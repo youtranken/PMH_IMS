@@ -1,0 +1,98 @@
+/* --- Đăng nhập IMS -----------------------------------------------------------
+   Nền grove tối (cố định, không theo theme app vì là màn ngoài shell) + card kính.
+   Mọi màu lấy từ tokens.css (AD-15) — không hex ở đây. */
+.auth {
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: var(--space-7);
+  background: var(--auth-bg);
+  overflow: hidden;
+}
+/* Vệt sáng nhấn — gradient thương hiệu, mờ, không cản đọc */
+.auth::before {
+  content: '';
+  position: absolute;
+  inset: -30% -10% auto auto;
+  width: 60vw;
+  height: 60vw;
+  background: var(--grad);
+  opacity: 0.14;
+  filter: blur(90px);
+  pointer-events: none;
+}
+.auth-card {
+  position: relative;
+  z-index: 1;
+  width: min(94vw, 420px);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-9);
+  padding: var(--space-10);
+  color: var(--auth-ink);
+  background: var(--auth-card);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  border: 1px solid var(--auth-card-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+  animation: pageIn 0.3s var(--ease) both;
+}
+.auth-card > .ghost.sm {
+  position: absolute;
+  top: var(--space-5);
+  right: var(--space-5);
+  padding: var(--space-1) var(--space-4);
+  color: var(--auth-ink-2);
+  background: var(--auth-card);
+  border: 1px solid var(--auth-card-border);
+  border-radius: var(--r-sm);
+}
+.auth-card > .ghost.sm:hover { color: var(--auth-ink); }
+.auth-logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.auth-logo .brand-mark { width: 34px; height: 34px; font-size: var(--fs-xs); }
+.auth-title { font-size: var(--fs-lg); font-weight: 600; }
+.auth-sub { color: var(--auth-ink-2); font-size: var(--fs-sm); }
+.auth-form { display: flex; flex-direction: column; gap: var(--space-7); }
+.auth-form .lbl-t { color: var(--auth-ink-2); }
+/* Ô nhập trên nền kính: viền sáng mờ thay vì viền content */
+.auth-form .inp {
+  color: var(--auth-ink);
+  background: var(--auth-card);
+  border-color: var(--auth-card-border);
+}
+.auth-form .inp::placeholder { color: var(--auth-ink-2); }
+.auth-form .inp:focus-visible { outline: none; box-shadow: var(--ring); }
+.auth-form .btn.primary { justify-content: center; padding: var(--space-5); }
+/* Ô nhập mã TOTP — 6 số, mono, giãn chữ */
+.auth-otp {
+  font-family: var(--mono);
+  font-size: var(--fs-xl);
+  letter-spacing: 0.4em;
+  text-align: center;
+}
+.auth-error {
+  color: var(--danger);
+  background: var(--danger-soft);
+  border: 1px solid var(--border-danger);
+  border-radius: var(--r);
+  padding: var(--space-4) var(--space-6);
+  font-size: var(--fs-sm);
+}
+.auth-foot {
+  color: var(--auth-ink-2);
+  font-size: var(--fs-xs);
+  text-align: center;
+}
+@media (max-width: 480px) {
+  .auth-card { padding: var(--space-9) var(--space-7); gap: var(--space-7); }
+}

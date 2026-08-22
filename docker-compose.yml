@@ -1,0 +1,115 @@
+# IMS — 5 service (AD-12): pg, redis, api, worker, web. Dev thêm mailpit.
+# postgres/redis KHÔNG publish cổng ra host (NFR-04 zero-trust); `web` là cổng vào duy nhất.
+# Bí mật (master key, pepper, SMTP pass) đi qua docker secret dạng FILE, không env (AD-11).
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?bắt buộc}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?bắt buộc}
+      POSTGRES_DB: ${POSTGRES_DB:-ims}
+      TZ: Asia/Ho_Chi_Minh
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # noeviction: BullMQ mất job nếu Redis đuổi key khi đầy bộ nhớ.
+    command: ['redis-server', '--requirepass', '${REDIS_PASSWORD:?bắt buộc}', '--maxmemory-policy', 'noeviction']
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD}', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    image: ims-api:latest
+    build: ./api
+    restart: unless-stopped
+    user: '1000:1000'
+    environment: &api_env
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ims}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      APP_BASE_URL: ${APP_BASE_URL:?bắt buộc — dùng để kiểm Origin chống CSRF}
+      MASTER_KEY_FILE: /run/secrets/ims_master_key
+      PASSWORD_PEPPER_FILE: /run/secrets/ims_password_pepper
+      SMTP_HOST: ${SMTP_HOST:-mailpit}
+      SMTP_PORT: ${SMTP_PORT:-1025}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD_FILE: /run/secrets/ims_smtp_password
+      FILE_STORAGE_DIR: /data/files
+      TZ: Asia/Ho_Chi_Minh
+    secrets: &api_secrets
+      - ims_master_key
+      - ims_password_pepper
+      - ims_smtp_password
+    volumes:
+      - filesdata:/data/files
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: ['CMD', 'node', '-e', "require('http').get('http://127.0.0.1:3000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    image: ims-api:latest
+    restart: unless-stopped
+    user: '1000:1000'
+    command: ['node', 'dist/worker/worker.js']
+    environment: *api_env
+    secrets: *api_secrets
+    volumes:
+      - filesdata:/data/files
+    depends_on:
+      api: { condition: service_healthy }
+
+  web:
+    image: ims-web:latest
+    build: ./web
+    restart: unless-stopped
+    ports:
+      - '443:443'
+      - '80:80'
+    volumes:
+      # Cert wildcard *.pmh.com.vn — chỉ service này giữ (NFR-04, TLS terminate tại web).
+      - ${TLS_CERT_DIR:-./ops/certs}:/etc/nginx/certs:ro
+    depends_on:
+      api: { condition: service_healthy }
+
+  # Dev only: hộp thư giả. Prod dùng SMTP thật (SMTP_HOST/.env) và không bật service này.
+  mailpit:
+    image: axllent/mailpit:latest
+    restart: unless-stopped
+    profiles: ['dev']
+    ports:
+      - '8025:8025'
+    environment:
+      MP_MAX_MESSAGES: 500
+      TZ: Asia/Ho_Chi_Minh
+
+secrets:
+  ims_master_key:
+    file: ./secrets/master_key
+  ims_password_pepper:
+    file: ./secrets/password_pepper
+  ims_smtp_password:
+    file: ./secrets/smtp_password
+
+volumes:
+  pgdata:
+  redisdata:
+  filesdata:

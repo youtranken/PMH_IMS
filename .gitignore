@@ -7,6 +7,7 @@ build/
 secrets/*
 !secrets/.gitkeep
 !secrets/*.example
+!secrets/README.md
 coverage/
 playwright-report/
 test-results/
