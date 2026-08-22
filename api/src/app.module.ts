@@ -19,6 +19,7 @@ import { SessionGuard } from './modules/auth/session.guard';
 import { SystemConfigModule } from './modules/config-sys/system-config.module';
 import { FilesModule } from './modules/files/files.module';
 import { MailModule } from './modules/mail/mail.module';
+import { SoftwareModule } from './modules/software/software.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
 import { QueueModule } from './modules/queue/queue.module';
 import { UsersModule } from './modules/users/users.module';
@@ -58,6 +59,7 @@ import { UsersModule } from './modules/users/users.module';
     AuthModule,
     CatalogModule,
     DevicesModule,
+    SoftwareModule,
     FilesModule,
     MailModule,
   ],

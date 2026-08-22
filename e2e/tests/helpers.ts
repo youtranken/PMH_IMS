@@ -51,6 +51,24 @@ export const COMPOSE =
  * `device_history` là append-only nên phải xóa lịch sử bằng superuser TRƯỚC — đây là lý do
  * script này chỉ chạy ở môi trường test, không bao giờ có mặt trong image production.
  */
+/**
+ * Xóa hồ sơ phần mềm do E2E tạo. Quy ước giống thiết bị: mã luôn chứa chuỗi "E2E" nên câu
+ * xóa không bao giờ chạm dữ liệu thật.
+ */
+export function resetSoftware(): void {
+  const match = "code ILIKE '%E2E%'";
+  const sql = [
+    `ALTER TABLE software_history DISABLE TRIGGER software_history_no_delete`,
+    `DELETE FROM software_history WHERE software_id IN (SELECT id FROM software WHERE ${match})`,
+    `ALTER TABLE software_history ENABLE TRIGGER software_history_no_delete`,
+    `DELETE FROM software WHERE ${match}`,
+  ].join('; ');
+  execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -c "${sql}"`, {
+    cwd: '..',
+    stdio: 'pipe',
+  });
+}
+
 export function resetDevices(): void {
   // Quy ước: MỌI mã thiết bị do E2E tạo đều chứa chuỗi "E2E" — nhờ vậy câu xóa dưới đây
   // không bao giờ chạm vào dữ liệu thật (SW-CORE-01, SRV-APP-01…) trong stack dev.

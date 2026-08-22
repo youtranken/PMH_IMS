@@ -16,6 +16,8 @@ import { AccountsScreen } from '@/features/admin/accounts-screen';
 import { CatalogScreen } from '@/features/catalog/catalog-screen';
 import { DeviceDetail } from '@/features/devices/device-detail';
 import { DevicesScreen } from '@/features/devices/devices-screen';
+import { SoftwareDetail } from '@/features/software/software-detail';
+import { SoftwareScreen } from '@/features/software/software-screen';
 import { ChangePassword } from '@/features/auth/change-password';
 import { LoginScreen } from '@/features/auth/login-screen';
 import { TotpChallenge } from '@/features/auth/totp-challenge';
@@ -81,6 +83,8 @@ function AppRoutes() {
         <Route path="/quan-tri/danh-muc" element={<CatalogScreen me={me} />} />
         <Route path="/thiet-bi" element={<DevicesScreen me={me} />} />
         <Route path="/thiet-bi/:id" element={<DeviceDetail me={me} />} />
+        <Route path="/phan-mem" element={<SoftwareScreen me={me} />} />
+        <Route path="/phan-mem/:id" element={<SoftwareDetail me={me} />} />
         {/* Bộ giao diện là trang nội bộ: member/admin vào thẳng URL cũng chỉ nhận 404. */}
         {me.role === 'sa' ? (
           <Route path="/dev/components" element={<ComponentsGallery />} />
