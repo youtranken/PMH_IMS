@@ -95,7 +95,7 @@ graphify label . --missing-only   # đặt tên community mới (cần API key)
 Sau đó kiểm nhanh và ghi lại:
 
 - `graphify god-nodes --top 15` — hub mới xuất hiện có đúng là public api (`*.api.ts`) không; nếu một file nội bộ thành hub → nghi phạm vi phạm AD-2.
-- Thêm vào `GRAPH_REPORT.md` một mục **"Epic N đã đóng góp gì"**: module mới, bảng mới + chủ sở hữu (AD-3), public api mới, `ExpirySource` provider mới (AD-7).
+- Thêm một mục **"Epic N đã đóng góp gì"** vào `docs/EPIC-MAP.md`: bảng mới + chủ sở hữu (AD-3), hợp đồng epic sau sẽ dùng, nợ kỹ thuật, bẫy đã gặp. (Ghi ở đây chứ KHÔNG ghi vào `GRAPH_REPORT.md` — file đó bị sinh lại mỗi lần `graphify update`, ghi tay vào sẽ mất.)
 - Epic sau bắt đầu bằng `graphify query "<câu hỏi>"` trên bản đồ vừa cập nhật, không đọc mò source.
 
 Lần đầu tiên (sau story 1.1, khi đã có code): chạy `/graphify` để build graph đầy đủ, kể từ đó mới dùng `update`.
