@@ -6,7 +6,7 @@ describe('LoadError', () => {
   it('hiện thông báo lỗi tiếng Việt + nút Thử lại', () => {
     renderWithI18n(<LoadError onRetry={() => {}} />);
     expect(
-      screen.getByText('Không tải được dữ liệu — thử lại.'),
+      screen.getByText('Không tải được dữ liệu.'),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Thử lại' }),

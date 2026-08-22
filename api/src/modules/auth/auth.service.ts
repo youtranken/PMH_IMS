@@ -215,6 +215,12 @@ export class AuthService {
     return { session: fresh, mustChangePassword: user.mustChangePassword };
   }
 
+  /** Đã cài xác thực 2 lớp chưa — UI dùng để chọn màn enroll hay màn nhập mã. */
+  async isTotpEnrolled(userId: string): Promise<boolean> {
+    const user = await this.users.findById(userId);
+    return user?.totpEnrolledAt !== null && user !== null;
+  }
+
   /** Enroll TOTP: sinh secret, envelope, trả QR. Chưa bật cho tới khi xác nhận đúng mã. */
   async startTotpEnrollment(userId: string): Promise<{ secret: string; qrDataUrl: string }> {
     const user = await this.requireUser(userId);
@@ -238,9 +244,20 @@ export class AuthService {
     return { secret, qrDataUrl: await this.totp.qrDataUrl(user.email, secret) };
   }
 
-  /** Xác nhận enroll bằng mã đầu tiên. */
-  async confirmTotpEnrollment(userId: string, token: string): Promise<void> {
-    const user = await this.requireUser(userId);
+  /**
+   * Xác nhận enroll bằng mã đầu tiên.
+   *
+   * Nếu việc này diễn ra NGAY TRONG luồng đăng nhập (phiên còn cờ `totp_pending`), người dùng
+   * vừa chứng minh có điện thoại → coi như đã qua bước 2: hủy phiên chờ, cấp phiên MỚI
+   * (regenerate id, NFR-01). Không làm bước này thì user kẹt: đã cài xong 2 lớp nhưng
+   * mọi request tiếp theo vẫn bị chặn bởi TOTP_REQUIRED.
+   */
+  async confirmTotpEnrollment(
+    session: SessionRecord,
+    token: string,
+    ctx: LoginContext,
+  ): Promise<{ session: SessionRecord }> {
+    const user = await this.requireUser(session.userId);
     const secret = this.openTotpSecret(user);
     const result = await this.totp.verify({ token, secret, lastUsedTimeStep: null });
     if (!result.ok) {
@@ -249,7 +266,9 @@ export class AuthService {
         message: 'Mã xác thực không đúng. Kiểm tra đồng hồ điện thoại rồi thử lại.',
       });
     }
-    await this.db.transaction(async (tx) => {
+
+    const absoluteHours = await this.config.getNumber('sessionAbsoluteHours');
+    const fresh = await this.db.transaction(async (tx) => {
       await this.users.markTotpEnrolledWithin(tx, user.id, result.timeStep as number);
       await this.audit.appendWithin(tx, {
         actor: user.email,
@@ -257,7 +276,28 @@ export class AuthService {
         objectType: 'user',
         objectId: user.id,
       });
+      if (!session.totpPending) return session;
+
+      await this.sessions.revoke(session.id, 'totp-enroll-regenerate');
+      const created = await this.sessions.createWithin(tx, {
+        userId: user.id,
+        ip: ctx.ip,
+        userAgent: ctx.userAgent,
+        absoluteHours,
+        totpPending: false,
+      });
+      await this.sessions.completeTotpWithin(tx, created.id);
+      await this.audit.appendWithin(tx, {
+        actor: user.email,
+        action: 'auth.login.ok',
+        objectType: 'session',
+        objectId: created.id,
+        detail: { ip: ctx.ip, viaTotpEnroll: true },
+      });
+      return created;
     });
+
+    return { session: fresh };
   }
 
   /**

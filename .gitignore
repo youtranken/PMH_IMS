@@ -14,3 +14,4 @@ test-results/
 *.log
 graphify-out/
 _bmad-output/planning-artifacts/design-ims/thiet-ke-man-hinh-ims.html
+ops/certs/*.pem

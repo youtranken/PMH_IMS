@@ -1,0 +1,53 @@
+import type { Me } from '@/lib/me';
+
+export interface NavItem {
+  /** Khóa i18n (`nav.*`) — nhãn không bao giờ viết cứng. */
+  key: string;
+  to: string;
+  /** Vai được nhìn thấy mục này. UI ẩn cho gọn; quyền THẬT do RolesGuard ở API (AD-9). */
+  roles?: Me['role'][];
+  /** Màn chưa làm (epic sau) — hiện mờ, không điều hướng được. */
+  planned?: boolean;
+}
+
+export interface NavGroup {
+  labelKey: string;
+  items: NavItem[];
+}
+
+/**
+ * Sidebar của IMS. Mục của epic sau đã có chỗ sẵn (`planned: true`) để bản đồ điều hướng
+ * không phải vẽ lại mỗi epic — thêm màn chỉ là bỏ cờ `planned`.
+ */
+export const navGroups: NavGroup[] = [
+  {
+    labelKey: 'nav.groupWork',
+    items: [
+      { key: 'nav.dashboard', to: '/', planned: true },
+      { key: 'nav.devices', to: '/thiet-bi', planned: true },
+      { key: 'nav.software', to: '/phan-mem', planned: true },
+      { key: 'nav.expiry', to: '/sap-het-han', planned: true },
+      { key: 'nav.ipam', to: '/dia-chi-ip', planned: true },
+      { key: 'nav.vault', to: '/ket-sat', planned: true },
+      { key: 'nav.documents', to: '/tai-lieu', planned: true },
+    ],
+  },
+  {
+    labelKey: 'nav.groupAdmin',
+    items: [
+      { key: 'nav.accounts', to: '/quan-tri/tai-khoan', roles: ['sa'] },
+      { key: 'nav.auditLog', to: '/quan-tri/nhat-ky', roles: ['sa', 'admin'], planned: true },
+      { key: 'nav.components', to: '/dev/components' },
+    ],
+  },
+];
+
+export function visibleGroups(me: Me | null): NavGroup[] {
+  if (!me) return [];
+  return navGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => !item.roles || item.roles.includes(me.role)),
+    }))
+    .filter((group) => group.items.length > 0);
+}

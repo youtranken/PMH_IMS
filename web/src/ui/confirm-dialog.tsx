@@ -45,7 +45,7 @@ export function ConfirmDialog({
           <button
             type="button"
             className="sheet-close"
-            aria-label={cancelLabel ?? t('assets.cancel')}
+            aria-label={cancelLabel ?? t('common.cancel')}
             disabled={busy}
           >
             ✕
@@ -59,7 +59,7 @@ export function ConfirmDialog({
       <div className="sheet-footer">
         <span className="spacer" />
         <button type="button" disabled={busy} onClick={onCancel}>
-          {cancelLabel ?? t('assets.cancel')}
+          {cancelLabel ?? t('common.cancel')}
         </button>
         <button
           type="button"

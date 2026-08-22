@@ -1,4 +1,4 @@
-const THEME_KEY = 'qlts_theme'; // chỉ theme — KHÔNG token (AD-8)
+const THEME_KEY = 'ims_theme'; // chỉ theme — KHÔNG token (AD-8)
 
 export type Theme = 'light' | 'dark';
 

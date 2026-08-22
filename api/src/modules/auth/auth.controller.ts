@@ -97,9 +97,19 @@ export class AuthController {
   @Post('totp/enroll/confirm')
   @HttpCode(200)
   @Audited('auth.totp.enroll.done', 'user')
-  async confirmEnroll(@Body() dto: TotpTokenDto, @Req() req: AuthedRequest) {
-    await this.auth.confirmTotpEnrollment(req.user!.id, dto.token);
-    return { status: 'enrolled' };
+  async confirmEnroll(
+    @Body() dto: TotpTokenDto,
+    @Req() req: AuthedRequest,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    const session = await this.requireSession(req);
+    const result = await this.auth.confirmTotpEnrollment(session, dto.token, {
+      ip: clientIp(req),
+      userAgent: req.headers['user-agent'] ?? null,
+    });
+    // Phiên có thể đã được cấp lại (regenerate sau khi qua 2 lớp) → cập nhật cookie.
+    setSessionCookie(res, result.session.id);
+    return { status: 'enrolled', csrfToken: result.session.csrfToken };
   }
 
   /** FR-022: step-up để xem bí mật — luôn bắt buộc, kể cả khi tắt TOTP lúc đăng nhập. */
@@ -141,6 +151,8 @@ export class AuthController {
   async me(@Req() req: AuthedRequest) {
     const user = req.user!;
     const session = await this.requireSession(req);
+    // UI cần biết đã cài 2 lớp chưa để đưa về ĐÚNG bước còn thiếu (enroll hay nhập mã).
+    const enrolled = await this.auth.isTotpEnrolled(user.id);
     const [graceMinutes, revealSeconds] = await Promise.all([
       this.config.getNumber('secretStepUpGraceMinutes'),
       this.config.getNumber('secretRevealSeconds'),
@@ -152,6 +164,7 @@ export class AuthController {
       role: user.role,
       mustChangePassword: user.mustChangePassword,
       totpPending: session.totpPending,
+      totpEnrolled: enrolled,
       steppedUpAt: session.steppedUpAt,
       csrfToken: session.csrfToken,
       config: { stepUpGraceMinutes: graceMinutes, secretRevealSeconds: revealSeconds },

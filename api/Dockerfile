@@ -15,6 +15,8 @@ COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 # dist đã kèm migrations/*.sql (nest-cli assets)
 COPY --from=builder /app/dist ./dist
+# Script vận hành (seed tài khoản đầu tiên) — chạy bằng `docker compose exec api node scripts/...`
+COPY scripts ./scripts
 USER node
 EXPOSE 3000
 # Story 3.5a: service worker dùng cùng image này, override command

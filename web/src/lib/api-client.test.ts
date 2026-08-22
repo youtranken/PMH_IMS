@@ -19,9 +19,27 @@ describe('apiFetch', () => {
     expect(err.body).toEqual({ message: 'trùng' });
   });
 
-  it('401 → ném ApiError(401) (redirect tập trung)', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(401, {})));
-    await expect(apiFetch('/x')).rejects.toMatchObject({ status: 401 });
+  it('401 vì SAI THÔNG TIN NHẬP → ném lỗi tại chỗ, KHÔNG đá về màn đăng nhập', async () => {
+    // Đây là lỗi từng làm màn đăng nhập không hiện được thông báo: apiFetch redirect
+    // mọi 401 nên "sai mật khẩu" biến thành reload trang trắng.
+    const assign = vi.fn();
+    vi.stubGlobal('location', { href: '', assign } as unknown as Location);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse(401, { code: 'LOGIN_FAILED', message: 'Sai' })),
+    );
+    await expect(apiFetch('/api/v1/auth/login')).rejects.toMatchObject({ status: 401 });
+    expect(window.location.href).toBe('');
+  });
+
+  it('401 vì PHIÊN CHẾT → đá về màn đăng nhập', async () => {
+    vi.stubGlobal('location', { href: '' } as unknown as Location);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse(401, { code: 'SESSION_EXPIRED', message: 'Hết hạn' })),
+    );
+    await expect(apiFetch('/api/v1/accounts')).rejects.toMatchObject({ status: 401 });
+    expect(window.location.href).toBe('/dang-nhap');
   });
 
   it('gắn Content-Type + X-CSRF-Token khi có body/csrf', async () => {

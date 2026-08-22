@@ -1,0 +1,96 @@
+/* --- Bộ dùng chung Story 1.5: toast, phân trang, lịch sử, ô nhập có lỗi ---------------
+   Mọi màu lấy từ tokens.css (AD-15) — không hex ở đây. */
+
+/* Toast */
+.toast-stack {
+  position: fixed;
+  right: var(--space-9);
+  bottom: var(--space-9);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: min(92vw, 420px);
+}
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-6);
+  border-radius: var(--r);
+  border: 1px solid var(--border-2);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-pop);
+  font-size: var(--fs-sm);
+  animation: pageIn 0.18s var(--ease) both;
+}
+.toast-ok { border-color: var(--border-ok); background: var(--ok-soft); color: var(--ok); }
+.toast-warn { border-color: var(--border-warn); background: var(--warn-soft); color: var(--warn); }
+.toast-error { border-color: var(--border-danger); background: var(--danger-soft); color: var(--danger); }
+.toast-close {
+  flex: none;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: var(--fs-lg);
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+}
+.toast-close:hover { opacity: 1; }
+
+/* Phân trang */
+.pager {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-5) 0 0;
+  font-size: var(--fs-sm);
+}
+.pager-info { margin-right: auto; }
+.pager-page { font-variant-numeric: tabular-nums; }
+
+/* Ô nhập: gợi ý + lỗi */
+.field-hint { font-size: var(--fs-xs); }
+.field-error { font-size: var(--fs-xs); color: var(--danger); font-weight: 600; }
+.inp[aria-invalid='true'] { border-color: var(--danger); }
+
+/* Lịch sử (AD-13) */
+.history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.history-item { display: flex; gap: var(--space-6); padding: var(--space-5) 0; }
+.history-item + .history-item { border-top: 1px solid var(--border); }
+.history-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-top: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+.history-body { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.history-action { font-weight: 600; font-size: var(--fs-sm); }
+.history-detail, .history-meta { font-size: var(--fs-xs); }
+
+/* Gallery /dev/components */
+.kit-section { display: flex; flex-direction: column; gap: var(--space-6); margin-bottom: var(--space-10); }
+.kit-row { display: flex; flex-wrap: wrap; gap: var(--space-5); align-items: center; }
+.kit-swatch {
+  width: 84px;
+  height: 56px;
+  border-radius: var(--r);
+  border: 1px solid var(--border-2);
+  display: grid;
+  place-items: end center;
+  font-size: var(--fs-2xs);
+  padding: 4px;
+  color: var(--ink-2);
+  background: var(--surface);
+}
+
+/* Màn nhỏ (UX-DR2 — mọi màn ĐỌC phải dùng được ở 390px) */
+@media (max-width: 480px) {
+  .toast-stack { right: var(--space-5); left: var(--space-5); bottom: var(--space-5); max-width: none; }
+  .pager { flex-wrap: wrap; gap: var(--space-4); }
+  .pager-info { width: 100%; }
+}
