@@ -23,6 +23,7 @@
 | `Tabs`, `TabPanel` | `ui/tabs.tsx` | Màn Danh mục (2.1), trang chi tiết thiết bị (2.5) | Hai tab thôi thì cân nhắc hiện cả hai |
 | `FilePicker` | `ui/file-picker.tsx` | Mọi chỗ chọn file: import danh mục/thiết bị, đính kèm | Không tự dựng `<input type="file">` trần |
 | `ImportPreview` | `ui/import-preview.tsx` | Bảng đối chiếu TRƯỚC khi ghi của mọi màn import | Màn import nào cũng phải có bước này |
+| `AttachmentPanel` | `ui/attachment-panel.tsx` | Giấy tờ đính kèm của MỌI chủ thể (`ownerType`/`ownerId`): thiết bị 2.3, phiếu Epic 8, sự cố Epic 9 | Không tự viết upload riêng — sẽ quên luật "tải về, không mở inline" |
 | `HistoryPanel` | `ui/history-panel.tsx` | Lịch sử nghiệp vụ (AD-13) | Nhật ký an ninh → màn Audit riêng |
 | `DatePicker`, `DateTimePicker` | `ui/date-picker.tsx`, `ui/date-time-picker.tsx` | Mọi ô chọn ngày/giờ | Không dùng `<input type="date">` trần |
 | `Loading`, `LoadError`, `EmptyState`, `NotFound` | `ui/load-state.tsx` | Mọi màn có fetch: phân biệt tải ≠ rỗng ≠ lỗi | — |
@@ -67,7 +68,8 @@
 | `MailTransportService`, `renderMail` | `modules/mail/` | Nơi duy nhất gửi và dựng HTML email | — |
 | `UsersApiService` | `modules/users/users.api.ts` | Module khác cần dữ liệu user (AD-2) | Cấm query bảng `users` từ module khác |
 | `CatalogApiService` | `modules/catalog/catalog.api.ts` | `devices` và mọi module cần site/tủ/loại/NCC | Cấm query bảng `site`/`cabinet`/`device_type`/`vendor` |
-| `FilesService` | `modules/files/` | Đính kèm file (Epic 2+) | — |
+| `FilesApiService` | `modules/files/files.api.ts` | Module khác hỏi "chủ thể này có file gì" (AD-2) | Cấm query bảng `file` từ module khác |
+| `DevicesApiService` | `modules/devices/devices.api.ts` | ipam/vault/software/phiếu tham chiếu thiết bị | Cấm query bảng `device` từ module khác |
 
 ## Cách CI ép luật (không trông vào review)
 

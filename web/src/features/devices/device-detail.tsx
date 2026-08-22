@@ -7,6 +7,7 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { ExpiryBadge } from '@/ui/expiry-badge';
+import { AttachmentPanel } from '@/ui/attachment-panel';
 import { HistoryPanel } from '@/ui/history-panel';
 import { LoadError, Loading, NotFound } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
@@ -133,6 +134,7 @@ export function DeviceDetail({ me }: { me: Me }) {
       <Tabs
         items={[
           { key: 'profile', label: t('devices.tabProfile') },
+          { key: 'attachments', label: t('devices.tabAttachments') },
           { key: 'history', label: t('devices.tabHistory') },
         ]}
         value={tab}
@@ -171,6 +173,14 @@ export function DeviceDetail({ me }: { me: Me }) {
             </Item>
             <Item label={t('devices.note')}>{orDash(item.note)}</Item>
           </dl>
+        ) : tab === 'attachments' ? (
+          <AttachmentPanel
+            ownerType="device"
+            ownerId={item.id}
+            csrfToken={me.csrfToken}
+            /* Thiết bị đã thanh lý: hồ sơ khóa lại thì giấy tờ cũng chỉ còn đọc/tải. */
+            canEdit={!retired}
+          />
         ) : history.isLoading ? (
           <Loading />
         ) : history.isError ? (

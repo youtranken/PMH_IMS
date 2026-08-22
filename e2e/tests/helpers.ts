@@ -52,8 +52,10 @@ export const COMPOSE =
  * script này chỉ chạy ở môi trường test, không bao giờ có mặt trong image production.
  */
 export function resetDevices(): void {
-  const match = "(code ILIKE '%-E2E-%' OR code ILIKE 'PC-A-%' OR code ILIKE 'PC-B-%' OR code ILIKE 'PC-DUP-%' OR code ILIKE 'NAS-%' OR code ILIKE 'SW-E2E-%')";
+  const match = "(code ILIKE '%-E2E-%' OR code ILIKE 'PC-A-%' OR code ILIKE 'PC-B-%' OR code ILIKE 'PC-DUP-%' OR code ILIKE 'NAS-%' OR code ILIKE 'SW-E2E-%' OR code ILIKE 'SRV-%' OR code ILIKE 'UPS-E2E-%' OR code ILIKE 'PC-E2E-%')";
   const sql = [
+    // Giấy tờ đính kèm trỏ tới thiết bị qua owner_id — xóa trước, không thì còn rác.
+    `DELETE FROM file WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE ${match})`,
     `ALTER TABLE device_history DISABLE TRIGGER device_history_no_delete`,
     `DELETE FROM device_history WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
     `ALTER TABLE device_history ENABLE TRIGGER device_history_no_delete`,
