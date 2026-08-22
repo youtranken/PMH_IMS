@@ -95,6 +95,26 @@ export class DevicesService {
     return (await this.decorate(rows))[0];
   }
 
+  /**
+   * Thiết bị có bảo hành hết trong [from, to] — cỗ máy expiry (3.4) hỏi qua provider.
+   * Thiết bị đã thanh lý thì thôi không nhắc: bảo hành của đồ bỏ đi không ai đi đòi.
+   */
+  async findWarrantyExpiring(from: string, to: string): Promise<DeviceListItem[]> {
+    const rows = await this.db
+      .select()
+      .from(deviceTable)
+      .where(
+        and(
+          sql`${deviceTable.warrantyEnd} IS NOT NULL`,
+          sql`${deviceTable.warrantyEnd} >= ${from}`,
+          sql`${deviceTable.warrantyEnd} <= ${to}`,
+          sql`${deviceTable.status} <> 'retired'`,
+        ),
+      )
+      .orderBy(asc(deviceTable.warrantyEnd));
+    return this.decorate(rows);
+  }
+
   async history(deviceId: string): Promise<DeviceHistoryRecord[]> {
     const rows = await this.db
       .select()

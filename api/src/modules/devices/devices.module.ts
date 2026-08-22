@@ -3,6 +3,7 @@ import { AuditModule } from '../audit/audit.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { ExcelImportService } from '../../common/excel/excel-import.service';
+import { DeviceExpirySource } from './device-expiry-source';
 import { DeviceImportService } from './device-import.service';
 import { DevicePortsService } from './device-ports.service';
 import { DevicesApiService } from './devices.api';
@@ -20,6 +21,7 @@ import { DevicesService } from './devices.service';
     DevicesService,
     DevicePortsService,
     DeviceImportService,
+    DeviceExpirySource,
     DevicesApiService,
     ExcelExportService,
     ExcelImportService,

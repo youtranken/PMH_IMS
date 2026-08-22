@@ -16,6 +16,7 @@ import { AccountsScreen } from '@/features/admin/accounts-screen';
 import { CatalogScreen } from '@/features/catalog/catalog-screen';
 import { DeviceDetail } from '@/features/devices/device-detail';
 import { DevicesScreen } from '@/features/devices/devices-screen';
+import { ExpiryScreen } from '@/features/expiry/expiry-screen';
 import { IspDetail } from '@/features/isp/isp-detail';
 import { IspScreen } from '@/features/isp/isp-screen';
 import { SoftwareDetail } from '@/features/software/software-detail';
@@ -89,6 +90,7 @@ function AppRoutes() {
         <Route path="/phan-mem/:id" element={<SoftwareDetail me={me} />} />
         <Route path="/duong-truyen" element={<IspScreen me={me} />} />
         <Route path="/duong-truyen/:id" element={<IspDetail me={me} />} />
+        <Route path="/sap-het-han" element={<ExpiryScreen me={me} />} />
         {/* Bộ giao diện là trang nội bộ: member/admin vào thẳng URL cũng chỉ nhận 404. */}
         {me.role === 'sa' ? (
           <Route path="/dev/components" element={<ComponentsGallery />} />

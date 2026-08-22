@@ -3,6 +3,7 @@ import { AuditModule } from '../audit/audit.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { DevicesModule } from '../devices/devices.module';
 import { IspDevicePanel } from './isp-device-panel';
+import { SoftwareExpiryRegistrar } from './software-expiry-sources';
 import { IspLineController } from './isp-line.controller';
 import { IspLineService } from './isp-line.service';
 import { LicenseAssignmentService } from './license-assignment.service';
@@ -23,6 +24,7 @@ import { SoftwareService } from './software.service';
     LicenseAssignmentService,
     IspLineService,
     IspDevicePanel,
+    SoftwareExpiryRegistrar,
     SoftwareDevicePanel,
     SoftwareApiService,
   ],

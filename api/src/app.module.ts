@@ -8,12 +8,14 @@ import { ExcelExportService } from './common/excel/excel-export.service';
 import { ExcelImportService } from './common/excel/excel-import.service';
 import { DatabaseModule } from './database/database.module';
 import { DevicePanelsModule } from './common/device-panels.registry';
+import { ExpiryRegistryModule } from './common/expiry/expiry-registry';
 import { HealthController } from './health/health.controller';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuditInterceptor } from './modules/audit/audit.interceptor';
 import { AuthModule } from './modules/auth/auth.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { DevicesModule } from './modules/devices/devices.module';
+import { ExpiryModule } from './modules/expiry/expiry.module';
 import { CsrfGuard } from './modules/auth/csrf.guard';
 import { RolesGuard } from './modules/auth/roles.guard';
 import { SessionGuard } from './modules/auth/session.guard';
@@ -53,6 +55,7 @@ import { UsersModule } from './modules/users/users.module';
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     DatabaseModule,
     DevicePanelsModule,
+    ExpiryRegistryModule,
     SystemConfigModule,
     AuditModule,
     OutboxModule,
@@ -62,6 +65,7 @@ import { UsersModule } from './modules/users/users.module';
     CatalogModule,
     DevicesModule,
     SoftwareModule,
+    ExpiryModule,
     FilesModule,
     MailModule,
   ],
