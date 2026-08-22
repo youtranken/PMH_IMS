@@ -54,11 +54,10 @@ của module chủ**. Chưa có file nội bộ nào trở thành hub, tức ch�
 
 | Việc | Vì sao hoãn | Hạn chót |
 | --- | --- | --- |
-| Chưa có pipeline CI thật (mới có script `lint`/`depcruise`/`test`) | Chưa chốt nơi chạy CI (máy nội bộ hay GitHub) | Trước khi có người thứ hai commit |
+| CI đã có file `.github/workflows/ci.yml` + `ops/ci-local.sh` nhưng **chưa gắn runner** | Chưa chốt chạy CI ở đâu (GitHub hay máy nội bộ) | Trước khi có người thứ hai commit |
 | `audit.controller` (màn xem nhật ký) chưa dựng UI | Không nằm trong AC Epic 1 | Epic 6 (nhật ký break-glass) |
 | Restore drill lần đầu (AR-9) | Phải chạy **cuối Đợt 1**, trước khi secret thật vào két | Cuối Epic 4 |
 | `system_config` chưa có màn Admin để sửa | AC Epic 1 chỉ yêu cầu seed + đọc | Epic 3 (luật digest cần UI) |
-| `web` chưa có `oxlint` chạy trong CI | — | Cùng lúc dựng CI |
 
 ### Bẫy đã gặp — đừng lặp lại
 
