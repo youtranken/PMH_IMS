@@ -81,3 +81,63 @@ của module chủ**. Chưa có file nội bộ nào trở thành hub, tức ch�
    giờ cấp lại phiên như đã qua bước 2.
 4. **E2E dùng lại mã TOTP cũ** → bị chống-replay chặn, dễ tưởng là bug. Helper `freshTotpCode`
    chờ sang chu kỳ 30 giây mới.
+
+---
+
+## Epic 2 — Kho thiết bị (đóng 2026-08-23)
+
+### Bảng mới và ai sở hữu (AD-3)
+
+| Bảng | Module chủ | Ghi chú cho epic sau |
+| --- | --- | --- |
+| `site`, `cabinet`, `device_type`, `vendor` | `catalog` (tầng nền) | Module khác đọc qua `CatalogApiService`. Xóa bị FK RESTRICT chặn → dịch thành 409 kèm gợi ý vô hiệu hóa |
+| `catalog_history` | `catalog` | Append-only (trigger `history_append_only`) |
+| `device` | `devices` | KHÔNG có cột xóa và KHÔNG có endpoint xóa — chỉ đổi trạng thái, `retired` khóa hồ sơ |
+| `device_history` | `devices` | Append-only; port map cũng ghi vào đây |
+| `device_port` | `devices` | AD-14: một kết nối một bản ghi, chiều ngược dựng bằng query |
+| `file` (sửa lại cho khớp migration 0007) | `files` | `owner_type`/`owner_id` phục vụ mọi chủ thể; xóa mềm |
+
+### Hợp đồng epic sau sẽ dùng
+
+| Thứ | Ở đâu | Epic dùng |
+| --- | --- | --- |
+| `CatalogApiService` (`lists`, `snapshot`, `validateRefs`, `hasPortMap`) | `modules/catalog/catalog.api.ts` | Mọi module cần site/tủ/loại/NCC |
+| `DevicesApiService` (`getById`, `exists`, `search`) | `modules/devices/devices.api.ts` | **Epic 3** license theo seat, **Epic 4** secret gắn thiết bị, **Epic 5** IP gắn thiết bị, **Epic 9** phiếu sự cố |
+| `FilesApiService` | `modules/files/files.api.ts` | **Epic 8** đính kèm phiếu, **Epic 9** ảnh sự cố |
+| **`DevicePanelProvider` + token `DEVICE_PANEL_PROVIDERS`** | `common/device-panels.ts` | **Epic 3/4/5**: góp một khu vào trang chi tiết thiết bị mà `devices` không cần biết module đó tồn tại |
+| `ExcelImportService` + `common/import-plan.ts` | `common/` | Mọi màn import về sau (license, IP) — đừng viết lại parser cột/ngày |
+| `ImportDialog`, `ImportPreview`, `FilePicker`, `AttachmentPanel`, `Tabs` | `web/src/ui/` | Mọi màn có import hoặc đính kèm |
+| `pgErrorCode` + `PG_*` | `common/sql.ts` | Dịch lỗi ràng buộc DB thành câu tiếng Việt |
+
+### God node sau Epic 2 (đối chiếu AD-2)
+
+`Roles()`, `AuthedRequest`, `Database`, `Tx`, `Audited()`, `UsersService`, `DevicesService`,
+`CatalogService`, `SessionService`, `AuditWriterService`, `SystemConfigService`,
+`CatalogEntity`, `DevicesController` — **đều là tài sản dùng chung hoặc service của module
+chủ**. Chưa có file nội bộ nào trở thành hub, tức chưa có import lậu xuyên module.
+
+### Nợ kỹ thuật cố ý mang sang
+
+| Việc | Vì sao hoãn | Hạn chót |
+| --- | --- | --- |
+| CI vẫn chưa gắn runner (mang từ Epic 1) | Chưa chốt chạy ở đâu | Trước khi có người thứ hai commit |
+| Blob của file xóa mềm chưa có job dọn đĩa | Chưa đáng, dung lượng nhỏ | Khi ổ file vượt ~50% |
+| `devices` chưa đăng ký `ExpirySource` cho bảo hành | Engine expiry mới ra đời ở story 3.4 | Epic 3 |
+| Bảng port map chưa có chế độ nhập nhanh nhiều cổng | 300 thiết bị nhưng port map làm dần | Khi có switch 48 cổng cần khai đủ |
+
+### Bẫy đã gặp — đừng lặp lại
+
+1. **`@Param()` bằng DTO thiếu tham số** → `forbidNonWhitelisted` chặn, MỌI route `:entity/:id`
+   trả 400. Cùng họ với bẫy body ở story 1.4: DTO phải khai ĐỦ tham số của route.
+2. **drizzle bọc lỗi pg vào `cause`** → `error.code` ở lớp ngoài luôn `undefined`, mọi câu
+   "dịch lỗi DB" rơi xuống 500. Giờ đào bằng `pgErrorCode` dùng chung, có test.
+3. **Luật depcruise `biz-cross-only-via-api` viết `` thay vì `$1`** → bắt nhầm mọi import
+   nội bộ ngay khi module nghiệp vụ đầu tiên ra đời. Group matching dùng `$1`.
+4. **Named volume lấy quyền từ image lúc khởi tạo** → `/data/files` không có sẵn trong image
+   nên volume ra root, container uid 1000 không ghi được, mọi upload 500 EACCES.
+5. **Trần đăng nhập viết cứng trong `@Throttle`** trong khi `system_config` có khóa cho nó —
+   khóa cấu hình để trưng bày. Bộ E2E lớn dần đâm vào trần mới lộ ra (AD-11).
+6. **Locator E2E bám vào nhãn có dấu `*`** (aria-hidden) hoặc vào chuỗi số sinh theo
+   timestamp → đỏ ngẫu nhiên. Dùng `getByRole(..., { exact: true })` và mã có tiền tố cố định.
+7. **Dữ liệu E2E không tự dọn** → bảng tràn sang trang 2, locator bắt trúng bản ghi lần chạy
+   trước. Quy ước: mọi mã do E2E tạo đều chứa chuỗi `E2E`, `resetDevices`/`resetCatalog` xóa theo đó.

@@ -24,8 +24,8 @@ import {
   siteTable,
   vendorTable,
 } from './catalog.schema';
+import { normalizeKey } from '../../common/import-plan';
 import {
-  normalizeKey,
   type CabinetRecord,
   type CatalogEntity,
   type CatalogHistoryRecord,

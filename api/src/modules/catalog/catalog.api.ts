@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { CatalogService, type CatalogLists } from './catalog.service';
-import { normalizeKey, type CatalogSnapshot } from './catalog.types';
+import { normalizeKey } from '../../common/import-plan';
+import type { CatalogSnapshot } from './catalog.types';
 
 /**
  * AD-2: public api DUY NHẤT của module `catalog`. Module `devices` (và sau này ipam,

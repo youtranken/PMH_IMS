@@ -1,5 +1,6 @@
 import { planCatalogImport, type ParsedSheets } from './catalog-import';
-import { normalizeKey, type CatalogSnapshot } from './catalog.types';
+import { normalizeKey } from '../../common/import-plan';
+import type { CatalogSnapshot } from './catalog.types';
 
 /** Ảnh chụp danh mục rỗng — mọi dòng hợp lệ đều là "thêm mới". */
 function emptySnapshot(): CatalogSnapshot {
