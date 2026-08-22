@@ -1,0 +1,18 @@
+import { Module } from '@nestjs/common';
+import { AuditModule } from '../audit/audit.module';
+import { CatalogModule } from '../catalog/catalog.module';
+import { DevicesApiService } from './devices.api';
+import { DevicesController } from './devices.controller';
+import { DevicesService } from './devices.service';
+
+/**
+ * Chủ sở hữu `device` + `device_history` (AD-3).
+ * Ra ngoài chỉ xuất `DevicesApiService` (AD-2) — ipam/vault/software ở epic sau dùng cái đó.
+ */
+@Module({
+  imports: [AuditModule, CatalogModule],
+  controllers: [DevicesController],
+  providers: [DevicesService, DevicesApiService],
+  exports: [DevicesApiService],
+})
+export class DevicesModule {}

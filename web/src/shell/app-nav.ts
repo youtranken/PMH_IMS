@@ -24,7 +24,7 @@ export const navGroups: NavGroup[] = [
     labelKey: 'nav.groupWork',
     items: [
       { key: 'nav.dashboard', to: '/', planned: true },
-      { key: 'nav.devices', to: '/thiet-bi', planned: true },
+      { key: 'nav.devices', to: '/thiet-bi' },
       { key: 'nav.software', to: '/phan-mem', planned: true },
       { key: 'nav.expiry', to: '/sap-het-han', planned: true },
       { key: 'nav.ipam', to: '/dia-chi-ip', planned: true },

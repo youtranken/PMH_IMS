@@ -18,6 +18,22 @@ export function resetUsers(): void {
     stdio: 'pipe',
     env: { ...process.env, ALLOW_E2E_RESET: '1' },
   });
+  relaxLoginRateLimit();
+}
+
+/**
+ * Nới trần đăng nhập theo IP cho MÔI TRƯỜNG TEST.
+ *
+ * Cả bộ E2E đăng nhập vài chục lần trong ít phút từ cùng một IP, đụng trần
+ * `login.rate_limit_per_ip` (mặc định 20/phút) và một loạt test đỏ vì 429 chứ không phải
+ * vì sản phẩm sai. Nới ở đây thay vì hạ trần thật: bản thân cơ chế chặn dò mật khẩu đã có
+ * test riêng ở `login-rate.guard.spec.ts` (kể cả việc ngưỡng phải ĐỌC TỪ system_config).
+ */
+function relaxLoginRateLimit(): void {
+  execSync(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "UPDATE system_config SET value = '500' WHERE key = 'login.rate_limit_per_ip'"`,
+    { cwd: '..', stdio: 'pipe' },
+  );
 }
 
 export const COMPOSE =
@@ -30,6 +46,25 @@ export const COMPOSE =
  * nên site/tủ của lần trước dồn lại làm bảng tràn sang trang 2 và locator theo dòng
  * bắt trúng bản ghi cũ. Chỉ xóa đúng tiền tố E2E — dữ liệu thật của PMH không đụng tới.
  */
+/**
+ * Xóa thiết bị do E2E tạo (mã chứa `-E2E-` hoặc bắt đầu bằng `PC-A-`/`PC-B-`/`PC-DUP-`/`NAS-`).
+ * `device_history` là append-only nên phải xóa lịch sử bằng superuser TRƯỚC — đây là lý do
+ * script này chỉ chạy ở môi trường test, không bao giờ có mặt trong image production.
+ */
+export function resetDevices(): void {
+  const match = "(code ILIKE '%-E2E-%' OR code ILIKE 'PC-A-%' OR code ILIKE 'PC-B-%' OR code ILIKE 'PC-DUP-%' OR code ILIKE 'NAS-%' OR code ILIKE 'SW-E2E-%')";
+  const sql = [
+    `ALTER TABLE device_history DISABLE TRIGGER device_history_no_delete`,
+    `DELETE FROM device_history WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
+    `ALTER TABLE device_history ENABLE TRIGGER device_history_no_delete`,
+    `DELETE FROM device WHERE ${match}`,
+  ].join('; ');
+  execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -c "${sql}"`, {
+    cwd: '..',
+    stdio: 'pipe',
+  });
+}
+
 export function resetCatalog(): void {
   const sql = [
     "DELETE FROM cabinet WHERE site_id IN (SELECT id FROM site WHERE code LIKE 'E2E-%')",

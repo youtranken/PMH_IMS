@@ -12,6 +12,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { AuditInterceptor } from './modules/audit/audit.interceptor';
 import { AuthModule } from './modules/auth/auth.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
+import { DevicesModule } from './modules/devices/devices.module';
 import { CsrfGuard } from './modules/auth/csrf.guard';
 import { RolesGuard } from './modules/auth/roles.guard';
 import { SessionGuard } from './modules/auth/session.guard';
@@ -56,6 +57,7 @@ import { UsersModule } from './modules/users/users.module';
     UsersModule,
     AuthModule,
     CatalogModule,
+    DevicesModule,
     FilesModule,
     MailModule,
   ],

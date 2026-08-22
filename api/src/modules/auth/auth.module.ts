@@ -10,6 +10,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { KnownDeviceService } from './known-device.service';
 import { PasswordService } from './password.service';
+import { LoginRateGuard } from './login-rate.guard';
 import { SessionService } from './session.service';
 import { TotpService } from './totp.service';
 
@@ -21,6 +22,7 @@ import { TotpService } from './totp.service';
   imports: [UsersModule, AuditModule, OutboxModule],
   controllers: [AuthController, AccountsController],
   providers: [
+    LoginRateGuard,
     AuthService,
     AccountsService,
     SessionService,

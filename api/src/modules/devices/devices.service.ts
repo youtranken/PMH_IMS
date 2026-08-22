@@ -1,0 +1,397 @@
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { and, asc, count, desc, eq, ne, or, sql, type SQL } from 'drizzle-orm';
+import { DRIZZLE_DB } from '../../database/database.module';
+import type { Database } from '../../database/database.module';
+import type { Tx } from '../../common/tx';
+import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
+import { escapeLike, pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
+import { AuditWriterService } from '../audit/audit-writer.service';
+import { CatalogApiService } from '../catalog/catalog.api';
+import { diffDevice, hasChanges, type DeviceChanges } from './device-changes';
+import { deviceHistoryTable, deviceTable } from './devices.schema';
+import type {
+  DeviceFilter,
+  DeviceHistoryRecord,
+  DeviceListItem,
+  DeviceRecord,
+  DeviceStatus,
+  DeviceWriteResult,
+} from './devices.types';
+
+export interface DeviceInput {
+  code?: string;
+  name?: string;
+  deviceTypeId?: string;
+  model?: string | null;
+  serial?: string | null;
+  siteId?: string | null;
+  cabinetId?: string | null;
+  vendorId?: string | null;
+  assignedTo?: string | null;
+  department?: string | null;
+  purchaseDate?: string | null;
+  warrantyStart?: string | null;
+  warrantyEnd?: string | null;
+  status?: DeviceStatus;
+  note?: string | null;
+}
+
+/**
+ * Chủ sở hữu `device` + `device_history` (AD-3).
+ * Danh mục lấy qua `CatalogApiService` — KHÔNG join sang bảng site/cabinet/... (AD-2).
+ */
+@Injectable()
+export class DevicesService {
+  constructor(
+    @Inject(DRIZZLE_DB) private readonly db: Database,
+    private readonly catalog: CatalogApiService,
+    private readonly audit: AuditWriterService,
+  ) {}
+
+  // ─────────────────────────── Đọc ───────────────────────────
+
+  async list(query: PageQuery, filter: DeviceFilter): Promise<Page<DeviceListItem>> {
+    const where = buildWhere(filter);
+    const [rows, totalRows] = await Promise.all([
+      this.db
+        .select()
+        .from(deviceTable)
+        .where(where)
+        .orderBy(asc(deviceTable.code))
+        .limit(query.limit)
+        .offset(pageOffset(query)),
+      this.db.select({ value: count() }).from(deviceTable).where(where),
+    ]);
+    return {
+      items: await this.decorate(rows),
+      total: Number(totalRows[0]?.value ?? 0),
+    };
+  }
+
+  /** Toàn bộ kết quả theo bộ lọc, KHÔNG phân trang — chỉ dùng cho export xlsx (FR-028). */
+  async listAll(filter: DeviceFilter): Promise<DeviceListItem[]> {
+    const rows = await this.db
+      .select()
+      .from(deviceTable)
+      .where(buildWhere(filter))
+      .orderBy(asc(deviceTable.code));
+    return this.decorate(rows);
+  }
+
+  async findOne(id: string): Promise<DeviceListItem> {
+    const rows = await this.db.select().from(deviceTable).where(eq(deviceTable.id, id));
+    if (rows.length === 0) {
+      throw new NotFoundException({
+        code: 'DEVICE_NOT_FOUND',
+        message: 'Không tìm thấy thiết bị này.',
+      });
+    }
+    return (await this.decorate(rows))[0];
+  }
+
+  async history(deviceId: string): Promise<DeviceHistoryRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(deviceHistoryTable)
+      .where(eq(deviceHistoryTable.deviceId, deviceId))
+      .orderBy(desc(deviceHistoryTable.createdAt))
+      .limit(200);
+    return rows as DeviceHistoryRecord[];
+  }
+
+  // ─────────────────────────── Ghi ───────────────────────────
+
+  async create(actor: string, input: DeviceInput): Promise<DeviceWriteResult> {
+    const values = await this.prepare(input, null);
+    const warnings = await this.serialWarnings(values.serial as string | null, null);
+
+    const device = await this.db.transaction(async (tx) => {
+      const created = await this.insertWithin(tx, values);
+      await this.recordWithin(tx, actor, created.id, 'created', {
+        code: { before: null, after: created.code },
+      });
+      return created;
+    });
+    return { device, warnings };
+  }
+
+  async update(actor: string, id: string, input: DeviceInput): Promise<DeviceWriteResult> {
+    const before = await this.requireRow(id);
+    const values = await this.prepare(input, id);
+    const changes = diffDevice(before, values);
+    const warnings =
+      values.serial !== undefined
+        ? await this.serialWarnings(values.serial as string | null, id)
+        : [];
+
+    if (!hasChanges(changes)) {
+      // Không đổi gì thì KHÔNG ghi lịch sử: bấm Lưu hai lần không được đẻ ra hai dòng
+      // "đã sửa" rỗng làm loãng tab Lịch sử (FR-007).
+      return { device: toRecord(before), warnings };
+    }
+
+    const device = await this.db.transaction(async (tx) => {
+      const updated = await this.updateWithin(tx, id, values);
+      await this.recordWithin(tx, actor, id, 'updated', changes);
+      return updated;
+    });
+    return { device, warnings };
+  }
+
+  /**
+   * Đổi trạng thái (AC 2.2 "thiết bị khóa được, không xóa"). `retired` = đã thanh lý:
+   * hồ sơ khóa lại, không sửa được nữa nhưng vẫn tra cứu và vẫn nằm trong sổ.
+   */
+  async setStatus(actor: string, id: string, status: DeviceStatus): Promise<void> {
+    const before = await this.requireRow(id);
+    if (before.status === status) return;
+    await this.db.transaction(async (tx) => {
+      await this.updateWithin(tx, id, { status });
+      await this.recordWithin(tx, actor, id, 'status-changed', {
+        status: { before: before.status, after: status },
+      });
+    });
+  }
+
+  async recordWithin(
+    tx: Tx,
+    actor: string,
+    deviceId: string,
+    action: string,
+    changes: DeviceChanges | Record<string, unknown>,
+  ): Promise<void> {
+    await tx.insert(deviceHistoryTable).values({ deviceId, action, actor, changes });
+    await this.audit.appendWithin(tx, {
+      actor,
+      action: `device.${action}`,
+      objectType: 'device',
+      objectId: deviceId,
+      detail: changes,
+    });
+  }
+
+  /** Dùng chung cho import hàng loạt (story 2.6) — đã có transaction bao ngoài. */
+  async insertWithin(tx: Tx, values: Record<string, unknown>): Promise<DeviceRecord> {
+    try {
+      const rows = await tx.insert(deviceTable).values(values as never).returning();
+      return toRecord(rows[0]);
+    } catch (error) {
+      throw this.translateWriteError(error);
+    }
+  }
+
+  async updateWithin(
+    tx: Tx,
+    id: string,
+    values: Record<string, unknown>,
+  ): Promise<DeviceRecord> {
+    try {
+      const rows = await tx
+        .update(deviceTable)
+        .set({ ...values, updatedAt: new Date() })
+        .where(eq(deviceTable.id, id))
+        .returning();
+      return toRecord(rows[0]);
+    } catch (error) {
+      throw this.translateWriteError(error);
+    }
+  }
+
+  // ─────────────────────────── Nội bộ ───────────────────────────
+
+  /** Gắn tên danh mục cho một trang kết quả — MỘT lượt đọc danh mục, không N+1. */
+  private async decorate(rows: (typeof deviceTable.$inferSelect)[]): Promise<DeviceListItem[]> {
+    if (rows.length === 0) return [];
+    const lists = await this.catalog.lists({ includeInactive: true });
+    const types = new Map(lists.deviceTypes.map((t) => [t.id, t]));
+    const sites = new Map(lists.sites.map((s) => [s.id, s]));
+    const cabinets = new Map(lists.cabinets.map((c) => [c.id, c]));
+    const vendors = new Map(lists.vendors.map((v) => [v.id, v]));
+
+    return rows.map((row) => {
+      const type = types.get(row.deviceTypeId);
+      return {
+        ...toRecord(row),
+        // Danh mục bị xóa lỗi nào đó vẫn không được làm sập màn danh sách.
+        deviceTypeName: type?.name ?? '(không rõ loại)',
+        hasPortMap: type?.hasPortMap ?? false,
+        siteCode: row.siteId ? (sites.get(row.siteId)?.code ?? null) : null,
+        cabinetCode: row.cabinetId ? (cabinets.get(row.cabinetId)?.code ?? null) : null,
+        vendorName: row.vendorId ? (vendors.get(row.vendorId)?.name ?? null) : null,
+      };
+    });
+  }
+
+  /**
+   * Chuẩn hóa đầu vào + kiểm tra tham chiếu danh mục. Chỉ trả về những trường CÓ MẶT trong
+   * `input`: sửa một trường không được âm thầm xóa những trường không gửi lên.
+   */
+  private async prepare(
+    input: DeviceInput,
+    id: string | null,
+  ): Promise<Record<string, unknown>> {
+    const values: Record<string, unknown> = {};
+    const put = (key: string, value: unknown) => {
+      if (value !== undefined) values[key] = value;
+    };
+
+    put('code', input.code === undefined ? undefined : requireText(input.code, 'Mã thiết bị'));
+    put('name', input.name === undefined ? undefined : requireText(input.name, 'Tên thiết bị'));
+    put('deviceTypeId', input.deviceTypeId);
+    put('model', text(input.model));
+    put('serial', text(input.serial));
+    put('siteId', input.siteId === undefined ? undefined : (input.siteId || null));
+    put('cabinetId', input.cabinetId === undefined ? undefined : (input.cabinetId || null));
+    put('vendorId', input.vendorId === undefined ? undefined : (input.vendorId || null));
+    put('assignedTo', text(input.assignedTo));
+    put('department', text(input.department));
+    put('purchaseDate', dateOnly(input.purchaseDate, 'Ngày mua'));
+    put('warrantyStart', dateOnly(input.warrantyStart, 'Bảo hành từ'));
+    put('warrantyEnd', dateOnly(input.warrantyEnd, 'Bảo hành đến'));
+    put('status', input.status);
+    put('note', text(input.note));
+
+    if (id === null) {
+      for (const required of ['code', 'name', 'deviceTypeId'] as const) {
+        if (values[required] === undefined) {
+          throw new BadRequestException({
+            code: 'FIELD_REQUIRED',
+            message: `Thiếu ${LABEL[required]}.`,
+          });
+        }
+      }
+    }
+
+    // Ngày bảo hành: kiểm ở đây để báo tiếng Việt tử tế thay vì để CHECK constraint
+    // ném ra một câu SQL. Phải ghép với giá trị ĐANG CÓ khi người dùng chỉ sửa một đầu.
+    const current = id ? await this.requireRow(id) : null;
+    const start = (values.warrantyStart ?? current?.warrantyStart ?? null) as string | null;
+    const end = (values.warrantyEnd ?? current?.warrantyEnd ?? null) as string | null;
+    if (start && end && end < start) {
+      throw new BadRequestException({
+        code: 'WARRANTY_RANGE_INVALID',
+        message: 'Ngày kết thúc bảo hành phải sau ngày bắt đầu.',
+      });
+    }
+
+    const errors = await this.catalog.validateRefs({
+      siteId: (values.siteId ?? current?.siteId ?? null) as string | null,
+      cabinetId: (values.cabinetId ?? current?.cabinetId ?? null) as string | null,
+      deviceTypeId: (values.deviceTypeId ?? current?.deviceTypeId ?? null) as string | null,
+      vendorId: (values.vendorId ?? current?.vendorId ?? null) as string | null,
+    });
+    if (errors.length > 0) {
+      throw new BadRequestException({ code: 'CATALOG_REF_INVALID', message: errors.join(' ') });
+    }
+    return values;
+  }
+
+  /** Serial trùng chỉ CẢNH BÁO, không chặn (AC 2.2). */
+  private async serialWarnings(serial: string | null, excludeId: string | null): Promise<string[]> {
+    if (!serial) return [];
+    const rows = await this.db
+      .select({ code: deviceTable.code })
+      .from(deviceTable)
+      .where(
+        and(
+          sql`lower(${deviceTable.serial}) = lower(${serial})`,
+          excludeId ? ne(deviceTable.id, excludeId) : undefined,
+        ),
+      )
+      .limit(5);
+    if (rows.length === 0) return [];
+    return [
+      `Serial "${serial}" đang trùng với ${rows.map((r) => r.code).join(', ')}. Vẫn lưu được — kiểm lại tem thiết bị cho chắc.`,
+    ];
+  }
+
+  private async requireRow(id: string): Promise<typeof deviceTable.$inferSelect> {
+    const rows = await this.db.select().from(deviceTable).where(eq(deviceTable.id, id));
+    if (rows.length === 0) {
+      throw new NotFoundException({
+        code: 'DEVICE_NOT_FOUND',
+        message: 'Không tìm thấy thiết bị này.',
+      });
+    }
+    return rows[0];
+  }
+
+  private translateWriteError(error: unknown): unknown {
+    if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
+      return new ConflictException({
+        code: 'DEVICE_CODE_TAKEN',
+        message: 'Đã có thiết bị mang mã này (không phân biệt hoa-thường).',
+      });
+    }
+    return error;
+  }
+}
+
+const LABEL: Record<string, string> = {
+  code: 'mã thiết bị',
+  name: 'tên thiết bị',
+  deviceTypeId: 'loại thiết bị',
+};
+
+function buildWhere(filter: DeviceFilter): SQL | undefined {
+  const parts: (SQL | undefined)[] = [];
+  const term = filter.search?.trim();
+  if (term) {
+    const like = `%${escapeLike(term)}%`;
+    // Tra cứu thực tế: người ta gõ mã, tên, serial hoặc model — tìm cả bốn trong một ô.
+    parts.push(
+      or(
+        sql`${deviceTable.code}::text ILIKE ${like}`,
+        sql`${deviceTable.name} ILIKE ${like}`,
+        sql`${deviceTable.serial} ILIKE ${like}`,
+        sql`${deviceTable.model} ILIKE ${like}`,
+      ),
+    );
+  }
+  if (filter.siteId) parts.push(eq(deviceTable.siteId, filter.siteId));
+  if (filter.cabinetId) parts.push(eq(deviceTable.cabinetId, filter.cabinetId));
+  if (filter.deviceTypeId) parts.push(eq(deviceTable.deviceTypeId, filter.deviceTypeId));
+  if (filter.status) parts.push(eq(deviceTable.status, filter.status));
+  const defined = parts.filter((part): part is SQL => part !== undefined);
+  return defined.length > 0 ? and(...defined) : undefined;
+}
+
+function toRecord(row: typeof deviceTable.$inferSelect): DeviceRecord {
+  return { ...row, status: row.status as DeviceStatus };
+}
+
+function text(value: string | null | undefined): string | null | undefined {
+  if (value === undefined) return undefined;
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function dateOnly(
+  value: string | null | undefined,
+  label: string,
+): string | null | undefined {
+  if (value === undefined) return undefined;
+  const trimmed = value?.trim();
+  if (!trimmed) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    throw new BadRequestException({
+      code: 'DATE_INVALID',
+      message: `${label} phải là ngày hợp lệ.`,
+    });
+  }
+  return trimmed;
+}
+
+function requireText(value: string, label: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new BadRequestException({ code: 'FIELD_REQUIRED', message: `Thiếu ${label}.` });
+  }
+  return trimmed;
+}

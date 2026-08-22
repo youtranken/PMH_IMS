@@ -24,7 +24,11 @@ module.exports = {
       from: { path: `^src/modules/(${BIZ})/` },
       to: {
         path: `^src/modules/(${BIZ})/`,
-        pathNot: [`^src/modules/(${BIZ})/[^/]+\.api\.ts$`, '^src/modules/([^/]+)/\1'],
+        // `$1` = tên module ở vế `from` (group matching của dependency-cruiser):
+        // import TRONG CÙNG module luôn hợp lệ, chỉ sang module KHÁC mới phải qua *.api.ts.
+        // (Bản cũ viết '\1' — backreference của regex, không phải cú pháp group matching —
+        //  nên luật bắt nhầm mọi import nội bộ ngay khi module nghiệp vụ đầu tiên ra đời.)
+        pathNot: [`^src/modules/(${BIZ})/[^/]+\.api\.ts$`, '^src/modules/$1/'],
       },
     },
     {

@@ -7,14 +7,15 @@ import {
   Req,
   Res,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { Throttle } from '@nestjs/throttler';
 import { Audited } from '../audit/audited.decorator';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { AuthService } from './auth.service';
 import { ChangePasswordDto, LoginDto, TotpTokenDto } from './auth.dto';
 import { clearSessionCookie, setSessionCookie } from './cookie';
+import { LoginRateGuard } from './login-rate.guard';
 import { Public } from './public.decorator';
 import { Roles } from './roles.decorator';
 import { SessionService } from './session.service';
@@ -32,11 +33,11 @@ export class AuthController {
   ) {}
 
   /**
-   * Bước 1: mật khẩu. Rate-limit theo IP (NFR-01) do ThrottlerGuard áp ở tầng app;
-   * ở đây siết chặt hơn cho riêng endpoint đăng nhập.
+   * Bước 1: mật khẩu. Rate-limit theo IP (NFR-01) — ngưỡng đọc từ `system_config`
+   * khóa `login.rate_limit_per_ip` qua LoginRateGuard, KHÔNG viết cứng ở đây (AD-11).
    */
   @Public()
-  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @UseGuards(LoginRateGuard)
   @Post('login')
   @HttpCode(200)
   async login(
