@@ -47,14 +47,14 @@ export class AccountsController {
 
   @Roles('sa')
   @Post()
-  @Audited('account.created', 'user')
+  @Audited('account.created', 'user', { writtenByService: true })
   create(@Body() dto: CreateUserDto, @Req() req: AuthedRequest) {
     return this.accounts.create(actor(req), dto);
   }
 
   @Roles('sa')
   @Patch(':id/status')
-  @Audited('account.status.changed', 'user')
+  @Audited('account.status.changed', 'user', { writtenByService: true })
   async setStatus(
     @Param('id') id: string,
     @Body() dto: StatusDto,
@@ -66,14 +66,14 @@ export class AccountsController {
 
   @Roles('sa')
   @Post(':id/reset-password')
-  @Audited('account.password.reset', 'user')
+  @Audited('account.password.reset', 'user', { writtenByService: true })
   resetPassword(@Param('id') id: string, @Req() req: AuthedRequest) {
     return this.accounts.resetPassword(actor(req), id);
   }
 
   @Roles('sa')
   @Post(':id/reset-totp')
-  @Audited('account.mfa.reset', 'user')
+  @Audited('account.mfa.reset', 'user', { writtenByService: true })
   async resetTotp(@Param('id') id: string, @Req() req: AuthedRequest) {
     await this.accounts.resetTotp(actor(req), id);
     return { status: 'reset' };
@@ -81,7 +81,7 @@ export class AccountsController {
 
   @Roles('sa')
   @Patch(':id/totp-login-required')
-  @Audited('account.totp_login_required.changed', 'user')
+  @Audited('account.totp_login_required.changed', 'user', { writtenByService: true })
   async setTotpRequired(
     @Param('id') id: string,
     @Body() dto: TotpRequiredDto,
@@ -99,7 +99,7 @@ export class AccountsController {
 
   @Roles('sa')
   @Post('sessions/:sessionId/kill')
-  @Audited('session.killed', 'session')
+  @Audited('session.killed', 'session', { writtenByService: true })
   async killSession(@Param('sessionId') sessionId: string, @Req() req: AuthedRequest) {
     await this.accounts.killSession(actor(req), sessionId);
     return { status: 'killed' };

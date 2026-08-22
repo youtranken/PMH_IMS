@@ -54,6 +54,7 @@
 | `MasterKeyRing` | `common/crypto/master-key-ring.ts` | Chùm chìa + xoay version | — |
 | `ExcelExportService` | `common/excel/excel-export.service.ts` | FR-028 — mọi bảng; `buildWorkbook` cho file nhiều sheet | Cấm import `exceljs` trực tiếp (eslint chặn) |
 | `ExcelImportService` | `common/excel/excel-import.service.ts` | Nơi DUY NHẤT ĐỌC file xlsx (import danh mục 2.1, thiết bị 2.6) | Trả chuỗi thô; hiểu nghĩa là việc của lõi `plan*Import` thuần |
+| `requireXlsx`, `sendXlsx`, `XLSX_UPLOAD_LIMIT` | `common/excel/xlsx-http.ts` | Endpoint nhận/gửi file xlsx (danh mục, thiết bị, và mọi màn export sau này) | Không copy hàm kiểm magic-byte ra controller riêng |
 | `import-plan.ts` (`pickCell`, `parseDateCell`, `normalizeKey`…) | `common/import-plan.ts` | Nền chung của MỌI bộ import: khớp tên cột, đọc ngày kiểu VN, nhận dòng VÍ DỤ | Không tự viết lại parser cột/ngày cho từng màn |
 | `parsePageQuery`, `Page<T>` | `common/pagination.ts` | Mọi endpoint danh sách | Shape trả về luôn là `{ items, total }` |
 | `Tx`, `WriteFn` | `common/tx.ts` | Mọi hàm ghi (AD-5) | `tx` là tham số đầu, không dùng ALS |

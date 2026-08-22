@@ -125,11 +125,77 @@ describe('planDeviceImport — đối chiếu file thiết bị trước khi ghi
     ['dự phòng', 'spare'],
     ['HỎNG', 'broken'],
     ['Đã thanh lý', 'retired'],
-    ['', 'in_use'],
   ])('trạng thái "%s" → %s', (input, expected) => {
     const plan = planDeviceImport(sheet([{ ...MINIMAL, 'Trạng thái': input }]), context());
     expect(plan.rows[0].action).toBe('create');
     expect(plan.rows[0].values).toMatchObject({ status: expected });
+  });
+
+  /**
+   * Ô Trạng thái để trống KHÔNG được ép về "Đang dùng": file sửa tay bỏ trống một ô sẽ
+   * âm thầm hồi sinh thiết bị đã thanh lý và đẩy nó về lại danh sách nhắc bảo hành.
+   */
+  it('ô Trạng thái để trống = không đụng tới trạng thái đang có', () => {
+    const plan = planDeviceImport(
+      sheet([{ ...MINIMAL, 'Trạng thái': '' }]),
+      context({ devices: new Map([['sw-core-01', existing({ status: 'retired' })]]) }),
+    );
+    expect(plan.rows[0].values).not.toHaveProperty('status');
+    expect(plan.summary).toMatchObject({ unchanged: 1, update: 0 });
+  });
+
+  it('thiết bị MỚI mà bỏ trống Trạng thái thì để DB dùng mặc định', () => {
+    const plan = planDeviceImport(sheet([{ ...MINIMAL, 'Trạng thái': '' }]), context());
+    expect(plan.rows[0].action).toBe('create');
+    expect(plan.rows[0].values).not.toHaveProperty('status');
+  });
+
+  /**
+   * Finding của code review Epic 2: file chỉ có cột Site (không có cột Tủ) mà đổi site thì
+   * thiết bị giữ nguyên tủ của site CŨ — sai lặng lẽ, form nhập tay chặn còn import thì không.
+   */
+  it('đổi site mà giữ tủ của site cũ = lỗi, đúng như form nhập tay', () => {
+    const ctx = context();
+    ctx.catalog.sites.set('pmh-nm', { id: 'site-nm', code: 'PMH-NM' });
+    const plan = planDeviceImport(
+      sheet([{ ...MINIMAL, Site: 'PMH-NM' }]),
+      {
+        ...ctx,
+        devices: new Map([
+          ['sw-core-01', existing({ siteId: SITE_HO.id, cabinetId: CABINET_R01.id })],
+        ]),
+      },
+    );
+    expect(plan.rows[0].action).toBe('error');
+    expect(plan.rows[0].message).toContain('không thuộc site');
+  });
+
+  it('xóa site mà vẫn giữ tủ = lỗi, không để thiết bị có tủ mà không có site', () => {
+    const plan = planDeviceImport(
+      sheet([{ ...MINIMAL, Site: '' }]),
+      context({
+        devices: new Map([
+          ['sw-core-01', existing({ siteId: SITE_HO.id, cabinetId: CABINET_R01.id })],
+        ]),
+      }),
+    );
+    expect(plan.rows[0].action).toBe('error');
+    expect(plan.rows[0].message).toContain('Site');
+  });
+
+  /**
+   * Finding của code review: file chỉ sửa MỘT đầu ngày bảo hành vẫn có thể tạo ra khoảng
+   * ngược khi ghép với giá trị đang có — trước đây lọt xuống DB và bung 500 không rõ dòng nào.
+   */
+  it('sửa một đầu ngày bảo hành thành khoảng ngược = lỗi ngay ở bảng đối chiếu', () => {
+    const plan = planDeviceImport(
+      sheet([{ ...MINIMAL, 'Bảo hành đến': '01/01/2025' }]),
+      context({
+        devices: new Map([['sw-core-01', existing({ warrantyStart: '2026-01-01' })]]),
+      }),
+    );
+    expect(plan.rows[0].action).toBe('error');
+    expect(plan.rows[0].message).toContain('Bảo hành');
   });
 
   it('trạng thái lạ = lỗi kèm danh sách giá trị hợp lệ', () => {

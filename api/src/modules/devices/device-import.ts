@@ -22,8 +22,8 @@ import type { DeviceStatus } from './devices.types';
 /** Ảnh chụp danh mục để tra id theo mã/tên người dùng gõ (đã chuẩn hóa khóa). */
 export interface DeviceImportCatalog {
   sites: Map<string, { id: string; code: string }>;
-  /** Khóa: `${siteKey} ${cabinetKey}`. */
-  cabinets: Map<string, { id: string; code: string; siteId: string }>;
+  /** Khóa: `${siteKey} ${cabinetKey}` — mã tủ chỉ duy nhất trong một site. */
+  cabinets: Map<string, { id: string; code: string; siteId: string; siteCode?: string }>;
   deviceTypes: Map<string, { id: string; name: string }>;
   vendors: Map<string, { id: string; name: string }>;
 }
@@ -244,7 +244,10 @@ function planRow(
 
       case 'status': {
         if (text === '') {
-          values.status = 'in_use';
+          // KHÔNG ép về 'in_use': cột có mà ô trống thì để nguyên trạng thái đang có.
+          // Ép ở đây là file sửa tay bỏ trống một ô sẽ âm thầm "hồi sinh" thiết bị đã
+          // thanh lý và đẩy nó trở lại danh sách nhắc bảo hành (code review Epic 2).
+          // Thiết bị mới thì DB tự dùng mặc định 'in_use'.
           break;
         }
         const status = STATUS_ALIASES[normalizeKey(text)];
@@ -352,18 +355,6 @@ function planRow(
     }
   }
 
-  // Bảo hành ngược ngày là lỗi gõ — bắt ở đây để nêu rõ dòng nào, thay vì để DB ném ra.
-  const start = values.warrantyStart as string | null | undefined;
-  const end = values.warrantyEnd as string | null | undefined;
-  if (start && end && end < start) {
-    return {
-      ...base,
-      action: 'error',
-      label,
-      message: 'Bảo hành đến sớm hơn Bảo hành từ — kiểm lại hai cột ngày.',
-    };
-  }
-
   const key = normalizeKey(String(values.code));
   if (seen.has(key)) {
     return {
@@ -376,6 +367,55 @@ function planRow(
   seen.add(key);
 
   const existing = context.devices.get(key);
+
+  /*
+   * Kiểm tra phải chạy trên GIÁ TRỊ SAU KHI GHÉP với hồ sơ đang có, không chỉ trên các ô
+   * có mặt trong file. File chỉ có cột Site (không có cột Tủ) mà đổi sang site khác thì
+   * thiết bị sẽ mang tủ của site cũ — form nhập chặn chuyện này, import cũng phải chặn.
+   * Cùng lẽ đó với cặp ngày bảo hành: file chỉ sửa một đầu vẫn có thể thành khoảng ngược.
+   * (Trước đây hai lỗi này lọt xuống DB: một cái sai lặng lẽ, một cái bung 500 không rõ dòng.)
+   */
+  const effective = <T,>(field: string, fallback: T): T =>
+    (field in values ? (values[field] as T) : fallback);
+
+  const siteId = effective<string | null>('siteId', existing?.siteId ?? null);
+  const cabinetId = effective<string | null>('cabinetId', existing?.cabinetId ?? null);
+  if (cabinetId) {
+    const cabinet = [...context.catalog.cabinets.values()].find(
+      (item) => item.id === cabinetId,
+    );
+    if (!cabinet) {
+      return { ...base, action: 'error', label, message: 'Tủ mạng không còn tồn tại.' };
+    }
+    if (!siteId) {
+      return {
+        ...base,
+        action: 'error',
+        label,
+        message: `Thiết bị đang gắn tủ "${cabinet.code}" mà không có site. Ghi cột Site, hoặc bỏ trống cột Tủ mạng.`,
+      };
+    }
+    if (cabinet.siteId !== siteId) {
+      return {
+        ...base,
+        action: 'error',
+        label,
+        message: `Tủ "${cabinet.code}" không thuộc site đã ghi. Sửa cột Site hoặc cột Tủ mạng cho khớp nhau.`,
+      };
+    }
+  }
+
+  const start = effective<string | null>('warrantyStart', existing?.warrantyStart ?? null);
+  const end = effective<string | null>('warrantyEnd', existing?.warrantyEnd ?? null);
+  if (start && end && end < start) {
+    return {
+      ...base,
+      action: 'error',
+      label,
+      message: `Bảo hành đến (${end}) sớm hơn Bảo hành từ (${start}) — kiểm lại hai cột ngày.`,
+    };
+  }
+
   if (!existing) {
     return { ...base, action: 'create', label, values };
   }

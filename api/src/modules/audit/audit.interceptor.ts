@@ -34,7 +34,10 @@ export class AuditInterceptor implements NestInterceptor {
       AUDITED_KEY,
       [context.getHandler(), context.getClass()],
     );
-    if (!meta) {
+    // Không khai @Audited → route không phải loại ghi, bỏ qua.
+    // Khai kèm `writtenByService` → service đã ghi dòng chi tiết TRONG transaction rồi,
+    // ghi thêm ở đây chỉ tạo dòng thứ hai chung chung làm loãng nhật ký.
+    if (!meta || meta.writtenByService) {
       return next.handle();
     }
     const request = context.switchToHttp().getRequest<AuthedRequest>();

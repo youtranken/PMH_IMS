@@ -34,13 +34,17 @@ export type DateCell = { ok: true; value: string | null } | { ok: false };
 export const EXAMPLE_HEADERS = ['ghi chú nhập', 'ghi chu nhap'];
 
 /**
- * Bỏ dấu tiếng Việt — CHỈ dùng để so tên cột/nhãn, KHÔNG dùng cho dữ liệu lưu xuống DB.
- * Dải dấu phụ Unicode viết bằng escape, không viết ký tự tổ hợp trần trong mã nguồn.
+ * Dải dấu thanh/dấu phụ Unicode dùng cho `stripDiacritics`. Dựng bằng `new RegExp` từ CHUỖI ESCAPE, không viết ký tự
+ * tổ hợp trần trong mã nguồn: editor hay formatter nào chuẩn hóa/nuốt mất mấy ký tự đó là
+ * toàn bộ việc khớp tên cột không dấu im lặng ngừng hoạt động (code review Epic 2).
  */
+const COMBINING_MARKS = new RegExp('[\u0300-\u036f]', 'g');
+
+/** Bỏ dấu tiếng Việt — CHỈ để so tên cột/nhãn, KHÔNG dùng cho dữ liệu lưu xuống DB. */
 export function stripDiacritics(value: string): string {
   return value
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(COMBINING_MARKS, '')
     .replace(/đ/g, 'd')
     .replace(/Đ/g, 'D');
 }

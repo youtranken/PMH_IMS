@@ -12,6 +12,7 @@ import {
   type DeviceImportContext,
   type DeviceImportPlan,
 } from './device-import';
+import { diffDevice } from './device-changes';
 import { deviceExportSheets, deviceTemplateSheets } from './device-template';
 import { deviceTable } from './devices.schema';
 import { DevicesService } from './devices.service';
@@ -54,8 +55,15 @@ export class DeviceImportService {
   }
 
   async preview(buffer: Buffer): Promise<DeviceImportPlan> {
+    return this.planFrom(buffer, await this.context());
+  }
+
+  private async planFrom(
+    buffer: Buffer,
+    context: DeviceImportContext,
+  ): Promise<DeviceImportPlan> {
     const sheets = await this.excelIn.read(buffer);
-    const plan = planDeviceImport(sheets, await this.context());
+    const plan = planDeviceImport(sheets, context);
     if (!plan.hasRecognizedSheet) {
       throw new BadRequestException({
         code: 'DEVICE_FILE_UNRECOGNIZED',
@@ -71,7 +79,10 @@ export class DeviceImportService {
    * không được ở lại. Nhập 300 thiết bị mà thành công một nửa thì không ai biết phải làm gì tiếp.
    */
   async commit(actor: string, buffer: Buffer): Promise<DeviceImportResult> {
-    const plan = await this.preview(buffer);
+    // Dựng context MỘT LẦN rồi dùng cho cả đối chiếu lẫn việc ghi lịch sử: hồ sơ "trước khi
+    // sửa" đã nằm sẵn trong đó, không phải đọc lại DB.
+    const context = await this.context();
+    const plan = await this.planFrom(buffer, context);
     if (plan.summary.error > 0) {
       throw new BadRequestException({
         code: 'DEVICE_IMPORT_HAS_ERRORS',
@@ -95,11 +106,18 @@ export class DeviceImportService {
             code: { before: null, after: device.code },
           });
         } else {
+          const before = context.devices.get(normalizeKey(row.label));
           await this.devices.updateWithin(tx, row.existingId!, values);
           updated += 1;
-          await this.devices.recordWithin(tx, actor, row.existingId!, 'imported-update', {
-            code: { before: row.label, after: row.label },
-          });
+          // FR-007: tab Lịch sử phải trả lời "ai ĐỔI GÌ". Ghi `mã: SW-01 → SW-01` thì
+          // dòng lịch sử tồn tại mà vô dụng — dùng đúng bộ so của luồng sửa tay.
+          await this.devices.recordWithin(
+            tx,
+            actor,
+            row.existingId!,
+            'imported-update',
+            diffDevice((before ?? {}) as unknown as Record<string, unknown>, values),
+          );
         }
       }
       // AC 2.6: kết quả import ghi audit KÈM SỐ DÒNG — sau này còn đối chiếu được
@@ -122,10 +140,16 @@ export class DeviceImportService {
     return { plan, ...counts };
   }
 
-  /** Ảnh chụp danh mục + kho thiết bị để đối chiếu file. */
+  /**
+   * Ảnh chụp danh mục + kho thiết bị để đối chiếu file.
+   *
+   * Danh mục lấy nguyên `CatalogApiService.snapshot()` — KHÔNG tự dựng lại map ở đây.
+   * Luật đặt khóa (nhất là khóa ghép `site + tủ`) phải chỉ có MỘT bản: hai bản thì sửa
+   * một chỗ là import danh mục đúng còn import thiết bị lệch (AD-15).
+   */
   private async context(): Promise<DeviceImportContext> {
-    const [lists, rows] = await Promise.all([
-      this.catalog.lists({ includeInactive: true }),
+    const [catalog, rows] = await Promise.all([
+      this.catalog.snapshot(),
       // Cả kho, kể cả thiết bị đã thanh lý: import trùng mã phải nhận ra là CẬP NHẬT,
       // không được tạo bản ghi thứ hai cùng mã (unique constraint sẽ chặn, nhưng người
       // dùng đáng được thấy "cập nhật" ở bảng đối chiếu thay vì một lỗi khó hiểu).
@@ -133,17 +157,7 @@ export class DeviceImportService {
     ]);
 
     return {
-      catalog: {
-        sites: new Map(lists.sites.map((site) => [normalizeKey(site.code), site])),
-        cabinets: new Map(
-          lists.cabinets.map((cabinet) => [
-            `${normalizeKey(cabinet.siteCode)} ${normalizeKey(cabinet.code)}`,
-            cabinet,
-          ]),
-        ),
-        deviceTypes: new Map(lists.deviceTypes.map((type) => [normalizeKey(type.name), type])),
-        vendors: new Map(lists.vendors.map((vendor) => [normalizeKey(vendor.name), vendor])),
-      },
+      catalog,
       devices: new Map(rows.map((row) => [normalizeKey(row.code), row])),
     };
   }

@@ -85,7 +85,7 @@ export class AuthController {
   @Roles(...ALL_ROLES)
   @Post('totp/enroll')
   @HttpCode(200)
-  @Audited('auth.totp.enroll.start', 'user')
+  @Audited('auth.totp.enroll.start', 'user', { writtenByService: true })
   async startEnroll(@Req() req: AuthedRequest) {
     const user = req.user!;
     const { secret, qrDataUrl } = await this.auth.startTotpEnrollment(user.id);
@@ -97,7 +97,7 @@ export class AuthController {
   @Roles(...ALL_ROLES)
   @Post('totp/enroll/confirm')
   @HttpCode(200)
-  @Audited('auth.totp.enroll.done', 'user')
+  @Audited('auth.totp.enroll.done', 'user', { writtenByService: true })
   async confirmEnroll(
     @Body() dto: TotpTokenDto,
     @Req() req: AuthedRequest,
@@ -127,7 +127,7 @@ export class AuthController {
   @Roles(...ALL_ROLES)
   @Post('change-password')
   @HttpCode(200)
-  @Audited('auth.password.changed', 'user')
+  @Audited('auth.password.changed', 'user', { writtenByService: true })
   async changePassword(@Body() dto: ChangePasswordDto, @Req() req: AuthedRequest) {
     const session = await this.requireSession(req);
     await this.auth.changePassword(session, dto.currentPassword, dto.newPassword);

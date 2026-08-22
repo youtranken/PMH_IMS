@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -25,6 +24,11 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { parsePageQuery } from '../../common/pagination';
+import {
+  requireXlsx,
+  sendXlsx,
+  XLSX_UPLOAD_LIMIT,
+} from '../../common/excel/xlsx-http';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
@@ -33,10 +37,6 @@ import { DevicePanelsService } from './device-panels.service';
 import { DevicePortsService } from './device-ports.service';
 import { DevicesService } from './devices.service';
 import { DEVICE_STATUSES, type DeviceStatus } from './devices.types';
-
-const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-/** Trần file thiết bị: vài nghìn dòng — 10MB đã quá rộng. */
-const IMPORT_LIMIT = { fileSize: 10 * 1024 * 1024 };
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
 const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
@@ -176,15 +176,15 @@ export class DevicesController {
   /** Bảng đối chiếu — KHÔNG ghi gì. */
   @Roles('sa', 'admin', 'member')
   @Post('import/preview')
-  @UseInterceptors(FileInterceptor('file', { limits: IMPORT_LIMIT }))
+  @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
   previewImport(@UploadedFile() file: Express.Multer.File | undefined) {
     return this.imports.preview(requireXlsx(file));
   }
 
   @Roles('sa', 'admin', 'member')
   @Post('import/commit')
-  @Audited('device.imported', 'device')
-  @UseInterceptors(FileInterceptor('file', { limits: IMPORT_LIMIT }))
+  @Audited('device.imported', 'device', { writtenByService: true })
+  @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
   commitImport(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Req() req: AuthedRequest,
@@ -216,14 +216,14 @@ export class DevicesController {
 
   @Roles('sa', 'admin', 'member')
   @Post()
-  @Audited('device.created', 'device')
+  @Audited('device.created', 'device', { writtenByService: true })
   create(@Body() body: DeviceBodyDto, @Req() req: AuthedRequest) {
     return this.devices.create(actor(req), body);
   }
 
   @Roles('sa', 'admin', 'member')
   @Patch(':id')
-  @Audited('device.updated', 'device')
+  @Audited('device.updated', 'device', { writtenByService: true })
   update(
     @Param() params: IdParamDto,
     @Body() body: DeviceBodyDto,
@@ -234,7 +234,7 @@ export class DevicesController {
 
   @Roles('sa', 'admin', 'member')
   @Patch(':id/status')
-  @Audited('device.status.changed', 'device')
+  @Audited('device.status-changed', 'device', { writtenByService: true })
   async setStatus(
     @Param() params: IdParamDto,
     @Body() body: StatusDto,
@@ -257,7 +257,7 @@ export class DevicesController {
 
   @Roles('sa', 'admin', 'member')
   @Post(':id/ports')
-  @Audited('device.port.added', 'device')
+  @Audited('device.port-added', 'device', { writtenByService: true })
   addPort(
     @Param() params: IdParamDto,
     @Body() body: PortBodyDto,
@@ -268,7 +268,7 @@ export class DevicesController {
 
   @Roles('sa', 'admin', 'member')
   @Patch(':id/ports/:portId')
-  @Audited('device.port.updated', 'device')
+  @Audited('device.port-updated', 'device', { writtenByService: true })
   updatePort(
     @Param() params: PortParamDto,
     @Body() body: PortBodyDto,
@@ -279,7 +279,7 @@ export class DevicesController {
 
   @Roles('sa', 'admin', 'member')
   @Delete(':id/ports/:portId')
-  @Audited('device.port.removed', 'device')
+  @Audited('device.port-removed', 'device', { writtenByService: true })
   async removePort(@Param() params: PortParamDto, @Req() req: AuthedRequest) {
     await this.ports.remove(actor(req), params.id, params.portId);
     return { status: 'deleted' };
@@ -290,39 +290,3 @@ function actor(req: AuthedRequest): string {
   return req.user!.email;
 }
 
-/**
- * Chỉ nhận .xlsx, kiểm bằng MAGIC BYTE (`PK`) chứ không tin Content-Type client gửi.
- * Cùng nguyên tắc với module files (NFR-9); đuôi file là lớp thứ hai vì zip nào cũng có magic đó.
- */
-function requireXlsx(file: Express.Multer.File | undefined): Buffer {
-  if (!file?.buffer?.length) {
-    throw new BadRequestException({
-      code: 'FILE_REQUIRED',
-      message: 'Chưa chọn file. Hãy tải file mẫu, điền rồi tải lên.',
-    });
-  }
-  const isZip =
-    file.buffer.length > 4 &&
-    file.buffer[0] === 0x50 &&
-    file.buffer[1] === 0x4b &&
-    file.buffer[2] === 0x03 &&
-    file.buffer[3] === 0x04;
-  const name = Buffer.from(file.originalname, 'latin1').toString('utf8').toLowerCase();
-  if (!isZip || !name.endsWith('.xlsx')) {
-    throw new BadRequestException({
-      code: 'UNSUPPORTED_FILE',
-      message: 'Chỉ nhận file .xlsx. File .xls đời cũ hãy mở bằng Excel rồi "Lưu thành" .xlsx.',
-    });
-  }
-  return file.buffer;
-}
-
-function sendXlsx(res: Response, buffer: Buffer, fileName: string): void {
-  res.setHeader('Content-Type', XLSX_MIME);
-  res.setHeader('Content-Length', String(buffer.length));
-  res.setHeader(
-    'Content-Disposition',
-    `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
-  );
-  res.end(buffer);
-}

@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -27,17 +26,17 @@ import {
 } from 'class-validator';
 import type { Response } from 'express';
 import { parsePageQuery } from '../../common/pagination';
+import {
+  requireXlsx,
+  sendXlsx,
+  XLSX_UPLOAD_LIMIT,
+} from '../../common/excel/xlsx-http';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { CatalogImportService } from './catalog-import.service';
 import { CatalogService } from './catalog.service';
 import { CATALOG_ENTITIES, type CatalogEntity } from './catalog.types';
-
-const XLSX_MIME =
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-/** Trần file danh mục: 4 sheet vài trăm dòng — 5MB đã là rộng rãi. */
-const IMPORT_LIMIT = { fileSize: 5 * 1024 * 1024 };
 
 class CatalogBodyDto {
   @IsOptional() @IsString() @Length(1, 40) code?: string;
@@ -81,6 +80,11 @@ class EntityIdParamDto extends EntityParamDto {
  * chỉ Admin/SA được SỬA — AC "Member chỉ xem, không sửa danh mục".
  * Mỗi route khai @Roles tường minh vì RolesGuard mặc định ĐÓNG (AD-9).
  */
+/*
+ * Ghi chú tên hành động: service ghi tên CỤ THỂ theo loại mục
+ * (`catalog.site.created`, `catalog.cabinet.updated`…) vì `:entity` chỉ biết lúc chạy;
+ * tên khai ở `@Audited` là tên HỌ, dùng để đọc controller biết route này có audit (AD-9).
+ */
 @Controller('api/v1/catalog')
 export class CatalogController {
   constructor(
@@ -119,7 +123,7 @@ export class CatalogController {
 
   @Roles('sa', 'admin')
   @Post(':entity')
-  @Audited('catalog.created', 'catalog')
+  @Audited('catalog.created', 'catalog', { writtenByService: true })
   create(
     @Param() params: EntityParamDto,
     @Body() body: CatalogBodyDto,
@@ -130,7 +134,7 @@ export class CatalogController {
 
   @Roles('sa', 'admin')
   @Patch(':entity/:id')
-  @Audited('catalog.updated', 'catalog')
+  @Audited('catalog.updated', 'catalog', { writtenByService: true })
   update(
     @Param() params: EntityIdParamDto,
     @Body() body: CatalogBodyDto,
@@ -141,7 +145,7 @@ export class CatalogController {
 
   @Roles('sa', 'admin')
   @Patch(':entity/:id/active')
-  @Audited('catalog.active.changed', 'catalog')
+  @Audited('catalog.active.changed', 'catalog', { writtenByService: true })
   async setActive(
     @Param() params: EntityIdParamDto,
     @Body() body: ActiveDto,
@@ -153,7 +157,7 @@ export class CatalogController {
 
   @Roles('sa', 'admin')
   @Delete(':entity/:id')
-  @Audited('catalog.deleted', 'catalog')
+  @Audited('catalog.deleted', 'catalog', { writtenByService: true })
   async remove(@Param() params: EntityIdParamDto, @Req() req: AuthedRequest) {
     await this.catalog.remove(actor(req), params.entity, params.id);
     return { status: 'deleted' };
@@ -162,15 +166,15 @@ export class CatalogController {
   /** Bảng đối chiếu — KHÔNG ghi gì (AC 2.1: chỉ khi xác nhận mới ghi). */
   @Roles('sa', 'admin')
   @Post('import/preview')
-  @UseInterceptors(FileInterceptor('file', { limits: IMPORT_LIMIT }))
+  @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
   preview(@UploadedFile() file: Express.Multer.File | undefined) {
     return this.imports.preview(requireXlsx(file));
   }
 
   @Roles('sa', 'admin')
   @Post('import/commit')
-  @Audited('catalog.imported', 'catalog')
-  @UseInterceptors(FileInterceptor('file', { limits: IMPORT_LIMIT }))
+  @Audited('catalog.imported', 'catalog', { writtenByService: true })
+  @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
   commit(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Req() req: AuthedRequest,
@@ -183,40 +187,3 @@ function actor(req: AuthedRequest): string {
   return req.user!.email;
 }
 
-/**
- * Chỉ nhận .xlsx. Kiểm bằng MAGIC BYTE (`PK\x03\x04`) chứ không tin Content-Type client gửi,
- * cùng nguyên tắc với module files (NFR-9); đuôi file thêm một lớp vì zip nào cũng có magic đó.
- */
-function requireXlsx(file: Express.Multer.File | undefined): Buffer {
-  if (!file?.buffer?.length) {
-    throw new BadRequestException({
-      code: 'FILE_REQUIRED',
-      message: 'Chưa chọn file. Hãy tải file mẫu, điền rồi tải lên.',
-    });
-  }
-  const isZip =
-    file.buffer.length > 4 &&
-    file.buffer[0] === 0x50 &&
-    file.buffer[1] === 0x4b &&
-    file.buffer[2] === 0x03 &&
-    file.buffer[3] === 0x04;
-  const name = Buffer.from(file.originalname, 'latin1').toString('utf8').toLowerCase();
-  if (!isZip || !name.endsWith('.xlsx')) {
-    throw new BadRequestException({
-      code: 'UNSUPPORTED_FILE',
-      message: 'Chỉ nhận file .xlsx. File .xls đời cũ hãy mở bằng Excel rồi "Lưu thành" .xlsx.',
-    });
-  }
-  return file.buffer;
-}
-
-function sendXlsx(res: Response, buffer: Buffer, fileName: string): void {
-  res.setHeader('Content-Type', XLSX_MIME);
-  res.setHeader('Content-Length', String(buffer.length));
-  res.setHeader(
-    'Content-Disposition',
-    `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
-  );
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.end(buffer);
-}

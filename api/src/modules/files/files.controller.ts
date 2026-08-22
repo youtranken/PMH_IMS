@@ -56,7 +56,7 @@ export class FilesController {
   @Post()
   // Upload giữ nguyên buffer 20MB trong RAM — siết 20 lần/phút/user.
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
-  @Audited('file.uploaded', 'file')
+  @Audited('file.uploaded', 'file', { writtenByService: true })
   @UseInterceptors(FileInterceptor('file', { limits: MULTER_LIMIT }))
   upload(
     @UploadedFile() file: Express.Multer.File | undefined,
@@ -116,7 +116,7 @@ export class FilesController {
 
   @Roles('sa', 'admin', 'member')
   @Delete(':id')
-  @Audited('file.deleted', 'file')
+  @Audited('file.deleted', 'file', { writtenByService: true })
   async remove(@Param() params: FileIdParamDto, @Req() req: AuthedRequest) {
     await this.files.remove(requireUser(req).email, params.id);
     return { status: 'deleted' };

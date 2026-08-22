@@ -138,6 +138,19 @@ khi kho vượt ~5.000 thiết bị thì xem lại `ILIKE '%…%'` (cân nhắc 
 | `devices` chưa đăng ký `ExpirySource` cho bảo hành | Engine expiry mới ra đời ở story 3.4 | Epic 3 |
 | Bảng port map chưa có chế độ nhập nhanh nhiều cổng | 300 thiết bị nhưng port map làm dần | Khi có switch 48 cổng cần khai đủ |
 
+### Code review đóng epic — 8 finding, đã sửa hết
+
+| # | Mức | Vấn đề | Cách sửa |
+| --- | --- | --- | --- |
+| 1 | Trung bình | Import thiết bị ghi thẳng, **bỏ qua `validateRefs`** → file chỉ có cột Site (không có cột Tủ) mà đổi site thì thiết bị giữ tủ của site CŨ. Sai lặng lẽ, DB không có ràng buộc nào chặn; form nhập tay thì chặn | Lõi đối chiếu ghép giá trị file với hồ sơ ĐANG CÓ rồi mới kiểm cặp site/tủ. 2 test hồi quy |
+| 2 | Trung bình | Kiểm khoảng bảo hành chỉ chạy khi file có ĐỦ hai cột ngày → sửa một đầu vẫn tạo được khoảng ngược, rơi xuống `CHECK` của DB thành 500 không rõ dòng nào | Cũng ghép với giá trị đang có; câu lỗi nêu cả hai ngày. Test hồi quy |
+| 3 | Thấp | Ô "Trạng thái" để TRỐNG bị ép về `in_use` → file sửa tay âm thầm hồi sinh thiết bị đã thanh lý, đẩy nó về lại danh sách nhắc bảo hành | Cột có mà ô trống = không đụng tới; thiết bị mới thì DB dùng mặc định. 2 test |
+| 4 | Thấp | Lịch sử của dòng import ghi `mã: SW-01 → SW-01` — dòng tồn tại mà vô dụng, FR-007 không trả lời được "đổi gì" | Dùng `diffDevice` như luồng sửa tay; context dựng một lần, dùng cho cả đối chiếu lẫn lịch sử |
+| 5 | Trung bình | `requireXlsx`/`sendXlsx`/trần dung lượng bị **copy y hệt** sang hai controller (vi phạm AD-15) và đã kịp lệch nhau: 5MB vs 10MB, một bên có header còn bên kia không | Tách `common/excel/xlsx-http.ts`, khai vào SHARED-REGISTRY |
+| 6 | Thấp | Import thiết bị tự dựng lại map danh mục thay vì dùng `CatalogApiService.snapshot()` — hai bản luật đặt khóa | Dùng thẳng `snapshot()` |
+| 7 | Thấp | `stripDiacritics` viết dải dấu phụ bằng KÝ TỰ TỔ HỢP TRẦN trong khi chú thích bảo là escape — editor nào nuốt mất là mọi màn import ngừng khớp tên cột không dấu, im lặng | `new RegExp('[̀-ͯ]', 'g')` |
+| 8 | Trung bình (tự phát hiện) | Mỗi thao tác ghi đẻ **hai dòng audit** (interceptor + service), đôi khi khác tên (`device.status.changed` vs `device.status-changed`) → màn nhật ký Epic 6 sẽ thấy mọi việc lặp đôi | `@Audited(..., { writtenByService: true })`: service ghi dòng chi tiết trong transaction, interceptor đứng ngoài. Route vẫn khai để giữ AD-9. 3 test |
+
 ### Bẫy đã gặp — đừng lặp lại
 
 1. **`@Param()` bằng DTO thiếu tham số** → `forbidNonWhitelisted` chặn, MỌI route `:entity/:id`
