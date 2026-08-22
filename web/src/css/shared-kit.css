@@ -206,6 +206,25 @@
   margin: var(--space-4) 0 0;
 }
 
+/* --- Trang chi tiết thiết bị (story 2.5) ---------------------------------- */
+.device-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  margin-bottom: var(--space-4);
+  font-size: var(--fs-sm);
+}
+.device-panels {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+}
+.device-panel {
+  padding: var(--space-5);
+}
+
 /* Màn nhỏ (UX-DR2 — mọi màn ĐỌC phải dùng được ở 390px) */
 @media (max-width: 480px) {
   .toast-stack { right: var(--space-5); left: var(--space-5); bottom: var(--space-5); max-width: none; }

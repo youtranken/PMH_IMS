@@ -22,6 +22,7 @@ import { parsePageQuery } from '../../common/pagination';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
+import { DevicePanelsService } from './device-panels.service';
 import { DevicePortsService } from './device-ports.service';
 import { DevicesService } from './devices.service';
 import { DEVICE_STATUSES, type DeviceStatus } from './devices.types';
@@ -100,6 +101,7 @@ export class DevicesController {
   constructor(
     private readonly devices: DevicesService,
     private readonly ports: DevicePortsService,
+    private readonly panels: DevicePanelsService,
   ) {}
 
   @Roles('sa', 'admin', 'member')
@@ -129,6 +131,16 @@ export class DevicesController {
   @Get(':id')
   findOne(@Param() params: IdParamDto) {
     return this.devices.findOne(params.id);
+  }
+
+  /**
+   * Khu mở rộng (story 2.5): IP, license, secret, phiếu… Đợt 1 trả mảng RỖNG vì chưa module
+   * nào đăng ký — UI ẩn gọn. Epic sau chỉ thêm provider, không sửa gì ở đây (AD-2).
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get(':id/panels')
+  panelsFor(@Param() params: IdParamDto) {
+    return this.panels.listFor(params.id);
   }
 
   @Roles('sa', 'admin', 'member')
