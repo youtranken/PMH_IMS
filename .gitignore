@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+secrets/*
+!secrets/.gitkeep
+!secrets/*.example
+coverage/
+playwright-report/
+test-results/
+*.log
+graphify-out/
+_bmad-output/planning-artifacts/design-ims/thiet-ke-man-hinh-ims.html
