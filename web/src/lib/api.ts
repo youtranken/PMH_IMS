@@ -45,18 +45,28 @@ export function useMe() {
  */
 export function useApiMutation<TInput, TResult>(
   path: string | ((input: TInput) => string),
-  options: { method?: 'POST' | 'PATCH' | 'DELETE'; csrfToken?: string | null; refreshMe?: boolean } = {},
+  options: {
+    method?: 'POST' | 'PATCH' | 'DELETE';
+    csrfToken?: string | null;
+    refreshMe?: boolean;
+    /**
+     * Chọn phần nào của input đi vào body. Cần khi input mang cả tham số ĐƯỜNG DẪN
+     * (vd `id`): API bật `forbidNonWhitelisted` nên body thừa field là 400.
+     */
+    body?: (input: TInput) => unknown;
+  } = {},
 ) {
   const queryClient = useQueryClient();
   const method = options.method ?? 'POST';
   return useMutation<TResult, unknown, TInput>({
     mutationFn: async (input: TInput) => {
       const url = typeof path === 'function' ? path(input) : path;
+      const payload = options.body ? options.body(input) : input;
       return apiFetch<TResult>(url, {
         method,
         credentials: 'include',
         csrfToken: options.csrfToken ?? null,
-        body: input === undefined ? undefined : JSON.stringify(input),
+        body: payload === undefined ? undefined : JSON.stringify(payload),
       });
     },
     /**

@@ -1,0 +1,11 @@
+# Override CHỈ dùng cho môi trường test E2E: mount script reset tài khoản test vào container
+# (script này cố tình KHÔNG nằm trong image production — xem api/Dockerfile).
+#
+#   docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml up -d
+#
+services:
+  api:
+    volumes:
+      - ./api/scripts/reset-e2e-user.mjs:/app/scripts/reset-e2e-user.mjs:ro
+    environment:
+      ALLOW_E2E_RESET: '1'

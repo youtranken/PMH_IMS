@@ -12,12 +12,16 @@ export const NEW_PASSWORD = 'Ims#Manh2026!ok';
  * thì test sau ăn theo test trước và đỏ ngẫu nhiên.
  */
 export function resetUsers(): void {
-  execSync('docker compose exec -T api node scripts/reset-e2e-user.mjs', {
+  // Script reset KHÔNG nằm trong image production; override e2e mount nó vào container.
+  execSync(`${COMPOSE} exec -T api node scripts/reset-e2e-user.mjs`, {
     cwd: '..',
     stdio: 'pipe',
     env: { ...process.env, ALLOW_E2E_RESET: '1' },
   });
 }
+
+export const COMPOSE =
+  'docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml';
 
 const totp = new TOTP({
   crypto: new NobleCryptoPlugin(),

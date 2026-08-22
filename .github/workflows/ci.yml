@@ -78,8 +78,8 @@ jobs:
             -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost"
           cp .env.example .env
           sed -i 's|^APP_BASE_URL=.*|APP_BASE_URL=https://localhost|' .env
-      - name: Dựng stack
-        run: docker compose --profile dev up -d --build
+      - name: Dựng stack (kèm override e2e)
+        run: docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml --profile dev up -d --build
       - name: Chờ api sẵn sàng
         run: |
           for i in $(seq 1 60); do
@@ -89,6 +89,8 @@ jobs:
           docker compose logs api; exit 1
       - name: Seed tài khoản
         run: docker compose exec -T api node scripts/seed-sa.mjs
+        env:
+          ALLOW_E2E_RESET: '1'
       - name: E2E Playwright (desktop + 390px)
         run: |
           npm ci

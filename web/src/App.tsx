@@ -75,7 +75,10 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<Home me={me} />} />
         <Route path="/quan-tri/tai-khoan" element={<AccountsScreen me={me} />} />
-        <Route path="/dev/components" element={<ComponentsGallery />} />
+        {/* Bộ giao diện là trang nội bộ: member/admin vào thẳng URL cũng chỉ nhận 404. */}
+        {me.role === 'sa' ? (
+          <Route path="/dev/components" element={<ComponentsGallery />} />
+        ) : null}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </AppShell>

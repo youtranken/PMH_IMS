@@ -59,6 +59,18 @@ của module chủ**. Chưa có file nội bộ nào trở thành hub, tức ch�
 | Restore drill lần đầu (AR-9) | Phải chạy **cuối Đợt 1**, trước khi secret thật vào két | Cuối Epic 4 |
 | `system_config` chưa có màn Admin để sửa | AC Epic 1 chỉ yêu cầu seed + đọc | Epic 3 (luật digest cần UI) |
 
+### Code review đóng epic — 7 finding, đã sửa hết
+
+| # | Mức | Vấn đề | Cách sửa |
+| --- | --- | --- | --- |
+| 1 | Nghiêm trọng | `/auth/totp/enroll/confirm` cấp phiên đã xác thực mà **không kiểm chống-replay và không kiểm đã enroll chưa** → kẻ có mật khẩu + một mã đã dùng đi vòng qua `/login/totp` | Chặn khi `totpEnrolledAt != null`, truyền `totpLastTimestep`, ghi audit khi thất bại. E2E `security.spec.ts` giữ hàng rào này |
+| 2 | Cao | Nút Khóa/Mở khóa luôn 400 (`id` lọt vào body, `forbidNonWhitelisted` chặn) | `useApiMutation` thêm `body` mapper; E2E khóa→mở lại |
+| 3 | Cao | Script reset tài khoản test chỉ **cảnh báo** ở prod và đã nằm trong image runtime | Bắt buộc `ALLOW_E2E_RESET=1` mới chạy; bỏ script khỏi image, E2E mount qua `docker-compose.override.e2e.yml` |
+| 4 | Trung bình | `sessions.revoke()` chạy ngoài transaction bao quanh → rollback là user mất phiên cũ mà không có phiên mới | Thêm `revokeWithin(tx, …)`, dùng ở cả 2 chỗ |
+| 5 | Trung bình | Ô tìm kiếm tài khoản chỉ lọc 20 dòng đang xem, tổng số vẫn báo 137 | Chuyển `?search=` xuống API, reset trang khi đổi từ khóa, thêm dòng "Chưa có dữ liệu" |
+| 6 | Thấp–TB | Danh sách 401 "phiên chết" là allowlist, sót `TOTP_REQUIRED`/`UNAUTHORIZED`/lỗi không JSON → kẹt màn hỏng | Đảo thành danh sách loại trừ: chỉ mã do người dùng nhập sai mới ở lại tại chỗ |
+| 7 | Thấp | `/dev/components` mọi vai đều vào được | Gắn `roles: ['sa']` ở nav **và** gác route; E2E kiểm member nhận 404 |
+
 ### Bẫy đã gặp — đừng lặp lại
 
 1. **`apiFetch` redirect mọi 401** → màn đăng nhập không hiện nổi lỗi "sai mật khẩu".

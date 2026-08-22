@@ -192,7 +192,7 @@ export class AuthService {
 
     const absoluteHours = await this.config.getNumber('sessionAbsoluteHours');
     const fresh = await this.db.transaction(async (tx) => {
-      await this.sessions.revoke(session.id, 'totp-regenerate');
+      await this.sessions.revokeWithin(tx, session.id, 'totp-regenerate');
       const created = await this.sessions.createWithin(tx, {
         userId: user.id,
         ip: ctx.ip,
@@ -258,12 +258,37 @@ export class AuthService {
     ctx: LoginContext,
   ): Promise<{ session: SessionRecord }> {
     const user = await this.requireUser(session.userId);
+    // Endpoint này CẤP PHIÊN ĐÃ XÁC THỰC, nên nó phải chặt bằng đúng bước 2 của đăng nhập:
+    //  - Đã enroll rồi thì không được vào đây nữa. Nếu không, kẻ có mật khẩu + một mã đã dùng
+    //    sẽ đi vòng qua chống-replay của `verifyLoginTotp` (mã bị từ chối ở /login/totp nhưng
+    //    lại được chấp nhận ở đây) — và `totp_enrolled_at` bị ghi đè, sai dữ liệu SA nhìn thấy.
+    //  - Vẫn phải truyền `totpLastTimestep` để mã đã dùng không dùng lại được.
+    if (user.totpEnrolledAt !== null) {
+      throw new BadRequestException({
+        code: 'TOTP_ALREADY_ENROLLED',
+        message: 'Tài khoản đã bật xác thực 2 lớp. Nhờ SA reset nếu đổi điện thoại.',
+      });
+    }
     const secret = this.openTotpSecret(user);
-    const result = await this.totp.verify({ token, secret, lastUsedTimeStep: null });
+    const result = await this.totp.verify({
+      token,
+      secret,
+      lastUsedTimeStep: user.totpLastTimestep,
+    });
     if (!result.ok) {
+      await this.audit.append({
+        actor: user.email,
+        action: 'auth.totp.enroll.failed',
+        objectType: 'user',
+        objectId: user.id,
+        detail: { reason: result.reason },
+      });
       throw new UnauthorizedException({
-        code: 'TOTP_INVALID',
-        message: 'Mã xác thực không đúng. Kiểm tra đồng hồ điện thoại rồi thử lại.',
+        code: result.reason === 'replayed' ? 'TOTP_REPLAYED' : 'TOTP_INVALID',
+        message:
+          result.reason === 'replayed'
+            ? 'Mã này đã được dùng. Chờ mã mới trên ứng dụng rồi nhập lại.'
+            : 'Mã xác thực không đúng. Kiểm tra đồng hồ điện thoại rồi thử lại.',
       });
     }
 
@@ -278,7 +303,7 @@ export class AuthService {
       });
       if (!session.totpPending) return session;
 
-      await this.sessions.revoke(session.id, 'totp-enroll-regenerate');
+      await this.sessions.revokeWithin(tx, session.id, 'totp-enroll-regenerate');
       const created = await this.sessions.createWithin(tx, {
         userId: user.id,
         ip: ctx.ip,

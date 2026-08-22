@@ -5,9 +5,12 @@ import { execSync } from 'node:child_process';
  * Dùng script trong container api — KHÔNG có endpoint reset trong API production.
  */
 export default function globalSetup(): void {
-  execSync('docker compose exec -T api node scripts/reset-e2e-user.mjs', {
-    cwd: '..',
-    stdio: 'inherit',
-    env: { ...process.env, ALLOW_E2E_RESET: '1' },
-  });
+  execSync(
+    'docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml exec -T api node scripts/reset-e2e-user.mjs',
+    {
+      cwd: '..',
+      stdio: 'inherit',
+      env: { ...process.env, ALLOW_E2E_RESET: '1' },
+    },
+  );
 }

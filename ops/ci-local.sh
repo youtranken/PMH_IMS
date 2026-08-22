@@ -36,6 +36,8 @@ npm --prefix web run build
 
 if [ "${1:-}" = "--e2e" ]; then
   step "E2E — Playwright trên stack docker"
+  # Override mount script reset tài khoản test (script không nằm trong image production).
+  docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml up -d
   (cd e2e && npx playwright test)
 fi
 

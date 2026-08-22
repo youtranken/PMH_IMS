@@ -39,8 +39,8 @@ export class AccountsService {
     private readonly outbox: OutboxService,
   ) {}
 
-  list(query: PageQuery): Promise<Page<UserRecord>> {
-    return this.users.list(query);
+  list(query: PageQuery, search?: string): Promise<Page<UserRecord>> {
+    return this.users.list(query, search);
   }
 
   /** Tạo user + mật khẩu tạm; buộc đổi mật khẩu và enroll TOTP ở lần đăng nhập đầu. */

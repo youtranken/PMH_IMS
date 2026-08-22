@@ -46,4 +46,35 @@ test.describe('Quản trị tài khoản', () => {
     await expect(page.getByRole('dialog')).toContainText('Phiên đang mở');
     await expect(page.getByRole('button', { name: 'Đá phiên' }).first()).toBeVisible();
   });
+
+  test('khóa rồi mở lại tài khoản (hồi quy: body chỉ được chứa field của DTO)', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    await page.getByRole('link', { name: 'Tài khoản' }).click();
+
+    const row = page.getByRole('row', { name: /E2E Thành viên/ });
+    await row.getByRole('button', { name: 'Khóa' }).click();
+    await page.getByRole('button', { name: 'Đồng ý' }).click();
+
+    await expect(row.getByText('Đang khóa')).toBeVisible();
+    // Không được có toast lỗi kiểu "property id should not exist".
+    await expect(page.getByText(/should not exist/i)).toHaveCount(0);
+
+    await row.getByRole('button', { name: 'Mở khóa' }).click();
+    await expect(row.getByText('Đang hoạt động')).toBeVisible();
+  });
+
+  test('tìm kiếm chạy phía server: tìm được cả người không nằm ở trang đang xem', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    await page.getByRole('link', { name: 'Tài khoản' }).click();
+
+    await page.getByRole('searchbox').fill('E2E Thành viên');
+    await expect(page.getByRole('cell', { name: /E2E Thành viên/ })).toBeVisible();
+    await expect(page.getByRole('cell', { name: /E2E Super Admin/ })).toHaveCount(0);
+
+    // Từ khóa không khớp ai: phải nói rõ "chưa có dữ liệu", không để bảng trắng.
+    await page.getByRole('searchbox').fill('khong-ton-tai-zzz');
+    await expect(page.getByText('Chưa có dữ liệu')).toBeVisible();
+  });
 });

@@ -14,16 +14,20 @@ export class ApiError extends Error {
 
 /**
  * 401 có HAI nghĩa khác nhau và không được xử lý giống nhau:
- *  - PHIÊN hỏng (hết hạn, bị SA đá, tài khoản khóa) → đá về màn đăng nhập.
- *  - THÔNG TIN nhập sai (sai mật khẩu, sai mã TOTP) → hiện lỗi TẠI CHỖ cho người dùng sửa.
- * Phân biệt bằng `code` do API trả (convention Error của spine), không đoán theo URL.
+ *  - THÔNG TIN nhập sai (sai mật khẩu, sai mã TOTP, tài khoản đang khóa) → hiện lỗi TẠI CHỖ.
+ *  - Mọi 401 CÒN LẠI (phiên hết hạn, bị đá, tài khoản khóa, lỗi không rõ, cả trang lỗi HTML
+ *    của nginx không có `code`) → coi như phiên chết, đá về màn đăng nhập.
+ *
+ * Cố ý là DANH SÁCH LOẠI TRỪ chứ không phải danh sách cho phép: quên khai một mã mới thì
+ * người dùng bị đưa về đăng nhập (phiền nhưng an toàn và tự thoát được), chứ không kẹt
+ * ở màn hỏng với một toast chung chung.
  */
-const SESSION_DEAD_CODES = new Set([
-  'SESSION_MISSING',
-  'SESSION_EXPIRED',
-  'SESSION_REVOKED',
-  'SESSION_INVALID',
-  'ACCOUNT_DISABLED',
+const USER_INPUT_401_CODES = new Set([
+  'LOGIN_FAILED',
+  'ACCOUNT_LOCKED',
+  'TOTP_INVALID',
+  'TOTP_REPLAYED',
+  'CURRENT_PASSWORD_WRONG',
 ]);
 
 /**
@@ -49,7 +53,7 @@ export async function apiFetch<T>(
   if (!res.ok) {
     const errBody: unknown = await res.json().catch(() => null);
     const code = (errBody as { code?: string } | null)?.code;
-    if (res.status === 401 && code && SESSION_DEAD_CODES.has(code)) {
+    if (res.status === 401 && !(code && USER_INPUT_401_CODES.has(code))) {
       window.location.href = '/dang-nhap';
     }
     throw new ApiError(res.status, errBody);

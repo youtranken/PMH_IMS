@@ -15,8 +15,9 @@ COPY package*.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 # dist đã kèm migrations/*.sql (nest-cli assets)
 COPY --from=builder /app/dist ./dist
-# Script vận hành (seed tài khoản đầu tiên) — chạy bằng `docker compose exec api node scripts/...`
-COPY scripts ./scripts
+# CHỈ script vận hành (seed tài khoản đầu tiên). Script test (reset-e2e-user) KHÔNG
+# vào image production; E2E mount nó vào lúc chạy — xem docker-compose.override.e2e.yml.
+COPY scripts/seed-sa.mjs scripts/make-import-template.mjs ./scripts/
 USER node
 EXPOSE 3000
 # Story 3.5a: service worker dùng cùng image này, override command

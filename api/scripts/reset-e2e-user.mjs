@@ -20,9 +20,15 @@ const E2E_USERS = [
 ];
 
 async function main() {
-  if (process.env.NODE_ENV === 'production' && !process.env.ALLOW_E2E_RESET) {
-    // Compose dev vẫn chạy NODE_ENV=production; cần cờ tường minh để không lỡ tay chạy ở prod thật.
-    console.warn('NODE_ENV=production — đặt ALLOW_E2E_RESET=1 nếu đây đúng là môi trường test.');
+  // CHẶN THẬT, không chỉ cảnh báo: script này đặt lại mật khẩu về một chuỗi có sẵn trong repo
+  // và hủy mọi phiên đang mở. Chạy nhầm trên máy thật là mở toang cửa. Muốn chạy thì phải
+  // khai tường minh ALLOW_E2E_RESET=1 (chỉ môi trường test/CI mới đặt biến này).
+  if (process.env.ALLOW_E2E_RESET !== '1') {
+    console.error(
+      'Từ chối chạy: script chỉ dành cho môi trường test. ' +
+        'Nếu đây đúng là máy test, chạy lại với ALLOW_E2E_RESET=1.',
+    );
+    process.exit(1);
   }
   const pepper = readFileSync(process.env.PASSWORD_PEPPER_FILE, 'utf8').trim();
   const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });

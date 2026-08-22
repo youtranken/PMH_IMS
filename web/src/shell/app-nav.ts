@@ -37,7 +37,8 @@ export const navGroups: NavGroup[] = [
     items: [
       { key: 'nav.accounts', to: '/quan-tri/tai-khoan', roles: ['sa'] },
       { key: 'nav.auditLog', to: '/quan-tri/nhat-ky', roles: ['sa', 'admin'], planned: true },
-      { key: 'nav.components', to: '/dev/components' },
+      // Trang nội bộ của đội phát triển — chỉ SA thấy (khớp gác quyền ở App.tsx).
+      { key: 'nav.components', to: '/dev/components', roles: ['sa'] },
     ],
   },
 ];

@@ -41,8 +41,8 @@ export class AccountsController {
 
   @Roles('sa')
   @Get()
-  list(@Query() query: { page?: string; limit?: string }) {
-    return this.accounts.list(parsePageQuery(query));
+  list(@Query() query: { page?: string; limit?: string; search?: string }) {
+    return this.accounts.list(parsePageQuery(query), query.search);
   }
 
   @Roles('sa')

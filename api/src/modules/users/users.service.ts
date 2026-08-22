@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, eq, ne, sql } from 'drizzle-orm';
+import { and, asc, count, eq, ilike, ne, or, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -33,15 +33,27 @@ export class UsersService {
     return found ? strip(found) : null;
   }
 
-  async list(query: PageQuery): Promise<Page<UserRecord>> {
+  /**
+   * Danh sách có tìm kiếm PHÍA SERVER: lọc phía client chỉ lọc đúng trang đang xem,
+   * nên gõ tên nằm ở trang 3 sẽ ra bảng rỗng trong khi tổng số vẫn báo 137 dòng.
+   */
+  async list(query: PageQuery, search?: string): Promise<Page<UserRecord>> {
+    const term = search?.trim();
+    const where = term
+      ? or(
+          ilike(usersTable.fullName, `%${term}%`),
+          sql`${usersTable.email}::text ILIKE ${`%${term}%`}`,
+        )
+      : undefined;
     const [rows, totalRows] = await Promise.all([
       this.db
         .select()
         .from(usersTable)
+        .where(where)
         .orderBy(asc(usersTable.fullName))
         .limit(query.limit)
         .offset(pageOffset(query)),
-      this.db.select({ value: count() }).from(usersTable),
+      this.db.select({ value: count() }).from(usersTable).where(where),
     ]);
     return {
       items: rows.map((r) => strip(toCredentials(r))),

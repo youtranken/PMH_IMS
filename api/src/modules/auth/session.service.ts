@@ -81,6 +81,19 @@ export class SessionService {
       .where(eq(sessionsTable.id, id));
   }
 
+  /**
+   * Thu hồi phiên TRONG transaction đang chạy (AD-5).
+   * Bắt buộc dùng bản này khi việc thu hồi đi kèm việc khác trong cùng transaction:
+   * dùng `revoke()` (chạy trên pool) sẽ commit ngay cả khi transaction rollback —
+   * người dùng mất phiên cũ mà không có phiên mới, kẹt giữa chừng.
+   */
+  async revokeWithin(tx: Tx, id: string, reason: string): Promise<void> {
+    await tx
+      .update(sessionsTable)
+      .set({ revokedAt: new Date(), revokedReason: reason })
+      .where(and(eq(sessionsTable.id, id), isNull(sessionsTable.revokedAt)));
+  }
+
   async revoke(id: string, reason: string): Promise<void> {
     await this.db
       .update(sessionsTable)
