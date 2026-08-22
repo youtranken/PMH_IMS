@@ -274,6 +274,19 @@ So that hồ sơ thiết bị nhập nhất quán, không ai gõ tay mỗi ngư�
 **Then** thay đổi ghi audit; mục đang được thiết bị tham chiếu không xóa được, chỉ vô hiệu
 **And** Member chỉ xem, không sửa danh mục (@Roles enforce)
 
+**Given** team chưa có danh mục sẵn trong hệ thống (2026-08-22: user xác nhận chưa có)
+**When** Admin bấm "Tải file mẫu" ở màn Danh mục
+**Then** tải về `mau-danh-muc.xlsx` 4 sheet (Site, Tủ mạng, Loại thiết bị, Nhà cung cấp) + sheet Hướng dẫn,
+sinh bằng `ExcelExportService` dùng chung (AD-15) — KHÔNG phục vụ file tĩnh nằm trong repo
+**And** file mẫu điền sẵn 12 loại thiết bị và vài dòng đánh dấu `VÍ DỤ`
+
+**Given** Admin đã điền file mẫu
+**When** import file đó
+**Then** hiện bảng đối chiếu TRƯỚC khi ghi: dòng nào thêm mới / cập nhật / lỗi và lỗi vì sao (thiếu cột bắt buộc,
+tủ trỏ tới site không tồn tại, mã trùng trong file…); bỏ qua dòng đánh dấu `VÍ DỤ`
+**And** chỉ khi Admin xác nhận mới ghi, ghi trong MỘT transaction + audit + lịch sử (AD-5, AD-13)
+**And** import lại cùng mã = CẬP NHẬT mục đó, không tạo bản sao
+
 ### Story 2.2: Hồ sơ thiết bị
 
 As a Member,

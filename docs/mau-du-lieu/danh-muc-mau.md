@@ -73,11 +73,15 @@ PC-KT-05        máy trạm phòng Kế toán
 Mã là thứ mọi người gõ khi tra cứu và là khóa để import lại (import trùng mã = **cập nhật**,
 không tạo bản sao). Chốt quy ước sớm thì 300 thiết bị nhập một lần là xong.
 
-## 6. Việc cần anh làm với file mẫu
+## 6. Việc cần anh làm
 
-1. Mở `mau-import-thiet-bi.xlsx`, xem 12 dòng mẫu ở sheet **Thiết bị** để biết định dạng.
-2. Sửa sheet **Danh mục** cho khớp thực tế (site, tủ, loại, NCC).
-3. Xóa 12 dòng mẫu, điền dữ liệu thật (hoặc dán từ file Excel đang dùng).
-4. Gửi lại — tôi khớp cột vào migration seed và bộ validate của story 2.6.
+1. Mở `mau-danh-muc.xlsx`, điền 4 sheet: Site → Tủ mạng → Loại thiết bị → Nhà cung cấp.
+   Chốt kỹ **mã site** và **mã tủ** vì đó là thứ mọi người gõ khi tra cứu, đổi sau rất phiền.
+2. Mở `mau-import-thiet-bi.xlsx`, xem 12 dòng mẫu để biết định dạng, rồi điền thiết bị thật
+   (hoặc dán từ file Excel đang dùng).
+3. Chưa cần gửi lại cho tôi: màn **Quản trị › Danh mục › Import** của Epic 2 sẽ nhận cả hai file,
+   hiện bảng đối chiếu để anh duyệt trước khi ghi.
+4. Nếu muốn tôi khớp cột giúp (file Excel hiện tại của anh có cột khác), gửi file — tôi map vào bộ
+   validate của story 2.1/2.6.
 
 > Nhắc theo FR-035: **không ghi mật khẩu vào cột Ghi chú**. Mật khẩu thiết bị vào Két sắt (Epic 4).
