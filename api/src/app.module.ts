@@ -5,11 +5,13 @@ import { LoggerModule } from 'nestjs-pino';
 import { GlobalExceptionFilter } from './common/global-exception.filter';
 import { UserThrottlerGuard } from './common/user-throttler.guard';
 import { ExcelExportService } from './common/excel/excel-export.service';
+import { ExcelImportService } from './common/excel/excel-import.service';
 import { DatabaseModule } from './database/database.module';
 import { HealthController } from './health/health.controller';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuditInterceptor } from './modules/audit/audit.interceptor';
 import { AuthModule } from './modules/auth/auth.module';
+import { CatalogModule } from './modules/catalog/catalog.module';
 import { CsrfGuard } from './modules/auth/csrf.guard';
 import { RolesGuard } from './modules/auth/roles.guard';
 import { SessionGuard } from './modules/auth/session.guard';
@@ -53,12 +55,14 @@ import { UsersModule } from './modules/users/users.module';
     QueueModule,
     UsersModule,
     AuthModule,
+    CatalogModule,
     FilesModule,
     MailModule,
   ],
   controllers: [HealthController],
   providers: [
     ExcelExportService,
+    ExcelImportService,
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
     { provide: APP_GUARD, useClass: UserThrottlerGuard },
     { provide: APP_GUARD, useClass: SessionGuard },
@@ -66,6 +70,6 @@ import { UsersModule } from './modules/users/users.module';
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
-  exports: [ExcelExportService],
+  exports: [ExcelExportService, ExcelImportService],
 })
 export class AppModule {}

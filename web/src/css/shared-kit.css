@@ -88,6 +88,105 @@
   background: var(--surface);
 }
 
+/* --- Tabs: số đếm nhỏ bên phải nhãn (ui/tabs.tsx) ------------------------- */
+.tab-count {
+  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-2);
+  background: var(--surface-2);
+}
+.tab.active .tab-count {
+  color: var(--primary-ink);
+  background: var(--primary-soft);
+}
+
+/* --- FilePicker (ui/file-picker.tsx) -------------------------------------- */
+.file-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-6);
+  border: 1px dashed var(--border-2);
+  border-radius: var(--r);
+  background: var(--surface-2);
+  transition: border-color 0.15s var(--ease), background 0.15s var(--ease);
+}
+.file-picker.dragging {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+.file-picker.disabled {
+  opacity: 0.6;
+}
+/* Ẩn input thật nhưng GIỮ nó trong cây a11y: display:none làm trình đọc màn hình
+   và Playwright getByLabel không thấy ô chọn file nữa. */
+.file-picker-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.file-picker-label {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  padding: var(--space-2) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+}
+.file-picker-input:focus-visible + .file-picker-label {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.file-picker-label:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+.file-picker-hint {
+  font-size: var(--fs-xs);
+}
+.file-picker-file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+/* --- Bảng đối chiếu import (ui/import-preview.tsx) ------------------------ */
+.import-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.import-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.import-preview-table {
+  max-height: 46vh;
+  overflow: auto;
+}
+.table tr.row-danger td {
+  background: var(--danger-soft);
+}
+
+/* Dòng danh mục đã vô hiệu — mờ đi nhưng vẫn đọc được (không ẩn hẳn). */
+.table tr.row-muted td {
+  opacity: 0.55;
+}
+
 /* Màn nhỏ (UX-DR2 — mọi màn ĐỌC phải dùng được ở 390px) */
 @media (max-width: 480px) {
   .toast-stack { right: var(--space-5); left: var(--space-5); bottom: var(--space-5); max-width: none; }

@@ -267,7 +267,9 @@ So that hồ sơ thiết bị nhập nhất quán, không ai gõ tay mỗi ngư�
 
 **Given** module `catalog` (tầng nền) sở hữu bảng site/cabinet/device_type/vendor
 **When** migration seed chạy
-**Then** 3 site và danh mục loại thiết bị cơ bản có sẵn sau cài đặt
+**Then** 12 loại thiết bị cơ bản có sẵn sau cài đặt (Switch, Firewall, Server, NAS, UPS, AP, PC, Laptop, Printer, Camera, Điện thoại IP, Khác)
+**And** site / tủ mạng / nhà cung cấp KHÔNG seed sẵn — 2026-08-22 user xác nhận chưa chốt danh sách,
+sẽ điền `mau-danh-muc.xlsx` rồi import (seed dữ liệu đoán mò chỉ tạo rác phải đi xóa)
 
 **Given** Admin mở màn danh mục
 **When** thêm/sửa/vô hiệu một mục

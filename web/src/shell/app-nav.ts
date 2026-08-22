@@ -36,6 +36,8 @@ export const navGroups: NavGroup[] = [
     labelKey: 'nav.groupAdmin',
     items: [
       { key: 'nav.accounts', to: '/quan-tri/tai-khoan', roles: ['sa'] },
+      // Member vào xem được (form thiết bị cần biết danh mục có gì); sửa thì API chặn.
+      { key: 'nav.catalog', to: '/quan-tri/danh-muc' },
       { key: 'nav.auditLog', to: '/quan-tri/nhat-ky', roles: ['sa', 'admin'], planned: true },
       // Trang nội bộ của đội phát triển — chỉ SA thấy (khớp gác quyền ở App.tsx).
       { key: 'nav.components', to: '/dev/components', roles: ['sa'] },

@@ -13,6 +13,7 @@ import { ConfirmProvider } from '@/ui/confirm-provider';
 import { Loading, NotFound } from '@/ui/load-state';
 import { ToastProvider } from '@/ui/toast';
 import { AccountsScreen } from '@/features/admin/accounts-screen';
+import { CatalogScreen } from '@/features/catalog/catalog-screen';
 import { ChangePassword } from '@/features/auth/change-password';
 import { LoginScreen } from '@/features/auth/login-screen';
 import { TotpChallenge } from '@/features/auth/totp-challenge';
@@ -75,6 +76,7 @@ function AppRoutes() {
       <Routes>
         <Route path="/" element={<Home me={me} />} />
         <Route path="/quan-tri/tai-khoan" element={<AccountsScreen me={me} />} />
+        <Route path="/quan-tri/danh-muc" element={<CatalogScreen me={me} />} />
         {/* Bộ giao diện là trang nội bộ: member/admin vào thẳng URL cũng chỉ nhận 404. */}
         {me.role === 'sa' ? (
           <Route path="/dev/components" element={<ComponentsGallery />} />

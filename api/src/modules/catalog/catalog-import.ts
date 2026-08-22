@@ -1,0 +1,467 @@
+import {
+  CATALOG_ENTITIES,
+  normalizeKey,
+  type CatalogEntity,
+  type CatalogSnapshot,
+} from './catalog.types';
+
+/**
+ * Lõi ĐỐI CHIẾU file danh mục — hàm THUẦN, không chạm DB, không chạm exceljs.
+ * Tách ra để test bằng bảng dữ liệu (CLAUDE.md: logic thuần phải test table-driven,
+ * không test qua HTTP) và để bước xem trước và bước ghi dùng CHUNG một kết quả:
+ * xem trước hiện gì thì ghi đúng cái đó.
+ */
+
+export interface ParsedRow {
+  /** Số dòng THẬT trong sheet Excel (dòng 1 là tiêu đề) — người dùng mở file sửa đúng dòng. */
+  rowNumber: number;
+  cells: Record<string, string>;
+}
+
+export type ParsedSheets = Record<string, ParsedRow[]>;
+
+export type ImportAction = 'create' | 'update' | 'unchanged' | 'skip' | 'error';
+
+export interface SiteValues {
+  code: string;
+  name?: string;
+  address?: string | null;
+}
+
+export interface CabinetValues {
+  code: string;
+  /** Mã site đã chuẩn hóa — bước ghi tra ra `site_id` (kể cả site vừa tạo trong cùng file). */
+  siteKey: string;
+  siteCode: string;
+  description?: string | null;
+  uHeight?: number | null;
+}
+
+export interface DeviceTypeValues {
+  name: string;
+  hasPortMap?: boolean;
+  description?: string | null;
+}
+
+export interface VendorValues {
+  name: string;
+  supplies?: string | null;
+  phone?: string | null;
+  contact?: string | null;
+}
+
+export type CatalogValues =
+  | SiteValues
+  | CabinetValues
+  | DeviceTypeValues
+  | VendorValues;
+
+export interface ImportRow {
+  sheet: CatalogEntity;
+  rowNumber: number;
+  action: ImportAction;
+  /** Nhãn hiện ở bảng đối chiếu: mã site / "PMH-HO · R01" / tên loại / tên NCC. */
+  label: string;
+  message?: string;
+  values?: CatalogValues;
+  /** Có khi action = 'update' | 'unchanged'. */
+  existingId?: string;
+}
+
+export interface ImportSummary {
+  create: number;
+  update: number;
+  unchanged: number;
+  skip: number;
+  error: number;
+}
+
+export interface ImportPlan {
+  rows: ImportRow[];
+  summary: ImportSummary;
+  /** false = file không có sheet nào tên Site/Tủ mạng/Loại thiết bị/Nhà cung cấp. */
+  hasRecognizedSheet: boolean;
+}
+
+/** Cột đánh dấu dòng minh họa trong file mẫu. */
+const EXAMPLE_HEADERS = ['ghi chú nhập', 'ghi chu nhap'];
+
+/**
+ * Tên sheet → loại mục. Chấp nhận cả bản có dấu lẫn không dấu vì người dùng có thể
+ * đổi tên sheet khi sao chép file.
+ */
+const SHEET_ALIASES: Record<string, CatalogEntity> = {
+  site: 'site',
+  'danh sách site': 'site',
+  'tủ mạng': 'cabinet',
+  'tu mang': 'cabinet',
+  tủ: 'cabinet',
+  cabinet: 'cabinet',
+  'loại thiết bị': 'device_type',
+  'loai thiet bi': 'device_type',
+  'loại': 'device_type',
+  'nhà cung cấp': 'vendor',
+  'nha cung cap': 'vendor',
+  ncc: 'vendor',
+  vendor: 'vendor',
+};
+
+interface FieldSpec {
+  /** Khóa trong `values`. */
+  key: string;
+  /** Tên cột (đã chuẩn hóa) mà cột này nhận. Cột đầu là tên chính, hiện trong thông báo lỗi. */
+  aliases: string[];
+  label: string;
+  required?: boolean;
+  kind?: 'text' | 'boolean' | 'integer';
+}
+
+const FIELDS: Record<CatalogEntity, FieldSpec[]> = {
+  site: [
+    { key: 'code', label: 'Mã site', aliases: ['mã site', 'ma site', 'mã'], required: true },
+    { key: 'name', label: 'Tên site', aliases: ['tên site', 'ten site', 'tên'], required: true },
+    {
+      key: 'address',
+      label: 'Địa chỉ',
+      aliases: ['địa chỉ / ghi chú', 'địa chỉ', 'dia chi', 'ghi chú'],
+    },
+  ],
+  cabinet: [
+    { key: 'code', label: 'Mã tủ', aliases: ['mã tủ', 'ma tu', 'mã'], required: true },
+    {
+      key: 'siteCode',
+      label: 'Thuộc site',
+      aliases: ['thuộc site', 'thuoc site', 'site', 'mã site'],
+      required: true,
+    },
+    {
+      key: 'description',
+      label: 'Mô tả',
+      aliases: ['mô tả / vị trí', 'mô tả', 'mo ta', 'vị trí'],
+    },
+    { key: 'uHeight', label: 'Số U', aliases: ['số u', 'so u', 'u'], kind: 'integer' },
+  ],
+  device_type: [
+    {
+      key: 'name',
+      label: 'Tên loại',
+      aliases: ['tên loại', 'ten loai', 'loại', 'tên loại thiết bị'],
+      required: true,
+    },
+    {
+      key: 'hasPortMap',
+      label: 'Có port map?',
+      aliases: ['có port map?', 'có port map', 'co port map', 'port map'],
+      kind: 'boolean',
+    },
+    { key: 'description', label: 'Mô tả', aliases: ['mô tả', 'mo ta'] },
+  ],
+  vendor: [
+    {
+      key: 'name',
+      label: 'Tên nhà cung cấp',
+      aliases: ['tên nhà cung cấp', 'ten nha cung cap', 'nhà cung cấp', 'tên ncc'],
+      required: true,
+    },
+    { key: 'supplies', label: 'Cung cấp gì', aliases: ['cung cấp gì', 'cung cấp', 'cung cap gi'] },
+    { key: 'phone', label: 'Điện thoại', aliases: ['điện thoại', 'dien thoai', 'sđt', 'phone'] },
+    {
+      key: 'contact',
+      label: 'Người liên hệ',
+      aliases: ['email / người liên hệ', 'người liên hệ', 'liên hệ', 'email'],
+    },
+  ],
+};
+
+/** Bỏ dấu tiếng Việt — chỉ dùng để so tên cột/nhãn, KHÔNG dùng cho dữ liệu lưu xuống DB. */
+function stripDiacritics(value: string): string {
+  return value
+    .normalize('NFD')
+    // Dải dấu thanh/dấu phụ Unicode viết bằng escape, KHÔNG viết ký tự thật:
+    // ký tự tổ hợp trần trong mã nguồn rất dễ bị editor/tool nuốt mất.
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D');
+}
+
+/** Tên cột: bỏ dấu `*`, bỏ khoảng trắng thừa, về chữ thường. "Mã site *" = "mã site". */
+function normalizeHeader(header: string): string {
+  return header.replace(/\*/g, '').trim().replace(/\s+/g, ' ').toLowerCase();
+}
+
+function pickCell(cells: Record<string, string>, aliases: string[]): string | undefined {
+  for (const [rawHeader, value] of Object.entries(cells)) {
+    const header = normalizeHeader(rawHeader);
+    const bare = stripDiacritics(header);
+    if (aliases.some((a) => a === header || stripDiacritics(a) === bare)) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function parseBoolean(raw: string): boolean {
+  const value = stripDiacritics(raw.trim().toLowerCase());
+  return ['co', 'x', 'yes', 'y', 'true', '1', 'v'].includes(value);
+}
+
+/** Ô trống → chuỗi rỗng, không phải "undefined"/"null" của Excel. */
+function cellText(raw: string | undefined): string {
+  return (raw ?? '').trim();
+}
+
+function isBlankRow(cells: Record<string, string>): boolean {
+  return Object.values(cells).every((v) => cellText(v) === '');
+}
+
+function isExampleRow(cells: Record<string, string>): boolean {
+  const marker = pickCell(cells, EXAMPLE_HEADERS);
+  if (marker === undefined) return false;
+  return stripDiacritics(marker.toLowerCase()).includes('vi du');
+}
+
+/**
+ * Dựng bảng đối chiếu cho toàn bộ file.
+ *
+ * Thứ tự xử lý CỐ ĐỊNH: site trước tủ mạng, vì tủ tham chiếu tới site và người dùng
+ * hoàn toàn có thể khai cả hai trong cùng một file (khai site ở sheet Site rồi dùng
+ * ngay ở sheet Tủ mạng phải chạy được).
+ */
+export function planCatalogImport(
+  sheets: ParsedSheets,
+  snapshot: CatalogSnapshot,
+): ImportPlan {
+  const bySheet = new Map<CatalogEntity, ParsedRow[]>();
+  for (const [name, rows] of Object.entries(sheets)) {
+    const entity = SHEET_ALIASES[normalizeHeader(name)];
+    if (!entity) continue;
+    bySheet.set(entity, [...(bySheet.get(entity) ?? []), ...rows]);
+  }
+
+  const rows: ImportRow[] = [];
+  // Khóa đã gặp trong CHÍNH file này — chặn trùng nội bộ và cho tủ dùng site vừa khai.
+  const seen: Record<CatalogEntity, Set<string>> = {
+    site: new Set(),
+    cabinet: new Set(),
+    device_type: new Set(),
+    vendor: new Set(),
+  };
+
+  for (const entity of CATALOG_ENTITIES) {
+    for (const row of bySheet.get(entity) ?? []) {
+      if (isBlankRow(row.cells)) continue;
+      rows.push(planRow(entity, row, snapshot, seen));
+    }
+  }
+
+  return {
+    rows,
+    summary: summarize(rows),
+    hasRecognizedSheet: bySheet.size > 0,
+  };
+}
+
+function planRow(
+  entity: CatalogEntity,
+  row: ParsedRow,
+  snapshot: CatalogSnapshot,
+  seen: Record<CatalogEntity, Set<string>>,
+): ImportRow {
+  const base = { sheet: entity, rowNumber: row.rowNumber };
+
+  if (isExampleRow(row.cells)) {
+    return {
+      ...base,
+      action: 'skip',
+      label: rawLabel(entity, row.cells),
+      message: 'Dòng ví dụ trong file mẫu — bỏ qua.',
+    };
+  }
+
+  const values: Record<string, string | number | boolean | null> = {};
+  for (const field of FIELDS[entity]) {
+    const raw = pickCell(row.cells, field.aliases);
+    // Cột KHÔNG có trong file = "đừng đụng tới trường này" (giữ giá trị đang có trong DB).
+    // Cột có nhưng ô trống = "xóa giá trị". Hai chuyện khác nhau, không gộp làm một.
+    if (raw === undefined) continue;
+    const text = cellText(raw);
+
+    if (field.required && text === '') {
+      return {
+        ...base,
+        action: 'error',
+        label: rawLabel(entity, row.cells),
+        message: `Thiếu cột bắt buộc "${field.label}".`,
+      };
+    }
+    if (field.kind === 'integer') {
+      if (text === '') {
+        values[field.key] = null;
+        continue;
+      }
+      const num = Number(text);
+      if (!Number.isInteger(num) || num <= 0) {
+        return {
+          ...base,
+          action: 'error',
+          label: rawLabel(entity, row.cells),
+          message: `Cột "${field.label}" phải là số nguyên dương (đang là "${text}").`,
+        };
+      }
+      values[field.key] = num;
+      continue;
+    }
+    if (field.kind === 'boolean') {
+      values[field.key] = parseBoolean(text);
+      continue;
+    }
+    values[field.key] = text === '' ? null : text;
+  }
+
+  // Cột bắt buộc KHÔNG XUẤT HIỆN trong file (không phải để trống) — báo rõ để người dùng
+  // biết là dùng nhầm file/sai sheet chứ không phải quên điền một dòng.
+  for (const field of FIELDS[entity]) {
+    if (field.required && values[field.key] === undefined) {
+      return {
+        ...base,
+        action: 'error',
+        label: rawLabel(entity, row.cells),
+        message: `File thiếu cột bắt buộc "${field.label}".`,
+      };
+    }
+  }
+
+  if (entity === 'cabinet') {
+    return planCabinetRow(base, values, snapshot, seen);
+  }
+
+  const keySource = String(entity === 'site' ? values.code : values.name);
+  const key = normalizeKey(keySource);
+  if (seen[entity].has(key)) {
+    return {
+      ...base,
+      action: 'error',
+      label: keySource,
+      message: `Giá trị "${keySource}" bị trùng ngay trong file — mỗi mục chỉ khai một dòng.`,
+    };
+  }
+  seen[entity].add(key);
+
+  const existing = existingOf(entity, key, snapshot);
+  return decide(base, keySource, values as unknown as CatalogValues, existing);
+}
+
+function planCabinetRow(
+  base: { sheet: CatalogEntity; rowNumber: number },
+  values: Record<string, string | number | boolean | null>,
+  snapshot: CatalogSnapshot,
+  seen: Record<CatalogEntity, Set<string>>,
+): ImportRow {
+  const siteCode = String(values.siteCode);
+  const siteKey = normalizeKey(siteCode);
+  const code = String(values.code);
+  const label = `${siteCode} · ${code}`;
+
+  // Site phải có sẵn trong hệ thống HOẶC được khai ở sheet Site của chính file này.
+  // Tuyệt đối không tự tạo site ngầm: gõ nhầm mã site mà hệ thống im lặng tạo mới thì
+  // hôm sau có hai site "PMH-H0" và "PMH-HO" không ai phân biệt nổi.
+  if (!snapshot.sites.has(siteKey) && !seen.site.has(siteKey)) {
+    return {
+      ...base,
+      action: 'error',
+      label,
+      message: `Không có site nào mã "${siteCode}". Khai site đó ở sheet Site trước, hoặc sửa lại mã.`,
+    };
+  }
+
+  const key = `${siteKey} ${normalizeKey(code)}`;
+  if (seen.cabinet.has(key)) {
+    return {
+      ...base,
+      action: 'error',
+      label,
+      message: `Tủ "${label}" bị trùng ngay trong file — mỗi tủ chỉ khai một dòng.`,
+    };
+  }
+  seen.cabinet.add(key);
+
+  const cabinetValues: CabinetValues = {
+    code,
+    siteKey,
+    siteCode,
+    ...(values.description !== undefined
+      ? { description: values.description as string | null }
+      : {}),
+    ...(values.uHeight !== undefined ? { uHeight: values.uHeight as number | null } : {}),
+  };
+  return decide(
+    base,
+    label,
+    cabinetValues,
+    snapshot.cabinets.get(key) as unknown as ({ id: string } & Record<string, unknown>) | undefined,
+  );
+}
+
+/** Đã có trong hệ thống chưa → thêm mới / cập nhật / không đổi. */
+function decide(
+  base: { sheet: CatalogEntity; rowNumber: number },
+  label: string,
+  values: CatalogValues,
+  existing?: { id: string } & Record<string, unknown>,
+): ImportRow {
+  if (!existing) {
+    return { ...base, action: 'create', label, values };
+  }
+  // Trải ra bản sao để so từng trường: kiểu union của `values` không có index signature.
+  const provided: Record<string, unknown> = { ...values };
+  const changed = Object.entries(provided).some(([key, value]) => {
+    // Khóa định danh và trường phụ trợ không tính là "thay đổi nội dung".
+    if (key === 'siteKey' || key === 'siteCode') return false;
+    const current = existing[key];
+    const before = current === undefined || current === null ? null : current;
+    const after = value === undefined || value === null ? null : value;
+    // citext: "pmh-ho" trong file và "PMH-HO" trong DB là CÙNG một mã, không phải sửa đổi.
+    if (typeof before === 'string' && typeof after === 'string') {
+      return normalizeKey(before) !== normalizeKey(after);
+    }
+    return before !== after;
+  });
+  return {
+    ...base,
+    action: changed ? 'update' : 'unchanged',
+    label,
+    values,
+    existingId: existing.id,
+  };
+}
+
+function existingOf(
+  entity: CatalogEntity,
+  key: string,
+  snapshot: CatalogSnapshot,
+): ({ id: string } & Record<string, unknown>) | undefined {
+  const found =
+    entity === 'site'
+      ? snapshot.sites.get(key)
+      : entity === 'device_type'
+        ? snapshot.deviceTypes.get(key)
+        : entity === 'vendor'
+          ? snapshot.vendors.get(key)
+          : undefined;
+  return found as ({ id: string } & Record<string, unknown>) | undefined;
+}
+
+/** Nhãn cho dòng chưa đọc được giá trị hợp lệ — cố lấy ô đầu tiên có chữ. */
+function rawLabel(entity: CatalogEntity, cells: Record<string, string>): string {
+  const first = FIELDS[entity][0];
+  const value = cellText(pickCell(cells, first.aliases));
+  if (value) return value;
+  const anyValue = Object.values(cells).map(cellText).find((v) => v !== '');
+  return anyValue ?? '(dòng trống)';
+}
+
+function summarize(rows: ImportRow[]): ImportSummary {
+  const summary: ImportSummary = { create: 0, update: 0, unchanged: 0, skip: 0, error: 0 };
+  for (const row of rows) summary[row.action] += 1;
+  return summary;
+}

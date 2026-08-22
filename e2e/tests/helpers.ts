@@ -23,6 +23,26 @@ export function resetUsers(): void {
 export const COMPOSE =
   'docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml';
 
+/**
+ * Xóa dữ liệu danh mục do E2E tạo ra (mã bắt đầu bằng `E2E-`).
+ *
+ * Vì sao cần: `resetUsers` chỉ đụng tới tài khoản. Danh mục thì Ở LẠI giữa các lần chạy,
+ * nên site/tủ của lần trước dồn lại làm bảng tràn sang trang 2 và locator theo dòng
+ * bắt trúng bản ghi cũ. Chỉ xóa đúng tiền tố E2E — dữ liệu thật của PMH không đụng tới.
+ */
+export function resetCatalog(): void {
+  const sql = [
+    "DELETE FROM cabinet WHERE site_id IN (SELECT id FROM site WHERE code LIKE 'E2E-%')",
+    "DELETE FROM site WHERE code LIKE 'E2E-%'",
+    "DELETE FROM vendor WHERE name LIKE 'E2E-%'",
+    "DELETE FROM device_type WHERE name LIKE 'E2E-%'",
+  ].join('; ');
+  execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -c "${sql}"`, {
+    cwd: '..',
+    stdio: 'pipe',
+  });
+}
+
 const totp = new TOTP({
   crypto: new NobleCryptoPlugin(),
   base32: new ScureBase32Plugin(),

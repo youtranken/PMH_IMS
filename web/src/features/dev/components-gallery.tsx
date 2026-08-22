@@ -3,11 +3,14 @@ import { useTranslation } from 'react-i18next';
 import { DatePicker } from '@/ui/date-picker';
 import { EmptyState } from '@/ui/load-state';
 import { ExpiryBadge } from '@/ui/expiry-badge';
+import { FilePicker } from '@/ui/file-picker';
 import { FilterBar } from '@/ui/filter-bar';
+import { ImportPreview } from '@/ui/import-preview';
 import { HistoryPanel } from '@/ui/history-panel';
 import { PageHeader, FormSection, Field } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { SchedulePicker, describeSchedule, type ScheduleValue } from '@/ui/schedule-picker';
+import { Tabs } from '@/ui/tabs';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 
@@ -35,6 +38,8 @@ export function ComponentsGallery() {
   const [page, setPage] = useState(2);
   const [search, setSearch] = useState('');
   const [date, setDate] = useState('2026-09-30');
+  const [tab, setTab] = useState('site');
+  const [file, setFile] = useState<File | null>(null);
   const [schedule, setSchedule] = useState<ScheduleValue>({ frequency: 'weekly', hour: 8, weekday: 1 });
 
   return (
@@ -166,6 +171,55 @@ export function ComponentsGallery() {
               action: 'Cấp IP 172.16.10.25 cho SW-CORE-01',
             },
           ]}
+        />
+      </section>
+
+      <section className="kit-section">
+        <h2>Tabs — Tabs (bàn phím ←/→, Home/End)</h2>
+        <Tabs
+          items={[
+            { key: 'site', label: 'Site', count: 2 },
+            { key: 'cabinet', label: 'Tủ mạng', count: 5 },
+            { key: 'vendor', label: 'Nhà cung cấp' },
+          ]}
+          value={tab}
+          onChange={setTab}
+          ariaLabel="Ví dụ tabs"
+        />
+        <p className="muted">Đang chọn: {tab}</p>
+      </section>
+
+      <section className="kit-section">
+        <h2>Chọn file — FilePicker (kéo-thả được)</h2>
+        <FilePicker
+          accept=".xlsx"
+          label="Chọn file .xlsx"
+          hint="Dùng ở import danh mục, import thiết bị, đính kèm giấy tờ."
+          file={file}
+          onPick={setFile}
+        />
+      </section>
+
+      <section className="kit-section">
+        <h2>Đối chiếu trước khi ghi — ImportPreview</h2>
+        <p className="muted">
+          Mọi màn import trong IMS phải qua bước này: người dùng thấy từng dòng sẽ ra sao rồi
+          mới bấm xác nhận.
+        </p>
+        <ImportPreview
+          rows={[
+            { group: 'Site', rowNumber: 2, action: 'create', label: 'PMH-HO' },
+            { group: 'Site', rowNumber: 3, action: 'update', label: 'PMH-NM' },
+            { group: 'Site', rowNumber: 4, action: 'unchanged', label: 'PMH-KHO' },
+            {
+              group: 'Tủ mạng',
+              rowNumber: 5,
+              action: 'error',
+              label: 'KHONG-CO · R01',
+              message: 'Không có site nào mã "KHONG-CO".',
+            },
+          ]}
+          summary={{ create: 1, update: 1, unchanged: 1, skip: 0, error: 1 }}
         />
       </section>
 

@@ -21,6 +21,7 @@
     "test:cov": "jest --coverage",
     "test:db": "jest --config ./test/jest-db.json --runInBand",
     "seed:sa": "node scripts/seed-sa.mjs",
+    "make:templates": "ts-node scripts/dump-templates.ts",
     "test:e2e": "cd ../e2e && npm test"
   },
   "dependencies": {
