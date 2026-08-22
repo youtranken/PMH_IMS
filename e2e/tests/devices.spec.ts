@@ -103,21 +103,21 @@ test.describe('Kho thiết bị', () => {
 
     await page.getByRole('link', { name: 'Thiết bị' }).click();
     await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
-    await fillDevice(page, { code: `PC-A-${stamp}`, name: 'Máy A', type: 'PC', serial });
-    await expect(page.getByRole('row', { name: new RegExp(`PC-A-${stamp}`) })).toBeVisible();
+    await fillDevice(page, { code: `PC-E2E-A-${stamp}`, name: 'Máy A', type: 'PC', serial });
+    await expect(page.getByRole('row', { name: new RegExp(`PC-E2E-A-${stamp}`) })).toBeVisible();
 
     await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
-    await fillDevice(page, { code: `PC-B-${stamp}`, name: 'Máy B', type: 'PC', serial });
+    await fillDevice(page, { code: `PC-E2E-B-${stamp}`, name: 'Máy B', type: 'PC', serial });
 
-    await expect(page.getByText(/đang trùng với PC-A-/)).toBeVisible();
+    await expect(page.getByText(/đang trùng với PC-E2E-A-/)).toBeVisible();
     // Cảnh báo chứ không phải chặn: bản ghi thứ hai vẫn phải nằm trong bảng.
-    await expect(page.getByRole('row', { name: new RegExp(`PC-B-${stamp}`) })).toBeVisible();
+    await expect(page.getByRole('row', { name: new RegExp(`PC-E2E-B-${stamp}`) })).toBeVisible();
   });
 
   test('đường hỏng: trùng mã thiết bị bị chặn, nói rõ lý do', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
-    const code = `PC-DUP-${stamp}`;
+    const code = `PC-E2E-DUP-${stamp}`;
 
     await page.getByRole('link', { name: 'Thiết bị' }).click();
     await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
@@ -172,7 +172,7 @@ test.describe('Kho thiết bị', () => {
     const bad = await page.request.post('/api/v1/devices', {
       headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
       data: {
-        code: `NAS-BAD-${stamp}`,
+        code: `NAS-E2E-BAD-${stamp}`,
         name: 'Khoảng bảo hành ngược',
         deviceTypeId: nas.id,
         warrantyStart: '2027-01-01',
@@ -196,7 +196,7 @@ test.describe('Kho thiết bị', () => {
       const mismatched = await page.request.post('/api/v1/devices', {
         headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
         data: {
-          code: `NAS-MIX-${stamp}`,
+          code: `NAS-E2E-MIX-${stamp}`,
           name: 'Tủ lệch site',
           deviceTypeId: nas.id,
           siteId: otherSite.id,

@@ -1,0 +1,143 @@
+import { expect, test, type Page } from '@playwright/test';
+import { E2E_SA, firstLogin, resetDevices, resetUsers } from './helpers';
+
+test.beforeEach(() => {
+  resetUsers();
+  resetDevices();
+});
+
+async function createDevice(page: Page, code: string, typeName: string): Promise<string> {
+  const csrf = await page.evaluate(async () => {
+    const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
+    return ((await res.json()) as { csrfToken: string }).csrfToken;
+  });
+  const catalog = await page.evaluate(async () => {
+    const res = await fetch('/api/v1/catalog', { credentials: 'include' });
+    return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
+  });
+  const type = catalog.deviceTypes.find((t) => t.name === typeName)!;
+  const created = await page.request.post('/api/v1/devices', {
+    headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+    data: { code, name: `${typeName} ${code}`, deviceTypeId: type.id },
+  });
+  expect(created.status()).toBe(201);
+  return ((await created.json()) as { device: { id: string } }).device.id;
+}
+
+test.describe('Port map', () => {
+  test('AD-14: khai một dòng ở switch, trang server tự hiện chiều ngược', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const switchCode = `SW-E2E-${stamp}`;
+    const serverCode = `SRV-E2E-${stamp}`;
+    const switchId = await createDevice(page, switchCode, 'Switch');
+    const serverId = await createDevice(page, serverCode, 'Server');
+
+    await page.goto(`/thiet-bi/${switchId}`);
+    await page.getByRole('tab', { name: 'Port map' }).click();
+    await expect(page.getByText('Chưa khai cổng nào.')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Thêm cổng' }).click();
+    const form = page.getByRole('dialog');
+    await form.getByRole('textbox', { name: 'Cổng', exact: true }).fill('Gi1/0/12');
+    await form.getByRole('combobox').fill(serverCode);
+    await page.getByRole('option', { name: new RegExp(serverCode) }).click();
+    await form.getByRole('textbox', { name: 'Cổng đầu kia' }).fill('eth0');
+    await form.getByRole('textbox', { name: 'Người dùng' }).fill('phòng Kế toán');
+    await form.getByRole('button', { name: 'Lưu' }).click();
+
+    const row = page.getByRole('row', { name: /Gi1\/0\/12/ });
+    await expect(row).toBeVisible();
+    await expect(row.getByRole('link', { name: serverCode })).toBeVisible();
+
+    // Trang thiết bị ĐẦU KIA: dòng hiện ở bảng chiều ngược, KHÔNG có bản ghi đối xứng.
+    await page.goto(`/thiet-bi/${serverId}`);
+    await page.getByRole('tab', { name: 'Port map' }).click();
+    await expect(page.getByText('Chưa khai cổng nào.')).toBeVisible();
+
+    const reverse = page.getByRole('row', { name: new RegExp(switchCode) });
+    await expect(reverse).toBeVisible();
+    await expect(reverse.getByText('Gi1/0/12')).toBeVisible();
+
+    // Chiều ngược chỉ để ĐỌC — sửa ở nơi giữ bản ghi.
+    await expect(reverse.getByRole('button', { name: 'Xóa' })).toHaveCount(0);
+
+    // API nói thẳng: server có 0 cổng của mình, 1 cổng đang cắm vào.
+    const map = await page.evaluate(async (id: string) => {
+      const res = await fetch(`/api/v1/devices/${id}/ports`, { credentials: 'include' });
+      return (await res.json()) as { ports: unknown[]; incoming: unknown[] };
+    }, serverId);
+    expect(map.ports).toHaveLength(0);
+    expect(map.incoming).toHaveLength(1);
+  });
+
+  test('trùng tên cổng trên cùng thiết bị bị chặn, nói rõ cổng nào', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const switchId = await createDevice(page, `SW-E2E-DUP-${stamp}`, 'Switch');
+
+    await page.goto(`/thiet-bi/${switchId}`);
+    await page.getByRole('tab', { name: 'Port map' }).click();
+
+    for (let i = 0; i < 2; i += 1) {
+      await page.getByRole('button', { name: 'Thêm cổng' }).click();
+      const form = page.getByRole('dialog');
+      await form.getByRole('textbox', { name: 'Cổng', exact: true }).fill('24');
+      await form.getByRole('textbox', { name: 'Hoặc mô tả tự do' }).fill(`lần ${i + 1}`);
+      await form.getByRole('button', { name: 'Lưu' }).click();
+      if (i === 0) await expect(page.getByRole('row', { name: /24/ })).toBeVisible();
+    }
+
+    await expect(page.getByText(/đã có dòng cho cổng "24"/)).toBeVisible();
+  });
+
+  test('không cắm được thiết bị vào chính nó', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const switchId = await createDevice(page, `SW-E2E-SELF-${stamp}`, 'Switch');
+
+    const csrf = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
+      return ((await res.json()) as { csrfToken: string }).csrfToken;
+    });
+    const response = await page.request.post(`/api/v1/devices/${switchId}/ports`, {
+      headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+      data: { portLabel: '1', connectedDeviceId: switchId },
+    });
+    expect(response.status()).toBe(400);
+    expect(await response.json()).toMatchObject({ code: 'PORT_SELF_LINK' });
+  });
+
+  test('loại thiết bị không có port map thì không hiện tab', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const printerId = await createDevice(page, `PC-E2E-NOPORT-${stamp}`, 'Printer');
+
+    await page.goto(`/thiet-bi/${printerId}`);
+    await expect(page.getByRole('tab', { name: 'Hồ sơ' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Port map' })).toHaveCount(0);
+  });
+
+  test('xóa dòng port map để lại vết trong lịch sử thiết bị', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const switchId = await createDevice(page, `SW-E2E-HIST-${stamp}`, 'Switch');
+
+    await page.goto(`/thiet-bi/${switchId}`);
+    await page.getByRole('tab', { name: 'Port map' }).click();
+    await page.getByRole('button', { name: 'Thêm cổng' }).click();
+    const form = page.getByRole('dialog');
+    await form.getByRole('textbox', { name: 'Cổng', exact: true }).fill('WAN1');
+    await form.getByRole('textbox', { name: 'Hoặc mô tả tự do' }).fill('uplink nhà mạng');
+    await form.getByRole('button', { name: 'Lưu' }).click();
+    await expect(page.getByRole('row', { name: /WAN1/ })).toBeVisible();
+
+    await page.getByRole('row', { name: /WAN1/ }).getByRole('button', { name: 'Xóa' }).click();
+    await page.getByRole('button', { name: 'Đồng ý' }).click();
+    await expect(page.getByText('Chưa khai cổng nào.')).toBeVisible();
+
+    await page.getByRole('tab', { name: 'Lịch sử' }).click();
+    await expect(page.getByText('Thêm cổng port map')).toBeVisible();
+    await expect(page.getByText('Xóa cổng port map')).toBeVisible();
+  });
+});

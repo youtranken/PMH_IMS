@@ -17,6 +17,7 @@ import { useToast } from '@/ui/toast';
 import type { CatalogLists } from '@/features/catalog/catalog-types';
 import { DeviceForm } from './device-form';
 import { toHistoryEntries } from './device-history-entries';
+import { PortMapPanel } from './port-map-panel';
 import {
   STATUS_KEY,
   STATUS_TONE,
@@ -134,6 +135,9 @@ export function DeviceDetail({ me }: { me: Me }) {
       <Tabs
         items={[
           { key: 'profile', label: t('devices.tabProfile') },
+          // Tab Port map CHỈ hiện với loại có port (FR-006) — bảng port của một cái máy in
+          // là chỗ trống vô nghĩa.
+          ...(item.hasPortMap ? [{ key: 'ports', label: t('devices.tabPortMap') }] : []),
           { key: 'attachments', label: t('devices.tabAttachments') },
           { key: 'history', label: t('devices.tabHistory') },
         ]}
@@ -173,6 +177,8 @@ export function DeviceDetail({ me }: { me: Me }) {
             </Item>
             <Item label={t('devices.note')}>{orDash(item.note)}</Item>
           </dl>
+        ) : tab === 'ports' ? (
+          <PortMapPanel device={item} csrfToken={me.csrfToken} canEdit={!retired} />
         ) : tab === 'attachments' ? (
           <AttachmentPanel
             ownerType="device"

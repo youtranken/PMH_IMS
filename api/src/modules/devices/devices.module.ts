@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { CatalogModule } from '../catalog/catalog.module';
+import { DevicePortsService } from './device-ports.service';
 import { DevicesApiService } from './devices.api';
 import { DevicesController } from './devices.controller';
 import { DevicesService } from './devices.service';
@@ -12,7 +13,7 @@ import { DevicesService } from './devices.service';
 @Module({
   imports: [AuditModule, CatalogModule],
   controllers: [DevicesController],
-  providers: [DevicesService, DevicesApiService],
+  providers: [DevicesService, DevicePortsService, DevicesApiService],
   exports: [DevicesApiService],
 })
 export class DevicesModule {}

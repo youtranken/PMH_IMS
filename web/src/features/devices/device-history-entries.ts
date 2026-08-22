@@ -25,6 +25,7 @@ const FIELD_LABEL: Record<string, string> = {
   warrantyEnd: 'bảo hành đến',
   status: 'trạng thái',
   note: 'ghi chú',
+  portLabel: 'cổng',
 };
 
 const ACTION_LABEL: Record<string, string> = {
@@ -33,6 +34,9 @@ const ACTION_LABEL: Record<string, string> = {
   'status-changed': 'Đổi trạng thái',
   imported: 'Nhập từ Excel',
   'imported-update': 'Cập nhật khi nhập từ Excel',
+  'port-added': 'Thêm cổng port map',
+  'port-updated': 'Sửa cổng port map',
+  'port-removed': 'Xóa cổng port map',
 };
 
 const STATUS_LABEL: Record<string, string> = {

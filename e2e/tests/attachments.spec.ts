@@ -65,7 +65,7 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
   test('file lạ định dạng bị từ chối theo MAGIC-BYTE, không tin đuôi file', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
-    const deviceId = await createDevice(page, `SRV-BAD-${stamp}`);
+    const deviceId = await createDevice(page, `SRV-E2E-BAD-${stamp}`);
 
     // Đặt tên .pdf nhưng ruột là HTML — đúng kiểu file dùng để chèn mã độc.
     const fake = join(tmpdir(), `gia-mao-${stamp}.pdf`);
@@ -85,7 +85,7 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
   }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
-    const deviceId = await createDevice(page, `SRV-HDR-${stamp}`);
+    const deviceId = await createDevice(page, `SRV-E2E-HDR-${stamp}`);
 
     await page.goto(`/thiet-bi/${deviceId}`);
     await page.getByRole('tab', { name: 'Giấy tờ' }).click();
@@ -113,7 +113,7 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
   test('xóa rồi thì không tải về được nữa', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
-    const deviceId = await createDevice(page, `SRV-DEL-${stamp}`);
+    const deviceId = await createDevice(page, `SRV-E2E-DEL-${stamp}`);
 
     await page.goto(`/thiet-bi/${deviceId}`);
     await page.getByRole('tab', { name: 'Giấy tờ' }).click();

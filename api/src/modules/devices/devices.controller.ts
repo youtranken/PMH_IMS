@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import {
   IsIn,
   IsOptional,
@@ -12,6 +22,7 @@ import { parsePageQuery } from '../../common/pagination';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
+import { DevicePortsService } from './device-ports.service';
 import { DevicesService } from './devices.service';
 import { DEVICE_STATUSES, type DeviceStatus } from './devices.types';
 
@@ -59,6 +70,24 @@ class IdParamDto {
   id!: string;
 }
 
+
+class PortBodyDto {
+  @IsOptional() @IsString() @Length(1, 60) portLabel?: string;
+
+  // Chuỗi rỗng = gỡ liên kết tới thiết bị trong kho (đầu kia thành mô tả tự do).
+  @IsOptional() @ValidateIf((_o, value) => value !== '') @IsUUID() connectedDeviceId?: string;
+
+  @IsOptional() @IsString() @Length(0, 200) connectedLabel?: string;
+  @IsOptional() @IsString() @Length(0, 60) connectedPort?: string;
+  @IsOptional() @IsString() @Length(0, 120) usedBy?: string;
+  @IsOptional() @IsString() @Length(0, 500) note?: string;
+}
+
+class PortParamDto extends IdParamDto {
+  @IsUUID(undefined, { message: 'Mã dòng port map không hợp lệ.' })
+  portId!: string;
+}
+
 /**
  * Kho thiết bị (story 2.2, FR-001/FR-007).
  *
@@ -68,7 +97,10 @@ class IdParamDto {
  */
 @Controller('api/v1/devices')
 export class DevicesController {
-  constructor(private readonly devices: DevicesService) {}
+  constructor(
+    private readonly devices: DevicesService,
+    private readonly ports: DevicePortsService,
+  ) {}
 
   @Roles('sa', 'admin', 'member')
   @Get()
@@ -133,6 +165,47 @@ export class DevicesController {
   ) {
     await this.devices.setStatus(actor(req), params.id, body.status);
     return { status: body.status };
+  }
+  // ───────────── Port map (story 2.4, AD-14) ─────────────
+
+  /**
+   * Trả CẢ HAI CHIỀU: `ports` là cổng của chính thiết bị này, `incoming` là cổng ở nơi khác
+   * đang cắm vào nó — dựng bằng query, không có bản ghi đối xứng nào trong DB (AD-14).
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get(':id/ports')
+  listPorts(@Param() params: IdParamDto) {
+    return this.ports.listFor(params.id);
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @Post(':id/ports')
+  @Audited('device.port.added', 'device')
+  addPort(
+    @Param() params: IdParamDto,
+    @Body() body: PortBodyDto,
+    @Req() req: AuthedRequest,
+  ) {
+    return this.ports.create(actor(req), params.id, body);
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @Patch(':id/ports/:portId')
+  @Audited('device.port.updated', 'device')
+  updatePort(
+    @Param() params: PortParamDto,
+    @Body() body: PortBodyDto,
+    @Req() req: AuthedRequest,
+  ) {
+    return this.ports.update(actor(req), params.id, params.portId, body);
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @Delete(':id/ports/:portId')
+  @Audited('device.port.removed', 'device')
+  async removePort(@Param() params: PortParamDto, @Req() req: AuthedRequest) {
+    await this.ports.remove(actor(req), params.id, params.portId);
+    return { status: 'deleted' };
   }
 }
 

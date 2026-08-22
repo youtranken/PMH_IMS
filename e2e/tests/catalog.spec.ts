@@ -49,7 +49,8 @@ test.describe('Danh mục', () => {
 
     const cabinetRow = page.getByRole('row', { name: new RegExp(cabinetCode) });
     await expect(cabinetRow).toBeVisible();
-    await expect(cabinetRow.getByRole('cell', { name: '42' })).toBeVisible();
+    // exact: mã sinh theo timestamp có thể CHỨA chuỗi "42", không exact thì bắt trúng 3 ô.
+    await expect(cabinetRow.getByRole('cell', { name: '42', exact: true })).toBeVisible();
 
     // Vô hiệu rồi bật lại — mục vẫn còn, chỉ đổi trạng thái.
     await cabinetRow.getByRole('button', { name: 'Vô hiệu' }).click();

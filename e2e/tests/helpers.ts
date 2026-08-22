@@ -52,10 +52,15 @@ export const COMPOSE =
  * script này chỉ chạy ở môi trường test, không bao giờ có mặt trong image production.
  */
 export function resetDevices(): void {
-  const match = "(code ILIKE '%-E2E-%' OR code ILIKE 'PC-A-%' OR code ILIKE 'PC-B-%' OR code ILIKE 'PC-DUP-%' OR code ILIKE 'NAS-%' OR code ILIKE 'SW-E2E-%' OR code ILIKE 'SRV-%' OR code ILIKE 'UPS-E2E-%' OR code ILIKE 'PC-E2E-%')";
+  // Quy ước: MỌI mã thiết bị do E2E tạo đều chứa chuỗi "E2E" — nhờ vậy câu xóa dưới đây
+  // không bao giờ chạm vào dữ liệu thật (SW-CORE-01, SRV-APP-01…) trong stack dev.
+  const match = "code ILIKE '%E2E%'";
   const sql = [
-    // Giấy tờ đính kèm trỏ tới thiết bị qua owner_id — xóa trước, không thì còn rác.
     `DELETE FROM file WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE ${match})`,
+    // Port map trỏ tới thiết bị ở CẢ HAI cột — xóa hết dòng có dính thiết bị test.
+    `DELETE FROM device_port WHERE device_id IN (SELECT id FROM device WHERE ${match}) OR connected_device_id IN (SELECT id FROM device WHERE ${match})`,
+    // `device_history` là append-only (AD-13) nên phải tắt trigger để dọn — đây là lý do
+    // việc này chỉ chạy ở môi trường test, không bao giờ có trong image production.
     `ALTER TABLE device_history DISABLE TRIGGER device_history_no_delete`,
     `DELETE FROM device_history WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
     `ALTER TABLE device_history ENABLE TRIGGER device_history_no_delete`,

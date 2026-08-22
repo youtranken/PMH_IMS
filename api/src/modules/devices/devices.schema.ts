@@ -48,3 +48,20 @@ export const deviceHistoryTable = pgTable('device_history', {
   changes: jsonb('changes'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Port map — migration 0013 (AD-14). MỘT kết nối = MỘT bản ghi; chiều ngược hiện bằng
+ * query trên `connected_device_id`, không có bản ghi đối xứng.
+ */
+export const devicePortTable = pgTable('device_port', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  deviceId: uuid('device_id').notNull(),
+  portLabel: text('port_label').notNull(),
+  connectedDeviceId: uuid('connected_device_id'),
+  connectedLabel: text('connected_label'),
+  connectedPort: text('connected_port'),
+  usedBy: text('used_by'),
+  note: text('note'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
