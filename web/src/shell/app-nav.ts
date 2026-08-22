@@ -26,6 +26,7 @@ export const navGroups: NavGroup[] = [
       { key: 'nav.dashboard', to: '/', planned: true },
       { key: 'nav.devices', to: '/thiet-bi' },
       { key: 'nav.software', to: '/phan-mem' },
+      { key: 'nav.isp', to: '/duong-truyen' },
       { key: 'nav.expiry', to: '/sap-het-han', planned: true },
       { key: 'nav.ipam', to: '/dia-chi-ip', planned: true },
       { key: 'nav.vault', to: '/ket-sat', planned: true },

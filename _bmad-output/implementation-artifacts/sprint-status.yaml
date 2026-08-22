@@ -55,7 +55,7 @@ development_status:
   epic-3: in-progress
   3-1-hồ-sơ-phần-mềm-theo-loại: done
   3-2-gán-license-cho-thiết-bị-theo-seat: done
-  3-3-hồ-sơ-đường-truyền-isp: backlog
+  3-3-hồ-sơ-đường-truyền-isp: done
   3-4-cỗ-máy-expiry-và-màn-tổng-hợp: backlog
   3-5-báo-cáo-email-sắp-hết-hạn-theo-luật: backlog
   epic-3-retrospective: optional

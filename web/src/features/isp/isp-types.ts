@@ -1,0 +1,43 @@
+export const ISP_STATUSES = ['active', 'suspended', 'terminated'] as const;
+export type IspStatus = (typeof ISP_STATUSES)[number];
+
+export interface IspRow {
+  id: string;
+  code: string;
+  provider: string;
+  bandwidth: string | null;
+  wanIp: string | null;
+  siteId: string | null;
+  siteCode: string | null;
+  deviceId: string | null;
+  deviceCode: string | null;
+  deviceName: string | null;
+  hotline: string | null;
+  contractNo: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  note: string | null;
+  status: IspStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface IspHistoryRow {
+  id: string;
+  action: string;
+  actor: string;
+  changes: Record<string, { before: unknown; after: unknown }> | null;
+  createdAt: string;
+}
+
+export const STATUS_KEY: Record<IspStatus, string> = {
+  active: 'isp.statusActive',
+  suspended: 'isp.statusSuspended',
+  terminated: 'isp.statusTerminated',
+};
+
+export const STATUS_TONE: Record<IspStatus, string> = {
+  active: 'ok',
+  suspended: 'warn',
+  terminated: 'muted',
+};

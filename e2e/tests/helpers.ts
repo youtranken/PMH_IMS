@@ -71,6 +71,22 @@ export function resetSoftware(): void {
   });
 }
 
+/** Xóa đường truyền ISP do E2E tạo (mã luôn chứa "E2E"). */
+export function resetIsp(): void {
+  const match = "code ILIKE '%E2E%'";
+  const sql = [
+    `DELETE FROM file WHERE owner_type = 'isp' AND owner_id IN (SELECT id FROM isp_line WHERE ${match})`,
+    `ALTER TABLE isp_line_history DISABLE TRIGGER isp_line_history_no_delete`,
+    `DELETE FROM isp_line_history WHERE isp_line_id IN (SELECT id FROM isp_line WHERE ${match})`,
+    `ALTER TABLE isp_line_history ENABLE TRIGGER isp_line_history_no_delete`,
+    `DELETE FROM isp_line WHERE ${match}`,
+  ].join('; ');
+  execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -c "${sql}"`, {
+    cwd: '..',
+    stdio: 'pipe',
+  });
+}
+
 export function resetDevices(): void {
   // Quy ước: MỌI mã thiết bị do E2E tạo đều chứa chuỗi "E2E" — nhờ vậy câu xóa dưới đây
   // không bao giờ chạm vào dữ liệu thật (SW-CORE-01, SRV-APP-01…) trong stack dev.
@@ -79,6 +95,8 @@ export function resetDevices(): void {
     `DELETE FROM file WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE ${match})`,
     // License gán vào thiết bị test cũng phải dọn, không thì FK chặn xóa thiết bị.
     `DELETE FROM license_assignment WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
+    // Đường ISP trỏ tới thiết bị biên — gỡ liên kết trước khi xóa thiết bị.
+    `UPDATE isp_line SET device_id = NULL WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
     // Port map trỏ tới thiết bị ở CẢ HAI cột — xóa hết dòng có dính thiết bị test.
     `DELETE FROM device_port WHERE device_id IN (SELECT id FROM device WHERE ${match}) OR connected_device_id IN (SELECT id FROM device WHERE ${match})`,
     // `device_history` là append-only (AD-13) nên phải tắt trigger để dọn — đây là lý do

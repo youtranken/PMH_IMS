@@ -33,7 +33,7 @@ export function AttachmentPanel({
   csrfToken,
   canEdit = true,
 }: {
-  ownerType: 'device';
+  ownerType: 'device' | 'isp';
   ownerId: string;
   csrfToken: string;
   canEdit?: boolean;

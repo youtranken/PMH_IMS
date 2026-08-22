@@ -21,9 +21,9 @@ import { filesTable } from './files.schema';
 /**
  * Chủ thể được phép có file đính kèm. Whitelist chứ không nhận chuỗi tự do: người dùng
  * gửi `ownerType` bịa ra thì file thành mồ côi, không màn nào hiển thị và không ai dọn.
- * Epic sau thêm loại thì thêm vào đây.
+ * Thêm loại mới (phiếu ISO ở Epic 8, sự cố ở Epic 9) thì thêm vào đây.
  */
-export const FILE_OWNER_TYPES = ['device'] as const;
+export const FILE_OWNER_TYPES = ['device', 'isp'] as const;
 export type FileOwnerType = (typeof FILE_OWNER_TYPES)[number];
 
 export interface FileRecord {
