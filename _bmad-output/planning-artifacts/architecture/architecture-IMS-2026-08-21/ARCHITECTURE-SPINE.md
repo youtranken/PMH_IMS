@@ -163,7 +163,7 @@ graph TD
 - Schema chi tiết từng bảng (dev quyết trong migration, theo AD-3 ownership + AD-13 history).
 - Cấu trúc component React trong từng feature (theo pattern `features/` QLTS).
 - Chi tiết template 10 phiếu ISO (tài sản module `sheets`, theo AD-14 snapshot).
-- Chính sách "xóa hẳn" bản ghi nhập nhầm (open item PRD — chốt khi thiết kế module `ipam`, trong khuôn khổ convention Xóa ở trên).
+- ~~Chính sách "xóa hẳn" bản ghi nhập nhầm~~ — **CHỐT 2026-08-23: KHÔNG xóa hẳn.** Bản ghi nhập nhầm được đánh dấu (`status = 'mistake'` hoặc tương đương của module chủ) và ẩn khỏi mọi danh sách mặc định; vẫn tra cứu được và vẫn giữ vết ai nhập / ai ẩn. Lý do: cả hệ thống đã theo nếp "không gì biến mất" (audit append-only, thiết bị chỉ thanh lý, file xóa mềm) — mở một đường xóa cứng ở `ipam` là phá nếp đó ở đúng chỗ kiểm kê cần đối chiếu nhất.
 
 ## Open Questions
 
