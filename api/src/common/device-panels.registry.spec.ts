@@ -1,5 +1,5 @@
-import { DevicePanelsService } from './device-panels.service';
-import type { DevicePanel, DevicePanelProvider } from '../../common/device-panels';
+import { DevicePanelRegistry } from './device-panels.registry';
+import type { DevicePanel, DevicePanelProvider } from './device-panels';
 
 function provider(
   key: string,
@@ -20,22 +20,29 @@ const IP_PANEL: DevicePanel = {
   items: [{ label: 'LAN', value: '172.16.10.25' }],
 };
 
-describe('DevicePanelsService — khu mở rộng của trang chi tiết (story 2.5)', () => {
+function serviceWith(providers: DevicePanelProvider[]): DevicePanelRegistry {
+  const service = new DevicePanelRegistry();
+  for (const item of providers) service.register(item);
+  return service;
+}
+
+describe('DevicePanelRegistry — khu mở rộng của trang chi tiết (story 2.5)', () => {
   it('chưa module nào đăng ký → danh sách rỗng, trang vẫn mở được', async () => {
-    const service = new DevicePanelsService();
-    await expect(service.listFor('device-1')).resolves.toEqual([]);
+    await expect(new DevicePanelRegistry().listFor('device-1')).resolves.toEqual([]);
   });
 
   it('module đăng ký thì panel của nó xuất hiện', async () => {
-    const service = new DevicePanelsService([provider('ipam', IP_PANEL)]);
+    const service = serviceWith([provider('ipam', IP_PANEL)]);
     await expect(service.listFor('device-1')).resolves.toEqual([IP_PANEL]);
   });
 
+  it('đăng ký hai lần cùng một khóa thì không nhân đôi panel', async () => {
+    const service = serviceWith([provider('ipam', IP_PANEL), provider('ipam', IP_PANEL)]);
+    await expect(service.listFor('device-1')).resolves.toHaveLength(1);
+  });
+
   it('provider trả null = không liên quan tới thiết bị này → không hiện panel trống', async () => {
-    const service = new DevicePanelsService([
-      provider('ipam', IP_PANEL),
-      provider('vault', null),
-    ]);
+    const service = serviceWith([provider('ipam', IP_PANEL), provider('vault', null)]);
     const panels = await service.listFor('device-1');
     expect(panels.map((panel) => panel.key)).toEqual(['ipam']);
   });
@@ -45,7 +52,7 @@ describe('DevicePanelsService — khu mở rộng của trang chi tiết (story 
    * Một module phụ hỏng mà kéo sập cả trang thì đúng lúc cần nhất lại không xem được gì.
    */
   it('một provider ném lỗi thì bị bỏ qua, các panel còn lại vẫn hiện', async () => {
-    const service = new DevicePanelsService([
+    const service = serviceWith([
       provider('vault', () => {
         throw new Error('két sắt sập');
       }),

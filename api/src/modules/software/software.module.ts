@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { CatalogModule } from '../catalog/catalog.module';
+import { DevicesModule } from '../devices/devices.module';
+import { LicenseAssignmentService } from './license-assignment.service';
+import { SoftwareDevicePanel } from './software-device-panel';
 import { SoftwareApiService } from './software.api';
 import { SoftwareController } from './software.controller';
 import { SoftwareService } from './software.service';
@@ -10,9 +13,14 @@ import { SoftwareService } from './software.service';
  * Ra ngoài chỉ xuất `SoftwareApiService` (AD-2).
  */
 @Module({
-  imports: [AuditModule, CatalogModule],
+  imports: [AuditModule, CatalogModule, DevicesModule],
   controllers: [SoftwareController],
-  providers: [SoftwareService, SoftwareApiService],
+  providers: [
+    SoftwareService,
+    LicenseAssignmentService,
+    SoftwareDevicePanel,
+    SoftwareApiService,
+  ],
   exports: [SoftwareApiService],
 })
 export class SoftwareModule {}

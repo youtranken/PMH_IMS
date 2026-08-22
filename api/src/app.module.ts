@@ -7,6 +7,7 @@ import { UserThrottlerGuard } from './common/user-throttler.guard';
 import { ExcelExportService } from './common/excel/excel-export.service';
 import { ExcelImportService } from './common/excel/excel-import.service';
 import { DatabaseModule } from './database/database.module';
+import { DevicePanelsModule } from './common/device-panels.registry';
 import { HealthController } from './health/health.controller';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuditInterceptor } from './modules/audit/audit.interceptor';
@@ -51,6 +52,7 @@ import { UsersModule } from './modules/users/users.module';
     }),
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     DatabaseModule,
+    DevicePanelsModule,
     SystemConfigModule,
     AuditModule,
     OutboxModule,

@@ -28,7 +28,15 @@ module.exports = {
         // import TRONG CÙNG module luôn hợp lệ, chỉ sang module KHÁC mới phải qua *.api.ts.
         // (Bản cũ viết '\1' — backreference của regex, không phải cú pháp group matching —
         //  nên luật bắt nhầm mọi import nội bộ ngay khi module nghiệp vụ đầu tiên ra đời.)
-        pathNot: [`^src/modules/(${BIZ})/[^/]+\.api\.ts$`, '^src/modules/$1/'],
+        pathNot: [
+          `^src/modules/(${BIZ})/[^/]+\.api\.ts$`,
+          // `*.module.ts` là cửa CHÍNH THỨC của một module trong Nest: nó chỉ export
+          // đúng `*.api.ts`, nên import nó là cách duy nhất để DI cấp được api service.
+          // Cấm cả dòng này thì hai module nghiệp vụ không bao giờ gọi nhau được — trái
+          // với chính AD-2 ("gọi nhau QUA *.api.ts", tức là có gọi nhau).
+          `^src/modules/(${BIZ})/[^/]+\.module\.ts$`,
+          '^src/modules/$1/',
+        ],
       },
     },
     {

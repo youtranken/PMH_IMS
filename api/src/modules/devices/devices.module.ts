@@ -4,7 +4,6 @@ import { CatalogModule } from '../catalog/catalog.module';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { ExcelImportService } from '../../common/excel/excel-import.service';
 import { DeviceImportService } from './device-import.service';
-import { DevicePanelsService } from './device-panels.service';
 import { DevicePortsService } from './device-ports.service';
 import { DevicesApiService } from './devices.api';
 import { DevicesController } from './devices.controller';
@@ -20,7 +19,6 @@ import { DevicesService } from './devices.service';
   providers: [
     DevicesService,
     DevicePortsService,
-    DevicePanelsService,
     DeviceImportService,
     DevicesApiService,
     ExcelExportService,

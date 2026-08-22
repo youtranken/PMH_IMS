@@ -16,6 +16,7 @@ import { PageHeader } from '@/ui/page-header';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useToast } from '@/ui/toast';
 import type { CatalogLists } from '@/features/catalog/catalog-types';
+import { LicenseAssignmentsPanel } from './license-assignments-panel';
 import { SoftwareForm } from './software-form';
 import { toSoftwareHistory } from './software-history-entries';
 import {
@@ -108,6 +109,10 @@ export function SoftwareDetail({ me }: { me: Me }) {
       <Tabs
         items={[
           { key: 'profile', label: t('software.tabProfile') },
+          // Tab "Máy đang dùng" chỉ có nghĩa với license (story 3.2).
+          ...(supportsSeats(item.kind)
+            ? [{ key: 'devices', label: t('software.tabDevices'), count: item.seatUsed }]
+            : []),
           { key: 'history', label: t('software.tabHistory') },
         ]}
         value={tab}
@@ -142,6 +147,8 @@ export function SoftwareDetail({ me }: { me: Me }) {
               <p className="muted">{t('software.vaultHint')}</p>
             </section>
           </>
+        ) : tab === 'devices' ? (
+          <LicenseAssignmentsPanel software={item} csrfToken={me.csrfToken} />
         ) : history.isLoading ? (
           <Loading />
         ) : history.isError ? (

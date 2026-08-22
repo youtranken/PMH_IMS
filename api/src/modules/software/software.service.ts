@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -20,7 +20,11 @@ import {
   type SoftwareKind,
   type SoftwareStatus,
 } from './software-rules';
-import { softwareHistoryTable, softwareTable } from './software.schema';
+import {
+  licenseAssignmentTable,
+  softwareHistoryTable,
+  softwareTable,
+} from './software.schema';
 import type {
   SoftwareFilter,
   SoftwareHistoryRecord,
@@ -234,13 +238,32 @@ export class SoftwareService {
     if (rows.length === 0) return [];
     const lists = await this.catalog.lists({ includeInactive: true });
     const vendors = new Map(lists.vendors.map((vendor) => [vendor.id, vendor]));
+    const used = await this.seatUsage(rows.map((row) => row.id));
     return rows.map((row) => ({
       ...toRecord(row),
       vendorName: row.vendorId ? (vendors.get(row.vendorId)?.name ?? null) : null,
-      // Story 3.1 chưa có bảng gán seat — luôn 0. Story 3.2 thay bằng số đếm thật;
-      // để sẵn trường ở đây để màn danh sách không phải đổi hình dạng dữ liệu giữa chừng.
-      seatUsed: 0,
+      seatUsed: used.get(row.id) ?? 0,
     }));
+  }
+
+  /**
+   * Số seat đang dùng của cả trang, một lượt đếm (story 3.2).
+   * Query thẳng `license_assignment` là hợp lệ: cùng module `software` sở hữu cả hai bảng
+   * (AD-3). Đi vòng qua service khác chỉ để đọc bảng của chính mình là vòng phụ thuộc thừa.
+   */
+  private async seatUsage(ids: string[]): Promise<Map<string, number>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.db
+      .select({ softwareId: licenseAssignmentTable.softwareId, used: count() })
+      .from(licenseAssignmentTable)
+      .where(
+        and(
+          inArray(licenseAssignmentTable.softwareId, ids),
+          isNull(licenseAssignmentTable.releasedAt),
+        ),
+      )
+      .groupBy(licenseAssignmentTable.softwareId);
+    return new Map(rows.map((row) => [row.softwareId, Number(row.used)]));
   }
 
   /** Chuẩn hóa + kiểm luật. Chỉ trả về trường CÓ MẶT trong `input`. */

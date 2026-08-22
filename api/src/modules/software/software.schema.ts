@@ -42,3 +42,22 @@ export const softwareHistoryTable = pgTable('software_history', {
   changes: jsonb('changes'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 });
+
+/**
+ * Gán license vào thiết bị — migration 0015. CÙNG module `software` sở hữu (AD-3): bảng nói
+ * về license, và license là tài sản của software.
+ *
+ * Gỡ gán KHÔNG xóa dòng mà đánh dấu `released_at` — "key này từng nhập máy nào" là câu hỏi
+ * kiểm toán hay gặp nhất khi rà license.
+ */
+export const licenseAssignmentTable = pgTable('license_assignment', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  softwareId: uuid('software_id').notNull(),
+  deviceId: uuid('device_id').notNull(),
+  assignedBy: text('assigned_by').notNull(),
+  assignedAt: timestamp('assigned_at', { withTimezone: true }).notNull().defaultNow(),
+  releasedBy: text('released_by'),
+  releasedAt: timestamp('released_at', { withTimezone: true }),
+  overSeatReason: text('over_seat_reason'),
+  note: text('note'),
+});

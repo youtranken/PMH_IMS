@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+} from '@nestjs/common';
 import {
   IsIn,
   IsInt,
@@ -20,6 +30,7 @@ import {
   type SoftwareKind,
   type SoftwareStatus,
 } from './software-rules';
+import { LicenseAssignmentService } from './license-assignment.service';
 import { SoftwareService } from './software.service';
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
@@ -57,6 +68,24 @@ class RenewDto {
   endDate!: string;
 }
 
+class AssignDto {
+  @IsUUID(undefined, { message: 'Thiết bị được chọn không hợp lệ.' })
+  deviceId!: string;
+
+  @IsOptional() @IsString() @Length(0, 500) note?: string;
+
+  /** Bắt buộc khi vượt seat (AC 3.2) — service kiểm, DTO chỉ giới hạn độ dài. */
+  @IsOptional() @IsString() @Length(0, 500) overSeatReason?: string;
+}
+
+class AssignmentParamDto {
+  @IsUUID(undefined, { message: 'Mã hồ sơ không hợp lệ.' })
+  id!: string;
+
+  @IsUUID(undefined, { message: 'Mã bản ghi gán không hợp lệ.' })
+  assignmentId!: string;
+}
+
 class IdParamDto {
   @IsUUID(undefined, { message: 'Mã hồ sơ không hợp lệ.' })
   id!: string;
@@ -70,7 +99,10 @@ class IdParamDto {
  */
 @Controller('api/v1/software')
 export class SoftwareController {
-  constructor(private readonly software: SoftwareService) {}
+  constructor(
+    private readonly software: SoftwareService,
+    private readonly assignments: LicenseAssignmentService,
+  ) {}
 
   @Roles('sa', 'admin', 'member')
   @Get()
@@ -129,6 +161,34 @@ export class SoftwareController {
   @Audited('software.renewed', 'software', { writtenByService: true })
   renew(@Param() params: IdParamDto, @Body() body: RenewDto, @Req() req: AuthedRequest) {
     return this.software.renew(actor(req), params.id, body.endDate);
+  }
+
+  // ───────────── Gán license vào máy (story 3.2, FR-011) ─────────────
+
+  /** `includeReleased=true` mở cả dòng đã gỡ — "key này từng nhập máy nào" là câu kiểm toán. */
+  @Roles('sa', 'admin', 'member')
+  @Get(':id/assignments')
+  listAssignments(
+    @Param() params: IdParamDto,
+    @Query('includeReleased') includeReleased?: string,
+  ) {
+    return this.assignments.listFor(params.id, includeReleased === 'true');
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @Post(':id/assignments')
+  @Audited('software.license-assigned', 'software', { writtenByService: true })
+  assign(@Param() params: IdParamDto, @Body() body: AssignDto, @Req() req: AuthedRequest) {
+    return this.assignments.assign(actor(req), params.id, body);
+  }
+
+  /** Gỡ gán = đánh dấu released, KHÔNG xóa dòng (AC 3.2). */
+  @Roles('sa', 'admin', 'member')
+  @Delete(':id/assignments/:assignmentId')
+  @Audited('software.license-released', 'software', { writtenByService: true })
+  async release(@Param() params: AssignmentParamDto, @Req() req: AuthedRequest) {
+    await this.assignments.release(actor(req), params.id, params.assignmentId);
+    return { status: 'released' };
   }
 }
 

@@ -59,6 +59,7 @@
 | `parsePageQuery`, `Page<T>` | `common/pagination.ts` | Mọi endpoint danh sách | Shape trả về luôn là `{ items, total }` |
 | `Tx`, `WriteFn` | `common/tx.ts` | Mọi hàm ghi (AD-5) | `tx` là tham số đầu, không dùng ALS |
 | `ExpirySource` | `common/expiry/expiry-source.ts` | Module có ngày hết hạn tự đăng ký (AD-7) | Vault KHÔNG đăng ký (AD-4) |
+| `DevicePanelRegistry` (+ `DevicePanelsModule` @Global) | `common/device-panels.registry.ts` | Module chủ gọi `register(this)` lúc khởi động để góp một khu vào trang thiết bị | Đặt sổ này trong `devices` là mọi module góp panel phải chạm nội bộ `devices` (AD-2) |
 | `DevicePanelProvider` | `common/device-panels.ts` | Module muốn góp một khu vào trang chi tiết thiết bị (IP, license, secret, phiếu) | Cấm `devices` import thẳng module đó (AD-2) |
 | `readSecretFile` | `common/secrets.ts` | Đọc docker secret | Cấm đọc bí mật từ env (AD-11) |
 | `GlobalExceptionFilter` | `common/global-exception.filter.ts` | Một shape lỗi cho toàn API | — |

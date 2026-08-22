@@ -58,6 +58,8 @@ export const COMPOSE =
 export function resetSoftware(): void {
   const match = "code ILIKE '%E2E%'";
   const sql = [
+    // Bản ghi gán license trỏ tới software — xóa trước, không thì FK chặn.
+    `DELETE FROM license_assignment WHERE software_id IN (SELECT id FROM software WHERE ${match})`,
     `ALTER TABLE software_history DISABLE TRIGGER software_history_no_delete`,
     `DELETE FROM software_history WHERE software_id IN (SELECT id FROM software WHERE ${match})`,
     `ALTER TABLE software_history ENABLE TRIGGER software_history_no_delete`,
@@ -75,6 +77,8 @@ export function resetDevices(): void {
   const match = "code ILIKE '%E2E%'";
   const sql = [
     `DELETE FROM file WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE ${match})`,
+    // License gán vào thiết bị test cũng phải dọn, không thì FK chặn xóa thiết bị.
+    `DELETE FROM license_assignment WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
     // Port map trỏ tới thiết bị ở CẢ HAI cột — xóa hết dòng có dính thiết bị test.
     `DELETE FROM device_port WHERE device_id IN (SELECT id FROM device WHERE ${match}) OR connected_device_id IN (SELECT id FROM device WHERE ${match})`,
     // `device_history` là append-only (AD-13) nên phải tắt trigger để dọn — đây là lý do
