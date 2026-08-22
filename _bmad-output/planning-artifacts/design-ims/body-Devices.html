@@ -1,0 +1,134 @@
+  <main class="page">
+    <div class="page-header">
+      <h1>Thiết bị</h1>
+      <span class="sub">312 hồ sơ · 4 loại · 3 site</span>
+      <button class="btn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 11l5 4 5-4"/><path d="M4 19h16"/></svg>Xuất Excel</button>
+      <button class="btn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3M7 7l5-4 5 4"/><path d="M4 19h16"/></svg>Nhập từ Excel</button>
+      <button class="btn primary"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Thêm thiết bị</button>
+    </div>
+
+    <div class="filter-bar">
+      <div class="grow"><div class="inp search ph">Tìm theo tên, mã, serial, model…</div></div>
+      <div class="sel" style="width:180px"><div class="inp pick">Loại: Switch</div></div>
+      <div class="sel" style="width:160px"><div class="inp pick">Site: Site 2</div></div>
+      <div class="sel" style="width:170px"><div class="inp pick ph">Tủ mạng: tất cả</div></div>
+      <div class="sel" style="width:170px"><div class="inp pick">Bảo hành: tất cả</div></div>
+      <button class="btn ghost">Xóa lọc</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr>
+            <th style="width:38px"></th>
+            <th>Mã / Tên</th><th>Loại</th><th>Model · Serial</th><th>Vị trí</th>
+            <th>Người dùng</th><th>IP</th><th>Bảo hành</th><th>Trạng thái</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="color:var(--ink-3)">›</td>
+            <td><b>SW-S2-F3-01</b><span class="cell-sub">Switch tầng 3 khu văn phòng</span></td>
+            <td><span class="badge brand plain">Switch</span></td>
+            <td>Cisco C1300-24T<span class="cell-sub mono">FOC2814X0AB</span></td>
+            <td>Site 2 › Tủ T2-F3<span class="cell-sub">Rack U12</span></td>
+            <td>Hạ tầng chung</td>
+            <td class="mono">172.16.20.11</td>
+            <td><span class="badge ok">còn 412 ngày</span></td>
+            <td><span class="badge ok">Đang chạy</span></td>
+            <td class="action-cell"><button class="kebab">⋯</button></td>
+          </tr>
+          <tr>
+            <td style="color:var(--ink-3)">›</td>
+            <td><b>DRAYTEK-S1-01</b><span class="cell-sub">Router chính site 1 — 4 WAN</span></td>
+            <td><span class="badge brand plain">Router</span></td>
+            <td>DrayTek Vigor2927<span class="cell-sub mono">2927-A19X22</span></td>
+            <td>Site 1 › Tủ T1-A<span class="cell-sub">Rack U3</span></td>
+            <td>Hạ tầng chung</td>
+            <td class="mono">172.16.10.1</td>
+            <td><span class="badge warn">còn 21 ngày</span></td>
+            <td><span class="badge ok">Đang chạy</span></td>
+            <td class="action-cell"><button class="kebab">⋯</button></td>
+          </tr>
+          <tr>
+            <td style="color:var(--ink-3)">›</td>
+            <td><b>AP-S2-F3-04</b><span class="cell-sub">Wifi phòng họp lớn</span></td>
+            <td><span class="badge brand plain">Access Point</span></td>
+            <td>Cisco Meraki MR46<span class="cell-sub mono">Q2PD-9XKL-88M2</span></td>
+            <td>Site 2 › Tủ T2-F3<span class="cell-sub">Gắn trần</span></td>
+            <td>Hạ tầng chung</td>
+            <td class="mono">172.16.20.64</td>
+            <td><span class="badge ok">còn 233 ngày</span></td>
+            <td><span class="badge ok">Đang chạy</span></td>
+            <td class="action-cell"><button class="kebab">⋯</button></td>
+          </tr>
+          <tr>
+            <td style="color:var(--ink-3)">›</td>
+            <td><b>NAS-S2-01</b><span class="cell-sub">NAS lưu file phòng ban</span></td>
+            <td><span class="badge brand plain">NAS</span></td>
+            <td>Synology RS1221+<span class="cell-sub mono">21A0PDN123456</span></td>
+            <td>Site 2 › Tủ T2-A<span class="cell-sub">Rack U8</span></td>
+            <td>P. Kế toán, P. Nhân sự</td>
+            <td class="mono">172.16.20.30</td>
+            <td><span class="badge muted">Hết bảo hành</span></td>
+            <td><span class="badge ok">Đang chạy</span></td>
+            <td class="action-cell"><button class="kebab">⋯</button></td>
+          </tr>
+          <tr>
+            <td style="color:var(--ink-3)">›</td>
+            <td><b>PRN-S1-KT-02</b><span class="cell-sub">Máy in phòng kế toán</span></td>
+            <td><span class="badge brand plain">Máy in</span></td>
+            <td>HP LaserJet M404dn<span class="cell-sub mono">CNB9J2X0PQ</span></td>
+            <td>Site 1 › Tủ T1-B<span class="cell-sub">Bàn góc phòng KT</span></td>
+            <td>Nguyễn Thị C — P. Kế toán</td>
+            <td class="mono">172.16.10.88</td>
+            <td><span class="badge ok">còn 96 ngày</span></td>
+            <td><span class="badge warn">Đang lỗi</span></td>
+            <td class="action-cell"><button class="kebab">⋯</button></td>
+          </tr>
+          <tr>
+            <td style="color:var(--ink-3)">›</td>
+            <td><b>UPS-S2-03</b><span class="cell-sub">UPS phòng server site 2</span></td>
+            <td><span class="badge brand plain">UPS</span></td>
+            <td>APC SRT3000<span class="cell-sub mono">AS2334120987</span></td>
+            <td>Site 2 › Tủ T2-A<span class="cell-sub">Rack U1-U2</span></td>
+            <td>Hạ tầng chung</td>
+            <td class="mono">172.16.20.9</td>
+            <td><span class="badge warn">còn 26 ngày</span></td>
+            <td><span class="badge ok">Đang chạy</span></td>
+            <td class="action-cell"><button class="kebab">⋯</button></td>
+          </tr>
+          <tr>
+            <td style="color:var(--ink-3)">›</td>
+            <td><b>CAM-S3-CONG-01</b><span class="cell-sub">Camera cổng chính site 3</span></td>
+            <td><span class="badge brand plain">Camera</span></td>
+            <td>Hikvision DS-2CD2143<span class="cell-sub mono">HK20240311X9</span></td>
+            <td>Site 3 › Tủ T3-A<span class="cell-sub">Cột cổng</span></td>
+            <td>Bảo vệ</td>
+            <td class="mono">172.16.30.51</td>
+            <td><span class="badge ok">còn 180 ngày</span></td>
+            <td><span class="badge muted">Nghi chết</span></td>
+            <td class="action-cell"><button class="kebab">⋯</button></td>
+          </tr>
+          <tr>
+            <td style="color:var(--ink-3)">›</td>
+            <td><b>ATT-S1-01</b><span class="cell-sub">Máy chấm công cửa trước</span></td>
+            <td><span class="badge brand plain">Chấm công</span></td>
+            <td>ZKTeco MB460<span class="cell-sub mono">ZK6620041188</span></td>
+            <td>Site 1 › Tủ T1-B<span class="cell-sub">Sảnh</span></td>
+            <td>P. Nhân sự</td>
+            <td class="mono">172.16.10.140</td>
+            <td><span class="badge muted">Hết bảo hành</span></td>
+            <td><span class="badge ok">Đang chạy</span></td>
+            <td class="action-cell"><button class="kebab">⋯</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="row" style="margin-top:1rem;color:var(--ink-3);font-size:var(--fs-sm)">
+      <span class="grow">Hiển thị 1–8 trong 312 hồ sơ</span>
+      <button class="btn sm">‹ Trước</button>
+      <button class="btn sm">Sau ›</button>
+    </div>
+  </main>

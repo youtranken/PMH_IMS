@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMS — Trình duyệt chủ trương</title>
+<style>
+  :root{
+    --navy:#12386b;
+    --navy-deep:#0b2447;
+    --navy-soft:#e8eef7;
+    --accent:#1a6fb5;
+    --gold:#c8912a;
+    --ink:#1c2733;
+    --muted:#5a6b7d;
+    --line:#d7e0ea;
+    --bg:#f6f8fb;
+    --card:#ffffff;
+    --ok:#1d7a4f;
+    --warn:#b3541e;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    color:var(--ink);
+    background:var(--bg);
+    line-height:1.55;
+  }
+  main{scroll-snap-type:y proximity}
+  section.slide{
+    min-height:100vh;
+    scroll-snap-align:start;
+    display:flex;
+    flex-direction:column;
+    padding:0 0 3rem 0;
+  }
+  .slide-head{
+    display:flex;justify-content:space-between;align-items:center;
+    padding:.85rem 2.2rem;
+    font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--muted);
+    border-bottom:1px solid var(--line);
+    background:rgba(255,255,255,.7);
+  }
+  .slide-head .brand{font-weight:700;color:var(--navy)}
+  .slide-body{
+    flex:1;display:flex;flex-direction:column;justify-content:center;
+    width:min(1060px,92%);margin:0 auto;padding:2.2rem 0;
+  }
+  h1{font-size:clamp(1.9rem,4.5vw,3rem);color:var(--navy-deep);line-height:1.15;letter-spacing:-.01em}
+  h2{font-size:clamp(1.5rem,3.2vw,2.15rem);color:var(--navy-deep);margin-bottom:.4rem;letter-spacing:-.01em}
+  .kicker{
+    display:inline-block;font-size:.8rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent);margin-bottom:.7rem;
+  }
+  .lead{font-size:1.08rem;color:var(--muted);max-width:46em}
+
+  /* ---------- Slide 1 ---------- */
+  #s1 .slide-body{gap:1.6rem}
+  .vision{
+    background:linear-gradient(135deg,var(--navy-deep),var(--navy) 60%,#1b4f8a);
+    color:#fff;border-radius:14px;padding:1.6rem 1.8rem;
+    font-size:1.12rem;line-height:1.6;
+  }
+  .vision strong{color:#ffd98a}
+  .facts{display:flex;gap:1rem;flex-wrap:wrap;margin-top:.2rem}
+  .fact{
+    background:var(--card);border:1px solid var(--line);border-radius:10px;
+    padding:.7rem 1.1rem;flex:1;min-width:150px;text-align:center;
+  }
+  .fact b{display:block;font-size:1.5rem;color:var(--navy)}
+  .fact span{font-size:.85rem;color:var(--muted)}
+  .pains{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
+  .pain{
+    background:#fff;border:1px solid var(--line);border-left:5px solid var(--warn);
+    border-radius:10px;padding:1rem 1.15rem;
+  }
+  .pain h3{font-size:1rem;color:var(--navy-deep);margin-bottom:.3rem}
+  .pain p{font-size:.92rem;color:var(--muted)}
+  .pain .tag{font-size:.72rem;font-weight:700;letter-spacing:.08em;color:var(--warn);text-transform:uppercase}
+
+  /* ---------- Slide 2 : cards ---------- */
+  .grid8{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:1rem;margin-top:1.4rem}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    padding:1.1rem 1.15rem;display:flex;flex-direction:column;gap:.45rem;
+    box-shadow:0 1px 3px rgba(18,56,107,.06);
+  }
+  .card .ic{
+    width:38px;height:38px;border-radius:9px;background:var(--navy-soft);
+    display:flex;align-items:center;justify-content:center;color:var(--navy);
+  }
+  .card h3{font-size:.98rem;color:var(--navy-deep)}
+  .card p{font-size:.88rem;color:var(--muted)}
+  .card.hl{border-color:var(--gold);background:#fffaf0}
+  .card.hl .ic{background:#f6e8c8;color:var(--gold)}
+
+  /* ---------- Slide 3 : security ---------- */
+  .sec-wrap{display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:center;margin-top:1.2rem}
+  @media (max-width:840px){.sec-wrap{grid-template-columns:1fr}}
+  .sec-list{list-style:none;display:flex;flex-direction:column;gap:.75rem}
+  .sec-list li{
+    display:flex;gap:.8rem;align-items:flex-start;
+    background:#fff;border:1px solid var(--line);border-radius:10px;padding:.75rem .95rem;
+  }
+  .sec-list .n{
+    flex:0 0 28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;margin-top:.1rem;
+  }
+  .sec-list b{color:var(--navy-deep)}
+  .sec-list p{font-size:.88rem;color:var(--muted)}
+  .attest{
+    margin-top:1.2rem;background:var(--navy-soft);border:1px solid #c2d4ea;border-radius:10px;
+    padding:.9rem 1.1rem;font-size:.95rem;
+  }
+  .attest b{color:var(--navy)}
+  .note{font-size:.8rem;color:var(--muted);margin-top:.5rem}
+
+  /* ---------- Slide 4 : reuse ---------- */
+  .reuse-bar{margin:1.4rem 0 .4rem;background:#e3e9f1;border-radius:99px;height:34px;overflow:hidden;display:flex}
+  .reuse-bar .p1{
+    background:linear-gradient(90deg,var(--navy),var(--accent));width:65%;
+    color:#fff;font-size:.85rem;font-weight:700;display:flex;align-items:center;justify-content:center;
+  }
+  .reuse-bar .p2{flex:1;color:var(--muted);font-size:.85rem;display:flex;align-items:center;justify-content:center}
+  .chips{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:1.1rem}
+  .chip{
+    background:#fff;border:1px solid var(--line);border-radius:99px;
+    padding:.45rem 1rem;font-size:.9rem;color:var(--navy-deep);
+    display:flex;align-items:center;gap:.45rem;
+  }
+  .chip svg{color:var(--ok)}
+  .benefit{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1rem;margin-top:1.5rem}
+  .benefit .b{
+    background:#fff;border:1px solid var(--line);border-top:4px solid var(--accent);
+    border-radius:10px;padding:1rem 1.1rem;
+  }
+  .benefit .b h3{font-size:.98rem;color:var(--navy-deep);margin-bottom:.25rem}
+  .benefit .b p{font-size:.88rem;color:var(--muted)}
+
+  /* ---------- Slide 5 : roadmap ---------- */
+  .road{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;margin-top:1.5rem}
+  @media (max-width:760px){.road{grid-template-columns:1fr}}
+  .phase{background:#fff;border:1px solid var(--line);border-radius:14px;padding:1.3rem 1.4rem;position:relative}
+  .phase.now{border:2px solid var(--navy)}
+  .phase .badge{
+    position:absolute;top:-13px;left:1.2rem;font-size:.72rem;font-weight:700;letter-spacing:.1em;
+    text-transform:uppercase;padding:.25rem .8rem;border-radius:99px;
+  }
+  .phase.now .badge{background:var(--navy);color:#fff}
+  .phase.next .badge{background:#e3e9f1;color:var(--muted)}
+  .phase h3{color:var(--navy-deep);margin:.4rem 0 .6rem;font-size:1.15rem}
+  .phase ul{list-style:none;display:flex;flex-direction:column;gap:.45rem}
+  .phase li{font-size:.92rem;color:var(--ink);padding-left:1.3rem;position:relative}
+  .phase li::before{content:"";position:absolute;left:0;top:.5em;width:.55em;height:.55em;border-radius:50%;background:var(--accent)}
+  .phase.next li::before{background:#9fb2c6}
+  .phase .cond{margin-top:.9rem;font-size:.82rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:.7rem}
+
+  /* ---------- Slide 6 ---------- */
+  #s6 .slide-body{align-items:flex-start}
+  .ask{
+    background:linear-gradient(135deg,var(--navy-deep),var(--navy));color:#fff;
+    border-radius:16px;padding:2rem 2.2rem;width:100%;
+  }
+  .ask h2{color:#fff}
+  .ask .big{font-size:1.15rem;margin:.8rem 0 1.2rem;color:#dbe7f5;max-width:44em}
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:.9rem;margin-top:.4rem}
+  .metric{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.18);border-radius:10px;padding:.85rem 1rem}
+  .metric b{display:block;font-size:1.25rem;color:#ffd98a}
+  .metric span{font-size:.85rem;color:#c9d8ea}
+  .fineprint{margin-top:1.4rem;font-size:.92rem;color:var(--muted)}
+
+  /* ---------- dot nav ---------- */
+  nav.dots{
+    position:fixed;right:1.1rem;top:50%;transform:translateY(-50%);
+    display:flex;flex-direction:column;gap:.7rem;z-index:50;
+  }
+  nav.dots a{
+    width:11px;height:11px;border-radius:50%;background:#b9c7d6;display:block;
+    transition:all .25s;position:relative;
+  }
+  nav.dots a.on{background:var(--navy);transform:scale(1.35)}
+  nav.dots a span{
+    position:absolute;right:22px;top:50%;transform:translateY(-50%);
+    background:var(--navy-deep);color:#fff;font-size:.72rem;padding:.2rem .6rem;border-radius:6px;
+    white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s;
+  }
+  nav.dots a:hover span{opacity:1}
+  @media (max-width:700px){nav.dots{display:none}}
+
+  .next-btn{
+    margin-top:1.8rem;align-self:flex-start;
+    display:inline-flex;align-items:center;gap:.5rem;
+    background:var(--navy);color:#fff;border:none;border-radius:99px;
+    padding:.6rem 1.4rem;font-size:.92rem;cursor:pointer;text-decoration:none;
+  }
+  .next-btn:hover{background:var(--navy-deep)}
+
+  svg.diagram{width:100%;height:auto;display:block}
+
+  /* ---------- print ---------- */
+  @media print{
+    :root{--bg:#fff}
+    body{background:#fff}
+    nav.dots,.next-btn{display:none !important}
+    section.slide{min-height:auto;page-break-after:always;padding-bottom:1rem}
+    section.slide:last-child{page-break-after:auto}
+    .slide-body{padding:1rem 0;width:96%}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .card,.pain,.fact,.phase,.chip,.sec-list li,.benefit .b{box-shadow:none}
+  }
+</style>
+</head>
+<body>
+<nav class="dots" aria-label="Điều hướng">
+  <a href="#s1" class="on"><span>Mở đầu</span></a>
+  <a href="#s2"><span>Tính năng</span></a>
+  <a href="#s3"><span>Bảo mật</span></a>
+  <a href="#s4"><span>Tiết kiệm</span></a>
+  <a href="#s5"><span>Lộ trình</span></a>
+  <a href="#s6"><span>Đề nghị</span></a>
+</nav>
+
+<main>
+
+<!-- ============ SLIDE 1 ============ -->
+<section class="slide" id="s1">
+  <div class="slide-head">
+    <span class="brand">IMS · Phòng IT — PMH</span>
+    <span>Trình duyệt chủ trương · Trang 1/6</span>
+  </div>
+  <div class="slide-body">
+    <span class="kicker">Đề xuất dự án nội bộ</span>
+    <h1>IMS — Sổ cái duy nhất của hạ tầng IT</h1>
+    <div class="vision">
+      Một nơi duy nhất lưu <strong>toàn bộ thiết bị, địa chỉ mạng, bản quyền phần mềm, mật khẩu hệ thống và phiếu ISO</strong> của cả 3 site — để tri thức hạ tầng <strong>không rời đi theo người</strong>, bằng chứng <strong>luôn sẵn sàng khi kiểm toán</strong>, và mọi thông tin tra cứu được <strong>trong 30 giây</strong> thay vì mò Excel, giấy tờ, Zalo.
+    </div>
+    <div class="facts">
+      <div class="fact"><b>3</b><span>site vận hành</span></div>
+      <div class="fact"><b>300+</b><span>thiết bị mạng</span></div>
+      <div class="fact"><b>25+</b><span>đường truyền nhà mạng</span></div>
+      <div class="fact"><b>5</b><span>nhân sự IT quản lý</span></div>
+    </div>
+    <div>
+      <h2 style="font-size:1.2rem;margin:1.2rem 0 .8rem">Vì sao cần làm — 3 chuyện đã xảy ra thật</h2>
+      <div class="pains">
+        <div class="pain">
+          <span class="tag">Vụ 1</span>
+          <h3>Hồ sơ giấy &amp; Excel thất lạc</h3>
+          <p>Hợp đồng mua thiết bị bản giấy tìm không ra khi cần bảo hành, đối chiếu. Dữ liệu rải rác nhiều file Excel, mỗi người giữ một bản.</p>
+        </div>
+        <div class="pain">
+          <span class="tag">Vụ 2</span>
+          <h3>Bản quyền hết hạn không ai hay</h3>
+          <p>License phần mềm hết hạn trong im lặng — đến khi hệ thống ngừng chạy mới phát hiện, xử lý bị động.</p>
+        </div>
+        <div class="pain">
+          <span class="tag">Vụ 3</span>
+          <h3>Không truy được ai đang giữ gì</h3>
+          <p>Không trả lời được "địa chỉ mạng này cấp cho ai?", "key phần mềm này đã cài máy nào?" — mỗi lần cần là một lần đi hỏi vòng quanh.</p>
+        </div>
+      </div>
+    </div>
+    <a class="next-btn" href="#s2">Hệ thống làm được gì &#8595;</a>
+  </div>
+</section>
+
+<!-- ============ SLIDE 2 ============ -->
+<section class="slide" id="s2">
+  <div class="slide-head">
+    <span class="brand">IMS · Phòng IT — PMH</span>
+    <span>Trình duyệt chủ trương · Trang 2/6</span>
+  </div>
+  <div class="slide-body">
+    <span class="kicker">Phạm vi phiên bản 1</span>
+    <h2>Hệ thống làm được gì</h2>
+    <p class="lead">8 nhóm tính năng, phủ trọn công việc quản lý hạ tầng hằng ngày của phòng IT.</p>
+    <div class="grid8">
+      <div class="card">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="7" rx="1"/><rect x="3" y="13" width="18" height="7" rx="1"/><circle cx="7" cy="7.5" r=".8" fill="currentColor"/><circle cx="7" cy="16.5" r=".8" fill="currentColor"/></svg></div>
+        <h3>Kho thiết bị 300+</h3>
+        <p>Mỗi thiết bị (switch, wifi, camera, máy in, UPS, server…) một hồ sơ: vị trí site &#8594; tủ mạng, ai dùng, hạn bảo hành, giấy tờ scan đính kèm, sơ đồ cổng cắm.</p>
+      </div>
+      <div class="card">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v14H4z"/><path d="M8 21h8M12 18v3"/><path d="M8 9l2.5 2.5L15 7"/></svg></div>
+        <h3>Bản quyền phần mềm</h3>
+        <p>License, chứng chỉ SSL, tên miền, hợp đồng nhà mạng &amp; bảo trì. Biết rõ key nào đang cài máy nào — cảnh báo ngay khi cài vượt số lượng đã mua.</p>
+      </div>
+      <div class="card">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a6 6 0 0 0-6 6v4l-2 3h16l-2-3V9a6 6 0 0 0-6-6z"/><path d="M10 19a2 2 0 0 0 4 0"/></svg></div>
+        <h3>Cảnh báo hết hạn tự động</h3>
+        <p>Mọi thứ có ngày hết hạn đều tự vào lịch theo dõi. Email tổng hợp gửi đúng người trước hạn (vd 30 ngày) — chấm dứt cảnh hết hạn "bất ngờ".</p>
+      </div>
+      <div class="card">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 2.5 15.4 0 18M12 3c-2.5 2.6-2.5 15.4 0 18"/></svg></div>
+        <h3>Quản lý địa chỉ mạng 3 site</h3>
+        <p>Mỗi địa chỉ IP: đang gắn thiết bị nào, ai dùng, ai cấp, khi nào. Hệ thống chặn cấp trùng tuyệt đối; lịch sử cấp — thu hồi giữ vĩnh viễn.</p>
+      </div>
+      <div class="card hl">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><circle cx="12" cy="15" r="1.5" fill="currentColor"/></svg></div>
+        <h3>Két sắt mật khẩu</h3>
+        <p>Toàn bộ mật khẩu thiết bị và key bản quyền nằm trong két mã hóa. Nhân viên cần dùng ngoài phạm vi phải xin — sếp/quản trị duyệt qua email, hết giờ tự đóng.</p>
+      </div>
+      <div class="card">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 20V10M9 20V4M15 20v-8M21 20V7"/></svg></div>
+        <h3>Dashboard cho lãnh đạo</h3>
+        <p>3 phút sáng thứ Hai: gì sắp hết hạn, sự cố tuần qua, ai đã mở két xem mật khẩu gì. Cần số liệu — bấm xuất Excel tại chỗ, không phải nhờ ai.</p>
+      </div>
+      <div class="card">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2h9l4 4v16H6z"/><path d="M15 2v4h4"/><path d="M9 12h6M9 16h6M9 8h2"/></svg></div>
+        <h3>Phiếu ISO số hóa</h3>
+        <p>Tái tạo y hệt bộ phiếu ISO SP-IT02xx, dữ liệu tự điền, in ra ký tay như quy trình hiện hành. Xuất trọn bộ phiếu cả năm cho auditor dưới 15 phút.</p>
+      </div>
+      <div class="card">
+        <div class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2z"/><path d="M19 17H6a2 2 0 0 0-2 2"/><path d="M9 7h6"/></svg></div>
+        <h3>Tài liệu vận hành</h3>
+        <p>Sổ tay xử lý sự cố, hướng dẫn nội bộ gắn thẳng vào từng thiết bị liên quan — nhân viên mới tự tra được, không phụ thuộc "người cũ".</p>
+      </div>
+    </div>
+    <a class="next-btn" href="#s3">Bảo mật ra sao &#8595;</a>
+  </div>
+</section>
+
+<!-- ============ SLIDE 3 ============ -->
+<section class="slide" id="s3">
+  <div class="slide-head">
+    <span class="brand">IMS · Phòng IT — PMH</span>
+    <span>Trình duyệt chủ trương · Trang 3/6</span>
+  </div>
+  <div class="slide-body">
+    <span class="kicker">Điểm quan trọng nhất</span>
+    <h2>Gom mật khẩu về một chỗ — có an toàn không?</h2>
+    <p class="lead">An toàn hơn hiện tại rất nhiều. Hôm nay mật khẩu nằm rải rác trong Excel, giấy note, tin nhắn — không kiểm soát được. Hệ thống mới đặt tất cả sau <b>5 lớp bảo vệ</b>:</p>
+    <div class="sec-wrap">
+      <!-- SVG: 5 lớp tường + két sắt -->
+      <svg class="diagram" viewBox="0 0 460 400" role="img" aria-label="Sơ đồ 5 lớp bảo vệ quanh két sắt mật khẩu">
+        <defs>
+          <linearGradient id="vaultG" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#12386b"/><stop offset="1" stop-color="#1a6fb5"/>
+          </linearGradient>
+        </defs>
+        <!-- 5 walls -->
+        <rect x="10"  y="10"  width="440" height="380" rx="26" fill="#eef3f9" stroke="#c2d4ea" stroke-width="2"/>
+        <rect x="45"  y="45"  width="370" height="310" rx="22" fill="#e2ebf6" stroke="#aec6e2" stroke-width="2"/>
+        <rect x="80"  y="80"  width="300" height="240" rx="18" fill="#d3e1f2" stroke="#96b6da" stroke-width="2"/>
+        <rect x="115" y="115" width="230" height="170" rx="14" fill="#c1d4ec" stroke="#7ea3cf" stroke-width="2"/>
+        <rect x="150" y="150" width="160" height="100" rx="10" fill="#aec7e6" stroke="#5f8dc2" stroke-width="2"/>
+        <!-- labels on walls -->
+        <text x="230" y="33"  text-anchor="middle" font-size="12.5" font-weight="700" fill="#12386b">1 · Chỉ mạng nội bộ — không mở ra Internet</text>
+        <text x="230" y="68"  text-anchor="middle" font-size="12.5" font-weight="700" fill="#12386b">2 · Đăng nhập định danh từng người</text>
+        <text x="230" y="103" text-anchor="middle" font-size="12.5" font-weight="700" fill="#12386b">3 · Phân quyền — mặc định là "không được xem"</text>
+        <text x="230" y="138" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0b2447">4 · Mã 6 số trên điện thoại mỗi lần mở két</text>
+        <text x="230" y="172" text-anchor="middle" font-size="12" font-weight="700" fill="#0b2447">5 · Ghi vết mọi lần xem</text>
+        <!-- vault -->
+        <g>
+          <rect x="192" y="182" width="76" height="58" rx="8" fill="url(#vaultG)"/>
+          <circle cx="230" cy="208" r="13" fill="none" stroke="#ffd98a" stroke-width="3"/>
+          <circle cx="230" cy="208" r="4" fill="#ffd98a"/>
+          <line x1="230" y1="208" x2="230" y2="199" stroke="#ffd98a" stroke-width="2.5"/>
+          <text x="230" y="256" text-anchor="middle" font-size="11.5" font-weight="700" fill="#0b2447">KÉT SẮT — mã hóa AES-256</text>
+        </g>
+        <!-- caption -->
+        <text x="230" y="378" text-anchor="middle" font-size="11" fill="#5a6b7d">Muốn chạm tới một mật khẩu phải đi qua đủ 5 lớp — và để lại dấu vết</text>
+      </svg>
+      <ul class="sec-list">
+        <li><span class="n">1</span><div><b>Chỉ chạy trong mạng nội bộ công ty.</b><p>Không mở ra Internet — người ngoài không có đường vào.</p></div></li>
+        <li><span class="n">2</span><div><b>Đăng nhập định danh từng người.</b><p>Sai mật khẩu 5 lần bị khóa tạm và báo ngay cho quản trị.</p></div></li>
+        <li><span class="n">3</span><div><b>Phân quyền 3 cấp rõ ràng.</b><p>Ai được thấy gì quy định trước; mặc định là "không được xem". Không tồn tại nút "xuất toàn bộ mật khẩu" cho bất kỳ ai.</p></div></li>
+        <li><span class="n">4</span><div><b>Xem mật khẩu phải nhập mã 6 số trên điện thoại cá nhân.</b><p>Kể cả đã đăng nhập đúng. Màn hình tự ẩn mật khẩu sau 30 giây.</p></div></li>
+        <li><span class="n">5</span><div><b>Mọi lần xem đều ghi sổ — sổ không xóa, không sửa được.</b><p>Ai xem mật khẩu nào, lúc nào, lý do gì — sếp thấy tổng hợp hằng tuần ngay trên dashboard.</p></div></li>
+      </ul>
+    </div>
+    <div class="attest">
+      <b>Bên trong két:</b> từng mật khẩu được mã hóa riêng bằng chuẩn <b>AES-256</b> (chuẩn mã hóa dùng trong ngân hàng); chìa khóa giải mã cất tách riêng, không nằm chung với dữ liệu hay bản sao lưu. Thiết kế bảo mật đã qua <b>thẩm định, đối chiếu với cách làm của các sản phẩm quản lý mật khẩu quốc tế</b> (HashiCorp Vault, Bitwarden).
+    </div>
+    <a class="next-btn" href="#s4">Chi phí &amp; tiến độ &#8595;</a>
+  </div>
+</section>
+
+<!-- ============ SLIDE 4 ============ -->
+<section class="slide" id="s4">
+  <div class="slide-head">
+    <span class="brand">IMS · Phòng IT — PMH</span>
+    <span>Trình duyệt chủ trương · Trang 4/6</span>
+  </div>
+  <div class="slide-body">
+    <span class="kicker">Tiết kiệm thời gian &amp; rủi ro</span>
+    <h2>Không xây từ số 0 — kế thừa nền tảng QLTS đang chạy ổn</h2>
+    <p class="lead">Hệ thống Quản lý tài sản (QLTS) do chính team IT xây và vận hành ổn định. IMS tái sử dụng khoảng <b>60–70% nền tảng</b> đã được kiểm chứng từ đó.</p>
+    <div class="reuse-bar">
+      <div class="p1">~60–70% kế thừa từ QLTS</div>
+      <div class="p2">phần xây mới</div>
+    </div>
+    <div class="chips">
+      <span class="chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Đăng nhập &amp; phân quyền</span>
+      <span class="chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Ghi vết (nhật ký hệ thống)</span>
+      <span class="chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Gửi email tự động</span>
+      <span class="chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Xuất Excel</span>
+      <span class="chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Đính kèm file</span>
+      <span class="chip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 12l5 5L20 6"/></svg>Bộ giao diện &amp; bố cục màn hình</span>
+    </div>
+    <div class="benefit">
+      <div class="b"><h3>Làm nhanh hơn hẳn</h3><p>Phần nền khó nhất đã có sẵn — team tập trung xây phần nghiệp vụ riêng của quản lý hạ tầng.</p></div>
+      <div class="b"><h3>Ít rủi ro</h3><p>Nền tảng kế thừa đã chạy thật, lỗi đã được vá qua thời gian vận hành QLTS.</p></div>
+      <div class="b"><h3>Không phải học lại</h3><p>Giao diện cùng một kiểu với QLTS mà team và sếp đã quen — mở lên là dùng được ngay.</p></div>
+      <div class="b"><h3>Chạy trên hạ tầng sẵn có</h3><p>Tự phát triển nội bộ, triển khai trên máy chủ trong mạng LAN của công ty.</p></div>
+    </div>
+    <a class="next-btn" href="#s5">Lộ trình &#8595;</a>
+  </div>
+</section>
+
+<!-- ============ SLIDE 5 ============ -->
+<section class="slide" id="s5">
+  <div class="slide-head">
+    <span class="brand">IMS · Phòng IT — PMH</span>
+    <span>Trình duyệt chủ trương · Trang 5/6</span>
+  </div>
+  <div class="slide-body">
+    <span class="kicker">Lộ trình</span>
+    <h2>Làm chắc phần lõi trước, mở rộng sau</h2>
+    <!-- SVG: 3 site -> server LAN -->
+    <svg class="diagram" viewBox="0 0 900 210" role="img" aria-label="Ba site kết nối về một máy chủ trong mạng nội bộ" style="max-width:820px;margin:1.2rem auto .4rem">
+      <defs>
+        <linearGradient id="srvG" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#12386b"/><stop offset="1" stop-color="#1a6fb5"/>
+        </linearGradient>
+      </defs>
+      <!-- LAN boundary -->
+      <rect x="8" y="8" width="884" height="194" rx="18" fill="none" stroke="#aec6e2" stroke-width="2" stroke-dasharray="7 6"/>
+      <text x="30" y="34" font-size="12.5" font-weight="700" fill="#5a6b7d">MẠNG NỘI BỘ CÔNG TY (không ra Internet)</text>
+      <!-- sites -->
+      <g>
+        <rect x="45" y="55" width="150" height="60" rx="10" fill="#fff" stroke="#c2d4ea" stroke-width="2"/>
+        <text x="120" y="80" text-anchor="middle" font-size="13.5" font-weight="700" fill="#12386b">Site 1</text>
+        <text x="120" y="99" text-anchor="middle" font-size="11" fill="#5a6b7d">thiết bị · IP · tủ mạng</text>
+        <rect x="45" y="128" width="150" height="60" rx="10" fill="#fff" stroke="#c2d4ea" stroke-width="2"/>
+        <text x="120" y="153" text-anchor="middle" font-size="13.5" font-weight="700" fill="#12386b">Site 2</text>
+        <text x="120" y="172" text-anchor="middle" font-size="11" fill="#5a6b7d">thiết bị · IP · tủ mạng</text>
+        <rect x="240" y="92" width="150" height="60" rx="10" fill="#fff" stroke="#c2d4ea" stroke-width="2"/>
+        <text x="315" y="117" text-anchor="middle" font-size="13.5" font-weight="700" fill="#12386b">Site 3</text>
+        <text x="315" y="136" text-anchor="middle" font-size="11" fill="#5a6b7d">thiết bị · IP · tủ mạng</text>
+      </g>
+      <!-- lines -->
+      <path d="M195 85 C 300 85, 380 118, 470 120" fill="none" stroke="#7ea3cf" stroke-width="2.5"/>
+      <path d="M195 158 C 300 158, 380 126, 470 124" fill="none" stroke="#7ea3cf" stroke-width="2.5"/>
+      <path d="M390 122 L 470 122" fill="none" stroke="#7ea3cf" stroke-width="2.5"/>
+      <!-- server -->
+      <g>
+        <rect x="472" y="76" width="200" height="92" rx="12" fill="url(#srvG)"/>
+        <rect x="492" y="94" width="70" height="12" rx="3" fill="#ffffff" opacity=".35"/>
+        <rect x="492" y="112" width="70" height="12" rx="3" fill="#ffffff" opacity=".35"/>
+        <rect x="492" y="130" width="70" height="12" rx="3" fill="#ffffff" opacity=".35"/>
+        <text x="600" y="108" text-anchor="middle" font-size="13" font-weight="700" fill="#fff">IMS</text>
+        <text x="600" y="126" text-anchor="middle" font-size="10.5" fill="#c9d8ea">máy chủ nội bộ</text>
+        <circle cx="600" cy="146" r="8" fill="none" stroke="#ffd98a" stroke-width="2"/>
+        <rect x="596" y="144" width="8" height="7" rx="1.5" fill="#ffd98a"/>
+      </g>
+      <!-- users -->
+      <path d="M672 122 L 730 122" fill="none" stroke="#7ea3cf" stroke-width="2.5"/>
+      <g>
+        <rect x="732" y="76" width="140" height="92" rx="12" fill="#fff" stroke="#c2d4ea" stroke-width="2"/>
+        <circle cx="768" cy="106" r="10" fill="#d3e1f2" stroke="#7ea3cf" stroke-width="2"/>
+        <path d="M754 132 c0-9 28-9 28 0" fill="none" stroke="#7ea3cf" stroke-width="2"/>
+        <circle cx="806" cy="106" r="10" fill="#d3e1f2" stroke="#7ea3cf" stroke-width="2"/>
+        <path d="M792 132 c0-9 28-9 28 0" fill="none" stroke="#7ea3cf" stroke-width="2"/>
+        <text x="802" y="156" text-anchor="middle" font-size="10.5" fill="#5a6b7d">Team IT + Lãnh đạo</text>
+      </g>
+    </svg>
+    <div class="road">
+      <div class="phase now">
+        <span class="badge">Phiên bản 1 — làm ngay</span>
+        <h3>Nền tảng quản lý hoàn chỉnh</h3>
+        <ul>
+          <li>Kho thiết bị, bản quyền, địa chỉ mạng 3 site</li>
+          <li>Két sắt mật khẩu + cơ chế xin – duyệt</li>
+          <li>Cảnh báo hết hạn tự động qua email</li>
+          <li>Dashboard lãnh đạo + xuất Excel</li>
+          <li>Phiếu ISO số hóa, in ký tay đúng mẫu</li>
+          <li>Tài liệu vận hành gắn với thiết bị</li>
+        </ul>
+      </div>
+      <div class="phase next">
+        <span class="badge">Giai đoạn sau</span>
+        <h3>Giám sát trực quan, tự động</h3>
+        <ul>
+          <li>Sơ đồ mạng trực quan từng site — thiết bị trên sơ đồ <b>tự đổi màu theo trạng thái</b> sống / chết / có cảnh báo</li>
+          <li>Quét mạng tự động: phát hiện thiết bị mới, thiết bị mất kết nối mà không cần đi kiểm tra tay</li>
+          <li>Kết nối với hệ thống giám sát an ninh (SIEM) để đối chiếu cảnh báo</li>
+        </ul>
+        <p class="cond">Triển khai sau khi hệ thống giám sát an ninh (SIEM) hoàn tất — dữ liệu nền của V1 chính là bản đồ để giai đoạn này chạy được.</p>
+      </div>
+    </div>
+    <a class="next-btn" href="#s6">Đề nghị phê duyệt &#8595;</a>
+  </div>
+</section>
+
+<!-- ============ SLIDE 6 ============ -->
+<section class="slide" id="s6">
+  <div class="slide-head">
+    <span class="brand">IMS · Phòng IT — PMH</span>
+    <span>Trình duyệt chủ trương · Trang 6/6</span>
+  </div>
+  <div class="slide-body">
+    <div class="ask">
+      <span class="kicker" style="color:#8fc1ee">Đề nghị</span>
+      <h2>Kính đề nghị sếp duyệt chủ trương triển khai IMS</h2>
+      <p class="big">Team IT tự phát triển trên nền tảng QLTS sẵn có, chạy trên máy chủ nội bộ. Sau khi được duyệt chủ trương, team sẽ trình kế hoạch thực hiện chi tiết. Cam kết đo được khi đưa vào vận hành:</p>
+      <div class="metrics">
+        <div class="metric"><b>&lt; 30 giây</b><span>tra cứu bất kỳ thông tin hạ tầng nào</span></div>
+        <div class="metric"><b>0 vụ</b><span>bản quyền / hợp đồng hết hạn "bất ngờ"</span></div>
+        <div class="metric"><b>100%</b><span>mật khẩu vào két sau 3 tháng — hết Excel chứa mật khẩu</span></div>
+        <div class="metric"><b>&lt; 15 phút</b><span>xuất trọn bộ phiếu ISO một năm cho auditor</span></div>
+      </div>
+    </div>
+    <p class="fineprint">Mọi số liệu và yêu cầu chi tiết có trong tài liệu PRD đính kèm.</p>
+  </div>
+</section>
+
+</main>
+
+<script>
+(function(){
+  var links = document.querySelectorAll('nav.dots a');
+  var map = {};
+  links.forEach(function(a){ map[a.getAttribute('href').slice(1)] = a; });
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if(e.isIntersecting){
+        links.forEach(function(a){ a.classList.remove('on'); });
+        var a = map[e.target.id];
+        if(a) a.classList.add('on');
+      }
+    });
+  }, {threshold:0.5});
+  document.querySelectorAll('section.slide').forEach(function(s){ obs.observe(s); });
+})();
+</script>
+</body>
+</html>

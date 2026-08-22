@@ -1,0 +1,181 @@
+  <main class="page">
+    <div class="sub" style="margin-bottom:.6rem">Phiếu ISO › Nhóm B — theo sự kiện › <b style="color:var(--ink)">SP-IT0206 · Daily Incident Report Form</b></div>
+    <div class="page-header" style="margin-bottom:1rem">
+      <h1>Phiếu sự cố SP-IT0206</h1>
+      <span class="badge warn">Chờ duyệt</span>
+      <button class="btn">Lưu nháp</button>
+      <button class="btn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><rect x="6" y="14" width="12" height="8"/><path d="M6 18H4a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2"/></svg>In để ký tay</button>
+      <button class="btn primary">Gửi duyệt</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 520px;gap:1.25rem;align-items:start">
+      <div class="col" style="gap:1.25rem">
+        <section class="form-section">
+          <div class="form-section-title">1. Incident Information</div>
+          <div class="form-grid">
+            <div class="field"><span class="lbl-t">Date Report <span class="req">*</span></span><div class="inp mono">22/08/2026</div></div>
+            <div class="field span-2">
+              <span class="lbl-t">Type of Incident <span class="req">*</span></span>
+              <div class="segmented"><span>Backup</span><span>Server</span><span class="on">Network</span><span>Database</span><span>Other</span></div>
+            </div>
+            <div class="field"><span class="lbl-t">Detection Time</span><div class="inp mono">22/08/2026 14:05</div></div>
+            <div class="field"><span class="lbl-t">Resolution Time</span><div class="inp mono">22/08/2026 14:48</div></div>
+            <div class="field">
+              <span class="lbl-t">Severity Level</span>
+              <div class="segmented"><span>Low</span><span class="on">Medium</span><span>High</span></div>
+            </div>
+            <div class="field span-3">
+              <span class="lbl-t">Thiết bị liên quan — chọn từ kho thiết bị (chỉ hiện khi Type = Network)</span>
+              <div class="row" style="gap:.5rem">
+                <span class="badge brand plain" style="padding:.4rem .7rem">SW-S2-F3-01 · Site 2 › T2-F3 ✕</span>
+                <button class="btn sm">+ Thêm thiết bị</button>
+              </div>
+            </div>
+            <div class="field span-3">
+              <span class="lbl-t">Incident Description <span class="req">*</span></span>
+              <div class="inp" style="min-height:76px;line-height:1.6">Tầng 3 site 2 mất mạng toàn khu văn phòng lúc 14:05. Kiểm tra switch SW-S2-F3-01 thấy cổng Gi1/0/14 bị port-security shutdown do vòng lặp mạng từ ổ cắm bàn 14.</div>
+            </div>
+            <div class="field span-3">
+              <span class="lbl-t">Corrective Action <span class="req">*</span></span>
+              <div class="inp" style="min-height:76px;line-height:1.6">Rút cáp gây loop tại ổ bàn 14, chạy lệnh no shutdown mở lại cổng Gi1/0/14, kiểm tra ping toàn tầng OK. Đã dán nhãn cảnh báo tại ổ mạng và ghi chú vào sơ đồ cổng của thiết bị.</div>
+            </div>
+            <div class="field span-3">
+              <span class="lbl-t">Current Status</span>
+              <div class="segmented"><span>Temporary Fix (if any)</span><span class="on">Resolved</span><span>In Progress</span></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="form-section" style="opacity:.55">
+          <div class="form-section-title">2. Detail Error Backup</div>
+          <p class="sub">Phần này chỉ mở khi <b>Type of Incident = Backup</b>. Khi mở, Job Name / Type Backup / Type Data / Storage Location tự điền theo dữ liệu job sao lưu đã khai trong hệ thống.</p>
+        </section>
+
+        <section class="form-section">
+          <div class="form-section-title">Luồng ký duyệt</div>
+          <div class="row" style="gap:1.25rem">
+            <div class="row grow" style="gap:.6rem">
+              <span style="width:26px;height:26px;border-radius:50%;background:var(--ok);color:#fff;display:grid;place-items:center;font-size:var(--fs-2xs);font-weight:700">✓</span>
+              <div><b style="font-size:var(--fs-sm)">Reported By</b><div class="sub">Nguyễn Văn A · 22/08 14:52</div></div>
+            </div>
+            <div style="flex:1;height:2px;background:var(--border-2)"></div>
+            <div class="row grow" style="gap:.6rem">
+              <span style="width:26px;height:26px;border-radius:50%;background:var(--warm);color:#fff;display:grid;place-items:center;font-size:var(--fs-2xs);font-weight:700">2</span>
+              <div><b style="font-size:var(--fs-sm)">Reviewed and Approved By</b><div class="sub">Đang chờ Lê Minh duyệt</div></div>
+            </div>
+          </div>
+          <div class="alert warn" style="margin-top:.85rem">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+            <span>Duyệt trên hệ thống chỉ để theo dõi trạng thái. <b>Chữ ký ISO vẫn ký tay bằng mực trên bản in</b> — đúng như quy trình đang chạy.</span>
+          </div>
+        </section>
+      </div>
+
+      <aside class="col" style="gap:1rem">
+        <div class="form-section-title" style="margin:0">Bản in — đúng layout ISO gốc</div>
+        <div style="background:#fff;color:#000;border:1px solid var(--border-2);border-radius:6px;padding:22px;font-family:'Times New Roman',Times,serif;font-size:11px;box-shadow:var(--shadow)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
+            <b style="font-size:11px">SP-IT0206</b>
+          </div>
+          <div style="text-align:center;font-weight:bold;font-size:14px;letter-spacing:.02em;margin-bottom:12px">DAILY INCIDENT REPORT FORM</div>
+          <div style="font-weight:bold;margin-bottom:4px">1. Incident Information</div>
+          <table style="width:100%;border-collapse:collapse;font-size:11px">
+            <tbody>
+              <tr><td style="border:1px solid #000;padding:4px 6px;width:34%">Date Report</td><td style="border:1px solid #000;padding:4px 6px">22/08/2026</td></tr>
+              <tr><td style="border:1px solid #000;padding:4px 6px">Type of Incident</td><td style="border:1px solid #000;padding:4px 6px">▢ Backup&nbsp;&nbsp; ▢ Server&nbsp;&nbsp; ☑ Network&nbsp;&nbsp; ▢ Database&nbsp;&nbsp; ▢ Other</td></tr>
+              <tr><td style="border:1px solid #000;padding:4px 6px">Detection Time</td><td style="border:1px solid #000;padding:4px 6px">22/08/2026 14:05</td></tr>
+              <tr><td style="border:1px solid #000;padding:4px 6px">Resolution Time</td><td style="border:1px solid #000;padding:4px 6px">22/08/2026 14:48</td></tr>
+              <tr><td style="border:1px solid #000;padding:4px 6px">Severity Level</td><td style="border:1px solid #000;padding:4px 6px">▢ Low&nbsp;&nbsp; ☑ Medium&nbsp;&nbsp; ▢ High</td></tr>
+              <tr><td style="border:1px solid #000;padding:4px 6px;vertical-align:top">Incident Description</td><td style="border:1px solid #000;padding:4px 6px;height:52px;vertical-align:top">Tầng 3 site 2 mất mạng lúc 14:05. Switch SW-S2-F3-01 cổng Gi1/0/14 bị port-security shutdown do loop từ ổ bàn 14.</td></tr>
+              <tr><td style="border:1px solid #000;padding:4px 6px;vertical-align:top">Corrective Action</td><td style="border:1px solid #000;padding:4px 6px;height:52px;vertical-align:top">Rút cáp gây loop, no shutdown cổng Gi1/0/14, ping toàn tầng OK. Dán nhãn cảnh báo tại ổ mạng.</td></tr>
+              <tr><td style="border:1px solid #000;padding:4px 6px">Current Status</td><td style="border:1px solid #000;padding:4px 6px">▢ Temporary Fix (if any)&nbsp;&nbsp; ☑ Resolved&nbsp;&nbsp; ▢ In Progress</td></tr>
+            </tbody>
+          </table>
+          <div style="font-weight:bold;margin:10px 0 4px">2. Detail Error Backup</div>
+          <table style="width:100%;border-collapse:collapse;font-size:10px">
+            <thead>
+              <tr>
+                <th style="border:1px solid #000;padding:3px">Job Name</th>
+                <th style="border:1px solid #000;padding:3px" colspan="3">Type Backup</th>
+                <th style="border:1px solid #000;padding:3px" colspan="3">Type Data</th>
+                <th style="border:1px solid #000;padding:3px">Storage Location</th>
+                <th style="border:1px solid #000;padding:3px">Error Message</th>
+                <th style="border:1px solid #000;padding:3px">Issue Resolution</th>
+              </tr>
+              <tr>
+                <th style="border:1px solid #000;padding:3px"></th>
+                <th style="border:1px solid #000;padding:3px;font-weight:normal">Full</th>
+                <th style="border:1px solid #000;padding:3px;font-weight:normal">Incr</th>
+                <th style="border:1px solid #000;padding:3px;font-weight:normal">Copy</th>
+                <th style="border:1px solid #000;padding:3px;font-weight:normal">DB</th>
+                <th style="border:1px solid #000;padding:3px;font-weight:normal">App</th>
+                <th style="border:1px solid #000;padding:3px;font-weight:normal">FileSV</th>
+                <th style="border:1px solid #000;padding:3px"></th>
+                <th style="border:1px solid #000;padding:3px"></th>
+                <th style="border:1px solid #000;padding:3px"></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style="border:1px solid #000;height:16px"></td><td style="border:1px solid #000"></td><td style="border:1px solid #000"></td><td style="border:1px solid #000"></td><td style="border:1px solid #000"></td><td style="border:1px solid #000"></td><td style="border:1px solid #000"></td><td style="border:1px solid #000"></td><td style="border:1px solid #000"></td><td style="border:1px solid #000"></td></tr>
+              <tr><td style="border:1px solid #000;height:16px"></td><td style="border:1px solid #000"></td><td style="border:1px solid #000"></td><td style="border:1px solid #000"></td><td style="border:1px solid #000"></td><td style="border:1px solid #000"></td><td style="border:1px solid #000"></td><td style="border:1px solid #000"></td><td style="border:1px solid #000"></td><td style="border:1px solid #000"></td></tr>
+            </tbody>
+          </table>
+          <table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:14px">
+            <tbody>
+              <tr>
+                <td style="border:1px solid #000;padding:4px 6px;text-align:center;width:50%">Reported By</td>
+                <td style="border:1px solid #000;padding:4px 6px;text-align:center">Reviewed and Approved By</td>
+              </tr>
+              <tr><td style="border:1px solid #000;height:64px"></td><td style="border:1px solid #000"></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="sub">Bản in tái tạo <b>y hệt</b> phiếu ISO gốc: cùng mã, cùng thứ tự mục, cùng ô ▢ tick tay, cùng hai ô chữ ký. Ô nào hệ thống đã có dữ liệu thì in sẵn, còn lại để trống cho ký/điền tay.</p>
+      </aside>
+    </div>
+
+    <section class="form-section" style="margin-top:1.25rem">
+      <div class="form-section-title">Nhóm A — phiếu định kỳ, tick từng ngày (SP-IT0203 · System Data Checklist &amp; Storage Record)</div>
+      <div class="row" style="margin-bottom:.85rem">
+        <span class="sub grow">Kỳ tháng 08/2026 · job sao lưu tự điền từ hệ thống · phiếu chốt kỳ sẽ bị khóa không sửa được</span>
+        <span class="badge ok">Đúng kỳ</span>
+        <button class="btn sm">Chốt kỳ tháng 8</button>
+      </div>
+      <div class="table-wrap">
+        <table class="table" style="font-size:var(--fs-sm)">
+          <thead>
+            <tr>
+              <th style="width:230px">Job / Hạng mục</th><th style="width:110px">Loại</th>
+              <th class="col-center">18</th><th class="col-center">19</th><th class="col-center">20</th><th class="col-center">21</th>
+              <th class="col-center">22</th><th class="col-center">23</th><th class="col-center">24</th><th class="col-center">25</th>
+              <th class="col-center">26</th><th class="col-center">27</th><th class="col-center">28</th>
+              <th>Ghi chú</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>BK-FILESV-DAILY</b><span class="cell-sub">SRV-FILE-01 → NAS-S2-01</span></td><td>Incr</td>
+              <td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ok)">✓</td>
+              <td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ok)">✓</td>
+              <td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ink-3)">·</td><td class="col-center" style="color:var(--ink-3)">·</td>
+              <td class="sub">—</td>
+            </tr>
+            <tr>
+              <td><b>BK-ERP-DB</b><span class="cell-sub">SRV-APP-02 → NAS-S2-01</span></td><td>Full</td>
+              <td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--danger)">✕</td><td class="col-center" style="color:var(--ok)">✓</td>
+              <td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ok)">✓</td>
+              <td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ink-3)">·</td><td class="col-center" style="color:var(--ink-3)">·</td>
+              <td class="sub">20/08 lỗi hết dung lượng → đã mở phiếu 0206</td>
+            </tr>
+            <tr>
+              <td><b>BK-CONFIG-NETWORK</b><span class="cell-sub">Switch, Draytek → NAS-S2-01</span></td><td>Copy</td>
+              <td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ok)">✓</td>
+              <td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ok)">✓</td>
+              <td class="col-center" style="color:var(--ok)">✓</td><td class="col-center" style="color:var(--ink-3)">·</td><td class="col-center" style="color:var(--ink-3)">·</td>
+              <td class="sub">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>

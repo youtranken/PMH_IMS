@@ -1,0 +1,91 @@
+  <main class="page">
+    <div class="page-header">
+      <h1>Tài liệu</h1>
+      <span class="sub">Runbook xử lý sự cố · WI-IT · quy định nội bộ</span>
+      <button class="btn primary"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Thêm tài liệu</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:270px minmax(0,1fr) 300px;gap:1.25rem;align-items:start">
+      <aside class="card" style="padding:.75rem">
+        <div class="inp search ph" style="margin-bottom:.6rem">Tìm tài liệu…</div>
+        <div class="nav-label" style="color:var(--ink-3);padding:.6rem .5rem .2rem">Runbook sự cố</div>
+        <div class="col" style="gap:2px">
+          <a href="#" style="padding:.45rem .6rem;border-radius:8px;background:var(--primary-soft);color:var(--primary-ink);font-weight:600;font-size:var(--fs-sm)">Switch không lên mạng</a>
+          <a href="#" style="padding:.45rem .6rem;border-radius:8px;color:var(--ink-2);font-size:var(--fs-sm)">Máy in không kết nối</a>
+          <a href="#" style="padding:.45rem .6rem;border-radius:8px;color:var(--ink-2);font-size:var(--fs-sm)">Job sao lưu báo lỗi</a>
+          <a href="#" style="padding:.45rem .6rem;border-radius:8px;color:var(--ink-2);font-size:var(--fs-sm)">Đứt một đường ISP</a>
+          <a href="#" style="padding:.45rem .6rem;border-radius:8px;color:var(--ink-2);font-size:var(--fs-sm)">NAS đầy dung lượng</a>
+        </div>
+        <div class="nav-label" style="color:var(--ink-3);padding:.85rem .5rem .2rem">Hướng dẫn công việc</div>
+        <div class="col" style="gap:2px">
+          <a href="#" style="padding:.45rem .6rem;border-radius:8px;color:var(--ink-2);font-size:var(--fs-sm)">WI-IT01 — Cấp phát thiết bị</a>
+          <a href="#" style="padding:.45rem .6rem;border-radius:8px;color:var(--ink-2);font-size:var(--fs-sm)">WI-IT03 — Sao lưu &amp; phục hồi</a>
+          <a href="#" style="padding:.45rem .6rem;border-radius:8px;color:var(--ink-2);font-size:var(--fs-sm)">WI-IT05 — Quản lý truy cập</a>
+        </div>
+        <div class="nav-label" style="color:var(--ink-3);padding:.85rem .5rem .2rem">Quy định</div>
+        <div class="col" style="gap:2px">
+          <a href="#" style="padding:.45rem .6rem;border-radius:8px;color:var(--ink-2);font-size:var(--fs-sm)">Quy định đặt tên thiết bị</a>
+          <a href="#" style="padding:.45rem .6rem;border-radius:8px;color:var(--ink-2);font-size:var(--fs-sm)">Quy định cấp IP tĩnh</a>
+        </div>
+      </aside>
+
+      <section class="form-section">
+        <div class="row" style="margin-bottom:.85rem">
+          <div class="grow">
+            <h2>Switch không lên mạng</h2>
+            <div class="sub">Cập nhật 26/08/2026 bởi Lê Minh · 3 thiết bị đang liên kết</div>
+          </div>
+          <button class="btn sm">Sửa</button>
+        </div>
+
+        <div class="alert error" style="margin-bottom:1rem">
+          <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span><b>Phát hiện chuỗi trông giống mật khẩu ở đoạn 3.</b> Tài liệu không bao giờ được chứa mật khẩu — hãy xóa và trỏ người đọc sang két sắt. <a href="#">Xem vị trí</a></span>
+        </div>
+
+        <div style="line-height:1.75">
+          <h3 style="margin-bottom:.4rem">1. Xác định phạm vi</h3>
+          <p class="muted" style="margin-bottom:.85rem">Hỏi người báo: mất mạng cả tầng hay chỉ một máy? Nếu cả tầng — nghi switch tầng. Nếu một máy — kiểm tra cáp và cổng trước, đừng đụng switch.</p>
+
+          <h3 style="margin-bottom:.4rem">2. Tra vị trí thiết bị</h3>
+          <p class="muted" style="margin-bottom:.85rem">Mở hồ sơ thiết bị theo site → tủ mạng, xem <b>Sơ đồ cổng</b> để biết cổng nào đang cắm gì trước khi xuống hiện trường.</p>
+
+          <h3 style="margin-bottom:.4rem">3. Vào giao diện quản trị switch</h3>
+          <p class="muted" style="margin-bottom:.35rem">Truy cập IP quản trị của switch bằng trình duyệt. Mật khẩu <b>không nằm trong tài liệu này</b> — mở két sắt từ chính hồ sơ thiết bị, gõ TOTP để xem.</p>
+          <div class="card" style="padding:.6rem .75rem;background:var(--danger-soft);border-color:#f4cfcb;margin-bottom:.85rem">
+            <span class="sub" style="color:var(--danger)">Đoạn bị cảnh báo — cần xóa:</span>
+            <div class="mono" style="color:var(--danger);text-decoration:line-through">tài khoản admin / Sw!tch-2026#F3-core</div>
+          </div>
+
+          <h3 style="margin-bottom:.4rem">4. Kiểm tra port-security</h3>
+          <p class="muted">Nếu cổng bị <span class="mono">err-disabled</span>, tìm nguyên nhân (thường là loop do người dùng cắm hai đầu cáp vào cùng ổ mạng) rồi mới mở lại cổng. Ghi lại vào phiếu SP-IT0206 Type = Network.</p>
+        </div>
+      </section>
+
+      <aside class="col" style="gap:1rem">
+        <section class="form-section" style="padding:1.1rem">
+          <div class="form-section-title">Thiết bị liên kết</div>
+          <div class="col" style="gap:.4rem">
+            <a href="#" style="padding:.5rem .6rem;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);font-size:var(--fs-sm)"><b>SW-S2-F3-01</b><span class="cell-sub">Switch · Site 2 › T2-F3</span></a>
+            <a href="#" style="padding:.5rem .6rem;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);font-size:var(--fs-sm)"><b>SW-S2-CORE</b><span class="cell-sub">Switch · Site 2 › T2-A</span></a>
+            <a href="#" style="padding:.5rem .6rem;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);font-size:var(--fs-sm)"><b>SW-S1-F1-02</b><span class="cell-sub">Switch · Site 1 › T1-B</span></a>
+          </div>
+          <button class="btn sm" style="margin-top:.6rem">Liên kết thêm</button>
+          <p class="sub" style="margin-top:.6rem;font-size:var(--fs-xs)">Liên kết hai chiều: mở hồ sơ ba thiết bị này cũng thấy tài liệu ở tab Tài liệu.</p>
+        </section>
+
+        <section class="form-section" style="padding:1.1rem">
+          <div class="form-section-title">Phiếu đã dùng runbook này</div>
+          <div class="col" style="gap:.4rem">
+            <div class="row"><span class="mono grow" style="font-size:var(--fs-sm)">SP-IT0206-2608</span><span class="badge ok">Đã xử lý</span></div>
+            <div class="row"><span class="mono grow" style="font-size:var(--fs-sm)">SP-IT0206-1907</span><span class="badge ok">Đã xử lý</span></div>
+          </div>
+        </section>
+
+        <section class="form-section" style="padding:1.1rem">
+          <div class="form-section-title">Nguyên tắc cứng</div>
+          <p class="sub">Tài liệu là thứ dễ bị chụp màn hình, gửi Zalo, in ra để quên trên bàn. Vì vậy <b>không bao giờ chứa mật khẩu</b> — chỉ trỏ người đọc sang két sắt, nơi có TOTP và nhật ký.</p>
+        </section>
+      </aside>
+    </div>
+  </main>

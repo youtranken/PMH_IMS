@@ -1,0 +1,123 @@
+  <main class="page">
+    <div class="page-header">
+      <h1>Địa chỉ IP</h1>
+      <span class="sub">v1 chỉ quản IP tĩnh · DHCP để sau</span>
+      <button class="btn">Xuất Excel</button>
+      <button class="btn primary"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Khai báo IP</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:300px minmax(0,1fr);gap:1.25rem;align-items:start">
+      <aside class="col" style="gap:.75rem">
+        <div class="form-section-title" style="margin:0">Subnet / VLAN</div>
+        <div class="card" style="padding:.85rem;border-color:var(--primary);box-shadow:var(--shadow)">
+          <div class="row"><b class="mono grow">172.16.20.0/24</b><span class="badge brand plain">VLAN 20</span></div>
+          <div class="sub" style="margin:.2rem 0 .5rem">Site 2 — khu văn phòng</div>
+          <div class="meter"><i class="warn" style="width:74%"></i></div>
+          <div class="sub" style="margin-top:.4rem">188/254 đã cấp · còn <b>66 IP trống</b></div>
+        </div>
+        <div class="card" style="padding:.85rem">
+          <div class="row"><b class="mono grow">172.16.10.0/24</b><span class="badge muted plain">VLAN 10</span></div>
+          <div class="sub" style="margin:.2rem 0 .5rem">Site 1 — nhà máy + văn phòng</div>
+          <div class="meter"><i style="width:52%"></i></div>
+          <div class="sub" style="margin-top:.4rem">132/254 đã cấp · còn 122 IP trống</div>
+        </div>
+        <div class="card" style="padding:.85rem">
+          <div class="row"><b class="mono grow">172.16.30.0/24</b><span class="badge muted plain">VLAN 30</span></div>
+          <div class="sub" style="margin:.2rem 0 .5rem">Site 3 — kho</div>
+          <div class="meter"><i style="width:23%"></i></div>
+          <div class="sub" style="margin-top:.4rem">58/254 đã cấp · còn 196 IP trống</div>
+        </div>
+        <div class="card" style="padding:.85rem">
+          <div class="row"><b class="mono grow">172.16.99.0/24</b><span class="badge muted plain">VLAN 99</span></div>
+          <div class="sub" style="margin:.2rem 0 .5rem">Quản trị thiết bị mạng</div>
+          <div class="meter"><i style="width:16%"></i></div>
+          <div class="sub" style="margin-top:.4rem">41/254 đã cấp · còn 213 IP trống</div>
+        </div>
+        <button class="btn" style="justify-content:center">Thêm subnet</button>
+      </aside>
+
+      <div class="col" style="gap:1.25rem">
+        <div>
+          <div class="filter-bar" style="margin-bottom:1rem">
+            <div class="grow"><div class="inp search ph">Tìm theo IP, thiết bị, người dùng…</div></div>
+            <div class="segmented"><span class="on">Tất cả</span><span>Đang cấp</span><span>Trống</span><span>Nghi chết</span><span>Đã thu hồi</span></div>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Địa chỉ</th><th>Thiết bị giữ</th><th>Người / bộ phận dùng</th><th>Ai cấp</th><th>Ngày cấp</th><th>Trạng thái</th><th></th></tr></thead>
+              <tbody>
+                <tr>
+                  <td class="mono"><b>172.16.20.11</b></td><td>SW-S2-F3-01</td><td>Hạ tầng chung</td>
+                  <td>Lê Minh</td><td class="mono">18/10/2024</td><td><span class="badge ok">Đang cấp</span></td>
+                  <td class="action-cell"><button class="kebab">⋯</button></td>
+                </tr>
+                <tr>
+                  <td class="mono"><b>172.16.20.30</b></td><td>NAS-S2-01</td><td>P. Kế toán, P. Nhân sự</td>
+                  <td>Lê Minh</td><td class="mono">02/02/2023</td><td><span class="badge ok">Đang cấp</span></td>
+                  <td class="action-cell"><button class="kebab">⋯</button></td>
+                </tr>
+                <tr>
+                  <td class="mono"><b>172.16.20.64</b></td><td>AP-S2-F3-04</td><td>Wifi phòng họp lớn</td>
+                  <td>Trần Thị B</td><td class="mono">14/05/2026</td><td><span class="badge ok">Đang cấp</span></td>
+                  <td class="action-cell"><button class="kebab">⋯</button></td>
+                </tr>
+                <tr class="due-today">
+                  <td class="mono"><b>172.16.20.77</b></td><td>CAM-S2-KHO-02</td><td>Bảo vệ</td>
+                  <td>Nguyễn Văn A</td><td class="mono">09/03/2025</td><td><span class="badge warn">Nghi chết</span></td>
+                  <td class="action-cell"><button class="btn sm">Thu hồi</button><button class="kebab">⋯</button></td>
+                </tr>
+                <tr>
+                  <td class="mono"><b>172.16.20.88</b></td><td><span style="color:var(--ink-3)">—</span></td><td><span style="color:var(--ink-3)">—</span></td>
+                  <td><span style="color:var(--ink-3)">—</span></td><td><span style="color:var(--ink-3)">—</span></td><td><span class="badge muted">Trống</span></td>
+                  <td class="action-cell"><button class="btn sm primary">Cấp IP này</button></td>
+                </tr>
+                <tr>
+                  <td class="mono"><b>172.16.20.91</b></td><td><span style="color:var(--ink-3)">— (trước: PRN-S2-01)</span></td><td><span style="color:var(--ink-3)">—</span></td>
+                  <td>Nguyễn Văn A</td><td class="mono">30/07/2026</td><td><span class="badge muted">Đã thu hồi</span></td>
+                  <td class="action-cell"><button class="btn sm">Cấp lại</button><button class="kebab">⋯</button></td>
+                </tr>
+                <tr>
+                  <td class="mono"><b>172.16.20.140</b></td><td>ATT-S2-01</td><td>P. Nhân sự</td>
+                  <td>Lê Minh</td><td class="mono">21/11/2025</td><td><span class="badge ok">Đang cấp</span></td>
+                  <td class="action-cell"><button class="kebab">⋯</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="alert ok" style="margin-top:.85rem">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+            <span>Hệ thống chặn cấp trùng tuyệt đối. IP thu hồi vẫn cấp lại được — <b>lịch sử giữ vĩnh viễn</b>, kể cả thao tác xóa.</span>
+          </div>
+        </div>
+
+        <section class="form-section">
+          <div class="form-section-title">Sổ NAT — DrayTek</div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr><th>Thiết bị DrayTek</th><th>Port ngoài</th><th>IP trong : port</th><th>Ai dùng</th><th>Lý do mở</th><th></th></tr></thead>
+              <tbody>
+                <tr>
+                  <td>DRAYTEK-S1-01<span class="cell-sub">WAN1 113.161.x.x</span></td>
+                  <td class="mono"><b>8443</b></td><td class="mono">172.16.10.25 : 443</td>
+                  <td>P. Kinh doanh</td><td>Web đơn hàng cho đối tác<span class="cell-sub">mở 11/2024 · rà lại 6 tháng/lần</span></td>
+                  <td class="action-cell"><button class="kebab">⋯</button></td>
+                </tr>
+                <tr>
+                  <td>DRAYTEK-S1-01<span class="cell-sub">WAN1 113.161.x.x</span></td>
+                  <td class="mono"><b>5001</b></td><td class="mono">172.16.10.30 : 5001</td>
+                  <td>P. Kế toán</td><td>Truy cập NAS khi làm ngoài giờ</td>
+                  <td class="action-cell"><button class="kebab">⋯</button></td>
+                </tr>
+                <tr>
+                  <td>DRAYTEK-S2-01<span class="cell-sub">WAN2 14.161.x.x</span></td>
+                  <td class="mono"><b>1723</b></td><td class="mono">172.16.20.1 : 1723</td>
+                  <td>Team IT</td><td>VPN vào LAN nội bộ</td>
+                  <td class="action-cell"><button class="kebab">⋯</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>

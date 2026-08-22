@@ -1,0 +1,99 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 08-21-2026 10:05
+last_updated: 08-21-2026 10:20
+project: IMS
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+development_status:
+  epic-1: backlog
+  1-1-khởi-tạo-dự-án-từ-xương-qlts: backlog
+  1-5-bộ-dùng-chung-nền-web: backlog
+  1-2-đăng-nhập-bằng-mật-khẩu-với-phiên-an-toàn: backlog
+  1-3-bật-totp-và-lõi-mã-hóa-envelope: backlog
+  1-4-sa-quản-trị-tài-khoản-và-phiên: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-danh-mục-site-tủ-loại-thiết-bị-nhà-cung-cấp: backlog
+  2-2-hồ-sơ-thiết-bị: backlog
+  2-3-đính-kèm-giấy-tờ-theo-thiết-bị: backlog
+  2-4-port-map-dạng-bảng: backlog
+  2-5-trang-chi-tiết-thiết-bị-tổng-hợp: backlog
+  2-6-import-thiết-bị-từ-excel-và-export: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-hồ-sơ-phần-mềm-theo-loại: backlog
+  3-2-gán-license-cho-thiết-bị-theo-seat: backlog
+  3-3-hồ-sơ-đường-truyền-isp: backlog
+  3-4-cỗ-máy-expiry-và-màn-tổng-hợp: backlog
+  3-5-báo-cáo-email-sắp-hết-hạn-theo-luật: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-lưu-secret-mã-hóa-gắn-thiết-bị-phần-mềm: backlog
+  4-2-xem-secret-với-totp-step-up: backlog
+  4-3-đóng-đợt-1-dữ-liệu-thật-và-diễn-tập-khôi-phục: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-khai-báo-subnet-và-hồ-sơ-ip: backlog
+  5-2-vòng-đời-ip-và-mức-sử-dụng-subnet: backlog
+  5-3-sổ-nat-draytek: backlog
+  5-4-panel-ip-trên-trang-thiết-bị: backlog
+  epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-module-phê-duyệt-dùng-chung: backlog
+  6-2-quản-trị-whitelist-và-danh-sách-cần-duyệt: backlog
+  6-3-break-glass-xin-duyệt-xem-theo-thời-hạn: backlog
+  epic-6-retrospective: optional
+
+  epic-7: backlog
+  7-1-dashboard-theo-vai: backlog
+  7-2-export-xlsx-mọi-bảng: backlog
+  epic-7-retrospective: optional
+
+  epic-8: backlog
+  8-1-template-phiếu-và-sinh-kỳ-tự-động: backlog
+  8-2-điền-phiếu-dạng-grid-tick-ngày: backlog
+  8-3-phiếu-kiểm-tra-định-kỳ-dạng-checklist: backlog
+  8-4-in-đúng-layout-iso-khóa-kỳ-lưu-theo-năm: backlog
+  epic-8-retrospective: optional
+
+  epic-9: backlog
+  9-1-phiếu-sự-cố-0206-động-theo-loại: backlog
+  9-2-nâng-cấp-rca-0207-và-luồng-ký-duyệt: backlog
+  9-3-phiếu-sự-kiện-0209-0210-0214: backlog
+  9-4-documents-runbook-có-nhà: backlog
+  epic-9-retrospective: optional

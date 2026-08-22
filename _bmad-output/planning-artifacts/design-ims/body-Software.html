@@ -1,0 +1,119 @@
+  <main class="page">
+    <div class="page-header">
+      <h1>Phần mềm &amp; License</h1>
+      <span class="sub">Mọi thứ có ngày bắt đầu / kết thúc đều nằm ở đây</span>
+      <button class="btn">Xuất Excel</button>
+      <button class="btn primary"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Thêm bản ghi</button>
+    </div>
+
+    <div class="row" style="margin-bottom:1rem">
+      <div class="segmented">
+        <span class="on">License phần mềm <span class="badge brand plain" style="margin-left:.25rem">24</span></span>
+        <span>Chứng chỉ SSL <span class="badge muted plain" style="margin-left:.25rem">3</span></span>
+        <span>Tên miền <span class="badge muted plain" style="margin-left:.25rem">2</span></span>
+        <span>Hợp đồng ISP <span class="badge muted plain" style="margin-left:.25rem">26</span></span>
+        <span>Hợp đồng bảo trì <span class="badge muted plain" style="margin-left:.25rem">5</span></span>
+      </div>
+    </div>
+
+    <div class="alert warn" style="margin-bottom:1rem">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+      <span><b>1 key bị gán vượt số seat.</b> Windows Server 2022 Standard (2 seat) đang gán cho 3 máy — SRV-FILE-01, SRV-APP-02, SRV-TEST-03. Cần gỡ bớt hoặc mua thêm seat.</span>
+    </div>
+
+    <div class="filter-bar">
+      <div class="grow"><div class="inp search ph">Tìm theo tên phần mềm, hãng, key…</div></div>
+      <div class="sel" style="width:190px"><div class="inp pick">Tình trạng hạn: tất cả</div></div>
+      <div class="sel" style="width:180px"><div class="inp pick ph">Gán cho thiết bị…</div></div>
+      <button class="btn ghost">Xóa lọc</button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>Phần mềm</th><th>Hãng / Nhà cung cấp</th><th>Key</th><th style="width:190px">Đã cấp</th><th>Bắt đầu</th><th>Hết hạn</th><th>Tình trạng</th><th></th></tr>
+        </thead>
+        <tbody>
+          <tr class="overdue">
+            <td><b>Windows Server 2022 Standard</b><span class="cell-sub">OEM · 2 socket</span></td>
+            <td>Microsoft — Sao Mai</td>
+            <td><span class="badge danger plain">Trong két sắt</span></td>
+            <td>
+              <div class="row" style="gap:.5rem"><b class="mono">3/2</b><span class="meter grow"><i class="danger" style="width:100%"></i></span></div>
+              <span class="cell-sub">Vượt 1 seat</span>
+            </td>
+            <td class="mono">01/03/2024</td>
+            <td class="mono">28/02/2027</td>
+            <td><span class="badge danger">Trùng key</span></td>
+            <td class="action-cell"><button class="kebab">⋯</button></td>
+          </tr>
+          <tr>
+            <td><b>Veeam Backup Essentials</b><span class="cell-sub">5 socket · gói năm</span></td>
+            <td>Veeam — Nhất Tiến Chung</td>
+            <td><span class="badge muted plain">Trong két sắt</span></td>
+            <td>
+              <div class="row" style="gap:.5rem"><b class="mono">5/5</b><span class="meter grow"><i class="warn" style="width:100%"></i></span></div>
+              <span class="cell-sub">Đã dùng hết seat</span>
+            </td>
+            <td class="mono">20/09/2025</td>
+            <td class="mono">19/09/2026</td>
+            <td><span class="badge warn">còn 28 ngày</span></td>
+            <td class="action-cell"><button class="kebab">⋯</button></td>
+          </tr>
+          <tr>
+            <td><b>Sophos Intercept X Advanced</b><span class="cell-sub">Endpoint · 120 máy</span></td>
+            <td>Sophos — Mi2 JSC</td>
+            <td><span class="badge muted plain">Trong két sắt</span></td>
+            <td>
+              <div class="row" style="gap:.5rem"><b class="mono">96/120</b><span class="meter grow"><i style="width:80%"></i></span></div>
+              <span class="cell-sub">Còn 24 seat</span>
+            </td>
+            <td class="mono">01/07/2026</td>
+            <td class="mono">30/06/2027</td>
+            <td><span class="badge ok">còn 312 ngày</span></td>
+            <td class="action-cell"><button class="kebab">⋯</button></td>
+          </tr>
+          <tr>
+            <td><b>Microsoft 365 Business Standard</b><span class="cell-sub">Theo tài khoản</span></td>
+            <td>Microsoft — CMC</td>
+            <td><span class="badge muted plain">Không lưu key</span></td>
+            <td>
+              <div class="row" style="gap:.5rem"><b class="mono">48/60</b><span class="meter grow"><i style="width:80%"></i></span></div>
+              <span class="cell-sub">Còn 12 tài khoản</span>
+            </td>
+            <td class="mono">15/01/2026</td>
+            <td class="mono">14/01/2027</td>
+            <td><span class="badge ok">còn 145 ngày</span></td>
+            <td class="action-cell"><button class="kebab">⋯</button></td>
+          </tr>
+          <tr>
+            <td><b>Synology Surveillance Station</b><span class="cell-sub">8 camera license</span></td>
+            <td>Synology — Sao Mai</td>
+            <td><span class="badge muted plain">Trong két sắt</span></td>
+            <td>
+              <div class="row" style="gap:.5rem"><b class="mono">8/8</b><span class="meter grow"><i class="warn" style="width:100%"></i></span></div>
+              <span class="cell-sub">Vĩnh viễn — không hết hạn</span>
+            </td>
+            <td class="mono">12/05/2023</td>
+            <td>—</td>
+            <td><span class="badge ok">Vĩnh viễn</span></td>
+            <td class="action-cell"><button class="kebab">⋯</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <section class="form-section" style="margin-top:1.25rem">
+      <div class="form-section-title">Windows Server 2022 Standard — key này đang nhập ở máy nào</div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Thiết bị</th><th>Vị trí</th><th>Người gán</th><th>Ngày gán</th><th>Trạng thái seat</th><th></th></tr></thead>
+          <tbody>
+            <tr><td><b>SRV-FILE-01</b></td><td>Site 1 › Tủ T1-A</td><td>Lê Minh</td><td class="mono">04/03/2024</td><td><span class="badge ok">Hợp lệ</span></td><td class="action-cell"><button class="btn sm">Gỡ</button></td></tr>
+            <tr><td><b>SRV-APP-02</b></td><td>Site 1 › Tủ T1-A</td><td>Lê Minh</td><td class="mono">04/03/2024</td><td><span class="badge ok">Hợp lệ</span></td><td class="action-cell"><button class="btn sm">Gỡ</button></td></tr>
+            <tr class="overdue"><td><b>SRV-TEST-03</b></td><td>Site 2 › Tủ T2-A</td><td>Trần Thị B</td><td class="mono">11/06/2026</td><td><span class="badge danger">Vượt seat</span></td><td class="action-cell"><button class="btn sm danger">Gỡ</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>

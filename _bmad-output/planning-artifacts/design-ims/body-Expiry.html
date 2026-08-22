@@ -1,0 +1,117 @@
+  <main class="page">
+    <div class="page-header">
+      <h1>Theo dõi hạn</h1>
+      <span class="sub">Bảo hành · License · SSL · Tên miền · Hợp đồng ISP · Hợp đồng bảo trì — gom về một chỗ</span>
+      <button class="btn">Xuất Excel</button>
+      <button class="btn primary">Gửi thử báo cáo</button>
+    </div>
+
+    <div class="filter-bar">
+      <div class="grow"><div class="inp search ph">Tìm theo tên đối tượng…</div></div>
+      <div class="sel" style="width:200px"><div class="inp pick">Loại: tất cả</div></div>
+      <div class="sel" style="width:200px"><div class="inp pick">Cửa sổ: 30 ngày tới</div></div>
+      <div class="segmented">
+        <span class="on">Sắp hết</span><span>Đã hết</span><span>Còn hạn</span>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-bottom:1.25rem">
+      <table class="table">
+        <thead>
+          <tr><th>Đối tượng</th><th>Loại</th><th>Gắn với</th><th>Bắt đầu</th><th>Hết hạn</th><th class="num">Còn lại</th><th>Lần gia hạn gần nhất</th><th></th></tr>
+        </thead>
+        <tbody>
+          <tr class="overdue">
+            <td><b>SSL *.pmh.com.vn</b></td><td><span class="badge danger">SSL</span></td>
+            <td>web-portal, ims-app</td><td class="mono">14/09/2025</td><td class="mono">13/09/2026</td>
+            <td class="num"><b style="color:var(--danger)">−2 ngày</b></td><td class="mono">13/09/2025 · Lê Minh</td>
+            <td class="action-cell"><button class="btn sm warm">Đã gia hạn</button></td>
+          </tr>
+          <tr class="due-today">
+            <td><b>Hợp đồng ISP — Viettel 300Mbps</b></td><td><span class="badge warn">Hợp đồng ISP</span></td>
+            <td>DRAYTEK-S1-01</td><td class="mono">01/09/2025</td><td class="mono">31/08/2026</td>
+            <td class="num"><b>9 ngày</b></td><td class="mono">28/08/2025 · Lê Minh</td>
+            <td class="action-cell"><button class="btn sm warm">Đã gia hạn</button></td>
+          </tr>
+          <tr>
+            <td><b>Tên miền pmh.com.vn</b></td><td><span class="badge brand">Tên miền</span></td>
+            <td>—</td><td class="mono">05/09/2025</td><td class="mono">05/09/2026</td>
+            <td class="num">14 ngày</td><td class="mono">02/09/2025 · Sếp</td>
+            <td class="action-cell"><button class="btn sm">Đã gia hạn</button></td>
+          </tr>
+          <tr>
+            <td><b>Bảo hành UPS APC 3KVA</b></td><td><span class="badge muted">Bảo hành</span></td>
+            <td>UPS-S2-03</td><td class="mono">18/09/2023</td><td class="mono">17/09/2026</td>
+            <td class="num">26 ngày</td><td>—</td>
+            <td class="action-cell"><button class="btn sm">Đã gia hạn</button></td>
+          </tr>
+          <tr>
+            <td><b>Veeam Backup Essentials</b></td><td><span class="badge brand">License</span></td>
+            <td>SRV-BACKUP-01</td><td class="mono">20/09/2025</td><td class="mono">19/09/2026</td>
+            <td class="num">28 ngày</td><td class="mono">19/09/2025 · Lê Minh</td>
+            <td class="action-cell"><button class="btn sm">Đã gia hạn</button></td>
+          </tr>
+          <tr>
+            <td><b>Hợp đồng bảo trì máy lạnh phòng server</b></td><td><span class="badge muted">Bảo trì</span></td>
+            <td>Site 1 › Tủ T1-A</td><td class="mono">01/10/2025</td><td class="mono">30/09/2026</td>
+            <td class="num">39 ngày</td><td class="mono">29/09/2025 · Lê Minh</td>
+            <td class="action-cell"><button class="btn sm">Đã gia hạn</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:1.25rem;align-items:start">
+      <section class="form-section">
+        <div class="form-section-title">Luật gửi báo cáo tổng hợp</div>
+        <p class="sub" style="margin-bottom:.85rem">Hệ thống không gửi mail lẻ từng món. Mỗi luật gom tất cả mục thỏa điều kiện thành <b>một mail duy nhất</b>.</p>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Loại đối tượng</th><th>Cửa sổ</th><th>Người nhận</th><th>Tần suất</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Tất cả (bảo hành · license · SSL · hợp đồng)</td><td class="mono">30 ngày</td>
+                <td>sếp@pmh.com.vn</td><td>Thứ Hai hằng tuần, 08:00</td>
+                <td><span class="badge ok">Đang bật</span></td>
+                <td class="action-cell"><button class="btn sm">Sửa</button></td>
+              </tr>
+              <tr>
+                <td>SSL · Tên miền</td><td class="mono">60 ngày</td>
+                <td>it@pmh.com.vn</td><td>Ngày 1 hằng tháng, 08:00</td>
+                <td><span class="badge ok">Đang bật</span></td>
+                <td class="action-cell"><button class="btn sm">Sửa</button></td>
+              </tr>
+              <tr>
+                <td>Hợp đồng ISP</td><td class="mono">45 ngày</td>
+                <td>it@pmh.com.vn · sếp@pmh.com.vn</td><td>Thứ Hai hằng tuần, 08:00</td>
+                <td><span class="badge muted">Tạm tắt</span></td>
+                <td class="action-cell"><button class="btn sm">Sửa</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <button class="btn" style="margin-top:.85rem"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Thêm luật</button>
+      </section>
+
+      <section class="form-section">
+        <div class="form-section-title">Xem trước mail sẽ gửi</div>
+        <div class="card" style="padding:.85rem;background:var(--surface-2)">
+          <div class="sub" style="margin-bottom:.1rem">Tới: sếp@pmh.com.vn</div>
+          <b>[IMS] 7 mục sắp hết hạn trong 30 ngày tới</b>
+          <div style="margin-top:.75rem;border-top:1px solid var(--border);padding-top:.6rem">
+            <table class="table" style="font-size:var(--fs-sm)">
+              <thead><tr><th>Đối tượng</th><th>Bắt đầu</th><th>Hết hạn</th></tr></thead>
+              <tbody>
+                <tr><td>SSL *.pmh.com.vn</td><td class="mono">14/09/25</td><td class="mono">13/09/26</td></tr>
+                <tr><td>Hợp đồng ISP Viettel 300Mbps</td><td class="mono">01/09/25</td><td class="mono">31/08/26</td></tr>
+                <tr><td>Tên miền pmh.com.vn</td><td class="mono">05/09/25</td><td class="mono">05/09/26</td></tr>
+                <tr><td>Bảo hành UPS APC 3KVA</td><td class="mono">18/09/23</td><td class="mono">17/09/26</td></tr>
+                <tr><td>Veeam Backup Essentials</td><td class="mono">20/09/25</td><td class="mono">19/09/26</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p class="sub" style="margin-top:.75rem">Mỗi dòng là một mục kèm ngày bắt đầu và ngày hết hạn — đúng dạng sếp cần đọc trong 3 phút.</p>
+      </section>
+    </div>
+  </main>

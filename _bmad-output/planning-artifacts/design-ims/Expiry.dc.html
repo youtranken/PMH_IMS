@@ -1,0 +1,428 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+  <style>
+  /* ===== IMS — hệ thiết kế "Sunset Grove" (port nguyên bản từ QLTS) ===== */
+  body { margin: 0; background: #f7f6f2; }
+  .ims {
+    --canvas:#f7f6f2; --surface:#ffffff; --surface-2:#f2f1ea;
+    --ink:#1f231c; --ink-2:#5a615a; --ink-3:#5c635c;
+    --border:#e9eae2; --border-2:#d8dbd0;
+    --primary:#0e9f6e; --primary-ink:#0a7d54; --primary-soft:#e5f6ee;
+    --warm:#f59e0b; --warm-ink:#ea580c; --warm-soft:#fef2df;
+    --grad:linear-gradient(135deg,#0e9f6e,#f59e0b);
+    --sidebar-bg:#16231b; --sidebar-ink:#8ea595; --sidebar-ink-2:#eaf3ee;
+    --sidebar-active-bg:rgba(245,158,11,.16); --sidebar-active-ink:#ffe1b3;
+    --sidebar-border:#24352a; --sidebar-label:#9fb0a5;
+    --ok:#0f7a55; --ok-soft:#e4f4ee; --warn:#a34d08; --warn-soft:#fdf0e3;
+    --danger:#c0392b; --danger-soft:#fdeceb; --muted:#5f665f; --muted-soft:#efeee7;
+    --ring:0 0 0 3px rgba(14,159,110,.22);
+    --r-sm:8px; --r:10px; --r-lg:14px;
+    --space-1:.25rem; --space-2:.4rem; --space-3:.5rem; --space-4:.6rem; --space-5:.75rem;
+    --space-6:.85rem; --space-7:1rem; --space-8:1.1rem; --space-9:1.25rem; --space-10:1.5rem;
+    --fs-2xs:.72rem; --fs-xs:.8rem; --fs-sm:.88rem; --fs-md:1rem; --fs-lg:1.1rem;
+    --fs-xl:1.3rem; --fs-2xl:1.5rem;
+    --shadow-sm:0 1px 2px rgba(16,24,40,.05);
+    --shadow:0 1px 3px rgba(16,24,40,.08),0 1px 2px rgba(16,24,40,.05);
+    --shadow-lg:0 24px 60px -20px rgba(16,24,40,.35),0 8px 20px -12px rgba(16,24,40,.2);
+    --shadow-pop:0 12px 28px -10px rgba(16,24,40,.25);
+    --font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+    --mono:ui-monospace,'Cascadia Code','SF Mono',Consolas,monospace;
+    --ease:cubic-bezier(.4,0,.2,1);
+    font-family:var(--font); font-size:14px; line-height:1.5; color:var(--ink);
+    background:var(--canvas); -webkit-font-smoothing:antialiased;
+    display:flex; flex-direction:column;
+  }
+  .ims.dark {
+    --canvas:#0f140f; --surface:#161d16; --surface-2:#1d261d;
+    --ink:#e9ede7; --ink-2:#a7b0a5; --ink-3:#9aa39a;
+    --border:#26312a; --border-2:#37453a;
+    --primary:#34d399; --primary-ink:#6ee7b7; --primary-soft:#123024;
+    --warm:#fbbf24; --warm-ink:#f59e0b; --warm-soft:#3a2c14;
+    --grad:linear-gradient(135deg,#34d399,#fbbf24);
+    --ok:#43c294; --ok-soft:#13312a; --warn:#e0a35a; --warn-soft:#3a2c18;
+    --danger:#ef6f63; --danger-soft:#3a1f1d; --muted:#9aa59a; --muted-soft:#232d23;
+    --sidebar-bg:#0e140f; --sidebar-border:#1e2a22;
+    --sidebar-active-bg:rgba(251,191,36,.16);
+    --ring:0 0 0 3px rgba(52,211,153,.3);
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 1px 3px rgba(0,0,0,.4),0 1px 2px rgba(0,0,0,.3);
+    --shadow-lg:0 24px 60px -20px rgba(0,0,0,.7),0 8px 20px -12px rgba(0,0,0,.5);
+    --shadow-pop:0 12px 28px -10px rgba(0,0,0,.6);
+  }
+  .ims *, .ims *::before, .ims *::after { box-sizing:border-box; }
+  .ims h1 { font-size:var(--fs-2xl); font-weight:700; letter-spacing:-.01em; margin:0; }
+  .ims h2 { font-size:var(--fs-lg); font-weight:600; letter-spacing:-.005em; margin:0; }
+  .ims h3 { font-size:var(--fs-md); font-weight:600; margin:0; }
+  .ims h4 { font-size:var(--fs-sm); font-weight:600; margin:0; }
+  .ims p { margin:0; }
+  .ims a { color:var(--primary-ink); text-decoration:none; }
+  .ims a:hover { color:var(--primary); text-decoration:underline; }
+
+  /* --- Shell --- */
+  .shell { display:flex; flex:1; min-height:0; }
+  .sidebar { width:236px; flex:none; background:var(--sidebar-bg);
+    border-right:1px solid var(--sidebar-border); padding:var(--space-8) var(--space-5);
+    display:flex; flex-direction:column; gap:.1rem; }
+  .brand { display:flex; align-items:center; gap:var(--space-3); font-weight:700;
+    font-size:var(--fs-lg); letter-spacing:-.01em; color:var(--sidebar-ink-2);
+    padding:.1rem var(--space-4) var(--space-7); }
+  .brand-mark { width:26px; height:26px; border-radius:var(--r-sm); background:var(--grad);
+    color:#fff; display:grid; place-items:center; font-size:var(--fs-2xs); font-weight:700; }
+  .nav-label { font-size:var(--fs-2xs); font-weight:700; letter-spacing:.06em;
+    text-transform:uppercase; color:var(--sidebar-label);
+    padding:var(--space-6) var(--space-4) var(--space-1); }
+  .nav-item { display:flex; align-items:center; gap:var(--space-4);
+    padding:var(--space-3) var(--space-4); border-radius:var(--r-sm);
+    color:var(--sidebar-ink); font-weight:600; font-size:var(--fs-sm); text-decoration:none; }
+  .nav-item.active { background:var(--sidebar-active-bg); color:var(--sidebar-active-ink);
+    box-shadow:inset 3px 0 0 var(--warm); }
+  .nav-ic { width:20px; height:20px; flex:none; }
+  .nav-item .lbl { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .nav-badge { flex:none; font-size:var(--fs-2xs); font-weight:800; min-width:20px; height:18px;
+    padding:0 var(--space-2); border-radius:999px; display:inline-grid; place-items:center;
+    line-height:1; background:rgba(255,255,255,.1); color:var(--sidebar-ink-2); }
+  .nav-badge.warn { background:var(--warm); color:#1f231c; }
+  .sb-foot { margin-top:auto; display:flex; flex-direction:column; gap:var(--space-4);
+    padding:var(--space-5); border-radius:10px; background:rgba(255,255,255,.04); }
+  .sb-user { display:flex; align-items:center; gap:var(--space-4); }
+  .sb-av { flex:none; width:30px; height:30px; border-radius:9px; display:grid; place-items:center;
+    font-size:var(--fs-2xs); font-weight:800; background:rgba(255,255,255,.14); color:var(--sidebar-ink-2); }
+  .sb-who { display:flex; flex-direction:column; min-width:0; }
+  .sb-who b { color:var(--sidebar-ink-2); font-size:var(--fs-sm); }
+  .sb-who span { color:var(--sidebar-label); font-size:var(--fs-2xs); }
+  .content { flex:1; min-width:0; display:flex; flex-direction:column; background:var(--canvas); }
+  .topbar { display:flex; align-items:center; gap:var(--space-5); height:56px; flex:none;
+    padding:0 var(--space-10); background:var(--surface); border-bottom:1px solid var(--border); }
+  .topbar .spacer { flex:1; }
+  .topbar .hello { color:var(--ink-2); font-size:var(--fs-sm); }
+  .topbar .hello strong { color:var(--ink); font-weight:600; }
+  .kbd { display:inline-flex; align-items:center; gap:var(--space-3);
+    padding:var(--space-2) var(--space-5); border:1px solid var(--border-2); border-radius:var(--r);
+    background:var(--surface-2); color:var(--ink-3); font-size:var(--fs-xs); min-width:230px; }
+  .kbd b { margin-left:auto; font-family:var(--mono); font-weight:600; font-size:var(--fs-2xs); }
+  .page { padding:var(--space-10); width:100%; }
+  .page-header { display:flex; align-items:center; flex-wrap:wrap; gap:var(--space-7);
+    margin-bottom:var(--space-9); }
+  .page-header h1 { margin-right:auto; }
+  .sub { color:var(--ink-2); font-size:var(--fs-sm); }
+
+  /* --- Buttons / inputs --- */
+  .btn { font-family:var(--font); font-size:14px; font-weight:600; color:var(--ink);
+    background:var(--surface); border:1px solid var(--border-2); border-radius:var(--r);
+    padding:.48rem var(--space-6); cursor:pointer; white-space:nowrap;
+    display:inline-flex; align-items:center; gap:var(--space-3); }
+  .btn.primary { color:#fff; background:var(--grad); border-color:transparent;
+    box-shadow:0 8px 18px -8px var(--warm-ink); }
+  .btn.warm { color:#fff; background:var(--warm); border-color:transparent; }
+  .btn.danger { color:#fff; background:var(--danger); border-color:var(--danger); }
+  .btn.ghost { background:transparent; border-color:transparent; color:var(--ink-2); padding:.42rem var(--space-4); }
+  .btn.sm { padding:.28rem var(--space-4); font-size:var(--fs-xs); }
+  .btn .ic { width:16px; height:16px; flex:none; }
+  .inp { font-family:var(--font); font-size:14px; color:var(--ink); background:var(--surface);
+    border:1px solid var(--border-2); border-radius:var(--r);
+    padding:var(--space-4) var(--space-5); width:100%; display:block; }
+  .inp.ph { color:var(--ink-3); }
+  .inp.search { padding-left:2rem; background-repeat:no-repeat; background-position:left .65rem center;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16' fill='none' stroke='%238a908a' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='m15 15-3.5-3.5'/%3E%3C/svg%3E"); }
+  .inp.pick { padding-right:1.9rem; background-repeat:no-repeat; background-position:right .62rem center;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%238a908a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E"); }
+  .lbl-t { font-size:var(--fs-xs); color:var(--ink-2); font-weight:500; }
+  .field { display:flex; flex-direction:column; gap:var(--space-1); min-width:0; }
+  .req { color:var(--danger); font-weight:600; }
+
+  /* --- Card / section / grid --- */
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg);
+    box-shadow:var(--shadow-sm); }
+  .form-section { border:1px solid var(--border); border-radius:var(--r-lg); background:var(--surface);
+    padding:var(--space-8) var(--space-8) var(--space-9); }
+  .form-section-title { display:flex; align-items:center; gap:var(--space-3); font-size:var(--fs-2xs);
+    font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ink-3);
+    margin-bottom:var(--space-6); }
+  .form-section-title::before { content:''; width:3px; height:.85rem; border-radius:2px; background:var(--primary); }
+  .form-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:var(--space-6) var(--space-7); }
+  .span-2 { grid-column:span 2; }
+  .span-3 { grid-column:1/-1; }
+  .data-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:var(--space-5); }
+  .data-item { padding:var(--space-4) var(--space-6); background:var(--surface-2);
+    border:1px solid var(--border); border-radius:var(--r); min-width:0; }
+  .data-item dt { font-size:var(--fs-2xs); font-weight:700; letter-spacing:.03em;
+    text-transform:uppercase; color:var(--ink-3); margin-bottom:var(--space-1); }
+  .data-item dd { margin:0; color:var(--ink); font-weight:500; overflow-wrap:anywhere; }
+
+  /* --- Filter bar --- */
+  .filter-bar { display:flex; flex-wrap:wrap; gap:var(--space-4); align-items:center;
+    padding:var(--space-4); background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--r-lg); box-shadow:var(--shadow-sm); margin-bottom:var(--space-8); }
+  .filter-bar .grow { flex:1; min-width:200px; }
+
+  /* --- Table --- */
+  .table-wrap { overflow:hidden; border:1px solid var(--border); border-radius:var(--r-lg);
+    background:var(--surface); box-shadow:var(--shadow-sm); }
+  table.table { width:100%; border-collapse:collapse; font-size:var(--fs-md); }
+  table.table thead th { text-align:left; font-size:var(--fs-2xs); font-weight:700; letter-spacing:.04em;
+    text-transform:uppercase; color:var(--ink-2); padding:var(--space-5) var(--space-7);
+    border-bottom:1px solid var(--border); background:var(--surface-2); white-space:nowrap; }
+  table.table tbody td { padding:var(--space-6) var(--space-7); border-bottom:1px solid var(--border);
+    color:var(--ink); vertical-align:middle; }
+  table.table tbody tr:last-child td { border-bottom:none; }
+  table.table tbody tr:nth-child(even) td { background:var(--surface-2); }
+  table.table tbody tr.overdue td { background:var(--danger-soft); }
+  table.table tbody tr.overdue td:first-child { box-shadow:inset 3px 0 0 var(--danger); }
+  table.table tbody tr.due-today td { background:var(--warn-soft); }
+  table.table tbody tr.due-today td:first-child { box-shadow:inset 3px 0 0 var(--warn); }
+  .table th.num, .table td.num { text-align:right; }
+  .table th.col-center, .table td.col-center { text-align:center; }
+  .mono { font-family:var(--mono); font-size:.85em; letter-spacing:-.01em; font-variant-numeric:tabular-nums; }
+  .cell-sub { display:block; font-size:var(--fs-xs); color:var(--ink-3); margin-top:2px; }
+  .action-cell { display:flex; align-items:center; justify-content:flex-end; gap:var(--space-2); }
+  .kebab { padding:var(--space-1) var(--space-3); font-size:var(--fs-lg); line-height:1;
+    background:transparent; border:1px solid transparent; border-radius:var(--r-sm); color:var(--ink-3);
+    font-family:var(--font); cursor:pointer; }
+
+  /* --- Badge --- */
+  .badge { display:inline-flex; align-items:center; gap:var(--space-1); padding:var(--space-1) var(--space-3);
+    border-radius:999px; font-size:var(--fs-xs); font-weight:600; line-height:1.4; white-space:nowrap; }
+  .badge::before { content:''; width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.9; }
+  .badge.ok { color:var(--ok); background:var(--ok-soft); }
+  .badge.warn { color:var(--warn); background:var(--warn-soft); }
+  .badge.danger { color:var(--danger); background:var(--danger-soft); }
+  .badge.muted { color:var(--muted); background:var(--muted-soft); }
+  .badge.brand { color:var(--primary-ink); background:var(--primary-soft); }
+  .badge.plain::before { display:none; }
+
+  /* --- Stat card --- */
+  .stat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:var(--space-4); }
+  .stat-card { position:relative; text-align:left; padding:var(--space-4) var(--space-5) var(--space-4) var(--space-6);
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--r-lg);
+    box-shadow:var(--shadow-sm); overflow:hidden; }
+  .stat-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:4px;
+    background:var(--primary); opacity:.85; }
+  .stat-card.critical { border-color:#f1c9c4; background:var(--danger-soft); }
+  .stat-card.critical::before { background:var(--danger); }
+  .stat-card.warnish::before { background:var(--warm); }
+  .stat-num { font-size:var(--fs-2xl); font-weight:700; line-height:1; font-variant-numeric:tabular-nums; color:var(--ink); }
+  .stat-card.critical .stat-num { color:var(--danger); }
+  .stat-label { margin-top:var(--space-1); font-size:var(--fs-2xs); font-weight:600; letter-spacing:.03em;
+    text-transform:uppercase; color:var(--ink-2); }
+
+  /* --- Tabs / segmented --- */
+  .tabs { display:flex; gap:var(--space-1); border-bottom:1px solid var(--border); }
+  .tab { flex:none; white-space:nowrap; padding:var(--space-3) var(--space-7); border:none;
+    border-bottom:2px solid transparent; background:none; border-radius:0; color:var(--ink-3);
+    font-family:var(--font); font-size:14px; font-weight:600; margin-bottom:-1px; cursor:pointer; }
+  .tab.active { color:var(--primary-ink); border-bottom-color:var(--primary); }
+  .segmented { display:inline-flex; padding:var(--space-1); gap:var(--space-1); background:var(--surface-2);
+    border:1px solid var(--border); border-radius:var(--r); }
+  .segmented span { display:inline-flex; align-items:center; gap:var(--space-2);
+    padding:var(--space-2) var(--space-6); border-radius:calc(var(--r) - 3px); font-size:var(--fs-sm);
+    font-weight:600; color:var(--ink-2); }
+  .segmented span.on { background:var(--surface); color:var(--primary-ink); box-shadow:var(--shadow-sm); }
+
+  /* --- Alert / empty --- */
+  .alert { padding:var(--space-4) var(--space-6); border-radius:var(--r); font-size:var(--fs-sm);
+    border:1px solid transparent; display:flex; gap:var(--space-4); align-items:flex-start; }
+  .alert .ic { width:18px; height:18px; flex:none; margin-top:1px; }
+  .alert.error { color:var(--danger); background:var(--danger-soft); border-color:#f4cfcb; }
+  .alert.ok { color:var(--ok); background:var(--ok-soft); border-color:#bfe4d4; }
+  .alert.warn { color:var(--warn); background:var(--warn-soft); border-color:#f2d9b8; }
+  .muted { color:var(--ink-2); }
+
+  /* --- Modal --- */
+  .modal-backdrop { position:absolute; inset:0; background:rgba(20,26,20,.44);
+    backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); display:grid; place-items:center; padding:var(--space-7); }
+  .modal { background:var(--surface); border-radius:var(--r-lg); box-shadow:var(--shadow-lg);
+    max-width:560px; width:100%; padding:var(--space-10); }
+
+  /* --- Meter --- */
+  .meter { height:8px; border-radius:999px; background:var(--muted-soft); overflow:hidden; }
+  .meter > i { display:block; height:100%; border-radius:999px; background:var(--primary); }
+  .meter > i.warn { background:var(--warm); }
+  .meter > i.danger { background:var(--danger); }
+
+  /* --- Row / stack helpers --- */
+  .row { display:flex; align-items:center; gap:var(--space-4); }
+  .col { display:flex; flex-direction:column; gap:var(--space-4); }
+  .grow { flex:1; min-width:0; }
+  </style>
+</helmet>
+<div class="ims {{themeClass}}" style="width:1440px;min-height:1080px;position:relative">
+<div class="shell">
+  <nav class="sidebar">
+    <div class="brand"><span class="brand-mark">IMS</span><span>IMS</span></div>
+
+    <div class="nav-label">Tổng quan</div>
+    <a class="nav-item " href="#"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span class="lbl">Bảng điều khiển</span></a>
+
+    <div class="nav-label">Hạ tầng</div>
+    <a class="nav-item " href="#"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg><span class="lbl">Thiết bị</span><span class="nav-badge">312</span></a>
+    <a class="nav-item " href="#"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L21 4"/><path d="m21 2-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/></svg><span class="lbl">Phần mềm &amp; License</span></a>
+    <a class="nav-item " href="#"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1.5"/><rect x="2" y="16" width="6" height="6" rx="1.5"/><rect x="16" y="16" width="6" height="6" rx="1.5"/><path d="M5 16v-3h14v3M12 8v5"/></svg><span class="lbl">Địa chỉ IP</span></a>
+    <a class="nav-item active" href="#"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M12 13v3l2 1"/></svg><span class="lbl">Theo dõi hạn</span><span class="nav-badge warn">7</span></a>
+
+    <div class="nav-label">Bảo mật</div>
+    <a class="nav-item " href="#"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><path d="M12 15v3"/></svg><span class="lbl">Két sắt</span></a>
+    <a class="nav-item " href="#"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/><path d="M12 9v3.5M12 16h.01"/></svg><span class="lbl">Đập tủ kính</span><span class="nav-badge warn">2</span></a>
+
+    <div class="nav-label">Vận hành</div>
+    <a class="nav-item " href="#"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 10h6M9 14h6M9 18h3"/></svg><span class="lbl">Phiếu ISO</span></a>
+    <a class="nav-item " href="#"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg><span class="lbl">Sự cố</span></a>
+    <a class="nav-item " href="#"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/></svg><span class="lbl">Tài liệu</span></a>
+
+    <div class="nav-label">Hệ thống</div>
+    <a class="nav-item " href="#"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/><circle cx="9" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="8" cy="18" r="2"/></svg><span class="lbl">Quản trị</span></a>
+    <a class="nav-item " href="#"><svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 2"/><path d="M3.05 11a9 9 0 1 1 .5 4"/><path d="M3 4v4h4"/></svg><span class="lbl">Nhật ký</span></a>
+
+    <div class="sb-foot">
+      <div class="sb-user">
+        <span class="sb-av">LM</span>
+        <span class="sb-who"><b>Lê Minh</b><span>Admin</span></span>
+      </div>
+    </div>
+  </nav>
+<div class="content">
+  <header class="topbar">
+    <span class="kbd"><svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="7" cy="7" r="5"/><path d="m15 15-3.5-3.5"/></svg>Tìm thiết bị, IP, license…<b>Ctrl K</b></span>
+    <span class="spacer"></span>
+    <span class="badge brand plain">Vai trò: Admin</span>
+    <button class="btn ghost sm"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></button>
+    <span class="hello">Xin chào, <strong>Lê Minh</strong></span>
+  </header>
+  <main class="page">
+    <div class="page-header">
+      <h1>Theo dõi hạn</h1>
+      <span class="sub">Bảo hành · License · SSL · Tên miền · Hợp đồng ISP · Hợp đồng bảo trì — gom về một chỗ</span>
+      <button class="btn">Xuất Excel</button>
+      <button class="btn primary">Gửi thử báo cáo</button>
+    </div>
+
+    <div class="filter-bar">
+      <div class="grow"><div class="inp search ph">Tìm theo tên đối tượng…</div></div>
+      <div class="sel" style="width:200px"><div class="inp pick">Loại: tất cả</div></div>
+      <div class="sel" style="width:200px"><div class="inp pick">Cửa sổ: 30 ngày tới</div></div>
+      <div class="segmented">
+        <span class="on">Sắp hết</span><span>Đã hết</span><span>Còn hạn</span>
+      </div>
+    </div>
+
+    <div class="table-wrap" style="margin-bottom:1.25rem">
+      <table class="table">
+        <thead>
+          <tr><th>Đối tượng</th><th>Loại</th><th>Gắn với</th><th>Bắt đầu</th><th>Hết hạn</th><th class="num">Còn lại</th><th>Lần gia hạn gần nhất</th><th></th></tr>
+        </thead>
+        <tbody>
+          <tr class="overdue">
+            <td><b>SSL *.pmh.com.vn</b></td><td><span class="badge danger">SSL</span></td>
+            <td>web-portal, ims-app</td><td class="mono">14/09/2025</td><td class="mono">13/09/2026</td>
+            <td class="num"><b style="color:var(--danger)">−2 ngày</b></td><td class="mono">13/09/2025 · Lê Minh</td>
+            <td class="action-cell"><button class="btn sm warm">Đã gia hạn</button></td>
+          </tr>
+          <tr class="due-today">
+            <td><b>Hợp đồng ISP — Viettel 300Mbps</b></td><td><span class="badge warn">Hợp đồng ISP</span></td>
+            <td>DRAYTEK-S1-01</td><td class="mono">01/09/2025</td><td class="mono">31/08/2026</td>
+            <td class="num"><b>9 ngày</b></td><td class="mono">28/08/2025 · Lê Minh</td>
+            <td class="action-cell"><button class="btn sm warm">Đã gia hạn</button></td>
+          </tr>
+          <tr>
+            <td><b>Tên miền pmh.com.vn</b></td><td><span class="badge brand">Tên miền</span></td>
+            <td>—</td><td class="mono">05/09/2025</td><td class="mono">05/09/2026</td>
+            <td class="num">14 ngày</td><td class="mono">02/09/2025 · Sếp</td>
+            <td class="action-cell"><button class="btn sm">Đã gia hạn</button></td>
+          </tr>
+          <tr>
+            <td><b>Bảo hành UPS APC 3KVA</b></td><td><span class="badge muted">Bảo hành</span></td>
+            <td>UPS-S2-03</td><td class="mono">18/09/2023</td><td class="mono">17/09/2026</td>
+            <td class="num">26 ngày</td><td>—</td>
+            <td class="action-cell"><button class="btn sm">Đã gia hạn</button></td>
+          </tr>
+          <tr>
+            <td><b>Veeam Backup Essentials</b></td><td><span class="badge brand">License</span></td>
+            <td>SRV-BACKUP-01</td><td class="mono">20/09/2025</td><td class="mono">19/09/2026</td>
+            <td class="num">28 ngày</td><td class="mono">19/09/2025 · Lê Minh</td>
+            <td class="action-cell"><button class="btn sm">Đã gia hạn</button></td>
+          </tr>
+          <tr>
+            <td><b>Hợp đồng bảo trì máy lạnh phòng server</b></td><td><span class="badge muted">Bảo trì</span></td>
+            <td>Site 1 › Tủ T1-A</td><td class="mono">01/10/2025</td><td class="mono">30/09/2026</td>
+            <td class="num">39 ngày</td><td class="mono">29/09/2025 · Lê Minh</td>
+            <td class="action-cell"><button class="btn sm">Đã gia hạn</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:1.25rem;align-items:start">
+      <section class="form-section">
+        <div class="form-section-title">Luật gửi báo cáo tổng hợp</div>
+        <p class="sub" style="margin-bottom:.85rem">Hệ thống không gửi mail lẻ từng món. Mỗi luật gom tất cả mục thỏa điều kiện thành <b>một mail duy nhất</b>.</p>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Loại đối tượng</th><th>Cửa sổ</th><th>Người nhận</th><th>Tần suất</th><th>Trạng thái</th><th></th></tr></thead>
+            <tbody>
+              <tr>
+                <td>Tất cả (bảo hành · license · SSL · hợp đồng)</td><td class="mono">30 ngày</td>
+                <td>sếp@pmh.com.vn</td><td>Thứ Hai hằng tuần, 08:00</td>
+                <td><span class="badge ok">Đang bật</span></td>
+                <td class="action-cell"><button class="btn sm">Sửa</button></td>
+              </tr>
+              <tr>
+                <td>SSL · Tên miền</td><td class="mono">60 ngày</td>
+                <td>it@pmh.com.vn</td><td>Ngày 1 hằng tháng, 08:00</td>
+                <td><span class="badge ok">Đang bật</span></td>
+                <td class="action-cell"><button class="btn sm">Sửa</button></td>
+              </tr>
+              <tr>
+                <td>Hợp đồng ISP</td><td class="mono">45 ngày</td>
+                <td>it@pmh.com.vn · sếp@pmh.com.vn</td><td>Thứ Hai hằng tuần, 08:00</td>
+                <td><span class="badge muted">Tạm tắt</span></td>
+                <td class="action-cell"><button class="btn sm">Sửa</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <button class="btn" style="margin-top:.85rem"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>Thêm luật</button>
+      </section>
+
+      <section class="form-section">
+        <div class="form-section-title">Xem trước mail sẽ gửi</div>
+        <div class="card" style="padding:.85rem;background:var(--surface-2)">
+          <div class="sub" style="margin-bottom:.1rem">Tới: sếp@pmh.com.vn</div>
+          <b>[IMS] 7 mục sắp hết hạn trong 30 ngày tới</b>
+          <div style="margin-top:.75rem;border-top:1px solid var(--border);padding-top:.6rem">
+            <table class="table" style="font-size:var(--fs-sm)">
+              <thead><tr><th>Đối tượng</th><th>Bắt đầu</th><th>Hết hạn</th></tr></thead>
+              <tbody>
+                <tr><td>SSL *.pmh.com.vn</td><td class="mono">14/09/25</td><td class="mono">13/09/26</td></tr>
+                <tr><td>Hợp đồng ISP Viettel 300Mbps</td><td class="mono">01/09/25</td><td class="mono">31/08/26</td></tr>
+                <tr><td>Tên miền pmh.com.vn</td><td class="mono">05/09/25</td><td class="mono">05/09/26</td></tr>
+                <tr><td>Bảo hành UPS APC 3KVA</td><td class="mono">18/09/23</td><td class="mono">17/09/26</td></tr>
+                <tr><td>Veeam Backup Essentials</td><td class="mono">20/09/25</td><td class="mono">19/09/26</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p class="sub" style="margin-top:.75rem">Mỗi dòng là một mục kèm ngày bắt đầu và ngày hết hạn — đúng dạng sếp cần đọc trong 3 phút.</p>
+      </section>
+    </div>
+  </main>
+</div>
+</div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1440,"height":1080},"theme":{"editor":"enum","options":["light","dark"],"default":"light","tsType":"string"}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme ?? 'light';
+    return { themeClass: theme === 'dark' ? 'dark' : '' };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,151 @@
+  <main class="page">
+    <div class="page-header">
+      <h1>Đập tủ kính</h1>
+      <span class="sub">Member lấy mật khẩu khi đang chữa cháy — có thời hạn, có người duyệt, có nhật ký</span>
+      <button class="btn">Xuất Excel</button>
+    </div>
+
+    <div class="row" style="margin-bottom:1.25rem">
+      <div class="segmented">
+        <span>Yêu cầu của tôi</span>
+        <span class="on">Chờ tôi duyệt <span class="badge warn plain" style="margin-left:.25rem">2</span></span>
+        <span>Phân quyền 3 tầng</span>
+        <span>Nhật ký</span>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem">
+      <section class="form-section" style="padding:1.1rem;border-color:var(--warm);border-left-width:4px">
+        <div class="row" style="margin-bottom:.6rem">
+          <span class="badge warn grow">Chờ duyệt · 4 phút trước</span>
+          <span class="sub mono">14:08 · 22/08</span>
+        </div>
+        <h3 style="margin-bottom:.3rem">Trần Thị B xin mật khẩu <b>DRAYTEK-S1-01</b></h3>
+        <p class="sub" style="margin-bottom:.85rem">Nhãn bí mật: “Quản trị” · Nhóm: Router &amp; Firewall — <b>Cần duyệt</b></p>
+        <div class="card" style="padding:.75rem;background:var(--surface-2);margin-bottom:.85rem">
+          <div class="sub" style="margin-bottom:.2rem">Lý do</div>
+          <div>Khách báo không vào được web đơn hàng qua port 8443, cần kiểm tra lại rule NAT trên Draytek site 1.</div>
+        </div>
+        <div class="row" style="margin-bottom:.85rem">
+          <div class="grow"><div class="sub">Thời hạn xin</div><b>4 giờ</b><span class="sub"> (trần cấu hình 24 giờ)</span></div>
+          <div class="grow"><div class="sub">Hết hiệu lực lúc</div><b class="mono">18:08 · 22/08</b></div>
+        </div>
+        <div class="row">
+          <button class="btn primary grow" style="justify-content:center">Duyệt 4 giờ</button>
+          <button class="btn grow" style="justify-content:center">Duyệt nhưng rút còn 1 giờ</button>
+          <button class="btn danger">Từ chối</button>
+        </div>
+      </section>
+
+      <section class="form-section" style="padding:1.1rem;border-color:var(--warm);border-left-width:4px">
+        <div class="row" style="margin-bottom:.6rem">
+          <span class="badge warn grow">Chờ duyệt · 12 phút trước</span>
+          <span class="sub mono">14:00 · 22/08</span>
+        </div>
+        <h3 style="margin-bottom:.3rem">Nguyễn Văn A xin key <b>Veeam Backup Essentials</b></h3>
+        <p class="sub" style="margin-bottom:.85rem">Nhãn bí mật: “License key” · Nhóm: Phần mềm sao lưu — <b>Cần duyệt</b></p>
+        <div class="card" style="padding:.75rem;background:var(--surface-2);margin-bottom:.85rem">
+          <div class="sub" style="margin-bottom:.2rem">Lý do</div>
+          <div>Cài lại agent Veeam trên SRV-BACKUP-01 sau khi máy chủ được dựng lại, cần nhập key kích hoạt.</div>
+        </div>
+        <div class="row" style="margin-bottom:.85rem">
+          <div class="grow"><div class="sub">Thời hạn xin</div><b>24 giờ</b></div>
+          <div class="grow"><div class="sub">Hết hiệu lực lúc</div><b class="mono">14:00 · 23/08</b></div>
+        </div>
+        <div class="row">
+          <button class="btn primary grow" style="justify-content:center">Duyệt 24 giờ</button>
+          <button class="btn grow" style="justify-content:center">Duyệt nhưng rút còn 4 giờ</button>
+          <button class="btn danger">Từ chối</button>
+        </div>
+      </section>
+    </div>
+
+    <section class="form-section" style="margin-bottom:1.25rem">
+      <div class="form-section-title">Phân quyền 3 tầng — member × nhóm đối tượng</div>
+      <div class="row" style="margin-bottom:.85rem;gap:1.25rem">
+        <span class="row" style="gap:.4rem"><span class="badge ok plain" style="width:14px;height:14px;padding:0;border-radius:50%"></span><span class="sub"><b>Whitelist</b> — xem thẳng, vẫn phải gõ TOTP và ghi nhật ký</span></span>
+        <span class="row" style="gap:.4rem"><span class="badge warn plain" style="width:14px;height:14px;padding:0;border-radius:50%"></span><span class="sub"><b>Cần duyệt</b> — gửi lý do, Admin/SA duyệt, xem trong thời hạn</span></span>
+        <span class="row" style="gap:.4rem"><span class="badge danger plain" style="width:14px;height:14px;padding:0;border-radius:50%"></span><span class="sub"><b>Ngoài danh sách</b> — không xin được, không hiện nút</span></span>
+      </div>
+      <div class="table-wrap">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Member</th>
+              <th class="col-center">Switch &amp; AP<br><span style="font-weight:500;text-transform:none">site 2</span></th>
+              <th class="col-center">Switch &amp; AP<br><span style="font-weight:500;text-transform:none">site 1, 3</span></th>
+              <th class="col-center">Router &amp;<br><span style="font-weight:500;text-transform:none">Firewall</span></th>
+              <th class="col-center">NAS &amp;<br><span style="font-weight:500;text-transform:none">Máy chủ</span></th>
+              <th class="col-center">Camera &amp;<br><span style="font-weight:500;text-transform:none">Chấm công</span></th>
+              <th class="col-center">Phần mềm<br><span style="font-weight:500;text-transform:none">sao lưu</span></th>
+              <th class="col-center">SSL &amp;<br><span style="font-weight:500;text-transform:none">Tên miền</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><b>Nguyễn Văn A</b><span class="cell-sub">Member · trực site 2</span></td>
+              <td class="col-center"><span class="badge ok">Whitelist</span></td>
+              <td class="col-center"><span class="badge warn">Cần duyệt</span></td>
+              <td class="col-center"><span class="badge warn">Cần duyệt</span></td>
+              <td class="col-center"><span class="badge warn">Cần duyệt</span></td>
+              <td class="col-center"><span class="badge ok">Whitelist</span></td>
+              <td class="col-center"><span class="badge warn">Cần duyệt</span></td>
+              <td class="col-center"><span class="badge danger">Ngoài DS</span></td>
+            </tr>
+            <tr>
+              <td><b>Trần Thị B</b><span class="cell-sub">Member · trực site 1</span></td>
+              <td class="col-center"><span class="badge warn">Cần duyệt</span></td>
+              <td class="col-center"><span class="badge ok">Whitelist</span></td>
+              <td class="col-center"><span class="badge warn">Cần duyệt</span></td>
+              <td class="col-center"><span class="badge warn">Cần duyệt</span></td>
+              <td class="col-center"><span class="badge ok">Whitelist</span></td>
+              <td class="col-center"><span class="badge danger">Ngoài DS</span></td>
+              <td class="col-center"><span class="badge danger">Ngoài DS</span></td>
+            </tr>
+            <tr>
+              <td><b>Phạm Văn D</b><span class="cell-sub">Member · mới 2 tháng</span></td>
+              <td class="col-center"><span class="badge warn">Cần duyệt</span></td>
+              <td class="col-center"><span class="badge warn">Cần duyệt</span></td>
+              <td class="col-center"><span class="badge danger">Ngoài DS</span></td>
+              <td class="col-center"><span class="badge danger">Ngoài DS</span></td>
+              <td class="col-center"><span class="badge ok">Whitelist</span></td>
+              <td class="col-center"><span class="badge danger">Ngoài DS</span></td>
+              <td class="col-center"><span class="badge danger">Ngoài DS</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="table-wrap">
+      <div class="row" style="padding:.85rem 1rem;border-bottom:1px solid var(--border)">
+        <h2 class="grow">Nhật ký đập tủ kính</h2>
+        <span class="sub">Không sửa, không xóa được — kể cả SA</span>
+      </div>
+      <table class="table">
+        <thead><tr><th>Ai</th><th>Đối tượng · bí mật</th><th>Tầng</th><th>Lý do</th><th>Ai duyệt</th><th>Xem lúc</th><th>Hiệu lực đến</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Nguyễn Văn A</td><td>SW-S2-F3-01 · Admin web</td>
+            <td><span class="badge ok">Whitelist</span></td><td>Xử lý mất mạng tầng 3</td>
+            <td>—</td><td class="mono">26/08 14:12</td><td class="mono">26/08 14:22</td>
+          </tr>
+          <tr>
+            <td>Trần Thị B</td><td>DRAYTEK-S1-01 · Quản trị</td>
+            <td><span class="badge warn">Cần duyệt</span></td><td>Kiểm tra NAT port 8443</td>
+            <td>Lê Minh · sau 6 phút</td><td class="mono">25/08 09:41</td><td class="mono">25/08 13:35</td>
+          </tr>
+          <tr>
+            <td>Nguyễn Văn A</td><td>NAS-S2-01 · Tài khoản admin</td>
+            <td><span class="badge warn">Cần duyệt</span></td><td>Khôi phục file phòng kế toán</td>
+            <td>Lê Minh · sau 11 phút</td><td class="mono">24/08 16:05</td><td class="mono">25/08 15:54</td>
+          </tr>
+          <tr>
+            <td>Phạm Văn D</td><td>SRV-FILE-01 · Administrator</td>
+            <td><span class="badge danger">Ngoài DS</span></td><td>—</td>
+            <td><b style="color:var(--danger)">Bị chặn — không hiện nút xin</b></td><td class="mono">23/08 10:20</td><td>—</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  </main>

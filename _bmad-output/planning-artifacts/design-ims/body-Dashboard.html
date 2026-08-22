@@ -1,0 +1,130 @@
+  <main class="page">
+    <div class="page-header">
+      <h1>Bảng điều khiển</h1>
+      <span class="sub">Thứ Hai, 24/08/2026 · số liệu 7 ngày gần nhất</span>
+      <button class="btn"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7 11l5 4 5-4"/><path d="M4 19h16"/></svg>Xuất Excel</button>
+    </div>
+
+    <div class="stat-grid" style="grid-template-columns:repeat(5,minmax(0,1fr));margin-bottom:1.25rem">
+      <div class="stat-card critical"><div class="stat-num">3</div><div class="stat-label">Đã hết hạn</div></div>
+      <div class="stat-card warnish"><div class="stat-num">7</div><div class="stat-label">Hết hạn ≤ 30 ngày</div></div>
+      <div class="stat-card"><div class="stat-num">312</div><div class="stat-label">Thiết bị đang chạy</div></div>
+      <div class="stat-card"><div class="stat-num">1</div><div class="stat-label">Sự cố tuần qua</div></div>
+      <div class="stat-card warnish"><div class="stat-num">3</div><div class="stat-label">Đập tủ kính tuần qua</div></div>
+    </div>
+
+    <section class="table-wrap" style="margin-bottom:1.25rem">
+      <div class="row" style="padding:.85rem 1rem;border-bottom:1px solid var(--border);background:var(--surface)">
+        <h2 class="grow">Sắp hết hạn — 30 ngày tới</h2>
+        <span class="badge muted plain">Báo cáo tổng hợp gửi mail sếp mỗi thứ Hai</span>
+        <a href="#">Xem tất cả →</a>
+      </div>
+      <table class="table">
+        <thead>
+          <tr><th>Đối tượng</th><th>Loại</th><th>Gắn với</th><th>Bắt đầu</th><th>Hết hạn</th><th class="num">Còn lại</th><th></th></tr>
+        </thead>
+        <tbody>
+          <tr class="overdue">
+            <td><b>SSL *.pmh.com.vn</b><span class="cell-sub">Sectigo · mua qua P.A Việt Nam</span></td>
+            <td><span class="badge danger">SSL</span></td>
+            <td>web-portal, ims-app</td>
+            <td class="mono">14/09/2025</td>
+            <td class="mono">13/09/2026</td>
+            <td class="num"><b style="color:var(--danger)">Đã hết 2 ngày</b></td>
+            <td class="action-cell"><button class="btn sm">Gia hạn</button></td>
+          </tr>
+          <tr class="due-today">
+            <td><b>Hợp đồng ISP — Viettel 300Mbps</b><span class="cell-sub">Draytek 2927 site 1 · WAN 113.161.x.x</span></td>
+            <td><span class="badge warn">Hợp đồng ISP</span></td>
+            <td>DRAYTEK-S1-01</td>
+            <td class="mono">01/09/2025</td>
+            <td class="mono">31/08/2026</td>
+            <td class="num"><b>còn 9 ngày</b></td>
+            <td class="action-cell"><button class="btn sm">Gia hạn</button></td>
+          </tr>
+          <tr>
+            <td><b>Tên miền pmh.com.vn</b><span class="cell-sub">P.A Việt Nam · sếp giữ quyền quản trị</span></td>
+            <td><span class="badge brand">Tên miền</span></td>
+            <td>—</td>
+            <td class="mono">05/09/2025</td>
+            <td class="mono">05/09/2026</td>
+            <td class="num">còn 14 ngày</td>
+            <td class="action-cell"><button class="btn sm">Gia hạn</button></td>
+          </tr>
+          <tr>
+            <td><b>Bảo hành UPS APC 3KVA</b><span class="cell-sub">Site 2 · tủ mạng T2-A</span></td>
+            <td><span class="badge muted">Bảo hành</span></td>
+            <td>UPS-S2-03</td>
+            <td class="mono">18/09/2023</td>
+            <td class="mono">17/09/2026</td>
+            <td class="num">còn 26 ngày</td>
+            <td class="action-cell"><button class="btn sm">Gia hạn</button></td>
+          </tr>
+          <tr>
+            <td><b>Veeam Backup Essentials — 5 socket</b><span class="cell-sub">Key trong két sắt · 5/5 seat đã gán</span></td>
+            <td><span class="badge brand">License</span></td>
+            <td>SRV-BACKUP-01</td>
+            <td class="mono">20/09/2025</td>
+            <td class="mono">19/09/2026</td>
+            <td class="num">còn 28 ngày</td>
+            <td class="action-cell"><button class="btn sm">Gia hạn</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;align-items:start">
+      <section class="table-wrap">
+        <div class="row" style="padding:.85rem 1rem;border-bottom:1px solid var(--border)">
+          <h2 class="grow">Sự cố tuần qua</h2>
+          <a href="#">Tất cả sự cố →</a>
+        </div>
+        <table class="table">
+          <thead><tr><th>Mã phiếu</th><th>Sự việc</th><th>Thiết bị</th><th>Trạng thái</th></tr></thead>
+          <tbody>
+            <tr>
+              <td class="mono">SP-IT0206-2608</td>
+              <td>Mất mạng tầng 3 site 2<span class="cell-sub">Type: Network · loop cổng Gi1/0/14</span></td>
+              <td>SW-S2-F3-01</td>
+              <td><span class="badge ok">Đã xử lý</span></td>
+            </tr>
+            <tr>
+              <td colspan="4" style="text-align:center;color:var(--ink-3);font-size:var(--fs-sm);padding:1.5rem">
+                Không còn sự cố nào khác trong 7 ngày qua.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="table-wrap">
+        <div class="row" style="padding:.85rem 1rem;border-bottom:1px solid var(--border)">
+          <h2 class="grow">Đập tủ kính tuần qua</h2>
+          <a href="#">Nhật ký đầy đủ →</a>
+        </div>
+        <table class="table">
+          <thead><tr><th>Ai</th><th>Đối tượng</th><th>Lý do</th><th>Lúc</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Nguyễn Văn A<span class="cell-sub">Member · site 2</span></td>
+              <td>SW-S2-F3-01<span class="cell-sub">mật khẩu admin web</span></td>
+              <td>Xử lý mất mạng tầng 3<span class="cell-sub">Whitelist — không cần duyệt</span></td>
+              <td class="mono">26/08 14:12</td>
+            </tr>
+            <tr>
+              <td>Trần Thị B<span class="cell-sub">Member · site 1</span></td>
+              <td>DRAYTEK-S1-01<span class="cell-sub">mật khẩu quản trị</span></td>
+              <td>Kiểm tra NAT port 8443<span class="cell-sub">Cần duyệt — Admin duyệt sau 6 phút</span></td>
+              <td class="mono">25/08 09:41</td>
+            </tr>
+            <tr>
+              <td>Nguyễn Văn A<span class="cell-sub">Member · site 2</span></td>
+              <td>NAS-S2-01<span class="cell-sub">tài khoản admin</span></td>
+              <td>Khôi phục file phòng kế toán<span class="cell-sub">Cần duyệt — Admin duyệt sau 11 phút</span></td>
+              <td class="mono">24/08 16:05</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+  </main>

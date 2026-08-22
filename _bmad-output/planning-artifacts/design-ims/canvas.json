@@ -1,0 +1,48 @@
+{
+  "pages": [
+    { "id": "page-1", "name": "Luồng màn hình" },
+    { "id": "page-2", "name": "Hệ thống thiết kế" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "title": "1 · Đăng nhập", "x": 0, "y": 0, "w": 1440, "h": 900, "page": "page-1" },
+    { "file": "Dashboard.dc.html", "title": "2 · Bảng điều khiển (sếp)", "x": 1560, "y": 0, "w": 1440, "h": 1000, "page": "page-1" },
+    { "file": "MobileField.dc.html", "title": "3 · Member ngoài hiện trường (390px)", "x": 3120, "y": 0, "w": 390, "h": 900, "page": "page-1" },
+
+    { "file": "Devices.dc.html", "title": "4 · Kho thiết bị", "x": 0, "y": 1300, "w": 1440, "h": 1000, "page": "page-1" },
+    { "file": "DeviceDetail.dc.html", "title": "5 · Chi tiết thiết bị + sơ đồ cổng", "x": 1560, "y": 1300, "w": 1440, "h": 1160, "page": "page-1" },
+    { "file": "Software.dc.html", "title": "6 · Phần mềm & License", "x": 3120, "y": 1300, "w": 1440, "h": 1120, "page": "page-1" },
+
+    { "file": "Expiry.dc.html", "title": "7 · Theo dõi hạn + luật gửi mail", "x": 0, "y": 2760, "w": 1440, "h": 1080, "page": "page-1" },
+    { "file": "Ipam.dc.html", "title": "8 · Địa chỉ IP + sổ NAT", "x": 1560, "y": 2760, "w": 1440, "h": 1160, "page": "page-1" },
+    { "file": "Vault.dc.html", "title": "9 · Két sắt + bước TOTP", "x": 3120, "y": 2760, "w": 1440, "h": 980, "page": "page-1" },
+
+    { "file": "BreakGlass.dc.html", "title": "10 · Đập tủ kính 3 tầng", "x": 0, "y": 4080, "w": 1440, "h": 1300, "page": "page-1" },
+    { "file": "IsoForm.dc.html", "title": "11 · Phiếu ISO SP-IT0206 + bản in", "x": 1560, "y": 4080, "w": 1440, "h": 1560, "page": "page-1" },
+    { "file": "Documents.dc.html", "title": "12 · Tài liệu (không chứa mật khẩu)", "x": 3120, "y": 4080, "w": 1440, "h": 940, "page": "page-1" },
+
+    { "file": "Components.dc.html", "title": "Token & component dùng chung", "x": 0, "y": 0, "w": 1200, "h": 1180, "page": "page-2" }
+  ],
+  "annotations": [
+    {
+      "id": "gioi-thieu",
+      "x": 0, "y": -230, "w": 700, "page": "page-1",
+      "text": "IMS — thiết kế màn hình v1\n\n12 màn hình từ đăng nhập tới hết tính năng trong PRD.\nGiao diện kế thừa nguyên bản hệ thiết kế \"Sunset Grove\" của QLTS: cùng token màu, cùng font Inter, cùng sidebar tối, cùng kiểu bảng — nên nhìn là thấy quen.\n\nĐây là mockup tĩnh để chốt bố cục trước khi code, chưa phải app chạy được."
+    },
+    {
+      "id": "note-vault",
+      "x": 3120, "y": 2620, "w": 480, "page": "page-1",
+      "text": "Khoảnh khắc quan trọng nhất của hệ thống: gõ TOTP → hiện mật khẩu → tự ẩn sau 30 giây → ghi nhật ký. Không có nút xuất toàn bộ, ở mọi quyền."
+    },
+    {
+      "id": "note-breakglass",
+      "x": 0, "y": 3940, "w": 520, "page": "page-1",
+      "text": "Ba tầng whitelist / cần duyệt / ngoài danh sách nằm trên một bảng phẳng member × nhóm đối tượng — sếp nhìn một lần là biết ai được xem gì."
+    },
+    {
+      "id": "note-iso",
+      "x": 1560, "y": 3940, "w": 520, "page": "page-1",
+      "text": "Bản in tái tạo y hệt phiếu ISO gốc (kể cả ô ▢ tick tay và hai ô chữ ký). Duyệt trên hệ thống chỉ để theo dõi trạng thái — chữ ký vẫn ký mực trên giấy."
+    }
+  ],
+  "launch": { "view": "canvas", "page": "page-1" }
+}
