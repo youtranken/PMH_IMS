@@ -199,6 +199,12 @@ export default {
     empty: 'Chưa có thiết bị nào khớp bộ lọc.',
     emptyHint: 'Thêm thiết bị hoặc dùng Nhập từ Excel để đưa cả danh sách vào một lần.',
     back: 'Về danh sách',
+    downloadTemplate: 'Tải file mẫu',
+    importExcel: 'Nhập từ Excel',
+    importTitle: 'Nhập thiết bị từ Excel',
+    importHint:
+      'Dùng file tải từ nút "Tải file mẫu" (hoặc file vừa Xuất Excel). Danh mục phải khai trước — hệ thống không tự tạo site/tủ/loại/NCC.',
+    exportHint: 'Xuất đúng những gì đang lọc trên màn hình.',
     noteHint: 'KHÔNG ghi mật khẩu ở đây. Mật khẩu thiết bị vào Két sắt (FR-035).',
     historyCreated: 'Tạo hồ sơ',
     historyUpdated: 'Sửa hồ sơ',
@@ -248,6 +254,14 @@ export default {
     portRequired: 'Nhập tên cổng (vd 12, Gi1/0/24, WAN1).',
     removed: 'Đã xóa dòng port map.',
     confirmRemove: 'Xóa dòng cổng "{{port}}"? Thao tác được ghi vào lịch sử thiết bị.',
+  },
+  importDialog: {
+    pick: 'Chọn file .xlsx',
+    check: 'Đối chiếu',
+    confirm: 'Xác nhận ghi',
+    nothing: 'Không có dòng nào cần ghi — file trùng khớp với dữ liệu đang có.',
+    hasErrors: 'Còn dòng lỗi. Sửa trong file rồi đối chiếu lại — chưa ghi gì cả.',
+    done: 'Đã nhập: thêm {{created}}, cập nhật {{updated}}.',
   },
   accounts: {
     title: 'Tài khoản',

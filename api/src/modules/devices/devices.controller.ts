@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -8,7 +9,12 @@ import {
   Post,
   Query,
   Req,
+  Res,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import type { Response } from 'express';
 import {
   IsIn,
   IsOptional,
@@ -22,10 +28,15 @@ import { parsePageQuery } from '../../common/pagination';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
+import { DeviceImportService } from './device-import.service';
 import { DevicePanelsService } from './device-panels.service';
 import { DevicePortsService } from './device-ports.service';
 import { DevicesService } from './devices.service';
 import { DEVICE_STATUSES, type DeviceStatus } from './devices.types';
+
+const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+/** Trần file thiết bị: vài nghìn dòng — 10MB đã quá rộng. */
+const IMPORT_LIMIT = { fileSize: 10 * 1024 * 1024 };
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
 const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
@@ -102,6 +113,7 @@ export class DevicesController {
     private readonly devices: DevicesService,
     private readonly ports: DevicePortsService,
     private readonly panels: DevicePanelsService,
+    private readonly imports: DeviceImportService,
   ) {}
 
   @Roles('sa', 'admin', 'member')
@@ -125,6 +137,59 @@ export class DevicesController {
       deviceTypeId: query.deviceTypeId,
       status: query.status,
     });
+  }
+
+  /**
+   * File mẫu + export + import (story 2.6). ĐẶT TRƯỚC `@Get(':id')`: Nest khớp route theo
+   * thứ tự khai báo, để sau thì `/devices/template` bị `:id` nuốt và trả 400 "id không hợp lệ".
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('template')
+  async template(@Res() res: Response) {
+    sendXlsx(res, await this.imports.buildTemplate(), 'mau-thiet-bi.xlsx');
+  }
+
+  /** FR-028: xuất đúng bộ lọc đang xem, không phải cả kho. */
+  @Roles('sa', 'admin', 'member')
+  @Get('export')
+  async export(
+    @Query()
+    query: {
+      search?: string;
+      siteId?: string;
+      cabinetId?: string;
+      deviceTypeId?: string;
+      status?: DeviceStatus;
+    },
+    @Res() res: Response,
+  ) {
+    const buffer = await this.imports.buildExport({
+      search: query.search,
+      siteId: query.siteId,
+      cabinetId: query.cabinetId,
+      deviceTypeId: query.deviceTypeId,
+      status: query.status,
+    });
+    sendXlsx(res, buffer, 'thiet-bi.xlsx');
+  }
+
+  /** Bảng đối chiếu — KHÔNG ghi gì. */
+  @Roles('sa', 'admin', 'member')
+  @Post('import/preview')
+  @UseInterceptors(FileInterceptor('file', { limits: IMPORT_LIMIT }))
+  previewImport(@UploadedFile() file: Express.Multer.File | undefined) {
+    return this.imports.preview(requireXlsx(file));
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @Post('import/commit')
+  @Audited('device.imported', 'device')
+  @UseInterceptors(FileInterceptor('file', { limits: IMPORT_LIMIT }))
+  commitImport(
+    @UploadedFile() file: Express.Multer.File | undefined,
+    @Req() req: AuthedRequest,
+  ) {
+    return this.imports.commit(actor(req), requireXlsx(file));
   }
 
   @Roles('sa', 'admin', 'member')
@@ -223,4 +288,41 @@ export class DevicesController {
 
 function actor(req: AuthedRequest): string {
   return req.user!.email;
+}
+
+/**
+ * Chỉ nhận .xlsx, kiểm bằng MAGIC BYTE (`PK`) chứ không tin Content-Type client gửi.
+ * Cùng nguyên tắc với module files (NFR-9); đuôi file là lớp thứ hai vì zip nào cũng có magic đó.
+ */
+function requireXlsx(file: Express.Multer.File | undefined): Buffer {
+  if (!file?.buffer?.length) {
+    throw new BadRequestException({
+      code: 'FILE_REQUIRED',
+      message: 'Chưa chọn file. Hãy tải file mẫu, điền rồi tải lên.',
+    });
+  }
+  const isZip =
+    file.buffer.length > 4 &&
+    file.buffer[0] === 0x50 &&
+    file.buffer[1] === 0x4b &&
+    file.buffer[2] === 0x03 &&
+    file.buffer[3] === 0x04;
+  const name = Buffer.from(file.originalname, 'latin1').toString('utf8').toLowerCase();
+  if (!isZip || !name.endsWith('.xlsx')) {
+    throw new BadRequestException({
+      code: 'UNSUPPORTED_FILE',
+      message: 'Chỉ nhận file .xlsx. File .xls đời cũ hãy mở bằng Excel rồi "Lưu thành" .xlsx.',
+    });
+  }
+  return file.buffer;
+}
+
+function sendXlsx(res: Response, buffer: Buffer, fileName: string): void {
+  res.setHeader('Content-Type', XLSX_MIME);
+  res.setHeader('Content-Length', String(buffer.length));
+  res.setHeader(
+    'Content-Disposition',
+    `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+  );
+  res.end(buffer);
 }

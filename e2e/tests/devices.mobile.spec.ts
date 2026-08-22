@@ -45,7 +45,8 @@ test('danh sách và chi tiết thiết bị dùng được ở 390px', async ({
 
   await page.goto(`/thiet-bi/${deviceId}`);
   await expect(page.getByRole('heading', { name: new RegExp(code) })).toBeVisible();
-  await expect(page.getByText('chị Lan')).toBeVisible();
+  // Story 2.5 thêm dải tóm tắt nên người dùng hiện ở HAI chỗ (tóm tắt + bảng hồ sơ).
+  await expect(page.getByText('chị Lan').first()).toBeVisible();
   await page.getByRole('tab', { name: 'Lịch sử' }).click();
   await expect(page.getByText('Tạo hồ sơ')).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);

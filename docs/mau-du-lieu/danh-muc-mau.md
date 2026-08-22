@@ -3,11 +3,20 @@
 Đây là **bản nháp để anh sửa**, chưa phải dữ liệu thật. Khi chốt, nội dung này thành một
 migration seed (AD-10) — không nhập tay trên từng máy.
 
-File Excel đi kèm: [`mau-import-thiet-bi.xlsx`](./mau-import-thiet-bi.xlsx) — sinh lại bất cứ lúc nào bằng:
+Hai file Excel đi kèm — sinh lại bất cứ lúc nào bằng một lệnh:
 
 ```bash
-cd api && node scripts/make-import-template.mjs ../docs/mau-du-lieu/mau-import-thiet-bi.xlsx
+npm --prefix api run make:templates
 ```
+
+| File | Điền khi nào |
+| --- | --- |
+| [`mau-danh-muc.xlsx`](./mau-danh-muc.xlsx) | TRƯỚC: site, tủ mạng, loại thiết bị, nhà cung cấp |
+| [`mau-thiet-bi.xlsx`](./mau-thiet-bi.xlsx) | SAU: từng thiết bị, cột danh mục ghi theo mã/tên đã khai ở trên |
+
+> Trong app, hai nút **"Tải file mẫu"** (màn Danh mục và màn Thiết bị) sinh ra ĐÚNG hai file
+> này từ cùng một định nghĩa, kèm dữ liệu đang có — nên xuất ra, sửa hàng loạt trong Excel,
+> rồi nhập lại là được ngay.
 
 ## 1. Site
 
@@ -77,10 +86,11 @@ không tạo bản sao). Chốt quy ước sớm thì 300 thiết bị nhập m�
 
 1. Mở `mau-danh-muc.xlsx`, điền 4 sheet: Site → Tủ mạng → Loại thiết bị → Nhà cung cấp.
    Chốt kỹ **mã site** và **mã tủ** vì đó là thứ mọi người gõ khi tra cứu, đổi sau rất phiền.
-2. Mở `mau-import-thiet-bi.xlsx`, xem 12 dòng mẫu để biết định dạng, rồi điền thiết bị thật
-   (hoặc dán từ file Excel đang dùng).
-3. Chưa cần gửi lại cho tôi: màn **Quản trị › Danh mục › Import** của Epic 2 sẽ nhận cả hai file,
-   hiện bảng đối chiếu để anh duyệt trước khi ghi.
+2. Mở `mau-thiet-bi.xlsx`, xem 2 dòng ví dụ để biết định dạng, rồi điền thiết bị thật
+   (hoặc dán từ file Excel đang dùng). Ngày ghi kiểu 30/08/2026 hay 2026-08-30 đều được.
+3. Chưa cần gửi lại cho tôi: **Quản trị › Danh mục › Nhập từ Excel** nhận file danh mục,
+   **Thiết bị › Nhập từ Excel** nhận file thiết bị. Cả hai đều hiện bảng đối chiếu
+   (thêm mới / cập nhật / lỗi ở dòng nào, vì sao) để anh duyệt TRƯỚC khi ghi.
 4. Nếu muốn tôi khớp cột giúp (file Excel hiện tại của anh có cột khác), gửi file — tôi map vào bộ
    validate của story 2.1/2.6.
 

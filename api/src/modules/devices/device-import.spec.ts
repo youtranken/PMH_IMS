@@ -1,0 +1,232 @@
+import {
+  planDeviceImport,
+  type DeviceImportContext,
+  type ExistingDevice,
+} from './device-import';
+import type { ParsedSheets } from '../../common/import-plan';
+
+const TYPE_SWITCH = { id: 'type-switch', name: 'Switch' };
+const SITE_HO = { id: 'site-ho', code: 'PMH-HO' };
+const CABINET_R01 = { id: 'cab-r01', code: 'R01', siteId: 'site-ho' };
+const VENDOR_DELL = { id: 'vendor-dell', name: 'Dell Partner VN' };
+
+function context(over: Partial<DeviceImportContext> = {}): DeviceImportContext {
+  return {
+    catalog: {
+      sites: new Map([['pmh-ho', SITE_HO]]),
+      cabinets: new Map([['pmh-ho r01', CABINET_R01]]),
+      deviceTypes: new Map([['switch', TYPE_SWITCH]]),
+      vendors: new Map([['dell partner vn', VENDOR_DELL]]),
+    },
+    devices: new Map(),
+    ...over,
+  };
+}
+
+function sheet(rows: Record<string, string>[]): ParsedSheets {
+  return { 'Thiết bị': rows.map((cells, i) => ({ rowNumber: i + 2, cells })) };
+}
+
+const MINIMAL = {
+  'Mã thiết bị *': 'SW-CORE-01',
+  'Tên thiết bị *': 'Switch lõi',
+  'Loại *': 'Switch',
+};
+
+function existing(over: Partial<ExistingDevice> = {}): ExistingDevice {
+  return {
+    id: 'dev-1',
+    code: 'SW-CORE-01',
+    name: 'Switch lõi',
+    deviceTypeId: TYPE_SWITCH.id,
+    model: null,
+    serial: null,
+    siteId: null,
+    cabinetId: null,
+    vendorId: null,
+    assignedTo: null,
+    department: null,
+    purchaseDate: null,
+    warrantyStart: null,
+    warrantyEnd: null,
+    status: 'in_use',
+    note: null,
+    ...over,
+  };
+}
+
+describe('planDeviceImport — đối chiếu file thiết bị trước khi ghi (story 2.6)', () => {
+  it('dòng đủ cột bắt buộc trên kho rỗng = thêm mới', () => {
+    const plan = planDeviceImport(sheet([MINIMAL]), context());
+    expect(plan.summary).toMatchObject({ create: 1, error: 0 });
+    expect(plan.rows[0]).toMatchObject({ action: 'create', label: 'SW-CORE-01', rowNumber: 2 });
+    expect(plan.rows[0].values).toMatchObject({
+      code: 'SW-CORE-01',
+      deviceTypeId: TYPE_SWITCH.id,
+    });
+    // File không có cột Trạng thái → không đụng tới trường đó (DB tự dùng mặc định in_use).
+    expect(plan.rows[0].values).not.toHaveProperty('status');
+  });
+
+  it.each([
+    ['Mã thiết bị *', 'Mã thiết bị'],
+    ['Tên thiết bị *', 'Tên thiết bị'],
+    ['Loại *', 'Loại'],
+  ])('thiếu %s → lỗi nêu đúng tên cột', (column, label) => {
+    const plan = planDeviceImport(sheet([{ ...MINIMAL, [column]: '' }]), context());
+    expect(plan.rows[0].action).toBe('error');
+    expect(plan.rows[0].message).toContain(label);
+  });
+
+  it('loại thiết bị chưa có trong danh mục = lỗi, KHÔNG tự tạo (AC 2.6)', () => {
+    const plan = planDeviceImport(sheet([{ ...MINIMAL, 'Loại *': 'Swich' }]), context());
+    expect(plan.rows[0].action).toBe('error');
+    expect(plan.rows[0].message).toContain('Swich');
+    expect(plan.rows[0].message).toContain('Danh mục');
+  });
+
+  it('site chưa có trong danh mục = lỗi nêu rõ mã site', () => {
+    const plan = planDeviceImport(sheet([{ ...MINIMAL, Site: 'PMH-XX' }]), context());
+    expect(plan.rows[0].action).toBe('error');
+    expect(plan.rows[0].message).toContain('PMH-XX');
+  });
+
+  it('tủ thuộc site khác với site đã ghi = lỗi (bẫy hay gặp nhất khi import)', () => {
+    const ctx = context();
+    ctx.catalog.sites.set('pmh-nm', { id: 'site-nm', code: 'PMH-NM' });
+    const plan = planDeviceImport(
+      sheet([{ ...MINIMAL, Site: 'PMH-NM', 'Tủ mạng': 'R01' }]),
+      ctx,
+    );
+    expect(plan.rows[0].action).toBe('error');
+    expect(plan.rows[0].message).toContain('R01');
+  });
+
+  it('ghi tủ mà bỏ trống site = lỗi, không đoán site giúp', () => {
+    const plan = planDeviceImport(sheet([{ ...MINIMAL, Site: '', 'Tủ mạng': 'R01' }]), context());
+    expect(plan.rows[0].action).toBe('error');
+    expect(plan.rows[0].message).toContain('Site');
+  });
+
+  it('site + tủ khớp nhau = thêm mới, tra đúng id', () => {
+    const plan = planDeviceImport(
+      sheet([{ ...MINIMAL, Site: 'pmh-ho', 'Tủ mạng': 'r01' }]),
+      context(),
+    );
+    expect(plan.rows[0].action).toBe('create');
+    expect(plan.rows[0].values).toMatchObject({
+      siteId: SITE_HO.id,
+      cabinetId: CABINET_R01.id,
+    });
+  });
+
+  it.each([
+    ['Đang dùng', 'in_use'],
+    ['dự phòng', 'spare'],
+    ['HỎNG', 'broken'],
+    ['Đã thanh lý', 'retired'],
+    ['', 'in_use'],
+  ])('trạng thái "%s" → %s', (input, expected) => {
+    const plan = planDeviceImport(sheet([{ ...MINIMAL, 'Trạng thái': input }]), context());
+    expect(plan.rows[0].action).toBe('create');
+    expect(plan.rows[0].values).toMatchObject({ status: expected });
+  });
+
+  it('trạng thái lạ = lỗi kèm danh sách giá trị hợp lệ', () => {
+    const plan = planDeviceImport(sheet([{ ...MINIMAL, 'Trạng thái': 'bỏ xó' }]), context());
+    expect(plan.rows[0].action).toBe('error');
+    expect(plan.rows[0].message).toContain('Đang dùng');
+  });
+
+  it('ngày kiểu dd/mm/yyyy được nhận, chuẩn hóa về ISO', () => {
+    const plan = planDeviceImport(
+      sheet([{ ...MINIMAL, 'Ngày mua': '15/03/2025', 'Bảo hành đến': '15/03/2028' }]),
+      context(),
+    );
+    expect(plan.rows[0].values).toMatchObject({
+      purchaseDate: '2025-03-15',
+      warrantyEnd: '2028-03-15',
+    });
+  });
+
+  it('ngày không đọc được = lỗi nêu rõ cột và giá trị', () => {
+    const plan = planDeviceImport(sheet([{ ...MINIMAL, 'Ngày mua': 'tháng trước' }]), context());
+    expect(plan.rows[0].action).toBe('error');
+    expect(plan.rows[0].message).toContain('Ngày mua');
+    expect(plan.rows[0].message).toContain('tháng trước');
+  });
+
+  it('bảo hành kết thúc trước khi bắt đầu = lỗi', () => {
+    const plan = planDeviceImport(
+      sheet([{ ...MINIMAL, 'Bảo hành từ': '2027-01-01', 'Bảo hành đến': '2026-01-01' }]),
+      context(),
+    );
+    expect(plan.rows[0].action).toBe('error');
+    expect(plan.rows[0].message).toContain('Bảo hành');
+  });
+
+  it('trùng mã ngay trong file = lỗi ở dòng sau', () => {
+    const plan = planDeviceImport(
+      sheet([MINIMAL, { ...MINIMAL, 'Mã thiết bị *': 'sw-core-01' }]),
+      context(),
+    );
+    expect(plan.rows[0].action).toBe('create');
+    expect(plan.rows[1].action).toBe('error');
+    expect(plan.rows[1].message).toContain('trùng');
+  });
+
+  it('mã đã có trong kho + đổi nội dung = CẬP NHẬT, không tạo bản sao', () => {
+    const plan = planDeviceImport(
+      sheet([{ ...MINIMAL, 'Tên thiết bị *': 'Switch lõi (mới)' }]),
+      context({ devices: new Map([['sw-core-01', existing()]]) }),
+    );
+    expect(plan.summary).toMatchObject({ update: 1, create: 0 });
+    expect(plan.rows[0].existingId).toBe('dev-1');
+  });
+
+  it('mã đã có + nội dung y hệt = không đổi gì', () => {
+    const plan = planDeviceImport(
+      sheet([MINIMAL]),
+      context({ devices: new Map([['sw-core-01', existing()]]) }),
+    );
+    expect(plan.summary).toMatchObject({ unchanged: 1, update: 0 });
+  });
+
+  it('dòng ví dụ trong file mẫu bị bỏ qua', () => {
+    const plan = planDeviceImport(
+      sheet([{ ...MINIMAL, 'Ghi chú nhập': 'VÍ DỤ' }]),
+      context(),
+    );
+    expect(plan.summary).toMatchObject({ skip: 1, create: 0 });
+  });
+
+  it('dòng trắng bị bỏ qua, không tính là lỗi', () => {
+    const plan = planDeviceImport(sheet([{ 'Mã thiết bị *': '', 'Tên thiết bị *': '  ' }]), context());
+    expect(plan.rows).toHaveLength(0);
+  });
+
+  it('file không có sheet "Thiết bị" → plan rỗng để nơi gọi báo sai mẫu', () => {
+    const plan = planDeviceImport({ Sheet1: [{ rowNumber: 2, cells: { a: 'b' } }] }, context());
+    expect(plan.hasRecognizedSheet).toBe(false);
+    expect(plan.rows).toHaveLength(0);
+  });
+
+  it('cột không có trong file thì KHÔNG bị xóa khi cập nhật', () => {
+    const plan = planDeviceImport(
+      // File chỉ có 3 cột bắt buộc — serial đang có trong kho phải giữ nguyên.
+      sheet([MINIMAL]),
+      context({ devices: new Map([['sw-core-01', existing({ serial: 'FOC123' })]]) }),
+    );
+    expect(plan.rows[0].values).not.toHaveProperty('serial');
+    expect(plan.summary).toMatchObject({ unchanged: 1 });
+  });
+
+  it('cột có trong file nhưng bỏ trống = XÓA giá trị đang có', () => {
+    const plan = planDeviceImport(
+      sheet([{ ...MINIMAL, Serial: '' }]),
+      context({ devices: new Map([['sw-core-01', existing({ serial: 'FOC123' })]]) }),
+    );
+    expect(plan.rows[0].values).toMatchObject({ serial: null });
+    expect(plan.summary).toMatchObject({ update: 1 });
+  });
+});

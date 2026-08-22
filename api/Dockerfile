@@ -17,7 +17,7 @@ RUN npm ci --omit=dev && npm cache clean --force
 COPY --from=builder /app/dist ./dist
 # CHỈ script vận hành (seed tài khoản đầu tiên). Script test (reset-e2e-user) KHÔNG
 # vào image production; E2E mount nó vào lúc chạy — xem docker-compose.override.e2e.yml.
-COPY scripts/seed-sa.mjs scripts/make-import-template.mjs ./scripts/
+COPY scripts/seed-sa.mjs ./scripts/
 # Thư mục file đính kèm (AD-6) phải TỒN TẠI SẴN trong image và thuộc về user `node` (uid 1000):
 # named volume của Docker lấy quyền theo thư mục có sẵn trong image lúc khởi tạo lần đầu.
 # Không có dòng này thì volume ra root:root, container chạy uid 1000 và MỌI lần upload

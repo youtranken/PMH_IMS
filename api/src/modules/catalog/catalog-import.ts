@@ -1,9 +1,21 @@
 import {
-  CATALOG_ENTITIES,
+  cellText,
+  isBlankRow,
+  isExampleRow,
+  normalizeHeader,
   normalizeKey,
-  type CatalogEntity,
-  type CatalogSnapshot,
-} from './catalog.types';
+  parseBoolean,
+  pickCell,
+  summarize,
+  type ImportAction,
+  type ImportSummary,
+  type ParsedRow,
+  type ParsedSheets,
+} from '../../common/import-plan';
+import { CATALOG_ENTITIES, type CatalogEntity, type CatalogSnapshot } from './catalog.types';
+
+// Kiểu dùng chung của mọi màn import (AD-15) — export lại để nơi gọi chỉ cần một chỗ import.
+export type { ImportAction, ImportSummary, ParsedRow, ParsedSheets };
 
 /**
  * Lõi ĐỐI CHIẾU file danh mục — hàm THUẦN, không chạm DB, không chạm exceljs.
@@ -11,16 +23,6 @@ import {
  * không test qua HTTP) và để bước xem trước và bước ghi dùng CHUNG một kết quả:
  * xem trước hiện gì thì ghi đúng cái đó.
  */
-
-export interface ParsedRow {
-  /** Số dòng THẬT trong sheet Excel (dòng 1 là tiêu đề) — người dùng mở file sửa đúng dòng. */
-  rowNumber: number;
-  cells: Record<string, string>;
-}
-
-export type ParsedSheets = Record<string, ParsedRow[]>;
-
-export type ImportAction = 'create' | 'update' | 'unchanged' | 'skip' | 'error';
 
 export interface SiteValues {
   code: string;
@@ -68,23 +70,12 @@ export interface ImportRow {
   existingId?: string;
 }
 
-export interface ImportSummary {
-  create: number;
-  update: number;
-  unchanged: number;
-  skip: number;
-  error: number;
-}
-
 export interface ImportPlan {
   rows: ImportRow[];
   summary: ImportSummary;
   /** false = file không có sheet nào tên Site/Tủ mạng/Loại thiết bị/Nhà cung cấp. */
   hasRecognizedSheet: boolean;
 }
-
-/** Cột đánh dấu dòng minh họa trong file mẫu. */
-const EXAMPLE_HEADERS = ['ghi chú nhập', 'ghi chu nhap'];
 
 /**
  * Tên sheet → loại mục. Chấp nhận cả bản có dấu lẫn không dấu vì người dùng có thể
@@ -172,53 +163,6 @@ const FIELDS: Record<CatalogEntity, FieldSpec[]> = {
     },
   ],
 };
-
-/** Bỏ dấu tiếng Việt — chỉ dùng để so tên cột/nhãn, KHÔNG dùng cho dữ liệu lưu xuống DB. */
-function stripDiacritics(value: string): string {
-  return value
-    .normalize('NFD')
-    // Dải dấu thanh/dấu phụ Unicode viết bằng escape, KHÔNG viết ký tự thật:
-    // ký tự tổ hợp trần trong mã nguồn rất dễ bị editor/tool nuốt mất.
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D');
-}
-
-/** Tên cột: bỏ dấu `*`, bỏ khoảng trắng thừa, về chữ thường. "Mã site *" = "mã site". */
-function normalizeHeader(header: string): string {
-  return header.replace(/\*/g, '').trim().replace(/\s+/g, ' ').toLowerCase();
-}
-
-function pickCell(cells: Record<string, string>, aliases: string[]): string | undefined {
-  for (const [rawHeader, value] of Object.entries(cells)) {
-    const header = normalizeHeader(rawHeader);
-    const bare = stripDiacritics(header);
-    if (aliases.some((a) => a === header || stripDiacritics(a) === bare)) {
-      return value;
-    }
-  }
-  return undefined;
-}
-
-function parseBoolean(raw: string): boolean {
-  const value = stripDiacritics(raw.trim().toLowerCase());
-  return ['co', 'x', 'yes', 'y', 'true', '1', 'v'].includes(value);
-}
-
-/** Ô trống → chuỗi rỗng, không phải "undefined"/"null" của Excel. */
-function cellText(raw: string | undefined): string {
-  return (raw ?? '').trim();
-}
-
-function isBlankRow(cells: Record<string, string>): boolean {
-  return Object.values(cells).every((v) => cellText(v) === '');
-}
-
-function isExampleRow(cells: Record<string, string>): boolean {
-  const marker = pickCell(cells, EXAMPLE_HEADERS);
-  if (marker === undefined) return false;
-  return stripDiacritics(marker.toLowerCase()).includes('vi du');
-}
 
 /**
  * Dựng bảng đối chiếu cho toàn bộ file.
@@ -460,8 +404,3 @@ function rawLabel(entity: CatalogEntity, cells: Record<string, string>): string 
   return anyValue ?? '(dòng trống)';
 }
 
-function summarize(rows: ImportRow[]): ImportSummary {
-  const summary: ImportSummary = { create: 0, update: 0, unchanged: 0, skip: 0, error: 0 };
-  for (const row of rows) summary[row.action] += 1;
-  return summary;
-}

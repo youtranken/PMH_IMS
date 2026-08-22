@@ -1,6 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { CatalogModule } from '../catalog/catalog.module';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
+import { ExcelImportService } from '../../common/excel/excel-import.service';
+import { DeviceImportService } from './device-import.service';
 import { DevicePanelsService } from './device-panels.service';
 import { DevicePortsService } from './device-ports.service';
 import { DevicesApiService } from './devices.api';
@@ -14,7 +17,15 @@ import { DevicesService } from './devices.service';
 @Module({
   imports: [AuditModule, CatalogModule],
   controllers: [DevicesController],
-  providers: [DevicesService, DevicePortsService, DevicePanelsService, DevicesApiService],
+  providers: [
+    DevicesService,
+    DevicePortsService,
+    DevicePanelsService,
+    DeviceImportService,
+    DevicesApiService,
+    ExcelExportService,
+    ExcelImportService,
+  ],
   exports: [DevicesApiService],
 })
 export class DevicesModule {}

@@ -7,12 +7,14 @@ import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { FilterBar } from '@/ui/filter-bar';
+import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
 import type { CatalogLists } from '@/features/catalog/catalog-types';
 import { DeviceForm } from './device-form';
+import { DeviceImportDialog } from './device-import-dialog';
 import {
   DEVICE_STATUSES,
   STATUS_KEY,
@@ -47,6 +49,7 @@ export function DevicesScreen({ me }: { me: Me }) {
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   const lists = useQuery({
     queryKey: ['catalog', 'lists'],
@@ -80,9 +83,24 @@ export function DevicesScreen({ me }: { me: Me }) {
         title={t('devices.title')}
         subtitle={t('devices.subtitle')}
         actions={
-          <button type="button" className="btn primary" onClick={() => setCreating(true)}>
-            {t('devices.add')}
-          </button>
+          <>
+            <ExportXlsxButton
+              url="/api/v1/devices/template"
+              fileName="mau-thiet-bi.xlsx"
+              label={t('devices.downloadTemplate')}
+            />
+            {/* FR-028: xuất đúng bộ lọc đang xem — cùng query với bảng bên dưới. */}
+            <ExportXlsxButton
+              url={`/api/v1/devices/export?${buildFilterQuery(filters)}`}
+              fileName="thiet-bi.xlsx"
+            />
+            <button type="button" className="btn" onClick={() => setImporting(true)}>
+              {t('devices.importExcel')}
+            </button>
+            <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+              {t('devices.add')}
+            </button>
+          </>
         }
       />
 
@@ -210,6 +228,17 @@ export function DevicesScreen({ me }: { me: Me }) {
         </>
       )}
 
+      {importing ? (
+        <DeviceImportDialog
+          csrfToken={me.csrfToken}
+          onClose={() => setImporting(false)}
+          onImported={() => {
+            setImporting(false);
+            void queryClient.invalidateQueries({ queryKey: ['devices'] });
+          }}
+        />
+      ) : null}
+
       {creating ? (
         <DeviceForm
           device={null}
@@ -228,6 +257,16 @@ export function DevicesScreen({ me }: { me: Me }) {
 
 function buildQuery(page: number, filters: Filters): string {
   const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
+  const filterQuery = buildFilterQuery(filters);
+  return filterQuery ? `${params.toString()}&${filterQuery}` : params.toString();
+}
+
+/**
+ * Phần lọc (không kèm phân trang) — dùng CHUNG cho danh sách và cho nút Xuất Excel, nên
+ * file xuất ra luôn khớp đúng cái đang nhìn thấy (FR-028).
+ */
+function buildFilterQuery(filters: Filters): string {
+  const params = new URLSearchParams();
   if (filters.search.trim()) params.set('search', filters.search.trim());
   if (filters.siteId) params.set('siteId', filters.siteId);
   if (filters.cabinetId) params.set('cabinetId', filters.cabinetId);

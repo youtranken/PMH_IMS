@@ -23,6 +23,7 @@
 | `Tabs`, `TabPanel` | `ui/tabs.tsx` | Màn Danh mục (2.1), trang chi tiết thiết bị (2.5) | Hai tab thôi thì cân nhắc hiện cả hai |
 | `FilePicker` | `ui/file-picker.tsx` | Mọi chỗ chọn file: import danh mục/thiết bị, đính kèm | Không tự dựng `<input type="file">` trần |
 | `ImportPreview` | `ui/import-preview.tsx` | Bảng đối chiếu TRƯỚC khi ghi của mọi màn import | Màn import nào cũng phải có bước này |
+| `ImportDialog` | `ui/import-dialog.tsx` | Hộp thoại nhập Excel hai bước (đối chiếu → ghi): danh mục 2.1, thiết bị 2.6 | Không tự dựng luồng import riêng |
 | `AttachmentPanel` | `ui/attachment-panel.tsx` | Giấy tờ đính kèm của MỌI chủ thể (`ownerType`/`ownerId`): thiết bị 2.3, phiếu Epic 8, sự cố Epic 9 | Không tự viết upload riêng — sẽ quên luật "tải về, không mở inline" |
 | `HistoryPanel` | `ui/history-panel.tsx` | Lịch sử nghiệp vụ (AD-13) | Nhật ký an ninh → màn Audit riêng |
 | `DatePicker`, `DateTimePicker` | `ui/date-picker.tsx`, `ui/date-time-picker.tsx` | Mọi ô chọn ngày/giờ | Không dùng `<input type="date">` trần |
@@ -53,6 +54,7 @@
 | `MasterKeyRing` | `common/crypto/master-key-ring.ts` | Chùm chìa + xoay version | — |
 | `ExcelExportService` | `common/excel/excel-export.service.ts` | FR-028 — mọi bảng; `buildWorkbook` cho file nhiều sheet | Cấm import `exceljs` trực tiếp (eslint chặn) |
 | `ExcelImportService` | `common/excel/excel-import.service.ts` | Nơi DUY NHẤT ĐỌC file xlsx (import danh mục 2.1, thiết bị 2.6) | Trả chuỗi thô; hiểu nghĩa là việc của lõi `plan*Import` thuần |
+| `import-plan.ts` (`pickCell`, `parseDateCell`, `normalizeKey`…) | `common/import-plan.ts` | Nền chung của MỌI bộ import: khớp tên cột, đọc ngày kiểu VN, nhận dòng VÍ DỤ | Không tự viết lại parser cột/ngày cho từng màn |
 | `parsePageQuery`, `Page<T>` | `common/pagination.ts` | Mọi endpoint danh sách | Shape trả về luôn là `{ items, total }` |
 | `Tx`, `WriteFn` | `common/tx.ts` | Mọi hàm ghi (AD-5) | `tx` là tham số đầu, không dùng ALS |
 | `ExpirySource` | `common/expiry/expiry-source.ts` | Module có ngày hết hạn tự đăng ký (AD-7) | Vault KHÔNG đăng ký (AD-4) |

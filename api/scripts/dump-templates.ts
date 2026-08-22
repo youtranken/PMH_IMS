@@ -4,18 +4,18 @@
  *
  *   npm --prefix api run make:templates
  *
- * Định nghĩa mẫu nằm ở `src/modules/catalog/catalog-template.ts` và app cũng sinh từ đúng
- * file đó (`GET /api/v1/catalog/template`) — AD-15: một định nghĩa, hai đường phát hành.
- * KHÔNG viết lại danh sách cột ở đây.
+ * Định nghĩa mẫu nằm ở `src/modules/catalog/catalog-template.ts` và
+ * `src/modules/devices/device-template.ts`; app cũng sinh từ đúng hai file đó
+ * (`GET /catalog/template`, `GET /devices/template`) — AD-15: một định nghĩa, hai đường
+ * phát hành. KHÔNG viết lại danh sách cột ở đây.
  */
 import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { ExcelExportService } from '../src/common/excel/excel-export.service';
 import { catalogTemplateSheets } from '../src/modules/catalog/catalog-template';
+import { deviceTemplateSheets } from '../src/modules/devices/device-template';
 
-const OUT = resolve(
-  process.argv[2] ?? '../docs/mau-du-lieu/mau-danh-muc.xlsx',
-);
+const OUT_DIR = resolve(process.argv[2] ?? '../docs/mau-du-lieu');
 
 /** 12 loại thiết bị khớp migration 0011 — bản trong repo phải giống hệ thống mới cài. */
 const SEED_DEVICE_TYPES: [string, boolean, string][] = [
@@ -36,7 +36,10 @@ const SEED_DEVICE_TYPES: [string, boolean, string][] = [
 const NOW = new Date('2026-08-22T00:00:00Z');
 
 async function main(): Promise<void> {
-  const sheets = catalogTemplateSheets({
+  const excel = new ExcelExportService();
+  await mkdir(OUT_DIR, { recursive: true });
+
+  const catalogSheets = catalogTemplateSheets({
     // Site / tủ / NCC để TRỐNG: bản trong repo dành cho hệ thống mới cài, chưa có dữ liệu
     // riêng của công ty — mẫu tự điền vài dòng ví dụ.
     sites: [],
@@ -53,10 +56,16 @@ async function main(): Promise<void> {
     vendors: [],
   });
 
-  const buffer = await new ExcelExportService().buildWorkbook(sheets);
-  await mkdir(dirname(OUT), { recursive: true });
-  await writeFile(OUT, buffer);
-  console.log(`Đã tạo ${OUT}`);
+  await write('mau-danh-muc.xlsx', await excel.buildWorkbook(catalogSheets));
+
+  // Kho rỗng → file mẫu thiết bị tự điền 2 dòng ví dụ (SW-CORE-01, PC-KT-05).
+  await write('mau-thiet-bi.xlsx', await excel.buildWorkbook(deviceTemplateSheets([])));
+}
+
+async function write(fileName: string, buffer: Buffer): Promise<void> {
+  const path = resolve(OUT_DIR, fileName);
+  await writeFile(path, buffer);
+  console.log(`Đã tạo ${path}`);
 }
 
 main().catch((error: unknown) => {
