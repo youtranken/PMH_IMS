@@ -116,6 +116,19 @@ của module chủ**. Chưa có file nội bộ nào trở thành hub, tức ch�
 `CatalogEntity`, `DevicesController` — **đều là tài sản dùng chung hoặc service của module
 chủ**. Chưa có file nội bộ nào trở thành hub, tức chưa có import lậu xuyên module.
 
+### Đo hiệu năng (AC 2.2 "< 2 giây" với 300+ thiết bị)
+
+Nạp 400 thiết bị vào DB rồi đo thẳng trên stack docker (2026-08-23):
+
+| Truy vấn | Thời gian |
+| --- | --- |
+| Trang 1, 20 dòng | 71 ms |
+| Trang 10 (offset 180) | 37 ms |
+| Tìm theo tên | 26 ms |
+
+Cách xa trần 2 giây. Chỉ mục theo site/tủ/loại/trạng thái đã có sẵn ở migration 0012;
+khi kho vượt ~5.000 thiết bị thì xem lại `ILIKE '%…%'` (cân nhắc `pg_trgm`).
+
 ### Nợ kỹ thuật cố ý mang sang
 
 | Việc | Vì sao hoãn | Hạn chót |
