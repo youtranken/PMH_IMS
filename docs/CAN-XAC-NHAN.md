@@ -64,3 +64,27 @@ trạng thái, nhưng cỗ máy cảnh báo (3.4) cần biết cái nào **thôi
 mỗi license cũ đã bỏ vẫn nhắc mãi và người ta sẽ tắt luôn cảnh báo.
 
 **Sửa lại tốn bao nhiêu:** nhỏ, một migration đổi `CHECK` + nhãn i18n.
+
+### 3. Địa chỉ IP: chỉ IPv4, và dải hẹp hơn /8 — story 5.1
+
+**Quyết:** hệ thống chỉ nhận IPv4. Gõ `fe80::/64` bị từ chối thẳng kèm lời giải thích, không
+nhận vào rồi quản nửa vời. Dải cũng phải hẹp hơn hoặc bằng /8 — gõ `10.0.0.0/7` bị chặn kèm
+câu hỏi "có phải gõ nhầm /24 không?".
+
+**Vì sao:** AC nói LAN của PMH là 172.16.x/24, chưa có IPv6 ở đâu. Nhận IPv6 nửa vời còn tệ
+hơn từ chối: người ta khai vào rồi tưởng hệ thống quản được, tới lúc cần tra thì mới biết là
+không. Còn dải rộng hơn /8 (16 triệu địa chỉ) thì màn "IP trống còn lại" phải dựng danh sách
+đó ra — và không ai khai dải /7 trong một mạng văn phòng.
+
+**Sửa lại tốn bao nhiêu:** IPv6 thì trung bình — số học địa chỉ phải viết lại (`ip-rules.ts`),
+nhưng bảng đã dùng kiểu `inet`/`cidr` của Postgres nên DB không phải đổi, chỉ bỏ hai ràng buộc
+`family(...) = 4`. Nới ngưỡng /8 thì chỉ là một hằng số.
+
+### 4. Vòng đời IP: bốn trạng thái — story 5.1/5.2
+
+**Quyết:** `Trống · Đang cấp · Nghi chết · Đã thu hồi`, đúng theo state machine AC 5.2 khai.
+Đổi trạng thái KHÔNG sửa trực tiếp được qua form (API trả lỗi `IP_STATUS_NEEDS_TRANSITION`) —
+phải đi thao tác riêng, để cái máy trạng thái không chỉ là gợi ý.
+
+**Sửa lại tốn bao nhiêu:** nhỏ, một migration đổi `CHECK` + nhãn i18n.
+
