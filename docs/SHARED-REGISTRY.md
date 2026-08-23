@@ -83,6 +83,9 @@
 | `DevicesApiService` | `modules/devices/devices.api.ts` | ipam/vault/software/phiếu tham chiếu thiết bị | Cấm query bảng `device` từ module khác |
 | `VaultApiService` | `modules/vault/vault.api.ts` | Module khác hỏi "chủ thể này có mấy secret, tên gì" (AD-2/AD-4) | CỐ Ý không có hàm trả plaintext — muốn mở két phải đi endpoint riêng có TOTP step-up (4.2); cấm mọi module khác chạm bảng `secret` |
 | `IpamApiService` | `modules/ipam/ipam.api.ts` | Module khác hỏi "thiết bị này có IP gì" (AD-2): panel IP 5.4, sổ NAT 5.3, phiếu bàn giao Epic 8 | Cấm query bảng `subnet`/`ip_address` từ module khác |
+| `ApprovalKindRegistry` (@Global) + `ApprovalFlow` | `common/approvals/` | Loại yêu cầu tự mang máy trạng thái của mình tới (AD-6): break-glass 6.3, phiếu ISO Epic 8, sự cố Epic 9 | Đặt sổ trong module `approvals` là mọi module muốn đăng ký phải chạm ruột nó — đúng lỗi depcruise bắt ở Epic 2 |
+| `ApprovalsApiService` | `modules/approvals/approvals.api.ts` | Tạo yêu cầu, chuyển trạng thái, hỏi "grant còn hiệu lực không" | Cấm query bảng `approval` từ module khác; cấm UPDATE `state` ngoài `transition()` (AD-6) |
+| `isGrantActive` | `common/approvals/approval-flow.ts` | MỌI đường đọc có kiểm quyền tạm thời | Cấm tin `status`; hiệu lực tính bằng `expires_at > now()` tại mỗi lần đọc (AD-6) |
 | `IpDevicePanel`, `NatDevicePanel` | `modules/ipam/*-device-panel.ts` | Cắm khu IP và khu NAT vào trang thiết bị (story 5.3/5.4) qua `DevicePanelRegistry` | `devices` KHÔNG được import ipam — chiều phụ thuộc chỉ đi một hướng (AD-2) |
 
 ## Cách CI ép luật (không trông vào review)

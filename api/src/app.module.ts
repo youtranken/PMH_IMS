@@ -7,11 +7,13 @@ import { UserThrottlerGuard } from './common/user-throttler.guard';
 import { ExcelExportService } from './common/excel/excel-export.service';
 import { ExcelImportService } from './common/excel/excel-import.service';
 import { DatabaseModule } from './database/database.module';
+import { ApprovalsRegistryModule } from './common/approvals/approvals-registry';
 import { DevicePanelsModule } from './common/device-panels.registry';
 import { ExpiryRegistryModule } from './common/expiry/expiry-registry';
 import { HealthController } from './health/health.controller';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuditInterceptor } from './modules/audit/audit.interceptor';
+import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { DevicesModule } from './modules/devices/devices.module';
@@ -70,12 +72,14 @@ import { VaultModule } from './modules/vault/vault.module';
     DatabaseModule,
     DevicePanelsModule,
     ExpiryRegistryModule,
+    ApprovalsRegistryModule,
     SystemConfigModule,
     AuditModule,
     OutboxModule,
     QueueModule,
     UsersModule,
     AuthModule,
+    ApprovalsModule,
     CatalogModule,
     DevicesModule,
     SoftwareModule,

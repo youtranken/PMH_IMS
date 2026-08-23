@@ -73,8 +73,8 @@ development_status:
   5-4-panel-ip-trên-trang-thiết-bị: done
   epic-5-retrospective: optional
 
-  epic-6: backlog
-  6-1-module-phê-duyệt-dùng-chung: backlog
+  epic-6: in-progress
+  6-1-module-phê-duyệt-dùng-chung: done
   6-2-quản-trị-whitelist-và-danh-sách-cần-duyệt: backlog
   6-3-break-glass-xin-duyệt-xem-theo-thời-hạn: backlog
   epic-6-retrospective: optional

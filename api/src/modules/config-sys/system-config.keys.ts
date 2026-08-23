@@ -12,6 +12,7 @@ export const CONFIG_KEYS = {
   secretStepUpGraceMinutes: { key: 'secret.stepup_grace_minutes', fallback: 10 },
   secretStepUpMaxFailures: { key: 'secret.stepup_max_failures', fallback: 5 },
   breakGlassMaxGrantHours: { key: 'breakglass.max_grant_hours', fallback: 24 },
+  approvalReminderHours: { key: 'approval.reminder_hours', fallback: 4 },
   mailFromAddress: { key: 'mail.from_address', fallback: 'ims@pmh.com.vn' },
   appTimezone: { key: 'app.timezone', fallback: 'Asia/Ho_Chi_Minh' },
 } as const;

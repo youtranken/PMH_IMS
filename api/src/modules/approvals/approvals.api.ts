@@ -1,0 +1,58 @@
+import { Injectable } from '@nestjs/common';
+import type { Tx } from '../../common/tx';
+import {
+  ApprovalsService,
+  type ApprovalRecord,
+  type CreateApprovalInput,
+  type TransitionInput,
+} from './approvals.service';
+
+/**
+ * AD-2: public api DUY NHẤT của module `approvals`.
+ *
+ * Dùng bởi: break-glass (Epic 6), phiếu ISO (Epic 8), phiếu sự cố (Epic 9). Các module đó
+ * KHÔNG query bảng `approval` — chúng đăng ký từ vựng state của mình vào `ApprovalKindRegistry`
+ * rồi gọi qua đây.
+ */
+@Injectable()
+export class ApprovalsApiService {
+  constructor(private readonly approvals: ApprovalsService) {}
+
+  createWithin(tx: Tx, input: CreateApprovalInput): Promise<ApprovalRecord> {
+    return this.approvals.createWithin(tx, input);
+  }
+
+  transition(id: string, input: TransitionInput): Promise<ApprovalRecord> {
+    return this.approvals.transition(id, input);
+  }
+
+  transitionWithin(tx: Tx, id: string, input: TransitionInput): Promise<ApprovalRecord> {
+    return this.approvals.transitionWithin(tx, id, input);
+  }
+
+  findOne(id: string): Promise<ApprovalRecord> {
+    return this.approvals.findOne(id);
+  }
+
+  list(filters: Parameters<ApprovalsService['list']>[0]): Promise<ApprovalRecord[]> {
+    return this.approvals.list(filters);
+  }
+
+  history(id: string): ReturnType<ApprovalsService['history']> {
+    return this.approvals.history(id);
+  }
+
+  /**
+   * "Người này còn quyền trên đối tượng kia không" — kiểm bằng ĐỒNG HỒ tại mỗi lần đọc (AD-6).
+   * Trả về bản ghi chứ không phải boolean: nơi gọi cần `id` để ghi vào audit "xem bằng grant nào".
+   */
+  activeGrantFor(
+    params: Parameters<ApprovalsService['activeGrantFor']>[0],
+  ): Promise<ApprovalRecord | null> {
+    return this.approvals.activeGrantFor(params);
+  }
+
+  pending(kind?: string): Promise<ApprovalRecord[]> {
+    return this.approvals.pending(kind);
+  }
+}

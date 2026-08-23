@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SystemConfigService } from '../config-sys/system-config.service';
+import { ApprovalsApiService } from '../approvals/approvals.api';
 import { ExpiryApiService } from '../expiry/expiry.api';
 import { OutboxService } from '../outbox/outbox.service';
 import { UsersApiService } from '../users/users.api';
@@ -23,6 +24,7 @@ export class MailConsumer {
     private readonly transport: MailTransportService,
     private readonly config: SystemConfigService,
     private readonly expiry: ExpiryApiService,
+    private readonly approvals: ApprovalsApiService,
   ) {}
 
   async handle(topic: string, outboxId: string): Promise<void> {
@@ -42,9 +44,53 @@ export class MailConsumer {
     await this.outbox.markProcessed(outboxId);
   }
 
+  /**
+   * Thư báo có yêu cầu duyệt (story 6.1).
+   *
+   * Gửi cho SA + Admin: người duyệt được xác định theo VAI chứ không theo một danh sách email
+   * cấu hình tay — đổi người thì đổi vai, không phải nhớ đi sửa một ô cấu hình nào đó.
+   *
+   * Thư KHÔNG chứa bất kỳ bí mật nào, kể cả tên secret: nó chỉ nói "có người xin quyền trên
+   * đối tượng X, lý do Y" và đưa một đường dẫn. Ai muốn quyết thì phải đăng nhập.
+   */
+  private async buildApprovalMail(approvalId: string, isReminder: boolean) {
+    const request = await this.approvals.findOne(approvalId).catch(() => null);
+    // Yêu cầu đã bị xử lý xong trước khi thư kịp đi → thôi, đừng làm phiền người duyệt.
+    if (!request || request.state !== 'pending') return null;
+
+    const approvers = await this.users.recipientsByRole(['sa', 'admin']);
+    if (approvers.length === 0) return null;
+
+    const waited = Math.round((Date.now() - request.createdAt.getTime()) / 60_000);
+    const { html, text } = renderMail({
+      title: isReminder ? 'Yêu cầu duyệt còn đang chờ' : 'Có yêu cầu cần duyệt',
+      intro: isReminder
+        ? `Yêu cầu dưới đây đã chờ ${waited} phút mà chưa ai xử lý.`
+        : `${request.requester} vừa gửi một yêu cầu cần người duyệt.`,
+      rows: [
+        { label: 'Người xin', value: request.requester },
+        { label: 'Lý do', value: request.reason },
+        { label: 'Lúc', value: request.createdAt.toLocaleString('vi-VN') },
+      ],
+      ctaLabel: 'Mở màn duyệt',
+      ctaUrl: `${APP_URL()}/duyet-yeu-cau`,
+      footnote:
+        'Duyệt được trên điện thoại. Quyền cấp ra luôn có thời hạn và tự cắt khi hết giờ.',
+    });
+
+    return {
+      to: approvers.map((r) => r.email),
+      subject: isReminder
+        ? `[IMS] Nhắc: yêu cầu của ${request.requester} chờ ${waited} phút`
+        : `[IMS] Yêu cầu cần duyệt từ ${request.requester}`,
+      html,
+      text,
+    };
+  }
+
   private async build(
     topic: string,
-    payload: { userId?: string; ruleId?: string; isTest?: boolean },
+    payload: { userId?: string; ruleId?: string; isTest?: boolean; approvalId?: string },
   ) {
     // Báo cáo tổng hợp không gắn với một user nào — xử riêng trước khi tra user.
     // Nội dung DỰNG LẠI từ `ruleId`: outbox chỉ giữ id tham chiếu, không PII (AD-11/NFR-04).
@@ -52,6 +98,15 @@ export class MailConsumer {
       if (!payload.ruleId) return null;
       const digest = await this.expiry.buildDigest(payload.ruleId);
       return buildDigestMail(digest, payload.isTest === true);
+    }
+
+    /**
+     * Thư của luồng duyệt cũng không gắn với một user cụ thể — nội dung DỰNG LẠI từ
+     * `approvalId` vì outbox chỉ giữ id tham chiếu, không PII (AD-11/NFR-04).
+     */
+    if (topic === 'approval.requested' || topic === 'approval.reminder') {
+      if (!payload.approvalId) return null;
+      return this.buildApprovalMail(payload.approvalId, topic === 'approval.reminder');
     }
 
     const user = payload.userId ? await this.users.getById(payload.userId) : null;
