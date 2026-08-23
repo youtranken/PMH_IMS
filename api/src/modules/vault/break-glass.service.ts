@@ -1,8 +1,10 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Inject,
   Injectable,
+  NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
 import { DRIZZLE_DB } from '../../database/database.module';
@@ -11,6 +13,7 @@ import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry'
 import { ApprovalsApiService } from '../approvals/approvals.api';
 import type { ApprovalRecord } from '../approvals/approvals.service';
 import { SystemConfigService } from '../config-sys/system-config.service';
+import { pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { OutboxService } from '../outbox/outbox.service';
 import { AccessListService } from './access-list.service';
 import { tierLabel, type AccessTier } from './access-tier';
@@ -217,9 +220,17 @@ export class BreakGlassService implements OnModuleInit {
       });
     }
 
+    /**
+     * Kiểm sớm cho thông điệp tử tế — nhưng ném CÙNG MỘT loại lỗi với hàng rào DB bên dưới.
+     *
+     * Trước đây chỗ này ném 400 còn ràng buộc DB ném 409: cùng một sai lầm của người dùng mà
+     * trả hai mã khác nhau tùy vào việc request thứ hai tới trước hay sau khi cái thứ nhất kịp
+     * commit. Client không thể xử lý tử tế một API đổi mã theo nhịp gõ phím, và test thì đỏ
+     * ngẫu nhiên — đúng cách bộ E2E đầy đủ phát hiện ra chuyện này.
+     */
     const existing = await this.pendingOf(memberEmail, input.ownerType, input.ownerId);
     if (existing) {
-      throw new BadRequestException({
+      throw new ConflictException({
         code: 'BREAK_GLASS_PENDING',
         message: 'Bạn đã có một yêu cầu đang chờ duyệt cho đối tượng này.',
       });
@@ -227,19 +238,38 @@ export class BreakGlassService implements OnModuleInit {
 
     const hours = await this.clampHours(input.hours);
 
-    return this.db.transaction(async (tx) => {
-      const created = await this.approvals.createWithin(tx, {
-        kind: BREAK_GLASS_KIND,
-        requester: memberEmail,
-        subjectType: input.ownerType,
-        subjectId: input.ownerId,
-        reason: input.reason,
-        payload: { hours },
+    try {
+      return await this.db.transaction(async (tx) => {
+        const created = await this.approvals.createWithin(tx, {
+          kind: BREAK_GLASS_KIND,
+          requester: memberEmail,
+          subjectType: input.ownerType,
+          subjectId: input.ownerId,
+          reason: input.reason,
+          payload: { hours },
+        });
+        // Outbox chỉ mang id tham chiếu, KHÔNG PII (AD-11/NFR-04).
+        await this.outbox.enqueueWithin(tx, 'approval.requested', { approvalId: created.id });
+        return created;
       });
-      // Outbox chỉ mang id tham chiếu, KHÔNG PII (AD-11/NFR-04).
-      await this.outbox.enqueueWithin(tx, 'approval.requested', { approvalId: created.id });
-      return created;
-    });
+    } catch (error) {
+      /**
+       * Ràng buộc `approval_one_pending_key` của DB — hàng rào THẬT cho luật "một yêu cầu
+       * đang treo cho mỗi chủ thể".
+       *
+       * Câu kiểm `pendingOf()` phía trên chạy NGOÀI transaction nên hai cú bấm "Gửi yêu cầu"
+       * cùng lúc (hoặc một lần thử lại) đều thấy "chưa có" và cùng ghi — người duyệt phải
+       * quyết hai lần cho một việc, và cái thứ hai nằm treo mãi sau khi cái thứ nhất được
+       * duyệt (code review Epic 6, finding 6).
+       */
+      if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
+        throw new ConflictException({
+          code: 'BREAK_GLASS_PENDING',
+          message: 'Bạn đã có một yêu cầu đang chờ duyệt cho đối tượng này.',
+        });
+      }
+      throw error;
+    }
   }
 
   /**
@@ -251,7 +281,7 @@ export class BreakGlassService implements OnModuleInit {
     id: string,
     options: { hours?: number; note?: string | null } = {},
   ): Promise<ApprovalRecord> {
-    const request = await this.approvals.findOne(id);
+    const request = await this.requireBreakGlass(id);
     const asked = Number((request.payload as { hours?: number } | null)?.hours ?? 0);
     const hours = await this.clampHours(options.hours ?? asked);
 
@@ -264,18 +294,53 @@ export class BreakGlassService implements OnModuleInit {
     });
   }
 
-  deny(approver: string, id: string, note?: string | null): Promise<ApprovalRecord> {
+  async deny(approver: string, id: string, note?: string | null): Promise<ApprovalRecord> {
+    await this.requireBreakGlass(id);
     return this.approvals.transition(id, { to: 'denied', actor: approver, note });
   }
 
   /** Thu hồi sớm — người xin không còn trực nữa thì không phải chờ hết giờ. */
-  revoke(approver: string, id: string, note?: string | null): Promise<ApprovalRecord> {
+  async revoke(approver: string, id: string, note?: string | null): Promise<ApprovalRecord> {
+    await this.requireBreakGlass(id);
     return this.approvals.transition(id, { to: 'revoked', actor: approver, note });
   }
 
-  /** Người xin tự hủy — việc đã xong trước khi ai kịp duyệt. */
-  cancel(requester: string, id: string): Promise<ApprovalRecord> {
+  /**
+   * Người xin tự hủy — việc đã xong trước khi ai kịp duyệt.
+   *
+   * Chỉ hủy được yêu cầu CỦA CHÍNH MÌNH. Không kiểm thì bất kỳ ai biết id (nhìn qua vai, ảnh
+   * chụp màn hình, URL bị chia sẻ) đều giết được yêu cầu của người khác — người xin ngồi chờ
+   * tiếp lúc 2 giờ sáng, còn lịch sử thì ghi tên người hủy sai
+   * (code review Epic 6, finding 1).
+   */
+  async cancel(requester: string, id: string): Promise<ApprovalRecord> {
+    const request = await this.requireBreakGlass(id);
+    if (request.requester.toLowerCase() !== requester.toLowerCase()) {
+      throw new ForbiddenException({
+        code: 'NOT_YOUR_REQUEST',
+        message: 'Chỉ người gửi mới hủy được yêu cầu này.',
+      });
+    }
     return this.approvals.transition(id, { to: 'cancelled', actor: requester });
+  }
+
+  /**
+   * Đúng LOẠI break-glass, không phải một yêu cầu của module khác.
+   *
+   * Bảng `approval` dùng chung cho mọi luồng duyệt (AD-6). Không kiểm `kind` thì khi Epic 8/9
+   * cắm phiếu ISO và phiếu sự cố vào cùng bảng, các endpoint của két sắt trở thành một cửa hậu
+   * lái yêu cầu của module khác — bỏ qua luật riêng của họ, và để lại một dòng audit ghi
+   * `iso_form.approved` phát ra từ `/vault/break-glass/...` (code review Epic 6, finding 4).
+   */
+  private async requireBreakGlass(id: string): Promise<ApprovalRecord> {
+    const request = await this.approvals.findOne(id);
+    if (request.kind !== BREAK_GLASS_KIND) {
+      throw new NotFoundException({
+        code: 'APPROVAL_NOT_FOUND',
+        message: 'Không tìm thấy yêu cầu break-glass này.',
+      });
+    }
+    return request;
   }
 
   pendingForApprovers(): Promise<ApprovalRecord[]> {
@@ -314,8 +379,17 @@ export class BreakGlassService implements OnModuleInit {
    * một grant hết hạn ngay lúc sinh ra trông y như hệ thống hỏng.
    */
   private async clampHours(requested: number): Promise<number> {
-    const max = await this.config.getNumber('breakGlassMaxGrantHours');
-    if (!Number.isFinite(requested) || requested <= 0) return Math.min(1, max);
-    return Math.max(1, Math.min(Math.round(requested), max));
+    const configured = await this.config.getNumber('breakGlassMaxGrantHours');
+    /**
+     * Trần cấu hình cũng có SÀN 1 giờ.
+     *
+     * Đặt `breakglass.max_grant_hours = 0` (gõ nhầm, hoặc tưởng 0 nghĩa là "tắt") thì mọi grant
+     * hết hạn ĐÚNG LÚC SINH RA — được duyệt xong mà vẫn không xem được, trông y hệt hệ thống
+     * hỏng và không có dòng lỗi nào. Muốn tắt break-glass thì gỡ quyền ở ma trận 6.2, không
+     * phải hạ trần xuống 0 (code review Epic 6, finding 5).
+     */
+    const max = Math.max(1, configured);
+    const asked = !Number.isFinite(requested) || requested <= 0 ? 1 : Math.round(requested);
+    return Math.max(1, Math.min(asked, max));
   }
 }

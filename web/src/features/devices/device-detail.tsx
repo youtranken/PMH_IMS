@@ -102,6 +102,8 @@ export function DeviceDetail({ me }: { me: Me }) {
    * người đã được gán quyền lại không có đường nào tới. Panel tự nói rõ tầng của người xem.
    */
   const canVault = true;
+  /** Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày ra nút để bấm rồi 403. */
+  const canVaultWrite = me.role === 'sa' || me.role === 'admin';
 
   return (
     <>
@@ -226,7 +228,15 @@ export function DeviceDetail({ me }: { me: Me }) {
         ) : tab === 'ports' ? (
           <PortMapPanel device={item} csrfToken={me.csrfToken} canEdit={!retired} />
         ) : tab === 'vault' ? (
-          <VaultPanel ownerType="device" ownerId={item.id} me={me} canEdit={!retired} />
+          <VaultPanel
+            ownerType="device"
+            ownerId={item.id}
+            me={me}
+            /* Ghi vào két là việc của SA/Admin. Member giờ MỞ được tab (story 6.3) nên
+               phải chặn ở đây — không thì họ thấy "Cất secret"/"Xoay"/"Xóa" và bấm vào
+               là 403 (code review Epic 6, finding 3). */
+            canEdit={canVaultWrite && !retired}
+          />
         ) : tab === 'attachments' ? (
           <AttachmentPanel
             ownerType="device"

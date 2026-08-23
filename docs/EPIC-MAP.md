@@ -367,3 +367,76 @@ service của module chủ**. Chưa có file nội bộ nào thành hub. `depcru
 10. **Hàm public của service là một cửa vào thật, không chỉ là chỗ controller gọi.** Đẩy hết
     việc kiểm lên DTO thì mọi đường khác (import, seed, module khác) đi thẳng xuống DB và bung
     500. Luật nghiệp vụ thuộc về hàm thuần, DTO chỉ là lớp chuyển kiểu.
+
+## Epic 6 — Break-glass & Phê duyệt (đóng 2026-08-23)
+
+### Bảng mới và ai sở hữu (AD-3)
+
+| Bảng | Module chủ | Ghi chú cho epic sau |
+| --- | --- | --- |
+| `approval`, `approval_history` | `approvals` (tầng nền) | **KHÔNG có CHECK về từ vựng state** — mỗi loại tự mang máy trạng thái tới (AD-6). Đổi lại, `transition()` là đường DUY NHẤT ghi cột `state` |
+| `access_list` | `vault` | Chỉ chứa `whitelist` và `needs_approval`. CẤM là mặc định (không có dòng), không phải một lời gán |
+
+### Hợp đồng epic sau sẽ dùng
+
+| Thứ | Ở đâu | Epic dùng |
+| --- | --- | --- |
+| `ApprovalKindRegistry` (@Global) + `ApprovalFlowSpec` | `common/approvals/` | **Epic 8** phiếu ISO, **Epic 9** phiếu sự cố: khai từ vựng state của mình rồi `register()`, không sửa gì trong `approvals` |
+| `ApprovalsApiService` | `modules/approvals/approvals.api.ts` | Tạo yêu cầu (trong tx của mình), chuyển trạng thái, hỏi "grant còn hiệu lực không" |
+| `isGrantActive` | `common/approvals/approval-flow.ts` | MỌI đường đọc có kiểm quyền tạm thời. **Cấm** tin `status` |
+| `overdueSince` | `common/approvals/approval-flow.ts` | Mẫu "treo quá lâu thì nhắc" — dùng lại cho phiếu quá hạn ở Epic 8 |
+| `AccessListService.tierFor` | `modules/vault/` | Bất cứ chỗ nào cần "người này có tầng gì trên đối tượng kia" |
+| `BREAK_GLASS_FLOW` | `modules/vault/break-glass.service.ts` | Mẫu khai một loại yêu cầu: `initial` + bảng `transitions` + nhãn tiếng Việt cho từng bước |
+
+### Nợ kỹ thuật cố ý mang sang
+
+| Việc | Vì sao hoãn | Hạn chót |
+| --- | --- | --- |
+| Chưa có màn Admin sửa `system_config` (từ Epic 3) | `breakglass.max_grant_hours` và `approval.reminder_hours` sửa bằng SQL được | Khi anh Thuận muốn tự đổi trần mà không cần tôi |
+| Nhắc yêu cầu treo chỉ nhắc MỘT lần | Nhắc lặp là cách nhanh nhất để người duyệt lọc thư hệ thống vào thùng rác | Nếu thực tế có yêu cầu bị bỏ quên qua đêm |
+| Chưa gửi thông báo cho người XIN khi được duyệt | Họ đang ngồi chờ và sẽ tự mở màn "Yêu cầu của tôi" | Khi có phản hồi là bất tiện |
+| Ma trận quyền chưa lọc theo site trên UI | Ba site, vài chục người — cuộn là thấy hết | Khi số tài khoản vượt ~30 |
+
+### Code review đóng epic — 7 finding, đã sửa hết
+
+| # | Mức | Vấn đề | Cách sửa |
+| --- | --- | --- | --- |
+| 1 | **Cao** | `cancel()` không kiểm người gọi có phải người xin. Bất kỳ ai biết id (nhìn qua vai, ảnh chụp màn hình, URL bị chia sẻ) đều **giết được yêu cầu của người khác** — người xin ngồi chờ tiếp lúc 2 giờ sáng, còn `approval_history` ghi sai tên người hủy | Chỉ người gửi mới hủy được (403). SA muốn chặn thì dùng "Từ chối", để lịch sử ghi đúng việc |
+| 2 | Trung bình | Member mở màn duyệt: `tab` khởi tạo `'pending'` nhưng `Tabs` ép `value='mine'` → nút sáng ở một tab, dữ liệu render của tab khác (đang disable, nên rỗng). Họ vừa gửi yêu cầu xong mà màn hình nói "không có yêu cầu nào" | `useState(canDecide ? 'pending' : 'mine')`, bỏ chỗ ép `value` |
+| 3 | Trung bình | `canVault = true` (story 6.3) mở tab cho Member, nhưng `canEdit` vẫn là `!retired` → Member thấy đủ nút **Cất secret / Sửa / Xoay / Thu hồi**, bấm cái nào cũng 403 | `canEdit={canVaultWrite && !retired}` |
+| 4 | Trung bình | `approve/deny/revoke/cancel` không kiểm `kind`. Hôm nay chỉ có một loại nên vô hại — nhưng Epic 8/9 cắm phiếu ISO và phiếu sự cố vào cùng bảng `approval`, và khi đó endpoint két sắt thành **cửa hậu lái yêu cầu của module khác**, bỏ qua luật riêng của họ, để lại dòng audit `iso_form.approved` phát ra từ `/vault/break-glass/...` | `requireBreakGlass(id)` — sai loại thì 404 |
+| 5 | Thấp/TB | `clampHours` mất sàn 1 giờ ở nhánh short-circuit: đặt `breakglass.max_grant_hours = 0` thì mọi grant hết hạn **đúng lúc sinh ra** — duyệt xong vẫn không xem được, trông y như hệ thống hỏng và không có dòng lỗi nào | Sàn 1 giờ cho CẢ trần cấu hình lẫn số giờ xin. Muốn tắt break-glass thì gỡ quyền ở ma trận, không hạ trần về 0 |
+| 6 | Thấp/TB | Luật "một yêu cầu treo cho mỗi chủ thể" chỉ có một câu `SELECT` chạy NGOÀI transaction canh giữ → hai cú bấm cùng lúc lọt cả hai; người duyệt quyết hai lần cho một việc, cái thứ hai treo mãi | Partial unique index `approval_one_pending_key` (migration 0025) + bắt `23505` thành 409. **Bộ E2E đầy đủ lộ thêm một chuyện nữa**: câu kiểm sớm ném 400 còn DB ném 409 — cùng một sai lầm mà hai mã tùy nhịp. Đã gộp về 409 |
+| 7 | Thấp/TB | `tierFor` nằm trên ĐƯỜNG NÓNG (mỗi lần mở két, mỗi lần đọc metadata, mỗi lần dựng verdict) nhưng đi qua `list()` → `scopeLabels()` → `catalog.lists()`: kéo cả danh mục site + loại thiết bị + loại phần mềm về **chỉ để vứt nhãn đi** | Thêm `rulesOf()` truy vấn thẳng `access_list`, không dựng nhãn |
+
+### Bẫy đã gặp — đừng lặp lại
+
+1. **Một lỗi 404 giả dạng lời từ chối quyền.** Web gọi sai đường dẫn verdict → query lỗi →
+   `data` undefined → panel hiện "Chỉ Quản trị xem được". Thông điệp đó nghe hợp lý tới mức che
+   hẳn một lỗi 404. Từ đó: **sai vì THIẾU QUYỀN và sai vì HỎNG phải là hai nhánh render khác
+   nhau** — đừng để `undefined` rơi xuống nhánh "không có quyền".
+2. **Câu chữ cũng hết hạn.** "Chỉ Quản trị và Super Admin xem được két sắt" đúng ở Epic 4 và
+   thành nói dối ở Epic 6. Mở rộng quyền cho một vai thì phải đi soát lại mọi câu nói về vai đó.
+3. **`str.replace` không khớp thì im lặng.** Một patch tự động vào `vault-panel.tsx` không khớp
+   anchor và không đổi gì cả — build vẫn xanh, chỉ E2E mới lộ. Patch tự động phải `assert` là
+   anchor có tồn tại.
+4. **Hàm helper trong test tự gọi chính nó.** Thay thế hàng loạt chuỗi "bấm Đăng xuất" cũng
+   thay luôn thân hàm `logout()` vừa viết → đệ quy vô hạn, cả 6 test đỏ. Thay hàng loạt thì phải
+   trừ chỗ định nghĩa ra.
+5. **Bảng dài che mất nút ở sidebar.** Playwright báo "intercepts pointer events". Đăng xuất từ
+   một trang trung tính (`/`) là hết — và cũng đúng thói quen người dùng hơn.
+6. **Đừng cho gán "cấm".** Nó lập tức sinh ra câu hỏi "dòng cấm có thắng dòng cho phép không",
+   và câu trả lời nào cũng làm ma trận khó đọc hơn. Cấm = không có dòng nào.
+7. **Mở quyền cho một vai là phải soát lại MỌI thứ gắn với vai đó.** Story 6.3 đổi
+   `canVault` thành `true` cho mọi vai — và lập tức Member nhìn thấy bốn cái nút GHI mà API
+   chặn. Nới một cổng thì phải đi hết các cổng còn lại trong cùng màn.
+8. **Một bảng dùng chung cần kiểm `kind` ở MỌI cửa.** `approval` phục vụ nhiều loại (AD-6).
+   Endpoint của loại A nhận id của loại B mà không kiểm là một cửa hậu — vô hại hôm nay, thành
+   lỗ hổng đúng ngày Epic 8 cắm phiếu ISO vào.
+9. **Test dài sát trần thời gian là test sẽ đỏ ngẫu nhiên.** Đường hạnh phúc break-glass đi
+   qua bốn luồng đăng nhập đầy đủ, mất ~50 giây trên trần 60. Nới trần (và nói rõ vì sao trong
+   comment) thay vì cắt bớt bước — chính chuỗi đổi người đó là thứ story phải chứng minh.
+10. **Hai hàng rào cho cùng một luật thì phải trả CÙNG một lỗi.** Câu kiểm sớm (cho thông
+    điệp tử tế) và ràng buộc DB (cho đúng đắn) đều chặn "xin trùng" — nhưng một cái ném 400,
+    một cái ném 409. Client không xử lý tử tế được một API đổi mã theo nhịp gõ phím, và test
+    thì đỏ ngẫu nhiên. Chạy riêng một bài thì luôn trúng một nhánh; chỉ bộ đầy đủ mới lộ ra.

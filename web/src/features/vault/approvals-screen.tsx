@@ -57,10 +57,18 @@ export function ApprovalsScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState('pending');
+  const canDecide = me.role === 'sa' || me.role === 'admin';
+  /**
+   * Member vào thẳng tab của mình.
+   *
+   * Trước đây `tab` khởi tạo là 'pending' còn `Tabs` lại ép `value='mine'` cho người không
+   * duyệt — nút sáng ở "Yêu cầu của tôi" trong khi dữ liệu render vẫn là của tab 'pending'
+   * (đang bị disable, nên rỗng). Member mở màn ra thấy "không có yêu cầu nào" dù họ vừa gửi
+   * một cái (code review Epic 6, finding 2).
+   */
+  const [tab, setTab] = useState(canDecide ? 'pending' : 'mine');
   const [deciding, setDeciding] = useState<{ row: ApprovalRow; approve: boolean } | null>(null);
 
-  const canDecide = me.role === 'sa' || me.role === 'admin';
 
   const pending = useQuery({
     queryKey: ['break-glass', 'pending'],
@@ -109,7 +117,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
             : []),
           { key: 'mine', label: t('approvals.tabMine') },
         ]}
-        value={canDecide ? tab : 'mine'}
+        value={tab}
         onChange={setTab}
         ariaLabel={t('approvals.title')}
       />

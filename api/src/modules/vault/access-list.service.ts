@@ -189,8 +189,34 @@ export class AccessListService {
         : groupsOfSoftware(await this.softwareGroupKeys(ownerId));
     if (groups.length === 0) return 'denied';
 
-    const rules = await this.list(memberEmail.toLowerCase());
-    return resolveTier(rules, memberEmail, groups);
+    return resolveTier(await this.rulesOf(memberEmail), memberEmail, groups);
+  }
+
+  /**
+   * Luật của một người, KHÔNG kèm nhãn.
+   *
+   * `list()` gọi `scopeLabels()` → `scopeOptions()` → `catalog.lists()` để dựng tên đọc được
+   * cho màn ma trận. Nhưng `tierFor` nằm trên ĐƯỜNG NÓNG: nó chạy ở mỗi lần mở két, mỗi lần
+   * đọc metadata, mỗi lần dựng verdict — và ném hết nhãn đi ngay sau đó. Kéo cả danh mục site
+   * + loại thiết bị + loại phần mềm về chỉ để vứt là cái giá trả mỗi lần xem một mật khẩu
+   * (code review Epic 6, finding 7).
+   */
+  private async rulesOf(memberEmail: string): Promise<AccessRule[]> {
+    const rows = await this.db
+      .select({
+        memberEmail: accessListTable.memberEmail,
+        scopeType: accessListTable.scopeType,
+        scopeRef: accessListTable.scopeRef,
+        tier: accessListTable.tier,
+      })
+      .from(accessListTable)
+      .where(eq(accessListTable.memberEmail, memberEmail.toLowerCase()));
+    return rows.map((row) => ({
+      memberEmail: row.memberEmail,
+      scopeType: row.scopeType as ScopeType,
+      scopeRef: row.scopeRef,
+      tier: row.tier as AccessTier,
+    }));
   }
 
   private async deviceGroupKeys(

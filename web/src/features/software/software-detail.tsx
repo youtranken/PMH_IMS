@@ -84,6 +84,8 @@ export function SoftwareDetail({ me }: { me: Me }) {
    * người đã được gán quyền lại không có đường nào tới. Panel tự nói rõ tầng của người xem.
    */
   const canVault = true;
+  /** Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày ra nút để bấm rồi 403. */
+  const canVaultWrite = me.role === 'sa' || me.role === 'admin';
 
   return (
     <>
@@ -153,7 +155,12 @@ export function SoftwareDetail({ me }: { me: Me }) {
             </dl>
           </>
         ) : tab === 'vault' ? (
-          <VaultPanel ownerType="software" ownerId={item.id} me={me} />
+          <VaultPanel
+            ownerType="software"
+            ownerId={item.id}
+            me={me}
+            canEdit={canVaultWrite}
+          />
         ) : tab === 'devices' ? (
           <LicenseAssignmentsPanel software={item} csrfToken={me.csrfToken} />
         ) : history.isLoading ? (

@@ -96,6 +96,15 @@ test.describe('Break-glass', () => {
    * Kịch bản đầy đủ của AC: Member cần-duyệt → xin → SA duyệt → xem được → nhật ký ghi đủ.
    */
   test('đường hạnh phúc: xin → duyệt → xem được trong hạn, nhật ký ghi đủ', async ({ page }) => {
+    /**
+     * Bài này đi qua BỐN luồng đăng nhập đầy đủ (SA enroll → Member enroll → SA lại → Member
+     * lại), mỗi luồng có một lần chờ mã TOTP mới để tránh chống-replay. Chạy một mình mất ~50
+     * giây — sát trần 60 giây mặc định, nên nó đỏ ngẫu nhiên khi cả bộ chạy cùng lúc.
+     *
+     * Nới trần thay vì cắt bớt bước: chính chuỗi bốn lượt đổi người NÀY là thứ story 6.3 phải
+     * chứng minh — xin ở một phiên, duyệt ở phiên khác, rồi quay lại xem được.
+     */
+    test.setTimeout(150_000);
     const saTotp = await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-5);
     const { deviceId, secretId, secretValue } = await setUpAs(page, stamp, 'needs_approval');
@@ -273,6 +282,117 @@ test.describe('Break-glass', () => {
     });
     expect(asked.status()).toBe(201);
     expect(((await asked.json()) as { payload: { hours: number } }).payload.hours).toBe(24);
+  });
+
+  /**
+   * Code review Epic 6, finding 1: `cancel()` không kiểm người gọi có phải người xin không.
+   * Bất kỳ ai biết id (nhìn qua vai, ảnh chụp màn hình, URL bị chia sẻ) đều giết được yêu cầu
+   * của người khác — người xin ngồi chờ tiếp lúc 2 giờ sáng, còn lịch sử ghi sai tên người hủy.
+   */
+  test('không hủy được yêu cầu của người khác', async ({ page }) => {
+    const saTotp = await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-5);
+    const { deviceId } = await setUpAs(page, stamp, 'needs_approval');
+    await logout(page);
+
+    await firstLogin(page, E2E_MEMBER);
+    const asked = await page.request.post('/api/v1/vault/break-glass', {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' },
+      data: { ownerType: 'device', ownerId: deviceId, reason: 'sự cố mạng tầng 3', hours: 4 },
+    });
+    const id = ((await asked.json()) as { id: string }).id;
+    await logout(page);
+
+    // SA cũng KHÔNG hủy hộ được — muốn chặn thì dùng "Từ chối", để lịch sử ghi đúng việc.
+    await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
+    const stolen = await page.request.post(`/api/v1/vault/break-glass/${id}/cancel`, {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' },
+    });
+    expect(stolen.status()).toBe(403);
+    expect(await stolen.json()).toMatchObject({ code: 'NOT_YOUR_REQUEST' });
+
+    // Yêu cầu vẫn còn nguyên, vẫn chờ duyệt.
+    const pending = await page.request.get('/api/v1/vault/break-glass/pending');
+    expect(((await pending.json()) as { id: string }[]).some((r) => r.id === id)).toBe(true);
+  });
+
+  /**
+   * Code review Epic 6, finding 6: luật "một yêu cầu treo cho mỗi chủ thể" trước đây chỉ có
+   * một câu SELECT ngoài transaction canh — hai cú bấm cùng lúc là lọt cả hai.
+   */
+  test('bắn hai yêu cầu cùng lúc thì chỉ một cái lọt', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-5);
+    const { deviceId } = await setUpAs(page, stamp, 'needs_approval');
+    await logout(page);
+
+    await firstLogin(page, E2E_MEMBER);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+    const body = {
+      ownerType: 'device',
+      ownerId: deviceId,
+      reason: 'bấm hai lần liên tiếp',
+      hours: 2,
+    };
+
+    const [a, b] = await Promise.all([
+      page.request.post('/api/v1/vault/break-glass', { headers, data: body }),
+      page.request.post('/api/v1/vault/break-glass', { headers, data: body }),
+    ]);
+    /**
+     * Luôn là 201 + 409, dù cái thứ hai bị chặn bởi câu kiểm sớm hay bởi ràng buộc DB.
+     *
+     * Bản đầu ném 400 ở câu kiểm sớm và 409 ở DB — cùng một sai lầm mà hai mã, tùy nhịp. Bộ
+     * E2E đầy đủ bắt được đúng chuyện đó (chạy riêng thì luôn trúng một nhánh).
+     */
+    expect([a.status(), b.status()].sort()).toEqual([201, 409]);
+    const failed = a.status() === 409 ? a : b;
+    expect(await failed.json()).toMatchObject({ code: 'BREAK_GLASS_PENDING' });
+
+    const mine = await page.request.get('/api/v1/vault/break-glass/mine');
+    const rows = (await mine.json()) as { state: string }[];
+    expect(rows.filter((r) => r.state === 'pending').length).toBe(1);
+  });
+
+  /**
+   * Code review Epic 6, finding 3: Member mở được tab Két sắt từ story 6.3, nên UI phải thôi
+   * bày ra nút GHI — bấm vào chỉ nhận 403.
+   */
+  test('Member được cấp quyền xem vẫn KHÔNG thấy nút ghi vào két', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-5);
+    const { deviceId } = await setUpAs(page, stamp, 'whitelist');
+    await logout(page);
+
+    await firstLogin(page, E2E_MEMBER);
+    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.getByRole('tab', { name: 'Két sắt' }).click();
+    await expect(page.getByRole('button', { name: 'Xem' })).toBeVisible();
+
+    for (const label of ['Cất secret', 'Sửa thông tin', 'Xoay', 'Thu hồi']) {
+      await expect(page.getByRole('button', { name: label })).toHaveCount(0);
+    }
+  });
+
+  /** Code review Epic 6, finding 2: Member mở màn duyệt phải thấy NGAY yêu cầu của mình. */
+  test('Member mở màn duyệt thấy ngay yêu cầu của mình, không phải bấm lại tab', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-5);
+    const { deviceId } = await setUpAs(page, stamp, 'needs_approval');
+    await logout(page);
+
+    await firstLogin(page, E2E_MEMBER);
+    await page.request.post('/api/v1/vault/break-glass', {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' },
+      data: { ownerType: 'device', ownerId: deviceId, reason: 'lý do của tôi', hours: 2 },
+    });
+
+    await page.goto('/duyet-yeu-cau');
+    // KHÔNG bấm tab nào cả — mở ra là phải thấy.
+    await expect(page.getByText('lý do của tôi')).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Chờ duyệt' })).toHaveCount(0);
   });
 
   test('Member không duyệt được yêu cầu của chính mình', async ({ page }) => {
