@@ -147,7 +147,11 @@ test.describe('Hồ sơ phần mềm', () => {
     expect(await back.json()).toMatchObject({ code: 'RENEW_NOT_FORWARD' });
   });
 
-  test('trang chi tiết nói rõ key nằm ở Két sắt, không nằm trong hồ sơ này', async ({ page }) => {
+  /**
+   * Epic 3 để chỗ này là một khối chữ "key nằm ở Két sắt (Epic 4)". Story 4.1 mở két thật,
+   * nên bài kiểm đổi theo: hồ sơ phần mềm VẪN không chứa key — key sống ở tab Két sắt.
+   */
+  test('key không nằm trong hồ sơ phần mềm mà ở tab Két sắt', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
     const created = await createViaApi(page, {
@@ -158,9 +162,9 @@ test.describe('Hồ sơ phần mềm', () => {
     });
 
     await page.goto(`/phan-mem/${String(created.body.id)}`);
-    await expect(page.getByRole('heading', { name: 'Chìa khóa / mật khẩu' })).toBeVisible();
-    await expect(page.getByText('Chưa có secret nào cho hồ sơ này.')).toBeVisible();
-    await expect(page.getByText(/nằm trong Két sắt/)).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Két sắt' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Két sắt' }).click();
+    await expect(page.getByText('Chưa cất secret nào')).toBeVisible();
   });
 
   test('tạo hồ sơ bằng form trên UI', async ({ page }) => {

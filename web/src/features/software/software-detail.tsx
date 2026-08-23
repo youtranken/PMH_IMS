@@ -14,6 +14,7 @@ import { HistoryPanel } from '@/ui/history-panel';
 import { LoadError, Loading, NotFound } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { TabPanel, Tabs } from '@/ui/tabs';
+import { VaultPanel } from '@/ui/vault-panel';
 import { useToast } from '@/ui/toast';
 import type { CatalogLists } from '@/features/catalog/catalog-types';
 import { LicenseAssignmentsPanel } from './license-assignments-panel';
@@ -75,6 +76,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
   }
 
   const item = software.data!;
+  const canVault = me.role === 'sa' || me.role === 'admin';
 
   return (
     <>
@@ -113,6 +115,8 @@ export function SoftwareDetail({ me }: { me: Me }) {
           ...(supportsSeats(item.kind)
             ? [{ key: 'devices', label: t('software.tabDevices'), count: item.seatUsed }]
             : []),
+          // Két sắt chỉ hiện với người có quyền — Member không có đường tới endpoint (AD-9).
+          ...(canVault ? [{ key: 'vault', label: t('vault.tab') }] : []),
           { key: 'history', label: t('software.tabHistory') },
         ]}
         value={tab}
@@ -140,13 +144,9 @@ export function SoftwareDetail({ me }: { me: Me }) {
               <Item label={t('software.status')}>{t(STATUS_KEY[item.status])}</Item>
               <Item label={t('software.note')}>{orDash(item.note)}</Item>
             </dl>
-
-            <section className="card device-panel">
-              <h2 className="form-section-title">{t('software.vaultTitle')}</h2>
-              <p className="muted">{t('software.vaultEmpty')}</p>
-              <p className="muted">{t('software.vaultHint')}</p>
-            </section>
           </>
+        ) : tab === 'vault' ? (
+          <VaultPanel ownerType="software" ownerId={item.id} me={me} />
         ) : tab === 'devices' ? (
           <LicenseAssignmentsPanel software={item} csrfToken={me.csrfToken} />
         ) : history.isLoading ? (

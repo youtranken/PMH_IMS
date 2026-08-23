@@ -71,6 +71,20 @@ export function resetSoftware(): void {
   });
 }
 
+/**
+ * Xóa secret do E2E cất. Quy ước: mọi nhãn secret trong test đều chứa "E2E".
+ *
+ * Bảng `secret` không có FK sang device/software (tham chiếu lỏng, AD-4) nên xóa thiết bị
+ * KHÔNG kéo theo secret — không có câu này thì nhãn của lần chạy trước ở lại và ràng buộc
+ * "một chủ thể một nhãn" bắt trúng bản ghi mồ côi.
+ */
+export function resetSecrets(): void {
+  execSync(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "DELETE FROM secret WHERE label ILIKE '%E2E%'"`,
+    { cwd: '..', stdio: 'pipe' },
+  );
+}
+
 /** Xóa luật gửi báo cáo do E2E tạo. Quy ước: mọi tên luật trong test đều chứa "E2E". */
 export function resetDigestRules(): void {
   execSync(

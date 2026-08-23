@@ -26,6 +26,7 @@ import { SoftwareModule } from './modules/software/software.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
 import { QueueModule } from './modules/queue/queue.module';
 import { UsersModule } from './modules/users/users.module';
+import { VaultModule } from './modules/vault/vault.module';
 
 /**
  * Thứ tự guard toàn cục QUAN TRỌNG (Nest chạy theo thứ tự khai báo):
@@ -47,6 +48,9 @@ import { UsersModule } from './modules/users/users.module';
           'req.body.currentPassword',
           'req.body.newPassword',
           'req.body.token',
+          // Giá trị cất vào két + mã TOTP step-up — không bao giờ được thấy trong log (FR-021).
+          'req.body.value',
+          'req.body.totp',
         ],
         transport:
           process.env.NODE_ENV === 'development' ? { target: 'pino-pretty' } : undefined,
@@ -68,6 +72,7 @@ import { UsersModule } from './modules/users/users.module';
     ExpiryModule,
     FilesModule,
     MailModule,
+    VaultModule,
   ],
   controllers: [HealthController],
   providers: [

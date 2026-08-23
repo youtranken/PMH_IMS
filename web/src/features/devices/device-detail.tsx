@@ -12,6 +12,7 @@ import { HistoryPanel } from '@/ui/history-panel';
 import { LoadError, Loading, NotFound } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { TabPanel, Tabs } from '@/ui/tabs';
+import { VaultPanel } from '@/ui/vault-panel';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import type { CatalogLists } from '@/features/catalog/catalog-types';
@@ -93,6 +94,7 @@ export function DeviceDetail({ me }: { me: Me }) {
 
   const item = device.data!;
   const retired = item.status === 'retired';
+  const canVault = me.role === 'sa' || me.role === 'admin';
 
   return (
     <>
@@ -167,6 +169,9 @@ export function DeviceDetail({ me }: { me: Me }) {
           // là chỗ trống vô nghĩa.
           ...(item.hasPortMap ? [{ key: 'ports', label: t('devices.tabPortMap') }] : []),
           { key: 'attachments', label: t('devices.tabAttachments') },
+          // Két sắt chỉ hiện với người có quyền — Member không có đường tới endpoint (AD-9),
+          // hiện tab rồi báo 403 chỉ tổ làm người ta tưởng hệ thống hỏng.
+          ...(canVault ? [{ key: 'vault', label: t('vault.tab') }] : []),
           { key: 'history', label: t('devices.tabHistory') },
         ]}
         value={tab}
@@ -213,6 +218,8 @@ export function DeviceDetail({ me }: { me: Me }) {
           </>
         ) : tab === 'ports' ? (
           <PortMapPanel device={item} csrfToken={me.csrfToken} canEdit={!retired} />
+        ) : tab === 'vault' ? (
+          <VaultPanel ownerType="device" ownerId={item.id} me={me} canEdit={!retired} />
         ) : tab === 'attachments' ? (
           <AttachmentPanel
             ownerType="device"
