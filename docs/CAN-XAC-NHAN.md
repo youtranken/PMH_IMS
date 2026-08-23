@@ -18,6 +18,29 @@
 
 ---
 
+## Đang chờ anh — story 4.3 (không phải chờ quyết định, mà chờ TAY người)
+
+Code của Epic 4 xong hết: két sắt (4.1) và mở két bằng TOTP (4.2) đã chạy, đã test, đã commit.
+Story 4.3 là ba việc máy không làm thay được: **mở phong bì niêm phong**, **đứng trước một máy
+sạch**, và **bấm deploy lên LAN thật**.
+
+Tôi đã viết sẵn đường đi từng bước, kể cả biên bản để in và ký:
+**`docs/RUNBOOK-4.3-dong-dot-1.md`** — ước lượng nửa ngày, cần 2 người (anh + một người nữa
+giữ phong bì thứ hai).
+
+Kèm theo đó là hai script đã viết và một override compose:
+
+| File | Làm gì |
+| --- | --- |
+| `ops/backup-nightly.sh` | pg_dump hằng đêm sang NAS. Tự **dừng** nếu thấy master key nằm cùng thư mục — chìa và ổ khóa phải tách máy |
+| `ops/restore-drill.sh` | Dựng stack trắng, nạp dump, rồi dừng chờ người giữ phong bì **gõ chìa từ bản giấy** |
+| `docker-compose.override.drill.yml` | Mount script giải mã thử — cố ý KHÔNG nằm trong image production |
+
+Cần anh chuẩn bị trước: file Excel 300 thiết bị thật, một máy sạch (hoặc VM mới), NAS mount
+được, cert wildcard `*.pmh.com.vn`, hai phong bì trắng.
+
+---
+
 ## Cần anh xác nhận
 
 ### 1. Hợp đồng ISP: bảng riêng, không phải một "loại phần mềm" — story 3.1/3.3

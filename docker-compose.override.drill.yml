@@ -1,0 +1,13 @@
+# Override CHỈ dùng cho buổi diễn tập khôi phục (story 4.3, NFR-02): mount script giải mã
+# thử vào container. Script này cố tình KHÔNG nằm trong image production — xem api/Dockerfile.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.override.drill.yml up -d api
+#   docker compose exec -T api node scripts/drill-open-secret.mjs <secret-id>
+#
+# Xong buổi diễn tập thì BỎ override này đi. Máy thật chạy `docker compose up -d` trần.
+services:
+  api:
+    volumes:
+      - ./api/scripts/drill-open-secret.mjs:/app/scripts/drill-open-secret.mjs:ro
+    environment:
+      ALLOW_RESTORE_DRILL: '1'
