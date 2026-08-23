@@ -158,7 +158,19 @@ test.describe('Xuất Excel', () => {
     const before = count('software.exported');
     await page.request.get('/api/v1/software/export.xlsx');
     await page.request.get('/api/v1/software/export.xlsx');
-    expect(count('software.exported')).toBe(before + 2);
+
+    /**
+     * Chờ dòng audit hiện ra thay vì đọc một phát.
+     *
+     * Handler dùng `@Res()` không passthrough và `res.end()` NGAY trong thân hàm, còn
+     * `AuditInterceptor` ghi ở `concatMap` SAU khi handler emit — tức là sau khi response đã
+     * bay đi. `await page.request.get()` trả về trước khi INSERT kịp commit. Hôm nay test xanh
+     * chỉ vì khởi động `psql` còn chậm hơn cái INSERT — đó là may, không phải đúng
+     * (code review Epic 7).
+     */
+    await expect
+      .poll(() => count('software.exported'), { timeout: 10_000 })
+      .toBe(before + 2);
   });
 
   test('xuất tôn trọng bộ lọc đang xem, không phải cả bảng', async ({ page }) => {
@@ -180,13 +192,25 @@ test.describe('Xuất Excel', () => {
       data: { code: `DOM-E2E-F2-${stamp}`, name: 'Tên miền lọc B', kind: 'domain', endDate: '2027-02-28' },
     });
 
-    const filtered = await (
-      await page.request.get('/api/v1/software/export.xlsx?kind=domain')
-    ).body();
-    const all = await (await page.request.get('/api/v1/software/export.xlsx')).body();
+    /**
+     * ĐỌC SỐ DÒNG thật trong sheet, không so kích thước file.
+     *
+     * Bản đầu so `filtered.length < all.length` trên bytes của file zip — mà deflate không
+     * đơn điệu theo kích thước đầu vào: một sheet 1 dòng và một sheet 2 dòng có thể nén ra
+     * bằng nhau hoặc ngược nhau tuỳ bảng chuỗi dùng chung. Nó cũng xanh vì những lý do chẳng
+     * liên quan gì tới việc lọc (code review Epic 7).
+     */
+    const filtered = await rowsOf(
+      await (await page.request.get('/api/v1/software/export.xlsx?kind=domain')).body(),
+    );
+    const all = await rowsOf(
+      await (await page.request.get('/api/v1/software/export.xlsx')).body(),
+    );
 
-    // File lọc phải NHỎ HƠN file đầy đủ — cách kiểm rẻ nhất mà không phải mở zip ra đọc.
-    expect(filtered.length).toBeLessThan(all.length);
+    expect(filtered).toContain('Tên miền lọc B');
+    expect(filtered).not.toContain('License lọc A');
+    expect(all).toContain('Tên miền lọc B');
+    expect(all).toContain('License lọc A');
   });
 
   test('Member không xuất được nhật ký break-glass', async ({ page }) => {
@@ -194,3 +218,22 @@ test.describe('Xuất Excel', () => {
     expect((await page.request.get('/api/v1/vault/break-glass/export.xlsx')).status()).toBe(403);
   });
 });
+
+/** Mở file xlsx và trả về chữ của MỌI ô — đủ để khẳng định dòng nào có, dòng nào không. */
+async function rowsOf(buffer: Buffer): Promise<string> {
+  // exceljs là CJS: `await import` trả về namespace, các export thật nằm dưới `.default`.
+  const mod = (await import('exceljs')) as unknown as {
+    default?: { Workbook: new () => import('exceljs').Workbook };
+    Workbook?: new () => import('exceljs').Workbook;
+  };
+  const Workbook = mod.default?.Workbook ?? mod.Workbook!;
+  const wb = new Workbook();
+  await wb.xlsx.load(buffer as unknown as ArrayBuffer);
+  const out: string[] = [];
+  wb.eachSheet((sheet) => {
+    sheet.eachRow((row) => {
+      out.push(row.values?.toString() ?? '');
+    });
+  });
+  return out.join('\n');
+}

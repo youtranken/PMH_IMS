@@ -16,7 +16,8 @@ import { ExpiryService } from './expiry.service';
   imports: [AuditModule, SystemConfigModule, OutboxModule],
   controllers: [ExpiryController],
   providers: [
-    ExcelExportService,ExpiryService, ExpiryDigestService, ExpiryApiService],
+    ExcelExportService,
+    ExpiryService, ExpiryDigestService, ExpiryApiService],
   exports: [ExpiryApiService],
 })
 export class ExpiryModule {}

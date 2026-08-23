@@ -103,15 +103,13 @@ export class IspLineController {
     query: { search?: string; siteId?: string; provider?: string; status?: IspStatus },
     @Res() res: Response,
   ) {
-    const page = await this.isp.list(
-      { page: 1, limit: 5000 },
-      {
-        search: query.search,
-        siteId: query.siteId,
-        provider: query.provider,
-        status: query.status,
-      },
-    );
+    // `listAll` — không cắt ở một con số bịa ra; xem ghi chú ở software.controller.
+    const rows = await this.isp.listAll({
+      search: query.search,
+      siteId: query.siteId,
+      provider: query.provider,
+      status: query.status,
+    });
     const buffer = await this.excel.build({
       sheetName: 'Duong truyen',
       columns: [
@@ -125,7 +123,7 @@ export class IspLineController {
         { header: 'Hết hạn', width: 14, value: (r) => r.endDate ?? '' },
         { header: 'Trạng thái', width: 16, value: (r) => ISP_STATUS_LABEL[r.status] ?? r.status },
       ],
-      rows: page.items,
+      rows,
     });
     sendXlsx(res, buffer, 'duong-truyen.xlsx');
   }

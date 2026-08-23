@@ -3,6 +3,7 @@ import type { Response } from 'express';
 import { IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
 import { Audited } from '../audit/audited.decorator';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
+import { SystemConfigService } from '../config-sys/system-config.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
@@ -47,6 +48,7 @@ export class BreakGlassController {
   constructor(
     private readonly breakGlass: BreakGlassService,
     private readonly excel: ExcelExportService,
+    private readonly config: SystemConfigService,
   ) {}
 
   /** Yêu cầu của CHÍNH MÌNH — Member mở màn này để xem đã được duyệt chưa. */
@@ -82,6 +84,7 @@ export class BreakGlassController {
   @Get('export.xlsx')
   async export(@Res() res: Response) {
     const rows = await this.breakGlass.log();
+    const tz = await this.config.getString('appTimezone');
     const buffer = await this.excel.build({
       sheetName: 'Nhat ky break-glass',
       columns: [
@@ -89,11 +92,32 @@ export class BreakGlassController {
         { header: 'Loại đối tượng', width: 16, value: (r) => r.subjectType },
         { header: 'Mã đối tượng', width: 38, value: (r) => r.subjectId },
         { header: 'Lý do', width: 48, value: (r) => r.reason },
-        { header: 'Trạng thái', width: 16, value: (r) => BG_STATE_LABEL[r.state] ?? r.state },
+        /**
+         * Trạng thái ĐỌC THEO ĐỒNG HỒ, không đọc thẳng cột `state` (AD-6).
+         *
+         * Grant đã quá hạn mà sweep chưa kịp đổi `state` thì cột này in "Đã duyệt" —
+         * và đó chính là tờ giấy đem đi trình auditor. Màn duyệt đã xử đúng chỗ này
+         * rồi; file xuất thì chưa (code review Epic 7).
+         */
+        {
+          header: 'Trạng thái',
+          width: 16,
+          value: (r) =>
+            r.state === 'approved' && !r.active
+              ? `${BG_STATE_LABEL.expired} (chờ dọn)`
+              : (BG_STATE_LABEL[r.state] ?? r.state),
+        },
         { header: 'Người quyết', width: 28, value: (r) => r.decidedBy ?? '' },
         { header: 'Ghi chú quyết', width: 36, value: (r) => r.decisionNote ?? '' },
-        { header: 'Gửi lúc', width: 20, value: (r) => r.createdAt },
-        { header: 'Hết hạn', width: 20, value: (r) => r.expiresAt ?? '' },
+        /**
+         * Ngày giờ ghi thành CHUỖI theo múi giờ ứng dụng, không đưa `Date` thô vào ô.
+         *
+         * ExcelJS quy `Date` về số serial theo giờ UTC. Một yêu cầu lúc 2 giờ sáng giờ VN
+         * sẽ hiện là 19 giờ HÔM TRƯỚC trong file — lệch 7 tiếng, có khi lệch cả ngày, so
+         * với chính màn hình vừa bấm xuất (code review Epic 7).
+         */
+        { header: 'Gửi lúc', width: 20, value: (r) => atLocal(r.createdAt, tz) },
+        { header: 'Hết hạn', width: 20, value: (r) => atLocal(r.expiresAt, tz) },
       ],
       rows,
     });
@@ -149,3 +173,18 @@ const BG_STATE_LABEL: Record<string, string> = {
   expired: 'Hết hạn',
   revoked: 'Đã thu hồi',
 };
+
+/** `Date` → chuỗi đọc được theo múi giờ ứng dụng (AD-11), hoặc rỗng nếu không có. */
+function atLocal(at: Date | null, timeZone: string): string {
+  if (!at) return '';
+  try {
+    return new Intl.DateTimeFormat('vi-VN', {
+      timeZone,
+      dateStyle: 'short',
+      timeStyle: 'short',
+    }).format(at);
+  } catch {
+    // Múi giờ cấu hình sai lùi về ISO chứ không ném — cùng nếp với `isoDateInTz` (Epic 3).
+    return at.toISOString().replace('T', ' ').slice(0, 16);
+  }
+}

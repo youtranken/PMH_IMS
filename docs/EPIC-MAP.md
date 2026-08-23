@@ -440,3 +440,80 @@ service của module chủ**. Chưa có file nội bộ nào thành hub. `depcru
     điệp tử tế) và ràng buộc DB (cho đúng đắn) đều chặn "xin trùng" — nhưng một cái ném 400,
     một cái ném 409. Client không xử lý tử tế được một API đổi mã theo nhịp gõ phím, và test
     thì đỏ ngẫu nhiên. Chạy riêng một bài thì luôn trúng một nhánh; chỉ bộ đầy đủ mới lộ ra.
+
+## Epic 7 — Dashboard sếp (đóng 2026-08-23)
+
+### Bảng mới và ai sở hữu (AD-3)
+
+| Bảng | Module chủ | Ghi chú cho epic sau |
+| --- | --- | --- |
+| _(không có)_ | `dashboard` | Module ĐỌC thuần — không sở hữu bảng nào. Đây là chỗ dễ phá AD-2 nhất hệ thống: một cái JOIN ở đây thì dashboard thành nơi mọi bảng của mọi module gặp nhau, và từ đó không module nào đổi được lược đồ của mình nữa |
+
+### Hợp đồng epic sau sẽ dùng
+
+| Thứ | Ở đâu | Epic dùng |
+| --- | --- | --- |
+| `DashboardBlock<T>` với cờ `available` | `modules/dashboard/dashboard.service.ts` | **Epic 9** bật khối sự cố: đổi `available: false` thành gọi `incidents.api`. Không phải sửa web |
+| Mẫu export: `ExcelExportService.build` + `sendXlsx` + `@Audited('*.exported')` | `common/excel/` | Mọi bảng mới. Ba thứ đi cùng nhau — thiếu `@Audited` là mất vết "ai kéo cả kho ra file" |
+| `ExportXlsxButton` | `web/src/ui/export-xlsx-button.tsx` | Mọi màn danh sách. Truyền nguyên query của bộ lọc đang xem |
+
+### Nợ kỹ thuật cố ý mang sang
+
+| Việc | Vì sao hoãn | Hạn chót |
+| --- | --- | --- |
+| Khối "sự cố tuần qua" mới là chỗ trống có khai báo | Epic 9 chưa mở; khối vẫn HIỆN và nói rõ "hệ thống CHƯA theo dõi mục này" | Epic 9 |
+| Export không ghi bộ lọc vào audit | `AuditInterceptor` cố ý chỉ ghi method + path, không ghi query string (nơi dễ lọt thứ không nên ghi) | Khi cần biết chính xác ai xuất bộ lọc nào |
+| Trần 5000 dòng mỗi lần xuất, im lặng | Quy mô PMH còn xa mới chạm | Khi một bảng vượt ~4000 dòng thì phải báo cho người xuất biết là đã cắt |
+| Dashboard chưa cache | Ba khối, mỗi khối một truy vấn nhẹ | Khi có người phàn nàn trang chủ chậm |
+
+### Code review đóng epic — 11 finding, đã sửa hết
+
+Không finding nào tsc hay eslint thấy được. Bốn cái đầu cùng một họ: **file xuất nói khác
+màn hình** — mà file xuất mới là thứ đem đi trình auditor.
+
+| # | Mức | Vấn đề | Cách sửa |
+| --- | --- | --- | --- |
+| 1 | **Cao** | `STATUS_LABEL` tự chế trong controller có khóa KHÔNG TỒN TẠI (`expired_no_renew`, `dropped`) trong khi trạng thái thật là `expired_ok`/`retired`. Kiểu `Record<string, string>` nên TS im, `?? r.status` nuốt nốt → mọi hồ sơ hết hạn/đã bỏ in ra MÃ MÁY. `software-rules.ts` đã có sẵn bản đúng, doc ghi rõ "dùng cho file export" | Import bản canon. Kiểu `Record<SoftwareStatus, string>` biến sai sót này thành lỗi biên dịch |
+| 2 | Trung bình | `KIND_LABEL` chép lại bản canon và ĐÃ TRÔI: `'License'` ở đây vs `'License phần mềm'` ở kia — email digest và file xlsx gọi cùng một thứ bằng hai tên (AD-15) | Import bản canon, xoá bản chép |
+| 3 | Trung bình | File sắp-hết-hạn in `warranty` trong khi màn hình hiện "Bảo hành thiết bị" — auditor cầm hai tờ giấy nói hai thứ khác nhau về cùng một dòng | Tra nhãn từ `expiry.kinds()` (đã inject sẵn) |
+| 4 | Trung bình | Nhét `Date` thô vào ô Excel: ExcelJS quy về serial theo giờ **UTC**, còn màn hình format theo `Asia/Ho_Chi_Minh`. Yêu cầu lúc 2 giờ sáng hiện thành 19 giờ HÔM TRƯỚC trong file | Ghi thành chuỗi theo múi giờ ứng dụng (AD-11) |
+| 5 | Trung bình | Cột trạng thái nhật ký break-glass đọc thẳng `state`, bỏ qua `active` — grant đã quá hạn mà sweep chưa dọn thì file ghi "Đã duyệt". Chính là điều AD-6 cấm, và màn duyệt đã xử đúng rồi | Đọc theo đồng hồ như mọi chỗ khác |
+| 6 | Thấp/TB | `@Audited('ip.exported', 'ip_address')` trên route theo DẢI: interceptor ghi `objectId = params.id` (id của subnet) nhưng `objectType` nói `ip_address` → dòng audit trỏ tới một uuid không tồn tại ở bảng đó | Đổi thành `'subnet'` |
+| 7 | Thấp/TB | Export phần mềm cắt im lặng ở 5000 dòng, trong khi `SoftwareService.listAll` đã có sẵn và doc ghi "chỉ dùng cho export xlsx (FR-028)" — tôi không đọc trước khi viết | Dùng `listAll` |
+| 8 | Thấp/TB | ISP y hệt, kèm số 5000 viết cứng lần hai | Dùng `listAll` |
+| 9 | Thấp/TB | Nút Xuất ở màn duyệt hiện trên MỌI tab nhưng luôn tải toàn bộ lịch sử — người đang xem "Chờ duyệt" bấm Xuất và im lặng nhận cả kho, trái luật "xuất đúng bộ lọc đang xem" | Chỉ hiện ở tab Nhật ký |
+| 10 | Thấp | Bài kiểm audit đọc số ngay sau `await request.get()`. Handler `@Res()` gọi `res.end()` trong thân hàm, còn interceptor ghi SAU khi emit — response bay đi trước khi INSERT commit. Xanh hôm nay chỉ vì khởi động `psql` chậm hơn cái INSERT | `expect.poll` |
+| 11 | Thấp | So kích thước file zip để suy ra số dòng. Deflate không đơn điệu theo đầu vào — 1 dòng và 2 dòng có thể nén ra bằng nhau hoặc ngược nhau | Mở sheet bằng exceljs, khẳng định dòng nào CÓ và dòng nào KHÔNG |
+
+### Bẫy đã gặp — đừng lặp lại
+
+1. **Một global interceptor khai ở hai module thì Nest áp CẢ HAI.** `AuditInterceptor` được
+   khai `APP_INTERCEPTOR` ở cả `app.module.ts` lẫn `audit.module.ts` → mọi route dựa vào
+   interceptor ghi audit đều đẻ ra hai dòng. Ẩn suốt **sáu epic** vì gần như mọi endpoint ghi
+   đều dùng `writtenByService: true` (service tự ghi, interceptor bỏ qua), nên không có route
+   nào thật sự đi qua đường đó. Story 7.2 là chỗ đầu tiên có, và bài kiểm "ghi MỘT dòng" đếm
+   ra 2. Bài học rộng hơn: **một nhánh code không ai đi qua là một nhánh không ai kiểm** — dù
+   nó nằm ở tầng hạ tầng và trông như đã chạy suốt.
+2. **Đổi chữ trên trang đích là đổi mốc chờ của cả bộ E2E.** Dashboard thay trang đáp cũ, mà
+   `firstLogin` chờ đúng chữ "Xin chào". Đổi tiêu đề thành "Chào" là 130 bài đỏ theo. Giữ
+   nguyên lời chào — vừa tự nhiên hơn vừa không phá gì.
+3. **"Chưa có phần này" ≠ "không có gì".** Khối sự cố phải nói rõ là hệ thống CHƯA theo dõi.
+   Một ô trống gọn gàng là cách nhanh nhất để sếp yên tâm nhầm. Có test khẳng định câu
+   "tuần qua không có sự cố nào" KHÔNG xuất hiện khi module chưa mở.
+4. **Rút gọn theo vai phải làm ở SERVER.** Ẩn khối ở web thì dữ liệu vẫn đi qua dây và Member
+   mở tab mạng ra là đọc được nhật ký break-glass toàn công ty. Test kiểm thẳng payload API,
+   không chỉ kiểm giao diện.
+5. **Route tĩnh phải khai TRƯỚC route `:id`.** `export.xlsx` để sau `@Get(':id')` thì bị `:id`
+   nuốt và trả 400 vì không phải uuid. Nest khớp theo thứ tự khai báo.
+6. **Bản chép của một hằng số sẽ trôi, và trôi im lặng.** Hai map nhãn tự chế trong controller
+   khi bản canon đã có sẵn ở `software-rules.ts` — một cái sai hẳn khóa, một cái đổi chữ. Cả
+   hai lọt qua tsc vì kiểu là `Record<string, string>`. Ràng buộc kiểu theo union
+   (`Record<SoftwareStatus, string>`) biến đúng loại sai sót này thành lỗi biên dịch.
+7. **File xuất là một MÀN HÌNH THỨ HAI, và nó phải nói y hệt màn thứ nhất.** Bốn finding của
+   epic này cùng một họ: mã máy thay vì nhãn, giờ UTC thay vì giờ VN, trạng thái đọc từ cột
+   thay vì tính theo đồng hồ. Trên màn hình thì đúng cả — nhưng thứ đem đi trình auditor là
+   cái file.
+8. **`await request.get()` KHÔNG có nghĩa là mọi hệ quả đã ghi xong.** Interceptor ghi audit
+   sau khi response đã bay đi. Đọc DB ngay sau đó là đọc trước khi commit; test xanh vì may.
+9. **Đừng suy ra nội dung từ kích thước file nén.** Mở file ra mà đọc — exceljs đã là
+   dependency sẵn có.

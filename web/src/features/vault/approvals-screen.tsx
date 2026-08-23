@@ -107,8 +107,14 @@ export function ApprovalsScreen({ me }: { me: Me }) {
         title={t('approvals.title')}
         subtitle={t('approvals.subtitle')}
         actions={
-          /* Nhật ký là thứ đem đi trình auditor — file KHÔNG có cột nào chứa secret (FR-026). */
-          canDecide ? (
+          /*
+            Nút Xuất CHỈ ở tab Nhật ký, vì file luôn là toàn bộ lịch sử.
+            Để nó ở mọi tab thì người đang xem "Chờ duyệt" bấm Xuất và im lặng nhận cả kho —
+            trái đúng luật "xuất đúng bộ lọc đang xem" mà mọi màn khác đang theo
+            (code review Epic 7). Nhật ký là thứ đem đi trình auditor; file không có cột nào
+            chứa secret (FR-026).
+          */
+          canDecide && tab === 'log' ? (
             <ExportXlsxButton
               url="/api/v1/vault/break-glass/export.xlsx"
               fileName="nhat-ky-break-glass.xlsx"

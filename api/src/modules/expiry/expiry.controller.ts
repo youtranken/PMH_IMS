@@ -114,10 +114,17 @@ export class ExpiryController {
       kinds: query.kinds ? query.kinds.split(',').filter(Boolean) : undefined,
       includeExpired: query.includeExpired !== 'false',
     });
+    /**
+     * Nhãn loại lấy từ sổ đăng ký nguồn hạn, không in mã máy.
+     *
+     * Màn hình hiện "Bảo hành thiết bị"; file xuất mà in `warranty` thì auditor cầm hai tờ
+     * giấy nói hai thứ khác nhau về cùng một dòng (code review Epic 7).
+     */
+    const kindLabel = new Map(this.expiry.kinds().map((k) => [k.kind, k.label]));
     const buffer = await this.excel.build({
       sheetName: 'Sap het han',
       columns: [
-        { header: 'Loại', width: 18, value: (r) => r.kind },
+        { header: 'Loại', width: 18, value: (r) => kindLabel.get(r.kind) ?? r.kind },
         { header: 'Tên', width: 36, value: (r) => r.label },
         { header: 'Chi tiết', width: 28, value: (r) => r.sublabel ?? '' },
         { header: 'Bắt đầu', width: 14, value: (r) => r.start ?? '' },

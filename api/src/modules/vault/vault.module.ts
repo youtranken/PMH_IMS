@@ -32,7 +32,8 @@ import { VaultService } from './vault.service';
   imports: [AuditModule, AuthModule, CatalogModule, DevicesModule, SoftwareModule, UsersModule, ApprovalsModule, OutboxModule],
   controllers: [VaultController, VaultAccessController, BreakGlassController],
   providers: [
-    ExcelExportService,VaultService, VaultApiService, VaultDevicePanel, AccessListService, BreakGlassService, StepUpGuard],
+    ExcelExportService,
+    VaultService, VaultApiService, VaultDevicePanel, AccessListService, BreakGlassService, StepUpGuard],
   exports: [VaultApiService],
 })
 export class VaultModule {}

@@ -174,7 +174,9 @@ export class IpamController {
    * file 254 dòng mà 250 dòng rỗng thì người nhận phải tự lọc — đúng việc mình vừa bắt máy làm.
    */
   @Roles('sa', 'admin', 'member')
-  @Audited('ip.exported', 'ip_address')
+  // `objectType` là 'subnet': interceptor ghi `objectId = params.id`, mà id ở đây là id
+  // của DẢI. Khai 'ip_address' thì dòng audit trỏ tới một uuid không tồn tại ở bảng đó.
+  @Audited('ip.exported', 'subnet')
   @Get('subnets/:id/export.xlsx')
   async exportAddresses(@Param() params: IdParamDto, @Res() res: Response) {
     const subnet = await this.subnets.findOne(params.id);
