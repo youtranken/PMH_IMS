@@ -89,6 +89,7 @@ export class VaultController {
     private readonly config: SystemConfigService,
   ) {}
 
+
   @Roles('sa', 'admin')
   @Get()
   list(@Query() query: OwnerQueryDto) {

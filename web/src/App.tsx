@@ -17,6 +17,7 @@ import { CatalogScreen } from '@/features/catalog/catalog-screen';
 import { DeviceDetail } from '@/features/devices/device-detail';
 import { DevicesScreen } from '@/features/devices/devices-screen';
 import { ExpiryScreen } from '@/features/expiry/expiry-screen';
+import { AccessMatrixScreen } from '@/features/vault/access-matrix-screen';
 import { NatScreen } from '@/features/ipam/nat-screen';
 import { SubnetDetail } from '@/features/ipam/subnet-detail';
 import { SubnetsScreen } from '@/features/ipam/subnets-screen';
@@ -87,6 +88,7 @@ function AppRoutes() {
         <Route path="/" element={<Home me={me} />} />
         <Route path="/quan-tri/tai-khoan" element={<AccountsScreen me={me} />} />
         <Route path="/quan-tri/danh-muc" element={<CatalogScreen me={me} />} />
+        <Route path="/quan-tri/quyen-ket-sat" element={<AccessMatrixScreen me={me} />} />
         <Route path="/thiet-bi" element={<DevicesScreen me={me} />} />
         <Route path="/thiet-bi/:id" element={<DeviceDetail me={me} />} />
         <Route path="/phan-mem" element={<SoftwareScreen me={me} />} />

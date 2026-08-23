@@ -1,8 +1,14 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
+import { CatalogModule } from '../catalog/catalog.module';
+import { DevicesModule } from '../devices/devices.module';
+import { SoftwareModule } from '../software/software.module';
+import { UsersModule } from '../users/users.module';
+import { AccessListService } from './access-list.service';
 import { AuthModule } from '../auth/auth.module';
 import { StepUpGuard } from '../auth/step-up.guard';
 import { VaultApiService } from './vault.api';
+import { VaultAccessController } from './vault-access.controller';
 import { VaultController } from './vault.controller';
 import { VaultDevicePanel } from './vault-device-panel';
 import { VaultService } from './vault.service';
@@ -18,9 +24,9 @@ import { VaultService } from './vault.service';
  * Ra ngoài chỉ xuất `VaultApiService`, và api đó KHÔNG có đường lấy plaintext.
  */
 @Module({
-  imports: [AuditModule, AuthModule],
-  controllers: [VaultController],
-  providers: [VaultService, VaultApiService, VaultDevicePanel, StepUpGuard],
+  imports: [AuditModule, AuthModule, CatalogModule, DevicesModule, SoftwareModule, UsersModule],
+  controllers: [VaultController, VaultAccessController],
+  providers: [VaultService, VaultApiService, VaultDevicePanel, AccessListService, StepUpGuard],
   exports: [VaultApiService],
 })
 export class VaultModule {}

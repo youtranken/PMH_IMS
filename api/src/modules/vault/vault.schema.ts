@@ -37,3 +37,24 @@ export const secretTable = pgTable('secret', {
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
   revokedBy: text('revoked_by'),
 });
+
+/** citext: email so không phân biệt hoa-thường — `IT01@` và `it01@` là một người. */
+const citext = customType<{ data: string }>({ dataType: () => 'citext' });
+
+/**
+ * Bảng `access_list` — migration 0024 (story 6.2). Chủ sở hữu: `vault` (AD-3).
+ *
+ * Chỉ chứa `whitelist` và `needs_approval`. CẤM là mặc định (không có dòng), không phải một
+ * lời gán — xem `access-tier.ts`.
+ */
+export const accessListTable = pgTable('access_list', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  memberEmail: citext('member_email').notNull(),
+  scopeType: text('scope_type').notNull(),
+  scopeRef: text('scope_ref').notNull(),
+  tier: text('tier').notNull(),
+  grantedBy: text('granted_by').notNull(),
+  note: text('note'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});

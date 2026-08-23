@@ -156,6 +156,14 @@ export function resetIpam(): void {
   });
 }
 
+/** Xóa mọi lời gán quyền két sắt của tài khoản E2E — ma trận phải sạch giữa các lần chạy. */
+export function resetAccessList(): void {
+  execSync(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "DELETE FROM access_list WHERE member_email ILIKE '%e2e%'"`,
+    { cwd: '..', stdio: 'pipe' },
+  );
+}
+
 /** Xóa luật gửi báo cáo do E2E tạo. Quy ước: mọi tên luật trong test đều chứa "E2E". */
 export function resetDigestRules(): void {
   execSync(
