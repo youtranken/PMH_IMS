@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { errorCode, errorMessage, useApiMutation } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
-import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDateTime, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { Dialog, DialogTitle } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
+import { RevealDialog } from '@/ui/reveal-dialog';
+import { StepUpDialog } from '@/ui/step-up-dialog';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 
@@ -35,8 +37,9 @@ export interface SecretMeta {
  * Hai màn tự viết hai bản là hai lần phải nhớ "đừng bao giờ hiện giá trị ở bảng", và sẽ có
  * màn quên.
  *
- * Ở 4.1 bảng CHỈ có metadata: nhãn, loại, tên đăng nhập. Không có nút Xem — đường mở két đi
- * kèm TOTP step-up là story 4.2. Cũng không có nút "xuất tất cả": FR-026 cấm ở mọi quyền.
+ * Bảng CHỈ có metadata: nhãn, loại, tên đăng nhập. Giá trị chỉ hiện khi bấm Xem và gõ TOTP
+ * (4.2), hiện đúng một secret, tự ẩn sau `secret.reveal_seconds`. Không có nút "xuất tất cả":
+ * FR-026 cấm ở mọi quyền.
  */
 export function VaultPanel({
   ownerType,
@@ -55,6 +58,10 @@ export function VaultPanel({
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<{ secret: SecretMeta | null } | null>(null);
   const [rotating, setRotating] = useState<SecretMeta | null>(null);
+  const [pendingStepUp, setPendingStepUp] = useState<SecretMeta | null>(null);
+  const [revealed, setRevealed] = useState<
+    { label: string; value: string; seconds: number } | null
+  >(null);
 
   // Chỉ SA/Admin có quyền tới endpoint két sắt (AD-9). Member thấy lời giải thích, không
   // thấy bảng trống kèm một lỗi 403 lặng lẽ trong console.
@@ -76,6 +83,30 @@ export function VaultPanel({
   );
 
   const refresh = () => queryClient.invalidateQueries({ queryKey });
+
+  /**
+   * Mở két. KHÔNG tự đoán "còn trong grace hay chưa" ở client: cứ gọi, gặp
+   * `STEPUP_REQUIRED` thì hỏi mã rồi thử lại đúng secret đó. Đồng hồ máy người dùng lệch,
+   * hay admin vừa đổi `secret.stepup_grace_minutes`, đều không làm sai luồng này.
+   */
+  const openSecret = useCallback(
+    async (secret: SecretMeta, afterStepUp = false) => {
+      try {
+        const opened = await apiFetch<{ value: string; revealSeconds: number }>(
+          `/api/v1/vault/secrets/${secret.id}/reveal`,
+          { method: 'POST', csrfToken: me.csrfToken },
+        );
+        setRevealed({ label: secret.label, value: opened.value, seconds: opened.revealSeconds });
+      } catch (error) {
+        if (!afterStepUp && errorCode(error) === 'STEPUP_REQUIRED') {
+          setPendingStepUp(secret);
+          return;
+        }
+        toast({ message: errorMessage(error), tone: 'error' });
+      }
+    },
+    [me.csrfToken, toast],
+  );
 
   if (!allowed) return <p className="alert">{t('vault.noPermission')}</p>;
 
@@ -113,7 +144,7 @@ export function VaultPanel({
                 <th>{t('vault.username')}</th>
                 <th>{t('vault.note')}</th>
                 <th>{t('vault.updatedAt')}</th>
-                {canEdit ? <th className="col-center">{t('common.actions')}</th> : null}
+                <th className="col-center">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -126,9 +157,19 @@ export function VaultPanel({
                   </td>
                   <td data-label={t('vault.note')}>{orDash(secret.note)}</td>
                   <td data-label={t('vault.updatedAt')}>{formatDateTime(secret.updatedAt)}</td>
-                  {canEdit ? (
-                    <td>
-                      <div className="action-cell">
+                  <td>
+                    <div className="action-cell">
+                      {/* Xem được kể cả khi hồ sơ đã khóa: thiết bị thanh lý rồi vẫn có lúc
+                          phải tra mật khẩu cũ để gỡ cấu hình. Khóa là khóa GHI. */}
+                      <button
+                        type="button"
+                        className="btn sm"
+                        onClick={() => void openSecret(secret)}
+                      >
+                        {t('vault.reveal')}
+                      </button>
+                      {canEdit ? (
+                        <>
                         <button
                           type="button"
                           className="btn sm"
@@ -169,9 +210,10 @@ export function VaultPanel({
                         >
                           {t('vault.revoke')}
                         </button>
-                      </div>
-                    </td>
-                  ) : null}
+                        </>
+                      ) : null}
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -191,6 +233,29 @@ export function VaultPanel({
             toast({ message: t('vault.saved') });
             void refresh();
           }}
+        />
+      ) : null}
+
+      {pendingStepUp ? (
+        <StepUpDialog
+          csrfToken={me.csrfToken}
+          onClose={() => setPendingStepUp(null)}
+          onDone={() => {
+            const secret = pendingStepUp;
+            setPendingStepUp(null);
+            // `afterStepUp` = true: gõ mã xong mà vẫn bị đòi mã nữa thì đó là lỗi thật,
+            // không phải chuyện để hỏi lại vòng hai — nếu không sẽ thành vòng lặp hộp thoại.
+            void openSecret(secret, true);
+          }}
+        />
+      ) : null}
+
+      {revealed ? (
+        <RevealDialog
+          label={revealed.label}
+          value={revealed.value}
+          seconds={revealed.seconds}
+          onClose={() => setRevealed(null)}
         />
       ) : null}
 
@@ -442,3 +507,4 @@ function RotateForm({
     </Dialog>
   );
 }
+

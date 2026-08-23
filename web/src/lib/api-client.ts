@@ -28,6 +28,9 @@ const USER_INPUT_401_CODES = new Set([
   'TOTP_INVALID',
   'TOTP_REPLAYED',
   'CURRENT_PASSWORD_WRONG',
+  // Hết hạn step-up KHÔNG phải phiên chết: phiên vẫn sống, chỉ cần gõ lại mã 6 số. Thiếu
+  // dòng này thì bấm Xem một secret sau 10 phút là bị đá thẳng về màn đăng nhập (FR-022).
+  'STEPUP_REQUIRED',
 ]);
 
 /**

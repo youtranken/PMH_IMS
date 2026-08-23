@@ -26,11 +26,13 @@
 | `ImportDialog` | `ui/import-dialog.tsx` | Hộp thoại nhập Excel hai bước (đối chiếu → ghi): danh mục 2.1, thiết bị 2.6 | Không tự dựng luồng import riêng |
 | `AttachmentPanel` | `ui/attachment-panel.tsx` | Giấy tờ đính kèm của MỌI chủ thể (`ownerType`/`ownerId`): thiết bị 2.3, phiếu Epic 8, sự cố Epic 9 | Không tự viết upload riêng — sẽ quên luật "tải về, không mở inline" |
 | `VaultPanel` | `ui/vault-panel.tsx` | Két sắt của MỌI chủ thể (`ownerType`/`ownerId`): thiết bị 4.1, phần mềm 4.1 | Không tự dựng bảng secret riêng — mỗi bản tự viết là một lần có thể lỡ hiện giá trị ra bảng, và cấm thêm nút "xuất tất cả" ở bất kỳ đâu (FR-026) |
+| `StepUpDialog` | `ui/step-up-dialog.tsx` | Hộp gõ TOTP mở quyền xem bí mật (FR-022): két sắt 4.2, break-glass Epic 6 | Không tự tính "còn trong grace hay chưa" ở client — cứ gọi việc, gặp `STEPUP_REQUIRED` thì mở hộp này rồi thử lại |
+| `RevealDialog` | `ui/reveal-dialog.tsx` | Hiện một giá trị bí mật rồi tự ẩn sau `secret.reveal_seconds` | Cấm tự dựng hộp hiện secret: sẽ quên đếm ngược theo MỐC (tab nền bị hãm nhịp) và quên bỏ nút sao chép |
+| `OtpInput` | `ui/otp-input.tsx` | Ô nhập mã 6 số: đăng nhập, enroll, step-up | Chuyển từ `features/auth/` sang `ui/` ở story 4.2 — `ui` không được import ngược vào `features` |
 | `HistoryPanel` | `ui/history-panel.tsx` | Lịch sử nghiệp vụ (AD-13) | Nhật ký an ninh → màn Audit riêng |
 | `DatePicker`, `DateTimePicker` | `ui/date-picker.tsx`, `ui/date-time-picker.tsx` | Mọi ô chọn ngày/giờ | Không dùng `<input type="date">` trần |
 | `Loading`, `LoadError`, `EmptyState`, `NotFound` | `ui/load-state.tsx` | Mọi màn có fetch: phân biệt tải ≠ rỗng ≠ lỗi | — |
 | `Select`, `Combobox`, `ThemeSwitch`, `PhotoLightbox`, `NavIcon` | `ui/` | Theo tên | — |
-| `OtpInput` | `features/auth/otp-input.tsx` | Nhập mã 6 số: đăng nhập, enroll, step-up | — |
 | `AuthCard` | `features/auth/auth-card.tsx` | Màn ngoài shell (đăng nhập, TOTP, đổi mật khẩu) | Màn trong app → `AppShell` |
 | `AppShell` | `shell/app-shell.tsx` | Khung sidebar + topbar của mọi màn nghiệp vụ | — |
 
@@ -67,6 +69,7 @@
 | `GlobalExceptionFilter` | `common/global-exception.filter.ts` | Một shape lỗi cho toàn API | — |
 | `@Audited` + `AuditInterceptor` | `modules/audit/` | Mọi endpoint ghi (AD-9) | — |
 | `@Roles` + `RolesGuard` | `modules/auth/roles.*` | Mọi controller — thiếu là bị chặn (AD-9) | Route công khai phải khai `@Public()` |
+| `@RequiresStepUp()` + `StepUpGuard` | `modules/auth/step-up.guard.ts` | Route đòi vừa gõ TOTP xong: mở két 4.2, break-glass Epic 6 | Cấm viết `if (steppedUpAt…)` trong service — mỗi chỗ tự viết là mỗi chỗ có thể quên, và cái quên đó không làm test nào đỏ |
 | `SessionGuard`, `CsrfGuard` | `modules/auth/` | Toàn cục | — |
 | `PasswordService` | `modules/auth/password.service.ts` | Băm/kiểm mật khẩu | Cấm import `@node-rs/argon2` nơi khác |
 | `TotpService` | `modules/auth/totp.service.ts` | TOTP + chống replay | — |
@@ -87,4 +90,5 @@
 | Cấm `exceljs`/`nodemailer`/`argon2`/`createCipheriv` ngoài chỗ được phép (AD-15) | eslint `no-restricted-imports` / `no-restricted-syntax` | `npm --prefix api run lint` |
 | Bảng `secret` chỉ dùng trong module `vault` (AD-4) | dependency-cruiser luật `secret-table-only-in-vault` | `npm --prefix api run depcruise` |
 | Không có đường xuất toàn bộ két ở mọi quyền (FR-026) | Jest `vault-surface.spec.ts` + E2E `vault.spec.ts` | `npm --prefix api test` / `npm run test:e2e` |
+| Mở két phải step-up + `no-store` + một id mỗi lần (FR-022) | Jest `vault-surface.spec.ts` + E2E `vault-reveal.spec.ts` | `npm --prefix api test` / `npm run test:e2e` |
 | Cấm hex màu ngoài `tokens.css` | rà bằng `grep -rE "#[0-9a-fA-F]{3,8}" web/src --include=*.css` | thêm vào CI khi dựng pipeline |

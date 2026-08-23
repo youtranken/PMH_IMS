@@ -42,8 +42,30 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
     }
   });
 
-  it('4.1 chưa mở đường xem giá trị — reveal phải chờ TOTP step-up của 4.2', () => {
-    expect(controller).not.toContain('reveal');
+  /**
+   * Đường mở két (4.2) là chỗ DUY NHẤT plaintext rời khỏi hệ thống. Ba thứ dưới đây mất
+   * bất kỳ cái nào cũng không làm test nghiệp vụ nào đỏ, nên khóa chúng ở đây:
+   * step-up (phiên bị chiếm vẫn không mở được), `no-store` (bấm Back ở máy dùng chung),
+   * và MỘT id mỗi lần (không có dạng nhận mảng — đó là FR-026 đi cửa sau).
+   */
+  it('đường mở két có step-up, no-store, và mỗi lần đúng một secret', () => {
+    const reveal = /@Roles[\s\S]*?@Post\(':id\/reveal'\)[\s\S]*?async reveal\(([\s\S]*?)\) \{/.exec(
+      controller,
+    );
+    expect(reveal).not.toBeNull();
+
+    const decorators = controller.slice(
+      controller.lastIndexOf('@Roles', controller.indexOf("@Post(':id/reveal')")),
+      controller.indexOf('async reveal('),
+    );
+    expect(decorators).toContain('@RequiresStepUp()');
+    expect(decorators).toContain('StepUpGuard');
+    expect(decorators).toContain("@Header('Cache-Control', 'no-store')");
+    expect(decorators).toContain("@Roles('sa', 'admin')");
+
+    // Tham số là IdParamDto (một id ở path), không phải body mang danh sách.
+    expect(reveal![1]).toContain('IdParamDto');
+    expect(reveal![1]).not.toContain('Body');
   });
 
   /**

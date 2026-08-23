@@ -486,5 +486,8 @@ export default {
     note: 'Ghi chú',
     noteHint: 'Đừng viết mật khẩu vào đây — ghi chú không được mã hóa.',
     updatedAt: 'Cập nhật',
+    reveal: 'Xem',
+    autoHide: 'Tự ẩn sau {{seconds}} giây',
+    hideNow: 'Ẩn ngay',
   },
 } as const;

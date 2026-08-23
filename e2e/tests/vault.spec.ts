@@ -66,11 +66,10 @@ test.describe('Két sắt', () => {
     await expect(row.getByText('Mật khẩu', { exact: true })).toBeVisible();
 
     /**
-     * Điểm kiểm quan trọng nhất của story: giá trị KHÔNG có mặt ở đâu trên trang, kể cả
-     * trong DOM ẩn. Ở 4.1 chưa có đường mở két — nút Xem là chuyện của 4.2.
+     * Điểm kiểm quan trọng nhất của story: bảng CHỈ có metadata. Giá trị không có mặt ở đâu
+     * trên trang cho tới khi bấm Xem và qua step-up (4.2) — kể cả trong DOM ẩn.
      */
     await expect(page.locator('body')).not.toContainText(secretValue);
-    await expect(page.getByRole('button', { name: 'Xem' })).toHaveCount(0);
 
     // Xoay: đổi giá trị, metadata giữ nguyên.
     await row.getByRole('button', { name: 'Xoay' }).click();

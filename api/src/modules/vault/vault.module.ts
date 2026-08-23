@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
+import { StepUpGuard } from '../auth/step-up.guard';
 import { VaultApiService } from './vault.api';
 import { VaultController } from './vault.controller';
 import { VaultDevicePanel } from './vault-device-panel';
@@ -19,7 +20,7 @@ import { VaultService } from './vault.service';
 @Module({
   imports: [AuditModule, AuthModule],
   controllers: [VaultController],
-  providers: [VaultService, VaultApiService, VaultDevicePanel],
+  providers: [VaultService, VaultApiService, VaultDevicePanel, StepUpGuard],
   exports: [VaultApiService],
 })
 export class VaultModule {}

@@ -19,6 +19,29 @@ export function resetUsers(): void {
     env: { ...process.env, ALLOW_E2E_RESET: '1' },
   });
   relaxLoginRateLimit();
+  dropAccountsCreatedByE2e();
+}
+
+/**
+ * Xóa tài khoản do test "SA tạo tài khoản mới" đẻ ra (`e2e-tao-moi-…`).
+ *
+ * `reset-e2e-user.mjs` chỉ đưa HAI tài khoản cố định về trạng thái ban đầu; tài khoản tạo
+ * trong lúc chạy thì ở lại. Sau vài chục lần chạy, danh sách tài khoản tràn sang trang 2 và
+ * bài kiểm "tạo xong phải thấy trong danh sách" đỏ — không phải vì sản phẩm sai mà vì rác
+ * của những lần chạy trước. Cùng quy ước với `resetDevices`/`resetSoftware`: chỉ đụng tiền tố
+ * E2E, không bao giờ chạm tài khoản thật của PMH.
+ */
+function dropAccountsCreatedByE2e(): void {
+  const match = "email LIKE 'e2e-tao-moi-%'";
+  const sql = [
+    `DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE ${match})`,
+    `DELETE FROM known_device WHERE user_id IN (SELECT id FROM users WHERE ${match})`,
+    `DELETE FROM users WHERE ${match}`,
+  ].join('; ');
+  execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -c "${sql}"`, {
+    cwd: '..',
+    stdio: 'pipe',
+  });
 }
 
 /**
@@ -83,6 +106,30 @@ export function resetSecrets(): void {
     `${COMPOSE} exec -T postgres psql -U ims -d ims -c "DELETE FROM secret WHERE label ILIKE '%E2E%'"`,
     { cwd: '..', stdio: 'pipe' },
   );
+}
+
+/**
+ * Đẩy mốc step-up của mọi phiên lùi 1 giờ — giả lập "hết grace 10 phút" mà không phải chờ.
+ *
+ * Cách khác là hạ `secret.stepup_grace_minutes` xuống 0, nhưng SystemConfigService cache 30
+ * giây nên test sẽ phải ngồi chờ cache hết hạn, và grace 0 thì gõ mã xong cũng vẫn hết hạn
+ * ngay — không kiểm được luồng "gõ mã rồi xem tiếp".
+ */
+export function expireStepUp(): void {
+  execSync(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "UPDATE sessions SET stepped_up_at = now() - interval '1 hour' WHERE revoked_at IS NULL"`,
+    { cwd: '..', stdio: 'pipe' },
+  );
+}
+
+/** Đếm số dòng audit của một hành động trên một secret — dùng để kiểm "mỗi lần mở = một dòng". */
+export function countAudit(action: string, objectId: string): number {
+  const out = execSync(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
+      `"SELECT count(*) FROM audit_log WHERE action = '${action}' AND object_id = '${objectId}'"`,
+    { cwd: '..', encoding: 'utf8' },
+  );
+  return Number(out.trim());
 }
 
 /** Xóa luật gửi báo cáo do E2E tạo. Quy ước: mọi tên luật trong test đều chứa "E2E". */

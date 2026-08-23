@@ -1,8 +1,23 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Header,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { IsIn, IsOptional, IsString, IsUUID, Length } from 'class-validator';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
+import { RequiresStepUp, StepUpGuard } from '../auth/step-up.guard';
 import type { AuthedRequest } from '../auth/types';
+import { SystemConfigService } from '../config-sys/system-config.service';
 import {
   SECRET_KINDS,
   SECRET_OWNER_TYPES,
@@ -61,14 +76,17 @@ class IdParamDto {
  *    `ownerType` + `ownerId` bắt buộc. Đây chính là FR-026 cài vào hình dạng route: không
  *    tồn tại đường nào trả về nhiều hơn một chủ thể, nên không có gì để mà lỡ gọi, lỡ mở
  *    quyền, hay lỡ thêm `?limit=99999`.
- * 2. KHÔNG có endpoint xem giá trị. Ở 4.1 plaintext chỉ đi VÀO. Đường ra là story 4.2 và
- *    phải qua TOTP step-up.
+ * 2. Đường DUY NHẤT lấy được plaintext là `POST :id/reveal`, và nó đòi vừa gõ TOTP xong
+ *    (story 4.2). Một secret một lần gọi — không có dạng nhận mảng id.
  *
  * Quyền: SA + Admin. Member không có đường nào tới đây (AD-9, mặc định đóng).
  */
 @Controller('api/v1/vault/secrets')
 export class VaultController {
-  constructor(private readonly vault: VaultService) {}
+  constructor(
+    private readonly vault: VaultService,
+    private readonly config: SystemConfigService,
+  ) {}
 
   @Roles('sa', 'admin')
   @Get()
@@ -106,6 +124,34 @@ export class VaultController {
   ) {
     await this.vault.rotate(actor(req), params.id, body.value);
     return { ok: true };
+  }
+
+  /**
+   * Mở két (story 4.2, FR-022).
+   *
+   * POST chứ không GET, và id nằm ở path chứ giá trị KHÔNG bao giờ ở query: GET dễ bị
+   * prefetch, lưu vào lịch sử trình duyệt, và lọt vào access log của reverse proxy.
+   *
+   * `Cache-Control: no-store` là bắt buộc: thiếu nó thì bí mật nằm lại trong bộ nhớ đệm
+   * của trình duyệt và bấm Back ở máy dùng chung là hiện lại.
+   *
+   * Một lần gọi = một secret = một dòng audit (`VaultService.reveal` ghi TRƯỚC khi giải mã).
+   */
+  @Roles('sa', 'admin')
+  @UseGuards(StepUpGuard)
+  @RequiresStepUp()
+  @Post(':id/reveal')
+  @HttpCode(200)
+  @Header('Cache-Control', 'no-store')
+  @Header('Pragma', 'no-cache')
+  @Audited('vault.secret.revealed', 'secret', { writtenByService: true })
+  async reveal(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    const [opened, revealSeconds] = await Promise.all([
+      this.vault.reveal(actor(req), params.id),
+      // AD-11: bao lâu thì tự ẩn — system_config, không hardcode 30.
+      this.config.getNumber('secretRevealSeconds'),
+    ]);
+    return { ...opened, revealSeconds };
   }
 
   /** "Xóa" = thu hồi mềm. Ciphertext ở lại để còn đối chiếu khi điều tra sự cố. */
