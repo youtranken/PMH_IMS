@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { GlobalExceptionFilter } from './common/global-exception.filter';
@@ -13,7 +13,6 @@ import { DevicePanelsModule } from './common/device-panels.registry';
 import { ExpiryRegistryModule } from './common/expiry/expiry-registry';
 import { HealthController } from './health/health.controller';
 import { AuditModule } from './modules/audit/audit.module';
-import { AuditInterceptor } from './modules/audit/audit.interceptor';
 import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
@@ -100,7 +99,6 @@ import { VaultModule } from './modules/vault/vault.module';
     { provide: APP_GUARD, useClass: UserThrottlerGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
-    { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
   exports: [ExcelExportService, ExcelImportService],
 })

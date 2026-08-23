@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDateTime, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
+import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { Dialog, DialogTitle } from '@/ui/dialog';
 import { EmptyState, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
@@ -105,6 +106,15 @@ export function ApprovalsScreen({ me }: { me: Me }) {
       <PageHeader
         title={t('approvals.title')}
         subtitle={t('approvals.subtitle')}
+        actions={
+          /* Nhật ký là thứ đem đi trình auditor — file KHÔNG có cột nào chứa secret (FR-026). */
+          canDecide ? (
+            <ExportXlsxButton
+              url="/api/v1/vault/break-glass/export.xlsx"
+              fileName="nhat-ky-break-glass.xlsx"
+            />
+          ) : null
+        }
       />
 
       <Tabs

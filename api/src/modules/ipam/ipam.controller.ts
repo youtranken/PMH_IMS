@@ -167,6 +167,34 @@ export class IpamController {
     return this.addresses.listBySubnet(params.id);
   }
 
+  /**
+   * FR-028 / AC 7.2: xuất hồ sơ IP của một dải.
+   *
+   * Chỉ xuất những IP CÓ hồ sơ, không xuất các ô trống: ô trống không phải dữ liệu, và một
+   * file 254 dòng mà 250 dòng rỗng thì người nhận phải tự lọc — đúng việc mình vừa bắt máy làm.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Audited('ip.exported', 'ip_address')
+  @Get('subnets/:id/export.xlsx')
+  async exportAddresses(@Param() params: IdParamDto, @Res() res: Response) {
+    const subnet = await this.subnets.findOne(params.id);
+    const rows = await this.addresses.listRecords(params.id);
+    const buffer = await this.excel.build({
+      sheetName: 'Dia chi IP',
+      columns: [
+        { header: 'Địa chỉ', width: 18, value: (r) => r.address },
+        { header: 'Trạng thái', width: 16, value: (r) => IP_STATUS_LABEL[r.status] ?? r.status },
+        { header: 'Thiết bị', width: 22, value: (r) => r.deviceCode ?? '' },
+        { header: 'Người / bộ phận', width: 28, value: (r) => r.usedBy ?? '' },
+        { header: 'Ngày cấp', width: 14, value: (r) => r.assignedAt ?? '' },
+        { header: 'Người cấp', width: 24, value: (r) => r.assignedBy },
+        { header: 'Ghi chú', width: 36, value: (r) => r.note ?? '' },
+      ],
+      rows,
+    });
+    sendXlsx(res, buffer, `ip-${subnet.cidr.replace('/', '-')}.xlsx`);
+  }
+
   @Roles('sa', 'admin')
   @Post('subnets')
   @Audited('subnet.created', 'subnet', { writtenByService: true })
@@ -295,6 +323,7 @@ export class IpamController {
    * là thứ người ta phải đem đi trình, còn mật khẩu thì không (FR-026).
    */
   @Roles('sa', 'admin', 'member')
+  @Audited('nat.exported', 'nat_rule')
   @Get('nat/export.xlsx')
   async exportNat(@Query() query: NatQueryDto, @Res() res: Response) {
     const rows = await this.nat.list(query);
@@ -402,4 +431,11 @@ const PORT_MESSAGE: Record<string, string> = {
   format: 'Port ngoài viết dạng "8080" hoặc "8000-8010".',
   range: 'Port phải từ 1 đến 65535.',
   reversed: 'Khoảng port viết ngược — số đầu phải nhỏ hơn số cuối (vd 8000-8010).',
+};
+
+const IP_STATUS_LABEL: Record<string, string> = {
+  free: 'Trống',
+  assigned: 'Đang cấp',
+  suspect_dead: 'Nghi chết',
+  reclaimed: 'Đã thu hồi',
 };

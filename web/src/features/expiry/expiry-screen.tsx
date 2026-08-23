@@ -9,6 +9,7 @@ import type { Me } from '@/lib/me';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog, DialogTitle } from '@/ui/dialog';
 import { ExpiryBadge } from '@/ui/expiry-badge';
+import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
@@ -80,7 +81,17 @@ export function ExpiryScreen({ me }: { me: Me }) {
 
   return (
     <>
-      <PageHeader title={t('expiry.title')} subtitle={t('expiry.subtitle')} />
+      <PageHeader
+        title={t('expiry.title')}
+        subtitle={t('expiry.subtitle')}
+        actions={
+          /* Xuất ĐÚNG cửa sổ ngày và loại đang xem — không phải cả bảng (FR-028). */
+          <ExportXlsxButton
+            url={`/api/v1/expiry/export.xlsx?withinDays=${withinDays}${kind ? `&kinds=${kind}` : ''}`}
+            fileName="sap-het-han.xlsx"
+          />
+        }
+      />
 
       {/* Ba con số này là thứ người ta nhìn đầu tiên mỗi sáng. */}
       {summary ? (

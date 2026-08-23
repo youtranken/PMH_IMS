@@ -149,8 +149,15 @@ export class DevicesController {
     sendXlsx(res, await this.imports.buildTemplate(), 'mau-thiet-bi.xlsx');
   }
 
-  /** FR-028: xuất đúng bộ lọc đang xem, không phải cả kho. */
+  /**
+   * FR-028: xuất đúng bộ lọc đang xem, không phải cả kho.
+   *
+   * `@Audited` vì AC 7.2 đòi ghi vết mỗi lần xuất: "ai kéo cả kho thiết bị ra file" là
+   * câu đáng trả lời được. Interceptor chỉ ghi method + path, KHÔNG ghi query string —
+   * nếp cũ của `AuditInterceptor`, và đừng nới ra vì query là nơi dễ lọt thứ không nên ghi.
+   */
   @Roles('sa', 'admin', 'member')
+  @Audited('devices.exported', 'device')
   @Get('export')
   async export(
     @Query()

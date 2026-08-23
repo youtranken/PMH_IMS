@@ -7,6 +7,7 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { Combobox } from '@/ui/combobox';
+import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { Dialog, DialogTitle } from '@/ui/dialog';
 import { DatePicker } from '@/ui/date-picker';
 import { LoadError, Loading, NotFound } from '@/ui/load-state';
@@ -84,9 +85,15 @@ export function SubnetDetail({ me }: { me: Me }) {
         title={`${item.cidr} — ${item.name}`}
         subtitle={item.siteCode ? `${t('ipam.site')}: ${item.siteCode}` : undefined}
         actions={
-          <Link className="btn" to="/dia-chi-ip">
-            {t('ipam.back')}
-          </Link>
+          <>
+            <ExportXlsxButton
+              url={`/api/v1/ipam/subnets/${id}/export.xlsx`}
+              fileName={`ip-${item.cidr.replace('/', '-')}.xlsx`}
+            />
+            <Link className="btn" to="/dia-chi-ip">
+              {t('ipam.back')}
+            </Link>
+          </>
         }
       />
 

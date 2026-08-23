@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { AuditModule } from '../audit/audit.module';
 import { SystemConfigModule } from '../config-sys/system-config.module';
 import { OutboxModule } from '../outbox/outbox.module';
@@ -14,7 +15,8 @@ import { ExpiryService } from './expiry.service';
 @Module({
   imports: [AuditModule, SystemConfigModule, OutboxModule],
   controllers: [ExpiryController],
-  providers: [ExpiryService, ExpiryDigestService, ExpiryApiService],
+  providers: [
+    ExcelExportService,ExpiryService, ExpiryDigestService, ExpiryApiService],
   exports: [ExpiryApiService],
 })
 export class ExpiryModule {}

@@ -8,7 +8,9 @@ import {
   Post,
   Query,
   Req,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   IsIn,
   IsInt,
@@ -22,6 +24,8 @@ import {
 } from 'class-validator';
 import { parsePageQuery } from '../../common/pagination';
 import { Audited } from '../audit/audited.decorator';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
+import { sendXlsx } from '../../common/excel/xlsx-http';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import {
@@ -102,6 +106,7 @@ export class SoftwareController {
   constructor(
     private readonly software: SoftwareService,
     private readonly assignments: LicenseAssignmentService,
+    private readonly excel: ExcelExportService,
   ) {}
 
   @Roles('sa', 'admin', 'member')
@@ -123,6 +128,50 @@ export class SoftwareController {
       status: query.status,
       vendorId: query.vendorId,
     });
+  }
+
+  /**
+   * FR-028 / AC 7.2: xuất đúng bộ lọc đang xem.
+   *
+   * Khai báo TRƯỚC `@Get(':id')` — Nest khớp route theo thứ tự, để sau thì `export.xlsx` bị
+   * `:id` nuốt mất và trả về 400 vì không phải uuid.
+   *
+   * Cột KHÔNG có chỗ nào cho key/mật khẩu: hồ sơ phần mềm không giữ chúng (Epic 3), và két
+   * sắt thì tuyệt đối không có đường xuất (FR-026).
+   */
+  @Roles('sa', 'admin', 'member')
+  @Audited('software.exported', 'software')
+  @Get('export.xlsx')
+  async export(
+    @Query()
+    query: { search?: string; kind?: SoftwareKind; status?: SoftwareStatus; vendorId?: string },
+    @Res() res: Response,
+  ) {
+    const page = await this.software.list(
+      { page: 1, limit: EXPORT_LIMIT },
+      {
+        search: query.search,
+        kind: query.kind,
+        status: query.status,
+        vendorId: query.vendorId,
+      },
+    );
+    const buffer = await this.excel.build({
+      sheetName: 'Phan mem',
+      columns: [
+        { header: 'Mã hồ sơ', width: 20, value: (r) => r.code },
+        { header: 'Tên', width: 32, value: (r) => r.name },
+        { header: 'Loại', width: 16, value: (r) => KIND_LABEL[r.kind] ?? r.kind },
+        { header: 'Nhà cung cấp', width: 22, value: (r) => r.vendorName ?? '' },
+        { header: 'Seat dùng/tổng', width: 14, value: (r) => seatText(r) },
+        { header: 'Bắt đầu', width: 14, value: (r) => r.startDate ?? '' },
+        { header: 'Hết hạn', width: 14, value: (r) => r.endDate ?? '' },
+        { header: 'Trạng thái', width: 18, value: (r) => STATUS_LABEL[r.status] ?? r.status },
+        { header: 'Ghi chú', width: 40, value: (r) => r.note ?? '' },
+      ],
+      rows: page.items,
+    });
+    sendXlsx(res, buffer, 'phan-mem.xlsx');
   }
 
   @Roles('sa', 'admin', 'member')
@@ -194,4 +243,31 @@ export class SoftwareController {
 
 function actor(req: AuthedRequest): string {
   return req.user!.email;
+}
+
+/**
+ * Trần một lần xuất.
+ *
+ * Xuất "đúng bộ lọc đang xem" nhưng người dùng thường xem với bộ lọc rỗng, nên một cú bấm là
+ * cả bảng. 5000 dòng là thừa cho quy mô PMH và vẫn giữ file mở được bằng Excel trên máy cũ.
+ */
+const EXPORT_LIMIT = 5000;
+
+const KIND_LABEL: Record<string, string> = {
+  license: 'License',
+  ssl: 'Chứng chỉ SSL',
+  domain: 'Tên miền',
+  maintenance: 'Hợp đồng bảo trì',
+  other: 'Khác',
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  active: 'Đang dùng',
+  expired_no_renew: 'Hết hạn, không gia hạn',
+  dropped: 'Đã bỏ',
+};
+
+function seatText(row: { seatTotal: number | null; seatUsed: number | null }): string {
+  if (row.seatTotal === null) return '';
+  return `${row.seatUsed ?? 0}/${row.seatTotal}`;
 }

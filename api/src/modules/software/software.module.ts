@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { AuditModule } from '../audit/audit.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { DevicesModule } from '../devices/devices.module';
@@ -20,6 +21,7 @@ import { SoftwareService } from './software.service';
   imports: [AuditModule, CatalogModule, DevicesModule],
   controllers: [SoftwareController, IspLineController],
   providers: [
+    ExcelExportService,
     SoftwareService,
     LicenseAssignmentService,
     IspLineService,

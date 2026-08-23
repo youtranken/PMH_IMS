@@ -8,7 +8,9 @@ import {
   Post,
   Query,
   Req,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import {
   IsArray,
   IsBoolean,
@@ -23,6 +25,8 @@ import {
   Min,
 } from 'class-validator';
 import { Audited } from '../audit/audited.decorator';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
+import { sendXlsx } from '../../common/excel/xlsx-http';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { ExpiryDigestService } from './expiry-digest.service';
@@ -76,6 +80,7 @@ export class ExpiryController {
   constructor(
     private readonly expiry: ExpiryService,
     private readonly digest: ExpiryDigestService,
+    private readonly excel: ExcelExportService,
   ) {}
 
   /** Các loại nguồn đang đăng ký — UI dựng bộ lọc từ đây, không viết cứng danh sách. */
@@ -94,6 +99,36 @@ export class ExpiryController {
       kinds: query.kinds ? query.kinds.split(',').filter(Boolean) : undefined,
       includeExpired: query.includeExpired !== 'false',
     });
+  }
+
+  /** FR-028 / AC 7.2: xuất đúng cửa sổ ngày và bộ loại đang xem. */
+  @Roles('sa', 'admin', 'member')
+  @Audited('expiry.exported', 'expiry')
+  @Get('export.xlsx')
+  async export(
+    @Query() query: { withinDays?: string; kinds?: string; includeExpired?: string },
+    @Res() res: Response,
+  ) {
+    const { items } = await this.expiry.list({
+      withinDays: query.withinDays ? Number(query.withinDays) : undefined,
+      kinds: query.kinds ? query.kinds.split(',').filter(Boolean) : undefined,
+      includeExpired: query.includeExpired !== 'false',
+    });
+    const buffer = await this.excel.build({
+      sheetName: 'Sap het han',
+      columns: [
+        { header: 'Loại', width: 18, value: (r) => r.kind },
+        { header: 'Tên', width: 36, value: (r) => r.label },
+        { header: 'Chi tiết', width: 28, value: (r) => r.sublabel ?? '' },
+        { header: 'Bắt đầu', width: 14, value: (r) => r.start ?? '' },
+        { header: 'Hết hạn', width: 14, value: (r) => r.end },
+        // Số ÂM = đã quá hạn. Giữ nguyên dấu chứ không đổi thành chữ: người nhận file thường
+        // sắp xếp theo cột này, và "quá hạn 200 ngày" phải nằm trên cùng.
+        { header: 'Còn (ngày)', width: 12, value: (r) => r.daysLeft },
+      ],
+      rows: items,
+    });
+    sendXlsx(res, buffer, 'sap-het-han.xlsx');
   }
 
   @Roles('sa', 'admin', 'member')

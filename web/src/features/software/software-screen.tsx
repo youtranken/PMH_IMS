@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api-client';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { ExpiryBadge } from '@/ui/expiry-badge';
+import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
@@ -70,9 +71,15 @@ export function SoftwareScreen({ me }: { me: Me }) {
         title={t('software.title')}
         subtitle={t('software.subtitle')}
         actions={
+          <>
+            <ExportXlsxButton
+              url={`/api/v1/software/export.xlsx?${buildQuery(1, filters)}`}
+              fileName="phan-mem.xlsx"
+            />
           <button type="button" className="btn primary" onClick={() => setCreating(true)}>
             {t('software.add')}
           </button>
+          </>
         }
       />
 

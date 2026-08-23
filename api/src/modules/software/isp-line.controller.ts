@@ -7,10 +7,14 @@ import {
   Post,
   Query,
   Req,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { IsIn, IsOptional, IsString, IsUUID, Length, Matches, ValidateIf } from 'class-validator';
 import { parsePageQuery } from '../../common/pagination';
 import { Audited } from '../audit/audited.decorator';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
+import { sendXlsx } from '../../common/excel/xlsx-http';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { ISP_STATUSES, IspLineService, type IspStatus } from './isp-line.service';
@@ -60,7 +64,10 @@ class IdParamDto {
  */
 @Controller('api/v1/isp-lines')
 export class IspLineController {
-  constructor(private readonly isp: IspLineService) {}
+  constructor(
+    private readonly isp: IspLineService,
+    private readonly excel: ExcelExportService,
+  ) {}
 
   @Roles('sa', 'admin', 'member')
   @Get()
@@ -81,6 +88,46 @@ export class IspLineController {
       provider: query.provider,
       status: query.status,
     });
+  }
+
+  /**
+   * FR-028 / AC 7.2: xuất đúng bộ lọc đang xem, cột đúng như đang hiển thị.
+   *
+   * Khai TRƯỚC `@Get(':id')` — Nest khớp route theo thứ tự khai báo, để sau thì `:id` nuốt mất.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Audited('isp.exported', 'isp_line')
+  @Get('export.xlsx')
+  async export(
+    @Query()
+    query: { search?: string; siteId?: string; provider?: string; status?: IspStatus },
+    @Res() res: Response,
+  ) {
+    const page = await this.isp.list(
+      { page: 1, limit: 5000 },
+      {
+        search: query.search,
+        siteId: query.siteId,
+        provider: query.provider,
+        status: query.status,
+      },
+    );
+    const buffer = await this.excel.build({
+      sheetName: 'Duong truyen',
+      columns: [
+        { header: 'Mã', width: 18, value: (r) => r.code },
+        { header: 'Nhà mạng', width: 22, value: (r) => r.provider },
+        { header: 'Băng thông', width: 14, value: (r) => r.bandwidth ?? '' },
+        { header: 'IP WAN', width: 18, value: (r) => r.wanIp ?? '' },
+        { header: 'Hotline', width: 16, value: (r) => r.hotline ?? '' },
+        { header: 'Số hợp đồng', width: 20, value: (r) => r.contractNo ?? '' },
+        { header: 'Bắt đầu', width: 14, value: (r) => r.startDate ?? '' },
+        { header: 'Hết hạn', width: 14, value: (r) => r.endDate ?? '' },
+        { header: 'Trạng thái', width: 16, value: (r) => ISP_STATUS_LABEL[r.status] ?? r.status },
+      ],
+      rows: page.items,
+    });
+    sendXlsx(res, buffer, 'duong-truyen.xlsx');
   }
 
   @Roles('sa', 'admin', 'member')
@@ -120,3 +167,9 @@ export class IspLineController {
 function actor(req: AuthedRequest): string {
   return req.user!.email;
 }
+
+const ISP_STATUS_LABEL: Record<string, string> = {
+  active: 'Đang chạy',
+  suspended: 'Tạm ngưng',
+  terminated: 'Đã cắt',
+};

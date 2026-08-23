@@ -1,6 +1,9 @@
-import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
 import { Audited } from '../audit/audited.decorator';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
+import { sendXlsx } from '../../common/excel/xlsx-http';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { BreakGlassService } from './break-glass.service';
@@ -41,7 +44,10 @@ class IdParamDto {
  */
 @Controller('api/v1/vault/break-glass')
 export class BreakGlassController {
-  constructor(private readonly breakGlass: BreakGlassService) {}
+  constructor(
+    private readonly breakGlass: BreakGlassService,
+    private readonly excel: ExcelExportService,
+  ) {}
 
   /** Yêu cầu của CHÍNH MÌNH — Member mở màn này để xem đã được duyệt chưa. */
   @Roles('sa', 'admin', 'member')
@@ -62,6 +68,36 @@ export class BreakGlassController {
   @Get('log')
   log() {
     return this.breakGlass.log();
+  }
+
+  /**
+   * FR-025 / AC 7.2: xuất nhật ký break-glass để nộp cho auditor.
+   *
+   * File này KHÔNG có cột nào chứa secret — chỉ ai xin, đối tượng nào, lý do, ai duyệt, hạn
+   * bao lâu. FR-026 vẫn nguyên hiệu lực: không đường nào xuất được giá trị trong két, kể cả
+   * đường đi vòng qua nhật ký (`vault-surface.spec.ts` khóa luật này lại).
+   */
+  @Roles('sa', 'admin')
+  @Audited('break_glass.exported', 'approval')
+  @Get('export.xlsx')
+  async export(@Res() res: Response) {
+    const rows = await this.breakGlass.log();
+    const buffer = await this.excel.build({
+      sheetName: 'Nhat ky break-glass',
+      columns: [
+        { header: 'Người xin', width: 28, value: (r) => r.requester },
+        { header: 'Loại đối tượng', width: 16, value: (r) => r.subjectType },
+        { header: 'Mã đối tượng', width: 38, value: (r) => r.subjectId },
+        { header: 'Lý do', width: 48, value: (r) => r.reason },
+        { header: 'Trạng thái', width: 16, value: (r) => BG_STATE_LABEL[r.state] ?? r.state },
+        { header: 'Người quyết', width: 28, value: (r) => r.decidedBy ?? '' },
+        { header: 'Ghi chú quyết', width: 36, value: (r) => r.decisionNote ?? '' },
+        { header: 'Gửi lúc', width: 20, value: (r) => r.createdAt },
+        { header: 'Hết hạn', width: 20, value: (r) => r.expiresAt ?? '' },
+      ],
+      rows,
+    });
+    sendXlsx(res, buffer, 'nhat-ky-break-glass.xlsx');
   }
 
   @Roles('sa', 'admin', 'member')
@@ -104,3 +140,12 @@ export class BreakGlassController {
 function actor(req: AuthedRequest): string {
   return req.user!.email;
 }
+
+const BG_STATE_LABEL: Record<string, string> = {
+  pending: 'Chờ duyệt',
+  approved: 'Đã duyệt',
+  denied: 'Từ chối',
+  cancelled: 'Đã hủy',
+  expired: 'Hết hạn',
+  revoked: 'Đã thu hồi',
+};

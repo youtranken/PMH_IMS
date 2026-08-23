@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { AuditModule } from '../audit/audit.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { DevicesModule } from '../devices/devices.module';
@@ -30,7 +31,8 @@ import { VaultService } from './vault.service';
 @Module({
   imports: [AuditModule, AuthModule, CatalogModule, DevicesModule, SoftwareModule, UsersModule, ApprovalsModule, OutboxModule],
   controllers: [VaultController, VaultAccessController, BreakGlassController],
-  providers: [VaultService, VaultApiService, VaultDevicePanel, AccessListService, BreakGlassService, StepUpGuard],
+  providers: [
+    ExcelExportService,VaultService, VaultApiService, VaultDevicePanel, AccessListService, BreakGlassService, StepUpGuard],
   exports: [VaultApiService],
 })
 export class VaultModule {}
