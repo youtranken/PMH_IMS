@@ -664,4 +664,20 @@ export default {
     stateExpired: 'Hết hạn',
     stateRevoked: 'Đã thu hồi',
   },
+  dashboard: {
+    title: 'Xin chào {{name}}',
+    subtitle: 'Ba khối cần nhìn trước giờ họp: sắp hết hạn, sự cố tuần qua, break-glass tuần qua.',
+    expiring: 'Sắp hết hạn (30 ngày)',
+    expiringEmpty: 'Không có gì hết hạn trong 30 ngày tới.',
+    seeAllExpiring: 'Xem toàn bộ danh sách hạn',
+    incidents: 'Sự cố tuần qua',
+    incidentsEmpty: 'Tuần qua không có sự cố nào.',
+    // "Chưa có phần này" KHÁC HẲN "tuần qua không có sự cố" — đọc nhầm là tưởng mọi thứ yên.
+    incidentsNotYet: 'Phần quản lý sự cố chưa mở (Epic 9). Hệ thống CHƯA theo dõi mục này.',
+    breakGlass: 'Break-glass tuần qua',
+    breakGlassEmpty: 'Tuần qua không ai xin quyền xem tạm thời.',
+    seeAllBreakGlass: 'Xem nhật ký đầy đủ',
+    by: 'quyết bởi {{who}}',
+    blockError: 'Không tải được khối này. Các khối còn lại vẫn đúng.',
+  },
 } as const;

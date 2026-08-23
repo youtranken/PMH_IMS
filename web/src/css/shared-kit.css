@@ -195,6 +195,43 @@
   padding-top: var(--space-4);
 }
 
+/* --- Bảng điều khiển (features/dashboard/dashboard-screen.tsx) ------------ */
+/* auto-fit + minmax: ba khối nằm ngang trên desktop, tự xếp dọc ở 390px mà không cần
+   media query riêng — cùng nếp với các lưới khác của bộ dùng chung. */
+.dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+.dash-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.dash-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.dash-list > li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dash-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
 /* --- Màn duyệt yêu cầu (features/vault/approvals-screen.tsx) -------------- */
 .approval-list {
   display: flex;

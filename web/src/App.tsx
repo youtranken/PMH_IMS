@@ -6,7 +6,6 @@ import {
   TOTP_CHALLENGE_PATH,
   TOTP_ENROLL_PATH,
   nextStepPath,
-  type Me,
 } from '@/lib/me';
 import { AppShell } from '@/shell/app-shell';
 import { ConfirmProvider } from '@/ui/confirm-provider';
@@ -17,6 +16,7 @@ import { CatalogScreen } from '@/features/catalog/catalog-screen';
 import { DeviceDetail } from '@/features/devices/device-detail';
 import { DevicesScreen } from '@/features/devices/devices-screen';
 import { ExpiryScreen } from '@/features/expiry/expiry-screen';
+import { DashboardScreen } from '@/features/dashboard/dashboard-screen';
 import { AccessMatrixScreen } from '@/features/vault/access-matrix-screen';
 import { ApprovalsScreen } from '@/features/vault/approvals-screen';
 import { NatScreen } from '@/features/ipam/nat-screen';
@@ -86,7 +86,7 @@ function AppRoutes() {
   return (
     <AppShell me={me}>
       <Routes>
-        <Route path="/" element={<Home me={me} />} />
+        <Route path="/" element={<DashboardScreen me={me} />} />
         <Route path="/quan-tri/tai-khoan" element={<AccountsScreen me={me} />} />
         <Route path="/quan-tri/danh-muc" element={<CatalogScreen me={me} />} />
         <Route path="/quan-tri/quyen-ket-sat" element={<AccessMatrixScreen me={me} />} />
@@ -111,15 +111,3 @@ function AppRoutes() {
   );
 }
 
-/** Bảng điều khiển thật thuộc Epic 7; Epic 1 chỉ cần chỗ đáp sau khi đăng nhập. */
-function Home({ me }: { me: Me }) {
-  return (
-    <section className="card" style={{ padding: 'var(--space-10)' }}>
-      <h1>Xin chào {me.fullName}</h1>
-      <p className="sub">
-        Nền tảng đã sẵn sàng. Các màn nghiệp vụ (thiết bị, phần mềm, IP, két sắt) sẽ mở dần theo
-        từng epic.
-      </p>
-    </section>
-  );
-}

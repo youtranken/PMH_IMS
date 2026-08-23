@@ -6,6 +6,7 @@ import { GlobalExceptionFilter } from './common/global-exception.filter';
 import { UserThrottlerGuard } from './common/user-throttler.guard';
 import { ExcelExportService } from './common/excel/excel-export.service';
 import { ExcelImportService } from './common/excel/excel-import.service';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DatabaseModule } from './database/database.module';
 import { ApprovalsRegistryModule } from './common/approvals/approvals-registry';
 import { DevicePanelsModule } from './common/device-panels.registry';
@@ -88,6 +89,7 @@ import { VaultModule } from './modules/vault/vault.module';
     MailModule,
     VaultModule,
     IpamModule,
+    DashboardModule,
   ],
   controllers: [HealthController],
   providers: [

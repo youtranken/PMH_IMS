@@ -23,7 +23,7 @@ export const navGroups: NavGroup[] = [
   {
     labelKey: 'nav.groupWork',
     items: [
-      { key: 'nav.dashboard', to: '/', planned: true },
+      { key: 'nav.dashboard', to: '/' },
       { key: 'nav.devices', to: '/thiet-bi' },
       { key: 'nav.software', to: '/phan-mem' },
       { key: 'nav.isp', to: '/duong-truyen' },

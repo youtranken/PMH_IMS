@@ -88,6 +88,7 @@
 | `isGrantActive` | `common/approvals/approval-flow.ts` | MỌI đường đọc có kiểm quyền tạm thời | Cấm tin `status`; hiệu lực tính bằng `expires_at > now()` tại mỗi lần đọc (AD-6) |
 | `AccessListService.tierFor` | `modules/vault/access-list.service.ts` | Trả lời "người này có tầng gì trên đối tượng kia" — story 6.3 xoay quanh hàm này | Cấm tự suy quyền ở nơi khác; CẤM là mặc định (AD-9 áp vào dữ liệu) |
 | `BreakGlassService.assertCanReveal` | `modules/vault/break-glass.service.ts` | Hàng rào ở MỌI đường đọc secret của Member (story 6.3) | Gọi tại MỖI lần đọc, cấm cache vào phiên — hiệu lực tính bằng đồng hồ (AD-6) |
+| `DashboardService` | `modules/dashboard/` | Module ĐỌC thuần, không sở hữu bảng nào — gom số liệu qua public api của module chủ | Cấm tuyệt đối JOIN chéo ở đây: dashboard mà chạm bảng của mọi module thì không module nào đổi được lược đồ nữa (AD-2) |
 | `IpDevicePanel`, `NatDevicePanel` | `modules/ipam/*-device-panel.ts` | Cắm khu IP và khu NAT vào trang thiết bị (story 5.3/5.4) qua `DevicePanelRegistry` | `devices` KHÔNG được import ipam — chiều phụ thuộc chỉ đi một hướng (AD-2) |
 
 ## Cách CI ép luật (không trông vào review)
