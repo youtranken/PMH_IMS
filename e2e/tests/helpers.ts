@@ -71,6 +71,14 @@ export function resetSoftware(): void {
   });
 }
 
+/** Xóa luật gửi báo cáo do E2E tạo. Quy ước: mọi tên luật trong test đều chứa "E2E". */
+export function resetDigestRules(): void {
+  execSync(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "DELETE FROM expiry_rule WHERE name ILIKE '%E2E%'"`,
+    { cwd: '..', stdio: 'pipe' },
+  );
+}
+
 /** Xóa đường truyền ISP do E2E tạo (mã luôn chứa "E2E"). */
 export function resetIsp(): void {
   const match = "code ILIKE '%E2E%'";

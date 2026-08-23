@@ -27,7 +27,7 @@ export class MailConsumer {
     const row = await this.outbox.loadForConsumer(outboxId);
     if (!row || row.processedAt) return;
 
-    const payload = row.payload as { userId?: string };
+    const payload = row.payload as DigestPayload & { userId?: string };
     const built = await this.build(topic, payload);
     if (!built) {
       this.logger.warn(`Topic ${topic} chưa có mẫu email — bỏ qua.`);
@@ -40,7 +40,10 @@ export class MailConsumer {
     await this.outbox.markProcessed(outboxId);
   }
 
-  private async build(topic: string, payload: { userId?: string }) {
+  private async build(topic: string, payload: DigestPayload & { userId?: string }) {
+    // Báo cáo tổng hợp không gắn với một user nào — xử riêng trước khi tra user.
+    if (topic === 'expiry.digest') return buildDigest(payload);
+
     const user = payload.userId ? await this.users.getById(payload.userId) : null;
     const sa = await this.users.recipientsByRole(['sa']);
 
@@ -112,4 +115,70 @@ export class MailConsumer {
         return null;
     }
   }
+}
+
+/** Payload của topic `expiry.digest` — module expiry ghi vào outbox. */
+interface DigestPayload {
+  ruleName?: string;
+  schedule?: string;
+  withinDays?: number;
+  recipients?: string[];
+  isTest?: boolean;
+  items?: {
+    label: string;
+    kind: string;
+    start: string | null;
+    end: string;
+    link: string;
+    daysLeft: number;
+  }[];
+}
+
+const KIND_LABEL: Record<string, string> = {
+  warranty: 'Bảo hành thiết bị',
+  license: 'License phần mềm',
+  ssl: 'Chứng chỉ SSL',
+  domain: 'Tên miền',
+  maintenance: 'Hợp đồng bảo trì',
+  isp: 'Hợp đồng đường truyền',
+};
+
+/**
+ * MỘT email tổng hợp cho cả luật (FR-013), không phải mail lẻ từng món.
+ *
+ * Mỗi dòng nêu đủ: tên, loại, hạn, còn bao nhiêu ngày — người đọc quyết được ngay có phải
+ * làm gì không mà không cần mở hệ thống. Link để bấm vào đúng hồ sơ khi cần làm thật.
+ */
+function buildDigest(payload: DigestPayload) {
+  const items = payload.items ?? [];
+  const recipients = payload.recipients ?? [];
+  if (recipients.length === 0) return null;
+
+  const rows = items.map((item) => ({
+    label: `${item.label} · ${KIND_LABEL[item.kind] ?? item.kind}`,
+    value:
+      item.daysLeft < 0
+        ? `${item.end} — ĐÃ QUÁ HẠN ${Math.abs(item.daysLeft)} ngày`
+        : `${item.end} — còn ${item.daysLeft} ngày`,
+  }));
+
+  const { html, text } = renderMail({
+    title: `${payload.isTest ? '[GỬI THỬ] ' : ''}Sắp hết hạn: ${items.length} mục`,
+    intro:
+      `Luật "${payload.ruleName ?? ''}" (${payload.schedule ?? ''}) — các mục hết hạn trong ` +
+      `${payload.withinDays ?? 30} ngày tới.`,
+    rows,
+    ctaLabel: 'Mở màn Sắp hết hạn',
+    ctaUrl: `${APP_URL()}/sap-het-han`,
+    footnote: payload.isTest
+      ? 'Đây là email gửi thử từ màn cấu hình luật. Kỳ gửi thật không bị ảnh hưởng.'
+      : 'Email tự động từ IMS. Đổi người nhận hoặc tần suất ở màn Sắp hết hạn › Luật gửi báo cáo.',
+  });
+
+  return {
+    to: recipients,
+    subject: `${payload.isTest ? '[Gửi thử] ' : ''}[IMS] ${items.length} mục sắp hết hạn — ${payload.ruleName ?? ''}`,
+    html,
+    text,
+  };
 }

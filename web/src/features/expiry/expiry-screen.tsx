@@ -13,7 +13,9 @@ import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
 import { Select } from '@/ui/select';
+import { TabPanel, Tabs } from '@/ui/tabs';
 import { useToast } from '@/ui/toast';
+import { DigestRulesPanel } from './digest-rules-panel';
 
 interface ExpiryRow {
   id: string;
@@ -55,6 +57,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
   const [withinDays, setWithinDays] = useState(30);
   const [kind, setKind] = useState('');
   const [renewing, setRenewing] = useState<ExpiryRow | null>(null);
+  const [tab, setTab] = useState('list');
 
   const kinds = useQuery({
     queryKey: ['expiry', 'kinds'],
@@ -94,6 +97,22 @@ export function ExpiryScreen({ me }: { me: Me }) {
         </div>
       ) : null}
 
+      <Tabs
+        items={[
+          { key: 'list', label: t('expiry.tabList') },
+          { key: 'rules', label: t('digest.tab') },
+        ]}
+        value={tab}
+        onChange={setTab}
+        ariaLabel={t('expiry.title')}
+      />
+
+      {tab === 'rules' ? (
+        <TabPanel tabKey="rules">
+          <DigestRulesPanel me={me} kinds={kinds.data ?? []} />
+        </TabPanel>
+      ) : (
+        <TabPanel tabKey="list">
       <FilterBar>
         <Select
           value={String(withinDays)}
@@ -169,6 +188,9 @@ export function ExpiryScreen({ me }: { me: Me }) {
             </tbody>
           </table>
         </div>
+      )}
+
+        </TabPanel>
       )}
 
       {renewing ? (
