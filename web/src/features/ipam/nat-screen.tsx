@@ -186,9 +186,18 @@ export function NatScreen({ me }: { me: Me }) {
           rule={editing.rule}
           csrfToken={me.csrfToken}
           onClose={() => setEditing(null)}
-          onSaved={() => {
+          onSaved={(warnings) => {
             setEditing(null);
-            toast({ message: t('nat.saved') });
+            /**
+             * Cảnh báo (vd "dải này mở hơn 1000 cổng") KHÔNG chặn lưu — nên nó phải được NÓI
+             * RA sau khi lưu, không thì im lặng luôn và người khai chẳng biết mình vừa mở
+             * bao nhiêu cổng ra Internet.
+             */
+            toast(
+              warnings.length > 0
+                ? { message: warnings.join(' '), tone: 'warn' }
+                : { message: t('nat.saved') },
+            );
             void refresh();
           }}
         />
@@ -221,7 +230,7 @@ function NatForm({
   rule: NatRow | null;
   csrfToken: string;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved: (warnings: string[]) => void;
 }) {
   const { t } = useTranslation();
   const [deviceId, setDeviceId] = useState(rule?.deviceId ?? '');
@@ -244,7 +253,7 @@ function NatForm({
     enabled: deviceTerm.length > 0,
   });
 
-  const save = useApiMutation<Record<string, unknown>, unknown>(
+  const save = useApiMutation<Record<string, unknown>, { warnings?: string[] }>(
     rule ? `/api/v1/ipam/nat/${rule.id}` : '/api/v1/ipam/nat',
     { method: rule ? 'PATCH' : 'POST', csrfToken, refreshMe: false },
   );
@@ -269,7 +278,10 @@ function NatForm({
               reason: reason.trim(),
               enabled,
             },
-            { onSuccess: onSaved, onError: (err) => setError(errorMessage(err)) },
+            {
+              onSuccess: (result) => onSaved(result?.warnings ?? []),
+              onError: (err) => setError(errorMessage(err)),
+            },
           );
         }}
       >

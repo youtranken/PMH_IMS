@@ -93,5 +93,6 @@
 | Cấm `exceljs`/`nodemailer`/`argon2`/`createCipheriv` ngoài chỗ được phép (AD-15) | eslint `no-restricted-imports` / `no-restricted-syntax` | `npm --prefix api run lint` |
 | Bảng `secret` chỉ dùng trong module `vault` (AD-4) | dependency-cruiser luật `secret-table-only-in-vault` | `npm --prefix api run depcruise` |
 | Không có đường xuất toàn bộ két ở mọi quyền (FR-026) | Jest `vault-surface.spec.ts` + E2E `vault.spec.ts` | `npm --prefix api test` / `npm run test:e2e` |
+| Sổ NAT chỉ có MỘT câu trả lời cho mỗi port | `EXCLUDE USING gist` (migration 0022) + `protocolsOverlap` ở service | `npm run test:e2e` |
 | Mở két phải step-up + `no-store` + một id mỗi lần (FR-022) | Jest `vault-surface.spec.ts` + E2E `vault-reveal.spec.ts` | `npm --prefix api test` / `npm run test:e2e` |
 | Cấm hex màu ngoài `tokens.css` | rà bằng `grep -rE "#[0-9a-fA-F]{3,8}" web/src --include=*.css` | thêm vào CI khi dựng pipeline |

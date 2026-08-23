@@ -10,6 +10,7 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
+import { Transform, type TransformFnParams } from 'class-transformer';
 import type { Response } from 'express';
 import {
   IsBoolean,
@@ -82,14 +83,46 @@ class NatBodyDto {
   protocol?: NatProtocol;
 
   /** Người dùng gõ "8080" hoặc "8000-8010" — một ô, không phải hai. */
-  @IsOptional() @IsString() @Length(1, 11) externalPorts?: string;
+  @IsOptional()
+  @Transform(trimText)
+  @IsString()
+  @Length(1, 11)
+  externalPorts?: string;
 
-  @IsOptional() @IsString() @Length(1, 15) internalIp?: string;
+  /**
+   * `@Transform` cắt khoảng trắng TRƯỚC khi `@Length` chạy.
+   *
+   * Không có nó thì một IP dán từ Excel kèm dấu cách ("172.16.10.5 ") dài 16 ký tự và bị
+   * `@Length(1, 15)` từ chối thẳng bằng một câu vô nghĩa với người dùng — họ nhìn ô thấy IP
+   * đúng y như mình gõ mà hệ thống bảo sai (code review Epic 5, finding 5).
+   */
+  @IsOptional()
+  @Transform(trimText)
+  @IsString()
+  @Length(1, 15)
+  internalIp?: string;
   @IsOptional() @IsInt() @Min(1) @Max(65535) internalPort?: number;
   @IsOptional() @IsString() @Length(1, 160) usedBy?: string;
   @IsOptional() @IsString() @Length(1, 500) reason?: string;
   @IsOptional() @IsBoolean() enabled?: boolean;
   @IsOptional() @IsString() @Length(0, 2000) note?: string;
+}
+
+/**
+ * Bộ lọc sổ NAT.
+ *
+ * Có DTO chứ không nhận object trần: `deviceId`/`siteId` đi thẳng vào `eq(...)`, nên
+ * `?deviceId=abc` xuống tới Postgres thành lỗi `22P02` và bung 500 thay vì 400
+ * (code review Epic 5, finding 7).
+ */
+class NatQueryDto {
+  @IsOptional() @ValidateIf((_o, v) => v !== '') @IsUUID(undefined, { message: 'Mã thiết bị không hợp lệ.' })
+  deviceId?: string;
+
+  @IsOptional() @ValidateIf((_o, v) => v !== '') @IsUUID(undefined, { message: 'Mã site không hợp lệ.' })
+  siteId?: string;
+
+  @IsOptional() @IsString() @Length(0, 120) search?: string;
 }
 
 class IdParamDto {
@@ -253,7 +286,7 @@ export class IpamController {
    */
   @Roles('sa', 'admin', 'member')
   @Get('nat')
-  listNat(@Query() query: { deviceId?: string; siteId?: string; search?: string }) {
+  listNat(@Query() query: NatQueryDto) {
     return this.nat.list(query);
   }
 
@@ -263,10 +296,7 @@ export class IpamController {
    */
   @Roles('sa', 'admin', 'member')
   @Get('nat/export.xlsx')
-  async exportNat(
-    @Query() query: { deviceId?: string; siteId?: string; search?: string },
-    @Res() res: Response,
-  ) {
+  async exportNat(@Query() query: NatQueryDto, @Res() res: Response) {
     const rows = await this.nat.list(query);
     const buffer = await this.excel.build({
       sheetName: 'So NAT',
@@ -339,6 +369,16 @@ export class IpamController {
     await this.nat.voidRule(actor(req), params.id, body.reason);
     return { ok: true };
   }
+}
+
+/**
+ * Cắt khoảng trắng ở hai đầu TRƯỚC khi các luật `@Length`/`@IsString` chạy.
+ *
+ * Tách thành hàm có kiểu rõ ràng thay vì lambda inline: `value` của class-transformer là
+ * `any`, và lambda inline làm eslint đỏ ở mỗi chỗ dùng.
+ */
+function trimText({ value }: TransformFnParams): unknown {
+  return typeof value === 'string' ? value.trim() : value;
 }
 
 function actor(req: AuthedRequest): string {

@@ -8,12 +8,17 @@ import {
 import { and, asc, eq, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
-import { escapeLike, pgErrorCode } from '../../common/sql';
+import { escapeLike, pgErrorCode, PG_CHECK_VIOLATION } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { DevicesApiService } from '../devices/devices.api';
 import { IpAddressService } from './ip-address.service';
-import { describePortRange, validateNatRule } from './nat-rules';
+import {
+  describePortRange,
+  protocolsOverlap,
+  rangesOverlap,
+  validateNatRule,
+} from './nat-rules';
 import { ipAddressTable, natRuleTable } from './ipam.schema';
 
 export const NAT_PROTOCOLS = ['tcp', 'udp', 'both'] as const;
@@ -44,6 +49,8 @@ export interface NatRuleRecord {
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
+  /** Chỉ có ở kết quả ghi: điều đáng nói nhưng không đủ để chặn (vd mở dải >1000 cổng). */
+  warnings?: string[];
 }
 
 export interface NatRuleInput {
@@ -82,15 +89,29 @@ export class NatRuleService {
     const where: SQL[] = [isNull(natRuleTable.voidedAt)];
     if (filters.deviceId) where.push(eq(natRuleTable.deviceId, filters.deviceId));
     if (filters.search?.trim()) {
-      const term = `%${escapeLike(filters.search.trim())}%`;
-      where.push(
-        or(
-          sql`${natRuleTable.usedBy} ILIKE ${term}`,
-          sql`${natRuleTable.reason} ILIKE ${term}`,
-          sql`host(${natRuleTable.internalIp}) ILIKE ${term}`,
-          sql`${natRuleTable.externalFrom}::text ILIKE ${term}`,
-        ) as SQL,
-      );
+      const text = filters.search.trim();
+      const term = `%${escapeLike(text)}%`;
+      const conditions: SQL[] = [
+        sql`${natRuleTable.usedBy} ILIKE ${term}`,
+        sql`${natRuleTable.reason} ILIKE ${term}`,
+        sql`host(${natRuleTable.internalIp}) ILIKE ${term}`,
+      ];
+      /**
+       * Gõ một SỐ thì tìm theo port, và tìm cả BÊN TRONG khoảng.
+       *
+       * Bản trước chỉ so `external_from::text` — nên rule `8000-8010` không tìm thấy khi gõ
+       * `8005` hay `8010`, và người tra kết luận là port đang trống (code review Epic 5,
+       * finding 6). Người tạo rule mới còn được lỗi 409 cứu; auditor chỉ đọc thì nhận thẳng
+       * một câu trả lời sai.
+       */
+      const port = Number(text);
+      if (Number.isInteger(port) && port >= 1 && port <= 65535) {
+        conditions.push(
+          sql`${natRuleTable.externalFrom} <= ${port} AND ${natRuleTable.externalTo} >= ${port}`,
+        );
+        conditions.push(sql`${natRuleTable.internalPort} = ${port}`);
+      }
+      where.push(or(...conditions) as SQL);
     }
 
     const rows = await this.db
@@ -109,6 +130,15 @@ export class NatRuleService {
      */
     if (!filters.siteId) return decorated;
     const site = await this.siteCodeOf(filters.siteId);
+    /**
+     * Site không tra ra được (đã xóa, hoặc bookmark cũ mang id lạ) → trả RỖNG.
+     *
+     * Bản trước để `site = null` rồi lọc `siteCode === null`, nên nó trả về đúng những rule
+     * của router KHÔNG gắn site — một tập khác hẳn, không rỗng, và auditor đọc thành "đây là
+     * các rule của site X" (code review Epic 5, finding 3). Export dùng chung đường này nên
+     * con số sai đi thẳng vào file nộp.
+     */
+    if (site === null) return [];
     return decorated.filter((rule) => rule.siteCode === site);
   }
 
@@ -122,25 +152,29 @@ export class NatRuleService {
 
   async create(actor: string, input: NatRuleInput): Promise<NatRuleRecord> {
     await this.requireDraytek(input.deviceId);
-    this.requireValid(input);
-    const ipAddressId = await this.linkIp(input.internalIp);
+    // Chuẩn hóa IP TRƯỚC mọi thứ: `linkIp` so chuỗi thô với `host(address)`, nên một dấu cách
+    // thừa là không nối được vào hồ sơ IP dù hồ sơ đó có thật (code review Epic 5, finding 5).
+    const clean: NatRuleInput = { ...input, internalIp: input.internalIp.trim() };
+    const warnings = this.requireValid(clean);
+    await this.requireNoProtocolOverlap(clean, null);
+    const ipAddressId = await this.linkIp(clean.internalIp);
 
     try {
       const row = await this.db.transaction(async (tx) => {
         const rows = await tx
           .insert(natRuleTable)
           .values({
-            deviceId: input.deviceId,
-            protocol: input.protocol,
-            externalFrom: input.externalFrom,
-            externalTo: input.externalTo,
-            internalIp: input.internalIp,
-            internalPort: input.internalPort,
+            deviceId: clean.deviceId,
+            protocol: clean.protocol,
+            externalFrom: clean.externalFrom,
+            externalTo: clean.externalTo,
+            internalIp: clean.internalIp,
+            internalPort: clean.internalPort,
             ipAddressId,
-            usedBy: input.usedBy.trim(),
-            reason: input.reason.trim(),
-            enabled: input.enabled ?? true,
-            note: input.note?.trim() || null,
+            usedBy: clean.usedBy.trim(),
+            reason: clean.reason.trim(),
+            enabled: clean.enabled ?? true,
+            note: clean.note?.trim() || null,
             createdBy: actor,
           })
           .returning();
@@ -150,17 +184,17 @@ export class NatRuleService {
           objectType: 'nat_rule',
           objectId: rows[0].id,
           detail: {
-            deviceId: input.deviceId,
-            ports: describePortRange(input.externalFrom, input.externalTo),
-            internalIp: input.internalIp,
-            reason: input.reason.trim(),
+            deviceId: clean.deviceId,
+            ports: describePortRange(clean.externalFrom, clean.externalTo),
+            internalIp: clean.internalIp,
+            reason: clean.reason.trim(),
           },
         });
         return rows[0];
       });
-      return (await this.decorate([row]))[0];
+      return { ...(await this.decorate([row]))[0], warnings };
     } catch (error) {
-      throw this.translate(error, input);
+      throw this.translate(error, clean);
     }
   }
 
@@ -171,7 +205,7 @@ export class NatRuleService {
       protocol: (input.protocol ?? before.protocol) as NatProtocol,
       externalFrom: input.externalFrom ?? before.externalFrom,
       externalTo: input.externalTo ?? before.externalTo,
-      internalIp: input.internalIp ?? hostOf(before.internalIp),
+      internalIp: (input.internalIp ?? hostOf(before.internalIp)).trim(),
       internalPort: input.internalPort ?? before.internalPort,
       usedBy: input.usedBy ?? before.usedBy,
       reason: input.reason ?? before.reason,
@@ -184,8 +218,9 @@ export class NatRuleService {
      * Sửa mỗi `externalTo` mà kiểm riêng nó thì "8010 hợp lệ" — trong khi hàng sau khi sửa
      * lại là 8020-8010, ngược đầu. Đúng bài học của import thiết bị ở Epic 2.
      */
-    this.requireValid(merged);
+    const warnings = this.requireValid(merged);
     if (input.deviceId) await this.requireDraytek(input.deviceId);
+    await this.requireNoProtocolOverlap(merged, id);
 
     const ipAddressId =
       input.internalIp !== undefined ? await this.linkIp(merged.internalIp) : before.ipAddressId;
@@ -208,8 +243,22 @@ export class NatRuleService {
             note: merged.note?.trim() || null,
             updatedAt: new Date(),
           })
-          .where(eq(natRuleTable.id, id))
+          /**
+           * `isNull(voidedAt)` trong chính câu UPDATE, không chỉ ở `requireAlive` phía trên.
+           *
+           * Hai người cùng lúc: A gỡ rule, B bấm Lưu — không có điều kiện này thì bản sửa của
+           * B ghi đè lên một hàng ĐÃ gỡ, đẻ ra một dòng audit `nat.updated` cho rule không còn
+           * trong sổ, và bản sửa biến mất vĩnh viễn mà không ai biết (code review Epic 5,
+           * finding 8). Có điều kiện thì người thua thấy lỗi ngay.
+           */
+          .where(and(eq(natRuleTable.id, id), isNull(natRuleTable.voidedAt)))
           .returning();
+        if (rows.length === 0) {
+          throw new ConflictException({
+            code: 'NAT_ALREADY_REMOVED',
+            message: 'Rule này vừa bị người khác gỡ. Tải lại danh sách rồi thao tác lại.',
+          });
+        }
         await this.audit.appendWithin(tx, {
           actor,
           action: 'nat.updated',
@@ -223,7 +272,7 @@ export class NatRuleService {
         });
         return rows[0];
       });
-      return (await this.decorate([row]))[0];
+      return { ...(await this.decorate([row]))[0], warnings };
     } catch (error) {
       throw this.translate(error, merged);
     }
@@ -261,8 +310,13 @@ export class NatRuleService {
     });
   }
 
-  private requireValid(input: NatRuleInput): void {
-    const errors = validateNatRule({
+  /**
+   * Chỉ LỖI mới chặn. Cảnh báo (vd mở dải hơn 1000 cổng) được trả về để nơi gọi hiện cho
+   * người dùng — chặn nó là mâu thuẫn với chính thông điệp "nếu đúng ý thì cứ lưu", và làm
+   * dải port camera không bao giờ vào nổi sổ (code review Epic 5, finding 1).
+   */
+  private requireValid(input: NatRuleInput): string[] {
+    const { errors, warnings } = validateNatRule({
       externalFrom: input.externalFrom,
       externalTo: input.externalTo,
       internalIp: input.internalIp,
@@ -273,6 +327,43 @@ export class NatRuleService {
     if (errors.length > 0) {
       throw new BadRequestException({ code: 'NAT_INVALID', message: errors.join(' ') });
     }
+    return warnings;
+  }
+
+  /**
+   * Chặn `both` chồng lên `tcp`/`udp` (và ngược lại) trên cùng router.
+   *
+   * Ràng buộc `EXCLUDE` của DB so `protocol WITH =` nên nó KHÔNG thấy chuyện này — mà `both`
+   * theo định nghĩa phủ cả hai giao thức. Không chặn thì sổ có hai câu trả lời cho TCP/8080,
+   * đúng thứ bảng này sinh ra để tránh (code review Epic 5, finding 4).
+   *
+   * `tcp` vs `udp` vẫn cho qua: Draytek khai riêng hai giao thức cùng port là việc hợp lệ.
+   */
+  private async requireNoProtocolOverlap(
+    input: NatRuleInput,
+    excludeId: string | null,
+  ): Promise<void> {
+    const siblings = await this.db
+      .select()
+      .from(natRuleTable)
+      .where(and(eq(natRuleTable.deviceId, input.deviceId), isNull(natRuleTable.voidedAt)));
+
+    const clash = siblings.find(
+      (row) =>
+        row.id !== excludeId &&
+        protocolsOverlap(row.protocol, input.protocol) &&
+        rangesOverlap(row.externalFrom, row.externalTo, input.externalFrom, input.externalTo),
+    );
+    if (!clash) return;
+
+    throw new ConflictException({
+      code: 'NAT_PORT_OVERLAP',
+      message:
+        `Port ngoài ${describePortRange(input.externalFrom, input.externalTo)} ` +
+        `(${input.protocol.toUpperCase()}) đụng rule đang có: ` +
+        `${clash.protocol.toUpperCase()} ${describePortRange(clash.externalFrom, clash.externalTo)}. ` +
+        'Sổ NAT chỉ được có MỘT câu trả lời cho mỗi port — sửa rule cũ hoặc gỡ nó trước.',
+    });
   }
 
   /**
@@ -374,6 +465,17 @@ export class NatRuleService {
   }
 
   private translate(error: unknown, input: NatRuleInput): unknown {
+    /**
+     * Ràng buộc `nat_external_range_check` của DB — hàng rào cuối. Không map thì mọi đường
+     * vào KHÔNG qua DTO HTTP (import Excel về sau, seed, module khác gọi lại) bung 500 thay
+     * vì một câu tiếng Việt (code review Epic 5, finding 2).
+     */
+    if (pgErrorCode(error) === PG_CHECK_VIOLATION) {
+      return new BadRequestException({
+        code: 'NAT_INVALID',
+        message: `Port ngoài ${describePortRange(input.externalFrom, input.externalTo)} không hợp lệ (phải từ 1 đến 65535, số đầu nhỏ hơn số cuối).`,
+      });
+    }
     if (pgErrorCode(error) === PG_EXCLUSION_VIOLATION) {
       return new ConflictException({
         code: 'NAT_PORT_OVERLAP',

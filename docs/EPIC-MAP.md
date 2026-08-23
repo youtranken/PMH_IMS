@@ -241,3 +241,129 @@ service của module chủ**. Chưa có file nội bộ nào thành hub. `depcru
    tuần. So "đã qua giờ hẹn" + mốc `last_sent_at` mới vừa gửi bù được vừa không gửi trùng.
 6. **`Field` thiếu `htmlFor` là ô nhập không có tên** với trình đọc màn hình — và cũng là lý
    do `getByRole('textbox', { name })` của Playwright không tìm thấy. Test trợ năng bắt hộ.
+
+## Epic 4 — Két sắt (code xong 2026-08-23; story 4.3 chờ diễn tập khôi phục)
+
+### Bảng mới và ai sở hữu (AD-3)
+
+| Bảng | Module chủ | Ghi chú cho epic sau |
+| --- | --- | --- |
+| `secret` | `vault` | **Chỉ `vault` được đụng** — depcruise có luật `secret-table-only-in-vault`. Tham chiếu chủ thể LỎNG (`owner_type` + `owner_id`, không FK): vault không được biết bảng của module khác |
+
+### Hợp đồng epic sau sẽ dùng
+
+| Thứ | Ở đâu | Epic dùng |
+| --- | --- | --- |
+| `@RequiresStepUp()` + `StepUpGuard` | `modules/auth/step-up.guard.ts` | **Epic 6** break-glass, và mọi cửa cần "vừa gõ TOTP xong". Cấm viết `if (steppedUpAt…)` trong service |
+| `VaultApiService` | `modules/vault/vault.api.ts` | Module khác hỏi "chủ thể này có mấy secret". CỐ Ý không có hàm trả plaintext |
+| `StepUpDialog`, `RevealDialog`, `OtpInput` | `web/src/ui/` | Bất cứ màn nào cần gõ TOTP hoặc hiện một bí mật rồi tự ẩn |
+
+### Nợ kỹ thuật cố ý mang sang
+
+| Việc | Vì sao hoãn | Hạn chót |
+| --- | --- | --- |
+| Story 4.3 (diễn tập khôi phục, dữ liệu thật, deploy LAN) | Cần TAY NGƯỜI: mở phong bì niêm phong, máy sạch, bấm deploy | Xem `docs/RUNBOOK-4.3-dong-dot-1.md` |
+| Chưa có màn xoay `key_version` hàng loạt | `rewrap()` đã có và có test; chưa có secret nào cần xoay | Lần xoay chìa đầu tiên |
+
+### Code review đóng epic — 5 finding, đã sửa hết
+
+| # | Mức | Vấn đề | Cách sửa |
+| --- | --- | --- | --- |
+| 1 | Trung bình | `UserThrottlerGuard` đếm theo `req.user.email` nhưng đăng ký TRƯỚC `SessionGuard` → `req.user` chưa có → **lặng lẽ lùi về đếm theo IP**, sau nginx là cả văn phòng chung một bucket. Đúng thứ epic review 2 sinh ra để sửa lại không chạy, mà không có gì đỏ | Đổi thứ tự Session → Throttler. Kèm: gõ sai step-up đủ ngưỡng thì THU HỒI PHIÊN (không khóa tài khoản — khóa thì kẻ tấn công lại khóa được người dùng thật) |
+| 2 | Trung bình | Hình dạng route "một id mỗi lần" một mình không giữ nổi FR-026: phiên đã step-up cứ liệt kê rồi mở lần lượt là rút cả két trong vài phút | Trần theo USER: 30/phút cho mở két, 10/phút cho step-up. Audit là hàng rào PHÁT HIỆN, trần là hàng rào PHÒNG |
+| 3 | Thấp | Nút Xem không chặn bấm đúp → một cú đúp = hai lần giải mã, hai dòng audit, đồng hồ tự ẩn khởi động lại | Chốt bằng `ref` (không phải state): hai lần bấm cùng nhịp render đều đọc state cũ |
+| 4 | Thấp | Thiếu phiên mà trả `STEPUP_REQUIRED` → UI mở hộp nhập mã người dùng không bao giờ thoát được | Trả `SESSION_MISSING` |
+| 5 | Thấp | Chưa có assertion 390px cho hộp nhập mã và hộp hiện giá trị — đúng cảnh dùng thật (2 giờ sáng, trước tủ rack) | Thêm test với mật khẩu dài đầy ký tự đặc biệt |
+
+### Bẫy đã gặp — đừng lặp lại
+
+1. **Thứ tự guard toàn cục là một hợp đồng ngầm, và nó im lặng khi sai.** Guard đọc
+   `req.user` phải nằm SAU guard dựng ra `req.user`. Sai thì `?? req.ip` nuốt gọn, không log,
+   không test đỏ — chỉ có một hàng rào an ninh âm thầm yếu đi.
+2. **"Không có endpoint xuất hàng loạt" không phải một lời hứa, nó là hình dạng route.**
+   Bỏ `GET /secrets` trần và bắt buộc `ownerType`+`ownerId` thì không còn gì để lỡ gọi. Nhưng
+   hình dạng thôi chưa đủ — phải có trần rate mới thành hàng rào phòng.
+3. **Đếm ngược phải tính từ MỘT MỐC, không trừ dần mỗi nhịp.** Trình duyệt hãm
+   `setInterval` của tab nền xuống ~1 lần/phút; trừ dần thì đi họp về mật khẩu vẫn nằm trên
+   màn hình.
+4. **Input `type="password"` không phải `role=textbox` với `getByLabel`.** Dùng
+   `getByRole('textbox', { name })` — snapshot của Playwright vẫn gọi nó là textbox.
+5. **Tài khoản do test tạo ra cũng là rác cần dọn.** 27 tài khoản `e2e-tao-moi-…` tích lại
+   đẩy tài khoản vừa tạo sang trang 2 và làm `accounts.spec` đỏ — không phải vì sản phẩm sai.
+
+---
+
+## Epic 5 — Quản lý IP & NAT (đóng 2026-08-23)
+
+### Bảng mới và ai sở hữu (AD-3)
+
+| Bảng | Module chủ | Ghi chú cho epic sau |
+| --- | --- | --- |
+| `subnet` | `ipam` | Kiểu `cidr` THẬT của Postgres. Dải đã có IP thì không sửa được dải — ẩn cái cũ, khai cái mới |
+| `ip_address` | `ipam` | Kiểu `inet`. Unique CÓ ĐIỀU KIỆN `(subnet_id, address) WHERE voided_at IS NULL`; trigger `ip_address_within_subnet` chặn IP ngoài dải ở tầng DB |
+| `ip_history` | `ipam` | APPEND-ONLY (AD-13). Giữ VĨNH VIỄN — đây là chỗ trả lời "IP này từng là máy in kế toán" |
+| `nat_rule` | `ipam` | `EXCLUDE USING gist` chặn chồng port ngoài, kể cả chồng MỘT PHẦN. `ip_address_id` là liên kết MỀM (ON DELETE SET NULL) |
+
+### Hợp đồng epic sau sẽ dùng
+
+| Thứ | Ở đâu | Epic dùng |
+| --- | --- | --- |
+| `IpamApiService` | `modules/ipam/ipam.api.ts` | **Epic 8** phiếu bàn giao cần IP của máy; **Epic 9** phiếu sự cố trỏ tới IP |
+| `ip-lifecycle.ts` (máy trạng thái thuần) | `modules/ipam/` | Mẫu cho MỌI vòng đời sau: khai bảng chuyển, `canTransition`, lỗi CHỈ ĐƯỜNG. **Epic 6** dùng lại cho vòng đời yêu cầu phê duyệt |
+| `ip-rules.ts` (số học IPv4) | `modules/ipam/` | Bất cứ chỗ nào đụng địa chỉ mạng. **Cấm** tự parse IP bằng `split('.')` ở nơi khác |
+| `UsageBar` | `web/src/ui/usage-bar.tsx` | **Epic 7** ô "dải nào sắp đầy" trên bảng điều khiển; seat license |
+| `IpDevicePanel`, `NatDevicePanel` | `modules/ipam/` | Mẫu cắm khu vào trang thiết bị — lần thứ ba dùng cơ chế của story 2.5, `devices` vẫn chưa phải sửa một dòng nào |
+
+### Nợ kỹ thuật cố ý mang sang
+
+| Việc | Vì sao hoãn | Hạn chót |
+| --- | --- | --- |
+| Chỉ IPv4 | PMH chạy 172.16.x/24, chưa có IPv6. Nhận nửa vời tệ hơn từ chối thẳng | Khi thật sự có IPv6. Bảng đã dùng `inet`/`cidr` nên chỉ phải sửa `ip-rules.ts` + bỏ 2 ràng buộc `family(...) = 4` |
+| Vòng đời IP đặt tay, chưa quét mạng tự động | AC 5.2 ghi rõ "v1 đặt tay" | Khi có nhu cầu phát hiện IP chết tự động |
+| Chưa import hàng loạt hồ sơ IP | Bộ khung `import-plan` đã sẵn, nhưng Đợt 1 nhập tay là đủ | Khi số IP vượt ~200 |
+| `nat_rule` chưa có lịch sử riêng | Audit đã ghi đủ ai-đổi-gì; rule NAT ít đổi hơn IP nhiều | Khi có yêu cầu tra "rule này từng trỏ đi đâu" |
+
+### Code review đóng epic — 8 finding, đã sửa hết
+
+| # | Mức | Vấn đề | Cách sửa |
+| --- | --- | --- | --- |
+| 1 | **Cao** | "Mở dải hơn 1000 cổng" được viết là CẢNH BÁO trong comment, trong thông điệp (*"nếu đúng ý thì cứ lưu"*) và trong tên test — nhưng code lại NÉM. Người dùng đọc được lời khuyên mà không làm theo được; dải port camera (50000-52000, đúng ví dụ trong chính comment) không bao giờ vào nổi sổ. **Test cũ chỉ đếm `errors.length === 1` nên nó XANH trong khi hành vi sai** | Tách kiểu: `{ errors, warnings }`. Chỉ `errors` chặn; `warnings` trả về cho UI hiện toast. Kiểu dữ liệu tách bạch làm chuyện này không lặp lại được |
+| 2 | Trung bình | `validateNatRule` không kiểm khoảng port NGOÀI (biên 1–65535, from ≤ to) — chỉ bộ phân tích chuỗi của controller kiểm. `NatRuleService.create` là hàm công khai: import Excel về sau, seed, module khác gọi lại đều không qua DTO HTTP → rơi xuống ràng buộc DB và bung **500** | Kiểm trong hàm thuần, và map `23514` sang 400 tiếng Việt |
+| 3 | Trung bình | Lọc theo site không tra ra được (site đã xóa, bookmark cũ) trả `null` rồi lọc `siteCode === null` → trả về rule của router KHÔNG gắn site: một tập khác hẳn, KHÔNG rỗng, mà auditor đọc thành "đây là rule của site X". Export dùng chung đường này | Site không tra được → trả RỖNG |
+| 4 | Trung bình | `EXCLUDE` của DB so `protocol WITH =` nên `both` và `tcp` cùng port không đụng nhau — trong khi `both` theo định nghĩa phủ cả hai. Sổ có HAI câu trả lời cho TCP/8080. Comment còn ghi "service cảnh báo chỗ đó" mà service **không hề có** đoạn nào như vậy | Thêm `protocolsOverlap`/`rangesOverlap` thuần + kiểm ở service trước khi ghi |
+| 5 | Thấp/TB | `internalIp` là trường text duy nhất không chuẩn hóa: `linkIp` so chuỗi thô với `host(address)` nên một dấu cách thừa là mất liên kết sang hồ sơ IP dù hồ sơ có thật. Ở tầng DTO thì `"172.16.10.5 "` dài 16 ký tự và bị `@Length(1,15)` từ chối bằng một câu vô nghĩa | `@Transform(trimText)` ở DTO (chạy trước `@Length`) + trim lại trong service cho các đường không qua HTTP |
+| 6 | Thấp/TB | Tìm kiếm chỉ so `external_from::text` → rule `8000-8010` không tìm thấy khi gõ `8005`, người tra kết luận port đang trống. Người tạo rule còn được 409 cứu; auditor chỉ đọc thì nhận thẳng câu trả lời sai | Gõ một SỐ thì tìm theo khoảng chứa (`from <= p AND to >= p`) và cả `internal_port` |
+| 7 | Thấp | `listNat`/`exportNat` nhận `@Query()` trần → `?deviceId=abc` xuống Postgres thành `22P02` và bung 500 | Thêm `NatQueryDto` |
+| 8 | Thấp | `update` có `requireAlive` nhưng câu `UPDATE` thiếu `voided_at IS NULL`: A gỡ rule, B bấm Lưu → bản sửa của B ghi đè hàng đã gỡ, đẻ dòng audit cho rule không còn trong sổ, và biến mất vĩnh viễn | Đưa điều kiện vào chính câu UPDATE + kiểm `rows.length` → 409 để người thua thấy lỗi ngay |
+
+### Bẫy đã gặp — đừng lặp lại
+
+1. **Đếm "đang dùng" theo SỐ HÀNG là sai.** IP đã thu hồi vẫn còn hàng (lịch sử giữ vĩnh
+   viễn) nhưng đã trả chỗ về pool. Đếm cả nó thì mức sử dụng chỉ tăng không bao giờ giảm, và
+   sau một năm màn hình báo dải đầy trong khi còn quá nửa. Đếm theo TRẠNG THÁI CHIẾM CHỖ.
+2. **UNIQUE hai cột không bắt được chồng MỘT PHẦN.** `8000-8010` và `8005-8020` là hai cặp
+   số khác nhau nên UNIQUE cho qua — trong khi port 8005 có hai chủ. Cần `EXCLUDE USING gist`
+   với `int4range &&`.
+3. **Dịch bit trong JS làm việc trên số CÓ DẤU.** `(a << 24) | …` với `255.x.x.x` ra số ÂM.
+   Phải `>>> 0`. Không có test bảng dữ liệu thì lỗi này chỉ lộ ra ở đúng một dải địa chỉ.
+4. **`172.16.010.5` không phải `172.16.10.5`.** Nhiều thư viện đọc số có 0 đứng đầu theo hệ
+   bát phân → thành `172.16.8.5`. Cấp một IP mà tưởng là cấp IP khác. Từ chối ở cửa vào.
+5. **Địa chỉ mạng và địa chỉ quảng bá NẰM TRONG dải nhưng không cấp được.** Trigger "nằm
+   trong dải" cho cả hai qua; service phải chặn thêm, nếu không máy nhận IP đó không ra mạng.
+6. **Quy chuẩn dải ngay lúc nhận.** Người ta gõ `172.16.10.37/24`. Không quy về địa chỉ mạng
+   thì hai người khai cùng một dải ra hai bản ghi, và ràng buộc "không trùng dải" vô dụng
+   ngay từ đầu.
+7. **Kiểm luật trên giá trị ĐÃ TRỘN với bản ghi cũ.** Sửa mỗi `externalTo` mà kiểm riêng nó
+   thì "8010 hợp lệ" — trong khi hàng sau khi sửa là `8020-8010`, ngược đầu. (Đúng bài học của
+   import thiết bị ở Epic 2, lặp lại ở một hình dạng khác.)
+8. **Test có thể XANH trong khi hành vi sai — nếu nó chỉ đếm.** `expect(errors.length).toBe(1)`
+   không phân biệt "cảnh báo" với "chặn". Khi ý định là *"cho qua nhưng nói ra"*, kiểu dữ liệu
+   phải nói được điều đó (`{ errors, warnings }`) — không thì comment, thông điệp và code trôi
+   khỏi nhau mà không có gì đỏ.
+9. **Comment mô tả hành vi KHÔNG TỒN TẠI là nợ nguy hiểm hơn không comment.** Hai chỗ trong
+   epic này: "service cảnh báo chỗ đó" (không có đoạn nào), và "kiểm trên giá trị đã trộn nên
+   bắt được 8020-8010" (hàm kiểm không hề đụng tới khoảng port ngoài). Người đọc sau tin
+   comment và không kiểm lại.
+10. **Hàm public của service là một cửa vào thật, không chỉ là chỗ controller gọi.** Đẩy hết
+    việc kiểm lên DTO thì mọi đường khác (import, seed, module khác) đi thẳng xuống DB và bung
+    500. Luật nghiệp vụ thuộc về hàm thuần, DTO chỉ là lớp chuyển kiểu.

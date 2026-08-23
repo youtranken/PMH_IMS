@@ -181,6 +181,205 @@ test.describe('Sổ NAT', () => {
     expect(((await bad.json()) as { message: string }).message).toContain('8000-8010');
   });
 
+  /**
+   * Code review Epic 5, finding 1: dải rộng là CẢNH BÁO chứ không phải lỗi. Trước đây comment
+   * và test đều nói "không chặn" nhưng code lại ném — người dùng đọc được lời khuyên "nếu
+   * đúng ý thì cứ lưu" mà không làm theo được, và dải port camera không vào nổi sổ.
+   */
+  test('dải port lớn LƯU ĐƯỢC và trả về cảnh báo, không bị chặn', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const { headers, routerId, internalIp } = await setUp(page, stamp);
+
+    const res = await page.request.post('/api/v1/ipam/nat', {
+      headers,
+      data: {
+        deviceId: routerId,
+        protocol: 'tcp',
+        externalPorts: '50000-52000',
+        internalIp,
+        internalPort: 554,
+        usedBy: 'Camera kho',
+        reason: 'dải RTSP của đầu ghi camera',
+      },
+    });
+    expect(res.status()).toBe(201);
+    const body = (await res.json()) as { warnings?: string[] };
+    expect(body.warnings?.length).toBe(1);
+    expect(body.warnings?.[0]).toContain('1000');
+  });
+
+  /**
+   * Code review Epic 5, finding 4: `EXCLUDE` của DB so `protocol WITH =` nên không thấy
+   * `both` chồng `tcp`. Mà `both` theo định nghĩa phủ cả hai — để lọt là sổ có HAI câu trả
+   * lời cho TCP/8080.
+   */
+  test('đường hỏng: "cả hai giao thức" chồng lên rule TCP đang có bị chặn', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const { headers, routerId, internalIp } = await setUp(page, stamp);
+    const base = {
+      deviceId: routerId,
+      internalIp,
+      internalPort: 80,
+      usedBy: 'Phòng Nhân sự',
+      reason: 'máy chấm công',
+    };
+
+    expect(
+      (
+        await page.request.post('/api/v1/ipam/nat', {
+          headers,
+          data: { ...base, protocol: 'tcp', externalPorts: '8080' },
+        })
+      ).status(),
+    ).toBe(201);
+
+    const both = await page.request.post('/api/v1/ipam/nat', {
+      headers,
+      data: { ...base, protocol: 'both', externalPorts: '8080' },
+    });
+    expect(both.status()).toBe(409);
+    expect(await both.json()).toMatchObject({ code: 'NAT_PORT_OVERLAP' });
+
+    // Và chiều ngược lại: đã có `both` thì thêm `udp` cùng port cũng phải bị chặn.
+    const other = await page.request.post('/api/v1/ipam/nat', {
+      headers,
+      data: { ...base, protocol: 'both', externalPorts: '9090' },
+    });
+    expect(other.status()).toBe(201);
+    const udp = await page.request.post('/api/v1/ipam/nat', {
+      headers,
+      data: { ...base, protocol: 'udp', externalPorts: '9090' },
+    });
+    expect(udp.status()).toBe(409);
+  });
+
+  /**
+   * Code review Epic 5, finding 6: tìm `8005` phải ra rule `8000-8010`. Bản trước chỉ so
+   * `external_from` nên người tra kết luận nhầm là port đang trống.
+   */
+  test('tìm theo port bắt được cả BÊN TRONG khoảng', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const { headers, routerId, internalIp } = await setUp(page, stamp);
+    await page.request.post('/api/v1/ipam/nat', {
+      headers,
+      data: {
+        deviceId: routerId,
+        protocol: 'tcp',
+        externalPorts: '8000-8010',
+        internalIp,
+        internalPort: 80,
+        usedBy: 'Phòng Nhân sự',
+        reason: 'máy chấm công',
+      },
+    });
+
+    for (const port of ['8000', '8005', '8010']) {
+      const res = await page.request.get(`/api/v1/ipam/nat?search=${port}`);
+      const rows = (await res.json()) as unknown[];
+      expect(rows.length, `tìm ${port} phải ra rule 8000-8010`).toBeGreaterThan(0);
+    }
+    const outside = await page.request.get('/api/v1/ipam/nat?search=8011');
+    expect(((await outside.json()) as unknown[]).length).toBe(0);
+  });
+
+  /**
+   * Code review Epic 5, finding 3: site không tra ra được (đã xóa / bookmark cũ) phải trả
+   * RỖNG. Bản trước lọc `siteCode === null` nên nó trả về rule của router KHÔNG gắn site —
+   * một tập khác hẳn, không rỗng, và auditor đọc thành "đây là rule của site X".
+   */
+  test('lọc theo site không tồn tại trả RỖNG, không trả nhầm tập khác', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const { headers, routerId, internalIp } = await setUp(page, stamp);
+    await page.request.post('/api/v1/ipam/nat', {
+      headers,
+      data: {
+        deviceId: routerId,
+        protocol: 'tcp',
+        externalPorts: '8080',
+        internalIp,
+        internalPort: 80,
+        usedBy: 'Phòng Nhân sự',
+        reason: 'máy chấm công',
+      },
+    });
+
+    // Router của test không gắn site → nếu lọc sai thì rule này sẽ lọt vào kết quả.
+    const stale = await page.request.get(
+      '/api/v1/ipam/nat?siteId=00000000-0000-4000-8000-000000000000',
+    );
+    expect(stale.status()).toBe(200);
+    expect(((await stale.json()) as unknown[]).length).toBe(0);
+
+    // Còn id rác thì phải là 400 tử tế, không phải 500 (finding 7).
+    const junk = await page.request.get('/api/v1/ipam/nat?deviceId=abc');
+    expect(junk.status()).toBe(400);
+  });
+
+  /**
+   * Code review Epic 5, finding 5: IP trong không được chuẩn hóa nên một dấu cách thừa làm
+   * mất liên kết sang hồ sơ IP — cột "máy trong" trống trong khi hồ sơ có thật.
+   */
+  test('IP trong có dấu cách thừa vẫn nối được sang hồ sơ IP', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const { headers, routerId, internalIp } = await setUp(page, stamp);
+
+    const res = await page.request.post('/api/v1/ipam/nat', {
+      headers,
+      data: {
+        deviceId: routerId,
+        protocol: 'tcp',
+        externalPorts: '8080',
+        internalIp: `  ${internalIp}  `,
+        internalPort: 80,
+        usedBy: 'Phòng Nhân sự',
+        reason: 'máy chấm công',
+      },
+    });
+    expect(res.status()).toBe(201);
+    const body = (await res.json()) as { internalIp: string; internalOwner: string | null };
+    expect(body.internalIp).toBe(internalIp);
+    expect(body.internalOwner).toBe('Máy chấm công');
+  });
+
+  /**
+   * Code review Epic 5, finding 8: A gỡ rule, B bấm Lưu — không có `voided_at IS NULL` trong
+   * chính câu UPDATE thì bản sửa của B ghi đè lên hàng đã gỡ và biến mất vĩnh viễn.
+   */
+  test('sửa một rule vừa bị người khác gỡ thì báo lỗi, không ghi đè im lặng', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const { headers, routerId, internalIp } = await setUp(page, stamp);
+    const created = await page.request.post('/api/v1/ipam/nat', {
+      headers,
+      data: {
+        deviceId: routerId,
+        protocol: 'tcp',
+        externalPorts: '8080',
+        internalIp,
+        internalPort: 80,
+        usedBy: 'Phòng Nhân sự',
+        reason: 'máy chấm công',
+      },
+    });
+    const id = ((await created.json()) as { id: string }).id;
+
+    await page.request.delete(`/api/v1/ipam/nat/${id}`, {
+      headers,
+      data: { reason: 'dịch vụ đã ngừng' },
+    });
+
+    const late = await page.request.patch(`/api/v1/ipam/nat/${id}`, {
+      headers,
+      data: { usedBy: 'Phòng Kho' },
+    });
+    expect([404, 409]).toContain(late.status());
+  });
+
   /** AC 5.3: trang thiết bị hiển thị rule của chính nó (qua sổ khu mở rộng của story 2.5). */
   test('trang router hiện sổ NAT của chính nó, devices không phải biết NAT là gì', async ({
     page,

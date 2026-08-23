@@ -11,7 +11,7 @@ import { parseAddress } from './ip-rules';
 
 const MIN_PORT = 1;
 const MAX_PORT = 65535;
-/** Mở rộng hơn ngần này thì phải nói ra — không chặn, nhưng người khai cần biết. */
+/** Rộng hơn ngần này thì CẢNH BÁO — không chặn. Xem `NatRuleCheck` bên dưới. */
 const WIDE_RANGE = 1000;
 
 export type PortRange =
@@ -51,11 +51,29 @@ export interface NatRuleDraft {
 }
 
 /**
- * Trả về danh sách lỗi tiếng Việt (rỗng = hợp lệ) thay vì ném ở lỗi đầu tiên: form NAT có
- * sáu ô, sửa từng lỗi một là sáu lần bấm Lưu.
+ * Kết quả kiểm một dòng: LỖI thì không lưu được, CẢNH BÁO thì lưu được nhưng phải nói ra.
+ *
+ * Tách hai loại này là điểm sửa của code review Epic 5 (finding 1). Trước đây cả hai cùng đổ
+ * vào một mảng `errors`, nên "mở hơn 1000 cổng" — thứ tôi CỐ Ý muốn cho qua và còn viết hẳn
+ * trong thông điệp là *"nếu đúng ý thì cứ lưu"* — lại bị chặn. Người dùng đọc được lời khuyên
+ * mà không làm theo được, và dải port camera (50000-52000, đúng ví dụ trong chính comment cũ)
+ * không bao giờ vào nổi sổ NAT.
+ *
+ * Bài học đắt hơn: test cũ chỉ đếm `errors.length === 1` nên nó XANH trong khi hành vi sai.
+ * Kiểu dữ liệu tách bạch làm chuyện đó không lặp lại được nữa.
  */
-export function validateNatRule(draft: NatRuleDraft): string[] {
+export interface NatRuleCheck {
+  errors: string[];
+  warnings: string[];
+}
+
+/**
+ * Trả về danh sách lỗi + cảnh báo (thay vì ném ở lỗi đầu tiên): form NAT có sáu ô, sửa từng
+ * lỗi một là sáu lần bấm Lưu.
+ */
+export function validateNatRule(draft: NatRuleDraft): NatRuleCheck {
   const errors: string[] = [];
+  const warnings: string[] = [];
 
   if (!draft.usedBy.trim()) {
     errors.push('Ghi rõ rule này mở cho ai dùng — đó là câu auditor sẽ hỏi.');
@@ -69,14 +87,51 @@ export function validateNatRule(draft: NatRuleDraft): string[] {
   if (!inPortRange(draft.internalPort)) {
     errors.push(`Port trong phải từ ${MIN_PORT} đến ${MAX_PORT}.`);
   }
-  if (draft.externalTo - draft.externalFrom + 1 > WIDE_RANGE) {
-    errors.push(
+
+  /**
+   * Khoảng port ngoài kiểm Ở ĐÂY chứ không chỉ ở bộ phân tích chuỗi của controller.
+   *
+   * Code review Epic 5 (finding 2): `NatRuleService.create` là một hàm công khai — import
+   * Excel về sau, seed, hay module khác gọi lại đều đi thẳng vào đây mà không qua DTO HTTP.
+   * Không kiểm thì cặp ngược đầu rơi xuống `nat_external_range_check` của Postgres và bung
+   * 500 thay vì một câu tiếng Việt.
+   */
+  if (!inPortRange(draft.externalFrom) || !inPortRange(draft.externalTo)) {
+    errors.push(`Port ngoài phải từ ${MIN_PORT} đến ${MAX_PORT}.`);
+  } else if (draft.externalFrom > draft.externalTo) {
+    errors.push('Khoảng port ngoài viết ngược — số đầu phải nhỏ hơn số cuối (vd 8000-8010).');
+  } else if (draft.externalTo - draft.externalFrom + 1 > WIDE_RANGE) {
+    // CẢNH BÁO, không phải lỗi: dải port camera là việc có thật và hợp lệ.
+    warnings.push(
       `Dải port ngoài này mở hơn ${WIDE_RANGE} cổng ra Internet. Nếu đúng ý thì cứ lưu, nhưng hãy chắc chắn.`,
     );
   }
-  return errors;
+
+  return { errors, warnings };
 }
 
 function inPortRange(port: number): boolean {
   return Number.isInteger(port) && port >= MIN_PORT && port <= MAX_PORT;
+}
+
+/**
+ * Hai rule có đụng nhau về giao thức không?
+ *
+ * `tcp` và `udp` KHÔNG đụng nhau — Draytek cho khai riêng hai giao thức cùng port, chặn là
+ * chặn nhầm việc hợp lệ. Nhưng `both` thì theo định nghĩa PHỦ CẢ HAI, nên nó đụng với mọi
+ * thứ. Ràng buộc `EXCLUDE` của DB so `protocol WITH =` nên không thấy chuyện này (code review
+ * Epic 5, finding 4) — service phải tự bắt.
+ */
+export function protocolsOverlap(a: string, b: string): boolean {
+  return a === b || a === 'both' || b === 'both';
+}
+
+/** Hai khoảng port có giao nhau không (biên tính vào). */
+export function rangesOverlap(
+  aFrom: number,
+  aTo: number,
+  bFrom: number,
+  bTo: number,
+): boolean {
+  return aFrom <= bTo && bFrom <= aTo;
 }
