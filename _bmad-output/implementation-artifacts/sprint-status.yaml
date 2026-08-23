@@ -69,8 +69,8 @@ development_status:
   epic-5: in-progress
   5-1-khai-báo-subnet-và-hồ-sơ-ip: done
   5-2-vòng-đời-ip-và-mức-sử-dụng-subnet: done
-  5-3-sổ-nat-draytek: backlog
-  5-4-panel-ip-trên-trang-thiết-bị: backlog
+  5-3-sổ-nat-draytek: done
+  5-4-panel-ip-trên-trang-thiết-bị: done
   epic-5-retrospective: optional
 
   epic-6: backlog

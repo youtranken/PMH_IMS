@@ -1,18 +1,39 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req } from '@nestjs/common';
 import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
+import type { Response } from 'express';
+import {
+  IsBoolean,
   IsIn,
+  IsInt,
   IsOptional,
   IsString,
   IsUUID,
   Length,
   Matches,
+  Max,
+  Min,
   ValidateIf,
 } from 'class-validator';
+import { BadRequestException } from '@nestjs/common';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { IpAddressService } from './ip-address.service';
 import { IP_LIFECYCLE_STATUSES, type IpStatus } from './ip-lifecycle';
+import { NAT_PROTOCOLS, NatRuleService, type NatProtocol } from './nat-rule.service';
+import { parsePortRange } from './nat-rules';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
+import { sendXlsx } from '../../common/excel/xlsx-http';
 import { SubnetService } from './subnet.service';
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
@@ -53,6 +74,24 @@ class VoidDto {
   @IsString() @Length(3, 500) reason!: string;
 }
 
+class NatBodyDto {
+  @IsOptional() @IsUUID(undefined, { message: 'Mã thiết bị không hợp lệ.' }) deviceId?: string;
+
+  @IsOptional()
+  @IsIn([...NAT_PROTOCOLS], { message: 'Giao thức phải là TCP, UDP hoặc cả hai.' })
+  protocol?: NatProtocol;
+
+  /** Người dùng gõ "8080" hoặc "8000-8010" — một ô, không phải hai. */
+  @IsOptional() @IsString() @Length(1, 11) externalPorts?: string;
+
+  @IsOptional() @IsString() @Length(1, 15) internalIp?: string;
+  @IsOptional() @IsInt() @Min(1) @Max(65535) internalPort?: number;
+  @IsOptional() @IsString() @Length(1, 160) usedBy?: string;
+  @IsOptional() @IsString() @Length(1, 500) reason?: string;
+  @IsOptional() @IsBoolean() enabled?: boolean;
+  @IsOptional() @IsString() @Length(0, 2000) note?: string;
+}
+
 class IdParamDto {
   @IsUUID(undefined, { message: 'Mã không hợp lệ.' })
   id!: string;
@@ -70,6 +109,8 @@ export class IpamController {
   constructor(
     private readonly subnets: SubnetService,
     private readonly addresses: IpAddressService,
+    private readonly nat: NatRuleService,
+    private readonly excel: ExcelExportService,
   ) {}
 
   // --- Dải mạng ---------------------------------------------------------------
@@ -204,8 +245,121 @@ export class IpamController {
     await this.addresses.voidAddress(actor(req), params.id, body.reason);
     return { ok: true };
   }
+  // --- Sổ NAT (story 5.3, FR-017) ---------------------------------------------
+
+  /**
+   * Cả team IT ĐỌC được: "port nào mở" là câu hỏi lúc xử lý sự cố, không phải câu hỏi
+   * hành chính. Ghi thì cũng cả team — người mở port chính là người biết vì sao mở.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('nat')
+  listNat(@Query() query: { deviceId?: string; siteId?: string; search?: string }) {
+    return this.nat.list(query);
+  }
+
+  /**
+   * Xuất Excel để nộp cho auditor (AC 5.3). Cố ý KHÔNG có ở két sắt nhưng CÓ ở đây: sổ NAT
+   * là thứ người ta phải đem đi trình, còn mật khẩu thì không (FR-026).
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('nat/export.xlsx')
+  async exportNat(
+    @Query() query: { deviceId?: string; siteId?: string; search?: string },
+    @Res() res: Response,
+  ) {
+    const rows = await this.nat.list(query);
+    const buffer = await this.excel.build({
+      sheetName: 'So NAT',
+      columns: [
+        { header: 'Router', width: 22, value: (r) => r.deviceCode ?? '' },
+        { header: 'Site', width: 12, value: (r) => r.siteCode ?? '' },
+        { header: 'Giao thức', width: 12, value: (r) => r.protocol.toUpperCase() },
+        { header: 'Port ngoài', width: 14, value: (r) => r.externalPorts },
+        { header: 'IP trong', width: 16, value: (r) => r.internalIp },
+        { header: 'Port trong', width: 12, value: (r) => r.internalPort },
+        { header: 'Máy trong', width: 22, value: (r) => r.internalOwner ?? '' },
+        { header: 'Mở cho ai', width: 24, value: (r) => r.usedBy },
+        { header: 'Lý do', width: 40, value: (r) => r.reason },
+        { header: 'Đang bật', width: 10, value: (r) => (r.enabled ? 'Có' : 'Không') },
+      ],
+      rows,
+    });
+    sendXlsx(res, buffer, 'so-nat.xlsx');
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @Get('nat/:id')
+  findNat(@Param() params: IdParamDto) {
+    return this.nat.findOne(params.id);
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @Post('nat')
+  @Audited('nat.created', 'nat_rule', { writtenByService: true })
+  createNat(@Body() body: NatBodyDto, @Req() req: AuthedRequest) {
+    const ports = requirePorts(body.externalPorts);
+    return this.nat.create(actor(req), {
+      deviceId: body.deviceId ?? '',
+      protocol: body.protocol ?? 'tcp',
+      externalFrom: ports.from,
+      externalTo: ports.to,
+      internalIp: body.internalIp ?? '',
+      internalPort: body.internalPort ?? 0,
+      usedBy: body.usedBy ?? '',
+      reason: body.reason ?? '',
+      enabled: body.enabled,
+      note: body.note,
+    });
+  }
+
+  @Roles('sa', 'admin', 'member')
+  @Patch('nat/:id')
+  @Audited('nat.updated', 'nat_rule', { writtenByService: true })
+  updateNat(@Param() params: IdParamDto, @Body() body: NatBodyDto, @Req() req: AuthedRequest) {
+    const ports = body.externalPorts === undefined ? null : requirePorts(body.externalPorts);
+    return this.nat.update(actor(req), params.id, {
+      deviceId: body.deviceId,
+      protocol: body.protocol,
+      externalFrom: ports?.from,
+      externalTo: ports?.to,
+      internalIp: body.internalIp,
+      internalPort: body.internalPort,
+      usedBy: body.usedBy,
+      reason: body.reason,
+      enabled: body.enabled,
+      note: body.note,
+    });
+  }
+
+  /** Gỡ rule = ẩn kèm lý do: "port 8080 đóng ngày nào, ai đóng, vì sao" sẽ có người hỏi. */
+  @Roles('sa', 'admin')
+  @Delete('nat/:id')
+  @Audited('nat.voided', 'nat_rule', { writtenByService: true })
+  async voidNat(@Param() params: IdParamDto, @Body() body: VoidDto, @Req() req: AuthedRequest) {
+    await this.nat.voidRule(actor(req), params.id, body.reason);
+    return { ok: true };
+  }
 }
 
 function actor(req: AuthedRequest): string {
   return req.user!.email;
 }
+
+/**
+ * Đổi ô "8080" / "8000-8010" thành cặp số. Lỗi nói ĐÚNG chỗ sai (viết ngược đầu ≠ sai định
+ * dạng) — người gõ biết mình muốn gì, chỉ cần được chỉ đúng chỗ.
+ */
+function requirePorts(value: string | undefined): { from: number; to: number } {
+  const parsed = parsePortRange(value ?? '');
+  if (parsed.ok) return { from: parsed.from, to: parsed.to };
+  throw new BadRequestException({
+    code: 'NAT_PORT_INVALID',
+    message: PORT_MESSAGE[parsed.reason],
+  });
+}
+
+const PORT_MESSAGE: Record<string, string> = {
+  format: 'Port ngoài viết dạng "8080" hoặc "8000-8010".',
+  range: 'Port phải từ 1 đến 65535.',
+  reversed: 'Khoảng port viết ngược — số đầu phải nhỏ hơn số cuối (vd 8000-8010).',
+};

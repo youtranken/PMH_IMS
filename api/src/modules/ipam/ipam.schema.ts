@@ -1,6 +1,8 @@
 import {
+  boolean,
   customType,
   date,
+  integer,
   jsonb,
   pgTable,
   text,
@@ -73,4 +75,32 @@ export const ipHistoryTable = pgTable('ip_history', {
   toStatus: text('to_status'),
   changes: jsonb('changes'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * Bảng `nat_rule` — migration 0022 (story 5.3, FR-017). Cùng chủ với `ip_address`: một rule
+ * NAT chỉ có nghĩa khi gắn được với một IP trong, ranh giới giữa hai thứ đó là ranh giới giả.
+ *
+ * Chồng port ngoài trên cùng một router bị chặn ở tầng DB bằng `EXCLUDE USING gist` — bắt
+ * được cả chồng MỘT PHẦN (8000-8010 vs 8005-8020), thứ mà UNIQUE hai cột không bao giờ thấy.
+ */
+export const natRuleTable = pgTable('nat_rule', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  deviceId: uuid('device_id').notNull(),
+  protocol: text('protocol').notNull(),
+  externalFrom: integer('external_from').notNull(),
+  externalTo: integer('external_to').notNull(),
+  internalIp: inet('internal_ip').notNull(),
+  internalPort: integer('internal_port').notNull(),
+  ipAddressId: uuid('ip_address_id'),
+  usedBy: text('used_by').notNull(),
+  reason: text('reason').notNull(),
+  enabled: boolean('enabled').notNull().default(true),
+  note: text('note'),
+  createdBy: text('created_by').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  voidedAt: timestamp('voided_at', { withTimezone: true }),
+  voidedBy: text('voided_by'),
+  voidReason: text('void_reason'),
 });

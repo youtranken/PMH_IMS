@@ -144,6 +144,9 @@ export function resetIpam(): void {
     `ALTER TABLE ip_history DISABLE TRIGGER ip_history_no_delete`,
     `DELETE FROM ip_history WHERE ip_address_id IN (SELECT id FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE ${match}))`,
     `ALTER TABLE ip_history ENABLE TRIGGER ip_history_no_delete`,
+    // Rule NAT trỏ tới hồ sơ IP — xóa trước, không thì FK chặn.
+    `DELETE FROM nat_rule WHERE ip_address_id IN (SELECT id FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE ${match}))`,
+    `DELETE FROM nat_rule WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
     `DELETE FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE ${match})`,
     `DELETE FROM subnet WHERE ${match}`,
   ].join('; ');
@@ -187,6 +190,12 @@ export function resetDevices(): void {
     `DELETE FROM license_assignment WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
     // Đường ISP trỏ tới thiết bị biên — gỡ liên kết trước khi xóa thiết bị.
     `UPDATE isp_line SET device_id = NULL WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
+    // Rule NAT và hồ sơ IP trỏ tới thiết bị (FK RESTRICT) — dọn trước khi xóa thiết bị.
+    `DELETE FROM nat_rule WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
+    `ALTER TABLE ip_history DISABLE TRIGGER ip_history_no_delete`,
+    `DELETE FROM ip_history WHERE ip_address_id IN (SELECT id FROM ip_address WHERE device_id IN (SELECT id FROM device WHERE ${match}))`,
+    `ALTER TABLE ip_history ENABLE TRIGGER ip_history_no_delete`,
+    `DELETE FROM ip_address WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
     // Port map trỏ tới thiết bị ở CẢ HAI cột — xóa hết dòng có dính thiết bị test.
     `DELETE FROM device_port WHERE device_id IN (SELECT id FROM device WHERE ${match}) OR connected_device_id IN (SELECT id FROM device WHERE ${match})`,
     // `device_history` là append-only (AD-13) nên phải tắt trigger để dọn — đây là lý do

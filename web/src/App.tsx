@@ -17,6 +17,7 @@ import { CatalogScreen } from '@/features/catalog/catalog-screen';
 import { DeviceDetail } from '@/features/devices/device-detail';
 import { DevicesScreen } from '@/features/devices/devices-screen';
 import { ExpiryScreen } from '@/features/expiry/expiry-screen';
+import { NatScreen } from '@/features/ipam/nat-screen';
 import { SubnetDetail } from '@/features/ipam/subnet-detail';
 import { SubnetsScreen } from '@/features/ipam/subnets-screen';
 import { IspDetail } from '@/features/isp/isp-detail';
@@ -95,6 +96,7 @@ function AppRoutes() {
         <Route path="/sap-het-han" element={<ExpiryScreen me={me} />} />
         <Route path="/dia-chi-ip" element={<SubnetsScreen me={me} />} />
         <Route path="/dia-chi-ip/:id" element={<SubnetDetail me={me} />} />
+        <Route path="/so-nat" element={<NatScreen me={me} />} />
         {/* Bộ giao diện là trang nội bộ: member/admin vào thẳng URL cũng chỉ nhận 404. */}
         {me.role === 'sa' ? (
           <Route path="/dev/components" element={<ComponentsGallery />} />

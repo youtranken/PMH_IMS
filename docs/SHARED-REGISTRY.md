@@ -83,6 +83,7 @@
 | `DevicesApiService` | `modules/devices/devices.api.ts` | ipam/vault/software/phiếu tham chiếu thiết bị | Cấm query bảng `device` từ module khác |
 | `VaultApiService` | `modules/vault/vault.api.ts` | Module khác hỏi "chủ thể này có mấy secret, tên gì" (AD-2/AD-4) | CỐ Ý không có hàm trả plaintext — muốn mở két phải đi endpoint riêng có TOTP step-up (4.2); cấm mọi module khác chạm bảng `secret` |
 | `IpamApiService` | `modules/ipam/ipam.api.ts` | Module khác hỏi "thiết bị này có IP gì" (AD-2): panel IP 5.4, sổ NAT 5.3, phiếu bàn giao Epic 8 | Cấm query bảng `subnet`/`ip_address` từ module khác |
+| `IpDevicePanel`, `NatDevicePanel` | `modules/ipam/*-device-panel.ts` | Cắm khu IP và khu NAT vào trang thiết bị (story 5.3/5.4) qua `DevicePanelRegistry` | `devices` KHÔNG được import ipam — chiều phụ thuộc chỉ đi một hướng (AD-2) |
 
 ## Cách CI ép luật (không trông vào review)
 
