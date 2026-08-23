@@ -88,3 +88,29 @@ phải đi thao tác riêng, để cái máy trạng thái không chỉ là gợ
 
 **Sửa lại tốn bao nhiêu:** nhỏ, một migration đổi `CHECK` + nhãn i18n.
 
+### 5. Break-glass dùng bảng `approval` chung, không có bảng `access_grant` riêng — story 6.3
+
+**Quyết:** AC 6.3 viết "lưu bảng `access_grant` + history". Tôi dùng bảng `approval` +
+`approval_history` của module duyệt dùng chung (story 6.1) thay cho một bảng riêng.
+
+**Vì sao:** AD-6 nói thẳng — *"mọi luồng xin–duyệt dùng bảng `approval` chung + từ vựng state
+đăng ký theo loại"*, và ARCHITECTURE-SPINE là luật chứ không phải gợi ý (CLAUDE.md). Đẻ thêm
+`access_grant` là đúng thứ AD-6 sinh ra để chặn: mỗi tính năng một bảng duyệt riêng, rồi phiếu
+ISO ở Epic 8 lại một bảng nữa. Mọi thứ AC đòi đều có đủ trong bảng chung: ai xin (`requester`),
+lý do (`reason`), ai duyệt (`decided_by`), hết hạn (`expires_at`), và xem lúc nào (nằm ở
+`audit_log` với `action = 'vault.secret.revealed'` kèm `grantId`).
+
+**Sửa lại tốn bao nhiêu:** nếu anh vẫn muốn bảng riêng thì trung bình — một migration + đổi
+`BreakGlassService`. Nhưng tôi khuyên không: Epic 8 sẽ cắm phiếu ISO vào đúng bộ máy này.
+
+### 6. Nhật ký "xem lúc nào" nằm ở `audit_log`, không nằm trong bảng duyệt — story 6.3
+
+**Quyết:** mỗi lần mở két ghi một dòng `audit_log` kèm `grantId` (grant nào cho phép lần xem
+đó). Bảng `approval` chỉ giữ vòng đời của yêu cầu.
+
+**Vì sao:** một grant 4 giờ có thể được dùng để xem nhiều secret nhiều lần. Nhét lượt xem vào
+bảng duyệt thì hoặc phải đẻ thêm bảng con, hoặc phải nhồi một mảng vào `payload` — trong khi
+`audit_log` đã là nơi trả lời "ai làm gì lúc nào" cho cả hệ thống (AD-9).
+
+**Sửa lại tốn bao nhiêu:** nhỏ. Dashboard Epic 7 join hai bảng theo `grantId` là ra.
+

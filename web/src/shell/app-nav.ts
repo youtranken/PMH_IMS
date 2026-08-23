@@ -30,6 +30,8 @@ export const navGroups: NavGroup[] = [
       { key: 'nav.expiry', to: '/sap-het-han' },
       { key: 'nav.ipam', to: '/dia-chi-ip' },
       { key: 'nav.nat', to: '/so-nat' },
+      // MỌI vai thấy: Member vào xem yêu cầu của mình đã được duyệt chưa.
+      { key: 'nav.approvals', to: '/duyet-yeu-cau' },
       { key: 'nav.vault', to: '/ket-sat', planned: true },
       { key: 'nav.documents', to: '/tai-lieu', planned: true },
     ],

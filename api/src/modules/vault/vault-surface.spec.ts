@@ -24,7 +24,7 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
 
   it('mọi route GET danh sách đều bắt buộc nói rõ chủ thể', () => {
     // `@Get()` trần chỉ hợp lệ khi tham số query là DTO có ownerType + ownerId bắt buộc.
-    const listHandler = /@Get\(\)\s*\n\s*list\(([\s\S]*?)\) \{/.exec(controller);
+    const listHandler = /@Get\(\)\s*\n\s*(?:async )?list\(([\s\S]*?)\) \{/.exec(controller);
     expect(listHandler).not.toBeNull();
     expect(listHandler![1]).toContain('OwnerQueryDto');
 
@@ -61,7 +61,24 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
     expect(decorators).toContain('@RequiresStepUp()');
     expect(decorators).toContain('StepUpGuard');
     expect(decorators).toContain("@Header('Cache-Control', 'no-store')");
-    expect(decorators).toContain("@Roles('sa', 'admin')");
+
+    /**
+     * Story 6.3 mở đường này cho Member — nhưng CHỈ khi thân hàm còn gọi `assertCanReveal`.
+     *
+     * Đây là thứ đáng khóa nhất của cả epic: bỏ `@Roles` đi là ai cũng thấy ngay, còn bỏ một
+     * dòng `await this.breakGlass.assertCanReveal(...)` thì mọi test nghiệp vụ vẫn xanh và
+     * mọi Member bỗng xem được mật khẩu của cả công ty. Không có gì đỏ để báo.
+     */
+    const body = controller.slice(
+      controller.indexOf('async reveal('),
+      controller.indexOf('/** "Xóa" = thu hồi mềm.'),
+    );
+    if (decorators.includes("'member'")) {
+      expect(body).toContain('assertCanReveal');
+      expect(body).toContain("role === 'member'");
+    } else {
+      expect(decorators).toContain("@Roles('sa', 'admin')");
+    }
 
     // Tham số là IdParamDto (một id ở path), không phải body mang danh sách.
     expect(reveal![1]).toContain('IdParamDto');
@@ -72,6 +89,18 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
    * api công khai của module là thứ các module khác gọi được. Khóa danh sách hàm ở đây lại:
    * thêm hàm mới phải sửa test này, tức là phải có người nhìn xem nó có trả bí mật không.
    */
+  /**
+   * Metadata mở cho Member (story 6.3) nhưng vẫn phải qua kiểm tầng — chủ thể ngoài quyền là
+   * 403, không phải một danh sách rỗng lặng lẽ.
+   */
+  it('đường đọc metadata của Member có kiểm tầng', () => {
+    const body = controller.slice(
+      controller.indexOf('async list('),
+      controller.indexOf("@Get('verdict')"),
+    );
+    expect(body).toContain('assertCanSeeMetadata');
+  });
+
   it('VaultApiService chỉ xuất metadata', () => {
     const methods = Object.getOwnPropertyNames(VaultApiService.prototype)
       .filter((name) => name !== 'constructor')

@@ -19,6 +19,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RequiresStepUp, StepUpGuard } from '../auth/step-up.guard';
 import type { AuthedRequest } from '../auth/types';
 import { SystemConfigService } from '../config-sys/system-config.service';
+import { BreakGlassService } from './break-glass.service';
 import {
   SECRET_KINDS,
   SECRET_OWNER_TYPES,
@@ -87,13 +88,31 @@ export class VaultController {
   constructor(
     private readonly vault: VaultService,
     private readonly config: SystemConfigService,
+    private readonly breakGlass: BreakGlassService,
   ) {}
 
 
-  @Roles('sa', 'admin')
+  /**
+   * Member đọc được METADATA của chủ thể nằm trong quyền của mình (story 6.3).
+   *
+   * Metadata thôi thì không lộ gì — nhưng nó là thứ để họ biết "máy này có mật khẩu admin đã
+   * cất" và bấm xin. Không cho đọc thì màn của Member trống trơn và họ không biết phải xin cái
+   * gì. Chủ thể ngoài quyền (`denied`) vẫn 403.
+   */
+  @Roles('sa', 'admin', 'member')
   @Get()
-  list(@Query() query: OwnerQueryDto) {
+  async list(@Query() query: OwnerQueryDto, @Req() req: AuthedRequest) {
+    if (req.user!.role === 'member') {
+      await this.breakGlass.assertCanSeeMetadata(actor(req), query.ownerType, query.ownerId);
+    }
     return this.vault.listFor(query.ownerType, query.ownerId);
+  }
+
+  /** "Tôi làm được gì với chủ thể này" — UI dựng đúng nút bằng MỘT lần gọi (story 6.3). */
+  @Roles('sa', 'admin', 'member')
+  @Get('verdict')
+  verdict(@Query() query: OwnerQueryDto, @Req() req: AuthedRequest) {
+    return this.breakGlass.verdictFor(actor(req), query.ownerType, query.ownerId);
   }
 
   @Roles('sa', 'admin')
@@ -146,7 +165,7 @@ export class VaultController {
    * với nhịp người thật (mở một hai mật khẩu rồi đi làm việc khác).
    */
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
-  @Roles('sa', 'admin')
+  @Roles('sa', 'admin', 'member')
   @UseGuards(StepUpGuard)
   @RequiresStepUp()
   @Post(':id/reveal')
@@ -155,8 +174,25 @@ export class VaultController {
   @Header('Pragma', 'no-cache')
   @Audited('vault.secret.revealed', 'secret', { writtenByService: true })
   async reveal(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    const who = actor(req);
+    const meta = await this.vault.findMeta(params.id);
+
+    /**
+     * Ba tầng của story 6.2 gặp bộ máy duyệt của 6.1 ĐÚNG TẠI ĐÂY, và kiểm ở MỖI lần mở —
+     * không cache, không tin một cờ nào trong phiên (AD-6).
+     *
+     * SA/Admin đi thẳng: quyền của họ đến từ VAI, không từ ma trận. Bắt họ tự gán quyền cho
+     * chính mình chỉ tạo ra một bước thừa mà ai cũng sẽ tìm cách bỏ qua.
+     */
+    let grantId: string | null = null;
+    if (req.user!.role === 'member') {
+      ({ grantId } = await this.breakGlass.assertCanReveal(who, meta.ownerType, meta.ownerId));
+    }
+
     const [opened, revealSeconds] = await Promise.all([
-      this.vault.reveal(actor(req), params.id),
+      // `grantId` đi vào dòng audit: không có nó thì nhật ký break-glass đứt đúng ở khúc quan
+      // trọng nhất — "xem bằng quyền nào" (FR-025).
+      this.vault.reveal(who, params.id, grantId),
       // AD-11: bao lâu thì tự ẩn — system_config, không hardcode 30.
       this.config.getNumber('secretRevealSeconds'),
     ]);

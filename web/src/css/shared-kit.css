@@ -195,6 +195,23 @@
   padding-top: var(--space-4);
 }
 
+/* --- Màn duyệt yêu cầu (features/vault/approvals-screen.tsx) -------------- */
+.approval-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-top: var(--space-4);
+}
+/* Lý do là thứ người duyệt ĐỌC để quyết — cho nó nổi lên, đừng để lẫn vào bảng thuộc tính. */
+.approval-reason {
+  margin: var(--space-3) 0;
+  padding: var(--space-3);
+  border-left: 3px solid var(--primary);
+  background: var(--surface-2);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
 /* --- Ma trận quyền két sắt (features/vault/access-matrix-screen.tsx) ------ */
 .access-matrix {
   display: flex;

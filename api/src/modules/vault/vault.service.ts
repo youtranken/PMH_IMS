@@ -259,7 +259,12 @@ export class VaultService {
    * Mỗi lần gọi ghi MỘT dòng audit (NFR-03). Ghi TRƯỚC khi trả giá trị: giải mã được mà
    * mất vết thì đúng thứ két sắt sinh ra để chống.
    */
-  async reveal(actor: string, id: string): Promise<{ meta: SecretMeta; value: string }> {
+  async reveal(
+    actor: string,
+    id: string,
+    /** Grant break-glass đã dùng (story 6.3). `null` = quyền đến từ vai hoặc whitelist. */
+    grantId: string | null = null,
+  ): Promise<{ meta: SecretMeta; value: string }> {
     const row = await this.requireAlive(id);
     const sealed: SealedValue = {
       ciphertext: row.valueCt,
@@ -273,7 +278,14 @@ export class VaultService {
       action: 'vault.secret.revealed',
       objectType: 'secret',
       objectId: id,
-      detail: { label: row.label, ownerType: row.ownerType, ownerId: row.ownerId },
+      detail: {
+        label: row.label,
+        ownerType: row.ownerType,
+        ownerId: row.ownerId,
+        // FR-025: xem bằng quyền nào. Thiếu trường này thì nhật ký break-glass chỉ nói
+        // "có người xem" mà không nói được là xem hợp lệ theo grant nào.
+        grantId,
+      },
     });
     const value = this.crypto.openText(sealed, { table: AAD_TABLE, recordId: id });
     return { meta: toMeta(row), value };

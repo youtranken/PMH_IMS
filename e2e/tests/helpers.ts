@@ -164,6 +164,26 @@ export function resetAccessList(): void {
   );
 }
 
+/**
+ * Xóa yêu cầu duyệt do E2E tạo (người xin là tài khoản e2e).
+ *
+ * `approval_history` là append-only (AD-13) nên phải tắt trigger — lý do script này chỉ có
+ * mặt ở môi trường test.
+ */
+export function resetApprovals(): void {
+  const match = "requester ILIKE '%e2e%'";
+  const sql = [
+    `ALTER TABLE approval_history DISABLE TRIGGER approval_history_no_delete`,
+    `DELETE FROM approval_history WHERE approval_id IN (SELECT id FROM approval WHERE ${match})`,
+    `ALTER TABLE approval_history ENABLE TRIGGER approval_history_no_delete`,
+    `DELETE FROM approval WHERE ${match}`,
+  ].join('; ');
+  execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -c "${sql}"`, {
+    cwd: '..',
+    stdio: 'pipe',
+  });
+}
+
 /** Xóa luật gửi báo cáo do E2E tạo. Quy ước: mọi tên luật trong test đều chứa "E2E". */
 export function resetDigestRules(): void {
   execSync(

@@ -17,6 +17,15 @@ import { useToast } from '@/ui/toast';
 export type SecretOwnerType = 'device' | 'software';
 export type SecretKind = 'password' | 'license_key' | 'other';
 
+export interface AccessVerdict {
+  tier: 'whitelist' | 'needs_approval' | 'denied';
+  tierLabel: string;
+  canReveal: boolean;
+  canRequest: boolean;
+  grant: { id: string; expiresAt: string | null } | null;
+  pending: { id: string } | null;
+}
+
 export interface SecretMeta {
   id: string;
   ownerType: SecretOwnerType;
@@ -61,15 +70,31 @@ export function VaultPanel({
   const [pendingStepUp, setPendingStepUp] = useState<SecretMeta | null>(null);
   /** Secret đang mở dở — chặn bấm đúp đẻ ra hai lần giải mã, hai dòng audit. */
   const [opening, setOpening] = useState<string | null>(null);
+  const [requesting, setRequesting] = useState(false);
   const [revealed, setRevealed] = useState<
     { label: string; value: string; seconds: number } | null
   >(null);
   const openingRef = useRef<string | null>(null);
 
-  // Chỉ SA/Admin có quyền tới endpoint két sắt (AD-9). Member thấy lời giải thích, không
-  // thấy bảng trống kèm một lỗi 403 lặng lẽ trong console.
-  const allowed = me.role === 'sa' || me.role === 'admin';
+  const isAdmin = me.role === 'sa' || me.role === 'admin';
   const queryKey = ['vault', ownerType, ownerId];
+
+  /**
+   * "Tôi làm được gì với chủ thể này" (story 6.3) — MỘT lần gọi, server phán.
+   *
+   * Client không tự suy từ vai: quyền của Member đến từ ma trận 6.2 cộng với grant còn
+   * hạn, và cả hai đổi được bất cứ lúc nào mà trình duyệt không hay biết.
+   */
+  const verdict = useQuery({
+    queryKey: ['vault', 'verdict', ownerType, ownerId],
+    queryFn: () =>
+      apiFetch<AccessVerdict>(
+        `/api/v1/vault/secrets/verdict?ownerType=${ownerType}&ownerId=${encodeURIComponent(ownerId)}`,
+      ),
+  });
+
+  const tier = verdict.data?.tier;
+  const allowed = isAdmin || (tier !== undefined && tier !== 'denied');
 
   const secrets = useQuery({
     queryKey,
@@ -119,6 +144,15 @@ export function VaultPanel({
     [me.csrfToken, toast],
   );
 
+  if (verdict.isLoading) return <Loading />;
+  /**
+   * Lỗi tải verdict KHÔNG được rơi xuống thành "bạn không có quyền".
+   *
+   * Đúng cái bẫy vừa gặp: URL sai → 404 → `verdict.data` undefined → panel nói "chỉ Quản trị
+   * xem được", và thông điệp đó nghe hợp lý tới mức che mất một lỗi 404. Sai vì thiếu quyền
+   * và sai vì hỏng phải nói ra hai câu khác nhau.
+   */
+  if (verdict.isError) return <LoadError onRetry={() => void verdict.refetch()} />;
   if (!allowed) return <p className="alert">{t('vault.noPermission')}</p>;
 
   const rows = secrets.data ?? [];
@@ -126,6 +160,18 @@ export function VaultPanel({
   return (
     <div className="attachment-panel">
       <p className="muted">{t('vault.intro')}</p>
+
+      {/* Member phải THẤY mình đang ở tầng nào — không thì họ bấm Xem, bị từ chối, và
+          không hiểu vì sao. */}
+      {!isAdmin && verdict.data ? (
+        <p className={verdict.data.canReveal ? 'alert' : 'alert warn'}>
+          {verdict.data.grant
+            ? t('vault.grantUntil', {
+                until: formatDateTime(verdict.data.grant.expiresAt ?? ''),
+              })
+            : t(`vault.tierNote_${verdict.data.tier}`)}
+        </p>
+      ) : null}
 
       {canEdit ? (
         <div className="row" style={{ justifyContent: 'flex-end' }}>
@@ -172,14 +218,26 @@ export function VaultPanel({
                     <div className="action-cell">
                       {/* Xem được kể cả khi hồ sơ đã khóa: thiết bị thanh lý rồi vẫn có lúc
                           phải tra mật khẩu cũ để gỡ cấu hình. Khóa là khóa GHI. */}
-                      <button
-                        type="button"
-                        className="btn sm"
-                        disabled={opening !== null}
-                        onClick={() => void openSecret(secret)}
-                      >
-                        {opening === secret.id ? t('common.loading') : t('vault.reveal')}
-                      </button>
+                      {isAdmin || verdict.data?.canReveal ? (
+                        <button
+                          type="button"
+                          className="btn sm"
+                          disabled={opening !== null}
+                          onClick={() => void openSecret(secret)}
+                        >
+                          {opening === secret.id ? t('common.loading') : t('vault.reveal')}
+                        </button>
+                      ) : verdict.data?.canRequest ? (
+                        <button
+                          type="button"
+                          className="btn sm"
+                          onClick={() => setRequesting(true)}
+                        >
+                          {t('vault.request')}
+                        </button>
+                      ) : (
+                        <span className="badge warn">{t('vault.awaitingApproval')}</span>
+                      )}
                       {canEdit ? (
                         <>
                         <button
@@ -268,6 +326,20 @@ export function VaultPanel({
           value={revealed.value}
           seconds={revealed.seconds}
           onClose={() => setRevealed(null)}
+        />
+      ) : null}
+
+      {requesting ? (
+        <BreakGlassDialog
+          ownerType={ownerType}
+          ownerId={ownerId}
+          csrfToken={me.csrfToken}
+          onClose={() => setRequesting(false)}
+          onSent={() => {
+            setRequesting(false);
+            toast({ message: t('vault.requestSent') });
+            void queryClient.invalidateQueries({ queryKey: ['vault', 'verdict'] });
+          }}
         />
       ) : null}
 
@@ -520,3 +592,93 @@ function RotateForm({
   );
 }
 
+/**
+ * Xin quyền xem tạm thời (story 6.3, FR-023).
+ *
+ * Hai ô, và cả hai đều bắt buộc vì cả hai đều là thứ người duyệt cần để quyết: LÝ DO (xin để
+ * làm gì) và THỜI HẠN (bao lâu là đủ). Trần thật nằm ở `breakglass.max_grant_hours` và server
+ * KẸP theo nó — người xin gõ 72 thì được 24 và được nói rõ, chứ không bị từ chối rồi phải
+ * đoán lại con số đúng.
+ */
+function BreakGlassDialog({
+  ownerType,
+  ownerId,
+  csrfToken,
+  onClose,
+  onSent,
+}: {
+  ownerType: SecretOwnerType;
+  ownerId: string;
+  csrfToken: string;
+  onClose: () => void;
+  onSent: () => void;
+}) {
+  const { t } = useTranslation();
+  const [reason, setReason] = useState('');
+  const [hours, setHours] = useState('4');
+  const [error, setError] = useState<string | null>(null);
+
+  const send = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/break-glass', {
+    csrfToken,
+    refreshMe: false,
+  });
+
+  return (
+    <Dialog open onOpenChange={onClose} maxWidth={480}>
+      <DialogTitle>{t('vault.requestTitle')}</DialogTitle>
+      <form
+        className="form-grid"
+        data-columns={1}
+        onSubmit={(e) => {
+          e.preventDefault();
+          setError(null);
+          send.mutate(
+            { ownerType, ownerId, reason: reason.trim(), hours: Number(hours) || 4 },
+            { onSuccess: onSent, onError: (err) => setError(errorMessage(err)) },
+          );
+        }}
+      >
+        <p className="muted">{t('vault.requestHint')}</p>
+
+        <Field label={t('vault.requestReason')} required htmlFor="bg-reason">
+          <textarea
+            id="bg-reason"
+            className="inp"
+            rows={2}
+            required
+            minLength={5}
+            placeholder={t('vault.requestReasonPlaceholder')}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+        </Field>
+
+        <Field label={t('vault.requestHours')} required hint={t('vault.requestHoursHint')} htmlFor="bg-hours">
+          <input
+            id="bg-hours"
+            className="inp"
+            required
+            inputMode="numeric"
+            value={hours}
+            onChange={(e) => setHours(e.target.value)}
+          />
+        </Field>
+
+        {error ? (
+          <p className="alert error" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" className="btn primary" disabled={send.isPending}>
+            {send.isPending ? t('common.loading') : t('vault.requestSend')}
+          </button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}

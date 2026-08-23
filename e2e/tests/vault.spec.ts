@@ -134,7 +134,15 @@ test.describe('Két sắt', () => {
     }
   });
 
-  test('Member không có đường tới két sắt: 403 ở API và không thấy tab', async ({ page }) => {
+  /**
+   * Story 6.3 ĐỔI hành vi này có chủ ý: Member giờ THẤY tab Két sắt, vì quyền của họ nằm ở ma
+   * trận 6.2 chứ không suy ra được từ vai. Nhưng chưa được gán gì thì vẫn là tầng CẤM — API
+   * trả 403 và không có gì lọt ra.
+   *
+   * Cái KHÔNG đổi, và là phần đáng giữ nhất của bài kiểm này: Member không bao giờ GHI được
+   * vào két, kể cả khi đã được cấp quyền xem.
+   */
+  test('Member chưa được gán gì: đọc 403, và không bao giờ ghi được vào két', async ({ page }) => {
     // Tạo thiết bị bằng SA trước, rồi đăng nhập lại bằng Member trên phiên sạch.
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
@@ -161,7 +169,9 @@ test.describe('Két sắt', () => {
 
     await page.goto(`/thiet-bi/${deviceId}`);
     await expect(page.getByRole('tab', { name: 'Hồ sơ' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Két sắt' })).toHaveCount(0);
+    // Tab CÓ hiện (story 6.3) nhưng nội dung nói rõ là không có quyền — không phải bảng trống.
+    await page.getByRole('tab', { name: 'Két sắt' }).click();
+    await expect(page.getByText(/không có quyền/i)).toBeVisible();
   });
 
   test('DB chỉ chứa rác: giá trị cất vào không tìm thấy ở dạng chữ trong bảng secret', async ({

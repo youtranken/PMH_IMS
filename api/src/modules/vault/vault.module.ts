@@ -4,7 +4,11 @@ import { CatalogModule } from '../catalog/catalog.module';
 import { DevicesModule } from '../devices/devices.module';
 import { SoftwareModule } from '../software/software.module';
 import { UsersModule } from '../users/users.module';
+import { ApprovalsModule } from '../approvals/approvals.module';
+import { OutboxModule } from '../outbox/outbox.module';
 import { AccessListService } from './access-list.service';
+import { BreakGlassController } from './break-glass.controller';
+import { BreakGlassService } from './break-glass.service';
 import { AuthModule } from '../auth/auth.module';
 import { StepUpGuard } from '../auth/step-up.guard';
 import { VaultApiService } from './vault.api';
@@ -24,9 +28,9 @@ import { VaultService } from './vault.service';
  * Ra ngoài chỉ xuất `VaultApiService`, và api đó KHÔNG có đường lấy plaintext.
  */
 @Module({
-  imports: [AuditModule, AuthModule, CatalogModule, DevicesModule, SoftwareModule, UsersModule],
-  controllers: [VaultController, VaultAccessController],
-  providers: [VaultService, VaultApiService, VaultDevicePanel, AccessListService, StepUpGuard],
+  imports: [AuditModule, AuthModule, CatalogModule, DevicesModule, SoftwareModule, UsersModule, ApprovalsModule, OutboxModule],
+  controllers: [VaultController, VaultAccessController, BreakGlassController],
+  providers: [VaultService, VaultApiService, VaultDevicePanel, AccessListService, BreakGlassService, StepUpGuard],
   exports: [VaultApiService],
 })
 export class VaultModule {}

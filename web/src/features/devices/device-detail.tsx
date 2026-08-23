@@ -94,7 +94,14 @@ export function DeviceDetail({ me }: { me: Me }) {
 
   const item = device.data!;
   const retired = item.status === 'retired';
-  const canVault = me.role === 'sa' || me.role === 'admin';
+  /**
+   * Tab Két sắt hiện cho MỌI vai kể từ story 6.3.
+   *
+   * Trước đây chỉ SA/Admin thấy. Nhưng Member giờ có thể được whitelist hoặc xin duyệt, và
+   * quyền đó nằm ở ma trận 6.2 — client không tự suy ra được từ vai. Ẩn tab theo vai thì
+   * người đã được gán quyền lại không có đường nào tới. Panel tự nói rõ tầng của người xem.
+   */
+  const canVault = true;
 
   return (
     <>
