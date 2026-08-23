@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq, isNull, lt, or } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -110,16 +110,16 @@ export class ExpiryDigestService {
     }
     const payload = await this.buildPayload(rule);
     await this.db.transaction(async (tx) => {
-      await this.outbox.enqueueWithin(tx, 'expiry.digest', { ...payload, isTest: true });
+      await this.outbox.enqueueWithin(tx, 'expiry.digest', { ruleId: id, isTest: true });
       await this.audit.appendWithin(tx, {
         actor,
         action: 'expiry.digest.test',
         objectType: 'expiry_rule',
         objectId: id,
-        detail: { recipients: recipients.length, items: payload.items.length },
+        detail: { recipients: recipients.length, items: payload.total },
       });
     });
-    return { recipients, items: payload.items.length };
+    return { recipients, items: payload.total };
   }
 
   /** Sweep gọi mỗi phút — chỉ những luật ĐẾN KỲ mới gửi. */
@@ -132,59 +132,117 @@ export class ExpiryDigestService {
       .where(eq(expiryRuleTable.active, true));
 
     for (const rule of rules) {
-      const lastSentDate = rule.lastSentAt ? isoDateInTz(timeZone, rule.lastSentAt) : null;
-      const due = shouldSendNow(
-        {
-          frequency: rule.frequency as DigestFrequency,
-          hour: rule.hour,
-          weekday: rule.weekday,
-          dayOfMonth: rule.dayOfMonth,
-        },
-        local,
-        lastSentDate,
-      );
-      if (!due) continue;
-
-      const recipients = rule.recipients as string[];
-      if (recipients.length === 0) {
-        this.logger.warn(`Luật "${rule.name}" đến kỳ nhưng chưa có người nhận — bỏ qua.`);
-        continue;
+      try {
+        await this.runOne(rule, local, timeZone, now);
+      } catch (error) {
+        // Một luật hỏng KHÔNG được chặn các luật sau. `SweepService` chỉ bắt lỗi ở mức
+        // handler, nên để lỗi thoát ra đây là mọi luật xếp sau ngừng gửi mà tín hiệu duy
+        // nhất là một dòng log mỗi phút (code review Epic 3).
+        this.logger.error(
+          `Luật "${rule.name}" lỗi khi gửi báo cáo: ${(error as Error).message}`,
+        );
       }
-
-      const payload = await this.buildPayload(rule);
-      // Không có gì sắp hết hạn thì KHÔNG gửi email rỗng — gửi "tuần này không có gì"
-      // đều đặn là cách nhanh nhất để mọi người lọc luật này vào thùng rác.
-      if (payload.items.length === 0) {
-        await this.markSent(rule.id, now);
-        continue;
-      }
-
-      await this.db.transaction(async (tx) => {
-        await this.outbox.enqueueWithin(tx, 'expiry.digest', payload);
-        // Đánh dấu đã gửi TRONG CÙNG transaction với việc ghi outbox: tách ra thì
-        // crash giữa hai bước sẽ gửi lại mỗi phút cho tới khi có người phát hiện.
-        await tx
-          .update(expiryRuleTable)
-          .set({ lastSentAt: now })
-          .where(eq(expiryRuleTable.id, rule.id));
-        await this.audit.appendWithin(tx, {
-          actor: 'system',
-          action: 'expiry.digest.sent',
-          objectType: 'expiry_rule',
-          objectId: rule.id,
-          detail: { items: payload.items.length, recipients: recipients.length },
-        });
-      });
     }
   }
 
-  /** Nội dung email: bảng các mục sắp hết hạn (FR-013 — tên, loại, start, end, link). */
+  private async runOne(
+    rule: typeof expiryRuleTable.$inferSelect,
+    local: ReturnType<typeof localNowIn>,
+    timeZone: string,
+    now: Date,
+  ): Promise<void> {
+    const lastSentDate = rule.lastSentAt ? isoDateInTz(timeZone, rule.lastSentAt) : null;
+    const due = shouldSendNow(
+      {
+        frequency: rule.frequency as DigestFrequency,
+        hour: rule.hour,
+        weekday: rule.weekday,
+        dayOfMonth: rule.dayOfMonth,
+      },
+      local,
+      lastSentDate,
+    );
+    if (!due) return;
+
+    /*
+     * CHỐT KỲ TRƯỚC, gửi sau — bằng một câu UPDATE CÓ ĐIỀU KIỆN.
+     *
+     * Đọc rồi mới ghi là chỗ hai worker cùng lọt qua: cả hai đọc `last_sent_at` cũ, cả hai
+     * thấy "đến kỳ", người nhận lãnh hai thư giống hệt. Cả hệ thống này đã chốt "nhiều nhất
+     * một lần" theo lối nguyên tử (outbox dùng FOR UPDATE SKIP LOCKED, markProcessed dùng
+     * check-and-set) — chỗ này theo đúng lối đó. Ai UPDATE trúng row thì người đó gửi.
+     */
+    const startOfDayUtc = new Date(`${local.date}T00:00:00Z`);
+    const claimed = await this.db
+      .update(expiryRuleTable)
+      .set({ lastSentAt: now })
+      .where(
+        and(
+          eq(expiryRuleTable.id, rule.id),
+          or(
+            isNull(expiryRuleTable.lastSentAt),
+            lt(expiryRuleTable.lastSentAt, startOfDayUtc),
+          ),
+        ),
+      )
+      .returning({ id: expiryRuleTable.id });
+    if (claimed.length === 0) return;
+
+    const recipients = rule.recipients as string[];
+    if (recipients.length === 0) {
+      // Không nên xảy ra (luật đang chạy bắt buộc có người nhận), nhưng dữ liệu cũ có thể
+      // còn. Kỳ đã chốt ở trên nên chỉ cảnh báo MỘT LẦN cho kỳ này, không phải mỗi phút.
+      this.logger.warn(`Luật "${rule.name}" đến kỳ nhưng chưa có người nhận — bỏ qua kỳ này.`);
+      return;
+    }
+
+    const payload = await this.buildPayload(rule);
+    // Không có gì cần chú ý thì KHÔNG gửi thư rỗng — gửi "tuần này không có gì" đều đặn là
+    // cách nhanh nhất để mọi người lọc luật này vào thùng rác.
+    if (payload.total === 0) return;
+
+    await this.db.transaction(async (tx) => {
+      // AD-11/NFR-04: outbox chỉ giữ ID THAM CHIẾU, không PII. Địa chỉ email và tên hồ sơ
+      // được consumer dựng lại từ `ruleId` — nếu nhét vào đây thì chúng còn chui sang cả
+      // job data của Redis (relay copy nguyên payload).
+      await this.outbox.enqueueWithin(tx, 'expiry.digest', { ruleId: rule.id });
+      await this.audit.appendWithin(tx, {
+        actor: 'system',
+        action: 'expiry.digest.sent',
+        objectType: 'expiry_rule',
+        objectId: rule.id,
+        detail: { items: payload.total, recipients: recipients.length },
+      });
+    });
+  }
+
+  /**
+   * Nội dung email (FR-013 — tên, loại, start, end, link).
+   *
+   * Public vì consumer mail dựng lại nội dung TỪ `ruleId`: outbox chỉ được giữ id tham
+   * chiếu, không PII (AD-11/NFR-04).
+   */
+  async buildDigest(ruleId: string) {
+    return this.buildPayload(await this.requireRule(ruleId));
+  }
+
   private async buildPayload(rule: typeof expiryRuleTable.$inferSelect) {
     const kinds = rule.kinds as string[];
     const { items } = await this.expiry.list({
       withinDays: rule.withinDays,
       kinds: kinds.length > 0 ? kinds : undefined,
     });
+    const rows = items.map((item) => ({
+      label: item.label,
+      kind: item.kind,
+      start: item.start,
+      end: item.end,
+      link: item.link,
+      daysLeft: item.daysLeft,
+    }));
+    // Tách hai con số: thư gọi tất cả là "sắp hết hạn" trong khi thân thư ghi "ĐÃ QUÁ HẠN
+    // 200 ngày" thì người đọc mất tin vào cái tiêu đề (code review Epic 3).
+    const expired = rows.filter((row) => row.daysLeft < 0).length;
     return {
       ruleId: rule.id,
       ruleName: rule.name,
@@ -196,22 +254,11 @@ export class ExpiryDigestService {
       }),
       withinDays: rule.withinDays,
       recipients: rule.recipients as string[],
-      items: items.map((item) => ({
-        label: item.label,
-        kind: item.kind,
-        start: item.start,
-        end: item.end,
-        link: item.link,
-        daysLeft: item.daysLeft,
-      })),
+      items: rows,
+      total: rows.length,
+      expired,
+      upcoming: rows.length - expired,
     };
-  }
-
-  private async markSent(id: string, now: Date): Promise<void> {
-    await this.db
-      .update(expiryRuleTable)
-      .set({ lastSentAt: now })
-      .where(eq(expiryRuleTable.id, id));
   }
 
   private async requireRule(id: string) {
@@ -266,6 +313,17 @@ function prepare(input: DigestRuleInput, isCreate: boolean): Record<string, unkn
       });
     }
     values.recipients = emails;
+    // Luật ĐANG CHẠY mà không có người nhận thì mỗi phút sweep lại đến kỳ, lại bỏ qua, lại
+    // ghi một dòng cảnh báo — gần một nghìn dòng rác mỗi ngày mà không ai nhận được gì.
+    // Chặn ở đây; muốn để dành thì bỏ tick "Đang chạy".
+    const active = input.active ?? true;
+    if (active && emails.length === 0) {
+      throw new BadRequestException({
+        code: 'NO_RECIPIENTS',
+        message:
+          'Luật đang chạy phải có ít nhất một người nhận. Bỏ tick "Đang chạy" nếu muốn tạm để đó.',
+      });
+    }
   }
 
   if (input.kinds !== undefined) values.kinds = input.kinds;

@@ -16,6 +16,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Length,
   Matches,
   Max,
@@ -31,7 +32,9 @@ import { ExpiryService } from './expiry.service';
 class RenewDto {
   @IsString() @Length(1, 40) kind!: string;
 
-  @Matches(/^[0-9a-fA-F-]{36}$/, { message: 'Mã hồ sơ không hợp lệ.' })
+  // @IsUUID chứ không phải regex 36 ký tự: regex nhận cả 36 dấu gạch ngang, lọt xuống
+  // Postgres và bung 500 thay vì 400 (code review Epic 3).
+  @IsUUID(undefined, { message: 'Mã hồ sơ không hợp lệ.' })
   id!: string;
 
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Hạn mới phải dạng YYYY-MM-DD.' })
@@ -60,7 +63,7 @@ class RuleBodyDto {
 }
 
 class RuleParamDto {
-  @Matches(/^[0-9a-fA-F-]{36}$/, { message: 'Mã luật không hợp lệ.' })
+  @IsUUID(undefined, { message: 'Mã luật không hợp lệ.' })
   id!: string;
 }
 

@@ -3,6 +3,7 @@ import {
   E2E_MEMBER,
   E2E_SA,
   firstLogin,
+  resetDevices,
   resetDigestRules,
   resetIsp,
   resetSoftware,
@@ -16,6 +17,9 @@ test.beforeEach(async () => {
   resetUsers();
   resetSoftware();
   resetIsp();
+  // PHẢI dọn cả thiết bị: luật dưới đây tính "mọi loại", nên một cái máy sót lại từ spec
+  // khác có bảo hành sắp hết là số mục đếm được lệch ngay (code review Epic 3).
+  resetDevices();
   resetDigestRules();
   await clearMailbox();
 });
@@ -108,7 +112,8 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
 
     const rule = await post(page, '/api/v1/expiry/rules', {
       name: `Luật E2E ${stamp}`,
-      kinds: [],
+      // Khoanh đúng hai loại vừa tạo — không phụ thuộc vào dữ liệu thật có sẵn trong DB.
+      kinds: ['ssl', 'isp'],
       withinDays: 30,
       recipients: ['sep@pmh.com.vn', 'it@pmh.com.vn'],
       frequency: 'weekly',
@@ -172,18 +177,45 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
     expect(body).not.toContain(`LIC-E2E-F1-${stamp}`);
   });
 
-  test('luật chưa có người nhận thì không gửi, báo rõ lý do', async ({ page }) => {
+  test('luật ĐANG CHẠY bắt buộc có người nhận; để dành thì phải tắt', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
-    const rule = await post(page, '/api/v1/expiry/rules', {
+
+    /*
+     * Luật đang chạy mà không có người nhận thì mỗi phút sweep lại đến kỳ, lại bỏ qua, lại
+     * ghi một dòng cảnh báo — gần một nghìn dòng rác mỗi ngày mà không ai nhận được gì
+     * (code review Epic 3). Chặn ngay lúc lưu.
+     */
+    const blocked = await post(page, '/api/v1/expiry/rules', {
       name: `E2E không người nhận ${stamp}`,
       recipients: [],
       frequency: 'daily',
       hour: 8,
     });
-    const sent = await post(page, `/api/v1/expiry/rules/${String(rule.body.id)}/test`, {});
+    expect(blocked.status).toBe(400);
+    expect(blocked.body).toMatchObject({ code: 'NO_RECIPIENTS' });
+
+    // Tắt "Đang chạy" thì lưu được — để dành cấu hình mà không đẻ rác log.
+    const draft = await post(page, '/api/v1/expiry/rules', {
+      name: `E2E nháp ${stamp}`,
+      recipients: [],
+      active: false,
+      frequency: 'daily',
+      hour: 8,
+    });
+    expect(draft.status).toBe(201);
+
+    // Nhưng gửi thử thì vẫn phải từ chối, kèm lý do đọc được.
+    const sent = await post(page, `/api/v1/expiry/rules/${String(draft.body.id)}/test`, {});
     expect(sent.status).toBe(400);
     expect(sent.body).toMatchObject({ code: 'NO_RECIPIENTS' });
+  });
+
+  test('mã luật sai định dạng trả 400, không phải 500', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    // 36 dấu gạch ngang: lọt qua regex "36 ký tự hex-hoặc-gạch" cũ và bung 500 ở Postgres.
+    const result = await post(page, '/api/v1/expiry/rules/------------------------------------/test', {});
+    expect(result.status).toBe(400);
   });
 
   test('email sai định dạng bị chặn ngay khi lưu luật', async ({ page }) => {

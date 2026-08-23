@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { SystemConfigService } from '../config-sys/system-config.service';
+import { ExpiryApiService } from '../expiry/expiry.api';
 import { OutboxService } from '../outbox/outbox.service';
 import { UsersApiService } from '../users/users.api';
 import { renderMail } from './mail-layout';
@@ -21,13 +22,14 @@ export class MailConsumer {
     private readonly users: UsersApiService,
     private readonly transport: MailTransportService,
     private readonly config: SystemConfigService,
+    private readonly expiry: ExpiryApiService,
   ) {}
 
   async handle(topic: string, outboxId: string): Promise<void> {
     const row = await this.outbox.loadForConsumer(outboxId);
     if (!row || row.processedAt) return;
 
-    const payload = row.payload as DigestPayload & { userId?: string };
+    const payload = row.payload as { userId?: string; ruleId?: string; isTest?: boolean };
     const built = await this.build(topic, payload);
     if (!built) {
       this.logger.warn(`Topic ${topic} chưa có mẫu email — bỏ qua.`);
@@ -40,9 +42,17 @@ export class MailConsumer {
     await this.outbox.markProcessed(outboxId);
   }
 
-  private async build(topic: string, payload: DigestPayload & { userId?: string }) {
+  private async build(
+    topic: string,
+    payload: { userId?: string; ruleId?: string; isTest?: boolean },
+  ) {
     // Báo cáo tổng hợp không gắn với một user nào — xử riêng trước khi tra user.
-    if (topic === 'expiry.digest') return buildDigest(payload);
+    // Nội dung DỰNG LẠI từ `ruleId`: outbox chỉ giữ id tham chiếu, không PII (AD-11/NFR-04).
+    if (topic === 'expiry.digest') {
+      if (!payload.ruleId) return null;
+      const digest = await this.expiry.buildDigest(payload.ruleId);
+      return buildDigestMail(digest, payload.isTest === true);
+    }
 
     const user = payload.userId ? await this.users.getById(payload.userId) : null;
     const sa = await this.users.recipientsByRole(['sa']);
@@ -117,14 +127,16 @@ export class MailConsumer {
   }
 }
 
-/** Payload của topic `expiry.digest` — module expiry ghi vào outbox. */
-interface DigestPayload {
-  ruleName?: string;
-  schedule?: string;
-  withinDays?: number;
-  recipients?: string[];
-  isTest?: boolean;
-  items?: {
+/** Nội dung digest do `ExpiryApiService.buildDigest` dựng — outbox không giữ thứ này. */
+interface DigestContent {
+  ruleName: string;
+  schedule: string;
+  withinDays: number;
+  recipients: string[];
+  total: number;
+  expired: number;
+  upcoming: number;
+  items: {
     label: string;
     kind: string;
     start: string | null;
@@ -146,15 +158,14 @@ const KIND_LABEL: Record<string, string> = {
 /**
  * MỘT email tổng hợp cho cả luật (FR-013), không phải mail lẻ từng món.
  *
- * Mỗi dòng nêu đủ: tên, loại, hạn, còn bao nhiêu ngày — người đọc quyết được ngay có phải
- * làm gì không mà không cần mở hệ thống. Link để bấm vào đúng hồ sơ khi cần làm thật.
+ * Tiêu đề tách hai con số "đã quá hạn" và "sắp hết hạn": gọi tất cả là "sắp hết hạn" trong
+ * khi thân thư ghi "ĐÃ QUÁ HẠN 200 ngày" thì người đọc mất tin vào cái tiêu đề, và thứ quá
+ * hạn — thứ gấp nhất — lại bị chìm.
  */
-function buildDigest(payload: DigestPayload) {
-  const items = payload.items ?? [];
-  const recipients = payload.recipients ?? [];
-  if (recipients.length === 0) return null;
+function buildDigestMail(digest: DigestContent, isTest: boolean) {
+  if (digest.recipients.length === 0) return null;
 
-  const rows = items.map((item) => ({
+  const rows = digest.items.map((item) => ({
     label: `${item.label} · ${KIND_LABEL[item.kind] ?? item.kind}`,
     value:
       item.daysLeft < 0
@@ -162,22 +173,27 @@ function buildDigest(payload: DigestPayload) {
         : `${item.end} — còn ${item.daysLeft} ngày`,
   }));
 
+  const headline =
+    digest.expired > 0
+      ? `${digest.expired} mục ĐÃ QUÁ HẠN, ${digest.upcoming} mục sắp hết hạn`
+      : `${digest.upcoming} mục sắp hết hạn`;
+
   const { html, text } = renderMail({
-    title: `${payload.isTest ? '[GỬI THỬ] ' : ''}Sắp hết hạn: ${items.length} mục`,
+    title: `${isTest ? '[GỬI THỬ] ' : ''}${headline}`,
     intro:
-      `Luật "${payload.ruleName ?? ''}" (${payload.schedule ?? ''}) — các mục hết hạn trong ` +
-      `${payload.withinDays ?? 30} ngày tới.`,
+      `Luật "${digest.ruleName}" (${digest.schedule}) — mục hết hạn trong ${digest.withinDays} ` +
+      'ngày tới, kèm những mục đã quá hạn mà chưa ai xử.',
     rows,
     ctaLabel: 'Mở màn Sắp hết hạn',
     ctaUrl: `${APP_URL()}/sap-het-han`,
-    footnote: payload.isTest
+    footnote: isTest
       ? 'Đây là email gửi thử từ màn cấu hình luật. Kỳ gửi thật không bị ảnh hưởng.'
       : 'Email tự động từ IMS. Đổi người nhận hoặc tần suất ở màn Sắp hết hạn › Luật gửi báo cáo.',
   });
 
   return {
-    to: recipients,
-    subject: `${payload.isTest ? '[Gửi thử] ' : ''}[IMS] ${items.length} mục sắp hết hạn — ${payload.ruleName ?? ''}`,
+    to: digest.recipients,
+    subject: `${isTest ? '[Gửi thử] ' : ''}[IMS] ${headline} — ${digest.ruleName}`,
     html,
     text,
   };

@@ -210,6 +210,20 @@ service của module chủ**. Chưa có file nội bộ nào thành hub. `depcru
 | `expiry_rule` chưa gửi được theo VAI (chỉ theo email) | Sếp có thể không có tài khoản IMS; email đơn giản và đủ | Khi có yêu cầu "gửi cho mọi Admin" |
 | Import hàng loạt cho phần mềm/ISP | Đợt 1 nhập tay vài chục dòng là xong; bộ khung `import-plan` đã sẵn | Khi số hồ sơ vượt ~100 |
 
+### Code review đóng epic — 9 finding, đã sửa hết
+
+| # | Mức | Vấn đề | Cách sửa |
+| --- | --- | --- | --- |
+| 1 | Trung bình | Luật đang chạy mà KHÔNG có người nhận: sweep mỗi phút lại thấy "đến kỳ", lại bỏ qua, lại ghi cảnh báo — ~960 dòng rác/ngày, mãi mãi | Luật `active` bắt buộc có ≥1 người nhận; muốn để dành thì tắt. Kỳ vẫn được chốt nên dữ liệu cũ chỉ cảnh báo một lần |
+| 2 | Trung bình | Một nguồn hạn ném lỗi làm lỗi thoát khỏi `runDue` → **mọi luật xếp sau ngừng gửi**, tín hiệu duy nhất là một dòng log | Bọc try/catch quanh TỪNG luật |
+| 3 | Trung bình | `last_sent_at` đọc-rồi-ghi, không nguyên tử → hai worker cùng lọt, người nhận lãnh hai thư giống hệt | `UPDATE … WHERE last_sent_at < đầu ngày RETURNING` — ai chốt được kỳ thì người đó gửi, đúng lối outbox đã dùng |
+| 4 | Trung bình | Email người nhận + tên hồ sơ nằm trong payload outbox, trái hợp đồng "chỉ id tham chiếu, không PII" (AD-11/NFR-04) — và relay copy sang cả job data của Redis | Outbox chỉ giữ `ruleId`; consumer dựng lại nội dung qua `ExpiryApiService.buildDigest` |
+| 5 | Trung bình | E2E đếm số mục chính xác nhưng KHÔNG dọn thiết bị — một cái máy sót lại từ spec khác là số đếm lệch, test đỏ ngẫu nhiên | Thêm `resetDevices()` và khoanh luật vào đúng hai loại vừa tạo |
+| 6 | Thấp | Tiêu đề gọi tất cả là "sắp hết hạn" trong khi thân thư ghi "ĐÃ QUÁ HẠN 200 ngày" → mất tin vào tiêu đề, và thứ quá hạn (gấp nhất) bị chìm | Tiêu đề tách hai con số: "N mục ĐÃ QUÁ HẠN, M mục sắp hết hạn" |
+| 7 | Thấp | Thứ trong tuần tra theo TÊN VIẾT TẮT của Intl + `?? 1`: bản Node small-icu trả "Mon." là mọi ngày thành Thứ Hai — luật "hằng tuần" gửi cả bảy ngày, không một dòng lỗi | Suy thứ TỪ NGÀY bằng số học, không đọc tên |
+| 8 | Thấp | `localNowIn` thiếu lưới an toàn múi giờ mà `isoDateInTz` đã có → cấu hình sai là màn Expiry vẫn chạy còn digest im lặng không bao giờ gửi | Bọc try/catch, lùi về UTC như hàm anh em |
+| 9 | Thấp | `@Matches(/^[0-9a-fA-F-]{36}$/)` nhận cả 36 dấu gạch ngang → xuống tới Postgres và bung **500** thay vì 400 | Dùng `@IsUUID()` như mọi controller khác |
+
 ### Bẫy đã gặp — đừng lặp lại
 
 1. **Đặt sổ đăng ký bên trong module đọc nó.** Lần đầu tôi để `DevicePanelsService` trong

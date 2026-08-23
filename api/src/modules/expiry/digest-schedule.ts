@@ -81,33 +81,55 @@ const WEEKDAY_LABEL: Record<number, string> = {
 
 /**
  * Tách một mốc thời gian thành các thành phần theo múi giờ cho trước.
- * `Date.getDay()` trả 0=Chủ Nhật; hệ thống dùng 1=Thứ Hai…7=Chủ Nhật nên phải đổi.
+ *
+ * Thứ trong tuần suy RA TỪ NGÀY đã tách được, không đọc tên viết tắt của Intl: bản Node
+ * dựng với small-icu (hoặc một phiên bản ICU khác) có thể trả "Mon." kèm dấu chấm, và một
+ * bảng tra theo tên sẽ lặng lẽ cho ra Thứ Hai cho MỌI ngày — luật "hằng tuần thứ Hai" thành
+ * ra gửi cả bảy ngày mà không có lấy một dòng lỗi. Tính từ ngày thì không có đường sai lặng lẽ.
+ *
+ * Múi giờ cấu hình sai lùi về UTC chứ không ném: `isoDateInTz` đã theo nếp đó, hàm này mà
+ * ném thì màn Expiry vẫn chạy còn digest im lặng không bao giờ gửi (code review Epic 3).
  */
 export function localNowIn(timeZone: string, now: Date = new Date()): LocalNow {
-  const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    hour12: false,
-    weekday: 'short',
-  }).formatToParts(now);
-
-  const get = (type: string) => parts.find((part) => part.type === type)?.value ?? '';
-  const date = `${get('year')}-${get('month')}-${get('day')}`;
-  // 'hour' có thể là '24' ở hour12:false trong một số môi trường — quy về 0.
-  const hour = Number(get('hour')) % 24;
-  const weekday = WEEKDAY_FROM_SHORT[get('weekday')] ?? 1;
-  return { date, hour, weekday, dayOfMonth: Number(get('day')) };
+  const date = safeIsoDate(timeZone, now);
+  const hour = safeHour(timeZone, now);
+  return {
+    date,
+    hour,
+    weekday: weekdayOf(date),
+    dayOfMonth: Number(date.slice(8, 10)),
+  };
 }
 
-const WEEKDAY_FROM_SHORT: Record<string, number> = {
-  Mon: 1,
-  Tue: 2,
-  Wed: 3,
-  Thu: 4,
-  Fri: 5,
-  Sat: 6,
-  Sun: 7,
-};
+function safeIsoDate(timeZone: string, now: Date): string {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(now);
+  } catch {
+    return now.toISOString().slice(0, 10);
+  }
+}
+
+function safeHour(timeZone: string, now: Date): number {
+  try {
+    const value = new Intl.DateTimeFormat('en-GB', {
+      timeZone,
+      hour: '2-digit',
+      hour12: false,
+    }).format(now);
+    // 'hour' có thể ra '24' ở hour12:false trong một số môi trường — quy về 0.
+    return Number(value) % 24;
+  } catch {
+    return now.getUTCHours();
+  }
+}
+
+/** 1=Thứ Hai … 7=Chủ Nhật, suy từ chuỗi YYYY-MM-DD (`getUTCDay` trả 0=Chủ Nhật). */
+export function weekdayOf(isoDate: string): number {
+  const day = new Date(`${isoDate}T00:00:00Z`).getUTCDay();
+  return day === 0 ? 7 : day;
+}

@@ -2,6 +2,7 @@ import {
   describeSchedule,
   localNowIn,
   shouldSendNow,
+  weekdayOf,
   type DigestSchedule,
   type LocalNow,
 } from './digest-schedule';
@@ -98,5 +99,31 @@ describe('localNowIn — quy mốc thời gian về múi giờ ứng dụng', ()
     ['2026-08-30T03:00:00Z', 7],
   ])('%s → thứ %s (1=Thứ Hai, 7=Chủ Nhật)', (utc, expected) => {
     expect(localNowIn('Asia/Ho_Chi_Minh', new Date(utc)).weekday).toBe(expected);
+  });
+
+  /**
+   * Múi giờ hỏng phải lùi về UTC, KHÔNG ném: `isoDateInTz` đã theo nếp đó. Hàm này mà ném
+   * thì màn Expiry vẫn chạy còn digest im lặng không bao giờ gửi (code review Epic 3).
+   */
+  it('múi giờ cấu hình sai thì lùi về UTC chứ không ném', () => {
+    const at = new Date('2026-08-24T10:00:00Z');
+    expect(localNowIn('Khong/Ton_Tai', at)).toEqual({
+      date: '2026-08-24',
+      hour: 10,
+      weekday: 1,
+      dayOfMonth: 24,
+    });
+  });
+});
+
+describe('weekdayOf — suy thứ TỪ NGÀY, không đọc tên viết tắt của Intl', () => {
+  it.each([
+    ['2026-08-24', 1],
+    ['2026-08-25', 2],
+    ['2026-08-29', 6],
+    ['2026-08-30', 7],
+    ['2027-01-01', 5],
+  ])('%s → thứ %s', (date, expected) => {
+    expect(weekdayOf(date)).toBe(expected);
   });
 });

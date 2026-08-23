@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { ExpiryDigestService } from './expiry-digest.service';
 import { ExpiryService, type ExpiryRow, type ExpirySummary } from './expiry.service';
 
 /**
@@ -7,13 +8,24 @@ import { ExpiryService, type ExpiryRow, type ExpirySummary } from './expiry.serv
  */
 @Injectable()
 export class ExpiryApiService {
-  constructor(private readonly expiry: ExpiryService) {}
+  constructor(
+    private readonly expiry: ExpiryService,
+    private readonly digest: ExpiryDigestService,
+  ) {}
 
   list(
     withinDays: number,
     kinds?: string[],
   ): Promise<{ items: ExpiryRow[]; summary: ExpirySummary }> {
     return this.expiry.list({ withinDays, kinds });
+  }
+
+  /**
+   * Nội dung email digest của một luật. Consumer mail gọi qua đây với `ruleId` lấy từ outbox
+   * — outbox chỉ giữ id tham chiếu, không PII (AD-11/NFR-04).
+   */
+  buildDigest(ruleId: string) {
+    return this.digest.buildDigest(ruleId);
   }
 
   /** Lịch sử gia hạn của một hồ sơ — trang chi tiết module chủ hiện được mà không cần bảng riêng. */
