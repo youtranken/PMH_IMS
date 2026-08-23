@@ -351,12 +351,37 @@ export class AuthService {
       detail: result.ok ? undefined : { reason: result.reason },
     });
     if (!result.ok) {
+      /**
+       * Sai liên tiếp đủ ngưỡng → THU HỒI PHIÊN (code review Epic 4, finding 1).
+       *
+       * Trước đây gõ sai chỉ ghi audit, nên kẻ cầm cookie phiên trộm được cứ thử mã cho tới
+       * khi trúng. Thu hồi PHIÊN chứ không khóa TÀI KHOẢN là có chủ ý: khóa tài khoản thì
+       * chính kẻ tấn công lại khóa được người dùng thật ra ngoài — hàng rào thành công cụ
+       * phá hoại. Mất phiên thì kẻ tấn công mất cookie, người dùng thật đăng nhập lại là xong.
+       */
+      const failures = await this.sessions.registerStepUpFailure(session.id);
+      const maxFailures = await this.config.getNumber('secretStepUpMaxFailures');
+      if (failures >= maxFailures) {
+        await this.sessions.revoke(session.id, 'stepup-brute-force');
+        await this.audit.append({
+          actor: user.email,
+          action: 'auth.stepup.session_revoked',
+          objectType: 'session',
+          objectId: session.id,
+          detail: { failures },
+        });
+        throw new UnauthorizedException({
+          code: 'SESSION_REVOKED',
+          message: `Gõ sai mã ${failures} lần — phiên đã bị thu hồi. Đăng nhập lại.`,
+        });
+      }
       throw new UnauthorizedException({
         code: result.reason === 'replayed' ? 'TOTP_REPLAYED' : 'TOTP_INVALID',
         message:
           result.reason === 'replayed'
             ? 'Mã này đã được dùng. Chờ mã mới rồi nhập lại.'
             : 'Mã xác thực không đúng.',
+        attemptsLeft: maxFailures - failures,
       });
     }
     await this.sessions.markSteppedUp(session.id);

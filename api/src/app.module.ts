@@ -30,10 +30,19 @@ import { VaultModule } from './modules/vault/vault.module';
 
 /**
  * Thứ tự guard toàn cục QUAN TRỌNG (Nest chạy theo thứ tự khai báo):
- *   1. Throttler  — chặn dò mật khẩu trước khi đụng DB (NFR-01)
- *   2. Session    — dựng request.user từ cookie phiên
- *   3. Csrf       — cần request.user.sessionId của bước 2
+ *   1. Session    — dựng request.user từ cookie phiên
+ *   2. Throttler  — rate-limit theo USER, nên PHẢI chạy sau Session
+ *   3. Csrf       — cần request.user.sessionId của bước 1
  *   4. Roles      — quyền mặc định ĐÓNG (AD-9)
+ *
+ * Throttler từng đứng đầu để "chặn dò mật khẩu trước khi đụng DB". Nhưng `UserThrottlerGuard`
+ * đếm theo `req.user.email`, mà lúc đó `req.user` CHƯA tồn tại — nên nó lặng lẽ lùi về đếm
+ * theo IP, và sau nginx thì cả văn phòng dùng chung một bucket. Đúng thứ thay đổi này định
+ * sửa từ epic review 2 lại không có tác dụng, mà không có gì đỏ để báo (code review Epic 4).
+ *
+ * Đổi thứ tự KHÔNG làm hở đường dò mật khẩu: `SessionGuard` trả `true` ngay cho route
+ * `@Public()` (login) mà không chạm DB, và login có `LoginRateGuard` riêng đọc ngưỡng từ
+ * `system_config` (AD-11).
  */
 @Module({
   imports: [
@@ -79,8 +88,8 @@ import { VaultModule } from './modules/vault/vault.module';
     ExcelExportService,
     ExcelImportService,
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
-    { provide: APP_GUARD, useClass: UserThrottlerGuard },
     { provide: APP_GUARD, useClass: SessionGuard },
+    { provide: APP_GUARD, useClass: UserThrottlerGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },

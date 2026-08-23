@@ -2,10 +2,12 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   E2E_MEMBER,
   E2E_SA,
+  NEW_PASSWORD,
   countAudit,
   expireStepUp,
   firstLogin,
   freshTotpCode,
+  loginWithTotp,
   resetDevices,
   resetSecrets,
   resetUsers,
@@ -215,4 +217,49 @@ test.describe('Mở két với TOTP step-up', () => {
       timeout: (revealSeconds + 10) * 1000,
     });
   });
+  /**
+   * Code review Epic 4, finding 1: trước đây gõ sai mã step-up chỉ ghi audit chứ không đếm,
+   * nên kẻ cầm cookie phiên trộm được cứ thử cho tới khi trúng.
+   *
+   * Thu hồi PHIÊN chứ không khóa TÀI KHOẢN là có chủ ý — nên bài này kiểm cả hai vế: phiên
+   * chết, mà tài khoản vẫn đăng nhập lại được bình thường. Khóa tài khoản thì chính kẻ tấn
+   * công lại khóa được người dùng thật ra ngoài.
+   */
+  test('gõ sai mã liên tiếp đủ ngưỡng thì THU HỒI PHIÊN, nhưng không khóa tài khoản', async ({
+    page,
+  }) => {
+    const totpSecret = await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const { ids } = await setUpDeviceWithSecrets(page, stamp, [
+      { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
+    ]);
+    expireStepUp();
+
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+
+    // Ngưỡng mặc định là 5 (system_config `secret.stepup_max_failures`).
+    let lastStatus = 0;
+    let lastBody: { code?: string } = {};
+    for (let i = 0; i < 5; i += 1) {
+      const res = await page.request.post('/api/v1/auth/step-up', {
+        headers,
+        data: { token: '000000' },
+      });
+      lastStatus = res.status();
+      lastBody = (await res.json()) as { code?: string };
+    }
+    expect(lastStatus).toBe(401);
+    expect(lastBody.code).toBe('SESSION_REVOKED');
+
+    // Phiên chết thật: mở két bằng cookie cũ không còn ăn thua.
+    const afterRevoke = await page.request.post(`/api/v1/vault/secrets/${ids[0]}/reveal`, {
+      headers,
+    });
+    expect(afterRevoke.status()).toBe(401);
+
+    // Tài khoản KHÔNG bị khóa — đăng nhập lại là dùng được ngay.
+    await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, totpSecret);
+    await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+  });
+
 });

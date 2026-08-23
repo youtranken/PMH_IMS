@@ -86,8 +86,11 @@ test.describe('Hồ sơ phần mềm', () => {
     await page.goto(`/phan-mem/${id}`);
     await expect(page.getByRole('heading', { name: new RegExp(code) })).toBeVisible();
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
-    await expect(page.getByText('Gia hạn')).toBeVisible();
-    await expect(page.getByText(/ngày hết hạn: 2026-12-31 → 2027-12-31/)).toBeVisible();
+    // Bám vào KHU lịch sử: chữ "Gia hạn" còn nằm trên cái nút ở đầu trang, tìm toàn trang
+    // là trúng hai chỗ và Playwright từ chối ở chế độ strict.
+    const history = page.getByLabel('Lịch sử');
+    await expect(history.getByText('Gia hạn')).toBeVisible();
+    await expect(history.getByText(/ngày hết hạn: 2026-12-31 → 2027-12-31/)).toBeVisible();
   });
 
   test('license/SSL/tên miền KHÔNG có hạn thì bị từ chối, nói rõ vì sao cần', async ({ page }) => {

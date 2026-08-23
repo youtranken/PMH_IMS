@@ -68,6 +68,20 @@ describe('StepUpGuard — FR-022', () => {
     );
   });
 
+  /**
+   * Mã phải là SESSION_MISSING chứ KHÔNG phải STEPUP_REQUIRED: client coi STEPUP_REQUIRED là
+   * "phiên còn sống, chỉ cần gõ mã" và mở hộp nhập mã. Không có phiên thì gõ mã nào cũng vô
+   * nghĩa — người dùng kẹt trong hộp thoại không thoát được (code review Epic 4).
+   */
+  it('không có phiên trả SESSION_MISSING, để UI đưa về màn đăng nhập', async () => {
+    await guardWith(true)
+      .canActivate(contextFor(undefined))
+      .catch((error: UnauthorizedException) => {
+        expect(error.getResponse()).toMatchObject({ code: 'SESSION_MISSING' });
+      });
+    expect.assertions(1);
+  });
+
   it('grace đọc từ system_config, không phải hằng số 10', async () => {
     const ctx = contextFor(userSteppedUpMinutesAgo(20));
     // Admin nới grace lên 30 phút → cùng một phiên đó phải được đi qua.

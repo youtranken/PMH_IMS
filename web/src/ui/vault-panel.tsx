@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { errorCode, errorMessage, useApiMutation } from '@/lib/api';
@@ -59,9 +59,12 @@ export function VaultPanel({
   const [editing, setEditing] = useState<{ secret: SecretMeta | null } | null>(null);
   const [rotating, setRotating] = useState<SecretMeta | null>(null);
   const [pendingStepUp, setPendingStepUp] = useState<SecretMeta | null>(null);
+  /** Secret đang mở dở — chặn bấm đúp đẻ ra hai lần giải mã, hai dòng audit. */
+  const [opening, setOpening] = useState<string | null>(null);
   const [revealed, setRevealed] = useState<
     { label: string; value: string; seconds: number } | null
   >(null);
+  const openingRef = useRef<string | null>(null);
 
   // Chỉ SA/Admin có quyền tới endpoint két sắt (AD-9). Member thấy lời giải thích, không
   // thấy bảng trống kèm một lỗi 403 lặng lẽ trong console.
@@ -91,6 +94,11 @@ export function VaultPanel({
    */
   const openSecret = useCallback(
     async (secret: SecretMeta, afterStepUp = false) => {
+      // Chốt bằng ref chứ không bằng state: hai lần bấm liên tiếp rơi vào cùng một nhịp
+      // render thì cả hai cùng đọc `opening === null` và cùng đi tiếp. Ref đổi ngay lập tức.
+      if (openingRef.current) return;
+      openingRef.current = secret.id;
+      setOpening(secret.id);
       try {
         const opened = await apiFetch<{ value: string; revealSeconds: number }>(
           `/api/v1/vault/secrets/${secret.id}/reveal`,
@@ -103,6 +111,9 @@ export function VaultPanel({
           return;
         }
         toast({ message: errorMessage(error), tone: 'error' });
+      } finally {
+        openingRef.current = null;
+        setOpening(null);
       }
     },
     [me.csrfToken, toast],
@@ -164,9 +175,10 @@ export function VaultPanel({
                       <button
                         type="button"
                         className="btn sm"
+                        disabled={opening !== null}
                         onClick={() => void openSecret(secret)}
                       >
-                        {t('vault.reveal')}
+                        {opening === secret.id ? t('common.loading') : t('vault.reveal')}
                       </button>
                       {canEdit ? (
                         <>

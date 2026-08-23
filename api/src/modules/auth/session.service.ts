@@ -13,6 +13,7 @@ export interface SessionRecord {
   ip: string | null;
   userAgent: string | null;
   steppedUpAt: Date | null;
+  stepupFailures: number;
   totpPending: boolean;
   createdAt: Date;
   lastSeenAt: Date;
@@ -73,12 +74,28 @@ export class SessionService {
       .where(eq(sessionsTable.id, id));
   }
 
-  /** FR-022: đóng dấu vừa gõ TOTP — grace tính từ mốc này. */
+  /** FR-022: đóng dấu vừa gõ TOTP — grace tính từ mốc này. Gõ đúng xóa sạch bộ đếm sai. */
   async markSteppedUp(id: string): Promise<void> {
     await this.db
       .update(sessionsTable)
-      .set({ steppedUpAt: new Date() })
+      .set({ steppedUpAt: new Date(), stepupFailures: 0 })
       .where(eq(sessionsTable.id, id));
+  }
+
+  /**
+   * Gõ sai mã step-up: tăng bộ đếm và trả về số lần sai LIÊN TIẾP sau khi tăng.
+   *
+   * Tăng bằng SQL (`+ 1` trên chính cột) chứ không đọc-rồi-ghi: hai request gõ sai cùng lúc
+   * mà đọc-rồi-ghi thì cả hai cùng thấy 3 và cùng ghi 4 — kẻ tấn công bắn song song là bộ
+   * đếm gần như đứng yên.
+   */
+  async registerStepUpFailure(id: string): Promise<number> {
+    const rows = await this.db
+      .update(sessionsTable)
+      .set({ stepupFailures: sql`${sessionsTable.stepupFailures} + 1` })
+      .where(eq(sessionsTable.id, id))
+      .returning({ failures: sessionsTable.stepupFailures });
+    return rows[0]?.failures ?? 0;
   }
 
   /**

@@ -12,6 +12,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { IsIn, IsOptional, IsString, IsUUID, Length } from 'class-validator';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
@@ -136,7 +137,14 @@ export class VaultController {
    * của trình duyệt và bấm Back ở máy dùng chung là hiện lại.
    *
    * Một lần gọi = một secret = một dòng audit (`VaultService.reveal` ghi TRƯỚC khi giải mã).
+   *
+   * Trần 30 lần/phút THEO USER. Hình dạng route ("một id mỗi lần") một mình KHÔNG đủ để giữ
+   * FR-026: phiên đã step-up cứ gọi liệt kê rồi mở lần lượt là rút được cả két trong vài phút,
+   * chỉ để lại N dòng audit mà chẳng ai ngồi đọc kịp (code review Epic 4, finding 2). Trần này
+   * là hàng rào PHÒNG, còn audit là hàng rào PHÁT HIỆN — cần cả hai. 30 vẫn rộng hơn nhiều so
+   * với nhịp người thật (mở một hai mật khẩu rồi đi làm việc khác).
    */
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @Roles('sa', 'admin')
   @UseGuards(StepUpGuard)
   @RequiresStepUp()

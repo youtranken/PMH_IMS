@@ -10,6 +10,7 @@ export const CONFIG_KEYS = {
   loginRateLimitPerIp: { key: 'login.rate_limit_per_ip', fallback: 20 },
   secretRevealSeconds: { key: 'secret.reveal_seconds', fallback: 30 },
   secretStepUpGraceMinutes: { key: 'secret.stepup_grace_minutes', fallback: 10 },
+  secretStepUpMaxFailures: { key: 'secret.stepup_max_failures', fallback: 5 },
   breakGlassMaxGrantHours: { key: 'breakglass.max_grant_hours', fallback: 24 },
   mailFromAddress: { key: 'mail.from_address', fallback: 'ims@pmh.com.vn' },
   appTimezone: { key: 'app.timezone', fallback: 'Asia/Ho_Chi_Minh' },

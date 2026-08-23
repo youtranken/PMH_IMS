@@ -1,4 +1,4 @@
-import { boolean, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, integer, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { usersTable } from '../users/users.schema';
 
 /** Phiên server-side (AD-8) — bảng tạo bằng migration 0003_sessions.sql. */
@@ -11,6 +11,8 @@ export const sessionsTable = pgTable('sessions', {
   ip: text('ip'),
   userAgent: text('user_agent'),
   steppedUpAt: timestamp('stepped_up_at', { withTimezone: true }),
+  /** Số lần gõ sai mã step-up LIÊN TIẾP trong phiên này — đủ ngưỡng thì thu hồi phiên. */
+  stepupFailures: integer('stepup_failures').notNull().default(0),
   totpPending: boolean('totp_pending').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),

@@ -38,9 +38,21 @@ export class StepUpGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<AuthedRequest>();
     const user = request.user;
-    // Không có phiên thì SessionGuard đã chặn từ trước; đây là hàng rào cuối, không phải
-    // chỗ để đoán "chắc là hợp lệ".
-    if (!user) throw stepUpRequired(0);
+    /**
+     * Không có phiên thì SessionGuard đã chặn từ trước; đây là hàng rào cuối, không phải chỗ
+     * để đoán "chắc là hợp lệ".
+     *
+     * Nhưng mã trả về phải là SESSION_MISSING chứ KHÔNG phải STEPUP_REQUIRED: client coi
+     * STEPUP_REQUIRED là "phiên vẫn sống, chỉ cần gõ mã" và sẽ mở hộp nhập mã. Không có phiên
+     * thì gõ mã nào cũng vô nghĩa — người dùng kẹt trong một hộp thoại không bao giờ thoát
+     * được, thay vì được đưa về màn đăng nhập (code review Epic 4, finding 4).
+     */
+    if (!user) {
+      throw new UnauthorizedException({
+        code: 'SESSION_MISSING',
+        message: 'Chưa đăng nhập.',
+      });
+    }
 
     // AD-11: grace đọc từ system_config, không hardcode 10.
     const graceMinutes = await this.config.getNumber('secretStepUpGraceMinutes');

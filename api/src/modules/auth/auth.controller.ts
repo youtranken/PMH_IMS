@@ -9,6 +9,7 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { Audited } from '../audit/audited.decorator';
 import { SystemConfigService } from '../config-sys/system-config.service';
@@ -113,7 +114,14 @@ export class AuthController {
     return { status: 'enrolled', csrfToken: result.session.csrfToken };
   }
 
-  /** FR-022: step-up để xem bí mật — luôn bắt buộc, kể cả khi tắt TOTP lúc đăng nhập. */
+  /**
+   * FR-022: step-up để xem bí mật — luôn bắt buộc, kể cả khi tắt TOTP lúc đăng nhập.
+   *
+   * Trần 10 lần/phút THEO USER (UserThrottlerGuard). Mã TOTP chỉ có một triệu khả năng và
+   * đây là cửa duy nhất vào cả két: trần 300/phút chung là quá rộng cho một ô 6 số. Người
+   * dùng thật gõ nhiều nhất vài lần — 10 đã là rộng rãi.
+   */
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Roles(...ALL_ROLES)
   @Post('step-up')
   @HttpCode(200)
