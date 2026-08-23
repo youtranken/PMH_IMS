@@ -132,6 +132,27 @@ export function countAudit(action: string, objectId: string): number {
   return Number(out.trim());
 }
 
+/**
+ * Xóa dải và hồ sơ IP do E2E tạo. Quy ước: mọi TÊN dải trong test đều chứa "E2E".
+ *
+ * `ip_history` là append-only (AD-13) nên phải tắt trigger để xóa — đúng lý do script reset
+ * chỉ chạy ở môi trường test, không bao giờ có mặt trong image production.
+ */
+export function resetIpam(): void {
+  const match = "name ILIKE '%E2E%'";
+  const sql = [
+    `ALTER TABLE ip_history DISABLE TRIGGER ip_history_no_delete`,
+    `DELETE FROM ip_history WHERE ip_address_id IN (SELECT id FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE ${match}))`,
+    `ALTER TABLE ip_history ENABLE TRIGGER ip_history_no_delete`,
+    `DELETE FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE ${match})`,
+    `DELETE FROM subnet WHERE ${match}`,
+  ].join('; ');
+  execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -c "${sql}"`, {
+    cwd: '..',
+    stdio: 'pipe',
+  });
+}
+
 /** Xóa luật gửi báo cáo do E2E tạo. Quy ước: mọi tên luật trong test đều chứa "E2E". */
 export function resetDigestRules(): void {
   execSync(

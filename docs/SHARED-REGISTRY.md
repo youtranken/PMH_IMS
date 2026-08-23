@@ -26,6 +26,7 @@
 | `ImportDialog` | `ui/import-dialog.tsx` | Hộp thoại nhập Excel hai bước (đối chiếu → ghi): danh mục 2.1, thiết bị 2.6 | Không tự dựng luồng import riêng |
 | `AttachmentPanel` | `ui/attachment-panel.tsx` | Giấy tờ đính kèm của MỌI chủ thể (`ownerType`/`ownerId`): thiết bị 2.3, phiếu Epic 8, sự cố Epic 9 | Không tự viết upload riêng — sẽ quên luật "tải về, không mở inline" |
 | `VaultPanel` | `ui/vault-panel.tsx` | Két sắt của MỌI chủ thể (`ownerType`/`ownerId`): thiết bị 4.1, phần mềm 4.1 | Không tự dựng bảng secret riêng — mỗi bản tự viết là một lần có thể lỡ hiện giá trị ra bảng, và cấm thêm nút "xuất tất cả" ở bất kỳ đâu (FR-026) |
+| `UsageBar` | `ui/usage-bar.tsx` | Thanh mức sử dụng: dải IP 5.1 (FR-020), seat license, ô bảng điều khiển Epic 7 | Ngưỡng màu 70/90 là quy ước ĐỌC, không phải tham số vận hành — đừng đưa vào `system_config` |
 | `StepUpDialog` | `ui/step-up-dialog.tsx` | Hộp gõ TOTP mở quyền xem bí mật (FR-022): két sắt 4.2, break-glass Epic 6 | Không tự tính "còn trong grace hay chưa" ở client — cứ gọi việc, gặp `STEPUP_REQUIRED` thì mở hộp này rồi thử lại |
 | `RevealDialog` | `ui/reveal-dialog.tsx` | Hiện một giá trị bí mật rồi tự ẩn sau `secret.reveal_seconds` | Cấm tự dựng hộp hiện secret: sẽ quên đếm ngược theo MỐC (tab nền bị hãm nhịp) và quên bỏ nút sao chép |
 | `OtpInput` | `ui/otp-input.tsx` | Ô nhập mã 6 số: đăng nhập, enroll, step-up | Chuyển từ `features/auth/` sang `ui/` ở story 4.2 — `ui` không được import ngược vào `features` |
@@ -81,6 +82,7 @@
 | `FilesApiService` | `modules/files/files.api.ts` | Module khác hỏi "chủ thể này có file gì" (AD-2) | Cấm query bảng `file` từ module khác |
 | `DevicesApiService` | `modules/devices/devices.api.ts` | ipam/vault/software/phiếu tham chiếu thiết bị | Cấm query bảng `device` từ module khác |
 | `VaultApiService` | `modules/vault/vault.api.ts` | Module khác hỏi "chủ thể này có mấy secret, tên gì" (AD-2/AD-4) | CỐ Ý không có hàm trả plaintext — muốn mở két phải đi endpoint riêng có TOTP step-up (4.2); cấm mọi module khác chạm bảng `secret` |
+| `IpamApiService` | `modules/ipam/ipam.api.ts` | Module khác hỏi "thiết bị này có IP gì" (AD-2): panel IP 5.4, sổ NAT 5.3, phiếu bàn giao Epic 8 | Cấm query bảng `subnet`/`ip_address` từ module khác |
 
 ## Cách CI ép luật (không trông vào review)
 

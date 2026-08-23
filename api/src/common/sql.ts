@@ -29,3 +29,8 @@ export function pgErrorCode(error: unknown): string | undefined {
 export const PG_FOREIGN_KEY_VIOLATION = '23503';
 /** Vi phạm ràng buộc duy nhất — trùng mã/tên. */
 export const PG_UNIQUE_VIOLATION = '23505';
+/**
+ * Vi phạm CHECK — cũng là mã mà `RAISE EXCEPTION ... USING ERRCODE = 'check_violation'`
+ * trong trigger dùng (vd `ip_address_within_subnet` của Epic 5).
+ */
+export const PG_CHECK_VIOLATION = '23514';

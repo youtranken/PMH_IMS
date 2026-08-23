@@ -195,6 +195,34 @@
   padding-top: var(--space-4);
 }
 
+/* --- Thanh mức sử dụng (ui/usage-bar.tsx) --------------------------------- */
+.usage {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+.usage-track {
+  flex: 1 1 auto;
+  min-width: 60px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.usage-fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  background: var(--ok);
+}
+.usage-track.tone-warn .usage-fill { background: var(--warn); }
+.usage-track.tone-danger .usage-fill { background: var(--danger); }
+.usage-text {
+  flex: 0 0 auto;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+
 /* --- Giá trị secret khi mở két (ui/vault-panel.tsx) ----------------------- */
 /* Chữ to, giãn ký tự, ngắt được: người ta phải ĐỌC và gõ lại chuỗi này trong 30 giây,
    thường là trên điện thoại, đứng trước tủ rack. `user-select: all` để bôi một phát dính cả
