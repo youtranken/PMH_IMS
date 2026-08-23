@@ -1,5 +1,42 @@
 # Những chỗ tôi tự quyết — cần anh xem lại
 
+## Tình hình đến 23/08/2026
+
+Phạm vi anh giao (Epic 3 → 4.1/4.2 → 5 → 6 → 7) đã **xong hết**.
+
+| Epic | Trạng thái |
+| --- | --- |
+| 1 · Nền tảng & Đăng nhập | done |
+| 2 · Kho thiết bị | done |
+| 3 · Phần mềm & Cảnh báo hết hạn | done |
+| 4 · Két sắt | 4.1 + 4.2 done · **4.3 chờ anh** |
+| 5 · Quản lý IP & NAT | done |
+| 6 · Break-glass & Phê duyệt | done |
+| 7 · Dashboard sếp | done |
+| 8 · Phiếu ISO · 9 · Sự cố | **chờ 8 mẫu phiếu của anh** |
+
+Số liệu: **459 test API · 80 test web · 143 E2E** xanh trên docker thật. 25 migration chạy
+sạch trên DB trắng. `dependency-cruiser` 0 vi phạm. Mỗi epic đóng đều qua `/code-review high`
+và sửa hết finding — tổng cộng **45 finding** qua 6 lần review, ghi đủ trong `docs/EPIC-MAP.md`.
+
+## Hai việc cần anh
+
+**1. Story 4.3 — đóng Đợt 1.** Máy không làm thay được: mở phong bì niêm phong, đứng trước
+một máy sạch, bấm deploy lên LAN thật. Đường đi từng bước + biên bản để in và ký nằm ở
+**`docs/RUNBOOK-4.3-dong-dot-1.md`**. Ước lượng nửa ngày, cần 2 người. Script sao lưu và diễn
+tập khôi phục đã viết và **đã chạy thử**.
+
+Anh chuẩn bị trước: file Excel 300 thiết bị thật, một máy sạch (hoặc VM mới), NAS mount được,
+cert wildcard `*.pmh.com.vn`, hai phong bì trắng.
+
+**2. Epic 8/9 — 8 mẫu phiếu ISO.** Đặt vào `docs/mau-phieu-iso/`: 0204, 0205, 0208, 0213,
+0207, 0209, 0210, 0214. Hiện mới có mockup của 0203 và 0206.
+
+## Sáu chỗ tôi tự quyết, mời anh duyệt
+
+Đọc phần dưới. Sai chỗ nào anh nói, sửa bây giờ vẫn còn rẻ.
+
+
 > Anh đã đồng ý (2026-08-23): gặp chỗ AC chưa chốt thì **tự quyết theo mặc định an toàn rồi
 > ghi vào đây**, thay vì dừng chờ. File này là danh sách để anh đọc buổi sáng: chỗ nào sai
 > thì nói, tôi sửa — sửa sớm rẻ hơn nhiều so với để cả đêm không ai làm gì.
