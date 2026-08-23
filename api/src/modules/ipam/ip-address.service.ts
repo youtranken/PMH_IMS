@@ -10,14 +10,24 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { pgErrorCode, PG_CHECK_VIOLATION, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { diffRecord, hasChanges } from '../../common/record-diff';
+import { isoDateInTz } from '../../common/today';
 import { AuditWriterService } from '../audit/audit-writer.service';
+import { SystemConfigService } from '../config-sys/system-config.service';
 import { DevicesApiService } from '../devices/devices.api';
 import { enumerateHosts, parseAddress } from './ip-rules';
+import {
+  IP_LIFECYCLE_STATUSES,
+  canTransition,
+  nextStatuses,
+  transitionLabel,
+  type IpStatus,
+} from './ip-lifecycle';
 import { ipAddressTable, ipHistoryTable } from './ipam.schema';
 import { SubnetService } from './subnet.service';
 
-export const IP_STATUSES = ['free', 'assigned', 'suspect_dead', 'reclaimed'] as const;
-export type IpStatus = (typeof IP_STATUSES)[number];
+/** MỘT nguồn sự thật cho danh sách trạng thái — `ip-lifecycle.ts` (AD-15). */
+export const IP_STATUSES = IP_LIFECYCLE_STATUSES;
+export type { IpStatus };
 
 /** Trường được theo dõi trong lịch sử (AD-13). */
 const TRACKED = ['address', 'deviceId', 'usedBy', 'assignedAt', 'status', 'note'] as const;
@@ -63,7 +73,18 @@ export class IpAddressService {
     private readonly audit: AuditWriterService,
     private readonly devices: DevicesApiService,
     private readonly subnets: SubnetService,
+    private readonly config: SystemConfigService,
   ) {}
+
+  /**
+   * "Hôm nay" theo múi giờ ứng dụng (AD-11).
+   *
+   * KHÔNG dùng `new Date().toISOString()`: từ 00:00 tới 07:00 giờ VN thì UTC còn là hôm qua,
+   * và ngày cấp IP sẽ lùi một ngày suốt cả buổi sáng — đúng lỗi E2E của Epic 3 bắt được.
+   */
+  private async timezone(): Promise<string> {
+    return this.config.getString('appTimezone');
+  }
 
   /**
    * AC 5.1: "danh sách IP tổng theo subnet hiển thị cả đang dùng lẫn trống".
@@ -231,6 +252,92 @@ export class IpAddressService {
   }
 
   /**
+   * Chuyển trạng thái vòng đời (story 5.2, FR-019).
+   *
+   * Đây là đường DUY NHẤT đổi được `status` — `update()` từ chối thẳng. Máy trạng thái nằm
+   * ở `ip-lifecycle.ts`, service chỉ hỏi rồi ghi.
+   *
+   * Thu hồi thì XÓA thiết bị và người dùng khỏi hàng, nhưng lịch sử giữ nguyên: đó chính là
+   * cách trả lời "IP này từng là máy in kế toán" sau khi nó đã được cấp cho máy khác. Để
+   * `device_id` lại thì màn hình nói IP đang thuộc một máy mà thực tế đã trả về pool.
+   */
+  async transition(
+    actor: string,
+    id: string,
+    to: IpStatus,
+    options: { reason?: string | null; deviceId?: string | null; usedBy?: string | null } = {},
+  ): Promise<IpAddressRecord> {
+    const before = await this.requireAlive(id);
+    const from = before.status as IpStatus;
+
+    if (!canTransition(from, to)) {
+      const allowed = nextStatuses(from).map((next) => transitionLabel(from, next));
+      throw new BadRequestException({
+        code: 'IP_TRANSITION_INVALID',
+        message:
+          allowed.length > 0
+            ? `Không chuyển thẳng được từ "${STATUS_LABEL[from]}" sang "${STATUS_LABEL[to]}". Từ đây chỉ có: ${allowed.join(', ')}.`
+            : `Không chuyển được từ "${STATUS_LABEL[from]}".`,
+      });
+    }
+
+    const values: {
+      status: IpStatus;
+      deviceId?: string | null;
+      usedBy?: string | null;
+      assignedAt?: string | null;
+    } = { status: to };
+
+    if (to === 'reclaimed') {
+      values.deviceId = null;
+      values.usedBy = null;
+    } else if (to === 'assigned') {
+      // Cấp (hoặc cấp lại) thường đi kèm chủ mới — nhận luôn ở đây để không phải gọi hai
+      // lượt và để lịch sử ghi "cấp lại cho máy X" thành MỘT dòng, đúng như việc thật.
+      if (options.deviceId !== undefined) {
+        await this.requireDevice(options.deviceId);
+        values.deviceId = options.deviceId || null;
+      }
+      if (options.usedBy !== undefined) values.usedBy = options.usedBy?.trim() || null;
+      if (from === 'reclaimed' || from === 'free') {
+          values.assignedAt = isoDateInTz(await this.timezone());
+      }
+    }
+
+    const row = await this.db.transaction(async (tx) => {
+      const rows = await tx
+        .update(ipAddressTable)
+        .set({ ...values, updatedAt: new Date() })
+        .where(eq(ipAddressTable.id, id))
+        .returning();
+      await this.audit.appendWithin(tx, {
+        actor,
+        action: 'ip.transitioned',
+        objectType: 'ip_address',
+        objectId: id,
+        detail: { address: before.address, from, to, reason: options.reason ?? null },
+      });
+      await tx.insert(ipHistoryTable).values({
+        ipAddressId: id,
+        action: transitionLabel(from, to),
+        actor,
+        fromStatus: from,
+        toStatus: to,
+        // Ghi lại CHỦ CŨ ngay tại dòng thu hồi — đó là chỗ tra "trước đây IP này của ai".
+        changes: {
+          reason: options.reason ?? null,
+          previousDeviceId: before.deviceId,
+          previousUsedBy: before.usedBy,
+          deviceId: rows[0].deviceId,
+          usedBy: rows[0].usedBy,
+        },
+      });
+      return rows[0];
+    });
+    return (await this.decorate([row]))[0];
+  }
+
+  /**
    * "Xóa" = ẩn, có lý do (quyết định 2026-08-23).
    *
    * Chỉ dành cho hồ sơ NHẬP NHẦM. IP hết dùng thì đi đường vòng đời (thu hồi, story 5.2) —
@@ -354,7 +461,10 @@ export class IpAddressService {
     if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
       return new ConflictException({
         code: 'IP_TAKEN',
-        message: `Địa chỉ ${address} đã có hồ sơ trong dải này. Một IP chỉ có một chủ.`,
+        message:
+          `Địa chỉ ${address} đã có hồ sơ trong dải này. Một IP chỉ có một chủ — ` +
+          'nếu hồ sơ cũ đã thu hồi thì dùng "Cấp lại" trên chính dòng đó, đừng tạo hồ sơ mới ' +
+          '(tạo mới là mất lịch sử cũ).',
       });
     }
     // Trigger `ip_address_within_subnet` — hàng rào cuối ở tầng DB.
@@ -369,3 +479,11 @@ export class IpAddressService {
     return error;
   }
 }
+
+/** Nhãn tiếng Việt cho thông điệp lỗi — khớp `STATUS_KEY` phía web. */
+const STATUS_LABEL: Record<IpStatus, string> = {
+  free: 'Trống',
+  assigned: 'Đang cấp',
+  suspect_dead: 'Nghi chết',
+  reclaimed: 'Đã thu hồi',
+};

@@ -52,3 +52,26 @@ export const STATUS_TONE: Record<IpStatus, string> = {
   suspect_dead: 'warn',
   reclaimed: 'muted',
 };
+
+/**
+ * Đường đi hợp lệ của vòng đời — BẢN SAO ĐỌC của `api/src/modules/ipam/ip-lifecycle.ts`.
+ *
+ * Client giữ bản này chỉ để biết hiện nút nào; API vẫn là nơi phán. Lệch nhau thì tệ nhất là
+ * hiện thừa một nút rồi bị API từ chối kèm lời giải thích — chứ không phải lọt một bước
+ * chuyển sai. E2E kiểm cả hai đầu nên lệch là đỏ.
+ */
+export const NEXT_STATUSES: Record<IpStatus, IpStatus[]> = {
+  free: ['assigned'],
+  assigned: ['suspect_dead', 'reclaimed'],
+  suspect_dead: ['assigned', 'reclaimed'],
+  reclaimed: ['assigned'],
+};
+
+export const TRANSITION_LABEL: Record<string, string> = {
+  'free->assigned': 'ipam.trAssign',
+  'assigned->suspect_dead': 'ipam.trSuspect',
+  'assigned->reclaimed': 'ipam.trReclaim',
+  'suspect_dead->assigned': 'ipam.trStillUsed',
+  'suspect_dead->reclaimed': 'ipam.trReclaim',
+  'reclaimed->assigned': 'ipam.trReassign',
+};

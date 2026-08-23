@@ -533,5 +533,17 @@ export default {
     assignIp: 'Cấp {{address}}',
     editIp: 'Sửa hồ sơ {{address}}',
     ipSaved: 'Đã lưu hồ sơ IP.',
+    history: 'Lịch sử',
+    historyOf: 'Lịch sử của {{address}}',
+    historyEmpty: 'Chưa có thay đổi nào được ghi nhận cho IP này.',
+    transitioned: 'Đã đổi trạng thái.',
+    reasonHint: 'Ghi lại để sau này còn tra. Không bắt buộc, nhưng nên có.',
+    reclaimHint:
+      'Thu hồi sẽ gỡ thiết bị và người dùng khỏi hồ sơ, trả địa chỉ về pool. Lịch sử vẫn giữ nguyên — sau này vẫn tra được IP này từng của ai.',
+    trAssign: 'Cấp IP',
+    trSuspect: 'Nghi chết',
+    trReclaim: 'Thu hồi',
+    trStillUsed: 'Vẫn dùng',
+    trReassign: 'Cấp lại',
   },
 } as const;

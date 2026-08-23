@@ -13,7 +13,18 @@ import { LoadError, Loading, NotFound } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
 import { UsageBar } from '@/ui/usage-bar';
 import { useToast } from '@/ui/toast';
-import { STATUS_KEY, STATUS_TONE, type IpRow, type SubnetRow, type SubnetSlot } from './ipam-types';
+import { HistoryPanel } from '@/ui/history-panel';
+import {
+  NEXT_STATUSES,
+  STATUS_KEY,
+  STATUS_TONE,
+  TRANSITION_LABEL,
+  type IpRow,
+  type IpStatus,
+  type SubnetRow,
+  type SubnetSlot,
+} from './ipam-types';
+import { toIpHistoryEntries, type IpHistoryRow } from './ip-history-entries';
 
 interface DeviceOption {
   id: string;
@@ -34,6 +45,8 @@ export function SubnetDetail({ me }: { me: Me }) {
   const { id = '' } = useParams();
   const [onlyUsed, setOnlyUsed] = useState(false);
   const [editing, setEditing] = useState<{ record: IpRow | null; address: string } | null>(null);
+  const [moving, setMoving] = useState<{ record: IpRow; to: IpStatus } | null>(null);
+  const [historyOf, setHistoryOf] = useState<IpRow | null>(null);
 
   const subnet = useQuery({
     queryKey: ['ipam', 'subnets', id],
@@ -155,13 +168,34 @@ export function SubnetDetail({ me }: { me: Me }) {
                       {orDash(formatDate(slot.assignedAt))}
                     </td>
                     <td>
-                      <button
-                        type="button"
-                        className="btn sm"
-                        onClick={() => setEditing({ record: slot, address: slot.address })}
-                      >
-                        {t('common.edit')}
-                      </button>
+                      <div className="action-cell">
+                        {/* Chỉ hiện những bước chuyển ĐI ĐƯỢC từ trạng thái hiện tại — một
+                            cái nút bấm vào rồi bị từ chối là cái nút không nên có. */}
+                        {NEXT_STATUSES[slot.status].map((to) => (
+                          <button
+                            key={to}
+                            type="button"
+                            className={`btn sm${to === 'reclaimed' ? ' danger' : ''}`}
+                            onClick={() => setMoving({ record: slot, to })}
+                          >
+                            {t(TRANSITION_LABEL[`${slot.status}->${to}`])}
+                          </button>
+                        ))}
+                        <button
+                          type="button"
+                          className="btn sm"
+                          onClick={() => setHistoryOf(slot)}
+                        >
+                          {t('ipam.history')}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn sm"
+                          onClick={() => setEditing({ record: slot, address: slot.address })}
+                        >
+                          {t('common.edit')}
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ),
@@ -170,6 +204,24 @@ export function SubnetDetail({ me }: { me: Me }) {
           </table>
         </div>
       )}
+
+      {moving ? (
+        <TransitionDialog
+          record={moving.record}
+          to={moving.to}
+          csrfToken={me.csrfToken}
+          onClose={() => setMoving(null)}
+          onDone={() => {
+            setMoving(null);
+            toast({ message: t('ipam.transitioned') });
+            void refresh();
+          }}
+        />
+      ) : null}
+
+      {historyOf ? (
+        <IpHistoryDialog record={historyOf} onClose={() => setHistoryOf(null)} />
+      ) : null}
 
       {editing ? (
         <IpForm
@@ -315,6 +367,129 @@ function IpForm({
           </button>
         </div>
       </form>
+    </Dialog>
+  );
+}
+
+/**
+ * Xác nhận một bước chuyển vòng đời.
+ *
+ * Thu hồi hỏi LÝ DO: sáu tháng sau, câu "vì sao IP này bị thu hồi" chỉ còn dòng lịch sử trả
+ * lời được. Cấp / cấp lại thì hỏi CHỦ MỚI ngay tại đây để cả việc đi thành MỘT dòng lịch sử,
+ * đúng như việc thật, thay vì hai dòng rời "đổi trạng thái" rồi "sửa hồ sơ".
+ */
+function TransitionDialog({
+  record,
+  to,
+  csrfToken,
+  onClose,
+  onDone,
+}: {
+  record: IpRow;
+  to: IpStatus;
+  csrfToken: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const { t } = useTranslation();
+  const [reason, setReason] = useState('');
+  const [usedBy, setUsedBy] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const asksOwner = to === 'assigned';
+
+  const move = useApiMutation<Record<string, unknown>, unknown>(
+    `/api/v1/ipam/addresses/${record.id}/transition`,
+    { csrfToken, refreshMe: false },
+  );
+
+  return (
+    <Dialog open onOpenChange={onClose} maxWidth={480}>
+      <DialogTitle>
+        {t(TRANSITION_LABEL[`${record.status}->${to}`])} — {record.address}
+      </DialogTitle>
+      <form
+        className="form-grid"
+        data-columns={1}
+        onSubmit={(e) => {
+          e.preventDefault();
+          setError(null);
+          move.mutate(
+            { to, reason: reason.trim(), usedBy: usedBy.trim() },
+            { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
+          );
+        }}
+      >
+        {to === 'reclaimed' ? <p className="muted">{t('ipam.reclaimHint')}</p> : null}
+
+        {asksOwner ? (
+          <Field label={t('ipam.usedBy')} hint={t('ipam.usedByHint')} htmlFor="tr-used-by">
+            <input
+              id="tr-used-by"
+              className="inp"
+              value={usedBy}
+              onChange={(e) => setUsedBy(e.target.value)}
+            />
+          </Field>
+        ) : null}
+
+        <Field label={t('ipam.reason')} hint={t('ipam.reasonHint')} htmlFor="tr-reason">
+          <input
+            id="tr-reason"
+            className="inp"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+        </Field>
+
+        {error ? (
+          <p className="alert error" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="submit"
+            className={`btn primary${to === 'reclaimed' ? ' danger' : ''}`}
+            disabled={move.isPending}
+          >
+            {move.isPending ? t('common.loading') : t('common.confirm')}
+          </button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+/** AC 5.2: lịch sử giữ VĨNH VIỄN và xem được ngay trên trang IP. */
+function IpHistoryDialog({ record, onClose }: { record: IpRow; onClose: () => void }) {
+  const { t } = useTranslation();
+  const history = useQuery({
+    queryKey: ['ipam', 'addresses', record.id, 'history'],
+    queryFn: () => apiFetch<IpHistoryRow[]>(`/api/v1/ipam/addresses/${record.id}/history`),
+  });
+
+  return (
+    <Dialog open onOpenChange={onClose} maxWidth={620}>
+      <DialogTitle>{t('ipam.historyOf', { address: record.address })}</DialogTitle>
+      {history.isLoading ? (
+        <Loading />
+      ) : history.isError ? (
+        <LoadError onRetry={() => void history.refetch()} />
+      ) : (
+        <HistoryPanel
+          entries={toIpHistoryEntries(history.data ?? [])}
+          emptyText={t('ipam.historyEmpty')}
+        />
+      )}
+      <div className="row" style={{ justifyContent: 'flex-end' }}>
+        <button type="button" className="btn" onClick={onClose}>
+          {t('common.close')}
+        </button>
+      </div>
     </Dialog>
   );
 }

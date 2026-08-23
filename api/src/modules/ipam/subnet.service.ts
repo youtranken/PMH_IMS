@@ -5,13 +5,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, eq, isNull } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNull } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { normalizeSubnet, subnetUsage, type SubnetUsage } from './ip-rules';
+import { OCCUPYING_STATUSES } from './ip-lifecycle';
 import { ipAddressTable, subnetTable } from './ipam.schema';
 
 export interface SubnetRecord {
@@ -65,7 +66,7 @@ export class SubnetService {
     const counts = await this.db
       .select({ subnetId: ipAddressTable.subnetId, used: count() })
       .from(ipAddressTable)
-      .where(isNull(ipAddressTable.voidedAt))
+      .where(and(isNull(ipAddressTable.voidedAt), occupying()))
       .groupBy(ipAddressTable.subnetId);
     const usedBySubnet = new Map(counts.map((row) => [row.subnetId, Number(row.used)]));
 
@@ -81,7 +82,9 @@ export class SubnetService {
     const [used] = await this.db
       .select({ used: count() })
       .from(ipAddressTable)
-      .where(and(eq(ipAddressTable.subnetId, id), isNull(ipAddressTable.voidedAt)));
+      .where(
+        and(eq(ipAddressTable.subnetId, id), isNull(ipAddressTable.voidedAt), occupying()),
+      );
     const sites = await this.siteCodes();
     return {
       ...this.toRecord(row, sites),
@@ -315,3 +318,14 @@ const CIDR_MESSAGE: Record<string, string> = {
   leading_zero: 'Không viết số 0 đứng đầu (172.16.010.5 dễ bị hiểu nhầm). Viết 172.16.10.5.',
   octet_range: 'Mỗi nhóm số phải từ 0 đến 255.',
 };
+
+/**
+ * FR-020 đếm theo địa chỉ đang CHIẾM chỗ, không phải theo số hàng có trong bảng.
+ *
+ * IP đã thu hồi vẫn còn hàng (lịch sử giữ vĩnh viễn — AC 5.2) nhưng đã trả chỗ về pool. Đếm
+ * cả nó thì mức sử dụng chỉ có tăng, không bao giờ giảm, và sau một năm màn hình báo dải đầy
+ * trong khi thực tế còn quá nửa.
+ */
+function occupying() {
+  return inArray(ipAddressTable.status, OCCUPYING_STATUSES);
+}
