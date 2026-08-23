@@ -167,3 +167,63 @@ khi kho vượt ~5.000 thiết bị thì xem lại `ILIKE '%…%'` (cân nhắc 
    timestamp → đỏ ngẫu nhiên. Dùng `getByRole(..., { exact: true })` và mã có tiền tố cố định.
 7. **Dữ liệu E2E không tự dọn** → bảng tràn sang trang 2, locator bắt trúng bản ghi lần chạy
    trước. Quy ước: mọi mã do E2E tạo đều chứa chuỗi `E2E`, `resetDevices`/`resetCatalog` xóa theo đó.
+
+---
+
+## Epic 3 — Phần mềm & Cảnh báo hết hạn (đóng 2026-08-23)
+
+### Bảng mới và ai sở hữu (AD-3)
+
+| Bảng | Module chủ | Ghi chú cho epic sau |
+| --- | --- | --- |
+| `software`, `software_history` | `software` | KHÔNG có cột key/mật khẩu — chìa khóa nằm ở két sắt (AD-4) |
+| `license_assignment` | `software` | Gỡ gán = `released_at`, không xóa dòng. Unique index CÓ ĐIỀU KIỆN nên gỡ rồi gán lại cùng máy vẫn được |
+| `isp_line`, `isp_line_history` | `software` | Cùng nhà vì đều là "hợp đồng có ngày gia hạn"; spine chỉ khai 8 module nghiệp vụ |
+| `renewal_history` | `expiry` | Tham chiếu LỎNG (`object_kind` + `object_id`), không FK — engine không được biết bảng nào tồn tại |
+| `expiry_rule` | `expiry` | Luật gửi digest; `last_sent_at` là mốc chống gửi trùng |
+
+### Hợp đồng epic sau sẽ dùng
+
+| Thứ | Ở đâu | Epic dùng |
+| --- | --- | --- |
+| `ExpirySourceRegistry` (@Global) + `ExpirySource` | `common/expiry/` | **Bất kỳ** module nào có ngày hết hạn: gọi `register(this)` là tự xuất hiện ở màn Expiry, ở bộ lọc và trong email digest. Không sửa gì trong `expiry` |
+| `DevicePanelRegistry` (@Global) | `common/device-panels.registry.ts` | Đã dùng thật 2 lần (license, ISP). **Epic 4** cắm panel secret, **Epic 5** cắm panel IP y hệt |
+| `SoftwareApiService`, `ExpiryApiService` | `modules/*/*.api.ts` | **Epic 4** gắn secret vào hồ sơ phần mềm, **Epic 7** dashboard đếm sắp-hết-hạn |
+| `common/today.ts` (`isoDateInTz`, `addDays`, `daysBetween`) | `common/` | Mọi phép tính ngày. **Cấm** `new Date().toISOString()` để lấy "hôm nay" |
+| `common/record-diff.ts` | `common/` | Lịch sử của mọi bảng (AD-13) — module chủ chỉ khai danh sách trường của mình |
+| `digest-schedule.ts` (`shouldSendNow`) | `modules/expiry/` | Mẫu "đến kỳ chưa" cho mọi thứ chạy định kỳ: **Epic 6** nhắc yêu cầu quá hạn, **Epic 8** sinh kỳ phiếu |
+
+### God node sau Epic 3 (đối chiếu AD-2)
+
+`Roles()`, `AuthedRequest`, `Audited()`, `Database`, `Tx`, `AuditWriterService`,
+`SoftwareService`, `DevicesService`, `UsersService`, `IspLineService`, `CatalogService`,
+`SessionService`, `SystemConfigService`, `DRIZZLE_DB` — **đều là tài sản dùng chung hoặc
+service của module chủ**. Chưa có file nội bộ nào thành hub. `depcruise` sạch hoàn toàn
+(0 vi phạm, kể cả cảnh báo orphan trước đây).
+
+### Nợ kỹ thuật cố ý mang sang
+
+| Việc | Vì sao hoãn | Hạn chót |
+| --- | --- | --- |
+| CI vẫn chưa gắn runner (từ Epic 1) | Chưa chốt chạy ở đâu | Trước khi có người thứ hai commit |
+| Chưa có màn Admin sửa `system_config` | Chưa story nào cần; digest đã có màn riêng | Epic 6 (trần grant break-glass) |
+| `expiry_rule` chưa gửi được theo VAI (chỉ theo email) | Sếp có thể không có tài khoản IMS; email đơn giản và đủ | Khi có yêu cầu "gửi cho mọi Admin" |
+| Import hàng loạt cho phần mềm/ISP | Đợt 1 nhập tay vài chục dòng là xong; bộ khung `import-plan` đã sẵn | Khi số hồ sơ vượt ~100 |
+
+### Bẫy đã gặp — đừng lặp lại
+
+1. **Đặt sổ đăng ký bên trong module đọc nó.** Lần đầu tôi để `DevicePanelsService` trong
+   `devices` — thành ra mọi module muốn góp panel đều phải chạm ruột `devices`. depcruise bắt
+   ngay. Sổ đăng ký thuộc về `common`, vì cả bên ghi lẫn bên đọc đều cần.
+2. **Luật depcruise viết chặt quá cũng là lỗi.** `biz-cross-only-via-api` cấm luôn cả
+   `import ... from '../devices/devices.module'` — mà trong Nest đó là cách duy nhất để DI
+   cấp api service. Cấm hết thì hai module nghiệp vụ không bao giờ gọi nhau được.
+3. **`new Date().toISOString()` KHÔNG phải "hôm nay".** Nó là hôm nay theo UTC. Với giờ VN
+   (+07), từ 0h đến 7h sáng nó trả về HÔM QUA — mọi phép "còn bao nhiêu ngày" lệch một ngày
+   suốt buổi sáng. E2E chạy lúc 6 giờ sáng mới lộ ra.
+4. **Thư đầu tiên trong hộp mailpit không phải thư mình vừa gửi.** Luồng đăng nhập lần đầu
+   cũng gửi email "thiết bị mới". Test phải tìm theo TIÊU ĐỀ, không lấy `messages[0]`.
+5. **Sweep chạy mỗi phút + so "đúng giờ hẹn" = mất kỳ.** Lỡ một phút vì restart là mất cả
+   tuần. So "đã qua giờ hẹn" + mốc `last_sent_at` mới vừa gửi bù được vừa không gửi trùng.
+6. **`Field` thiếu `htmlFor` là ô nhập không có tên** với trình đọc màn hình — và cũng là lý
+   do `getByRole('textbox', { name })` của Playwright không tìm thấy. Test trợ năng bắt hộ.
