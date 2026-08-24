@@ -1,5 +1,12 @@
 import { expect, test } from '@playwright/test';
-import { E2E_SA, firstLogin, resetDevices, resetUsers } from './helpers';
+import {
+  E2E_SA,
+  firstLogin,
+  horizontalOverflow,
+  resetDevices,
+  resetUsers,
+  writeHeaders,
+} from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -52,8 +59,54 @@ test('danh sách và chi tiết thiết bị dùng được ở 390px', async ({
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 });
 
-function horizontalOverflow(page: import('@playwright/test').Page): Promise<number> {
-  return page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-}
+/**
+ * G-08 — Story 2.4 AC-2 ghi rõ "bảng pass 390px ở chế độ xem", nhưng bài mobile ở trên chỉ
+ * mở tab Lịch sử. Port map mới là bảng rộng nhất của trang thiết bị (cổng · đầu kia · ghi
+ * chú), và cũng là thứ người ta tra khi đang đứng cạnh tủ.
+ */
+test('bảng port map, cả chiều ngược, đọc được ở 390px', async ({ page }) => {
+  await firstLogin(page, E2E_SA);
+  const stamp = Date.now().toString().slice(-6);
+  const switchCode = `SW-E2E-390-${stamp}`;
+  const serverCode = `SRV-E2E-390-${stamp}`;
+  const headers = await writeHeaders(page);
+
+  const catalog = await page.evaluate(async () => {
+    const res = await fetch('/api/v1/catalog', { credentials: 'include' });
+    return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
+  });
+  const make = async (code: string, typeName: string) => {
+    const res = await page.request.post('/api/v1/devices', {
+      headers,
+      data: {
+        code,
+        name: `${typeName} ${code}`,
+        deviceTypeId: catalog.deviceTypes.find((t) => t.name === typeName)!.id,
+      },
+    });
+    expect(res.status()).toBe(201);
+    return ((await res.json()) as { device: { id: string } }).device.id;
+  };
+  const switchId = await make(switchCode, 'Switch');
+  const serverId = await make(serverCode, 'Server');
+
+  expect(
+    (
+      await page.request.post(`/api/v1/devices/${switchId}/ports`, {
+        headers,
+        data: { portLabel: '24', connectedDeviceId: serverId, note: 'uplink phòng máy chủ' },
+      })
+    ).status(),
+  ).toBe(201);
+
+  await page.goto(`/thiet-bi/${switchId}`);
+  await page.getByRole('tab', { name: 'Port map' }).click();
+  await expect(page.getByText('uplink phòng máy chủ')).toBeVisible();
+  expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+
+  // AD-14: khai một đầu, đầu kia tự hiện — chiều ngược cũng phải đọc được trên điện thoại.
+  await page.goto(`/thiet-bi/${serverId}`);
+  await page.getByRole('tab', { name: 'Port map' }).click();
+  await expect(page.getByText(switchCode).first()).toBeVisible();
+  expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+});

@@ -17,6 +17,11 @@ export default defineConfig({
   globalSetup: './global-setup.ts',
   use: {
     baseURL: BASE_URL,
+    /**
+     * Xem tận mắt: IMS_SLOW_MO=300 npx playwright test --headed
+     * Mặc định 0 — CI và lượt chạy thường không bị chậm đi chút nào.
+     */
+    launchOptions: { slowMo: Number(process.env.IMS_SLOW_MO ?? 0) },
     ignoreHTTPSErrors: true,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',

@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { expect, type Page } from '@playwright/test';
+import { expect, request, type Page } from '@playwright/test';
 import { NobleCryptoPlugin, ScureBase32Plugin, TOTP } from 'otplib';
 
 export const E2E_SA = { email: 'e2e-sa@pmh.com.vn', password: 'E2e@Test#2026' };
@@ -331,4 +331,130 @@ export async function loginWithTotp(
   await page.getByLabel('Mã xác thực').fill(await freshTotpCode(secret));
   await page.getByRole('button', { name: 'Xác nhận' }).click();
   await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+}
+
+/**
+ * Mailpit — hộp thư của môi trường dev/test. SMTP thật chỉ bật ở prod.
+ *
+ * Ba hàm dưới đây TỪNG nằm riêng trong `expiry-digest.spec.ts`. Epic 6 cũng gửi thư (báo
+ * người duyệt khi có yêu cầu treo, nhắc yêu cầu quá hạn) nên chúng chuyển ra đây thay vì bị
+ * chép sang file thứ hai — AD-15 cấm bản sao.
+ */
+export const MAILPIT = process.env.MAILPIT_URL ?? 'http://localhost:8025';
+
+export interface MailSummary {
+  ID: string;
+  Subject: string;
+  To: { Address: string }[];
+}
+
+export async function clearMailbox(): Promise<void> {
+  const api = await request.newContext();
+  await api.delete(`${MAILPIT}/api/v1/messages`).catch(() => undefined);
+  await api.dispose();
+}
+
+/**
+ * Chờ thư có tiêu đề khớp — KHÔNG lấy bừa thư đầu hộp: luồng đăng nhập lần đầu cũng gửi
+ * email "thiết bị mới", nên thư đầu tiên trong hộp thường không phải thư mình đang chờ.
+ */
+export async function waitForMail(subjectPart: string, attempts = 40): Promise<MailSummary[]> {
+  const api = await request.newContext();
+  try {
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      const res = await api.get(`${MAILPIT}/api/v1/messages`);
+      if (res.ok()) {
+        const body = (await res.json()) as { messages: MailSummary[] };
+        const matched = body.messages.filter((mail) => mail.Subject.includes(subjectPart));
+        if (matched.length > 0) return matched;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    return [];
+  } finally {
+    await api.dispose();
+  }
+}
+
+export async function mailBody(id: string): Promise<string> {
+  const api = await request.newContext();
+  const res = await api.get(`${MAILPIT}/api/v1/message/${id}`);
+  const body = (await res.json()) as { Text?: string; HTML?: string };
+  await api.dispose();
+  return `${body.Text ?? ''}
+${body.HTML ?? ''}`;
+}
+
+/**
+ * Đổi một khóa `system_config` (AD-11).
+ *
+ * CẨN THẬN: `SystemConfigService` cache 30 giây. Test nào đổi ngưỡng rồi kiểm hệ quả NGAY
+ * sẽ đọc phải giá trị cũ và xanh/đỏ vì lý do chẳng liên quan — phải chờ qua cache
+ * (`CONFIG_CACHE_MS`) hoặc chọn cách kiểm không phụ thuộc thời điểm.
+ */
+export const CONFIG_CACHE_MS = 31_000;
+
+export function setConfig(key: string, value: string): void {
+  execSync(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -c ` +
+      `"UPDATE system_config SET value = '${value}' WHERE key = '${key}'"`,
+    { cwd: '..', stdio: 'pipe' },
+  );
+}
+
+export function getConfig(key: string): string {
+  return execSync(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
+      `"SELECT value FROM system_config WHERE key = '${key}'"`,
+    { cwd: '..', encoding: 'utf8' },
+  ).trim();
+}
+
+/** Chạy một câu SQL bất kỳ và trả về chữ — dùng để dựng trạng thái mà UI không dựng được. */
+export function sql(query: string): string {
+  return execSync(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c "${query}"`,
+    { cwd: '..', encoding: 'utf8' },
+  ).trim();
+}
+
+/** Token CSRF của phiên đang mở — mọi lệnh ghi qua API đều phải kèm. */
+export async function csrfOf(page: Page): Promise<string> {
+  return page.evaluate(async () => {
+    const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
+    return ((await res.json()) as { csrfToken: string }).csrfToken;
+  });
+}
+
+/** Header đủ để gọi API ghi từ trong test (CSRF + Origin hợp lệ). */
+export async function writeHeaders(page: Page): Promise<Record<string, string>> {
+  return { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+}
+
+/**
+ * Tuỳ chọn cho test cần MỘT TRÌNH DUYỆT THỨ HAI (`browser.newContext()`).
+ *
+ * `newContext()` KHÔNG thừa kế mục `use` trong `playwright.config.ts`. Thiếu
+ * `ignoreHTTPSErrors` là mọi request chết vì cert dev tự ký, và thiếu `baseURL` là
+ * `goto('/')` không biết đi đâu — cả hai đều đỏ theo kiểu chẳng liên quan gì tới bài test.
+ */
+export const SECOND_BROWSER = {
+  baseURL: process.env.IMS_BASE_URL ?? 'https://localhost',
+  ignoreHTTPSErrors: true,
+  locale: 'vi-VN',
+  timezoneId: 'Asia/Ho_Chi_Minh',
+} as const;
+
+/**
+ * Số pixel trang bị tràn ngang. 0 (hoặc 1 do làm tròn) = không tràn.
+ *
+ * TỪNG có NĂM bản chép của hàm này, mỗi file `*.mobile.spec.ts` một bản — và chúng ĐÃ TRÔI:
+ * bốn bản trả về số pixel, riêng bản trong `shared-kit.mobile.spec.ts` trả về boolean với
+ * ngưỡng `+1` nằm bên trong. Cùng một cái tên, hai ý nghĩa khác nhau, không có gì báo.
+ * Đúng lý do AD-15 cấm bản sao: bản sao không sai lúc chép, nó sai dần về sau.
+ */
+export function horizontalOverflow(page: Page): Promise<number> {
+  return page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
 }

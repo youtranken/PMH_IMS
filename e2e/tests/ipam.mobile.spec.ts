@@ -1,9 +1,17 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, firstLogin, resetIpam, resetUsers } from './helpers';
+import {
+  E2E_SA,
+  firstLogin,
+  horizontalOverflow,
+  resetDevices,
+  resetIpam,
+  resetUsers,
+} from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
   resetIpam();
+  resetDevices();
 });
 
 /**
@@ -42,6 +50,51 @@ test.describe('Địa chỉ IP ở 390px', () => {
     await expect(page.getByText(`172.16.${octet}.1`)).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   });
+
+  /**
+   * G-11 — Story 5.4 AC-2 nói thẳng "panel pass 390px", mà chưa có bài nào.
+   *
+   * Đây là cảnh dùng thật của cả Epic 5: đứng trước tủ mạng, mở trang con switch trên điện
+   * thoại, cần biết ngay nó đang giữ IP nào.
+   */
+  test('panel IP trên trang thiết bị đọc được ở 390px', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const octet = (Number(stamp) % 200) + 20;
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+
+    const catalog = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/catalog', { credentials: 'include' });
+      return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
+    });
+    const type = catalog.deviceTypes.find((t) => t.name === 'Switch')!;
+    const device = await page.request.post('/api/v1/devices', {
+      headers,
+      data: { code: `SW-E2E-390-${stamp}`, name: 'Switch tầng 3', deviceTypeId: type.id },
+    });
+    const deviceId = ((await device.json()) as { device: { id: string } }).device.id;
+
+    const subnet = await page.request.post('/api/v1/ipam/subnets', {
+      headers,
+      data: { cidr: `172.17.${octet}.0/29`, name: `LAN panel E2E ${stamp}` },
+    });
+    const subnetId = ((await subnet.json()) as { id: string }).id;
+    await page.request.post('/api/v1/ipam/addresses', {
+      headers,
+      data: {
+        subnetId,
+        address: `172.17.${octet}.1`,
+        deviceId,
+        usedBy: 'cổng quản trị switch tầng 3',
+      },
+    });
+
+    await page.goto(`/thiet-bi/${deviceId}`);
+    await expect(page.getByRole('heading', { name: 'Địa chỉ IP' })).toBeVisible();
+    await expect(page.getByText(`172.17.${octet}.1`)).toBeVisible();
+    await expect(page.getByText('cổng quản trị switch tầng 3')).toBeVisible();
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+  });
 });
 
 async function csrfOf(page: Page): Promise<string> {
@@ -51,8 +104,3 @@ async function csrfOf(page: Page): Promise<string> {
   });
 }
 
-async function horizontalOverflow(page: Page): Promise<number> {
-  return page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-}

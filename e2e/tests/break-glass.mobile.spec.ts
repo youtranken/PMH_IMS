@@ -4,6 +4,7 @@ import {
   E2E_SA,
   NEW_PASSWORD,
   firstLogin,
+  horizontalOverflow,
   loginWithTotp,
   resetAccessList,
   resetApprovals,
@@ -96,8 +97,3 @@ test.describe('Duyệt break-glass ở 390px', () => {
   });
 });
 
-async function horizontalOverflow(page: Page): Promise<number> {
-  return page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-}

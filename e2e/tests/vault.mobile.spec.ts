@@ -4,6 +4,7 @@ import {
   expireStepUp,
   firstLogin,
   freshTotpCode,
+  horizontalOverflow,
   resetDevices,
   resetSecrets,
   resetUsers,
@@ -106,11 +107,6 @@ test.describe('Két sắt ở 390px', () => {
   });
 });
 
-async function horizontalOverflow(page: Page): Promise<number> {
-  return page.evaluate(
-    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-  );
-}
 
 async function createDeviceWithSecret(
   page: Page,

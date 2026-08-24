@@ -1,8 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
+import { execSync } from 'node:child_process';
 import {
+  COMPOSE,
   E2E_MEMBER,
   E2E_SA,
   NEW_PASSWORD,
+  SECOND_BROWSER,
   countAudit,
   expireStepUp,
   firstLogin,
@@ -10,11 +13,13 @@ import {
   loginWithTotp,
   resetDevices,
   resetSecrets,
+  resetAccessList,
   resetUsers,
 } from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
+  resetAccessList();
   resetSecrets();
   resetDevices();
 });
@@ -30,7 +35,7 @@ async function setUpDeviceWithSecrets(
   page: Page,
   stamp: string,
   secrets: { label: string; value: string }[],
-): Promise<{ deviceId: string; ids: string[] }> {
+): Promise<{ deviceId: string; ids: string[]; typeId: string }> {
   const csrf = await csrfOf(page);
   const headers = { 'X-CSRF-Token': csrf, Origin: 'https://localhost' };
   const catalog = await page.evaluate(async () => {
@@ -64,7 +69,7 @@ async function setUpDeviceWithSecrets(
     expect(created.status()).toBe(201);
     ids.push(((await created.json()) as { id: string }).id);
   }
-  return { deviceId, ids };
+  return { deviceId, ids, typeId: type.id };
 }
 
 /** Story 4.2 — FR-022: mở két phải gõ TOTP, hiện rồi tự ẩn, mỗi lần một dòng audit. */
@@ -262,4 +267,126 @@ test.describe('Mở két với TOTP step-up', () => {
     await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
   });
 
+  /**
+   * G-19 — Story 4.1 AC-2: trần 30 lần mở két mỗi phút, ĐẾM THEO USER.
+   *
+   * Hình dạng route "một id mỗi lần" một mình không giữ nổi FR-026: một phiên đã step-up cứ
+   * liệt kê rồi mở lần lượt là rút cả két trong vài phút. Trần này là hàng rào PHÒNG, và nó
+   * đã từng lặng lẽ lùi về đếm theo IP vì thứ tự guard sai — không có gì đỏ lúc đó.
+   *
+   * Vế thứ hai mới là vế khó làm giả: người thứ hai mở từ CÙNG MỘT IP (mọi test đều chạy từ
+   * localhost) mà vẫn thông, thì con số 30 kia chắc chắn đang tính theo tài khoản.
+   */
+  test('mở quá 30 lần một phút thì bị chặn, và trần đếm theo USER chứ không theo IP', async ({
+    page,
+    browser,
+  }) => {
+    test.setTimeout(240_000);
+    const testStart = Date.now();
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const { ids, typeId } = await setUpDeviceWithSecrets(page, stamp, [
+      { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
+    ]);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+
+    // Member được whitelist để lát nữa mở được — không thì 403 và bài mất nghĩa.
+    await page.request.post('/api/v1/vault/access', {
+      headers,
+      data: {
+        memberEmail: E2E_MEMBER.email,
+        scopeType: 'device_type',
+        scopeRef: typeId,
+        tier: 'whitelist',
+      },
+    });
+
+    /**
+     * Các bài phía trên trong CÙNG FILE cũng vừa mở két vài lần, và hit của họ vẫn nằm
+     * trong cửa sổ 60 giây của throttler (khóa theo user). Không chờ chúng trôi hết thì
+     * lần mở "thứ 30" của bài này thực chất là lần thứ 31+ và bị chặn oan. Mốc tính từ
+     * LÚC BÀI BẮT ĐẦU là đủ: mọi hit cũ đều xảy ra trước đó, nên thời gian setup phía
+     * trên đã được tính vào phần chờ.
+     */
+    const cleanAt = testStart + 61_000;
+    if (Date.now() < cleanAt) {
+      await new Promise((resolve) => setTimeout(resolve, cleanAt - Date.now()));
+    }
+
+    const windowStart = Date.now();
+    try {
+      for (let i = 1; i <= 30; i += 1) {
+        const res = await page.request.post(`/api/v1/vault/secrets/${ids[0]}/reveal`, { headers });
+        expect(res.status(), `lần mở thứ ${i} phải thông`).toBe(200);
+      }
+      const blocked = await page.request.post(`/api/v1/vault/secrets/${ids[0]}/reveal`, {
+        headers,
+      });
+      expect(blocked.status(), 'lần thứ 31 phải bị chặn').toBe(429);
+
+      const memberCtx = await browser.newContext(SECOND_BROWSER);
+      const memberPage = await memberCtx.newPage();
+      try {
+        await firstLogin(memberPage, E2E_MEMBER);
+        const byMember = await memberPage.request.post(
+          `/api/v1/vault/secrets/${ids[0]}/reveal`,
+          { headers: { 'X-CSRF-Token': await csrfOf(memberPage), Origin: 'https://localhost' } },
+        );
+        expect(byMember.status(), 'người khác, cùng IP — trần của người kia không được dính').toBe(
+          200,
+        );
+      } finally {
+        await memberCtx.close();
+      }
+    } finally {
+      /**
+       * Chờ hết cửa sổ 60 giây TRƯỚC KHI rời bài — trong `finally` để bài đỏ giữa chừng
+       * cũng vẫn dọn.
+       *
+       * Kho đếm của throttler nằm trong bộ nhớ tiến trình api và khóa theo (user, handler) —
+       * nên bài này ăn sạch hạn mức mở-két của SA, và bài NGAY SAU đó nhận 429 vì lý do
+       * chẳng liên quan gì tới nó. Dọn sau lưng mình ở đây rẻ hơn là bắt mọi bài khác phải
+       * biết bài này tồn tại.
+       */
+      const left = 61_000 - (Date.now() - windowStart);
+      if (left > 0) await new Promise((resolve) => setTimeout(resolve, left));
+    }
+  });
+
+  /**
+   * G-20 — Story 4.2 AC-2: giá trị secret không được xuất hiện trong log.
+   *
+   * `no-store` và audit đã có bài giữ. Phần log thì chưa: một `console.log` lỡ tay trong
+   * service là secret nằm trong `docker compose logs` vĩnh viễn — nơi không mã hóa, không
+   * xoay chìa, và ai có quyền đọc log là đọc được.
+   */
+  test('mở két xong thì log của api không chứa giá trị secret', async ({ page }) => {
+    test.setTimeout(150_000);
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const secretValue = `LogRedact#${stamp}`;
+    const { ids } = await setUpDeviceWithSecrets(page, stamp, [
+      { label: `admin web E2E ${stamp}`, value: secretValue },
+    ]);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+
+    // Tự phòng vệ trước trần 30 lần/phút: nếu bài trước vừa ăn hết cửa sổ (kể cả khi nó đỏ
+    // và không kịp dọn), thử lại tới khi cửa sổ trôi qua thay vì đỏ dây chuyền theo.
+    let opened = await page.request.post(`/api/v1/vault/secrets/${ids[0]}/reveal`, { headers });
+    for (let waited = 0; opened.status() === 429 && waited < 70; waited += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1_000));
+      opened = await page.request.post(`/api/v1/vault/secrets/${ids[0]}/reveal`, { headers });
+    }
+    expect(opened.status()).toBe(200);
+    expect(((await opened.json()) as { value: string }).value).toBe(secretValue);
+
+    const logs = execSync(`${COMPOSE} logs api --since 5m --no-log-prefix`, {
+      cwd: '..',
+      encoding: 'utf8',
+      maxBuffer: 64 * 1024 * 1024,
+    });
+    expect(logs, 'giá trị secret lọt vào log api').not.toContain(secretValue);
+    // Cả thân request lúc CẤT cũng không được lọt — đó mới là chỗ giá trị đi qua dạng thô.
+    expect(logs, 'giá trị secret lọt vào log lúc cất').not.toContain(`"value":"${secretValue}"`);
+  });
 });

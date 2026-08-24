@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { E2E_SA, firstLogin, resetUsers } from './helpers';
+import {
+  E2E_MEMBER,
+  E2E_SA,
+  SECOND_BROWSER,
+  firstLogin,
+  resetUsers,
+} from './helpers';
 
 test.beforeEach(() => resetUsers());
 
@@ -76,5 +82,75 @@ test.describe('Quản trị tài khoản', () => {
     // Từ khóa không khớp ai: phải nói rõ "chưa có dữ liệu", không để bảng trắng.
     await page.getByRole('searchbox').fill('khong-ton-tai-zzz');
     await expect(page.getByText('Chưa có dữ liệu')).toBeVisible();
+  });
+
+  /**
+   * G-04 — Story 1.4 AC-2: khóa tài khoản thì MỌI phiên của người đó chết ngay.
+   *
+   * Bài "khóa rồi mở lại" ở trên chỉ khẳng định huy hiệu đổi thành "Đang khóa" — tức là
+   * khẳng định CÁI NHÃN, không khẳng định hệ quả. Nhân viên nghỉ việc mà phiên còn sống là
+   * chuyện thật, và nó sẽ không làm đỏ bài nào ở trên.
+   */
+  test('khóa tài khoản thì phiên đang mở của người đó chết ngay', async ({ page, browser }) => {
+    const memberCtx = await browser.newContext(SECOND_BROWSER);
+    const memberPage = await memberCtx.newPage();
+    try {
+      await firstLogin(memberPage, E2E_MEMBER);
+      expect((await memberPage.request.get('/api/v1/auth/me')).status()).toBe(200);
+
+      await firstLogin(page, E2E_SA);
+      await page.getByRole('link', { name: 'Tài khoản' }).click();
+      const row = page.getByRole('row', { name: /E2E Thành viên/ });
+      await row.getByRole('button', { name: 'Khóa' }).click();
+      await page.getByRole('button', { name: 'Đồng ý' }).click();
+      await expect(row.getByText('Đang khóa')).toBeVisible();
+
+      // `expect.poll` chứ không đọc một phát: thu hồi phiên đi qua DB, và response của lệnh
+      // khóa có thể về trước khi UPDATE kịp commit.
+      await expect
+        .poll(async () => (await memberPage.request.get('/api/v1/auth/me')).status())
+        .toBe(401);
+
+      // Và người đó bị đá về trang đăng nhập chứ không ngồi lại trong app với dữ liệu cũ.
+      await memberPage.goto('/thiet-bi');
+      await expect(memberPage).toHaveURL(/dang-nhap/);
+    } finally {
+      await memberCtx.close();
+    }
+  });
+
+  /**
+   * G-05 — Story 1.4 AC-3: nút "Đá phiên" thật sự cắt phiên.
+   *
+   * Bài cũ dừng ở `toBeVisible()` trên chính nút đó. Một nút hiện ra và một nút làm được
+   * việc là hai chuyện khác nhau.
+   */
+  test('SA bấm đá phiên thì trình duyệt kia bị đá về đăng nhập', async ({ page, browser }) => {
+    const memberCtx = await browser.newContext(SECOND_BROWSER);
+    const memberPage = await memberCtx.newPage();
+    try {
+      await firstLogin(memberPage, E2E_MEMBER);
+      expect((await memberPage.request.get('/api/v1/auth/me')).status()).toBe(200);
+
+      await firstLogin(page, E2E_SA);
+      await page.getByRole('link', { name: 'Tài khoản' }).click();
+      const row = page.getByRole('row', { name: /E2E Thành viên/ });
+      await row.getByRole('button', { name: 'Phiên đang mở' }).click();
+
+      // Lọc theo nội dung: lát nữa hộp xác nhận mở chồng lên, `getByRole('dialog')` trơ
+      // sẽ khớp hai cái và Playwright báo strict mode.
+      const dialog = page.getByRole('dialog').filter({ hasText: 'Phiên đang mở' });
+      await dialog.getByRole('button', { name: 'Đá phiên' }).first().click();
+      // Đá phiên có hỏi lại ("Đá phiên đăng nhập này?") — không bấm Đồng ý thì chưa có gì xảy ra.
+      await page.getByRole('button', { name: 'Đồng ý' }).click();
+
+      await expect
+        .poll(async () => (await memberPage.request.get('/api/v1/auth/me')).status())
+        .toBe(401);
+      await memberPage.goto('/thiet-bi');
+      await expect(memberPage).toHaveURL(/dang-nhap/);
+    } finally {
+      await memberCtx.close();
+    }
   });
 });

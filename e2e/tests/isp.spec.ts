@@ -144,7 +144,10 @@ test.describe('Đường truyền ISP', () => {
 
     await page.goto(`/duong-truyen/${id}`);
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
-    await expect(page.getByText('Gia hạn hợp đồng')).toBeVisible();
+    // Nút "Gia hạn hợp đồng" trên đầu trang cũng mang đúng chữ này — chỉ kiểm DÒNG LỊCH SỬ.
+    await expect(
+      page.getByRole('listitem').filter({ hasText: 'Gia hạn hợp đồng' }),
+    ).toBeVisible();
     await expect(page.getByText(/ngày hết hạn: 2026-12-31 → 2027-12-31/)).toBeVisible();
   });
 

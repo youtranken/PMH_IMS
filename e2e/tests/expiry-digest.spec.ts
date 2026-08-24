@@ -2,16 +2,16 @@ import { expect, request, test, type Page } from '@playwright/test';
 import {
   E2E_MEMBER,
   E2E_SA,
+  clearMailbox,
   firstLogin,
+  mailBody,
   resetDevices,
   resetDigestRules,
   resetIsp,
   resetSoftware,
   resetUsers,
+  waitForMail,
 } from './helpers';
-
-/** Mailpit chỉ có ở môi trường dev/test — SMTP thật chỉ cấu hình ở prod. */
-const MAILPIT = process.env.MAILPIT_URL ?? 'http://localhost:8025';
 
 test.beforeEach(async () => {
   resetUsers();
@@ -23,48 +23,6 @@ test.beforeEach(async () => {
   resetDigestRules();
   await clearMailbox();
 });
-
-async function clearMailbox(): Promise<void> {
-  const api = await request.newContext();
-  await api.delete(`${MAILPIT}/api/v1/messages`).catch(() => undefined);
-  await api.dispose();
-}
-
-interface MailSummary {
-  ID: string;
-  Subject: string;
-  To: { Address: string }[];
-}
-
-/**
- * Chờ thư có tiêu đề khớp — KHÔNG lấy bừa thư đầu hộp: luồng đăng nhập lần đầu cũng gửi
- * email "thiết bị mới", nên thư đầu tiên trong hộp thường không phải thư mình đang chờ.
- */
-async function waitForMail(subjectPart: string): Promise<MailSummary[]> {
-  const api = await request.newContext();
-  try {
-    for (let attempt = 0; attempt < 40; attempt += 1) {
-      const res = await api.get(`${MAILPIT}/api/v1/messages`);
-      if (res.ok()) {
-        const body = (await res.json()) as { messages: MailSummary[] };
-        const matched = body.messages.filter((mail) => mail.Subject.includes(subjectPart));
-        if (matched.length > 0) return matched;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-    return [];
-  } finally {
-    await api.dispose();
-  }
-}
-
-async function mailBody(id: string): Promise<string> {
-  const api = await request.newContext();
-  const res = await api.get(`${MAILPIT}/api/v1/message/${id}`);
-  const body = (await res.json()) as { Text?: string; HTML?: string };
-  await api.dispose();
-  return `${body.Text ?? ''}\n${body.HTML ?? ''}`;
-}
 
 async function post(page: Page, url: string, data: Record<string, unknown>) {
   const csrf = await page.evaluate(async () => {
