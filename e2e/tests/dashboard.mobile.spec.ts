@@ -25,7 +25,7 @@ test.describe('Bảng điều khiển ở 390px', () => {
     const stamp = Date.now().toString().slice(-5);
 
     await page.request.post('/api/v1/software', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
       data: {
         code: `LIC-E2E-M390-${stamp}`,
         name: 'License có tên rất dài để thử tràn ngang trên điện thoại',

@@ -17,7 +17,7 @@ async function createDevice(page: Page, code: string, typeName: string): Promise
   });
   const type = catalog.deviceTypes.find((t) => t.name === typeName)!;
   const created = await page.request.post('/api/v1/devices', {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
     data: { code, name: `${typeName} ${code}`, deviceTypeId: type.id },
   });
   expect(created.status()).toBe(201);
@@ -101,7 +101,7 @@ test.describe('Port map', () => {
       return ((await res.json()) as { csrfToken: string }).csrfToken;
     });
     const response = await page.request.post(`/api/v1/devices/${switchId}/ports`, {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
       data: { portLabel: '1', connectedDeviceId: switchId },
     });
     expect(response.status()).toBe(400);

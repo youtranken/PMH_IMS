@@ -39,7 +39,7 @@ test.describe('Két sắt ở 390px', () => {
     });
     const type = catalog.deviceTypes.find((t) => t.name === 'Switch')!;
     const device = await page.request.post('/api/v1/devices', {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
       data: {
         code: `SW-E2E-M390-${stamp}`,
         name: 'Switch tầng 2',
@@ -51,7 +51,7 @@ test.describe('Két sắt ở 390px', () => {
 
     const label = `admin web E2E ${stamp}`;
     await page.request.post('/api/v1/vault/secrets', {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
       data: {
         ownerType: 'device',
         ownerId: deviceId,
@@ -114,7 +114,7 @@ async function createDeviceWithSecret(
   secret: { label: string; value: string },
 ): Promise<{ deviceId: string }> {
   const csrf = await csrfOf(page);
-  const headers = { 'X-CSRF-Token': csrf, Origin: 'https://localhost' };
+  const headers = { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' };
   const catalog = await page.evaluate(async () => {
     const res = await fetch('/api/v1/catalog', { credentials: 'include' });
     return (await res.json()) as { deviceTypes: { id: string; name: string }[] };

@@ -24,7 +24,7 @@ async function createSwitch(page: Page, code: string): Promise<string> {
   });
   const type = catalog.deviceTypes.find((t) => t.name === 'Switch')!;
   const created = await page.request.post('/api/v1/devices', {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
     data: {
       code,
       name: 'Switch lõi phòng máy',
@@ -50,7 +50,7 @@ test.describe('Trang chi tiết thiết bị', () => {
     const csrf = await csrfOf(page);
 
     await page.request.post(`/api/v1/devices/${deviceId}/ports`, {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
       data: { portLabel: 'Gi1/0/1', connectedLabel: 'uplink nhà mạng' },
     });
 

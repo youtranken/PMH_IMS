@@ -36,7 +36,7 @@ test.describe('Xuất Excel', () => {
   test('mọi màn danh sách đều xuất được file thật', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-5);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
 
     // Dựng một ít dữ liệu để file không rỗng.
     await page.request.post('/api/v1/software', {
@@ -91,7 +91,7 @@ test.describe('Xuất Excel', () => {
   test('FR-026: không đường xuất nào chứa secret, và không có đường xuất két', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-5);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
 
     const catalog = await page.evaluate(async () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });
@@ -176,7 +176,7 @@ test.describe('Xuất Excel', () => {
   test('xuất tôn trọng bộ lọc đang xem, không phải cả bảng', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-5);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
 
     await page.request.post('/api/v1/software', {
       headers,

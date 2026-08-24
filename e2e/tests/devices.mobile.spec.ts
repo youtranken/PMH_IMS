@@ -33,7 +33,7 @@ test('danh sách và chi tiết thiết bị dùng được ở 390px', async ({
   });
   const pc = catalog.deviceTypes.find((type) => type.name === 'PC')!;
   const created = await page.request.post('/api/v1/devices', {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
     data: {
       code,
       name: 'Máy trạm kế toán',

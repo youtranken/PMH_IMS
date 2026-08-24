@@ -22,7 +22,7 @@ async function createDevice(page: Page, code: string): Promise<string> {
   });
   const fw = catalog.deviceTypes.find((type) => type.name === 'Firewall')!;
   const created = await page.request.post('/api/v1/devices', {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
     data: { code, name: 'Draytek biên', deviceTypeId: fw.id },
   });
   expect(created.status()).toBe(201);
@@ -32,7 +32,7 @@ async function createDevice(page: Page, code: string): Promise<string> {
 async function createLine(page: Page, data: Record<string, unknown>) {
   const csrf = await csrfOf(page);
   const response = await page.request.post('/api/v1/isp-lines', {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
     data,
   });
   return { status: response.status(), body: (await response.json()) as Record<string, unknown> };
@@ -130,14 +130,14 @@ test.describe('Đường truyền ISP', () => {
     const csrf = await csrfOf(page);
 
     const back = await page.request.post(`/api/v1/isp-lines/${id}/renew`, {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
       data: { endDate: '2026-01-01' },
     });
     expect(back.status()).toBe(400);
     expect(await back.json()).toMatchObject({ code: 'RENEW_NOT_FORWARD' });
 
     const forward = await page.request.post(`/api/v1/isp-lines/${id}/renew`, {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
       data: { endDate: '2027-12-31' },
     });
     expect(forward.status()).toBe(201);

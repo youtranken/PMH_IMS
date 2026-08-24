@@ -22,7 +22,7 @@ async function createDevice(page: Page, code: string): Promise<string> {
   });
   const pc = catalog.deviceTypes.find((type) => type.name === 'PC')!;
   const created = await page.request.post('/api/v1/devices', {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
     data: { code, name: `Máy ${code}`, deviceTypeId: pc.id },
   });
   expect(created.status()).toBe(201);
@@ -32,7 +32,7 @@ async function createDevice(page: Page, code: string): Promise<string> {
 async function createLicense(page: Page, code: string, seats: number | null): Promise<string> {
   const csrf = await csrfOf(page);
   const created = await page.request.post('/api/v1/software', {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
     data: {
       code,
       name: `License ${code}`,
@@ -53,7 +53,7 @@ async function assign(
 ) {
   const csrf = await csrfOf(page);
   return page.request.post(`/api/v1/software/${softwareId}/assignments`, {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
     data: { deviceId, overSeatReason: overSeatReason ?? '' },
   });
 }
@@ -136,7 +136,7 @@ test.describe('Gán license theo seat', () => {
 
     const released = await page.request.delete(
       `/api/v1/software/${licenseId}/assignments/${assignmentId}`,
-      { headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' } },
+      { headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' } },
     );
     expect(released.status()).toBe(200);
 
@@ -150,7 +150,7 @@ test.describe('Gán license theo seat', () => {
     const stamp = Date.now().toString().slice(-6);
     const csrf = await csrfOf(page);
     const ssl = await page.request.post('/api/v1/software', {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
       data: { code: `SSL-E2E-NA-${stamp}`, name: 'SSL', kind: 'ssl', endDate: '2027-01-01' },
     });
     const sslId = ((await ssl.json()) as { id: string }).id;

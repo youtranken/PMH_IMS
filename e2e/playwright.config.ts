@@ -4,7 +4,7 @@ import { defineConfig, devices } from '@playwright/test';
  * E2E chạy trên STACK THẬT (docker compose), không mock API — DoD story.
  * Cert dev tự ký nên bỏ qua lỗi HTTPS.
  */
-const BASE_URL = process.env.IMS_BASE_URL ?? 'https://localhost';
+const BASE_URL = process.env.IMS_BASE_URL ?? 'https://ims.pmh.com.vn';
 
 export default defineConfig({
   testDir: './tests',

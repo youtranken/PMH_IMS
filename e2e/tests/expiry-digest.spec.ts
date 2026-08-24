@@ -30,7 +30,7 @@ async function post(page: Page, url: string, data: Record<string, unknown>) {
     return ((await res.json()) as { csrfToken: string }).csrfToken;
   });
   const response = await page.request.post(url, {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
     data,
   });
   return { status: response.status(), body: (await response.json()) as Record<string, unknown> };

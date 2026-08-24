@@ -41,7 +41,7 @@ test.describe('Bảng điều khiển', () => {
   test('đường hạnh phúc: ba khối hiện đủ, sắp-hết-hạn xếp gấp nhất lên đầu', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-5);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
 
     // Hai hồ sơ: một cái hết hạn gấp hơn cái kia.
     await page.request.post('/api/v1/software', {
@@ -97,7 +97,7 @@ test.describe('Bảng điều khiển', () => {
   test('break-glass tuần qua nói rõ AI, THIẾT BỊ GÌ, lý do', async ({ page }) => {
     const saTotp = await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-5);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
 
     const catalog = await page.evaluate(async () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });
@@ -123,7 +123,7 @@ test.describe('Bảng điều khiển', () => {
 
     await firstLogin(page, E2E_MEMBER);
     await page.request.post('/api/v1/vault/break-glass', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
       data: {
         ownerType: 'device',
         ownerId: deviceId,

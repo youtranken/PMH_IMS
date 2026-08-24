@@ -428,7 +428,7 @@ export async function csrfOf(page: Page): Promise<string> {
 
 /** Header đủ để gọi API ghi từ trong test (CSRF + Origin hợp lệ). */
 export async function writeHeaders(page: Page): Promise<Record<string, string>> {
-  return { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+  return { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
 }
 
 /**
@@ -439,7 +439,7 @@ export async function writeHeaders(page: Page): Promise<Record<string, string>> 
  * `goto('/')` không biết đi đâu — cả hai đều đỏ theo kiểu chẳng liên quan gì tới bài test.
  */
 export const SECOND_BROWSER = {
-  baseURL: process.env.IMS_BASE_URL ?? 'https://localhost',
+  baseURL: process.env.IMS_BASE_URL ?? 'https://ims.pmh.com.vn',
   ignoreHTTPSErrors: true,
   locale: 'vi-VN',
   timezoneId: 'Asia/Ho_Chi_Minh',

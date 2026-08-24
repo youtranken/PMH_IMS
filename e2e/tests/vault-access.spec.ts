@@ -64,7 +64,7 @@ test.describe('Ma trận quyền két sắt', () => {
    */
   test('chưa gán gì thì tầng là CẤM, không phải "cần duyệt"', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
     const catalog = await page.evaluate(async () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });
       return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
@@ -94,7 +94,7 @@ test.describe('Ma trận quyền két sắt', () => {
    */
   test('nhiều luật cùng áp thì lấy tầng rộng nhất', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
     const options = await scopes(page);
     const byType = options.find((o) => o.scopeType === 'device_type')!;
     const bySite = options.find((o) => o.scopeType === 'device_site');
@@ -147,7 +147,7 @@ test.describe('Ma trận quyền két sắt', () => {
 
   test('gán lại cùng nhóm = ĐỔI tầng, không đẻ dòng thứ hai', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
     const byType = (await scopes(page)).find((o) => o.scopeType === 'device_type')!;
     const body = {
       memberEmail: E2E_MEMBER.email,
@@ -174,7 +174,7 @@ test.describe('Ma trận quyền két sắt', () => {
 
   test('đường hỏng: gán tầng "cấm" bị từ chối — cấm là gỡ, không phải gán', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
     const byType = (await scopes(page)).find((o) => o.scopeType === 'device_type')!;
 
     const res = await page.request.post('/api/v1/vault/access', {
@@ -192,7 +192,7 @@ test.describe('Ma trận quyền két sắt', () => {
 
   test('đường hỏng: nhóm không tồn tại và email lạ đều bị chặn', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
 
     const ghostScope = await page.request.post('/api/v1/vault/access', {
       headers,

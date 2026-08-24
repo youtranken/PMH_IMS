@@ -170,7 +170,7 @@ test.describe('Kho thiết bị', () => {
     const nas = catalog.deviceTypes.find((type) => type.name === 'NAS')!;
 
     const bad = await page.request.post('/api/v1/devices', {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
       data: {
         code: `NAS-E2E-BAD-${stamp}`,
         name: 'Khoảng bảo hành ngược',
@@ -194,7 +194,7 @@ test.describe('Kho thiết bị', () => {
     const otherSite = lists.sites.find((site) => site.id !== cabinet?.siteId);
     if (cabinet && otherSite) {
       const mismatched = await page.request.post('/api/v1/devices', {
-        headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+        headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
         data: {
           code: `NAS-E2E-MIX-${stamp}`,
           name: 'Tủ lệch site',

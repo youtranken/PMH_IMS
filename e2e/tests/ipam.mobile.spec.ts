@@ -23,7 +23,7 @@ test.describe('Địa chỉ IP ở 390px', () => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const octet = Number(stamp) % 200;
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
 
     const subnet = await page.request.post('/api/v1/ipam/subnets', {
       headers,
@@ -61,7 +61,7 @@ test.describe('Địa chỉ IP ở 390px', () => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const octet = (Number(stamp) % 200) + 20;
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://localhost' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
 
     const catalog = await page.evaluate(async () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });

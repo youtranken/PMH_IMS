@@ -172,7 +172,7 @@ test.describe('Danh mục', () => {
       return ((await res.json()) as { csrfToken: string }).csrfToken;
     });
     const response = await page.request.post('/api/v1/catalog/site', {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://localhost' },
+      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
       data: { code: 'HACK', name: 'Không được phép' },
     });
     expect(response.status()).toBe(403);
