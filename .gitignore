@@ -15,3 +15,7 @@ test-results/
 graphify-out/
 _bmad-output/planning-artifacts/design-ims/thiet-ke-man-hinh-ims.html
 ops/certs/*.pem
+
+# Cert wildcard that + private key — khong bao gio commit
+/pmh.com.vn/
+ops/certs/*.dev-bak
