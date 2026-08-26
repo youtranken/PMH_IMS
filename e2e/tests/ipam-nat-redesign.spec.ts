@@ -52,7 +52,7 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
     await firstLogin(page, E2E_SA);
     const octet = 30 + (Number(Date.now().toString().slice(-2)) % 60);
     const cidr = `10.${octet}.7.0/24`;
-    const id = await createSubnet(page, cidr, 'LAN cắt trang');
+    const id = await createSubnet(page, cidr, `LAN E2E cắt trang ${octet}`);
 
     await page.goto(`/ip-addresses/${id}`);
     await expect(page.getByRole('heading', { name: new RegExp(cidr) })).toBeVisible();
@@ -83,7 +83,7 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
     await firstLogin(page, E2E_SA);
     const octet = 90 + (Number(Date.now().toString().slice(-2)) % 60);
     const cidr = `10.${octet}.8.0/24`;
-    const id = await createSubnet(page, cidr, 'LAN đếm');
+    const id = await createSubnet(page, cidr, `LAN E2E đếm ${octet}`);
 
     // Cấp một IP nằm ở TRANG 3 — con số trên nút phải thấy nó dù trang 1 đang hiện.
     const created = await page.request.post('/api/v1/ipam/addresses', {
@@ -114,7 +114,7 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
     const base = 150 + (Number(Date.now().toString().slice(-2)) % 40);
     // Nhiều dải để cột trái dài hơn một màn hình.
     for (let i = 0; i < 12; i += 1) {
-      await createSubnet(page, `10.${base}.${i}.0/24`, `LAN cuộn ${i}`);
+      await createSubnet(page, `10.${base}.${i}.0/24`, `LAN E2E cuộn ${base}-${i}`);
     }
 
     await page.goto('/ip-addresses');
@@ -318,7 +318,7 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
     const octet = 20 + (Number(stamp) % 200);
     const subnet = await page.request.post('/api/v1/ipam/subnets', {
       headers,
-      data: { cidr: `172.20.${octet}.0/24`, name: `LAN đích ${stamp}` },
+      data: { cidr: `172.20.${octet}.0/24`, name: `LAN E2E đích ${stamp}` },
     });
     const subnetId = ((await subnet.json()) as { id: string }).id;
     const targetIp = `172.20.${octet}.20`;
