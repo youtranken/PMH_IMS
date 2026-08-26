@@ -3,6 +3,7 @@ import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { AuditModule } from '../audit/audit.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { DevicesModule } from '../devices/devices.module';
+import { ServiceAccountsModule } from '../service-accounts/service-accounts.module';
 import { SoftwareModule } from '../software/software.module';
 import { UsersModule } from '../users/users.module';
 import { ApprovalsModule } from '../approvals/approvals.module';
@@ -31,7 +32,7 @@ import { VaultService } from './vault.service';
  * Ra ngoài chỉ xuất `VaultApiService`, và api đó KHÔNG có đường lấy plaintext.
  */
 @Module({
-  imports: [AuditModule, AuthModule, CatalogModule, DevicesModule, SoftwareModule, UsersModule, ApprovalsModule, OutboxModule],
+  imports: [AuditModule, AuthModule, CatalogModule, DevicesModule, ServiceAccountsModule, SoftwareModule, UsersModule, ApprovalsModule, OutboxModule],
   controllers: [VaultController, VaultOwnersController, VaultAccessController, BreakGlassController],
   providers: [
     ExcelExportService,

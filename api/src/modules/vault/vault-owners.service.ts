@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DevicesApiService } from '../devices/devices.api';
+import { ServiceAccountsApiService } from '../service-accounts/service-accounts.api';
 import { SoftwareApiService } from '../software/software.api';
 import { VaultService, type SecretOwnerType } from './vault.service';
 
@@ -40,6 +41,7 @@ export class VaultOwnersService {
     private readonly vault: VaultService,
     private readonly devices: DevicesApiService,
     private readonly software: SoftwareApiService,
+    private readonly serviceAccounts: ServiceAccountsApiService,
   ) {}
 
   async list(): Promise<VaultOwnerSummary[]> {
@@ -52,6 +54,10 @@ export class VaultOwnersService {
           if (item.ownerType === 'device') {
             const device = await this.devices.getById(item.ownerId);
             return { ...base, code: device.code, name: device.name, siteCode: device.siteCode };
+          }
+          if (item.ownerType === 'service_account') {
+            const account = await this.serviceAccounts.getById(item.ownerId);
+            return { ...base, code: account.code, name: account.name, siteCode: null };
           }
           const software = await this.software.getById(item.ownerId);
           return { ...base, code: software.code, name: software.name, siteCode: null };

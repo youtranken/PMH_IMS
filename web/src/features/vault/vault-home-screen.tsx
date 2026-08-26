@@ -12,7 +12,14 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { VaultPanel } from '@/ui/vault-panel';
 
-type OwnerType = 'device' | 'software';
+type OwnerType = 'device' | 'software' | 'service_account';
+
+/** Nhãn của từng loại chủ thể — MỘT chỗ, dùng cho cả nút lọc lẫn cột Loại. */
+const OWNER_LABEL: Record<OwnerType, string> = {
+  device: 'vaultHome.kindDevice',
+  software: 'vaultHome.kindSoftware',
+  service_account: 'vaultHome.kindServiceAccount',
+};
 
 interface VaultOwner {
   ownerType: OwnerType;
@@ -23,6 +30,13 @@ interface VaultOwner {
   secretCount: number;
   lastChangeAt: string;
   orphan: boolean;
+}
+
+/** Đường sang hồ sơ đầy đủ của chủ thể đang mở. */
+function recordPathOf(owner: VaultOwner): string {
+  if (owner.ownerType === 'device') return PATHS.device(owner.ownerId);
+  if (owner.ownerType === 'service_account') return PATHS.serviceAccount(owner.ownerId);
+  return PATHS.softwareItem(owner.ownerId);
 }
 
 /**
@@ -85,7 +99,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
       >
         {/* Hai nút bật/tắt độc lập, không phải một ô chọn: "xem cả thiết bị lẫn phần mềm"
             là trạng thái thường gặp nhất, mà ô chọn một-giá-trị không diễn tả được. */}
-        {(['device', 'software'] as const).map((kind) => (
+        {(['device', 'software', 'service_account'] as const).map((kind) => (
           <button
             key={kind}
             type="button"
@@ -93,7 +107,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
             aria-pressed={kinds.includes(kind)}
             onClick={() => toggle(kind)}
           >
-            {t(kind === 'device' ? 'vaultHome.devices' : 'vaultHome.software')}
+            {t(OWNER_LABEL[kind])}
           </button>
         ))}
       </FilterBar>
@@ -135,13 +149,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
                         </span>
                       </td>
                       <td data-label={t('vaultHome.ownerKind')}>
-                        <span className="badge plain">
-                          {t(
-                            row.ownerType === 'device'
-                              ? 'vaultHome.kindDevice'
-                              : 'vaultHome.kindSoftware',
-                          )}
-                        </span>
+                        <span className="badge plain">{t(OWNER_LABEL[row.ownerType])}</span>
                       </td>
                       <td className="num" data-label={t('vaultHome.secretCount')}>
                         {row.secretCount}
@@ -182,11 +190,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
               {opened.orphan ? null : (
                 <Link
                   className="btn"
-                  to={
-                    opened.ownerType === 'device'
-                      ? PATHS.device(opened.ownerId)
-                      : PATHS.softwareItem(opened.ownerId)
-                  }
+                  to={recordPathOf(opened)}
                 >
                   {t('vaultHome.openRecord')}
                 </Link>

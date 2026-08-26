@@ -24,6 +24,7 @@ import { SessionGuard } from './modules/auth/session.guard';
 import { SystemConfigModule } from './modules/config-sys/system-config.module';
 import { FilesModule } from './modules/files/files.module';
 import { MailModule } from './modules/mail/mail.module';
+import { ServiceAccountsModule } from './modules/service-accounts/service-accounts.module';
 import { SoftwareModule } from './modules/software/software.module';
 import { IpamModule } from './modules/ipam/ipam.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
@@ -82,6 +83,7 @@ import { VaultModule } from './modules/vault/vault.module';
     ApprovalsModule,
     CatalogModule,
     DevicesModule,
+    ServiceAccountsModule,
     SoftwareModule,
     ExpiryModule,
     FilesModule,

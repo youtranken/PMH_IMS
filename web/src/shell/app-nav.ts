@@ -31,6 +31,8 @@ export const navGroups: NavGroup[] = [
       { key: 'nav.expiry', to: PATHS.expiry },
       { key: 'nav.ipam', to: PATHS.ipAddresses },
       { key: 'nav.nat', to: PATHS.nat },
+      // Tài khoản dùng chung + VPN (0032) — mật khẩu của chúng nằm ở két sắt.
+      { key: 'nav.serviceAccounts', to: PATHS.serviceAccounts },
       // MỌI vai thấy: Member vào xem yêu cầu của mình đã được duyệt chưa.
       { key: 'nav.approvals', to: PATHS.approvals },
       // Không còn `planned`: két sắt đã chạy từ Epic 4, chỉ thiếu cửa vào từ menu.

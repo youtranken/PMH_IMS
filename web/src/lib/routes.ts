@@ -27,6 +27,10 @@ export const PATHS = {
   subnet: (id: string) => `/ip-addresses/${id}`,
 
   nat: '/nat',
+
+  serviceAccounts: '/service-accounts',
+  serviceAccount: (id: string) => `/service-accounts/${id}`,
+
   approvals: '/approvals',
   vault: '/vault',
   documents: '/documents',

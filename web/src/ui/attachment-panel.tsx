@@ -16,7 +16,7 @@ import { useToast } from '@/ui/toast';
  * (`api/src/modules/files/files.service.ts`). Thêm loại mới phải sửa cả hai đầu, không thì
  * client gửi lên một `ownerType` mà server từ chối.
  */
-export type AttachmentOwnerType = 'device' | 'isp' | 'software';
+export type AttachmentOwnerType = 'device' | 'isp' | 'software' | 'service_account';
 
 /**
  * Đuôi file gợi ý cho hộp thoại chọn — MỘT chỗ duy nhất, dùng chung cho panel (đính kèm sau)

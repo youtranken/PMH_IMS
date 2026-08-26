@@ -30,6 +30,8 @@ import { AccessMatrixScreen } from '@/features/vault/access-matrix-screen';
 import { ApprovalsScreen } from '@/features/vault/approvals-screen';
 import { VaultHomeScreen } from '@/features/vault/vault-home-screen';
 import { NatScreen } from '@/features/ipam/nat-screen';
+import { ServiceAccountDetail } from '@/features/service-accounts/service-account-detail';
+import { ServiceAccountsScreen } from '@/features/service-accounts/service-accounts-screen';
 import { IpamScreen } from '@/features/ipam/ipam-screen';
 import { IspDetail } from '@/features/isp/isp-detail';
 import { IspScreen } from '@/features/isp/isp-screen';
@@ -124,6 +126,11 @@ function AppRoutes() {
         <Route path={PATHS.ipAddresses} element={<IpamScreen me={me} />} />
         <Route path={`${PATHS.ipAddresses}/:id`} element={<IpamScreen me={me} />} />
         <Route path={PATHS.nat} element={<NatScreen me={me} />} />
+        <Route path={PATHS.serviceAccounts} element={<ServiceAccountsScreen me={me} />} />
+        <Route
+          path={`${PATHS.serviceAccounts}/:id`}
+          element={<ServiceAccountDetail me={me} />}
+        />
         {/* Bộ giao diện là trang nội bộ: member/admin vào thẳng URL cũng chỉ nhận 404. */}
         {me.role === 'sa' ? (
           <Route path={PATHS.devComponents} element={<ComponentsGallery />} />

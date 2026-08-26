@@ -183,6 +183,17 @@ export class AccessListService {
     ownerType: SecretOwnerType,
     ownerId: string,
   ): Promise<AccessTier> {
+    /*
+     * Tài khoản dịch vụ (0032) CHƯA có nhóm đối tượng trong ma trận quyền, nên Member luôn
+     * là 'denied' — mặc định ĐÓNG, đúng luật của Epic 6.
+     *
+     * Phải có nhánh RIÊNG chứ không để rơi vào `else`: nhánh else gọi `softwareGroupKeys`,
+     * tức là đi tra một id tài khoản dịch vụ trong bảng `software`. Kết quả tốt nhất là
+     * không tìm thấy (rồi 'denied' đúng vì lý do sai); tệ nhất là một id trùng nhau giữa hai
+     * bảng và người ta được cấp quyền theo loại phần mềm của một hồ sơ chẳng liên quan.
+     */
+    if (ownerType === 'service_account') return 'denied';
+
     const groups =
       ownerType === 'device'
         ? groupsOfDevice(await this.deviceGroupKeys(ownerId))

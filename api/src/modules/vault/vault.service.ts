@@ -15,7 +15,7 @@ import { pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { secretTable } from './vault.schema';
 
-export const SECRET_OWNER_TYPES = ['device', 'software'] as const;
+export const SECRET_OWNER_TYPES = ['device', 'software', 'service_account'] as const;
 export type SecretOwnerType = (typeof SECRET_OWNER_TYPES)[number];
 
 export const SECRET_KINDS = ['password', 'license_key', 'other'] as const;

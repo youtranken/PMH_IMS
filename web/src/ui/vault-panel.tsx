@@ -14,7 +14,11 @@ import { StepUpDialog } from '@/ui/step-up-dialog';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 
-export type SecretOwnerType = 'device' | 'software';
+/**
+ * SOI GƯƠNG `SECRET_OWNER_TYPES` phía API (`api/src/modules/vault/vault.service.ts`).
+ * Thêm loại mới phải sửa CẢ HAI đầu — thiếu một bên là 400 lúc cất secret.
+ */
+export type SecretOwnerType = 'device' | 'software' | 'service_account';
 export type SecretKind = 'password' | 'license_key' | 'other';
 
 export interface AccessVerdict {
