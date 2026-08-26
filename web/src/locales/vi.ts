@@ -240,7 +240,9 @@ export default {
     type: 'Loại',
     model: 'Model',
     serial: 'Serial',
-    location: 'Vị trí',
+    location: 'Vị trí và người giữ',
+    // Khối thứ ba của form: mua từ ai, mua khi nào, bảo hành tới bao giờ — một mạch.
+    purchase: 'Mua sắm và bảo hành',
     site: 'Site',
     cabinet: 'Tủ mạng',
     vendor: 'Nhà cung cấp',
@@ -460,6 +462,8 @@ export default {
     deviceHint: 'Draytek/firewall đang cắm đường này. Trang thiết bị đó sẽ hiện ngược lại đường truyền.',
     deviceSearch: 'Tìm thiết bị trong kho…',
     hotline: 'Hotline',
+    // Khối thứ hai của form — KHÔNG đặt tên là "Hotline": nó chứa cả số hợp đồng và kỳ hạn.
+    sectionContract: 'Hợp đồng và liên hệ sự cố',
     contractNo: 'Số hợp đồng',
     startDate: 'Bắt đầu',
     endDate: 'Hết hạn',

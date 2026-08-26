@@ -47,9 +47,10 @@ export function PortChipsField({
           {chips.map((chip, index) => (
             <li key={chip.value} className={`chip${isWideRange(chip) ? ' chip-warn' : ''}`}>
               <span className="mono">{chip.value}</span>
+              {/* Lớp `.chip button` của `form-layout.css` lo hình dáng nút ✕ — không dựng
+                  bản riêng, chip ở màn khác phải trông y hệt. */}
               <button
                 type="button"
-                className="chip-x"
                 disabled={disabled}
                 aria-label={t('nat.portRemove', { port: chip.value })}
                 onClick={() => onChange(chips.filter((_, i) => i !== index))}

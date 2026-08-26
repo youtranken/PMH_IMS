@@ -335,7 +335,9 @@ function IpForm({
       <form
         id="ip-form"
         className="form-grid"
-        data-columns={1}
+        /* Hai cột: năm ô ngắn (địa chỉ · máy · người dùng · ngày cấp) xếp một cột dọc làm
+           hộp cao gấp đôi cần thiết, phải cuộn mới thấy nút Lưu. Ghi chú `span={2}`. */
+        data-columns={2}
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
@@ -354,8 +356,11 @@ function IpForm({
           );
         }}
       >
+        {/* Địa chỉ CỐ ĐỊNH ở hộp này — `.static-value` là lớp dành riêng cho "giá trị không
+            sửa được trong form"; để `<p class="mono">` trần thì nó cao khác mọi ô còn lại và
+            hàng đầu tiên trông lệch. */}
         <Field label={t('ipam.address')}>
-          <p className="mono">{address}</p>
+          <p className="static-value mono">{address}</p>
         </Field>
 
         <Field label={t('ipam.device')} hint={t('ipam.deviceHint')}>
@@ -398,7 +403,7 @@ function IpForm({
           <DatePicker value={assignedAt} onChange={setAssignedAt} ariaLabel={t('ipam.assignedAt')} />
         </Field>
 
-        <Field label={t('ipam.note')} htmlFor="ip-note">
+        <Field label={t('ipam.note')} htmlFor="ip-note" span={2}>
           <textarea
             id="ip-note"
             className="inp"
@@ -409,7 +414,7 @@ function IpForm({
         </Field>
 
         {error ? (
-          <p className="alert error" role="alert">
+          <p className="alert error span-2" role="alert">
             {error}
           </p>
         ) : null}

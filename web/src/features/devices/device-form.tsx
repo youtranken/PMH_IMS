@@ -213,6 +213,19 @@ export function DeviceForm({
               onChange={(e) => set('serial', e.target.value)}
             />
           </Field>
+          {/* Trạng thái là thuộc tính của chính cái máy (đang dùng / trong kho / đã thanh lý),
+              không phải của chỗ nó đứng — nó từng nằm trong khối "Vị trí". */}
+          <Field label={t('devices.status')}>
+            <Select
+              value={form.status}
+              ariaLabel={t('devices.status')}
+              options={DEVICE_STATUSES.map((status) => ({
+                value: status,
+                label: t(STATUS_KEY[status]),
+              }))}
+              onChange={(value) => set('status', value as DeviceStatus)}
+            />
+          </Field>
         </FormSection>
 
         <FormSection title={t('devices.location')} columns={3}>
@@ -240,18 +253,6 @@ export function DeviceForm({
               onChange={(value) => set('cabinetId', value)}
             />
           </Field>
-          <Field label={t('devices.status')}>
-            <Select
-              value={form.status}
-              ariaLabel={t('devices.status')}
-              options={DEVICE_STATUSES.map((status) => ({
-                value: status,
-                label: t(STATUS_KEY[status]),
-              }))}
-              onChange={(value) => set('status', value as DeviceStatus)}
-            />
-          </Field>
-
           <Field label={t('devices.assignedTo')} htmlFor="device-assigned">
             <input
               id="device-assigned"
@@ -271,6 +272,11 @@ export function DeviceForm({
               ariaLabel={t('devices.department')}
             />
           </Field>
+        </FormSection>
+
+        {/* Nhà cung cấp đi cùng ngày mua và hạn bảo hành — "mua của ai, khi nào, bảo hành tới
+            bao giờ" là MỘT câu chuyện. Trước đây nó nằm trong khối Vị trí. */}
+        <FormSection title={t('devices.purchase')} columns={3}>
           <Field label={t('devices.vendor')}>
             <Select
               value={form.vendorId}
@@ -283,9 +289,6 @@ export function DeviceForm({
               onChange={(value) => set('vendorId', value)}
             />
           </Field>
-        </FormSection>
-
-        <FormSection title={t('devices.warranty')} columns={3}>
           <Field label={t('devices.purchaseDate')}>
             <DatePicker
               value={form.purchaseDate}

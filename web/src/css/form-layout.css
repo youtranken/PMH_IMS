@@ -131,8 +131,48 @@
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: var(--space-6) var(--space-7);
 }
+
+/* ─── `data-columns` PHẢI có tác dụng ────────────────────────────────────────────────────
+   `FormSection columns={n}` và mọi `<div class="form-grid" data-columns={1}>` viết ra thuộc
+   tính này, nhưng trước đây KHÔNG có luật nào đọc nó — mọi form đều rơi về `auto-fill` ở
+   trên, tức số cột do BỀ RỘNG hộp thoại quyết định chứ không phải do người viết chọn. Hậu
+   quả nhìn thấy được: hộp 480px khai `columns={1}` vẫn xé thành 2 cột, hộp 860px khai
+   `columns={3}` thành 4 cột, và ô nhập rơi vào những chỗ không ai định đặt.
+   Lỗi kiểu này không ném exception nào và không test nào bắt được. */
+.form-grid[data-columns='1'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.form-grid[data-columns='2'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.form-grid[data-columns='3'] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+/* Lưới 3 cột ở khổ vừa còn 2, khổ hẹp còn 1 — cùng ngưỡng với `.asset-grid` đã có. */
+@media (max-width: 860px) {
+  .form-grid[data-columns='3'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .form-grid[data-columns='2'],
+  .form-grid[data-columns='3'] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .form-grid .span-2 {
   grid-column: 1 / -1;
+}
+/* Ở lưới 3 cột, `span={2}` phải là ĐÚNG hai cột — trải hết hàng thì nó không khác `span={3}`
+   và ô Ghi chú/Tên hồ sơ mất hẳn ý nghĩa "rộng hơn nhưng chưa hết hàng". */
+.form-grid[data-columns='3'] .span-2 {
+  grid-column: span 2;
+}
+@media (max-width: 860px) {
+  .form-grid[data-columns='3'] .span-2 {
+    grid-column: 1 / -1;
+  }
 }
 /* `Field span={3}` sinh class `span-3`. Không có luật này thì ô Ghi chú/textarea khai
    span={3} vẫn chỉ chiếm 1 cột — trông "lửng" giữa hàng. */

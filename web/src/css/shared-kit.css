@@ -182,42 +182,12 @@
   padding: 0;
   list-style: none;
 }
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 0.15rem var(--space-2) 0.15rem var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: var(--surface-2);
-  font-size: var(--fs-sm);
-}
+/* KHÔNG khai lại `.chip` ở đây: nó đã có trong `form-layout.css` (viên bo tròn nền
+   `--primary-soft`, nút ✕ tròn) và file này nạp SAU nên bản trùng sẽ đè lên mọi chip đang
+   dùng ở chỗ khác. Ô port dùng lại đúng lớp đó, chỉ thêm biến thể cảnh báo bên dưới. */
 /* Dải mở hơn 1000 cổng: viền vàng ngay lúc gõ, không chờ tới lúc lưu mới báo. */
 .chip-warn {
-  border-color: var(--warn);
-}
-.chip-x {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.15rem;
-  height: 1.15rem;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
-  font-size: var(--fs-xs);
-  line-height: 1;
-  cursor: pointer;
-}
-.chip-x:hover {
-  background: var(--danger-soft);
-  color: var(--danger);
-}
-.chip-x:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 1px;
+  box-shadow: inset 0 0 0 1px var(--warn);
 }
 .chip-add {
   display: flex;
@@ -235,8 +205,12 @@
   gap: var(--space-3);
   align-items: start;
 }
+/* Bề rộng CỐ ĐỊNH, không `flex: 0 0 auto`: `Select` bên trong là `.fsel` mang
+   `width: 100%` (luật `.field .fsel`), nên basis `auto` tính ra trọn bề ngang hàng và đẩy
+   hẳn ô bên cạnh ra ngoài hộp thoại. */
 .field-row > :first-child {
-  flex: 0 0 auto;
+  flex: 0 0 12rem;
+  min-width: 0;
 }
 .field-row > :last-child {
   flex: 1;

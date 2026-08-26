@@ -257,8 +257,10 @@ export function IspForm({
           </Field>
         </FormSection>
 
-        {/* Hai ô này là lý do màn ISP tồn tại: 2 giờ sáng gọi ai, đọc số hợp đồng nào. */}
-        <FormSection title={t('isp.hotline')} columns={3}>
+        {/* Hai ô đầu là lý do màn ISP tồn tại: 2 giờ sáng gọi ai, đọc số hợp đồng nào.
+            Tiêu đề khối KHÔNG còn là "Hotline" — khối này chứa cả hợp đồng và kỳ hạn, đặt
+            tên theo ô đầu tiên là nói sai về ba ô còn lại. */}
+        <FormSection title={t('isp.sectionContract')} columns={3}>
           <Field label={t('isp.hotline')} htmlFor="isp-hotline">
             <input
               id="isp-hotline"
