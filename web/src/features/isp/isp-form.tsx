@@ -7,6 +7,7 @@ import { Combobox } from '@/ui/combobox';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
+import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
@@ -67,6 +68,10 @@ export function IspForm({
   const [query, setQuery] = useState(row?.deviceCode ?? '');
   const [debounced, setDebounced] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Bản scan hợp đồng ISP đi kèm ngay lúc khai đường mới (AD-15 — cùng khối với thiết bị và
+  // phần mềm). Sửa đường thì tab "Giấy tờ" ở trang chi tiết mới là chỗ xem cả danh sách.
+  const draft = useAttachmentDraft();
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     const id = setTimeout(() => setDebounced(query), 250);
@@ -82,10 +87,13 @@ export function IspForm({
       ),
   });
 
-  const save = useApiMutation<Record<string, unknown>, unknown>(
+  const save = useApiMutation<Record<string, unknown>, { id: string }>(
     row ? `/api/v1/isp-lines/${row.id}` : '/api/v1/isp-lines',
     { method: row ? 'PATCH' : 'POST', csrfToken, refreshMe: false },
   );
+  // Đẩy giấy tờ chạy SAU khi lưu xong, lúc `isPending` đã tắt — không khoá thêm thì nút Lưu
+  // mở lại và bấm thêm phát nữa là khai trùng một đường truyền.
+  const busy = save.isPending || uploading;
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
@@ -101,8 +109,8 @@ export function IspForm({
           <button type="button" className="btn" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button type="submit" form="isp-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
+          <button type="submit" form="isp-form" className="btn primary" disabled={busy}>
+            {busy ? t('common.loading') : t('common.save')}
           </button>
         </>
       }
@@ -132,9 +140,30 @@ export function IspForm({
               status: form.status,
             },
             {
-              onSuccess: () => {
-                toast({ message: t('isp.saved') });
-                onSaved();
+              onSuccess: (created) => {
+                void (async () => {
+                  toast({ message: t('isp.saved') });
+                  // Giấy tờ đi SAU khi đường truyền đã có id — file không treo vào cái chưa có.
+                  if (draft.files.length > 0) {
+                    setUploading(true);
+                    const count = draft.files.length;
+                    const failures = await draft.upload(
+                      'isp',
+                      row?.id ?? created.id,
+                      csrfToken,
+                    );
+                    setUploading(false);
+                    if (failures.length < count) {
+                      toast({
+                        message: t('attachments.draftUploaded', {
+                          count: count - failures.length,
+                        }),
+                      });
+                    }
+                    for (const message of failures) toast({ message, tone: 'warn' });
+                  }
+                  onSaved();
+                })();
               },
               onError: (err) => setError(errorMessage(err)),
             },
@@ -268,6 +297,8 @@ export function IspForm({
             />
           </Field>
         </FormSection>
+
+        {row ? null : <AttachmentDraftSection draft={draft} disabled={busy} />}
 
         {error ? (
           <p className="alert error" role="alert">

@@ -371,6 +371,60 @@ test.describe('Gán license theo seat', () => {
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(`LIC-E2E-NOEXP-${stamp}`);
     const row = page.getByRole('row', { name: new RegExp(`LIC-E2E-NOEXP-${stamp}`) });
     await expect(row).toBeVisible();
-    await expect(row.getByRole('button')).toHaveCount(0);
+    // Bám ĐÚNG cái mũi tên, không đếm tổng số nút: dòng nào cũng có sẵn "Sửa" và "Gán vào máy"
+    // ở cột Thao tác, đếm tổng thì bài kiểm đỏ vì lý do chẳng liên quan gì tới mũi tên.
+    await expect(row.getByRole('button', { name: 'Mở rộng dòng' })).toHaveCount(0);
+  });
+
+  /**
+   * Gán NGAY TỪ DANH SÁCH — không phải bung dòng, không phải vào trang chi tiết.
+   *
+   * License chưa gán máy nào thì không có mũi tên để bung (bài ngay trên), mà nút gán lại nằm
+   * trong khu bung: đúng lúc cần gán lần đầu thì chẳng có đường nào tới. Cột Thao tác trám
+   * đúng lỗ đó, và mở lại `AssignDialog` cũ chứ không dựng hộp thứ hai (AD-15).
+   */
+  test('gán license vào máy ngay từ cột Thao tác của danh sách', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const code = `LIC-E2E-ROW-${stamp}`;
+    await createLicense(page, code, 5);
+    const deviceCode = `PC-E2E-ROW-${stamp}`;
+    await createDevice(page, deviceCode);
+
+    await page.goto('/phan-mem');
+    await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
+    const row = page.getByRole('row', { name: new RegExp(code) });
+    await expect(row).toBeVisible();
+    await expect(row.getByText('0/5')).toBeVisible();
+
+    await row.getByRole('button', { name: `Gán hồ sơ ${code} vào máy` }).click();
+    const form = page.getByRole('dialog');
+    await form.getByPlaceholder('Tìm máy trong kho…').fill(deviceCode);
+    await page.getByRole('option', { name: new RegExp(deviceCode) }).click();
+    await form.getByRole('button', { name: 'Gán vào máy' }).click();
+
+    await expect(page.getByText('Đã gán license vào máy.')).toBeVisible();
+    // Cột Seat của chính dòng đó phải nhích lên ngay, không phải tải lại trang mới thấy.
+    await expect(row.getByText('1/5')).toBeVisible();
+  });
+
+  /** SSL, tên miền không có ghế — nút gán không được bày ra để bấm vào rồi báo lỗi. */
+  test('hồ sơ không phải license thì cột Thao tác không có nút gán', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const code = `SSL-E2E-ROW-${stamp}`;
+    const csrf = await csrfOf(page);
+    const created = await page.request.post('/api/v1/software', {
+      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      // SSL bắt buộc có hạn (`requiresEndDate`) — thiếu là 400 chứ không phải lỗi của màn.
+      data: { code, name: 'Chứng chỉ không có ghế', kind: 'ssl', endDate: '2028-12-31' },
+    });
+    expect(created.status()).toBe(201);
+
+    await page.goto('/phan-mem');
+    await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
+    const row = page.getByRole('row', { name: new RegExp(code) });
+    await expect(row.getByRole('button', { name: `Sửa hồ sơ ${code}` })).toBeVisible();
+    await expect(row.getByRole('button', { name: `Gán hồ sơ ${code} vào máy` })).toHaveCount(0);
   });
 });

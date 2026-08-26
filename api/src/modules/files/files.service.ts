@@ -23,7 +23,7 @@ import { filesTable } from './files.schema';
  * gửi `ownerType` bịa ra thì file thành mồ côi, không màn nào hiển thị và không ai dọn.
  * Thêm loại mới (phiếu ISO ở Epic 8, sự cố ở Epic 9) thì thêm vào đây.
  */
-export const FILE_OWNER_TYPES = ['device', 'isp'] as const;
+export const FILE_OWNER_TYPES = ['device', 'isp', 'software'] as const;
 export type FileOwnerType = (typeof FILE_OWNER_TYPES)[number];
 
 export interface FileRecord {

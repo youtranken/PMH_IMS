@@ -17,7 +17,9 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
+import { useToast } from '@/ui/toast';
 import type { CatalogLists } from '@/features/catalog/catalog-types';
+import { AssignDialog } from './license-assignments-panel';
 import { SoftwareForm } from './software-form';
 import {
   KIND_KEY,
@@ -45,6 +47,7 @@ const EMPTY_FILTERS: Filters = { search: '', kind: '', status: '' };
 /** Danh sách phần mềm (story 3.1, FR-008/FR-009) — lọc theo loại, cột tình trạng hạn. */
 export function SoftwareScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
+  const toast = useToast();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
@@ -52,11 +55,15 @@ export function SoftwareScreen({ me }: { me: Me }) {
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả danh sách — sai mà không có dấu hiệu nào.
   const [sorting, setSorting] = useState<SortingState>([{ id: 'code', desc: false }]);
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<SoftwareRow | null>(null);
+  const [assigning, setAssigning] = useState<SoftwareRow | null>(null);
 
   const lists = useQuery({
     queryKey: ['catalog', 'lists'],
     queryFn: () => apiFetch<CatalogLists>('/api/v1/catalog?includeInactive=true'),
   });
+
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['software'] });
 
   const software = useQuery({
     queryKey: ['software', page, filters, sorting],
@@ -148,6 +155,48 @@ export function SoftwareScreen({ me }: { me: Me }) {
             {t(STATUS_KEY[row.original.status])}
           </span>
         ),
+      },
+      {
+        id: 'actions',
+        header: t('common.actions'),
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            // Sửa và Gán NGAY TRÊN DANH SÁCH, cùng nếp với màn thiết bị: đổi hạn hay nhét key
+            // vào một máy là việc lặt vặt hằng ngày, bắt vào trang chi tiết rồi quay ra là ba
+            // lần chuyển trang cho một ô. Cả hai mở ĐÚNG hộp cũ (`SoftwareForm`,
+            // `AssignDialog`) — AD-15 cấm bản thứ hai, hai bản sẽ trôi khác nhau đúng lúc
+            // luật vượt seat đổi.
+            <div className="action-cell">
+              <button
+                type="button"
+                className="btn sm"
+                aria-label={t('software.editOf', { code: item.code })}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setEditing(item);
+                }}
+              >
+                {t('common.edit')}
+              </button>
+              {/* Chỉ license mới có ghế để gán. SSL hay tên miền thì nút này vô nghĩa —
+                  bày ra để bấm vào rồi báo lỗi là một kiểu hứa hão. */}
+              {supportsSeats(item.kind) ? (
+                <button
+                  type="button"
+                  className="btn sm"
+                  aria-label={t('license.assignOf', { code: item.code })}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setAssigning(item);
+                  }}
+                >
+                  {t('license.assign')}
+                </button>
+              ) : null}
+            </div>
+          );
+        },
       },
     ],
     [t],
@@ -253,7 +302,34 @@ export function SoftwareScreen({ me }: { me: Me }) {
           onClose={() => setCreating(false)}
           onSaved={() => {
             setCreating(false);
-            void queryClient.invalidateQueries({ queryKey: ['software'] });
+            void refresh();
+          }}
+        />
+      ) : null}
+
+      {editing ? (
+        <SoftwareForm
+          row={editing}
+          lists={lists.data}
+          csrfToken={me.csrfToken}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            void refresh();
+          }}
+        />
+      ) : null}
+
+      {assigning ? (
+        <AssignDialog
+          software={assigning}
+          csrfToken={me.csrfToken}
+          onClose={() => setAssigning(null)}
+          onDone={(warnings) => {
+            setAssigning(null);
+            toast({ message: t('license.assigned') });
+            for (const warning of warnings) toast({ message: warning, tone: 'warn' });
+            void refresh();
           }}
         />
       ) : null}

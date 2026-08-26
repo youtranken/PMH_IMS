@@ -168,6 +168,25 @@
   font-size: var(--fs-sm);
 }
 
+/* --- Giấy tờ chọn trước khi lưu (ui/attachment-draft.tsx) ----------------- */
+/* Danh sách file đang chờ đẩy lên. Cùng cỡ chữ với `.file-picker-file` ngay phía trên nó —
+   hai khối đọc liền nhau, lệch cỡ là mắt tưởng hai thứ khác nhau. */
+.draft-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-sm);
+}
+.draft-file-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
 /* --- Bảng đối chiếu import (ui/import-preview.tsx) ------------------------ */
 .import-preview {
   display: flex;

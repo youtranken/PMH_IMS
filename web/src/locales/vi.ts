@@ -305,6 +305,14 @@ export default {
     removed: 'Đã xóa giấy tờ.',
     uploaded: 'Đã đính kèm giấy tờ.',
     noPreview: 'File luôn được TẢI VỀ, không mở trực tiếp trong trình duyệt (chống mã độc qua file).',
+    // Khối chọn giấy tờ ngay trong form THÊM MỚI — file chỉ được đẩy lên sau khi hồ sơ đã lưu.
+    draftHint:
+      'Không bắt buộc. Chọn từng file (ảnh jpg/png/webp, giấy tờ pdf/xlsx) — sẽ đính kèm ngay sau khi lưu hồ sơ.',
+    draftRemove: 'Bỏ ra',
+    draftRemoveOf: 'Bỏ "{{name}}" khỏi danh sách sẽ đính kèm',
+    draftUploaded: 'Đã đính kèm {{count}} giấy tờ.',
+    draftFailed:
+      'Hồ sơ đã lưu nhưng không tải lên được "{{name}}": {{reason}} — đính kèm lại ở tab Giấy tờ.',
   },
   ports: {
     vlan: 'VLAN',
@@ -349,6 +357,7 @@ export default {
     subtitle: 'License, SSL, tên miền, hợp đồng bảo trì — mọi thứ có ngày gia hạn nằm một chỗ',
     add: 'Thêm hồ sơ',
     edit: 'Sửa hồ sơ',
+    editOf: 'Sửa hồ sơ {{code}}',
     search: 'Tìm theo mã, tên hoặc ghi chú',
     code: 'Mã hồ sơ',
     name: 'Tên hồ sơ',
@@ -393,6 +402,7 @@ export default {
   },
   license: {
     assign: 'Gán vào máy',
+    assignOf: 'Gán hồ sơ {{code}} vào máy',
     assignTitle: 'Gán license vào máy',
     assigned: 'Đã gán license vào máy.',
     release: 'Gỡ',

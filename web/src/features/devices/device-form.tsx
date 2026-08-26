@@ -4,6 +4,7 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
+import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
@@ -76,6 +77,10 @@ export function DeviceForm({
   const toast = useToast();
   const [form, setForm] = useState<FormState>(() => initialState(device));
   const [error, setError] = useState<string | null>(null);
+  // Hóa đơn, biên bản bàn giao, ảnh máy — chọn ngay lúc khai máy mới (AD-15, dùng chung với
+  // form phần mềm và đường truyền). Sửa máy thì tab "Giấy tờ" ở trang chi tiết lo việc đó.
+  const draft = useAttachmentDraft();
+  const [uploading, setUploading] = useState(false);
   const departments = (lists?.departments ?? [])
     .filter((department) => department.active)
     .map((department) => department.name);
@@ -84,6 +89,9 @@ export function DeviceForm({
     device ? `/api/v1/devices/${device.id}` : '/api/v1/devices',
     { method: device ? 'PATCH' : 'POST', csrfToken, refreshMe: false },
   );
+  // Đẩy giấy tờ chạy SAU khi lưu xong, lúc `isPending` đã tắt — không khoá thêm thì nút Lưu
+  // mở lại và bấm thêm phát nữa là khai trùng một cái máy.
+  const busy = save.isPending || uploading;
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => {
@@ -108,10 +116,25 @@ export function DeviceForm({
     }
     save.mutate(buildBody(form), {
       onSuccess: (result) => {
-        toast({ message: t('devices.saved') });
-        // Cảnh báo (serial trùng) hiện RIÊNG và ở lại lâu hơn — lưu vẫn thành công.
-        for (const warning of result.warnings) toast({ message: warning, tone: 'warn' });
-        onSaved(result);
+        void (async () => {
+          toast({ message: t('devices.saved') });
+          // Cảnh báo (serial trùng) hiện RIÊNG và ở lại lâu hơn — lưu vẫn thành công.
+          for (const warning of result.warnings) toast({ message: warning, tone: 'warn' });
+          // Giấy tờ đi SAU khi máy đã có id — file không thể treo vào cái chưa tồn tại.
+          if (draft.files.length > 0) {
+            setUploading(true);
+            const count = draft.files.length;
+            const failures = await draft.upload('device', result.device.id, csrfToken);
+            setUploading(false);
+            if (failures.length < count) {
+              toast({
+                message: t('attachments.draftUploaded', { count: count - failures.length }),
+              });
+            }
+            for (const message of failures) toast({ message, tone: 'warn' });
+          }
+          onSaved(result);
+        })();
       },
       onError: (err) => setError(errorMessage(err)),
     });
@@ -128,8 +151,8 @@ export function DeviceForm({
           <button type="button" className="btn" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button type="submit" form="device-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
+          <button type="submit" form="device-form" className="btn primary" disabled={busy}>
+            {busy ? t('common.loading') : t('common.save')}
           </button>
         </>
       }
@@ -293,6 +316,8 @@ export function DeviceForm({
             />
           </Field>
         </FormSection>
+
+        {device ? null : <AttachmentDraftSection draft={draft} disabled={busy} />}
 
         {error ? (
           <p className="alert error" role="alert">

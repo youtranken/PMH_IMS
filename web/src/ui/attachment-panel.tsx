@@ -11,6 +11,19 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 
+/**
+ * Chủ thể được phép có giấy tờ đính kèm — SOI GƯƠNG `FILE_OWNER_TYPES` phía API
+ * (`api/src/modules/files/files.service.ts`). Thêm loại mới phải sửa cả hai đầu, không thì
+ * client gửi lên một `ownerType` mà server từ chối.
+ */
+export type AttachmentOwnerType = 'device' | 'isp' | 'software';
+
+/**
+ * Đuôi file gợi ý cho hộp thoại chọn — MỘT chỗ duy nhất, dùng chung cho panel (đính kèm sau)
+ * và cho khối chọn trước lúc lưu. Chốt chặn thật là magic-byte ở server, đây chỉ là gợi ý.
+ */
+export const ATTACHMENT_ACCEPT = '.jpg,.jpeg,.png,.webp,.pdf,.xlsx';
+
 export interface AttachmentRecord {
   id: string;
   originalName: string;
@@ -33,7 +46,7 @@ export function AttachmentPanel({
   csrfToken,
   canEdit = true,
 }: {
-  ownerType: 'device' | 'isp';
+  ownerType: AttachmentOwnerType;
   ownerId: string;
   csrfToken: string;
   canEdit?: boolean;
@@ -83,7 +96,7 @@ export function AttachmentPanel({
       {canEdit ? (
         <>
           <FilePicker
-            accept=".jpg,.jpeg,.png,.webp,.pdf,.xlsx"
+            accept={ATTACHMENT_ACCEPT}
             label={t('attachments.pick')}
             hint={t('attachments.hint')}
             file={file}

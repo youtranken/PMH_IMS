@@ -4,6 +4,7 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
+import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import type { CatalogLists } from '@/features/catalog/catalog-types';
@@ -66,11 +67,18 @@ export function SoftwareForm({
   const toast = useToast();
   const [form, setForm] = useState<FormState>(() => initialState(row));
   const [error, setError] = useState<string | null>(null);
+  // Giấy tờ chọn kèm lúc THÊM MỚI (AD-15). Hồ sơ đang sửa thì đã có tab Giấy tờ ở trang
+  // chi tiết — bày thêm một ô chọn ở đây chỉ làm người ta tưởng danh sách cũ biến mất.
+  const draft = useAttachmentDraft();
+  const [uploading, setUploading] = useState(false);
 
-  const save = useApiMutation<Record<string, unknown>, unknown>(
+  const save = useApiMutation<Record<string, unknown>, { id: string }>(
     row ? `/api/v1/software/${row.id}` : '/api/v1/software',
     { method: row ? 'PATCH' : 'POST', csrfToken, refreshMe: false },
   );
+  // Trong lúc đẩy giấy tờ lên, `save` đã xong nên `isPending` hết đỏ — không khoá thêm thì
+  // nút Lưu mở lại và bấm phát nữa là tạo hồ sơ thứ hai.
+  const busy = save.isPending || uploading;
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => {
@@ -107,8 +115,8 @@ export function SoftwareForm({
           <button type="button" className="btn" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button type="submit" form="software-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
+          <button type="submit" form="software-form" className="btn primary" disabled={busy}>
+            {busy ? t('common.loading') : t('common.save')}
           </button>
         </>
       }
@@ -136,9 +144,26 @@ export function SoftwareForm({
               status: form.status,
             },
             {
-              onSuccess: () => {
-                toast({ message: t('software.saved') });
-                onSaved();
+              onSuccess: (created) => {
+                void (async () => {
+                  toast({ message: t('software.saved') });
+                  // Giấy tờ đi SAU khi hồ sơ đã có id — file không thể treo vào cái chưa tồn tại.
+                  if (draft.files.length > 0) {
+                    setUploading(true);
+                    const count = draft.files.length;
+                    const failures = await draft.upload(
+                      'software',
+                      row?.id ?? created.id,
+                      csrfToken,
+                    );
+                    setUploading(false);
+                    if (failures.length < count) {
+                      toast({ message: t('attachments.draftUploaded', { count: count - failures.length }) });
+                    }
+                    for (const message of failures) toast({ message, tone: 'warn' });
+                  }
+                  onSaved();
+                })();
               },
               onError: (err) => setError(errorMessage(err)),
             },
@@ -254,6 +279,11 @@ export function SoftwareForm({
             />
           </Field>
         </FormSection>
+
+        {/* Hợp đồng license, thư xác nhận SSL, hóa đơn tên miền — chúng nằm sẵn trên tay lúc
+            gõ hồ sơ mới. Sửa hồ sơ thì không hiện: tab "Giấy tờ" ở trang chi tiết mới là chỗ
+            xem và xóa cả danh sách đang có. */}
+        {row ? null : <AttachmentDraftSection draft={draft} disabled={busy} />}
 
         {error ? (
           <p className="alert error" role="alert">

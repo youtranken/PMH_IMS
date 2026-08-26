@@ -6,6 +6,7 @@ import { ApiError, apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
+import { AttachmentPanel } from '@/ui/attachment-panel';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { ExpiryBadge } from '@/ui/expiry-badge';
@@ -130,6 +131,9 @@ export function SoftwareDetail({ me }: { me: Me }) {
             : []),
           // Két sắt chỉ hiện với người có quyền — Member không có đường tới endpoint (AD-9).
           ...(canVault ? [{ key: 'vault', label: t('vault.tab') }] : []),
+          // Hợp đồng license, thư xác nhận SSL, hóa đơn tên miền — cùng `AttachmentPanel` với
+          // thiết bị (2.3) và đường truyền (3.3), không có bản riêng cho phần mềm.
+          { key: 'attachments', label: t('software.tabAttachments') },
           { key: 'history', label: t('software.tabHistory') },
         ]}
         value={tab}
@@ -174,6 +178,8 @@ export function SoftwareDetail({ me }: { me: Me }) {
           />
         ) : tab === 'devices' ? (
           <LicenseAssignmentsPanel software={item} csrfToken={me.csrfToken} />
+        ) : tab === 'attachments' ? (
+          <AttachmentPanel ownerType="software" ownerId={item.id} csrfToken={me.csrfToken} />
         ) : history.isLoading ? (
           <Loading />
         ) : history.isError ? (

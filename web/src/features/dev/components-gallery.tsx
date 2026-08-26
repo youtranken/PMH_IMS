@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatMoney, orDash } from '@/lib/format';
+import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { DatePicker } from '@/ui/date-picker';
 import { EmptyState } from '@/ui/load-state';
 import { ExpiryBadge } from '@/ui/expiry-badge';
@@ -36,6 +37,7 @@ export function ComponentsGallery() {
   const { t } = useTranslation();
   const toast = useToast();
   const askConfirm = useConfirm();
+  const draft = useAttachmentDraft();
   const [page, setPage] = useState(2);
   const [search, setSearch] = useState('');
   const [date, setDate] = useState('2026-09-30');
@@ -257,6 +259,16 @@ export function ComponentsGallery() {
           file={file}
           onPick={setFile}
         />
+      </section>
+
+      <section className="kit-section">
+        <h2>Giấy tờ chọn trước khi lưu — AttachmentDraftSection</h2>
+        <p className="muted">
+          Khối đặt cuối MỌI form thêm mới (thiết bị, phần mềm, đường truyền): giữ file trong bộ
+          nhớ, hồ sơ lưu xong mới đẩy lên. Form SỬA không dùng — tab "Giấy tờ" ở trang chi tiết
+          mới là chỗ xem và xóa cả danh sách.
+        </p>
+        <AttachmentDraftSection draft={draft} />
       </section>
 
       <section className="kit-section">

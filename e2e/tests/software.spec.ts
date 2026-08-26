@@ -293,4 +293,45 @@ test.describe('Hồ sơ phần mềm', () => {
     const body = (await expiry.json()) as { items: { label: string }[] };
     expect(body.items.some((entry) => entry.label.includes(code))).toBe(false);
   });
+
+  /**
+   * Sửa NGAY TRÊN DANH SÁCH, cùng nếp với màn Thiết bị.
+   *
+   * Đổi tên hồ sơ hay đổi trạng thái là việc lặt vặt hằng ngày; bắt vào trang chi tiết rồi
+   * quay ra là ba lần chuyển trang cho một ô. Nút mở ĐÚNG hộp "Thêm hồ sơ" đã điền sẵn.
+   */
+  test('sửa hồ sơ ngay từ cột Thao tác của danh sách', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const code = `LIC-E2E-SUA-${stamp}`;
+
+    expect(
+      (
+        await createViaApi(page, {
+          code,
+          name: 'Tên cũ cần sửa',
+          kind: 'license',
+          seatTotal: 3,
+          endDate: '2028-12-31',
+        })
+      ).status,
+    ).toBe(201);
+
+    await page.goto('/phan-mem');
+    await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
+    const row = page.getByRole('row', { name: new RegExp(code) });
+    await expect(row).toBeVisible();
+
+    await row.getByRole('button', { name: `Sửa hồ sơ ${code}` }).click();
+    const form = page.getByRole('dialog');
+    // Hộp phải mở ra với dữ liệu ĐANG CÓ — hộp trắng là mất hết những ô người ta không sửa.
+    await expect(form.getByRole('textbox', { name: 'Mã hồ sơ' })).toHaveValue(code);
+    await form.getByRole('textbox', { name: 'Tên hồ sơ' }).fill('Tên mới sau khi sửa');
+    await form.getByRole('button', { name: 'Lưu' }).click();
+
+    await expect(page.getByText('Đã lưu hồ sơ.')).toBeVisible();
+    await expect(page.getByRole('row', { name: new RegExp(code) })).toContainText(
+      'Tên mới sau khi sửa',
+    );
+  });
 });
