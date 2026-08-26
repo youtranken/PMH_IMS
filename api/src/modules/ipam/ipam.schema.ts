@@ -29,6 +29,8 @@ export const subnetTable = pgTable('subnet', {
   name: text('name').notNull(),
   cidr: cidr('cidr').notNull(),
   siteId: uuid('site_id'),
+  /** Số VLAN 802.1Q, 1–4094 (0029). CHECK ở tầng DB. */
+  vlan: integer('vlan'),
   description: text('description'),
   createdBy: text('created_by').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

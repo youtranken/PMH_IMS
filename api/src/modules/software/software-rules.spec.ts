@@ -1,7 +1,10 @@
 import {
   requiresEndDate,
   supportsSeats,
+  validateAssignmentTerms,
   validateSoftware,
+  type AssignmentTerms,
+  type LicenseModel,
   type SoftwareEffective,
   type SoftwareKind,
 } from './software-rules';
@@ -9,6 +12,7 @@ import {
 function effective(over: Partial<SoftwareEffective> = {}): SoftwareEffective {
   return {
     kind: 'license',
+    licenseModel: 'subscription',
     seatTotal: null,
     startDate: null,
     endDate: '2027-12-31',
@@ -18,13 +22,49 @@ function effective(over: Partial<SoftwareEffective> = {}): SoftwareEffective {
 
 describe('requiresEndDate — loại nào bắt buộc có hạn', () => {
   it.each([
-    ['license', true],
-    ['ssl', true],
-    ['domain', true],
-    ['maintenance', false],
-    ['other', false],
-  ])('%s → %s', (kind, expected) => {
-    expect(requiresEndDate(kind as SoftwareKind)).toBe(expected);
+    ['license', 'subscription', true],
+    ['ssl', 'subscription', true],
+    ['domain', 'subscription', true],
+    ['maintenance', 'subscription', false],
+    ['other', 'subscription', false],
+    // License MUA ĐỨT không có ngày hết hạn để mà nhắc — bắt buộc nhập là ép người dùng
+    // bịa một ngày, rồi tới ngày đó hệ thống đi nhắc gia hạn một thứ không cần gia hạn.
+    ['license', 'perpetual', false],
+  ])('%s + %s → %s', (kind, model, expected) => {
+    expect(requiresEndDate(kind as SoftwareKind, model as LicenseModel)).toBe(expected);
+  });
+});
+
+describe('license vĩnh viễn', () => {
+  it('không cần ngày hết hạn', () => {
+    expect(
+      validateSoftware(effective({ licenseModel: 'perpetual', endDate: null })),
+    ).toEqual([]);
+  });
+
+  it('chỉ cần ngày bắt đầu là đủ', () => {
+    expect(
+      validateSoftware(
+        effective({ licenseModel: 'perpetual', endDate: null, startDate: '2026-01-01' }),
+      ),
+    ).toEqual([]);
+  });
+
+  /** Vừa "vĩnh viễn" vừa có ngày hết hạn là hai lời khẳng định ngược nhau — chặn từ đầu. */
+  it('có ngày hết hạn thì bị từ chối, nói rõ mâu thuẫn', () => {
+    const errors = validateSoftware(
+      effective({ licenseModel: 'perpetual', endDate: '2027-01-01' }),
+    );
+    expect(errors.length).toBe(1);
+    expect(errors[0]).toContain('vĩnh viễn');
+  });
+
+  /** Chỉ license mới có chuyện mua đứt; SSL/tên miền luôn có kỳ hạn. */
+  it.each(['ssl', 'domain'])('%s đánh dấu vĩnh viễn thì bị từ chối', (kind) => {
+    const errors = validateSoftware(
+      effective({ kind: kind as SoftwareKind, licenseModel: 'perpetual', endDate: null }),
+    );
+    expect(errors.length).toBeGreaterThan(0);
   });
 });
 
@@ -37,6 +77,88 @@ describe('supportsSeats — chỉ license mới có seat', () => {
     ['other', false],
   ])('%s → %s', (kind, expected) => {
     expect(supportsSeats(kind as SoftwareKind)).toBe(expected);
+  });
+});
+
+describe('validateAssignmentTerms — kỳ hạn & chi phí RIÊNG của từng ghế', () => {
+  function terms(over: Partial<AssignmentTerms> = {}): AssignmentTerms {
+    return { cost: null, contract: null, startDate: null, endDate: null, ...over };
+  }
+
+  it('ghế không khai gì cả là hợp lệ — mọi trường đều tùy chọn', () => {
+    expect(validateAssignmentTerms(terms())).toEqual([]);
+  });
+
+  it('khai đủ chi phí, hợp đồng và kỳ hạn = hợp lệ', () => {
+    expect(
+      validateAssignmentTerms(
+        terms({
+          cost: 3_500_000,
+          contract: 'HD-2026-014',
+          startDate: '2026-01-01',
+          endDate: '2026-12-31',
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  /** Chi phí là TIỀN ĐỒNG: VND không có phần lẻ, và âm thì không phải chi phí. */
+  it.each([[-1], [-3_000_000], [1.5], [0.01]])('chi phí %s là vô nghĩa → lỗi', (cost) => {
+    const errors = validateAssignmentTerms(terms({ cost }));
+    expect(errors.some((e) => e.includes('số nguyên'))).toBe(true);
+  });
+
+  it('chi phí 0 là hợp lệ — license được tặng kèm máy vẫn phải ghi nhận', () => {
+    expect(validateAssignmentTerms(terms({ cost: 0 }))).toEqual([]);
+  });
+
+  /**
+   * Cột `cost` là bigint; quá 2^53 thì JavaScript đọc ra một con số KHÁC lúc ghi vào mà
+   * không có lỗi nào. Chặn ở đây để tiền không lặng lẽ sai chữ số cuối.
+   */
+  it('chi phí vượt ngưỡng số nguyên an toàn → lỗi, không lặng lẽ làm tròn', () => {
+    const errors = validateAssignmentTerms(terms({ cost: Number.MAX_SAFE_INTEGER + 2 }));
+    expect(errors.length).toBeGreaterThan(0);
+  });
+
+  it('ngày kết thúc trước ngày bắt đầu = lỗi', () => {
+    const errors = validateAssignmentTerms(
+      terms({ startDate: '2026-06-01', endDate: '2026-01-01' }),
+    );
+    expect(errors.some((e) => e.includes('sau ngày bắt đầu'))).toBe(true);
+  });
+
+  it('cùng ngày bắt đầu và kết thúc là hợp lệ — thuê một ngày vẫn là kỳ hạn thật', () => {
+    expect(
+      validateAssignmentTerms(terms({ startDate: '2026-06-01', endDate: '2026-06-01' })),
+    ).toEqual([]);
+  });
+
+  it('chỉ có ngày bắt đầu, chưa biết ngày kết thúc = hợp lệ', () => {
+    expect(validateAssignmentTerms(terms({ startDate: '2026-06-01' }))).toEqual([]);
+  });
+
+  /**
+   * License mua đứt mà ghế lại có ngày kết thúc là hai lời khẳng định ngược nhau — y hệt
+   * luật ở tầng hồ sơ, chỉ khác chỗ đặt. Cho lọt thì cỗ máy nhắc hạn sẽ đi giục gia hạn
+   * một chỗ ngồi vĩnh viễn.
+   */
+  it('license mua đứt: ghế có ngày kết thúc thì bị từ chối', () => {
+    const errors = validateAssignmentTerms(terms({ endDate: '2027-01-01' }), 'perpetual');
+    expect(errors.some((e) => e.includes('vĩnh viễn'))).toBe(true);
+  });
+
+  it('license mua đứt: ghế chỉ có ngày bắt đầu là hợp lệ', () => {
+    expect(
+      validateAssignmentTerms(terms({ startDate: '2026-01-01' }), 'perpetual'),
+    ).toEqual([]);
+  });
+
+  it('gom HẾT lỗi trong một lần, không dừng ở lỗi đầu', () => {
+    const errors = validateAssignmentTerms(
+      terms({ cost: -1, startDate: '2026-06-01', endDate: '2026-01-01' }),
+    );
+    expect(errors).toHaveLength(2);
   });
 });
 
@@ -82,6 +204,7 @@ describe('validateSoftware', () => {
   it('gom HẾT lỗi của một hồ sơ trong một lần, không dừng ở lỗi đầu', () => {
     const errors = validateSoftware({
       kind: 'ssl',
+      licenseModel: 'subscription',
       seatTotal: 5,
       startDate: '2027-01-01',
       endDate: null,

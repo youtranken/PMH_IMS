@@ -40,7 +40,8 @@ table.table thead th .th-sort:hover {
 }
 table.table thead th .sort-arrow {
   font-size: 0.7em;
-  color: var(--accent, var(--ink-3));
+  /* `--accent` chưa từng được khai trong tokens.css — dùng token thật để khỏi rơi về fallback. */
+  color: var(--primary-ink);
 }
 .table-search {
   width: 100%;
@@ -68,7 +69,10 @@ table.table tbody tr {
 table.table tbody tr:nth-child(even) td {
   background: var(--surface-2);
 }
-table.table tbody tr:hover td {
+/* Chỉ tô sáng hàng khi hàng THẬT SỰ bấm được. Trước đây luật này không điều kiện, nên rê
+   chuột vào ô trống của bất kỳ bảng nào cũng sáng cả hàng như mời bấm — bấm thì không có gì
+   xảy ra (chỉ ô Mã và nút trong cột Thao tác mới ăn). Hứa hão ở 15/15 bảng. */
+table.table tbody tr.clickable:hover td {
   background: var(--primary-soft);
 }
 table.table tbody tr.overdue td:first-child {
@@ -282,6 +286,12 @@ table.table tbody tr.row-highlight td:first-child {
   color: var(--muted);
   background: var(--muted-soft);
 }
+/* Tone "brand" cho badge vai trò (Member/Admin/SA) — accounts-screen dùng `badge plain brand`
+   nhưng tone này chưa từng được định nghĩa, nên badge vai trò hiện ra như chữ thường. */
+.badge.brand {
+  color: var(--primary-ink);
+  background: var(--primary-soft);
+}
 .badge.plain::before {
   display: none;
 }
@@ -295,7 +305,8 @@ button.link.session-toggle {
   padding: 0;
   border: none;
   background: none;
-  color: var(--accent);
+  /* `--accent` không tồn tại → nút "xem chi tiết phiên" trước đây mất hẳn màu nhấn. */
+  color: var(--primary-ink);
   font-size: var(--fs-xs);
   font-weight: 600;
   cursor: pointer;
@@ -335,3 +346,15 @@ button.link.session-toggle {
   min-width: 15rem;
 }
 
+
+/* Chữ phụ trong ô bảng (serial dưới tên máy, email dưới họ tên, băng thông dưới nhà mạng…).
+   Dùng ở 10 màn nhưng CHƯA TỪNG có luật — cùng họ lỗi với `.shell`/`.row`/`.spinner`. Không có
+   nó, span này là inline trần nên dính thẳng vào chữ trước: "Switch lõi auditFOC-AUD-907714",
+   "Cao Thuâncaothuan@pmh.com.vn". */
+.cell-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--fs-2xs);
+  color: var(--ink-3);
+  font-weight: 400;
+}

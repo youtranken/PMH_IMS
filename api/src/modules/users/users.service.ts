@@ -1,11 +1,12 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, eq, ilike, ne, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, ne, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import type { Page, PageQuery } from '../../common/pagination';
 import { pageOffset } from '../../common/pagination';
 import type { SealedValue } from '../../common/crypto/envelope.types';
+import type { SortQuery } from '../../common/sorting';
 import type { UserRole } from '../auth/types';
 import { usersTable } from './users.schema';
 import type { UserCredentials, UserRecord } from './users.types';
@@ -36,8 +37,15 @@ export class UsersService {
   /**
    * Danh sách có tìm kiếm PHÍA SERVER: lọc phía client chỉ lọc đúng trang đang xem,
    * nên gõ tên nằm ở trang 3 sẽ ra bảng rỗng trong khi tổng số vẫn báo 137 dòng.
+   *
+   * Sắp xếp cũng PHÍA SERVER (AD-15, cùng cửa `parseSortQuery`): lý do y hệt — sắp ở client
+   * chỉ đảo chỗ 20 dòng đang xem, không phải cả bảng người dùng.
    */
-  async list(query: PageQuery, search?: string): Promise<Page<UserRecord>> {
+  async list(
+    query: PageQuery,
+    search?: string,
+    sort: SortQuery<UserSortKey> = USER_SORT_DEFAULT,
+  ): Promise<Page<UserRecord>> {
     const term = search?.trim();
     const where = term
       ? or(
@@ -50,7 +58,7 @@ export class UsersService {
         .select()
         .from(usersTable)
         .where(where)
-        .orderBy(asc(usersTable.fullName))
+        .orderBy(...userOrderBy(sort))
         .limit(query.limit)
         .offset(pageOffset(query)),
       this.db.select({ value: count() }).from(usersTable).where(where),
@@ -194,6 +202,37 @@ export class UsersService {
       .filter((r) => roles.includes(r.role as UserRole))
       .map((r) => ({ email: r.email, fullName: r.fullName }));
   }
+}
+
+/**
+ * Cột được phép sắp xếp. Đây là WHITELIST — tên cột đi thẳng vào `ORDER BY`.
+ *
+ * Chỉ mở những cột nằm SẴN trong bảng `users` (AD-2). `email` không có mặt: nó chỉ hiện
+ * dưới dạng dòng phụ trong ô Họ tên, không phải cột riêng — không có nút bấm nào gửi nó lên.
+ */
+export const USER_SORT_KEYS = [
+  'fullName',
+  'role',
+  'status',
+  'totpEnrolledAt',
+  'lastLoginAt',
+] as const;
+export type UserSortKey = (typeof USER_SORT_KEYS)[number];
+export const USER_SORT_DEFAULT: SortQuery<UserSortKey> = { key: 'fullName', dir: 'asc' };
+
+function userOrderBy(sort: SortQuery<UserSortKey>): SQL[] {
+  const column = {
+    fullName: usersTable.fullName,
+    role: usersTable.role,
+    status: usersTable.status,
+    totpEnrolledAt: usersTable.totpEnrolledAt,
+    lastLoginAt: usersTable.lastLoginAt,
+  }[sort.key];
+  const primary = sort.dir === 'desc' ? desc(column) : asc(column);
+  // Chốt hạ bằng `email` (duy nhất, UNIQUE ở migration 0002): không cột nào trong whitelist ở
+  // trên là duy nhất, thiếu chốt hạ thì hai người cùng vai/trạng thái có thể đổi chỗ nhau giữa
+  // hai lần tải — sang trang 2 lại thấy đúng người vừa xem ở trang 1, hoặc mất hẳn một dòng.
+  return [primary, asc(usersTable.email)];
 }
 
 type Row = typeof usersTable.$inferSelect;

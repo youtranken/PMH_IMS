@@ -10,21 +10,41 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { DevicesApiService } from '../devices/devices.api';
-import { licenseAssignmentTable } from './software.schema';
+import { licenseAssignmentTable, softwareTable } from './software.schema';
 import { SoftwareService } from './software.service';
-import { supportsSeats } from './software-rules';
+import {
+  supportsSeats,
+  validateAssignmentTerms,
+  type AssignmentTerms,
+  type LicenseModel,
+} from './software-rules';
 
-export interface AssignmentRow {
+export interface AssignmentRow extends AssignmentTerms {
   id: string;
   softwareId: string;
   deviceId: string;
   deviceCode: string;
   deviceName: string;
+  /** Ai đang giữ máy — "ghế này ai ngồi" là câu hỏi đầu tiên khi rà license. */
+  deviceAssignedTo: string | null;
   assignedBy: string;
   assignedAt: Date;
   releasedBy: string | null;
   releasedAt: Date | null;
   overSeatReason: string | null;
+  note: string | null;
+}
+
+/** Một license đang cài trên MỘT máy — dùng cho khu bung dòng của danh sách thiết bị. */
+export interface InstalledLicenseRow extends AssignmentTerms {
+  id: string;
+  softwareId: string;
+  softwareCode: string;
+  softwareName: string;
+  licenseModel: LicenseModel;
+  /** Hạn của HỒ SƠ — hiện khi ghế không khai kỳ hạn riêng. */
+  softwareEndDate: string | null;
+  assignedAt: Date;
   note: string | null;
 }
 
@@ -102,10 +122,74 @@ export class LicenseAssignmentService {
     return this.decorate(rows);
   }
 
+  /**
+   * Máy này đang cài license nào — kèm kỳ hạn/chi phí riêng của từng ghế.
+   *
+   * Join thẳng sang `software` là HỢP LỆ: cả hai bảng cùng một chủ (module `software`,
+   * AD-3). Thứ AD-2 cấm là join sang bảng của module KHÁC — nên mã/tên máy vẫn phải hỏi
+   * qua `devices.api`, và ở đây thì không cần hỏi vì máy đã biết trước.
+   */
+  async installedForDevice(deviceId: string): Promise<InstalledLicenseRow[]> {
+    const rows = await this.db
+      .select({
+        id: licenseAssignmentTable.id,
+        softwareId: softwareTable.id,
+        softwareCode: softwareTable.code,
+        softwareName: softwareTable.name,
+        licenseModel: softwareTable.licenseModel,
+        softwareEndDate: softwareTable.endDate,
+        assignedAt: licenseAssignmentTable.assignedAt,
+        note: licenseAssignmentTable.note,
+        cost: licenseAssignmentTable.cost,
+        contract: licenseAssignmentTable.contract,
+        startDate: licenseAssignmentTable.startDate,
+        endDate: licenseAssignmentTable.endDate,
+      })
+      .from(licenseAssignmentTable)
+      .innerJoin(softwareTable, eq(softwareTable.id, licenseAssignmentTable.softwareId))
+      .where(
+        and(
+          eq(licenseAssignmentTable.deviceId, deviceId),
+          isNull(licenseAssignmentTable.releasedAt),
+        ),
+      )
+      .orderBy(asc(softwareTable.code));
+    return rows.map((row) => ({
+      ...row,
+      licenseModel: row.licenseModel as LicenseModel,
+    }));
+  }
+
+  /**
+   * Đếm license đang cài của NHIỀU máy một lượt — danh sách thiết bị gọi để biết dòng nào
+   * đáng mọc mũi tên bung. Một lượt hỏi cho cả trang, không N+1.
+   *
+   * Không có con số này thì mũi tên phải hiện ở mọi dòng, và bấm vào phần lớn sẽ ra rỗng —
+   * đúng kiểu hứa hão mà bảng đã tránh ở màn phần mềm.
+   */
+  async installedCountsFor(deviceIds: string[]): Promise<Map<string, number>> {
+    if (deviceIds.length === 0) return new Map();
+    const rows = await this.db
+      .select({ deviceId: licenseAssignmentTable.deviceId, used: count() })
+      .from(licenseAssignmentTable)
+      .where(
+        and(
+          inArray(licenseAssignmentTable.deviceId, deviceIds),
+          isNull(licenseAssignmentTable.releasedAt),
+        ),
+      )
+      .groupBy(licenseAssignmentTable.deviceId);
+    return new Map(rows.map((row) => [row.deviceId, Number(row.used)]));
+  }
+
   async assign(
     actor: string,
     softwareId: string,
-    input: { deviceId: string; note?: string | null; overSeatReason?: string | null },
+    input: {
+      deviceId: string;
+      note?: string | null;
+      overSeatReason?: string | null;
+    } & Partial<AssignmentTerms>,
   ): Promise<AssignResult> {
     const software = await this.software.findOne(softwareId);
     if (!supportsSeats(software.kind)) {
@@ -120,6 +204,9 @@ export class LicenseAssignmentService {
         message: 'Thiết bị được chọn không tồn tại.',
       });
     }
+
+    const terms = normalizeTerms(input);
+    assertTerms(terms, software.licenseModel);
 
     const used = (await this.usageFor([softwareId])).get(softwareId) ?? 0;
     const warnings: string[] = [];
@@ -148,6 +235,7 @@ export class LicenseAssignmentService {
             assignedBy: actor,
             note: input.note?.trim() || null,
             overSeatReason: input.overSeatReason?.trim() || null,
+            ...terms,
           })
           .returning();
       } catch (error) {
@@ -173,6 +261,83 @@ export class LicenseAssignmentService {
       .from(licenseAssignmentTable)
       .where(eq(licenseAssignmentTable.id, id));
     return { assignment: (await this.decorate(rows))[0], warnings };
+  }
+
+  /**
+   * Sửa kỳ hạn / chi phí / hợp đồng / ghi chú của MỘT ghế đang dùng.
+   *
+   * Chỉ sửa được ghế còn hiệu lực: bản ghi đã gỡ là dấu vết lịch sử ("key này từng nhập máy
+   * nào"), sửa lại thì lịch sử không còn là lịch sử nữa.
+   *
+   * Ghi vào `software_history` chứ không lặng lẽ đổi: chi phí và số hợp đồng là thứ đem đi
+   * đối chiếu quyết toán, phải biết ai đổi lúc nào.
+   */
+  async updateTerms(
+    actor: string,
+    softwareId: string,
+    assignmentId: string,
+    input: Partial<AssignmentTerms> & { note?: string | null },
+  ): Promise<AssignmentRow> {
+    const existing = await this.db
+      .select()
+      .from(licenseAssignmentTable)
+      .where(
+        and(
+          eq(licenseAssignmentTable.id, assignmentId),
+          eq(licenseAssignmentTable.softwareId, softwareId),
+          isNull(licenseAssignmentTable.releasedAt),
+        ),
+      );
+    if (existing.length === 0) {
+      throw new NotFoundException({
+        code: 'ASSIGNMENT_NOT_FOUND',
+        message: 'Không tìm thấy bản ghi gán còn hiệu lực này.',
+      });
+    }
+    const before = existing[0];
+    const software = await this.software.findOne(softwareId);
+
+    // Ghép bản sửa lên giá trị đang có RỒI mới soi luật: sửa mỗi ngày kết thúc vẫn phải
+    // kiểm với ngày bắt đầu cũ, nếu không thì lách được bằng cách sửa từng ô một.
+    const terms = normalizeTerms({
+      cost: input.cost === undefined ? before.cost : input.cost,
+      contract: input.contract === undefined ? before.contract : input.contract,
+      startDate: input.startDate === undefined ? before.startDate : input.startDate,
+      endDate: input.endDate === undefined ? before.endDate : input.endDate,
+    });
+    assertTerms(terms, software.licenseModel);
+    const note = input.note === undefined ? before.note : input.note?.trim() || null;
+
+    const changes: Record<string, { before: unknown; after: unknown }> = {};
+    for (const [key, after] of Object.entries({ ...terms, note })) {
+      const prev = (before as Record<string, unknown>)[key] ?? null;
+      if (prev !== after) changes[key] = { before: prev, after };
+    }
+    // Không có gì đổi thì không ghi một dòng lịch sử rỗng — nhật ký loãng là nhật ký không ai đọc.
+    if (Object.keys(changes).length === 0) {
+      return (await this.decorate(existing))[0];
+    }
+
+    // Mã máy đi kèm làm BỐI CẢNH (before === after): một license 10 ghế thì dòng lịch sử
+    // "đổi chi phí" không nói được gì nếu thiếu chỗ ngồi nào vừa đổi.
+    const deviceCode = await this.deviceCodeOf(before.deviceId);
+
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(licenseAssignmentTable)
+        .set({ ...terms, note })
+        .where(eq(licenseAssignmentTable.id, assignmentId));
+      await this.software.recordWithin(tx, actor, softwareId, 'license-terms-updated', {
+        device: { before: deviceCode, after: deviceCode },
+        ...changes,
+      });
+    });
+
+    const rows = await this.db
+      .select()
+      .from(licenseAssignmentTable)
+      .where(eq(licenseAssignmentTable.id, assignmentId));
+    return (await this.decorate(rows))[0];
   }
 
   /** Gỡ gán = đánh dấu released, KHÔNG xóa dòng (AC 3.2). */
@@ -204,6 +369,15 @@ export class LicenseAssignmentService {
     });
   }
 
+  /** Mã máy để đọc, hoặc chính uuid nếu máy đã biến mất — không được để sập cả lời gọi. */
+  private async deviceCodeOf(deviceId: string): Promise<string> {
+    try {
+      return (await this.devices.getById(deviceId)).code;
+    } catch {
+      return deviceId;
+    }
+  }
+
   /** Gắn mã + tên thiết bị (một lượt hỏi devices.api, không N+1). */
   private async decorate(
     rows: (typeof licenseAssignmentTable.$inferSelect)[],
@@ -212,10 +386,12 @@ export class LicenseAssignmentService {
     for (const row of rows) {
       let deviceCode = '(thiết bị không còn)';
       let deviceName = '';
+      let deviceAssignedTo: string | null = null;
       try {
         const device = await this.devices.getById(row.deviceId);
         deviceCode = device.code;
         deviceName = device.name;
+        deviceAssignedTo = device.assignedTo;
       } catch {
         // Thiết bị bị khóa/thanh lý vẫn đọc được; chỉ khi dữ liệu hỏng mới rơi vào đây.
         // Không được để một bản ghi lạ làm sập cả bảng gán.
@@ -226,15 +402,46 @@ export class LicenseAssignmentService {
         deviceId: row.deviceId,
         deviceCode,
         deviceName,
+        deviceAssignedTo,
         assignedBy: row.assignedBy,
         assignedAt: row.assignedAt,
         releasedBy: row.releasedBy,
         releasedAt: row.releasedAt,
         overSeatReason: row.overSeatReason,
         note: row.note,
+        cost: row.cost,
+        contract: row.contract,
+        startDate: row.startDate,
+        endDate: row.endDate,
       });
     }
     return out;
+  }
+}
+
+/**
+ * Đưa bản khai của người dùng về đúng hình dạng lưu trong DB.
+ *
+ * Chuỗi rỗng nghĩa là XÓA giá trị đang có, không phải lưu một chuỗi rỗng: form luôn hiện đủ
+ * ô, nên "để trống" là một ý định rõ ràng.
+ */
+function normalizeTerms(input: Partial<AssignmentTerms>): AssignmentTerms {
+  return {
+    cost: input.cost ?? null,
+    contract: input.contract?.trim() || null,
+    startDate: input.startDate || null,
+    endDate: input.endDate || null,
+  };
+}
+
+function assertTerms(terms: AssignmentTerms, licenseModel: LicenseModel): void {
+  const errors = validateAssignmentTerms(terms, licenseModel);
+  if (errors.length > 0) {
+    throw new BadRequestException({
+      code: 'INVALID_ASSIGNMENT_TERMS',
+      message: errors.join(' '),
+      errors,
+    });
   }
 }
 

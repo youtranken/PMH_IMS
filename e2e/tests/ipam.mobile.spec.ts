@@ -40,9 +40,18 @@ test.describe('Địa chỉ IP ở 390px', () => {
     });
 
     await page.goto('/dia-chi-ip');
-    await expect(page.getByRole('cell', { name: new RegExp(`LAN 390 E2E ${stamp}`) })).toBeVisible();
+    // Cột dải là thẻ (mockup), không phải ô bảng — ở 390px nó xếp ngang cuộn được.
+    await expect(
+      page.getByRole('link', { name: new RegExp(`LAN 390 E2E ${stamp}`) }),
+    ).toBeVisible();
     // Thanh mức sử dụng phải co được, không đẩy bảng rộng ra.
-    await expect(page.getByRole('meter')).toBeVisible();
+    //
+    // Bám vào ĐÚNG dải vừa tạo, không phải "cái thanh đo duy nhất trên màn": danh sách này
+    // hiện mọi dải đang có, nên chỉ cần trong DB dev còn một dải nào khác là bài kiểm vỡ vì
+    // lý do chẳng liên quan gì tới thứ nó muốn kiểm.
+    await expect(
+      page.getByRole('meter', { name: `Mức sử dụng dải 172.16.${octet}.0/29` }),
+    ).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
     await page.goto(`/dia-chi-ip/${subnetId}`);

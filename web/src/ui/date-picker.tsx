@@ -78,14 +78,20 @@ export function DatePicker({
         return;
       setOpen(false);
     };
+    // Esc chỉ đóng lịch: capture + stopPropagation chặn Radix Dialog (DismissableLayer) đóng
+    // luôn cả form đang mở và mất trắng thứ đang gõ. TimeField đã vá đúng cách này từ trước,
+    // comment ở đó ghi "(giống DatePicker)" — nhưng DatePicker thì chưa bao giờ được vá.
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        setOpen(false);
+      }
     };
     document.addEventListener('mousedown', onDoc);
-    document.addEventListener('keydown', onKey);
+    document.addEventListener('keydown', onKey, true);
     return () => {
       document.removeEventListener('mousedown', onDoc);
-      document.removeEventListener('keydown', onKey);
+      document.removeEventListener('keydown', onKey, true);
     };
   }, [open, refs.domReference, refs.floating]);
 

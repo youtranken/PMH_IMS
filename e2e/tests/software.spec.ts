@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, firstLogin, resetSoftware, resetUsers } from './helpers';
+import { E2E_SA, firstLogin, resetSoftware, resetUsers, writeHeaders } from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -170,6 +170,50 @@ test.describe('Hồ sơ phần mềm', () => {
     await expect(page.getByText('Chưa cất secret nào')).toBeVisible();
   });
 
+  /**
+   * Sắp xếp PHẢI chạy ở server, không phải ở trang đang xem.
+   *
+   * Bài kiểm dựng 3 hồ sơ rồi lọc còn đúng 3 dòng, bấm tiêu đề cột và đọc lại thứ tự. Quan
+   * trọng hơn: kiểm luôn cột KHÔNG được phép sắp (Nhà cung cấp) không có nút bấm — sắp theo
+   * nó đòi join sang module danh mục, vi phạm AD-2.
+   */
+  test('sắp xếp theo cột chạy ở server, cột không sắp được thì không có nút', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+
+    for (const [suffix, name] of [
+      ['A', 'Zulu hồ sơ cuối bảng'],
+      ['B', 'Alpha hồ sơ đầu bảng'],
+      ['C', 'Mike hồ sơ giữa bảng'],
+    ]) {
+      await createViaApi(page, {
+        code: `SORT-E2E-${stamp}-${suffix}`,
+        name,
+        kind: 'maintenance',
+      });
+    }
+
+    await page.goto('/phan-mem');
+    await page
+      .getByRole('searchbox', { name: 'Tìm theo mã, tên hoặc ghi chú' })
+      .fill(`SORT-E2E-${stamp}`);
+    await expect(page.getByRole('row')).toHaveCount(4); // 1 dòng tiêu đề + 3 hồ sơ
+
+    const firstDataRow = () => page.getByRole('row').nth(1);
+    await expect(firstDataRow()).toContainText(`SORT-E2E-${stamp}-A`); // mặc định: theo mã tăng
+
+    // Phải bám vào ĐẦU BẢNG: ngoài kia thanh lọc cũng có nút tên "Tên hồ sơ".
+    const head = page.locator('thead');
+    await head.getByRole('button', { name: 'Tên hồ sơ' }).click();
+    await expect(firstDataRow()).toContainText('Alpha hồ sơ đầu bảng');
+
+    await head.getByRole('button', { name: 'Tên hồ sơ' }).click();
+    await expect(firstDataRow()).toContainText('Zulu hồ sơ cuối bảng');
+
+    // Cột dựa vào danh mục: hiện chữ, nhưng KHÔNG phải nút bấm được.
+    await expect(head.getByRole('button', { name: 'Nhà cung cấp' })).toHaveCount(0);
+  });
+
   test('tạo hồ sơ bằng form trên UI', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
@@ -184,5 +228,69 @@ test.describe('Hồ sơ phần mềm', () => {
     await expect(
       page.getByRole('row', { name: new RegExp(code) }).getByText('—').first(),
     ).toBeVisible();
+  });
+
+  /**
+   * License MUA ĐỨT: chỉ cần ngày bắt đầu.
+   *
+   * Trước đây luật bắt MỌI license phải có ngày hết hạn, nên license mua đứt không khai vào
+   * hệ thống được — người dùng buộc phải bịa một ngày, rồi tới ngày đó cỗ máy nhắc hạn đi
+   * giục gia hạn một thứ không cần gia hạn. Nhắc sai vài lần là người ta bỏ qua mọi lời nhắc.
+   */
+  test('license vĩnh viễn: không cần ngày hết hạn, và không bị nhắc gia hạn', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const headers = await writeHeaders(page);
+    const code = `LIC-E2E-PERP-${stamp}`;
+
+    const created = await page.request.post('/api/v1/software', {
+      headers,
+      data: {
+        code,
+        name: 'AutoCad mua đứt E2E',
+        kind: 'license',
+        licenseModel: 'perpetual',
+        startDate: '2026-01-01',
+        seatTotal: 3,
+      },
+    });
+    expect(created.status(), 'vĩnh viễn không cần ngày hết hạn').toBe(201);
+
+    // Vừa vĩnh viễn vừa có hạn là hai lời khẳng định ngược nhau — phải bị chặn.
+    const contradiction = await page.request.post('/api/v1/software', {
+      headers,
+      data: {
+        code: `LIC-E2E-PERP2-${stamp}`,
+        name: 'Mâu thuẫn E2E',
+        kind: 'license',
+        licenseModel: 'perpetual',
+        endDate: '2027-01-01',
+      },
+    });
+    expect(contradiction.status()).toBe(400);
+    expect(((await contradiction.json()) as { message: string }).message).toContain('vĩnh viễn');
+
+    // Chỉ license mới có bản mua đứt: SSL luôn có kỳ hạn của nhà cung cấp.
+    const wrongKind = await page.request.post('/api/v1/software', {
+      headers,
+      data: {
+        code: `SSL-E2E-PERP-${stamp}`,
+        name: 'SSL vĩnh viễn E2E',
+        kind: 'ssl',
+        licenseModel: 'perpetual',
+      },
+    });
+    expect(wrongKind.status()).toBe(400);
+
+    // Trên danh sách: cột hạn nói "Vĩnh viễn", không phải badge ngày.
+    await page.goto('/phan-mem');
+    await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
+    const row = page.getByRole('row', { name: new RegExp(code) });
+    await expect(row).toContainText('Vĩnh viễn');
+
+    // Và KHÔNG xuất hiện trong màn Sắp hết hạn dù cửa sổ nhìn tới 365 ngày.
+    const expiry = await page.request.get('/api/v1/expiry?withinDays=365');
+    const body = (await expiry.json()) as { items: { label: string }[] };
+    expect(body.items.some((entry) => entry.label.includes(code))).toBe(false);
   });
 });

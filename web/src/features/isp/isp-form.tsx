@@ -5,9 +5,10 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { Combobox } from '@/ui/combobox';
 import { DatePicker } from '@/ui/date-picker';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { Dialog } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { Select } from '@/ui/select';
+import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
 import type { CatalogLists } from '@/features/catalog/catalog-types';
 import type { DeviceRow } from '@/features/devices/device-types';
@@ -90,9 +91,24 @@ export function IspForm({
     setForm((current) => ({ ...current, [key]: value }));
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={800}>
-      <DialogTitle>{row ? `${t('isp.edit')} — ${row.code}` : t('isp.add')}</DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={800}
+      title={row ? `${t('isp.edit')} — ${row.code}` : t('isp.add')}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" form="isp-form" className="btn primary" disabled={save.isPending}>
+            {save.isPending ? t('common.loading') : t('common.save')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="isp-form"
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
@@ -135,13 +151,15 @@ export function IspForm({
               onChange={(e) => set('code', e.target.value)}
             />
           </Field>
-          <Field label={t('isp.provider')} required htmlFor="isp-provider">
-            <input
-              id="isp-provider"
-              className="inp"
-              required
+          <Field label={t('isp.provider')} required hint={t('isp.providerHint')}>
+            {/* Gợi ý từ danh mục Nhà mạng, nhưng VẪN gõ tự do được: nhà mạng mới ký hợp đồng
+                lúc 5 giờ chiều thì phải khai được ngay, không chờ ai mở danh mục ra thêm. */}
+            <SuggestInput
               value={form.provider}
-              onChange={(e) => set('provider', e.target.value)}
+              onChange={(value) => set('provider', value)}
+              options={(lists?.ispProviders ?? []).map((item) => item.name)}
+              placeholder={t('isp.providerPlaceholder')}
+              ariaLabel={t('isp.provider')}
             />
           </Field>
           <Field label={t('isp.bandwidth')} htmlFor="isp-bandwidth">
@@ -256,15 +274,6 @@ export function IspForm({
             {error}
           </p>
         ) : null}
-
-        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button type="submit" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );

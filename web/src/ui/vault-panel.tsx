@@ -5,7 +5,7 @@ import { errorCode, errorMessage, useApiMutation } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
 import { formatDateTime, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
@@ -257,11 +257,13 @@ export function VaultPanel({
                         <button
                           type="button"
                           className="btn sm danger"
+                          disabled={revoke.isPending}
                           onClick={() => {
                             void (async () => {
                               const ok = await askConfirm({
                                 message: t('vault.confirmRevoke', { label: secret.label }),
                                 danger: true,
+                                confirmLabel: t('vault.revoke'),
                               });
                               if (!ok) return;
                               revoke.mutate(
@@ -335,9 +337,15 @@ export function VaultPanel({
           ownerId={ownerId}
           csrfToken={me.csrfToken}
           onClose={() => setRequesting(false)}
-          onSent={() => {
+          onSent={({ askedHours, grantedHours }) => {
             setRequesting(false);
-            toast({ message: t('vault.requestSent') });
+            // Trần hệ thống có thể kẹp số giờ xuống thấp hơn số người dùng gõ — im lặng
+            // toast chung chung thì họ tưởng mình được đúng số giờ đã xin.
+            toast(
+              grantedHours !== askedHours
+                ? { message: t('vault.requestHoursClamped', { hours: grantedHours }), tone: 'warn' }
+                : { message: t('vault.requestSent') },
+            );
             void queryClient.invalidateQueries({ queryKey: ['vault', 'verdict'] });
           }}
         />
@@ -398,9 +406,24 @@ function SecretForm({
   );
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={560}>
-      <DialogTitle>{isEdit ? t('vault.edit') : t('vault.add')}</DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={560}
+      title={isEdit ? t('vault.edit') : t('vault.add')}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" form="secret-form" className="btn primary" disabled={save.isPending}>
+            {save.isPending ? t('common.loading') : t('common.save')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="secret-form"
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
@@ -501,15 +524,6 @@ function SecretForm({
             {error}
           </p>
         ) : null}
-
-        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button type="submit" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );
@@ -536,9 +550,24 @@ function RotateForm({
   );
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={480}>
-      <DialogTitle>{t('vault.rotateTitle', { label: secret.label })}</DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={480}
+      title={t('vault.rotateTitle', { label: secret.label })}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" form="rotate-form" className="btn primary" disabled={rotate.isPending}>
+            {rotate.isPending ? t('common.loading') : t('vault.rotate')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="rotate-form"
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
@@ -578,15 +607,6 @@ function RotateForm({
             {error}
           </p>
         ) : null}
-
-        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button type="submit" className="btn primary" disabled={rotate.isPending}>
-            {rotate.isPending ? t('common.loading') : t('vault.rotate')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );
@@ -600,6 +620,9 @@ function RotateForm({
  * KẸP theo nó — người xin gõ 72 thì được 24 và được nói rõ, chứ không bị từ chối rồi phải
  * đoán lại con số đúng.
  */
+/** Server đọc lại giới hạn — client chỉ cần khớp con số tối thiểu để không hỏi lại người dùng vô ích. */
+const REQUEST_REASON_MIN_LEN = 5;
+
 function BreakGlassDialog({
   ownerType,
   ownerId,
@@ -611,30 +634,56 @@ function BreakGlassDialog({
   ownerId: string;
   csrfToken: string;
   onClose: () => void;
-  onSent: () => void;
+  onSent: (info: { askedHours: number; grantedHours: number }) => void;
 }) {
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
   const [hours, setHours] = useState('4');
   const [error, setError] = useState<string | null>(null);
 
-  const send = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/break-glass', {
-    csrfToken,
-    refreshMe: false,
-  });
+  const send = useApiMutation<Record<string, unknown>, { hours: number }>(
+    '/api/v1/vault/break-glass',
+    { csrfToken, refreshMe: false },
+  );
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={480}>
-      <DialogTitle>{t('vault.requestTitle')}</DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={480}
+      title={t('vault.requestTitle')}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" form="break-glass-form" className="btn primary" disabled={send.isPending}>
+            {send.isPending ? t('common.loading') : t('vault.requestSend')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="break-glass-form"
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          const trimmedReason = reason.trim();
+          // `minLength` của trình duyệt báo lỗi bằng tiếng Anh — validate tay để dùng câu
+          // tiếng Việt đã có sẵn trong vi.ts (vault.requestReasonRequired).
+          if (trimmedReason.length < REQUEST_REASON_MIN_LEN) {
+            setError(t('vault.requestReasonRequired'));
+            return;
+          }
+          const askedHours = Number(hours) || 4;
           send.mutate(
-            { ownerType, ownerId, reason: reason.trim(), hours: Number(hours) || 4 },
-            { onSuccess: onSent, onError: (err) => setError(errorMessage(err)) },
+            { ownerType, ownerId, reason: trimmedReason, hours: askedHours },
+            {
+              onSuccess: (result) => onSent({ askedHours, grantedHours: result.hours }),
+              onError: (err) => setError(errorMessage(err)),
+            },
           );
         }}
       >
@@ -645,8 +694,6 @@ function BreakGlassDialog({
             id="bg-reason"
             className="inp"
             rows={2}
-            required
-            minLength={5}
             placeholder={t('vault.requestReasonPlaceholder')}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
@@ -669,15 +716,6 @@ function BreakGlassDialog({
             {error}
           </p>
         ) : null}
-
-        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button type="submit" className="btn primary" disabled={send.isPending}>
-            {send.isPending ? t('common.loading') : t('vault.requestSend')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );

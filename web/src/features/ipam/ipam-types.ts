@@ -6,6 +6,8 @@ export interface SubnetRow {
   cidr: string;
   siteId: string | null;
   siteCode: string | null;
+  /** Số VLAN 802.1Q (0029) — ở PMH người ta gọi dải theo VLAN chứ không theo CIDR. */
+  vlan: number | null;
   description: string | null;
   createdBy: string;
   createdAt: string;

@@ -1,10 +1,12 @@
 import { expect, test } from '@playwright/test';
 import {
+  confirmAction,
   E2E_MEMBER,
   E2E_SA,
-  SECOND_BROWSER,
   firstLogin,
   resetUsers,
+  SECOND_BROWSER,
+  writeHeaders,
 } from './helpers';
 
 test.beforeEach(() => resetUsers());
@@ -30,7 +32,8 @@ test.describe('Quản trị tài khoản', () => {
     const temp = await page.locator('.temp-password').innerText();
     expect(temp.trim().length).toBeGreaterThanOrEqual(12);
 
-    await page.getByRole('button', { name: 'Đóng' }).click();
+    // `exact`: nút ✕ của hộp thoại có nhãn "Đóng hộp thoại", đừng bắt nhầm nó.
+    await page.getByRole('button', { name: 'Đóng', exact: true }).click();
     await expect(page.getByText(unique)).toBeVisible();
   });
 
@@ -59,7 +62,9 @@ test.describe('Quản trị tài khoản', () => {
 
     const row = page.getByRole('row', { name: /E2E Thành viên/ });
     await row.getByRole('button', { name: 'Khóa' }).click();
-    await page.getByRole('button', { name: 'Đồng ý' }).click();
+    // Chốt luôn CHỮ trên nút: hộp hỏi "Khóa tài khoản X?" thì nút phải ghi "Khóa", không
+    // phải "Đồng ý" chung chung. Đây là chỗ duy nhất canh chữ — 15 chỗ còn lại bám vị trí.
+    await confirmAction(page, 'Khóa');
 
     await expect(row.getByText('Đang khóa')).toBeVisible();
     // Không được có toast lỗi kiểu "property id should not exist".
@@ -102,7 +107,7 @@ test.describe('Quản trị tài khoản', () => {
       await page.getByRole('link', { name: 'Tài khoản' }).click();
       const row = page.getByRole('row', { name: /E2E Thành viên/ });
       await row.getByRole('button', { name: 'Khóa' }).click();
-      await page.getByRole('button', { name: 'Đồng ý' }).click();
+      await confirmAction(page);
       await expect(row.getByText('Đang khóa')).toBeVisible();
 
       // `expect.poll` chứ không đọc một phát: thu hồi phiên đi qua DB, và response của lệnh
@@ -142,7 +147,7 @@ test.describe('Quản trị tài khoản', () => {
       const dialog = page.getByRole('dialog').filter({ hasText: 'Phiên đang mở' });
       await dialog.getByRole('button', { name: 'Đá phiên' }).first().click();
       // Đá phiên có hỏi lại ("Đá phiên đăng nhập này?") — không bấm Đồng ý thì chưa có gì xảy ra.
-      await page.getByRole('button', { name: 'Đồng ý' }).click();
+      await confirmAction(page);
 
       await expect
         .poll(async () => (await memberPage.request.get('/api/v1/auth/me')).status())
@@ -152,5 +157,53 @@ test.describe('Quản trị tài khoản', () => {
     } finally {
       await memberCtx.close();
     }
+  });
+
+  /**
+   * Sắp xếp PHẢI chạy ở server, không phải ở trang đang xem — cùng luật với danh sách thiết
+   * bị (devices.spec.ts, AD-15). Cũng kiểm cột "Hành động" không có nút sắp: nó không phải
+   * cột dữ liệu, không có gì để `ORDER BY`.
+   *
+   * Email tạo tài khoản đặt tiền tố `e2e-tao-moi-` để `dropAccountsCreatedByE2e` trong
+   * `resetUsers()` tự dọn — không cần script xóa riêng cho bài này.
+   */
+  test('sắp xếp theo cột chạy ở server, cột không sắp được thì không có nút', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const headers = await writeHeaders(page);
+
+    // Vai trò cố tình KHÔNG cùng thứ tự với họ tên: admin < member < sa theo bảng chữ cái,
+    // trong khi họ tên tăng dần là Alpha, Mike, Zulu — hai cách sắp phải ra hai kết quả khác.
+    for (const [suffix, fullName, role] of [
+      ['a', `E2E Sort Zulu ${stamp}`, 'admin'],
+      ['b', `E2E Sort Alpha ${stamp}`, 'sa'],
+      ['c', `E2E Sort Mike ${stamp}`, 'member'],
+    ] as const) {
+      await page.request.post('/api/v1/accounts', {
+        headers,
+        data: { email: `e2e-tao-moi-sort-${suffix}-${stamp}@pmh.com.vn`, fullName, role },
+      });
+    }
+
+    await page.goto('/');
+    await page.getByRole('link', { name: 'Tài khoản' }).click();
+    // Tìm bằng RIÊNG dấu thời gian: họ tên là "E2E Sort Zulu 123456" nên chuỗi
+    // "E2E Sort 123456" KHÔNG nằm trong đó — dấu thời gian thì có mặt ở cả tên lẫn email.
+    await page.getByRole('searchbox').fill(stamp);
+    await expect(page.getByRole('row')).toHaveCount(4); // 1 dòng tiêu đề + 3 tài khoản
+
+    const firstDataRow = () => page.getByRole('row').nth(1);
+    await expect(firstDataRow()).toContainText('Alpha'); // mặc định: theo họ tên tăng dần
+
+    // Bám vào ĐẦU BẢNG: ô tìm kiếm phía trên không chứa nút tên "Vai trò".
+    const head = page.locator('thead');
+    await head.getByRole('button', { name: 'Vai trò' }).click();
+    await expect(firstDataRow()).toContainText('Zulu'); // admin trước tiên
+
+    await head.getByRole('button', { name: 'Vai trò' }).click();
+    await expect(firstDataRow()).toContainText('Alpha'); // sa trước tiên (đảo chiều)
+
+    // Cột Hành động không có dữ liệu để sắp — không phải nút bấm được.
+    await expect(head.getByRole('button', { name: 'Hành động' })).toHaveCount(0);
   });
 });

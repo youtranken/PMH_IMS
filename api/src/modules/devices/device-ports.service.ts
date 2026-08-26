@@ -18,6 +18,7 @@ export interface PortInput {
   connectedLabel?: string | null;
   connectedPort?: string | null;
   usedBy?: string | null;
+  vlan?: string | null;
   note?: string | null;
 }
 
@@ -32,6 +33,11 @@ export interface PortRow {
   connectedLabel: string | null;
   connectedPort: string | null;
   usedBy: string | null;
+  /**
+   * VLAN của cổng — `text`, không phải số: "trunk" là giá trị có thật và hay gặp nhất trên
+   * cổng uplink. Ép kiểu số là ép bỏ trống ô cho cổng quan trọng nhất của con switch.
+   */
+  vlan: string | null;
   note: string | null;
 }
 
@@ -94,6 +100,7 @@ export class DevicePortsService {
         connectedLabel: row.port.connectedLabel,
         connectedPort: row.port.connectedPort,
         usedBy: row.port.usedBy,
+        vlan: row.port.vlan,
         note: row.port.note,
       })),
       incoming: incoming.map((row) => ({
@@ -207,7 +214,7 @@ export class DevicePortsService {
       }
       values.connectedDeviceId = peerId;
     }
-    for (const key of ['connectedLabel', 'connectedPort', 'usedBy', 'note'] as const) {
+    for (const key of ['connectedLabel', 'connectedPort', 'usedBy', 'vlan', 'note'] as const) {
       if (input[key] !== undefined) {
         const text = input[key]?.trim();
         values[key] = text ? text : null;

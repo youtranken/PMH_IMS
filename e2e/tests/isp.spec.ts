@@ -164,4 +164,49 @@ test.describe('Đường truyền ISP', () => {
     await expect(page.getByText('Chưa có giấy tờ nào.')).toBeVisible();
     await expect(page.getByLabel('Chọn file để đính kèm')).toBeVisible();
   });
+
+  /**
+   * Sắp xếp PHẢI chạy ở server, không phải ở trang đang xem.
+   *
+   * Bài kiểm dựng 3 đường ISP rồi lọc còn đúng 3 dòng, bấm tiêu đề cột Nhà mạng và đọc lại
+   * thứ tự. Quan trọng hơn: kiểm luôn cột Site KHÔNG có nút bấm — sắp theo site đòi join
+   * sang bảng của module danh mục, vi phạm AD-2.
+   */
+  test('sắp xếp theo cột chạy ở server, cột Site không sắp được thì không có nút', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    for (const [suffix, provider] of [
+      ['A', 'Zulu Telecom cuối bảng'],
+      ['B', 'Alpha Telecom đầu bảng'],
+      ['C', 'Mike Telecom giữa bảng'],
+    ]) {
+      const created = await createLine(page, {
+        code: `ISP-SORT-E2E-${stamp}-${suffix}`,
+        provider,
+      });
+      expect(created.status).toBe(201);
+    }
+
+    await page.goto('/duong-truyen');
+    await page
+      .getByRole('searchbox', { name: 'Tìm theo mã, nhà mạng, IP WAN hoặc số hợp đồng' })
+      .fill(`ISP-SORT-E2E-${stamp}`);
+    await expect(page.getByRole('row')).toHaveCount(4); // 1 dòng tiêu đề + 3 đường
+
+    const firstDataRow = () => page.getByRole('row').nth(1);
+    await expect(firstDataRow()).toContainText(`ISP-SORT-E2E-${stamp}-A`); // mặc định: theo mã tăng
+
+    // Phải bám vào ĐẦU BẢNG: ngoài kia thanh lọc cũng có nút tên "Site".
+    const head = page.locator('thead');
+    await head.getByRole('button', { name: 'Nhà mạng' }).click();
+    await expect(firstDataRow()).toContainText('Alpha Telecom đầu bảng');
+
+    await head.getByRole('button', { name: 'Nhà mạng' }).click();
+    await expect(firstDataRow()).toContainText('Zulu Telecom cuối bảng');
+
+    // Cột dựa vào danh mục: hiện chữ, nhưng KHÔNG phải nút bấm được.
+    await expect(head.getByRole('button', { name: 'Site' })).toHaveCount(0);
+  });
 });

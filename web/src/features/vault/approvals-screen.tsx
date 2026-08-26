@@ -6,7 +6,7 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDateTime, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { Dialog } from '@/ui/dialog';
 import { EmptyState, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
 import { TabPanel, Tabs } from '@/ui/tabs';
@@ -218,6 +218,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                     <button
                       type="button"
                       className="btn sm danger"
+                      disabled={revoke.isPending}
                       onClick={() =>
                         revoke.mutate(
                           { id: row.id },
@@ -290,13 +291,33 @@ function DecisionDialog({
   );
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={460}>
-      <DialogTitle>
-        {t(approve ? 'approvals.approveTitle' : 'approvals.denyTitle', {
-          member: row.requester,
-        })}
-      </DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={460}
+      title={t(approve ? 'approvals.approveTitle' : 'approvals.denyTitle', {
+        member: row.requester,
+      })}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="submit"
+            form="decision-form"
+            className={approve ? 'btn primary' : 'btn danger'}
+            disabled={decide.isPending}
+          >
+            {decide.isPending
+              ? t('common.loading')
+              : t(approve ? 'approvals.approve' : 'approvals.deny')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="decision-form"
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
@@ -342,21 +363,6 @@ function DecisionDialog({
             {error}
           </p>
         ) : null}
-
-        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button
-            type="submit"
-            className={`btn primary${approve ? '' : ' danger'}`}
-            disabled={decide.isPending}
-          >
-            {decide.isPending
-              ? t('common.loading')
-              : t(approve ? 'approvals.approve' : 'approvals.deny')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /** Kết quả đối chiếu một dòng file import — khớp `ImportRow` phía API. */
 export interface ImportPreviewRow {
@@ -49,6 +50,7 @@ export function ImportPreview({
   rows: ImportPreviewRow[];
   summary: ImportPreviewSummary;
 }) {
+  const { t } = useTranslation();
   const noisy = summary.unchanged + summary.skip;
   const [showAll, setShowAll] = useState(noisy === 0);
   const visible = showAll
@@ -75,11 +77,11 @@ export function ImportPreview({
         <table className="table">
           <thead>
             <tr>
-              <th>Mục</th>
-              <th>Dòng</th>
-              <th>Nội dung</th>
-              <th>Kết quả</th>
-              <th>Ghi chú</th>
+              <th>{t('importPreview.item')}</th>
+              <th>{t('importPreview.row')}</th>
+              <th>{t('importPreview.content')}</th>
+              <th>{t('importPreview.result')}</th>
+              <th>{t('importPreview.note')}</th>
             </tr>
           </thead>
           <tbody>

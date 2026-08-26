@@ -1,4 +1,5 @@
 import {
+  bigint,
   customType,
   date,
   integer,
@@ -23,6 +24,8 @@ export const softwareTable = pgTable('software', {
   code: citext('code').notNull(),
   name: text('name').notNull(),
   kind: text('kind').notNull(),
+  /** 'subscription' | 'perpetual' — chỉ có nghĩa với kind='license' (0026). */
+  licenseModel: text('license_model').notNull().default('subscription'),
   vendorId: uuid('vendor_id'),
   seatTotal: integer('seat_total'),
   startDate: date('start_date'),
@@ -60,6 +63,14 @@ export const licenseAssignmentTable = pgTable('license_assignment', {
   releasedAt: timestamp('released_at', { withTimezone: true }),
   overSeatReason: text('over_seat_reason'),
   note: text('note'),
+  /**
+   * Kỳ hạn + chi phí RIÊNG của từng ghế (0027). Một license 10 ghế thường gồm nhiều đợt mua,
+   * mỗi đợt một hợp đồng, một giá, một kỳ — nhét vào hồ sơ chung là mất hết thông tin đó.
+   */
+  cost: bigint('cost', { mode: 'number' }),
+  contract: text('contract'),
+  startDate: date('start_date'),
+  endDate: date('end_date'),
 });
 
 /**

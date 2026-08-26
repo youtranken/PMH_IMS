@@ -2,7 +2,13 @@ import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, firstLogin, resetDevices, resetUsers } from './helpers';
+import {
+  confirmAction,
+  E2E_SA,
+  firstLogin,
+  resetDevices,
+  resetUsers,
+} from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -58,7 +64,7 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
     expect(download.suggestedFilename()).toBe(`hoa-don-${stamp}.pdf`);
 
     await row.getByRole('button', { name: 'Xóa' }).click();
-    await page.getByRole('button', { name: 'Đồng ý' }).click();
+    await confirmAction(page);
     await expect(page.getByText('Chưa có giấy tờ nào.')).toBeVisible();
   });
 
@@ -133,7 +139,7 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
       .getByRole('row', { name: new RegExp(`xoa-${stamp}`) })
       .getByRole('button', { name: 'Xóa' })
       .click();
-    await page.getByRole('button', { name: 'Đồng ý' }).click();
+    await confirmAction(page);
     await expect(page.getByText('Chưa có giấy tờ nào.')).toBeVisible();
 
     const response = await page.request.get(`/api/v1/files/${fileId}/download`);

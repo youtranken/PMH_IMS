@@ -44,7 +44,7 @@ export function TotpEnroll() {
           <img
             className="totp-qr"
             src={enroll.qrDataUrl}
-            alt="Mã QR cài xác thực 2 lớp"
+            alt={t('auth.enrollQrAlt')}
             width={200}
             height={200}
           />

@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  confirmAction,
   E2E_MEMBER,
   E2E_SA,
   firstLogin,
@@ -52,7 +53,7 @@ test.describe('Ma trận quyền két sắt', () => {
     await expect(card.getByText('Cần duyệt')).toBeVisible();
 
     await card.getByRole('button', { name: 'Gỡ' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Đồng ý' }).click();
+    await confirmAction(page);
     await expect(card.getByText('Chưa gán quyền nào')).toBeVisible();
   });
 

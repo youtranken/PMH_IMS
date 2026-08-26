@@ -7,7 +7,7 @@
  * và cứ thế port nằm mở mãi.
  */
 
-import { parseAddress } from './ip-rules';
+import { hostRole } from './ip-rules';
 
 const MIN_PORT = 1;
 const MAX_PORT = 65535;
@@ -81,8 +81,21 @@ export function validateNatRule(draft: NatRuleDraft): NatRuleCheck {
   if (!draft.reason.trim()) {
     errors.push('Ghi rõ vì sao phải mở port này. Không có lý do thì sau này không ai dám đóng.');
   }
-  if (!parseAddress(draft.internalIp).ok) {
+  /**
+   * IP trong phải là một MÁY, không phải địa chỉ mạng hay địa chỉ quảng bá.
+   *
+   * Hai nhánh nối tiếp chứ không song song: chuỗi sai định dạng thì `hostRole` trả `null`, và
+   * báo thêm "đây là địa chỉ mạng" lúc đó là báo chồng một điều chưa biết đúng hay sai.
+   */
+  const role = hostRole(draft.internalIp);
+  if (role === null) {
     errors.push('IP trong phải là địa chỉ IPv4 hợp lệ, vd 172.16.10.5.');
+  } else if (role !== 'host') {
+    errors.push(
+      role === 'network'
+        ? `${draft.internalIp} là ĐỊA CHỈ MẠNG của dải, không phải một máy — gói tin chuyển tới đó không tới đâu cả. Nhập IP thật của máy, vd 172.16.10.5.`
+        : `${draft.internalIp} là ĐỊA CHỈ QUẢNG BÁ của dải, không phải một máy. Nhập IP thật của máy, vd 172.16.10.5.`,
+    );
   }
   if (!inPortRange(draft.internalPort)) {
     errors.push(`Port trong phải từ ${MIN_PORT} đến ${MAX_PORT}.`);

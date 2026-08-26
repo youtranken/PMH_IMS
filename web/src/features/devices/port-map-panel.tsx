@@ -6,9 +6,11 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { orDash } from '@/lib/format';
 import { Combobox } from '@/ui/combobox';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
+import { SuggestInput } from '@/ui/suggest-input';
+import { useDepartments } from '@/features/ipam/use-departments';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import type { DeviceRow } from './device-types';
@@ -22,6 +24,8 @@ export interface PortRow {
   connectedLabel: string | null;
   connectedPort: string | null;
   usedBy: string | null;
+  /** VLAN của cổng (0029) — text vì "trunk" là giá trị có thật trên uplink. */
+  vlan: string | null;
   note: string | null;
 }
 
@@ -106,6 +110,7 @@ export function PortMapPanel({
                     <th>{t('ports.connectedTo')}</th>
                     <th>{t('ports.peerPort')}</th>
                     <th>{t('ports.usedBy')}</th>
+                    <th>{t('ports.vlan')}</th>
                     <th>{t('ports.note')}</th>
                     {canEdit ? <th className="col-center">{t('common.actions')}</th> : null}
                   </tr>
@@ -132,6 +137,9 @@ export function PortMapPanel({
                         {orDash(port.connectedPort)}
                       </td>
                       <td data-label={t('ports.usedBy')}>{orDash(port.usedBy)}</td>
+                      <td data-label={t('ports.vlan')} className="mono">
+                        {orDash(port.vlan)}
+                      </td>
                       <td data-label={t('ports.note')}>{orDash(port.note)}</td>
                       {canEdit ? (
                         <td>
@@ -146,11 +154,13 @@ export function PortMapPanel({
                             <button
                               type="button"
                               className="btn sm danger"
+                              disabled={remove.isPending}
                               onClick={() => {
                                 void (async () => {
                                   const ok = await askConfirm({
                                     message: t('ports.confirmRemove', { port: port.portLabel }),
                                     danger: true,
+                                    confirmLabel: t('ports.remove'),
                                   });
                                   if (!ok) return;
                                   remove.mutate(
@@ -262,6 +272,8 @@ function PortForm({
   const [connectedLabel, setConnectedLabel] = useState(port?.connectedLabel ?? '');
   const [connectedPort, setConnectedPort] = useState(port?.connectedPort ?? '');
   const [usedBy, setUsedBy] = useState(port?.usedBy ?? '');
+  const [vlan, setVlan] = useState(port?.vlan ?? '');
+  const departments = useDepartments();
   const [note, setNote] = useState(port?.note ?? '');
   const [error, setError] = useState<string | null>(null);
 
@@ -288,9 +300,24 @@ function PortForm({
   );
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={620}>
-      <DialogTitle>{port ? t('ports.edit') : t('ports.add')}</DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={620}
+      title={port ? t('ports.edit') : t('ports.add')}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" form="port-form" className="btn primary" disabled={save.isPending}>
+            {save.isPending ? t('common.loading') : t('common.save')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="port-form"
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
@@ -309,6 +336,7 @@ function PortForm({
               connectedLabel: peer ? '' : connectedLabel.trim(),
               connectedPort: connectedPort.trim(),
               usedBy: usedBy.trim(),
+              vlan: vlan.trim(),
               note: note.trim(),
             },
             {
@@ -331,6 +359,10 @@ function PortForm({
         <Field label={t('ports.peerDevice')} hint={t('ports.peerDeviceHint')}>
           <Combobox
             placeholder={t('ports.peerSearch')}
+            /* Tên trợ năng tường minh: form này giờ có HAI combobox (thiết bị đầu kia và ô
+               "ai dùng" gợi ý theo danh mục Bộ phận). Không đặt tên thì cả người dùng trình
+               đọc màn hình lẫn bài kiểm đều không phân biệt được hai ô. */
+            ariaLabel={t('ports.peerDevice')}
             query={query}
             onQuery={(value) => {
               setQuery(value);
@@ -370,12 +402,25 @@ function PortForm({
             onChange={(e) => setConnectedPort(e.target.value)}
           />
         </Field>
-        <Field label={t('ports.usedBy')} htmlFor="port-used-by">
+        <Field label={t('ports.vlan')} hint={t('ports.vlanHint')} htmlFor="port-vlan">
           <input
-            id="port-used-by"
-            className="inp"
+            id="port-vlan"
+            className="inp mono"
+            placeholder="20"
+            value={vlan}
+            onChange={(e) => setVlan(e.target.value)}
+          />
+        </Field>
+
+        <Field label={t('ports.usedBy')}>
+          {/* Cùng danh mục Bộ phận với ô "ai đang dùng" của hồ sơ IP và của sổ NAT — ba chỗ
+              trả lời cùng một câu, viết lệch nhau thì tra chéo không ra. */}
+          <SuggestInput
             value={usedBy}
-            onChange={(e) => setUsedBy(e.target.value)}
+            onChange={setUsedBy}
+            options={departments}
+            placeholder={t('ports.usedByPlaceholder')}
+            ariaLabel={t('ports.usedBy')}
           />
         </Field>
         <Field label={t('ports.note')} htmlFor="port-note">
@@ -392,15 +437,6 @@ function PortForm({
             {error}
           </p>
         ) : null}
-
-        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button type="submit" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );

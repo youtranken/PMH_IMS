@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   flexRender,
   getCoreRowModel,
@@ -89,6 +90,7 @@ export function DataTable<T>({
   selection,
   rowNumberOffset,
 }: DataTableProps<T>) {
+  const { t } = useTranslation();
   const [internalSort, setInternalSort] = useState<SortingState>(initialSort);
   const [globalFilter, setGlobalFilter] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -154,7 +156,7 @@ export function DataTable<T>({
                   <th style={{ width: 34 }}>
                     <input
                       type="checkbox"
-                      aria-label="Chọn tất cả"
+                      aria-label={t('dataTable.selectAll')}
                       checked={
                         rows.length > 0 &&
                         rows.every((r) => selection.selected.has(r.id))
@@ -198,6 +200,15 @@ export function DataTable<T>({
                         <button
                           type="button"
                           className="th-sort"
+                          /* Tên gọi phải NÓI RÕ đây là nút sắp xếp. Nếu chỉ để nguyên tên cột,
+                             màn nào có ô lọc trùng tên cột (vd "Loại" ở Phần mềm) sẽ có hai nút
+                             cùng tên với hai nghĩa khác nhau — người dùng trình đọc màn hình
+                             nghe "Loại, nút" hai lần mà không biết cái nào làm gì. */
+                          aria-label={
+                            typeof h.column.columnDef.header === 'string'
+                              ? t('common.sortBy', { column: h.column.columnDef.header })
+                              : undefined
+                          }
                           onClick={h.column.getToggleSortingHandler()}
                         >
                           {flexRender(h.column.columnDef.header, h.getContext())}
@@ -262,7 +273,7 @@ export function DataTable<T>({
                         >
                           <input
                             type="checkbox"
-                            aria-label="Chọn dòng"
+                            aria-label={t('dataTable.selectRow')}
                             checked={selection.selected.has(row.id)}
                             onChange={() => selection.onToggle(row.id)}
                           />
@@ -275,6 +286,30 @@ export function DataTable<T>({
                               {rowNumberOffset + rowIndex + 1}
                             </span>
                           )}
+                          {/* Mũi tên bung dòng do BẢNG vẽ, không bắt mỗi màn tự dựng lại
+                              trong ô đầu (nếp cũ của QLTS) — cột này vốn đã được chừa sẵn.
+                              Chỉ vẽ khi dòng thật sự bung được: mũi tên bấm ra rỗng cũng là
+                              một kiểu hứa hão. */}
+                          {rowCanExpand ? (
+                            <button
+                              type="button"
+                              className="caret-btn"
+                              aria-expanded={expanded}
+                              aria-label={t(expanded ? 'common.collapseRow' : 'common.expandRow')}
+                              onClick={(event) => {
+                                // Không để lan lên `onRowClick` (mở trang chi tiết).
+                                event.stopPropagation();
+                                setExpandedId((cur) => (cur === row.id ? null : row.id));
+                              }}
+                            >
+                              <span
+                                className={`cell-caret${expanded ? ' open' : ''}`}
+                                aria-hidden="true"
+                              >
+                                ›
+                              </span>
+                            </button>
+                          ) : null}
                         </td>
                       )}
                       {row.getVisibleCells().map((cell) => {

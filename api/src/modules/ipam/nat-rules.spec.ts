@@ -81,6 +81,35 @@ describe('validateNatRule — luật nghiệp vụ của một dòng sổ NAT (F
     expect(validateNatRule({ ...base, internalIp: 'fe80::1' }).errors.length).toBe(1);
   });
 
+  /**
+   * Địa chỉ mạng và địa chỉ quảng bá KHÔNG phải máy nào cả.
+   *
+   * Trước đây form chỉ hỏi "có phải IPv4 hợp lệ không", nên `172.16.0.0` khai được và cuốn
+   * sổ có một dòng dẫn tới hư không: gói tin chuyển tới đó không tới máy nào, còn người đọc
+   * sổ thì tin rằng port ấy đang phục vụ một dịch vụ thật.
+   */
+  it.each([
+    ['172.16.0.0', 'địa chỉ mạng'],
+    ['172.16.10.0', 'địa chỉ mạng'],
+    ['172.16.10.255', 'địa chỉ quảng bá'],
+  ])('IP trong = %s bị từ chối (%s)', (internalIp) => {
+    const errors = validateNatRule({ ...base, internalIp }).errors;
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatch(/địa chỉ (mạng|quảng bá)/i);
+  });
+
+  it.each([['172.16.10.1'], ['172.16.10.128'], ['172.16.10.254']])(
+    'IP trong = %s vẫn khai được bình thường',
+    (internalIp) => {
+      expect(validateNatRule({ ...base, internalIp }).errors).toEqual([]);
+    },
+  );
+
+  /** Sai định dạng báo MỘT lỗi định dạng, không kèm thêm lỗi "địa chỉ mạng" vô nghĩa. */
+  it('IP sai định dạng chỉ báo lỗi định dạng, không báo chồng', () => {
+    expect(validateNatRule({ ...base, internalIp: '172.16.10.999' }).errors).toHaveLength(1);
+  });
+
   it('port trong phải trong khoảng 1–65535', () => {
     expect(validateNatRule({ ...base, internalPort: 0 }).errors.length).toBe(1);
     expect(validateNatRule({ ...base, internalPort: 70000 }).errors.length).toBe(1);

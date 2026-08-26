@@ -1,10 +1,11 @@
-import type { SoftwareKind, SoftwareStatus } from './software-rules';
+import type { LicenseModel, SoftwareKind, SoftwareStatus } from './software-rules';
 
 export interface SoftwareRecord {
   id: string;
   code: string;
   name: string;
   kind: SoftwareKind;
+  licenseModel: LicenseModel;
   vendorId: string | null;
   seatTotal: number | null;
   startDate: string | null;
@@ -34,6 +35,7 @@ export interface SoftwareHistoryRecord {
 export interface SoftwareFilter {
   search?: string;
   kind?: SoftwareKind;
+  licenseModel?: LicenseModel;
   status?: SoftwareStatus;
   vendorId?: string;
 }

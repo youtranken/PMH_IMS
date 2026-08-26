@@ -12,7 +12,11 @@ import {
   type ParsedRow,
   type ParsedSheets,
 } from '../../common/import-plan';
-import { CATALOG_ENTITIES, type CatalogEntity, type CatalogSnapshot } from './catalog.types';
+import {
+  IMPORTABLE_ENTITIES,
+  type CatalogSnapshot,
+  type ImportableEntity,
+} from './catalog.types';
 
 // Kiểu dùng chung của mọi màn import (AD-15) — export lại để nơi gọi chỉ cần một chỗ import.
 export type { ImportAction, ImportSummary, ParsedRow, ParsedSheets };
@@ -59,7 +63,7 @@ export type CatalogValues =
   | VendorValues;
 
 export interface ImportRow {
-  sheet: CatalogEntity;
+  sheet: ImportableEntity;
   rowNumber: number;
   action: ImportAction;
   /** Nhãn hiện ở bảng đối chiếu: mã site / "PMH-HO · R01" / tên loại / tên NCC. */
@@ -81,7 +85,7 @@ export interface ImportPlan {
  * Tên sheet → loại mục. Chấp nhận cả bản có dấu lẫn không dấu vì người dùng có thể
  * đổi tên sheet khi sao chép file.
  */
-const SHEET_ALIASES: Record<string, CatalogEntity> = {
+const SHEET_ALIASES: Record<string, ImportableEntity> = {
   site: 'site',
   'danh sách site': 'site',
   'tủ mạng': 'cabinet',
@@ -107,7 +111,7 @@ interface FieldSpec {
   kind?: 'text' | 'boolean' | 'integer';
 }
 
-const FIELDS: Record<CatalogEntity, FieldSpec[]> = {
+const FIELDS: Record<ImportableEntity, FieldSpec[]> = {
   site: [
     { key: 'code', label: 'Mã site', aliases: ['mã site', 'ma site', 'mã'], required: true },
     { key: 'name', label: 'Tên site', aliases: ['tên site', 'ten site', 'tên'], required: true },
@@ -175,7 +179,7 @@ export function planCatalogImport(
   sheets: ParsedSheets,
   snapshot: CatalogSnapshot,
 ): ImportPlan {
-  const bySheet = new Map<CatalogEntity, ParsedRow[]>();
+  const bySheet = new Map<ImportableEntity, ParsedRow[]>();
   for (const [name, rows] of Object.entries(sheets)) {
     const entity = SHEET_ALIASES[normalizeHeader(name)];
     if (!entity) continue;
@@ -184,14 +188,14 @@ export function planCatalogImport(
 
   const rows: ImportRow[] = [];
   // Khóa đã gặp trong CHÍNH file này — chặn trùng nội bộ và cho tủ dùng site vừa khai.
-  const seen: Record<CatalogEntity, Set<string>> = {
+  const seen: Record<ImportableEntity, Set<string>> = {
     site: new Set(),
     cabinet: new Set(),
     device_type: new Set(),
     vendor: new Set(),
   };
 
-  for (const entity of CATALOG_ENTITIES) {
+  for (const entity of IMPORTABLE_ENTITIES) {
     for (const row of bySheet.get(entity) ?? []) {
       if (isBlankRow(row.cells)) continue;
       rows.push(planRow(entity, row, snapshot, seen));
@@ -206,10 +210,10 @@ export function planCatalogImport(
 }
 
 function planRow(
-  entity: CatalogEntity,
+  entity: ImportableEntity,
   row: ParsedRow,
   snapshot: CatalogSnapshot,
-  seen: Record<CatalogEntity, Set<string>>,
+  seen: Record<ImportableEntity, Set<string>>,
 ): ImportRow {
   const base = { sheet: entity, rowNumber: row.rowNumber };
 
@@ -296,10 +300,10 @@ function planRow(
 }
 
 function planCabinetRow(
-  base: { sheet: CatalogEntity; rowNumber: number },
+  base: { sheet: ImportableEntity; rowNumber: number },
   values: Record<string, string | number | boolean | null>,
   snapshot: CatalogSnapshot,
-  seen: Record<CatalogEntity, Set<string>>,
+  seen: Record<ImportableEntity, Set<string>>,
 ): ImportRow {
   const siteCode = String(values.siteCode);
   const siteKey = normalizeKey(siteCode);
@@ -348,7 +352,7 @@ function planCabinetRow(
 
 /** Đã có trong hệ thống chưa → thêm mới / cập nhật / không đổi. */
 function decide(
-  base: { sheet: CatalogEntity; rowNumber: number },
+  base: { sheet: ImportableEntity; rowNumber: number },
   label: string,
   values: CatalogValues,
   existing?: { id: string } & Record<string, unknown>,
@@ -380,7 +384,7 @@ function decide(
 }
 
 function existingOf(
-  entity: CatalogEntity,
+  entity: ImportableEntity,
   key: string,
   snapshot: CatalogSnapshot,
 ): ({ id: string } & Record<string, unknown>) | undefined {
@@ -396,7 +400,7 @@ function existingOf(
 }
 
 /** Nhãn cho dòng chưa đọc được giá trị hợp lệ — cố lấy ô đầu tiên có chữ. */
-function rawLabel(entity: CatalogEntity, cells: Record<string, string>): string {
+function rawLabel(entity: ImportableEntity, cells: Record<string, string>): string {
   const first = FIELDS[entity][0];
   const value = cellText(pickCell(cells, first.aliases));
   if (value) return value;

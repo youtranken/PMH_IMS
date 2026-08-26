@@ -161,7 +161,22 @@ test.describe('Bảng điều khiển', () => {
     await firstLogin(page, E2E_SA);
     await page.goto('/');
     await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
-    await expect(page.getByText('Không có gì hết hạn trong 30 ngày tới.')).toBeVisible();
+
+    /**
+     * Khối "Sắp hết hạn" chỉ kiểm là DỰNG ĐƯỢC, không kiểm là rỗng.
+     *
+     * Các hàm reset chỉ xóa dữ liệu mang dấu "E2E" — cố ý như vậy để bài kiểm không bao giờ
+     * chạm vào dữ liệu thật trong stack dev. Hệ quả: một hồ sơ ai đó gõ tay lúc bấm thử giao
+     * diện, nếu hạn rơi vào 30 ngày tới, sẽ làm khối này có dữ liệu. Bắt nó phải rỗng là bắt
+     * cả cái DB dev phải sạch — điều kiện không đời nào giữ được, và khi vỡ thì báo sai chỗ.
+     */
+    await expect(page.getByRole('heading', { name: 'Sắp hết hạn' })).toBeVisible();
+    await expect(
+      page.getByText('Không tải được khối này. Các khối còn lại vẫn đúng.'),
+    ).toHaveCount(0);
+
+    // Hai khối này thì reset kiểm soát được TRỌN VẸN, nên vẫn bắt đúng chữ trạng thái rỗng —
+    // đó là chỗ thật sự kiểm được nhánh "không có dữ liệu" của BlockCard.
     await expect(page.getByText('Tuần qua không ai xin quyền xem tạm thời.')).toBeVisible();
   });
 });

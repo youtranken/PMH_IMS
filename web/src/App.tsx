@@ -20,8 +20,7 @@ import { DashboardScreen } from '@/features/dashboard/dashboard-screen';
 import { AccessMatrixScreen } from '@/features/vault/access-matrix-screen';
 import { ApprovalsScreen } from '@/features/vault/approvals-screen';
 import { NatScreen } from '@/features/ipam/nat-screen';
-import { SubnetDetail } from '@/features/ipam/subnet-detail';
-import { SubnetsScreen } from '@/features/ipam/subnets-screen';
+import { IpamScreen } from '@/features/ipam/ipam-screen';
 import { IspDetail } from '@/features/isp/isp-detail';
 import { IspScreen } from '@/features/isp/isp-screen';
 import { SoftwareDetail } from '@/features/software/software-detail';
@@ -98,8 +97,10 @@ function AppRoutes() {
         <Route path="/duong-truyen" element={<IspScreen me={me} />} />
         <Route path="/duong-truyen/:id" element={<IspDetail me={me} />} />
         <Route path="/sap-het-han" element={<ExpiryScreen me={me} />} />
-        <Route path="/dia-chi-ip" element={<SubnetsScreen me={me} />} />
-        <Route path="/dia-chi-ip/:id" element={<SubnetDetail me={me} />} />
+        {/* Một màn cho cả hai đường dẫn: `/dia-chi-ip` mở sẵn dải đầu, `/dia-chi-ip/:id` mở
+            đúng dải đó — link cũ vẫn dùng được, mỗi dải vẫn có địa chỉ riêng để gửi cho nhau. */}
+        <Route path="/dia-chi-ip" element={<IpamScreen me={me} />} />
+        <Route path="/dia-chi-ip/:id" element={<IpamScreen me={me} />} />
         <Route path="/so-nat" element={<NatScreen me={me} />} />
         {/* Bộ giao diện là trang nội bộ: member/admin vào thẳng URL cũng chỉ nhận 404. */}
         {me.role === 'sa' ? (

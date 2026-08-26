@@ -109,7 +109,7 @@
   gap: var(--space-2);
   padding: var(--space-3);
   background: var(--grad);
-  color: var(--on-accent);
+  color: var(--on-brand);
 }
 .dp-nav {
   width: 1.9rem;
@@ -118,10 +118,11 @@
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  color: var(--on-accent);
-  /* Nền TỐI mờ (không phải trắng): mũi tên trắng nổi rõ ở CẢ đầu cam sáng lẫn đầu xanh của
-     gradient header — trước dùng nền trắng mờ nên ‹ phía cam bị "trắng trên sáng" khó thấy. */
-  background: rgba(0, 0, 0, 0.24);
+  /* Đi theo chữ tiêu đề tháng (--on-brand): cả header giờ dùng chữ tối trên gradient, nên
+     nút mũi tên phải là mực tối trên nền SÁNG mờ — giữ nền tối cũ sẽ thành hai kiểu tương
+     phản ngược nhau nằm cạnh nhau trong cùng một dải header. */
+  color: var(--on-brand);
+  background: rgba(255, 255, 255, 0.28);
   display: grid;
   place-items: center;
   line-height: 1;
@@ -147,7 +148,7 @@
   flex: 1;
   border: none;
   background: transparent;
-  color: var(--on-accent);
+  color: var(--on-brand);
   font: inherit;
   font-weight: 800;
   cursor: pointer;
@@ -218,7 +219,7 @@
 }
 .dp-cell.sel {
   background: var(--grad);
-  color: var(--on-accent);
+  color: var(--on-brand);
   font-weight: 800;
 }
 .dp-cell:focus-visible {

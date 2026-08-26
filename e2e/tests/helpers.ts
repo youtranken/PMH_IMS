@@ -245,6 +245,11 @@ export function resetCatalog(): void {
     "DELETE FROM site WHERE code LIKE 'E2E-%'",
     "DELETE FROM vendor WHERE name LIKE 'E2E-%'",
     "DELETE FROM device_type WHERE name LIKE 'E2E-%'",
+    // Ba danh mục của 0028. Khớp '%E2E%' ở GIỮA chuỗi chứ không chỉ tiền tố: tên do người
+    // dùng đặt (vd "Cong E2E 1234") nên không có quy ước mã đứng đầu như site/NCC.
+    "DELETE FROM service_port WHERE name ILIKE '%E2E%'",
+    "DELETE FROM department WHERE name ILIKE '%E2E%'",
+    "DELETE FROM isp_provider WHERE name ILIKE '%E2E%'",
   ].join('; ');
   execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -c "${sql}"`, {
     cwd: '..',
@@ -453,6 +458,50 @@ export const SECOND_BROWSER = {
  * ngưỡng `+1` nằm bên trong. Cùng một cái tên, hai ý nghĩa khác nhau, không có gì báo.
  * Đúng lý do AD-15 cấm bản sao: bản sao không sai lúc chép, nó sai dần về sau.
  */
+/**
+ * Bấm nút XÁC NHẬN trong hộp hỏi lại (`ConfirmDialog`).
+ *
+ * Không bám vào chữ trên nút: nhãn giờ là ĐỘNG TỪ của hành động ("Khoá", "Xoá", "Gỡ"…) chứ
+ * không còn là "Đồng ý" chung chung — đó là chủ đích, vì hộp hỏi "Khoá tài khoản A?" mà nút
+ * ghi "Đồng ý" thì người dùng phải đọc lại câu hỏi mới biết mình sắp làm gì. Bám vào vị trí
+ * (nút cuối trong chân hộp, sau nút Hủy — thứ tự nhất quán toàn app) để đổi câu chữ không
+ * làm đỏ 16 bài kiểm.
+ *
+ * Truyền `label` khi bài kiểm CỐ TÌNH muốn chốt đúng chữ trên nút.
+ */
+export async function confirmAction(page: Page, label?: string): Promise<void> {
+  const footer = page.locator('.sheet-footer').last();
+  if (label) {
+    await footer.getByRole('button', { name: label }).click();
+    return;
+  }
+  await footer.getByRole('button').last().click();
+}
+
+/**
+ * Đăng xuất qua giao diện, dùng được ở CẢ desktop lẫn 390px.
+ *
+ * Nút "Đăng xuất" nằm ở chân sidebar — mà ở màn hẹp sidebar là drawer đang đóng. Bản chép
+ * trong từng spec chỉ bấm thẳng nút nên treo 60 giây ở 390px; gom về đây theo AD-15.
+ */
+export async function logout(page: Page): Promise<void> {
+  await page.goto('/');
+  await expect(page.locator('header.topbar')).toBeVisible();
+  const openNav = page.getByRole('button', { name: 'Mở menu' });
+  if (await openNav.count()) await openNav.click();
+  await page.getByRole('button', { name: 'Đăng xuất' }).click();
+}
+
+/**
+ * Mở drawer điều hướng ở viewport hẹp (≤900px).
+ *
+ * Ở 390px sidebar KHÔNG nằm sẵn trong DOM (nó ăn 60% bề ngang điện thoại), nên muốn bấm một
+ * mục nav thì phải mở drawer trước. Để ở đây thay vì chép vào từng `*.mobile.spec.ts` — AD-15.
+ */
+export async function openNavDrawer(page: Page): Promise<void> {
+  await page.getByRole('button', { name: 'Mở menu' }).click();
+}
+
 export function horizontalOverflow(page: Page): Promise<number> {
   return page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

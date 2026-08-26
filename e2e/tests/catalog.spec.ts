@@ -2,7 +2,14 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
-import { E2E_MEMBER, E2E_SA, firstLogin, resetCatalog, resetUsers } from './helpers';
+import {
+  confirmAction,
+  E2E_MEMBER,
+  E2E_SA,
+  firstLogin,
+  resetCatalog,
+  resetUsers,
+} from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -54,22 +61,22 @@ test.describe('Danh mục', () => {
 
     // Vô hiệu rồi bật lại — mục vẫn còn, chỉ đổi trạng thái.
     await cabinetRow.getByRole('button', { name: 'Vô hiệu' }).click();
-    await page.getByRole('button', { name: 'Đồng ý' }).click();
+    await confirmAction(page);
     await expect(cabinetRow.getByText('Đã vô hiệu')).toBeVisible();
 
     await cabinetRow.getByRole('button', { name: 'Bật lại' }).click();
-    await page.getByRole('button', { name: 'Đồng ý' }).click();
+    await confirmAction(page);
     await expect(cabinetRow.getByText('Đang dùng')).toBeVisible();
 
     // Dọn sạch sau khi chạy — đồng thời kiểm luôn đường XÓA THÀNH CÔNG (mục chưa ai dùng).
     await cabinetRow.getByRole('button', { name: 'Xóa' }).click();
-    await page.getByRole('button', { name: 'Đồng ý' }).click();
+    await confirmAction(page);
     await expect(cabinetRow).toHaveCount(0);
 
     await page.getByRole('tab', { name: 'Site' }).click();
     const createdSite = page.getByRole('row', { name: new RegExp(siteCode) });
     await createdSite.getByRole('button', { name: 'Xóa' }).click();
-    await page.getByRole('button', { name: 'Đồng ý' }).click();
+    await confirmAction(page);
     await expect(createdSite).toHaveCount(0);
   });
 
@@ -103,7 +110,7 @@ test.describe('Danh mục', () => {
       .getByRole('row', { name: new RegExp(siteCode) })
       .getByRole('button', { name: 'Xóa' })
       .click();
-    await page.getByRole('button', { name: 'Đồng ý' }).click();
+    await confirmAction(page);
 
     await expect(page.getByText(/không xóa được/i)).toBeVisible();
     // Vẫn còn nguyên trong bảng — chặn thật, không phải chỉ báo lỗi rồi vẫn xóa.
@@ -176,5 +183,135 @@ test.describe('Danh mục', () => {
       data: { code: 'HACK', name: 'Không được phép' },
     });
     expect(response.status()).toBe(403);
+  });
+
+  /**
+   * Sắp xếp PHẢI chạy ở server, không phải ở trang đang xem (cùng lý do với màn Thiết bị).
+   *
+   * Dựng 3 tủ mạng trong một site rồi lọc còn đúng 3 dòng, bấm tiêu đề cột "Mô tả" và đọc
+   * lại thứ tự. Quan trọng hơn: kiểm cột "Thuộc site" — giá trị lấy qua JOIN sang bảng site
+   * (AD-2) — KHÔNG có nút bấm, vì whitelist sắp xếp của tủ mạng không cho phép sắp theo nó.
+   */
+  test('sắp xếp theo cột chạy ở server, cột lấy qua join thì không có nút', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const siteCode = `E2E-SORT-${stamp}`;
+    const csrf = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
+      return ((await res.json()) as { csrfToken: string }).csrfToken;
+    });
+    const headers = { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' };
+
+    const siteRes = await page.request.post('/api/v1/catalog/site', {
+      headers,
+      data: { code: siteCode, name: 'Site sắp xếp' },
+    });
+    const site = (await siteRes.json()) as { id: string };
+
+    for (const [suffix, description] of [
+      ['A', 'Zulu tủ cuối bảng'],
+      ['B', 'Alpha tủ đầu bảng'],
+      ['C', 'Mike tủ giữa bảng'],
+    ]) {
+      await page.request.post('/api/v1/catalog/cabinet', {
+        headers,
+        data: { code: `SORT-E2E-${stamp}-${suffix}`, siteId: site.id, description },
+      });
+    }
+
+    await page.goto('/quan-tri/danh-muc');
+    await page.getByRole('tab', { name: 'Tủ mạng' }).click();
+    await page
+      .getByRole('searchbox', { name: 'Tìm theo mã tủ, site hoặc mô tả' })
+      .fill(`SORT-E2E-${stamp}`);
+    await expect(page.getByRole('row')).toHaveCount(4); // 1 dòng tiêu đề + 3 tủ
+
+    const firstDataRow = () => page.getByRole('row').nth(1);
+    await expect(firstDataRow()).toContainText(`SORT-E2E-${stamp}-A`); // mặc định: theo mã tăng
+
+    const head = page.locator('thead');
+    await head.getByRole('button', { name: 'Mô tả' }).click();
+    await expect(firstDataRow()).toContainText('Alpha tủ đầu bảng');
+
+    await head.getByRole('button', { name: 'Mô tả' }).click();
+    await expect(firstDataRow()).toContainText('Zulu tủ cuối bảng');
+
+    // Cột dựa vào JOIN sang bảng site: hiện chữ, nhưng KHÔNG phải nút bấm được.
+    await expect(head.getByRole('button', { name: 'Thuộc site' })).toHaveCount(0);
+  });
+
+  /**
+   * Ba danh mục của migration 0028: Bộ phận, Nhà mạng, Dịch vụ/Port.
+   *
+   * Chúng ra đời vì cùng một lý do — ba ô đang gõ tay tự do, gõ mỗi nơi một kiểu ("P. Kế
+   * toán" / "Phòng Kế toán" / "KT"), nên lọc ra thiếu và báo cáo cộng nhầm.
+   */
+  test('ba danh mục mới thêm được, và bảng lịch sử chấp nhận chúng', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    await page.goto('/quan-tri/danh-muc');
+
+    // ── Bộ phận ───────────────────────────────────────────────────────────
+    await page.getByRole('tab', { name: 'Bộ phận' }).click();
+    await page.getByRole('button', { name: 'Thêm bộ phận' }).click();
+    let form = page.getByRole('dialog');
+    await form.getByRole('textbox', { name: 'Tên', exact: true }).fill(`P. E2E ${stamp}`);
+    await form.getByRole('button', { name: 'Lưu' }).click();
+    await expect(page.getByRole('row', { name: new RegExp(`P. E2E ${stamp}`) })).toBeVisible();
+
+    // ── Nhà mạng ──────────────────────────────────────────────────────────
+    await page.getByRole('tab', { name: 'Nhà mạng' }).click();
+    await page.getByRole('button', { name: 'Thêm nhà mạng' }).click();
+    form = page.getByRole('dialog');
+    await form.getByRole('textbox', { name: 'Tên', exact: true }).fill(`Mang E2E ${stamp}`);
+    await form.getByRole('textbox', { name: 'Hotline' }).fill('1900 1234');
+    await form.getByRole('button', { name: 'Lưu' }).click();
+    const ispRow = page.getByRole('row', { name: new RegExp(`Mang E2E ${stamp}`) });
+    await expect(ispRow).toBeVisible();
+    // Hotline bấm gọi được: đứt cáp lúc 2 giờ sáng thì người ta cầm điện thoại, không cầm chuột.
+    await expect(ispRow.getByRole('link', { name: '1900 1234' })).toHaveAttribute(
+      'href',
+      'tel:19001234',
+    );
+
+    // ── Dịch vụ / Port ────────────────────────────────────────────────────
+    await page.getByRole('tab', { name: 'Dịch vụ / Port' }).click();
+    // Bộ khởi đầu của migration phải có sẵn — ô chọn rỗng ngày đầu là người dùng lại gõ tay.
+    await expect(page.getByRole('row', { name: /HTTPS/ })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Thêm dịch vụ' }).click();
+    form = page.getByRole('dialog');
+    await form.getByRole('textbox', { name: 'Tên', exact: true }).fill(`Camera E2E ${stamp}`);
+    await form.getByRole('textbox', { name: 'Port', exact: true }).fill('50000');
+    await form.getByRole('textbox', { name: 'Đến port' }).fill('52000');
+    await form.getByRole('button', { name: 'Lưu' }).click();
+    await expect(
+      page.getByRole('row', { name: new RegExp(`Camera E2E ${stamp}`) }).getByText('50000-52000'),
+    ).toBeVisible();
+
+    // Ba danh mục này KHÔNG có đường nhập Excel — file mẫu không hề có sheet cho chúng, nên
+    // bày nút ra là hứa một đường đi không tồn tại.
+    await expect(page.getByRole('button', { name: 'Nhập từ Excel' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Tải file mẫu' })).toHaveCount(0);
+    // Còn tab gốc thì vẫn phải có.
+    await page.getByRole('tab', { name: 'Site' }).click();
+    await expect(page.getByRole('button', { name: 'Nhập từ Excel' })).toBeVisible();
+  });
+
+  /** Dải port viết ngược bị chặn — và chặn ở SERVER, không chỉ ở ô nhập. */
+  test('đường hỏng: dải port viết ngược bị từ chối', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const csrf = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
+      return ((await res.json()) as { csrfToken: string }).csrfToken;
+    });
+
+    const res = await page.request.post('/api/v1/catalog/service_port', {
+      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      data: { name: `Nguoc E2E ${stamp}`, protocol: 'tcp', portFrom: 52000, portTo: 50000 },
+    });
+    expect(res.status()).toBe(400);
+    expect(String((await res.json()).message)).toContain('ngược');
   });
 });

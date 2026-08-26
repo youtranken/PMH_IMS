@@ -52,9 +52,9 @@ export function SchedulePicker({
             onChange({ ...value, frequency: e.target.value as ScheduleFrequency })
           }
         >
-          <option value="daily">Hằng ngày</option>
-          <option value="weekly">Hằng tuần</option>
-          <option value="monthly">Hằng tháng</option>
+          <option value="daily">{t('schedule.daily')}</option>
+          <option value="weekly">{t('schedule.weekly')}</option>
+          <option value="monthly">{t('schedule.monthly')}</option>
         </select>
       </div>
 

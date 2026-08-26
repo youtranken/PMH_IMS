@@ -44,6 +44,18 @@ class SubnetBodyDto {
   @IsOptional() @IsString() @Length(1, 120) name?: string;
   @IsOptional() @IsString() @Length(1, 43) cidr?: string;
   @IsOptional() @ValidateIf((_o, value) => value !== '') @IsUUID() siteId?: string;
+
+  /**
+   * 1–4094: dải hợp lệ của 802.1Q. 0 và 4095 là hai giá trị dành riêng của chuẩn.
+   * `null` = xóa số VLAN đang có (ô để trống là một ý định rõ ràng, không phải "đừng đụng").
+   */
+  @IsOptional()
+  @ValidateIf((_o, value) => value !== null)
+  @IsInt()
+  @Min(1, { message: 'VLAN phải từ 1 đến 4094.' })
+  @Max(4094, { message: 'VLAN phải từ 1 đến 4094.' })
+  vlan?: number | null;
+
   @IsOptional() @IsString() @Length(0, 500) description?: string;
 }
 
@@ -201,10 +213,17 @@ export class IpamController {
   @Post('subnets')
   @Audited('subnet.created', 'subnet', { writtenByService: true })
   createSubnet(@Body() body: SubnetBodyDto, @Req() req: AuthedRequest) {
+    /**
+     * Liệt kê tay từng trường ở đây là chỗ ĐÃ ĐÁNH RƠI dữ liệu hai lần trong dự án này
+     * (`licenseModel` ở `SoftwareService.prepare`, rồi `vlan` ở đúng chỗ này): thêm cột mới,
+     * quên thêm một dòng, và giá trị biến mất trên đường xuống service mà không lỗi nào nổ.
+     * Thêm trường vào `SubnetBodyDto` thì PHẢI thêm cả ở đây.
+     */
     return this.subnets.create(actor(req), {
       name: body.name ?? '',
       cidr: body.cidr ?? '',
       siteId: body.siteId,
+      vlan: body.vlan,
       description: body.description,
     });
   }

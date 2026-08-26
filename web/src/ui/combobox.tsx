@@ -14,6 +14,10 @@ interface ComboboxProps<T> {
   renderOption: (option: T) => ReactNode;
   onSelect: (option: T) => void;
   disabled?: boolean;
+  /** Tên trợ năng khi ô không có `<label>` trỏ tới (placeholder là tên dự phòng). */
+  ariaLabel?: string;
+  /** Dòng ghim ở ĐẦU menu, vd "+ Thêm router mới" — luôn hiện, kể cả khi lọc ra rỗng. */
+  action?: { label: string; onClick: () => void };
 }
 
 /**
@@ -32,9 +36,19 @@ export function Combobox<T>({
   renderOption,
   onSelect,
   disabled,
+  ariaLabel,
+  action,
 }: ComboboxProps<T>) {
   const [active, setActive] = useState(0);
   const [closed, setClosed] = useState(false);
+  /**
+   * Menu chỉ mở SAU KHI người dùng chạm vào ô (focus, gõ, hoặc bấm mũi tên).
+   *
+   * Không có cờ này thì ô nào có sẵn danh sách sẽ tự bung menu ngay lúc hộp thoại hiện ra —
+   * che mất các ô bên dưới và buộc người dùng bấm ra chỗ khác để đóng, trước cả khi họ kịp
+   * đọc form. Với ô kiểu gõ-để-tìm thì không đổi gì: phải gõ mới có gợi ý, mà gõ là đã chạm.
+   */
+  const [touched, setTouched] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const portal = useDialogPortal();
 
@@ -44,7 +58,7 @@ export function Combobox<T>({
     setClosed(false);
   }, [options]);
 
-  const open = options.length > 0 && !closed;
+  const open = touched && !closed && (options.length > 0 || action !== undefined);
   const { refs, floatingStyles } = useAnchoredMenu(open, {
     matchWidth: true,
     maxHeight: 260,
@@ -76,6 +90,7 @@ export function Combobox<T>({
     if (open) {
       setClosed(true);
     } else {
+      setTouched(true);
       setClosed(false);
       inputRef.current?.focus();
     }
@@ -89,9 +104,12 @@ export function Combobox<T>({
         value={query}
         disabled={disabled}
         role="combobox"
+        aria-label={ariaLabel}
         aria-expanded={open}
         aria-autocomplete="list"
+        onFocus={() => setTouched(true)}
         onChange={(e) => {
+          setTouched(true);
           onQuery(e.target.value);
           setClosed(false);
         }}
@@ -141,6 +159,23 @@ export function Combobox<T>({
             role="listbox"
             style={floatingStyles}
           >
+            {/* Dòng "tạo mới" ghim ở đầu, KHÔNG nằm trong danh sách chọn: nó không phải một
+                lựa chọn, và phải với tới được cả khi lọc ra rỗng — đúng lúc người dùng cần
+                nó nhất là lúc thứ họ tìm chưa tồn tại. */}
+            {action ? (
+              <li className="combo-action-row">
+                <button
+                  type="button"
+                  className="combo-option combo-action"
+                  onClick={() => {
+                    setClosed(true);
+                    action.onClick();
+                  }}
+                >
+                  {action.label}
+                </button>
+              </li>
+            ) : null}
             {options.map((option, i) => (
               <li key={getKey(option)}>
                 <button

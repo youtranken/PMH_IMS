@@ -12,12 +12,19 @@ import {
 import type { Response } from 'express';
 import { IsIn, IsOptional, IsString, IsUUID, Length, Matches, ValidateIf } from 'class-validator';
 import { parsePageQuery } from '../../common/pagination';
+import { parseSortQuery } from '../../common/sorting';
 import { Audited } from '../audit/audited.decorator';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
-import { ISP_STATUSES, IspLineService, type IspStatus } from './isp-line.service';
+import {
+  ISP_SORT_DEFAULT,
+  ISP_SORT_KEYS,
+  ISP_STATUSES,
+  IspLineService,
+  type IspStatus,
+} from './isp-line.service';
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
 const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
@@ -80,14 +87,20 @@ export class IspLineController {
       siteId?: string;
       provider?: string;
       status?: IspStatus;
+      sort?: string;
+      dir?: string;
     },
   ) {
-    return this.isp.list(parsePageQuery(query), {
-      search: query.search,
-      siteId: query.siteId,
-      provider: query.provider,
-      status: query.status,
-    });
+    return this.isp.list(
+      parsePageQuery(query),
+      {
+        search: query.search,
+        siteId: query.siteId,
+        provider: query.provider,
+        status: query.status,
+      },
+      parseSortQuery(query, ISP_SORT_KEYS, ISP_SORT_DEFAULT),
+    );
   }
 
   /**
@@ -100,16 +113,27 @@ export class IspLineController {
   @Get('export.xlsx')
   async export(
     @Query()
-    query: { search?: string; siteId?: string; provider?: string; status?: IspStatus },
+    query: {
+      search?: string;
+      siteId?: string;
+      provider?: string;
+      status?: IspStatus;
+      sort?: string;
+      dir?: string;
+    },
     @Res() res: Response,
   ) {
     // `listAll` — không cắt ở một con số bịa ra; xem ghi chú ở software.controller.
-    const rows = await this.isp.listAll({
-      search: query.search,
-      siteId: query.siteId,
-      provider: query.provider,
-      status: query.status,
-    });
+    // Cùng thứ tự với màn hình (FR-028): export phải khớp đúng cái đang nhìn thấy.
+    const rows = await this.isp.listAll(
+      {
+        search: query.search,
+        siteId: query.siteId,
+        provider: query.provider,
+        status: query.status,
+      },
+      parseSortQuery(query, ISP_SORT_KEYS, ISP_SORT_DEFAULT),
+    );
     const buffer = await this.excel.build({
       sheetName: 'Duong truyen',
       columns: [

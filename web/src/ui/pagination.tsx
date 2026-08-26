@@ -32,7 +32,7 @@ export function Pagination({
         className="btn sm"
         disabled={page <= 1}
         onClick={() => onPageChange(page - 1)}
-        aria-label="Trang trước"
+        aria-label={t('pagination.prev')}
       >
         ‹
       </button>
@@ -44,7 +44,7 @@ export function Pagination({
         className="btn sm"
         disabled={page >= lastPage}
         onClick={() => onPageChange(page + 1)}
-        aria-label="Trang sau"
+        aria-label={t('pagination.next')}
       >
         ›
       </button>

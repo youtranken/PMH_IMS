@@ -61,6 +61,8 @@ export const devicePortTable = pgTable('device_port', {
   connectedLabel: text('connected_label'),
   connectedPort: text('connected_port'),
   usedBy: text('used_by'),
+  /** VLAN của cổng (0029) — text vì "trunk" là giá trị có thật trên cổng uplink. */
+  vlan: text('vlan'),
   note: text('note'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),

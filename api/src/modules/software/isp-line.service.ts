@@ -10,6 +10,7 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
+import type { SortQuery } from '../../common/sorting';
 import { escapeLike, pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
 import { AuditWriterService } from '../audit/audit-writer.service';
@@ -112,14 +113,18 @@ export class IspLineService {
 
   // ─────────────────────────── Đọc ───────────────────────────
 
-  async list(query: PageQuery, filter: IspFilter): Promise<Page<IspLineListItem>> {
+  async list(
+    query: PageQuery,
+    filter: IspFilter,
+    sort: SortQuery<IspSortKey> = ISP_SORT_DEFAULT,
+  ): Promise<Page<IspLineListItem>> {
     const where = buildWhere(filter);
     const [rows, totalRows] = await Promise.all([
       this.db
         .select()
         .from(ispLineTable)
         .where(where)
-        .orderBy(asc(ispLineTable.code))
+        .orderBy(...ispOrderBy(sort))
         .limit(query.limit)
         .offset(pageOffset(query)),
       this.db.select({ value: count() }).from(ispLineTable).where(where),
@@ -130,12 +135,17 @@ export class IspLineService {
     };
   }
 
-  async listAll(filter: IspFilter): Promise<IspLineListItem[]> {
+  /** Toàn bộ kết quả theo bộ lọc, KHÔNG phân trang — chỉ dùng cho export xlsx (FR-028). */
+  async listAll(
+    filter: IspFilter,
+    sort: SortQuery<IspSortKey> = ISP_SORT_DEFAULT,
+  ): Promise<IspLineListItem[]> {
     const rows = await this.db
       .select()
       .from(ispLineTable)
       .where(buildWhere(filter))
-      .orderBy(asc(ispLineTable.code));
+      // Cùng thứ tự với màn hình: file tải về phải khớp thứ tự người dùng đang nhìn.
+      .orderBy(...ispOrderBy(sort));
     return this.decorate(rows);
   }
 
@@ -402,6 +412,39 @@ export class IspLineService {
     }
     return error;
   }
+}
+
+/**
+ * Cột được phép sắp xếp. Đây là WHITELIST — tên cột đi thẳng vào `ORDER BY`.
+ *
+ * Chỉ mở những cột nằm SẴN trong bảng `isp_line`. `siteCode`/`deviceCode`/`deviceName` hiển
+ * thị trên bảng nhưng tra qua CatalogApiService/DevicesApiService — sắp theo chúng đòi join
+ * sang bảng của module khác, vi phạm AD-2. Muốn theo site thì lọc theo site rồi sắp theo mã.
+ */
+export const ISP_SORT_KEYS = [
+  'code',
+  'provider',
+  'hotline',
+  'contractNo',
+  'endDate',
+  'status',
+] as const;
+export type IspSortKey = (typeof ISP_SORT_KEYS)[number];
+export const ISP_SORT_DEFAULT: SortQuery<IspSortKey> = { key: 'code', dir: 'asc' };
+
+function ispOrderBy(sort: SortQuery<IspSortKey>): SQL[] {
+  const column = {
+    code: ispLineTable.code,
+    provider: ispLineTable.provider,
+    hotline: ispLineTable.hotline,
+    contractNo: ispLineTable.contractNo,
+    endDate: ispLineTable.endDate,
+    status: ispLineTable.status,
+  }[sort.key];
+  const primary = sort.dir === 'desc' ? desc(column) : asc(column);
+  // Chốt hạ bằng `code`: thiếu nó thì hai đường cùng trạng thái/hạn có thể đổi chỗ nhau
+  // giữa hai lần tải — sang trang 2 lại thấy đúng dòng vừa xem ở trang 1, hoặc mất hẳn 1 dòng.
+  return sort.key === 'code' ? [primary] : [primary, asc(ispLineTable.code)];
 }
 
 function buildWhere(filter: IspFilter): SQL | undefined {

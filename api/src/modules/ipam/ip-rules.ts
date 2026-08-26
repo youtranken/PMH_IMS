@@ -9,8 +9,15 @@
  * từ chối thẳng — người ta khai vào rồi tưởng hệ thống quản được.
  */
 
-/** Rộng hơn /8 (16 triệu địa chỉ) thì gần như chắc chắn là gõ nhầm, không phải LAN của PMH. */
-const MIN_PREFIX = 8;
+/**
+ * Trần độ rộng một dải: /24 (254 host). Quyết định của chủ dự án, 25/08/2026.
+ *
+ * Không phải giới hạn tuỳ tiện: màn chi tiết dải liệt kê MỌI host trong dải và cố ý không
+ * phân trang, còn `enumerateHosts` thì dựng mảng đồng bộ. Nên gõ nhầm /16 thay /24 là 65.534
+ * dòng (treo tab), /8 là 16 triệu (treo luôn server). Chặn ngay lúc khai dải là chỗ rẻ nhất.
+ * Mạng lớn hơn thì chia thành nhiều dải /24 — cách PMH vẫn đang đánh số LAN.
+ */
+const MIN_PREFIX = 24;
 
 export type ParseResult<T> = { ok: true; value: T } | { ok: false; reason: string };
 
@@ -109,6 +116,59 @@ export function enumerateHosts(cidr: string): string[] {
   const out: string[] = [];
   for (let i = 0; i < count; i += 1) out.push(longToAddress(first + i));
   return out;
+}
+
+/** Vai trò của một địa chỉ trong dải của nó. Chỉ `host` mới gán cho máy được. */
+export type HostRole = 'host' | 'network' | 'broadcast';
+
+/**
+ * Địa chỉ này có gán cho máy được không, khi CHƯA biết dải?
+ *
+ * Suy từ octet cuối, và điều đó ĐÚNG TUYỆT ĐỐI trong hệ này vì `MIN_PREFIX = 24`: mọi dải
+ * khai được đều là /24 hoặc hẹp hơn, mà trong bất kỳ dải nào như vậy, octet cuối 0 luôn là
+ * địa chỉ mạng và 255 luôn là địa chỉ quảng bá (/25 chia thành .0 và .128 — hai địa chỉ
+ * quảng bá là .127 và .255; /26 thì .63/.127/.191/.255; cứ thế).
+ *
+ * Vì sao cần: gán 172.16.0.0 cho một máy là dữ liệu không bao giờ đúng ngoài đời — gói tin
+ * gửi tới đó không tới máy nào cả. Bên IPAM đã trừ sẵn hai địa chỉ này khi liệt kê dải, nhưng
+ * sổ NAT thì nhận IP gõ tay tự do nên lọt thẳng vào.
+ *
+ * Trả `null` nếu chuỗi không phải IPv4 — không đoán bừa, để nơi gọi báo đúng lỗi định dạng.
+ */
+export function hostRole(address: string): HostRole | null {
+  const parsed = parseAddress(address);
+  if (!parsed.ok) return null;
+  const last = Number(parsed.value.split('.')[3]);
+  if (last === 0) return 'network';
+  if (last === 255) return 'broadcast';
+  return 'host';
+}
+
+/**
+ * Vai trò của một địa chỉ trong MỘT dải cụ thể — chính xác hơn `hostRole` vì biết prefix.
+ *
+ * Cần bản này khi dải hẹp hơn /24: trong `172.16.10.64/26` thì .64 là địa chỉ mạng và .127 là
+ * quảng bá, hai con số mà nhìn octet cuối không thể biết.
+ *
+ * `null` = địa chỉ không thuộc dải, hoặc một trong hai chuỗi không hợp lệ. Câu hỏi lúc đó
+ * không có nghĩa, nên không trả lời còn hơn trả lời bừa.
+ */
+export function hostRoleIn(address: string, cidr: string): HostRole | null {
+  const host = parseAddress(address);
+  const subnet = normalizeSubnet(cidr);
+  if (!host.ok || !subnet.ok) return null;
+
+  const value = addressToLong(host.value);
+  if (((value & maskOf(subnet.prefix)) >>> 0) !== subnet.network) return null;
+
+  // /31 và /32: không có địa chỉ mạng hay quảng bá để mà trừ (RFC 3021) — cùng ngoại lệ
+  // mà `usableHostCount` đã chừa.
+  if (subnet.prefix >= 31) return 'host';
+
+  const broadcast = (subnet.network + 2 ** (32 - subnet.prefix) - 1) >>> 0;
+  if (value === subnet.network) return 'network';
+  if (value === broadcast) return 'broadcast';
+  return 'host';
 }
 
 export interface SubnetUsage {

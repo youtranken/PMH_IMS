@@ -8,7 +8,7 @@ import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { DatePicker } from '@/ui/date-picker';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { Dialog } from '@/ui/dialog';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { HistoryPanel } from '@/ui/history-panel';
 import { LoadError, Loading, NotFound } from '@/ui/load-state';
@@ -210,11 +210,24 @@ function RenewDialog({
   );
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={480}>
-      <DialogTitle>
-        {t('isp.renew')} — {line.code}
-      </DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={480}
+      title={`${t('isp.renew')} — ${line.code}`}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" form="isp-renew-form" className="btn primary" disabled={renew.isPending}>
+            {renew.isPending ? t('common.loading') : t('isp.renew')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="isp-renew-form"
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
@@ -248,15 +261,6 @@ function RenewDialog({
             {error}
           </p>
         ) : null}
-
-        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button type="submit" className="btn primary" disabled={renew.isPending}>
-            {renew.isPending ? t('common.loading') : t('isp.renew')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );

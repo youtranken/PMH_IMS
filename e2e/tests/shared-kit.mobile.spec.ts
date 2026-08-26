@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { E2E_SA, firstLogin, horizontalOverflow, resetUsers } from './helpers';
+import { E2E_SA, firstLogin, horizontalOverflow, openNavDrawer, resetUsers } from './helpers';
 
 test.beforeEach(() => resetUsers());
 
@@ -16,6 +16,7 @@ test.describe('390px', () => {
 
   test('bộ dùng chung (light + dark) không tràn ngang', async ({ page }) => {
     await firstLogin(page, E2E_SA);
+    await openNavDrawer(page);
     await page.getByRole('link', { name: 'Bộ giao diện' }).click();
     await expect(page.getByRole('heading', { name: 'Bộ giao diện' })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
@@ -28,6 +29,7 @@ test.describe('390px', () => {
 
   test('danh sách tài khoản đọc được ở 390px', async ({ page }) => {
     await firstLogin(page, E2E_SA);
+    await openNavDrawer(page);
     await page.getByRole('link', { name: 'Tài khoản' }).click();
     await expect(page.getByRole('heading', { name: 'Tài khoản' })).toBeVisible();
     // Tên xuất hiện cả ở chân sidebar và trong bảng — chỉ kiểm dòng trong BẢNG.

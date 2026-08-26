@@ -231,7 +231,7 @@
 .pipe .pnode.cur .pc {
   background: var(--primary);
   border-color: var(--primary);
-  color: var(--on-accent);
+  color: var(--on-brand);
 }
 .pipe .pnode .plb {
   font-size: var(--fs-2xs);
@@ -313,6 +313,272 @@ table.table tbody tr.exp:hover td {
   font-size: var(--fs-xs);
 }
 
+/* Ô TÊN DÒNG của bảng khu mở rộng (trang chi tiết thiết bị): là <th scope="row">, nên phải
+   tự bỏ dáng tiêu đề cột — căn trái, không viết hoa, và hẹp lại để cột giá trị được rộng. */
+.table th.panel-key {
+  width: 38%;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+  color: var(--ink-2);
+  white-space: normal;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Màn Địa chỉ IP — hai cột: dải mạng bên trái, IP của dải đang chọn bên phải.
+
+   Cột trái CỐ ĐỊNH 300px (đúng mockup): danh sách dải là thứ để liếc, không phải để đọc, và
+   một cột co giãn theo nội dung sẽ nhảy chiều rộng mỗi lần thêm dải có tên dài hơn.
+   ───────────────────────────────────────────────────────────────────────────── */
+.ipam-split {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: var(--space-10);
+  align-items: start;
+}
+.subnet-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+.subnet-rail > .form-section-title {
+  margin: 0;
+}
+.subnet-card {
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+  transition: border-color 0.14s var(--ease), box-shadow 0.14s var(--ease);
+}
+.subnet-card:hover {
+  border-color: var(--border-2);
+  box-shadow: var(--shadow-sm);
+}
+/* Dải đang xem: viền màu thương hiệu + bóng — người dùng phải biết cột phải đang nói về cái
+   nào mà không cần đọc lại tiêu đề. */
+.subnet-card.is-active {
+  border-color: var(--primary);
+  box-shadow: var(--shadow);
+}
+.subnet-link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-7);
+  color: inherit;
+  text-decoration: none;
+}
+.subnet-link:focus-visible {
+  box-shadow: var(--ring);
+  border-radius: var(--r);
+}
+.subnet-link .row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+.subnet-link .sub {
+  color: var(--ink-3);
+  font-size: var(--fs-xs);
+}
+.subnet-card-actions {
+  display: flex;
+  gap: var(--space-3);
+  padding: 0 var(--space-7) var(--space-6);
+}
+
+/* Đầu cột phải: đang xem dải nào, và đầy tới đâu. */
+.pane-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-7);
+}
+.pane-title {
+  margin: 0;
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+}
+.subnet-pane {
+  min-width: 0;
+}
+.subnet-pane .segmented {
+  margin-bottom: var(--space-7);
+  /* Năm trạng thái không đời nào vừa 390px. Cho cuộn ngang TRONG chính điều khiển thay vì
+     để nó đẩy cả trang tràn ra — trang tràn ngang thì mọi thứ khác cũng lệch theo.
+     `max-width` phải có: `inline-flex` tự co theo nội dung, không tự nhận giới hạn của cha. */
+  max-width: 100%;
+  overflow-x: auto;
+}
+.subnet-pane .segmented button {
+  white-space: nowrap;
+}
+
+/* Dưới 1100px hai cột thành một: cột trái 300px + bảng 6 cột không còn đủ chỗ, và cột trái
+   là thứ CHỌN xong rồi mới đọc — nên nó lên trên, cuộn ngang được, không chiếm chiều cao. */
+@media (max-width: 1100px) {
+  .ipam-split {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-7);
+  }
+  .subnet-rail {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: var(--space-3);
+  }
+  .subnet-rail > .form-section-title {
+    display: none;
+  }
+  .subnet-card {
+    flex: 0 0 260px;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Danh sách GHẾ (seat-list) — nếp bung dòng của code nền QLTS (AD-12).
+
+   Vì sao là lưới thẻ chứ không phải <table> lồng: hàng bung nằm TRONG một ô của bảng cha.
+   Bảng lồng bảng khiến bề rộng cột trong ngoài giằng nhau, và ở ≤960px thì bảng cha đã gập
+   thành thẻ dọc còn bảng con thì chưa. Lưới thẻ tự quyết bề rộng của mình, gập riêng.
+
+   Bề rộng CỐ ĐỊNH cho Chi phí/Bắt đầu/Hết hạn: header và các dòng là hai lưới riêng, dùng
+   `auto` thì cột co theo nội dung ("—") nên lệch nhau.
+   ───────────────────────────────────────────────────────────────────────────── */
+.seat-list {
+  --seat-cols: minmax(110px, 1.1fr) minmax(90px, 1fr) 120px 108px 118px
+    minmax(0, 1fr) minmax(0, 1.2fr) 92px;
+}
+/* Hàng bung ở danh sách THIẾT BỊ: phần mềm đang cài trên máy này (không có cột Máy/Người). */
+.seat-list.inst-list {
+  --seat-cols: minmax(150px, 2fr) minmax(90px, 0.9fr) 120px 108px 118px
+    minmax(0, 1fr) minmax(0, 1.2fr);
+}
+.seat-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-5);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-3);
+  margin-bottom: var(--space-5);
+}
+.seat-head .spacer {
+  flex: 1;
+}
+.seat-hd {
+  display: grid;
+  grid-template-columns: var(--seat-cols);
+  gap: var(--space-7);
+  padding: 0 var(--space-7) var(--space-2);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink-3);
+}
+.seat-card {
+  display: grid;
+  grid-template-columns: var(--seat-cols);
+  gap: var(--space-7);
+  align-items: center;
+  padding: var(--space-6) var(--space-7);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  margin-bottom: var(--space-4);
+}
+.seat-card:last-child {
+  margin-bottom: 0;
+}
+.seat-mc {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.seat-who {
+  color: var(--ink-2);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Tiền và ngày căn theo chữ số đều nhau — cột số so sánh được bằng mắt mới có ích. */
+.seat-cost,
+.seat-date {
+  font-size: var(--fs-sm);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.seat-cost {
+  text-align: right;
+}
+.seat-note {
+  color: var(--ink-3);
+  font-size: var(--fs-xs);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.seat-menu {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.seat-empty {
+  color: var(--ink-3);
+  font-style: italic;
+  padding: var(--space-2) 2px;
+}
+/* Ghế không khai kỳ hạn riêng thì đi theo hồ sơ — hiện hạn của hồ sơ, kèm một dòng nói rõ
+   nó từ đâu ra, để không ai tưởng con số đó là do mình đã nhập cho ghế này. */
+.seat-inherit {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.25;
+  gap: 1px;
+}
+.seat-inherit small {
+  font-size: var(--fs-2xs);
+}
+
+/* Cùng mốc gập với `.table-stack`: ở dải tablet lưới 8 cột đã chật, và bảng CHA cũng đã
+   gập rồi — để lưới con nguyên cột thì hàng bung tràn ngang trong khi phần trên thì không. */
+@media (max-width: 960px) {
+  .seat-hd {
+    display: none;
+  }
+  .seat-card {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+    padding: var(--space-6);
+  }
+  .seat-card > [data-label]::before {
+    content: attr(data-label) ': ';
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+  .seat-cost {
+    text-align: left;
+  }
+  .seat-note {
+    white-space: normal;
+  }
+  .seat-menu {
+    justify-self: start;
+    margin-top: var(--space-4);
+  }
+}
+
 /* Part 2: chip giờ trống hôm nay trên card máy (catalog Mượn máy) */
 .slot-row {
   display: flex;
@@ -335,3 +601,27 @@ table.table tbody tr.exp:hover td {
   color: var(--on-accent);
 }
 
+
+/* --- Hàng ngang dùng chung ------------------------------------------------------
+ * `.row` được dùng 47 chỗ (chân dialog, cặp nhãn + công tắc, thanh nút của form) và hầu hết
+ * đi kèm `style={{ justifyContent: 'flex-end', gap: … }}`. Thiếu luật này thì container là
+ * block, mà block KHÔNG đọc `justify-content`/`gap` → nút dồn trái và dính nhau. Cùng một
+ * họ lỗi với `.shell`: markup gọi tên một lớp mà CSS chưa từng định nghĩa.
+ * -------------------------------------------------------------------------------- */
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+/* Mũi tên bung dòng trong bảng (DataTable vẽ ở cột đầu). Dùng CHUNG một kiểu chevron với
+   nav/dropdown/lịch: xoay 90° khi mở, không đổi ký tự. */
+.cell-caret {
+  display: inline-block;
+  font-size: var(--fs-lg);
+  line-height: 1;
+  transition: transform 0.18s var(--ease);
+}
+.cell-caret.open {
+  transform: rotate(90deg);
+}

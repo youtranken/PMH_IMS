@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { formatMoney, orDash } from '@/lib/format';
 import { DatePicker } from '@/ui/date-picker';
 import { EmptyState } from '@/ui/load-state';
 import { ExpiryBadge } from '@/ui/expiry-badge';
@@ -130,6 +131,64 @@ export function ComponentsGallery() {
         <h2>Thanh lọc &amp; phân trang</h2>
         <FilterBar search={search} onSearchChange={setSearch} searchPlaceholder="Tìm thiết bị…" />
         <Pagination page={page} limit={20} total={137} onPageChange={setPage} />
+      </section>
+
+      <section className="kit-section">
+        <h2>Lưới ghế — .seat-list (khu bung dòng)</h2>
+        <p className="muted">
+          Dùng khi hàng bung ra chứa "một dòng một bản ghi con": ghế license ở /phan-mem, phần
+          mềm đang cài ở /thiet-bi. Lưới thẻ chứ không phải bảng lồng — bảng cha đã gập ở
+          ≤960px mà bảng con thì chưa. Mỗi ô phải có <code>data-label</code>: đó là nhãn cột
+          hiện ra khi lưới gập trên điện thoại.
+        </p>
+        <div className="seat-head">
+          <span>2/5 ghế đã gán</span>
+        </div>
+        <div className="seat-list">
+          <div className="seat-hd">
+            <span>Máy</span>
+            <span>Người dùng</span>
+            <span>Chi phí</span>
+            <span>Bắt đầu</span>
+            <span>Kết thúc</span>
+            <span>Hợp đồng</span>
+            <span>Ghi chú</span>
+            <span aria-hidden="true" />
+          </div>
+          {[
+            { code: 'PC-KT-01', who: 'chị Lan', cost: 3_500_000, contract: 'HD-2026-014' },
+            { code: 'PC-XU-07', who: 'anh Tuấn', cost: null, contract: null },
+          ].map((seat) => (
+            <div key={seat.code} className="seat-card">
+              <div className="seat-mc" data-label="Máy">
+                <span className="mono">{seat.code}</span>
+              </div>
+              <div className="seat-who" data-label="Người dùng">
+                {seat.who}
+              </div>
+              <div className="seat-cost" data-label="Chi phí">
+                {formatMoney(seat.cost)}
+              </div>
+              <div className="seat-date" data-label="Bắt đầu">
+                01/01/2026
+              </div>
+              <div className="seat-date" data-label="Kết thúc">
+                <ExpiryBadge end="2026-12-31" />
+              </div>
+              <div className="seat-note" data-label="Hợp đồng">
+                {orDash(seat.contract)}
+              </div>
+              <div className="seat-note" data-label="Ghi chú">
+                —
+              </div>
+              <div className="seat-menu">
+                <button type="button" className="btn sm">
+                  Sửa
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section className="kit-section">

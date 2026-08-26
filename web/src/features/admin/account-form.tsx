@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import type { Me } from '@/lib/me';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 
 interface CreateResult {
@@ -33,9 +33,24 @@ export function AccountForm({
   >('/api/v1/accounts', { csrfToken, refreshMe: false });
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={520}>
-      <DialogTitle>{t('accounts.create')}</DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={520}
+      title={t('accounts.create')}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" form="account-form" className="btn primary" disabled={create.isPending}>
+            {t('common.save')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="account-form"
         className="col"
         onSubmit={(e) => {
           e.preventDefault();
@@ -99,15 +114,6 @@ export function AccountForm({
           />
           <span>{t('accounts.totpRequired')}</span>
         </label>
-
-        <div className="row" style={{ justifyContent: 'flex-end' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button type="submit" className="btn primary" disabled={create.isPending}>
-            {t('common.save')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );

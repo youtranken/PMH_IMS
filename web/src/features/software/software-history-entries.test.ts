@@ -45,6 +45,41 @@ describe('toSoftwareHistory — tab Lịch sử hồ sơ phần mềm phải đ�
     expect(entry.detail).toBe('số seat: (trống) → 10');
   });
 
+  /**
+   * Sửa ghế (0027): một license 10 ghế thì "đổi chi phí" là vô nghĩa nếu không nói ghế nào.
+   * Mã máy đi kèm dưới dạng trường KHÔNG đổi — hiện làm bối cảnh, không phải mũi tên.
+   */
+  it('sửa ghế license: nói rõ ghế nào, rồi mới tới cái đã đổi', () => {
+    const [entry] = toSoftwareHistory([
+      row({
+        action: 'license-terms-updated',
+        changes: {
+          device: { before: 'PC-KT-01', after: 'PC-KT-01' },
+          cost: { before: null, after: 3_500_000 },
+          contract: { before: null, after: 'HD-2026-014' },
+        },
+      }),
+    ]);
+    expect(entry.action).toBe('Sửa ghế license');
+    expect(entry.detail).toBe(
+      'ghế PC-KT-01; chi phí: (trống) → 3.500.000 ₫; hợp đồng: (trống) → HD-2026-014',
+    );
+  });
+
+  it('gán và gỡ license hiện tên tiếng Việt, không phải mã hành động thô', () => {
+    const [assigned] = toSoftwareHistory([row({ action: 'license-assigned' })]);
+    const [released] = toSoftwareHistory([row({ action: 'license-released' })]);
+    expect(assigned.action).toBe('Gán license vào máy');
+    expect(released.action).toBe('Gỡ license khỏi máy');
+  });
+
+  it('chi phí hiện thành tiền đồng, không phải một dãy số trần', () => {
+    const [entry] = toSoftwareHistory([
+      row({ action: 'license-terms-updated', changes: { cost: { before: 0, after: 12_000_000 } } }),
+    ]);
+    expect(entry.detail).toBe('chi phí: 0 ₫ → 12.000.000 ₫');
+  });
+
   it('không có changes thì không bịa mô tả', () => {
     const [entry] = toSoftwareHistory([row({ action: 'created', changes: null })]);
     expect(entry.action).toBe('Tạo hồ sơ');

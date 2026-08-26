@@ -1,7 +1,9 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
 import { IsBoolean, IsEmail, IsIn, IsString, Length } from 'class-validator';
 import { parsePageQuery } from '../../common/pagination';
+import { parseSortQuery } from '../../common/sorting';
 import { Audited } from '../audit/audited.decorator';
+import { USER_SORT_DEFAULT, USER_SORT_KEYS } from '../users/users.service';
 import { AccountsService } from './accounts.service';
 import { Roles } from './roles.decorator';
 import type { AuthedRequest, UserRole } from './types';
@@ -41,8 +43,15 @@ export class AccountsController {
 
   @Roles('sa')
   @Get()
-  list(@Query() query: { page?: string; limit?: string; search?: string }) {
-    return this.accounts.list(parsePageQuery(query), query.search);
+  list(
+    @Query()
+    query: { page?: string; limit?: string; search?: string; sort?: string; dir?: string },
+  ) {
+    return this.accounts.list(
+      parsePageQuery(query),
+      query.search,
+      parseSortQuery(query, USER_SORT_KEYS, USER_SORT_DEFAULT),
+    );
   }
 
   @Roles('sa')

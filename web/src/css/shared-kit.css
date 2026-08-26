@@ -28,6 +28,11 @@
 .toast-ok { border-color: var(--border-ok); background: var(--ok-soft); color: var(--ok); }
 .toast-warn { border-color: var(--border-warn); background: var(--warn-soft); color: var(--warn); }
 .toast-error { border-color: var(--border-danger); background: var(--danger-soft); color: var(--danger); }
+.toast-icon {
+  /* Dấu hiệu THỨ HAI ngoài màu (ok/warn/error) cho người khó phân biệt màu sắc. */
+  flex: none;
+  margin-top: 2px;
+}
 .toast-close {
   flex: none;
   border: none;
@@ -347,4 +352,85 @@
   .toast-stack { right: var(--space-5); left: var(--space-5); bottom: var(--space-5); max-width: none; }
   .pager { flex-wrap: wrap; gap: var(--space-4); }
   .pager-info { width: 100%; }
+}
+
+/* --- Loading / rỗng / 404 (load-state.tsx) -------------------------------------
+ * Cụm này BỊ RỚT khi port từ QLTS (auth.css:266-332): component vẫn render
+ * `.spinner`, `.empty`, `.error-state`… nhưng không luật nào tồn tại → vòng xoay
+ * không xoay, khối rỗng thành chữ trôi sát mép, trang 404 mất số lớn. Cùng một họ
+ * lỗi với `.shell` (lớp bọc không có luật CSS). Màu lấy từ token, không hex mới.
+ * ---------------------------------------------------------------------------- */
+.spinner {
+  width: 15px;
+  height: 15px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.6s linear infinite;
+  vertical-align: -2px;
+}
+/* Người đặt "giảm chuyển động" vẫn cần biết là ĐANG TẢI — giữ dấu hiệu, bỏ xoay. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+    border-right-color: currentColor;
+    opacity: 0.5;
+  }
+}
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: 2.25rem var(--space-7);
+  text-align: center;
+  color: var(--ink-3);
+  font-size: var(--fs-sm);
+  background: var(--surface-2);
+  border: 1px dashed var(--border-2);
+  border-radius: var(--r-lg);
+}
+/* Icon "khay rỗng" (Lucide inbox) — biến chữ trôi thành khối có chủ đích. */
+.empty::before {
+  content: '';
+  width: 38px;
+  height: 38px;
+  background: center / contain no-repeat
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='38' height='38' viewBox='0 0 24 24' fill='none' stroke='%238a908a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='22 12 16 12 14 15 10 15 8 12 2 12'/%3E%3Cpath d='M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z'/%3E%3C/svg%3E");
+}
+.empty .empty-hint {
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+  max-width: 32ch;
+}
+.empty .empty-action {
+  margin-top: var(--space-2);
+}
+.error-state {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  text-align: center;
+  animation: pageIn 0.3s var(--ease) both;
+}
+.error-state .error-code {
+  font-size: 3.2rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  background: var(--grad);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.error-state h1 {
+  margin: var(--space-1) 0 0;
+}
+.error-state .primary {
+  margin-top: var(--space-3);
 }

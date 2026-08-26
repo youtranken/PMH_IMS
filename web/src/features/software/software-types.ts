@@ -2,6 +2,13 @@
 export const SOFTWARE_KINDS = ['license', 'ssl', 'domain', 'maintenance', 'other'] as const;
 export type SoftwareKind = (typeof SOFTWARE_KINDS)[number];
 
+/**
+ * Kỳ hạn license: thuê bao (có ngày hết hạn, phải gia hạn) hay mua đứt (dùng mãi).
+ * Chỉ có nghĩa với `license` — SSL và tên miền luôn có kỳ hạn của nhà cung cấp.
+ */
+export const LICENSE_MODELS = ['subscription', 'perpetual'] as const;
+export type LicenseModel = (typeof LICENSE_MODELS)[number];
+
 export const SOFTWARE_STATUSES = ['active', 'expired_ok', 'retired'] as const;
 export type SoftwareStatus = (typeof SOFTWARE_STATUSES)[number];
 
@@ -10,6 +17,7 @@ export interface SoftwareRow {
   code: string;
   name: string;
   kind: SoftwareKind;
+  licenseModel: LicenseModel;
   vendorId: string | null;
   vendorName: string | null;
   seatTotal: number | null;
@@ -20,6 +28,45 @@ export interface SoftwareRow {
   status: SoftwareStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+/**
+ * Kỳ hạn + chi phí RIÊNG của một chỗ ngồi (migration 0027).
+ *
+ * Một license 10 ghế hầu như không mua một lần: Kế toán mua 3 ghế theo hợp đồng này, Xưởng
+ * mua 2 ghế hợp đồng khác giá khác kỳ khác. Đây là chỗ giữ những con số đó.
+ */
+export interface SeatTerms {
+  /** Tiền đồng, số nguyên. `null` = chưa khai, KHÁC với 0 (được tặng kèm). */
+  cost: number | null;
+  contract: string | null;
+  startDate: string | null;
+  endDate: string | null;
+}
+
+/** Một chỗ ngồi của license — dòng trong khu bung ở danh sách phần mềm. */
+export interface LicenseSeat extends SeatTerms {
+  id: string;
+  deviceId: string;
+  deviceCode: string;
+  deviceName: string;
+  deviceAssignedTo: string | null;
+  assignedBy: string;
+  assignedAt: string;
+  note: string | null;
+}
+
+/** Một license đang cài trên MỘT máy — dòng trong khu bung ở danh sách thiết bị. */
+export interface InstalledLicense extends SeatTerms {
+  id: string;
+  softwareId: string;
+  softwareCode: string;
+  softwareName: string;
+  licenseModel: LicenseModel;
+  /** Hạn của HỒ SƠ — hiện khi ghế không khai kỳ hạn riêng. */
+  softwareEndDate: string | null;
+  assignedAt: string;
+  note: string | null;
 }
 
 export interface SoftwareHistoryRow {

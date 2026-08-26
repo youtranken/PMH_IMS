@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { DatePicker } from '@/ui/date-picker';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { Dialog } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { Select } from '@/ui/select';
+import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
 import type { CatalogLists } from '@/features/catalog/catalog-types';
 import {
@@ -75,6 +76,9 @@ export function DeviceForm({
   const toast = useToast();
   const [form, setForm] = useState<FormState>(() => initialState(device));
   const [error, setError] = useState<string | null>(null);
+  const departments = (lists?.departments ?? [])
+    .filter((department) => department.active)
+    .map((department) => department.name);
 
   const save = useApiMutation<Record<string, unknown>, DeviceWriteResult>(
     device ? `/api/v1/devices/${device.id}` : '/api/v1/devices',
@@ -114,9 +118,24 @@ export function DeviceForm({
   };
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={860}>
-      <DialogTitle>{device ? `${t('devices.edit')} — ${device.code}` : t('devices.add')}</DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={860}
+      title={device ? `${t('devices.edit')} — ${device.code}` : t('devices.add')}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" form="device-form" className="btn primary" disabled={save.isPending}>
+            {save.isPending ? t('common.loading') : t('common.save')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="device-form"
         onSubmit={(e) => {
           e.preventDefault();
           submit();
@@ -217,12 +236,15 @@ export function DeviceForm({
               onChange={(e) => set('assignedTo', e.target.value)}
             />
           </Field>
-          <Field label={t('devices.department')} htmlFor="device-department">
-            <input
-              id="device-department"
-              className="inp"
+          <Field label={t('devices.department')} hint={t('devices.departmentHint')}>
+            {/* Gợi ý từ danh mục Bộ phận. Vẫn gõ tự do được: bộ phận mới lập tuần này phải
+                khai được ngay, không chờ ai mở danh mục ra thêm. */}
+            <SuggestInput
               value={form.department}
-              onChange={(e) => set('department', e.target.value)}
+              onChange={(value) => set('department', value)}
+              options={departments}
+              placeholder={t('devices.departmentPlaceholder')}
+              ariaLabel={t('devices.department')}
             />
           </Field>
           <Field label={t('devices.vendor')}>
@@ -277,15 +299,6 @@ export function DeviceForm({
             {error}
           </p>
         ) : null}
-
-        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button type="submit" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );

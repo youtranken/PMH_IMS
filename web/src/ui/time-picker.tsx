@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import '@/ui/time-picker.css';
 
 const ITEM_H = 42; // px — khớp --item-h trong CSS
@@ -194,6 +195,7 @@ function vnHourMinute(): { h24: number; minute: number } {
 }
 
 export function TimePicker({ value = DEFAULT, onDone, onCancel }: TimePickerProps) {
+  const { t } = useTranslation();
   const [h, setH] = useState(value.hour - 1); // index 0..11
   const [m, setM] = useState(value.minute);
   const [pm, setPm] = useState(value.pm);
@@ -240,7 +242,7 @@ export function TimePicker({ value = DEFAULT, onDone, onCancel }: TimePickerProp
   };
 
   return (
-    <section className="tp" aria-label="Chọn giờ">
+    <section className="tp" aria-label={t('timePicker.choose')}>
       <p className="tp-title">Select Time</p>
 
       <div className="tp-field" ref={fieldRef}>
@@ -250,7 +252,7 @@ export function TimePicker({ value = DEFAULT, onDone, onCancel }: TimePickerProp
           value={text}
           inputMode="numeric"
           maxLength={5}
-          aria-label="Giờ : phút"
+          aria-label={t('timePicker.hourMinute')}
           onFocus={() => {
             editingRef.current = true;
           }}

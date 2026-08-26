@@ -23,6 +23,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { parsePageQuery } from '../../common/pagination';
+import { parseSortQuery } from '../../common/sorting';
 import { Audited } from '../audit/audited.decorator';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
@@ -31,16 +32,25 @@ import type { AuthedRequest } from '../auth/types';
 import {
   KIND_LABEL,
   STATUS_LABEL,
+  LICENSE_MODELS,
   SOFTWARE_KINDS,
   SOFTWARE_STATUSES,
+  type LicenseModel,
   type SoftwareKind,
   type SoftwareStatus,
 } from './software-rules';
 import { LicenseAssignmentService } from './license-assignment.service';
-import { SoftwareService } from './software.service';
+import {
+  SOFTWARE_SORT_DEFAULT,
+  SOFTWARE_SORT_KEYS,
+  SoftwareService,
+} from './software.service';
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
 const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
+
+/** Lọc mã máy rác khỏi danh sách `?deviceIds=` trước khi đưa xuống truy vấn. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 class SoftwareBodyDto {
   @IsOptional() @IsString() @Length(1, 60) code?: string;
@@ -49,6 +59,10 @@ class SoftwareBodyDto {
   @IsOptional()
   @IsIn([...SOFTWARE_KINDS], { message: 'Loại hồ sơ không hợp lệ.' })
   kind?: SoftwareKind;
+
+  @IsOptional()
+  @IsIn([...LICENSE_MODELS], { message: 'Kỳ hạn phải là thuê bao hoặc vĩnh viễn.' })
+  licenseModel?: LicenseModel;
 
   // Chuỗi rỗng = bỏ gán nhà cung cấp, nên không ép UUID trong trường hợp đó.
   @IsOptional() @ValidateIf((_o, value) => value !== '') @IsUUID() vendorId?: string;
@@ -74,14 +88,45 @@ class RenewDto {
   endDate!: string;
 }
 
-class AssignDto {
+/**
+ * Kỳ hạn + chi phí RIÊNG của một ghế (0027). Dùng chung cho lúc gán và lúc sửa: hai bản DTO
+ * riêng sẽ trôi khác nhau đúng vào lúc luật đổi.
+ */
+class AssignmentTermsDto {
+  /**
+   * Tiền đồng, số nguyên. `null` = xóa giá trị đang có; service kiểm giới hạn trên
+   * (`Number.MAX_SAFE_INTEGER`) vì cột là bigint, quá ngưỡng thì JS đọc ra số khác.
+   */
+  @IsOptional() @ValidateIf((_o, value) => value !== null) @IsInt() @Min(0)
+  cost?: number | null;
+
+  @IsOptional() @IsString() @Length(0, 200) contract?: string;
+
+  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày bắt đầu của ghế phải dạng YYYY-MM-DD.' })
+  startDate?: string;
+
+  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày kết thúc của ghế phải dạng YYYY-MM-DD.' })
+  endDate?: string;
+
+  @IsOptional() @IsString() @Length(0, 500) note?: string;
+}
+
+class AssignDto extends AssignmentTermsDto {
   @IsUUID(undefined, { message: 'Thiết bị được chọn không hợp lệ.' })
   deviceId!: string;
 
-  @IsOptional() @IsString() @Length(0, 500) note?: string;
-
   /** Bắt buộc khi vượt seat (AC 3.2) — service kiểm, DTO chỉ giới hạn độ dài. */
   @IsOptional() @IsString() @Length(0, 500) overSeatReason?: string;
+}
+
+class DeviceIdsQueryDto {
+  /** Danh sách mã máy ngăn bởi dấu phẩy — một lượt hỏi cho cả trang, không N+1. */
+  @IsOptional() @IsString() @Length(0, 2000) deviceIds?: string;
+}
+
+class DeviceIdParamDto {
+  @IsUUID(undefined, { message: 'Mã thiết bị không hợp lệ.' })
+  deviceId!: string;
 }
 
 class AssignmentParamDto {
@@ -122,14 +167,20 @@ export class SoftwareController {
       kind?: SoftwareKind;
       status?: SoftwareStatus;
       vendorId?: string;
+      sort?: string;
+      dir?: string;
     },
   ) {
-    return this.software.list(parsePageQuery(query), {
-      search: query.search,
-      kind: query.kind,
-      status: query.status,
-      vendorId: query.vendorId,
-    });
+    return this.software.list(
+      parsePageQuery(query),
+      {
+        search: query.search,
+        kind: query.kind,
+        status: query.status,
+        vendorId: query.vendorId,
+      },
+      parseSortQuery(query, SOFTWARE_SORT_KEYS, SOFTWARE_SORT_DEFAULT),
+    );
   }
 
   /**
@@ -146,7 +197,14 @@ export class SoftwareController {
   @Get('export.xlsx')
   async export(
     @Query()
-    query: { search?: string; kind?: SoftwareKind; status?: SoftwareStatus; vendorId?: string },
+    query: {
+      search?: string;
+      kind?: SoftwareKind;
+      status?: SoftwareStatus;
+      vendorId?: string;
+      sort?: string;
+      dir?: string;
+    },
     @Res() res: Response,
   ) {
     /**
@@ -156,12 +214,15 @@ export class SoftwareController {
      * không có gì báo. `SoftwareService.listAll` đã có sẵn và ghi rõ trong doc là "chỉ dùng
      * cho export xlsx (FR-028)" — tôi đã không đọc trước khi viết (code review Epic 7).
      */
-    const rows = await this.software.listAll({
-      search: query.search,
-      kind: query.kind,
-      status: query.status,
-      vendorId: query.vendorId,
-    });
+    const rows = await this.software.listAll(
+      {
+        search: query.search,
+        kind: query.kind,
+        status: query.status,
+        vendorId: query.vendorId,
+      },
+      parseSortQuery(query, SOFTWARE_SORT_KEYS, SOFTWARE_SORT_DEFAULT),
+    );
     const buffer = await this.excel.build({
       sheetName: 'Phan mem',
       columns: [
@@ -178,6 +239,32 @@ export class SoftwareController {
       rows,
     });
     sendXlsx(res, buffer, 'phan-mem.xlsx');
+  }
+
+  /**
+   * Có bao nhiêu license đang cài trên mỗi máy — danh sách thiết bị hỏi một lượt cho cả
+   * trang để biết dòng nào đáng mọc mũi tên bung (mũi tên bấm ra rỗng là một kiểu hứa hão).
+   *
+   * Đặt dưới tiền tố `installed/` và khai TRƯỚC `@Get(':id')`: Nest khớp route theo thứ tự,
+   * để sau thì `:id` nuốt mất và trả 400 vì không phải uuid — đúng cái bẫy đã sập với
+   * `export.xlsx`. `counts` khai trước `:deviceId` cũng vì lý do đó.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('installed/counts')
+  async installedCounts(@Query() query: DeviceIdsQueryDto) {
+    const ids = (query.deviceIds ?? '')
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => UUID_RE.test(id));
+    const counts = await this.assignments.installedCountsFor(ids);
+    return Object.fromEntries(counts);
+  }
+
+  /** Máy này đang cài license nào — khu bung dòng của danh sách thiết bị. */
+  @Roles('sa', 'admin', 'member')
+  @Get('installed/:deviceId')
+  installedForDevice(@Param() params: DeviceIdParamDto) {
+    return this.assignments.installedForDevice(params.deviceId);
   }
 
   @Roles('sa', 'admin', 'member')
@@ -235,6 +322,23 @@ export class SoftwareController {
   @Audited('software.license-assigned', 'software', { writtenByService: true })
   assign(@Param() params: IdParamDto, @Body() body: AssignDto, @Req() req: AuthedRequest) {
     return this.assignments.assign(actor(req), params.id, body);
+  }
+
+  /**
+   * Sửa kỳ hạn / chi phí / hợp đồng / ghi chú của MỘT ghế (0027).
+   *
+   * Tách khỏi `PATCH :id` (sửa hồ sơ) vì đây là dữ liệu của một chỗ ngồi cụ thể: cùng một
+   * license, ghế của Kế toán và ghế của Xưởng có hợp đồng và giá khác nhau.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Patch(':id/assignments/:assignmentId')
+  @Audited('software.license-terms-updated', 'software', { writtenByService: true })
+  updateAssignment(
+    @Param() params: AssignmentParamDto,
+    @Body() body: AssignmentTermsDto,
+    @Req() req: AuthedRequest,
+  ) {
+    return this.assignments.updateTerms(actor(req), params.id, params.assignmentId, body);
   }
 
   /** Gỡ gán = đánh dấu released, KHÔNG xóa dòng (AC 3.2). */

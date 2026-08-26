@@ -1,17 +1,20 @@
 import { useTranslation } from 'react-i18next';
 import { ImportDialog } from '@/ui/import-dialog';
 import type { ImportPreviewRow } from '@/ui/import-preview';
-import type { CatalogEntity } from './catalog-types';
+import type { IMPORTABLE_ENTITIES } from './catalog-types';
+
+/** Chỉ bốn danh mục gốc có sheet trong file mẫu — khớp `IMPORTABLE_ENTITIES` phía API. */
+type ImportableEntity = (typeof IMPORTABLE_ENTITIES)[number];
 
 interface ApiImportRow {
-  sheet: CatalogEntity;
+  sheet: ImportableEntity;
   rowNumber: number;
   action: ImportPreviewRow['action'];
   label: string;
   message?: string;
 }
 
-const SHEET_LABEL: Record<CatalogEntity, string> = {
+const SHEET_LABEL: Record<ImportableEntity, string> = {
   site: 'Site',
   cabinet: 'Tủ mạng',
   device_type: 'Loại thiết bị',

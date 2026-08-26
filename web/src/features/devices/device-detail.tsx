@@ -16,6 +16,7 @@ import { VaultPanel } from '@/ui/vault-panel';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import type { CatalogLists } from '@/features/catalog/catalog-types';
+import { DeviceLicensesExpand } from '@/features/software/device-licenses-expand';
 import { DeviceForm } from './device-form';
 import { toHistoryEntries } from './device-history-entries';
 import { PortMapPanel } from './port-map-panel';
@@ -104,6 +105,8 @@ export function DeviceDetail({ me }: { me: Me }) {
   const canVault = true;
   /** Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày ra nút để bấm rồi 403. */
   const canVaultWrite = me.role === 'sa' || me.role === 'admin';
+  /** Khu do module `software` đăng ký — tách riêng vì nó có bảng riêng, không dùng khu chung. */
+  const softwarePanel = (panels.data ?? []).find((panel) => panel.key === 'software');
 
   return (
     <>
@@ -126,13 +129,14 @@ export function DeviceDetail({ me }: { me: Me }) {
             </button>
             <button
               type="button"
-              className={`btn${retired ? '' : ' danger'}`}
+              className="btn"
               onClick={() => {
                 void (async () => {
                   if (!retired) {
                     const ok = await askConfirm({
                       message: t('devices.confirmRetire', { name: item.code }),
                       danger: true,
+                      confirmLabel: t('devices.retire'),
                     });
                     if (!ok) return;
                   }
@@ -223,7 +227,24 @@ export function DeviceDetail({ me }: { me: Me }) {
               <Item label={t('devices.note')}>{orDash(item.note)}</Item>
             </dl>
 
-            <ExtensionPanels panels={panels.data ?? []} />
+            {/* Phần mềm đang cài dùng BẢNG GHẾ đầy đủ (kỳ hạn · chi phí · hợp đồng), không
+                phải khu `nhãn: giá trị` chung — cùng một bảng với khu bung dòng ở danh sách
+                thiết bị, nên hai chỗ không thể trả lời khác nhau (AD-15).
+
+                Tiêu đề lấy từ CHÍNH `panel.title` của API, không tự đặt một chuỗi thứ hai:
+                module `software` là chủ sở hữu khu này (nó tự đăng ký vào sổ của `devices`),
+                nên nó cũng là nơi quyết định khu ấy tên gì. Đặt tên riêng ở đây là để hai
+                chỗ trôi lệch nhau, và bài kiểm e2e đã bắt đúng lúc chúng bắt đầu lệch. */}
+            {softwarePanel ? (
+              <section className="card device-panel">
+                <h2 className="form-section-title">{softwarePanel.title}</h2>
+                <DeviceLicensesExpand deviceId={item.id} />
+              </section>
+            ) : null}
+
+            <ExtensionPanels
+              panels={(panels.data ?? []).filter((panel) => panel.key !== 'software')}
+            />
           </>
         ) : tab === 'ports' ? (
           <PortMapPanel device={item} csrfToken={me.csrfToken} canEdit={!retired} />
@@ -273,6 +294,12 @@ export function DeviceDetail({ me }: { me: Me }) {
 /**
  * Khu mở rộng. Rỗng thì KHÔNG render gì cả — không có tiêu đề "Địa chỉ IP" treo lơ lửng,
  * cũng không có dòng "tính năng sẽ có ở epic sau". Người dùng Đợt 1 không cần biết Đợt 2.
+ *
+ * Dựng bằng BẢNG chứ không phải danh sách `nhãn: giá trị`.
+ *
+ * Danh sách định nghĩa chỉ đọc xuôi được từng cặp một; khi khu này có nhiều dòng cùng loại —
+ * ba secret của một con switch, hai IP của một server — thì mắt phải nhảy qua nhảy lại để so.
+ * Bảng xếp cùng loại vào một cột, và đó chính là việc người ta mở trang này ra để làm.
  */
 function ExtensionPanels({ panels }: { panels: DevicePanel[] }) {
   if (panels.length === 0) return null;
@@ -284,19 +311,31 @@ function ExtensionPanels({ panels }: { panels: DevicePanel[] }) {
           {panel.items.length === 0 ? (
             <p className="muted">{panel.emptyText ?? '—'}</p>
           ) : (
-            <dl className="data-grid">
-              {panel.items.map((entry, index) => (
-                <Item key={`${panel.key}-${index}`} label={entry.label}>
-                  {entry.link ? (
-                    <Link to={entry.link}>{entry.value}</Link>
-                  ) : entry.tone ? (
-                    <span className={`badge ${entry.tone}`}>{entry.value}</span>
-                  ) : (
-                    entry.value
-                  )}
-                </Item>
-              ))}
-            </dl>
+            <div className="table-wrap">
+              <table className="table table-stack">
+                <tbody>
+                  {panel.items.map((entry, index) => (
+                    <tr key={`${panel.key}-${index}`}>
+                      {/* `scope="row"` chứ không phải `<td>`: ô đầu là TÊN của dòng, và trình
+                          đọc màn hình cần biết điều đó để đọc "Admin web — ••••" chứ không
+                          đọc hai ô rời nhau. */}
+                      <th scope="row" className="panel-key">
+                        {entry.label}
+                      </th>
+                      <td>
+                        {entry.link ? (
+                          <Link to={entry.link}>{entry.value}</Link>
+                        ) : entry.tone ? (
+                          <span className={`badge ${entry.tone}`}>{entry.value}</span>
+                        ) : (
+                          entry.value
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </section>
       ))}

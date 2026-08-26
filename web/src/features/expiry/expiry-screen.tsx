@@ -1,13 +1,15 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ColumnDef } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
+import { DataTable } from '@/ui/data-table';
 import { DatePicker } from '@/ui/date-picker';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { Dialog } from '@/ui/dialog';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
@@ -78,6 +80,60 @@ export function ExpiryScreen({ me }: { me: Me }) {
 
   const rows = expiry.data?.items ?? [];
   const summary = expiry.data?.summary;
+
+  const columns = useMemo<ColumnDef<ExpiryRow, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'label',
+        header: t('expiry.item'),
+        cell: ({ row }) => (
+          <>
+            <Link to={row.original.link}>{row.original.label}</Link>
+            {row.original.sublabel ? (
+              <span className="cell-sub">{row.original.sublabel}</span>
+            ) : null}
+          </>
+        ),
+      },
+      {
+        accessorKey: 'kind',
+        header: t('expiry.kind'),
+        cell: ({ row }) => kindLabel(row.original.kind),
+      },
+      {
+        accessorKey: 'end',
+        header: t('expiry.end'),
+        cell: ({ row }) => orDash(formatDate(row.original.end)),
+      },
+      {
+        // Sắp theo "còn bao nhiêu ngày" chứ không theo chữ trên badge: xếp theo chữ thì
+        // "Quá hạn 40 ngày" và "Quá hạn 2 ngày" đứng cạnh nhau vô nghĩa.
+        accessorKey: 'daysLeft',
+        header: t('expiry.state'),
+        // AD-15: luật "sắp hết hạn" chỉ có một, ở lib/expiry.ts
+        cell: ({ row }) => <ExpiryBadge end={row.original.end} />,
+      },
+      {
+        id: 'actions',
+        header: t('common.actions'),
+        meta: { className: 'col-center' },
+        cell: ({ row }) =>
+          row.original.canRenew ? (
+            <button
+              type="button"
+              className="btn sm primary"
+              onClick={() => setRenewing(row.original)}
+            >
+              {t('expiry.renew')}
+            </button>
+          ) : (
+            // Bảo hành thiết bị không "gia hạn" được — nói rõ thay vì để nút chết.
+            <span className="muted">{t('expiry.notRenewable')}</span>
+          ),
+      },
+    ],
+    [t, kinds.data],
+  );
 
   return (
     <>
@@ -153,52 +209,17 @@ export function ExpiryScreen({ me }: { me: Me }) {
       ) : rows.length === 0 ? (
         <EmptyState title={t('expiry.empty')} hint={t('expiry.emptyHint')} />
       ) : (
-        <div className="table-wrap">
-          <table className="table table-stack">
-            <thead>
-              <tr>
-                <th>{t('expiry.item')}</th>
-                <th>{t('expiry.kind')}</th>
-                <th>{t('expiry.end')}</th>
-                <th>{t('expiry.state')}</th>
-                <th className="col-center">{t('common.actions')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr
-                  key={`${row.kind}-${row.id}`}
-                  className={row.daysLeft < 0 ? 'row-danger' : undefined}
-                >
-                  <td data-label={t('expiry.item')}>
-                    <Link to={row.link}>{row.label}</Link>
-                    {row.sublabel ? <span className="cell-sub">{row.sublabel}</span> : null}
-                  </td>
-                  <td data-label={t('expiry.kind')}>{kindLabel(row.kind)}</td>
-                  <td data-label={t('expiry.end')}>{orDash(formatDate(row.end))}</td>
-                  <td data-label={t('expiry.state')}>
-                    {/* AD-15: luật "sắp hết hạn" chỉ có một, ở lib/expiry.ts */}
-                    <ExpiryBadge end={row.end} />
-                  </td>
-                  <td>
-                    {row.canRenew ? (
-                      <button
-                        type="button"
-                        className="btn sm primary"
-                        onClick={() => setRenewing(row)}
-                      >
-                        {t('expiry.renew')}
-                      </button>
-                    ) : (
-                      // Bảo hành thiết bị không "gia hạn" được — nói rõ thay vì để nút chết.
-                      <span className="muted">{t('expiry.notRenewable')}</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          data={rows}
+          columns={columns}
+          emptyText={t('expiry.empty')}
+          stackOnMobile
+          // Màn này KHÔNG phân trang (API lọc theo `withinDays` rồi trả hết), nên sắp ở client
+          // là sắp đúng toàn bộ tập kết quả — khác các màn danh sách phân trang, ở đó sắp
+          // client chỉ đảo chỗ trang đang xem nên phải nhờ server.
+          initialSort={[{ id: 'end', desc: false }]}
+          rowClassName={(row) => (row.daysLeft < 0 ? 'row-danger' : '')}
+        />
       )}
 
         </TabPanel>
@@ -243,11 +264,24 @@ function RenewDialog({
   });
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={520}>
-      <DialogTitle>
-        {t('expiry.renew')} — {row.label}
-      </DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={520}
+      title={`${t('expiry.renew')} — ${row.label}`}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" form="renew-form" className="btn primary" disabled={renew.isPending}>
+            {renew.isPending ? t('common.loading') : t('expiry.renew')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="renew-form"
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
@@ -282,15 +316,6 @@ function RenewDialog({
             {error}
           </p>
         ) : null}
-
-        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button type="submit" className="btn primary" disabled={renew.isPending}>
-            {renew.isPending ? t('common.loading') : t('expiry.renew')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );

@@ -109,6 +109,12 @@
 
     /* --- IMS thêm (AD-15: mọi màu phải là token, không hex rời trong partial) --- */
     --on-accent:#ffffff; --on-overlay:#ffffff;            /* chữ/nền trắng đặt trên màu nhấn */
+    /* Chữ đặt trên nền THƯƠNG HIỆU (lục --primary / cam --warm / gradient --grad).
+       Trắng trên hai màu này chỉ đạt 3,39:1 và 2,15:1 — dưới ngưỡng AA 4,5:1 của chữ 14px,
+       và nút chính là thứ người dùng bấm đầu tiên. Chữ tối đạt 5,03:1 và 7,92:1 mà KHÔNG
+       phải đổi một sắc nào trong bảng màu. Trạng thái đỏ/xanh thì ngược lại — giữ
+       --on-accent trắng, vì chữ tối trên chúng chỉ được 2,9–3,1:1. */
+    --on-brand:#0b2018;
     --danger-strong:#a5271b;        /* chữ lỗi đậm trên nền sáng */
     --border-ok:#bfe4d4; --border-warn:#f2d9b8; --border-danger:#f4cfcb;
     --border-critical:#f1c9c4; --warn-hi:#fff8d6;
@@ -157,6 +163,8 @@ html[data-theme='dark'] {
   color-scheme: dark;
 
     --on-accent:#0f140f; --on-overlay:#ffffff;
+    /* Theme tối: lục/cam đều SÁNG hơn nền, nên chữ tối vốn đã đúng — giữ nguyên tinh thần. */
+    --on-brand:#0f140f;
     --danger-strong:#ef8f85;
     --border-ok:#1d4a3a; --border-warn:#4a3a1c; --border-danger:#4d2b27;
     --border-critical:#4d2b27; --warn-hi:#3a3418;

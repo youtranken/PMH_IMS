@@ -155,6 +155,7 @@ export function AttachmentPanel({
                                   name: row.originalName,
                                 }),
                                 danger: true,
+                                confirmLabel: t('attachments.remove'),
                               });
                               if (!ok) return;
                               remove.mutate(

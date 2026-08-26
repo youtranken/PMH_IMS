@@ -37,6 +37,31 @@
 .segmented label:has(input:focus-visible) {
   box-shadow: var(--ring);
 }
+/* Bản dùng NÚT (bộ lọc trạng thái ở màn Địa chỉ IP): cùng một điều khiển, nhưng lọc bảng thì
+   `aria-pressed` mới đúng nghĩa — radio ngầm hứa "chọn xong sẽ gửi đi đâu đó". */
+.segmented button {
+  padding: var(--space-2) var(--space-6);
+  border: none;
+  background: none;
+  border-radius: calc(var(--r) - 3px);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: background 0.15s var(--ease), color 0.15s var(--ease),
+    box-shadow 0.15s var(--ease);
+}
+.segmented button:hover {
+  color: var(--ink);
+}
+.segmented button[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--primary-ink);
+  box-shadow: var(--shadow-sm);
+}
+.segmented button:focus-visible {
+  box-shadow: var(--ring);
+}
 
 /* --- Form layout: nhóm trường theo mục ------------------------------------ */
 .form-section {
@@ -109,6 +134,11 @@
 .form-grid .span-2 {
   grid-column: 1 / -1;
 }
+/* `Field span={3}` sinh class `span-3`. Không có luật này thì ô Ghi chú/textarea khai
+   span={3} vẫn chỉ chiếm 1 cột — trông "lửng" giữa hàng. */
+.form-grid .span-3 {
+  grid-column: 1 / -1;
+}
 /* Form tài sản (Thêm/Sửa): lưới 3 cột ĐỀU (Code|Type|Trạng thái…), tránh hàng chừa trống
    như auto-fill. span-2 vẫn full. Thu về 2/1 cột ở màn hẹp. */
 .form-grid.asset-grid {
@@ -129,6 +159,14 @@
   .form-grid.asset-grid {
     grid-template-columns: 1fr;
   }
+}
+/* Giá trị KHÔNG sửa được trong form (vd máy của một ghế license đã gán): trông như ô nhập
+   bị khóa thì người dùng còn ngồi thử bấm; hiện thẳng chữ mới nói đúng "chỗ này cố định". */
+.static-value {
+  margin: 0;
+  padding: var(--space-5) 0;
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
 }
 .field-req {
   color: var(--danger);
@@ -382,6 +420,83 @@ input[list]::-webkit-calendar-picker-indicator {
   color: var(--primary-ink);
   opacity: 0.8;
 }
+/* ─── Bảng dịch vụ/port nhỏ dưới ô nhập port (sổ NAT) ────────────────────────────────────
+   Đặt THẲNG trong form chứ không giấu sau một nút: khai NAT là lúc người ta cần thấy tên và
+   số cùng lúc, và bắt bấm thêm một lần để mở danh sách là bắt thêm một bước ở đúng chỗ đang
+   vội. Cao tối đa ~170px rồi tự cuộn — không đẩy nút Lưu xuống dưới tầm nhìn. */
+.svc-picker {
+  margin-top: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface-2);
+  padding: var(--space-4);
+}
+.svc-head {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+.svc-head .inp {
+  flex: 1;
+  min-width: 0;
+}
+.svc-list {
+  max-height: 170px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.svc-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 74px;
+  gap: var(--space-4);
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: var(--fs-sm);
+}
+.svc-row:hover,
+.svc-row:focus-visible {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+}
+.svc-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.svc-port {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.svc-empty {
+  margin: 0;
+  padding: var(--space-3) var(--space-2);
+  color: var(--ink-3);
+  font-size: var(--fs-xs);
+  font-style: italic;
+}
+
+/* Dòng "tạo mới" ghim đầu menu — tách hẳn khỏi vùng lựa chọn bằng một đường kẻ, để mắt
+   không đọc nhầm nó là một mục có sẵn. */
+.combo-action-row {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-2);
+  padding-bottom: var(--space-2);
+}
+.combo-option.combo-action {
+  color: var(--primary-ink);
+  font-weight: 600;
+}
 .combo-empty {
   padding: var(--space-4);
   color: var(--ink-3);
@@ -462,7 +577,7 @@ input[list]::-webkit-calendar-picker-indicator {
 }
 .chip button:hover:not(:disabled) {
   background: var(--primary);
-  color: var(--on-accent);
+  color: var(--on-brand);
 }
 
 /* --- Sheet modal (form editor lớn: header/body/footer sticky, cuộn body) --- */
@@ -475,7 +590,13 @@ input[list]::-webkit-calendar-picker-indicator {
   background: var(--surface);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-lg);
-  overflow: hidden;
+  /* PHẢI là `auto`, KHÔNG được `hidden`. `.sheet` chỉ cắt gọn góc bo khi nội dung được bọc
+     trong `.sheet-body` (chỉ confirm-dialog làm vậy) — 21 dialog còn lại đổ form thẳng vào
+     đây, nên `hidden` nghĩa là form cao quá 94vh bị CẮT MẤT phần dưới, kể cả nút Lưu, mà
+     không có thanh cuộn nào để với tới. Đo thật ở 1366×768: hộp cao 721px, nút Lưu nằm ở
+     y=807 — ngoài tầm với của chuột. Popover (DatePicker/Select) portal vào đây vẫn thoát
+     ra được vì chúng `position: fixed` và `.sheet` cố ý không có `transform`. */
+  overflow-y: auto;
   /* Fade-only (KHÔNG transform): popover (DatePicker/TimeField…) portal VÀO Content;
      transform trên .sheet (kể cả identity từ fill-mode) tạo containing-block +
      overflow:hidden → CẮT popover. Bỏ transform để popover fixed thoát ra viewport. */
@@ -492,6 +613,10 @@ input[list]::-webkit-calendar-picker-indicator {
   gap: var(--space-5);
   padding: var(--space-7) 1.35rem;
   flex-shrink: 0;
+  /* Viền trên + nền nhạt: chân hộp phải TÁCH khỏi phần thân, nếu không hàng nút trôi lơ
+     lửng ngay dưới ô nhập cuối cùng (đúng cảnh người dùng chụp lại ở hộp "Sửa thông tin"). */
+  border-top: 1px solid var(--border);
+  background: var(--surface-2);
 }
 .sheet-header {
   /* Nền xám nhẹ để thanh tiêu đề tách khỏi thân trắng (feedback: header trùng màu trắng). */

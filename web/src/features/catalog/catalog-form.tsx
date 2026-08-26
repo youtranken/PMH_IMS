@@ -1,11 +1,18 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
-import type { CabinetRow, CatalogEntity, CatalogLists, CatalogRow } from './catalog-types';
+import {
+  SERVICE_PROTOCOLS,
+  type CabinetRow,
+  type CatalogEntity,
+  type CatalogLists,
+  type CatalogRow,
+  type ServiceProtocol,
+} from './catalog-types';
 
 type FormState = {
   code: string;
@@ -18,11 +25,26 @@ type FormState = {
   supplies: string;
   phone: string;
   contact: string;
+  hotline: string;
+  protocol: ServiceProtocol;
+  portFrom: string;
+  portTo: string;
 };
 
 function initialState(entity: CatalogEntity, row: CatalogRow | null): FormState {
   const any = (row ?? {}) as Partial<
-    CabinetRow & { name: string; address: string | null; supplies: string | null; phone: string | null; contact: string | null; hasPortMap: boolean }
+    CabinetRow & {
+      name: string;
+      address: string | null;
+      supplies: string | null;
+      phone: string | null;
+      contact: string | null;
+      hasPortMap: boolean;
+      hotline: string | null;
+      protocol: ServiceProtocol;
+      portFrom: number;
+      portTo: number;
+    }
   >;
   return {
     code: any.code ?? '',
@@ -35,6 +57,13 @@ function initialState(entity: CatalogEntity, row: CatalogRow | null): FormState 
     supplies: any.supplies ?? '',
     phone: any.phone ?? '',
     contact: any.contact ?? '',
+    hotline: any.hotline ?? '',
+    protocol: any.protocol ?? 'tcp',
+    portFrom: any.portFrom != null ? String(any.portFrom) : '',
+    // Một port thì ô "đến" để TRỐNG, không lặp lại con số: nhìn "443 → 443" người ta phải
+    // dừng lại kiểm xem có phải mình gõ nhầm không.
+    portTo:
+      any.portTo != null && any.portTo !== any.portFrom ? String(any.portTo) : '',
   };
 }
 
@@ -56,14 +85,21 @@ export function CatalogForm({
   lists: CatalogLists | undefined;
   csrfToken: string;
   onClose: () => void;
-  onSaved: () => void;
+  /**
+   * Nhận luôn BẢN GHI vừa lưu.
+   *
+   * Màn Danh mục không cần tới nó (chỉ tải lại bảng), nhưng hộp "Thêm rule" của sổ NAT thì
+   * có: khai xong một dịch vụ mới phải áp được ngay vào ô port đang dở. Không có tham số này
+   * thì nơi gọi phải đi tải lại cả danh mục rồi mò tìm theo tên — dò bằng tên là chỗ sinh lỗi.
+   */
+  onSaved: (saved: CatalogRow) => void;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
   const [form, setForm] = useState<FormState>(() => initialState(entity, row));
   const [error, setError] = useState<string | null>(null);
 
-  const save = useApiMutation<Record<string, unknown>, unknown>(
+  const save = useApiMutation<Record<string, unknown>, CatalogRow>(
     row ? `/api/v1/catalog/${entity}/${row.id}` : `/api/v1/catalog/${entity}`,
     { method: row ? 'PATCH' : 'POST', csrfToken, refreshMe: false },
   );
@@ -79,18 +115,33 @@ export function CatalogForm({
       return;
     }
     save.mutate(body, {
-      onSuccess: () => {
+      onSuccess: (saved) => {
         toast({ message: t('catalog.saved') });
-        onSaved();
+        onSaved(saved);
       },
       onError: (err) => setError(errorMessage(err)),
     });
   };
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={560}>
-      <DialogTitle>{row ? t('catalog.edit') : t(ADD_KEY[entity])}</DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={560}
+      title={row ? t('catalog.edit') : t(ADD_KEY[entity])}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" form="catalog-form" className="btn primary" disabled={save.isPending}>
+            {save.isPending ? t('common.loading') : t('common.save')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="catalog-form"
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
@@ -110,7 +161,12 @@ export function CatalogForm({
           </Field>
         ) : null}
 
-        {entity === 'site' || entity === 'device_type' || entity === 'vendor' ? (
+        {entity === 'site' ||
+        entity === 'device_type' ||
+        entity === 'vendor' ||
+        entity === 'department' ||
+        entity === 'isp_provider' ||
+        entity === 'service_port' ? (
           <Field label={t('catalog.name')} required htmlFor="catalog-name">
             <input
               id="catalog-name"
@@ -177,9 +233,7 @@ export function CatalogForm({
                   checked={form.hasPortMap}
                   onChange={(e) => set('hasPortMap', e.target.checked)}
                 />
-                <span className="muted">
-                  Loại này hiện bảng port map ở trang chi tiết thiết bị (FR-006)
-                </span>
+                <span className="muted">{t('catalog.hasPortMapHint')}</span>
               </label>
             </Field>
             <Field label={t('catalog.description')} htmlFor="catalog-description">
@@ -222,20 +276,100 @@ export function CatalogForm({
           </>
         ) : null}
 
+        {entity === 'department' ? (
+          <Field
+            label={t('catalog.description')}
+            hint={t('catalog.departmentHint')}
+            htmlFor="catalog-description"
+          >
+            <input
+              id="catalog-description"
+              className="inp"
+              value={form.description}
+              onChange={(e) => set('description', e.target.value)}
+            />
+          </Field>
+        ) : null}
+
+        {entity === 'isp_provider' ? (
+          <>
+            <Field
+              label={t('catalog.hotline')}
+              hint={t('catalog.hotlineHint')}
+              htmlFor="catalog-hotline"
+            >
+              <input
+                id="catalog-hotline"
+                className="inp mono"
+                value={form.hotline}
+                onChange={(e) => set('hotline', e.target.value)}
+              />
+            </Field>
+            <Field label={t('catalog.contact')} htmlFor="catalog-contact">
+              <input
+                id="catalog-contact"
+                className="inp"
+                value={form.contact}
+                onChange={(e) => set('contact', e.target.value)}
+              />
+            </Field>
+          </>
+        ) : null}
+
+        {entity === 'service_port' ? (
+          <>
+            <Field label={t('catalog.protocol')}>
+              <Select
+                value={form.protocol}
+                ariaLabel={t('catalog.protocol')}
+                options={SERVICE_PROTOCOLS.map((item) => ({
+                  value: item,
+                  label: item === 'both' ? t('catalog.protocolBoth') : item.toUpperCase(),
+                }))}
+                onChange={(value) => set('protocol', value as ServiceProtocol)}
+              />
+            </Field>
+            <Field
+              label={t('catalog.portFrom')}
+              required
+              hint={t('catalog.portHint')}
+              htmlFor="catalog-port-from"
+            >
+              <input
+                id="catalog-port-from"
+                className="inp mono"
+                required
+                inputMode="numeric"
+                value={form.portFrom}
+                onChange={(e) => set('portFrom', e.target.value)}
+              />
+            </Field>
+            <Field label={t('catalog.portTo')} htmlFor="catalog-port-to">
+              <input
+                id="catalog-port-to"
+                className="inp mono"
+                inputMode="numeric"
+                placeholder={t('catalog.portToPlaceholder')}
+                value={form.portTo}
+                onChange={(e) => set('portTo', e.target.value)}
+              />
+            </Field>
+            <Field label={t('catalog.description')} htmlFor="catalog-description">
+              <input
+                id="catalog-description"
+                className="inp"
+                value={form.description}
+                onChange={(e) => set('description', e.target.value)}
+              />
+            </Field>
+          </>
+        ) : null}
+
         {error ? (
           <p className="alert" role="alert">
             {error}
           </p>
         ) : null}
-
-        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button type="submit" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );
@@ -246,6 +380,9 @@ const ADD_KEY: Record<CatalogEntity, string> = {
   cabinet: 'catalog.addCabinet',
   device_type: 'catalog.addDeviceType',
   vendor: 'catalog.addVendor',
+  department: 'catalog.addDepartment',
+  isp_provider: 'catalog.addIspProvider',
+  service_port: 'catalog.addServicePort',
 };
 
 /**
@@ -291,5 +428,33 @@ function buildBody(entity: CatalogEntity, form: FormState): Record<string, unkno
         phone: form.phone.trim(),
         contact: form.contact.trim(),
       };
+    case 'department':
+      return { name: form.name.trim(), description: form.description.trim() };
+    case 'isp_provider':
+      return {
+        name: form.name.trim(),
+        hotline: form.hotline.trim(),
+        contact: form.contact.trim(),
+      };
+    case 'service_port': {
+      const from = Number(form.portFrom.trim());
+      if (!isPort(from)) return 'Port phải là số nguyên từ 1 đến 65535.';
+      // Bỏ trống ô "đến" = một port duy nhất, không phải dải hở đầu kia.
+      const rawTo = form.portTo.trim();
+      const to = rawTo === '' ? from : Number(rawTo);
+      if (!isPort(to)) return 'Port phải là số nguyên từ 1 đến 65535.';
+      if (to < from) return 'Dải port viết ngược — số đầu phải nhỏ hơn số cuối (vd 50000-52000).';
+      return {
+        name: form.name.trim(),
+        protocol: form.protocol,
+        portFrom: from,
+        portTo: to,
+        description: form.description.trim(),
+      };
+    }
   }
+}
+
+function isPort(value: number): boolean {
+  return Number.isInteger(value) && value >= 1 && value <= 65535;
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { Dialog } from '@/ui/dialog';
 
 /**
  * Hiện giá trị đúng `seconds` giây rồi tự đóng (FR-022).
@@ -46,8 +46,17 @@ export function RevealDialog({
   }, [onClose]);
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={480}>
-      <DialogTitle>{label}</DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={480}
+      title={label}
+      footer={
+        <button type="button" className="btn primary" onClick={onClose}>
+          {t('vault.hideNow')}
+        </button>
+      }
+    >
       <div className="form-grid" data-columns={1}>
         <p className="secret-value mono" data-testid="secret-value">
           {value}
@@ -55,11 +64,9 @@ export function RevealDialog({
         <p className="muted" role="status">
           {t('vault.autoHide', { seconds: left })}
         </p>
-        <div className="row" style={{ justifyContent: 'flex-end' }}>
-          <button type="button" className="btn primary" onClick={onClose}>
-            {t('vault.hideNow')}
-          </button>
-        </div>
+        <p className="muted">
+          <small>{t('vault.revealLogged')}</small>
+        </p>
       </div>
     </Dialog>
   );

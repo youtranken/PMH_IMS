@@ -15,7 +15,12 @@ import {
 import { diffDevice } from './device-changes';
 import { deviceExportSheets, deviceTemplateSheets } from './device-template';
 import { deviceTable } from './devices.schema';
-import { DevicesService } from './devices.service';
+import {
+  DEVICE_SORT_DEFAULT,
+  DevicesService,
+  type DeviceSortKey,
+} from './devices.service';
+import type { SortQuery } from '../../common/sorting';
 import type { DeviceFilter } from './devices.types';
 
 export interface DeviceImportResult {
@@ -49,8 +54,11 @@ export class DeviceImportService {
   }
 
   /** FR-028: xuất đúng những gì đang lọc trên màn hình, không phải cả kho. */
-  async buildExport(filter: DeviceFilter): Promise<Buffer> {
-    const devices = await this.devices.listAll(filter);
+  async buildExport(
+    filter: DeviceFilter,
+    sort: SortQuery<DeviceSortKey> = DEVICE_SORT_DEFAULT,
+  ): Promise<Buffer> {
+    const devices = await this.devices.listAll(filter, sort);
     return this.excelOut.buildWorkbook(deviceExportSheets(devices));
   }
 

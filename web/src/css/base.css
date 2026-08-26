@@ -98,7 +98,7 @@ button:focus-visible {
   left: var(--space-4);
   z-index: var(--z-toast);
   background: var(--primary);
-  color: var(--on-accent);
+  color: var(--on-brand);
   padding: var(--space-3) var(--space-6);
   border-radius: var(--r-sm);
   font-weight: 600;
@@ -114,7 +114,7 @@ button:disabled {
   cursor: not-allowed;
 }
 button.primary {
-  color: var(--on-accent);
+  color: var(--on-brand);
   background: var(--grad);
   border-color: transparent;
   box-shadow: 0 8px 18px -8px var(--warm-ink);
@@ -128,7 +128,7 @@ button.primary:hover:not(:disabled) {
   box-shadow: 0 10px 22px -8px var(--warm-ink);
 }
 button.warm {
-  color: var(--on-accent);
+  color: var(--on-brand);
   background: var(--warm);
   border-color: transparent;
 }
@@ -212,7 +212,7 @@ a.linkbtn:hover {
   height: 26px;
   border-radius: var(--r-sm);
   background: var(--grad);
-  color: var(--on-accent);
+  color: var(--on-brand);
   display: grid;
   place-items: center;
   font-size: var(--fs-2xs);
@@ -341,7 +341,10 @@ a.linkbtn:hover {
 }
 .page {
   padding: var(--space-10);
-  max-width: 1180px;
+  /* Dùng gần trọn bề ngang màn lớn. Trước đây kẹp 1180px nên trên màn 24" (1920px) bảng bị
+     bó vào giữa, chừa hơn 270px trống MỖI BÊN — mà đây là app đầy bảng, bề ngang là thứ
+     đáng tiền nhất. Vẫn có trần để trên màn siêu rộng dòng không dài vô tận. */
+  max-width: min(1880px, 95vw);
   width: 100%;
   margin-inline: auto;
   animation: pageIn 0.25s var(--ease) both;
@@ -358,6 +361,45 @@ a.linkbtn:hover {
 .page-header h1 {
   margin-right: auto;
   font-size: var(--fs-2xl);
+}
+/* `PageHeader` (ui/page-header.tsx) bọc tiêu đề trong `.grow` và nút trong `.row`, nên
+   `margin-right:auto` ở h1 KHÔNG còn tác dụng (h1 hết là flex item trực tiếp) — thiếu hai
+   luật dưới đây thì tiêu đề, phụ đề và toàn bộ nút dồn cụm sát trái ở mọi màn. */
+.page-header > .grow {
+  flex: 1;
+  /* PHẢI có sàn. Với `min-width: 0` khối tiêu đề co được về gần 0, nên ở màn hẹp trình duyệt
+     chọn bóp tiêu đề thay vì cho cụm nút xuống dòng — tiêu đề dạng "MÃ — TÊN" bị bẻ dọc từng
+     mẩu ("SW-" / "E2E-" / "VERIFY-") còn nút thì chèn ngang giữa dòng. */
+  min-width: 240px;
+}
+/* Điện thoại: xếp chồng tiêu đề rồi tới cụm nút, thay vì ép co chữ. */
+@media (max-width: 640px) {
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-5);
+  }
+  .page-header > .grow {
+    min-width: 0;
+    width: 100%;
+  }
+  .page-header > .row {
+    width: 100%;
+  }
+}
+.page-header > .row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+.page-header .sub {
+  margin-top: var(--space-2);
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+  /* Trang giờ rộng gần trọn màn, nhưng CHỮ thì không nên dài theo: phụ đề dài ~95 ký tự
+     chạy một dòng ngang 1880px là mắt phải quét quá xa. Bảng rộng, chữ hẹp. */
+  max-width: 68ch;
 }
 /* Cột nội dung hẹp, canh giữa NHẤT QUÁN cho trang cấu hình/danh mục — tiêu đề, thẻ, nút
    cùng một mép trái (tránh cảnh tiêu đề trái / thẻ giữa / nút trái lệch nhau). */
@@ -402,6 +444,9 @@ a.linkbtn:hover {
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-sm);
+  /* Không có padding thì chữ nằm sát viền — đây là lý do các thẻ trên Bảng điều khiển
+     trông "chưa xong". Thẻ nào cần sát mép (bảng tràn viền) tự đè bằng padding: 0. */
+  padding: var(--space-8);
 }
 .section-gap {
   margin-top: var(--space-10);

@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDateTime, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { sortQuery } from '@/lib/sort-query';
+import { DataTable } from '@/ui/data-table';
+import { Dialog } from '@/ui/dialog';
 import { FilterBar } from '@/ui/filter-bar';
 import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
@@ -43,6 +46,9 @@ export function AccountsScreen({ me }: { me: Me }) {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState('');
+  // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
+  // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả bảng — sai mà không có dấu hiệu nào.
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'fullName', desc: false }]);
   const [creating, setCreating] = useState(false);
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
   const [sessionsFor, setSessionsFor] = useState<AccountRow | null>(null);
@@ -50,12 +56,17 @@ export function AccountsScreen({ me }: { me: Me }) {
   // Tìm kiếm chạy PHÍA SERVER: lọc phía client chỉ lọc đúng 20 dòng đang xem, nên tên nằm ở
   // trang 3 sẽ ra bảng rỗng trong khi phân trang vẫn báo tổng 137 dòng.
   const accounts = useQuery({
-    queryKey: ['accounts', page, search],
+    queryKey: ['accounts', page, search, sorting],
     queryFn: () =>
       apiFetch<{ items: AccountRow[]; total: number }>(
-        `/api/v1/accounts?page=${page}&limit=${LIMIT}${
-          search ? `&search=${encodeURIComponent(search)}` : ''
-        }`,
+        `/api/v1/accounts?${[
+          `page=${page}`,
+          `limit=${LIMIT}`,
+          search ? `search=${encodeURIComponent(search)}` : '',
+          sortQuery(sorting),
+        ]
+          .filter(Boolean)
+          .join('&')}`,
         { credentials: 'include' },
       ),
   });
@@ -86,6 +97,166 @@ export function AccountsScreen({ me }: { me: Me }) {
 
   const rows = accounts.data?.items ?? [];
 
+  /**
+   * `accessorKey` PHẢI khớp whitelist `USER_SORT_KEYS` phía API — đó là tên cột gửi lên trong
+   * `?sort=`. `email` không có cột riêng (chỉ là dòng phụ dưới Họ tên) nên không sắp được.
+   */
+  const columns = useMemo<ColumnDef<AccountRow, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'fullName',
+        header: t('accounts.fullName'),
+        cell: ({ row }) => (
+          <>
+            {row.original.fullName}
+            <span className="cell-sub">{row.original.email}</span>
+          </>
+        ),
+      },
+      {
+        accessorKey: 'role',
+        header: t('accounts.role'),
+        cell: ({ row }) => (
+          <span className="badge plain brand">{roleLabel(row.original.role, t)}</span>
+        ),
+      },
+      {
+        accessorKey: 'status',
+        header: t('accounts.status'),
+        cell: ({ row }) => (
+          <span className={`badge ${row.original.status === 'active' ? 'ok' : 'danger'}`}>
+            {t(
+              row.original.status === 'active'
+                ? 'accounts.statusActive'
+                : row.original.status === 'locked'
+                  ? 'accounts.statusLocked'
+                  : 'accounts.statusDisabled',
+            )}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'totpEnrolledAt',
+        header: t('accounts.totpEnrolled'),
+        cell: ({ row }) =>
+          row.original.totpEnrolledAt ? (
+            <span className="badge ok">{t('common.yes')}</span>
+          ) : (
+            <span className="badge warn">{t('common.no')}</span>
+          ),
+      },
+      {
+        accessorKey: 'lastLoginAt',
+        header: t('accounts.lastLogin'),
+        cell: ({ row }) =>
+          orDash(row.original.lastLoginAt ? formatDateTime(row.original.lastLoginAt) : null),
+      },
+      {
+        id: 'actions',
+        header: t('common.actions'),
+        meta: { className: 'col-center' },
+        cell: ({ row }) => {
+          const account = row.original;
+          const rowBusy = setStatus.isPending || resetPassword.isPending || resetTotp.isPending;
+          return (
+            <div className="action-cell">
+              <button
+                type="button"
+                className="btn sm"
+                disabled={rowBusy}
+                onClick={() => setSessionsFor(account)}
+              >
+                {t('accounts.sessions')}
+              </button>
+              <button
+                type="button"
+                className="btn sm"
+                disabled={resetPassword.isPending}
+                onClick={() => {
+                  void (async () => {
+                    const ok = await askConfirm({
+                      message: t('accounts.confirmResetPassword', { name: account.fullName }),
+                      danger: true,
+                      confirmLabel: t('accounts.resetPassword'),
+                    });
+                    if (!ok) return;
+                    resetPassword.mutate(
+                      { id: account.id },
+                      {
+                        onSuccess: (result) => {
+                          setTemporaryPassword(result.temporaryPassword);
+                          void refresh();
+                        },
+                        onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
+                      },
+                    );
+                  })();
+                }}
+              >
+                {t('accounts.resetPassword')}
+              </button>
+              <button
+                type="button"
+                className="btn sm"
+                disabled={resetTotp.isPending}
+                onClick={() => {
+                  void (async () => {
+                    const ok = await askConfirm({
+                      message: t('accounts.confirmResetTotp', { name: account.fullName }),
+                      danger: true,
+                      confirmLabel: t('accounts.resetTotp'),
+                    });
+                    if (!ok) return;
+                    resetTotp.mutate(
+                      { id: account.id },
+                      {
+                        onSuccess: () => {
+                          toast({ message: 'Đã đặt lại xác thực 2 lớp.' });
+                          void refresh();
+                        },
+                        onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
+                      },
+                    );
+                  })();
+                }}
+              >
+                {t('accounts.resetTotp')}
+              </button>
+              <button
+                type="button"
+                className="btn sm"
+                disabled={setStatus.isPending}
+                onClick={() => {
+                  void (async () => {
+                    const next = account.status === 'active' ? 'locked' : 'active';
+                    if (next === 'locked') {
+                      const ok = await askConfirm({
+                        message: t('accounts.confirmLock', { name: account.fullName }),
+                        danger: true,
+                        confirmLabel: t('accounts.lock'),
+                      });
+                      if (!ok) return;
+                    }
+                    setStatus.mutate(
+                      { id: account.id, status: next },
+                      {
+                        onSuccess: () => void refresh(),
+                        onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
+                      },
+                    );
+                  })();
+                }}
+              >
+                {account.status === 'active' ? t('accounts.lock') : t('accounts.unlock')}
+              </button>
+            </div>
+          );
+        },
+      },
+    ],
+    [t, setStatus.isPending, resetPassword.isPending, resetTotp.isPending],
+  );
+
   return (
     <>
       <PageHeader
@@ -113,148 +284,22 @@ export function AccountsScreen({ me }: { me: Me }) {
         <LoadError onRetry={() => void accounts.refetch()} />
       ) : (
         <>
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>{t('accounts.fullName')}</th>
-                  <th>{t('accounts.role')}</th>
-                  <th>{t('accounts.status')}</th>
-                  <th>{t('accounts.totpEnrolled')}</th>
-                  <th>{t('accounts.lastLogin')}</th>
-                  <th className="col-center">{t('common.actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="muted" style={{ textAlign: 'center' }}>
-                      {t('common.empty')}
-                    </td>
-                  </tr>
-                ) : null}
-                {rows.map((row) => (
-                  <tr key={row.id}>
-                    <td>
-                      {row.fullName}
-                      <span className="cell-sub">{row.email}</span>
-                    </td>
-                    <td>
-                      <span className="badge plain brand">{roleLabel(row.role, t)}</span>
-                    </td>
-                    <td>
-                      <span className={`badge ${row.status === 'active' ? 'ok' : 'danger'}`}>
-                        {t(
-                          row.status === 'active'
-                            ? 'accounts.statusActive'
-                            : row.status === 'locked'
-                              ? 'accounts.statusLocked'
-                              : 'accounts.statusDisabled',
-                        )}
-                      </span>
-                    </td>
-                    <td>
-                      {row.totpEnrolledAt ? (
-                        <span className="badge ok">{t('common.yes')}</span>
-                      ) : (
-                        <span className="badge warn">{t('common.no')}</span>
-                      )}
-                    </td>
-                    <td>{orDash(row.lastLoginAt ? formatDateTime(row.lastLoginAt) : null)}</td>
-                    <td>
-                      <div className="action-cell">
-                        <button
-                          type="button"
-                          className="btn sm"
-                          onClick={() => setSessionsFor(row)}
-                        >
-                          {t('accounts.sessions')}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn sm"
-                          onClick={() => {
-                            void (async () => {
-                              const ok = await askConfirm({
-                                message: t('accounts.confirmResetPassword', { name: row.fullName }),
-                                danger: true,
-                              });
-                              if (!ok) return;
-                              resetPassword.mutate(
-                                { id: row.id },
-                                {
-                                  onSuccess: (result) => {
-                                    setTemporaryPassword(result.temporaryPassword);
-                                    void refresh();
-                                  },
-                                  onError: (err) =>
-                                    toast({ message: errorMessage(err), tone: 'error' }),
-                                },
-                              );
-                            })();
-                          }}
-                        >
-                          {t('accounts.resetPassword')}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn sm"
-                          onClick={() => {
-                            void (async () => {
-                              const ok = await askConfirm({
-                                message: t('accounts.confirmResetTotp', { name: row.fullName }),
-                                danger: true,
-                              });
-                              if (!ok) return;
-                              resetTotp.mutate(
-                                { id: row.id },
-                                {
-                                  onSuccess: () => {
-                                    toast({ message: 'Đã đặt lại xác thực 2 lớp.' });
-                                    void refresh();
-                                  },
-                                  onError: (err) =>
-                                    toast({ message: errorMessage(err), tone: 'error' }),
-                                },
-                              );
-                            })();
-                          }}
-                        >
-                          {t('accounts.resetTotp')}
-                        </button>
-                        <button
-                          type="button"
-                          className={`btn sm${row.status === 'active' ? ' danger' : ''}`}
-                          onClick={() => {
-                            void (async () => {
-                              const next = row.status === 'active' ? 'locked' : 'active';
-                              if (next === 'locked') {
-                                const ok = await askConfirm({
-                                  message: t('accounts.confirmLock', { name: row.fullName }),
-                                  danger: true,
-                                });
-                                if (!ok) return;
-                              }
-                              setStatus.mutate(
-                                { id: row.id, status: next },
-                                {
-                                  onSuccess: () => void refresh(),
-                                  onError: (err) =>
-                                    toast({ message: errorMessage(err), tone: 'error' }),
-                                },
-                              );
-                            })();
-                          }}
-                        >
-                          {row.status === 'active' ? t('accounts.lock') : t('accounts.unlock')}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            data={rows}
+            columns={columns}
+            emptyText={t('common.empty')}
+            stackOnMobile
+            manualSorting
+            sorting={sorting}
+            onSortingChange={(updater) => {
+              setSorting((current) =>
+                typeof updater === 'function' ? updater(current) : updater,
+              );
+              // Đổi cột sắp xếp thì về trang 1: giữ nguyên trang 5 của thứ tự CŨ là nhìn vào
+              // một lát cắt chẳng liên quan gì tới thứ tự vừa chọn.
+              setPage(1);
+            }}
+          />
 
           <Pagination
             page={page}
@@ -278,15 +323,19 @@ export function AccountsScreen({ me }: { me: Me }) {
       ) : null}
 
       {temporaryPassword ? (
-        <Dialog open onOpenChange={() => setTemporaryPassword(null)} maxWidth={460}>
-          <DialogTitle>{t('accounts.temporaryPassword')}</DialogTitle>
-          <p className="mono temp-password">{temporaryPassword}</p>
-          <p className="muted">{t('accounts.temporaryPasswordNote')}</p>
-          <div className="row" style={{ justifyContent: 'flex-end' }}>
+        <Dialog
+          open
+          onOpenChange={() => setTemporaryPassword(null)}
+          maxWidth={460}
+          title={t('accounts.temporaryPassword')}
+          footer={
             <button type="button" className="btn primary" onClick={() => setTemporaryPassword(null)}>
               {t('common.close')}
             </button>
-          </div>
+          }
+        >
+          <p className="mono temp-password">{temporaryPassword}</p>
+          <p className="muted">{t('accounts.temporaryPasswordNote')}</p>
         </Dialog>
       ) : null}
 
@@ -326,10 +375,12 @@ function SessionsDialog({
   );
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={640}>
-      <DialogTitle>
-        {t('accounts.sessions')} — {account.fullName}
-      </DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={640}
+      title={`${t('accounts.sessions')} — ${account.fullName}`}
+    >
       {sessions.isLoading ? (
         <Loading />
       ) : (sessions.data ?? []).length === 0 ? (
@@ -359,7 +410,13 @@ function SessionsDialog({
                       className="btn sm danger"
                       onClick={() => {
                         void (async () => {
-                          if (!(await askConfirm({ message: t('accounts.confirmKillSession'), danger: true })))
+                          if (
+                            !(await askConfirm({
+                              message: t('accounts.confirmKillSession'),
+                              danger: true,
+                              confirmLabel: t('accounts.killSession'),
+                            }))
+                          )
                             return;
                           kill.mutate(
                             { id: session.id },

@@ -1,18 +1,18 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
-import { ApiError, apiFetch } from '@/lib/api-client';
+import { Link } from 'react-router-dom';
+import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { Combobox } from '@/ui/combobox';
-import { ExportXlsxButton } from '@/ui/export-xlsx-button';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { Dialog } from '@/ui/dialog';
 import { DatePicker } from '@/ui/date-picker';
-import { LoadError, Loading, NotFound } from '@/ui/load-state';
-import { Field, PageHeader } from '@/ui/page-header';
-import { UsageBar } from '@/ui/usage-bar';
+import { LoadError, Loading } from '@/ui/load-state';
+import { Field } from '@/ui/page-header';
+import { SuggestInput } from '@/ui/suggest-input';
+import { useDepartments } from './use-departments';
 import { useToast } from '@/ui/toast';
 import { HistoryPanel } from '@/ui/history-panel';
 import {
@@ -34,83 +34,74 @@ interface DeviceOption {
 }
 
 /**
- * Toàn bộ một dải: IP đã có hồ sơ và ô còn trống, xếp theo thứ tự địa chỉ (story 5.1).
+ * Cột PHẢI của màn Địa chỉ IP: toàn bộ một dải — IP đã có hồ sơ và ô còn trống, xếp theo thứ
+ * tự địa chỉ (story 5.1).
  *
  * Ô trống hiện luôn trong bảng chứ không giấu sau một nút "thêm IP": câu hỏi thật khi cắm máy
  * là "còn chỗ nào trống", và nhìn thấy chỗ trống rồi bấm vào đó là đường ngắn nhất.
+ *
+ * Nhận cả bản ghi dải qua props (cột trái đã tải danh sách rồi) — không hỏi lại API cho một
+ * thứ đang nằm sẵn trong tay.
  */
-export function SubnetDetail({ me }: { me: Me }) {
+export function SubnetPane({ subnet: item, me }: { subnet: SubnetRow; me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const { id = '' } = useParams();
-  const [onlyUsed, setOnlyUsed] = useState(false);
+  const id = item.id;
+  const [status, setStatus] = useState<'all' | IpStatus>('all');
   const [editing, setEditing] = useState<{ record: IpRow | null; address: string } | null>(null);
   const [moving, setMoving] = useState<{ record: IpRow; to: IpStatus } | null>(null);
   const [historyOf, setHistoryOf] = useState<IpRow | null>(null);
 
-  const subnet = useQuery({
-    queryKey: ['ipam', 'subnets', id],
-    queryFn: () => apiFetch<SubnetRow>(`/api/v1/ipam/subnets/${id}`),
-    retry: false,
-  });
-
   const slots = useQuery({
     queryKey: ['ipam', 'subnets', id, 'addresses'],
     queryFn: () => apiFetch<SubnetSlot[]>(`/api/v1/ipam/subnets/${id}/addresses`),
-    enabled: subnet.isSuccess,
   });
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['ipam'] });
 
+  /**
+   * Lọc theo trạng thái, gồm cả "Trống" — đúng bộ lọc của mockup.
+   *
+   * Thay ô tick "chỉ hiện IP đã cấp" cũ: ô tick chỉ mở/đóng được MỘT trạng thái, nên câu hỏi
+   * hay gặp thứ hai — "còn chỗ nào trống" — vẫn phải tự dò bằng mắt giữa 254 dòng.
+   */
   const rows = useMemo(
-    () => (slots.data ?? []).filter((slot) => !onlyUsed || slot.kind === 'record'),
-    [slots.data, onlyUsed],
+    () =>
+      (slots.data ?? []).filter((slot) => {
+        if (status === 'all') return true;
+        return slot.kind === 'free' ? status === 'free' : slot.status === status;
+      }),
+    [slots.data, status],
   );
-
-  if (subnet.isLoading) return <Loading />;
-  if (subnet.isError) {
-    return subnet.error instanceof ApiError && subnet.error.status === 404 ? (
-      <NotFound />
-    ) : (
-      <LoadError onRetry={() => void subnet.refetch()} />
-    );
-  }
-
-  const item = subnet.data!;
 
   return (
     <>
-      <PageHeader
-        title={`${item.cidr} — ${item.name}`}
-        subtitle={item.siteCode ? `${t('ipam.site')}: ${item.siteCode}` : undefined}
-        actions={
-          <>
-            <ExportXlsxButton
-              url={`/api/v1/ipam/subnets/${id}/export.xlsx`}
-              fileName={`ip-${item.cidr.replace('/', '-')}.xlsx`}
-            />
-            <Link className="btn" to="/dia-chi-ip">
-              {t('ipam.back')}
-            </Link>
-          </>
-        }
-      />
+      {/*
+        CHỈ tiêu đề, KHÔNG lặp lại thanh mức sử dụng.
+        Thẻ dải đang chọn nằm ngay bên trái và đã hiện đúng con số đó rồi; vẽ lại lần hai
+        cách nhau 300px không thêm thông tin nào, chỉ làm người đọc phải đối chiếu xem hai
+        chỗ có khớp nhau không.
+      */}
+      <div className="pane-head">
+        <h2 className="pane-title">
+          <span className="mono">{item.cidr}</span> — {item.name}
+        </h2>
+      </div>
 
-      <div className="device-summary">
-        <UsageBar
-          percent={item.percent}
-          ariaLabel={t('ipam.usageOf', { cidr: item.cidr })}
-          label={t('ipam.usageLabel', { used: item.used, total: item.total, free: item.free })}
-        />
-        <label className="row" style={{ gap: 'var(--space-2)' }}>
-          <input
-            type="checkbox"
-            checked={onlyUsed}
-            onChange={(e) => setOnlyUsed(e.target.checked)}
-          />
-          <span className="muted">{t('ipam.onlyUsed')}</span>
-        </label>
+      {/* Bộ lọc trạng thái — "Trống" là một lựa chọn ngang hàng, không phải một ô tick phụ. */}
+      <div className="segmented" role="group" aria-label={t('ipam.status')}>
+        {(['all', 'assigned', 'free', 'suspect_dead', 'reclaimed'] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            className={status === key ? 'on' : undefined}
+            aria-pressed={status === key}
+            onClick={() => setStatus(key)}
+          >
+            {t(key === 'all' ? 'ipam.filterAll' : STATUS_KEY[key])}
+          </button>
+        ))}
       </div>
 
       {slots.isLoading ? (
@@ -267,6 +258,7 @@ function IpForm({
   const [deviceId, setDeviceId] = useState(record?.deviceId ?? '');
   const [deviceTerm, setDeviceTerm] = useState(record?.deviceCode ?? '');
   const [usedBy, setUsedBy] = useState(record?.usedBy ?? '');
+  const departments = useDepartments();
   const [assignedAt, setAssignedAt] = useState(record?.assignedAt ?? '');
   const [note, setNote] = useState(record?.note ?? '');
   const [error, setError] = useState<string | null>(null);
@@ -286,9 +278,24 @@ function IpForm({
   );
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={560}>
-      <DialogTitle>{record ? t('ipam.editIp', { address }) : t('ipam.assignIp', { address })}</DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={560}
+      title={record ? t('ipam.editIp', { address }) : t('ipam.assignIp', { address })}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" form="ip-form" className="btn primary" disabled={save.isPending}>
+            {save.isPending ? t('common.loading') : t('common.save')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="ip-form"
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
@@ -336,12 +343,16 @@ function IpForm({
           />
         </Field>
 
-        <Field label={t('ipam.usedBy')} hint={t('ipam.usedByHint')} htmlFor="ip-used-by">
-          <input
-            id="ip-used-by"
-            className="inp"
+        <Field label={t('ipam.usedBy')} hint={t('ipam.usedByHint')}>
+          {/* Gợi ý từ danh mục Bộ phận, VẪN gõ tự do được: ô này đôi khi là một phòng, đôi
+              khi là "Chị Lan — Kế toán", đôi khi là hai phòng dùng chung một máy in. Ép thành
+              khóa ngoại là ép người dùng khai sai cho vừa cái ô. */}
+          <SuggestInput
             value={usedBy}
-            onChange={(e) => setUsedBy(e.target.value)}
+            onChange={setUsedBy}
+            options={departments}
+            placeholder={t('ipam.usedByPlaceholder')}
+            ariaLabel={t('ipam.usedBy')}
           />
         </Field>
 
@@ -364,15 +375,6 @@ function IpForm({
             {error}
           </p>
         ) : null}
-
-        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button type="submit" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );
@@ -401,6 +403,7 @@ function TransitionDialog({
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
   const [usedBy, setUsedBy] = useState('');
+  const departments = useDepartments();
   const [error, setError] = useState<string | null>(null);
   const asksOwner = to === 'assigned';
 
@@ -410,11 +413,33 @@ function TransitionDialog({
   );
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={480}>
-      <DialogTitle>
-        {t(TRANSITION_LABEL[`${record.status}->${to}`])} — {record.address}
-      </DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={480}
+      title={
+        <>
+          {t(TRANSITION_LABEL[`${record.status}->${to}`])} — {record.address}
+        </>
+      }
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="submit"
+            form="transition-form"
+            className={to === 'reclaimed' ? 'btn danger' : 'btn primary'}
+            disabled={move.isPending}
+          >
+            {move.isPending ? t('common.loading') : t('common.confirm')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="transition-form"
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
@@ -429,12 +454,13 @@ function TransitionDialog({
         {to === 'reclaimed' ? <p className="muted">{t('ipam.reclaimHint')}</p> : null}
 
         {asksOwner ? (
-          <Field label={t('ipam.usedBy')} hint={t('ipam.usedByHint')} htmlFor="tr-used-by">
-            <input
-              id="tr-used-by"
-              className="inp"
+          <Field label={t('ipam.usedBy')} hint={t('ipam.usedByHint')}>
+            <SuggestInput
               value={usedBy}
-              onChange={(e) => setUsedBy(e.target.value)}
+              onChange={setUsedBy}
+              options={departments}
+              placeholder={t('ipam.usedByPlaceholder')}
+              ariaLabel={t('ipam.usedBy')}
             />
           </Field>
         ) : null}
@@ -453,19 +479,6 @@ function TransitionDialog({
             {error}
           </p>
         ) : null}
-
-        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button
-            type="submit"
-            className={`btn primary${to === 'reclaimed' ? ' danger' : ''}`}
-            disabled={move.isPending}
-          >
-            {move.isPending ? t('common.loading') : t('common.confirm')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );
@@ -480,8 +493,17 @@ function IpHistoryDialog({ record, onClose }: { record: IpRow; onClose: () => vo
   });
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={620}>
-      <DialogTitle>{t('ipam.historyOf', { address: record.address })}</DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={620}
+      title={t('ipam.historyOf', { address: record.address })}
+      footer={
+        <button type="button" className="btn" onClick={onClose}>
+          {t('common.close')}
+        </button>
+      }
+    >
       {history.isLoading ? (
         <Loading />
       ) : history.isError ? (
@@ -492,11 +514,6 @@ function IpHistoryDialog({ record, onClose }: { record: IpRow; onClose: () => vo
           emptyText={t('ipam.historyEmpty')}
         />
       )}
-      <div className="row" style={{ justifyContent: 'flex-end' }}>
-        <button type="button" className="btn" onClick={onClose}>
-          {t('common.close')}
-        </button>
-      </div>
     </Dialog>
   );
 }

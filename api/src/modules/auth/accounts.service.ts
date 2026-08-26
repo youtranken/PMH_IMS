@@ -9,9 +9,10 @@ import {
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Page, PageQuery } from '../../common/pagination';
+import type { SortQuery } from '../../common/sorting';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { OutboxService } from '../outbox/outbox.service';
-import { UsersService } from '../users/users.service';
+import { UsersService, type UserSortKey } from '../users/users.service';
 import type { UserRecord } from '../users/users.types';
 import { PasswordService } from './password.service';
 import { checkPasswordStrength } from './password-policy';
@@ -39,8 +40,12 @@ export class AccountsService {
     private readonly outbox: OutboxService,
   ) {}
 
-  list(query: PageQuery, search?: string): Promise<Page<UserRecord>> {
-    return this.users.list(query, search);
+  list(
+    query: PageQuery,
+    search?: string,
+    sort?: SortQuery<UserSortKey>,
+  ): Promise<Page<UserRecord>> {
+    return this.users.list(query, search, sort);
   }
 
   /** Tạo user + mật khẩu tạm; buộc đổi mật khẩu và enroll TOTP ở lần đăng nhập đầu. */

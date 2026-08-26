@@ -1,5 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, firstLogin, resetDevices, resetSoftware, resetUsers } from './helpers';
+import {
+  confirmAction,
+  E2E_SA,
+  firstLogin,
+  resetDevices,
+  resetSoftware,
+  resetUsers,
+} from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -50,12 +57,23 @@ async function assign(
   softwareId: string,
   deviceId: string,
   overSeatReason?: string,
+  terms: Record<string, unknown> = {},
 ) {
   const csrf = await csrfOf(page);
   return page.request.post(`/api/v1/software/${softwareId}/assignments`, {
     headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
-    data: { deviceId, overSeatReason: overSeatReason ?? '' },
+    data: { deviceId, overSeatReason: overSeatReason ?? '', ...terms },
   });
+}
+
+/** Bung dòng license đang hiện trên danh sách và trả về khu vừa mở. */
+async function expandLicense(page: Page, licenseCode: string) {
+  await page.goto('/phan-mem');
+  await page.getByRole('searchbox', { name: /Tìm/ }).fill(licenseCode);
+  const row = page.getByRole('row', { name: new RegExp(licenseCode) });
+  await expect(row).toBeVisible();
+  await row.getByRole('button').first().click();
+  return row;
 }
 
 test.describe('Gán license theo seat', () => {
@@ -78,7 +96,7 @@ test.describe('Gán license theo seat', () => {
     await expect(row.getByText('Đang dùng')).toBeVisible();
 
     await row.getByRole('button', { name: 'Gỡ' }).click();
-    await page.getByRole('button', { name: 'Đồng ý' }).click();
+    await confirmAction(page);
     await expect(page.getByText('Chưa gán license này vào máy nào.')).toBeVisible();
 
     // Gỡ KHÔNG xóa dòng: bật "xem cả đã gỡ" là thấy lại, kèm mốc thời gian.
@@ -181,5 +199,178 @@ test.describe('Gán license theo seat', () => {
     await page.reload();
     await expect(page.getByRole('heading', { name: 'License đang cài' })).toBeVisible();
     await expect(page.getByRole('link', { name: `LIC-E2E-PANEL-${stamp}` })).toBeVisible();
+  });
+
+  /**
+   * AC 3.2: "màn license hiển thị danh sách máy đang dùng key" — trên DANH SÁCH, không bắt
+   * bấm vào từng license. Đây là nếp bung dòng của code nền QLTS (AD-12) mà bản dựng đầu
+   * đánh rơi: hạ tầng `renderExpanded` đã port sang nhưng không màn nào nối dây.
+   */
+  test('bung dòng license trên danh sách là thấy máy đang dùng', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const licenseId = await createLicense(page, `LIC-E2E-EXP-${stamp}`, 3);
+    const deviceCode = `PC-E2E-EXP-${stamp}`;
+    const deviceId = await createDevice(page, deviceCode);
+    expect((await assign(page, licenseId, deviceId)).status()).toBe(201);
+
+    await page.goto('/phan-mem');
+    await page.getByRole('searchbox', { name: /Tìm/ }).fill(`LIC-E2E-EXP-${stamp}`);
+    const row = page.getByRole('row', { name: new RegExp(`LIC-E2E-EXP-${stamp}`) });
+    await expect(row).toBeVisible();
+
+    // Chưa bung thì mã máy CHƯA có mặt trên màn.
+    await expect(page.getByRole('link', { name: deviceCode })).toHaveCount(0);
+
+    await row.getByRole('button').first().click();
+    await expect(page.getByRole('link', { name: deviceCode })).toBeVisible();
+
+    // Gán thêm máy NGAY TẠI ĐÂY — không bắt vào trang chi tiết mới gán được.
+    await expect(page.getByRole('button', { name: 'Gán vào máy' })).toBeVisible();
+  });
+
+  /**
+   * Kỳ hạn + chi phí RIÊNG của từng ghế (0027).
+   *
+   * Một license 10 ghế hầu như không mua một lần: Kế toán mua 3 ghế hợp đồng này giá này,
+   * Xưởng mua 2 ghế hợp đồng khác giá khác kỳ khác. Trước đó mọi con số ấy chỉ có MỘT ô ở
+   * tầng hồ sơ, nên "ghế này thuộc hợp đồng nào" không trả lời được.
+   */
+  test('mỗi ghế mang chi phí, hợp đồng và kỳ hạn riêng — khu bung dòng hiện đủ', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const licenseId = await createLicense(page, `LIC-E2E-TERM-${stamp}`, 5);
+    const ktCode = `PC-E2E-KT-${stamp}`;
+    const xuongCode = `PC-E2E-XU-${stamp}`;
+
+    expect(
+      (
+        await assign(page, licenseId, await createDevice(page, ktCode), '', {
+          cost: 3_500_000,
+          contract: `HD-KT-${stamp}`,
+          startDate: '2026-01-01',
+          endDate: '2026-12-31',
+        })
+      ).status(),
+    ).toBe(201);
+    expect(
+      (
+        await assign(page, licenseId, await createDevice(page, xuongCode), '', {
+          cost: 1_200_000,
+          contract: `HD-XU-${stamp}`,
+        })
+      ).status(),
+    ).toBe(201);
+
+    await expandLicense(page, `LIC-E2E-TERM-${stamp}`);
+
+    // Hai ghế, hai hợp đồng, hai mức giá — cùng một license.
+    await expect(page.getByText('3.500.000 ₫')).toBeVisible();
+    await expect(page.getByText('1.200.000 ₫')).toBeVisible();
+    await expect(page.getByText(`HD-KT-${stamp}`)).toBeVisible();
+    await expect(page.getByText(`HD-XU-${stamp}`)).toBeVisible();
+    await expect(page.getByText('01/01/2026')).toBeVisible();
+    // Ghế không khai kỳ hạn riêng thì đi theo hồ sơ — và phải NÓI RA như vậy, không hiện
+    // con số của hồ sơ như thể người dùng đã khai riêng cho ghế đó.
+    await expect(page.getByText('Theo hồ sơ')).toBeVisible();
+    await expect(page.getByText(`2/5 ghế đã gán`)).toBeVisible();
+  });
+
+  /** Sửa ghế NGAY TẠI khu bung dòng, bằng đúng hộp đã dùng để gán (AD-15). */
+  test('sửa chi phí và hợp đồng của một ghế ngay trong khu bung dòng', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const licenseId = await createLicense(page, `LIC-E2E-EDIT-${stamp}`, 3);
+    const deviceCode = `PC-E2E-ED-${stamp}`;
+    const deviceId = await createDevice(page, deviceCode);
+    expect((await assign(page, licenseId, deviceId, '', { cost: 1_000_000 })).status()).toBe(201);
+
+    await expandLicense(page, `LIC-E2E-EDIT-${stamp}`);
+    await expect(page.getByText('1.000.000 ₫')).toBeVisible();
+
+    await page.getByRole('button', { name: `Sửa ghế của máy ${deviceCode}` }).click();
+    const form = page.getByRole('dialog');
+    // Máy KHÔNG sửa được ở đây: đổi máy phải là gỡ rồi gán lại, nếu không thì lịch sử
+    // "key này từng nhập máy nào" mất một chặng.
+    await expect(form.getByLabel('Tìm máy trong kho…')).toHaveCount(0);
+    await form.getByLabel('Chi phí').fill('4200000');
+    await form.getByLabel('Hợp đồng').fill(`HD-SUA-${stamp}`);
+    await form.getByRole('button', { name: 'Lưu' }).click();
+
+    // Toast phải GỌI TÊN ghế vừa đổi — "Đã lưu" trên màn nhiều ghế thì không biết ghế nào.
+    await expect(page.getByText(`Đã lưu ghế của máy ${deviceCode}`)).toBeVisible();
+    await expect(page.getByText('4.200.000 ₫')).toBeVisible();
+    await expect(page.getByText(`HD-SUA-${stamp}`)).toBeVisible();
+
+    // Đổi chi phí là chuyện đem đi đối chiếu quyết toán — phải để lại vết, kèm ghế nào.
+    await page.goto(`/phan-mem/${licenseId}`);
+    await page.getByRole('tab', { name: 'Lịch sử' }).click();
+    await expect(page.getByText('Sửa ghế license')).toBeVisible();
+    await expect(page.getByText(new RegExp(`ghế ${deviceCode}`))).toBeVisible();
+    await expect(page.getByText(/1\.000\.000 ₫ → 4\.200\.000 ₫/)).toBeVisible();
+  });
+
+  test('đường hỏng: kỳ hạn ghế ngược, và ghế của license vĩnh viễn không có ngày kết thúc', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const csrf = await csrfOf(page);
+    const headers = { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' };
+
+    const licenseId = await createLicense(page, `LIC-E2E-BAD-${stamp}`, 3);
+    const deviceId = await createDevice(page, `PC-E2E-BAD-${stamp}`);
+
+    const reversed = await assign(page, licenseId, deviceId, '', {
+      startDate: '2026-12-01',
+      endDate: '2026-01-01',
+    });
+    expect(reversed.status()).toBe(400);
+    expect(await reversed.json()).toMatchObject({ code: 'INVALID_ASSIGNMENT_TERMS' });
+
+    // Chi phí âm không phải chi phí — chặn ở server, không chỉ ở ô nhập.
+    const negative = await assign(page, licenseId, deviceId, '', { cost: -1 });
+    expect(negative.status()).toBe(400);
+
+    // License MUA ĐỨT: chỗ ngồi của nó cũng vĩnh viễn. Cho lọt thì cỗ máy nhắc hạn sẽ đi
+    // giục gia hạn một thứ không cần gia hạn.
+    const perpetual = await page.request.post('/api/v1/software', {
+      headers,
+      data: {
+        code: `LIC-E2E-PERP-${stamp}`,
+        name: 'License mua đứt',
+        kind: 'license',
+        licenseModel: 'perpetual',
+        seatTotal: 2,
+        startDate: '2026-01-01',
+      },
+    });
+    expect(perpetual.status()).toBe(201);
+    const perpetualId = ((await perpetual.json()) as { id: string }).id;
+
+    const withEnd = await assign(page, perpetualId, deviceId, '', { endDate: '2027-01-01' });
+    expect(withEnd.status()).toBe(400);
+    expect(String((await withEnd.json()).message)).toContain('vĩnh viễn');
+
+    // Không có ngày kết thúc thì gán được bình thường.
+    expect((await assign(page, perpetualId, deviceId, '', { cost: 9_900_000 })).status()).toBe(201);
+    await expandLicense(page, `LIC-E2E-PERP-${stamp}`);
+    await expect(page.getByText('9.900.000 ₫')).toBeVisible();
+    await expect(page.getByText('Vĩnh viễn').first()).toBeVisible();
+  });
+
+  /** Hồ sơ không có máy nào gắn thì KHÔNG được mọc mũi tên bấm ra rỗng. */
+  test('license chưa gán máy nào thì không có mũi tên bung dòng', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    await createLicense(page, `LIC-E2E-NOEXP-${stamp}`, 5);
+
+    await page.goto('/phan-mem');
+    await page.getByRole('searchbox', { name: /Tìm/ }).fill(`LIC-E2E-NOEXP-${stamp}`);
+    const row = page.getByRole('row', { name: new RegExp(`LIC-E2E-NOEXP-${stamp}`) });
+    await expect(row).toBeVisible();
+    await expect(row.getByRole('button')).toHaveCount(0);
   });
 });

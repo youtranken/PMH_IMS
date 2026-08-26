@@ -10,12 +10,14 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
+import type { SortQuery } from '../../common/sorting';
 import { escapeLike, pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
 import {
   validateSoftware,
+  type LicenseModel,
   type SoftwareInputShape,
   type SoftwareKind,
   type SoftwareStatus,
@@ -59,14 +61,18 @@ export class SoftwareService {
 
   // ─────────────────────────── Đọc ───────────────────────────
 
-  async list(query: PageQuery, filter: SoftwareFilter): Promise<Page<SoftwareListItem>> {
+  async list(
+    query: PageQuery,
+    filter: SoftwareFilter,
+    sort: SortQuery<SoftwareSortKey> = SOFTWARE_SORT_DEFAULT,
+  ): Promise<Page<SoftwareListItem>> {
     const where = buildWhere(filter);
     const [rows, totalRows] = await Promise.all([
       this.db
         .select()
         .from(softwareTable)
         .where(where)
-        .orderBy(asc(softwareTable.code))
+        .orderBy(...softwareOrderBy(sort))
         .limit(query.limit)
         .offset(pageOffset(query)),
       this.db.select({ value: count() }).from(softwareTable).where(where),
@@ -78,12 +84,16 @@ export class SoftwareService {
   }
 
   /** Toàn bộ theo bộ lọc, không phân trang — chỉ dùng cho export xlsx (FR-028). */
-  async listAll(filter: SoftwareFilter): Promise<SoftwareListItem[]> {
+  async listAll(
+    filter: SoftwareFilter,
+    sort: SortQuery<SoftwareSortKey> = SOFTWARE_SORT_DEFAULT,
+  ): Promise<SoftwareListItem[]> {
     const rows = await this.db
       .select()
       .from(softwareTable)
       .where(buildWhere(filter))
-      .orderBy(asc(softwareTable.code));
+      // Cùng thứ tự với màn hình: file tải về phải khớp thứ tự người dùng đang nhìn.
+      .orderBy(...softwareOrderBy(sort));
     return this.decorate(rows);
   }
 
@@ -115,6 +125,9 @@ export class SoftwareService {
       .from(softwareTable)
       .where(
         and(
+          // License VĨNH VIỄN không có end_date, nên tự nhiên nằm ngoài lời nhắc — đúng ý:
+          // nhắc gia hạn một thứ mua đứt là lời nhắc sai, và nhắc sai vài lần thì người ta
+          // bỏ qua mọi lời nhắc còn lại.
           sql`${softwareTable.endDate} IS NOT NULL`,
           sql`${softwareTable.endDate} >= ${from}`,
           sql`${softwareTable.endDate} <= ${to}`,
@@ -164,6 +177,7 @@ export class SoftwareService {
     const before = await this.requireRow(id);
     const errors = validateSoftware({
       kind: before.kind as SoftwareKind,
+      licenseModel: before.licenseModel as LicenseModel,
       seatTotal: before.seatTotal,
       startDate: before.startDate,
       endDate: newEnd,
@@ -279,6 +293,7 @@ export class SoftwareService {
     put('code', input.code === undefined ? undefined : requireText(input.code, 'mã hồ sơ'));
     put('name', input.name === undefined ? undefined : requireText(input.name, 'tên hồ sơ'));
     put('kind', input.kind);
+    put('licenseModel', input.licenseModel);
     put('vendorId', input.vendorId === undefined ? undefined : (input.vendorId || null));
     put('seatTotal', input.seatTotal === undefined ? undefined : (input.seatTotal ?? null));
     put('startDate', dateOnly(input.startDate, 'Ngày bắt đầu'));
@@ -302,6 +317,9 @@ export class SoftwareService {
     const current = id ? await this.requireRow(id) : null;
     const errors = validateSoftware({
       kind: (values.kind ?? current?.kind ?? 'other') as SoftwareKind,
+      licenseModel: (values.licenseModel ??
+        current?.licenseModel ??
+        'subscription') as LicenseModel,
       seatTotal: (values.seatTotal ?? current?.seatTotal ?? null) as number | null,
       startDate: (values.startDate ?? current?.startDate ?? null) as string | null,
       endDate: (values.endDate ?? current?.endDate ?? null) as string | null,
@@ -350,6 +368,43 @@ const LABEL: Record<string, string> = {
   kind: 'loại hồ sơ',
 };
 
+/**
+ * Cột được phép sắp xếp. Đây là WHITELIST — tên cột đi thẳng vào `ORDER BY`.
+ *
+ * Chỉ mở những cột nằm SẴN trong bảng `software`. `vendorId` không có ở đây: màn hình hiện
+ * TÊN nhà cung cấp (`vendorName`), và tên đó đọc qua `CatalogApiService`, không phải cột của
+ * bảng này — sắp theo nó phải join sang bảng của module khác, vi phạm AD-2. `seatUsed` cũng
+ * không có: đó là số đếm từ `license_assignment`, không phải cột thật. `note` là chữ tự do,
+ * không ai cần sắp theo nó.
+ */
+export const SOFTWARE_SORT_KEYS = [
+  'code',
+  'name',
+  'kind',
+  'seatTotal',
+  'startDate',
+  'endDate',
+  'status',
+] as const;
+export type SoftwareSortKey = (typeof SOFTWARE_SORT_KEYS)[number];
+export const SOFTWARE_SORT_DEFAULT: SortQuery<SoftwareSortKey> = { key: 'code', dir: 'asc' };
+
+function softwareOrderBy(sort: SortQuery<SoftwareSortKey>): SQL[] {
+  const column = {
+    code: softwareTable.code,
+    name: softwareTable.name,
+    kind: softwareTable.kind,
+    seatTotal: softwareTable.seatTotal,
+    startDate: softwareTable.startDate,
+    endDate: softwareTable.endDate,
+    status: softwareTable.status,
+  }[sort.key];
+  const primary = sort.dir === 'desc' ? desc(column) : asc(column);
+  // Chốt hạ bằng `code`: thiếu nó thì hai hồ sơ cùng giá trị có thể đổi chỗ nhau giữa hai
+  // lần tải — sang trang 2 lại thấy đúng bản ghi vừa xem ở trang 1, hoặc mất hẳn một dòng.
+  return sort.key === 'code' ? [primary] : [primary, asc(softwareTable.code)];
+}
+
 function buildWhere(filter: SoftwareFilter): SQL | undefined {
   const parts: (SQL | undefined)[] = [];
   const term = filter.search?.trim();
@@ -374,6 +429,7 @@ function toRecord(row: typeof softwareTable.$inferSelect): SoftwareRecord {
   return {
     ...row,
     kind: row.kind as SoftwareKind,
+    licenseModel: row.licenseModel as LicenseModel,
     status: row.status as SoftwareStatus,
   };
 }

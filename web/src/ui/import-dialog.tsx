@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage } from '@/lib/api';
 import { uploadFile } from '@/lib/upload';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { Dialog } from '@/ui/dialog';
 import { FilePicker } from '@/ui/file-picker';
 import {
   ImportPreview,
@@ -89,9 +89,36 @@ export function ImportDialog<TRow>({
   const hasErrors = (plan?.summary.error ?? 0) > 0;
 
   return (
-    <Dialog open onOpenChange={busy ? () => undefined : onClose} dismissible={!busy} maxWidth={900}>
-      <DialogTitle>{title}</DialogTitle>
-
+    <Dialog
+      open
+      onOpenChange={busy ? () => undefined : onClose}
+      dismissible={!busy}
+      maxWidth={900}
+      title={title}
+      footer={
+        <>
+          <button type="button" className="btn" disabled={busy} onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="button"
+            className="btn"
+            disabled={!file || busy}
+            onClick={() => void run('preview')}
+          >
+            {busy && !plan ? t('common.loading') : t('importDialog.check')}
+          </button>
+          <button
+            type="button"
+            className="btn primary"
+            disabled={!plan || hasErrors || writable === 0 || busy}
+            onClick={() => void run('commit')}
+          >
+            {t('importDialog.confirm')}
+          </button>
+        </>
+      }
+    >
       <FilePicker
         accept=".xlsx"
         label={t('importDialog.pick')}
@@ -125,28 +152,6 @@ export function ImportDialog<TRow>({
           ) : null}
         </>
       ) : null}
-
-      <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-        <button type="button" className="btn" disabled={busy} onClick={onClose}>
-          {t('common.cancel')}
-        </button>
-        <button
-          type="button"
-          className="btn"
-          disabled={!file || busy}
-          onClick={() => void run('preview')}
-        >
-          {busy && !plan ? t('common.loading') : t('importDialog.check')}
-        </button>
-        <button
-          type="button"
-          className="btn primary"
-          disabled={!plan || hasErrors || writable === 0 || busy}
-          onClick={() => void run('commit')}
-        >
-          {t('importDialog.confirm')}
-        </button>
-      </div>
     </Dialog>
   );
 }

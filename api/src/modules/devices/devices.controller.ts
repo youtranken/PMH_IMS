@@ -24,6 +24,7 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { parsePageQuery } from '../../common/pagination';
+import { parseSortQuery } from '../../common/sorting';
 import {
   requireXlsx,
   sendXlsx,
@@ -35,7 +36,11 @@ import type { AuthedRequest } from '../auth/types';
 import { DevicePanelRegistry } from '../../common/device-panels.registry';
 import { DeviceImportService } from './device-import.service';
 import { DevicePortsService } from './device-ports.service';
-import { DevicesService } from './devices.service';
+import {
+  DEVICE_SORT_DEFAULT,
+  DEVICE_SORT_KEYS,
+  DevicesService,
+} from './devices.service';
 import { DEVICE_STATUSES, type DeviceStatus } from './devices.types';
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
@@ -92,6 +97,10 @@ class PortBodyDto {
   @IsOptional() @IsString() @Length(0, 200) connectedLabel?: string;
   @IsOptional() @IsString() @Length(0, 60) connectedPort?: string;
   @IsOptional() @IsString() @Length(0, 120) usedBy?: string;
+
+  // VLAN của cổng (0029): text, vì "trunk" là giá trị có thật và hay gặp nhất trên uplink.
+  @IsOptional() @IsString() @Length(0, 40) vlan?: string;
+
   @IsOptional() @IsString() @Length(0, 500) note?: string;
 }
 
@@ -128,15 +137,21 @@ export class DevicesController {
       cabinetId?: string;
       deviceTypeId?: string;
       status?: DeviceStatus;
+      sort?: string;
+      dir?: string;
     },
   ) {
-    return this.devices.list(parsePageQuery(query), {
-      search: query.search,
-      siteId: query.siteId,
-      cabinetId: query.cabinetId,
-      deviceTypeId: query.deviceTypeId,
-      status: query.status,
-    });
+    return this.devices.list(
+      parsePageQuery(query),
+      {
+        search: query.search,
+        siteId: query.siteId,
+        cabinetId: query.cabinetId,
+        deviceTypeId: query.deviceTypeId,
+        status: query.status,
+      },
+      parseSortQuery(query, DEVICE_SORT_KEYS, DEVICE_SORT_DEFAULT),
+    );
   }
 
   /**
@@ -167,16 +182,21 @@ export class DevicesController {
       cabinetId?: string;
       deviceTypeId?: string;
       status?: DeviceStatus;
+      sort?: string;
+      dir?: string;
     },
     @Res() res: Response,
   ) {
-    const buffer = await this.imports.buildExport({
-      search: query.search,
-      siteId: query.siteId,
-      cabinetId: query.cabinetId,
-      deviceTypeId: query.deviceTypeId,
-      status: query.status,
-    });
+    const buffer = await this.imports.buildExport(
+      {
+        search: query.search,
+        siteId: query.siteId,
+        cabinetId: query.cabinetId,
+        deviceTypeId: query.deviceTypeId,
+        status: query.status,
+      },
+      parseSortQuery(query, DEVICE_SORT_KEYS, DEVICE_SORT_DEFAULT),
+    );
     sendXlsx(res, buffer, 'thiet-bi.xlsx');
   }
 

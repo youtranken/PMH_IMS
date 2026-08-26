@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { DatePicker } from '@/ui/date-picker';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { Dialog } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
@@ -13,6 +13,7 @@ import {
   SOFTWARE_STATUSES,
   STATUS_KEY,
   supportsSeats,
+  type LicenseModel,
   type SoftwareKind,
   type SoftwareRow,
   type SoftwareStatus,
@@ -22,6 +23,7 @@ interface FormState {
   code: string;
   name: string;
   kind: SoftwareKind;
+  licenseModel: LicenseModel;
   vendorId: string;
   seatTotal: string;
   startDate: string;
@@ -35,6 +37,7 @@ function initialState(row: SoftwareRow | null): FormState {
     code: row?.code ?? '',
     name: row?.name ?? '',
     kind: row?.kind ?? 'license',
+    licenseModel: row?.licenseModel ?? 'subscription',
     vendorId: row?.vendorId ?? '',
     seatTotal: row?.seatTotal != null ? String(row.seatTotal) : '',
     startDate: row?.startDate ?? '',
@@ -74,19 +77,44 @@ export function SoftwareForm({
       // Đổi sang loại không có seat thì xóa luôn ô seat — gửi lên sẽ bị API từ chối,
       // và giữ lại một con số vô nghĩa trên màn hình chỉ tổ gây hiểu nhầm.
       if (key === 'kind' && !supportsSeats(value as SoftwareKind)) {
-        return { ...current, kind: value as SoftwareKind, seatTotal: '' };
+        // Đổi sang loại không có seat: xóa seat, và kéo kỳ hạn về thuê bao vì chỉ license
+        // mới có bản mua đứt (API cũng chặn, nhưng để form gửi lên rồi bị từ chối thì tệ).
+        return {
+          ...current,
+          kind: value as SoftwareKind,
+          seatTotal: '',
+          licenseModel: 'subscription',
+        };
+      }
+      // Đánh dấu vĩnh viễn thì bỏ luôn ngày hết hạn — hai thứ đó ngược nhau.
+      if (key === 'licenseModel' && value === 'perpetual') {
+        return { ...current, licenseModel: 'perpetual', endDate: '' };
       }
       return { ...current, [key]: value };
     });
 
   const hasSeats = supportsSeats(form.kind);
+  const isPerpetual = form.licenseModel === 'perpetual';
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={760}>
-      <DialogTitle>
-        {row ? `${t('software.edit')} — ${row.code}` : t('software.add')}
-      </DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={760}
+      title={row ? `${t('software.edit')} — ${row.code}` : t('software.add')}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" form="software-form" className="btn primary" disabled={save.isPending}>
+            {save.isPending ? t('common.loading') : t('common.save')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="software-form"
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
@@ -99,6 +127,7 @@ export function SoftwareForm({
               code: form.code.trim(),
               name: form.name.trim(),
               kind: form.kind,
+              licenseModel: form.licenseModel,
               vendorId: form.vendorId,
               seatTotal: hasSeats && form.seatTotal.trim() ? Number(form.seatTotal) : null,
               startDate: form.startDate,
@@ -147,6 +176,20 @@ export function SoftwareForm({
               onChange={(value) => set('kind', value as SoftwareKind)}
             />
           </Field>
+          {/* Chỉ license mới có bản mua đứt — loại khác không hiện ô này cho đỡ rối. */}
+          {hasSeats ? (
+            <Field label={t('software.licenseModel')} hint={t('software.licenseModelHint')}>
+              <Select
+                value={form.licenseModel}
+                ariaLabel={t('software.licenseModel')}
+                options={[
+                  { value: 'subscription', label: t('software.subscription') },
+                  { value: 'perpetual', label: t('software.perpetual') },
+                ]}
+                onChange={(value) => set('licenseModel', value as LicenseModel)}
+              />
+            </Field>
+          ) : null}
           <Field label={t('software.vendor')}>
             <Select
               value={form.vendorId}
@@ -180,6 +223,7 @@ export function SoftwareForm({
               onChange={(value) => set('startDate', value)}
             />
           </Field>
+          {isPerpetual ? null : (
           <Field label={t('software.endDate')}>
             <DatePicker
               value={form.endDate}
@@ -187,6 +231,7 @@ export function SoftwareForm({
               onChange={(value) => set('endDate', value)}
             />
           </Field>
+          )}
           {/* Ô seat chỉ hiện với license — loại khác thấy ô này là hiểu sai ý nghĩa cột. */}
           {hasSeats ? (
             <Field label={t('software.seatTotal')} hint={t('software.seatHint')} htmlFor="sw-seat">
@@ -215,15 +260,6 @@ export function SoftwareForm({
             {error}
           </p>
         ) : null}
-
-        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button type="submit" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );

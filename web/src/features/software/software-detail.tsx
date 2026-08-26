@@ -7,7 +7,7 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { DatePicker } from '@/ui/date-picker';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { Dialog } from '@/ui/dialog';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { Field } from '@/ui/page-header';
 import { HistoryPanel } from '@/ui/history-panel';
@@ -109,7 +109,11 @@ export function SoftwareDetail({ me }: { me: Me }) {
 
       <div className="device-summary">
         <span className={`badge ${STATUS_TONE[item.status]}`}>{t(STATUS_KEY[item.status])}</span>
-        <ExpiryBadge end={item.endDate} />
+        {item.licenseModel === 'perpetual' ? (
+          <span className="badge ok plain">{t('software.perpetual')}</span>
+        ) : (
+          <ExpiryBadge end={item.endDate} />
+        )}
         {supportsSeats(item.kind) && item.seatTotal !== null ? (
           <span className="muted">
             {t('software.seats')}: <span className="mono">{seatLabel(item)}</span>
@@ -141,8 +145,15 @@ export function SoftwareDetail({ me }: { me: Me }) {
               <Item label={t('software.vendor')}>{orDash(item.vendorName)}</Item>
               <Item label={t('software.seats')}>{seatLabel(item)}</Item>
               <Item label={t('software.startDate')}>{orDash(formatDate(item.startDate))}</Item>
+              <Item label={t('software.licenseModel')}>
+                {supportsSeats(item.kind)
+                  ? t(item.licenseModel === 'perpetual' ? 'software.perpetual' : 'software.subscription')
+                  : '—'}
+              </Item>
               <Item label={t('software.endDate')}>
-                {item.endDate ? (
+                {item.licenseModel === 'perpetual' ? (
+                  t('software.perpetual')
+                ) : item.endDate ? (
                   <>
                     {formatDate(item.endDate)} <ExpiryBadge end={item.endDate} />
                   </>
@@ -221,11 +232,24 @@ function RenewDialog({
   );
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={480}>
-      <DialogTitle>
-        {t('software.renewTitle')} — {software.code}
-      </DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={480}
+      title={`${t('software.renewTitle')} — ${software.code}`}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" form="renew-form" className="btn primary" disabled={renew.isPending}>
+            {renew.isPending ? t('common.loading') : t('software.renew')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="renew-form"
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
@@ -260,15 +284,6 @@ function RenewDialog({
             {error}
           </p>
         ) : null}
-
-        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button type="submit" className="btn primary" disabled={renew.isPending}>
-            {renew.isPending ? t('common.loading') : t('software.renew')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );

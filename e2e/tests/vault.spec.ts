@@ -2,6 +2,7 @@ import { execSync } from 'node:child_process';
 import { expect, test, type Page } from '@playwright/test';
 import {
   COMPOSE,
+  confirmAction,
   E2E_MEMBER,
   E2E_SA,
   firstLogin,
@@ -84,7 +85,7 @@ test.describe('Két sắt', () => {
       .getByRole('row', { name: new RegExp(label) })
       .getByRole('button', { name: 'Thu hồi' })
       .click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Đồng ý' }).click();
+    await confirmAction(page);
     await expect(page.getByRole('row', { name: new RegExp(label) })).toHaveCount(0);
   });
 

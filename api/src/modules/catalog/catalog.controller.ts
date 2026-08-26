@@ -26,6 +26,7 @@ import {
 } from 'class-validator';
 import type { Response } from 'express';
 import { parsePageQuery } from '../../common/pagination';
+import { parseSortQuery } from '../../common/sorting';
 import {
   requireXlsx,
   sendXlsx,
@@ -35,7 +36,7 @@ import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { CatalogImportService } from './catalog-import.service';
-import { CatalogService } from './catalog.service';
+import { CATALOG_SORT_DEFAULT, CATALOG_SORT_KEYS, CatalogService } from './catalog.service';
 import { CATALOG_ENTITIES, type CatalogEntity } from './catalog.types';
 
 class CatalogBodyDto {
@@ -49,6 +50,17 @@ class CatalogBodyDto {
   @IsOptional() @IsString() @Length(0, 200) supplies?: string;
   @IsOptional() @IsString() @Length(0, 40) phone?: string;
   @IsOptional() @IsString() @Length(0, 200) contact?: string;
+
+  // Ba danh mục của 0028. Một DTO chung cho mọi loại, đúng nếp sẵn có: `toRow` phía service
+  // mới là chỗ quyết định loại nào nhận trường nào — DTO chỉ chặn rác và giới hạn độ dài.
+  @IsOptional() @IsString() @Length(0, 40) hotline?: string;
+
+  @IsOptional()
+  @IsIn(['tcp', 'udp', 'both'], { message: 'Giao thức phải là TCP, UDP hoặc cả hai.' })
+  protocol?: string;
+
+  @IsOptional() @IsInt() @Min(1) @Max(65535) portFrom?: number;
+  @IsOptional() @IsInt() @Min(1) @Max(65535) portTo?: number;
 }
 
 class ActiveDto {
@@ -110,9 +122,15 @@ export class CatalogController {
   @Get(':entity')
   list(
     @Param() params: EntityParamDto,
-    @Query() query: { page?: string; limit?: string; search?: string },
+    @Query()
+    query: { page?: string; limit?: string; search?: string; sort?: string; dir?: string },
   ) {
-    return this.catalog.list(params.entity, parsePageQuery(query), query.search);
+    const sort = parseSortQuery(
+      query,
+      CATALOG_SORT_KEYS[params.entity],
+      CATALOG_SORT_DEFAULT[params.entity],
+    );
+    return this.catalog.list(params.entity, parsePageQuery(query), query.search, sort);
   }
 
   @Roles('sa', 'admin', 'member')

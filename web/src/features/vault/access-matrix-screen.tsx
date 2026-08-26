@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { Dialog } from '@/ui/dialog';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
@@ -151,6 +151,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
                         <button
                           type="button"
                           className="btn sm danger"
+                          disabled={remove.isPending}
                           onClick={() => {
                             void (async () => {
                               const ok = await askConfirm({
@@ -159,6 +160,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
                                   scope: rule.scopeLabel,
                                 }),
                                 danger: true,
+                                confirmLabel: t('access.remove'),
                               });
                               if (!ok) return;
                               remove.mutate(
@@ -231,9 +233,24 @@ function GrantDialog({
   });
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={520}>
-      <DialogTitle>{t('access.grantTitle', { member: memberEmail })}</DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={520}
+      title={t('access.grantTitle', { member: memberEmail })}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" form="grant-form" className="btn primary" disabled={save.isPending}>
+            {save.isPending ? t('common.loading') : t('common.save')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="grant-form"
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
@@ -289,15 +306,6 @@ function GrantDialog({
             {error}
           </p>
         ) : null}
-
-        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button type="submit" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );

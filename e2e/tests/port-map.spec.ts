@@ -1,5 +1,11 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, firstLogin, resetDevices, resetUsers } from './helpers';
+import {
+  confirmAction,
+  E2E_SA,
+  firstLogin,
+  resetDevices,
+  resetUsers,
+} from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -40,10 +46,11 @@ test.describe('Port map', () => {
     await page.getByRole('button', { name: 'Thêm cổng' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Cổng', exact: true }).fill('Gi1/0/12');
-    await form.getByRole('combobox').fill(serverCode);
+    // Bám theo TÊN: form có hai combobox (thiết bị đầu kia, và ô "ai dùng" gợi ý bộ phận).
+    await form.getByRole('combobox', { name: 'Thiết bị đầu kia' }).fill(serverCode);
     await page.getByRole('option', { name: new RegExp(serverCode) }).click();
     await form.getByRole('textbox', { name: 'Cổng đầu kia' }).fill('eth0');
-    await form.getByRole('textbox', { name: 'Người dùng' }).fill('phòng Kế toán');
+    await form.getByRole('combobox', { name: 'Người dùng' }).fill('phòng Kế toán');
     await form.getByRole('button', { name: 'Lưu' }).click();
 
     const row = page.getByRole('row', { name: /Gi1\/0\/12/ });
@@ -133,7 +140,7 @@ test.describe('Port map', () => {
     await expect(page.getByRole('row', { name: /WAN1/ })).toBeVisible();
 
     await page.getByRole('row', { name: /WAN1/ }).getByRole('button', { name: 'Xóa' }).click();
-    await page.getByRole('button', { name: 'Đồng ý' }).click();
+    await confirmAction(page);
     await expect(page.getByText('Chưa khai cổng nào.')).toBeVisible();
 
     await page.getByRole('tab', { name: 'Lịch sử' }).click();

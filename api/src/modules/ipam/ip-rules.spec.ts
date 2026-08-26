@@ -1,6 +1,8 @@
 import {
   addressToLong,
   enumerateHosts,
+  hostRole,
+  hostRoleIn,
   isHostInSubnet,
   longToAddress,
   normalizeSubnet,
@@ -8,6 +10,64 @@ import {
   subnetUsage,
   usableHostCount,
 } from './ip-rules';
+
+describe('hostRole — địa chỉ mạng và địa chỉ quảng bá KHÔNG cấp cho máy được', () => {
+  /**
+   * Không biết dải thì suy từ octet cuối. Đúng tuyệt đối trong hệ này vì `MIN_PREFIX = 24`:
+   * mọi dải khai được đều là /24 hoặc hẹp hơn, và trong MỌI dải như vậy octet cuối 0 là địa
+   * chỉ mạng còn 255 là địa chỉ quảng bá (kiểm cả /25, /26 ở nhóm dưới).
+   */
+  it.each([
+    ['172.16.10.0', 'network'],
+    ['172.16.0.0', 'network'],
+    ['10.0.0.0', 'network'],
+    ['172.16.10.255', 'broadcast'],
+    ['192.168.1.255', 'broadcast'],
+    ['172.16.10.1', 'host'],
+    ['172.16.10.254', 'host'],
+    ['172.16.10.128', 'host'],
+  ])('%s → %s', (address, expected) => {
+    expect(hostRole(address)).toBe(expected);
+  });
+
+  it('chuỗi không phải IPv4 thì trả về null, không đoán bừa', () => {
+    expect(hostRole('không phải ip')).toBeNull();
+    expect(hostRole('172.16.10')).toBeNull();
+  });
+});
+
+describe('hostRoleIn — biết dải thì soi ĐÚNG dải đó', () => {
+  /** /26 có bốn dải con: biên rơi vào .64/.128/.192 chứ không chỉ .0 và .255. */
+  it.each([
+    ['172.16.10.64', '172.16.10.64/26', 'network'],
+    ['172.16.10.127', '172.16.10.64/26', 'broadcast'],
+    ['172.16.10.65', '172.16.10.64/26', 'host'],
+    ['172.16.10.126', '172.16.10.64/26', 'host'],
+    ['172.16.10.128', '172.16.10.128/25', 'network'],
+    ['172.16.10.255', '172.16.10.128/25', 'broadcast'],
+    ['172.16.10.0', '172.16.10.0/24', 'network'],
+    ['172.16.10.255', '172.16.10.0/24', 'broadcast'],
+    ['172.16.10.5', '172.16.10.0/24', 'host'],
+  ])('%s trong %s → %s', (address, cidr, expected) => {
+    expect(hostRoleIn(address, cidr)).toBe(expected);
+  });
+
+  it('IP ngoài dải trả về null — câu hỏi không có nghĩa, đừng bịa câu trả lời', () => {
+    expect(hostRoleIn('172.16.99.5', '172.16.10.0/24')).toBeNull();
+  });
+
+  /**
+   * /31 (RFC 3021, link point-to-point giữa hai router) và /32 KHÔNG có địa chỉ mạng hay
+   * quảng bá — cả hai đầu đều dùng được. `usableHostCount` đã chừa ngoại lệ này rồi.
+   */
+  it.each([
+    ['10.0.0.0', '10.0.0.0/31'],
+    ['10.0.0.1', '10.0.0.0/31'],
+    ['10.0.0.7', '10.0.0.7/32'],
+  ])('%s trong %s vẫn là host dùng được', (address, cidr) => {
+    expect(hostRoleIn(address, cidr)).toBe('host');
+  });
+});
 
 describe('parseAddress — nhận đúng một địa chỉ IPv4', () => {
   it.each([
@@ -45,8 +105,9 @@ describe('normalizeSubnet — chuẩn hóa dải', () => {
 
   it.each([
     ['172.16.10.0/24', '172.16.10.0/24'],
-    ['10.0.0.0/8', '10.0.0.0/8'],
+    ['192.168.1.0/28', '192.168.1.0/28'],
     ['192.168.1.0/30', '192.168.1.0/30'],
+    ['10.20.30.40/32', '10.20.30.40/32'],
   ])('%s → %s', (input, expected) => {
     const result = normalizeSubnet(input);
     expect(result.ok && result.cidr).toBe(expected);
@@ -60,14 +121,21 @@ describe('normalizeSubnet — chuẩn hóa dải', () => {
   );
 
   /**
-   * /7 trở lên rộng hơn 33 triệu địa chỉ. Màn "IP trống còn lại" sẽ phải dựng danh sách đó,
-   * và không ai khai subnet /7 trong mạng LAN của PMH — gần như chắc chắn là gõ nhầm /27.
+   * Trần là /24 (254 host) — quyết định của chủ dự án, 25/08/2026.
+   *
+   * Lý do không phải thẩm mỹ: màn chi tiết dải liệt kê MỌI host trong dải, không phân trang.
+   * Gõ nhầm /16 thay /24 là 65.534 dòng dựng một lượt (treo tab), /8 là 16 triệu (treo cả
+   * server vì `enumerateHosts` chạy đồng bộ). Chặn ngay từ lúc khai dải rẻ hơn nhiều so với
+   * chặn ở tầng hiển thị. Cần dải rộng hơn thì chia thành nhiều dải /24.
    */
-  it('dải rộng quá mức hợp lý bị chặn kèm lời giải thích', () => {
-    const result = normalizeSubnet('10.0.0.0/7');
-    expect(result.ok).toBe(false);
-    expect(result.ok === false && result.reason).toBe('too_wide');
-  });
+  it.each(['10.0.0.0/7', '10.0.0.0/8', '172.16.0.0/16', '172.16.0.0/23'])(
+    'dải rộng hơn /24 bị chặn kèm lời giải thích: %s',
+    (value) => {
+      const result = normalizeSubnet(value);
+      expect(result.ok).toBe(false);
+      expect(result.ok === false && result.reason).toBe('too_wide');
+    },
+  );
 });
 
 describe('isHostInSubnet — IP ngoài dải bị từ chối', () => {

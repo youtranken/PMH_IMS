@@ -1,10 +1,13 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
+import { DataTable } from '@/ui/data-table';
+import { sortQuery } from '@/lib/sort-query';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { FilterBar } from '@/ui/filter-bar';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
@@ -13,6 +16,7 @@ import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
 import type { CatalogLists } from '@/features/catalog/catalog-types';
+import { DeviceLicensesExpand } from '@/features/software/device-licenses-expand';
 import { DeviceForm } from './device-form';
 import { DeviceImportDialog } from './device-import-dialog';
 import {
@@ -48,8 +52,12 @@ export function DevicesScreen({ me }: { me: Me }) {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
+  // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả kho — sai mà không có dấu hiệu nào.
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'code', desc: false }]);
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [editing, setEditing] = useState<DeviceRow | null>(null);
 
   const lists = useQuery({
     queryKey: ['catalog', 'lists'],
@@ -57,10 +65,10 @@ export function DevicesScreen({ me }: { me: Me }) {
   });
 
   const devices = useQuery({
-    queryKey: ['devices', page, filters],
+    queryKey: ['devices', page, filters, sorting],
     queryFn: () =>
       apiFetch<{ items: DeviceRow[]; total: number }>(
-        `/api/v1/devices?${buildQuery(page, filters)}`,
+        `/api/v1/devices?${buildQuery(page, filters, sorting)}`,
       ),
   });
 
@@ -77,6 +85,114 @@ export function DevicesScreen({ me }: { me: Me }) {
   );
   const rows = devices.data?.items ?? [];
 
+  /**
+   * Máy nào đang cài license — hỏi MỘT lượt cho cả trang (không N+1) để biết dòng nào đáng
+   * mọc mũi tên bung. Mũi tên bấm ra rỗng cũng là một kiểu hứa hão, đúng như bảng phần mềm
+   * đã tránh.
+   *
+   * Hỏi qua module `software`: `devices` không được biết license là gì (AD-2).
+   */
+  const deviceIds = rows.map((row) => row.id);
+  const installedCounts = useQuery({
+    queryKey: ['software', 'installed', 'counts', deviceIds],
+    enabled: deviceIds.length > 0,
+    queryFn: () =>
+      apiFetch<Record<string, number>>(
+        `/api/v1/software/installed/counts?deviceIds=${deviceIds.join(',')}`,
+      ),
+  });
+
+  /**
+   * `id` của cột PHẢI khớp whitelist `DEVICE_SORT_KEYS` phía API — đó là tên cột gửi lên
+   * trong `?sort=`. Cột hiển thị qua danh mục (Loại, Vị trí) không sắp được: sắp theo chúng
+   * đòi join sang bảng của module khác, vi phạm AD-2. Muốn theo site thì lọc rồi sắp theo mã.
+   */
+  const columns = useMemo<ColumnDef<DeviceRow, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'code',
+        header: t('devices.code'),
+        cell: ({ row }) => (
+          // Link thật (không phải onClick trên <tr>): mở tab mới, copy link được.
+          <Link className="mono" to={`/thiet-bi/${row.original.id}`}>
+            {row.original.code}
+          </Link>
+        ),
+      },
+      {
+        accessorKey: 'name',
+        header: t('devices.name'),
+        cell: ({ row }) => (
+          <>
+            {row.original.name}
+            {row.original.serial ? (
+              <span className="cell-sub mono">{row.original.serial}</span>
+            ) : null}
+          </>
+        ),
+      },
+      {
+        id: 'deviceTypeName',
+        header: t('devices.type'),
+        cell: ({ row }) => row.original.deviceTypeName,
+      },
+      {
+        id: 'location',
+        header: t('devices.location'),
+        meta: { className: 'mono' },
+        cell: ({ row }) => locationLabel(row.original),
+      },
+      {
+        accessorKey: 'assignedTo',
+        header: t('devices.assignedTo'),
+        cell: ({ row }) => (
+          <>
+            {orDash(row.original.assignedTo)}
+            {row.original.department ? (
+              <span className="cell-sub">{row.original.department}</span>
+            ) : null}
+          </>
+        ),
+      },
+      {
+        accessorKey: 'warrantyEnd',
+        header: t('devices.warranty'),
+        // AD-15: luật "sắp hết hạn" chỉ có một, ở lib/expiry.ts
+        cell: ({ row }) => <ExpiryBadge end={row.original.warrantyEnd} />,
+      },
+      {
+        accessorKey: 'status',
+        header: t('devices.status'),
+        cell: ({ row }) => (
+          <span className={`badge ${STATUS_TONE[row.original.status]}`}>
+            {t(STATUS_KEY[row.original.status])}
+          </span>
+        ),
+      },
+      {
+        id: 'actions',
+        header: t('common.actions'),
+        cell: ({ row }) => (
+          // Sửa NGAY TRÊN DANH SÁCH: đổi người giữ máy hay hạn bảo hành là việc lặt vặt
+          // hằng ngày, bắt vào trang chi tiết rồi quay ra là ba lần chuyển trang cho một ô.
+          // Mở đúng hộp "Thêm thiết bị" (AD-15) — cùng bộ trường, chỉ khác đã điền sẵn.
+          <button
+            type="button"
+            className="btn sm"
+            aria-label={t('devices.editOf', { device: row.original.code })}
+            onClick={(event) => {
+              event.stopPropagation();
+              setEditing(row.original);
+            }}
+          >
+            {t('common.edit')}
+          </button>
+        ),
+      },
+    ],
+    [t],
+  );
+
   return (
     <>
       <PageHeader
@@ -89,9 +205,11 @@ export function DevicesScreen({ me }: { me: Me }) {
               fileName="mau-thiet-bi.xlsx"
               label={t('devices.downloadTemplate')}
             />
-            {/* FR-028: xuất đúng bộ lọc đang xem — cùng query với bảng bên dưới. */}
+            {/* FR-028: xuất đúng bộ lọc VÀ đúng thứ tự đang xem — cùng query với bảng dưới. */}
             <ExportXlsxButton
-              url={`/api/v1/devices/export?${buildFilterQuery(filters)}`}
+              url={`/api/v1/devices/export?${[buildFilterQuery(filters), sortQuery(sorting)]
+                .filter(Boolean)
+                .join('&')}`}
               fileName="thiet-bi.xlsx"
             />
             <button type="button" className="btn" onClick={() => setImporting(true)}>
@@ -168,56 +286,26 @@ export function DevicesScreen({ me }: { me: Me }) {
         <EmptyState title={t('devices.empty')} hint={t('devices.emptyHint')} />
       ) : (
         <>
-          <div className="table-wrap">
-            <table className="table table-stack">
-              <thead>
-                <tr>
-                  <th>{t('devices.code')}</th>
-                  <th>{t('devices.name')}</th>
-                  <th>{t('devices.type')}</th>
-                  <th>{t('devices.location')}</th>
-                  <th>{t('devices.assignedTo')}</th>
-                  <th>{t('devices.warranty')}</th>
-                  <th>{t('devices.status')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((device) => (
-                  <tr key={device.id}>
-                    <td data-label={t('devices.code')}>
-                      {/* Link thật (không phải onClick trên <tr>): mở tab mới, copy link được. */}
-                      <Link className="mono" to={`/thiet-bi/${device.id}`}>
-                        {device.code}
-                      </Link>
-                    </td>
-                    <td data-label={t('devices.name')}>
-                      {device.name}
-                      {device.serial ? <span className="cell-sub mono">{device.serial}</span> : null}
-                    </td>
-                    <td data-label={t('devices.type')}>{device.deviceTypeName}</td>
-                    <td data-label={t('devices.location')} className="mono">
-                      {locationLabel(device)}
-                    </td>
-                    <td data-label={t('devices.assignedTo')}>
-                      {orDash(device.assignedTo)}
-                      {device.department ? (
-                        <span className="cell-sub">{device.department}</span>
-                      ) : null}
-                    </td>
-                    <td data-label={t('devices.warranty')}>
-                      {/* AD-15: luật "sắp hết hạn" chỉ có một, ở lib/expiry.ts */}
-                      <ExpiryBadge end={device.warrantyEnd} />
-                    </td>
-                    <td data-label={t('devices.status')}>
-                      <span className={`badge ${STATUS_TONE[device.status]}`}>
-                        {t(STATUS_KEY[device.status])}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            data={rows}
+            columns={columns}
+            emptyText={t('devices.empty')}
+            stackOnMobile
+            /* Bung dòng ra là thấy máy này đang cài license nào — cùng nếp với danh sách
+               phần mềm. Chỉ hiện mũi tên khi thật sự có phần mềm đang cài. */
+            canExpand={(item) => (installedCounts.data?.[item.id] ?? 0) > 0}
+            renderExpanded={(item) => <DeviceLicensesExpand deviceId={item.id} />}
+            manualSorting
+            sorting={sorting}
+            onSortingChange={(updater) => {
+              setSorting((current) =>
+                typeof updater === 'function' ? updater(current) : updater,
+              );
+              // Đổi cột sắp xếp thì về trang 1: giữ nguyên trang 5 của thứ tự CŨ là nhìn vào
+              // một lát cắt chẳng liên quan gì tới thứ tự vừa chọn.
+              setPage(1);
+            }}
+          />
 
           <Pagination
             page={page}
@@ -251,14 +339,30 @@ export function DevicesScreen({ me }: { me: Me }) {
           }}
         />
       ) : null}
+
+      {editing ? (
+        // Cùng một `DeviceForm` với nút "Thêm thiết bị" — truyền `device` vào là nó tự đổi
+        // sang PATCH và điền sẵn. AD-15: không có bản "form sửa" thứ hai để trôi lệch.
+        <DeviceForm
+          device={editing}
+          lists={lists.data}
+          csrfToken={me.csrfToken}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            void queryClient.invalidateQueries({ queryKey: ['devices'] });
+          }}
+        />
+      ) : null}
     </>
   );
 }
 
-function buildQuery(page: number, filters: Filters): string {
+function buildQuery(page: number, filters: Filters, sorting: SortingState): string {
   const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
-  const filterQuery = buildFilterQuery(filters);
-  return filterQuery ? `${params.toString()}&${filterQuery}` : params.toString();
+  return [params.toString(), buildFilterQuery(filters), sortQuery(sorting)]
+    .filter(Boolean)
+    .join('&');
 }
 
 /**

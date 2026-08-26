@@ -13,7 +13,7 @@
 | `useConfirm` / `ConfirmProvider` | `ui/confirm-provider.tsx` | Mọi thao tác khóa/thu hồi/reset/gia hạn | Không bao giờ dùng `window.confirm` thay thế |
 | `Dialog`, `DialogTitle` | `ui/dialog.tsx` | Mọi hộp thoại (Radix: focus trap, Esc, a11y) | Không tự dựng overlay bằng `createPortal` |
 | `useToast` / `ToastProvider` | `ui/toast.tsx` | Báo kết quả thao tác ngắn | Lỗi cần người đọc kỹ → dùng `.alert` trong form |
-| `DataTable` | `ui/data-table.tsx` | Bảng có sort/tìm/expand (TanStack) | Bảng tĩnh 3 dòng thì `<table class="table">` là đủ |
+| `DataTable` | `ui/data-table.tsx` | **Mọi màn danh sách** (thiết bị, phần mềm, đường truyền, sắp hết hạn, tài khoản, danh mục) | Bảng tĩnh 3 dòng thì `<table class="table">` là đủ. Cột muốn sắp được PHẢI có `accessorKey` — cột chỉ có `id`+`cell` không bao giờ sắp được (bẫy TanStack). Danh sách CÓ phân trang thì bắt buộc `manualSorting` + sắp ở server: sắp client chỉ đảo chỗ trang đang xem |
 | `Pagination` | `ui/pagination.tsx` | Mọi danh sách server-side `{items,total}` | Danh sách tải hết một lần |
 | `FilterBar` | `ui/filter-bar.tsx` | Thanh lọc phía trên danh sách | — |
 | `PageHeader`, `FormSection`, `Field` | `ui/page-header.tsx` | Đầu trang + bố cục form | — |
@@ -33,9 +33,15 @@
 | `HistoryPanel` | `ui/history-panel.tsx` | Lịch sử nghiệp vụ (AD-13) | Nhật ký an ninh → màn Audit riêng |
 | `DatePicker`, `DateTimePicker` | `ui/date-picker.tsx`, `ui/date-time-picker.tsx` | Mọi ô chọn ngày/giờ | Không dùng `<input type="date">` trần |
 | `Loading`, `LoadError`, `EmptyState`, `NotFound` | `ui/load-state.tsx` | Mọi màn có fetch: phân biệt tải ≠ rỗng ≠ lỗi | — |
-| `Select`, `Combobox`, `ThemeSwitch`, `PhotoLightbox`, `NavIcon` | `ui/` | Theo tên | — |
+| `SuggestInput` | `ui/suggest-input.tsx` | Ô chữ CÓ gợi ý từ danh mục nhưng vẫn gõ tự do: "Người / bộ phận dùng" (IP 5.1, NAT 5.3, port map 2.4), "Nhà mạng" (ISP 5.4) | Dùng khi danh mục nên HƯỚNG chứ không được ép. Ô nào chỉ nhận đúng một mục trong danh sách thì dùng `Select`; ô nào là khóa ngoại thật thì dùng `Combobox` + id. Lưu ý: nó là `role="combobox"`, không phải `textbox` — bài kiểm phải bám đúng vai |
+| `Select`, `Combobox`, `ThemeSwitch`, `PhotoLightbox`, `NavIcon` | `ui/` | Theo tên | `Combobox` chỉ mở menu SAU KHI người dùng chạm vào ô (focus/gõ/bấm mũi tên) — không tự bung lúc hộp thoại vừa hiện. Truyền `action` để ghim một dòng "＋ tạo mới" ở đầu menu (sổ NAT dùng cho "Thêm router mới") |
+| Danh mục dùng chung | `/quan-tri/danh-muc` · `api/src/modules/catalog` | **Bảy** loại: site · tủ mạng · loại thiết bị · nhà cung cấp · **bộ phận** · **nhà mạng** · **dịch vụ/port** (ba loại sau từ migration 0028) | Ô nào lặp lại ở ≥2 màn thì khai vào đây, đừng để gõ tay. Thêm loại mới phải sờ **ba** chỗ: bảng dữ liệu, danh sách trắng `catalog_history_entity_check` (0030 — chỗ đã sập), và `CATALOG_ENTITIES`. Chỉ bốn loại gốc có sheet trong file mẫu Excel (`IMPORTABLE_ENTITIES`) |
+| `ServicePortPicker` | `features/ipam/service-port-picker.tsx` | Bảng dịch vụ/port nhỏ đặt ngay dưới ô nhập port (sổ NAT, cả port ngoài lẫn port trong) | Chọn một dịch vụ ở ô PORT NGOÀI kéo theo cả giao thức — đó là ý nghĩa của nó. Ô port trong chỉ lấy số đầu dải (đích chuyển tiếp là một port duy nhất) |
+| Lưới ghế `.seat-list` | `css/primitives.css` | Khu bung dòng hiển thị "một dòng một bản ghi con": ghế license ở /phan-mem, phần mềm đang cài ở /thiet-bi | Lưới thẻ chứ KHÔNG phải `<table>` lồng: hàng bung nằm trong một ô của bảng cha, bảng lồng bảng thì cột trong ngoài giằng nhau và ở ≤960px bảng cha đã gập còn bảng con thì chưa. Mỗi ô phải có `data-label` — nhãn cột hiện qua `::before` khi lưới gập ở 390px |
+| `SeatEndCell`, `SeatTerm` | `features/software/seat-cells.tsx` | Ô "hết hạn"/"kỳ hạn" của một ghế license: khu bung ở /phan-mem, khu bung ở /thiet-bi, tab Máy đang dùng | Ba chỗ này PHẢI trả lời giống nhau: ghế của license mua đứt mà chỗ ghi "—" chỗ ghi "Vĩnh viễn" là kiểu sai không ai báo lỗi |
+| `AssignDialog` | `features/software/license-assignments-panel.tsx` | Gán license vào máy VÀ sửa kỳ hạn/chi phí của ghế đã gán | Một hộp cho cả hai vì các ô là MỘT BỘ (chi phí · hợp đồng · kỳ hạn · ghi chú). Truyền `seat` = chế độ sửa (khóa máy, PATCH). Đổi máy KHÔNG phải sửa ghế — phải gỡ rồi gán lại để lịch sử không mất một chặng |
 | `AuthCard` | `features/auth/auth-card.tsx` | Màn ngoài shell (đăng nhập, TOTP, đổi mật khẩu) | Màn trong app → `AppShell` |
-| `AppShell` | `shell/app-shell.tsx` | Khung sidebar + topbar của mọi màn nghiệp vụ | — |
+| `AppShell` | `shell/app-shell.tsx` | Khung sidebar + topbar của mọi màn nghiệp vụ | Lớp bọc PHẢI là `app-shell` (lớp duy nhất có `display:flex`). Ở ≤900px sidebar thành drawer: mở bằng nút `.nav-toggle` trong topbar, tự khép khi chọn mục / bấm backdrop / Esc — màn mới không được tự dựng nút mở menu riêng |
 
 ## Logic dùng chung — `web/src/lib/`
 
@@ -46,7 +52,9 @@
 | `apiFetch`, `ApiError` | `lib/api-client.ts` | Mọi lời gọi API | Tự gắn CSRF; 401-phiên-chết mới đá về đăng nhập |
 | `useMe`, `useApiMutation`, `errorMessage` | `lib/api.ts` | Query/mutation + đọc message lỗi tiếng Việt | Mutation tự làm mới `me` |
 | `formatDateTime`, `formatDate`, `orDash` | `lib/format.ts` | Mọi chỗ hiện ngày giờ | Lưu UTC, hiện giờ VN |
+| `formatMoney` | `lib/format.ts` | **Mọi chỗ hiện tiền**: chi phí ghế license (3.2), giá mua tài sản về sau | Tự ghép " ₫" chứ không dùng `style:'currency'` (bản vi-VN chèn dấu cách không ngắt). `null` ra dấu gạch, KHÔNG ra "0 ₫" — "chưa khai" khác "được tặng" |
 | `downloadFile` | `lib/download-file.ts` | Tải file giữ đúng tên | — |
+| `sortQuery` | `lib/sort-query.ts` | Nối `?sort=&dir=` từ trạng thái sắp xếp của `DataTable` | Không màn nào tự ghép chuỗi này. Phía API có cửa đối ứng: `parseSortQuery` trong `api/src/common/sorting.ts`, luôn kẹp về whitelist cột của module chủ |
 | `uploadFile` | `lib/upload.ts` | Gửi file lên endpoint multipart | Không tự đặt `Content-Type` (mất boundary) |
 | Token màu | `css/tokens.css` | **Nguồn màu duy nhất** | Cấm hex ngoài file này |
 
@@ -100,5 +108,7 @@
 | Bảng `secret` chỉ dùng trong module `vault` (AD-4) | dependency-cruiser luật `secret-table-only-in-vault` | `npm --prefix api run depcruise` |
 | Không có đường xuất toàn bộ két ở mọi quyền (FR-026) | Jest `vault-surface.spec.ts` + E2E `vault.spec.ts` | `npm --prefix api test` / `npm run test:e2e` |
 | Sổ NAT chỉ có MỘT câu trả lời cho mỗi port | `EXCLUDE USING gist` (migration 0022) + `protocolsOverlap` ở service | `npm run test:e2e` |
+| IP trong sổ NAT phải là MÁY, không phải địa chỉ mạng/quảng bá | `hostRole` ở `ip-rules.ts`, gọi trong `validateNatRule` | `npm --prefix api test` / `npm run test:e2e` |
+| Chi phí ghế license không lặng lẽ sai chữ số cuối | `validateAssignmentTerms` chặn quá `Number.MAX_SAFE_INTEGER` (cột là bigint) | `npm --prefix api test` |
 | Mở két phải step-up + `no-store` + một id mỗi lần (FR-022) | Jest `vault-surface.spec.ts` + E2E `vault-reveal.spec.ts` | `npm --prefix api test` / `npm run test:e2e` |
 | Cấm hex màu ngoài `tokens.css` | rà bằng `grep -rE "#[0-9a-fA-F]{3,8}" web/src --include=*.css` | thêm vào CI khi dựng pipeline |

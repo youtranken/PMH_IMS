@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { currentTheme, toggleTheme } from '@/lib/theme';
 
 /**
@@ -6,6 +7,7 @@ import { currentTheme, toggleTheme } from '@/lib/theme';
  * không cần biết đang ở theme nào.
  */
 export function ThemeSwitch() {
+  const { t } = useTranslation();
   const [theme, setThemeState] = useState(currentTheme());
   const toDark = theme !== 'dark';
   return (
@@ -13,8 +15,8 @@ export function ThemeSwitch() {
       type="button"
       className="btn ghost sm"
       onClick={() => setThemeState(toggleTheme())}
-      title={toDark ? 'Chế độ tối' : 'Chế độ sáng'}
-      aria-label={toDark ? 'Chuyển sang chế độ tối' : 'Chuyển sang chế độ sáng'}
+      title={toDark ? t('theme.dark') : t('theme.light')}
+      aria-label={toDark ? t('theme.switchToDark') : t('theme.switchToLight')}
     >
       <svg
         width="16"

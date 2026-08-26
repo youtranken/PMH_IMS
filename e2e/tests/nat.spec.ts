@@ -1,10 +1,19 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, firstLogin, resetDevices, resetIpam, resetUsers } from './helpers';
+import {
+  E2E_SA,
+  firstLogin,
+  resetCatalog,
+  resetDevices,
+  resetIpam,
+  resetUsers,
+} from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
   resetIpam();
   resetDevices();
+  // Bài "thêm dịch vụ bằng (+)" sinh một mục danh mục — dọn để nó không tích lại qua các lần chạy.
+  resetCatalog();
 });
 
 async function csrfOf(page: Page): Promise<string> {
@@ -66,12 +75,12 @@ test.describe('Sổ NAT', () => {
     await page.goto('/so-nat');
     await page.getByRole('button', { name: 'Thêm rule' }).click();
     const form = page.getByRole('dialog');
-    await form.getByPlaceholder('Gõ mã hoặc tên router…').fill(routerCode);
+    await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
     await form.getByRole('textbox', { name: 'Port ngoài' }).fill('8080');
     await form.getByRole('textbox', { name: 'IP trong' }).fill(internalIp);
     await form.getByRole('textbox', { name: 'Port trong' }).fill('80');
-    await form.getByRole('textbox', { name: 'Mở cho ai' }).fill('Phòng Nhân sự');
+    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('Phòng Nhân sự');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill('máy chấm công truy cập từ ngoài');
     await form.getByRole('button', { name: 'Lưu' }).click();
 
@@ -84,6 +93,174 @@ test.describe('Sổ NAT', () => {
     // Nối mềm sang hồ sơ IP: biết luôn port này dẫn tới máy của ai.
     // `exact` vì chữ "máy chấm công" còn nằm trong ô Lý do ngay bên cạnh.
     await expect(row.getByText('Máy chấm công', { exact: true })).toBeVisible();
+  });
+
+  /**
+   * Địa chỉ mạng và địa chỉ quảng bá KHÔNG phải một máy.
+   *
+   * Trước đây form chỉ hỏi "có phải IPv4 hợp lệ không", nên `172.16.0.0` khai được và cuốn sổ
+   * có một dòng dẫn tới hư không: gói tin chuyển tới đó không tới máy nào, còn người đọc sổ
+   * thì tin rằng port ấy đang phục vụ một dịch vụ thật. Bên IPAM đã chặn đúng từ đầu — lỗ
+   * hổng chỉ nằm ở cuốn sổ này.
+   */
+  test('đường hỏng: IP trong là địa chỉ mạng hoặc quảng bá đều bị từ chối', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const { headers, routerId, routerCode } = await setUp(page, stamp);
+
+    for (const [internalIp, kind] of [
+      ['172.16.0.0', 'mạng'],
+      ['172.16.10.0', 'mạng'],
+      ['172.16.10.255', 'quảng bá'],
+    ]) {
+      const res = await page.request.post('/api/v1/ipam/nat', {
+        headers,
+        data: {
+          deviceId: routerId,
+          protocol: 'tcp',
+          externalPorts: '9090',
+          internalIp,
+          internalPort: 80,
+          usedBy: 'thử',
+          reason: 'thử',
+        },
+      });
+      expect(res.status(), `phải bị từ chối: ${internalIp}`).toBe(400);
+      // Lỗi phải NÓI RA đó là loại địa chỉ gì, không chỉ "không hợp lệ": người gõ tin là mình
+      // gõ đúng, nên cần biết vì sao máy nghĩ khác.
+      // Không phân biệt hoa-thường: thông điệp viết "ĐỊA CHỈ MẠNG" in hoa để đập vào mắt.
+      expect(String((await res.json()).message)).toMatch(new RegExp(kind, 'i'));
+    }
+
+    // Và hàng rào phải hiện ra tận màn hình, không chỉ nằm ở API.
+    await page.goto('/so-nat');
+    await page.getByRole('button', { name: 'Thêm rule' }).click();
+    const form = page.getByRole('dialog');
+    await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
+    await page.getByRole('option', { name: new RegExp(routerCode) }).click();
+    await form.getByRole('textbox', { name: 'Port ngoài' }).fill('9091');
+    await form.getByRole('textbox', { name: 'IP trong' }).fill('172.16.0.0');
+    await form.getByRole('textbox', { name: 'Port trong' }).fill('80');
+    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('thử');
+    await form.getByRole('textbox', { name: 'Lý do mở' }).fill('thử');
+    await form.getByRole('button', { name: 'Lưu' }).click();
+    await expect(form.getByText(/ĐỊA CHỈ MẠNG/)).toBeVisible();
+  });
+
+  /**
+   * Bảng dịch vụ/port nhỏ ngay trong hộp (0028).
+   *
+   * Một dòng NAT ghi "5001" thì sáu tháng sau không ai biết nó là gì và không ai dám đóng.
+   * Chọn "OpenVPN" thì port VÀ giao thức tự điền — đó là toàn bộ lý do danh mục này tồn tại.
+   */
+  test('chọn dịch vụ từ bảng nhỏ thì điền sẵn cả port lẫn giao thức', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const { routerCode, internalIp } = await setUp(page, stamp);
+
+    await page.goto('/so-nat');
+    await page.getByRole('button', { name: 'Thêm rule' }).click();
+    const form = page.getByRole('dialog');
+    await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
+    await page.getByRole('option', { name: new RegExp(routerCode) }).click();
+
+    // OpenVPN là UDP — chọn nó phải kéo giao thức đổi theo, không chỉ điền con số.
+    await form.getByRole('button', { name: 'Chọn OpenVPN cho Port ngoài' }).click();
+    await expect(form.getByRole('textbox', { name: 'Port ngoài' })).toHaveValue('1194');
+    await expect(form.getByRole('button', { name: 'Giao thức' })).toContainText('UDP');
+
+    await form.getByRole('button', { name: 'Chọn NAS Web cho Port trong' }).click();
+    await expect(form.getByRole('textbox', { name: 'Port trong' })).toHaveValue('5001');
+
+    await form.getByRole('textbox', { name: 'IP trong' }).fill(internalIp);
+    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('Team IT');
+    await form.getByRole('textbox', { name: 'Lý do mở' }).fill('VPN vào LAN nội bộ');
+    await form.getByRole('button', { name: 'Lưu' }).click();
+
+    const row = page.getByRole('row', { name: new RegExp(routerCode) });
+    await expect(row.getByText('UDP 1194')).toBeVisible();
+    await expect(row.getByText(`${internalIp}:5001`)).toBeVisible();
+  });
+
+  /** Dịch vụ chưa có thì khai NGAY trong hộp, không phải bỏ dở form đi sang màn Danh mục. */
+  test('thêm dịch vụ mới bằng (+) rồi dùng luôn cho rule đang khai', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const { routerCode, internalIp } = await setUp(page, stamp);
+    const serviceName = `Cong E2E ${stamp}`;
+
+    await page.goto('/so-nat');
+    await page.getByRole('button', { name: 'Thêm rule' }).click();
+    const form = page.getByRole('dialog');
+    await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
+    await page.getByRole('option', { name: new RegExp(routerCode) }).click();
+
+    await form.getByRole('button', { name: '+ Thêm dịch vụ' }).first().click();
+    const serviceForm = page.getByRole('dialog').last();
+    // `getByRole` chứ không `getByLabel`: nhãn có kèm dấu * (aria-hidden), nên TEXT của thẻ
+    // label là "Port *" còn TÊN TRỢ NĂNG mới đúng là "Port".
+    await serviceForm.getByRole('textbox', { name: 'Tên', exact: true }).fill(serviceName);
+    await serviceForm.getByRole('textbox', { name: 'Port', exact: true }).fill('8443');
+    await serviceForm.getByRole('button', { name: 'Lưu' }).click();
+
+    // Lưu xong là ÁP THẲNG vào ô đang khai — không bắt người dùng đi tìm lại trong danh sách.
+    await expect(form.getByRole('textbox', { name: 'Port ngoài' })).toHaveValue('8443');
+
+    await form.getByRole('textbox', { name: 'IP trong' }).fill(internalIp);
+    await form.getByRole('textbox', { name: 'Port trong' }).fill('443');
+    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('P. Kinh doanh');
+    await form.getByRole('textbox', { name: 'Lý do mở' }).fill('web đơn hàng cho đối tác');
+    await form.getByRole('button', { name: 'Lưu' }).click();
+    await expect(
+      page.getByRole('row', { name: new RegExp(routerCode) }).getByText('TCP 8443'),
+    ).toBeVisible();
+
+    // Và dịch vụ đó ở lại danh mục để lần sau chỉ việc chọn.
+    await page.goto('/quan-tri/danh-muc');
+    await page.getByRole('tab', { name: 'Dịch vụ / Port' }).click();
+    await expect(page.getByRole('row', { name: new RegExp(serviceName) })).toBeVisible();
+  });
+
+  /**
+   * Router chưa có trong kho thì thêm NGAY trong hộp.
+   *
+   * Đây đúng là chỗ người dùng mắc kẹt: ô Router mở ra trắng trơn, gõ không ra gì (kho chưa
+   * có router nào), và không có đường nào đi tiếp mà không mất cả form đang khai dở.
+   */
+  test('thêm router mới ngay trong hộp, không mất form đang khai dở', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const { internalIp } = await setUp(page, stamp);
+    const newRouter = `RT-E2E-NEW-${stamp}`;
+
+    await page.goto('/so-nat');
+    await page.getByRole('button', { name: 'Thêm rule' }).click();
+    const form = page.getByRole('dialog');
+
+    // Khai dở một ô TRƯỚC khi mở hộp thêm router — nó phải còn nguyên khi quay lại.
+    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('Team IT');
+
+    await form.getByPlaceholder('Chọn hoặc gõ để lọc…').click();
+    await page.getByRole('button', { name: '+ Thêm router mới' }).click();
+
+    const deviceForm = page.getByRole('dialog').last();
+    await deviceForm.getByLabel('Mã thiết bị').fill(newRouter);
+    await deviceForm.getByLabel('Tên thiết bị').fill('Draytek mới');
+    await deviceForm.getByRole('button', { name: 'Loại' }).click();
+    await page.getByRole('option', { name: 'Switch', exact: true }).click();
+    await deviceForm.getByRole('button', { name: 'Lưu' }).click();
+
+    // Router vừa tạo được CHỌN SẴN, và ô khai dở còn nguyên.
+    await expect(form.getByPlaceholder('Chọn hoặc gõ để lọc…')).toHaveValue(newRouter);
+    await expect(form.getByRole('combobox', { name: 'Mở cho ai' })).toHaveValue('Team IT');
+
+    await form.getByRole('textbox', { name: 'Port ngoài' }).fill('7443');
+    await form.getByRole('textbox', { name: 'IP trong' }).fill(internalIp);
+    await form.getByRole('textbox', { name: 'Port trong' }).fill('443');
+    await form.getByRole('textbox', { name: 'Lý do mở' }).fill('thử router mới');
+    await form.getByRole('button', { name: 'Lưu' }).click();
+
+    await expect(page.getByRole('row', { name: new RegExp(newRouter) })).toBeVisible();
   });
 
   /**

@@ -58,6 +58,44 @@ export const vendorTable = pgTable('vendor', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
+/**
+ * Ba danh mục của migration 0028 — cùng chủ, cùng nếp `active` (vô hiệu chứ không xóa).
+ *
+ * Chúng ra đời vì cùng một lý do: ba ô đang gõ tay tự do, gõ mỗi nơi một kiểu, nên lọc ra
+ * thiếu và báo cáo cộng nhầm.
+ */
+export const departmentTable = pgTable('department', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: citext('name').notNull(),
+  description: text('description'),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const ispProviderTable = pgTable('isp_provider', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: citext('name').notNull(),
+  hotline: text('hotline'),
+  contact: text('contact'),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const servicePortTable = pgTable('service_port', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: citext('name').notNull(),
+  /** 'tcp' | 'udp' | 'both' — CHECK ở tầng DB (0028). */
+  protocol: text('protocol').notNull().default('tcp'),
+  portFrom: integer('port_from').notNull(),
+  portTo: integer('port_to').notNull(),
+  description: text('description'),
+  active: boolean('active').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 /** AD-13: append-only (trigger `history_append_only` chặn UPDATE/DELETE ở tầng DB). */
 export const catalogHistoryTable = pgTable('catalog_history', {
   id: uuid('id').primaryKey().defaultRandom(),

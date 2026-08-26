@@ -6,6 +6,7 @@ import {
   firstLogin,
   horizontalOverflow,
   loginWithTotp,
+  logout,
   resetAccessList,
   resetApprovals,
   resetDevices,
@@ -26,11 +27,6 @@ async function csrfOf(page: Page): Promise<string> {
     const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
     return ((await res.json()) as { csrfToken: string }).csrfToken;
   });
-}
-
-async function logout(page: Page): Promise<void> {
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Đăng xuất' }).click();
 }
 
 /**

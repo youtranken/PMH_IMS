@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { SchedulePicker, describeSchedule, type ScheduleValue } from '@/ui/schedule-picker';
@@ -167,6 +167,7 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
                               const ok = await askConfirm({
                                 message: t('digest.confirmDelete', { name: rule.name }),
                                 danger: true,
+                                confirmLabel: t('digest.delete'),
                               });
                               if (!ok) return;
                               remove.mutate(
@@ -250,9 +251,24 @@ function RuleForm({
     );
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={640}>
-      <DialogTitle>{rule ? t('digest.edit') : t('digest.add')}</DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={640}
+      title={rule ? t('digest.edit') : t('digest.add')}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" form="rule-form" className="btn primary" disabled={save.isPending}>
+            {save.isPending ? t('common.loading') : t('common.save')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="rule-form"
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
@@ -358,15 +374,6 @@ function RuleForm({
             {error}
           </p>
         ) : null}
-
-        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button type="submit" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );

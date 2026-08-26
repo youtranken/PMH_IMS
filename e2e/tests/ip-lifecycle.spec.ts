@@ -84,7 +84,7 @@ test.describe('Vòng đời IP', () => {
 
     await afterReclaim.getByRole('button', { name: 'Cấp lại' }).click();
     const reassign = page.getByRole('dialog');
-    await reassign.getByRole('textbox', { name: 'Người / bộ phận dùng' }).fill('Anh Hùng — Kho');
+    await reassign.getByRole('combobox', { name: 'Người / bộ phận dùng' }).fill('Anh Hùng — Kho');
     await reassign.getByRole('button', { name: 'Xác nhận' }).click();
     await expect(page.getByText('Anh Hùng — Kho')).toBeVisible();
     await expect(page.getByText('17% · 1/6 · còn 5')).toBeVisible();

@@ -47,12 +47,13 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await form.getByRole('textbox', { name: 'Tên gọi' }).fill(`LAN thử E2E ${stamp}`);
     await form.getByRole('button', { name: 'Lưu' }).click();
 
-    const row = page.getByRole('row', { name: new RegExp(`LAN thử E2E ${stamp}`) });
-    await expect(row).toBeVisible();
+    // Dải mới nằm ở CỘT TRÁI dưới dạng thẻ, không phải một dòng bảng (mockup body-Ipam.html).
+    const card = page.getByRole('link', { name: new RegExp(`LAN thử E2E ${stamp}`) });
+    await expect(card).toBeVisible();
     // /29 = 8 địa chỉ, trừ địa chỉ mạng và quảng bá còn 6.
-    await expect(row.getByText('0% · 0/6 · còn 6')).toBeVisible();
+    await expect(card.getByText('0% · 0/6 · còn 6')).toBeVisible();
 
-    await row.getByRole('link').click();
+    await card.click();
     await expect(page.getByRole('heading', { name: new RegExp(cidr) })).toBeVisible();
 
     // Ô trống hiện sẵn trong bảng, không giấu sau nút "thêm".
@@ -60,12 +61,105 @@ test.describe('Dải mạng và hồ sơ IP', () => {
 
     await page.getByRole('button', { name: 'Cấp IP này' }).first().click();
     const ipForm = page.getByRole('dialog');
-    await ipForm.getByRole('textbox', { name: 'Người / bộ phận dùng' }).fill('Chị Lan — Kế toán');
+    await ipForm.getByRole('combobox', { name: 'Người / bộ phận dùng' }).fill('Chị Lan — Kế toán');
     await ipForm.getByRole('button', { name: 'Lưu' }).click();
 
     await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();
     await expect(page.getByText('17% · 1/6 · còn 5')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(5);
+  });
+
+  /**
+   * Màn Địa chỉ IP là MỘT trang hai cột (mockup `body-Ipam.html`): dải bên trái, IP của dải
+   * đang chọn bên phải.
+   *
+   * Bản dựng đầu tách hai trang và đường đi giữa chúng là mã CIDR gạch chân trong ô đầu bảng
+   * — không ai nhận ra đó là đường vào, nên cả màn trông như "khai được dải mà không khai
+   * được IP nào". Bài này khoá lại đúng chuyện đó: bấm một thẻ dải là bảng IP đổi theo, ngay
+   * trên cùng một trang.
+   */
+  test('hai cột: bấm thẻ dải bên trái thì bảng IP bên phải đổi theo', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const octet = Number(stamp) % 150;
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+
+    // Hai dải, mỗi dải một số VLAN — badge VLAN là thứ mockup vẽ ngay trên thẻ.
+    const first = await page.request.post('/api/v1/ipam/subnets', {
+      headers,
+      data: { cidr: `172.16.${octet}.0/29`, name: `LAN A E2E ${stamp}`, vlan: 20 },
+    });
+    const firstId = ((await first.json()) as { id: string }).id;
+    await page.request.post('/api/v1/ipam/subnets', {
+      headers,
+      data: { cidr: `172.16.${octet + 1}.0/29`, name: `LAN B E2E ${stamp}`, vlan: 30 },
+    });
+    await page.request.post('/api/v1/ipam/addresses', {
+      headers,
+      data: { subnetId: firstId, address: `172.16.${octet}.1`, usedBy: 'Máy A của dải A' },
+    });
+
+    await page.goto(`/dia-chi-ip/${firstId}`);
+    // Badge VLAN trên thẻ: ở PMH người ta gọi dải theo VLAN chứ không theo CIDR.
+    await expect(page.getByText('VLAN 20')).toBeVisible();
+    await expect(page.getByText('VLAN 30')).toBeVisible();
+    await expect(page.getByText('Máy A của dải A')).toBeVisible();
+
+    // Bấm thẻ dải B → cột phải đổi, KHÔNG rời trang.
+    await page.getByRole('link', { name: new RegExp(`LAN B E2E ${stamp}`) }).click();
+    await expect(
+      page.getByRole('heading', { name: new RegExp(`172.16.${octet + 1}.0/29`) }),
+    ).toBeVisible();
+    await expect(page.getByText('Máy A của dải A')).toHaveCount(0);
+    // Dải B chưa cấp IP nào → 6 ô trống, mỗi ô một nút cấp.
+    await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(6);
+  });
+
+  /**
+   * Bộ lọc trạng thái có nhánh "Trống" — thay ô tick "chỉ hiện IP đã cấp" cũ.
+   *
+   * Ô tick chỉ mở/đóng được MỘT trạng thái, nên câu hỏi hay gặp thứ hai khi cắm máy — "còn
+   * chỗ nào trống" — vẫn phải tự dò bằng mắt giữa 254 dòng.
+   */
+  test('lọc trạng thái: xem riêng ô trống, xem riêng IP đang cấp', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const octet = (Number(stamp) % 150) + 40;
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const subnetId = await createSubnet(page, `172.16.${octet}.0/29`, `LAN lọc E2E ${stamp}`);
+    await page.request.post('/api/v1/ipam/addresses', {
+      headers,
+      data: { subnetId, address: `172.16.${octet}.1`, usedBy: 'Chị Lan — Kế toán' },
+    });
+
+    await page.goto(`/dia-chi-ip/${subnetId}`);
+    // Mặc định "Tất cả": 1 IP đã cấp + 5 ô trống.
+    await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(5);
+    await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Đang cấp', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(0);
+    await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();
+
+    await page.getByRole('button', { name: 'Trống', exact: true }).click();
+    await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(5);
+    await expect(page.getByText('Chị Lan — Kế toán')).toHaveCount(0);
+  });
+
+  /** VLAN ngoài dải 802.1Q (1–4094) bị chặn ở SERVER, không chỉ ở ô nhập. */
+  test('đường hỏng: số VLAN ngoài 1–4094 bị từ chối', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const octet = (Number(stamp) % 150) + 60;
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+
+    for (const vlan of [0, 4095, 9999]) {
+      const res = await page.request.post('/api/v1/ipam/subnets', {
+        headers,
+        data: { cidr: `172.16.${octet}.0/29`, name: `LAN vlan E2E ${stamp}`, vlan },
+      });
+      expect(res.status(), `phải bị từ chối: VLAN ${vlan}`).toBe(400);
+    }
   });
 
   /**
@@ -127,6 +221,10 @@ test.describe('Dải mạng và hồ sơ IP', () => {
       ['172.16.10.0', 'SUBNET_INVALID'],
       ['172.16.10.0/33', 'SUBNET_INVALID'],
       ['10.0.0.0/7', 'SUBNET_INVALID'],
+      // Trần /24 (quyết định 25/08/2026): /16 là kiểu gõ nhầm dễ xảy ra nhất và tốn nhất —
+      // 65.534 dòng dựng một lượt ở màn chi tiết dải.
+      ['172.16.0.0/16', 'SUBNET_INVALID'],
+      ['172.16.0.0/23', 'SUBNET_INVALID'],
       ['fe80::/64', 'SUBNET_INVALID'],
     ]) {
       const res = await page.request.post('/api/v1/ipam/subnets', {
@@ -137,12 +235,14 @@ test.describe('Dải mạng và hồ sơ IP', () => {
       expect(await res.json()).toMatchObject({ code });
     }
 
-    // Dải rộng quá mức nói rõ nghi ngờ gõ nhầm, không chỉ "không hợp lệ".
+    // Dải rộng quá mức phải CHỈ ĐƯỜNG (chia thành nhiều /24), không chỉ nói "không hợp lệ".
     const wide = await page.request.post('/api/v1/ipam/subnets', {
       headers,
       data: { cidr: '10.0.0.0/7', name: 'rộng E2E' },
     });
-    expect(((await wide.json()) as { message: string }).message).toContain('gõ nhầm');
+    const wideMessage = ((await wide.json()) as { message: string }).message;
+    expect(wideMessage).toContain('/24');
+    expect(wideMessage).toContain('chia thành nhiều');
   });
 
   test('gõ IP bất kỳ kèm /24 thì tự quy về địa chỉ mạng, không đẻ ra hai dải cho một dải', async ({

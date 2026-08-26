@@ -1,10 +1,15 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
+import { DataTable } from '@/ui/data-table';
+import { UsageBar } from '@/ui/usage-bar';
+import { LicenseSeatsExpand } from './license-seats-expand';
+import { sortQuery } from '@/lib/sort-query';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
@@ -21,6 +26,7 @@ import {
   STATUS_KEY,
   STATUS_TONE,
   seatLabel,
+  supportsSeats,
   type SoftwareKind,
   type SoftwareRow,
   type SoftwareStatus,
@@ -42,6 +48,9 @@ export function SoftwareScreen({ me }: { me: Me }) {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
+  // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả danh sách — sai mà không có dấu hiệu nào.
+  const [sorting, setSorting] = useState<SortingState>([{ id: 'code', desc: false }]);
   const [creating, setCreating] = useState(false);
 
   const lists = useQuery({
@@ -50,10 +59,10 @@ export function SoftwareScreen({ me }: { me: Me }) {
   });
 
   const software = useQuery({
-    queryKey: ['software', page, filters],
+    queryKey: ['software', page, filters, sorting],
     queryFn: () =>
       apiFetch<{ items: SoftwareRow[]; total: number }>(
-        `/api/v1/software?${buildQuery(page, filters)}`,
+        `/api/v1/software?${buildQuery(page, filters, sorting)}`,
       ),
   });
 
@@ -65,6 +74,85 @@ export function SoftwareScreen({ me }: { me: Me }) {
 
   const rows = software.data?.items ?? [];
 
+  /**
+   * `id` của cột PHẢI khớp whitelist `SOFTWARE_SORT_KEYS` phía API — đó là tên cột gửi lên
+   * trong `?sort=`. Cột "Nhà cung cấp" hiển thị qua danh mục, không sắp được: sắp theo nó đòi
+   * join sang bảng của module khác, vi phạm AD-2. Cột "Seat" là số đã dùng/tổng, số đã dùng
+   * tính từ bảng license_assignment nên không có cột thật để sắp.
+   */
+  const columns = useMemo<ColumnDef<SoftwareRow, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'code',
+        header: t('software.code'),
+        cell: ({ row }) => (
+          <Link className="mono" to={`/phan-mem/${row.original.id}`}>
+            {row.original.code}
+          </Link>
+        ),
+      },
+      {
+        accessorKey: 'name',
+        header: t('software.name'),
+        cell: ({ row }) => row.original.name,
+      },
+      {
+        accessorKey: 'kind',
+        header: t('software.kind'),
+        cell: ({ row }) => t(KIND_KEY[row.original.kind]),
+      },
+      {
+        id: 'vendorName',
+        header: t('software.vendor'),
+        cell: ({ row }) => orDash(row.original.vendorName),
+      },
+      {
+        id: 'seats',
+        header: t('software.seats'),
+        cell: ({ row }) => {
+          const item = row.original;
+          // Thanh đo dùng chung (AD-15) — `SHARED-REGISTRY` ghi nó dành cho "dải IP, seat
+          // license" ngay từ đầu, nhưng phần seat chưa bao giờ được nối. Con số trần "3/10"
+          // bắt người đọc tự chia; thanh đo cho biết "gần đầy chưa" trong một cái liếc.
+          if (!supportsSeats(item.kind) || item.seatTotal === null) {
+            return <span className="mono">{seatLabel(item)}</span>;
+          }
+          return (
+            <UsageBar
+              percent={item.seatTotal === 0 ? 100 : (item.seatUsed / item.seatTotal) * 100}
+              label={seatLabel(item)}
+              ariaLabel={t('software.seats')}
+            />
+          );
+        },
+      },
+      {
+        accessorKey: 'endDate',
+        header: t('software.expiry'),
+        cell: ({ row }) =>
+          row.original.licenseModel === 'perpetual' ? (
+            // Mua đứt: nói thẳng "Vĩnh viễn". Để badge hạn ở đây thì hoặc hiện "Không có
+            // hạn" (nghe như thiếu dữ liệu), hoặc trống trơn — cả hai đều làm người đọc
+            // dừng lại tự hỏi, trong khi đây là trạng thái hoàn toàn bình thường.
+            <span className="badge ok plain">{t('software.perpetual')}</span>
+          ) : (
+            // AD-15: luật "sắp hết hạn" chỉ có một, ở lib/expiry.ts
+            <ExpiryBadge end={row.original.endDate} />
+          ),
+      },
+      {
+        accessorKey: 'status',
+        header: t('software.status'),
+        cell: ({ row }) => (
+          <span className={`badge ${STATUS_TONE[row.original.status]}`}>
+            {t(STATUS_KEY[row.original.status])}
+          </span>
+        ),
+      },
+    ],
+    [t],
+  );
+
   return (
     <>
       <PageHeader
@@ -72,8 +160,11 @@ export function SoftwareScreen({ me }: { me: Me }) {
         subtitle={t('software.subtitle')}
         actions={
           <>
+            {/* FR-028: xuất đúng bộ lọc VÀ đúng thứ tự đang xem — cùng query với bảng dưới. */}
             <ExportXlsxButton
-              url={`/api/v1/software/export.xlsx?${buildQuery(1, filters)}`}
+              url={`/api/v1/software/export.xlsx?${[buildFilterQuery(filters), sortQuery(sorting)]
+                .filter(Boolean)
+                .join('&')}`}
               fileName="phan-mem.xlsx"
             />
           <button type="button" className="btn primary" onClick={() => setCreating(true)}>
@@ -121,47 +212,29 @@ export function SoftwareScreen({ me }: { me: Me }) {
         <EmptyState title={t('software.empty')} hint={t('software.emptyHint')} />
       ) : (
         <>
-          <div className="table-wrap">
-            <table className="table table-stack">
-              <thead>
-                <tr>
-                  <th>{t('software.code')}</th>
-                  <th>{t('software.name')}</th>
-                  <th>{t('software.kind')}</th>
-                  <th>{t('software.vendor')}</th>
-                  <th>{t('software.seats')}</th>
-                  <th>{t('software.expiry')}</th>
-                  <th>{t('software.status')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id}>
-                    <td data-label={t('software.code')}>
-                      <Link className="mono" to={`/phan-mem/${row.id}`}>
-                        {row.code}
-                      </Link>
-                    </td>
-                    <td data-label={t('software.name')}>{row.name}</td>
-                    <td data-label={t('software.kind')}>{t(KIND_KEY[row.kind])}</td>
-                    <td data-label={t('software.vendor')}>{orDash(row.vendorName)}</td>
-                    <td data-label={t('software.seats')} className="mono">
-                      {seatLabel(row)}
-                    </td>
-                    <td data-label={t('software.expiry')}>
-                      {/* AD-15: luật "sắp hết hạn" chỉ có một, ở lib/expiry.ts */}
-                      <ExpiryBadge end={row.endDate} />
-                    </td>
-                    <td data-label={t('software.status')}>
-                      <span className={`badge ${STATUS_TONE[row.status]}`}>
-                        {t(STATUS_KEY[row.status])}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <DataTable
+            data={rows}
+            columns={columns}
+            emptyText={t('software.empty')}
+            stackOnMobile
+            /* Bung dòng ra là thấy MÁY NÀO đang dùng key (AC 3.2 + nếp QLTS, AD-12). Chỉ
+               license mới có seat, và chỉ hiện mũi tên khi thật sự có máy đang dùng — mũi
+               tên bấm ra rỗng là một kiểu hứa hão khác. */
+            canExpand={(item) => supportsSeats(item.kind) && item.seatUsed > 0}
+            renderExpanded={(item) => (
+              <LicenseSeatsExpand software={item} csrfToken={me.csrfToken} />
+            )}
+            manualSorting
+            sorting={sorting}
+            onSortingChange={(updater) => {
+              setSorting((current) =>
+                typeof updater === 'function' ? updater(current) : updater,
+              );
+              // Đổi cột sắp xếp thì về trang 1: giữ nguyên trang 5 của thứ tự CŨ là nhìn vào
+              // một lát cắt chẳng liên quan gì tới thứ tự vừa chọn.
+              setPage(1);
+            }}
+          />
 
           <Pagination
             page={page}
@@ -188,8 +261,19 @@ export function SoftwareScreen({ me }: { me: Me }) {
   );
 }
 
-function buildQuery(page: number, filters: Filters): string {
+function buildQuery(page: number, filters: Filters, sorting: SortingState): string {
   const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
+  return [params.toString(), buildFilterQuery(filters), sortQuery(sorting)]
+    .filter(Boolean)
+    .join('&');
+}
+
+/**
+ * Phần lọc (không kèm phân trang) — dùng CHUNG cho danh sách và cho nút Xuất Excel, nên
+ * file xuất ra luôn khớp đúng cái đang nhìn thấy (FR-028).
+ */
+function buildFilterQuery(filters: Filters): string {
+  const params = new URLSearchParams();
   if (filters.search.trim()) params.set('search', filters.search.trim());
   if (filters.kind) params.set('kind', filters.kind);
   if (filters.status) params.set('status', filters.status);

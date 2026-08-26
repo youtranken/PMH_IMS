@@ -10,6 +10,7 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
+import type { SortQuery } from '../../common/sorting';
 import { escapeLike, pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
@@ -56,14 +57,18 @@ export class DevicesService {
 
   // ─────────────────────────── Đọc ───────────────────────────
 
-  async list(query: PageQuery, filter: DeviceFilter): Promise<Page<DeviceListItem>> {
+  async list(
+    query: PageQuery,
+    filter: DeviceFilter,
+    sort: SortQuery<DeviceSortKey> = DEVICE_SORT_DEFAULT,
+  ): Promise<Page<DeviceListItem>> {
     const where = buildWhere(filter);
     const [rows, totalRows] = await Promise.all([
       this.db
         .select()
         .from(deviceTable)
         .where(where)
-        .orderBy(asc(deviceTable.code))
+        .orderBy(...deviceOrderBy(sort))
         .limit(query.limit)
         .offset(pageOffset(query)),
       this.db.select({ value: count() }).from(deviceTable).where(where),
@@ -75,12 +80,17 @@ export class DevicesService {
   }
 
   /** Toàn bộ kết quả theo bộ lọc, KHÔNG phân trang — chỉ dùng cho export xlsx (FR-028). */
-  async listAll(filter: DeviceFilter): Promise<DeviceListItem[]> {
+  async listAll(
+    filter: DeviceFilter,
+    sort: SortQuery<DeviceSortKey> = DEVICE_SORT_DEFAULT,
+  ): Promise<DeviceListItem[]> {
     const rows = await this.db
       .select()
       .from(deviceTable)
       .where(buildWhere(filter))
-      .orderBy(asc(deviceTable.code));
+      // Cùng thứ tự với màn hình: file tải về phải khớp thứ tự người dùng đang nhìn, không
+      // thì họ mở file ra và tưởng đây là dữ liệu khác.
+      .orderBy(...deviceOrderBy(sort));
     return this.decorate(rows);
   }
 
@@ -358,6 +368,39 @@ const LABEL: Record<string, string> = {
   name: 'tên thiết bị',
   deviceTypeId: 'loại thiết bị',
 };
+
+/**
+ * Cột được phép sắp xếp. Đây là WHITELIST — tên cột đi thẳng vào `ORDER BY`.
+ *
+ * Chỉ mở những cột nằm SẴN trong bảng `device`. Cột hiển thị qua danh mục (site, tủ, loại)
+ * không có ở đây vì sắp theo chúng phải join sang bảng của module khác — vi phạm AD-2. Muốn
+ * sắp theo site thì lọc theo site rồi sắp theo mã.
+ */
+export const DEVICE_SORT_KEYS = [
+  'code',
+  'name',
+  'serial',
+  'assignedTo',
+  'status',
+  'warrantyEnd',
+] as const;
+export type DeviceSortKey = (typeof DEVICE_SORT_KEYS)[number];
+export const DEVICE_SORT_DEFAULT: SortQuery<DeviceSortKey> = { key: 'code', dir: 'asc' };
+
+function deviceOrderBy(sort: SortQuery<DeviceSortKey>): SQL[] {
+  const column = {
+    code: deviceTable.code,
+    name: deviceTable.name,
+    serial: deviceTable.serial,
+    assignedTo: deviceTable.assignedTo,
+    status: deviceTable.status,
+    warrantyEnd: deviceTable.warrantyEnd,
+  }[sort.key];
+  const primary = sort.dir === 'desc' ? desc(column) : asc(column);
+  // Chốt hạ bằng `code`: thiếu nó thì hai máy cùng trạng thái có thể đổi chỗ nhau giữa hai
+  // lần tải — sang trang 2 lại thấy đúng bản ghi vừa xem ở trang 1, hoặc mất hẳn một dòng.
+  return sort.key === 'code' ? [primary] : [primary, asc(deviceTable.code)];
+}
 
 function buildWhere(filter: DeviceFilter): SQL | undefined {
   const parts: (SQL | undefined)[] = [];

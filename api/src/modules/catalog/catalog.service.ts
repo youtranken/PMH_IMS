@@ -5,11 +5,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, ilike, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
+import type { SortQuery } from '../../common/sorting';
 import {
   escapeLike,
   pgErrorCode,
@@ -20,7 +21,10 @@ import { AuditWriterService } from '../audit/audit-writer.service';
 import {
   cabinetTable,
   catalogHistoryTable,
+  departmentTable,
   deviceTypeTable,
+  ispProviderTable,
+  servicePortTable,
   siteTable,
   vendorTable,
 } from './catalog.schema';
@@ -31,7 +35,10 @@ import {
   type CatalogHistoryRecord,
   type CatalogRecord,
   type CatalogSnapshot,
+  type DepartmentRecord,
   type DeviceTypeRecord,
+  type IspProviderRecord,
+  type ServicePortRecord,
   type SiteRecord,
   type VendorRecord,
 } from './catalog.types';
@@ -41,6 +48,9 @@ export interface CatalogLists {
   cabinets: CabinetRecord[];
   deviceTypes: DeviceTypeRecord[];
   vendors: VendorRecord[];
+  departments: DepartmentRecord[];
+  ispProviders: IspProviderRecord[];
+  servicePorts: ServicePortRecord[];
 }
 
 export interface CatalogInput {
@@ -54,6 +64,10 @@ export interface CatalogInput {
   supplies?: string | null;
   phone?: string | null;
   contact?: string | null;
+  hotline?: string | null;
+  protocol?: string;
+  portFrom?: number;
+  portTo?: number;
 }
 
 /**
@@ -70,10 +84,18 @@ export class CatalogService {
 
   // ─────────────────────────── Đọc ───────────────────────────
 
-  /** Bốn danh sách đầy đủ để đổ vào ô chọn của form thiết bị và để sinh file mẫu. */
+  /** Mọi danh sách đầy đủ để đổ vào ô chọn của các form và để sinh file mẫu. */
   async lists(options: { includeInactive?: boolean } = {}): Promise<CatalogLists> {
     const onlyActive = options.includeInactive !== true;
-    const [sites, cabinets, deviceTypes, vendors] = await Promise.all([
+    const [
+      sites,
+      cabinets,
+      deviceTypes,
+      vendors,
+      departments,
+      ispProviders,
+      servicePorts,
+    ] = await Promise.all([
       this.db
         .select()
         .from(siteTable)
@@ -95,12 +117,32 @@ export class CatalogService {
         .from(vendorTable)
         .where(onlyActive ? eq(vendorTable.active, true) : undefined)
         .orderBy(asc(vendorTable.name)),
+      this.db
+        .select()
+        .from(departmentTable)
+        .where(onlyActive ? eq(departmentTable.active, true) : undefined)
+        .orderBy(asc(departmentTable.name)),
+      this.db
+        .select()
+        .from(ispProviderTable)
+        .where(onlyActive ? eq(ispProviderTable.active, true) : undefined)
+        .orderBy(asc(ispProviderTable.name)),
+      this.db
+        .select()
+        .from(servicePortTable)
+        .where(onlyActive ? eq(servicePortTable.active, true) : undefined)
+        .orderBy(asc(servicePortTable.name)),
     ]);
     return {
       sites,
       cabinets: cabinets.map((r) => ({ ...r.cabinet, siteCode: r.siteCode })),
       deviceTypes,
       vendors,
+      departments,
+      ispProviders,
+      // `protocol` ở DB là `text` nên drizzle trả `string`; kiểu công khai hẹp hơn
+      // ('tcp' | 'udp' | 'both'). CHECK của migration 0028 mới là chỗ giữ lời hứa đó.
+      servicePorts: servicePorts as ServicePortRecord[],
     };
   }
 
@@ -109,9 +151,11 @@ export class CatalogService {
     entity: CatalogEntity,
     query: PageQuery,
     search?: string,
+    sort?: SortQuery<string>,
   ): Promise<Page<CatalogRecord>> {
     const term = search?.trim();
     const like = term ? `%${escapeLike(term)}%` : null;
+    const effectiveSort = sort ?? CATALOG_SORT_DEFAULT[entity];
 
     if (entity === 'cabinet') {
       const where = like
@@ -127,7 +171,7 @@ export class CatalogService {
           .from(cabinetTable)
           .innerJoin(siteTable, eq(cabinetTable.siteId, siteTable.id))
           .where(where)
-          .orderBy(asc(siteTable.code), asc(cabinetTable.code))
+          .orderBy(...cabinetOrderBy(effectiveSort))
           .limit(query.limit)
           .offset(pageOffset(query)),
         this.db
@@ -154,7 +198,7 @@ export class CatalogService {
         .select()
         .from(table)
         .where(where)
-        .orderBy(asc(labelColumn))
+        .orderBy(...entityOrderBy(entity, effectiveSort))
         .limit(query.limit)
         .offset(pageOffset(query)),
       this.db.select({ value: count() }).from(table).where(where),
@@ -464,6 +508,45 @@ export class CatalogService {
           ...(input.phone !== undefined ? { phone: text(input.phone) } : {}),
           ...(input.contact !== undefined ? { contact: text(input.contact) } : {}),
         };
+      case 'department':
+        return {
+          ...(input.name !== undefined ? { name: requireText(input.name, 'Tên bộ phận') } : {}),
+          ...(input.description !== undefined ? { description: text(input.description) } : {}),
+        };
+      case 'isp_provider':
+        return {
+          ...(input.name !== undefined ? { name: requireText(input.name, 'Tên nhà mạng') } : {}),
+          ...(input.hotline !== undefined ? { hotline: text(input.hotline) } : {}),
+          ...(input.contact !== undefined ? { contact: text(input.contact) } : {}),
+        };
+      case 'service_port': {
+        const values: Record<string, unknown> = {
+          ...(input.name !== undefined ? { name: requireText(input.name, 'Tên dịch vụ') } : {}),
+          ...(input.protocol !== undefined ? { protocol: input.protocol } : {}),
+          ...(input.description !== undefined ? { description: text(input.description) } : {}),
+        };
+        if (input.portFrom !== undefined || input.portTo !== undefined) {
+          const from = input.portFrom;
+          // Bỏ trống "đến" nghĩa là MỘT port, không phải một dải hở đầu kia: người khai
+          // "HTTPS 443" chỉ điền một ô, và bắt họ gõ 443 hai lần là bắt vô cớ.
+          const to = input.portTo ?? from;
+          if (!isPort(from) || !isPort(to)) {
+            throw new BadRequestException({
+              code: 'SERVICE_PORT_INVALID',
+              message: 'Port phải là số nguyên từ 1 đến 65535.',
+            });
+          }
+          if (to < from) {
+            throw new BadRequestException({
+              code: 'SERVICE_PORT_INVALID',
+              message: 'Dải port viết ngược — số đầu phải nhỏ hơn số cuối (vd 50000-52000).',
+            });
+          }
+          values.portFrom = from;
+          values.portTo = to;
+        }
+        return values;
+      }
     }
   }
 
@@ -482,6 +565,135 @@ export class CatalogService {
   }
 }
 
+/**
+ * Cột được phép sắp xếp — WHITELIST theo TỪNG loại (AD-2): tên cột đi thẳng vào `ORDER BY`,
+ * và mỗi loại có bộ cột hiển thị riêng trên bảng nên whitelist cũng phải khai riêng.
+ *
+ * `siteCode` của tủ mạng KHÔNG có ở đây dù đang hiển thị trên bảng: giá trị đó lấy qua JOIN
+ * sang bảng `site` (module khác — AD-2), sắp theo nó nghĩa là phải sắp bằng cột của bảng khác.
+ * Muốn xem theo site thì lọc/tìm theo site rồi sắp theo mã tủ.
+ */
+export const CATALOG_SORT_KEYS = {
+  site: ['code', 'name', 'address', 'active'],
+  cabinet: ['code', 'description', 'uHeight', 'active'],
+  device_type: ['name', 'hasPortMap', 'description', 'active'],
+  vendor: ['name', 'supplies', 'phone', 'contact', 'active'],
+  department: ['name', 'description', 'active'],
+  isp_provider: ['name', 'hotline', 'contact', 'active'],
+  service_port: ['name', 'protocol', 'portFrom', 'description', 'active'],
+} as const satisfies Record<CatalogEntity, readonly string[]>;
+
+export const CATALOG_SORT_DEFAULT: Record<CatalogEntity, SortQuery<string>> = {
+  site: { key: 'code', dir: 'asc' },
+  cabinet: { key: 'code', dir: 'asc' },
+  device_type: { key: 'name', dir: 'asc' },
+  vendor: { key: 'name', dir: 'asc' },
+  department: { key: 'name', dir: 'asc' },
+  isp_provider: { key: 'name', dir: 'asc' },
+  service_port: { key: 'name', dir: 'asc' },
+};
+
+/** Loại KHÔNG cần join (mọi loại trừ `cabinet`) — gộp một hàm theo entity. */
+type SimpleEntity = Exclude<CatalogEntity, 'cabinet'>;
+
+function entityOrderBy(entity: SimpleEntity, sort: SortQuery<string>): SQL[] {
+  switch (entity) {
+    case 'site':
+      return siteOrderBy(sort);
+    case 'device_type':
+      return deviceTypeOrderBy(sort);
+    case 'vendor':
+      return vendorOrderBy(sort);
+    case 'department':
+      return nameFirstOrderBy(sort, departmentTable.name, {
+        description: departmentTable.description,
+        active: departmentTable.active,
+      });
+    case 'isp_provider':
+      return nameFirstOrderBy(sort, ispProviderTable.name, {
+        hotline: ispProviderTable.hotline,
+        contact: ispProviderTable.contact,
+        active: ispProviderTable.active,
+      });
+    case 'service_port':
+      return nameFirstOrderBy(sort, servicePortTable.name, {
+        protocol: servicePortTable.protocol,
+        portFrom: servicePortTable.portFrom,
+        description: servicePortTable.description,
+        active: servicePortTable.active,
+      });
+  }
+}
+
+type OrderColumn = Parameters<typeof asc>[0];
+
+/**
+ * Sắp theo một cột rồi CHỐT HẠ bằng `name`.
+ *
+ * Chốt hạ không phải chi tiết thừa: thiếu nó thì hai dòng cùng giá trị ở cột đang sắp có thể
+ * đổi chỗ nhau giữa hai lần tải trang, và người dùng thấy bảng "nhảy" mà không hiểu vì sao.
+ * `name` là khóa duy nhất của cả ba danh mục này nên nó chốt được.
+ */
+function nameFirstOrderBy(
+  sort: SortQuery<string>,
+  nameColumn: OrderColumn,
+  others: Record<string, OrderColumn>,
+): SQL[] {
+  const column = others[sort.key];
+  if (!column) return [sort.dir === 'desc' ? desc(nameColumn) : asc(nameColumn)];
+  return [sort.dir === 'desc' ? desc(column) : asc(column), asc(nameColumn)];
+}
+
+function siteOrderBy(sort: SortQuery<string>): SQL[] {
+  const column = {
+    code: siteTable.code,
+    name: siteTable.name,
+    address: siteTable.address,
+    active: siteTable.active,
+  }[sort.key as (typeof CATALOG_SORT_KEYS)['site'][number]];
+  const primary = sort.dir === 'desc' ? desc(column) : asc(column);
+  // Chốt hạ bằng `code`: đây là khóa duy nhất của site, thiếu nó hai site cùng giá trị cột
+  // đang sắp có thể đổi chỗ nhau giữa hai lần tải trang.
+  return sort.key === 'code' ? [primary] : [primary, asc(siteTable.code)];
+}
+
+function cabinetOrderBy(sort: SortQuery<string>): SQL[] {
+  const column = {
+    code: cabinetTable.code,
+    description: cabinetTable.description,
+    uHeight: cabinetTable.uHeight,
+    active: cabinetTable.active,
+  }[sort.key as (typeof CATALOG_SORT_KEYS)['cabinet'][number]];
+  const primary = sort.dir === 'desc' ? desc(column) : asc(column);
+  // Chốt hạ bằng `id`, KHÔNG phải `code`: mã tủ chỉ duy nhất TRONG một site (unique theo
+  // site_id + code), không duy nhất toàn cục — và whitelist không cho sắp theo site (AD-2)
+  // nên không có cột nào khác đủ để chốt hạ ổn định ngoài khóa chính.
+  return [primary, asc(cabinetTable.id)];
+}
+
+function deviceTypeOrderBy(sort: SortQuery<string>): SQL[] {
+  const column = {
+    name: deviceTypeTable.name,
+    hasPortMap: deviceTypeTable.hasPortMap,
+    description: deviceTypeTable.description,
+    active: deviceTypeTable.active,
+  }[sort.key as (typeof CATALOG_SORT_KEYS)['device_type'][number]];
+  const primary = sort.dir === 'desc' ? desc(column) : asc(column);
+  return sort.key === 'name' ? [primary] : [primary, asc(deviceTypeTable.name)];
+}
+
+function vendorOrderBy(sort: SortQuery<string>): SQL[] {
+  const column = {
+    name: vendorTable.name,
+    supplies: vendorTable.supplies,
+    phone: vendorTable.phone,
+    contact: vendorTable.contact,
+    active: vendorTable.active,
+  }[sort.key as (typeof CATALOG_SORT_KEYS)['vendor'][number]];
+  const primary = sort.dir === 'desc' ? desc(column) : asc(column);
+  return sort.key === 'name' ? [primary] : [primary, asc(vendorTable.name)];
+}
+
 function tableOf(entity: CatalogEntity) {
   switch (entity) {
     case 'site':
@@ -492,16 +704,38 @@ function tableOf(entity: CatalogEntity) {
       return deviceTypeTable;
     case 'vendor':
       return vendorTable;
+    case 'department':
+      return departmentTable;
+    case 'isp_provider':
+      return ispProviderTable;
+    case 'service_port':
+      return servicePortTable;
   }
 }
 
-function nameColumn(entity: CatalogEntity) {
-  return entity === 'device_type' ? deviceTypeTable.name : vendorTable.name;
+/** Cột mang NHÃN của loại — dùng cho ô tìm kiếm. `site`/`cabinet` mang nhãn ở `code`. */
+function nameColumn(entity: Exclude<CatalogEntity, 'site' | 'cabinet'>) {
+  switch (entity) {
+    case 'device_type':
+      return deviceTypeTable.name;
+    case 'vendor':
+      return vendorTable.name;
+    case 'department':
+      return departmentTable.name;
+    case 'isp_provider':
+      return ispProviderTable.name;
+    case 'service_port':
+      return servicePortTable.name;
+  }
 }
 
 function labelOf(entity: CatalogEntity, row: Record<string, unknown>): string {
   const value = entity === 'site' || entity === 'cabinet' ? row.code : row.name;
   return typeof value === 'string' ? value : '';
+}
+
+function isPort(value: number | undefined): value is number {
+  return Number.isInteger(value) && (value as number) >= 1 && (value as number) <= 65535;
 }
 
 function requireText(value: string, label: string): string {

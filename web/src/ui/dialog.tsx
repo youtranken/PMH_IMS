@@ -1,5 +1,6 @@
 import * as RD from '@radix-ui/react-dialog';
 import { createContext, useContext, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
 
 /**
@@ -31,8 +32,24 @@ export function Dialog({
   className = 'sheet',
   overlayClassName = 'modal-backdrop',
   maxWidth,
+  title,
+  footer,
+  closeLabel,
   children,
 }: {
+  /**
+   * Tiêu đề hộp. Truyền vào là `Dialog` TỰ DỰNG khung ba phần (header có nền riêng + thân
+   * cuộn được + chân dính đáy) — đúng thứ CSS `.sheet-*` đã có sẵn từ đầu nhưng gần như
+   * không nơi nào dùng, khiến tiêu đề dính mép trên và ô nhập chạm mép trái.
+   *
+   * Không truyền → giữ nguyên hành vi cũ (children đổ thẳng vào `.sheet`), để những hộp có
+   * bố cục riêng không bị ép khuôn.
+   */
+  title?: ReactNode;
+  /** Hàng nút chân hộp. Tự đẩy sang phải, tự tách khỏi phần thân bằng viền trên. */
+  footer?: ReactNode;
+  /** Nhãn trợ năng cho nút ✕ (mặc định "Đóng"). */
+  closeLabel?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   // false = chặn đóng bằng Esc/click-ngoài (vd đang busy) — nút đóng tự disable.
@@ -45,6 +62,7 @@ export function Dialog({
   maxWidth?: number;
   children: ReactNode;
 }) {
+  const { t } = useTranslation();
   const block = dismissible ? undefined : (e: Event) => e.preventDefault();
   const [portalEl, setPortalEl] = useState<HTMLDivElement | null>(null);
   return (
@@ -60,7 +78,35 @@ export function Dialog({
             onInteractOutside={block}
           >
             <DialogPortalContext.Provider value={portalEl}>
-              {children}
+              {title === undefined ? (
+                children
+              ) : (
+                <>
+                  <div className="sheet-header">
+                    <RD.Title className="sheet-title">{title}</RD.Title>
+                    <span className="spacer" />
+                    <RD.Close asChild>
+                      <button
+                        type="button"
+                        className="sheet-close"
+                        /* KHÔNG dùng chung nhãn "Đóng" với nút ở chân hộp: hai nút cùng tên trong một
+                           hộp thì trình đọc màn hình đọc "Đóng, nút" hai lần, không phân biệt được. */
+                        aria-label={closeLabel ?? t('common.closeDialog')}
+                        disabled={!dismissible}
+                      >
+                        ✕
+                      </button>
+                    </RD.Close>
+                  </div>
+                  <div className="sheet-body">{children}</div>
+                  {footer ? (
+                    <div className="sheet-footer">
+                      <span className="spacer" />
+                      {footer}
+                    </div>
+                  ) : null}
+                </>
+              )}
             </DialogPortalContext.Provider>
             {/* Mount-point cho popover portal vào (trong Content → tránh RRS chặn cuộn/click). */}
             <div ref={setPortalEl} />

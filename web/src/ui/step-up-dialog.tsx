@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
-import { Dialog, DialogTitle } from '@/ui/dialog';
+import { Dialog } from '@/ui/dialog';
 import { OtpInput } from '@/ui/otp-input';
 
 /**
@@ -34,9 +34,29 @@ export function StepUpDialog({
   );
 
   return (
-    <Dialog open onOpenChange={onClose} maxWidth={420}>
-      <DialogTitle>{t('auth.stepUpTitle')}</DialogTitle>
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={420}
+      title={t('auth.stepUpTitle')}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="submit"
+            form="stepup-form"
+            className="btn primary"
+            disabled={stepUp.isPending || token.length !== 6}
+          >
+            {stepUp.isPending ? t('common.loading') : t('common.confirm')}
+          </button>
+        </>
+      }
+    >
       <form
+        id="stepup-form"
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
@@ -67,19 +87,6 @@ export function StepUpDialog({
             {error}
           </p>
         ) : null}
-
-        <div className="row" style={{ justifyContent: 'flex-end', gap: 'var(--space-3)' }}>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button
-            type="submit"
-            className="btn primary"
-            disabled={stepUp.isPending || token.length !== 6}
-          >
-            {stepUp.isPending ? t('common.loading') : t('common.confirm')}
-          </button>
-        </div>
       </form>
     </Dialog>
   );

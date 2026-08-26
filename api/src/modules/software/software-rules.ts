@@ -31,6 +31,7 @@ export interface SoftwareInputShape {
   code?: string;
   name?: string;
   kind?: SoftwareKind;
+  licenseModel?: LicenseModel;
   vendorId?: string | null;
   seatTotal?: number | null;
   startDate?: string | null;
@@ -42,10 +43,20 @@ export interface SoftwareInputShape {
 /** Giá trị sau khi ghép bản sửa với hồ sơ đang có — thứ luật cần soi. */
 export interface SoftwareEffective {
   kind: SoftwareKind;
+  licenseModel: LicenseModel;
   seatTotal: number | null;
   startDate: string | null;
   endDate: string | null;
 }
+
+/**
+ * Kỳ hạn của license: thuê bao (có hạn, phải gia hạn) hay mua đứt (dùng mãi).
+ *
+ * Chỉ có nghĩa với `license`. SSL và tên miền LUÔN có kỳ hạn — nhà cung cấp không bán vĩnh
+ * viễn — nên đánh dấu vĩnh viễn cho chúng là khai sai, chặn ngay ở luật.
+ */
+export const LICENSE_MODELS = ['subscription', 'perpetual'] as const;
+export type LicenseModel = (typeof LICENSE_MODELS)[number];
 
 /**
  * Loại nào BẮT BUỘC có ngày hết hạn.
@@ -53,9 +64,64 @@ export interface SoftwareEffective {
  * License / SSL / tên miền mà không có hạn thì cỗ máy cảnh báo (story 3.4) không nhắc được —
  * mà tránh "hết hạn bất ngờ" chính là lý do Epic 3 tồn tại. Hợp đồng bảo trì và "khác" thì
  * thả lỏng: có thứ ký vô thời hạn thật.
+ *
+ * NGOẠI LỆ: license mua đứt không có ngày hết hạn để mà nhắc. Bắt nhập là ép người dùng bịa
+ * một ngày, rồi tới ngày đó hệ thống đi nhắc gia hạn một thứ không cần gia hạn — tệ hơn là
+ * không nhắc, vì nhắc sai làm người ta mất tin vào mọi lời nhắc còn lại.
  */
-export function requiresEndDate(kind: SoftwareKind): boolean {
-  return kind === 'license' || kind === 'ssl' || kind === 'domain';
+export function requiresEndDate(
+  kind: SoftwareKind,
+  licenseModel: LicenseModel = 'subscription',
+): boolean {
+  if (kind === 'license') return licenseModel !== 'perpetual';
+  return kind === 'ssl' || kind === 'domain';
+}
+
+/**
+ * Kỳ hạn và chi phí RIÊNG của một chỗ ngồi (bản ghi gán) — migration 0027.
+ *
+ * Vì sao không nằm ở hồ sơ: một license 10 ghế thường không mua một lần. Phòng Kế toán mua
+ * 3 ghế theo hợp đồng HD-2026-014 giá 3,5tr/ghế kỳ 2026, Xưởng mua thêm 2 ghế hợp đồng khác
+ * giá khác kỳ khác. Nhét vào hồ sơ chung thì mọi con số đó chỉ còn một ô duy nhất, và câu
+ * "ghế này của hợp đồng nào, hết hạn khi nào" không trả lời được nữa.
+ *
+ * Mọi trường đều TÙY CHỌN: gán nhanh một máy rồi bổ sung giấy tờ sau là việc có thật, bắt
+ * nhập đủ ngay lúc gán chỉ khiến người ta điền bừa cho qua.
+ */
+export interface AssignmentTerms {
+  /** Tiền đồng, số nguyên (VND không có phần lẻ). */
+  cost: number | null;
+  contract: string | null;
+  startDate: string | null;
+  endDate: string | null;
+}
+
+export function validateAssignmentTerms(
+  terms: AssignmentTerms,
+  licenseModel: LicenseModel = 'subscription',
+): string[] {
+  const errors: string[] = [];
+
+  if (terms.cost !== null) {
+    // `cost` là cột bigint. Quá 2^53 thì JavaScript đọc ra một con số KHÁC lúc ghi vào mà
+    // không có lỗi nào — tiền lặng lẽ sai chữ số cuối là thứ không được phép xảy ra.
+    if (
+      !Number.isInteger(terms.cost) ||
+      terms.cost < 0 ||
+      terms.cost > Number.MAX_SAFE_INTEGER
+    ) {
+      errors.push('Chi phí phải là số nguyên tiền đồng, không âm.');
+    }
+  }
+  if (terms.startDate && terms.endDate && terms.endDate < terms.startDate) {
+    errors.push('Ngày kết thúc của ghế phải sau ngày bắt đầu.');
+  }
+  if (licenseModel === 'perpetual' && terms.endDate) {
+    errors.push(
+      'License mua đứt là vĩnh viễn — chỗ ngồi của nó không có ngày kết thúc. Bỏ ngày kết thúc, hoặc đổi kỳ hạn hồ sơ sang thuê bao.',
+    );
+  }
+  return errors;
 }
 
 /** Chỉ license mới nói tới seat; loại khác điền seat là hiểu nhầm ý nghĩa cột. */
@@ -72,10 +138,23 @@ export function supportsSeats(kind: SoftwareKind): boolean {
 export function validateSoftware(effective: SoftwareEffective): string[] {
   const errors: string[] = [];
 
-  if (requiresEndDate(effective.kind) && !effective.endDate) {
+  if (requiresEndDate(effective.kind, effective.licenseModel) && !effective.endDate) {
     errors.push(
       `${KIND_LABEL[effective.kind]} phải có ngày hết hạn — không có hạn thì hệ thống không nhắc gia hạn được.`,
     );
+  }
+  if (effective.licenseModel === 'perpetual') {
+    // Hai lời khẳng định ngược nhau trên cùng một hồ sơ: hoặc dùng mãi, hoặc hết hạn ngày đó.
+    if (effective.endDate) {
+      errors.push(
+        'Hồ sơ đánh dấu vĩnh viễn thì không có ngày hết hạn. Bỏ ngày hết hạn, hoặc đổi kỳ hạn sang thuê bao.',
+      );
+    }
+    if (effective.kind !== 'license') {
+      errors.push(
+        `Chỉ ${KIND_LABEL.license} mới có bản mua đứt. "${KIND_LABEL[effective.kind]}" luôn có kỳ hạn.`,
+      );
+    }
   }
   if (effective.startDate && effective.endDate && effective.endDate < effective.startDate) {
     errors.push('Ngày hết hạn phải sau ngày bắt đầu.');

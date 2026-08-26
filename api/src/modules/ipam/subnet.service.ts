@@ -21,6 +21,8 @@ export interface SubnetRecord {
   cidr: string;
   siteId: string | null;
   siteCode: string | null;
+  /** Số VLAN 802.1Q (0029) — ở PMH người ta gọi dải theo VLAN chứ không theo CIDR. */
+  vlan: number | null;
   description: string | null;
   createdBy: string;
   createdAt: Date;
@@ -33,6 +35,7 @@ export interface SubnetInput {
   name: string;
   cidr: string;
   siteId?: string | null;
+  vlan?: number | null;
   description?: string | null;
 }
 
@@ -105,6 +108,7 @@ export class SubnetService {
             name,
             cidr,
             siteId: input.siteId || null,
+            vlan: input.vlan ?? null,
             description: input.description?.trim() || null,
             createdBy: actor,
           })
@@ -129,12 +133,14 @@ export class SubnetService {
       name?: string;
       description?: string | null;
       siteId?: string | null;
+      vlan?: number | null;
       cidr?: string;
     } = {};
     if (input.name !== undefined) values.name = this.requireName(input.name);
     if (input.description !== undefined) {
       values.description = input.description?.trim() || null;
     }
+    if (input.vlan !== undefined) values.vlan = input.vlan ?? null;
     if (input.siteId !== undefined) {
       await this.requireSite(input.siteId);
       values.siteId = input.siteId || null;
@@ -292,6 +298,7 @@ export class SubnetService {
       cidr: row.cidr,
       siteId: row.siteId,
       siteCode: row.siteId ? (sites.get(row.siteId) ?? null) : null,
+      vlan: row.vlan,
       description: row.description,
       createdBy: row.createdBy,
       createdAt: row.createdAt,
@@ -312,8 +319,10 @@ export class SubnetService {
 
 const CIDR_MESSAGE: Record<string, string> = {
   missing_prefix: 'Thiếu độ dài dải. Viết dạng 172.16.10.0/24.',
-  bad_prefix: 'Độ dài dải phải từ /8 đến /32. Ví dụ: 172.16.10.0/24.',
-  too_wide: 'Dải rộng quá mức hợp lý (rộng hơn /8) — có phải gõ nhầm /24 thành /8 không?',
+  bad_prefix: 'Độ dài dải phải từ /24 đến /32. Ví dụ: 172.16.10.0/24.',
+  too_wide:
+    'Dải rộng nhất được khai là /24 (254 máy). Mạng lớn hơn thì chia thành nhiều dải /24 — ' +
+    'ví dụ 172.16.10.0/24 và 172.16.11.0/24.',
   not_ipv4: 'Chỉ nhận địa chỉ IPv4. Ví dụ đúng: 172.16.10.0/24.',
   leading_zero: 'Không viết số 0 đứng đầu (172.16.010.5 dễ bị hiểu nhầm). Viết 172.16.10.5.',
   octet_range: 'Mỗi nhóm số phải từ 0 đến 255.',
