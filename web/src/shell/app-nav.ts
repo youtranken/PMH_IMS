@@ -35,8 +35,16 @@ export const navGroups: NavGroup[] = [
       { key: 'nav.serviceAccounts', to: PATHS.serviceAccounts },
       // MỌI vai thấy: Member vào xem yêu cầu của mình đã được duyệt chưa.
       { key: 'nav.approvals', to: PATHS.approvals },
-      // Không còn `planned`: két sắt đã chạy từ Epic 4, chỉ thiếu cửa vào từ menu.
-      { key: 'nav.vault', to: PATHS.vault },
+      /*
+       * Không còn `planned`: két sắt đã chạy từ Epic 4, chỉ thiếu cửa vào từ menu.
+       *
+       * Nhưng CHỈ SA/Admin: trang tổng là bản đồ "công ty giữ bí mật ở đâu" và
+       * `GET /vault/owners` chặn theo vai. Bỏ `roles` thì Member bấm vào và nhận một màn
+       * lỗi "thử lại" — bày ra một cánh cửa khóa còn tệ hơn không bày.
+       * (Két sắt của TỪNG hồ sơ thì Member vẫn thấy — đó là tab trong trang chi tiết,
+       * quyền nằm ở ma trận 6.2.)
+       */
+      { key: 'nav.vault', to: PATHS.vault, roles: ['sa', 'admin'] },
       { key: 'nav.documents', to: PATHS.documents, planned: true },
     ],
   },

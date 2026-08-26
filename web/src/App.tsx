@@ -67,9 +67,19 @@ function AppRoutes() {
   if (isLoading) return <Loading />;
 
   const step = nextStepPath(me ?? null);
-  const isAuthRoute = [LOGIN_PATH, TOTP_CHALLENGE_PATH, TOTP_ENROLL_PATH, CHANGE_PASSWORD_PATH].includes(
-    location.pathname,
-  );
+  /*
+   * Kể cả đường TIẾNG VIỆT cũ: người đã đăng nhập mở một link `/dang-nhap` đã ghim thì phải
+   * được đưa về trang chủ như trước khi đổi đường dẫn. Không kể vào đây thì nó rơi xuống
+   * `Routes` của shell, không khớp gì và ra trang 404 — một hồi quy do chính lần đổi đường
+   * dẫn gây ra.
+   */
+  const isAuthRoute = [
+    LOGIN_PATH,
+    TOTP_CHALLENGE_PATH,
+    TOTP_ENROLL_PATH,
+    CHANGE_PASSWORD_PATH,
+    ...LEGACY_AUTH_ROUTES.map((route) => route.from),
+  ].includes(location.pathname);
 
   // Người dùng chưa đi hết luồng đăng nhập: luôn đưa về ĐÚNG bước còn thiếu.
   // Đây là nơi DUY NHẤT quyết định điều hướng đăng nhập — màn không tự navigate (AD-15).
@@ -113,7 +123,10 @@ function AppRoutes() {
         <Route path={PATHS.adminCatalog} element={<CatalogScreen me={me} />} />
         <Route path={PATHS.adminVaultAccess} element={<AccessMatrixScreen me={me} />} />
         <Route path={PATHS.approvals} element={<ApprovalsScreen me={me} />} />
-        <Route path={PATHS.vault} element={<VaultHomeScreen me={me} />} />
+        {/* Gác ở CẢ route, không chỉ ẩn mục menu: gõ thẳng URL cũng chỉ nhận 404. */}
+        {me.role === 'sa' || me.role === 'admin' ? (
+          <Route path={PATHS.vault} element={<VaultHomeScreen me={me} />} />
+        ) : null}
         <Route path={PATHS.devices} element={<DevicesScreen me={me} />} />
         <Route path={`${PATHS.devices}/:id`} element={<DeviceDetail me={me} />} />
         <Route path={PATHS.software} element={<SoftwareScreen me={me} />} />

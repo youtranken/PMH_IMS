@@ -339,9 +339,10 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
           members={(accounts.data?.items ?? []).filter((account) => account.role === 'member')}
           csrfToken={me.csrfToken}
           onClose={() => setGrantingScope(null)}
-          onSaved={(count) => {
+          onSaved={({ granted, failures }) => {
             setGrantingScope(null);
-            toast({ message: t('access.grantedMany', { count }) });
+            toast({ message: t('access.grantedMany', { count: granted }) });
+            for (const failure of failures) toast({ message: failure, tone: 'warn' });
             void refresh();
           }}
         />
@@ -411,7 +412,7 @@ function GrantToScopeDialog({
   members: AccountRow[];
   csrfToken: string;
   onClose: () => void;
-  onSaved: (count: number) => void;
+  onSaved: (result: { granted: number; failures: string[] }) => void;
 }) {
   const { t } = useTranslation();
   const [picked, setPicked] = useState<string[]>([]);
@@ -481,7 +482,14 @@ function GrantToScopeDialog({
               setError(failures.join(' '));
               return;
             }
-            onSaved(done);
+            /*
+             * Người GÁN HỎNG phải được nói ra, kể cả khi có người gán được.
+             *
+             * Chọn 5 người mà 3 người đã có luật trên nhóm đó (POST từ chối trùng): bản cũ
+             * đóng hộp, báo "đã gán cho 2 người", và ba lỗi biến mất — SA tin là cả 5 đã có
+             * quyền. Cùng cách làm với form NAT: đẩy cả lỗi lên cho nơi gọi báo riêng.
+             */
+            onSaved({ granted: done, failures });
           })();
         }}
       >

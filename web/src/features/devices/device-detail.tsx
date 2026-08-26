@@ -1,33 +1,33 @@
-import { useState, type ReactNode } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ApiError, apiFetch } from '@/lib/api-client';
-import { errorMessage, useApiMutation } from '@/lib/api';
-import { formatDate, orDash } from '@/lib/format';
-import type { Me } from '@/lib/me';
-import { AttachmentPanel } from '@/ui/attachment-panel';
-import { ExpiryBadge } from '@/ui/expiry-badge';
-import { HistoryPanel } from '@/ui/history-panel';
-import { LoadError, Loading, NotFound } from '@/ui/load-state';
-import { PageHeader } from '@/ui/page-header';
-import { TabPanel, Tabs } from '@/ui/tabs';
-import { VaultPanel } from '@/ui/vault-panel';
-import { useConfirm } from '@/ui/confirm-provider';
-import { useToast } from '@/ui/toast';
-import type { CatalogLists } from '@/features/catalog/catalog-types';
-import { DeviceLicensesExpand } from '@/features/software/device-licenses-expand';
-import { DeviceForm } from './device-form';
-import { toHistoryEntries } from './device-history-entries';
-import { PortMapPanel } from './port-map-panel';
+import { useState, type ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import { ApiError, apiFetch } from "@/lib/api-client";
+import { errorMessage, useApiMutation } from "@/lib/api";
+import { formatDate, orDash } from "@/lib/format";
+import type { Me } from "@/lib/me";
+import { AttachmentPanel } from "@/ui/attachment-panel";
+import { ExpiryBadge } from "@/ui/expiry-badge";
+import { HistoryPanel } from "@/ui/history-panel";
+import { LoadError, Loading, NotFound } from "@/ui/load-state";
+import { PageHeader } from "@/ui/page-header";
+import { TabPanel, Tabs } from "@/ui/tabs";
+import { VaultPanel } from "@/ui/vault-panel";
+import { useConfirm } from "@/ui/confirm-provider";
+import { useToast } from "@/ui/toast";
+import type { CatalogLists } from "@/features/catalog/catalog-types";
+import { DeviceLicensesExpand } from "@/features/software/device-licenses-expand";
+import { DeviceForm } from "./device-form";
+import { toHistoryEntries } from "./device-history-entries";
+import { PortMapPanel } from "./port-map-panel";
 import {
   STATUS_KEY,
   STATUS_TONE,
   locationLabel,
   type DeviceHistoryRow,
   type DeviceRow,
-} from './device-types';
-import { PATHS } from '@/lib/routes';
+} from "./device-types";
+import { PATHS } from "@/lib/routes";
 
 /** Khu mở rộng do module khác đóng góp (Epic 3/4/5) — Đợt 1 luôn rỗng. */
 interface DevicePanel {
@@ -35,6 +35,18 @@ interface DevicePanel {
   title: string;
   items: { label: string; value: string; link?: string; tone?: string }[];
   emptyText?: string;
+}
+
+/**
+ * Tab mở sẵn đọc từ URL, CÓ KIỂM: chuỗi lạ phải rơi về 'profile'.
+ *
+ * Chuỗi ternary render kết thúc ở nhánh Lịch sử, nên `?tab=rác` không kiểm sẽ vẽ một tab
+ * Lịch sử RỖNG mà không tab nào sáng — và vì truy vấn lịch sử `enabled: tab === 'history'`
+ * nên nó còn chẳng gọi API: `isLoading`/`isError` đều false, `HistoryPanel` nhận mảng rỗng.
+ * Một link cũ gõ sai một chữ sẽ hiện ra "hồ sơ này chưa có lịch sử gì" một cách rất thuyết phục.
+ */
+function initialTab(raw: string | null, allowed: string[]): string {
+  return raw && allowed.includes(raw) ? raw : "profile";
 }
 
 /**
@@ -49,43 +61,52 @@ export function DeviceDetail({ me }: { me: Me }) {
   const toast = useToast();
   const askConfirm = useConfirm();
   const queryClient = useQueryClient();
-  const { id = '' } = useParams();
-  /* Tab mở sẵn đọc từ URL (`?tab=vault`): trang Két sắt dẫn thẳng vào đúng tab, không bắt
-     người ta mở hồ sơ rồi tự đi tìm. Giá trị lạ thì rơi về tab Hồ sơ. */
+  const { id = "" } = useParams();
   const [params] = useSearchParams();
-  const [tab, setTab] = useState(() => params.get('tab') ?? 'profile');
+  const [tab, setTab] = useState(() =>
+    initialTab(params.get("tab"), [
+      "profile",
+      "ports",
+      "attachments",
+      "vault",
+      "history",
+    ]),
+  );
   const [editing, setEditing] = useState(false);
 
   const device = useQuery({
-    queryKey: ['devices', id],
+    queryKey: ["devices", id],
     queryFn: () => apiFetch<DeviceRow>(`/api/v1/devices/${id}`),
     retry: false,
   });
 
   const panels = useQuery({
-    queryKey: ['devices', id, 'panels'],
+    queryKey: ["devices", id, "panels"],
     queryFn: () => apiFetch<DevicePanel[]>(`/api/v1/devices/${id}/panels`),
     enabled: device.isSuccess,
   });
 
   const history = useQuery({
-    queryKey: ['devices', id, 'history'],
-    queryFn: () => apiFetch<DeviceHistoryRow[]>(`/api/v1/devices/${id}/history`),
-    enabled: tab === 'history',
+    queryKey: ["devices", id, "history"],
+    queryFn: () =>
+      apiFetch<DeviceHistoryRow[]>(`/api/v1/devices/${id}/history`),
+    enabled: tab === "history",
   });
 
   const lists = useQuery({
-    queryKey: ['catalog', 'lists'],
-    queryFn: () => apiFetch<CatalogLists>('/api/v1/catalog?includeInactive=true'),
+    queryKey: ["catalog", "lists"],
+    queryFn: () =>
+      apiFetch<CatalogLists>("/api/v1/catalog?includeInactive=true"),
     enabled: editing,
   });
 
   const setStatus = useApiMutation<{ status: string }, unknown>(
     `/api/v1/devices/${id}/status`,
-    { method: 'PATCH', csrfToken: me.csrfToken, refreshMe: false },
+    { method: "PATCH", csrfToken: me.csrfToken, refreshMe: false },
   );
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['devices'] });
+  const refresh = () =>
+    queryClient.invalidateQueries({ queryKey: ["devices"] });
 
   if (device.isLoading) return <Loading />;
   if (device.isError) {
@@ -98,7 +119,7 @@ export function DeviceDetail({ me }: { me: Me }) {
   }
 
   const item = device.data!;
-  const retired = item.status === 'retired';
+  const retired = item.status === "retired";
   /**
    * Tab Két sắt hiện cho MỌI vai kể từ story 6.3.
    *
@@ -108,9 +129,11 @@ export function DeviceDetail({ me }: { me: Me }) {
    */
   const canVault = true;
   /** Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày ra nút để bấm rồi 403. */
-  const canVaultWrite = me.role === 'sa' || me.role === 'admin';
+  const canVaultWrite = me.role === "sa" || me.role === "admin";
   /** Khu do module `software` đăng ký — tách riêng vì nó có bảng riêng, không dùng khu chung. */
-  const softwarePanel = (panels.data ?? []).find((panel) => panel.key === 'software');
+  const softwarePanel = (panels.data ?? []).find(
+    (panel) => panel.key === "software",
+  );
 
   return (
     <>
@@ -120,16 +143,16 @@ export function DeviceDetail({ me }: { me: Me }) {
         actions={
           <>
             <Link className="btn" to={PATHS.devices}>
-              {t('devices.back')}
+              {t("devices.back")}
             </Link>
             <button
               type="button"
               className="btn"
               disabled={retired}
-              title={retired ? t('devices.retiredLocked') : undefined}
+              title={retired ? t("devices.retiredLocked") : undefined}
               onClick={() => setEditing(true)}
             >
-              {t('devices.edit')}
+              {t("devices.edit")}
             </button>
             <button
               type="button"
@@ -138,26 +161,27 @@ export function DeviceDetail({ me }: { me: Me }) {
                 void (async () => {
                   if (!retired) {
                     const ok = await askConfirm({
-                      message: t('devices.confirmRetire', { name: item.code }),
+                      message: t("devices.confirmRetire", { name: item.code }),
                       danger: true,
-                      confirmLabel: t('devices.retire'),
+                      confirmLabel: t("devices.retire"),
                     });
                     if (!ok) return;
                   }
                   setStatus.mutate(
-                    { status: retired ? 'in_use' : 'retired' },
+                    { status: retired ? "in_use" : "retired" },
                     {
                       onSuccess: () => {
-                        toast({ message: t('devices.statusChanged') });
+                        toast({ message: t("devices.statusChanged") });
                         void refresh();
                       },
-                      onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
+                      onError: (err) =>
+                        toast({ message: errorMessage(err), tone: "error" }),
                     },
                   );
                 })();
               }}
             >
-              {t(retired ? 'devices.reopen' : 'devices.retire')}
+              {t(retired ? "devices.reopen" : "devices.retire")}
             </button>
           </>
         }
@@ -165,70 +189,84 @@ export function DeviceDetail({ me }: { me: Me }) {
 
       {/* Dải tóm tắt: thứ cần biết trong 2 giây khi đang đứng xử lý sự cố. */}
       <div className="device-summary">
-        <span className={`badge ${STATUS_TONE[item.status]}`}>{t(STATUS_KEY[item.status])}</span>
+        <span className={`badge ${STATUS_TONE[item.status]}`}>
+          {t(STATUS_KEY[item.status])}
+        </span>
         <ExpiryBadge end={item.warrantyEnd} />
         <span className="muted">
-          {t('devices.location')}: <span className="mono">{locationLabel(item)}</span>
+          {t("devices.location")}:{" "}
+          <span className="mono">{locationLabel(item)}</span>
         </span>
         {item.assignedTo ? (
           <span className="muted">
-            {t('devices.assignedTo')}: {item.assignedTo}
+            {t("devices.assignedTo")}: {item.assignedTo}
           </span>
         ) : null}
       </div>
 
-      {retired ? <p className="alert">{t('devices.retiredLocked')}</p> : null}
+      {retired ? <p className="alert">{t("devices.retiredLocked")}</p> : null}
 
       <Tabs
         items={[
-          { key: 'profile', label: t('devices.tabProfile') },
+          { key: "profile", label: t("devices.tabProfile") },
           // Tab Port map CHỈ hiện với loại có port (FR-006) — bảng port của một cái máy in
           // là chỗ trống vô nghĩa.
-          ...(item.hasPortMap ? [{ key: 'ports', label: t('devices.tabPortMap') }] : []),
-          { key: 'attachments', label: t('devices.tabAttachments') },
+          ...(item.hasPortMap
+            ? [{ key: "ports", label: t("devices.tabPortMap") }]
+            : []),
+          { key: "attachments", label: t("devices.tabAttachments") },
           // Két sắt chỉ hiện với người có quyền — Member không có đường tới endpoint (AD-9),
           // hiện tab rồi báo 403 chỉ tổ làm người ta tưởng hệ thống hỏng.
-          ...(canVault ? [{ key: 'vault', label: t('vault.tab') }] : []),
-          { key: 'history', label: t('devices.tabHistory') },
+          ...(canVault ? [{ key: "vault", label: t("vault.tab") }] : []),
+          { key: "history", label: t("devices.tabHistory") },
         ]}
         value={tab}
         onChange={setTab}
-        ariaLabel={t('devices.title')}
+        ariaLabel={t("devices.title")}
       />
 
       <TabPanel tabKey={tab}>
-        {tab === 'profile' ? (
+        {tab === "profile" ? (
           <>
             <dl className="data-grid">
-              <Item label={t('devices.status')}>
+              <Item label={t("devices.status")}>
                 <span className={`badge ${STATUS_TONE[item.status]}`}>
                   {t(STATUS_KEY[item.status])}
                 </span>
               </Item>
-              <Item label={t('devices.type')}>{item.deviceTypeName}</Item>
-              <Item label={t('devices.model')}>{orDash(item.model)}</Item>
-              <Item label={t('devices.serial')}>
+              <Item label={t("devices.type")}>{item.deviceTypeName}</Item>
+              <Item label={t("devices.model")}>{orDash(item.model)}</Item>
+              <Item label={t("devices.serial")}>
                 <span className="mono">{orDash(item.serial)}</span>
               </Item>
-              <Item label={t('devices.site')}>{orDash(item.siteCode)}</Item>
-              <Item label={t('devices.cabinet')}>{orDash(item.cabinetCode)}</Item>
-              <Item label={t('devices.assignedTo')}>{orDash(item.assignedTo)}</Item>
-              <Item label={t('devices.department')}>{orDash(item.department)}</Item>
-              <Item label={t('devices.vendor')}>{orDash(item.vendorName)}</Item>
-              <Item label={t('devices.purchaseDate')}>{orDash(formatDate(item.purchaseDate))}</Item>
-              <Item label={t('devices.warrantyStart')}>
+              <Item label={t("devices.site")}>{orDash(item.siteCode)}</Item>
+              <Item label={t("devices.cabinet")}>
+                {orDash(item.cabinetCode)}
+              </Item>
+              <Item label={t("devices.assignedTo")}>
+                {orDash(item.assignedTo)}
+              </Item>
+              <Item label={t("devices.department")}>
+                {orDash(item.department)}
+              </Item>
+              <Item label={t("devices.vendor")}>{orDash(item.vendorName)}</Item>
+              <Item label={t("devices.purchaseDate")}>
+                {orDash(formatDate(item.purchaseDate))}
+              </Item>
+              <Item label={t("devices.warrantyStart")}>
                 {orDash(formatDate(item.warrantyStart))}
               </Item>
-              <Item label={t('devices.warrantyEnd')}>
+              <Item label={t("devices.warrantyEnd")}>
                 {item.warrantyEnd ? (
                   <>
-                    {formatDate(item.warrantyEnd)} <ExpiryBadge end={item.warrantyEnd} />
+                    {formatDate(item.warrantyEnd)}{" "}
+                    <ExpiryBadge end={item.warrantyEnd} />
                   </>
                 ) : (
-                  '—'
+                  "—"
                 )}
               </Item>
-              <Item label={t('devices.note')}>{orDash(item.note)}</Item>
+              <Item label={t("devices.note")}>{orDash(item.note)}</Item>
             </dl>
 
             {/* Phần mềm đang cài dùng BẢNG GHẾ đầy đủ (kỳ hạn · chi phí · hợp đồng), không
@@ -247,12 +285,18 @@ export function DeviceDetail({ me }: { me: Me }) {
             ) : null}
 
             <ExtensionPanels
-              panels={(panels.data ?? []).filter((panel) => panel.key !== 'software')}
+              panels={(panels.data ?? []).filter(
+                (panel) => panel.key !== "software",
+              )}
             />
           </>
-        ) : tab === 'ports' ? (
-          <PortMapPanel device={item} csrfToken={me.csrfToken} canEdit={!retired} />
-        ) : tab === 'vault' ? (
+        ) : tab === "ports" ? (
+          <PortMapPanel
+            device={item}
+            csrfToken={me.csrfToken}
+            canEdit={!retired}
+          />
+        ) : tab === "vault" ? (
           <VaultPanel
             ownerType="device"
             ownerId={item.id}
@@ -262,7 +306,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                là 403 (code review Epic 6, finding 3). */
             canEdit={canVaultWrite && !retired}
           />
-        ) : tab === 'attachments' ? (
+        ) : tab === "attachments" ? (
           <AttachmentPanel
             ownerType="device"
             ownerId={item.id}
@@ -313,7 +357,7 @@ function ExtensionPanels({ panels }: { panels: DevicePanel[] }) {
         <section key={panel.key} className="card device-panel">
           <h2 className="form-section-title">{panel.title}</h2>
           {panel.items.length === 0 ? (
-            <p className="muted">{panel.emptyText ?? '—'}</p>
+            <p className="muted">{panel.emptyText ?? "—"}</p>
           ) : (
             <div className="table-wrap">
               <table className="table table-stack">
@@ -330,7 +374,9 @@ function ExtensionPanels({ panels }: { panels: DevicePanel[] }) {
                         {entry.link ? (
                           <Link to={entry.link}>{entry.value}</Link>
                         ) : entry.tone ? (
-                          <span className={`badge ${entry.tone}`}>{entry.value}</span>
+                          <span className={`badge ${entry.tone}`}>
+                            {entry.value}
+                          </span>
                         ) : (
                           entry.value
                         )}

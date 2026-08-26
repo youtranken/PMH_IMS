@@ -9,6 +9,7 @@ import {
   resetSecrets,
   resetSoftware,
   resetUsers,
+  sql,
 } from './helpers';
 
 /**
@@ -171,7 +172,73 @@ test.describe('Trang tổng Két sắt', () => {
   });
 });
 
+test.describe('Trang tổng Két sắt — sửa từ code review', () => {
+  test('Member không thấy mục Két sắt trên menu, và gõ thẳng URL cũng chỉ ra 404', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_MEMBER);
+    /*
+     * `GET /vault/owners` chặn theo vai, nên nếu vẫn bày mục menu ra thì Member bấm vào và
+     * nhận một màn lỗi "thử lại" — bày một cánh cửa khóa còn tệ hơn không bày.
+     * (Két sắt của TỪNG hồ sơ thì Member vẫn thấy — đó là tab, quyền nằm ở ma trận 6.2.)
+     */
+    await expect(page.getByRole('link', { name: 'Két sắt', exact: true })).toHaveCount(0);
+
+    await page.goto('/vault');
+    await expect(page.getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible();
+  });
+});
+
 test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', () => {
+  /**
+   * Gán hàng loạt: người GÁN HỎNG phải được nói ra, kể cả khi có người khác gán được.
+   *
+   * Bản trước chỉ hiện lỗi khi KHÔNG ai gán được — có một người lọt là hộp đóng, toast báo
+   * "đã gán cho N người", và mọi lỗi biến mất. SA tin là cả nhóm đã có quyền.
+   *
+   * Dựng cảnh hỏng bằng cách xoá một tài khoản SAU khi hộp đã mở: API từ chối email lạ, còn
+   * người kia vẫn gán được — đúng tình huống "thành công một phần".
+   */
+  test('gán hàng loạt hỏng một phần: vẫn báo rõ ai không gán được', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const doomed = `e2e-tao-moi-${stamp}@pmh.com.vn`;
+
+    const created = await page.request.post('/api/v1/accounts', {
+      headers,
+      data: { email: doomed, fullName: `E2E Sắp bị xoá ${stamp}`, role: 'member', totpLoginRequired: true },
+    });
+    expect(created.status()).toBe(201);
+
+    const scopeList = await page.request.get('/api/v1/vault/access/scopes');
+    const first = ((await scopeList.json()) as { label: string }[])[0];
+
+    await page.goto('/admin/vault-access');
+    await page.getByRole('button', { name: 'Theo nhóm đối tượng' }).click();
+    const card = page.locator('section', { hasText: first.label }).first();
+    await card.getByRole('button', { name: 'Gán cho người…' }).click();
+
+    const form = page.getByRole('dialog');
+    /* Tick CẢ HAI theo ĐÍCH DANH, không dùng `.first()`: danh sách sắp theo họ tên nên tài
+       khoản vừa tạo có thể đứng đầu, và tick "cái đầu tiên" hoá ra tick trúng chính nó. */
+    await form.locator('li', { hasText: E2E_MEMBER.email }).getByRole('checkbox').check();
+    await form.locator('li', { hasText: doomed }).getByRole('checkbox').check();
+
+    // Xoá tài khoản kia SAU khi hộp đã dựng xong danh sách.
+    sql(
+      `DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE email = '${doomed}'); ` +
+        `DELETE FROM known_device WHERE user_id IN (SELECT id FROM users WHERE email = '${doomed}'); ` +
+        `DELETE FROM users WHERE email = '${doomed}'`,
+    );
+
+    await form.getByRole('button', { name: 'Lưu' }).click();
+
+    // Người gán được thì vẫn báo, NHƯNG người hỏng cũng phải hiện ra kèm email.
+    await expect(page.getByText('Đã gán quyền cho 1 người.')).toBeVisible();
+    await expect(page.getByText(new RegExp(doomed))).toBeVisible();
+  });
+
   test('gán một nhóm cho nhiều người, rồi xem lại được ai đang có quyền trên nhóm đó', async ({
     page,
   }) => {

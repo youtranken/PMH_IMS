@@ -1,26 +1,26 @@
-import { useState, type ReactNode } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ApiError, apiFetch } from '@/lib/api-client';
-import { errorMessage, useApiMutation } from '@/lib/api';
-import { formatDate, orDash } from '@/lib/format';
-import type { Me } from '@/lib/me';
-import { AttachmentPanel } from '@/ui/attachment-panel';
-import { DatePicker } from '@/ui/date-picker';
-import { Dialog } from '@/ui/dialog';
-import { ExpiryBadge } from '@/ui/expiry-badge';
-import { Field } from '@/ui/page-header';
-import { HistoryPanel } from '@/ui/history-panel';
-import { LoadError, Loading, NotFound } from '@/ui/load-state';
-import { PageHeader } from '@/ui/page-header';
-import { TabPanel, Tabs } from '@/ui/tabs';
-import { VaultPanel } from '@/ui/vault-panel';
-import { useToast } from '@/ui/toast';
-import type { CatalogLists } from '@/features/catalog/catalog-types';
-import { LicenseAssignmentsPanel } from './license-assignments-panel';
-import { SoftwareForm } from './software-form';
-import { toSoftwareHistory } from './software-history-entries';
+import { useState, type ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { Link, useParams, useSearchParams } from "react-router-dom";
+import { ApiError, apiFetch } from "@/lib/api-client";
+import { errorMessage, useApiMutation } from "@/lib/api";
+import { formatDate, orDash } from "@/lib/format";
+import type { Me } from "@/lib/me";
+import { AttachmentPanel } from "@/ui/attachment-panel";
+import { DatePicker } from "@/ui/date-picker";
+import { Dialog } from "@/ui/dialog";
+import { ExpiryBadge } from "@/ui/expiry-badge";
+import { Field } from "@/ui/page-header";
+import { HistoryPanel } from "@/ui/history-panel";
+import { LoadError, Loading, NotFound } from "@/ui/load-state";
+import { PageHeader } from "@/ui/page-header";
+import { TabPanel, Tabs } from "@/ui/tabs";
+import { VaultPanel } from "@/ui/vault-panel";
+import { useToast } from "@/ui/toast";
+import type { CatalogLists } from "@/features/catalog/catalog-types";
+import { LicenseAssignmentsPanel } from "./license-assignments-panel";
+import { SoftwareForm } from "./software-form";
+import { toSoftwareHistory } from "./software-history-entries";
 import {
   KIND_KEY,
   STATUS_KEY,
@@ -29,8 +29,20 @@ import {
   supportsSeats,
   type SoftwareHistoryRow,
   type SoftwareRow,
-} from './software-types';
-import { PATHS } from '@/lib/routes';
+} from "./software-types";
+import { PATHS } from "@/lib/routes";
+
+/**
+ * Tab mở sẵn đọc từ URL, CÓ KIỂM: chuỗi lạ phải rơi về 'profile'.
+ *
+ * Chuỗi ternary render kết thúc ở nhánh Lịch sử, nên `?tab=rác` không kiểm sẽ vẽ một tab
+ * Lịch sử RỖNG mà không tab nào sáng — và vì truy vấn lịch sử `enabled: tab === 'history'`
+ * nên nó còn chẳng gọi API: `isLoading`/`isError` đều false, `HistoryPanel` nhận mảng rỗng.
+ * Một link cũ gõ sai một chữ sẽ hiện ra "hồ sơ này chưa có lịch sử gì" một cách rất thuyết phục.
+ */
+function initialTab(raw: string | null, allowed: string[]): string {
+  return raw && allowed.includes(raw) ? raw : "profile";
+}
 
 /**
  * Trang chi tiết hồ sơ phần mềm (story 3.1).
@@ -43,36 +55,47 @@ export function SoftwareDetail({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const { id = '' } = useParams();
-  /* Tab mở sẵn đọc từ URL (`?tab=vault`) — xem chú thích ở `device-detail.tsx`. */
+  const { id = "" } = useParams();
   const [params] = useSearchParams();
-  const [tab, setTab] = useState(() => params.get('tab') ?? 'profile');
+  const [tab, setTab] = useState(() =>
+    initialTab(params.get("tab"), [
+      "profile",
+      "devices",
+      "vault",
+      "attachments",
+      "history",
+    ]),
+  );
   const [editing, setEditing] = useState(false);
   const [renewing, setRenewing] = useState(false);
 
   const software = useQuery({
-    queryKey: ['software', id],
+    queryKey: ["software", id],
     queryFn: () => apiFetch<SoftwareRow>(`/api/v1/software/${id}`),
     retry: false,
   });
 
   const history = useQuery({
-    queryKey: ['software', id, 'history'],
-    queryFn: () => apiFetch<SoftwareHistoryRow[]>(`/api/v1/software/${id}/history`),
-    enabled: tab === 'history',
+    queryKey: ["software", id, "history"],
+    queryFn: () =>
+      apiFetch<SoftwareHistoryRow[]>(`/api/v1/software/${id}/history`),
+    enabled: tab === "history",
   });
 
   const lists = useQuery({
-    queryKey: ['catalog', 'lists'],
-    queryFn: () => apiFetch<CatalogLists>('/api/v1/catalog?includeInactive=true'),
+    queryKey: ["catalog", "lists"],
+    queryFn: () =>
+      apiFetch<CatalogLists>("/api/v1/catalog?includeInactive=true"),
     enabled: editing,
   });
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['software'] });
+  const refresh = () =>
+    queryClient.invalidateQueries({ queryKey: ["software"] });
 
   if (software.isLoading) return <Loading />;
   if (software.isError) {
-    return software.error instanceof ApiError && software.error.status === 404 ? (
+    return software.error instanceof ApiError &&
+      software.error.status === 404 ? (
       <NotFound />
     ) : (
       <LoadError onRetry={() => void software.refetch()} />
@@ -89,100 +112,132 @@ export function SoftwareDetail({ me }: { me: Me }) {
    */
   const canVault = true;
   /** Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày ra nút để bấm rồi 403. */
-  const canVaultWrite = me.role === 'sa' || me.role === 'admin';
+  const canVaultWrite = me.role === "sa" || me.role === "admin";
 
   return (
     <>
       <PageHeader
         title={`${item.code} — ${item.name}`}
-        subtitle={`${t(KIND_KEY[item.kind])}${item.vendorName ? ` · ${item.vendorName}` : ''}`}
+        subtitle={`${t(KIND_KEY[item.kind])}${item.vendorName ? ` · ${item.vendorName}` : ""}`}
         actions={
           <>
             <Link className="btn" to={PATHS.software}>
-              {t('software.back')}
+              {t("software.back")}
             </Link>
-            <button type="button" className="btn" onClick={() => setEditing(true)}>
-              {t('software.edit')}
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setEditing(true)}
+            >
+              {t("software.edit")}
             </button>
-            <button type="button" className="btn primary" onClick={() => setRenewing(true)}>
-              {t('software.renew')}
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => setRenewing(true)}
+            >
+              {t("software.renew")}
             </button>
           </>
         }
       />
 
       <div className="device-summary">
-        <span className={`badge ${STATUS_TONE[item.status]}`}>{t(STATUS_KEY[item.status])}</span>
-        {item.licenseModel === 'perpetual' ? (
-          <span className="badge ok plain">{t('software.perpetual')}</span>
+        <span className={`badge ${STATUS_TONE[item.status]}`}>
+          {t(STATUS_KEY[item.status])}
+        </span>
+        {item.licenseModel === "perpetual" ? (
+          <span className="badge ok plain">{t("software.perpetual")}</span>
         ) : (
           <ExpiryBadge end={item.endDate} />
         )}
         {supportsSeats(item.kind) && item.seatTotal !== null ? (
           <span className="muted">
-            {t('software.seats')}: <span className="mono">{seatLabel(item)}</span>
+            {t("software.seats")}:{" "}
+            <span className="mono">{seatLabel(item)}</span>
           </span>
         ) : null}
       </div>
 
       <Tabs
         items={[
-          { key: 'profile', label: t('software.tabProfile') },
+          { key: "profile", label: t("software.tabProfile") },
           // Tab "Máy đang dùng" chỉ có nghĩa với license (story 3.2).
           ...(supportsSeats(item.kind)
-            ? [{ key: 'devices', label: t('software.tabDevices'), count: item.seatUsed }]
+            ? [
+                {
+                  key: "devices",
+                  label: t("software.tabDevices"),
+                  count: item.seatUsed,
+                },
+              ]
             : []),
           // Két sắt chỉ hiện với người có quyền — Member không có đường tới endpoint (AD-9).
-          ...(canVault ? [{ key: 'vault', label: t('vault.tab') }] : []),
+          ...(canVault ? [{ key: "vault", label: t("vault.tab") }] : []),
           // Hợp đồng license, thư xác nhận SSL, hóa đơn tên miền — cùng `AttachmentPanel` với
           // thiết bị (2.3) và đường truyền (3.3), không có bản riêng cho phần mềm.
-          { key: 'attachments', label: t('software.tabAttachments') },
-          { key: 'history', label: t('software.tabHistory') },
+          { key: "attachments", label: t("software.tabAttachments") },
+          { key: "history", label: t("software.tabHistory") },
         ]}
         value={tab}
         onChange={setTab}
-        ariaLabel={t('software.title')}
+        ariaLabel={t("software.title")}
       />
 
       <TabPanel tabKey={tab}>
-        {tab === 'profile' ? (
+        {tab === "profile" ? (
           <>
             <dl className="data-grid">
-              <Item label={t('software.kind')}>{t(KIND_KEY[item.kind])}</Item>
-              <Item label={t('software.vendor')}>{orDash(item.vendorName)}</Item>
-              <Item label={t('software.seats')}>{seatLabel(item)}</Item>
-              <Item label={t('software.startDate')}>{orDash(formatDate(item.startDate))}</Item>
-              <Item label={t('software.licenseModel')}>
-                {supportsSeats(item.kind)
-                  ? t(item.licenseModel === 'perpetual' ? 'software.perpetual' : 'software.subscription')
-                  : '—'}
+              <Item label={t("software.kind")}>{t(KIND_KEY[item.kind])}</Item>
+              <Item label={t("software.vendor")}>
+                {orDash(item.vendorName)}
               </Item>
-              <Item label={t('software.endDate')}>
-                {item.licenseModel === 'perpetual' ? (
-                  t('software.perpetual')
+              <Item label={t("software.seats")}>{seatLabel(item)}</Item>
+              <Item label={t("software.startDate")}>
+                {orDash(formatDate(item.startDate))}
+              </Item>
+              <Item label={t("software.licenseModel")}>
+                {supportsSeats(item.kind)
+                  ? t(
+                      item.licenseModel === "perpetual"
+                        ? "software.perpetual"
+                        : "software.subscription",
+                    )
+                  : "—"}
+              </Item>
+              <Item label={t("software.endDate")}>
+                {item.licenseModel === "perpetual" ? (
+                  t("software.perpetual")
                 ) : item.endDate ? (
                   <>
-                    {formatDate(item.endDate)} <ExpiryBadge end={item.endDate} />
+                    {formatDate(item.endDate)}{" "}
+                    <ExpiryBadge end={item.endDate} />
                   </>
                 ) : (
-                  '—'
+                  "—"
                 )}
               </Item>
-              <Item label={t('software.status')}>{t(STATUS_KEY[item.status])}</Item>
-              <Item label={t('software.note')}>{orDash(item.note)}</Item>
+              <Item label={t("software.status")}>
+                {t(STATUS_KEY[item.status])}
+              </Item>
+              <Item label={t("software.note")}>{orDash(item.note)}</Item>
             </dl>
           </>
-        ) : tab === 'vault' ? (
+        ) : tab === "vault" ? (
           <VaultPanel
             ownerType="software"
             ownerId={item.id}
             me={me}
             canEdit={canVaultWrite}
           />
-        ) : tab === 'devices' ? (
+        ) : tab === "devices" ? (
           <LicenseAssignmentsPanel software={item} csrfToken={me.csrfToken} />
-        ) : tab === 'attachments' ? (
-          <AttachmentPanel ownerType="software" ownerId={item.id} csrfToken={me.csrfToken} />
+        ) : tab === "attachments" ? (
+          <AttachmentPanel
+            ownerType="software"
+            ownerId={item.id}
+            csrfToken={me.csrfToken}
+          />
         ) : history.isLoading ? (
           <Loading />
         ) : history.isError ? (
@@ -212,7 +267,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
           onClose={() => setRenewing(false)}
           onDone={() => {
             setRenewing(false);
-            toast({ message: t('software.renewed') });
+            toast({ message: t("software.renewed") });
             void refresh();
           }}
         />
@@ -233,7 +288,7 @@ function RenewDialog({
   onDone: () => void;
 }) {
   const { t } = useTranslation();
-  const [endDate, setEndDate] = useState('');
+  const [endDate, setEndDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const renew = useApiMutation<{ endDate: string }, unknown>(
     `/api/v1/software/${software.id}/renew`,
@@ -245,14 +300,19 @@ function RenewDialog({
       open
       onOpenChange={onClose}
       maxWidth={480}
-      title={`${t('software.renewTitle')} — ${software.code}`}
+      title={`${t("software.renewTitle")} — ${software.code}`}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
+            {t("common.cancel")}
           </button>
-          <button type="submit" form="renew-form" className="btn primary" disabled={renew.isPending}>
-            {renew.isPending ? t('common.loading') : t('software.renew')}
+          <button
+            type="submit"
+            form="renew-form"
+            className="btn primary"
+            disabled={renew.isPending}
+          >
+            {renew.isPending ? t("common.loading") : t("software.renew")}
           </button>
         </>
       }
@@ -265,22 +325,30 @@ function RenewDialog({
           e.preventDefault();
           setError(null);
           if (!endDate) {
-            setError(t('software.renewHint'));
+            setError(t("software.renewHint"));
             return;
           }
           renew.mutate(
             { endDate },
-            { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
+            {
+              onSuccess: onDone,
+              onError: (err) => setError(errorMessage(err)),
+            },
           );
         }}
       >
         <p className="muted">
-          {t('software.endDate')}: {software.endDate ? formatDate(software.endDate) : '—'}
+          {t("software.endDate")}:{" "}
+          {software.endDate ? formatDate(software.endDate) : "—"}
         </p>
-        <Field label={t('software.endDate')} required hint={t('software.renewHint')}>
+        <Field
+          label={t("software.endDate")}
+          required
+          hint={t("software.renewHint")}
+        >
           <DatePicker
             value={endDate}
-            ariaLabel={t('software.renewTitle')}
+            ariaLabel={t("software.renewTitle")}
             /* Hạn mới phải sau hạn cũ — chặn ngay trên lịch cho khỏi bấm nhầm;
                API vẫn kiểm lại vì chốt chặn thật phải nằm ở server. */
             min={software.endDate ?? undefined}

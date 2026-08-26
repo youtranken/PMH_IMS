@@ -127,7 +127,7 @@ export class ServiceAccountService {
     input: ServiceAccountInput,
   ): Promise<ServiceAccountRecord> {
     const before = await this.requireRow(id);
-    const { values, warnings } = this.prepare(input);
+    const { values, warnings } = this.prepare(input, before.status as ServiceAccountRecord['status']);
     const changes = diffRecord(TRACKED, before, values);
     if (!hasChanges(changes)) return { ...toRecord(before), warnings };
 
@@ -177,7 +177,7 @@ export class ServiceAccountService {
   }
 
   /** Chuẩn hóa + kiểm luật thuần. Lỗi thì 400 kèm ĐỦ chỗ sai, không chỉ chỗ đầu tiên. */
-  private prepare(input: ServiceAccountInput) {
+  private prepare(input: ServiceAccountInput, fallbackStatus: ServiceAccountRecord['status'] = 'active') {
     const kind = input.kind;
     const vpn = kind === 'vpn';
     const check = validateServiceAccount({
@@ -209,7 +209,13 @@ export class ServiceAccountService {
         groupName: vpn ? blank(input.groupName) : null,
         allowedIps: vpn ? blank(input.allowedIps) : null,
         note: blank(input.note),
-        status: input.status ?? 'active',
+        /*
+         * KHÔNG mặc định 'active' khi sửa: mọi ô trong DTO đều `@IsOptional()`, nên một
+         * `PATCH {code, kind, name}` sẽ âm thầm bật lại một tài khoản vừa bị vô hiệu hóa —
+         * xoá công của `disable()` và cái lý do nó đã ghi, mà dòng lịch sử chỉ nói "updated".
+         * Thiếu `status` nghĩa là "đừng đụng tới", không phải "bật lên".
+         */
+        status: input.status ?? fallbackStatus,
       },
       warnings: check.warnings,
     };

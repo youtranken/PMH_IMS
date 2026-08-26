@@ -1,5 +1,16 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
-import { IsBoolean, IsEmail, IsIn, IsOptional, IsString, Length, Matches } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsIn,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  Validate,
+  ValidatorConstraint,
+  type ValidatorConstraintInterface,
+} from 'class-validator';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
 import { Audited } from '../audit/audited.decorator';
@@ -7,6 +18,32 @@ import { USER_SORT_DEFAULT, USER_SORT_KEYS } from '../users/users.service';
 import { AccountsService } from './accounts.service';
 import { Roles } from './roles.decorator';
 import type { AuthedRequest, UserRole } from './types';
+
+/**
+ * Ngày lịch CÓ THẬT ở dạng `YYYY-MM-DD`, hoặc chuỗi rỗng (= xoá giá trị).
+ *
+ * Dựng lại ngày từ ba mảnh rồi so ngược: `new Date('2026-02-31')` không ném mà tự trôi sang
+ * 03/03, nên chỉ parse được thôi thì chưa chứng minh được ngày đó tồn tại.
+ */
+@ValidatorConstraint({ name: 'realDateOrEmpty' })
+export class RealDateOrEmpty implements ValidatorConstraintInterface {
+  validate(value: unknown): boolean {
+    if (typeof value !== 'string' || value === '') return true;
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!match) return false;
+    const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
+    const date = new Date(Date.UTC(year, month - 1, day));
+    return (
+      date.getUTCFullYear() === year &&
+      date.getUTCMonth() === month - 1 &&
+      date.getUTCDate() === day
+    );
+  }
+
+  defaultMessage(): string {
+    return 'Ngày sinh phải là một ngày có thật, dạng YYYY-MM-DD.';
+  }
+}
 
 /**
  * SĐT và mã nhân viên (0031) — hai ô TÙY CHỌN, dùng chung cho cả tạo mới lẫn sửa hồ sơ.
@@ -30,9 +67,15 @@ class ContactDto {
 
   @IsOptional()
   @IsString()
-  // Chuỗi rỗng phải LỌT qua (nghĩa là "xoá ngày sinh"), nên không dùng @IsDateString —
-  // nó từ chối chuỗi rỗng và người dùng hết đường bỏ giá trị đã lỡ nhập.
-  @Matches(/^(\d{4}-\d{2}-\d{2})?$/, { message: 'Ngày sinh phải dạng YYYY-MM-DD.' })
+  /*
+   * Chuỗi rỗng phải LỌT qua (nghĩa là "xoá ngày sinh"), nên không dùng `@IsDateString` —
+   * nó từ chối chuỗi rỗng và người dùng hết đường bỏ giá trị đã lỡ nhập.
+   *
+   * Nhưng riêng regex thì KHÔNG đủ: `2026-13-45` khớp đúng khuôn, đi thẳng vào cột `date`,
+   * và Postgres ném 22008 → 500 trắng thay vì đúng câu tiếng Việt bên dưới. Nên kiểm cả
+   * ngày có THẬT hay không.
+   */
+  @Validate(RealDateOrEmpty)
   birthDate?: string;
 }
 

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { DevicesApiService } from '../devices/devices.api';
 import { ServiceAccountsApiService } from '../service-accounts/service-accounts.api';
 import { SoftwareApiService } from '../software/software.api';
@@ -61,12 +61,14 @@ export class VaultOwnersService {
           }
           const software = await this.software.getById(item.ownerId);
           return { ...base, code: software.code, name: software.name, siteCode: null };
-        } catch {
+        } catch (error) {
           /*
-           * Hồ sơ chủ không còn (đã xoá hẳn) nhưng secret vẫn nằm đó. KHÔNG lặng lẽ bỏ qua:
-           * một ngăn két không còn ai nhận là thứ phải có người đi dọn, và giấu nó đi thì nó
-           * nằm mãi. Hiện ra kèm cờ `orphan` để màn hình nói rõ.
+           * CHỈ "không tìm thấy" mới là mồ côi. Bắt trần mọi lỗi thì một trục trặc DB thoáng
+           * qua cũng biến một cái máy đang sống thành "hồ sơ đã bị xóa" — và quản trị viên
+           * đọc dòng đó rất có thể đi thu hồi những secret vẫn đang dùng. Lỗi khác phải nổi
+           * lên để màn hình báo đúng là đang hỏng, không phải báo sai là đang rác.
            */
+          if (!(error instanceof NotFoundException)) throw error;
           return { ...base, code: '—', name: '', siteCode: null, orphan: true };
         }
       }),

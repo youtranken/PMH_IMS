@@ -367,9 +367,17 @@ function NatForm({
         service.portFrom === service.portTo
           ? String(service.portFrom)
           : `${service.portFrom}-${service.portTo}`;
+      /*
+       * Đang SỬA (đã đủ một khoảng) thì KHÔNG đụng gì cả — kể cả giao thức.
+       *
+       * Bản trước vẫn `setProtocol(...)` trong trường hợp này, nên người dùng mở hộp Sửa,
+       * chọn HTTPS, thấy giao thức nhảy sang TCP mà con số port đứng im, và tin rằng port
+       * đã đổi theo. Im lặng một nửa còn tệ hơn im lặng hẳn.
+       */
+      if (ports.length >= maxPorts) return;
       const parsed = parsePortChip(value, ports);
       // Chọn trùng dịch vụ đã có thì lặng lẽ bỏ qua — không đẻ chip trùng, cũng không la lối.
-      if (parsed.chip && ports.length < maxPorts) setPorts([...ports, parsed.chip]);
+      if (parsed.chip) setPorts([...ports, parsed.chip]);
       setProtocol(service.protocol);
     } else {
       // Port TRONG là một số duy nhất (đích của chuyển tiếp), nên lấy đầu dải.
@@ -522,12 +530,16 @@ function NatForm({
                 ))}
               </div>
             </div>
-            <ServicePortPicker
-              services={services}
-              label={t('nat.external')}
-              onPick={(service) => applyService(service, 'external')}
-              onAdd={() => setAddingService('external')}
-            />
+            {/* Đủ khoảng rồi (chế độ sửa) thì ẩn hẳn ô chọn dịch vụ: một điều khiển bấm vào
+                mà không xảy ra gì là thứ người dùng sẽ bấm vài lần rồi nghĩ máy hỏng. */}
+            {ports.length >= maxPorts ? null : (
+              <ServicePortPicker
+                services={services}
+                label={t('nat.external')}
+                onPick={(service) => applyService(service, 'external')}
+                onAdd={() => setAddingService('external')}
+              />
+            )}
           </Field>
 
           <Field label={t('nat.internalPort')} required htmlFor="nat-internal-port">
