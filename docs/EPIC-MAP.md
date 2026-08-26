@@ -565,3 +565,47 @@ hiện dưới đây là loại bẫy sẽ lặp lại.
    (`getByRole('button', { name: 'Mở rộng dòng' })`), đừng đếm tổng.
 6. **`required` của trình duyệt chặn submit TRƯỚC lỗi của form.** Bài kiểm "thiếu port thì báo
    lỗi" đỏ vì các ô bắt buộc khác còn trống — thông điệp của form không bao giờ tới.
+
+---
+
+## Đợt UI/UX 4 — góp gì (26/08/2026, tiếp theo đợt 3)
+
+### Tài sản mới
+
+| Thứ | Ở đâu | Ai sẽ cần |
+| --- | --- | --- |
+| Module `service-accounts` | `api/src/modules/service-accounts/`, `web/src/features/service-accounts/` | Chỗ đứng cho mọi tài khoản KHÔNG phải máy và KHÔNG phải license |
+| `GET /vault/owners` + `VaultOwnersService` | `api/src/modules/vault/` | Trang tổng két sắt. Ranh giới: chỉ CHỦ THỂ, không nội dung két |
+| `PATCH /accounts/:id/profile` | `api/src/modules/auth/` | Sửa hồ sơ tài khoản (tên · SĐT · mã NV · ngày sinh) |
+| `GET /ipam/devices/:id/addresses` | `api/src/modules/ipam/` | Ô chọn IP theo thiết bị (form NAT dùng) |
+
+### Hợp đồng cho đợt sau
+
+- **Thêm một `ownerType` mới cho két sắt phải sờ BA chỗ**: `SECRET_OWNER_TYPES`
+  (`vault.service.ts`), `SecretOwnerType` (`vault-panel.tsx`), và **CHECK constraint** trong
+  DB. Giấy tờ đính kèm thì hai chỗ (`FILE_OWNER_TYPES` + `AttachmentOwnerType`) — bảng `file`
+  không có CHECK.
+- **`tierFor` phải có nhánh cho mọi `ownerType`.** Nó đang là ternary device/else; loại mới rơi
+  vào `else` là đi tra id trong bảng `software`.
+- **Module nghiệp vụ mới phải khai vào `BIZ` trong `.dependency-cruiser.cjs`**, không thì luật
+  AD-2 không áp cho nó và không ai biết.
+- **Trang tổng két sắt là ngoại lệ DUY NHẤT được liệt kê qua nhiều chủ thể**, và chỉ tới mức
+  "có mấy ngăn". `vault-surface.spec.ts` khoá danh sách trường của `VaultOwnerSummary` lại —
+  thêm trường mới phải sửa test, tức là phải có người nhìn xem nó có lộ gì không.
+
+### Bẫy đã gặp
+
+1. **Whitelist ở ba tầng, tầng DB là tầng bị quên.** Thêm `service_account` vào két: TS xanh,
+   `npm run build` xanh, 557 unit test xanh — rồi 500 lúc chạy thật vì
+   `secret_owner_type_check`. Bài học: whitelist nào có bản sao trong migration thì grep
+   `CHECK (.*IN (` trước khi tin là đã sửa đủ.
+2. **Trang tổng vừa dựng đã tìm ra rác cũ.** `/vault` hiện 10 dòng "hồ sơ đã bị xoá — còn
+   secret treo lại": `resetDevices`/`resetSoftware` của E2E xoá chủ thể mà không xoá secret.
+   Một màn tổng hợp tốt là một màn tự tố cáo được dữ liệu hỏng.
+3. **Bài kiểm canh code đừng soi cả chú thích.** Test "service không được nhắc tới `label`"
+   đỏ vì chính câu chú thích *"không `label`, không `kind`"*. Bóc comment trước khi soi.
+4. **Jest không nhận tham số thứ hai của `expect`** (Vitest thì có). Muốn thông điệp lỗi nói
+   rõ mục nào sai thì đưa mục đó vào chính giá trị so sánh.
+5. **Bảng dịch vụ luôn mở × hai ô port = quá nửa hộp thoại.** Thứ làm form NAT dài không phải
+   ô nhập mà là hai bảng gợi ý giống hệt nhau. Dropdown giữ nguyên phần đúng (tên · giao thức
+   · port trên một dòng) mà không chiếm chỗ.
