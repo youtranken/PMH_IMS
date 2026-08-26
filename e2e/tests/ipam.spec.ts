@@ -137,11 +137,12 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(5);
     await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Đang cấp', exact: true }).click();
+    // Nhãn nút lọc mang luôn con số của CẢ dải ("Đang cấp 1"), nên bám theo tiền tố.
+    await page.getByRole('button', { name: /^Đang cấp/ }).click();
     await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(0);
     await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Trống', exact: true }).click();
+    await page.getByRole('button', { name: /^Trống/ }).click();
     await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(5);
     await expect(page.getByText('Chị Lan — Kế toán')).toHaveCount(0);
   });

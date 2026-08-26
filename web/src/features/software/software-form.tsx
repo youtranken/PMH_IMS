@@ -5,6 +5,7 @@ import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
+import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import type { CatalogLists } from '@/features/catalog/catalog-types';
@@ -281,9 +282,21 @@ export function SoftwareForm({
         </FormSection>
 
         {/* Hợp đồng license, thư xác nhận SSL, hóa đơn tên miền — chúng nằm sẵn trên tay lúc
-            gõ hồ sơ mới. Sửa hồ sơ thì không hiện: tab "Giấy tờ" ở trang chi tiết mới là chỗ
-            xem và xóa cả danh sách đang có. */}
-        {row ? null : <AttachmentDraftSection draft={draft} disabled={busy} />}
+            gõ hồ sơ mới, và cũng là thứ hay phải thay bản mới lúc sửa. Thêm mới thì chỉ chọn
+            file (đẩy lên sau khi có id); sửa thì dùng thẳng panel giấy tờ, có đủ danh sách
+            đang có + tải về + xóa. */}
+        {row ? (
+          <FormSection title={t('attachments.title')} columns={1}>
+            <AttachmentPanel
+              ownerType="software"
+              ownerId={row.id}
+              csrfToken={csrfToken}
+              canEdit={!busy}
+            />
+          </FormSection>
+        ) : (
+          <AttachmentDraftSection draft={draft} disabled={busy} />
+        )}
 
         {error ? (
           <p className="alert error" role="alert">

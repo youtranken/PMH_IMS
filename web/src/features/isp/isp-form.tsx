@@ -8,6 +8,7 @@ import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
+import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
@@ -298,7 +299,20 @@ export function IspForm({
           </Field>
         </FormSection>
 
-        {row ? null : <AttachmentDraftSection draft={draft} disabled={busy} />}
+        {/* Thêm mới: chọn bản scan hợp đồng, đẩy lên sau khi có id.
+            Sửa: panel giấy tờ đầy đủ — đổi hợp đồng là việc thường xuyên của đường truyền. */}
+        {row ? (
+          <FormSection title={t('attachments.title')} columns={1}>
+            <AttachmentPanel
+              ownerType="isp"
+              ownerId={row.id}
+              csrfToken={csrfToken}
+              canEdit={!busy}
+            />
+          </FormSection>
+        ) : (
+          <AttachmentDraftSection draft={draft} disabled={busy} />
+        )}
 
         {error ? (
           <p className="alert error" role="alert">

@@ -11,7 +11,7 @@ import { Dialog } from '@/ui/dialog';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
-import { Field, PageHeader } from '@/ui/page-header';
+import { Field, FormSection, PageHeader } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
@@ -19,6 +19,8 @@ import type { CatalogLists, ServicePortRow } from '@/features/catalog/catalog-ty
 import { CatalogForm } from '@/features/catalog/catalog-form';
 import { DeviceForm } from '@/features/devices/device-form';
 import { ServicePortPicker } from './service-port-picker';
+import { chipsFromValue, parsePortChip, type PortChip } from './port-chips';
+import { PortChipsField } from './port-chips-field';
 
 type NatProtocol = 'tcp' | 'udp' | 'both';
 
@@ -190,18 +192,18 @@ export function NatScreen({ me }: { me: Me }) {
           rule={editing.rule}
           csrfToken={me.csrfToken}
           onClose={() => setEditing(null)}
-          onSaved={(warnings) => {
+          onSaved={({ created, warnings }) => {
             setEditing(null);
+            // Nói RÕ vừa ghi mấy dòng: gõ một form ra ba dòng là chuyện dễ đếm nhầm.
+            toast({
+              message: created > 1 ? t('nat.savedMany', { count: created }) : t('nat.saved'),
+            });
             /**
              * Cảnh báo (vd "dải này mở hơn 1000 cổng") KHÔNG chặn lưu — nên nó phải được NÓI
              * RA sau khi lưu, không thì im lặng luôn và người khai chẳng biết mình vừa mở
-             * bao nhiêu cổng ra Internet.
+             * bao nhiêu cổng ra Internet. Khoảng nào ghi hỏng cũng đi đường này.
              */
-            toast(
-              warnings.length > 0
-                ? { message: warnings.join(' '), tone: 'warn' }
-                : { message: t('nat.saved') },
-            );
+            for (const warning of warnings) toast({ message: warning, tone: 'warn' });
             void refresh();
           }}
         />
@@ -234,7 +236,7 @@ function NatForm({
   rule: NatRow | null;
   csrfToken: string;
   onClose: () => void;
-  onSaved: (warnings: string[]) => void;
+  onSaved: (result: { created: number; warnings: string[] }) => void;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -253,13 +255,32 @@ function NatForm({
   /** Ô nào đang mở hộp thêm dịch vụ — để lưu xong áp thẳng vào đúng ô đó. */
   const [addingService, setAddingService] = useState<'external' | 'internal' | null>(null);
   const [protocol, setProtocol] = useState<NatProtocol>(rule?.protocol ?? 'tcp');
-  const [externalPorts, setExternalPorts] = useState(rule?.externalPorts ?? '');
+  /**
+   * Port ngoài giữ dạng DANH SÁCH CHIP, không phải một chuỗi.
+   *
+   * Một rule trong DB chỉ mang một khoảng port, nhưng việc thật là "mở 8080, 8443 và
+   * 5060-5070 cho cùng một máy, cùng một lý do". Trước đây phải mở form ba lần và gõ lại
+   * router / IP trong / ai dùng / lý do ba lượt — sai một chỗ là ba dòng lệch nhau. Giờ gõ
+   * một lần, bấm Lưu ra ba dòng dùng chung mọi thứ còn lại.
+   *
+   * SỬA thì cắt về đúng một khoảng (`max={1}`): "sửa" là đổi một dòng đang có, còn tách nó
+   * thành ba dòng là chuyện khác hẳn và phải đi qua nút Thêm rule cho rõ ràng.
+   */
+  const [ports, setPorts] = useState<PortChip[]>(() =>
+    rule ? chipsFromValue(rule.externalPorts) : [],
+  );
   const [internalIp, setInternalIp] = useState(rule?.internalIp ?? '');
   const [internalPort, setInternalPort] = useState(String(rule?.internalPort ?? ''));
   const [usedBy, setUsedBy] = useState(rule?.usedBy ?? '');
   const [reason, setReason] = useState(rule?.reason ?? '');
   const [enabled, setEnabled] = useState(rule?.enabled ?? true);
   const [error, setError] = useState<string | null>(null);
+  /** Sửa = một khoảng; thêm mới = bao nhiêu khoảng cũng được (mỗi khoảng ra một dòng). */
+  const maxPorts = rule ? 1 : Number.POSITIVE_INFINITY;
+  /* Nhiều chip = nhiều lượt gọi nối tiếp; giữa hai lượt `isPending` tụt về false, không khoá
+     thêm thì nút Lưu nhấp nháy mở ra và bấm phát nữa là ghi trùng cả cụm. */
+  const [saving, setSaving] = useState(false);
+  const busy = saving;
 
   const lists = useQuery({
     queryKey: ['catalog', 'lists'],
@@ -297,14 +318,21 @@ function NatForm({
     [lists.data],
   );
 
-  /** Áp một dịch vụ vào ô port — port ngoài kéo theo cả giao thức, vì đó là ý nghĩa của nó. */
+  /**
+   * Áp một dịch vụ vào ô port — port ngoài kéo theo cả giao thức, vì đó là ý nghĩa của nó.
+   *
+   * Chọn dịch vụ giờ là THÊM một chip chứ không ghi đè ô: chọn "HTTPS" rồi chọn tiếp "RDP"
+   * mà mất cái đầu là đúng cái bẫy khiến người ta tưởng ô này chỉ chứa được một thứ.
+   */
   const applyService = (service: ServicePortRow, field: 'external' | 'internal') => {
     if (field === 'external') {
-      setExternalPorts(
+      const value =
         service.portFrom === service.portTo
           ? String(service.portFrom)
-          : `${service.portFrom}-${service.portTo}`,
-      );
+          : `${service.portFrom}-${service.portTo}`;
+      const parsed = parsePortChip(value, ports);
+      // Chọn trùng dịch vụ đã có thì lặng lẽ bỏ qua — không đẻ chip trùng, cũng không la lối.
+      if (parsed.chip && ports.length < maxPorts) setPorts([...ports, parsed.chip]);
       setProtocol(service.protocol);
     } else {
       // Port TRONG là một số duy nhất (đích của chuyển tiếp), nên lấy đầu dải.
@@ -322,189 +350,238 @@ function NatForm({
     <Dialog
       open
       onOpenChange={onClose}
-      maxWidth={620}
+      maxWidth={720}
       title={rule ? t('nat.edit') : t('nat.add')}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button type="submit" form="nat-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending ? t('common.loading') : t('common.save')}
+          <button type="submit" form="nat-form" className="btn primary" disabled={busy}>
+            {busy ? t('common.loading') : t('common.save')}
           </button>
         </>
       }
     >
+      {/*
+        Ba khối theo ĐÚNG đường đi của một gói tin: vào từ đâu → chuyển tới đâu → vì sao mở.
+        Bản cũ là một dây 10 ô xếp dọc, trong đó "Loại thiết bị" (một BỘ LỌC của ô Router
+        ngay dưới) đứng đầu như thể là dữ liệu của rule, còn Port ngoài và Port trong — hai
+        thứ luôn phải đọc cùng nhau — thì bị IP trong chen vào giữa.
+      */}
       <form
         id="nat-form"
-        className="form-grid"
-        data-columns={1}
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          save.mutate(
-            {
+          if (ports.length === 0) {
+            setError(t('nat.portRequired'));
+            return;
+          }
+          void (async () => {
+            setSaving(true);
+            const shared = {
               deviceId,
               protocol,
-              externalPorts: externalPorts.trim(),
               internalIp: internalIp.trim(),
               internalPort: Number(internalPort),
               usedBy: usedBy.trim(),
               reason: reason.trim(),
               enabled,
-            },
-            {
-              onSuccess: (result) => onSaved(result?.warnings ?? []),
-              onError: (err) => setError(errorMessage(err)),
-            },
-          );
+            };
+            const warnings: string[] = [];
+            const failures: string[] = [];
+            let created = 0;
+            /* Nối tiếp chứ không song song: luật chống chồng port phía API xét dòng đang có
+               trong DB, bắn cùng lúc thì hai chip chồng nhau có thể cùng lọt qua. */
+            for (const chip of ports) {
+              try {
+                const result = await save.mutateAsync({
+                  ...shared,
+                  externalPorts: chip.value,
+                });
+                created += 1;
+                warnings.push(...(result?.warnings ?? []));
+              } catch (err) {
+                // Một khoảng hỏng KHÔNG được nuốt mất mấy khoảng đã ghi xong — nói rõ khoảng
+                // nào hỏng vì sao, phần còn lại vẫn nằm trong sổ.
+                failures.push(
+                  t('nat.portFailed', { port: chip.value, reason: errorMessage(err) }),
+                );
+              }
+            }
+            setSaving(false);
+            if (created === 0) {
+              setError(failures.join(' '));
+              return;
+            }
+            onSaved({ created, warnings: [...warnings, ...failures] });
+          })();
         }}
       >
-        <Field label={t('nat.deviceType')} hint={t('nat.deviceTypeHint')}>
-          <Select
-            value={typeFilter}
-            ariaLabel={t('nat.deviceType')}
-            placeholder={t('nat.allTypes')}
-            options={[
-              { value: '', label: t('nat.allTypes') },
-              ...(lists.data?.deviceTypes ?? []).map((type) => ({
-                value: type.id,
-                label: type.name,
-              })),
-            ]}
-            onChange={(value) => {
-              setTypeFilter(value);
-              // Đổi bộ lọc mà giữ nguyên router đã chọn thì ô hiện một mã không còn nằm
-              // trong danh sách đang xem — người dùng không hiểu vì sao.
-              setDeviceTerm('');
-              setDeviceId('');
-            }}
-          />
-        </Field>
+        <FormSection title={t('nat.sectionExternal')} columns={2}>
+          <Field label={t('nat.router')} required hint={t('nat.routerHint')} span={2}>
+            {/* Bộ lọc theo loại nằm TRONG ô Router, không phải một trường ngang hàng phía
+                trên: nó không được lưu vào rule nào cả, nó chỉ rút ngắn danh sách bên cạnh. */}
+            <div className="field-row">
+              <Select
+                value={typeFilter}
+                ariaLabel={t('nat.deviceType')}
+                placeholder={t('nat.allTypes')}
+                options={[
+                  { value: '', label: t('nat.allTypes') },
+                  ...(lists.data?.deviceTypes ?? []).map((type) => ({
+                    value: type.id,
+                    label: type.name,
+                  })),
+                ]}
+                onChange={(value) => {
+                  setTypeFilter(value);
+                  // Đổi bộ lọc mà giữ nguyên router đã chọn thì ô hiện một mã không còn nằm
+                  // trong danh sách đang xem — người dùng không hiểu vì sao.
+                  setDeviceTerm('');
+                  setDeviceId('');
+                }}
+              />
+              <Combobox
+                placeholder={t('nat.routerSearch')}
+                ariaLabel={t('nat.router')}
+                query={deviceTerm}
+                onQuery={(value) => {
+                  setDeviceTerm(value);
+                  setDeviceId('');
+                }}
+                options={devices.data?.items ?? []}
+                getKey={(item) => item.id}
+                renderOption={(item) => (
+                  <>
+                    <span className="mono">{item.code}</span> <small>{item.name}</small>
+                  </>
+                )}
+                onSelect={(item) => {
+                  setDeviceId(item.id);
+                  setDeviceTerm(item.code);
+                }}
+                /* Router chưa có trong kho thì thêm NGAY TẠI ĐÂY. Bắt người dùng thoát ra,
+                   sang màn Thiết bị, khai xong rồi quay lại gõ lại cả form NAT là ba lần
+                   chuyển màn cho một việc — và form đang dở thì mất trắng. */
+                action={{ label: t('nat.addRouter'), onClick: () => setAddingRouter(true) }}
+              />
+            </div>
+          </Field>
 
-        <Field label={t('nat.router')} required hint={t('nat.routerHint')}>
-          <Combobox
-            placeholder={t('nat.routerSearch')}
-            ariaLabel={t('nat.router')}
-            query={deviceTerm}
-            onQuery={(value) => {
-              setDeviceTerm(value);
-              setDeviceId('');
-            }}
-            options={devices.data?.items ?? []}
-            getKey={(item) => item.id}
-            renderOption={(item) => (
-              <>
-                <span className="mono">{item.code}</span> <small>{item.name}</small>
-              </>
-            )}
-            onSelect={(item) => {
-              setDeviceId(item.id);
-              setDeviceTerm(item.code);
-            }}
-            /* Router chưa có trong kho thì thêm NGAY TẠI ĐÂY. Bắt người dùng thoát ra, sang
-               màn Thiết bị, khai xong rồi quay lại gõ lại cả form NAT là ba lần chuyển màn
-               cho một việc — và form đang dở thì mất trắng. */
-            action={{ label: t('nat.addRouter'), onClick: () => setAddingRouter(true) }}
-          />
-        </Field>
-
-        <Field label={t('nat.protocol')}>
-          <Select
-            value={protocol}
-            onChange={(next) => setProtocol(next as NatProtocol)}
-            ariaLabel={t('nat.protocol')}
-            options={PROTOCOLS.map((item) => ({
-              value: item,
-              label: item === 'both' ? t('nat.protocolBoth') : item.toUpperCase(),
-            }))}
-          />
-        </Field>
-
-        <Field
-          label={t('nat.external')}
-          required
-          hint={t('nat.externalHint')}
-          htmlFor="nat-external"
-        >
-          <input
-            id="nat-external"
-            className="inp mono"
-            required
-            placeholder="8080"
-            value={externalPorts}
-            onChange={(e) => setExternalPorts(e.target.value)}
-          />
-          <ServicePortPicker
-            services={services}
-            label={t('nat.external')}
-            onPick={(service) => applyService(service, 'external')}
-            onAdd={() => setAddingService('external')}
-          />
-        </Field>
-
-        <Field label={t('nat.internalIp')} required htmlFor="nat-internal-ip">
-          <input
-            id="nat-internal-ip"
-            className="inp mono"
-            required
-            placeholder="172.16.10.5"
-            value={internalIp}
-            onChange={(e) => setInternalIp(e.target.value)}
-          />
-        </Field>
-
-        <Field label={t('nat.internalPort')} required htmlFor="nat-internal-port">
-          <input
-            id="nat-internal-port"
-            className="inp mono"
-            required
-            inputMode="numeric"
-            value={internalPort}
-            onChange={(e) => setInternalPort(e.target.value)}
-          />
-          <ServicePortPicker
-            services={services}
-            label={t('nat.internalPort')}
-            onPick={(service) => applyService(service, 'internal')}
-            onAdd={() => setAddingService('internal')}
-          />
-        </Field>
-
-        {/* Hai ô dưới đây là LÝ DO cuốn sổ tồn tại — nên chúng bắt buộc, không phải tùy chọn. */}
-        <Field label={t('nat.usedBy')} required hint={t('nat.usedByHint')}>
-          {/* Cùng danh mục Bộ phận với ô "ai đang dùng" của hồ sơ IP — hai chỗ trả lời cùng
-              một câu, viết lệch nhau thì tra chéo không ra. */}
-          <SuggestInput
-            value={usedBy}
-            onChange={setUsedBy}
-            options={departments}
-            placeholder={t('nat.usedByPlaceholder')}
-            ariaLabel={t('nat.usedBy')}
-          />
-        </Field>
-
-        <Field label={t('nat.reason')} required hint={t('nat.reasonHint')} htmlFor="nat-reason">
-          <textarea
-            id="nat-reason"
-            className="inp"
-            rows={2}
-            required
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-          />
-        </Field>
-
-        <Field label={t('nat.enabled')}>
-          <label className="row" style={{ gap: 'var(--space-3)' }}>
-            <input
-              type="checkbox"
-              checked={enabled}
-              onChange={(e) => setEnabled(e.target.checked)}
+          <Field label={t('nat.protocol')}>
+            <Select
+              value={protocol}
+              onChange={(next) => setProtocol(next as NatProtocol)}
+              ariaLabel={t('nat.protocol')}
+              options={PROTOCOLS.map((item) => ({
+                value: item,
+                label: item === 'both' ? t('nat.protocolBoth') : item.toUpperCase(),
+              }))}
             />
-            <span className="muted">{t('nat.enabledHint')}</span>
-          </label>
-        </Field>
+          </Field>
+
+          <Field
+            label={t('nat.external')}
+            required
+            hint={rule ? t('nat.externalHintEdit') : t('nat.externalHint')}
+            htmlFor="nat-external"
+            span={2}
+          >
+            <PortChipsField
+              chips={ports}
+              onChange={setPorts}
+              max={maxPorts}
+              disabled={busy}
+              inputId="nat-external"
+            />
+            <ServicePortPicker
+              services={services}
+              label={t('nat.external')}
+              onPick={(service) => applyService(service, 'external')}
+              onAdd={() => setAddingService('external')}
+            />
+          </Field>
+        </FormSection>
+
+        <FormSection title={t('nat.sectionInternal')} columns={2}>
+          <Field label={t('nat.internalIp')} required htmlFor="nat-internal-ip">
+            <input
+              id="nat-internal-ip"
+              className="inp mono"
+              required
+              placeholder="172.16.10.5"
+              value={internalIp}
+              onChange={(e) => setInternalIp(e.target.value)}
+            />
+          </Field>
+
+          <Field label={t('nat.internalPort')} required htmlFor="nat-internal-port">
+            <input
+              id="nat-internal-port"
+              className="inp mono"
+              required
+              inputMode="numeric"
+              value={internalPort}
+              onChange={(e) => setInternalPort(e.target.value)}
+            />
+            <ServicePortPicker
+              services={services}
+              label={t('nat.internalPort')}
+              onPick={(service) => applyService(service, 'internal')}
+              onAdd={() => setAddingService('internal')}
+            />
+          </Field>
+        </FormSection>
+
+        {/* Khối này là LÝ DO cuốn sổ tồn tại — nên hai ô đầu bắt buộc, không phải tùy chọn. */}
+        <FormSection title={t('nat.sectionWhy')} columns={2}>
+          <Field label={t('nat.usedBy')} required hint={t('nat.usedByHint')}>
+            {/* Cùng danh mục Bộ phận với ô "ai đang dùng" của hồ sơ IP — hai chỗ trả lời cùng
+                một câu, viết lệch nhau thì tra chéo không ra. */}
+            <SuggestInput
+              value={usedBy}
+              onChange={setUsedBy}
+              options={departments}
+              placeholder={t('nat.usedByPlaceholder')}
+              ariaLabel={t('nat.usedBy')}
+            />
+          </Field>
+
+          <Field label={t('nat.enabled')}>
+            <label className="row" style={{ gap: 'var(--space-3)' }}>
+              <input
+                type="checkbox"
+                checked={enabled}
+                onChange={(e) => setEnabled(e.target.checked)}
+              />
+              <span className="muted">{t('nat.enabledHint')}</span>
+            </label>
+          </Field>
+
+          <Field
+            label={t('nat.reason')}
+            required
+            hint={t('nat.reasonHint')}
+            htmlFor="nat-reason"
+            span={2}
+          >
+            <textarea
+              id="nat-reason"
+              className="inp"
+              rows={2}
+              required
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+          </Field>
+        </FormSection>
+
+        {/* Nói TRƯỚC khi bấm Lưu là sẽ ghi ra mấy dòng — sau đó mới biết thì đã muộn. */}
+        {ports.length > 1 ? (
+          <p className="alert">{t('nat.willCreate', { count: ports.length })}</p>
+        ) : null}
 
         {error ? (
           <p className="alert error" role="alert">

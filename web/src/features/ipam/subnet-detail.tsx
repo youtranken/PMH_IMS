@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -11,6 +11,7 @@ import { Dialog } from '@/ui/dialog';
 import { DatePicker } from '@/ui/date-picker';
 import { LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
+import { Pagination } from '@/ui/pagination';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from './use-departments';
 import { useToast } from '@/ui/toast';
@@ -25,6 +26,15 @@ import {
   type SubnetRow,
   type SubnetSlot,
 } from './ipam-types';
+import {
+  clampPage,
+  countSlots,
+  filterSlots,
+  pageSlots,
+  SLOT_FILTERS,
+  SLOT_PAGE_SIZE,
+  type SlotFilter,
+} from './slot-paging';
 import { toIpHistoryEntries, type IpHistoryRow } from './ip-history-entries';
 
 interface DeviceOption {
@@ -48,7 +58,8 @@ export function SubnetPane({ subnet: item, me }: { subnet: SubnetRow; me: Me }) 
   const toast = useToast();
   const queryClient = useQueryClient();
   const id = item.id;
-  const [status, setStatus] = useState<'all' | IpStatus>('all');
+  const [status, setStatus] = useState<SlotFilter>('all');
+  const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<{ record: IpRow | null; address: string } | null>(null);
   const [moving, setMoving] = useState<{ record: IpRow; to: IpStatus } | null>(null);
   const [historyOf, setHistoryOf] = useState<IpRow | null>(null);
@@ -66,14 +77,26 @@ export function SubnetPane({ subnet: item, me }: { subnet: SubnetRow; me: Me }) 
    * Thay ô tick "chỉ hiện IP đã cấp" cũ: ô tick chỉ mở/đóng được MỘT trạng thái, nên câu hỏi
    * hay gặp thứ hai — "còn chỗ nào trống" — vẫn phải tự dò bằng mắt giữa 254 dòng.
    */
-  const rows = useMemo(
-    () =>
-      (slots.data ?? []).filter((slot) => {
-        if (status === 'all') return true;
-        return slot.kind === 'free' ? status === 'free' : slot.status === status;
-      }),
-    [slots.data, status],
-  );
+  const all = slots.data ?? [];
+  const counts = useMemo(() => countSlots(all), [all]);
+  const filtered = useMemo(() => filterSlots(all, status), [all, status]);
+
+  /**
+   * Phân trang Ở CLIENT, cố ý.
+   *
+   * `MIN_PREFIX = 24` phía API chặn dải rộng nhất ở /24 = 254 host, nên cả dải về trong MỘT
+   * lượt gọi và nằm gọn trong bộ nhớ. Cắt trang ở đây thì đổi trang là tức thì, còn bộ lọc
+   * và con số đếm trên từng nút vẫn tính trên TOÀN dải chứ không phải trên 50 dòng đang xem —
+   * đó mới là câu trả lời đúng cho "còn mấy chỗ trống". Đẩy phân trang xuống server sẽ đổi
+   * một lượt gọi thành sáu, mà chẳng bớt được byte nào đáng kể.
+   */
+  const rows = pageSlots(filtered, page);
+
+  // Đổi dải hoặc đổi bộ lọc thì số dòng đổi theo; giữ nguyên trang 5 của tập cũ là nhìn vào
+  // một bảng rỗng và tưởng không có gì.
+  useEffect(() => {
+    setPage((current) => clampPage(current, filtered.length));
+  }, [filtered.length, id]);
 
   return (
     <>
@@ -89,17 +112,23 @@ export function SubnetPane({ subnet: item, me }: { subnet: SubnetRow; me: Me }) 
         </h2>
       </div>
 
-      {/* Bộ lọc trạng thái — "Trống" là một lựa chọn ngang hàng, không phải một ô tick phụ. */}
+      {/* Bộ lọc trạng thái — "Trống" là một lựa chọn ngang hàng, không phải một ô tick phụ.
+          Con số đi kèm ngay trên nút: "còn mấy chỗ trống" là câu hỏi màn này sinh ra để trả
+          lời, bắt bấm vào rồi mới đếm là bắt làm hai lần một việc. */}
       <div className="segmented" role="group" aria-label={t('ipam.status')}>
-        {(['all', 'assigned', 'free', 'suspect_dead', 'reclaimed'] as const).map((key) => (
+        {SLOT_FILTERS.map((key) => (
           <button
             key={key}
             type="button"
             className={status === key ? 'on' : undefined}
             aria-pressed={status === key}
-            onClick={() => setStatus(key)}
+            onClick={() => {
+              setStatus(key);
+              setPage(1);
+            }}
           >
-            {t(key === 'all' ? 'ipam.filterAll' : STATUS_KEY[key])}
+            {t(key === 'all' ? 'ipam.filterAll' : STATUS_KEY[key])}{' '}
+            <span className="seg-count">{counts[key]}</span>
           </button>
         ))}
       </div>
@@ -109,7 +138,8 @@ export function SubnetPane({ subnet: item, me }: { subnet: SubnetRow; me: Me }) 
       ) : slots.isError ? (
         <LoadError onRetry={() => void slots.refetch()} />
       ) : (
-        <div className="table-wrap">
+        <>
+          <div className="table-wrap">
           <table className="table table-stack">
             <thead>
               <tr>
@@ -200,7 +230,15 @@ export function SubnetPane({ subnet: item, me }: { subnet: SubnetRow; me: Me }) 
               )}
             </tbody>
           </table>
-        </div>
+          </div>
+
+          <Pagination
+            page={clampPage(page, filtered.length)}
+            limit={SLOT_PAGE_SIZE}
+            total={filtered.length}
+            onPageChange={setPage}
+          />
+        </>
       )}
 
       {moving ? (

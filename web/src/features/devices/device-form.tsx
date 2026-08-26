@@ -5,6 +5,7 @@ import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
+import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
@@ -317,7 +318,24 @@ export function DeviceForm({
           </Field>
         </FormSection>
 
-        {device ? null : <AttachmentDraftSection draft={draft} disabled={busy} />}
+        {/*
+          THÊM MỚI: chỉ chọn file, đẩy lên sau khi có id (`AttachmentDraftSection`).
+          SỬA: hồ sơ đã có id nên dùng thẳng `AttachmentPanel` — nó hiện luôn danh sách giấy
+          tờ đang có, tải về được, xóa được, và thêm file mới là lên ngay. Hai chế độ dùng hai
+          khối khác nhau vì chúng trả lời hai câu khác nhau, không phải vì tiện tay.
+        */}
+        {device ? (
+          <FormSection title={t('attachments.title')} columns={1}>
+            <AttachmentPanel
+              ownerType="device"
+              ownerId={device.id}
+              csrfToken={csrfToken}
+              canEdit={!busy}
+            />
+          </FormSection>
+        ) : (
+          <AttachmentDraftSection draft={draft} disabled={busy} />
+        )}
 
         {error ? (
           <p className="alert error" role="alert">

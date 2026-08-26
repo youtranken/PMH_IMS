@@ -165,8 +165,10 @@ test.describe('Sổ NAT', () => {
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
 
     // OpenVPN là UDP — chọn nó phải kéo giao thức đổi theo, không chỉ điền con số.
+    // Port ngoài giờ là danh sách CHIP (mỗi chip một khoảng, có ✕), không còn là một ô chữ:
+    // chọn dịch vụ là THÊM một chip chứ không ghi đè cái đang có.
     await form.getByRole('button', { name: 'Chọn OpenVPN cho Port ngoài' }).click();
-    await expect(form.getByRole('textbox', { name: 'Port ngoài' })).toHaveValue('1194');
+    await expect(form.getByRole('button', { name: 'Bỏ port 1194' })).toBeVisible();
     await expect(form.getByRole('button', { name: 'Giao thức' })).toContainText('UDP');
 
     await form.getByRole('button', { name: 'Chọn NAS Web cho Port trong' }).click();
@@ -204,7 +206,7 @@ test.describe('Sổ NAT', () => {
     await serviceForm.getByRole('button', { name: 'Lưu' }).click();
 
     // Lưu xong là ÁP THẲNG vào ô đang khai — không bắt người dùng đi tìm lại trong danh sách.
-    await expect(form.getByRole('textbox', { name: 'Port ngoài' })).toHaveValue('8443');
+    await expect(form.getByRole('button', { name: 'Bỏ port 8443' })).toBeVisible();
 
     await form.getByRole('textbox', { name: 'IP trong' }).fill(internalIp);
     await form.getByRole('textbox', { name: 'Port trong' }).fill('443');

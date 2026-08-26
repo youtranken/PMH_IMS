@@ -342,6 +342,16 @@ table.table tbody tr.exp:hover td {
   flex-direction: column;
   gap: var(--space-5);
   min-width: 0;
+  /* Cột dải CUỘN RIÊNG, dính dưới topbar (56px, `position:sticky` ở base.css).
+     Không có hai dòng này thì 30 dải đẩy chiều cao cả trang lên, và người đang đọc bảng IP
+     bên phải phải cuộn qua hết cột trái mới xuống tới nơi — hai khu không liên quan gì nhau
+     lại buộc vào cùng một thanh cuộn. */
+  position: sticky;
+  top: calc(56px + var(--space-7));
+  max-height: calc(100vh - 56px - var(--space-7) * 2);
+  overflow-y: auto;
+  /* Chừa chỗ cho thanh cuộn để viền thẻ không bị nó đè lên. */
+  padding-right: var(--space-2);
 }
 .subnet-rail > .form-section-title {
   margin: 0;
@@ -416,6 +426,16 @@ table.table tbody tr.exp:hover td {
 .subnet-pane .segmented button {
   white-space: nowrap;
 }
+/* Con số đi kèm nhãn lọc ("Trống 137"). Nhạt hơn và nhỏ hơn chữ nhãn: nó là số liệu bổ trợ,
+   không phải tên nút — để cùng cỡ thì mắt đọc thành hai từ ngang hàng. */
+.seg-count {
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+.segmented button.on .seg-count {
+  opacity: 0.85;
+}
 
 /* Dưới 1100px hai cột thành một: cột trái 300px + bảng 6 cột không còn đủ chỗ, và cột trái
    là thứ CHỌN xong rồi mới đọc — nên nó lên trên, cuộn ngang được, không chiếm chiều cao. */
@@ -428,6 +448,12 @@ table.table tbody tr.exp:hover td {
     flex-direction: row;
     overflow-x: auto;
     padding-bottom: var(--space-3);
+    /* Ở khổ hẹp cột trái nằm NGANG phía trên, không còn là một cột cao — gỡ hết luật cuộn
+       dọc/dính của khổ rộng, để nguyên thì nó tự kẹp chiều cao và cắt mất thẻ. */
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0;
   }
   .subnet-rail > .form-section-title {
     display: none;
