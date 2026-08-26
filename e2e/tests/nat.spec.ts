@@ -164,14 +164,25 @@ test.describe('Sổ NAT', () => {
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
 
-    // OpenVPN là UDP — chọn nó phải kéo giao thức đổi theo, không chỉ điền con số.
-    // Port ngoài giờ là danh sách CHIP (mỗi chip một khoảng, có ✕), không còn là một ô chữ:
-    // chọn dịch vụ là THÊM một chip chứ không ghi đè cái đang có.
-    await form.getByRole('button', { name: 'Chọn OpenVPN cho Port ngoài' }).click();
+    /*
+     * OpenVPN là UDP — chọn nó phải kéo giao thức đổi theo, không chỉ điền con số.
+     *
+     * Hai thay đổi của bản dựng lại (26/08/2026) mà bài này phải theo:
+     *  - Danh mục dịch vụ giờ là DROPDOWN xổ khi bấm, không phải bảng luôn mở (hai ô port
+     *    thành hai bảng chiếm quá nửa hộp thoại).
+     *  - Port ngoài là danh sách CHIP có ✕; chọn dịch vụ là THÊM chip, không ghi đè.
+     *  - Giao thức không còn là ô chọn riêng mà là dải nút nhỏ ngay dưới ô port.
+     */
+    await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Port ngoài' }).click();
+    await page.getByRole('option', { name: /OpenVPN/ }).click();
     await expect(form.getByRole('button', { name: 'Bỏ port 1194' })).toBeVisible();
-    await expect(form.getByRole('button', { name: 'Giao thức' })).toContainText('UDP');
+    await expect(form.getByRole('button', { name: 'UDP', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
 
-    await form.getByRole('button', { name: 'Chọn NAS Web cho Port trong' }).click();
+    await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Port trong' }).click();
+    await page.getByRole('option', { name: /NAS Web/ }).click();
     await expect(form.getByRole('textbox', { name: 'Port trong' })).toHaveValue('5001');
 
     await form.getByRole('textbox', { name: 'IP trong' }).fill(internalIp);
@@ -197,7 +208,9 @@ test.describe('Sổ NAT', () => {
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
 
-    await form.getByRole('button', { name: '+ Thêm dịch vụ' }).first().click();
+    // Dịch vụ chưa có: dòng "＋ Thêm dịch vụ" ghim ở đầu menu dropdown.
+    await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Port ngoài' }).click();
+    await page.getByRole('button', { name: '+ Thêm dịch vụ' }).first().click();
     const serviceForm = page.getByRole('dialog').last();
     // `getByRole` chứ không `getByLabel`: nhãn có kèm dấu * (aria-hidden), nên TEXT của thẻ
     // label là "Port *" còn TÊN TRỢ NĂNG mới đúng là "Port".

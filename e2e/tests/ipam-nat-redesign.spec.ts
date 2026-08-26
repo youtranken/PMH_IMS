@@ -287,6 +287,89 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
   });
 });
 
+test.describe('Sổ NAT — máy đích được NAT', () => {
+  /**
+   * Lỗ hổng lớn nhất của cuốn sổ trước đây: nó ghi "dẫn tới 172.16.10.5" mà không nói
+   * 172.16.10.5 là MÁY NÀO. Ba thứ trong form là ba câu khác nhau và không trùng nhau:
+   * Router = con THỰC HIỆN NAT · Máy đích = con ĐƯỢC NAT · Mở cho ai = NGƯỜI hưởng dịch vụ.
+   */
+  test('chọn máy đích thì ô IP chỉ còn IP của chính máy đó, và sổ hiện tên máy', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const routerCode = `FW-E2E-T-${stamp}`;
+    await createRouter(page, routerCode);
+
+    // Máy đích + IP của nó.
+    const catalog = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/catalog', { credentials: 'include' });
+      return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
+    });
+    const pc = catalog.deviceTypes.find((type) => type.name === 'PC')!;
+    const nasCode = `NAS-E2E-T-${stamp}`;
+    const nas = await page.request.post('/api/v1/devices', {
+      headers,
+      data: { code: nasCode, name: 'NAS phòng máy', deviceTypeId: pc.id },
+    });
+    const nasId = ((await nas.json()) as { device: { id: string } }).device.id;
+
+    const octet = 20 + (Number(stamp) % 200);
+    const subnet = await page.request.post('/api/v1/ipam/subnets', {
+      headers,
+      data: { cidr: `172.20.${octet}.0/24`, name: `LAN đích ${stamp}` },
+    });
+    const subnetId = ((await subnet.json()) as { id: string }).id;
+    const targetIp = `172.20.${octet}.20`;
+    expect(
+      (
+        await page.request.post('/api/v1/ipam/addresses', {
+          headers,
+          data: { subnetId, address: targetIp, deviceId: nasId, usedBy: 'P. Kỹ thuật' },
+        })
+      ).status(),
+    ).toBe(201);
+
+    await page.goto('/nat');
+    await page.getByRole('button', { name: 'Thêm rule' }).click();
+    const form = page.getByRole('dialog');
+
+    // MỘT ô chọn router — ô "Loại thiết bị" cũ đã bỏ, vì nó bắt thao tác hai dropdown cho
+    // một việc và chọn nhầm loại là danh sách rỗng trơn.
+    await expect(form.getByRole('button', { name: 'Loại thiết bị' })).toHaveCount(0);
+    await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
+    await page.getByRole('option', { name: new RegExp(routerCode) }).click();
+
+    const portInput = form.getByPlaceholder('8080 hoặc 8000-8010');
+    await portInput.fill('5001');
+    await portInput.press('Enter');
+    await form.getByRole('textbox', { name: 'Port trong' }).fill('5001');
+
+    // Chưa chọn máy đích: IP là ô gõ tay.
+    await expect(form.getByRole('textbox', { name: 'IP trong' })).toBeVisible();
+
+    await form.getByRole('combobox', { name: 'Máy đích (được NAT)' }).fill(nasCode);
+    await page.getByRole('option', { name: new RegExp(nasCode) }).click();
+
+    // Chọn máy xong: ô IP thành DANH SÁCH IP của chính máy đó — hết cảnh gõ tay một địa chỉ
+    // không thuộc máy nào rồi bị API từ chối ở bước cuối.
+    await expect(form.getByRole('textbox', { name: 'IP trong' })).toHaveCount(0);
+    await form.getByRole('button', { name: 'IP trong' }).click();
+    await page.getByRole('option', { name: new RegExp(targetIp) }).click();
+
+    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('P. Kỹ thuật');
+    await form.getByRole('textbox', { name: 'Lý do mở' }).fill(`NAS cho đối tác ${stamp}`);
+    await form.getByRole('button', { name: 'Lưu' }).click();
+    await expect(page.getByText('Đã lưu rule NAT.')).toBeVisible();
+
+    // Trong sổ: dòng nói luôn MÁY nào, bấm sang được hồ sơ máy đó.
+    await page.getByRole('searchbox', { name: /Tìm/ }).fill(`NAS cho đối tác ${stamp}`);
+    const row = page.getByRole('row', { name: new RegExp(routerCode) });
+    await expect(row.getByRole('link', { name: nasCode })).toBeVisible();
+  });
+});
+
 test.describe('Popup Sửa có chỗ quản lý giấy tờ', () => {
   test('sửa thiết bị: thấy panel giấy tờ, tải lên rồi xóa ngay trong hộp', async ({ page }) => {
     await firstLogin(page, E2E_SA);

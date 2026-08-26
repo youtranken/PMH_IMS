@@ -37,6 +37,9 @@ interface NatRow {
   internalPort: number;
   ipAddressId: string | null;
   internalOwner: string | null;
+  /** Máy ĐƯỢC NAT (khác `deviceId` — con router thực hiện NAT). Suy từ hồ sơ IP. */
+  internalDeviceId: string | null;
+  internalDeviceCode: string | null;
   usedBy: string;
   reason: string;
   enabled: boolean;
@@ -155,7 +158,16 @@ export function NatScreen({ me }: { me: Me }) {
                     <span className="mono">
                       {rule.internalIp}:{rule.internalPort}
                     </span>
-                    {rule.internalOwner ? (
+                    {/* MÁY ĐÍCH ngay trên bảng: "dẫn tới 172.16.10.5" mà không nói đó là máy
+                        nào thì người đọc sổ vẫn phải sang màn IP tra tiếp. */}
+                    {rule.internalDeviceId ? (
+                      <span className="cell-sub">
+                        <Link className="mono" to={PATHS.device(rule.internalDeviceId)}>
+                          {rule.internalDeviceCode}
+                        </Link>
+                        {rule.internalOwner ? ` · ${rule.internalOwner}` : ''}
+                      </span>
+                    ) : rule.internalOwner ? (
                       <span className="cell-sub">{rule.internalOwner}</span>
                     ) : null}
                   </td>
@@ -243,15 +255,17 @@ function NatForm({
   const queryClient = useQueryClient();
   const [deviceId, setDeviceId] = useState(rule?.deviceId ?? '');
   const [deviceTerm, setDeviceTerm] = useState(rule?.deviceCode ?? '');
-  /**
-   * Lọc ô chọn router theo LOẠI thiết bị.
+  /*
+   * Ô "Loại thiết bị" ĐÃ BỎ (26/08/2026).
    *
-   * Router là một thiết bị trong kho (dòng NAT bấm vào mở thẳng trang thiết bị), nên ô chọn
-   * vốn phải cuộn qua cả kho — máy in, PC, switch. Lọc theo loại rút danh sách về đúng mấy
-   * cái Draytek/firewall, mà vẫn KHÔNG cần thêm một danh mục router thứ hai để rồi cùng một
-   * cái Draytek phải khai hai nơi.
+   * Nó là một bộ lọc cho ô Router ngay dưới, nhưng đứng thành một trường riêng nên để chọn
+   * MỘT con router phải thao tác HAI dropdown. Tệ hơn: chọn nhầm loại là danh sách router
+   * rỗng trơn, và người dùng kết luận kho không có router nào. Router ở PMH gần như luôn là
+   * Firewall/Draytek — một ô tìm là đủ, gõ hai chữ ra ngay.
    */
-  const [typeFilter, setTypeFilter] = useState('');
+  /** Máy ĐƯỢC NAT — chọn máy thì ô IP trong chỉ còn IP của chính máy đó. */
+  const [targetId, setTargetId] = useState(rule?.internalDeviceId ?? '');
+  const [targetTerm, setTargetTerm] = useState(rule?.internalDeviceCode ?? '');
   const [addingRouter, setAddingRouter] = useState(false);
   /** Ô nào đang mở hộp thêm dịch vụ — để lưu xong áp thẳng vào đúng ô đó. */
   const [addingService, setAddingService] = useState<'external' | 'internal' | null>(null);
@@ -297,13 +311,35 @@ function NatForm({
    * và bấm "Thêm router mới" ở đầu menu.
    */
   const devices = useQuery({
-    queryKey: ['devices', 'picker', typeFilter, deviceTerm],
+    queryKey: ['devices', 'picker', deviceTerm],
     queryFn: () => {
       const params = new URLSearchParams({ limit: '20' });
-      if (typeFilter) params.set('deviceTypeId', typeFilter);
       if (deviceTerm.trim()) params.set('search', deviceTerm.trim());
       return apiFetch<{ items: DeviceOption[] }>(`/api/v1/devices?${params.toString()}`);
     },
+  });
+
+  /** Danh sách máy cho ô "Máy đích" — cùng cửa với ô Router, khác từ khoá tìm. */
+  const targets = useQuery({
+    queryKey: ['devices', 'picker', 'target', targetTerm],
+    queryFn: () => {
+      const params = new URLSearchParams({ limit: '20' });
+      if (targetTerm.trim()) params.set('search', targetTerm.trim());
+      return apiFetch<{ items: DeviceOption[] }>(`/api/v1/devices?${params.toString()}`);
+    },
+  });
+
+  /**
+   * IP của máy đích. Chọn máy xong thì ô "IP trong" chỉ còn IP của chính máy đó — hết cảnh
+   * gõ tay một địa chỉ không thuộc máy nào (thứ `validateNatRule` đang phải chặn ở tầng sau).
+   */
+  const targetIps = useQuery({
+    queryKey: ['ipam', 'device-addresses', targetId],
+    enabled: targetId !== '',
+    queryFn: () =>
+      apiFetch<{ id: string; address: string; usedBy: string | null }[]>(
+        `/api/v1/ipam/devices/${targetId}/addresses`,
+      ),
   });
 
   const departments = useMemo(
@@ -421,74 +457,43 @@ function NatForm({
         }}
       >
         <FormSection title={t('nat.sectionExternal')} columns={2}>
+          {/* MỘT ô chọn router, không hai. Ô "Loại thiết bị" cũ chỉ là bộ lọc cho chính ô
+              này, nhưng đứng thành trường riêng nên chọn một con router phải thao tác hai
+              dropdown — và chọn nhầm loại là danh sách rỗng trơn. */}
           <Field label={t('nat.router')} required hint={t('nat.routerHint')} span={2}>
-            {/* Bộ lọc theo loại nằm TRONG ô Router, không phải một trường ngang hàng phía
-                trên: nó không được lưu vào rule nào cả, nó chỉ rút ngắn danh sách bên cạnh. */}
-            <div className="field-row">
-              <Select
-                value={typeFilter}
-                ariaLabel={t('nat.deviceType')}
-                placeholder={t('nat.allTypes')}
-                options={[
-                  { value: '', label: t('nat.allTypes') },
-                  ...(lists.data?.deviceTypes ?? []).map((type) => ({
-                    value: type.id,
-                    label: type.name,
-                  })),
-                ]}
-                onChange={(value) => {
-                  setTypeFilter(value);
-                  // Đổi bộ lọc mà giữ nguyên router đã chọn thì ô hiện một mã không còn nằm
-                  // trong danh sách đang xem — người dùng không hiểu vì sao.
-                  setDeviceTerm('');
-                  setDeviceId('');
-                }}
-              />
-              <Combobox
-                placeholder={t('nat.routerSearch')}
-                ariaLabel={t('nat.router')}
-                query={deviceTerm}
-                onQuery={(value) => {
-                  setDeviceTerm(value);
-                  setDeviceId('');
-                }}
-                options={devices.data?.items ?? []}
-                getKey={(item) => item.id}
-                renderOption={(item) => (
-                  <>
-                    <span className="mono">{item.code}</span> <small>{item.name}</small>
-                  </>
-                )}
-                onSelect={(item) => {
-                  setDeviceId(item.id);
-                  setDeviceTerm(item.code);
-                }}
-                /* Router chưa có trong kho thì thêm NGAY TẠI ĐÂY. Bắt người dùng thoát ra,
-                   sang màn Thiết bị, khai xong rồi quay lại gõ lại cả form NAT là ba lần
-                   chuyển màn cho một việc — và form đang dở thì mất trắng. */
-                action={{ label: t('nat.addRouter'), onClick: () => setAddingRouter(true) }}
-              />
-            </div>
-          </Field>
-
-          <Field label={t('nat.protocol')}>
-            <Select
-              value={protocol}
-              onChange={(next) => setProtocol(next as NatProtocol)}
-              ariaLabel={t('nat.protocol')}
-              options={PROTOCOLS.map((item) => ({
-                value: item,
-                label: item === 'both' ? t('nat.protocolBoth') : item.toUpperCase(),
-              }))}
+            <Combobox
+              placeholder={t('nat.routerSearch')}
+              ariaLabel={t('nat.router')}
+              query={deviceTerm}
+              onQuery={(value) => {
+                setDeviceTerm(value);
+                setDeviceId('');
+              }}
+              options={devices.data?.items ?? []}
+              getKey={(item) => item.id}
+              renderOption={(item) => (
+                <>
+                  <span className="mono">{item.code}</span> <small>{item.name}</small>
+                </>
+              )}
+              onSelect={(item) => {
+                setDeviceId(item.id);
+                setDeviceTerm(item.code);
+              }}
+              /* Router chưa có trong kho thì thêm NGAY TẠI ĐÂY. Bắt người dùng thoát ra,
+                 sang màn Thiết bị, khai xong rồi quay lại gõ lại cả form NAT là ba lần
+                 chuyển màn cho một việc — và form đang dở thì mất trắng. */
+              action={{ label: t('nat.addRouter'), onClick: () => setAddingRouter(true) }}
             />
           </Field>
 
+          {/* Hai ô port đứng CẠNH nhau: "ngoài 8080 dẫn vào trong 80" là một câu đọc ngang,
+              tách hai hàng thì phải nhớ số bên trên trong lúc đọc số bên dưới. */}
           <Field
             label={t('nat.external')}
             required
             hint={rule ? t('nat.externalHintEdit') : t('nat.externalHint')}
             htmlFor="nat-external"
-            span={2}
           >
             <PortChipsField
               chips={ports}
@@ -497,24 +502,31 @@ function NatForm({
               disabled={busy}
               inputId="nat-external"
             />
+            {/* Giao thức KHÔNG còn là một ô nhập riêng: chọn dịch vụ trong danh mục là nó tự
+                theo (danh mục đã ghi TCP/UDP của từng dịch vụ). Chỉ hiện ra để đọc, và chỉ
+                mở cho sửa khi người dùng tự gõ port thay vì chọn dịch vụ — bỏ hẳn thì port
+                gõ tay luôn mặc định TCP, sai âm thầm với mấy dịch vụ UDP như VPN. */}
+            <div className="proto-row">
+              <span className="muted">{t('nat.protocol')}:</span>
+              <div className="segmented" role="group" aria-label={t('nat.protocol')}>
+                {PROTOCOLS.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className={protocol === item ? 'on' : undefined}
+                    aria-pressed={protocol === item}
+                    onClick={() => setProtocol(item)}
+                  >
+                    {item === 'both' ? t('nat.protocolBoth') : item.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            </div>
             <ServicePortPicker
               services={services}
               label={t('nat.external')}
               onPick={(service) => applyService(service, 'external')}
               onAdd={() => setAddingService('external')}
-            />
-          </Field>
-        </FormSection>
-
-        <FormSection title={t('nat.sectionInternal')} columns={2}>
-          <Field label={t('nat.internalIp')} required htmlFor="nat-internal-ip">
-            <input
-              id="nat-internal-ip"
-              className="inp mono"
-              required
-              placeholder="172.16.10.5"
-              value={internalIp}
-              onChange={(e) => setInternalIp(e.target.value)}
             />
           </Field>
 
@@ -524,6 +536,7 @@ function NatForm({
               className="inp mono"
               required
               inputMode="numeric"
+              placeholder="80"
               value={internalPort}
               onChange={(e) => setInternalPort(e.target.value)}
             />
@@ -533,6 +546,71 @@ function NatForm({
               onPick={(service) => applyService(service, 'internal')}
               onAdd={() => setAddingService('internal')}
             />
+          </Field>
+        </FormSection>
+
+        <FormSection title={t('nat.sectionInternal')} columns={2}>
+          {/*
+            MÁY ĐÍCH — ô này trước đây KHÔNG có, và đó là lỗ hổng lớn nhất của cuốn sổ: nó
+            ghi "dẫn tới 172.16.10.5" mà không nói 172.16.10.5 là máy nào. Ba thứ trong form
+            là ba câu khác nhau, không trùng nhau:
+              Router   = con nào THỰC HIỆN NAT (Draytek)
+              Máy đích = con nào ĐƯỢC NAT (camera, NAS, máy chủ)  ← ô này
+              Mở cho ai = NGƯỜI/bộ phận hưởng dịch vụ (câu auditor hỏi)
+          */}
+          <Field label={t('nat.target')} hint={t('nat.targetHint')}>
+            <Combobox
+              placeholder={t('nat.targetSearch')}
+              ariaLabel={t('nat.target')}
+              query={targetTerm}
+              onQuery={(value) => {
+                setTargetTerm(value);
+                setTargetId('');
+              }}
+              options={targets.data?.items ?? []}
+              getKey={(item) => item.id}
+              renderOption={(item) => (
+                <>
+                  <span className="mono">{item.code}</span> <small>{item.name}</small>
+                </>
+              )}
+              onSelect={(item) => {
+                setTargetId(item.id);
+                setTargetTerm(item.code);
+                setInternalIp('');
+              }}
+            />
+          </Field>
+
+          <Field label={t('nat.internalIp')} required htmlFor="nat-internal-ip">
+            {targetId && (targetIps.data ?? []).length > 0 ? (
+              // Đã chọn máy thì chỉ còn IP CỦA CHÍNH MÁY ĐÓ — hết cảnh gõ tay một địa chỉ
+              // không thuộc máy nào rồi bị API từ chối ở bước cuối.
+              <Select
+                value={internalIp}
+                ariaLabel={t('nat.internalIp')}
+                placeholder={t('nat.pickIp')}
+                options={(targetIps.data ?? []).map((ip) => ({
+                  value: ip.address,
+                  label: ip.usedBy ? `${ip.address} — ${ip.usedBy}` : ip.address,
+                }))}
+                onChange={setInternalIp}
+              />
+            ) : (
+              <>
+                <input
+                  id="nat-internal-ip"
+                  className="inp mono"
+                  required
+                  placeholder="172.16.10.5"
+                  value={internalIp}
+                  onChange={(e) => setInternalIp(e.target.value)}
+                />
+                {targetId ? (
+                  <span className="field-hint muted">{t('nat.targetNoIp')}</span>
+                ) : null}
+              </>
+            )}
           </Field>
         </FormSection>
 

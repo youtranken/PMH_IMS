@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -177,6 +178,19 @@ export class IpamController {
   @Get('subnets/:id/addresses')
   listSlots(@Param() params: IdParamDto) {
     return this.addresses.listBySubnet(params.id);
+  }
+
+  /**
+   * IP đã cấp cho MỘT thiết bị.
+   *
+   * Form NAT hỏi cái này: chọn máy đích xong thì ô "IP trong" chỉ còn đúng những IP của
+   * chính máy đó — hết cảnh gõ tay một địa chỉ không thuộc máy nào (thứ mà `validateNatRule`
+   * đang phải chặn ở tầng sau).
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('devices/:deviceId/addresses')
+  listForDevice(@Param('deviceId', new ParseUUIDPipe()) deviceId: string) {
+    return this.addresses.listForDevice(deviceId);
   }
 
   /**

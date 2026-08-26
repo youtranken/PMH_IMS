@@ -189,6 +189,21 @@
 .chip-warn {
   box-shadow: inset 0 0 0 1px var(--warn);
 }
+/* Giao thức đứng cùng hàng với ô port, cỡ nhỏ: nó là HỆ QUẢ của dịch vụ vừa chọn chứ không
+   phải một trường người dùng phải điền, nên không được trông ngang hàng với Port ngoài. */
+.proto-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--fs-xs);
+}
+.proto-row .segmented {
+  padding: 2px;
+}
+.proto-row .segmented button {
+  padding: var(--space-1) var(--space-4);
+  font-size: var(--fs-xs);
+}
 .chip-add {
   display: flex;
   gap: var(--space-3);

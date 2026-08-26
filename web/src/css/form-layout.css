@@ -460,53 +460,17 @@ input[list]::-webkit-calendar-picker-indicator {
   color: var(--primary-ink);
   opacity: 0.8;
 }
-/* ─── Bảng dịch vụ/port nhỏ dưới ô nhập port (sổ NAT) ────────────────────────────────────
-   Đặt THẲNG trong form chứ không giấu sau một nút: khai NAT là lúc người ta cần thấy tên và
-   số cùng lúc, và bắt bấm thêm một lần để mở danh sách là bắt thêm một bước ở đúng chỗ đang
-   vội. Cao tối đa ~170px rồi tự cuộn — không đẩy nút Lưu xuống dưới tầm nhìn. */
-.svc-picker {
-  margin-top: var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-  background: var(--surface-2);
-  padding: var(--space-4);
-}
-.svc-head {
-  display: flex;
-  gap: var(--space-3);
-  align-items: center;
-  margin-bottom: var(--space-3);
-}
-.svc-head .inp {
-  flex: 1;
-  min-width: 0;
-}
-.svc-list {
-  max-height: 170px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.svc-row {
+/* ─── Một dòng dịch vụ trong menu chọn port (sổ NAT) ──────────────────────────────────────
+   Ba mẩu trên MỘT hàng: tên · giao thức · port. Một dòng chỉ có tên thì phải bung ra từng
+   cái mới nhớ nó là port mấy — đúng việc mà danh mục này sinh ra để khỏi phải làm.
+   (Trước đây khối này là một bảng luôn mở dưới ô nhập; hai ô port thành hai bảng chiếm quá
+   nửa hộp thoại, nên nó thu về dropdown — xem `service-port-picker.tsx`.) */
+.svc-opt {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto 74px;
   gap: var(--space-4);
   align-items: center;
   width: 100%;
-  text-align: left;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid transparent;
-  border-radius: var(--r-sm);
-  background: var(--surface);
-  cursor: pointer;
-  font-size: var(--fs-sm);
-}
-.svc-row:hover,
-.svc-row:focus-visible {
-  border-color: var(--primary);
-  background: var(--primary-soft);
-  color: var(--primary-ink);
 }
 .svc-name {
   font-weight: 600;
@@ -517,13 +481,6 @@ input[list]::-webkit-calendar-picker-indicator {
 .svc-port {
   text-align: right;
   font-variant-numeric: tabular-nums;
-}
-.svc-empty {
-  margin: 0;
-  padding: var(--space-3) var(--space-2);
-  color: var(--ink-3);
-  font-size: var(--fs-xs);
-  font-style: italic;
 }
 
 /* Dòng "tạo mới" ghim đầu menu — tách hẳn khỏi vùng lựa chọn bằng một đường kẻ, để mắt

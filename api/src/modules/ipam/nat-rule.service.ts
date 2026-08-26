@@ -42,6 +42,18 @@ export interface NatRuleRecord {
   ipAddressId: string | null;
   /** Chủ của IP trong, tra qua hồ sơ IP — trả lời "port này dẫn tới máy của ai". */
   internalOwner: string | null;
+  /**
+   * MÁY ĐÍCH — thiết bị đang được NAT, suy từ hồ sơ IP của `internalIp`.
+   *
+   * Khác hẳn `deviceId` ở trên: cái kia là con router THỰC HIỆN NAT (Draytek), cái này là
+   * con máy ĐƯỢC NAT (camera, NAS, máy chủ). Trước đây bảng chỉ có IP trần nên câu "port
+   * này dẫn tới máy nào trong kho" phải tự tra bằng mắt qua màn IP.
+   *
+   * Không thêm cột: IPAM đã là nguồn sự thật của map IP → thiết bị, chép thêm một cột nữa
+   * là có hai chỗ cùng trả lời một câu và chúng sẽ lệch nhau.
+   */
+  internalDeviceId: string | null;
+  internalDeviceCode: string | null;
   usedBy: string;
   reason: string;
   enabled: boolean;
@@ -453,6 +465,8 @@ export class NatRuleService {
         internalPort: row.internalPort,
         ipAddressId: row.ipAddressId,
         internalOwner: ip?.usedBy ?? ip?.deviceCode ?? null,
+        internalDeviceId: ip?.deviceId ?? null,
+        internalDeviceCode: ip?.deviceCode ?? null,
         usedBy: row.usedBy,
         reason: row.reason,
         enabled: row.enabled,
