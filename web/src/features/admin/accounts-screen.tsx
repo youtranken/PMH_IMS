@@ -21,6 +21,9 @@ interface AccountRow {
   id: string;
   email: string;
   fullName: string;
+  phone: string | null;
+  employeeCode: string | null;
+  birthDate: string | null;
   role: Me['role'];
   status: 'active' | 'locked' | 'disabled';
   totpEnrolledAt: string | null;
@@ -50,6 +53,7 @@ export function AccountsScreen({ me }: { me: Me }) {
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả bảng — sai mà không có dấu hiệu nào.
   const [sorting, setSorting] = useState<SortingState>([{ id: 'fullName', desc: false }]);
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<AccountRow | null>(null);
   const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
   const [sessionsFor, setSessionsFor] = useState<AccountRow | null>(null);
 
@@ -109,7 +113,16 @@ export function AccountsScreen({ me }: { me: Me }) {
         cell: ({ row }) => (
           <>
             {row.original.fullName}
-            <span className="cell-sub">{row.original.email}</span>
+            {/* Mã nhân viên đi cùng tên vì đó là cách Nhân sự gọi một người; email và SĐT
+                xuống dòng nhỏ. Không tách thành hai cột nữa — bảng đã 6 cột, thêm hai cột
+                ngắn là bắt cuộn ngang để đọc một con số. */}
+            {row.original.employeeCode ? (
+              <span className="mono"> · {row.original.employeeCode}</span>
+            ) : null}
+            <span className="cell-sub">
+              {row.original.email}
+              {row.original.phone ? ` · ${row.original.phone}` : ''}
+            </span>
           </>
         ),
       },
@@ -160,6 +173,17 @@ export function AccountsScreen({ me }: { me: Me }) {
           const rowBusy = setStatus.isPending || resetPassword.isPending || resetTotp.isPending;
           return (
             <div className="action-cell">
+              {/* Sửa hồ sơ (tên · SĐT · mã NV) ngay trên danh sách, cùng nếp với màn Thiết bị
+                  và Phần mềm — đổi một số điện thoại là việc lặt vặt hằng ngày. */}
+              <button
+                type="button"
+                className="btn sm"
+                disabled={rowBusy}
+                aria-label={t('accounts.editOf', { name: account.fullName })}
+                onClick={() => setEditing(account)}
+              >
+                {t('common.edit')}
+              </button>
               <button
                 type="button"
                 className="btn sm"
@@ -312,11 +336,27 @@ export function AccountsScreen({ me }: { me: Me }) {
 
       {creating ? (
         <AccountForm
+          account={null}
           csrfToken={csrfToken}
           onClose={() => setCreating(false)}
           onCreated={(password) => {
             setCreating(false);
             setTemporaryPassword(password);
+            void refresh();
+          }}
+          onSaved={() => setCreating(false)}
+        />
+      ) : null}
+
+      {editing ? (
+        <AccountForm
+          account={editing}
+          csrfToken={csrfToken}
+          onClose={() => setEditing(null)}
+          onCreated={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            toast({ message: t('accounts.profileSaved') });
             void refresh();
           }}
         />

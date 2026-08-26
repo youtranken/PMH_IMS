@@ -9,6 +9,7 @@ import {
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Page, PageQuery } from '../../common/pagination';
+import { pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import type { SortQuery } from '../../common/sorting';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { OutboxService } from '../outbox/outbox.service';
@@ -51,7 +52,15 @@ export class AccountsService {
   /** Tạo user + mật khẩu tạm; buộc đổi mật khẩu và enroll TOTP ở lần đăng nhập đầu. */
   async create(
     actor: ActorRef,
-    input: { email: string; fullName: string; role: UserRole; totpLoginRequired?: boolean },
+    input: {
+      email: string;
+      fullName: string;
+      phone?: string;
+      employeeCode?: string;
+      birthDate?: string;
+      role: UserRole;
+      totpLoginRequired?: boolean;
+    },
   ): Promise<{ user: UserRecord; temporaryPassword: string }> {
     const existing = await this.users.findCredentialsByEmail(input.email);
     if (existing) {
@@ -67,6 +76,11 @@ export class AccountsService {
       const created = await this.users.createWithin(tx, {
         email: input.email.trim(),
         fullName: input.fullName.trim(),
+        // Chuỗi rỗng = KHÔNG KHAI, phải thành NULL: để rỗng thì index duy nhất của mã nhân
+        // viên coi hai người cùng "chưa khai" là trùng nhau và chặn người thứ hai.
+        phone: blankToNull(input.phone),
+        employeeCode: blankToNull(input.employeeCode),
+        birthDate: blankToNull(input.birthDate),
         role: input.role,
         passwordHash,
         totpLoginRequired: input.totpLoginRequired ?? true,
@@ -82,6 +96,57 @@ export class AccountsService {
       return created;
     });
     return { user, temporaryPassword };
+  }
+
+  /**
+   * Sửa hồ sơ: họ tên, SĐT, mã nhân viên (0031).
+   *
+   * KHÔNG đụng email — email là danh tính đăng nhập, đổi nó là đổi người. Ai cần đổi email
+   * thì tạo tài khoản mới và vô hiệu hoá cái cũ, để nhật ký cũ vẫn trỏ đúng người đã làm.
+   */
+  async updateProfile(
+    actor: ActorRef,
+    userId: string,
+    input: { fullName: string; phone?: string; employeeCode?: string; birthDate?: string },
+  ): Promise<UserRecord> {
+    const before = await this.users.findById(userId);
+    if (!before) {
+      throw new NotFoundException({ code: 'USER_NOT_FOUND', message: 'Không tìm thấy tài khoản.' });
+    }
+    const values = {
+      fullName: input.fullName.trim(),
+      phone: blankToNull(input.phone),
+      employeeCode: blankToNull(input.employeeCode),
+      birthDate: blankToNull(input.birthDate),
+    };
+
+    try {
+      return await this.db.transaction(async (tx) => {
+        const updated = await this.users.updateProfileWithin(tx, userId, values);
+        await this.audit.appendWithin(tx, {
+          actor: actor.email,
+          action: 'account.profile.updated',
+          objectType: 'user',
+          objectId: userId,
+          detail: {
+            fullName: { before: before.fullName, after: values.fullName },
+            phone: { before: before.phone, after: values.phone },
+            employeeCode: { before: before.employeeCode, after: values.employeeCode },
+            birthDate: { before: before.birthDate, after: values.birthDate },
+          },
+        });
+        return updated;
+      });
+    } catch (error) {
+      // Mã nhân viên trùng: nói RÕ trùng cái gì. 500 chung chung thì người nhập ngồi đoán.
+      if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
+        throw new ConflictException({
+          code: 'EMPLOYEE_CODE_TAKEN',
+          message: `Mã nhân viên "${values.employeeCode}" đã thuộc về một tài khoản khác.`,
+        });
+      }
+      throw error;
+    }
   }
 
   /** Khóa/mở tài khoản. Khóa → mọi phiên chết ngay (NFR-01). */
@@ -229,6 +294,12 @@ export class AccountsService {
       });
     }
   }
+}
+
+/** Chuỗi rỗng ≠ giá trị rỗng: "chưa khai" phải là NULL, xem chú thích ở chỗ gọi. */
+function blankToNull(value?: string | null): string | null {
+  const text = (value ?? '').trim();
+  return text === '' ? null : text;
 }
 
 /**

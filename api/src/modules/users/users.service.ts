@@ -51,6 +51,10 @@ export class UsersService {
       ? or(
           ilike(usersTable.fullName, `%${term}%`),
           sql`${usersTable.email}::text ILIKE ${`%${term}%`}`,
+          // Tra theo SĐT và mã nhân viên: Nhân sự đưa sang một danh sách mã, người trực gõ
+          // một số điện thoại — cả hai đều là cách tìm THẬT, không phải chỉ tìm theo tên.
+          ilike(usersTable.phone, `%${term}%`),
+          ilike(usersTable.employeeCode, `%${term}%`),
         )
       : undefined;
     const [rows, totalRows] = await Promise.all([
@@ -89,6 +93,9 @@ export class UsersService {
     input: {
       email: string;
       fullName: string;
+      phone?: string | null;
+      employeeCode?: string | null;
+      birthDate?: string | null;
       role: UserRole;
       passwordHash: string;
       totpLoginRequired: boolean;
@@ -97,6 +104,25 @@ export class UsersService {
     const rows = await tx
       .insert(usersTable)
       .values({ ...input, mustChangePassword: true })
+      .returning();
+    return strip(toCredentials(rows[0]));
+  }
+
+  /** Sửa hồ sơ (0031). Email KHÔNG nằm ở đây — xem chú thích ở `accounts.service.ts`. */
+  async updateProfileWithin(
+    tx: Tx,
+    userId: string,
+    values: {
+      fullName: string;
+      phone: string | null;
+      employeeCode: string | null;
+      birthDate: string | null;
+    },
+  ): Promise<UserRecord> {
+    const rows = await tx
+      .update(usersTable)
+      .set({ ...values, updatedAt: new Date() })
+      .where(eq(usersTable.id, userId))
       .returning();
     return strip(toCredentials(rows[0]));
   }
@@ -242,6 +268,9 @@ function toCredentials(row: Row): UserCredentials {
     id: row.id,
     email: row.email,
     fullName: row.fullName,
+    phone: row.phone ?? null,
+    employeeCode: row.employeeCode ?? null,
+    birthDate: row.birthDate ?? null,
     role: row.role as UserRole,
     status: row.status as UserCredentials['status'],
     mustChangePassword: row.mustChangePassword,

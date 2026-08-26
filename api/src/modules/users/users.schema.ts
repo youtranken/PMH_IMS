@@ -2,6 +2,7 @@ import {
   bigint,
   boolean,
   customType,
+  date,
   integer,
   pgTable,
   text,
@@ -19,6 +20,11 @@ export const usersTable = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: citext('email').notNull(),
   fullName: text('full_name').notNull(),
+  // Liên hệ (migration 0031): gọi được người giữ máy lúc 2h sáng, và đối chiếu được sang
+  // bảng lương. Cả hai cho phép rỗng — tài khoản cũ chưa có sẵn hai giá trị này.
+  phone: text('phone'),
+  employeeCode: text('employee_code'),
+  birthDate: date('birth_date'),
   role: text('role').notNull(),
   passwordHash: text('password_hash').notNull(),
   mustChangePassword: boolean('must_change_password').notNull().default(true),
