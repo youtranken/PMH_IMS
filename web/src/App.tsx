@@ -111,7 +111,7 @@ function AppRoutes() {
         <Route path={PATHS.adminCatalog} element={<CatalogScreen me={me} />} />
         <Route path={PATHS.adminVaultAccess} element={<AccessMatrixScreen me={me} />} />
         <Route path={PATHS.approvals} element={<ApprovalsScreen me={me} />} />
-        <Route path={PATHS.vault} element={<VaultHomeScreen />} />
+        <Route path={PATHS.vault} element={<VaultHomeScreen me={me} />} />
         <Route path={PATHS.devices} element={<DevicesScreen me={me} />} />
         <Route path={`${PATHS.devices}/:id`} element={<DeviceDetail me={me} />} />
         <Route path={PATHS.software} element={<SoftwareScreen me={me} />} />

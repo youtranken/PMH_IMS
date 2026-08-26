@@ -101,6 +101,53 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
     expect(body).toContain('assertCanSeeMetadata');
   });
 
+  /**
+   * Trang tổng `/vault/owners` (26/08/2026) là NGOẠI LỆ DUY NHẤT được liệt kê qua nhiều chủ
+   * thể — và nó chỉ được phép nói "máy nào có két, mấy ngăn", không được nói trong đó có gì.
+   *
+   * Khóa ranh giới ấy ở đây vì nó rất dễ trôi: một hôm ai đó thấy "hiện luôn tên ngăn cho
+   * tiện" là bản đồ bí mật của công ty ra đời, mà không test nghiệp vụ nào đỏ.
+   */
+  describe('trang tổng chủ thể — liệt kê CHỦ THỂ, không liệt kê secret', () => {
+    const ownersService = readFileSync(join(__dirname, 'vault-owners.service.ts'), 'utf8');
+    const ownersController = readFileSync(join(__dirname, 'vault-owners.controller.ts'), 'utf8');
+
+    it('không đụng tới nhãn, loại hay giá trị của secret', () => {
+      // Bóc chú thích trước: bản thân đoạn giải thích ở đầu file có viết "không `label`,
+      // không `kind`" — soi cả chú thích thì test đỏ vì đúng câu nói rằng nó không làm.
+      const code = ownersService
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/.*$/gm, '');
+      for (const forbidden of ['label', 'kind', 'value', 'plaintext', 'reveal', 'listFor']) {
+        // Jest (khác Vitest) không nhận tham số thứ hai của `expect` — gắn tên vào chính
+        // vòng lặp thì thông điệp lỗi vẫn chỉ đúng từ nào vi phạm.
+        expect({ forbidden, hit: code.includes(forbidden) }).toEqual({ forbidden, hit: false });
+      }
+    });
+
+    it('kiểu trả về không có trường nào mô tả nội dung két', () => {
+      const shape = /export interface VaultOwnerSummary \{([\s\S]*?)\n\}/.exec(ownersService)![1];
+      const fields = [...shape.matchAll(/^\s{2}(\w+)[?]?:/gm)].map((m) => m[1]).sort();
+      expect(fields).toEqual([
+        'code',
+        'lastChangeAt',
+        'name',
+        'orphan',
+        'ownerId',
+        'ownerType',
+        'secretCount',
+        'siteCode',
+      ]);
+    });
+
+    it('chỉ SA/Admin, và không có route xuất', () => {
+      expect(ownersController).toContain("@Roles('sa', 'admin')");
+      for (const forbidden of ['export', 'download', 'xlsx', 'csv']) {
+        expect(ownersController.toLowerCase()).not.toContain(`@get('${forbidden}`);
+      }
+    });
+  });
+
   it('VaultApiService chỉ xuất metadata', () => {
     const methods = Object.getOwnPropertyNames(VaultApiService.prototype)
       .filter((name) => name !== 'constructor')

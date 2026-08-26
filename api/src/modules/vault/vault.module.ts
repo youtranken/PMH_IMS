@@ -15,6 +15,8 @@ import { StepUpGuard } from '../auth/step-up.guard';
 import { VaultApiService } from './vault.api';
 import { VaultAccessController } from './vault-access.controller';
 import { VaultController } from './vault.controller';
+import { VaultOwnersController } from './vault-owners.controller';
+import { VaultOwnersService } from './vault-owners.service';
 import { VaultDevicePanel } from './vault-device-panel';
 import { VaultService } from './vault.service';
 
@@ -30,10 +32,10 @@ import { VaultService } from './vault.service';
  */
 @Module({
   imports: [AuditModule, AuthModule, CatalogModule, DevicesModule, SoftwareModule, UsersModule, ApprovalsModule, OutboxModule],
-  controllers: [VaultController, VaultAccessController, BreakGlassController],
+  controllers: [VaultController, VaultOwnersController, VaultAccessController, BreakGlassController],
   providers: [
     ExcelExportService,
-    VaultService, VaultApiService, VaultDevicePanel, AccessListService, BreakGlassService, StepUpGuard],
+    VaultService, VaultApiService, VaultOwnersService, VaultDevicePanel, AccessListService, BreakGlassService, StepUpGuard],
   exports: [VaultApiService],
 })
 export class VaultModule {}

@@ -3,8 +3,11 @@ import {
   E2E_MEMBER,
   E2E_SA,
   firstLogin,
+  logout,
   resetAccessList,
   resetDevices,
+  resetSecrets,
+  resetSoftware,
   resetUsers,
 } from './helpers';
 
@@ -19,6 +22,8 @@ test.beforeEach(() => {
   resetUsers();
   resetAccessList();
   resetDevices();
+  resetSoftware();
+  resetSecrets();
 });
 
 async function csrfOf(page: Page): Promise<string> {
@@ -42,14 +47,29 @@ async function createDevice(page: Page, code: string): Promise<string> {
   return ((await created.json()) as { device: { id: string } }).device.id;
 }
 
-test.describe('Cửa vào két sắt', () => {
-  test('mục Két sắt trên menu vào được, và dẫn thẳng tới tab Két sắt của một hồ sơ', async ({
+/** Cất một secret vào một chủ thể, để trang tổng có cái mà liệt kê. */
+async function stash(
+  page: Page,
+  ownerType: 'device' | 'software',
+  ownerId: string,
+  label: string,
+): Promise<void> {
+  const created = await page.request.post('/api/v1/vault/secrets', {
+    headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+    data: { ownerType, ownerId, kind: 'password', label, value: 'Mat-Khau#2026' },
+  });
+  expect(created.status()).toBe(201);
+}
+
+test.describe('Trang tổng Két sắt', () => {
+  test('mục Két sắt vào được, liệt kê hồ sơ đang giữ két và mở xem ngay trong popup', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
     const code = `PC-E2E-VH-${stamp}`;
-    await createDevice(page, code);
+    const deviceId = await createDevice(page, code);
+    await stash(page, 'device', deviceId, `admin-${stamp}`);
 
     // Trước đây mục này hiện MỜ (planned) nên bấm không đi đâu — người dùng tưởng chưa làm.
     // `exact` vì sidebar còn một mục "Quyền két sắt" — khớp lỏng là trúng cả hai.
@@ -57,39 +77,97 @@ test.describe('Cửa vào két sắt', () => {
     await expect(page).toHaveURL(/\/vault$/);
     await expect(page.getByRole('heading', { name: 'Két sắt' })).toBeVisible();
 
-    await page.getByLabel('Tìm thiết bị hoặc phần mềm').fill(code);
-    await page.getByRole('link', { name: new RegExp(code) }).click();
+    const row = page.getByRole('row', { name: new RegExp(code) });
+    await expect(row).toBeVisible();
+    await expect(row.getByText('Thiết bị')).toBeVisible();
 
-    // Mở ĐÚNG tab Két sắt của chính hồ sơ đó, không phải tab Hồ sơ rồi tự đi tìm.
-    await expect(page).toHaveURL(new RegExp('/devices/.*tab=vault'));
-    await expect(page.getByRole('tab', { name: 'Két sắt', selected: true })).toBeVisible();
+    // Bấm là mở POPUP tại chỗ — không chuyển trang, nên không phải bấm quay lại.
+    await row.getByRole('button', { name: `Mở két của ${code}` }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText(`admin-${stamp}`)).toBeVisible();
+    await expect(page).toHaveURL(/\/vault$/);
+
+    await dialog.getByRole('button', { name: 'Đóng', exact: true }).click();
+    await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
+  });
+
+  test('lọc theo loại chọn được nhiều cùng lúc, và tìm theo mã', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const deviceCode = `PC-E2E-VF-${stamp}`;
+    const deviceId = await createDevice(page, deviceCode);
+    await stash(page, 'device', deviceId, `pw-${stamp}`);
+
+    const swCode = `LIC-E2E-VF-${stamp}`;
+    const sw = await page.request.post('/api/v1/software', {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      data: { code: swCode, name: 'License có key', kind: 'license', endDate: '2028-12-31' },
+    });
+    expect(sw.status()).toBe(201);
+    await stash(page, 'software', ((await sw.json()) as { id: string }).id, `key-${stamp}`);
+
+    await page.goto('/vault');
+    const deviceRow = page.getByRole('row', { name: new RegExp(deviceCode) });
+    const swRow = page.getByRole('row', { name: new RegExp(swCode) });
+    await expect(deviceRow).toBeVisible();
+    await expect(swRow).toBeVisible();
+
+    // Bật lọc "Thiết bị": phần mềm biến mất.
+    await page.getByRole('button', { name: 'Thiết bị', exact: true }).click();
+    await expect(deviceRow).toBeVisible();
+    await expect(swRow).toHaveCount(0);
+
+    // Bật thêm "Phần mềm" — hai nút độc lập, chọn cả hai thì thấy cả hai.
+    await page.getByRole('button', { name: 'Phần mềm', exact: true }).click();
+    await expect(deviceRow).toBeVisible();
+    await expect(swRow).toBeVisible();
+
+    await page.getByRole('searchbox', { name: /Tìm/ }).fill(swCode);
+    await expect(swRow).toBeVisible();
+    await expect(deviceRow).toHaveCount(0);
   });
 
   /**
-   * FR-026 phải còn nguyên hiệu lực SAU khi thêm trang này — đó là rủi ro lớn nhất của việc
-   * dựng một "trang két sắt": rất dễ tiện tay thêm một endpoint liệt kê.
+   * Rủi ro lớn nhất của việc dựng trang tổng: rất dễ tiện tay cho nó trả luôn tên từng ngăn,
+   * và thế là bản đồ bí mật của công ty ra đời mà không bài kiểm nghiệp vụ nào đỏ.
    */
-  test('trang cửa vào KHÔNG gọi đường nào lấy secret của nhiều chủ thể', async ({ page }) => {
+  test('trang tổng chỉ nói CHỦ THỂ, không nói trong két có gì', async ({ page }) => {
     await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const deviceId = await createDevice(page, `PC-E2E-VS-${stamp}`);
+    const label = `ten-ngan-bi-mat-${stamp}`;
+    await stash(page, 'device', deviceId, label);
 
-    const vaultCalls: string[] = [];
-    page.on('request', (request) => {
-      const url = new URL(request.url());
-      if (url.pathname.startsWith('/api/v1/vault')) vaultCalls.push(url.pathname + url.search);
-    });
+    const owners = await page.request.get('/api/v1/vault/owners');
+    expect(owners.status()).toBe(200);
+    const body = await owners.text();
+    // Tên ngăn KHÔNG được có mặt trong payload của trang tổng.
+    expect(body).not.toContain(label);
+    expect(body).not.toContain('Mat-Khau#2026');
 
     await page.goto('/vault');
     await expect(page.getByRole('heading', { name: 'Két sắt' })).toBeVisible();
-    await page.getByLabel('Tìm thiết bị hoặc phần mềm').fill('PC');
-    await expect(page.getByText('Luật của két')).toBeVisible();
+    await expect(page.getByText(label)).toHaveCount(0);
 
-    // Trang này chỉ tra CHỦ THỂ (thiết bị / phần mềm) — không đụng tới module két.
-    expect(vaultCalls, `không được gọi: ${vaultCalls.join(', ')}`).toHaveLength(0);
-
-    // Và các đường liệt kê vẫn bị chặn y như trước.
+    // Và các đường liệt kê secret vẫn bị chặn y như trước.
     for (const url of ['/api/v1/vault/secrets', '/api/v1/vault/secrets/all']) {
       expect((await page.request.get(url)).status(), url).not.toBe(200);
     }
+  });
+
+  test('Member không vào được trang tổng — bản đồ két không mở cho mọi người', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    await page.request.get('/api/v1/auth/me');
+    // Đường API phải chặn theo VAI, không chỉ giấu mục menu đi.
+    const asSa = await page.request.get('/api/v1/vault/owners');
+    expect(asSa.status()).toBe(200);
+
+    await logout(page);
+    await firstLogin(page, E2E_MEMBER);
+    expect((await page.request.get('/api/v1/vault/owners')).status()).toBe(403);
   });
 });
 

@@ -83,6 +83,8 @@ export function resetSoftware(): void {
   const sql = [
     // Bản ghi gán license trỏ tới software — xóa trước, không thì FK chặn.
     `DELETE FROM license_assignment WHERE software_id IN (SELECT id FROM software WHERE ${match})`,
+    // Secret gắn vào hồ sơ phần mềm — cùng lý do như ở `resetDevices`.
+    `DELETE FROM secret WHERE owner_type = 'software' AND owner_id IN (SELECT id FROM software WHERE ${match})`,
     `ALTER TABLE software_history DISABLE TRIGGER software_history_no_delete`,
     `DELETE FROM software_history WHERE software_id IN (SELECT id FROM software WHERE ${match})`,
     `ALTER TABLE software_history ENABLE TRIGGER software_history_no_delete`,
@@ -214,6 +216,15 @@ export function resetDevices(): void {
   const match = "code ILIKE '%E2E%'";
   const sql = [
     `DELETE FROM file WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE ${match})`,
+    /*
+     * Secret gắn vào thiết bị test cũng phải dọn theo.
+     *
+     * Bỏ dòng này thì mỗi lần chạy để lại một ngăn két không còn chủ, và chúng tích lại
+     * hàng chục dòng — trang tổng Két sắt hiện đúng chỗ đó thành "hồ sơ đã bị xóa, còn
+     * secret treo lại". Đúng ra là công của trang tổng: nó phát hiện được rác mà trước
+     * đây không ai nhìn thấy; nhưng rác này là do bộ test đẻ ra nên dọn ở đây.
+     */
+    `DELETE FROM secret WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE ${match})`,
     // License gán vào thiết bị test cũng phải dọn, không thì FK chặn xóa thiết bị.
     `DELETE FROM license_assignment WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
     // Đường ISP trỏ tới thiết bị biên — gỡ liên kết trước khi xóa thiết bị.
