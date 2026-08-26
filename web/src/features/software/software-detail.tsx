@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, orDash } from '@/lib/format';
@@ -30,6 +30,7 @@ import {
   type SoftwareHistoryRow,
   type SoftwareRow,
 } from './software-types';
+import { PATHS } from '@/lib/routes';
 
 /**
  * Trang chi tiết hồ sơ phần mềm (story 3.1).
@@ -43,7 +44,9 @@ export function SoftwareDetail({ me }: { me: Me }) {
   const toast = useToast();
   const queryClient = useQueryClient();
   const { id = '' } = useParams();
-  const [tab, setTab] = useState('profile');
+  /* Tab mở sẵn đọc từ URL (`?tab=vault`) — xem chú thích ở `device-detail.tsx`. */
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState(() => params.get('tab') ?? 'profile');
   const [editing, setEditing] = useState(false);
   const [renewing, setRenewing] = useState(false);
 
@@ -95,7 +98,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
         subtitle={`${t(KIND_KEY[item.kind])}${item.vendorName ? ` · ${item.vendorName}` : ''}`}
         actions={
           <>
-            <Link className="btn" to="/phan-mem">
+            <Link className="btn" to={PATHS.software}>
               {t('software.back')}
             </Link>
             <button type="button" className="btn" onClick={() => setEditing(true)}>

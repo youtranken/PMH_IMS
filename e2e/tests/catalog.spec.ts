@@ -219,7 +219,7 @@ test.describe('Danh mục', () => {
       });
     }
 
-    await page.goto('/quan-tri/danh-muc');
+    await page.goto('/admin/catalog');
     await page.getByRole('tab', { name: 'Tủ mạng' }).click();
     await page
       .getByRole('searchbox', { name: 'Tìm theo mã tủ, site hoặc mô tả' })
@@ -249,7 +249,7 @@ test.describe('Danh mục', () => {
   test('ba danh mục mới thêm được, và bảng lịch sử chấp nhận chúng', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
-    await page.goto('/quan-tri/danh-muc');
+    await page.goto('/admin/catalog');
 
     // ── Bộ phận ───────────────────────────────────────────────────────────
     await page.getByRole('tab', { name: 'Bộ phận' }).click();

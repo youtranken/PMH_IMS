@@ -12,17 +12,18 @@ import { useToast } from '@/ui/toast';
 import { HideDialog, SubnetForm } from './subnet-form';
 import { SubnetPane } from './subnet-detail';
 import type { SubnetRow } from './ipam-types';
+import { PATHS } from '@/lib/routes';
 
 /**
  * Địa chỉ IP (story 5.1, FR-018/FR-020) — MỘT trang hai cột, đúng mockup `body-Ipam.html`:
  * dải mạng ở cột trái, IP của dải đang chọn ở cột phải.
  *
- * Bản dựng đầu tách thành hai trang (`/dia-chi-ip` là bảng dải, `/dia-chi-ip/:id` là bảng IP),
+ * Bản dựng đầu tách thành hai trang (`/ip-addresses` là bảng dải, `/ip-addresses/:id` là bảng IP),
  * và đường đi giữa chúng là mã CIDR gạch chân trong ô đầu bảng. Không ai nhận ra đó là đường
  * vào, nên cả màn trông như "khai được dải mà không khai được IP nào". Hai cột thì chỗ trống
  * và nút "Cấp IP này" nằm ngay cạnh danh sách dải, không phải bấm mò mới thấy.
  *
- * Cả hai đường dẫn cũ đều vào đây: `/dia-chi-ip` chọn sẵn dải đầu tiên, `/dia-chi-ip/:id` chọn
+ * Cả hai đường dẫn đều vào đây: `/ip-addresses` chọn sẵn dải đầu tiên, `/ip-addresses/:id` chọn
  * đúng dải đó — link cũ vẫn mở được, và mỗi dải vẫn có một địa chỉ riêng để gửi cho nhau.
  */
 export function IpamScreen({ me }: { me: Me }) {
@@ -155,7 +156,7 @@ function SubnetCard({
     <div className={`subnet-card${active ? ' is-active' : ''}`}>
       <Link
         className="subnet-link"
-        to={`/dia-chi-ip/${subnet.id}`}
+        to={PATHS.subnet(subnet.id)}
         aria-current={active ? 'page' : undefined}
       >
         <span className="row">

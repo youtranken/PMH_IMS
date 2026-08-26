@@ -117,8 +117,8 @@ test.describe('Quản trị tài khoản', () => {
         .toBe(401);
 
       // Và người đó bị đá về trang đăng nhập chứ không ngồi lại trong app với dữ liệu cũ.
-      await memberPage.goto('/thiet-bi');
-      await expect(memberPage).toHaveURL(/dang-nhap/);
+      await memberPage.goto('/devices');
+      await expect(memberPage).toHaveURL(/login/);
     } finally {
       await memberCtx.close();
     }
@@ -152,8 +152,8 @@ test.describe('Quản trị tài khoản', () => {
       await expect
         .poll(async () => (await memberPage.request.get('/api/v1/auth/me')).status())
         .toBe(401);
-      await memberPage.goto('/thiet-bi');
-      await expect(memberPage).toHaveURL(/dang-nhap/);
+      await memberPage.goto('/devices');
+      await expect(memberPage).toHaveURL(/login/);
     } finally {
       await memberCtx.close();
     }

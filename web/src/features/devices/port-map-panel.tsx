@@ -14,6 +14,7 @@ import { useDepartments } from '@/features/ipam/use-departments';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import type { DeviceRow } from './device-types';
+import { PATHS } from '@/lib/routes';
 
 export interface PortRow {
   id: string;
@@ -123,7 +124,7 @@ export function PortMapPanel({
                       </td>
                       <td data-label={t('ports.connectedTo')}>
                         {port.connectedDeviceId ? (
-                          <Link className="mono" to={`/thiet-bi/${port.connectedDeviceId}`}>
+                          <Link className="mono" to={PATHS.device(port.connectedDeviceId)}>
                             {port.connectedDeviceCode}
                           </Link>
                         ) : (
@@ -209,7 +210,7 @@ export function PortMapPanel({
                   {incoming.map((row) => (
                     <tr key={row.id}>
                       <td data-label={t('ports.fromDevice')}>
-                        <Link className="mono" to={`/thiet-bi/${row.deviceId}`}>
+                        <Link className="mono" to={PATHS.device(row.deviceId)}>
                           {row.deviceCode}
                         </Link>
                         <span className="cell-sub">{row.deviceName}</span>

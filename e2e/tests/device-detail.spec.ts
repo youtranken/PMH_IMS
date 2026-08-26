@@ -54,7 +54,7 @@ test.describe('Trang chi tiết thiết bị', () => {
       data: { portLabel: 'Gi1/0/1', connectedLabel: 'uplink nhà mạng' },
     });
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
 
     // Dải tóm tắt: trạng thái + tình trạng bảo hành hiện ngay, không phải bấm vào đâu.
     await expect(page.getByRole('heading', { name: new RegExp(code) })).toBeVisible();
@@ -97,7 +97,7 @@ test.describe('Trang chi tiết thiết bị', () => {
     // Đợt 1: ipam/vault/software chưa tồn tại nên danh sách rỗng — ĐÚNG như thiết kế.
     expect(panels).toEqual([]);
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await expect(page.getByRole('heading', { name: /SW-E2E-EXT/ })).toBeVisible();
     // Không được có tiêu đề khu mở rộng treo lơ lửng, cũng không có lời hứa "sẽ có sau".
     for (const ghost of ['Địa chỉ IP', 'Két sắt', 'License', 'Phiếu']) {
@@ -107,7 +107,7 @@ test.describe('Trang chi tiết thiết bị', () => {
 
   test('mở thiết bị không tồn tại → trang 404 tử tế, không phải khối lỗi đỏ', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    await page.goto('/thiet-bi/00000000-0000-4000-8000-000000000000');
+    await page.goto('/devices/00000000-0000-4000-8000-000000000000');
     await expect(page.getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Về trang chủ' })).toBeVisible();
   });

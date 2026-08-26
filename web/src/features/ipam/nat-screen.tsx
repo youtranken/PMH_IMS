@@ -21,6 +21,7 @@ import { DeviceForm } from '@/features/devices/device-form';
 import { ServicePortPicker } from './service-port-picker';
 import { chipsFromValue, parsePortChip, type PortChip } from './port-chips';
 import { PortChipsField } from './port-chips-field';
+import { PATHS } from '@/lib/routes';
 
 type NatProtocol = 'tcp' | 'udp' | 'both';
 
@@ -141,7 +142,7 @@ export function NatScreen({ me }: { me: Me }) {
               {rows.map((rule) => (
                 <tr key={rule.id} className={rule.enabled ? undefined : 'row-muted'}>
                   <td data-label={t('nat.router')}>
-                    <Link to={`/thiet-bi/${rule.deviceId}`}>{orDash(rule.deviceCode)}</Link>
+                    <Link to={PATHS.device(rule.deviceId)}>{orDash(rule.deviceCode)}</Link>
                     <span className="cell-sub">{orDash(rule.siteCode)}</span>
                   </td>
                   <td data-label={t('nat.external')}>

@@ -60,12 +60,12 @@ test('danh sách phần mềm và tab Máy đang dùng đọc được ở 390px
     ).status(),
   ).toBe(201);
 
-  await page.goto('/phan-mem');
+  await page.goto('/software');
   await expect(page.getByRole('heading', { name: 'Phần mềm' })).toBeVisible();
   await expect(page.getByRole('link', { name: code })).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-  await page.goto(`/phan-mem/${licenseId}`);
+  await page.goto(`/software/${licenseId}`);
   await page.getByRole('tab', { name: 'Máy đang dùng' }).click();
   await expect(page.getByText(deviceCode)).toBeVisible();
   // Bảng máy đang dùng có cột mã + tên + ngày gán — chỗ dễ tràn nhất của màn này.
@@ -115,7 +115,7 @@ test('khu bung dòng ghế license gập thành thẻ dọc có nhãn ở 390px'
     ).status(),
   ).toBe(201);
 
-  await page.goto('/phan-mem');
+  await page.goto('/software');
   // Lọc còn đúng một dòng rồi mới bấm: ở 390px bảng đã gập thành thẻ dọc, bám vào từng
   // dòng cụ thể là bám vào thứ đang biến dạng.
   await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);

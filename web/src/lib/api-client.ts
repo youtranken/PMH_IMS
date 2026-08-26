@@ -1,4 +1,5 @@
 import { QueryClient } from '@tanstack/react-query';
+import { LOGIN_PATH } from '@/lib/me';
 
 /** Lỗi HTTP mang theo status + body để nơi gọi đọc `code`/`message` tiếng Việt của API. */
 export class ApiError extends Error {
@@ -57,7 +58,7 @@ export async function apiFetch<T>(
     const errBody: unknown = await res.json().catch(() => null);
     const code = (errBody as { code?: string } | null)?.code;
     if (res.status === 401 && !(code && USER_INPUT_401_CODES.has(code))) {
-      window.location.href = '/dang-nhap';
+      window.location.href = LOGIN_PATH;
     }
     throw new ApiError(res.status, errBody);
   }

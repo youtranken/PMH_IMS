@@ -9,7 +9,7 @@ test.beforeEach(() => resetUsers());
  */
 test.describe('390px', () => {
   test('màn đăng nhập không tràn ngang', async ({ page }) => {
-    await page.goto('/dang-nhap');
+    await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Đăng nhập' })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   });

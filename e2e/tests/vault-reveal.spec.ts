@@ -87,7 +87,7 @@ test.describe('Mở két với TOTP step-up', () => {
     // Enroll TOTP vừa xong đã tính là step-up — đẩy mốc lùi để đúng cảnh "đã quá grace".
     expireStepUp();
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
 
     await page
@@ -97,7 +97,7 @@ test.describe('Mở két với TOTP step-up', () => {
 
     // Phải hỏi mã, KHÔNG được hiện giá trị và cũng không được đá về màn đăng nhập.
     await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
-    await expect(page).toHaveURL(new RegExp(`/thiet-bi/${deviceId}`));
+    await expect(page).toHaveURL(new RegExp(`/devices/${deviceId}`));
 
     await page.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
     await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận' }).click();
@@ -127,7 +127,7 @@ test.describe('Mở két với TOTP step-up', () => {
     ]);
     expireStepUp();
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await page.getByRole('button', { name: 'Xem' }).click();
 
@@ -213,7 +213,7 @@ test.describe('Mở két với TOTP step-up', () => {
     });
     test.setTimeout((revealSeconds + 40) * 1000);
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await page.getByRole('button', { name: 'Xem' }).click();
     await expect(page.getByTestId('secret-value')).toBeVisible();

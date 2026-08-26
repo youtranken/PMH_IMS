@@ -517,3 +517,51 @@ màn hình** — mà file xuất mới là thứ đem đi trình auditor.
    sau khi response đã bay đi. Đọc DB ngay sau đó là đọc trước khi commit; test xanh vì may.
 9. **Đừng suy ra nội dung từ kích thước file nén.** Mở file ra mà đọc — exceljs đã là
    dependency sẵn có.
+
+---
+
+## Đợt UI/UX 3 — góp gì (26/08/2026)
+
+Không phải một epic: một đợt sửa theo phản hồi trực tiếp của chủ dự án. Ghi lại vì mấy phát
+hiện dưới đây là loại bẫy sẽ lặp lại.
+
+### Tài sản mới, dùng chung
+
+| Thứ | Ở đâu | Ai sẽ cần |
+| --- | --- | --- |
+| `PATHS`, `LEGACY_ROUTES` | `web/src/lib/routes.ts` | Mọi màn mới. Cấm gõ chuỗi đường dẫn thẳng vào `<Link to>` |
+| `useAttachmentDraft`, `AttachmentDraftSection` | `web/src/ui/attachment-draft.tsx` | Mọi form THÊM MỚI cần đính kèm giấy tờ (phiếu Epic 8, sự cố Epic 9) |
+| `PortChipsField`, `port-chips.ts` | `web/src/features/ipam/` | Ô nhập nhiều giá trị rời dạng chip |
+| `slot-paging.ts` | `web/src/features/ipam/` | Bảng cắt trang ở client khi tập dữ liệu có TRẦN chắc chắn |
+
+### Hợp đồng cho đợt sau
+
+- **Đường dẫn là tiếng Anh, giao diện là tiếng Việt.** Màn mới lấy đường từ `PATHS`; đổi đường
+  cũ thì thêm dòng vào `LEGACY_ROUTES` chứ không xoá.
+- **`FILE_OWNER_TYPES` phía API và `AttachmentOwnerType` phía web phải sửa CÙNG nhau.** Thiếu
+  một bên là 400 lúc upload, không phải lỗi biên dịch.
+- **`/vault` là cửa vào, KHÔNG phải danh sách secret.** FR-026 cấm mọi đường lấy secret qua
+  nhiều chủ thể, và `vault-surface.spec.ts` canh hình dạng route. Ai định thêm "trang tổng hợp
+  két sắt" thì đọc chỗ này trước.
+
+### Bẫy đã gặp
+
+1. **`npx tsc --noEmit` ở `web/` không kiểm gì cả.** `tsconfig.json` là file references với
+   `"files": []`. Lỗi kiểu chỉ lộ ra ở `tsc -b` trong `npm run build` — tôi phát hiện khi
+   `docker compose build` đỏ sau ba lần "typecheck xanh". **Cổng thật là `npm run build`.**
+2. **`tsconfig.app.json` không bật `strict`**, nên TS không thu hẹp được union phân biệt bằng
+   cờ boolean. `if (!r.ok) r.reason` là lỗi biên dịch dù logic đúng. Hàm thuần bên web trả
+   MỘT hình dạng `{ value, reason }`.
+3. **Thuộc tính có mặt trong TSX không có nghĩa là CSS đọc nó.** `data-columns` được viết ở
+   15+ chỗ suốt bảy epic mà **không có một luật CSS nào** — mọi form rơi về `auto-fill`, số cột
+   do bề rộng hộp quyết định. Không exception, không test nào đỏ. Cùng họ với những `.shell`,
+   `.row`, `.span-3` của đợt soát trước: **lớp/thuộc tính viết ra rồi quên khai luật là lỗi
+   câm.** Cách bắt: grep tên lớp/thuộc tính trong `css/` trước khi tin nó có tác dụng.
+4. **Khai trùng tên lớp CSS đè lên bản có sẵn mà không ai báo.** Tôi thêm `.chip` vào
+   `shared-kit.css` trong khi `form-layout.css` đã có — và `shared-kit.css` nạp SAU. Trước
+   khi đặt tên lớp mới: `grep -rn "\.tên-lớp" web/src/css/`.
+5. **Bài kiểm đếm TỔNG số nút trong một dòng sẽ đỏ vì lý do chẳng liên quan.** Thêm cột Thao
+   tác làm đỏ bài "license chưa gán thì không có mũi tên bung dòng". Bám đúng nút cần kiểm
+   (`getByRole('button', { name: 'Mở rộng dòng' })`), đừng đếm tổng.
+6. **`required` của trình duyệt chặn submit TRƯỚC lỗi của form.** Bài kiểm "thiếu port thì báo
+   lỗi" đỏ vì các ô bắt buộc khác còn trống — thông điệp của form không bao giờ tới.

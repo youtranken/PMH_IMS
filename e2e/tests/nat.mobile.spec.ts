@@ -58,7 +58,7 @@ test.describe('Sổ NAT ở 390px', () => {
       },
     });
 
-    await page.goto('/so-nat');
+    await page.goto('/nat');
     await expect(page.getByText('TCP 8000-8010')).toBeVisible();
     await expect(page.getByText('Phòng Nhân sự tầng 3')).toBeVisible();
     await expect(page.getByText(/phần mềm chấm công cần truy cập/)).toBeVisible();

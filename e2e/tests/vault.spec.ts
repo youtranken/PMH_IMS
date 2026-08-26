@@ -51,7 +51,7 @@ test.describe('Két sắt', () => {
     const label = `admin web E2E ${stamp}`;
     const secretValue = `Sup3r#Secret#${stamp}`;
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByText('Chưa cất secret nào')).toBeVisible();
 
@@ -168,7 +168,7 @@ test.describe('Két sắt', () => {
     });
     expect(create.status()).toBe(403);
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await expect(page.getByRole('tab', { name: 'Hồ sơ' })).toBeVisible();
     // Tab CÓ hiện (story 6.3) nhưng nội dung nói rõ là không có quyền — không phải bảng trống.
     await page.getByRole('tab', { name: 'Két sắt' }).click();

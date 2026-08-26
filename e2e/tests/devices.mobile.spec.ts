@@ -45,12 +45,12 @@ test('danh sách và chi tiết thiết bị dùng được ở 390px', async ({
   expect(created.status()).toBe(201);
   const deviceId = ((await created.json()) as { device: { id: string } }).device.id;
 
-  await page.goto('/thiet-bi');
+  await page.goto('/devices');
   await expect(page.getByRole('link', { name: code })).toBeVisible();
   // Bảng gập thành thẻ dọc (.table-stack) — trang không được cuộn ngang.
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-  await page.goto(`/thiet-bi/${deviceId}`);
+  await page.goto(`/devices/${deviceId}`);
   await expect(page.getByRole('heading', { name: new RegExp(code) })).toBeVisible();
   // Story 2.5 thêm dải tóm tắt nên người dùng hiện ở HAI chỗ (tóm tắt + bảng hồ sơ).
   await expect(page.getByText('chị Lan').first()).toBeVisible();
@@ -99,13 +99,13 @@ test('bảng port map, cả chiều ngược, đọc được ở 390px', async 
     ).status(),
   ).toBe(201);
 
-  await page.goto(`/thiet-bi/${switchId}`);
+  await page.goto(`/devices/${switchId}`);
   await page.getByRole('tab', { name: 'Port map' }).click();
   await expect(page.getByText('uplink phòng máy chủ')).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
   // AD-14: khai một đầu, đầu kia tự hiện — chiều ngược cũng phải đọc được trên điện thoại.
-  await page.goto(`/thiet-bi/${serverId}`);
+  await page.goto(`/devices/${serverId}`);
   await page.getByRole('tab', { name: 'Port map' }).click();
   await expect(page.getByText(switchCode).first()).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);

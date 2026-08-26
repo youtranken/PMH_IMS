@@ -27,7 +27,7 @@ test.describe('Đăng nhập', () => {
 
     // Đăng xuất rồi đăng nhập lại bằng mật khẩu MỚI + mã TOTP.
     await page.getByRole('button', { name: 'Đăng xuất' }).click();
-    await expect(page).toHaveURL(/dang-nhap/);
+    await expect(page).toHaveURL(/login/);
     await loginWithTotp(page, E2E_MEMBER.email, NEW_PASSWORD, secret);
   });
 

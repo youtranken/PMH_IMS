@@ -34,7 +34,7 @@ test.describe('Ma trận quyền két sắt', () => {
   }) => {
     await firstLogin(page, E2E_SA);
 
-    await page.goto('/quan-tri/quyen-ket-sat');
+    await page.goto('/admin/vault-access');
     await expect(page.getByRole('heading', { name: 'Quyền xem két sắt' })).toBeVisible();
 
     // Người chưa gán gì vẫn HIỆN, kèm lời nói rõ là chưa có quyền — ẩn đi thì SA tưởng đã gán.

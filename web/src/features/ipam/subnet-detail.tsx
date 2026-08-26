@@ -36,6 +36,7 @@ import {
   type SlotFilter,
 } from './slot-paging';
 import { toIpHistoryEntries, type IpHistoryRow } from './ip-history-entries';
+import { PATHS } from '@/lib/routes';
 
 interface DeviceOption {
   id: string;
@@ -186,7 +187,7 @@ export function SubnetPane({ subnet: item, me }: { subnet: SubnetRow; me: Me }) 
                     </td>
                     <td data-label={t('ipam.device')}>
                       {slot.deviceId ? (
-                        <Link to={`/thiet-bi/${slot.deviceId}`}>{slot.deviceCode}</Link>
+                        <Link to={PATHS.device(slot.deviceId)}>{slot.deviceCode}</Link>
                       ) : (
                         '—'
                       )}

@@ -18,6 +18,7 @@ import { Select } from '@/ui/select';
 import type { CatalogLists } from '@/features/catalog/catalog-types';
 import { IspForm } from './isp-form';
 import { ISP_STATUSES, STATUS_KEY, STATUS_TONE, type IspRow, type IspStatus } from './isp-types';
+import { PATHS } from '@/lib/routes';
 
 const LIMIT = 20;
 
@@ -74,7 +75,7 @@ export function IspScreen({ me }: { me: Me }) {
         accessorKey: 'code',
         header: t('isp.code'),
         cell: ({ row }) => (
-          <Link className="mono" to={`/duong-truyen/${row.original.id}`}>
+          <Link className="mono" to={PATHS.ispLine(row.original.id)}>
             {row.original.code}
           </Link>
         ),

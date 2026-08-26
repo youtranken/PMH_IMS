@@ -39,7 +39,7 @@ test.describe('Port map', () => {
     const switchId = await createDevice(page, switchCode, 'Switch');
     const serverId = await createDevice(page, serverCode, 'Server');
 
-    await page.goto(`/thiet-bi/${switchId}`);
+    await page.goto(`/devices/${switchId}`);
     await page.getByRole('tab', { name: 'Port map' }).click();
     await expect(page.getByText('Chưa khai cổng nào.')).toBeVisible();
 
@@ -58,7 +58,7 @@ test.describe('Port map', () => {
     await expect(row.getByRole('link', { name: serverCode })).toBeVisible();
 
     // Trang thiết bị ĐẦU KIA: dòng hiện ở bảng chiều ngược, KHÔNG có bản ghi đối xứng.
-    await page.goto(`/thiet-bi/${serverId}`);
+    await page.goto(`/devices/${serverId}`);
     await page.getByRole('tab', { name: 'Port map' }).click();
     await expect(page.getByText('Chưa khai cổng nào.')).toBeVisible();
 
@@ -83,7 +83,7 @@ test.describe('Port map', () => {
     const stamp = Date.now().toString().slice(-6);
     const switchId = await createDevice(page, `SW-E2E-DUP-${stamp}`, 'Switch');
 
-    await page.goto(`/thiet-bi/${switchId}`);
+    await page.goto(`/devices/${switchId}`);
     await page.getByRole('tab', { name: 'Port map' }).click();
 
     for (let i = 0; i < 2; i += 1) {
@@ -120,7 +120,7 @@ test.describe('Port map', () => {
     const stamp = Date.now().toString().slice(-6);
     const printerId = await createDevice(page, `PC-E2E-NOPORT-${stamp}`, 'Printer');
 
-    await page.goto(`/thiet-bi/${printerId}`);
+    await page.goto(`/devices/${printerId}`);
     await expect(page.getByRole('tab', { name: 'Hồ sơ' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Port map' })).toHaveCount(0);
   });
@@ -130,7 +130,7 @@ test.describe('Port map', () => {
     const stamp = Date.now().toString().slice(-6);
     const switchId = await createDevice(page, `SW-E2E-HIST-${stamp}`, 'Switch');
 
-    await page.goto(`/thiet-bi/${switchId}`);
+    await page.goto(`/devices/${switchId}`);
     await page.getByRole('tab', { name: 'Port map' }).click();
     await page.getByRole('button', { name: 'Thêm cổng' }).click();
     const form = page.getByRole('dialog');

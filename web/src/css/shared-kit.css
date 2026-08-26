@@ -223,6 +223,71 @@
   }
 }
 
+/* --- Ma trận quyền két sắt, chiều "theo nhóm đối tượng" ------------------- */
+/* Hai tầng quyền đứng CẠNH nhau chứ không xếp dọc: câu hỏi lúc rà soát là "ai xem thẳng, ai
+   phải xin duyệt" — hai con số đó phải so được bằng một cái liếc. */
+.scope-tiers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+  margin-top: var(--space-5);
+}
+.scope-tiers > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+@media (max-width: 680px) {
+  .scope-tiers {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Danh sách chọn nhiều người trong hộp gán theo nhóm. */
+.pick-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+/* --- Cửa vào két sắt (features/vault/vault-home-screen.tsx) --------------- */
+.vault-hits {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-7);
+  margin-top: var(--space-5);
+}
+.vault-hit-list,
+.vault-rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vault-rules li {
+  padding-left: var(--space-5);
+  position: relative;
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+.vault-rules li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
 /* --- Giấy tờ chọn trước khi lưu (ui/attachment-draft.tsx) ----------------- */
 /* Danh sách file đang chờ đẩy lên. Cùng cỡ chữ với `.file-picker-file` ngay phía trên nó —
    hai khối đọc liền nhau, lệch cỡ là mắt tưởng hai thứ khác nhau. */

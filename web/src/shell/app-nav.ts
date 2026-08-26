@@ -1,4 +1,5 @@
 import type { Me } from '@/lib/me';
+import { PATHS } from '@/lib/routes';
 
 export interface NavItem {
   /** Khóa i18n (`nav.*`) — nhãn không bao giờ viết cứng. */
@@ -23,30 +24,31 @@ export const navGroups: NavGroup[] = [
   {
     labelKey: 'nav.groupWork',
     items: [
-      { key: 'nav.dashboard', to: '/' },
-      { key: 'nav.devices', to: '/thiet-bi' },
-      { key: 'nav.software', to: '/phan-mem' },
-      { key: 'nav.isp', to: '/duong-truyen' },
-      { key: 'nav.expiry', to: '/sap-het-han' },
-      { key: 'nav.ipam', to: '/dia-chi-ip' },
-      { key: 'nav.nat', to: '/so-nat' },
+      { key: 'nav.dashboard', to: PATHS.dashboard },
+      { key: 'nav.devices', to: PATHS.devices },
+      { key: 'nav.software', to: PATHS.software },
+      { key: 'nav.isp', to: PATHS.ispLines },
+      { key: 'nav.expiry', to: PATHS.expiry },
+      { key: 'nav.ipam', to: PATHS.ipAddresses },
+      { key: 'nav.nat', to: PATHS.nat },
       // MỌI vai thấy: Member vào xem yêu cầu của mình đã được duyệt chưa.
-      { key: 'nav.approvals', to: '/duyet-yeu-cau' },
-      { key: 'nav.vault', to: '/ket-sat', planned: true },
-      { key: 'nav.documents', to: '/tai-lieu', planned: true },
+      { key: 'nav.approvals', to: PATHS.approvals },
+      // Không còn `planned`: két sắt đã chạy từ Epic 4, chỉ thiếu cửa vào từ menu.
+      { key: 'nav.vault', to: PATHS.vault },
+      { key: 'nav.documents', to: PATHS.documents, planned: true },
     ],
   },
   {
     labelKey: 'nav.groupAdmin',
     items: [
-      { key: 'nav.accounts', to: '/quan-tri/tai-khoan', roles: ['sa'] },
+      { key: 'nav.accounts', to: PATHS.adminAccounts, roles: ['sa'] },
       // Member vào xem được (form thiết bị cần biết danh mục có gì); sửa thì API chặn.
-      { key: 'nav.catalog', to: '/quan-tri/danh-muc' },
+      { key: 'nav.catalog', to: PATHS.adminCatalog },
       // Ma trận quyền két sắt là bản đồ phòng thủ — chỉ SA/Admin thấy.
-      { key: 'nav.vaultAccess', to: '/quan-tri/quyen-ket-sat', roles: ['sa', 'admin'] },
-      { key: 'nav.auditLog', to: '/quan-tri/nhat-ky', roles: ['sa', 'admin'], planned: true },
+      { key: 'nav.vaultAccess', to: PATHS.adminVaultAccess, roles: ['sa', 'admin'] },
+      { key: 'nav.auditLog', to: PATHS.adminAuditLog, roles: ['sa', 'admin'], planned: true },
       // Trang nội bộ của đội phát triển — chỉ SA thấy (khớp gác quyền ở App.tsx).
-      { key: 'nav.components', to: '/dev/components', roles: ['sa'] },
+      { key: 'nav.components', to: PATHS.devComponents, roles: ['sa'] },
     ],
   },
 ];

@@ -46,7 +46,7 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
     const stamp = Date.now().toString().slice(-6);
     const deviceId = await createDevice(page, `SRV-E2E-${stamp}`);
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Giấy tờ' }).click();
     await expect(page.getByText('Chưa có giấy tờ nào.')).toBeVisible();
 
@@ -77,7 +77,7 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
     const fake = join(tmpdir(), `gia-mao-${stamp}.pdf`);
     writeFileSync(fake, '<html><script>alert(1)</script></html>');
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Giấy tờ' }).click();
     await page.getByLabel('Chọn file để đính kèm').setInputFiles(fake);
     await page.getByRole('button', { name: 'Tải lên' }).click();
@@ -93,7 +93,7 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
     const stamp = Date.now().toString().slice(-6);
     const deviceId = await createDevice(page, `SRV-E2E-HDR-${stamp}`);
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Giấy tờ' }).click();
     await page.getByLabel('Chọn file để đính kèm').setInputFiles(writePdf(`bien-ban-${stamp}.pdf`));
     await page.getByRole('button', { name: 'Tải lên' }).click();
@@ -121,7 +121,7 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
     const stamp = Date.now().toString().slice(-6);
     const deviceId = await createDevice(page, `SRV-E2E-DEL-${stamp}`);
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Giấy tờ' }).click();
     await page.getByLabel('Chọn file để đính kèm').setInputFiles(writePdf(`xoa-${stamp}.pdf`));
     await page.getByRole('button', { name: 'Tải lên' }).click();

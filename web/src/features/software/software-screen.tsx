@@ -33,6 +33,7 @@ import {
   type SoftwareRow,
   type SoftwareStatus,
 } from './software-types';
+import { PATHS } from '@/lib/routes';
 
 const LIMIT = 20;
 
@@ -93,7 +94,7 @@ export function SoftwareScreen({ me }: { me: Me }) {
         accessorKey: 'code',
         header: t('software.code'),
         cell: ({ row }) => (
-          <Link className="mono" to={`/phan-mem/${row.original.id}`}>
+          <Link className="mono" to={PATHS.softwareItem(row.original.id)}>
             {row.original.code}
           </Link>
         ),

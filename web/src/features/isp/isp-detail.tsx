@@ -19,6 +19,7 @@ import type { CatalogLists } from '@/features/catalog/catalog-types';
 import { IspForm } from './isp-form';
 import { toIspHistory } from './isp-history-entries';
 import { STATUS_KEY, STATUS_TONE, type IspHistoryRow, type IspRow } from './isp-types';
+import { PATHS } from '@/lib/routes';
 
 /**
  * Trang chi tiết đường truyền (story 3.3).
@@ -71,7 +72,7 @@ export function IspDetail({ me }: { me: Me }) {
         subtitle={[item.bandwidth, item.siteCode].filter(Boolean).join(' · ')}
         actions={
           <>
-            <Link className="btn" to="/duong-truyen">
+            <Link className="btn" to={PATHS.ispLines}>
               {t('isp.back')}
             </Link>
             <button type="button" className="btn" onClick={() => setEditing(true)}>
@@ -125,7 +126,7 @@ export function IspDetail({ me }: { me: Me }) {
             <Item label={t('isp.site')}>{orDash(item.siteCode)}</Item>
             <Item label={t('isp.device')}>
               {item.deviceId ? (
-                <Link className="mono" to={`/thiet-bi/${item.deviceId}`}>
+                <Link className="mono" to={PATHS.device(item.deviceId)}>
                   {item.deviceCode}
                 </Link>
               ) : (

@@ -21,7 +21,7 @@ declare module '@tanstack/react-table' {
   }
 }
 
-/** Trạng thái expand đưa xuống cột (qua table.meta) để ô đầu tự vẽ caret › như /phan-mem. */
+/** Trạng thái expand đưa xuống cột (qua table.meta) để ô đầu tự vẽ caret › như /software. */
 export interface ExpandMeta<T> {
   expandedId: string | null;
   canExpandRow: (row: T) => boolean;
@@ -117,7 +117,7 @@ export function DataTable<T>({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
-    // Cột đầu (Code) tự vẽ caret › mở/đóng như /phan-mem — đọc qua cell.table.options.meta.
+    // Cột đầu (Code) tự vẽ caret › mở/đóng như /software — đọc qua cell.table.options.meta.
     meta: {
       expandedId,
       canExpandRow: (r: T) => !!renderExpanded && (canExpand?.(r) ?? true),

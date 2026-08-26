@@ -54,7 +54,7 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
     const cidr = `10.${octet}.7.0/24`;
     const id = await createSubnet(page, cidr, 'LAN cắt trang');
 
-    await page.goto(`/dia-chi-ip/${id}`);
+    await page.goto(`/ip-addresses/${id}`);
     await expect(page.getByRole('heading', { name: new RegExp(cidr) })).toBeVisible();
 
     // 254 host / 50 = 6 trang. Trước đây đổ hết 254 dòng ra một lượt.
@@ -92,7 +92,7 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
     });
     expect(created.status()).toBe(201);
 
-    await page.goto(`/dia-chi-ip/${id}`);
+    await page.goto(`/ip-addresses/${id}`);
     // Nhãn nút mang luôn con số: "Đang cấp 1", "Trống 253" — đọc được bằng một cái liếc.
     const assigned = page.getByRole('button', { name: 'Đang cấp 1' });
     await expect(assigned).toBeVisible();
@@ -117,7 +117,7 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
       await createSubnet(page, `10.${base}.${i}.0/24`, `LAN cuộn ${i}`);
     }
 
-    await page.goto('/dia-chi-ip');
+    await page.goto('/ip-addresses');
     const rail = page.locator('.subnet-rail');
     await expect(rail).toBeVisible();
 
@@ -142,7 +142,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     const routerCode = `FW-E2E-${stamp}`;
     await createRouter(page, routerCode);
 
-    await page.goto('/so-nat');
+    await page.goto('/nat');
     await page.getByRole('button', { name: 'Thêm rule' }).click();
     const form = page.getByRole('dialog');
 
@@ -182,7 +182,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     const routerCode = `FW-E2E-X-${stamp}`;
     await createRouter(page, routerCode);
 
-    await page.goto('/so-nat');
+    await page.goto('/nat');
     await page.getByRole('button', { name: 'Thêm rule' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
@@ -214,7 +214,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     const routerCode = `FW-E2E-E-${stamp}`;
     await createRouter(page, routerCode);
 
-    await page.goto('/so-nat');
+    await page.goto('/nat');
     await page.getByRole('button', { name: 'Thêm rule' }).click();
     const form = page.getByRole('dialog');
 
@@ -265,7 +265,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     });
     expect(created.status()).toBe(201);
 
-    await page.goto('/so-nat');
+    await page.goto('/nat');
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(`SSH tạm ${stamp}`);
     await page.getByRole('button', { name: 'Sửa' }).click();
 
@@ -304,7 +304,7 @@ test.describe('Popup Sửa có chỗ quản lý giấy tờ', () => {
     });
     expect(created.status()).toBe(201);
 
-    await page.goto('/thiet-bi');
+    await page.goto('/devices');
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
     await page.getByRole('button', { name: `Sửa máy ${code}` }).click();
 

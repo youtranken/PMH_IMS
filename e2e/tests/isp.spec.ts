@@ -55,7 +55,7 @@ test.describe('Đường truyền ISP', () => {
     });
     expect(created.status).toBe(201);
 
-    await page.goto('/duong-truyen');
+    await page.goto('/isp-lines');
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toBeVisible();
     // Mục tiêu của story: 2h sáng nhìn thấy ngay, không phải bấm vào trong.
@@ -74,7 +74,7 @@ test.describe('Đường truyền ISP', () => {
     const deviceId = await createDevice(page, `FW-E2E-${stamp}`);
 
     // Chưa gắn đường nào: khu mở rộng phải RỖNG.
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await expect(page.getByRole('heading', { name: 'Đường truyền ISP' })).toHaveCount(0);
 
     const created = await createLine(page, {
@@ -142,7 +142,7 @@ test.describe('Đường truyền ISP', () => {
     });
     expect(forward.status()).toBe(201);
 
-    await page.goto(`/duong-truyen/${id}`);
+    await page.goto(`/isp-lines/${id}`);
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
     // Nút "Gia hạn hợp đồng" trên đầu trang cũng mang đúng chữ này — chỉ kiểm DÒNG LỊCH SỬ.
     await expect(
@@ -159,7 +159,7 @@ test.describe('Đường truyền ISP', () => {
       provider: 'FPT',
     });
 
-    await page.goto(`/duong-truyen/${String(created.body.id)}`);
+    await page.goto(`/isp-lines/${String(created.body.id)}`);
     await page.getByRole('tab', { name: 'Giấy tờ' }).click();
     await expect(page.getByText('Chưa có giấy tờ nào.')).toBeVisible();
     await expect(page.getByLabel('Chọn file để đính kèm')).toBeVisible();
@@ -189,7 +189,7 @@ test.describe('Đường truyền ISP', () => {
       expect(created.status).toBe(201);
     }
 
-    await page.goto('/duong-truyen');
+    await page.goto('/isp-lines');
     await page
       .getByRole('searchbox', { name: 'Tìm theo mã, nhà mạng, IP WAN hoặc số hợp đồng' })
       .fill(`ISP-SORT-E2E-${stamp}`);

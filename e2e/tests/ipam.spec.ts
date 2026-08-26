@@ -40,7 +40,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     // /29 cho 6 địa chỉ cấp được — đủ để kiểm mà bảng không dài 254 dòng.
     const cidr = `172.16.${Number(stamp) % 200}.0/29`;
 
-    await page.goto('/dia-chi-ip');
+    await page.goto('/ip-addresses');
     await page.getByRole('button', { name: 'Khai dải mới' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Dải' }).fill(cidr);
@@ -99,7 +99,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
       data: { subnetId: firstId, address: `172.16.${octet}.1`, usedBy: 'Máy A của dải A' },
     });
 
-    await page.goto(`/dia-chi-ip/${firstId}`);
+    await page.goto(`/ip-addresses/${firstId}`);
     // Badge VLAN trên thẻ: ở PMH người ta gọi dải theo VLAN chứ không theo CIDR.
     await expect(page.getByText('VLAN 20')).toBeVisible();
     await expect(page.getByText('VLAN 30')).toBeVisible();
@@ -132,7 +132,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
       data: { subnetId, address: `172.16.${octet}.1`, usedBy: 'Chị Lan — Kế toán' },
     });
 
-    await page.goto(`/dia-chi-ip/${subnetId}`);
+    await page.goto(`/ip-addresses/${subnetId}`);
     // Mặc định "Tất cả": 1 IP đã cấp + 5 ô trống.
     await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(5);
     await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();

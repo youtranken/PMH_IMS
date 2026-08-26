@@ -191,7 +191,7 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
   test('Member xem được luật nhưng không sửa được', async ({ page }) => {
     await firstLogin(page, E2E_MEMBER);
 
-    await page.goto('/sap-het-han');
+    await page.goto('/expiry');
     await page.getByRole('tab', { name: 'Luật gửi báo cáo' }).click();
     await expect(page.getByText('Bạn xem được luật nhưng không sửa được.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Thêm luật' })).toHaveCount(0);
@@ -209,7 +209,7 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
 
-    await page.goto('/sap-het-han');
+    await page.goto('/expiry');
     await page.getByRole('tab', { name: 'Luật gửi báo cáo' }).click();
     await expect(page.getByText('Chưa có luật gửi báo cáo nào.')).toBeVisible();
 

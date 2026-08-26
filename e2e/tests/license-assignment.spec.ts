@@ -68,7 +68,7 @@ async function assign(
 
 /** Bung dòng license đang hiện trên danh sách và trả về khu vừa mở. */
 async function expandLicense(page: Page, licenseCode: string) {
-  await page.goto('/phan-mem');
+  await page.goto('/software');
   await page.getByRole('searchbox', { name: /Tìm/ }).fill(licenseCode);
   const row = page.getByRole('row', { name: new RegExp(licenseCode) });
   await expect(row).toBeVisible();
@@ -87,7 +87,7 @@ test.describe('Gán license theo seat', () => {
 
     expect((await assign(page, licenseId, deviceId)).status()).toBe(201);
 
-    await page.goto(`/phan-mem/${licenseId}`);
+    await page.goto(`/software/${licenseId}`);
     await expect(page.getByText('1/2').first()).toBeVisible();
 
     await page.getByRole('tab', { name: 'Máy đang dùng' }).click();
@@ -125,7 +125,7 @@ test.describe('Gán license theo seat', () => {
     expect(forced.status()).toBe(201);
     expect(String((await forced.json()).warnings)).toContain('vượt seat');
 
-    await page.goto(`/phan-mem/${licenseId}`);
+    await page.goto(`/software/${licenseId}`);
     await page.getByRole('tab', { name: 'Máy đang dùng' }).click();
     await expect(page.getByText('Sếp duyệt mua thêm seat tuần sau')).toBeVisible();
   });
@@ -178,7 +178,7 @@ test.describe('Gán license theo seat', () => {
     expect(result.status()).toBe(400);
     expect(await result.json()).toMatchObject({ code: 'NOT_A_LICENSE' });
 
-    await page.goto(`/phan-mem/${sslId}`);
+    await page.goto(`/software/${sslId}`);
     await expect(page.getByRole('tab', { name: 'Máy đang dùng' })).toHaveCount(0);
   });
 
@@ -191,7 +191,7 @@ test.describe('Gán license theo seat', () => {
     const deviceId = await createDevice(page, `PC-E2E-P1-${stamp}`);
 
     // Chưa gán: khu mở rộng phải RỖNG, không có khối trống treo lơ lửng.
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await expect(page.getByRole('heading', { name: 'License đang cài' })).toHaveCount(0);
 
     expect((await assign(page, licenseId, deviceId)).status()).toBe(201);
@@ -214,7 +214,7 @@ test.describe('Gán license theo seat', () => {
     const deviceId = await createDevice(page, deviceCode);
     expect((await assign(page, licenseId, deviceId)).status()).toBe(201);
 
-    await page.goto('/phan-mem');
+    await page.goto('/software');
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(`LIC-E2E-EXP-${stamp}`);
     const row = page.getByRole('row', { name: new RegExp(`LIC-E2E-EXP-${stamp}`) });
     await expect(row).toBeVisible();
@@ -305,7 +305,7 @@ test.describe('Gán license theo seat', () => {
     await expect(page.getByText(`HD-SUA-${stamp}`)).toBeVisible();
 
     // Đổi chi phí là chuyện đem đi đối chiếu quyết toán — phải để lại vết, kèm ghế nào.
-    await page.goto(`/phan-mem/${licenseId}`);
+    await page.goto(`/software/${licenseId}`);
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
     await expect(page.getByText('Sửa ghế license')).toBeVisible();
     await expect(page.getByText(new RegExp(`ghế ${deviceCode}`))).toBeVisible();
@@ -367,7 +367,7 @@ test.describe('Gán license theo seat', () => {
     const stamp = Date.now().toString().slice(-6);
     await createLicense(page, `LIC-E2E-NOEXP-${stamp}`, 5);
 
-    await page.goto('/phan-mem');
+    await page.goto('/software');
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(`LIC-E2E-NOEXP-${stamp}`);
     const row = page.getByRole('row', { name: new RegExp(`LIC-E2E-NOEXP-${stamp}`) });
     await expect(row).toBeVisible();
@@ -391,7 +391,7 @@ test.describe('Gán license theo seat', () => {
     const deviceCode = `PC-E2E-ROW-${stamp}`;
     await createDevice(page, deviceCode);
 
-    await page.goto('/phan-mem');
+    await page.goto('/software');
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toBeVisible();
@@ -421,7 +421,7 @@ test.describe('Gán license theo seat', () => {
     });
     expect(created.status()).toBe(201);
 
-    await page.goto('/phan-mem');
+    await page.goto('/software');
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row.getByRole('button', { name: `Sửa hồ sơ ${code}` })).toBeVisible();

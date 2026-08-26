@@ -23,7 +23,7 @@ test.beforeEach(() => {
 async function seedLocation(page: Page, stamp: string) {
   const siteCode = `E2E-${stamp}`;
   const cabinetCode = `R-${stamp}`;
-  await page.goto('/quan-tri/danh-muc');
+  await page.goto('/admin/catalog');
   await page.getByRole('button', { name: 'Thêm site' }).click();
   const siteForm = page.getByRole('dialog');
   await siteForm.getByLabel('Mã').fill(siteCode);
@@ -246,7 +246,7 @@ test.describe('Kho thiết bị', () => {
       ).status(),
     ).toBe(201);
 
-    await page.goto('/thiet-bi');
+    await page.goto('/devices');
     await page.getByRole('searchbox', { name: /Tìm theo mã/ }).fill(code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toBeVisible();
@@ -320,7 +320,7 @@ test.describe('Kho thiết bị', () => {
       ).status(),
     ).toBe(201);
 
-    await page.goto('/thiet-bi');
+    await page.goto('/devices');
     await page.getByRole('searchbox', { name: /Tìm theo mã/ }).fill(`E2E-INST-${stamp}`);
     const row = page.getByRole('row', { name: new RegExp(withCode) });
     await expect(row).toBeVisible();
@@ -370,7 +370,7 @@ test.describe('Kho thiết bị', () => {
       });
     }
 
-    await page.goto('/thiet-bi');
+    await page.goto('/devices');
     await page.getByRole('searchbox', { name: 'Tìm theo mã, tên, serial hoặc model' }).fill(`SORT-E2E-${stamp}`);
     await expect(page.getByRole('row')).toHaveCount(4); // 1 dòng tiêu đề + 3 máy
 

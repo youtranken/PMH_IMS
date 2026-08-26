@@ -22,7 +22,7 @@ test('danh sách đường truyền đọc được ở 390px và hotline bấm 
   });
   expect(created.status()).toBe(201);
 
-  await page.goto('/duong-truyen');
+  await page.goto('/isp-lines');
   await expect(page.getByRole('heading', { name: 'Đường truyền' })).toBeVisible();
   await expect(page.getByRole('link', { name: code })).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);

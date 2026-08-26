@@ -57,10 +57,20 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [adding, setAdding] = useState<string | null>(null);
+  /** Chiếu theo NGƯỜI hay theo NHÓM ĐỐI TƯỢNG — cùng dữ liệu, hai câu hỏi khác nhau. */
+  const [view, setView] = useState<'member' | 'scope'>('member');
+  const [grantingScope, setGrantingScope] = useState<ScopeOption | null>(null);
 
   const rules = useQuery({
     queryKey: ['vault', 'access'],
     queryFn: () => apiFetch<AccessRule[]>('/api/v1/vault/access'),
+  });
+
+  // Danh sách nhóm đối tượng dùng cho CẢ chiều nhìn thứ hai lẫn hộp gán — tải sẵn ở đây để
+  // chiều "theo nhóm" hiện được cả nhóm CHƯA ai được gán (chỗ hổng cần thấy nhất).
+  const scopes = useQuery({
+    queryKey: ['vault', 'access', 'scopes'],
+    queryFn: () => apiFetch<ScopeOption[]>('/api/v1/vault/access/scopes'),
   });
 
   const accounts = useQuery({
@@ -74,6 +84,30 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
   );
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['vault', 'access'] });
+
+  /**
+   * Gỡ một dòng quyền — dùng CHUNG cho cả hai chiều nhìn (AD-15).
+   *
+   * Hai bản sao sẽ trôi khác nhau đúng lúc câu xác nhận đổi, và một bên sẽ quên hỏi.
+   */
+  const removeRule = async (rule: AccessRule) => {
+    const ok = await askConfirm({
+      message: t('access.confirmRemove', { member: rule.memberEmail, scope: rule.scopeLabel }),
+      danger: true,
+      confirmLabel: t('access.remove'),
+    });
+    if (!ok) return;
+    remove.mutate(
+      { id: rule.id },
+      {
+        onSuccess: () => {
+          toast({ message: t('access.removed') });
+          void refresh();
+        },
+        onError: (error) => toast({ message: errorMessage(error), tone: 'error' }),
+      },
+    );
+  };
 
   const byMember = useMemo(() => {
     const map = new Map<string, AccessRule[]>();
@@ -96,22 +130,142 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
     );
   });
 
+  /**
+   * Chiều nhìn thứ hai: gom theo NHÓM ĐỐI TƯỢNG.
+   *
+   * Màn này vốn chỉ gom theo người, nên câu "site PMH-HO ai đang xem được" không trả lời
+   * được — phải rà mắt qua từng thẻ người rồi tự cộng lại trong đầu. Mà đó chính là câu hỏi
+   * lúc rà soát: gỡ một site khỏi vòng an toàn thì phải biết trước ai mất quyền.
+   *
+   * Cùng MỘT tập dữ liệu, chỉ chiếu theo trục khác — không gọi thêm API, và hai chiều không
+   * thể nói lệch nhau.
+   */
+  const scopeGroups = useMemo(() => {
+    const map = new Map<string, { label: string; whitelist: AccessRule[]; needsApproval: AccessRule[] }>();
+    for (const scope of scopes.data ?? []) {
+      map.set(`${scope.scopeType}|${scope.scopeRef}`, {
+        label: scope.label,
+        whitelist: [],
+        needsApproval: [],
+      });
+    }
+    for (const rule of rules.data ?? []) {
+      const key = `${rule.scopeType}|${rule.scopeRef}`;
+      // Nhóm đã bị xoá khỏi danh mục nhưng quyền còn treo: vẫn phải HIỆN, không được giấu —
+      // quyền mồ côi là đúng thứ cần thấy để đi gỡ.
+      const entry = map.get(key) ?? { label: rule.scopeLabel, whitelist: [], needsApproval: [] };
+      (rule.tier === 'whitelist' ? entry.whitelist : entry.needsApproval).push(rule);
+      map.set(key, entry);
+    }
+    const term = search.trim().toLowerCase();
+    return [...map.entries()]
+      .map(([key, value]) => ({ key, ...value }))
+      .filter((group) => !term || group.label.toLowerCase().includes(term))
+      .sort((a, b) => a.label.localeCompare(b.label, 'vi'));
+  }, [rules.data, scopes.data, search]);
+
+  const totalRules = (rules.data ?? []).length;
+  const emptyScopes = scopeGroups.filter(
+    (group) => group.whitelist.length + group.needsApproval.length === 0,
+  ).length;
+
   return (
     <>
       <PageHeader title={t('access.title')} subtitle={t('access.subtitle')} />
 
+      {/* Hai chiều nhìn cùng một tập quyền. "Anh Hùng xem được gì" và "site này ai xem được"
+          là hai câu hỏi khác nhau, và bản cũ chỉ trả lời được câu đầu. */}
+      <div className="segmented" role="group" aria-label={t('access.viewLabel')}>
+        <button
+          type="button"
+          className={view === 'member' ? 'on' : undefined}
+          aria-pressed={view === 'member'}
+          onClick={() => setView('member')}
+        >
+          {t('access.viewByMember')}
+        </button>
+        <button
+          type="button"
+          className={view === 'scope' ? 'on' : undefined}
+          aria-pressed={view === 'scope'}
+          onClick={() => setView('scope')}
+        >
+          {t('access.viewByScope')}
+        </button>
+      </div>
+
       <FilterBar
         search={search}
         onSearchChange={setSearch}
-        searchPlaceholder={t('access.search')}
+        searchPlaceholder={t(view === 'member' ? 'access.search' : 'access.searchScope')}
       />
 
       <p className="alert">{t('access.defaultDenied')}</p>
+
+      {/* Một dòng tổng: lỗ hổng của ma trận là những nhóm CHƯA ai được gán, mà thứ đó không
+          nhìn ra được khi phải rà từng thẻ. */}
+      {!rules.isLoading && !scopes.isLoading ? (
+        <p className="muted">
+          {t('access.summary', {
+            people: people.length,
+            rules: totalRules,
+            scopes: scopeGroups.length,
+            empty: emptyScopes,
+          })}
+        </p>
+      ) : null}
 
       {rules.isLoading || accounts.isLoading ? (
         <Loading />
       ) : rules.isError ? (
         <LoadError onRetry={() => void rules.refetch()} />
+      ) : view === 'scope' ? (
+        scopeGroups.length === 0 ? (
+          <EmptyState title={t('access.noScopes')} />
+        ) : (
+          <div className="access-matrix">
+            {scopeGroups.map((group) => (
+              <section key={group.key} className="card device-panel">
+                <div className="row" style={{ justifyContent: 'space-between' }}>
+                  <h2 className="form-section-title">{group.label}</h2>
+                  <button
+                    type="button"
+                    className="btn sm"
+                    onClick={() => {
+                      const [scopeType, scopeRef] = group.key.split('|');
+                      setGrantingScope({
+                        scopeType: scopeType as ScopeType,
+                        scopeRef,
+                        label: group.label,
+                      });
+                    }}
+                  >
+                    {t('access.addPeople')}
+                  </button>
+                </div>
+
+                {group.whitelist.length + group.needsApproval.length === 0 ? (
+                  <p className="muted">{t('access.scopeEmpty')}</p>
+                ) : (
+                  <div className="scope-tiers">
+                    <TierColumn
+                      title={t('access.tier_whitelist')}
+                      tone="ok"
+                      rules={group.whitelist}
+                      onRemove={(rule) => void removeRule(rule)}
+                    />
+                    <TierColumn
+                      title={t('access.tier_needs_approval')}
+                      tone="warn"
+                      rules={group.needsApproval}
+                      onRemove={(rule) => void removeRule(rule)}
+                    />
+                  </div>
+                )}
+              </section>
+            ))}
+          </div>
+        )
       ) : people.length === 0 ? (
         <EmptyState title={t('access.noPeople')} />
       ) : (
@@ -152,30 +306,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
                           type="button"
                           className="btn sm danger"
                           disabled={remove.isPending}
-                          onClick={() => {
-                            void (async () => {
-                              const ok = await askConfirm({
-                                message: t('access.confirmRemove', {
-                                  member: account.fullName,
-                                  scope: rule.scopeLabel,
-                                }),
-                                danger: true,
-                                confirmLabel: t('access.remove'),
-                              });
-                              if (!ok) return;
-                              remove.mutate(
-                                { id: rule.id },
-                                {
-                                  onSuccess: () => {
-                                    toast({ message: t('access.removed') });
-                                    void refresh();
-                                  },
-                                  onError: (error) =>
-                                    toast({ message: errorMessage(error), tone: 'error' }),
-                                },
-                              );
-                            })();
-                          }}
+                          onClick={() => void removeRule(rule)}
                         >
                           {t('access.remove')}
                         </button>
@@ -201,7 +332,216 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
           }}
         />
       ) : null}
+
+      {grantingScope ? (
+        <GrantToScopeDialog
+          scope={grantingScope}
+          members={(accounts.data?.items ?? []).filter((account) => account.role === 'member')}
+          csrfToken={me.csrfToken}
+          onClose={() => setGrantingScope(null)}
+          onSaved={(count) => {
+            setGrantingScope(null);
+            toast({ message: t('access.grantedMany', { count }) });
+            void refresh();
+          }}
+        />
+      ) : null}
     </>
+  );
+}
+
+/** Một cột tầng quyền trong thẻ nhóm đối tượng: mỗi người là một chip có ✕ để gỡ. */
+function TierColumn({
+  title,
+  tone,
+  rules,
+  onRemove,
+}: {
+  title: string;
+  tone: 'ok' | 'warn';
+  rules: AccessRule[];
+  onRemove: (rule: AccessRule) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div>
+      <span className={`badge ${tone}`}>
+        {title} {rules.length}
+      </span>
+      {rules.length === 0 ? (
+        <p className="muted">{t('access.tierEmpty')}</p>
+      ) : (
+        <ul className="chip-list">
+          {rules.map((rule) => (
+            <li key={rule.id} className="chip">
+              <span>{rule.memberEmail}</span>
+              <button
+                type="button"
+                aria-label={t('access.removeOf', {
+                  member: rule.memberEmail,
+                  scope: rule.scopeLabel,
+                })}
+                onClick={() => onRemove(rule)}
+              >
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Gán MỘT nhóm đối tượng cho NHIỀU người một lượt — chiều ngược của `GrantDialog`.
+ *
+ * Mở vòng an toàn cho một site thường là việc của cả một nhóm người ("ba anh trực đêm"), mà
+ * hộp cũ chỉ nhận một người một lần: ba lần mở hộp, ba lần chọn lại đúng nhóm đó, và lần thứ
+ * ba rất dễ chọn nhầm tầng quyền.
+ */
+function GrantToScopeDialog({
+  scope,
+  members,
+  csrfToken,
+  onClose,
+  onSaved,
+}: {
+  scope: ScopeOption;
+  members: AccountRow[];
+  csrfToken: string;
+  onClose: () => void;
+  onSaved: (count: number) => void;
+}) {
+  const { t } = useTranslation();
+  const [picked, setPicked] = useState<string[]>([]);
+  const [tier, setTier] = useState<Tier>('needs_approval');
+  const [note, setNote] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const save = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/access', {
+    csrfToken,
+    refreshMe: false,
+  });
+
+  const toggle = (email: string) =>
+    setPicked((current) =>
+      current.includes(email) ? current.filter((item) => item !== email) : [...current, email],
+    );
+
+  return (
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={560}
+      title={t('access.grantScopeTitle', { scope: scope.label })}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" form="grant-scope-form" className="btn primary" disabled={saving}>
+            {saving ? t('common.loading') : t('common.save')}
+          </button>
+        </>
+      }
+    >
+      <form
+        id="grant-scope-form"
+        className="form-grid"
+        data-columns={1}
+        onSubmit={(e) => {
+          e.preventDefault();
+          setError(null);
+          if (picked.length === 0) {
+            setError(t('access.pickPeople'));
+            return;
+          }
+          void (async () => {
+            setSaving(true);
+            let done = 0;
+            const failures: string[] = [];
+            for (const memberEmail of picked) {
+              try {
+                await save.mutateAsync({
+                  memberEmail,
+                  scopeType: scope.scopeType,
+                  scopeRef: scope.scopeRef,
+                  tier,
+                  note: note.trim(),
+                });
+                done += 1;
+              } catch (err) {
+                failures.push(`${memberEmail}: ${errorMessage(err)}`);
+              }
+            }
+            setSaving(false);
+            if (done === 0) {
+              setError(failures.join(' '));
+              return;
+            }
+            onSaved(done);
+          })();
+        }}
+      >
+        {members.length === 0 ? (
+          <p className="muted">{t('access.noMembers')}</p>
+        ) : (
+          <fieldset className="ff-contents">
+            <legend className="lbl-t">{t('access.people')}</legend>
+            <ul className="pick-list">
+              {members.map((member) => (
+                <li key={member.id}>
+                  <label className="row" style={{ gap: 'var(--space-3)' }}>
+                    <input
+                      type="checkbox"
+                      checked={picked.includes(member.email)}
+                      onChange={() => toggle(member.email)}
+                    />
+                    <span>
+                      {member.fullName} <span className="muted mono">{member.email}</span>
+                    </span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+          </fieldset>
+        )}
+
+        <Field label={t('access.tier')} hint={t('access.tierHint')}>
+          <Select
+            value={tier}
+            onChange={(next) => setTier(next as Tier)}
+            ariaLabel={t('access.tier')}
+            options={[
+              { value: 'needs_approval', label: t('access.tier_needs_approval') },
+              { value: 'whitelist', label: t('access.tier_whitelist') },
+            ]}
+          />
+        </Field>
+
+        <Field label={t('access.note')} htmlFor="grant-scope-note">
+          <input
+            id="grant-scope-note"
+            className="inp"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        </Field>
+
+        {/* Nói TRƯỚC sẽ ghi mấy dòng — gán một lượt cho năm người là chuyện dễ đếm nhầm. */}
+        {picked.length > 1 ? (
+          <p className="alert">{t('access.willGrant', { count: picked.length })}</p>
+        ) : null}
+
+        {error ? (
+          <p className="alert error" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </form>
+    </Dialog>
   );
 }
 

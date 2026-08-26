@@ -7,6 +7,7 @@ import type { Me } from '@/lib/me';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
+import { PATHS } from '@/lib/routes';
 
 interface Block<T> {
   available: boolean;
@@ -71,7 +72,7 @@ export function DashboardScreen({ me }: { me: Me }) {
           title={t('dashboard.expiring')}
           total={board.expiring.total}
           available={board.expiring.available}
-          moreTo="/sap-het-han"
+          moreTo={PATHS.expiry}
           moreLabel={t('dashboard.seeAllExpiring')}
           emptyText={t('dashboard.expiringEmpty')}
           unavailableText={t('dashboard.blockError')}
@@ -111,7 +112,7 @@ export function DashboardScreen({ me }: { me: Me }) {
             title={t('dashboard.breakGlass')}
             total={board.breakGlass.total}
             available
-            moreTo="/duyet-yeu-cau"
+            moreTo={PATHS.approvals}
             moreLabel={t('dashboard.seeAllBreakGlass')}
             emptyText={t('dashboard.breakGlassEmpty')}
             unavailableText={t('dashboard.blockError')}

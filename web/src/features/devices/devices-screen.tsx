@@ -27,6 +27,7 @@ import {
   type DeviceRow,
   type DeviceStatus,
 } from './device-types';
+import { PATHS } from '@/lib/routes';
 
 const LIMIT = 20;
 
@@ -114,7 +115,7 @@ export function DevicesScreen({ me }: { me: Me }) {
         header: t('devices.code'),
         cell: ({ row }) => (
           // Link thật (không phải onClick trên <tr>): mở tab mới, copy link được.
-          <Link className="mono" to={`/thiet-bi/${row.original.id}`}>
+          <Link className="mono" to={PATHS.device(row.original.id)}>
             {row.original.code}
           </Link>
         ),

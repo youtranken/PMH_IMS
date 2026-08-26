@@ -62,7 +62,7 @@ test.describe('Két sắt ở 390px', () => {
       },
     });
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByRole('cell', { name: label })).toBeVisible();
     await expect(page.getByText('Mật khẩu', { exact: true })).toBeVisible();
@@ -89,7 +89,7 @@ test.describe('Két sắt ở 390px', () => {
     });
     expireStepUp();
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await page.getByRole('button', { name: 'Xem' }).click();
 

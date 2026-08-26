@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api-client';
 import { formatDate, formatMoney, orDash } from '@/lib/format';
 import { SeatEndCell } from './seat-cells';
 import type { InstalledLicense } from './software-types';
+import { PATHS } from '@/lib/routes';
 
 /**
  * Khu bung ra dưới một dòng THIẾT BỊ: máy này đang cài license nào, kỳ hạn và chi phí của
@@ -53,7 +54,7 @@ export function DeviceLicensesExpand({ deviceId }: { deviceId: string }) {
           {rows.map((item) => (
             <div key={item.id} className="seat-card">
               <div className="seat-mc" data-label={t('devices.software')}>
-                <Link className="mono" to={`/phan-mem/${item.softwareId}`}>
+                <Link className="mono" to={PATHS.softwareItem(item.softwareId)}>
                   {item.softwareCode}
                 </Link>
                 <span className="seat-who">{item.softwareName}</span>

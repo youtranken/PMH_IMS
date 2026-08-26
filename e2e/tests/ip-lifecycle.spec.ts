@@ -47,7 +47,7 @@ test.describe('Vòng đời IP', () => {
     const stamp = Date.now().toString().slice(-4);
     const { subnetId, address } = await setUp(page, stamp);
 
-    await page.goto(`/dia-chi-ip/${subnetId}`);
+    await page.goto(`/ip-addresses/${subnetId}`);
     const row = page.getByRole('row', { name: new RegExp(address.replace(/\./g, '\\.')) });
     await expect(row.getByText('Đang cấp')).toBeVisible();
 

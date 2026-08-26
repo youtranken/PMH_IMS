@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, orDash } from '@/lib/format';
@@ -27,6 +27,7 @@ import {
   type DeviceHistoryRow,
   type DeviceRow,
 } from './device-types';
+import { PATHS } from '@/lib/routes';
 
 /** Khu mở rộng do module khác đóng góp (Epic 3/4/5) — Đợt 1 luôn rỗng. */
 interface DevicePanel {
@@ -49,7 +50,10 @@ export function DeviceDetail({ me }: { me: Me }) {
   const askConfirm = useConfirm();
   const queryClient = useQueryClient();
   const { id = '' } = useParams();
-  const [tab, setTab] = useState('profile');
+  /* Tab mở sẵn đọc từ URL (`?tab=vault`): trang Két sắt dẫn thẳng vào đúng tab, không bắt
+     người ta mở hồ sơ rồi tự đi tìm. Giá trị lạ thì rơi về tab Hồ sơ. */
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState(() => params.get('tab') ?? 'profile');
   const [editing, setEditing] = useState(false);
 
   const device = useQuery({
@@ -115,7 +119,7 @@ export function DeviceDetail({ me }: { me: Me }) {
         subtitle={`${item.deviceTypeName} · ${locationLabel(item)}`}
         actions={
           <>
-            <Link className="btn" to="/thiet-bi">
+            <Link className="btn" to={PATHS.devices}>
               {t('devices.back')}
             </Link>
             <button

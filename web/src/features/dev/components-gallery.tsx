@@ -138,8 +138,8 @@ export function ComponentsGallery() {
       <section className="kit-section">
         <h2>Lưới ghế — .seat-list (khu bung dòng)</h2>
         <p className="muted">
-          Dùng khi hàng bung ra chứa "một dòng một bản ghi con": ghế license ở /phan-mem, phần
-          mềm đang cài ở /thiet-bi. Lưới thẻ chứ không phải bảng lồng — bảng cha đã gập ở
+          Dùng khi hàng bung ra chứa "một dòng một bản ghi con": ghế license ở /software, phần
+          mềm đang cài ở /devices. Lưới thẻ chứ không phải bảng lồng — bảng cha đã gập ở
           ≤960px mà bảng con thì chưa. Mỗi ô phải có <code>data-label</code>: đó là nhãn cột
           hiện ra khi lưới gập trên điện thoại.
         </p>
