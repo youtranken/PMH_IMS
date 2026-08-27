@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
+import { apiFetch } from '@/lib/api-client';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Dialog } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
+import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
@@ -74,6 +76,18 @@ export function ServiceAccountForm({
   const [error, setError] = useState<string | null>(null);
   const draft = useAttachmentDraft();
   const [uploading, setUploading] = useState(false);
+  /*
+   * Mật khẩu cất kèm NGAY trong popup thêm mới.
+   *
+   * Trước đây phải: lưu hồ sơ → đóng popup → bấm vào mã → sang tab Két sắt → bấm Cất secret.
+   * Năm bước cho một việc người ta luôn làm liền sau khi khai tài khoản, nên phần lớn sẽ để
+   * đó "làm sau" — và mật khẩu ở lại trong file Excel hay tin nhắn Zalo, đúng chỗ IMS sinh ra
+   * để dọn đi.
+   *
+   * CHỈ ở lượt tạo mới: sửa hồ sơ thì két đã có tab riêng với đủ xoay/thu hồi/nhật ký, nhét
+   * thêm một ô mật khẩu vào đó chỉ tạo ra hai đường ghi cho cùng một thứ.
+   */
+  const [secretValue, setSecretValue] = useState('');
 
   const save = useApiMutation<Record<string, unknown>, ServiceAccountRow>(
     row ? `/api/v1/service-accounts/${row.id}` : '/api/v1/service-accounts',
@@ -129,6 +143,31 @@ export function ServiceAccountForm({
               onSuccess: (created) => {
                 void (async () => {
                   toast({ message: t('serviceAccounts.saved') });
+                  /*
+                   * Cất mật khẩu là việc RIÊNG sau khi hồ sơ đã có id — không gộp vào cùng
+                   * một request được, vì két gắn theo `ownerId`. Hỏng ở bước này thì hồ sơ
+                   * VẪN còn: báo cho người dùng biết để họ vào tab Két sắt cất lại, chứ đừng
+                   * nuốt lỗi rồi để họ tin là mật khẩu đã nằm trong két.
+                   */
+                  if (!row && secretValue) {
+                    try {
+                      await apiFetch('/api/v1/vault/secrets', {
+                        method: 'POST',
+                        csrfToken,
+                        body: JSON.stringify({
+                          ownerType: 'service_account',
+                          ownerId: created.id,
+                          kind: 'password',
+                          label: t('serviceAccounts.secretLabel'),
+                          username: form.login.trim(),
+                          value: secretValue,
+                        }),
+                      });
+                      toast({ message: t('serviceAccounts.secretSaved') });
+                    } catch (err) {
+                      toast({ message: errorMessage(err), tone: 'error' });
+                    }
+                  }
                   if (draft.files.length > 0) {
                     setUploading(true);
                     const count = draft.files.length;
@@ -156,26 +195,37 @@ export function ServiceAccountForm({
         }}
       >
         <FormSection title={t('serviceAccounts.sectionProfile')} columns={3}>
-          <Field label={t('serviceAccounts.code')} required htmlFor="sa-code">
-            <input
-              id="sa-code"
-              className="inp mono"
-              required
-              placeholder="TK-KETOAN"
-              value={form.code}
-              onChange={(e) => set('code', e.target.value)}
-            />
-          </Field>
-          <Field label={t('serviceAccounts.name')} required htmlFor="sa-name" span={2}>
-            <input
-              id="sa-name"
-              className="inp"
-              required
-              value={form.name}
-              onChange={(e) => set('name', e.target.value)}
-            />
-          </Field>
+          {/*
+            TÊN ĐĂNG NHẬP đứng đầu và là ô bắt buộc — nó là thứ người khai THẬT SỰ biết.
 
+            "Mã" và "tên gọi" là thứ hệ thống cần chứ người dùng không cần: bắt gõ là bắt bịa,
+            và mỗi người bịa một kiểu, đúng thứ làm cột mã trở nên vô dụng. Để trống thì API
+            suy mã từ tên đăng nhập (`codeFromLogin`) và lấy tên đăng nhập làm tên gọi. Cả hai
+            ô vẫn còn đó cho ai muốn tự đặt.
+          */}
+          {/*
+            Bắt buộc CÓ ĐIỀU KIỆN: chỉ khi ô Mã còn trống.
+
+            Vì mã được suy TỪ tên đăng nhập — không có cả hai thì hồ sơ không có gì để gọi tên.
+            Nhưng ai đã tự đặt mã thì không việc gì phải ép họ khai thêm tên đăng nhập: có tài
+            khoản dịch vụ đăng nhập bằng chứng thư, bằng khóa SSH, không có username nào cả.
+          */}
+          <Field
+            label={t('serviceAccounts.login')}
+            required={!form.code.trim()}
+            hint={t('serviceAccounts.loginHint')}
+            htmlFor="sa-login"
+            span={2}
+          >
+            <input
+              id="sa-login"
+              className="inp mono"
+              required={!form.code.trim()}
+              placeholder="ketoan@pmh.com.vn"
+              value={form.login}
+              onChange={(e) => set('login', e.target.value)}
+            />
+          </Field>
           <Field label={t('serviceAccounts.kind')} required hint={t('serviceAccounts.kindHint')}>
             <Select
               value={form.kind}
@@ -187,12 +237,31 @@ export function ServiceAccountForm({
               onChange={(value) => set('kind', value as ServiceAccountKind)}
             />
           </Field>
-          <Field label={t('serviceAccounts.login')} hint={t('serviceAccounts.loginHint')} htmlFor="sa-login">
+
+          <Field
+            label={t('serviceAccounts.code')}
+            hint={row ? undefined : t('serviceAccounts.codeAutoHint')}
+            htmlFor="sa-code"
+          >
             <input
-              id="sa-login"
+              id="sa-code"
               className="inp mono"
-              value={form.login}
-              onChange={(e) => set('login', e.target.value)}
+              placeholder={t('serviceAccounts.codeAutoPlaceholder')}
+              value={form.code}
+              onChange={(e) => set('code', e.target.value)}
+            />
+          </Field>
+          <Field
+            label={t('serviceAccounts.name')}
+            hint={row ? undefined : t('serviceAccounts.nameAutoHint')}
+            htmlFor="sa-name"
+          >
+            <input
+              id="sa-name"
+              className="inp"
+              placeholder={form.login || undefined}
+              value={form.name}
+              onChange={(e) => set('name', e.target.value)}
             />
           </Field>
           {/*
@@ -268,6 +337,34 @@ export function ServiceAccountForm({
             </Field>
           </FormSection>
         ) : null}
+
+        {/*
+          Cất mật khẩu NGAY tại đây — chỉ ở lượt thêm mới.
+
+          Đây là việc người ta luôn làm liền sau khi khai một tài khoản dịch vụ. Bắt đi năm
+          bước (lưu → đóng → mở hồ sơ → sang tab Két sắt → bấm Cất secret) thì phần lớn sẽ để
+          "làm sau", và mật khẩu ở lại trong Excel hay tin nhắn Zalo — đúng chỗ IMS sinh ra để
+          dọn đi. Bỏ trống vẫn lưu được: có tài khoản chưa ai cầm mật khẩu.
+        */}
+        {row ? null : (
+          <FormSection title={t('serviceAccounts.sectionSecret')} columns={1}>
+            <Field
+              label={t('serviceAccounts.secretValue')}
+              hint={t('serviceAccounts.secretHint')}
+              htmlFor="sa-secret"
+            >
+              <input
+                id="sa-secret"
+                className="inp mono"
+                type="password"
+                autoComplete="new-password"
+                value={secretValue}
+                onChange={(e) => setSecretValue(e.target.value)}
+              />
+              <SecretStrengthMeter value={secretValue} />
+            </Field>
+          </FormSection>
+        )}
 
         <FormSection title={t('serviceAccounts.note')} columns={1}>
           <Field label={t('serviceAccounts.note')} hint={t('serviceAccounts.noteHint')} htmlFor="sa-note">

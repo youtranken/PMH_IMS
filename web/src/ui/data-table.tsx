@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Chevron } from './chevron';
 import {
   flexRender,
   getCoreRowModel,
@@ -212,9 +213,13 @@ export function DataTable<T>({
                           onClick={h.column.getToggleSortingHandler()}
                         >
                           {flexRender(h.column.columnDef.header, h.getContext())}
-                          <span aria-hidden="true" className="sort-arrow">
-                            {sorted === 'asc' ? ' ▲' : sorted === 'desc' ? ' ▼' : ''}
-                          </span>
+                          {/* Cùng nét chevron với dropdown, không phải ▲▼ của bộ ký tự —
+                              hai loại mũi tên trên cùng một bảng đọc như hai hệ thống. */}
+                          {sorted ? (
+                            <span className="sort-arrow">
+                              <Chevron direction={sorted === 'asc' ? 'up' : 'down'} />
+                            </span>
+                          ) : null}
                         </button>
                       ) : (
                         flexRender(h.column.columnDef.header, h.getContext())
@@ -302,12 +307,9 @@ export function DataTable<T>({
                                 setExpandedId((cur) => (cur === row.id ? null : row.id));
                               }}
                             >
-                              <span
-                                className={`cell-caret${expanded ? ' open' : ''}`}
-                                aria-hidden="true"
-                              >
-                                ›
-                              </span>
+                              {/* Cùng nét mũi tên với dropdown/lịch — chỉ SANG PHẢI khi đóng,
+                                  xoay xuống khi bung, đúng nếp cây thư mục. */}
+                              <Chevron direction={expanded ? 'down' : 'right'} />
                             </button>
                           ) : null}
                         </td>

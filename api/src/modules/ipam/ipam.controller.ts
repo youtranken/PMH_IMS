@@ -57,6 +57,15 @@ class SubnetBodyDto {
   @Max(4094, { message: 'VLAN phải từ 1 đến 4094.' })
   vlan?: number | null;
 
+  /**
+   * Gateway của dải (0035). Chuỗi rỗng = xóa gateway đang có — ô để trống là ý định rõ ràng
+   * ("dải point-to-point này không có gateway"), không phải "đừng đụng tới".
+   *
+   * Chỉ kiểm ĐỘ DÀI ở đây; "có nằm trong dải không" là luật nghiệp vụ, thuộc về service —
+   * và còn một CHECK ở tầng DB nữa cho mọi đường vào không đi qua HTTP.
+   */
+  @IsOptional() @IsString() @Length(0, 15) gateway?: string;
+
   @IsOptional() @IsString() @Length(0, 500) description?: string;
 }
 
@@ -238,6 +247,7 @@ export class IpamController {
       cidr: body.cidr ?? '',
       siteId: body.siteId,
       vlan: body.vlan,
+      gateway: body.gateway,
       description: body.description,
     });
   }
@@ -253,9 +263,15 @@ export class IpamController {
     return this.subnets.update(actor(req), params.id, body);
   }
 
-  /** "Xóa" = ẩn kèm lý do. Bản ghi ở lại, tra cứu được, còn vết ai ẩn. */
+  /**
+   * Vô hiệu hóa kèm lý do — dùng cho dải ĐÃ TỪNG có hồ sơ IP. Bản ghi ở lại, tra cứu được.
+   *
+   * Chuyển từ `DELETE` sang `PATCH :id/void` (2026-08-27) để `DELETE` mang đúng nghĩa của nó:
+   * xóa hẳn. Hai việc khác nhau thì hai cửa khác nhau — trước đây `DELETE` mà thực ra là ẩn
+   * là một cái bẫy cho bất cứ ai đọc route mà không đọc service.
+   */
   @Roles('sa', 'admin')
-  @Delete('subnets/:id')
+  @Patch('subnets/:id/void')
   @Audited('subnet.voided', 'subnet', { writtenByService: true })
   async voidSubnet(
     @Param() params: IdParamDto,
@@ -263,6 +279,21 @@ export class IpamController {
     @Req() req: AuthedRequest,
   ) {
     await this.subnets.voidSubnet(actor(req), params.id, body.reason);
+    return { ok: true };
+  }
+
+  /**
+   * XÓA HẲN — chỉ dải CHƯA TỪNG có hồ sơ IP nào (quyết định 2026-08-27).
+   *
+   * Khai nhầm một dải rồi phải sống chung với nó mãi là phiền vô lý: dải chưa dùng thì chưa
+   * mang thông tin gì, xóa đi khai lại. Dải đã từng dùng thì service từ chối kèm số hồ sơ IP
+   * đang giữ lịch sử, và chỉ sang đường vô hiệu hóa.
+   */
+  @Roles('sa', 'admin')
+  @Delete('subnets/:id')
+  @Audited('subnet.deleted', 'subnet', { writtenByService: true })
+  async deleteSubnet(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    await this.subnets.remove(actor(req), params.id);
     return { ok: true };
   }
 

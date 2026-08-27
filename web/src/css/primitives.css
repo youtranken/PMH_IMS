@@ -261,10 +261,15 @@
 .caret-btn {
   all: unset;
   cursor: pointer;
-  color: var(--ink-3);
-  font-size: var(--fs-xs);
-  padding: 2px var(--space-1);
-  border-radius: 4px;
+  color: var(--ink-2);
+  /* Ô bấm VUÔNG 28px, không phải một con chữ. Trước đây là ký tự › cỡ --fs-xs với padding
+     2px: vùng bấm chưa tới 12px, trượt tay là bấm trúng link mã thiết bị ngay bên cạnh. */
+  display: inline-grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  font-size: var(--fs-md);
+  border-radius: 6px;
 }
 .caret-btn:hover {
   color: var(--ink);
@@ -642,12 +647,5 @@ table.table tbody tr.exp:hover td {
 
 /* Mũi tên bung dòng trong bảng (DataTable vẽ ở cột đầu). Dùng CHUNG một kiểu chevron với
    nav/dropdown/lịch: xoay 90° khi mở, không đổi ký tự. */
-.cell-caret {
-  display: inline-block;
-  font-size: var(--fs-lg);
-  line-height: 1;
-  transition: transform 0.18s var(--ease);
-}
-.cell-caret.open {
-  transform: rotate(90deg);
-}
+/* `.cell-caret` cũ (ký tự › xoay 90°) đã bỏ: caret bung dòng giờ dùng `<Chevron>` chung,
+   tự đổi hướng phải→xuống. Không giữ lại luật chết để lần sau có người tưởng nó còn chạy. */

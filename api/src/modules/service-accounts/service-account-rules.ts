@@ -86,6 +86,34 @@ export function checkAllowedIps(value: string): AllowedIpsCheck {
   return { invalid, tooWide, normalized };
 }
 
+/**
+ * Sinh MÃ từ tên đăng nhập — để người khai không phải nghĩ ra một cái mã.
+ *
+ * Việc thật: người ta biết tài khoản đó đăng nhập bằng gì (`ketoan@pmh.com.vn`, `vpn-lan`),
+ * còn "mã tài khoản" là thứ hệ thống cần chứ người dùng không cần. Bắt gõ là bắt bịa, và mỗi
+ * người bịa một kiểu — đúng thứ làm cột mã trở nên vô dụng.
+ *
+ * Vẫn GIỮ cột mã: nó là khóa duy nhất, là thứ hiện trên mọi dòng lịch sử, mọi biên bản. Chỉ
+ * là hệ thống tự lo khi ô để trống.
+ *
+ * Quy tắc: lấy phần trước `@`, bỏ dấu tiếng Việt, viết hoa, mọi thứ không phải chữ-số thành
+ * `-`. Rỗng (login toàn ký tự lạ) → `TK` để còn có cái mà thêm số vào.
+ */
+export function codeFromLogin(login: string): string {
+  const local = login.trim().split('@')[0] ?? '';
+  const ascii = local
+    .normalize('NFD')
+    // Bỏ dấu thanh + dấu mũ; `đ/Đ` không phải tổ hợp nên phải thay riêng.
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D');
+  const slug = ascii
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || 'TK';
+}
+
 /** Ô có thể để trống — đúng bộ ô mà "không gửi" khác hẳn "gửi chuỗi rỗng". */
 export const SERVICE_ACCOUNT_OPTIONAL_FIELDS = [
   'login',
@@ -97,11 +125,17 @@ export const SERVICE_ACCOUNT_OPTIONAL_FIELDS = [
 ] as const;
 export type ServiceAccountOptionalField = (typeof SERVICE_ACCOUNT_OPTIONAL_FIELDS)[number];
 
-/** Body một lần ghi: ô vắng mặt = "đừng đụng tới". */
+/**
+ * Body một lần ghi: ô vắng mặt = "đừng đụng tới".
+ *
+ * `code`/`name` để `string | undefined` vì lúc TẠO chúng có thể được suy ra sau (`fillBlanks`
+ * ở service). `mergeServiceAccount` chỉ chuyển tiếp chúng nguyên vẹn —
+ * `validateServiceAccount` mới là chỗ phán "thiếu mã" / "thiếu tên", và nó đọc chuỗi rỗng.
+ */
 export type ServiceAccountPatch = {
-  code: string;
+  code?: string;
   kind: ServiceAccountKind;
-  name: string;
+  name?: string;
 } & Partial<Record<ServiceAccountOptionalField, string>>;
 
 /** Dòng đang nằm trong DB — chỉ phần ô tùy chọn, đủ để `merge` lấp chỗ trống. */
@@ -150,9 +184,11 @@ export function mergeServiceAccount(
   };
 
   return {
-    code: input.code,
+    // `?? ''` để `validateServiceAccount` thấy một chuỗi rỗng và báo "cần mã tài khoản",
+    // thay vì nổ khi gọi `.trim()` trên `undefined`.
+    code: input.code ?? '',
     kind: input.kind,
-    name: input.name,
+    name: input.name ?? '',
     login: keep('login'),
     department: keep('department'),
     ownerName: keep('ownerName'),

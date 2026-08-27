@@ -45,6 +45,23 @@ label {
   font-weight: 500;
 }
 
+/* --- Chevron dùng chung (ui/chevron.tsx) ------------------------------------
+ * MỘT nét mũi tên cho cả app: dropdown, lịch, caret bung dòng, phân trang, cột sắp xếp.
+ *
+ * Đặt ở base.css — tức là TRƯỚC form-layout/primitives/datepicker trong thứ tự @import —
+ * để `.fsel-caret`, `.combo-caret svg`, `.dp-trigger .chev` vẫn đè được kích thước riêng
+ * của chúng. Ngược lại (đặt ở primitives) là mũi tên dropdown lặng lẽ co lại theo `1em`.
+ *
+ * Kích thước mặc định theo `1em` nên nó lớn/nhỏ theo nút bọc ngoài — muốn to hơn thì chỉnh
+ * `font-size` của nút, không sửa ở đây.
+ * -------------------------------------------------------------------------- */
+.chevron {
+  width: 1em;
+  height: 1em;
+  flex: none;
+  transition: transform 0.18s var(--ease);
+}
+
 /* --- Buttons -------------------------------------------------------------- */
 button {
   font: inherit;

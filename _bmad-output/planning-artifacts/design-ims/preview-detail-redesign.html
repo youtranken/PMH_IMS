@@ -1,0 +1,1027 @@
+<title>Trang chi tiết IMS</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/* ============================================================================
+   Bản xem trước — trang chi tiết IMS.
+   Màu lấy NGUYÊN từ web/src/css/tokens.css ("Sunset Grove"). Không hệ màu mới:
+   đây là bản xem trước của chính ứng dụng, không phải một đề xuất nhận diện khác.
+   ========================================================================== */
+:root {
+  --canvas:#f7f6f2; --surface:#ffffff; --surface-2:#f2f1ea;
+  --ink:#1f231c; --ink-2:#5a615a; --ink-3:#5c635c;
+  --border:#e9eae2; --border-2:#d8dbd0;
+  --primary:#0e9f6e; --primary-ink:#0a7d54; --primary-soft:#e5f6ee;
+  --warm:#f59e0b; --warm-ink:#ea580c; --warm-soft:#fef2df;
+  --ok:#0f7a55; --ok-soft:#e4f4ee;
+  --warn:#a34d08; --warn-soft:#fdf0e3;
+  --danger:#c0392b; --danger-soft:#fdeceb;
+  --muted:#5f665f; --muted-soft:#efeee7;
+  --sidebar-bg:#16231b; --sidebar-ink:#8ea595; --sidebar-ink-2:#eaf3ee;
+  --sidebar-active-bg:rgba(245,158,11,.16); --sidebar-active-ink:#ffe1b3;
+  --sidebar-border:#24352a;
+  --shadow-sm:0 1px 2px rgba(16,24,40,.05);
+  --shadow:0 1px 3px rgba(16,24,40,.08),0 1px 2px rgba(16,24,40,.05);
+  --shadow-lg:0 24px 60px -20px rgba(16,24,40,.3);
+  --note-bg:#fffbeb; --note-border:#f3d99b; --note-ink:#7a5410;
+  --r-sm:8px; --r:10px; --r-lg:14px;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:ui-monospace,'Cascadia Code','SF Mono',Consolas,monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas:#141a15; --surface:#18201a; --surface-2:#1d261d;
+    --ink:#e9ede7; --ink-2:#a7b0a5; --ink-3:#9aa39a;
+    --border:#26312a; --border-2:#37453a;
+    --primary:#34d399; --primary-ink:#6ee7b7; --primary-soft:#123024;
+    --warm:#fbbf24; --warm-ink:#f59e0b; --warm-soft:#3a2c14;
+    --ok:#43c294; --ok-soft:#13312a;
+    --warn:#e0a35a; --warn-soft:#3a2c18;
+    --danger:#ef6f63; --danger-soft:#3a1f1d;
+    --muted:#9aa59a; --muted-soft:#232d23;
+    --sidebar-bg:#0e140f; --sidebar-border:#1e2a22;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+    --shadow:0 1px 3px rgba(0,0,0,.4),0 1px 2px rgba(0,0,0,.3);
+    --shadow-lg:0 24px 60px -20px rgba(0,0,0,.7);
+    --note-bg:#2b2413; --note-border:#4a3a1c; --note-ink:#e8c987;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --canvas:#141a15; --surface:#18201a; --surface-2:#1d261d;
+  --ink:#e9ede7; --ink-2:#a7b0a5; --ink-3:#9aa39a;
+  --border:#26312a; --border-2:#37453a;
+  --primary:#34d399; --primary-ink:#6ee7b7; --primary-soft:#123024;
+  --warm:#fbbf24; --warm-ink:#f59e0b; --warm-soft:#3a2c14;
+  --ok:#43c294; --ok-soft:#13312a;
+  --warn:#e0a35a; --warn-soft:#3a2c18;
+  --danger:#ef6f63; --danger-soft:#3a1f1d;
+  --muted:#9aa59a; --muted-soft:#232d23;
+  --sidebar-bg:#0e140f; --sidebar-border:#1e2a22;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+  --shadow:0 1px 3px rgba(0,0,0,.4),0 1px 2px rgba(0,0,0,.3);
+  --shadow-lg:0 24px 60px -20px rgba(0,0,0,.7);
+  --note-bg:#2b2413; --note-border:#4a3a1c; --note-ink:#e8c987;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+
+/* --- Khung trang tài liệu --------------------------------------------------- */
+.doc-head { display: flex; flex-direction: column; gap: .75rem; margin-bottom: 2.5rem; }
+.eyebrow {
+  font-size: .72rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--primary-ink);
+}
+h1 { font-size: 2rem; font-weight: 800; margin: 0; letter-spacing: -.02em; text-wrap: balance; }
+.lede { color: var(--ink-2); max-width: 65ch; }
+h2 {
+  font-size: 1.25rem; font-weight: 700; margin: 0 0 .35rem; letter-spacing: -.01em;
+  text-wrap: balance;
+}
+h3 { font-size: 1rem; font-weight: 700; margin: 0; }
+section.block { margin-top: 3.5rem; }
+.block-head { display: flex; flex-direction: column; gap: .3rem; margin-bottom: 1.25rem; }
+.block-head p { margin: 0; color: var(--ink-2); max-width: 68ch; }
+
+/* Chú thích đánh số — chỉ dùng ở chỗ THẬT SỰ là một chuỗi có thứ tự. */
+.note {
+  display: flex; gap: .7rem; align-items: flex-start;
+  background: var(--note-bg); border: 1px solid var(--note-border);
+  border-radius: var(--r); padding: .7rem .85rem; color: var(--note-ink);
+  font-size: .88rem;
+}
+.note b { color: inherit; }
+.note-n {
+  flex: none; width: 1.35rem; height: 1.35rem; border-radius: 999px;
+  background: var(--note-ink); color: var(--note-bg);
+  display: grid; place-items: center; font-size: .7rem; font-weight: 800;
+}
+
+/* --- Artboard: khung giả lập màn hình app ---------------------------------- */
+.board {
+  border: 1px solid var(--border-2); border-radius: var(--r-lg);
+  background: var(--surface); box-shadow: var(--shadow-lg); overflow: hidden;
+}
+.board-bar {
+  display: flex; align-items: center; gap: .5rem;
+  padding: .55rem .85rem; background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  font-size: .78rem; color: var(--ink-3);
+}
+.dot { width: 10px; height: 10px; border-radius: 999px; background: var(--border-2); }
+.board-url {
+  margin-left: .5rem; font-family: var(--mono); font-size: .75rem;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 999px; padding: .15rem .6rem; color: var(--ink-2);
+}
+.board-tag { margin-left: auto; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; font-size: .68rem; }
+.tag-before { color: var(--danger); }
+.tag-after  { color: var(--primary-ink); }
+.board-body { padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
+
+/* --- Mảnh giao diện dùng lại từ app --------------------------------------- */
+.crumbs { display: flex; align-items: center; gap: .4rem; font-size: .8rem; color: var(--ink-3); }
+.crumbs a { color: var(--ink-3); text-decoration: none; }
+.crumbs a:hover { color: var(--primary-ink); text-decoration: underline; }
+.crumb-sep { opacity: .5; }
+
+.page-title-row { display: flex; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+.page-title-row .grow { flex: 1 1 22rem; min-width: 0; }
+.title-xl {
+  font-family: var(--mono); font-size: 1.5rem; font-weight: 700; letter-spacing: -.01em;
+  display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+}
+.title-sub { color: var(--ink-2); font-size: 1rem; font-weight: 500; font-family: var(--font); }
+.subline { color: var(--ink-3); font-size: .85rem; display: flex; gap: .45rem; align-items: center; flex-wrap: wrap; }
+.subline .mono { font-family: var(--mono); color: var(--ink-2); }
+
+.btn {
+  border: 1px solid var(--border-2); background: var(--surface); color: var(--ink);
+  border-radius: var(--r-sm); padding: .38rem .8rem; font: inherit; font-size: .85rem;
+  font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+.btn.icon { padding: .38rem .55rem; }
+.btn.sm { padding: .25rem .6rem; font-size: .8rem; }
+.btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: .3rem;
+  border-radius: 999px; padding: .12rem .55rem;
+  font-size: .78rem; font-weight: 700; border: 1px solid transparent;
+}
+.badge::before { content: ''; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+.badge.plain::before { display: none; }
+.badge.ok { background: var(--ok-soft); color: var(--ok); }
+.badge.warn { background: var(--warn-soft); color: var(--warn); }
+.badge.danger { background: var(--danger-soft); color: var(--danger); }
+.badge.muted { background: var(--muted-soft); color: var(--muted); }
+.badge.brand { background: var(--primary-soft); color: var(--primary-ink); }
+
+/* Dải tóm tắt CŨ — một hàng badge trôi, không có cấu trúc. */
+.summary-old { display: flex; gap: .9rem; align-items: center; flex-wrap: wrap; color: var(--ink-3); font-size: .85rem; }
+
+/* HERO MỚI — bốn chỉ số, mỗi cái một ô có nhịp riêng. */
+.hero {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: var(--r); overflow: hidden;
+}
+.stat { background: var(--surface); padding: .7rem .85rem; display: flex; flex-direction: column; gap: .35rem; min-width: 0; }
+.stat-k { font-size: .68rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.stat-v { font-weight: 600; font-size: .95rem; overflow-wrap: anywhere; }
+.stat-v .mono { font-family: var(--mono); }
+.stat-note { font-size: .75rem; color: var(--ink-3); }
+
+/* --- Thanh bảo hành (đề xuất mới) ------------------------------------------ */
+.wt { display: flex; flex-direction: column; gap: .45rem; }
+.wt-ends { display: flex; justify-content: space-between; font-size: .74rem; color: var(--ink-3); }
+.wt-ends b { color: var(--ink-2); font-weight: 600; }
+.wt-track {
+  position: relative; height: 12px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--border); overflow: visible;
+}
+.wt-fill {
+  position: absolute; inset: 0 auto 0 0; border-radius: 999px;
+  background: linear-gradient(90deg, var(--ok) 0%, var(--warn) 62%, var(--danger) 100%);
+  background-size: 1000% 100%;
+}
+/* Phần đã đi hiện theo TỶ LỆ, còn màu lấy từ mốc tương ứng của cả quãng —
+   nên hai thanh cùng % luôn cùng màu, không phụ thuộc độ dài hợp đồng. */
+.wt-fill.ok    { background: var(--ok); }
+.wt-fill.warn  { background: linear-gradient(90deg, var(--ok), var(--warn)); }
+.wt-fill.crit  { background: linear-gradient(90deg, var(--ok), var(--warn) 70%, var(--danger)); }
+.wt-fill.over  {
+  background: repeating-linear-gradient(45deg, var(--danger) 0 6px, color-mix(in srgb, var(--danger) 60%, transparent) 6px 12px);
+}
+.wt-now {
+  position: absolute; top: -5px; bottom: -5px; width: 2px; background: var(--ink);
+  border-radius: 2px;
+}
+.wt-now::after {
+  content: ''; position: absolute; top: -5px; left: 50%; transform: translateX(-50%);
+  border-left: 5px solid transparent; border-right: 5px solid transparent;
+  border-top: 6px solid var(--ink);
+}
+.wt-legend { display: flex; justify-content: space-between; font-size: .78rem; }
+.wt-legend .left { color: var(--ink-3); }
+.wt-legend .right { font-weight: 700; }
+.wt-legend .right.ok { color: var(--ok); }
+.wt-legend .right.warn { color: var(--warn); }
+.wt-legend .right.crit, .wt-legend .right.over { color: var(--danger); }
+.wt-mini .wt-track { height: 6px; }
+.wt-mini .wt-now { top: -3px; bottom: -3px; }
+.wt-mini .wt-now::after { display: none; }
+
+.wt-cases { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+.wt-case { border: 1px solid var(--border); border-radius: var(--r); padding: .85rem; background: var(--surface); display: flex; flex-direction: column; gap: .6rem; }
+.wt-case h4 { margin: 0; font-size: .82rem; font-weight: 700; color: var(--ink-2); }
+
+/* --- Tabs ------------------------------------------------------------------ */
+.tabs { display: flex; gap: .15rem; border-bottom: 1px solid var(--border); overflow-x: auto; }
+.tab {
+  flex: none; border: none; background: none; font: inherit; font-weight: 600;
+  color: var(--ink-3); padding: .5rem .9rem; border-bottom: 2px solid transparent;
+  cursor: pointer; display: inline-flex; align-items: center; gap: .4rem;
+}
+.tab[aria-selected="true"] { color: var(--primary-ink); border-bottom-color: var(--primary); }
+.tab-count {
+  font-size: .7rem; font-weight: 700; background: var(--surface-2); color: var(--ink-3);
+  border-radius: 999px; padding: 0 .38rem; min-width: 1.15rem; text-align: center;
+}
+.tab[aria-selected="true"] .tab-count { background: var(--primary-soft); color: var(--primary-ink); }
+.tab-count.zero { opacity: .55; }
+
+/* --- Lưới thông tin -------------------------------------------------------- */
+.grid-old { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: .75rem; }
+.cell-old { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r); padding: .55rem .8rem; min-width: 0; }
+.cell-old dt { font-size: .68rem; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--ink-3); margin-bottom: .1rem; }
+.cell-old dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
+.cell-old dd.empty { color: var(--ink-3); }
+
+.fieldset { border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); }
+.fieldset + .fieldset { margin-top: .85rem; }
+.fieldset > header {
+  padding: .5rem .85rem; border-bottom: 1px solid var(--border);
+  font-size: .7rem; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--ink-3); background: var(--surface-2);
+  border-radius: var(--r) var(--r) 0 0;
+}
+.rows { padding: .35rem .85rem .6rem; }
+.row-kv {
+  display: grid; grid-template-columns: minmax(8rem, 12rem) 1fr; gap: .5rem 1rem;
+  padding: .42rem 0; border-bottom: 1px dashed var(--border);
+  align-items: baseline;
+}
+.rows .row-kv:last-child { border-bottom: none; }
+.row-kv > dt { color: var(--ink-3); font-size: .85rem; }
+.row-kv > dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
+.row-kv .mono { font-family: var(--mono); }
+.row-kv.wide { grid-template-columns: 1fr; }
+.copy {
+  border: 1px solid var(--border-2); background: var(--surface); color: var(--ink-3);
+  border-radius: 6px; padding: 0 .3rem; font-size: .72rem; cursor: pointer; margin-left: .3rem;
+}
+.copy:hover { color: var(--primary-ink); border-color: var(--primary); }
+.blank-line {
+  margin-top: .5rem; font-size: .8rem; color: var(--ink-3);
+  background: var(--surface-2); border-radius: var(--r-sm); padding: .4rem .7rem;
+}
+
+/* --- Hành động nhanh ------------------------------------------------------- */
+.quick { display: flex; gap: .45rem; flex-wrap: wrap; }
+.quick .btn { font-weight: 600; }
+
+/* --- Lịch sử --------------------------------------------------------------- */
+.hist-day { font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); margin: .7rem 0 .35rem; }
+.hist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.hist li { display: flex; gap: .65rem; padding: .45rem 0; border-bottom: 1px solid var(--border); }
+.hist li:last-child { border-bottom: none; }
+.hist-dot { flex: none; width: 8px; height: 8px; border-radius: 999px; background: var(--border-2); margin-top: .42rem; }
+.hist-dot.brand { background: var(--primary); }
+.hist-act { font-weight: 600; }
+.hist-det { color: var(--ink-2); font-size: .85rem; }
+.hist-meta { color: var(--ink-3); font-size: .78rem; }
+
+/* --- Bảng nhỏ -------------------------------------------------------------- */
+.tbl-wrap { overflow-x: auto; }
+table.tbl { width: 100%; border-collapse: collapse; font-size: .87rem; }
+table.tbl th, table.tbl td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--border); }
+table.tbl th { font-size: .7rem; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+table.tbl td.num { font-variant-numeric: tabular-nums; }
+
+/* --- So sánh trước/sau ----------------------------------------------------- */
+.compare { display: grid; gap: 1.25rem; }
+@media (min-width: 1000px) { .compare.two { grid-template-columns: 1fr 1fr; align-items: start; } }
+
+.legend-swatches { display: flex; gap: 1rem; flex-wrap: wrap; font-size: .82rem; color: var(--ink-2); }
+.sw { display: inline-flex; align-items: center; gap: .35rem; }
+.sw i { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+
+footer.end { margin-top: 4rem; padding-top: 1.25rem; border-top: 1px solid var(--border); color: var(--ink-3); font-size: .85rem; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="wrap">
+
+<header class="doc-head">
+  <span class="eyebrow">IMS · bản xem trước, chưa vào code</span>
+  <h1>Trang chi tiết — thiết kế lại</h1>
+  <p class="lede">
+    Bốn trang chi tiết của IMS đang là <b>một cái bảng phẳng</b>: 13 ô cùng cỡ, cùng màu, cùng
+    trọng số chữ. Trang này bày ra hiện trạng và đề xuất, đặt cạnh nhau. Màu và chữ lấy nguyên
+    từ <span class="mono">tokens.css</span> — không có hệ màu mới, vì đây là bản xem trước của
+    chính IMS chứ không phải một đề xuất nhận diện khác.
+  </p>
+  <div class="legend-swatches">
+    <span class="sw"><i style="background:var(--danger)"></i> HIỆN TẠI — đúng như app đang chạy</span>
+    <span class="sw"><i style="background:var(--primary)"></i> ĐỀ XUẤT — chưa có trong code</span>
+  </div>
+</header>
+
+<!-- ======================================================================= -->
+<section class="block">
+  <div class="block-head">
+    <h2>1 · Thanh bảo hành</h2>
+    <p>
+      Toàn bộ "bảo hành" trên trang hiện là một cái nhãn chữ: <b>"Còn 157 ngày"</b>. Nó trả lời
+      đúng một câu và giấu mất ba câu còn lại — mua từ bao giờ, bảo hành chạy từ mốc nào, và đã
+      đi hết bao nhiêu phần đường.
+    </p>
+  </div>
+
+  <div class="compare two">
+    <div class="board">
+      <div class="board-bar"><span class="dot"></span><span class="board-tag tag-before">Hiện tại</span></div>
+      <div class="board-body">
+        <dl class="grid-old" style="grid-template-columns:repeat(auto-fill,minmax(200px,1fr))">
+          <div class="cell-old"><dt>Ngày mua</dt><dd>12/01/2025</dd></div>
+          <div class="cell-old"><dt>Bảo hành từ</dt><dd>12/01/2025</dd></div>
+          <div class="cell-old"><dt>Bảo hành đến</dt><dd>31/12/2026 <span class="badge ok">Còn 157 ngày</span></dd></div>
+        </dl>
+        <p class="stat-note">
+          Ba con số rời nhau ở ba ô. Muốn biết "đã đi được bao nhiêu" thì phải tự trừ ngày trong đầu.
+        </p>
+      </div>
+    </div>
+
+    <div class="board">
+      <div class="board-bar"><span class="dot"></span><span class="board-tag tag-after">Đề xuất</span></div>
+      <div class="board-body">
+        <div class="wt">
+          <div class="wt-ends">
+            <span>Mua <b>12/01/2025</b></span>
+            <span>Hết bảo hành <b>31/12/2026</b></span>
+          </div>
+          <div class="wt-track">
+            <div class="wt-fill ok" style="right:32%"></div>
+            <div class="wt-now" style="left:68%"></div>
+          </div>
+          <div class="wt-legend">
+            <span class="left">Đã đi 68% · hôm nay 27/08/2026</span>
+            <span class="right ok">Còn 157 ngày</span>
+          </div>
+        </div>
+        <p class="stat-note">
+          Một thanh trả lời cả bốn câu. Mốc <b>hôm nay</b> là cái tam giác — nhìn phát biết mình
+          đang đứng ở đâu trên quãng đường, không phải đọc ba ô rồi tự tính.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="block-head" style="margin-top:1.5rem">
+    <h3>Bốn trạng thái</h3>
+    <p>
+      Màu chạy theo <b>phần trăm quãng đường đã đi</b>, và ngưỡng đổi màu đọc từ chính
+      <span class="mono">expiryLevel()</span> đang có — nên thanh này và badge không bao giờ nói
+      khác nhau (AD-15).
+    </p>
+  </div>
+
+  <div class="wt-cases">
+    <div class="wt-case">
+      <h4>Mới mua</h4>
+      <div class="wt">
+        <div class="wt-ends"><span>01/2026</span><span>01/2029</span></div>
+        <div class="wt-track"><div class="wt-fill ok" style="right:88%"></div><div class="wt-now" style="left:12%"></div></div>
+        <div class="wt-legend"><span class="left">Đã đi 12%</span><span class="right ok">Còn 962 ngày</span></div>
+      </div>
+    </div>
+    <div class="wt-case">
+      <h4>Sắp hết (≤30 ngày)</h4>
+      <div class="wt">
+        <div class="wt-ends"><span>09/2024</span><span>21/09/2026</span></div>
+        <div class="wt-track"><div class="wt-fill warn" style="right:4%"></div><div class="wt-now" style="left:96%"></div></div>
+        <div class="wt-legend"><span class="left">Đã đi 96%</span><span class="right warn">Còn 25 ngày</span></div>
+      </div>
+    </div>
+    <div class="wt-case">
+      <h4>Gấp (≤7 ngày)</h4>
+      <div class="wt">
+        <div class="wt-ends"><span>08/2023</span><span>30/08/2026</span></div>
+        <div class="wt-track"><div class="wt-fill crit" style="right:1%"></div><div class="wt-now" style="left:99%"></div></div>
+        <div class="wt-legend"><span class="left">Đã đi 99%</span><span class="right crit">Còn 3 ngày</span></div>
+      </div>
+    </div>
+    <div class="wt-case">
+      <h4>Quá hạn</h4>
+      <div class="wt">
+        <div class="wt-ends"><span>07/2022</span><span>24/07/2026</span></div>
+        <div class="wt-track"><div class="wt-fill over" style="right:0"></div><div class="wt-now" style="left:100%"></div></div>
+        <div class="wt-legend"><span class="left">Hết từ 24/07/2026</span><span class="right over">Quá hạn 34 ngày</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note" style="margin-top:1rem">
+    <span class="note-n">!</span>
+    <span>
+      <b>Thiếu mốc đầu thì không bịa.</b> Không có <span class="mono">warrantyStart</span> thì suy
+      từ <span class="mono">purchaseDate</span>; thiếu cả hai thì vẽ thanh <b>chỉ có đích</b> —
+      một vạch đỏ ở cuối và chữ "Còn N ngày", không vẽ ra một điểm bắt đầu không ai biết.
+      Dùng lại ở <b>bốn chỗ cùng hỏi một câu</b>: bảo hành thiết bị, hạn license/SSL/tên miền,
+      hợp đồng đường truyền, và cột hạn ở màn Sắp hết hạn.
+    </span>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<section class="block">
+  <div class="block-head">
+    <h2>2 · Trang chi tiết thiết bị</h2>
+    <p>
+      Trang được mở nhiều nhất. Dưới đây là hiện trạng, rồi tới đề xuất — cùng một hồ sơ,
+      cùng một bộ dữ liệu.
+    </p>
+  </div>
+
+  <div class="board" style="margin-bottom:1.25rem">
+    <div class="board-bar">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="board-url">/devices/SW-CORE-01</span>
+      <span class="board-tag tag-before">Hiện tại</span>
+    </div>
+    <div class="board-body">
+      <div class="page-title-row">
+        <div class="grow">
+          <div class="title-xl">SW-CORE-01 — Switch tầng 2</div>
+        </div>
+        <div class="quick">
+          <button class="btn">Về danh sách</button>
+          <button class="btn primary">Sửa</button>
+          <button class="btn">Thanh lý</button>
+        </div>
+      </div>
+
+      <div class="summary-old">
+        <span class="badge ok">Đang dùng</span>
+        <span class="badge ok">Còn 157 ngày</span>
+        <span>Vị trí: <span class="mono">LST · T-1</span></span>
+        <span>Người dùng: Chị Lan</span>
+      </div>
+
+      <div class="tabs">
+        <button class="tab" aria-selected="true">Hồ sơ</button>
+        <button class="tab">Port map</button>
+        <button class="tab">Giấy tờ</button>
+        <button class="tab">Két sắt</button>
+        <button class="tab">Lịch sử</button>
+      </div>
+
+      <dl class="grid-old">
+        <div class="cell-old"><dt>Trạng thái</dt><dd><span class="badge ok">Đang dùng</span></dd></div>
+        <div class="cell-old"><dt>Loại</dt><dd>Switch</dd></div>
+        <div class="cell-old"><dt>Model</dt><dd class="empty">—</dd></div>
+        <div class="cell-old"><dt>Serial</dt><dd class="mono">FOC2312A1B2</dd></div>
+        <div class="cell-old"><dt>Site</dt><dd>LST</dd></div>
+        <div class="cell-old"><dt>Tủ mạng</dt><dd>T-1</dd></div>
+        <div class="cell-old"><dt>Người dùng</dt><dd>Chị Lan</dd></div>
+        <div class="cell-old"><dt>Bộ phận</dt><dd class="empty">—</dd></div>
+        <div class="cell-old"><dt>Nhà cung cấp</dt><dd class="empty">—</dd></div>
+        <div class="cell-old"><dt>Ngày mua</dt><dd>12/01/2025</dd></div>
+        <div class="cell-old"><dt>Bảo hành từ</dt><dd>12/01/2025</dd></div>
+        <div class="cell-old"><dt>Bảo hành đến</dt><dd>31/12/2026 <span class="badge ok">Còn 157 ngày</span></dd></div>
+        <div class="cell-old"><dt>Ghi chú</dt><dd class="empty">—</dd></div>
+      </dl>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:.6rem;margin-bottom:1.5rem">
+    <div class="note">
+      <span class="note-n">1</span>
+      <span><b>Lặp ngay trong nửa màn trên.</b> Badge "Đang dùng" và "Còn 157 ngày" xuất hiện ở dải
+      tóm tắt, rồi lặp lại y hệt trong ô Trạng thái và ô Bảo hành đến — cùng một câu nói hai lần
+      cách nhau 40px.</span>
+    </div>
+    <div class="note">
+      <span class="note-n">2</span>
+      <span><b>Không có phân cấp.</b> Serial — thứ đọc cho nhà cung cấp lúc gọi bảo hành — trông y
+      hệt ô Ghi chú. Mắt không có chỗ bám nên phải đọc tuần tự cả 13 ô.</span>
+    </div>
+    <div class="note">
+      <span class="note-n">3</span>
+      <span><b>Ô rỗng vẫn chiếm chỗ đầy đủ.</b> 4 hộp chỉ chứa dấu gạch ngang. Với một máy in khai
+      sơ sài thì 8/13 ô là gạch — trang trông như dữ liệu hỏng.</span>
+    </div>
+    <div class="note">
+      <span class="note-n">4</span>
+      <span><b>Bốn tầng điều hướng trước khi tới nội dung</b> — sidebar, topbar, hàng nút có
+      "Về danh sách", rồi thanh tab. Không breadcrumb nào nói đang đứng ở đâu, mà lại có hai
+      đường quay ra.</span>
+    </div>
+    <div class="note">
+      <span class="note-n">5</span>
+      <span><b>Tab không nói bên trong có gì.</b> Phải bấm vào mới biết tab Giấy tờ trống.</span>
+    </div>
+  </div>
+
+  <div class="board">
+    <div class="board-bar">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="board-url">/devices/SW-CORE-01</span>
+      <span class="board-tag tag-after">Đề xuất</span>
+    </div>
+    <div class="board-body">
+      <!-- 4 · MỘT đường quay ra, dạng breadcrumb — thay cho nút "Về danh sách" -->
+      <nav class="crumbs">
+        <a href="#">Thiết bị</a>
+        <span class="crumb-sep">›</span>
+        <a href="#">Switch</a>
+        <span class="crumb-sep">›</span>
+        <span>SW-CORE-01</span>
+      </nav>
+
+      <div class="page-title-row">
+        <div class="grow">
+          <div class="title-xl">
+            SW-CORE-01
+            <button class="copy" title="Chép mã">⧉</button>
+            <span class="title-sub">Switch tầng 2</span>
+          </div>
+          <!-- 2 · Định danh kỹ thuật lên ngay dưới tiêu đề, có nút chép -->
+          <div class="subline">
+            <span>Switch</span><span class="crumb-sep">·</span>
+            <span>Cisco C9200</span><span class="crumb-sep">·</span>
+            <span>S/N <span class="mono">FOC2312A1B2</span><button class="copy" title="Chép serial">⧉</button></span>
+          </div>
+        </div>
+        <div class="quick">
+          <button class="btn primary">Sửa</button>
+          <button class="btn icon" title="Thao tác khác" aria-label="Thao tác khác">⋯</button>
+        </div>
+      </div>
+
+      <!-- 1 · Hero gánh bốn chỉ số; chúng BỊ BỎ khỏi lưới bên dưới, không lặp -->
+      <div class="hero">
+        <div class="stat">
+          <span class="stat-k">Trạng thái</span>
+          <span class="stat-v"><span class="badge ok">Đang dùng</span></span>
+          <span class="stat-note">từ 12/01/2025</span>
+        </div>
+        <div class="stat">
+          <span class="stat-k">Bảo hành</span>
+          <div class="wt wt-mini">
+            <div class="wt-track"><div class="wt-fill ok" style="right:32%"></div><div class="wt-now" style="left:68%"></div></div>
+          </div>
+          <span class="stat-note"><b style="color:var(--ok)">Còn 157 ngày</b> · đến 31/12/2026</span>
+        </div>
+        <div class="stat">
+          <span class="stat-k">Vị trí</span>
+          <span class="stat-v mono">LST · T-1</span>
+          <span class="stat-note">Tủ mạng tầng 2</span>
+        </div>
+        <div class="stat">
+          <span class="stat-k">Người dùng</span>
+          <span class="stat-v">Chị Lan</span>
+          <span class="stat-note">Kế toán</span>
+        </div>
+      </div>
+
+      <!-- 6 · Hành động theo NGỮ CẢNH, không phải đi vòng qua màn khác -->
+      <div class="quick">
+        <button class="btn sm">+ Cấp IP cho máy này</button>
+        <button class="btn sm">+ Mở NAT</button>
+        <button class="btn sm">+ Cất mật khẩu</button>
+        <button class="btn sm">+ Đính hóa đơn</button>
+      </div>
+
+      <!-- 5 · Tab mang số lượng, tab rỗng vẫn hiện nhưng số mờ đi -->
+      <div class="tabs">
+        <button class="tab" aria-selected="true">Hồ sơ</button>
+        <button class="tab">Port map <span class="tab-count">24</span></button>
+        <button class="tab">Giấy tờ <span class="tab-count zero">0</span></button>
+        <button class="tab">Két sắt <span class="tab-count">2</span></button>
+        <button class="tab">Lịch sử <span class="tab-count">18</span></button>
+      </div>
+
+      <!-- 2, 3 · Nhóm theo CHỦ ĐỀ; ô rỗng gom về một dòng -->
+      <div>
+        <div class="fieldset">
+          <header>Định danh</header>
+          <dl class="rows">
+            <div class="row-kv"><dt>Loại thiết bị</dt><dd>Switch</dd></div>
+            <div class="row-kv"><dt>Model</dt><dd>Cisco Catalyst C9200-24T</dd></div>
+            <div class="row-kv"><dt>Serial</dt><dd><span class="mono">FOC2312A1B2</span><button class="copy">⧉</button></dd></div>
+            <div class="row-kv"><dt>Nhà cung cấp</dt><dd>Công ty TNHH Tin học Minh Anh</dd></div>
+          </dl>
+        </div>
+
+        <div class="fieldset">
+          <header>Mua sắm &amp; bảo hành</header>
+          <div class="rows">
+            <div class="wt" style="padding:.5rem 0 .3rem">
+              <div class="wt-ends"><span>Mua <b>12/01/2025</b></span><span>Hết bảo hành <b>31/12/2026</b></span></div>
+              <div class="wt-track"><div class="wt-fill ok" style="right:32%"></div><div class="wt-now" style="left:68%"></div></div>
+              <div class="wt-legend"><span class="left">Đã đi 68% · hôm nay 27/08/2026</span><span class="right ok">Còn 157 ngày</span></div>
+            </div>
+            <dl style="margin:0">
+              <div class="row-kv"><dt>Giá mua</dt><dd class="num">18.400.000 ₫</dd></div>
+              <div class="row-kv"><dt>Số hóa đơn</dt><dd><span class="mono">HD-2025-0043</span></dd></div>
+            </dl>
+          </div>
+        </div>
+
+        <div class="fieldset">
+          <header>Ghi chú</header>
+          <div class="rows">
+            <p style="margin:.3rem 0;max-width:65ch">
+              Uplink cổng 23–24 đi lên core. Cấu hình đã sao lưu ngày 02/08/2026, file đính kèm ở
+              tab Giấy tờ.
+            </p>
+            <!-- 3 · Thay 4 hộp gạch ngang bằng MỘT dòng -->
+            <p class="blank-line">Chưa khai: bộ phận, ngày kiểm kê gần nhất. <a href="#" style="color:var(--primary-ink)">Bổ sung</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<section class="block">
+  <div class="block-head">
+    <h2>3 · Trang chi tiết phần mềm</h2>
+    <p>
+      Cùng khung với thiết bị, nhưng chỉ số hero khác: hạn license và <b>ghế đã dùng</b> — hai
+      con số quyết định "có mua thêm không". Ghế hiện đang nằm sâu trong tab, phải bấm mới thấy.
+    </p>
+  </div>
+
+  <div class="board">
+    <div class="board-bar">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="board-url">/software/LIC-OFFICE-365</span>
+      <span class="board-tag tag-after">Đề xuất</span>
+    </div>
+    <div class="board-body">
+      <nav class="crumbs">
+        <a href="#">Phần mềm</a><span class="crumb-sep">›</span>
+        <a href="#">License</a><span class="crumb-sep">›</span>
+        <span>LIC-OFFICE-365</span>
+      </nav>
+
+      <div class="page-title-row">
+        <div class="grow">
+          <div class="title-xl">
+            LIC-OFFICE-365<button class="copy">⧉</button>
+            <span class="title-sub">Microsoft 365 Business Standard</span>
+          </div>
+          <div class="subline">
+            <span>License</span><span class="crumb-sep">·</span>
+            <span>Thuê bao năm</span><span class="crumb-sep">·</span>
+            <span>Microsoft VN</span>
+          </div>
+        </div>
+        <div class="quick">
+          <button class="btn primary">Gia hạn</button>
+          <button class="btn">Sửa</button>
+          <button class="btn icon" aria-label="Thao tác khác">⋯</button>
+        </div>
+      </div>
+
+      <div class="hero">
+        <div class="stat">
+          <span class="stat-k">Hạn license</span>
+          <div class="wt wt-mini">
+            <div class="wt-track"><div class="wt-fill warn" style="right:4%"></div><div class="wt-now" style="left:96%"></div></div>
+          </div>
+          <span class="stat-note"><b style="color:var(--warn)">Còn 25 ngày</b> · đến 21/09/2026</span>
+        </div>
+        <div class="stat">
+          <span class="stat-k">Ghế đã dùng</span>
+          <span class="stat-v">42 <span style="color:var(--ink-3);font-weight:500">/ 50</span></span>
+          <div class="wt wt-mini"><div class="wt-track"><div class="wt-fill ok" style="right:16%"></div></div></div>
+        </div>
+        <div class="stat">
+          <span class="stat-k">Chi phí năm</span>
+          <span class="stat-v num">78.000.000 ₫</span>
+          <span class="stat-note">1.560.000 ₫ / ghế</span>
+        </div>
+        <div class="stat">
+          <span class="stat-k">Người phụ trách</span>
+          <span class="stat-v">Anh Hùng</span>
+          <span class="stat-note">Phòng IT</span>
+        </div>
+      </div>
+
+      <div class="quick">
+        <button class="btn sm">+ Gán ghế cho máy</button>
+        <button class="btn sm">+ Cất license key</button>
+        <button class="btn sm">+ Đính hợp đồng</button>
+      </div>
+
+      <div class="tabs">
+        <button class="tab">Hồ sơ</button>
+        <button class="tab" aria-selected="true">Máy đang dùng <span class="tab-count">42</span></button>
+        <button class="tab">Két sắt <span class="tab-count">1</span></button>
+        <button class="tab">Giấy tờ <span class="tab-count">3</span></button>
+        <button class="tab">Lịch sử <span class="tab-count">7</span></button>
+      </div>
+
+      <div class="tbl-wrap">
+        <table class="tbl">
+          <thead>
+            <tr><th>Máy</th><th>Người dùng</th><th>Gán ngày</th><th>Trạng thái</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="mono">PC-KT-04</td><td>Chị Lan</td><td class="num">12/03/2026</td><td><span class="badge ok">Đang dùng</span></td></tr>
+            <tr><td class="mono">PC-KT-07</td><td>Anh Dũng</td><td class="num">12/03/2026</td><td><span class="badge ok">Đang dùng</span></td></tr>
+            <tr><td class="mono">PC-KD-02</td><td>Chị Hoa</td><td class="num">03/06/2026</td><td><span class="badge warn">Máy đã thanh lý</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="stat-note">
+        Dòng thứ ba là thứ chỉ bảng này mới nói được: <b>một ghế đang gán cho cái máy đã thanh lý</b>
+        — tức là một ghế trả về được ngay, và đó là lý do người ta mở trang này trước khi mua thêm.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<section class="block">
+  <div class="block-head">
+    <h2>4 · Trang chi tiết tài khoản dịch vụ</h2>
+    <p>
+      Trang nghèo nhất hiện nay: dải tóm tắt chỉ có badge trạng thái và tên đăng nhập. Thiếu
+      người phụ trách, thiếu bộ phận — và thiếu câu hay hỏi nhất về một tài khoản dùng chung:
+      <b>mật khẩu xoay lần cuối lúc nào</b>.
+    </p>
+  </div>
+
+  <div class="board">
+    <div class="board-bar">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="board-url">/service-accounts/VPN-KETOAN</span>
+      <span class="board-tag tag-after">Đề xuất</span>
+    </div>
+    <div class="board-body">
+      <nav class="crumbs">
+        <a href="#">Tài khoản dịch vụ</a><span class="crumb-sep">›</span>
+        <a href="#">Tài khoản VPN</a><span class="crumb-sep">›</span>
+        <span>VPN-KETOAN</span>
+      </nav>
+
+      <div class="page-title-row">
+        <div class="grow">
+          <div class="title-xl">
+            VPN-KETOAN<button class="copy">⧉</button>
+            <span class="title-sub">VPN phòng Kế toán</span>
+          </div>
+          <div class="subline">
+            <span class="badge plain brand">Tài khoản VPN</span>
+            <span>Đăng nhập <span class="mono">vpn-ketoan@pmh.com.vn</span><button class="copy">⧉</button></span>
+          </div>
+        </div>
+        <div class="quick">
+          <button class="btn primary">Sửa</button>
+          <button class="btn">Vô hiệu hóa</button>
+        </div>
+      </div>
+
+      <div class="hero">
+        <div class="stat">
+          <span class="stat-k">Trạng thái</span>
+          <span class="stat-v"><span class="badge ok">Đang dùng</span></span>
+          <span class="stat-note">khai 14/02/2026</span>
+        </div>
+        <div class="stat">
+          <span class="stat-k">Mật khẩu trong két</span>
+          <span class="stat-v"><span class="badge warn">Xoay 214 ngày trước</span></span>
+          <span class="stat-note">lần cuối 25/01/2026 · Anh Hùng</span>
+        </div>
+        <div class="stat">
+          <span class="stat-k">Người phụ trách</span>
+          <span class="stat-v">Chị Lan</span>
+          <span class="stat-note">Kế toán</span>
+        </div>
+        <div class="stat">
+          <span class="stat-k">Dải IP được phép</span>
+          <span class="stat-v mono" style="font-size:.85rem">203.113.1.5<br>118.70.2.0/24</span>
+        </div>
+      </div>
+
+      <div class="note">
+        <span class="note-n">★</span>
+        <span>
+          Ô <b>"Mật khẩu trong két"</b> là thứ đáng thêm nhất ở trang này. Một tài khoản dùng chung
+          mà 214 ngày chưa xoay là rủi ro thật, và hiện KHÔNG màn nào trong IMS nói ra điều đó —
+          phải mở tab Két sắt, nhìn cột ngày, rồi tự nhẩm.
+        </span>
+      </div>
+
+      <div class="tabs">
+        <button class="tab" aria-selected="true">Hồ sơ</button>
+        <button class="tab">Két sắt <span class="tab-count">1</span></button>
+        <button class="tab">Giấy tờ <span class="tab-count">2</span></button>
+        <button class="tab">Lịch sử <span class="tab-count">5</span></button>
+      </div>
+
+      <div class="fieldset">
+        <header>Cấu hình VPN</header>
+        <dl class="rows">
+          <div class="row-kv"><dt>Nhóm VPN</dt><dd class="mono">vpn-ketoan</dd></div>
+          <div class="row-kv"><dt>Dải IP được phép</dt><dd class="mono">203.113.1.5, 118.70.2.0/24</dd></div>
+          <div class="row-kv"><dt>Bộ phận</dt><dd>Kế toán</dd></div>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<section class="block">
+  <div class="block-head">
+    <h2>5 · Trang chi tiết đường truyền</h2>
+    <p>
+      Trang bạn quên khi liệt kê — <span class="mono">/isp-lines/:id</span>. Nó cũng dùng đúng
+      <span class="mono">.data-grid</span> phẳng đó, và nó là trang người ta mở lúc <b>2 giờ sáng
+      khi đứt cáp</b>. Nên hero của nó phải là hotline, không phải mã hợp đồng.
+    </p>
+  </div>
+
+  <div class="board">
+    <div class="board-bar">
+      <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+      <span class="board-url">/isp-lines/FTTH-VNPT-01</span>
+      <span class="board-tag tag-after">Đề xuất</span>
+    </div>
+    <div class="board-body">
+      <nav class="crumbs">
+        <a href="#">Đường truyền</a><span class="crumb-sep">›</span><span>FTTH-VNPT-01</span>
+      </nav>
+
+      <div class="page-title-row">
+        <div class="grow">
+          <div class="title-xl">
+            FTTH-VNPT-01<button class="copy">⧉</button>
+            <span class="title-sub">Cáp quang văn phòng LST</span>
+          </div>
+          <div class="subline">
+            <span>VNPT</span><span class="crumb-sep">·</span>
+            <span>200 Mbps</span><span class="crumb-sep">·</span>
+            <span>IP tĩnh <span class="mono">113.161.44.18</span><button class="copy">⧉</button></span>
+          </div>
+        </div>
+        <div class="quick"><button class="btn primary">Sửa</button></div>
+      </div>
+
+      <div class="hero">
+        <div class="stat">
+          <span class="stat-k">Gọi khi đứt</span>
+          <span class="stat-v"><a href="tel:18001166" style="color:var(--primary-ink);font-weight:700;text-decoration:none">1800 1166</a></span>
+          <span class="stat-note">VNPT · trực 24/7</span>
+        </div>
+        <div class="stat">
+          <span class="stat-k">Trạng thái</span>
+          <span class="stat-v"><span class="badge ok">Đang chạy</span></span>
+          <span class="stat-note">không có sự cố tuần qua</span>
+        </div>
+        <div class="stat">
+          <span class="stat-k">Hợp đồng</span>
+          <div class="wt wt-mini">
+            <div class="wt-track"><div class="wt-fill crit" style="right:1%"></div><div class="wt-now" style="left:99%"></div></div>
+          </div>
+          <span class="stat-note"><b style="color:var(--danger)">Còn 3 ngày</b> · đến 30/08/2026</span>
+        </div>
+        <div class="stat">
+          <span class="stat-k">Cước tháng</span>
+          <span class="stat-v num">1.250.000 ₫</span>
+          <span class="stat-note">thanh toán quý</span>
+        </div>
+      </div>
+
+      <div class="note">
+        <span class="note-n">★</span>
+        <span>
+          Số hotline là <b>một cái link bấm gọi được</b>, đứng ở ô đầu tiên. Đây là trang mở ra
+          lúc 2 giờ sáng — thứ cần đầu tiên là số điện thoại, không phải mã hợp đồng.
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<section class="block">
+  <div class="block-head">
+    <h2>6 · Lịch sử — gộp theo ngày</h2>
+    <p>
+      <span class="mono">HistoryPanel</span> hiện đổ hết dòng ra một mạch, không nhóm, không lọc.
+      Hồ sơ hai năm là vài trăm dòng phẳng.
+    </p>
+  </div>
+
+  <div class="compare two">
+    <div class="board">
+      <div class="board-bar"><span class="dot"></span><span class="board-tag tag-before">Hiện tại</span></div>
+      <div class="board-body">
+        <ul class="hist">
+          <li><span class="hist-dot"></span><div><div class="hist-act">Sửa hồ sơ</div><div class="hist-det">người dùng: Anh Dũng → Chị Lan</div><div class="hist-meta">sa@pmh.com.vn · 27/08/2026 09:14</div></div></li>
+          <li><span class="hist-dot"></span><div><div class="hist-act">Sửa hồ sơ</div><div class="hist-det">tủ mạng: T-2 → T-1</div><div class="hist-meta">sa@pmh.com.vn · 27/08/2026 09:02</div></div></li>
+          <li><span class="hist-dot"></span><div><div class="hist-act">Gia hạn bảo hành</div><div class="hist-det">đến: 31/12/2025 → 31/12/2026</div><div class="hist-meta">admin@pmh.com.vn · 14/02/2026 16:30</div></div></li>
+          <li><span class="hist-dot"></span><div><div class="hist-act">Tạo hồ sơ</div><div class="hist-meta">admin@pmh.com.vn · 12/01/2025 08:00</div></div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="board">
+      <div class="board-bar"><span class="dot"></span><span class="board-tag tag-after">Đề xuất</span></div>
+      <div class="board-body">
+        <div class="quick">
+          <button class="btn sm" style="border-color:var(--primary);color:var(--primary-ink)">Tất cả <span class="tab-count">18</span></button>
+          <button class="btn sm">Sửa hồ sơ <span class="tab-count">12</span></button>
+          <button class="btn sm">Bảo hành <span class="tab-count">2</span></button>
+          <button class="btn sm">Két sắt <span class="tab-count">4</span></button>
+        </div>
+        <div class="hist-day">Hôm nay · 27/08/2026</div>
+        <ul class="hist">
+          <li><span class="hist-dot brand"></span><div><div class="hist-act">Sửa hồ sơ</div><div class="hist-det">người dùng: Anh Dũng → Chị Lan</div><div class="hist-meta">sa@pmh.com.vn · 09:14</div></div></li>
+          <li><span class="hist-dot brand"></span><div><div class="hist-act">Sửa hồ sơ</div><div class="hist-det">tủ mạng: T-2 → T-1</div><div class="hist-meta">sa@pmh.com.vn · 09:02</div></div></li>
+        </ul>
+        <div class="hist-day">Tháng 2 · 2026</div>
+        <ul class="hist">
+          <li><span class="hist-dot"></span><div><div class="hist-act">Gia hạn bảo hành</div><div class="hist-det">đến: 31/12/2025 → 31/12/2026</div><div class="hist-meta">admin@pmh.com.vn · 14/02 16:30</div></div></li>
+        </ul>
+        <div class="hist-day">Tháng 1 · 2025</div>
+        <ul class="hist">
+          <li><span class="hist-dot"></span><div><div class="hist-act">Tạo hồ sơ</div><div class="hist-meta">admin@pmh.com.vn · 12/01 08:00</div></div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================================================================= -->
+<section class="block">
+  <div class="block-head">
+    <h2>Tóm lại — làm gì, theo thứ tự nào</h2>
+  </div>
+  <div class="tbl-wrap">
+    <table class="tbl">
+      <thead><tr><th>Việc</th><th>Ảnh hưởng tới</th><th>Ghi chú</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>WarrantyTimeline</b> dùng chung</td>
+          <td>Thiết bị · Phần mềm · Đường truyền · Sắp hết hạn</td>
+          <td>Đọc ngưỡng từ <span class="mono">expiryLevel()</span> đang có, không tự chọn màu</td>
+        </tr>
+        <tr>
+          <td><b>Hero bốn chỉ số</b> + bỏ ô lặp khỏi lưới</td>
+          <td>Cả 4 trang chi tiết</td>
+          <td>Mỗi trang chọn 4 chỉ số riêng — ISP là hotline, phần mềm là ghế</td>
+        </tr>
+        <tr>
+          <td><b>Breadcrumb</b> thay nút "Về danh sách"</td>
+          <td>Cả 4 trang chi tiết</td>
+          <td>Bốn tầng điều hướng rút còn ba</td>
+        </tr>
+        <tr>
+          <td><b>Nhóm trường theo chủ đề</b> + gom ô rỗng</td>
+          <td>Cả 4 trang chi tiết</td>
+          <td>Thay <span class="mono">.data-grid</span> phẳng</td>
+        </tr>
+        <tr>
+          <td><b>Số lượng trên tab</b></td>
+          <td>Cả 4 trang chi tiết</td>
+          <td><span class="mono">Tabs</span> đã hỗ trợ <span class="mono">count</span>, chỉ chưa dùng</td>
+        </tr>
+        <tr>
+          <td><b>"Mật khẩu xoay lần cuối"</b></td>
+          <td>Tài khoản dịch vụ (và thiết bị)</td>
+          <td>Cần API trả mốc xoay gần nhất của két</td>
+        </tr>
+        <tr>
+          <td><b>Lịch sử gộp theo ngày + lọc</b></td>
+          <td>Mọi trang có tab Lịch sử</td>
+          <td>Sửa trong <span class="mono">HistoryPanel</span> dùng chung</td>
+        </tr>
+        <tr>
+          <td><b>Nút chép mã/serial</b></td>
+          <td>Cả 4 trang chi tiết</td>
+          <td>Thứ đọc qua điện thoại cho nhà cung cấp</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer class="end">
+  Bản xem trước — chưa có dòng code nào vào ứng dụng. Màu và chữ lấy từ
+  <span class="mono">web/src/css/tokens.css</span>; trang này chạy được cả nền sáng lẫn nền tối
+  theo cài đặt máy bạn.
+</footer>
+
+</div>

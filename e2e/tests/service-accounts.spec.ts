@@ -75,6 +75,46 @@ test.describe('Tài khoản dịch vụ', () => {
     await expect(page.getByText(`mk-email-E2E-${stamp}`)).toBeVisible();
   });
 
+  /*
+   * Khai nhanh: chỉ gõ TÊN ĐĂNG NHẬP và mật khẩu.
+   *
+   * "Mã" và "tên gọi" là thứ hệ thống cần chứ người dùng không cần — bắt gõ là bắt bịa. Và
+   * mật khẩu cất ngay trong popup: bắt đi năm bước để cất nó thì phần lớn sẽ để "làm sau",
+   * rồi mật khẩu ở lại trong Excel hay tin nhắn Zalo, đúng chỗ IMS sinh ra để dọn đi.
+   */
+  test('chỉ gõ tên đăng nhập + mật khẩu: mã và tên tự đặt, mật khẩu vào thẳng két', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const login = `ke-toan-e2e-${stamp}@pmh.com.vn`;
+
+    await page.goto('/service-accounts');
+    await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
+    const form = page.getByRole('dialog');
+    await form.getByRole('textbox', { name: 'Tên đăng nhập' }).fill(login);
+    await form.getByLabel('Mật khẩu', { exact: true }).fill('MatKhau#2026');
+
+    // Thanh đo hiện tick xanh khi gõ đủ — và KHÔNG khóa nút Lưu, vì nó là lời khuyên.
+    await expect(form.getByTestId('secret-strength')).toBeVisible();
+    await expect(form.getByTestId('secret-strength-warning')).toHaveCount(0);
+
+    await form.getByRole('button', { name: 'Lưu' }).click();
+    await expect(page.getByText('Đã lưu tài khoản dịch vụ.')).toBeVisible();
+    await expect(page.getByText('Đã cất mật khẩu vào két.')).toBeVisible();
+
+    // Mã tự đặt từ phần trước @, viết hoa.
+    const code = `KE-TOAN-E2E-${stamp}`;
+    const row = page.getByRole('row', { name: new RegExp(code) });
+    await expect(row).toBeVisible();
+    await expect(row.getByText(login).first()).toBeVisible();
+
+    // Và mật khẩu nằm trong két của chính hồ sơ vừa tạo, không phải ô ghi chú.
+    await row.getByRole('link', { name: code }).click();
+    await page.getByRole('tab', { name: 'Két sắt' }).click();
+    await expect(page.getByText('Mật khẩu đăng nhập')).toBeVisible();
+  });
+
   test('tài khoản VPN có thêm nhóm và dải IP; loại dùng chung thì không', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);

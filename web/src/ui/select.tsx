@@ -1,6 +1,7 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { Chevron } from '@/ui/chevron';
 import { useAnchoredMenu } from '@/ui/use-anchored-menu';
 import { useDialogPortal } from '@/ui/dialog';
 
@@ -123,17 +124,7 @@ export function Select({
         }}
       >
         <span className={selected ? 'fsel-val' : 'fsel-val ph'}>{label}</span>
-        <svg
-          className="fsel-caret"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.4"
-          strokeLinecap="round"
-          aria-hidden="true"
-        >
-          <path d="m6 9 6 6 6-6" />
-        </svg>
+        <Chevron className="fsel-caret" />
       </button>
       {open &&
         createPortal(

@@ -1,5 +1,6 @@
 import {
   checkAllowedIps,
+  codeFromLogin,
   mergeServiceAccount,
   supportsVpnFields,
   validateServiceAccount,
@@ -183,7 +184,9 @@ describe('mergeServiceAccount — ghép body với dòng đang có', () => {
    * `warnings` rỗng — đọc thành "kiểm rồi, sạch" cho một dòng vẫn mở toang cho cả internet.
    */
   it('cảnh báo dải IP quá rộng vẫn còn khi PATCH không gửi lại dải IP', () => {
-    const onBody = validateServiceAccount(patch());
+    // `patch()` luôn có đủ code/name nên ép kiểu ở đây là an toàn — `ServiceAccountPatch` để
+    // chúng tùy chọn chỉ vì đường TẠO MỚI có thể suy chúng ra sau (`fillBlanks`).
+    const onBody = validateServiceAccount(patch() as ServiceAccountDraft);
     expect(onBody.warnings).toEqual([]);
 
     const onMerged = validateServiceAccount(mergeServiceAccount(patch(), stored));
@@ -196,4 +199,31 @@ describe('mergeServiceAccount — ghép body với dòng đang có', () => {
     const result = validateServiceAccount(mergeServiceAccount(patch({ kind: 'shared' }), stored));
     expect(result).toEqual({ errors: [], warnings: [] });
   });
+});
+
+/**
+ * Người khai biết tài khoản đăng nhập bằng gì; "mã tài khoản" là thứ hệ thống cần chứ họ
+ * không cần. Bắt gõ là bắt bịa — và mỗi người bịa một kiểu, đúng thứ làm cột mã vô dụng.
+ */
+describe('codeFromLogin — suy mã từ tên đăng nhập', () => {
+  const cases: { login: string; expected: string }[] = [
+    { login: 'ketoan@pmh.com.vn', expected: 'KETOAN' },
+    { login: 'vpn-ketoan', expected: 'VPN-KETOAN' },
+    // Dấu chấm, gạch dưới, khoảng trắng đều thành MỘT gạch nối — không đẻ ra "A--B".
+    { login: 'ke.toan_2@pmh.com.vn', expected: 'KE-TOAN-2' },
+    { login: '  admin  ', expected: 'ADMIN' },
+    { login: 'Nguyễn Văn A', expected: 'NGUYEN-VAN-A' },
+    { login: 'đăng-nhập', expected: 'DANG-NHAP' },
+    // Gạch nối thừa ở hai đầu bị cắt: "-admin-@x" ra "ADMIN", không phải "-ADMIN-".
+    { login: '-admin-@pmh.com.vn', expected: 'ADMIN' },
+    // Không còn ký tự nào dùng được thì phải có một gốc để còn thêm số vào.
+    { login: '@@@', expected: 'TK' },
+    { login: '', expected: 'TK' },
+  ];
+
+  for (const { login, expected } of cases) {
+    it(`"${login}" → ${expected}`, () => {
+      expect(codeFromLogin(login)).toBe(expected);
+    });
+  }
 });

@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
-import { IsIn, IsOptional, IsString, IsUUID, Length } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID, Length, ValidateIf } from 'class-validator';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
 import { Audited } from '../audit/audited.decorator';
@@ -22,16 +22,33 @@ class IdParamDto {
 }
 
 class ServiceAccountBodyDto {
+  /*
+   * Mã và tên KHÔNG còn bắt buộc ở tầng HTTP (2026-08-27).
+   *
+   * Người khai biết tài khoản đăng nhập bằng gì; "mã" là thứ hệ thống cần chứ họ không cần.
+   * Để trống thì service suy mã từ tên đăng nhập và lấy tên đăng nhập làm tên gọi — xem
+   * `fillBlanks`. Không suy được (không có cả login) thì `validateServiceAccount` vẫn báo
+   * thiếu, nên luật "một hồ sơ phải có mã và tên" không hề lỏng ra, chỉ là ai lấp nó thôi.
+   */
+  /*
+   * `@ValidateIf` chứ không chỉ `@IsOptional()`: form luôn gửi đủ ô, nên ô để trống tới đây
+   * là chuỗi RỖNG, mà `@IsOptional()` chỉ bỏ qua `undefined`/`null`. Thiếu dòng này thì
+   * "để trống cho hệ thống tự đặt" nhận về đúng câu "Mã tài khoản từ 1 đến 64 ký tự".
+   */
+  @IsOptional()
+  @ValidateIf((_o, value) => value !== '')
   @IsString()
   @Length(1, 64, { message: 'Mã tài khoản từ 1 đến 64 ký tự.' })
-  code!: string;
+  code?: string;
 
   @IsIn([...SERVICE_ACCOUNT_KINDS], { message: 'Loại tài khoản không hợp lệ.' })
   kind!: ServiceAccountKind;
 
+  @IsOptional()
+  @ValidateIf((_o, value) => value !== '')
   @IsString()
   @Length(1, 160, { message: 'Tên tài khoản từ 1 đến 160 ký tự.' })
-  name!: string;
+  name?: string;
 
   @IsOptional() @IsString() @Length(0, 160) login?: string;
   @IsOptional() @IsString() @Length(0, 120) department?: string;

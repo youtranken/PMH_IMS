@@ -10,6 +10,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { RevealDialog } from '@/ui/reveal-dialog';
+import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { StepUpDialog } from '@/ui/step-up-dialog';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
@@ -76,7 +77,7 @@ export function VaultPanel({
   const [opening, setOpening] = useState<string | null>(null);
   const [requesting, setRequesting] = useState(false);
   const [revealed, setRevealed] = useState<
-    { label: string; value: string; seconds: number } | null
+    { label: string; value: string; seconds: number; stepUpSecondsLeft: number } | null
   >(null);
   const openingRef = useRef<string | null>(null);
 
@@ -129,11 +130,21 @@ export function VaultPanel({
       openingRef.current = secret.id;
       setOpening(secret.id);
       try {
-        const opened = await apiFetch<{ value: string; revealSeconds: number }>(
+        const opened = await apiFetch<{
+          value: string;
+          revealSeconds: number;
+          /** Grace step-up còn lại — server tính, client không tự đoán được (xem session-policy). */
+          stepUpSecondsLeft: number;
+        }>(
           `/api/v1/vault/secrets/${secret.id}/reveal`,
           { method: 'POST', csrfToken: me.csrfToken },
         );
-        setRevealed({ label: secret.label, value: opened.value, seconds: opened.revealSeconds });
+        setRevealed({
+          label: secret.label,
+          value: opened.value,
+          seconds: opened.revealSeconds,
+          stepUpSecondsLeft: opened.stepUpSecondsLeft,
+        });
       } catch (error) {
         if (!afterStepUp && errorCode(error) === 'STEPUP_REQUIRED') {
           setPendingStepUp(secret);
@@ -331,6 +342,7 @@ export function VaultPanel({
           label={revealed.label}
           value={revealed.value}
           seconds={revealed.seconds}
+          stepUpSecondsLeft={revealed.stepUpSecondsLeft}
           onClose={() => setRevealed(null)}
         />
       ) : null}
@@ -509,6 +521,7 @@ function SecretForm({
               value={value}
               onChange={(e) => setValue(e.target.value)}
             />
+            <SecretStrengthMeter value={value} />
           </Field>
         ) : null}
 
@@ -604,6 +617,9 @@ function RotateForm({
             value={value}
             onChange={(e) => setValue(e.target.value)}
           />
+          {/* Xoay mật khẩu là lúc người ta ĐẶT một giá trị mới, không phải chép lại cái đang
+              có — nên thanh đo ở đây còn đáng nói hơn ở ô cất lần đầu. */}
+          <SecretStrengthMeter value={value} />
         </Field>
 
         {error ? (

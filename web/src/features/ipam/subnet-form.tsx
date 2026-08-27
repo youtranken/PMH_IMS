@@ -25,6 +25,7 @@ export function SubnetForm({
   const [cidr, setCidr] = useState(subnet?.cidr ?? '');
   const [siteId, setSiteId] = useState(subnet?.siteId ?? '');
   const [vlan, setVlan] = useState(subnet?.vlan != null ? String(subnet.vlan) : '');
+  const [gateway, setGateway] = useState(subnet?.gateway ?? '');
   const [description, setDescription] = useState(subnet?.description ?? '');
   const [error, setError] = useState<string | null>(null);
 
@@ -79,6 +80,8 @@ export function SubnetForm({
               cidr: cidr.trim(),
               siteId,
               vlan: vlanValue,
+              // Ô để trống = XÓA gateway đang có, cùng luật với VLAN — form luôn hiện đủ ô.
+              gateway: gateway.trim(),
               description: description.trim(),
             },
             { onSuccess: onSaved, onError: (err) => setError(errorMessage(err)) },
@@ -114,6 +117,18 @@ export function SubnetForm({
             placeholder="20"
             value={vlan}
             onChange={(e) => setVlan(e.target.value)}
+          />
+        </Field>
+
+        {/* Gateway (0035): câu hỏi ĐẦU TIÊN khi khai IP tĩnh cho một cái máy. Trước đây phải
+            nhét vào ô mô tả, mỗi người một kiểu, nên không tra được. */}
+        <Field label={t('ipam.gateway')} hint={t('ipam.gatewayHint')} htmlFor="subnet-gateway">
+          <input
+            id="subnet-gateway"
+            className="inp mono"
+            placeholder="172.16.10.1"
+            value={gateway}
+            onChange={(e) => setGateway(e.target.value)}
           />
         </Field>
 
@@ -172,9 +187,15 @@ export function HideDialog({
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
 
+  /*
+   * `PATCH :id/void`, KHÔNG phải `DELETE` (2026-08-27).
+   *
+   * `DELETE` giờ mang đúng nghĩa của nó — xóa hẳn — và chỉ nhận dải chưa từng có hồ sơ IP.
+   * Vô hiệu hóa là việc khác: dải đã từng dùng, bản ghi phải ở lại kèm lý do.
+   */
   const hide = useApiMutation<{ reason: string }, unknown>(
-    `/api/v1/ipam/subnets/${subnet.id}`,
-    { method: 'DELETE', csrfToken, refreshMe: false },
+    `/api/v1/ipam/subnets/${subnet.id}/void`,
+    { method: 'PATCH', csrfToken, refreshMe: false },
   );
 
   return (

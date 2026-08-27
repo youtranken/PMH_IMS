@@ -29,7 +29,7 @@ import {
   type ServiceAccountStatus,
 } from './service-account-types';
 
-const LIMIT = 20;
+const DEFAULT_LIMIT = 20;
 
 interface Filters {
   search: string;
@@ -51,6 +51,8 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
   const toast = useToast();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
+  /** Số dòng/trang do NGƯỜI DÙNG chọn (10/20/50/100), không còn là hằng số cứng. */
+  const [limit, setLimit] = useState(DEFAULT_LIMIT);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [sorting, setSorting] = useState<SortingState>([{ id: 'code', desc: false }]);
   const [creating, setCreating] = useState(false);
@@ -65,10 +67,10 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
   const canEdit = me.role === 'sa' || me.role === 'admin';
 
   const accounts = useQuery({
-    queryKey: ['service-accounts', page, filters, sorting],
+    queryKey: ['service-accounts', page, limit, filters, sorting],
     queryFn: () =>
       apiFetch<{ items: ServiceAccountRow[]; total: number }>(
-        `/api/v1/service-accounts?${buildQuery(page, filters, sorting)}`,
+        `/api/v1/service-accounts?${buildQuery(page, limit, filters, sorting)}`,
       ),
   });
 
@@ -252,7 +254,8 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
           />
           <Pagination
             page={page}
-            limit={LIMIT}
+            limit={limit}
+            onLimitChange={setLimit}
             total={accounts.data?.total ?? 0}
             onPageChange={setPage}
           />
@@ -404,8 +407,8 @@ function StatusDialog({
   );
 }
 
-function buildQuery(page: number, filters: Filters, sorting: SortingState): string {
-  const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
+function buildQuery(page: number, limit: number, filters: Filters, sorting: SortingState): string {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (filters.search.trim()) params.set('search', filters.search.trim());
   if (filters.kind) params.set('kind', filters.kind);
   if (filters.status) params.set('status', filters.status);

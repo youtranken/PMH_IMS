@@ -8,6 +8,8 @@ export interface SubnetRow {
   siteCode: string | null;
   /** Số VLAN 802.1Q (0029) — ở PMH người ta gọi dải theo VLAN chứ không theo CIDR. */
   vlan: number | null;
+  /** Gateway của dải (0035) — câu hỏi đầu tiên khi khai IP tĩnh cho một cái máy. */
+  gateway: string | null;
   description: string | null;
   createdBy: string;
   createdAt: string;
@@ -16,6 +18,13 @@ export interface SubnetRow {
   used: number;
   free: number;
   percent: number;
+  /**
+   * Tổng số hồ sơ IP TỪNG thuộc dải này, kể cả đã thu hồi hoặc đã ẩn.
+   *
+   * Khác `used` (chỉ đếm IP đang chiếm chỗ). Màn hình dùng con số này để quyết định bày nút
+   * **Xóa** (xóa hẳn — chỉ dải chưa từng dùng) hay nút **Vô hiệu hóa** (dải đã có lịch sử).
+   */
+  addressCount: number;
 }
 
 export interface IpRow {

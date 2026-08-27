@@ -20,7 +20,7 @@ import { IspForm } from './isp-form';
 import { ISP_STATUSES, STATUS_KEY, STATUS_TONE, type IspRow, type IspStatus } from './isp-types';
 import { PATHS } from '@/lib/routes';
 
-const LIMIT = 20;
+const DEFAULT_LIMIT = 20;
 
 interface Filters {
   search: string;
@@ -38,6 +38,8 @@ export function IspScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
+  /** Số dòng/trang do NGƯỜI DÙNG chọn (10/20/50/100), không còn là hằng số cứng. */
+  const [limit, setLimit] = useState(DEFAULT_LIMIT);
   const [filters, setFilters] = useState<Filters>({ search: '', siteId: '', status: '' });
   // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả sổ — sai mà không có dấu hiệu nào.
@@ -50,10 +52,10 @@ export function IspScreen({ me }: { me: Me }) {
   });
 
   const lines = useQuery({
-    queryKey: ['isp', page, filters, sorting],
+    queryKey: ['isp', page, limit, filters, sorting],
     queryFn: () =>
       apiFetch<{ items: IspRow[]; total: number }>(
-        `/api/v1/isp-lines?${buildQuery(page, filters, sorting)}`,
+        `/api/v1/isp-lines?${buildQuery(page, limit, filters, sorting)}`,
       ),
   });
 
@@ -210,7 +212,8 @@ export function IspScreen({ me }: { me: Me }) {
 
           <Pagination
             page={page}
-            limit={LIMIT}
+            limit={limit}
+            onLimitChange={setLimit}
             total={lines.data?.total ?? 0}
             onPageChange={setPage}
           />
@@ -233,8 +236,8 @@ export function IspScreen({ me }: { me: Me }) {
   );
 }
 
-function buildQuery(page: number, filters: Filters, sorting: SortingState): string {
-  const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
+function buildQuery(page: number, limit: number, filters: Filters, sorting: SortingState): string {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   return [params.toString(), buildFilterQuery(filters), sortQuery(sorting)]
     .filter(Boolean)
     .join('&');

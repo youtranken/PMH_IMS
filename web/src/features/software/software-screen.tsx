@@ -35,7 +35,7 @@ import {
 } from './software-types';
 import { PATHS } from '@/lib/routes';
 
-const LIMIT = 20;
+const DEFAULT_LIMIT = 20;
 
 interface Filters {
   search: string;
@@ -51,6 +51,8 @@ export function SoftwareScreen({ me }: { me: Me }) {
   const toast = useToast();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
+  /** Số dòng/trang do NGƯỜI DÙNG chọn (10/20/50/100), không còn là hằng số cứng. */
+  const [limit, setLimit] = useState(DEFAULT_LIMIT);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả danh sách — sai mà không có dấu hiệu nào.
@@ -67,10 +69,10 @@ export function SoftwareScreen({ me }: { me: Me }) {
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['software'] });
 
   const software = useQuery({
-    queryKey: ['software', page, filters, sorting],
+    queryKey: ['software', page, limit, filters, sorting],
     queryFn: () =>
       apiFetch<{ items: SoftwareRow[]; total: number }>(
-        `/api/v1/software?${buildQuery(page, filters, sorting)}`,
+        `/api/v1/software?${buildQuery(page, limit, filters, sorting)}`,
       ),
   });
 
@@ -288,7 +290,8 @@ export function SoftwareScreen({ me }: { me: Me }) {
 
           <Pagination
             page={page}
-            limit={LIMIT}
+            limit={limit}
+            onLimitChange={setLimit}
             total={software.data?.total ?? 0}
             onPageChange={setPage}
           />
@@ -338,8 +341,8 @@ export function SoftwareScreen({ me }: { me: Me }) {
   );
 }
 
-function buildQuery(page: number, filters: Filters, sorting: SortingState): string {
-  const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
+function buildQuery(page: number, limit: number, filters: Filters, sorting: SortingState): string {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   return [params.toString(), buildFilterQuery(filters), sortQuery(sorting)]
     .filter(Boolean)
     .join('&');

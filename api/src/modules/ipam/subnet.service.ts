@@ -11,7 +11,7 @@ import type { Database } from '../../database/database.module';
 import { pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
-import { normalizeSubnet, subnetUsage, type SubnetUsage } from './ip-rules';
+import { isHostInSubnet, normalizeSubnet, subnetUsage, type SubnetUsage } from './ip-rules';
 import { OCCUPYING_STATUSES } from './ip-lifecycle';
 import { ipAddressTable, subnetTable } from './ipam.schema';
 
@@ -23,19 +23,32 @@ export interface SubnetRecord {
   siteCode: string | null;
   /** Số VLAN 802.1Q (0029) — ở PMH người ta gọi dải theo VLAN chứ không theo CIDR. */
   vlan: number | null;
+  /** Gateway của dải (0035) — câu hỏi đầu tiên khi khai IP tĩnh cho một cái máy. */
+  gateway: string | null;
   description: string | null;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
 }
 
-export interface SubnetWithUsage extends SubnetRecord, SubnetUsage {}
+export interface SubnetWithUsage extends SubnetRecord, SubnetUsage {
+  /**
+   * Có BAO NHIÊU hồ sơ IP từng thuộc dải này, kể cả đã thu hồi hoặc đã ẩn.
+   *
+   * Khác `used` (chỉ đếm IP đang chiếm chỗ): con số này trả lời "dải này đã từng được dùng
+   * chưa", và đó mới là câu quyết định xóa cứng được hay không. Một dải có 0 IP đang dùng
+   * nhưng 40 IP đã thu hồi vẫn đang giữ lịch sử "IP này từng của máy nào" (AC 5.2).
+   */
+  addressCount: number;
+}
 
 export interface SubnetInput {
   name: string;
   cidr: string;
   siteId?: string | null;
   vlan?: number | null;
+  /** Chuỗi rỗng = xóa gateway đang có. `undefined` = đừng đụng tới. */
+  gateway?: string | null;
   description?: string | null;
 }
 
@@ -73,10 +86,23 @@ export class SubnetService {
       .groupBy(ipAddressTable.subnetId);
     const usedBySubnet = new Map(counts.map((row) => [row.subnetId, Number(row.used)]));
 
+    /*
+     * Đếm thứ HAI: tổng số hàng, KHÔNG lọc gì cả.
+     *
+     * Nó trả lời câu khác hẳn `used`: "dải này đã từng được dùng chưa". Màn hình dựa vào đó
+     * để bày nút Xóa (xóa cứng, chỉ khi chưa từng dùng) hay nút Vô hiệu hóa.
+     */
+    const totals = await this.db
+      .select({ subnetId: ipAddressTable.subnetId, all: count() })
+      .from(ipAddressTable)
+      .groupBy(ipAddressTable.subnetId);
+    const allBySubnet = new Map(totals.map((row) => [row.subnetId, Number(row.all)]));
+
     const sites = await this.siteCodes();
     return rows.map((row) => ({
       ...this.toRecord(row, sites),
       ...subnetUsage(row.cidr, usedBySubnet.get(row.id) ?? 0),
+      addressCount: allBySubnet.get(row.id) ?? 0,
     }));
   }
 
@@ -88,10 +114,15 @@ export class SubnetService {
       .where(
         and(eq(ipAddressTable.subnetId, id), isNull(ipAddressTable.voidedAt), occupying()),
       );
+    const [all] = await this.db
+      .select({ all: count() })
+      .from(ipAddressTable)
+      .where(eq(ipAddressTable.subnetId, id));
     const sites = await this.siteCodes();
     return {
       ...this.toRecord(row, sites),
       ...subnetUsage(row.cidr, Number(used?.used ?? 0)),
+      addressCount: Number(all?.all ?? 0),
     };
   }
 
@@ -99,6 +130,7 @@ export class SubnetService {
     const cidr = this.requireCidr(input.cidr);
     await this.requireSite(input.siteId);
     const name = this.requireName(input.name);
+    const gateway = this.requireGateway(input.gateway, cidr);
 
     try {
       return await this.db.transaction(async (tx) => {
@@ -109,6 +141,7 @@ export class SubnetService {
             cidr,
             siteId: input.siteId || null,
             vlan: input.vlan ?? null,
+            gateway,
             description: input.description?.trim() || null,
             createdBy: actor,
           })
@@ -134,6 +167,7 @@ export class SubnetService {
       description?: string | null;
       siteId?: string | null;
       vlan?: number | null;
+      gateway?: string | null;
       cidr?: string;
     } = {};
     if (input.name !== undefined) values.name = this.requireName(input.name);
@@ -141,6 +175,19 @@ export class SubnetService {
       values.description = input.description?.trim() || null;
     }
     if (input.vlan !== undefined) values.vlan = input.vlan ?? null;
+    /*
+     * Gateway kiểm theo dải SẼ CÓ sau lần sửa này, không phải dải cũ.
+     *
+     * `input.cidr` xử lý ở dưới, nhưng dải chỉ đổi được khi chưa có IP nào — nên ở đây dùng
+     * `input.cidr ?? before.cidr` là đủ và đúng: sửa cả hai cùng lúc thì gateway phải hợp với
+     * dải mới, còn chỉ sửa gateway thì hợp với dải đang có.
+     */
+    if (input.gateway !== undefined) {
+      values.gateway = this.requireGateway(
+        input.gateway,
+        input.cidr === undefined ? before.cidr : this.requireCidr(input.cidr),
+      );
+    }
     if (input.siteId !== undefined) {
       await this.requireSite(input.siteId);
       values.siteId = input.siteId || null;
@@ -233,6 +280,53 @@ export class SubnetService {
     });
   }
 
+  /**
+   * XÓA CỨNG một dải — chỉ khi nó CHƯA TỪNG được dùng.
+   *
+   * Quyết định 2026-08-27: khai nhầm một dải rồi phải sống chung với nó mãi là phiền vô lý.
+   * Dải chưa có hồ sơ IP nào thì nó chưa mang thông tin gì cả — xóa hẳn, cần thì khai lại.
+   *
+   * Nhưng "chưa từng dùng" tính theo TỔNG số hàng `ip_address`, kể cả hàng đã thu hồi hoặc đã
+   * ẩn: những hàng đó đang giữ câu trả lời "IP này từng của máy nào" mà AC 5.2 bắt giữ vĩnh
+   * viễn, và `ip_history` còn trỏ vào chúng. Dải đã từng dùng thì đi đường `voidSubnet` —
+   * bản ghi ở lại, tra cứu được, còn vết ai ẩn và vì sao.
+   */
+  async remove(actor: string, id: string): Promise<void> {
+    const row = await this.requireAlive(id);
+    const [existing] = await this.db
+      .select({ all: count() })
+      .from(ipAddressTable)
+      .where(eq(ipAddressTable.subnetId, id));
+    const addresses = Number(existing?.all ?? 0);
+    if (addresses > 0) {
+      throw new ConflictException({
+        code: 'SUBNET_HAS_ADDRESSES',
+        message:
+          `Dải này đã có ${addresses} hồ sơ IP nên không xóa hẳn được — xóa là mất luôn lịch sử ` +
+          '"IP nào từng của máy nào". Dùng Vô hiệu hóa để cất dải đi mà vẫn tra cứu được.',
+        addresses,
+      });
+    }
+
+    await this.db.transaction(async (tx) => {
+      /*
+       * Ghi audit TRƯỚC khi xóa, trong cùng transaction.
+       *
+       * Sau khi xóa thì hàng không còn để mà đọc — mà dòng audit lại là thứ DUY NHẤT còn lại
+       * kể chuyện "dải 172.16.15.0/24 từng tồn tại và ai đã xóa nó". Chép cả cidr + tên vào
+       * `detail` vì `objectId` sau đây trỏ tới một hàng không còn nữa.
+       */
+      await this.audit.appendWithin(tx, {
+        actor,
+        action: 'subnet.deleted',
+        objectType: 'subnet',
+        objectId: id,
+        detail: { cidr: row.cidr, name: row.name, vlan: row.vlan, gateway: row.gateway },
+      });
+      await tx.delete(subnetTable).where(eq(subnetTable.id, id));
+    });
+  }
+
   /** Dải chuẩn hóa của một subnet — `IpAddressService` cần để kiểm IP nằm trong dải. */
   async cidrOf(id: string): Promise<string> {
     return (await this.requireAlive(id)).cidr;
@@ -256,6 +350,25 @@ export class SubnetService {
       code: 'SUBNET_INVALID',
       message: CIDR_MESSAGE[parsed.reason] ?? 'Dải không hợp lệ. Ví dụ đúng: 172.16.10.0/24.',
     });
+  }
+
+  /**
+   * Gateway phải nằm TRONG chính dải của nó — kiểm ở đây để báo một câu tiếng Việt, và CHECK
+   * ở tầng DB (`subnet_gateway_within_check`, 0035) là hàng rào cuối cho mọi đường vào khác.
+   *
+   * Ô để trống là một ý định rõ ràng ("dải này không có gateway", vd dải point-to-point), nên
+   * chuỗi rỗng → `null` chứ không phải lỗi.
+   */
+  private requireGateway(value: string | null | undefined, cidr: string): string | null {
+    const text = (value ?? '').trim();
+    if (!text) return null;
+    if (!isHostInSubnet(text, cidr)) {
+      throw new BadRequestException({
+        code: 'GATEWAY_OUT_OF_SUBNET',
+        message: `Gateway ${text} không nằm trong dải ${cidr}. Gateway phải là một địa chỉ của chính dải đó.`,
+      });
+    }
+    return text;
   }
 
   private async requireSite(siteId: string | null | undefined): Promise<void> {
@@ -299,6 +412,7 @@ export class SubnetService {
       siteId: row.siteId,
       siteCode: row.siteId ? (sites.get(row.siteId) ?? null) : null,
       vlan: row.vlan,
+      gateway: row.gateway,
       description: row.description,
       createdBy: row.createdBy,
       createdAt: row.createdAt,

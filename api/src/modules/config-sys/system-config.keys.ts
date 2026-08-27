@@ -8,7 +8,8 @@ export const CONFIG_KEYS = {
   loginMaxFailedAttempts: { key: 'login.max_failed_attempts', fallback: 5 },
   loginLockoutMinutes: { key: 'login.lockout_minutes', fallback: 15 },
   loginRateLimitPerIp: { key: 'login.rate_limit_per_ip', fallback: 20 },
-  secretRevealSeconds: { key: 'secret.reveal_seconds', fallback: 30 },
+  // 60s (0034): 30 chỉ vừa đủ đọc xong thì hộp đóng, người dùng bấm Xem lại — mỗi lần một dòng audit.
+  secretRevealSeconds: { key: 'secret.reveal_seconds', fallback: 60 },
   secretStepUpGraceMinutes: { key: 'secret.stepup_grace_minutes', fallback: 10 },
   secretStepUpMaxFailures: { key: 'secret.stepup_max_failures', fallback: 5 },
   breakGlassMaxGrantHours: { key: 'breakglass.max_grant_hours', fallback: 24 },

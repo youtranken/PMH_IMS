@@ -39,7 +39,12 @@ table.table thead th .th-sort:hover {
   color: var(--ink);
 }
 table.table thead th .sort-arrow {
-  font-size: 0.7em;
+  /* Chevron kích thước theo `1em` nên cỡ mũi tên sắp xếp đặt ở ĐÂY, không ở component.
+     0.7em như ký tự ▲ cũ thì ở 12px chữ tiêu đề nó còn ~8px — nhìn ra một vệt mờ. */
+  font-size: 0.95em;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 2px;
   /* `--accent` chưa từng được khai trong tokens.css — dùng token thật để khỏi rơi về fallback. */
   color: var(--primary-ink);
 }

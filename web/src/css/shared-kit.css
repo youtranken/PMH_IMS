@@ -55,6 +55,24 @@
 }
 .pager-info { margin-right: auto; }
 .pager-page { font-variant-numeric: tabular-nums; }
+/* Nút ‹ › cũ là KÝ TỰ theo cỡ chữ — mảnh như dấu ngoặc và ô bấm chỉ bằng con chữ. Giờ là
+   chevron dùng chung, ô bấm vuông đủ 32px (ngón tay ở 390px cần chừng đó). */
+.pager-nav {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: var(--fs-md);
+}
+.pager-size {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.pager-size select { font-size: var(--fs-sm); padding: 2px 1.6rem 2px var(--space-3); }
 
 /* Ô nhập: gợi ý + lỗi */
 .field-hint { font-size: var(--fs-xs); }
@@ -458,6 +476,77 @@
 /* Chữ to, giãn ký tự, ngắt được: người ta phải ĐỌC và gõ lại chuỗi này trong 30 giây,
    thường là trên điện thoại, đứng trước tủ rack. `user-select: all` để bôi một phát dính cả
    chuỗi — nhưng KHÔNG tự chép vào clipboard (clipboard sống lâu hơn cái hộp này nhiều). */
+/* --- Thanh đo độ khó giá trị secret (ui/secret-strength-meter.tsx) -----------
+ * Năm đoạn = năm điều kiện. Đoạn nào đạt thì xanh — nhìn phát biết còn thiếu cái gì, thay
+ * cho một chữ "Yếu" chẳng nói được sai ở đâu. Đây là LỜI KHUYÊN: nút Lưu không bị khóa.
+ * ---------------------------------------------------------------------------- */
+.strength {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.strength-bar {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 3px;
+}
+.strength-seg {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-2);
+  transition: background 0.2s var(--ease);
+}
+.strength-seg.met { background: var(--ok); }
+.strength-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+.strength-rules li.met { color: var(--ok); font-weight: 600; }
+.warn-text { color: var(--warn); }
+
+/* --- Đồng hồ đếm ngược của hộp hiện secret (ui/reveal-dialog.tsx) -------------
+ * Hai số: "còn hiện bao lâu" / "còn mở két được bao lâu". Màu do `countdownTone` quyết —
+ * xanh khi còn nhiều, hổ phách khi quá nửa, đỏ NHẤP NHÁY khi sắp hết. Con số này là thứ
+ * người ta liếc chứ không đọc; xám đều tăm tắp thì còn 5 giây trông y hệt còn 50.
+ * Màu lấy từ token (tokens.css), không hex mới — đã có cặp dark sẵn.
+ * ---------------------------------------------------------------------------- */
+.countdown {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+.countdown-num {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.3s var(--ease);
+}
+.countdown-num.calm { color: var(--ok); }
+.countdown-num.warn { color: var(--warn); }
+.countdown-num.urgent {
+  color: var(--danger);
+  animation: countdown-blink 1s steps(2, start) infinite;
+}
+.countdown-sep { color: var(--ink-3); }
+.countdown-note { font-size: var(--fs-xs); }
+@keyframes countdown-blink {
+  to { opacity: 0.25; }
+}
+/* Nhấp nháy là hiệu ứng dễ gây khó chịu (và với vài người là nguy hiểm) — ai đã bật
+   "giảm chuyển động" thì giữ màu đỏ, bỏ nhịp nháy. Màu vẫn nói đủ điều cần nói. */
+@media (prefers-reduced-motion: reduce) {
+  .countdown-num.urgent { animation: none; }
+}
+
 .secret-value {
   margin: 0;
   padding: var(--space-4);

@@ -273,17 +273,24 @@ test.describe('Dải mạng và hồ sơ IP', () => {
   });
 
   /**
-   * Quyết định 2026-08-23: KHÔNG xóa hẳn. Ẩn phải kèm lý do, và bản ghi vẫn còn trong DB
-   * cùng vết ai ẩn — đó mới là thứ trả lời được "sao dải này biến mất" sáu tháng sau.
+   * Hai cửa khác nhau cho hai việc khác nhau (quyết định 2026-08-27):
+   *
+   *  - `PATCH :id/void` — vô hiệu hóa kèm LÝ DO, cho dải đã từng dùng. Bản ghi ở lại.
+   *  - `DELETE :id`      — xóa HẲN, chỉ cho dải CHƯA TỪNG có hồ sơ IP nào.
+   *
+   * Trước đây `DELETE` thực ra là ẩn — một cái bẫy cho bất cứ ai đọc route mà không đọc
+   * service. Giờ mỗi route mang đúng nghĩa của nó.
    */
-  test('ẩn dải phải có lý do; dải còn IP bên trong thì không ẩn được', async ({ page }) => {
+  test('vô hiệu hóa dải phải có lý do; dải còn IP bên trong thì không vô hiệu hóa được', async ({
+    page,
+  }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const octet = Number(stamp) % 200;
     const subnetId = await createSubnet(page, `172.16.${octet}.0/29`, `LAN ẩn E2E ${stamp}`);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
 
-    const noReason = await page.request.delete(`/api/v1/ipam/subnets/${subnetId}`, {
+    const noReason = await page.request.patch(`/api/v1/ipam/subnets/${subnetId}/void`, {
       headers,
       data: { reason: '' },
     });
@@ -293,12 +300,98 @@ test.describe('Dải mạng và hồ sơ IP', () => {
       headers,
       data: { subnetId, address: `172.16.${octet}.1`, usedBy: 'máy A' },
     });
-    const hasIps = await page.request.delete(`/api/v1/ipam/subnets/${subnetId}`, {
+    const hasIps = await page.request.patch(`/api/v1/ipam/subnets/${subnetId}/void`, {
       headers,
       data: { reason: 'khai nhầm dải' },
     });
     expect(hasIps.status()).toBe(409);
     expect(await hasIps.json()).toMatchObject({ code: 'SUBNET_HAS_ADDRESSES' });
+  });
+
+  /**
+   * Xóa hẳn dải khai nhầm — và CHỈ khi nó chưa từng được dùng.
+   *
+   * Ranh giới nằm ở TỔNG số hàng `ip_address`, không phải số IP đang chiếm chỗ: một hàng đã
+   * thu hồi vẫn đang giữ câu trả lời "IP này từng của máy nào" mà AC 5.2 bắt giữ vĩnh viễn.
+   * Thu hồi IP xong tưởng dải đã sạch rồi xóa hẳn là mất luôn khúc lịch sử đó.
+   */
+  test('xóa hẳn dải chưa dùng; dải đã từng có IP thì bị chặn kèm số hồ sơ', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const octet = Number(stamp) % 200;
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+
+    // 1. Dải trắng tinh → xóa hẳn được, và sau đó khai LẠI đúng dải đó cũng được.
+    const clean = await createSubnet(page, `172.16.${octet}.0/29`, `LAN xóa E2E ${stamp}`);
+    const removed = await page.request.delete(`/api/v1/ipam/subnets/${clean}`, { headers });
+    expect(removed.status()).toBe(200);
+    expect((await page.request.get(`/api/v1/ipam/subnets/${clean}`)).status()).toBe(404);
+    const again = await createSubnet(page, `172.16.${octet}.0/29`, `LAN khai lại E2E ${stamp}`);
+    expect(again).toBeTruthy();
+
+    // 2. Dải đã có IP — kể cả khi IP đó đã thu hồi — thì KHÔNG xóa hẳn được.
+    const created = await page.request.post('/api/v1/ipam/addresses', {
+      headers,
+      data: { subnetId: again, address: `172.16.${octet}.1`, usedBy: 'máy A' },
+    });
+    expect(created.status()).toBe(201);
+    const ipId = ((await created.json()) as { id: string }).id;
+    const released = await page.request.post(`/api/v1/ipam/addresses/${ipId}/transition`, {
+      headers,
+      data: { to: 'reclaimed', reason: 'máy nghỉ' },
+    });
+    expect(released.status()).toBe(201);
+
+    const blocked = await page.request.delete(`/api/v1/ipam/subnets/${again}`, { headers });
+    expect(blocked.status()).toBe(409);
+    const body = (await blocked.json()) as Record<string, unknown>;
+    expect(body).toMatchObject({ code: 'SUBNET_HAS_ADDRESSES', addresses: 1 });
+    // Câu báo phải chỉ sang đường còn lại, không để người dùng đứng đó không biết làm gì.
+    expect(String(body.message)).toContain('Vô hiệu hóa');
+  });
+
+  /**
+   * Gateway (0035) — thứ người ta hỏi đầu tiên khi khai IP tĩnh, mà thẻ dải trước đây không
+   * có chỗ nào để ghi. Nằm ngoài chính dải của nó là cấu hình sai mà nhìn vẫn thấy hợp lệ.
+   */
+  test('gateway phải nằm trong chính dải của nó', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const octet = Number(stamp) % 200;
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+
+    const outside = await page.request.post('/api/v1/ipam/subnets', {
+      headers,
+      data: {
+        cidr: `172.16.${octet}.0/24`,
+        name: `LAN GW E2E ${stamp}`,
+        gateway: '10.0.0.1',
+      },
+    });
+    expect(outside.status()).toBe(400);
+    expect(await outside.json()).toMatchObject({ code: 'GATEWAY_OUT_OF_SUBNET' });
+
+    const ok = await page.request.post('/api/v1/ipam/subnets', {
+      headers,
+      data: {
+        cidr: `172.16.${octet}.0/24`,
+        name: `LAN GW E2E ${stamp}`,
+        gateway: `172.16.${octet}.1`,
+      },
+    });
+    expect(ok.status()).toBe(201);
+    const id = ((await ok.json()) as { id: string }).id;
+    expect((await (await page.request.get(`/api/v1/ipam/subnets/${id}`)).json())).toMatchObject({
+      gateway: `172.16.${octet}.1`,
+    });
+
+    // Ô để trống là ý định rõ ràng ("dải này không có gateway"), không phải lỗi.
+    const cleared = await page.request.patch(`/api/v1/ipam/subnets/${id}`, {
+      headers,
+      data: { gateway: '' },
+    });
+    expect(cleared.status()).toBe(200);
+    expect((await cleared.json()) as { gateway: string | null }).toMatchObject({ gateway: null });
   });
 
   test('Member cấp được IP nhưng không khai được dải', async ({ page }) => {

@@ -36,9 +36,16 @@ export interface ServiceAccountFilter {
 }
 
 export interface ServiceAccountInput {
-  code: string;
+  /**
+   * Để trống khi TẠO MỚI thì service suy từ tên đăng nhập (`fillBlanks`).
+   *
+   * Vẫn là khóa duy nhất và vẫn hiện trên mọi dòng lịch sử — chỉ là người khai không phải
+   * nghĩ ra nó. Suy không được (không có cả login) thì `validateServiceAccount` báo thiếu.
+   */
+  code?: string;
   kind: ServiceAccountKind;
-  name: string;
+  /** Để trống khi TẠO MỚI thì lấy tên đăng nhập làm tên gọi. */
+  name?: string;
   login?: string;
   department?: string;
   ownerName?: string;

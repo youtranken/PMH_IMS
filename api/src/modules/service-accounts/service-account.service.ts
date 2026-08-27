@@ -16,6 +16,7 @@ import { diffRecord, hasChanges } from '../../common/record-diff';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import {
   checkAllowedIps,
+  codeFromLogin,
   mergeServiceAccount,
   validateServiceAccount,
   type ServiceAccountKind,
@@ -112,7 +113,7 @@ export class ServiceAccountService {
   }
 
   async create(actor: string, input: ServiceAccountInput): Promise<ServiceAccountRecord> {
-    const { values, warnings } = this.prepare(input);
+    const { values, warnings } = this.prepare(await this.fillBlanks(input));
     try {
       const created = await this.db.transaction(async (tx) => {
         const rows = await tx.insert(serviceAccountTable).values({ ...values, createdBy: actor }).returning();
@@ -220,6 +221,48 @@ export class ServiceAccountService {
       return rows[0];
     });
     return toRecord(updated);
+  }
+
+  /**
+   * Lấp MÃ và TÊN khi người khai để trống — chỉ lúc TẠO MỚI.
+   *
+   * Người ta biết tài khoản đăng nhập bằng gì; "mã" và "tên gọi" là thứ hệ thống cần chứ họ
+   * không cần, và bắt gõ là bắt bịa. Mã suy từ tên đăng nhập, tên thì lấy luôn tên đăng nhập.
+   *
+   * Mã trùng thì thêm `-2`, `-3`… Hai tài khoản khác nhau vẫn có thể cùng tên đăng nhập ở hai
+   * hệ thống khác nhau (`admin` trên Draytek và `admin` trên NAS), nên đây không phải trường
+   * hợp hiếm — và để nó nổ 409 với một cái mã người dùng chưa từng gõ là vô lý.
+   *
+   * Vòng lặp là "thử rồi kiểm", không phải khóa: hai request cùng lúc vẫn có thể cùng chọn
+   * `ADMIN-2`. Ràng buộc duy nhất của DB vẫn là hàng rào cuối và `translate()` vẫn dịch nó
+   * thành 409 tử tế — nhưng đó là cửa hẹp hơn nhiều so với "mọi lần khai `admin` thứ hai".
+   */
+  private async fillBlanks(input: ServiceAccountInput): Promise<ServiceAccountInput> {
+    const login = (input.login ?? '').trim();
+    const code = input.code?.trim();
+    const name = input.name?.trim();
+    if (code && name) return input;
+    /*
+     * Không có gì để suy ra thì TRẢ NGUYÊN, để `validateServiceAccount` báo đúng ô còn thiếu.
+     * Tự bịa ra một cái mã cho một hồ sơ trống trơn là tạo ra rác không ai truy được.
+     */
+    if (!login && (!code || !name)) return input;
+
+    let nextCode = code;
+    if (!nextCode) {
+      const base = codeFromLogin(login);
+      const taken = new Set(
+        (
+          await this.db
+            .select({ code: serviceAccountTable.code })
+            .from(serviceAccountTable)
+            .where(ilike(serviceAccountTable.code, `${escapeLike(base)}%`))
+        ).map((row) => row.code.toUpperCase()),
+      );
+      nextCode = base;
+      for (let n = 2; taken.has(nextCode.toUpperCase()); n += 1) nextCode = `${base}-${n}`;
+    }
+    return { ...input, code: nextCode, name: name || login };
   }
 
   /** Chuẩn hóa + kiểm luật thuần. Lỗi thì 400 kèm ĐỦ chỗ sai, không chỉ chỗ đầu tiên. */

@@ -39,7 +39,7 @@ interface SessionRow {
   lastSeenAt: string;
 }
 
-const LIMIT = 20;
+const DEFAULT_LIMIT = 20;
 
 /** Story 1.4 — SA quản trị tài khoản và phiên. */
 export function AccountsScreen({ me }: { me: Me }) {
@@ -48,6 +48,8 @@ export function AccountsScreen({ me }: { me: Me }) {
   const askConfirm = useConfirm();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
+  /** Số dòng/trang do NGƯỜI DÙNG chọn (10/20/50/100), không còn là hằng số cứng. */
+  const [limit, setLimit] = useState(DEFAULT_LIMIT);
   const [search, setSearch] = useState('');
   // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả bảng — sai mà không có dấu hiệu nào.
@@ -60,12 +62,12 @@ export function AccountsScreen({ me }: { me: Me }) {
   // Tìm kiếm chạy PHÍA SERVER: lọc phía client chỉ lọc đúng 20 dòng đang xem, nên tên nằm ở
   // trang 3 sẽ ra bảng rỗng trong khi phân trang vẫn báo tổng 137 dòng.
   const accounts = useQuery({
-    queryKey: ['accounts', page, search, sorting],
+    queryKey: ['accounts', page, limit, search, sorting],
     queryFn: () =>
       apiFetch<{ items: AccountRow[]; total: number }>(
         `/api/v1/accounts?${[
           `page=${page}`,
-          `limit=${LIMIT}`,
+          `limit=${limit}`,
           search ? `search=${encodeURIComponent(search)}` : '',
           sortQuery(sorting),
         ]
@@ -327,7 +329,8 @@ export function AccountsScreen({ me }: { me: Me }) {
 
           <Pagination
             page={page}
-            limit={LIMIT}
+            limit={limit}
+            onLimitChange={setLimit}
             total={accounts.data?.total ?? 0}
             onPageChange={setPage}
           />

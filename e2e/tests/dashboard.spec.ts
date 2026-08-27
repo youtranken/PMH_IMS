@@ -70,9 +70,19 @@ test.describe('Bảng điều khiển', () => {
     await expect(expiring.getByText('License gấp')).toBeVisible();
     await expect(expiring.getByText('License thong tha')).toBeVisible();
 
-    // Gấp nhất lên đầu — sếp đọc từ trên xuống và thường chỉ đọc mấy dòng đầu.
+    /*
+     * Gấp nhất lên đầu — sếp đọc từ trên xuống và thường chỉ đọc mấy dòng đầu.
+     *
+     * So THỨ TỰ TƯƠNG ĐỐI của hai hồ sơ bài này vừa tạo, KHÔNG đòi "dòng đầu bảng".
+     * DB thật có sẵn hồ sơ của người dùng, và một hồ sơ trùng đúng ngày hết hạn là đủ để đẩy
+     * dòng của bài kiểm xuống hàng hai — bài đỏ vì dữ liệu hàng xóm chứ không phải vì thứ tự
+     * sắp xếp sai, đúng loại đỏ giả làm người ta mất niềm tin vào cả bộ test.
+     */
     const labels = await expiring.locator('.dash-list > li').allInnerTexts();
-    expect(labels[0]).toContain('License gấp');
+    const urgent = labels.findIndex((text) => text.includes('License gấp'));
+    const relaxed = labels.findIndex((text) => text.includes('License thong tha'));
+    expect(urgent).toBeGreaterThanOrEqual(0);
+    expect(urgent).toBeLessThan(relaxed);
 
     // Khối sự cố PHẢI hiện và nói rõ là chưa có phần này (Epic 9 chưa mở).
     const incidents = page.locator('section').filter({ hasText: 'Sự cố tuần qua' });

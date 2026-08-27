@@ -35,7 +35,7 @@ import {
   type VendorRow,
 } from './catalog-types';
 
-const LIMIT = 20;
+const DEFAULT_LIMIT = 20;
 
 const TAB_KEYS: { key: CatalogEntity; labelKey: string; searchKey: string }[] = [
   { key: 'site', labelKey: 'catalog.tabSite', searchKey: 'catalog.searchSite' },
@@ -238,6 +238,8 @@ export function CatalogScreen({ me }: { me: Me }) {
 
   const [entity, setEntity] = useState<CatalogEntity>('site');
   const [page, setPage] = useState(1);
+  /** Số dòng/trang do NGƯỜI DÙNG chọn (10/20/50/100), không còn là hằng số cứng. */
+  const [limit, setLimit] = useState(DEFAULT_LIMIT);
   const [search, setSearch] = useState('');
   // Sắp xếp chạy ở SERVER (`manualSorting`) — lý do giống màn Thiết bị: bảng phân trang
   // 20 dòng/trang, sắp ở client chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả danh mục.
@@ -250,10 +252,10 @@ export function CatalogScreen({ me }: { me: Me }) {
   const importable = (IMPORTABLE_ENTITIES as readonly string[]).includes(entity);
 
   const rows = useQuery({
-    queryKey: ['catalog', entity, page, search, sorting],
+    queryKey: ['catalog', entity, page, limit, search, sorting],
     queryFn: () =>
       apiFetch<{ items: CatalogRow[]; total: number }>(
-        `/api/v1/catalog/${entity}?${buildQuery(page, search, sorting)}`,
+        `/api/v1/catalog/${entity}?${buildQuery(page, limit, search, sorting)}`,
       ),
   });
 
@@ -457,7 +459,8 @@ export function CatalogScreen({ me }: { me: Me }) {
 
             <Pagination
               page={page}
-              limit={LIMIT}
+              limit={limit}
+            onLimitChange={setLimit}
               total={rows.data?.total ?? 0}
               onPageChange={setPage}
             />
@@ -503,8 +506,8 @@ const TAB_SUFFIX: Record<CatalogEntity, string> = {
   service_port: 'ServicePort',
 };
 
-function buildQuery(page: number, search: string, sorting: SortingState): string {
-  const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
+function buildQuery(page: number, limit: number, search: string, sorting: SortingState): string {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (search) params.set('search', search);
   return [params.toString(), sortQuery(sorting)].filter(Boolean).join('&');
 }
