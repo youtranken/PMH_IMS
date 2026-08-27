@@ -305,6 +305,10 @@ export function IspForm({
             Sửa: panel giấy tờ đầy đủ — đổi hợp đồng là việc thường xuyên của đường truyền. */}
         {row ? (
           <FormSection title={t('attachments.title')} columns={1}>
+            {/* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt
+                lưu của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên —
+                xóa một bản scan rồi bấm Hủy là mất luôn, nên phải nói ra. */}
+            <p className="alert">{t('attachments.liveWarning')}</p>
             <AttachmentPanel
               ownerType="isp"
               ownerId={row.id}

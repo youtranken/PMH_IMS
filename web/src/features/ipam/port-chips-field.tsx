@@ -63,7 +63,20 @@ export function PortChipsField({
       ) : null}
 
       {full ? (
-        <p className="field-hint muted">{t('nat.portOneOnly')}</p>
+        <>
+          <p className="field-hint muted">{t('nat.portOneOnly')}</p>
+          {/*
+            Phần CHƯA nhận được vẫn phải NHÌN THẤY, kể cả khi ô nhập đã biến mất.
+            Dán "80,443,8080" vào hộp Sửa (`max = 1`): `80` thành chip, danh sách đầy ngay,
+            `.chip-add` bị tháo — và `443, 8080` nằm trong `draft` mà không chỗ nào vẽ ra.
+            Đúng thứ mà chú thích ở nhánh dưới hứa là không xảy ra.
+          */}
+          {draft.trim() ? (
+            <p className="field-hint muted">
+              {t('nat.portLeftover')} <span className="mono">{draft}</span>
+            </p>
+          ) : null}
+        </>
       ) : (
         <div className="chip-add">
           <input

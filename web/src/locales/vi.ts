@@ -311,6 +311,8 @@ export default {
     // Khối chọn giấy tờ ngay trong form THÊM MỚI — file chỉ được đẩy lên sau khi hồ sơ đã lưu.
     draftHint:
       'Không bắt buộc. Chọn từng file (ảnh jpg/png/webp, giấy tờ pdf/xlsx) — sẽ đính kèm ngay sau khi lưu hồ sơ.',
+    liveWarning:
+      'Thêm và xóa giấy tờ ở đây có hiệu lực NGAY, không chờ bấm Lưu — nút Hủy không hoàn tác được.',
     draftRemove: 'Bỏ ra',
     draftRemoveOf: 'Bỏ "{{name}}" khỏi danh sách sẽ đính kèm',
     draftUploaded: 'Đã đính kèm {{count}} giấy tờ.',
@@ -740,6 +742,7 @@ export default {
     portPlaceholder: '8080 hoặc 8000-8010',
     portRemove: 'Bỏ port {{port}}',
     portOneOnly: 'Đang sửa một dòng nên chỉ giữ một khoảng port. Bấm ✕ ở trên rồi gõ khoảng mới.',
+    portLeftover: 'Chưa nhận:',
     portRequired: 'Thêm ít nhất một port ngoài.',
     portErr_format: 'Chỉ nhận một số ("8080") hoặc một dải ("8000-8010").',
     portErr_range: 'Port phải nằm trong khoảng 1–65535.',

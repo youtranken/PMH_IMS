@@ -80,6 +80,22 @@ export function VaultHomeScreen({ me }: { me: Me }) {
     });
   }, [owners.data, kinds, search]);
 
+  /**
+   * Đóng popup + nạp lại danh sách.
+   *
+   * `VaultPanel` làm mới bằng khóa `['vault', ownerType, ownerId]`, KHÔNG khớp tiền tố với
+   * `['vault','owners']` của bảng này. Không tự nạp lại thì cất/thu hồi một ngăn xong đóng
+   * popup là "Số ngăn" và "Thay đổi gần nhất" đứng im tới lúc tải lại trang — thu hồi ngăn
+   * cuối còn để lại một dòng ma.
+   *
+   * MỘT hàm cho MỌI đường đóng (nút Đóng, Esc, bấm nền) — ba lối ra mà chỉ hai lối nạp lại
+   * thì lỗi chỉ hiện ở lối còn lại, và đó thường là lối hay đi nhất.
+   */
+  const closePopup = () => {
+    setOpened(null);
+    void queryClient.invalidateQueries({ queryKey: ['vault', 'owners'] });
+  };
+
   const all = owners.data ?? [];
   const totalSecrets = all.reduce((sum, row) => sum + row.secretCount, 0);
   const toggle = (kind: OwnerType) =>
@@ -182,16 +198,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
       {opened ? (
         <Dialog
           open
-          onOpenChange={() => {
-            setOpened(null);
-            /*
-             * `VaultPanel` làm mới bằng khóa `['vault', ownerType, ownerId]`, KHÔNG khớp tiền
-             * tố với `['vault','owners']` của bảng này. Không tự nạp lại thì cất/thu hồi một
-             * ngăn xong đóng popup là "Số ngăn" và "Thay đổi gần nhất" đứng im tới lúc tải
-             * lại trang — thu hồi ngăn cuối còn để lại một dòng ma.
-             */
-            void queryClient.invalidateQueries({ queryKey: ['vault', 'owners'] });
-          }}
+          onOpenChange={closePopup}
           maxWidth={860}
           title={`${t('vaultHome.title')} — ${opened.code}${opened.name ? ` · ${opened.name}` : ''}`}
           footer={
@@ -205,7 +212,11 @@ export function VaultHomeScreen({ me }: { me: Me }) {
                   {t('vaultHome.openRecord')}
                 </Link>
               )}
-              <button type="button" className="btn primary" onClick={() => setOpened(null)}>
+              {/* PHẢI dùng `closePopup`, không phải `setOpened(null)` trần: nút này mới là
+                  đường phần lớn người dùng đóng hộp, mà bản trước chỉ làm mới ở
+                  `onOpenChange` (Esc / bấm nền) — nên đúng lối đi thường nhất lại không nạp
+                  lại danh sách. */}
+              <button type="button" className="btn primary" onClick={closePopup}>
                 {t('common.close')}
               </button>
             </>

@@ -307,6 +307,70 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
   });
 });
 
+test.describe('Sổ NAT — lưu hỏng một phần', () => {
+  /**
+   * Ghi được một phần thì GIỮ HỘP LẠI, chỉ bỏ đi khoảng đã ghi xong.
+   *
+   * Đóng hộp là mất trắng router, IP trong, lý do và mấy khoảng còn lại — người dùng gõ lại
+   * từ đầu chỉ vì một khoảng đụng rule cũ. Toast cảnh báo trôi qua vài giây, form thì mất hẳn.
+   */
+  test('một khoảng đụng rule cũ: hộp còn mở, khoảng đã ghi biến khỏi danh sách', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const routerCode = `FW-E2E-P-${stamp}`;
+    const deviceId = await createRouter(page, routerCode);
+
+    // Dựng sẵn một rule chiếm port 7100 trên chính router đó.
+    expect(
+      (
+        await page.request.post('/api/v1/ipam/nat', {
+          headers,
+          data: {
+            deviceId,
+            protocol: 'tcp',
+            externalPorts: '7100',
+            internalIp: '172.16.10.7',
+            internalPort: 22,
+            usedBy: 'P. Kỹ thuật',
+            reason: `Chiếm sẵn ${stamp}`,
+            enabled: true,
+          },
+        })
+      ).status(),
+    ).toBe(201);
+
+    await page.goto('/nat');
+    await page.getByRole('button', { name: 'Thêm rule' }).click();
+    const form = page.getByRole('dialog');
+    await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
+    await page.getByRole('option', { name: new RegExp(routerCode) }).click();
+
+    const portInput = form.getByPlaceholder('8080 hoặc 8000-8010');
+    for (const value of ['7200', '7100']) {
+      await portInput.fill(value);
+      await portInput.press('Enter');
+    }
+    await form.getByRole('textbox', { name: 'IP trong' }).fill('172.16.10.8');
+    await form.getByRole('textbox', { name: 'Port trong' }).fill('80');
+    await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('P. Kỹ thuật');
+    await form.getByRole('textbox', { name: 'Lý do mở' }).fill(`Hỏng một phần ${stamp}`);
+    await form.getByRole('button', { name: 'Lưu' }).click();
+
+    // 7200 ghi được, 7100 đụng → hộp CÒN MỞ, báo lỗi tại chỗ, và 7200 đã biến khỏi chip.
+    await expect(form.getByRole('alert')).toBeVisible();
+    await expect(form.getByRole('button', { name: 'Bỏ port 7100' })).toBeVisible();
+    await expect(form.getByRole('button', { name: 'Bỏ port 7200' })).toHaveCount(0);
+    // Mọi thứ đã gõ vẫn nguyên — không phải gõ lại từ đầu.
+    await expect(form.getByRole('textbox', { name: 'IP trong' })).toHaveValue('172.16.10.8');
+    await expect(form.getByRole('textbox', { name: 'Lý do mở' })).toHaveValue(
+      `Hỏng một phần ${stamp}`,
+    );
+  });
+});
+
 test.describe('Sổ NAT — máy đích được NAT', () => {
   /**
    * Lỗ hổng lớn nhất của cuốn sổ trước đây: nó ghi "dẫn tới 172.16.10.5" mà không nói

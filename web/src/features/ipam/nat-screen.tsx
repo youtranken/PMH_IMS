@@ -206,6 +206,14 @@ export function NatScreen({ me }: { me: Me }) {
           rule={editing.rule}
           csrfToken={me.csrfToken}
           onClose={() => setEditing(null)}
+          onPartial={({ created, warnings }) => {
+            // Bảng phía sau phải phản ánh mấy dòng vừa ghi được, dù hộp còn mở.
+            toast({
+              message: created > 1 ? t('nat.savedMany', { count: created }) : t('nat.saved'),
+            });
+            for (const warning of warnings) toast({ message: warning, tone: 'warn' });
+            void refresh();
+          }}
           onSaved={({ created, warnings }) => {
             setEditing(null);
             // Nói RÕ vừa ghi mấy dòng: gõ một form ra ba dòng là chuyện dễ đếm nhầm.
@@ -246,11 +254,14 @@ function NatForm({
   csrfToken,
   onClose,
   onSaved,
+  onPartial,
 }: {
   rule: NatRow | null;
   csrfToken: string;
   onClose: () => void;
   onSaved: (result: { created: number; warnings: string[] }) => void;
+  /** Ghi được một phần: làm mới bảng phía sau nhưng KHÔNG đóng hộp. */
+  onPartial: (result: { created: number; warnings: string[] }) => void;
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -377,8 +388,15 @@ function NatForm({
        */
       if (ports.length >= maxPorts) return;
       const parsed = parsePortChip(value, ports);
-      // Chọn trùng dịch vụ đã có thì lặng lẽ bỏ qua — không đẻ chip trùng, cũng không la lối.
-      if (parsed.chip) setPorts([...ports, parsed.chip]);
+      /*
+       * Khoảng này đã có rồi thì KHÔNG đụng gì cả — kể cả giao thức.
+       *
+       * Cùng lỗi "im lặng một nửa" với chế độ sửa: gõ tay 443, đổi giao thức sang UDP, rồi
+       * chọn "HTTPS" (443/TCP) trong danh mục — danh sách port đứng im mà giao thức lặng lẽ
+       * nhảy về TCP. Người dùng không bấm gì thêm và không hề biết.
+       */
+      if (!parsed.chip) return;
+      setPorts([...ports, parsed.chip]);
       setProtocol(service.protocol);
     } else {
       // Port TRONG là một số duy nhất (đích của chuyển tiếp), nên lấy đầu dải.
@@ -446,6 +464,8 @@ function NatForm({
             };
             const warnings: string[] = [];
             const failures: string[] = [];
+            /** Khoảng đã ghi xong — bỏ khỏi danh sách nếu phải giữ hộp lại. */
+            const written: string[] = [];
             let created = 0;
             /* Nối tiếp chứ không song song: luật chống chồng port phía API xét dòng đang có
                trong DB, bắn cùng lúc thì hai chip chồng nhau có thể cùng lọt qua. */
@@ -456,6 +476,7 @@ function NatForm({
                   externalPorts: chip.value,
                 });
                 created += 1;
+                written.push(chip.value);
                 warnings.push(...(result?.warnings ?? []));
               } catch (err) {
                 // Một khoảng hỏng KHÔNG được nuốt mất mấy khoảng đã ghi xong — nói rõ khoảng
@@ -470,7 +491,21 @@ function NatForm({
               setError(failures.join(' '));
               return;
             }
-            onSaved({ created, warnings: [...warnings, ...failures] });
+            /*
+             * Hỏng một phần thì GIỮ HỘP LẠI, chỉ bỏ đi những khoảng đã ghi xong.
+             *
+             * Đóng hộp là mất trắng router, máy đích, IP, lý do và mấy khoảng còn lại — người
+             * dùng phải gõ lại từ đầu chỉ vì một khoảng đụng rule cũ. Toast cảnh báo trôi qua
+             * trong vài giây, còn cái form thì đã biến mất.
+             */
+            if (failures.length > 0) {
+              setPorts((current) => current.filter((chip) => !written.includes(chip.value)));
+              setError(failures.join(' '));
+              // Cảnh báo của những dòng ĐÃ ghi vẫn phải tới nơi.
+              onPartial({ created, warnings });
+              return;
+            }
+            onSaved({ created, warnings });
           })();
         }}
       >

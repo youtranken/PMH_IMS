@@ -215,7 +215,10 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
 
       {/* Một dòng tổng: lỗ hổng của ma trận là những nhóm CHƯA ai được gán, mà thứ đó không
           nhìn ra được khi phải rà từng thẻ. */}
-      {!rules.isLoading && !scopes.isLoading ? (
+      {/* Chỉ hiện dòng tổng khi CẢ HAI truy vấn đã xong và không lỗi. `scopes` hỏng thì
+          `allScopes` rỗng và dòng này nói "0 nhóm chưa gán cho ai" — trên đúng cái màn sinh
+          ra để soi chỗ hổng, một request hỏng lại đọc thành giấy chứng nhận sạch sẽ. */}
+      {!rules.isLoading && !scopes.isLoading && !scopes.isError ? (
         <p className="muted">
           {t('access.summary', {
             people: people.length,
@@ -226,10 +229,14 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
         </p>
       ) : null}
 
-      {rules.isLoading || accounts.isLoading ? (
+      {rules.isLoading || accounts.isLoading || scopes.isLoading ? (
         <Loading />
       ) : rules.isError ? (
         <LoadError onRetry={() => void rules.refetch()} />
+      ) : scopes.isError ? (
+        // Chiều "theo nhóm" DỰNG TỪ `scopes`: thiếu nó thì mọi nhóm chưa ai được gán biến
+        // mất — đúng tập mà chiều nhìn này sinh ra để chỉ ra.
+        <LoadError onRetry={() => void scopes.refetch()} />
       ) : view === 'scope' ? (
         scopeGroups.length === 0 ? (
           <EmptyState title={t('access.noScopes')} />
