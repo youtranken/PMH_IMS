@@ -452,6 +452,50 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
     const row = page.getByRole('row', { name: new RegExp(routerCode) });
     await expect(row.getByRole('link', { name: nasCode })).toBeVisible();
   });
+
+  /*
+   * Ô "Máy đích" là BỘ LỌC, không phải dữ liệu được ghi: máy đích của rule do API suy ra từ
+   * hồ sơ IP. Nên khi máy được chọn KHÔNG có hồ sơ IP nào, chọn nó xong gõ tay một địa chỉ
+   * là sổ ghi về một máy khác (hoặc không máy nào) — im lặng. Ô gõ tay vẫn phải cho gõ, vì
+   * có máy chưa kịp khai IP, nhưng phải NÓI RA rằng máy vừa chọn sẽ không được gắn.
+   */
+  test('máy đích chưa có hồ sơ IP → vẫn gõ tay được nhưng nói rõ rule không gắn về máy đó', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const routerCode = `FW-E2E-NOIP-${stamp}`;
+    await createRouter(page, routerCode);
+
+    const catalog = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/catalog', { credentials: 'include' });
+      return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
+    });
+    const pc = catalog.deviceTypes.find((type) => type.name === 'PC')!;
+    const bareCode = `PC-E2E-NOIP-${stamp}`;
+    expect(
+      (
+        await page.request.post('/api/v1/devices', {
+          headers,
+          data: { code: bareCode, name: 'Máy chưa khai IP', deviceTypeId: pc.id },
+        })
+      ).status(),
+    ).toBe(201);
+
+    await page.goto('/nat');
+    await page.getByRole('button', { name: 'Thêm rule' }).click();
+    const form = page.getByRole('dialog');
+    await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
+    await page.getByRole('option', { name: new RegExp(routerCode) }).click();
+
+    await form.getByRole('combobox', { name: 'Máy đích (được NAT)' }).fill(bareCode);
+    await page.getByRole('option', { name: new RegExp(bareCode) }).click();
+
+    // Vẫn là ô gõ tay — nhưng kèm câu cảnh báo, không phải im lặng.
+    await expect(form.getByRole('textbox', { name: 'IP trong' })).toBeVisible();
+    await expect(form.getByText(/KHÔNG gắn rule về máy vừa chọn/)).toBeVisible();
+  });
 });
 
 test.describe('Popup Sửa có chỗ quản lý giấy tờ', () => {

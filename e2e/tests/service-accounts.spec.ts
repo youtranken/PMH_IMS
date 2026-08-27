@@ -150,6 +150,22 @@ test.describe('Tài khoản dịch vụ', () => {
     });
     expect(wide.status).toBe(201);
     expect(String(wide.body.warnings)).toContain('rất rộng');
+
+    /*
+     * Sửa mà KHÔNG gửi lại dải IP thì cảnh báo vẫn phải còn.
+     *
+     * Ô không gửi = "đừng đụng tới", nên dòng trong DB vẫn nguyên `0.0.0.0/0`. Nếu luật chỉ
+     * chạy trên body thì `PATCH {code, kind, name}` trả `warnings: []` — đọc thành "kiểm rồi,
+     * sạch" cho một tài khoản VPN vẫn đang mở toang cho cả internet.
+     */
+    const id = wide.body.id as string;
+    const patched = await page.request.patch(`/api/v1/service-accounts/${id}`, {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      data: { code: `VPN-E2E-WIDE-${stamp}`, kind: 'vpn', name: 'VPN mở rộng (đổi tên)' },
+    });
+    expect(patched.status()).toBe(200);
+    const patchedBody = (await patched.json()) as Record<string, unknown>;
+    expect(String(patchedBody.warnings)).toContain('rất rộng');
   });
 
   test('đường hỏng: trùng mã bị chặn kèm chính cái mã đang trùng', async ({ page }) => {

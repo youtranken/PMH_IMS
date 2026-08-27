@@ -11,7 +11,7 @@ import { ExpiryBadge } from "@/ui/expiry-badge";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
 import { PageHeader } from "@/ui/page-header";
-import { TabPanel, Tabs } from "@/ui/tabs";
+import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useConfirm } from "@/ui/confirm-provider";
 import { useToast } from "@/ui/toast";
@@ -35,18 +35,6 @@ interface DevicePanel {
   title: string;
   items: { label: string; value: string; link?: string; tone?: string }[];
   emptyText?: string;
-}
-
-/**
- * Tab mở sẵn đọc từ URL, CÓ KIỂM: chuỗi lạ phải rơi về 'profile'.
- *
- * Chuỗi ternary render kết thúc ở nhánh Lịch sử, nên `?tab=rác` không kiểm sẽ vẽ một tab
- * Lịch sử RỖNG mà không tab nào sáng — và vì truy vấn lịch sử `enabled: tab === 'history'`
- * nên nó còn chẳng gọi API: `isLoading`/`isError` đều false, `HistoryPanel` nhận mảng rỗng.
- * Một link cũ gõ sai một chữ sẽ hiện ra "hồ sơ này chưa có lịch sử gì" một cách rất thuyết phục.
- */
-function initialTab(raw: string | null, allowed: string[]): string {
-  return raw && allowed.includes(raw) ? raw : "profile";
 }
 
 /**
@@ -108,6 +96,39 @@ export function DeviceDetail({ me }: { me: Me }) {
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: ["devices"] });
 
+  /**
+   * Tab Két sắt hiện cho MỌI vai kể từ story 6.3.
+   *
+   * Trước đây chỉ SA/Admin thấy. Nhưng Member giờ có thể được whitelist hoặc xin duyệt, và
+   * quyền đó nằm ở ma trận 6.2 — client không tự suy ra được từ vai. Ẩn tab theo vai thì
+   * người đã được gán quyền lại không có đường nào tới. Panel tự nói rõ tầng của người xem.
+   */
+  const canVault = true;
+
+  /*
+   * Danh sách tab dựng TRƯỚC mấy nhánh `return` sớm bên dưới, vì `useVisibleTab` là hook:
+   * đặt nó sau `if (device.isLoading) return` thì số hook giữa hai lượt render lệch nhau.
+   * Lúc hồ sơ chưa về thì chỉ có Hồ sơ + Giấy tờ + Lịch sử, nhưng cũng chưa vẽ gì.
+   */
+  const tabItems = [
+    { key: "profile", label: t("devices.tabProfile") },
+    // Tab Port map CHỈ hiện với loại có port (FR-006) — bảng port của một cái máy in
+    // là chỗ trống vô nghĩa.
+    ...(device.data?.hasPortMap
+      ? [{ key: "ports", label: t("devices.tabPortMap") }]
+      : []),
+    { key: "attachments", label: t("devices.tabAttachments") },
+    // Két sắt chỉ hiện với người có quyền — Member không có đường tới endpoint (AD-9),
+    // hiện tab rồi báo 403 chỉ tổ làm người ta tưởng hệ thống hỏng.
+    ...(canVault ? [{ key: "vault", label: t("vault.tab") }] : []),
+    { key: "history", label: t("devices.tabHistory") },
+  ];
+  const safeTab = useVisibleTab(
+    tab,
+    tabItems.map((entry) => entry.key),
+    setTab,
+  );
+
   if (device.isLoading) return <Loading />;
   if (device.isError) {
     // 404 = thiết bị không tồn tại → trang 404 tử tế, không phải khối lỗi đỏ "thử lại".
@@ -120,14 +141,6 @@ export function DeviceDetail({ me }: { me: Me }) {
 
   const item = device.data!;
   const retired = item.status === "retired";
-  /**
-   * Tab Két sắt hiện cho MỌI vai kể từ story 6.3.
-   *
-   * Trước đây chỉ SA/Admin thấy. Nhưng Member giờ có thể được whitelist hoặc xin duyệt, và
-   * quyền đó nằm ở ma trận 6.2 — client không tự suy ra được từ vai. Ẩn tab theo vai thì
-   * người đã được gán quyền lại không có đường nào tới. Panel tự nói rõ tầng của người xem.
-   */
-  const canVault = true;
   /** Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày ra nút để bấm rồi 403. */
   const canVaultWrite = me.role === "sa" || me.role === "admin";
   /** Khu do module `software` đăng ký — tách riêng vì nó có bảng riêng, không dùng khu chung. */
@@ -207,26 +220,14 @@ export function DeviceDetail({ me }: { me: Me }) {
       {retired ? <p className="alert">{t("devices.retiredLocked")}</p> : null}
 
       <Tabs
-        items={[
-          { key: "profile", label: t("devices.tabProfile") },
-          // Tab Port map CHỈ hiện với loại có port (FR-006) — bảng port của một cái máy in
-          // là chỗ trống vô nghĩa.
-          ...(item.hasPortMap
-            ? [{ key: "ports", label: t("devices.tabPortMap") }]
-            : []),
-          { key: "attachments", label: t("devices.tabAttachments") },
-          // Két sắt chỉ hiện với người có quyền — Member không có đường tới endpoint (AD-9),
-          // hiện tab rồi báo 403 chỉ tổ làm người ta tưởng hệ thống hỏng.
-          ...(canVault ? [{ key: "vault", label: t("vault.tab") }] : []),
-          { key: "history", label: t("devices.tabHistory") },
-        ]}
-        value={tab}
+        items={tabItems}
+        value={safeTab}
         onChange={setTab}
         ariaLabel={t("devices.title")}
       />
 
-      <TabPanel tabKey={tab}>
-        {tab === "profile" ? (
+      <TabPanel tabKey={safeTab}>
+        {safeTab === "profile" ? (
           <>
             <dl className="data-grid">
               <Item label={t("devices.status")}>
@@ -290,13 +291,13 @@ export function DeviceDetail({ me }: { me: Me }) {
               )}
             />
           </>
-        ) : tab === "ports" ? (
+        ) : safeTab === "ports" ? (
           <PortMapPanel
             device={item}
             csrfToken={me.csrfToken}
             canEdit={!retired}
           />
-        ) : tab === "vault" ? (
+        ) : safeTab === "vault" ? (
           <VaultPanel
             ownerType="device"
             ownerId={item.id}
@@ -306,7 +307,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                là 403 (code review Epic 6, finding 3). */
             canEdit={canVaultWrite && !retired}
           />
-        ) : tab === "attachments" ? (
+        ) : safeTab === "attachments" ? (
           <AttachmentPanel
             ownerType="device"
             ownerId={item.id}

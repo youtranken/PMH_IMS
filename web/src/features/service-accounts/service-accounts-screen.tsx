@@ -4,14 +4,16 @@ import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
+import { errorMessage, useApiMutation } from '@/lib/api';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
 import { sortQuery } from '@/lib/sort-query';
 import { DataTable } from '@/ui/data-table';
+import { Dialog } from '@/ui/dialog';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
-import { PageHeader } from '@/ui/page-header';
+import { Field, PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
@@ -53,6 +55,7 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'code', desc: false }]);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<ServiceAccountRow | null>(null);
+  const [disabling, setDisabling] = useState<ServiceAccountRow | null>(null);
 
   /** Ghi chỉ SA/Admin — API chặn, UI đừng bày nút ra để bấm rồi 403. */
   const canEdit = me.role === 'sa' || me.role === 'admin';
@@ -139,6 +142,21 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
                   >
                     {t('common.edit')}
                   </button>
+                  {/* Vô hiệu hóa là đường RIÊNG vì nó BẮT ghi lý do — không phải một giá trị
+                      trong ô Trạng thái của form. Xem chú thích ở `service-account-form`. */}
+                  {row.original.status === 'active' ? (
+                    <button
+                      type="button"
+                      className="btn sm danger"
+                      aria-label={t('serviceAccounts.disableOf', { code: row.original.code })}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setDisabling(row.original);
+                      }}
+                    >
+                      {t('serviceAccounts.disable')}
+                    </button>
+                  ) : null}
                 </div>
               ),
             } as ColumnDef<ServiceAccountRow, unknown>,
@@ -236,6 +254,19 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         />
       ) : null}
 
+      {disabling ? (
+        <DisableDialog
+          row={disabling}
+          csrfToken={me.csrfToken}
+          onClose={() => setDisabling(null)}
+          onDone={() => {
+            setDisabling(null);
+            toast({ message: t('serviceAccounts.disabled') });
+            void refresh();
+          }}
+        />
+      ) : null}
+
       {editing ? (
         <ServiceAccountForm
           row={editing}
@@ -249,6 +280,89 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         />
       ) : null}
     </>
+  );
+}
+
+/**
+ * Vô hiệu hóa kèm LÝ DO — đường duy nhất đóng một tài khoản dịch vụ.
+ *
+ * Cùng khuôn với hộp gỡ rule NAT: "tài khoản này đóng ngày nào, ai đóng, vì sao" là câu sáu
+ * tháng sau sẽ có người hỏi, và chỉ dòng lịch sử trả lời được.
+ */
+function DisableDialog({
+  row,
+  csrfToken,
+  onClose,
+  onDone,
+}: {
+  row: ServiceAccountRow;
+  csrfToken: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const { t } = useTranslation();
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const disable = useApiMutation<{ reason: string }, unknown>(
+    `/api/v1/service-accounts/${row.id}/disable`,
+    { method: 'PATCH', csrfToken, refreshMe: false },
+  );
+
+  return (
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={480}
+      title={`${t('serviceAccounts.disable')} — ${row.code}`}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button
+            type="submit"
+            form="sa-disable-form"
+            className="btn danger"
+            disabled={disable.isPending}
+          >
+            {disable.isPending ? t('common.loading') : t('serviceAccounts.disable')}
+          </button>
+        </>
+      }
+    >
+      <form
+        id="sa-disable-form"
+        className="form-grid"
+        data-columns={1}
+        onSubmit={(e) => {
+          e.preventDefault();
+          setError(null);
+          disable.mutate(
+            { reason: reason.trim() },
+            { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
+          );
+        }}
+      >
+        <p className="muted">{t('serviceAccounts.disableHint')}</p>
+        <Field label={t('serviceAccounts.disableReason')} required htmlFor="sa-disable-reason">
+          <input
+            id="sa-disable-reason"
+            className="inp"
+            required
+            minLength={3}
+            placeholder={t('serviceAccounts.disableReasonPlaceholder')}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+        </Field>
+
+        {error ? (
+          <p className="alert error" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </form>
+    </Dialog>
   );
 }
 

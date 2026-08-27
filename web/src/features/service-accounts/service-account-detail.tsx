@@ -10,7 +10,7 @@ import { AttachmentPanel } from "@/ui/attachment-panel";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
 import { PageHeader } from "@/ui/page-header";
-import { TabPanel, Tabs } from "@/ui/tabs";
+import { TabPanel, Tabs, initialTab } from "@/ui/tabs";
 import { VaultPanel } from "@/ui/vault-panel";
 import { toServiceAccountHistory } from "./service-account-history-entries";
 import {
@@ -21,18 +21,6 @@ import {
   type ServiceAccountHistoryRow,
   type ServiceAccountRow,
 } from "./service-account-types";
-
-/**
- * Tab mở sẵn đọc từ URL, CÓ KIỂM: chuỗi lạ phải rơi về 'profile'.
- *
- * Chuỗi ternary render kết thúc ở nhánh Lịch sử, nên `?tab=rác` không kiểm sẽ vẽ một tab
- * Lịch sử RỖNG mà không tab nào sáng — và vì truy vấn lịch sử `enabled: tab === 'history'`
- * nên nó còn chẳng gọi API: `isLoading`/`isError` đều false, `HistoryPanel` nhận mảng rỗng.
- * Một link cũ gõ sai một chữ sẽ hiện ra "hồ sơ này chưa có lịch sử gì" một cách rất thuyết phục.
- */
-function initialTab(raw: string | null, allowed: string[]): string {
-  return raw && allowed.includes(raw) ? raw : "profile";
-}
 
 /**
  * Trang hồ sơ một tài khoản dịch vụ.

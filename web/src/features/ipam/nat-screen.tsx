@@ -451,6 +451,21 @@ function NatForm({
             setError(t('nat.internalIpRequired'));
             return;
           }
+          /*
+           * Ô "Máy đích" là BỘ LỌC, không phải dữ liệu được ghi: máy đích của rule do API
+           * suy ra từ hồ sơ IP (`internalDeviceId: ip?.deviceId`), client không gửi lên.
+           * Nên chọn máy A rồi để địa chỉ của máy B nằm trong ô là sổ ghi về B, không một
+           * lời nào — người khai vẫn tin mình vừa mở port cho A. Còn chặn được thì chặn.
+           */
+          const ownIps = targetIps.data ?? [];
+          if (
+            targetId &&
+            ownIps.length > 0 &&
+            !ownIps.some((ip) => ip.address === internalIp.trim())
+          ) {
+            setError(t('nat.internalIpNotOfTarget'));
+            return;
+          }
           void (async () => {
             setSaving(true);
             const shared = {
@@ -640,7 +655,24 @@ function NatForm({
           </Field>
 
           <Field label={t('nat.internalIp')} required htmlFor="nat-internal-ip">
-            {targetId && (targetIps.data ?? []).length > 0 ? (
+            {targetId && (targetIps.isLoading || targetIps.isError) ? (
+              /*
+               * ĐANG TẢI danh sách IP của máy vừa chọn — chưa biết máy đó có IP hay không.
+               * Rơi thẳng về ô gõ tay ở đây là sai hai lần: nó bày ra dòng "máy này chưa có
+               * hồ sơ IP nào" trong khi câu trả lời chưa về, và nó mở đúng cái cửa gõ tay một
+               * địa chỉ THUỘC MÁY KHÁC — rule sẽ lặng lẽ ghi về máy kia, vì máy đích của rule
+               * suy ra từ IP chứ không từ ô chọn này.
+               */
+              <Select
+                id="nat-internal-ip"
+                value=""
+                disabled
+                ariaLabel={t('nat.internalIp')}
+                placeholder={t(targetIps.isError ? 'nat.targetIpsError' : 'common.loading')}
+                options={[]}
+                onChange={() => {}}
+              />
+            ) : targetId && (targetIps.data ?? []).length > 0 ? (
               // Đã chọn máy thì chỉ còn IP CỦA CHÍNH MÁY ĐÓ — hết cảnh gõ tay một địa chỉ
               // không thuộc máy nào rồi bị API từ chối ở bước cuối.
               <Select

@@ -188,22 +188,6 @@ export class ServiceAccountService {
   ) {
     const kind = input.kind;
     const vpn = kind === 'vpn';
-    const check = validateServiceAccount({
-      code: input.code,
-      kind,
-      name: input.name,
-      login: input.login,
-      department: input.department,
-      ownerName: input.ownerName,
-      groupName: input.groupName,
-      allowedIps: input.allowedIps,
-    });
-    if (check.errors.length > 0) {
-      throw new BadRequestException({
-        code: 'SERVICE_ACCOUNT_INVALID',
-        message: check.errors.join(' '),
-      });
-    }
     /*
      * THIẾU một ô nghĩa là "đừng đụng tới", KHÔNG phải "xoá đi".
      *
@@ -218,6 +202,33 @@ export class ServiceAccountService {
       key: K,
       raw: string | undefined,
     ): string | null => (raw === undefined ? (before?.[key] ?? null) : blank(raw));
+
+    /*
+     * Kiểm trên GIÁ TRỊ SẼ NẰM TRONG DB, không phải trên body.
+     *
+     * Bản trước gọi `validateServiceAccount(input)` ngay đầu hàm, tức là TRƯỚC khi `keep`
+     * lấp các ô bị bỏ trống bằng giá trị cũ. Nên một `PATCH {code, kind, name}` lên tài khoản
+     * VPN đang để `allowedIps = '0.0.0.0/0'` chạy qua với `allowedIps: undefined` — không
+     * lỗi, và quan trọng hơn là KHÔNG cảnh báo, trong khi dòng vừa ghi vẫn mở toang cho cả
+     * internet. Cảnh báo trả về rỗng đọc thành "kiểm rồi, sạch".
+     */
+    const effective = {
+      code: input.code,
+      kind,
+      name: input.name,
+      login: keep('login', input.login) ?? undefined,
+      department: keep('department', input.department) ?? undefined,
+      ownerName: keep('ownerName', input.ownerName) ?? undefined,
+      groupName: vpn ? (keep('groupName', input.groupName) ?? undefined) : input.groupName,
+      allowedIps: vpn ? (keep('allowedIps', input.allowedIps) ?? undefined) : input.allowedIps,
+    };
+    const check = validateServiceAccount(effective);
+    if (check.errors.length > 0) {
+      throw new BadRequestException({
+        code: 'SERVICE_ACCOUNT_INVALID',
+        message: check.errors.join(' '),
+      });
+    }
 
     return {
       values: {

@@ -757,7 +757,11 @@ export default {
     target: 'Máy đích (được NAT)',
     targetHint: 'Máy trong kho mà port này dẫn tới. Chọn máy thì ô IP chỉ còn IP của chính máy đó.',
     targetSearch: 'Tìm máy trong kho…',
-    targetNoIp: 'Máy này chưa có hồ sơ IP nào — gõ tay địa chỉ, hoặc khai IP ở màn Địa chỉ IP.',
+    targetNoIp:
+      'Máy này chưa có hồ sơ IP nào. Gõ tay được, nhưng sổ sẽ KHÔNG gắn rule về máy vừa chọn — máy đích suy ra từ hồ sơ IP. Muốn gắn đúng, khai IP cho máy ở màn Địa chỉ IP trước.',
+    targetIpsError: 'Không lấy được danh sách IP của máy — thử lại',
+    internalIpNotOfTarget:
+      'Địa chỉ này không thuộc máy đích vừa chọn. Chọn một IP của chính máy đó, hoặc bỏ chọn máy đích.',
     pickIp: 'Chọn IP của máy…',
     internalIpRequired: 'Chọn hoặc gõ IP của máy đích.',
     sectionWhy: 'Mở cho ai và vì sao',
@@ -810,6 +814,14 @@ export default {
     status: 'Trạng thái',
     statusActive: 'Đang dùng',
     statusDisabled: 'Đã vô hiệu',
+    statusHint: 'Vô hiệu hóa bằng nút riêng ngoài danh sách — nó bắt ghi lý do.',
+    disable: 'Vô hiệu hóa',
+    disableOf: 'Vô hiệu hóa tài khoản {{code}}',
+    disabled: 'Đã vô hiệu hóa tài khoản.',
+    disableHint:
+      'Tài khoản không bị xóa — mật khẩu trong két và mọi dòng nhật ký cũ vẫn còn, chỉ là hồ sơ này thôi được dùng.',
+    disableReason: 'Lý do vô hiệu hóa',
+    disableReasonPlaceholder: 'vd: nhân sự phụ trách đã nghỉ',
     allKinds: 'Tất cả loại',
     allStatuses: 'Mọi trạng thái',
     empty: 'Chưa có tài khoản dịch vụ nào khớp bộ lọc.',

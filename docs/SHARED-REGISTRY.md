@@ -21,6 +21,7 @@
 | `ExportXlsxButton` | `ui/export-xlsx-button.tsx` | FR-028 — xuất bảng đang xem | Không tự sinh file phía trình duyệt |
 | `SchedulePicker`, `describeSchedule` | `ui/schedule-picker.tsx` | Luật gửi email định kỳ (FR-013), sinh kỳ phiếu (FR-029) | — |
 | `Tabs`, `TabPanel` | `ui/tabs.tsx` | Màn Danh mục (2.1), trang chi tiết thiết bị (2.5) | Hai tab thôi thì cân nhắc hiện cả hai |
+| `initialTab`, `useVisibleTab` | `ui/tabs.tsx` | Chi tiết thiết bị · phần mềm · tài khoản dịch vụ | Trang có tab CỐ ĐỊNH thì `initialTab` là đủ, khỏi `useVisibleTab`. Trang có tab hiện theo dữ liệu (Port map, Máy đang dùng) thì phải dùng CẢ HAI — và gọi `useVisibleTab` trước mọi nhánh `return` sớm, nó là hook |
 | `FilePicker` | `ui/file-picker.tsx` | Mọi chỗ chọn file: import danh mục/thiết bị, đính kèm | Không tự dựng `<input type="file">` trần |
 | `ImportPreview` | `ui/import-preview.tsx` | Bảng đối chiếu TRƯỚC khi ghi của mọi màn import | Màn import nào cũng phải có bước này |
 | `ImportDialog` | `ui/import-dialog.tsx` | Hộp thoại nhập Excel hai bước (đối chiếu → ghi): danh mục 2.1, thiết bị 2.6 | Không tự dựng luồng import riêng |

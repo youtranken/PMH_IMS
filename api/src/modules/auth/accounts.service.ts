@@ -211,8 +211,18 @@ export class AccountsService {
         return updated;
       });
     } catch (error) {
-      // Mã nhân viên trùng: nói RÕ trùng cái gì. 500 chung chung thì người nhập ngồi đoán.
-      if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
+      /*
+       * Mã nhân viên trùng: nói RÕ trùng cái gì. 500 chung chung thì người nhập ngồi đoán.
+       *
+       * Nhưng phải đọc TÊN ràng buộc như nhánh tạo mới ở trên, không gán mọi 23505 vào đây.
+       * `users` còn khóa duy nhất trên `email`, và lượt ghi này còn chạm `user_history` —
+       * một 23505 từ chỗ khác sẽ hiện ra câu `Mã nhân viên "" đã thuộc về một tài khoản
+       * khác` trong khi người dùng để trống đúng ô đó, và lỗi thật thì bị nuốt mất.
+       */
+      if (
+        pgErrorCode(error) === PG_UNIQUE_VIOLATION &&
+        pgConstraint(error) === "users_employee_code_uq"
+      ) {
         throw new ConflictException({
           code: "EMPLOYEE_CODE_TAKEN",
           message: `Mã nhân viên "${values.employeeCode}" đã thuộc về một tài khoản khác.`,

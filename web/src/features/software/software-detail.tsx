@@ -14,7 +14,7 @@ import { Field } from "@/ui/page-header";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
 import { PageHeader } from "@/ui/page-header";
-import { TabPanel, Tabs } from "@/ui/tabs";
+import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useToast } from "@/ui/toast";
 import type { CatalogLists } from "@/features/catalog/catalog-types";
@@ -31,18 +31,6 @@ import {
   type SoftwareRow,
 } from "./software-types";
 import { PATHS } from "@/lib/routes";
-
-/**
- * Tab mở sẵn đọc từ URL, CÓ KIỂM: chuỗi lạ phải rơi về 'profile'.
- *
- * Chuỗi ternary render kết thúc ở nhánh Lịch sử, nên `?tab=rác` không kiểm sẽ vẽ một tab
- * Lịch sử RỖNG mà không tab nào sáng — và vì truy vấn lịch sử `enabled: tab === 'history'`
- * nên nó còn chẳng gọi API: `isLoading`/`isError` đều false, `HistoryPanel` nhận mảng rỗng.
- * Một link cũ gõ sai một chữ sẽ hiện ra "hồ sơ này chưa có lịch sử gì" một cách rất thuyết phục.
- */
-function initialTab(raw: string | null, allowed: string[]): string {
-  return raw && allowed.includes(raw) ? raw : "profile";
-}
 
 /**
  * Trang chi tiết hồ sơ phần mềm (story 3.1).
@@ -92,6 +80,44 @@ export function SoftwareDetail({ me }: { me: Me }) {
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: ["software"] });
 
+  /**
+   * Tab Két sắt hiện cho MỌI vai kể từ story 6.3.
+   *
+   * Trước đây chỉ SA/Admin thấy. Nhưng Member giờ có thể được whitelist hoặc xin duyệt, và
+   * quyền đó nằm ở ma trận 6.2 — client không tự suy ra được từ vai. Ẩn tab theo vai thì
+   * người đã được gán quyền lại không có đường nào tới. Panel tự nói rõ tầng của người xem.
+   */
+  const canVault = true;
+
+  /*
+   * Danh sách tab dựng TRƯỚC mấy nhánh `return` sớm bên dưới, vì `useVisibleTab` là hook:
+   * đặt nó sau `if (software.isLoading) return` thì số hook giữa hai lượt render lệch nhau.
+   */
+  const tabItems = [
+    { key: "profile", label: t("software.tabProfile") },
+    // Tab "Máy đang dùng" chỉ có nghĩa với license (story 3.2).
+    ...(software.data && supportsSeats(software.data.kind)
+      ? [
+          {
+            key: "devices",
+            label: t("software.tabDevices"),
+            count: software.data.seatUsed,
+          },
+        ]
+      : []),
+    // Két sắt chỉ hiện với người có quyền — Member không có đường tới endpoint (AD-9).
+    ...(canVault ? [{ key: "vault", label: t("vault.tab") }] : []),
+    // Hợp đồng license, thư xác nhận SSL, hóa đơn tên miền — cùng `AttachmentPanel` với
+    // thiết bị (2.3) và đường truyền (3.3), không có bản riêng cho phần mềm.
+    { key: "attachments", label: t("software.tabAttachments") },
+    { key: "history", label: t("software.tabHistory") },
+  ];
+  const safeTab = useVisibleTab(
+    tab,
+    tabItems.map((entry) => entry.key),
+    setTab,
+  );
+
   if (software.isLoading) return <Loading />;
   if (software.isError) {
     return software.error instanceof ApiError &&
@@ -103,14 +129,6 @@ export function SoftwareDetail({ me }: { me: Me }) {
   }
 
   const item = software.data!;
-  /**
-   * Tab Két sắt hiện cho MỌI vai kể từ story 6.3.
-   *
-   * Trước đây chỉ SA/Admin thấy. Nhưng Member giờ có thể được whitelist hoặc xin duyệt, và
-   * quyền đó nằm ở ma trận 6.2 — client không tự suy ra được từ vai. Ẩn tab theo vai thì
-   * người đã được gán quyền lại không có đường nào tới. Panel tự nói rõ tầng của người xem.
-   */
-  const canVault = true;
   /** Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày ra nút để bấm rồi 403. */
   const canVaultWrite = me.role === "sa" || me.role === "admin";
 
@@ -160,32 +178,14 @@ export function SoftwareDetail({ me }: { me: Me }) {
       </div>
 
       <Tabs
-        items={[
-          { key: "profile", label: t("software.tabProfile") },
-          // Tab "Máy đang dùng" chỉ có nghĩa với license (story 3.2).
-          ...(supportsSeats(item.kind)
-            ? [
-                {
-                  key: "devices",
-                  label: t("software.tabDevices"),
-                  count: item.seatUsed,
-                },
-              ]
-            : []),
-          // Két sắt chỉ hiện với người có quyền — Member không có đường tới endpoint (AD-9).
-          ...(canVault ? [{ key: "vault", label: t("vault.tab") }] : []),
-          // Hợp đồng license, thư xác nhận SSL, hóa đơn tên miền — cùng `AttachmentPanel` với
-          // thiết bị (2.3) và đường truyền (3.3), không có bản riêng cho phần mềm.
-          { key: "attachments", label: t("software.tabAttachments") },
-          { key: "history", label: t("software.tabHistory") },
-        ]}
-        value={tab}
+        items={tabItems}
+        value={safeTab}
         onChange={setTab}
         ariaLabel={t("software.title")}
       />
 
-      <TabPanel tabKey={tab}>
-        {tab === "profile" ? (
+      <TabPanel tabKey={safeTab}>
+        {safeTab === "profile" ? (
           <>
             <dl className="data-grid">
               <Item label={t("software.kind")}>{t(KIND_KEY[item.kind])}</Item>
@@ -223,16 +223,16 @@ export function SoftwareDetail({ me }: { me: Me }) {
               <Item label={t("software.note")}>{orDash(item.note)}</Item>
             </dl>
           </>
-        ) : tab === "vault" ? (
+        ) : safeTab === "vault" ? (
           <VaultPanel
             ownerType="software"
             ownerId={item.id}
             me={me}
             canEdit={canVaultWrite}
           />
-        ) : tab === "devices" ? (
+        ) : safeTab === "devices" ? (
           <LicenseAssignmentsPanel software={item} csrfToken={me.csrfToken} />
-        ) : tab === "attachments" ? (
+        ) : safeTab === "attachments" ? (
           <AttachmentPanel
             ownerType="software"
             ownerId={item.id}

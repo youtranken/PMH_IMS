@@ -176,6 +176,14 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
     (rules.data ?? []).map((rule) => `${rule.scopeType}|${rule.scopeRef}`),
   );
   const allScopes = scopes.data ?? [];
+  /*
+   * Số tài khoản cũng phải TOÀN CỤC, cùng lý do với `scopedRules` ngay trên.
+   *
+   * Dòng tổng ghép bốn con số vào một câu. Ba con số kia đếm trên toàn bộ dữ liệu, riêng
+   * `people` lại lấy từ danh sách ĐÃ LỌC theo ô tìm — nên gõ "hùng" vào ô tìm là câu đó thành
+   * "1 tài khoản · 47 dòng quyền", đọc như thể 47 dòng quyền đang thuộc về một người.
+   */
+  const totalPeople = (accounts.data?.items ?? []).length;
   const emptyScopes = allScopes.filter(
     (scope) => !scopedRules.has(`${scope.scopeType}|${scope.scopeRef}`),
   ).length;
@@ -222,10 +230,17 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
           dòng này vẽ ra "0 dòng quyền · M nhóm, trong đó M nhóm chưa gán cho ai" ngay phía
           trên khối báo lỗi — một con số kiểm toán bịa ra, đúng kiểu hỏng mà chú thích bên
           cạnh đã mô tả cho `scopes`. */}
-      {!rules.isLoading && !rules.isError && !scopes.isLoading && !scopes.isError ? (
+      {/* Gác cả `accounts` nữa: nó hỏng thì `totalPeople` = 0 và câu tổng mở đầu bằng
+          "0 tài khoản", cùng loại số bịa như hai truy vấn kia. */}
+      {!rules.isLoading &&
+      !rules.isError &&
+      !scopes.isLoading &&
+      !scopes.isError &&
+      !accounts.isLoading &&
+      !accounts.isError ? (
         <p className="muted">
           {t('access.summary', {
-            people: people.length,
+            people: totalPeople,
             rules: totalRules,
             scopes: allScopes.length,
             empty: emptyScopes,
@@ -241,6 +256,11 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
         // Chiều "theo nhóm" DỰNG TỪ `scopes`: thiếu nó thì mọi nhóm chưa ai được gán biến
         // mất — đúng tập mà chiều nhìn này sinh ra để chỉ ra.
         <LoadError onRetry={() => void scopes.refetch()} />
+      ) : accounts.isError ? (
+        // Chiều "theo người" DỰNG TỪ `accounts`: thiếu nó thì màn vẽ ra "Không có tài khoản
+        // nào khớp" — nghe như hệ thống chưa có ai, chứ không phải một request hỏng. Và hộp
+        // Gán quyền cũng lấy danh sách người từ đây, mở ra sẽ rỗng không lý do.
+        <LoadError onRetry={() => void accounts.refetch()} />
       ) : view === 'scope' ? (
         scopeGroups.length === 0 ? (
           <EmptyState title={t('access.noScopes')} />

@@ -12,7 +12,6 @@ import { useDepartments } from '@/features/ipam/use-departments';
 import {
   KIND_KEY,
   SERVICE_ACCOUNT_KINDS,
-  SERVICE_ACCOUNT_STATUSES,
   STATUS_KEY,
   supportsVpnFields,
   type ServiceAccountKind,
@@ -125,7 +124,6 @@ export function ServiceAccountForm({
               groupName: vpn ? form.groupName.trim() : '',
               allowedIps: vpn ? form.allowedIps.trim() : '',
               note: form.note.trim(),
-              status: form.status,
             },
             {
               onSuccess: (created) => {
@@ -197,16 +195,15 @@ export function ServiceAccountForm({
               onChange={(e) => set('login', e.target.value)}
             />
           </Field>
-          <Field label={t('serviceAccounts.status')}>
-            <Select
-              value={form.status}
-              ariaLabel={t('serviceAccounts.status')}
-              options={SERVICE_ACCOUNT_STATUSES.map((status) => ({
-                value: status,
-                label: t(STATUS_KEY[status]),
-              }))}
-              onChange={(value) => set('status', value as ServiceAccountStatus)}
-            />
+          {/*
+            Trạng thái là thứ CHỈ ĐỌC ở đây.
+            Vô hiệu hóa phải đi qua `PATCH :id/disable` — đường DUY NHẤT bắt ghi lý do và ghi
+            một dòng lịch sử nói đúng việc vừa làm. Để nó thành một ô chọn bình thường thì
+            người dùng vô hiệu hóa qua `PATCH` thường: không lý do, lịch sử chỉ ghi "updated",
+            và cái luật "sáu tháng sau sẽ có người hỏi vì sao" thành ra không ai thi hành được.
+          */}
+          <Field label={t('serviceAccounts.status')} hint={row ? t('serviceAccounts.statusHint') : undefined}>
+            <p className="static-value">{t(STATUS_KEY[form.status])}</p>
           </Field>
         </FormSection>
 

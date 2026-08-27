@@ -105,6 +105,40 @@ test.describe('Trang chi tiết thiết bị', () => {
     }
   });
 
+  test('?tab=ports trên máy KHÔNG có port map → rơi về Hồ sơ, không vẽ bảng port', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const csrf = await csrfOf(page);
+    const catalog = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/catalog', { credentials: 'include' });
+      return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
+    });
+    // Máy in: `has_port_map = false` trong seed 0011 — đúng loại không có tab Port map.
+    const printer = catalog.deviceTypes.find((t) => t.name === 'Printer')!;
+    const created = await page.request.post('/api/v1/devices', {
+      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      data: {
+        code: `PR-E2E-TAB-${stamp}`,
+        name: 'Máy in kiểm tab',
+        deviceTypeId: printer.id,
+      },
+    });
+    expect(created.status()).toBe(201);
+    const id = ((await created.json()) as { device: { id: string } }).device.id;
+
+    /*
+     * Danh sách tab hợp lệ phụ thuộc DỮ LIỆU, mà lượt kiểm đầu tiên chạy lúc hồ sơ chưa về.
+     * Không kẹp lại sau khi có hồ sơ thì `?tab=ports` lọt qua: thanh tab không ô nào sáng,
+     * mà bảng port map vẫn được vẽ ra cho một cái máy in.
+     */
+    await page.goto(`/devices/${id}?tab=ports`);
+    await expect(page.getByRole('heading', { name: new RegExp(`PR-E2E-TAB-${stamp}`) })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Port map' })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Hồ sơ', selected: true })).toBeVisible();
+  });
+
   test('mở thiết bị không tồn tại → trang 404 tử tế, không phải khối lỗi đỏ', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     await page.goto('/devices/00000000-0000-4000-8000-000000000000');
