@@ -107,6 +107,26 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
     await expect(page.getByText('1–1 trên 1 dòng')).toBeVisible();
   });
 
+  test('đổi sang dải khác thì về TRANG 1, không giữ nguyên trang cũ', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const octet = 200 + (Number(Date.now().toString().slice(-2)) % 40);
+    const first = await createSubnet(page, `10.${octet}.1.0/24`, `LAN E2E trang A ${octet}`);
+    await createSubnet(page, `10.${octet}.2.0/24`, `LAN E2E trang B ${octet}`);
+
+    await page.goto(`/ip-addresses/${first}`);
+    await page.getByRole('button', { name: 'Trang sau' }).click();
+    await page.getByRole('button', { name: 'Trang sau' }).click();
+    await expect(page.getByText('Trang 3/6')).toBeVisible();
+
+    /*
+     * Bấm sang dải khác mà vẫn ở trang 3 là mở ra dòng 101–150 của dải mới, còn 100 địa chỉ
+     * đầu thì biến mất — không có gì trên màn hình giải thích vì sao.
+     */
+    await page.getByRole('link', { name: new RegExp(`10\.${octet}\.2\.0/24`) }).click();
+    await expect(page.getByText('Trang 1/6')).toBeVisible();
+    await expect(page.getByText(`10.${octet}.2.1`, { exact: true })).toBeVisible();
+  });
+
   test('cột dải cuộn riêng: cuộn bảng IP xuống thì cột trái vẫn ở trong tầm nhìn', async ({
     page,
   }) => {

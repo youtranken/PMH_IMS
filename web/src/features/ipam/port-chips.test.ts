@@ -122,3 +122,26 @@ describe('isWideRange — cảnh báo mềm khi mở quá rộng', () => {
     });
   }
 });
+
+/**
+ * Dán cả danh sách vào ô port — phần CHƯA nhận được không được biến mất.
+ *
+ * `chipsFromValue` là hàm thuần đọc cả chuỗi (dùng khi mở lại rule đang có); phần "giữ lại
+ * mẩu kẹt và mọi mẩu sau nó" nằm ở `PortChipsField`. Bảng dưới khóa hành vi của hàm thuần,
+ * còn hành vi của ô nhập có bài E2E riêng.
+ */
+describe('chipsFromValue — mẩu hỏng không kéo theo mẩu đúng đứng sau', () => {
+  const cases: { input: string; values: string[] }[] = [
+    { input: '80,rác,443', values: ['80', '443'] },
+    { input: '80, 443, 8000-8010', values: ['80', '443', '8000-8010'] },
+    // Mẩu hỏng ở ĐẦU cũng không được nuốt phần còn lại.
+    { input: 'rác,80,443', values: ['80', '443'] },
+    { input: '9000-8000, 443', values: ['443'] },
+  ];
+
+  for (const { input, values } of cases) {
+    it(`"${input}" → ${values.join(', ') || '(rỗng)'}`, () => {
+      expect(chipsFromValue(input).map((chip) => chip.value)).toEqual(values);
+    });
+  }
+});

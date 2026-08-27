@@ -19,6 +19,7 @@ import type { CatalogLists, ServicePortRow } from '@/features/catalog/catalog-ty
 import { CatalogForm } from '@/features/catalog/catalog-form';
 import { DeviceForm } from '@/features/devices/device-form';
 import { ServicePortPicker } from './service-port-picker';
+import { STATUS_KEY, type IpStatus } from './ipam-types';
 import { chipsFromValue, parsePortChip, type PortChip } from './port-chips';
 import { PortChipsField } from './port-chips-field';
 import { PATHS } from '@/lib/routes';
@@ -337,7 +338,7 @@ function NatForm({
     queryKey: ['ipam', 'device-addresses', targetId],
     enabled: targetId !== '',
     queryFn: () =>
-      apiFetch<{ id: string; address: string; usedBy: string | null }[]>(
+      apiFetch<{ id: string; address: string; usedBy: string | null; status: IpStatus }[]>(
         `/api/v1/ipam/devices/${targetId}/addresses`,
       ),
   });
@@ -421,6 +422,15 @@ function NatForm({
           setError(null);
           if (ports.length === 0) {
             setError(t('nat.portRequired'));
+            return;
+          }
+          /*
+           * Chặn tay ô IP trong: khi đã chọn máy đích, ô này thành `Select` và `required`
+           * của trình duyệt không còn áp. Thiếu chốt này thì bỏ trống IP rồi bấm Lưu sẽ bắn
+           * MỘT lượt POST hỏng cho MỖI chip port trước khi hiện lỗi gộp.
+           */
+          if (!internalIp.trim()) {
+            setError(t('nat.internalIpRequired'));
             return;
           }
           void (async () => {
@@ -599,12 +609,25 @@ function NatForm({
               // Đã chọn máy thì chỉ còn IP CỦA CHÍNH MÁY ĐÓ — hết cảnh gõ tay một địa chỉ
               // không thuộc máy nào rồi bị API từ chối ở bước cuối.
               <Select
+                id="nat-internal-ip"
                 value={internalIp}
                 ariaLabel={t('nat.internalIp')}
                 placeholder={t('nat.pickIp')}
+                /*
+                 * Endpoint trả MỌI trạng thái vòng đời, chỉ lọc bản ghi đã hủy. Một IP
+                 * `suspect_dead` vẫn giữ `device_id` nên nó lọt vào đây trông y hệt một IP
+                 * khỏe — và người khai chĩa một rule NAT mới vào đúng địa chỉ mà IPAM đang
+                 * nghi là đã chết. Vẫn CHO chọn (có thể máy vừa sống lại), nhưng phải NÓI RA.
+                 */
                 options={(targetIps.data ?? []).map((ip) => ({
                   value: ip.address,
-                  label: ip.usedBy ? `${ip.address} — ${ip.usedBy}` : ip.address,
+                  label: [
+                    ip.address,
+                    ip.status === 'assigned' ? null : t(STATUS_KEY[ip.status]),
+                    ip.usedBy,
+                  ]
+                    .filter(Boolean)
+                    .join(' — '),
                 }))}
                 onChange={setInternalIp}
               />

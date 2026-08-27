@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
@@ -53,6 +53,7 @@ function recordPathOf(owner: VaultOwner): string {
  */
 export function VaultHomeScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   /** Lọc theo loại — chọn được NHIỀU cùng lúc; rỗng = xem tất cả. */
   const [kinds, setKinds] = useState<OwnerType[]>([]);
@@ -181,7 +182,16 @@ export function VaultHomeScreen({ me }: { me: Me }) {
       {opened ? (
         <Dialog
           open
-          onOpenChange={() => setOpened(null)}
+          onOpenChange={() => {
+            setOpened(null);
+            /*
+             * `VaultPanel` làm mới bằng khóa `['vault', ownerType, ownerId]`, KHÔNG khớp tiền
+             * tố với `['vault','owners']` của bảng này. Không tự nạp lại thì cất/thu hồi một
+             * ngăn xong đóng popup là "Số ngăn" và "Thay đổi gần nhất" đứng im tới lúc tải
+             * lại trang — thu hồi ngăn cuối còn để lại một dòng ma.
+             */
+            void queryClient.invalidateQueries({ queryKey: ['vault', 'owners'] });
+          }}
           maxWidth={860}
           title={`${t('vaultHome.title')} — ${opened.code}${opened.name ? ` · ${opened.name}` : ''}`}
           footer={

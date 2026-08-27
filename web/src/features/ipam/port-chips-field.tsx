@@ -86,26 +86,41 @@ export function PortChipsField({
               const parts = raw.split(',');
               const tail = parts.pop() ?? '';
               let next = chips;
-              let stuck = '';
               let failure: ChipError | null = null;
+              /**
+               * Phần CHƯA nhận được — mẩu hỏng và MỌI mẩu đứng sau nó.
+               *
+               * Bản trước chỉ giữ lại đúng mẩu hỏng rồi `setDraft(stuck || tail)`, nên dán
+               * "80, rác, 443" là `80` thành chip, `rác` ở lại kèm lỗi, còn `443` biến mất
+               * không dấu vết — đúng thứ mà chú thích ngay trên khẳng định là không xảy ra.
+               * Cùng lỗi ở chế độ sửa: dán "80,443,8080" thì `8080` bốc hơi.
+               */
+              const leftover: string[] = [];
               for (const part of parts) {
+                // Đã có mẩu kẹt thì mọi mẩu sau nó cũng ở lại NGUYÊN thứ tự — không nhận
+                // tiếp, cũng không vứt đi.
+                if (leftover.length > 0) {
+                  leftover.push(part.trim());
+                  continue;
+                }
                 if (!part.trim()) continue;
                 const parsed = parsePortChip(part, next);
                 if (!parsed.chip) {
-                  stuck = part.trim();
                   failure = parsed.reason;
-                  break;
+                  leftover.push(part.trim());
+                  continue;
                 }
                 // Đã đầy (chế độ sửa) thì mẩu này ở lại trong ô chứ không bị nuốt — người
                 // dán vào phải thấy phần chưa nhận được, không phải đoán.
                 if (next.length >= max) {
-                  stuck = part.trim();
-                  break;
+                  leftover.push(part.trim());
+                  continue;
                 }
                 next = [...next, parsed.chip];
               }
               if (next !== chips) onChange(next);
-              setDraft(stuck || tail);
+              // Bỏ mẩu rỗng trước khi nối, không thì ô còn lại dấu phẩy lơ lửng ở cuối.
+              setDraft([...leftover, tail.trim()].filter(Boolean).join(', '));
               setError(failure);
             }}
             onKeyDown={(e) => {

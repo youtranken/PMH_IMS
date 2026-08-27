@@ -105,11 +105,22 @@ export function SubnetPane({
    */
   const rows = pageSlots(filtered, page);
 
-  // Đổi dải hoặc đổi bộ lọc thì số dòng đổi theo; giữ nguyên trang 5 của tập cũ là nhìn vào
-  // một bảng rỗng và tưởng không có gì.
+  // Đổi bộ lọc thì số dòng đổi theo; giữ nguyên trang 5 của tập cũ là nhìn vào một bảng
+  // rỗng và tưởng không có gì.
   useEffect(() => {
     setPage((current) => clampPage(current, filtered.length));
-  }, [filtered.length, id]);
+  }, [filtered.length]);
+
+  /*
+   * Đổi DẢI thì về trang 1, không phải chỉ kẹp lại.
+   *
+   * Đang ở trang 4 của một /24 rồi bấm sang dải khác mà vẫn ở trang 4 là mở ra dòng 151–200
+   * của dải mới, còn 150 địa chỉ đầu thì biến mất — không có gì trên màn hình giải thích vì
+   * sao. Nút lọc đã `setPage(1)` rồi; đổi dải cũng phải vậy.
+   */
+  useEffect(() => {
+    setPage(1);
+  }, [id]);
 
   return (
     <>

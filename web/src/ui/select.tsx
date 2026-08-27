@@ -17,6 +17,7 @@ export interface SelectOption {
  * dưới thiếu chỗ. Keyboard: ↑/↓/Enter/Esc.
  */
 export function Select({
+  id,
   value,
   onChange,
   options,
@@ -25,6 +26,14 @@ export function Select({
   className,
   disabled,
 }: {
+  /**
+   * Gắn lên chính nút mở menu, để `<Field htmlFor>` còn trỏ vào một điều khiển CÓ THẬT.
+   *
+   * Cần khi một ô đổi qua lại giữa `<input>` và `Select` tùy trạng thái (ô "IP trong" của
+   * form NAT): nhánh nào thiếu `id` thì bấm vào nhãn không xảy ra gì, và `getByLabel` của
+   * bài kiểm cũng không tìm ra ô.
+   */
+  id?: string;
   value: string;
   onChange: (v: string) => void;
   options: SelectOption[];
@@ -83,6 +92,7 @@ export function Select({
     >
       <button
         ref={triggerRef}
+        id={id}
         type="button"
         className="fsel-trigger"
         aria-label={ariaLabel}

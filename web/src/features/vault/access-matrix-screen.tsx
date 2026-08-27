@@ -165,8 +165,19 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
   }, [rules.data, scopes.data, search]);
 
   const totalRules = (rules.data ?? []).length;
-  const emptyScopes = scopeGroups.filter(
-    (group) => group.whitelist.length + group.needsApproval.length === 0,
+  /*
+   * Đếm trên TOÀN BỘ nhóm, không phải trên tập đang lọc.
+   *
+   * Dòng tổng hiện ở cả hai chiều nhìn và đọc như một con số TOÀN CỤC. Tính từ `scopeGroups`
+   * (đã lọc theo ô tìm) thì gõ một chữ vào ô tìm là con số tụt xuống theo — một con số rà
+   * soát mà lại nói về một lát cắt, không ai biết.
+   */
+  const scopedRules = new Set(
+    (rules.data ?? []).map((rule) => `${rule.scopeType}|${rule.scopeRef}`),
+  );
+  const allScopes = scopes.data ?? [];
+  const emptyScopes = allScopes.filter(
+    (scope) => !scopedRules.has(`${scope.scopeType}|${scope.scopeRef}`),
   ).length;
 
   return (
@@ -209,7 +220,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
           {t('access.summary', {
             people: people.length,
             rules: totalRules,
-            scopes: scopeGroups.length,
+            scopes: allScopes.length,
             empty: emptyScopes,
           })}
         </p>

@@ -756,6 +756,7 @@ export default {
     targetSearch: 'Tìm máy trong kho…',
     targetNoIp: 'Máy này chưa có hồ sơ IP nào — gõ tay địa chỉ, hoặc khai IP ở màn Địa chỉ IP.',
     pickIp: 'Chọn IP của máy…',
+    internalIpRequired: 'Chọn hoặc gõ IP của máy đích.',
     sectionWhy: 'Mở cho ai và vì sao',
     internal: 'Đích bên trong',
     internalIp: 'IP trong',
