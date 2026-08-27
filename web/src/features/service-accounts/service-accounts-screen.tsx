@@ -55,7 +55,11 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'code', desc: false }]);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<ServiceAccountRow | null>(null);
-  const [disabling, setDisabling] = useState<ServiceAccountRow | null>(null);
+  /** Hồ sơ đang chờ đổi trạng thái, kèm chiều đổi — cùng một hộp cho cả đóng lẫn mở lại. */
+  const [switching, setSwitching] = useState<{
+    row: ServiceAccountRow;
+    next: ServiceAccountStatus;
+  } | null>(null);
 
   /** Ghi chỉ SA/Admin — API chặn, UI đừng bày nút ra để bấm rồi 403. */
   const canEdit = me.role === 'sa' || me.role === 'admin';
@@ -142,8 +146,10 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
                   >
                     {t('common.edit')}
                   </button>
-                  {/* Vô hiệu hóa là đường RIÊNG vì nó BẮT ghi lý do — không phải một giá trị
-                      trong ô Trạng thái của form. Xem chú thích ở `service-account-form`. */}
+                  {/* Đổi trạng thái là đường RIÊNG vì nó BẮT ghi lý do — không phải một giá trị
+                      trong ô Trạng thái của form. Xem chú thích ở `service-account-form`.
+                      Hai chiều đối xứng: đóng rồi thì phải có đường mở lại, cũng kèm lý do,
+                      không thì hồ sơ đã đóng là đóng vĩnh viễn với người dùng giao diện. */}
                   {row.original.status === 'active' ? (
                     <button
                       type="button"
@@ -151,12 +157,24 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
                       aria-label={t('serviceAccounts.disableOf', { code: row.original.code })}
                       onClick={(event) => {
                         event.stopPropagation();
-                        setDisabling(row.original);
+                        setSwitching({ row: row.original, next: 'disabled' });
                       }}
                     >
                       {t('serviceAccounts.disable')}
                     </button>
-                  ) : null}
+                  ) : (
+                    <button
+                      type="button"
+                      className="btn sm"
+                      aria-label={t('serviceAccounts.enableOf', { code: row.original.code })}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSwitching({ row: row.original, next: 'active' });
+                      }}
+                    >
+                      {t('serviceAccounts.enable')}
+                    </button>
+                  )}
                 </div>
               ),
             } as ColumnDef<ServiceAccountRow, unknown>,
@@ -254,14 +272,16 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         />
       ) : null}
 
-      {disabling ? (
-        <DisableDialog
-          row={disabling}
+      {switching ? (
+        <StatusDialog
+          row={switching.row}
+          next={switching.next}
           csrfToken={me.csrfToken}
-          onClose={() => setDisabling(null)}
+          onClose={() => setSwitching(null)}
           onDone={() => {
-            setDisabling(null);
-            toast({ message: t('serviceAccounts.disabled') });
+            const done = switching.next === 'disabled' ? 'disabled' : 'enabled';
+            setSwitching(null);
+            toast({ message: t(`serviceAccounts.${done}`) });
             void refresh();
           }}
         />
@@ -284,36 +304,44 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
 }
 
 /**
- * Vô hiệu hóa kèm LÝ DO — đường duy nhất đóng một tài khoản dịch vụ.
+ * Đổi trạng thái kèm LÝ DO — đường duy nhất đóng, và cũng là đường duy nhất mở lại.
  *
  * Cùng khuôn với hộp gỡ rule NAT: "tài khoản này đóng ngày nào, ai đóng, vì sao" là câu sáu
- * tháng sau sẽ có người hỏi, và chỉ dòng lịch sử trả lời được.
+ * tháng sau sẽ có người hỏi, và chỉ dòng lịch sử trả lời được. Mở lại cũng vậy: bật lại một
+ * tài khoản dùng chung đã bị đóng là một quyết định, không phải một lần sửa ô.
+ *
+ * MỘT hộp cho hai chiều, không hai bản copy: khác nhau đúng ba thứ — endpoint, nhãn, tông nút.
  */
-function DisableDialog({
+function StatusDialog({
   row,
+  next,
   csrfToken,
   onClose,
   onDone,
 }: {
   row: ServiceAccountRow;
+  /** Trạng thái SẼ tới, không phải trạng thái đang có. */
+  next: ServiceAccountStatus;
   csrfToken: string;
   onClose: () => void;
   onDone: () => void;
 }) {
   const { t } = useTranslation();
+  const off = next === 'disabled';
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const disable = useApiMutation<{ reason: string }, unknown>(
-    `/api/v1/service-accounts/${row.id}/disable`,
+  const change = useApiMutation<{ reason: string }, unknown>(
+    `/api/v1/service-accounts/${row.id}/${off ? 'disable' : 'enable'}`,
     { method: 'PATCH', csrfToken, refreshMe: false },
   );
+  const label = off ? t('serviceAccounts.disable') : t('serviceAccounts.enable');
 
   return (
     <Dialog
       open
       onOpenChange={onClose}
       maxWidth={480}
-      title={`${t('serviceAccounts.disable')} — ${row.code}`}
+      title={`${label} — ${row.code}`}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
@@ -321,36 +349,46 @@ function DisableDialog({
           </button>
           <button
             type="submit"
-            form="sa-disable-form"
-            className="btn danger"
-            disabled={disable.isPending}
+            form="sa-status-form"
+            className={off ? 'btn danger' : 'btn primary'}
+            disabled={change.isPending}
           >
-            {disable.isPending ? t('common.loading') : t('serviceAccounts.disable')}
+            {change.isPending ? t('common.loading') : label}
           </button>
         </>
       }
     >
       <form
-        id="sa-disable-form"
+        id="sa-status-form"
         className="form-grid"
         data-columns={1}
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          disable.mutate(
+          change.mutate(
             { reason: reason.trim() },
             { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
           );
         }}
       >
-        <p className="muted">{t('serviceAccounts.disableHint')}</p>
-        <Field label={t('serviceAccounts.disableReason')} required htmlFor="sa-disable-reason">
+        <p className="muted">
+          {off ? t('serviceAccounts.disableHint') : t('serviceAccounts.enableHint')}
+        </p>
+        <Field
+          label={off ? t('serviceAccounts.disableReason') : t('serviceAccounts.enableReason')}
+          required
+          htmlFor="sa-status-reason"
+        >
           <input
-            id="sa-disable-reason"
+            id="sa-status-reason"
             className="inp"
             required
             minLength={3}
-            placeholder={t('serviceAccounts.disableReasonPlaceholder')}
+            placeholder={
+              off
+                ? t('serviceAccounts.disableReasonPlaceholder')
+                : t('serviceAccounts.enableReasonPlaceholder')
+            }
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />

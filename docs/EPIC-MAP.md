@@ -592,6 +592,15 @@ hiện dưới đây là loại bẫy sẽ lặp lại.
 - **Trang tổng két sắt là ngoại lệ DUY NHẤT được liệt kê qua nhiều chủ thể**, và chỉ tới mức
   "có mấy ngăn". `vault-surface.spec.ts` khoá danh sách trường của `VaultOwnerSummary` lại —
   thêm trường mới phải sửa test, tức là phải có người nhìn xem nó có lộ gì không.
+- **Đổi trạng thái một hồ sơ = endpoint RIÊNG bắt ghi lý do, không phải một ô trong DTO sửa.**
+  `service_account` làm mẫu: `PATCH :id/disable` + `PATCH :id/enable`, và `status` bị bỏ hẳn
+  khỏi `ServiceAccountBodyDto`. `ValidationPipe` bật `forbidNonWhitelisted` nên gửi `status`
+  vào đường sửa là 400 — cửa sau đóng ở tầng API, không chỉ ẩn nút ở giao diện. Hai chiều phải
+  đối xứng: có đường đóng mà không có đường mở thì ô Trạng thái chỉ-đọc thành cái bẫy.
+- **Kiểm luật của một lần `PATCH` phải chạy trên bản ĐÃ GHÉP với dòng trong DB**, không trên
+  body. Ô không gửi = giữ nguyên, nên kiểm trên body là bỏ sót đúng những ô người ta không
+  đụng tới — và `warnings: []` đọc thành "kiểm rồi, sạch". Xem `mergeServiceAccount`
+  (`service-account-rules.ts`), tách riêng để test bảng dữ liệu.
 
 ### Bẫy đã gặp
 

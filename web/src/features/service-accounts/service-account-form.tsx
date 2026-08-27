@@ -197,10 +197,11 @@ export function ServiceAccountForm({
           </Field>
           {/*
             Trạng thái là thứ CHỈ ĐỌC ở đây.
-            Vô hiệu hóa phải đi qua `PATCH :id/disable` — đường DUY NHẤT bắt ghi lý do và ghi
-            một dòng lịch sử nói đúng việc vừa làm. Để nó thành một ô chọn bình thường thì
-            người dùng vô hiệu hóa qua `PATCH` thường: không lý do, lịch sử chỉ ghi "updated",
-            và cái luật "sáu tháng sau sẽ có người hỏi vì sao" thành ra không ai thi hành được.
+            Đổi nó phải đi qua `PATCH :id/disable` hoặc `:id/enable` — hai đường DUY NHẤT bắt
+            ghi lý do và ghi một dòng lịch sử nói đúng việc vừa làm. Để nó thành một ô chọn
+            bình thường thì người dùng đóng/mở qua `PATCH` thường: không lý do, lịch sử chỉ ghi
+            "Sửa hồ sơ", và cái luật "sáu tháng sau sẽ có người hỏi vì sao" thành ra không ai
+            thi hành được. API cũng đã bỏ hẳn `status` khỏi DTO sửa, không chỉ ẩn ở giao diện.
           */}
           <Field label={t('serviceAccounts.status')} hint={row ? t('serviceAccounts.statusHint') : undefined}>
             <p className="static-value">{t(STATUS_KEY[form.status])}</p>

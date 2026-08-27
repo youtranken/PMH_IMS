@@ -16,8 +16,10 @@ import { diffRecord, hasChanges } from '../../common/record-diff';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import {
   checkAllowedIps,
+  mergeServiceAccount,
   validateServiceAccount,
   type ServiceAccountKind,
+  type ServiceAccountStatus,
 } from './service-account-rules';
 import { serviceAccountHistoryTable, serviceAccountTable } from './service-account.schema';
 import type {
@@ -158,21 +160,61 @@ export class ServiceAccountService {
    * đang trỏ tới id đó. Xóa hẳn là biến chúng thành bản ghi mồ côi.
    */
   async disable(actor: string, id: string, reason: string): Promise<ServiceAccountRecord> {
+    return this.switchStatus(actor, id, 'disabled', reason);
+  }
+
+  /**
+   * Bật lại một tài khoản đã đóng — cũng BẮT ghi lý do, đối xứng với `disable()`.
+   *
+   * Vì sao không để `PATCH {status:'active'}` làm việc này: mở lại một tài khoản dùng chung
+   * đã bị đóng là một quyết định, không phải một lần sửa ô. "Ai mở lại, ngày nào, vì sao" là
+   * đúng bộ câu hỏi mà `disable()` sinh ra để trả lời — bỏ nửa sau thì nửa đầu cũng vô dụng.
+   */
+  async enable(actor: string, id: string, reason: string): Promise<ServiceAccountRecord> {
+    return this.switchStatus(actor, id, 'active', reason);
+  }
+
+  private async switchStatus(
+    actor: string,
+    id: string,
+    next: ServiceAccountStatus,
+    reason: string,
+  ): Promise<ServiceAccountRecord> {
     const before = await this.requireRow(id);
     if (!reason.trim()) {
       throw new BadRequestException({
         code: 'REASON_REQUIRED',
-        message: 'Ghi lý do vô hiệu hóa — sáu tháng sau sẽ có người hỏi vì sao.',
+        message:
+          next === 'disabled'
+            ? 'Ghi lý do vô hiệu hóa — sáu tháng sau sẽ có người hỏi vì sao.'
+            : 'Ghi lý do bật lại — sáu tháng sau sẽ có người hỏi vì sao.',
       });
     }
+    /*
+     * Đóng một tài khoản đã đóng (hoặc mở một tài khoản đang mở) KHÔNG được ghi gì.
+     *
+     * Không chặn thì hai lần bấm liên tiếp đẻ ra hai dòng "Vô hiệu hóa" với "trạng thái: Đã
+     * vô hiệu → Đã vô hiệu" — đúng thứ nhiễu làm người đọc lịch sử phải dừng lại tìm xem lần
+     * nào mới là lần thật.
+     */
+    if (before.status === next) {
+      throw new BadRequestException({
+        code: 'STATUS_UNCHANGED',
+        message:
+          next === 'disabled'
+            ? 'Tài khoản này đã bị vô hiệu hóa từ trước.'
+            : 'Tài khoản này đang dùng bình thường.',
+      });
+    }
+    const action = next === 'disabled' ? 'disabled' : 'enabled';
     const updated = await this.db.transaction(async (tx) => {
       const rows = await tx
         .update(serviceAccountTable)
-        .set({ status: 'disabled', updatedAt: new Date() })
+        .set({ status: next, updatedAt: new Date() })
         .where(eq(serviceAccountTable.id, id))
         .returning();
-      await this.recordWithin(tx, actor, id, 'disabled', {
-        status: { before: before.status, after: 'disabled' },
+      await this.recordWithin(tx, actor, id, action, {
+        status: { before: before.status, after: next },
         reason: { before: null, after: reason.trim() },
       });
       return rows[0];
@@ -189,40 +231,15 @@ export class ServiceAccountService {
     const kind = input.kind;
     const vpn = kind === 'vpn';
     /*
-     * THIẾU một ô nghĩa là "đừng đụng tới", KHÔNG phải "xoá đi".
+     * Ghép body với dòng đang có TRƯỚC, rồi mới kiểm — luật ghép và lý do nằm ở
+     * `mergeServiceAccount` (hàm thuần, có test bảng dữ liệu riêng).
      *
-     * Mọi ô trong `ServiceAccountBodyDto` đều `@IsOptional()`, nên một `PATCH {code, kind,
-     * name}` — đúng bộ tối thiểu mà DTO cho phép — sẽ ghi `null` đè lên login, bộ phận,
-     * người phụ trách, nhóm VPN, dải IP và ghi chú; rồi ghi vào lịch sử như một lần sửa bình
-     * thường. Form hiện tại luôn gửi đủ ô nên chỗ này chỉ cắn người gọi API, và cắn im lặng.
-     *
-     * `keep` chỉ áp khi SỬA (`before` có giá trị). Lúc TẠO thì thiếu ô đúng là để trống.
+     * Điều quan trọng ở đây: `validateServiceAccount` chạy trên bản ĐÃ GHÉP, tức là đúng giá
+     * trị sẽ nằm trong DB — không phải trên body. Kiểm trên body thì một `PATCH {code, kind,
+     * name}` lên tài khoản VPN đang để `allowedIps = '0.0.0.0/0'` trả về `warnings: []`.
      */
-    const keep = <K extends 'login' | 'department' | 'ownerName' | 'groupName' | 'allowedIps' | 'note'>(
-      key: K,
-      raw: string | undefined,
-    ): string | null => (raw === undefined ? (before?.[key] ?? null) : blank(raw));
-
-    /*
-     * Kiểm trên GIÁ TRỊ SẼ NẰM TRONG DB, không phải trên body.
-     *
-     * Bản trước gọi `validateServiceAccount(input)` ngay đầu hàm, tức là TRƯỚC khi `keep`
-     * lấp các ô bị bỏ trống bằng giá trị cũ. Nên một `PATCH {code, kind, name}` lên tài khoản
-     * VPN đang để `allowedIps = '0.0.0.0/0'` chạy qua với `allowedIps: undefined` — không
-     * lỗi, và quan trọng hơn là KHÔNG cảnh báo, trong khi dòng vừa ghi vẫn mở toang cho cả
-     * internet. Cảnh báo trả về rỗng đọc thành "kiểm rồi, sạch".
-     */
-    const effective = {
-      code: input.code,
-      kind,
-      name: input.name,
-      login: keep('login', input.login) ?? undefined,
-      department: keep('department', input.department) ?? undefined,
-      ownerName: keep('ownerName', input.ownerName) ?? undefined,
-      groupName: vpn ? (keep('groupName', input.groupName) ?? undefined) : input.groupName,
-      allowedIps: vpn ? (keep('allowedIps', input.allowedIps) ?? undefined) : input.allowedIps,
-    };
-    const check = validateServiceAccount(effective);
+    const merged = mergeServiceAccount(input, before);
+    const check = validateServiceAccount(merged);
     if (check.errors.length > 0) {
       throw new BadRequestException({
         code: 'SERVICE_ACCOUNT_INVALID',
@@ -232,29 +249,32 @@ export class ServiceAccountService {
 
     return {
       values: {
-        code: input.code.trim(),
+        code: merged.code.trim(),
         kind,
-        name: input.name.trim(),
-        login: keep('login', input.login),
-        department: keep('department', input.department),
-        ownerName: keep('ownerName', input.ownerName),
+        name: merged.name.trim(),
+        login: merged.login,
+        department: merged.department,
+        ownerName: merged.ownerName,
         // Ô của loại khác đã bị `validateServiceAccount` chặn; ở đây ép null cho chắc, để
         // đổi loại từ VPN sang dùng chung không để lại vết của loại cũ.
-        groupName: vpn ? keep('groupName', input.groupName) : null,
+        groupName: vpn ? merged.groupName : null,
         /*
          * Lưu bản ĐÃ CHUẨN HÓA: `checkAllowedIps` vốn đã bỏ khoảng trắng thừa, bỏ mục rỗng
          * và bỏ mục trùng — nhưng bản trước lưu nguyên chuỗi thô, nên "1.2.3.4, , 1.2.3.4"
          * nằm y nguyên trong DB và đi vòng qua form vẫn thế. Dựng ra một hàm chuẩn hóa rồi
          * không ai đọc thì nó chỉ là một lời hứa trong test.
          */
-        allowedIps: vpn ? normalizeIps(keep('allowedIps', input.allowedIps)) : null,
-        note: keep('note', input.note),
+        allowedIps: vpn ? normalizeIps(merged.allowedIps) : null,
+        note: merged.note,
         /*
-         * KHÔNG mặc định 'active' khi sửa: cùng lý do như trên — `PATCH` thiếu `status` sẽ
-         * âm thầm bật lại một tài khoản vừa bị vô hiệu hóa, xoá công của `disable()` và cái
-         * lý do nó đã ghi, mà dòng lịch sử chỉ nói "updated".
+         * Trạng thái KHÔNG đọc từ body — `ServiceAccountInput` không còn ô đó.
+         *
+         * Sửa hồ sơ thì giữ nguyên trạng thái đang có; tạo mới thì 'active'. Đổi trạng thái
+         * là việc của `disable()`/`enable()`, hai đường bắt ghi lý do. Bản trước còn nhận
+         * `input.status`, tức là `PATCH {status:'active'}` âm thầm bật lại một tài khoản vừa
+         * bị đóng, xoá công của `disable()` và cái lý do nó đã ghi, mà lịch sử chỉ nói "updated".
          */
-        status: input.status ?? before?.status ?? 'active',
+        status: before?.status ?? 'active',
       },
       warnings: check.warnings,
     };
@@ -312,11 +332,6 @@ function normalizeIps(value: string | null): string | null {
   if (value === null) return null;
   const normalized = checkAllowedIps(value).normalized;
   return normalized.length === 0 ? null : normalized.join(', ');
-}
-
-function blank(value?: string | null): string | null {
-  const text = (value ?? '').trim();
-  return text === '' ? null : text;
 }
 
 function buildWhere(filter: ServiceAccountFilter): SQL | undefined {

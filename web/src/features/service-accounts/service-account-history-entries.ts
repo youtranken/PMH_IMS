@@ -25,6 +25,7 @@ const ACTION_LABEL: Record<string, string> = {
   created: 'Tạo hồ sơ',
   updated: 'Sửa hồ sơ',
   disabled: 'Vô hiệu hóa',
+  enabled: 'Bật lại',
 };
 
 const KIND_LABEL: Record<string, string> = {

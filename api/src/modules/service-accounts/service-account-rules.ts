@@ -86,6 +86,82 @@ export function checkAllowedIps(value: string): AllowedIpsCheck {
   return { invalid, tooWide, normalized };
 }
 
+/** Ô có thể để trống — đúng bộ ô mà "không gửi" khác hẳn "gửi chuỗi rỗng". */
+export const SERVICE_ACCOUNT_OPTIONAL_FIELDS = [
+  'login',
+  'department',
+  'ownerName',
+  'groupName',
+  'allowedIps',
+  'note',
+] as const;
+export type ServiceAccountOptionalField = (typeof SERVICE_ACCOUNT_OPTIONAL_FIELDS)[number];
+
+/** Body một lần ghi: ô vắng mặt = "đừng đụng tới". */
+export type ServiceAccountPatch = {
+  code: string;
+  kind: ServiceAccountKind;
+  name: string;
+} & Partial<Record<ServiceAccountOptionalField, string>>;
+
+/** Dòng đang nằm trong DB — chỉ phần ô tùy chọn, đủ để `merge` lấp chỗ trống. */
+export type ServiceAccountStored = Record<ServiceAccountOptionalField, string | null>;
+
+export type ServiceAccountMerged = ServiceAccountDraft &
+  Record<ServiceAccountOptionalField, string | null>;
+
+/**
+ * Ghép body với dòng đang có — GIÁ TRỊ SẼ NẰM TRONG DB sau lần ghi này.
+ *
+ * Ba luật, và cả ba đều từng cắn thật:
+ *
+ * 1. **Ô không gửi = giữ nguyên**, không phải xoá. Mọi ô trong DTO đều `@IsOptional()`, nên
+ *    `PATCH {code, kind, name}` — đúng bộ tối thiểu DTO cho phép — từng ghi `null` đè lên tên
+ *    đăng nhập, bộ phận, người phụ trách, nhóm VPN, dải IP và ghi chú, rồi vào lịch sử như một
+ *    lần sửa bình thường.
+ * 2. **Gửi chuỗi rỗng = xoá thật.** Người dùng xoá trắng một ô trên form là có ý.
+ * 3. **Kiểm luật phải chạy trên bản ĐÃ GHÉP, không trên body.** Kiểm trên body thì `PATCH
+ *    {code, kind, name}` lên một tài khoản VPN đang để `allowedIps = '0.0.0.0/0'` trả về
+ *    `warnings: []` — đọc thành "kiểm rồi, sạch" cho một dòng vẫn mở toang cho cả internet.
+ *
+ * Tách khỏi service để test bằng bảng dữ liệu, không phải dựng DB lên mới biết nó ghép đúng.
+ */
+export function mergeServiceAccount(
+  input: ServiceAccountPatch,
+  before?: ServiceAccountStored | null,
+): ServiceAccountMerged {
+  const vpn = supportsVpnFields(input.kind);
+  const keep = (key: ServiceAccountOptionalField): string | null => {
+    const raw = input[key];
+    if (raw === undefined) return before?.[key] ?? null;
+    const text = raw.trim();
+    return text === '' ? null : text;
+  };
+  /*
+   * Ô của loại KHÁC không được lấp bằng giá trị cũ.
+   *
+   * Đổi một tài khoản từ VPN sang dùng chung mà body không gửi lại `groupName`: lấp bằng giá
+   * trị cũ là `validateServiceAccount` báo "tài khoản dùng chung không có nhóm VPN" cho một ô
+   * người dùng vừa cố tình bỏ đi. Với loại không hỗ trợ, chỉ nhìn đúng thứ body gửi lên.
+   */
+  const foreign = (key: ServiceAccountOptionalField): string | null => {
+    const text = (input[key] ?? '').trim();
+    return text === '' ? null : text;
+  };
+
+  return {
+    code: input.code,
+    kind: input.kind,
+    name: input.name,
+    login: keep('login'),
+    department: keep('department'),
+    ownerName: keep('ownerName'),
+    groupName: vpn ? keep('groupName') : foreign('groupName'),
+    allowedIps: vpn ? keep('allowedIps') : foreign('allowedIps'),
+    note: keep('note'),
+  };
+}
+
 export interface ServiceAccountCheck {
   errors: string[];
   warnings: string[];

@@ -7,7 +7,6 @@ import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import {
   SERVICE_ACCOUNT_KINDS,
-  SERVICE_ACCOUNT_STATUSES,
   type ServiceAccountKind,
   type ServiceAccountStatus,
 } from './service-account-rules';
@@ -42,14 +41,21 @@ class ServiceAccountBodyDto {
   @IsOptional() @IsString() @Length(0, 2000) allowedIps?: string;
   @IsOptional() @IsString() @Length(0, 2000) note?: string;
 
-  @IsOptional()
-  @IsIn([...SERVICE_ACCOUNT_STATUSES], { message: 'Trạng thái không hợp lệ.' })
-  status?: ServiceAccountStatus;
+  /*
+   * KHÔNG có `status` — xem chú thích ở `ServiceAccountInput`. Đổi trạng thái đi qua
+   * `:id/disable` và `:id/enable`, hai đường bắt ghi lý do.
+   */
 }
 
 class DisableDto {
   @IsString()
   @Length(3, 500, { message: 'Lý do vô hiệu hóa từ 3 ký tự.' })
+  reason!: string;
+}
+
+class EnableDto {
+  @IsString()
+  @Length(3, 500, { message: 'Lý do bật lại từ 3 ký tự.' })
   reason!: string;
 }
 
@@ -123,6 +129,14 @@ export class ServiceAccountController {
   @Audited('service_account.disabled', 'service_account', { writtenByService: true })
   disable(@Param() params: IdParamDto, @Body() body: DisableDto, @Req() req: AuthedRequest) {
     return this.accounts.disable(actor(req), params.id, body.reason);
+  }
+
+  /** Bật lại — cũng bắt lý do, đối xứng với `:id/disable`. */
+  @Roles('sa', 'admin')
+  @Patch(':id/enable')
+  @Audited('service_account.enabled', 'service_account', { writtenByService: true })
+  enable(@Param() params: IdParamDto, @Body() body: EnableDto, @Req() req: AuthedRequest) {
+    return this.accounts.enable(actor(req), params.id, body.reason);
   }
 }
 

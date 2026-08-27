@@ -45,5 +45,12 @@ export interface ServiceAccountInput {
   groupName?: string;
   allowedIps?: string;
   note?: string;
-  status?: ServiceAccountStatus;
+  /*
+   * KHÔNG có `status` ở đây, và đó là chủ ý.
+   *
+   * Trạng thái chỉ đổi qua `disable()` / `enable()` — hai đường DUY NHẤT bắt ghi lý do và để
+   * lại một dòng lịch sử nói đúng việc vừa làm. Để `status` lọt vào bộ ô sửa bình thường thì
+   * `PATCH {status:'active'}` bật lại một tài khoản vừa bị đóng mà không lý do, lịch sử chỉ
+   * ghi "Sửa hồ sơ", và cái luật "sáu tháng sau sẽ có người hỏi vì sao" thành ra vô nghĩa.
+   */
 }

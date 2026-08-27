@@ -1,9 +1,13 @@
 import {
   checkAllowedIps,
+  mergeServiceAccount,
   supportsVpnFields,
   validateServiceAccount,
   type ServiceAccountDraft,
   type ServiceAccountKind,
+  type ServiceAccountOptionalField,
+  type ServiceAccountPatch,
+  type ServiceAccountStored,
 } from './service-account-rules';
 
 function draft(over: Partial<ServiceAccountDraft> = {}): ServiceAccountDraft {
@@ -113,5 +117,83 @@ describe('validateServiceAccount', () => {
     const result = validateServiceAccount(draft({ kind: 'vpn', allowedIps: '0.0.0.0/0' }));
     expect(result.errors).toEqual([]);
     expect(result.warnings).toHaveLength(1);
+  });
+});
+
+/**
+ * `mergeServiceAccount` là chỗ quyết định GIÁ TRỊ SẼ NẰM TRONG DB sau một lần ghi — và cũng
+ * là chỗ hai lỗi im lặng từng đi qua: `PATCH` thiếu ô xoá trắng hồ sơ, và luật kiểm chạy trên
+ * body nên không thấy dải IP cũ vẫn mở toang.
+ */
+describe('mergeServiceAccount — ghép body với dòng đang có', () => {
+  const stored: ServiceAccountStored = {
+    login: 'ketoan@pmh.com.vn',
+    department: 'Kế toán',
+    ownerName: 'Chị Lan',
+    groupName: 'vpn-ketoan',
+    allowedIps: '0.0.0.0/0',
+    note: 'ghi chú cũ',
+  };
+  const patch = (over: Partial<ServiceAccountPatch> = {}): ServiceAccountPatch => ({
+    code: 'VPN-KETOAN',
+    kind: 'vpn',
+    name: 'VPN kế toán',
+    ...over,
+  });
+
+  const cases: {
+    name: string;
+    input: ServiceAccountPatch;
+    before?: ServiceAccountStored | null;
+    field: ServiceAccountOptionalField;
+    expected: string | null;
+  }[] = [
+    // 1. Ô KHÔNG gửi = đừng đụng tới.
+    { name: 'sửa: ô không gửi giữ giá trị cũ', input: patch(), before: stored, field: 'login', expected: 'ketoan@pmh.com.vn' },
+    { name: 'sửa: dải IP không gửi vẫn là dải cũ', input: patch(), before: stored, field: 'allowedIps', expected: '0.0.0.0/0' },
+    // 2. Gửi chuỗi rỗng = xoá thật, vì người dùng xoá trắng ô là có ý.
+    { name: 'sửa: gửi rỗng thì xoá', input: patch({ login: '' }), before: stored, field: 'login', expected: null },
+    { name: 'sửa: gửi toàn khoảng trắng cũng là xoá', input: patch({ note: '   ' }), before: stored, field: 'note', expected: null },
+    // 3. Gửi giá trị mới thì đè, và cắt khoảng trắng thừa.
+    { name: 'sửa: giá trị mới đè lên cũ', input: patch({ department: '  Kỹ thuật  ' }), before: stored, field: 'department', expected: 'Kỹ thuật' },
+    // 4. TẠO MỚI thì thiếu ô đúng là để trống — không có `before` để lấp.
+    { name: 'tạo: ô không gửi là null', input: patch(), before: undefined, field: 'ownerName', expected: null },
+    { name: 'tạo: ô có gửi thì giữ', input: patch({ ownerName: 'Anh Hùng' }), before: null, field: 'ownerName', expected: 'Anh Hùng' },
+    /*
+     * 5. Ô của loại KHÁC không được lấp bằng giá trị cũ. Đổi VPN → dùng chung mà không gửi lại
+     *    `groupName`: lấp bằng giá trị cũ là báo lỗi "dùng chung không có nhóm VPN" cho một ô
+     *    người dùng vừa cố tình bỏ đi.
+     */
+    { name: 'đổi sang dùng chung: nhóm VPN cũ KHÔNG theo sang', input: patch({ kind: 'shared' }), before: stored, field: 'groupName', expected: null },
+    { name: 'đổi sang dùng chung: dải IP cũ KHÔNG theo sang', input: patch({ kind: 'shared' }), before: stored, field: 'allowedIps', expected: null },
+    // …nhưng ô mà body THẬT SỰ gửi lên thì vẫn phải thấy, để còn báo là gõ nhầm loại.
+    { name: 'dùng chung mà vẫn gửi nhóm VPN: giữ để báo lỗi', input: patch({ kind: 'shared', groupName: 'vpn-lo' }), before: null, field: 'groupName', expected: 'vpn-lo' },
+  ];
+
+  for (const { name, input, before, field, expected } of cases) {
+    it(`${name} → ${field} = ${expected === null ? 'null' : `"${expected}"`}`, () => {
+      expect(mergeServiceAccount(input, before)[field]).toBe(expected);
+    });
+  }
+
+  /*
+   * Đây là lý do cả hàm này tồn tại: kiểm luật phải chạy trên bản ĐÃ GHÉP.
+   *
+   * `PATCH {code, kind, name}` lên một tài khoản VPN đang mở `0.0.0.0/0` mà kiểm trên body thì
+   * `warnings` rỗng — đọc thành "kiểm rồi, sạch" cho một dòng vẫn mở toang cho cả internet.
+   */
+  it('cảnh báo dải IP quá rộng vẫn còn khi PATCH không gửi lại dải IP', () => {
+    const onBody = validateServiceAccount(patch());
+    expect(onBody.warnings).toEqual([]);
+
+    const onMerged = validateServiceAccount(mergeServiceAccount(patch(), stored));
+    expect(onMerged.errors).toEqual([]);
+    expect(onMerged.warnings).toHaveLength(1);
+    expect(onMerged.warnings[0]).toContain('0.0.0.0/0');
+  });
+
+  it('đổi loại sang dùng chung KHÔNG bị báo lỗi vì hai ô VPN cũ', () => {
+    const result = validateServiceAccount(mergeServiceAccount(patch({ kind: 'shared' }), stored));
+    expect(result).toEqual({ errors: [], warnings: [] });
   });
 });

@@ -2,7 +2,15 @@ import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_MEMBER, E2E_SA, firstLogin, logout, resetUsers, sql } from './helpers';
+import {
+  E2E_MEMBER,
+  E2E_SA,
+  csrfOf,
+  firstLogin,
+  logout,
+  resetServiceAccounts,
+  resetUsers,
+} from './helpers';
 
 /**
  * Tài khoản dịch vụ (0032) — tài khoản DÙNG CHUNG và tài khoản VPN.
@@ -18,24 +26,6 @@ test.beforeEach(() => {
   resetUsers();
   resetServiceAccounts();
 });
-
-function resetServiceAccounts(): void {
-  sql(
-    "ALTER TABLE service_account_history DISABLE TRIGGER service_account_history_no_delete; " +
-      "DELETE FROM secret WHERE owner_type = 'service_account' AND owner_id IN (SELECT id FROM service_account WHERE code ILIKE '%E2E%'); " +
-      "DELETE FROM file WHERE owner_type = 'service_account' AND owner_id IN (SELECT id FROM service_account WHERE code ILIKE '%E2E%'); " +
-      "DELETE FROM service_account_history WHERE service_account_id IN (SELECT id FROM service_account WHERE code ILIKE '%E2E%'); " +
-      "ALTER TABLE service_account_history ENABLE TRIGGER service_account_history_no_delete; " +
-      "DELETE FROM service_account WHERE code ILIKE '%E2E%'",
-  );
-}
-
-async function csrfOf(page: Page): Promise<string> {
-  return page.evaluate(async () => {
-    const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
-    return ((await res.json()) as { csrfToken: string }).csrfToken;
-  });
-}
 
 async function createViaApi(page: Page, data: Record<string, unknown>) {
   const response = await page.request.post('/api/v1/service-accounts', {
@@ -288,5 +278,156 @@ test.describe('Tài khoản dịch vụ', () => {
     // Lọc riêng loại này ra được.
     await page.getByRole('button', { name: 'Tài khoản dịch vụ', exact: true }).click();
     await expect(row).toBeVisible();
+  });
+
+  /*
+   * "Xóa" một tài khoản dịch vụ = vô hiệu hóa, và nó phải đi qua ĐÚNG MỘT cửa: hộp riêng bắt
+   * ghi lý do. Nếu trạng thái còn là một ô chọn bình thường trong form Sửa thì người dùng đóng
+   * tài khoản bằng `PATCH` thường — không lý do, lịch sử chỉ ghi "Sửa hồ sơ" — và sáu tháng sau
+   * không ai trả lời được vì sao cái email dùng chung của Kế toán ngừng hoạt động.
+   */
+  test('vô hiệu hóa đi qua hộp riêng bắt ghi lý do; ô Trạng thái trong form là CHỈ ĐỌC', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const code = `TK-E2E-OFF-${stamp}`;
+    const created = await createViaApi(page, {
+      code,
+      kind: 'shared',
+      name: 'Tài khoản sắp đóng',
+      login: 'sapdong@pmh.com.vn',
+    });
+    expect(created.status).toBe(201);
+    const id = String(created.body.id);
+
+    await page.goto('/service-accounts');
+    const row = page.getByRole('row', { name: new RegExp(code) });
+    await expect(row.getByText('Đang dùng')).toBeVisible();
+
+    // Cửa sau đã khóa: form Sửa chỉ HIỆN trạng thái, không cho chọn.
+    await row.getByRole('button', { name: `Sửa hồ sơ ${code}` }).click();
+    const editForm = page.getByRole('dialog');
+    await expect(editForm.getByText('Đang dùng')).toBeVisible();
+    await expect(editForm.getByRole('button', { name: 'Trạng thái', exact: true })).toHaveCount(0);
+    await editForm.getByRole('button', { name: 'Hủy' }).click();
+
+    // Cửa trước: nút riêng ngoài danh sách, và nó BẮT lý do.
+    await row.getByRole('button', { name: `Vô hiệu hóa tài khoản ${code}` }).click();
+    const offForm = page.getByRole('dialog');
+    await expect(offForm.getByText(/mật khẩu trong két .* vẫn còn/)).toBeVisible();
+    await offForm.getByRole('textbox', { name: 'Lý do vô hiệu hóa' }).fill('nhân sự phụ trách đã nghỉ');
+    await offForm.getByRole('button', { name: 'Vô hiệu hóa' }).click();
+
+    await expect(page.getByText('Đã vô hiệu hóa tài khoản.')).toBeVisible();
+    await expect(row.getByText('Đã vô hiệu')).toBeVisible();
+    // Đã đóng rồi thì không còn nút đóng nữa — bấm lần hai chỉ đẻ thêm một dòng lịch sử rỗng nghĩa.
+    await expect(row.getByRole('button', { name: `Vô hiệu hóa tài khoản ${code}` })).toHaveCount(0);
+
+    // Lý do đi thẳng vào lịch sử, kèm chuyển trạng thái — đó mới là chỗ trả lời câu hỏi sáu tháng sau.
+    await page.goto(`/service-accounts/${id}?tab=history`);
+    const entry = page.getByRole('listitem').filter({ hasText: 'Vô hiệu hóa' });
+    await expect(entry).toBeVisible();
+    await expect(entry).toContainText('nhân sự phụ trách đã nghỉ');
+    await expect(entry).toContainText('Đang dùng → Đã vô hiệu');
+  });
+
+  /*
+   * Đóng rồi phải mở lại được — và mở lại cũng kèm lý do.
+   *
+   * Bỏ nửa sau thì nửa đầu thành cái bẫy: hồ sơ đã đóng là đóng vĩnh viễn với người dùng giao
+   * diện, vì ô Trạng thái trong form đã thành chỉ-đọc. Còn cho mở lại bằng `PATCH` thường thì
+   * lý do lại rơi mất đúng ở chiều mà người ta cần nó nhất.
+   */
+  test('bật lại tài khoản đã đóng cũng bắt ghi lý do, và PATCH thường không lách được', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const code = `TK-E2E-ON-${stamp}`;
+    const created = await createViaApi(page, { code, kind: 'shared', name: 'Tài khoản mở lại' });
+    expect(created.status).toBe(201);
+    const id = String(created.body.id);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+
+    const off = await page.request.patch(`/api/v1/service-accounts/${id}/disable`, {
+      headers,
+      data: { reason: 'tạm đóng chờ bàn giao' },
+    });
+    expect(off.status()).toBe(200);
+
+    /*
+     * Cửa sau bịt ở TẦNG API, không chỉ ẩn nút: `status` không còn trong DTO sửa, mà
+     * `ValidationPipe` bật `forbidNonWhitelisted` — nên `PATCH {status:'active'}` bị chặn
+     * thẳng, không phải "nhận rồi lặng lẽ bỏ qua".
+     */
+    const sneak = await page.request.patch(`/api/v1/service-accounts/${id}`, {
+      headers,
+      data: { code, kind: 'shared', name: 'Tài khoản mở lại', status: 'active' },
+    });
+    expect(sneak.status()).toBe(400);
+    const stillOff = await page.request.get(`/api/v1/service-accounts/${id}`);
+    expect(((await stillOff.json()) as { status: string }).status).toBe('disabled');
+
+    // Cửa trước: nút Bật lại ngay trên dòng, kèm ô lý do.
+    await page.goto('/service-accounts');
+    const row = page.getByRole('row', { name: new RegExp(code) });
+    await expect(row.getByText('Đã vô hiệu')).toBeVisible();
+    await row.getByRole('button', { name: `Bật lại tài khoản ${code}` }).click();
+    const onForm = page.getByRole('dialog');
+    await onForm.getByRole('textbox', { name: 'Lý do bật lại' }).fill('nhân sự mới nhận bàn giao');
+    await onForm.getByRole('button', { name: 'Bật lại' }).click();
+
+    await expect(page.getByText('Đã bật lại tài khoản.')).toBeVisible();
+    await expect(row.getByText('Đang dùng')).toBeVisible();
+
+    await page.goto(`/service-accounts/${id}?tab=history`);
+    const entry = page.getByRole('listitem').filter({ hasText: 'Bật lại' });
+    await expect(entry).toContainText('nhân sự mới nhận bàn giao');
+    await expect(entry).toContainText('Đã vô hiệu → Đang dùng');
+
+    // Mở một tài khoản đang mở không đẻ ra dòng lịch sử rỗng nghĩa.
+    const again = await page.request.patch(`/api/v1/service-accounts/${id}/enable`, {
+      headers,
+      data: { reason: 'bấm nhầm lần hai' },
+    });
+    expect(again.status()).toBe(400);
+    expect(String(((await again.json()) as Record<string, unknown>).message)).toContain(
+      'đang dùng bình thường',
+    );
+  });
+
+  test('đường hỏng: vô hiệu hóa không lý do bị chặn, và Member không đóng được tài khoản', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const created = await createViaApi(page, {
+      code: `TK-E2E-OFF-BAD-${stamp}`,
+      kind: 'shared',
+      name: 'Tài khoản kiểm lý do',
+    });
+    expect(created.status).toBe(201);
+    const id = String(created.body.id);
+
+    // Lý do toàn khoảng trắng KHÔNG phải là lý do.
+    const blank = await page.request.patch(`/api/v1/service-accounts/${id}/disable`, {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      data: { reason: '   ' },
+    });
+    expect(blank.status()).toBe(400);
+    expect(String(((await blank.json()) as Record<string, unknown>).message)).toContain('lý do');
+
+    // Và hồ sơ vẫn nguyên trạng — 400 không được để lại nửa lần ghi.
+    const still = await page.request.get(`/api/v1/service-accounts/${id}`);
+    expect(((await still.json()) as { status: string }).status).toBe('active');
+
+    await logout(page);
+    await firstLogin(page, E2E_MEMBER);
+    const asMember = await page.request.patch(`/api/v1/service-accounts/${id}/disable`, {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      data: { reason: 'member thử đóng' },
+    });
+    expect(asMember.status()).toBe(403);
   });
 });

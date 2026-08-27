@@ -19,6 +19,7 @@ import type { CatalogLists, ServicePortRow } from '@/features/catalog/catalog-ty
 import { CatalogForm } from '@/features/catalog/catalog-form';
 import { DeviceForm } from '@/features/devices/device-form';
 import { ServicePortPicker } from './service-port-picker';
+import { checkInternalIp } from './nat-internal-ip';
 import { STATUS_KEY, type IpStatus } from './ipam-types';
 import { chipsFromValue, parsePortChip, type PortChip } from './port-chips';
 import { PortChipsField } from './port-chips-field';
@@ -443,27 +444,16 @@ function NatForm({
             return;
           }
           /*
-           * Chặn tay ô IP trong: khi đã chọn máy đích, ô này thành `Select` và `required`
-           * của trình duyệt không còn áp. Thiếu chốt này thì bỏ trống IP rồi bấm Lưu sẽ bắn
-           * MỘT lượt POST hỏng cho MỖI chip port trước khi hiện lỗi gộp.
+           * Hai luật của ô "IP trong" nằm ở `checkInternalIp` (hàm thuần, có test bảng dữ
+           * liệu): phải có địa chỉ, và địa chỉ phải thuộc chính máy đích đang chọn.
            */
-          if (!internalIp.trim()) {
-            setError(t('nat.internalIpRequired'));
-            return;
-          }
-          /*
-           * Ô "Máy đích" là BỘ LỌC, không phải dữ liệu được ghi: máy đích của rule do API
-           * suy ra từ hồ sơ IP (`internalDeviceId: ip?.deviceId`), client không gửi lên.
-           * Nên chọn máy A rồi để địa chỉ của máy B nằm trong ô là sổ ghi về B, không một
-           * lời nào — người khai vẫn tin mình vừa mở port cho A. Còn chặn được thì chặn.
-           */
-          const ownIps = targetIps.data ?? [];
-          if (
-            targetId &&
-            ownIps.length > 0 &&
-            !ownIps.some((ip) => ip.address === internalIp.trim())
-          ) {
-            setError(t('nat.internalIpNotOfTarget'));
+          const ipCheck = checkInternalIp({
+            internalIp,
+            targetId,
+            targetIps: (targetIps.data ?? []).map((ip) => ip.address),
+          });
+          if (ipCheck.reason) {
+            setError(t(`nat.${ipCheck.reason}`));
             return;
           }
           void (async () => {

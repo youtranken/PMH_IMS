@@ -111,6 +111,24 @@ export function resetSecrets(): void {
 }
 
 /**
+ * Xóa tài khoản dịch vụ do E2E tạo, kèm secret · giấy tờ · lịch sử của chúng.
+ *
+ * Dọn theo THỨ TỰ ngược với lúc tạo, và phải tắt trigger chống-xóa của bảng lịch sử — bảng đó
+ * chỉ-thêm (AD-13) nên `DELETE` bình thường bị chặn. Không dọn secret thì ràng buộc "một chủ
+ * thể một nhãn" bắt trúng bản ghi mồ côi của lần chạy trước.
+ */
+export function resetServiceAccounts(): void {
+  sql(
+    "ALTER TABLE service_account_history DISABLE TRIGGER service_account_history_no_delete; " +
+      "DELETE FROM secret WHERE owner_type = 'service_account' AND owner_id IN (SELECT id FROM service_account WHERE code ILIKE '%E2E%'); " +
+      "DELETE FROM file WHERE owner_type = 'service_account' AND owner_id IN (SELECT id FROM service_account WHERE code ILIKE '%E2E%'); " +
+      "DELETE FROM service_account_history WHERE service_account_id IN (SELECT id FROM service_account WHERE code ILIKE '%E2E%'); " +
+      "ALTER TABLE service_account_history ENABLE TRIGGER service_account_history_no_delete; " +
+      "DELETE FROM service_account WHERE code ILIKE '%E2E%'",
+  );
+}
+
+/**
  * Đẩy mốc step-up của mọi phiên lùi 1 giờ — giả lập "hết grace 10 phút" mà không phải chờ.
  *
  * Cách khác là hạ `secret.stepup_grace_minutes` xuống 0, nhưng SystemConfigService cache 30
