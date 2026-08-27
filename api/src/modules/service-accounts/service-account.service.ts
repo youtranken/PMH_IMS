@@ -14,7 +14,11 @@ import type { SortQuery } from '../../common/sorting';
 import { escapeLike, pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { diffRecord, hasChanges } from '../../common/record-diff';
 import { AuditWriterService } from '../audit/audit-writer.service';
-import { validateServiceAccount, type ServiceAccountKind } from './service-account-rules';
+import {
+  checkAllowedIps,
+  validateServiceAccount,
+  type ServiceAccountKind,
+} from './service-account-rules';
 import { serviceAccountHistoryTable, serviceAccountTable } from './service-account.schema';
 import type {
   ServiceAccountFilter,
@@ -127,7 +131,7 @@ export class ServiceAccountService {
     input: ServiceAccountInput,
   ): Promise<ServiceAccountRecord> {
     const before = await this.requireRow(id);
-    const { values, warnings } = this.prepare(input, before.status as ServiceAccountRecord['status']);
+    const { values, warnings } = this.prepare(input, before);
     const changes = diffRecord(TRACKED, before, values);
     if (!hasChanges(changes)) return { ...toRecord(before), warnings };
 
@@ -177,7 +181,11 @@ export class ServiceAccountService {
   }
 
   /** Chuẩn hóa + kiểm luật thuần. Lỗi thì 400 kèm ĐỦ chỗ sai, không chỉ chỗ đầu tiên. */
-  private prepare(input: ServiceAccountInput, fallbackStatus: ServiceAccountRecord['status'] = 'active') {
+  private prepare(
+    input: ServiceAccountInput,
+    /** Bản ghi đang có — chỉ có khi SỬA. Dùng để giữ nguyên ô không được gửi lên. */
+    before?: typeof serviceAccountTable.$inferSelect,
+  ) {
     const kind = input.kind;
     const vpn = kind === 'vpn';
     const check = validateServiceAccount({
@@ -196,26 +204,46 @@ export class ServiceAccountService {
         message: check.errors.join(' '),
       });
     }
+    /*
+     * THIẾU một ô nghĩa là "đừng đụng tới", KHÔNG phải "xoá đi".
+     *
+     * Mọi ô trong `ServiceAccountBodyDto` đều `@IsOptional()`, nên một `PATCH {code, kind,
+     * name}` — đúng bộ tối thiểu mà DTO cho phép — sẽ ghi `null` đè lên login, bộ phận,
+     * người phụ trách, nhóm VPN, dải IP và ghi chú; rồi ghi vào lịch sử như một lần sửa bình
+     * thường. Form hiện tại luôn gửi đủ ô nên chỗ này chỉ cắn người gọi API, và cắn im lặng.
+     *
+     * `keep` chỉ áp khi SỬA (`before` có giá trị). Lúc TẠO thì thiếu ô đúng là để trống.
+     */
+    const keep = <K extends 'login' | 'department' | 'ownerName' | 'groupName' | 'allowedIps' | 'note'>(
+      key: K,
+      raw: string | undefined,
+    ): string | null => (raw === undefined ? (before?.[key] ?? null) : blank(raw));
+
     return {
       values: {
         code: input.code.trim(),
         kind,
         name: input.name.trim(),
-        login: blank(input.login),
-        department: blank(input.department),
-        ownerName: blank(input.ownerName),
+        login: keep('login', input.login),
+        department: keep('department', input.department),
+        ownerName: keep('ownerName', input.ownerName),
         // Ô của loại khác đã bị `validateServiceAccount` chặn; ở đây ép null cho chắc, để
         // đổi loại từ VPN sang dùng chung không để lại vết của loại cũ.
-        groupName: vpn ? blank(input.groupName) : null,
-        allowedIps: vpn ? blank(input.allowedIps) : null,
-        note: blank(input.note),
+        groupName: vpn ? keep('groupName', input.groupName) : null,
         /*
-         * KHÔNG mặc định 'active' khi sửa: mọi ô trong DTO đều `@IsOptional()`, nên một
-         * `PATCH {code, kind, name}` sẽ âm thầm bật lại một tài khoản vừa bị vô hiệu hóa —
-         * xoá công của `disable()` và cái lý do nó đã ghi, mà dòng lịch sử chỉ nói "updated".
-         * Thiếu `status` nghĩa là "đừng đụng tới", không phải "bật lên".
+         * Lưu bản ĐÃ CHUẨN HÓA: `checkAllowedIps` vốn đã bỏ khoảng trắng thừa, bỏ mục rỗng
+         * và bỏ mục trùng — nhưng bản trước lưu nguyên chuỗi thô, nên "1.2.3.4, , 1.2.3.4"
+         * nằm y nguyên trong DB và đi vòng qua form vẫn thế. Dựng ra một hàm chuẩn hóa rồi
+         * không ai đọc thì nó chỉ là một lời hứa trong test.
          */
-        status: input.status ?? fallbackStatus,
+        allowedIps: vpn ? normalizeIps(keep('allowedIps', input.allowedIps)) : null,
+        note: keep('note', input.note),
+        /*
+         * KHÔNG mặc định 'active' khi sửa: cùng lý do như trên — `PATCH` thiếu `status` sẽ
+         * âm thầm bật lại một tài khoản vừa bị vô hiệu hóa, xoá công của `disable()` và cái
+         * lý do nó đã ghi, mà dòng lịch sử chỉ nói "updated".
+         */
+        status: input.status ?? before?.status ?? 'active',
       },
       warnings: check.warnings,
     };
@@ -266,6 +294,13 @@ export class ServiceAccountService {
     }
     return rows[0];
   }
+}
+
+/** Chuẩn hóa danh sách IP được phép; giữ `null` nguyên là `null`. */
+function normalizeIps(value: string | null): string | null {
+  if (value === null) return null;
+  const normalized = checkAllowedIps(value).normalized;
+  return normalized.length === 0 ? null : normalized.join(', ');
 }
 
 function blank(value?: string | null): string | null {

@@ -9,7 +9,7 @@ import {
 import { DRIZZLE_DB } from "../../database/database.module";
 import type { Database } from "../../database/database.module";
 import type { Page, PageQuery } from "../../common/pagination";
-import { pgErrorCode, PG_UNIQUE_VIOLATION } from "../../common/sql";
+import { pgConstraint, pgErrorCode, PG_UNIQUE_VIOLATION } from "../../common/sql";
 import type { SortQuery } from "../../common/sorting";
 import { AuditWriterService } from "../audit/audit-writer.service";
 import { OutboxService } from "../outbox/outbox.service";
@@ -122,10 +122,24 @@ export class AccountsService {
         return created;
       });
     } catch (error) {
+      /*
+       * Đọc TÊN ràng buộc, không đoán.
+       *
+       * Bảng `users` có HAI khóa duy nhất: `email` (0002) và `users_employee_code_uq` (0031).
+       * Tra email ở trên là TOCTOU — hai SA cùng gửi một email (hay một người bấm Lưu hai
+       * lần) thì lượt sau đụng khóa email. Gán mọi 23505 vào một câu là chỉ sai hẳn ô: người
+       * dùng đọc `Mã nhân viên "" đã thuộc về một tài khoản khác` trong khi họ để trống ô đó.
+       */
       if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
+        if (pgConstraint(error) === "users_employee_code_uq") {
+          throw new ConflictException({
+            code: "EMPLOYEE_CODE_TAKEN",
+            message: `Mã nhân viên "${(input.employeeCode ?? "").trim()}" đã thuộc về một tài khoản khác.`,
+          });
+        }
         throw new ConflictException({
-          code: "EMPLOYEE_CODE_TAKEN",
-          message: `Mã nhân viên "${(input.employeeCode ?? "").trim()}" đã thuộc về một tài khoản khác.`,
+          code: "EMAIL_TAKEN",
+          message: "Email này đã có tài khoản.",
         });
       }
       throw error;
@@ -155,11 +169,21 @@ export class AccountsService {
         message: "Không tìm thấy tài khoản.",
       });
     }
+    /*
+     * THIẾU một ô nghĩa là "đừng đụng tới", KHÔNG phải "xoá đi" — chuỗi RỖNG mới là xoá.
+     *
+     * Ba ô này đều `@IsOptional()` trong `ProfileDto`, nên một `PATCH {fullName}` — đúng bộ
+     * tối thiểu DTO cho phép — sẽ ghi `null` đè lên SĐT, mã nhân viên và ngày sinh. Form
+     * hiện tại luôn gửi đủ ô nên chỗ này chỉ cắn người gọi API, và cắn im lặng.
+     */
+    const keep = (raw: string | undefined, current: string | null): string | null =>
+      raw === undefined ? current : blankToNull(raw);
+
     const values = {
       fullName: input.fullName.trim(),
-      phone: blankToNull(input.phone),
-      employeeCode: blankToNull(input.employeeCode),
-      birthDate: blankToNull(input.birthDate),
+      phone: keep(input.phone, before.phone),
+      employeeCode: keep(input.employeeCode, before.employeeCode),
+      birthDate: keep(input.birthDate, before.birthDate),
     };
 
     try {

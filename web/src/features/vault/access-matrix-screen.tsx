@@ -218,7 +218,11 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
       {/* Chỉ hiện dòng tổng khi CẢ HAI truy vấn đã xong và không lỗi. `scopes` hỏng thì
           `allScopes` rỗng và dòng này nói "0 nhóm chưa gán cho ai" — trên đúng cái màn sinh
           ra để soi chỗ hổng, một request hỏng lại đọc thành giấy chứng nhận sạch sẽ. */}
-      {!rules.isLoading && !scopes.isLoading && !scopes.isError ? (
+      {/* Gác CẢ HAI truy vấn. `rules` hỏng thì `totalRules` = 0 và `scopedRules` rỗng, nên
+          dòng này vẽ ra "0 dòng quyền · M nhóm, trong đó M nhóm chưa gán cho ai" ngay phía
+          trên khối báo lỗi — một con số kiểm toán bịa ra, đúng kiểu hỏng mà chú thích bên
+          cạnh đã mô tả cho `scopes`. */}
+      {!rules.isLoading && !rules.isError && !scopes.isLoading && !scopes.isError ? (
         <p className="muted">
           {t('access.summary', {
             people: people.length,

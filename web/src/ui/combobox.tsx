@@ -83,6 +83,15 @@ export function Combobox<T>({
   const choose = (option: T) => {
     onSelect(option);
     setClosed(true);
+    /*
+     * Trả về "chưa chạm" luôn, không chỉ đóng.
+     *
+     * `onSelect` thường làm `options` đổi (nơi gọi xoá từ khoá lọc, hoặc danh sách được tính
+     * lại theo giá trị vừa chọn), và effect `[options]` ngay trên lại `setClosed(false)` —
+     * menu vừa đóng đã bung lại ngay. Đặt `touched = false` khiến điều kiện `open` không thể
+     * bật lên cho tới khi người dùng thật sự chạm vào ô lần nữa, đúng ý nghĩa của cờ này.
+     */
+    setTouched(false);
   };
 
   // Mũi tên bung/đóng như dropdown: đóng → mở lại (nếu có gợi ý) và focus để gõ lọc.

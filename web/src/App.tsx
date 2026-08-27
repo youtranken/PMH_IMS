@@ -55,10 +55,18 @@ export default function App() {
   );
 }
 
-/** Chuyển hướng đường cũ CÓ `:id` sang đường mới, ghép lại đúng id đang đứng trên URL. */
-function RedirectWithId({ to }: { to: string }) {
+/**
+ * Chuyển hướng đường cũ sang đường mới, GIỮ NGUYÊN query và hash.
+ *
+ * Chính đợt này thêm deep-link `?tab=vault`, nên một link đã ghim
+ * `/thiet-bi/<id>?tab=vault` mà rơi mất query sẽ mở ra tab Hồ sơ — người bấm không hiểu vì
+ * sao nó không vào thẳng két như mọi khi.
+ */
+function LegacyRedirect({ to, withId }: { to: string; withId?: boolean }) {
   const { id = '' } = useParams();
-  return <Navigate to={`${to}/${id}`} replace />;
+  const location = useLocation();
+  const path = withId ? `${to}/${id}` : to;
+  return <Navigate to={`${path}${location.search}${location.hash}`} replace />;
 }
 
 function AppRoutes() {
@@ -98,7 +106,7 @@ function AppRoutes() {
         {/* Link đăng nhập tiếng Việt đã ghim: đưa sang đúng đường mới thay vì để `*` gom hết
             về màn đăng nhập — người đang ở giữa luồng 2 lớp phải quay lại đúng bước của họ. */}
         {LEGACY_AUTH_ROUTES.map(({ from, to }) => (
-          <Route key={from} path={from} element={<Navigate to={to} replace />} />
+          <Route key={from} path={from} element={<LegacyRedirect to={to} />} />
         ))}
         <Route path="*" element={<Navigate to={LOGIN_PATH} replace />} />
       </Routes>
@@ -151,11 +159,7 @@ function AppRoutes() {
         {/* Link tiếng Việt đã ghim/đã gửi cho nhau vẫn mở được, và thanh địa chỉ đổi luôn
             sang đường mới (`replace` để nút Back không kẹt giữa hai đường). */}
         {LEGACY_ROUTES.map(({ from, to, withId }) => (
-          <Route
-            key={from}
-            path={from}
-            element={withId ? <RedirectWithId to={to} /> : <Navigate to={to} replace />}
-          />
+          <Route key={from} path={from} element={<LegacyRedirect to={to} withId={withId} />} />
         ))}
         <Route path="*" element={<NotFound />} />
       </Routes>

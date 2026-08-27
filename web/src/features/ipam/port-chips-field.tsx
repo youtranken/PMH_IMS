@@ -43,7 +43,14 @@ export function PortChipsField({
   return (
     <div className="port-chips">
       {chips.length > 0 ? (
-        <ul className="chip-list">
+        /*
+         * `id` đặt lên chính danh sách chip khi ô nhập đã bị tháo (chế độ sửa, danh sách đầy
+         * ngay từ đầu). Không có nó thì `<Field htmlFor="nat-external">` trỏ vào một phần tử
+         * không tồn tại: bấm nhãn không xảy ra gì, và `getByLabel('Port ngoài')` của bài kiểm
+         * cũng không tìm ra gì. Cùng lỗi đã sửa cho ô "IP trong" bằng cách thêm `id` vào
+         * `Select`, chỉ khác chỗ.
+         */
+        <ul className="chip-list" id={full ? inputId : undefined}>
           {chips.map((chip, index) => (
             <li key={chip.value} className={`chip${isWideRange(chip) ? ' chip-warn' : ''}`}>
               <span className="mono">{chip.value}</span>

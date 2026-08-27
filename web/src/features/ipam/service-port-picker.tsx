@@ -60,6 +60,7 @@ export function ServicePortPicker({
         onPick(service);
         // Xoá từ khoá sau khi chọn: ô này KHÔNG giữ giá trị (giá trị đi vào ô port bên trên),
         // để nguyên chữ cũ thì lần mở sau menu đã bị lọc sẵn mà không ai biết vì sao.
+        // Việc menu tự bung lại vì `options` đổi danh tính đã chặn ở chính `Combobox`.
         setQuery('');
       }}
       action={{ label: t('nat.serviceAdd'), onClick: onAdd }}
