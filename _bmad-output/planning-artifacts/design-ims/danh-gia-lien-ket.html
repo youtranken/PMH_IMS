@@ -1,0 +1,308 @@
+<title>Liên kết tính năng IMS</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+/* Màu lấy từ web/src/css/tokens.css ("Sunset Grove") — cùng hệ với chính ứng dụng. */
+:root {
+  --canvas:#f7f6f2; --surface:#ffffff; --surface-2:#f2f1ea;
+  --ink:#1f231c; --ink-2:#5a615a; --ink-3:#5c635c;
+  --border:#e9eae2; --border-2:#d8dbd0;
+  --primary:#0e9f6e; --primary-ink:#0a7d54; --primary-soft:#e5f6ee;
+  --warm:#f59e0b; --warm-ink:#ea580c; --warm-soft:#fef2df;
+  --ok:#0f7a55; --ok-soft:#e4f4ee;
+  --warn:#a34d08; --warn-soft:#fdf0e3;
+  --danger:#c0392b; --danger-soft:#fdeceb;
+  --muted:#5f665f; --muted-soft:#efeee7;
+  --shadow:0 1px 3px rgba(16,24,40,.08),0 1px 2px rgba(16,24,40,.05);
+  --r-sm:8px; --r:10px; --r-lg:14px;
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:ui-monospace,'Cascadia Code','SF Mono',Consolas,monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas:#141a15; --surface:#18201a; --surface-2:#1d261d;
+    --ink:#e9ede7; --ink-2:#a7b0a5; --ink-3:#9aa39a;
+    --border:#26312a; --border-2:#37453a;
+    --primary:#34d399; --primary-ink:#6ee7b7; --primary-soft:#123024;
+    --warm:#fbbf24; --warm-ink:#f59e0b; --warm-soft:#3a2c14;
+    --ok:#43c294; --ok-soft:#13312a;
+    --warn:#e0a35a; --warn-soft:#3a2c18;
+    --danger:#ef6f63; --danger-soft:#3a1f1d;
+    --muted:#9aa59a; --muted-soft:#232d23;
+    --shadow:0 1px 3px rgba(0,0,0,.4),0 1px 2px rgba(0,0,0,.3);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --canvas:#141a15; --surface:#18201a; --surface-2:#1d261d;
+  --ink:#e9ede7; --ink-2:#a7b0a5; --ink-3:#9aa39a;
+  --border:#26312a; --border-2:#37453a;
+  --primary:#34d399; --primary-ink:#6ee7b7; --primary-soft:#123024;
+  --warm:#fbbf24; --warm-ink:#f59e0b; --warm-soft:#3a2c14;
+  --ok:#43c294; --ok-soft:#13312a;
+  --warn:#e0a35a; --warn-soft:#3a2c18;
+  --danger:#ef6f63; --danger-soft:#3a1f1d;
+  --muted:#9aa59a; --muted-soft:#232d23;
+  --shadow:0 1px 3px rgba(0,0,0,.4),0 1px 2px rgba(0,0,0,.3);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  margin:0; background:var(--canvas); color:var(--ink);
+  font-family:var(--font); font-size:15px; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap { max-width: 980px; margin: 0 auto; padding: 2.5rem 1.25rem 6rem; }
+.mono { font-family: var(--mono); font-size: .9em; }
+
+.eyebrow { font-size:.72rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--primary-ink); }
+h1 { font-size:2.1rem; font-weight:800; margin:.4rem 0 .6rem; letter-spacing:-.02em; text-wrap:balance; }
+.lede { color:var(--ink-2); max-width:65ch; margin:0; }
+h2 { font-size:1.3rem; font-weight:700; margin:0 0 .3rem; letter-spacing:-.01em; text-wrap:balance; }
+h3 { font-size:1rem; font-weight:700; margin:1.4rem 0 .3rem; }
+p { max-width: 68ch; }
+
+.finding { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.finding:first-of-type { border-top: none; }
+.f-head { display:flex; gap:.75rem; align-items:flex-start; margin-bottom:.5rem; }
+.f-n {
+  flex:none; width:2rem; height:2rem; border-radius:var(--r-sm);
+  display:grid; place-items:center; font-weight:800; font-size:.95rem;
+  background:var(--danger-soft); color:var(--danger);
+}
+.f-n.mild { background:var(--warn-soft); color:var(--warn); }
+.f-n.good { background:var(--ok-soft); color:var(--ok); }
+
+.tag {
+  display:inline-block; border-radius:999px; padding:.1rem .55rem;
+  font-size:.72rem; font-weight:700; letter-spacing:.02em;
+}
+.tag.a { background:var(--danger-soft); color:var(--danger); }
+.tag.b { background:var(--warn-soft); color:var(--warn); }
+.tag.c { background:var(--muted-soft); color:var(--muted); }
+
+.tbl-wrap { overflow-x:auto; margin:1rem 0; }
+table { width:100%; border-collapse:collapse; font-size:.9rem; background:var(--surface); }
+th, td { padding:.5rem .65rem; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+thead th {
+  font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-3);
+  border-bottom:2px solid var(--border-2); white-space:nowrap;
+}
+tbody th { font-weight:600; white-space:nowrap; }
+td.c { text-align:center; }
+.yes { color:var(--ok); font-weight:700; }
+.no  { color:var(--danger); font-weight:700; }
+.na  { color:var(--ink-3); }
+tbody tr:hover { background:var(--surface-2); }
+
+.matrix { border:1px solid var(--border); border-radius:var(--r); overflow:hidden; box-shadow:var(--shadow); }
+.legend { display:flex; gap:1.25rem; flex-wrap:wrap; font-size:.83rem; color:var(--ink-2); margin-top:.5rem; }
+
+.callout {
+  background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--warm);
+  border-radius:var(--r-sm); padding:.75rem .9rem; margin:.9rem 0; font-size:.92rem;
+}
+.callout.bad { border-left-color:var(--danger); }
+.callout.ok  { border-left-color:var(--primary); }
+.callout b { color:var(--ink); }
+
+pre {
+  background:var(--surface-2); border:1px solid var(--border); border-radius:var(--r-sm);
+  padding:.75rem .9rem; overflow-x:auto; font-family:var(--mono); font-size:.82rem;
+  line-height:1.7; margin:.9rem 0;
+}
+ul { max-width:68ch; padding-left:1.2rem; }
+li { margin:.25rem 0; }
+footer { margin-top:3.5rem; padding-top:1.25rem; border-top:1px solid var(--border); color:var(--ink-3); font-size:.85rem; }
+</style>
+
+<div class="wrap">
+
+<header>
+  <span class="eyebrow">IMS · rà soát trước phase sau · 28/08/2026</span>
+  <h1>Các tính năng đã nối với nhau chưa?</h1>
+  <p class="lede">
+    Soi bằng khóa ngoại thật trong DB, whitelist trong migration, đăng ký nguồn hạn trong code
+    và <span class="mono">graphify god-nodes</span> — không phỏng đoán. Kết luận ngắn:
+    <b>kiến trúc lành, nhưng bảy chỗ nối còn hở</b>, và Epic 8–9 sắp tới sẽ đi qua đúng mấy chỗ đó.
+  </p>
+</header>
+
+<section style="margin-top:2.5rem">
+  <h2>Ma trận: chủ thể nào nối được với năng lực nào</h2>
+  <p style="color:var(--ink-2)">Cột nào cũng có ít nhất một ô đỏ.</p>
+  <div class="tbl-wrap matrix">
+    <table>
+      <thead>
+        <tr>
+          <th>Chủ thể</th><th class="c">Lịch sử</th><th class="c">Giấy tờ</th>
+          <th class="c">Két sắt</th><th class="c">Quyền két</th><th class="c">Nguồn hạn</th><th class="c">Dashboard</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><th>Thiết bị</th><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td></tr>
+        <tr><th>Phần mềm</th><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td></tr>
+        <tr><th>Đường truyền ISP</th><td class="c yes">✓</td><td class="c yes">✓</td><td class="c no">✕</td><td class="c no">✕</td><td class="c yes">✓</td><td class="c yes">✓</td></tr>
+        <tr><th>Tài khoản dịch vụ</th><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c no">✕</td><td class="c no">✕</td><td class="c no">✕</td></tr>
+        <tr><th>Dải mạng</th><td class="c no">✕</td><td class="c no">✕</td><td class="c na">—</td><td class="c na">—</td><td class="c na">—</td><td class="c no">✕</td></tr>
+        <tr><th>Hồ sơ IP</th><td class="c yes">✓</td><td class="c no">✕</td><td class="c na">—</td><td class="c na">—</td><td class="c na">—</td><td class="c no">✕</td></tr>
+        <tr><th>Rule NAT</th><td class="c no">✕</td><td class="c no">✕</td><td class="c na">—</td><td class="c na">—</td><td class="c na">—</td><td class="c no">✕</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="legend">
+    <span><span class="yes">✓</span> đã nối</span>
+    <span><span class="no">✕</span> chưa nối, mà đáng ra nên có</span>
+    <span><span class="na">—</span> không áp dụng</span>
+  </div>
+</section>
+
+<section class="finding">
+  <div class="f-head"><span class="f-n">1</span><div><h2>Két sắt không với tới đường truyền</h2><span class="tag a">Nhóm A · rẻ</span></div></div>
+  <p>
+    <span class="mono">secret.owner_type</span> chỉ nhận <span class="mono">device</span>,
+    <span class="mono">software</span>, <span class="mono">service_account</span>. Nhưng
+    <span class="mono">file.owner_type</span> <b>đã</b> nhận <span class="mono">isp</span> từ lâu.
+  </p>
+  <div class="callout bad">
+    Hợp đồng PDF của đường truyền đính vào được, còn <b>mật khẩu PPPoE và tài khoản quản trị
+    modem nhà mạng thì không có chỗ đứng</b> — hai thứ luôn đi cùng nhau ngoài đời.
+  </div>
+  <p>Người dùng còn đúng hai đường, cả hai đều sai:</p>
+  <ul>
+    <li>gắn nhờ vào hồ sơ router — sáu tháng sau đổi router là mất dấu;</li>
+    <li>ghi vào ô Ghi chú của <span class="mono">isp_line</span> — chỗ <b>không mã hóa</b>,
+        đúng thứ két sắt sinh ra để dọn.</li>
+  </ul>
+</section>
+
+<section class="finding">
+  <div class="f-head"><span class="f-n">2</span><div><h2>Ma trận quyền két bỏ sót tài khoản dịch vụ</h2><span class="tag a">Nhóm A · mở khóa tính năng đang chết</span></div></div>
+  <p>
+    <span class="mono">access_list.scope_type</span> chỉ có <span class="mono">device_site</span>,
+    <span class="mono">device_type</span>, <span class="mono">software_kind</span>.
+    Tài khoản dịch vụ cất được mật khẩu từ migration <span class="mono">0033</span>, nhưng
+    <b>không nhóm đối tượng nào phủ nó</b> — nên tầng quyền của mọi Member với mọi secret loại
+    này vĩnh viễn là CẤM, kể cả khi SA muốn cấp thì cũng không có ô nào để chọn.
+  </p>
+  <div class="callout bad">
+    Đáng lo hơn: bài kiểm e2e đang <b>khóa đúng hành vi đó lại như thể nó là đặc tả</b> —
+    <i>"Member KHÔNG xem được mật khẩu của tài khoản dịch vụ — mặc định CẤM"</i>. Chú thích
+    trong bài có nói đây là hệ quả của việc chưa có nhóm đối tượng, nhưng đọc lướt sẽ tưởng là
+    chủ ý. Đây là <b>nợ</b>, không phải thiết kế.
+  </div>
+</section>
+
+<section class="finding">
+  <div class="f-head"><span class="f-n">3</span><div><h2>Sổ NAT và Dải mạng không có lịch sử nghiệp vụ</h2><span class="tag a">Nhóm A</span></div></div>
+  <p>
+    <span class="mono">nat_rule</span> và <span class="mono">subnet</span> không có bảng history,
+    cũng không có tab Lịch sử — chỉ có <span class="mono">audit_log</span>.
+  </p>
+  <div class="callout bad">
+    Sổ NAT lại chính là thứ auditor hỏi nhiều nhất: <b>"ai mở port 3389 ra internet, ngày nào,
+    vì sao, và ai gỡ nó"</b>. Hiện muốn trả lời phải tra <span class="mono">audit_log</span>
+    bằng SQL — không màn nào làm được.
+  </div>
+  <p>
+    Đối chiếu: <span class="mono">ip_address</span> <b>có</b> <span class="mono">ip_history</span>
+    và AC 5.2 bắt giữ vĩnh viễn. Nên đây không phải quyết định kiến trúc, chỉ là chưa làm tới.
+  </p>
+</section>
+
+<section class="finding">
+  <div class="f-head"><span class="f-n">4</span><div><h2>Giấy tờ không với tới IPAM và NAT</h2><span class="tag a">Nhóm A</span></div></div>
+  <p>
+    <span class="mono">FILE_OWNER_TYPES = ['device', 'isp', 'software', 'service_account']</span>.
+    Không đính được: sơ đồ mạng của một dải, biên bản bàn giao dải IP tĩnh từ nhà mạng, ảnh chụp
+    cấu hình Draytek kèm rule NAT. Cả ba đều là giấy tờ thật, đều đang nằm trong thư mục chia
+    sẻ của phòng IT.
+  </p>
+</section>
+
+<section class="finding">
+  <div class="f-head"><span class="f-n mild">5</span><div><h2>Dashboard chỉ biết ba khối</h2><span class="tag b">Nhóm B</span></div></div>
+  <p>Hiện có: Sắp hết hạn · Sự cố (chưa mở) · Break-glass tuần qua. Ba câu sếp hay hỏi mà
+     dashboard không trả lời được, <b>dù dữ liệu đã có sẵn</b>:</p>
+  <ul>
+    <li>Két sắt — bao nhiêu mật khẩu quá lâu chưa xoay;</li>
+    <li>IPAM — dải nào sắp đầy (<span class="mono">subnetUsage</span> đã tính sẵn phần trăm);</li>
+    <li>Tài khoản dịch vụ — bao nhiêu cái đã vô hiệu mà mật khẩu vẫn nằm trong két.</li>
+  </ul>
+</section>
+
+<section class="finding">
+  <div class="f-head"><span class="f-n mild">6</span><div><h2>Tài khoản dịch vụ không có ngày hết hiệu lực</h2><span class="tag b">Nhóm B</span></div></div>
+  <p>
+    <span class="mono">service_account</span> không có cột nào kiểu <span class="mono">end_date</span>.
+    Nhưng VPN cấp cho nhà thầu, kiểm toán viên, nhân sự thời vụ <b>luôn có ngày hết hạn</b> — và
+    đó đúng là loại tài khoản dễ bị quên nhất.
+  </p>
+  <div class="callout">
+    Thiếu cột đó thì nó không vào được cỗ máy expiry, không vào digest email, không lên
+    dashboard. <b>Cả một dây chuyền đã dựng sẵn mà chủ thể này không bước vào được.</b>
+  </div>
+</section>
+
+<section class="finding">
+  <div class="f-head"><span class="f-n mild">7</span><div><h2>Tiền chỉ tồn tại ở đúng một chỗ</h2><span class="tag c">Nhóm C · cần bàn</span></div></div>
+  <p>Soi toàn bộ schema, cột liên quan tới tiền <b>chỉ có một</b>:</p>
+  <pre>license_assignment.cost      bigint     -- chi phí MỘT ghế gán cho MỘT máy
+license_assignment.contract  text</pre>
+  <p>
+    Không có: giá mua thiết bị, số hóa đơn thiết bị, chi phí tổng của một hồ sơ phần mềm, cước
+    tháng của đường truyền. Nên câu <b>"IT tiêu bao nhiêu một năm"</b> hiện chỉ cộng được phần
+    license theo ghế — phần nhỏ nhất trong ba phần.
+  </p>
+</section>
+
+<section class="finding">
+  <div class="f-head"><span class="f-n good">✓</span><div><h2>Sức khỏe kiến trúc — phần này đạt</h2></div></div>
+  <p><span class="mono">graphify god-nodes</span> sau lượt cập nhật mới nhất (3200 node, 7514 cạnh, 241 community):</p>
+  <pre>1. Roles()              145   2. AuthedRequest       100   3. Audited()            86
+4. Database              60   5. Tx                   53   6. firstLogin()         47
+7. resetUsers()          47   8. AuditWriterService   45   9. E2E_SA               42
+10. SystemConfigService  37  11. DevicesService       30  12. SoftwareService      30</pre>
+  <div class="callout ok">
+    Mười hub đầu <b>đều là hạ tầng xuyên suốt</b> (quyền · audit · transaction · config) và
+    helper e2e — đúng thứ được phép làm hub. Không file nghiệp vụ nội bộ nào trèo lên, tức là
+    <b>AD-2 vẫn đang được giữ</b>. <span class="mono">dependency-cruiser</span> cũng sạch:
+    191 module, 850 phụ thuộc, 0 vi phạm.
+  </div>
+  <p>
+    Một quan sát nhỏ: <b>module <span class="mono">isp</span> không tồn tại</b> — đường truyền
+    sống trong module <span class="mono">software</span>. Theo AD-3 thì đây là một chủ thể có
+    bảng riêng nhưng không có module chủ. Chưa gây hỏng gì, nhưng nếu phase sau đụng nhiều vào
+    ISP thì nên tách trước khi nó dính thêm.
+  </p>
+</section>
+
+<section class="finding">
+  <h2>Đề xuất thứ tự cho phase sau</h2>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Nhóm</th><th>Việc</th><th>Vì sao xếp ở đây</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag a">A</span></td><td><span class="mono">isp</span> vào két sắt</td><td>Ba chỗ + một migration. Đóng lỗ hổng nguy hiểm nhất</td></tr>
+        <tr><td><span class="tag a">A</span></td><td><span class="mono">service_account_kind</span> vào ma trận quyền</td><td>Mở khóa một tính năng đang chết hẳn</td></tr>
+        <tr><td><span class="tag a">A</span></td><td><span class="mono">nat_rule_history</span> + tab Lịch sử</td><td>Thứ auditor hỏi mà hệ thống chưa trả lời được</td></tr>
+        <tr><td><span class="tag a">A</span></td><td>IPAM · NAT vào <span class="mono">FILE_OWNER_TYPES</span></td><td>Giấy tờ thật đang nằm ngoài hệ thống</td></tr>
+        <tr><td><span class="tag b">B</span></td><td><span class="mono">service_account.end_date</span></td><td>Nối chủ thể vào dây chuyền expiry đã dựng sẵn</td></tr>
+        <tr><td><span class="tag b">B</span></td><td>Ba khối mới cho dashboard</td><td>Dữ liệu đã có, chỉ chưa ai hỏi nó</td></tr>
+        <tr><td><span class="tag c">C</span></td><td>Chi phí: giá mua · hóa đơn · cước tháng</td><td>Mở ra một CÂU HỎI MỚI cho hệ thống — xứng đáng một buổi bàn riêng</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="callout ok">
+    Epic 8 (phiếu ISO) và Epic 9 (sự cố) đang <span class="mono">backlog</span>. Cả hai sẽ cần
+    đính giấy tờ, cần lịch sử, cần audit — tức là chúng sẽ <b>đi qua đúng những đường đang hở ở
+    nhóm A</b>. Làm nhóm A trước thì hai epic đó không phải tự dựng đường riêng.
+  </div>
+</section>
+
+<footer>
+  Bản đầy đủ có trong repo: <span class="mono">docs/DANH-GIA-LIEN-KET.md</span>.
+  Mọi con số đều tra lại được từ DB đang chạy và từ migration.
+</footer>
+
+</div>
