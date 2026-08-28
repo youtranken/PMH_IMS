@@ -935,7 +935,7 @@ export default {
   },
   disposal: {
     title: 'Kho thanh lý',
-    subtitle: 'Mọi hồ sơ đã ngừng dùng của cả hệ thống về một chỗ — thiết bị, phần mềm, đường truyền, tài khoản',
+    subtitle: 'Mọi hồ sơ đã ngừng dùng của cả hệ thống về một chỗ — thiết bị, phần mềm, tài khoản',
     note: 'Hồ sơ trong kho KHÔNG còn được tính hạn và không vào email nhắc gia hạn. Muốn dùng lại thì mở hồ sơ gốc và đổi trạng thái.',
     search: 'Tìm theo mã, tên hoặc loại…',
     filterKind: 'Lọc theo loại hồ sơ',
@@ -943,21 +943,17 @@ export default {
     kind: 'Loại',
     kindDevice: 'Thiết bị',
     kindSoftware: 'Phần mềm',
-    kindIsp: 'Đường truyền',
     kindServiceAccount: 'Tài khoản dịch vụ',
     code: 'Mã',
     detail: 'Chi tiết',
     at: 'Ngày đưa vào kho',
     dispose: 'Đưa vào kho thanh lý',
-    disposeIsp: 'Cắt hợp đồng',
     confirmTitle: 'Đưa vào kho thanh lý',
     confirmSoftware:
       'Đưa hồ sơ {{code}} vào kho thanh lý? Nó sẽ không còn được tính hạn và không vào email nhắc gia hạn. Ghế đã gán vẫn giữ nguyên để tra cứu.',
-    confirmIsp:
-      'Cắt hợp đồng đường truyền {{code}}? Nó sẽ không còn được tính hạn và không vào email nhắc gia hạn.',
     done: 'Đã đưa vào kho thanh lý.',
     empty: 'Kho thanh lý đang trống',
-    emptyHint: 'Chưa hồ sơ nào bị thanh lý, cắt hay vô hiệu hóa.',
+    emptyHint: 'Chưa hồ sơ nào bị thanh lý hay vô hiệu hóa.',
   },
   access: {
     title: 'Quyền xem két sắt',

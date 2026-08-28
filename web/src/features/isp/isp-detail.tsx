@@ -9,7 +9,6 @@ import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { DatePicker } from "@/ui/date-picker";
 import { Dialog } from "@/ui/dialog";
-import { DisposeButton } from "@/ui/dispose-button";
 import { ExpiryBadge } from "@/ui/expiry-badge";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
@@ -123,17 +122,6 @@ export function IspDetail({ me }: { me: Me }) {
             >
               {t("isp.renew")}
             </button>
-            {/* Đường truyền đã cắt thì không bày nút cắt nữa. */}
-            {item.status !== "terminated" ? (
-              <DisposeButton
-                url={`/api/v1/isp-lines/${item.id}`}
-                body={{ status: "terminated" }}
-                label={t("disposal.disposeIsp")}
-                confirmMessage={t("disposal.confirmIsp", { code: item.code })}
-                csrfToken={me.csrfToken}
-                onDone={() => void refresh()}
-              />
-            ) : null}
           </>
         }
       />

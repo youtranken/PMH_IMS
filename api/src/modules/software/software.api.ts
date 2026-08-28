@@ -55,9 +55,4 @@ export class SoftwareApiService {
     return page.items;
   }
 
-  /** Đường truyền đã cắt. Mỗi module giữ TÊN TRẠNG THÁI của mình — ở đây là `terminated`. */
-  async listTerminatedIsp(): Promise<IspLineListItem[]> {
-    const page = await this.isp.list({ page: 1, limit: 500 }, { status: 'terminated' });
-    return page.items;
-  }
 }

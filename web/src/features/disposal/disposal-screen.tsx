@@ -10,7 +10,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 
 /** Khớp `DISPOSAL_KINDS` bên API. */
-type DisposalKind = 'device' | 'software' | 'isp' | 'service_account';
+type DisposalKind = 'device' | 'software' | 'service_account';
 
 interface DisposalItem {
   kind: DisposalKind;
@@ -25,7 +25,6 @@ interface DisposalItem {
 const KIND_KEY: Record<DisposalKind, string> = {
   device: 'disposal.kindDevice',
   software: 'disposal.kindSoftware',
-  isp: 'disposal.kindIsp',
   service_account: 'disposal.kindServiceAccount',
 };
 
@@ -33,24 +32,22 @@ const KIND_KEY: Record<DisposalKind, string> = {
 const LINK: Record<DisposalKind, (id: string) => string> = {
   device: PATHS.device,
   software: PATHS.softwareItem,
-  isp: PATHS.ispLine,
   service_account: PATHS.serviceAccount,
 };
 
 /**
  * Kho thanh lý — MỘT chỗ nhìn thấy mọi thứ công ty đã ngừng dùng.
  *
- * Vì sao cần: bốn loại hồ sơ có bốn trạng thái "ngừng dùng" mang bốn cái tên khác nhau
- * (thiết bị *đã thanh lý*, phần mềm *đã bỏ*, đường truyền *đã cắt*, tài khoản *đã vô hiệu*),
- * nằm ở bốn màn khác nhau. Câu "công ty đã bỏ những gì trong quý này" vì thế không ai trả lời
- * được, dù dữ liệu đã có đủ từ lâu.
+ * Vì sao cần: ba loại hồ sơ có ba trạng thái "ngừng dùng" mang ba cái tên khác nhau (thiết bị
+ * *đã thanh lý*, phần mềm *đã bỏ*, tài khoản *đã vô hiệu*), nằm ở ba màn khác nhau. Câu "công
+ * ty đã bỏ những gì trong quý này" vì thế không ai trả lời được, dù dữ liệu đã có đủ từ lâu.
  *
  * Màn này KHÔNG ghi gì. Đưa một hồ sơ vào kho là việc của chính module chủ, dưới đúng cái tên
  * mà module đó dùng — thêm một đường ghi thứ hai ở đây là tạo ra hai nguồn sự thật cho cùng
  * một trạng thái.
  *
- * Chuyện "không tính hạn, không vào email digest" thì các module đã lo sẵn: cả ba nguồn hạn
- * lọc `status <> retired/terminated` ngay trong truy vấn của mình.
+ * Chuyện "không tính hạn, không vào email digest" thì các module đã lo sẵn: mọi nguồn hạn lọc
+ * `status <> retired` ngay trong truy vấn của mình.
  */
 export function DisposalScreen() {
   const { t } = useTranslation();
