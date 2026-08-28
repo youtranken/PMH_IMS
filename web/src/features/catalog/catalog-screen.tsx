@@ -14,6 +14,7 @@ import { FilterBar } from '@/ui/filter-bar';
 import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
+import { RowActions } from '@/ui/row-actions';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
@@ -35,7 +36,7 @@ import {
   type VendorRow,
 } from './catalog-types';
 
-const LIMIT = 20;
+const DEFAULT_LIMIT = 20;
 
 const TAB_KEYS: { key: CatalogEntity; labelKey: string; searchKey: string }[] = [
   { key: 'site', labelKey: 'catalog.tabSite', searchKey: 'catalog.searchSite' },
@@ -238,6 +239,8 @@ export function CatalogScreen({ me }: { me: Me }) {
 
   const [entity, setEntity] = useState<CatalogEntity>('site');
   const [page, setPage] = useState(1);
+  /** Số dòng/trang do NGƯỜI DÙNG chọn (10/20/50/100), không còn là hằng số cứng. */
+  const [limit, setLimit] = useState(DEFAULT_LIMIT);
   const [search, setSearch] = useState('');
   // Sắp xếp chạy ở SERVER (`manualSorting`) — lý do giống màn Thiết bị: bảng phân trang
   // 20 dòng/trang, sắp ở client chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả danh mục.
@@ -250,10 +253,10 @@ export function CatalogScreen({ me }: { me: Me }) {
   const importable = (IMPORTABLE_ENTITIES as readonly string[]).includes(entity);
 
   const rows = useQuery({
-    queryKey: ['catalog', entity, page, search, sorting],
+    queryKey: ['catalog', entity, page, limit, search, sorting],
     queryFn: () =>
       apiFetch<{ items: CatalogRow[]; total: number }>(
-        `/api/v1/catalog/${entity}?${buildQuery(page, search, sorting)}`,
+        `/api/v1/catalog/${entity}?${buildQuery(page, limit, search, sorting)}`,
       ),
   });
 
@@ -306,67 +309,79 @@ export function CatalogScreen({ me }: { me: Me }) {
       meta: { className: 'col-center' },
       cell: ({ row }) => {
         const catalogRow = row.original;
+        const name = catalogLabel(entity, catalogRow);
         return (
           <div className="action-cell">
-            <button type="button" className="btn sm" onClick={() => setEditing({ row: catalogRow })}>
-              {t('catalog.edit')}
-            </button>
-            <button
-              type="button"
-              className="btn sm"
-              onClick={() => {
-                void (async () => {
-                  const name = catalogLabel(entity, catalogRow);
-                  const ok = await askConfirm({
-                    message: t(
-                      catalogRow.active ? 'catalog.confirmDeactivate' : 'catalog.confirmActivate',
-                      { name },
-                    ),
-                    danger: catalogRow.active,
-                    confirmLabel: t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate'),
-                  });
-                  if (!ok) return;
-                  setActive.mutate(
-                    { id: catalogRow.id, active: !catalogRow.active },
-                    {
-                      onSuccess: () => void refresh(),
-                      onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
-                    },
-                  );
-                })();
-              }}
-            >
-              {t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate')}
-            </button>
-            <button
-              type="button"
-              className="btn sm danger"
-              onClick={() => {
-                void (async () => {
-                  const name = catalogLabel(entity, catalogRow);
-                  const ok = await askConfirm({
-                    message: t('catalog.confirmDelete', { name }),
-                    danger: true,
-                    confirmLabel: t('catalog.delete'),
-                  });
-                  if (!ok) return;
-                  remove.mutate(
-                    { id: catalogRow.id },
-                    {
-                      onSuccess: () => {
-                        toast({ message: t('catalog.deleted') });
-                        void refresh();
-                      },
-                      // Xóa mục đang được thiết bị dùng → API trả 409 kèm câu gợi ý
-                      // "hãy vô hiệu hóa"; hiện nguyên văn cho người dùng.
-                      onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
-                    },
-                  );
-                })();
-              }}
-            >
-              {t('catalog.delete')}
-            </button>
+            <RowActions
+              label={t('common.actionsOf', { subject: name })}
+              items={[
+                {
+                  key: 'edit',
+                  label: t('catalog.edit'),
+                  onSelect: () => setEditing({ row: catalogRow }),
+                },
+                {
+                  key: 'active',
+                  label: t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate'),
+                  /* Ngừng dùng là lấy đi (mục biến khỏi mọi ô chọn); dùng lại thì không.
+                     Cùng một nút, hai màu — vì đó là hai việc ngược nhau. */
+                  danger: catalogRow.active,
+                  onSelect: () => {
+                    void (async () => {
+                      const ok = await askConfirm({
+                        message: t(
+                          catalogRow.active
+                            ? 'catalog.confirmDeactivate'
+                            : 'catalog.confirmActivate',
+                          { name },
+                        ),
+                        danger: catalogRow.active,
+                        confirmLabel: t(
+                          catalogRow.active ? 'catalog.deactivate' : 'catalog.activate',
+                        ),
+                      });
+                      if (!ok) return;
+                      setActive.mutate(
+                        { id: catalogRow.id, active: !catalogRow.active },
+                        {
+                          onSuccess: () => void refresh(),
+                          onError: (err) =>
+                            toast({ message: errorMessage(err), tone: 'error' }),
+                        },
+                      );
+                    })();
+                  },
+                },
+                {
+                  key: 'delete',
+                  label: t('catalog.delete'),
+                  danger: true,
+                  onSelect: () => {
+                    void (async () => {
+                      const ok = await askConfirm({
+                        message: t('catalog.confirmDelete', { name }),
+                        danger: true,
+                        confirmLabel: t('catalog.delete'),
+                      });
+                      if (!ok) return;
+                      remove.mutate(
+                        { id: catalogRow.id },
+                        {
+                          onSuccess: () => {
+                            toast({ message: t('catalog.deleted') });
+                            void refresh();
+                          },
+                          // Xóa mục đang được thiết bị dùng → API trả 409 kèm câu gợi ý
+                          // "hãy vô hiệu hóa"; hiện nguyên văn cho người dùng.
+                          onError: (err) =>
+                            toast({ message: errorMessage(err), tone: 'error' }),
+                        },
+                      );
+                    })();
+                  },
+                },
+              ]}
+            />
           </div>
         );
       },
@@ -457,7 +472,8 @@ export function CatalogScreen({ me }: { me: Me }) {
 
             <Pagination
               page={page}
-              limit={LIMIT}
+              limit={limit}
+            onLimitChange={setLimit}
               total={rows.data?.total ?? 0}
               onPageChange={setPage}
             />
@@ -503,8 +519,8 @@ const TAB_SUFFIX: Record<CatalogEntity, string> = {
   service_port: 'ServicePort',
 };
 
-function buildQuery(page: number, search: string, sorting: SortingState): string {
-  const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
+function buildQuery(page: number, limit: number, search: string, sorting: SortingState): string {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (search) params.set('search', search);
   return [params.toString(), sortQuery(sorting)].filter(Boolean).join('&');
 }

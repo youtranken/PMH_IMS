@@ -39,7 +39,12 @@ table.table thead th .th-sort:hover {
   color: var(--ink);
 }
 table.table thead th .sort-arrow {
-  font-size: 0.7em;
+  /* Chevron kích thước theo `1em` nên cỡ mũi tên sắp xếp đặt ở ĐÂY, không ở component.
+     0.7em như ký tự ▲ cũ thì ở 12px chữ tiêu đề nó còn ~8px — nhìn ra một vệt mờ. */
+  font-size: 0.95em;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-left: 2px;
   /* `--accent` chưa từng được khai trong tokens.css — dùng token thật để khỏi rơi về fallback. */
   color: var(--primary-ink);
 }
@@ -179,7 +184,10 @@ table.table tbody tr.row-highlight td:first-child {
   white-space: nowrap;
 }
 
-/* --- Menu thao tác hàng "⋯" (bảng /tai-san) ------------------------------- */
+/* --- Menu thao tác hàng "⋯" (ui/row-actions.tsx) --------------------------
+ * Chép sang từ QLTS (AD-12) cùng đợt nền tảng, nhưng tới 28/08/2026 mới có component dùng
+ * tới — trước đó cột thao tác vẫn là dãy nút phẳng, và nó phình tới ba–năm nút một dòng.
+ * ---------------------------------------------------------------------------- */
 .row-actions {
   position: relative;
   text-align: right;
@@ -189,14 +197,20 @@ table.table tbody tr.row-highlight td:first-child {
   font-size: var(--fs-lg);
   line-height: 1;
 }
-.row-actions-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
+/* Vùng bấm đủ ngón tay chạm trúng (WCAG 2.5.8) — ba chấm vẽ ra chỉ rộng chừng 10px. */
+.row-actions .kebab {
+  min-width: 2rem;
+  min-height: 1.9rem;
+}
+.row-actions .kebab[aria-expanded='true'] {
+  background: var(--muted-soft);
+  color: var(--ink);
 }
 .row-actions-menu {
   /* Vị trí do Floating UI (useAnchoredMenu) set inline. */
-  z-index: 21;
+  z-index: var(--z-popover);
+  /* Radix modal set body{pointer-events:none}; menu portal ra body thừa hưởng → bật lại. */
+  pointer-events: auto;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -213,6 +227,17 @@ table.table tbody tr.row-highlight td:first-child {
   gap: var(--space-4);
   justify-content: flex-start;
   text-align: left;
+  /* Cả bề ngang menu là vùng bấm, không chỉ mấy chữ — mục ngắn ("Sửa") mà chỉ bấm trúng
+     đúng hai chữ thì menu này khó dùng hơn dãy nút nó vừa thay. */
+  width: 100%;
+  white-space: nowrap;
+  border-color: transparent;
+}
+/* Bàn phím đi bằng focus — không có vòng focus thấy được thì ↑↓ chạy mà không ai biết đang ở đâu. */
+.row-actions-menu button:focus-visible {
+  outline: none;
+  background: var(--muted-soft);
+  box-shadow: var(--ring);
 }
 /* Icon dẫn đầu: mờ (ink-3) cho action thường; item danger thì icon đỏ theo chữ. */
 .row-actions-menu .ra-ic {

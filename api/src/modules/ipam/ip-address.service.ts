@@ -95,22 +95,42 @@ export class IpAddressService {
    * giả vờ có nghĩa.
    */
   async listBySubnet(subnetId: string): Promise<SubnetSlot[]> {
-    const cidr = await this.subnets.cidrOf(subnetId);
-    const records = await this.listRecords(subnetId);
+    /*
+     * Dải ĐÃ VÔ HIỆU HÓA thì hiện luôn cả những hồ sơ IP đã tắt theo nó.
+     *
+     * Bỏ chúng đi thì 254 địa chỉ hiện ra là 254 ô TRỐNG — và "trống" ở màn này có nghĩa rất
+     * cụ thể: cấp cho máy khác được. Trong khi sự thật là mấy chục cái máy vẫn đang cắm đúng
+     * những địa chỉ đó dưới dạng IP tĩnh; không cái nào tự nhả ra chỉ vì cuốn sổ đã cất dải đi.
+     * Đây chính là lý do người dùng mở phiếu: vô hiệu hóa mà nhìn như đã xóa sạch.
+     *
+     * Dải đang dùng thì ngược lại — hồ sơ bị xóa lẻ ("gõ nhầm địa chỉ") PHẢI biến thành ô
+     * trống, vì đó là toàn bộ ý nghĩa của việc xóa nó.
+     */
+    const frame = await this.subnets.frameOf(subnetId);
+    const records = await this.listRecords(subnetId, {
+      includeVoided: frame.voidedAt !== null,
+    });
     const byAddress = new Map(records.map((row) => [row.address, row]));
 
-    return enumerateHosts(cidr).map<SubnetSlot>((address) => {
+    return enumerateHosts(frame.cidr).map<SubnetSlot>((address) => {
       const record = byAddress.get(address);
       return record ? { kind: 'record', ...record } : { kind: 'free', address };
     });
   }
 
   /** Chỉ những IP CÓ hồ sơ, sắp theo thứ tự số học (nhờ kiểu `inet` của Postgres). */
-  async listRecords(subnetId: string): Promise<IpAddressRecord[]> {
+  async listRecords(
+    subnetId: string,
+    options: { includeVoided?: boolean } = {},
+  ): Promise<IpAddressRecord[]> {
     const rows = await this.db
       .select()
       .from(ipAddressTable)
-      .where(and(eq(ipAddressTable.subnetId, subnetId), isNull(ipAddressTable.voidedAt)))
+      .where(
+        options.includeVoided
+          ? eq(ipAddressTable.subnetId, subnetId)
+          : and(eq(ipAddressTable.subnetId, subnetId), isNull(ipAddressTable.voidedAt)),
+      )
       .orderBy(asc(ipAddressTable.address));
     return this.decorate(rows);
   }
@@ -129,8 +149,15 @@ export class IpAddressService {
     return (await this.decorate([await this.requireAlive(id)]))[0];
   }
 
+  /**
+   * Lịch sử của MỘT hồ sơ IP — kể cả hồ sơ ĐÃ ẨN.
+   *
+   * `requireAlive` ở đây là chặn nhầm chỗ: câu "IP này từng của máy nào, ai xóa nó, vì sao"
+   * chỉ được hỏi SAU khi hồ sơ đã biến khỏi bảng. AC 5.2 bắt giữ lịch sử vĩnh viễn, mà giữ
+   * xong lại không cho đọc thì bằng không.
+   */
   async history(id: string): Promise<(typeof ipHistoryTable.$inferSelect)[]> {
-    await this.requireAlive(id);
+    await this.requireAny(id);
     return this.db
       .select()
       .from(ipHistoryTable)
@@ -218,13 +245,47 @@ export class IpAddressService {
       });
     }
 
+    /*
+     * Gán MÁY hoặc NGƯỜI DÙNG vào một hồ sơ đang TRỐNG thì nó thành ĐANG CẤP.
+     *
+     * Bản trước để `status` nguyên: một hàng vừa có tên máy vừa mang badge "Trống", còn nút
+     * lọc phía trên đếm "Đang cấp 0" — bảng và con số nói ngược nhau, và cả hai đều đúng theo
+     * dữ liệu. Người dùng thấy ô đã có máy nên tưởng đã cấp, còn hệ thống thì vẫn coi địa chỉ
+     * đó là chỗ trống và sẵn sàng cấp lần nữa cho máy khác.
+     *
+     * Vẫn KHÔNG nhận `status` từ body (AC 5.2: đổi trạng thái phải qua `transition`) — đây là
+     * hệ quả TỰ SUY từ việc gán chủ, đúng luật mà `create()` đã dùng từ đầu.
+     */
+    const nextOwner = {
+      deviceId: values.deviceId !== undefined ? values.deviceId : before.deviceId,
+      usedBy: values.usedBy !== undefined ? values.usedBy : before.usedBy,
+    };
+    const becomesAssigned =
+      before.status === 'free' && Boolean(nextOwner.deviceId || nextOwner.usedBy);
+
     try {
       const row = await this.db.transaction(async (tx) => {
         const rows = await tx
           .update(ipAddressTable)
-          .set({ ...values, updatedAt: new Date() })
+          .set({
+            ...values,
+            ...(becomesAssigned ? { status: 'assigned' as const } : {}),
+            updatedAt: new Date(),
+          })
           .where(eq(ipAddressTable.id, id))
           .returning();
+        if (becomesAssigned) {
+          // Dòng lịch sử RIÊNG cho bước chuyển, không trộn vào dòng "sửa hồ sơ": AC 5.2 đòi
+          // "IP này từng của máy nào" trả lời được, mà câu đó đọc từ chuỗi chuyển trạng thái.
+          await tx.insert(ipHistoryTable).values({
+            ipAddressId: id,
+            action: 'ip.assigned',
+            actor,
+            fromStatus: before.status,
+            toStatus: 'assigned',
+            changes: { reason: 'gán chủ khi sửa hồ sơ' },
+          });
+        }
         const changes = diffRecord(TRACKED, before, rows[0]);
         await this.audit.appendWithin(tx, {
           actor,
@@ -407,6 +468,18 @@ export class IpAddressService {
         message: 'Thiết bị không tồn tại.',
       });
     }
+  }
+
+  /** Tra một hồ sơ KỂ CẢ đã ẩn — dùng cho đường đọc lịch sử. */
+  private async requireAny(id: string): Promise<typeof ipAddressTable.$inferSelect> {
+    const rows = await this.db.select().from(ipAddressTable).where(eq(ipAddressTable.id, id));
+    if (rows.length === 0) {
+      throw new NotFoundException({
+        code: 'IP_NOT_FOUND',
+        message: 'Không tìm thấy hồ sơ IP này.',
+      });
+    }
+    return rows[0];
   }
 
   private async requireAlive(id: string): Promise<typeof ipAddressTable.$inferSelect> {

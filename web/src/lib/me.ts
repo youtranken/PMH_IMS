@@ -17,10 +17,18 @@ export interface Me {
   };
 }
 
-export const LOGIN_PATH = '/dang-nhap';
-export const TOTP_CHALLENGE_PATH = '/dang-nhap/xac-thuc';
-export const TOTP_ENROLL_PATH = '/dang-nhap/cai-dat-2-lop';
-export const CHANGE_PASSWORD_PATH = '/doi-mat-khau';
+export const LOGIN_PATH = '/login';
+export const TOTP_CHALLENGE_PATH = '/login/2fa';
+export const TOTP_ENROLL_PATH = '/login/2fa-setup';
+export const CHANGE_PASSWORD_PATH = '/change-password';
+
+/** Đường dẫn tiếng Việt của bản cũ, giữ để link đã ghim còn mở được (xem `lib/routes.ts`). */
+export const LEGACY_AUTH_ROUTES: { from: string; to: string }[] = [
+  { from: '/dang-nhap', to: LOGIN_PATH },
+  { from: '/dang-nhap/xac-thuc', to: TOTP_CHALLENGE_PATH },
+  { from: '/dang-nhap/cai-dat-2-lop', to: TOTP_ENROLL_PATH },
+  { from: '/doi-mat-khau', to: CHANGE_PASSWORD_PATH },
+];
 export const HOME_PATH = '/';
 
 /**

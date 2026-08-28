@@ -35,7 +35,7 @@ test('màn Sắp hết hạn đọc được ở 390px, sáng và tối', async 
   });
   expect(created.status()).toBe(201);
 
-  await page.goto('/sap-het-han');
+  await page.goto('/expiry');
   await expect(page.getByRole('heading', { name: 'Sắp hết hạn' })).toBeVisible();
   await expect(page.getByText('Chứng chỉ web E2E')).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);

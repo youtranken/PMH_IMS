@@ -71,7 +71,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     const stamp = Date.now().toString().slice(-6);
     const code = `SW-E2E-ATT-${stamp}`;
 
-    await page.goto('/thiet-bi');
+    await page.goto('/devices');
     await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
 
     const form = page.getByRole('dialog');
@@ -102,7 +102,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     const stamp = Date.now().toString().slice(-6);
     const code = `LIC-E2E-ATT-${stamp}`;
 
-    await page.goto('/phan-mem');
+    await page.goto('/software');
     await page.getByRole('button', { name: 'Thêm hồ sơ' }).click();
 
     const form = await fillSoftwareBasics(page, code, 'Office 365 có hợp đồng');
@@ -131,7 +131,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     const stamp = Date.now().toString().slice(-6);
     const code = `ISP-E2E-ATT-${stamp}`;
 
-    await page.goto('/duong-truyen');
+    await page.goto('/isp-lines');
     await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
 
     const form = page.getByRole('dialog');
@@ -154,7 +154,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     const stamp = Date.now().toString().slice(-6);
     const code = `LIC-E2E-BO-${stamp}`;
 
-    await page.goto('/phan-mem');
+    await page.goto('/software');
     await page.getByRole('button', { name: 'Thêm hồ sơ' }).click();
 
     const form = await fillSoftwareBasics(page, code, 'Hồ sơ đổi ý');
@@ -180,7 +180,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     const fake = join(tmpdir(), `gia-mao-${stamp}.pdf`);
     writeFileSync(fake, '<html><script>alert(1)</script></html>');
 
-    await page.goto('/phan-mem');
+    await page.goto('/software');
     await page.getByRole('button', { name: 'Thêm hồ sơ' }).click();
     const form = await fillSoftwareBasics(page, code, 'Hồ sơ kèm file lạ');
     await picker(page).setInputFiles(fake);
@@ -213,7 +213,7 @@ test.describe('Giấy tờ của hồ sơ phần mềm', () => {
     expect(created.status()).toBe(201);
     const id = ((await created.json()) as { id: string }).id;
 
-    await page.goto(`/phan-mem/${id}`);
+    await page.goto(`/software/${id}`);
     await page.getByRole('tab', { name: 'Giấy tờ' }).click();
     await expect(page.getByText('Chưa có giấy tờ nào.')).toBeVisible();
 

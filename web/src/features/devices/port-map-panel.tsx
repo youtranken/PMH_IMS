@@ -9,11 +9,13 @@ import { Combobox } from '@/ui/combobox';
 import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
+import { RowActions } from '@/ui/row-actions';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/features/ipam/use-departments';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import type { DeviceRow } from './device-types';
+import { PATHS } from '@/lib/routes';
 
 export interface PortRow {
   id: string;
@@ -123,7 +125,7 @@ export function PortMapPanel({
                       </td>
                       <td data-label={t('ports.connectedTo')}>
                         {port.connectedDeviceId ? (
-                          <Link className="mono" to={`/thiet-bi/${port.connectedDeviceId}`}>
+                          <Link className="mono" to={PATHS.device(port.connectedDeviceId)}>
                             {port.connectedDeviceCode}
                           </Link>
                         ) : (
@@ -144,41 +146,48 @@ export function PortMapPanel({
                       {canEdit ? (
                         <td>
                           <div className="action-cell">
-                            <button
-                              type="button"
-                              className="btn sm"
-                              onClick={() => setEditing({ port })}
-                            >
-                              {t('ports.edit')}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn sm danger"
-                              disabled={remove.isPending}
-                              onClick={() => {
-                                void (async () => {
-                                  const ok = await askConfirm({
-                                    message: t('ports.confirmRemove', { port: port.portLabel }),
-                                    danger: true,
-                                    confirmLabel: t('ports.remove'),
-                                  });
-                                  if (!ok) return;
-                                  remove.mutate(
-                                    { id: port.id },
-                                    {
-                                      onSuccess: () => {
-                                        toast({ message: t('ports.removed') });
-                                        void refresh();
-                                      },
-                                      onError: (error) =>
-                                        toast({ message: errorMessage(error), tone: 'error' }),
-                                    },
-                                  );
-                                })();
-                              }}
-                            >
-                              {t('ports.remove')}
-                            </button>
+                            <RowActions
+                              label={t('common.actionsOf', { subject: port.portLabel })}
+                              items={[
+                                {
+                                  key: 'edit',
+                                  label: t('ports.edit'),
+                                  onSelect: () => setEditing({ port }),
+                                },
+                                {
+                                  key: 'remove',
+                                  label: t('ports.remove'),
+                                  danger: true,
+                                  disabled: remove.isPending,
+                                  onSelect: () => {
+                                    void (async () => {
+                                      const ok = await askConfirm({
+                                        message: t('ports.confirmRemove', {
+                                          port: port.portLabel,
+                                        }),
+                                        danger: true,
+                                        confirmLabel: t('ports.remove'),
+                                      });
+                                      if (!ok) return;
+                                      remove.mutate(
+                                        { id: port.id },
+                                        {
+                                          onSuccess: () => {
+                                            toast({ message: t('ports.removed') });
+                                            void refresh();
+                                          },
+                                          onError: (error) =>
+                                            toast({
+                                              message: errorMessage(error),
+                                              tone: 'error',
+                                            }),
+                                        },
+                                      );
+                                    })();
+                                  },
+                                },
+                              ]}
+                            />
                           </div>
                         </td>
                       ) : null}
@@ -209,7 +218,7 @@ export function PortMapPanel({
                   {incoming.map((row) => (
                     <tr key={row.id}>
                       <td data-label={t('ports.fromDevice')}>
-                        <Link className="mono" to={`/thiet-bi/${row.deviceId}`}>
+                        <Link className="mono" to={PATHS.device(row.deviceId)}>
                           {row.deviceCode}
                         </Link>
                         <span className="cell-sub">{row.deviceName}</span>

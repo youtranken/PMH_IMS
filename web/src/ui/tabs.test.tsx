@@ -52,6 +52,35 @@ describe('Tabs dùng chung', () => {
     expect(screen.getByRole('tab', { name: 'Site' })).toHaveAttribute('aria-selected', 'true');
   });
 
+  /**
+   * Con số trên nhãn phải TÁCH khỏi chữ trong tên khả truy cập.
+   *
+   * Khoảng cách bằng CSS chỉ có nghĩa với mắt: tên khả truy cập ghép thẳng hai node văn bản,
+   * nên thiếu dấu cách là trình đọc màn hình đọc "Giấy tờ0" thành một từ. Lỗi này sống từ Epic
+   * 3 (tab "Máy đang dùng" đã có `count`) tới 28/08/2026 mới lộ, vì tới lúc đó mới có bài kiểm
+   * nào đọc tên tab kèm số.
+   */
+  it('số trên nhãn tách khỏi chữ, kể cả khi số là 0', () => {
+    renderWithI18n(
+      <Tabs
+        items={[
+          { key: 'files', label: 'Giấy tờ', count: 0 },
+          { key: 'vault', label: 'Két sắt', count: 12 },
+          { key: 'history', label: 'Lịch sử' },
+        ]}
+        value="files"
+        onChange={() => {}}
+        ariaLabel="Thiết bị"
+      />,
+    );
+
+    // 0 là câu trả lời THẬT ("chưa đính giấy tờ nào") và vẫn phải hiện.
+    expect(screen.getByRole('tab', { name: 'Giấy tờ 0' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Két sắt 12' })).toBeInTheDocument();
+    // Không truyền `count` thì không có số nào bám vào nhãn.
+    expect(screen.getByRole('tab', { name: 'Lịch sử' })).toBeInTheDocument();
+  });
+
   it('bấm chuột cũng đổi tab', async () => {
     const user = userEvent.setup();
     renderWithI18n(<Harness />);

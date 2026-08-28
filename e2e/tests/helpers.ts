@@ -83,6 +83,8 @@ export function resetSoftware(): void {
   const sql = [
     // Bản ghi gán license trỏ tới software — xóa trước, không thì FK chặn.
     `DELETE FROM license_assignment WHERE software_id IN (SELECT id FROM software WHERE ${match})`,
+    // Secret gắn vào hồ sơ phần mềm — cùng lý do như ở `resetDevices`.
+    `DELETE FROM secret WHERE owner_type = 'software' AND owner_id IN (SELECT id FROM software WHERE ${match})`,
     `ALTER TABLE software_history DISABLE TRIGGER software_history_no_delete`,
     `DELETE FROM software_history WHERE software_id IN (SELECT id FROM software WHERE ${match})`,
     `ALTER TABLE software_history ENABLE TRIGGER software_history_no_delete`,
@@ -105,6 +107,24 @@ export function resetSecrets(): void {
   execSync(
     `${COMPOSE} exec -T postgres psql -U ims -d ims -c "DELETE FROM secret WHERE label ILIKE '%E2E%'"`,
     { cwd: '..', stdio: 'pipe' },
+  );
+}
+
+/**
+ * Xóa tài khoản dịch vụ do E2E tạo, kèm secret · giấy tờ · lịch sử của chúng.
+ *
+ * Dọn theo THỨ TỰ ngược với lúc tạo, và phải tắt trigger chống-xóa của bảng lịch sử — bảng đó
+ * chỉ-thêm (AD-13) nên `DELETE` bình thường bị chặn. Không dọn secret thì ràng buộc "một chủ
+ * thể một nhãn" bắt trúng bản ghi mồ côi của lần chạy trước.
+ */
+export function resetServiceAccounts(): void {
+  sql(
+    "ALTER TABLE service_account_history DISABLE TRIGGER service_account_history_no_delete; " +
+      "DELETE FROM secret WHERE owner_type = 'service_account' AND owner_id IN (SELECT id FROM service_account WHERE code ILIKE '%E2E%'); " +
+      "DELETE FROM file WHERE owner_type = 'service_account' AND owner_id IN (SELECT id FROM service_account WHERE code ILIKE '%E2E%'); " +
+      "DELETE FROM service_account_history WHERE service_account_id IN (SELECT id FROM service_account WHERE code ILIKE '%E2E%'); " +
+      "ALTER TABLE service_account_history ENABLE TRIGGER service_account_history_no_delete; " +
+      "DELETE FROM service_account WHERE code ILIKE '%E2E%'",
   );
 }
 
@@ -144,6 +164,18 @@ export function resetIpam(): void {
     `ALTER TABLE ip_history DISABLE TRIGGER ip_history_no_delete`,
     `DELETE FROM ip_history WHERE ip_address_id IN (SELECT id FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE ${match}))`,
     `ALTER TABLE ip_history ENABLE TRIGGER ip_history_no_delete`,
+    /*
+     * `nat_rule_history` (0037) trỏ tới `nat_rule` bằng FK `ON DELETE RESTRICT`, nên phải dọn
+     * lịch sử TRƯỚC rule — y hệt cách `ip_history` phải đi trước `ip_address` ở trên. Và cũng
+     * y hệt vậy: bảng chỉ-thêm nên phải tắt trigger mới xóa được.
+     *
+     * Dùng CHÍNH hai điều kiện của hai câu xóa rule bên dưới, không viết một điều kiện thứ ba
+     * lỏng hơn: sót một nhánh là lần chạy sau đỏ ở `resetIpam` chứ không đỏ ở bài kiểm, và
+     * người đọc log sẽ đi tìm lỗi ở nhầm chỗ.
+     */
+    `ALTER TABLE nat_rule_history DISABLE TRIGGER nat_rule_history_no_delete`,
+    `DELETE FROM nat_rule_history WHERE nat_rule_id IN (SELECT id FROM nat_rule WHERE ip_address_id IN (SELECT id FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE ${match})) OR device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%'))`,
+    `ALTER TABLE nat_rule_history ENABLE TRIGGER nat_rule_history_no_delete`,
     // Rule NAT trỏ tới hồ sơ IP — xóa trước, không thì FK chặn.
     `DELETE FROM nat_rule WHERE ip_address_id IN (SELECT id FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE ${match}))`,
     `DELETE FROM nat_rule WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
@@ -214,11 +246,24 @@ export function resetDevices(): void {
   const match = "code ILIKE '%E2E%'";
   const sql = [
     `DELETE FROM file WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE ${match})`,
+    /*
+     * Secret gắn vào thiết bị test cũng phải dọn theo.
+     *
+     * Bỏ dòng này thì mỗi lần chạy để lại một ngăn két không còn chủ, và chúng tích lại
+     * hàng chục dòng — trang tổng Két sắt hiện đúng chỗ đó thành "hồ sơ đã bị xóa, còn
+     * secret treo lại". Đúng ra là công của trang tổng: nó phát hiện được rác mà trước
+     * đây không ai nhìn thấy; nhưng rác này là do bộ test đẻ ra nên dọn ở đây.
+     */
+    `DELETE FROM secret WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE ${match})`,
     // License gán vào thiết bị test cũng phải dọn, không thì FK chặn xóa thiết bị.
     `DELETE FROM license_assignment WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
     // Đường ISP trỏ tới thiết bị biên — gỡ liên kết trước khi xóa thiết bị.
     `UPDATE isp_line SET device_id = NULL WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
     // Rule NAT và hồ sơ IP trỏ tới thiết bị (FK RESTRICT) — dọn trước khi xóa thiết bị.
+    // `nat_rule_history` (0037) lại trỏ tới rule, cũng RESTRICT: nó phải đi trước nữa.
+    `ALTER TABLE nat_rule_history DISABLE TRIGGER nat_rule_history_no_delete`,
+    `DELETE FROM nat_rule_history WHERE nat_rule_id IN (SELECT id FROM nat_rule WHERE device_id IN (SELECT id FROM device WHERE ${match}))`,
+    `ALTER TABLE nat_rule_history ENABLE TRIGGER nat_rule_history_no_delete`,
     `DELETE FROM nat_rule WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
     `ALTER TABLE ip_history DISABLE TRIGGER ip_history_no_delete`,
     `DELETE FROM ip_history WHERE ip_address_id IN (SELECT id FROM ip_address WHERE device_id IN (SELECT id FROM device WHERE ${match}))`,
@@ -290,7 +335,7 @@ export async function freshTotpCode(secret: string): Promise<string> {
 }
 
 export async function fillLogin(page: Page, email: string, password: string): Promise<void> {
-  await page.goto('/dang-nhap');
+  await page.goto('/login');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Đăng nhập' }).click();
@@ -506,4 +551,36 @@ export function horizontalOverflow(page: Page): Promise<number> {
   return page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
+}
+
+/**
+ * Mở menu ba chấm của một dòng rồi chọn một việc trong đó (28/08/2026).
+ *
+ * Cột "Thao tác" của mọi bảng danh sách đã đổi từ dãy nút phẳng sang menu ba chấm
+ * (`ui/row-actions.tsx`), nên `getByRole('button', { name: 'Sửa' })` không còn tìm thấy gì:
+ * mục menu chỉ tồn tại trong DOM khi menu đang mở, và nó mang vai `menuitem` chứ không phải
+ * `button`. Để ở đây thay vì chép hai dòng vào hai chục chỗ — AD-15.
+ *
+ * `subject` là thứ đứng sau "Thao tác với …" trong `aria-label` của nút ba chấm: mã hồ sơ,
+ * địa chỉ IP, tên tài khoản… Nó phải RIÊNG cho từng dòng, đó chính là lý do nhãn mang nó.
+ */
+export async function rowAction(
+  page: Page,
+  subject: string | RegExp,
+  action: string | RegExp,
+): Promise<void> {
+  const label =
+    typeof subject === 'string'
+      ? `Thao tác với ${subject}`
+      : new RegExp(`Thao tác với .*${subject.source}`, subject.flags);
+  await page.getByRole('button', { name: label }).click();
+  await page.getByRole('menuitem', { name: action }).click();
+}
+
+/** Menu ba chấm của một dòng CÓ mục này không — dùng để kiểm việc bị ẩn theo quyền. */
+export async function rowActionNames(page: Page, subject: string): Promise<string[]> {
+  await page.getByRole('button', { name: `Thao tác với ${subject}` }).click();
+  const names = await page.getByRole('menuitem').allTextContents();
+  await page.keyboard.press('Escape');
+  return names;
 }

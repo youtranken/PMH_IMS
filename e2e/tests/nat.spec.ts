@@ -72,7 +72,7 @@ test.describe('Sổ NAT', () => {
     const stamp = Date.now().toString().slice(-4);
     const { routerCode, internalIp } = await setUp(page, stamp);
 
-    await page.goto('/so-nat');
+    await page.goto('/nat');
     await page.getByRole('button', { name: 'Thêm rule' }).click();
     const form = page.getByRole('dialog');
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
@@ -133,7 +133,7 @@ test.describe('Sổ NAT', () => {
     }
 
     // Và hàng rào phải hiện ra tận màn hình, không chỉ nằm ở API.
-    await page.goto('/so-nat');
+    await page.goto('/nat');
     await page.getByRole('button', { name: 'Thêm rule' }).click();
     const form = page.getByRole('dialog');
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
@@ -158,18 +158,31 @@ test.describe('Sổ NAT', () => {
     const stamp = Date.now().toString().slice(-4);
     const { routerCode, internalIp } = await setUp(page, stamp);
 
-    await page.goto('/so-nat');
+    await page.goto('/nat');
     await page.getByRole('button', { name: 'Thêm rule' }).click();
     const form = page.getByRole('dialog');
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
 
-    // OpenVPN là UDP — chọn nó phải kéo giao thức đổi theo, không chỉ điền con số.
-    await form.getByRole('button', { name: 'Chọn OpenVPN cho Port ngoài' }).click();
-    await expect(form.getByRole('textbox', { name: 'Port ngoài' })).toHaveValue('1194');
-    await expect(form.getByRole('button', { name: 'Giao thức' })).toContainText('UDP');
+    /*
+     * OpenVPN là UDP — chọn nó phải kéo giao thức đổi theo, không chỉ điền con số.
+     *
+     * Hai thay đổi của bản dựng lại (26/08/2026) mà bài này phải theo:
+     *  - Danh mục dịch vụ giờ là DROPDOWN xổ khi bấm, không phải bảng luôn mở (hai ô port
+     *    thành hai bảng chiếm quá nửa hộp thoại).
+     *  - Port ngoài là danh sách CHIP có ✕; chọn dịch vụ là THÊM chip, không ghi đè.
+     *  - Giao thức không còn là ô chọn riêng mà là dải nút nhỏ ngay dưới ô port.
+     */
+    await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Port ngoài' }).click();
+    await page.getByRole('option', { name: /OpenVPN/ }).click();
+    await expect(form.getByRole('button', { name: 'Bỏ port 1194' })).toBeVisible();
+    await expect(form.getByRole('button', { name: 'UDP', exact: true })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
 
-    await form.getByRole('button', { name: 'Chọn NAS Web cho Port trong' }).click();
+    await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Port trong' }).click();
+    await page.getByRole('option', { name: /NAS Web/ }).click();
     await expect(form.getByRole('textbox', { name: 'Port trong' })).toHaveValue('5001');
 
     await form.getByRole('textbox', { name: 'IP trong' }).fill(internalIp);
@@ -189,13 +202,15 @@ test.describe('Sổ NAT', () => {
     const { routerCode, internalIp } = await setUp(page, stamp);
     const serviceName = `Cong E2E ${stamp}`;
 
-    await page.goto('/so-nat');
+    await page.goto('/nat');
     await page.getByRole('button', { name: 'Thêm rule' }).click();
     const form = page.getByRole('dialog');
     await form.getByPlaceholder('Chọn hoặc gõ để lọc…').fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
 
-    await form.getByRole('button', { name: '+ Thêm dịch vụ' }).first().click();
+    // Dịch vụ chưa có: dòng "＋ Thêm dịch vụ" ghim ở đầu menu dropdown.
+    await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Port ngoài' }).click();
+    await page.getByRole('button', { name: '+ Thêm dịch vụ' }).first().click();
     const serviceForm = page.getByRole('dialog').last();
     // `getByRole` chứ không `getByLabel`: nhãn có kèm dấu * (aria-hidden), nên TEXT của thẻ
     // label là "Port *" còn TÊN TRỢ NĂNG mới đúng là "Port".
@@ -204,7 +219,7 @@ test.describe('Sổ NAT', () => {
     await serviceForm.getByRole('button', { name: 'Lưu' }).click();
 
     // Lưu xong là ÁP THẲNG vào ô đang khai — không bắt người dùng đi tìm lại trong danh sách.
-    await expect(form.getByRole('textbox', { name: 'Port ngoài' })).toHaveValue('8443');
+    await expect(form.getByRole('button', { name: 'Bỏ port 8443' })).toBeVisible();
 
     await form.getByRole('textbox', { name: 'IP trong' }).fill(internalIp);
     await form.getByRole('textbox', { name: 'Port trong' }).fill('443');
@@ -216,7 +231,7 @@ test.describe('Sổ NAT', () => {
     ).toBeVisible();
 
     // Và dịch vụ đó ở lại danh mục để lần sau chỉ việc chọn.
-    await page.goto('/quan-tri/danh-muc');
+    await page.goto('/admin/catalog');
     await page.getByRole('tab', { name: 'Dịch vụ / Port' }).click();
     await expect(page.getByRole('row', { name: new RegExp(serviceName) })).toBeVisible();
   });
@@ -233,7 +248,7 @@ test.describe('Sổ NAT', () => {
     const { internalIp } = await setUp(page, stamp);
     const newRouter = `RT-E2E-NEW-${stamp}`;
 
-    await page.goto('/so-nat');
+    await page.goto('/nat');
     await page.getByRole('button', { name: 'Thêm rule' }).click();
     const form = page.getByRole('dialog');
 
@@ -577,7 +592,7 @@ test.describe('Sổ NAT', () => {
       },
     });
 
-    await page.goto(`/thiet-bi/${routerId}`);
+    await page.goto(`/devices/${routerId}`);
     await expect(page.getByRole('heading', { name: 'Sổ NAT' })).toBeVisible();
     await expect(page.getByText('TCP 8443')).toBeVisible();
     await expect(page.getByText(/phần mềm thuế truy cập từ ngoài/)).toBeVisible();
@@ -630,7 +645,7 @@ test.describe('Panel IP trên trang thiết bị', () => {
       },
     });
 
-    await page.goto(`/thiet-bi/${routerId}`);
+    await page.goto(`/devices/${routerId}`);
     await expect(page.getByRole('heading', { name: 'Địa chỉ IP' })).toBeVisible();
     await expect(page.getByText(`172.16.${octet}.1`)).toBeVisible();
     await expect(page.getByText('cổng mặc định')).toBeVisible();
@@ -643,7 +658,7 @@ test.describe('Panel IP trên trang thiết bị', () => {
     const stamp = Date.now().toString().slice(-4);
     const { routerId } = await setUp(page, stamp);
 
-    await page.goto(`/thiet-bi/${routerId}`);
+    await page.goto(`/devices/${routerId}`);
     await expect(page.getByRole('tab', { name: 'Hồ sơ' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Địa chỉ IP' })).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Sổ NAT' })).toHaveCount(0);

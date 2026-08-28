@@ -8,6 +8,7 @@ import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
+import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
@@ -220,17 +221,26 @@ export function IspForm({
               onChange={(value) => set('siteId', value)}
             />
           </Field>
-          <Field label={t('isp.status')}>
-            <Select
-              value={form.status}
-              ariaLabel={t('isp.status')}
-              options={ISP_STATUSES.map((status) => ({
-                value: status,
-                label: t(STATUS_KEY[status]),
-              }))}
-              onChange={(value) => set('status', value as IspStatus)}
-            />
-          </Field>
+          {/*
+            Ô Trạng thái CHỈ hiện khi SỬA.
+
+            Thêm mới thì trạng thái luôn là "đang dùng" — bày một ô chọn có đúng một câu trả
+            lời hợp lý là bắt người khai đọc và bỏ qua một thứ không có quyết định nào ở đó,
+            và mở đường cho một hồ sơ vừa tạo đã ở trạng thái "đã thanh lý".
+          */}
+          {row ? (
+            <Field label={t('isp.status')}>
+              <Select
+                value={form.status}
+                ariaLabel={t('isp.status')}
+                options={ISP_STATUSES.map((status) => ({
+                  value: status,
+                  label: t(STATUS_KEY[status]),
+                }))}
+                onChange={(value) => set('status', value as IspStatus)}
+              />
+            </Field>
+          ) : null}
 
           <Field label={t('isp.device')} hint={t('isp.deviceHint')} span={3}>
             <Combobox
@@ -256,8 +266,10 @@ export function IspForm({
           </Field>
         </FormSection>
 
-        {/* Hai ô này là lý do màn ISP tồn tại: 2 giờ sáng gọi ai, đọc số hợp đồng nào. */}
-        <FormSection title={t('isp.hotline')} columns={3}>
+        {/* Hai ô đầu là lý do màn ISP tồn tại: 2 giờ sáng gọi ai, đọc số hợp đồng nào.
+            Tiêu đề khối KHÔNG còn là "Hotline" — khối này chứa cả hợp đồng và kỳ hạn, đặt
+            tên theo ô đầu tiên là nói sai về ba ô còn lại. */}
+        <FormSection title={t('isp.sectionContract')} columns={3}>
           <Field label={t('isp.hotline')} htmlFor="isp-hotline">
             <input
               id="isp-hotline"
@@ -298,7 +310,24 @@ export function IspForm({
           </Field>
         </FormSection>
 
-        {row ? null : <AttachmentDraftSection draft={draft} disabled={busy} />}
+        {/* Thêm mới: chọn bản scan hợp đồng, đẩy lên sau khi có id.
+            Sửa: panel giấy tờ đầy đủ — đổi hợp đồng là việc thường xuyên của đường truyền. */}
+        {row ? (
+          <FormSection title={t('attachments.title')} columns={1}>
+            {/* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt
+                lưu của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên —
+                xóa một bản scan rồi bấm Hủy là mất luôn, nên phải nói ra. */}
+            <p className="alert">{t('attachments.liveWarning')}</p>
+            <AttachmentPanel
+              ownerType="isp"
+              ownerId={row.id}
+              csrfToken={csrfToken}
+              canEdit={!busy}
+            />
+          </FormSection>
+        ) : (
+          <AttachmentDraftSection draft={draft} disabled={busy} />
+        )}
 
         {error ? (
           <p className="alert error" role="alert">

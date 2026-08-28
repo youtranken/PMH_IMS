@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, count, eq, isNull, max } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { EnvelopeCryptoService } from '../../common/crypto/envelope.service';
@@ -15,7 +15,13 @@ import { pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { secretTable } from './vault.schema';
 
-export const SECRET_OWNER_TYPES = ['device', 'software'] as const;
+/*
+ * Thêm `isp` (0036): `file.owner_type` đã nhận đường truyền từ lâu, nên hợp đồng PDF đính vào
+ * được mà mật khẩu PPPoE thì không có chỗ đứng — bất đối xứng đẩy mật khẩu thật vào ô Ghi chú
+ * không mã hóa. Whitelist này có BẢN SAO ở tầng DB (`secret_owner_type_check`) và ở
+ * `SecretOwnerType` bên web; thêm loại mới phải sờ đủ ba chỗ.
+ */
+export const SECRET_OWNER_TYPES = ['device', 'software', 'service_account', 'isp'] as const;
 export type SecretOwnerType = (typeof SECRET_OWNER_TYPES)[number];
 
 export const SECRET_KINDS = ['password', 'license_key', 'other'] as const;
@@ -88,6 +94,38 @@ export class VaultService {
 
   async countFor(ownerType: SecretOwnerType, ownerId: string): Promise<number> {
     return (await this.listFor(ownerType, ownerId)).length;
+  }
+
+  /**
+   * Danh sách CHỦ THỂ đang giữ secret, kèm số lượng — KHÔNG kèm tên secret, KHÔNG kèm giá trị.
+   *
+   * FR-026 cấm mọi đường lấy secret qua nhiều chủ thể. Hàm này cố ý dừng ở mức "máy nào /
+   * hồ sơ nào có két, có mấy ngăn": nó KHÔNG chạm cột nhãn, nên kể cả bị lộ ra ngoài cũng
+   * không cho biết công ty đang cất bí mật GÌ. Đủ để trang quản trị trả lời "vào phát thấy
+   * hết", mà vẫn không dựng được bản đồ bí mật.
+   *
+   * Mở đúng một ngăn vẫn phải đi qua trang hồ sơ và gõ TOTP như cũ (4.2).
+   */
+  async listOwnerSummaries(): Promise<
+    { ownerType: SecretOwnerType; ownerId: string; secretCount: number; lastChangeAt: Date }[]
+  > {
+    const rows = await this.db
+      .select({
+        ownerType: secretTable.ownerType,
+        ownerId: secretTable.ownerId,
+        secretCount: count(),
+        lastChangeAt: max(secretTable.updatedAt),
+      })
+      .from(secretTable)
+      .where(isNull(secretTable.revokedAt))
+      .groupBy(secretTable.ownerType, secretTable.ownerId);
+
+    return rows.map((row) => ({
+      ownerType: row.ownerType as SecretOwnerType,
+      ownerId: row.ownerId,
+      secretCount: Number(row.secretCount),
+      lastChangeAt: row.lastChangeAt ?? new Date(0),
+    }));
   }
 
   async findMeta(id: string): Promise<SecretMeta> {

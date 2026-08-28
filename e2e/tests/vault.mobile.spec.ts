@@ -62,9 +62,19 @@ test.describe('Két sắt ở 390px', () => {
       },
     });
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
-    await expect(page.getByRole('cell', { name: label })).toBeVisible();
+    /*
+     * Bám theo CHỮ HIỆN RA, không theo tên khả truy cập của ô.
+     *
+     * Hai lớp bẫy chồng nhau ở đây. Nút ba chấm mang nhãn trợ năng "Thao tác với {tên gọi}",
+     * nên ô Thao tác cũng CHỨA tên gọi — khớp lỏng theo `cell` là trúng hai ô. Mà `exact`
+     * cũng không cứu được: ở 390px bảng gập dọc và `td::before { content: attr(data-label) }`
+     * nhét thêm chữ "Tên gọi" vào tên khả truy cập, nên không ô nào mang đúng nhãn cả.
+     *
+     * `getByText` đọc node văn bản thật, không đọc `aria-label` — nên nó trỏ đúng một ô.
+     */
+    await expect(page.getByText(label, { exact: true })).toBeVisible();
     await expect(page.getByText('Mật khẩu', { exact: true })).toBeVisible();
 
     // Trang không được cuộn ngang ở 390px.
@@ -89,7 +99,7 @@ test.describe('Két sắt ở 390px', () => {
     });
     expireStepUp();
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await page.getByRole('button', { name: 'Xem' }).click();
 

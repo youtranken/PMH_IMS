@@ -10,6 +10,7 @@ import { useToast } from '@/ui/toast';
 import { AssignDialog } from './license-assignments-panel';
 import { SeatEndCell } from './seat-cells';
 import { seatLabel, supportsSeats, type LicenseSeat, type SoftwareRow } from './software-types';
+import { PATHS } from '@/lib/routes';
 
 /**
  * Khu bung ra dưới một dòng license: MỖI CHỖ NGỒI một thẻ, kèm chi phí, hợp đồng và kỳ hạn
@@ -91,7 +92,7 @@ export function LicenseSeatsExpand({
             <div key={seat.id} className="seat-card">
               <div className="seat-mc" data-label={t('license.device')}>
                 {/* Link thật (không phải onClick trên thẻ): mở tab mới, copy link được. */}
-                <Link className="mono" to={`/thiet-bi/${seat.deviceId}`}>
+                <Link className="mono" to={PATHS.device(seat.deviceId)}>
                   {seat.deviceCode}
                 </Link>
               </div>
@@ -126,9 +127,11 @@ export function LicenseSeatsExpand({
                 >
                   {t('common.edit')}
                 </button>
+                {/* Gỡ ghế = thu lại license khỏi một máy đang dùng. Hộp hỏi lại đã `danger`
+                    từ đầu, nhưng chính cái nút thì vẫn xám y như nút Sửa bên cạnh. */}
                 <button
                   type="button"
-                  className="btn sm"
+                  className="btn sm danger"
                   disabled={release.isPending}
                   aria-label={t('license.releaseSeatOf', { device: seat.deviceCode })}
                   onClick={() => {

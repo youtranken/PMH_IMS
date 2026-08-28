@@ -87,7 +87,7 @@ test.describe('Mở két với TOTP step-up', () => {
     // Enroll TOTP vừa xong đã tính là step-up — đẩy mốc lùi để đúng cảnh "đã quá grace".
     expireStepUp();
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
 
     await page
@@ -97,14 +97,23 @@ test.describe('Mở két với TOTP step-up', () => {
 
     // Phải hỏi mã, KHÔNG được hiện giá trị và cũng không được đá về màn đăng nhập.
     await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
-    await expect(page).toHaveURL(new RegExp(`/thiet-bi/${deviceId}`));
+    await expect(page).toHaveURL(new RegExp(`/devices/${deviceId}`));
 
     await page.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
     await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận' }).click();
 
     await expect(page.getByTestId('secret-value')).toHaveText(`Web#Pass#${stamp}`);
-    // Toast stack cũng mang role=status — bám vào hộp thoại, không bám toàn trang.
-    await expect(page.getByRole('dialog').getByRole('status')).toContainText('Tự ẩn sau');
+    /*
+     * HAI đồng hồ đếm ngược, không phải một:
+     *   trái  — giá trị này còn hiện bao lâu (`secret.reveal_seconds`, mặc định 60)
+     *   phải  — còn mở được két bao lâu nữa mà không phải gõ lại mã (grace 10 phút)
+     *
+     * Số phải mới là thứ trả lời được câu ngay bên dưới ("xem tiếp secret khác không phải gõ
+     * lại") — thiếu nó thì người dùng đoán mò và bị hỏi mã giữa chừng mà không hiểu vì sao.
+     */
+    const countdown = page.getByTestId('reveal-countdown');
+    await expect(countdown).toContainText(/^\d+s/);
+    await expect(page.getByTestId('stepup-countdown')).toContainText(/\d+s/);
     await page.getByRole('button', { name: 'Ẩn ngay' }).click();
     await expect(page.getByTestId('secret-value')).toHaveCount(0);
 
@@ -127,7 +136,7 @@ test.describe('Mở két với TOTP step-up', () => {
     ]);
     expireStepUp();
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await page.getByRole('button', { name: 'Xem' }).click();
 
@@ -213,7 +222,7 @@ test.describe('Mở két với TOTP step-up', () => {
     });
     test.setTimeout((revealSeconds + 40) * 1000);
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await page.getByRole('button', { name: 'Xem' }).click();
     await expect(page.getByTestId('secret-value')).toBeVisible();

@@ -9,7 +9,7 @@ test.beforeEach(() => resetUsers());
  */
 test('Danh mục đọc được ở 390px, không tràn ngang', async ({ page }) => {
   await firstLogin(page, E2E_MEMBER);
-  await page.goto('/quan-tri/danh-muc');
+  await page.goto('/admin/catalog');
 
   await expect(page.getByRole('heading', { name: 'Danh mục' })).toBeVisible();
   await page.getByRole('tab', { name: 'Loại thiết bị' }).click();

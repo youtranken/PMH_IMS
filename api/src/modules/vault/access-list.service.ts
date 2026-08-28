@@ -10,12 +10,15 @@ import type { Database } from '../../database/database.module';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { DevicesApiService } from '../devices/devices.api';
+import { ServiceAccountsApiService } from '../service-accounts/service-accounts.api';
 import { SoftwareApiService } from '../software/software.api';
 import { UsersApiService } from '../users/users.api';
 import {
   ACCESS_TIERS,
   SCOPE_TYPES,
   groupsOfDevice,
+  groupsOfIsp,
+  groupsOfServiceAccount,
   groupsOfSoftware,
   resolveTier,
   type AccessRule,
@@ -58,6 +61,7 @@ export class AccessListService {
     private readonly catalog: CatalogApiService,
     private readonly devices: DevicesApiService,
     private readonly software: SoftwareApiService,
+    private readonly accounts: ServiceAccountsApiService,
     private readonly users: UsersApiService,
   ) {}
 
@@ -89,6 +93,21 @@ export class AccessListService {
         scopeType: 'software_kind' as const,
         scopeRef: kind.key,
         label: `Phần mềm: ${kind.label}`,
+      })),
+      ...SERVICE_ACCOUNT_SCOPES.map((kind) => ({
+        scopeType: 'service_account_kind' as const,
+        scopeRef: kind.key,
+        label: `Tài khoản: ${kind.label}`,
+      })),
+      /*
+       * Nhà mạng lấy từ DANH MỤC, không phải từ các giá trị `provider` đang có trong bảng
+       * `isp_line`. Lấy từ dữ liệu thì gán được quyền cho một nhà mạng chỉ vì tình cờ đang có
+       * một đường truyền của họ, rồi xóa đường truyền đó là luật quyền trỏ vào hư không.
+       */
+      ...lists.ispProviders.map((provider) => ({
+        scopeType: 'isp_provider' as const,
+        scopeRef: provider.name,
+        label: `Đường truyền: ${provider.name}`,
       })),
     ];
   }
@@ -183,10 +202,16 @@ export class AccessListService {
     ownerType: SecretOwnerType,
     ownerId: string,
   ): Promise<AccessTier> {
-    const groups =
-      ownerType === 'device'
-        ? groupsOfDevice(await this.deviceGroupKeys(ownerId))
-        : groupsOfSoftware(await this.softwareGroupKeys(ownerId));
+    /*
+     * MỘT nhánh cho MỖI loại chủ thể — `switch` chứ không phải ternary device/else.
+     *
+     * Ternary từng là cái bẫy: loại mới rơi vào `else` là đi tra id của nó trong bảng
+     * `software`. Kết quả tốt nhất là không tìm thấy rồi 'denied' đúng vì lý do sai; tệ nhất
+     * là hai bảng có id trùng nhau và người ta được cấp quyền theo loại phần mềm của một hồ
+     * sơ chẳng liên quan. Thêm `owner_type` mới mà quên chỗ này thì TypeScript báo ngay, vì
+     * `never` ở nhánh cuối không nhận được giá trị nào.
+     */
+    const groups = await this.groupsOf(ownerType, ownerId);
     if (groups.length === 0) return 'denied';
 
     return resolveTier(await this.rulesOf(memberEmail), memberEmail, groups);
@@ -217,6 +242,42 @@ export class AccessListService {
       scopeRef: row.scopeRef,
       tier: row.tier as AccessTier,
     }));
+  }
+
+  /**
+   * Chủ thể này thuộc những nhóm đối tượng nào.
+   *
+   * Tra qua public api của module chủ (`devices.api`, `software.api`,
+   * `service-accounts.api`) chứ KHÔNG join bảng của họ — `vault` không được biết bảng
+   * `device` trông thế nào (AD-2/AD-3).
+   */
+  private async groupsOf(ownerType: SecretOwnerType, ownerId: string) {
+    switch (ownerType) {
+      case 'device':
+        return groupsOfDevice(await this.deviceGroupKeys(ownerId));
+      case 'software':
+        return groupsOfSoftware(await this.softwareGroupKeys(ownerId));
+      case 'service_account':
+        return groupsOfServiceAccount(await this.serviceAccountGroupKeys(ownerId));
+      case 'isp':
+        return groupsOfIsp(await this.ispGroupKeys(ownerId));
+      default: {
+        /* Thêm `owner_type` mới mà quên nhánh ở trên → lỗi biên dịch tại đây, không phải một
+           lỗ hổng quyền phát hiện ra sáu tháng sau. */
+        const missed: never = ownerType;
+        return missed;
+      }
+    }
+  }
+
+  private async serviceAccountGroupKeys(id: string): Promise<{ kind: string }> {
+    const account = await this.accounts.getById(id).catch(() => null);
+    return { kind: account?.kind ?? '' };
+  }
+
+  private async ispGroupKeys(id: string): Promise<{ provider: string }> {
+    const line = await this.software.getIspById(id).catch(() => null);
+    return { provider: line?.provider ?? '' };
   }
 
   private async deviceGroupKeys(
@@ -302,6 +363,12 @@ export class AccessListService {
     };
   }
 }
+
+/** Khớp `SERVICE_ACCOUNT_KINDS` của module service-accounts — nhãn cho người gán đọc. */
+const SERVICE_ACCOUNT_SCOPES = [
+  { key: 'shared', label: 'Dùng chung' },
+  { key: 'vpn', label: 'VPN' },
+];
 
 /** Khớp `SOFTWARE_KINDS` của module software — nhãn để người gán đọc, không phải khóa mới. */
 const SOFTWARE_KINDS = [

@@ -25,6 +25,23 @@ export function pgErrorCode(error: unknown): string | undefined {
   return undefined;
 }
 
+/**
+ * TÊN ràng buộc bị vi phạm (vd `users_employee_code_uq`) — đào qua `cause` y như
+ * `pgErrorCode`, vì drizzle bọc lỗi pg trong `DrizzleQueryError`.
+ *
+ * Cần khi MỘT bảng có nhiều khóa duy nhất: chỉ biết mã `23505` thì không biết ô nào đụng, và
+ * đoán bừa là báo sai hẳn ô cho người dùng.
+ */
+export function pgConstraint(error: unknown): string | undefined {
+  let current: unknown = error;
+  for (let depth = 0; current !== null && current !== undefined && depth < 5; depth += 1) {
+    const constraint = (current as { constraint?: unknown }).constraint;
+    if (typeof constraint === 'string') return constraint;
+    current = (current as { cause?: unknown }).cause;
+  }
+  return undefined;
+}
+
 /** Vi phạm khóa ngoại — "đang có dữ liệu khác trỏ tới, không xóa được". */
 export const PG_FOREIGN_KEY_VIOLATION = '23503';
 /** Vi phạm ràng buộc duy nhất — trùng mã/tên. */

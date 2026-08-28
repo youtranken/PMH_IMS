@@ -7,6 +7,9 @@ import type { Me } from '@/lib/me';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
+import { OWNER_PATH, PATHS } from '@/lib/routes';
+import { UsageBar } from '@/ui/usage-bar';
+import { DISPOSAL_KIND_KEY, type DisposalKind } from '@/lib/disposal-kinds';
 
 interface Block<T> {
   available: boolean;
@@ -33,10 +36,43 @@ interface BreakGlassItem {
   expiresAt: string | null;
 }
 
+interface SubnetLoadItem {
+  id: string;
+  name: string;
+  cidr: string;
+  vlan: number | null;
+  used: number;
+  total: number;
+  free: number;
+  percent: number;
+}
+
+interface StaleSecretItem {
+  ownerType: keyof typeof OWNER_PATH;
+  ownerId: string;
+  code: string;
+  name: string;
+  secretCount: number;
+  lastChangeAt: string;
+  daysSince: number;
+}
+
+interface DisposedItem {
+  kind: DisposalKind;
+  id: string;
+  code: string;
+  name: string;
+  detail: string | null;
+  updatedAt: string | null;
+}
+
 interface Dashboard {
   expiring: Block<ExpiringItem>;
   incidents: Block<never>;
   breakGlass: Block<BreakGlassItem>;
+  subnetLoad: Block<SubnetLoadItem>;
+  staleSecrets: Block<StaleSecretItem>;
+  disposed: Block<DisposedItem>;
 }
 
 /**
@@ -71,7 +107,7 @@ export function DashboardScreen({ me }: { me: Me }) {
           title={t('dashboard.expiring')}
           total={board.expiring.total}
           available={board.expiring.available}
-          moreTo="/sap-het-han"
+          moreTo={PATHS.expiry}
           moreLabel={t('dashboard.seeAllExpiring')}
           emptyText={t('dashboard.expiringEmpty')}
           unavailableText={t('dashboard.blockError')}
@@ -90,6 +126,80 @@ export function DashboardScreen({ me }: { me: Me }) {
             ))}
           </ul>
         </BlockCard>
+
+        {/*
+          Dải nào sắp hết chỗ (FR-020). Câu này trước đây chỉ trả lời được bằng cách mở màn IP
+          rồi đọc từng thanh — mà không ai mở màn IP khi chưa có việc.
+        */}
+        <BlockCard
+          title={t('dashboard.subnetLoad')}
+          total={board.subnetLoad.total}
+          available={board.subnetLoad.available}
+          moreTo={PATHS.ipAddresses}
+          moreLabel={t('dashboard.seeAllSubnets')}
+          emptyText={t('dashboard.subnetLoadEmpty')}
+          unavailableText={t('dashboard.blockError')}
+        >
+          <ul className="dash-list">
+            {board.subnetLoad.items.map((item) => (
+              <li key={item.id}>
+                <div className="dash-line">
+                  <Link to={PATHS.subnet(item.id)}>{item.name}</Link>
+                  <span className="mono muted">{item.cidr}</span>
+                </div>
+                {/*
+                  Kèm `used/total · còn free` chứ không chỉ phần trăm: 95% của một /26 là còn 3
+                  chỗ, 95% của một /24 là còn 12 — hai mức khẩn khác hẳn nhau, cùng một con số.
+                */}
+                <UsageBar
+                  percent={item.percent}
+                  label={t('dashboard.subnetUsage', {
+                    used: item.used,
+                    total: item.total,
+                    free: item.free,
+                  })}
+                  ariaLabel={t('dashboard.subnetUsageAria', { name: item.name })}
+                />
+              </li>
+            ))}
+          </ul>
+        </BlockCard>
+
+        {/*
+          Member KHÔNG nhận khối này từ server (rút gọn theo vai, đúng bằng quyền của
+          `GET /vault/owners`) — nên không render gì cả, y như khối break-glass.
+        */}
+        {board.staleSecrets.available ? (
+          <BlockCard
+            title={t('dashboard.staleSecrets')}
+            total={board.staleSecrets.total}
+            available
+            moreTo={PATHS.vault}
+            moreLabel={t('dashboard.seeAllVault')}
+            emptyText={t('dashboard.staleSecretsEmpty')}
+            unavailableText={t('dashboard.blockError')}
+          >
+            <ul className="dash-list">
+              {board.staleSecrets.items.map((item) => (
+                <li key={`${item.ownerType}-${item.ownerId}`}>
+                  <div className="dash-line">
+                    <Link to={OWNER_PATH[item.ownerType](item.ownerId)}>{item.code}</Link>
+                    <span className="badge muted">
+                      {t('dashboard.secretCount', { count: item.secretCount })}
+                    </span>
+                  </div>
+                  <span>{item.name}</span>
+                  <span className="muted">
+                    {t('dashboard.staleSince', {
+                      date: formatDate(item.lastChangeAt),
+                      days: item.daysSince,
+                    })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </BlockCard>
+        ) : null}
 
         {/*
           Epic 9 chưa deploy. Khối vẫn HIỆN, nói rõ "phần này chưa có" — giấu đi thì sếp tưởng
@@ -111,7 +221,7 @@ export function DashboardScreen({ me }: { me: Me }) {
             title={t('dashboard.breakGlass')}
             total={board.breakGlass.total}
             available
-            moreTo="/duyet-yeu-cau"
+            moreTo={PATHS.approvals}
             moreLabel={t('dashboard.seeAllBreakGlass')}
             emptyText={t('dashboard.breakGlassEmpty')}
             unavailableText={t('dashboard.blockError')}
@@ -134,6 +244,34 @@ export function DashboardScreen({ me }: { me: Me }) {
             </ul>
           </BlockCard>
         ) : null}
+
+        {/* Tuần qua công ty bỏ những gì — ba loại gộp sẵn ở module `disposal`, không gộp lại. */}
+        <BlockCard
+          title={t('dashboard.disposed')}
+          total={board.disposed.total}
+          available={board.disposed.available}
+          moreTo={PATHS.disposal}
+          moreLabel={t('dashboard.seeAllDisposed')}
+          emptyText={t('dashboard.disposedEmpty')}
+          unavailableText={t('dashboard.blockError')}
+        >
+          <ul className="dash-list">
+            {board.disposed.items.map((item) => (
+              <li key={`${item.kind}-${item.id}`}>
+                <div className="dash-line">
+                  {/* Vẫn mở được hồ sơ gốc: "đã thanh lý" không phải "đã xóa". */}
+                  <Link to={OWNER_PATH[item.kind](item.id)}>{item.code}</Link>
+                  <span className="badge plain">{t(DISPOSAL_KIND_KEY[item.kind])}</span>
+                </div>
+                <span>{item.name}</span>
+                <span className="muted">
+                  {item.detail ? `${item.detail} · ` : ''}
+                  {item.updatedAt ? formatDate(item.updatedAt) : ''}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </BlockCard>
       </div>
     </>
   );

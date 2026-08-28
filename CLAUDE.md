@@ -54,6 +54,15 @@ Trước khi viết **bất kỳ** component / hook / service nào: mở `docs/S
 - Integration chạm DB: dùng Postgres thật trong docker (compose profile `test`), không mock drizzle.
 - Lõi bảo mật (Argon2, TOTP chống replay, envelope AES-GCM + xoay `key_version`, CSRF, lockout) — **không có test thì không được merge**.
 
+**Cổng kiểm kiểu của web là `npm run build`, KHÔNG phải `npx tsc --noEmit`.** `web/tsconfig.json`
+chỉ là file references (`"files": []`), nên `tsc --noEmit` ở đó chạy xong sạch mà **không kiểm
+file nào**. Lỗi kiểu chỉ lộ ra ở `tsc -b` bên trong `npm run build` — và lúc đó thì đã ở trong
+`docker compose build`. Chạy `npm run build` trước khi dựng ảnh.
+
+Liên quan: `tsconfig.app.json` **không bật `strict`**, nên `strictNullChecks` tắt và TS **không
+thu hẹp được union phân biệt bằng cờ boolean** (`if (!r.ok) r.reason` báo lỗi biên dịch dù logic
+đúng). Hàm thuần bên web trả về MỘT hình dạng (`{ value, reason }`) thay vì union `ok: true|false`.
+
 **E2E: Playwright** (`e2e/`), chạy trên compose thật, không mock API.
 - Mỗi story có ít nhất 1 kịch bản đường-hạnh-phúc + 1 đường-hỏng.
 - Màn ĐỌC phải có assertion ở viewport **390px** (UX-DR2) ngoài desktop.

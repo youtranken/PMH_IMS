@@ -31,6 +31,18 @@ export class DevicesApiService {
     }
   }
 
+  /**
+   * Thiết bị ĐÃ THANH LÝ — màn Kho thanh lý gom qua đây.
+   *
+   * Module `disposal` chỉ là một MÀN TỔNG: nó không giữ bảng nào, không đặt ra trạng thái
+   * mới. Mỗi module vẫn là chủ của vòng đời hồ sơ mình (AD-3), và "đã ngừng dùng" ở đây gọi
+   * đúng cái tên mà module đó vốn dùng — thiết bị là `retired`.
+   */
+  async listRetired(): Promise<DeviceListItem[]> {
+    const page = await this.devices.list({ page: 1, limit: 500 }, { status: 'retired' });
+    return page.items;
+  }
+
   /** Gợi ý cho ô chọn thiết bị ở màn khác (port map, IP, secret). */
   async search(term: string, limit = 20): Promise<DeviceListItem[]> {
     const page = await this.devices.list({ page: 1, limit }, { search: term });

@@ -9,6 +9,7 @@ import {
   resetDevices,
   resetSecrets,
   resetUsers,
+  rowAction,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -51,7 +52,7 @@ test.describe('Két sắt', () => {
     const label = `admin web E2E ${stamp}`;
     const secretValue = `Sup3r#Secret#${stamp}`;
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByText('Chưa cất secret nào')).toBeVisible();
 
@@ -73,7 +74,7 @@ test.describe('Két sắt', () => {
     await expect(page.locator('body')).not.toContainText(secretValue);
 
     // Xoay: đổi giá trị, metadata giữ nguyên.
-    await row.getByRole('button', { name: 'Xoay' }).click();
+    await rowAction(page, label, 'Xoay');
     const rotate = page.getByRole('dialog');
     await rotate.getByRole('textbox', { name: 'Giá trị mới' }).fill(`${secretValue}-v2`);
     await rotate.getByRole('button', { name: 'Xoay' }).click();
@@ -81,10 +82,7 @@ test.describe('Két sắt', () => {
     await expect(page.locator('body')).not.toContainText(secretValue);
 
     // Thu hồi = xóa mềm: biến khỏi danh sách.
-    await page
-      .getByRole('row', { name: new RegExp(label) })
-      .getByRole('button', { name: 'Thu hồi' })
-      .click();
+    await rowAction(page, label, 'Thu hồi');
     await confirmAction(page);
     await expect(page.getByRole('row', { name: new RegExp(label) })).toHaveCount(0);
   });
@@ -168,7 +166,7 @@ test.describe('Két sắt', () => {
     });
     expect(create.status()).toBe(403);
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await expect(page.getByRole('tab', { name: 'Hồ sơ' })).toBeVisible();
     // Tab CÓ hiện (story 6.3) nhưng nội dung nói rõ là không có quyền — không phải bảng trống.
     await page.getByRole('tab', { name: 'Két sắt' }).click();

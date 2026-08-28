@@ -1,3 +1,4 @@
+import { diffRecord, type RecordChanges } from '../../common/record-diff';
 /**
  * Luật của một dòng sổ NAT (story 5.3, FR-017) — hàm THUẦN, không chạm DB.
  *
@@ -147,4 +148,43 @@ export function rangesOverlap(
   bTo: number,
 ): boolean {
   return aFrom <= bTo && bFrom <= aTo;
+}
+
+/** Bộ ô của một rule NAT được theo dõi trong lịch sử (AD-13). */
+export interface NatRuleSnapshot {
+  ports: string;
+  protocol: string;
+  internalIp: string;
+  internalPort: number;
+  usedBy: string;
+  reason: string;
+  enabled: boolean;
+  note: string | null;
+}
+
+const NAT_TRACKED = [
+  'ports',
+  'protocol',
+  'internalIp',
+  'internalPort',
+  'usedBy',
+  'reason',
+  'enabled',
+  'note',
+] as const;
+
+/**
+ * Ô nào của rule NAT thật sự đổi sau một lượt sửa — hàm THUẦN.
+ *
+ * Gộp `externalFrom`/`externalTo` thành MỘT ô `ports` ("8000-8010") vì người đọc lịch sử nghĩ
+ * theo khoảng port, không theo hai con số rời: "8000→8000, 8010→8020" bắt họ tự ghép lại trong
+ * đầu mới hiểu là dải vừa nới ra.
+ *
+ * Dùng lại `diffRecord` dùng chung nên luật "rỗng kiểu nào cũng là rỗng" giống hệt mọi bảng
+ * khác — bấm vào ô ghi chú rồi bấm ra không đẻ ra dòng lịch sử.
+ */
+export function natChanges(before: NatRuleSnapshot, after: NatRuleSnapshot): RecordChanges {
+  // `{ ...x }` để TS coi nó là `Record<string, unknown>`: interface không có index signature,
+  // và nới `diffRecord` ra nhận interface bất kỳ thì mất luôn chỗ chặn gõ nhầm tên trường.
+  return diffRecord(NAT_TRACKED, { ...before }, { ...after });
 }

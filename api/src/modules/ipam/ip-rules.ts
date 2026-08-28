@@ -12,10 +12,14 @@
 /**
  * Trần độ rộng một dải: /24 (254 host). Quyết định của chủ dự án, 25/08/2026.
  *
- * Không phải giới hạn tuỳ tiện: màn chi tiết dải liệt kê MỌI host trong dải và cố ý không
- * phân trang, còn `enumerateHosts` thì dựng mảng đồng bộ. Nên gõ nhầm /16 thay /24 là 65.534
- * dòng (treo tab), /8 là 16 triệu (treo luôn server). Chặn ngay lúc khai dải là chỗ rẻ nhất.
- * Mạng lớn hơn thì chia thành nhiều dải /24 — cách PMH vẫn đang đánh số LAN.
+ * Không phải giới hạn tuỳ tiện: `listBySubnet` liệt kê MỌI host của dải trong một lượt gọi và
+ * `enumerateHosts` dựng mảng đồng bộ. Nên gõ nhầm /16 thay /24 là 65.534 dòng (treo tab), /8
+ * là 16 triệu (treo luôn server). Chặn ngay lúc khai dải là chỗ rẻ nhất. Mạng lớn hơn thì
+ * chia thành nhiều dải /24 — cách PMH vẫn đang đánh số LAN.
+ *
+ * Trần này CHÍNH LÀ thứ cho phép màn dải cắt trang ở client (50 dòng/trang, `slot-paging.ts`):
+ * 254 host về gọn trong một lượt gọi, nên đổi trang là tức thì và con số đếm trên từng nút lọc
+ * vẫn tính trên cả dải. Nới trần ở đây thì phải đẩy phân trang xuống server trước.
  */
 const MIN_PREFIX = 24;
 

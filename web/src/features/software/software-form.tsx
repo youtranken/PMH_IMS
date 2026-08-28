@@ -5,6 +5,7 @@ import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
+import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import type { CatalogLists } from '@/features/catalog/catalog-types';
@@ -227,17 +228,26 @@ export function SoftwareForm({
               onChange={(value) => set('vendorId', value)}
             />
           </Field>
-          <Field label={t('software.status')}>
-            <Select
-              value={form.status}
-              ariaLabel={t('software.status')}
-              options={SOFTWARE_STATUSES.map((status) => ({
-                value: status,
-                label: t(STATUS_KEY[status]),
-              }))}
-              onChange={(value) => set('status', value as SoftwareStatus)}
-            />
-          </Field>
+          {/*
+            Ô Trạng thái CHỈ hiện khi SỬA.
+
+            Thêm mới thì trạng thái luôn là "đang dùng" — bày một ô chọn có đúng một câu trả
+            lời hợp lý là bắt người khai đọc và bỏ qua một thứ không có quyết định nào ở đó,
+            và mở đường cho một hồ sơ vừa tạo đã ở trạng thái "đã thanh lý".
+          */}
+          {row ? (
+            <Field label={t('software.status')}>
+              <Select
+                value={form.status}
+                ariaLabel={t('software.status')}
+                options={SOFTWARE_STATUSES.map((status) => ({
+                  value: status,
+                  label: t(STATUS_KEY[status]),
+                }))}
+                onChange={(value) => set('status', value as SoftwareStatus)}
+              />
+            </Field>
+          ) : null}
         </FormSection>
 
         <FormSection title={t('software.expiry')} columns={3}>
@@ -281,9 +291,25 @@ export function SoftwareForm({
         </FormSection>
 
         {/* Hợp đồng license, thư xác nhận SSL, hóa đơn tên miền — chúng nằm sẵn trên tay lúc
-            gõ hồ sơ mới. Sửa hồ sơ thì không hiện: tab "Giấy tờ" ở trang chi tiết mới là chỗ
-            xem và xóa cả danh sách đang có. */}
-        {row ? null : <AttachmentDraftSection draft={draft} disabled={busy} />}
+            gõ hồ sơ mới, và cũng là thứ hay phải thay bản mới lúc sửa. Thêm mới thì chỉ chọn
+            file (đẩy lên sau khi có id); sửa thì dùng thẳng panel giấy tờ, có đủ danh sách
+            đang có + tải về + xóa. */}
+        {row ? (
+          <FormSection title={t('attachments.title')} columns={1}>
+            {/* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt
+                lưu của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên —
+                xóa một bản scan rồi bấm Hủy là mất luôn, nên phải nói ra. */}
+            <p className="alert">{t('attachments.liveWarning')}</p>
+            <AttachmentPanel
+              ownerType="software"
+              ownerId={row.id}
+              csrfToken={csrfToken}
+              canEdit={!busy}
+            />
+          </FormSection>
+        ) : (
+          <AttachmentDraftSection draft={draft} disabled={busy} />
+        )}
 
         {error ? (
           <p className="alert error" role="alert">

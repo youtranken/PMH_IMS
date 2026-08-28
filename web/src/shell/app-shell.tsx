@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useApiMutation } from '@/lib/api';
-import type { Me } from '@/lib/me';
+import { LOGIN_PATH, type Me } from '@/lib/me';
 import { visibleGroups } from '@/shell/app-nav';
 import { NavIcon } from '@/ui/nav-icon';
 import { ThemeSwitch } from '@/ui/switches';
@@ -130,7 +130,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
               className="btn sm"
               disabled={logout.isPending}
               onClick={() => {
-                logout.mutate(undefined, { onSuccess: () => navigate('/dang-nhap') });
+                logout.mutate(undefined, { onSuccess: () => navigate(LOGIN_PATH) });
               }}
             >
               {t('common.logout')}

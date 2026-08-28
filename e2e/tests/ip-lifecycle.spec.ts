@@ -1,5 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, firstLogin, resetDevices, resetIpam, resetUsers } from './helpers';
+import {
+  E2E_SA,
+  firstLogin,
+  resetDevices,
+  resetIpam,
+  resetUsers,
+  rowAction,
+  rowActionNames,
+} from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -47,16 +55,18 @@ test.describe('Vòng đời IP', () => {
     const stamp = Date.now().toString().slice(-4);
     const { subnetId, address } = await setUp(page, stamp);
 
-    await page.goto(`/dia-chi-ip/${subnetId}`);
+    await page.goto(`/ip-addresses/${subnetId}`);
     const row = page.getByRole('row', { name: new RegExp(address.replace(/\./g, '\\.')) });
     await expect(row.getByText('Đang cấp')).toBeVisible();
 
     // Đang cấp: chỉ hai đường đi tiếp, KHÔNG có "Cấp lại".
-    await expect(row.getByRole('button', { name: 'Nghi chết' })).toBeVisible();
-    await expect(row.getByRole('button', { name: 'Thu hồi' })).toBeVisible();
-    await expect(row.getByRole('button', { name: 'Cấp lại' })).toHaveCount(0);
+    // Cột thao tác giờ là menu ba chấm — mục chỉ có trong DOM khi menu đang mở.
+    const whenAssigned = await rowActionNames(page, address);
+    expect(whenAssigned).toContain('Nghi chết');
+    expect(whenAssigned).toContain('Thu hồi');
+    expect(whenAssigned).not.toContain('Cấp lại');
 
-    await row.getByRole('button', { name: 'Nghi chết' }).click();
+    await rowAction(page, address, 'Nghi chết');
     await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận' }).click();
     await expect(
       page.getByRole('row', { name: new RegExp(address.replace(/\./g, '\\.')) }).getByText('Nghi chết'),
@@ -65,10 +75,7 @@ test.describe('Vòng đời IP', () => {
     // Nghi chết vẫn CHIẾM chỗ — chưa xác nhận chết thì chưa cấp cho người khác được.
     await expect(page.getByText('17% · 1/6 · còn 5')).toBeVisible();
 
-    await page
-      .getByRole('row', { name: new RegExp(address.replace(/\./g, '\\.')) })
-      .getByRole('button', { name: 'Thu hồi' })
-      .click();
+    await rowAction(page, address, 'Thu hồi');
     const reclaim = page.getByRole('dialog');
     await reclaim.getByRole('textbox', { name: 'Lý do' }).fill('máy đã thanh lý');
     await reclaim.getByRole('button', { name: 'Xác nhận' }).click();
@@ -82,7 +89,7 @@ test.describe('Vòng đời IP', () => {
     // Chủ cũ đã biến khỏi hồ sơ — chỉ lịch sử còn giữ.
     await expect(afterReclaim.getByText('Máy in kế toán')).toHaveCount(0);
 
-    await afterReclaim.getByRole('button', { name: 'Cấp lại' }).click();
+    await rowAction(page, address, 'Cấp lại');
     const reassign = page.getByRole('dialog');
     await reassign.getByRole('combobox', { name: 'Người / bộ phận dùng' }).fill('Anh Hùng — Kho');
     await reassign.getByRole('button', { name: 'Xác nhận' }).click();
@@ -90,10 +97,7 @@ test.describe('Vòng đời IP', () => {
     await expect(page.getByText('17% · 1/6 · còn 5')).toBeVisible();
 
     // AC: lịch sử giữ VĨNH VIỄN — mở ra vẫn đọc được IP này từng là máy in kế toán.
-    await page
-      .getByRole('row', { name: new RegExp(address.replace(/\./g, '\\.')) })
-      .getByRole('button', { name: 'Lịch sử' })
-      .click();
+    await rowAction(page, address, 'Lịch sử');
     const history = page.getByRole('dialog');
     await expect(history.getByText('trước đó: Máy in kế toán')).toBeVisible();
     await expect(history.getByText('lý do: máy đã thanh lý')).toBeVisible();

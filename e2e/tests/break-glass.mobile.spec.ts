@@ -75,7 +75,7 @@ test.describe('Duyệt break-glass ở 390px', () => {
     await logout(page);
 
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
-    await page.goto('/duyet-yeu-cau');
+    await page.goto('/approvals');
 
     // Lý do là thứ người duyệt ĐỌC để quyết — phải đọc được đủ, không bị cắt.
     await expect(page.getByText(longReason)).toBeVisible();

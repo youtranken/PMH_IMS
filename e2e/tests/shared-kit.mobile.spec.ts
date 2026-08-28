@@ -9,7 +9,7 @@ test.beforeEach(() => resetUsers());
  */
 test.describe('390px', () => {
   test('màn đăng nhập không tràn ngang', async ({ page }) => {
-    await page.goto('/dang-nhap');
+    await page.goto('/login');
     await expect(page.getByRole('heading', { name: 'Đăng nhập' })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   });
@@ -30,10 +30,14 @@ test.describe('390px', () => {
   test('danh sách tài khoản đọc được ở 390px', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     await openNavDrawer(page);
-    await page.getByRole('link', { name: 'Tài khoản' }).click();
-    await expect(page.getByRole('heading', { name: 'Tài khoản' })).toBeVisible();
+    await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Tài khoản', exact: true })).toBeVisible();
     // Tên xuất hiện cả ở chân sidebar và trong bảng — chỉ kiểm dòng trong BẢNG.
-    await expect(page.getByRole('cell', { name: /E2E Super Admin/ })).toBeVisible();
+    // Bám đúng ô HỌ TÊN: nút ba chấm mang nhãn trợ năng "Thao tác với {tên}" nên ô Thao tác
+    // cũng chứa tên người, và khớp lỏng là trúng hai ô.
+    await expect(
+      page.getByRole('cell', { name: /E2E Super Admin/ }).filter({ hasText: 'e2e-sa@' }),
+    ).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   });
 });

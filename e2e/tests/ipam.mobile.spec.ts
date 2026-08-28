@@ -39,7 +39,7 @@ test.describe('Địa chỉ IP ở 390px', () => {
       },
     });
 
-    await page.goto('/dia-chi-ip');
+    await page.goto('/ip-addresses');
     // Cột dải là thẻ (mockup), không phải ô bảng — ở 390px nó xếp ngang cuộn được.
     await expect(
       page.getByRole('link', { name: new RegExp(`LAN 390 E2E ${stamp}`) }),
@@ -54,7 +54,7 @@ test.describe('Địa chỉ IP ở 390px', () => {
     ).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-    await page.goto(`/dia-chi-ip/${subnetId}`);
+    await page.goto(`/ip-addresses/${subnetId}`);
     await expect(page.getByText('Chị Lan — Phòng Kế toán tầng 3')).toBeVisible();
     await expect(page.getByText(`172.16.${octet}.1`)).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
@@ -98,7 +98,7 @@ test.describe('Địa chỉ IP ở 390px', () => {
       },
     });
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await expect(page.getByRole('heading', { name: 'Địa chỉ IP' })).toBeVisible();
     await expect(page.getByText(`172.17.${octet}.1`)).toBeVisible();
     await expect(page.getByText('cổng quản trị switch tầng 3')).toBeVisible();

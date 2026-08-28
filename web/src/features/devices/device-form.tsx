@@ -5,6 +5,7 @@ import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { Field, FormSection } from '@/ui/page-header';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
+import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
@@ -212,6 +213,28 @@ export function DeviceForm({
               onChange={(e) => set('serial', e.target.value)}
             />
           </Field>
+          {/*
+            Ô Trạng thái CHỈ hiện khi SỬA.
+
+            Thêm mới thì trạng thái luôn là "đang dùng" — bày một ô chọn có đúng một câu trả
+            lời hợp lý là bắt người khai đọc và bỏ qua một thứ không có quyết định nào ở đó,
+            và mở đường cho một hồ sơ vừa tạo đã ở trạng thái "đã thanh lý".
+          */}
+          {/* Trạng thái là thuộc tính của chính cái máy (đang dùng / trong kho / đã thanh lý),
+              không phải của chỗ nó đứng — nó từng nằm trong khối "Vị trí". */}
+          {device ? (
+            <Field label={t('devices.status')}>
+              <Select
+                value={form.status}
+                ariaLabel={t('devices.status')}
+                options={DEVICE_STATUSES.map((status) => ({
+                  value: status,
+                  label: t(STATUS_KEY[status]),
+                }))}
+                onChange={(value) => set('status', value as DeviceStatus)}
+              />
+            </Field>
+          ) : null}
         </FormSection>
 
         <FormSection title={t('devices.location')} columns={3}>
@@ -239,18 +262,6 @@ export function DeviceForm({
               onChange={(value) => set('cabinetId', value)}
             />
           </Field>
-          <Field label={t('devices.status')}>
-            <Select
-              value={form.status}
-              ariaLabel={t('devices.status')}
-              options={DEVICE_STATUSES.map((status) => ({
-                value: status,
-                label: t(STATUS_KEY[status]),
-              }))}
-              onChange={(value) => set('status', value as DeviceStatus)}
-            />
-          </Field>
-
           <Field label={t('devices.assignedTo')} htmlFor="device-assigned">
             <input
               id="device-assigned"
@@ -270,6 +281,11 @@ export function DeviceForm({
               ariaLabel={t('devices.department')}
             />
           </Field>
+        </FormSection>
+
+        {/* Nhà cung cấp đi cùng ngày mua và hạn bảo hành — "mua của ai, khi nào, bảo hành tới
+            bao giờ" là MỘT câu chuyện. Trước đây nó nằm trong khối Vị trí. */}
+        <FormSection title={t('devices.purchase')} columns={3}>
           <Field label={t('devices.vendor')}>
             <Select
               value={form.vendorId}
@@ -282,9 +298,6 @@ export function DeviceForm({
               onChange={(value) => set('vendorId', value)}
             />
           </Field>
-        </FormSection>
-
-        <FormSection title={t('devices.warranty')} columns={3}>
           <Field label={t('devices.purchaseDate')}>
             <DatePicker
               value={form.purchaseDate}
@@ -317,7 +330,28 @@ export function DeviceForm({
           </Field>
         </FormSection>
 
-        {device ? null : <AttachmentDraftSection draft={draft} disabled={busy} />}
+        {/*
+          THÊM MỚI: chỉ chọn file, đẩy lên sau khi có id (`AttachmentDraftSection`).
+          SỬA: hồ sơ đã có id nên dùng thẳng `AttachmentPanel` — nó hiện luôn danh sách giấy
+          tờ đang có, tải về được, xóa được, và thêm file mới là lên ngay. Hai chế độ dùng hai
+          khối khác nhau vì chúng trả lời hai câu khác nhau, không phải vì tiện tay.
+        */}
+        {device ? (
+          <FormSection title={t('attachments.title')} columns={1}>
+            {/* Panel này GHI THẲNG: tải lên và xóa bay đi ngay lúc bấm, không nằm trong lượt
+                lưu của form. Trong một hộp thoại CÓ nút Hủy thì điều đó không hiển nhiên —
+                xóa một bản scan rồi bấm Hủy là mất luôn, nên phải nói ra. */}
+            <p className="alert">{t('attachments.liveWarning')}</p>
+            <AttachmentPanel
+              ownerType="device"
+              ownerId={device.id}
+              csrfToken={csrfToken}
+              canEdit={!busy}
+            />
+          </FormSection>
+        ) : (
+          <AttachmentDraftSection draft={draft} disabled={busy} />
+        )}
 
         {error ? (
           <p className="alert error" role="alert">

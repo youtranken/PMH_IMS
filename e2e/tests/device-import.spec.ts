@@ -42,7 +42,7 @@ test.describe('Import / export thiết bị', () => {
     });
     expect(site.status()).toBe(201);
 
-    await page.goto('/thiet-bi');
+    await page.goto('/devices');
     const template = await downloadTo(page, 'Tải file mẫu', `mau-tb-${stamp}.xlsx`);
     expect(readFileSync(template).subarray(0, 2).toString()).toBe('PK');
 
@@ -89,7 +89,7 @@ test.describe('Import / export thiết bị', () => {
       [`SW-E2E-ERR-${stamp}`, 'Loại không tồn tại', 'Swich', '', ''],
     ]);
 
-    await page.goto('/thiet-bi');
+    await page.goto('/devices');
     await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
     await page.getByLabel('Chọn file .xlsx').setInputFiles(bad);
     await page.getByRole('button', { name: 'Đối chiếu' }).click();
@@ -156,7 +156,7 @@ test.describe('Import / export thiết bị', () => {
       expect(created.status()).toBe(201);
     }
 
-    await page.goto('/thiet-bi');
+    await page.goto('/devices');
     await page.getByRole('button', { name: 'Loại', exact: true }).click();
     await page.getByRole('option', { name: 'Switch', exact: true }).click();
     await expect(page.getByRole('link', { name: `PC-E2E-EXP-${stamp}` })).toHaveCount(0);

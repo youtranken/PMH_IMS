@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +7,8 @@ import { apiFetch } from '@/lib/api-client';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { DataTable } from '@/ui/data-table';
+import { useDispose } from '@/ui/dispose-button';
+import { RowActions } from '@/ui/row-actions';
 import { UsageBar } from '@/ui/usage-bar';
 import { LicenseSeatsExpand } from './license-seats-expand';
 import { sortQuery } from '@/lib/sort-query';
@@ -33,8 +35,9 @@ import {
   type SoftwareRow,
   type SoftwareStatus,
 } from './software-types';
+import { PATHS } from '@/lib/routes';
 
-const LIMIT = 20;
+const DEFAULT_LIMIT = 20;
 
 interface Filters {
   search: string;
@@ -50,6 +53,8 @@ export function SoftwareScreen({ me }: { me: Me }) {
   const toast = useToast();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
+  /** Số dòng/trang do NGƯỜI DÙNG chọn (10/20/50/100), không còn là hằng số cứng. */
+  const [limit, setLimit] = useState(DEFAULT_LIMIT);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả danh sách — sai mà không có dấu hiệu nào.
@@ -63,13 +68,18 @@ export function SoftwareScreen({ me }: { me: Me }) {
     queryFn: () => apiFetch<CatalogLists>('/api/v1/catalog?includeInactive=true'),
   });
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['software'] });
+  /* `useCallback`: `refresh` đi vào mảng phụ thuộc của `useMemo` dựng cột. Hàm mới mỗi lần
+     render thì `useMemo` mất tác dụng và cả mảng cột được dựng lại sau mỗi phím gõ vào ô tìm. */
+  const refresh = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: ['software'] }),
+    [queryClient],
+  );
 
   const software = useQuery({
-    queryKey: ['software', page, filters, sorting],
+    queryKey: ['software', page, limit, filters, sorting],
     queryFn: () =>
       apiFetch<{ items: SoftwareRow[]; total: number }>(
-        `/api/v1/software?${buildQuery(page, filters, sorting)}`,
+        `/api/v1/software?${buildQuery(page, limit, filters, sorting)}`,
       ),
   });
 
@@ -93,7 +103,7 @@ export function SoftwareScreen({ me }: { me: Me }) {
         accessorKey: 'code',
         header: t('software.code'),
         cell: ({ row }) => (
-          <Link className="mono" to={`/phan-mem/${row.original.id}`}>
+          <Link className="mono" to={PATHS.softwareItem(row.original.id)}>
             {row.original.code}
           </Link>
         ),
@@ -159,47 +169,19 @@ export function SoftwareScreen({ me }: { me: Me }) {
       {
         id: 'actions',
         header: t('common.actions'),
-        cell: ({ row }) => {
-          const item = row.original;
-          return (
-            // Sửa và Gán NGAY TRÊN DANH SÁCH, cùng nếp với màn thiết bị: đổi hạn hay nhét key
-            // vào một máy là việc lặt vặt hằng ngày, bắt vào trang chi tiết rồi quay ra là ba
-            // lần chuyển trang cho một ô. Cả hai mở ĐÚNG hộp cũ (`SoftwareForm`,
-            // `AssignDialog`) — AD-15 cấm bản thứ hai, hai bản sẽ trôi khác nhau đúng lúc
-            // luật vượt seat đổi.
-            <div className="action-cell">
-              <button
-                type="button"
-                className="btn sm"
-                aria-label={t('software.editOf', { code: item.code })}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setEditing(item);
-                }}
-              >
-                {t('common.edit')}
-              </button>
-              {/* Chỉ license mới có ghế để gán. SSL hay tên miền thì nút này vô nghĩa —
-                  bày ra để bấm vào rồi báo lỗi là một kiểu hứa hão. */}
-              {supportsSeats(item.kind) ? (
-                <button
-                  type="button"
-                  className="btn sm"
-                  aria-label={t('license.assignOf', { code: item.code })}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    setAssigning(item);
-                  }}
-                >
-                  {t('license.assign')}
-                </button>
-              ) : null}
-            </div>
-          );
-        },
+        meta: { className: 'col-center' },
+        cell: ({ row }) => (
+          <SoftwareRowActions
+            item={row.original}
+            csrfToken={me.csrfToken}
+            onEdit={setEditing}
+            onAssign={setAssigning}
+            onDone={refresh}
+          />
+        ),
       },
     ],
-    [t],
+    [t, me.csrfToken, refresh],
   );
 
   return (
@@ -287,7 +269,8 @@ export function SoftwareScreen({ me }: { me: Me }) {
 
           <Pagination
             page={page}
-            limit={LIMIT}
+            limit={limit}
+            onLimitChange={setLimit}
             total={software.data?.total ?? 0}
             onPageChange={setPage}
           />
@@ -337,8 +320,79 @@ export function SoftwareScreen({ me }: { me: Me }) {
   );
 }
 
-function buildQuery(page: number, filters: Filters, sorting: SortingState): string {
-  const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
+/**
+ * Cột "Thao tác" của một dòng phần mềm — Sửa · Gán vào máy · Đưa vào kho thanh lý.
+ *
+ * Là component RIÊNG chứ không phải một biểu thức trong `cell`, vì `useDispose` là hook: hàm
+ * `cell` của TanStack Table chạy giữa lượt render của bảng, gọi hook trong đó là lệch số hook
+ * giữa hai lượt.
+ *
+ * Sửa và Gán vẫn NGAY TRÊN DANH SÁCH, cùng nếp với màn thiết bị: đổi hạn hay nhét key vào một
+ * máy là việc lặt vặt hằng ngày, bắt vào trang chi tiết rồi quay ra là ba lần chuyển trang cho
+ * một ô. Cả hai mở ĐÚNG hộp cũ (`SoftwareForm`, `AssignDialog`) — AD-15 cấm bản thứ hai, hai
+ * bản sẽ trôi khác nhau đúng lúc luật vượt seat đổi.
+ */
+function SoftwareRowActions({
+  item,
+  csrfToken,
+  onEdit,
+  onAssign,
+  onDone,
+}: {
+  item: SoftwareRow;
+  csrfToken: string;
+  onEdit: (row: SoftwareRow) => void;
+  onAssign: (row: SoftwareRow) => void;
+  onDone: () => void;
+}) {
+  const { t } = useTranslation();
+  const dispose = useDispose({
+    url: `/api/v1/software/${item.id}`,
+    body: { status: 'retired' },
+    label: t('disposal.dispose'),
+    confirmMessage: t('disposal.confirmSoftware', { code: item.code }),
+    csrfToken,
+    onDone,
+  });
+
+  return (
+    <div className="action-cell">
+      <RowActions
+        label={t('common.actionsOf', { subject: item.code })}
+        items={[
+          { key: 'edit', label: t('common.edit'), onSelect: () => onEdit(item) },
+          /* Chỉ license mới có ghế để gán. SSL hay tên miền thì mục này vô nghĩa — bày ra để
+             bấm vào rồi báo lỗi là một kiểu hứa hão. */
+          ...(supportsSeats(item.kind)
+            ? [
+                {
+                  key: 'assign',
+                  label: t('license.assign'),
+                  onSelect: () => onAssign(item),
+                },
+              ]
+            : []),
+          /* Hồ sơ đã bỏ thì không bày mục bỏ nữa — bấm lần hai chỉ ghi thêm một dòng lịch sử
+             rỗng nghĩa. */
+          ...(item.status !== 'retired'
+            ? [
+                {
+                  key: 'dispose',
+                  label: t('disposal.dispose'),
+                  onSelect: dispose.run,
+                  danger: true,
+                  disabled: dispose.isPending,
+                },
+              ]
+            : []),
+        ]}
+      />
+    </div>
+  );
+}
+
+function buildQuery(page: number, limit: number, filters: Filters, sorting: SortingState): string {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   return [params.toString(), buildFilterQuery(filters), sortQuery(sorting)]
     .filter(Boolean)
     .join('&');

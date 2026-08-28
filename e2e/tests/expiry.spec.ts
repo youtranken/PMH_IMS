@@ -74,7 +74,7 @@ test.describe('Cỗ máy Expiry', () => {
       warrantyEnd: inDays(20),
     });
 
-    await page.goto('/sap-het-han');
+    await page.goto('/expiry');
     await expect(page.getByRole('heading', { name: 'Sắp hết hạn' })).toBeVisible();
 
     const rows = page.getByRole('row');
@@ -123,7 +123,7 @@ test.describe('Cỗ máy Expiry', () => {
     // Bảo hành thiết bị KHÔNG gia hạn được từ màn này.
     expect(kinds.find((item) => item.kind === 'warranty')?.canRenew).toBe(false);
 
-    await page.goto('/sap-het-han');
+    await page.goto('/expiry');
     await page.getByRole('button', { name: 'Loại', exact: true }).click();
     await page.getByRole('option', { name: 'Chứng chỉ SSL', exact: true }).click();
 
@@ -167,7 +167,7 @@ test.describe('Cỗ máy Expiry', () => {
     expect(entry?.newEnd).toBe(newEnd);
 
     // Và lịch sử của chính module chủ cũng có dòng "Gia hạn".
-    await page.goto(`/phan-mem/${id}`);
+    await page.goto(`/software/${id}`);
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
     // Bám vào DÒNG lịch sử, không phải chữ "Gia hạn" chung chung (nút ở đầu trang cũng vậy).
     await expect(
@@ -199,7 +199,7 @@ test.describe('Cỗ máy Expiry', () => {
     expect(blocked.status).toBe(400);
     expect(blocked.body).toMatchObject({ code: 'EXPIRY_NOT_RENEWABLE' });
 
-    await page.goto('/sap-het-han');
+    await page.goto('/expiry');
     const row = page.getByRole('row', { name: new RegExp(`PC-E2E-NOREN-${stamp}`) });
     await expect(row.getByText('Sửa trong hồ sơ')).toBeVisible();
     await expect(row.getByRole('button', { name: 'Gia hạn' })).toHaveCount(0);
@@ -215,7 +215,7 @@ test.describe('Cỗ máy Expiry', () => {
       endDate: inDays(-40),
     });
 
-    await page.goto('/sap-het-han');
+    await page.goto('/expiry');
     await expect(page.getByRole('link', { name: new RegExp(`SSL-E2E-OLD-${stamp}`) })).toBeVisible();
     await expect(page.getByText(/Quá hạn \d+ ngày/).first()).toBeVisible();
     await expect(page.getByText(/Đã quá hạn: [1-9]/)).toBeVisible();

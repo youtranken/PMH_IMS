@@ -60,6 +60,15 @@ const ICONS: Record<string, React.ReactNode> = {
       <path d="M20 17H4" />
     </>
   ),
+  'nav.serviceAccounts': (
+    <>
+      {/* Thẻ danh tính — một tài khoản có chủ, khác với "tài khoản đăng nhập IMS". */}
+      <rect x="2" y="5" width="20" height="14" rx="2" />
+      <circle cx="8" cy="11" r="2" />
+      <path d="M5 16c0-1.7 1.3-3 3-3s3 1.3 3 3" />
+      <path d="M14 10h5M14 14h3" />
+    </>
+  ),
   'nav.approvals': (
     <>
       {/* Ô có dấu tích — xin–duyệt. */}

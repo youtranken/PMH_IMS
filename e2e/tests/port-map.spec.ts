@@ -5,6 +5,7 @@ import {
   firstLogin,
   resetDevices,
   resetUsers,
+  rowAction,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -39,7 +40,7 @@ test.describe('Port map', () => {
     const switchId = await createDevice(page, switchCode, 'Switch');
     const serverId = await createDevice(page, serverCode, 'Server');
 
-    await page.goto(`/thiet-bi/${switchId}`);
+    await page.goto(`/devices/${switchId}`);
     await page.getByRole('tab', { name: 'Port map' }).click();
     await expect(page.getByText('Chưa khai cổng nào.')).toBeVisible();
 
@@ -58,7 +59,7 @@ test.describe('Port map', () => {
     await expect(row.getByRole('link', { name: serverCode })).toBeVisible();
 
     // Trang thiết bị ĐẦU KIA: dòng hiện ở bảng chiều ngược, KHÔNG có bản ghi đối xứng.
-    await page.goto(`/thiet-bi/${serverId}`);
+    await page.goto(`/devices/${serverId}`);
     await page.getByRole('tab', { name: 'Port map' }).click();
     await expect(page.getByText('Chưa khai cổng nào.')).toBeVisible();
 
@@ -67,7 +68,10 @@ test.describe('Port map', () => {
     await expect(reverse.getByText('Gi1/0/12')).toBeVisible();
 
     // Chiều ngược chỉ để ĐỌC — sửa ở nơi giữ bản ghi.
-    await expect(reverse.getByRole('button', { name: 'Xóa' })).toHaveCount(0);
+    // Bám nút BA CHẤM chứ không bám chữ "Xóa": từ 28/08/2026 mục xóa nằm trong menu, nên
+    // `getByRole('button', { name: 'Xóa' })` trả 0 kể cả khi menu có mục đó — một khẳng
+    // định luôn xanh không kiểm được gì.
+    await expect(reverse.getByRole('button', { name: /^Thao tác với/ })).toHaveCount(0);
 
     // API nói thẳng: server có 0 cổng của mình, 1 cổng đang cắm vào.
     const map = await page.evaluate(async (id: string) => {
@@ -83,7 +87,7 @@ test.describe('Port map', () => {
     const stamp = Date.now().toString().slice(-6);
     const switchId = await createDevice(page, `SW-E2E-DUP-${stamp}`, 'Switch');
 
-    await page.goto(`/thiet-bi/${switchId}`);
+    await page.goto(`/devices/${switchId}`);
     await page.getByRole('tab', { name: 'Port map' }).click();
 
     for (let i = 0; i < 2; i += 1) {
@@ -120,7 +124,7 @@ test.describe('Port map', () => {
     const stamp = Date.now().toString().slice(-6);
     const printerId = await createDevice(page, `PC-E2E-NOPORT-${stamp}`, 'Printer');
 
-    await page.goto(`/thiet-bi/${printerId}`);
+    await page.goto(`/devices/${printerId}`);
     await expect(page.getByRole('tab', { name: 'Hồ sơ' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Port map' })).toHaveCount(0);
   });
@@ -130,7 +134,7 @@ test.describe('Port map', () => {
     const stamp = Date.now().toString().slice(-6);
     const switchId = await createDevice(page, `SW-E2E-HIST-${stamp}`, 'Switch');
 
-    await page.goto(`/thiet-bi/${switchId}`);
+    await page.goto(`/devices/${switchId}`);
     await page.getByRole('tab', { name: 'Port map' }).click();
     await page.getByRole('button', { name: 'Thêm cổng' }).click();
     const form = page.getByRole('dialog');
@@ -139,7 +143,7 @@ test.describe('Port map', () => {
     await form.getByRole('button', { name: 'Lưu' }).click();
     await expect(page.getByRole('row', { name: /WAN1/ })).toBeVisible();
 
-    await page.getByRole('row', { name: /WAN1/ }).getByRole('button', { name: 'Xóa' }).click();
+    await rowAction(page, 'WAN1', 'Xóa');
     await confirmAction(page);
     await expect(page.getByText('Chưa khai cổng nào.')).toBeVisible();
 

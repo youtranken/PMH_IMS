@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+import { Chevron } from '@/ui/chevron';
 import { useAnchoredMenu } from '@/ui/use-anchored-menu';
 import { useDialogPortal } from '@/ui/dialog';
 
@@ -194,9 +195,7 @@ export function DatePicker({
             ✕
           </span>
         )}
-        <svg className="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
-          <path d="m6 9 6 6 6-6" />
-        </svg>
+        <Chevron className="chev" />
       </button>
 
       {open &&

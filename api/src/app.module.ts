@@ -7,6 +7,7 @@ import { UserThrottlerGuard } from './common/user-throttler.guard';
 import { ExcelExportService } from './common/excel/excel-export.service';
 import { ExcelImportService } from './common/excel/excel-import.service';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { DisposalModule } from './modules/disposal/disposal.module';
 import { DatabaseModule } from './database/database.module';
 import { ApprovalsRegistryModule } from './common/approvals/approvals-registry';
 import { DevicePanelsModule } from './common/device-panels.registry';
@@ -24,6 +25,7 @@ import { SessionGuard } from './modules/auth/session.guard';
 import { SystemConfigModule } from './modules/config-sys/system-config.module';
 import { FilesModule } from './modules/files/files.module';
 import { MailModule } from './modules/mail/mail.module';
+import { ServiceAccountsModule } from './modules/service-accounts/service-accounts.module';
 import { SoftwareModule } from './modules/software/software.module';
 import { IpamModule } from './modules/ipam/ipam.module';
 import { OutboxModule } from './modules/outbox/outbox.module';
@@ -82,6 +84,7 @@ import { VaultModule } from './modules/vault/vault.module';
     ApprovalsModule,
     CatalogModule,
     DevicesModule,
+    ServiceAccountsModule,
     SoftwareModule,
     ExpiryModule,
     FilesModule,
@@ -89,6 +92,7 @@ import { VaultModule } from './modules/vault/vault.module';
     VaultModule,
     IpamModule,
     DashboardModule,
+    DisposalModule,
   ],
   controllers: [HealthController],
   providers: [

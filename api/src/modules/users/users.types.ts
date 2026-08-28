@@ -4,6 +4,10 @@ export interface UserRecord {
   id: string;
   email: string;
   fullName: string;
+  phone: string | null;
+  employeeCode: string | null;
+  /** Dạng `YYYY-MM-DD` — cột `date`, không mang giờ nên không lệch theo múi giờ. */
+  birthDate: string | null;
   role: UserRole;
   status: 'active' | 'locked' | 'disabled';
   mustChangePassword: boolean;

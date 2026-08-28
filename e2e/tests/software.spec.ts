@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, firstLogin, resetSoftware, resetUsers, writeHeaders } from './helpers';
+import { E2E_SA, firstLogin, resetSoftware, resetUsers, rowAction, writeHeaders } from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -57,7 +57,7 @@ test.describe('Hồ sơ phần mềm', () => {
     });
     expect(created.status).toBe(201);
 
-    await page.goto('/phan-mem');
+    await page.goto('/software');
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toBeVisible();
     await expect(row.getByText('0/10')).toBeVisible();
@@ -83,7 +83,7 @@ test.describe('Hồ sơ phần mềm', () => {
     });
     expect(renewed.status()).toBe(201);
 
-    await page.goto(`/phan-mem/${id}`);
+    await page.goto(`/software/${id}`);
     await expect(page.getByRole('heading', { name: new RegExp(code) })).toBeVisible();
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
     // Bám vào KHU lịch sử: chữ "Gia hạn" còn nằm trên cái nút ở đầu trang, tìm toàn trang
@@ -164,7 +164,7 @@ test.describe('Hồ sơ phần mềm', () => {
       endDate: '2027-06-30',
     });
 
-    await page.goto(`/phan-mem/${String(created.body.id)}`);
+    await page.goto(`/software/${String(created.body.id)}`);
     await expect(page.getByRole('tab', { name: 'Két sắt' })).toBeVisible();
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByText('Chưa cất secret nào')).toBeVisible();
@@ -193,7 +193,7 @@ test.describe('Hồ sơ phần mềm', () => {
       });
     }
 
-    await page.goto('/phan-mem');
+    await page.goto('/software');
     await page
       .getByRole('searchbox', { name: 'Tìm theo mã, tên hoặc ghi chú' })
       .fill(`SORT-E2E-${stamp}`);
@@ -219,7 +219,7 @@ test.describe('Hồ sơ phần mềm', () => {
     const stamp = Date.now().toString().slice(-6);
     const code = `MAINT-E2E-UI-${stamp}`;
 
-    await page.goto('/phan-mem');
+    await page.goto('/software');
     await page.getByRole('button', { name: 'Thêm hồ sơ' }).click();
     await fillSoftware(page, { code, name: 'Hợp đồng bảo trì UPS', kind: 'Hợp đồng bảo trì' });
 
@@ -283,7 +283,7 @@ test.describe('Hồ sơ phần mềm', () => {
     expect(wrongKind.status()).toBe(400);
 
     // Trên danh sách: cột hạn nói "Vĩnh viễn", không phải badge ngày.
-    await page.goto('/phan-mem');
+    await page.goto('/software');
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toContainText('Vĩnh viễn');
@@ -317,12 +317,12 @@ test.describe('Hồ sơ phần mềm', () => {
       ).status,
     ).toBe(201);
 
-    await page.goto('/phan-mem');
+    await page.goto('/software');
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toBeVisible();
 
-    await row.getByRole('button', { name: `Sửa hồ sơ ${code}` }).click();
+    await rowAction(page, code, 'Sửa');
     const form = page.getByRole('dialog');
     // Hộp phải mở ra với dữ liệu ĐANG CÓ — hộp trắng là mất hết những ô người ta không sửa.
     await expect(form.getByRole('textbox', { name: 'Mã hồ sơ' })).toHaveValue(code);

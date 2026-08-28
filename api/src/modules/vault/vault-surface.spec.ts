@@ -101,11 +101,71 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
     expect(body).toContain('assertCanSeeMetadata');
   });
 
+  /**
+   * Trang tổng `/vault/owners` (26/08/2026) là NGOẠI LỆ DUY NHẤT được liệt kê qua nhiều chủ
+   * thể — và nó chỉ được phép nói "máy nào có két, mấy ngăn", không được nói trong đó có gì.
+   *
+   * Khóa ranh giới ấy ở đây vì nó rất dễ trôi: một hôm ai đó thấy "hiện luôn tên ngăn cho
+   * tiện" là bản đồ bí mật của công ty ra đời, mà không test nghiệp vụ nào đỏ.
+   */
+  describe('trang tổng chủ thể — liệt kê CHỦ THỂ, không liệt kê secret', () => {
+    const ownersService = readFileSync(join(__dirname, 'vault-owners.service.ts'), 'utf8');
+    const ownersController = readFileSync(join(__dirname, 'vault-owners.controller.ts'), 'utf8');
+
+    it('không đụng tới nhãn, loại hay giá trị của secret', () => {
+      // Bóc chú thích trước: bản thân đoạn giải thích ở đầu file có viết "không `label`,
+      // không `kind`" — soi cả chú thích thì test đỏ vì đúng câu nói rằng nó không làm.
+      const code = ownersService
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/\/\/.*$/gm, '');
+      for (const forbidden of ['label', 'kind', 'value', 'plaintext', 'reveal', 'listFor']) {
+        // Jest (khác Vitest) không nhận tham số thứ hai của `expect` — gắn tên vào chính
+        // vòng lặp thì thông điệp lỗi vẫn chỉ đúng từ nào vi phạm.
+        expect({ forbidden, hit: code.includes(forbidden) }).toEqual({ forbidden, hit: false });
+      }
+    });
+
+    it('kiểu trả về không có trường nào mô tả nội dung két', () => {
+      const shape = /export interface VaultOwnerSummary \{([\s\S]*?)\n\}/.exec(ownersService)![1];
+      const fields = [...shape.matchAll(/^\s{2}(\w+)[?]?:/gm)].map((m) => m[1]).sort();
+      expect(fields).toEqual([
+        'code',
+        'lastChangeAt',
+        'name',
+        'orphan',
+        'ownerId',
+        'ownerType',
+        'secretCount',
+        'siteCode',
+      ]);
+    });
+
+    it('chỉ SA/Admin, và không có route xuất', () => {
+      expect(ownersController).toContain("@Roles('sa', 'admin')");
+      for (const forbidden of ['export', 'download', 'xlsx', 'csv']) {
+        expect(ownersController.toLowerCase()).not.toContain(`@get('${forbidden}`);
+      }
+    });
+  });
+
+  /**
+   * Danh sách này là DÂY BẪY, không phải thủ tục: sửa nó phải kèm lý do, ở đây và ở
+   * `vault.api.ts`.
+   *
+   * `listOwners` (28/08/2026) mở ra cho bảng điều khiển dựng khối "két lâu không đổi". Nó trả
+   * đúng `VaultOwnerSummary` — kiểu mà bài kiểm ngay phía trên ghim từng tên trường, và trong
+   * đó cố ý không có `label`, `kind` hay giá trị. Nên thứ rời khỏi vault vẫn là "hồ sơ nào có
+   * két, mấy ngăn, đổi lần cuối bao giờ", đúng bằng `GET /vault/owners` đã mở cho SA/Admin từ
+   * 26/08. Bên gọi tự gác vai — `DashboardService` chỉ dựng khối đó cho SA/Admin.
+   *
+   * Cái KHÔNG được thêm vào đây, ở bất kỳ hoàn cảnh nào: hàm trả giá trị, hàm trả nhãn ngăn,
+   * hoặc hàm nhận nhiều chủ thể một lượt rồi trả kèm nội dung (FR-026).
+   */
   it('VaultApiService chỉ xuất metadata', () => {
     const methods = Object.getOwnPropertyNames(VaultApiService.prototype)
       .filter((name) => name !== 'constructor')
       .sort();
-    expect(methods).toEqual(['countFor', 'listFor']);
+    expect(methods).toEqual(['countFor', 'listFor', 'listOwners']);
   });
 
   it('không file nào ngoài module vault đụng vào schema két sắt (AD-4)', () => {

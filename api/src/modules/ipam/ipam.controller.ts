@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -55,6 +56,15 @@ class SubnetBodyDto {
   @Min(1, { message: 'VLAN phải từ 1 đến 4094.' })
   @Max(4094, { message: 'VLAN phải từ 1 đến 4094.' })
   vlan?: number | null;
+
+  /**
+   * Gateway của dải (0035). Chuỗi rỗng = xóa gateway đang có — ô để trống là ý định rõ ràng
+   * ("dải point-to-point này không có gateway"), không phải "đừng đụng tới".
+   *
+   * Chỉ kiểm ĐỘ DÀI ở đây; "có nằm trong dải không" là luật nghiệp vụ, thuộc về service —
+   * và còn một CHECK ở tầng DB nữa cho mọi đường vào không đi qua HTTP.
+   */
+  @IsOptional() @IsString() @Length(0, 15) gateway?: string;
 
   @IsOptional() @IsString() @Length(0, 500) description?: string;
 }
@@ -160,10 +170,16 @@ export class IpamController {
 
   // --- Dải mạng ---------------------------------------------------------------
 
+  /**
+   * `?includeVoided=true` — CHỈ màn dải mạng dùng cờ này (28/08/2026).
+   *
+   * Mặc định vẫn là "chỉ dải đang dùng", nên mọi thứ đọc dải qua `IpamApiService` không đổi
+   * hành vi: bảng điều khiển "Dải mạng sắp đầy" không được lôi một dải đã tắt lên nhắc sếp.
+   */
   @Roles('sa', 'admin', 'member')
   @Get('subnets')
-  listSubnets() {
-    return this.subnets.list();
+  listSubnets(@Query('includeVoided') includeVoided?: string) {
+    return this.subnets.list({ includeVoided: includeVoided === 'true' });
   }
 
   @Roles('sa', 'admin', 'member')
@@ -180,6 +196,19 @@ export class IpamController {
   }
 
   /**
+   * IP đã cấp cho MỘT thiết bị.
+   *
+   * Form NAT hỏi cái này: chọn máy đích xong thì ô "IP trong" chỉ còn đúng những IP của
+   * chính máy đó — hết cảnh gõ tay một địa chỉ không thuộc máy nào (thứ mà `validateNatRule`
+   * đang phải chặn ở tầng sau).
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('devices/:deviceId/addresses')
+  listForDevice(@Param('deviceId', new ParseUUIDPipe()) deviceId: string) {
+    return this.addresses.listForDevice(deviceId);
+  }
+
+  /**
    * FR-028 / AC 7.2: xuất hồ sơ IP của một dải.
    *
    * Chỉ xuất những IP CÓ hồ sơ, không xuất các ô trống: ô trống không phải dữ liệu, và một
@@ -192,7 +221,14 @@ export class IpamController {
   @Get('subnets/:id/export.xlsx')
   async exportAddresses(@Param() params: IdParamDto, @Res() res: Response) {
     const subnet = await this.subnets.findOne(params.id);
-    const rows = await this.addresses.listRecords(params.id);
+    /*
+     * Dải đã vô hiệu hóa thì xuất luôn cả hồ sơ đã tắt theo nó — CÙNG luật với bảng trên màn
+     * hình (`listBySubnet`). Không đồng bộ chỗ này thì màn hình hiện 6 dòng còn file Excel ra
+     * 0 dòng, và người ta sẽ tin cái file.
+     */
+    const rows = await this.addresses.listRecords(params.id, {
+      includeVoided: subnet.voidedAt !== null,
+    });
     const buffer = await this.excel.build({
       sheetName: 'Dia chi IP',
       columns: [
@@ -224,6 +260,7 @@ export class IpamController {
       cidr: body.cidr ?? '',
       siteId: body.siteId,
       vlan: body.vlan,
+      gateway: body.gateway,
       description: body.description,
     });
   }
@@ -239,9 +276,15 @@ export class IpamController {
     return this.subnets.update(actor(req), params.id, body);
   }
 
-  /** "Xóa" = ẩn kèm lý do. Bản ghi ở lại, tra cứu được, còn vết ai ẩn. */
+  /**
+   * Vô hiệu hóa kèm lý do — dùng cho dải ĐÃ TỪNG có hồ sơ IP. Bản ghi ở lại, tra cứu được.
+   *
+   * Chuyển từ `DELETE` sang `PATCH :id/void` (2026-08-27) để `DELETE` mang đúng nghĩa của nó:
+   * xóa hẳn. Hai việc khác nhau thì hai cửa khác nhau — trước đây `DELETE` mà thực ra là ẩn
+   * là một cái bẫy cho bất cứ ai đọc route mà không đọc service.
+   */
   @Roles('sa', 'admin')
-  @Delete('subnets/:id')
+  @Patch('subnets/:id/void')
   @Audited('subnet.voided', 'subnet', { writtenByService: true })
   async voidSubnet(
     @Param() params: IdParamDto,
@@ -249,6 +292,40 @@ export class IpamController {
     @Req() req: AuthedRequest,
   ) {
     await this.subnets.voidSubnet(actor(req), params.id, body.reason);
+    return { ok: true };
+  }
+
+  /**
+   * BẬT LẠI một dải đã vô hiệu hóa (28/08/2026).
+   *
+   * Đối xứng với `:id/void`. Không có nó thì vô hiệu hóa là một cánh cửa một chiều, và ai lỡ
+   * tay bấm nhầm chỉ còn cách khai lại dải rồi gõ tay từng hồ sơ IP — với một /24 dùng nửa
+   * dải thì đó là hơn trăm lượt nhập cho một cú bấm nhầm.
+   *
+   * KHÔNG hỏi lý do: bật lại là việc khôi phục, nó không lấy đi thứ gì. Bắt gõ lý do cho một
+   * thao tác vô hại chỉ dạy người dùng thói quen gõ bừa cho qua ô bắt buộc — rồi tới ô lý do
+   * THẬT SỰ quan trọng (vô hiệu hóa) họ cũng gõ bừa nốt.
+   */
+  @Roles('sa', 'admin')
+  @Patch('subnets/:id/restore')
+  @Audited('subnet.restored', 'subnet', { writtenByService: true })
+  async restoreSubnet(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    await this.subnets.restore(actor(req), params.id);
+    return { ok: true };
+  }
+
+  /**
+   * XÓA HẲN — chỉ dải CHƯA TỪNG có hồ sơ IP nào (quyết định 2026-08-27).
+   *
+   * Khai nhầm một dải rồi phải sống chung với nó mãi là phiền vô lý: dải chưa dùng thì chưa
+   * mang thông tin gì, xóa đi khai lại. Dải đã từng dùng thì service từ chối kèm số hồ sơ IP
+   * đang giữ lịch sử, và chỉ sang đường vô hiệu hóa.
+   */
+  @Roles('sa', 'admin')
+  @Delete('subnets/:id')
+  @Audited('subnet.deleted', 'subnet', { writtenByService: true })
+  async deleteSubnet(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    await this.subnets.remove(actor(req), params.id);
     return { ok: true };
   }
 
@@ -371,6 +448,18 @@ export class IpamController {
   @Get('nat/:id')
   findNat(@Param() params: IdParamDto) {
     return this.nat.findOne(params.id);
+  }
+
+  /**
+   * Lịch sử của MỘT rule — kể cả rule đã gỡ.
+   *
+   * Đọc thì mọi vai đã đăng nhập, cùng mức với chính sổ NAT: "port này từng mở cho ai" là câu
+   * người trực cần trả lời lúc 2 giờ sáng, không phải câu chỉ quản trị mới được biết.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('nat/:id/history')
+  natHistory(@Param() params: IdParamDto) {
+    return this.nat.history(params.id);
   }
 
   @Roles('sa', 'admin', 'member')

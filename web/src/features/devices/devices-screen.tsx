@@ -27,8 +27,9 @@ import {
   type DeviceRow,
   type DeviceStatus,
 } from './device-types';
+import { PATHS } from '@/lib/routes';
 
-const LIMIT = 20;
+const DEFAULT_LIMIT = 20;
 
 interface Filters {
   search: string;
@@ -51,6 +52,8 @@ export function DevicesScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(1);
+  /** Số dòng/trang do NGƯỜI DÙNG chọn (10/20/50/100), không còn là hằng số cứng. */
+  const [limit, setLimit] = useState(DEFAULT_LIMIT);
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả kho — sai mà không có dấu hiệu nào.
@@ -65,10 +68,10 @@ export function DevicesScreen({ me }: { me: Me }) {
   });
 
   const devices = useQuery({
-    queryKey: ['devices', page, filters, sorting],
+    queryKey: ['devices', page, limit, filters, sorting],
     queryFn: () =>
       apiFetch<{ items: DeviceRow[]; total: number }>(
-        `/api/v1/devices?${buildQuery(page, filters, sorting)}`,
+        `/api/v1/devices?${buildQuery(page, limit, filters, sorting)}`,
       ),
   });
 
@@ -114,7 +117,7 @@ export function DevicesScreen({ me }: { me: Me }) {
         header: t('devices.code'),
         cell: ({ row }) => (
           // Link thật (không phải onClick trên <tr>): mở tab mới, copy link được.
-          <Link className="mono" to={`/thiet-bi/${row.original.id}`}>
+          <Link className="mono" to={PATHS.device(row.original.id)}>
             {row.original.code}
           </Link>
         ),
@@ -309,7 +312,8 @@ export function DevicesScreen({ me }: { me: Me }) {
 
           <Pagination
             page={page}
-            limit={LIMIT}
+            limit={limit}
+            onLimitChange={setLimit}
             total={devices.data?.total ?? 0}
             onPageChange={setPage}
           />
@@ -358,8 +362,8 @@ export function DevicesScreen({ me }: { me: Me }) {
   );
 }
 
-function buildQuery(page: number, filters: Filters, sorting: SortingState): string {
-  const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
+function buildQuery(page: number, limit: number, filters: Filters, sorting: SortingState): string {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   return [params.toString(), buildFilterQuery(filters), sortQuery(sorting)]
     .filter(Boolean)
     .join('&');

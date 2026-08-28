@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { statusLabel, toIpHistoryEntries, type IpHistoryRow } from './ip-history-entries';
+import {
+  actionLabel,
+  statusLabel,
+  toIpHistoryEntries,
+  type IpHistoryRow,
+} from './ip-history-entries';
 
 function row(over: Partial<IpHistoryRow> = {}): IpHistoryRow {
   return {
@@ -81,6 +86,39 @@ describe('toIpHistoryEntries — lịch sử IP đọc được (story 5.2)', ()
   it('chuỗi rỗng trong changes không đẻ ra "lý do: " cụt lủn', () => {
     const [entry] = toIpHistoryEntries([row({ changes: { reason: '   ', usedBy: '' } })]);
     expect(entry.detail).not.toContain('lý do');
+  });
+});
+
+/**
+ * Bảng lịch sử trước 28/08/2026 xen kẽ hai thứ tiếng: bước chuyển mang tên tiếng Việt do API
+ * đặt ("Thu hồi"), còn bốn hành động còn lại rơi ra nguyên khóa máy ("ip.voided").
+ */
+describe('actionLabel — tên việc bằng tiếng Việt', () => {
+  it.each([
+    ['ip.created', 'Tạo hồ sơ'],
+    ['ip.updated', 'Sửa hồ sơ'],
+    ['ip.assigned', 'Gán chủ'],
+    ['ip.voided', 'Xóa hồ sơ'],
+    ['ip.restored', 'Bật lại'],
+  ])('%s → %s', (action, expected) => {
+    expect(actionLabel(action)).toBe(expected);
+  });
+
+  /** Bước chuyển đã là tiếng Việt sẵn — đi qua bảng này phải RA NGUYÊN, không bị nuốt. */
+  it('tên bước chuyển do API đặt đi qua nguyên vẹn', () => {
+    expect(actionLabel('Thu hồi')).toBe('Thu hồi');
+    expect(actionLabel('Xác nhận vẫn dùng')).toBe('Xác nhận vẫn dùng');
+  });
+
+  it('khóa lạ giữ nguyên còn hơn hiện ô trống', () => {
+    expect(actionLabel('ip.chuaTungCo')).toBe('ip.chuaTungCo');
+  });
+
+  it('dòng lịch sử đi qua toIpHistoryEntries cũng được dịch', () => {
+    const [entry] = toIpHistoryEntries([
+      row({ action: 'ip.restored', fromStatus: 'assigned', toStatus: 'assigned' }),
+    ]);
+    expect(entry.action).toBe('Bật lại');
   });
 });
 

@@ -39,7 +39,7 @@ describe('apiFetch', () => {
       vi.fn().mockResolvedValue(jsonResponse(401, { code: 'SESSION_EXPIRED', message: 'Hết hạn' })),
     );
     await expect(apiFetch('/api/v1/accounts')).rejects.toMatchObject({ status: 401 });
-    expect(window.location.href).toBe('/dang-nhap');
+    expect(window.location.href).toBe('/login');
   });
 
   it('gắn Content-Type + X-CSRF-Token khi có body/csrf', async () => {

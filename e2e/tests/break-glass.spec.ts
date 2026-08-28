@@ -120,7 +120,7 @@ test.describe('Break-glass', () => {
     expect(blocked.status()).toBe(403);
     expect(await blocked.json()).toMatchObject({ code: 'BREAK_GLASS_REQUIRED' });
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByText(`admin web E2E ${stamp}`)).toBeVisible();
     await expect(page.getByText(/cần được duyệt trước khi xem/i)).toBeVisible();
@@ -136,7 +136,7 @@ test.describe('Break-glass', () => {
     await logout(page);
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
 
-    await page.goto('/duyet-yeu-cau');
+    await page.goto('/approvals');
     await expect(page.getByText('switch tầng 3 mất kết nối')).toBeVisible();
     await page.getByRole('button', { name: 'Duyệt', exact: true }).first().click();
     const decide = page.getByRole('dialog');
@@ -149,7 +149,7 @@ test.describe('Break-glass', () => {
     await loginWithTotp(page, E2E_MEMBER.email, NEW_PASSWORD, totpSecret);
     expireStepUp();
 
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByText(/Bạn được xem tới/)).toBeVisible();
 
@@ -365,13 +365,18 @@ test.describe('Break-glass', () => {
     await logout(page);
 
     await firstLogin(page, E2E_MEMBER);
-    await page.goto(`/thiet-bi/${deviceId}`);
+    await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByRole('button', { name: 'Xem' })).toBeVisible();
 
-    for (const label of ['Cất secret', 'Sửa thông tin', 'Xoay', 'Thu hồi']) {
-      await expect(page.getByRole('button', { name: label })).toHaveCount(0);
-    }
+    // "Cất secret" vẫn là nút phẳng trên đầu panel.
+    await expect(page.getByRole('button', { name: 'Cất secret' })).toHaveCount(0);
+    /*
+     * Sửa · Xoay · Thu hồi nằm trong menu ba chấm từ 28/08/2026, nên bám theo chữ trên nút
+     * đã thành một khẳng định luôn xanh: mục menu không có trong DOM khi menu đóng, kể cả
+     * với người CÓ quyền. Bám đúng cái nút mở menu — nó chỉ được vẽ khi `canEdit`.
+     */
+    await expect(page.getByRole('button', { name: /^Thao tác với/ })).toHaveCount(0);
   });
 
   /** Code review Epic 6, finding 2: Member mở màn duyệt phải thấy NGAY yêu cầu của mình. */
@@ -389,7 +394,7 @@ test.describe('Break-glass', () => {
       data: { ownerType: 'device', ownerId: deviceId, reason: 'lý do của tôi', hours: 2 },
     });
 
-    await page.goto('/duyet-yeu-cau');
+    await page.goto('/approvals');
     // KHÔNG bấm tab nào cả — mở ra là phải thấy.
     await expect(page.getByText('lý do của tôi')).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Chờ duyệt' })).toHaveCount(0);

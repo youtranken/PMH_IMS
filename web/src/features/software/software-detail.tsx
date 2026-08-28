@@ -1,26 +1,29 @@
-import { useState, type ReactNode } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
-import { ApiError, apiFetch } from '@/lib/api-client';
-import { errorMessage, useApiMutation } from '@/lib/api';
-import { formatDate, orDash } from '@/lib/format';
-import type { Me } from '@/lib/me';
-import { AttachmentPanel } from '@/ui/attachment-panel';
-import { DatePicker } from '@/ui/date-picker';
-import { Dialog } from '@/ui/dialog';
-import { ExpiryBadge } from '@/ui/expiry-badge';
-import { Field } from '@/ui/page-header';
-import { HistoryPanel } from '@/ui/history-panel';
-import { LoadError, Loading, NotFound } from '@/ui/load-state';
-import { PageHeader } from '@/ui/page-header';
-import { TabPanel, Tabs } from '@/ui/tabs';
-import { VaultPanel } from '@/ui/vault-panel';
-import { useToast } from '@/ui/toast';
-import type { CatalogLists } from '@/features/catalog/catalog-types';
-import { LicenseAssignmentsPanel } from './license-assignments-panel';
-import { SoftwareForm } from './software-form';
-import { toSoftwareHistory } from './software-history-entries';
+import { useState, type ReactNode } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { useParams, useSearchParams } from "react-router-dom";
+import { ApiError, apiFetch } from "@/lib/api-client";
+import { errorMessage, useApiMutation } from "@/lib/api";
+import { formatDate, orDash } from "@/lib/format";
+import type { Me } from "@/lib/me";
+import { AttachmentPanel } from "@/ui/attachment-panel";
+import { DatePicker } from "@/ui/date-picker";
+import { Dialog } from "@/ui/dialog";
+import { ExpiryBadge } from "@/ui/expiry-badge";
+import { Field } from "@/ui/page-header";
+import { HistoryPanel } from "@/ui/history-panel";
+import { LoadError, Loading, NotFound } from "@/ui/load-state";
+import { BlankFields, DetailHeader, Stat, StatGrid, StatIfSet } from "@/ui/detail-header";
+import { DisposeButton } from "@/ui/dispose-button";
+import { WarrantyTimeline } from "@/ui/warranty-timeline";
+import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
+import { useTabCounts } from "@/ui/tab-counts";
+import { VaultPanel } from "@/ui/vault-panel";
+import { useToast } from "@/ui/toast";
+import type { CatalogLists } from "@/features/catalog/catalog-types";
+import { LicenseAssignmentsPanel } from "./license-assignments-panel";
+import { SoftwareForm } from "./software-form";
+import { toSoftwareHistory } from "./software-history-entries";
 import {
   KIND_KEY,
   STATUS_KEY,
@@ -29,7 +32,8 @@ import {
   supportsSeats,
   type SoftwareHistoryRow,
   type SoftwareRow,
-} from './software-types';
+} from "./software-types";
+import { PATHS } from "@/lib/routes";
 
 /**
  * Trang chi tiết hồ sơ phần mềm (story 3.1).
@@ -42,41 +46,43 @@ export function SoftwareDetail({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const { id = '' } = useParams();
-  const [tab, setTab] = useState('profile');
+  const { id = "" } = useParams();
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState(() =>
+    initialTab(params.get("tab"), [
+      "profile",
+      "devices",
+      "vault",
+      "attachments",
+      "history",
+    ]),
+  );
   const [editing, setEditing] = useState(false);
   const [renewing, setRenewing] = useState(false);
 
   const software = useQuery({
-    queryKey: ['software', id],
+    queryKey: ["software", id],
     queryFn: () => apiFetch<SoftwareRow>(`/api/v1/software/${id}`),
     retry: false,
   });
 
   const history = useQuery({
-    queryKey: ['software', id, 'history'],
-    queryFn: () => apiFetch<SoftwareHistoryRow[]>(`/api/v1/software/${id}/history`),
-    enabled: tab === 'history',
+    queryKey: ["software", id, "history"],
+    queryFn: () =>
+      apiFetch<SoftwareHistoryRow[]>(`/api/v1/software/${id}/history`),
+    enabled: tab === "history",
   });
 
   const lists = useQuery({
-    queryKey: ['catalog', 'lists'],
-    queryFn: () => apiFetch<CatalogLists>('/api/v1/catalog?includeInactive=true'),
+    queryKey: ["catalog", "lists"],
+    queryFn: () =>
+      apiFetch<CatalogLists>("/api/v1/catalog?includeInactive=true"),
     enabled: editing,
   });
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['software'] });
+  const refresh = () =>
+    queryClient.invalidateQueries({ queryKey: ["software"] });
 
-  if (software.isLoading) return <Loading />;
-  if (software.isError) {
-    return software.error instanceof ApiError && software.error.status === 404 ? (
-      <NotFound />
-    ) : (
-      <LoadError onRetry={() => void software.refetch()} />
-    );
-  }
-
-  const item = software.data!;
   /**
    * Tab Két sắt hiện cho MỌI vai kể từ story 6.3.
    *
@@ -85,101 +91,211 @@ export function SoftwareDetail({ me }: { me: Me }) {
    * người đã được gán quyền lại không có đường nào tới. Panel tự nói rõ tầng của người xem.
    */
   const canVault = true;
+
+  /*
+   * Danh sách tab dựng TRƯỚC mấy nhánh `return` sớm bên dưới, vì `useVisibleTab` là hook:
+   * đặt nó sau `if (software.isLoading) return` thì số hook giữa hai lượt render lệch nhau.
+   */
+  const counts = useTabCounts("software", id, me);
+  const tabItems = [
+    { key: "profile", label: t("software.tabProfile") },
+    // Tab "Máy đang dùng" chỉ có nghĩa với license (story 3.2).
+    ...(software.data && supportsSeats(software.data.kind)
+      ? [
+          {
+            key: "devices",
+            label: t("software.tabDevices"),
+            count: software.data.seatUsed,
+          },
+        ]
+      : []),
+    // Két sắt chỉ hiện với người có quyền — Member không có đường tới endpoint (AD-9).
+    ...(canVault
+      ? [{ key: "vault", label: t("vault.tab"), count: counts.secrets }]
+      : []),
+    // Hợp đồng license, thư xác nhận SSL, hóa đơn tên miền — cùng `AttachmentPanel` với
+    // thiết bị (2.3) và đường truyền (3.3), không có bản riêng cho phần mềm.
+    {
+      key: "attachments",
+      label: t("software.tabAttachments"),
+      count: counts.files,
+    },
+    { key: "history", label: t("software.tabHistory") },
+  ];
+  const safeTab = useVisibleTab(
+    tab,
+    tabItems.map((entry) => entry.key),
+    setTab,
+  );
+
+  if (software.isLoading) return <Loading />;
+  if (software.isError) {
+    return software.error instanceof ApiError &&
+      software.error.status === 404 ? (
+      <NotFound />
+    ) : (
+      <LoadError onRetry={() => void software.refetch()} />
+    );
+  }
+
+  const item = software.data!;
   /** Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày ra nút để bấm rồi 403. */
-  const canVaultWrite = me.role === 'sa' || me.role === 'admin';
+  const canVaultWrite = me.role === "sa" || me.role === "admin";
 
   return (
     <>
-      <PageHeader
-        title={`${item.code} — ${item.name}`}
-        subtitle={`${t(KIND_KEY[item.kind])}${item.vendorName ? ` · ${item.vendorName}` : ''}`}
+      <DetailHeader
+        crumbs={[
+          { label: t("nav.software"), to: PATHS.software },
+          { label: t(KIND_KEY[item.kind]) },
+          { label: item.code },
+        ]}
+        code={item.code}
+        name={item.name}
+        subline={
+          <>
+            <span>{t(KIND_KEY[item.kind])}</span>
+            {item.vendorName ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{item.vendorName}</span>
+              </>
+            ) : null}
+          </>
+        }
         actions={
           <>
-            <Link className="btn" to="/phan-mem">
-              {t('software.back')}
-            </Link>
-            <button type="button" className="btn" onClick={() => setEditing(true)}>
-              {t('software.edit')}
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setEditing(true)}
+            >
+              {t("software.edit")}
             </button>
-            <button type="button" className="btn primary" onClick={() => setRenewing(true)}>
-              {t('software.renew')}
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => setRenewing(true)}
+            >
+              {t("software.renew")}
             </button>
+            {item.status !== "retired" ? (
+              <DisposeButton
+                url={`/api/v1/software/${item.id}`}
+                body={{ status: "retired" }}
+                label={t("disposal.dispose")}
+                confirmMessage={t("disposal.confirmSoftware", { code: item.code })}
+                csrfToken={me.csrfToken}
+                onDone={() => void refresh()}
+              />
+            ) : null}
           </>
         }
       />
 
-      <div className="device-summary">
-        <span className={`badge ${STATUS_TONE[item.status]}`}>{t(STATUS_KEY[item.status])}</span>
-        {item.licenseModel === 'perpetual' ? (
-          <span className="badge ok plain">{t('software.perpetual')}</span>
-        ) : (
-          <ExpiryBadge end={item.endDate} />
-        )}
-        {supportsSeats(item.kind) && item.seatTotal !== null ? (
-          <span className="muted">
-            {t('software.seats')}: <span className="mono">{seatLabel(item)}</span>
+      {/* Bốn chỉ số RIÊNG của phần mềm: hạn và GHẾ ĐÃ DÙNG là hai con số quyết định "có mua
+          thêm không" — trước đây ghế nằm sâu trong tab, phải bấm mới thấy. */}
+      <StatGrid>
+        <Stat
+          label={t("software.status")}
+          note={item.startDate ? `${t("expiry.from")} ${formatDate(item.startDate)}` : undefined}
+        >
+          <span className={`badge ${STATUS_TONE[item.status]}`}>
+            {t(STATUS_KEY[item.status])}
           </span>
+        </Stat>
+
+        {/*
+          Thẻ hạn CHỈ hiện khi tab Hồ sơ KHÔNG vẽ thanh đầy đủ — tức là license vĩnh viễn
+          (không có quãng đường nào) hoặc hồ sơ chưa khai hạn.
+
+          Còn lại thì thanh đầy đủ ngay dưới đã nói đủ, và một thanh mini lặp lại nó cách đó
+          hai dòng là hai lần cùng một câu — đúng lỗi mà dải chỉ số sinh ra để dọn.
+        */}
+        {item.licenseModel === "perpetual" ? (
+          <Stat label={t("software.endDate")}>
+            <span className="badge ok plain">{t("software.perpetual")}</span>
+          </Stat>
+        ) : item.endDate ? null : (
+          <Stat label={t("software.endDate")}>
+            <ExpiryBadge end={null} />
+          </Stat>
+        )}
+
+        {supportsSeats(item.kind) ? (
+          <Stat label={t("software.seats")} note={t("software.seatsNote")}>
+            <span className="mono">{seatLabel(item)}</span>
+          </Stat>
         ) : null}
-      </div>
+
+        {/* Thẻ rỗng là ô chết chiếm chỗ của một chỉ số có ích — dải chỉ có bốn chỗ. */}
+        <StatIfSet label={t("software.vendor")} value={item.vendorName} />
+        <StatIfSet label={t("software.note")} value={item.note} />
+      </StatGrid>
 
       <Tabs
-        items={[
-          { key: 'profile', label: t('software.tabProfile') },
-          // Tab "Máy đang dùng" chỉ có nghĩa với license (story 3.2).
-          ...(supportsSeats(item.kind)
-            ? [{ key: 'devices', label: t('software.tabDevices'), count: item.seatUsed }]
-            : []),
-          // Két sắt chỉ hiện với người có quyền — Member không có đường tới endpoint (AD-9).
-          ...(canVault ? [{ key: 'vault', label: t('vault.tab') }] : []),
-          // Hợp đồng license, thư xác nhận SSL, hóa đơn tên miền — cùng `AttachmentPanel` với
-          // thiết bị (2.3) và đường truyền (3.3), không có bản riêng cho phần mềm.
-          { key: 'attachments', label: t('software.tabAttachments') },
-          { key: 'history', label: t('software.tabHistory') },
-        ]}
-        value={tab}
+        items={tabItems}
+        value={safeTab}
         onChange={setTab}
-        ariaLabel={t('software.title')}
+        ariaLabel={t("software.title")}
       />
 
-      <TabPanel tabKey={tab}>
-        {tab === 'profile' ? (
+      <TabPanel tabKey={safeTab}>
+        {safeTab === "profile" ? (
           <>
+            {/* Thanh hạn ĐẦY ĐỦ. License vĩnh viễn thì không có quãng đường nào để vẽ. */}
+            {item.licenseModel !== "perpetual" && item.endDate ? (
+              <section className="card">
+                <h2 className="form-section-title">{t("software.endDate")}</h2>
+                <WarrantyTimeline
+                  start={item.startDate}
+                  end={item.endDate}
+                  startLabel={t("software.startDate")}
+                  endLabel={t("software.endDate")}
+                />
+              </section>
+            ) : null}
+
+            {/* Loại · nhà cung cấp ĐÃ ở dòng định danh; trạng thái · hạn · ghế ĐÃ ở dải chỉ
+                số. Lưới chỉ còn phần chưa nói ở đâu cả. */}
             <dl className="data-grid">
-              <Item label={t('software.kind')}>{t(KIND_KEY[item.kind])}</Item>
-              <Item label={t('software.vendor')}>{orDash(item.vendorName)}</Item>
-              <Item label={t('software.seats')}>{seatLabel(item)}</Item>
-              <Item label={t('software.startDate')}>{orDash(formatDate(item.startDate))}</Item>
-              <Item label={t('software.licenseModel')}>
+              <Item label={t("software.licenseModel")}>
                 {supportsSeats(item.kind)
-                  ? t(item.licenseModel === 'perpetual' ? 'software.perpetual' : 'software.subscription')
-                  : '—'}
+                  ? t(
+                      item.licenseModel === "perpetual"
+                        ? "software.perpetual"
+                        : "software.subscription",
+                    )
+                  : "—"}
               </Item>
-              <Item label={t('software.endDate')}>
-                {item.licenseModel === 'perpetual' ? (
-                  t('software.perpetual')
-                ) : item.endDate ? (
-                  <>
-                    {formatDate(item.endDate)} <ExpiryBadge end={item.endDate} />
-                  </>
-                ) : (
-                  '—'
-                )}
+              <Item label={t("software.startDate")}>
+                {orDash(formatDate(item.startDate))}
               </Item>
-              <Item label={t('software.status')}>{t(STATUS_KEY[item.status])}</Item>
-              <Item label={t('software.note')}>{orDash(item.note)}</Item>
+              <Item label={t("software.note")}>{orDash(item.note)}</Item>
             </dl>
+            <BlankFields
+              labels={[
+                item.vendorName ? null : t("software.vendor"),
+                item.startDate ? null : t("software.startDate"),
+                item.note ? null : t("software.note"),
+              ].filter((label): label is string => label !== null)}
+            />
           </>
-        ) : tab === 'vault' ? (
+        ) : safeTab === "vault" ? (
           <VaultPanel
             ownerType="software"
             ownerId={item.id}
             me={me}
             canEdit={canVaultWrite}
           />
-        ) : tab === 'devices' ? (
+        ) : safeTab === "devices" ? (
           <LicenseAssignmentsPanel software={item} csrfToken={me.csrfToken} />
-        ) : tab === 'attachments' ? (
-          <AttachmentPanel ownerType="software" ownerId={item.id} csrfToken={me.csrfToken} />
+        ) : safeTab === "attachments" ? (
+          <AttachmentPanel
+            ownerType="software"
+            ownerId={item.id}
+            csrfToken={me.csrfToken}
+          />
         ) : history.isLoading ? (
           <Loading />
         ) : history.isError ? (
@@ -209,7 +325,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
           onClose={() => setRenewing(false)}
           onDone={() => {
             setRenewing(false);
-            toast({ message: t('software.renewed') });
+            toast({ message: t("software.renewed") });
             void refresh();
           }}
         />
@@ -230,7 +346,7 @@ function RenewDialog({
   onDone: () => void;
 }) {
   const { t } = useTranslation();
-  const [endDate, setEndDate] = useState('');
+  const [endDate, setEndDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const renew = useApiMutation<{ endDate: string }, unknown>(
     `/api/v1/software/${software.id}/renew`,
@@ -242,14 +358,19 @@ function RenewDialog({
       open
       onOpenChange={onClose}
       maxWidth={480}
-      title={`${t('software.renewTitle')} — ${software.code}`}
+      title={`${t("software.renewTitle")} — ${software.code}`}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
+            {t("common.cancel")}
           </button>
-          <button type="submit" form="renew-form" className="btn primary" disabled={renew.isPending}>
-            {renew.isPending ? t('common.loading') : t('software.renew')}
+          <button
+            type="submit"
+            form="renew-form"
+            className="btn primary"
+            disabled={renew.isPending}
+          >
+            {renew.isPending ? t("common.loading") : t("software.renew")}
           </button>
         </>
       }
@@ -262,22 +383,30 @@ function RenewDialog({
           e.preventDefault();
           setError(null);
           if (!endDate) {
-            setError(t('software.renewHint'));
+            setError(t("software.renewHint"));
             return;
           }
           renew.mutate(
             { endDate },
-            { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
+            {
+              onSuccess: onDone,
+              onError: (err) => setError(errorMessage(err)),
+            },
           );
         }}
       >
         <p className="muted">
-          {t('software.endDate')}: {software.endDate ? formatDate(software.endDate) : '—'}
+          {t("software.endDate")}:{" "}
+          {software.endDate ? formatDate(software.endDate) : "—"}
         </p>
-        <Field label={t('software.endDate')} required hint={t('software.renewHint')}>
+        <Field
+          label={t("software.endDate")}
+          required
+          hint={t("software.renewHint")}
+        >
           <DatePicker
             value={endDate}
-            ariaLabel={t('software.renewTitle')}
+            ariaLabel={t("software.renewTitle")}
             /* Hạn mới phải sau hạn cũ — chặn ngay trên lịch cho khỏi bấm nhầm;
                API vẫn kiểm lại vì chốt chặn thật phải nằm ở server. */
             min={software.endDate ?? undefined}

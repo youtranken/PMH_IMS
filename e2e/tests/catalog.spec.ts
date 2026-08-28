@@ -9,6 +9,7 @@ import {
   firstLogin,
   resetCatalog,
   resetUsers,
+  rowAction,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -60,22 +61,22 @@ test.describe('Danh mục', () => {
     await expect(cabinetRow.getByRole('cell', { name: '42', exact: true })).toBeVisible();
 
     // Vô hiệu rồi bật lại — mục vẫn còn, chỉ đổi trạng thái.
-    await cabinetRow.getByRole('button', { name: 'Vô hiệu' }).click();
+    await rowAction(page, new RegExp(cabinetCode), 'Vô hiệu');
     await confirmAction(page);
     await expect(cabinetRow.getByText('Đã vô hiệu')).toBeVisible();
 
-    await cabinetRow.getByRole('button', { name: 'Bật lại' }).click();
+    await rowAction(page, new RegExp(cabinetCode), 'Bật lại');
     await confirmAction(page);
     await expect(cabinetRow.getByText('Đang dùng')).toBeVisible();
 
     // Dọn sạch sau khi chạy — đồng thời kiểm luôn đường XÓA THÀNH CÔNG (mục chưa ai dùng).
-    await cabinetRow.getByRole('button', { name: 'Xóa' }).click();
+    await rowAction(page, new RegExp(cabinetCode), 'Xóa');
     await confirmAction(page);
     await expect(cabinetRow).toHaveCount(0);
 
     await page.getByRole('tab', { name: 'Site' }).click();
     const createdSite = page.getByRole('row', { name: new RegExp(siteCode) });
-    await createdSite.getByRole('button', { name: 'Xóa' }).click();
+    await rowAction(page, siteCode, 'Xóa');
     await confirmAction(page);
     await expect(createdSite).toHaveCount(0);
   });
@@ -106,10 +107,7 @@ test.describe('Danh mục', () => {
     await expect(page.getByRole('row', { name: new RegExp(cabinetCode) })).toBeVisible();
 
     await page.getByRole('tab', { name: 'Site' }).click();
-    await page
-      .getByRole('row', { name: new RegExp(siteCode) })
-      .getByRole('button', { name: 'Xóa' })
-      .click();
+    await rowAction(page, siteCode, 'Xóa');
     await confirmAction(page);
 
     await expect(page.getByText(/không xóa được/i)).toBeVisible();
@@ -219,7 +217,7 @@ test.describe('Danh mục', () => {
       });
     }
 
-    await page.goto('/quan-tri/danh-muc');
+    await page.goto('/admin/catalog');
     await page.getByRole('tab', { name: 'Tủ mạng' }).click();
     await page
       .getByRole('searchbox', { name: 'Tìm theo mã tủ, site hoặc mô tả' })
@@ -249,7 +247,7 @@ test.describe('Danh mục', () => {
   test('ba danh mục mới thêm được, và bảng lịch sử chấp nhận chúng', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
-    await page.goto('/quan-tri/danh-muc');
+    await page.goto('/admin/catalog');
 
     // ── Bộ phận ───────────────────────────────────────────────────────────
     await page.getByRole('tab', { name: 'Bộ phận' }).click();

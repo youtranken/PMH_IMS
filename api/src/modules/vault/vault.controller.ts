@@ -16,6 +16,7 @@ import { Throttle } from '@nestjs/throttler';
 import { IsIn, IsOptional, IsString, IsUUID, Length } from 'class-validator';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
+import { stepUpSecondsLeft } from '../auth/session-policy';
 import { RequiresStepUp, StepUpGuard } from '../auth/step-up.guard';
 import type { AuthedRequest } from '../auth/types';
 import { SystemConfigService } from '../config-sys/system-config.service';
@@ -189,14 +190,26 @@ export class VaultController {
       ({ grantId } = await this.breakGlass.assertCanReveal(who, meta.ownerType, meta.ownerId));
     }
 
-    const [opened, revealSeconds] = await Promise.all([
+    const [opened, revealSeconds, graceMinutes] = await Promise.all([
       // `grantId` đi vào dòng audit: không có nó thì nhật ký break-glass đứt đúng ở khúc quan
       // trọng nhất — "xem bằng quyền nào" (FR-025).
       this.vault.reveal(who, params.id, grantId),
       // AD-11: bao lâu thì tự ẩn — system_config, không hardcode 30.
       this.config.getNumber('secretRevealSeconds'),
+      this.config.getNumber('secretStepUpGraceMinutes'),
     ]);
-    return { ...opened, revealSeconds };
+    /*
+     * Hộp hiện secret đếm ngược HAI số: `60s / 600s`.
+     *
+     * Trái = giá trị này còn hiện bao lâu. Phải = còn mở được két bao lâu nữa mà không phải gõ
+     * lại mã 6 số. Con số phải PHẢI do server nói: client không biết `stepped_up_at`, và tự
+     * đếm từ lần gõ mã gần nhất thì mỗi tab ra một số khác nhau.
+     */
+    return {
+      ...opened,
+      revealSeconds,
+      stepUpSecondsLeft: stepUpSecondsLeft(req.user!.steppedUpAt, graceMinutes, new Date()),
+    };
   }
 
   /** "Xóa" = thu hồi mềm. Ciphertext ở lại để còn đối chiếu khi điều tra sự cố. */

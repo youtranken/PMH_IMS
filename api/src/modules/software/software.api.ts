@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { IspLineService, type IspLineListItem } from './isp-line.service';
 import { SoftwareService } from './software.service';
 import type { SoftwareListItem } from './software.types';
 
@@ -9,7 +10,10 @@ import type { SoftwareListItem } from './software.types';
  */
 @Injectable()
 export class SoftwareApiService {
-  constructor(private readonly software: SoftwareService) {}
+  constructor(
+    private readonly software: SoftwareService,
+    private readonly isp: IspLineService,
+  ) {}
 
   getById(id: string): Promise<SoftwareListItem> {
     return this.software.findOne(id);
@@ -33,4 +37,22 @@ export class SoftwareApiService {
   renew(actor: string, id: string, newEnd: string): Promise<unknown> {
     return this.software.renew(actor, id, newEnd);
   }
+
+  /*
+   * Đường truyền cũng đi qua CỬA NÀY.
+   *
+   * `isp_line` là bảng riêng nhưng chưa có module chủ riêng — nó sống trong `software` (ghi
+   * nhận trong docs/DANH-GIA-LIEN-KET.md, tách module để phase sau). Chừng nào còn vậy thì
+   * public api của nó cũng ở đây, chứ KHÔNG để module khác import thẳng `isp-line.service`.
+   */
+  getIspById(id: string): Promise<IspLineListItem> {
+    return this.isp.findOne(id);
+  }
+
+  /** Hồ sơ phần mềm đã bỏ — màn Kho thanh lý gom qua đây. */
+  async listRetired(): Promise<SoftwareListItem[]> {
+    const page = await this.software.list({ page: 1, limit: 500 }, { status: 'retired' });
+    return page.items;
+  }
+
 }

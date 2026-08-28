@@ -3,6 +3,7 @@ import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { AuditModule } from '../audit/audit.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { DevicesModule } from '../devices/devices.module';
+import { ServiceAccountsModule } from '../service-accounts/service-accounts.module';
 import { SoftwareModule } from '../software/software.module';
 import { UsersModule } from '../users/users.module';
 import { ApprovalsModule } from '../approvals/approvals.module';
@@ -15,6 +16,8 @@ import { StepUpGuard } from '../auth/step-up.guard';
 import { VaultApiService } from './vault.api';
 import { VaultAccessController } from './vault-access.controller';
 import { VaultController } from './vault.controller';
+import { VaultOwnersController } from './vault-owners.controller';
+import { VaultOwnersService } from './vault-owners.service';
 import { VaultDevicePanel } from './vault-device-panel';
 import { VaultService } from './vault.service';
 
@@ -29,11 +32,11 @@ import { VaultService } from './vault.service';
  * Ra ngoài chỉ xuất `VaultApiService`, và api đó KHÔNG có đường lấy plaintext.
  */
 @Module({
-  imports: [AuditModule, AuthModule, CatalogModule, DevicesModule, SoftwareModule, UsersModule, ApprovalsModule, OutboxModule],
-  controllers: [VaultController, VaultAccessController, BreakGlassController],
+  imports: [AuditModule, AuthModule, CatalogModule, DevicesModule, ServiceAccountsModule, SoftwareModule, UsersModule, ApprovalsModule, OutboxModule],
+  controllers: [VaultController, VaultOwnersController, VaultAccessController, BreakGlassController],
   providers: [
     ExcelExportService,
-    VaultService, VaultApiService, VaultDevicePanel, AccessListService, BreakGlassService, StepUpGuard],
+    VaultService, VaultApiService, VaultOwnersService, VaultDevicePanel, AccessListService, BreakGlassService, StepUpGuard],
   exports: [VaultApiService],
 })
 export class VaultModule {}

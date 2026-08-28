@@ -55,6 +55,24 @@
 }
 .pager-info { margin-right: auto; }
 .pager-page { font-variant-numeric: tabular-nums; }
+/* Nút ‹ › cũ là KÝ TỰ theo cỡ chữ — mảnh như dấu ngoặc và ô bấm chỉ bằng con chữ. Giờ là
+   chevron dùng chung, ô bấm vuông đủ 32px (ngón tay ở 390px cần chừng đó). */
+.pager-nav {
+  display: inline-grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  font-size: var(--fs-md);
+}
+.pager-size {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.pager-size select { font-size: var(--fs-sm); padding: 2px 1.6rem 2px var(--space-3); }
 
 /* Ô nhập: gợi ý + lỗi */
 .field-hint { font-size: var(--fs-xs); }
@@ -168,6 +186,141 @@
   font-size: var(--fs-sm);
 }
 
+/* --- Ô nhập nhiều port dạng chip (features/ipam/port-chips-field.tsx) ----- */
+.port-chips {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* KHÔNG khai lại `.chip` ở đây: nó đã có trong `form-layout.css` (viên bo tròn nền
+   `--primary-soft`, nút ✕ tròn) và file này nạp SAU nên bản trùng sẽ đè lên mọi chip đang
+   dùng ở chỗ khác. Ô port dùng lại đúng lớp đó, chỉ thêm biến thể cảnh báo bên dưới. */
+/* Dải mở hơn 1000 cổng: viền vàng ngay lúc gõ, không chờ tới lúc lưu mới báo. */
+.chip-warn {
+  box-shadow: inset 0 0 0 1px var(--warn);
+}
+/* Giao thức đứng cùng hàng với ô port, cỡ nhỏ: nó là HỆ QUẢ của dịch vụ vừa chọn chứ không
+   phải một trường người dùng phải điền, nên không được trông ngang hàng với Port ngoài. */
+.proto-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--fs-xs);
+}
+.proto-row .segmented {
+  padding: 2px;
+}
+.proto-row .segmented button {
+  padding: var(--space-1) var(--space-4);
+  font-size: var(--fs-xs);
+}
+.chip-add {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+.chip-add .inp {
+  flex: 1;
+  min-width: 0;
+}
+/* Hai điều khiển đứng cạnh nhau TRONG một ô (bộ lọc loại + ô tìm router ở form NAT).
+   Cái đầu co lại vừa nội dung, cái sau ăn hết chỗ còn lại. */
+.field-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: start;
+}
+/* Bề rộng CỐ ĐỊNH, không `flex: 0 0 auto`: `Select` bên trong là `.fsel` mang
+   `width: 100%` (luật `.field .fsel`), nên basis `auto` tính ra trọn bề ngang hàng và đẩy
+   hẳn ô bên cạnh ra ngoài hộp thoại. */
+.field-row > :first-child {
+  flex: 0 0 12rem;
+  min-width: 0;
+}
+.field-row > :last-child {
+  flex: 1;
+  min-width: 0;
+}
+@media (max-width: 560px) {
+  .field-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* --- Ma trận quyền két sắt, chiều "theo nhóm đối tượng" ------------------- */
+/* Hai tầng quyền đứng CẠNH nhau chứ không xếp dọc: câu hỏi lúc rà soát là "ai xem thẳng, ai
+   phải xin duyệt" — hai con số đó phải so được bằng một cái liếc. */
+.scope-tiers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6);
+  margin-top: var(--space-5);
+}
+.scope-tiers > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+@media (max-width: 680px) {
+  .scope-tiers {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* Danh sách chọn nhiều người trong hộp gán theo nhóm. */
+.pick-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+/* --- Cửa vào két sắt (features/vault/vault-home-screen.tsx) --------------- */
+.vault-hits {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-7);
+  margin-top: var(--space-5);
+}
+.vault-hit-list,
+.vault-rules {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.vault-rules li {
+  padding-left: var(--space-5);
+  position: relative;
+  color: var(--ink-2);
+  font-size: var(--fs-sm);
+}
+.vault-rules li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
 /* --- Giấy tờ chọn trước khi lưu (ui/attachment-draft.tsx) ----------------- */
 /* Danh sách file đang chờ đẩy lên. Cùng cỡ chữ với `.file-picker-file` ngay phía trên nó —
    hai khối đọc liền nhau, lệch cỡ là mắt tưởng hai thứ khác nhau. */
@@ -273,12 +426,96 @@
   overflow-wrap: anywhere;
 }
 
-/* --- Ma trận quyền két sắt (features/vault/access-matrix-screen.tsx) ------ */
-.access-matrix {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+/* --- Ma trận quyền két sắt (features/vault/access-matrix-screen.tsx) ------
+ * LƯỚI THẬT: hàng = người, cột = nhóm đối tượng. Đọc theo hàng ra "người này xem được gì",
+ * đọc theo cột ra "nhóm này ai xem được" — hai câu cùng lúc, không phải bấm qua lại.
+ * -------------------------------------------------------------------------- */
+.access-grid-wrap {
+  /* Cuộn ngang TRONG khung, không phải cả trang: vài chục cột là bình thường, mà trang cuộn
+     ngang thì cột tên người trôi mất và lưới hết đọc được (UX-DR2 ở 390px cũng nhờ luật này). */
+  overflow-x: auto;
+  max-height: 70vh;
+  overflow-y: auto;
 }
+table.access-grid {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: auto;
+  min-width: 100%;
+}
+/* Cột tên người DÍNH TRÁI: cuộn sang cột thứ 20 mà không biết đang đọc dòng của ai thì lưới
+   vô dụng. `z-index` 3 để nó nằm trên cả tiêu đề đang dính trên. */
+table.access-grid .access-row-head {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--surface);
+  text-align: left;
+  vertical-align: middle;
+  min-width: 13rem;
+  border-right: 1px solid var(--border-2);
+  display: table-cell;
+}
+table.access-grid thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-2);
+}
+table.access-grid thead .access-row-head {
+  z-index: 3;
+  background: var(--surface-2);
+}
+.access-person { display: block; font-weight: 600; }
+.access-person-mail { display: block; font-size: var(--fs-2xs); }
+.access-family {
+  text-align: center;
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  border-left: 1px solid var(--border-2);
+}
+.access-col { padding: 0; }
+.access-col-btn {
+  all: unset;
+  cursor: pointer;
+  display: block;
+  padding: var(--space-3) var(--space-2);
+  min-width: 4.5rem;
+  max-width: 8rem;
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  color: var(--ink-2);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.access-col-btn:hover { color: var(--primary-ink); }
+.access-col-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.access-cell { text-align: center; padding: 2px; }
+/* Ô là một NÚT vuông đủ 30px — bấm nhầm sang ô bên cạnh khi đang cuộn ngang là mở quyền cho
+   nhầm người, nên vùng bấm phải rõ ràng chứ không phải một ký tự. */
+.access-chip {
+  all: unset;
+  cursor: pointer;
+  display: inline-grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 6px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+.access-chip.whitelist { background: var(--ok-soft); color: var(--ok); }
+.access-chip.needs_approval { background: var(--warn-soft); color: var(--warn); }
+.access-chip.none { color: var(--ink-3); }
+.access-chip.none:hover { background: var(--surface-2); border-color: var(--border-2); }
+.access-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.access-by-role { text-align: center; font-size: var(--fs-xs); }
+.access-legend { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+.access-legend .access-chip { cursor: default; }
+
 .access-rules {
   list-style: none;
   margin: var(--space-3) 0 0;
@@ -323,6 +560,77 @@
 /* Chữ to, giãn ký tự, ngắt được: người ta phải ĐỌC và gõ lại chuỗi này trong 30 giây,
    thường là trên điện thoại, đứng trước tủ rack. `user-select: all` để bôi một phát dính cả
    chuỗi — nhưng KHÔNG tự chép vào clipboard (clipboard sống lâu hơn cái hộp này nhiều). */
+/* --- Thanh đo độ khó giá trị secret (ui/secret-strength-meter.tsx) -----------
+ * Năm đoạn = năm điều kiện. Đoạn nào đạt thì xanh — nhìn phát biết còn thiếu cái gì, thay
+ * cho một chữ "Yếu" chẳng nói được sai ở đâu. Đây là LỜI KHUYÊN: nút Lưu không bị khóa.
+ * ---------------------------------------------------------------------------- */
+.strength {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.strength-bar {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 3px;
+}
+.strength-seg {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-2);
+  transition: background 0.2s var(--ease);
+}
+.strength-seg.met { background: var(--ok); }
+.strength-rules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+.strength-rules li.met { color: var(--ok); font-weight: 600; }
+.warn-text { color: var(--warn); }
+
+/* --- Đồng hồ đếm ngược của hộp hiện secret (ui/reveal-dialog.tsx) -------------
+ * Hai số: "còn hiện bao lâu" / "còn mở két được bao lâu". Màu do `countdownTone` quyết —
+ * xanh khi còn nhiều, hổ phách khi quá nửa, đỏ NHẤP NHÁY khi sắp hết. Con số này là thứ
+ * người ta liếc chứ không đọc; xám đều tăm tắp thì còn 5 giây trông y hệt còn 50.
+ * Màu lấy từ token (tokens.css), không hex mới — đã có cặp dark sẵn.
+ * ---------------------------------------------------------------------------- */
+.countdown {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+.countdown-num {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.3s var(--ease);
+}
+.countdown-num.calm { color: var(--ok); }
+.countdown-num.warn { color: var(--warn); }
+.countdown-num.urgent {
+  color: var(--danger);
+  animation: countdown-blink 1s steps(2, start) infinite;
+}
+.countdown-sep { color: var(--ink-3); }
+.countdown-note { font-size: var(--fs-xs); }
+@keyframes countdown-blink {
+  to { opacity: 0.25; }
+}
+/* Nhấp nháy là hiệu ứng dễ gây khó chịu (và với vài người là nguy hiểm) — ai đã bật
+   "giảm chuyển động" thì giữ màu đỏ, bỏ nhịp nháy. Màu vẫn nói đủ điều cần nói. */
+@media (prefers-reduced-motion: reduce) {
+  .countdown-num.urgent { animation: none; }
+}
+
 .secret-value {
   margin: 0;
   padding: var(--space-4);
@@ -453,3 +761,56 @@
 .error-state .primary {
   margin-top: var(--space-3);
 }
+
+
+/* --- Thanh thời hạn (ui/warranty-timeline.tsx) -------------------------------
+ * Mốc đầu → HÔM NAY → mốc cuối. Màu chạy theo phần đường đã đi, lấy từ `expiryLevel` dùng
+ * chung nên thanh và badge không bao giờ nói khác nhau. Màu từ token, không hex mới.
+ * ---------------------------------------------------------------------------- */
+.wt { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.wt-ends {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  font-size: var(--fs-2xs);
+  color: var(--ink-3);
+}
+.wt-ends b { color: var(--ink-2); font-weight: 600; }
+.wt-track {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.wt-fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; }
+.wt-fill.ok { background: var(--ok); }
+.wt-fill.warn { background: linear-gradient(90deg, var(--ok), var(--warn)); }
+.wt-fill.crit { background: linear-gradient(90deg, var(--ok), var(--warn) 70%, var(--danger)); }
+/* Quá hạn: gạch chéo chứ không chỉ đổi màu — dấu hiệu THỨ HAI ngoài màu, cho người khó phân
+   biệt màu sắc, đúng nếp của toast ok/warn/error. */
+.wt-fill.over {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--danger) 0 6px,
+    var(--danger-soft) 6px 12px
+  );
+}
+.wt-now {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: var(--ink);
+  border-radius: 2px;
+}
+.wt-legend { display: flex; justify-content: space-between; gap: var(--space-4); font-size: var(--fs-xs); }
+.wt-legend .left { color: var(--ink-3); }
+.wt-legend .right { font-weight: 700; }
+.wt-legend .right.ok { color: var(--ok); }
+.wt-legend .right.warn { color: var(--warn); }
+.wt-legend .right.crit,
+.wt-legend .right.over { color: var(--danger); }
+/* Bản gọn cho dải chỉ số đầu trang: chỉ còn cái thanh. */
+.wt-mini .wt-track { height: 6px; }
+.wt-mini .wt-now { top: -2px; bottom: -2px; }

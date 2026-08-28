@@ -20,6 +20,7 @@ import {
   type LicenseSeat,
   type SoftwareRow,
 } from './software-types';
+import { PATHS } from '@/lib/routes';
 
 interface AssignmentRow extends LicenseSeat {
   releasedBy: string | null;
@@ -111,7 +112,7 @@ export function LicenseAssignmentsPanel({
               {rows.map((row) => (
                 <tr key={row.id} className={row.releasedAt ? 'row-muted' : undefined}>
                   <td data-label={t('license.device')}>
-                    <Link className="mono" to={`/thiet-bi/${row.deviceId}`}>
+                    <Link className="mono" to={PATHS.device(row.deviceId)}>
                       {row.deviceCode}
                     </Link>
                     <span className="cell-sub">{row.deviceName}</span>
@@ -158,7 +159,7 @@ export function LicenseAssignmentsPanel({
                     {row.releasedAt ? null : (
                       <button
                         type="button"
-                        className="btn sm"
+                        className="btn sm danger"
                         disabled={release.isPending}
                         onClick={() => {
                           void (async () => {
