@@ -48,4 +48,16 @@ export class SoftwareApiService {
   getIspById(id: string): Promise<IspLineListItem> {
     return this.isp.findOne(id);
   }
+
+  /** Hồ sơ phần mềm đã bỏ — màn Kho thanh lý gom qua đây. */
+  async listRetired(): Promise<SoftwareListItem[]> {
+    const page = await this.software.list({ page: 1, limit: 500 }, { status: 'retired' });
+    return page.items;
+  }
+
+  /** Đường truyền đã cắt. Mỗi module giữ TÊN TRẠNG THÁI của mình — ở đây là `terminated`. */
+  async listTerminatedIsp(): Promise<IspLineListItem[]> {
+    const page = await this.isp.list({ page: 1, limit: 500 }, { status: 'terminated' });
+    return page.items;
+  }
 }

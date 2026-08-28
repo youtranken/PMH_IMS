@@ -221,17 +221,26 @@ export function IspForm({
               onChange={(value) => set('siteId', value)}
             />
           </Field>
-          <Field label={t('isp.status')}>
-            <Select
-              value={form.status}
-              ariaLabel={t('isp.status')}
-              options={ISP_STATUSES.map((status) => ({
-                value: status,
-                label: t(STATUS_KEY[status]),
-              }))}
-              onChange={(value) => set('status', value as IspStatus)}
-            />
-          </Field>
+          {/*
+            Ô Trạng thái CHỈ hiện khi SỬA.
+
+            Thêm mới thì trạng thái luôn là "đang dùng" — bày một ô chọn có đúng một câu trả
+            lời hợp lý là bắt người khai đọc và bỏ qua một thứ không có quyết định nào ở đó,
+            và mở đường cho một hồ sơ vừa tạo đã ở trạng thái "đã thanh lý".
+          */}
+          {row ? (
+            <Field label={t('isp.status')}>
+              <Select
+                value={form.status}
+                ariaLabel={t('isp.status')}
+                options={ISP_STATUSES.map((status) => ({
+                  value: status,
+                  label: t(STATUS_KEY[status]),
+                }))}
+                onChange={(value) => set('status', value as IspStatus)}
+              />
+            </Field>
+          ) : null}
 
           <Field label={t('isp.device')} hint={t('isp.deviceHint')} span={3}>
             <Combobox

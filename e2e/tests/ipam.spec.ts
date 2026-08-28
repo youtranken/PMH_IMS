@@ -281,7 +281,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
    * Trước đây `DELETE` thực ra là ẩn — một cái bẫy cho bất cứ ai đọc route mà không đọc
    * service. Giờ mỗi route mang đúng nghĩa của nó.
    */
-  test('vô hiệu hóa dải phải có lý do; dải còn IP bên trong thì không vô hiệu hóa được', async ({
+  test('vô hiệu hóa dải phải có lý do, và ẩn luôn mọi IP bên trong', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);
@@ -296,16 +296,40 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     });
     expect(noReason.status()).toBe(400);
 
-    await page.request.post('/api/v1/ipam/addresses', {
+    /*
+     * Dải còn hồ sơ IP thì vô hiệu hóa vẫn CHẠY, và ẩn luôn mọi IP bên trong cùng một lý do
+     * (28/08/2026).
+     *
+     * Bản trước từ chối và bắt đi ẩn tay từng địa chỉ — với một dải /24 đã dùng một nửa thì
+     * đó là hơn trăm lượt bấm cho một quyết định đã ra rồi, nên không ai làm và dải hỏng cứ
+     * nằm đó. Ẩn chứ KHÔNG xóa: `ip_history` vẫn trỏ vào những hàng đó.
+     */
+    const created = await page.request.post('/api/v1/ipam/addresses', {
       headers,
       data: { subnetId, address: `172.16.${octet}.1`, usedBy: 'máy A' },
     });
+    expect(created.status()).toBe(201);
+    const ipId = ((await created.json()) as { id: string }).id;
+
     const hasIps = await page.request.patch(`/api/v1/ipam/subnets/${subnetId}/void`, {
       headers,
       data: { reason: 'khai nhầm dải' },
     });
-    expect(hasIps.status()).toBe(409);
-    expect(await hasIps.json()).toMatchObject({ code: 'SUBNET_HAS_ADDRESSES' });
+    expect(hasIps.status()).toBe(200);
+
+    // Dải biến khỏi danh sách…
+    expect((await page.request.get(`/api/v1/ipam/subnets/${subnetId}`)).status()).toBe(404);
+    // …và hồ sơ IP bên trong cũng vậy, chứ không ở lại trỏ vào một dải không còn hiện ở đâu.
+    expect((await page.request.get(`/api/v1/ipam/addresses/${ipId}`)).status()).toBe(404);
+
+    /* Nhưng LỊCH SỬ vẫn còn — đó là chỗ trả lời "IP này từng của ai" mà AC 5.2 bắt giữ vĩnh
+       viễn, và dòng cuối phải nói rõ nó bị ẩn THEO DẢI nào chứ không biến mất im lặng. */
+    const history = await page.request.get(`/api/v1/ipam/addresses/${ipId}/history`);
+    expect(history.status()).toBe(200);
+    const rows = (await history.json()) as { changes: Record<string, unknown> | null }[];
+    expect(
+      rows.some((row) => String(row.changes?.reason ?? '').includes('khai nhầm dải')),
+    ).toBe(true);
   });
 
   /**
@@ -418,5 +442,83 @@ test.describe('Dải mạng và hồ sơ IP', () => {
       data: { cidr: '192.168.99.0/24', name: 'Member khai E2E' },
     });
     expect(subnet.status()).toBe(403);
+  });
+});
+
+/**
+ * Hai lỗi người dùng bắt được ngày 28/08/2026, cùng một họ: bảng và con số nói ngược nhau.
+ */
+test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
+  test('gán máy vào một IP đang TRỐNG thì nó thành ĐANG CẤP, không ở lại "Trống"', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const octet = (Number(stamp) % 150) + 20;
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const subnetId = await createSubnet(page, `172.16.${octet}.0/29`, `LAN gán E2E ${stamp}`);
+
+    // Hồ sơ tạo KHÔNG có chủ → 'free', đúng.
+    const created = await page.request.post('/api/v1/ipam/addresses', {
+      headers,
+      data: { subnetId, address: `172.16.${octet}.1`, note: 'để dành' },
+    });
+    expect(created.status()).toBe(201);
+    const ipId = ((await created.json()) as { id: string }).id;
+    expect(((await created.json()) as { status?: string }).status ?? 'free').toBe('free');
+
+    /*
+     * Rồi SỬA để gán người dùng. Bản trước giữ nguyên `status='free'`: bảng hiện một hàng vừa
+     * có tên chủ vừa mang badge "Trống", còn nút lọc phía trên đếm "Đang cấp 0" — và cả hai
+     * đều đúng theo dữ liệu. Người dùng tưởng đã cấp, hệ thống vẫn coi là chỗ trống và sẵn
+     * sàng cấp lại cho máy khác.
+     */
+    const updated = await page.request.patch(`/api/v1/ipam/addresses/${ipId}`, {
+      headers,
+      data: { usedBy: 'Chị Lan — Kế toán' },
+    });
+    expect(updated.status()).toBe(200);
+    expect((await updated.json()) as { status: string }).toMatchObject({ status: 'assigned' });
+
+    // Con số trên màn hình phải đổi theo, không còn "Đang cấp 0".
+    await page.goto(`/ip-addresses/${subnetId}`);
+    await expect(page.getByRole('button', { name: /^Đang cấp 1/ })).toBeVisible();
+
+    // Và bước chuyển được ghi thành một dòng lịch sử riêng, không lẫn vào "sửa hồ sơ".
+    const history = (await (
+      await page.request.get(`/api/v1/ipam/addresses/${ipId}/history`)
+    ).json()) as { action: string; toStatus: string | null }[];
+    expect(history.some((row) => row.toStatus === 'assigned')).toBe(true);
+  });
+
+  test('xóa hồ sơ IP khai nhầm: chỗ trống hiện lại, lịch sử vẫn còn', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const octet = (Number(stamp) % 150) + 30;
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const subnetId = await createSubnet(page, `172.16.${octet}.0/29`, `LAN xoá IP E2E ${stamp}`);
+    const created = await page.request.post('/api/v1/ipam/addresses', {
+      headers,
+      data: { subnetId, address: `172.16.${octet}.2`, usedBy: 'gõ nhầm' },
+    });
+    const ipId = ((await created.json()) as { id: string }).id;
+
+    await page.goto(`/ip-addresses/${subnetId}`);
+    const row = page.getByRole('row', { name: new RegExp(`172\.16\.${octet}\.2`) });
+    await row.getByRole('button', { name: `Xóa hồ sơ IP 172.16.${octet}.2` }).click();
+    const form = page.getByRole('dialog');
+    await form.getByRole('textbox', { name: 'Lý do' }).fill('gõ nhầm địa chỉ');
+    await form.getByRole('button', { name: 'Xóa' }).click();
+
+    await expect(page.getByText('Đã xóa hồ sơ IP.')).toBeVisible();
+    // Địa chỉ trở lại thành chỗ TRỐNG, có nút cấp — chứ không nằm lại trong sổ vĩnh viễn.
+    await expect(
+      page.getByRole('row', { name: new RegExp(`172\.16\.${octet}\.2`) })
+        .getByRole('button', { name: 'Cấp IP này' }),
+    ).toBeVisible();
+
+    // Lịch sử của hồ sơ đã ẩn VẪN đọc được — đó mới là lúc người ta cần đọc nó.
+    const history = await page.request.get(`/api/v1/ipam/addresses/${ipId}/history`);
+    expect(history.status()).toBe(200);
   });
 });

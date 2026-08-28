@@ -33,6 +33,8 @@ export const PATHS = {
 
   approvals: '/approvals',
   vault: '/vault',
+  /** Kho thanh lý — màn TỔNG hợp mọi hồ sơ đã ngừng dùng, không phải một bảng riêng. */
+  disposal: '/disposal',
   documents: '/documents',
 
   adminAccounts: '/admin/accounts',

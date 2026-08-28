@@ -13,7 +13,8 @@ import { ExpiryBadge } from "@/ui/expiry-badge";
 import { Field } from "@/ui/page-header";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
-import { BlankFields, DetailHeader, Stat, StatGrid } from "@/ui/detail-header";
+import { BlankFields, DetailHeader, Stat, StatGrid, StatIfSet } from "@/ui/detail-header";
+import { DisposeButton } from "@/ui/dispose-button";
 import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
 import { VaultPanel } from "@/ui/vault-panel";
@@ -171,6 +172,16 @@ export function SoftwareDetail({ me }: { me: Me }) {
             >
               {t("software.renew")}
             </button>
+            {item.status !== "retired" ? (
+              <DisposeButton
+                url={`/api/v1/software/${item.id}`}
+                body={{ status: "retired" }}
+                label={t("disposal.dispose")}
+                confirmMessage={t("disposal.confirmSoftware", { code: item.code })}
+                csrfToken={me.csrfToken}
+                onDone={() => void refresh()}
+              />
+            ) : null}
           </>
         }
       />
@@ -187,19 +198,22 @@ export function SoftwareDetail({ me }: { me: Me }) {
           </span>
         </Stat>
 
-        <Stat
-          label={t("software.endDate")}
-          note={item.endDate ? `${t("expiry.to")} ${formatDate(item.endDate)}` : undefined}
-        >
-          {item.licenseModel === "perpetual" ? (
+        {/*
+          Thẻ hạn CHỈ hiện khi tab Hồ sơ KHÔNG vẽ thanh đầy đủ — tức là license vĩnh viễn
+          (không có quãng đường nào) hoặc hồ sơ chưa khai hạn.
+
+          Còn lại thì thanh đầy đủ ngay dưới đã nói đủ, và một thanh mini lặp lại nó cách đó
+          hai dòng là hai lần cùng một câu — đúng lỗi mà dải chỉ số sinh ra để dọn.
+        */}
+        {item.licenseModel === "perpetual" ? (
+          <Stat label={t("software.endDate")}>
             <span className="badge ok plain">{t("software.perpetual")}</span>
-          ) : (
-            <>
-              <WarrantyTimeline compact start={item.startDate} end={item.endDate} />
-              <ExpiryBadge end={item.endDate} />
-            </>
-          )}
-        </Stat>
+          </Stat>
+        ) : item.endDate ? null : (
+          <Stat label={t("software.endDate")}>
+            <ExpiryBadge end={null} />
+          </Stat>
+        )}
 
         {supportsSeats(item.kind) ? (
           <Stat label={t("software.seats")} note={t("software.seatsNote")}>
@@ -207,9 +221,9 @@ export function SoftwareDetail({ me }: { me: Me }) {
           </Stat>
         ) : null}
 
-        <Stat label={t("software.vendor")} note={orDash(item.note)}>
-          {orDash(item.vendorName)}
-        </Stat>
+        {/* Thẻ rỗng là ô chết chiếm chỗ của một chỉ số có ích — dải chỉ có bốn chỗ. */}
+        <StatIfSet label={t("software.vendor")} value={item.vendorName} />
+        <StatIfSet label={t("software.note")} value={item.note} />
       </StatGrid>
 
       <Tabs

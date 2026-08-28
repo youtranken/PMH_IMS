@@ -228,17 +228,26 @@ export function SoftwareForm({
               onChange={(value) => set('vendorId', value)}
             />
           </Field>
-          <Field label={t('software.status')}>
-            <Select
-              value={form.status}
-              ariaLabel={t('software.status')}
-              options={SOFTWARE_STATUSES.map((status) => ({
-                value: status,
-                label: t(STATUS_KEY[status]),
-              }))}
-              onChange={(value) => set('status', value as SoftwareStatus)}
-            />
-          </Field>
+          {/*
+            Ô Trạng thái CHỈ hiện khi SỬA.
+
+            Thêm mới thì trạng thái luôn là "đang dùng" — bày một ô chọn có đúng một câu trả
+            lời hợp lý là bắt người khai đọc và bỏ qua một thứ không có quyết định nào ở đó,
+            và mở đường cho một hồ sơ vừa tạo đã ở trạng thái "đã thanh lý".
+          */}
+          {row ? (
+            <Field label={t('software.status')}>
+              <Select
+                value={form.status}
+                ariaLabel={t('software.status')}
+                options={SOFTWARE_STATUSES.map((status) => ({
+                  value: status,
+                  label: t(STATUS_KEY[status]),
+                }))}
+                onChange={(value) => set('status', value as SoftwareStatus)}
+              />
+            </Field>
+          ) : null}
         </FormSection>
 
         <FormSection title={t('software.expiry')} columns={3}>

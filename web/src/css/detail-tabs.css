@@ -16,8 +16,28 @@
   font-size: var(--fs-xs);
   color: var(--ink-3);
 }
-.crumbs a { color: var(--ink-3); }
-.crumbs a:hover { color: var(--primary-ink); }
+.crumbs a { color: var(--ink-2); }
+.crumbs a:hover { color: var(--primary-ink); text-decoration: underline; }
+/* Mục đầu là đường QUAY LẠI — phải trông ra một cái nút, không phải chữ xám như mọi chữ
+   xám khác. Người dùng báo "mất nút quay về danh sách" chính vì nó không giống link. */
+.crumbs a.crumb-back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-3) 2px var(--space-2);
+  border: 1px solid var(--border-2);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+.crumbs a.crumb-back:hover {
+  border-color: var(--primary);
+  color: var(--primary-ink);
+  text-decoration: none;
+}
+.crumb-arrow { font-size: var(--fs-md); line-height: 1; }
 .crumb { display: inline-flex; align-items: center; gap: var(--space-2); }
 .crumb-sep { opacity: 0.55; }
 

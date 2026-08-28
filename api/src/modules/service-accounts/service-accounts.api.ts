@@ -23,4 +23,10 @@ export class ServiceAccountsApiService {
   exists(id: string): Promise<boolean> {
     return this.accounts.exists(id);
   }
+
+  /** Tài khoản đã vô hiệu hóa — màn Kho thanh lý gom qua đây. */
+  async listDisabled(): Promise<ServiceAccountRecord[]> {
+    const page = await this.accounts.list({ page: 1, limit: 500 }, { status: 'disabled' });
+    return page.items;
+  }
 }

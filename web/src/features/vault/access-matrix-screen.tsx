@@ -443,6 +443,7 @@ function CellDialog({
   onRemove: () => void;
 }) {
   const { t } = useTranslation();
+  const askConfirm = useConfirm();
   const [tier, setTier] = useState<Tier>(rule?.tier ?? 'needs_approval');
   const [note, setNote] = useState(rule?.note ?? '');
   const [error, setError] = useState<string | null>(null);
@@ -488,16 +489,36 @@ function CellDialog({
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          save.mutate(
-            {
-              memberEmail: account.email,
-              scopeType: scope.scopeType,
-              scopeRef: scope.scopeRef,
-              tier,
-              note: note.trim(),
-            },
-            { onSuccess: onSaved, onError: (err) => setError(errorMessage(err)) },
-          );
+          void (async () => {
+            /*
+             * HỎI LẠI trước khi ghi — cấp quyền xem mật khẩu là việc mở cửa, không phải sửa
+             * một ô dữ liệu. Gỡ quyền đã hỏi lại từ đầu, mà chiều CẤP lại ghi thẳng: chiều
+             * nguy hiểm hơn thì lại nhẹ tay hơn, ngược hẳn.
+             *
+             * Câu hỏi nêu đích danh AI, NHÓM NÀO và TẦNG gì — ba thứ mà bấm nhầm một ô trên
+             * lưới là sai hết cả ba.
+             */
+            const ok = await askConfirm({
+              title: t('access.confirmGrantTitle'),
+              message: t('access.confirmGrant', {
+                member: account.fullName,
+                scope: scope.label,
+                tier: t(`access.tier_${tier}`),
+              }),
+              confirmLabel: t('access.add'),
+            });
+            if (!ok) return;
+            save.mutate(
+              {
+                memberEmail: account.email,
+                scopeType: scope.scopeType,
+                scopeRef: scope.scopeRef,
+                tier,
+                note: note.trim(),
+              },
+              { onSuccess: onSaved, onError: (err) => setError(errorMessage(err)) },
+            );
+          })();
         }}
       >
         <p className="muted">{t('access.tierHint')}</p>

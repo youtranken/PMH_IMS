@@ -75,6 +75,10 @@ export function SubnetPane({
     null,
   );
   const [historyOf, setHistoryOf] = useState<IpRow | null>(null);
+  /** Hồ sơ IP đang chờ XÓA (ẩn kèm lý do) — khác `moving` vốn là bước vòng đời. */
+  const [voiding, setVoiding] = useState<IpRow | null>(null);
+  /** Ghi chỉ SA/Admin — API chặn, UI đừng bày nút ra để bấm rồi 403. */
+  const canEdit = me.role === "sa" || me.role === "admin";
 
   const slots = useQuery({
     queryKey: ["ipam", "subnets", id, "addresses"],
@@ -260,6 +264,27 @@ export function SubnetPane({
                           >
                             {t("common.edit")}
                           </button>
+                          {/*
+                            XÓA hồ sơ IP — khác "Thu hồi".
+
+                            Thu hồi là bước vòng đời: địa chỉ trả về pool nhưng hàng ở lại
+                            kèm lịch sử "IP này từng của máy nào" (AC 5.2). Xóa là cho bản
+                            ghi KHAI NHẦM: nó biến khỏi bảng, chỗ trống hiện lại như chưa
+                            từng có ai cấp. Thiếu nút này thì một địa chỉ gõ nhầm nằm lại
+                            trong sổ vĩnh viễn — người dùng báo đúng chuyện đó.
+
+                            Vẫn là ẩn ở tầng DB, không DELETE: `ip_history` trỏ vào hàng này.
+                          */}
+                          {canEdit ? (
+                            <button
+                              type="button"
+                              className="btn sm danger"
+                              aria-label={t("ipam.voidAddressOf", { address: slot.address })}
+                              onClick={() => setVoiding(slot)}
+                            >
+                              {t("common.delete")}
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -287,6 +312,19 @@ export function SubnetPane({
           onDone={() => {
             setMoving(null);
             toast({ message: t("ipam.transitioned") });
+            void refresh();
+          }}
+        />
+      ) : null}
+
+      {voiding ? (
+        <VoidAddressDialog
+          record={voiding}
+          csrfToken={me.csrfToken}
+          onClose={() => setVoiding(null)}
+          onDone={() => {
+            setVoiding(null);
+            toast({ message: t("ipam.addressVoided") });
             void refresh();
           }}
         />
@@ -633,6 +671,90 @@ function IpHistoryDialog({
           emptyText={t("ipam.historyEmpty")}
         />
       )}
+    </Dialog>
+  );
+}
+
+
+/**
+ * Xóa (ẩn) MỘT hồ sơ IP, kèm lý do.
+ *
+ * Cùng khuôn với hộp ẩn dải và hộp gỡ rule NAT: "địa chỉ này biến đi đâu" là câu sáu tháng
+ * sau sẽ có người hỏi, và chỉ dòng lịch sử trả lời được. Dùng hộp riêng chứ không dùng
+ * `useConfirm` chung vì lý do ở đây là DỮ LIỆU bắt buộc, không phải một câu có/không.
+ */
+function VoidAddressDialog({
+  record,
+  csrfToken,
+  onClose,
+  onDone,
+}: {
+  record: IpRow;
+  csrfToken: string;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const { t } = useTranslation();
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const remove = useApiMutation<{ reason: string }, unknown>(
+    `/api/v1/ipam/addresses/${record.id}`,
+    { method: "DELETE", csrfToken, refreshMe: false },
+  );
+
+  return (
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={480}
+      title={`${t("common.delete")} — ${record.address}`}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t("common.cancel")}
+          </button>
+          <button
+            type="submit"
+            form="ip-void-form"
+            className="btn danger"
+            disabled={remove.isPending}
+          >
+            {remove.isPending ? t("common.loading") : t("common.delete")}
+          </button>
+        </>
+      }
+    >
+      <form
+        id="ip-void-form"
+        className="form-grid"
+        data-columns={1}
+        onSubmit={(e) => {
+          e.preventDefault();
+          setError(null);
+          remove.mutate(
+            { reason: reason.trim() },
+            { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
+          );
+        }}
+      >
+        <p className="muted">{t("ipam.voidAddressHint")}</p>
+        <Field label={t("ipam.reason")} required htmlFor="ip-void-reason">
+          <input
+            id="ip-void-reason"
+            className="inp"
+            required
+            minLength={3}
+            placeholder={t("ipam.voidAddressPlaceholder")}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          />
+        </Field>
+        {error ? (
+          <p className="alert error" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </form>
     </Dialog>
   );
 }

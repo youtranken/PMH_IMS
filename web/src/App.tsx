@@ -28,6 +28,7 @@ import { ExpiryScreen } from '@/features/expiry/expiry-screen';
 import { DashboardScreen } from '@/features/dashboard/dashboard-screen';
 import { AccessMatrixScreen } from '@/features/vault/access-matrix-screen';
 import { ApprovalsScreen } from '@/features/vault/approvals-screen';
+import { DisposalScreen } from '@/features/disposal/disposal-screen';
 import { VaultHomeScreen } from '@/features/vault/vault-home-screen';
 import { NatScreen } from '@/features/ipam/nat-screen';
 import { ServiceAccountDetail } from '@/features/service-accounts/service-account-detail';
@@ -135,6 +136,9 @@ function AppRoutes() {
         {me.role === 'sa' || me.role === 'admin' ? (
           <Route path={PATHS.vault} element={<VaultHomeScreen me={me} />} />
         ) : null}
+        {/* Kho thanh lý mở cho MỌI vai — khác trang tổng Két sắt ngay trên: kho chỉ nói
+            "hồ sơ nào đã ngừng dùng", không nói công ty giữ bí mật ở đâu. */}
+        <Route path={PATHS.disposal} element={<DisposalScreen />} />
         <Route path={PATHS.devices} element={<DevicesScreen me={me} />} />
         <Route path={`${PATHS.devices}/:id`} element={<DeviceDetail me={me} />} />
         <Route path={PATHS.software} element={<SoftwareScreen me={me} />} />

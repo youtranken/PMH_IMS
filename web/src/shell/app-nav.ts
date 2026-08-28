@@ -45,6 +45,9 @@ export const navGroups: NavGroup[] = [
        * quyền nằm ở ma trận 6.2.)
        */
       { key: 'nav.vault', to: PATHS.vault, roles: ['sa', 'admin'] },
+      /* Kho thanh lý cho MỌI vai: "cái máy này đâu rồi" là câu ai trong team IT cũng hỏi, và
+         "đã thanh lý tháng trước" không phải bí mật gì. */
+      { key: 'nav.disposal', to: PATHS.disposal },
       { key: 'nav.documents', to: PATHS.documents, planned: true },
     ],
   },

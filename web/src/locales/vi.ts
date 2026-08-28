@@ -81,6 +81,11 @@ export default {
     confirm: 'Xác nhận',
     search: 'Tìm kiếm',
     edit: 'Sửa',
+    /* `common.delete` THIẾU cho tới 28/08 — nút xóa dải hiện ra nguyên chuỗi khóa
+       "common.delete" trên màn Địa chỉ IP. i18next trả về chính cái khóa khi không tìm thấy,
+       nên lỗi loại này không đỏ ở đâu cả, chỉ lộ ra khi có người nhìn màn hình. */
+    delete: 'Xóa',
+    back: 'Quay lại',
     sortBy: 'Sắp xếp theo {{column}}',
     expandRow: 'Mở rộng dòng',
     collapseRow: 'Thu gọn dòng',
@@ -141,6 +146,7 @@ export default {
     vaultAccess: 'Quyền két sắt',
     approvals: 'Duyệt yêu cầu',
     vault: 'Két sắt',
+    disposal: 'Kho thanh lý',
     documents: 'Tài liệu',
     sheets: 'Phiếu ISO',
     incidents: 'Sự cố',
@@ -705,7 +711,7 @@ export default {
     hide: 'Vô hiệu hóa',
     hideSubnetTitle: 'Vô hiệu hóa dải {{cidr}}',
     hideHint:
-      'Dải không bị xóa khỏi hệ thống — chỉ ẩn khỏi danh sách và vẫn tra cứu được. Dùng cho dải ĐÃ TỪNG có hồ sơ IP: xóa hẳn là mất luôn lịch sử "IP nào từng của máy nào".',
+      'Dải không bị xóa khỏi hệ thống — chỉ ẩn khỏi danh sách và vẫn tra cứu được. Mọi hồ sơ IP trong dải cũng được ẩn theo, cùng lý do này; lịch sử "IP nào từng của máy nào" vẫn giữ nguyên.',
     deleteSubnetOf: 'Xóa hẳn dải {{cidr}}',
     deleteSubnetTitle: 'Xóa hẳn dải {{cidr}}?',
     deleteSubnetConfirm:
@@ -713,6 +719,11 @@ export default {
     subnetDeleted: 'Đã xóa dải.',
     reason: 'Lý do',
     reasonPlaceholder: 'vd: khai nhầm dải',
+    voidAddressOf: 'Xóa hồ sơ IP {{address}}',
+    voidAddressHint:
+      'Dùng cho bản ghi KHAI NHẦM: địa chỉ trở lại thành chỗ trống. Máy đang thật sự dùng địa chỉ này thì bấm Thu hồi — nó giữ lại lịch sử "IP này từng của máy nào".',
+    voidAddressPlaceholder: 'vd: gõ nhầm địa chỉ',
+    addressVoided: 'Đã xóa hồ sơ IP.',
     onlyUsed: 'Chỉ hiện IP đã cấp',
     address: 'Địa chỉ',
     status: 'Trạng thái',
@@ -922,6 +933,32 @@ export default {
     rule3: 'Giá trị hiện ra rồi TỰ ẨN sau vài chục giây, và không có nút sao chép hàng loạt.',
     rule4: 'Mỗi lần mở đều ghi nhật ký: ai xem, xem của ai, lúc nào — không xoá được.',
   },
+  disposal: {
+    title: 'Kho thanh lý',
+    subtitle: 'Mọi hồ sơ đã ngừng dùng của cả hệ thống về một chỗ — thiết bị, phần mềm, đường truyền, tài khoản',
+    note: 'Hồ sơ trong kho KHÔNG còn được tính hạn và không vào email nhắc gia hạn. Muốn dùng lại thì mở hồ sơ gốc và đổi trạng thái.',
+    search: 'Tìm theo mã, tên hoặc loại…',
+    filterKind: 'Lọc theo loại hồ sơ',
+    allKinds: 'Tất cả',
+    kind: 'Loại',
+    kindDevice: 'Thiết bị',
+    kindSoftware: 'Phần mềm',
+    kindIsp: 'Đường truyền',
+    kindServiceAccount: 'Tài khoản dịch vụ',
+    code: 'Mã',
+    detail: 'Chi tiết',
+    at: 'Ngày đưa vào kho',
+    dispose: 'Đưa vào kho thanh lý',
+    disposeIsp: 'Cắt hợp đồng',
+    confirmTitle: 'Đưa vào kho thanh lý',
+    confirmSoftware:
+      'Đưa hồ sơ {{code}} vào kho thanh lý? Nó sẽ không còn được tính hạn và không vào email nhắc gia hạn. Ghế đã gán vẫn giữ nguyên để tra cứu.',
+    confirmIsp:
+      'Cắt hợp đồng đường truyền {{code}}? Nó sẽ không còn được tính hạn và không vào email nhắc gia hạn.',
+    done: 'Đã đưa vào kho thanh lý.',
+    empty: 'Kho thanh lý đang trống',
+    emptyHint: 'Chưa hồ sơ nào bị thanh lý, cắt hay vô hiệu hóa.',
+  },
   access: {
     title: 'Quyền xem két sắt',
     subtitle: 'Ai xem thẳng được mật khẩu nào, ai phải xin duyệt.',
@@ -934,6 +971,10 @@ export default {
     add: 'Gán quyền',
     grantTitle: 'Gán quyền cho {{member}}',
     granted: 'Đã gán quyền.',
+    confirmGrantTitle: 'Xác nhận cấp quyền',
+    /* Nêu đích danh ba thứ mà bấm nhầm một ô trên lưới là sai hết cả ba. */
+    confirmGrant:
+      'Cấp cho {{member}} tầng "{{tier}}" trên nhóm "{{scope}}"? Họ sẽ xem được mật khẩu của mọi hồ sơ thuộc nhóm này.',
     removed: 'Đã gỡ quyền.',
     remove: 'Gỡ',
     confirmRemove: 'Gỡ quyền của {{member}} trên "{{scope}}"? Sau đó họ sẽ không xem và không xin được nữa.',

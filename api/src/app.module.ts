@@ -7,6 +7,7 @@ import { UserThrottlerGuard } from './common/user-throttler.guard';
 import { ExcelExportService } from './common/excel/excel-export.service';
 import { ExcelImportService } from './common/excel/excel-import.service';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { DisposalModule } from './modules/disposal/disposal.module';
 import { DatabaseModule } from './database/database.module';
 import { ApprovalsRegistryModule } from './common/approvals/approvals-registry';
 import { DevicePanelsModule } from './common/device-panels.registry';
@@ -91,6 +92,7 @@ import { VaultModule } from './modules/vault/vault.module';
     VaultModule,
     IpamModule,
     DashboardModule,
+    DisposalModule,
   ],
   controllers: [HealthController],
   providers: [

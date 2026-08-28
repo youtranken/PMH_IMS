@@ -3,7 +3,7 @@
  * Luật: module nghiệp vụ chỉ được gọi nhau qua `*.api.ts`; đồ thị phải acyclic;
  * tầng nền không import tầng nghiệp vụ.
  */
-const BIZ = 'devices|software|ipam|vault|service-accounts|sheets|incidents|documents|dashboard';
+const BIZ = 'devices|software|ipam|vault|service-accounts|sheets|incidents|documents|dashboard|disposal';
 const BASE = 'auth|audit|approvals|outbox|queue|expiry|files|config-sys|catalog|users|mail';
 
 module.exports = {

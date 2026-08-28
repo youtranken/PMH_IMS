@@ -10,7 +10,7 @@ import { AttachmentPanel } from "@/ui/attachment-panel";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
 import { CopyButton } from "@/ui/copy-button";
-import { BlankFields, DetailHeader, Stat, StatGrid } from "@/ui/detail-header";
+import { BlankFields, DetailHeader, Stat, StatGrid, StatIfSet } from "@/ui/detail-header";
 import { TabPanel, Tabs, initialTab } from "@/ui/tabs";
 import { VaultPanel } from "@/ui/vault-panel";
 import { toServiceAccountHistory } from "./service-account-history-entries";
@@ -108,20 +108,16 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
             {t(STATUS_KEY[item.status])}
           </span>
         </Stat>
-        <Stat label={t("serviceAccounts.ownerName")} note={item.department ?? undefined}>
-          {orDash(item.ownerName)}
-        </Stat>
+        <StatIfSet
+          label={t("serviceAccounts.ownerName")}
+          value={item.ownerName}
+          note={item.department ?? undefined}
+        />
+        {vpn ? <StatIfSet label={t("serviceAccounts.groupName")} value={item.groupName} /> : null}
         {vpn ? (
-          <Stat label={t("serviceAccounts.groupName")}>
-            <span className="mono">{orDash(item.groupName)}</span>
-          </Stat>
-        ) : null}
-        {vpn ? (
-          <Stat label={t("serviceAccounts.allowedIps")}>
-            <span className="mono">{orDash(item.allowedIps)}</span>
-          </Stat>
+          <StatIfSet label={t("serviceAccounts.allowedIps")} value={item.allowedIps} />
         ) : (
-          <Stat label={t("serviceAccounts.note")}>{orDash(item.note)}</Stat>
+          <StatIfSet label={t("serviceAccounts.note")} value={item.note} />
         )}
       </StatGrid>
 

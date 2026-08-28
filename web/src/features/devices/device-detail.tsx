@@ -8,7 +8,7 @@ import { formatDate, orDash } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { CopyButton } from "@/ui/copy-button";
-import { BlankFields, DetailHeader, Stat, StatGrid } from "@/ui/detail-header";
+import { BlankFields, DetailHeader, Stat, StatGrid, StatIfSet } from "@/ui/detail-header";
 import { ExpiryBadge } from "@/ui/expiry-badge";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
@@ -236,33 +236,22 @@ export function DeviceDetail({ me }: { me: Me }) {
             {t(STATUS_KEY[item.status])}
           </span>
         </Stat>
-        <Stat
-          label={t("devices.warranty")}
-          note={
-            item.warrantyEnd
-              ? `${t("expiry.to")} ${formatDate(item.warrantyEnd)}`
-              : undefined
-          }
-        >
-          {item.warrantyEnd ? (
-            <>
-              <WarrantyTimeline
-                compact
-                start={item.warrantyStart ?? item.purchaseDate}
-                end={item.warrantyEnd}
-              />
-              <ExpiryBadge end={item.warrantyEnd} />
-            </>
-          ) : (
+        {/* Thẻ bảo hành CHỈ hiện khi tab Hồ sơ không vẽ thanh đầy đủ — máy chưa khai hạn.
+            Có hạn thì thanh dưới đã nói đủ; lặp lại ở đây là hai lần cùng một câu. */}
+        {item.warrantyEnd ? null : (
+          <Stat label={t("devices.warranty")}>
             <ExpiryBadge end={null} />
-          )}
-        </Stat>
+          </Stat>
+        )}
         <Stat label={t("devices.location")} note={orDash(item.cabinetCode)}>
           <span className="mono">{locationLabel(item)}</span>
         </Stat>
-        <Stat label={t("devices.assignedTo")} note={item.department ?? undefined}>
-          {orDash(item.assignedTo)}
-        </Stat>
+        <StatIfSet
+          label={t("devices.assignedTo")}
+          value={item.assignedTo}
+          note={item.department ?? undefined}
+        />
+        <StatIfSet label={t("devices.department")} value={item.department} />
       </StatGrid>
 
       {retired ? <p className="alert">{t("devices.retiredLocked")}</p> : null}

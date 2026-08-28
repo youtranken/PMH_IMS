@@ -13,7 +13,7 @@ import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { isHostInSubnet, normalizeSubnet, subnetUsage, type SubnetUsage } from './ip-rules';
 import { OCCUPYING_STATUSES } from './ip-lifecycle';
-import { ipAddressTable, subnetTable } from './ipam.schema';
+import { ipAddressTable, ipHistoryTable, subnetTable } from './ipam.schema';
 
 export interface SubnetRecord {
   id: string;
@@ -254,28 +254,50 @@ export class SubnetService {
         message: 'Nói rõ vì sao ẩn dải này (vd "khai nhầm dải").',
       });
     }
-    const [existing] = await this.db
-      .select({ used: count() })
+    /*
+     * Vô hiệu hóa dải thì ẨN LUÔN mọi hồ sơ IP bên trong — CÙNG một lý do, cùng một lượt.
+     *
+     * Bản trước từ chối thẳng ("Ẩn hết IP trong dải trước đã") và bắt người dùng đi ẩn tay
+     * từng địa chỉ. Với một dải /24 đã dùng một nửa thì đó là hơn trăm lượt bấm cho một quyết
+     * định họ đã ra rồi — và không ai làm, nên dải hỏng cứ nằm đó.
+     *
+     * Ẩn chứ KHÔNG xóa: `ip_history` vẫn trỏ vào những hàng này, và câu "IP này từng của máy
+     * nào" mà AC 5.2 bắt giữ vĩnh viễn nằm ở đó. Mỗi hàng vẫn để lại một dòng lịch sử nói rõ
+     * nó bị ẩn theo dải nào, chứ không biến mất im lặng.
+     */
+    const children = await this.db
+      .select({ id: ipAddressTable.id, status: ipAddressTable.status })
       .from(ipAddressTable)
       .where(and(eq(ipAddressTable.subnetId, id), isNull(ipAddressTable.voidedAt)));
-    if (Number(existing?.used ?? 0) > 0) {
-      throw new ConflictException({
-        code: 'SUBNET_HAS_ADDRESSES',
-        message: 'Dải này còn hồ sơ IP. Ẩn hết IP trong dải trước đã.',
-      });
-    }
 
     await this.db.transaction(async (tx) => {
+      const now = new Date();
+      if (children.length > 0) {
+        await tx
+          .update(ipAddressTable)
+          .set({ voidedAt: now, voidedBy: actor, voidReason: text, updatedAt: now })
+          .where(and(eq(ipAddressTable.subnetId, id), isNull(ipAddressTable.voidedAt)));
+        await tx.insert(ipHistoryTable).values(
+          children.map((child) => ({
+            ipAddressId: child.id,
+            action: 'ip.voided',
+            actor,
+            fromStatus: child.status,
+            toStatus: child.status,
+            changes: { reason: `ẩn theo dải: ${text}` },
+          })),
+        );
+      }
       await tx
         .update(subnetTable)
-        .set({ voidedAt: new Date(), voidedBy: actor, voidReason: text })
+        .set({ voidedAt: now, voidedBy: actor, voidReason: text })
         .where(eq(subnetTable.id, id));
       await this.audit.appendWithin(tx, {
         actor,
         action: 'subnet.voided',
         objectType: 'subnet',
         objectId: id,
-        detail: { reason: text },
+        detail: { reason: text, addressesVoided: children.length },
       });
     });
   }

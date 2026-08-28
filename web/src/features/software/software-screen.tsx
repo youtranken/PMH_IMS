@@ -7,6 +7,7 @@ import { apiFetch } from '@/lib/api-client';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { DataTable } from '@/ui/data-table';
+import { DisposeButton } from '@/ui/dispose-button';
 import { UsageBar } from '@/ui/usage-bar';
 import { LicenseSeatsExpand } from './license-seats-expand';
 import { sortQuery } from '@/lib/sort-query';
@@ -182,6 +183,18 @@ export function SoftwareScreen({ me }: { me: Me }) {
               >
                 {t('common.edit')}
               </button>
+              {/* Hồ sơ đã bỏ thì không bày nút bỏ nữa — bấm lần hai chỉ ghi thêm một dòng
+                  lịch sử rỗng nghĩa. */}
+              {item.status !== 'retired' ? (
+                <DisposeButton
+                  url={`/api/v1/software/${item.id}`}
+                  body={{ status: 'retired' }}
+                  label={t('disposal.dispose')}
+                  confirmMessage={t('disposal.confirmSoftware', { code: item.code })}
+                  csrfToken={me.csrfToken}
+                  onDone={() => void refresh()}
+                />
+              ) : null}
               {/* Chỉ license mới có ghế để gán. SSL hay tên miền thì nút này vô nghĩa —
                   bày ra để bấm vào rồi báo lỗi là một kiểu hứa hão. */}
               {supportsSeats(item.kind) ? (

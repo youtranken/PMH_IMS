@@ -9,11 +9,12 @@ import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { DatePicker } from "@/ui/date-picker";
 import { Dialog } from "@/ui/dialog";
+import { DisposeButton } from "@/ui/dispose-button";
 import { ExpiryBadge } from "@/ui/expiry-badge";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
 import { CopyButton } from "@/ui/copy-button";
-import { BlankFields, DetailHeader, Stat, StatGrid } from "@/ui/detail-header";
+import { BlankFields, DetailHeader, Stat, StatGrid, StatIfSet } from "@/ui/detail-header";
 import { Field } from "@/ui/page-header";
 import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { TabPanel, Tabs } from "@/ui/tabs";
@@ -122,6 +123,17 @@ export function IspDetail({ me }: { me: Me }) {
             >
               {t("isp.renew")}
             </button>
+            {/* Đường truyền đã cắt thì không bày nút cắt nữa. */}
+            {item.status !== "terminated" ? (
+              <DisposeButton
+                url={`/api/v1/isp-lines/${item.id}`}
+                body={{ status: "terminated" }}
+                label={t("disposal.disposeIsp")}
+                confirmMessage={t("disposal.confirmIsp", { code: item.code })}
+                csrfToken={me.csrfToken}
+                onDone={() => void refresh()}
+              />
+            ) : null}
           </>
         }
       />
@@ -144,16 +156,14 @@ export function IspDetail({ me }: { me: Me }) {
             {t(STATUS_KEY[item.status])}
           </span>
         </Stat>
-        <Stat
-          label={t("isp.contract")}
-          note={item.endDate ? `${t("expiry.to")} ${formatDate(item.endDate)}` : undefined}
-        >
-          <WarrantyTimeline compact start={item.startDate} end={item.endDate} />
-          <ExpiryBadge end={item.endDate} />
-        </Stat>
-        <Stat label={t("isp.contractNo")}>
-          <span className="mono">{orDash(item.contractNo)}</span>
-        </Stat>
+        {/* Thanh hợp đồng đầy đủ nằm ở tab Hồ sơ — thẻ này chỉ còn ý nghĩa khi chưa khai hạn. */}
+        {item.endDate ? null : (
+          <Stat label={t("isp.contract")}>
+            <ExpiryBadge end={null} />
+          </Stat>
+        )}
+        <StatIfSet label={t("isp.contractNo")} value={item.contractNo} />
+        <StatIfSet label={t("isp.bandwidth")} value={item.bandwidth} />
       </StatGrid>
 
       <Tabs

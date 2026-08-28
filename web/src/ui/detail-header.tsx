@@ -37,6 +37,12 @@ export function DetailHeader({
 }) {
   return (
     <header className="detail-head">
+      {/*
+        Mục ĐẦU TIÊN vừa là breadcrumb vừa là đường QUAY LẠI, và nó phải trông ra một cái nút.
+        Bản trước để cả hàng cùng một màu xám nhạt: người dùng nhìn không ra chỗ nào bấm được
+        và báo là "mất nút quay về danh sách" — đúng, vì một cái link không trông giống link
+        thì nó không tồn tại.
+      */}
       <nav className="crumbs" aria-label="breadcrumb">
         {crumbs.map((crumb, index) => (
           <span key={`${crumb.label}-${index}`} className="crumb">
@@ -45,7 +51,18 @@ export function DetailHeader({
                 ›
               </span>
             ) : null}
-            {crumb.to ? <Link to={crumb.to}>{crumb.label}</Link> : <span>{crumb.label}</span>}
+            {crumb.to ? (
+              <Link className={index === 0 ? 'crumb-back' : undefined} to={crumb.to}>
+                {index === 0 ? (
+                  <span aria-hidden="true" className="crumb-arrow">
+                    ‹
+                  </span>
+                ) : null}
+                {crumb.label}
+              </Link>
+            ) : (
+              <span>{crumb.label}</span>
+            )}
           </span>
         ))}
       </nav>
@@ -93,6 +110,30 @@ export function Stat({
       <span className="stat-v">{children}</span>
       {note ? <span className="stat-note">{note}</span> : null}
     </div>
+  );
+}
+
+/**
+ * Chỉ vẽ thẻ khi CÓ nội dung — thẻ "NHÀ CUNG CẤP: — / —" là một ô chết chiếm đúng chỗ của
+ * một chỉ số có ích, và dải chỉ số chỉ có bốn chỗ.
+ *
+ * Khác `orDash` ở lưới bên dưới: dưới đó một ô rỗng vẫn nói lên điều gì đó ("trường này tồn
+ * tại, chưa ai khai"), còn trên dải chỉ số thì nó chỉ tốn chỗ.
+ */
+export function StatIfSet({
+  label,
+  value,
+  note,
+}: {
+  label: string;
+  value: string | null | undefined;
+  note?: ReactNode;
+}) {
+  if (!value) return null;
+  return (
+    <Stat label={label} note={note}>
+      {value}
+    </Stat>
   );
 }
 

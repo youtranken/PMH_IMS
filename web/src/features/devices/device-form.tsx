@@ -213,19 +213,28 @@ export function DeviceForm({
               onChange={(e) => set('serial', e.target.value)}
             />
           </Field>
+          {/*
+            Ô Trạng thái CHỈ hiện khi SỬA.
+
+            Thêm mới thì trạng thái luôn là "đang dùng" — bày một ô chọn có đúng một câu trả
+            lời hợp lý là bắt người khai đọc và bỏ qua một thứ không có quyết định nào ở đó,
+            và mở đường cho một hồ sơ vừa tạo đã ở trạng thái "đã thanh lý".
+          */}
           {/* Trạng thái là thuộc tính của chính cái máy (đang dùng / trong kho / đã thanh lý),
               không phải của chỗ nó đứng — nó từng nằm trong khối "Vị trí". */}
-          <Field label={t('devices.status')}>
-            <Select
-              value={form.status}
-              ariaLabel={t('devices.status')}
-              options={DEVICE_STATUSES.map((status) => ({
-                value: status,
-                label: t(STATUS_KEY[status]),
-              }))}
-              onChange={(value) => set('status', value as DeviceStatus)}
-            />
-          </Field>
+          {device ? (
+            <Field label={t('devices.status')}>
+              <Select
+                value={form.status}
+                ariaLabel={t('devices.status')}
+                options={DEVICE_STATUSES.map((status) => ({
+                  value: status,
+                  label: t(STATUS_KEY[status]),
+                }))}
+                onChange={(value) => set('status', value as DeviceStatus)}
+              />
+            </Field>
+          ) : null}
         </FormSection>
 
         <FormSection title={t('devices.location')} columns={3}>
