@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
+import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
@@ -154,6 +155,25 @@ export function SubnetForm({
             onChange={(e) => setDescription(e.target.value)}
           />
         </Field>
+
+        {/*
+          SỬA một dải đang có thì mở khu giấy tờ: sơ đồ mạng, biên bản bàn giao dải IP tĩnh từ
+          nhà mạng — trước đây không có chỗ đính nên nằm trong thư mục chia sẻ của phòng IT.
+
+          KHAI MỚI thì chưa có id để gắn, nên chưa hiện.
+        */}
+        {subnet ? (
+          <>
+            {/* Panel GHI THẲNG, không nằm trong lượt Lưu — hộp có nút Hủy nên phải nói ra. */}
+            <p className="alert">{t('attachments.liveWarning')}</p>
+            <AttachmentPanel
+              ownerType="subnet"
+              ownerId={subnet.id}
+              csrfToken={csrfToken}
+              canEdit={!save.isPending}
+            />
+          </>
+        ) : null}
 
         {error ? (
           <p className="alert error" role="alert">

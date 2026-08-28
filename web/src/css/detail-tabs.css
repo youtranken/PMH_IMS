@@ -1,3 +1,104 @@
+/* --- Đầu trang chi tiết (ui/detail-header.tsx) -------------------------------
+ * Breadcrumb → mã + tên → dòng định danh → nút thao tác. Thay hàng nút có "Về danh sách":
+ * bốn tầng điều hướng rút còn ba, và breadcrumb nói thêm được bối cảnh.
+ * ---------------------------------------------------------------------------- */
+.detail-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-7);
+}
+.crumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+.crumbs a { color: var(--ink-3); }
+.crumbs a:hover { color: var(--primary-ink); }
+.crumb { display: inline-flex; align-items: center; gap: var(--space-2); }
+.crumb-sep { opacity: 0.55; }
+
+.detail-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-6);
+  flex-wrap: wrap;
+}
+.detail-title-main { flex: 1 1 20rem; min-width: 0; }
+.detail-code {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: 0;
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.detail-name { font-family: var(--font); font-size: var(--fs-md); font-weight: 500; color: var(--ink-2); }
+.detail-subline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+.detail-actions { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+
+/* Nút chép (ui/copy-button.tsx) — nhỏ nhưng vùng bấm vẫn phải đủ ngón tay chạm trúng. */
+.copy-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border: 1px solid var(--border-2);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink-3);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.copy-btn:hover { color: var(--primary-ink); border-color: var(--primary); }
+
+/* --- Dải chỉ số đầu trang (StatGrid) -----------------------------------------
+ * Bốn thứ cần biết trong hai giây. Thứ đã nằm ở đây thì BỎ khỏi lưới bên dưới — bản trước
+ * lặp cả hai chỗ, cách nhau 40px.
+ * ---------------------------------------------------------------------------- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  margin-bottom: var(--space-7);
+}
+.stat {
+  background: var(--surface);
+  padding: var(--space-5) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.stat-k {
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.stat-v { font-weight: 600; overflow-wrap: anywhere; }
+.stat-note { font-size: var(--fs-xs); color: var(--ink-3); overflow-wrap: anywhere; }
+
+.blank-fields { font-size: var(--fs-xs); margin-top: var(--space-4); }
+
 /* --- Data grid (chi tiết tài sản: cặp nhãn/giá trị) ----------------------- */
 .data-grid {
   display: grid;

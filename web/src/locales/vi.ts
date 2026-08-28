@@ -227,6 +227,9 @@ export default {
   },
   devices: {
     title: 'Thiết bị',
+    since: 'từ {{date}}',
+    copyCode: 'Chép mã thiết bị',
+    copySerial: 'Chép serial',
     subtitle: 'Kho thiết bị IT — tra theo site, tủ, loại hoặc serial',
     add: 'Thêm thiết bị',
     edit: 'Sửa hồ sơ',
@@ -360,6 +363,8 @@ export default {
   },
   software: {
     title: 'Phần mềm',
+    copyCode: 'Chép mã hồ sơ',
+    seatsNote: 'ghế đã gán / tổng số ghế',
     subtitle: 'License, SSL, tên miền, hợp đồng bảo trì — mọi thứ có ngày gia hạn nằm một chỗ',
     add: 'Thêm hồ sơ',
     edit: 'Sửa hồ sơ',
@@ -451,6 +456,9 @@ export default {
   },
   isp: {
     title: 'Đường truyền',
+    contract: 'Hợp đồng',
+    copyCode: 'Chép mã đường truyền',
+    copyWanIp: 'Chép IP tĩnh',
     subtitle: 'Đứt cáp lúc 2 giờ sáng: hotline và số hợp đồng có ngay trên danh sách',
     add: 'Thêm đường truyền',
     edit: 'Sửa hồ sơ',
@@ -491,6 +499,13 @@ export default {
     callNow: 'Gọi ngay',
   },
   expiry: {
+    /* Bốn khóa dưới đây dùng cho THANH THỜI HẠN (ui/warranty-timeline.tsx) — bảo hành thiết
+       bị, hạn license/SSL/tên miền, hợp đồng đường truyền. Đặt trong chính khối `expiry` vì
+       khai một khối `expiry` thứ hai ở đầu file thì khối sau đè mất khối trước. */
+    from: 'Từ',
+    to: 'Đến',
+    walked: 'Đã đi {{percent}}%',
+    noStart: 'Chưa khai mốc bắt đầu',
     title: 'Sắp hết hạn',
     subtitle: 'Mọi thứ có ngày gia hạn của cả hệ thống về một chỗ — bảo hành, license, SSL, tên miền, hợp đồng',
     item: 'Mục',
@@ -732,6 +747,7 @@ export default {
   },
   nat: {
     title: 'Sổ NAT',
+    tabHistory: 'Lịch sử rule',
     subtitle: 'Mọi rule port-forward: port nào mở, dẫn tới máy nào, cho ai, vì sao.',
     add: 'Thêm rule',
     edit: 'Sửa rule',
@@ -839,6 +855,8 @@ export default {
     statusActive: 'Đang dùng',
     statusDisabled: 'Đã vô hiệu',
     statusHint: 'Đổi bằng nút Vô hiệu hóa / Bật lại ngoài danh sách — hai đường đó bắt ghi lý do.',
+    copyCode: 'Chép mã tài khoản',
+    copyLogin: 'Chép tên đăng nhập',
     codeAutoHint: 'Để trống thì hệ thống tự đặt theo tên đăng nhập.',
     codeAutoPlaceholder: 'tự đặt theo tên đăng nhập',
     nameAutoHint: 'Để trống thì lấy chính tên đăng nhập.',
@@ -928,11 +946,19 @@ export default {
     tier_whitelist: 'Xem thẳng',
     tier_needs_approval: 'Cần duyệt',
     note: 'Ghi chú',
-    // Chiều nhìn thứ hai — gom theo nhóm đối tượng
-    viewLabel: 'Cách xem',
-    viewByMember: 'Theo người',
-    viewByScope: 'Theo nhóm đối tượng',
-    searchScope: 'Tìm theo tên nhóm đối tượng…',
+    // Lưới thật (28/08/2026): hàng = người, cột = nhóm đối tượng.
+    person: 'Người',
+    columnFilter: 'Nhóm đối tượng',
+    allFamilies: 'Tất cả nhóm',
+    scope_device_site: 'Thiết bị theo site',
+    scope_device_type: 'Thiết bị theo loại',
+    scope_software_kind: 'Phần mềm',
+    scope_service_account_kind: 'Tài khoản dịch vụ',
+    scope_isp_provider: 'Đường truyền',
+    tier_denied: 'Không có quyền',
+    cellLabel: '{{member}} — {{scope}}: {{tier}}',
+    addPeopleTo: 'Gán "{{scope}}" cho nhiều người',
+    grantedByLine: 'Người gán: {{actor}}',
     summary:
       '{{people}} tài khoản · {{rules}} dòng quyền · {{scopes}} nhóm đối tượng, trong đó {{empty}} nhóm chưa gán cho ai.',
     noScopes: 'Không có nhóm đối tượng nào khớp',

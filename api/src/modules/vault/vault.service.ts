@@ -15,7 +15,13 @@ import { pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { secretTable } from './vault.schema';
 
-export const SECRET_OWNER_TYPES = ['device', 'software', 'service_account'] as const;
+/*
+ * Thêm `isp` (0036): `file.owner_type` đã nhận đường truyền từ lâu, nên hợp đồng PDF đính vào
+ * được mà mật khẩu PPPoE thì không có chỗ đứng — bất đối xứng đẩy mật khẩu thật vào ô Ghi chú
+ * không mã hóa. Whitelist này có BẢN SAO ở tầng DB (`secret_owner_type_check`) và ở
+ * `SecretOwnerType` bên web; thêm loại mới phải sờ đủ ba chỗ.
+ */
+export const SECRET_OWNER_TYPES = ['device', 'software', 'service_account', 'isp'] as const;
 export type SecretOwnerType = (typeof SECRET_OWNER_TYPES)[number];
 
 export const SECRET_KINDS = ['password', 'license_key', 'other'] as const;

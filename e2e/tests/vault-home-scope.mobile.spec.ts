@@ -73,7 +73,7 @@ test('trang tổng Két sắt đọc được ở 390px, popup mở xem cũng v�
   expect(dialogOverflow).toBeLessThanOrEqual(1);
 });
 
-test('ma trận quyền két sắt đọc được ở 390px, cả hai chiều nhìn', async ({ page }) => {
+test('lưới ma trận quyền đọc được ở 390px, cuộn ngang trong khung của nó', async ({ page }) => {
   await firstLogin(page, E2E_SA);
   const headers = await writeHeaders(page);
   const scopeList = await page.request.get('/api/v1/vault/access/scopes');
@@ -96,7 +96,14 @@ test('ma trận quyền két sắt đọc được ở 390px, cả hai chiều n
   await expect(page.getByText(E2E_MEMBER.email)).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-  await page.getByRole('button', { name: 'Theo nhóm đối tượng' }).click();
-  await expect(page.getByText('Cần duyệt').first()).toBeVisible();
+  /*
+   * Lưới (28/08/2026) cuộn ngang TRONG khung của nó, không đẩy cả trang — đó chính là điều
+   * bài này khóa lại. Vài chục cột ở 390px mà trang cuộn ngang thì cột tên người trôi mất và
+   * lưới hết đọc được.
+   */
+  const grid = page.locator('.access-grid-wrap');
+  await expect(grid).toBeVisible();
+  const gridScrolls = await grid.evaluate((el) => el.scrollWidth > el.clientWidth);
+  expect(gridScrolls).toBe(true);
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 });

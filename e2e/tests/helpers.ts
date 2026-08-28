@@ -164,6 +164,18 @@ export function resetIpam(): void {
     `ALTER TABLE ip_history DISABLE TRIGGER ip_history_no_delete`,
     `DELETE FROM ip_history WHERE ip_address_id IN (SELECT id FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE ${match}))`,
     `ALTER TABLE ip_history ENABLE TRIGGER ip_history_no_delete`,
+    /*
+     * `nat_rule_history` (0037) trỏ tới `nat_rule` bằng FK `ON DELETE RESTRICT`, nên phải dọn
+     * lịch sử TRƯỚC rule — y hệt cách `ip_history` phải đi trước `ip_address` ở trên. Và cũng
+     * y hệt vậy: bảng chỉ-thêm nên phải tắt trigger mới xóa được.
+     *
+     * Dùng CHÍNH hai điều kiện của hai câu xóa rule bên dưới, không viết một điều kiện thứ ba
+     * lỏng hơn: sót một nhánh là lần chạy sau đỏ ở `resetIpam` chứ không đỏ ở bài kiểm, và
+     * người đọc log sẽ đi tìm lỗi ở nhầm chỗ.
+     */
+    `ALTER TABLE nat_rule_history DISABLE TRIGGER nat_rule_history_no_delete`,
+    `DELETE FROM nat_rule_history WHERE nat_rule_id IN (SELECT id FROM nat_rule WHERE ip_address_id IN (SELECT id FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE ${match})) OR device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%'))`,
+    `ALTER TABLE nat_rule_history ENABLE TRIGGER nat_rule_history_no_delete`,
     // Rule NAT trỏ tới hồ sơ IP — xóa trước, không thì FK chặn.
     `DELETE FROM nat_rule WHERE ip_address_id IN (SELECT id FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE ${match}))`,
     `DELETE FROM nat_rule WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
@@ -248,6 +260,10 @@ export function resetDevices(): void {
     // Đường ISP trỏ tới thiết bị biên — gỡ liên kết trước khi xóa thiết bị.
     `UPDATE isp_line SET device_id = NULL WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
     // Rule NAT và hồ sơ IP trỏ tới thiết bị (FK RESTRICT) — dọn trước khi xóa thiết bị.
+    // `nat_rule_history` (0037) lại trỏ tới rule, cũng RESTRICT: nó phải đi trước nữa.
+    `ALTER TABLE nat_rule_history DISABLE TRIGGER nat_rule_history_no_delete`,
+    `DELETE FROM nat_rule_history WHERE nat_rule_id IN (SELECT id FROM nat_rule WHERE device_id IN (SELECT id FROM device WHERE ${match}))`,
+    `ALTER TABLE nat_rule_history ENABLE TRIGGER nat_rule_history_no_delete`,
     `DELETE FROM nat_rule WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
     `ALTER TABLE ip_history DISABLE TRIGGER ip_history_no_delete`,
     `DELETE FROM ip_history WHERE ip_address_id IN (SELECT id FROM ip_address WHERE device_id IN (SELECT id FROM device WHERE ${match}))`,

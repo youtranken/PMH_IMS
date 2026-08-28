@@ -214,10 +214,14 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
     const scopeList = await page.request.get('/api/v1/vault/access/scopes');
     const first = ((await scopeList.json()) as { label: string }[])[0];
 
+    /*
+     * Lưới (28/08/2026): không còn hai chiều nhìn để bấm qua lại. Gán hàng loạt mở từ chính
+     * TIÊU ĐỀ CỘT của nhóm đó — nhãn trợ năng là câu đầy đủ, còn chữ hiện ra đã cắt tiền tố.
+     */
     await page.goto('/admin/vault-access');
-    await page.getByRole('button', { name: 'Theo nhóm đối tượng' }).click();
-    const card = page.locator('section', { hasText: first.label }).first();
-    await card.getByRole('button', { name: 'Gán cho người…' }).click();
+    await page
+      .getByRole('button', { name: `Gán "${first.label}" cho nhiều người` })
+      .click();
 
     const form = page.getByRole('dialog');
     /* Tick CẢ HAI theo ĐÍCH DANH, không dùng `.first()`: danh sách sắp theo họ tên nên tài
@@ -236,7 +240,10 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
 
     // Người gán được thì vẫn báo, NHƯNG người hỏng cũng phải hiện ra kèm email.
     await expect(page.getByText('Đã gán quyền cho 1 người.')).toBeVisible();
-    await expect(page.getByText(new RegExp(doomed))).toBeVisible();
+    /* `.first()`: từ khi ma trận thành LƯỚI, email đó xuất hiện HAI chỗ — trong toast báo hỏng
+       và trong hàng của chính tài khoản đó (danh sách người đã nằm trong cache). Bài này chỉ
+       cần biết lời báo có nêu đích danh ai không gán được. */
+    await expect(page.getByText(new RegExp(doomed)).first()).toBeVisible();
   });
 
   test('gán một nhóm cho nhiều người, rồi xem lại được ai đang có quyền trên nhóm đó', async ({
@@ -245,18 +252,19 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
     await firstLogin(page, E2E_SA);
     await page.goto('/admin/vault-access');
 
-    // Chiều mặc định là theo NGƯỜI; câu "nhóm này ai xem được" phải đổi chiều mới trả lời được.
-    await page.getByRole('button', { name: 'Theo nhóm đối tượng' }).click();
-
     const scopes = await page.request.get('/api/v1/vault/access/scopes');
     const list = (await scopes.json()) as { label: string }[];
     expect(list.length).toBeGreaterThan(0);
     const label = list[0].label;
 
-    const card = page.locator('section', { hasText: label }).first();
-    await expect(card.getByText(/Chưa ai được gán nhóm này/)).toBeVisible();
+    /*
+     * Lưới trả lời CẢ HAI câu cùng lúc: đọc theo hàng ra "người này xem được gì", đọc theo
+     * cột ra "nhóm này ai xem được". Không còn phải bấm đổi chiều nhìn — đó là lý do bản cũ
+     * bị dựng lại.
+     */
+    await expect(page.getByRole('button', { name: new RegExp(`${escapeRe(label)}: Không có quyền`) }).first()).toBeVisible();
 
-    await card.getByRole('button', { name: 'Gán cho người…' }).click();
+    await page.getByRole('button', { name: `Gán "${label}" cho nhiều người` }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('checkbox').first().check();
     await form.getByRole('button', { name: 'Tầng quyền' }).click();
@@ -265,10 +273,10 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
 
     await expect(page.getByText('Đã gán quyền cho 1 người.')).toBeVisible();
 
-    // Thẻ của chính nhóm đó phải hiện tên người vừa gán, ở đúng cột tầng quyền.
-    const after = page.locator('section', { hasText: label }).first();
-    await expect(after.getByText(E2E_MEMBER.email)).toBeVisible();
-    await expect(after.getByText('Xem thẳng 1')).toBeVisible();
+    // Ô của đúng cột đó đổi màu ngay — không phải đi tìm trong một thẻ khác.
+    await expect(
+      page.getByRole('button', { name: new RegExp(`${escapeRe(label)}: Xem thẳng`) }).first(),
+    ).toBeVisible();
   });
 
   test('dòng tổng nói rõ còn bao nhiêu nhóm chưa gán cho ai', async ({ page }) => {
@@ -300,15 +308,28 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
     });
     expect(granted.status()).toBe(201);
 
+    /*
+     * Gỡ NGAY TRÊN Ô của lưới: bấm ô → hộp nhỏ đọc rõ ai-nhóm-nào → nút Gỡ → hỏi lại.
+     *
+     * Cố ý KHÔNG cho bấm-để-đổi-vòng ngay trên ô: đây là quyền xem mật khẩu, một cú bấm nhầm
+     * khi đang cuộn ngang là mở quyền cho người không nên có.
+     */
     await page.goto('/admin/vault-access');
-    await page.getByRole('button', { name: 'Theo nhóm đối tượng' }).click();
     await page
-      .getByRole('button', { name: `Gỡ quyền của ${E2E_MEMBER.email} trên ${first.label}` })
+      .getByRole('button', { name: new RegExp(`${escapeRe(first.label)}: Cần duyệt`) })
+      .first()
       .click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Gỡ' }).click();
     await page.getByRole('button', { name: 'Gỡ', exact: true }).last().click();
 
     await expect(page.getByText('Đã gỡ quyền.')).toBeVisible();
-    const card = page.locator('section', { hasText: first.label }).first();
-    await expect(card.getByText(/Chưa ai được gán nhóm này/)).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: new RegExp(`${escapeRe(first.label)}: Không có quyền`) }).first(),
+    ).toBeVisible();
   });
 });
+
+/** Nhãn nhóm có thể chứa `(`, `.`, `+`… — chèn thẳng vào RegExp là hỏng ở đúng nhãn khó nhất. */
+function escapeRe(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}

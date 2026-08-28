@@ -12,8 +12,24 @@
 export const ACCESS_TIERS = ['whitelist', 'needs_approval', 'denied'] as const;
 export type AccessTier = (typeof ACCESS_TIERS)[number];
 
-/** Nhóm đối tượng: thiết bị theo site / theo loại, hoặc phần mềm theo loại hồ sơ. */
-export const SCOPE_TYPES = ['device_site', 'device_type', 'software_kind'] as const;
+/**
+ * Nhóm đối tượng có thể gán quyền.
+ *
+ * Gán theo NHÓM chứ không theo từng bản ghi: thêm một cái switch mới vào site là nó tự nằm
+ * trong quyền đã gán, không phải gán lại. Đó là lý do ma trận này dùng được với vài trăm thiết
+ * bị mà không biến thành một bảng vài trăm dòng.
+ *
+ * `service_account_kind` và `isp_provider` thêm 28/08/2026. Trước đó hai loại chủ thể này cất
+ * được mật khẩu vào két nhưng KHÔNG nhóm nào phủ, nên Member vĩnh viễn bị từ chối và SA không
+ * có ô nào để cấp quyền — một tính năng chết chứ không phải một quyết định.
+ */
+export const SCOPE_TYPES = [
+  'device_site',
+  'device_type',
+  'software_kind',
+  'service_account_kind',
+  'isp_provider',
+] as const;
 export type ScopeType = (typeof SCOPE_TYPES)[number];
 
 export interface AccessGroup {
@@ -47,6 +63,27 @@ export function groupsOfDevice(device: {
 
 export function groupsOfSoftware(software: { kind: string }): AccessGroup[] {
   return software.kind ? [{ scopeType: 'software_kind', scopeRef: software.kind }] : [];
+}
+
+/**
+ * Tài khoản dịch vụ nhóm theo LOẠI (`shared` / `vpn`) — cùng khuôn với phần mềm.
+ *
+ * Vì sao theo loại chứ không theo bộ phận: "cho cả tổ trực xem mọi tài khoản VPN" là câu có
+ * thật, còn "cho họ xem mọi tài khoản của phòng Kế toán" thì gần như không ai gán — bộ phận là
+ * ô gõ tự do, viết lệch một chữ là quyền không áp.
+ */
+export function groupsOfServiceAccount(account: { kind: string }): AccessGroup[] {
+  return account.kind ? [{ scopeType: 'service_account_kind', scopeRef: account.kind }] : [];
+}
+
+/**
+ * Đường truyền nhóm theo NHÀ MẠNG.
+ *
+ * `provider` là chuỗi lấy từ danh mục Nhà mạng nên nó viết đúng một kiểu — khác `department`
+ * của tài khoản dịch vụ vốn gõ tự do.
+ */
+export function groupsOfIsp(line: { provider: string }): AccessGroup[] {
+  return line.provider ? [{ scopeType: 'isp_provider', scopeRef: line.provider }] : [];
 }
 
 /** Rộng → hẹp. Dùng để chọn khi nhiều luật cùng áp. */
@@ -98,4 +135,6 @@ export const SCOPE_LABEL: Record<string, string> = {
   device_site: 'Thiết bị tại site',
   device_type: 'Thiết bị theo loại',
   software_kind: 'Phần mềm theo loại',
+  service_account_kind: 'Tài khoản dịch vụ theo loại',
+  isp_provider: 'Đường truyền theo nhà mạng',
 };

@@ -524,3 +524,136 @@ test.describe('Popup Sửa có chỗ quản lý giấy tờ', () => {
     await expect(form.getByText('Chưa có giấy tờ nào.')).toBeVisible();
   });
 });
+
+/**
+ * Lịch sử nghiệp vụ của sổ NAT (0037) + giấy tờ đính kèm cho rule và cho dải.
+ *
+ * Vì sao đáng có một bài riêng: "ai mở port 3389 ra internet, ngày nào, vì sao, ai gỡ" là câu
+ * auditor hỏi nhiều nhất về sổ NAT, và trước 0037 nó chỉ tra được bằng SQL trên `audit_log`.
+ * `ip_address` ngay bên cạnh thì đã có `ip_history` từ Epic 5 — nên đây là chỗ bị bỏ sót chứ
+ * không phải một quyết định kiến trúc.
+ */
+test.describe('Sổ NAT — lịch sử và giấy tờ', () => {
+  test('mở rule → sửa → gỡ đều để lại dòng lịch sử nói rõ đổi gì', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const routerCode = `FW-E2E-HIST-${stamp}`;
+    const routerId = await createRouter(page, routerCode);
+
+    const created = await page.request.post('/api/v1/ipam/nat', {
+      headers,
+      data: {
+        deviceId: routerId,
+        protocol: 'tcp',
+        externalPorts: '8080',
+        internalIp: '172.16.199.3',
+        internalPort: 80,
+        usedBy: 'Camera tầng 2',
+        reason: 'Xem camera từ ngoài',
+      },
+    });
+    expect(created.status()).toBe(201);
+    const ruleId = ((await created.json()) as { id: string }).id;
+
+    // Sửa: nới dải port và đổi người dùng.
+    const updated = await page.request.patch(`/api/v1/ipam/nat/${ruleId}`, {
+      headers,
+      data: { externalPorts: '8080-8090', usedBy: 'Đầu ghi NVR' },
+    });
+    expect(updated.status()).toBe(200);
+
+    const afterEdit = (await (
+      await page.request.get(`/api/v1/ipam/nat/${ruleId}/history`)
+    ).json()) as { action: string; changes: Record<string, unknown> }[];
+    // Mới nhất lên đầu.
+    expect(afterEdit[0].action).toBe('updated');
+    expect(Object.keys(afterEdit[0].changes).sort()).toEqual(['ports', 'usedBy']);
+    expect(afterEdit[afterEdit.length - 1].action).toBe('created');
+
+    /*
+     * Đọc trên GIAO DIỆN trước khi gỡ — gỡ rồi thì dòng biến khỏi sổ, không còn nút Sửa để mở.
+     * Đây cũng là thứ tự thật của người dùng: sửa xong mở lại xem lịch sử.
+     */
+    await page.goto('/nat');
+    await page
+      .getByRole('row', { name: new RegExp(routerCode) })
+      .first()
+      .getByRole('button', { name: 'Sửa' })
+      .click();
+    const form = page.getByRole('dialog');
+    await expect(form.getByText(/mở cho ai: Camera tầng 2 → Đầu ghi NVR/)).toBeVisible();
+    // Dòng "Mở rule" cũng phải còn đó — lịch sử là cả quãng đời, không chỉ lần sửa gần nhất.
+    await expect(form.getByText('Mở rule')).toBeVisible();
+    await form.getByRole('button', { name: 'Hủy' }).click();
+
+    // Gỡ rule: lý do phải nằm trong LỊCH SỬ, không chỉ trong audit_log.
+    const removed = await page.request.delete(`/api/v1/ipam/nat/${ruleId}`, {
+      headers,
+      data: { reason: 'dịch vụ đã ngừng' },
+    });
+    expect(removed.status()).toBe(200);
+
+    /*
+     * Đọc lịch sử của một rule ĐÃ GỠ vẫn phải được — đó mới đúng là lúc người ta cần đọc nó
+     * ("port này từng mở cho ai, gỡ vì sao"). Nên endpoint tra theo `requireAny`, không phải
+     * `requireAlive`.
+     */
+    const afterVoid = (await (
+      await page.request.get(`/api/v1/ipam/nat/${ruleId}/history`)
+    ).json()) as { action: string; changes: Record<string, { after: unknown }> }[];
+    expect(afterVoid[0].action).toBe('voided');
+    expect(afterVoid[0].changes.reason.after).toBe('dịch vụ đã ngừng');
+  });
+
+  test('đính được giấy tờ vào rule NAT và vào dải mạng', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+
+    const routerId = await createRouter(page, `FW-E2E-FILE-${stamp}`);
+    const rule = await page.request.post('/api/v1/ipam/nat', {
+      headers,
+      data: {
+        deviceId: routerId,
+        protocol: 'tcp',
+        externalPorts: '9443',
+        internalIp: '172.16.199.4',
+        internalPort: 443,
+        usedBy: 'Cổng thanh toán',
+        reason: 'Đối tác gọi vào',
+      },
+    });
+    const ruleId = ((await rule.json()) as { id: string }).id;
+
+    const subnet = await page.request.post('/api/v1/ipam/subnets', {
+      headers,
+      data: { cidr: '172.16.198.0/29', name: `LAN giấy tờ E2E ${stamp}` },
+    });
+    const subnetId = ((await subnet.json()) as { id: string }).id;
+
+    /*
+     * Gọi thẳng API vì `FILE_OWNER_TYPES` là whitelist — trước 28/08 hai loại này không có
+     * trong đó và mọi lượt tải lên trả 400. Sơ đồ mạng và ảnh chụp cấu hình Draytek vì thế
+     * nằm trong thư mục chia sẻ của phòng IT chứ không trong IMS.
+     */
+    for (const [ownerType, ownerId] of [
+      ['nat_rule', ruleId],
+      ['subnet', subnetId],
+    ] as const) {
+      const uploaded = await page.request.post('/api/v1/files', {
+        headers: { 'X-CSRF-Token': headers['X-CSRF-Token'], Origin: headers.Origin },
+        multipart: {
+          ownerType,
+          ownerId,
+          file: {
+            name: `so-do-${ownerType}-${stamp}.pdf`,
+            mimeType: 'application/pdf',
+            buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\ntrailer<</Root 1 0 R>>\n'),
+          },
+        },
+      });
+      expect(uploaded.status(), `phải nhận được ownerType ${ownerType}`).toBe(201);
+    }
+  });
+});

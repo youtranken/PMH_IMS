@@ -23,7 +23,19 @@ import { filesTable } from './files.schema';
  * gửi `ownerType` bịa ra thì file thành mồ côi, không màn nào hiển thị và không ai dọn.
  * Thêm loại mới (phiếu ISO ở Epic 8, sự cố ở Epic 9) thì thêm vào đây.
  */
-export const FILE_OWNER_TYPES = ['device', 'isp', 'software', 'service_account'] as const;
+/*
+ * `subnet` và `nat_rule` thêm 28/08/2026 (rà soát liên kết): sơ đồ mạng của một dải, biên bản
+ * bàn giao dải IP tĩnh từ nhà mạng, ảnh chụp cấu hình Draytek kèm rule NAT — cả ba đều là
+ * giấy tờ thật và cả ba đang nằm trong thư mục chia sẻ của phòng IT chứ không trong IMS.
+ */
+export const FILE_OWNER_TYPES = [
+  'device',
+  'isp',
+  'software',
+  'service_account',
+  'subnet',
+  'nat_rule',
+] as const;
 export type FileOwnerType = (typeof FILE_OWNER_TYPES)[number];
 
 export interface FileRecord {

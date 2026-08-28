@@ -4,6 +4,8 @@ import {
   protocolsOverlap,
   rangesOverlap,
   validateNatRule,
+  natChanges,
+  type NatRuleSnapshot,
 } from './nat-rules';
 
 describe('parsePortRange — người ta gõ "8080" hoặc "8000-8010"', () => {
@@ -195,5 +197,61 @@ describe('rangesOverlap — biên tính vào', () => {
     [1000, 60000, 8080, 8080, true],
   ])('%s-%s vs %s-%s → %s', (aFrom, aTo, bFrom, bTo, expected) => {
     expect(rangesOverlap(aFrom, aTo, bFrom, bTo)).toBe(expected);
+  });
+});
+
+/**
+ * `natChanges` là thứ tab Lịch sử của sổ NAT đọc. Nó phải trả lời đúng câu "cái gì đổi từ đâu
+ * sang đâu" — không phải chép lại cả bản ghi, cũng không đẻ dòng cho những ô không ai đụng.
+ */
+describe('natChanges — ô nào của rule NAT thật sự đổi', () => {
+  const base: NatRuleSnapshot = {
+    ports: '8080',
+    protocol: 'tcp',
+    internalIp: '172.16.10.5',
+    internalPort: 80,
+    usedBy: 'Camera tầng 2',
+    reason: 'Xem camera từ ngoài',
+    enabled: true,
+    note: null,
+  };
+
+  it('không đổi gì thì không đẻ dòng nào', () => {
+    expect(natChanges(base, { ...base })).toEqual({});
+  });
+
+  it('nới dải port ra thì ghi thành MỘT ô, không phải hai con số rời', () => {
+    expect(natChanges(base, { ...base, ports: '8080-8090' })).toEqual({
+      ports: { before: '8080', after: '8080-8090' },
+    });
+  });
+
+  it('tắt rule ghi được cả giá trị boolean', () => {
+    expect(natChanges(base, { ...base, enabled: false })).toEqual({
+      enabled: { before: true, after: false },
+    });
+  });
+
+  it('đổi nhiều ô một lúc thì ghi đủ, không gộp', () => {
+    const changes = natChanges(base, {
+      ...base,
+      internalIp: '172.16.10.9',
+      usedBy: 'Đầu ghi NVR',
+    });
+    expect(Object.keys(changes).sort()).toEqual(['internalIp', 'usedBy']);
+  });
+
+  /*
+   * Ô ghi chú đang trống, người dùng bấm vào rồi bấm ra: form gửi lên chuỗi rỗng còn DB đang
+   * giữ null. Không chuẩn hóa thì mỗi lần mở form ra đóng lại là một dòng lịch sử rác.
+   */
+  it('rỗng kiểu nào cũng là rỗng — không đẻ dòng rác', () => {
+    expect(natChanges(base, { ...base, note: '' })).toEqual({});
+  });
+
+  it('thêm ghi chú thật thì có ghi', () => {
+    expect(natChanges(base, { ...base, note: 'mở theo yêu cầu anh Dũng' })).toEqual({
+      note: { before: null, after: 'mở theo yêu cầu anh Dũng' },
+    });
   });
 });

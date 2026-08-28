@@ -19,7 +19,12 @@ import { useToast } from '@/ui/toast';
  * SOI GƯƠNG `SECRET_OWNER_TYPES` phía API (`api/src/modules/vault/vault.service.ts`).
  * Thêm loại mới phải sửa CẢ HAI đầu — thiếu một bên là 400 lúc cất secret.
  */
-export type SecretOwnerType = 'device' | 'software' | 'service_account';
+/*
+ * Phải khớp `SECRET_OWNER_TYPES` bên API và CHECK `secret_owner_type_check` ở tầng DB.
+ * Bài học 0033: whitelist ba tầng, tầng DB là tầng bị quên — TS xanh, unit test xanh, rồi 500
+ * lúc chạy thật.
+ */
+export type SecretOwnerType = 'device' | 'software' | 'service_account' | 'isp';
 export type SecretKind = 'password' | 'license_key' | 'other';
 
 export interface AccessVerdict {

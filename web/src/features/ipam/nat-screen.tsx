@@ -18,7 +18,10 @@ import { useToast } from '@/ui/toast';
 import type { CatalogLists, ServicePortRow } from '@/features/catalog/catalog-types';
 import { CatalogForm } from '@/features/catalog/catalog-form';
 import { DeviceForm } from '@/features/devices/device-form';
+import { AttachmentPanel } from '@/ui/attachment-panel';
+import { HistoryPanel } from '@/ui/history-panel';
 import { ServicePortPicker } from './service-port-picker';
+import { toNatHistory, type NatHistoryRow } from './nat-history-entries';
 import { checkInternalIp } from './nat-internal-ip';
 import { STATUS_KEY, type IpStatus } from './ipam-types';
 import { chipsFromValue, parsePortChip, type PortChip } from './port-chips';
@@ -749,6 +752,38 @@ function NatForm({
           </Field>
         </FormSection>
 
+        {/*
+          SỬA một rule đang có thì mở thêm hai khu: giấy tờ và lịch sử.
+
+          Giấy tờ — ảnh chụp cấu hình Draytek, email nhà mạng xác nhận mở port — trước đây
+          không có chỗ đính nên nằm trong thư mục chia sẻ của phòng IT.
+
+          Lịch sử — "ai mở port này, ngày nào, vì sao, ai gỡ" — là câu auditor hỏi nhiều nhất
+          về sổ NAT, và trước 0037 chỉ tra được bằng SQL trên `audit_log`.
+
+          THÊM MỚI thì không hiện: chưa có id để gắn, và một rule chưa tồn tại thì chưa có gì
+          để kể.
+        */}
+        {rule ? (
+          <>
+            <FormSection title={t('attachments.title')} columns={1}>
+              {/* Panel này GHI THẲNG, không nằm trong lượt Lưu của form — trong hộp thoại CÓ
+                  nút Hủy thì điều đó không hiển nhiên, nên phải nói ra. */}
+              <p className="alert">{t('attachments.liveWarning')}</p>
+              <AttachmentPanel
+                ownerType="nat_rule"
+                ownerId={rule.id}
+                csrfToken={csrfToken}
+                canEdit={!busy}
+              />
+            </FormSection>
+
+            <FormSection title={t('nat.tabHistory')} columns={1}>
+              <NatHistory ruleId={rule.id} />
+            </FormSection>
+          </>
+        ) : null}
+
         {/* Nói TRƯỚC khi bấm Lưu là sẽ ghi ra mấy dòng — sau đó mới biết thì đã muộn. */}
         {ports.length > 1 ? (
           <p className="alert">{t('nat.willCreate', { count: ports.length })}</p>
@@ -876,4 +911,21 @@ function RemoveDialog({
       </form>
     </Dialog>
   );
+}
+
+/**
+ * Lịch sử của MỘT rule NAT (0037).
+ *
+ * Tách thành component riêng vì truy vấn chỉ chạy khi hộp Sửa mở ra — nhét `useQuery` vào
+ * `NatForm` thì nó chạy cả lúc THÊM MỚI, gọi `/nat/undefined/history` và nhận 400.
+ */
+function NatHistory({ ruleId }: { ruleId: string }) {
+  const history = useQuery({
+    queryKey: ['ipam', 'nat', ruleId, 'history'],
+    queryFn: () => apiFetch<NatHistoryRow[]>(`/api/v1/ipam/nat/${ruleId}/history`),
+  });
+
+  if (history.isLoading) return <Loading />;
+  if (history.isError) return <LoadError onRetry={() => void history.refetch()} />;
+  return <HistoryPanel entries={toNatHistory(history.data ?? [])} />;
 }

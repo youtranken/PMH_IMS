@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { errorMessage, useApiMutation } from "@/lib/api";
 import { formatDate, orDash } from "@/lib/format";
@@ -13,7 +13,8 @@ import { ExpiryBadge } from "@/ui/expiry-badge";
 import { Field } from "@/ui/page-header";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
-import { PageHeader } from "@/ui/page-header";
+import { BlankFields, DetailHeader, Stat, StatGrid } from "@/ui/detail-header";
+import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useToast } from "@/ui/toast";
@@ -134,14 +135,28 @@ export function SoftwareDetail({ me }: { me: Me }) {
 
   return (
     <>
-      <PageHeader
-        title={`${item.code} — ${item.name}`}
-        subtitle={`${t(KIND_KEY[item.kind])}${item.vendorName ? ` · ${item.vendorName}` : ""}`}
+      <DetailHeader
+        crumbs={[
+          { label: t("nav.software"), to: PATHS.software },
+          { label: t(KIND_KEY[item.kind]) },
+          { label: item.code },
+        ]}
+        code={item.code}
+        name={item.name}
+        copyLabel={t("software.copyCode")}
+        subline={
+          <>
+            <span>{t(KIND_KEY[item.kind])}</span>
+            {item.vendorName ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{item.vendorName}</span>
+              </>
+            ) : null}
+          </>
+        }
         actions={
           <>
-            <Link className="btn" to={PATHS.software}>
-              {t("software.back")}
-            </Link>
             <button
               type="button"
               className="btn"
@@ -160,22 +175,42 @@ export function SoftwareDetail({ me }: { me: Me }) {
         }
       />
 
-      <div className="device-summary">
-        <span className={`badge ${STATUS_TONE[item.status]}`}>
-          {t(STATUS_KEY[item.status])}
-        </span>
-        {item.licenseModel === "perpetual" ? (
-          <span className="badge ok plain">{t("software.perpetual")}</span>
-        ) : (
-          <ExpiryBadge end={item.endDate} />
-        )}
-        {supportsSeats(item.kind) && item.seatTotal !== null ? (
-          <span className="muted">
-            {t("software.seats")}:{" "}
-            <span className="mono">{seatLabel(item)}</span>
+      {/* Bốn chỉ số RIÊNG của phần mềm: hạn và GHẾ ĐÃ DÙNG là hai con số quyết định "có mua
+          thêm không" — trước đây ghế nằm sâu trong tab, phải bấm mới thấy. */}
+      <StatGrid>
+        <Stat
+          label={t("software.status")}
+          note={item.startDate ? `${t("expiry.from")} ${formatDate(item.startDate)}` : undefined}
+        >
+          <span className={`badge ${STATUS_TONE[item.status]}`}>
+            {t(STATUS_KEY[item.status])}
           </span>
+        </Stat>
+
+        <Stat
+          label={t("software.endDate")}
+          note={item.endDate ? `${t("expiry.to")} ${formatDate(item.endDate)}` : undefined}
+        >
+          {item.licenseModel === "perpetual" ? (
+            <span className="badge ok plain">{t("software.perpetual")}</span>
+          ) : (
+            <>
+              <WarrantyTimeline compact start={item.startDate} end={item.endDate} />
+              <ExpiryBadge end={item.endDate} />
+            </>
+          )}
+        </Stat>
+
+        {supportsSeats(item.kind) ? (
+          <Stat label={t("software.seats")} note={t("software.seatsNote")}>
+            <span className="mono">{seatLabel(item)}</span>
+          </Stat>
         ) : null}
-      </div>
+
+        <Stat label={t("software.vendor")} note={orDash(item.note)}>
+          {orDash(item.vendorName)}
+        </Stat>
+      </StatGrid>
 
       <Tabs
         items={tabItems}
@@ -187,15 +222,22 @@ export function SoftwareDetail({ me }: { me: Me }) {
       <TabPanel tabKey={safeTab}>
         {safeTab === "profile" ? (
           <>
+            {/* Thanh hạn ĐẦY ĐỦ. License vĩnh viễn thì không có quãng đường nào để vẽ. */}
+            {item.licenseModel !== "perpetual" && item.endDate ? (
+              <section className="card">
+                <h2 className="form-section-title">{t("software.endDate")}</h2>
+                <WarrantyTimeline
+                  start={item.startDate}
+                  end={item.endDate}
+                  startLabel={t("software.startDate")}
+                  endLabel={t("software.endDate")}
+                />
+              </section>
+            ) : null}
+
+            {/* Loại · nhà cung cấp ĐÃ ở dòng định danh; trạng thái · hạn · ghế ĐÃ ở dải chỉ
+                số. Lưới chỉ còn phần chưa nói ở đâu cả. */}
             <dl className="data-grid">
-              <Item label={t("software.kind")}>{t(KIND_KEY[item.kind])}</Item>
-              <Item label={t("software.vendor")}>
-                {orDash(item.vendorName)}
-              </Item>
-              <Item label={t("software.seats")}>{seatLabel(item)}</Item>
-              <Item label={t("software.startDate")}>
-                {orDash(formatDate(item.startDate))}
-              </Item>
               <Item label={t("software.licenseModel")}>
                 {supportsSeats(item.kind)
                   ? t(
@@ -205,23 +247,18 @@ export function SoftwareDetail({ me }: { me: Me }) {
                     )
                   : "—"}
               </Item>
-              <Item label={t("software.endDate")}>
-                {item.licenseModel === "perpetual" ? (
-                  t("software.perpetual")
-                ) : item.endDate ? (
-                  <>
-                    {formatDate(item.endDate)}{" "}
-                    <ExpiryBadge end={item.endDate} />
-                  </>
-                ) : (
-                  "—"
-                )}
-              </Item>
-              <Item label={t("software.status")}>
-                {t(STATUS_KEY[item.status])}
+              <Item label={t("software.startDate")}>
+                {orDash(formatDate(item.startDate))}
               </Item>
               <Item label={t("software.note")}>{orDash(item.note)}</Item>
             </dl>
+            <BlankFields
+              labels={[
+                item.vendorName ? null : t("software.vendor"),
+                item.startDate ? null : t("software.startDate"),
+                item.note ? null : t("software.note"),
+              ].filter((label): label is string => label !== null)}
+            />
           </>
         ) : safeTab === "vault" ? (
           <VaultPanel

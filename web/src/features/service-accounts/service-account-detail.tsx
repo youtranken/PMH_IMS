@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { orDash } from "@/lib/format";
 import type { Me } from "@/lib/me";
@@ -9,7 +9,8 @@ import { PATHS } from "@/lib/routes";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
-import { PageHeader } from "@/ui/page-header";
+import { CopyButton } from "@/ui/copy-button";
+import { BlankFields, DetailHeader, Stat, StatGrid } from "@/ui/detail-header";
 import { TabPanel, Tabs, initialTab } from "@/ui/tabs";
 import { VaultPanel } from "@/ui/vault-panel";
 import { toServiceAccountHistory } from "./service-account-history-entries";
@@ -76,27 +77,53 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
 
   return (
     <>
-      <PageHeader
-        title={`${item.code} — ${item.name}`}
-        subtitle={t(KIND_KEY[item.kind])}
-        actions={
-          <Link className="btn" to={PATHS.serviceAccounts}>
-            {t("serviceAccounts.back")}
-          </Link>
+      <DetailHeader
+        crumbs={[
+          { label: t("nav.serviceAccounts"), to: PATHS.serviceAccounts },
+          { label: t(KIND_KEY[item.kind]) },
+          { label: item.code },
+        ]}
+        code={item.code}
+        name={item.name}
+        copyLabel={t("serviceAccounts.copyCode")}
+        subline={
+          <>
+            <span className="badge plain brand">{t(KIND_KEY[item.kind])}</span>
+            {item.login ? (
+              <span>
+                {t("serviceAccounts.login")}: <span className="mono">{item.login}</span>
+                <CopyButton value={item.login} label={t("serviceAccounts.copyLogin")} />
+              </span>
+            ) : null}
+          </>
         }
       />
 
-      <div className="device-summary">
-        <span className={`badge ${STATUS_TONE[item.status]}`}>
-          {t(STATUS_KEY[item.status])}
-        </span>
-        {item.login ? (
-          <span className="muted">
-            {t("serviceAccounts.login")}:{" "}
-            <span className="mono">{item.login}</span>
+      {/* Trang này trước đây nghèo nhất: dải tóm tắt chỉ có badge trạng thái và tên đăng
+          nhập. Thiếu người phụ trách, thiếu bộ phận — và thiếu cả câu hay hỏi nhất về một
+          tài khoản dùng chung. */}
+      <StatGrid>
+        <Stat label={t("serviceAccounts.status")}>
+          <span className={`badge ${STATUS_TONE[item.status]}`}>
+            {t(STATUS_KEY[item.status])}
           </span>
+        </Stat>
+        <Stat label={t("serviceAccounts.ownerName")} note={item.department ?? undefined}>
+          {orDash(item.ownerName)}
+        </Stat>
+        {vpn ? (
+          <Stat label={t("serviceAccounts.groupName")}>
+            <span className="mono">{orDash(item.groupName)}</span>
+          </Stat>
         ) : null}
-      </div>
+        {vpn ? (
+          <Stat label={t("serviceAccounts.allowedIps")}>
+            <span className="mono">{orDash(item.allowedIps)}</span>
+          </Stat>
+        ) : (
+          <Stat label={t("serviceAccounts.note")}>{orDash(item.note)}</Stat>
+        )}
+      </StatGrid>
 
       <Tabs
         items={[
@@ -112,34 +139,25 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
 
       <TabPanel tabKey={tab}>
         {tab === "profile" ? (
-          <dl className="data-grid">
-            <Item label={t("serviceAccounts.kind")}>
-              {t(KIND_KEY[item.kind])}
-            </Item>
-            <Item label={t("serviceAccounts.login")}>{orDash(item.login)}</Item>
-            <Item label={t("serviceAccounts.department")}>
-              {orDash(item.department)}
-            </Item>
-            <Item label={t("serviceAccounts.ownerName")}>
-              {orDash(item.ownerName)}
-            </Item>
-            {/* Hai ô VPN chỉ hiện với tài khoản VPN — với email dùng chung chúng luôn rỗng,
-                và một hàng "—" chỉ làm người đọc dừng lại tự hỏi. */}
-            {vpn ? (
-              <>
-                <Item label={t("serviceAccounts.groupName")}>
-                  <span className="mono">{orDash(item.groupName)}</span>
-                </Item>
-                <Item label={t("serviceAccounts.allowedIps")}>
-                  <span className="mono">{orDash(item.allowedIps)}</span>
-                </Item>
-              </>
-            ) : null}
-            <Item label={t("serviceAccounts.status")}>
-              {t(STATUS_KEY[item.status])}
-            </Item>
-            <Item label={t("serviceAccounts.note")}>{orDash(item.note)}</Item>
-          </dl>
+          <>
+            {/* Loại · tên đăng nhập ĐÃ nằm ở dòng định danh dưới tiêu đề; trạng thái · người
+                phụ trách · bộ phận · nhóm VPN · dải IP ĐÃ nằm ở dải chỉ số. Lưới này chỉ còn
+                thứ chưa nói ở đâu cả — lặp lại chúng là hai lần cùng một câu trong nửa màn. */}
+            <dl className="data-grid">
+              <Item label={t("serviceAccounts.department")}>
+                {orDash(item.department)}
+              </Item>
+              <Item label={t("serviceAccounts.note")}>{orDash(item.note)}</Item>
+            </dl>
+            <BlankFields
+              labels={[
+                item.login ? null : t("serviceAccounts.login"),
+                item.ownerName ? null : t("serviceAccounts.ownerName"),
+                item.department ? null : t("serviceAccounts.department"),
+                item.note ? null : t("serviceAccounts.note"),
+              ].filter((label): label is string => label !== null)}
+            />
+          </>
         ) : tab === "vault" ? (
           <VaultPanel
             ownerType="service_account"

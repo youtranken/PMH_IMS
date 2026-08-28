@@ -12,8 +12,12 @@ import { Dialog } from "@/ui/dialog";
 import { ExpiryBadge } from "@/ui/expiry-badge";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
-import { Field, PageHeader } from "@/ui/page-header";
+import { CopyButton } from "@/ui/copy-button";
+import { BlankFields, DetailHeader, Stat, StatGrid } from "@/ui/detail-header";
+import { Field } from "@/ui/page-header";
+import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { TabPanel, Tabs } from "@/ui/tabs";
+import { VaultPanel } from "@/ui/vault-panel";
 import { useToast } from "@/ui/toast";
 import type { CatalogLists } from "@/features/catalog/catalog-types";
 import { IspForm } from "./isp-form";
@@ -73,14 +77,37 @@ export function IspDetail({ me }: { me: Me }) {
 
   return (
     <>
-      <PageHeader
-        title={`${item.code} — ${item.provider}`}
-        subtitle={[item.bandwidth, item.siteCode].filter(Boolean).join(" · ")}
+      <DetailHeader
+        crumbs={[
+          { label: t("nav.isp"), to: PATHS.ispLines },
+          { label: item.provider },
+          { label: item.code },
+        ]}
+        code={item.code}
+        name={item.provider}
+        copyLabel={t("isp.copyCode")}
+        subline={
+          <>
+            {item.bandwidth ? <span>{item.bandwidth}</span> : null}
+            {item.siteCode ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{item.siteCode}</span>
+              </>
+            ) : null}
+            {item.wanIp ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>
+                  {t("isp.wanIp")} <span className="mono">{item.wanIp}</span>
+                  <CopyButton value={item.wanIp} label={t("isp.copyWanIp")} />
+                </span>
+              </>
+            ) : null}
+          </>
+        }
         actions={
           <>
-            <Link className="btn" to={PATHS.ispLines}>
-              {t("isp.back")}
-            </Link>
             <button
               type="button"
               className="btn"
@@ -99,31 +126,46 @@ export function IspDetail({ me }: { me: Me }) {
         }
       />
 
-      {/* Dải tóm tắt đặt hotline lên đầu: mở trang này lúc mất mạng là để gọi nhà mạng. */}
-      <div className="device-summary">
-        <span className={`badge ${STATUS_TONE[item.status]}`}>
-          {t(STATUS_KEY[item.status])}
-        </span>
-        <ExpiryBadge end={item.endDate} />
-        {item.hotline ? (
-          <span>
-            {t("isp.hotline")}:{" "}
+      {/* HOTLINE đứng ô ĐẦU TIÊN, và là một link bấm gọi được.
+          Đây là trang mở ra lúc 2 giờ sáng khi đứt cáp — thứ cần đầu tiên là số điện thoại,
+          không phải mã hợp đồng. */}
+      <StatGrid>
+        <Stat label={t("isp.hotline")} note={item.provider}>
+          {item.hotline ? (
             <a className="mono" href={`tel:${item.hotline.replace(/\s/g, "")}`}>
               {item.hotline}
             </a>
+          ) : (
+            "—"
+          )}
+        </Stat>
+        <Stat label={t("isp.status")}>
+          <span className={`badge ${STATUS_TONE[item.status]}`}>
+            {t(STATUS_KEY[item.status])}
           </span>
-        ) : null}
-        {item.contractNo ? (
-          <span className="muted">
-            {t("isp.contractNo")}:{" "}
-            <span className="mono">{item.contractNo}</span>
-          </span>
-        ) : null}
-      </div>
+        </Stat>
+        <Stat
+          label={t("isp.contract")}
+          note={item.endDate ? `${t("expiry.to")} ${formatDate(item.endDate)}` : undefined}
+        >
+          <WarrantyTimeline compact start={item.startDate} end={item.endDate} />
+          <ExpiryBadge end={item.endDate} />
+        </Stat>
+        <Stat label={t("isp.contractNo")}>
+          <span className="mono">{orDash(item.contractNo)}</span>
+        </Stat>
+      </StatGrid>
 
       <Tabs
         items={[
           { key: "profile", label: t("isp.tabProfile") },
+          /*
+            Két sắt cho đường truyền (0036).
+            Mật khẩu PPPoE và tài khoản quản trị modem nhà mạng trước đây không có chỗ đứng —
+            `file.owner_type` đã nhận `isp` từ lâu mà `secret.owner_type` thì chưa, nên hợp
+            đồng PDF đính vào được còn mật khẩu thì chảy vào ô Ghi chú, chỗ không mã hóa.
+          */
+          { key: "vault", label: t("vault.tab") },
           { key: "attachments", label: t("isp.tabAttachments") },
           { key: "history", label: t("isp.tabHistory") },
         ]}
@@ -134,42 +176,54 @@ export function IspDetail({ me }: { me: Me }) {
 
       <TabPanel tabKey={tab}>
         {tab === "profile" ? (
-          <dl className="data-grid">
-            <Item label={t("isp.provider")}>{item.provider}</Item>
-            <Item label={t("isp.bandwidth")}>{orDash(item.bandwidth)}</Item>
-            <Item label={t("isp.wanIp")}>
-              <span className="mono">{orDash(item.wanIp)}</span>
-            </Item>
-            <Item label={t("isp.site")}>{orDash(item.siteCode)}</Item>
-            <Item label={t("isp.device")}>
-              {item.deviceId ? (
-                <Link className="mono" to={PATHS.device(item.deviceId)}>
-                  {item.deviceCode}
-                </Link>
-              ) : (
-                "—"
-              )}
-            </Item>
-            <Item label={t("isp.hotline")}>
-              <span className="mono">{orDash(item.hotline)}</span>
-            </Item>
-            <Item label={t("isp.contractNo")}>
-              <span className="mono">{orDash(item.contractNo)}</span>
-            </Item>
-            <Item label={t("isp.startDate")}>
-              {orDash(formatDate(item.startDate))}
-            </Item>
-            <Item label={t("isp.endDate")}>
-              {item.endDate ? (
-                <>
-                  {formatDate(item.endDate)} <ExpiryBadge end={item.endDate} />
-                </>
-              ) : (
-                "—"
-              )}
-            </Item>
-            <Item label={t("isp.note")}>{orDash(item.note)}</Item>
-          </dl>
+          <>
+            {/* Thanh hợp đồng ĐẦY ĐỦ — hai ô ngày rời nhau bắt người đọc tự trừ trong đầu. */}
+            {item.endDate ? (
+              <section className="card">
+                <h2 className="form-section-title">{t("isp.contract")}</h2>
+                <WarrantyTimeline
+                  start={item.startDate}
+                  end={item.endDate}
+                  startLabel={t("isp.startDate")}
+                  endLabel={t("isp.endDate")}
+                />
+              </section>
+            ) : null}
+
+            {/* Nhà mạng · băng thông · IP tĩnh ĐÃ ở dòng định danh; hotline · trạng thái ·
+                hợp đồng · số hợp đồng ĐÃ ở dải chỉ số. Lưới chỉ còn phần chưa nói. */}
+            <dl className="data-grid">
+              <Item label={t("isp.site")}>{orDash(item.siteCode)}</Item>
+              <Item label={t("isp.device")}>
+                {item.deviceId ? (
+                  <Link className="mono" to={PATHS.device(item.deviceId)}>
+                    {item.deviceCode}
+                  </Link>
+                ) : (
+                  "—"
+                )}
+              </Item>
+              <Item label={t("isp.note")}>{orDash(item.note)}</Item>
+            </dl>
+            <BlankFields
+              labels={[
+                item.bandwidth ? null : t("isp.bandwidth"),
+                item.wanIp ? null : t("isp.wanIp"),
+                item.hotline ? null : t("isp.hotline"),
+                item.siteCode ? null : t("isp.site"),
+                item.deviceId ? null : t("isp.device"),
+                item.note ? null : t("isp.note"),
+              ].filter((label): label is string => label !== null)}
+            />
+          </>
+        ) : tab === "vault" ? (
+          <VaultPanel
+            ownerType="isp"
+            ownerId={item.id}
+            me={me}
+            /* Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày nút ra để bấm rồi 403. */
+            canEdit={me.role === "sa" || me.role === "admin"}
+          />
         ) : tab === "attachments" ? (
           <AttachmentPanel
             ownerType="isp"

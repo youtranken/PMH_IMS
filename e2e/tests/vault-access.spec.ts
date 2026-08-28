@@ -6,6 +6,9 @@ import {
   firstLogin,
   resetAccessList,
   resetDevices,
+  resetIsp,
+  resetSecrets,
+  resetServiceAccounts,
   resetUsers,
 } from './helpers';
 
@@ -13,6 +16,11 @@ test.beforeEach(() => {
   resetUsers();
   resetAccessList();
   resetDevices();
+  // Hai bài cuối file cất secret vào ISP và tạo tài khoản dịch vụ — dọn luôn để lần chạy sau
+  // không đụng ràng buộc "một chủ thể một nhãn" của lần chạy trước.
+  resetSecrets();
+  resetIsp();
+  resetServiceAccounts();
 });
 
 async function csrfOf(page: Page): Promise<string> {
@@ -37,24 +45,33 @@ test.describe('Ma trận quyền két sắt', () => {
     await page.goto('/admin/vault-access');
     await expect(page.getByRole('heading', { name: 'Quyền xem két sắt' })).toBeVisible();
 
-    // Người chưa gán gì vẫn HIỆN, kèm lời nói rõ là chưa có quyền — ẩn đi thì SA tưởng đã gán.
-    const card = page
-      .locator('section')
-      .filter({ hasText: E2E_MEMBER.email });
-    await expect(card.getByText('Chưa gán quyền nào')).toBeVisible();
+    /*
+     * Ma trận dựng lại thành LƯỚI (28/08/2026): hàng = người, cột = nhóm đối tượng.
+     *
+     * Người chưa gán gì vẫn HIỆN — nhưng giờ nó hiện thành một hàng toàn ô trống, chứ không
+     * phải một thẻ có chữ "chưa có quyền nào". Ẩn họ đi thì SA tưởng đã gán rồi.
+     */
+    const row = page.getByRole('row').filter({ hasText: E2E_MEMBER.email });
+    await expect(row).toBeVisible();
+    const cell = row.getByRole('button', { name: /Thiết bị loại Switch: Không có quyền/ });
+    await expect(cell).toBeVisible();
 
-    await card.getByRole('button', { name: 'Gán quyền' }).click();
+    // Gán qua nút của HÀNG (nhiều nhóm cho một người) — vẫn là hộp cũ, chỉ khác chỗ đứng.
+    await row.getByRole('button', { name: 'Gán quyền' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('button', { name: 'Nhóm đối tượng' }).click();
     await page.getByRole('option').filter({ hasText: 'Thiết bị loại Switch' }).click();
     await form.getByRole('button', { name: 'Lưu' }).click();
 
-    await expect(card.getByText('Thiết bị loại Switch')).toBeVisible();
-    await expect(card.getByText('Cần duyệt')).toBeVisible();
+    // Ô đổi ngay tại chỗ — không phải đi tìm trong một thẻ khác.
+    const granted = row.getByRole('button', { name: /Thiết bị loại Switch: Cần duyệt/ });
+    await expect(granted).toBeVisible();
 
-    await card.getByRole('button', { name: 'Gỡ' }).click();
+    // Gỡ NGAY TRÊN Ô: bấm ô → hộp có nút Gỡ → hỏi lại.
+    await granted.click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Gỡ' }).click();
     await confirmAction(page);
-    await expect(card.getByText('Chưa gán quyền nào')).toBeVisible();
+    await expect(row.getByRole('button', { name: /Thiết bị loại Switch: Không có quyền/ })).toBeVisible();
   });
 
   /**
@@ -227,5 +244,100 @@ test.describe('Ma trận quyền két sắt', () => {
     expect((await page.request.get('/api/v1/vault/access')).status()).toBe(403);
     expect((await page.request.get('/api/v1/vault/access/scopes')).status()).toBe(403);
     await expect(page.getByRole('link', { name: 'Quyền két sắt' })).toHaveCount(0);
+  });
+});
+
+/**
+ * Rà soát liên kết 28/08/2026 tìm ra hai lỗ hổng cùng một họ, migration 0036 vá cả hai:
+ *
+ *  - Két sắt chưa với tới ĐƯỜNG TRUYỀN, dù giấy tờ thì với tới từ lâu.
+ *  - Ma trận quyền chưa có nhóm nào phủ TÀI KHOẢN DỊCH VỤ, nên nó cất được mật khẩu mà không
+ *    ai cấp quyền xem được — một tính năng chết, không phải một quyết định.
+ */
+test.describe('Két sắt và ma trận quyền với tới ISP + tài khoản dịch vụ', () => {
+  test('cất được mật khẩu PPPoE của đường truyền', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+
+    const line = await page.request.post('/api/v1/isp-lines', {
+      headers,
+      data: { code: `FTTH-E2E-${stamp}`, provider: 'VNPT', bandwidth: '200 Mbps' },
+    });
+    expect(line.status()).toBe(201);
+    const lineId = ((await line.json()) as { id: string }).id;
+
+    /*
+     * Đây là chỗ TRƯỚC 0036 trả 500: CHECK ở tầng DB chỉ nhận device/software/service_account.
+     * Whitelist ba tầng và tầng DB là tầng bị quên — nên bài này gọi thẳng API để chạm đúng
+     * tầng đó, không chỉ chạm cái mảng trong TypeScript.
+     */
+    const stashed = await page.request.post('/api/v1/vault/secrets', {
+      headers,
+      data: {
+        ownerType: 'isp',
+        ownerId: lineId,
+        kind: 'password',
+        label: `pppoe-E2E-${stamp}`,
+        username: 'ftth-lst@vnpt',
+        value: 'MatKhau#2026',
+      },
+    });
+    expect(stashed.status()).toBe(201);
+
+    // Và nó hiện ở tab Két sắt của chính trang đường truyền.
+    await page.goto(`/isp-lines/${lineId}`);
+    await page.getByRole('tab', { name: 'Két sắt' }).click();
+    await expect(page.getByText(`pppoe-E2E-${stamp}`)).toBeVisible();
+  });
+
+  test('gán quyền theo LOẠI tài khoản dịch vụ — Member hết bị cấm vĩnh viễn', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+
+    const account = await page.request.post('/api/v1/service-accounts', {
+      headers,
+      data: { code: `VPN-E2E-ACL-${stamp}`, kind: 'vpn', name: 'VPN kiểm quyền' },
+    });
+    expect(account.status()).toBe(201);
+    const accountId = ((await account.json()) as { id: string }).id;
+
+    // Chưa gán gì: CẤM — mặc định đóng vẫn nguyên, đây không phải chuyện nới lỏng.
+    const before = await page.request.get(
+      `/api/v1/vault/access/tier?memberEmail=${E2E_MEMBER.email}&ownerType=service_account&ownerId=${accountId}`,
+    );
+    expect(((await before.json()) as { tier: string }).tier).toBe('denied');
+
+    // Gán "Tài khoản: VPN" → tầng đổi. Trước 0036 thì không có ô nào để chọn.
+    const granted = await page.request.post('/api/v1/vault/access', {
+      headers,
+      data: {
+        memberEmail: E2E_MEMBER.email,
+        scopeType: 'service_account_kind',
+        scopeRef: 'vpn',
+        tier: 'whitelist',
+      },
+    });
+    expect(granted.status()).toBe(201);
+
+    const after = await page.request.get(
+      `/api/v1/vault/access/tier?memberEmail=${E2E_MEMBER.email}&ownerType=service_account&ownerId=${accountId}`,
+    );
+    expect(((await after.json()) as { tier: string }).tier).toBe('whitelist');
+
+    /*
+     * Quyền theo LOẠI, nên nó không tràn sang loại khác: gán VPN thì tài khoản dùng chung vẫn
+     * CẤM. Thiếu bài này thì một `scopeRef` gõ sai vẫn "chạy" mà không ai biết nó mở quá tay.
+     */
+    const shared = await page.request.post('/api/v1/service-accounts', {
+      headers,
+      data: { code: `TK-E2E-ACL-${stamp}`, kind: 'shared', name: 'Dùng chung kiểm quyền' },
+    });
+    const sharedId = ((await shared.json()) as { id: string }).id;
+    const other = await page.request.get(
+      `/api/v1/vault/access/tier?memberEmail=${E2E_MEMBER.email}&ownerType=service_account&ownerId=${sharedId}`,
+    );
+    expect(((await other.json()) as { tier: string }).tier).toBe('denied');
   });
 });

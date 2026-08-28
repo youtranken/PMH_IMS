@@ -5,9 +5,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, eq, isNull, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
+import type { Tx } from '../../common/tx';
 import { escapeLike, pgErrorCode, PG_CHECK_VIOLATION } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
@@ -15,11 +16,22 @@ import { DevicesApiService } from '../devices/devices.api';
 import { IpAddressService } from './ip-address.service';
 import {
   describePortRange,
+  natChanges,
   protocolsOverlap,
   rangesOverlap,
   validateNatRule,
+  type NatRuleSnapshot,
 } from './nat-rules';
-import { ipAddressTable, natRuleTable } from './ipam.schema';
+import { ipAddressTable, natRuleHistoryTable, natRuleTable } from './ipam.schema';
+
+export interface NatRuleHistoryRecord {
+  id: string;
+  natRuleId: string;
+  action: string;
+  actor: string;
+  changes: Record<string, unknown> | null;
+  createdAt: Date;
+}
 
 export const NAT_PROTOCOLS = ['tcp', 'udp', 'both'] as const;
 export type NatProtocol = (typeof NAT_PROTOCOLS)[number];
@@ -202,6 +214,14 @@ export class NatRuleService {
             reason: clean.reason.trim(),
           },
         });
+        await this.recordWithin(tx, actor, rows[0].id, 'created', {
+          ports: { before: null, after: describePortRange(clean.externalFrom, clean.externalTo) },
+          protocol: { before: null, after: clean.protocol },
+          internalIp: { before: null, after: clean.internalIp },
+          internalPort: { before: null, after: clean.internalPort },
+          usedBy: { before: null, after: clean.usedBy.trim() },
+          reason: { before: null, after: clean.reason.trim() },
+        });
         return rows[0];
       });
       return { ...(await this.decorate([row]))[0], warnings };
@@ -282,6 +302,25 @@ export class NatRuleService {
             enabled: merged.enabled,
           },
         });
+        /*
+         * Lịch sử chỉ ghi ô THẬT SỰ đổi — `audit_log` ở trên vốn chép nguyên trạng thái sau.
+         * Hai bảng trả lời hai câu: audit là "đã có lệnh ghi nào chạy", lịch sử là "cái gì đổi
+         * từ đâu sang đâu". Chép cả bản ghi vào lịch sử thì mỗi lần sửa một ô cũng ra một dòng
+         * mười trường giống hệt nhau, và người đọc phải tự dò xem chỗ nào khác.
+         */
+        const changes = natChanges(snapshotOf(before), {
+          ports: describePortRange(merged.externalFrom, merged.externalTo),
+          protocol: merged.protocol,
+          internalIp: merged.internalIp,
+          internalPort: merged.internalPort,
+          usedBy: merged.usedBy.trim(),
+          reason: merged.reason.trim(),
+          enabled: merged.enabled ?? true,
+          note: merged.note?.trim() || null,
+        });
+        if (Object.keys(changes).length > 0) {
+          await this.recordWithin(tx, actor, id, 'updated', changes);
+        }
         return rows[0];
       });
       return { ...(await this.decorate([row]))[0], warnings };
@@ -318,6 +357,13 @@ export class NatRuleService {
           internalIp: hostOf(before.internalIp),
           reason: text,
         },
+      });
+      await this.recordWithin(tx, actor, id, 'voided', {
+        ports: {
+          before: describePortRange(before.externalFrom, before.externalTo),
+          after: describePortRange(before.externalFrom, before.externalTo),
+        },
+        reason: { before: null, after: text },
       });
     });
   }
@@ -410,6 +456,57 @@ export class NatRuleService {
   private async siteCodeOf(siteId: string): Promise<string | null> {
     const lists = await this.catalog.lists({ includeInactive: true });
     return lists.sites.find((site) => site.id === siteId)?.code ?? null;
+  }
+
+  /** Lịch sử nghiệp vụ của MỘT rule, mới nhất lên đầu (AD-13). */
+  async history(id: string): Promise<NatRuleHistoryRecord[]> {
+    await this.requireAny(id);
+    const rows = await this.db
+      .select()
+      .from(natRuleHistoryTable)
+      .where(eq(natRuleHistoryTable.natRuleId, id))
+      .orderBy(desc(natRuleHistoryTable.createdAt));
+    return rows.map((row) => ({
+      id: row.id,
+      natRuleId: row.natRuleId,
+      action: row.action,
+      actor: row.actor,
+      changes: (row.changes as Record<string, unknown> | null) ?? null,
+      createdAt: row.createdAt,
+    }));
+  }
+
+  /*
+   * Ghi lịch sử TRONG transaction của lượt ghi, không phải sau nó.
+   *
+   * Ngoài transaction thì một lỗi ở giữa để lại rule đã đổi mà lịch sử không ghi — đúng loại
+   * lệch mà AD-5 sinh ra để chặn, và là loại chỉ lộ ra khi có người đi tra sáu tháng sau.
+   */
+  private async recordWithin(
+    tx: Tx,
+    actor: string,
+    id: string,
+    action: string,
+    changes: Record<string, unknown>,
+  ): Promise<void> {
+    await tx.insert(natRuleHistoryTable).values({ natRuleId: id, action, actor, changes });
+  }
+
+  /**
+   * Tra một rule KỂ CẢ đã gỡ — khác `requireAlive`.
+   *
+   * Lịch sử của một rule đã gỡ chính là thứ đáng đọc nhất ("port này từng mở cho ai, gỡ vì
+   * sao"), nên chặn ở đây theo `voidedAt` là chặn đúng chỗ cần xem.
+   */
+  private async requireAny(id: string): Promise<typeof natRuleTable.$inferSelect> {
+    const rows = await this.db.select().from(natRuleTable).where(eq(natRuleTable.id, id));
+    if (rows.length === 0) {
+      throw new NotFoundException({
+        code: 'NAT_NOT_FOUND',
+        message: 'Không tìm thấy rule NAT này.',
+      });
+    }
+    return rows[0];
   }
 
   private async requireAlive(id: string): Promise<typeof natRuleTable.$inferSelect> {
@@ -506,4 +603,24 @@ export class NatRuleService {
 /** Postgres trả `inet` kèm mask; UI luôn muốn địa chỉ trần. */
 function hostOf(value: string): string {
   return value.split('/')[0];
+}
+
+/**
+ * Bản ghi DB → hình dạng mà `natChanges` so được.
+ *
+ * `internalIp` phải đi qua `hostOf`: cột là kiểu `inet` nên Postgres trả về `172.16.10.5/32`,
+ * còn giá trị mới từ form là `172.16.10.5`. Không chuẩn hóa thì MỌI lượt sửa đều đẻ ra một
+ * dòng "IP trong: 172.16.10.5/32 → 172.16.10.5" — sai, và lặp lại mãi.
+ */
+function snapshotOf(row: typeof natRuleTable.$inferSelect): NatRuleSnapshot {
+  return {
+    ports: describePortRange(row.externalFrom, row.externalTo),
+    protocol: row.protocol,
+    internalIp: hostOf(row.internalIp),
+    internalPort: row.internalPort,
+    usedBy: row.usedBy,
+    reason: row.reason,
+    enabled: row.enabled,
+    note: row.note,
+  };
 }

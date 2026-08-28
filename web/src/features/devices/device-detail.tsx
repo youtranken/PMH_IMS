@@ -7,11 +7,13 @@ import { errorMessage, useApiMutation } from "@/lib/api";
 import { formatDate, orDash } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
+import { CopyButton } from "@/ui/copy-button";
+import { BlankFields, DetailHeader, Stat, StatGrid } from "@/ui/detail-header";
 import { ExpiryBadge } from "@/ui/expiry-badge";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
-import { PageHeader } from "@/ui/page-header";
 import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
+import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useConfirm } from "@/ui/confirm-provider";
 import { useToast } from "@/ui/toast";
@@ -150,14 +152,37 @@ export function DeviceDetail({ me }: { me: Me }) {
 
   return (
     <>
-      <PageHeader
-        title={`${item.code} — ${item.name}`}
-        subtitle={`${item.deviceTypeName} · ${locationLabel(item)}`}
+      <DetailHeader
+        crumbs={[
+          { label: t("nav.devices"), to: PATHS.devices },
+          { label: item.deviceTypeName },
+          { label: item.code },
+        ]}
+        code={item.code}
+        name={item.name}
+        copyLabel={t("devices.copyCode")}
+        subline={
+          <>
+            <span>{item.deviceTypeName}</span>
+            {item.model ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>{item.model}</span>
+              </>
+            ) : null}
+            {item.serial ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <span>
+                  S/N <span className="mono">{item.serial}</span>
+                  <CopyButton value={item.serial} label={t("devices.copySerial")} />
+                </span>
+              </>
+            ) : null}
+          </>
+        }
         actions={
           <>
-            <Link className="btn" to={PATHS.devices}>
-              {t("devices.back")}
-            </Link>
             <button
               type="button"
               className="btn"
@@ -200,22 +225,45 @@ export function DeviceDetail({ me }: { me: Me }) {
         }
       />
 
-      {/* Dải tóm tắt: thứ cần biết trong 2 giây khi đang đứng xử lý sự cố. */}
-      <div className="device-summary">
-        <span className={`badge ${STATUS_TONE[item.status]}`}>
-          {t(STATUS_KEY[item.status])}
-        </span>
-        <ExpiryBadge end={item.warrantyEnd} />
-        <span className="muted">
-          {t("devices.location")}:{" "}
-          <span className="mono">{locationLabel(item)}</span>
-        </span>
-        {item.assignedTo ? (
-          <span className="muted">
-            {t("devices.assignedTo")}: {item.assignedTo}
+      {/* Bốn chỉ số cần biết trong 2 giây khi đang đứng xử lý sự cố. Chúng bị BỎ khỏi lưới
+          bên dưới — bản trước lặp cả hai chỗ, cách nhau 40px. */}
+      <StatGrid>
+        <Stat
+          label={t("devices.status")}
+          note={item.purchaseDate ? t("devices.since", { date: formatDate(item.purchaseDate) }) : undefined}
+        >
+          <span className={`badge ${STATUS_TONE[item.status]}`}>
+            {t(STATUS_KEY[item.status])}
           </span>
-        ) : null}
-      </div>
+        </Stat>
+        <Stat
+          label={t("devices.warranty")}
+          note={
+            item.warrantyEnd
+              ? `${t("expiry.to")} ${formatDate(item.warrantyEnd)}`
+              : undefined
+          }
+        >
+          {item.warrantyEnd ? (
+            <>
+              <WarrantyTimeline
+                compact
+                start={item.warrantyStart ?? item.purchaseDate}
+                end={item.warrantyEnd}
+              />
+              <ExpiryBadge end={item.warrantyEnd} />
+            </>
+          ) : (
+            <ExpiryBadge end={null} />
+          )}
+        </Stat>
+        <Stat label={t("devices.location")} note={orDash(item.cabinetCode)}>
+          <span className="mono">{locationLabel(item)}</span>
+        </Stat>
+        <Stat label={t("devices.assignedTo")} note={item.department ?? undefined}>
+          {orDash(item.assignedTo)}
+        </Stat>
+      </StatGrid>
 
       {retired ? <p className="alert">{t("devices.retiredLocked")}</p> : null}
 
@@ -229,46 +277,54 @@ export function DeviceDetail({ me }: { me: Me }) {
       <TabPanel tabKey={safeTab}>
         {safeTab === "profile" ? (
           <>
+            {/* Thanh bảo hành ĐẦY ĐỦ: mốc mua → hôm nay → hết hạn.
+                Ba ô ngày rời nhau ("ngày mua", "bảo hành từ", "bảo hành đến") bắt người đọc
+                tự trừ trong đầu mới biết đã đi hết bao nhiêu phần đường. */}
+            {item.warrantyEnd ? (
+              <section className="card">
+                <h2 className="form-section-title">{t("devices.warranty")}</h2>
+                <WarrantyTimeline
+                  start={item.warrantyStart ?? item.purchaseDate}
+                  end={item.warrantyEnd}
+                  startLabel={item.warrantyStart ? t("devices.warrantyStart") : t("devices.purchaseDate")}
+                  endLabel={t("devices.warrantyEnd")}
+                />
+              </section>
+            ) : null}
+
+            {/* Trạng thái · vị trí · người dùng · bảo hành ĐÃ nằm ở dải chỉ số trên — không
+                lặp lại ở đây. Lưới này chỉ còn thứ chưa nói ở đâu cả. */}
             <dl className="data-grid">
-              <Item label={t("devices.status")}>
-                <span className={`badge ${STATUS_TONE[item.status]}`}>
-                  {t(STATUS_KEY[item.status])}
-                </span>
-              </Item>
-              <Item label={t("devices.type")}>{item.deviceTypeName}</Item>
               <Item label={t("devices.model")}>{orDash(item.model)}</Item>
               <Item label={t("devices.serial")}>
-                <span className="mono">{orDash(item.serial)}</span>
-              </Item>
-              <Item label={t("devices.site")}>{orDash(item.siteCode)}</Item>
-              <Item label={t("devices.cabinet")}>
-                {orDash(item.cabinetCode)}
-              </Item>
-              <Item label={t("devices.assignedTo")}>
-                {orDash(item.assignedTo)}
-              </Item>
-              <Item label={t("devices.department")}>
-                {orDash(item.department)}
-              </Item>
-              <Item label={t("devices.vendor")}>{orDash(item.vendorName)}</Item>
-              <Item label={t("devices.purchaseDate")}>
-                {orDash(formatDate(item.purchaseDate))}
-              </Item>
-              <Item label={t("devices.warrantyStart")}>
-                {orDash(formatDate(item.warrantyStart))}
-              </Item>
-              <Item label={t("devices.warrantyEnd")}>
-                {item.warrantyEnd ? (
+                {item.serial ? (
                   <>
-                    {formatDate(item.warrantyEnd)}{" "}
-                    <ExpiryBadge end={item.warrantyEnd} />
+                    <span className="mono">{item.serial}</span>
+                    <CopyButton value={item.serial} label={t("devices.copySerial")} />
                   </>
                 ) : (
                   "—"
                 )}
               </Item>
+              <Item label={t("devices.vendor")}>{orDash(item.vendorName)}</Item>
+              <Item label={t("devices.purchaseDate")}>
+                {orDash(formatDate(item.purchaseDate))}
+              </Item>
               <Item label={t("devices.note")}>{orDash(item.note)}</Item>
             </dl>
+
+            {/* Ô chưa khai gom về MỘT dòng, thay cho một dãy hộp chỉ chứa dấu gạch ngang —
+                hồ sơ khai sơ sài trông như dữ liệu hỏng chứ không phải việc còn thiếu. */}
+            <BlankFields
+              labels={[
+                item.model ? null : t("devices.model"),
+                item.serial ? null : t("devices.serial"),
+                item.vendorName ? null : t("devices.vendor"),
+                item.department ? null : t("devices.department"),
+                item.purchaseDate ? null : t("devices.purchaseDate"),
+                item.note ? null : t("devices.note"),
+              ].filter((label): label is string => label !== null)}
+            />
 
             {/* Phần mềm đang cài dùng BẢNG GHẾ đầy đủ (kỳ hạn · chi phí · hợp đồng), không
                 phải khu `nhãn: giá trị` chung — cùng một bảng với khu bung dòng ở danh sách

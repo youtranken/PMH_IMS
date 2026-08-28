@@ -66,7 +66,9 @@ test.describe('Trang chi tiết thiết bị', () => {
       await expect(page.getByRole('tab', { name })).toBeVisible();
     }
 
-    await expect(page.getByText(`FOC-${code}`)).toBeVisible();
+    /* `.first()`: serial giờ hiện ở HAI chỗ có chủ ý — dòng định danh ngay dưới tiêu đề
+       (thứ người ta đọc qua điện thoại cho nhà cung cấp) và ô Serial trong lưới hồ sơ. */
+    await expect(page.getByText(`FOC-${code}`).first()).toBeVisible();
 
     await page.getByRole('tab', { name: 'Port map' }).click();
     await expect(page.getByRole('row', { name: /Gi1\/0\/1/ })).toBeVisible();
@@ -144,5 +146,87 @@ test.describe('Trang chi tiết thiết bị', () => {
     await page.goto('/devices/00000000-0000-4000-8000-000000000000');
     await expect(page.getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Về trang chủ' })).toBeVisible();
+  });
+});
+
+/**
+ * Đợt dựng lại trang chi tiết (28/08/2026): thanh thời hạn, dải chỉ số, breadcrumb.
+ *
+ * Trước đó "bảo hành" chỉ là một cái nhãn chữ ("Còn 157 ngày") — trả lời đúng một câu và
+ * giấu mất ba câu còn lại: mua từ bao giờ, hạn chạy từ mốc nào, đã đi hết bao nhiêu phần.
+ */
+test.describe('Trang chi tiết — dựng lại 28/08', () => {
+  test('thanh bảo hành hiện quãng đường và mốc hôm nay, không chỉ một nhãn chữ', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const code = `SW-E2E-WT-${stamp}`;
+    const csrf = await csrfOf(page);
+    const catalog = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/catalog', { credentials: 'include' });
+      return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
+    });
+    const type = catalog.deviceTypes.find((item) => item.name === 'Switch')!;
+    const created = await page.request.post('/api/v1/devices', {
+      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      data: {
+        code,
+        name: 'Switch có bảo hành',
+        deviceTypeId: type.id,
+        purchaseDate: '2025-01-12',
+        warrantyStart: '2025-01-12',
+        warrantyEnd: '2027-12-31',
+      },
+    });
+    expect(created.status()).toBe(201);
+    const id = ((await created.json()) as { device: { id: string } }).device.id;
+
+    await page.goto(`/devices/${id}`);
+
+    // Breadcrumb thay nút "Về danh sách": bốn tầng điều hướng rút còn ba, và nó nói thêm
+    // được bối cảnh — loại thiết bị nằm giữa danh sách và hồ sơ đang mở.
+    const crumbs = page.getByRole('navigation', { name: 'breadcrumb' });
+    await expect(crumbs.getByRole('link', { name: 'Thiết bị' })).toBeVisible();
+    await expect(crumbs.getByText('Switch')).toBeVisible();
+
+    /*
+     * Thanh là một `progressbar` THẬT, không phải một cái div tô màu: trình đọc màn hình đọc
+     * ra được phần trăm, và bài kiểm bám vào giá trị đó thay vì bám vào bề rộng pixel.
+     */
+    const bar = page.getByRole('progressbar').first();
+    await expect(bar).toBeVisible();
+    const percent = Number(await bar.getAttribute('aria-valuenow'));
+    expect(percent).toBeGreaterThan(0);
+    expect(percent).toBeLessThan(100);
+
+    // Hai đầu thanh nói rõ mốc, và vế phải vẫn là câu quen thuộc của badge.
+    await expect(page.getByText('12/01/2025').first()).toBeVisible();
+    await expect(page.getByText('31/12/2027').first()).toBeVisible();
+    await expect(page.getByText(/Đã đi \d+%/)).toBeVisible();
+  });
+
+  /* Không có hạn thì KHÔNG vẽ thanh — thanh rỗng chỉ làm người đọc tưởng dữ liệu bị mất. */
+  test('máy không khai bảo hành thì không có thanh nào', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const csrf = await csrfOf(page);
+    const catalog = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/catalog', { credentials: 'include' });
+      return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
+    });
+    const pc = catalog.deviceTypes.find((item) => item.name === 'PC')!;
+    const created = await page.request.post('/api/v1/devices', {
+      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      data: { code: `PC-E2E-NOWT-${stamp}`, name: 'Máy không hạn', deviceTypeId: pc.id },
+    });
+    const id = ((await created.json()) as { device: { id: string } }).device.id;
+
+    await page.goto(`/devices/${id}`);
+    await expect(page.getByText('Không có hạn')).toBeVisible();
+    await expect(page.getByRole('progressbar')).toHaveCount(0);
+
+    // Và ô chưa khai gom về MỘT dòng, không phải một dãy hộp gạch ngang.
+    await expect(page.getByText(/Chưa khai:/)).toBeVisible();
   });
 });

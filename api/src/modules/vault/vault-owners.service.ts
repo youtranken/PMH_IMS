@@ -51,16 +51,36 @@ export class VaultOwnersService {
       summaries.map(async (item): Promise<VaultOwnerSummary> => {
         const base = { ...item, orphan: false };
         try {
-          if (item.ownerType === 'device') {
-            const device = await this.devices.getById(item.ownerId);
-            return { ...base, code: device.code, name: device.name, siteCode: device.siteCode };
+          /*
+           * MỘT nhánh cho MỖI loại — không để loại mới rơi vào nhánh cuối.
+           *
+           * Bản trước kết thúc bằng `software.getById(...)` không có điều kiện, nên thêm một
+           * `owner_type` mới là nó lặng lẽ đi tra id đó trong bảng `software`, không tìm thấy,
+           * rồi hiện ra "hồ sơ đã bị xóa" cho một chủ thể vẫn đang sống. `never` ở nhánh cuối
+           * biến chuyện đó thành lỗi biên dịch.
+           */
+          switch (item.ownerType) {
+            case 'device': {
+              const device = await this.devices.getById(item.ownerId);
+              return { ...base, code: device.code, name: device.name, siteCode: device.siteCode };
+            }
+            case 'service_account': {
+              const account = await this.serviceAccounts.getById(item.ownerId);
+              return { ...base, code: account.code, name: account.name, siteCode: null };
+            }
+            case 'isp': {
+              const line = await this.software.getIspById(item.ownerId);
+              return { ...base, code: line.code, name: line.provider, siteCode: line.siteCode };
+            }
+            case 'software': {
+              const software = await this.software.getById(item.ownerId);
+              return { ...base, code: software.code, name: software.name, siteCode: null };
+            }
+            default: {
+              const missed: never = item.ownerType;
+              return missed;
+            }
           }
-          if (item.ownerType === 'service_account') {
-            const account = await this.serviceAccounts.getById(item.ownerId);
-            return { ...base, code: account.code, name: account.name, siteCode: null };
-          }
-          const software = await this.software.getById(item.ownerId);
-          return { ...base, code: software.code, name: software.name, siteCode: null };
         } catch (error) {
           /*
            * CHỈ "không tìm thấy" mới là mồ côi. Bắt trần mọi lỗi thì một trục trặc DB thoáng

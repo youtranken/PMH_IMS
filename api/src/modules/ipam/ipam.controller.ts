@@ -418,6 +418,18 @@ export class IpamController {
     return this.nat.findOne(params.id);
   }
 
+  /**
+   * Lịch sử của MỘT rule — kể cả rule đã gỡ.
+   *
+   * Đọc thì mọi vai đã đăng nhập, cùng mức với chính sổ NAT: "port này từng mở cho ai" là câu
+   * người trực cần trả lời lúc 2 giờ sáng, không phải câu chỉ quản trị mới được biết.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('nat/:id/history')
+  natHistory(@Param() params: IdParamDto) {
+    return this.nat.history(params.id);
+  }
+
   @Roles('sa', 'admin', 'member')
   @Post('nat')
   @Audited('nat.created', 'nat_rule', { writtenByService: true })
