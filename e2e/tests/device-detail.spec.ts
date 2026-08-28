@@ -229,4 +229,49 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
     // Và ô chưa khai gom về MỘT dòng, không phải một dãy hộp gạch ngang.
     await expect(page.getByText(/Chưa khai:/)).toBeVisible();
   });
+
+  /**
+   * Số trên nhãn tab (28/08/2026) — "Giấy tờ 0", "Két sắt 1".
+   *
+   * Trước đây phải bấm vào từng tab mới biết trong đó có gì, kể cả khi rỗng. Số `0` là một câu
+   * trả lời THẬT và vẫn hiện; chỉ khi chưa biết (đang tải, hoặc không có quyền xem két) mới
+   * không hiện gì.
+   *
+   * Đếm ở web qua chính truy vấn mà panel dùng, không phải một endpoint mới: `vault.module` đã
+   * import `devices`, nên cho `devices` gọi ngược `vault.api` để đếm là vòng phụ thuộc.
+   */
+  test('nhãn tab mang sẵn số — không phải bấm vào mới biết trong đó có gì', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const deviceId = await createSwitch(page, `SW-E2E-CNT-${stamp}`);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+
+    await page.goto(`/devices/${deviceId}`);
+    // Rỗng vẫn đề 0 — "chưa có gì" khác "chưa biết", và người đọc cần phân biệt được.
+    await expect(page.getByRole('tab', { name: 'Giấy tờ 0' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Két sắt 0' })).toBeVisible();
+
+    const secret = await page.request.post('/api/v1/vault/secrets', {
+      headers,
+      data: {
+        ownerType: 'device',
+        ownerId: deviceId,
+        kind: 'password',
+        label: `Mat khau switch E2E ${stamp}`,
+        value: 'Qw3rty!@#Manh2026',
+      },
+    });
+    expect(secret.status()).toBe(201);
+
+    await page.goto(`/devices/${deviceId}`);
+    await expect(page.getByRole('tab', { name: 'Két sắt 1' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Giấy tờ 0' })).toBeVisible();
+
+    /*
+     * Bấm sang tab là dữ liệu đã nằm sẵn trong cache — số và nội dung panel dùng CHUNG một
+     * truy vấn, nên hai chỗ không thể nói hai con số khác nhau.
+     */
+    await page.getByRole('tab', { name: 'Két sắt 1' }).click();
+    await expect(page.getByText(`Mat khau switch E2E ${stamp}`)).toBeVisible();
+  });
 });

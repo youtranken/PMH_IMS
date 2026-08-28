@@ -68,7 +68,18 @@ export function Tabs({
           }}
         >
           {item.label}
-          {item.count !== undefined ? <span className="tab-count">{item.count}</span> : null}
+          {/*
+            Dấu cách RÕ RÀNG trước con số, không dựa vào `margin` của `.tab-count`.
+            Khoảng cách CSS chỉ có nghĩa với mắt: tên khả truy cập của nút ghép thẳng hai node
+            văn bản, nên thiếu nó là trình đọc màn hình đọc "Giấy tờ0" thành một từ — và mọi
+            selector theo tên tab cũng phải viết dính vào nhau mới khớp.
+          */}
+          {item.count !== undefined ? (
+            <>
+              {' '}
+              <span className="tab-count">{item.count}</span>
+            </>
+          ) : null}
         </button>
       ))}
     </div>

@@ -41,6 +41,30 @@ export interface AttachmentRecord {
 }
 
 /**
+ * Giấy tờ của một chủ thể — MỘT định nghĩa truy vấn, hai nơi dùng.
+ *
+ * Panel dưới đây cần cả danh sách; nhãn tab của trang chi tiết chỉ cần cái `length`. Hai chỗ
+ * mà tự khai truy vấn riêng thì khóa cache lệch nhau một phần tử là đủ để cùng một câu hỏi đi
+ * hai lượt mạng và cho hai con số khác nhau — con số trên tab nói 3, mở ra thấy 4.
+ *
+ * Gọi ở trang chi tiết còn được thêm một thứ: lúc người ta bấm sang tab Giấy tờ thì dữ liệu đã
+ * nằm sẵn trong cache, panel không phải quay vòng chờ nữa.
+ */
+export function useOwnerAttachments(ownerType: AttachmentOwnerType, ownerId: string) {
+  return useQuery({
+    queryKey: attachmentsKey(ownerType, ownerId),
+    queryFn: () =>
+      apiFetch<AttachmentRecord[]>(
+        `/api/v1/files?ownerType=${ownerType}&ownerId=${encodeURIComponent(ownerId)}`,
+      ),
+  });
+}
+
+export function attachmentsKey(ownerType: AttachmentOwnerType, ownerId: string) {
+  return ['files', ownerType, ownerId];
+}
+
+/**
  * Panel giấy tờ đính kèm dùng chung (AD-15, FR-002).
  *
  * Gắn vào BẤT KỲ chủ thể nào qua cặp `ownerType`/`ownerId` — thiết bị (2.3), phiếu ISO
@@ -65,14 +89,8 @@ export function AttachmentPanel({
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const queryKey = ['files', ownerType, ownerId];
-  const files = useQuery({
-    queryKey,
-    queryFn: () =>
-      apiFetch<AttachmentRecord[]>(
-        `/api/v1/files?ownerType=${ownerType}&ownerId=${encodeURIComponent(ownerId)}`,
-      ),
-  });
+  const queryKey = attachmentsKey(ownerType, ownerId);
+  const files = useOwnerAttachments(ownerType, ownerId);
 
   const remove = useApiMutation<{ id: string }, unknown>(
     (input) => `/api/v1/files/${input.id}`,

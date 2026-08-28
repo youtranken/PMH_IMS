@@ -12,6 +12,7 @@ import { DatePicker } from "@/ui/date-picker";
 import { LoadError, Loading } from "@/ui/load-state";
 import { Field } from "@/ui/page-header";
 import { Pagination } from "@/ui/pagination";
+import { RowActions } from "@/ui/row-actions";
 import { SuggestInput } from "@/ui/suggest-input";
 import { useDepartments } from "./use-departments";
 import { useToast } from "@/ui/toast";
@@ -77,8 +78,23 @@ export function SubnetPane({
   const [historyOf, setHistoryOf] = useState<IpRow | null>(null);
   /** Hồ sơ IP đang chờ XÓA (ẩn kèm lý do) — khác `moving` vốn là bước vòng đời. */
   const [voiding, setVoiding] = useState<IpRow | null>(null);
-  /** Ghi chỉ SA/Admin — API chặn, UI đừng bày nút ra để bấm rồi 403. */
-  const canEdit = me.role === "sa" || me.role === "admin";
+  /**
+   * Dải ĐÃ VÔ HIỆU HÓA thì cả bảng này chỉ còn ĐỌC (28/08/2026).
+   *
+   * Hồ sơ IP vẫn hiện nguyên — đó chính là điểm: mấy cái máy ngoài kia không tự nhả IP tĩnh
+   * ra chỉ vì cuốn sổ cất dải đi, nên giấu chúng đi là nói dối. Nhưng cấp mới, chuyển trạng
+   * thái hay sửa thì API từ chối (`cidrOf` đòi dải còn sống), và một cái nút bấm vào rồi bị
+   * từ chối là cái nút không nên có. Muốn sửa thì bật lại dải trước.
+   */
+  const subnetDisabled = item.voidedAt !== null;
+  /**
+   * Cấp IP · chuyển trạng thái · sửa hồ sơ: CẢ TEAM IT làm được (`@Roles('sa','admin','member')`).
+   * Người cắm máy chính là người biết IP nào vừa cấp — bắt họ chờ Admin duyệt thì cuốn sổ sẽ
+   * quay về file Excel trên máy ai đó.
+   */
+  const canWrite = !subnetDisabled;
+  /** XÓA hồ sơ thì chỉ SA/Admin — API chặn, UI đừng bày nút ra để bấm rồi 403. */
+  const canEdit = (me.role === "sa" || me.role === "admin") && !subnetDisabled;
 
   const slots = useQuery({
     queryKey: ["ipam", "subnets", id, "addresses"],
@@ -140,6 +156,11 @@ export function SubnetPane({
         </h2>
       </div>
 
+      {/* Nói NGAY vì sao mọi nút biến mất. Không có dòng này thì bảng chỉ-đọc trông như hỏng. */}
+      {subnetDisabled ? (
+        <p className="alert">{t("ipam.voidedSlotHint")}</p>
+      ) : null}
+
       {/* Bộ lọc trạng thái — "Trống" là một lựa chọn ngang hàng, không phải một ô tick phụ.
           Con số đi kèm ngay trên nút: "còn mấy chỗ trống" là câu hỏi màn này sinh ra để trả
           lời, bắt bấm vào rồi mới đếm là bắt làm hai lần một việc. */}
@@ -195,15 +216,17 @@ export function SubnetPane({
                       <td data-label={t("ipam.usedBy")}>—</td>
                       <td data-label={t("ipam.assignedAt")}>—</td>
                       <td>
-                        <button
-                          type="button"
-                          className="btn sm"
-                          onClick={() =>
-                            setEditing({ record: null, address: slot.address })
-                          }
-                        >
-                          {t("ipam.assign")}
-                        </button>
+                        {canWrite ? (
+                          <button
+                            type="button"
+                            className="btn sm"
+                            onClick={() =>
+                              setEditing({ record: null, address: slot.address })
+                            }
+                          >
+                            {t("ipam.assign")}
+                          </button>
+                        ) : null}
                       </td>
                     </tr>
                   ) : (
@@ -233,58 +256,66 @@ export function SubnetPane({
                       </td>
                       <td>
                         <div className="action-cell">
-                          {/* Chỉ hiện những bước chuyển ĐI ĐƯỢC từ trạng thái hiện tại — một
-                            cái nút bấm vào rồi bị từ chối là cái nút không nên có. */}
-                          {NEXT_STATUSES[slot.status].map((to) => (
-                            <button
-                              key={to}
-                              type="button"
-                              className={`btn sm${to === "reclaimed" ? " danger" : ""}`}
-                              onClick={() => setMoving({ record: slot, to })}
-                            >
-                              {t(TRANSITION_LABEL[`${slot.status}->${to}`])}
-                            </button>
-                          ))}
-                          <button
-                            type="button"
-                            className="btn sm"
-                            onClick={() => setHistoryOf(slot)}
-                          >
-                            {t("ipam.history")}
-                          </button>
-                          <button
-                            type="button"
-                            className="btn sm"
-                            onClick={() =>
-                              setEditing({
-                                record: slot,
-                                address: slot.address,
-                              })
-                            }
-                          >
-                            {t("common.edit")}
-                          </button>
                           {/*
-                            XÓA hồ sơ IP — khác "Thu hồi".
-
-                            Thu hồi là bước vòng đời: địa chỉ trả về pool nhưng hàng ở lại
-                            kèm lịch sử "IP này từng của máy nào" (AC 5.2). Xóa là cho bản
-                            ghi KHAI NHẦM: nó biến khỏi bảng, chỗ trống hiện lại như chưa
-                            từng có ai cấp. Thiếu nút này thì một địa chỉ gõ nhầm nằm lại
-                            trong sổ vĩnh viễn — người dùng báo đúng chuyện đó.
-
-                            Vẫn là ẩn ở tầng DB, không DELETE: `ip_history` trỏ vào hàng này.
+                            Năm cái nút cạnh nhau trước đây ("Đánh dấu nghi chết" · "Thu hồi" ·
+                            "Lịch sử" · "Sửa" · "Xóa") làm cột cuối rộng hơn cả năm cột dữ liệu
+                            còn lại cộng lại, trên một bảng người ta mở ra để ĐỌC địa chỉ. Và số
+                            nút đổi theo từng dòng, nên mắt phải quét lại mỗi hàng.
                           */}
-                          {canEdit ? (
-                            <button
-                              type="button"
-                              className="btn sm danger"
-                              aria-label={t("ipam.voidAddressOf", { address: slot.address })}
-                              onClick={() => setVoiding(slot)}
-                            >
-                              {t("common.delete")}
-                            </button>
-                          ) : null}
+                          <RowActions
+                            label={t("common.actionsOf", { subject: slot.address })}
+                            items={[
+                              /* Chỉ hiện những bước chuyển ĐI ĐƯỢC từ trạng thái hiện tại — một
+                                 cái nút bấm vào rồi bị từ chối là cái nút không nên có. */
+                              ...(canWrite
+                                ? NEXT_STATUSES[slot.status].map((to) => ({
+                                    key: `to-${to}`,
+                                    label: t(TRANSITION_LABEL[`${slot.status}->${to}`]),
+                                    onSelect: () => setMoving({ record: slot, to }),
+                                    danger: to === "reclaimed",
+                                  }))
+                                : []),
+                              {
+                                key: "history",
+                                label: t("ipam.history"),
+                                onSelect: () => setHistoryOf(slot),
+                              },
+                              ...(canWrite
+                                ? [
+                                    {
+                                      key: "edit",
+                                      label: t("common.edit"),
+                                      onSelect: () =>
+                                        setEditing({
+                                          record: slot,
+                                          address: slot.address,
+                                        }),
+                                    },
+                                  ]
+                                : []),
+                              /*
+                                XÓA hồ sơ IP — khác "Thu hồi".
+
+                                Thu hồi là bước vòng đời: địa chỉ trả về pool nhưng hàng ở lại
+                                kèm lịch sử "IP này từng của máy nào" (AC 5.2). Xóa là cho bản
+                                ghi KHAI NHẦM: nó biến khỏi bảng, chỗ trống hiện lại như chưa
+                                từng có ai cấp. Thiếu nút này thì một địa chỉ gõ nhầm nằm lại
+                                trong sổ vĩnh viễn — người dùng báo đúng chuyện đó.
+
+                                Vẫn là ẩn ở tầng DB, không DELETE: `ip_history` trỏ vào hàng này.
+                              */
+                              ...(canEdit
+                                ? [
+                                    {
+                                      key: "void",
+                                      label: t("common.delete"),
+                                      onSelect: () => setVoiding(slot),
+                                      danger: true,
+                                    },
+                                  ]
+                                : []),
+                            ]}
+                          />
                         </div>
                       </td>
                     </tr>

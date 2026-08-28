@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, firstLogin, resetSoftware, resetUsers, writeHeaders } from './helpers';
+import { E2E_SA, firstLogin, resetSoftware, resetUsers, rowAction, writeHeaders } from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -322,7 +322,7 @@ test.describe('Hồ sơ phần mềm', () => {
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toBeVisible();
 
-    await row.getByRole('button', { name: `Sửa hồ sơ ${code}` }).click();
+    await rowAction(page, code, 'Sửa');
     const form = page.getByRole('dialog');
     // Hộp phải mở ra với dữ liệu ĐANG CÓ — hộp trắng là mất hết những ô người ta không sửa.
     await expect(form.getByRole('textbox', { name: 'Mã hồ sơ' })).toHaveValue(code);

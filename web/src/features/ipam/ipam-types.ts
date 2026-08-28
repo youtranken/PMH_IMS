@@ -25,6 +25,17 @@ export interface SubnetRow {
    * **Xóa** (xóa hẳn — chỉ dải chưa từng dùng) hay nút **Vô hiệu hóa** (dải đã có lịch sử).
    */
   addressCount: number;
+  /**
+   * Dải đã vô hiệu hóa hay chưa — `null` là đang dùng (28/08/2026).
+   *
+   * Danh sách gọi kèm `?includeVoided=true` nên dải đã tắt VẪN nằm trong mảng này, gạch ngang
+   * và xám đi. Trước đó API lọc thẳng ở SQL, nên vô hiệu hóa xong là dải biến mất — người
+   * dùng đọc đúng cái đó là "đã bị xóa", trong khi mấy chục cái máy vẫn đang cắm IP tĩnh
+   * thuộc dải ấy.
+   */
+  voidedAt: string | null;
+  voidedBy: string | null;
+  voidReason: string | null;
 }
 
 export interface IpRow {

@@ -14,6 +14,7 @@ import { FilterBar } from '@/ui/filter-bar';
 import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
+import { RowActions } from '@/ui/row-actions';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
@@ -308,67 +309,79 @@ export function CatalogScreen({ me }: { me: Me }) {
       meta: { className: 'col-center' },
       cell: ({ row }) => {
         const catalogRow = row.original;
+        const name = catalogLabel(entity, catalogRow);
         return (
           <div className="action-cell">
-            <button type="button" className="btn sm" onClick={() => setEditing({ row: catalogRow })}>
-              {t('catalog.edit')}
-            </button>
-            <button
-              type="button"
-              className="btn sm"
-              onClick={() => {
-                void (async () => {
-                  const name = catalogLabel(entity, catalogRow);
-                  const ok = await askConfirm({
-                    message: t(
-                      catalogRow.active ? 'catalog.confirmDeactivate' : 'catalog.confirmActivate',
-                      { name },
-                    ),
-                    danger: catalogRow.active,
-                    confirmLabel: t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate'),
-                  });
-                  if (!ok) return;
-                  setActive.mutate(
-                    { id: catalogRow.id, active: !catalogRow.active },
-                    {
-                      onSuccess: () => void refresh(),
-                      onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
-                    },
-                  );
-                })();
-              }}
-            >
-              {t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate')}
-            </button>
-            <button
-              type="button"
-              className="btn sm danger"
-              onClick={() => {
-                void (async () => {
-                  const name = catalogLabel(entity, catalogRow);
-                  const ok = await askConfirm({
-                    message: t('catalog.confirmDelete', { name }),
-                    danger: true,
-                    confirmLabel: t('catalog.delete'),
-                  });
-                  if (!ok) return;
-                  remove.mutate(
-                    { id: catalogRow.id },
-                    {
-                      onSuccess: () => {
-                        toast({ message: t('catalog.deleted') });
-                        void refresh();
-                      },
-                      // Xóa mục đang được thiết bị dùng → API trả 409 kèm câu gợi ý
-                      // "hãy vô hiệu hóa"; hiện nguyên văn cho người dùng.
-                      onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
-                    },
-                  );
-                })();
-              }}
-            >
-              {t('catalog.delete')}
-            </button>
+            <RowActions
+              label={t('common.actionsOf', { subject: name })}
+              items={[
+                {
+                  key: 'edit',
+                  label: t('catalog.edit'),
+                  onSelect: () => setEditing({ row: catalogRow }),
+                },
+                {
+                  key: 'active',
+                  label: t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate'),
+                  /* Ngừng dùng là lấy đi (mục biến khỏi mọi ô chọn); dùng lại thì không.
+                     Cùng một nút, hai màu — vì đó là hai việc ngược nhau. */
+                  danger: catalogRow.active,
+                  onSelect: () => {
+                    void (async () => {
+                      const ok = await askConfirm({
+                        message: t(
+                          catalogRow.active
+                            ? 'catalog.confirmDeactivate'
+                            : 'catalog.confirmActivate',
+                          { name },
+                        ),
+                        danger: catalogRow.active,
+                        confirmLabel: t(
+                          catalogRow.active ? 'catalog.deactivate' : 'catalog.activate',
+                        ),
+                      });
+                      if (!ok) return;
+                      setActive.mutate(
+                        { id: catalogRow.id, active: !catalogRow.active },
+                        {
+                          onSuccess: () => void refresh(),
+                          onError: (err) =>
+                            toast({ message: errorMessage(err), tone: 'error' }),
+                        },
+                      );
+                    })();
+                  },
+                },
+                {
+                  key: 'delete',
+                  label: t('catalog.delete'),
+                  danger: true,
+                  onSelect: () => {
+                    void (async () => {
+                      const ok = await askConfirm({
+                        message: t('catalog.confirmDelete', { name }),
+                        danger: true,
+                        confirmLabel: t('catalog.delete'),
+                      });
+                      if (!ok) return;
+                      remove.mutate(
+                        { id: catalogRow.id },
+                        {
+                          onSuccess: () => {
+                            toast({ message: t('catalog.deleted') });
+                            void refresh();
+                          },
+                          // Xóa mục đang được thiết bị dùng → API trả 409 kèm câu gợi ý
+                          // "hãy vô hiệu hóa"; hiện nguyên văn cho người dùng.
+                          onError: (err) =>
+                            toast({ message: errorMessage(err), tone: 'error' }),
+                        },
+                      );
+                    })();
+                  },
+                },
+              ]}
+            />
           </div>
         );
       },

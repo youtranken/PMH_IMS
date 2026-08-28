@@ -148,11 +148,24 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
     });
   });
 
+  /**
+   * Danh sách này là DÂY BẪY, không phải thủ tục: sửa nó phải kèm lý do, ở đây và ở
+   * `vault.api.ts`.
+   *
+   * `listOwners` (28/08/2026) mở ra cho bảng điều khiển dựng khối "két lâu không đổi". Nó trả
+   * đúng `VaultOwnerSummary` — kiểu mà bài kiểm ngay phía trên ghim từng tên trường, và trong
+   * đó cố ý không có `label`, `kind` hay giá trị. Nên thứ rời khỏi vault vẫn là "hồ sơ nào có
+   * két, mấy ngăn, đổi lần cuối bao giờ", đúng bằng `GET /vault/owners` đã mở cho SA/Admin từ
+   * 26/08. Bên gọi tự gác vai — `DashboardService` chỉ dựng khối đó cho SA/Admin.
+   *
+   * Cái KHÔNG được thêm vào đây, ở bất kỳ hoàn cảnh nào: hàm trả giá trị, hàm trả nhãn ngăn,
+   * hoặc hàm nhận nhiều chủ thể một lượt rồi trả kèm nội dung (FR-026).
+   */
   it('VaultApiService chỉ xuất metadata', () => {
     const methods = Object.getOwnPropertyNames(VaultApiService.prototype)
       .filter((name) => name !== 'constructor')
       .sort();
-    expect(methods).toEqual(['countFor', 'listFor']);
+    expect(methods).toEqual(['countFor', 'listFor', 'listOwners']);
   });
 
   it('không file nào ngoài module vault đụng vào schema két sắt (AD-4)', () => {

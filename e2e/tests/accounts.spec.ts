@@ -5,6 +5,7 @@ import {
   E2E_SA,
   firstLogin,
   resetUsers,
+  rowAction,
   SECOND_BROWSER,
   writeHeaders,
 } from './helpers';
@@ -56,8 +57,7 @@ test.describe('Quản trị tài khoản', () => {
     await firstLogin(page, E2E_SA);
     await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
 
-    const row = page.getByRole('row', { name: /E2E Super Admin/ });
-    await row.getByRole('button', { name: 'Phiên đang mở' }).click();
+    await rowAction(page, 'E2E Super Admin', 'Phiên đang mở');
     await expect(page.getByRole('dialog')).toContainText('Phiên đang mở');
     await expect(page.getByRole('button', { name: 'Đá phiên' }).first()).toBeVisible();
   });
@@ -67,7 +67,7 @@ test.describe('Quản trị tài khoản', () => {
     await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
 
     const row = page.getByRole('row', { name: /E2E Thành viên/ });
-    await row.getByRole('button', { name: 'Khóa' }).click();
+    await rowAction(page, 'E2E Thành viên', 'Khóa');
     // Chốt luôn CHỮ trên nút: hộp hỏi "Khóa tài khoản X?" thì nút phải ghi "Khóa", không
     // phải "Đồng ý" chung chung. Đây là chỗ duy nhất canh chữ — 15 chỗ còn lại bám vị trí.
     await confirmAction(page, 'Khóa');
@@ -76,7 +76,7 @@ test.describe('Quản trị tài khoản', () => {
     // Không được có toast lỗi kiểu "property id should not exist".
     await expect(page.getByText(/should not exist/i)).toHaveCount(0);
 
-    await row.getByRole('button', { name: 'Mở khóa' }).click();
+    await rowAction(page, 'E2E Thành viên', 'Mở khóa');
     await expect(row.getByText('Đang hoạt động')).toBeVisible();
   });
 
@@ -87,7 +87,7 @@ test.describe('Quản trị tài khoản', () => {
     await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
 
     await page.getByRole('searchbox').fill('E2E Thành viên');
-    // Bám đúng ô HỌ TÊN: nút Sửa mang nhãn trợ năng "Sửa hồ sơ của {tên}" nên ô Thao tác
+    // Bám đúng ô HỌ TÊN: nút ba chấm mang nhãn trợ năng "Thao tác với {tên}" nên ô Thao tác
     // cũng chứa tên người, và khớp lỏng là trúng hai ô.
     await expect(
       page.getByRole('cell', { name: /E2E Thành viên/ }).filter({ hasText: 'e2e-member@' }),
@@ -116,7 +116,7 @@ test.describe('Quản trị tài khoản', () => {
       await firstLogin(page, E2E_SA);
       await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
       const row = page.getByRole('row', { name: /E2E Thành viên/ });
-      await row.getByRole('button', { name: 'Khóa' }).click();
+      await rowAction(page, 'E2E Thành viên', 'Khóa');
       await confirmAction(page);
       await expect(row.getByText('Đang khóa')).toBeVisible();
 
@@ -149,8 +149,7 @@ test.describe('Quản trị tài khoản', () => {
 
       await firstLogin(page, E2E_SA);
       await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
-      const row = page.getByRole('row', { name: /E2E Thành viên/ });
-      await row.getByRole('button', { name: 'Phiên đang mở' }).click();
+      await rowAction(page, 'E2E Thành viên', 'Phiên đang mở');
 
       // Lọc theo nội dung: lát nữa hộp xác nhận mở chồng lên, `getByRole('dialog')` trơ
       // sẽ khớp hai cái và Playwright báo strict mode.

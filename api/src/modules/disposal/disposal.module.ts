@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { DevicesModule } from '../devices/devices.module';
 import { ServiceAccountsModule } from '../service-accounts/service-accounts.module';
 import { SoftwareModule } from '../software/software.module';
+import { DisposalApiService } from './disposal.api';
 import { DisposalController } from './disposal.controller';
 import { DisposalService } from './disposal.service';
 
@@ -15,6 +16,7 @@ import { DisposalService } from './disposal.service';
 @Module({
   imports: [DevicesModule, SoftwareModule, ServiceAccountsModule],
   controllers: [DisposalController],
-  providers: [DisposalService],
+  providers: [DisposalService, DisposalApiService],
+  exports: [DisposalApiService],
 })
 export class DisposalModule {}

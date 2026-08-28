@@ -13,6 +13,7 @@ import { ExpiryBadge } from "@/ui/expiry-badge";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
 import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
+import { useTabCounts } from "@/ui/tab-counts";
 import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useConfirm } from "@/ui/confirm-provider";
@@ -112,6 +113,7 @@ export function DeviceDetail({ me }: { me: Me }) {
    * đặt nó sau `if (device.isLoading) return` thì số hook giữa hai lượt render lệch nhau.
    * Lúc hồ sơ chưa về thì chỉ có Hồ sơ + Giấy tờ + Lịch sử, nhưng cũng chưa vẽ gì.
    */
+  const counts = useTabCounts("device", id, me);
   const tabItems = [
     { key: "profile", label: t("devices.tabProfile") },
     // Tab Port map CHỈ hiện với loại có port (FR-006) — bảng port của một cái máy in
@@ -119,10 +121,16 @@ export function DeviceDetail({ me }: { me: Me }) {
     ...(device.data?.hasPortMap
       ? [{ key: "ports", label: t("devices.tabPortMap") }]
       : []),
-    { key: "attachments", label: t("devices.tabAttachments") },
+    {
+      key: "attachments",
+      label: t("devices.tabAttachments"),
+      count: counts.files,
+    },
     // Két sắt chỉ hiện với người có quyền — Member không có đường tới endpoint (AD-9),
     // hiện tab rồi báo 403 chỉ tổ làm người ta tưởng hệ thống hỏng.
-    ...(canVault ? [{ key: "vault", label: t("vault.tab") }] : []),
+    ...(canVault
+      ? [{ key: "vault", label: t("vault.tab"), count: counts.secrets }]
+      : []),
     { key: "history", label: t("devices.tabHistory") },
   ];
   const safeTab = useVisibleTab(
@@ -160,7 +168,6 @@ export function DeviceDetail({ me }: { me: Me }) {
         ]}
         code={item.code}
         name={item.name}
-        copyLabel={t("devices.copyCode")}
         subline={
           <>
             <span>{item.deviceTypeName}</span>
@@ -192,9 +199,13 @@ export function DeviceDetail({ me }: { me: Me }) {
             >
               {t("devices.edit")}
             </button>
+            {/* ĐỎ khi là "Thanh lý", KHÔNG đỏ khi là "Mở lại".
+                Màu đỏ nói "việc này lấy đi cái gì đó" — thanh lý khóa hồ sơ, dừng tính hạn,
+                cắt máy khỏi email nhắc gia hạn. Mở lại là việc ngược lại, tô đỏ nó thì màu đỏ
+                thành trang trí và lần sau người dùng không còn đọc nó như một cảnh báo nữa. */}
             <button
               type="button"
-              className="btn"
+              className={retired ? "btn" : "btn danger"}
               onClick={() => {
                 void (async () => {
                   if (!retired) {

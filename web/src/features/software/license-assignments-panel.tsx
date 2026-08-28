@@ -159,7 +159,7 @@ export function LicenseAssignmentsPanel({
                     {row.releasedAt ? null : (
                       <button
                         type="button"
-                        className="btn sm"
+                        className="btn sm danger"
                         disabled={release.isPending}
                         onClick={() => {
                           void (async () => {

@@ -6,6 +6,8 @@ import {
   resetDevices,
   resetSoftware,
   resetUsers,
+  rowAction,
+  rowActionNames,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -371,8 +373,8 @@ test.describe('Gán license theo seat', () => {
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(`LIC-E2E-NOEXP-${stamp}`);
     const row = page.getByRole('row', { name: new RegExp(`LIC-E2E-NOEXP-${stamp}`) });
     await expect(row).toBeVisible();
-    // Bám ĐÚNG cái mũi tên, không đếm tổng số nút: dòng nào cũng có sẵn "Sửa" và "Gán vào máy"
-    // ở cột Thao tác, đếm tổng thì bài kiểm đỏ vì lý do chẳng liên quan gì tới mũi tên.
+    // Bám ĐÚNG cái mũi tên, không đếm tổng số nút: dòng nào cũng có sẵn nút ba chấm ở cột
+    // Thao tác, đếm tổng thì bài kiểm đỏ vì lý do chẳng liên quan gì tới mũi tên.
     await expect(row.getByRole('button', { name: 'Mở rộng dòng' })).toHaveCount(0);
   });
 
@@ -397,7 +399,7 @@ test.describe('Gán license theo seat', () => {
     await expect(row).toBeVisible();
     await expect(row.getByText('0/5')).toBeVisible();
 
-    await row.getByRole('button', { name: `Gán hồ sơ ${code} vào máy` }).click();
+    await rowAction(page, code, 'Gán vào máy');
     const form = page.getByRole('dialog');
     await form.getByPlaceholder('Tìm máy trong kho…').fill(deviceCode);
     await page.getByRole('option', { name: new RegExp(deviceCode) }).click();
@@ -424,7 +426,9 @@ test.describe('Gán license theo seat', () => {
     await page.goto('/software');
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
     const row = page.getByRole('row', { name: new RegExp(code) });
-    await expect(row.getByRole('button', { name: `Sửa hồ sơ ${code}` })).toBeVisible();
-    await expect(row.getByRole('button', { name: `Gán hồ sơ ${code} vào máy` })).toHaveCount(0);
+    // Cột Thao tác là menu ba chấm từ 28/08/2026: mục chỉ có trong DOM khi menu đang mở.
+    const names = await rowActionNames(page, code);
+    expect(names).toContain('Sửa');
+    expect(names).not.toContain('Gán vào máy');
   });
 });

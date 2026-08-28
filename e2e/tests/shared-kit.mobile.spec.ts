@@ -33,7 +33,7 @@ test.describe('390px', () => {
     await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Tài khoản', exact: true })).toBeVisible();
     // Tên xuất hiện cả ở chân sidebar và trong bảng — chỉ kiểm dòng trong BẢNG.
-    // Bám đúng ô HỌ TÊN: nút Sửa mang nhãn trợ năng "Sửa hồ sơ của {tên}" nên ô Thao tác
+    // Bám đúng ô HỌ TÊN: nút ba chấm mang nhãn trợ năng "Thao tác với {tên}" nên ô Thao tác
     // cũng chứa tên người, và khớp lỏng là trúng hai ô.
     await expect(
       page.getByRole('cell', { name: /E2E Super Admin/ }).filter({ hasText: 'e2e-sa@' }),

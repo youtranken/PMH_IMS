@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
+import { formatDate } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
+import { RowActions, type RowAction } from '@/ui/row-actions';
 import { UsageBar } from '@/ui/usage-bar';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
@@ -39,12 +41,47 @@ export function IpamScreen({ me }: { me: Me }) {
 
   const canEdit = me.role === 'sa' || me.role === 'admin';
 
+  /*
+   * `includeVoided=true` — CHỈ màn này (28/08/2026).
+   *
+   * Vô hiệu hóa một dải trước đây làm nó biến mất khỏi danh sách, và người dùng đọc đúng cái
+   * đó là "đã xóa hẳn" — họ không sai, vì không còn chỗ nào trên giao diện nói nó tồn tại.
+   * Nhưng dải ấy vẫn giữ mấy chục hồ sơ IP tĩnh, và mấy cái máy ngoài kia không tự nhả địa
+   * chỉ ra chỉ vì cuốn sổ đã cất dải đi. Giữ nó lại, gạch ngang, rồi mới cho xóa.
+   *
+   * Mọi chỗ ĐỌC dải khác (bảng điều khiển, form NAT) vẫn gọi mặc định = chỉ dải đang dùng.
+   */
   const subnets = useQuery({
-    queryKey: ['ipam', 'subnets'],
-    queryFn: () => apiFetch<SubnetRow[]>('/api/v1/ipam/subnets'),
+    queryKey: ['ipam', 'subnets', 'withVoided'],
+    queryFn: () => apiFetch<SubnetRow[]>('/api/v1/ipam/subnets?includeVoided=true'),
   });
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['ipam'] });
+
+  /**
+   * Bật lại một dải đã vô hiệu hóa.
+   *
+   * Không hỏi lý do — bật lại là khôi phục, nó không lấy đi thứ gì. Vẫn hỏi lại một câu vì nó
+   * kéo theo cả đám hồ sơ IP đã tắt cùng dải, và người bấm nên biết con số đó trước.
+   */
+  const restoreSubnet = async (subnet: SubnetRow) => {
+    const ok = await askConfirm({
+      title: t('ipam.restoreTitle', { cidr: subnet.cidr }),
+      message: t('ipam.restoreConfirm', { cidr: subnet.cidr, count: subnet.addressCount }),
+      confirmLabel: t('ipam.restore'),
+    });
+    if (!ok) return;
+    try {
+      await apiFetch(`/api/v1/ipam/subnets/${subnet.id}/restore`, {
+        method: 'PATCH',
+        csrfToken: me.csrfToken,
+      });
+      toast({ message: t('ipam.subnetRestored') });
+      void refresh();
+    } catch (error) {
+      toast({ message: errorMessage(error), tone: 'error' });
+    }
+  };
 
   /*
    * Xóa HẲN — không có hộp riêng, chỉ một câu hỏi lại. Khác vô hiệu hóa ở chỗ không cần lý
@@ -73,7 +110,21 @@ export function IpamScreen({ me }: { me: Me }) {
       toast({ message: errorMessage(error), tone: 'error' });
     }
   };
-  const rows = subnets.data ?? [];
+  /**
+   * Dải đã vô hiệu hóa XUỐNG CUỐI cột trái, giữ nguyên thứ tự CIDR trong từng nhóm.
+   *
+   * Chúng phải ở lại (đó là cả điểm của thay đổi 28/08/2026), nhưng xen kẽ theo thứ tự địa
+   * chỉ thì sau một năm cột trái là một danh sách lẫn lộn cái còn dùng với cái đã bỏ, và người
+   * ta phải đọc huy hiệu từng thẻ mới biết cái nào là cái nào. `sort` trên bản SAO — mảng của
+   * TanStack Query là dữ liệu cache dùng chung, sắp tại chỗ là sửa cache của mọi nơi khác.
+   */
+  const rows = useMemo(
+    () =>
+      [...(subnets.data ?? [])].sort(
+        (a, b) => Number(a.voidedAt !== null) - Number(b.voidedAt !== null),
+      ),
+    [subnets.data],
+  );
   // Không có `:id` thì mở sẵn dải đầu tiên — mở ra một cột phải trống rỗng rồi bắt người dùng
   // tự bấm một cái nữa là bắt vô cớ. KHÔNG điều hướng: đổi URL sau lưng người dùng làm nút
   // Back của trình duyệt hết đoán được.
@@ -123,6 +174,7 @@ export function IpamScreen({ me }: { me: Me }) {
                 canEdit={canEdit}
                 onEdit={() => setEditing({ subnet })}
                 onHide={() => setHiding(subnet)}
+                onRestore={() => void restoreSubnet(subnet)}
                 onDelete={() => void removeSubnet(subnet)}
               />
             ))}
@@ -167,7 +219,7 @@ export function IpamScreen({ me }: { me: Me }) {
  * Một thẻ dải ở cột trái.
  *
  * Cả thẻ là một `<Link>` thật, không phải `onClick` trên `<div>`: mở tab mới, copy link, và
- * bàn phím Tab tới được — ba thứ mất sạch nếu dùng div. Hai nút Sửa/Ẩn nằm NGOÀI link (không
+ * bàn phím Tab tới được — ba thứ mất sạch nếu dùng div. Nút thao tác nằm NGOÀI link (không
  * lồng nút trong link) và chỉ hiện khi có quyền.
  */
 function SubnetCard({
@@ -176,6 +228,7 @@ function SubnetCard({
   canEdit,
   onEdit,
   onHide,
+  onRestore,
   onDelete,
 }: {
   subnet: SubnetRow;
@@ -183,11 +236,55 @@ function SubnetCard({
   canEdit: boolean;
   onEdit: () => void;
   onHide: () => void;
+  onRestore: () => void;
   onDelete: () => void;
 }) {
   const { t } = useTranslation();
+  const disabled = subnet.voidedAt !== null;
+  /**
+   * Xóa HẲN chỉ mở ra khi dải chưa từng có hồ sơ IP nào.
+   *
+   * Không phải một luật thêm cho vui: `ip_history` là bảng CHỈ-THÊM (AD-13, trigger chặn ở
+   * tầng DB), và mấy dòng đó đang giữ câu "IP này từng của máy nào" mà AC 5.2 bắt giữ vĩnh
+   * viễn. Dải đã từng dùng thì trạng thái cuối của nó là "đã vô hiệu hóa", không phải "biến
+   * mất" — và thẻ nói thẳng ra điều đó thay vì lặng lẽ giấu nút Xóa đi.
+   */
+  const canDelete = subnet.addressCount === 0;
+
+  const actions: RowAction[] = disabled
+    ? [
+        { key: 'restore', label: t('ipam.restore'), onSelect: onRestore },
+        ...(canDelete
+          ? [
+              {
+                key: 'delete',
+                label: t('common.delete'),
+                onSelect: onDelete,
+                danger: true,
+              },
+            ]
+          : []),
+      ]
+    : [
+        { key: 'edit', label: t('common.edit'), onSelect: onEdit },
+        /*
+         * HAI việc khác nhau, và màn hình tự biết bày cái nào — không bắt người dùng đoán.
+         *
+         * Dải CHƯA TỪNG có hồ sơ IP → **Xóa** hẳn ngay. Khai nhầm một dải ba giây trước rồi
+         * phải sống chung với nó mãi là phiền vô lý; nó chưa mang thông tin gì cả.
+         *
+         * Dải ĐÃ TỪNG dùng → **Vô hiệu hóa** kèm lý do, và từ 28/08/2026 thì nó Ở LẠI danh
+         * sách chứ không biến mất.
+         */
+        canDelete
+          ? { key: 'delete', label: t('common.delete'), onSelect: onDelete, danger: true }
+          : { key: 'hide', label: t('ipam.hide'), onSelect: onHide, danger: true },
+      ];
+
   return (
-    <div className={`subnet-card${active ? ' is-active' : ''}`}>
+    <div
+      className={`subnet-card${active ? ' is-active' : ''}${disabled ? ' is-disabled' : ''}`}
+    >
       <Link
         className="subnet-link"
         to={PATHS.subnet(subnet.id)}
@@ -195,8 +292,13 @@ function SubnetCard({
       >
         <span className="row">
           <b className="mono grow">{subnet.cidr}</b>
+          {/* Badge trạng thái ĐI TRƯỚC badge VLAN: "dải này còn dùng không" là câu phải trả
+              lời trước "dải này VLAN mấy". */}
+          {disabled ? (
+            <span className="badge muted plain">{t('ipam.disabledBadge')}</span>
+          ) : null}
           {subnet.vlan !== null ? (
-            <span className={`badge ${active ? 'brand' : 'muted'} plain`}>
+            <span className={`badge ${active && !disabled ? 'brand' : 'muted'} plain`}>
               {t('ipam.vlanBadge', { vlan: subnet.vlan })}
             </span>
           ) : null}
@@ -221,46 +323,28 @@ function SubnetCard({
             free: subnet.free,
           })}
         />
+        {/* Vì sao dải này đang tắt, và từ bao giờ — câu đầu tiên người mở màn sẽ hỏi khi thấy
+            một dòng gạch ngang. Nói ngay trên thẻ, không bắt đi tra nhật ký. */}
+        {disabled ? (
+          <span className="sub subnet-void-note">
+            {t('ipam.disabledSince', {
+              date: formatDate(subnet.voidedAt),
+              reason: subnet.voidReason ?? '—',
+            })}
+          </span>
+        ) : null}
+        {disabled && !canDelete ? (
+          <span className="sub subnet-void-note">
+            {t('ipam.keptForHistory', { count: subnet.addressCount })}
+          </span>
+        ) : null}
       </Link>
       {canEdit ? (
         <div className="subnet-card-actions">
-          <button
-            type="button"
-            className="btn sm"
-            aria-label={t('ipam.editSubnetOf', { cidr: subnet.cidr })}
-            onClick={onEdit}
-          >
-            {t('common.edit')}
-          </button>
-          {/*
-            HAI việc khác nhau, và màn hình tự biết bày cái nào — không bắt người dùng đoán:
-
-            Dải CHƯA TỪNG có hồ sơ IP nào → **Xóa** hẳn. Khai nhầm một dải rồi phải sống chung
-            với nó mãi là phiền vô lý; nó chưa mang thông tin gì cả, cần thì khai lại.
-
-            Dải ĐÃ TỪNG dùng → **Vô hiệu hóa** kèm lý do. Xóa hẳn là mất luôn câu trả lời "IP
-            này từng của máy nào" mà AC 5.2 bắt giữ vĩnh viễn — kể cả khi mọi IP đã thu hồi và
-            thanh mức dùng đang chỉ 0%.
-          */}
-          {subnet.addressCount === 0 ? (
-            <button
-              type="button"
-              className="btn sm danger"
-              aria-label={t('ipam.deleteSubnetOf', { cidr: subnet.cidr })}
-              onClick={onDelete}
-            >
-              {t('common.delete')}
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="btn sm"
-              aria-label={t('ipam.hideSubnetOf', { cidr: subnet.cidr })}
-              onClick={onHide}
-            >
-              {t('ipam.hide')}
-            </button>
-          )}
+          <RowActions
+            label={t('common.actionsOf', { subject: subnet.cidr })}
+            items={actions}
+          />
         </div>
       ) : null}
     </div>

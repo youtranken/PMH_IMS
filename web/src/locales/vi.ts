@@ -96,6 +96,10 @@ export default {
     export: 'Xuất Excel',
     filter: 'Bộ lọc',
     actions: 'Thao tác',
+    /* Tên riêng cho nút ba chấm của TỪNG dòng. Dùng chung một chữ "Thao tác" thì hai chục nút
+       trong bảng mang cùng một tên: trình đọc màn hình đọc y hệt nhau, và `getByRole` của bài
+       kiểm khớp cả hai chục dòng cùng lúc. */
+    actionsOf: 'Thao tác với {{subject}}',
     yes: 'Có',
     no: 'Không',
     copy: 'Sao chép',
@@ -234,7 +238,6 @@ export default {
   devices: {
     title: 'Thiết bị',
     since: 'từ {{date}}',
-    copyCode: 'Chép mã thiết bị',
     copySerial: 'Chép serial',
     subtitle: 'Kho thiết bị IT — tra theo site, tủ, loại hoặc serial',
     add: 'Thêm thiết bị',
@@ -369,12 +372,10 @@ export default {
   },
   software: {
     title: 'Phần mềm',
-    copyCode: 'Chép mã hồ sơ',
     seatsNote: 'ghế đã gán / tổng số ghế',
     subtitle: 'License, SSL, tên miền, hợp đồng bảo trì — mọi thứ có ngày gia hạn nằm một chỗ',
     add: 'Thêm hồ sơ',
     edit: 'Sửa hồ sơ',
-    editOf: 'Sửa hồ sơ {{code}}',
     search: 'Tìm theo mã, tên hoặc ghi chú',
     code: 'Mã hồ sơ',
     name: 'Tên hồ sơ',
@@ -419,7 +420,6 @@ export default {
   },
   license: {
     assign: 'Gán vào máy',
-    assignOf: 'Gán hồ sơ {{code}} vào máy',
     assignTitle: 'Gán license vào máy',
     assigned: 'Đã gán license vào máy.',
     release: 'Gỡ',
@@ -463,7 +463,6 @@ export default {
   isp: {
     title: 'Đường truyền',
     contract: 'Hợp đồng',
-    copyCode: 'Chép mã đường truyền',
     copyWanIp: 'Chép IP tĩnh',
     subtitle: 'Đứt cáp lúc 2 giờ sáng: hotline và số hợp đồng có ngay trên danh sách',
     add: 'Thêm đường truyền',
@@ -569,7 +568,6 @@ export default {
     subtitle: 'SA tạo, khóa, đặt lại mật khẩu và đá phiên đăng nhập',
     create: 'Thêm tài khoản',
     edit: 'Sửa hồ sơ',
-    editOf: 'Sửa hồ sơ của {{name}}',
     profileSaved: 'Đã lưu hồ sơ tài khoản.',
     fullName: 'Họ tên',
     email: 'Email',
@@ -587,6 +585,9 @@ export default {
     killSession: 'Đá phiên',
     resetPassword: 'Đặt lại mật khẩu',
     resetTotp: 'Đặt lại 2 lớp',
+    /* Chuỗi này trước đây viết CỨNG trong `accounts-screen.tsx` — lọt qua vì nó nằm trong
+       `toast({ message: '…' })` chứ không phải trên JSX, chỗ mắt không quét tới. */
+    totpReset: 'Đã đặt lại xác thực 2 lớp.',
     lock: 'Khóa',
     unlock: 'Mở khóa',
     disable: 'Vô hiệu hóa',
@@ -687,8 +688,6 @@ export default {
     vlanHint: 'Số VLAN 802.1Q (1–4094). Để trống nếu dải này không gắn VLAN nào.',
     vlanInvalid: 'VLAN phải là số nguyên từ 1 đến 4094.',
     filterAll: 'Tất cả',
-    editSubnetOf: 'Sửa dải {{cidr}}',
-    hideSubnetOf: 'Vô hiệu hóa dải {{cidr}}',
     addSubnet: 'Khai dải mới',
     editSubnet: 'Sửa dải',
     subnetSaved: 'Đã lưu dải.',
@@ -711,15 +710,29 @@ export default {
     hide: 'Vô hiệu hóa',
     hideSubnetTitle: 'Vô hiệu hóa dải {{cidr}}',
     hideHint:
-      'Dải không bị xóa khỏi hệ thống — chỉ ẩn khỏi danh sách và vẫn tra cứu được. Mọi hồ sơ IP trong dải cũng được ẩn theo, cùng lý do này; lịch sử "IP nào từng của máy nào" vẫn giữ nguyên.',
-    deleteSubnetOf: 'Xóa hẳn dải {{cidr}}',
+      'Dải Ở LẠI danh sách, gạch ngang và xám đi, tra cứu được như cũ — mọi hồ sơ IP bên trong vẫn hiện nguyên, vì mấy cái máy đang cắm IP tĩnh của dải này không tự nhả ra chỉ vì cuốn sổ cất dải đi. Bật lại được bất cứ lúc nào. Lịch sử "IP nào từng của máy nào" giữ nguyên.',
+    /* Trạng thái vô hiệu hóa hiện NGAY trên thẻ dải (28/08/2026). Trước đó dải vừa vô hiệu
+       hóa là biến mất khỏi danh sách, và người dùng đọc đúng cái đó là "đã bị xóa hẳn". */
+    disabledBadge: 'Đã vô hiệu hóa',
+    disabledSince: 'Vô hiệu hóa {{date}} · {{reason}}',
+    restore: 'Bật lại',
+    restoreSubnetOf: 'Bật lại dải {{cidr}}',
+    restoreTitle: 'Bật lại dải {{cidr}}?',
+    restoreConfirm:
+      'Dải {{cidr}} trở lại danh sách như cũ, và {{count}} hồ sơ IP đã tắt cùng nó cũng sống lại. Những hồ sơ bị xóa lẻ trước đó thì không — chúng đã xóa vì lý do riêng.',
+    subnetRestored: 'Đã bật lại dải.',
+    /* Vì sao dải đã tắt vẫn KHÔNG xóa hẳn được: xóa là mất luôn thứ AC 5.2 bắt giữ vĩnh viễn,
+       và `ip_history` là bảng CHỈ-THÊM (AD-13) nên tầng DB cũng không cho xóa. Nói thẳng ra
+       trên thẻ, thay vì lặng lẽ giấu nút Xóa và để người dùng tự đoán. */
+    keptForHistory: 'Giữ lại vì còn {{count}} hồ sơ IP mang lịch sử — không xóa hẳn được.',
+    voidedSlotHint:
+      'Dải này đã vô hiệu hóa. Hồ sơ IP hiện ra để tra cứu, không cấp hay sửa được — bật lại dải trước đã.',
     deleteSubnetTitle: 'Xóa hẳn dải {{cidr}}?',
     deleteSubnetConfirm:
       'Dải {{cidr}} chưa có hồ sơ IP nào nên xóa hẳn được — bản ghi biến mất khỏi hệ thống, cần thì khai lại. Không hoàn tác được.',
     subnetDeleted: 'Đã xóa dải.',
     reason: 'Lý do',
     reasonPlaceholder: 'vd: khai nhầm dải',
-    voidAddressOf: 'Xóa hồ sơ IP {{address}}',
     voidAddressHint:
       'Dùng cho bản ghi KHAI NHẦM: địa chỉ trở lại thành chỗ trống. Máy đang thật sự dùng địa chỉ này thì bấm Thu hồi — nó giữ lại lịch sử "IP này từng của máy nào".',
     voidAddressPlaceholder: 'vd: gõ nhầm địa chỉ',
@@ -839,7 +852,6 @@ export default {
     subtitle: 'Tài khoản dùng chung và tài khoản VPN — mật khẩu cất trong két, không nằm ở đây',
     add: 'Thêm tài khoản',
     edit: 'Sửa hồ sơ',
-    editOf: 'Sửa hồ sơ {{code}}',
     saved: 'Đã lưu tài khoản dịch vụ.',
     back: 'Về danh sách',
     search: 'Tìm theo mã, tên, đăng nhập, bộ phận…',
@@ -866,20 +878,17 @@ export default {
     statusActive: 'Đang dùng',
     statusDisabled: 'Đã vô hiệu',
     statusHint: 'Đổi bằng nút Vô hiệu hóa / Bật lại ngoài danh sách — hai đường đó bắt ghi lý do.',
-    copyCode: 'Chép mã tài khoản',
     copyLogin: 'Chép tên đăng nhập',
     codeAutoHint: 'Để trống thì hệ thống tự đặt theo tên đăng nhập.',
     codeAutoPlaceholder: 'tự đặt theo tên đăng nhập',
     nameAutoHint: 'Để trống thì lấy chính tên đăng nhập.',
     disable: 'Vô hiệu hóa',
-    disableOf: 'Vô hiệu hóa tài khoản {{code}}',
     disabled: 'Đã vô hiệu hóa tài khoản.',
     disableHint:
       'Tài khoản không bị xóa — mật khẩu trong két và mọi dòng nhật ký cũ vẫn còn, chỉ là hồ sơ này thôi được dùng.',
     disableReason: 'Lý do vô hiệu hóa',
     disableReasonPlaceholder: 'vd: nhân sự phụ trách đã nghỉ',
     enable: 'Bật lại',
-    enableOf: 'Bật lại tài khoản {{code}}',
     enabled: 'Đã bật lại tài khoản.',
     enableHint:
       'Hồ sơ được dùng trở lại từ lúc bấm. Mật khẩu trong két vẫn là mật khẩu cũ — đổi ở tab Két sắt nếu lý do đóng là lộ mật khẩu.',
@@ -1047,7 +1056,8 @@ export default {
   },
   dashboard: {
     title: 'Xin chào {{name}}',
-    subtitle: 'Ba khối cần nhìn trước giờ họp: sắp hết hạn, sự cố tuần qua, break-glass tuần qua.',
+    subtitle:
+      'Những khối cần nhìn trước giờ họp: sắp hết hạn, dải mạng sắp đầy, két lâu chưa đổi, sự cố và break-glass tuần qua, và những gì vừa vào kho thanh lý.',
     expiring: 'Sắp hết hạn (30 ngày)',
     expiringEmpty: 'Không có gì hết hạn trong 30 ngày tới.',
     seeAllExpiring: 'Xem toàn bộ danh sách hạn',
@@ -1060,5 +1070,22 @@ export default {
     seeAllBreakGlass: 'Xem nhật ký đầy đủ',
     by: 'quyết bởi {{who}}',
     blockError: 'Không tải được khối này. Các khối còn lại vẫn đúng.',
+
+    subnetLoad: 'Dải mạng sắp đầy',
+    subnetLoadEmpty: 'Chưa dải nào chạm ngưỡng. Còn chỗ để cấp IP.',
+    seeAllSubnets: 'Xem toàn bộ dải mạng',
+    subnetUsage: 'đã cấp {{used}}/{{total}} · còn {{free}}',
+    subnetUsageAria: 'Mức sử dụng dải {{name}}',
+
+    staleSecrets: 'Két lâu chưa đổi',
+    // Nói rõ đây KHÔNG phải hạn chót: IMS không ép xoay mật khẩu theo lịch, đây là câu rà soát.
+    staleSecretsEmpty: 'Không có ngăn nào quá hạn rà soát.',
+    seeAllVault: 'Xem toàn bộ két sắt',
+    secretCount: '{{count}} ngăn',
+    staleSince: 'đổi lần cuối {{date}} · {{days}} ngày trước',
+
+    disposed: 'Vừa vào kho thanh lý (7 ngày)',
+    disposedEmpty: 'Tuần qua không bỏ thứ gì.',
+    seeAllDisposed: 'Xem toàn bộ kho thanh lý',
   },
 } as const;

@@ -170,10 +170,16 @@ export class IpamController {
 
   // --- Dải mạng ---------------------------------------------------------------
 
+  /**
+   * `?includeVoided=true` — CHỈ màn dải mạng dùng cờ này (28/08/2026).
+   *
+   * Mặc định vẫn là "chỉ dải đang dùng", nên mọi thứ đọc dải qua `IpamApiService` không đổi
+   * hành vi: bảng điều khiển "Dải mạng sắp đầy" không được lôi một dải đã tắt lên nhắc sếp.
+   */
   @Roles('sa', 'admin', 'member')
   @Get('subnets')
-  listSubnets() {
-    return this.subnets.list();
+  listSubnets(@Query('includeVoided') includeVoided?: string) {
+    return this.subnets.list({ includeVoided: includeVoided === 'true' });
   }
 
   @Roles('sa', 'admin', 'member')
@@ -215,7 +221,14 @@ export class IpamController {
   @Get('subnets/:id/export.xlsx')
   async exportAddresses(@Param() params: IdParamDto, @Res() res: Response) {
     const subnet = await this.subnets.findOne(params.id);
-    const rows = await this.addresses.listRecords(params.id);
+    /*
+     * Dải đã vô hiệu hóa thì xuất luôn cả hồ sơ đã tắt theo nó — CÙNG luật với bảng trên màn
+     * hình (`listBySubnet`). Không đồng bộ chỗ này thì màn hình hiện 6 dòng còn file Excel ra
+     * 0 dòng, và người ta sẽ tin cái file.
+     */
+    const rows = await this.addresses.listRecords(params.id, {
+      includeVoided: subnet.voidedAt !== null,
+    });
     const buffer = await this.excel.build({
       sheetName: 'Dia chi IP',
       columns: [
@@ -279,6 +292,25 @@ export class IpamController {
     @Req() req: AuthedRequest,
   ) {
     await this.subnets.voidSubnet(actor(req), params.id, body.reason);
+    return { ok: true };
+  }
+
+  /**
+   * BẬT LẠI một dải đã vô hiệu hóa (28/08/2026).
+   *
+   * Đối xứng với `:id/void`. Không có nó thì vô hiệu hóa là một cánh cửa một chiều, và ai lỡ
+   * tay bấm nhầm chỉ còn cách khai lại dải rồi gõ tay từng hồ sơ IP — với một /24 dùng nửa
+   * dải thì đó là hơn trăm lượt nhập cho một cú bấm nhầm.
+   *
+   * KHÔNG hỏi lý do: bật lại là việc khôi phục, nó không lấy đi thứ gì. Bắt gõ lý do cho một
+   * thao tác vô hại chỉ dạy người dùng thói quen gõ bừa cho qua ô bắt buộc — rồi tới ô lý do
+   * THẬT SỰ quan trọng (vô hiệu hóa) họ cũng gõ bừa nốt.
+   */
+  @Roles('sa', 'admin')
+  @Patch('subnets/:id/restore')
+  @Audited('subnet.restored', 'subnet', { writtenByService: true })
+  async restoreSubnet(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    await this.subnets.restore(actor(req), params.id);
     return { ok: true };
   }
 

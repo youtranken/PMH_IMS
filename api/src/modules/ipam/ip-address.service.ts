@@ -95,22 +95,42 @@ export class IpAddressService {
    * giả vờ có nghĩa.
    */
   async listBySubnet(subnetId: string): Promise<SubnetSlot[]> {
-    const cidr = await this.subnets.cidrOf(subnetId);
-    const records = await this.listRecords(subnetId);
+    /*
+     * Dải ĐÃ VÔ HIỆU HÓA thì hiện luôn cả những hồ sơ IP đã tắt theo nó.
+     *
+     * Bỏ chúng đi thì 254 địa chỉ hiện ra là 254 ô TRỐNG — và "trống" ở màn này có nghĩa rất
+     * cụ thể: cấp cho máy khác được. Trong khi sự thật là mấy chục cái máy vẫn đang cắm đúng
+     * những địa chỉ đó dưới dạng IP tĩnh; không cái nào tự nhả ra chỉ vì cuốn sổ đã cất dải đi.
+     * Đây chính là lý do người dùng mở phiếu: vô hiệu hóa mà nhìn như đã xóa sạch.
+     *
+     * Dải đang dùng thì ngược lại — hồ sơ bị xóa lẻ ("gõ nhầm địa chỉ") PHẢI biến thành ô
+     * trống, vì đó là toàn bộ ý nghĩa của việc xóa nó.
+     */
+    const frame = await this.subnets.frameOf(subnetId);
+    const records = await this.listRecords(subnetId, {
+      includeVoided: frame.voidedAt !== null,
+    });
     const byAddress = new Map(records.map((row) => [row.address, row]));
 
-    return enumerateHosts(cidr).map<SubnetSlot>((address) => {
+    return enumerateHosts(frame.cidr).map<SubnetSlot>((address) => {
       const record = byAddress.get(address);
       return record ? { kind: 'record', ...record } : { kind: 'free', address };
     });
   }
 
   /** Chỉ những IP CÓ hồ sơ, sắp theo thứ tự số học (nhờ kiểu `inet` của Postgres). */
-  async listRecords(subnetId: string): Promise<IpAddressRecord[]> {
+  async listRecords(
+    subnetId: string,
+    options: { includeVoided?: boolean } = {},
+  ): Promise<IpAddressRecord[]> {
     const rows = await this.db
       .select()
       .from(ipAddressTable)
-      .where(and(eq(ipAddressTable.subnetId, subnetId), isNull(ipAddressTable.voidedAt)))
+      .where(
+        options.includeVoided
+          ? eq(ipAddressTable.subnetId, subnetId)
+          : and(eq(ipAddressTable.subnetId, subnetId), isNull(ipAddressTable.voidedAt)),
+      )
       .orderBy(asc(ipAddressTable.address));
     return this.decorate(rows);
   }

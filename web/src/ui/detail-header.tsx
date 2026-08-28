@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { CopyButton } from '@/ui/copy-button';
 
 /**
  * Đầu MỌI trang chi tiết (AD-15): breadcrumb → mã + tên → dòng định danh → nút thao tác.
@@ -22,15 +21,20 @@ export function DetailHeader({
   crumbs,
   code,
   name,
-  copyLabel,
   subline,
   actions,
 }: {
   crumbs: Crumb[];
-  /** Mã hồ sơ — hiện cỡ lớn, dạng `mono`, kèm nút chép. */
+  /**
+   * Mã hồ sơ — hiện cỡ lớn, dạng `mono`. KHÔNG kèm nút chép (bỏ 28/08/2026).
+   *
+   * Mã đang là TIÊU ĐỀ của trang, và tiêu đề thì người ta bôi đen chép như mọi chữ khác. Cái
+   * nút nhỏ nhét giữa mã và tên làm hàng tiêu đề gãy làm ba mảnh mà đổi lại gần như không ai
+   * bấm — khác hẳn nút chép ở serial / IP WAN / tài khoản đăng nhập, những giá trị người ta
+   * dán thẳng vào terminal và gõ tay thì sai. Mấy nút đó GIỮ NGUYÊN.
+   */
   code: string;
   name?: string | null;
-  copyLabel?: string;
   /** Dòng định danh kỹ thuật dưới tiêu đề (loại · model · serial…). */
   subline?: ReactNode;
   actions?: ReactNode;
@@ -71,7 +75,6 @@ export function DetailHeader({
         <div className="detail-title-main">
           <h1 className="detail-code">
             <span className="mono">{code}</span>
-            <CopyButton value={code} label={copyLabel} />
             {name ? <span className="detail-name">{name}</span> : null}
           </h1>
           {subline ? <div className="detail-subline">{subline}</div> : null}

@@ -127,9 +127,11 @@ export function LicenseSeatsExpand({
                 >
                   {t('common.edit')}
                 </button>
+                {/* Gỡ ghế = thu lại license khỏi một máy đang dùng. Hộp hỏi lại đã `danger`
+                    từ đầu, nhưng chính cái nút thì vẫn xám y như nút Sửa bên cạnh. */}
                 <button
                   type="button"
-                  className="btn sm"
+                  className="btn sm danger"
                   disabled={release.isPending}
                   aria-label={t('license.releaseSeatOf', { device: seat.deviceCode })}
                   onClick={() => {

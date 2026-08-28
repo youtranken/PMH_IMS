@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, firstLogin, resetUsers } from './helpers';
+import { E2E_SA, firstLogin, resetUsers, rowAction } from './helpers';
 
 /**
  * Hồ sơ tài khoản có SĐT, mã nhân viên và ngày sinh (migration 0031).
@@ -27,7 +27,7 @@ test.describe('Hồ sơ tài khoản', () => {
 
     await page.goto('/admin/accounts');
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(E2E_SA.email);
-    await page.getByRole('button', { name: /^Sửa hồ sơ của/ }).first().click();
+    await rowAction(page, 'E2E Super Admin', 'Sửa');
 
     const form = page.getByRole('dialog');
     // Email KHÔNG sửa được: nó là danh tính đăng nhập và là thứ mọi dòng nhật ký trỏ tới.

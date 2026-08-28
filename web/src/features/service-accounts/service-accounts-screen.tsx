@@ -15,6 +15,7 @@ import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
+import { RowActions } from '@/ui/row-actions';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { ServiceAccountForm } from './service-account-form';
@@ -135,48 +136,37 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
             {
               id: 'actions',
               header: t('common.actions'),
+              meta: { className: 'col-center' },
               cell: ({ row }) => (
                 <div className="action-cell">
-                  <button
-                    type="button"
-                    className="btn sm"
-                    aria-label={t('serviceAccounts.editOf', { code: row.original.code })}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setEditing(row.original);
-                    }}
-                  >
-                    {t('common.edit')}
-                  </button>
-                  {/* Đổi trạng thái là đường RIÊNG vì nó BẮT ghi lý do — không phải một giá trị
-                      trong ô Trạng thái của form. Xem chú thích ở `service-account-form`.
-                      Hai chiều đối xứng: đóng rồi thì phải có đường mở lại, cũng kèm lý do,
-                      không thì hồ sơ đã đóng là đóng vĩnh viễn với người dùng giao diện. */}
-                  {row.original.status === 'active' ? (
-                    <button
-                      type="button"
-                      className="btn sm danger"
-                      aria-label={t('serviceAccounts.disableOf', { code: row.original.code })}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setSwitching({ row: row.original, next: 'disabled' });
-                      }}
-                    >
-                      {t('serviceAccounts.disable')}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="btn sm"
-                      aria-label={t('serviceAccounts.enableOf', { code: row.original.code })}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        setSwitching({ row: row.original, next: 'active' });
-                      }}
-                    >
-                      {t('serviceAccounts.enable')}
-                    </button>
-                  )}
+                  <RowActions
+                    label={t('common.actionsOf', { subject: row.original.code })}
+                    items={[
+                      {
+                        key: 'edit',
+                        label: t('common.edit'),
+                        onSelect: () => setEditing(row.original),
+                      },
+                      /* Đổi trạng thái là đường RIÊNG vì nó BẮT ghi lý do — không phải một giá
+                         trị trong ô Trạng thái của form. Xem chú thích ở `service-account-form`.
+                         Hai chiều đối xứng: đóng rồi thì phải có đường mở lại, cũng kèm lý do,
+                         không thì hồ sơ đã đóng là đóng vĩnh viễn với người dùng giao diện. */
+                      row.original.status === 'active'
+                        ? {
+                            key: 'disable',
+                            label: t('serviceAccounts.disable'),
+                            onSelect: () =>
+                              setSwitching({ row: row.original, next: 'disabled' }),
+                            danger: true,
+                          }
+                        : {
+                            key: 'enable',
+                            label: t('serviceAccounts.enable'),
+                            onSelect: () =>
+                              setSwitching({ row: row.original, next: 'active' }),
+                          },
+                    ]}
+                  />
                 </div>
               ),
             } as ColumnDef<ServiceAccountRow, unknown>,

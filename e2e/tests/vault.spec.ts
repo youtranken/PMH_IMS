@@ -9,6 +9,7 @@ import {
   resetDevices,
   resetSecrets,
   resetUsers,
+  rowAction,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -73,7 +74,7 @@ test.describe('Két sắt', () => {
     await expect(page.locator('body')).not.toContainText(secretValue);
 
     // Xoay: đổi giá trị, metadata giữ nguyên.
-    await row.getByRole('button', { name: 'Xoay' }).click();
+    await rowAction(page, label, 'Xoay');
     const rotate = page.getByRole('dialog');
     await rotate.getByRole('textbox', { name: 'Giá trị mới' }).fill(`${secretValue}-v2`);
     await rotate.getByRole('button', { name: 'Xoay' }).click();
@@ -81,10 +82,7 @@ test.describe('Két sắt', () => {
     await expect(page.locator('body')).not.toContainText(secretValue);
 
     // Thu hồi = xóa mềm: biến khỏi danh sách.
-    await page
-      .getByRole('row', { name: new RegExp(label) })
-      .getByRole('button', { name: 'Thu hồi' })
-      .click();
+    await rowAction(page, label, 'Thu hồi');
     await confirmAction(page);
     await expect(page.getByRole('row', { name: new RegExp(label) })).toHaveCount(0);
   });

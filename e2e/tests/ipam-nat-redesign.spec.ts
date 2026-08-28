@@ -5,6 +5,7 @@ import {
   resetDevices,
   resetIpam,
   resetUsers,
+  rowAction,
 } from './helpers';
 
 /**
@@ -287,7 +288,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
 
     await page.goto('/nat');
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(`SSH tạm ${stamp}`);
-    await page.getByRole('button', { name: 'Sửa' }).click();
+    await rowAction(page, /7001/, 'Sửa');
 
     const form = page.getByRole('dialog');
     // Khoảng đang có mở ra thành chip; ô thêm biến mất kèm lời giải thích.
@@ -576,11 +577,7 @@ test.describe('Sổ NAT — lịch sử và giấy tờ', () => {
      * Đây cũng là thứ tự thật của người dùng: sửa xong mở lại xem lịch sử.
      */
     await page.goto('/nat');
-    await page
-      .getByRole('row', { name: new RegExp(routerCode) })
-      .first()
-      .getByRole('button', { name: 'Sửa' })
-      .click();
+    await rowAction(page, /8080-8090/, 'Sửa');
     const form = page.getByRole('dialog');
     await expect(form.getByText(/mở cho ai: Camera tầng 2 → Đầu ghi NVR/)).toBeVisible();
     // Dòng "Mở rule" cũng phải còn đó — lịch sử là cả quãng đời, không chỉ lần sửa gần nhất.

@@ -11,6 +11,7 @@ import { Dialog } from '@/ui/dialog';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
+import { RowActions } from '@/ui/row-actions';
 import { Field, FormSection, PageHeader } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
@@ -180,22 +181,28 @@ export function NatScreen({ me }: { me: Me }) {
                   <td data-label={t('nat.reason')}>{rule.reason}</td>
                   <td>
                     <div className="action-cell">
-                      <button
-                        type="button"
-                        className="btn sm"
-                        onClick={() => setEditing({ rule })}
-                      >
-                        {t('common.edit')}
-                      </button>
-                      {canHide ? (
-                        <button
-                          type="button"
-                          className="btn sm"
-                          onClick={() => setHiding(rule)}
-                        >
-                          {t('nat.remove')}
-                        </button>
-                      ) : null}
+                      <RowActions
+                        label={t('common.actionsOf', {
+                          subject: `${rule.protocol.toUpperCase()} ${rule.externalPorts}`,
+                        })}
+                        items={[
+                          {
+                            key: 'edit',
+                            label: t('common.edit'),
+                            onSelect: () => setEditing({ rule }),
+                          },
+                          ...(canHide
+                            ? [
+                                {
+                                  key: 'remove',
+                                  label: t('nat.remove'),
+                                  onSelect: () => setHiding(rule),
+                                  danger: true,
+                                },
+                              ]
+                            : []),
+                        ]}
+                      />
                     </div>
                   </td>
                 </tr>

@@ -16,6 +16,17 @@ export const CONFIG_KEYS = {
   approvalReminderHours: { key: 'approval.reminder_hours', fallback: 4 },
   mailFromAddress: { key: 'mail.from_address', fallback: 'ims@pmh.com.vn' },
   appTimezone: { key: 'app.timezone', fallback: 'Asia/Ho_Chi_Minh' },
+  /*
+   * Hai ngưỡng của bảng điều khiển (0038).
+   *
+   * Vào đây chứ không nằm trong `dashboard.service.ts` vì chúng là LUẬT NGHIỆP VỤ, không phải
+   * hằng số hiển thị: "dải bao nhiêu phần trăm thì gọi là sắp đầy" và "mật khẩu bao lâu không
+   * đổi thì gọi là cũ" là hai câu mà bộ phận IT sẽ muốn siết dần theo thời gian, và siết bằng
+   * một dòng UPDATE thì không cần dựng lại ảnh docker. (Số dòng hiện trên mỗi khối thì ngược
+   * lại — đó là chuyện bày biện, để nguyên trong code.)
+   */
+  dashboardSubnetFullPercent: { key: 'dashboard.subnet_full_percent', fallback: 80 },
+  dashboardSecretStaleDays: { key: 'dashboard.secret_stale_days', fallback: 180 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;

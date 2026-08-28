@@ -5,6 +5,7 @@ import {
   firstLogin,
   resetDevices,
   resetUsers,
+  rowAction,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -67,7 +68,10 @@ test.describe('Port map', () => {
     await expect(reverse.getByText('Gi1/0/12')).toBeVisible();
 
     // Chiều ngược chỉ để ĐỌC — sửa ở nơi giữ bản ghi.
-    await expect(reverse.getByRole('button', { name: 'Xóa' })).toHaveCount(0);
+    // Bám nút BA CHẤM chứ không bám chữ "Xóa": từ 28/08/2026 mục xóa nằm trong menu, nên
+    // `getByRole('button', { name: 'Xóa' })` trả 0 kể cả khi menu có mục đó — một khẳng
+    // định luôn xanh không kiểm được gì.
+    await expect(reverse.getByRole('button', { name: /^Thao tác với/ })).toHaveCount(0);
 
     // API nói thẳng: server có 0 cổng của mình, 1 cổng đang cắm vào.
     const map = await page.evaluate(async (id: string) => {
@@ -139,7 +143,7 @@ test.describe('Port map', () => {
     await form.getByRole('button', { name: 'Lưu' }).click();
     await expect(page.getByRole('row', { name: /WAN1/ })).toBeVisible();
 
-    await page.getByRole('row', { name: /WAN1/ }).getByRole('button', { name: 'Xóa' }).click();
+    await rowAction(page, 'WAN1', 'Xóa');
     await confirmAction(page);
     await expect(page.getByText('Chưa khai cổng nào.')).toBeVisible();
 

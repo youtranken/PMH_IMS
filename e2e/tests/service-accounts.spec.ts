@@ -10,6 +10,8 @@ import {
   logout,
   resetServiceAccounts,
   resetUsers,
+  rowAction,
+  rowActionNames,
 } from './helpers';
 
 /**
@@ -346,14 +348,14 @@ test.describe('Tài khoản dịch vụ', () => {
     await expect(row.getByText('Đang dùng')).toBeVisible();
 
     // Cửa sau đã khóa: form Sửa chỉ HIỆN trạng thái, không cho chọn.
-    await row.getByRole('button', { name: `Sửa hồ sơ ${code}` }).click();
+    await rowAction(page, code, 'Sửa');
     const editForm = page.getByRole('dialog');
     await expect(editForm.getByText('Đang dùng')).toBeVisible();
     await expect(editForm.getByRole('button', { name: 'Trạng thái', exact: true })).toHaveCount(0);
     await editForm.getByRole('button', { name: 'Hủy' }).click();
 
     // Cửa trước: nút riêng ngoài danh sách, và nó BẮT lý do.
-    await row.getByRole('button', { name: `Vô hiệu hóa tài khoản ${code}` }).click();
+    await rowAction(page, code, 'Vô hiệu hóa');
     const offForm = page.getByRole('dialog');
     await expect(offForm.getByText(/mật khẩu trong két .* vẫn còn/)).toBeVisible();
     await offForm.getByRole('textbox', { name: 'Lý do vô hiệu hóa' }).fill('nhân sự phụ trách đã nghỉ');
@@ -362,7 +364,8 @@ test.describe('Tài khoản dịch vụ', () => {
     await expect(page.getByText('Đã vô hiệu hóa tài khoản.')).toBeVisible();
     await expect(row.getByText('Đã vô hiệu')).toBeVisible();
     // Đã đóng rồi thì không còn nút đóng nữa — bấm lần hai chỉ đẻ thêm một dòng lịch sử rỗng nghĩa.
-    await expect(row.getByRole('button', { name: `Vô hiệu hóa tài khoản ${code}` })).toHaveCount(0);
+    // Cột Thao tác là menu ba chấm từ 28/08/2026 — mở ra mới đọc được có mục nào.
+    expect(await rowActionNames(page, code)).not.toContain('Vô hiệu hóa');
 
     // Lý do đi thẳng vào lịch sử, kèm chuyển trạng thái — đó mới là chỗ trả lời câu hỏi sáu tháng sau.
     await page.goto(`/service-accounts/${id}?tab=history`);
@@ -413,7 +416,7 @@ test.describe('Tài khoản dịch vụ', () => {
     await page.goto('/service-accounts');
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row.getByText('Đã vô hiệu')).toBeVisible();
-    await row.getByRole('button', { name: `Bật lại tài khoản ${code}` }).click();
+    await rowAction(page, code, 'Bật lại');
     const onForm = page.getByRole('dialog');
     await onForm.getByRole('textbox', { name: 'Lý do bật lại' }).fill('nhân sự mới nhận bàn giao');
     await onForm.getByRole('button', { name: 'Bật lại' }).click();

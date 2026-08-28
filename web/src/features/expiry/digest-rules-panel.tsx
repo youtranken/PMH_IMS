@@ -8,6 +8,7 @@ import type { Me } from '@/lib/me';
 import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
+import { RowActions } from '@/ui/row-actions';
 import { SchedulePicker, describeSchedule, type ScheduleValue } from '@/ui/schedule-picker';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
@@ -129,63 +130,62 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
                   {canEdit ? (
                     <td>
                       <div className="action-cell">
-                        <button
-                          type="button"
-                          className="btn sm"
-                          onClick={() => setEditing({ rule })}
-                        >
-                          {t('digest.edit')}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn sm"
-                          disabled={sendTest.isPending}
-                          onClick={() =>
-                            sendTest.mutate(
-                              { id: rule.id },
-                              {
-                                onSuccess: (result) =>
-                                  toast({
-                                    message: t('digest.testSent', {
-                                      count: result.items,
-                                      to: result.recipients.join(', '),
-                                    }),
-                                  }),
-                                onError: (error) =>
-                                  toast({ message: errorMessage(error), tone: 'error' }),
-                              },
-                            )
-                          }
-                        >
-                          {t('digest.test')}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn sm danger"
-                          onClick={() => {
-                            void (async () => {
-                              const ok = await askConfirm({
-                                message: t('digest.confirmDelete', { name: rule.name }),
-                                danger: true,
-                                confirmLabel: t('digest.delete'),
-                              });
-                              if (!ok) return;
-                              remove.mutate(
-                                { id: rule.id },
-                                {
-                                  onSuccess: () => {
-                                    toast({ message: t('digest.deleted') });
-                                    void refresh();
+                        <RowActions
+                          label={t('common.actionsOf', { subject: rule.name })}
+                          items={[
+                            {
+                              key: 'edit',
+                              label: t('digest.edit'),
+                              onSelect: () => setEditing({ rule }),
+                            },
+                            {
+                              key: 'test',
+                              label: t('digest.test'),
+                              disabled: sendTest.isPending,
+                              onSelect: () =>
+                                sendTest.mutate(
+                                  { id: rule.id },
+                                  {
+                                    onSuccess: (result) =>
+                                      toast({
+                                        message: t('digest.testSent', {
+                                          count: result.items,
+                                          to: result.recipients.join(', '),
+                                        }),
+                                      }),
+                                    onError: (error) =>
+                                      toast({ message: errorMessage(error), tone: 'error' }),
                                   },
-                                  onError: (error) =>
-                                    toast({ message: errorMessage(error), tone: 'error' }),
-                                },
-                              );
-                            })();
-                          }}
-                        >
-                          {t('digest.delete')}
-                        </button>
+                                ),
+                            },
+                            {
+                              key: 'delete',
+                              label: t('digest.delete'),
+                              danger: true,
+                              onSelect: () => {
+                                void (async () => {
+                                  const ok = await askConfirm({
+                                    message: t('digest.confirmDelete', { name: rule.name }),
+                                    danger: true,
+                                    confirmLabel: t('digest.delete'),
+                                  });
+                                  if (!ok) return;
+                                  remove.mutate(
+                                    { id: rule.id },
+                                    {
+                                      onSuccess: () => {
+                                        toast({ message: t('digest.deleted') });
+                                        void refresh();
+                                      },
+                                      onError: (error) =>
+                                        toast({ message: errorMessage(error), tone: 'error' }),
+                                    },
+                                  );
+                                })();
+                              },
+                            },
+                          ]}
+                        />
                       </div>
                     </td>
                   ) : null}

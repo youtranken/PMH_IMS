@@ -17,6 +17,7 @@ import { BlankFields, DetailHeader, Stat, StatGrid, StatIfSet } from "@/ui/detai
 import { Field } from "@/ui/page-header";
 import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { TabPanel, Tabs } from "@/ui/tabs";
+import { useTabCounts } from "@/ui/tab-counts";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useToast } from "@/ui/toast";
 import type { CatalogLists } from "@/features/catalog/catalog-types";
@@ -42,6 +43,10 @@ export function IspDetail({ me }: { me: Me }) {
   const [tab, setTab] = useState("profile");
   const [editing, setEditing] = useState(false);
   const [renewing, setRenewing] = useState(false);
+
+  /* Trước mọi nhánh `return` sớm bên dưới: đây là hook, đặt sau `if (isLoading) return` thì
+     số hook giữa hai lượt render lệch nhau. */
+  const counts = useTabCounts("isp", id, me);
 
   const line = useQuery({
     queryKey: ["isp", id],
@@ -85,7 +90,6 @@ export function IspDetail({ me }: { me: Me }) {
         ]}
         code={item.code}
         name={item.provider}
-        copyLabel={t("isp.copyCode")}
         subline={
           <>
             {item.bandwidth ? <span>{item.bandwidth}</span> : null}
@@ -163,8 +167,12 @@ export function IspDetail({ me }: { me: Me }) {
             `file.owner_type` đã nhận `isp` từ lâu mà `secret.owner_type` thì chưa, nên hợp
             đồng PDF đính vào được còn mật khẩu thì chảy vào ô Ghi chú, chỗ không mã hóa.
           */
-          { key: "vault", label: t("vault.tab") },
-          { key: "attachments", label: t("isp.tabAttachments") },
+          { key: "vault", label: t("vault.tab"), count: counts.secrets },
+          {
+            key: "attachments",
+            label: t("isp.tabAttachments"),
+            count: counts.files,
+          },
           { key: "history", label: t("isp.tabHistory") },
         ]}
         value={tab}

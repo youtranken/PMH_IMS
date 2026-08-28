@@ -618,3 +618,128 @@ hiện dưới đây là loại bẫy sẽ lặp lại.
 5. **Bảng dịch vụ luôn mở × hai ô port = quá nửa hộp thoại.** Thứ làm form NAT dài không phải
    ô nhập mà là hai bảng gợi ý giống hệt nhau. Dropdown giữ nguyên phần đúng (tên · giao thức
    · port trên một dòng) mà không chiếm chỗ.
+
+---
+
+## Đợt UI/UX 5 — góp gì (28/08/2026: nhóm B + số trên nhãn tab)
+
+Bảng điều khiển từ **hai** khối lên **năm**, và trang chi tiết trả lời được "trong tab đó có gì"
+mà không phải bấm vào. Không bảng mới, không cột mới — toàn bộ dựng trên dữ liệu đã có từ lâu
+nhưng chưa ai nhìn thấy cùng lúc.
+
+### Tài sản mới
+
+| Thứ | Ở đâu | Ai sẽ cần |
+| --- | --- | --- |
+| `dashboard-rules.ts` | `api/src/modules/dashboard/` | Luật chọn dòng của mọi khối — hàm thuần, `now` là tham số, không hàm nào nhận `limit` |
+| `IpamApiService.listSubnets()` | `api/src/modules/ipam/ipam.api.ts` | Ai cần mức sử dụng dải mà không được chạm bảng `subnet` |
+| `VaultApiService.listOwners()` | `api/src/modules/vault/vault.api.ts` | Ai cần "hồ sơ nào có két, đổi lần cuối bao giờ". **Không tự gác vai** |
+| `DisposalApiService` | `api/src/modules/disposal/disposal.api.ts` | Ai cần "vừa bỏ những gì" — một cửa cho cả ba loại |
+| `useTabCounts` | `web/src/ui/tab-counts.ts` | Số bên phải nhãn tab của mọi trang chi tiết |
+| `useOwnerAttachments` · `useOwnerSecrets` | `web/src/ui/attachment-panel.tsx` · `vault-panel.tsx` | Truy vấn dùng chung giữa panel và số đếm — một khóa cache, một luật quyền |
+| `OWNER_PATH` | `web/src/lib/routes.ts` | Dựng link từ cặp `(ownerType, id)` |
+| `DISPOSAL_KINDS` · `DISPOSAL_KIND_KEY` | `web/src/lib/disposal-kinds.ts` | Ba loại vào kho + nhãn i18n, dùng ở hai màn |
+| `dashboard.subnet_full_percent` · `dashboard.secret_stale_days` | migration 0038 | Hai ngưỡng nghiệp vụ, siết bằng `UPDATE` chứ không dựng lại ảnh |
+
+### Hợp đồng cho đợt sau
+
+- **`vault.module` đã import `devices` · `software` · `service-accounts`.** Nên MỌI ý tưởng
+  "cho module chủ hỏi ngược két sắt" đều là vòng phụ thuộc và `dependency-cruiser` chặn thẳng
+  (`no-circular`). Cần số secret ở trang chi tiết thì đếm ở **web**, qua chính truy vấn panel
+  dùng — xem `useTabCounts`. Cách này còn đúng hơn về quyền: số đi qua `verdict` nên Member
+  không được thấy két thì cũng không thấy số.
+- **`VaultApiService` bị `vault-surface.spec.ts` ghim từng tên hàm.** Thêm hàm là bài kiểm đỏ —
+  cố ý. Sửa nó phải kèm lý do viết ở CẢ HAI đầu (`vault.api.ts` và chính bài kiểm). Thứ vĩnh
+  viễn không được thêm: hàm trả giá trị, hàm trả nhãn ngăn, hàm nhận nhiều chủ thể rồi trả kèm
+  nội dung (FR-026).
+- **Hàm thuần chọn dòng KHÔNG nhận `limit`.** Nhận `limit` thì nơi gọi vẫn phải đếm tổng, và
+  cách nhanh nhất là chép lại điều kiện lọc ra ngoài — hai bản của một luật, rồi một hôm sửa
+  một bản. Lọc một lần, `.length` ra tổng, `.slice()` ra số dòng hiện.
+- **Khối mới trên bảng điều khiển đọc dữ liệu hạn chế theo vai thì phải cắt ở TẦNG SERVICE**,
+  không phải để web ẩn khối đi. Ẩn ở web thì dữ liệu vẫn đi qua dây. Mẫu: `staleSecrets` cắt
+  đúng bằng quyền của `GET /vault/owners`.
+- **Ngưỡng nghiệp vụ vào `system_config`, số dòng hiển thị thì không.** "Bao nhiêu phần trăm
+  gọi là sắp đầy" là thứ IT sẽ siết dần; "hiện mấy dòng" là bày biện. Trộn hai loại vào một
+  chỗ là làm bảng cấu hình đầy những thứ không ai chỉnh.
+- **Module ĐỌC thuần thứ ba đã ra đời** (`dashboard`, `disposal`, và mọi thứ tiếp theo). Luật
+  chung: không sở hữu bảng, chỉ gom qua `*.api.ts`, và **không tự gộp lại thứ module khác đã
+  gộp** — `dashboard` gọi `disposal.api`, không tự hỏi lại ba module chủ.
+
+### Bẫy đã gặp
+
+1. **Tên khả truy cập ghép thẳng hai node văn bản.** `{label}<span>{count}</span>` cho ra
+   `"Giấy tờ0"` — trình đọc màn hình đọc thành một từ, và mọi selector theo tên tab cũng phải
+   viết dính nhau mới khớp. Khoảng cách bằng CSS chỉ có nghĩa với mắt. Lỗi này sống từ Epic 3
+   (tab "Máy đang dùng" đã có `count`) tới 28/08 mới lộ, vì tới lúc đó mới có bài kiểm nào đọc
+   tên tab kèm số. Đã chốt lại bằng unit test trong `tabs.test.tsx`.
+2. **`Tabs` đã có `count?: number` và CSS `.tab-count` từ story 2.1 — chưa màn nào truyền vào.**
+   Trước khi dựng thứ mới thì đọc `docs/SHARED-REGISTRY.md` và chính component: ở đây thứ cần
+   dùng đã nằm sẵn hai epic rồi.
+3. **`service_account` KHÔNG có cột `end_date`.** Kiểm lược đồ trước khi hứa "chỉ cần nối dây":
+   đưa tài khoản dịch vụ vào luồng hạn là thêm cột + migration + ô trên form + một
+   `ExpirySource`, không phải một dòng đăng ký. Và khi làm thì cột đó phải cho **cả hai**
+   `kind` — `groupName`/`allowedIps` bị gác VPN-only vì với tài khoản dùng chung chúng *vô
+   nghĩa*, còn ngày hết hạn thì có nghĩa với mọi tài khoản. Gác vì vô nghĩa là đúng; gác vì ít
+   gặp là sai.
+4. **Không có endpoint sửa `system_config`.** E2E muốn dựng trạng thái phụ thuộc ngưỡng thì đi
+   đường SQL (`sql()` trong `helpers.ts`) chứ đừng tìm API — và nhớ `SystemConfigService` cache
+   30 giây (`CONFIG_CACHE_MS`).
+
+---
+
+## Đợt UI/UX 6 — góp gì (28/08/2026: menu ba chấm · vô hiệu hóa dải · màu nút nguy hiểm)
+
+Năm việc từ phản hồi trực tiếp của người dùng trên hai ảnh màn hình. Không epic mới, không
+bảng mới; một cột mới trên đường ĐỌC và một tài sản dùng chung.
+
+### Tài sản dùng chung mới (AD-15)
+
+| Tài sản | Đường dẫn | Thay cho |
+| --- | --- | --- |
+| `RowActions`, `RowAction` | `web/src/ui/row-actions.tsx` | Dãy nút phẳng ở cột "Thao tác" của 9 bảng |
+| `useDispose` | `web/src/ui/dispose-button.tsx` | Bản hook của `DisposeButton`, để đưa được vào menu |
+| `rowAction`, `rowActionNames` | `e2e/tests/helpers.ts` | `getByRole('button', { name: 'Sửa' })` ở 26 chỗ |
+| `actionLabel` | `web/src/features/ipam/ip-history-entries.ts` | Bảng lịch sử IP hiện lẫn `ip.voided` với "Thu hồi" |
+
+### Hợp đồng cho epic sau
+
+- **`GET /ipam/subnets` mặc định CHỈ trả dải đang dùng.** `?includeVoided=true` là cửa riêng
+  của màn dải mạng. `IpamApiService.listSubnets()` gọi mặc định — bảng điều khiển không được
+  lôi một dải đã tắt lên nhắc sếp.
+- **`SubnetService.cidrOf` (đường GHI) từ chối dải đã tắt; `frameOf` (đường ĐỌC) thì không.**
+  Thêm IP vào một dải đã cất đi là tạo dữ liệu không màn nào chịu trách nhiệm; còn xem lại
+  bảng IP của nó thì phải được, đó là thứ người ta đọc trước khi quyết định bật lại hay xóa.
+- **`PATCH /ipam/subnets/:id/restore`** bật lại dải + đúng những hồ sơ IP tắt CÙNG nó, nhận ra
+  bằng `ip_address.voided_at = subnet.voided_at`. Dấu thời gian là khóa chính xác vì
+  `voidSubnet` đóng cả hai bằng một `now` trong một transaction.
+- **Nhãn nút ba chấm PHẢI kèm định danh dòng** qua `common.actionsOf`. Dùng chung một chữ
+  "Thao tác" thì hai chục nút mang cùng một tên: trình đọc màn hình đọc y hệt nhau và
+  `getByRole` của bài kiểm khớp cả hai chục dòng.
+
+### Bẫy đã gặp
+
+1. **Hai khối CSS không liên quan trùng tên lớp `.stat-grid`.** `detail-tabs.css` định nghĩa
+   nó hai lần: một cho dải chỉ số trang chi tiết (gap 1px + nền `--border` = các ô liền nhau),
+   một cho KPI của một bản dựng Bảng điều khiển đã bỏ. Khối sau đè `grid-template-columns`
+   (`auto-fit` → `auto-fill`) và `gap`, nhưng KHÔNG đè `background` — nên hai thẻ chỉ số ngồi
+   trên một tấm nền xám kéo hết chiều ngang. Đó là hình 34 người dùng gửi. Khối KPI ấy chết từ
+   lâu mà không ai biết, vì `stat-card`/`stat-num` không còn ai gọi. **Đặt tên lớp theo màn**
+   như `profile.css` đã làm với `.profile-stat-card`.
+2. **"Vô hiệu hóa" mà bản ghi biến khỏi danh sách thì người dùng đọc là "đã xóa".** Và họ
+   không sai — không còn chỗ nào trên giao diện nói nó tồn tại. Với dải mạng thì tệ hơn: mấy
+   chục cái máy vẫn cắm IP tĩnh của dải đó, còn màn hình vẽ 254 ô "Trống" sẵn sàng cấp lại.
+   Luật rút ra: **ẩn mềm phải NHÌN THẤY được ở đúng chỗ nó vừa biến mất**, gạch ngang và nói
+   rõ ai tắt, khi nào, vì sao. Danh sách khác đang ẩn mềm nên soi lại theo luật này.
+3. **`sort()` trên mảng của TanStack Query là sửa cache dùng chung.** Sắp dải đã tắt xuống
+   cuối phải làm trên bản sao (`[...rows].sort(...)`), không thì mọi nơi khác đọc cùng
+   `queryKey` nhận về thứ tự đã bị đổi.
+4. **Mảng mới mỗi render trong deps của `useEffect`.** Bản đầu của `RowActions` đưa danh sách
+   mục (đã `sort`) vào deps của effect "mở menu thì focus mục đầu" — effect chạy lại sau mọi
+   lần render và kéo focus về đầu, nên phím ↓ trông như chết. Giữ qua `useRef`, effect chỉ
+   nghe `open`.
+5. **Nhãn bước chuyển IP có HAI bản.** API `transitionLabel` viết "Đánh dấu nghi chết", web
+   `ipam.trSuspect` viết "Nghi chết". Cả hai đều hiện ra người dùng (một cái trên nút, một cái
+   trong dòng lịch sử) — bài kiểm bám nhầm bản là đỏ mà chẳng nói lên điều gì.
+6. **"Hủy" trong dự án này là nút HỦY BỎ HỘP THOẠI (`common.cancel`), không phải "hủy phiếu".**
+   Tô đỏ nó là dạy người dùng bỏ qua màu đỏ, rồi tới nút thật sự nguy hiểm họ cũng không đọc
+   nữa. Màu đỏ chỉ dành cho việc LẤY ĐI thứ gì đó.

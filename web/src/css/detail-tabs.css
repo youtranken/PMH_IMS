@@ -189,6 +189,17 @@
   color: var(--primary-ink);
   border-bottom-color: var(--primary);
 }
+/*
+ * Khoảng thở giữa thanh tab và nội dung tab.
+ *
+ * Thanh tab là một ĐƯỜNG ĐIỀU HƯỚNG, thẻ ngay dưới nó là NỘI DUNG — hai vai trò khác nhau mà
+ * dính sát vào nhau thì đọc ra một khối liền, và cái gạch chân của tab đang chọn trông như
+ * viền trên của thẻ. Đặt ở `[role='tabpanel']` nên MỌI trang chi tiết (thiết bị · phần mềm ·
+ * đường truyền · tài khoản dịch vụ) được cùng một lúc, không phải sửa bốn chỗ.
+ */
+[role='tabpanel'] {
+  padding-top: var(--space-10);
+}
 
 /* --- Filter bar (thanh lọc trong khung) ----------------------------------- */
 .filter-bar {
@@ -214,78 +225,21 @@ input.search {
   padding-left: 2rem;
 }
 
-/* --- Stat card (Bảng điều khiển: số đếm dẫn vào hàng đợi) ------------------ */
-.stat-grid {
-  display: grid;
-  /* Gọn hơn: thẻ nhỏ + nhiều cột/hàng → dải KPI dashboard chiếm ít không gian. */
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: var(--space-4);
-}
-/* Xử lý mượn: 5 KPI trên 1 hàng cho gọn (co lại 1 cột khi màn hẹp). */
-.stat-grid.stat-grid-5 {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-}
-@media (max-width: 720px) {
-  .stat-grid.stat-grid-5 {
-    grid-template-columns: 1fr;
-  }
-}
-.stat-card {
-  position: relative;
-  text-align: left;
-  padding: var(--space-4) var(--space-5) var(--space-4) var(--space-6);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-sm);
-  cursor: pointer;
-  overflow: hidden;
-  transition: transform 0.12s var(--ease), box-shadow 0.15s var(--ease),
-    border-color 0.15s var(--ease);
-}
-.stat-card::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  background: var(--primary);
-  opacity: 0.85;
-}
-.stat-card:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow);
-  background: var(--surface);
-}
-.stat-card.critical {
-  border-color: var(--border-critical);
-  background: var(--danger-soft);
-}
-.stat-card.critical::before {
-  background: var(--danger);
-}
-.stat-num {
-  font-size: var(--fs-2xl);
-  font-weight: var(--fw-bold);
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-}
-.stat-num.zero {
-  color: var(--ink-3);
-}
-.stat-card.critical .stat-num {
-  color: var(--danger);
-}
-.stat-label {
-  margin-top: var(--space-1);
-  font-size: var(--fs-2xs);
-  font-weight: 600;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  color: var(--ink-2);
-}
+/*
+ * ĐÃ XÓA (28/08/2026): khối `.stat-grid` / `.stat-card` / `.stat-num` / `.stat-label` của một
+ * bản dựng Bảng điều khiển cũ. Bảng điều khiển hiện tại dùng `BlockCard`, không component nào
+ * còn gọi tới mấy lớp đó nữa — nhưng `.stat-grid` thứ hai vẫn ĐÈ lên `.stat-grid` thật ở trên
+ * (cùng độ đặc hiệu, đứng sau thì thắng) và chỉ đè MỘT PHẦN:
+ *
+ *   - `grid-template-columns` đổi `auto-fit` → `auto-fill`, nên cột trống KHÔNG co lại;
+ *   - `gap` đổi 1px → var(--space-4), nên các ô rời nhau ra;
+ *   - `background: var(--border)` của rule thật thì KHÔNG bị đè.
+ *
+ * Kết quả trên trang chi tiết: hai thẻ chỉ số ngồi trên một tấm nền xám kéo hết chiều ngang —
+ * đúng cái người dùng báo ở hình 34. Đây là kiểu hỏng chỉ lộ ra khi hai khối CSS không liên
+ * quan trùng tên lớp; đặt tên theo màn (`profile.css` đã làm đúng với `.profile-stat-card`)
+ * là cách tránh.
+ */
 
 @media (max-width: 680px) {
   /* Overlay chiếm gần full màn trên mobile — sheet full-bleed, không bo góc. */

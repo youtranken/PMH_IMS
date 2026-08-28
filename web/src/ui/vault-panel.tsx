@@ -8,6 +8,7 @@ import type { Me } from '@/lib/me';
 import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
+import { RowActions } from '@/ui/row-actions';
 import { Select } from '@/ui/select';
 import { RevealDialog } from '@/ui/reveal-dialog';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
@@ -49,6 +50,55 @@ export interface SecretMeta {
   updatedAt: string;
 }
 
+export function secretsKey(ownerType: SecretOwnerType, ownerId: string) {
+  return ['vault', ownerType, ownerId];
+}
+
+/**
+ * Két của một chủ thể + phán quyết quyền — MỘT định nghĩa, hai nơi dùng.
+ *
+ * Panel dưới đây cần cả danh sách; nhãn tab của trang chi tiết chỉ cần cái `length`. Tách ra
+ * đây vì luật "được xem danh sách hay không" KHÔNG được nằm ở hai chỗ: bản sao thứ hai sẽ
+ * quên `enabled: allowed`, và mỗi lần mở trang chi tiết là một cú 403 cho Member không có
+ * quyền — đúng thứ mà `verdict` sinh ra để tránh.
+ *
+ * SA/Admin không chờ `verdict`: `isAdmin` đã đủ, bắt họ đợi thêm một lượt mạng nữa là vô ích.
+ *
+ * Số secret vì thế là `undefined` chứ không phải 0 khi người xem không có quyền — "không biết"
+ * và "không có ngăn nào" là hai câu khác hẳn, và nhãn tab đề số 0 cho một két đầy là nói dối.
+ */
+export function useOwnerSecrets(ownerType: SecretOwnerType, ownerId: string, me: Me) {
+  const isAdmin = me.role === 'sa' || me.role === 'admin';
+
+  /**
+   * "Tôi làm được gì với chủ thể này" (story 6.3) — MỘT lần gọi, server phán.
+   *
+   * Client không tự suy từ vai: quyền của Member đến từ ma trận 6.2 cộng với grant còn
+   * hạn, và cả hai đổi được bất cứ lúc nào mà trình duyệt không hay biết.
+   */
+  const verdict = useQuery({
+    queryKey: ['vault', 'verdict', ownerType, ownerId],
+    queryFn: () =>
+      apiFetch<AccessVerdict>(
+        `/api/v1/vault/secrets/verdict?ownerType=${ownerType}&ownerId=${encodeURIComponent(ownerId)}`,
+      ),
+  });
+
+  const tier = verdict.data?.tier;
+  const allowed = isAdmin || (tier !== undefined && tier !== 'denied');
+
+  const secrets = useQuery({
+    queryKey: secretsKey(ownerType, ownerId),
+    queryFn: () =>
+      apiFetch<SecretMeta[]>(
+        `/api/v1/vault/secrets?ownerType=${ownerType}&ownerId=${encodeURIComponent(ownerId)}`,
+      ),
+    enabled: allowed,
+  });
+
+  return { verdict, secrets, allowed, isAdmin };
+}
+
 /**
  * Két sắt dùng chung (story 4.1, FR-021/FR-026, AD-15).
  *
@@ -86,34 +136,8 @@ export function VaultPanel({
   >(null);
   const openingRef = useRef<string | null>(null);
 
-  const isAdmin = me.role === 'sa' || me.role === 'admin';
-  const queryKey = ['vault', ownerType, ownerId];
-
-  /**
-   * "Tôi làm được gì với chủ thể này" (story 6.3) — MỘT lần gọi, server phán.
-   *
-   * Client không tự suy từ vai: quyền của Member đến từ ma trận 6.2 cộng với grant còn
-   * hạn, và cả hai đổi được bất cứ lúc nào mà trình duyệt không hay biết.
-   */
-  const verdict = useQuery({
-    queryKey: ['vault', 'verdict', ownerType, ownerId],
-    queryFn: () =>
-      apiFetch<AccessVerdict>(
-        `/api/v1/vault/secrets/verdict?ownerType=${ownerType}&ownerId=${encodeURIComponent(ownerId)}`,
-      ),
-  });
-
-  const tier = verdict.data?.tier;
-  const allowed = isAdmin || (tier !== undefined && tier !== 'denied');
-
-  const secrets = useQuery({
-    queryKey,
-    queryFn: () =>
-      apiFetch<SecretMeta[]>(
-        `/api/v1/vault/secrets?ownerType=${ownerType}&ownerId=${encodeURIComponent(ownerId)}`,
-      ),
-    enabled: allowed,
-  });
+  const queryKey = secretsKey(ownerType, ownerId);
+  const { verdict, secrets, allowed, isAdmin } = useOwnerSecrets(ownerType, ownerId, me);
 
   const revoke = useApiMutation<{ id: string }, unknown>(
     (input) => `/api/v1/vault/secrets/${input.id}`,
@@ -258,51 +282,55 @@ export function VaultPanel({
                       ) : (
                         <span className="badge warn">{t('vault.awaitingApproval')}</span>
                       )}
+                      {/*
+                        "Xem" ở NGOÀI, ba việc còn lại vào menu — mẫu "nút chính + tràn".
+                        Xem chính là lý do người ta mở tab két sắt; giấu nó sau một cú bấm là
+                        trả giá đúng chỗ không nên trả. Còn Sửa · Xoay · Xóa là việc thỉnh
+                        thoảng, và ba nút xám cạnh nhau làm mờ luôn cái nút quan trọng nhất.
+                      */}
                       {canEdit ? (
-                        <>
-                        <button
-                          type="button"
-                          className="btn sm"
-                          onClick={() => setEditing({ secret })}
-                        >
-                          {t('vault.edit')}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn sm"
-                          onClick={() => setRotating(secret)}
-                        >
-                          {t('vault.rotate')}
-                        </button>
-                        <button
-                          type="button"
-                          className="btn sm danger"
-                          disabled={revoke.isPending}
-                          onClick={() => {
-                            void (async () => {
-                              const ok = await askConfirm({
-                                message: t('vault.confirmRevoke', { label: secret.label }),
-                                danger: true,
-                                confirmLabel: t('vault.revoke'),
-                              });
-                              if (!ok) return;
-                              revoke.mutate(
-                                { id: secret.id },
-                                {
-                                  onSuccess: () => {
-                                    toast({ message: t('vault.revoked') });
-                                    void refresh();
-                                  },
-                                  onError: (error) =>
-                                    toast({ message: errorMessage(error), tone: 'error' }),
-                                },
-                              );
-                            })();
-                          }}
-                        >
-                          {t('vault.revoke')}
-                        </button>
-                        </>
+                        <RowActions
+                          label={t('common.actionsOf', { subject: secret.label })}
+                          items={[
+                            {
+                              key: 'edit',
+                              label: t('vault.edit'),
+                              onSelect: () => setEditing({ secret }),
+                            },
+                            {
+                              key: 'rotate',
+                              label: t('vault.rotate'),
+                              onSelect: () => setRotating(secret),
+                            },
+                            {
+                              key: 'revoke',
+                              label: t('vault.revoke'),
+                              danger: true,
+                              disabled: revoke.isPending,
+                              onSelect: () => {
+                                void (async () => {
+                                  const ok = await askConfirm({
+                                    message: t('vault.confirmRevoke', { label: secret.label }),
+                                    danger: true,
+                                    confirmLabel: t('vault.revoke'),
+                                  });
+                                  if (!ok) return;
+                                  revoke.mutate(
+                                    { id: secret.id },
+                                    {
+                                      onSuccess: () => {
+                                        toast({ message: t('vault.revoked') });
+                                        void refresh();
+                                      },
+                                      onError: (error) =>
+                                        toast({ message: errorMessage(error), tone: 'error' }),
+                                    },
+                                  );
+                                })();
+                              },
+                            },
+                          ]}
+                        />
                       ) : null}
                     </div>
                   </td>

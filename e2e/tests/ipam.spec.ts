@@ -6,6 +6,7 @@ import {
   resetDevices,
   resetIpam,
   resetUsers,
+  rowAction,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -317,10 +318,38 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     });
     expect(hasIps.status()).toBe(200);
 
-    // Dải biến khỏi danh sách…
-    expect((await page.request.get(`/api/v1/ipam/subnets/${subnetId}`)).status()).toBe(404);
-    // …và hồ sơ IP bên trong cũng vậy, chứ không ở lại trỏ vào một dải không còn hiện ở đâu.
+    /*
+     * Dải Ở LẠI, mang dấu vô hiệu hóa (28/08/2026) — trước đó nó biến mất khỏi mọi đường đọc,
+     * và người dùng đọc đúng cái đó là "đã bị xóa hẳn".
+     */
+    const still = await page.request.get(`/api/v1/ipam/subnets/${subnetId}`);
+    expect(still.status()).toBe(200);
+    expect(((await still.json()) as { voidedAt: string | null }).voidedAt).not.toBeNull();
+
+    // Nhưng KHÔNG nằm trong danh sách mặc định: mọi chỗ khác hỏi "dải nào đang dùng".
+    const alive = (await (await page.request.get('/api/v1/ipam/subnets')).json()) as {
+      id: string;
+    }[];
+    expect(alive.some((row) => row.id === subnetId)).toBe(false);
+    // Chỉ màn dải mạng bật cờ mới thấy.
+    const withVoided = (await (
+      await page.request.get('/api/v1/ipam/subnets?includeVoided=true')
+    ).json()) as { id: string }[];
+    expect(withVoided.some((row) => row.id === subnetId)).toBe(true);
+
+    // Hồ sơ IP thì đã ẩn — tra lẻ từng cái là đường GHI, phải từ chối.
     expect((await page.request.get(`/api/v1/ipam/addresses/${ipId}`)).status()).toBe(404);
+    /*
+     * NHƯNG bảng của chính dải đó vẫn hiện nguyên chúng. Đây là điểm quan trọng nhất của cả
+     * thay đổi: mấy cái máy ngoài kia không tự nhả IP tĩnh ra chỉ vì cuốn sổ cất dải đi, nên
+     * vẽ 6 ô "Trống" là nói với người đọc rằng cấp lại được — sai, và sai theo hướng gây ra
+     * xung đột IP thật.
+     */
+    const slots = (await (
+      await page.request.get(`/api/v1/ipam/subnets/${subnetId}/addresses`)
+    ).json()) as { kind: string; address: string }[];
+    const mine = slots.find((slot) => slot.address === `172.16.${octet}.1`);
+    expect(mine?.kind).toBe('record');
 
     /* Nhưng LỊCH SỬ vẫn còn — đó là chỗ trả lời "IP này từng của ai" mà AC 5.2 bắt giữ vĩnh
        viễn, và dòng cuối phải nói rõ nó bị ẩn THEO DẢI nào chứ không biến mất im lặng. */
@@ -330,6 +359,101 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     expect(
       rows.some((row) => String(row.changes?.reason ?? '').includes('khai nhầm dải')),
     ).toBe(true);
+  });
+
+  /**
+   * Vô hiệu hóa KHÔNG được trông như đã xóa (phiếu người dùng 28/08/2026).
+   *
+   * Trước đây bấm "Vô hiệu hóa" là thẻ dải biến mất khỏi cột trái, và không còn chỗ nào trên
+   * giao diện nói nó tồn tại — nên người dùng đọc ra "đã xóa hẳn". Nhưng dải đó vẫn giữ mấy
+   * chục hồ sơ IP TĨNH, và mấy cái máy ngoài kia không nhả địa chỉ ra chỉ vì cuốn sổ cất dải
+   * đi. Giờ nó ở lại, gạch ngang, xem được, bật lại được — rồi mới tới chuyện xóa.
+   */
+  test('vô hiệu hóa: dải Ở LẠI danh sách và gạch ngang, bật lại thì IP bên trong sống lại', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const octet = Number(stamp) % 200;
+    const cidr = `172.16.${octet}.0/29`;
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const subnetId = await createSubnet(page, cidr, `LAN tắt-bật E2E ${stamp}`);
+
+    // Hai hồ sơ IP: một cái sẽ tắt THEO DẢI, một cái bị xóa lẻ TRƯỚC đó vì lý do riêng.
+    const keep = await page.request.post('/api/v1/ipam/addresses', {
+      headers,
+      data: { subnetId, address: `172.16.${octet}.1`, usedBy: 'Máy chủ file' },
+    });
+    const gone = await page.request.post('/api/v1/ipam/addresses', {
+      headers,
+      data: { subnetId, address: `172.16.${octet}.2`, usedBy: 'gõ nhầm' },
+    });
+    expect(gone.status()).toBe(201);
+    const goneId = ((await gone.json()) as { id: string }).id;
+    expect(keep.status()).toBe(201);
+    expect(
+      (
+        await page.request.delete(`/api/v1/ipam/addresses/${goneId}`, {
+          headers,
+          data: { reason: 'gõ nhầm địa chỉ' },
+        })
+      ).status(),
+    ).toBe(200);
+
+    await page.goto(`/ip-addresses/${subnetId}`);
+    await rowAction(page, cidr, 'Vô hiệu hóa');
+    const off = page.getByRole('dialog');
+    await off.getByRole('textbox', { name: 'Lý do' }).fill('gộp sang VLAN mới');
+    await off.getByRole('button', { name: 'Vô hiệu hóa' }).click();
+    await expect(page.getByText('Đã vô hiệu hóa dải.')).toBeVisible();
+
+    /*
+     * Thẻ dải VẪN ĐỨNG ĐÓ, mang huy hiệu và nói rõ vì sao — không biến mất.
+     *
+     * Bám vào ĐÚNG thẻ của dải này, không phải chữ "Đã vô hiệu hóa" bất kỳ: cột trái giờ
+     * hiện cả những dải đã tắt từ các lần chạy trước, nên khớp lỏng là trúng nhiều thẻ.
+     */
+    const card = page.getByRole('link', { name: new RegExp(cidr.replace(/\./g, '\.')) });
+    await expect(card.getByText('Đã vô hiệu hóa', { exact: true })).toBeVisible();
+    await expect(card.getByText(/gộp sang VLAN mới/)).toBeVisible();
+
+    // Bảng IP vẫn hiện hồ sơ cũ — địa chỉ KHÔNG được vẽ thành ô trống sẵn sàng cấp lại.
+    await expect(page.getByText('Máy chủ file')).toBeVisible();
+    // Không một ô nào của dải đã tắt được mời cấp — kể cả những địa chỉ chưa ai dùng.
+    await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(0);
+    await expect(page.getByText(/Dải này đã vô hiệu hóa/)).toBeVisible();
+
+    // Bật lại: dải sống lại, và ĐÚNG hồ sơ đã tắt cùng nó cũng vậy.
+    await rowAction(page, cidr, 'Bật lại');
+    await page.getByRole('dialog').getByRole('button', { name: 'Bật lại' }).click();
+    await expect(page.getByText('Đã bật lại dải.')).toBeVisible();
+    await expect(card.getByText('Đã vô hiệu hóa', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Máy chủ file')).toBeVisible();
+
+    /*
+     * Hồ sơ bị xóa LẺ trước đó thì KHÔNG sống lại — nó đã xóa vì lý do riêng ("gõ nhầm địa
+     * chỉ"), bật lại dải mà kéo theo cả nó là trả về một cuốn sổ khác cuốn lúc tắt.
+     */
+    const slots = (await (
+      await page.request.get(`/api/v1/ipam/subnets/${subnetId}/addresses`)
+    ).json()) as { kind: string; address: string }[];
+    expect(slots.find((slot) => slot.address === `172.16.${octet}.1`)?.kind).toBe('record');
+    expect(slots.find((slot) => slot.address === `172.16.${octet}.2`)?.kind).toBe('free');
+  });
+
+  /**
+   * Đường hỏng của chính luồng trên: dải đang dùng thì không có gì để bật lại.
+   */
+  test('đường hỏng: bật lại một dải đang dùng bị từ chối', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const octet = Number(stamp) % 200;
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const subnetId = await createSubnet(page, `172.16.${octet}.0/29`, `LAN đang dùng E2E ${stamp}`);
+
+    const res = await page.request.patch(`/api/v1/ipam/subnets/${subnetId}/restore`, { headers });
+    expect(res.status()).toBe(409);
+    expect(((await res.json()) as { code: string }).code).toBe('SUBNET_NOT_VOIDED');
   });
 
   /**
@@ -505,7 +629,7 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
 
     await page.goto(`/ip-addresses/${subnetId}`);
     const row = page.getByRole('row', { name: new RegExp(`172\.16\.${octet}\.2`) });
-    await row.getByRole('button', { name: `Xóa hồ sơ IP 172.16.${octet}.2` }).click();
+    await rowAction(page, `172.16.${octet}.2`, 'Xóa');
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Lý do' }).fill('gõ nhầm địa chỉ');
     await form.getByRole('button', { name: 'Xóa' }).click();

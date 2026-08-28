@@ -4,13 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { formatDate, orDash } from '@/lib/format';
-import { PATHS } from '@/lib/routes';
+import { OWNER_PATH } from '@/lib/routes';
+import {
+  DISPOSAL_KIND_KEY as KIND_KEY,
+  type DisposalKind,
+} from '@/lib/disposal-kinds';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
-
-/** Khớp `DISPOSAL_KINDS` bên API. */
-type DisposalKind = 'device' | 'software' | 'service_account';
 
 interface DisposalItem {
   kind: DisposalKind;
@@ -22,18 +23,13 @@ interface DisposalItem {
   updatedAt: string | null;
 }
 
-const KIND_KEY: Record<DisposalKind, string> = {
-  device: 'disposal.kindDevice',
-  software: 'disposal.kindSoftware',
-  service_account: 'disposal.kindServiceAccount',
-};
-
-/** Đường về hồ sơ gốc — kho thanh lý chỉ NHÌN, sửa thì về đúng module chủ. */
-const LINK: Record<DisposalKind, (id: string) => string> = {
-  device: PATHS.device,
-  software: PATHS.softwareItem,
-  service_account: PATHS.serviceAccount,
-};
+/**
+ * Đường về hồ sơ gốc — kho thanh lý chỉ NHÌN, sửa thì về đúng module chủ.
+ *
+ * Dùng `OWNER_PATH` dùng chung chứ không giữ bản riêng: bảng điều khiển cũng dựng link từ một
+ * cặp `(loại, id)` y hệt, và hai bản chép tay sẽ lệch nhau khi có loại thứ tư vào kho.
+ */
+const LINK = OWNER_PATH;
 
 /**
  * Kho thanh lý — MỘT chỗ nhìn thấy mọi thứ công ty đã ngừng dùng.

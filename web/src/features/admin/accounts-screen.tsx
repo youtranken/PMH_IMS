@@ -13,6 +13,7 @@ import { FilterBar } from '@/ui/filter-bar';
 import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
+import { RowActions } from '@/ui/row-actions';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import { AccountForm } from '@/features/admin/account-form';
@@ -173,108 +174,116 @@ export function AccountsScreen({ me }: { me: Me }) {
         cell: ({ row }) => {
           const account = row.original;
           const rowBusy = setStatus.isPending || resetPassword.isPending || resetTotp.isPending;
+          const locking = account.status === 'active';
           return (
             <div className="action-cell">
-              {/* Sửa hồ sơ (tên · SĐT · mã NV) ngay trên danh sách, cùng nếp với màn Thiết bị
-                  và Phần mềm — đổi một số điện thoại là việc lặt vặt hằng ngày. */}
-              <button
-                type="button"
-                className="btn sm"
-                disabled={rowBusy}
-                aria-label={t('accounts.editOf', { name: account.fullName })}
-                onClick={() => setEditing(account)}
-              >
-                {t('common.edit')}
-              </button>
-              <button
-                type="button"
-                className="btn sm"
-                disabled={rowBusy}
-                onClick={() => setSessionsFor(account)}
-              >
-                {t('accounts.sessions')}
-              </button>
-              <button
-                type="button"
-                className="btn sm"
-                disabled={resetPassword.isPending}
-                onClick={() => {
-                  void (async () => {
-                    const ok = await askConfirm({
-                      message: t('accounts.confirmResetPassword', { name: account.fullName }),
-                      danger: true,
-                      confirmLabel: t('accounts.resetPassword'),
-                    });
-                    if (!ok) return;
-                    resetPassword.mutate(
-                      { id: account.id },
-                      {
-                        onSuccess: (result) => {
-                          setTemporaryPassword(result.temporaryPassword);
-                          void refresh();
-                        },
-                        onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
-                      },
-                    );
-                  })();
-                }}
-              >
-                {t('accounts.resetPassword')}
-              </button>
-              <button
-                type="button"
-                className="btn sm"
-                disabled={resetTotp.isPending}
-                onClick={() => {
-                  void (async () => {
-                    const ok = await askConfirm({
-                      message: t('accounts.confirmResetTotp', { name: account.fullName }),
-                      danger: true,
-                      confirmLabel: t('accounts.resetTotp'),
-                    });
-                    if (!ok) return;
-                    resetTotp.mutate(
-                      { id: account.id },
-                      {
-                        onSuccess: () => {
-                          toast({ message: 'Đã đặt lại xác thực 2 lớp.' });
-                          void refresh();
-                        },
-                        onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
-                      },
-                    );
-                  })();
-                }}
-              >
-                {t('accounts.resetTotp')}
-              </button>
-              <button
-                type="button"
-                className="btn sm"
-                disabled={setStatus.isPending}
-                onClick={() => {
-                  void (async () => {
-                    const next = account.status === 'active' ? 'locked' : 'active';
-                    if (next === 'locked') {
-                      const ok = await askConfirm({
-                        message: t('accounts.confirmLock', { name: account.fullName }),
-                        danger: true,
-                        confirmLabel: t('accounts.lock'),
-                      });
-                      if (!ok) return;
-                    }
-                    setStatus.mutate(
-                      { id: account.id, status: next },
-                      {
-                        onSuccess: () => void refresh(),
-                        onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
-                      },
-                    );
-                  })();
-                }}
-              >
-                {account.status === 'active' ? t('accounts.lock') : t('accounts.unlock')}
-              </button>
+              {/*
+                Năm việc trên một dòng — nhiều nhất trong cả hệ thống. Dãy nút phẳng ở đây làm
+                cột thao tác rộng hơn cả năm cột dữ liệu cộng lại, và bốn trong năm cái là việc
+                vài tháng mới làm một lần (đặt lại mật khẩu, đặt lại 2FA, khóa tài khoản).
+              */}
+              <RowActions
+                label={t('common.actionsOf', { subject: account.fullName })}
+                items={[
+                  /* Sửa hồ sơ (tên · SĐT · mã NV) ngay trên danh sách, cùng nếp với màn Thiết
+                     bị và Phần mềm — đổi một số điện thoại là việc lặt vặt hằng ngày. */
+                  {
+                    key: 'edit',
+                    label: t('common.edit'),
+                    disabled: rowBusy,
+                    onSelect: () => setEditing(account),
+                  },
+                  {
+                    key: 'sessions',
+                    label: t('accounts.sessions'),
+                    disabled: rowBusy,
+                    onSelect: () => setSessionsFor(account),
+                  },
+                  {
+                    key: 'reset-password',
+                    label: t('accounts.resetPassword'),
+                    danger: true,
+                    disabled: resetPassword.isPending,
+                    onSelect: () => {
+                      void (async () => {
+                        const ok = await askConfirm({
+                          message: t('accounts.confirmResetPassword', {
+                            name: account.fullName,
+                          }),
+                          danger: true,
+                          confirmLabel: t('accounts.resetPassword'),
+                        });
+                        if (!ok) return;
+                        resetPassword.mutate(
+                          { id: account.id },
+                          {
+                            onSuccess: (result) => {
+                              setTemporaryPassword(result.temporaryPassword);
+                              void refresh();
+                            },
+                            onError: (err) =>
+                              toast({ message: errorMessage(err), tone: 'error' }),
+                          },
+                        );
+                      })();
+                    },
+                  },
+                  {
+                    key: 'reset-totp',
+                    label: t('accounts.resetTotp'),
+                    danger: true,
+                    disabled: resetTotp.isPending,
+                    onSelect: () => {
+                      void (async () => {
+                        const ok = await askConfirm({
+                          message: t('accounts.confirmResetTotp', { name: account.fullName }),
+                          danger: true,
+                          confirmLabel: t('accounts.resetTotp'),
+                        });
+                        if (!ok) return;
+                        resetTotp.mutate(
+                          { id: account.id },
+                          {
+                            onSuccess: () => {
+                              toast({ message: t('accounts.totpReset') });
+                              void refresh();
+                            },
+                            onError: (err) =>
+                              toast({ message: errorMessage(err), tone: 'error' }),
+                          },
+                        );
+                      })();
+                    },
+                  },
+                  {
+                    key: 'lock',
+                    label: locking ? t('accounts.lock') : t('accounts.unlock'),
+                    /* Khóa là lấy đi (người ta không đăng nhập được nữa); mở khóa thì không. */
+                    danger: locking,
+                    disabled: setStatus.isPending,
+                    onSelect: () => {
+                      void (async () => {
+                        if (locking) {
+                          const ok = await askConfirm({
+                            message: t('accounts.confirmLock', { name: account.fullName }),
+                            danger: true,
+                            confirmLabel: t('accounts.lock'),
+                          });
+                          if (!ok) return;
+                        }
+                        setStatus.mutate(
+                          { id: account.id, status: locking ? 'locked' : 'active' },
+                          {
+                            onSuccess: () => void refresh(),
+                            onError: (err) =>
+                              toast({ message: errorMessage(err), tone: 'error' }),
+                          },
+                        );
+                      })();
+                    },
+                  },
+                ]}
+              />
             </div>
           );
         },

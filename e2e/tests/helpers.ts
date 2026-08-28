@@ -552,3 +552,35 @@ export function horizontalOverflow(page: Page): Promise<number> {
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
   );
 }
+
+/**
+ * Mở menu ba chấm của một dòng rồi chọn một việc trong đó (28/08/2026).
+ *
+ * Cột "Thao tác" của mọi bảng danh sách đã đổi từ dãy nút phẳng sang menu ba chấm
+ * (`ui/row-actions.tsx`), nên `getByRole('button', { name: 'Sửa' })` không còn tìm thấy gì:
+ * mục menu chỉ tồn tại trong DOM khi menu đang mở, và nó mang vai `menuitem` chứ không phải
+ * `button`. Để ở đây thay vì chép hai dòng vào hai chục chỗ — AD-15.
+ *
+ * `subject` là thứ đứng sau "Thao tác với …" trong `aria-label` của nút ba chấm: mã hồ sơ,
+ * địa chỉ IP, tên tài khoản… Nó phải RIÊNG cho từng dòng, đó chính là lý do nhãn mang nó.
+ */
+export async function rowAction(
+  page: Page,
+  subject: string | RegExp,
+  action: string | RegExp,
+): Promise<void> {
+  const label =
+    typeof subject === 'string'
+      ? `Thao tác với ${subject}`
+      : new RegExp(`Thao tác với .*${subject.source}`, subject.flags);
+  await page.getByRole('button', { name: label }).click();
+  await page.getByRole('menuitem', { name: action }).click();
+}
+
+/** Menu ba chấm của một dòng CÓ mục này không — dùng để kiểm việc bị ẩn theo quyền. */
+export async function rowActionNames(page: Page, subject: string): Promise<string[]> {
+  await page.getByRole('button', { name: `Thao tác với ${subject}` }).click();
+  const names = await page.getByRole('menuitem').allTextContents();
+  await page.keyboard.press('Escape');
+  return names;
+}

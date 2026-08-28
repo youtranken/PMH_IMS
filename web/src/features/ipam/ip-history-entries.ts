@@ -32,10 +32,32 @@ export function statusLabel(status: string | null | undefined): string {
   return STATUS_LABEL[status] ?? status;
 }
 
+/**
+ * Tên việc bằng tiếng Việt cho những hành động KHÔNG phải bước chuyển trạng thái.
+ *
+ * Bước chuyển đã tự mang tên tiếng Việt từ `transitionLabel` phía API ("Thu hồi", "Cấp lại"),
+ * nhưng bốn cái còn lại thì API ghi thẳng khóa máy — nên bảng lịch sử đang xen kẽ "Thu hồi"
+ * với "ip.voided". Ánh xạ ở web chứ không sửa dữ liệu đã ghi: `ip_history` là CHỈ-THÊM (AD-13),
+ * mọi dòng cũ vẫn mang khóa máy và phải đọc được như dòng mới.
+ *
+ * Khóa lạ (migration sau, dữ liệu cũ) GIỮ NGUYÊN — hiện "ip.somethingNew" còn hơn hiện ô trống.
+ */
+const ACTION_LABEL: Record<string, string> = {
+  'ip.created': 'Tạo hồ sơ',
+  'ip.updated': 'Sửa hồ sơ',
+  'ip.assigned': 'Gán chủ',
+  'ip.voided': 'Xóa hồ sơ',
+  'ip.restored': 'Bật lại',
+};
+
+export function actionLabel(action: string): string {
+  return ACTION_LABEL[action] ?? action;
+}
+
 export function toIpHistoryEntries(rows: IpHistoryRow[]): HistoryEntry[] {
   return rows.map((row) => ({
     id: row.id,
-    action: row.action,
+    action: actionLabel(row.action),
     detail: describe(row),
     actor: row.actor,
     at: row.createdAt,

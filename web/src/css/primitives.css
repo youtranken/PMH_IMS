@@ -398,8 +398,33 @@ table.table tbody tr.exp:hover td {
   color: var(--ink-3);
   font-size: var(--fs-xs);
 }
+/*
+ * Dải ĐÃ VÔ HIỆU HÓA — gạch ngang + xám, nhưng VẪN ĐỨNG ĐÓ (28/08/2026).
+ *
+ * Gạch ngang chỉ đặt lên MÃ DẢI và tên, không lên cả thẻ: gạch cả thẻ thì thanh mức sử dụng
+ * và dòng lý do cũng bị gạch, mà đó lại đúng là hai thứ người ta mở ra để đọc trước khi quyết
+ * định bật lại hay xóa.
+ */
+.subnet-card.is-disabled {
+  background: var(--surface-2);
+  border-style: dashed;
+}
+.subnet-card.is-disabled .subnet-link .mono,
+.subnet-card.is-disabled .subnet-link > .sub:not(.subnet-void-note) {
+  text-decoration: line-through;
+  color: var(--ink-3);
+}
+.subnet-card.is-disabled .usage-track {
+  opacity: 0.55;
+}
+.subnet-void-note {
+  color: var(--ink-3);
+  font-style: italic;
+}
+
 .subnet-card-actions {
   display: flex;
+  justify-content: flex-end;
   gap: var(--space-3);
   padding: 0 var(--space-7) var(--space-6);
 }

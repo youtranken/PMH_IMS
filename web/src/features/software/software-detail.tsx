@@ -17,6 +17,7 @@ import { BlankFields, DetailHeader, Stat, StatGrid, StatIfSet } from "@/ui/detai
 import { DisposeButton } from "@/ui/dispose-button";
 import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
+import { useTabCounts } from "@/ui/tab-counts";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useToast } from "@/ui/toast";
 import type { CatalogLists } from "@/features/catalog/catalog-types";
@@ -95,6 +96,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
    * Danh sách tab dựng TRƯỚC mấy nhánh `return` sớm bên dưới, vì `useVisibleTab` là hook:
    * đặt nó sau `if (software.isLoading) return` thì số hook giữa hai lượt render lệch nhau.
    */
+  const counts = useTabCounts("software", id, me);
   const tabItems = [
     { key: "profile", label: t("software.tabProfile") },
     // Tab "Máy đang dùng" chỉ có nghĩa với license (story 3.2).
@@ -108,10 +110,16 @@ export function SoftwareDetail({ me }: { me: Me }) {
         ]
       : []),
     // Két sắt chỉ hiện với người có quyền — Member không có đường tới endpoint (AD-9).
-    ...(canVault ? [{ key: "vault", label: t("vault.tab") }] : []),
+    ...(canVault
+      ? [{ key: "vault", label: t("vault.tab"), count: counts.secrets }]
+      : []),
     // Hợp đồng license, thư xác nhận SSL, hóa đơn tên miền — cùng `AttachmentPanel` với
     // thiết bị (2.3) và đường truyền (3.3), không có bản riêng cho phần mềm.
-    { key: "attachments", label: t("software.tabAttachments") },
+    {
+      key: "attachments",
+      label: t("software.tabAttachments"),
+      count: counts.files,
+    },
     { key: "history", label: t("software.tabHistory") },
   ];
   const safeTab = useVisibleTab(
@@ -144,7 +152,6 @@ export function SoftwareDetail({ me }: { me: Me }) {
         ]}
         code={item.code}
         name={item.name}
-        copyLabel={t("software.copyCode")}
         subline={
           <>
             <span>{t(KIND_KEY[item.kind])}</span>

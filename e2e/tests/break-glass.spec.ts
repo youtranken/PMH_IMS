@@ -369,9 +369,14 @@ test.describe('Break-glass', () => {
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByRole('button', { name: 'Xem' })).toBeVisible();
 
-    for (const label of ['Cất secret', 'Sửa thông tin', 'Xoay', 'Thu hồi']) {
-      await expect(page.getByRole('button', { name: label })).toHaveCount(0);
-    }
+    // "Cất secret" vẫn là nút phẳng trên đầu panel.
+    await expect(page.getByRole('button', { name: 'Cất secret' })).toHaveCount(0);
+    /*
+     * Sửa · Xoay · Thu hồi nằm trong menu ba chấm từ 28/08/2026, nên bám theo chữ trên nút
+     * đã thành một khẳng định luôn xanh: mục menu không có trong DOM khi menu đóng, kể cả
+     * với người CÓ quyền. Bám đúng cái nút mở menu — nó chỉ được vẽ khi `canEdit`.
+     */
+    await expect(page.getByRole('button', { name: /^Thao tác với/ })).toHaveCount(0);
   });
 
   /** Code review Epic 6, finding 2: Member mở màn duyệt phải thấy NGAY yêu cầu của mình. */

@@ -46,6 +46,27 @@ export const PATHS = {
 } as const;
 
 /**
+ * Loại chủ thể → đường tới hồ sơ của nó.
+ *
+ * Bốn loại này là `SECRET_OWNER_TYPES` bên API (`device` · `software` · `service_account` ·
+ * `isp`), và đủ dùng cho cả kho thanh lý (chỉ có ba loại đầu).
+ *
+ * Có mặt vì ba màn TỔNG — kho thanh lý, khối "vừa thanh lý" và khối "két lâu không đổi" trên
+ * bảng điều khiển — đều nhận một cặp `(ownerType, id)` rồi phải tự dựng link. Ba bản chép tay
+ * là ba chỗ phải nhớ sửa khi có loại thứ năm, và chỗ quên sẽ hiện ra một link chết chứ không
+ * phải một lỗi biên dịch. Ở đây thì `Record` bắt đủ khóa: thiếu một loại là TS đỏ ngay.
+ */
+export const OWNER_PATH: Record<
+  'device' | 'software' | 'service_account' | 'isp',
+  (id: string) => string
+> = {
+  device: (id) => PATHS.device(id),
+  software: (id) => PATHS.softwareItem(id),
+  service_account: (id) => PATHS.serviceAccount(id),
+  isp: (id) => PATHS.ispLine(id),
+};
+
+/**
  * Đường dẫn tiếng Việt của bản cũ → đường mới.
  *
  * Giữ lại vì link đã gửi qua chat, đã ghim trong trình duyệt, đã dán vào biên bản sự cố —

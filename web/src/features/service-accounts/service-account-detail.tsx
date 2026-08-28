@@ -12,6 +12,7 @@ import { LoadError, Loading, NotFound } from "@/ui/load-state";
 import { CopyButton } from "@/ui/copy-button";
 import { BlankFields, DetailHeader, Stat, StatGrid, StatIfSet } from "@/ui/detail-header";
 import { TabPanel, Tabs, initialTab } from "@/ui/tabs";
+import { useTabCounts } from "@/ui/tab-counts";
 import { VaultPanel } from "@/ui/vault-panel";
 import { toServiceAccountHistory } from "./service-account-history-entries";
 import {
@@ -42,6 +43,10 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
       "history",
     ]),
   );
+
+  /* Trước mọi nhánh `return` sớm bên dưới: đây là hook, đặt sau `if (isLoading) return` thì
+     số hook giữa hai lượt render lệch nhau. */
+  const counts = useTabCounts("service_account", id, me);
 
   const account = useQuery({
     queryKey: ["service-accounts", id],
@@ -85,7 +90,6 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
         ]}
         code={item.code}
         name={item.name}
-        copyLabel={t("serviceAccounts.copyCode")}
         subline={
           <>
             <span className="badge plain brand">{t(KIND_KEY[item.kind])}</span>
@@ -124,8 +128,12 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
       <Tabs
         items={[
           { key: "profile", label: t("serviceAccounts.tabProfile") },
-          { key: "vault", label: t("vault.tab") },
-          { key: "attachments", label: t("serviceAccounts.tabAttachments") },
+          { key: "vault", label: t("vault.tab"), count: counts.secrets },
+          {
+            key: "attachments",
+            label: t("serviceAccounts.tabAttachments"),
+            count: counts.files,
+          },
           { key: "history", label: t("serviceAccounts.tabHistory") },
         ]}
         value={tab}

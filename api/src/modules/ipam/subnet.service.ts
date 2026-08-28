@@ -29,6 +29,19 @@ export interface SubnetRecord {
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
+  /**
+   * Dải đã VÔ HIỆU HÓA hay chưa — `null` là đang dùng.
+   *
+   * Ba cột này có từ migration 0020; cái MỚI (28/08/2026) là chúng ra khỏi service.
+   *
+   * Trước 28/08/2026 ba trường này không bao giờ ra khỏi service: `list()` lọc thẳng
+   * `voidedAt IS NULL`, nên một dải vừa vô hiệu hóa là BIẾN MẤT khỏi màn hình. Người dùng đọc
+   * đúng cái đó là "đã xóa", và họ không sai — không còn chỗ nào trên giao diện nói nó tồn
+   * tại, trong khi mấy chục máy vẫn đang cắm IP tĩnh thuộc dải ấy.
+   */
+  voidedAt: Date | null;
+  voidedBy: string | null;
+  voidReason: string | null;
 }
 
 export interface SubnetWithUsage extends SubnetRecord, SubnetUsage {
@@ -66,12 +79,19 @@ export class SubnetService {
     private readonly catalog: CatalogApiService,
   ) {}
 
-  /** Danh sách kèm mức sử dụng (FR-020) — màn subnet cần cả hai, đừng bắt UI gọi hai lần. */
-  async list(): Promise<SubnetWithUsage[]> {
+  /**
+   * Danh sách kèm mức sử dụng (FR-020) — màn subnet cần cả hai, đừng bắt UI gọi hai lần.
+   *
+   * `includeVoided` mặc định TẮT, và đó là mặc định đúng: mọi thứ đọc dải qua `IpamApiService`
+   * (bảng điều khiển "Dải mạng sắp đầy", form NAT…) đang hỏi "dải nào đang dùng". Chỉ MÀN dải
+   * mạng bật cờ này lên, vì nó là nơi duy nhất có việc với một dải đã vô hiệu hóa: xem lại,
+   * bật lại, hoặc xóa hẳn.
+   */
+  async list(options: { includeVoided?: boolean } = {}): Promise<SubnetWithUsage[]> {
     const rows = await this.db
       .select()
       .from(subnetTable)
-      .where(isNull(subnetTable.voidedAt))
+      .where(options.includeVoided ? undefined : isNull(subnetTable.voidedAt))
       .orderBy(asc(subnetTable.cidr));
 
     /**
@@ -106,8 +126,15 @@ export class SubnetService {
     }));
   }
 
+  /**
+   * Một dải, KỂ CẢ đã vô hiệu hóa — đây là đường ĐỌC.
+   *
+   * Dải đã tắt vẫn phải mở ra xem được: đó là chỗ duy nhất trả lời "hồi đó dải này có những
+   * IP nào" trước khi quyết định bật lại hay xóa hẳn. Chặn ở đây thì nút "Bật lại" vừa thêm
+   * dẫn tới một trang 404.
+   */
   async findOne(id: string): Promise<SubnetWithUsage> {
-    const row = await this.requireAlive(id);
+    const row = await this.requireAny(id);
     const [used] = await this.db
       .select({ used: count() })
       .from(ipAddressTable)
@@ -303,6 +330,76 @@ export class SubnetService {
   }
 
   /**
+   * BẬT LẠI một dải đã vô hiệu hóa, kéo theo đúng những hồ sơ IP đã tắt CÙNG NÓ.
+   *
+   * "Cùng nó" nhận ra bằng dấu thời gian: `voidSubnet` đóng dải và mọi IP bên trong bằng MỘT
+   * `now` duy nhất trong một transaction, nên `ip_address.voided_at = subnet.voided_at` là
+   * điều kiện chính xác, không phải phỏng đoán. Quan trọng là nó KHÔNG đụng tới những hồ sơ
+   * IP bị xóa lẻ TRƯỚC đó vì lý do riêng ("gõ nhầm địa chỉ") — bật lại dải mà làm sống lại
+   * luôn mấy dòng đã xóa nhầm là trả về một cuốn sổ khác với cuốn lúc tắt.
+   *
+   * Vẫn ghi lịch sử cho từng hồ sơ (AD-13): "IP này từng của máy nào" phải đọc liền mạch, và
+   * một khoảng lặng không giải thích giữa lúc tắt và lúc bật là chỗ người đọc sẽ mất niềm tin.
+   */
+  async restore(actor: string, id: string): Promise<void> {
+    const row = await this.requireAny(id);
+    if (row.voidedAt === null) {
+      throw new ConflictException({
+        code: 'SUBNET_NOT_VOIDED',
+        message: 'Dải này đang dùng, không có gì để bật lại.',
+      });
+    }
+    const stamp = row.voidedAt;
+
+    await this.db.transaction(async (tx) => {
+      const now = new Date();
+      const children = await tx
+        .select({ id: ipAddressTable.id, status: ipAddressTable.status })
+        .from(ipAddressTable)
+        .where(and(eq(ipAddressTable.subnetId, id), eq(ipAddressTable.voidedAt, stamp)));
+      if (children.length > 0) {
+        await tx
+          .update(ipAddressTable)
+          .set({ voidedAt: null, voidedBy: null, voidReason: null, updatedAt: now })
+          .where(and(eq(ipAddressTable.subnetId, id), eq(ipAddressTable.voidedAt, stamp)));
+        await tx.insert(ipHistoryTable).values(
+          children.map((child) => ({
+            ipAddressId: child.id,
+            action: 'ip.restored',
+            actor,
+            fromStatus: child.status,
+            toStatus: child.status,
+            changes: { reason: 'bật lại theo dải' },
+          })),
+        );
+      }
+      await tx
+        .update(subnetTable)
+        .set({ voidedAt: null, voidedBy: null, voidReason: null, updatedAt: now })
+        .where(eq(subnetTable.id, id));
+      await this.audit.appendWithin(tx, {
+        actor,
+        action: 'subnet.restored',
+        objectType: 'subnet',
+        objectId: id,
+        detail: { cidr: row.cidr, addressesRestored: children.length },
+      });
+    });
+  }
+
+  /**
+   * Dải + trạng thái ẩn của nó, KỂ CẢ dải đã vô hiệu hóa.
+   *
+   * Tách khỏi `cidrOf` một cách cố ý. `cidrOf` là đường GHI (tạo/sửa hồ sơ IP) và phải tiếp
+   * tục từ chối dải đã tắt — thêm IP mới vào một dải đã cất đi là tạo dữ liệu không màn nào
+   * chịu trách nhiệm. Còn đây là đường ĐỌC: bảng IP của một dải đã tắt vẫn phải xem được.
+   */
+  async frameOf(id: string): Promise<{ cidr: string; voidedAt: Date | null }> {
+    const row = await this.requireAny(id);
+    return { cidr: row.cidr, voidedAt: row.voidedAt };
+  }
+
+  /**
    * XÓA CỨNG một dải — chỉ khi nó CHƯA TỪNG được dùng.
    *
    * Quyết định 2026-08-27: khai nhầm một dải rồi phải sống chung với nó mãi là phiền vô lý.
@@ -314,7 +411,10 @@ export class SubnetService {
    * bản ghi ở lại, tra cứu được, còn vết ai ẩn và vì sao.
    */
   async remove(actor: string, id: string): Promise<void> {
-    const row = await this.requireAlive(id);
+    // `requireAny`, không phải `requireAlive`: từ 28/08/2026 thứ tự người dùng đi là
+    // vô hiệu hóa TRƯỚC rồi mới xóa. Chặn dải đã tắt ở đây thì đúng cái đường đi vừa dựng lại
+    // kết thúc bằng 404 ở bước cuối.
+    const row = await this.requireAny(id);
     const [existing] = await this.db
       .select({ all: count() })
       .from(ipAddressTable)
@@ -409,6 +509,18 @@ export class SubnetService {
     return new Map(lists.sites.map((site) => [site.id, site.code]));
   }
 
+  /** Tra một dải KỂ CẢ đã vô hiệu hóa — dùng cho đường đọc, bật lại, và xóa hẳn. */
+  private async requireAny(id: string): Promise<typeof subnetTable.$inferSelect> {
+    const rows = await this.db.select().from(subnetTable).where(eq(subnetTable.id, id));
+    if (rows.length === 0) {
+      throw new NotFoundException({
+        code: 'SUBNET_NOT_FOUND',
+        message: 'Không tìm thấy dải này.',
+      });
+    }
+    return rows[0];
+  }
+
   private async requireAlive(id: string): Promise<typeof subnetTable.$inferSelect> {
     const rows = await this.db
       .select()
@@ -439,6 +551,9 @@ export class SubnetService {
       createdBy: row.createdBy,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
+      voidedAt: row.voidedAt,
+      voidedBy: row.voidedBy,
+      voidReason: row.voidReason,
     };
   }
 

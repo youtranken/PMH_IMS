@@ -9,6 +9,7 @@ import { Combobox } from '@/ui/combobox';
 import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
+import { RowActions } from '@/ui/row-actions';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/features/ipam/use-departments';
 import { useConfirm } from '@/ui/confirm-provider';
@@ -145,41 +146,48 @@ export function PortMapPanel({
                       {canEdit ? (
                         <td>
                           <div className="action-cell">
-                            <button
-                              type="button"
-                              className="btn sm"
-                              onClick={() => setEditing({ port })}
-                            >
-                              {t('ports.edit')}
-                            </button>
-                            <button
-                              type="button"
-                              className="btn sm danger"
-                              disabled={remove.isPending}
-                              onClick={() => {
-                                void (async () => {
-                                  const ok = await askConfirm({
-                                    message: t('ports.confirmRemove', { port: port.portLabel }),
-                                    danger: true,
-                                    confirmLabel: t('ports.remove'),
-                                  });
-                                  if (!ok) return;
-                                  remove.mutate(
-                                    { id: port.id },
-                                    {
-                                      onSuccess: () => {
-                                        toast({ message: t('ports.removed') });
-                                        void refresh();
-                                      },
-                                      onError: (error) =>
-                                        toast({ message: errorMessage(error), tone: 'error' }),
-                                    },
-                                  );
-                                })();
-                              }}
-                            >
-                              {t('ports.remove')}
-                            </button>
+                            <RowActions
+                              label={t('common.actionsOf', { subject: port.portLabel })}
+                              items={[
+                                {
+                                  key: 'edit',
+                                  label: t('ports.edit'),
+                                  onSelect: () => setEditing({ port }),
+                                },
+                                {
+                                  key: 'remove',
+                                  label: t('ports.remove'),
+                                  danger: true,
+                                  disabled: remove.isPending,
+                                  onSelect: () => {
+                                    void (async () => {
+                                      const ok = await askConfirm({
+                                        message: t('ports.confirmRemove', {
+                                          port: port.portLabel,
+                                        }),
+                                        danger: true,
+                                        confirmLabel: t('ports.remove'),
+                                      });
+                                      if (!ok) return;
+                                      remove.mutate(
+                                        { id: port.id },
+                                        {
+                                          onSuccess: () => {
+                                            toast({ message: t('ports.removed') });
+                                            void refresh();
+                                          },
+                                          onError: (error) =>
+                                            toast({
+                                              message: errorMessage(error),
+                                              tone: 'error',
+                                            }),
+                                        },
+                                      );
+                                    })();
+                                  },
+                                },
+                              ]}
+                            />
                           </div>
                         </td>
                       ) : null}
