@@ -18,7 +18,7 @@ import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useConfirm } from "@/ui/confirm-provider";
 import { useToast } from "@/ui/toast";
-import type { CatalogLists } from "@/features/catalog/catalog-types";
+import type { CatalogLists } from "@/lib/catalog-types";
 import { DeviceLicensesExpand } from "@/features/software/device-licenses-expand";
 import { DeviceForm } from "./device-form";
 import { toHistoryEntries } from "./device-history-entries";
@@ -29,7 +29,7 @@ import {
   locationLabel,
   type DeviceHistoryRow,
   type DeviceRow,
-} from "./device-types";
+} from "@/lib/device-types";
 import { PATHS } from "@/lib/routes";
 
 /** Khu mở rộng do module khác đóng góp (Epic 3/4/5) — Đợt 1 luôn rỗng. */

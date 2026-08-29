@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Combobox } from '@/ui/combobox';
-import { portRangeLabel, type ServicePortRow } from '@/features/catalog/catalog-types';
+import { portRangeLabel, type ServicePortRow } from '@/lib/catalog-types';
 
 /**
  * Ô chọn dịch vụ/port (0028) — DROPDOWN xổ khi bấm, không phải bảng bày sẵn.

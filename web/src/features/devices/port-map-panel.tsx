@@ -11,10 +11,10 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
 import { SuggestInput } from '@/ui/suggest-input';
-import { useDepartments } from '@/features/ipam/use-departments';
+import { useDepartments } from '@/ui/use-departments';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
-import type { DeviceRow } from './device-types';
+import type { DeviceRow } from '@/lib/device-types';
 import { PATHS } from '@/lib/routes';
 
 export interface PortRow {

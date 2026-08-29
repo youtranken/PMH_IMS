@@ -45,11 +45,5 @@ export const usersTable = pgTable('users', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const knownDeviceTable = pgTable('known_device', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  userId: uuid('user_id').notNull(),
-  deviceHash: text('device_hash').notNull(),
-  label: text('label'),
-  firstSeenAt: timestamp('first_seen_at', { withTimezone: true }).notNull().defaultNow(),
-  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }).notNull().defaultNow(),
-});
+// `known_device` đã chuyển sang `auth/known-device.schema.ts` (28/08) — module `auth` là nơi
+// duy nhất đọc/ghi bảng đó, nên nó phải là nơi khai schema (AD-3).

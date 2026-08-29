@@ -12,7 +12,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
-import type { DeviceRow } from '@/features/devices/device-types';
+import type { DeviceRow } from '@/lib/device-types';
 import { SeatTerm } from './seat-cells';
 import {
   seatLabel,

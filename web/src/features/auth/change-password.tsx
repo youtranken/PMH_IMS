@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation, useMe } from '@/lib/api';
-import { AuthCard } from '@/features/auth/auth-card';
+import { AuthCard } from './auth-card';
 
 /** Đổi mật khẩu — bắt buộc ở lần đăng nhập đầu (mật khẩu tạm do SA cấp). */
 export function ChangePassword() {

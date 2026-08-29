@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { toHistoryEntries } from './device-history-entries';
-import type { DeviceHistoryRow } from './device-types';
+import type { DeviceHistoryRow } from '@/lib/device-types';
 
 function row(over: Partial<DeviceHistoryRow>): DeviceHistoryRow {
   return {

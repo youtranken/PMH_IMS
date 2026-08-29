@@ -8,6 +8,13 @@ import {
 } from './approvals.service';
 
 /**
+ * Hợp đồng KIỂU của module — tái xuất ở đây để nơi gọi không phải chạm `approvals.service`.
+ * (Trước 28/08 hai module `dashboard` và `vault` phải import thẳng service chỉ để lấy
+ *  `ApprovalRecord`, vì cửa chính không đủ dùng — đúng loại vi phạm AD-2 mà luật CI bỏ sót.)
+ */
+export type { ApprovalRecord, CreateApprovalInput, TransitionInput } from './approvals.service';
+
+/**
  * AD-2: public api DUY NHẤT của module `approvals`.
  *
  * Dùng bởi: break-glass (Epic 6), phiếu ISO (Epic 8), phiếu sự cố (Epic 9). Các module đó

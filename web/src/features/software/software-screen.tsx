@@ -20,7 +20,7 @@ import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
-import type { CatalogLists } from '@/features/catalog/catalog-types';
+import type { CatalogLists } from '@/lib/catalog-types';
 import { AssignDialog } from './license-assignments-panel';
 import { SoftwareForm } from './software-form';
 import {

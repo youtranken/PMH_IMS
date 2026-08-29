@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
-import { AuthCard } from '@/features/auth/auth-card';
+import { AuthCard } from './auth-card';
 
 interface LoginResult {
   status: 'authenticated' | 'totp-required' | 'totp-enroll-required';

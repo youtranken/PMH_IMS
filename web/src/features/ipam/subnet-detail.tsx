@@ -14,7 +14,7 @@ import { Field } from "@/ui/page-header";
 import { Pagination } from "@/ui/pagination";
 import { RowActions } from "@/ui/row-actions";
 import { SuggestInput } from "@/ui/suggest-input";
-import { useDepartments } from "./use-departments";
+import { useDepartments } from "@/ui/use-departments";
 import { useToast } from "@/ui/toast";
 import { HistoryPanel } from "@/ui/history-panel";
 import {

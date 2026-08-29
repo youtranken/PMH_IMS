@@ -16,7 +16,7 @@ import { Field, FormSection, PageHeader } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
-import type { CatalogLists, ServicePortRow } from '@/features/catalog/catalog-types';
+import type { CatalogLists, ServicePortRow } from '@/lib/catalog-types';
 import { CatalogForm } from '@/features/catalog/catalog-form';
 import { DeviceForm } from '@/features/devices/device-form';
 import { AttachmentPanel } from '@/ui/attachment-panel';

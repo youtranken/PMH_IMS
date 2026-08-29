@@ -15,7 +15,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
-import type { CatalogLists } from '@/features/catalog/catalog-types';
+import type { CatalogLists } from '@/lib/catalog-types';
 import { DeviceLicensesExpand } from '@/features/software/device-licenses-expand';
 import { DeviceForm } from './device-form';
 import { DeviceImportDialog } from './device-import-dialog';
@@ -26,7 +26,7 @@ import {
   locationLabel,
   type DeviceRow,
   type DeviceStatus,
-} from './device-types';
+} from '@/lib/device-types';
 import { PATHS } from '@/lib/routes';
 
 const DEFAULT_LIMIT = 20;

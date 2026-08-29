@@ -7,7 +7,7 @@ import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
-import type { CatalogLists } from '@/features/catalog/catalog-types';
+import type { CatalogLists } from '@/lib/catalog-types';
 import type { SubnetRow } from './ipam-types';
 
 export function SubnetForm({
