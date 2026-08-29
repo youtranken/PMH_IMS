@@ -292,20 +292,30 @@ export class SubnetService {
      * nào" mà AC 5.2 bắt giữ vĩnh viễn nằm ở đó. Mỗi hàng vẫn để lại một dòng lịch sử nói rõ
      * nó bị ẩn theo dải nào, chứ không biến mất im lặng.
      */
-    const children = await this.db
-      .select({ id: ipAddressTable.id, status: ipAddressTable.status })
-      .from(ipAddressTable)
-      .where(and(eq(ipAddressTable.subnetId, id), isNull(ipAddressTable.voidedAt)));
-
     await this.db.transaction(async (tx) => {
       const now = new Date();
-      if (children.length > 0) {
-        await tx
-          .update(ipAddressTable)
-          .set({ voidedAt: now, voidedBy: actor, voidReason: text, updatedAt: now })
-          .where(and(eq(ipAddressTable.subnetId, id), isNull(ipAddressTable.voidedAt)));
+      /*
+       * Danh sách hàng bị ẩn lấy TỪ CHÍNH câu UPDATE (`returning`), không phải từ một câu
+       * SELECT chạy trước đó ngoài transaction.
+       *
+       * Bản trước đọc `children` bằng `this.db` (ngoài tx) rồi mới UPDATE trong tx. Chỉ cần
+       * một IP được cấp trong khoảnh khắc giữa hai câu lệnh: câu UPDATE ẩn luôn hàng mới đó
+       * (nó khớp `subnet_id` + `voided_at IS NULL`), nhưng vòng ghi `ip_history` chạy trên
+       * ảnh chụp cũ nên KHÔNG sinh dòng `ip.voided` cho nó — vi phạm đúng điều chú thích
+       * ngay trên đây tự hứa ("mỗi hàng vẫn để lại một dòng lịch sử… chứ không biến mất im
+       * lặng") và đúng điều AC 5.2 bắt giữ vĩnh viễn. Tệ hơn: `restore()` khớp theo
+       * `voidedAt = stamp` sẽ hồi sinh hàng đó và ghi `ip.restored`, nên lịch sử có "bật lại"
+       * mà không có "ẩn". `addressesVoided` trong audit cũng sai số.
+       */
+      const voided = await tx
+        .update(ipAddressTable)
+        .set({ voidedAt: now, voidedBy: actor, voidReason: text, updatedAt: now })
+        .where(and(eq(ipAddressTable.subnetId, id), isNull(ipAddressTable.voidedAt)))
+        .returning({ id: ipAddressTable.id, status: ipAddressTable.status });
+
+      if (voided.length > 0) {
         await tx.insert(ipHistoryTable).values(
-          children.map((child) => ({
+          voided.map((child) => ({
             ipAddressId: child.id,
             action: 'ip.voided',
             actor,
@@ -324,7 +334,7 @@ export class SubnetService {
         action: 'subnet.voided',
         objectType: 'subnet',
         objectId: id,
-        detail: { reason: text, addressesVoided: children.length },
+        detail: { reason: text, addressesVoided: voided.length },
       });
     });
   }
