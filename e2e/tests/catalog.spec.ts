@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import {
+  APP_ORIGIN,
   confirmAction,
   E2E_MEMBER,
   E2E_SA,
@@ -177,7 +178,7 @@ test.describe('Danh mục', () => {
       return ((await res.json()) as { csrfToken: string }).csrfToken;
     });
     const response = await page.request.post('/api/v1/catalog/site', {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
       data: { code: 'HACK', name: 'Không được phép' },
     });
     expect(response.status()).toBe(403);
@@ -198,7 +199,7 @@ test.describe('Danh mục', () => {
       const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
       return ((await res.json()) as { csrfToken: string }).csrfToken;
     });
-    const headers = { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN };
 
     const siteRes = await page.request.post('/api/v1/catalog/site', {
       headers,
@@ -306,7 +307,7 @@ test.describe('Danh mục', () => {
     });
 
     const res = await page.request.post('/api/v1/catalog/service_port', {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
       data: { name: `Nguoc E2E ${stamp}`, protocol: 'tcp', portFrom: 52000, portTo: 50000 },
     });
     expect(res.status()).toBe(400);

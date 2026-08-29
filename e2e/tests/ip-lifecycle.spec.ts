@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  APP_ORIGIN,
   E2E_SA,
   firstLogin,
   resetDevices,
@@ -26,7 +27,7 @@ async function setUp(
   page: Page,
   stamp: string,
 ): Promise<{ subnetId: string; ipId: string; address: string; headers: Record<string, string> }> {
-  const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+  const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
   const octet = Number(stamp) % 200;
   const subnet = await page.request.post('/api/v1/ipam/subnets', {
     headers,

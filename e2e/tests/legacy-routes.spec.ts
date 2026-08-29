@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { E2E_SA, firstLogin, resetUsers } from './helpers';
+import { APP_ORIGIN, E2E_SA, firstLogin, resetUsers } from './helpers';
 
 /**
  * Đường dẫn đổi sang tiếng Anh, nhưng link tiếng Việt đã gửi qua chat, đã ghim trong trình
@@ -46,7 +46,7 @@ test('link cũ có :id giữ nguyên id khi chuyển sang đường mới', asyn
   });
   const pc = catalog.deviceTypes.find((type) => type.name === 'PC')!;
   const created = await page.request.post('/api/v1/devices', {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+    headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
     data: { code: `PC-E2E-RD-${stamp}`, name: 'Máy kiểm chuyển hướng', deviceTypeId: pc.id },
   });
   expect(created.status()).toBe(201);
@@ -72,7 +72,7 @@ test('link cũ giữ nguyên ?tab= khi chuyển sang đường mới', async ({ 
   });
   const pc = catalog.deviceTypes.find((type) => type.name === 'PC')!;
   const created = await page.request.post('/api/v1/devices', {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+    headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
     data: { code: `PC-E2E-TAB-${stamp}`, name: 'Máy kiểm deep-link', deviceTypeId: pc.id },
   });
   const id = ((await created.json()) as { device: { id: string } }).device.id;

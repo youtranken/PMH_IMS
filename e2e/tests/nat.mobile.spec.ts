@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, firstLogin, resetDevices, resetIpam, resetUsers } from './helpers';
+import { APP_ORIGIN, E2E_SA, firstLogin, resetDevices, resetIpam, resetUsers } from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -22,7 +22,7 @@ test.describe('Sổ NAT ở 390px', () => {
   test('bảng NAT xếp dọc, đọc đủ port/lý do/người dùng, không tràn ngang', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     const catalog = await page.evaluate(async () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });

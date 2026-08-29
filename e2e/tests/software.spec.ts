@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, firstLogin, resetSoftware, resetUsers, rowAction, writeHeaders } from './helpers';
+import { APP_ORIGIN, E2E_SA, firstLogin, resetSoftware, resetUsers, rowAction, writeHeaders } from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -35,7 +35,7 @@ async function createViaApi(
     return ((await res.json()) as { csrfToken: string }).csrfToken;
   });
   const response = await page.request.post('/api/v1/software', {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+    headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
     data,
   });
   return { status: response.status(), body: (await response.json()) as Record<string, unknown> };
@@ -78,7 +78,7 @@ test.describe('Hồ sơ phần mềm', () => {
     });
     const id = (created.body.id ?? '') as string;
     const renewed = await page.request.post(`/api/v1/software/${id}/renew`, {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
       data: { endDate: '2027-12-31' },
     });
     expect(renewed.status()).toBe(201);
@@ -143,7 +143,7 @@ test.describe('Hồ sơ phần mềm', () => {
       return ((await res.json()) as { csrfToken: string }).csrfToken;
     });
     const back = await page.request.post(`/api/v1/software/${String(lic.body.id)}/renew`, {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
       data: { endDate: '2026-01-01' },
     });
     expect(back.status()).toBe(400);

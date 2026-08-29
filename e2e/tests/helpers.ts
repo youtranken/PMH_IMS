@@ -2,6 +2,20 @@ import { execSync } from 'node:child_process';
 import { expect, request, type Page } from '@playwright/test';
 import { NobleCryptoPlugin, ScureBase32Plugin, TOTP } from 'otplib';
 
+/**
+ * Origin của ứng dụng — NGUỒN DUY NHẤT cho mọi request thủ công trong bộ E2E.
+ *
+ * `CsrfGuard` so `Origin` của request với `APP_BASE_URL` của server. Trước 28/08, 137 chỗ
+ * trong `tests/` gõ cứng `https://ims.pmh.com.vn` trong khi CI dựng stack với
+ * `APP_BASE_URL=https://localhost` — nghĩa là job `e2e` KHÔNG THỂ xanh: mọi request ghi
+ * trả 403 ORIGIN_MISMATCH. Đó là lý do CI chưa từng chạy được, và mọi con số "xanh
+ * 235/235" đều là tự khai trên máy dev. Xem `docs/CODE-REVIEW-2026-08-28.md` (F-QA-01).
+ *
+ * Đặt `IMS_BASE_URL` là đổi cả baseURL của Playwright lẫn Origin gửi lên — hai thứ đó
+ * BẮT BUỘC phải khớp nhau, nên chúng phải đọc từ cùng một biến.
+ */
+export const APP_ORIGIN = process.env.IMS_BASE_URL ?? 'https://ims.pmh.com.vn';
+
 export const E2E_SA = { email: 'e2e-sa@pmh.com.vn', password: 'E2e@Test#2026' };
 export const E2E_MEMBER = { email: 'e2e-member@pmh.com.vn', password: 'E2e@Test#2026' };
 export const NEW_PASSWORD = 'Ims#Manh2026!ok';
@@ -44,19 +58,49 @@ function dropAccountsCreatedByE2e(): void {
   });
 }
 
+/** Trần đăng nhập/IP mà cả bộ E2E chạy dưới — đủ cao để không ai đụng phải do chạy nhiều. */
+export const E2E_LOGIN_RATE_LIMIT = 500;
+
+/**
+ * Đọc trần đăng nhập theo IP đang có trong `system_config`.
+ * Dùng để bài kiểm rate-limit tự trả lại đúng giá trị nó mượn.
+ */
+export function getLoginRateLimit(): string {
+  return execSync(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -tAc "SELECT value FROM system_config WHERE key = 'login.rate_limit_per_ip'"`,
+    { cwd: '..', stdio: 'pipe' },
+  )
+    .toString()
+    .trim();
+}
+
+/** Đặt trần đăng nhập theo IP. CHỈ dùng trong E2E. */
+export function setLoginRateLimit(value: number): void {
+  execSync(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "UPDATE system_config SET value = '${value}' WHERE key = 'login.rate_limit_per_ip'"`,
+    { cwd: '..', stdio: 'pipe' },
+  );
+}
+
 /**
  * Nới trần đăng nhập theo IP cho MÔI TRƯỜNG TEST.
  *
  * Cả bộ E2E đăng nhập vài chục lần trong ít phút từ cùng một IP, đụng trần
  * `login.rate_limit_per_ip` (mặc định 20/phút) và một loạt test đỏ vì 429 chứ không phải
- * vì sản phẩm sai. Nới ở đây thay vì hạ trần thật: bản thân cơ chế chặn dò mật khẩu đã có
- * test riêng ở `login-rate.guard.spec.ts` (kể cả việc ngưỡng phải ĐỌC TỪ system_config).
+ * vì sản phẩm sai.
+ *
+ * ĐÍNH CHÍNH so với bản trước (28/08): chú thích cũ nói "cơ chế chặn dò mật khẩu đã có test
+ * riêng ở login-rate.guard.spec.ts" — nhưng bài đó TIÊM SystemConfigService GIẢ, nên nó chỉ
+ * chứng minh hàm đếm hoạt động, không chứng minh guard được lắp đúng vào chuỗi request. Cộng
+ * với việc hàm này chạy trong MỌI beforeEach và không bao giờ trả lại, NFR-01 "rate-limit theo
+ * IP trên endpoint đăng nhập" chưa từng chạy thật một lần nào trên stack thật.
+ *
+ * Nay: `login-rate-limit.spec.ts` mượn trần xuống thấp, chứng minh 429 là THẬT, rồi trả lại;
+ * và `global-teardown.ts` khôi phục giá trị gốc khi cả bộ chạy xong, để DB dev/test không nằm
+ * vĩnh viễn ở ngưỡng 500 (nguy hiểm nếu bản restore drill của Story 4.3 lấy dữ liệu từ đây).
  */
 function relaxLoginRateLimit(): void {
-  execSync(
-    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "UPDATE system_config SET value = '500' WHERE key = 'login.rate_limit_per_ip'"`,
-    { cwd: '..', stdio: 'pipe' },
-  );
+  setLoginRateLimit(E2E_LOGIN_RATE_LIMIT);
 }
 
 export const COMPOSE =
@@ -489,7 +533,7 @@ export async function writeHeaders(page: Page): Promise<Record<string, string>> 
  * `goto('/')` không biết đi đâu — cả hai đều đỏ theo kiểu chẳng liên quan gì tới bài test.
  */
 export const SECOND_BROWSER = {
-  baseURL: process.env.IMS_BASE_URL ?? 'https://ims.pmh.com.vn',
+  baseURL: APP_ORIGIN,
   ignoreHTTPSErrors: true,
   locale: 'vi-VN',
   timezoneId: 'Asia/Ho_Chi_Minh',

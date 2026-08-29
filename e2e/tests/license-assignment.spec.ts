@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  APP_ORIGIN,
   confirmAction,
   E2E_SA,
   firstLogin,
@@ -31,7 +32,7 @@ async function createDevice(page: Page, code: string): Promise<string> {
   });
   const pc = catalog.deviceTypes.find((type) => type.name === 'PC')!;
   const created = await page.request.post('/api/v1/devices', {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+    headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
     data: { code, name: `Máy ${code}`, deviceTypeId: pc.id },
   });
   expect(created.status()).toBe(201);
@@ -41,7 +42,7 @@ async function createDevice(page: Page, code: string): Promise<string> {
 async function createLicense(page: Page, code: string, seats: number | null): Promise<string> {
   const csrf = await csrfOf(page);
   const created = await page.request.post('/api/v1/software', {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+    headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
     data: {
       code,
       name: `License ${code}`,
@@ -63,7 +64,7 @@ async function assign(
 ) {
   const csrf = await csrfOf(page);
   return page.request.post(`/api/v1/software/${softwareId}/assignments`, {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+    headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
     data: { deviceId, overSeatReason: overSeatReason ?? '', ...terms },
   });
 }
@@ -156,7 +157,7 @@ test.describe('Gán license theo seat', () => {
 
     const released = await page.request.delete(
       `/api/v1/software/${licenseId}/assignments/${assignmentId}`,
-      { headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' } },
+      { headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN } },
     );
     expect(released.status()).toBe(200);
 
@@ -170,7 +171,7 @@ test.describe('Gán license theo seat', () => {
     const stamp = Date.now().toString().slice(-6);
     const csrf = await csrfOf(page);
     const ssl = await page.request.post('/api/v1/software', {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
       data: { code: `SSL-E2E-NA-${stamp}`, name: 'SSL', kind: 'ssl', endDate: '2027-01-01' },
     });
     const sslId = ((await ssl.json()) as { id: string }).id;
@@ -320,7 +321,7 @@ test.describe('Gán license theo seat', () => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
     const csrf = await csrfOf(page);
-    const headers = { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN };
 
     const licenseId = await createLicense(page, `LIC-E2E-BAD-${stamp}`, 3);
     const deviceId = await createDevice(page, `PC-E2E-BAD-${stamp}`);
@@ -417,7 +418,7 @@ test.describe('Gán license theo seat', () => {
     const code = `SSL-E2E-ROW-${stamp}`;
     const csrf = await csrfOf(page);
     const created = await page.request.post('/api/v1/software', {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
       // SSL bắt buộc có hạn (`requiresEndDate`) — thiếu là 400 chứ không phải lỗi của màn.
       data: { code, name: 'Chứng chỉ không có ghế', kind: 'ssl', endDate: '2028-12-31' },
     });

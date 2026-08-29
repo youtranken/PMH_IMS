@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  APP_ORIGIN,
   E2E_MEMBER,
   E2E_SA,
   firstLogin,
@@ -41,7 +42,7 @@ async function createDevice(page: Page, code: string): Promise<string> {
   });
   const pc = catalog.deviceTypes.find((type) => type.name === 'PC')!;
   const created = await page.request.post('/api/v1/devices', {
-    headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+    headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
     data: { code, name: `Máy ${code}`, deviceTypeId: pc.id },
   });
   expect(created.status()).toBe(201);
@@ -56,7 +57,7 @@ async function stash(
   label: string,
 ): Promise<void> {
   const created = await page.request.post('/api/v1/vault/secrets', {
-    headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+    headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
     data: { ownerType, ownerId, kind: 'password', label, value: 'Mat-Khau#2026' },
   });
   expect(created.status()).toBe(201);
@@ -102,7 +103,7 @@ test.describe('Trang tổng Két sắt', () => {
 
     const swCode = `LIC-E2E-VF-${stamp}`;
     const sw = await page.request.post('/api/v1/software', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: { code: swCode, name: 'License có key', kind: 'license', endDate: '2028-12-31' },
     });
     expect(sw.status()).toBe(201);
@@ -202,7 +203,7 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
   test('gán hàng loạt hỏng một phần: vẫn báo rõ ai không gán được', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const doomed = `e2e-tao-moi-${stamp}@pmh.com.vn`;
 
     const created = await page.request.post('/api/v1/accounts', {
@@ -297,7 +298,7 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
     }[])[0];
 
     const granted = await page.request.post('/api/v1/vault/access', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: {
         memberEmail: E2E_MEMBER.email,
         scopeType: first.scopeType,

@@ -1,6 +1,7 @@
 import { execSync } from 'node:child_process';
 import { expect, test, type Page } from '@playwright/test';
 import {
+  APP_ORIGIN,
   COMPOSE,
   confirmAction,
   E2E_MEMBER,
@@ -33,7 +34,7 @@ async function createSwitch(page: Page, code: string): Promise<string> {
   });
   const type = catalog.deviceTypes.find((t) => t.name === 'Switch')!;
   const created = await page.request.post('/api/v1/devices', {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+    headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
     data: { code, name: 'Switch cho két sắt', deviceTypeId: type.id, serial: `FOC-${code}` },
   });
   expect(created.status()).toBe(201);
@@ -99,7 +100,7 @@ test.describe('Két sắt', () => {
       label: `SSH root E2E ${stamp}`,
       value: 'khong-quan-trong',
     };
-    const headers = { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN };
 
     expect((await page.request.post('/api/v1/vault/secrets', { headers, data: body })).status())
       .toBe(201);
@@ -155,7 +156,7 @@ test.describe('Két sắt', () => {
     expect(list.status()).toBe(403);
 
     const create = await page.request.post('/api/v1/vault/secrets', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: {
         ownerType: 'device',
         ownerId: deviceId,
@@ -182,7 +183,7 @@ test.describe('Két sắt', () => {
     const plaintext = `Plain#Text#${stamp}`;
 
     const created = await page.request.post('/api/v1/vault/secrets', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: {
         ownerType: 'device',
         ownerId: deviceId,

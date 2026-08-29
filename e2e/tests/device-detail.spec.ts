@@ -2,7 +2,7 @@ import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, firstLogin, resetDevices, resetUsers } from './helpers';
+import { APP_ORIGIN, E2E_SA, firstLogin, resetDevices, resetUsers } from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -24,7 +24,7 @@ async function createSwitch(page: Page, code: string): Promise<string> {
   });
   const type = catalog.deviceTypes.find((t) => t.name === 'Switch')!;
   const created = await page.request.post('/api/v1/devices', {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+    headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
     data: {
       code,
       name: 'Switch lõi phòng máy',
@@ -50,7 +50,7 @@ test.describe('Trang chi tiết thiết bị', () => {
     const csrf = await csrfOf(page);
 
     await page.request.post(`/api/v1/devices/${deviceId}/ports`, {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
       data: { portLabel: 'Gi1/0/1', connectedLabel: 'uplink nhà mạng' },
     });
 
@@ -120,7 +120,7 @@ test.describe('Trang chi tiết thiết bị', () => {
     // Máy in: `has_port_map = false` trong seed 0011 — đúng loại không có tab Port map.
     const printer = catalog.deviceTypes.find((t) => t.name === 'Printer')!;
     const created = await page.request.post('/api/v1/devices', {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
       data: {
         code: `PR-E2E-TAB-${stamp}`,
         name: 'Máy in kiểm tab',
@@ -169,7 +169,7 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
     });
     const type = catalog.deviceTypes.find((item) => item.name === 'Switch')!;
     const created = await page.request.post('/api/v1/devices', {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
       data: {
         code,
         name: 'Switch có bảo hành',
@@ -217,7 +217,7 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
     });
     const pc = catalog.deviceTypes.find((item) => item.name === 'PC')!;
     const created = await page.request.post('/api/v1/devices', {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
       data: { code: `PC-E2E-NOWT-${stamp}`, name: 'Máy không hạn', deviceTypeId: pc.id },
     });
     const id = ((await created.json()) as { device: { id: string } }).device.id;
@@ -244,7 +244,7 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
     const deviceId = await createSwitch(page, `SW-E2E-CNT-${stamp}`);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     await page.goto(`/devices/${deviceId}`);
     // Rỗng vẫn đề 0 — "chưa có gì" khác "chưa biết", và người đọc cần phân biệt được.

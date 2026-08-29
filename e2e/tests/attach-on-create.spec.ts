@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import {
+  APP_ORIGIN,
   E2E_SA,
   firstLogin,
   resetDevices,
@@ -201,7 +202,7 @@ test.describe('Giấy tờ của hồ sơ phần mềm', () => {
       return ((await res.json()) as { csrfToken: string }).csrfToken;
     });
     const created = await page.request.post('/api/v1/software', {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
       // SSL bắt buộc có hạn (luật `requiresEndDate`) — thiếu là 400 chứ không phải lỗi màn.
       data: {
         code: `SSL-E2E-${stamp}`,

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import {
+  APP_ORIGIN,
   confirmAction,
   E2E_SA,
   firstLogin,
@@ -33,7 +34,7 @@ async function createDevice(page: Page, code: string): Promise<string> {
   });
   const type = catalog.deviceTypes.find((t) => t.name === 'Server')!;
   const created = await page.request.post('/api/v1/devices', {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+    headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
     data: { code, name: 'Máy chủ có giấy tờ', deviceTypeId: type.id },
   });
   expect(created.status()).toBe(201);
