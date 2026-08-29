@@ -55,6 +55,15 @@ export class AuditQueryService {
       conds.length > 0 ? sql`WHERE ${sql.join(conds, sql` AND `)}` : sql``;
 
     const offset = (q.page - 1) * q.pageSize;
+    /*
+     * JOIN theo EMAIL. Cột `actor` của audit_log lưu email (xem AuditWriterService).
+     *
+     * Bản trước join `u.sub = a.actor` — bảng `users` chưa bao giờ có cột `sub`; đó là mảnh
+     * sót của bản QLTS mà AD-12 dặn phải grep bỏ. Postgres ném 42703 nên endpoint này 500 ở
+     * MỌI lần gọi. Không có gì đỏ vì đây là raw SQL (TypeScript và `npm run build` không
+     * thấy), màn web còn `planned: true` nên chưa ai bấm vào, và không có test nào chạm tới.
+     * `users.email` là citext UNIQUE nên join này có index.
+     */
     const [items, totalRows] = await Promise.all([
       this.db.execute<{
         id: string;
@@ -69,7 +78,7 @@ export class AuditQueryService {
         SELECT a.id, a.actor, u.full_name AS actor_name, a.action,
                a.object_type, a.object_id, a.detail, a.created_at
         FROM audit_log a
-        LEFT JOIN users u ON u.sub = a.actor
+        LEFT JOIN users u ON u.email = a.actor
         ${where}
         ORDER BY a.created_at DESC, a.id DESC
         LIMIT ${q.pageSize} OFFSET ${offset}
