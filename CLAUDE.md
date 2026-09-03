@@ -84,10 +84,18 @@ thu hẹp được union phân biệt bằng cờ boolean** (`if (!r.ok) r.reaso
 **Kết thúc mỗi epic — chạy đủ 3 bước, đúng thứ tự:**
 
 ```bash
-npm run test && npm run test:e2e     # 1. toàn bộ test xanh
+bash ops/ci-local.sh --e2e            # 1. lint + depcruise + test đơn vị + build + E2E
 /code-review high                     # 2. tự soi lại epic vừa xong, sửa hết finding
 graphify update . && graphify cluster-only .   # 3. cập nhật bản đồ (mục dưới)
 ```
+
+Cổng chia hai nơi (03/09): **GitHub Actions** chạy lint · depcruise · test đơn vị · build và là
+cổng tự động chặn merge vào `master`; **E2E chỉ chạy ở máy nội bộ** vì nó cần dựng cả stack
+docker. Nghĩa là E2E **không có ai ép ngoài anh** — bước 1 ở trên là ràng buộc duy nhất giữ nó
+sống. Không chạy `--e2e` thì DoD gạch 7 chưa đạt, dù GitHub báo xanh.
+
+`ops/ci-local.sh --e2e` tự dựng lại stack bằng `--build` trước khi chạy: thiếu bước đó thì test
+chạy trên image CŨ và báo xanh cho code chưa hề được nạp.
 
 Code review là bắt buộc, không phải tùy chọn: chạy `/code-review high` trên toàn bộ thay đổi của epic, sửa hết finding **trước khi** đóng epic trong `sprint-status.yaml`.
 

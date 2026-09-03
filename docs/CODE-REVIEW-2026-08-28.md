@@ -379,6 +379,45 @@ luôn nghĩa là xuyên feature.
 nhập — hai tab đăng nhập cùng lúc từ một máy trước đây ném 23505 không ai bắt → 500 và rollback
 cả lượt đăng nhập. `.gitignore` lưu lại đúng UTF-8 (graphify đang phải đọc fallback cp1252).
 
+### Cập nhật 03/09 — chạy E2E thật, phát hiện thêm 3 lỗi mà rà soát tĩnh không thấy
+
+Lần đầu chạy `npx playwright test` trên stack thật với code đã sửa: **256 bài cũ xanh** (tức
+là refactor 137 chỗ `Origin` và mọi bản sửa không làm hỏng gì), **4 bài mới đỏ**. Cả 4 đều là
+phát hiện thật, không phải test viết ẩu.
+
+**Module `audit` hỏng ở BA tầng chồng lên nhau, mỗi lỗi che lỗi kế tiếp.** Đây là bài học đáng
+giá nhất của cả đợt: rà soát tĩnh chỉ thấy được lớp trên cùng.
+
+| Lớp | Lỗi | Chỉ lộ ra khi |
+| --- | --- | --- |
+| 1 | `LEFT JOIN users u ON u.sub = a.actor` — cột `sub` không tồn tại → 42703 | đọc code (đã tìm ra ở rà soát tĩnh) |
+| 2 | `@Controller('admin/audit')` thiếu tiền tố `api/v1` — controller **duy nhất trong 17 cái**. nginx chỉ chuyển tiếp `/api/`, `= /api`, `= /health`; mọi đường khác rơi vào SPA fallback → endpoint **không tiếp cận được từ trình duyệt** | gọi thật qua nginx (E2E) |
+| 3 | `created_at` **mơ hồ** giữa `audit_log` và `users` (cả hai bảng đều có cột đó) → 42702 mỗi khi lọc theo ngày. Điều kiện WHERE viết cột trần, không gắn bí danh | sửa xong lớp 1 mới chạm tới được |
+
+Lớp 2 và 3 **không thể phát hiện bằng đọc code** một cách thực tế: lớp 2 cần biết cấu hình
+nginx, lớp 3 bị lớp 1 che. Chúng chứng minh vì sao E2E chạm endpoint thật là bắt buộc chứ
+không phải xa xỉ.
+
+Đã thêm `api/src/route-prefix.spec.ts` — quét mọi `*.controller.ts`, bắt buộc tiền tố `api/v1`,
+có ngoại lệ tường minh cho `/health`. Bài này chặn cả **lớp** lỗi chứ không chỉ một chỗ, và có
+chốt sàn `files.length >= 15` để không "xanh vì không tìm thấy gì".
+
+**Lỗi thứ tư — trong chính bài test của tôi, và nó cũng chỉ ra một sự thật về hệ thống:**
+`login-rate-limit.spec.ts` bắn dồn dập để chờ cache config nhả, nên trúng **throttler toàn cục**
+(300 req/phút) trước và nhận `TOO_MANY_REQUESTS` thay vì `LOGIN_RATE_LIMITED`. Hai hàng rào khác
+nhau. Sửa bằng cách giãn cách 4 giây mỗi lần bắn.
+
+Nhân đó, bài test **chứng minh bằng thực nghiệm** finding F-QA-12: `SystemConfigService` cache
+30 giây trong bộ nhớ tiến trình và `setWithin` chỉ xóa cache trong tiến trình gọi nó — nên "đổi
+cấu hình có hiệu lực ngay" là **không đúng**: có độ trễ tới 30 giây, và worker giữ cache riêng.
+Đây là thứ cần ghi vào tài liệu vận hành trước khi ai đó siết một ngưỡng an ninh trong sự cố
+và tưởng nó có tác dụng tức thì.
+
+**Lỗi thứ năm — cũng của tôi:** `rate-limit-backup.ts` dùng `__dirname` trong khi gói `e2e` khai
+`"type": "module"` → `globalSetup` chết và **không bài nào chạy**, trong khi lệnh vẫn thoát 0 vì
+bị nối `| tail`. Nhắc lại một điều trong chính báo cáo này: "xanh" và "không chạy gì" trông
+giống hệt nhau nếu không nhìn kỹ.
+
 ### Còn lại — cần quyết định của chủ dự án
 
 1. **Đẩy repo lên remote + bật branch protection.** Tôi không tạo remote thay được. Cho tới

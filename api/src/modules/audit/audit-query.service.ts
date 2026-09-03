@@ -38,17 +38,27 @@ export class AuditQueryService {
     page: number;
     pageSize: number;
   }> {
+    /*
+     * MỌI cột phải gắn bí danh `a.` — cả hai câu dưới đều `FROM audit_log a`.
+     *
+     * Bản trước viết cột trần (`created_at >= ...`). Câu đếm không JOIN nên chạy được, nhưng
+     * câu lấy dữ liệu có `LEFT JOIN users u` và `users` CŨNG có cột `created_at` → Postgres
+     * ném 42702 "column reference created_at is ambiguous" mỗi khi người dùng lọc theo ngày.
+     *
+     * Lỗi này bị lỗi `u.sub` che khuất suốt 9 epic: join sai cột chết trước (42703) nên không
+     * ai chạm tới được lớp thứ hai. Sửa lớp một xong, E2E lộ ra ngay lớp hai.
+     */
     const conds = [
-      q.actor ? sql`actor ILIKE ${'%' + q.actor + '%'}` : null,
-      q.action ? sql`action = ${q.action}` : null,
-      q.objectType ? sql`object_type = ${q.objectType}` : null,
-      q.objectId ? sql`object_id ILIKE ${'%' + q.objectId + '%'}` : null,
+      q.actor ? sql`a.actor ILIKE ${'%' + q.actor + '%'}` : null,
+      q.action ? sql`a.action = ${q.action}` : null,
+      q.objectType ? sql`a.object_type = ${q.objectType}` : null,
+      q.objectId ? sql`a.object_id ILIKE ${'%' + q.objectId + '%'}` : null,
       // VN: from 00:00, to inclusive → < (to + 1 ngày) 00:00 giờ VN
       q.from
-        ? sql`created_at >= (${q.from}::date AT TIME ZONE 'Asia/Ho_Chi_Minh')`
+        ? sql`a.created_at >= (${q.from}::date AT TIME ZONE 'Asia/Ho_Chi_Minh')`
         : null,
       q.to
-        ? sql`created_at < ((${q.to}::date + 1) AT TIME ZONE 'Asia/Ho_Chi_Minh')`
+        ? sql`a.created_at < ((${q.to}::date + 1) AT TIME ZONE 'Asia/Ho_Chi_Minh')`
         : null,
     ].filter((c): c is NonNullable<typeof c> => c !== null);
     const where =
@@ -84,7 +94,7 @@ export class AuditQueryService {
         LIMIT ${q.pageSize} OFFSET ${offset}
       `),
       this.db.execute<{ n: number }>(sql`
-        SELECT count(*)::int AS n FROM audit_log ${where}
+        SELECT count(*)::int AS n FROM audit_log a ${where}
       `),
     ]);
     return {

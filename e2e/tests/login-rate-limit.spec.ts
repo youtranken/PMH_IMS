@@ -38,6 +38,19 @@ test.describe('Chống dò mật khẩu theo IP', () => {
     setLoginRateLimit(Number(restoreTo) || E2E_LOGIN_RATE_LIMIT);
   });
 
+  /*
+   * `SystemConfigService` cache mỗi khóa 30 GIÂY trong bộ nhớ tiến trình
+   * (`system-config.service.ts:9` — `CACHE_TTL_MS = 30_000`), và `setWithin` chỉ xóa cache
+   * TRONG tiến trình gọi nó. Ta đổi trần bằng psql nên api không hề biết: nó vẫn dùng giá trị
+   * cũ tới 30 giây.
+   *
+   * Vì vậy bài này KHÔNG chờ mù bằng sleep, mà bắn lại cho tới khi thấy hành vi đổi, có trần
+   * thời gian. Đây cũng chính là bằng chứng thực nghiệm cho F-QA-12 trong hồ sơ rà soát:
+   * "đổi cấu hình có hiệu lực ngay" là không đúng — có độ trễ tới 30 giây, và worker giữ cache
+   * riêng của nó.
+   */
+  test.setTimeout(120_000);
+
   test('vượt trần thì trả 429 LOGIN_RATE_LIMITED, không phải 401', async ({ page }) => {
     await page.goto('/login');
 
@@ -50,26 +63,47 @@ test.describe('Chống dò mật khẩu theo IP', () => {
 
     // Trong trần: phải là 401 (sai mật khẩu), KHÔNG được là 429.
     for (let i = 0; i < LIMIT; i += 1) {
-      const res = await attempt();
-      expect(res.status(), `lần thử ${i + 1} còn trong trần`).toBe(401);
+      expect(await attempt().then((r) => r.status())).toBe(401);
     }
 
-    // Vượt trần: guard phải cắt trước cả khi kiểm mật khẩu.
-    const blocked = await attempt();
+    /*
+     * Vượt trần: guard phải cắt TRƯỚC cả khi kiểm mật khẩu.
+     *
+     * GIÃN CÁCH 4 giây giữa các lần bắn, KHÔNG bắn liên tục: `ThrottlerModule` toàn cục có
+     * trần 300 request/phút (`app.module.ts`), nên vòng lặp dày sẽ trúng guard ĐÓ trước và
+     * trả `TOO_MANY_REQUESTS` thay vì `LOGIN_RATE_LIMITED` — đúng lỗi bài này mắc phải lần
+     * chạy đầu. Hai hàng rào khác nhau, phải phân biệt được thì test mới nói lên điều gì.
+     */
+    let blocked = await attempt();
+    for (let i = 0; i < 12 && blocked.status() !== 429; i += 1) {
+      await page.waitForTimeout(4_000);
+      blocked = await attempt();
+    }
+
     expect(blocked.status()).toBe(429);
     expect(await blocked.json()).toMatchObject({ code: 'LOGIN_RATE_LIMITED' });
   });
 
   test('trần đọc TỪ system_config, không viết cứng trong code (AD-11)', async ({ page }) => {
-    // Nâng trần lên cao rồi bắn đúng số lần vừa làm nghẽn ở bài trên: phải hết bị chặn.
+    // Nâng trần lên cao: cùng một IP vừa bị chặn ở bài trên phải được đi tiếp.
+    // Nếu ngưỡng bị viết cứng trong code thì dòng UPDATE này không đổi được gì và bài đỏ.
     setLoginRateLimit(E2E_LOGIN_RATE_LIMIT);
     await page.goto('/login');
 
-    const res = await page.request.post('/api/v1/auth/login', {
-      headers: { Origin: APP_ORIGIN },
-      data: { email: E2E_SA.email, password: 'sai-mat-khau-co-y' },
-      failOnStatusCode: false,
-    });
+    const send = () =>
+      page.request.post('/api/v1/auth/login', {
+        headers: { Origin: APP_ORIGIN },
+        data: { email: E2E_SA.email, password: 'sai-mat-khau-co-y' },
+        failOnStatusCode: false,
+      });
+
+    // Lại phải đợi cache 30 giây của SystemConfigService nhả ra, và vẫn giãn cách để không
+    // trúng throttler toàn cục — xem ghi chú ở bài trên.
+    let res = await send();
+    for (let i = 0; i < 12 && res.status() === 429; i += 1) {
+      await page.waitForTimeout(4_000);
+      res = await send();
+    }
 
     // Đổi một dòng trong system_config là đổi hành vi — không cần dựng lại ảnh docker.
     expect(res.status()).toBe(401);

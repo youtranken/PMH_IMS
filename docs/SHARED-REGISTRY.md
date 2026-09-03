@@ -123,6 +123,17 @@
 
 ## Cách CI ép luật (không trông vào review)
 
+Cổng chia hai nơi (quyết định 03/09):
+
+- **GitHub Actions** (`.github/workflows/ci.yml`) — lint · depcruise · test đơn vị · build.
+  Đây là cổng **tự động** chặn merge vào `master` qua branch protection.
+- **Máy nội bộ** (`bash ops/ci-local.sh --e2e`) — E2E Playwright trên docker compose thật.
+  E2E cần dựng cả stack nên chạy ở đây nhanh hơn và không ăn hạn mức Actions của repo private.
+
+Đánh đổi phải biết: **E2E không còn là cổng tự động.** Thứ duy nhất giữ nó sống là luật đóng
+epic trong `CLAUDE.md` — `--e2e` phải xanh trước khi chuyển story sang `done`. Nếu nếp đó trôi,
+cách rẻ nhất để đóng lại là một self-hosted runner trong LAN rồi bỏ comment job `e2e`.
+
 | Luật | Công cụ | Chạy bằng |
 | --- | --- | --- |
 | Đồ thị module acyclic, cấm import nội bộ xuyên module (AD-2) | dependency-cruiser | `npm --prefix api run depcruise` |
