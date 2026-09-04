@@ -1,5 +1,5 @@
 import type { HistoryEntry } from '@/ui/history-panel';
-import type { DeviceHistoryRow } from './device-types';
+import type { DeviceHistoryRow } from '@/lib/device-types';
 
 /**
  * Đổi bản ghi `device_history` thô thành dòng người đọc được cho `HistoryPanel` dùng chung.

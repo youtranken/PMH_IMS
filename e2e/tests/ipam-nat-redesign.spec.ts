@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  APP_ORIGIN,
   E2E_SA,
   firstLogin,
   resetDevices,
@@ -27,7 +28,7 @@ async function csrfOf(page: Page): Promise<string> {
 
 async function createSubnet(page: Page, cidr: string, name: string): Promise<string> {
   const created = await page.request.post('/api/v1/ipam/subnets', {
-    headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+    headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
     data: { cidr, name },
   });
   expect(created.status()).toBe(201);
@@ -41,7 +42,7 @@ async function createRouter(page: Page, code: string): Promise<string> {
   });
   const firewall = catalog.deviceTypes.find((type) => type.name === 'Firewall')!;
   const created = await page.request.post('/api/v1/devices', {
-    headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+    headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
     data: { code, name: `Router ${code}`, deviceTypeId: firewall.id },
   });
   expect(created.status()).toBe(201);
@@ -88,7 +89,7 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
 
     // Cấp một IP nằm ở TRANG 3 — con số trên nút phải thấy nó dù trang 1 đang hiện.
     const created = await page.request.post('/api/v1/ipam/addresses', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: { subnetId: id, address: `10.${octet}.8.120`, usedBy: 'P. Kế toán' },
     });
     expect(created.status()).toBe(201);
@@ -272,7 +273,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     const deviceId = await createRouter(page, routerCode);
 
     const created = await page.request.post('/api/v1/ipam/nat', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: {
         deviceId,
         protocol: 'tcp',
@@ -320,7 +321,7 @@ test.describe('Sổ NAT — lưu hỏng một phần', () => {
   }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const routerCode = `FW-E2E-P-${stamp}`;
     const deviceId = await createRouter(page, routerCode);
 
@@ -383,7 +384,7 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
   }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const routerCode = `FW-E2E-T-${stamp}`;
     await createRouter(page, routerCode);
 
@@ -465,7 +466,7 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
   }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const routerCode = `FW-E2E-NOIP-${stamp}`;
     await createRouter(page, routerCode);
 
@@ -511,7 +512,7 @@ test.describe('Popup Sửa có chỗ quản lý giấy tờ', () => {
     });
     const pc = catalog.deviceTypes.find((type) => type.name === 'PC')!;
     const created = await page.request.post('/api/v1/devices', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: { code, name: 'Máy cần đổi giấy tờ', deviceTypeId: pc.id },
     });
     expect(created.status()).toBe(201);
@@ -538,7 +539,7 @@ test.describe('Sổ NAT — lịch sử và giấy tờ', () => {
   test('mở rule → sửa → gỡ đều để lại dòng lịch sử nói rõ đổi gì', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const routerCode = `FW-E2E-HIST-${stamp}`;
     const routerId = await createRouter(page, routerCode);
 
@@ -606,7 +607,7 @@ test.describe('Sổ NAT — lịch sử và giấy tờ', () => {
   test('đính được giấy tờ vào rule NAT và vào dải mạng', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     const routerId = await createRouter(page, `FW-E2E-FILE-${stamp}`);
     const rule = await page.request.post('/api/v1/ipam/nat', {

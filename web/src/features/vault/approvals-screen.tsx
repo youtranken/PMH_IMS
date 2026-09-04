@@ -7,7 +7,7 @@ import { formatDateTime, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { Dialog } from '@/ui/dialog';
-import { EmptyState, Loading } from '@/ui/load-state';
+import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useToast } from '@/ui/toast';
@@ -96,10 +96,19 @@ export function ApprovalsScreen({ me }: { me: Me }) {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['break-glass'] });
 
-  const items =
-    tab === 'pending' ? (pending.data ?? []) : tab === 'log' ? (log.data ?? []) : (mine.data ?? []);
-  const loading =
-    tab === 'pending' ? pending.isLoading : tab === 'log' ? log.isLoading : mine.isLoading;
+  /**
+   * `query` của tab đang xem — lấy MỘT lần rồi rút cả ba trạng thái từ đó.
+   *
+   * Bản trước rút `items`/`loading` bằng hai chuỗi ba nhánh riêng và KHÔNG có nhánh lỗi:
+   * `pending.data ?? []` biến một API 500 thành mảng rỗng, nên màn hiện "Chưa có yêu cầu nào
+   * chờ duyệt". Đây là màn DUYỆT BREAK-GLASS — admin trực đêm nhìn thấy màn trống và tin là
+   * không có ai đang xin quyền khẩn cấp, trong khi phiếu đang nằm đó. Mọi màn khác trong repo
+   * đều dùng `LoadError`; riêng màn này thì không import nó.
+   */
+  const active = tab === 'pending' ? pending : tab === 'log' ? log : mine;
+  const items = active.data ?? [];
+  const loading = active.isLoading;
+  const failed = active.isError;
 
   return (
     <>
@@ -141,9 +150,17 @@ export function ApprovalsScreen({ me }: { me: Me }) {
       <TabPanel tabKey={tab}>
         {loading ? (
           <Loading />
+        ) : failed ? (
+          <LoadError onRetry={() => void active.refetch()} />
         ) : items.length === 0 ? (
           <EmptyState
-            title={t(tab === 'pending' ? 'approvals.emptyPending' : 'approvals.emptyLog')}
+            title={t(
+              tab === 'pending'
+                ? 'approvals.emptyPending'
+                : tab === 'log'
+                  ? 'approvals.emptyLog'
+                  : 'approvals.emptyMine',
+            )}
             hint={tab === 'pending' ? t('approvals.emptyPendingHint') : undefined}
           />
         ) : (

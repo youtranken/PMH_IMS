@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, firstLogin, resetUsers, rowAction } from './helpers';
+import { APP_ORIGIN, E2E_SA, firstLogin, resetUsers, rowAction } from './helpers';
 
 /**
  * Hồ sơ tài khoản có SĐT, mã nhân viên và ngày sinh (migration 0031).
@@ -62,7 +62,7 @@ test.describe('Hồ sơ tài khoản', () => {
     const target = items.find((item) => item.email === E2E_SA.email)!;
 
     const saved = await page.request.patch(`/api/v1/accounts/${target.id}/profile`, {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: { fullName: 'E2E Super Admin', phone, employeeCode: `NV-${stamp}`, birthDate: '1990-05-20' },
     });
     expect(saved.status()).toBe(200);
@@ -79,7 +79,7 @@ test.describe('Hồ sơ tài khoản', () => {
   test('đường hỏng: mã nhân viên trùng bị chặn kèm lời giải thích', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     const users = await page.request.get('/api/v1/accounts?limit=200');
     const items = ((await users.json()) as {
@@ -108,7 +108,7 @@ test.describe('Hồ sơ tài khoản', () => {
 
   test('đường hỏng: SĐT gõ chữ bị từ chối; để trống thì xoá được giá trị cũ', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const users = await page.request.get('/api/v1/accounts?limit=200');
     const target = ((await users.json()) as { items: { id: string; fullName: string }[] }).items[0];
 

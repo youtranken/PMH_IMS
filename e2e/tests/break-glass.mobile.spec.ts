@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  APP_ORIGIN,
   E2E_MEMBER,
   E2E_SA,
   NEW_PASSWORD,
@@ -40,7 +41,7 @@ test.describe('Duyệt break-glass ở 390px', () => {
   test('Admin đọc được lý do và duyệt được trên điện thoại', async ({ page }) => {
     const saTotp = await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-5);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     const catalog = await page.evaluate(async () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });
@@ -69,7 +70,7 @@ test.describe('Duyệt break-glass ở 390px', () => {
       'Switch tầng 3 mất kết nối từ 1h45 sáng, khách sạn báo mạng phòng họp chết, cần vào ' +
       'cấu hình VLAN để khôi phục trước giờ làm việc';
     await page.request.post('/api/v1/vault/break-glass', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: { ownerType: 'device', ownerId: deviceId, reason: longReason, hours: 4 },
     });
     await logout(page);

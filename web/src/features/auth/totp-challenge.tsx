@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation, useMe } from '@/lib/api';
-import { AuthCard } from '@/features/auth/auth-card';
+import { AuthCard } from './auth-card';
 import { OtpInput } from '@/ui/otp-input';
 
 /** Bước 2 của đăng nhập: nhập mã 6 số từ ứng dụng Authenticator. */

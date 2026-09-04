@@ -10,7 +10,7 @@ import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
-import { useDepartments } from '@/features/ipam/use-departments';
+import { useDepartments } from '@/ui/use-departments';
 import {
   KIND_KEY,
   SERVICE_ACCOUNT_KINDS,
@@ -109,11 +109,14 @@ export function ServiceAccountForm({
     <Dialog
       open
       onOpenChange={onClose}
+      // Đang ghi thì không cho đóng bằng Esc / bấm nền: hộp đóng nhưng chuỗi `await` bên dưới
+      // vẫn chạy tiếp và ghi nốt, nên người dùng tin là đã hủy trong khi dữ liệu đã vào.
+      dismissible={!busy}
       maxWidth={780}
       title={row ? `${t('serviceAccounts.edit')} — ${row.code}` : t('serviceAccounts.add')}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <button type="button" className="btn" onClick={onClose} disabled={busy}>
             {t('common.cancel')}
           </button>
           <button type="submit" form="sa-form" className="btn primary" disabled={busy}>
@@ -142,6 +145,17 @@ export function ServiceAccountForm({
             {
               onSuccess: (created) => {
                 void (async () => {
+                  /*
+                   * KHÓA NGAY ĐẦU khối này, không phải chỉ quanh bước tải tệp.
+                   *
+                   * `busy = save.isPending || uploading`, mà `save.isPending` về false ngay khi
+                   * mutation settle — tức là ngay trước dòng này. Trong suốt thời gian `await`
+                   * cất mật khẩu vào két bên dưới, nút Lưu SÁNG LẠI: bấm lần hai là POST thêm
+                   * một tài khoản dịch vụ trùng. `isp-form.tsx` đã mô tả đúng cái bẫy này
+                   * nhưng bản SA không bịt.
+                   */
+                  setUploading(true);
+                  try {
                   toast({ message: t('serviceAccounts.saved') });
                   /*
                    * Cất mật khẩu là việc RIÊNG sau khi hồ sơ đã có id — không gộp vào cùng
@@ -169,14 +183,12 @@ export function ServiceAccountForm({
                     }
                   }
                   if (draft.files.length > 0) {
-                    setUploading(true);
                     const count = draft.files.length;
                     const failures = await draft.upload(
                       'service_account',
                       row?.id ?? created.id,
                       csrfToken,
                     );
-                    setUploading(false);
                     if (failures.length < count) {
                       toast({
                         message: t('attachments.draftUploaded', {
@@ -187,6 +199,9 @@ export function ServiceAccountForm({
                     for (const message of failures) toast({ message, tone: 'warn' });
                   }
                   onSaved(created.warnings ?? []);
+                  } finally {
+                    setUploading(false);
+                  }
                 })();
               },
               onError: (err) => setError(errorMessage(err)),

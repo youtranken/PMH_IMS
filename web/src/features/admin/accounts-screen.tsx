@@ -16,7 +16,7 @@ import { Pagination } from '@/ui/pagination';
 import { RowActions } from '@/ui/row-actions';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
-import { AccountForm } from '@/features/admin/account-form';
+import { AccountForm } from './account-form';
 
 interface AccountRow {
   id: string;

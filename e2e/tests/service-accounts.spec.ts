@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import {
+  APP_ORIGIN,
   E2E_MEMBER,
   E2E_SA,
   csrfOf,
@@ -31,7 +32,7 @@ test.beforeEach(() => {
 
 async function createViaApi(page: Page, data: Record<string, unknown>) {
   const response = await page.request.post('/api/v1/service-accounts', {
-    headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+    headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
     data,
   });
   return { status: response.status(), body: (await response.json()) as Record<string, unknown> };
@@ -192,7 +193,7 @@ test.describe('Tài khoản dịch vụ', () => {
      */
     const id = wide.body.id as string;
     const patched = await page.request.patch(`/api/v1/service-accounts/${id}`, {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: { code: `VPN-E2E-WIDE-${stamp}`, kind: 'vpn', name: 'VPN mở rộng (đổi tên)' },
     });
     expect(patched.status()).toBe(200);
@@ -230,7 +231,7 @@ test.describe('Tài khoản dịch vụ', () => {
 
     // Ghi thì 403 — một tài khoản dùng chung bị sửa sai là cả phòng mất đường đăng nhập.
     const write = await page.request.post('/api/v1/service-accounts', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: { code: `TK-E2E-M-${stamp}`, kind: 'shared', name: 'Member thử ghi' },
     });
     expect(write.status()).toBe(403);
@@ -250,7 +251,7 @@ test.describe('Tài khoản dịch vụ', () => {
     });
     const id = String(created.body.id);
     const stash = await page.request.post('/api/v1/vault/secrets', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: {
         ownerType: 'service_account',
         ownerId: id,
@@ -302,7 +303,7 @@ test.describe('Tài khoản dịch vụ', () => {
     const created = await createViaApi(page, { code, kind: 'shared', name: 'Có két' });
     const id = String(created.body.id);
     await page.request.post('/api/v1/vault/secrets', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: {
         ownerType: 'service_account',
         ownerId: id,
@@ -391,7 +392,7 @@ test.describe('Tài khoản dịch vụ', () => {
     const created = await createViaApi(page, { code, kind: 'shared', name: 'Tài khoản mở lại' });
     expect(created.status).toBe(201);
     const id = String(created.body.id);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     const off = await page.request.patch(`/api/v1/service-accounts/${id}/disable`, {
       headers,
@@ -455,7 +456,7 @@ test.describe('Tài khoản dịch vụ', () => {
 
     // Lý do toàn khoảng trắng KHÔNG phải là lý do.
     const blank = await page.request.patch(`/api/v1/service-accounts/${id}/disable`, {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: { reason: '   ' },
     });
     expect(blank.status()).toBe(400);
@@ -468,7 +469,7 @@ test.describe('Tài khoản dịch vụ', () => {
     await logout(page);
     await firstLogin(page, E2E_MEMBER);
     const asMember = await page.request.patch(`/api/v1/service-accounts/${id}/disable`, {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: { reason: 'member thử đóng' },
     });
     expect(asMember.status()).toBe(403);

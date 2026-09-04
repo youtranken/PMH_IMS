@@ -1028,6 +1028,8 @@ export default {
     emptyPending: 'Không có yêu cầu nào đang chờ',
     emptyPendingHint: 'Yêu cầu mới sẽ gửi email cho Quản trị và hiện ở đây.',
     emptyLog: 'Chưa có yêu cầu nào',
+    // Tab "Yêu cầu của tôi" trước đây rơi vào nhánh else và mượn thông điệp của Nhật ký.
+    emptyMine: 'Bạn chưa gửi yêu cầu nào',
     subject: 'Đối tượng',
     subject_device: 'Thiết bị',
     subject_software: 'Phần mềm',

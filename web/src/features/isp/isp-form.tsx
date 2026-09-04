@@ -12,8 +12,8 @@ import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
-import type { CatalogLists } from '@/features/catalog/catalog-types';
-import type { DeviceRow } from '@/features/devices/device-types';
+import type { CatalogLists } from '@/lib/catalog-types';
+import type { DeviceRow } from '@/lib/device-types';
 import { ISP_STATUSES, STATUS_KEY, type IspRow, type IspStatus } from './isp-types';
 
 interface FormState {

@@ -9,14 +9,14 @@ import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
-import type { CatalogLists } from '@/features/catalog/catalog-types';
+import type { CatalogLists } from '@/lib/catalog-types';
 import {
   DEVICE_STATUSES,
   STATUS_KEY,
   type DeviceRow,
   type DeviceStatus,
   type DeviceWriteResult,
-} from './device-types';
+} from '@/lib/device-types';
 
 interface FormState {
   code: string;

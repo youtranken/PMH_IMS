@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ApprovalsApiService } from '../approvals/approvals.api';
-import type { ApprovalRecord } from '../approvals/approvals.service';
+import { ApprovalsApiService, type ApprovalRecord } from '../approvals/approvals.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { DevicesApiService } from '../devices/devices.api';
 import { DisposalApiService } from '../disposal/disposal.api';

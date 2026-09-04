@@ -12,7 +12,7 @@ import {
   type CatalogLists,
   type CatalogRow,
   type ServiceProtocol,
-} from './catalog-types';
+} from '@/lib/catalog-types';
 
 type FormState = {
   code: string;

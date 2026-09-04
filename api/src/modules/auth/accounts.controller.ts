@@ -14,7 +14,7 @@ import {
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
 import { Audited } from '../audit/audited.decorator';
-import { USER_SORT_DEFAULT, USER_SORT_KEYS } from '../users/users.service';
+import { USER_SORT_DEFAULT, USER_SORT_KEYS } from '../users/users.api';
 import { AccountsService } from './accounts.service';
 import { Roles } from './roles.decorator';
 import type { AuthedRequest, UserRole } from './types';

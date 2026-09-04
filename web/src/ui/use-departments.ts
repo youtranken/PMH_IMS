@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
-import type { CatalogLists } from '@/features/catalog/catalog-types';
+import type { CatalogLists } from '@/lib/catalog-types';
 
 /**
  * Tên bộ phận đang dùng, để gợi ý cho các ô "ai đang dùng".

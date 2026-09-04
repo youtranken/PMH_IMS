@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { E2E_MEMBER, NEW_PASSWORD, fillLogin, firstLogin, freshTotpCode, resetUsers } from './helpers';
+import { APP_ORIGIN, E2E_MEMBER, NEW_PASSWORD, fillLogin, firstLogin, freshTotpCode, resetUsers } from './helpers';
 
 test.beforeEach(() => resetUsers());
 
@@ -25,7 +25,7 @@ test.describe('Hàng rào an ninh', () => {
     });
 
     const response = await page.request.post('/api/v1/auth/totp/enroll/confirm', {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
       data: { token: usedCode },
     });
 
@@ -45,7 +45,7 @@ test.describe('Hàng rào an ninh', () => {
   test('thao tác ghi thiếu CSRF token bị từ chối', async ({ page }) => {
     await firstLogin(page, E2E_MEMBER);
     const response = await page.request.post('/api/v1/auth/logout', {
-      headers: { Origin: 'https://ims.pmh.com.vn' },
+      headers: { Origin: APP_ORIGIN },
     });
     expect(response.status()).toBe(403);
     expect(await response.json()).toMatchObject({ code: 'CSRF_TOKEN_INVALID' });

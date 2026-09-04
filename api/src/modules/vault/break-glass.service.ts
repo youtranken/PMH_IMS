@@ -10,8 +10,7 @@ import {
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
-import { ApprovalsApiService } from '../approvals/approvals.api';
-import type { ApprovalRecord } from '../approvals/approvals.service';
+import { ApprovalsApiService, type ApprovalRecord } from '../approvals/approvals.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { OutboxService } from '../outbox/outbox.service';

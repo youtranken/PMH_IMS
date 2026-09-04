@@ -1,5 +1,19 @@
-# CI tối thiểu theo spine: lint + dependency-cruiser (AD-2) + test + build image.
-# Chạy được ở GitHub Actions hoặc bất cứ runner nào có Docker; bản chạy tay: ops/ci-local.sh
+# CI theo spine, CHIA HAI NƠI (quyết định 03/09):
+#
+#   GitHub Actions (file này) — thứ chạy nhanh và không cần stack thật:
+#     lint · dependency-cruiser (AD-2) · test đơn vị · build.
+#     Đây là cổng chặn merge vào master (branch protection).
+#
+#   Máy nội bộ (`bash ops/ci-local.sh --e2e`) — E2E Playwright trên docker compose thật.
+#     E2E cần dựng cả stack (postgres + redis + api + worker + web) rồi chạy 260 bài trên
+#     trình duyệt thật; ở runner GitHub việc đó tốn 10-15 phút mỗi lần và ăn hết hạn mức
+#     Actions của repo private. Ở đây stack đã chạy sẵn nên nhanh hơn nhiều.
+#
+# ĐÁNH ĐỔI PHẢI BIẾT: E2E không còn là cổng TỰ ĐỘNG. Nó chỉ chặn được nếu người ta thật sự
+# chạy. Ràng buộc duy nhất giữ nó sống là luật đóng epic trong CLAUDE.md — chạy
+# `bash ops/ci-local.sh --e2e` xanh TRƯỚC khi chuyển story sang `done`. Nếu về sau thấy nếp
+# này trôi, cách rẻ nhất để đóng lại là dựng một self-hosted runner trong LAN
+# (Settings → Actions → Runners) và bật lại job `e2e` bên dưới.
 name: CI
 
 on:
@@ -59,46 +73,58 @@ jobs:
         run: npm run build
         working-directory: web
 
-  e2e:
-    runs-on: ubuntu-latest
-    needs: [api, web]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-      - name: Sinh secret + cert cho môi trường test
-        run: |
-          mkdir -p secrets ops/certs
-          echo "1=$(openssl rand -hex 32)" > secrets/master_key
-          openssl rand -hex 32 > secrets/password_pepper
-          : > secrets/smtp_password
-          openssl req -x509 -newkey rsa:2048 -nodes -days 2 \
-            -keyout ops/certs/privkey.pem -out ops/certs/fullchain.pem \
-            -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost"
-          cp .env.example .env
-          sed -i 's|^APP_BASE_URL=.*|APP_BASE_URL=https://localhost|' .env
-      - name: Dựng stack (kèm override e2e)
-        run: docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml --profile dev up -d --build
-      - name: Chờ api sẵn sàng
-        run: |
-          for i in $(seq 1 60); do
-            if docker compose ps api | grep -q healthy; then exit 0; fi
-            sleep 5
-          done
-          docker compose logs api; exit 1
-      - name: Seed tài khoản
-        run: docker compose exec -T api node scripts/seed-sa.mjs
-        env:
-          ALLOW_E2E_RESET: '1'
-      - name: E2E Playwright (desktop + 390px)
-        run: |
-          npm ci
-          npx playwright install --with-deps chromium
-          npx playwright test
-        working-directory: e2e
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: playwright-report
-          path: e2e/playwright-report
+  # ===================================================================================
+  # E2E chạy ở MÁY NỘI BỘ, không ở đây — xem ghi chú đầu file.
+  #
+  #   bash ops/ci-local.sh --e2e
+  #
+  # Cấu hình bên dưới giữ nguyên, đã sửa đúng (biến `IMS_BASE_URL` phải KHỚP `APP_BASE_URL`
+  # mà stack được dựng — thiếu nó thì Playwright trỏ vào host không tồn tại và CsrfGuard trả
+  # 403 ORIGIN_MISMATCH cho mọi request ghi; đó là lý do job này chưa từng xanh, F-QA-01).
+  # Muốn bật lại: bỏ dấu `#` và gắn một self-hosted runner có Docker.
+  #
+  # e2e:
+  #   runs-on: [self-hosted, linux, docker]
+  #   needs: [api, web]
+  #   env:
+  #     IMS_BASE_URL: https://localhost
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: 24
+  #     - name: Sinh secret + cert cho môi trường test
+  #       run: |
+  #         mkdir -p secrets ops/certs
+  #         echo "1=$(openssl rand -hex 32)" > secrets/master_key
+  #         openssl rand -hex 32 > secrets/password_pepper
+  #         : > secrets/smtp_password
+  #         openssl req -x509 -newkey rsa:2048 -nodes -days 2 \
+  #           -keyout ops/certs/privkey.pem -out ops/certs/fullchain.pem \
+  #           -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost"
+  #         cp .env.example .env
+  #         sed -i 's|^APP_BASE_URL=.*|APP_BASE_URL=https://localhost|' .env
+  #     - name: Dựng stack (kèm override e2e)
+  #       run: docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml --profile dev up -d --build
+  #     - name: Chờ api sẵn sàng
+  #       run: |
+  #         for i in $(seq 1 60); do
+  #           if docker compose ps api | grep -q healthy; then exit 0; fi
+  #           sleep 5
+  #         done
+  #         docker compose logs api; exit 1
+  #     - name: Seed tài khoản
+  #       run: docker compose exec -T api node scripts/seed-sa.mjs
+  #       env:
+  #         ALLOW_E2E_RESET: '1'
+  #     - name: E2E Playwright (desktop + 390px)
+  #       run: |
+  #         npm ci
+  #         npx playwright install --with-deps chromium
+  #         npx playwright test
+  #       working-directory: e2e
+  #     - uses: actions/upload-artifact@v4
+  #       if: failure()
+  #       with:
+  #         name: playwright-report
+  #         path: e2e/playwright-report

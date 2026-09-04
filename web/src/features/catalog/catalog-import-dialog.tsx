@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { ImportDialog } from '@/ui/import-dialog';
 import type { ImportPreviewRow } from '@/ui/import-preview';
-import type { IMPORTABLE_ENTITIES } from './catalog-types';
+import type { IMPORTABLE_ENTITIES } from '@/lib/catalog-types';
 
 /** Chỉ bốn danh mục gốc có sheet trong file mẫu — khớp `IMPORTABLE_ENTITIES` phía API. */
 type ImportableEntity = (typeof IMPORTABLE_ENTITIES)[number];

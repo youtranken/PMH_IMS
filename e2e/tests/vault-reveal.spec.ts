@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { execSync } from 'node:child_process';
 import {
+  APP_ORIGIN,
   COMPOSE,
   E2E_MEMBER,
   E2E_SA,
@@ -37,7 +38,7 @@ async function setUpDeviceWithSecrets(
   secrets: { label: string; value: string }[],
 ): Promise<{ deviceId: string; ids: string[]; typeId: string }> {
   const csrf = await csrfOf(page);
-  const headers = { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' };
+  const headers = { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN };
   const catalog = await page.evaluate(async () => {
     const res = await fetch('/api/v1/catalog', { credentials: 'include' });
     return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
@@ -159,7 +160,7 @@ test.describe('Mở két với TOTP step-up', () => {
     expireStepUp();
 
     const denied = await page.request.post(`/api/v1/vault/secrets/${ids[0]}/reveal`, {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
     });
     expect(denied.status()).toBe(401);
     expect(await denied.json()).toMatchObject({ code: 'STEPUP_REQUIRED' });
@@ -171,7 +172,7 @@ test.describe('Mở két với TOTP step-up', () => {
     const { ids } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
     ]);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     expect(countAudit('vault.secret.revealed', ids[0])).toBe(0);
 
@@ -198,7 +199,7 @@ test.describe('Mở két với TOTP step-up', () => {
 
     await firstLogin(page, E2E_MEMBER);
     const denied = await page.request.post(`/api/v1/vault/secrets/${ids[0]}/reveal`, {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
     });
     // 403 chứ KHÔNG phải 401/STEPUP_REQUIRED: Member gõ mã đúng cũng vẫn không được xem.
     expect(denied.status()).toBe(403);
@@ -249,7 +250,7 @@ test.describe('Mở két với TOTP step-up', () => {
     ]);
     expireStepUp();
 
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     // Ngưỡng mặc định là 5 (system_config `secret.stepup_max_failures`).
     let lastStatus = 0;
@@ -297,7 +298,7 @@ test.describe('Mở két với TOTP step-up', () => {
     const { ids, typeId } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
     ]);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     // Member được whitelist để lát nữa mở được — không thì 403 và bài mất nghĩa.
     await page.request.post('/api/v1/vault/access', {
@@ -339,7 +340,7 @@ test.describe('Mở két với TOTP step-up', () => {
         await firstLogin(memberPage, E2E_MEMBER);
         const byMember = await memberPage.request.post(
           `/api/v1/vault/secrets/${ids[0]}/reveal`,
-          { headers: { 'X-CSRF-Token': await csrfOf(memberPage), Origin: 'https://ims.pmh.com.vn' } },
+          { headers: { 'X-CSRF-Token': await csrfOf(memberPage), Origin: APP_ORIGIN } },
         );
         expect(byMember.status(), 'người khác, cùng IP — trần của người kia không được dính').toBe(
           200,
@@ -377,7 +378,7 @@ test.describe('Mở két với TOTP step-up', () => {
     const { ids } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: secretValue },
     ]);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     // Tự phòng vệ trước trần 30 lần/phút: nếu bài trước vừa ăn hết cửa sổ (kể cả khi nó đỏ
     // và không kịp dọn), thử lại tới khi cửa sổ trôi qua thay vì đỏ dây chuyền theo.

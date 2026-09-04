@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  APP_ORIGIN,
   E2E_SA,
   firstLogin,
   resetCatalog,
@@ -32,7 +33,7 @@ interface Fixture {
 }
 
 async function setUp(page: Page, stamp: string): Promise<Fixture> {
-  const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+  const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
   const catalog = await page.evaluate(async () => {
     const res = await fetch('/api/v1/catalog', { credentials: 'include' });
     return (await res.json()) as { deviceTypes: { id: string; name: string }[] };

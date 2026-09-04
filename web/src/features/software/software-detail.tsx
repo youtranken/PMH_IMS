@@ -20,7 +20,7 @@ import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
 import { useTabCounts } from "@/ui/tab-counts";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useToast } from "@/ui/toast";
-import type { CatalogLists } from "@/features/catalog/catalog-types";
+import type { CatalogLists } from "@/lib/catalog-types";
 import { LicenseAssignmentsPanel } from "./license-assignments-panel";
 import { SoftwareForm } from "./software-form";
 import { toSoftwareHistory } from "./software-history-entries";

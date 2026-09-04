@@ -56,6 +56,7 @@
 | `SeatEndCell`, `SeatTerm` | `features/software/seat-cells.tsx` | Ô "hết hạn"/"kỳ hạn" của một ghế license: khu bung ở /phan-mem, khu bung ở /thiet-bi, tab Máy đang dùng | Ba chỗ này PHẢI trả lời giống nhau: ghế của license mua đứt mà chỗ ghi "—" chỗ ghi "Vĩnh viễn" là kiểu sai không ai báo lỗi |
 | `AssignDialog` | `features/software/license-assignments-panel.tsx` | Gán license vào máy VÀ sửa kỳ hạn/chi phí của ghế đã gán | Một hộp cho cả hai vì các ô là MỘT BỘ (chi phí · hợp đồng · kỳ hạn · ghi chú). Truyền `seat` = chế độ sửa (khóa máy, PATCH). Đổi máy KHÔNG phải sửa ghế — phải gỡ rồi gán lại để lịch sử không mất một chặng |
 | `AuthCard` | `features/auth/auth-card.tsx` | Màn ngoài shell (đăng nhập, TOTP, đổi mật khẩu) | Màn trong app → `AppShell` |
+| `useDepartments` | `ui/use-departments.ts` | Danh sách bộ phận cho ô chọn: form NAT, panel port map, form tài khoản dịch vụ | Chuyển ra khỏi `features/ipam/` ngày 28/08 — hook hỏi dữ liệu của **catalog** mà lại nằm trong ipam, và bị 3 feature dùng (sai chủ ở cả hai chiều). Giữ nguyên `queryKey: ['catalog','lists']` để dùng chung cache với các màn khác |
 | `AppShell` | `shell/app-shell.tsx` | Khung sidebar + topbar của mọi màn nghiệp vụ | Lớp bọc PHẢI là `app-shell` (lớp duy nhất có `display:flex`). Ở ≤900px sidebar thành drawer: mở bằng nút `.nav-toggle` trong topbar, tự khép khi chọn mục / bấm backdrop / Esc — màn mới không được tự dựng nút mở menu riêng |
 
 ## Logic dùng chung — `web/src/lib/`
@@ -74,6 +75,8 @@
 | `downloadFile` | `lib/download-file.ts` | Tải file giữ đúng tên | — |
 | `sortQuery` | `lib/sort-query.ts` | Nối `?sort=&dir=` từ trạng thái sắp xếp của `DataTable` | Không màn nào tự ghép chuỗi này. Phía API có cửa đối ứng: `parseSortQuery` trong `api/src/common/sorting.ts`, luôn kẹp về whitelist cột của module chủ |
 | `uploadFile` | `lib/upload.ts` | Gửi file lên endpoint multipart | Không tự đặt `Content-Type` (mất boundary) |
+| `CATALOG_ENTITIES`, `CatalogLists`, `SiteRow`, `CabinetRow`, … | `lib/catalog-types.ts` | Hợp đồng kiểu của danh mục — dùng ở 10 file thuộc `devices`, `ipam`, `isp`, `software`, `catalog` | Chuyển ra khỏi `features/catalog/` ngày 28/08: thứ bị 5 feature dùng thì không thuộc về feature nào (AD-15). Khớp `CatalogEntity` phía API — thêm loại danh mục phải sửa cả hai đầu |
+| `DeviceRow`, `DeviceStatus`, … | `lib/device-types.ts` | Hợp đồng kiểu của thiết bị — dùng ở `isp/isp-form`, `software/license-assignments-panel`, `devices` | Chuyển ra khỏi `features/devices/` ngày 28/08, cùng lý do trên |
 | Token màu | `css/tokens.css` | **Nguồn màu duy nhất** | Cấm hex ngoài file này |
 
 ## Hạ tầng API — `api/src/common/` và module nền
@@ -120,6 +123,17 @@
 
 ## Cách CI ép luật (không trông vào review)
 
+Cổng chia hai nơi (quyết định 03/09):
+
+- **GitHub Actions** (`.github/workflows/ci.yml`) — lint · depcruise · test đơn vị · build.
+  Đây là cổng **tự động** chặn merge vào `master` qua branch protection.
+- **Máy nội bộ** (`bash ops/ci-local.sh --e2e`) — E2E Playwright trên docker compose thật.
+  E2E cần dựng cả stack nên chạy ở đây nhanh hơn và không ăn hạn mức Actions của repo private.
+
+Đánh đổi phải biết: **E2E không còn là cổng tự động.** Thứ duy nhất giữ nó sống là luật đóng
+epic trong `CLAUDE.md` — `--e2e` phải xanh trước khi chuyển story sang `done`. Nếu nếp đó trôi,
+cách rẻ nhất để đóng lại là một self-hosted runner trong LAN rồi bỏ comment job `e2e`.
+
 | Luật | Công cụ | Chạy bằng |
 | --- | --- | --- |
 | Đồ thị module acyclic, cấm import nội bộ xuyên module (AD-2) | dependency-cruiser | `npm --prefix api run depcruise` |
@@ -130,4 +144,12 @@
 | IP trong sổ NAT phải là MÁY, không phải địa chỉ mạng/quảng bá | `hostRole` ở `ip-rules.ts`, gọi trong `validateNatRule` | `npm --prefix api test` / `npm run test:e2e` |
 | Chi phí ghế license không lặng lẽ sai chữ số cuối | `validateAssignmentTerms` chặn quá `Number.MAX_SAFE_INTEGER` (cột là bigint) | `npm --prefix api test` |
 | Mở két phải step-up + `no-store` + một id mỗi lần (FR-022) | Jest `vault-surface.spec.ts` + E2E `vault-reveal.spec.ts` | `npm --prefix api test` / `npm run test:e2e` |
-| Cấm hex màu ngoài `tokens.css` | rà bằng `grep -rE "#[0-9a-fA-F]{3,8}" web/src --include=*.css` | thêm vào CI khi dựng pipeline |
+| Cấm hex màu ngoài `tokens.css` | rà bằng `grep -rE "#[0-9a-fA-F]{3,8}" web/src --include=*.css` | `.github/workflows/ci.yml` job `web` (chưa bắt `rgba()` — 23 chỗ đang lách, xem CODE-REVIEW F-FE-03) |
+| **Luật AD-2 còn SỐNG** (không khớp 0 chuỗi như bản glob cũ) | Jest `api/src/ad2-boundary.spec.ts` — 36 ca, chốt cả "phải bắt" lẫn "phải cho qua" | `npm --prefix api test` |
+| Mỗi bảng một chủ: chỉ module sở hữu import `*.schema.ts` của nó (AD-3) | dependency-cruiser luật `schema-only-in-owning-module` | `npm --prefix api run depcruise` |
+| **Một feature web không import ruột feature khác** (AD-15) | oxlint `no-restricted-imports` trong `web/.oxlintrc.json` | `npm --prefix web run lint` |
+| Tầng nền web (`ui`/`lib`/`shell`) không import ngược vào `features` | oxlint `no-restricted-imports`, override theo thư mục | `npm --prefix web run lint` |
+| Cấm `window.confirm` / `window.alert` phía web | oxlint `no-restricted-globals` | `npm --prefix web run lint` |
+| Argon2 + pepper làm đúng việc (pepper sai ⇒ mật khẩu đúng phải trượt) | Jest `password.service.spec.ts` | `npm --prefix api test` |
+| Rate-limit đăng nhập theo IP là THẬT, không phải mock | E2E `login-rate-limit.spec.ts` (mượn trần rồi trả lại) | `npm run test:e2e` |
+| `audit_log` chỉ-thêm kể cả với TRUNCATE (NFR-03) | migration `0039` (trigger cấp câu lệnh) + E2E `audit-log.spec.ts` | `npm run test:e2e` |

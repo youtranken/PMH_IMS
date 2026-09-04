@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import ExcelJS from 'exceljs';
-import { E2E_SA, firstLogin, resetCatalog, resetDevices, resetUsers } from './helpers';
+import { APP_ORIGIN, E2E_SA, firstLogin, resetCatalog, resetDevices, resetUsers } from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -37,7 +37,7 @@ test.describe('Import / export thiết bị', () => {
 
     // Danh mục phải có trước — đúng thứ tự hệ thống bắt buộc.
     const site = await page.request.post('/api/v1/catalog/site', {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
       data: { code: `E2E-${stamp}`, name: 'Site import' },
     });
     expect(site.status()).toBe(201);
@@ -117,7 +117,7 @@ test.describe('Import / export thiết bị', () => {
     ]);
 
     const response = await page.request.post('/api/v1/devices/import/commit', {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
       multipart: {
         file: { name: 'tb.xlsx', mimeType: 'application/octet-stream', buffer: readFileSync(bad) },
       },
@@ -150,7 +150,7 @@ test.describe('Import / export thiết bị', () => {
       [`PC-E2E-EXP-${stamp}`, 'PC để xuất', pc.id],
     ]) {
       const created = await page.request.post('/api/v1/devices', {
-        headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+        headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
         data: { code, name, deviceTypeId: typeId },
       });
       expect(created.status()).toBe(201);

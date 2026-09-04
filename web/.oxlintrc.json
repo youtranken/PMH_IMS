@@ -1,0 +1,79 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript", "oxc"],
+  "categories": {
+    "correctness": "error"
+  },
+  "ignorePatterns": ["dist/**", "node_modules/**", "src/test/**"],
+  "rules": {
+    "react-hooks/rules-of-hooks": "error",
+    "react-hooks/exhaustive-deps": "warn",
+    "eqeqeq": ["error", "always", { "null": "ignore" }],
+
+    "react/react-in-jsx-scope": "off",
+    "typescript/triple-slash-reference": "off",
+
+    "react/refs": "warn",
+    "react/purity": "warn",
+    "react/incompatible-library": "warn",
+    "react/no-unstable-nested-components": "warn",
+    "react/memo-dependencies": "warn",
+    "react/set-state-in-effect": "warn",
+
+    "no-restricted-globals": [
+      "error",
+      {
+        "name": "confirm",
+        "message": "AD-15: cấm window.confirm. Dùng useConfirm() (web/src/ui)."
+      },
+      {
+        "name": "alert",
+        "message": "AD-15: cấm window.alert. Dùng Dialog/toast của web/src/ui."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["src/ui/**/*.{ts,tsx}", "src/lib/**/*.{ts,tsx}", "src/shell/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["@/features/**", "../features/**"],
+                "message": "AD-15: tầng nền (ui/lib/shell) KHÔNG được biết tới features. Chiều phụ thuộc chỉ đi một hướng: features -> ui/lib/shell. Cần dữ liệu của feature thì nhận qua prop."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/features/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "@/features/*/**",
+                  "../*/[!.]*",
+                  "!@/features/software/device-licenses-expand",
+                  "!@/features/catalog/catalog-form",
+                  "!@/features/devices/device-form"
+                ],
+                "message": "AD-15: một feature KHÔNG import ruột feature khác. Thứ dùng ở >=2 màn/module là tài sản dùng chung -> web/src/ui hoặc web/src/lib, và phải khai vào docs/SHARED-REGISTRY.md. Trong CÙNG một feature thì dùng đường dẫn tương đối ('./x'), không dùng alias @/features."
+              },
+              {
+                "group": ["react-dom"],
+                "message": "AD-15: không tự dựng dialog/portal trong features/. Dùng Dialog (Radix) của web/src/ui."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

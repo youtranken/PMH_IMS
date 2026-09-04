@@ -1,5 +1,6 @@
 import { expect, request, test, type Page } from '@playwright/test';
 import {
+  APP_ORIGIN,
   E2E_MEMBER,
   E2E_SA,
   clearMailbox,
@@ -30,7 +31,7 @@ async function post(page: Page, url: string, data: Record<string, unknown>) {
     return ((await res.json()) as { csrfToken: string }).csrfToken;
   });
   const response = await page.request.post(url, {
-    headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+    headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
     data,
   });
   return { status: response.status(), body: (await response.json()) as Record<string, unknown> };

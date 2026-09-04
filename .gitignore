@@ -16,6 +16,9 @@ graphify-out/
 _bmad-output/planning-artifacts/design-ims/thiet-ke-man-hinh-ims.html
 ops/certs/*.pem
 
-# Cert wildcard that + private key � khong bao gio commit
+# Cert wildcard thật + private key — không bao giờ commit
 /pmh.com.vn/
 ops/certs/*.dev-bak
+
+# Giá trị gốc của login.rate_limit_per_ip, do global-setup cất và global-teardown trả lại.
+e2e/.rate-limit-original

@@ -15,7 +15,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
-import type { CatalogLists } from '@/features/catalog/catalog-types';
+import type { CatalogLists } from '@/lib/catalog-types';
 import { IspForm } from './isp-form';
 import { ISP_STATUSES, STATUS_KEY, STATUS_TONE, type IspRow, type IspStatus } from './isp-types';
 import { PATHS } from '@/lib/routes';

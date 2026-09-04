@@ -15,6 +15,8 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: [['list'], ['html', { open: 'never' }]],
   globalSetup: './global-setup.ts',
+  // Trả `login.rate_limit_per_ip` về giá trị gốc — bộ test nới nó lên 500 để chạy được.
+  globalTeardown: './global-teardown.ts',
   use: {
     baseURL: BASE_URL,
     /**

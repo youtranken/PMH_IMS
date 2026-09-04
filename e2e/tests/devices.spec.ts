@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  APP_ORIGIN,
   confirmAction,
   E2E_SA,
   firstLogin,
@@ -182,7 +183,7 @@ test.describe('Kho thiết bị', () => {
     const nas = catalog.deviceTypes.find((type) => type.name === 'NAS')!;
 
     const bad = await page.request.post('/api/v1/devices', {
-      headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
       data: {
         code: `NAS-E2E-BAD-${stamp}`,
         name: 'Khoảng bảo hành ngược',
@@ -206,7 +207,7 @@ test.describe('Kho thiết bị', () => {
     const otherSite = lists.sites.find((site) => site.id !== cabinet?.siteId);
     if (cabinet && otherSite) {
       const mismatched = await page.request.post('/api/v1/devices', {
-        headers: { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' },
+        headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
         data: {
           code: `NAS-E2E-MIX-${stamp}`,
           name: 'Tủ lệch site',
@@ -358,7 +359,7 @@ test.describe('Kho thiết bị', () => {
       return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
     });
     const typeId = catalog.deviceTypes[0]!.id;
-    const headers = { 'X-CSRF-Token': csrf, Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN };
     for (const [suffix, name] of [
       ['A', 'Zulu máy cuối bảng'],
       ['B', 'Alpha máy đầu bảng'],

@@ -34,7 +34,7 @@ import {
   type ServicePortRow,
   type SiteRow,
   type VendorRow,
-} from './catalog-types';
+} from '@/lib/catalog-types';
 
 const DEFAULT_LIMIT = 20;
 

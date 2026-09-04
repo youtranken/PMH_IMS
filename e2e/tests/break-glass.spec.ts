@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  APP_ORIGIN,
   E2E_MEMBER,
   E2E_SA,
   NEW_PASSWORD,
@@ -50,7 +51,7 @@ interface Fixture {
 
 /** SA dựng thiết bị + secret, rồi gán cho Member tầng `tier` trên nhóm LOẠI của thiết bị đó. */
 async function setUpAs(page: Page, stamp: string, tier: 'whitelist' | 'needs_approval' | null) {
-  const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+  const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
   const catalog = await page.evaluate(async () => {
     const res = await fetch('/api/v1/catalog', { credentials: 'include' });
     return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
@@ -112,7 +113,7 @@ test.describe('Break-glass', () => {
 
     // --- Member: chưa duyệt thì KHÔNG xem được, nhưng THẤY được tên gọi để biết xin cái gì.
     const totpSecret = await firstLogin(page, E2E_MEMBER);
-    const memberHeaders = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const memberHeaders = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     const blocked = await page.request.post(`/api/v1/vault/secrets/${secretId}/reveal`, {
       headers: memberHeaders,
@@ -172,7 +173,7 @@ test.describe('Break-glass', () => {
     await logout(page);
 
     const memberTotp = await firstLogin(page, E2E_MEMBER);
-    const memberHeaders = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const memberHeaders = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const asked = await page.request.post('/api/v1/vault/break-glass', {
       headers: memberHeaders,
       data: { ownerType: 'device', ownerId: deviceId, reason: 'sự cố mạng', hours: 4 },
@@ -182,7 +183,7 @@ test.describe('Break-glass', () => {
 
     await logout(page);
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
-    const saHeaders = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const saHeaders = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     await page.request.post(`/api/v1/vault/break-glass/${approvalId}/approve`, {
       headers: saHeaders,
       data: { hours: 4 },
@@ -206,7 +207,7 @@ test.describe('Break-glass', () => {
     await logout(page);
     await loginWithTotp(page, E2E_MEMBER.email, NEW_PASSWORD, memberTotp);
     const denied = await page.request.post(`/api/v1/vault/secrets/${secretId}/reveal`, {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
     });
     expect(denied.status()).toBe(403);
     expect(await denied.json()).toMatchObject({ code: 'BREAK_GLASS_REQUIRED' });
@@ -221,14 +222,14 @@ test.describe('Break-glass', () => {
 
     await firstLogin(page, E2E_MEMBER);
     const opened = await page.request.post(`/api/v1/vault/secrets/${secretId}/reveal`, {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
     });
     expect(opened.status()).toBe(200);
     expect(((await opened.json()) as { value: string }).value).toBe(secretValue);
 
     // Đã xem thẳng được thì XIN là vô nghĩa — API nói rõ thay vì đẻ ra một yêu cầu thừa.
     const pointless = await page.request.post('/api/v1/vault/break-glass', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: {
         ownerType: 'device',
         ownerId: deviceId,
@@ -248,7 +249,7 @@ test.describe('Break-glass', () => {
     await logout(page);
 
     await firstLogin(page, E2E_MEMBER);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     const reveal = await page.request.post(`/api/v1/vault/secrets/${secretId}/reveal`, { headers });
     expect(reveal.status()).toBe(403);
@@ -276,7 +277,7 @@ test.describe('Break-glass', () => {
 
     await firstLogin(page, E2E_MEMBER);
     const asked = await page.request.post('/api/v1/vault/break-glass', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       // Xin 100 giờ; trần mặc định là 24. Phải được CHẤP NHẬN và kẹp xuống, không bị từ chối.
       data: { ownerType: 'device', ownerId: deviceId, reason: 'xin quá nhiều', hours: 100 },
     });
@@ -297,7 +298,7 @@ test.describe('Break-glass', () => {
 
     await firstLogin(page, E2E_MEMBER);
     const asked = await page.request.post('/api/v1/vault/break-glass', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: { ownerType: 'device', ownerId: deviceId, reason: 'sự cố mạng tầng 3', hours: 4 },
     });
     const id = ((await asked.json()) as { id: string }).id;
@@ -306,7 +307,7 @@ test.describe('Break-glass', () => {
     // SA cũng KHÔNG hủy hộ được — muốn chặn thì dùng "Từ chối", để lịch sử ghi đúng việc.
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
     const stolen = await page.request.post(`/api/v1/vault/break-glass/${id}/cancel`, {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
     });
     expect(stolen.status()).toBe(403);
     expect(await stolen.json()).toMatchObject({ code: 'NOT_YOUR_REQUEST' });
@@ -327,7 +328,7 @@ test.describe('Break-glass', () => {
     await logout(page);
 
     await firstLogin(page, E2E_MEMBER);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const body = {
       ownerType: 'device',
       ownerId: deviceId,
@@ -390,7 +391,7 @@ test.describe('Break-glass', () => {
 
     await firstLogin(page, E2E_MEMBER);
     await page.request.post('/api/v1/vault/break-glass', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: { ownerType: 'device', ownerId: deviceId, reason: 'lý do của tôi', hours: 2 },
     });
 
@@ -407,7 +408,7 @@ test.describe('Break-glass', () => {
     await logout(page);
 
     await firstLogin(page, E2E_MEMBER);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const asked = await page.request.post('/api/v1/vault/break-glass', {
       headers,
       data: { ownerType: 'device', ownerId: deviceId, reason: 'tự duyệt thử', hours: 2 },

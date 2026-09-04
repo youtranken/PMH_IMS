@@ -8,7 +8,7 @@ import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draf
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
-import type { CatalogLists } from '@/features/catalog/catalog-types';
+import type { CatalogLists } from '@/lib/catalog-types';
 import {
   KIND_KEY,
   SOFTWARE_KINDS,

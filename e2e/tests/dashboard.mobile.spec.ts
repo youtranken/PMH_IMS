@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { E2E_SA, firstLogin, resetIpam, resetSoftware, resetUsers } from './helpers';
+import { APP_ORIGIN, E2E_SA, firstLogin, resetIpam, resetSoftware, resetUsers } from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -24,7 +24,7 @@ test.describe('Bảng điều khiển ở 390px', () => {
   test('mọi khối xếp dọc, đọc được, không tràn ngang', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-5);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const octet = (Number(stamp) % 200) + 30;
 
     await page.request.post('/api/v1/software', {

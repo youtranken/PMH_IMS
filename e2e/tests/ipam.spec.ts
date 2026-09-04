@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
+  APP_ORIGIN,
   E2E_MEMBER,
   E2E_SA,
   firstLogin,
@@ -24,7 +25,7 @@ async function csrfOf(page: Page): Promise<string> {
 
 async function createSubnet(page: Page, cidr: string, name: string): Promise<string> {
   const created = await page.request.post('/api/v1/ipam/subnets', {
-    headers: { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' },
+    headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
     data: { cidr, name },
   });
   expect(created.status()).toBe(201);
@@ -83,7 +84,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const octet = Number(stamp) % 150;
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     // Hai dải, mỗi dải một số VLAN — badge VLAN là thứ mockup vẽ ngay trên thẻ.
     const first = await page.request.post('/api/v1/ipam/subnets', {
@@ -126,7 +127,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const octet = (Number(stamp) % 150) + 40;
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const subnetId = await createSubnet(page, `172.16.${octet}.0/29`, `LAN lọc E2E ${stamp}`);
     await page.request.post('/api/v1/ipam/addresses', {
       headers,
@@ -153,7 +154,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const octet = (Number(stamp) % 150) + 60;
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     for (const vlan of [0, 4095, 9999]) {
       const res = await page.request.post('/api/v1/ipam/subnets', {
@@ -174,7 +175,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     const stamp = Date.now().toString().slice(-4);
     const octet = Number(stamp) % 200;
     const subnetId = await createSubnet(page, `172.16.${octet}.0/29`, `LAN trùng E2E ${stamp}`);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const body = { subnetId, address: `172.16.${octet}.1`, usedBy: 'máy A' };
 
     const [first, second] = await Promise.all([
@@ -198,7 +199,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     const stamp = Date.now().toString().slice(-4);
     const octet = Number(stamp) % 200;
     const subnetId = await createSubnet(page, `172.16.${octet}.0/29`, `LAN biên E2E ${stamp}`);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     for (const address of [
       `172.16.${octet}.9`, // ngoài dải /29
@@ -217,7 +218,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
 
   test('đường hỏng: dải gõ sai được giải thích tử tế, không phải lỗi 500', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     for (const [cidr, code] of [
       ['172.16.10.0', 'SUBNET_INVALID'],
@@ -253,7 +254,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const octet = Number(stamp) % 200;
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     const first = await page.request.post('/api/v1/ipam/subnets', {
       headers,
@@ -289,7 +290,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     const stamp = Date.now().toString().slice(-4);
     const octet = Number(stamp) % 200;
     const subnetId = await createSubnet(page, `172.16.${octet}.0/29`, `LAN ẩn E2E ${stamp}`);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     const noReason = await page.request.patch(`/api/v1/ipam/subnets/${subnetId}/void`, {
       headers,
@@ -376,7 +377,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     const stamp = Date.now().toString().slice(-4);
     const octet = Number(stamp) % 200;
     const cidr = `172.16.${octet}.0/29`;
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const subnetId = await createSubnet(page, cidr, `LAN tắt-bật E2E ${stamp}`);
 
     // Hai hồ sơ IP: một cái sẽ tắt THEO DẢI, một cái bị xóa lẻ TRƯỚC đó vì lý do riêng.
@@ -448,7 +449,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const octet = Number(stamp) % 200;
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const subnetId = await createSubnet(page, `172.16.${octet}.0/29`, `LAN đang dùng E2E ${stamp}`);
 
     const res = await page.request.patch(`/api/v1/ipam/subnets/${subnetId}/restore`, { headers });
@@ -467,7 +468,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const octet = Number(stamp) % 200;
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     // 1. Dải trắng tinh → xóa hẳn được, và sau đó khai LẠI đúng dải đó cũng được.
     const clean = await createSubnet(page, `172.16.${octet}.0/29`, `LAN xóa E2E ${stamp}`);
@@ -506,7 +507,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const octet = Number(stamp) % 200;
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     const outside = await page.request.post('/api/v1/ipam/subnets', {
       headers,
@@ -550,7 +551,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await page.getByRole('button', { name: 'Đăng xuất' }).click();
 
     await firstLogin(page, E2E_MEMBER);
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     // Người cắm máy chính là người biết IP nào vừa cấp — bắt chờ Admin duyệt thì cuốn sổ
     // sẽ quay về file Excel trên máy ai đó.
@@ -579,7 +580,7 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const octet = (Number(stamp) % 150) + 20;
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const subnetId = await createSubnet(page, `172.16.${octet}.0/29`, `LAN gán E2E ${stamp}`);
 
     // Hồ sơ tạo KHÔNG có chủ → 'free', đúng.
@@ -619,7 +620,7 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const octet = (Number(stamp) % 150) + 30;
-    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const subnetId = await createSubnet(page, `172.16.${octet}.0/29`, `LAN xoá IP E2E ${stamp}`);
     const created = await page.request.post('/api/v1/ipam/addresses', {
       headers,
