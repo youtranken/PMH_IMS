@@ -426,7 +426,6 @@ test.describe('Gán license theo seat', () => {
 
     await page.goto('/software');
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
-    const row = page.getByRole('row', { name: new RegExp(code) });
     // Cột Thao tác là menu ba chấm từ 28/08/2026: mục chỉ có trong DOM khi menu đang mở.
     const names = await rowActionNames(page, code);
     expect(names).toContain('Sửa');

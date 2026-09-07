@@ -629,7 +629,6 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
     const ipId = ((await created.json()) as { id: string }).id;
 
     await page.goto(`/ip-addresses/${subnetId}`);
-    const row = page.getByRole('row', { name: new RegExp(`172\.16\.${octet}\.2`) });
     await rowAction(page, `172.16.${octet}.2`, 'Xóa');
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Lý do' }).fill('gõ nhầm địa chỉ');

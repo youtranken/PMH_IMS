@@ -12,12 +12,14 @@ Rules:
 
 ## Dự án IMS — bản đồ tài liệu
 
-Đây là repo IMS (Quản lý hệ thống IT — PMH). Giai đoạn hiện tại: kế hoạch xong, code chưa khởi tạo.
+Đây là repo IMS (Quản lý hệ thống IT — PMH). Trạng thái (07/09/2026): **đang chạy** — 7 epic
+`done`, ~204 file TS backend, 40 migration, 260+ bài E2E. `master` đã lên GitHub và CI Actions
+là cổng chặn merge.
 
 | Cần gì | Đọc ở đâu |
 | --- | --- |
 | Yêu cầu (FR/NFR) | `_bmad-output/planning-artifacts/prds/prd-IMS-2026-08-19/prd.md` + `addendum.md` |
-| Luật kiến trúc AD-1..AD-14 | `_bmad-output/planning-artifacts/architecture/architecture-IMS-2026-08-21/ARCHITECTURE-SPINE.md` |
+| Luật kiến trúc AD-1..AD-15 | `_bmad-output/planning-artifacts/architecture/architecture-IMS-2026-08-21/ARCHITECTURE-SPINE.md` |
 | Epic 1..9 + story + AC | `_bmad-output/planning-artifacts/epics.md` |
 | Trạng thái story | `_bmad-output/implementation-artifacts/sprint-status.yaml` |
 | Thiết kế màn hình (13 màn HTML) | `_bmad-output/planning-artifacts/design-ims/` |
@@ -30,7 +32,9 @@ ARCHITECTURE-SPINE.md là luật, không phải gợi ý. Mọi story ghi phải
 Hệ màu = "Sunset Grove", định nghĩa **một chỗ duy nhất** (`web/src/css/tokens.css` copy từ QLTS; bản mockup ở `design-ims/_head.html`).
 
 - Component **không được** viết hex/rgb trực tiếp — chỉ dùng `var(--primary)`, `var(--ink)`, `var(--danger)`… Đổi màu toàn hệ thống về sau = sửa duy nhất `tokens.css`.
-- Mỗi token light phải có cặp dark trong `.dark`. Thêm token mới thì thêm cả hai.
+- Mỗi token light phải có cặp dark trong `html[data-theme='dark']` (KHÔNG phải `.dark` — selector
+  đó không tồn tại trong repo; viết theo nó sẽ ra một khối CSS hợp lệ mà không bao giờ chạy).
+  Thêm token mới thì thêm cả hai.
 - Không tạo style riêng cho màn mới (UX-DR1): dùng lại `web/ui` + shell (sidebar + command palette).
 - Màn ĐỌC phải chạy được ở viewport 390px (UX-DR2); màn nhập phức tạp (import, form phiếu, grid tick) desktop-only.
 
@@ -50,8 +54,14 @@ Trước khi viết **bất kỳ** component / hook / service nào: mở `docs/S
 
 1. Đọc AC của story trong `epics.md` → dịch thành test trước, test phải **đỏ**.
 2. Viết code tối thiểu cho xanh. 3. Refactor khi đã xanh.
-- Unit/integration: **Vitest** (`api/test`, `web/src/**/*.test.tsx`). Logic thuần (tính hạn, parse Excel, envelope crypto, lockout) phải có test bảng dữ liệu (table-driven), không test qua HTTP.
-- Integration chạm DB: dùng Postgres thật trong docker (compose profile `test`), không mock drizzle.
+- Unit api: **Jest** (`api/src/**/*.spec.ts`). Unit web: **Vitest** (`web/src/**/*.test.tsx`).
+  Logic thuần (tính hạn, parse Excel, envelope crypto, lockout) phải có test bảng dữ liệu
+  (table-driven), không test qua HTTP.
+- Integration chạm DB thật: **chưa có tầng này**. `api/test/` đang rỗng, `npm run test:db` trỏ
+  vào `test/jest-db.json` không tồn tại, và compose không có profile `test`. Cấm mock drizzle,
+  nên tới khi tầng đó được dựng thì lỗi ranh giới transaction chỉ chứng minh được bằng E2E
+  (xem `e2e/tests/m2-concurrency.spec.ts`). Đây là nợ số một, ghi ở
+  `docs/CODE-REVIEW-2026-09-07.md` mục 9.
 - Lõi bảo mật (Argon2, TOTP chống replay, envelope AES-GCM + xoay `key_version`, CSRF, lockout) — **không có test thì không được merge**.
 
 **Cổng kiểm kiểu của web là `npm run build`, KHÔNG phải `npx tsc --noEmit`.** `web/tsconfig.json`
@@ -68,7 +78,8 @@ thu hẹp được union phân biệt bằng cờ boolean** (`if (!r.ok) r.reaso
 - Màn ĐỌC phải có assertion ở viewport **390px** (UX-DR2) ngoài desktop.
 - Test luôn cả light + dark khi màn có màu trạng thái.
 - Không dùng `sleep`; chỉ `expect(...).toBeVisible()` / `waitForResponse`. Selector ưu tiên `getByRole`/`getByLabel`, cấm CSS class selector.
-- Email dev bắt qua **Mailpit** (API `http://mailpit:8025/api/v1/messages`), không đọc log.
+- Email dev bắt qua **Mailpit** (API `http://localhost:8025/api/v1/messages` — Playwright chạy
+  NGOÀI docker nên hostname `mailpit` không phân giải được), không đọc log.
 
 **Definition of Done — story chỉ `done` khi đủ 8 gạch:**
 

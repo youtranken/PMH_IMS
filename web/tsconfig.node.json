@@ -19,5 +19,11 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts"]
+  /*
+   * `src/lint-rules.test.ts` chạy trong NODE, không trong trình duyệt: nó spawn eslint để
+   * kiểm chính cái cổng lint. Nên nó thuộc project này (types: node) chứ không thuộc
+   * `tsconfig.app.json` (types: vite/client) — ở đó `node:fs`, `__dirname`, `process`
+   * đều là lỗi biên dịch.
+   */
+  "include": ["vite.config.ts", "src/lint-rules.test.ts"]
 }

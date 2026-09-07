@@ -8,6 +8,7 @@ import {
 import { and, asc, eq, isNull } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
+import { requireCas } from '../../common/cas';
 import { pgErrorCode, PG_CHECK_VIOLATION, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { diffRecord, hasChanges } from '../../common/record-diff';
 import { isoDateInTz } from '../../common/today';
@@ -366,11 +367,35 @@ export class IpAddressService {
     }
 
     const row = await this.db.transaction(async (tx) => {
+      /*
+       * Điều kiện `status = from` VÀ `voided_at IS NULL` đi ngay trong câu UPDATE.
+       *
+       * `requireAlive` ở trên đọc bằng `this.db`, tức NGOÀI transaction này. Giữa lúc đó và
+       * lúc UPDATE có một khe hở. Hai người cùng mở một IP đang `free`: cả hai đọc
+       * `from = 'free'`, cả hai qua được `canTransition`, cả hai UPDATE. Không có điều kiện
+       * này thì trạng thái cuối là của người bấm sau, người bấm trước tưởng mình làm xong,
+       * và `ip_history` để lại HAI dòng cùng `fromStatus: 'free'` — sổ lịch sử tự mâu thuẫn
+       * với chính nó, mà AC 5.2 lại bắt giữ nó vĩnh viễn.
+       *
+       * `voided_at IS NULL` chặn nốt trường hợp dải cha bị ẩn xen giữa: không được hồi sinh
+       * một hàng đã ẩn bằng đường đổi trạng thái.
+       */
       const rows = await tx
         .update(ipAddressTable)
         .set({ ...values, updatedAt: new Date() })
-        .where(eq(ipAddressTable.id, id))
+        .where(
+          and(
+            eq(ipAddressTable.id, id),
+            eq(ipAddressTable.status, from),
+            isNull(ipAddressTable.voidedAt),
+          ),
+        )
         .returning();
+      requireCas(rows, {
+        code: 'IP_ALREADY_CHANGED',
+        message:
+          'Địa chỉ IP này vừa được người khác đổi trạng thái (hoặc dải chứa nó vừa bị ẩn). Tải lại để xem trạng thái mới.',
+      });
       await this.audit.appendWithin(tx, {
         actor,
         action: 'ip.transitioned',

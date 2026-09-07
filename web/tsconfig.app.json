@@ -25,5 +25,7 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  // Chạy trong Node (spawn eslint), thuộc `tsconfig.node.json`. Xem chú thích ở file đó.
+  "exclude": ["src/lint-rules.test.ts"]
 }

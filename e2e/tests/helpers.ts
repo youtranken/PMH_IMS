@@ -520,9 +520,17 @@ export async function csrfOf(page: Page): Promise<string> {
   });
 }
 
-/** Header đủ để gọi API ghi từ trong test (CSRF + Origin hợp lệ). */
+/**
+ * Header đủ để gọi API ghi từ trong test (CSRF + Origin hợp lệ).
+ *
+ * Dùng `APP_ORIGIN`, KHÔNG gõ cứng. Đợt 28/08 gom 137 chỗ hardcode `Origin` về hằng chung
+ * nhưng bỏ sót đúng cái helper dùng chung này — nó vẫn ghi thẳng `https://ims.pmh.com.vn`.
+ * Ở máy dev thì trùng nên không ai thấy; chạy với `IMS_BASE_URL=https://localhost` (đúng cấu
+ * hình CI) là mọi lệnh ghi qua helper này trả 403 ORIGIN_MISMATCH. Lỗi cũ, chỉ lộ ở đúng môi
+ * trường mà bản sửa kia sinh ra để phục vụ.
+ */
 export async function writeHeaders(page: Page): Promise<Record<string, string>> {
-  return { 'X-CSRF-Token': await csrfOf(page), Origin: 'https://ims.pmh.com.vn' };
+  return { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 }
 
 /**

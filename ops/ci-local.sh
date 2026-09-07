@@ -29,7 +29,9 @@ npm --prefix api test
 step "API — build"
 npm --prefix api run build
 
-step "WEB — lint (AD-15 ranh giới feature + cấm window.confirm)"
+step "WEB — lint + depcruise (AD-15 ranh giới tầng, cấm window.confirm)"
+# 07/09: web chuyển từ oxlint sang ESLint để cả repo dùng MỘT phương ngữ luật, và có
+# dependency-cruiser lần đầu (trước đó vòng lặp phụ thuộc bên web không ai canh).
 npm --prefix web run lint
 
 step "WEB — cấm hex màu ngoài tokens.css (AD-15)"
@@ -43,6 +45,12 @@ npm --prefix web test
 
 step "WEB — build (đây mới là cổng kiểm KIỂU của web, không phải tsc --noEmit)"
 npm --prefix web run build
+
+step "E2E — kiểm kiểu (tsc --noEmit)"
+# Playwright transpile TS nhưng KHÔNG kiểm kiểu, nên trước 07/09 thư mục e2e không có cổng
+# nào. Đó là cơ chế đã để lọt lỗi `__dirname` trong gói ESM hôm 03/09: globalSetup chết,
+# KHÔNG bài nào chạy, mà lệnh vẫn thoát 0.
+npm --prefix e2e run typecheck
 
 if [ "${1:-}" = "--e2e" ]; then
   # `IMS_BASE_URL` phải KHỚP `APP_BASE_URL` trong .env: Playwright dùng nó làm baseURL, và

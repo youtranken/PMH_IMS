@@ -167,16 +167,26 @@ test.describe('Vòng đời IP', () => {
       `UPDATE ip_history SET actor = 'ke-gian' WHERE ip_address_id = '${ipId}'`,
       `DELETE FROM ip_history WHERE ip_address_id = '${ipId}'`,
     ]) {
-      let blocked = false;
+      // Soi `stderr` chứ không chỉ "có ném hay không": `catch` rỗng nuốt cả docker chưa chạy,
+      // sai tên container, gõ sai tên bảng — và bài kiểm hàng rào AD-13 sẽ xanh trong khi
+      // không có hàng rào nào được chạm tới. Cùng lý do với `audit-log.spec.ts` (rà soát 07/09).
+      let stderr: string | null = null;
       try {
         execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -v ON_ERROR_STOP=1 -c "${sql}"`, {
           cwd: '..',
           stdio: 'pipe',
         });
-      } catch {
-        blocked = true;
+      } catch (error) {
+        const err = error as { stderr?: Buffer | string; stdout?: Buffer | string };
+        stderr = `${err.stderr?.toString() ?? ''}${err.stdout?.toString() ?? ''}`;
       }
-      expect(blocked, `phải bị chặn: ${sql}`).toBe(true);
+
+      expect(stderr, `phải bị chặn: ${sql}`).not.toBeNull();
+      expect(
+        stderr,
+        `phải bị chặn bởi HÀNG RÀO append-only, không phải bởi sự cố hạ tầng. ` +
+          `Câu: ${sql}\nstderr:\n${stderr}`,
+      ).toMatch(/chỉ-thêm|append_only|no_truncate|no_delete|no_update|permission denied/i);
     }
   });
 });

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { APP_ORIGIN, E2E_MEMBER, E2E_SA, firstLogin, resetUsers } from './helpers';
+import { E2E_MEMBER, E2E_SA, firstLogin, resetUsers } from './helpers';
 
 test.beforeEach(() => resetUsers());
 
@@ -96,21 +96,39 @@ test.describe('Nhật ký kiểm toán — API', () => {
     const { execSync } = await import('node:child_process');
     const { COMPOSE } = await import('./helpers');
 
+    /*
+     * KHÔNG dùng `catch { blocked = true }` trần.
+     *
+     * Bản trước làm thế, và `catch` rỗng nuốt MỌI nguyên nhân: docker chưa chạy, sai tên
+     * container, máy không có `psql`, gõ sai tên bảng, mất mạng — tất cả đều thành "đã bị
+     * chặn". Bài này là thứ DUY NHẤT giữ migration 0039 khỏi bị gỡ ra, và nó xanh cả khi
+     * Postgres không tồn tại (rà soát 07/09). Nên phải soi `stderr` để biết nó bị chặn ĐÚNG
+     * bởi hàng rào của mình, chứ không phải bởi một sự cố nào khác.
+     */
+    const guardSignals = /chỉ-thêm|append_only|no_truncate|no_delete|no_update|permission denied/i;
+
     for (const sql of [
       "UPDATE audit_log SET actor = 'ke-gian' WHERE true",
       'DELETE FROM audit_log WHERE true',
       'TRUNCATE audit_log',
     ]) {
-      let blocked = false;
+      let stderr: string | null = null;
       try {
         execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -v ON_ERROR_STOP=1 -c "${sql}"`, {
           cwd: '..',
           stdio: 'pipe',
         });
-      } catch {
-        blocked = true;
+      } catch (error) {
+        const err = error as { stderr?: Buffer | string; stdout?: Buffer | string };
+        stderr = `${err.stderr?.toString() ?? ''}${err.stdout?.toString() ?? ''}`;
       }
-      expect(blocked, `phải bị chặn: ${sql}`).toBe(true);
+
+      expect(stderr, `phải bị chặn: ${sql}`).not.toBeNull();
+      expect(
+        stderr,
+        `phải bị chặn bởi HÀNG RÀO append-only, không phải bởi sự cố hạ tầng. ` +
+          `Câu: ${sql}\nstderr:\n${stderr}`,
+      ).toMatch(guardSignals);
     }
   });
 });

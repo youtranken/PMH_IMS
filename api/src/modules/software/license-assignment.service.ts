@@ -8,7 +8,9 @@ import {
 import { and, asc, count, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
+import { requireCas } from '../../common/cas';
 import { pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
+import type { Tx } from '../../common/tx';
 import { DevicesApiService } from '../devices/devices.api';
 import { licenseAssignmentTable, softwareTable } from './software.schema';
 import { SoftwareService } from './software.service';
@@ -85,6 +87,26 @@ export class LicenseAssignmentService {
       )
       .groupBy(licenseAssignmentTable.softwareId);
     return new Map(rows.map((row) => [row.softwareId, Number(row.used)]));
+  }
+
+  /**
+   * Số ghế đang dùng của MỘT license, đếm bên trong `tx` (AD-5).
+   *
+   * Tách khỏi `usageFor` vì `usageFor` chạy trên pool — dùng nó để quyết định rồi ghi trong
+   * transaction khác là đúng cái khe hở mà `assign` vừa bịt. Hàm này chỉ có nghĩa khi hàng
+   * `software` đã được khóa `FOR UPDATE` ngay trước đó.
+   */
+  private async usedWithin(tx: Tx, softwareId: string): Promise<number> {
+    const rows = await tx
+      .select({ used: count() })
+      .from(licenseAssignmentTable)
+      .where(
+        and(
+          eq(licenseAssignmentTable.softwareId, softwareId),
+          isNull(licenseAssignmentTable.releasedAt),
+        ),
+      );
+    return Number(rows[0]?.used ?? 0);
   }
 
   /**
@@ -208,23 +230,46 @@ export class LicenseAssignmentService {
     const terms = normalizeTerms(input);
     assertTerms(terms, software.licenseModel);
 
-    const used = (await this.usageFor([softwareId])).get(softwareId) ?? 0;
-    const warnings: string[] = [];
-    if (software.seatTotal !== null && used >= software.seatTotal) {
-      // AC 3.2: cho ghi đè nhưng PHẢI có lý do — vượt seat là chuyện pháp lý với nhà cung
-      // cấp, không thể để lặng lẽ.
-      if (!input.overSeatReason?.trim()) {
-        throw new BadRequestException({
-          code: 'SEAT_LIMIT_REACHED',
-          message: `License này đã dùng hết ${software.seatTotal} seat. Vẫn gán được nhưng phải ghi lý do.`,
-        });
-      }
-      warnings.push(
-        `Đang vượt seat: ${used + 1}/${software.seatTotal}. Lý do đã được ghi vào lịch sử.`,
-      );
-    }
+    const { id, warnings } = await this.db.transaction(async (tx) => {
+      /*
+       * ĐẾM SEAT TRONG TRANSACTION, sau khi đã khóa hàng license.
+       *
+       * Bản trước đếm bằng `this.usageFor([softwareId])` — chạy trên pool, NGOÀI transaction
+       * bên dưới — rồi chèn vô điều kiện. License 10 ghế đang dùng 9, hai người gán cùng
+       * lúc: cả hai đọc `used = 9`, `9 >= 10` là sai nên cả hai qua cửa, cả hai chèn.
+       * Thành 11/10 và KHÔNG AI phải khai `overSeatReason` — đúng thứ AC 3.2 dựng ra để
+       * chặn, mà vượt seat là chuyện pháp lý với nhà cung cấp chứ không phải cảnh báo cho vui.
+       *
+       * UNIQUE `(software_id, device_id)` không cứu được: nó canh trùng THIẾT BỊ, không canh
+       * SỐ GHẾ. Hai máy khác nhau là hai dòng hợp lệ với nó.
+       *
+       * `FOR UPDATE` trên hàng `software` là chỗ xếp hàng: hai lượt gán trên cùng một license
+       * buộc phải nối đuôi, nên người thứ hai đếm được `used = 10` và bị chặn đúng luật.
+       * Khóa trên hàng license (không phải trên các dòng gán) vì dòng gán của người kia CHƯA
+       * TỒN TẠI lúc ta đếm — không có gì để mà khóa.
+       */
+      await tx
+        .select({ id: softwareTable.id })
+        .from(softwareTable)
+        .where(eq(softwareTable.id, softwareId))
+        .for('update');
 
-    const id = await this.db.transaction(async (tx) => {
+      const used = await this.usedWithin(tx, softwareId);
+      const warnings: string[] = [];
+      if (software.seatTotal !== null && used >= software.seatTotal) {
+        // AC 3.2: cho ghi đè nhưng PHẢI có lý do — vượt seat là chuyện pháp lý với nhà cung
+        // cấp, không thể để lặng lẽ.
+        if (!input.overSeatReason?.trim()) {
+          throw new BadRequestException({
+            code: 'SEAT_LIMIT_REACHED',
+            message: `License này đã dùng hết ${software.seatTotal} seat. Vẫn gán được nhưng phải ghi lý do.`,
+          });
+        }
+        warnings.push(
+          `Đang vượt seat: ${used + 1}/${software.seatTotal}. Lý do đã được ghi vào lịch sử.`,
+        );
+      }
+
       let inserted;
       try {
         inserted = await tx
@@ -253,7 +298,7 @@ export class LicenseAssignmentService {
           ? { overSeatReason: { before: null, after: input.overSeatReason.trim() } }
           : {}),
       });
-      return inserted[0].id;
+      return { id: inserted[0].id, warnings };
     });
 
     const rows = await this.db
@@ -323,10 +368,28 @@ export class LicenseAssignmentService {
     const deviceCode = await this.deviceCodeOf(before.deviceId);
 
     await this.db.transaction(async (tx) => {
-      await tx
+      /*
+       * Cùng lý do với `release`: chỉ được sửa ghế CÒN HIỆU LỰC, và điều kiện đó phải nằm
+       * trong câu UPDATE chứ không phải ở câu SELECT chạy trước đó ngoài transaction.
+       *
+       * Không có nó thì người A gỡ ghế trong lúc người B đang sửa kỳ hạn: bản ghi đã gỡ —
+       * tức dấu vết lịch sử "key này từng nhập máy nào" — bị sửa chi phí/hợp đồng đè lên,
+       * đúng điều chú thích của chính hàm này hứa là không được phép.
+       */
+      const updated = await tx
         .update(licenseAssignmentTable)
         .set({ ...terms, note })
-        .where(eq(licenseAssignmentTable.id, assignmentId));
+        .where(
+          and(
+            eq(licenseAssignmentTable.id, assignmentId),
+            isNull(licenseAssignmentTable.releasedAt),
+          ),
+        )
+        .returning({ id: licenseAssignmentTable.id });
+      requireCas(updated, {
+        code: 'ASSIGNMENT_ALREADY_RELEASED',
+        message: 'Ghế này vừa được người khác gỡ nên không sửa kỳ hạn được nữa. Tải lại để xem.',
+      });
       await this.software.recordWithin(tx, actor, softwareId, 'license-terms-updated', {
         device: { before: deviceCode, after: deviceCode },
         ...changes,
@@ -359,10 +422,29 @@ export class LicenseAssignmentService {
       });
     }
     await this.db.transaction(async (tx) => {
-      await tx
+      /*
+       * `released_at IS NULL` đi cùng câu UPDATE — câu SELECT ở trên chạy ngoài transaction
+       * này, nên một mình nó không chốt được gì.
+       *
+       * Gỡ hai lần cùng lúc (bấm đúp, hoặc hai người cùng mở màn): bản trước ghi đè
+       * `released_at` lần thứ hai và ghi THÊM một dòng `software_history` "license-released"
+       * nữa. Sổ lịch sử thành ra có hai lần gỡ cho một lần ngồi ghế — và bảng lịch sử là
+       * chỉ-thêm (AD-13), không sửa lại được.
+       */
+      const released = await tx
         .update(licenseAssignmentTable)
         .set({ releasedAt: new Date(), releasedBy: actor })
-        .where(eq(licenseAssignmentTable.id, assignmentId));
+        .where(
+          and(
+            eq(licenseAssignmentTable.id, assignmentId),
+            isNull(licenseAssignmentTable.releasedAt),
+          ),
+        )
+        .returning({ id: licenseAssignmentTable.id });
+      requireCas(released, {
+        code: 'ASSIGNMENT_ALREADY_RELEASED',
+        message: 'Ghế này vừa được người khác gỡ. Tải lại để xem danh sách mới.',
+      });
       await this.software.recordWithin(tx, actor, softwareId, 'license-released', {
         deviceId: { before: rows[0].deviceId, after: null },
       });

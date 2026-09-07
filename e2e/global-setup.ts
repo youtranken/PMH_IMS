@@ -1,6 +1,7 @@
 import { execSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
 import { RATE_LIMIT_BACKUP_FILE } from './rate-limit-backup';
+import { E2E_LOGIN_RATE_LIMIT } from './tests/helpers';
 
 /**
  * Đưa tài khoản E2E về trạng thái sạch trước mỗi lần chạy.
@@ -30,5 +31,31 @@ export default function globalSetup(): void {
     .toString()
     .trim();
 
-  if (original) writeFileSync(RATE_LIMIT_BACKUP_FILE, original, 'utf8');
+  if (!original) return;
+
+  /*
+   * HAI CHỐT trước khi ghi đè bản cất — cả hai đều chống cùng một tai nạn.
+   *
+   * Bản trước ghi vô điều kiện. Lượt 1 bị `Ctrl-C` / SIGKILL / CI timeout → `globalTeardown`
+   * KHÔNG chạy → DB còn 500, file backup còn 20. Lượt 2 khởi động: đọc DB ra **500** rồi ghi
+   * đè file → giá trị thật 20 biến mất VĨNH VIỄN, và từ đó mọi lượt "khôi phục" đều trả về
+   * 500. Đúng finding #5 Chặn của 28/08 quay lại bằng cửa sau (rà soát 07/09).
+   *
+   * 1. File đã có thì giữ nguyên — nó là giá trị của lượt chạy SẠCH gần nhất.
+   * 2. Kể cả khi chưa có file, không bao giờ cất chính con số mà bộ test tự đặt vào: đó là
+   *    dấu hiệu lượt trước chết giữa chừng, và cất nó lại là hợp thức hóa cấu hình bẩn.
+   */
+  if (existsSync(RATE_LIMIT_BACKUP_FILE)) return;
+
+  if (original === String(E2E_LOGIN_RATE_LIMIT)) {
+    console.warn(
+      `[e2e] login.rate_limit_per_ip đang là ${original} — đúng giá trị bộ test tự đặt, nghĩa là ` +
+        `một lượt chạy trước đã chết giữa chừng và không kịp trả lại. KHÔNG cất con số này. ` +
+        `Hãy đặt lại giá trị thật (seed là 20) rồi chạy lại: ` +
+        `UPDATE system_config SET value = '20' WHERE key = 'login.rate_limit_per_ip';`,
+    );
+    return;
+  }
+
+  writeFileSync(RATE_LIMIT_BACKUP_FILE, original, 'utf8');
 }
