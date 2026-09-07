@@ -25,38 +25,8 @@ export const NEW_PASSWORD = 'Ims#Manh2026!ok';
  * làm THAY ĐỔI trạng thái thật (đổi mật khẩu, cài TOTP, khóa tài khoản) — không reset
  * thì test sau ăn theo test trước và đỏ ngẫu nhiên.
  */
-export function resetUsers(): void {
-  // Script reset KHÔNG nằm trong image production; override e2e mount nó vào container.
-  execSync(`${COMPOSE} exec -T api node scripts/reset-e2e-user.mjs`, {
-    cwd: '..',
-    stdio: 'pipe',
-    env: { ...process.env, ALLOW_E2E_RESET: '1' },
-  });
-  relaxLoginRateLimit();
-  dropAccountsCreatedByE2e();
-}
-
-/**
- * Xóa tài khoản do test "SA tạo tài khoản mới" đẻ ra (`e2e-tao-moi-…`).
- *
- * `reset-e2e-user.mjs` chỉ đưa HAI tài khoản cố định về trạng thái ban đầu; tài khoản tạo
- * trong lúc chạy thì ở lại. Sau vài chục lần chạy, danh sách tài khoản tràn sang trang 2 và
- * bài kiểm "tạo xong phải thấy trong danh sách" đỏ — không phải vì sản phẩm sai mà vì rác
- * của những lần chạy trước. Cùng quy ước với `resetDevices`/`resetSoftware`: chỉ đụng tiền tố
- * E2E, không bao giờ chạm tài khoản thật của PMH.
- */
-function dropAccountsCreatedByE2e(): void {
-  const match = "email LIKE 'e2e-tao-moi-%'";
-  const sql = [
-    `DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE ${match})`,
-    `DELETE FROM known_device WHERE user_id IN (SELECT id FROM users WHERE ${match})`,
-    `DELETE FROM users WHERE ${match}`,
-  ].join('; ');
-  execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -c "${sql}"`, {
-    cwd: '..',
-    stdio: 'pipe',
-  });
-}
+export const COMPOSE =
+  'docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml';
 
 /** Trần đăng nhập/IP mà cả bộ E2E chạy dưới — đủ cao để không ai đụng phải do chạy nhiều. */
 export const E2E_LOGIN_RATE_LIMIT = 500;
@@ -79,96 +49,6 @@ export function setLoginRateLimit(value: number): void {
   execSync(
     `${COMPOSE} exec -T postgres psql -U ims -d ims -c "UPDATE system_config SET value = '${value}' WHERE key = 'login.rate_limit_per_ip'"`,
     { cwd: '..', stdio: 'pipe' },
-  );
-}
-
-/**
- * Nới trần đăng nhập theo IP cho MÔI TRƯỜNG TEST.
- *
- * Cả bộ E2E đăng nhập vài chục lần trong ít phút từ cùng một IP, đụng trần
- * `login.rate_limit_per_ip` (mặc định 20/phút) và một loạt test đỏ vì 429 chứ không phải
- * vì sản phẩm sai.
- *
- * ĐÍNH CHÍNH so với bản trước (28/08): chú thích cũ nói "cơ chế chặn dò mật khẩu đã có test
- * riêng ở login-rate.guard.spec.ts" — nhưng bài đó TIÊM SystemConfigService GIẢ, nên nó chỉ
- * chứng minh hàm đếm hoạt động, không chứng minh guard được lắp đúng vào chuỗi request. Cộng
- * với việc hàm này chạy trong MỌI beforeEach và không bao giờ trả lại, NFR-01 "rate-limit theo
- * IP trên endpoint đăng nhập" chưa từng chạy thật một lần nào trên stack thật.
- *
- * Nay: `login-rate-limit.spec.ts` mượn trần xuống thấp, chứng minh 429 là THẬT, rồi trả lại;
- * và `global-teardown.ts` khôi phục giá trị gốc khi cả bộ chạy xong, để DB dev/test không nằm
- * vĩnh viễn ở ngưỡng 500 (nguy hiểm nếu bản restore drill của Story 4.3 lấy dữ liệu từ đây).
- */
-function relaxLoginRateLimit(): void {
-  setLoginRateLimit(E2E_LOGIN_RATE_LIMIT);
-}
-
-export const COMPOSE =
-  'docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml';
-
-/**
- * Xóa dữ liệu danh mục do E2E tạo ra (mã bắt đầu bằng `E2E-`).
- *
- * Vì sao cần: `resetUsers` chỉ đụng tới tài khoản. Danh mục thì Ở LẠI giữa các lần chạy,
- * nên site/tủ của lần trước dồn lại làm bảng tràn sang trang 2 và locator theo dòng
- * bắt trúng bản ghi cũ. Chỉ xóa đúng tiền tố E2E — dữ liệu thật của PMH không đụng tới.
- */
-/**
- * Xóa thiết bị do E2E tạo (mã chứa `-E2E-` hoặc bắt đầu bằng `PC-A-`/`PC-B-`/`PC-DUP-`/`NAS-`).
- * `device_history` là append-only nên phải xóa lịch sử bằng superuser TRƯỚC — đây là lý do
- * script này chỉ chạy ở môi trường test, không bao giờ có mặt trong image production.
- */
-/**
- * Xóa hồ sơ phần mềm do E2E tạo. Quy ước giống thiết bị: mã luôn chứa chuỗi "E2E" nên câu
- * xóa không bao giờ chạm dữ liệu thật.
- */
-export function resetSoftware(): void {
-  const match = "code ILIKE '%E2E%'";
-  const sql = [
-    // Bản ghi gán license trỏ tới software — xóa trước, không thì FK chặn.
-    `DELETE FROM license_assignment WHERE software_id IN (SELECT id FROM software WHERE ${match})`,
-    // Secret gắn vào hồ sơ phần mềm — cùng lý do như ở `resetDevices`.
-    `DELETE FROM secret WHERE owner_type = 'software' AND owner_id IN (SELECT id FROM software WHERE ${match})`,
-    `ALTER TABLE software_history DISABLE TRIGGER software_history_no_delete`,
-    `DELETE FROM software_history WHERE software_id IN (SELECT id FROM software WHERE ${match})`,
-    `ALTER TABLE software_history ENABLE TRIGGER software_history_no_delete`,
-    `DELETE FROM software WHERE ${match}`,
-  ].join('; ');
-  execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -c "${sql}"`, {
-    cwd: '..',
-    stdio: 'pipe',
-  });
-}
-
-/**
- * Xóa secret do E2E cất. Quy ước: mọi nhãn secret trong test đều chứa "E2E".
- *
- * Bảng `secret` không có FK sang device/software (tham chiếu lỏng, AD-4) nên xóa thiết bị
- * KHÔNG kéo theo secret — không có câu này thì nhãn của lần chạy trước ở lại và ràng buộc
- * "một chủ thể một nhãn" bắt trúng bản ghi mồ côi.
- */
-export function resetSecrets(): void {
-  execSync(
-    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "DELETE FROM secret WHERE label ILIKE '%E2E%'"`,
-    { cwd: '..', stdio: 'pipe' },
-  );
-}
-
-/**
- * Xóa tài khoản dịch vụ do E2E tạo, kèm secret · giấy tờ · lịch sử của chúng.
- *
- * Dọn theo THỨ TỰ ngược với lúc tạo, và phải tắt trigger chống-xóa của bảng lịch sử — bảng đó
- * chỉ-thêm (AD-13) nên `DELETE` bình thường bị chặn. Không dọn secret thì ràng buộc "một chủ
- * thể một nhãn" bắt trúng bản ghi mồ côi của lần chạy trước.
- */
-export function resetServiceAccounts(): void {
-  sql(
-    "ALTER TABLE service_account_history DISABLE TRIGGER service_account_history_no_delete; " +
-      "DELETE FROM secret WHERE owner_type = 'service_account' AND owner_id IN (SELECT id FROM service_account WHERE code ILIKE '%E2E%'); " +
-      "DELETE FROM file WHERE owner_type = 'service_account' AND owner_id IN (SELECT id FROM service_account WHERE code ILIKE '%E2E%'); " +
-      "DELETE FROM service_account_history WHERE service_account_id IN (SELECT id FROM service_account WHERE code ILIKE '%E2E%'); " +
-      "ALTER TABLE service_account_history ENABLE TRIGGER service_account_history_no_delete; " +
-      "DELETE FROM service_account WHERE code ILIKE '%E2E%'",
   );
 }
 
@@ -197,153 +77,142 @@ export function countAudit(action: string, objectId: string): number {
 }
 
 /**
- * Xóa dải và hồ sơ IP do E2E tạo. Quy ước: mọi TÊN dải trong test đều chứa "E2E".
+ * ===== GOM MỌI LỆNH DỌN VÀO MỘT LƯỢT `docker compose exec` =====
  *
- * `ip_history` là append-only (AD-13) nên phải tắt trigger để xóa — đúng lý do script reset
- * chỉ chạy ở môi trường test, không bao giờ có mặt trong image production.
+ * Bản trước có 11 hàm reset, mỗi hàm tự `execSync` một lệnh riêng, và mỗi `beforeEach` gọi
+ * 2-5 hàm. Đo trên máy này: **một lần `docker compose exec` tốn 0,46 giây**. Nhân với ~900
+ * lượt gọi trong một lượt chạy đầy đủ là **~7 phút thuần overhead** — nhiều hơn cả thời gian
+ * trình duyệt thật sự làm việc ở phần lớn các bài.
+ *
+ * Nay các hàm `resetX()` chỉ GHI TÊN VÙNG vào một hàng đợi; lượt `exec` DUY NHẤT xảy ra ở
+ * `flushResets()`, do fixture `test.beforeEach` trong `tests/fixtures.ts` gọi. Nhờ vậy call
+ * site trong 47 spec không phải sửa một dòng nào, mà số lần `exec` giảm từ ~900 xuống ~264.
+ *
+ * Thứ tự dọn KHÔNG phụ thuộc thứ tự gọi: script `reset-e2e.mjs` tự xếp theo phụ thuộc khóa
+ * ngoại (devices phải sau software vì `license_assignment` trỏ cả hai chiều).
  */
-export function resetIpam(): void {
-  const match = "name ILIKE '%E2E%'";
-  const sql = [
-    `ALTER TABLE ip_history DISABLE TRIGGER ip_history_no_delete`,
-    `DELETE FROM ip_history WHERE ip_address_id IN (SELECT id FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE ${match}))`,
-    `ALTER TABLE ip_history ENABLE TRIGGER ip_history_no_delete`,
-    /*
-     * `nat_rule_history` (0037) trỏ tới `nat_rule` bằng FK `ON DELETE RESTRICT`, nên phải dọn
-     * lịch sử TRƯỚC rule — y hệt cách `ip_history` phải đi trước `ip_address` ở trên. Và cũng
-     * y hệt vậy: bảng chỉ-thêm nên phải tắt trigger mới xóa được.
-     *
-     * Dùng CHÍNH hai điều kiện của hai câu xóa rule bên dưới, không viết một điều kiện thứ ba
-     * lỏng hơn: sót một nhánh là lần chạy sau đỏ ở `resetIpam` chứ không đỏ ở bài kiểm, và
-     * người đọc log sẽ đi tìm lỗi ở nhầm chỗ.
-     */
-    `ALTER TABLE nat_rule_history DISABLE TRIGGER nat_rule_history_no_delete`,
-    `DELETE FROM nat_rule_history WHERE nat_rule_id IN (SELECT id FROM nat_rule WHERE ip_address_id IN (SELECT id FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE ${match})) OR device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%'))`,
-    `ALTER TABLE nat_rule_history ENABLE TRIGGER nat_rule_history_no_delete`,
-    // Rule NAT trỏ tới hồ sơ IP — xóa trước, không thì FK chặn.
-    `DELETE FROM nat_rule WHERE ip_address_id IN (SELECT id FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE ${match}))`,
-    `DELETE FROM nat_rule WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
-    `DELETE FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE ${match})`,
-    `DELETE FROM subnet WHERE ${match}`,
-  ].join('; ');
-  execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -c "${sql}"`, {
+const DOMAIN_ORDER = [
+  'users',
+  'access-list',
+  'approvals',
+  'secrets',
+  'service-accounts',
+  'software',
+  'ipam',
+  'isp',
+  'devices',
+  'digest-rules',
+  'catalog',
+] as const;
+
+type ResetDomain = (typeof DOMAIN_ORDER)[number];
+
+const pending = new Set<ResetDomain>();
+let flushScheduled = false;
+
+/**
+ * Xếp một vùng vào hàng đợi và hẹn xả ở CUỐI TICK hiện tại.
+ *
+ * Vì sao `queueMicrotask` chứ không phải một fixture của Playwright: Playwright dựng fixture
+ * TRƯỚC khi chạy `beforeEach` của spec, nên fixture sẽ xả hàng đợi lúc nó còn rỗng. Không có
+ * hook nào chạy SAU `beforeEach`.
+ *
+ * Còn `beforeEach` của mọi spec đều là một khối đồng bộ (`() => { resetUsers(); resetDevices(); }`),
+ * nên mọi lời gọi rơi vào cùng một tick; microtask xả ngay sau khối đó và luôn xong trước thân
+ * bài test, vì Playwright `await` kết quả của hook. Spec nào viết `beforeEach` bất đồng bộ thì
+ * microtask nổ ở lần `await` đầu tiên — vẫn trước thân bài.
+ */
+function queue(domain: ResetDomain): void {
+  pending.add(domain);
+  if (flushScheduled) return;
+  flushScheduled = true;
+  queueMicrotask(() => {
+    flushScheduled = false;
+    flushResets();
+  });
+}
+
+/**
+ * Chạy MỘT lệnh dọn cho tất cả vùng đang xếp hàng. Gọi từ fixture, không gọi trong spec.
+ *
+ * `ALLOW_E2E_RESET=1` là chốt chặn thật trong chính script: không có biến đó thì nó từ chối
+ * chạy, để production không tồn tại đường đặt lại mật khẩu về chuỗi có sẵn trong repo.
+ */
+export function flushResets(): void {
+  if (pending.size === 0) return;
+  const domains = DOMAIN_ORDER.filter((d) => pending.has(d));
+  pending.clear();
+  execSync(`${COMPOSE} exec -T api node scripts/reset-e2e.mjs ${domains.join(' ')}`, {
     cwd: '..',
     stdio: 'pipe',
+    env: { ...process.env, ALLOW_E2E_RESET: '1' },
   });
+}
+
+/**
+ * Đưa tài khoản E2E về trạng thái vừa-được-tạo, và nới trần đăng nhập cho môi trường test.
+ *
+ * Gọi ở `beforeEach` vì test đăng nhập làm THAY ĐỔI trạng thái thật (đổi mật khẩu, cài TOTP,
+ * khóa tài khoản) — không reset thì test sau ăn theo test trước và đỏ ngẫu nhiên.
+ */
+export function resetUsers(): void {
+  queue('users');
+}
+
+/** Xóa thiết bị do E2E tạo, kèm file · secret · IP · NAT · port · lịch sử của chúng. */
+export function resetDevices(): void {
+  queue('devices');
+}
+
+/** Xóa hồ sơ phần mềm do E2E tạo. Quy ước: mã luôn chứa "E2E". */
+export function resetSoftware(): void {
+  queue('software');
+}
+
+/** Xóa dải và hồ sơ IP do E2E tạo. Quy ước: mọi TÊN dải trong test đều chứa "E2E". */
+export function resetIpam(): void {
+  queue('ipam');
+}
+
+/** Xóa dữ liệu danh mục do E2E tạo (mã bắt đầu bằng `E2E-`, hoặc tên chứa "E2E"). */
+export function resetCatalog(): void {
+  queue('catalog');
+}
+
+/**
+ * Xóa secret do E2E cất. Quy ước: mọi nhãn secret trong test đều chứa "E2E".
+ *
+ * Bảng `secret` không có FK sang device/software (tham chiếu lỏng, AD-4) nên xóa thiết bị
+ * KHÔNG kéo theo secret — không có câu này thì nhãn của lần chạy trước ở lại và ràng buộc
+ * "một chủ thể một nhãn" bắt trúng bản ghi mồ côi.
+ */
+export function resetSecrets(): void {
+  queue('secrets');
+}
+
+/** Xóa tài khoản dịch vụ do E2E tạo, kèm secret · giấy tờ · lịch sử của chúng. */
+export function resetServiceAccounts(): void {
+  queue('service-accounts');
 }
 
 /** Xóa mọi lời gán quyền két sắt của tài khoản E2E — ma trận phải sạch giữa các lần chạy. */
 export function resetAccessList(): void {
-  execSync(
-    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "DELETE FROM access_list WHERE member_email ILIKE '%e2e%'"`,
-    { cwd: '..', stdio: 'pipe' },
-  );
+  queue('access-list');
 }
 
-/**
- * Xóa yêu cầu duyệt do E2E tạo (người xin là tài khoản e2e).
- *
- * `approval_history` là append-only (AD-13) nên phải tắt trigger — lý do script này chỉ có
- * mặt ở môi trường test.
- */
+/** Xóa yêu cầu duyệt do E2E tạo (người xin là tài khoản e2e). */
 export function resetApprovals(): void {
-  const match = "requester ILIKE '%e2e%'";
-  const sql = [
-    `ALTER TABLE approval_history DISABLE TRIGGER approval_history_no_delete`,
-    `DELETE FROM approval_history WHERE approval_id IN (SELECT id FROM approval WHERE ${match})`,
-    `ALTER TABLE approval_history ENABLE TRIGGER approval_history_no_delete`,
-    `DELETE FROM approval WHERE ${match}`,
-  ].join('; ');
-  execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -c "${sql}"`, {
-    cwd: '..',
-    stdio: 'pipe',
-  });
+  queue('approvals');
 }
 
 /** Xóa luật gửi báo cáo do E2E tạo. Quy ước: mọi tên luật trong test đều chứa "E2E". */
 export function resetDigestRules(): void {
-  execSync(
-    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "DELETE FROM expiry_rule WHERE name ILIKE '%E2E%'"`,
-    { cwd: '..', stdio: 'pipe' },
-  );
+  queue('digest-rules');
 }
 
 /** Xóa đường truyền ISP do E2E tạo (mã luôn chứa "E2E"). */
 export function resetIsp(): void {
-  const match = "code ILIKE '%E2E%'";
-  const sql = [
-    `DELETE FROM file WHERE owner_type = 'isp' AND owner_id IN (SELECT id FROM isp_line WHERE ${match})`,
-    `ALTER TABLE isp_line_history DISABLE TRIGGER isp_line_history_no_delete`,
-    `DELETE FROM isp_line_history WHERE isp_line_id IN (SELECT id FROM isp_line WHERE ${match})`,
-    `ALTER TABLE isp_line_history ENABLE TRIGGER isp_line_history_no_delete`,
-    `DELETE FROM isp_line WHERE ${match}`,
-  ].join('; ');
-  execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -c "${sql}"`, {
-    cwd: '..',
-    stdio: 'pipe',
-  });
-}
-
-export function resetDevices(): void {
-  // Quy ước: MỌI mã thiết bị do E2E tạo đều chứa chuỗi "E2E" — nhờ vậy câu xóa dưới đây
-  // không bao giờ chạm vào dữ liệu thật (SW-CORE-01, SRV-APP-01…) trong stack dev.
-  const match = "code ILIKE '%E2E%'";
-  const sql = [
-    `DELETE FROM file WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE ${match})`,
-    /*
-     * Secret gắn vào thiết bị test cũng phải dọn theo.
-     *
-     * Bỏ dòng này thì mỗi lần chạy để lại một ngăn két không còn chủ, và chúng tích lại
-     * hàng chục dòng — trang tổng Két sắt hiện đúng chỗ đó thành "hồ sơ đã bị xóa, còn
-     * secret treo lại". Đúng ra là công của trang tổng: nó phát hiện được rác mà trước
-     * đây không ai nhìn thấy; nhưng rác này là do bộ test đẻ ra nên dọn ở đây.
-     */
-    `DELETE FROM secret WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE ${match})`,
-    // License gán vào thiết bị test cũng phải dọn, không thì FK chặn xóa thiết bị.
-    `DELETE FROM license_assignment WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
-    // Đường ISP trỏ tới thiết bị biên — gỡ liên kết trước khi xóa thiết bị.
-    `UPDATE isp_line SET device_id = NULL WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
-    // Rule NAT và hồ sơ IP trỏ tới thiết bị (FK RESTRICT) — dọn trước khi xóa thiết bị.
-    // `nat_rule_history` (0037) lại trỏ tới rule, cũng RESTRICT: nó phải đi trước nữa.
-    `ALTER TABLE nat_rule_history DISABLE TRIGGER nat_rule_history_no_delete`,
-    `DELETE FROM nat_rule_history WHERE nat_rule_id IN (SELECT id FROM nat_rule WHERE device_id IN (SELECT id FROM device WHERE ${match}))`,
-    `ALTER TABLE nat_rule_history ENABLE TRIGGER nat_rule_history_no_delete`,
-    `DELETE FROM nat_rule WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
-    `ALTER TABLE ip_history DISABLE TRIGGER ip_history_no_delete`,
-    `DELETE FROM ip_history WHERE ip_address_id IN (SELECT id FROM ip_address WHERE device_id IN (SELECT id FROM device WHERE ${match}))`,
-    `ALTER TABLE ip_history ENABLE TRIGGER ip_history_no_delete`,
-    `DELETE FROM ip_address WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
-    // Port map trỏ tới thiết bị ở CẢ HAI cột — xóa hết dòng có dính thiết bị test.
-    `DELETE FROM device_port WHERE device_id IN (SELECT id FROM device WHERE ${match}) OR connected_device_id IN (SELECT id FROM device WHERE ${match})`,
-    // `device_history` là append-only (AD-13) nên phải tắt trigger để dọn — đây là lý do
-    // việc này chỉ chạy ở môi trường test, không bao giờ có trong image production.
-    `ALTER TABLE device_history DISABLE TRIGGER device_history_no_delete`,
-    `DELETE FROM device_history WHERE device_id IN (SELECT id FROM device WHERE ${match})`,
-    `ALTER TABLE device_history ENABLE TRIGGER device_history_no_delete`,
-    `DELETE FROM device WHERE ${match}`,
-  ].join('; ');
-  execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -c "${sql}"`, {
-    cwd: '..',
-    stdio: 'pipe',
-  });
-}
-
-export function resetCatalog(): void {
-  const sql = [
-    "DELETE FROM cabinet WHERE site_id IN (SELECT id FROM site WHERE code LIKE 'E2E-%')",
-    "DELETE FROM site WHERE code LIKE 'E2E-%'",
-    "DELETE FROM vendor WHERE name LIKE 'E2E-%'",
-    "DELETE FROM device_type WHERE name LIKE 'E2E-%'",
-    // Ba danh mục của 0028. Khớp '%E2E%' ở GIỮA chuỗi chứ không chỉ tiền tố: tên do người
-    // dùng đặt (vd "Cong E2E 1234") nên không có quy ước mã đứng đầu như site/NCC.
-    "DELETE FROM service_port WHERE name ILIKE '%E2E%'",
-    "DELETE FROM department WHERE name ILIKE '%E2E%'",
-    "DELETE FROM isp_provider WHERE name ILIKE '%E2E%'",
-  ].join('; ');
-  execSync(`${COMPOSE} exec -T postgres psql -U ims -d ims -c "${sql}"`, {
-    cwd: '..',
-    stdio: 'pipe',
-  });
+  queue('isp');
 }
 
 const totp = new TOTP({

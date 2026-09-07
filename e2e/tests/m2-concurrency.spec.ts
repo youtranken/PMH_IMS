@@ -256,7 +256,7 @@ test.describe('M2 — ghi song song trên cùng bản ghi', () => {
    * được "còn 2", cả hai qua cửa, cả hai ghi. Còn lại 1. Với đúng 2 SA thì còn 0, tức KHÓA
    * CẢ CÔNG TY RA NGOÀI hệ thống, và không ai mở lại được vì mở cũng cần quyền SA.
    */
-  test('SA cuối cùng: hai lệnh khóa đồng thời không được đưa hệ thống xuống dưới 2 SA', async ({
+  test('SA cuối cùng: hai lệnh khóa đồng thời không được đưa hệ thống xuống dưới 2 SA @slow', async ({
     page,
   }) => {
     await firstLogin(page, E2E_SA);

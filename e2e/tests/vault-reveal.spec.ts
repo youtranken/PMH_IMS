@@ -209,7 +209,7 @@ test.describe('Mở két với TOTP step-up', () => {
    * Tự ẩn kiểm bằng ĐÚNG giá trị `secret.reveal_seconds` đang cấu hình, đọc từ chính API —
    * viết cứng 30 ở đây thì đổi cấu hình xong test vẫn xanh trong khi màn hình đã sai (AD-11).
    */
-  test('giá trị tự ẩn sau đúng số giây trong system_config', async ({ page }) => {
+  test('giá trị tự ẩn sau đúng số giây trong system_config @slow', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
     const { deviceId } = await setUpDeviceWithSecrets(page, stamp, [
@@ -240,7 +240,7 @@ test.describe('Mở két với TOTP step-up', () => {
    * chết, mà tài khoản vẫn đăng nhập lại được bình thường. Khóa tài khoản thì chính kẻ tấn
    * công lại khóa được người dùng thật ra ngoài.
    */
-  test('gõ sai mã liên tiếp đủ ngưỡng thì THU HỒI PHIÊN, nhưng không khóa tài khoản', async ({
+  test('gõ sai mã liên tiếp đủ ngưỡng thì THU HỒI PHIÊN, nhưng không khóa tài khoản @slow', async ({
     page,
   }) => {
     const totpSecret = await firstLogin(page, E2E_SA);
@@ -287,7 +287,7 @@ test.describe('Mở két với TOTP step-up', () => {
    * Vế thứ hai mới là vế khó làm giả: người thứ hai mở từ CÙNG MỘT IP (mọi test đều chạy từ
    * localhost) mà vẫn thông, thì con số 30 kia chắc chắn đang tính theo tài khoản.
    */
-  test('mở quá 30 lần một phút thì bị chặn, và trần đếm theo USER chứ không theo IP', async ({
+  test('mở quá 30 lần một phút thì bị chặn, và trần đếm theo USER chứ không theo IP @slow', async ({
     page,
     browser,
   }) => {

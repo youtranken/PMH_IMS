@@ -1,0 +1,274 @@
+#!/usr/bin/env node
+/**
+ * Đưa MỌI vùng dữ liệu do E2E tạo ra về trạng thái sạch — trong MỘT lần gọi.
+ *
+ * CHỈ dùng ở môi trường dev/CI. Không có endpoint API nào làm việc này — cố tình, để
+ * production không tồn tại cửa hậu (NFR-01).
+ *
+ *   docker compose exec -T api node scripts/reset-e2e.mjs users devices software
+ *
+ * ===== VÌ SAO GỘP LÀM MỘT (07/09/2026) =====
+ *
+ * Trước đây `e2e/tests/helpers.ts` có 11 hàm reset, mỗi hàm tự `execSync` một lệnh
+ * `docker compose exec` riêng, và mỗi `beforeEach` gọi 2-5 hàm. Đo được: **một lần
+ * `docker compose exec` tốn 0,46 giây** trên máy Windows này. Nhân với ~900 lượt gọi
+ * trong một lượt chạy đầy đủ là **~7 phút thuần overhead** — nhiều hơn cả thời gian
+ * trình duyệt thật sự làm việc ở phần lớn các bài.
+ *
+ * Gộp về một script: 1 tiến trình, 1 kết nối pg, 1 transaction cho mỗi vùng. Số lần
+ * `exec` trong cả bộ giảm từ ~900 xuống ~264 (đúng một lần mỗi bài).
+ *
+ * Lợi thứ hai, không kém phần quan trọng: 7 hàm cũ tắt trigger append-only bằng
+ * `ALTER TABLE ... DISABLE TRIGGER` rồi bật lại ở câu SQL kế tiếp, KHÔNG có `try/finally`.
+ * Một lỗi FK giữa chừng là trigger ở lại DISABLED, và từ lúc đó hai bài kiểm giữ NFR-03
+ * (`audit-log.spec.ts`, `ip-lifecycle.spec.ts`) cho kết quả GIẢ mà không ai biết
+ * (rà soát 07/09). Ở đây mỗi vùng chạy trong một transaction: hỏng thì `ROLLBACK` trả
+ * trigger về nguyên trạng.
+ */
+import { createHash } from 'node:crypto';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { hash } from '@node-rs/argon2';
+import pg from 'pg';
+
+const ARGON = { algorithm: 2, memoryCost: 65_536, timeCost: 3, parallelism: 1 };
+
+const E2E_USERS = [
+  { email: 'e2e-sa@pmh.com.vn', fullName: 'E2E Super Admin', role: 'sa', password: 'E2e@Test#2026' },
+  {
+    email: 'e2e-member@pmh.com.vn',
+    fullName: 'E2E Thành viên',
+    role: 'member',
+    password: 'E2e@Test#2026',
+  },
+];
+
+/** Trần đăng nhập/IP mà cả bộ E2E chạy dưới — phải khớp `E2E_LOGIN_RATE_LIMIT` bên helpers. */
+const E2E_LOGIN_RATE_LIMIT = 500;
+
+/**
+ * Mỗi vùng = một danh sách câu SQL chạy TRONG MỘT transaction.
+ *
+ * Quy ước xuyên suốt: chỉ đụng dữ liệu mang dấu E2E (`code ILIKE '%E2E%'`,
+ * `name ILIKE '%E2E%'`, `email LIKE 'e2e-tao-moi-%'`). Không câu nào có thể chạm dữ liệu
+ * thật của PMH trong stack dev.
+ */
+const DOMAINS = {
+  /** Tài khoản do bài "SA tạo tài khoản mới" đẻ ra + trần đăng nhập cho môi trường test. */
+  users: [
+    `UPDATE system_config SET value = '${E2E_LOGIN_RATE_LIMIT}' WHERE key = 'login.rate_limit_per_ip'`,
+    `DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'e2e-tao-moi-%')`,
+    `DELETE FROM known_device WHERE user_id IN (SELECT id FROM users WHERE email LIKE 'e2e-tao-moi-%')`,
+    `DELETE FROM users WHERE email LIKE 'e2e-tao-moi-%'`,
+  ],
+
+  devices: [
+    `DELETE FROM file WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
+    `DELETE FROM secret WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
+    `DELETE FROM license_assignment WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
+    `UPDATE isp_line SET device_id = NULL WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
+    `ALTER TABLE nat_rule_history DISABLE TRIGGER nat_rule_history_no_delete`,
+    `DELETE FROM nat_rule_history WHERE nat_rule_id IN (SELECT id FROM nat_rule WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%'))`,
+    `ALTER TABLE nat_rule_history ENABLE TRIGGER nat_rule_history_no_delete`,
+    `DELETE FROM nat_rule WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
+    `ALTER TABLE ip_history DISABLE TRIGGER ip_history_no_delete`,
+    `DELETE FROM ip_history WHERE ip_address_id IN (SELECT id FROM ip_address WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%'))`,
+    `ALTER TABLE ip_history ENABLE TRIGGER ip_history_no_delete`,
+    `DELETE FROM ip_address WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
+    `DELETE FROM device_port WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%') OR connected_device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
+    `ALTER TABLE device_history DISABLE TRIGGER device_history_no_delete`,
+    `DELETE FROM device_history WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
+    `ALTER TABLE device_history ENABLE TRIGGER device_history_no_delete`,
+    `DELETE FROM device WHERE code ILIKE '%E2E%'`,
+  ],
+
+  software: [
+    `DELETE FROM license_assignment WHERE software_id IN (SELECT id FROM software WHERE code ILIKE '%E2E%')`,
+    `DELETE FROM secret WHERE owner_type = 'software' AND owner_id IN (SELECT id FROM software WHERE code ILIKE '%E2E%')`,
+    `ALTER TABLE software_history DISABLE TRIGGER software_history_no_delete`,
+    `DELETE FROM software_history WHERE software_id IN (SELECT id FROM software WHERE code ILIKE '%E2E%')`,
+    `ALTER TABLE software_history ENABLE TRIGGER software_history_no_delete`,
+    `DELETE FROM software WHERE code ILIKE '%E2E%'`,
+  ],
+
+  ipam: [
+    `ALTER TABLE ip_history DISABLE TRIGGER ip_history_no_delete`,
+    `DELETE FROM ip_history WHERE ip_address_id IN (SELECT id FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE name ILIKE '%E2E%'))`,
+    `ALTER TABLE ip_history ENABLE TRIGGER ip_history_no_delete`,
+    `ALTER TABLE nat_rule_history DISABLE TRIGGER nat_rule_history_no_delete`,
+    `DELETE FROM nat_rule_history WHERE nat_rule_id IN (SELECT id FROM nat_rule WHERE ip_address_id IN (SELECT id FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE name ILIKE '%E2E%')) OR device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%'))`,
+    `ALTER TABLE nat_rule_history ENABLE TRIGGER nat_rule_history_no_delete`,
+    `DELETE FROM nat_rule WHERE ip_address_id IN (SELECT id FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE name ILIKE '%E2E%'))`,
+    `DELETE FROM nat_rule WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
+    `DELETE FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE name ILIKE '%E2E%')`,
+    `DELETE FROM subnet WHERE name ILIKE '%E2E%'`,
+  ],
+
+  catalog: [
+    `DELETE FROM cabinet WHERE site_id IN (SELECT id FROM site WHERE code LIKE 'E2E-%')`,
+    `DELETE FROM site WHERE code LIKE 'E2E-%'`,
+    `DELETE FROM vendor WHERE name LIKE 'E2E-%'`,
+    `DELETE FROM device_type WHERE name LIKE 'E2E-%'`,
+    `DELETE FROM service_port WHERE name ILIKE '%E2E%'`,
+    `DELETE FROM department WHERE name ILIKE '%E2E%'`,
+    `DELETE FROM isp_provider WHERE name ILIKE '%E2E%'`,
+  ],
+
+  secrets: [`DELETE FROM secret WHERE label ILIKE '%E2E%'`],
+
+  'service-accounts': [
+    `ALTER TABLE service_account_history DISABLE TRIGGER service_account_history_no_delete`,
+    `DELETE FROM secret WHERE owner_type = 'service_account' AND owner_id IN (SELECT id FROM service_account WHERE code ILIKE '%E2E%')`,
+    `DELETE FROM file WHERE owner_type = 'service_account' AND owner_id IN (SELECT id FROM service_account WHERE code ILIKE '%E2E%')`,
+    `DELETE FROM service_account_history WHERE service_account_id IN (SELECT id FROM service_account WHERE code ILIKE '%E2E%')`,
+    `ALTER TABLE service_account_history ENABLE TRIGGER service_account_history_no_delete`,
+    `DELETE FROM service_account WHERE code ILIKE '%E2E%'`,
+  ],
+
+  'access-list': [`DELETE FROM access_list WHERE member_email ILIKE '%e2e%'`],
+
+  approvals: [
+    `ALTER TABLE approval_history DISABLE TRIGGER approval_history_no_delete`,
+    `DELETE FROM approval_history WHERE approval_id IN (SELECT id FROM approval WHERE requester ILIKE '%e2e%')`,
+    `ALTER TABLE approval_history ENABLE TRIGGER approval_history_no_delete`,
+    `DELETE FROM approval WHERE requester ILIKE '%e2e%'`,
+  ],
+
+  'digest-rules': [`DELETE FROM expiry_rule WHERE name ILIKE '%E2E%'`],
+
+  isp: [
+    `DELETE FROM file WHERE owner_type = 'isp' AND owner_id IN (SELECT id FROM isp_line WHERE code ILIKE '%E2E%')`,
+    `ALTER TABLE isp_line_history DISABLE TRIGGER isp_line_history_no_delete`,
+    `DELETE FROM isp_line_history WHERE isp_line_id IN (SELECT id FROM isp_line WHERE code ILIKE '%E2E%')`,
+    `ALTER TABLE isp_line_history ENABLE TRIGGER isp_line_history_no_delete`,
+    `DELETE FROM isp_line WHERE code ILIKE '%E2E%'`,
+  ],
+};
+
+/**
+ * Băm Argon2 tốn ~200-400ms MỖI tài khoản, và script này chạy lại ở mọi `beforeEach` —
+ * tức 2 lần băm × 264 bài = 2-3,5 phút thuần băm cho một lượt chạy đầy đủ.
+ *
+ * Argon2 sinh salt ngẫu nhiên mỗi lần, nhưng MỘT băm cũ của cùng mật khẩu vẫn xác thực đúng
+ * — nên dùng lại được. Cache trong container (`/tmp`, mất khi container dựng lại, đúng ý:
+ * pepper đổi thì cache cũng phải đi theo).
+ *
+ * Khóa cache gồm cả pepper để đổi pepper là cache tự hỏng, không âm thầm dùng băm sai.
+ */
+const HASH_CACHE = '/tmp/.e2e-argon2-cache.json';
+
+function loadHashCache() {
+  try {
+    return JSON.parse(readFileSync(HASH_CACHE, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+/** Đưa hai tài khoản E2E cố định về trạng thái "vừa được SA tạo". */
+async function resetUsers(pool) {
+  const pepper = readFileSync(process.env.PASSWORD_PEPPER_FILE, 'utf8').trim();
+  const cache = loadHashCache();
+  const cacheKey = (user) => `${user.email}|${createHash('sha256').update(pepper).digest('hex')}`;
+  let cacheDirty = false;
+
+  for (const user of E2E_USERS) {
+    const key = cacheKey(user);
+    let passwordHash = cache[key];
+    if (!passwordHash) {
+      passwordHash = await hash(`${user.password}${pepper}`, ARGON);
+      cache[key] = passwordHash;
+      cacheDirty = true;
+    }
+    const existing = await pool.query('SELECT id FROM users WHERE email = $1', [user.email]);
+    if (existing.rowCount > 0) {
+      const id = existing.rows[0].id;
+      await pool.query(
+        `UPDATE users SET password_hash=$2, must_change_password=true, status='active',
+           failed_attempts=0, locked_until=NULL, totp_secret_ct=NULL, totp_secret_iv=NULL,
+           totp_secret_tag=NULL, totp_dek_wrapped=NULL, totp_key_version=NULL,
+           totp_enrolled_at=NULL, totp_last_timestep=NULL, totp_login_required=true,
+           updated_at=now()
+         WHERE id=$1`,
+        [id, passwordHash],
+      );
+      await pool.query(
+        `UPDATE sessions SET revoked_at=now(), revoked_reason='e2e-reset'
+         WHERE user_id=$1 AND revoked_at IS NULL`,
+        [id],
+      );
+      await pool.query('DELETE FROM known_device WHERE user_id=$1', [id]);
+    } else {
+      await pool.query(
+        `INSERT INTO users (email, full_name, role, password_hash, must_change_password, totp_login_required)
+         VALUES ($1,$2,$3,$4,true,true)`,
+        [user.email, user.fullName, user.role, passwordHash],
+      );
+    }
+  }
+
+  // Ghi cache SAU vòng lặp, một lần. Hỏng thì kệ — lần sau băm lại, chỉ chậm chứ không sai.
+  if (cacheDirty) {
+    try {
+      writeFileSync(HASH_CACHE, JSON.stringify(cache), 'utf8');
+    } catch {
+      /* không ghi được cache thì thôi, không phải lỗi nghiệp vụ */
+    }
+  }
+}
+
+async function main() {
+  /*
+   * CHẶN THẬT, không chỉ cảnh báo: script này đặt lại mật khẩu về một chuỗi có sẵn trong repo
+   * và hủy mọi phiên đang mở. Chạy nhầm trên máy thật là mở toang cửa. Muốn chạy thì phải khai
+   * tường minh ALLOW_E2E_RESET=1 (chỉ môi trường test/CI mới đặt biến này).
+   */
+  if (process.env.ALLOW_E2E_RESET !== '1') {
+    console.error(
+      'Từ chối chạy: script chỉ dành cho môi trường test. ' +
+        'Nếu đây đúng là máy test, chạy lại với ALLOW_E2E_RESET=1.',
+    );
+    process.exit(1);
+  }
+
+  const domains = process.argv.slice(2);
+  const unknown = domains.filter((d) => d !== 'users' && !(d in DOMAINS));
+  if (unknown.length > 0) {
+    console.error(
+      `Vùng không hợp lệ: ${unknown.join(', ')}. Hợp lệ: users, ${Object.keys(DOMAINS).join(', ')}`,
+    );
+    process.exit(1);
+  }
+
+  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  try {
+    if (domains.includes('users')) await resetUsers(pool);
+
+    for (const domain of domains) {
+      const statements = DOMAINS[domain];
+      if (!statements) continue;
+      /*
+       * MỘT transaction cho mỗi vùng. `ROLLBACK` trong `catch` là thứ trả lại trigger
+       * append-only khi có câu nào hỏng giữa chừng — không có nó thì `ALTER TABLE ...
+       * DISABLE TRIGGER` ở đầu danh sách nằm lại vĩnh viễn và hàng rào AD-13 im lặng biến mất.
+       */
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        for (const sql of statements) await client.query(sql);
+        await client.query('COMMIT');
+      } catch (error) {
+        await client.query('ROLLBACK').catch(() => undefined);
+        throw new Error(`reset vùng "${domain}" thất bại: ${error.message}`);
+      } finally {
+        client.release();
+      }
+    }
+  } finally {
+    await pool.end();
+  }
+}
+
+main().catch((error) => {
+  console.error('Reset E2E thất bại:', error.message);
+  process.exit(1);
+});

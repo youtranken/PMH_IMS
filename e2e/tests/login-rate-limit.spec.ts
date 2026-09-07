@@ -51,7 +51,7 @@ test.describe('Chống dò mật khẩu theo IP', () => {
    */
   test.setTimeout(120_000);
 
-  test('vượt trần thì trả 429 LOGIN_RATE_LIMITED, không phải 401', async ({ page }) => {
+  test('vượt trần thì trả 429 LOGIN_RATE_LIMITED, không phải 401 @slow', async ({ page }) => {
     await page.goto('/login');
 
     const attempt = () =>
@@ -84,7 +84,7 @@ test.describe('Chống dò mật khẩu theo IP', () => {
     expect(await blocked.json()).toMatchObject({ code: 'LOGIN_RATE_LIMITED' });
   });
 
-  test('trần đọc TỪ system_config, không viết cứng trong code (AD-11)', async ({ page }) => {
+  test('trần đọc TỪ system_config, không viết cứng trong code (AD-11) @slow', async ({ page }) => {
     // Nâng trần lên cao: cùng một IP vừa bị chặn ở bài trên phải được đi tiếp.
     // Nếu ngưỡng bị viết cứng trong code thì dòng UPDATE này không đổi được gì và bài đỏ.
     setLoginRateLimit(E2E_LOGIN_RATE_LIMIT);

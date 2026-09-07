@@ -8,18 +8,14 @@ import { E2E_LOGIN_RATE_LIMIT } from './tests/helpers';
  * Dùng script trong container api — KHÔNG có endpoint reset trong API production.
  */
 export default function globalSetup(): void {
-  execSync(
-    'docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml exec -T api node scripts/reset-e2e-user.mjs',
-    {
-      cwd: '..',
-      stdio: 'inherit',
-      env: { ...process.env, ALLOW_E2E_RESET: '1' },
-    },
-  );
-
   /*
-   * Cất giá trị GỐC của `login.rate_limit_per_ip` trước khi bộ test nới nó lên.
-   * `global-teardown.ts` trả lại đúng con số này. Không có bước cất/trả, DB dev-test nằm
+   * ĐỌC TRƯỚC, RESET SAU — thứ tự này quan trọng.
+   *
+   * Từ 07/09, `reset-e2e.mjs users` tự nới `login.rate_limit_per_ip` lên 500 (trước kia việc
+   * đó nằm ở `relaxLoginRateLimit()` gọi riêng trong từng `beforeEach`). Chạy reset trước rồi
+   * mới đọc là đọc phải chính con số bộ test vừa đặt, và giá trị thật không bao giờ được cất.
+   *
+   * `global-teardown.ts` trả lại đúng con số cất ở đây. Không có bước cất/trả, DB dev-test nằm
    * vĩnh viễn ở ngưỡng 500 — và nếu diễn tập khôi phục (Story 4.3) lấy dữ liệu từ đây thì
    * cấu hình bẩn đó đi thẳng vào production.
    */
@@ -31,6 +27,20 @@ export default function globalSetup(): void {
     .toString()
     .trim();
 
+  saveBackup(original);
+
+  // Giờ mới đưa tài khoản E2E về trạng thái sạch (script này cũng nới trần đăng nhập).
+  execSync(
+    'docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml exec -T api node scripts/reset-e2e.mjs users',
+    {
+      cwd: '..',
+      stdio: 'inherit',
+      env: { ...process.env, ALLOW_E2E_RESET: '1' },
+    },
+  );
+}
+
+function saveBackup(original: string): void {
   if (!original) return;
 
   /*

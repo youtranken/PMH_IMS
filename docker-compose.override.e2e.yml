@@ -1,4 +1,4 @@
-# Override CHỈ dùng cho môi trường test E2E: mount script reset tài khoản test vào container
+# Override CHỈ dùng cho môi trường test E2E: mount script dọn dữ liệu test vào container
 # (script này cố tình KHÔNG nằm trong image production — xem api/Dockerfile).
 #
 #   docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml up -d
@@ -6,6 +6,9 @@
 services:
   api:
     volumes:
-      - ./api/scripts/reset-e2e-user.mjs:/app/scripts/reset-e2e-user.mjs:ro
+      # 07/09: gộp 11 hàm dọn của `helpers.ts` về MỘT script, một kết nối pg, một transaction
+      # mỗi vùng. Trước đó mỗi hàm tự `docker compose exec` một lệnh riêng (0,46s/lần, ~900
+      # lượt mỗi lần chạy đầy đủ = ~7 phút thuần overhead).
+      - ./api/scripts/reset-e2e.mjs:/app/scripts/reset-e2e.mjs:ro
     environment:
       ALLOW_E2E_RESET: '1'
