@@ -59,7 +59,16 @@ export class AuthController {
     };
   }
 
-  /** Bước 2: mã TOTP. Phiên chờ được thay bằng phiên mới (regenerate id). */
+  /**
+   * Bước 2: mã TOTP. Phiên chờ được thay bằng phiên mới (regenerate id).
+   *
+   * Trần 10 lần/phút — CÙNG con số với `POST /auth/step-up` ngay dưới, và vì cùng một lý do:
+   * mã TOTP chỉ có một triệu khả năng, còn trần chung 300/phút là quá rộng cho một ô 6 số.
+   * Đường này kết thúc bằng `completeTotpWithin` (đóng dấu `stepped_up_at`) nên đoán trúng ở
+   * đây là được cấp một phiên ĐÃ MỞ KÉT — nó là cửa két thứ hai, phải canh ngang cửa thứ nhất.
+   * Trước 07/09 route này không có gì cả (rà soát 07/09, finding #2).
+   */
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @AllowTotpPending()
   @Roles(...ALL_ROLES)
   @Post('login/totp')

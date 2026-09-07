@@ -14,7 +14,7 @@ import { OutboxService } from '../outbox/outbox.service';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { UsersService } from '../users/users.service';
 import type { UserCredentials } from '../users/users.types';
-import { isLocked, lockRemainingSeconds, registerFailure } from './lockout';
+import { isLocked, lockRemainingSeconds } from '../../common/lockout';
 import { PasswordService } from './password.service';
 import { checkPasswordStrength } from './password-policy';
 import { SessionService, type SessionRecord } from './session.service';
@@ -99,29 +99,48 @@ export class AuthService {
 
     const ok = await this.passwords.verify(user.passwordHash, password);
     if (!ok) {
-      const next = registerFailure(
-        { failedAttempts: user.failedAttempts, lockedUntil: user.lockedUntil },
-        { maxFailedAttempts: maxFailed, lockoutMinutes },
-        now,
-      );
-      await this.users.applyLockoutState(user.id, {
-        failedAttempts: next.failedAttempts,
-        lockedUntil: next.lockedUntil,
-      });
-      await this.auditFailure(user, 'bad-password', ctx);
-      if (next.justLocked) {
-        // Email báo SA đi qua outbox (AD-5) — không gửi thẳng trong request.
-        await this.db.transaction(async (tx) => {
+      /*
+       * MỘT transaction cho cả ba việc: cộng bộ đếm, ghi audit, và (nếu vừa khóa) đẩy email
+       * báo SA vào outbox.
+       *
+       * Bản trước làm ba bước rời: `applyLockoutState` chạy trên pool và COMMIT NGAY, rồi mới
+       * mở một transaction khác cho audit + outbox. Hai lỗi cộng dồn:
+       *
+       * 1. ĐUA (finding #5). Bộ đếm là đọc-rồi-ghi-đè quanh một lần Argon2 ~200ms, nên N lượt
+       *    đoán song song chỉ tốn 1 lượt đếm. Nay `registerLoginFailureWithin` cộng nguyên tử
+       *    ngay trong câu UPDATE.
+       * 2. MẤT EMAIL (mẫu N3). `locked_until` đã commit mà transaction thứ hai hỏng — pool
+       *    cạn, worker bị kill — thì tài khoản BỊ KHÓA nhưng SA không bao giờ nhận được thư,
+       *    và không có đường bù: lần thử sau bị `isLocked()` chặn ở trên nên `justLocked`
+       *    không bao giờ đúng lần nữa.
+       */
+      await this.db.transaction(async (tx) => {
+        const state = await this.users.registerLoginFailureWithin(
+          tx,
+          user.id,
+          { maxFailedAttempts: maxFailed, lockoutMinutes },
+          now,
+        );
+        await this.audit.appendWithin(tx, {
+          actor: user.email,
+          action: 'auth.login.failed',
+          objectType: 'user',
+          objectId: user.id,
+          detail: { reason: 'bad-password', ip: ctx.ip },
+        });
+        if (state.justLocked) {
           await this.audit.appendWithin(tx, {
             actor: user.email,
             action: 'auth.account.locked',
             objectType: 'user',
             objectId: user.id,
-            detail: { failedAttempts: next.failedAttempts, ip: ctx.ip },
+            detail: { failedAttempts: state.failedAttempts, ip: ctx.ip },
           });
+          // Email báo SA đi qua outbox (AD-5) — không gửi thẳng trong request.
           await this.outbox.enqueueWithin(tx, 'auth.account.locked', { userId: user.id });
-        });
-      }
+        }
+        return state;
+      });
       throw new UnauthorizedException({
         code: 'LOGIN_FAILED',
         message: 'Email hoặc mật khẩu không đúng.',
@@ -166,6 +185,21 @@ export class AuthService {
     token: string,
     ctx: LoginContext,
   ): Promise<{ session: SessionRecord; mustChangePassword: boolean }> {
+    /*
+     * CHỈ nhận phiên ĐANG CHỜ mã. Bản trước không kiểm gì cả.
+     *
+     * Đường này kết thúc bằng `completeTotpWithin`, và hàm đó đóng dấu `stepped_up_at` — tức
+     * nó cấp một phiên ĐÃ MỞ KÉT. Với một phiên đã xác thực đủ (`totp_pending = false`), gọi
+     * lại đường này là một cửa STEP-UP THỨ HAI: cùng tác dụng với `POST /auth/step-up` nhưng
+     * không có bộ đếm sai, không thu hồi phiên, và (trước bản sửa này) không có trần riêng.
+     */
+    if (!session.totpPending) {
+      throw new UnauthorizedException({
+        code: 'TOTP_NOT_PENDING',
+        message: 'Phiên này không ở bước chờ mã. Dùng đường mở két nếu cần xác thực lại.',
+      });
+    }
+
     const user = await this.requireUser(session.userId);
     const secret = this.openTotpSecret(user);
     const result = await this.totp.verify({
@@ -181,12 +215,45 @@ export class AuthService {
         objectId: session.id,
         detail: { reason: result.reason, ip: ctx.ip },
       });
+
+      /*
+       * ĐẾM SAI VÀ THU HỒI PHIÊN — cùng khuôn với `stepUp()` (finding #2).
+       *
+       * Bản trước chỉ ghi audit rồi ném. Trần duy nhất là throttler chung 300/phút, mà ở route
+       * này `req.user` đã tồn tại nên 300 lượt đó đổ hết vào ĐÚNG MỘT tài khoản. Kẻ đã có mật
+       * khẩu (dùng lại từ nơi khác, phishing) nhưng không có điện thoại chỉ việc bắn liên tục:
+       * phiên chờ không bao giờ chết, `markLoginSuccess` đã xóa `failed_attempts` nên lockout
+       * cũng không liên quan. Đã đo: 25 lượt đoán liên tiếp đều trả 401, không gì chặn.
+       *
+       * Thu hồi PHIÊN chứ không khóa TÀI KHOẢN — đúng lý do đã viết ở `stepUp()`: khóa tài
+       * khoản thì chính kẻ tấn công lại khóa được người dùng thật ra ngoài.
+       */
+      const failures = await this.sessions.registerStepUpFailure(session.id);
+      const maxFailures = await this.config.getNumber('secretStepUpMaxFailures');
+      if (failures >= maxFailures) {
+        await this.db.transaction(async (tx) => {
+          await this.sessions.revokeWithin(tx, session.id, 'totp-brute-force');
+          await this.audit.appendWithin(tx, {
+            actor: user.email,
+            action: 'auth.totp.session_revoked',
+            objectType: 'session',
+            objectId: session.id,
+            detail: { failures, ip: ctx.ip },
+          });
+        });
+        throw new UnauthorizedException({
+          code: 'SESSION_REVOKED',
+          message: `Gõ sai mã ${failures} lần — phiên đã bị thu hồi. Đăng nhập lại.`,
+        });
+      }
+
       throw new UnauthorizedException({
         code: result.reason === 'replayed' ? 'TOTP_REPLAYED' : 'TOTP_INVALID',
         message:
           result.reason === 'replayed'
             ? 'Mã này đã được dùng. Chờ mã mới trên ứng dụng rồi nhập lại.'
             : 'Mã xác thực không đúng.',
+        attemptsLeft: maxFailures - failures,
       });
     }
 

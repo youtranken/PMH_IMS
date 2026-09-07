@@ -7,6 +7,7 @@ import type { Page, PageQuery } from '../../common/pagination';
 import { pageOffset } from '../../common/pagination';
 import type { SealedValue } from '../../common/crypto/envelope.types';
 import type { SortQuery } from '../../common/sorting';
+import { registerFailure, type LockoutPolicy, type LockoutState } from '../../common/lockout';
 import type { UserRole } from '../auth/types';
 import { usersTable } from './users.schema';
 import type { UserCredentials, UserRecord } from './users.types';
@@ -227,11 +228,58 @@ export class UsersService {
       .where(eq(usersTable.id, userId));
   }
 
-  async applyLockoutState(
+  /**
+   * Cộng MỘT vào bộ đếm sai mật khẩu và khóa tài khoản nếu chạm ngưỡng — NGUYÊN TỬ, trong `tx`.
+   *
+   * VÌ SAO KHÔNG CÒN `applyLockoutState` GHI GIÁ TRỊ TUYỆT ĐỐI. Bản cũ đọc `failed_attempts`
+   * ở đầu `login()`, rồi Argon2 xác minh mất ~200ms, rồi mới ghi đè một con số tính sẵn. Bắn
+   * nhiều request song song cùng email: tất cả đọc được cùng con số cũ, tất cả tính ra cùng
+   * giá trị mới, tất cả ghi đè nhau — **N lần đoán chỉ tốn 1 lượt đếm**, và hàng rào "sai 5
+   * lần thì khóa" của NFR-01 gần như vô hiệu. Đã tái hiện thật: 6 lượt sai đồng thời cho ra
+   * `failed_attempts = 1` (`e2e/tests/auth-hardening.spec.ts`).
+   *
+   * Cả phép cộng và phép quyết định khóa nằm trong MỘT câu UPDATE, nên hai request song song
+   * buộc phải xếp hàng ở hàng đó và mỗi lượt đếm đúng một lần. Repo đã làm đúng lối này ở
+   * `session.service.ts` (`SET stepup_failures = stepup_failures + 1`); đường login là chỗ sót.
+   *
+   * KHÔNG viết lại luật bằng SQL. `SELECT ... FOR UPDATE` khóa đúng hàng người dùng đó, nên
+   * lượt song song thứ hai phải xếp hàng và khi tới lượt nó ĐỌC LẠI giá trị đã commit rồi mới
+   * tính. Nhờ vậy `registerFailure` trong `lockout.ts` vẫn là NGUỒN DUY NHẤT của luật (ngưỡng
+   * khóa, "khóa hết hạn thì đếm lại từ 0", gia hạn khóa), và `lockout.spec.ts` vẫn là nơi chốt
+   * nó bằng 9 test bảng dữ liệu. Dịch luật đó sang một biểu thức CASE trong SQL là đẻ ra bản
+   * thứ hai của cùng một luật — đúng mẫu M5 mà hai đợt rà soát đều cảnh báo.
+   *
+   * Argon2 (~200ms) chạy TRƯỚC transaction này, nên khóa hàng chỉ giữ trong một tx rất ngắn.
+   */
+  async registerLoginFailureWithin(
+    tx: Tx,
     userId: string,
-    state: { failedAttempts: number; lockedUntil: Date | null },
-  ): Promise<void> {
-    await this.db.update(usersTable).set(state).where(eq(usersTable.id, userId));
+    policy: LockoutPolicy,
+    now: Date,
+  ): Promise<LockoutState & { justLocked: boolean }> {
+    const current = await tx
+      .select({
+        failedAttempts: usersTable.failedAttempts,
+        lockedUntil: usersTable.lockedUntil,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .for('update');
+
+    if (current.length === 0) {
+      return { failedAttempts: 0, lockedUntil: null, justLocked: false };
+    }
+
+    const next = registerFailure(current[0], policy, now);
+    await tx
+      .update(usersTable)
+      .set({
+        failedAttempts: next.failedAttempts,
+        lockedUntil: next.lockedUntil,
+        updatedAt: now,
+      })
+      .where(eq(usersTable.id, userId));
+    return next;
   }
 
   async markLoginSuccess(userId: string): Promise<void> {
