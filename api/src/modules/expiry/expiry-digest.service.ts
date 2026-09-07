@@ -164,44 +164,61 @@ export class ExpiryDigestService {
     );
     if (!due) return;
 
-    /*
-     * CHỐT KỲ TRƯỚC, gửi sau — bằng một câu UPDATE CÓ ĐIỀU KIỆN.
-     *
-     * Đọc rồi mới ghi là chỗ hai worker cùng lọt qua: cả hai đọc `last_sent_at` cũ, cả hai
-     * thấy "đến kỳ", người nhận lãnh hai thư giống hệt. Cả hệ thống này đã chốt "nhiều nhất
-     * một lần" theo lối nguyên tử (outbox dùng FOR UPDATE SKIP LOCKED, markProcessed dùng
-     * check-and-set) — chỗ này theo đúng lối đó. Ai UPDATE trúng row thì người đó gửi.
-     */
-    const startOfDayUtc = new Date(`${local.date}T00:00:00Z`);
-    const claimed = await this.db
-      .update(expiryRuleTable)
-      .set({ lastSentAt: now })
-      .where(
-        and(
-          eq(expiryRuleTable.id, rule.id),
-          or(
-            isNull(expiryRuleTable.lastSentAt),
-            lt(expiryRuleTable.lastSentAt, startOfDayUtc),
-          ),
-        ),
-      )
-      .returning({ id: expiryRuleTable.id });
-    if (claimed.length === 0) return;
-
     const recipients = rule.recipients as string[];
-    if (recipients.length === 0) {
-      // Không nên xảy ra (luật đang chạy bắt buộc có người nhận), nhưng dữ liệu cũ có thể
-      // còn. Kỳ đã chốt ở trên nên chỉ cảnh báo MỘT LẦN cho kỳ này, không phải mỗi phút.
-      this.logger.warn(`Luật "${rule.name}" đến kỳ nhưng chưa có người nhận — bỏ qua kỳ này.`);
-      return;
-    }
+    /*
+     * Dựng nội dung TRƯỚC khi mở transaction — đây là câu đọc thuần, không cần nằm trong tx,
+     * và để nó ngoài thì transaction chốt kỳ giữ khóa ngắn nhất có thể. Ai thua cuộc đua chốt
+     * kỳ bên dưới thì chỉ phí một lượt đọc, mỗi kỳ một lần, không đáng kể.
+     */
+    const payload = recipients.length > 0 ? await this.buildPayload(rule) : null;
 
-    const payload = await this.buildPayload(rule);
-    // Không có gì cần chú ý thì KHÔNG gửi thư rỗng — gửi "tuần này không có gì" đều đặn là
-    // cách nhanh nhất để mọi người lọc luật này vào thùng rác.
-    if (payload.total === 0) return;
-
+    const startOfDayUtc = new Date(`${local.date}T00:00:00Z`);
     await this.db.transaction(async (tx) => {
+      /*
+       * CHỐT KỲ và ĐẨY VÀO OUTBOX TRONG CÙNG MỘT TRANSACTION.
+       *
+       * Hai tính chất phải giữ cùng lúc, và bản trước chỉ giữ được một:
+       *
+       * 1. "Nhiều nhất một lần" — câu UPDATE có điều kiện `last_sent_at < đầu ngày` là trọng
+       *    tài. Hai worker cùng thấy "đến kỳ" thì chỉ một câu UPDATE trúng row; người thua
+       *    nhận 0 hàng và im lặng rút. Tính chất này bản trước ĐÃ có.
+       *
+       * 2. "Ít nhất một lần" — bản trước chốt kỳ bằng `this.db` (tự commit ngay), rồi mở một
+       *    transaction KHÁC để đẩy outbox. Nếu transaction thứ hai hỏng — outbox lỗi, mạng
+       *    DB chớp, worker bị kill giữa chừng — thì `last_sent_at` ĐÃ nhảy sang kỳ mới trong
+       *    khi không có thư nào được xếp hàng. Kỳ báo cáo đó mất VĨNH VIỄN: lần chạy sau
+       *    thấy `last_sent_at` là hôm nay nên không đến kỳ nữa. Không có gì đỏ, không có gì
+       *    trong log, chỉ là người nhận không bao giờ nhận được thư của kỳ đó.
+       *
+       * Gộp chung một tx thì hỏng ở đâu cũng rollback cả chốt kỳ — kỳ vẫn "chưa gửi" và lần
+       * chạy sau làm lại. Đây đúng nếp mà `approval-sweep.service.ts` đã dùng (claim + outbox
+       * cùng tx).
+       */
+      const claimed = await tx
+        .update(expiryRuleTable)
+        .set({ lastSentAt: now })
+        .where(
+          and(
+            eq(expiryRuleTable.id, rule.id),
+            or(
+              isNull(expiryRuleTable.lastSentAt),
+              lt(expiryRuleTable.lastSentAt, startOfDayUtc),
+            ),
+          ),
+        )
+        .returning({ id: expiryRuleTable.id });
+      if (claimed.length === 0) return; // worker khác đã chốt kỳ này
+
+      if (payload === null) {
+        // Không nên xảy ra (luật đang chạy bắt buộc có người nhận), nhưng dữ liệu cũ có thể
+        // còn. Kỳ vẫn được chốt (commit) nên chỉ cảnh báo MỘT LẦN cho kỳ này, không mỗi phút.
+        this.logger.warn(`Luật "${rule.name}" đến kỳ nhưng chưa có người nhận — bỏ qua kỳ này.`);
+        return;
+      }
+      // Không có gì cần chú ý thì KHÔNG gửi thư rỗng — gửi "tuần này không có gì" đều đặn là
+      // cách nhanh nhất để mọi người lọc luật này vào thùng rác. Kỳ vẫn chốt: đã xét rồi.
+      if (payload.total === 0) return;
+
       // AD-11/NFR-04: outbox chỉ giữ ID THAM CHIẾU, không PII. Địa chỉ email và tên hồ sơ
       // được consumer dựng lại từ `ruleId` — nếu nhét vào đây thì chúng còn chui sang cả
       // job data của Redis (relay copy nguyên payload).

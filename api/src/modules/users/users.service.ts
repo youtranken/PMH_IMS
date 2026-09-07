@@ -73,10 +73,26 @@ export class UsersService {
     };
   }
 
-  /** Đếm SA đang hoạt động — chặn hạ/khóa SA cuối cùng (NFR-01 "2 SA", dual control). */
-  async countActiveSa(exceptUserId?: string): Promise<number> {
-    const rows = await this.db
-      .select({ value: count() })
+  /**
+   * Đếm SA đang hoạt động BÊN TRONG `tx`, và KHÓA từng hàng đếm được (AD-5).
+   *
+   * Chặn hạ/khóa SA cuối cùng (NFR-01 "luôn còn 2 SA", dual control).
+   *
+   * Vì sao phải khóa chứ không chỉ đếm lại trong tx: hai lệnh khóa tài khoản chạy song song
+   * trên hai SA khác nhau đều đọc "còn 2 SA hoạt động", cả hai qua cửa, cả hai khóa — hệ
+   * thống còn 0 SA và không ai vào được nữa. `FOR UPDATE` bắt lượt thứ hai xếp hàng; khi nó
+   * chạy tiếp, hàng của người vừa bị khóa đã đổi `status` nên không còn khớp `active` và
+   * phép đếm ra đúng con số thật.
+   *
+   * `ORDER BY id` để mọi lượt gọi khóa theo CÙNG một thứ tự — hai tiến trình khóa chéo thứ
+   * tự nhau là công thức của deadlock.
+   *
+   * Dùng `select` rồi đếm trong JS chứ không `count()`: Postgres không cho `FOR UPDATE` đi
+   * cùng hàm tổng hợp.
+   */
+  async countActiveSaWithin(tx: Tx, exceptUserId?: string): Promise<number> {
+    const rows = await tx
+      .select({ id: usersTable.id })
       .from(usersTable)
       .where(
         and(
@@ -84,8 +100,10 @@ export class UsersService {
           eq(usersTable.status, 'active'),
           exceptUserId ? ne(usersTable.id, exceptUserId) : sql`true`,
         ),
-      );
-    return Number(rows[0]?.value ?? 0);
+      )
+      .orderBy(usersTable.id)
+      .for('update');
+    return rows.length;
   }
 
   async createWithin(

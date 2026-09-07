@@ -11,6 +11,7 @@ import type { Database } from "../../database/database.module";
 import type { Page, PageQuery } from "../../common/pagination";
 import { pgConstraint, pgErrorCode, PG_UNIQUE_VIOLATION } from "../../common/sql";
 import type { SortQuery } from "../../common/sorting";
+import type { Tx } from "../../common/tx";
 import { AuditWriterService } from "../audit/audit-writer.service";
 import { OutboxService } from "../outbox/outbox.service";
 import { UsersService, type UserSortKey } from "../users/users.service";
@@ -239,10 +240,21 @@ export class AccountsService {
     status: "active" | "locked" | "disabled",
   ): Promise<void> {
     const user = await this.requireUser(userId);
-    if (status !== "active") {
-      await this.assertNotLastSa(user.role, userId);
-    }
     await this.db.transaction(async (tx) => {
+      /*
+       * Đếm SA BÊN TRONG transaction, và khóa các hàng đếm được.
+       *
+       * Bản trước gọi `assertNotLastSa` NGOÀI transaction bên dưới. Hệ thống còn đúng 3 SA,
+       * hai lệnh khóa chạy song song trên hai SA khác nhau: cả hai đếm được "còn 2 SA hoạt
+       * động", cả hai qua cửa, cả hai ghi. Kết quả là còn 1 SA — và với đúng 2 SA thì kết
+       * quả là còn 0, tức KHÓA CẢ CÔNG TY RA NGOÀI hệ thống, không ai mở lại được vì mở
+       * cũng cần quyền SA.
+       *
+       * Đây là chỗ nguy hiểm nhất trong cả nhóm lỗi này, nên nó được sửa trước tiên.
+       */
+      if (status !== "active") {
+        await this.assertNotLastSaWithin(tx, user.role, userId);
+      }
       await this.users.setStatusWithin(tx, userId, status);
       const killed =
         status === "active"
@@ -394,10 +406,16 @@ export class AccountsService {
     return user;
   }
 
-  /** NFR-01: luôn còn tối thiểu 2 SA hoạt động — chặn tự khóa mình thành hệ thống không SA. */
-  private async assertNotLastSa(role: string, userId: string): Promise<void> {
+  /**
+   * NFR-01: luôn còn tối thiểu 2 SA hoạt động — chặn tự khóa mình thành hệ thống không SA.
+   *
+   * Nhận `tx` và chỉ nhận `tx`: phép đếm này chỉ có giá trị nếu nó chạy trong CÙNG
+   * transaction với câu ghi mà nó bảo vệ, và nếu nó khóa các hàng vừa đếm. Bản chạy trên
+   * pool đã bị xóa khỏi `UsersService` để không ai vô tình cầm nhầm cái tiện tay.
+   */
+  private async assertNotLastSaWithin(tx: Tx, role: string, userId: string): Promise<void> {
     if (role !== "sa") return;
-    const remaining = await this.users.countActiveSa(userId);
+    const remaining = await this.users.countActiveSaWithin(tx, userId);
     if (remaining < 2) {
       throw new BadRequestException({
         code: "LAST_SA",
