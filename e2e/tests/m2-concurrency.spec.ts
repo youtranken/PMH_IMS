@@ -314,27 +314,46 @@ test.describe('M2 — ghi song song trên cùng bản ghi', () => {
       expect(before).toBe(3);
 
       const headers = await writeHeaders(page);
-      const responses = await Promise.all(
-        extraIds.map((id) =>
-          page.request.patch(`/api/v1/accounts/${id}/status`, {
-            headers,
-            data: { status: 'locked' },
-          }),
-        ),
-      );
+      /*
+       * ĐUA NHIỀU VÒNG, không phải một.
+       *
+       * Ở đây chỉ có ĐÚNG HAI request đua được (hai SA khóa được), trong khi ba bài trên bắn
+       * sáu. Cửa sổ hỏng lại rất hẹp: giữa câu đếm và câu ghi chỉ vài trăm micro giây. Chạy
+       * một vòng thì bản CHƯA sửa vẫn xanh — tôi đã thử: gỡ bản sửa ra, dựng lại ảnh, bài
+       * vẫn qua. Một bài như thế không canh được gì, nó chỉ chốt tính chất tuần tự.
+       *
+       * Mỗi vòng chỉ tốn hai câu SQL đặt lại trạng thái (không tạo lại tài khoản — băm
+       * Argon2 tốn ~200ms mỗi cái), nên chạy nhiều vòng gần như không tốn thêm thời gian
+       * mà xác suất trúng cửa sổ tăng theo số vòng.
+       */
+      const ROUNDS = 12;
+      const idList = `('${extraIds.join("','")}')`;
+      for (let round = 0; round < ROUNDS; round += 1) {
+        sql(`UPDATE users SET status = 'active' WHERE id IN ${idList}`);
 
-      const statuses = responses.map((res) => res.status());
-      expect(statuses.filter((status) => status >= 200 && status < 300)).toHaveLength(1);
+        const responses = await Promise.all(
+          extraIds.map((id) =>
+            page.request.patch(`/api/v1/accounts/${id}/status`, {
+              headers,
+              data: { status: 'locked' },
+            }),
+          ),
+        );
 
-      const rejected = responses.filter((res) => res.status() >= 400);
-      expect(rejected).toHaveLength(1);
-      expect(((await rejected[0].json()) as { code: string }).code).toBe('LAST_SA');
+        const statuses = responses.map((res) => res.status());
+        const winners = statuses.filter((status) => status >= 200 && status < 300);
+        const rejected = responses.filter((res) => res.status() >= 400);
 
-      // Hàng rào thật: NFR-01 nói tối thiểu 2, và con số này là thứ duy nhất chứng minh nó.
-      const after = Number(
-        sql("SELECT count(*) FROM users WHERE role = 'sa' AND status = 'active'"),
-      );
-      expect(after).toBe(2);
+        expect(winners, `vòng ${round + 1}: mã trả về ${JSON.stringify(statuses)}`).toHaveLength(1);
+        expect(rejected).toHaveLength(1);
+        expect(((await rejected[0].json()) as { code: string }).code).toBe('LAST_SA');
+
+        // Hàng rào thật: NFR-01 nói tối thiểu 2, và con số này là thứ duy nhất chứng minh nó.
+        const after = Number(
+          sql("SELECT count(*) FROM users WHERE role = 'sa' AND status = 'active'"),
+        );
+        expect(after, `vòng ${round + 1}: số SA hoạt động còn lại`).toBe(2);
+      }
     } finally {
       // Trả các SA nền về `active` DÙ BÀI ĐỎ — bài kiểm không được để lại một hệ thống mà
       // chính người thật không đăng nhập vào được.

@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, ilike, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -84,8 +84,18 @@ export class UsersService {
    * chạy tiếp, hàng của người vừa bị khóa đã đổi `status` nên không còn khớp `active` và
    * phép đếm ra đúng con số thật.
    *
-   * `ORDER BY id` để mọi lượt gọi khóa theo CÙNG một thứ tự — hai tiến trình khóa chéo thứ
-   * tự nhau là công thức của deadlock.
+   * Khóa TẤT CẢ SA đang hoạt động, KỂ CẢ hàng sắp bị đổi, rồi mới loại nó ra lúc đếm —
+   * chứ không loại nó ra ngay trong câu `WHERE`.
+   *
+   * Đây là điểm mấu chốt, và bản viết đầu của chính hàm này đã sai ở đây. Nếu mỗi transaction
+   * chỉ khóa các SA KHÁC rồi UPDATE hàng đích của mình, hai lượt khóa song song ôm chéo nhau:
+   * T1 giữ B rồi đòi A, T2 giữ A rồi đòi B → Postgres bắn deadlock 40P01, người dùng nhận 500
+   * thay vì câu tiếng Việt giải thích còn bao nhiêu SA. Đã tái hiện thật bằng
+   * `e2e/tests/m2-concurrency.spec.ts` trước khi sửa lại.
+   *
+   * Khóa cả tập theo `ORDER BY id` thì mọi lượt gọi lấy khóa theo CÙNG một thứ tự và
+   * không bao giờ có vòng chờ. Lượt thứ hai xếp hàng, và khi tới lượt nó thì hàng vừa bị
+   * khóa đã đổi `status` nên không còn khớp `active` — phép đếm ra đúng con số thật.
    *
    * Dùng `select` rồi đếm trong JS chứ không `count()`: Postgres không cho `FOR UPDATE` đi
    * cùng hàm tổng hợp.
@@ -94,16 +104,10 @@ export class UsersService {
     const rows = await tx
       .select({ id: usersTable.id })
       .from(usersTable)
-      .where(
-        and(
-          eq(usersTable.role, 'sa'),
-          eq(usersTable.status, 'active'),
-          exceptUserId ? ne(usersTable.id, exceptUserId) : sql`true`,
-        ),
-      )
+      .where(and(eq(usersTable.role, 'sa'), eq(usersTable.status, 'active')))
       .orderBy(usersTable.id)
       .for('update');
-    return rows.length;
+    return rows.filter((row) => row.id !== exceptUserId).length;
   }
 
   async createWithin(
