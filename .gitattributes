@@ -1,0 +1,17 @@
+# Migration là BYTE, không phải văn bản — đóng băng kiểu xuống dòng.
+#
+# `migration-runner.ts:63` băm sha256 trên BYTE THÔ của file và so với checksum đã lưu trong
+# bảng `_migrations`; lệch là `throw`, và migration chạy TRƯỚC `app.listen` (`main.ts:25`) nên
+# api không khởi động lại được.
+#
+# Repo đang trộn kiểu xuống dòng: `git ls-files --eol` cho 39 file `i/lf` và 1 file `i/crlf`
+# (`0003_sessions.sql`). Hôm nay vô hại vì `core.autocrlf=false` và không có `.gitattributes`,
+# nên git trả về đúng byte đã lưu. Nhưng chỉ cần một người dọn dẹp thêm `* text=auto` — việc
+# rất thường gặp — là `0003_sessions.sql` đổi CRLF→LF, checksum đổi, và MỌI DB đã chạy
+# migration đó chết ở boot. Thông điệp lỗi khuyên "tạo migration mới": đúng cho mọi trường hợp
+# khác, sai hoàn toàn cho trường hợp này, và đường thoát duy nhất là sửa tay `_migrations`
+# trên production.
+#
+# `-text` = không bao giờ chuẩn hóa xuống dòng, cả lúc checkout lẫn lúc commit.
+# ĐỪNG sửa hàm checksum để "cho linh hoạt hơn" — làm thế là hỏng đúng thứ nó sinh ra để giữ.
+api/src/migrations/*.sql -text

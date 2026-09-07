@@ -57,7 +57,10 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - run: npm ci
         working-directory: web
-      - run: npm run lint
+      # 07/09: web dùng ESLint (không còn oxlint) để cả repo một phương ngữ luật, và `lint`
+      # gọi luôn dependency-cruiser — thứ web chưa từng có trước đó.
+      - name: Lint + ranh giới tầng (AD-15)
+        run: npm run lint
         working-directory: web
       - name: Cấm hex màu ngoài tokens.css (AD-15)
         run: |
@@ -72,6 +75,25 @@ jobs:
       - name: Build
         run: npm run build
         working-directory: web
+
+  # E2E KHÔNG chạy ở đây (xem ghi chú đầu file), nhưng CỔNG KIỂU của nó thì chạy được — nó chỉ
+  # cần `tsc`, không cần stack. Trước 07/09 thư mục `e2e/` không có tsconfig và không nằm trong
+  # cổng nào; đó là cơ chế đã để lọt lỗi `__dirname` trong gói ESM hôm 03/09 (globalSetup chết,
+  # KHÔNG bài nào chạy, lệnh vẫn thoát 0).
+  e2e-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: e2e/package-lock.json
+      - run: npm ci
+        working-directory: e2e
+      - name: Kiểm kiểu bộ E2E (tsc --noEmit)
+        run: npm run typecheck
+        working-directory: e2e
 
   # ===================================================================================
   # E2E chạy ở MÁY NỘI BỘ, không ở đây — xem ghi chú đầu file.

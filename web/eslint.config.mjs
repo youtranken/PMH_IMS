@@ -1,0 +1,161 @@
+// @ts-check
+import eslint from '@eslint/js';
+import globals from 'globals';
+import reactHooks from 'eslint-plugin-react-hooks';
+import tseslint from 'typescript-eslint';
+
+/**
+ * ===== Cổng lint của web =====
+ *
+ * VÌ SAO LÀ ESLINT CHỨ KHÔNG PHẢI OXLINT (quyết định 07/09).
+ *
+ * `oxlint` vào `web/package.json` từ Epic 1 (`f728245`) cùng lúc dựng khung web, và chạy rule
+ * mặc định không có file cấu hình cho tới 28/08. Nó nhanh hơn ESLint rất nhiều — nhưng nó
+ * **không có cùng bộ rule**, và điều đó đã cắn thật:
+ *
+ *   luật cấm `window.confirm` viết bằng `no-restricted-syntax` (đúng cú pháp mà
+ *   `api/eslint.config.mjs` đang dùng cho `crypto.createCipheriv`) → oxlint trả về
+ *   `Rule 'no-restricted-syntax' not found in plugin 'eslint'`.
+ *
+ * Hệ quả là một luật viết đúng ở api là luật CHẾT ở web, và ngược lại — đúng lớp lỗi mà cả hai
+ * đợt rà soát 28/08 và 07/09 đều gọi tên ("cổng khớp 0 chuỗi"). Với hai phương ngữ thì mỗi luật
+ * phải viết hai lần theo hai cách, và không có gì báo khi bản thứ hai viết sai.
+ *
+ * Nên: MỘT phương ngữ cho cả repo. Luật ở đây copy sang api được và ngược lại.
+ * Ranh giới ở mức ĐƯỜNG DẪN ĐÃ RESOLVE do `.dependency-cruiser.cjs` canh — cùng cách api làm.
+ *
+ * Cổng này được canh ngược bởi `src/lint-rules.test.ts`: bài đó chạy thẳng eslint trên file
+ * probe và chốt rằng luật BẮT ĐƯỢC thứ nó phải bắt. Không có bài đó thì không gì cho biết
+ * luật đã chết.
+ */
+
+/** Ba mục ngoại lệ dưới đây là ngoại lệ VIẾT RA GIẤY — thêm một cái là phải giải thích trong PR. */
+const CROSS_FEATURE_EXCEPTIONS = [
+  '!@/features/software/device-licenses-expand',
+  '!@/features/catalog/catalog-form',
+  '!@/features/devices/device-form',
+];
+
+/** Cấm `window.confirm` / `alert` / `prompt` — cả dạng trần lẫn dạng có tiền tố đối tượng. */
+const NO_NATIVE_DIALOG = /** @type {const} */ ([
+  'error',
+  {
+    selector:
+      "MemberExpression[object.name=/^(window|globalThis|self)$/][property.name=/^(confirm|alert|prompt)$/]",
+    message:
+      'AD-15: cấm window.confirm / alert / prompt. Dùng useConfirm() hoặc Dialog / toast của web/src/ui.',
+  },
+  {
+    selector: "CallExpression[callee.name=/^(confirm|alert|prompt)$/]",
+    message:
+      'AD-15: cấm confirm / alert / prompt. Dùng useConfirm() hoặc Dialog / toast của web/src/ui.',
+  },
+]);
+
+export default tseslint.config(
+  {
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', 'src/test/**', 'vite.config.ts'],
+  },
+  eslint.configs.recommended,
+  ...tseslint.configs.recommended,
+  {
+    languageOptions: {
+      globals: { ...globals.browser, ...globals.es2024 },
+      parserOptions: { ecmaFeatures: { jsx: true } },
+    },
+    plugins: { 'react-hooks': reactHooks },
+    rules: {
+      'react-hooks/rules-of-hooks': 'error',
+      // `warn` chứ không `error`: rà soát 07/09 tìm thấy vài chỗ dependency thiếu thật, nhưng
+      // bật `error` ngay bây giờ là chặn merge vì nợ cũ. Hạ nợ xong thì nâng lên `error`.
+      'react-hooks/exhaustive-deps': 'warn',
+
+      eqeqeq: ['error', 'always', { null: 'ignore' }],
+      'no-restricted-syntax': NO_NATIVE_DIALOG,
+
+      /*
+       * `tsconfig.app.json` KHÔNG bật strict, nên compiler không ép gì. Ba luật này giữ nếp
+       * mà đội đã tự giữ suốt 9 epic — nay có máy canh thay vì trông vào kỷ luật.
+       *
+       * `no-explicit-any` và `ban-ts-comment` để `error`: quét toàn `src/` ra ĐÚNG 0 vi phạm,
+       * nên bật lên không tốn gì và khóa lại được ngay. (api tắt `no-explicit-any` vì nó dùng
+       * `recommendedTypeChecked` và có chỗ chạm thư viện bên ngoài; web thì sạch, nên siết được.)
+       *
+       * `no-non-null-assertion` chỉ `warn`: quét ra **20 chỗ đang dùng `!`** — nợ có sẵn mà
+       * oxlint chưa bao giờ bắt (nó không nằm trong category `correctness`). Đính chính luôn
+       * một khẳng định của rà soát 28/08: mục "0 `any`/`!`/`@ts-ignore`" ĐÚNG hai vế, SAI vế
+       * `!`. Bật thẳng `error` là chặn merge vì nợ cũ; hạ hết 20 chỗ rồi nâng lên `error`.
+       */
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-non-null-assertion': 'warn',
+      '@typescript-eslint/ban-ts-comment': 'error',
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
+    },
+  },
+  {
+    /*
+     * TẦNG NỀN không được biết tới features. Chiều phụ thuộc chỉ đi một hướng:
+     * features → ui / lib / shell. Cần dữ liệu của feature thì nhận qua prop.
+     */
+    files: ['src/ui/**/*.{ts,tsx}', 'src/lib/**/*.{ts,tsx}', 'src/shell/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/features/**', '../features/**', '../../features/**'],
+              message:
+                'AD-15: tầng nền (ui/lib/shell) KHÔNG được biết tới features. Chiều phụ thuộc chỉ đi một hướng: features -> ui/lib/shell. Cần dữ liệu của feature thì nhận qua prop.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    /*
+     * MỘT FEATURE không import ruột feature khác.
+     *
+     * Quy ước: trong CÙNG một feature dùng đường dẫn tương đối (`./x`); `@/features/…` LUÔN
+     * nghĩa là xuyên feature. Thứ dùng ở ≥2 màn là tài sản dùng chung → `web/src/ui` hoặc
+     * `web/src/lib`, và phải khai vào `docs/SHARED-REGISTRY.md`.
+     */
+    files: ['src/features/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/features/*/**', '../*/[!.]*', ...CROSS_FEATURE_EXCEPTIONS],
+              message:
+                'AD-15: một feature KHÔNG import ruột feature khác. Thứ dùng ở >=2 màn/module là tài sản dùng chung -> web/src/ui hoặc web/src/lib, và phải khai vào docs/SHARED-REGISTRY.md. Trong CÙNG một feature thì dùng đường dẫn tương đối (./x), không dùng alias @/features.',
+            },
+            {
+              group: ['react-dom'],
+              message:
+                'AD-15: không tự dựng dialog/portal trong features/. Dùng Dialog (Radix) của web/src/ui.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // File test được chạy bởi vitest (node), không phải trình duyệt — và chúng CẦN gọi tiến
+    // trình con để probe chính cái cổng này.
+    files: ['src/**/*.{test,spec}.{ts,tsx}'],
+    languageOptions: { globals: { ...globals.node } },
+    rules: { 'no-restricted-syntax': 'off' },
+  },
+  {
+    // File cấu hình chạy bằng Node, không phải trong trình duyệt. `.cjs` là CommonJS thật
+    // (`module.exports`) — dependency-cruiser đọc bằng `require`, không phải bundler.
+    files: ['*.cjs', '*.mjs', '*.config.{js,ts}'],
+    languageOptions: { sourceType: 'commonjs', globals: { ...globals.node } },
+  },
+);

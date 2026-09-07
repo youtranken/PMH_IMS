@@ -313,20 +313,69 @@ thật, hoặc xóa script `test:db` và sửa `CLAUDE.md`.
 
 ## 9. Thứ tự đề nghị
 
-**Rẻ, làm ngay, mỗi cái chặn được cả một lớp lỗi:**
+### ✅ Đã làm ngay trong ngày 07/09
 
-1. `.gitattributes` với `api/src/migrations/*.sql -text` — **một dòng**, chặn một sự cố không boot được (mục 4).
-2. `clientIp()` trả `req.ip` (Express đã xử lý trust proxy đúng) hoặc đọc `X-Real-IP` — **5 dòng**, đóng ngay đường tắt chuông báo thiết bị mới (#1).
-3. `no-restricted-syntax` bắt `window.confirm/alert/prompt` + một probe test cố định (#8).
-4. Chốt sàn `allTsFiles(SRC).length` cho `vault-surface.spec.ts` — **2 dòng**.
-5. Bỏ `catch {}` rỗng ở `audit-log.spec.ts` + `ip-lifecycle.spec.ts`, assert `stderr` (N4).
-6. `global-setup.ts:33` chỉ ghi backup khi file chưa có — **1 dòng**.
-7. Sửa 6 dòng sai trong `CLAUDE.md` (mục 8) — rẻ nhất cả danh sách, và quyết định người sau viết đúng hay sai.
+| # | Việc | Kết quả |
+| --- | --- | --- |
+| 1 | `.gitattributes` với `api/src/migrations/*.sql -text` | Kiểm chứng: thêm xong `git status` trên `api/src/migrations/` **rỗng** — không file nào bị đổi byte, đúng ý định (mục 4) |
+| 2 | `clientIp()` trả thẳng `req.ip` | `trust proxy = 1` khiến Express bỏ đúng một hop ĐẾM TỪ PHẢI, nên nó lấy phần nginx nối chứ không phải phần client tự khai. Gom luôn hai khái niệm "IP client" trong repo về một (`LoginRateGuard` vốn đã dùng `request.ip`) (#1) |
+| 3 | **Web chuyển từ oxlint sang ESLint** | Xem khung dưới — đây là việc lớn nhất trong nhóm |
+| 4 | Chốt sàn + regex rộng hơn cho `vault-surface.spec.ts` | `expect(scanned.length).toBeGreaterThanOrEqual(120)`; và bắt cả nháy kép/backtick/`import()`/`require()` chứ không chỉ `from '...'` nháy đơn |
+| 5 | Bỏ `catch {}` rỗng ở `audit-log.spec.ts` + `ip-lifecycle.spec.ts` | Nay soi `stderr` phải khớp `/chỉ-thêm\|append_only\|no_truncate\|no_delete\|no_update\|permission denied/` — bị chặn bởi HÀNG RÀO, không phải bởi sự cố hạ tầng (N4) |
+| 6 | `global-setup.ts` không ghi đè bản cất | Hai chốt: file đã có thì giữ; và không bao giờ cất chính con số bộ test tự đặt (`E2E_LOGIN_RATE_LIMIT`) — đó là dấu hiệu lượt trước chết giữa chừng |
+| 7 | Sửa 5 chỗ sai trong `CLAUDE.md` | "code chưa khởi tạo" → trạng thái thật · `AD-1..AD-14` → `AD-15` · `.dark` → `html[data-theme='dark']` · Vitest/`api/test` → Jest + ghi thẳng rằng tầng test DB **chưa có** · `mailpit:8025` → `localhost:8025` |
+| — | `docker-compose.yml`: cổng host của `web` đọc từ biến | `${WEB_HTTPS_PORT:-443}` / `${WEB_HTTP_PORT:-80}`. Production giữ nguyên; máy dev có proxy khác giữ cổng 80 thì đặt `WEB_HTTP_PORT=8080` là `ops/ci-local.sh --e2e` chạy được |
 
-**Đợt Chặn (theo thứ tự bảng mục 3):** #2 (2FA) → #3 (`audit_log.ip`) → #4 (audit nuốt lỗi) →
-#5 (đếm sai mật khẩu, gộp với N3 khóa tài khoản) → #6 (NAT ↔ thu hồi IP) → #7
+> ### Web: oxlint → ESLint (quyết định 07/09)
+>
+> **Vì sao.** `oxlint` vào `web/package.json` từ **Epic 1** (`f728245`), chạy rule mặc định
+> không cấu hình cho tới 28/08. Nó nhanh hơn ESLint nhiều, nhưng **không cùng bộ rule** — và
+> điều đó cắn thật ngay khi vá finding #8: luật viết bằng `no-restricted-syntax` (đúng cú pháp
+> `api/eslint.config.mjs` đang dùng cho `crypto.createCipheriv`) bị oxlint trả về
+> `Rule 'no-restricted-syntax' not found in plugin 'eslint'`. Một luật viết đúng ở api là luật
+> **chết** ở web. Mỗi luật phải viết hai lần theo hai cách, và không gì báo khi bản thứ hai sai.
+>
+> **Đã làm.** `web/eslint.config.mjs` (cùng phương ngữ với api) · **`web/.dependency-cruiser.cjs`
+> — web chưa từng có, nên vòng lặp phụ thuộc bên web chưa từng có ai canh** · gỡ `oxlint` khỏi
+> `package.json`, xóa `.oxlintrc.json`, đổi mọi tham chiếu trong `ci-local.sh`, `ci.yml`,
+> `SHARED-REGISTRY.md`.
+>
+> **Bài canh ngược: `web/src/lint-rules.test.ts`** — 9 test chạy **thẳng eslint** trên file
+> probe rồi xóa, chốt rằng luật BẮT ĐƯỢC cả 6 cách viết (`window.confirm`, `confirm` trần,
+> `globalThis.confirm`, …), KHÔNG bắt nhầm `useConfirm()`, và hai luật ranh giới tầng còn sống.
+> Khác `ad2-boundary.spec.ts` ở một chỗ quan trọng: bài kia kiểm **biểu thức regex**, bài này
+> kiểm **cái cổng đang chạy** — nên nó không còn cửa "regex đúng nhưng không cắm vào rule nào".
+>
+> **Bản thân bài test đó cũng từng có chế độ xanh-giả** và đã bịt: `npx`/`npx.cmd` không phân
+> giải được trong tiến trình con của vitest trên Windows → `ENOENT` → `err.stdout` là
+> `undefined` → bài thấy "output rỗng + có ném" và kết luận SAI là luật đã bắt được. Nay gọi
+> thẳng `node node_modules/eslint/bin/eslint.js` và ném to khi `ENOENT`.
+>
+> **Nợ ESLint vừa lộ ra:** 20 chỗ dùng `!` (`no-non-null-assertion`), oxlint chưa bao giờ bắt vì
+> nó không nằm trong category `correctness`. Để `warn`, chưa chặn merge. **Đính chính bản
+> 28/08:** mục "0 `any` / `!` / `@ts-ignore`" đúng hai vế, **sai vế `!`**. (`any` và
+> `@ts-ignore` xác nhận đúng 0, nên hai luật đó để `error`.)
+
+> ### e2e: có cổng kiểm kiểu lần đầu
+>
+> `e2e/tsconfig.json` + `npm --prefix e2e run typecheck`, nối vào `npm run lint` gốc,
+> `ops/ci-local.sh`, và một job `e2e-typecheck` riêng trong GitHub Actions (chạy được ở CI vì
+> nó chỉ cần `tsc`, không cần stack). Chạy lần đầu ra **4 lỗi thật** — 1 import thừa và 3 biến
+> chết còn sót từ đợt đổi sang menu ba chấm hôm 28/08 — đã dọn.
+>
+> **Giới hạn phải biết:** cổng này **không** bắt được đúng lỗi `__dirname` hôm 03/09, vì
+> `@types/node` khai `__dirname` là biến toàn cục vô điều kiện nên `tsc` thấy nó hợp lệ kể cả
+> trong gói ESM. Muốn bắt hẳn thì cần một luật lint cho `e2e/` — chưa làm, vẫn nằm ở #16.
+
+### Còn lại
+
+**Đợt Chặn còn lại (theo thứ tự bảng mục 3):** #2 (2FA) → #3 (`audit_log.ip`) → #4 (audit nuốt
+lỗi) → #5 (đếm sai mật khẩu, gộp với N3 khóa tài khoản) → #6 (NAT ↔ thu hồi IP) → #7
 (`renewal_history`) → #9 (regex AD-2 + thu hẹp ngoại lệ `users.schema`) → #10 (import) →
 #11/#12/#13 (ba màn nuốt lỗi, cùng một khuôn `LoadError`).
+
+Ghi chú: **#8 và #16 đã đóng** (xem hai khung trên). **#9 vẫn mở** — việc hôm nay là ở phía web;
+lỗ regex `../../modules/` bên api chưa đụng tới.
 
 **Đòn bẩy lớn nhất, đắt hơn:** dựng `api/test/` với Postgres thật. Nó là tầng lẽ ra bắt được
 **#14** (40 migration chưa từng parse), **#15** (outbox), toàn bộ mẫu M2 và N3, và các kịch bản

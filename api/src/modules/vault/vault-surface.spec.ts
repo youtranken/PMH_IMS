@@ -169,9 +169,27 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
   });
 
   it('không file nào ngoài module vault đụng vào schema két sắt (AD-4)', () => {
-    const offenders = allTsFiles(SRC)
+    const scanned = allTsFiles(SRC);
+
+    /*
+     * CHỐT SÀN — bài này quét cây thư mục, nên nó có một chế độ hỏng rất im lặng: nếu `SRC`
+     * trỏ sai chỗ, hoặc cây thư mục đổi, hoặc `allTsFiles` gặp lỗi và trả mảng rỗng, thì
+     * `offenders` cũng rỗng và bài XANH VĨNH VIỄN mà không quét một file nào.
+     *
+     * `route-prefix.spec.ts:41-44` đã tự vá chế độ hỏng này cho mình; file này bị bỏ sót
+     * (rà soát 07/09). Con số đặt thấp hơn thực tế nhiều (hiện ~200 file) để không phải sửa
+     * mỗi lần thêm file, nhưng đủ cao để "quét được 0 file" không thể lọt.
+     */
+    expect(scanned.length).toBeGreaterThanOrEqual(120);
+
+    /*
+     * Bắt CẢ nháy đơn, nháy kép, backtick, và cả `import(...)`/`require(...)` động — bản
+     * trước chỉ khớp `from '...'` nháy đơn, nên ba cách viết kia đi qua không ai thấy.
+     */
+    const touches = /(?:from|import|require)\s*\(?\s*['"`][^'"`]*vault\.schema['"`]/;
+    const offenders = scanned
       .filter((file) => !file.includes(join('modules', 'vault')))
-      .filter((file) => /from '.*vault\.schema'/.test(readFileSync(file, 'utf8')));
+      .filter((file) => touches.test(readFileSync(file, 'utf8')));
     expect(offenders).toEqual([]);
   });
 });

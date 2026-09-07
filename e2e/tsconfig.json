@@ -1,0 +1,43 @@
+{
+  /*
+   * ===== Cổng kiểm KIỂU của bộ E2E =====
+   *
+   * Trước 07/09 thư mục này KHÔNG có tsconfig, không nằm trong `npm run lint` lẫn
+   * `npm run build`, và không có lint. Playwright transpile TypeScript nhưng **không kiểm
+   * kiểu**, nên mọi lỗi kiểu ở đây chỉ lộ ra lúc chạy — nếu nó chạy tới đó.
+   *
+   * Cấu hình phải KHỚP cách Playwright thật sự phân giải module, không siết hơn:
+   *   - `moduleResolution: bundler` — Playwright cho import không đuôi (`./helpers`). Đặt
+   *     `nodenext` thì tsc đòi `.js` ở cả 47 file spec, tức bắt sửa toàn bộ import cho vừa
+   *     lòng một công cụ không hề chạy chúng.
+   *   - `lib` có `DOM` — thân `page.evaluate()` chạy TRONG trình duyệt nên `document`/`window`
+   *     ở đó là hợp lệ.
+   *
+   * GIỚI HẠN PHẢI BIẾT: cổng này KHÔNG bắt được lỗi `__dirname` hôm 03/09. `@types/node` khai
+   * `__dirname` là biến toàn cục vô điều kiện, nên tsc thấy nó hợp lệ kể cả trong gói ESM;
+   * lỗi đó chỉ nổ lúc chạy. Muốn bắt hẳn thì cần một luật lint cho `e2e/` (cấm `__dirname`,
+   * `__filename`, `require` trong gói `"type": "module"`) — chưa làm, xem
+   * `docs/CODE-REVIEW-2026-09-07.md` mục 3 finding #16.
+   */
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "types": ["node"],
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    /* Chỉ kiểm kiểu, không sinh file — Playwright tự lo phần chạy. */
+    "noEmit": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": true
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "playwright-report", "test-results"]
+}

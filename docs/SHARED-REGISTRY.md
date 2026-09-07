@@ -91,6 +91,7 @@
 | `import-plan.ts` (`pickCell`, `parseDateCell`, `normalizeKey`…) | `common/import-plan.ts` | Nền chung của MỌI bộ import: khớp tên cột, đọc ngày kiểu VN, nhận dòng VÍ DỤ | Không tự viết lại parser cột/ngày cho từng màn |
 | `parsePageQuery`, `Page<T>` | `common/pagination.ts` | Mọi endpoint danh sách | Shape trả về luôn là `{ items, total }` |
 | `Tx`, `WriteFn` | `common/tx.ts` | Mọi hàm ghi (AD-5) | `tx` là tham số đầu, không dùng ALS |
+| `requireCas` | `common/cas.ts` | Mọi đường ghi có tranh chấp: `ip-address.transition`, `license-assignment.release`/`updateTerms` (07/09) | **KHÔNG** dùng cho `.returning()` trả nhiều hàng hợp lệ (vd `voidSubnet` ẩn cả dải) — nó chốt "đúng MỘT hàng bị đổi" và ném lỗi lập trình nếu trúng nhiều hơn. Điều kiện đã kiểm phải nằm TRONG câu UPDATE, không phải ở câu SELECT chạy trước |
 | `ExpirySource` + `ExpirySourceRegistry` (@Global) | `common/expiry/` | Module có ngày hết hạn tự gọi `register(this)`; engine chỉ đọc sổ (AD-7) | Vault KHÔNG đăng ký (AD-4) |
 | `isoDateInTz`, `addDays`, `daysBetween` | `common/today.ts` | "Hôm nay" theo múi giờ ứng dụng | Cấm `new Date().toISOString()` để lấy ngày — lệch một ngày suốt buổi sáng giờ VN |
 | `DevicePanelRegistry` (+ `DevicePanelsModule` @Global) | `common/device-panels.registry.ts` | Module chủ gọi `register(this)` lúc khởi động để góp một khu vào trang thiết bị | Đặt sổ này trong `devices` là mọi module góp panel phải chạm nội bộ `devices` (AD-2) |
@@ -147,9 +148,9 @@ cách rẻ nhất để đóng lại là một self-hosted runner trong LAN rồ
 | Cấm hex màu ngoài `tokens.css` | rà bằng `grep -rE "#[0-9a-fA-F]{3,8}" web/src --include=*.css` | `.github/workflows/ci.yml` job `web` (chưa bắt `rgba()` — 23 chỗ đang lách, xem CODE-REVIEW F-FE-03) |
 | **Luật AD-2 còn SỐNG** (không khớp 0 chuỗi như bản glob cũ) | Jest `api/src/ad2-boundary.spec.ts` — 36 ca, chốt cả "phải bắt" lẫn "phải cho qua" | `npm --prefix api test` |
 | Mỗi bảng một chủ: chỉ module sở hữu import `*.schema.ts` của nó (AD-3) | dependency-cruiser luật `schema-only-in-owning-module` | `npm --prefix api run depcruise` |
-| **Một feature web không import ruột feature khác** (AD-15) | oxlint `no-restricted-imports` trong `web/.oxlintrc.json` | `npm --prefix web run lint` |
-| Tầng nền web (`ui`/`lib`/`shell`) không import ngược vào `features` | oxlint `no-restricted-imports`, override theo thư mục | `npm --prefix web run lint` |
-| Cấm `window.confirm` / `window.alert` phía web | oxlint `no-restricted-globals` | `npm --prefix web run lint` |
+| **Một feature web không import ruột feature khác** (AD-15) | ESLint `no-restricted-imports` trong `web/eslint.config.mjs` + luật `feature-cross-only-via-shared` của `web/.dependency-cruiser.cjs` (khớp trên đường dẫn ĐÃ RESOLVE nên không lách được bằng cách đổi cách gõ) | `npm --prefix web run lint` |
+| Tầng nền web (`ui`/`lib`/`shell`) không import ngược vào `features` | ESLint `no-restricted-imports` (khối `files:` theo thư mục) + `base-must-not-import-features` của dependency-cruiser | `npm --prefix web run lint` |
+| Cấm `window.confirm` / `alert` / `prompt` phía web | ESLint `no-restricted-syntax` (bắt cả dạng trần lẫn `window.`/`globalThis.`). Chính luật này được canh ngược bởi `web/src/lint-rules.test.ts` — bài đó chạy thẳng eslint trên file probe và chốt rằng luật BẮT ĐƯỢC thứ nó phải bắt | `npm --prefix web run lint` |
 | Argon2 + pepper làm đúng việc (pepper sai ⇒ mật khẩu đúng phải trượt) | Jest `password.service.spec.ts` | `npm --prefix api test` |
 | Rate-limit đăng nhập theo IP là THẬT, không phải mock | E2E `login-rate-limit.spec.ts` (mượn trần rồi trả lại) | `npm run test:e2e` |
 | `audit_log` chỉ-thêm kể cả với TRUNCATE (NFR-03) | migration `0039` (trigger cấp câu lệnh) + E2E `audit-log.spec.ts` | `npm run test:e2e` |

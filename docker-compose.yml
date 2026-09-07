@@ -81,9 +81,18 @@ services:
     image: ims-web:latest
     build: ./web
     restart: unless-stopped
+    # Cổng HOST đọc từ biến, mặc định giữ nguyên 443/80 cho production.
+    #
+    # Máy dev thường đã có một reverse proxy khác giữ cổng 80 (ở máy PMH là edge nginx của
+    # dự án bên cạnh), và khi đó `docker compose up` chết với "port is already allocated" —
+    # kéo theo `ops/ci-local.sh --e2e` không chạy được, tức DoD gạch 7 bị chặn vì một lý do
+    # chẳng liên quan gì tới sản phẩm. Đặt `WEB_HTTP_PORT=8080` trong `.env` là xong.
+    #
+    # Cổng 80 bên TRONG container chỉ làm 301 sang HTTPS (`web/nginx.conf:6-8`), nên đổi cổng
+    # host không ảnh hưởng gì tới bộ E2E — nó chạy hoàn toàn trên HTTPS.
     ports:
-      - '443:443'
-      - '80:80'
+      - '${WEB_HTTPS_PORT:-443}:443'
+      - '${WEB_HTTP_PORT:-80}:80'
     volumes:
       # Cert wildcard *.pmh.com.vn — chỉ service này giữ (NFR-04, TLS terminate tại web).
       - ${TLS_CERT_DIR:-./ops/certs}:/etc/nginx/certs:ro

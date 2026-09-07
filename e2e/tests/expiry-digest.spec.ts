@@ -1,4 +1,4 @@
-import { expect, request, test, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import {
   APP_ORIGIN,
   E2E_MEMBER,

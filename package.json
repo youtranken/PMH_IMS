@@ -3,9 +3,11 @@
   "private": true,
   "version": "0.1.0",
   "description": "IMS — Quản lý hệ thống IT (PMH). Gốc repo chỉ để chạy các cổng chất lượng bắc qua api + web + e2e; mỗi thư mục con vẫn là một dự án npm độc lập với lockfile riêng.",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
-    "lint": "npm --prefix api run lint && npm --prefix api run depcruise && npm --prefix web run lint",
+    "lint": "npm --prefix api run lint && npm --prefix api run depcruise && npm --prefix web run lint && npm --prefix e2e run typecheck",
     "test": "npm --prefix api test && npm --prefix web test",
     "test:e2e": "npm --prefix e2e test",
     "build": "npm --prefix api run build && npm --prefix web run build",
