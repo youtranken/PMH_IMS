@@ -10,6 +10,7 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { DeviceRetirementRegistry } from '../../common/device-retirement.registry';
+import { requireCas } from '../../common/cas';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
 import { escapeLike, pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
@@ -277,6 +278,20 @@ export class DevicesService {
         .set({ ...values, updatedAt: new Date() })
         .where(eq(deviceTable.id, id))
         .returning();
+      /*
+       * Trúng 0 dòng là CHUYỆN CÓ THẬT, không phải trường hợp không xảy ra (rà soát 07/09 #10).
+       *
+       * Hồ sơ bị xóa xen giữa lúc đối chiếu và lúc ghi thì câu này khớp 0 dòng và Postgres
+       * KHÔNG báo lỗi. Bản trước `toRecord(rows[0])` đọc `.status` của `undefined` → TypeError,
+       * tức người dùng nhận 500 với câu "Cannot read properties of undefined" thay vì một câu
+       * nói đúng chuyện gì đã xảy ra. Bản catalog còn tệ hơn: nó `as unknown as` nên trả về
+       * `undefined` trong IM LẶNG và bộ đếm import vẫn +1.
+       */
+      requireCas(rows, {
+        code: 'DEVICE_ALREADY_CHANGED',
+        message:
+          'Hồ sơ thiết bị này vừa bị người khác xóa hoặc đổi. Tải lại rồi làm lại — chưa ghi gì cả.',
+      });
       return toRecord(rows[0]);
     } catch (error) {
       throw this.translateWriteError(error);
@@ -391,8 +406,23 @@ export class DevicesService {
     ];
   }
 
-  private async requireRow(id: string): Promise<typeof deviceTable.$inferSelect> {
-    const rows = await this.db.select().from(deviceTable).where(eq(deviceTable.id, id));
+  private requireRow(id: string): Promise<typeof deviceTable.$inferSelect> {
+    return this.requireRowWithin(this.db, id);
+  }
+
+  /**
+   * Hồ sơ hiện tại, đọc TRONG transaction — import cần "trước khi sửa" là trạng thái THẬT.
+   *
+   * Bản trước import lấy `before` từ ảnh chụp dựng lúc đối chiếu (`context()`), và khi tra
+   * không thấy thì rơi về `before ?? {}`. Hệ quả: `diffDevice` so hồ sơ mới với một object
+   * RỖNG, nên `device_history` ghi "mọi trường đổi từ trống" — một dòng lịch sử BỊA, trong
+   * một bảng chỉ-thêm mà FR-007 dựng ra để trả lời "ai đổi gì" (rà soát 07/09 #10).
+   */
+  async requireRowWithin(
+    tx: Pick<Database, 'select'>,
+    id: string,
+  ): Promise<typeof deviceTable.$inferSelect> {
+    const rows = await tx.select().from(deviceTable).where(eq(deviceTable.id, id));
     if (rows.length === 0) {
       throw new NotFoundException({
         code: 'DEVICE_NOT_FOUND',

@@ -9,6 +9,7 @@ import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
+import { requireCas } from '../../common/cas';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
 import {
@@ -437,6 +438,22 @@ export class CatalogService {
         .set({ ...values, updatedAt: new Date() })
         .where(eq(tableOf(entity).id, id))
         .returning();
+      /*
+       * Trúng 0 dòng phải NÉM (rà soát 07/09 #10).
+       *
+       * `rows[0] as unknown as CatalogRecord` là ép kiểu che mắt: khi câu UPDATE không khớp
+       * dòng nào — mục danh mục bị xóa xen giữa lúc đối chiếu và lúc ghi — nó trả `undefined`
+       * đội lốt `CatalogRecord`, `applyImportWithin` vẫn `updated += 1`, vẫn ghi một dòng
+       * `catalog_history` cho một bản ghi KHÔNG CÒN TỒN TẠI, và audit báo "đã cập nhật 1".
+       * Người dùng thấy import thành công cho một việc chưa hề xảy ra.
+       */
+      // `tableOf(entity)` trả về hợp của 7 kiểu bảng nên `rows` là hợp của 7 kiểu mảng và TS
+      // không hợp nhất được cho `requireCas<T>`. Ở đây chỉ cần ĐẾM, không cần biết hình dạng.
+      requireCas(rows as readonly unknown[], {
+        code: 'CATALOG_ALREADY_CHANGED',
+        message:
+          'Một mục danh mục trong file vừa bị người khác xóa hoặc đổi. Tải lại bảng đối chiếu rồi làm lại — chưa ghi gì cả.',
+      });
       return rows[0] as unknown as CatalogRecord;
     } catch (error) {
       throw this.translateWriteError(error, entity);

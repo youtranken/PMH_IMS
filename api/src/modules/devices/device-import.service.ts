@@ -114,7 +114,19 @@ export class DeviceImportService {
             code: { before: null, after: device.code },
           });
         } else {
-          const before = context.devices.get(normalizeKey(row.label));
+          /*
+           * "Trước khi sửa" đọc TRONG transaction, không lấy từ ảnh chụp lúc đối chiếu.
+           *
+           * Bản trước dùng `context.devices.get(...)` — ảnh chụp dựng ở đầu `commit()` — và
+           * khi tra trượt thì rơi về `before ?? {}`. `{...undefined}` không ném, nên
+           * `diffDevice` lặng lẽ so hồ sơ mới với một object RỖNG và `device_history` ghi
+           * "mọi trường đổi từ trống": một dòng lịch sử BỊA, trong bảng chỉ-thêm mà FR-007
+           * dựng ra để trả lời "ai đổi gì" (rà soát 07/09 #10).
+           *
+           * Đọc lại trong tx sửa cả hai vế: nội dung diff là thật, và hồ sơ đã biến mất thì
+           * ném ngay tại đây thay vì `UPDATE` khớp 0 dòng rồi vẫn `updated += 1`.
+           */
+          const before = await this.devices.requireRowWithin(tx, row.existingId!);
           await this.devices.updateWithin(tx, row.existingId!, values);
           updated += 1;
           // FR-007: tab Lịch sử phải trả lời "ai ĐỔI GÌ". Ghi `mã: SW-01 → SW-01` thì
@@ -124,7 +136,7 @@ export class DeviceImportService {
             actor,
             row.existingId!,
             'imported-update',
-            diffDevice((before ?? {}) as unknown as Record<string, unknown>, values),
+            diffDevice(before, values),
           );
         }
       }

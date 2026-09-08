@@ -3,7 +3,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 import ExcelJS from 'exceljs';
-import { APP_ORIGIN, E2E_SA, firstLogin, resetCatalog, resetDevices, resetUsers } from './helpers';
+import {
+  APP_ORIGIN,
+  E2E_SA,
+  firstLogin,
+  resetCatalog,
+  resetDevices,
+  resetUsers,
+  sql,
+} from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -186,3 +194,96 @@ async function buildDeviceFile(path: string, rows: string[][]): Promise<string> 
   await wb.xlsx.writeFile(path);
   return path;
 }
+
+/**
+ * Finding #10 — import đối chiếu NGOÀI transaction rồi ghi vô điều kiện bên trong.
+ *
+ * Hai lỗi cộng dồn, và cả hai đều IM LẶNG:
+ *
+ * 1. `updateWithin` không kiểm số dòng trúng. Hồ sơ bị xóa xen giữa lúc đối chiếu và lúc ghi
+ *    thì `UPDATE ... WHERE id = <đã chết>` khớp 0 dòng, Postgres không báo lỗi, `updated += 1`
+ *    và audit ghi một sự kiện CHƯA TỪNG XẢY RA. Bản catalog còn ép kiểu `as unknown as` nên
+ *    trả `undefined` đội lốt bản ghi.
+ * 2. `before` lấy từ ảnh chụp lúc đối chiếu, tra trượt thì rơi về `before ?? {}`.
+ *    `{...undefined}` không ném, nên `diffDevice` lặng lẽ so với object RỖNG và
+ *    `device_history` ghi "mọi trường đổi từ trống" — một dòng lịch sử BỊA trong bảng
+ *    chỉ-thêm mà FR-007 dựng ra để trả lời "ai đổi gì".
+ *
+ * ===== BÀI NÀY CHỨNG MINH ĐƯỢC GÌ, VÀ KHÔNG CHỨNG MINH ĐƯỢC GÌ =====
+ *
+ * Nói thẳng: bài này XANH CẢ TRƯỚC LẪN SAU bản sửa. Nó là hàng rào hồi quy, KHÔNG phải bằng
+ * chứng. Đừng đọc nó như bằng chứng.
+ *
+ * Lý do, cho cả hai vế:
+ *  - Vế 1 (UPDATE khớp 0 dòng): cửa sổ đua nằm TRỌN trong một lời gọi `/import/commit` — plan
+ *    được dựng lại ngay bên trong lời gọi đó — nên không có cách nào chen một lượt xóa vào
+ *    giữa từ bên ngoài. Và `updateWithin` chỉ tới được nhánh 0-dòng qua đúng đường đua này:
+ *    mọi lối vào khác (`update`, `setStatus`) đều có `requireRow` chặn trước.
+ *  - Vế 2 (`before ?? {}`): `row.label` chính là mã máy, tức CÙNG khóa đã dựng ra `existingId`.
+ *    Tra trượt là không xảy ra ở đường bình thường; `?? {}` là một nhánh phòng thủ chưa ai
+ *    chạm tới. Nó nguy hiểm vì im lặng khi cách đánh khóa đổi, không vì hôm nay nó sai.
+ *
+ * Nên giá trị thật của bài này là: khóa lại hình dạng ĐÚNG của `changes` (diff thật, `before`
+ * là giá trị cũ thật), để nếu ai đó đổi cách dựng khóa hoặc quay lại dùng ảnh chụp thì nó đỏ.
+ * Chứng minh trực tiếp hai vế trên cần tầng integration chạm DB thật — thứ repo chưa có
+ * (`api/test/` rỗng) và đã ghi là nợ số một ở `docs/CODE-REVIEW-2026-09-07.md` mục 9.
+ */
+test.describe('Import cập nhật — lịch sử phải là THẬT (finding #10)', () => {
+  test('sửa MỘT ô qua import thì lịch sử chỉ ghi đúng ô đó, không phải "mọi trường từ trống"', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const csrf = await csrfOf(page);
+    const code = `SW-E2E-DIFF-${stamp}`;
+
+    // Vòng 1: tạo mới qua import.
+    const first = await buildDeviceFile(join(tmpdir(), `tb-diff1-${stamp}.xlsx`), [
+      [code, 'Ten ban dau', 'Switch', '', ''],
+    ]);
+    const created = await page.request.post('/api/v1/devices/import/commit', {
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
+      multipart: {
+        file: { name: 'tb.xlsx', mimeType: 'application/octet-stream', buffer: readFileSync(first) },
+      },
+    });
+    expect(created.status()).toBe(201);
+
+    // Vòng 2: CÙNG mã, chỉ đổi TÊN. Mọi trường khác giữ nguyên.
+    const second = await buildDeviceFile(join(tmpdir(), `tb-diff2-${stamp}.xlsx`), [
+      [code, 'Ten da sua', 'Switch', '', ''],
+    ]);
+    const updated = await page.request.post('/api/v1/devices/import/commit', {
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
+      multipart: {
+        file: { name: 'tb.xlsx', mimeType: 'application/octet-stream', buffer: readFileSync(second) },
+      },
+    });
+    expect(updated.status()).toBe(201);
+    expect((await updated.json()) as { updated: number }).toMatchObject({ updated: 1 });
+
+    const changes = sql(
+      `SELECT changes::text FROM device_history h ` +
+        `JOIN device d ON d.id = h.device_id ` +
+        `WHERE d.code = '${code}' AND h.action = 'imported-update' ` +
+        `ORDER BY h.created_at DESC LIMIT 1`,
+    );
+
+    expect(changes, 'phải có dòng lịch sử cho lượt cập nhật').not.toBe('');
+    const parsed = JSON.parse(changes) as Record<string, { before: unknown; after: unknown }>;
+
+    // Đúng MỘT trường đổi, và `before` phải là giá trị THẬT chứ không phải null.
+    expect(Object.keys(parsed), 'chỉ tên đổi thì lịch sử chỉ được ghi tên').toEqual(['name']);
+    expect(
+      parsed.name.before,
+      'before phải là tên cũ THẬT — null nghĩa là đang so với một object rỗng',
+    ).toBe('Ten ban dau');
+    expect(parsed.name.after).toBe('Ten da sua');
+
+    /*
+     * Hàng rào hồi quy cho đúng chế độ hỏng: nếu `before` lại rơi về `{}` thì `code` và
+     * `deviceTypeId` cũng lọt vào diff với `before: null`, dù chúng không đổi gì.
+     */
+    expect(parsed.code, 'mã không đổi thì không được có mặt trong lịch sử').toBeUndefined();
+  });
+});
