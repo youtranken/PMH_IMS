@@ -9,6 +9,7 @@ import { and, asc, count, desc, eq, ne, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
+import { DeviceRetirementRegistry } from '../../common/device-retirement.registry';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
 import { escapeLike, pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
@@ -53,6 +54,7 @@ export class DevicesService {
     @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly catalog: CatalogApiService,
     private readonly audit: AuditWriterService,
+    private readonly retirement: DeviceRetirementRegistry,
   ) {}
 
   // ─────────────────────────── Đọc ───────────────────────────
@@ -178,13 +180,61 @@ export class DevicesService {
    * Đổi trạng thái (AC 2.2 "thiết bị khóa được, không xóa"). `retired` = đã thanh lý:
    * hồ sơ khóa lại, không sửa được nữa nhưng vẫn tra cứu và vẫn nằm trong sổ.
    */
-  async setStatus(actor: string, id: string, status: DeviceStatus): Promise<void> {
+  /**
+   * Đổi trạng thái thiết bị. `cleanup` chỉ có nghĩa khi chuyển sang `retired`.
+   *
+   * ===== THANH LÝ LÀ MỘT CHỐT, KHÔNG PHẢI MỘT PHÉP GÁN =====
+   *
+   * Bản trước chỉ lật một chữ trong cột `status`. Máy đã ra khỏi công ty, đã ký biên bản,
+   * nhưng IP của nó vẫn `assigned` và vẫn trỏ về chính nó, rule NAT vào IP đó vẫn sống, ghế
+   * license vẫn bị chiếm. Hậu quả nặng nhất không nằm ở IPAM: thanh lý 10 máy cũ thì máy mới
+   * đầu tiên đã đụng trần seat và cửa đó BẮT người trực khai một lý do vượt seat sai sự thật
+   * pháp lý với nhà cung cấp, chỉ để đi tiếp được việc hằng ngày.
+   *
+   * Nên mặc định CHẶN, kèm danh sách đích danh thứ máy còn giữ. `cleanup: true` (ô tick trên
+   * hộp thanh lý) dọn hết trong CÙNG transaction: hoặc máy được thanh lý và mọi thứ nó giữ
+   * được trả lại, hoặc không có gì xảy ra.
+   *
+   * `devices` không biết ai đang giữ gì — nó chỉ hỏi sổ đăng ký. Xem
+   * `common/device-retirement.registry.ts`.
+   */
+  async setStatus(
+    actor: string,
+    id: string,
+    status: DeviceStatus,
+    options: { cleanup?: boolean } = {},
+  ): Promise<void> {
     const before = await this.requireRow(id);
     if (before.status === status) return;
+
+    if (status === 'retired' && !options.cleanup) {
+      const holdings = await this.retirement.holdings(id);
+      if (holdings.length > 0) {
+        throw new ConflictException({
+          code: 'DEVICE_HAS_HOLDINGS',
+          message:
+            `Thiết bị ${before.code} còn đang giữ: ${holdings.join(', ')}. ` +
+            'Gỡ những thứ này trước, hoặc tick "Dọn hết thứ liên quan" để hệ thống trả lại ' +
+            'trong cùng lượt thanh lý.',
+          holdings,
+        });
+      }
+    }
+
     await this.db.transaction(async (tx) => {
+      /*
+       * Dọn TRƯỚC khi lật trạng thái.
+       *
+       * Ngược lại thì máy đã là `retired` khi các releaser chạy, và chúng đi qua đúng những
+       * cửa ghi mà `assertUsable` vừa đóng lại — lượt dọn tự chặn chính mình.
+       */
+      if (status === 'retired' && options.cleanup) {
+        await this.retirement.releaseAllWithin(tx, actor, id);
+      }
       await this.updateWithin(tx, id, { status });
       await this.recordWithin(tx, actor, id, 'status-changed', {
         status: { before: before.status, after: status },
+        ...(status === 'retired' && options.cleanup ? { cleanup: { before: null, after: true } } : {}),
       });
     });
   }

@@ -447,6 +447,53 @@ export class LicenseAssignmentService {
     });
   }
 
+  /**
+   * Trả MỌI ghế mà một thiết bị đang ngồi, TRONG transaction của lượt thanh lý máy.
+   *
+   * ===== GỠ KHỎI MÁY, KHÔNG THANH LÝ PHẦN MỀM =====
+   *
+   * Chỉ đóng `released_at` của dòng GÁN. Hồ sơ `software` không bị chạm tới một chữ: công ty
+   * vẫn sở hữu cái license đó và sẽ gán cho máy mới. Đây là ranh giới dễ vượt nhất khi viết
+   * "dọn tự động", và vượt qua nó là xoá tài sản của công ty vì một cú bấm thanh lý máy.
+   *
+   * ===== VÌ SAO PHẢI CÓ HÀM NÀY, THAY VÌ MỘT CÂU UPDATE HÀNG LOẠT =====
+   *
+   * Mỗi ghế vẫn phải để lại dòng `software_history` của riêng nó. Đó là chỗ trả lời "cái ghế
+   * này ai từng ngồi, gỡ khi nào, vì sao" — câu hỏi khi rà license với nhà cung cấp. Một câu
+   * `UPDATE ... WHERE device_id = ?` nhanh hơn nhưng để lại đúng con số 0 dòng lịch sử.
+   *
+   * Không dùng `requireCas` ở đây: `WHERE released_at IS NULL` đã lọc sẵn, và số hàng trúng là
+   * "bao nhiêu ghế máy này đang ngồi" — 0 hay 5 đều hợp lệ, khác hẳn ngữ nghĩa của `release()`
+   * (gỡ ĐÚNG một ghế người dùng chỉ định).
+   */
+  async releaseForDeviceWithin(
+    tx: Tx,
+    actor: string,
+    deviceId: string,
+    reason: string,
+  ): Promise<void> {
+    const released = await tx
+      .update(licenseAssignmentTable)
+      .set({ releasedAt: new Date(), releasedBy: actor })
+      .where(
+        and(
+          eq(licenseAssignmentTable.deviceId, deviceId),
+          isNull(licenseAssignmentTable.releasedAt),
+        ),
+      )
+      .returning({
+        id: licenseAssignmentTable.id,
+        softwareId: licenseAssignmentTable.softwareId,
+      });
+
+    for (const row of released) {
+      await this.software.recordWithin(tx, actor, row.softwareId, 'license-released', {
+        deviceId: { before: deviceId, after: null },
+        reason: { before: null, after: reason },
+      });
+    }
+  }
+
   /** Mã máy để đọc, hoặc chính uuid nếu máy đã biến mất — không được để sập cả lời gọi. */
   private async deviceCodeOf(deviceId: string): Promise<string> {
     try {

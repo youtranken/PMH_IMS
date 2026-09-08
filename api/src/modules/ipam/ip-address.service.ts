@@ -331,7 +331,28 @@ export class IpAddressService {
     to: IpStatus,
     options: { reason?: string | null; deviceId?: string | null; usedBy?: string | null } = {},
   ): Promise<IpAddressRecord> {
-    const before = await this.requireAlive(id);
+    const row = await this.db.transaction((tx) =>
+      this.transitionWithin(tx, actor, id, to, options),
+    );
+    return (await this.decorate([row]))[0];
+  }
+
+  /**
+   * Thân của `transition`, chạy trong transaction CÓ SẴN.
+   *
+   * Tách ra để lượt THANH LÝ MÁY thu hồi được mọi IP của máy trong cùng một transaction với
+   * lượt đổi trạng thái thiết bị (`DeviceRetirementRegistry`). Không chép logic sang chỗ khác:
+   * máy trạng thái, hàng rào NAT, CAS và hai dòng sổ đều phải là MỘT bản, nếu không thì đường
+   * thanh lý và đường bấm tay sẽ trôi khỏi nhau đúng như mẫu M5.
+   */
+  async transitionWithin(
+    tx: Tx,
+    actor: string,
+    id: string,
+    to: IpStatus,
+    options: { reason?: string | null; deviceId?: string | null; usedBy?: string | null } = {},
+  ): Promise<typeof ipAddressTable.$inferSelect> {
+    const before = await this.requireAliveWithin(tx, id);
     const from = before.status as IpStatus;
 
     if (!canTransition(from, to)) {
@@ -368,7 +389,7 @@ export class IpAddressService {
       }
     }
 
-    const row = await this.db.transaction(async (tx) => {
+    {
       /*
        * SỔ NAT PHẢI ĐƯỢC HỎI TRƯỚC KHI QUYỀN SỞ HỮU ĐỔI CHỦ (rà soát 07/09, #6).
        *
@@ -440,8 +461,7 @@ export class IpAddressService {
         },
       });
       return rows[0];
-    });
-    return (await this.decorate([row]))[0];
+    }
   }
 
   /**
@@ -579,8 +599,16 @@ export class IpAddressService {
     return rows[0];
   }
 
-  private async requireAlive(id: string): Promise<typeof ipAddressTable.$inferSelect> {
-    const rows = await this.db
+  private requireAlive(id: string): Promise<typeof ipAddressTable.$inferSelect> {
+    return this.requireAliveWithin(this.db, id);
+  }
+
+  /** Bản đọc TRONG transaction — `transitionWithin` phải thấy trạng thái của chính tx mình. */
+  private async requireAliveWithin(
+    tx: Pick<Database, 'select'>,
+    id: string,
+  ): Promise<typeof ipAddressTable.$inferSelect> {
+    const rows = await tx
       .select()
       .from(ipAddressTable)
       .where(and(eq(ipAddressTable.id, id), isNull(ipAddressTable.voidedAt)));

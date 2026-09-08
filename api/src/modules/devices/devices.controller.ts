@@ -15,6 +15,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import type { Response } from 'express';
 import {
+  IsBoolean,
   IsIn,
   IsOptional,
   IsString,
@@ -80,6 +81,14 @@ class DeviceBodyDto {
 class StatusDto {
   @IsIn([...DEVICE_STATUSES], { message: 'Trạng thái thiết bị không hợp lệ.' })
   status!: DeviceStatus;
+
+  /**
+   * Ô tick "Dọn hết thứ liên quan" trên hộp thanh lý — chỉ có nghĩa khi `status = 'retired'`.
+   *
+   * Mặc định `false` là có chủ ý: dọn tự động thu hồi IP, gỡ rule NAT và trả ghế license trong
+   * một cú bấm, nên nó phải là lựa chọn NGƯỜI DÙNG NÓI RA, không phải mặc định êm ái.
+   */
+  @IsOptional() @IsBoolean() cleanup?: boolean;
 }
 
 class IdParamDto {
@@ -267,7 +276,9 @@ export class DevicesController {
     @Body() body: StatusDto,
     @Req() req: AuthedRequest,
   ) {
-    await this.devices.setStatus(actor(req), params.id, body.status);
+    await this.devices.setStatus(actor(req), params.id, body.status, {
+      cleanup: body.cleanup ?? false,
+    });
     return { status: body.status };
   }
   // ───────────── Port map (story 2.4, AD-14) ─────────────

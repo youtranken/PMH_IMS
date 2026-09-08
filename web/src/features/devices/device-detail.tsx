@@ -91,7 +91,7 @@ export function DeviceDetail({ me }: { me: Me }) {
     enabled: editing,
   });
 
-  const setStatus = useApiMutation<{ status: string }, unknown>(
+  const setStatus = useApiMutation<{ status: string; cleanup?: boolean }, unknown>(
     `/api/v1/devices/${id}/status`,
     { method: "PATCH", csrfToken: me.csrfToken, refreshMe: false },
   );
@@ -208,16 +208,28 @@ export function DeviceDetail({ me }: { me: Me }) {
               className={retired ? "btn" : "btn danger"}
               onClick={() => {
                 void (async () => {
+                  let cleanup = false;
                   if (!retired) {
-                    const ok = await askConfirm({
+                    /*
+                     * Ô tick "dọn hết thứ liên quan": không tick thì API CHẶN và liệt kê đích
+                     * danh thứ máy còn giữ (IP, rule NAT, ghế license). Mặc định KHÔNG tick là
+                     * có chủ ý — dọn tự động thu hồi IP và gỡ rule NAT trong một cú bấm, nên
+                     * nó phải là điều người dùng nói ra.
+                     */
+                    const answer = await askConfirm({
                       message: t("devices.confirmRetire", { name: item.code }),
                       danger: true,
                       confirmLabel: t("devices.retire"),
+                      checkbox: {
+                        label: t("devices.retireCleanup"),
+                        hint: t("devices.retireCleanupHint"),
+                      },
                     });
-                    if (!ok) return;
+                    if (!answer.ok) return;
+                    cleanup = answer.checked;
                   }
                   setStatus.mutate(
-                    { status: retired ? "in_use" : "retired" },
+                    { status: retired ? "in_use" : "retired", cleanup },
                     {
                       onSuccess: () => {
                         toast({ message: t("devices.statusChanged") });

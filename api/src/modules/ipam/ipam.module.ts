@@ -5,6 +5,7 @@ import { DevicesModule } from '../devices/devices.module';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { IpAddressService } from './ip-address.service';
 import { IpDevicePanel } from './ip-device-panel';
+import { IpDeviceRetirement } from './ip-device-retirement';
 import { NatDevicePanel } from './nat-device-panel';
 import { NatRuleService } from './nat-rule.service';
 import { IpamApiService } from './ipam.api';
@@ -21,6 +22,7 @@ import { SubnetService } from './subnet.service';
     NatRuleService,
     IpamApiService,
     IpDevicePanel,
+    IpDeviceRetirement,
     NatDevicePanel,
     ExcelExportService,
   ],

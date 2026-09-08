@@ -14,6 +14,9 @@ export function ConfirmDialog({
   danger = false,
   busy = false,
   error,
+  checkbox,
+  checked = false,
+  onCheckedChange,
   onConfirm,
   onCancel,
 }: {
@@ -24,6 +27,16 @@ export function ConfirmDialog({
   danger?: boolean;
   busy?: boolean;
   error?: string | null;
+  /**
+   * Một lựa chọn PHỤ đi kèm việc đang xác nhận — vd "Dọn hết thứ liên quan" khi thanh lý máy.
+   *
+   * Cố ý chỉ nhận MỘT ô, không nhận danh sách: hộp xác nhận là chỗ người ta đọc một câu rồi
+   * quyết định. Nhét một cái form vào đây là biến nó thành màn nhập liệu, và lúc đó thứ cần
+   * dựng là một Dialog riêng chứ không phải nới cái này rộng ra.
+   */
+  checkbox?: { label: string; hint?: string };
+  checked?: boolean;
+  onCheckedChange?: (next: boolean) => void;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -55,6 +68,25 @@ export function ConfirmDialog({
       <div className="sheet-body">
         {error && <p role="alert" className="alert error">{error}</p>}
         <DialogDescription style={{ margin: 0 }}>{message}</DialogDescription>
+        {checkbox && (
+          <label className="field-inline" style={{ marginTop: 'var(--sp-3)' }}>
+            <input
+              type="checkbox"
+              checked={checked}
+              disabled={busy}
+              onChange={(e) => onCheckedChange?.(e.target.checked)}
+            />
+            <span>
+              {checkbox.label}
+              {checkbox.hint && (
+                <>
+                  {' '}
+                  <small>{checkbox.hint}</small>
+                </>
+              )}
+            </span>
+          </label>
+        )}
       </div>
       <div className="sheet-footer">
         <span className="spacer" />

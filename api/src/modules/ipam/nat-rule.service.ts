@@ -347,7 +347,15 @@ export class NatRuleService {
    * "port 8080 đóng ngày nào, ai đóng, vì sao" là câu hỏi sẽ có người hỏi.
    */
   async voidRule(actor: string, id: string, reason: string): Promise<void> {
-    const before = await this.requireAlive(id);
+    await this.db.transaction((tx) => this.voidWithin(tx, actor, id, reason));
+  }
+
+  /**
+   * Thân của `voidRule`, chạy trong transaction CÓ SẴN — để lượt thanh lý máy gỡ được cả chùm
+   * rule trong cùng một transaction với lượt đổi trạng thái thiết bị. Một bản logic, hai lối vào.
+   */
+  async voidWithin(tx: Tx, actor: string, id: string, reason: string): Promise<void> {
+    const before = await this.requireAliveWithin(tx, id);
     const text = reason.trim();
     if (!text) {
       throw new BadRequestException({
@@ -355,7 +363,7 @@ export class NatRuleService {
         message: 'Nói rõ vì sao gỡ rule này (vd "dịch vụ đã ngừng").',
       });
     }
-    await this.db.transaction(async (tx) => {
+    {
       await tx
         .update(natRuleTable)
         .set({ voidedAt: new Date(), voidedBy: actor, voidReason: text })
@@ -378,7 +386,63 @@ export class NatRuleService {
         },
         reason: { before: null, after: text },
       });
-    });
+    }
+  }
+
+  /**
+   * Rule NAT còn sống mà một thiết bị "dính" tới, theo HAI đường — và cả hai đều cần.
+   *
+   *   1. rule NẰM TRÊN chính máy đó (máy là router đang bị thanh lý);
+   *   2. rule TRỎ VÀO một trong các IP của máy đó — và rule này thường nằm trên MỘT ROUTER
+   *      KHÁC. Đây là đường của kịch bản camera: camera bị thanh lý, còn rule 8080 thì nằm
+   *      trên con Draytek. Chỉ nhìn `device_id` là bỏ sót đúng cái nguy hiểm.
+   *
+   * Khớp IP theo `internal_ip` chứ không theo `ip_address_id`, cùng lý do đã ghi ở
+   * `IpAddressService.assertNoLiveNatWithin`: cột liên kết đó có thể null.
+   */
+  async rulesTouchingDevice(
+    deviceId: string,
+    addresses: string[],
+  ): Promise<{ id: string; label: string }[]> {
+    const reach: SQL[] = [eq(natRuleTable.deviceId, deviceId)];
+    if (addresses.length > 0) {
+      reach.push(sql`host(${natRuleTable.internalIp}) IN ${addresses.map((a) => hostOf(a))}`);
+    }
+    const rows = await this.db
+      .select({
+        id: natRuleTable.id,
+        protocol: natRuleTable.protocol,
+        externalFrom: natRuleTable.externalFrom,
+        externalTo: natRuleTable.externalTo,
+        internalIp: natRuleTable.internalIp,
+      })
+      .from(natRuleTable)
+      .where(and(isNull(natRuleTable.voidedAt), or(...reach)))
+      .orderBy(asc(natRuleTable.externalFrom));
+    return rows.map((row) => ({
+      id: row.id,
+      label: `${row.protocol.toUpperCase()} ${describePortRange(row.externalFrom, row.externalTo)} → ${hostOf(row.internalIp)}`,
+    }));
+  }
+
+  /**
+   * Gỡ mọi rule mà thiết bị này dính tới, TRONG transaction của lượt thanh lý.
+   *
+   * Đi qua `voidWithin` chứ không tự UPDATE hàng loạt: mỗi rule vẫn phải có dòng `audit` và
+   * dòng `nat_rule_history` của riêng nó. "Port 8080 đóng ngày nào, ai đóng, vì sao" là câu
+   * hỏi sẽ có người hỏi — và câu trả lời "vì máy bị thanh lý" chỉ có giá trị khi nó nằm ở
+   * từng rule, không phải ở một dòng tổng.
+   */
+  async voidForDeviceWithin(
+    tx: Tx,
+    actor: string,
+    deviceId: string,
+    addresses: string[],
+    reason: string,
+  ): Promise<void> {
+    for (const rule of await this.rulesTouchingDevice(deviceId, addresses)) {
+      await this.voidWithin(tx, actor, rule.id, reason);
+    }
   }
 
   /**
@@ -548,8 +612,16 @@ export class NatRuleService {
     return rows[0];
   }
 
-  private async requireAlive(id: string): Promise<typeof natRuleTable.$inferSelect> {
-    const rows = await this.db
+  private requireAlive(id: string): Promise<typeof natRuleTable.$inferSelect> {
+    return this.requireAliveWithin(this.db, id);
+  }
+
+  /** Bản đọc TRONG transaction — `voidWithin` phải thấy trạng thái của chính tx mình. */
+  private async requireAliveWithin(
+    tx: Pick<Database, 'select'>,
+    id: string,
+  ): Promise<typeof natRuleTable.$inferSelect> {
+    const rows = await tx
       .select()
       .from(natRuleTable)
       .where(and(eq(natRuleTable.id, id), isNull(natRuleTable.voidedAt)));

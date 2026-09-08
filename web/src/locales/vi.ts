@@ -287,6 +287,11 @@ export default {
     saved: 'Đã lưu hồ sơ thiết bị.',
     statusChanged: 'Đã đổi trạng thái thiết bị.',
     confirmRetire: 'Chuyển "{{name}}" sang ĐÃ THANH LÝ? Hồ sơ vẫn còn trong sổ, chỉ khóa lại.',
+    retireCleanup: 'Dọn hết thứ liên quan',
+    // Nói RÕ "gỡ khỏi máy" chứ không phải "xóa": license là tài sản công ty, thanh lý máy
+    // không đụng tới hồ sơ phần mềm. Không tick thì hệ thống chặn và liệt kê để tự đi gỡ.
+    retireCleanupHint:
+      'Thu hồi IP, gỡ rule NAT và trả ghế license của máy này. Hồ sơ phần mềm giữ nguyên — chỉ gỡ máy khỏi license.',
     retire: 'Thanh lý',
     reopen: 'Đưa lại vào dùng',
     retiredLocked: 'Thiết bị đã thanh lý — mở lại mới sửa được hồ sơ.',
