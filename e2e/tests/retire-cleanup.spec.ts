@@ -258,3 +258,75 @@ test.describe('Thanh lý máy còn đang giữ đồ', () => {
     expect(sql(`SELECT status FROM device WHERE id = '${deviceId}'`)).toBe('retired');
   });
 });
+
+/**
+ * LUỒNG NGƯỜI DÙNG THẬT — bấm Thanh lý trên giao diện, tick ô, và xem việc xảy ra.
+ *
+ * ===== VÌ SAO BÀI NÀY PHẢI TỒN TẠI RIÊNG =====
+ *
+ * Mọi bài phía trên gọi thẳng `PATCH /devices/:id/status` với `{cleanup: true|false}`. Chúng
+ * chứng minh SERVER làm đúng, nhưng KHÔNG chạm một dòng nào của phần web: ô tick trong
+ * `ConfirmDialog`, kiểu trả `{ok, checked}` của `askConfirm`, và chỗ đọc `answer.checked` ở
+ * `device-detail.tsx`. Trước bài này, cả ba CHƯA TỪNG chạy một lần.
+ *
+ * Đây đúng chế độ hỏng đã dính ở đợt A: siết API xong, tưởng đã xong, trong khi đường người
+ * dùng thật chưa ai đi qua (xem `vault-write-stepup-ui.spec.ts`, cùng lý do).
+ */
+test.describe('Thanh lý trên giao diện — ô tick "Dọn hết thứ liên quan"', () => {
+  test('không tick: lỗi hiện ra trên màn, và máy KHÔNG bị thanh lý', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const kit = await deviceHoldingEverything(page, stamp);
+
+    await page.goto(`/devices/${kit.deviceId}`);
+    await page.getByRole('button', { name: 'Thanh lý' }).click();
+
+    const dialog = page.getByRole('dialog');
+    // Ô tick phải CÓ MẶT và mặc định KHÔNG tick — dọn hàng loạt không được là mặc định êm ái.
+    const box = dialog.getByRole('checkbox', { name: /Dọn hết thứ liên quan/ });
+    await expect(box, 'hộp thanh lý phải có ô tick dọn').toBeVisible();
+    await expect(box, 'mặc định phải là KHÔNG dọn').not.toBeChecked();
+
+    await dialog.getByRole('button', { name: 'Thanh lý' }).click();
+
+    // Người dùng phải ĐỌC ĐƯỢC vì sao bị chặn, ngay trên màn, kèm tên thứ đang vướng.
+    await expect(
+      page.getByText(new RegExp(kit.ip)),
+      'lỗi phải hiện trên giao diện, không chỉ nằm trong response',
+    ).toBeVisible();
+
+    expect(sql(`SELECT status FROM device WHERE id = '${kit.deviceId}'`)).toBe('in_use');
+  });
+
+  test('tick rồi bấm: máy thanh lý xong và mọi thứ nó giữ được trả lại', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const kit = await deviceHoldingEverything(page, stamp);
+
+    await page.goto(`/devices/${kit.deviceId}`);
+    await page.getByRole('button', { name: 'Thanh lý' }).click();
+
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('checkbox', { name: /Dọn hết thứ liên quan/ }).check();
+    await dialog.getByRole('button', { name: 'Thanh lý' }).click();
+
+    /*
+     * Nút đổi thành "Đưa lại vào dùng" là dấu hiệu lượt thanh lý ĐÃ xong và màn đã làm mới — bám vào
+     * nó thay vì `waitForTimeout`, và nó cũng khẳng định luôn giao diện phản ánh trạng thái mới.
+     */
+    await expect(page.getByRole('button', { name: 'Đưa lại vào dùng' })).toBeVisible();
+
+    expect(sql(`SELECT status FROM device WHERE id = '${kit.deviceId}'`)).toBe('retired');
+    expect(
+      sql(`SELECT status FROM ip_address WHERE id = '${kit.ipId}'`),
+      'tick trên giao diện phải dẫn tới ĐÚNG hành vi mà API đã chứng minh',
+    ).toBe('reclaimed');
+    expect(
+      Number(
+        sql(
+          `SELECT count(*) FROM license_assignment WHERE device_id = '${kit.deviceId}' AND released_at IS NULL`,
+        ),
+      ),
+    ).toBe(0);
+  });
+});

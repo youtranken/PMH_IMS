@@ -1,4 +1,6 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
+import { DRIZZLE_DB } from '../../database/database.module';
+import type { Database } from '../../database/database.module';
 import type { DeviceReleaser } from '../../common/device-retirement.registry';
 import { DeviceRetirementRegistry } from '../../common/device-retirement.registry';
 import type { Tx } from '../../common/tx';
@@ -15,6 +17,7 @@ import { NatRuleService } from './nat-rule.service';
 @Injectable()
 export class IpDeviceRetirement implements DeviceReleaser, OnModuleInit {
   constructor(
+    @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly registry: DeviceRetirementRegistry,
     private readonly addresses: IpAddressService,
     private readonly nat: NatRuleService,
@@ -25,8 +28,13 @@ export class IpDeviceRetirement implements DeviceReleaser, OnModuleInit {
   }
 
   async holdingsOf(deviceId: string): Promise<string[]> {
-    const ips = await this.addresses.listForDevice(deviceId);
-    const rules = await this.nat.rulesTouchingDevice(deviceId, ips.map((ip) => ip.address));
+    // Đường CHẶN chỉ để dựng thông điệp, không ghi gì — đọc trên pool là đủ.
+    const ips = await this.addresses.listForDeviceWithin(this.db, deviceId);
+    const rules = await this.nat.rulesTouchingDevice(
+      this.db,
+      deviceId,
+      ips.map((ip) => ip.address),
+    );
 
     const out: string[] = [];
     for (const ip of ips) out.push(`địa chỉ IP ${ip.address}`);
@@ -35,7 +43,9 @@ export class IpDeviceRetirement implements DeviceReleaser, OnModuleInit {
   }
 
   async releaseWithin(tx: Tx, actor: string, deviceId: string): Promise<void> {
-    const ips = await this.addresses.listForDevice(deviceId);
+    // Đọc bằng CHÍNH `tx`, không phải `this.db`: đọc trên kết nối khác thì một IP vừa được cấp
+    // cho máy này sẽ không có trong danh sách, và máy được thanh lý khi vẫn đang giữ nó.
+    const ips = await this.addresses.listForDeviceWithin(tx, deviceId);
     const addresses = ips.map((ip) => ip.address);
 
     /*

@@ -401,6 +401,7 @@ export class NatRuleService {
    * `IpAddressService.assertNoLiveNatWithin`: cột liên kết đó có thể null.
    */
   async rulesTouchingDevice(
+    tx: Pick<Database, 'select'>,
     deviceId: string,
     addresses: string[],
   ): Promise<{ id: string; label: string }[]> {
@@ -408,7 +409,7 @@ export class NatRuleService {
     if (addresses.length > 0) {
       reach.push(sql`host(${natRuleTable.internalIp}) IN ${addresses.map((a) => hostOf(a))}`);
     }
-    const rows = await this.db
+    const rows = await tx
       .select({
         id: natRuleTable.id,
         protocol: natRuleTable.protocol,
@@ -440,7 +441,7 @@ export class NatRuleService {
     addresses: string[],
     reason: string,
   ): Promise<void> {
-    for (const rule of await this.rulesTouchingDevice(deviceId, addresses)) {
+    for (const rule of await this.rulesTouchingDevice(tx, deviceId, addresses)) {
       await this.voidWithin(tx, actor, rule.id, reason);
     }
   }

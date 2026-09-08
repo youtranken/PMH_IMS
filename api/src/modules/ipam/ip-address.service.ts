@@ -32,6 +32,13 @@ import { SubnetService } from './subnet.service';
 export const IP_STATUSES = IP_LIFECYCLE_STATUSES;
 export type { IpStatus };
 
+/** Câu cảnh báo theo đúng việc người dùng vừa bấm — xem `assertNoLiveNatWithin`. */
+const PURPOSE_WARNING = {
+  reclaim: 'Thu hồi mà để nguyên rule thì port vẫn mở và sẽ trỏ vào máy được cấp tiếp theo.',
+  assign: 'Cấp cho máy khác mà để nguyên rule là giao thẳng port đang mở cho máy mới.',
+  void: 'Ẩn hồ sơ thì địa chỉ này biến khỏi mọi màn, còn rule NAT vẫn chuyển gói tới đó — lỗ thủng còn nguyên mà không còn chỗ nào nhắc tới nó.',
+} as const;
+
 /** Trường được theo dõi trong lịch sử (AD-13). */
 const TRACKED = ['address', 'deviceId', 'usedBy', 'assignedAt', 'status', 'note'] as const;
 
@@ -136,6 +143,26 @@ export class IpAddressService {
       )
       .orderBy(asc(ipAddressTable.address));
     return this.decorate(rows);
+  }
+
+  /**
+   * Địa chỉ của một thiết bị, đọc TRONG transaction và KHÔNG tra thêm gì (`decorate` gọi sang
+   * `devices.api`, thừa ở đây và làm chậm lượt dọn).
+   *
+   * Lượt thanh lý phải đọc bằng chính `tx` của nó: đọc bằng `this.db` là đọc trên MỘT KẾT NỐI
+   * KHÁC, ngoài transaction — một IP vừa được cấp cho máy này sẽ không có trong danh sách và
+   * máy được thanh lý trong khi vẫn đang giữ nó. Đó đúng là mẫu M2 mà cả đợt rà soát này dọn.
+   */
+  async listForDeviceWithin(
+    tx: Pick<Database, 'select'>,
+    deviceId: string,
+  ): Promise<{ id: string; address: string }[]> {
+    const rows = await tx
+      .select({ id: ipAddressTable.id, address: ipAddressTable.address })
+      .from(ipAddressTable)
+      .where(and(eq(ipAddressTable.deviceId, deviceId), isNull(ipAddressTable.voidedAt)))
+      .orderBy(asc(ipAddressTable.address));
+    return rows.map((row) => ({ id: row.id, address: hostOf(row.address) }));
   }
 
   /** IP của một thiết bị — panel IP trên trang thiết bị (story 5.4) hỏi cái này. */
@@ -407,7 +434,7 @@ export class IpAddressService {
        * đợt trước vừa dọn xong ở năm chỗ.
        */
       const tenancyChanges = to === 'reclaimed' || (to === 'assigned' && from !== 'suspect_dead');
-      if (tenancyChanges) await this.assertNoLiveNatWithin(tx, before.address, to);
+      if (tenancyChanges) await this.assertNoLiveNatWithin(tx, before.address, to === 'reclaimed' ? 'reclaim' : 'assign');
 
       /*
        * Điều kiện `status = from` VÀ `voided_at IS NULL` đi ngay trong câu UPDATE.
@@ -480,6 +507,15 @@ export class IpAddressService {
       });
     }
     await this.db.transaction(async (tx) => {
+      /*
+       * ẨN cũng phải hỏi sổ NAT, y như THU HỒI (rà soát 08/09, #5 — mẫu N1).
+       *
+       * Bản đầu của hàng rào #6 chỉ áp cho `transition`, bỏ trống cửa này. Nhưng ẩn hồ sơ còn
+       * tệ hơn thu hồi một bậc: thu hồi thì địa chỉ vẫn còn trong sổ và người ta còn thấy nó
+       * trống; ẩn thì hồ sơ BIẾN MẤT khỏi mọi màn, trong khi rule NAT vẫn lặng lẽ chuyển gói
+       * tới đúng địa chỉ đó. Lỗ thủng vẫn nguyên mà cuốn sổ không còn chỗ nào nhắc tới nó.
+       */
+      await this.assertNoLiveNatWithin(tx, before.address, 'void');
       await tx
         .update(ipAddressTable)
         .set({ voidedAt: new Date(), voidedBy: actor, voidReason: text })
@@ -548,7 +584,8 @@ export class IpAddressService {
   private async assertNoLiveNatWithin(
     tx: Tx,
     address: string,
-    to: IpStatus,
+    /** Việc đang làm — chỉ dùng để câu lỗi nói đúng thứ người dùng vừa bấm. */
+    purpose: 'reclaim' | 'assign' | 'void',
   ): Promise<void> {
     const rules = await tx
       .select({
@@ -573,10 +610,8 @@ export class IpAddressService {
       code: 'IP_HAS_LIVE_NAT',
       message:
         `Địa chỉ ${hostOf(address)} còn ${rules.length} rule NAT đang mở (${list}). ` +
-        (to === 'reclaimed'
-          ? 'Thu hồi mà để nguyên rule thì port vẫn mở và sẽ trỏ vào máy được cấp tiếp theo. '
-          : 'Cấp cho máy khác mà để nguyên rule là giao thẳng port đang mở cho máy mới. ') +
-        'Vào sổ NAT gỡ hoặc trỏ lại rule trước, rồi làm lại.',
+        PURPOSE_WARNING[purpose] +
+        ' Vào sổ NAT gỡ hoặc trỏ lại rule trước, rồi làm lại.',
     });
   }
 

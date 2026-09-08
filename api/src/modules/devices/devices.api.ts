@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { DevicesService } from './devices.service';
 import type { DeviceListItem } from './devices.types';
 
@@ -43,7 +43,14 @@ export class DevicesApiService {
     let device: DeviceListItem;
     try {
       device = await this.devices.findOne(id);
-    } catch {
+    } catch (error) {
+      /*
+       * CHỈ nuốt đúng lỗi "không tìm thấy". `catch` trần ở đây biến một sự cố DB thành câu
+       * "Thiết bị được chọn không tồn tại" — người dùng đi tìm một thiết bị đang nằm rành
+       * rành trong kho, còn nguyên nhân thật thì mất luôn (rà soát 08/09, #4). Đây đúng là
+       * lớp lỗi mà đợt B vừa dọn ở `AuditWriterService`.
+       */
+      if (!(error instanceof NotFoundException)) throw error;
       throw new BadRequestException({
         code: 'DEVICE_NOT_FOUND',
         message: 'Thiết bị được chọn không tồn tại.',

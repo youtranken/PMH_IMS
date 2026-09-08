@@ -394,9 +394,22 @@ export class IspLineService {
         });
       }
     }
-    const deviceId = (values.deviceId ?? current?.deviceId ?? null) as string | null;
-    // Máy đã thanh lý thì không cắm đường truyền vào được nữa (rà soát 07/09).
-    if (deviceId) await this.devices.assertUsable(deviceId);
+    /*
+     * Chỉ kiểm khi thiết bị biên THẬT SỰ được gán mới hoặc đổi — không kiểm khi nó chỉ đang
+     * nằm sẵn ở đó.
+     *
+     * Bản đầu của bản sửa này viết `values.deviceId ?? current?.deviceId`, tức kiểm cả liên
+     * kết CŨ. Hậu quả: một đường truyền đã nối vào máy X, sau đó X bị thanh lý — từ lúc đó
+     * KHÔNG SỬA ĐƯỢC GÌ trên đường truyền đó nữa, kể cả sửa hotline, kể cả để gỡ chính liên
+     * kết hỏng ấy ra. Hàng rào tự nhốt người dùng vào trong (rà soát 08/09, #1).
+     *
+     * Máy đã thanh lý mà vẫn còn đường truyền cắm vào là chuyện CÓ THẬT với dữ liệu cũ, và
+     * lối thoát duy nhất là sửa được hồ sơ đó.
+     */
+    const nextDeviceId = values.deviceId as string | null | undefined;
+    if (nextDeviceId && nextDeviceId !== current?.deviceId) {
+      await this.devices.assertUsable(nextDeviceId);
+    }
     return values;
   }
 
