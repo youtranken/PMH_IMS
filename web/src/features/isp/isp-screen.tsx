@@ -15,10 +15,10 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
-import type { CatalogLists } from '@/lib/catalog-types';
 import { IspForm } from './isp-form';
 import { ISP_STATUSES, STATUS_KEY, STATUS_TONE, type IspRow, type IspStatus } from './isp-types';
 import { PATHS } from '@/lib/routes';
+import { useCatalogLists } from '@/ui/use-catalog-lists';
 
 const DEFAULT_LIMIT = 20;
 
@@ -46,10 +46,7 @@ export function IspScreen({ me }: { me: Me }) {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'code', desc: false }]);
   const [creating, setCreating] = useState(false);
 
-  const lists = useQuery({
-    queryKey: ['catalog', 'lists'],
-    queryFn: () => apiFetch<CatalogLists>('/api/v1/catalog?includeInactive=true'),
-  });
+  const lists = useCatalogLists();
 
   const lines = useQuery({
     queryKey: ['isp', page, limit, filters, sorting],
@@ -171,6 +168,7 @@ export function IspScreen({ me }: { me: Me }) {
             { value: '', label: t('isp.allSites') },
             ...(lists.data?.sites ?? []).map((site) => ({ value: site.id, label: site.code })),
           ]}
+          failed={lists.isError}
           onChange={(value) => setFilter('siteId', value)}
         />
         <Select
@@ -223,7 +221,6 @@ export function IspScreen({ me }: { me: Me }) {
       {creating ? (
         <IspForm
           row={null}
-          lists={lists.data}
           csrfToken={me.csrfToken}
           onClose={() => setCreating(false)}
           onSaved={() => {

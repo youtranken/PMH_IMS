@@ -331,6 +331,14 @@ input[list]::-webkit-calendar-picker-indicator {
   font-size: var(--fs-sm);
   cursor: default;
 }
+/* "Không tải được" — màu cảnh báo, KHÁC hẳn màu chữ mờ của `.fsel-none`. Hai dòng này nói
+   hai chuyện khác nhau, trông giống nhau là mất luôn phần phân biệt vừa dựng. */
+.fsel-error {
+  padding: var(--space-3) var(--space-4);
+  color: var(--danger);
+  font-size: var(--fs-sm);
+  cursor: default;
+}
 .fsel-option:hover,
 .fsel-option.active {
   background: var(--primary-soft);
@@ -493,6 +501,15 @@ input[list]::-webkit-calendar-picker-indicator {
 .combo-option.combo-action {
   color: var(--primary-ink);
   font-weight: 600;
+}
+/* Dòng "không tải được" ghim đầu menu. Màu cảnh báo chứ không phải màu chữ mờ như
+   `.combo-empty`: hai dòng này nói hai chuyện khác nhau và không được trông giống nhau. */
+.combo-error {
+  padding: var(--space-2) var(--space-3);
+  color: var(--danger);
+  font-size: var(--fs-sm);
+  border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-2);
 }
 .combo-empty {
   padding: var(--space-4);

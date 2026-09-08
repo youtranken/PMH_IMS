@@ -1,14 +1,12 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
-import type { CatalogLists } from '@/lib/catalog-types';
 import type { SubnetRow } from './ipam-types';
+import { useCatalogLists } from '@/ui/use-catalog-lists';
 
 export function SubnetForm({
   subnet,
@@ -30,10 +28,7 @@ export function SubnetForm({
   const [description, setDescription] = useState(subnet?.description ?? '');
   const [error, setError] = useState<string | null>(null);
 
-  const lists = useQuery({
-    queryKey: ['catalog', 'lists'],
-    queryFn: () => apiFetch<CatalogLists>('/api/v1/catalog?includeInactive=true'),
-  });
+  const lists = useCatalogLists();
 
   const save = useApiMutation<Record<string, unknown>, unknown>(
     subnet ? `/api/v1/ipam/subnets/${subnet.id}` : '/api/v1/ipam/subnets',
@@ -143,6 +138,7 @@ export function SubnetForm({
               { value: '', label: t('ipam.noSite') },
               ...(lists.data?.sites ?? []).map((site) => ({ value: site.id, label: site.code })),
             ]}
+            failed={lists.isError}
           />
         </Field>
 

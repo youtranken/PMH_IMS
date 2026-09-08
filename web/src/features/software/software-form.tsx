@@ -8,7 +8,7 @@ import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draf
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
-import type { CatalogLists } from '@/lib/catalog-types';
+import { useCatalogLists } from '@/ui/use-catalog-lists';
 import {
   KIND_KEY,
   SOFTWARE_KINDS,
@@ -52,20 +52,24 @@ function initialState(row: SoftwareRow | null): FormState {
 /** Form hồ sơ phần mềm (story 3.1, FR-008). Màn nhập — desktop-first. */
 export function SoftwareForm({
   row,
-  lists,
   csrfToken,
   onClose,
   onSaved,
 }: {
   /** null = thêm mới. */
   row: SoftwareRow | null;
-  lists: CatalogLists | undefined;
   csrfToken: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
+  /*
+   * Form TỰ hỏi danh mục thay vì nhận qua props: `useCatalogLists` dùng chung `queryKey` nên
+   * đây không phải lượt gọi thêm, nhưng form THẤY được `isError`. Props `CatalogLists |
+   * undefined` không có đường nào phân biệt "danh mục hỏng" với "chưa tải xong".
+   */
+  const lists = useCatalogLists();
   const [form, setForm] = useState<FormState>(() => initialState(row));
   const [error, setError] = useState<string | null>(null);
   // Giấy tờ chọn kèm lúc THÊM MỚI (AD-15). Hồ sơ đang sửa thì đã có tab Giấy tờ ở trang
@@ -221,7 +225,8 @@ export function SoftwareForm({
               value={form.vendorId}
               ariaLabel={t('software.vendor')}
               placeholder={`— ${t('software.noVendor')} —`}
-              options={(lists?.vendors ?? []).map((vendor) => ({
+              failed={lists.isError}
+              options={(lists.data?.vendors ?? []).map((vendor) => ({
                 value: vendor.id,
                 label: vendor.name,
               }))}

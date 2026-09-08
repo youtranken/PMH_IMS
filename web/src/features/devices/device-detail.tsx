@@ -18,7 +18,6 @@ import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useConfirm } from "@/ui/confirm-provider";
 import { useToast } from "@/ui/toast";
-import type { CatalogLists } from "@/lib/catalog-types";
 import { DeviceLicensesExpand } from "@/features/software/device-licenses-expand";
 import { DeviceForm } from "./device-form";
 import { toHistoryEntries } from "./device-history-entries";
@@ -82,13 +81,6 @@ export function DeviceDetail({ me }: { me: Me }) {
     queryFn: () =>
       apiFetch<DeviceHistoryRow[]>(`/api/v1/devices/${id}/history`),
     enabled: tab === "history",
-  });
-
-  const lists = useQuery({
-    queryKey: ["catalog", "lists"],
-    queryFn: () =>
-      apiFetch<CatalogLists>("/api/v1/catalog?includeInactive=true"),
-    enabled: editing,
   });
 
   const setStatus = useApiMutation<{ status: string; cleanup?: boolean }, unknown>(
@@ -353,11 +345,24 @@ export function DeviceDetail({ me }: { me: Me }) {
               </section>
             ) : null}
 
-            <ExtensionPanels
-              panels={(panels.data ?? []).filter(
-                (panel) => panel.key !== "software",
-              )}
-            />
+            {/*
+              KHU MỞ RỘNG HỎNG PHẢI NÓI RA, KHÔNG ĐƯỢC BIẾN MẤT.
+              `(panels.data ?? [])` biến một lỗi 500 thành "máy này không giữ gì cả" — và
+              trang vẫn trông hoàn chỉnh, vì phần hồ sơ ở trên vẫn đầy đủ. Đúng câu hỏi người
+              ta mở trang này ra để hỏi TRƯỚC KHI THANH LÝ: máy còn giữ IP, rule NAT, ghế
+              license nào không. Đọc nhầm sự im lặng đó thành "sạch rồi" là thanh lý nhầm.
+            */}
+            {panels.isError ? (
+              <div className="card device-panel">
+                <LoadError onRetry={() => void panels.refetch()} />
+              </div>
+            ) : (
+              <ExtensionPanels
+                panels={(panels.data ?? []).filter(
+                  (panel) => panel.key !== "software",
+                )}
+              />
+            )}
           </>
         ) : safeTab === "ports" ? (
           <PortMapPanel
@@ -395,7 +400,6 @@ export function DeviceDetail({ me }: { me: Me }) {
       {editing ? (
         <DeviceForm
           device={item}
-          lists={lists.data}
           csrfToken={me.csrfToken}
           onClose={() => setEditing(false)}
           onSaved={() => {

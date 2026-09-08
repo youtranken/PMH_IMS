@@ -497,6 +497,7 @@ function IpForm({
               setDeviceId("");
             }}
             options={devices.data?.items ?? []}
+            failed={devices.isError}
             getKey={(item) => item.id}
             renderOption={(item) => (
               <>
@@ -518,7 +519,8 @@ function IpForm({
           <SuggestInput
             value={usedBy}
             onChange={setUsedBy}
-            options={departments}
+            options={departments.names}
+            failed={departments.failed}
             placeholder={t("ipam.usedByPlaceholder")}
             ariaLabel={t("ipam.usedBy")}
           />
@@ -635,7 +637,8 @@ function TransitionDialog({
             <SuggestInput
               value={usedBy}
               onChange={setUsedBy}
-              options={departments}
+              options={departments.names}
+              failed={departments.failed}
               placeholder={t("ipam.usedByPlaceholder")}
               ariaLabel={t("ipam.usedBy")}
             />

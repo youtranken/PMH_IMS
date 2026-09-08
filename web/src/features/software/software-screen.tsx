@@ -20,7 +20,6 @@ import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
-import type { CatalogLists } from '@/lib/catalog-types';
 import { AssignDialog } from './license-assignments-panel';
 import { SoftwareForm } from './software-form';
 import {
@@ -62,11 +61,6 @@ export function SoftwareScreen({ me }: { me: Me }) {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<SoftwareRow | null>(null);
   const [assigning, setAssigning] = useState<SoftwareRow | null>(null);
-
-  const lists = useQuery({
-    queryKey: ['catalog', 'lists'],
-    queryFn: () => apiFetch<CatalogLists>('/api/v1/catalog?includeInactive=true'),
-  });
 
   /* `useCallback`: `refresh` đi vào mảng phụ thuộc của `useMemo` dựng cột. Hàm mới mỗi lần
      render thì `useMemo` mất tác dụng và cả mảng cột được dựng lại sau mỗi phím gõ vào ô tìm. */
@@ -280,7 +274,6 @@ export function SoftwareScreen({ me }: { me: Me }) {
       {creating ? (
         <SoftwareForm
           row={null}
-          lists={lists.data}
           csrfToken={me.csrfToken}
           onClose={() => setCreating(false)}
           onSaved={() => {
@@ -293,7 +286,6 @@ export function SoftwareScreen({ me }: { me: Me }) {
       {editing ? (
         <SoftwareForm
           row={editing}
-          lists={lists.data}
           csrfToken={me.csrfToken}
           onClose={() => setEditing(null)}
           onSaved={() => {

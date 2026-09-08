@@ -12,9 +12,9 @@ import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
-import type { CatalogLists } from '@/lib/catalog-types';
 import type { DeviceRow } from '@/lib/device-types';
 import { ISP_STATUSES, STATUS_KEY, type IspRow, type IspStatus } from './isp-types';
+import { useCatalogLists } from '@/ui/use-catalog-lists';
 
 interface FormState {
   code: string;
@@ -49,19 +49,23 @@ function initialState(row: IspRow | null): FormState {
 /** Form đường truyền ISP (story 3.3, FR-010). Màn nhập — desktop-first. */
 export function IspForm({
   row,
-  lists,
   csrfToken,
   onClose,
   onSaved,
 }: {
   row: IspRow | null;
-  lists: CatalogLists | undefined;
   csrfToken: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
+  /*
+   * Form TỰ hỏi danh mục thay vì nhận qua props: `useCatalogLists` dùng chung `queryKey` nên
+   * đây không phải lượt gọi thêm, nhưng form THẤY được `isError`. Props `CatalogLists |
+   * undefined` không có đường nào phân biệt "danh mục hỏng" với "chưa tải xong".
+   */
+  const lists = useCatalogLists();
   const [form, setForm] = useState<FormState>(() => initialState(row));
   const [device, setDevice] = useState<{ id: string; code: string } | null>(
     row?.deviceId ? { id: row.deviceId, code: row.deviceCode ?? '' } : null,
@@ -187,7 +191,8 @@ export function IspForm({
             <SuggestInput
               value={form.provider}
               onChange={(value) => set('provider', value)}
-              options={(lists?.ispProviders ?? []).map((item) => item.name)}
+              options={(lists.data?.ispProviders ?? []).map((item) => item.name)}
+              failed={lists.isError}
               placeholder={t('isp.providerPlaceholder')}
               ariaLabel={t('isp.provider')}
             />
@@ -214,7 +219,8 @@ export function IspForm({
               value={form.siteId}
               ariaLabel={t('isp.site')}
               placeholder={`— ${t('isp.allSites')} —`}
-              options={(lists?.sites ?? []).map((site) => ({
+              failed={lists.isError}
+              options={(lists.data?.sites ?? []).map((site) => ({
                 value: site.id,
                 label: `${site.code} — ${site.name}`,
               }))}
@@ -252,6 +258,7 @@ export function IspForm({
                 setDevice(null);
               }}
               options={candidates.data?.items ?? []}
+              failed={candidates.isError}
               getKey={(item) => item.id}
               renderOption={(item) => (
                 <>

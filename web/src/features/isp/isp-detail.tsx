@@ -20,7 +20,6 @@ import { TabPanel, Tabs } from "@/ui/tabs";
 import { useTabCounts } from "@/ui/tab-counts";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useToast } from "@/ui/toast";
-import type { CatalogLists } from "@/lib/catalog-types";
 import { IspForm } from "./isp-form";
 import { toIspHistory } from "./isp-history-entries";
 import {
@@ -58,13 +57,6 @@ export function IspDetail({ me }: { me: Me }) {
     queryKey: ["isp", id, "history"],
     queryFn: () => apiFetch<IspHistoryRow[]>(`/api/v1/isp-lines/${id}/history`),
     enabled: tab === "history",
-  });
-
-  const lists = useQuery({
-    queryKey: ["catalog", "lists"],
-    queryFn: () =>
-      apiFetch<CatalogLists>("/api/v1/catalog?includeInactive=true"),
-    enabled: editing,
   });
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["isp"] });
@@ -248,7 +240,6 @@ export function IspDetail({ me }: { me: Me }) {
       {editing ? (
         <IspForm
           row={item}
-          lists={lists.data}
           csrfToken={me.csrfToken}
           onClose={() => setEditing(false)}
           onSaved={() => {

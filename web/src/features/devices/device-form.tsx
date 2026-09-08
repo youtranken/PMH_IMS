@@ -9,7 +9,7 @@ import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
-import type { CatalogLists } from '@/lib/catalog-types';
+import { useCatalogLists } from '@/ui/use-catalog-lists';
 import {
   DEVICE_STATUSES,
   STATUS_KEY,
@@ -62,14 +62,12 @@ function initialState(device: DeviceRow | null): FormState {
  */
 export function DeviceForm({
   device,
-  lists,
   csrfToken,
   onClose,
   onSaved,
 }: {
   /** null = thêm mới. */
   device: DeviceRow | null;
-  lists: CatalogLists | undefined;
   csrfToken: string;
   onClose: () => void;
   onSaved: (result: DeviceWriteResult) => void;
@@ -82,7 +80,17 @@ export function DeviceForm({
   // form phần mềm và đường truyền). Sửa máy thì tab "Giấy tờ" ở trang chi tiết lo việc đó.
   const draft = useAttachmentDraft();
   const [uploading, setUploading] = useState(false);
-  const departments = (lists?.departments ?? [])
+  /*
+   * Form TỰ hỏi danh mục thay vì nhận qua props.
+   *
+   * `useCatalogLists` dùng chung `queryKey` nên đây không phải một lượt gọi thêm — react-query
+   * trả từ cache của màn cha. Đổi lại, form thấy được `isError`: props `CatalogLists | undefined`
+   * KHÔNG có đường nào phân biệt "danh mục hỏng" với "chưa tải xong", nên mọi ô chọn bắt buộc
+   * ở đây từng nói "— Không có lựa chọn —" khi API hỏng và đẩy người dùng đi khai lại một loại
+   * thiết bị đã có sẵn.
+   */
+  const lists = useCatalogLists();
+  const departments = (lists.data?.departments ?? [])
     .filter((department) => department.active)
     .map((department) => department.name);
 
@@ -105,7 +113,7 @@ export function DeviceForm({
     });
 
   // Chỉ hiện tủ thuộc site đang chọn; chưa chọn site thì hiện hết để còn tra được.
-  const cabinets = (lists?.cabinets ?? []).filter(
+  const cabinets = (lists.data?.cabinets ?? []).filter(
     (cabinet) => !form.siteId || cabinet.siteId === form.siteId,
   );
 
@@ -190,10 +198,11 @@ export function DeviceForm({
               value={form.deviceTypeId}
               ariaLabel={t('devices.type')}
               placeholder="— Chọn loại —"
-              options={(lists?.deviceTypes ?? []).map((type) => ({
+              options={(lists.data?.deviceTypes ?? []).map((type) => ({
                 value: type.id,
                 label: type.name,
               }))}
+              failed={lists.isError}
               onChange={(value) => set('deviceTypeId', value)}
             />
           </Field>
@@ -243,10 +252,11 @@ export function DeviceForm({
               value={form.siteId}
               ariaLabel={t('devices.site')}
               placeholder="— Chưa gán site —"
-              options={(lists?.sites ?? []).map((site) => ({
+              options={(lists.data?.sites ?? []).map((site) => ({
                 value: site.id,
                 label: `${site.code} — ${site.name}`,
               }))}
+              failed={lists.isError}
               onChange={(value) => set('siteId', value)}
             />
           </Field>
@@ -259,6 +269,7 @@ export function DeviceForm({
                 value: cabinet.id,
                 label: `${cabinet.siteCode} · ${cabinet.code}`,
               }))}
+              failed={lists.isError}
               onChange={(value) => set('cabinetId', value)}
             />
           </Field>
@@ -277,6 +288,7 @@ export function DeviceForm({
               value={form.department}
               onChange={(value) => set('department', value)}
               options={departments}
+              failed={lists.isError}
               placeholder={t('devices.departmentPlaceholder')}
               ariaLabel={t('devices.department')}
             />
@@ -291,10 +303,11 @@ export function DeviceForm({
               value={form.vendorId}
               ariaLabel={t('devices.vendor')}
               placeholder="— Chưa rõ NCC —"
-              options={(lists?.vendors ?? []).map((vendor) => ({
+              options={(lists.data?.vendors ?? []).map((vendor) => ({
                 value: vendor.id,
                 label: vendor.name,
               }))}
+              failed={lists.isError}
               onChange={(value) => set('vendorId', value)}
             />
           </Field>

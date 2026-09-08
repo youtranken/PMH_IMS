@@ -16,7 +16,7 @@ import { Field, FormSection, PageHeader } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
-import type { CatalogLists, ServicePortRow } from '@/lib/catalog-types';
+import type { ServicePortRow } from '@/lib/catalog-types';
 import { CatalogForm } from '@/features/catalog/catalog-form';
 import { DeviceForm } from '@/features/devices/device-form';
 import { AttachmentPanel } from '@/ui/attachment-panel';
@@ -28,6 +28,7 @@ import { STATUS_KEY, type IpStatus } from './ipam-types';
 import { chipsFromValue, parsePortChip, type PortChip } from './port-chips';
 import { PortChipsField } from './port-chips-field';
 import { PATHS } from '@/lib/routes';
+import { useCatalogLists } from '@/ui/use-catalog-lists';
 
 type NatProtocol = 'tcp' | 'udp' | 'both';
 
@@ -76,10 +77,7 @@ export function NatScreen({ me }: { me: Me }) {
 
   const canHide = me.role === 'sa' || me.role === 'admin';
 
-  const lists = useQuery({
-    queryKey: ['catalog', 'lists'],
-    queryFn: () => apiFetch<CatalogLists>('/api/v1/catalog?includeInactive=true'),
-  });
+  const lists = useCatalogLists();
 
   const query = new URLSearchParams();
   if (search.trim()) query.set('search', search.trim());
@@ -125,6 +123,7 @@ export function NatScreen({ me }: { me: Me }) {
             { value: '', label: t('nat.allSites') },
             ...(lists.data?.sites ?? []).map((site) => ({ value: site.id, label: site.code })),
           ]}
+          failed={lists.isError}
         />
       </FilterBar>
 
@@ -320,10 +319,7 @@ function NatForm({
   const [saving, setSaving] = useState(false);
   const busy = saving;
 
-  const lists = useQuery({
-    queryKey: ['catalog', 'lists'],
-    queryFn: () => apiFetch<CatalogLists>('/api/v1/catalog?includeInactive=true'),
-  });
+  const lists = useCatalogLists();
 
   /**
    * KHÔNG còn `enabled: deviceTerm.length > 0`.
@@ -538,6 +534,7 @@ function NatForm({
                 setDeviceId('');
               }}
               options={devices.data?.items ?? []}
+              failed={devices.isError}
               getKey={(item) => item.id}
               renderOption={(item) => (
                 <>
@@ -640,6 +637,7 @@ function NatForm({
                 setTargetId('');
               }}
               options={targets.data?.items ?? []}
+              failed={targets.isError}
               getKey={(item) => item.id}
               renderOption={(item) => (
                 <>
@@ -809,7 +807,6 @@ function NatForm({
     {addingRouter ? (
       <DeviceForm
         device={null}
-        lists={lists.data}
         csrfToken={csrfToken}
         onClose={() => setAddingRouter(false)}
         onSaved={(result) => {
@@ -826,7 +823,6 @@ function NatForm({
       <CatalogForm
         entity="service_port"
         row={null}
-        lists={lists.data}
         csrfToken={csrfToken}
         onClose={() => setAddingService(null)}
         onSaved={(saved) => {

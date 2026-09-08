@@ -15,6 +15,7 @@ export function SuggestInput({
   value,
   onChange,
   options,
+  failed,
   placeholder,
   ariaLabel,
 }: {
@@ -22,6 +23,11 @@ export function SuggestInput({
   onChange: (value: string) => void;
   /** Cách viết chuẩn lấy từ danh mục. */
   options: string[];
+  /**
+   * Danh mục HỎNG chứ không rỗng. Không nói ra thì mỗi người gõ một kiểu ("P. Kế toán" /
+   * "Phòng Kế toán" / "KT") — đúng cái mà ô gợi ý này sinh ra để tránh.
+   */
+  failed?: boolean;
   placeholder: string;
   ariaLabel: string;
 }) {
@@ -43,6 +49,7 @@ export function SuggestInput({
       query={value}
       onQuery={onChange}
       options={filtered}
+      failed={failed}
       getKey={(option) => option}
       renderOption={(option) => <span>{option}</span>}
       onSelect={onChange}

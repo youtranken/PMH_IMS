@@ -378,6 +378,7 @@ export function AssignDialog({
                 setDevice(null);
               }}
               options={candidates.data?.items ?? []}
+              failed={candidates.isError}
               getKey={(item) => item.id}
               renderOption={(item) => (
                 <>

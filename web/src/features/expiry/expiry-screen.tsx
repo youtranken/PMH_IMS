@@ -176,7 +176,17 @@ export function ExpiryScreen({ me }: { me: Me }) {
 
       {tab === 'rules' ? (
         <TabPanel tabKey="rules">
-          <DigestRulesPanel me={me} kinds={kinds.data ?? []} />
+          {/*
+            DANH SÁCH LOẠI HỎNG THÌ KHÔNG ĐƯỢC MỞ TRÌNH SOẠN LUẬT.
+            `kinds.data ?? []` khiến hộp thoại "Thêm luật" hiện ra KHÔNG MỘT ô tick nào, y hệt
+            lúc hệ thống thật sự chưa đăng ký loại nào. Người dùng lưu được một luật digest
+            theo dõi RỖNG — nó không bao giờ gửi email, và không có gì trên màn nói vì sao.
+          */}
+          {kinds.isError ? (
+            <LoadError onRetry={() => void kinds.refetch()} />
+          ) : (
+            <DigestRulesPanel me={me} kinds={kinds.data ?? []} />
+          )}
         </TabPanel>
       ) : (
         <TabPanel tabKey="list">

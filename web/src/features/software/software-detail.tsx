@@ -20,7 +20,6 @@ import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
 import { useTabCounts } from "@/ui/tab-counts";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useToast } from "@/ui/toast";
-import type { CatalogLists } from "@/lib/catalog-types";
 import { LicenseAssignmentsPanel } from "./license-assignments-panel";
 import { SoftwareForm } from "./software-form";
 import { toSoftwareHistory } from "./software-history-entries";
@@ -71,13 +70,6 @@ export function SoftwareDetail({ me }: { me: Me }) {
     queryFn: () =>
       apiFetch<SoftwareHistoryRow[]>(`/api/v1/software/${id}/history`),
     enabled: tab === "history",
-  });
-
-  const lists = useQuery({
-    queryKey: ["catalog", "lists"],
-    queryFn: () =>
-      apiFetch<CatalogLists>("/api/v1/catalog?includeInactive=true"),
-    enabled: editing,
   });
 
   const refresh = () =>
@@ -308,7 +300,6 @@ export function SoftwareDetail({ me }: { me: Me }) {
       {editing ? (
         <SoftwareForm
           row={item}
-          lists={lists.data}
           csrfToken={me.csrfToken}
           onClose={() => setEditing(false)}
           onSaved={() => {

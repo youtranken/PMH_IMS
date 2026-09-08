@@ -435,6 +435,17 @@ function SessionsDialog({
     >
       {sessions.isLoading ? (
         <Loading />
+      ) : sessions.isError ? (
+        /*
+         * "KHÔNG CÒN PHIÊN NÀO" LÀ CÂU TRẢ LỜI CỦA MÀN NÀY — nên nó không được nói ra khi
+         * chưa hỏi được.
+         *
+         * Bản trước chỉ có `isLoading` và `?? []`: API 500 rơi thẳng vào nhánh rỗng và hộp
+         * thoại hiện "Chưa có dữ liệu". Đây là màn người ta mở đúng lúc nghi một tài khoản
+         * bị chiếm — đọc "không còn phiên nào" rồi đóng lại là để nguyên phiên của kẻ đang
+         * đăng nhập, và tin rằng mình đã kiểm tra xong.
+         */
+        <LoadError onRetry={() => void sessions.refetch()} />
       ) : (sessions.data ?? []).length === 0 ? (
         <p className="muted">{t('common.empty')}</p>
       ) : (

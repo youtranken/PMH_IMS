@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { Chevron } from '@/ui/chevron';
 import { useAnchoredMenu } from '@/ui/use-anchored-menu';
 import { useDialogPortal } from '@/ui/dialog';
@@ -19,6 +20,14 @@ interface ComboboxProps<T> {
   ariaLabel?: string;
   /** Dòng ghim ở ĐẦU menu, vd "+ Thêm router mới" — luôn hiện, kể cả khi lọc ra rỗng. */
   action?: { label: string; onClick: () => void };
+  /**
+   * Nguồn gợi ý HỎNG (không phải rỗng) — nơi gọi truyền `query.isError` vào đây.
+   *
+   * Mọi nơi gọi đều viết `options={q.data?.items ?? []}`, nên một lỗi 500 rơi vào đúng hình
+   * dạng của "tìm không ra". Người dùng đọc sự im lặng đó thành "hệ thống không có máy này"
+   * rồi khai một máy trùng, hoặc chọn đại máy khác — cả hai đều ghi vào DB và không tự sửa.
+   */
+  failed?: boolean;
 }
 
 /**
@@ -39,7 +48,9 @@ export function Combobox<T>({
   disabled,
   ariaLabel,
   action,
+  failed,
 }: ComboboxProps<T>) {
+  const { t } = useTranslation();
   const [active, setActive] = useState(0);
   const [closed, setClosed] = useState(false);
   /**
@@ -59,7 +70,9 @@ export function Combobox<T>({
     setClosed(false);
   }, [options]);
 
-  const open = touched && !closed && (options.length > 0 || action !== undefined);
+  // `failed` cũng mở menu: người dùng phải THẤY câu "không tải được" ở đúng chỗ họ đang nhìn,
+  // chứ không phải suy ra từ việc gõ mãi không thấy gì.
+  const open = touched && !closed && (options.length > 0 || action !== undefined || failed === true);
   const { refs, floatingStyles } = useAnchoredMenu(open, {
     matchWidth: true,
     maxHeight: 260,
@@ -176,6 +189,15 @@ export function Combobox<T>({
                 >
                   {action.label}
                 </button>
+              </li>
+            ) : null}
+            {/* Dòng báo hỏng: KHÔNG mang `role="option"`, nên ↓/Enter không chạm tới được và
+                trình đọc màn hình không đọc nó lên như một thiết bị có thật. `role="alert"`
+                để NVDA đọc ngay lúc nó xuất hiện. Danh sách cũ (nếu còn trong cache) vẫn giữ
+                nguyên bên dưới — giấu đi là lấy mất thứ đang còn dùng được. */}
+            {failed ? (
+              <li className="combo-error" role="presentation">
+                <span role="alert">{t('common.optionsLoadError')}</span>
               </li>
             ) : null}
             {options.map((option, i) => (

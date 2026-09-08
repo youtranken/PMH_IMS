@@ -15,7 +15,6 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
-import type { CatalogLists } from '@/lib/catalog-types';
 import { DeviceLicensesExpand } from '@/features/software/device-licenses-expand';
 import { DeviceForm } from './device-form';
 import { DeviceImportDialog } from './device-import-dialog';
@@ -28,6 +27,7 @@ import {
   type DeviceStatus,
 } from '@/lib/device-types';
 import { PATHS } from '@/lib/routes';
+import { useCatalogLists } from '@/ui/use-catalog-lists';
 
 const DEFAULT_LIMIT = 20;
 
@@ -62,10 +62,7 @@ export function DevicesScreen({ me }: { me: Me }) {
   const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<DeviceRow | null>(null);
 
-  const lists = useQuery({
-    queryKey: ['catalog', 'lists'],
-    queryFn: () => apiFetch<CatalogLists>('/api/v1/catalog?includeInactive=true'),
-  });
+  const lists = useCatalogLists();
 
   const devices = useQuery({
     queryKey: ['devices', page, limit, filters, sorting],
@@ -238,6 +235,7 @@ export function DevicesScreen({ me }: { me: Me }) {
             { value: '', label: t('devices.allSites') },
             ...(lists.data?.sites ?? []).map((site) => ({ value: site.id, label: site.code })),
           ]}
+          failed={lists.isError}
           onChange={(value) => setFilter('siteId', value)}
         />
         <Select
@@ -251,6 +249,7 @@ export function DevicesScreen({ me }: { me: Me }) {
               label: `${cabinet.siteCode} · ${cabinet.code}`,
             })),
           ]}
+          failed={lists.isError}
           onChange={(value) => setFilter('cabinetId', value)}
         />
         <Select
@@ -264,6 +263,7 @@ export function DevicesScreen({ me }: { me: Me }) {
               label: type.name,
             })),
           ]}
+          failed={lists.isError}
           onChange={(value) => setFilter('deviceTypeId', value)}
         />
         <Select
@@ -296,7 +296,17 @@ export function DevicesScreen({ me }: { me: Me }) {
             stackOnMobile
             /* Bung dòng ra là thấy máy này đang cài license nào — cùng nếp với danh sách
                phần mềm. Chỉ hiện mũi tên khi thật sự có phần mềm đang cài. */
-            canExpand={(item) => (installedCounts.data?.[item.id] ?? 0) > 0}
+            /*
+             * Hỏng thì MỌI dòng bung được, không phải KHÔNG dòng nào.
+             *
+             * `?? 0` biến một lỗi 500 thành "không máy nào đang cài phần mềm" — mũi tên biến
+             * mất sạch và bảng trông hoàn toàn bình thường. Khi không biết máy nào có, để
+             * người dùng bung ra xem là câu trả lời đúng: `DeviceLicensesExpand` có nhánh lỗi
+             * riêng, nên bung ra sẽ thấy "không tải được" chứ không thấy một danh sách rỗng.
+             */
+            canExpand={(item) =>
+              installedCounts.isError || (installedCounts.data?.[item.id] ?? 0) > 0
+            }
             renderExpanded={(item) => <DeviceLicensesExpand deviceId={item.id} />}
             manualSorting
             sorting={sorting}
@@ -334,7 +344,6 @@ export function DevicesScreen({ me }: { me: Me }) {
       {creating ? (
         <DeviceForm
           device={null}
-          lists={lists.data}
           csrfToken={me.csrfToken}
           onClose={() => setCreating(false)}
           onSaved={() => {
@@ -349,7 +358,6 @@ export function DevicesScreen({ me }: { me: Me }) {
         // sang PATCH và điền sẵn. AD-15: không có bản "form sửa" thứ hai để trôi lệch.
         <DeviceForm
           device={editing}
-          lists={lists.data}
           csrfToken={me.csrfToken}
           onClose={() => setEditing(null)}
           onSaved={() => {

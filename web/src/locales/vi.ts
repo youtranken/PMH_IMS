@@ -79,6 +79,9 @@ export default {
     // cảnh đó trong ảnh trạng thái.
     closeDialog: 'Đóng hộp thoại',
     confirm: 'Xác nhận',
+    /* "Không tải được" ≠ "không có". Ô chọn im lặng khi API hỏng bị đọc thành "hệ thống không
+       có thứ này", và người dùng khai một bản ghi trùng — sai dữ liệu, không phải sai giao diện. */
+    optionsLoadError: 'Không tải được danh sách. Thử lại sau.',
     search: 'Tìm kiếm',
     edit: 'Sửa',
     /* `common.delete` THIẾU cho tới 28/08 — nút xóa dải hiện ra nguyên chuỗi khóa

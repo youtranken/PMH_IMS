@@ -320,7 +320,8 @@ export function ServiceAccountForm({
             <SuggestInput
               value={form.department}
               onChange={(value) => set('department', value)}
-              options={departments}
+              options={departments.names}
+              failed={departments.failed}
               placeholder={t('serviceAccounts.departmentPlaceholder')}
               ariaLabel={t('serviceAccounts.department')}
             />

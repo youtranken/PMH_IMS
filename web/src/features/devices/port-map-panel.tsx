@@ -379,6 +379,7 @@ function PortForm({
               setPeer(null);
             }}
             options={candidates.data?.items.filter((item) => item.id !== deviceId) ?? []}
+            failed={candidates.isError}
             getKey={(item) => item.id}
             renderOption={(item) => (
               <>
@@ -427,7 +428,8 @@ function PortForm({
           <SuggestInput
             value={usedBy}
             onChange={setUsedBy}
-            options={departments}
+            options={departments.names}
+            failed={departments.failed}
             placeholder={t('ports.usedByPlaceholder')}
             ariaLabel={t('ports.usedBy')}
           />

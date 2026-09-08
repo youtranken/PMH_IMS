@@ -26,6 +26,7 @@ export function Select({
   ariaLabel,
   className,
   disabled,
+  failed,
 }: {
   /**
    * Gắn lên chính nút mở menu, để `<Field htmlFor>` còn trỏ vào một điều khiển CÓ THẬT.
@@ -43,6 +44,15 @@ export function Select({
   ariaLabel?: string;
   className?: string;
   disabled?: boolean;
+  /**
+   * Nguồn lựa chọn HỎNG (không phải rỗng) — nơi gọi truyền `query.isError` vào đây.
+   *
+   * Thiếu cờ này thì `options=[]` và menu nói "— Không có lựa chọn —", một câu SAI đọc y hệt
+   * lúc chưa ai khai danh mục. Ở ô bắt buộc của form thêm mới (Loại thiết bị, Vị trí, Nhà
+   * mạng) nó khiến người dùng đi khai lại một mục đã có sẵn, hoặc kết luận hệ thống chưa cài
+   * xong. Cùng một hàng rào với `Combobox.failed` — hai cửa này không được lệch nhau.
+   */
+  failed?: boolean;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -134,12 +144,19 @@ export function Select({
             style={floatingStyles}
             ref={refs.setFloating}
           >
-            {/* Không có lựa chọn nào → báo rõ thay vì ô nổi trống trơ (review D3). */}
-            {options.length === 0 && (
+            {/* HỎNG được ưu tiên hơn RỖNG: khi không hỏi được thì "không có lựa chọn" là một
+                câu khẳng định mà ta không có quyền nói. `role="alert"`, không `role="option"` —
+                trình đọc màn hình phải đọc nó như cảnh báo, và ↓/Enter không chạm tới được. */}
+            {failed ? (
+              <li className="fsel-error" aria-disabled="true">
+                <span role="alert">{t('common.optionsLoadError')}</span>
+              </li>
+            ) : options.length === 0 ? (
+              /* Không có lựa chọn nào → báo rõ thay vì ô nổi trống trơ (review D3). */
               <li className="fsel-none" aria-disabled="true">
                 {t('select.noOptions', '— Không có lựa chọn —')}
               </li>
-            )}
+            ) : null}
             {options.map((o, i) => (
               <li key={o.value}>
                 <button

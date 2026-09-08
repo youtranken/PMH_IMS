@@ -5,11 +5,11 @@ import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
+import { useCatalogLists } from '@/ui/use-catalog-lists';
 import {
   SERVICE_PROTOCOLS,
   type CabinetRow,
   type CatalogEntity,
-  type CatalogLists,
   type CatalogRow,
   type ServiceProtocol,
 } from '@/lib/catalog-types';
@@ -74,7 +74,6 @@ function initialState(entity: CatalogEntity, row: CatalogRow | null): FormState 
 export function CatalogForm({
   entity,
   row,
-  lists,
   csrfToken,
   onClose,
   onSaved,
@@ -82,7 +81,6 @@ export function CatalogForm({
   entity: CatalogEntity;
   /** null = thêm mới. */
   row: CatalogRow | null;
-  lists: CatalogLists | undefined;
   csrfToken: string;
   onClose: () => void;
   /**
@@ -96,6 +94,12 @@ export function CatalogForm({
 }) {
   const { t } = useTranslation();
   const toast = useToast();
+  /*
+   * Form TỰ hỏi danh mục thay vì nhận qua props: `useCatalogLists` dùng chung `queryKey` nên
+   * đây không phải lượt gọi thêm, nhưng form THẤY được `isError`. Props `CatalogLists |
+   * undefined` không có đường nào phân biệt "danh mục hỏng" với "chưa tải xong".
+   */
+  const lists = useCatalogLists();
   const [form, setForm] = useState<FormState>(() => initialState(entity, row));
   const [error, setError] = useState<string | null>(null);
 
@@ -196,7 +200,8 @@ export function CatalogForm({
                 value={form.siteId}
                 ariaLabel={t('catalog.site')}
                 placeholder="— Chọn site —"
-                options={(lists?.sites ?? []).map((site) => ({
+                failed={lists.isError}
+                options={(lists.data?.sites ?? []).map((site) => ({
                   value: site.id,
                   label: `${site.code} — ${site.name}`,
                 }))}

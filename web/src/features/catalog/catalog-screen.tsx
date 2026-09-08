@@ -26,7 +26,6 @@ import {
   IMPORTABLE_ENTITIES,
   type CabinetRow,
   type CatalogEntity,
-  type CatalogLists,
   type CatalogRow,
   type DepartmentRow,
   type DeviceTypeRow,
@@ -260,13 +259,6 @@ export function CatalogScreen({ me }: { me: Me }) {
       ),
   });
 
-  // Danh sách site cho ô chọn của form tủ mạng. Lấy CẢ mục đã vô hiệu để sửa tủ cũ
-  // không bị mất site đang gắn.
-  const lists = useQuery({
-    queryKey: ['catalog', 'lists'],
-    queryFn: () => apiFetch<CatalogLists>('/api/v1/catalog?includeInactive=true'),
-  });
-
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['catalog'] });
 
   const setActive = useApiMutation<{ id: string; active: boolean }, unknown>(
@@ -485,7 +477,6 @@ export function CatalogScreen({ me }: { me: Me }) {
         <CatalogForm
           entity={entity}
           row={editing.row}
-          lists={lists.data}
           csrfToken={csrfToken}
           onClose={() => setEditing(null)}
           onSaved={() => {
