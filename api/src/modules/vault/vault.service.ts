@@ -13,6 +13,7 @@ import { EnvelopeCryptoService } from '../../common/crypto/envelope.service';
 import type { SealedValue } from '../../common/crypto/envelope.types';
 import { pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
+import { OwnerExistsRegistry } from '../../common/owner-exists.registry';
 import { secretTable } from './vault.schema';
 
 /*
@@ -74,6 +75,7 @@ export class VaultService {
     @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly crypto: EnvelopeCryptoService,
     private readonly audit: AuditWriterService,
+    private readonly owners: OwnerExistsRegistry,
   ) {}
 
   /** Danh sách secret của một chủ thể — CHỈ metadata, không có giá trị. */
@@ -154,6 +156,16 @@ export class VaultService {
         message: 'Đặt nhãn cho secret này (vd "admin web", "SSH root").',
       });
     }
+
+    /*
+     * Chủ thể phải CÓ THẬT trước khi cất bí mật vào (cùng hàng rào với kho file).
+     *
+     * Bí mật cất vào một `ownerId` bịa ra là bí mật KHÔNG AI MỞ LẠI ĐƯỢC — kể cả chính người
+     * vừa cất: mọi đường đọc đều đi qua `listFor(ownerType, ownerId)` từ một trang hồ sơ có
+     * thật. Nó nằm đó, chiếm chỗ, tính vào số đếm, và mã hóa bằng một DEK không bao giờ được
+     * mở nữa.
+     */
+    await this.owners.assertExists(input.ownerType, input.ownerId);
 
     const id = randomUUID();
     const sealed = this.crypto.seal(value, { table: AAD_TABLE, recordId: id });

@@ -7,6 +7,7 @@ import { DevicesModule } from '../devices/devices.module';
 import { IspDevicePanel } from './isp-device-panel';
 import { SoftwareExpiryRegistrar } from './software-expiry-sources';
 import { LicenseDeviceRetirement } from './license-device-retirement';
+import { SoftwareOwnerResolver } from './software-owner-resolver';
 import { IspLineController } from './isp-line.controller';
 import { IspLineService } from './isp-line.service';
 import { LicenseAssignmentService } from './license-assignment.service';
@@ -30,6 +31,7 @@ import { SoftwareService } from './software.service';
     IspDevicePanel,
     SoftwareExpiryRegistrar,
     LicenseDeviceRetirement,
+    SoftwareOwnerResolver,
     SoftwareDevicePanel,
     SoftwareApiService,
   ],

@@ -14,6 +14,7 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { AuditWriterService } from '../audit/audit-writer.service';
+import { OwnerExistsRegistry } from '../../common/owner-exists.registry';
 import { detectFileType, SIZE_LIMITS } from './file-validation';
 import type { FileKind } from './file-validation';
 import { filesTable } from './files.schema';
@@ -64,6 +65,7 @@ export class FilesService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly audit: AuditWriterService,
+    private readonly owners: OwnerExistsRegistry,
   ) {}
 
   /**
@@ -93,6 +95,18 @@ export class FilesService {
         message: `File vượt trần ${Math.round(limit / 1024 / 1024)}MB.`,
       });
     }
+
+    /*
+     * XÁC MINH CHỦ THỂ TRƯỚC KHI GHI RA ĐĨA.
+     *
+     * Chú thích ở đầu file này đã ghi rõ rủi ro từ lâu — "gửi `ownerType` bịa ra thì file thành
+     * mồ côi, không màn nào hiển thị và không ai dọn" — mà không có hàng rào nào đi kèm. Blob
+     * vẫn nằm trên đĩa và vẫn tính vào dung lượng, vĩnh viễn.
+     *
+     * Đặt trước `writeFile` chứ không sau: viết ra đĩa rồi mới phát hiện chủ thể không có thật
+     * thì đã tạo đúng cái file mồ côi cần tránh, và phải trông vào nhánh dọn ở `catch`.
+     */
+    await this.owners.assertExists(input.ownerType, input.ownerId);
 
     const dir = storageDir();
     await mkdir(dir, { recursive: true });

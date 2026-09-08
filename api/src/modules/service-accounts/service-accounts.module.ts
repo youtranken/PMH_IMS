@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { ServiceAccountController } from './service-account.controller';
 import { ServiceAccountService } from './service-account.service';
+import { ServiceAccountOwnerResolver } from './service-account-owner-resolver';
 import { ServiceAccountsApiService } from './service-accounts.api';
 
 /**
@@ -11,7 +12,7 @@ import { ServiceAccountsApiService } from './service-accounts.api';
 @Module({
   imports: [AuditModule],
   controllers: [ServiceAccountController],
-  providers: [ServiceAccountService, ServiceAccountsApiService],
+  providers: [ServiceAccountService, ServiceAccountsApiService, ServiceAccountOwnerResolver],
   exports: [ServiceAccountsApiService],
 })
 export class ServiceAccountsModule {}
