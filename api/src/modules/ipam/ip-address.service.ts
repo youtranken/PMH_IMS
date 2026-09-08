@@ -562,12 +562,9 @@ export class IpAddressService {
 
   private async requireDevice(deviceId: string | null | undefined): Promise<void> {
     if (!deviceId) return;
-    if (!(await this.devices.exists(deviceId))) {
-      throw new BadRequestException({
-        code: 'DEVICE_NOT_FOUND',
-        message: 'Thiết bị không tồn tại.',
-      });
-    }
+    // `assertUsable` chứ không `exists`: máy đã thanh lý không được nhận thêm IP (rà soát
+    // 07/09). Thông điệp và mã lỗi do `devices.api` giữ — bốn cửa phải nói cùng một câu.
+    await this.devices.assertUsable(deviceId);
   }
 
   /** Tra một hồ sơ KỂ CẢ đã ẩn — dùng cho đường đọc lịch sử. */

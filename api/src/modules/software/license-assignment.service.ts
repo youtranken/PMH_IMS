@@ -220,12 +220,8 @@ export class LicenseAssignmentService {
         message: 'Chỉ hồ sơ loại License mới gán được vào máy.',
       });
     }
-    if (!(await this.devices.exists(input.deviceId))) {
-      throw new BadRequestException({
-        code: 'DEVICE_NOT_FOUND',
-        message: 'Thiết bị được chọn không tồn tại.',
-      });
-    }
+    // Máy đã thanh lý không được ăn thêm một ghế license nào (rà soát 07/09).
+    await this.devices.assertUsable(input.deviceId);
 
     const terms = normalizeTerms(input);
     assertTerms(terms, software.licenseModel);

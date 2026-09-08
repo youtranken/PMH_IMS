@@ -443,12 +443,9 @@ export class NatRuleService {
    * dùng được — chặn theo hãng chỉ tổ đẻ ra một loại thiết bị giả để lách.
    */
   private async requireDraytek(deviceId: string): Promise<void> {
-    if (!(await this.devices.exists(deviceId))) {
-      throw new BadRequestException({
-        code: 'DEVICE_NOT_FOUND',
-        message: 'Thiết bị không tồn tại.',
-      });
-    }
+    // Router ĐÃ THÁO thì rule trỏ vào hư không — mở port trên một hộp không còn cắm điện chỉ
+    // làm sổ NAT nói dối về việc "port nào đang mở" (rà soát 07/09).
+    await this.devices.assertUsable(deviceId);
   }
 
   /** Nối mềm sang hồ sơ IP nếu có — không có cũng lưu được, chỉ là mất đường bấm sang. */

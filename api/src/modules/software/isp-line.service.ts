@@ -395,12 +395,8 @@ export class IspLineService {
       }
     }
     const deviceId = (values.deviceId ?? current?.deviceId ?? null) as string | null;
-    if (deviceId && !(await this.devices.exists(deviceId))) {
-      throw new BadRequestException({
-        code: 'DEVICE_NOT_FOUND',
-        message: 'Thiết bị biên được chọn không tồn tại.',
-      });
-    }
+    // Máy đã thanh lý thì không cắm đường truyền vào được nữa (rà soát 07/09).
+    if (deviceId) await this.devices.assertUsable(deviceId);
     return values;
   }
 
