@@ -22,6 +22,10 @@ import {
   validateNatRule,
   type NatRuleSnapshot,
 } from './nat-rules';
+import { hostOf } from './ip-rules';
+// `isOccupying` là MỘT nguồn sự thật cho "địa chỉ này đang có máy chiếm" (ip-lifecycle.ts).
+// Cảnh báo dưới đây phải dùng đúng nó, không tự liệt kê lại danh sách trạng thái.
+import { isOccupying, type IpStatus } from './ip-lifecycle';
 import { ipAddressTable, natRuleHistoryTable, natRuleTable } from './ipam.schema';
 
 export interface NatRuleHistoryRecord {
@@ -181,7 +185,9 @@ export class NatRuleService {
     const clean: NatRuleInput = { ...input, internalIp: input.internalIp.trim() };
     const warnings = this.requireValid(clean);
     await this.requireNoProtocolOverlap(clean, null);
-    const ipAddressId = await this.linkIp(clean.internalIp);
+    const ip = await this.lookupIp(clean.internalIp);
+    const ipAddressId = ip?.id ?? null;
+    warnings.push(...this.warnIfUnowned(ip, clean.internalIp));
 
     try {
       const row = await this.db.transaction(async (tx) => {
@@ -254,8 +260,15 @@ export class NatRuleService {
     if (input.deviceId) await this.requireDraytek(input.deviceId);
     await this.requireNoProtocolOverlap(merged, id);
 
-    const ipAddressId =
-      input.internalIp !== undefined ? await this.linkIp(merged.internalIp) : before.ipAddressId;
+    /*
+     * Chỉ tra lại sổ IP khi địa chỉ THẬT SỰ đổi. Sửa mỗi cái ghi chú mà cũng bắn cảnh báo
+     * "IP không có chủ" thì cảnh báo mất giá — và cảnh báo mất giá thì không ai đọc nữa.
+     */
+    const ip = input.internalIp !== undefined ? await this.lookupIp(merged.internalIp) : null;
+    if (input.internalIp !== undefined) {
+      warnings.push(...this.warnIfUnowned(ip, merged.internalIp));
+    }
+    const ipAddressId = input.internalIp !== undefined ? (ip?.id ?? null) : before.ipAddressId;
 
     try {
       const row = await this.db.transaction(async (tx) => {
@@ -440,8 +453,15 @@ export class NatRuleService {
 
   /** Nối mềm sang hồ sơ IP nếu có — không có cũng lưu được, chỉ là mất đường bấm sang. */
   private async linkIp(internalIp: string): Promise<string | null> {
+    return (await this.lookupIp(internalIp))?.id ?? null;
+  }
+
+  /** Hồ sơ IP tương ứng (nếu có) kèm TRẠNG THÁI — `linkIp` chỉ cần id, cảnh báo cần cả hai. */
+  private async lookupIp(
+    internalIp: string,
+  ): Promise<{ id: string; status: IpStatus } | null> {
     const rows = await this.db
-      .select({ id: ipAddressTable.id })
+      .select({ id: ipAddressTable.id, status: ipAddressTable.status })
       .from(ipAddressTable)
       .where(
         and(
@@ -449,7 +469,29 @@ export class NatRuleService {
           isNull(ipAddressTable.voidedAt),
         ),
       );
-    return rows[0]?.id ?? null;
+    const row = rows[0];
+    return row ? { id: row.id, status: row.status as IpStatus } : null;
+  }
+
+  /**
+   * Rule trỏ vào một địa chỉ mà sổ IP nói là KHÔNG CÓ CHỦ — cảnh báo, không chặn.
+   *
+   * Vế đối xứng của hàng rào ở `IpAddressService.assertNoLiveNatWithin` (rà soát 07/09, #6).
+   * Bên kia chặn cứng vì ở đó quyền sở hữu đang đổi chủ và port sẽ trỏ nhầm máy. Bên này chỉ
+   * nói, vì người trực hay khai rule TRƯỚC khi dựng xong máy và cập nhật sổ IP sau — chặn ở
+   * đây là chặn một việc hợp lệ, và một hàng rào chặn việc hợp lệ là hàng rào sẽ bị tìm cách
+   * lách.
+   *
+   * Địa chỉ KHÔNG có hồ sơ IPAM thì im lặng: `linkIp` vốn cho phép ("không có cũng lưu được"),
+   * và kêu ở đó chỉ tạo tiếng ồn cho mọi rule trỏ ra ngoài phạm vi IPAM đang quản.
+   */
+  private warnIfUnowned(ip: { status: IpStatus } | null, internalIp: string): string[] {
+    if (!ip || isOccupying(ip.status)) return [];
+    return [
+      ip.status === 'reclaimed'
+        ? `${internalIp} đang ở trạng thái "đã thu hồi" trong sổ IP — rule này sẽ mở port vào một địa chỉ không còn chủ. Kiểm tra lại sổ IP.`
+        : `${internalIp} đang ở trạng thái "trống" trong sổ IP — chưa cấp cho máy nào. Kiểm tra lại sổ IP.`,
+    ];
   }
 
   /** Đổi id site → mã site, vì `devices.api` trả về MÃ chứ không trả id. */
@@ -598,11 +640,6 @@ export class NatRuleService {
     }
     return error;
   }
-}
-
-/** Postgres trả `inet` kèm mask; UI luôn muốn địa chỉ trần. */
-function hostOf(value: string): string {
-  return value.split('/')[0];
 }
 
 /**

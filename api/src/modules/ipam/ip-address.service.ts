@@ -5,17 +5,18 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, isNull, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { requireCas } from '../../common/cas';
+import type { Tx } from '../../common/tx';
 import { pgErrorCode, PG_CHECK_VIOLATION, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { diffRecord, hasChanges } from '../../common/record-diff';
 import { isoDateInTz } from '../../common/today';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { DevicesApiService } from '../devices/devices.api';
-import { enumerateHosts, parseAddress } from './ip-rules';
+import { enumerateHosts, hostOf, parseAddress } from './ip-rules';
 import {
   IP_LIFECYCLE_STATUSES,
   canTransition,
@@ -23,7 +24,8 @@ import {
   transitionLabel,
   type IpStatus,
 } from './ip-lifecycle';
-import { ipAddressTable, ipHistoryTable } from './ipam.schema';
+import { describePortRange } from './nat-rules';
+import { ipAddressTable, ipHistoryTable, natRuleTable } from './ipam.schema';
 import { SubnetService } from './subnet.service';
 
 /** MỘT nguồn sự thật cho danh sách trạng thái — `ip-lifecycle.ts` (AD-15). */
@@ -368,6 +370,25 @@ export class IpAddressService {
 
     const row = await this.db.transaction(async (tx) => {
       /*
+       * SỔ NAT PHẢI ĐƯỢC HỎI TRƯỚC KHI QUYỀN SỞ HỮU ĐỔI CHỦ (rà soát 07/09, #6).
+       *
+       * Kịch bản: rule `TCP 8080 → 172.16.10.5` cho "camera tầng 2". Camera chết, IT thu hồi
+       * `.5`. Tuần sau `.5` cấp cho laptop kế toán — và port 8080 vẫn mở, giờ trỏ vào laptop
+       * kế toán. Từng bước đều đúng; cái sai là hai cuốn sổ không hỏi nhau câu nào.
+       *
+       * Chặn ở đúng HAI mốc quyền sở hữu đổi chủ, không phải ở mọi lượt chuyển:
+       *   - thu hồi (`* → reclaimed`): người thuê cũ đi khỏi;
+       *   - cấp mới (`free|reclaimed → assigned`): người thuê mới dọn vào.
+       * `suspect_dead ↔ assigned` KHÔNG chặn: máy tưởng chết hóa ra còn sống vẫn là CHÍNH nó,
+       * rule cũ vẫn đúng chủ. Chặn cả ở đó chỉ làm người trực khó chịu mà không giữ thêm gì.
+       *
+       * Trong transaction, không phải trước nó: kiểm ngoài rồi ghi trong là đúng mẫu M2 mà
+       * đợt trước vừa dọn xong ở năm chỗ.
+       */
+      const tenancyChanges = to === 'reclaimed' || (to === 'assigned' && from !== 'suspect_dead');
+      if (tenancyChanges) await this.assertNoLiveNatWithin(tx, before.address, to);
+
+      /*
        * Điều kiện `status = from` VÀ `voided_at IS NULL` đi ngay trong câu UPDATE.
        *
        * `requireAlive` ở trên đọc bằng `this.db`, tức NGOÀI transaction này. Giữa lúc đó và
@@ -485,6 +506,60 @@ export class IpAddressService {
     return parsed.value;
   }
 
+  /**
+   * Chặn nếu còn rule NAT SỐNG trỏ vào địa chỉ này.
+   *
+   * ===== KHỚP THEO ĐỊA CHỈ, KHÔNG THEO `ip_address_id` =====
+   *
+   * Đây là điểm dễ làm sai nhất. `nat_rule.ip_address_id` chỉ là liên kết MỀM: `linkIp()` để
+   * `null` khi rule được khai trước lúc địa chỉ có hồ sơ IPAM ("không có cũng lưu được"), và
+   * FK `ON DELETE SET NULL` thì không bao giờ bắn vì thu hồi/ẩn đều là XÓA MỀM. Khớp theo cột
+   * đó sẽ bỏ sót đúng những rule nguy hiểm nhất — những rule không ai nối vào sổ IP.
+   *
+   * Thứ router THẬT SỰ chuyển gói tới là `internal_ip`. Nên hỏi đúng cột đó, bằng chính vị từ
+   * `host(...)` mà `NatRuleService.linkIp()` dùng, để hai bên không bao giờ trả lời khác nhau.
+   * Có index riêng cho nó: `nat_rule_internal_idx ... WHERE voided_at IS NULL` (migration 0022).
+   *
+   * Chặn (chứ không cảnh báo) là có chủ ý: một port-forward đang mở trỏ vào máy sắp rời đi là
+   * lỗ thủng tường lửa, và bước đúng — gỡ hoặc trỏ lại rule — luôn phải làm trước. Thông điệp
+   * nêu đích danh port để người trực đi dọn được ngay; nói chung chung thì họ sẽ đi tìm đường
+   * lách thay vì đi dọn.
+   */
+  private async assertNoLiveNatWithin(
+    tx: Tx,
+    address: string,
+    to: IpStatus,
+  ): Promise<void> {
+    const rules = await tx
+      .select({
+        externalFrom: natRuleTable.externalFrom,
+        externalTo: natRuleTable.externalTo,
+        protocol: natRuleTable.protocol,
+      })
+      .from(natRuleTable)
+      .where(
+        and(
+          sql`host(${natRuleTable.internalIp}) = host(${address}::inet)`,
+          isNull(natRuleTable.voidedAt),
+        ),
+      )
+      .orderBy(asc(natRuleTable.externalFrom));
+    if (rules.length === 0) return;
+
+    const list = rules
+      .map((r) => `${r.protocol.toUpperCase()} ${describePortRange(r.externalFrom, r.externalTo)}`)
+      .join(', ');
+    throw new ConflictException({
+      code: 'IP_HAS_LIVE_NAT',
+      message:
+        `Địa chỉ ${hostOf(address)} còn ${rules.length} rule NAT đang mở (${list}). ` +
+        (to === 'reclaimed'
+          ? 'Thu hồi mà để nguyên rule thì port vẫn mở và sẽ trỏ vào máy được cấp tiếp theo. '
+          : 'Cấp cho máy khác mà để nguyên rule là giao thẳng port đang mở cho máy mới. ') +
+        'Vào sổ NAT gỡ hoặc trỏ lại rule trước, rồi làm lại.',
+    });
+  }
+
   private async requireDevice(deviceId: string | null | undefined): Promise<void> {
     if (!deviceId) return;
     if (!(await this.devices.exists(deviceId))) {
@@ -539,8 +614,7 @@ export class IpAddressService {
       return {
         id: row.id,
         subnetId: row.subnetId,
-        // Postgres trả `inet` kèm mask khi khác /32 — cắt bỏ để UI luôn thấy đúng địa chỉ.
-        address: row.address.split('/')[0],
+        address: hostOf(row.address),
         deviceId: row.deviceId,
         deviceCode: device?.code ?? null,
         deviceName: device?.name ?? null,

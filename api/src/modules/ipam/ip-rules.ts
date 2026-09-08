@@ -23,6 +23,19 @@
  */
 const MIN_PREFIX = 24;
 
+/**
+ * Cột `inet` của Postgres trả về kèm mask (`172.16.10.5/32`); người dùng và mọi ô nhập đều nói
+ * địa chỉ trần. Chuẩn hóa về một dạng trước khi SO SÁNH hay HIỂN THỊ.
+ *
+ * Gom về đây (AD-15) vì tới 08/09 khái niệm này đã có ba bản: một hàm riêng trong
+ * `nat-rule.service.ts`, một dòng `split('/')[0]` chép tay trong `ip-address.service.ts`, và
+ * hàng rào NAT mới cần bản thứ ba. Ba bản của cùng một phép chuẩn hóa là ba cơ hội để hai
+ * cuốn sổ trả lời khác nhau về CÙNG một địa chỉ — đúng loại lệch mà finding #6 nói tới.
+ */
+export function hostOf(value: string): string {
+  return value.split('/')[0];
+}
+
 export type ParseResult<T> = { ok: true; value: T } | { ok: false; reason: string };
 
 /** Đúng 4 nhóm 0–255, KHÔNG cho số 0 đứng đầu (tránh bị đọc theo hệ 8). */
