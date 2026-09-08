@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Cổng chất lượng chạy trên máy — BA TẦNG, chọn theo việc đang làm (quyết định 07/09).
 #
-#   bash ops/ci-local.sh              # ~4 phút — lint + depcruise + test đơn vị + build
-#                                     # CHẠY MỖI LẦN SỬA CODE. Giống hệt CI GitHub.
+#   bash ops/ci-local.sh              # ~4 phút — lint + depcruise + test đơn vị + DB + build
+#                                     # CHẠY MỖI LẦN SỬA CODE. Bao trùm CI GitHub:
+#                                     # xanh ở đây ⇒ xanh trên GitHub, không ngược lại.
 #
 #   bash ops/ci-local.sh --e2e-fast   # ~24 phút — thêm E2E, BỎ những bài gắn @slow
 #                                     # CHẠY KHI SỬA XONG MỘT TÍNH NĂNG.
@@ -24,6 +25,12 @@
 #
 # PHÂN CÔNG (quyết định 03/09): GitHub Actions chạy tầng một; E2E chỉ chạy ở đây, vì nó cần
 # dựng cả stack và ở runner GitHub thì tốn 10-15 phút mỗi lần cho repo private.
+#
+# TẦNG TEST CHẠM DB THẬT (08/09) nằm ở TẦNG MỘT, không phải tầng E2E — nó chỉ tốn ~8 giây và
+# chỉ cần MỘT container postgres. Đặt nó vào tầng đắt là đặt nó vào chỗ không ai chạy, mà đây
+# đang là cơ chế kiểm chứng DUY NHẤT cho DoD gạch 5 ("migration chạy sạch trên DB TRẮNG") và
+# cho `OutboxService` — thứ AD-5 bắt mọi lượt ghi đi qua. GitHub không chạy được vì runner
+# không có Postgres; nghĩa là y như E2E, KHÔNG ai ép nó ngoài anh.
 #
 # ĐIỀU KIỆN ĐỦ ĐỂ ĐÓNG STORY (CLAUDE.md, DoD gạch 7): `--e2e` ĐẦY ĐỦ phải xanh. `--e2e-fast`
 # KHÔNG thay thế được — nó cố tình bỏ qua đúng những hàng rào an ninh theo thời gian.
@@ -49,6 +56,19 @@ npm --prefix api run depcruise
 
 step "API — test đơn vị"
 npm --prefix api test
+
+step "API — test chạm DB THẬT (migration trên DB trắng + outbox)"
+# Cần một Postgres đang sống. Dựng riêng mình nó — KHÔNG kéo cả stack: bước này phải rẻ đủ để
+# chạy mỗi lần sửa code, nếu không nó sẽ bị bỏ qua và cả DoD gạch 5 quay về chỗ cũ (không có
+# cơ chế nào).
+$COMPOSE up -d postgres
+ready=0
+for _ in $(seq 1 30); do
+  if $COMPOSE ps postgres 2>/dev/null | grep -q healthy; then ready=1; break; fi
+  sleep 2
+done
+[ "$ready" = "1" ] || fail "postgres không lên được — tầng test DB KHÔNG được phép bỏ qua im lặng."
+npm --prefix api run test:db
 
 step "API — build"
 npm --prefix api run build

@@ -4,6 +4,22 @@ import { join } from 'node:path';
 import type { Pool } from 'pg';
 import { runMigrations } from './migration-runner';
 
+/**
+ * PHẠM VI CỦA FILE NÀY — đọc trước khi thêm bài vào đây.
+ *
+ * `Pool` ở dưới là GIẢ: `client.query()` trả `{rows: [], rowCount: 0}` cho mọi câu lệnh, nên
+ * Postgres không bao giờ đọc chuỗi SQL nào. File này chỉ chứng minh được những thứ ở tầng
+ * ĐIỀU KHIỂN của runner — có gửi "BEGIN" đi không, có chặn tên file sai format không.
+ *
+ * Nó KHÔNG chứng minh — và trước 08/09 đã bị hiểu nhầm là có chứng minh — rằng 40 file
+ * migration của dự án hợp lệ. Journal giả luôn rỗng nên nhánh "đã apply rồi" và nhánh
+ * "checksum lệch" cũng chưa từng chạy ở đây.
+ *
+ * Chỗ hỏi những câu đó là `api/test/migrations.spec.ts`: Postgres thật, DATABASE trắng thật,
+ * chạy bằng `npm --prefix api run test:db`. Bài kiểm mới đó đỏ ngay khi một file SQL hỏng;
+ * mấy bài dưới đây thì không, và sẽ không bao giờ.
+ */
+
 describe('runMigrations — validate format tên file (trước khi chạm DB)', () => {
   it('tên không zero-pad NNNN_ → throw, pool không bị gọi', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'qlts-mig-'));

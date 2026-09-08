@@ -4,6 +4,17 @@
 #   docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml up -d
 #
 services:
+  postgres:
+    # Mở cổng Postgres RA HOST — chỉ ở file override này, chỉ trên loopback.
+    #
+    # `docker-compose.yml` cố ý KHÔNG publish (NFR-04 zero-trust, `web` là cổng vào duy nhất),
+    # và điều đó không đổi: file này không bao giờ đi cùng production.
+    #
+    # Vì sao cần: tầng test chạm DB thật (`api/test/*.spec.ts`, 08/09) chạy bằng jest TRÊN HOST,
+    # không chạy được trong container — ảnh api build với `npm ci --omit=dev` nên không có jest.
+    # Cổng lẻ 55432 để không đụng Postgres cài sẵn trên máy ai đó ở 5432.
+    ports:
+      - '127.0.0.1:${POSTGRES_TEST_PORT:-55432}:5432'
   api:
     volumes:
       # 07/09: gộp 11 hàm dọn của `helpers.ts` về MỘT script, một kết nối pg, một transaction

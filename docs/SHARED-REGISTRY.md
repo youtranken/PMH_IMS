@@ -131,6 +131,7 @@
 | `BreakGlassService.assertCanReveal` | `modules/vault/break-glass.service.ts` | Hàng rào ở MỌI đường đọc secret của Member (story 6.3) | Gọi tại MỖI lần đọc, cấm cache vào phiên — hiệu lực tính bằng đồng hồ (AD-6) |
 | `DashboardService` | `modules/dashboard/` | Module ĐỌC thuần, không sở hữu bảng nào — gom số liệu qua public api của module chủ | Cấm tuyệt đối JOIN chéo ở đây: dashboard mà chạm bảng của mọi module thì không module nào đổi được lược đồ nữa (AD-2) |
 | `IpDevicePanel`, `NatDevicePanel` | `modules/ipam/*-device-panel.ts` | Cắm khu IP và khu NAT vào trang thiết bị (story 5.3/5.4) qua `DevicePanelRegistry` | `devices` KHÔNG được import ipam — chiều phụ thuộc chỉ đi một hướng (AD-2) |
+| `createScratchDb`, `testDbUrl`, `migrationsDir` | `api/test/db.ts` | Hạ tầng cho tầng test CHẠM DB THẬT (`api/test/*.spec.ts`, chạy bằng `npm --prefix api run test:db`) | Mỗi bài tự tạo rồi xóa một **DATABASE trắng** riêng — không phải schema riêng, không phải transaction bọc ngoài: bài migration cần đúng nghĩa DB trắng của DoD gạch 5 (kể cả `CREATE EXTENSION`), bài outbox cần tự mở/đóng transaction thật để đo ranh giới rollback. `testDbUrl` **NÉM** khi thiếu cấu hình, không `skip` — một tầng test tự bỏ qua là cổng khớp đúng số không chuỗi, repo này đã dựng nhầm loại đó hai lần. Cấm dựng `Pool` giả thứ hai: chỗ cần Postgres thật thì viết bài ở đây |
 
 ## Cách CI ép luật (không trông vào review)
 
@@ -138,6 +139,9 @@ Cổng chia hai nơi (quyết định 03/09):
 
 - **GitHub Actions** (`.github/workflows/ci.yml`) — lint · depcruise · test đơn vị · build.
   Đây là cổng **tự động** chặn merge vào `master` qua branch protection.
+- **Tầng test chạm DB thật** (`npm --prefix api run test:db`, ~8 giây) — chạy ở `ops/ci-local.sh`
+  **tầng một**, KHÔNG chạy trên GitHub (runner không có Postgres). Nghĩa là y như E2E: không ai
+  ép nó ngoài người ngồi máy. Đây là cơ chế kiểm chứng duy nhất cho DoD gạch 5.
 - **Máy nội bộ** (`bash ops/ci-local.sh --e2e`) — E2E Playwright trên docker compose thật.
   E2E cần dựng cả stack nên chạy ở đây nhanh hơn và không ăn hạn mức Actions của repo private.
 

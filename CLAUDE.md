@@ -57,11 +57,15 @@ Trước khi viết **bất kỳ** component / hook / service nào: mở `docs/S
 - Unit api: **Jest** (`api/src/**/*.spec.ts`). Unit web: **Vitest** (`web/src/**/*.test.tsx`).
   Logic thuần (tính hạn, parse Excel, envelope crypto, lockout) phải có test bảng dữ liệu
   (table-driven), không test qua HTTP.
-- Integration chạm DB thật: **chưa có tầng này**. `api/test/` đang rỗng, `npm run test:db` trỏ
-  vào `test/jest-db.json` không tồn tại, và compose không có profile `test`. Cấm mock drizzle,
-  nên tới khi tầng đó được dựng thì lỗi ranh giới transaction chỉ chứng minh được bằng E2E
-  (xem `e2e/tests/m2-concurrency.spec.ts`). Đây là nợ số một, ghi ở
-  `docs/CODE-REVIEW-2026-09-07.md` mục 9.
+- Integration chạm DB thật: **`api/test/*.spec.ts`**, chạy bằng `npm --prefix api run test:db`
+  (~8 giây). Dựng 08/09 — trước đó `api/test/` rỗng và `test:db` trỏ vào một file config không
+  tồn tại, nên lỗi ranh giới transaction chỉ chứng minh được bằng E2E. Mỗi file tự tạo rồi xóa
+  một DATABASE trắng riêng; migration thật chạy vào đó. Cần Postgres của compose mở cổng
+  loopback: `docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml up -d postgres`.
+  Đây là nơi hỏi những câu mà `Pool` giả không hỏi được — **DoD gạch 5** ("migration chạy sạch
+  trên DB TRẮNG") và ranh giới transaction của `OutboxService`. GitHub Actions KHÔNG chạy tầng
+  này (runner không có Postgres); `ops/ci-local.sh` tầng một ép nó, y như E2E.
+  Vẫn **cấm mock drizzle** — viết bài ở đây, đừng dựng `Pool` giả thứ hai.
 - Lõi bảo mật (Argon2, TOTP chống replay, envelope AES-GCM + xoay `key_version`, CSRF, lockout) — **không có test thì không được merge**.
 
 **Cổng kiểm kiểu của web là `npm run build`, KHÔNG phải `npx tsc --noEmit`.** `web/tsconfig.json`
@@ -95,7 +99,7 @@ thu hẹp được union phân biệt bằng cờ boolean** (`if (!r.ok) r.reaso
 **Kết thúc mỗi epic — chạy đủ 3 bước, đúng thứ tự:**
 
 ```bash
-bash ops/ci-local.sh --e2e            # 1. lint + depcruise + test đơn vị + build + E2E
+bash ops/ci-local.sh --e2e            # 1. lint + depcruise + test đơn vị + DB + build + E2E
 /code-review high                     # 2. tự soi lại epic vừa xong, sửa hết finding
 graphify update . && graphify cluster-only .   # 3. cập nhật bản đồ (mục dưới)
 ```
