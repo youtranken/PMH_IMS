@@ -15,8 +15,13 @@ import type { AuditedMeta } from './audited.decorator';
 /**
  * Ghi audit cho route có @Audited — CHỈ khi handler thành công (AD-10).
  * Handler ném lỗi → không ghi. AWAIT ghi xong mới trả response (không
- * fire-and-forget — process chết ngay sau response vẫn còn vết); writer tự
- * catch lỗi ghi nên không gãy nghiệp vụ.
+ * fire-and-forget — process chết ngay sau response vẫn còn vết).
+ *
+ * Đây là NƠI DUY NHẤT được dùng `appendBestEffort` (rà soát 07/09, #4). Lý do: dòng audit ở
+ * đây nằm SAU một mutation đã commit, nên ném lỗi biến một thao tác THÀNH CÔNG thành 500 và
+ * người dùng bấm lại sẽ tạo bản ghi trùng — hỏng dữ liệu để cứu nhật ký. Mọi nơi khác phải
+ * dùng `appendWithin` trong chính transaction nghiệp vụ, kèm `writtenByService: true`.
+ *
  * Giới hạn ghi nhận: Observable nhiều emission chỉ audit lần emission đầu.
  */
 @Injectable()
@@ -47,7 +52,7 @@ export class AuditInterceptor implements NestInterceptor {
       concatMap(async (value: unknown) => {
         if (!written) {
           written = true;
-          await this.audit.append({
+          await this.audit.appendBestEffort({
             actor: request.user?.email ?? 'system',
             action: meta.action,
             objectType: meta.objectType,

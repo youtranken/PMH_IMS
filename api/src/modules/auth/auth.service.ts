@@ -67,7 +67,7 @@ export class AuthService {
         actor: email,
         action: 'auth.login.failed',
         objectType: 'user',
-        detail: { reason: 'not-found', ip: ctx.ip },
+        detail: { reason: 'not-found' },
       });
       throw new UnauthorizedException({
         code: 'LOGIN_FAILED',
@@ -76,7 +76,7 @@ export class AuthService {
     }
 
     if (user.status === 'disabled') {
-      await this.auditFailure(user, 'disabled', ctx);
+      await this.auditFailure(user, 'disabled');
       throw new UnauthorizedException({
         code: 'ACCOUNT_DISABLED',
         message: 'Tài khoản đã bị vô hiệu hóa. Liên hệ SA.',
@@ -89,7 +89,7 @@ export class AuthService {
         { failedAttempts: user.failedAttempts, lockedUntil: user.lockedUntil },
         now,
       );
-      await this.auditFailure(user, 'locked', ctx);
+      await this.auditFailure(user, 'locked');
       throw new UnauthorizedException({
         code: 'ACCOUNT_LOCKED',
         message: `Tài khoản đang bị khóa. Thử lại sau ${Math.ceil(seconds / 60)} phút.`,
@@ -126,7 +126,7 @@ export class AuthService {
           action: 'auth.login.failed',
           objectType: 'user',
           objectId: user.id,
-          detail: { reason: 'bad-password', ip: ctx.ip },
+          detail: { reason: 'bad-password' },
         });
         if (state.justLocked) {
           await this.audit.appendWithin(tx, {
@@ -134,7 +134,7 @@ export class AuthService {
             action: 'auth.account.locked',
             objectType: 'user',
             objectId: user.id,
-            detail: { failedAttempts: state.failedAttempts, ip: ctx.ip },
+            detail: { failedAttempts: state.failedAttempts },
           });
           // Email báo SA đi qua outbox (AD-5) — không gửi thẳng trong request.
           await this.outbox.enqueueWithin(tx, 'auth.account.locked', { userId: user.id });
@@ -163,7 +163,7 @@ export class AuthService {
         action: needsTotp ? 'auth.password.ok' : 'auth.login.ok',
         objectType: 'session',
         objectId: created.id,
-        detail: { ip: ctx.ip, totpPending: needsTotp },
+        detail: { totpPending: needsTotp },
       });
       await this.noticeNewDevice(tx, user, ctx);
       return created;
@@ -213,7 +213,7 @@ export class AuthService {
         action: 'auth.totp.failed',
         objectType: 'session',
         objectId: session.id,
-        detail: { reason: result.reason, ip: ctx.ip },
+        detail: { reason: result.reason },
       });
 
       /*
@@ -238,7 +238,7 @@ export class AuthService {
             action: 'auth.totp.session_revoked',
             objectType: 'session',
             objectId: session.id,
-            detail: { failures, ip: ctx.ip },
+            detail: { failures },
           });
         });
         throw new UnauthorizedException({
@@ -273,7 +273,7 @@ export class AuthService {
         action: 'auth.login.ok',
         objectType: 'session',
         objectId: created.id,
-        detail: { ip: ctx.ip, viaTotp: true },
+        detail: { viaTotp: true },
       });
       return created;
     });
@@ -384,7 +384,7 @@ export class AuthService {
         action: 'auth.login.ok',
         objectType: 'session',
         objectId: created.id,
-        detail: { ip: ctx.ip, viaTotpEnroll: true },
+        detail: { viaTotpEnroll: true },
       });
       return created;
     });
@@ -439,13 +439,17 @@ export class AuthService {
       const failures = await this.sessions.registerStepUpFailure(session.id);
       const maxFailures = await this.config.getNumber('secretStepUpMaxFailures');
       if (failures >= maxFailures) {
-        await this.sessions.revoke(session.id, 'stepup-brute-force');
-        await this.audit.append({
-          actor: user.email,
-          action: 'auth.stepup.session_revoked',
-          objectType: 'session',
-          objectId: session.id,
-          detail: { failures },
+        // Một transaction cho thu-hồi + ghi vết (AD-5, mẫu N3) — cùng khuôn với
+        // `verifyLoginTotp` phía trên. Rời ra thì phiên chết mà không ai biết vì sao.
+        await this.db.transaction(async (tx) => {
+          await this.sessions.revokeWithin(tx, session.id, 'stepup-brute-force');
+          await this.audit.appendWithin(tx, {
+            actor: user.email,
+            action: 'auth.stepup.session_revoked',
+            objectType: 'session',
+            objectId: session.id,
+            detail: { failures },
+          });
         });
         throw new UnauthorizedException({
           code: 'SESSION_REVOKED',
@@ -509,12 +513,16 @@ export class AuthService {
   }
 
   async logout(session: SessionRecord, actorEmail: string): Promise<void> {
-    await this.sessions.revoke(session.id, 'logout');
-    await this.audit.append({
-      actor: actorEmail,
-      action: 'auth.logout',
-      objectType: 'session',
-      objectId: session.id,
+    // Một transaction cho thu-hồi + ghi vết (AD-5, mẫu N3). "Người này đăng xuất lúc mấy giờ,
+    // từ đâu" là câu NFR-03 phải trả lời được, và phiên đã chết thì không có lần thử lại nào.
+    await this.db.transaction(async (tx) => {
+      await this.sessions.revokeWithin(tx, session.id, 'logout');
+      await this.audit.appendWithin(tx, {
+        actor: actorEmail,
+        action: 'auth.logout',
+        objectType: 'session',
+        objectId: session.id,
+      });
     });
   }
 
@@ -554,17 +562,18 @@ export class AuthService {
     );
   }
 
-  private async auditFailure(
-    user: UserCredentials,
-    reason: string,
-    ctx: LoginContext,
-  ): Promise<void> {
+  /*
+   * `ip` không còn là tham số ở đây: từ 08/09 nó là CỘT `audit_log.ip`, do
+   * `AuditWriterService` tự lấy từ ngữ cảnh request (`common/request-context.ts`). Ghi thêm
+   * vào `detail` nữa là hai chỗ giữ cùng một sự thật — đúng cách chúng trôi khỏi nhau.
+   */
+  private async auditFailure(user: UserCredentials, reason: string): Promise<void> {
     await this.audit.append({
       actor: user.email,
       action: 'auth.login.failed',
       objectType: 'user',
       objectId: user.id,
-      detail: { reason, ip: ctx.ip },
+      detail: { reason },
     });
   }
 
@@ -584,7 +593,7 @@ export class AuthService {
       action: 'auth.device.new',
       objectType: 'user',
       objectId: user.id,
-      detail: { ip: ctx.ip },
+      // IP nằm ở cột `audit_log.ip`; `detail` chỉ còn giữ thứ cột không có.
     });
     await this.outbox.enqueueWithin(tx, 'auth.device.new', { userId: user.id, deviceHash: hash });
   }

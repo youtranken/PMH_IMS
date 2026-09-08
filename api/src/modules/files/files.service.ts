@@ -100,31 +100,40 @@ export class FilesService {
     await writeFile(join(dir, storedName), input.buffer);
 
     try {
-      const rows = await this.db
-        .insert(filesTable)
-        .values({
-          originalName: input.originalName,
-          storedName,
-          mimeType: detected.mime,
-          sizeBytes: input.buffer.length,
-          ownerType: input.ownerType,
-          ownerId: input.ownerId,
-          uploadedBy: input.uploadedBy,
-        })
-        .returning();
-      await this.audit.append({
-        actor: input.actor,
-        action: 'file.uploaded',
-        objectType: input.ownerType,
-        objectId: input.ownerId,
-        detail: {
-          fileId: rows[0].id,
-          originalName: input.originalName,
-          mime: detected.mime,
-          sizeBytes: input.buffer.length,
-        },
+      /*
+       * Hàng file + dòng audit đi CHUNG một transaction (AD-5, rà soát 07/09 #4).
+       *
+       * Bản trước INSERT commit ngay rồi mới ghi audit bằng hàm nuốt lỗi: file lên kho mà
+       * không có vết ai đưa lên. Nay audit hỏng thì hàng file rollback theo, và `catch` bên
+       * dưới dọn luôn blob vừa ghi ra đĩa — không còn file mồ côi.
+       */
+      return await this.db.transaction(async (tx) => {
+        const rows = await tx
+          .insert(filesTable)
+          .values({
+            originalName: input.originalName,
+            storedName,
+            mimeType: detected.mime,
+            sizeBytes: input.buffer.length,
+            ownerType: input.ownerType,
+            ownerId: input.ownerId,
+            uploadedBy: input.uploadedBy,
+          })
+          .returning();
+        await this.audit.appendWithin(tx, {
+          actor: input.actor,
+          action: 'file.uploaded',
+          objectType: input.ownerType,
+          objectId: input.ownerId,
+          detail: {
+            fileId: rows[0].id,
+            originalName: input.originalName,
+            mime: detected.mime,
+            sizeBytes: input.buffer.length,
+          },
+        });
+        return toRecord(rows[0]);
       });
-      return toRecord(rows[0]);
     } catch (error) {
       await unlink(join(dir, storedName)).catch(() => undefined);
       throw error;

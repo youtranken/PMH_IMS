@@ -385,13 +385,27 @@ export class AccountsService {
         message: "Phiên không tồn tại.",
       });
     }
-    await this.sessions.revoke(sessionId, `killed-by:${actor.email}`);
-    await this.audit.append({
-      actor: actor.email,
-      action: "session.killed",
-      objectType: "session",
-      objectId: sessionId,
-      detail: { userId: session.userId },
+    /*
+     * MỘT transaction cho đá-phiên + ghi vết (AD-5, mẫu N3).
+     *
+     * Bản trước `revoke()` chạy trên pool và COMMIT NGAY, rồi mới ghi audit riêng. Transaction
+     * thứ hai hỏng — pool cạn, worker bị kill — thì phiên ĐÃ CHẾT mà không còn dòng nào nói ai
+     * đá và đá lúc nào; `audit_log` chỉ-thêm nên không có đường bù. Đúng cửa mà NFR-03 sinh ra
+     * để trả lời: SA nghi tài khoản bị chiếm, đá phiên, rồi tuần sau phải chứng minh mình đã
+     * làm gì.
+     *
+     * `verifyLoginTotp` đã gói đúng cặp này trong tx từ đợt A — ba chỗ còn lại (đây,
+     * `stepUp()`, `logout()`) là những cửa tương đương chưa được áp (mẫu N1).
+     */
+    await this.db.transaction(async (tx) => {
+      await this.sessions.revokeWithin(tx, sessionId, `killed-by:${actor.email}`);
+      await this.audit.appendWithin(tx, {
+        actor: actor.email,
+        action: "session.killed",
+        objectType: "session",
+        objectId: sessionId,
+        detail: { userId: session.userId },
+      });
     });
   }
 

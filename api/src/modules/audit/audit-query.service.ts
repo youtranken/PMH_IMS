@@ -23,6 +23,12 @@ export interface AuditRow {
   action: string;
   objectType: string | null;
   objectId: string | null;
+  /**
+   * "Từ đâu" của NFR-03. `null` cho các dòng do job nền sinh ra (outbox relay, cron hết hạn)
+   * — đó là câu trả lời đúng, không phải thiếu dữ liệu — và cho MỌI dòng ghi trước 08/09,
+   * khi cột này còn NULL trên 100% số dòng (rà soát 07/09, #3).
+   */
+  ip: string | null;
   detail: unknown;
   createdAt: string;
 }
@@ -82,11 +88,12 @@ export class AuditQueryService {
         action: string;
         object_type: string | null;
         object_id: string | null;
+        ip: string | null;
         detail: unknown;
         created_at: string;
       }>(sql`
         SELECT a.id, a.actor, u.full_name AS actor_name, a.action,
-               a.object_type, a.object_id, a.detail, a.created_at
+               a.object_type, a.object_id, a.ip, a.detail, a.created_at
         FROM audit_log a
         LEFT JOIN users u ON u.email = a.actor
         ${where}
@@ -105,6 +112,7 @@ export class AuditQueryService {
         action: r.action,
         objectType: r.object_type,
         objectId: r.object_id,
+        ip: r.ip,
         detail: r.detail,
         createdAt: new Date(r.created_at).toISOString(),
       })),

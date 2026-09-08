@@ -25,10 +25,16 @@ function reflectorFor(meta: AuditedMeta | undefined): Reflector {
   return { getAllAndOverride: () => meta } as unknown as Reflector;
 }
 
+/**
+ * CỐ Ý chỉ cài `appendBestEffort`. Interceptor gọi `append` (bản NÉM lỗi) thì bài test đỏ
+ * bằng TypeError — đúng điều cần: interceptor chạy SAU khi mutation đã commit, ném ở đó biến
+ * một thao tác đã thành công thành 500 và người dùng bấm lại sẽ tạo bản ghi trùng. Xem khối
+ * chú thích của `AuditWriterService` để biết ranh giới giữa ba hàm ghi.
+ */
 function writerSpy() {
   const calls: unknown[] = [];
   const writer = {
-    append: (entry: unknown) => {
+    appendBestEffort: (entry: unknown) => {
       calls.push(entry);
       return Promise.resolve();
     },

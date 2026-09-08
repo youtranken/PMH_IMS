@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
-import { E2E_MEMBER, E2E_SA, firstLogin, resetUsers } from './helpers';
+import { expect, request, test } from '@playwright/test';
+import { APP_ORIGIN, E2E_MEMBER, E2E_SA, firstLogin, resetUsers, sql } from './helpers';
 
 test.beforeEach(() => resetUsers());
 
@@ -130,5 +130,96 @@ test.describe('Nhật ký kiểm toán — API', () => {
           `Câu: ${sql}\nstderr:\n${stderr}`,
       ).toMatch(guardSignals);
     }
+  });
+});
+
+/**
+ * NFR-03 đòi nhật ký trả lời được "AI làm gì, lúc nào, TỪ ĐÂU". Vế cuối là vế duy nhất chưa
+ * bao giờ được trả lời: `audit_log.ip` NULL trên 100% số dòng suốt 9 epic (rà soát 07/09, #3).
+ *
+ * Cột `ip` có trong `0004_audit_log.sql:8` từ ngày đầu; thứ thiếu là bảng drizzle không khai
+ * nó, nên `toRow()` không map và không ai ghi. Không có gì đỏ vì cột NULL là hợp lệ với
+ * Postgres, và endpoint đọc cũng không `SELECT` nó nên không ai nhìn thấy khoảng trống.
+ *
+ * Đây là loại lỗi chỉ E2E mới bắt được: nó không phải sai logic ở một hàm nào, mà là đứt gãy
+ * giữa migration ↔ ORM ↔ HTTP. Và vì bảng chỉ-thêm nên nó KHÔNG vá ngược được — mỗi ngày
+ * chạy thiếu là thêm một ngày "từ đâu" vĩnh viễn rỗng.
+ */
+test.describe('Nhật ký kiểm toán — "từ đâu" (NFR-03)', () => {
+  /**
+   * `203.0.113.0/24` là TEST-NET-3 (RFC 5737): dải dành riêng cho tài liệu, không bao giờ là
+   * IP thật của một máy trong LAN. Nếu nó xuất hiện trong nhật ký thì chắc chắn nó tới từ
+   * header client tự khai, không từ nơi nào khác.
+   */
+  const FORGED_IP = '203.0.113.99';
+
+  test('dòng ghi ngoài transaction có IP, và IP đó KHÔNG phải thứ client tự khai', async () => {
+    const stamp = Date.now().toString().slice(-6);
+    // Email không tồn tại → nhánh `not-found` của `login()`, dùng `append()` (bản NÉM lỗi).
+    // Actor là duy nhất nên tìm lại đúng một dòng, không lẫn với dòng của bài khác.
+    const ghost = `e2e-ip-${stamp}@pmh.com.vn`;
+
+    const api = await request.newContext({
+      baseURL: APP_ORIGIN,
+      ignoreHTTPSErrors: true,
+      extraHTTPHeaders: { Origin: APP_ORIGIN, 'X-Forwarded-For': FORGED_IP },
+    });
+    try {
+      const res = await api.post('/api/v1/auth/login', {
+        data: { email: ghost, password: 'chac-chan-sai-#2026' },
+      });
+      expect(res.status()).toBe(401);
+    } finally {
+      await api.dispose();
+    }
+
+    const ip = sql(
+      `SELECT coalesce(ip, '<NULL>') FROM audit_log WHERE actor = '${ghost}' ` +
+        `ORDER BY created_at DESC LIMIT 1`,
+    );
+
+    expect(ip, 'phải có một dòng audit cho lượt đăng nhập hỏng này').not.toBe('');
+    expect(ip, 'NFR-03: nhật ký phải trả lời được "từ đâu" — cột ip không được NULL').not.toBe(
+      '<NULL>',
+    );
+    /*
+     * Vế thứ hai, và là vế quan trọng hơn: nginx dùng `$proxy_add_x_forwarded_for` (NỐI THÊM),
+     * nên nếu code đọc phần tử trái nhất của `X-Forwarded-For` thì nó lấy đúng thứ nghi phạm
+     * tự điền. Ghi được IP mà là IP giả thì tệ hơn để trống — nó khiến người điều tra đi sai
+     * hướng và tin rằng mình có bằng chứng (rà soát 07/09, #1).
+     */
+    expect(ip, 'IP phải đến từ req.ip (trust proxy), không phải X-Forwarded-For client khai').not.toBe(
+      FORGED_IP,
+    );
+  });
+
+  test('dòng ghi TRONG transaction cũng có IP, và endpoint đọc trả nó ra', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+
+    /*
+     * Đăng nhập thành công ghi `auth.login.ok` / `auth.password.ok` bằng `appendWithin` —
+     * đường khác hẳn bài trên. Ngữ cảnh request (`AsyncLocalStorage`) phải sống qua cả
+     * `db.transaction`, nếu không thì đúng đường ĐÔNG NHẤT của hệ thống lại là đường mất IP.
+     */
+    const rows = sql(
+      `SELECT count(*) FROM audit_log WHERE actor = '${E2E_SA.email}' ` +
+        `AND action IN ('auth.login.ok','auth.password.ok') AND ip IS NOT NULL`,
+    );
+    expect(
+      Number(rows),
+      'audit ghi trong transaction phải giữ được ngữ cảnh request',
+    ).toBeGreaterThan(0);
+
+    // Và người điều tra phải ĐỌC được nó: ghi vào cột mà `SELECT` không lấy thì vẫn là câm.
+    const response = await page.request.get(
+      `/api/v1/admin/audit?actor=${encodeURIComponent(E2E_SA.email)}&pageSize=50`,
+    );
+    expect(response.status()).toBe(200);
+    const body = (await response.json()) as { items: { action: string; ip: string | null }[] };
+    const login = body.items.find(
+      (r) => r.action === 'auth.login.ok' || r.action === 'auth.password.ok',
+    );
+    expect(login, 'phải có dòng đăng nhập của chính tài khoản vừa dùng').toBeTruthy();
+    expect(login?.ip, 'GET /admin/audit phải trả cột ip ra ngoài').toBeTruthy();
   });
 });
