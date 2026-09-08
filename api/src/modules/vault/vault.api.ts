@@ -1,10 +1,22 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, type OnModuleInit } from '@nestjs/common';
+import {
+  OwnerAccessRegistry,
+  type OwnerAccessChecker,
+} from '../../common/owner-access.registry';
+import { BreakGlassService } from './break-glass.service';
 import { VaultOwnersService, type VaultOwnerSummary } from './vault-owners.service';
 import {
+  SECRET_OWNER_TYPES,
   VaultService,
   type SecretMeta,
   type SecretOwnerType,
 } from './vault.service';
+
+/**
+ * Bốn loại chủ thể mà MA TRẬN QUYỀN của két phủ. Xuất ra ngoài để `files` biết đường nào cần
+ * hỏi quyền và đường nào không — xem `assertMemberCanSee` bên dưới.
+ */
+export { SECRET_OWNER_TYPES, type SecretOwnerType };
 
 /**
  * AD-2 + AD-4: public api DUY NHẤT của module `vault`.
@@ -15,11 +27,29 @@ import {
  * để mà lỡ gọi.
  */
 @Injectable()
-export class VaultApiService {
+export class VaultApiService implements OnModuleInit, OwnerAccessChecker {
   constructor(
     private readonly vault: VaultService,
     private readonly owners: VaultOwnersService,
+    private readonly breakGlass: BreakGlassService,
+    private readonly ownerAccess: OwnerAccessRegistry,
   ) {}
+
+  /** Bốn loại chủ thể mà ma trận quyền của két phủ (`OwnerAccessChecker`). */
+  readonly ownerTypes = SECRET_OWNER_TYPES;
+
+  /**
+   * Nhận canh quyền đọc cho 4 loại đó, thay cho mọi module nền muốn hỏi (hiện là `files`).
+   * Ghi vào sổ ở đây chứ không để `files` gọi ngược — xem `common/owner-access.registry.ts`.
+   */
+  onModuleInit(): void {
+    this.ownerAccess.register(this);
+  }
+
+  /** `OwnerAccessChecker` — chữ ký rộng (string) vì sổ dùng chung cho mọi loại chủ thể. */
+  assertCanSee(memberEmail: string, ownerType: string, ownerId: string): Promise<void> {
+    return this.assertMemberCanSee(memberEmail, ownerType as SecretOwnerType, ownerId);
+  }
 
   /** Metadata thôi — nhãn, loại, ai cất. Không bao giờ có giá trị. */
   listFor(ownerType: SecretOwnerType, ownerId: string): Promise<SecretMeta[]> {
@@ -45,5 +75,30 @@ export class VaultApiService {
    */
   listOwners(): Promise<VaultOwnerSummary[]> {
     return this.owners.list();
+  }
+
+  /**
+   * "Người này có được nhìn thấy chủ thể đó không" — ném `ACCESS_DENIED` nếu không.
+   *
+   * MỞ RA NGOÀI MODULE cho `files` (rà soát 07/09, C1). Két có ma trận quyền ba tầng và mặc
+   * định là CẤM (`access-list.service.ts` trả `'denied'` khi không có luật nào áp), nhưng kho
+   * file đính kèm thì không kiểm gì: một Member bị `denied` trên một tài khoản dịch vụ vẫn
+   * `GET /files?ownerType=service_account&ownerId=…` để lấy danh sách id, rồi tải từng cái.
+   * Đính kèm của tài khoản dịch vụ hay là biên bản bàn giao, ảnh chụp cấu hình router — loại
+   * giấy tờ thường có thông tin đăng nhập chép ngay trên đó.
+   *
+   * Hàm này chỉ trả lời câu hỏi quyền; nó KHÔNG mở đường tới bất cứ giá trị bí mật nào, nên
+   * bề mặt công khai của `vault` vẫn giữ nguyên tính chất mà `vault-surface.spec.ts` canh.
+   *
+   * Chỉ áp cho 4 loại chủ thể mà ma trận phủ (`SECRET_OWNER_TYPES`). `subnet`/`nat_rule` là
+   * chủ thể của FILE nhưng không phải của KÉT — với chúng không tồn tại khái niệm "tầng quyền",
+   * nên bên gọi phải tự quyết, xem chú thích ở `files.controller.ts`.
+   */
+  assertMemberCanSee(
+    memberEmail: string,
+    ownerType: SecretOwnerType,
+    ownerId: string,
+  ): Promise<void> {
+    return this.breakGlass.assertCanSeeMetadata(memberEmail, ownerType, ownerId);
   }
 }

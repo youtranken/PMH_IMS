@@ -158,14 +158,31 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
    * két, mấy ngăn, đổi lần cuối bao giờ", đúng bằng `GET /vault/owners` đã mở cho SA/Admin từ
    * 26/08. Bên gọi tự gác vai — `DashboardService` chỉ dựng khối đó cho SA/Admin.
    *
+   * `assertMemberCanSee` / `assertCanSee` / `onModuleInit` (08/09/2026) mở ra cho module `files`
+   * hỏi ma trận quyền (rà soát 07/09, C1): Member bị `denied` trên một tài khoản dịch vụ trước
+   * đây vẫn tải được biên bản bàn giao đính kèm của nó. Ba cái này an toàn với FR-026 vì chúng
+   * trả `void` hoặc ném — KHÔNG cái nào trả về dữ liệu, nên không có gì để mà rò rỉ. Chúng chỉ
+   * trả lời "có/không", và câu trả lời đó vốn đã lộ ra qua chính mã 403 của endpoint.
+   *
+   * `files` KHÔNG gọi thẳng ba hàm này (nó là module nền, không được biết tới `vault` —
+   * dependency-cruiser chặn). Đường đi là `OwnerAccessRegistry` ở `common/`: `vault` ghi vào
+   * sổ lúc khởi động (`onModuleInit`), `files` đọc sổ.
+   *
    * Cái KHÔNG được thêm vào đây, ở bất kỳ hoàn cảnh nào: hàm trả giá trị, hàm trả nhãn ngăn,
    * hoặc hàm nhận nhiều chủ thể một lượt rồi trả kèm nội dung (FR-026).
    */
-  it('VaultApiService chỉ xuất metadata', () => {
+  it('VaultApiService chỉ xuất metadata và câu trả lời quyền', () => {
     const methods = Object.getOwnPropertyNames(VaultApiService.prototype)
       .filter((name) => name !== 'constructor')
       .sort();
-    expect(methods).toEqual(['countFor', 'listFor', 'listOwners']);
+    expect(methods).toEqual([
+      'assertCanSee',
+      'assertMemberCanSee',
+      'countFor',
+      'listFor',
+      'listOwners',
+      'onModuleInit',
+    ]);
   });
 
   it('không file nào ngoài module vault đụng vào schema két sắt (AD-4)', () => {

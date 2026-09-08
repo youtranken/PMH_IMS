@@ -13,6 +13,7 @@ import { Select } from '@/ui/select';
 import { RevealDialog } from '@/ui/reveal-dialog';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { StepUpDialog } from '@/ui/step-up-dialog';
+import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 
@@ -143,6 +144,9 @@ export function VaultPanel({
     (input) => `/api/v1/vault/secrets/${input.id}`,
     { method: 'DELETE', csrfToken: me.csrfToken, refreshMe: false, body: () => undefined },
   );
+
+  /** Ghi vào két nay đòi step-up (C2) — hook lo phần hỏi mã rồi làm lại. */
+  const writeStepUp = useStepUpRetry(me.csrfToken);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey });
 
@@ -315,17 +319,19 @@ export function VaultPanel({
                                     confirmLabel: t('vault.revoke'),
                                   });
                                   if (!ok) return;
-                                  revoke.mutate(
-                                    { id: secret.id },
-                                    {
-                                      onSuccess: () => {
-                                        toast({ message: t('vault.revoked') });
-                                        void refresh();
-                                      },
-                                      onError: (error) =>
-                                        toast({ message: errorMessage(error), tone: 'error' }),
-                                    },
-                                  );
+                                  try {
+                                    // Thu hồi nay đòi step-up (C2): gặp `STEPUP_REQUIRED` thì
+                                    // hỏi mã rồi làm lại chính việc này.
+                                    await writeStepUp.run(() =>
+                                      revoke.mutateAsync({ id: secret.id }),
+                                    );
+                                    toast({ message: t('vault.revoked') });
+                                    void refresh();
+                                  } catch (error) {
+                                    // Người dùng đóng hộp hỏi mã = hủy, không phải lỗi.
+                                    if ((error as Error).message === 'STEPUP_CANCELLED') return;
+                                    toast({ message: errorMessage(error), tone: 'error' });
+                                  }
                                 })();
                               },
                             },
@@ -355,6 +361,8 @@ export function VaultPanel({
           }}
         />
       ) : null}
+
+      {writeStepUp.dialog}
 
       {pendingStepUp ? (
         <StepUpDialog
@@ -453,6 +461,8 @@ function SecretForm({
     isEdit ? `/api/v1/vault/secrets/${secret.id}` : '/api/v1/vault/secrets',
     { method: isEdit ? 'PATCH' : 'POST', csrfToken, refreshMe: false },
   );
+  /** Cất/sửa bí mật nay đòi step-up (C2). */
+  const stepUp = useStepUpRetry(csrfToken);
 
   return (
     <Dialog
@@ -486,26 +496,30 @@ function SecretForm({
             setError(t('vault.valueRequired'));
             return;
           }
-          save.mutate(
-            isEdit
-              ? { label: label.trim(), username: username.trim(), note: note.trim() }
-              : {
-                  ownerType,
-                  ownerId,
-                  kind,
-                  label: label.trim(),
-                  username: username.trim(),
-                  note: note.trim(),
-                  value,
-                },
-            {
-              onSuccess: () => {
-                setValue('');
-                onSaved();
-              },
-              onError: (err) => setError(errorMessage(err)),
-            },
-          );
+          void (async () => {
+            try {
+              await stepUp.run(() =>
+                save.mutateAsync(
+                  isEdit
+                    ? { label: label.trim(), username: username.trim(), note: note.trim() }
+                    : {
+                        ownerType,
+                        ownerId,
+                        kind,
+                        label: label.trim(),
+                        username: username.trim(),
+                        note: note.trim(),
+                        value,
+                      },
+                ),
+              );
+              setValue('');
+              onSaved();
+            } catch (err) {
+              if ((err as Error).message === 'STEPUP_CANCELLED') return;
+              setError(errorMessage(err));
+            }
+          })();
         }}
       >
         <Field label={t('vault.label')} required htmlFor="secret-label">
@@ -575,6 +589,8 @@ function SecretForm({
           </p>
         ) : null}
       </form>
+      {/* Hộp hỏi mã 6 số khi server đòi step-up (C2) — chỉ hiện khi cần. */}
+      {stepUp.dialog}
     </Dialog>
   );
 }
@@ -598,6 +614,8 @@ function RotateForm({
     `/api/v1/vault/secrets/${secret.id}/rotate`,
     { csrfToken, refreshMe: false },
   );
+  /** Xoay bí mật nay đòi step-up (C2). */
+  const stepUp = useStepUpRetry(csrfToken);
 
   return (
     <Dialog
@@ -627,16 +645,16 @@ function RotateForm({
             setError(t('vault.valueRequired'));
             return;
           }
-          rotate.mutate(
-            { value },
-            {
-              onSuccess: () => {
-                setValue('');
-                onSaved();
-              },
-              onError: (err) => setError(errorMessage(err)),
-            },
-          );
+          void (async () => {
+            try {
+              await stepUp.run(() => rotate.mutateAsync({ value }));
+              setValue('');
+              onSaved();
+            } catch (err) {
+              if ((err as Error).message === 'STEPUP_CANCELLED') return;
+              setError(errorMessage(err));
+            }
+          })();
         }}
       >
         <p className="muted">{t('vault.rotateHint')}</p>
@@ -661,6 +679,8 @@ function RotateForm({
           </p>
         ) : null}
       </form>
+      {/* Hộp hỏi mã 6 số khi server đòi step-up (C2) — chỉ hiện khi cần. */}
+      {stepUp.dialog}
     </Dialog>
   );
 }

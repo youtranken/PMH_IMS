@@ -122,7 +122,24 @@ export class VaultController {
     return this.vault.findMeta(params.id);
   }
 
+  /*
+   * ===== GHI VÀO KÉT CŨNG PHẢI STEP-UP (rà soát 07/09, C2) =====
+   *
+   * Trước đây ĐỌC thì phải gõ mã 6 số, còn GHI ĐÈ thì không. Một phiên Admin bị chiếm — cookie
+   * trộm, máy bỏ ngỏ, chưa từng step-up hoặc đã hết grace — vẫn xoay được mật khẩu switch lõi
+   * sang một giá trị kẻ tấn công tự chọn, hoặc thu hồi bí mật đang dùng. Hắn KHÔNG đọc được
+   * giá trị cũ, nhưng ĐẶT được giá trị mới rồi dùng chính nó ở nơi khác; và thu hồi là một
+   * đường phá hoại thẳng, không cần đọc được gì.
+   *
+   * Cửa trước khóa kỹ, cửa sau để mở — đúng mẫu N1 của rà soát 07/09.
+   *
+   * Chi phí cho người dùng thật: một lần gõ mã trong mỗi `secret.stepup_grace_minutes` (10
+   * phút), đúng lúc họ đang chủ ý cất/xoay mật khẩu. Web bắt `STEPUP_REQUIRED` rồi mở hộp hỏi
+   * mã và thử lại chính việc vừa rồi — xem `useStepUpRetry` trong `web/src/ui`.
+   */
   @Roles('sa', 'admin')
+  @UseGuards(StepUpGuard)
+  @RequiresStepUp()
   @Post()
   @Audited('vault.secret.created', 'secret', { writtenByService: true })
   create(@Body() body: CreateSecretDto, @Req() req: AuthedRequest) {
@@ -130,6 +147,8 @@ export class VaultController {
   }
 
   @Roles('sa', 'admin')
+  @UseGuards(StepUpGuard)
+  @RequiresStepUp()
   @Patch(':id')
   @Audited('vault.secret.updated', 'secret', { writtenByService: true })
   update(@Param() params: IdParamDto, @Body() body: UpdateSecretDto, @Req() req: AuthedRequest) {
@@ -137,6 +156,8 @@ export class VaultController {
   }
 
   @Roles('sa', 'admin')
+  @UseGuards(StepUpGuard)
+  @RequiresStepUp()
   @Post(':id/rotate')
   @Audited('vault.secret.rotated', 'secret', { writtenByService: true })
   async rotate(
@@ -214,6 +235,8 @@ export class VaultController {
 
   /** "Xóa" = thu hồi mềm. Ciphertext ở lại để còn đối chiếu khi điều tra sự cố. */
   @Roles('sa', 'admin')
+  @UseGuards(StepUpGuard)
+  @RequiresStepUp()
   @Delete(':id')
   @Audited('vault.secret.revoked', 'secret', { writtenByService: true })
   async revoke(@Param() params: IdParamDto, @Req() req: AuthedRequest) {

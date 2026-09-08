@@ -9,6 +9,7 @@ import { Field, FormSection } from '@/ui/page-header';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
+import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
 import { useDepartments } from '@/ui/use-departments';
 import {
@@ -71,6 +72,8 @@ export function ServiceAccountForm({
 }) {
   const { t } = useTranslation();
   const toast = useToast();
+  /** Cất mật khẩu vào két nay đòi step-up (C2) — hook lo phần hỏi mã rồi cất lại. */
+  const stepUp = useStepUpRetry(csrfToken);
   const departments = useDepartments();
   const [form, setForm] = useState<FormState>(() => initialState(row));
   const [error, setError] = useState<string | null>(null);
@@ -165,21 +168,33 @@ export function ServiceAccountForm({
                    */
                   if (!row && secretValue) {
                     try {
-                      await apiFetch('/api/v1/vault/secrets', {
-                        method: 'POST',
-                        csrfToken,
-                        body: JSON.stringify({
-                          ownerType: 'service_account',
-                          ownerId: created.id,
-                          kind: 'password',
-                          label: t('serviceAccounts.secretLabel'),
-                          username: form.login.trim(),
-                          value: secretValue,
+                      // Cất vào két nay đòi step-up (C2): `run` gặp `STEPUP_REQUIRED` thì hỏi
+                      // mã 6 số rồi cất lại — hồ sơ đã tạo xong ở trên nên không mất gì.
+                      await stepUp.run(() =>
+                        apiFetch('/api/v1/vault/secrets', {
+                          method: 'POST',
+                          csrfToken,
+                          body: JSON.stringify({
+                            ownerType: 'service_account',
+                            ownerId: created.id,
+                            kind: 'password',
+                            label: t('serviceAccounts.secretLabel'),
+                            username: form.login.trim(),
+                            value: secretValue,
+                          }),
                         }),
-                      });
+                      );
                       toast({ message: t('serviceAccounts.secretSaved') });
                     } catch (err) {
-                      toast({ message: errorMessage(err), tone: 'error' });
+                      // Đóng hộp hỏi mã = người dùng chủ động bỏ qua bước cất, không phải lỗi
+                      // hệ thống — nhưng VẪN phải nói, vì mật khẩu họ vừa gõ không vào két.
+                      toast({
+                        message:
+                          (err as Error).message === 'STEPUP_CANCELLED'
+                            ? t('serviceAccounts.secretSkipped')
+                            : errorMessage(err),
+                        tone: 'warn',
+                      });
                     }
                   }
                   if (draft.files.length > 0) {
@@ -416,6 +431,8 @@ export function ServiceAccountForm({
           </p>
         ) : null}
       </form>
+      {/* Hộp hỏi mã 6 số khi server đòi step-up (C2). */}
+      {stepUp.dialog}
     </Dialog>
   );
 }

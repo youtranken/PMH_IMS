@@ -10,6 +10,7 @@ import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { DisposalModule } from './modules/disposal/disposal.module';
 import { DatabaseModule } from './database/database.module';
 import { ApprovalsRegistryModule } from './common/approvals/approvals-registry';
+import { OwnerAccessModule } from './common/owner-access.registry';
 import { DevicePanelsModule } from './common/device-panels.registry';
 import { ExpiryRegistryModule } from './common/expiry/expiry-registry';
 import { HealthController } from './health/health.controller';
@@ -73,6 +74,7 @@ import { VaultModule } from './modules/vault/vault.module';
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     DatabaseModule,
     DevicePanelsModule,
+    OwnerAccessModule,
     ExpiryRegistryModule,
     ApprovalsRegistryModule,
     SystemConfigModule,

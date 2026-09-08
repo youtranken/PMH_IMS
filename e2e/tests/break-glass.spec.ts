@@ -167,6 +167,17 @@ test.describe('Break-glass', () => {
    * như khi sweep chưa kịp chạy) — quyền phải chết ngay.
    */
   test('grant hết hạn thì cắt NGAY, kể cả khi sweep chưa đổi status', async ({ page }) => {
+    /*
+     * Cùng lý do với bài ở trên: bài này cũng đổi người BỐN lượt (SA dựng → Member xin → SA
+     * duyệt → Member xem lại), và `freshTotpCode` phải chờ sang chu kỳ 30 giây kế tiếp mỗi khi
+     * mã đã bị dùng.
+     *
+     * Chạy riêng mất ~38 giây, dưới trần mặc định 60 giây. Nhưng chạy theo lô thì các bài
+     * trước đã tiêu mã của chu kỳ hiện tại, nên chỉ một lần chờ là vượt trần — và nó đỏ ở
+     * `locator.fill` của form đăng nhập, tức một chỗ chẳng liên quan gì tới điều đang kiểm.
+     * Đã gặp thật ngày 08/09 khi chạy chung với sáu file khác.
+     */
+    test.setTimeout(150_000);
     const saTotp = await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-5);
     const { secretId, deviceId } = await setUpAs(page, stamp, 'needs_approval');

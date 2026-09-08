@@ -18,6 +18,7 @@ import { Throttle } from '@nestjs/throttler';
 import { IsIn, IsUUID } from 'class-validator';
 import type { Response } from 'express';
 import { Audited } from '../audit/audited.decorator';
+import { OwnerAccessRegistry } from '../../common/owner-access.registry';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { MULTER_LIMIT } from './file-validation';
@@ -39,16 +40,50 @@ class FileIdParamDto {
 /**
  * Đính kèm giấy tờ (story 2.3, FR-002) — module file DÙNG CHUNG cho mọi chủ thể.
  *
- * Quyền: mọi vai đã đăng nhập. Giấy tờ thiết bị (hóa đơn, biên bản bàn giao) là thứ cả team
- * IT cần xem hằng ngày; thứ cần siết là KÉT SẮT (Epic 4), không phải cái này.
+ * ===== QUYỀN, sửa 08/09 (rà soát 07/09, C1) =====
+ *
+ * Quyết định gốc ở story 2.3 là "mọi vai đã đăng nhập đều xem được; thứ cần siết là KÉT SẮT,
+ * không phải cái này". Quyết định đó ĐÚNG lúc nó được đưa ra — khi ấy file chỉ gắn vào thiết
+ * bị và phần mềm, và hóa đơn thiết bị đúng là thứ cả team IT cần xem hằng ngày.
+ *
+ * Nhưng sau đó `service_account` và `isp` được thêm vào `FILE_OWNER_TYPES`, và Epic 6 dựng ma
+ * trận quyền ba tầng cho két với mặc định là CẤM. Từ lúc đó phạm vi đã đổi mà luật thì không:
+ * một Member bị `denied` trên một tài khoản dịch vụ vẫn liệt kê được đính kèm của nó rồi tải
+ * từng cái — mà đính kèm loại này hay là biên bản bàn giao, ảnh chụp cấu hình router, tức
+ * giấy tờ có thông tin đăng nhập chép ngay trên đó.
+ *
+ * Nay: với 4 loại chủ thể mà ma trận PHỦ (`SECRET_OWNER_TYPES`), Member phải có quyền trên
+ * chủ thể mới đọc được đính kèm của nó. SA/Admin không đổi. Với `subnet`/`nat_rule` — chủ thể
+ * của file nhưng KHÔNG phải của két — không tồn tại khái niệm tầng quyền, nên quyết định gốc
+ * của story 2.3 vẫn giữ nguyên cho chúng.
  */
 @Controller('api/v1/files')
 export class FilesController {
-  constructor(private readonly files: FilesService) {}
+  constructor(
+    private readonly files: FilesService,
+    private readonly access: OwnerAccessRegistry,
+  ) {}
+
+  /**
+   * Member phải có quyền trên chủ thể mới đọc được đính kèm của nó. SA/Admin đi thẳng.
+   *
+   * Hỏi qua SỔ ĐĂNG KÝ chứ không gọi thẳng `vault`: `files` là module NỀN, cho nó biết tới một
+   * module nghiệp vụ cụ thể là đảo chiều phụ thuộc của cả hệ thống (dependency-cruiser chặn
+   * đúng chỗ này khi tôi thử cách hiển nhiên). Xem `common/owner-access.registry.ts`.
+   *
+   * Loại chủ thể chưa có ai canh (`subnet`, `nat_rule`) đi qua: với chúng khái niệm tầng quyền
+   * không tồn tại. Mặc-định-cấm nằm TRONG ma trận, không nằm ở đây.
+   */
+  private async assertCanRead(req: AuthedRequest, ownerType: FileOwnerType, ownerId: string) {
+    const user = requireUser(req);
+    if (user.role !== 'member') return;
+    await this.access.assertCanRead(user.email, ownerType, ownerId);
+  }
 
   @Roles('sa', 'admin', 'member')
   @Get()
-  list(@Query() query: OwnerDto) {
+  async list(@Query() query: OwnerDto, @Req() req: AuthedRequest) {
+    await this.assertCanRead(req, query.ownerType, query.ownerId);
     return this.files.listFor(query.ownerType, query.ownerId);
   }
 
@@ -58,13 +93,16 @@ export class FilesController {
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Audited('file.uploaded', 'file', { writtenByService: true })
   @UseInterceptors(FileInterceptor('file', { limits: MULTER_LIMIT }))
-  upload(
+  async upload(
     @UploadedFile() file: Express.Multer.File | undefined,
     @Body() body: OwnerDto,
     @Req() req: AuthedRequest,
   ) {
     const uploaded = requireFile(file);
     const user = requireUser(req);
+    // Đọc được thì mới đính kèm được: không có lý do gì cho phép ghi vào một chủ thể mà chính
+    // người đó không được nhìn thấy.
+    await this.assertCanRead(req, body.ownerType, body.ownerId);
     return this.files.save({
       buffer: uploaded.buffer,
       originalName: decodeOriginalName(uploaded.originalname),
@@ -87,6 +125,11 @@ export class FilesController {
     @Req() req: AuthedRequest,
     @Res() res: Response,
   ) {
+    // Hỏi quyền TRƯỚC khi mở luồng: `openForDownload` ghi audit rồi stream ngay, nên kiểm sau
+    // là đã muộn — dữ liệu đã bắt đầu đi ra.
+    const owner = await this.files.metaOf(params.id);
+    await this.assertCanRead(req, owner.ownerType, owner.ownerId);
+
     const { meta, stream } = await this.files.openForDownload(
       params.id,
       requireUser(req).email,
@@ -114,7 +157,12 @@ export class FilesController {
     stream.pipe(res);
   }
 
-  @Roles('sa', 'admin', 'member')
+  /**
+   * XÓA siết về SA/Admin (rà soát 07/09, C1). Trước đây bất kỳ Member nào cũng xóa được mọi
+   * đính kèm của mọi hồ sơ chỉ cần có id — xóa mềm nên khôi phục được, nhưng không có lý do
+   * nghiệp vụ nào để mở đường đó cho toàn bộ vai Member.
+   */
+  @Roles('sa', 'admin')
   @Delete(':id')
   @Audited('file.deleted', 'file', { writtenByService: true })
   async remove(@Param() params: FileIdParamDto, @Req() req: AuthedRequest) {

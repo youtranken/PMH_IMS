@@ -907,6 +907,9 @@ export default {
       'Cất thẳng vào két sắt, mã hóa như mọi secret khác. Bỏ trống cũng được — vào tab Két sắt cất sau.',
     secretLabel: 'Mật khẩu đăng nhập',
     secretSaved: 'Đã cất mật khẩu vào két.',
+    // Người dùng đóng hộp hỏi mã 6 số giữa chừng: hồ sơ đã tạo, nhưng mật khẩu KHÔNG vào
+    // két. Phải nói ra, không được im lặng để họ tin là đã cất.
+    secretSkipped: 'Hồ sơ đã tạo nhưng mật khẩu CHƯA vào két (bạn đã bỏ qua bước nhập mã). Vào tab Két sắt để cất lại.',
     tabProfile: 'Hồ sơ',
     tabAttachments: 'Giấy tờ',
     tabHistory: 'Lịch sử',

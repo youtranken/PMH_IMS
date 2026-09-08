@@ -191,6 +191,18 @@ export class FilesService {
     });
   }
 
+  /**
+   * Chủ thể của một file — để nơi gọi hỏi quyền TRƯỚC khi mở luồng tải (rà soát 07/09, C1).
+   *
+   * Tách riêng chứ không nhét kiểm quyền vào `openForDownload`: quyết định "ai được xem gì"
+   * thuộc về ma trận của `vault`, và module `files` không được biết tới nó (AD-2). Controller
+   * là chỗ duy nhất thấy cả hai — nó có `req.user` (vai + email) lẫn cửa `VaultApiService`.
+   */
+  async metaOf(id: string): Promise<{ ownerType: FileOwnerType; ownerId: string }> {
+    const row = await this.requireAlive(id);
+    return { ownerType: row.ownerType as FileOwnerType, ownerId: row.ownerId };
+  }
+
   private async requireAlive(id: string): Promise<typeof filesTable.$inferSelect> {
     const rows = await this.db
       .select()
