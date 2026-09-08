@@ -15,6 +15,17 @@ services:
     # Cổng lẻ 55432 để không đụng Postgres cài sẵn trên máy ai đó ở 5432.
     ports:
       - '127.0.0.1:${POSTGRES_TEST_PORT:-55432}:5432'
+  redis:
+    # Cùng lý do với postgres: `outbox-relay-redis.spec.ts` chứng minh BullMQ thật sự khử job
+    # đúp theo `jobId` — thứ mà một Queue giả chỉ khẳng định được về hình dạng tham số.
+    ports:
+      - '127.0.0.1:${REDIS_TEST_PORT:-56379}:6379'
+  mailpit:
+    # Cổng SMTP 1025 ra host. Cổng 8025 (API đọc hộp thư) đã publish sẵn ở compose gốc cho
+    # Playwright; thiếu 1025 thì không gửi thư từ host vào được, và `MailTransportService` —
+    # nơi DUY NHẤT chạm nodemailer — không có bài kiểm nào chạm hộp thư thật.
+    ports:
+      - '127.0.0.1:${SMTP_TEST_PORT:-51025}:1025'
   api:
     volumes:
       # 07/09: gộp 11 hàm dọn của `helpers.ts` về MỘT script, một kết nối pg, một transaction

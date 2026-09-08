@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Cổng chất lượng chạy trên máy — BA TẦNG, chọn theo việc đang làm (quyết định 07/09).
 #
-#   bash ops/ci-local.sh              # ~4 phút — lint + depcruise + test đơn vị + DB + build
+#   bash ops/ci-local.sh              # ~4 phút — lint + depcruise + test đơn vị + hạ tầng + build
 #                                     # CHẠY MỖI LẦN SỬA CODE. Bao trùm CI GitHub:
 #                                     # xanh ở đây ⇒ xanh trên GitHub, không ngược lại.
 #
@@ -26,11 +26,13 @@
 # PHÂN CÔNG (quyết định 03/09): GitHub Actions chạy tầng một; E2E chỉ chạy ở đây, vì nó cần
 # dựng cả stack và ở runner GitHub thì tốn 10-15 phút mỗi lần cho repo private.
 #
-# TẦNG TEST CHẠM DB THẬT (08/09) nằm ở TẦNG MỘT, không phải tầng E2E — nó chỉ tốn ~8 giây và
-# chỉ cần MỘT container postgres. Đặt nó vào tầng đắt là đặt nó vào chỗ không ai chạy, mà đây
-# đang là cơ chế kiểm chứng DUY NHẤT cho DoD gạch 5 ("migration chạy sạch trên DB TRẮNG") và
-# cho `OutboxService` — thứ AD-5 bắt mọi lượt ghi đi qua. GitHub không chạy được vì runner
-# không có Postgres; nghĩa là y như E2E, KHÔNG ai ép nó ngoài anh.
+# TẦNG TEST CHẠM HẠ TẦNG THẬT (08/09) nằm ở TẦNG MỘT, không phải tầng E2E — nó tốn ~15 giây và
+# chỉ cần ba container hạ tầng (postgres · redis · mailpit), không cần dựng api/web/worker. Đặt
+# nó vào tầng đắt là đặt nó vào chỗ không ai chạy, mà đây đang là cơ chế kiểm chứng DUY NHẤT
+# cho DoD gạch 5 ("migration chạy sạch trên DB TRẮNG"), cho ranh giới transaction của
+# `OutboxService` (thứ AD-5 bắt mọi lượt ghi đi qua), cho việc BullMQ khử job đúp, và cho
+# đường SMTP. GitHub không chạy được vì runner không có Postgres/Redis/Mailpit; nghĩa là y như
+# E2E, KHÔNG ai ép nó ngoài anh.
 #
 # ĐIỀU KIỆN ĐỦ ĐỂ ĐÓNG STORY (CLAUDE.md, DoD gạch 7): `--e2e` ĐẦY ĐỦ phải xanh. `--e2e-fast`
 # KHÔNG thay thế được — nó cố tình bỏ qua đúng những hàng rào an ninh theo thời gian.
@@ -57,17 +59,21 @@ npm --prefix api run depcruise
 step "API — test đơn vị"
 npm --prefix api test
 
-step "API — test chạm DB THẬT (migration trên DB trắng + outbox)"
-# Cần một Postgres đang sống. Dựng riêng mình nó — KHÔNG kéo cả stack: bước này phải rẻ đủ để
-# chạy mỗi lần sửa code, nếu không nó sẽ bị bỏ qua và cả DoD gạch 5 quay về chỗ cũ (không có
-# cơ chế nào).
-$COMPOSE up -d postgres
+step "API — test hạ tầng THẬT (migration trên DB trắng · outbox · BullMQ · SMTP)"
+# Ba container hạ tầng, KHÔNG kéo cả stack (không api, không web, không worker): bước này phải
+# rẻ đủ để chạy mỗi lần sửa code, nếu không nó sẽ bị bỏ qua và DoD gạch 5 quay về chỗ cũ.
+#
+# Vì sao cả ba: `postgres` cho migration + ranh giới transaction outbox; `redis` để chứng minh
+# BullMQ THẬT SỰ khử job đúp theo `jobId` (Queue giả chỉ khẳng định được hình dạng tham số);
+# `mailpit` để `MailTransportService` — nơi DUY NHẤT chạm nodemailer — có một bài kiểm chạm
+# hộp thư thật. Cổng của cả ba mở ở `docker-compose.override.e2e.yml`, chỉ trên loopback.
+$COMPOSE --profile dev up -d postgres redis mailpit
 ready=0
 for _ in $(seq 1 30); do
-  if $COMPOSE ps postgres 2>/dev/null | grep -q healthy; then ready=1; break; fi
+  if $COMPOSE ps postgres 2>/dev/null | grep -q healthy      && $COMPOSE ps redis 2>/dev/null | grep -q healthy; then ready=1; break; fi
   sleep 2
 done
-[ "$ready" = "1" ] || fail "postgres không lên được — tầng test DB KHÔNG được phép bỏ qua im lặng."
+[ "$ready" = "1" ] || fail "postgres/redis không lên được — tầng test hạ tầng KHÔNG được bỏ qua im lặng."
 npm --prefix api run test:db
 
 step "API — build"

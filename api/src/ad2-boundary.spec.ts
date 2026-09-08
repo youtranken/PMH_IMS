@@ -87,6 +87,52 @@ describe('AD-2 — luật chặn import xuyên ruột module', () => {
     });
   });
 
+  /**
+   * ĐƯỜNG VÒNG: cùng một file, viết dài ra thì lọt.
+   *
+   * Bản trước neo `^\.\./[^./]` — nghĩa là luật chỉ nhìn thấy đúng MỘT cách viết. Ký tự
+   * `[^./]` được thêm để `../../common/...` không bị bắt oan, và chú thích trong
+   * `ad2-boundary.js` giải thích rằng "đi lên hai tầng là ra khỏi src/modules". Lập luận đó
+   * đúng với `common/`, và SAI với `modules/`: đi lên hai tầng rồi quay vào `modules/` thì
+   * vẫn là đúng cái file đó.
+   *
+   *     import { IpAddressService } from '../ipam/ip-address.service';      // bị chặn
+   *     import { IpAddressService } from '../../modules/ipam/ip-address.service';  // lọt
+   *
+   * Hai dòng resolve về CÙNG một file. Người viết dòng thứ hai không cần biết mình đang lách —
+   * chỉ cần một lần "sửa import cho tường minh hơn" là hàng rào biến mất, im lặng.
+   *
+   * `tsconfig.json` của api còn đặt `baseUrl: "./"`, nên `src/modules/...` cũng resolve được
+   * mà không có `../` nào.
+   */
+  describe('PHẢI bắt cả những cách viết DÀI của cùng một đường dẫn', () => {
+    it.each([
+      ['../../modules/ipam/ip-address.service', 'lên hai tầng rồi quay vào modules/'],
+      ['../../modules/auth/auth.service', 'module nền cũng lọt y hệt'],
+      ['../../modules/vault/vault.service', 'két sắt'],
+      ['../../../src/modules/devices/devices.service', 'lên ba tầng rồi vào src/modules/'],
+      ['src/modules/vault/vault.service', 'baseUrl="./" nên không cần ../ nào'],
+      ['modules/software/license-assignment.service', 'dạng ngắn nhất của cùng đường đó'],
+    ])('bắt %s (%s)', (specifier) => {
+      expect(ad2.test(specifier)).toBe(true);
+    });
+
+    it.each([
+      ['../../modules/devices/devices.api', 'cửa chính viết dài vẫn phải qua'],
+      ['../../modules/audit/audit.module', 'cửa DI viết dài'],
+      ['../../modules/users/users.types', 'hợp đồng kiểu viết dài'],
+      ['../../modules/auth/roles.decorator', 'nguyên thủy hạ tầng viết dài'],
+      ['../../modules/outbox/outbox.service', 'outbox là nguyên thủy khai tường minh'],
+    ])('vẫn cho qua %s (%s)', (specifier) => {
+      expect(ad2.test(specifier)).toBe(false);
+    });
+
+    it('ngoại lệ auth↔users cũng phải hiểu cách viết dài, không mở toang', () => {
+      expect(ad2FromAuth.test('../../modules/users/users.service')).toBe(false);
+      expect(ad2FromAuth.test('../../modules/vault/vault.service')).toBe(true);
+    });
+  });
+
   it('luật phải bắt được ÍT NHẤT một chuỗi — bản glob cũ khớp số không', () => {
     const probes = [
       '../approvals/approvals.service',

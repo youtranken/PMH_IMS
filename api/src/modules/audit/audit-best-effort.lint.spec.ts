@@ -1,67 +1,15 @@
-import { execFileSync } from 'node:child_process';
-import { unlinkSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { lint, withProbe } from '../../../test/lint-probe';
 
 /**
  * Bài kiểm cho CHÍNH CÁI CỔNG, không phải cho code.
- *
- * ===== VÌ SAO PHẢI CÓ =====
- *
- * Repo này đã hai lần dựng một hàng rào lint khớp ĐÚNG SỐ KHÔNG chuỗi mà không ai biết: luật
- * AD-2 viết bằng glob sai cú pháp (chết âm thầm 9 epic, `docs/CODE-REVIEW-2026-08-28.md` M1),
- * và luật cấm `window.confirm` của oxlint (probe cho exit 0, rà soát 07/09 #8). Cả hai đều
- * "có trong config" và đều vô hiệu.
  *
  * Luật `appendBestEffort` gác đúng thứ đã hỏng ở finding #4: một hàm nuốt lỗi ghi audit mà
  * mọi nơi với tới được. Nếu selector của nó gõ sai một ký tự thì hàng rào biến mất, code vẫn
  * xanh, và lần sau ai đó gọi `appendBestEffort` trong service là NFR-03 thủng lại — im lặng.
  *
- * ===== CÁCH KIỂM =====
- *
- * Chạy eslint THẬT trên một file mồi đặt trong `src/` (phải nằm trong `src/` thì mới trúng
- * `files: ['src/**\/*.ts']` của config). Không mock, không đọc config bằng mắt.
- *
- * `process.execPath` + đường dẫn bin, KHÔNG dùng `npx`: trong tiến trình con của jest `npx`
- * có thể ENOENT, và khi đó `err.stdout` là `undefined` → output rỗng → bài kiểm kết luận
- * "không có lỗi nào" và cho kết quả GIẢ. Bẫy này đã dính một lần ở `web/src/lint-rules.test.ts`.
+ * Cơ chế chạy eslint thật (và hai cái bẫy của nó) nằm ở `api/test/lint-probe.ts` — dùng chung
+ * với bài kiểm cổng AD-2, để hai bên không trôi lệch nhau.
  */
-
-const API_ROOT = join(__dirname, '..', '..', '..');
-const ESLINT_BIN = join(API_ROOT, 'node_modules', 'eslint', 'bin', 'eslint.js');
-
-function lint(relPath: string): string {
-  try {
-    execFileSync(process.execPath, [ESLINT_BIN, '--no-warn-ignored', '--format', 'stylish', relPath], {
-      cwd: API_ROOT,
-      encoding: 'utf8',
-      stdio: 'pipe',
-    });
-    return '';
-  } catch (error) {
-    const err = error as { stdout?: string; stderr?: string; code?: string };
-    if (err.code === 'ENOENT') {
-      throw new Error(
-        `Không chạy được eslint (ENOENT) tại ${ESLINT_BIN}. Đã cài node_modules chưa? ` +
-          `KHÔNG được coi đây là "không có lỗi".`,
-      );
-    }
-    const out = `${err.stdout ?? ''}${err.stderr ?? ''}`;
-    if (out.trim() === '') {
-      throw new Error('eslint hỏng nhưng không in gì — không kết luận được, xem là ĐỎ.');
-    }
-    return out;
-  }
-}
-
-function withProbe(relPath: string, source: string, run: () => void): void {
-  const abs = join(API_ROOT, relPath);
-  writeFileSync(abs, source, 'utf8');
-  try {
-    run();
-  } finally {
-    unlinkSync(abs);
-  }
-}
 
 const CALLS_BEST_EFFORT = `import { AuditWriterService } from '../audit/audit-writer.service';
 export async function probe(audit: AuditWriterService): Promise<void> {

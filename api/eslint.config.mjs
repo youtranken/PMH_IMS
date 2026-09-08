@@ -67,8 +67,19 @@ const NO_BEST_EFFORT_AUDIT = /** @type {const} */ ({
     'NFR-03: appendBestEffort nuốt lỗi ghi audit — chỉ AuditInterceptor được dùng (dòng audit ở đó nằm SAU một mutation đã commit). Nơi khác dùng appendWithin trong transaction nghiệp vụ.',
 });
 
+/**
+ * @param {{ crossModule?: boolean, extraExceptions?: string, allowLibraries?: string[] }} [opts]
+ *   `allowLibraries` — BỎ đúng vài thư viện khỏi danh sách cấm mà GIỮ NGUYÊN AD-2.
+ *
+ *   Trước 08/09, hai file được phép chạm nguyên thủy (`mail-transport.service.ts` với
+ *   `nodemailer`, `password.service.ts` với `@node-rs/argon2`) được miễn bằng
+ *   `'no-restricted-imports': 'off'`. Nhưng luật đó chở CẢ danh sách thư viện cấm LẪN biểu
+ *   thức AD-2, nên `'off'` tắt luôn ranh giới module cho hai file nằm giữa `src/modules/` —
+ *   trong đó có lõi bảo mật. Rà soát 07/09 #9. Cùng hình dạng đã sửa ở đợt B cho
+ *   `appendBestEffort`: ngoại lệ phải khai lại luật mà BỚT đúng một mục.
+ */
 function ad2Rule(opts = {}) {
-  const { crossModule = true, extraExceptions = '' } = opts;
+  const { crossModule = true, extraExceptions = '', allowLibraries = [] } = opts;
   return /** @type {const} */ ([
     'error',
     {
@@ -97,7 +108,7 @@ function ad2Rule(opts = {}) {
           importNames: ['createCipheriv', 'createDecipheriv'],
           message: 'NFR-02/AD-15: mã hóa/giải mã chỉ qua EnvelopeCryptoService.',
         },
-      ],
+      ].filter((entry) => !allowLibraries.includes(entry.name)),
       patterns: crossModule
         ? [{ regex: ad2.ad2PatternSource(extraExceptions), message: ad2.AD2_MESSAGE }]
         : [],
@@ -159,14 +170,41 @@ export default tseslint.config(
     },
   },
   {
-    // Nơi DUY NHẤT được phép chạm nguyên thủy tương ứng.
-    files: [
-      'src/common/crypto/**/*.ts',
-      'src/common/excel/**/*.ts',
-      'src/modules/mail/mail-transport.service.ts',
-      'src/modules/auth/password.service.ts',
-    ],
+    /**
+     * Nơi DUY NHẤT được phép chạm nguyên thủy mã hóa / xuất Excel.
+     *
+     * `'off'` chỉ an toàn ở ĐÂY vì `src/common/**` nằm ngoài `src/modules/**`, nên AD-2 vốn
+     * không áp cho chúng (ranh giới `common → modules` do dependency-cruiser canh).
+     */
+    files: ['src/common/crypto/**/*.ts', 'src/common/excel/**/*.ts'],
     rules: { 'no-restricted-imports': 'off', 'no-restricted-syntax': 'off' },
+  },
+  {
+    /**
+     * Hai file trong `src/modules/` được phép chạm nguyên thủy — nhưng CHỈ nguyên thủy của
+     * chúng, KHÔNG kèm giấy phép bỏ qua AD-2.
+     *
+     * Bản trước gộp chung với khối trên và dùng `'off'`. `no-restricted-imports` chở cả danh
+     * sách thư viện cấm lẫn biểu thức AD-2, nên `password.service.ts` (lõi bảo mật) và
+     * `mail-transport.service.ts` được phép import thẳng ruột mọi module khác — vĩnh viễn,
+     * không ai thấy. Rà soát 07/09 #9; canh bằng `src/ad2-gate.lint.spec.ts`.
+     *
+     * `no-restricted-syntax` KHÔNG còn được tắt: cả hai file đọc `SMTP_HOST/PORT/USER` và
+     * `readSecretFile`, không đọc `SMTP_PASSWORD` từ env và không gọi `createCipheriv` — tức
+     * là chúng chưa bao giờ cần miễn luật đó.
+     */
+    files: ['src/modules/mail/mail-transport.service.ts'],
+    rules: { 'no-restricted-imports': ad2Rule({ allowLibraries: ['nodemailer'] }) },
+  },
+  {
+    files: ['src/modules/auth/password.service.ts'],
+    rules: {
+      'no-restricted-imports': ad2Rule({
+        allowLibraries: ['@node-rs/argon2'],
+        // `password.service` nằm trong module auth → giữ luôn ngoại lệ auth↔users (AD-3).
+        extraExceptions: ad2.AUTH_USERS_EXCEPTION,
+      }),
+    },
   },
   {
     files: ['test/**/*.ts', 'src/**/*.spec.ts'],

@@ -61,11 +61,15 @@ Trước khi viết **bất kỳ** component / hook / service nào: mở `docs/S
   (~8 giây). Dựng 08/09 — trước đó `api/test/` rỗng và `test:db` trỏ vào một file config không
   tồn tại, nên lỗi ranh giới transaction chỉ chứng minh được bằng E2E. Mỗi file tự tạo rồi xóa
   một DATABASE trắng riêng; migration thật chạy vào đó. Cần Postgres của compose mở cổng
-  loopback: `docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml up -d postgres`.
-  Đây là nơi hỏi những câu mà `Pool` giả không hỏi được — **DoD gạch 5** ("migration chạy sạch
-  trên DB TRẮNG") và ranh giới transaction của `OutboxService`. GitHub Actions KHÔNG chạy tầng
-  này (runner không có Postgres); `ops/ci-local.sh` tầng một ép nó, y như E2E.
-  Vẫn **cấm mock drizzle** — viết bài ở đây, đừng dựng `Pool` giả thứ hai.
+  loopback, cùng Redis và Mailpit:
+  `docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml --profile dev up -d postgres redis mailpit`.
+  Đây là nơi hỏi những câu mà đồ giả không hỏi được: **DoD gạch 5** ("migration chạy sạch trên
+  DB TRẮNG"), ranh giới transaction của `OutboxService`, việc BullMQ **thật sự** khử job đúp
+  theo `jobId`, và đường SMTP tới hộp thư thật. GitHub Actions KHÔNG chạy tầng này (runner
+  không có Postgres/Redis/Mailpit); `ops/ci-local.sh` tầng một ép nó, y như E2E.
+  Vẫn **cấm mock drizzle** — viết bài ở đây, đừng dựng `Pool` giả thứ hai. Và đừng tin một
+  bài kiểm chỉ vì nó xanh: gieo một đột biến vào code rồi xem nó có đỏ không (bài mail của
+  chính tôi từng xanh dù đã bỏ hẳn `text` — Mailpit tự suy phần văn bản ra từ HTML).
 - Lõi bảo mật (Argon2, TOTP chống replay, envelope AES-GCM + xoay `key_version`, CSRF, lockout) — **không có test thì không được merge**.
 
 **Cổng kiểm kiểu của web là `npm run build`, KHÔNG phải `npx tsc --noEmit`.** `web/tsconfig.json`
