@@ -1,4 +1,4 @@
-import { useCallback, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { errorCode } from '@/lib/api';
 import { StepUpDialog } from '@/ui/step-up-dialog';
 
@@ -34,11 +34,33 @@ export function useStepUpRetry(csrfToken: string): {
   /** Đặt vào cây JSX của màn — hộp hỏi mã chỉ hiện khi cần. */
   dialog: ReactNode;
 } {
-  const [pending, setPending] = useState<{
+  type Pending = {
     action: () => Promise<unknown>;
     resolve: (value: unknown) => void;
     reject: (reason: unknown) => void;
-  } | null>(null);
+  };
+  const [pending, setPending] = useState<Pending | null>(null);
+
+  /*
+   * Bản sao trong ref để hai chỗ dưới đây đọc được lời hứa ĐANG treo mà không phải phụ thuộc
+   * vào `pending` trong closure:
+   *   1. `run()` bị gọi lần nữa khi lần trước còn đang chờ gõ mã;
+   *   2. component tháo trong lúc hộp hỏi mã còn mở.
+   *
+   * Không có nó thì lời hứa cũ KHÔNG BAO GIỜ settle: nơi gọi `await` mãi, `finally
+   * { setBusy(false) }` không chạy, nút Lưu kẹt ở "Đang xử lý…" tới khi tải lại trang —
+   * đúng chế độ hỏng mà hook này sinh ra để chặn (rà soát 08/09, #6).
+   */
+  const pendingRef = useRef<Pending | null>(null);
+
+  const settle = useCallback((next: Pending | null) => {
+    const previous = pendingRef.current;
+    pendingRef.current = next;
+    setPending(next);
+    if (previous) previous.reject(new Error('STEPUP_CANCELLED'));
+  }, []);
+
+  useEffect(() => () => settle(null), [settle]);
 
   const run = useCallback(
     async <T,>(action: () => Promise<T>): Promise<T> => {
@@ -52,7 +74,7 @@ export function useStepUpRetry(csrfToken: string): {
          * step-up — chúng chạy sau khi thử lại thành công, y như khi không có hàng rào.
          */
         return new Promise<T>((resolve, reject) => {
-          setPending({
+          settle({
             action: action as () => Promise<unknown>,
             resolve: resolve as (value: unknown) => void,
             reject,
@@ -60,22 +82,20 @@ export function useStepUpRetry(csrfToken: string): {
         });
       }
     },
-    [],
+    [settle],
   );
 
   const dialog = pending ? (
     <StepUpDialog
       csrfToken={csrfToken}
       onClose={() => {
-        /*
-         * Đóng hộp = HỦY việc. Phải `reject` chứ không để lời hứa treo mãi: nơi gọi thường
-         * có `finally { setBusy(false) }`, treo là nút Lưu kẹt ở trạng thái đang-ghi vĩnh viễn.
-         */
-        pending.reject(new Error('STEPUP_CANCELLED'));
-        setPending(null);
+        // Đóng hộp = HỦY việc. `settle(null)` lo phần `reject` — xem chú thích ở trên.
+        settle(null);
       }}
       onDone={() => {
         const current = pending;
+        // Gỡ khỏi ref TRƯỚC khi xóa state, để `settle` không reject chính lời hứa sắp thành công.
+        pendingRef.current = null;
         setPending(null);
         /*
          * Thử lại ĐÚNG MỘT lần. Gõ mã xong mà vẫn bị đòi mã nữa thì đó là lỗi thật, không

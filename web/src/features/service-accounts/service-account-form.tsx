@@ -186,14 +186,20 @@ export function ServiceAccountForm({
                       );
                       toast({ message: t('serviceAccounts.secretSaved') });
                     } catch (err) {
-                      // Đóng hộp hỏi mã = người dùng chủ động bỏ qua bước cất, không phải lỗi
-                      // hệ thống — nhưng VẪN phải nói, vì mật khẩu họ vừa gõ không vào két.
+                      /*
+                       * TONE phải theo NHÁNH, không hạ hết về `warn`.
+                       *
+                       * Đóng hộp hỏi mã = người dùng chủ động bỏ qua bước cất: `warn` đúng.
+                       * Nhưng một lỗi THẬT (500, trùng nhãn 409, mất mạng) mà cũng `warn` thì
+                       * nó chỉ hiện 4 giây thay vì 7 — trong đúng luồng mà mật khẩu vừa gõ sẽ
+                       * không lấy lại được sau khi hộp đóng (rà soát 08/09, #7).
+                       */
+                      const cancelled = (err as Error).message === 'STEPUP_CANCELLED';
                       toast({
-                        message:
-                          (err as Error).message === 'STEPUP_CANCELLED'
-                            ? t('serviceAccounts.secretSkipped')
-                            : errorMessage(err),
-                        tone: 'warn',
+                        message: cancelled
+                          ? t('serviceAccounts.secretSkipped')
+                          : errorMessage(err),
+                        tone: cancelled ? 'warn' : 'error',
                       });
                     }
                   }

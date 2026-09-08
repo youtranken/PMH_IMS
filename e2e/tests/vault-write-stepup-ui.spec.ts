@@ -81,7 +81,9 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
     await expect(page.getByRole('cell', { name: label }).first()).toBeVisible();
 
     await rowAction(page, label, 'Xoay');
-    const rotateDialog = page.getByRole('dialog');
+    // Khoanh theo tiêu đề: khi hộp hỏi mã mở ra thì có HAI dialog, `getByRole('dialog')`
+    // trần sẽ mơ hồ.
+    const rotateDialog = page.getByRole('dialog').filter({ hasText: 'Xoay' });
     await rotateDialog.getByRole('textbox', { name: 'Giá trị mới' }).fill(`Moi#${stamp}`);
     await rotateDialog.getByRole('button', { name: 'Xoay' }).click();
 
@@ -144,13 +146,26 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await rowAction(page, label, 'Xoay');
-    const rotateDialog = page.getByRole('dialog');
+    // Khoanh theo tiêu đề: khi hộp hỏi mã mở ra thì có HAI dialog, `getByRole('dialog')`
+    // trần sẽ mơ hồ.
+    const rotateDialog = page.getByRole('dialog').filter({ hasText: 'Xoay' });
     await rotateDialog.getByRole('textbox', { name: 'Giá trị mới' }).fill(`Moi#${stamp}`);
     await rotateDialog.getByRole('button', { name: 'Xoay' }).click();
     await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
 
-    // Bấm Hủy trong hộp hỏi mã.
-    await page.getByRole('button', { name: 'Hủy' }).first().click();
+    /*
+     * Bấm Hủy CỦA HỘP HỎI MÃ — phải khoanh vùng, không dùng `.first()`.
+     *
+     * Lúc này CẢ HAI hộp đang mở và cả hai đều có nút "Hủy" (`common.cancel`): hộp Xoay và
+     * hộp hỏi mã. `.first()` bắt trúng nút Hủy của hộp XOAY — nút đang nằm dưới lớp modal
+     * (`pointer-events: none`), nên hoặc là treo tới hết 150 giây, hoặc nếu lọt thì nó đóng
+     * hộp Xoay và tháo luôn hộp hỏi mã, khiến khẳng định cuối chạy trên một node đã chết.
+     * Kiểu nào cũng là bài kiểm nói dối (rà soát 08/09, #3).
+     */
+    const stepUpDialog = page
+      .getByRole('dialog')
+      .filter({ hasText: 'Xác nhận danh tính' });
+    await stepUpDialog.getByRole('button', { name: 'Hủy' }).click();
     await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeHidden();
 
     /*

@@ -93,7 +93,16 @@ test.describe('C2 — ghi vào két cũng phải step-up', () => {
       'thu hồi bí mật phải đòi step-up',
     ).toBe('STEPUP_REQUIRED');
 
-    // Giá trị cũ phải còn nguyên: không lượt ghi nào lọt qua.
+    /*
+     * Ngăn két vẫn còn — tức lượt THU HỒI không lọt (thu hồi là xóa mềm, lọt thì nó biến khỏi
+     * danh sách).
+     *
+     * Cố ý KHÔNG khẳng định "giá trị cũ còn nguyên" ở đây: `listFor` chỉ trả metadata, nên nó
+     * không thể phát hiện một lượt XOAY lọt qua. Việc chứng minh xoay bị chặn nằm ở khẳng định
+     * `STEPUP_REQUIRED` phía trên, và luồng xoay thành công sau khi gõ mã được chứng minh ở
+     * `vault-write-stepup-ui.spec.ts`. Chú thích cũ hứa nhiều hơn thứ dòng dưới kiểm được
+     * (rà soát 08/09, #8).
+     */
     const stillThere = await page.request.get(
       `/api/v1/vault/secrets?ownerType=service_account&ownerId=${ownerId}`,
     );
@@ -162,5 +171,70 @@ test.describe('C1 — file đính kèm theo ma trận quyền của két', () =>
     // SA vẫn tải được bình thường — hàng rào không được chặn nhầm người có quyền.
     const saDownload = await page.request.get(`/api/v1/files/${fileId}/download`);
     expect(saDownload.status()).toBe(200);
+  });
+
+  /**
+   * HÀNG RÀO CHỈ ÁP CHO `service_account` VÀ `isp` — Member vẫn xem được giấy tờ THIẾT BỊ.
+   *
+   * Bài này canh một hồi quy tôi ĐÃ gây ra rồi phải sửa (code review 08/09, #1): bản đầu gác
+   * cả bốn loại của `SECRET_OWNER_TYPES`. Ma trận quyền là opt-in và `resolveTier` mặc định
+   * `'denied'`, nên MỌI Member mất quyền xem MỌI hóa đơn, biên bản bàn giao thiết bị — đo
+   * được HTTP 403. Story 2.3 nói đó là thứ cả team IT xem hằng ngày, và điều đó vẫn đúng.
+   *
+   * Bộ test cũ không bắt được vì `attachments.spec.ts` chỉ đăng nhập bằng SA. Bài này là chỗ
+   * duy nhất chạy đường đó bằng Member.
+   */
+  test('nhưng Member VẪN xem được giấy tờ thiết bị — hàng rào không được rộng quá', async ({
+    page,
+    browser,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+
+    const catalog = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/catalog', { credentials: 'include' });
+      return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
+    });
+    const typeId = catalog.deviceTypes.find((t) => t.name === 'PC')!.id;
+    const device = await page.request.post('/api/v1/devices', {
+      headers: await writeHeaders(page),
+      data: { code: `PC-E2E-ATT-${stamp}`, name: 'May co hoa don', deviceTypeId: typeId },
+    });
+    expect(device.status()).toBe(201);
+    const deviceId = ((await device.json()) as { device: { id: string } }).device.id;
+
+    const uploaded = await page.request.post('/api/v1/files', {
+      headers: { 'X-CSRF-Token': (await writeHeaders(page))['X-CSRF-Token'], Origin: APP_ORIGIN },
+      multipart: {
+        ownerType: 'device',
+        ownerId: deviceId,
+        file: {
+          name: 'hoa-don.pdf',
+          mimeType: 'application/pdf',
+          buffer: Buffer.from('%PDF-1.4\nhoa don mua may\n%%EOF\n'),
+        },
+      },
+    });
+    expect(uploaded.status()).toBe(201);
+    const fileId = ((await uploaded.json()) as { id: string }).id;
+
+    const memberCtx = await browser.newContext({ baseURL: APP_ORIGIN, ignoreHTTPSErrors: true });
+    const memberPage = await memberCtx.newPage();
+    try {
+      await firstLogin(memberPage, E2E_MEMBER);
+
+      const listed = await memberPage.request.get(
+        `/api/v1/files?ownerType=device&ownerId=${deviceId}`,
+      );
+      expect(
+        listed.status(),
+        'story 2.3: hóa đơn thiết bị là thứ cả team IT xem hằng ngày',
+      ).toBe(200);
+
+      const downloaded = await memberPage.request.get(`/api/v1/files/${fileId}/download`);
+      expect(downloaded.status(), 'Member phải tải được giấy tờ thiết bị').toBe(200);
+    } finally {
+      await memberCtx.close();
+    }
   });
 });

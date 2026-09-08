@@ -399,9 +399,19 @@ export class AuthService {
   async stepUp(session: SessionRecord, token: string): Promise<void> {
     const user = await this.requireUser(session.userId);
     if (user.totpEnrolledAt === null) {
+      /*
+       * Thông điệp phải CHỈ ĐƯỜNG RA, vì đây là chỗ người dùng kẹt lại.
+       *
+       * Từ 08/09 cửa này canh cả đường GHI vào két (C2), không chỉ đường đọc — nên câu cũ
+       * ("không thể xem bí mật") vừa sai vừa cụt: tài khoản tạo với `totpLoginRequired: false`
+       * và chưa enroll bao giờ sẽ gõ mã nào cũng trượt mà không biết phải làm gì tiếp
+       * (rà soát 08/09, #4).
+       */
       throw new BadRequestException({
         code: 'TOTP_NOT_ENROLLED',
-        message: 'Chưa bật xác thực 2 lớp — không thể xem bí mật.',
+        message:
+          'Chưa bật xác thực 2 lớp nên không mở được két (kể cả để ghi). ' +
+          'Vào Hồ sơ của bạn để bật xác thực 2 lớp, rồi thử lại.',
       });
     }
     const secret = this.openTotpSecret(user);

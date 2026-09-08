@@ -5,6 +5,8 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { downloadFile } from '@/lib/download-file';
 import { formatDateTime } from '@/lib/format';
+import { ME_KEY } from '@/lib/api';
+import type { Me } from '@/lib/me';
 import { uploadFile } from '@/lib/upload';
 import { FilePicker } from '@/ui/file-picker';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
@@ -86,6 +88,20 @@ export function AttachmentPanel({
   const toast = useToast();
   const askConfirm = useConfirm();
   const queryClient = useQueryClient();
+
+  /*
+   * XÓA đính kèm siết về SA/Admin từ 08/09 (C1) — nên nút Xóa cũng phải biến mất với Member,
+   * không phải bày ra để bấm rồi nhận 403.
+   *
+   * Đọc `me` thẳng từ cache dùng chung (`ME_KEY`) chứ không thêm prop: bảy chỗ gọi panel này
+   * đều đang dùng `canEdit` với nghĩa "chưa thanh lý / không đang bận", thêm một prop nữa là
+   * bảy lần phải nhớ truyền, và quên một chỗ thì lỗi quay lại y như cũ. `me` luôn có sẵn
+   * trong cache vì shell nạp nó trước khi dựng bất kỳ màn nào.
+   *
+   * Đây đúng luật mà `device-detail.tsx:361` tự đặt ra: "UI đừng bày nút ra để bấm rồi 403".
+   */
+  const me = queryClient.getQueryData<Me>(ME_KEY);
+  const canDelete = canEdit && (me?.role === 'sa' || me?.role === 'admin');
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -182,7 +198,7 @@ export function AttachmentPanel({
                       >
                         {t('attachments.download')}
                       </button>
-                      {canEdit ? (
+                      {canDelete ? (
                         <button
                           type="button"
                           className="btn sm danger"

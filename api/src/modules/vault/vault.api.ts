@@ -35,8 +35,24 @@ export class VaultApiService implements OnModuleInit, OwnerAccessChecker {
     private readonly ownerAccess: OwnerAccessRegistry,
   ) {}
 
-  /** Bốn loại chủ thể mà ma trận quyền của két phủ (`OwnerAccessChecker`). */
-  readonly ownerTypes = SECRET_OWNER_TYPES;
+  /**
+   * Loại chủ thể mà `vault` nhận canh quyền ĐỌC ĐÍNH KÈM — chỉ `service_account` và `isp`.
+   *
+   * KHÔNG phải cả bốn loại của `SECRET_OWNER_TYPES`, và đây là chỗ bản đầu của tôi làm sai:
+   * gác cả `device`/`software` thì mọi Member mất quyền xem MỌI giấy tờ thiết bị (ma trận là
+   * opt-in, `resolveTier` mặc định `'denied'`, và Member mặc định không có dòng nào trong
+   * `access_list`). Đã đo thật: `GET /files?ownerType=device` trả 403 cho Member. Hóa đơn và
+   * biên bản bàn giao thiết bị là thứ cả team IT xem hằng ngày — đúng điều story 2.3 nói, và
+   * điều đó vẫn đúng.
+   *
+   * Hai loại ở đây là hai loại được thêm vào `FILE_OWNER_TYPES` SAU khi ma trận ra đời, và là
+   * hai loại mà đính kèm hay chép sẵn thông tin đăng nhập (biên bản bàn giao tài khoản dịch
+   * vụ, ảnh chụp cấu hình router). Đó là lỗ hổng thật cần bịt, không phải cả bốn.
+   *
+   * Muốn siết thêm `device`/`software` về sau thì thêm vào đây — nhưng phải là một quyết định
+   * có ý thức, kèm đường cho SA cấp quyền hàng loạt, không phải tác dụng phụ.
+   */
+  readonly ownerTypes = ['service_account', 'isp'] as const;
 
   /**
    * Nhận canh quyền đọc cho 4 loại đó, thay cho mọi module nền muốn hỏi (hiện là `files`).
