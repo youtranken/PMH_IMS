@@ -99,20 +99,20 @@ export class SessionService {
   }
 
   /**
-   * Thu hồi phiên TRONG transaction đang chạy (AD-5).
-   * Bắt buộc dùng bản này khi việc thu hồi đi kèm việc khác trong cùng transaction:
-   * dùng `revoke()` (chạy trên pool) sẽ commit ngay cả khi transaction rollback —
-   * người dùng mất phiên cũ mà không có phiên mới, kẹt giữa chừng.
+   * Thu hồi phiên — LUÔN trong transaction đang chạy (AD-5). Không có bản chạy-trên-pool.
+   *
+   * Từng có một `revoke(id, reason)` chạy thẳng trên pool, và chính chú thích của nó cảnh báo
+   * rằng nó commit kể cả khi transaction ngoài rollback. Rà soát 07/09 tìm thấy đúng ba nơi
+   * dùng nó — `killSession`, `stepUp` brute-force, `logout` — và cả ba đều là mẫu N3: phiên
+   * chết trước, dòng audit ghi sau ở một transaction khác, transaction đó hỏng thì phiên đã
+   * mất mà không còn gì nói ai đá và đá lúc nào (`audit_log` chỉ-thêm, không có đường bù).
+   *
+   * Sửa xong ba nơi thì hàm kia còn 0 chỗ gọi. Giữ lại một hàm mồ côi mà tài liệu của nó nói
+   * "đừng dùng" chỉ là để dành sẵn cái bẫy cho người viết đường thu hồi thứ tư. Nên xóa hẳn:
+   * bây giờ muốn thu hồi phiên thì buộc phải có `tx` trong tay (rà soát 08/09, #2).
    */
   async revokeWithin(tx: Tx, id: string, reason: string): Promise<void> {
     await tx
-      .update(sessionsTable)
-      .set({ revokedAt: new Date(), revokedReason: reason })
-      .where(and(eq(sessionsTable.id, id), isNull(sessionsTable.revokedAt)));
-  }
-
-  async revoke(id: string, reason: string): Promise<void> {
-    await this.db
       .update(sessionsTable)
       .set({ revokedAt: new Date(), revokedReason: reason })
       .where(and(eq(sessionsTable.id, id), isNull(sessionsTable.revokedAt)));

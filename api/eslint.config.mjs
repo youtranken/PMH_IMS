@@ -28,6 +28,45 @@ import ad2 from './ad2-boundary.js';
  *   `main.ts`/`worker.ts`/`health`, nơi việc đấu dây mọi module là NHIỆM VỤ chứ không phải
  *   vi phạm; ranh giới `common → modules` do dependency-cruiser canh).
  */
+/** Luật cấm cú pháp áp cho MỌI file `src/` — tách ra const để chỗ ngoại lệ dùng lại được. */
+const RESTRICTED_SYNTAX = /** @type {const} */ ([
+  {
+    // `callee.name` chỉ có với lời gọi TRẦN. `crypto.createCipheriv(...)` là
+    // MemberExpression nên bản cũ để lọt đúng cách viết phổ biến nhất. Bắt cả hai dạng.
+    selector:
+      "CallExpression[callee.name=/^create(?:De)?cipheriv$/], CallExpression[callee.property.name=/^create(?:De)?cipheriv$/]",
+    message:
+      'NFR-02/AD-15: mã hóa/giải mã chỉ qua EnvelopeCryptoService — không tự gọi createCipheriv/createDecipheriv.',
+  },
+  {
+    selector:
+      "MemberExpression[object.name='process'][property.name='env'] > Identifier[name=/^(MASTER_KEY|PASSWORD_PEPPER|SMTP_PASSWORD)$/]",
+    message: 'AD-11: bí mật đọc từ file docker secret, không từ env.',
+  },
+]);
+
+/**
+ * NFR-03 — `appendBestEffort` nuốt lỗi ghi audit, nên nó chỉ được tồn tại ở ĐÚNG MỘT nơi.
+ *
+ * Rà soát 07/09 (#4): trước 08/09 chỉ có một hàm `append()` và nó bọc `try/catch` chỉ log rồi
+ * đi tiếp. Vì mọi nơi dùng chung hàm đó, `vault.reveal()` — writer DUY NHẤT của đường mở két,
+ * do controller khai `writtenByService: true` — cũng nuốt lỗi: INSERT hỏng thì plaintext vẫn
+ * ra và vết chỉ còn một dòng log container.
+ *
+ * Bản sửa tách ba hàm và ghi rõ trong chú thích rằng chỉ interceptor được dùng bản nuốt lỗi.
+ * Chú thích không phải hàng rào: người viết đường ghi thứ 63 sẽ chọn hàm không làm mình gãy,
+ * và hỏng lại đúng như cũ — im lặng. Nên luật này ép bằng máy, đúng nếp `docs/SHARED-REGISTRY.md`
+ * mục "Cách CI ép luật (không trông vào review)".
+ *
+ * Đường ghi mới cần audit thì dùng `appendWithin` trong chính transaction nghiệp vụ, kèm
+ * `@Audited(..., { writtenByService: true })`.
+ */
+const NO_BEST_EFFORT_AUDIT = /** @type {const} */ ({
+  selector: "CallExpression[callee.property.name='appendBestEffort']",
+  message:
+    'NFR-03: appendBestEffort nuốt lỗi ghi audit — chỉ AuditInterceptor được dùng (dòng audit ở đó nằm SAU một mutation đã commit). Nơi khác dùng appendWithin trong transaction nghiệp vụ.',
+});
+
 function ad2Rule(opts = {}) {
   const { crossModule = true, extraExceptions = '' } = opts;
   return /** @type {const} */ ([
@@ -97,22 +136,7 @@ export default tseslint.config(
     files: ['src/**/*.ts'],
     rules: {
       'no-restricted-imports': ad2Rule({ crossModule: false }),
-      'no-restricted-syntax': [
-        'error',
-        {
-          // `callee.name` chỉ có với lời gọi TRẦN. `crypto.createCipheriv(...)` là
-          // MemberExpression nên bản cũ để lọt đúng cách viết phổ biến nhất. Bắt cả hai dạng.
-          selector:
-            "CallExpression[callee.name=/^create(?:De)?cipheriv$/], CallExpression[callee.property.name=/^create(?:De)?cipheriv$/]",
-          message:
-            'NFR-02/AD-15: mã hóa/giải mã chỉ qua EnvelopeCryptoService — không tự gọi createCipheriv/createDecipheriv.',
-        },
-        {
-          selector:
-            "MemberExpression[object.name='process'][property.name='env'] > Identifier[name=/^(MASTER_KEY|PASSWORD_PEPPER|SMTP_PASSWORD)$/]",
-          message: 'AD-11: bí mật đọc từ file docker secret, không từ env.',
-        },
-      ],
+      'no-restricted-syntax': ['error', ...RESTRICTED_SYNTAX, NO_BEST_EFFORT_AUDIT],
     },
   },
   {
@@ -152,5 +176,21 @@ export default tseslint.config(
       '@typescript-eslint/no-unsafe-call': 'off',
       'no-restricted-imports': 'off',
     },
+  },
+  {
+    /**
+     * HAI nơi duy nhất được gọi `appendBestEffort` — xem `NO_BEST_EFFORT_AUDIT` phía trên:
+     *   - interceptor: nơi dùng thật, vì dòng audit ở đó nằm SAU một mutation đã commit;
+     *   - spec của chính writer: phải gọi được thì mới chứng minh nó nuốt lỗi.
+     *
+     * Khối này khai lại `no-restricted-syntax` KHÔNG kèm luật đó, chứ không tắt cả rule: tắt
+     * hẳn thì hai file này cũng thoát luôn luật cấm `createCipheriv` và luật cấm đọc bí mật từ
+     * `process.env` — mở một lỗ chẳng ai định mở.
+     */
+    files: [
+      'src/modules/audit/audit.interceptor.ts',
+      'src/modules/audit/audit-writer.service.spec.ts',
+    ],
+    rules: { 'no-restricted-syntax': ['error', ...RESTRICTED_SYNTAX] },
   },
 );

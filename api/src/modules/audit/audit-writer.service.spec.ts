@@ -53,9 +53,16 @@ describe('AuditWriterService — cột ip (NFR-03, finding #3)', () => {
   });
 
   /**
-   * Nơi gọi khai `ip` tường minh thì lời khai đó THẮNG ngữ cảnh. Cần cho các dòng nói về một
-   * IP khác với IP của request đang chạy (ví dụ SA đá một phiên: dòng audit nói về phiên bị
-   * đá, còn IP của SA là IP hiện tại — hai thứ khác nhau, phải phân biệt được).
+   * Nơi gọi khai `ip` tường minh thì lời khai đó THẮNG ngữ cảnh.
+   *
+   * Nói thẳng: HIỆN KHÔNG CHỖ GỌI NÀO dùng cửa này. Nó tồn tại vì `toRow()` buộc phải có một
+   * luật cho `entry.ip`, và "mặc định lấy từ ngữ cảnh, cho phép khai đè" là hình dạng không
+   * phải viết lại khi có nhu cầu thật (ví dụ hình dung được: một dòng ghi trong request nhưng
+   * KHÔNG được mang IP của request đó — khai `ip: null`).
+   *
+   * Hai bài này giữ phần tinh tế và dễ vỡ nhất của luật đó: `undefined` (không khai) khác hẳn
+   * `null` (khai là không có). Viết `entry.ip ?? currentRequestIp()` là gộp hai thứ làm một và
+   * `ip: null` sẽ âm thầm rơi ngược về ngữ cảnh.
    */
   it('ip khai tường minh thắng ngữ cảnh', async () => {
     const { db, rows } = dbSpy();

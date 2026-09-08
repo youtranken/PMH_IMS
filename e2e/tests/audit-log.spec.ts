@@ -194,6 +194,19 @@ test.describe('Nhật ký kiểm toán — "từ đâu" (NFR-03)', () => {
   });
 
   test('dòng ghi TRONG transaction cũng có IP, và endpoint đọc trả nó ra', async ({ page }) => {
+    /*
+     * MỐC THỜI GIAN LẤY TRƯỚC KHI ĐĂNG NHẬP — và đây là phần quan trọng nhất của bài.
+     *
+     * `audit_log` là bảng CHỈ-THÊM, không bao giờ được dọn giữa các lượt chạy (chính bài
+     * "chỉ-thêm" phía trên chứng minh `TRUNCATE` bị chặn). Bản đầu của bài này đếm mọi dòng
+     * `auth.login.ok` có ip của tài khoản E2E, không giới hạn thời gian — mà lượt chạy đầu
+     * tiên đã để lại 133 dòng như vậy. Từ đó trở đi nó XANH VĨNH VIỄN: gỡ sạch phần điền IP
+     * rồi chạy lại vẫn xanh, vì 133 dòng cũ đủ thỏa điều kiện (rà soát 08/09, #1).
+     *
+     * Đúng chế độ hỏng mà đợt A đã dính một lần: bài kiểm không thể đỏ thì nó không phải bài
+     * kiểm, chỉ là một dòng chữ trấn an.
+     */
+    const before = sql(`SELECT now()`);
     await firstLogin(page, E2E_SA);
 
     /*
@@ -201,14 +214,22 @@ test.describe('Nhật ký kiểm toán — "từ đâu" (NFR-03)', () => {
      * đường khác hẳn bài trên. Ngữ cảnh request (`AsyncLocalStorage`) phải sống qua cả
      * `db.transaction`, nếu không thì đúng đường ĐÔNG NHẤT của hệ thống lại là đường mất IP.
      */
-    const rows = sql(
+    const fresh = sql(
       `SELECT count(*) FROM audit_log WHERE actor = '${E2E_SA.email}' ` +
-        `AND action IN ('auth.login.ok','auth.password.ok') AND ip IS NOT NULL`,
+        `AND action IN ('auth.login.ok','auth.password.ok') ` +
+        `AND created_at > '${before}'::timestamptz AND ip IS NOT NULL`,
     );
     expect(
-      Number(rows),
-      'audit ghi trong transaction phải giữ được ngữ cảnh request',
+      Number(fresh),
+      'dòng audit sinh ra TRONG lượt chạy này phải có ip — ngữ cảnh request phải sống qua transaction',
     ).toBeGreaterThan(0);
+
+    // Và không dòng mới nào được thiếu ip: một dòng câm lẫn giữa các dòng có tiếng vẫn là mất vết.
+    const freshNull = sql(
+      `SELECT count(*) FROM audit_log WHERE actor = '${E2E_SA.email}' ` +
+        `AND created_at > '${before}'::timestamptz AND ip IS NULL`,
+    );
+    expect(Number(freshNull), 'không dòng nào của lượt chạy này được để trống ip').toBe(0);
 
     // Và người điều tra phải ĐỌC được nó: ghi vào cột mà `SELECT` không lấy thì vẫn là câm.
     const response = await page.request.get(
