@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { AuditModule } from '../audit/audit.module';
+import { ExpiryModule } from '../expiry/expiry.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { DevicesModule } from '../devices/devices.module';
 import { IspDevicePanel } from './isp-device-panel';
@@ -18,7 +19,7 @@ import { SoftwareService } from './software.service';
  * Ra ngoài chỉ xuất `SoftwareApiService` (AD-2).
  */
 @Module({
-  imports: [AuditModule, CatalogModule, DevicesModule],
+  imports: [AuditModule, CatalogModule, DevicesModule, ExpiryModule],
   controllers: [SoftwareController, IspLineController],
   providers: [
     ExcelExportService,

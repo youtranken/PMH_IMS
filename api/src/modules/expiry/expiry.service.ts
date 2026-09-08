@@ -3,6 +3,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { ExpirySourceRegistry } from '../../common/expiry/expiry-registry';
+import type { Tx } from '../../common/tx';
 import { addDays, daysBetween, isoDateInTz } from '../../common/today';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import type { ExpiryItem } from '../../common/expiry/expiry-source';
@@ -104,26 +105,53 @@ export class ExpiryService {
       });
     }
 
-    // Lấy mốc cũ TRƯỚC khi gọi module chủ, để lịch sử ghi được "từ ngày nào sang ngày nào".
-    const before = await this.findItem(source.sourceKind, id);
+    /*
+     * CHỈ ĐIỀU PHỐI — không tự ghi sổ nữa (rà soát 07/09, #7).
+     *
+     * Bản trước gọi `source.renew()` (commit), rồi mở transaction THỨ HAI để ghi
+     * `renewal_history`. Hai lỗi cộng dồn:
+     *
+     * 1. HAI CỬA, MỘT SỔ. Web có hai nút Gia hạn: màn "Sắp hết hạn" đi qua đây và ghi sổ; nút
+     *    trong chính trang hồ sơ gọi thẳng `SoftwareService.renew` và KHÔNG ghi gì. `end_date`
+     *    đổi, toast xanh, lịch sử hồ sơ có dòng — nhưng báo cáo cuối năm và khối "gia hạn gần
+     *    đây" trên dashboard đọc `renewal_history` nên trả rỗng. Bảng chỉ-thêm: không vá ngược.
+     * 2. MẤT SỔ (mẫu N3). `end_date` đã commit mà transaction thứ hai hỏng thì hồ sơ đã gia
+     *    hạn nhưng sổ không có dòng nào, và không có đường bù.
+     *
+     * Nay phần ghi sổ nằm TRONG transaction của module chủ (`recordRenewalWithin`), nên cả hai
+     * cửa dùng chung đúng một đường và một transaction. Ở đây chỉ còn kiểm tra rồi gọi.
+     */
     await source.renew(actor, id, newEnd);
+  }
 
-    await this.db.transaction(async (tx) => {
-      await tx.insert(renewalHistoryTable).values({
-        objectKind: kind,
-        objectId: id,
-        label: before?.label ?? id,
-        oldEnd: before?.end ?? null,
-        newEnd,
-        actor,
-      });
-      await this.audit.appendWithin(tx, {
-        actor,
-        action: 'expiry.renewed',
-        objectType: kind,
-        objectId: id,
-        detail: { oldEnd: before?.end ?? null, newEnd },
-      });
+  /**
+   * Ghi một lượt gia hạn vào `renewal_history` — TRONG transaction của module chủ.
+   *
+   * `expiry` là chủ sở hữu bảng này (AD-3), nên câu INSERT phải nằm ở đây; nhưng thời điểm ghi
+   * thuộc về module chủ, vì chỉ nó biết lượt gia hạn có thành công hay không. Cửa này là cách
+   * dung hòa: chủ bảng giữ câu lệnh, module chủ giữ transaction.
+   *
+   * Gọi qua `ExpiryApiService` (AD-2). Đây là chiều nghiệp vụ → nền, hợp lệ; chiều ngược lại
+   * vẫn đi qua sổ đăng ký ở `common` như cũ, `expiry` không biết module nào tồn tại.
+   */
+  async recordRenewalWithin(
+    tx: Tx,
+    entry: {
+      objectKind: string;
+      objectId: string;
+      label: string;
+      oldEnd: string | null;
+      newEnd: string;
+      actor: string;
+    },
+  ): Promise<void> {
+    await tx.insert(renewalHistoryTable).values(entry);
+    await this.audit.appendWithin(tx, {
+      actor: entry.actor,
+      action: 'expiry.renewed',
+      objectType: entry.objectKind,
+      objectId: entry.objectId,
+      detail: { oldEnd: entry.oldEnd, newEnd: entry.newEnd },
     });
   }
 
@@ -148,14 +176,6 @@ export class ExpiryService {
       .limit(limit);
   }
 
-  /** Tìm một mục trong cửa sổ rộng để biết mốc hạn cũ. */
-  private async findItem(kind: string, id: string): Promise<ExpiryItem | undefined> {
-    const today = await this.today();
-    const items = await this.registry.collect(addDays(today, -3650), addDays(today, 3650), [
-      kind,
-    ]);
-    return items.find((item) => item.id === id);
-  }
 }
 
 /** Ngưỡng khớp `web/src/lib/expiry.ts` — luật "sắp hết hạn" của hệ thống chỉ có một. */

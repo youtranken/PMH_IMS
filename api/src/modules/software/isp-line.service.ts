@@ -14,6 +14,7 @@ import type { SortQuery } from '../../common/sorting';
 import { escapeLike, pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
 import { AuditWriterService } from '../audit/audit-writer.service';
+import { ExpiryApiService } from '../expiry/expiry.api';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { DevicesApiService } from '../devices/devices.api';
 import { ispLineHistoryTable, ispLineTable } from './software.schema';
@@ -109,6 +110,7 @@ export class IspLineService {
     private readonly catalog: CatalogApiService,
     private readonly devices: DevicesApiService,
     private readonly audit: AuditWriterService,
+    private readonly expiry: ExpiryApiService,
   ) {}
 
   // ─────────────────────────── Đọc ───────────────────────────
@@ -243,6 +245,16 @@ export class IspLineService {
       const updated = await this.updateWithin(tx, id, { endDate: newEnd, status: 'active' });
       await this.recordWithin(tx, actor, id, 'renewed', {
         endDate: { before: before.endDate, after: newEnd },
+      });
+      // Cùng lý do như `SoftwareService.renew` — đường truyền cũng có hai nút Gia hạn.
+      // `objectKind: 'isp'` khớp `sourceKind` mà `software-expiry-sources.ts` đăng ký.
+      await this.expiry.recordRenewalWithin(tx, {
+        objectKind: 'isp',
+        objectId: id,
+        label: `${before.code} — ${before.provider}`,
+        oldEnd: before.endDate,
+        newEnd,
+        actor,
       });
       return updated;
     });

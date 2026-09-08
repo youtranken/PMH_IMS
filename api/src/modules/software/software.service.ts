@@ -13,6 +13,7 @@ import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
 import { escapeLike, pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
+import { ExpiryApiService } from '../expiry/expiry.api';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
 import {
@@ -57,6 +58,7 @@ export class SoftwareService {
     @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly catalog: CatalogApiService,
     private readonly audit: AuditWriterService,
+    private readonly expiry: ExpiryApiService,
   ) {}
 
   // ─────────────────────────── Đọc ───────────────────────────
@@ -195,6 +197,24 @@ export class SoftwareService {
       const updated = await this.updateWithin(tx, id, { endDate: newEnd, status: 'active' });
       await this.recordWithin(tx, actor, id, 'renewed', {
         endDate: { before: before.endDate, after: newEnd },
+      });
+      /*
+       * Sổ gia hạn dùng chung ghi Ở ĐÂY, trong chính transaction này (AC 3.4, rà soát 07/09 #7).
+       *
+       * Trước 08/09 chỉ đường `/expiry/renew` ghi `renewal_history`; nút Gia hạn trong trang hồ
+       * sơ gọi thẳng hàm này và không ghi gì. `end_date` đổi, tab Lịch sử có dòng, toast xanh —
+       * nhưng báo cáo cuối năm và khối "gia hạn gần đây" đọc `renewal_history` nên trả rỗng.
+       *
+       * `label` phải khớp đúng chuỗi mà `software-expiry-sources.ts` dựng, để hai cửa không đẻ
+       * ra hai cách gọi tên cùng một hồ sơ trong cùng một bảng.
+       */
+      await this.expiry.recordRenewalWithin(tx, {
+        objectKind: before.kind,
+        objectId: id,
+        label: `${before.code} — ${before.name}`,
+        oldEnd: before.endDate,
+        newEnd,
+        actor,
       });
       return updated;
     });
