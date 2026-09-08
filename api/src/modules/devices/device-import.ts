@@ -417,6 +417,10 @@ function planRow(
   }
 
   if (!existing) {
+    /*
+     * Tạo MỚI một máy đã ở trạng thái "đã thanh lý" thì hợp lệ: nạp kho lịch sử lần đầu là
+     * việc thật, và một bản ghi vừa sinh ra thì chưa giữ IP/NAT/ghế license nào để mà dọn.
+     */
     return { ...base, action: 'create', label, values };
   }
 
@@ -430,11 +434,49 @@ function planRow(
     return before !== after;
   });
 
-  return {
-    ...base,
-    action: changed ? 'update' : 'unchanged',
-    label,
-    values,
-    existingId: existing.id,
-  };
+  /*
+   * Dòng KHÔNG đổi gì thì cho qua, kể cả khi hồ sơ đã thanh lý.
+   *
+   * Bản đầu của tôi chặn ngay khi thấy `existing.status === 'retired'`, trước cả khi biết
+   * dòng đó có đổi gì không. Hệ quả: tải lại nguyên file kiểm kê — việc bình thường nhất của
+   * import — biến MỌI máy đã thanh lý thành dòng lỗi, và vì `commit` từ chối cả file khi còn
+   * lỗi, cả lượt nhập 300 dòng đứng im. Đúng chế độ hỏng tôi đã gây ra ở đợt C: hàng rào chặn
+   * luôn việc hợp lệ. Bài kiểm đơn vị "ô Trạng thái để trống" bắt được, và nó đúng.
+   */
+  if (!changed) {
+    return { ...base, action: 'unchanged', label, values, existingId: existing.id };
+  }
+
+  /*
+   * HAI HÀNG RÀO CHO ĐƯỜNG IMPORT — cả hai đều là cửa sau của cùng một quyết định.
+   *
+   * 1. Hồ sơ ĐÃ THANH LÝ thì khóa, y như nút Sửa trên web. Import là đường ghi hàng loạt nên
+   *    nó là chỗ dễ vô tình cán qua nhất.
+   *
+   * 2. Không được ĐỔI SANG "đã thanh lý" bằng một ô Excel. Thanh lý là một CHỐT (xem
+   *    `devices.service.setStatus`): nó hỏi máy còn giữ IP · rule NAT · ghế license nào,
+   *    chặn nếu còn, và chỉ dọn khi người dùng nói ra. `updateWithin` mà import gọi đi vòng
+   *    qua trọn vẹn cái chốt đó — hàng rào chặn ở màn hình, còn Excel thì mở cửa sau.
+   *
+   * Báo ở tầng ĐỐI CHIẾU chứ không để `commit` ném: cả file là một transaction (AC 2.6), nên
+   * một lỗi lúc ghi sẽ giết cả 300 dòng mà không nói dòng nào hỏng.
+   */
+  if (existing.status === 'retired') {
+    return {
+      ...base,
+      action: 'error',
+      label,
+      message: `Thiết bị ${existing.code} đã thanh lý — hồ sơ khóa lại, import không sửa được. Mở lại hồ sơ trong Kho thanh lý trước nếu thanh lý nhầm.`,
+    };
+  }
+  if (values.status === 'retired') {
+    return {
+      ...base,
+      action: 'error',
+      label,
+      message: `Không thanh lý được bằng Excel: thanh lý phải đi qua nút "Thanh lý" để hệ thống còn hỏi thiết bị ${existing.code} có đang giữ IP, rule NAT hay ghế license nào không.`,
+    };
+  }
+
+  return { ...base, action: 'update', label, values, existingId: existing.id };
 }

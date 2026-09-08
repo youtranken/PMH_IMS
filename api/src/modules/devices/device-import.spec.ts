@@ -144,6 +144,64 @@ describe('planDeviceImport — đối chiếu file thiết bị trước khi ghi
     expect(plan.summary).toMatchObject({ unchanged: 1, update: 0 });
   });
 
+  /**
+   * Máy ĐÃ THANH LÝ: hồ sơ khóa lại, và Excel không phải cửa sau.
+   *
+   * Rà soát 07/09 liệt kê tám điểm ghi hở với máy `retired`; import là một trong ba điểm nằm
+   * ngay trong module `devices` nên không đi qua `DevicesApiService.assertUsable` — hàng rào
+   * dựng ở cửa ngoài không với tới nó.
+   */
+  it('sửa hồ sơ máy đã thanh lý → dòng LỖI, không lặng lẽ ghi đè', () => {
+    const plan = planDeviceImport(
+      sheet([{ ...MINIMAL, 'Tên thiết bị *': 'Ten moi de len ho so da khoa' }]),
+      context({ devices: new Map([['sw-core-01', existing({ status: 'retired' })]]) }),
+    );
+    expect(plan.rows[0].action).toBe('error');
+    expect(plan.rows[0].message).toMatch(/đã thanh lý/);
+    expect(plan.summary).toMatchObject({ error: 1, update: 0 });
+  });
+
+  /**
+   * Vế đối chứng, và là bài bắt được lỗi của chính bản vá đầu tiên.
+   *
+   * Bản đó chặn ngay khi thấy `status === 'retired'`, TRƯỚC khi biết dòng có đổi gì không.
+   * Tải lại nguyên file kiểm kê — việc bình thường nhất của import — biến mọi máy đã thanh lý
+   * thành dòng lỗi, và vì `commit` từ chối cả file khi còn lỗi thì cả lượt nhập đứng im.
+   */
+  it('dòng KHÔNG đổi gì trên máy đã thanh lý vẫn phải qua — nếu không, tải lại file kiểm kê là chết cả lượt', () => {
+    const plan = planDeviceImport(
+      sheet([MINIMAL]),
+      context({ devices: new Map([['sw-core-01', existing({ status: 'retired' })]]) }),
+    );
+    expect(plan.rows[0].action).toBe('unchanged');
+    expect(plan.summary).toMatchObject({ error: 0, unchanged: 1 });
+  });
+
+  /**
+   * THANH LÝ BẰNG MỘT Ô EXCEL — tìm ra khi đang vá cửa import, không có trong danh sách rà soát.
+   *
+   * `setStatus` hỏi máy còn giữ IP · rule NAT · ghế license nào, chặn nếu còn, và chỉ dọn khi
+   * người dùng tick. Import gọi thẳng `updateWithin` nên đi vòng qua trọn vẹn cái chốt đó.
+   */
+  it('đổi trạng thái sang "Đã thanh lý" bằng Excel → dòng LỖI, thanh lý phải đi qua chốt', () => {
+    const plan = planDeviceImport(
+      sheet([{ ...MINIMAL, 'Trạng thái': 'Đã thanh lý' }]),
+      context({ devices: new Map([['sw-core-01', existing({ status: 'in_use' })]]) }),
+    );
+    expect(plan.rows[0].action).toBe('error');
+    expect(plan.rows[0].message).toMatch(/thanh lý phải đi qua nút/i);
+  });
+
+  /** Nhưng TẠO MỚI một máy đã thanh lý thì hợp lệ: nạp kho lịch sử lần đầu là việc thật. */
+  it('tạo mới với trạng thái "Đã thanh lý" vẫn được — bản ghi mới chưa giữ gì để mà dọn', () => {
+    const plan = planDeviceImport(
+      sheet([{ ...MINIMAL, 'Trạng thái': 'Đã thanh lý' }]),
+      context(),
+    );
+    expect(plan.rows[0].action).toBe('create');
+    expect(plan.rows[0].values).toMatchObject({ status: 'retired' });
+  });
+
   it('thiết bị MỚI mà bỏ trống Trạng thái thì để DB dùng mặc định', () => {
     const plan = planDeviceImport(sheet([{ ...MINIMAL, 'Trạng thái': '' }]), context());
     expect(plan.rows[0].action).toBe('create');

@@ -156,6 +156,15 @@ export class DevicesService {
 
   async update(actor: string, id: string, input: DeviceInput): Promise<DeviceWriteResult> {
     const before = await this.requireRow(id);
+    /*
+     * Hồ sơ đã thanh lý thì KHÓA — kiểm ở đây chứ không chỉ `disabled` cái nút trên web.
+     * Nút bấm là gợi ý; import, script dọn dữ liệu và mọi tích hợp về sau đều đi thẳng vào
+     * đường này. Dùng lại chính `before` vừa đọc, không hỏi DB lần hai.
+     *
+     * `setStatus` KHÔNG đi qua đây (nó gọi thẳng `updateWithin`), nên mở lại một máy bị
+     * thanh lý nhầm vẫn chạy — nếu không thì bấm nhầm một lần là hồ sơ chết vĩnh viễn.
+     */
+    this.assertNotRetired(before);
     const values = await this.prepare(input, id);
     const changes = diffDevice(before, values);
     const warnings =
@@ -408,6 +417,30 @@ export class DevicesService {
 
   private requireRow(id: string): Promise<typeof deviceTable.$inferSelect> {
     return this.requireRowWithin(this.db, id);
+  }
+
+  /**
+   * "Máy này còn nhận thêm được không" — MỘT câu trả lời cho cả hệ thống.
+   *
+   * `DevicesApiService.assertUsable` (cửa cho module khác) và ba đường ghi NỘI BỘ của chính
+   * module này (sửa hồ sơ · nối cổng · import) đều đi qua đây. Trước 08/09 chỉ có cửa ngoài,
+   * nên bốn module khác bị chặn còn ba đường trong nhà thì không — đúng mẫu N1: dựng hàng rào
+   * ở mấy cửa mình buộc phải bước qua, quên mấy cửa mở sẵn bên trong.
+   *
+   * `broken` (hỏng, chờ sửa) VẪN qua: máy đó còn trong công ty, còn giữ license và IP của nó.
+   * Chỉ `retired` mới là "đã ra khỏi sổ".
+   */
+  assertNotRetired(row: { code: string; status: string }): void {
+    if (row.status !== 'retired') return;
+    throw new BadRequestException({
+      code: 'DEVICE_RETIRED',
+      message: `Thiết bị ${row.code} đã thanh lý nên không nhận thêm được nữa. Chọn thiết bị khác, hoặc mở lại hồ sơ trong Kho thanh lý nếu thanh lý nhầm.`,
+    });
+  }
+
+  /** Bản tra-rồi-kiểm. Ném `NotFoundException` nếu không có hồ sơ. */
+  async assertUsable(id: string): Promise<void> {
+    this.assertNotRetired(await this.requireRow(id));
   }
 
   /**

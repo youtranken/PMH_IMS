@@ -138,6 +138,11 @@
 
 Cổng chia hai nơi (quyết định 03/09):
 
+- **`e2e/` có lint từ 08/09** (`npm --prefix e2e run lint`) — trước đó là thư mục DUY NHẤT
+  không có cổng nào, nên luật E2E trong `CLAUDE.md` (cấm `sleep`, cấm selector CSS) có 0
+  cưỡng chế. Sleep = LỖI (ngoại lệ duy nhất: `login-rate-limit.spec.ts`, chờ đồng hồ thật).
+  Selector CSS = cảnh báo có **trần ghim** `--max-warnings=25`: nợ không được lớn thêm.
+  Hạ trần mỗi lần gỡ được một chỗ; đừng nâng.
 - **GitHub Actions** (`.github/workflows/ci.yml`) — lint · depcruise · test đơn vị · build.
   Đây là cổng **tự động** chặn merge vào `master` qua branch protection.
 - **Tầng test chạm hạ tầng thật** (`npm --prefix api run test:db`, ~15 giây) — chạy ở

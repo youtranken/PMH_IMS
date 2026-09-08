@@ -75,12 +75,32 @@ module.exports = {
       severity: 'error',
       comment:
         'AD-3 — mỗi bảng một chủ: chỉ module sở hữu mới được import `*.schema.ts` của chính nó. ' +
-        'Module khác đọc/ghi qua `*.api.ts`. (Ngoại lệ auth↔users khai ở pathNot bên dưới: hai ' +
+        'Module khác đọc/ghi qua `*.api.ts`. (Ngoại lệ auth↔users khai ở vế FROM bên dưới: hai ' +
         'module này là MỘT chủ của bảng `users` theo spine.)',
-      from: { path: '^src/modules/([^/]+)/' },
+      /*
+       * NGOẠI LỆ auth↔users khai ở vế `from`, KHÔNG ở vế `to` (rà soát 07/09 #9, vá 08/09).
+       *
+       * Bản trước để `'^src/modules/users/users\\.schema\\.ts$'` trong `to.pathNot` mà không
+       * ràng buộc `from` — nghĩa là MỌI module đều import được bảng `users`, không riêng `auth`.
+       * Ghép với lỗ `../../modules/` của cổng eslint (vá cùng ngày) thì
+       * `import { usersTable } from '../../modules/users/users.schema'` qua sạch CẢ HAI cổng:
+       * đường ngắn nhất phá AD-3.
+       *
+       * Nay chỉ đúng hai file của `auth` được miễn, và chúng được miễn vì lý do có thật:
+       * `sessions.schema` và `known-device.schema` khai khóa ngoại trỏ sang `usersTable`.
+       *
+       * Có ngày tách hẳn hai module thì xóa khối này TRƯỚC, rồi mới sửa code.
+       */
+      from: {
+        path: '^src/modules/([^/]+)/',
+        pathNot: [
+          '^src/modules/auth/sessions\\.schema\\.ts$',
+          '^src/modules/auth/known-device\\.schema\\.ts$',
+        ],
+      },
       to: {
         path: '^src/modules/([^/]+)/[^/]+\\.schema\\.ts$',
-        pathNot: ['^src/modules/$1/', '^src/modules/users/users\\.schema\\.ts$'],
+        pathNot: ['^src/modules/$1/'],
       },
     },
     { name: 'no-orphans', severity: 'warn', from: { orphan: true, pathNot: '\\.d\\.ts$' }, to: {} },

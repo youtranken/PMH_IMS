@@ -40,9 +40,13 @@ export class DevicesApiService {
    * máy đang sửa — một hàng rào chặn việc hợp lệ là hàng rào sẽ bị tìm cách lách.
    */
   async assertUsable(id: string): Promise<void> {
-    let device: DeviceListItem;
     try {
-      device = await this.devices.findOne(id);
+      /*
+       * Uỷ quyền cho `DevicesService`: câu "còn nhận thêm được không" và câu chữ của lỗi chỉ
+       * được có MỘT bản (AD-15). Trước 08/09 nó nằm nguyên ở đây, nên ba đường ghi nội bộ của
+       * chính module `devices` không với tới được và đã hở suốt.
+       */
+      await this.devices.assertUsable(id);
     } catch (error) {
       /*
        * CHỈ nuốt đúng lỗi "không tìm thấy". `catch` trần ở đây biến một sự cố DB thành câu
@@ -54,12 +58,6 @@ export class DevicesApiService {
       throw new BadRequestException({
         code: 'DEVICE_NOT_FOUND',
         message: 'Thiết bị được chọn không tồn tại.',
-      });
-    }
-    if (device.status === 'retired') {
-      throw new BadRequestException({
-        code: 'DEVICE_RETIRED',
-        message: `Thiết bị ${device.code} đã thanh lý nên không nhận thêm được nữa. Chọn thiết bị khác, hoặc mở lại hồ sơ trong Kho thanh lý nếu thanh lý nhầm.`,
       });
     }
   }

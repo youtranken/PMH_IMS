@@ -124,7 +124,7 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
      * Bấm sang dải khác mà vẫn ở trang 3 là mở ra dòng 101–150 của dải mới, còn 100 địa chỉ
      * đầu thì biến mất — không có gì trên màn hình giải thích vì sao.
      */
-    await page.getByRole('link', { name: new RegExp(`10\.${octet}\.2\.0/24`) }).click();
+    await page.getByRole('link', { name: new RegExp(`10\\.${octet}\\.2\\.0/24`) }).click();
     await expect(page.getByText('Trang 1/6')).toBeVisible();
     await expect(page.getByText(`10.${octet}.2.1`, { exact: true })).toBeVisible();
   });

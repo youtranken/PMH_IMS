@@ -96,6 +96,12 @@ npm --prefix web test
 step "WEB — build (đây mới là cổng kiểm KIỂU của web, không phải tsc --noEmit)"
 npm --prefix web run build
 
+step "E2E — lint (cấm sleep, ghim trần selector CSS)"
+# 08/09: `e2e/` là thư mục DUY NHẤT của repo chưa có lint (rà soát 07/09 #16), nên mọi luật
+# E2E trong CLAUDE.md có 0 cưỡng chế. `--max-warnings` ghim nợ selector CSS ở con số hôm nay —
+# nó không được lớn thêm. Xem đầu `e2e/eslint.config.mjs`.
+npm --prefix e2e run lint
+
 step "E2E — kiểm kiểu (tsc --noEmit)"
 # Playwright transpile TS nhưng KHÔNG kiểm kiểu, nên trước 07/09 thư mục e2e không có cổng
 # nào. Đó là cơ chế đã để lọt lỗi `__dirname` trong gói ESM hôm 03/09: globalSetup chết,

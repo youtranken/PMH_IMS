@@ -414,7 +414,9 @@ test.describe('Dải mạng và hồ sơ IP', () => {
      * Bám vào ĐÚNG thẻ của dải này, không phải chữ "Đã vô hiệu hóa" bất kỳ: cột trái giờ
      * hiện cả những dải đã tắt từ các lần chạy trước, nên khớp lỏng là trúng nhiều thẻ.
      */
-    const card = page.getByRole('link', { name: new RegExp(cidr.replace(/\./g, '\.')) });
+    // `'\\.'` chứ không phải `'\.'`: trong chuỗi JS thì `\.` rơi mất dấu chéo và phép thay thế
+    // này thành RỖNG — regex đi ra vẫn còn dấu chấm khớp-mọi-ký-tự (cổng lint e2e bắt, 08/09).
+    const card = page.getByRole('link', { name: new RegExp(cidr.replace(/\./g, '\\.')) });
     await expect(card.getByText('Đã vô hiệu hóa', { exact: true })).toBeVisible();
     await expect(card.getByText(/gộp sang VLAN mới/)).toBeVisible();
 
@@ -637,7 +639,7 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
     await expect(page.getByText('Đã xóa hồ sơ IP.')).toBeVisible();
     // Địa chỉ trở lại thành chỗ TRỐNG, có nút cấp — chứ không nằm lại trong sổ vĩnh viễn.
     await expect(
-      page.getByRole('row', { name: new RegExp(`172\.16\.${octet}\.2`) })
+      page.getByRole('row', { name: new RegExp(`172\\.16\\.${octet}\\.2`) })
         .getByRole('button', { name: 'Cấp IP này' }),
     ).toBeVisible();
 
