@@ -369,6 +369,31 @@ export class AccountsService {
         objectType: "user",
         objectId: userId,
       });
+      /*
+       * BÁO CHO CHỦ TÀI KHOẢN BIẾT (rà soát 07/09, mục 6 "Nghiệp vụ").
+       *
+       * Đây là đường ghi duy nhất trong `AccountsService` không đẩy outbox — `resetPassword`,
+       * `resetTotp`, `create` đều có. Mà cửa này còn nặng hơn `resetPassword`: SA đặt được một
+       * mật khẩu CỤ THỂ mà SA biết, rồi đá sạch phiên. Chủ tài khoản chỉ thấy mình bị đăng
+       * xuất, đăng nhập lại không được, và không có gì nói cho họ biết vì sao — trong khi
+       * người khác đang cầm mật khẩu của họ.
+       *
+       * Topic `account.password.reset`: nội dung mẫu thư đó ("SA vừa đặt lại mật khẩu cho tài
+       * khoản của bạn. Mọi phiên đang mở đã bị đăng xuất.") đúng nguyên văn cho cửa này. Không
+       * dựng mẫu thứ hai nói cùng một điều (AD-15).
+       *
+       * ===== NÓI RÕ: HÀM NÀY HIỆN KHÔNG AI GỌI =====
+       *
+       * 09/09 rà lại toàn repo: `setPassword` không có route trong `accounts.controller.ts`,
+       * không nơi nào gọi, không bài kiểm nào chạm. Nên lỗi "quên outbox" chưa từng gây hậu
+       * quả ngoài đời — nhưng vá vẫn đúng, vì thứ nguy hiểm ở đây là một đường GHI MẬT KHẨU
+       * nằm sẵn, không test, chờ ai đó nối vào một story sau và thừa kế nguyên lỗ hổng.
+       *
+       * Chưa xóa vì đó là quyết định về phạm vi, không phải về đúng/sai. Nếu Epic sau không
+       * dùng tới thì nên xóa hẳn: nó gần trùng `resetPassword` (AD-15), chỉ khác chỗ SA tự
+       * chọn mật khẩu — mà đó lại đúng là điều khiến nó nguy hiểm hơn.
+       */
+      await this.outbox.enqueueWithin(tx, "account.password.reset", { userId });
     });
   }
 

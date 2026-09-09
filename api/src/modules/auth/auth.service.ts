@@ -292,6 +292,14 @@ export class AuthService {
         totpPending: false,
       });
       await this.sessions.completeTotpWithin(tx, created.id);
+      /*
+       * ĐỐT MÃ TRONG CÙNG TRANSACTION VỚI LƯỢT CẤP PHIÊN (NFR-01).
+       *
+       * Bản trước ghi mốc này SAU KHI transaction đã commit. Không cần lỗi gì để hỏng: hai
+       * request mang CÙNG một mã 6 số, cả hai đọc `totp_last_timestep` cũ, cả hai qua cửa,
+       * cả hai được cấp phiên. Một mã ra hai phiên — đúng thứ chống-replay sinh ra để chặn.
+       */
+      await this.users.setTotpLastTimestepWithin(tx, user.id, result.timeStep as number);
       await this.audit.appendWithin(tx, {
         actor: user.email,
         action: 'auth.login.ok',
@@ -301,7 +309,6 @@ export class AuthService {
       });
       return created;
     });
-    await this.users.setTotpLastTimestep(user.id, result.timeStep as number);
 
     return { session: fresh, mustChangePassword: user.mustChangePassword };
   }
@@ -444,14 +451,14 @@ export class AuthService {
       secret,
       lastUsedTimeStep: user.totpLastTimestep,
     });
-    await this.audit.append({
-      actor: user.email,
-      action: result.ok ? 'auth.stepup.ok' : 'auth.stepup.failed',
-      objectType: 'session',
-      objectId: session.id,
-      detail: result.ok ? undefined : { reason: result.reason },
-    });
     if (!result.ok) {
+      await this.audit.append({
+        actor: user.email,
+        action: 'auth.stepup.failed',
+        objectType: 'session',
+        objectId: session.id,
+        detail: { reason: result.reason },
+      });
       /**
        * Sai liên tiếp đủ ngưỡng → THU HỒI PHIÊN (code review Epic 4, finding 1).
        *
@@ -489,8 +496,26 @@ export class AuthService {
         attemptsLeft: maxFailures - failures,
       });
     }
-    await this.sessions.markSteppedUp(session.id);
-    await this.users.setTotpLastTimestep(user.id, result.timeStep as number);
+    /*
+     * MỘT transaction cho: mở két + ĐỐT MÃ + ghi vết (AD-5, NFR-01).
+     *
+     * Bản trước là ba lượt ghi rời, và thứ tự của chúng sai đúng ở chỗ nguy hiểm nhất: audit
+     * "auth.stepup.ok" ghi TRƯỚC cả hai lượt còn lại, rồi `markSteppedUp` commit ngay, rồi mới
+     * tới mốc chống-replay. Nghĩa là quyền mở két đã cấp xong trong khi mã 6 số vừa dùng VẪN
+     * còn hiệu lực tới hết chu kỳ 30 giây — và nếu lượt ghi cuối hỏng thì nó còn hiệu lực mà
+     * không có dòng lỗi nào. Sổ cũng nói dối được theo chiều ngược lại: "đã mở két lúc 14:03"
+     * trong khi lượt ghi thật đằng sau đã rollback.
+     */
+    await this.db.transaction(async (tx) => {
+      await this.sessions.markSteppedUpWithin(tx, session.id);
+      await this.users.setTotpLastTimestepWithin(tx, user.id, result.timeStep as number);
+      await this.audit.appendWithin(tx, {
+        actor: user.email,
+        action: 'auth.stepup.ok',
+        objectType: 'session',
+        objectId: session.id,
+      });
+    });
   }
 
   /** Đổi mật khẩu: kiểm mật khẩu cũ, áp luật mạnh, đá mọi phiên khác (NFR-01). */

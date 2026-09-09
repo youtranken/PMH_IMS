@@ -96,9 +96,15 @@ export class SessionService {
       .where(eq(sessionsTable.id, id));
   }
 
-  /** FR-022: đóng dấu vừa gõ TOTP — grace tính từ mốc này. Gõ đúng xóa sạch bộ đếm sai. */
-  async markSteppedUp(id: string): Promise<void> {
-    await this.db
+  /**
+   * FR-022: đóng dấu vừa gõ TOTP — grace tính từ mốc này. Gõ đúng xóa sạch bộ đếm sai.
+   *
+   * LUÔN trong transaction đang chạy (AD-5), không có bản chạy-trên-pool. Bản trước commit
+   * NGAY, rồi `stepUp()` mới ghi mốc chống-replay bằng một lượt ghi thứ hai: quyền mở két đã
+   * cấp xong trong khi mã 6 số vừa dùng vẫn còn hiệu lực. Xem `setTotpLastTimestepWithin`.
+   */
+  async markSteppedUpWithin(tx: Tx, id: string): Promise<void> {
+    await tx
       .update(sessionsTable)
       .set({ steppedUpAt: new Date(), stepupFailures: 0 })
       .where(eq(sessionsTable.id, id));

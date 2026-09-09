@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { ApprovalsApiService } from '../approvals/approvals.api';
 import { ExpiryApiService } from '../expiry/expiry.api';
@@ -34,7 +34,11 @@ export class MailConsumer {
     const payload = row.payload as { userId?: string; ruleId?: string; isTest?: boolean };
     const built = await this.build(topic, payload);
     if (!built) {
-      this.logger.warn(`Topic ${topic} chưa có mẫu email — bỏ qua.`);
+      // `null` = "không có gì để gửi, và đây là kết luận cuối" — thiếu mẫu, hoặc hồ sơ tham
+      // chiếu đã bị xóa/đã xử lý xong. Đánh dấu processed để job không quay lại mãi mãi.
+      this.logger.warn(
+        `Topic ${topic} không dựng được thư (thiếu mẫu, hoặc hồ sơ tham chiếu đã xóa) — bỏ qua.`,
+      );
       await this.outbox.markProcessed(outboxId);
       return;
     }
@@ -54,8 +58,17 @@ export class MailConsumer {
    * đối tượng X, lý do Y" và đưa một đường dẫn. Ai muốn quyết thì phải đăng nhập.
    */
   private async buildApprovalMail(approvalId: string, isReminder: boolean) {
-    const request = await this.approvals.findOne(approvalId).catch(() => null);
-    // Yêu cầu đã bị xử lý xong trước khi thư kịp đi → thôi, đừng làm phiền người duyệt.
+    /*
+     * Yêu cầu đã bị xử lý xong / xóa trước khi thư kịp đi → thôi, đừng làm phiền người duyệt.
+     *
+     * Bắt ĐÍCH DANH `NotFoundException`. Bản trước là `.catch(() => null)` bao trọn: một lượt
+     * DB chớp cũng thành "không tìm thấy yêu cầu", `handle()` đánh dấu processed, và thư báo
+     * duyệt đó mất vĩnh viễn — không ai biết vì đó đúng là đường xử lý bình thường.
+     */
+    const request = await this.approvals.findOne(approvalId).catch((error: unknown) => {
+      if (error instanceof NotFoundException) return null;
+      throw error;
+    });
     if (!request || request.state !== 'pending') return null;
 
     const approvers = await this.users.recipientsByRole(['sa', 'admin']);
@@ -96,7 +109,27 @@ export class MailConsumer {
     // Nội dung DỰNG LẠI từ `ruleId`: outbox chỉ giữ id tham chiếu, không PII (AD-11/NFR-04).
     if (topic === 'expiry.digest') {
       if (!payload.ruleId) return null;
-      const digest = await this.expiry.buildDigest(payload.ruleId);
+      /*
+       * LUẬT BỊ XÓA GIỮA LÚC THƯ CÒN TRONG HÀNG ĐỢI → BỎ KỲ, KHÔNG THỬ LẠI VÔ HẠN.
+       *
+       * `buildDigest` ném `NotFoundException` khi luật không còn. Bản trước để nó bay thẳng ra
+       * `handle()`, nên job BullMQ hỏng, hết lượt thử lại thì outbox row không bao giờ được
+       * đánh dấu `processed_at` — relay lại tái phát nó sau mỗi lần hết hạn lease, mãi mãi.
+       * Trên màn Hàng đợi, huy hiệu "gửi lỗi" sáng vĩnh viễn cho một luật KHÔNG CÒN TỒN TẠI,
+       * và không có nút nào tắt được nó. Admin xóa một luật gõ nhầm là đủ để tạo ra chuyện đó.
+       *
+       * `buildApprovalMail` đã xử đúng cửa tương đương này từ trước (yêu cầu đã xử lý xong thì
+       * thôi đừng gửi) — đây là cửa bị bỏ sót, mẫu N1.
+       *
+       * CHỈ nuốt `NotFoundException`, không nuốt tất cả: `.catch(() => null)` bao trọn sẽ biến
+       * một lượt DB chớp thành "đã xử lý xong", và kỳ báo cáo đó mất vĩnh viễn — chính là lỗi
+       * mà `runOne` đã phải gói lại vào một transaction để tránh.
+       */
+      const digest = await this.expiry.buildDigest(payload.ruleId).catch((error: unknown) => {
+        if (error instanceof NotFoundException) return null;
+        throw error;
+      });
+      if (!digest) return null;
       return buildDigestMail(digest, payload.isTest === true);
     }
 

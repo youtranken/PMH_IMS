@@ -204,9 +204,27 @@ export class UsersService {
       .where(eq(usersTable.id, userId));
   }
 
-  /** Chống replay (NFR-01): ghi lại time step vừa dùng. */
-  async setTotpLastTimestep(userId: string, timeStep: number): Promise<void> {
-    await this.db
+  /**
+   * Chống replay (NFR-01): ghi lại time step vừa dùng — LUÔN trong transaction đang chạy.
+   *
+   * ===== VÌ SAO KHÔNG CÒN BẢN CHẠY-TRÊN-POOL =====
+   *
+   * Bản trước là `setTotpLastTimestep(userId, timeStep)` chạy thẳng trên `this.db`, và cả hai
+   * nơi gọi đều gọi nó SAU KHI transaction cấp phiên / đóng dấu step-up đã COMMIT. Giữa hai
+   * lượt ghi đó, mã 6 số vừa dùng vẫn còn hiệu lực:
+   *
+   *   - Không cần lỗi gì cả, chỉ cần đồng thời. Hai request `/login/totp` mang CÙNG một mã,
+   *     cả hai đọc `totp_last_timestep` cũ, cả hai qua cửa, cả hai được cấp phiên. Một mã đổi
+   *     ra hai phiên — đúng thứ NFR-01 sinh ra để chặn.
+   *   - Và nếu lượt ghi thứ hai hỏng (DB chớp, pool cạn, worker bị kill), mốc KHÔNG BAO GIỜ
+   *     nhảy: mã đó dùng lại được cho tới hết chu kỳ 30 giây, im lặng, không dòng lỗi nào.
+   *
+   * Gói chung transaction với lượt cấp phiên thì hỏng ở đâu cũng rollback cả hai — hoặc người
+   * dùng vào được VÀ mã bị đốt, hoặc không có gì xảy ra. Không còn trạng thái ở giữa.
+   * `revokeWithin` đã bỏ bản chạy-trên-pool vì đúng lý do này (rà soát 07/09).
+   */
+  async setTotpLastTimestepWithin(tx: Tx, userId: string, timeStep: number): Promise<void> {
+    await tx
       .update(usersTable)
       .set({ totpLastTimestep: timeStep })
       .where(eq(usersTable.id, userId));

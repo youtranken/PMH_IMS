@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, count, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
@@ -226,27 +226,47 @@ export class SubnetService {
      * khi INSERT/UPDATE chính hàng IP, nên chúng ở lại, vẫn hiện trên màn hình, vẫn trông hợp
      * lệ. Muốn đổi dải thì ẩn subnet cũ và khai subnet mới — chậm hơn một chút, nhưng không
      * để lại thứ gì sai mà không ai biết.
+     *
+     * Ở đây CHỈ chuẩn hóa chuỗi (hàm thuần). Việc "đã có IP chưa" phải hỏi bên trong
+     * transaction — xem chú thích tại chỗ hỏi.
      */
-    if (input.cidr !== undefined) {
-      const cidr = this.requireCidr(input.cidr);
-      if (cidr !== before.cidr) {
-        const [existing] = await this.db
-          .select({ used: count() })
-          .from(ipAddressTable)
-          .where(and(eq(ipAddressTable.subnetId, id), isNull(ipAddressTable.voidedAt)));
-        if (Number(existing?.used ?? 0) > 0) {
-          throw new ConflictException({
-            code: 'SUBNET_HAS_ADDRESSES',
-            message:
-              'Dải này đã có hồ sơ IP nên không đổi được dải. Ẩn dải cũ rồi khai dải mới.',
-          });
-        }
-        values.cidr = cidr;
-      }
-    }
+    const nextCidr =
+      input.cidr === undefined
+        ? null
+        : ((cidr) => (cidr === before.cidr ? null : cidr))(this.requireCidr(input.cidr));
 
     try {
       return await this.db.transaction(async (tx) => {
+        if (nextCidr !== null) {
+          /*
+           * KHÓA HÀNG SUBNET RỒI MỚI ĐẾM — trong cùng transaction với lượt ghi (AD-5, mẫu M2).
+           *
+           * Bản trước đếm bằng `this.db` (ngoài tx) rồi mới mở transaction để UPDATE. Giữa hai
+           * câu lệnh đó, một lượt khai IP hoàn toàn bình thường lọt qua: trigger
+           * `ip_address_within_subnet()` đọc dải CŨ, thấy hợp lệ, commit. Rồi câu UPDATE ở đây
+           * đổi dải — và để lại đúng thứ chú thích ngay trên tự hứa sẽ không bao giờ có: một
+           * hồ sơ IP nằm ngoài dải của chính nó, không lỗi, không cảnh báo, trigger không bao
+           * giờ chạy lại trên hàng đó.
+           *
+           * `FOR UPDATE` ở đây bắt cặp với `FOR SHARE` trong trigger (migration 0040): hai lượt
+           * loại trừ nhau nên thứ tự nào cũng đúng — hoặc lượt khai IP bị dải mới từ chối, hoặc
+           * lượt đổi dải đếm được IP vừa khai và từ chối.
+           */
+          await tx.execute(sql`SELECT 1 FROM subnet WHERE id = ${id}::uuid FOR UPDATE`);
+          const [existing] = await tx
+            .select({ used: count() })
+            .from(ipAddressTable)
+            .where(and(eq(ipAddressTable.subnetId, id), isNull(ipAddressTable.voidedAt)));
+          if (Number(existing?.used ?? 0) > 0) {
+            throw new ConflictException({
+              code: 'SUBNET_HAS_ADDRESSES',
+              message:
+                'Dải này đã có hồ sơ IP nên không đổi được dải. Ẩn dải cũ rồi khai dải mới.',
+            });
+          }
+          values.cidr = nextCidr;
+        }
+
         const rows = await tx
           .update(subnetTable)
           .set({ ...values, updatedAt: new Date() })

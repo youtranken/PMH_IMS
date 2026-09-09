@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { redactForLog } from './log-redact';
 
 export interface ErrorBody {
   statusCode: number;
@@ -28,11 +29,16 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const response = host.switchToHttp().getResponse<Response>();
     const body = this.toBody(exception);
     if (body.statusCode >= 500) {
-      this.logger.error(
-        exception instanceof Error
-          ? (exception.stack ?? exception.message)
-          : String(exception),
-      );
+      /*
+       * QUA `redactForLog`, KHÔNG in thẳng `.stack` (rà soát 07/09, mục 6 "Bảo mật").
+       *
+       * `DrizzleQueryError` nhét cả mảng THAM SỐ ĐÃ BIND vào message của nó, và `.stack` chứa
+       * message nguyên văn ở dòng đầu. Nên một câu INSERT vào `users` mà hỏng sẽ in hash
+       * Argon2, ciphertext TOTP secret, email, họ tên, số điện thoại ra `docker logs` — ra
+       * ngoài đúng ranh giới PII mà NFR-04/AD-4 dựng quanh DB, với vòng đời và danh sách người
+       * đọc hoàn toàn khác. Xem `log-redact.ts` để biết vì sao không thể vá bằng regex.
+       */
+      this.logger.error(redactForLog(exception));
     }
     // Response đã gửi (stream/write dở) → không thể đổi status; chỉ log, tránh
     // ERR_HTTP_HEADERS_SENT thứ cấp nuốt mất lỗi gốc.
