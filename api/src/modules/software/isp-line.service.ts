@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
@@ -11,7 +10,7 @@ import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
-import { escapeLike, pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
+import { conflictOnUnique, escapeLike } from '../../common/sql';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { ExpiryApiService } from '../expiry/expiry.api';
@@ -425,13 +424,10 @@ export class IspLineService {
   }
 
   private translate(error: unknown): unknown {
-    if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
-      return new ConflictException({
-        code: 'ISP_CODE_TAKEN',
-        message: 'Đã có đường truyền mang mã này (không phân biệt hoa-thường).',
-      });
-    }
-    return error;
+    return conflictOnUnique(error, {
+      code: 'ISP_CODE_TAKEN',
+      message: 'Đã có đường truyền mang mã này (không phân biệt hoa-thường).',
+    });
   }
 }
 

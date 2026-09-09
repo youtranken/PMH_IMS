@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
@@ -11,7 +10,7 @@ import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
-import { escapeLike, pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
+import { conflictOnUnique, escapeLike } from '../../common/sql';
 import { diffRecord, hasChanges } from '../../common/record-diff';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import {
@@ -324,13 +323,10 @@ export class ServiceAccountService {
   }
 
   private translate(error: unknown, code: string): unknown {
-    if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
-      return new ConflictException({
-        code: 'SERVICE_ACCOUNT_CODE_TAKEN',
-        message: `Mã "${code}" đã thuộc về một tài khoản dịch vụ khác.`,
-      });
-    }
-    return error;
+    return conflictOnUnique(error, {
+      code: 'SERVICE_ACCOUNT_CODE_TAKEN',
+      message: `Mã "${code}" đã thuộc về một tài khoản dịch vụ khác.`,
+    });
   }
 
   private async recordWithin(

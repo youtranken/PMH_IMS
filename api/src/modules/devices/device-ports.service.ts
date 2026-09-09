@@ -8,7 +8,7 @@ import {
 import { and, asc, eq, ne } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
-import { pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
+import { conflictOnUnique } from '../../common/sql';
 import { devicePortTable, deviceTable } from './devices.schema';
 import { DevicesService } from './devices.service';
 
@@ -265,12 +265,9 @@ export class DevicePortsService {
   }
 
   private translate(error: unknown): unknown {
-    if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
-      return new ConflictException({
-        code: 'PORT_LABEL_TAKEN',
-        message: 'Thiết bị này đã có dòng cho cổng đó.',
-      });
-    }
-    return error;
+    return conflictOnUnique(error, {
+      code: 'PORT_LABEL_TAKEN',
+      message: 'Thiết bị này đã có dòng cho cổng đó.',
+    });
   }
 }

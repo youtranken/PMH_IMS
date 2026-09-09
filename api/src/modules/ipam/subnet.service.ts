@@ -8,7 +8,7 @@ import {
 import { and, asc, count, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
-import { pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
+import { conflictOnUnique } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { isHostInSubnet, normalizeSubnet, subnetUsage, type SubnetUsage } from './ip-rules';
@@ -588,13 +588,10 @@ export class SubnetService {
   }
 
   private translate(error: unknown, cidr: string): unknown {
-    if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
-      return new ConflictException({
-        code: 'SUBNET_TAKEN',
-        message: `Dải ${cidr} đã được khai rồi.`,
-      });
-    }
-    return error;
+    return conflictOnUnique(error, {
+      code: 'SUBNET_TAKEN',
+      message: `Dải ${cidr} đã được khai rồi.`,
+    });
   }
 }
 

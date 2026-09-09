@@ -1,3 +1,5 @@
+import { ConflictException } from '@nestjs/common';
+
 /**
  * Escape ký tự đặc biệt của LIKE/ILIKE — search chứa % _ \ không thành wildcard
  * (bài học 1.5; dùng chung users/assets, Epic 3 booking dùng tiếp).
@@ -51,3 +53,38 @@ export const PG_UNIQUE_VIOLATION = '23505';
  * trong trigger dùng (vd `ip_address_within_subnet` của Epic 5).
  */
 export const PG_CHECK_VIOLATION = '23514';
+
+/**
+ * Dịch một lỗi "trùng khóa duy nhất" thành `409` có câu tiếng Việt — MỘT chỗ, mười hai nơi gọi.
+ *
+ * ===== VÌ SAO GOM =====
+ *
+ * Mười hai module đều viết lại đúng bốn dòng này:
+ *
+ *     if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
+ *       return new ConflictException({ code: '…', message: '…' });
+ *     }
+ *     return error;
+ *
+ * Phần KHÁC NHAU là `code` + `message` — dữ liệu nghiệp vụ, đúng ra phải khác nhau. Phần
+ * GIỐNG NHAU là tri thức dễ sai nhất và cũng là thứ đã sai một lần: drizzle bọc lỗi pg trong
+ * `DrizzleQueryError` và để lỗi gốc ở `cause`, nên đọc thẳng `error.code` luôn ra `undefined`
+ * và MỌI câu dịch rơi xuống 500 (lỗi E2E story 2.1). Bản sao thứ mười ba viết tay là bản sao
+ * thứ mười ba có thể quên `pgErrorCode` mà dùng `error.code`.
+ *
+ * Trả về `unknown` chứ không ném: nơi gọi vẫn giữ nguyên nếp `throw this.translate(error)`,
+ * và lỗi không phải 23505 đi qua nguyên vẹn để tầng trên xử.
+ *
+ * @param constraint tên ràng buộc PHẢI khớp, khi một bảng có nhiều khóa duy nhất. Bỏ trống thì
+ *   mọi 23505 trên bảng đó đều ra cùng một câu — đúng khi bảng chỉ có một khóa, và SAI (báo
+ *   nhầm ô cho người dùng) khi bảng có nhiều.
+ */
+export function conflictOnUnique(
+  error: unknown,
+  body: { code: string; message: string },
+  constraint?: string,
+): unknown {
+  if (pgErrorCode(error) !== PG_UNIQUE_VIOLATION) return error;
+  if (constraint !== undefined && pgConstraint(error) !== constraint) return error;
+  return new ConflictException(body);
+}

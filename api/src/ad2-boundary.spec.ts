@@ -51,8 +51,6 @@ describe('AD-2 — luật chặn import xuyên ruột module', () => {
       // Nguyên thủy hạ tầng.
       ['../auth/roles.decorator', 'decorator @Roles dùng ở mọi controller'],
       ['../auth/types', 'AuthedRequest / UserRole'],
-      ['../auth/step-up.guard', 'guard step-up cho két sắt'],
-      ['../auth/session-policy', 'hàm thuần tính hạn phiên'],
       ['../audit/audited.decorator', 'decorator @Audited (AD-9)'],
       ['../audit/audit-writer.service', 'ghi audit trong tx (AD-5)'],
       ['../config-sys/system-config.service', 'sổ tham số nghiệp vụ (AD-11)'],

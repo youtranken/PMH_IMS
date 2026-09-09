@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
@@ -11,7 +10,7 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { EnvelopeCryptoService } from '../../common/crypto/envelope.service';
 import type { SealedValue } from '../../common/crypto/envelope.types';
-import { pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
+import { conflictOnUnique } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { OwnerExistsRegistry } from '../../common/owner-exists.registry';
 import { secretTable } from './vault.schema';
@@ -356,13 +355,10 @@ export class VaultService {
   }
 
   private translate(error: unknown, label: string): unknown {
-    if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
-      return new ConflictException({
-        code: 'SECRET_LABEL_TAKEN',
-        message: `Chủ thể này đã có secret nhãn "${label}". Đổi nhãn hoặc thu hồi cái cũ trước.`,
-      });
-    }
-    return error;
+    return conflictOnUnique(error, {
+      code: 'SECRET_LABEL_TAKEN',
+      message: `Chủ thể này đã có secret nhãn "${label}". Đổi nhãn hoặc thu hồi cái cũ trước.`,
+    });
   }
 }
 

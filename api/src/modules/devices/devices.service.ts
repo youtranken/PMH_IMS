@@ -13,7 +13,7 @@ import { DeviceRetirementRegistry } from '../../common/device-retirement.registr
 import { requireCas } from '../../common/cas';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
-import { escapeLike, pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
+import { conflictOnUnique, escapeLike } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { diffDevice, hasChanges, type DeviceChanges } from './device-changes';
@@ -466,13 +466,10 @@ export class DevicesService {
   }
 
   private translateWriteError(error: unknown): unknown {
-    if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
-      return new ConflictException({
-        code: 'DEVICE_CODE_TAKEN',
-        message: 'Đã có thiết bị mang mã này (không phân biệt hoa-thường).',
-      });
-    }
-    return error;
+    return conflictOnUnique(error, {
+      code: 'DEVICE_CODE_TAKEN',
+      message: 'Đã có thiết bị mang mã này (không phân biệt hoa-thường).',
+    });
   }
 }
 

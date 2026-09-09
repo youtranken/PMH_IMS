@@ -171,6 +171,20 @@ export default tseslint.config(
   },
   {
     /**
+     * KÉT SẮT được phép chạm `auth/step-up.guard` + `auth/session-policy`.
+     *
+     * Step-up (FR-022) chỉ tồn tại vì két sắt, và két sắt là nơi duy nhất dùng nó. Hai file
+     * này TỪNG nằm trong `INFRA_PRIMITIVES` — một danh sách toàn cục mở cửa cho mọi module —
+     * và đó là sai hình dạng: module thứ ba bắt đầu dùng chúng sẽ không ai thấy. Ở đây thì
+     * thấy ngay, vì lint đỏ.
+     */
+    files: ['src/modules/vault/**/*.ts'],
+    rules: {
+      'no-restricted-imports': ad2Rule({ extraExceptions: ad2.VAULT_STEPUP_EXCEPTION }),
+    },
+  },
+  {
+    /**
      * Nơi DUY NHẤT được phép chạm nguyên thủy mã hóa / xuất Excel.
      *
      * `'off'` chỉ an toàn ở ĐÂY vì `src/common/**` nằm ngoài `src/modules/**`, nên AD-2 vốn

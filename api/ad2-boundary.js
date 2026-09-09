@@ -63,12 +63,30 @@ const MODULE_DOORS = String.raw`(?![^/]+/[^/]*\.(?:api|module|types)$)`;
  * cho cả sáu cách gõ ở `MODULE_ENTRIES`, không chỉ cách gõ ngắn.
  */
 const INFRA_PRIMITIVES = [
-  String.raw`(?!auth/(?:roles\.decorator|types|step-up\.guard|session-policy)$)`,
+  String.raw`(?!auth/(?:roles\.decorator|types)$)`,
   String.raw`(?!audit/(?:audited\.decorator|audit-writer\.service)$)`,
-  String.raw`(?!config-sys/system-config\.(?:service|keys)$)`,
+  String.raw`(?!config-sys/system-config\.service$)`,
   String.raw`(?!outbox/outbox\.service$)`,
   String.raw`(?!queue/sweep\.service$)`,
 ].join('');
+
+/**
+ * ===== BA DÒNG ĐÃ RA KHỎI DANH SÁCH 09/09 (rà soát 07/09, mục 6 "Kiến trúc") =====
+ *
+ * Danh sách này là ngoại lệ TOÀN CỤC: một dòng ở đây mở cửa cho MỌI module, mãi mãi. Nên nó
+ * chỉ được chứa thứ thật sự dùng ở khắp nơi. Đếm lại 09/09 thì ba dòng không đạt:
+ *
+ *   - `config-sys/system-config.keys` — **0 file** ngoài module chủ import nó. Một ngoại lệ
+ *     không bảo vệ cái gì cả: nó chỉ ngồi đó, và lần sau ai đó đọc danh sách sẽ tưởng đây là
+ *     một nguyên thủy hạ tầng thật.
+ *   - `auth/step-up.guard` và `auth/session-policy` — chỉ `vault` dùng. Mở cho cả mười một
+ *     module để đúng một module đi qua là sai HÌNH DẠNG, không phải sai mức độ: module thứ ba
+ *     bắt đầu dùng chúng sẽ không ai thấy, vì lint đã cho qua sẵn.
+ *
+ * Hai cái sau chuyển thành ngoại lệ CÓ PHẠM VI trong `eslint.config.mjs`, đúng khuôn cặp
+ * `auth`↔`users` đã dùng. Module khác chạm vào là lint đỏ ngay — và đó chính là lúc cần một
+ * cuộc trò chuyện về việc dựng cửa cho `auth`.
+ */
 
 /** `<module>/<file>`. `[^./]` ở ký tự đầu tên module chặn `../../common/...` lọt vào lối 1. */
 const CROSS_MODULE_TAIL = String.raw`[^./][^/]*/.+$`;
@@ -90,5 +108,10 @@ function ad2PatternSource(extraExceptions = '') {
 module.exports = {
   AD2_MESSAGE,
   AUTH_USERS_EXCEPTION: String.raw`(?!users/.+$)`,
+  /**
+   * Két sắt là nơi DUY NHẤT gọi step-up (FR-022), nên nó là nơi duy nhất cần hai file này.
+   * Ngoại lệ có phạm vi thay cho một dòng trong `INFRA_PRIMITIVES` — xem chú thích ở đó.
+   */
+  VAULT_STEPUP_EXCEPTION: String.raw`(?!auth/(?:step-up\.guard|session-policy)$)`,
   ad2PatternSource,
 };
