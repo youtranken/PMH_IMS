@@ -56,6 +56,17 @@ export interface IpAddressRecord {
   note: string | null;
   createdAt: Date;
   updatedAt: Date;
+  /**
+   * Hồ sơ đã ẨN hay chưa — `null` là đang hiển thị.
+   *
+   * Ra khỏi service từ 09/09. Trước đó `decorate` không trả ba trường này, nên khi màn dải
+   * xin thêm hồ sơ đã ẩn (`?includeVoided=true`) thì chúng về trông y hệt hồ sơ đang sống —
+   * và cửa `restore()` không có cách nào biết nên bày nút cho dòng nào. Đúng bẫy đã gặp ở
+   * `SubnetRecord`: ba cột có từ 0020 nhưng không bao giờ ra tới giao diện.
+   */
+  voidedAt: Date | null;
+  voidedBy: string | null;
+  voidReason: string | null;
 }
 
 export interface IpAddressInput {
@@ -104,7 +115,7 @@ export class IpAddressService {
    * phải dọn khi ẩn dải, và một hàng "trống" vẫn mang `assigned_by`, `created_at` — dữ liệu
    * giả vờ có nghĩa.
    */
-  async listBySubnet(subnetId: string): Promise<SubnetSlot[]> {
+  async listBySubnet(subnetId: string, includeVoided = false): Promise<SubnetSlot[]> {
     /*
      * Dải ĐÃ VÔ HIỆU HÓA thì hiện luôn cả những hồ sơ IP đã tắt theo nó.
      *
@@ -115,10 +126,14 @@ export class IpAddressService {
      *
      * Dải đang dùng thì ngược lại — hồ sơ bị xóa lẻ ("gõ nhầm địa chỉ") PHẢI biến thành ô
      * trống, vì đó là toàn bộ ý nghĩa của việc xóa nó.
+     *
+     * `includeVoided` là cửa XIN thêm, do người dùng bật ("Hiện hồ sơ đã ẩn"). Nó phải tồn
+     * tại vì cửa `restore()` cần một đường tới: ẩn nhầm một hồ sơ mà không màn nào hiện nó ra
+     * nữa thì bật lại chỉ là một endpoint không ai gọi được (rà soát 07/09, mục 6).
      */
     const frame = await this.subnets.frameOf(subnetId);
     const records = await this.listRecords(subnetId, {
-      includeVoided: frame.voidedAt !== null,
+      includeVoided: includeVoided || frame.voidedAt !== null,
     });
     const byAddress = new Map(records.map((row) => [row.address, row]));
 
@@ -424,7 +439,26 @@ export class IpAddressService {
         await this.requireDevice(options.deviceId);
         values.deviceId = options.deviceId || null;
       }
-      if (options.usedBy !== undefined) values.usedBy = options.usedBy?.trim() || null;
+      /*
+       * "XÁC NHẬN VẪN DÙNG" KHÔNG ĐƯỢC XÓA MẤT NGƯỜI DÙNG (rà soát 07/09, mục 6 "Miền nghiệp vụ").
+       *
+       * `suspect_dead -> assigned` là lượt XÁC NHẬN: máy tưởng chết hóa ra còn sống, và nó vẫn
+       * là CHÍNH nó — chủ cũ không đi đâu cả. Nhưng hộp thoại bên web mở ra với ô "Người dùng"
+       * TRỐNG rồi gửi `usedBy: ''`, và `'' || null` biến nó thành `null`. Kết quả: hành động
+       * tên là "Xác nhận vẫn dùng" xóa mất dòng chữ "Phòng Kế toán" khỏi hồ sơ, im lặng, và
+       * `ip_history` ghi lại việc đó như thể đó là ý người dùng.
+       *
+       * Nên ô trống ở lượt XÁC NHẬN nghĩa là "không đổi gì". Ở lượt CẤP MỚI (`free`/`reclaimed`
+       * -> `assigned`) thì ngược lại: chủ mới dọn vào, ô trống đúng là "chưa biết ai", và
+       * không có gì để giữ lại.
+       *
+       * Muốn XÓA chủ khỏi một IP đang dùng thì đi đường sửa hồ sơ (`update`) — ở đó ô để trống
+       * là một câu nói rõ ràng, không phải một cái ô người ta chưa kịp điền.
+       */
+      if (options.usedBy !== undefined) {
+        const next = options.usedBy?.trim() || null;
+        if (next !== null || from !== 'suspect_dead') values.usedBy = next;
+      }
       if (from === 'reclaimed' || from === 'free') {
           values.assignedAt = isoDateInTz(await this.timezone());
       }
@@ -551,6 +585,87 @@ export class IpAddressService {
     });
   }
 
+  /**
+   * BẬT LẠI một hồ sơ IP đã ẩn — cửa đối ứng của `voidAddress`.
+   *
+   * ===== VÌ SAO PHẢI CÓ =====
+   *
+   * `voidAddress` tự nhận là "chỉ dành cho hồ sơ NHẬP NHẦM". Nhưng bấm nhầm ở đây là chuyện
+   * cùng loại với gõ nhầm: ẩn `.5` (Phòng Kế toán, thật) trong khi định ẩn `.6`. Và cho tới
+   * 09/09 đó là đường MỘT CHIỀU — `SubnetService.restore()` bật lại được cả một dải, còn một
+   * hồ sơ IP lẻ thì không có cửa nào. Hồ sơ đã ẩn biến khỏi mọi màn (`listBySubnet` chỉ hiện
+   * hàng đã ẩn khi chính DẢI bị ẩn), `findOne` trả 404, nên nó cũng không mở ra xem được lý
+   * do vì sao mình vừa ẩn nó. Nhãn `'ip.restored'` có sẵn trong `ip-history-entries.ts` mà
+   * không đường nào tới được cho hồ sơ lẻ.
+   *
+   * Hậu quả cụ thể: ô `.5` hiện ra là TRỐNG, người khác cấp nó cho máy khác, và lịch sử
+   * "IP này từng là máy in kế toán" — thứ AC 5.2 bắt giữ vĩnh viễn — nằm mồ côi dưới một hàng
+   * không ai nhìn thấy.
+   *
+   * ===== HAI HÀNG RÀO =====
+   *
+   * 1. Dải cha còn ẩn thì không bật lẻ được: một hồ sơ IP sống trong một dải đã cất đi sẽ
+   *    không hiện ở màn nào — bật lại mà vẫn vô hình thì không phải bật lại.
+   * 2. Địa chỉ đã bị hồ sơ khác chiếm trong lúc này thì từ chối. Không kiểm bằng SELECT chạy
+   *    trước (mẫu M2): để chính `ip_address_key` (UNIQUE ... WHERE voided_at IS NULL) làm
+   *    trọng tài rồi dịch 23505 thành câu tiếng Việt.
+   */
+  async restore(actor: string, id: string): Promise<IpAddressRecord> {
+    const before = await this.requireAny(id);
+    if (before.voidedAt === null) {
+      throw new ConflictException({
+        code: 'IP_NOT_VOIDED',
+        message: 'Hồ sơ này đang hiển thị, không có gì để bật lại.',
+      });
+    }
+    const frame = await this.subnets.frameOf(before.subnetId);
+    if (frame.voidedAt !== null) {
+      throw new ConflictException({
+        code: 'SUBNET_VOIDED',
+        message:
+          `Dải ${frame.cidr} đang bị ẩn nên bật lẻ hồ sơ này cũng không hiện ra ở đâu. ` +
+          'Bật lại cả dải trước.',
+      });
+    }
+
+    try {
+      const row = await this.db.transaction(async (tx) => {
+        const rows = await tx
+          .update(ipAddressTable)
+          .set({ voidedAt: null, voidedBy: null, voidReason: null, updatedAt: new Date() })
+          .where(eq(ipAddressTable.id, id))
+          .returning();
+        await this.audit.appendWithin(tx, {
+          actor,
+          action: 'ip.restored',
+          objectType: 'ip_address',
+          objectId: id,
+          detail: { address: before.address, previousReason: before.voidReason },
+        });
+        await tx.insert(ipHistoryTable).values({
+          ipAddressId: id,
+          action: 'ip.restored',
+          actor,
+          fromStatus: before.status,
+          toStatus: before.status,
+          changes: { previousReason: before.voidReason },
+        });
+        return rows[0];
+      });
+      return (await this.decorate([row]))[0];
+    } catch (error) {
+      if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
+        throw new ConflictException({
+          code: 'IP_TAKEN',
+          message:
+            `Địa chỉ ${before.address} đã có hồ sơ khác dùng sau khi hồ sơ này bị ẩn. ` +
+            'Bật lại sẽ có hai hồ sơ cho cùng một địa chỉ — xử lý hồ sơ kia trước.',
+        });
+      }
+      throw error;
+    }
+  }
+
   private requireHost(value: string, cidr: string): string {
     const parsed = parseAddress(value);
     if (!parsed.ok) {
@@ -652,6 +767,18 @@ export class IpAddressService {
     return this.requireAliveWithin(this.db, id);
   }
 
+  /** Đọc KHÔNG lọc `voided_at` — chỉ đường bật lại được dùng, xem `restore()`. */
+  private async requireAny(id: string): Promise<typeof ipAddressTable.$inferSelect> {
+    const rows = await this.db.select().from(ipAddressTable).where(eq(ipAddressTable.id, id));
+    if (rows.length === 0) {
+      throw new NotFoundException({
+        code: 'IP_NOT_FOUND',
+        message: 'Không tìm thấy hồ sơ IP này.',
+      });
+    }
+    return rows[0];
+  }
+
   /** Bản đọc TRONG transaction — `transitionWithin` phải thấy trạng thái của chính tx mình. */
   private async requireAliveWithin(
     tx: Pick<Database, 'select'>,
@@ -699,6 +826,9 @@ export class IpAddressService {
         note: row.note,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
+        voidedAt: row.voidedAt,
+        voidedBy: row.voidedBy,
+        voidReason: row.voidReason,
       };
     });
   }

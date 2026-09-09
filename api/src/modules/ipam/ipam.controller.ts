@@ -188,11 +188,17 @@ export class IpamController {
     return this.subnets.findOne(params.id);
   }
 
-  /** Toàn bộ dải: IP đã có hồ sơ + ô còn trống (AC 5.1). */
+  /**
+   * Toàn bộ dải: IP đã có hồ sơ + ô còn trống (AC 5.1).
+   *
+   * `?includeVoided=true` hiện thêm hồ sơ ĐÃ ẨN. Mặc định tắt vì ẩn một hồ sơ nhập nhầm phải
+   * trả ô đó về "trống" — đó là toàn bộ ý nghĩa của việc ẩn. Nhưng phải có đường BẬT nó lên:
+   * không có thì hồ sơ ẩn nhầm biến khỏi mọi màn và cửa `restore` mới thêm không ai tới được.
+   */
   @Roles('sa', 'admin', 'member')
   @Get('subnets/:id/addresses')
-  listSlots(@Param() params: IdParamDto) {
-    return this.addresses.listBySubnet(params.id);
+  listSlots(@Param() params: IdParamDto, @Query() query: { includeVoided?: string }) {
+    return this.addresses.listBySubnet(params.id, query.includeVoided === 'true');
   }
 
   /**
@@ -403,6 +409,19 @@ export class IpamController {
   ) {
     await this.addresses.voidAddress(actor(req), params.id, body.reason);
     return { ok: true };
+  }
+
+  /**
+   * BẬT LẠI hồ sơ đã ẩn — cửa đối ứng của `DELETE`.
+   *
+   * Thiếu nó thì ẩn là đường MỘT CHIỀU: `SubnetService.restore()` bật lại được cả một dải,
+   * còn một hồ sơ IP lẻ bấm nhầm thì không có đường quay lại. Cùng quyền với ẩn (`sa`/`admin`).
+   */
+  @Roles('sa', 'admin')
+  @Post('addresses/:id/restore')
+  @Audited('ip.restored', 'ip_address', { writtenByService: true })
+  restoreAddress(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    return this.addresses.restore(actor(req), params.id);
   }
   // --- Sổ NAT (story 5.3, FR-017) ---------------------------------------------
 

@@ -31,6 +31,9 @@ function record(address: string, status: IpStatus): SubnetSlot {
     note: null,
     createdAt: '2026-01-01T00:00:00Z',
     updatedAt: '2026-01-01T00:00:00Z',
+    voidedAt: null,
+    voidedBy: null,
+    voidReason: null,
   };
 }
 

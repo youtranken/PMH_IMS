@@ -745,6 +745,13 @@ export default {
       'Dùng cho bản ghi KHAI NHẦM: địa chỉ trở lại thành chỗ trống. Máy đang thật sự dùng địa chỉ này thì bấm Thu hồi — nó giữ lại lịch sử "IP này từng của máy nào".',
     voidAddressPlaceholder: 'vd: gõ nhầm địa chỉ',
     addressVoided: 'Đã xóa hồ sơ IP.',
+    showVoided: 'Hiện cả hồ sơ đã ẩn',
+    voidedBadge: 'Đã ẩn',
+    restoreAddress: 'Bật lại',
+    restoreAddressHint:
+      'Hồ sơ hiện lại trên bảng cùng trạng thái cũ, và lịch sử của nó nối tiếp chứ không bắt đầu lại. Nếu địa chỉ này đã có hồ sơ khác dùng sau khi ẩn thì phải xử lý hồ sơ kia trước.',
+    voidReasonWas: 'Lý do đã ẩn:',
+    addressRestored: 'Đã bật lại hồ sơ IP.',
     onlyUsed: 'Chỉ hiện IP đã cấp',
     address: 'Địa chỉ',
     status: 'Trạng thái',
