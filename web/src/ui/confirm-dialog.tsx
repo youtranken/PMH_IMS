@@ -88,7 +88,16 @@ export function ConfirmDialog({
           </label>
         )}
       </div>
-      <div className="sheet-footer">
+      {/*
+        `data-testid` PHẢI có ở đây nữa, không chỉ ở `dialog.tsx`.
+
+        Hộp xác nhận không đi qua prop `footer` của `Dialog` mà tự dựng chân hộp của mình —
+        nên có HAI nơi sinh ra `.sheet-footer`, và một `data-testid` đặt ở một nơi thì
+        `confirmAction()` của bộ E2E chỉ tìm thấy một nửa số hộp. Đúng loại "một khái niệm,
+        hai bản dựng" mà AD-15 sinh ra để chặn; ở đây giữ hai bản là có chủ ý (hộp xác nhận có
+        bố cục riêng), nên cái phải giữ đồng bộ là cái tên.
+      */}
+      <div className="sheet-footer" data-testid="dialog-footer">
         <span className="spacer" />
         <button type="button" disabled={busy} onClick={onCancel}>
           {cancelLabel ?? t('common.cancel')}

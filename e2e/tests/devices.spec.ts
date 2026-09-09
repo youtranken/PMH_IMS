@@ -195,35 +195,47 @@ test.describe('Kho thiết bị', () => {
     expect(bad.status()).toBe(400);
     expect(await bad.json()).toMatchObject({ code: 'WARRANTY_RANGE_INVALID' });
 
-    // Tủ thuộc site KHÁC với site đã chọn cũng phải bị chặn (bẫy hay gặp khi import).
-    const lists = await page.evaluate(async () => {
-      const res = await fetch('/api/v1/catalog?includeInactive=true', { credentials: 'include' });
-      return (await res.json()) as {
-        sites: { id: string; code: string }[];
-        cabinets: { id: string; siteId: string }[];
-      };
-    });
-    const cabinet = lists.cabinets[0];
-    const otherSite = lists.sites.find((site) => site.id !== cabinet?.siteId);
     /*
-     * KIỂM ĐIỀU KIỆN TIÊN QUYẾT, KHÔNG BỌC `if` QUANH PHẦN KIỂM (rà soát 07/09, mục 6).
+     * Tủ thuộc site KHÁC với site đã chọn cũng phải bị chặn (bẫy hay gặp khi import).
      *
-     * Bản trước là `if (cabinet && otherSite) { ...ba dòng expect... }`. Dữ liệu seed thiếu tủ
-     * hoặc chỉ có một site là cả phần kiểm ranh giới này KHÔNG CHẠY — và bài vẫn xanh, vẫn
-     * đếm là một bài đã qua. Một bài kiểm im lặng bỏ qua chính thứ nó sinh ra để kiểm thì tệ
-     * hơn không có bài nào, vì nó còn cho người đọc cảm giác an toàn.
+     * ===== BÀI NÀY TỰ DỰNG DỮ LIỆU, KHÔNG XIN SEED (sửa 09/09) =====
+     *
+     * Bản trước bọc cả phần kiểm trong `if (cabinet && otherSite)` và đọc tủ/site từ danh mục
+     * có sẵn. Rà soát 07/09 xếp nó vào nhóm "assertion có thể không bao giờ chạy"; đợt E6 đổi
+     * `if` thành hai `expect` điều kiện tiên quyết, và lượt E2E ngay sau đó ĐỎ — vì seed
+     * KHÔNG có tủ nào. Nghĩa là suốt từ đầu, phần kiểm ranh giới quan trọng nhất của bài này
+     * chưa từng chạy một lần nào, và bài vẫn xanh, vẫn được đếm là một bài đã qua.
+     *
+     * Bài kiểm đi mượn dữ liệu của người khác là bài kiểm sẽ im lặng bỏ đi vào một ngày nào
+     * đó. Nay nó tự khai hai site và một tủ, nên tình huống "tủ lệch site" luôn tồn tại.
      */
-    expect(cabinet, 'seed phải có ít nhất một tủ, nếu không phần kiểm dưới đây vô nghĩa').toBeTruthy();
-    expect(otherSite, 'seed phải có ít nhất hai site để dựng được tình huống lệch').toBeTruthy();
+    const site = async (suffix: string) => {
+      const res = await page.request.post('/api/v1/catalog/site', {
+        headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
+        data: { code: `S-E2E-MIX${suffix}-${stamp}`, name: `Site lech ${suffix} ${stamp}` },
+      });
+      expect(res.status(), 'phải khai được site cho bài này').toBeLessThan(300);
+      return ((await res.json()) as { id: string }).id;
+    };
+    const siteA = await site('A');
+    const siteB = await site('B');
 
+    const cab = await page.request.post('/api/v1/catalog/cabinet', {
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
+      data: { code: `TU-E2E-MIX-${stamp}`, name: `Tu lech ${stamp}`, siteId: siteA },
+    });
+    expect(cab.status(), 'phải khai được tủ trong site A').toBeLessThan(300);
+    const cabinetId = ((await cab.json()) as { id: string }).id;
+
+    // Tủ nằm ở site A, nhưng thiết bị khai site B → phải bị chặn.
     const mismatched = await page.request.post('/api/v1/devices', {
       headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
       data: {
         code: `NAS-E2E-MIX-${stamp}`,
         name: 'Tủ lệch site',
         deviceTypeId: nas.id,
-        siteId: otherSite!.id,
-        cabinetId: cabinet.id,
+        siteId: siteB,
+        cabinetId,
       },
     });
     expect(mismatched.status()).toBe(400);
