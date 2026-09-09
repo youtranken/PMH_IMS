@@ -66,7 +66,29 @@ export class SessionService {
       .where(eq(sessionsTable.id, id));
   }
 
-  /** Qua TOTP đăng nhập: bỏ cờ chờ + đóng dấu step-up trong CÙNG transaction (AD-5). */
+  /**
+   * Qua TOTP đăng nhập: bỏ cờ chờ + đóng dấu step-up trong CÙNG transaction (AD-5).
+   *
+   * ===== VÌ SAO VẪN ĐÓNG DẤU `steppedUpAt` — ĐÃ THỬ BỎ VÀ HOÀN LẠI (09/09) =====
+   *
+   * Rà soát 07/09 (mục 6, "Bảo mật") đề nghị bỏ, với lập luận đúng: yếu tố thứ hai nên được
+   * hỏi TẠI THỜI ĐIỂM mở bí mật, không thừa hưởng từ thao tác đăng nhập vừa xong.
+   *
+   * Tôi đã bỏ thử, và nó va vào một ràng buộc mà đề nghị đó không tính tới: **chống replay
+   * TOTP**. Người dùng vừa dùng mã 6 số để đăng nhập; hệ thống từ chối chính mã đó lần thứ
+   * hai (NFR-01). Nên nếu mở két đòi step-up ngay sau khi đăng nhập, họ KHÔNG có mã hợp lệ
+   * nào để gõ — phải chờ hết chu kỳ 30 giây rồi mới mở được két. Mỗi lần. Sau mỗi lần đăng
+   * nhập.
+   *
+   * Một hàng rào bắt người dùng ngồi đợi đồng hồ là hàng rào sẽ bị tìm cách lách: người ta sẽ
+   * xin nới grace, hoặc tệ hơn, xin bỏ 2 lớp. Đổi một rủi ro nhỏ lấy một rủi ro lớn.
+   *
+   * Rủi ro còn lại (máy vừa đăng nhập bị người khác ngồi vào) được xử ở chỗ đúng của nó: độ
+   * dài grace, vốn đã nằm trong `system_config` theo FR-022 — hạ nó xuống là một dòng cấu
+   * hình, không phải một lần sửa code.
+   *
+   * ĐỪNG "sửa" lại chỗ này mà không giải quyết trước bài toán replay ở trên.
+   */
   async completeTotpWithin(tx: Tx, id: string): Promise<void> {
     await tx
       .update(sessionsTable)

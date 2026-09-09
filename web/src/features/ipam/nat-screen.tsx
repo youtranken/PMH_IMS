@@ -332,7 +332,8 @@ function NatForm({
   const devices = useQuery({
     queryKey: ['devices', 'picker', deviceTerm],
     queryFn: () => {
-      const params = new URLSearchParams({ limit: '20' });
+      // `usable=true`: máy đã thanh lý không dựng được rule NAT (API chặn), nên không bày ra.
+      const params = new URLSearchParams({ limit: '20', usable: 'true' });
       if (deviceTerm.trim()) params.set('search', deviceTerm.trim());
       return apiFetch<{ items: DeviceOption[] }>(`/api/v1/devices?${params.toString()}`);
     },
@@ -342,7 +343,8 @@ function NatForm({
   const targets = useQuery({
     queryKey: ['devices', 'picker', 'target', targetTerm],
     queryFn: () => {
-      const params = new URLSearchParams({ limit: '20' });
+      // `usable=true`: máy đã thanh lý không dựng được rule NAT (API chặn), nên không bày ra.
+      const params = new URLSearchParams({ limit: '20', usable: 'true' });
       if (targetTerm.trim()) params.set('search', targetTerm.trim());
       return apiFetch<{ items: DeviceOption[] }>(`/api/v1/devices?${params.toString()}`);
     },

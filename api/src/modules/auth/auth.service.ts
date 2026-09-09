@@ -83,6 +83,30 @@ export class AuthService {
       });
     }
 
+    /*
+     * SA KHÓA TAY — kiểm ở đây, tách hẳn khỏi khóa tự động bên dưới.
+     *
+     * `users.status` có ba giá trị (`active`/`locked`/`disabled`), màn Tài khoản đặt được cả
+     * ba, nhưng tới 09/09 chỗ này chỉ kiểm `disabled`. `locked` rơi thẳng qua: SA bấm "Khóa
+     * tài khoản" vì nghi bị chiếm hoặc vì nhân viên vừa nghỉ, màn hiện "Khóa", nhật ký ghi một
+     * dòng — và người kia vẫn đăng nhập bình thường. Không có gì trên hệ thống mâu thuẫn với
+     * niềm tin rằng đã khóa xong (rà soát 07/09, mục 6 "Bảo mật").
+     *
+     * Nặng thêm: đi tiếp thì `markLoginSuccess` XÓA `failed_attempts` và ghi `auth.login.ok` —
+     * nhật ký ghi một lần đăng nhập THÀNH CÔNG cho tài khoản đang bị khóa.
+     *
+     * Mã lỗi RIÊNG với `ACCOUNT_DISABLED`: khóa là tạm và mở lại được, vô hiệu hóa là dứt
+     * điểm. Gộp một mã thì người trực không biết nên bảo người dùng chờ hay bảo họ gặp SA.
+     * KHÔNG kèm `retryAfterSeconds` như khóa tự động: khóa này không tự hết, chỉ SA mở.
+     */
+    if (user.status === 'locked') {
+      await this.auditFailure(user, 'locked-by-sa');
+      throw new UnauthorizedException({
+        code: 'ACCOUNT_LOCKED',
+        message: 'Tài khoản đang bị khóa. Liên hệ SA để mở lại.',
+      });
+    }
+
     const now = new Date();
     if (isLocked({ failedAttempts: user.failedAttempts, lockedUntil: user.lockedUntil }, now)) {
       const seconds = lockRemainingSeconds(

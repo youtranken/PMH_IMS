@@ -414,7 +414,7 @@ function IpForm({
     queryKey: ["devices", "search", deviceTerm],
     queryFn: () =>
       apiFetch<{ items: DeviceOption[] }>(
-        `/api/v1/devices?limit=20&search=${encodeURIComponent(deviceTerm)}`,
+        `/api/v1/devices?limit=20&usable=true&search=${encodeURIComponent(deviceTerm)}`,
       ),
     enabled: deviceTerm.length > 0,
   });

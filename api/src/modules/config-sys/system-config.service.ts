@@ -4,6 +4,7 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { CONFIG_KEYS, type ConfigName } from './system-config.keys';
+import { parseConfigNumber } from './system-config.parse';
 import { systemConfigTable } from './system-config.schema';
 
 const CACHE_TTL_MS = 30_000;
@@ -23,12 +24,18 @@ export class SystemConfigService {
   async getNumber(name: ConfigName): Promise<number> {
     const spec = CONFIG_KEYS[name];
     const raw = await this.read(spec.key);
-    const value = typeof raw === 'number' ? raw : Number(raw);
-    if (!Number.isFinite(value)) {
-      this.logger.warn(`Cấu hình ${spec.key} không phải số — dùng mặc định ${spec.fallback}`);
-      return spec.fallback as number;
+    /*
+     * Phép ép kiểu nằm ở `parseConfigNumber` — hàm thuần, có test bảng dữ liệu.
+     * Bản trước viết thẳng `Number(raw)` ở đây và để chuỗi RỖNG lọt thành 0: xem chú thích
+     * đầu `system-config.parse.ts` cho hậu quả (cả công ty không đăng nhập được).
+     */
+    const parsed = parseConfigNumber(raw, spec.fallback as number);
+    if (parsed.fellBack) {
+      this.logger.warn(
+        `Cấu hình ${spec.key} không phải số hợp lệ (${JSON.stringify(raw)}) — dùng mặc định ${spec.fallback}`,
+      );
     }
-    return value;
+    return parsed.value;
   }
 
   async getString(name: ConfigName): Promise<string> {

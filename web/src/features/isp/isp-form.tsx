@@ -88,7 +88,7 @@ export function IspForm({
     enabled: debounced.trim().length >= 2,
     queryFn: () =>
       apiFetch<{ items: DeviceRow[] }>(
-        `/api/v1/devices?limit=10&search=${encodeURIComponent(debounced.trim())}`,
+        `/api/v1/devices?limit=10&usable=true&search=${encodeURIComponent(debounced.trim())}`,
       ),
   });
 

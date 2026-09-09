@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { requireCas } from '../../common/cas';
@@ -186,13 +186,27 @@ export class IpAddressService {
    * chỉ được hỏi SAU khi hồ sơ đã biến khỏi bảng. AC 5.2 bắt giữ lịch sử vĩnh viễn, mà giữ
    * xong lại không cho đọc thì bằng không.
    */
+  /**
+   * Lịch sử một hồ sơ IP — MỚI NHẤT TRÊN ĐẦU, có trần 200 dòng.
+   *
+   * Trước 09/09 đây là bản LỆCH DUY NHẤT trong mười bộ đọc lịch sử của repo, và là bản lệch
+   * duy nhất NGƯỜI DÙNG NHÌN THẤY: nó `asc` và không trần, nên panel Lịch sử của IP hiện
+   * cũ-nhất-trên-đầu trong khi chín màn kia hiện mới-nhất-trên-đầu. Người đọc chuyển qua lại
+   * giữa hai màn sẽ đọc sai thứ tự mà không nhận ra — dòng đầu bảng ở màn này là "lâu rồi",
+   * ở màn kia là "vừa xong".
+   *
+   * Trần 200 cũng đi kèm, cùng lý do với chín bản kia: một IP bị chuyển trạng thái hàng ngày
+   * trong vài năm sẽ kéo cả nghìn dòng về trình duyệt cho một cái panel không ai cuộn hết.
+   * Rà soát 07/09, mục 6 "Kiến trúc".
+   */
   async history(id: string): Promise<(typeof ipHistoryTable.$inferSelect)[]> {
     await this.requireAny(id);
     return this.db
       .select()
       .from(ipHistoryTable)
       .where(eq(ipHistoryTable.ipAddressId, id))
-      .orderBy(asc(ipHistoryTable.createdAt));
+      .orderBy(desc(ipHistoryTable.createdAt))
+      .limit(200);
   }
 
   async create(actor: string, input: IpAddressInput): Promise<IpAddressRecord> {

@@ -146,6 +146,8 @@ export class DevicesController {
       cabinetId?: string;
       deviceTypeId?: string;
       status?: DeviceStatus;
+      /** '?usable=true' — chỉ máy còn nhận thêm được. Xem `DeviceFilter.usableOnly`. */
+      usable?: string;
       sort?: string;
       dir?: string;
     },
@@ -158,6 +160,8 @@ export class DevicesController {
         cabinetId: query.cabinetId,
         deviceTypeId: query.deviceTypeId,
         status: query.status,
+        // So với chuỗi 'true', không ép boolean: `?usable=false` phải nghĩa là KHÔNG lọc.
+        usableOnly: query.usable === 'true',
       },
       parseSortQuery(query, DEVICE_SORT_KEYS, DEVICE_SORT_DEFAULT),
     );

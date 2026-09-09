@@ -534,6 +534,9 @@ function buildWhere(filter: DeviceFilter): SQL | undefined {
   if (filter.cabinetId) parts.push(eq(deviceTable.cabinetId, filter.cabinetId));
   if (filter.deviceTypeId) parts.push(eq(deviceTable.deviceTypeId, filter.deviceTypeId));
   if (filter.status) parts.push(eq(deviceTable.status, filter.status));
+  // `usableOnly` KHÔNG chồng lên `status`: ai lọc đích danh `status=retired` thì vẫn được
+  // xem, đó là màn Kho thanh lý. Cờ này chỉ để các ô CHỌN thôi bày ra thứ không chọn được.
+  if (filter.usableOnly) parts.push(ne(deviceTable.status, 'retired'));
   const defined = parts.filter((part): part is SQL => part !== undefined);
   return defined.length > 0 ? and(...defined) : undefined;
 }
