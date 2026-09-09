@@ -254,6 +254,9 @@ function RuleForm({
     <Dialog
       open
       onOpenChange={onClose}
+      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
+         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
+      dismissible={!save.isPending}
       maxWidth={640}
       title={rule ? t('digest.edit') : t('digest.add')}
       footer={

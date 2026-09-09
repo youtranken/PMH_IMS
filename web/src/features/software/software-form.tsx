@@ -113,6 +113,9 @@ export function SoftwareForm({
     <Dialog
       open
       onOpenChange={onClose}
+      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
+         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
+      dismissible={!busy}
       maxWidth={760}
       title={row ? `${t('software.edit')} — ${row.code}` : t('software.add')}
       footer={

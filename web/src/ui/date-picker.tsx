@@ -67,6 +67,22 @@ export function DatePicker({
     }
   }, [open, selected]);
 
+  /**
+   * ĐÓNG VÀ TRẢ FOCUS VỀ NÚT MỞ.
+   *
+   * Popover PORTAL ra ngoài cây DOM của nút, nên khi nó bị gỡ đi, focus rơi về `<body>` —
+   * người dùng bàn phím vừa chọn xong một ngày là mất dấu hoàn toàn: Tab tiếp theo bắt đầu
+   * lại từ đầu trang, không phải từ ô kế tiếp trong form. `Select.choose` đã làm đúng việc
+   * này từ đầu; hai bộ chọn ngày/giờ thì chưa bao giờ.
+   *
+   * KHÔNG gọi khi người dùng bấm ra chỗ khác: lúc đó họ đã chủ động chuyển đi đâu rồi, giật
+   * focus về là cướp mất chỗ họ vừa bấm.
+   */
+  const closeAndReturnFocus = useCallback(() => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }, []);
+
   // Đóng khi bấm ngoài / Esc.
   useEffect(() => {
     if (!open) return;
@@ -85,7 +101,7 @@ export function DatePicker({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        setOpen(false);
+        closeAndReturnFocus();
       }
     };
     document.addEventListener('mousedown', onDoc);
@@ -94,7 +110,7 @@ export function DatePicker({
       document.removeEventListener('mousedown', onDoc);
       document.removeEventListener('keydown', onKey, true);
     };
-  }, [open, refs.domReference, refs.floating]);
+  }, [open, refs.domReference, refs.floating, closeAndReturnFocus]);
 
   const label = useMemo(() => {
     if (!selected) return placeholder ?? t('datePicker.choose');
@@ -125,9 +141,9 @@ export function DatePicker({
     (d: Date) => {
       if (outOfRange(d)) return;
       onChange(toISO(d));
-      setOpen(false);
+      closeAndReturnFocus();
     },
-    [onChange, outOfRange],
+    [onChange, outOfRange, closeAndReturnFocus],
   );
 
   const step = (dir: number) => {
@@ -157,7 +173,10 @@ export function DatePicker({
   }, [i18n.language]);
 
   return (
-    <div className={`dp${open ? ' open' : ''}`} ref={refs.setReference}>
+    <div
+      className={`dp${open ? ' open' : ''}${clearable && selected ? ' has-clear' : ''}`}
+      ref={refs.setReference}
+    >
       <button
         ref={triggerRef}
         type="button"
@@ -174,29 +193,30 @@ export function DatePicker({
           <path d="M8 2v4M16 2v4M3 10h18" />
         </svg>
         <span className={selected ? 'dp-val' : 'dp-val ph'}>{label}</span>
-        {clearable && selected && (
-          <span
-            className="dp-clear"
-            role="button"
-            aria-label={t('datePicker.clear')}
-            tabIndex={0}
-            onClick={(e) => {
-              e.stopPropagation();
-              onChange('');
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                e.stopPropagation();
-                onChange('');
-              }
-            }}
-          >
-            ✕
-          </span>
-        )}
         <Chevron className="chev" />
       </button>
+
+      {/*
+        NÚT XÓA LÀ ANH EM CỦA NÚT MỞ, KHÔNG LỒNG BÊN TRONG.
+
+        Bản trước là `<span role="button" tabIndex={0}>` nằm NGAY TRONG `<button className=
+        "dp-trigger">`. HTML không cho phép điều khiển lồng trong điều khiển, và trình duyệt
+        không báo lỗi — nó chỉ xử lý mỗi nơi một kiểu: phím Space bấm trên dấu ✕ vẫn nổi lên
+        và MỞ luôn lịch, cây trợ năng gộp hai thứ thành một nút nghe không ra là gì, và
+        `getByRole('button', { name: 'Xóa' })` có lúc tìm ra có lúc không. Ba triệu chứng rời
+        rạc, một nguyên nhân.
+      */}
+      {clearable && selected ? (
+        <button
+          type="button"
+          className="dp-clear"
+          aria-label={t('datePicker.clear')}
+          disabled={disabled}
+          onClick={() => onChange('')}
+        >
+          ✕
+        </button>
+      ) : null}
 
       {open &&
         createPortal(

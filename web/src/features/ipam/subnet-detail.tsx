@@ -500,6 +500,9 @@ function IpForm({
     <Dialog
       open
       onOpenChange={onClose}
+      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
+         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
+      dismissible={!save.isPending}
       maxWidth={560}
       title={
         record ? t("ipam.editIp", { address }) : t("ipam.assignIp", { address })
@@ -673,6 +676,9 @@ function TransitionDialog({
     <Dialog
       open
       onOpenChange={onClose}
+      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
+         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
+      dismissible={!move.isPending}
       maxWidth={480}
       title={
         <>
@@ -830,6 +836,9 @@ function RestoreAddressDialog({
     <Dialog
       open
       onOpenChange={onClose}
+      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
+         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
+      dismissible={!restore.isPending}
       maxWidth={480}
       title={`${t("ipam.restoreAddress")} — ${record.address}`}
       footer={
@@ -892,6 +901,9 @@ function VoidAddressDialog({
     <Dialog
       open
       onOpenChange={onClose}
+      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
+         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
+      dismissible={!remove.isPending}
       maxWidth={480}
       title={`${t("common.delete")} — ${record.address}`}
       footer={

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { TimePicker, type TimeValue } from '@/ui/time-picker';
 import { useAnchoredMenu } from '@/ui/use-anchored-menu';
@@ -48,6 +48,22 @@ export function TimeField({
     maxHeight: 400,
   });
   const portal = useDialogPortal();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  /**
+   * ĐÓNG VÀ TRẢ FOCUS VỀ NÚT MỞ.
+   *
+   * Popover PORTAL ra ngoài cây DOM của nút, nên khi nó bị gỡ đi, focus rơi về `<body>`:
+   * người dùng bàn phím vừa chọn xong giờ là mất dấu hoàn toàn, Tab tiếp theo bắt đầu lại
+   * từ đầu trang chứ không phải từ ô kế tiếp trong form. `Select.choose` đã làm đúng việc
+   * này từ đầu; hai bộ chọn ngày/giờ thì chưa bao giờ.
+   *
+   * KHÔNG gọi khi người dùng bấm ra chỗ khác — lúc đó họ đã chủ động chuyển đi rồi.
+   */
+  const closeAndReturnFocus = useCallback(() => {
+    setOpen(false);
+    triggerRef.current?.focus();
+  }, []);
 
   // Đóng khi bấm ra ngoài — popover ở PORTAL (body) nên phải loại trừ cả nút LẪN popover.
   useEffect(() => {
@@ -66,7 +82,7 @@ export function TimeField({
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
-        setOpen(false);
+        closeAndReturnFocus();
       }
     };
     document.addEventListener('mousedown', onDoc);
@@ -75,11 +91,12 @@ export function TimeField({
       document.removeEventListener('mousedown', onDoc);
       document.removeEventListener('keydown', onKey, true);
     };
-  }, [open, refs.domReference, refs.floating]);
+  }, [open, refs.domReference, refs.floating, closeAndReturnFocus]);
 
   return (
     <div className="tf" ref={refs.setReference}>
       <button
+        ref={triggerRef}
         type="button"
         className="tf-trigger"
         aria-label={ariaLabel}
@@ -116,9 +133,9 @@ export function TimeField({
               value={parse(value)}
               onDone={(v) => {
                 onChange(fmt(v));
-                setOpen(false);
+                closeAndReturnFocus();
               }}
-              onCancel={() => setOpen(false)}
+              onCancel={closeAndReturnFocus}
             />
           </div>,
           portal ?? document.body,

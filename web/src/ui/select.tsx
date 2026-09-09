@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Chevron } from '@/ui/chevron';
@@ -63,6 +63,19 @@ export function Select({
   const selected = options.find((o) => o.value === value);
   const label = selected ? selected.label : (placeholder ?? '—');
 
+  /**
+   * NỐI NÚT VỚI DANH SÁCH — `aria-controls` + `aria-activedescendant`.
+   *
+   * Menu PORTAL ra ngoài cây DOM của nút, nên không có hai thuộc tính này thì với trình đọc
+   * màn hình chúng là hai thứ rời nhau: `aria-expanded` báo "đã mở", nhưng "mở cái gì" thì
+   * không có câu trả lời, và ↑/↓ chỉ đổi lớp CSS `active` — một thay đổi hoàn toàn IM LẶNG.
+   * Người dùng mù bấm mũi tên năm lần và nghe đúng năm lần không có gì.
+   *
+   * `aria-activedescendant` phải trỏ tới MỘT PHẦN TỬ CÓ THẬT, nên chỉ đặt khi menu đang mở.
+   */
+  const listId = useId();
+  const optionId = (index: number) => `${listId}-o${index}`;
+
   const { refs, floatingStyles } = useAnchoredMenu(open, {
     matchWidth: true,
     maxHeight: 288,
@@ -109,6 +122,8 @@ export function Select({
         aria-label={ariaLabel}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-controls={open ? listId : undefined}
+        aria-activedescendant={open && options[active] ? optionId(active) : undefined}
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
         onKeyDown={(e) => {
@@ -140,6 +155,7 @@ export function Select({
         createPortal(
           <ul
             className="fsel-menu"
+            id={listId}
             role="listbox"
             style={floatingStyles}
             ref={refs.setFloating}
@@ -161,6 +177,7 @@ export function Select({
               <li key={o.value}>
                 <button
                   type="button"
+                  id={optionId(i)}
                   role="option"
                   aria-selected={o.value === value}
                   className={`fsel-option${i === active ? ' active' : ''}${o.value === value ? ' sel' : ''}`}

@@ -423,6 +423,9 @@ function NatForm({
     <Dialog
       open
       onOpenChange={onClose}
+      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
+         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
+      dismissible={!busy}
       maxWidth={720}
       title={rule ? t('nat.edit') : t('nat.add')}
       footer={
@@ -864,6 +867,9 @@ function RemoveDialog({
     <Dialog
       open
       onOpenChange={onClose}
+      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
+         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
+      dismissible={!remove.isPending}
       maxWidth={480}
       title={t('nat.removeTitle', { ports: `${rule.protocol.toUpperCase()} ${rule.externalPorts}` })}
       footer={

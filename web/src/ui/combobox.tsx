@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -63,6 +63,21 @@ export function Combobox<T>({
   const [touched, setTouched] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const portal = useDialogPortal();
+
+  /**
+   * NỐI Ô GÕ VỚI DANH SÁCH — `aria-controls` + `aria-activedescendant`.
+   *
+   * Menu PORTAL ra ngoài cây DOM của ô input, nên thiếu hai thuộc tính này thì với trình đọc
+   * màn hình chúng là hai thứ rời nhau: `role="combobox"` + `aria-expanded` báo "đã mở",
+   * nhưng "mở cái gì" thì không có câu trả lời, và ↑/↓ chỉ đổi lớp CSS `active` — một thay
+   * đổi hoàn toàn IM LẶNG. Người dùng mù bấm mũi tên năm lần và nghe đúng năm lần không có
+   * gì; cả cơ chế điều hướng bàn phím tồn tại mà không tới được họ.
+   *
+   * `aria-activedescendant` phải trỏ tới MỘT PHẦN TỬ CÓ THẬT — chỉ đặt khi menu đang mở và
+   * dòng đang chọn thật sự tồn tại (menu có thể chỉ chứa dòng "tạo mới" hoặc dòng báo hỏng).
+   */
+  const listId = useId();
+  const optionId = (index: number) => `${listId}-o${index}`;
 
   // options đổi (query mới) → về đầu danh sách và mở lại menu
   useEffect(() => {
@@ -129,6 +144,8 @@ export function Combobox<T>({
         role="combobox"
         aria-label={ariaLabel}
         aria-expanded={open}
+        aria-controls={open ? listId : undefined}
+        aria-activedescendant={open && options[active] ? optionId(active) : undefined}
         aria-autocomplete="list"
         onFocus={() => setTouched(true)}
         onChange={(e) => {
@@ -170,6 +187,7 @@ export function Combobox<T>({
         createPortal(
           <ul
             className="combo-menu"
+            id={listId}
             ref={refs.setFloating}
             role="listbox"
             style={floatingStyles}
@@ -204,6 +222,7 @@ export function Combobox<T>({
               <li key={getKey(option)}>
                 <button
                   type="button"
+                  id={optionId(i)}
                   role="option"
                   aria-selected={i === active}
                   disabled={disabled}

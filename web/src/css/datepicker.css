@@ -75,15 +75,33 @@
 .dp.open .dp-trigger .chev {
   transform: rotate(180deg);
 }
+/*
+ * Nút xóa nằm NGOÀI `.dp-trigger` (điều khiển không được lồng trong điều khiển), nên phải tự
+ * neo lấy chỗ của mình: sát trái chevron, giữa chiều cao ô. Chevron rộng 1rem và cách mép phải
+ * đúng một nhịp `--space-5`, cộng thêm khoảng `gap` giữa hai thứ.
+ */
 .dp-clear {
-  flex: none;
+  position: absolute;
+  top: 50%;
+  right: calc(var(--space-5) + 1rem + var(--space-3));
+  transform: translateY(-50%);
   display: grid;
   place-items: center;
   width: 1.3rem;
   height: 1.3rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
   border-radius: 50%;
   color: var(--ink-3);
+  font: inherit;
   font-size: var(--fs-2xs);
+}
+/* Chừa chỗ cho nút xóa: `.dp-val` là phần co giãn, nên padding ở đây mới cắt đúng chỗ chữ
+   dài bị "…" thay vì để ngày chạy xuống dưới dấu ✕. */
+.dp.has-clear .dp-trigger .dp-val {
+  padding-right: calc(1.3rem + var(--space-3));
 }
 .dp-clear:hover {
   background: var(--surface-2);
