@@ -32,16 +32,68 @@ export const COMPOSE =
 export const E2E_LOGIN_RATE_LIMIT = 500;
 
 /**
+ * CHẠY MỘT LỆNH `docker compose exec` — CÓ THỬ LẠI. Mọi helper chạm stack đều đi qua đây.
+ *
+ * ===== VÌ SAO CẦN, ĐO ĐƯỢC =====
+ *
+ * Trên máy Windows này, lúc bộ E2E đang chạy thì hệ điều hành có lúc KHÔNG DỰNG NỔI tiến
+ * trình con nữa (đo được: 24 GB tổng, còn 4,3 GB trống khi chưa chạy gì; cộng thêm trình
+ * duyệt của bài test và docker là cạn). Triệu chứng rất dễ chẩn nhầm: `execSync` ném với
+ * stderr RỖNG, chỉ còn dòng "Command failed" — nhìn như docker hỏng hoặc câu SQL sai.
+ *
+ * Đo trong ba lượt chạy đầy đủ: một lần trượt ở bài thứ ~61 → bài đó đỏ, và vì dữ liệu không
+ * được dọn nên hơn 50 bài sau đỏ theo. Cả lượt 25 phút hỏng vì một lần gọi tiến trình con.
+ *
+ * ===== VÌ SAO THỬ LẠI Ở ĐÂY LÀ ĐÚNG =====
+ *
+ * Mọi lệnh đi qua cửa này đều TOÀN PHẦN: đọc một giá trị, đặt một giá trị về hằng số, hoặc
+ * dọn một vùng về trạng thái cố định. Chạy hai lần cho kết quả y hệt chạy một lần. Thử lại
+ * một lệnh GHI NGHIỆP VỤ thì mới là giấu lỗi đi — cửa này không có lệnh nào như vậy.
+ *
+ * CÓ NGHỈ giữa hai lượt: bản đầu bắn ba lượt liên tiếp và cả ba cùng hỏng, vì thử lại tức thì
+ * là đâm vào đúng bức tường vừa đâm. `Atomics.wait` chứ không `await`: nhiều nơi gọi nằm
+ * trong `beforeEach` ĐỒNG BỘ, và `execSync('sleep')` không có trên Windows.
+ *
+ * Ba lượt, không nhiều hơn: hỏng THẬT (api chết, sai cấu hình, SQL sai) phải đỏ nhanh và đỏ
+ * rõ, chứ không được biến thành một bài kiểm treo lâu gấp ba rồi mới chịu nói.
+ */
+function dockerExec(command: string, label: string, env?: NodeJS.ProcessEnv): string {
+  const options = { cwd: '..', stdio: 'pipe' as const, ...(env ? { env } : {}) };
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      return execSync(command, options).toString();
+    } catch (error) {
+      if (attempt < 3) {
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, attempt * 1_000);
+        continue;
+      }
+      /*
+       * Kèm stderr THẬT. "Command failed" trần trụi chính là thứ đã làm mất một giờ để lần ra
+       * rằng nguyên nhân chỉ là máy hết bộ nhớ — và stderr rỗng lại là DẤU HIỆU của đúng
+       * chuyện đó, nên câu nói rõ ra đáng giá hơn cả stderr.
+       */
+      const stderr = String((error as { stderr?: Buffer }).stderr ?? '').trim();
+      throw new Error(
+        `${label} hỏng sau 3 lần thử.` +
+          (stderr
+            ? `\n${stderr}`
+            : ' stderr RỖNG — nhiều khả năng máy không dựng nổi tiến trình con (hết bộ nhớ), ' +
+              'không phải lỗi SQL hay docker.'),
+        { cause: error },
+      );
+    }
+  }
+}
+
+/**
  * Đọc trần đăng nhập theo IP đang có trong `system_config`.
  * Dùng để bài kiểm rate-limit tự trả lại đúng giá trị nó mượn.
  */
 export function getLoginRateLimit(): string {
-  return execSync(
+  return dockerExec(
     `${COMPOSE} exec -T postgres psql -U ims -d ims -tAc "SELECT value FROM system_config WHERE key = 'login.rate_limit_per_ip'"`,
-    { cwd: '..', stdio: 'pipe' },
-  )
-    .toString()
-    .trim();
+    'Đọc trần đăng nhập',
+  ).trim();
 }
 
 /**
@@ -71,9 +123,9 @@ export function getLoginRateLimit(): string {
  */
 export function setLoginRateLimit(value: number): void {
   flushResets();
-  execSync(
+  dockerExec(
     `${COMPOSE} exec -T postgres psql -U ims -d ims -c "UPDATE system_config SET value = '${value}' WHERE key = 'login.rate_limit_per_ip'"`,
-    { cwd: '..', stdio: 'pipe' },
+    'Đặt trần đăng nhập',
   );
 }
 
@@ -97,18 +149,18 @@ export function expireStepUp(email: string): void {
    * Bắt buộc truyền email chứ không đặt mặc định: mặc định là cách một lời gọi thiếu sót lại
    * lặng lẽ quét cả DB lần nữa.
    */
-  execSync(
+  dockerExec(
     `${COMPOSE} exec -T postgres psql -U ims -d ims -c "UPDATE sessions SET stepped_up_at = now() - interval '1 hour' WHERE revoked_at IS NULL AND user_id = (SELECT id FROM users WHERE email = '${email}')"`,
-    { cwd: '..', stdio: 'pipe' },
+    'Hết hạn step-up',
   );
 }
 
 /** Đếm số dòng audit của một hành động trên một secret — dùng để kiểm "mỗi lần mở = một dòng". */
 export function countAudit(action: string, objectId: string): number {
-  const out = execSync(
+  const out = dockerExec(
     `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
       `"SELECT count(*) FROM audit_log WHERE action = '${action}' AND object_id = '${objectId}'"`,
-    { cwd: '..', encoding: 'utf8' },
+    'Đếm dòng audit',
   );
   return Number(out.trim());
 }
@@ -179,59 +231,11 @@ export function flushResets(): void {
   if (pending.size === 0) return;
   const domains = DOMAIN_ORDER.filter((d) => pending.has(d));
   pending.clear();
-  /*
-   * THỬ LẠI — vì hỏng ở đây KHÔNG chỉ làm đỏ một bài (09/09).
-   *
-   * `docker compose exec` trên máy Windows này thỉnh thoảng hỏng nhất thời dưới tải: process
-   * con không dựng được, `execSync` ném, và triệu chứng là một dòng "Command failed" trần
-   * trụi. Đo được trong một lượt chạy đầy đủ: MỘT lần hỏng ở bài thứ 62 → bài đó đỏ, và vì
-   * trạng thái không được dọn nên 52 bài sau đỏ theo. Cả lượt 25 phút hỏng vì một lần gọi
-   * tiến trình con trượt.
-   *
-   * Đây đúng chỗ đáng thử lại, và là chỗ HIẾM khi thử lại là đúng: lệnh này TOÀN PHẦN
-   * (idempotent) — nó đưa vùng dữ liệu về một trạng thái cố định, chạy hai lần cho kết quả y
-   * hệt chạy một lần. Thử lại một lệnh GHI nghiệp vụ thì mới là giấu lỗi đi.
-   *
-   * Ba lượt, không nhiều hơn: hỏng thật (api chết, sai cấu hình) phải đỏ NHANH và đỏ rõ, chứ
-   * không được biến thành một bài kiểm treo lâu gấp ba rồi mới chịu nói.
-   */
-  const cmd = `${COMPOSE} exec -T api node scripts/reset-e2e.mjs ${domains.join(' ')}`;
-  const options = {
-    cwd: '..',
-    stdio: 'pipe' as const,
-    env: { ...process.env, ALLOW_E2E_RESET: '1' },
-  };
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      execSync(cmd, options);
-      return;
-    } catch (error) {
-      /*
-       * CÓ NGHỈ GIỮA HAI LƯỢT, và đó là phần quan trọng nhất của cơ chế thử lại này.
-       *
-       * Bản đầu bắn ba lượt liên tiếp không nghỉ, và đo được là cả ba cùng hỏng: nguyên nhân
-       * không phải một lượt trượt ngẫu nhiên mà là máy đang KHÔNG DỰNG NỔI tiến trình con
-       * (trình duyệt của bài test + docker + MCP cùng chiếm chỗ). Thử lại tức thì là đâm vào
-       * đúng bức tường vừa đâm, ba lần trong vài mili giây, rồi kết luận "hỏng thật".
-       *
-       * `Atomics.wait` vì đây là hàm ĐỒNG BỘ (nó chạy trong `beforeEach` đồng bộ của mọi
-       * spec) — `await` không dùng được, và `execSync('sleep')` thì không có trên Windows.
-       */
-      if (attempt < 3) {
-        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, attempt * 1_000);
-      }
-      if (attempt >= 3) {
-        // Kèm stderr THẬT của script: "Command failed" trần trụi là thứ đã làm mất một giờ
-        // để lần ra đúng một lần gọi docker trượt.
-        const stderr = String((error as { stderr?: Buffer }).stderr ?? '').trim();
-        throw new Error(
-          `Dọn dữ liệu E2E hỏng sau 3 lần thử (${domains.join(' ')}).` +
-            (stderr ? `\n${stderr}` : ' Không có stderr — nhiều khả năng docker exec không dựng được tiến trình con.'),
-          { cause: error },
-        );
-      }
-    }
-  }
+  dockerExec(
+    `${COMPOSE} exec -T api node scripts/reset-e2e.mjs ${domains.join(' ')}`,
+    `Dọn dữ liệu E2E (${domains.join(' ')})`,
+    { ...process.env, ALLOW_E2E_RESET: '1' },
+  );
 }
 
 /**
@@ -443,26 +447,26 @@ ${body.HTML ?? ''}`;
 export const CONFIG_CACHE_MS = 31_000;
 
 export function setConfig(key: string, value: string): void {
-  execSync(
+  dockerExec(
     `${COMPOSE} exec -T postgres psql -U ims -d ims -c ` +
       `"UPDATE system_config SET value = '${value}' WHERE key = '${key}'"`,
-    { cwd: '..', stdio: 'pipe' },
+    `Đặt cấu hình ${key}`,
   );
 }
 
 export function getConfig(key: string): string {
-  return execSync(
+  return dockerExec(
     `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
       `"SELECT value FROM system_config WHERE key = '${key}'"`,
-    { cwd: '..', encoding: 'utf8' },
+    `Đọc cấu hình ${key}`,
   ).trim();
 }
 
 /** Chạy một câu SQL bất kỳ và trả về chữ — dùng để dựng trạng thái mà UI không dựng được. */
 export function sql(query: string): string {
-  return execSync(
+  return dockerExec(
     `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c "${query}"`,
-    { cwd: '..', encoding: 'utf8' },
+    `Câu SQL: ${query.slice(0, 60)}`,
   ).trim();
 }
 
