@@ -51,6 +51,24 @@ test.describe('Chống dò mật khẩu theo IP', () => {
    */
   test.setTimeout(120_000);
 
+  /**
+   * CANH CHÍNH CÁI GIÀN GIÁO — không phải canh sản phẩm.
+   *
+   * Từ 07/09 (`b3d488f`), `resetUsers()` chỉ XẾP HÀNG; `reset-e2e.mjs` chạy sau, do fixture
+   * gọi ngay trước thân bài — và trong domain `users` của nó có một dòng đặt trần về 500.
+   * Nên trần mà `beforeAll` vừa hạ xuống 3 bị đè lại thành 500 TRƯỚC KHI bài chạy, và bài
+   * chống dò mật khẩu bên dưới chạy với trần 500: không bao giờ chạm 429, luôn xanh vì lý do
+   * sai. Nó im lặng đúng hai ngày, tới lượt `--e2e` đầy đủ đầu tiên (09/09) mới lộ.
+   *
+   * `setLoginRateLimit` nay tự `flushResets()` trước khi ghi. Bài này khóa đúng điều đó lại:
+   * nó KHÔNG kiểm sản phẩm, nó kiểm rằng con số bộ test vừa đặt còn sống lúc bài bắt đầu.
+   * Bỏ bài này thì lần tối ưu tốc độ tiếp theo lại tắt được một hàng rào bảo mật mà không ai
+   * thấy — đúng như lần vừa rồi.
+   */
+  test('giàn giáo: trần bộ test vừa đặt không bị hàng đợi dọn ghi đè', () => {
+    expect(getLoginRateLimit()).toBe(String(LIMIT));
+  });
+
   test('vượt trần thì trả 429 LOGIN_RATE_LIMITED, không phải 401 @slow', async ({ page }) => {
     await page.goto('/login');
 

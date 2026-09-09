@@ -289,9 +289,22 @@ test.describe('Thanh lý trên giao diện — ô tick "Dọn hết thứ liên 
 
     await dialog.getByRole('button', { name: 'Thanh lý' }).click();
 
-    // Người dùng phải ĐỌC ĐƯỢC vì sao bị chặn, ngay trên màn, kèm tên thứ đang vướng.
+    /*
+     * Người dùng phải ĐỌC ĐƯỢC vì sao bị chặn, ngay trên màn, kèm tên thứ đang vướng.
+     *
+     * Bám vào KHUNG THÔNG BÁO (`role="status"`), không quét cả trang. Bản trước dùng
+     * `page.getByText(new RegExp(kit.ip))` và nó khớp HAI chỗ: dòng IP trong khu mở rộng của
+     * chính trang thiết bị, và câu lỗi trong toast. Playwright ở chế độ strict thì hai kết quả
+     * là đỏ — nhưng đỏ vì bài kiểm hỏi mơ hồ, KHÔNG phải vì sản phẩm sai (máy vẫn `in_use`,
+     * toast vẫn hiện đúng). Lượt E2E đầy đủ 09/09 bắt được; trước đó nó xanh chỉ vì khu mở
+     * rộng tải chậm hơn toast một nhịp — tức là bài này vốn đã là một bài may rủi.
+     *
+     * Dấu chấm trong IP cũng phải escape: `new RegExp('172.21.126.5')` cho dấu chấm khớp MỌI
+     * ký tự — cùng lớp lỗi mà cổng lint e2e vừa bắt ở ba chỗ khác.
+     */
+    const toast = page.getByRole('status');
     await expect(
-      page.getByText(new RegExp(kit.ip)),
+      toast.getByText(new RegExp(kit.ip.replace(/\./g, '\\.'))),
       'lỗi phải hiện trên giao diện, không chỉ nằm trong response',
     ).toBeVisible();
 

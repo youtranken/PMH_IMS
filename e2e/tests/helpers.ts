@@ -44,8 +44,33 @@ export function getLoginRateLimit(): string {
     .trim();
 }
 
-/** Đặt trần đăng nhập theo IP. CHỈ dùng trong E2E. */
+/**
+ * Đặt trần đăng nhập theo IP. CHỈ dùng trong E2E.
+ *
+ * ===== VÌ SAO PHẢI `flushResets()` TRƯỚC =====
+ *
+ * `resetUsers()` không dọn ngay — từ 07/09 (`b3d488f`) nó chỉ XẾP HÀNG, và `flushResets()`
+ * mới thật sự chạy `reset-e2e.mjs`, do fixture gọi NGAY TRƯỚC thân bài kiểm. Mà trong domain
+ * `users` của script đó có đúng một dòng:
+ *
+ *     UPDATE system_config SET value = '500' WHERE key = 'login.rate_limit_per_ip'
+ *
+ * Nên `beforeAll` viết như mọi người sẽ viết —
+ *
+ *     resetUsers();            // xếp hàng
+ *     setLoginRateLimit(3);    // DB = 3
+ *                              // …fixture flush: DB = 500  ← đè mất
+ *
+ * — cho ra trần 500 lúc bài chạy. Đó chính là chuyện đã xảy ra với
+ * `login-rate-limit.spec.ts` KỂ TỪ 07/09: bài canh hàng rào chống dò mật khẩu chạy với trần
+ * 500 nên không bao giờ chạm 429, và nó im lặng cho tới lượt `--e2e` đầy đủ ngày 09/09 —
+ * lượt đầy đủ đầu tiên kể từ hôm đó. Một tối ưu tốc độ đã tắt một bài kiểm bảo mật.
+ *
+ * Sửa ở ĐÂY chứ không ở spec: nơi nào GHI cấu hình cũng phải tự làm cạn hàng đợi có thể ghi
+ * đè nó. Vá trong một spec thì spec thứ hai — viết sau, bởi người khác — lại dính y hệt.
+ */
 export function setLoginRateLimit(value: number): void {
+  flushResets();
   execSync(
     `${COMPOSE} exec -T postgres psql -U ims -d ims -c "UPDATE system_config SET value = '${value}' WHERE key = 'login.rate_limit_per_ip'"`,
     { cwd: '..', stdio: 'pipe' },
