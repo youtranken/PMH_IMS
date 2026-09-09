@@ -122,11 +122,37 @@ export class AuditQueryService {
     };
   }
 
-  /** Distinct action cho dropdown lọc (AC3). */
+  /**
+   * Distinct action cho dropdown lọc (AC3) — "loose index scan", KHÔNG quét toàn bảng.
+   *
+   * ===== VÌ SAO KHÔNG PHẢI `SELECT DISTINCT` =====
+   *
+   * `audit_log` là bảng CHỈ-THÊM giữ vĩnh viễn (NFR-03): nó chỉ có thể to lên. `SELECT
+   * DISTINCT action` đọc MỌI dòng đã từng ghi để trả về chừng 60 giá trị cho một ô chọn —
+   * chi phí tăng tuyến tính theo tuổi hệ thống, cho một câu trả lời gần như không đổi.
+   *
+   * Câu đệ quy dưới đây là mẫu "loose index scan" chuẩn của Postgres (Postgres < 18 không có
+   * skip scan sẵn): lấy giá trị nhỏ nhất, rồi mỗi vòng nhảy tới giá trị KẾ TIẾP LỚN HƠN bằng
+   * `audit_log_action_idx` (migration 0042). Chi phí thành O(số giá trị khác nhau × log n)
+   * thay vì O(số dòng) — với 60 hành động thì đó là 60 lần dò index, bất kể bảng có một nghìn
+   * hay một tỷ dòng.
+   */
   async distinctActions(): Promise<string[]> {
-    const rows = await this.db.execute<{ action: string }>(
-      sql`SELECT DISTINCT action FROM audit_log ORDER BY action`,
-    );
+    const rows = await this.db.execute<{ action: string }>(sql`
+      WITH RECURSIVE walk AS (
+        (SELECT action FROM audit_log ORDER BY action LIMIT 1)
+        UNION ALL
+        SELECT (
+          SELECT a.action FROM audit_log a
+          WHERE a.action > walk.action
+          ORDER BY a.action
+          LIMIT 1
+        )
+        FROM walk
+        WHERE walk.action IS NOT NULL
+      )
+      SELECT action FROM walk WHERE action IS NOT NULL ORDER BY action
+    `);
     return rows.rows.map((r) => r.action);
   }
 }

@@ -1,7 +1,15 @@
 import { customType, jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
-/** citext không dùng ở đây: mã so sánh qua `lower(code)` trong index duy nhất (0032). */
-const citext = customType<{ data: string }>({ dataType: () => 'text' });
+/**
+ * `citext` THẬT từ 09/09 (migration 0042).
+ *
+ * Trước đó đây là một cái tên nói dối: biến tên `citext` nhưng `dataType` trả `'text'`, và cột
+ * trong DB cũng là `text` — bảng DUY NHẤT trong sáu bảng có cột `code` lệch khỏi quy ước. Nó
+ * tự vá bằng `UNIQUE (lower(code))`, đủ để chặn trùng nhưng KHÔNG chữa việc tra cứu: cùng một
+ * câu `WHERE code = 'sv-01'`, năm bảng tìm ra `SV-01` còn bảng này thì không. Đúng loại khác
+ * biệt không ai nhớ nổi, và chỉ lộ ra khi có người gõ chữ thường.
+ */
+const citext = customType<{ data: string }>({ dataType: () => 'citext' });
 
 /**
  * Bảng `service_account` + `service_account_history` — migration 0032.

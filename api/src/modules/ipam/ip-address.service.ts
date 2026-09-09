@@ -703,7 +703,10 @@ export class IpAddressService {
    *
    * Thứ router THẬT SỰ chuyển gói tới là `internal_ip`. Nên hỏi đúng cột đó, bằng chính vị từ
    * `host(...)` mà `NatRuleService.linkIp()` dùng, để hai bên không bao giờ trả lời khác nhau.
-   * Có index riêng cho nó: `nat_rule_internal_idx ... WHERE voided_at IS NULL` (migration 0022).
+   * Có index riêng cho nó: `nat_rule_internal_host_idx ON nat_rule (host(internal_ip))
+   * WHERE voided_at IS NULL` (migration 0042). Bản 0022 đánh chỉ mục cột `internal_ip` THÔ, mà
+   * mọi câu ở đây lại bọc nó trong `host(...)` — một hàm quanh cột được đánh chỉ mục là chỉ
+   * mục KHÔNG bao giờ được chọn. Nó tồn tại, tốn chỗ, tốn công ghi, và chưa từng giúp đọc.
    *
    * Chặn (chứ không cảnh báo) là có chủ ý: một port-forward đang mở trỏ vào máy sắp rời đi là
    * lỗ thủng tường lửa, và bước đúng — gỡ hoặc trỏ lại rule — luôn phải làm trước. Thông điệp
