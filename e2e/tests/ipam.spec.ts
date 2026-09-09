@@ -4,6 +4,7 @@ import {
   E2E_MEMBER,
   E2E_SA,
   firstLogin,
+  logout,
   resetDevices,
   resetIpam,
   resetUsers,
@@ -550,7 +551,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     const stamp = Date.now().toString().slice(-4);
     const octet = Number(stamp) % 200;
     const subnetId = await createSubnet(page, `172.16.${octet}.0/29`, `LAN quyền E2E ${stamp}`);
-    await page.getByRole('button', { name: 'Đăng xuất' }).click();
+    await logout(page);
 
     await firstLogin(page, E2E_MEMBER);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };

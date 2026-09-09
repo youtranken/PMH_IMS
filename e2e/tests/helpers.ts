@@ -372,7 +372,22 @@ export async function freshTotpCode(secret: string): Promise<string> {
 }
 
 export async function fillLogin(page: Page, email: string, password: string): Promise<void> {
-  await page.goto('/login');
+  /*
+   * NUỐT ĐÚNG MỘT LỖI, VÀ CHỈ KHI ĐÍCH ĐẾN TRÙNG (09/09).
+   *
+   * Sau `logout()`, trang tự đi tới `/login` HAI lượt cách nhau 2ms: `navigate()` trong
+   * `onSuccess`, rồi NẠP LẠI CỨNG do `apiFetch` gặp 401 ở lượt `me` kế tiếp. Lượt `goto`
+   * của ta rơi vào giữa thì Playwright ném "Navigation to .../login is interrupted by
+   * another navigation to .../login".
+   *
+   * Lỗi ấy vô hại THEO ĐỊNH NGHĨA: nó nói rằng có người khác vừa chở ta tới ĐÚNG chỗ ta
+   * đang muốn tới. Nên bắt đúng nó, và chỉ khi đích đến là `/login` — mọi lỗi điều hướng
+   * khác (mạng chết, api sập, chuyển sang URL khác) vẫn ném nguyên. Không thử lại, không
+   * `catch` trần: một `catch(() => {})` ở đây sẽ nuốt luôn cả những lần server thật sự hỏng.
+   */
+  await page.goto('/login').catch((error: unknown) => {
+    if (!/interrupted by another navigation to \S*\/login/.test(String(error))) throw error;
+  });
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Đăng nhập' }).click();
@@ -573,13 +588,61 @@ export async function confirmAction(page: Page, label?: string): Promise<void> {
  *
  * Nút "Đăng xuất" nằm ở chân sidebar — mà ở màn hẹp sidebar là drawer đang đóng. Bản chép
  * trong từng spec chỉ bấm thẳng nút nên treo 60 giây ở 390px; gom về đây theo AD-15.
+ *
+ * ===== VÌ SAO PHẢI CHỜ PHẢN HỒI, KHÔNG CHỈ BẤM (09/09) =====
+ *
+ * Bản trước trả về NGAY sau `.click()`. Nhưng nút chỉ `logout.mutate(...)` rồi mới
+ * `navigate('/login')` trong `onSuccess` — nghĩa là lúc hàm này trả về, `POST /auth/logout`
+ * mới đang bay. Bài kiểm gọi tiếp `fillLogin`, mà việc đầu tiên của nó là `page.goto('/login')`
+ * — và điều hướng thì HỦY mọi request đang bay. Lượt đăng xuất chết giữa đường
+ * (`net::ERR_ABORTED`), phiên cũ vẫn sống, `AppRoutes` thấy `step === '/'` ở màn đăng nhập nên
+ * đá thẳng về `/`. Bài kiểm đứng chờ ô Email trên màn ĐÃ ĐĂNG NHẬP cho tới hết 60 giây, và đỏ
+ * ở `locator.fill` — một chỗ chẳng liên quan gì tới điều nó đang kiểm.
+ *
+ * ĐÃ ĐO, không phải suy đoán: giữ phản hồi logout lại 800ms rồi `goto('/login')` ngay sau khi
+ * bấm → số phiên còn sống 16 → 16 (không đổi), ô Email không hiện, URL nhảy về `/`. Đúng ảnh
+ * chụp của lượt đỏ. Không giữ lại thì máy thường thắng cuộc đua — nên nó CHẬP CHỜN chứ không
+ * đỏ đều, và đó là kiểu hỏng tệ nhất: nó dạy người ta chạy lại thay vì đọc.
+ *
+ * Chờ đúng cái phản hồi ấy là chốt chặn thật: phản hồi về nghĩa là transaction thu hồi phiên
+ * đã commit. Sau đó mới được rời khỏi hàm này.
  */
 export async function logout(page: Page): Promise<void> {
   await page.goto('/');
   await expect(page.getByRole('banner')).toBeVisible();
   const openNav = page.getByRole('button', { name: 'Mở menu' });
   if (await openNav.count()) await openNav.click();
+
+  const done = page.waitForResponse(
+    (res) => res.url().includes('/api/v1/auth/logout') && res.request().method() === 'POST',
+  );
   await page.getByRole('button', { name: 'Đăng xuất' }).click();
+  const res = await done;
+  expect(
+    res.status(),
+    'đăng xuất phải thành công — không thì bài sau chạy với phiên cũ',
+  ).toBeLessThan(300);
+
+  /*
+   * ===== VÀ PHẢI CHỜ TRANG LẮNG XUỐNG, KHÔNG CHỈ CHỜ PHẢN HỒI =====
+   *
+   * ĐO ĐƯỢC (nghe `framenavigated`): lúc phản hồi logout về, trình duyệt CÒN ĐANG ở `/`. Ngay
+   * sau đó có HAI lượt điều hướng tới `/login` cách nhau 2ms — lượt đầu là `navigate()` trong
+   * `onSuccess`, lượt sau là NẠP LẠI CỨNG do `apiFetch` gặp 401 ở lần gọi `me` kế tiếp
+   * (`window.location.href = LOGIN_PATH`).
+   *
+   * Trả về giữa hai lượt đó thì `page.goto('/login')` của `fillLogin` đâm vào lượt thứ hai:
+   * "Navigation to .../login is interrupted by another navigation to .../login". Đây là cuộc
+   * đua THỨ HAI, khác hẳn cuộc đua request-bị-hủy ở trên — sửa cái trước xong mới lộ ra cái này.
+   *
+   * ĐÃ THỬ `waitForLoadState('networkidle')` VÀ NÓ SAI: màn đăng nhập không bao giờ đứng yên
+   * 500ms không-một-request, nên cả 10 bài break-glass treo tới hết 60 giây. Ghi lại đây để
+   * không ai thử lại đường đó.
+   *
+   * Chỗ đúng để chịu đựng cuộc đua này là `fillLogin` — bên dưới — vì nó mới là nơi gọi
+   * `goto`. Ở đây chỉ cần chờ trang thật sự rời khỏi màn đã đăng nhập.
+   */
+  await page.waitForURL(/\/login(\?|$)/);
 }
 
 /**

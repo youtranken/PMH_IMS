@@ -6,6 +6,7 @@ import {
   firstLogin,
   freshTotpCode,
   loginWithTotp,
+  logout,
   resetUsers,
 } from './helpers';
 
@@ -26,14 +27,14 @@ test.describe('Đăng nhập', () => {
     expect(secret).toMatch(/^[A-Z2-7]+$/);
 
     // Đăng xuất rồi đăng nhập lại bằng mật khẩu MỚI + mã TOTP.
-    await page.getByRole('button', { name: 'Đăng xuất' }).click();
+    await logout(page);
     await expect(page).toHaveURL(/login/);
     await loginWithTotp(page, E2E_MEMBER.email, NEW_PASSWORD, secret);
   });
 
   test('mã TOTP sai → từ chối; mã đã dùng → báo đã dùng (chống replay)', async ({ page }) => {
     const secret = await firstLogin(page, E2E_MEMBER);
-    await page.getByRole('button', { name: 'Đăng xuất' }).click();
+    await logout(page);
 
     await fillLogin(page, E2E_MEMBER.email, NEW_PASSWORD);
     await page.getByLabel('Mã xác thực').fill('000000');
@@ -46,7 +47,7 @@ test.describe('Đăng nhập', () => {
     await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
 
     // Dùng LẠI đúng mã đó cho lần đăng nhập kế tiếp → phải bị chặn.
-    await page.getByRole('button', { name: 'Đăng xuất' }).click();
+    await logout(page);
     await fillLogin(page, E2E_MEMBER.email, NEW_PASSWORD);
     await page.getByLabel('Mã xác thực').fill(code);
     await page.getByRole('button', { name: 'Xác nhận' }).click();

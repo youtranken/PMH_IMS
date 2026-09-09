@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { APP_ORIGIN, E2E_MEMBER, NEW_PASSWORD, fillLogin, firstLogin, freshTotpCode, resetUsers } from './helpers';
+import { APP_ORIGIN, E2E_MEMBER, NEW_PASSWORD, fillLogin, firstLogin, freshTotpCode, logout, resetUsers } from './helpers';
 
 test.beforeEach(() => resetUsers());
 
@@ -15,7 +15,7 @@ test.describe('Hàng rào an ninh', () => {
     const usedCode = await freshTotpCode(secret);
 
     // Đăng nhập lại tới bước chờ TOTP rồi thử "enroll lại" bằng một mã bất kỳ.
-    await page.getByRole('button', { name: 'Đăng xuất' }).click();
+    await logout(page);
     await fillLogin(page, E2E_MEMBER.email, NEW_PASSWORD);
     await expect(page.getByRole('heading', { name: 'Xác thực 2 lớp' })).toBeVisible();
 

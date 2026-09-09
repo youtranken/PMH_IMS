@@ -12,6 +12,7 @@ import {
   firstLogin,
   freshTotpCode,
   loginWithTotp,
+  logout,
   resetDevices,
   resetSecrets,
   resetAccessList,
@@ -195,7 +196,7 @@ test.describe('Mở két với TOTP step-up', () => {
     const { ids } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
     ]);
-    await page.getByRole('button', { name: 'Đăng xuất' }).click();
+    await logout(page);
 
     await firstLogin(page, E2E_MEMBER);
     const denied = await page.request.post(`/api/v1/vault/secrets/${ids[0]}/reveal`, {

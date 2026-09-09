@@ -8,6 +8,7 @@ import {
   firstLogin,
   freshTotpCode,
   loginWithTotp,
+  logout,
   resetAccessList,
   resetApprovals,
   resetDevices,
@@ -28,18 +29,6 @@ async function csrfOf(page: Page): Promise<string> {
     const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
     return ((await res.json()) as { csrfToken: string }).csrfToken;
   });
-}
-
-/**
- * Đăng xuất từ một trang TRUNG TÍNH.
- *
- * Bấm thẳng nút "Đăng xuất" khi đang đứng ở trang có bảng dài thì bảng che mất nút và
- * Playwright báo "intercepts pointer events". Về trang chủ trước là hết, và cũng đúng thói
- * quen thật của người dùng hơn.
- */
-async function logout(page: Page): Promise<void> {
-  await page.goto('/');
-  await page.getByRole('button', { name: 'Đăng xuất' }).click();
 }
 
 interface Fixture {

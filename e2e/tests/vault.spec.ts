@@ -7,6 +7,7 @@ import {
   E2E_MEMBER,
   E2E_SA,
   firstLogin,
+  logout,
   resetDevices,
   resetSecrets,
   resetUsers,
@@ -147,7 +148,7 @@ test.describe('Két sắt', () => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
     const deviceId = await createSwitch(page, `SW-E2E-MEM-${stamp}`);
-    await page.getByRole('button', { name: 'Đăng xuất' }).click();
+    await logout(page);
 
     await firstLogin(page, E2E_MEMBER);
     const list = await page.request.get(
