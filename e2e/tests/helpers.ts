@@ -206,6 +206,20 @@ export function flushResets(): void {
       execSync(cmd, options);
       return;
     } catch (error) {
+      /*
+       * CÓ NGHỈ GIỮA HAI LƯỢT, và đó là phần quan trọng nhất của cơ chế thử lại này.
+       *
+       * Bản đầu bắn ba lượt liên tiếp không nghỉ, và đo được là cả ba cùng hỏng: nguyên nhân
+       * không phải một lượt trượt ngẫu nhiên mà là máy đang KHÔNG DỰNG NỔI tiến trình con
+       * (trình duyệt của bài test + docker + MCP cùng chiếm chỗ). Thử lại tức thì là đâm vào
+       * đúng bức tường vừa đâm, ba lần trong vài mili giây, rồi kết luận "hỏng thật".
+       *
+       * `Atomics.wait` vì đây là hàm ĐỒNG BỘ (nó chạy trong `beforeEach` đồng bộ của mọi
+       * spec) — `await` không dùng được, và `execSync('sleep')` thì không có trên Windows.
+       */
+      if (attempt < 3) {
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, attempt * 1_000);
+      }
       if (attempt >= 3) {
         // Kèm stderr THẬT của script: "Command failed" trần trụi là thứ đã làm mất một giờ
         // để lần ra đúng một lần gọi docker trượt.
