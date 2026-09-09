@@ -90,6 +90,20 @@ export class ExpiryController {
     return this.expiry.kinds();
   }
 
+  /**
+   * Hai ngưỡng "sắp hết hạn" đang hiệu lực (AD-11, 0041).
+   *
+   * Có endpoint riêng vì `ExpiryBadge` và `WarrantyTimeline` xuất hiện ở MỌI màn — thiết bị,
+   * phần mềm, tài khoản dịch vụ, đường truyền, bảng điều khiển — chứ không riêng màn Sắp hết
+   * hạn. Không có cửa này thì web buộc phải giữ bản sao của hai con số, và bản sao đó lệch
+   * lúc nào không ai biết (đúng lỗi đang vá).
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('thresholds')
+  thresholds() {
+    return this.expiry.thresholds();
+  }
+
   @Roles('sa', 'admin', 'member')
   @Get()
   list(@Query() query: { withinDays?: string; kinds?: string; includeExpired?: string }) {

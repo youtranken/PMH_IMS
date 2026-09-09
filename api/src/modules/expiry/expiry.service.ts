@@ -22,6 +22,17 @@ export interface ExpirySummary {
   warning: number;
 }
 
+/**
+ * Hai ngưỡng "sắp hết hạn", đọc từ `system_config` (AD-11, 0041).
+ *
+ * Trả kèm mọi câu `list()` để giao diện dùng ĐÚNG hai con số mà server vừa đếm bằng. Không có
+ * chúng trong payload thì web phải tự giữ một bản sao — và đó chính là lỗi đang vá.
+ */
+export interface ExpiryThresholds {
+  criticalDays: number;
+  warningDays: number;
+}
+
 export interface ExpiryQuery {
   /** Cửa sổ nhìn tới, tính bằng ngày. Mặc định 30. */
   withinDays?: number;
@@ -59,12 +70,29 @@ export class ExpiryService {
     return this.registry.list();
   }
 
+  /** Hai ngưỡng đang hiệu lực — giao diện đọc để huy hiệu và chip đếm cùng một luật. */
+  async thresholds(): Promise<ExpiryThresholds> {
+    const [criticalDays, warningDays] = await Promise.all([
+      this.config.getNumber('expiryCriticalDays'),
+      this.config.getNumber('expiryWarningDays'),
+    ]);
+    /*
+     * Kẹp `critical <= warning`. Cấu hình sai thứ tự (gấp 30, sắp 7) sẽ làm mọi thứ trong
+     * khoảng 8..30 vừa là "gấp" vừa vượt trần "sắp" — tức là biến mất khỏi cả ba chip trong
+     * khi vẫn hiện đỏ trên hàng. Rơi về `warning = critical` thì ít nhất hai bên vẫn nói
+     * cùng một điều.
+     */
+    return { criticalDays, warningDays: Math.max(warningDays, criticalDays) };
+  }
+
   async list(query: ExpiryQuery): Promise<{
     items: ExpiryRow[];
     summary: ExpirySummary;
+    thresholds: ExpiryThresholds;
   }> {
     const today = await this.today();
-    const withinDays = clampWindow(query.withinDays);
+    const thresholds = await this.thresholds();
+    const withinDays = clampWindow(query.withinDays, thresholds.warningDays);
     // Nhìn lùi 1 năm để bắt cả thứ ĐÃ quá hạn mà chưa ai xử — đó mới là thứ nguy hiểm.
     const from = query.includeExpired === false ? today : addDays(today, -365);
     const to = addDays(today, withinDays);
@@ -83,7 +111,7 @@ export class ExpiryService {
       canRenew: renewable.has(item.kind),
     }));
 
-    return { items: rows, summary: summarize(rows) };
+    return { items: rows, summary: summarize(rows, thresholds), thresholds };
   }
 
   /**
@@ -178,15 +206,27 @@ export class ExpiryService {
 
 }
 
-/** Ngưỡng khớp `web/src/lib/expiry.ts` — luật "sắp hết hạn" của hệ thống chỉ có một. */
-const CRITICAL_DAYS = 7;
-
-function summarize(rows: ExpiryRow[]): ExpirySummary {
+/**
+ * Ba chip đếm — DÙNG ĐÚNG hai ngưỡng mà huy hiệu trên hàng dùng.
+ *
+ * ===== BẪY ĐÃ VÁ 09/09 =====
+ *
+ * Bản trước không có TRẦN cho `warning`: mọi thứ còn hơn 7 ngày đều được đếm là "sắp hết hạn".
+ * Với cửa sổ mặc định 30 ngày thì trùng khớp ngẫu nhiên với `expiryLevel()` bên web, nên không
+ * ai thấy. Nhưng người dùng đổi cửa sổ thành 90 ngày là hai bên nói khác nhau ngay:
+ *
+ *     chip:  "40 sắp hết hạn"      (mọi thứ > 7 ngày)
+ *     hàng:  40 huy hiệu XÁM 'ok'  (`expiryLevel` gọi > 30 ngày là 'ok')
+ *
+ * Người đọc thấy một con số cảnh báo và một bảng không có gì cảnh báo. Ba chip cộng lại KHÔNG
+ * còn bằng số dòng — và đó là ĐÚNG: chúng đếm "cần chú ý", không đếm "có bao nhiêu dòng".
+ */
+function summarize(rows: ExpiryRow[], thresholds: ExpiryThresholds): ExpirySummary {
   const summary: ExpirySummary = { expired: 0, critical: 0, warning: 0 };
   for (const row of rows) {
     if (row.daysLeft < 0) summary.expired += 1;
-    else if (row.daysLeft <= CRITICAL_DAYS) summary.critical += 1;
-    else summary.warning += 1;
+    else if (row.daysLeft <= thresholds.criticalDays) summary.critical += 1;
+    else if (row.daysLeft <= thresholds.warningDays) summary.warning += 1;
   }
   return summary;
 }
@@ -194,9 +234,13 @@ function summarize(rows: ExpiryRow[]): ExpirySummary {
 /**
  * Cửa sổ nhìn tới. Kẹp 1..365 ngày: `?withinDays=99999` sẽ kéo cả kho ra và làm chậm màn,
  * còn 0 thì trả rỗng khiến người dùng tưởng không có gì sắp hết hạn.
+ *
+ * Mặc định là `expiry.warning_days` (AD-11), không phải số 30 viết cứng: cửa sổ mặc định và
+ * ngưỡng "vàng" phải là CÙNG một con số, nếu không thì màn mở ra đã sẵn có hàng nằm ngoài
+ * ngưỡng cảnh báo mà vẫn bị gọi tên là sắp hết hạn.
  */
-function clampWindow(value: number | undefined): number {
-  if (value === undefined || Number.isNaN(value)) return 30;
+function clampWindow(value: number | undefined, fallback: number): number {
+  if (value === undefined || Number.isNaN(value)) return fallback;
   return Math.min(365, Math.max(1, Math.trunc(value)));
 }
 

@@ -2,6 +2,7 @@ import {
   describeSchedule,
   localNowIn,
   shouldSendNow,
+  startOfLocalDayUtc,
   weekdayOf,
   type DigestSchedule,
   type LocalNow,
@@ -125,5 +126,63 @@ describe('weekdayOf — suy thứ TỪ NGÀY, không đọc tên viết tắt c�
     ['2027-01-01', 5],
   ])('%s → thứ %s', (date, expected) => {
     expect(weekdayOf(date)).toBe(expected);
+  });
+});
+
+/**
+ * MỐC ĐẦU NGÀY THEO MÚI GIỜ ỨNG DỤNG, KHÔNG PHẢI NỬA ĐÊM UTC.
+ *
+ * ===== BẪY =====
+ *
+ * `runOne()` dựng trọng tài chống-gửi-trùng bằng
+ *
+ *     const startOfDayUtc = new Date(`${local.date}T00:00:00Z`);   // ← SAI
+ *     ... where last_sent_at IS NULL OR last_sent_at < startOfDayUtc
+ *
+ * `local.date` là ngày theo GIỜ VIỆT NAM, nhưng `T00:00:00Z` dán vào nó lại là nửa đêm UTC —
+ * tức là 7 giờ SÁNG cùng ngày ở Việt Nam. Nên với mọi luật hẹn giờ 0..6:
+ *
+ *     Luật "hằng ngày 6 giờ sáng". Gửi lúc 06:00 giờ VN ngày 10/09
+ *       = 23:00Z ngày 09/09  →  ghi last_sent_at = 2026-09-09T23:00:00Z
+ *     Câu UPDATE giành kỳ hỏi: 2026-09-09T23:00Z < 2026-09-10T00:00Z ?  → ĐÚNG.
+ *
+ * Nghĩa là trọng tài "nhiều nhất một lần" — thứ duy nhất chặn HAI worker cùng gửi một kỳ —
+ * KHÔNG chặn gì cả với các luật hẹn giờ sớm. Hàng rào thứ hai (`shouldSendNow` so theo ngày
+ * địa phương) vẫn đứng, nhưng nó chạy TRONG BỘ NHỚ trên ảnh chụp đọc trước đó: hai worker
+ * cùng đọc `last_sent_at` cũ thì cả hai cùng qua. Trọng tài ở DB tồn tại đúng để bắt trường
+ * hợp đó, và với luật 0..6 giờ nó im lặng gật đầu.
+ *
+ * Hậu quả: luật gửi lúc 6 giờ sáng gửi ĐÔI mỗi kỳ khi có hai worker — và giờ sớm lại đúng là
+ * giờ người ta chọn cho báo cáo đầu ngày.
+ */
+describe('startOfLocalDayUtc — đầu ngày ĐỊA PHƯƠNG, tính bằng UTC', () => {
+  it.each([
+    ['Việt Nam (+07, không có giờ mùa hè)', 'Asia/Ho_Chi_Minh', '2026-09-10', '2026-09-09T17:00:00.000Z'],
+    ['UTC', 'UTC', '2026-09-10', '2026-09-10T00:00:00.000Z'],
+    ['Tokyo (+09)', 'Asia/Tokyo', '2026-09-10', '2026-09-09T15:00:00.000Z'],
+    ['New York mùa hè (-04)', 'America/New_York', '2026-09-10', '2026-09-10T04:00:00.000Z'],
+    ['New York mùa đông (-05)', 'America/New_York', '2026-01-10', '2026-01-10T05:00:00.000Z'],
+  ])('%s', (_name, timeZone, isoDate, expected) => {
+    expect(startOfLocalDayUtc(timeZone, isoDate).toISOString()).toBe(expected);
+  });
+
+  /** Múi giờ gõ sai lùi về UTC chứ không ném — cùng nếp với `localNowIn`/`isoDateInTz`. */
+  it('múi giờ không hợp lệ → lùi về UTC, không ném', () => {
+    expect(startOfLocalDayUtc('Hành/Tinh_Sao_Hoả', '2026-09-10').toISOString()).toBe(
+      '2026-09-10T00:00:00.000Z',
+    );
+  });
+
+  /**
+   * ĐÂY LÀ BÀI CHỐT, viết lại đúng tình huống của `runOne`: một luật gửi lúc 6 giờ sáng giờ
+   * VN. Mốc trả về PHẢI đứng trước thời điểm gửi, nếu không trọng tài giành kỳ vô hiệu.
+   */
+  it('luật gửi 6 giờ sáng giờ VN: mốc đầu ngày phải TRƯỚC thời điểm gửi', () => {
+    const sentAt = new Date('2026-09-09T23:00:00Z'); // = 06:00 ngày 10/09 giờ VN
+    const start = startOfLocalDayUtc('Asia/Ho_Chi_Minh', '2026-09-10');
+
+    expect(start.getTime()).toBeLessThan(sentAt.getTime());
+    // Và sau khi đã gửi, `last_sent_at < start` phải SAI — kỳ này coi như đã chốt.
+    expect(sentAt.getTime() < start.getTime()).toBe(false);
   });
 });

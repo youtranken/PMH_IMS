@@ -1,4 +1,11 @@
-import { daysUntil, expiryLabel, expiryLevel, type ExpiryLevel } from '@/lib/expiry';
+import {
+  DEFAULT_EXPIRY_THRESHOLDS,
+  daysUntil,
+  expiryLabel,
+  expiryLevel,
+  type ExpiryLevel,
+  type ExpiryThresholds,
+} from '@/lib/expiry';
 
 /**
  * Quãng đường của một thời hạn — hàm THUẦN, có bảng test.
@@ -33,12 +40,18 @@ export function warrantyProgress(input: {
   start?: string | null;
   end?: string | null;
   now?: Date;
+  /**
+   * Hai ngưỡng đang hiệu lực (AD-11). Bỏ trống thì `expiryLevel` dùng mặc định — đúng cho
+   * bài kiểm bảng dữ liệu; component gọi thật thì phải truyền từ `useExpiryThresholds()`,
+   * nếu không thanh và huy hiệu lại quay về hai luật khác nhau.
+   */
+  thresholds?: ExpiryThresholds;
 }): WarrantyProgress | null {
   const { end } = input;
   if (!end) return null;
   const now = input.now ?? new Date();
 
-  const level = expiryLevel(end, now);
+  const level = expiryLevel(end, now, input.thresholds ?? DEFAULT_EXPIRY_THRESHOLDS);
   const label = expiryLabel(end, now);
   const daysLeft = daysUntil(end, now);
 

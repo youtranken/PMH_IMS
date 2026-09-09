@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/format';
+import { useExpiryThresholds } from './use-expiry-thresholds';
 import { warrantyProgress } from './warranty-progress';
 
 /**
@@ -30,7 +31,9 @@ export function WarrantyTimeline({
   endLabel?: string;
 }) {
   const { t } = useTranslation();
-  const progress = warrantyProgress({ start, end, now });
+  // Cùng nguồn ngưỡng với `ExpiryBadge` — nếu không thì thanh và huy hiệu lại nói khác nhau,
+  // đúng thứ chú thích đầu file này hứa sẽ không bao giờ xảy ra (AD-11).
+  const progress = warrantyProgress({ start, end, now, thresholds: useExpiryThresholds() });
   // Không có hạn thì không có quãng đường nào để vẽ — thanh rỗng chỉ làm người đọc tưởng
   // dữ liệu bị mất.
   if (!progress) return null;

@@ -14,6 +14,18 @@ export interface ExpiryThresholds {
   warningDays: number;
 }
 
+/**
+ * Giá trị dùng TRONG LÚC CHỜ, không phải bản sao của luật.
+ *
+ * Luật thật nằm ở `system_config` (`expiry.critical_days` / `expiry.warning_days`, migration
+ * 0041) và web đọc nó qua `useExpiryThresholds()`. Trước 09/09 hai con số này là một bản sao
+ * độc lập ở tầng web, và chú thích ở đây lẫn ở `expiry.service.ts` đều tự nhận là "khớp
+ * nhau" — bằng lời hứa chứ không bằng cơ chế.
+ *
+ * Giữ lại vì hai lý do, cả hai đều KHÔNG phải "để tiện": (1) vẽ huy hiệu xám cho cả màn trong
+ * 200ms đầu rồi đổi màu tệ hơn nhiều so với vẽ đúng ngay; (2) hàm thuần dưới đây có bảng test
+ * riêng và không được phụ thuộc mạng. Hai số này PHẢI khớp giá trị seed của 0041.
+ */
 export const DEFAULT_EXPIRY_THRESHOLDS: ExpiryThresholds = {
   criticalDays: 7,
   warningDays: 30,

@@ -128,6 +128,68 @@ function safeHour(timeZone: string, now: Date): number {
   }
 }
 
+/**
+ * Nửa đêm của một NGÀY ĐỊA PHƯƠNG, trả về dưới dạng mốc UTC.
+ *
+ * ===== VÌ SAO KHÔNG PHẢI `new Date(`${date}T00:00:00Z`)` =====
+ *
+ * Đó chính là lỗi đang vá. `runOne()` dựng trọng tài chống-gửi-trùng bằng câu UPDATE có điều
+ * kiện `last_sent_at < đầu-ngày`, và "đầu ngày" nó dùng là nửa đêm UTC của một chuỗi ngày
+ * ĐỊA PHƯƠNG — tức là 7 giờ sáng cùng ngày ở Việt Nam. Nên với mọi luật hẹn giờ 0..6:
+ *
+ *     Gửi lúc 06:00 giờ VN ngày 10/09  =  23:00Z ngày 09/09
+ *     Trọng tài hỏi: 09/09 23:00Z  <  10/09 00:00Z ?  → ĐÚNG → cho giành kỳ LẦN NỮA.
+ *
+ * Trọng tài "nhiều nhất một lần" — hàng rào duy nhất chặn hai worker cùng gửi một kỳ — im
+ * lặng gật đầu. Mà giờ sớm lại đúng là giờ người ta chọn cho báo cáo đầu ngày.
+ *
+ * ===== CÁCH TÍNH =====
+ *
+ * Đoán nửa đêm địa phương ở UTC, đo độ lệch múi giờ TẠI CHÍNH mốc đoán được, rồi trừ đi. Lặp
+ * lần hai vì độ lệch có thể khác nhau ở hai bên mốc (múi giờ có giờ mùa hè — Việt Nam thì
+ * không, nhưng hàm này không được sai ở nơi khác). Múi giờ gõ sai lùi về UTC chứ không ném,
+ * cùng nếp với `localNowIn`: hàm này mà ném thì digest im lặng không bao giờ gửi.
+ */
+export function startOfLocalDayUtc(timeZone: string, isoDate: string): Date {
+  const wall = new Date(`${isoDate}T00:00:00Z`).getTime();
+  let guess = new Date(wall);
+  for (let round = 0; round < 2; round += 1) {
+    const next = new Date(wall - offsetMinutes(timeZone, guess) * 60_000);
+    if (next.getTime() === guess.getTime()) return next;
+    guess = next;
+  }
+  return guess;
+}
+
+/** Độ lệch múi giờ (phút, dương = sớm hơn UTC) tại một mốc cụ thể. */
+function offsetMinutes(timeZone: string, at: Date): number {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    }).formatToParts(at);
+    const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? '0');
+    // 'hour' có thể ra '24' ở hour12:false trong một số môi trường — cùng bẫy với `safeHour`.
+    const asIfUtc = Date.UTC(
+      get('year'),
+      get('month') - 1,
+      get('day'),
+      get('hour') % 24,
+      get('minute'),
+      get('second'),
+    );
+    return Math.round((asIfUtc - at.getTime()) / 60_000);
+  } catch {
+    return 0;
+  }
+}
+
 /** 1=Thứ Hai … 7=Chủ Nhật, suy từ chuỗi YYYY-MM-DD (`getUTCDay` trả 0=Chủ Nhật). */
 export function weekdayOf(isoDate: string): number {
   const day = new Date(`${isoDate}T00:00:00Z`).getUTCDay();

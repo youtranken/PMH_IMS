@@ -27,6 +27,15 @@ export const CONFIG_KEYS = {
    */
   dashboardSubnetFullPercent: { key: 'dashboard.subnet_full_percent', fallback: 80 },
   dashboardSecretStaleDays: { key: 'dashboard.secret_stale_days', fallback: 180 },
+  /*
+   * Hai ngưỡng "sắp hết hạn" (0041). Trước đó chúng nằm cứng ở BA chỗ độc lập — hai bên API,
+   * một bên web — và mỗi chú thích tự nhận là "khớp nhau" bằng lời hứa chứ không bằng cơ chế.
+   *
+   * "Trước bao nhiêu ngày thì phải bắt đầu lo" là câu trả lời của bộ phận IT, không của lập
+   * trình viên: gia hạn SSL mất một buổi, gia hạn hợp đồng đường truyền mất ba tuần.
+   */
+  expiryCriticalDays: { key: 'expiry.critical_days', fallback: 7 },
+  expiryWarningDays: { key: 'expiry.warning_days', fallback: 30 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;

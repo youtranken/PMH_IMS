@@ -1,4 +1,5 @@
 import { expiryLabel, expiryLevel, type ExpiryLevel } from '@/lib/expiry';
+import { useExpiryThresholds } from './use-expiry-thresholds';
 
 const TONE: Record<ExpiryLevel, string> = {
   expired: 'danger',
@@ -21,7 +22,9 @@ export function ExpiryBadge({
   now?: Date;
   showDate?: boolean;
 }) {
-  const level = expiryLevel(end, now);
+  // Ngưỡng đọc TỪ SERVER (AD-11), không phải bản sao trong web — xem `use-expiry-thresholds`.
+  const thresholds = useExpiryThresholds();
+  const level = expiryLevel(end, now, thresholds);
   const label = expiryLabel(end, now);
   return (
     <span className={`badge ${TONE[level]}`} title={showDate && end ? String(end) : undefined}>

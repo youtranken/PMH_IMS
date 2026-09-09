@@ -12,6 +12,7 @@ import {
   describeSchedule,
   localNowIn,
   shouldSendNow,
+  startOfLocalDayUtc,
   type DigestFrequency,
 } from './digest-schedule';
 import { expiryRuleTable } from './expiry.schema';
@@ -172,7 +173,14 @@ export class ExpiryDigestService {
      */
     const payload = recipients.length > 0 ? await this.buildPayload(rule) : null;
 
-    const startOfDayUtc = new Date(`${local.date}T00:00:00Z`);
+    /*
+     * ĐẦU NGÀY THEO MÚI GIỜ ỨNG DỤNG. Bản trước là `new Date(`${local.date}T00:00:00Z`)` —
+     * dán nửa đêm UTC vào một chuỗi ngày ĐỊA PHƯƠNG, tức 7 giờ sáng cùng ngày ở Việt Nam. Với
+     * mọi luật hẹn giờ 0..6, câu UPDATE giành kỳ bên dưới im lặng cho giành LẦN NỮA, và trọng
+     * tài "nhiều nhất một lần" mất tác dụng đúng ở khung giờ người ta hay chọn nhất cho báo
+     * cáo đầu ngày. Xem `startOfLocalDayUtc`.
+     */
+    const startOfDayUtc = startOfLocalDayUtc(timeZone, local.date);
     await this.db.transaction(async (tx) => {
       /*
        * CHỐT KỲ và ĐẨY VÀO OUTBOX TRONG CÙNG MỘT TRANSACTION.
