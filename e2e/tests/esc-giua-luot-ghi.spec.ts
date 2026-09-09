@@ -149,7 +149,7 @@ test.describe('Hộp thoại đang ghi thì không đóng bằng Esc', () => {
     await form.getByRole('combobox', { name: 'Mở cho ai' }).fill('Phòng Nhân sự');
     await form.getByRole('textbox', { name: 'Lý do mở' }).fill('kiem tra Esc giua luot ghi');
 
-    const before = Number(sql("SELECT count(*) FROM nat_rule WHERE external_ports LIKE '1808%'"));
+    const before = Number(sql('SELECT count(*) FROM nat_rule WHERE external_from BETWEEN 18081 AND 18083'));
     await form.getByRole('button', { name: 'Lưu' }).click();
     await expect(form.getByRole('button', { name: 'Đang tải…' })).toBeVisible();
 
@@ -166,7 +166,7 @@ test.describe('Hộp thoại đang ghi thì không đóng bằng Esc', () => {
      * Cả ba port đều vào sổ. Đây mới là câu chốt: chuỗi ghi KHÔNG hề dừng lại vì Esc, nên nếu
      * hộp đóng được thì người dùng đã tin là mình hủy trong khi ba port đã mở.
      */
-    const after = Number(sql("SELECT count(*) FROM nat_rule WHERE external_ports LIKE '1808%'"));
+    const after = Number(sql('SELECT count(*) FROM nat_rule WHERE external_from BETWEEN 18081 AND 18083'));
     expect(after - before).toBe(3);
   });
 });

@@ -40,7 +40,7 @@ async function seed(page: Page): Promise<{ subnetId: string; ipId: string; addre
   const address = cidr.replace('.0/24', '.5');
   const ip = await page.request.post('/api/v1/ipam/addresses', {
     headers,
-    data: { subnetId, address, usedBy: OWNER, status: 'assigned' },
+    data: { subnetId, address, usedBy: OWNER },
   });
   expect(ip.status()).toBeLessThan(300);
   return { subnetId, ipId: ((await ip.json()) as { id: string }).id, address };
@@ -195,7 +195,7 @@ test.describe('Hồ sơ IP — xác nhận vẫn dùng, và bật lại sau khi 
     });
     const retaken = await page.request.post('/api/v1/ipam/addresses', {
       headers,
-      data: { subnetId, address, usedBy: 'Phòng Kỹ thuật E2E', status: 'assigned' },
+      data: { subnetId, address, usedBy: 'Phòng Kỹ thuật E2E' },
     });
     expect(retaken.status(), 'ô đã trống nên khai lại phải được').toBeLessThan(300);
 
