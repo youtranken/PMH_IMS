@@ -9,15 +9,11 @@ import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
+import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { requireCas } from '../../common/cas';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
-import {
-  escapeLike,
-  pgErrorCode,
-  PG_FOREIGN_KEY_VIOLATION,
-  PG_UNIQUE_VIOLATION,
-} from '../../common/sql';
+import { PG_FOREIGN_KEY_VIOLATION, conflictOnUnique, escapeLike, pgErrorCode } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import {
   cabinetTable,
@@ -237,7 +233,7 @@ export class CatalogService {
         ),
       )
       .orderBy(desc(catalogHistoryTable.createdAt))
-      .limit(100);
+      .limit(HISTORY_PAGE_LIMIT);
     return rows as CatalogHistoryRecord[];
   }
 
@@ -461,16 +457,13 @@ export class CatalogService {
   }
 
   private translateWriteError(error: unknown, entity: CatalogEntity): unknown {
-    if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
-      return new ConflictException({
-        code: 'CATALOG_DUPLICATE',
-        message:
-          entity === 'cabinet'
-            ? 'Site này đã có tủ mang mã đó.'
-            : 'Đã có mục khác trùng mã/tên (không phân biệt hoa-thường).',
-      });
-    }
-    return error;
+    return conflictOnUnique(error, {
+      code: 'CATALOG_DUPLICATE',
+      message:
+        entity === 'cabinet'
+          ? 'Site này đã có tủ mang mã đó.'
+          : 'Đã có mục khác trùng mã/tên (không phân biệt hoa-thường).',
+    });
   }
 
   /** Chuẩn hóa + kiểm tra đầu vào của form trước khi chạm DB. */

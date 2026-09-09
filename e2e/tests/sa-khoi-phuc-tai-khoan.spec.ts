@@ -91,17 +91,40 @@ test.describe('SA khôi phục tài khoản người khác', () => {
      * VẾ HỘP THƯ. Đây là vế duy nhất chứng minh chủ tài khoản BIẾT chuyện vừa xảy ra — và là
      * vế đã thiếu suốt từ Epic 4.
      */
-    const mails = await waitForMail('[IMS] Thay đổi mật khẩu');
-    expect(mails.length, 'phải có đúng thư báo đổi mật khẩu trong hộp').toBeGreaterThan(0);
-    expect(
-      mails.some((mail) => mail.To.some((to) => to.Address === E2E_MEMBER.email)),
-      'thư phải gửi cho CHỦ TÀI KHOẢN, không phải cho SA',
-    ).toBe(true);
+    /*
+     * CHỜ THEO THÂN THƯ, KHÔNG THEO TIÊU ĐỀ — hai lỗi chồng nhau ở một chỗ.
+     *
+     * 1. HAI TOPIC DÙNG CHUNG MỘT TIÊU ĐỀ. `MailConsumer` gộp `auth.password.changed` và
+     *    `account.password.reset` vào cùng một nhánh `case`, nên cả hai ra tiêu đề
+     *    `[IMS] Thay đổi mật khẩu`, chỉ khác phần thân.
+     * 2. `waitForMail` TRẢ VỀ NGAY khi thấy tiêu đề. Mà chính bài này gọi `firstLogin` cho
+     *    member ở trên — lượt đó ĐỔI MẬT KHẨU và đã sinh một thư đúng tiêu đề ấy. Nên hàm
+     *    chờ trả về tức thì, ở thời điểm thư reset còn chưa đi hết đường outbox → worker →
+     *    SMTP (đo được: outbox xử lý xong SAU khi bài kiểm đã bỏ cuộc vài giây).
+     *
+     * Cộng lại: bài kiểm chờ một thứ nó ĐÃ CÓ SẴN, rồi kết luận thứ nó đang đợi không tới.
+     * Phải chờ đúng thứ cần chờ — một thư gửi CHO MEMBER mà THÂN có câu của lượt reset.
+     */
+    const resetMail = async (): Promise<string | undefined> => {
+      const mails = await waitForMail('[IMS] Thay đổi mật khẩu', 1);
+      const toMember = mails.filter((mail) =>
+        mail.To.some((to) => to.Address === E2E_MEMBER.email),
+      );
+      const bodies = await Promise.all(toMember.map((mail) => mailBody(mail.ID)));
+      return bodies.find((text) => text.includes('SA vừa đặt lại mật khẩu'));
+    };
 
-    const text = await mailBody(mails[0].ID);
-    expect(text).toContain('SA vừa đặt lại mật khẩu');
+    await expect
+      .poll(resetMail, {
+        timeout: 30_000,
+        message: 'chủ tài khoản phải nhận được ĐÚNG thư "SA đặt lại mật khẩu"',
+      })
+      .toBeTruthy();
+
     // NFR-04: thư báo KHÔNG được mang chính mật khẩu tạm đi qua SMTP.
-    expect(text, 'mật khẩu tạm không được nằm trong thư').not.toContain(body.temporaryPassword);
+    expect((await resetMail()) ?? '', 'mật khẩu tạm không được nằm trong thư').not.toContain(
+      body.temporaryPassword,
+    );
 
     await memberContext.close();
   });

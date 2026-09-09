@@ -8,6 +8,7 @@ import { and, asc, count, desc, eq, inArray, isNull, or, sql, type SQL } from 'd
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
+import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
 import { conflictOnUnique, escapeLike } from '../../common/sql';
@@ -115,7 +116,7 @@ export class SoftwareService {
       .from(softwareHistoryTable)
       .where(eq(softwareHistoryTable.softwareId, softwareId))
       .orderBy(desc(softwareHistoryTable.createdAt))
-      .limit(200);
+      .limit(HISTORY_PAGE_LIMIT);
     return rows as SoftwareHistoryRecord[];
   }
 

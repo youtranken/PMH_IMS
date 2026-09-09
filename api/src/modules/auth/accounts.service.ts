@@ -9,7 +9,7 @@ import {
 import { DRIZZLE_DB } from "../../database/database.module";
 import type { Database } from "../../database/database.module";
 import type { Page, PageQuery } from "../../common/pagination";
-import { pgConstraint, pgErrorCode, PG_UNIQUE_VIOLATION } from "../../common/sql";
+import { conflictOnUnique, pgConstraint } from "../../common/sql";
 import type { SortQuery } from "../../common/sorting";
 import type { Tx } from "../../common/tx";
 import { AuditWriterService } from "../audit/audit-writer.service";
@@ -17,7 +17,6 @@ import { OutboxService } from "../outbox/outbox.service";
 import { UsersService, type UserSortKey } from "../users/users.service";
 import type { UserRecord } from "../users/users.types";
 import { PasswordService } from "./password.service";
-import { checkPasswordStrength } from "./password-policy";
 import { SessionService, type SessionRecord } from "./session.service";
 import type { UserRole } from "./types";
 
@@ -131,19 +130,21 @@ export class AccountsService {
        * lần) thì lượt sau đụng khóa email. Gán mọi 23505 vào một câu là chỉ sai hẳn ô: người
        * dùng đọc `Mã nhân viên "" đã thuộc về một tài khoản khác` trong khi họ để trống ô đó.
        */
-      if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
-        if (pgConstraint(error) === "users_employee_code_uq") {
-          throw new ConflictException({
+      if (pgConstraint(error) === "users_employee_code_uq") {
+        throw conflictOnUnique(
+          error,
+          {
             code: "EMPLOYEE_CODE_TAKEN",
             message: `Mã nhân viên "${(input.employeeCode ?? "").trim()}" đã thuộc về một tài khoản khác.`,
-          });
-        }
-        throw new ConflictException({
-          code: "EMAIL_TAKEN",
-          message: "Email này đã có tài khoản.",
-        });
+          },
+          "users_employee_code_uq",
+        );
       }
-      throw error;
+      // Không phải khóa mã nhân viên → hoặc trùng email, hoặc không phải 23505 (đi qua nguyên vẹn).
+      throw conflictOnUnique(error, {
+        code: "EMAIL_TAKEN",
+        message: "Email này đã có tài khoản.",
+      });
     }
   }
 
@@ -220,16 +221,14 @@ export class AccountsService {
        * một 23505 từ chỗ khác sẽ hiện ra câu `Mã nhân viên "" đã thuộc về một tài khoản
        * khác` trong khi người dùng để trống đúng ô đó, và lỗi thật thì bị nuốt mất.
        */
-      if (
-        pgErrorCode(error) === PG_UNIQUE_VIOLATION &&
-        pgConstraint(error) === "users_employee_code_uq"
-      ) {
-        throw new ConflictException({
+      throw conflictOnUnique(
+        error,
+        {
           code: "EMPLOYEE_CODE_TAKEN",
           message: `Mã nhân viên "${values.employeeCode}" đã thuộc về một tài khoản khác.`,
-        });
-      }
-      throw error;
+        },
+        "users_employee_code_uq",
+      );
     }
   }
 
@@ -338,62 +337,6 @@ export class AccountsService {
         objectId: userId,
         detail: { required },
       });
-    });
-  }
-
-  /** Đặt mật khẩu cụ thể (SA seed/khôi phục) — vẫn áp luật mạnh và vẫn đá phiên. */
-  async setPassword(
-    actor: ActorRef,
-    userId: string,
-    newPassword: string,
-  ): Promise<void> {
-    await this.requireUser(userId);
-    const check = checkPasswordStrength(newPassword);
-    if (!check.ok) {
-      throw new BadRequestException({
-        code: "PASSWORD_WEAK",
-        message: check.reason,
-      });
-    }
-    const hash = await this.passwords.hash(newPassword);
-    await this.db.transaction(async (tx) => {
-      await this.users.setPasswordWithin(tx, userId, hash, true);
-      await this.sessions.revokeAllForUserWithin(
-        tx,
-        userId,
-        "password-set-by-sa",
-      );
-      await this.audit.appendWithin(tx, {
-        actor: actor.email,
-        action: "account.password.set",
-        objectType: "user",
-        objectId: userId,
-      });
-      /*
-       * BÁO CHO CHỦ TÀI KHOẢN BIẾT (rà soát 07/09, mục 6 "Nghiệp vụ").
-       *
-       * Đây là đường ghi duy nhất trong `AccountsService` không đẩy outbox — `resetPassword`,
-       * `resetTotp`, `create` đều có. Mà cửa này còn nặng hơn `resetPassword`: SA đặt được một
-       * mật khẩu CỤ THỂ mà SA biết, rồi đá sạch phiên. Chủ tài khoản chỉ thấy mình bị đăng
-       * xuất, đăng nhập lại không được, và không có gì nói cho họ biết vì sao — trong khi
-       * người khác đang cầm mật khẩu của họ.
-       *
-       * Topic `account.password.reset`: nội dung mẫu thư đó ("SA vừa đặt lại mật khẩu cho tài
-       * khoản của bạn. Mọi phiên đang mở đã bị đăng xuất.") đúng nguyên văn cho cửa này. Không
-       * dựng mẫu thứ hai nói cùng một điều (AD-15).
-       *
-       * ===== NÓI RÕ: HÀM NÀY HIỆN KHÔNG AI GỌI =====
-       *
-       * 09/09 rà lại toàn repo: `setPassword` không có route trong `accounts.controller.ts`,
-       * không nơi nào gọi, không bài kiểm nào chạm. Nên lỗi "quên outbox" chưa từng gây hậu
-       * quả ngoài đời — nhưng vá vẫn đúng, vì thứ nguy hiểm ở đây là một đường GHI MẬT KHẨU
-       * nằm sẵn, không test, chờ ai đó nối vào một story sau và thừa kế nguyên lỗ hổng.
-       *
-       * Chưa xóa vì đó là quyết định về phạm vi, không phải về đúng/sai. Nếu Epic sau không
-       * dùng tới thì nên xóa hẳn: nó gần trùng `resetPassword` (AD-15), chỉ khác chỗ SA tự
-       * chọn mật khẩu — mà đó lại đúng là điều khiến nó nguy hiểm hơn.
-       */
-      await this.outbox.enqueueWithin(tx, "account.password.reset", { userId });
     });
   }
 

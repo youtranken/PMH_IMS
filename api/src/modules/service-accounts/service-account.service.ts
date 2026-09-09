@@ -8,6 +8,7 @@ import { and, asc, count, desc, eq, ilike, or, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
+import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
 import { conflictOnUnique, escapeLike } from '../../common/sql';
@@ -100,7 +101,8 @@ export class ServiceAccountService {
       .select()
       .from(serviceAccountHistoryTable)
       .where(eq(serviceAccountHistoryTable.serviceAccountId, id))
-      .orderBy(desc(serviceAccountHistoryTable.createdAt));
+      .orderBy(desc(serviceAccountHistoryTable.createdAt))
+      .limit(HISTORY_PAGE_LIMIT);
     return rows.map((row) => ({
       id: row.id,
       serviceAccountId: row.serviceAccountId,

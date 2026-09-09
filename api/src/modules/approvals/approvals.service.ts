@@ -8,6 +8,7 @@ import { and, desc, eq, isNotNull, lt, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
+import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
 import { isGrantActive } from '../../common/approvals/approval-flow';
 import { AuditWriterService } from '../audit/audit-writer.service';
@@ -210,7 +211,8 @@ export class ApprovalsService {
       .select()
       .from(approvalHistoryTable)
       .where(eq(approvalHistoryTable.approvalId, id))
-      .orderBy(desc(approvalHistoryTable.createdAt));
+      .orderBy(desc(approvalHistoryTable.createdAt))
+      .limit(HISTORY_PAGE_LIMIT);
   }
 
   async list(filters: {

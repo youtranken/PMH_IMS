@@ -8,6 +8,7 @@ import { and, asc, count, desc, eq, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
+import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
 import { conflictOnUnique, escapeLike } from '../../common/sql';
@@ -177,7 +178,7 @@ export class IspLineService {
       .from(ispLineHistoryTable)
       .where(eq(ispLineHistoryTable.ispLineId, ispLineId))
       .orderBy(desc(ispLineHistoryTable.createdAt))
-      .limit(200);
+      .limit(HISTORY_PAGE_LIMIT);
     return rows as IspLineHistoryRecord[];
   }
 

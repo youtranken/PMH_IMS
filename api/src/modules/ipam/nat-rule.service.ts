@@ -9,6 +9,7 @@ import { and, asc, desc, eq, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
+import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { escapeLike, pgErrorCode, PG_CHECK_VIOLATION } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
@@ -569,7 +570,8 @@ export class NatRuleService {
       .select()
       .from(natRuleHistoryTable)
       .where(eq(natRuleHistoryTable.natRuleId, id))
-      .orderBy(desc(natRuleHistoryTable.createdAt));
+      .orderBy(desc(natRuleHistoryTable.createdAt))
+      .limit(HISTORY_PAGE_LIMIT);
     return rows.map((row) => ({
       id: row.id,
       natRuleId: row.natRuleId,

@@ -12,7 +12,7 @@ import type { Database } from '../../database/database.module';
 import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
 import { ApprovalsApiService, type ApprovalRecord } from '../approvals/approvals.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
-import { pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
+import { conflictOnUnique } from '../../common/sql';
 import { OutboxService } from '../outbox/outbox.service';
 import { AccessListService } from './access-list.service';
 import { tierLabel, type AccessTier } from './access-tier';
@@ -261,13 +261,16 @@ export class BreakGlassService implements OnModuleInit {
        * quyết hai lần cho một việc, và cái thứ hai nằm treo mãi sau khi cái thứ nhất được
        * duyệt (code review Epic 6, finding 6).
        */
-      if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
-        throw new ConflictException({
+      throw conflictOnUnique(
+        error,
+        {
           code: 'BREAK_GLASS_PENDING',
           message: 'Bạn đã có một yêu cầu đang chờ duyệt cho đối tượng này.',
-        });
-      }
-      throw error;
+        },
+        // Khai ĐÍCH DANH: bảng `approval` còn khóa chính, và một 23505 từ chỗ khác mà hiện ra
+        // câu "bạn đã có yêu cầu đang chờ" là nói sai hẳn việc vừa xảy ra.
+        'approval_one_pending_key',
+      );
     }
   }
 

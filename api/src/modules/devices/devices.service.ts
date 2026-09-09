@@ -9,6 +9,7 @@ import { and, asc, count, desc, eq, ne, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
+import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { DeviceRetirementRegistry } from '../../common/device-retirement.registry';
 import { requireCas } from '../../common/cas';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
@@ -134,7 +135,7 @@ export class DevicesService {
       .from(deviceHistoryTable)
       .where(eq(deviceHistoryTable.deviceId, deviceId))
       .orderBy(desc(deviceHistoryTable.createdAt))
-      .limit(200);
+      .limit(HISTORY_PAGE_LIMIT);
     return rows as DeviceHistoryRecord[];
   }
 

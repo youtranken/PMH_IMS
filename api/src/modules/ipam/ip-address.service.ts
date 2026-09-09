@@ -9,8 +9,9 @@ import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { requireCas } from '../../common/cas';
+import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import type { Tx } from '../../common/tx';
-import { pgErrorCode, PG_CHECK_VIOLATION, PG_UNIQUE_VIOLATION } from '../../common/sql';
+import { PG_CHECK_VIOLATION, conflictOnUnique, pgErrorCode } from '../../common/sql';
 import { diffRecord, hasChanges } from '../../common/record-diff';
 import { isoDateInTz } from '../../common/today';
 import { AuditWriterService } from '../audit/audit-writer.service';
@@ -221,7 +222,7 @@ export class IpAddressService {
       .from(ipHistoryTable)
       .where(eq(ipHistoryTable.ipAddressId, id))
       .orderBy(desc(ipHistoryTable.createdAt))
-      .limit(200);
+      .limit(HISTORY_PAGE_LIMIT);
   }
 
   async create(actor: string, input: IpAddressInput): Promise<IpAddressRecord> {
@@ -654,15 +655,12 @@ export class IpAddressService {
       });
       return (await this.decorate([row]))[0];
     } catch (error) {
-      if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
-        throw new ConflictException({
-          code: 'IP_TAKEN',
-          message:
-            `Địa chỉ ${before.address} đã có hồ sơ khác dùng sau khi hồ sơ này bị ẩn. ` +
-            'Bật lại sẽ có hai hồ sơ cho cùng một địa chỉ — xử lý hồ sơ kia trước.',
-        });
-      }
-      throw error;
+      throw conflictOnUnique(error, {
+        code: 'IP_TAKEN',
+        message:
+          `Địa chỉ ${before.address} đã có hồ sơ khác dùng sau khi hồ sơ này bị ẩn. ` +
+          'Bật lại sẽ có hai hồ sơ cho cùng một địa chỉ — xử lý hồ sơ kia trước.',
+      });
     }
   }
 
@@ -825,16 +823,8 @@ export class IpAddressService {
   }
 
   private translate(error: unknown, address: string, cidr: string | null): unknown {
-    if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
-      return new ConflictException({
-        code: 'IP_TAKEN',
-        message:
-          `Địa chỉ ${address} đã có hồ sơ trong dải này. Một IP chỉ có một chủ — ` +
-          'nếu hồ sơ cũ đã thu hồi thì dùng "Cấp lại" trên chính dòng đó, đừng tạo hồ sơ mới ' +
-          '(tạo mới là mất lịch sử cũ).',
-      });
-    }
-    // Trigger `ip_address_within_subnet` — hàng rào cuối ở tầng DB.
+    // Trigger `ip_address_within_subnet` — hàng rào cuối ở tầng DB. Xét TRƯỚC vì nhánh 23505
+    // bên dưới là nhánh trả về mặc định; 23514 và 23505 loại trừ nhau nên thứ tự không đổi nghĩa.
     if (pgErrorCode(error) === PG_CHECK_VIOLATION) {
       return new BadRequestException({
         code: 'IP_OUT_OF_SUBNET',
@@ -843,7 +833,13 @@ export class IpAddressService {
           : `Địa chỉ ${address} không nằm trong dải của hồ sơ này.`,
       });
     }
-    return error;
+    return conflictOnUnique(error, {
+      code: 'IP_TAKEN',
+      message:
+        `Địa chỉ ${address} đã có hồ sơ trong dải này. Một IP chỉ có một chủ — ` +
+        'nếu hồ sơ cũ đã thu hồi thì dùng "Cấp lại" trên chính dòng đó, đừng tạo hồ sơ mới ' +
+        '(tạo mới là mất lịch sử cũ).',
+    });
   }
 }
 

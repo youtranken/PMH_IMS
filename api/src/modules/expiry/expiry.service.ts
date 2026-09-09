@@ -3,6 +3,7 @@ import { and, desc, eq } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { ExpirySourceRegistry } from '../../common/expiry/expiry-registry';
+import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import type { Tx } from '../../common/tx';
 import { addDays, daysBetween, isoDateInTz } from '../../common/today';
 import { SystemConfigService } from '../config-sys/system-config.service';
@@ -206,7 +207,7 @@ export class ExpiryService {
         and(eq(renewalHistoryTable.objectKind, kind), eq(renewalHistoryTable.objectId, id)),
       )
       .orderBy(desc(renewalHistoryTable.createdAt))
-      .limit(100);
+      .limit(HISTORY_PAGE_LIMIT);
   }
 
   /** Toàn bộ lượt gia hạn gần đây — dashboard sếp (Epic 7) và báo cáo năm. */

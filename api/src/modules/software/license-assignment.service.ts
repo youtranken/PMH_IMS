@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
@@ -9,7 +8,7 @@ import { and, asc, count, desc, eq, inArray, isNull } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { requireCas } from '../../common/cas';
-import { pgErrorCode, PG_UNIQUE_VIOLATION } from '../../common/sql';
+import { conflictOnUnique } from '../../common/sql';
 import type { Tx } from '../../common/tx';
 import { DevicesApiService } from '../devices/devices.api';
 import { licenseAssignmentTable, softwareTable } from './software.schema';
@@ -280,13 +279,10 @@ export class LicenseAssignmentService {
           })
           .returning();
       } catch (error) {
-        if (pgErrorCode(error) === PG_UNIQUE_VIOLATION) {
-          throw new ConflictException({
-            code: 'ALREADY_ASSIGNED',
-            message: 'License này đã được gán vào đúng máy đó rồi.',
-          });
-        }
-        throw error;
+        throw conflictOnUnique(error, {
+          code: 'ALREADY_ASSIGNED',
+          message: 'License này đã được gán vào đúng máy đó rồi.',
+        });
       }
       await this.software.recordWithin(tx, actor, softwareId, 'license-assigned', {
         deviceId: { before: null, after: input.deviceId },
