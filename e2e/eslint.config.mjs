@@ -19,13 +19,20 @@ import tseslint from 'typescript-eslint';
  * chậm hơn thì nó đỏ ngẫu nhiên, máy nhanh hơn thì nó xanh trước khi thứ cần kiểm kịp xảy ra.
  * Playwright có `expect(...).toBeVisible()` và `waitForResponse` cho đúng việc đó.
  *
- * Selector CSS = CẢNH BÁO CÓ TRẦN. Nó là nợ THẬT (đang 20+ chỗ) nhưng gỡ hết đòi thêm
- * `data-testid` vào hàng chục component, và làm việc đó ngay trước lượt E2E chốt nhánh là đổi
- * một rủi ro nhỏ lấy một rủi ro lớn. Nên: đếm hôm nay, ghim trần bằng `--max-warnings`, và nợ
- * KHÔNG được phép lớn thêm. Một cổng chặn được đà tăng vẫn hơn hẳn một cổng không tồn tại —
- * và hơn hẳn một cổng đặt `'off'` rồi quên (đúng cái bẫy vừa gỡ ở `api/eslint.config.mjs`).
+ * Selector CSS = CẢNH BÁO CÓ TRẦN, và trần đã về **0** (09/09). Lúc dựng cổng này (08/09)
+ * còn 25 chỗ; gỡ hết đòi thêm `data-testid` vào hàng chục component, và làm việc đó ngay
+ * trước lượt E2E chốt nhánh là đổi một rủi ro nhỏ lấy một rủi ro lớn — nên nó được ghim lại
+ * chứ không bỏ qua. Nay đã gỡ xong cả 25:
  *
- * Hạ trần mỗi khi gỡ được một chỗ. Đừng nâng.
+ *   - Phần lớn KHÔNG cần `data-testid` nào cả, chỉ cần dùng đúng tên trợ năng đã có:
+ *     `<main>` là `getByRole('main')`, `<header>` là `banner`, thanh dải mạng vốn đã là
+ *     `<nav aria-label>`. Selector CSS ở những chỗ đó chỉ là thói quen.
+ *   - Sidebar đổi từ `<aside>` sang `<nav aria-label>` — sửa cả HTML cho đúng nghĩa lẫn bài
+ *     kiểm cho hết bám class, một việc.
+ *   - Chỉ 5 chỗ thật sự cần `data-testid` (mật khẩu tạm, secret TOTP, chân hộp thoại, lưới
+ *     phân quyền, nền drawer) — chúng là khối bố cục không có tên trợ năng nào tự nhiên.
+ *
+ * Trần nay là `--max-warnings=0`: thêm MỘT selector CSS mới là lint đỏ ngay. Đừng nâng.
  */
 
 /** Ngủ theo đồng hồ thay vì chờ điều kiện. */

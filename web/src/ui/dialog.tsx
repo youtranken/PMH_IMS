@@ -100,7 +100,7 @@ export function Dialog({
                   </div>
                   <div className="sheet-body">{children}</div>
                   {footer ? (
-                    <div className="sheet-footer">
+                    <div className="sheet-footer" data-testid="dialog-footer">
                       <span className="spacer" />
                       {footer}
                     </div>

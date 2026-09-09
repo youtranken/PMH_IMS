@@ -62,7 +62,7 @@ test.describe('C2 — ghi vào két cũng phải step-up', () => {
     const secretId = ((await created.json()) as { id: string }).id;
 
     // Đẩy mốc step-up lùi 1 giờ = giả lập "grace đã hết", không phải chờ 10 phút thật.
-    expireStepUp();
+    expireStepUp(E2E_SA.email);
 
     /*
      * ĐỌC bị chặn — hàng rào này đã có từ story 4.2, đây chỉ là mốc đối chiếu.

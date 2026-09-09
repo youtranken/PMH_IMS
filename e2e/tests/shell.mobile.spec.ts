@@ -22,8 +22,8 @@ test.describe('Khung ứng dụng ở 390px', () => {
 
     const viewport = page.viewportSize()!;
     // Sidebar 236px không được nằm chình ình ở màn 390px.
-    await expect(page.locator('aside.sidebar')).toHaveCount(0);
-    const main = (await page.locator('main.page').boundingBox())!;
+    await expect(page.getByRole('navigation', { name: 'Điều hướng chính' })).toHaveCount(0);
+    const main = (await page.getByRole('main').boundingBox())!;
     expect(main.width).toBeGreaterThan(viewport.width * 0.9);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
@@ -31,10 +31,10 @@ test.describe('Khung ứng dụng ở 390px', () => {
     await openNavDrawer(page);
     // Drawer trượt vào bằng animation 0.2s — đo ngay là bắt trúng lúc còn ngoài màn hình.
     await expect
-      .poll(async () => (await page.locator('aside.sidebar.is-drawer').boundingBox())!.x)
+      .poll(async () => (await page.getByRole('navigation', { name: 'Điều hướng chính' }).boundingBox())!.x)
       .toBe(0);
     await expect(
-      page.locator('aside.sidebar').getByRole('link', { name: 'Thiết bị' }),
+      page.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('link', { name: 'Thiết bị' }),
     ).toBeInViewport();
   });
 
@@ -43,10 +43,10 @@ test.describe('Khung ứng dụng ở 390px', () => {
     await page.goto('/');
 
     await openNavDrawer(page);
-    await page.locator('aside.sidebar').getByRole('link', { name: 'Thiết bị' }).click();
+    await page.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('link', { name: 'Thiết bị' }).click();
 
     await expect(page.getByRole('heading', { name: 'Thiết bị' })).toBeInViewport();
-    await expect(page.locator('aside.sidebar')).toHaveCount(0);
+    await expect(page.getByRole('navigation', { name: 'Điều hướng chính' })).toHaveCount(0);
   });
 
   /** Đường hỏng: mở nhầm menu thì phải thoát được — bấm ra ngoài hoặc Esc. */
@@ -56,11 +56,11 @@ test.describe('Khung ứng dụng ở 390px', () => {
 
     await openNavDrawer(page);
     // Bấm ở nửa PHẢI: nửa trái là chỗ drawer đang nằm, bấm vào đó là bấm trúng menu.
-    await page.locator('.drawer-backdrop').click({ position: { x: 330, y: 400 } });
-    await expect(page.locator('aside.sidebar')).toHaveCount(0);
+    await page.getByTestId('drawer-backdrop').click({ position: { x: 330, y: 400 } });
+    await expect(page.getByRole('navigation', { name: 'Điều hướng chính' })).toHaveCount(0);
 
     await openNavDrawer(page);
     await page.keyboard.press('Escape');
-    await expect(page.locator('aside.sidebar')).toHaveCount(0);
+    await expect(page.getByRole('navigation', { name: 'Điều hướng chính' })).toHaveCount(0);
   });
 });

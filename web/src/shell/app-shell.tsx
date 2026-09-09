@@ -71,12 +71,23 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
           // Bấm ra ngoài để đóng — nút mở đang bị chính drawer che.
           <div
             className="drawer-backdrop"
+            data-testid="drawer-backdrop"
             onClick={() => setDrawerOpen(false)}
             aria-hidden="true"
           />
         ) : null}
+        {/*
+          `<nav>` chứ không phải `<aside>` (09/09). Khối này KHÔNG phải nội dung phụ trợ — nó
+          là điều hướng chính của cả ứng dụng, nên `role="navigation"` mới đúng, và trình đọc
+          màn hình mới nhảy thẳng tới được bằng phím tắt landmark. Kèm theo, bộ E2E hết phải
+          bám vào selector CSS `aside.sidebar` (CLAUDE.md cấm) — `getByRole('navigation')` là
+          tên trợ năng THẬT, đổi class không làm hỏng bài kiểm.
+        */}
         {showSidebar ? (
-        <aside className={narrow ? 'sidebar is-drawer' : 'sidebar'}>
+        <nav
+          className={narrow ? 'sidebar is-drawer' : 'sidebar'}
+          aria-label={t('app.mainNav')}
+        >
           <div className="brand">
             <span className="brand-mark" aria-hidden="true">
               IMS
@@ -136,10 +147,12 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
               {t('common.logout')}
             </button>
           </div>
-        </aside>
+        </nav>
         ) : null}
 
         <div className="content">
+          {/* `banner` là landmark có sẵn của `<header>` khi nó không nằm trong main/article —
+              đủ để E2E bám vào mà không cần selector CSS. */}
           <header className="topbar">
             {narrow ? (
               <button

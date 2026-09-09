@@ -55,7 +55,7 @@ test.describe('Đăng nhập', () => {
 
   test('mật khẩu mới yếu bị từ chối, hai ô nhập lệch nhau cũng bị chặn', async ({ page }) => {
     await fillLogin(page, E2E_MEMBER.email, E2E_MEMBER.password);
-    const secret = (await page.locator('code.mono').innerText()).trim();
+    const secret = (await page.getByTestId('totp-secret').innerText()).trim();
     await page.getByLabel('Nhập mã 6 số đầu tiên để xác nhận').fill(await freshTotpCode(secret));
     await page.getByRole('button', { name: 'Xác nhận' }).click();
 

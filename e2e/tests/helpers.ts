@@ -84,9 +84,21 @@ export function setLoginRateLimit(value: number): void {
  * giây nên test sẽ phải ngồi chờ cache hết hạn, và grace 0 thì gõ mã xong cũng vẫn hết hạn
  * ngay — không kiểm được luồng "gõ mã rồi xem tiếp".
  */
-export function expireStepUp(): void {
+export function expireStepUp(email: string): void {
+  /*
+   * KHOANH VÀO ĐÚNG MỘT NGƯỜI (09/09).
+   *
+   * Bản trước không có `WHERE user_id`: nó đẩy `stepped_up_at` lùi một giờ cho MỌI phiên còn
+   * sống trong DB. Playwright chạy nhiều worker song song, nên một bài kiểm đang ở giữa luồng
+   * "gõ mã xong rồi xem tiếp" bị bài khác cắt mất quyền — đỏ ngẫu nhiên, đỏ ở một file không
+   * hề gọi hàm này, và mỗi lần chạy lại một chỗ khác. Đúng loại đỏ giả làm người ta ngừng tin
+   * cả bộ test.
+   *
+   * Bắt buộc truyền email chứ không đặt mặc định: mặc định là cách một lời gọi thiếu sót lại
+   * lặng lẽ quét cả DB lần nữa.
+   */
   execSync(
-    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "UPDATE sessions SET stepped_up_at = now() - interval '1 hour' WHERE revoked_at IS NULL"`,
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "UPDATE sessions SET stepped_up_at = now() - interval '1 hour' WHERE revoked_at IS NULL AND user_id = (SELECT id FROM users WHERE email = '${email}')"`,
     { cwd: '..', stdio: 'pipe' },
   );
 }
@@ -291,7 +303,7 @@ export async function firstLogin(
   await fillLogin(page, user.email, user.password);
 
   await expect(page.getByRole('heading', { name: 'Cài xác thực 2 lớp' })).toBeVisible();
-  const secret = (await page.locator('code.mono').innerText()).trim();
+  const secret = (await page.getByTestId('totp-secret').innerText()).trim();
   expect(secret.length).toBeGreaterThan(15);
 
   await page.getByLabel('Nhập mã 6 số đầu tiên để xác nhận').fill(await freshTotpCode(secret));
@@ -461,7 +473,7 @@ export const SECOND_BROWSER = {
  * Truyền `label` khi bài kiểm CỐ TÌNH muốn chốt đúng chữ trên nút.
  */
 export async function confirmAction(page: Page, label?: string): Promise<void> {
-  const footer = page.locator('.sheet-footer').last();
+  const footer = page.getByTestId('dialog-footer').last();
   if (label) {
     await footer.getByRole('button', { name: label }).click();
     return;
@@ -477,7 +489,7 @@ export async function confirmAction(page: Page, label?: string): Promise<void> {
  */
 export async function logout(page: Page): Promise<void> {
   await page.goto('/');
-  await expect(page.locator('header.topbar')).toBeVisible();
+  await expect(page.getByRole('banner')).toBeVisible();
   const openNav = page.getByRole('button', { name: 'Mở menu' });
   if (await openNav.count()) await openNav.click();
   await page.getByRole('button', { name: 'Đăng xuất' }).click();

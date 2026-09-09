@@ -98,7 +98,7 @@ test.describe('Két sắt ở 390px', () => {
       // Chuỗi dài, có ký tự đặc biệt: mật khẩu thiết bị thật trông đúng như vậy.
       value: `Qw3rty!@#$%^&*()_+-=[]{}|;:,.<>?~E2E-${stamp}`,
     });
-    expireStepUp();
+    expireStepUp(E2E_SA.email);
 
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();

@@ -72,7 +72,7 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
     expect(created.status(), 'cất lúc còn trong grace phải chạy được bình thường').toBe(201);
 
     // Hết grace — từ đây mọi đường GHI vào két phải hỏi mã.
-    expireStepUp();
+    expireStepUp(E2E_SA.email);
 
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
@@ -141,7 +141,7 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
       data: { ownerType: 'device', ownerId: deviceId, kind: 'password', label, value: `Cu#${stamp}` },
     });
 
-    expireStepUp();
+    expireStepUp(E2E_SA.email);
 
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();

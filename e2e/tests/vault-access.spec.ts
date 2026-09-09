@@ -146,17 +146,24 @@ test.describe('Ma trận quyền két sắt', () => {
     });
     const deviceId = ((await device.json()) as { device: { id: string } }).device.id;
 
-    if (bySite) {
-      await page.request.post('/api/v1/vault/access', {
-        headers,
-        data: {
-          memberEmail: E2E_MEMBER.email,
-          scopeType: bySite.scopeType,
-          scopeRef: bySite.scopeRef,
-          tier: 'needs_approval',
-        },
-      });
-    }
+    /*
+     * KIỂM ĐIỀU KIỆN TIÊN QUYẾT, KHÔNG BỌC `if` QUANH PHẦN DỰNG (rà soát 07/09, mục 6).
+     *
+     * Bài này chứng minh "gán theo LOẠI thắng gán theo SITE". Bản trước bọc lượt gán theo site
+     * trong `if (bySite)`: không có nhóm site nào thì lượt gán ấy KHÔNG chạy, nên câu chốt
+     * `tier: 'whitelist'` bên dưới đúng một cách tầm thường — chỉ còn đúng một quy tắc trong
+     * cuộc, không có gì để mà thắng. Bài xanh, và nó chứng minh đúng con số không.
+     */
+    expect(bySite, 'phải có nhóm theo site, nếu không bài này không kiểm được thứ tự ưu tiên').toBeTruthy();
+    await page.request.post('/api/v1/vault/access', {
+      headers,
+      data: {
+        memberEmail: E2E_MEMBER.email,
+        scopeType: bySite!.scopeType,
+        scopeRef: bySite!.scopeRef,
+        tier: 'needs_approval',
+      },
+    });
 
     const tier = await page.request.get(
       `/api/v1/vault/access/tier?ownerType=device&ownerId=${deviceId}&memberEmail=${E2E_MEMBER.email}`,

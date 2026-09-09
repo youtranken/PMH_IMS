@@ -34,7 +34,7 @@ test.describe('Hồ sơ tài khoản', () => {
     await expect(form.getByRole('textbox', { name: 'Email' })).toHaveCount(0);
     // Hiện thẳng chữ (`.static-value`) chứ không phải ô nhập bị khoá — ô khoá thì người dùng
     // còn ngồi thử bấm. Bám vào chính khối đó, không phải tiêu đề hộp cũng chứa email.
-    await expect(form.locator('.static-value', { hasText: E2E_SA.email })).toBeVisible();
+    await expect(form.getByTestId('account-email')).toHaveText(E2E_SA.email);
 
     await form.getByLabel('Số điện thoại').fill('0912 345 678');
     await form.getByLabel('Mã nhân viên').fill(`NV-${stamp}`);

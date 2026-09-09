@@ -140,7 +140,7 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
     }
 
     await page.goto('/ip-addresses');
-    const rail = page.locator('.subnet-rail');
+    const rail = page.getByRole('navigation', { name: 'Danh sách dải mạng' });
     await expect(rail).toBeVisible();
 
     // Cột trái có thanh cuộn RIÊNG: nội dung cao hơn khung của chính nó.

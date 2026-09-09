@@ -205,20 +205,29 @@ test.describe('Kho thiết bị', () => {
     });
     const cabinet = lists.cabinets[0];
     const otherSite = lists.sites.find((site) => site.id !== cabinet?.siteId);
-    if (cabinet && otherSite) {
-      const mismatched = await page.request.post('/api/v1/devices', {
-        headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
-        data: {
-          code: `NAS-E2E-MIX-${stamp}`,
-          name: 'Tủ lệch site',
-          deviceTypeId: nas.id,
-          siteId: otherSite.id,
-          cabinetId: cabinet.id,
-        },
-      });
-      expect(mismatched.status()).toBe(400);
-      expect(await mismatched.json()).toMatchObject({ code: 'CATALOG_REF_INVALID' });
-    }
+    /*
+     * KIỂM ĐIỀU KIỆN TIÊN QUYẾT, KHÔNG BỌC `if` QUANH PHẦN KIỂM (rà soát 07/09, mục 6).
+     *
+     * Bản trước là `if (cabinet && otherSite) { ...ba dòng expect... }`. Dữ liệu seed thiếu tủ
+     * hoặc chỉ có một site là cả phần kiểm ranh giới này KHÔNG CHẠY — và bài vẫn xanh, vẫn
+     * đếm là một bài đã qua. Một bài kiểm im lặng bỏ qua chính thứ nó sinh ra để kiểm thì tệ
+     * hơn không có bài nào, vì nó còn cho người đọc cảm giác an toàn.
+     */
+    expect(cabinet, 'seed phải có ít nhất một tủ, nếu không phần kiểm dưới đây vô nghĩa').toBeTruthy();
+    expect(otherSite, 'seed phải có ít nhất hai site để dựng được tình huống lệch').toBeTruthy();
+
+    const mismatched = await page.request.post('/api/v1/devices', {
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
+      data: {
+        code: `NAS-E2E-MIX-${stamp}`,
+        name: 'Tủ lệch site',
+        deviceTypeId: nas.id,
+        siteId: otherSite!.id,
+        cabinetId: cabinet.id,
+      },
+    });
+    expect(mismatched.status()).toBe(400);
+    expect(await mismatched.json()).toMatchObject({ code: 'CATALOG_REF_INVALID' });
   });
 
   /**

@@ -23,15 +23,15 @@ test.describe('Khung ứng dụng', () => {
     await page.goto('/');
 
     const viewport = page.viewportSize()!;
-    const sidebar = (await page.locator('aside.sidebar').boundingBox())!;
-    const main = (await page.locator('main.page').boundingBox())!;
+    const sidebar = (await page.getByRole('navigation', { name: 'Điều hướng chính' }).boundingBox())!;
+    const main = (await page.getByRole('main').boundingBox())!;
 
     // Cạnh trái của nội dung phải ở sau cạnh phải của sidebar → hai khối nằm CẠNH nhau.
     expect(main.x).toBeGreaterThanOrEqual(sidebar.x + sidebar.width - 1);
     // …và cùng một tầng, không phải khối này rơi xuống dưới khối kia.
     expect(main.y).toBeLessThan(sidebar.y + sidebar.height);
 
-    await expect(page.locator('header.topbar')).toBeInViewport();
+    await expect(page.getByRole('banner')).toBeInViewport();
     await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeInViewport();
     expect(main.width).toBeGreaterThan(viewport.width / 2);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
@@ -43,8 +43,8 @@ test.describe('Khung ứng dụng', () => {
     await page.getByRole('link', { name: 'Thiết bị' }).click();
 
     await expect(page.getByRole('heading', { name: 'Thiết bị' })).toBeInViewport();
-    const sidebar = (await page.locator('aside.sidebar').boundingBox())!;
-    const main = (await page.locator('main.page').boundingBox())!;
+    const sidebar = (await page.getByRole('navigation', { name: 'Điều hướng chính' }).boundingBox())!;
+    const main = (await page.getByRole('main').boundingBox())!;
     expect(main.x).toBeGreaterThanOrEqual(sidebar.x + sidebar.width - 1);
     expect(main.y).toBeLessThan(sidebar.y + sidebar.height);
   });
@@ -57,7 +57,7 @@ test.describe('Khung ứng dụng', () => {
     await firstLogin(page, E2E_SA);
     await page.goto('/khong-co-trang-nay');
 
-    await expect(page.locator('aside.sidebar')).toBeInViewport();
-    await expect(page.locator('main.page')).toBeInViewport();
+    await expect(page.getByRole('navigation', { name: 'Điều hướng chính' })).toBeInViewport();
+    await expect(page.getByRole('main')).toBeInViewport();
   });
 });

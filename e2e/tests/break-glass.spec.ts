@@ -148,7 +148,7 @@ test.describe('Break-glass', () => {
     // --- Member giờ xem được, và mỗi lần xem vẫn phải gõ TOTP (cơ chế 4.2 không đổi).
     await logout(page);
     await loginWithTotp(page, E2E_MEMBER.email, NEW_PASSWORD, totpSecret);
-    expireStepUp();
+    expireStepUp(E2E_MEMBER.email);
 
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();

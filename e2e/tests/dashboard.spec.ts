@@ -86,7 +86,7 @@ test.describe('Bảng điều khiển', () => {
      * dòng của bài kiểm xuống hàng hai — bài đỏ vì dữ liệu hàng xóm chứ không phải vì thứ tự
      * sắp xếp sai, đúng loại đỏ giả làm người ta mất niềm tin vào cả bộ test.
      */
-    const labels = await expiring.locator('.dash-list > li').allInnerTexts();
+    const labels = await expiring.getByRole('listitem').allInnerTexts();
     const urgent = labels.findIndex((text) => text.includes('License gấp'));
     const relaxed = labels.findIndex((text) => text.includes('License thong tha'));
     expect(urgent).toBeGreaterThanOrEqual(0);

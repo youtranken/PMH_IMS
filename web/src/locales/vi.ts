@@ -18,6 +18,8 @@ export default {
     confirmOk: 'Đồng ý',
     openNav: 'Mở menu',
     closeNav: 'Đóng menu',
+    /** Tên của landmark điều hướng chính — trình đọc màn hình đọc lên khi nhảy tới khối này. */
+    mainNav: 'Điều hướng chính',
   },
   select: {
     noOptions: '— Không có lựa chọn —',

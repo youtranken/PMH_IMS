@@ -132,7 +132,7 @@ export function AccountForm({
           {editing ? (
             // Hiện thẳng chữ chứ không phải ô nhập bị khoá: ô khoá thì người dùng còn ngồi
             // thử bấm và tự hỏi vì sao không gõ được.
-            <p className="static-value mono">{account.email}</p>
+            <p className="static-value mono" data-testid="account-email">{account.email}</p>
           ) : (
             <input
               id="acc-email"

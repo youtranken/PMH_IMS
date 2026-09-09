@@ -36,7 +36,7 @@ test.describe('Quản trị tài khoản', () => {
 
     // Mật khẩu tạm chỉ hiện MỘT LẦN.
     await expect(page.getByText('Mật khẩu tạm')).toBeVisible();
-    const temp = await page.locator('.temp-password').innerText();
+    const temp = await page.getByTestId('temp-password').innerText();
     expect(temp.trim().length).toBeGreaterThanOrEqual(12);
 
     // `exact`: nút ✕ của hộp thoại có nhãn "Đóng hộp thoại", đừng bắt nhầm nó.

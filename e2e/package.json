@@ -4,8 +4,8 @@
   "type": "module",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "_lint_note": "--max-warnings=25 la TRAN GHIM cua no selector CSS (rà soát 07/09 #16). Ha tran khi go duoc mot cho. KHONG nang. Doc dau eslint.config.mjs truoc khi doi.",
-    "lint": "eslint . --max-warnings=25",
+    "_lint_note": "--max-warnings=0 tu 09/09: ca 25 selector CSS da go het. Tran nay KHONG duoc nang lai — them mot selector CSS moi la lint DO ngay. Khung bo cuc khong co ten tro nang thi them data-testid vao component (xem app-shell.tsx, dialog.tsx). Doc dau eslint.config.mjs truoc khi doi.",
+    "lint": "eslint . --max-warnings=0",
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "report": "playwright show-report"

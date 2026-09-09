@@ -386,7 +386,7 @@ export function AccountsScreen({ me }: { me: Me }) {
             </button>
           }
         >
-          <p className="mono temp-password">{temporaryPassword}</p>
+          <p className="mono temp-password" data-testid="temp-password">{temporaryPassword}</p>
           <p className="muted">{t('accounts.temporaryPasswordNote')}</p>
         </Dialog>
       ) : null}

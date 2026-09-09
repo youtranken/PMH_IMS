@@ -101,7 +101,7 @@ test('lưới ma trận quyền đọc được ở 390px, cuộn ngang trong kh
    * bài này khóa lại. Vài chục cột ở 390px mà trang cuộn ngang thì cột tên người trôi mất và
    * lưới hết đọc được.
    */
-  const grid = page.locator('.access-grid-wrap');
+  const grid = page.getByTestId('access-grid');
   await expect(grid).toBeVisible();
   const gridScrolls = await grid.evaluate((el) => el.scrollWidth > el.clientWidth);
   expect(gridScrolls).toBe(true);

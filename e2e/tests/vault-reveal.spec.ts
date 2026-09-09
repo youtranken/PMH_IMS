@@ -86,7 +86,7 @@ test.describe('Mở két với TOTP step-up', () => {
     ]);
 
     // Enroll TOTP vừa xong đã tính là step-up — đẩy mốc lùi để đúng cảnh "đã quá grace".
-    expireStepUp();
+    expireStepUp(E2E_SA.email);
 
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
@@ -135,7 +135,7 @@ test.describe('Mở két với TOTP step-up', () => {
     const { deviceId } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
     ]);
-    expireStepUp();
+    expireStepUp(E2E_SA.email);
 
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
@@ -157,7 +157,7 @@ test.describe('Mở két với TOTP step-up', () => {
     const { ids } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
     ]);
-    expireStepUp();
+    expireStepUp(E2E_SA.email);
 
     const denied = await page.request.post(`/api/v1/vault/secrets/${ids[0]}/reveal`, {
       headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
@@ -248,7 +248,7 @@ test.describe('Mở két với TOTP step-up', () => {
     const { ids } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
     ]);
-    expireStepUp();
+    expireStepUp(E2E_SA.email);
 
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 

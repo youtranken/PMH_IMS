@@ -49,7 +49,7 @@ export function TotpEnroll() {
             height={200}
           />
           <p className="auth-sub">
-            {t('auth.enrollManual')} <code className="mono">{enroll.secret}</code>
+            {t('auth.enrollManual')} <code className="mono" data-testid="totp-secret">{enroll.secret}</code>
           </p>
           <form
             className="auth-form"
