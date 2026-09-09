@@ -1,5 +1,5 @@
 import * as RD from '@radix-ui/react-dialog';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
 
@@ -65,6 +65,53 @@ export function Dialog({
   const { t } = useTranslation();
   const block = dismissible ? undefined : (e: Event) => e.preventDefault();
   const [portalEl, setPortalEl] = useState<HTMLDivElement | null>(null);
+
+  /*
+   * ===== TRẢ TIÊU ĐIỂM VỀ NÚT ĐÃ MỞ HỘP (09/09) =====
+   *
+   * Chú thích ở đầu file này từng hứa "Radix lo focus trap, scroll-lock, Esc, TRẢ FOCUS".
+   * Hai phần ba lời hứa đó đúng. Phần trả focus thì KHÔNG, và bài kiểm bàn phím đầu tiên của
+   * bộ E2E đã bắt được: gõ Tab tới nút "Thêm thiết bị", Enter mở hộp, Esc đóng — tiêu điểm
+   * rơi về `<body>`. Người dùng bàn phím bị ném về đầu trang sau MỖI lần đóng hộp, và phải
+   * gõ lại hơn hai chục lượt Tab để về chỗ cũ.
+   *
+   * VÌ SAO RADIX KHÔNG LÀM ĐƯỢC Ở ĐÂY: nó trả focus trong bước dọn của `FocusScope`, bước ấy
+   * chỉ chạy khi `open` LẬT từ true sang false trong lúc `RD.Root` còn sống. Nhưng gần như
+   * mọi call site trong repo viết `{dangMo ? <XForm onClose={…}/> : null}` với `<Dialog open>`
+   * cứng — nghĩa là đóng hộp = THÁO CẢ GỐC ra khỏi cây React. Radix không còn cơ hội chạy
+   * bước nào cả. Sửa từng call site là sửa hàng chục chỗ và chỗ thứ mười một sẽ lại quên;
+   * sửa ở đây là sửa cho tất cả (AD-15).
+   *
+   * GHI LẠI TRONG LÚC RENDER, không phải trong effect: layout effect của con (`RD.Content`)
+   * chạy TRƯỚC của cha, nên tới lượt cha thì tiêu điểm đã nằm trong hộp rồi — ghi lúc đó là
+   * ghi nhầm chính cái hộp.
+   */
+  const opener = useRef<HTMLElement | null>(null);
+  const wasOpen = useRef(false);
+  if (open && !wasOpen.current) {
+    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  }
+  wasOpen.current = open;
+
+  const returnFocus = useCallback(() => {
+    const el = opener.current;
+    opener.current = null;
+    if (!el || !el.isConnected) return;
+    /*
+     * CHỈ nhặt tiêu điểm lên khi nó đã RƠI. Nếu màn vừa chủ động đưa tiêu điểm đi đâu đó
+     * (mở tiếp hộp thứ hai, nhảy tới ô vừa tạo), cướp lại còn tệ hơn là không làm gì.
+     */
+    const now = document.activeElement;
+    if (now && now !== document.body) return;
+    el.focus();
+  }, []);
+
+  // Hai đường đóng hộp: `open` lật về false, hoặc cả component bị tháo. Cả hai đều phải trả.
+  useEffect(() => {
+    if (!open) returnFocus();
+  }, [open, returnFocus]);
+  useEffect(() => () => returnFocus(), [returnFocus]);
+
   return (
     <RD.Root open={open} onOpenChange={onOpenChange}>
       <RD.Portal>
