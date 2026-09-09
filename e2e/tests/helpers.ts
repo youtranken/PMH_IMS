@@ -44,15 +44,24 @@ export const E2E_LOGIN_RATE_LIMIT = 500;
  * Hậu quả lớn hơn nguyên nhân: một lần trượt → bài đó đỏ, và vì dữ liệu không được dọn nên
  * hơn 50 bài sau đỏ theo. Cả lượt 25 phút hỏng vì một lần gọi tiến trình con.
  *
- * ===== NGUYÊN NHÂN: CHƯA BIẾT =====
+ * ===== NGUYÊN NHÂN: CHƯA BIẾT. ĐÃ LOẠI ĐƯỢC "HẾT BỘ NHỚ" =====
  *
- * Giả thuyết đang có là máy không dựng nổi tiến trình con lúc đó (bộ nhớ khả dụng đo được sau
- * lượt chạy: 5,8/24 GB). NHƯNG ĐÓ CHỈ LÀ GIẢ THUYẾT: chưa ai đo bộ nhớ ĐÚNG LÚC hỏng, và
- * chưa lần nào bắt được mã lỗi `ENOMEM`. `stderr` rỗng hợp với nhiều nguyên nhân khác nữa —
- * docker daemon bận, tiến trình bị tín hiệu, `execSync` bị ngắt.
+ * Giả thuyết đầu tiên là máy hết bộ nhớ nên không dựng nổi tiến trình con. ĐÃ ĐO VÀ BÁC BỎ
+ * (09/09), bằng cách lấy mẫu `\Memory\Available MBytes` mỗi 3 giây TRONG LÚC bộ E2E chạy:
  *
- * Vì vậy khối `catch` dưới đây GHI LẠI `code`/`status`/`signal` của lỗi. Lần hỏng tới sẽ tự
- * nói ra nguyên nhân thay vì để người đọc đoán tiếp — đó mới là việc cần làm ở đây.
+ *     thấp nhất 4 716 MB · trung bình 6 057 MB · trên tổng 24 GB
+ *     máy ảo Docker: 7,76 GiB, toàn bộ container dùng ~700 MB
+ *
+ * Còn dư rất nhiều ở cả hai phía. Con số từng dùng để kết luận (`FreePhysicalMemory` = 4,3 GB)
+ * là số ĐO SAI CÁCH: chỉ tiêu đó của Windows bỏ qua standby cache nên luôn thấp hơn thực tế,
+ * và nó được đo SAU lượt hỏng chứ không phải trong lúc hỏng.
+ *
+ * Còn lại chưa loại được: Docker Desktop chỉ được cấp 2 nhân trên 8 luồng của máy — tranh CPU
+ * là ứng viên hợp lý hơn. Nhưng đó CŨNG chỉ là giả thuyết, và bài học của lần trước là đừng
+ * viết giả thuyết ra như kết luận.
+ *
+ * Vì vậy khối `catch` dưới đây GHI LẠI `code`/`status`/`signal`. Lần hỏng tới sẽ tự nói ra
+ * nguyên nhân thay vì để người đọc đoán tiếp — đó mới là việc cần làm ở đây.
  *
  * ===== VÌ SAO THỬ LẠI Ở ĐÂY LÀ ĐÚNG =====
  *
