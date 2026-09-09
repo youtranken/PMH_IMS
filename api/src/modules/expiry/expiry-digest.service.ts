@@ -253,9 +253,19 @@ export class ExpiryDigestService {
 
   private async buildPayload(rule: typeof expiryRuleTable.$inferSelect) {
     const kinds = rule.kinds as string[];
+    /*
+     * Email KHÔNG nhìn lùi một năm như màn hình (rà soát 07/09, mục 6 "Miền nghiệp vụ").
+     *
+     * Bản trước để `includeExpired` trống nên rơi về mặc định của MÀN HÌNH: nhìn lùi 365 ngày.
+     * Với một thứ gửi hằng tuần thì đó là 52 lá thư liên tiếp cùng chứa một tên miền công ty
+     * đã bỏ. Không ai xử được nó BẰNG EMAIL — việc phải làm nằm ở màn khác — nên nó chỉ dạy
+     * người nhận rằng thư này có thứ không cần đọc, và vài tuần sau cả lá thư vào thùng rác,
+     * kể cả những dòng thật sự gấp.
+     */
     const { items } = await this.expiry.list({
       withinDays: rule.withinDays,
       kinds: kinds.length > 0 ? kinds : undefined,
+      expiredWithinDays: await this.config.getNumber('expiryDigestExpiredDays'),
     });
     const rows = items.map((item) => ({
       label: item.label,

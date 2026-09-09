@@ -34,11 +34,26 @@ export interface ExpiryThresholds {
 }
 
 export interface ExpiryQuery {
-  /** Cửa sổ nhìn tới, tính bằng ngày. Mặc định 30. */
+  /** Cửa sổ nhìn tới, tính bằng ngày. Mặc định `expiry.warning_days` (AD-11). */
   withinDays?: number;
   kinds?: string[];
   /** true = kèm cả mục ĐÃ quá hạn (mặc định có, vì đó là thứ gấp nhất). */
   includeExpired?: boolean;
+  /**
+   * NHÌN LÙI bao nhiêu ngày để bắt mục đã quá hạn. Mặc định `LOOK_BACK_DAYS` (một năm).
+   *
+   * ===== VÌ SAO MÀN HÌNH VÀ EMAIL PHẢI KHÁC NHAU Ở ĐÂY =====
+   *
+   * Màn hình là thứ người ta KÉO tới xem: nhìn lùi một năm là đúng, vì mục quá hạn 200 ngày mà
+   * chưa ai xử chính là thứ nguy hiểm nhất và phải hiện ra.
+   *
+   * Email là thứ ĐẨY tới người ta, hằng tuần, mãi mãi. Cùng một mục đó sẽ nằm trong 52 lá thư
+   * liên tiếp — một tên miền công ty đã bỏ, một hợp đồng đã chấm dứt, xuất hiện đều đặn cả
+   * năm. Không ai xử được nó bằng email (việc phải làm là sửa hồ sơ, ở màn khác), nên nó chỉ
+   * dạy người nhận một điều: thư này có thứ không cần đọc. Vài tuần sau cả lá thư vào thùng
+   * rác, kể cả những dòng THẬT SỰ gấp.
+   */
+  expiredWithinDays?: number;
 }
 
 /**
@@ -93,8 +108,7 @@ export class ExpiryService {
     const today = await this.today();
     const thresholds = await this.thresholds();
     const withinDays = clampWindow(query.withinDays, thresholds.warningDays);
-    // Nhìn lùi 1 năm để bắt cả thứ ĐÃ quá hạn mà chưa ai xử — đó mới là thứ nguy hiểm.
-    const from = query.includeExpired === false ? today : addDays(today, -365);
+    const from = addDays(today, -lookBackDays(query));
     const to = addDays(today, withinDays);
 
     const items = await this.registry.collect(from, to, query.kinds);
@@ -229,6 +243,30 @@ function summarize(rows: ExpiryRow[], thresholds: ExpiryThresholds): ExpirySumma
     else if (row.daysLeft <= thresholds.warningDays) summary.warning += 1;
   }
   return summary;
+}
+
+/** Nhìn lùi tối đa một năm — mặc định của MÀN HÌNH. */
+export const LOOK_BACK_DAYS = 365;
+
+/**
+ * Nhìn lùi bao nhiêu ngày — hàm THUẦN, có bảng test.
+ *
+ * Ba câu trả lời, và cả ba đều đúng ở đúng chỗ của nó:
+ *   - `includeExpired: false` → 0, không nhìn lùi tí nào (bộ lọc "chỉ sắp tới" của màn hình).
+ *   - có `expiredWithinDays` → đúng con số đó (digest, đọc từ `system_config`).
+ *   - còn lại → một năm (mặc định của màn hình).
+ *
+ * Kẹp về 0..365: số âm sẽ đẩy `from` ra TƯƠNG LAI và lặng lẽ giấu mất mọi mục quá hạn — đúng
+ * loại hỏng không ai thấy, vì màn hình vẫn có dữ liệu, chỉ thiếu đúng phần nguy hiểm nhất.
+ */
+export function lookBackDays(query: {
+  includeExpired?: boolean;
+  expiredWithinDays?: number;
+}): number {
+  if (query.includeExpired === false) return 0;
+  const raw = query.expiredWithinDays;
+  if (raw === undefined || Number.isNaN(raw)) return LOOK_BACK_DAYS;
+  return Math.min(LOOK_BACK_DAYS, Math.max(0, Math.trunc(raw)));
 }
 
 /**

@@ -36,6 +36,14 @@ export const CONFIG_KEYS = {
    */
   expiryCriticalDays: { key: 'expiry.critical_days', fallback: 7 },
   expiryWarningDays: { key: 'expiry.warning_days', fallback: 30 },
+  /*
+   * Email báo cáo nhìn lùi bao nhiêu ngày để bắt mục ĐÃ quá hạn (0043).
+   *
+   * Màn hình nhìn lùi một năm và đó là đúng — nó là thứ người ta KÉO tới xem. Email thì ĐẨY
+   * tới, hằng tuần, mãi mãi: một tên miền đã bỏ sẽ nằm trong 52 lá thư liên tiếp và dạy người
+   * nhận rằng thư này có thứ không cần đọc.
+   */
+  expiryDigestExpiredDays: { key: 'expiry.digest_expired_days', fallback: 30 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;

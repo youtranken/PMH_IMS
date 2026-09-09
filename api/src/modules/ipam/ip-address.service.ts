@@ -754,7 +754,7 @@ export class IpAddressService {
     await this.devices.assertUsable(deviceId);
   }
 
-  /** Tra một hồ sơ KỂ CẢ đã ẩn — dùng cho đường đọc lịch sử. */
+  /** Tra một hồ sơ KỂ CẢ đã ẩn — đường đọc lịch sử, và đường BẬT LẠI (`restore`). */
   private async requireAny(id: string): Promise<typeof ipAddressTable.$inferSelect> {
     const rows = await this.db.select().from(ipAddressTable).where(eq(ipAddressTable.id, id));
     if (rows.length === 0) {
@@ -768,18 +768,6 @@ export class IpAddressService {
 
   private requireAlive(id: string): Promise<typeof ipAddressTable.$inferSelect> {
     return this.requireAliveWithin(this.db, id);
-  }
-
-  /** Đọc KHÔNG lọc `voided_at` — chỉ đường bật lại được dùng, xem `restore()`. */
-  private async requireAny(id: string): Promise<typeof ipAddressTable.$inferSelect> {
-    const rows = await this.db.select().from(ipAddressTable).where(eq(ipAddressTable.id, id));
-    if (rows.length === 0) {
-      throw new NotFoundException({
-        code: 'IP_NOT_FOUND',
-        message: 'Không tìm thấy hồ sơ IP này.',
-      });
-    }
-    return rows[0];
   }
 
   /** Bản đọc TRONG transaction — `transitionWithin` phải thấy trạng thái của chính tx mình. */

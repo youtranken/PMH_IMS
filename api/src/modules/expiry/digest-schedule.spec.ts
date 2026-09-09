@@ -1,3 +1,4 @@
+import { lookBackDays } from './expiry.service';
 import {
   describeSchedule,
   localNowIn,
@@ -184,5 +185,39 @@ describe('startOfLocalDayUtc — đầu ngày ĐỊA PHƯƠNG, tính bằng UTC'
     expect(start.getTime()).toBeLessThan(sentAt.getTime());
     // Và sau khi đã gửi, `last_sent_at < start` phải SAI — kỳ này coi như đã chốt.
     expect(sentAt.getTime() < start.getTime()).toBe(false);
+  });
+});
+
+/**
+ * MÀN HÌNH VÀ EMAIL PHẢI NHÌN LÙI KHÁC NHAU.
+ *
+ * Màn hình là thứ người ta KÉO tới xem: nhìn lùi một năm là đúng, vì mục quá hạn 200 ngày mà
+ * chưa ai xử chính là thứ nguy hiểm nhất.
+ *
+ * Email là thứ ĐẨY tới, hằng tuần, mãi mãi. Cùng một mục đó nằm trong 52 lá thư liên tiếp —
+ * một tên miền công ty đã bỏ, xuất hiện đều đặn cả năm. Không ai xử được nó bằng email (việc
+ * phải làm ở màn khác), nên nó chỉ dạy người nhận rằng thư này có thứ không cần đọc.
+ */
+describe('lookBackDays — nhìn lùi bao xa để bắt mục đã quá hạn', () => {
+  it.each([
+    ['mặc định (màn hình): một năm', {}, 365],
+    ['digest đọc từ system_config', { expiredWithinDays: 30 }, 30],
+    ['bộ lọc "chỉ sắp tới": không nhìn lùi tí nào', { includeExpired: false }, 0],
+    [
+      '`includeExpired: false` THẮNG cả con số — người dùng đã nói rõ là không muốn',
+      { includeExpired: false, expiredWithinDays: 30 },
+      0,
+    ],
+    ['0 là một câu trả lời hợp lệ, không phải "chưa cấu hình"', { expiredWithinDays: 0 }, 0],
+    ['kẹp trần ở một năm', { expiredWithinDays: 99_999 }, 365],
+    [
+      'số ÂM kẹp về 0 — nếu không nó đẩy mốc ra TƯƠNG LAI và giấu sạch mục quá hạn',
+      { expiredWithinDays: -30 },
+      0,
+    ],
+    ['số lẻ cắt phần thập phân', { expiredWithinDays: 30.9 }, 30],
+    ['NaN rơi về mặc định', { expiredWithinDays: Number.NaN }, 365],
+  ])('%s', (_name, query, expected) => {
+    expect(lookBackDays(query)).toBe(expected);
   });
 });
