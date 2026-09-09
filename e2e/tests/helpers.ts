@@ -34,15 +34,25 @@ export const E2E_LOGIN_RATE_LIMIT = 500;
 /**
  * CHẠY MỘT LỆNH `docker compose exec` — CÓ THỬ LẠI. Mọi helper chạm stack đều đi qua đây.
  *
- * ===== VÌ SAO CẦN, ĐO ĐƯỢC =====
+ * ===== TRIỆU CHỨNG (ĐÃ QUAN SÁT) =====
  *
- * Trên máy Windows này, lúc bộ E2E đang chạy thì hệ điều hành có lúc KHÔNG DỰNG NỔI tiến
- * trình con nữa (đo được: 24 GB tổng, còn 4,3 GB trống khi chưa chạy gì; cộng thêm trình
- * duyệt của bài test và docker là cạn). Triệu chứng rất dễ chẩn nhầm: `execSync` ném với
- * stderr RỖNG, chỉ còn dòng "Command failed" — nhìn như docker hỏng hoặc câu SQL sai.
+ * Trong ba lượt E2E đầy đủ ngày 09/09, `docker compose exec` hỏng giữa chừng — quanh bài thứ
+ * ~61, sau ~6 phút. `execSync` ném với **stderr RỖNG**, chỉ còn dòng "Command failed". Ngay
+ * sau đó chạy TAY đúng lệnh ấy thì xong trong dưới 1 giây, api `healthy`, 0 lần khởi động
+ * lại, không một dòng lỗi trong log.
  *
- * Đo trong ba lượt chạy đầy đủ: một lần trượt ở bài thứ ~61 → bài đó đỏ, và vì dữ liệu không
- * được dọn nên hơn 50 bài sau đỏ theo. Cả lượt 25 phút hỏng vì một lần gọi tiến trình con.
+ * Hậu quả lớn hơn nguyên nhân: một lần trượt → bài đó đỏ, và vì dữ liệu không được dọn nên
+ * hơn 50 bài sau đỏ theo. Cả lượt 25 phút hỏng vì một lần gọi tiến trình con.
+ *
+ * ===== NGUYÊN NHÂN: CHƯA BIẾT =====
+ *
+ * Giả thuyết đang có là máy không dựng nổi tiến trình con lúc đó (bộ nhớ khả dụng đo được sau
+ * lượt chạy: 5,8/24 GB). NHƯNG ĐÓ CHỈ LÀ GIẢ THUYẾT: chưa ai đo bộ nhớ ĐÚNG LÚC hỏng, và
+ * chưa lần nào bắt được mã lỗi `ENOMEM`. `stderr` rỗng hợp với nhiều nguyên nhân khác nữa —
+ * docker daemon bận, tiến trình bị tín hiệu, `execSync` bị ngắt.
+ *
+ * Vì vậy khối `catch` dưới đây GHI LẠI `code`/`status`/`signal` của lỗi. Lần hỏng tới sẽ tự
+ * nói ra nguyên nhân thay vì để người đọc đoán tiếp — đó mới là việc cần làm ở đây.
  *
  * ===== VÌ SAO THỬ LẠI Ở ĐÂY LÀ ĐÚNG =====
  *
@@ -68,17 +78,33 @@ function dockerExec(command: string, label: string, env?: NodeJS.ProcessEnv): st
         continue;
       }
       /*
-       * Kèm stderr THẬT. "Command failed" trần trụi chính là thứ đã làm mất một giờ để lần ra
-       * rằng nguyên nhân chỉ là máy hết bộ nhớ — và stderr rỗng lại là DẤU HIỆU của đúng
-       * chuyện đó, nên câu nói rõ ra đáng giá hơn cả stderr.
+       * IN RA ĐỦ THỨ CẦN ĐỂ CHẨN, KHÔNG ĐOÁN HỘ NGƯỜI ĐỌC.
+       *
+       * "Command failed" trần trụi là thứ đã tốn một giờ mà vẫn KHÔNG kết luận được nguyên
+       * nhân. Ba trường dưới đây phân biệt được các khả năng ngay từ dòng đầu:
+       *
+       *   `code: 'ENOMEM'`  → máy không dựng nổi tiến trình con (giả thuyết hiện tại).
+       *   `code: 'ETIMEDOUT'` → lệnh chạy quá lâu, không phải không chạy được.
+       *   `signal: 'SIGKILL'` → có thứ khác giết tiến trình.
+       *   `status: 1` + stderr → docker/psql trả lỗi THẬT: sai SQL, container chết.
+       *
+       * Không có ba trường này thì bốn nguyên nhân trên trông y hệt nhau.
        */
-      const stderr = String((error as { stderr?: Buffer }).stderr ?? '').trim();
+      const e = error as { stderr?: Buffer; code?: unknown; status?: unknown; signal?: unknown };
+      const stderr = String(e.stderr ?? '').trim();
+      const facts = [
+        e.code === undefined ? null : `code=${String(e.code)}`,
+        e.status === undefined || e.status === null ? null : `status=${String(e.status)}`,
+        e.signal ? `signal=${String(e.signal)}` : null,
+      ]
+        .filter(Boolean)
+        .join(' ');
+
       throw new Error(
-        `${label} hỏng sau 3 lần thử.` +
+        `${label} hỏng sau 3 lần thử [${facts || 'không có code/status/signal'}].` +
           (stderr
             ? `\n${stderr}`
-            : ' stderr RỖNG — nhiều khả năng máy không dựng nổi tiến trình con (hết bộ nhớ), ' +
-              'không phải lỗi SQL hay docker.'),
+            : ' stderr RỖNG — lệnh không chạy được, KHÔNG phải lỗi SQL. Xem `code` ở trên.'),
         { cause: error },
       );
     }
