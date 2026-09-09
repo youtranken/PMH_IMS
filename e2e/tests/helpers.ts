@@ -179,11 +179,45 @@ export function flushResets(): void {
   if (pending.size === 0) return;
   const domains = DOMAIN_ORDER.filter((d) => pending.has(d));
   pending.clear();
-  execSync(`${COMPOSE} exec -T api node scripts/reset-e2e.mjs ${domains.join(' ')}`, {
+  /*
+   * THỬ LẠI — vì hỏng ở đây KHÔNG chỉ làm đỏ một bài (09/09).
+   *
+   * `docker compose exec` trên máy Windows này thỉnh thoảng hỏng nhất thời dưới tải: process
+   * con không dựng được, `execSync` ném, và triệu chứng là một dòng "Command failed" trần
+   * trụi. Đo được trong một lượt chạy đầy đủ: MỘT lần hỏng ở bài thứ 62 → bài đó đỏ, và vì
+   * trạng thái không được dọn nên 52 bài sau đỏ theo. Cả lượt 25 phút hỏng vì một lần gọi
+   * tiến trình con trượt.
+   *
+   * Đây đúng chỗ đáng thử lại, và là chỗ HIẾM khi thử lại là đúng: lệnh này TOÀN PHẦN
+   * (idempotent) — nó đưa vùng dữ liệu về một trạng thái cố định, chạy hai lần cho kết quả y
+   * hệt chạy một lần. Thử lại một lệnh GHI nghiệp vụ thì mới là giấu lỗi đi.
+   *
+   * Ba lượt, không nhiều hơn: hỏng thật (api chết, sai cấu hình) phải đỏ NHANH và đỏ rõ, chứ
+   * không được biến thành một bài kiểm treo lâu gấp ba rồi mới chịu nói.
+   */
+  const cmd = `${COMPOSE} exec -T api node scripts/reset-e2e.mjs ${domains.join(' ')}`;
+  const options = {
     cwd: '..',
-    stdio: 'pipe',
+    stdio: 'pipe' as const,
     env: { ...process.env, ALLOW_E2E_RESET: '1' },
-  });
+  };
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      execSync(cmd, options);
+      return;
+    } catch (error) {
+      if (attempt >= 3) {
+        // Kèm stderr THẬT của script: "Command failed" trần trụi là thứ đã làm mất một giờ
+        // để lần ra đúng một lần gọi docker trượt.
+        const stderr = String((error as { stderr?: Buffer }).stderr ?? '').trim();
+        throw new Error(
+          `Dọn dữ liệu E2E hỏng sau 3 lần thử (${domains.join(' ')}).` +
+            (stderr ? `\n${stderr}` : ' Không có stderr — nhiều khả năng docker exec không dựng được tiến trình con.'),
+          { cause: error },
+        );
+      }
+    }
+  }
 }
 
 /**
