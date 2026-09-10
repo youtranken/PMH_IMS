@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { requireCas } from '../../common/cas';
@@ -38,6 +38,8 @@ const PURPOSE_WARNING = {
   reclaim: 'Thu hồi mà để nguyên rule thì port vẫn mở và sẽ trỏ vào máy được cấp tiếp theo.',
   assign: 'Cấp cho máy khác mà để nguyên rule là giao thẳng port đang mở cho máy mới.',
   void: 'Ẩn hồ sơ thì địa chỉ này biến khỏi mọi màn, còn rule NAT vẫn chuyển gói tới đó — lỗ thủng còn nguyên mà không còn chỗ nào nhắc tới nó.',
+  readdress:
+    'Dời hồ sơ sang địa chỉ khác mà để nguyên rule thì rule vẫn trỏ vào địa chỉ CŨ — sổ NAT và sổ IP nói khác nhau về cùng một cái máy.',
 } as const;
 
 /** Trường được theo dõi trong lịch sử (AD-13). */
@@ -323,8 +325,33 @@ export class IpAddressService {
     const becomesAssigned =
       before.status === 'free' && Boolean(nextOwner.deviceId || nextOwner.usedBy);
 
+    /*
+     * ĐỔI CHỦ hoặc DỜI ĐỊA CHỈ qua đường sửa hồ sơ cũng phải hỏi sổ NAT (rà soát 10/09).
+     *
+     * Bản vá finding #6 đặt hàng rào ở `transitionWithin` và `voidAddress` — hai cửa HẸP. Cửa
+     * này dẫn tới đúng cùng một hậu quả, chỉ khác đường vào:
+     *
+     *   · đổi `deviceId`: rule `TCP 8080 → .5` vẫn mở, và giờ nó trỏ vào máy mới. Không khác
+     *     gì "cấp cho máy khác" — thứ `PURPOSE_WARNING.assign` viết ra để chặn.
+     *   · đổi `address`: `nat_rule.internal_ip` giữ nguyên địa chỉ CŨ, còn `decorate()` của sổ
+     *     NAT lại lấy tên máy qua `ip_address_id`. Sổ NAT hiện "8080 → 172.16.10.5, máy
+     *     PC-KT-01" trong khi PC-KT-01 đã ở .9.
+     *
+     * Hỏi theo địa chỉ CŨ (`before.address`) vì đó là địa chỉ rule đang trỏ vào.
+     */
+    const ownerMoves =
+      values.deviceId !== undefined && (values.deviceId ?? null) !== (before.deviceId ?? null);
+    const addressMoves = values.address !== undefined && values.address !== before.address;
+
     try {
       const row = await this.db.transaction(async (tx) => {
+        if (addressMoves || ownerMoves) {
+          await this.assertNoLiveNatWithin(
+            tx,
+            before.address,
+            addressMoves ? 'readdress' : 'assign',
+          );
+        }
         const rows = await tx
           .update(ipAddressTable)
           .set({
@@ -610,6 +637,15 @@ export class IpAddressService {
    * 2. Địa chỉ đã bị hồ sơ khác chiếm trong lúc này thì từ chối. Không kiểm bằng SELECT chạy
    *    trước (mẫu M2): để chính `ip_address_key` (UNIQUE ... WHERE voided_at IS NULL) làm
    *    trọng tài rồi dịch 23505 thành câu tiếng Việt.
+   * 3. DẢI ĐÃ ĐỔI từ lúc hồ sơ bị ẩn thì từ chối. Trọng tài cũng ở tầng DB
+   *    (`ip_address_within_subnet`, mở rộng sang `voided_at` ở migration 0044), vì cùng lý do
+   *    với gạch 2: một câu SELECT chạy trước lại đẻ ra đúng mẫu M2 mà cả nhánh này đi dọn.
+   *
+   * VÌ SAO GẠCH 3 TỪNG KHÔNG CÓ. Trigger khai `BEFORE UPDATE OF address, subnet_id`, mà
+   * `restore` chỉ đụng `voided_at` — nên trigger không chạy trên đường này. Ghép với hàng rào
+   * đổi dải (chỉ đếm IP đang sống), ba cú bấm bình thường là ra một hàng 10.0.0.5 nằm trong
+   * dải 192.168.1.0/24: ẩn hồ sơ → sửa dải (được, vì đếm ra 0) → bật lại. Không cuộc đua nào,
+   * không lỗi hạ tầng nào.
    */
   async restore(actor: string, id: string): Promise<IpAddressRecord> {
     const before = await this.requireAny(id);
@@ -631,11 +667,22 @@ export class IpAddressService {
 
     try {
       const row = await this.db.transaction(async (tx) => {
+        /*
+         * CAS trên `voided_at`: điều kiện "đang bị ẩn" phải nằm TRONG câu ghi, không chỉ ở câu
+         * kiểm phía trên. Hai người cùng bấm "Bật lại" một hồ sơ thì không có gì loại trừ nhau
+         * — cả hai đọc `voidedAt !== null`, cả hai ghi, và `audit_log` cùng `ip_history` (đều
+         * CHỈ-THÊM, AD-13) để lại HAI dòng `ip.restored` cho MỘT lần bật lại. Không có đường
+         * bù: xoá dòng lịch sử là đúng thứ AD-13 cấm.
+         */
         const rows = await tx
           .update(ipAddressTable)
           .set({ voidedAt: null, voidedBy: null, voidReason: null, updatedAt: new Date() })
-          .where(eq(ipAddressTable.id, id))
+          .where(and(eq(ipAddressTable.id, id), isNotNull(ipAddressTable.voidedAt)))
           .returning();
+        requireCas(rows, {
+          code: 'IP_NOT_VOIDED',
+          message: 'Hồ sơ này vừa được người khác bật lại. Tải lại để xem trạng thái mới.',
+        });
         await this.audit.appendWithin(tx, {
           actor,
           action: 'ip.restored',
@@ -655,6 +702,18 @@ export class IpAddressService {
       });
       return (await this.decorate([row]))[0];
     } catch (error) {
+      /*
+       * Dải đã đổi từ lúc hồ sơ bị ẩn. Câu này phải NÓI RA con số dải hiện tại: hồ sơ đã ẩn
+       * không hiện ở màn nào, nên người bấm không có cách nào tự biết vì sao bị từ chối.
+       */
+      if (pgErrorCode(error) === PG_CHECK_VIOLATION) {
+        throw new ConflictException({
+          code: 'IP_OUT_OF_SUBNET',
+          message:
+            `Dải đã đổi thành ${frame.cidr} từ khi hồ sơ này bị ẩn, nên ${before.address} ` +
+            'không còn nằm trong dải. Khai một hồ sơ mới với địa chỉ thuộc dải hiện tại.',
+        });
+      }
       throw conflictOnUnique(error, {
         code: 'IP_TAKEN',
         message:
@@ -715,7 +774,7 @@ export class IpAddressService {
     tx: Tx,
     address: string,
     /** Việc đang làm — chỉ dùng để câu lỗi nói đúng thứ người dùng vừa bấm. */
-    purpose: 'reclaim' | 'assign' | 'void',
+    purpose: keyof typeof PURPOSE_WARNING,
   ): Promise<void> {
     const rules = await tx
       .select({

@@ -9,11 +9,13 @@ import { and, asc, count, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { conflictOnUnique } from '../../common/sql';
+import type { Tx } from '../../common/tx';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { isHostInSubnet, normalizeSubnet, subnetUsage, type SubnetUsage } from './ip-rules';
 import { OCCUPYING_STATUSES } from './ip-lifecycle';
-import { ipAddressTable, ipHistoryTable, subnetTable } from './ipam.schema';
+import { ipAddressTable, ipHistoryTable, natRuleTable, subnetTable } from './ipam.schema';
+import { describePortRange } from './nat-rules';
 
 export interface SubnetRecord {
   id: string;
@@ -314,6 +316,7 @@ export class SubnetService {
      */
     await this.db.transaction(async (tx) => {
       const now = new Date();
+      await this.assertNoLiveNatInSubnetWithin(tx, id);
       /*
        * Danh sách hàng bị ẩn lấy TỪ CHÍNH câu UPDATE (`returning`), không phải từ một câu
        * SELECT chạy trước đó ngoài transaction.
@@ -585,6 +588,71 @@ export class SubnetService {
       voidedBy: row.voidedBy,
       voidReason: row.voidReason,
     };
+  }
+
+  /**
+   * Chặn nếu trong dải còn hồ sơ IP nào đang bị một rule NAT SỐNG trỏ vào (rà soát 10/09).
+   *
+   * ===== VÌ SAO CỬA NÀY MỚI LÀ CỬA NGUY HIỂM =====
+   *
+   * `IpAddressService.voidAddress` đã hỏi sổ NAT trước khi ẩn MỘT hồ sơ, với lý do ghi ngay
+   * tại đó: "ẩn thì hồ sơ BIẾN MẤT khỏi mọi màn, trong khi rule NAT vẫn lặng lẽ chuyển gói tới
+   * đó". Nhưng `voidSubnet` ẩn TOÀN BỘ hồ sơ của dải bằng một câu UPDATE và không hỏi gì —
+   * nên hàng rào kia chặn được một cú bấm, mà bỏ lọt cú bấm ẩn cả trăm hồ sơ cùng lúc.
+   *
+   * Người bị chặn ở đường hẹp sẽ đi đường rộng: bấm ẩn `.5` không được, bấm ẩn cả dải thì
+   * được. Lỗ thủng tường lửa còn nguyên, và giờ không còn hàng nào trong sổ nhắc tới nó.
+   *
+   * ===== KHỚP THEO ĐỊA CHỈ, KHÔNG THEO `ip_address_id` =====
+   *
+   * Cùng lý do đã ghi ở `IpAddressService.assertNoLiveNatWithin`: `nat_rule.ip_address_id` chỉ
+   * là liên kết MỀM (`linkIp()` để null khi rule được khai trước lúc địa chỉ có hồ sơ IPAM),
+   * nên khớp theo cột đó sẽ bỏ sót đúng những rule nguy hiểm nhất — những rule không ai nối
+   * vào sổ. Thứ router THẬT SỰ chuyển gói tới là `internal_ip`, và `nat_rule_internal_host_idx`
+   * (0042) đánh chỉ mục đúng biểu thức `host(internal_ip)` mà câu này dùng.
+   *
+   * Nêu ĐỊA CHỈ chứ không chỉ số lượng: một dải /24 có 254 ô, câu "còn 3 rule" là bắt người
+   * trực đi mò cả sổ. Cắt ở 5 để thông điệp còn đọc được.
+   */
+  private async assertNoLiveNatInSubnetWithin(tx: Tx, subnetId: string): Promise<void> {
+    const rules = await tx
+      .select({
+        address: sql<string>`host(${ipAddressTable.address})`,
+        protocol: natRuleTable.protocol,
+        externalFrom: natRuleTable.externalFrom,
+        externalTo: natRuleTable.externalTo,
+      })
+      .from(natRuleTable)
+      .innerJoin(
+        ipAddressTable,
+        sql`host(${ipAddressTable.address}) = host(${natRuleTable.internalIp})`,
+      )
+      .where(
+        and(
+          eq(ipAddressTable.subnetId, subnetId),
+          isNull(ipAddressTable.voidedAt),
+          isNull(natRuleTable.voidedAt),
+        ),
+      )
+      .orderBy(asc(ipAddressTable.address), asc(natRuleTable.externalFrom));
+    if (rules.length === 0) return;
+
+    const shown = rules
+      .slice(0, 5)
+      .map(
+        (r) =>
+          `${r.address} (${r.protocol.toUpperCase()} ${describePortRange(r.externalFrom, r.externalTo)})`,
+      )
+      .join(', ');
+    const rest = rules.length > 5 ? ` và ${rules.length - 5} rule nữa` : '';
+    throw new ConflictException({
+      code: 'IP_HAS_LIVE_NAT',
+      message:
+        `Trong dải này còn ${rules.length} rule NAT đang mở: ${shown}${rest}. ` +
+        'Ẩn dải thì những địa chỉ đó biến khỏi mọi màn, còn rule vẫn chuyển gói tới chúng — ' +
+        'lỗ thủng còn nguyên mà không còn chỗ nào nhắc tới nó. ' +
+        'Vào sổ NAT gỡ hoặc trỏ lại rule trước, rồi ẩn dải.',
+    });
   }
 
   private translate(error: unknown, cidr: string): unknown {
