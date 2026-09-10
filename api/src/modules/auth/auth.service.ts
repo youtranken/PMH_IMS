@@ -299,7 +299,28 @@ export class AuthService {
        * request mang CÙNG một mã 6 số, cả hai đọc `totp_last_timestep` cũ, cả hai qua cửa,
        * cả hai được cấp phiên. Một mã ra hai phiên — đúng thứ chống-replay sinh ra để chặn.
        */
-      await this.users.setTotpLastTimestepWithin(tx, user.id, result.timeStep as number);
+      const burned = await this.users.setTotpLastTimestepWithin(
+        tx,
+        user.id,
+        result.timeStep as number,
+      );
+      /*
+       * MÃ ĐÃ BỊ ĐỐT bởi một lượt CHỒNG LÊN lượt này (rà soát 10/09).
+       *
+       * `totp.verify` phía trên chạy trên ảnh chụp đọc NGOÀI transaction, nên nó không thấy
+       * lượt song song. Vị từ trong `setTotpLastTimestepWithin` mới là chỗ loại trừ, và khớp
+       * 0 dòng nghĩa là ai đó vừa dùng đúng mã này trước ta trong gang tấc.
+       *
+       * NÉM để cả transaction rollback: phiên vừa cấp ở trên phải biến mất cùng. Không có
+       * dòng này thì lượt thua vẫn được cấp phiên — đúng thứ chống replay sinh ra để chặn.
+       */
+      if (!burned) {
+        throw new UnauthorizedException({
+          code: 'TOTP_REPLAYED',
+          message: 'Mã này đã được dùng. Chờ mã mới trên ứng dụng rồi nhập lại.',
+        });
+      }
+
       await this.audit.appendWithin(tx, {
         actor: user.email,
         action: 'auth.login.ok',
@@ -392,7 +413,23 @@ export class AuthService {
 
     const absoluteHours = await this.config.getNumber('sessionAbsoluteHours');
     const fresh = await this.db.transaction(async (tx) => {
-      await this.users.markTotpEnrolledWithin(tx, user.id, result.timeStep as number);
+      const enrolled = await this.users.markTotpEnrolledWithin(
+        tx,
+        user.id,
+        result.timeStep as number,
+      );
+      /*
+       * Khớp 0 dòng = tài khoản đã enroll xong bởi một lượt chồng lên lượt này. Kiểm
+       * `totpEnrolledAt` ở đầu hàm chạy ngoài transaction nên không loại trừ được gì; vị từ
+       * `totp_enrolled_at IS NULL` trong câu ghi mới là chỗ loại trừ. Ném để rollback cả phiên
+       * vừa cấp — hai lượt cùng thắng nghĩa là secret vừa cài bị ghi đè mốc chống replay.
+       */
+      if (!enrolled) {
+        throw new UnauthorizedException({
+          code: 'TOTP_REPLAYED',
+          message: 'Mã này đã được dùng. Chờ mã mới trên ứng dụng rồi nhập lại.',
+        });
+      }
       await this.audit.appendWithin(tx, {
         actor: user.email,
         action: 'auth.totp.enroll.done',
@@ -508,7 +545,28 @@ export class AuthService {
      */
     await this.db.transaction(async (tx) => {
       await this.sessions.markSteppedUpWithin(tx, session.id);
-      await this.users.setTotpLastTimestepWithin(tx, user.id, result.timeStep as number);
+      const burned = await this.users.setTotpLastTimestepWithin(
+        tx,
+        user.id,
+        result.timeStep as number,
+      );
+      /*
+       * MÃ ĐÃ BỊ ĐỐT bởi một lượt CHỒNG LÊN lượt này (rà soát 10/09).
+       *
+       * `totp.verify` phía trên chạy trên ảnh chụp đọc NGOÀI transaction, nên nó không thấy
+       * lượt song song. Vị từ trong `setTotpLastTimestepWithin` mới là chỗ loại trừ, và khớp
+       * 0 dòng nghĩa là ai đó vừa dùng đúng mã này trước ta trong gang tấc.
+       *
+       * NÉM để cả transaction rollback: phiên vừa cấp ở trên phải biến mất cùng. Không có
+       * dòng này thì lượt thua vẫn được cấp phiên — đúng thứ chống replay sinh ra để chặn.
+       */
+      if (!burned) {
+        throw new UnauthorizedException({
+          code: 'TOTP_REPLAYED',
+          message: 'Mã này đã được dùng. Chờ mã mới trên ứng dụng rồi nhập lại.',
+        });
+      }
+
       await this.audit.appendWithin(tx, {
         actor: user.email,
         action: 'auth.stepup.ok',

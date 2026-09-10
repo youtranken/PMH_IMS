@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -197,11 +197,21 @@ export class UsersService {
       .where(eq(usersTable.id, userId));
   }
 
-  async markTotpEnrolledWithin(tx: Tx, userId: string, timeStep: number): Promise<void> {
-    await tx
+  /**
+   * Đóng dấu đã enroll VÀ đốt mã xác nhận trong cùng một câu.
+   *
+   * Trả về `false` khi tài khoản đã enroll rồi — vị từ `totp_enrolled_at IS NULL` là thứ loại
+   * trừ hai lượt xác nhận chồng nhau. Kiểm ở service (`confirmTotpEnrollment`) chạy NGOÀI
+   * transaction nên một mình nó không loại trừ được gì; hai lượt cùng lọt qua thì lượt sau
+   * ghi đè `totp_enrolled_at` và mốc chống replay của lượt trước.
+   */
+  async markTotpEnrolledWithin(tx: Tx, userId: string, timeStep: number): Promise<boolean> {
+    const rows = await tx
       .update(usersTable)
       .set({ totpEnrolledAt: new Date(), totpLastTimestep: timeStep, updatedAt: new Date() })
-      .where(eq(usersTable.id, userId));
+      .where(and(eq(usersTable.id, userId), isNull(usersTable.totpEnrolledAt)))
+      .returning({ id: usersTable.id });
+    return rows.length === 1;
   }
 
   /**
@@ -222,12 +232,42 @@ export class UsersService {
    * Gói chung transaction với lượt cấp phiên thì hỏng ở đâu cũng rollback cả hai — hoặc người
    * dùng vào được VÀ mã bị đốt, hoặc không có gì xảy ra. Không còn trạng thái ở giữa.
    * `revokeWithin` đã bỏ bản chạy-trên-pool vì đúng lý do này (rà soát 07/09).
+   *
+   * ===== VÀ VÌ SAO CHỪNG ĐÓ VẪN CHƯA ĐỦ (rà soát 10/09) =====
+   *
+   * Câu "không còn trạng thái ở giữa" ở trên đúng với SỰ CỐ và sai với ĐỒNG THỜI. Lượt ĐỌC —
+   * `requireUser()` rồi `totp.verify({ lastUsedTimeStep })` — vẫn chạy trên pool, NGOÀI
+   * transaction; nếu câu ghi này là `SET ... WHERE id = $2` vô điều kiện thì ở READ COMMITTED
+   * hai lượt không thấy nhau:
+   *
+   *     T1 đọc last = 100  ·  T2 đọc last = 100     (cùng một mã 6 số, timestep 101)
+   *     T1 verify OK       ·  T2 verify OK
+   *     T1 UPDATE → 101 COMMIT  ·  T2 UPDATE → 101 COMMIT
+   *
+   * MỘT mã 6 số ra HAI phiên đã step-up. Đây là ca AitM/proxy phishing: kẻ tấn công chộp mã
+   * nạn nhân đang gửi rồi bắn SONG SONG thay vì gửi lại sau (gửi lại thì đã bị chặn đúng).
+   *
+   * Vị từ `< timeStep` làm hai việc trong một câu:
+   *   · loại trừ hai lượt cùng timestep — lượt sau khớp 0 dòng;
+   *   · và cấm mốc ĐI LÙI. `epochTolerance` nhận cả timestep liền trước, nên hai lượt song
+   *     song có thể mang hai timestep khác nhau; ghi lùi là mở lại đúng cái mã vừa đốt.
+   *
+   * Trả về `false` chứ không ném: nơi gọi biết đây là mã đã dùng và ném đúng `TOTP_REPLAYED`.
+   * `api/test/totp-replay-cas.spec.ts` giữ hợp đồng này bằng hai kết nối thật, kèm vế đối
+   * chứng chạy câu ghi CŨ để chứng minh lỗ có thật.
    */
-  async setTotpLastTimestepWithin(tx: Tx, userId: string, timeStep: number): Promise<void> {
-    await tx
+  async setTotpLastTimestepWithin(tx: Tx, userId: string, timeStep: number): Promise<boolean> {
+    const rows = await tx
       .update(usersTable)
       .set({ totpLastTimestep: timeStep })
-      .where(eq(usersTable.id, userId));
+      .where(
+        and(
+          eq(usersTable.id, userId),
+          or(isNull(usersTable.totpLastTimestep), lt(usersTable.totpLastTimestep, timeStep)),
+        ),
+      )
+      .returning({ id: usersTable.id });
+    return rows.length === 1;
   }
 
   async clearTotpWithin(tx: Tx, userId: string): Promise<void> {
