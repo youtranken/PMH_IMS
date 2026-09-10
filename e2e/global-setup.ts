@@ -1,6 +1,7 @@
 import { execSync } from 'node:child_process';
 import { existsSync, writeFileSync } from 'node:fs';
 import { RATE_LIMIT_BACKUP_FILE } from './rate-limit-backup';
+import { markRunStart } from './leak-guard';
 import { E2E_LOGIN_RATE_LIMIT } from './tests/helpers';
 
 /**
@@ -8,6 +9,9 @@ import { E2E_LOGIN_RATE_LIMIT } from './tests/helpers';
  * Dùng script trong container api — KHÔNG có endpoint reset trong API production.
  */
 export default function globalSetup(): void {
+  // Mốc để `globalTeardown` chỉ soi những hàng do CHÍNH lượt này tạo ra. Xem `leak-guard.ts`.
+  markRunStart();
+
   /*
    * ĐỌC TRƯỚC, RESET SAU — thứ tự này quan trọng.
    *

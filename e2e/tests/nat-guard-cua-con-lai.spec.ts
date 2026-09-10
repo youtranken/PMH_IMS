@@ -89,7 +89,14 @@ async function setUp(page: Page, stamp: string): Promise<Fixture> {
   const octet = Number(stamp) % 200;
   const subnet = await page.request.post('/api/v1/ipam/subnets', {
     headers,
-    data: { cidr: `172.16.${octet}.0/29`, name: `LAN cua con lai ${stamp}` },
+    /*
+     * Tên PHẢI chứa "E2E". `api/scripts/reset-e2e.mjs` dọn theo `subnet.name ILIKE '%E2E%'`,
+     * nên một cái tên quên chữ đó là một hàng KHÔNG BAO GIỜ bị dọn. Đã trả giá: bản đầu của
+     * file này đặt `LAN cua con lai ${stamp}`, để lại 27 dải rác, và làm đỏ `dashboard`,
+     * `expiry-digest`, `ip-lifecycle`, `ipam` cùng `ipam.mobile` ở lượt E2E đầy đủ — tám bài
+     * đỏ trông y hệt một hồi quy của API.
+     */
+    data: { cidr: `172.16.${octet}.0/29`, name: `LAN E2E cua con lai ${stamp}` },
   });
   expect(subnet.status()).toBe(201);
   const subnetId = ((await subnet.json()) as { id: string }).id;

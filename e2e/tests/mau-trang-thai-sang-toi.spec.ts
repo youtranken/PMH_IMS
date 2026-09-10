@@ -175,12 +175,12 @@ test('huy hiệu hạn ở màn Sắp hết hạn đọc được ở CẢ chế
   // này là toàn bộ ngôn ngữ màu của màn — xám chỉ xuất hiện khi con số bằng 0.
   const critical = await page.request.post('/api/v1/software', {
     headers,
-    data: { code: `SSL-DARK-C-${stamp}`, name: `Chứng chỉ gấp ${stamp}`, kind: 'ssl', endDate: day(3) },
+    data: { code: `SSL-E2E-DARK-C-${stamp}`, name: `Chứng chỉ gấp ${stamp}`, kind: 'ssl', endDate: day(3) },
   });
   expect(critical.status()).toBe(201);
   const warning = await page.request.post('/api/v1/software', {
     headers,
-    data: { code: `SSL-DARK-W-${stamp}`, name: `Chứng chỉ sắp ${stamp}`, kind: 'ssl', endDate: day(20) },
+    data: { code: `SSL-E2E-DARK-W-${stamp}`, name: `Chứng chỉ sắp ${stamp}`, kind: 'ssl', endDate: day(20) },
   });
   expect(warning.status()).toBe(201);
 
