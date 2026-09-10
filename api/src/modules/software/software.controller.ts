@@ -45,6 +45,7 @@ import {
   SOFTWARE_SORT_KEYS,
   SoftwareService,
 } from './software.service';
+import { NoStepUp } from '../auth/step-up.decorator';
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
 const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
@@ -148,6 +149,7 @@ class IdParamDto {
  * Quyền: giống kho thiết bị — cả team IT đọc và ghi được, vì đây là việc hằng ngày.
  * Thứ cần siết là KÉT SẮT (Epic 4): key/mật khẩu KHÔNG nằm trong module này.
  */
+@NoStepUp()
 @Controller('api/v1/software')
 export class SoftwareController {
   constructor(

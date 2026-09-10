@@ -1,6 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { Roles } from '../auth/roles.decorator';
 import { VaultOwnersService } from './vault-owners.service';
+import { NoStepUp } from '../auth/step-up.decorator';
 
 /**
  * `GET /api/v1/vault/owners` — danh sách CHỦ THỂ đang giữ secret.
@@ -16,6 +17,7 @@ import { VaultOwnersService } from './vault-owners.service';
  * Quyền SA + Admin. Member cố ý KHÔNG thấy: bản đồ "công ty giữ bí mật ở đâu" không phải
  * thứ mở cho mọi người, kể cả khi nó không nói trong đó có gì.
  */
+@NoStepUp()
 @Controller('api/v1/vault/owners')
 export class VaultOwnersController {
   constructor(private readonly owners: VaultOwnersService) {}

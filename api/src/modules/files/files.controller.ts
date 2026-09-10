@@ -23,6 +23,7 @@ import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { MULTER_LIMIT } from './file-validation';
 import { FILE_OWNER_TYPES, FilesService, type FileOwnerType } from './files.service';
+import { NoStepUp } from '../auth/step-up.decorator';
 
 class OwnerDto {
   @IsIn([...FILE_OWNER_TYPES], { message: 'Loại chủ thể đính kèm không hợp lệ.' })
@@ -57,6 +58,7 @@ class FileIdParamDto {
  * của file nhưng KHÔNG phải của két — không tồn tại khái niệm tầng quyền, nên quyết định gốc
  * của story 2.3 vẫn giữ nguyên cho chúng.
  */
+@NoStepUp()
 @Controller('api/v1/files')
 export class FilesController {
   constructor(

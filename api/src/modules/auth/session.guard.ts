@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -8,6 +9,7 @@ import { Reflector } from '@nestjs/core';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { UsersService } from '../users/users.service';
 import { IS_PUBLIC_KEY } from './public.decorator';
+import { ALLOW_PASSWORD_PENDING_KEY } from './password-pending.decorator';
 import { ALLOW_TOTP_PENDING_KEY } from './totp-pending.decorator';
 import { evaluateSession } from './session-policy';
 import { SessionService } from './session.service';
@@ -67,6 +69,31 @@ export class SessionGuard implements CanActivate {
     if (!user) throw unauthorized('SESSION_INVALID', 'Tài khoản không còn tồn tại.');
     if (user.status !== 'active') {
       throw unauthorized('ACCOUNT_DISABLED', 'Tài khoản đã bị khóa hoặc vô hiệu hóa.');
+    }
+
+    /*
+     * ĐANG BỊ BẮT ĐỔI MẬT KHẨU thì chỉ đi được bốn cửa (rà soát 10/09).
+     *
+     * `must_change_password` mặc định `true` cho mọi tài khoản mới và mọi lần SA reset. Tới
+     * 10/09 nó chỉ được ĐỌC và trả về client — không guard nào chặn. Ràng buộc duy nhất nằm ở
+     * `nextStepPath()` bên web, tức mật khẩu tạm (đi qua email, hoặc đọc qua điện thoại, và
+     * nằm nguyên trong response của `POST /accounts`) dùng được vô thời hạn nếu gọi API thẳng.
+     *
+     * Đặt SAU `status !== 'active'` và SAU khối `totpPending`: thứ tự này là thứ tự của luồng
+     * đăng nhập, nên câu lỗi người dùng nhận luôn là bước còn thiếu GẦN NHẤT, không phải bước
+     * xa nhất. Cùng khuôn danh-sách-trắng với `@AllowTotpPending()` ngay trên.
+     */
+    if (user.mustChangePassword) {
+      const allowed = this.reflector.getAllAndOverride<boolean>(ALLOW_PASSWORD_PENDING_KEY, [
+        context.getHandler(),
+        context.getClass(),
+      ]);
+      if (!allowed) {
+        throw new ForbiddenException({
+          code: 'PASSWORD_CHANGE_REQUIRED',
+          message: 'Phải đổi mật khẩu tạm trước khi dùng tiếp.',
+        });
+      }
     }
 
     request.user = {

@@ -1,6 +1,7 @@
 import { Controller, Get } from '@nestjs/common';
 import { Roles } from '../auth/roles.decorator';
 import { DisposalService } from './disposal.service';
+import { NoStepUp } from '../auth/step-up.decorator';
 
 /**
  * Kho thanh lý (28/08/2026) — MỘT chỗ nhìn thấy mọi thứ công ty đã ngừng dùng.
@@ -10,6 +11,7 @@ import { DisposalService } from './disposal.service';
  * là việc của chính module chủ, dưới đúng cái tên mà module đó dùng (Thanh lý / Cắt / Vô hiệu
  * hóa). Màn này chỉ nhìn.
  */
+@NoStepUp()
 @Controller('api/v1/disposal')
 export class DisposalController {
   constructor(private readonly disposal: DisposalService) {}

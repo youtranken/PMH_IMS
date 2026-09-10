@@ -9,6 +9,7 @@ import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { BreakGlassService } from './break-glass.service';
 import { SECRET_OWNER_TYPES, type SecretOwnerType } from './vault.service';
+import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
 
 class RequestDto {
   @IsIn([...SECRET_OWNER_TYPES], { message: 'Loại chủ thể không hợp lệ.' })
@@ -43,6 +44,7 @@ class IdParamDto {
  * chỉ SA/Admin mới QUYẾT. Người xin cũng tự hủy được yêu cầu của chính mình — việc đã xong
  * trước khi ai kịp duyệt là chuyện thường lúc 2 giờ sáng.
  */
+@NoStepUp()
 @Controller('api/v1/vault/break-glass')
 export class BreakGlassController {
   constructor(
@@ -132,6 +134,9 @@ export class BreakGlassController {
   }
 
   @Roles('sa', 'admin')
+  // Duyệt = cấp quyền đọc két trong nhiều giờ. Đây là cửa CẤP QUYỀN, nặng ngang
+  // `POST /vault/access`, nên nó đòi mã như mọi cửa cấp quyền khác.
+  @RequiresStepUp()
   @Post(':id/approve')
   @Audited('break_glass.approved', 'approval', { writtenByService: true })
   approve(@Param() params: IdParamDto, @Body() body: DecisionDto, @Req() req: AuthedRequest) {
@@ -147,6 +152,8 @@ export class BreakGlassController {
 
   /** Thu hồi sớm: người xin không còn trực nữa thì không phải chờ hết giờ. */
   @Roles('sa', 'admin')
+  // Thu hồi một grant đang sống — phá hoại thẳng, cùng khuôn `DELETE /vault/secrets/:id`.
+  @RequiresStepUp()
   @Post(':id/revoke')
   @Audited('break_glass.revoked', 'approval', { writtenByService: true })
   revoke(@Param() params: IdParamDto, @Body() body: DecisionDto, @Req() req: AuthedRequest) {

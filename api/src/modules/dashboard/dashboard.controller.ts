@@ -2,6 +2,7 @@ import { Controller, Get, Req } from '@nestjs/common';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { DashboardService } from './dashboard.service';
+import { NoStepUp } from '../auth/step-up.decorator';
 
 /**
  * Bảng điều khiển (story 7.1, FR-025).
@@ -14,6 +15,7 @@ import { DashboardService } from './dashboard.service';
  * thì dữ liệu vẫn đi qua dây, và Member mở tab mạng ra là đọc được nhật ký break-glass toàn
  * công ty.
  */
+@NoStepUp()
 @Controller('api/v1/dashboard')
 export class DashboardController {
   constructor(private readonly dashboard: DashboardService) {}

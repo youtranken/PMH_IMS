@@ -23,6 +23,7 @@ import { CatalogModule } from './modules/catalog/catalog.module';
 import { DevicesModule } from './modules/devices/devices.module';
 import { ExpiryModule } from './modules/expiry/expiry.module';
 import { CsrfGuard } from './modules/auth/csrf.guard';
+import { StepUpGuard } from './modules/auth/step-up.guard';
 import { RolesGuard } from './modules/auth/roles.guard';
 import { SessionGuard } from './modules/auth/session.guard';
 import { SystemConfigModule } from './modules/config-sys/system-config.module';
@@ -109,6 +110,13 @@ import { VaultModule } from './modules/vault/vault.module';
     { provide: APP_GUARD, useClass: UserThrottlerGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    /*
+     * StepUpGuard chạy SAU RolesGuard và là guard cuối: nó chỉ có nghĩa khi đã biết route này
+     * ai được vào. Từ 10/09 nó MẶC ĐỊNH ĐÓNG — route không khai `@RequiresStepUp()` hoặc
+     * `@NoStepUp()` thì 403 `STEP_UP_NOT_DECLARED`. Xem khối chú thích ở `step-up.guard.ts`
+     * để biết chuỗi leo thang quyền mà cách gắn tay từng route đã để lọt.
+     */
+    { provide: APP_GUARD, useClass: StepUpGuard },
   ],
   exports: [ExcelExportService, ExcelImportService],
 })

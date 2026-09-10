@@ -25,6 +25,7 @@ import {
   IspLineService,
   type IspStatus,
 } from './isp-line.service';
+import { NoStepUp } from '../auth/step-up.decorator';
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
 const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
@@ -69,6 +70,7 @@ class IdParamDto {
  * Đường truyền ISP (story 3.3, FR-010).
  * Quyền: cả team IT — đứt cáp lúc 2 giờ sáng thì ai trực cũng phải tra được hotline.
  */
+@NoStepUp()
 @Controller('api/v1/isp-lines')
 export class IspLineController {
   constructor(

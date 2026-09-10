@@ -37,6 +37,7 @@ import { parsePortRange } from './nat-rules';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
 import { SubnetService } from './subnet.service';
+import { NoStepUp } from '../auth/step-up.decorator';
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
 const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
@@ -159,6 +160,7 @@ class IdParamDto {
  * Còn hồ sơ IP thì cả team IT làm được: người cắm máy chính là người biết IP nào vừa cấp,
  * bắt họ chờ Admin duyệt thì cuốn sổ sẽ lại quay về file Excel trên máy ai đó.
  */
+@NoStepUp()
 @Controller('api/v1/ipam')
 export class IpamController {
   constructor(

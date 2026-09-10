@@ -18,6 +18,7 @@ import { USER_SORT_DEFAULT, USER_SORT_KEYS } from '../users/users.api';
 import { AccountsService } from './accounts.service';
 import { Roles } from './roles.decorator';
 import type { AuthedRequest, UserRole } from './types';
+import { NoStepUp, RequiresStepUp } from './step-up.decorator';
 
 /**
  * Ngày lịch CÓ THẬT ở dạng `YYYY-MM-DD`, hoặc chuỗi rỗng (= xoá giá trị).
@@ -114,6 +115,7 @@ class TotpRequiredDto {
  * Quản trị tài khoản — CHỈ SA (story 1.4). Mọi route ghi có @Audited (AD-9).
  * Không có endpoint xóa user: nghiệp vụ chỉ khóa/vô hiệu hóa (convention "Xóa").
  */
+@NoStepUp()
 @Controller('api/v1/accounts')
 export class AccountsController {
   constructor(private readonly accounts: AccountsService) {}
@@ -132,6 +134,13 @@ export class AccountsController {
   }
 
   @Roles('sa')
+  /*
+   * Cửa NẶNG NHẤT của cả bề mặt này: response trả thẳng `temporaryPassword`, nên một tài
+   * khoản tạo ra ở đây là một tài khoản đăng nhập được ngay. Ghép với `POST /auth/totp/enroll`
+   * (trả secret base32 nguyên văn) thì một phiên SA bị chiếm tự dựng được đường vào két mà
+   * không cần yếu tố thứ hai của nạn nhân. Xem chuỗi sáu bước ở `step-up.guard.ts`.
+   */
+  @RequiresStepUp()
   @Post()
   @Audited('account.created', 'user', { writtenByService: true })
   create(@Body() dto: CreateUserDto, @Req() req: AuthedRequest) {
@@ -151,6 +160,9 @@ export class AccountsController {
   }
 
   @Roles('sa')
+  // Khoá/vô hiệu hoá người khác — kể cả SA khác. Đường phá hoại thẳng, và `assertNotLastSa`
+  // là thứ duy nhất đứng giữa nó với việc khoá cả công ty ra ngoài.
+  @RequiresStepUp()
   @Patch(':id/status')
   @Audited('account.status.changed', 'user', { writtenByService: true })
   async setStatus(
@@ -163,6 +175,8 @@ export class AccountsController {
   }
 
   @Roles('sa')
+  // Trả `temporaryPassword` trong response — đường chiếm tài khoản người khác ngắn nhất.
+  @RequiresStepUp()
   @Post(':id/reset-password')
   @Audited('account.password.reset', 'user', { writtenByService: true })
   resetPassword(@Param('id') id: string, @Req() req: AuthedRequest) {
@@ -170,6 +184,9 @@ export class AccountsController {
   }
 
   @Roles('sa')
+  // XOÁ yếu tố thứ hai của một người khác. Nếu chính cửa này không đòi yếu tố thứ hai thì
+  // toàn bộ 2FA của hệ thống chỉ mạnh bằng một cái cookie.
+  @RequiresStepUp()
   @Post(':id/reset-totp')
   @Audited('account.mfa.reset', 'user', { writtenByService: true })
   async resetTotp(@Param('id') id: string, @Req() req: AuthedRequest) {
@@ -178,6 +195,8 @@ export class AccountsController {
   }
 
   @Roles('sa')
+  // TẮT bắt buộc 2FA lúc đăng nhập cho một tài khoản. Cùng lý do với `reset-totp`.
+  @RequiresStepUp()
   @Patch(':id/totp-login-required')
   @Audited('account.totp_login_required.changed', 'user', { writtenByService: true })
   async setTotpRequired(
@@ -196,6 +215,15 @@ export class AccountsController {
   }
 
   @Roles('sa')
+  /*
+   * CỐ Ý không đòi step-up, và đây là một đánh đổi có chủ đích chứ không phải bỏ sót.
+   *
+   * Đây là nút dùng trong lúc SỰ CỐ: thấy một phiên lạ thì phải giết được NGAY. Bắt gõ mã 6
+   * số đúng lúc đó là dựng một khúc chờ vào đường phản ứng, để đổi lấy rất ít — cửa này không
+   * đọc được gì và không cấp được gì, hậu quả xấu nhất là làm phiền một người phải đăng nhập
+   * lại. Đường phá hoại rộng hơn (`:id/status`) thì đã có step-up.
+   */
+  @NoStepUp()
   @Post('sessions/:sessionId/kill')
   @Audited('session.killed', 'session', { writtenByService: true })
   async killSession(@Param('sessionId') sessionId: string, @Req() req: AuthedRequest) {

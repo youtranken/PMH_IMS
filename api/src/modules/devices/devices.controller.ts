@@ -43,6 +43,7 @@ import {
   DevicesService,
 } from './devices.service';
 import { DEVICE_STATUSES, type DeviceStatus } from './devices.types';
+import { NoStepUp } from '../auth/step-up.decorator';
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
 const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
@@ -125,6 +126,7 @@ class PortParamDto extends IdParamDto {
  * của cả team IT (story viết "As a Member"). Thứ chỉ Admin/SA đụng là DANH MỤC.
  * Không có endpoint DELETE: thiết bị chỉ đổi trạng thái sang "đã thanh lý".
  */
+@NoStepUp()
 @Controller('api/v1/devices')
 export class DevicesController {
   constructor(

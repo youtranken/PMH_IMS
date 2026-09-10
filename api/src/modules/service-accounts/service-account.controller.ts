@@ -15,6 +15,7 @@ import {
   SERVICE_ACCOUNT_SORT_KEYS,
   ServiceAccountService,
 } from './service-account.service';
+import { NoStepUp } from '../auth/step-up.decorator';
 
 class IdParamDto {
   @IsUUID(undefined, { message: 'Mã tài khoản dịch vụ không hợp lệ.' })
@@ -85,6 +86,7 @@ class EnableDto {
  *
  * Mật khẩu KHÔNG nằm ở đây — nó ở két sắt với `ownerType: 'service_account'`.
  */
+@NoStepUp()
 @Controller('api/v1/service-accounts')
 export class ServiceAccountController {
   constructor(private readonly accounts: ServiceAccountService) {}

@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 import { Roles } from '../auth/roles.decorator';
 import { AuditQueryService } from './audit-query.service';
+import { NoStepUp } from '../auth/step-up.decorator';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -74,6 +75,7 @@ class AuditQueryDto {
  * Cộng với lỗi `u.sub` ở audit-query.service.ts, màn Nhật ký hỏng ở hai tầng cùng lúc.
  * Không gì phát hiện được vì màn web còn `planned: true` và endpoint có 0 test (F-QA-01).
  */
+@NoStepUp()
 @Controller('api/v1/admin/audit')
 @Roles('sa', 'admin')
 export class AuditController {

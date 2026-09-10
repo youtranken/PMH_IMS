@@ -63,7 +63,7 @@ const MODULE_DOORS = String.raw`(?![^/]+/[^/]*\.(?:api|module|types)$)`;
  * cho cả sáu cách gõ ở `MODULE_ENTRIES`, không chỉ cách gõ ngắn.
  */
 const INFRA_PRIMITIVES = [
-  String.raw`(?!auth/(?:roles\.decorator|types)$)`,
+  String.raw`(?!auth/(?:roles\.decorator|step-up\.decorator|types)$)`,
   String.raw`(?!audit/(?:audited\.decorator|audit-writer\.service)$)`,
   String.raw`(?!config-sys/system-config\.service$)`,
   String.raw`(?!outbox/outbox\.service$)`,
@@ -86,6 +86,17 @@ const INFRA_PRIMITIVES = [
  * Hai cái sau chuyển thành ngoại lệ CÓ PHẠM VI trong `eslint.config.mjs`, đúng khuôn cặp
  * `auth`↔`users` đã dùng. Module khác chạm vào là lint đỏ ngay — và đó chính là lúc cần một
  * cuộc trò chuyện về việc dựng cửa cho `auth`.
+ *
+ * ===== VÀ MỘT DÒNG QUAY LẠI 10/09, VỚI TIỀN ĐỀ KHÁC =====
+ *
+ * `auth/step-up.decorator` (file MỚI, tách khỏi guard) vào danh sách. Lập luận 09/09 —
+ * "chỉ `vault` dùng" — đã hết đúng: từ 10/09 `StepUpGuard` là guard toàn cục MẶC ĐỊNH ĐÓNG,
+ * nên mọi route của mọi module phải khai `@RequiresStepUp()` hoặc `@NoStepUp()`. Lập trường
+ * step-up trở thành thứ cắt ngang toàn hệ, đúng cùng lý do khiến `roles.decorator` là ngoại
+ * lệ chính đáng.
+ *
+ * `auth/step-up.guard` thì VẪN NGOÀI danh sách, và đó là điểm mấu chốt: chỉ `app.module` cần
+ * tới guard. Module nào import guard chứ không phải decorator là lint đỏ, y như cũ.
  */
 
 /** `<module>/<file>`. `[^./]` ở ký tự đầu tên module chặn `../../common/...` lọt vào lối 1. */

@@ -6,6 +6,7 @@ import type { AuthedRequest } from '../auth/types';
 import { AccessListService } from './access-list.service';
 import { SECRET_OWNER_TYPES, type SecretOwnerType } from './vault.service';
 import { SCOPE_TYPES, type ScopeType } from './access-tier';
+import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
 
 class AccessRuleDto {
   @IsString() @Length(3, 160) memberEmail!: string;
@@ -56,6 +57,7 @@ class IdParamDto {
  * Chỉ SA/Admin. Ma trận này là bản đồ phòng thủ của cả hệ thống — Member đọc được nó là biết
  * chính xác chỗ nào yếu.
  */
+@NoStepUp()
 @Controller('api/v1/vault/access')
 export class VaultAccessController {
   constructor(private readonly access: AccessListService) {}
@@ -86,6 +88,12 @@ export class VaultAccessController {
   }
 
   @Roles('sa', 'admin')
+  /*
+   * Cấp tầng quyền đọc két cho một tài khoản khác. Lập luận của `DELETE /vault/secrets/:id`
+   * áp nguyên vào đây, chỉ đổi chiều: thu hồi là phá hoại thẳng, còn cấp quyền là dựng một
+   * cửa hậu BỀN — nó sống tiếp cả sau khi phiên đang bị chiếm đã chết.
+   */
+  @RequiresStepUp()
   @Post()
   @Audited('vault.access.granted', 'access_list', { writtenByService: true })
   grant(@Body() body: AccessRuleDto, @Req() req: AuthedRequest) {
@@ -94,6 +102,9 @@ export class VaultAccessController {
 
   /** Gỡ = đưa về CẤM mặc định (AD-9 áp vào dữ liệu, không phải vào route). */
   @Roles('sa', 'admin')
+  // Gỡ quyền của đội trực. Phá hoại thuần — đúng loại rủi ro mà `revoke` secret được gắn
+  // step-up để chặn.
+  @RequiresStepUp()
   @Delete(':id')
   @Audited('vault.access.revoked', 'access_list', { writtenByService: true })
   async revoke(@Param() params: IdParamDto, @Req() req: AuthedRequest) {

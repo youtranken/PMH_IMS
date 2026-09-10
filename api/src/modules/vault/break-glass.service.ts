@@ -284,6 +284,27 @@ export class BreakGlassService implements OnModuleInit {
     options: { hours?: number; note?: string | null } = {},
   ): Promise<ApprovalRecord> {
     const request = await this.requireBreakGlass(id);
+    /*
+     * BỐN MẮT (FR-023) — người xin không tự duyệt cho chính mình.
+     *
+     * `POST /vault/break-glass` mở cho cả `member`, `admin` và `sa` ("ai cũng XIN được, kể cả
+     * Admin"), còn `approve` mở cho `sa`/`admin`. Tới 10/09 `approve()` KHÔNG so `approver`
+     * với `request.requester` — trong khi `cancel()` ngay bên dưới thì có, và có vì đúng lý do
+     * này (code review Epic 6, finding 1).
+     *
+     * Tác động quyền hạn chế: Admin vốn đã đi thẳng qua ma trận nên grant không cho thêm gì.
+     * Nhưng nhật ký FR-025 thì in ra một grant "đã được duyệt" nhìn hợp lệ hoàn toàn, với
+     * `decided_by` là chính người xin — và đó là thứ auditor đọc. Nguyên tắc bốn mắt mất đi
+     * không phải vì ai đó phá được nó, mà vì nó chưa từng được cài.
+     */
+    if (request.requester.toLowerCase() === approver.toLowerCase()) {
+      throw new ForbiddenException({
+        code: 'CANNOT_APPROVE_OWN_REQUEST',
+        message:
+          'Không tự duyệt yêu cầu của chính mình được — phải là người khác duyệt (FR-023). ' +
+          'Nhờ một Quản trị viên khác, hoặc hủy yêu cầu nếu đã hết cần.',
+      });
+    }
     const asked = Number((request.payload as { hours?: number } | null)?.hours ?? 0);
     const hours = await this.clampHours(options.hours ?? asked);
 

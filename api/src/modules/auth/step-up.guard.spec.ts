@@ -1,7 +1,8 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import type { ExecutionContext } from '@nestjs/common';
 import type { Reflector } from '@nestjs/core';
 import type { SystemConfigService } from '../config-sys/system-config.service';
+import { IS_PUBLIC_KEY } from './public.decorator';
 import { StepUpGuard } from './step-up.guard';
 import type { AuthedUser } from './types';
 
@@ -13,8 +14,20 @@ function contextFor(user: AuthedUser | undefined): ExecutionContext {
   } as unknown as ExecutionContext;
 }
 
-function guardWith(required: boolean, graceMinutes = 10): StepUpGuard {
-  const reflector = { getAllAndOverride: () => required } as unknown as Reflector;
+/**
+ * `stance` là thứ `@RequiresStepUp()` / `@NoStepUp()` đặt vào metadata:
+ *   true      → route đòi gõ mã
+ *   false     → route KHAI RÕ là không đòi
+ *   undefined → route KHÔNG KHAI GÌ CẢ, và đó mới là ca đáng sợ (xem mặc-định-đóng bên dưới)
+ */
+function guardWith(
+  required: boolean | undefined,
+  graceMinutes = 10,
+  isPublic = false,
+): StepUpGuard {
+  const reflector = {
+    getAllAndOverride: (key: string) => (key === IS_PUBLIC_KEY ? isPublic : required),
+  } as unknown as Reflector;
   const config = {
     getNumber: () => Promise.resolve(graceMinutes),
   } as unknown as SystemConfigService;
@@ -34,8 +47,50 @@ function userSteppedUpMinutesAgo(minutes: number | null): AuthedUser {
 }
 
 describe('StepUpGuard — FR-022', () => {
-  it('route không khai @RequiresStepUp thì đi thẳng, không đọc cấu hình', async () => {
+  it('route khai @NoStepUp thì đi thẳng, không đọc cấu hình', async () => {
     await expect(guardWith(false).canActivate(contextFor(undefined))).resolves.toBe(true);
+  });
+
+  /*
+   * ===== MẶC ĐỊNH ĐÓNG (rà soát 10/09) =====
+   *
+   * `@RequiresStepUp()` là opt-in, và tới 10/09 nó xuất hiện đúng 5 lần trong cả repo — tất cả
+   * ở `vault.controller.ts`. Nghĩa là MỌI route nhạy cảm viết sau này bắt đầu ở trạng thái
+   * không được bảo vệ, và chỉ được bảo vệ nếu có người nhớ ra.
+   *
+   * Cái quên đó đã có hậu quả đo được: toàn bộ `/api/v1/accounts/*` không có step-up, nên một
+   * phiên SA bị chiếm (cookie trộm, máy bỏ ngỏ, chưa từng gõ mã) đi được trọn đường:
+   * `POST /accounts` trả thẳng `temporaryPassword` trong response → đăng nhập bằng tài khoản
+   * mới → `POST /auth/totp/enroll` trả secret base32 → tự sinh mã → step-up → mở két. Yếu tố
+   * thứ hai của NẠN NHÂN không bao giờ được hỏi tới.
+   *
+   * `RolesGuard` trong chính repo này đã giải đúng bài đó từ lâu: route quên `@Roles` bị 403
+   * `ROLES_NOT_DECLARED` kèm câu "Đây là lỗi lập trình". Đây là vế tương ứng cho step-up.
+   */
+  it('route KHÔNG khai lập trường nào → chặn, không phải cho qua', async () => {
+    await expect(guardWith(undefined).canActivate(contextFor(undefined))).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('lỗi đó phải nói ĐÂY LÀ LỖI LẬP TRÌNH, không phải bảo người dùng đi gõ mã', async () => {
+    await guardWith(undefined)
+      .canActivate(contextFor(undefined))
+      .catch((error: ForbiddenException) => {
+        expect(error.getResponse()).toMatchObject({ code: 'STEP_UP_NOT_DECLARED' });
+      });
+    expect.assertions(1);
+  });
+
+  /*
+   * Route `@Public()` chạy TRƯỚC khi có phiên (đăng nhập, health). Bắt chúng khai lập trường
+   * step-up là vô nghĩa, và nếu mặc-định-đóng đá cả chúng thì không ai đăng nhập được nữa —
+   * đúng kiểu hàng rào bị gỡ ngay sáng hôm sau.
+   */
+  it('route @Public() đi thẳng, không cần khai gì', async () => {
+    await expect(
+      guardWith(undefined, 10, true).canActivate(contextFor(undefined)),
+    ).resolves.toBe(true);
   });
 
   it('vừa gõ mã xong → cho qua', async () => {

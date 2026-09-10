@@ -32,6 +32,7 @@ import type { AuthedRequest } from '../auth/types';
 import { ExpiryDigestService } from './expiry-digest.service';
 import type { DigestFrequency } from './digest-schedule';
 import { ExpiryService } from './expiry.service';
+import { NoStepUp } from '../auth/step-up.decorator';
 
 class RenewDto {
   @IsString() @Length(1, 40) kind!: string;
@@ -75,6 +76,7 @@ class RuleParamDto {
  * Màn Expiry tổng hợp (story 3.4, FR-012).
  * Quyền: cả team IT — ai cũng cần biết cái gì sắp hết hạn.
  */
+@NoStepUp()
 @Controller('api/v1/expiry')
 export class ExpiryController {
   constructor(

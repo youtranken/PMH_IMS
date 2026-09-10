@@ -38,6 +38,7 @@ import type { AuthedRequest } from '../auth/types';
 import { CatalogImportService } from './catalog-import.service';
 import { CATALOG_SORT_DEFAULT, CATALOG_SORT_KEYS, CatalogService } from './catalog.service';
 import { CATALOG_ENTITIES, type CatalogEntity } from './catalog.types';
+import { NoStepUp } from '../auth/step-up.decorator';
 
 class CatalogBodyDto {
   @IsOptional() @IsString() @Length(1, 40) code?: string;
@@ -97,6 +98,7 @@ class EntityIdParamDto extends EntityParamDto {
  * (`catalog.site.created`, `catalog.cabinet.updated`…) vì `:entity` chỉ biết lúc chạy;
  * tên khai ở `@Audited` là tên HỌ, dùng để đọc controller biết route này có audit (AD-9).
  */
+@NoStepUp()
 @Controller('api/v1/catalog')
 export class CatalogController {
   constructor(

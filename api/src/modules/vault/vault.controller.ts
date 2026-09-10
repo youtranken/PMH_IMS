@@ -10,14 +10,13 @@ import {
   Post,
   Query,
   Req,
-  UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { IsIn, IsOptional, IsString, IsUUID, Length } from 'class-validator';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { stepUpSecondsLeft } from '../auth/session-policy';
-import { RequiresStepUp, StepUpGuard } from '../auth/step-up.guard';
+import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { BreakGlassService } from './break-glass.service';
@@ -84,6 +83,15 @@ class IdParamDto {
  *
  * Quyền: SA + Admin. Member không có đường nào tới đây (AD-9, mặc định đóng).
  */
+/*
+ * `@NoStepUp()` ở cấp lớp là MẶC ĐỊNH của controller này, không phải lời khẳng định rằng két
+ * sắt không cần gõ mã. Năm cửa cần thì ghi đè bằng `@RequiresStepUp()` ngay trên route — và
+ * nhờ vậy mỗi dòng `@RequiresStepUp()` dưới đây đọc ra đúng một ý: "cửa NÀY khác các cửa kia".
+ *
+ * `@UseGuards(StepUpGuard)` trên từng route đã bỏ: từ 10/09 guard chạy toàn cục (`app.module`),
+ * nên gắn tay ở đây vừa thừa vừa gợi ý sai rằng route không gắn thì không được canh.
+ */
+@NoStepUp()
 @Controller('api/v1/vault/secrets')
 export class VaultController {
   constructor(
@@ -138,7 +146,6 @@ export class VaultController {
    * mã và thử lại chính việc vừa rồi — xem `useStepUpRetry` trong `web/src/ui`.
    */
   @Roles('sa', 'admin')
-  @UseGuards(StepUpGuard)
   @RequiresStepUp()
   @Post()
   @Audited('vault.secret.created', 'secret', { writtenByService: true })
@@ -147,7 +154,6 @@ export class VaultController {
   }
 
   @Roles('sa', 'admin')
-  @UseGuards(StepUpGuard)
   @RequiresStepUp()
   @Patch(':id')
   @Audited('vault.secret.updated', 'secret', { writtenByService: true })
@@ -156,7 +162,6 @@ export class VaultController {
   }
 
   @Roles('sa', 'admin')
-  @UseGuards(StepUpGuard)
   @RequiresStepUp()
   @Post(':id/rotate')
   @Audited('vault.secret.rotated', 'secret', { writtenByService: true })
@@ -188,7 +193,6 @@ export class VaultController {
    */
   @Throttle({ default: { limit: 30, ttl: 60_000 } })
   @Roles('sa', 'admin', 'member')
-  @UseGuards(StepUpGuard)
   @RequiresStepUp()
   @Post(':id/reveal')
   @HttpCode(200)
@@ -235,7 +239,6 @@ export class VaultController {
 
   /** "Xóa" = thu hồi mềm. Ciphertext ở lại để còn đối chiếu khi điều tra sự cố. */
   @Roles('sa', 'admin')
-  @UseGuards(StepUpGuard)
   @RequiresStepUp()
   @Delete(':id')
   @Audited('vault.secret.revoked', 'secret', { writtenByService: true })

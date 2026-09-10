@@ -59,7 +59,13 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
       controller.indexOf('async reveal('),
     );
     expect(decorators).toContain('@RequiresStepUp()');
-    expect(decorators).toContain('StepUpGuard');
+    /*
+     * `@UseGuards(StepUpGuard)` từng phải có ở ĐÂY, và bài này khoá đúng chuyện đó. Từ 10/09
+     * guard chạy TOÀN CỤC (`app.module`), nên gắn tay ở route vừa thừa vừa gợi ý sai rằng
+     * route không gắn thì không được canh. Khẳng định chuyển sang hình dạng mới, và vế "guard
+     * có thật sự được cắm không" nay do `auth/step-up-surface.spec.ts` giữ.
+     */
+    expect(decorators).not.toContain('@UseGuards(StepUpGuard)');
     expect(decorators).toContain("@Header('Cache-Control', 'no-store')");
 
     /**

@@ -1,26 +1,16 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Injectable,
-  SetMetadata,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { SystemConfigService } from '../config-sys/system-config.service';
+import { IS_PUBLIC_KEY } from './public.decorator';
+import { REQUIRES_STEP_UP_KEY } from './step-up.decorator';
 import { isStepUpValid } from './session-policy';
 import type { AuthedRequest } from './types';
-
-export const REQUIRES_STEP_UP_KEY = 'ims:requires-step-up';
-
-/**
- * FR-022: route này đòi đã gõ TOTP trong `secret.stepup_grace_minutes` phút gần nhất.
- *
- * Vì sao là decorator + guard chứ không phải một câu `if` trong service: cửa mở két sẽ nhiều
- * dần (xem secret 4.2, break-glass Epic 6, xuất khóa khi bàn giao). Mỗi chỗ tự viết `if` là
- * mỗi chỗ có thể quên, hoặc quên khác kiểu — và cái quên đó không làm test nào đỏ. Khai báo
- * ngay trên route thì nhìn controller là biết cửa nào cần gõ mã.
- */
-export const RequiresStepUp = () => SetMetadata(REQUIRES_STEP_UP_KEY, true);
 
 @Injectable()
 export class StepUpGuard implements CanActivate {
@@ -29,12 +19,52 @@ export class StepUpGuard implements CanActivate {
     private readonly config: SystemConfigService,
   ) {}
 
+  /**
+   * ===== MẶC ĐỊNH ĐÓNG (rà soát 10/09) =====
+   *
+   * Bản trước: `if (!required) return true` — route không khai gì thì ĐI THẲNG. `@RequiresStepUp()`
+   * là opt-in, và nó xuất hiện đúng 5 lần trong cả repo, tất cả ở `vault.controller.ts`. Nghĩa
+   * là mọi route nhạy cảm viết sau này bắt đầu ở trạng thái không được bảo vệ.
+   *
+   * Cái quên đó đã có hậu quả đo được. Toàn bộ `/api/v1/accounts/*` không có step-up, nên một
+   * phiên SA bị chiếm — đúng mô hình đe dọa mà chính cửa két nêu ra: "cookie trộm, máy bỏ ngỏ,
+   * chưa từng gõ mã" — đi được TRỌN đường mà không cần yếu tố thứ hai của nạn nhân:
+   *
+   *   1. `GET /auth/me` lấy CSRF token (GET nên CsrfGuard bỏ qua).
+   *   2. `POST /accounts` tạo một tài khoản SA mới; response trả thẳng `temporaryPassword`.
+   *   3. `POST /auth/login` bằng tài khoản đó → phiên `authenticated` ngay.
+   *   4. `POST /auth/totp/enroll` trả `secret` base32 nguyên văn → tự sinh mã 6 số.
+   *   5. `POST /auth/step-up` → đóng dấu `stepped_up_at`.
+   *   6. `POST /vault/secrets/:id/reveal` → plaintext.
+   *
+   * Cửa két được dựng để "kể cả root cũng phải gõ mã". Đường trên vô hiệu hoá đúng lời hứa đó.
+   *
+   * `RolesGuard` trong chính repo này đã giải bài cùng hình dạng từ lâu: route quên `@Roles`
+   * bị 403 `ROLES_NOT_DECLARED`, "Đây là lỗi lập trình". Đây là vế tương ứng cho step-up —
+   * không phải để bắt mọi route gõ mã, mà để bắt mọi route TRẢ LỜI câu hỏi đó.
+   */
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const required = this.reflector.getAllAndOverride<boolean>(REQUIRES_STEP_UP_KEY, [
+    // Route `@Public()` chạy trước khi có phiên (đăng nhập, health). Bắt chúng khai lập trường
+    // step-up là vô nghĩa, và đá chúng thì không ai đăng nhập được nữa.
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
       context.getHandler(),
       context.getClass(),
     ]);
-    if (!required) return true;
+    if (isPublic) return true;
+
+    const required = this.reflector.getAllAndOverride<boolean | undefined>(REQUIRES_STEP_UP_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (required === undefined) {
+      throw new ForbiddenException({
+        code: 'STEP_UP_NOT_DECLARED',
+        message:
+          'Route chưa khai @RequiresStepUp() hoặc @NoStepUp() — bị chặn theo mặc định đóng ' +
+          '(FR-022). Đây là lỗi lập trình.',
+      });
+    }
+    if (required === false) return true;
 
     const request = context.switchToHttp().getRequest<AuthedRequest>();
     const user = request.user;

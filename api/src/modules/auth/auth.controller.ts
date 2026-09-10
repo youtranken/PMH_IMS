@@ -21,11 +21,14 @@ import { LoginRateGuard } from './login-rate.guard';
 import { Public } from './public.decorator';
 import { Roles } from './roles.decorator';
 import { SessionService } from './session.service';
+import { AllowPasswordPending } from './password-pending.decorator';
 import { AllowTotpPending } from './totp-pending.decorator';
 import type { AuthedRequest } from './types';
+import { NoStepUp } from './step-up.decorator';
 
 const ALL_ROLES = ['sa', 'admin', 'member'] as const;
 
+@NoStepUp()
 @Controller('api/v1/auth')
 export class AuthController {
   constructor(
@@ -94,6 +97,7 @@ export class AuthController {
 
   @AllowTotpPending()
   @Roles(...ALL_ROLES)
+  @AllowPasswordPending()
   @Post('totp/enroll')
   @HttpCode(200)
   @Audited('auth.totp.enroll.start', 'user', { writtenByService: true })
@@ -106,6 +110,7 @@ export class AuthController {
 
   @AllowTotpPending()
   @Roles(...ALL_ROLES)
+  @AllowPasswordPending()
   @Post('totp/enroll/confirm')
   @HttpCode(200)
   @Audited('auth.totp.enroll.done', 'user', { writtenByService: true })
@@ -143,6 +148,7 @@ export class AuthController {
   }
 
   @Roles(...ALL_ROLES)
+  @AllowPasswordPending()
   @Post('change-password')
   @HttpCode(200)
   @Audited('auth.password.changed', 'user', { writtenByService: true })
@@ -154,6 +160,7 @@ export class AuthController {
 
   @AllowTotpPending()
   @Roles(...ALL_ROLES)
+  @AllowPasswordPending()
   @Post('logout')
   @HttpCode(200)
   async logout(@Req() req: AuthedRequest, @Res({ passthrough: true }) res: Response) {
@@ -166,6 +173,7 @@ export class AuthController {
   /** Thông tin phiên hiện tại — UI dùng để dựng shell, biết vai và trạng thái step-up. */
   @AllowTotpPending()
   @Roles(...ALL_ROLES)
+  @AllowPasswordPending()
   @Get('me')
   async me(@Req() req: AuthedRequest) {
     const user = req.user!;
