@@ -67,6 +67,36 @@ export function Dialog({
   const [portalEl, setPortalEl] = useState<HTMLDivElement | null>(null);
 
   /*
+   * ===== ESC LÚC MENU Ô CHỌN ĐANG MỞ CHỈ ĐƯỢC ĐÓNG MENU (10/09) =====
+   *
+   * Mở form, bấm ô chọn, đổi ý, bấm Esc — CẢ HỘP đóng và mất trắng những gì vừa gõ. Bài kiểm
+   * "đi khắp giao diện" bắt được, và nó không phải lỗi của một màn: mọi ô chọn trong repo đều
+   * dựng từ `ui/select.tsx`, mọi hộp đều dựng từ file này.
+   *
+   * Ý định đúng ĐÃ có trong mã: `select.tsx` bắt Escape rồi `e.stopPropagation()`. Nó không
+   * đạt được vì Radix nghe `keydown` ở `document` với `capture: true`
+   * (`react-dismissable-layer/dist/index.mjs:105`) — tầng bắt chạy XONG trước khi sự kiện kịp
+   * bò tới handler React của ô chọn. Không handler nào của con chặn nổi một listener đăng ký
+   * ở tài liệu, pha bắt. Đó là lý do một dòng `stopPropagation` trông rất hợp lý lại vô hiệu.
+   *
+   * Chặn phải đặt ở ĐÂY, tại `onEscapeKeyDown` — chỗ duy nhất Radix hỏi ý trước khi đóng.
+   * `preventDefault()` làm Radix bỏ lượt đóng, còn sự kiện vẫn bò tiếp nên ô chọn vẫn tự đóng
+   * menu của nó. Mỗi bên đóng đúng phần của mình.
+   *
+   * LÀM SAO BIẾT "CÓ POPOVER ĐANG MỞ": cả sáu thứ có thể mở đè lên hộp — `select`, `combobox`,
+   * `date-picker`, `time-field`, `row-actions` — đều `createPortal` vào ĐÚNG điểm neo dưới
+   * đây (`portal ?? document.body`). Nên "điểm neo có con" chính là "đang có popover mở".
+   * Không cần sổ đăng ký, không cần context thứ hai, và không thể quên cập nhật.
+   */
+  const onEscapeKeyDown = (event: KeyboardEvent) => {
+    if (!dismissible) {
+      event.preventDefault();
+      return;
+    }
+    if (portalEl && portalEl.childElementCount > 0) event.preventDefault();
+  };
+
+  /*
    * ===== TRẢ TIÊU ĐIỂM VỀ NÚT ĐÃ MỞ HỘP (09/09) =====
    *
    * Chú thích ở đầu file này từng hứa "Radix lo focus trap, scroll-lock, Esc, TRẢ FOCUS".
@@ -120,7 +150,7 @@ export function Dialog({
           <RD.Content
             className={className}
             style={maxWidth ? { maxWidth } : undefined}
-            onEscapeKeyDown={block}
+            onEscapeKeyDown={onEscapeKeyDown}
             onPointerDownOutside={block}
             onInteractOutside={block}
           >
