@@ -8,6 +8,7 @@ import {
   resetSecrets,
   resetUsers,
   rowAction,
+  sql,
   writeHeaders,
 } from './helpers';
 
@@ -136,10 +137,22 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
     const deviceId = ((await device.json()) as { device: { id: string } }).device.id;
 
     const label = `admin web E2E ${stamp}`;
-    await page.request.post('/api/v1/vault/secrets', {
+    const created = await page.request.post('/api/v1/vault/secrets', {
       headers: await writeHeaders(page),
       data: { ownerType: 'device', ownerId: deviceId, kind: 'password', label, value: `Cu#${stamp}` },
     });
+    expect(created.status()).toBe(201);
+    const secretId = ((await created.json()) as { id: string }).id;
+
+    /*
+     * ẢNH CHỤP TRƯỚC — không có nó thì nửa "KHÔNG GHI GÌ" của tên bài không có gì đỡ.
+     *
+     * Ciphertext là thứ đo đúng nhất: xoay bí mật sinh DEK mới và IV mới cho mỗi lần seal
+     * (`envelope.service.ts`), nên `value_ct` đổi kể cả khi người dùng gõ lại ĐÚNG giá trị cũ.
+     * `updated_at` một mình thì không đủ — một bản cài đặt quên đụng cột đó vẫn qua.
+     */
+    const beforeCt = sql(`SELECT md5(value_ct::text) FROM secret WHERE id = '${secretId}'`);
+    const beforeUpdatedAt = sql(`SELECT updated_at::text FROM secret WHERE id = '${secretId}'`);
 
     expireStepUp(E2E_SA.email);
 
@@ -175,5 +188,31 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
      */
     const rotateButton = rotateDialog.getByRole('button', { name: 'Xoay' });
     await expect(rotateButton, 'hủy gõ mã thì nút Xoay phải bấm lại được').toBeEnabled();
+
+    /*
+     * VÀ KHÔNG GHI GÌ — nửa còn lại của tên bài.
+     *
+     * Tới 10/09 bài này chỉ có ba khẳng định về hiển thị và nút bấm. Nếu lượt xoay VẪN lọt
+     * xuống server sau khi người dùng hủy — đúng chế độ hỏng mà `useStepUpRetry` sinh ra để
+     * chặn — thì cả ba khẳng định kia vẫn xanh, và bài mang tên một lời hứa bảo mật mà không
+     * có dòng nào đỡ lời hứa đó.
+     *
+     * Kiểm ở DB chứ không qua API: đường đọc giá trị đòi step-up, mà bài này vừa cố tình để
+     * step-up hết hạn.
+     */
+    expect(
+      sql(`SELECT md5(value_ct::text) FROM secret WHERE id = '${secretId}'`),
+      'hủy gõ mã mà ciphertext đổi = lượt xoay đã lọt xuống server, mật khẩu cũ đã chết',
+    ).toBe(beforeCt);
+    expect(
+      sql(`SELECT updated_at::text FROM secret WHERE id = '${secretId}'`),
+      'không ghi gì thì không có gì để đóng dấu thời gian',
+    ).toBe(beforeUpdatedAt);
+    expect(
+      sql(
+        `SELECT count(*)::text FROM audit_log WHERE action = 'vault.secret.rotated' AND object_id = '${secretId}'`,
+      ),
+      'nhật ký cũng không được có dòng nào cho một lượt xoay đã hủy',
+    ).toBe('0');
   });
 });

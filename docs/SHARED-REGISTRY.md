@@ -42,6 +42,7 @@
 | `VaultPanel` | `ui/vault-panel.tsx` | Két sắt của MỌI chủ thể (`ownerType`/`ownerId`): thiết bị 4.1, phần mềm 4.1, tài khoản dịch vụ 0032, và trang tổng `/vault` | Không tự dựng bảng secret riêng — mỗi bản tự viết là một lần có thể lỡ hiện giá trị ra bảng, và cấm thêm nút "xuất tất cả" ở bất kỳ đâu (FR-026) |
 | `UsageBar` | `ui/usage-bar.tsx` | Thanh mức sử dụng: dải IP 5.1 (FR-020), seat license, ô bảng điều khiển Epic 7 | Ngưỡng màu 70/90 là quy ước ĐỌC, không phải tham số vận hành — đừng đưa vào `system_config` |
 | `StepUpDialog` | `ui/step-up-dialog.tsx` | Hộp gõ TOTP mở quyền xem bí mật (FR-022): két sắt 4.2, break-glass Epic 6 | Không tự tính "còn trong grace hay chưa" ở client — cứ gọi việc, gặp `STEPUP_REQUIRED` thì mở hộp này rồi thử lại |
+| `Dialog` (prop `dismissible`) | `ui/dialog.tsx` | Mọi hộp có lượt ghi: `dismissible={!busy}` (18 hộp tính tới 10/09) | Từ 10/09 `dismissible={false}` bịt **cả ba** đường đóng: Esc, click nền, và click vào hàng nút `.sheet-footer` (chặn ở pha bắt). Trước đó nó chỉ bịt hai đường đầu, nên nút "Hủy" vẫn bấm được giữa lúc đang ghi — hộp đóng, request vẫn hoàn tất, `onSaved()` không chạy: người dùng tin là đã hủy trong khi mật khẩu đã bị xoay. Nơi gọi **vẫn nên** đặt `disabled` cho nút Hủy để nó TRÔNG như không bấm được — hàng rào ở `dialog.tsx` là lưới an toàn, không phải giao diện |
 | `RevealDialog` | `ui/reveal-dialog.tsx` | Hiện một giá trị bí mật rồi tự ẩn sau `secret.reveal_seconds` | Cấm tự dựng hộp hiện secret: sẽ quên đếm ngược theo MỐC (tab nền bị hãm nhịp) và quên bỏ nút sao chép |
 | `OtpInput` | `ui/otp-input.tsx` | Ô nhập mã 6 số: đăng nhập, enroll, step-up | Chuyển từ `features/auth/` sang `ui/` ở story 4.2 — `ui` không được import ngược vào `features` |
 | `HistoryPanel` | `ui/history-panel.tsx` | Lịch sử nghiệp vụ (AD-13) | Nhật ký an ninh → màn Audit riêng |
@@ -75,7 +76,7 @@
 | `formatDateTime`, `formatDate`, `orDash` | `lib/format.ts` | Mọi chỗ hiện ngày giờ | Lưu UTC, hiện giờ VN |
 | `formatMoney` | `lib/format.ts` | **Mọi chỗ hiện tiền**: chi phí ghế license (3.2), giá mua tài sản về sau | Tự ghép " ₫" chứ không dùng `style:'currency'` (bản vi-VN chèn dấu cách không ngắt). `null` ra dấu gạch, KHÔNG ra "0 ₫" — "chưa khai" khác "được tặng" |
 | `downloadFile` | `lib/download-file.ts` | Tải file giữ đúng tên | — |
-| `useStepUpRetry` | `ui/use-step-up-retry.tsx` | 4 đường GHI của két: cất · sửa · xoay · thu hồi (08/09) | Chạy việc, gặp `STEPUP_REQUIRED` thì hỏi mã 6 số rồi chạy LẠI ĐÚNG MỘT LẦN. **Không** tự đoán "còn trong grace hay chưa" ở client — đồng hồ máy người dùng lệch và admin đổi được `secret.stepup_grace_minutes` bất cứ lúc nào; để server trả lời. Đóng hộp = `STEPUP_CANCELLED`, nơi gọi phải bắt để nút Lưu không kẹt |
+| `useStepUpRetry` | `ui/use-step-up-retry.tsx` (SỔ NÀY từng xếp nó dưới mục `web/src/lib/` — đường dẫn mới đúng) | 4 đường GHI của két: cất · sửa · xoay · thu hồi (08/09) | Chạy việc, gặp `STEPUP_REQUIRED` thì hỏi mã 6 số rồi chạy LẠI ĐÚNG MỘT LẦN. **Không** tự đoán "còn trong grace hay chưa" ở client — đồng hồ máy người dùng lệch và admin đổi được `secret.stepup_grace_minutes` bất cứ lúc nào; để server trả lời. Đóng hộp = `STEPUP_CANCELLED`, nơi gọi phải bắt để nút Lưu không kẹt |
 | `sortQuery` | `lib/sort-query.ts` | Nối `?sort=&dir=` từ trạng thái sắp xếp của `DataTable` | Không màn nào tự ghép chuỗi này. Phía API có cửa đối ứng: `parseSortQuery` trong `api/src/common/sorting.ts`, luôn kẹp về whitelist cột của module chủ |
 | `uploadFile` | `lib/upload.ts` | Gửi file lên endpoint multipart | Không tự đặt `Content-Type` (mất boundary) |
 | `CATALOG_ENTITIES`, `CatalogLists`, `SiteRow`, `CabinetRow`, … | `lib/catalog-types.ts` | Hợp đồng kiểu của danh mục — dùng ở 10 file thuộc `devices`, `ipam`, `isp`, `software`, `catalog` | Chuyển ra khỏi `features/catalog/` ngày 28/08: thứ bị 5 feature dùng thì không thuộc về feature nào (AD-15). Khớp `CatalogEntity` phía API — thêm loại danh mục phải sửa cả hai đầu |
@@ -94,6 +95,8 @@
 | `import-plan.ts` (`pickCell`, `parseDateCell`, `normalizeKey`…) | `common/import-plan.ts` | Nền chung của MỌI bộ import: khớp tên cột, đọc ngày kiểu VN, nhận dòng VÍ DỤ | Không tự viết lại parser cột/ngày cho từng màn |
 | `parsePageQuery`, `Page<T>` | `common/pagination.ts` | Mọi endpoint danh sách | Shape trả về luôn là `{ items, total }` |
 | `Tx`, `WriteFn` | `common/tx.ts` | Mọi hàm ghi (AD-5) | `tx` là tham số đầu, không dùng ALS |
+| `HISTORY_PAGE_LIMIT` | `common/history.ts` | **10** bộ đọc lịch sử (thiết bị, IP, NAT, dải, license, ISP, tài khoản dịch vụ, danh mục, phần mềm, két) | Ra đời vì con số này đã trôi thành BA giá trị khác nhau (0 · 100 · 200) ở mười chỗ chép tay; `history-readers.spec.ts` canh bằng máy. Đây là trần KỸ THUẬT của panel, **không** vào `system_config` (AD-11 nói về tham số nghiệp vụ — con số này không đổi câu trả lời nào cho người dùng). Nợ đã biết: chưa có cửa đọc phần bị cắt, một IP đổi trạng thái hằng ngày chạm trần trong ~7 tháng |
+| `evaluateLockout`, `registerFailure` | `common/lockout.ts` | `auth.service` (đăng nhập) và `users.service` (ghi bộ đếm) — 2 module, nên nó thuộc `common` chứ không phải `modules/auth/` | Luật thuần, không chạm DB: **đừng** dịch nó sang SQL. Lượt ghi phải đi qua `registerLoginFailureWithin` (`SELECT … FOR UPDATE` trong cùng tx) — không có khoá đó thì n request sai mật khẩu song song đều đọc cùng một bộ đếm và tài khoản không bao giờ khoá |
 | `OwnerAccessRegistry` | `common/owner-access.registry.ts` | `files` hỏi quyền đọc đính kèm; `vault` ghi vào sổ lúc khởi động (08/09) | Sổ ĐẢO PHỤ THUỘC, cùng khuôn `DevicePanelRegistry`. **Không** cho module nền gọi thẳng module nghiệp vụ — depcruise `base-must-not-import-biz` chặn, và chặn đúng. Loại chủ thể chưa ai đăng ký thì ĐI QUA: mặc-định-cấm nằm trong ma trận (`access-list.service.ts`), không nằm ở sổ này |
 | `requireCas` | `common/cas.ts` | Mọi đường ghi có tranh chấp: `ip-address.transition`, `license-assignment.release`/`updateTerms` (07/09) | **KHÔNG** dùng cho `.returning()` trả nhiều hàng hợp lệ (vd `voidSubnet` ẩn cả dải) — nó chốt "đúng MỘT hàng bị đổi" và ném lỗi lập trình nếu trúng nhiều hơn. Điều kiện đã kiểm phải nằm TRONG câu UPDATE, không phải ở câu SELECT chạy trước |
 | `clientIp` | `common/client-ip.ts` | Định nghĩa DUY NHẤT của "IP client": controller auth + middleware dựng `RequestContext` (08/09) | Chỉ đọc `req.ip` (Express đã `trust proxy = 1`). **Cấm** đọc `X-Forwarded-For` thô: nginx dùng `$proxy_add_x_forwarded_for` (NỐI THÊM) nên phần tử trái nhất là thứ client tự khai |
@@ -148,8 +151,10 @@ Cổng chia hai nơi (quyết định 03/09):
 - **`e2e/` có lint từ 08/09** (`npm --prefix e2e run lint`) — trước đó là thư mục DUY NHẤT
   không có cổng nào, nên luật E2E trong `CLAUDE.md` (cấm `sleep`, cấm selector CSS) có 0
   cưỡng chế. Sleep = LỖI (ngoại lệ duy nhất: `login-rate-limit.spec.ts`, chờ đồng hồ thật).
-  Selector CSS = cảnh báo có **trần ghim** `--max-warnings=25`: nợ không được lớn thêm.
-  Hạ trần mỗi lần gỡ được một chỗ; đừng nâng.
+  Selector CSS = cảnh báo có **trần ghim** `--max-warnings=0` (`e2e/package.json`): 25 chỗ nợ
+  đã gỡ hết ở đợt E6, trần hạ về 0 và đầu `e2e/eslint.config.mjs` ghi "Đừng nâng". Sổ này ghi
+  25 tới tận 10/09 — hai tài liệu nói ngược nhau thì cái sai sẽ dạy người sau rằng nợ mới là
+  chấp nhận được.
 - **GitHub Actions** (`.github/workflows/ci.yml`) — lint · depcruise · test đơn vị · build.
   Đây là cổng **tự động** chặn merge vào `master` qua branch protection.
 - **Tầng test chạm hạ tầng thật** (`npm --prefix api run test:db`, ~15 giây) — chạy ở

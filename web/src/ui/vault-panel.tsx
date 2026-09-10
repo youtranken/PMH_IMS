@@ -468,11 +468,15 @@ function SecretForm({
     <Dialog
       open
       onOpenChange={onClose}
+      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền / bấm Hủy: hộp biến mất nhưng lượt
+         ghi vẫn chạy tiếp, `onSaved()` không bao giờ chạy — không toast, không refresh — nên
+         người dùng tin là đã hủy trong khi secret đã vào két. */
+      dismissible={!save.isPending}
       maxWidth={560}
       title={isEdit ? t('vault.edit') : t('vault.add')}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <button type="button" className="btn" disabled={save.isPending} onClick={onClose}>
             {t('common.cancel')}
           </button>
           <button type="submit" form="secret-form" className="btn primary" disabled={save.isPending}>
@@ -621,11 +625,15 @@ function RotateForm({
     <Dialog
       open
       onOpenChange={onClose}
+      /* Hộp nguy hiểm nhất trong ba hộp: xoay xong là giá trị CŨ không đọc lại được nữa. Đóng
+         nhầm lúc POST đang bay = người dùng tin là đã hủy, trong khi mật khẩu họ đang dán vào
+         cấu hình thiết bị vừa hết hiệu lực. */
+      dismissible={!rotate.isPending}
       maxWidth={480}
       title={t('vault.rotateTitle', { label: secret.label })}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <button type="button" className="btn" disabled={rotate.isPending} onClick={onClose}>
             {t('common.cancel')}
           </button>
           <button type="submit" form="rotate-form" className="btn primary" disabled={rotate.isPending}>
@@ -723,11 +731,14 @@ function BreakGlassDialog({
     <Dialog
       open
       onOpenChange={onClose}
+      /* Đóng lúc yêu cầu đang bay thì phiếu vẫn được tạo và Quản trị vẫn nhận email, nhưng
+         người xin không thấy toast nào — họ gửi lại lần nữa, và người duyệt nhận hai phiếu. */
+      dismissible={!send.isPending}
       maxWidth={480}
       title={t('vault.requestTitle')}
       footer={
         <>
-          <button type="button" className="btn" onClick={onClose}>
+          <button type="button" className="btn" disabled={send.isPending} onClick={onClose}>
             {t('common.cancel')}
           </button>
           <button type="submit" form="break-glass-form" className="btn primary" disabled={send.isPending}>

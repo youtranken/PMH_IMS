@@ -164,22 +164,36 @@ export function Select({
                 câu khẳng định mà ta không có quyền nói. `role="alert"`, không `role="option"` —
                 trình đọc màn hình phải đọc nó như cảnh báo, và ↓/Enter không chạm tới được. */}
             {failed ? (
-              <li className="fsel-error" aria-disabled="true">
+              <li className="fsel-error" role="presentation">
                 <span role="alert">{t('common.optionsLoadError')}</span>
               </li>
             ) : options.length === 0 ? (
               /* Không có lựa chọn nào → báo rõ thay vì ô nổi trống trơ (review D3). */
-              <li className="fsel-none" aria-disabled="true">
+              <li className="fsel-none" role="presentation">
                 {t('select.noOptions', '— Không có lựa chọn —')}
               </li>
             ) : null}
+            {/*
+                `<li role="presentation">`: `<ul role="listbox">` chỉ được chứa `option`, mà
+                `<li>` trần cho ra `listbox > listitem > option` — một tầng `listitem` chen vào
+                giữa. Giữ `<li>` (CSS `.fsel-menu` dựa vào nó), bỏ vai của nó đi. Hai hàng báo
+                RỖNG/HỎNG ở trên cũng vậy: chúng không phải lựa chọn, và `aria-disabled` trên
+                một hàng không có vai gì thì cũng không nói được với ai.
+
+                `tabIndex={-1}`: mẫu `aria-activedescendant` đòi tiêu điểm DOM ở NGUYÊN trên nút
+                mở. `<button>` mặc định `tabindex=0`, mà menu lại portal vào điểm neo của
+                `dialog.tsx` — con CUỐI của `RD.Content`, sau cả `.sheet-footer`. Nên trong một
+                form đang mở menu, gõ Tab đưa tiêu điểm xuống giữa danh sách, ĐỨNG SAU cả nút
+                Lưu và Hủy.
+            */}
             {options.map((o, i) => (
-              <li key={o.value}>
+              <li key={o.value} role="presentation">
                 <button
                   type="button"
                   id={optionId(i)}
                   role="option"
                   aria-selected={o.value === value}
+                  tabIndex={-1}
                   className={`fsel-option${i === active ? ' active' : ''}${o.value === value ? ' sel' : ''}`}
                   onMouseEnter={() => setActive(i)}
                   onClick={() => choose(o.value)}

@@ -68,8 +68,11 @@ export function ConfirmDialog({
       <div className="sheet-body">
         {error && <p role="alert" className="alert error">{error}</p>}
         <DialogDescription style={{ margin: 0 }}>{message}</DialogDescription>
+        {/* `--space-3`, KHÔNG phải `--sp-3`: tiền tố `--sp-` không tồn tại ở `tokens.css`, nên
+            khoảng cách này trước đây rơi về 0 mà CSS vẫn hợp lệ — không lỗi, không cảnh báo,
+            chỉ là ô tick dính vào câu hỏi ngay trên. */}
         {checkbox && (
-          <label className="field-inline" style={{ marginTop: 'var(--sp-3)' }}>
+          <label className="field-inline" style={{ marginTop: 'var(--space-3)' }}>
             <input
               type="checkbox"
               checked={checked}

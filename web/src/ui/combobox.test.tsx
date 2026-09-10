@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { Combobox } from '@/ui/combobox';
 import { SuggestInput } from '@/ui/suggest-input';
-import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
+import { fireEvent, renderWithI18n, screen, userEvent } from '@/test/test-utils';
 
 /**
  * "KHÔNG TÌM THẤY" và "KHÔNG HỎI ĐƯỢC" là hai câu khác nhau.
@@ -108,5 +109,98 @@ describe('SuggestInput chuyển tiếp cờ hỏng', () => {
     await userEvent.click(screen.getByRole('combobox'));
 
     expect(screen.getByText('Không tải được danh sách. Thử lại sau.')).toBeInTheDocument();
+  });
+});
+
+/**
+ * ESC PHẢI ĐÓNG ĐƯỢC THẬT — KHÔNG BUNG LẠI SAU MỖI LẦN CHA RENDER.
+ *
+ * `options` gần như KHÔNG BAO GIỜ ổn định về identity ở nơi gọi thật: `SuggestInput` dựng
+ * `filtered` bằng `useMemo([options, term])`, `use-departments.ts` trả `.filter().map()` —
+ * mảng MỚI mỗi lượt gọi. Một effect nghe `[options]` vì thế chạy sau MỖI lần cha render, kể
+ * cả khi nội dung y hệt.
+ *
+ * Cảnh thật (hộp Chuyển của `subnet-detail.tsx`): bấm ô "Người/bộ phận dùng" → menu bung →
+ * Esc để dẹp nó đi → gõ tiếp vào ô "Lý do" → menu BUNG LẠI, đè lên đúng ô đang gõ. Người
+ * dùng bấm Esc lần nữa, gõ tiếp, nó lại bung: không có cách nào đóng được nó bằng bàn phím.
+ *
+ * Chú thích trong `choose()` đã nhận ra đúng cơ chế này và vá bằng `touched = false` — nhưng
+ * chỉ cho đường CHỌN. Đường Esc thì bỏ ngỏ.
+ */
+describe('Combobox — Esc đóng menu, cha render lại không được bung lại', () => {
+  function Harness({ items }: { items: string[] }) {
+    /* Ô thứ hai chỉ để BẮT CHƯỚC cha render lại — y như ô "Lý do" của hộp Chuyển. */
+    const [reason, setReason] = useState('');
+    return (
+      <>
+        <Combobox
+          placeholder="Người / bộ phận dùng"
+          ariaLabel="Người / bộ phận dùng"
+          query=""
+          onQuery={() => {}}
+          /* Mảng MỚI mỗi lần render, nội dung KHÔNG đổi — đúng hình dạng của nơi gọi thật. */
+          options={items.map((item) => item)}
+          getKey={(item) => item}
+          renderOption={(item) => <span>{item}</span>}
+          onSelect={() => {}}
+        />
+        <label>
+          Lý do
+          <input value={reason} onChange={(e) => setReason(e.target.value)} />
+        </label>
+      </>
+    );
+  }
+
+  it('Esc rồi gõ vào ô KHÁC: menu vẫn đóng', async () => {
+    renderWithI18n(<Harness items={['Phòng Kế toán', 'Phòng Nhân sự']} />);
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Người / bộ phận dùng' }));
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('listbox')).toBeNull();
+
+    // Cha render lại (gõ một ký tự vào ô Lý do) → `options` đổi identity, nội dung y nguyên.
+    await userEvent.type(screen.getByLabelText('Lý do'), 'x');
+    expect(screen.queryByRole('listbox')).toBeNull();
+  });
+
+  /** Vế đối chứng: gõ vào CHÍNH ô gợi ý sau khi Esc thì menu PHẢI bung lại. */
+  it('Esc rồi gõ tiếp vào chính ô gợi ý: menu bung lại', async () => {
+    renderWithI18n(<Harness items={['Phòng Kế toán']} />);
+
+    const input = screen.getByRole('combobox', { name: 'Người / bộ phận dùng' });
+    await userEvent.click(input);
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('listbox')).toBeNull();
+
+    await userEvent.type(input, 'k');
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+  });
+
+  /**
+   * Cùng một effect còn `setActive(0)`: mỗi lần cha render là dòng đang sáng nhảy về đầu.
+   * Bấm ↓ ba lần rồi cha render một cái là mất chỗ — với người dùng bàn phím thì đó là mất
+   * hẳn khả năng chọn dòng thứ hai trở đi trên một form đang gõ.
+   */
+  it('cha render lại KHÔNG được kéo dòng đang sáng về đầu danh sách', async () => {
+    renderWithI18n(<Harness items={['Phòng Kế toán', 'Phòng Nhân sự']} />);
+
+    const input = screen.getByRole('combobox', { name: 'Người / bộ phận dùng' });
+    await userEvent.click(input);
+    await userEvent.keyboard('{ArrowDown}');
+    const options = screen.getAllByRole('option');
+    expect(input.getAttribute('aria-activedescendant')).toBe(options[1].id);
+
+    /*
+     * `fireEvent.change` chứ không phải `userEvent.type`: gõ bằng chuột-và-phím sẽ mousedown
+     * ra ngoài ô gợi ý, và menu đóng vì lý do KHÁC (đúng hành vi, nhưng che mất thứ đang đo).
+     * Ở đây cần đúng một thứ: cha render lại, không có tương tác nào chạm vào ô gợi ý.
+     */
+    fireEvent.change(screen.getByLabelText('Lý do'), { target: { value: 'x' } });
+
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+    expect(input.getAttribute('aria-activedescendant')).toBe(options[1].id);
   });
 });

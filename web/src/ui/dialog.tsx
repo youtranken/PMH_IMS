@@ -177,7 +177,38 @@ export function Dialog({
                   </div>
                   <div className="sheet-body">{children}</div>
                   {footer ? (
-                    <div className="sheet-footer" data-testid="dialog-footer">
+                    /*
+                     * ===== CỬA THỨ TƯ CỦA `dismissible` (10/09) =====
+                     *
+                     * Prop `dismissible` sinh ra để chặn đúng một cảnh: lượt ghi ĐANG BAY, hộp
+                     * biến mất, POST vẫn hoàn tất — dữ liệu vào sổ nhưng `onSaved()` không
+                     * chạy, nên không toast, không refresh, và người vận hành tin là mình đã
+                     * hủy. Nó bịt Esc, bịt click-nền, bịt nút ✕.
+                     *
+                     * Nút HỦY ở chân hộp thì không: nó là `children` do nơi gọi truyền vào.
+                     * Kiểm lại 18 hộp trong repo thì đúng 1 (`import-dialog`) nhớ tự
+                     * `disabled={busy}` — 17 hộp còn lại để cửa mở, và bấm Hủy lúc đang chờ
+                     * rơi vào ĐÚNG cảnh trên, chỉ khác đường vào.
+                     *
+                     * "Đang bận thì chân hộp không ăn" là MỘT khái niệm; bắt 18 nơi gọi cùng
+                     * nhớ nó là đúng cách 17/18 đã quên (AD-15). Chặn ở pha BẮT nên click
+                     * không bò tới được handler của nút, dù nút đó là gì.
+                     *
+                     * Nơi gọi VẪN nên `disabled` nút Hủy của mình — hàng rào này chặn hậu quả,
+                     * không thay được việc cho người dùng THẤY nút đã mờ đi.
+                     */
+                    <div
+                      className="sheet-footer"
+                      data-testid="dialog-footer"
+                      onClickCapture={
+                        dismissible
+                          ? undefined
+                          : (event) => {
+                              event.preventDefault();
+                              event.stopPropagation();
+                            }
+                      }
+                    >
                       <span className="spacer" />
                       {footer}
                     </div>

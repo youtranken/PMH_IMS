@@ -79,11 +79,32 @@ export function Combobox<T>({
   const listId = useId();
   const optionId = (index: number) => `${listId}-o${index}`;
 
-  // options đổi (query mới) → về đầu danh sách và mở lại menu
+  /*
+   * ===== "OPTIONS ĐỔI" PHẢI ĐO BẰNG NỘI DUNG, KHÔNG PHẢI BẰNG IDENTITY (10/09) =====
+   *
+   * Bản cũ nghe `[options]` và làm hai việc: `setActive(0)` + `setClosed(false)`. Cả hai đều
+   * sai nhịp, vì `options` gần như KHÔNG BAO GIỜ ổn định về identity ở nơi gọi thật:
+   * `SuggestInput` dựng `filtered` bằng `useMemo([options, term])`, `use-departments.ts` trả
+   * `.filter().map()` — mảng MỚI sau mỗi lần cha render, kể cả khi nội dung y hệt.
+   *
+   * Nên effect chạy sau MỌI lần cha render, và `setClosed(false)` bung lại đúng cái menu người
+   * dùng vừa bấm Esc để đóng: mở hộp Chuyển → bấm ô "Người/bộ phận dùng" → Esc → gõ tiếp vào
+   * ô "Lý do" → menu bung lại, đè lên chính ô đang gõ. Esc không còn là một đường thoát.
+   *
+   * `choose()` đã gặp đúng cơ chế này và vá riêng cho đường CHỌN bằng `touched = false`; đây
+   * là chỗ vá cho phần còn lại.
+   *
+   * HAI VIỆC TÁCH LÀM HAI:
+   *   - Về đầu danh sách: chỉ khi DANH SÁCH thật sự khác — so bằng khóa, không bằng ô nhớ.
+   *     (Trước đây bấm ↓ ba lần rồi cha render một cái là dòng đang sáng nhảy về đầu.)
+   *   - Mở lại menu: chuyển hẳn về các handler của NGƯỜI DÙNG — gõ (`onChange`), chạm vào ô
+   *     (`onFocus`), bấm mũi tên (`toggle`). Cha render lại không phải một hành vi của người
+   *     dùng, nên nó không được mở gì cả.
+   */
+  const optionKeys = JSON.stringify(options.map(getKey));
   useEffect(() => {
     setActive(0);
-    setClosed(false);
-  }, [options]);
+  }, [optionKeys]);
 
   // `failed` cũng mở menu: người dùng phải THẤY câu "không tải được" ở đúng chỗ họ đang nhìn,
   // chứ không phải suy ra từ việc gõ mãi không thấy gì.
@@ -147,7 +168,13 @@ export function Combobox<T>({
         aria-controls={open ? listId : undefined}
         aria-activedescendant={open && options[active] ? optionId(active) : undefined}
         aria-autocomplete="list"
-        onFocus={() => setTouched(true)}
+        /* Chạm vào ô là một hành vi CÓ Ý của người dùng → mở lại menu đã đóng bằng Esc.
+           Esc không làm rơi tiêu điểm, nên sự kiện này KHÔNG bắn ngay sau Esc: muốn mở lại
+           thì phải rời ô rồi quay lại, hoặc gõ tiếp — đúng ý "người dùng chủ động". */
+        onFocus={() => {
+          setTouched(true);
+          setClosed(false);
+        }}
         onChange={(e) => {
           setTouched(true);
           onQuery(e.target.value);
@@ -196,9 +223,10 @@ export function Combobox<T>({
                 lựa chọn, và phải với tới được cả khi lọc ra rỗng — đúng lúc người dùng cần
                 nó nhất là lúc thứ họ tìm chưa tồn tại. */}
             {action ? (
-              <li className="combo-action-row">
+              <li className="combo-action-row" role="presentation">
                 <button
                   type="button"
+                  tabIndex={-1}
                   className="combo-option combo-action"
                   onClick={() => {
                     setClosed(true);
@@ -218,13 +246,32 @@ export function Combobox<T>({
                 <span role="alert">{t('common.optionsLoadError')}</span>
               </li>
             ) : null}
+            {/*
+                `<li role="presentation">`: `<ul role="listbox">` chỉ được chứa `option`, mà
+                `<li>` trần thì cây trợ năng đọc ra `listbox > listitem > option` — một tầng
+                `listitem` chen vào giữa. `combo-error` ngay trên đã làm đúng từ đầu; hàng bọc
+                dòng chọn thì chưa. Giữ `<li>` (CSS `.combo-menu` dựa vào nó), bỏ vai của nó đi.
+
+                `tabIndex={-1}`: mẫu `aria-activedescendant` đòi tiêu điểm DOM ở NGUYÊN trên ô
+                gõ. `<button>` mặc định `tabindex=0`, mà menu lại portal vào điểm neo của
+                `dialog.tsx` — con CUỐI của `RD.Content`, sau cả `.sheet-footer`. Nên trong một
+                form đang mở gợi ý, gõ Tab đưa tiêu điểm xuống giữa danh sách, ĐỨNG SAU cả nút
+                Lưu và Hủy.
+
+                `aria-selected={false}`: "đang sáng" KHÔNG phải "đã chọn". Bản cũ đặt
+                `i === active`, nên mỗi lần bấm ↓ trình đọc màn hình đọc "đã chọn" cho một dòng
+                người dùng mới chỉ lướt qua, trong khi ô gõ chưa nhận giá trị nào. Việc đang
+                sáng đã do `aria-activedescendant` nói ra rồi. `Select` có `value` nên nó so
+                với `value` thật; `Combobox` là ô gõ tự do, danh sách gợi ý không mang lựa chọn.
+            */}
             {options.map((option, i) => (
-              <li key={getKey(option)}>
+              <li key={getKey(option)} role="presentation">
                 <button
                   type="button"
                   id={optionId(i)}
                   role="option"
-                  aria-selected={i === active}
+                  aria-selected={false}
+                  tabIndex={-1}
                   disabled={disabled}
                   className={`combo-option${i === active ? ' active' : ''}`}
                   onMouseEnter={() => setActive(i)}
