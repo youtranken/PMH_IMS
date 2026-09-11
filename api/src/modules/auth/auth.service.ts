@@ -20,6 +20,7 @@ import { checkPasswordStrength } from './password-policy';
 import { SessionService, type SessionRecord } from './session.service';
 import { TotpService } from './totp.service';
 import { KnownDeviceService } from './known-device.service';
+import { LoginFailureService } from './login-failure.service';
 
 /** AAD của TOTP secret: bảng users + id user (NFR-02). */
 const TOTP_TABLE = 'users';
@@ -51,6 +52,7 @@ export class AuthService {
     private readonly outbox: OutboxService,
     private readonly config: SystemConfigService,
     private readonly devices: KnownDeviceService,
+    private readonly loginFailures: LoginFailureService,
   ) {}
 
   async login(email: string, password: string, ctx: LoginContext): Promise<LoginOutcome> {
@@ -108,11 +110,23 @@ export class AuthService {
     }
 
     const now = new Date();
-    if (isLocked({ failedAttempts: user.failedAttempts, lockedUntil: user.lockedUntil }, now)) {
-      const seconds = lockRemainingSeconds(
-        { failedAttempts: user.failedAttempts, lockedUntil: user.lockedUntil },
-        now,
-      );
+    /*
+     * KHOÁ TỰ ĐỘNG ĐỌC THEO CẶP (NGƯỜI DÙNG, IP) — đổi 11/09.
+     *
+     * Bản trước đọc `users.failed_attempts`/`users.locked_until`, tức khoá đặt lên TÀI KHOẢN.
+     * Hệ quả không ai định: cái khoá đó ai kích cũng được. Biết email của một người là khoá
+     * được họ ra ngoài bằng năm request, lặp lại tuỳ thích — và người đáng khoá nhất là SA,
+     * đúng lúc đang có sự cố cần đăng nhập để xử lý.
+     *
+     * Khoá sinh ra để chặn một người đang ĐOÁN, mà người đoán thì ngồi ở một chỗ. Chặn đúng
+     * chỗ đó là đủ; người dùng thật ngồi ở bàn của họ không việc gì phải chịu hậu quả.
+     *
+     * Xem `0045_login_failure_per_ip.sql` để biết vì sao KHÔNG thêm một trần chặn ở tầng tài
+     * khoản, kể cả ở mức cao.
+     */
+    const lockState = await this.loginFailures.stateFor(user.id, ctx.ip);
+    if (isLocked(lockState, now)) {
+      const seconds = lockRemainingSeconds(lockState, now);
       await this.auditFailure(user, 'locked');
       throw new UnauthorizedException({
         code: 'ACCOUNT_LOCKED',
@@ -139,19 +153,43 @@ export class AuthService {
        *    không bao giờ đúng lần nữa.
        */
       await this.db.transaction(async (tx) => {
-        const state = await this.users.registerLoginFailureWithin(
+        const policy = { maxFailedAttempts: maxFailed, lockoutMinutes };
+        /*
+         * HAI BỘ ĐẾM, HAI VAI KHÁC HẲN NHAU (11/09):
+         *
+         *   · theo CẶP (người dùng, IP) — bộ đếm CHẶN. Đây là thứ quyết định lượt sau có vào
+         *     được không.
+         *   · trên hàng `users` — bộ đếm CẢNH BÁO. Nó không chặn ai nữa, nhưng là chỗ DUY NHẤT
+         *     nhìn thấy bức tranh "tài khoản này đang bị dò từ nhiều nơi": bộ đếm theo cặp,
+         *     chia nhỏ theo IP, không bao giờ thấy điều đó.
+         *
+         * Vẫn dùng chung `registerFailure` của `common/lockout.ts` cho cả hai, nên luật (ngưỡng,
+         * "khoá hết hạn thì đếm lại từ 0", `justLocked`) chỉ có MỘT bản.
+         */
+        const local = await this.loginFailures.registerFailureWithin(
           tx,
           user.id,
-          { maxFailedAttempts: maxFailed, lockoutMinutes },
+          ctx.ip,
+          policy,
           now,
         );
+        const state = await this.users.registerLoginFailureWithin(tx, user.id, policy, now);
         await this.audit.appendWithin(tx, {
           actor: user.email,
           action: 'auth.login.failed',
           objectType: 'user',
           objectId: user.id,
-          detail: { reason: 'bad-password' },
+          detail: { reason: 'bad-password', ipLocked: local.lockedUntil !== null },
         });
+        /*
+         * `justLocked` nay đọc là "VỪA CHẠM NGƯỠNG CẢNH BÁO", không còn là "vừa bị khoá".
+         *
+         * Tên cờ và tên mã audit (`auth.account.locked`) giữ nguyên có chủ ý: đổi chúng là
+         * làm gãy mọi truy vấn nhật ký đã viết và mọi bài kiểm đang chốt chúng, đổi lấy một
+         * chữ đẹp hơn. Chỗ PHẢI đổi là thứ người ta ĐỌC — nội dung lá thư gửi SA, xem
+         * `mail.consumer.ts`. `users.locked_until` vẫn được ghi, nay với vai CỬA SỔ CHỐNG SPAM
+         * THƯ: không báo lại cho tới khi nó qua.
+         */
         if (state.justLocked) {
           await this.audit.appendWithin(tx, {
             actor: user.email,
@@ -194,6 +232,14 @@ export class AuthService {
     });
 
     await this.users.markLoginSuccess(user.id);
+    /*
+     * Vào được từ NƠI NÀY → xoá dấu vết của chính nơi này.
+     *
+     * Cố ý không xoá hàng của IP khác: nếu có ai đang dò tài khoản này từ chỗ khác thì khoá
+     * bên đó phải còn nguyên. Người dùng thật đăng nhập được không phải là bằng chứng rằng kẻ
+     * kia đã thôi gõ.
+     */
+    await this.loginFailures.clearFor(user.id, ctx.ip);
 
     if (needsTotp && !enrolled) return { status: 'totp-enroll-required', session };
     if (needsTotp) return { status: 'totp-required', session };

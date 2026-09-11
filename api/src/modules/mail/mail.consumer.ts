@@ -146,20 +146,38 @@ export class MailConsumer {
     const sa = await this.users.recipientsByRole(['sa']);
 
     switch (topic) {
+      /*
+       * TÊN CHỦ ĐỀ GIỮ NGUYÊN, NỘI DUNG PHẢI ĐỔI (11/09).
+       *
+       * Từ khi khoá chuyển sang cặp (người dùng, IP), tài khoản KHÔNG còn bị khoá khi bộ đếm
+       * chạm ngưỡng — chỉ cái IP đang gõ mới bị. Lá thư cũ viết "vừa bị khóa tạm thời" và
+       * "khóa tự mở sau thời gian cấu hình": cả hai câu nay đều sai, và sai theo hướng tệ nhất
+       * — SA đọc xong tưởng hệ thống đã tự xử lý nên không làm gì.
+       *
+       * Thư này giờ là thứ DUY NHẤT khiến một CON NGƯỜI nhìn thấy một lượt dò rải rác (mỗi IP
+       * gõ vài lần rồi đổi IP, không IP nào chạm ngưỡng riêng). Nên nó phải nói rõ: chưa có ai
+       * bị chặn ở tầng tài khoản, và việc cần làm là của anh.
+       */
       case 'auth.account.locked': {
         if (!user) return null;
         const { html, text } = renderMail({
-          title: 'Tài khoản bị khóa do đăng nhập sai nhiều lần',
-          intro: `Tài khoản ${user.email} vừa bị khóa tạm thời vì nhập sai mật khẩu quá số lần cho phép.`,
+          title: 'Một tài khoản đang bị dò mật khẩu',
+          intro: `Tài khoản ${user.email} vừa nhập sai mật khẩu quá số lần cho phép. Nơi gõ sai đã bị chặn tạm thời, nhưng TÀI KHOẢN VẪN ĐĂNG NHẬP ĐƯỢC từ chỗ khác — kể cả từ chỗ của kẻ đang dò, nếu họ đổi mạng.`,
           rows: [
             { label: 'Người dùng', value: `${user.fullName} (${user.email})` },
             { label: 'Thời điểm', value: new Date().toLocaleString('vi-VN') },
           ],
           ctaLabel: 'Xem nhật ký đăng nhập',
           ctaUrl: `${APP_URL()}/quan-tri/nhat-ky`,
-          footnote: 'Khóa tự mở sau thời gian cấu hình. SA có thể mở sớm trong màn Tài khoản.',
+          footnote:
+            'Mở nhật ký xem các lượt sai đến từ một nơi hay nhiều nơi. Nếu thấy đáng ngờ, vào màn Tài khoản KHÓA TAY tài khoản này — khóa tay chặn mọi nơi và chỉ SA mở được.',
         });
-        return { to: sa.map((r) => r.email), subject: `[IMS] Khóa tài khoản ${user.email}`, html, text };
+        return {
+          to: sa.map((r) => r.email),
+          subject: `[IMS] Dò mật khẩu tài khoản ${user.email}`,
+          html,
+          text,
+        };
       }
       case 'auth.device.new': {
         if (!user) return null;

@@ -197,6 +197,15 @@ async function resetUsers(pool) {
         [id],
       );
       await pool.query('DELETE FROM known_device WHERE user_id=$1', [id]);
+      /*
+       * Bộ đếm gõ sai theo CẶP (người dùng, IP) — bảng thêm 11/09.
+       *
+       * Phải dọn ở đây, cạnh `failed_attempts=0` ngay trên: từ 11/09 chính bảng này mới là thứ
+       * CHẶN đăng nhập, còn hai cột kia chỉ còn vai cảnh báo. Bỏ sót nó thì một bài kiểm khoá
+       * tài khoản để lại hàng khoá cho bài kế tiếp, và bài kế tiếp đỏ vì một lý do chẳng liên
+       * quan gì tới nó — đúng kiểu rò rỉ mà `e2e/leak-guard.ts` được dựng lên để bắt.
+       */
+      await pool.query('DELETE FROM login_failure WHERE user_id=$1', [id]);
     } else {
       await pool.query(
         `INSERT INTO users (email, full_name, role, password_hash, must_change_password, totp_login_required)
