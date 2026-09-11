@@ -31,9 +31,8 @@ import {
  * rằng đã khóa xong. Đúng lớp lỗi mà rà soát 07/09 gọi tên: hệ thống nói một đằng, làm một nẻo,
  * và người dùng không có cách nào biết.
  *
- * Cộng thêm một vế mà rà soát nêu: `login` chạy tiếp thì `markLoginSuccess` XÓA
- * `failed_attempts` và ghi `auth.login.ok` — nhật ký ghi một lần đăng nhập THÀNH CÔNG cho một
- * tài khoản đang bị khóa.
+ * Cộng thêm một vế mà rà soát nêu: `login` chạy tiếp thì bộ đếm sai bị XÓA và nhật ký ghi
+ * `auth.login.ok` — một lần đăng nhập THÀNH CÔNG cho một tài khoản đang bị khóa.
  */
 
 test.beforeEach(() => {
