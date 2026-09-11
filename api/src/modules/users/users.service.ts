@@ -340,10 +340,41 @@ export class UsersService {
     return next;
   }
 
-  async markLoginSuccess(userId: string): Promise<void> {
+  /**
+   * MẬT KHẨU đã đúng → xoá dấu vết đoán mật khẩu. KHÔNG đóng dấu `last_login_at`.
+   *
+   * ===== VÌ SAO TÁCH LÀM HAI (11/09) =====
+   *
+   * Bản trước là một hàm `markLoginSuccess` làm cả hai việc, và nó chạy ngay sau khi Argon2
+   * xác minh xong — tức TRƯỚC bước TOTP. Với tài khoản bật `totp_login_required` (mặc định
+   * là mọi tài khoản), người gõ đúng mật khẩu nhưng không có điện thoại vẫn khiến
+   * `last_login_at` nhảy sang thời điểm đó.
+   *
+   * Hai bộ đếm thì xoá ở đây là ĐÚNG: chúng đếm việc đoán MẬT KHẨU, mà việc đó vừa kết thúc.
+   *
+   * `last_login_at` thì không. Nó là câu trả lời cho "người này vào lần cuối lúc nào", hiện
+   * thẳng trên màn Tài khoản và là thứ SA nhìn khi rà tài khoản bỏ quên hoặc khi truy vết một
+   * vụ việc. Đóng dấu nó cho một lượt CHƯA vào được biến nó thành câu trả lời sai — và sai
+   * theo hướng nguy hiểm: một kẻ có mật khẩu nhưng bị chặn ở cửa TOTP để lại đúng dấu vết của
+   * một lần đăng nhập bình thường.
+   */
+  async clearLoginFailures(userId: string): Promise<void> {
     await this.db
       .update(usersTable)
-      .set({ failedAttempts: 0, lockedUntil: null, lastLoginAt: new Date() })
+      .set({ failedAttempts: 0, lockedUntil: null })
+      .where(eq(usersTable.id, userId));
+  }
+
+  /**
+   * Đóng dấu `last_login_at` — chỉ gọi khi phiên đã xác thực ĐỦ.
+   *
+   * Nhận `tx` và không có bản chạy trên pool: mốc này phải commit cùng lượt cấp phiên, nếu
+   * không lại sinh ra đúng thứ vừa sửa — một mốc đăng nhập không có phiên nào đi kèm.
+   */
+  async markLoginCompletedWithin(tx: Tx, userId: string): Promise<void> {
+    await tx
+      .update(usersTable)
+      .set({ lastLoginAt: new Date() })
       .where(eq(usersTable.id, userId));
   }
 

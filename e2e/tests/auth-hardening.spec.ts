@@ -3,6 +3,7 @@ import {
   APP_ORIGIN,
   E2E_SA,
   firstLogin,
+  freshTotpCode,
   logout,
   NEW_PASSWORD,
   resetUsers,
@@ -172,6 +173,109 @@ test.describe('Siết cửa xác thực', () => {
         data: { token: '123456' },
       });
       expect(((await after.json()) as { code?: string }).code).not.toBe('TOTP_INVALID');
+    } finally {
+      await api.dispose();
+    }
+  });
+});
+
+/**
+ * "ĐĂNG NHẬP LẦN CUỐI" PHẢI LÀ LÚC THẬT SỰ VÀO ĐƯỢC — vá 11/09.
+ *
+ * ===== LỖ ĐANG VÁ =====
+ *
+ * `markLoginSuccess` chạy ngay sau khi Argon2 xác minh xong, tức TRƯỚC bước TOTP, và nó đóng
+ * dấu `last_login_at` cùng lúc với việc xoá hai bộ đếm sai. Với tài khoản bật
+ * `totp_login_required` (mặc định là mọi tài khoản), người gõ đúng mật khẩu nhưng KHÔNG có
+ * điện thoại vẫn khiến cột đó nhảy sang thời điểm ấy.
+ *
+ * Cột này hiện thẳng trên màn Tài khoản và là thứ SA nhìn khi rà tài khoản bỏ quên hoặc khi
+ * truy vết một vụ việc. Ghi sai nó là ghi sai theo hướng nguy hiểm: một kẻ có mật khẩu nhưng
+ * bị chặn ở cửa TOTP để lại đúng dấu vết của một lần đăng nhập bình thường — và người đọc sổ
+ * sẽ kết luận người dùng thật đã vào.
+ *
+ * Xoá bộ đếm thì VẪN đúng ở bước đó: chúng đếm việc đoán MẬT KHẨU, mà việc đó vừa kết thúc.
+ * Nên bài dưới kiểm cả hai vế — nếu chỉ kiểm vế đầu thì một bản "bỏ hẳn cả hai việc" cũng xanh.
+ */
+test.describe('Dấu "đăng nhập lần cuối"', () => {
+  function lastLoginAt(): string {
+    return sql(
+      `SELECT coalesce(last_login_at::text, '') FROM users WHERE email = '${E2E_SA.email}'`,
+    );
+  }
+
+  test('qua mật khẩu nhưng CHƯA qua TOTP thì không được đóng dấu', async ({ page }) => {
+    const secret = await firstLogin(page, E2E_SA);
+    await logout(page);
+
+    /*
+     * Nền sạch: xoá mốc do chính lượt `firstLogin` vừa đóng, và gieo sẵn 3 lượt sai để có cái
+     * mà quan sát ở vế đối chứng bên dưới.
+     */
+    sql(
+      `UPDATE users SET last_login_at = NULL, failed_attempts = 3 WHERE email = '${E2E_SA.email}'`,
+    );
+    expect(lastLoginAt()).toBe('');
+
+    const api = await rawClient();
+    try {
+      const step1 = await api.post('/api/v1/auth/login', {
+        data: { email: E2E_SA.email, password: NEW_PASSWORD },
+      });
+      expect(step1.status()).toBe(200);
+      const body = (await step1.json()) as { status: string; csrfToken: string };
+      // Bài chỉ có nghĩa khi phiên đang CHỜ mã — nếu không thì chẳng có bước nào ở giữa để hỏng.
+      expect(body.status).toBe('totp-required');
+
+      // ĐÂY LÀ CẢ BÀI: mật khẩu đúng nhưng chưa vào được, nên sổ chưa được ghi gì.
+      expect(lastLoginAt()).toBe('');
+
+      /*
+       * VẾ ĐỐI CHỨNG, và nó nằm ngay đây chứ không ở bài riêng: bộ đếm sai PHẢI đã bị xoá.
+       * Thiếu vế này thì một bản "dời cả hai việc xuống sau TOTP" cũng xanh — và khi đó một
+       * người gõ đúng mật khẩu ở lần thứ 5 sẽ vẫn còn nguyên 5 lượt sai trên hồ sơ.
+       */
+      expect(Number(sql(`SELECT failed_attempts FROM users WHERE email = '${E2E_SA.email}'`))).toBe(
+        0,
+      );
+
+      const step2 = await api.post('/api/v1/auth/login/totp', {
+        headers: { 'X-CSRF-Token': body.csrfToken },
+        data: { token: await freshTotpCode(secret) },
+      });
+      expect(step2.status(), '403 = chưa qua CSRF, bài kiểm chưa chạm tới luồng cần kiểm').toBe(
+        200,
+      );
+
+      // Giờ mới thật sự vào được → giờ mới được đóng dấu.
+      expect(lastLoginAt()).not.toBe('');
+    } finally {
+      await api.dispose();
+    }
+  });
+
+  /**
+   * VẾ ĐỐI CHỨNG THỨ HAI: tài khoản KHÔNG bắt TOTP lúc đăng nhập thì bước 1 đã là vào được,
+   * và mốc phải đóng dấu ngay ở đó. Không có bài này thì một bản "chỉ đóng dấu trong
+   * `verifyLoginTotp`" cũng xanh bài trên — và cả một nhóm người dùng sẽ mãi mãi hiện
+   * "chưa đăng nhập lần nào".
+   */
+  test('tài khoản không bắt TOTP thì đóng dấu ngay ở bước mật khẩu', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    await logout(page);
+    sql(
+      `UPDATE users SET last_login_at = NULL, totp_login_required = false WHERE email = '${E2E_SA.email}'`,
+    );
+
+    const api = await rawClient();
+    try {
+      const res = await api.post('/api/v1/auth/login', {
+        data: { email: E2E_SA.email, password: NEW_PASSWORD },
+      });
+      expect(res.status()).toBe(200);
+      expect(((await res.json()) as { status: string }).status).toBe('authenticated');
+
+      expect(lastLoginAt()).not.toBe('');
     } finally {
       await api.dispose();
     }

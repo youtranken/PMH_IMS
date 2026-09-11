@@ -94,8 +94,8 @@ export class AuthService {
      * dòng — và người kia vẫn đăng nhập bình thường. Không có gì trên hệ thống mâu thuẫn với
      * niềm tin rằng đã khóa xong (rà soát 07/09, mục 6 "Bảo mật").
      *
-     * Nặng thêm: đi tiếp thì `markLoginSuccess` XÓA `failed_attempts` và ghi `auth.login.ok` —
-     * nhật ký ghi một lần đăng nhập THÀNH CÔNG cho tài khoản đang bị khóa.
+     * Nặng thêm: đi tiếp thì bộ đếm sai bị XÓA và nhật ký ghi một lần đăng nhập THÀNH CÔNG
+     * cho tài khoản đang bị khóa.
      *
      * Mã lỗi RIÊNG với `ACCOUNT_DISABLED`: khóa là tạm và mở lại được, vô hiệu hóa là dứt
      * điểm. Gộp một mã thì người trực không biết nên bảo người dùng chờ hay bảo họ gặp SA.
@@ -227,11 +227,22 @@ export class AuthService {
         objectId: created.id,
         detail: { totpPending: needsTotp },
       });
+      /*
+       * `last_login_at` chỉ đóng dấu khi phiên đã xác thực ĐỦ (11/09).
+       *
+       * Với `needsTotp` thì tới đây người dùng MỚI qua cửa mật khẩu, chưa vào được — đóng dấu
+       * lúc này là ghi một lần đăng nhập chưa từng hoàn tất, và kẻ có mật khẩu nhưng bị chặn ở
+       * cửa TOTP sẽ để lại đúng dấu vết của một lần vào bình thường. Nhánh còn lại do
+       * `verifyLoginTotp` đóng dấu, trong chính transaction cấp phiên mới.
+       */
+      if (!needsTotp) await this.users.markLoginCompletedWithin(tx, user.id);
       await this.noticeNewDevice(tx, user, ctx);
       return created;
     });
 
-    await this.users.markLoginSuccess(user.id);
+    // Mật khẩu đã đúng → xoá dấu vết ĐOÁN MẬT KHẨU. Việc này đúng ở đây kể cả khi còn cửa TOTP:
+    // hai bộ đếm đó đếm lượt đoán mật khẩu, mà việc đó vừa kết thúc.
+    await this.users.clearLoginFailures(user.id);
     /*
      * Vào được từ NƠI NÀY → xoá dấu vết của chính nơi này.
      *
@@ -292,7 +303,7 @@ export class AuthService {
        * Bản trước chỉ ghi audit rồi ném. Trần duy nhất là throttler chung 300/phút, mà ở route
        * này `req.user` đã tồn tại nên 300 lượt đó đổ hết vào ĐÚNG MỘT tài khoản. Kẻ đã có mật
        * khẩu (dùng lại từ nơi khác, phishing) nhưng không có điện thoại chỉ việc bắn liên tục:
-       * phiên chờ không bao giờ chết, `markLoginSuccess` đã xóa `failed_attempts` nên lockout
+       * phiên chờ không bao giờ chết, `clearLoginFailures` đã xóa bộ đếm nên lockout
        * cũng không liên quan. Đã đo: 25 lượt đoán liên tiếp đều trả 401, không gì chặn.
        *
        * Thu hồi PHIÊN chứ không khóa TÀI KHOẢN — đúng lý do đã viết ở `stepUp()`: khóa tài
@@ -338,6 +349,14 @@ export class AuthService {
         totpPending: false,
       });
       await this.sessions.completeTotpWithin(tx, created.id);
+      /*
+       * ĐÂY mới là lúc đóng dấu `last_login_at` cho đường có TOTP (11/09).
+       *
+       * Phiên vừa cấp là phiên đầu tiên người này thật sự vào được: `login()` chỉ mở cửa mật
+       * khẩu và cố tình KHÔNG đóng dấu. Đặt trong chính transaction này nên hoặc phiên được
+       * cấp VÀ sổ ghi đúng, hoặc không có gì — cùng lý do đã ghi cho lượt đốt mã ngay dưới.
+       */
+      await this.users.markLoginCompletedWithin(tx, user.id);
       /*
        * ĐỐT MÃ TRONG CÙNG TRANSACTION VỚI LƯỢT CẤP PHIÊN (NFR-01).
        *
