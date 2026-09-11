@@ -64,6 +64,7 @@ const DOMAINS = {
   devices: [
     `DELETE FROM file WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
     `DELETE FROM secret WHERE owner_type = 'device' AND owner_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
+    `DELETE FROM file WHERE owner_type = 'nat_rule' AND owner_id IN (SELECT id FROM nat_rule WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%'))`,
     `DELETE FROM license_assignment WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
     `UPDATE isp_line SET device_id = NULL WHERE device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%')`,
     `ALTER TABLE nat_rule_history DISABLE TRIGGER nat_rule_history_no_delete`,
@@ -82,6 +83,8 @@ const DOMAINS = {
   ],
 
   software: [
+    // Giấy tờ của hồ sơ phần mềm chưa từng nằm trong vùng nào — 70 hàng mồ côi (cửa canh 11/09).
+    `DELETE FROM file WHERE owner_type = 'software' AND owner_id IN (SELECT id FROM software WHERE code ILIKE '%E2E%')`,
     `DELETE FROM license_assignment WHERE software_id IN (SELECT id FROM software WHERE code ILIKE '%E2E%')`,
     `DELETE FROM secret WHERE owner_type = 'software' AND owner_id IN (SELECT id FROM software WHERE code ILIKE '%E2E%')`,
     `ALTER TABLE software_history DISABLE TRIGGER software_history_no_delete`,
@@ -91,6 +94,9 @@ const DOMAINS = {
   ],
 
   ipam: [
+    // Giấy tờ của dải và của rule NAT: 54 hàng mồ côi nữa, cùng lý do (cửa canh 11/09).
+    `DELETE FROM file WHERE owner_type = 'subnet' AND owner_id IN (SELECT id FROM subnet WHERE name ILIKE '%E2E%')`,
+    `DELETE FROM file WHERE owner_type = 'nat_rule' AND owner_id IN (SELECT id FROM nat_rule WHERE ip_address_id IN (SELECT id FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE name ILIKE '%E2E%')) OR device_id IN (SELECT id FROM device WHERE code ILIKE '%E2E%'))`,
     `ALTER TABLE ip_history DISABLE TRIGGER ip_history_no_delete`,
     `DELETE FROM ip_history WHERE ip_address_id IN (SELECT id FROM ip_address WHERE subnet_id IN (SELECT id FROM subnet WHERE name ILIKE '%E2E%'))`,
     `ALTER TABLE ip_history ENABLE TRIGGER ip_history_no_delete`,
@@ -103,11 +109,37 @@ const DOMAINS = {
     `DELETE FROM subnet WHERE name ILIKE '%E2E%'`,
   ],
 
+  /*
+   * QUY ƯỚC: tên CHỨA chữ "E2E", không phải BẮT ĐẦU bằng "E2E-".
+   *
+   * Ba dòng `site`/`vendor`/`device_type` trước 11/09 dùng `LIKE 'E2E-%'` — khác hẳn sáu vùng
+   * còn lại, và khác vì một lý do không ai nhớ. Hậu quả đo được: spec đặt tên `S-E2E-MIXA-…`
+   * (có tiền tố `S-`) nên không bao giờ bị dọn, và `cabinet` của nó ở lại theo. Cửa canh rác
+   * 11/09 tìm ra — đúng lớp lỗi "hai bản luật cho cùng một khái niệm".
+   *
+   * `catalog_history` cũng chưa từng được dọn: 793 hàng tích lại. Nó là bảng chỉ-thêm (AD-13)
+   * nên phải tắt trigger đúng như sáu bảng lịch sử khác trong file này.
+   */
   catalog: [
-    `DELETE FROM cabinet WHERE site_id IN (SELECT id FROM site WHERE code LIKE 'E2E-%')`,
-    `DELETE FROM site WHERE code LIKE 'E2E-%'`,
-    `DELETE FROM vendor WHERE name LIKE 'E2E-%'`,
-    `DELETE FROM device_type WHERE name LIKE 'E2E-%'`,
+    `ALTER TABLE catalog_history DISABLE TRIGGER catalog_history_no_delete`,
+    /*
+     * Hai vế, và vế thứ hai mới là vế bắt buộc.
+     *
+     * Danh mục XOÁ HẲN được qua API (không phải ẩn), còn lịch sử thì ở lại — đó là thiết kế:
+     * dòng "đã xoá" là thứ duy nhất còn chứng minh mục đó từng tồn tại. Hệ quả với E2E: hàng
+     * lịch sử MỒ CÔI, không còn hàng gốc nào để dọn theo, nên vế `entity_id IN (…)` không bao
+     * giờ với tới.
+     *
+     * Lọc theo NGƯỜI THỰC HIỆN là cách vùng `approvals` ngay dưới đã dùng (`requester ILIKE
+     * '%e2e%'`) — không phải quy ước mới, và không đụng tới lịch sử của người dùng thật (năm
+     * tài khoản thật không ai có chữ "e2e" trong email).
+     */
+    `DELETE FROM catalog_history WHERE actor ILIKE '%e2e%' OR entity_id IN (SELECT id FROM site WHERE code ILIKE '%E2E%' UNION ALL SELECT id FROM cabinet WHERE code ILIKE '%E2E%' UNION ALL SELECT id FROM vendor WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM device_type WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM service_port WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM department WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM isp_provider WHERE name ILIKE '%E2E%')`,
+    `ALTER TABLE catalog_history ENABLE TRIGGER catalog_history_no_delete`,
+    `DELETE FROM cabinet WHERE code ILIKE '%E2E%' OR site_id IN (SELECT id FROM site WHERE code ILIKE '%E2E%')`,
+    `DELETE FROM site WHERE code ILIKE '%E2E%'`,
+    `DELETE FROM vendor WHERE name ILIKE '%E2E%'`,
+    `DELETE FROM device_type WHERE name ILIKE '%E2E%'`,
     `DELETE FROM service_port WHERE name ILIKE '%E2E%'`,
     `DELETE FROM department WHERE name ILIKE '%E2E%'`,
     `DELETE FROM isp_provider WHERE name ILIKE '%E2E%'`,
@@ -133,7 +165,20 @@ const DOMAINS = {
     `DELETE FROM approval WHERE requester ILIKE '%e2e%'`,
   ],
 
-  'digest-rules': [`DELETE FROM expiry_rule WHERE name ILIKE '%E2E%'`],
+  /*
+   * Vùng này gom MỌI thứ cỗ máy hạn để lại, không chỉ luật gửi báo cáo.
+   *
+   * `renewal_history` (137 hàng lúc phát hiện) chưa từng nằm trong vùng nào. Nó không gắn khoá
+   * ngoại với hồ sơ nào — `object_kind` + `object_id` là liên kết MỀM, cố ý, để engine hạn
+   * không phải biết bảng nào tồn tại (AD-7). Nên không có hàng gốc nào để dọn theo, và nó chỉ
+   * lớn lên. Lọc bằng `actor` như vùng `approvals`, cộng `label` cho chắc.
+   */
+  'digest-rules': [
+    `ALTER TABLE renewal_history DISABLE TRIGGER renewal_history_no_delete`,
+    `DELETE FROM renewal_history WHERE actor ILIKE '%e2e%' OR label ILIKE '%E2E%'`,
+    `ALTER TABLE renewal_history ENABLE TRIGGER renewal_history_no_delete`,
+    `DELETE FROM expiry_rule WHERE name ILIKE '%E2E%'`,
+  ],
 
   isp: [
     `DELETE FROM file WHERE owner_type = 'isp' AND owner_id IN (SELECT id FROM isp_line WHERE code ILIKE '%E2E%')`,
@@ -239,7 +284,18 @@ async function main() {
     process.exit(1);
   }
 
-  const domains = process.argv.slice(2);
+  /*
+   * `all` = mọi vùng, theo đúng thứ tự khai trong `DOMAINS`.
+   *
+   * Thêm 11/09 cho cửa canh rác ở `e2e/global-teardown.ts`: nó chạy trọn lượt dọn ở cuối lượt
+   * E2E rồi hỏi "còn sót hàng nào không". Thứ sống sót qua lượt dọn thì THEO ĐỊNH NGHĨA là
+   * thứ lượt dọn không dọn được — không phải đoán, không phải chép lại luật ra chỗ thứ hai.
+   *
+   * Gõ tay 12 tên vùng ở bên kia cũng chạy, nhưng đó lại là một danh sách nữa phải nhớ cập
+   * nhật, và quên cập nhật thì cửa canh mù đúng vùng vừa thêm.
+   */
+  const requested = process.argv.slice(2);
+  const domains = requested.includes('all') ? ['users', ...Object.keys(DOMAINS)] : requested;
   const unknown = domains.filter((d) => d !== 'users' && !(d in DOMAINS));
   if (unknown.length > 0) {
     console.error(

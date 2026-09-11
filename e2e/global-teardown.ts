@@ -18,20 +18,33 @@ import { clearRunStart, findLeakedRows } from './leak-guard';
  *    Xem `leak-guard.ts` để biết vì sao nó đáng một cổng riêng.
  */
 export default function globalTeardown(): void {
-  restoreRateLimit();
-
+  /*
+   * THỨ TỰ QUAN TRỌNG: cửa canh chạy TRƯỚC, trả trần sau.
+   *
+   * `findLeakedRows()` chạy trọn `reset-e2e.mjs`, mà vùng `users` của lượt dọn NÂNG
+   * `login.rate_limit_per_ip` lên mức E2E. Trả trần trước rồi mới dọn thì lượt dọn nâng lại,
+   * và DB dev nằm vĩnh viễn ở ngưỡng 500 — đúng lỗ F-QA-02 mà bước trả trần này sinh ra để vá.
+   */
   const leaked = findLeakedRows();
   clearRunStart();
+  restoreRateLimit();
+
   if (leaked) {
     throw new Error(
-      `Bộ E2E để lại hàng mà \`reset-e2e.mjs\` KHÔNG dọn được (tên thiếu chữ "E2E"):
+      `Bộ E2E để lại hàng SỐNG SÓT QUA TRỌN MỘT LƯỢT DỌN:
 ${leaked}
 
-Quy ước: mọi hàng do bài kiểm tạo ra phải mang chữ "E2E" trong \`subnet.name\`,
-\`software.code\`, \`device.code\` — đó là thứ DUY NHẤT \`reset-e2e.mjs\` nhìn vào.
-Sửa tên trong spec vừa thêm, rồi dọn tay số đã lỡ tạo (đổi tên là đủ, lượt reset
-sau sẽ tự xoá):
-  UPDATE subnet SET name = name || ' E2E' WHERE name LIKE '<mẫu>%';`,
+Nghĩa là \`api/scripts/reset-e2e.mjs\` không có đường nào với tới chúng — gần như luôn
+luôn vì bài kiểm đặt tên không đúng quy ước. Lượt dọn nhận ra hàng của E2E BẰNG TÊN:
+\`device.code\`/\`software.code\`/\`isp_line.code\` chứa "E2E", \`subnet.name\` chứa "E2E",
+\`users.email\` bắt đầu bằng "e2e-tao-moi-"… (xem \`DOMAINS\` trong script đó).
+
+Sửa tên trong spec vừa thêm. Số đã lỡ tạo thì đổi tên là đủ, lượt dọn sau tự xoá:
+  UPDATE subnet SET name = name || ' E2E' WHERE name LIKE '<mẫu>%';
+
+Nếu bảng này ĐÚNG LÀ được phép giữ hàng lại (chỉ-thêm, sổ sự kiện…), khai nó vào
+\`MAY_GROW\` trong \`e2e/leak-guard.ts\` KÈM LÝ DO — đó là ngoại lệ phải giải thích
+được, không phải chỗ để dập tắt cảnh báo.`,
     );
   }
 }
