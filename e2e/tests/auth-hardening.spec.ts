@@ -70,10 +70,16 @@ test.describe('Siết cửa xác thực', () => {
         5,
       );
 
+      /*
+       * `users.locked_until` ĐỔI VAI từ 11/09: nó không còn chặn đăng nhập, nay là mốc CẢNH
+       * BÁO (chạm ngưỡng thì bắn thư báo SA, và chính nó là cửa sổ chống spam thư). Bài này
+       * vẫn đọc đúng cột đó vì thứ nó đang đo là BỘ ĐẾM CÓ CỘNG DỒN KHÔNG — câu hỏi không đổi.
+       * Vế "ai bị chặn" nay do `khoa-dang-nhap-theo-noi.spec.ts` giữ.
+       */
       const lockedUntil = sql(
         `SELECT coalesce(locked_until::text, '') FROM users WHERE email = '${E2E_SA.email}'`,
       );
-      expect(lockedUntil, 'sáu lượt sai thì tài khoản phải bị khóa').not.toBe('');
+      expect(lockedUntil, 'sáu lượt sai thì phải chạm mốc cảnh báo').not.toBe('');
     } finally {
       await Promise.all(clients.map((api) => api.dispose()));
     }
