@@ -516,24 +516,30 @@ export class LicenseAssignmentService {
     }
   }
 
-  /** Gắn mã + tên thiết bị (một lượt hỏi devices.api, không N+1). */
+  /**
+   * Gắn mã + tên thiết bị bằng MỘT lượt hỏi `devices.api`.
+   *
+   * Chú thích cũ ở đây viết đúng câu này — "(một lượt hỏi devices.api, không N+1)" — trong khi
+   * code ngay bên dưới gọi `getById` cho TỪNG dòng. Một bảng gán 200 máy là 1600 truy vấn, và
+   * dòng chữ đó là lý do không ai đi kiểm lại. Giữ lại ghi chú này để lần sau đọc chú thích
+   * thì vẫn mở code ra xem.
+   */
   private async decorate(
     rows: (typeof licenseAssignmentTable.$inferSelect)[],
   ): Promise<AssignmentRow[]> {
+    const devices = await this.devices.getByIds(rows.map((row) => row.deviceId));
     const out: AssignmentRow[] = [];
     for (const row of rows) {
       let deviceCode = '(thiết bị không còn)';
       let deviceName = '';
       let deviceAssignedTo: string | null = null;
-      try {
-        const device = await this.devices.getById(row.deviceId);
+      const device = devices.get(row.deviceId);
+      if (device) {
         deviceCode = device.code;
         deviceName = device.name;
         deviceAssignedTo = device.assignedTo;
-      } catch {
-        // Thiết bị bị khóa/thanh lý vẫn đọc được; chỉ khi dữ liệu hỏng mới rơi vào đây.
-        // Không được để một bản ghi lạ làm sập cả bảng gán.
       }
+      // Vắng mặt = thiết bị bị xóa/dữ liệu hỏng. Không được để một bản ghi lạ làm sập cả bảng.
       out.push({
         id: row.id,
         softwareId: row.softwareId,

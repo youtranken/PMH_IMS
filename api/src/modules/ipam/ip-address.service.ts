@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, desc, eq, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { requireCas } from '../../common/cas';
@@ -195,6 +195,22 @@ export class IpAddressService {
 
   async findOne(id: string): Promise<IpAddressRecord> {
     return (await this.decorate([await this.requireAlive(id)]))[0];
+  }
+
+  /**
+   * Tra NHIỀU hồ sơ IP còn sống trong MỘT lượt — bản chống N+1 của `findOne`, cho sổ NAT.
+   *
+   * Id không tồn tại (hoặc đã ẩn) thì VẮNG MẶT trong map chứ không ném: sổ NAT hiện được cả
+   * rule trỏ vào một địa chỉ chưa có hồ sơ, và đó là chuyện bình thường chứ không phải lỗi.
+   */
+  async findByIds(ids: string[]): Promise<Map<string, IpAddressRecord>> {
+    const unique = [...new Set(ids)];
+    if (unique.length === 0) return new Map();
+    const rows = await this.db
+      .select()
+      .from(ipAddressTable)
+      .where(and(inArray(ipAddressTable.id, unique), isNull(ipAddressTable.voidedAt)));
+    return new Map((await this.decorate(rows)).map((item) => [item.id, item]));
   }
 
   /**
@@ -857,17 +873,17 @@ export class IpAddressService {
   private async decorate(
     rows: (typeof ipAddressTable.$inferSelect)[],
   ): Promise<IpAddressRecord[]> {
+    /*
+     * MỘT lượt hỏi `devices.api` cho cả trang, không phải một lượt mỗi thiết bị.
+     *
+     * Bản trước gọi `getById` trong vòng lặp, mà hàm đó tốn 8 truy vấn (đọc hàng `device` +
+     * `catalog.lists()` bắn 7 câu không cache). Một dải /24 gán đầy là ~2000 câu cho MỘT lần
+     * mở màn — và nó lớn lên theo số máy, đúng chiều mà sổ IPAM sẽ lớn lên.
+     */
     const deviceIds = [...new Set(rows.map((row) => row.deviceId).filter(Boolean))] as string[];
-    const devices = new Map(
-      await Promise.all(
-        deviceIds.map(async (id) => {
-          const device = await this.devices.getById(id).catch(() => null);
-          return [id, device] as const;
-        }),
-      ),
-    );
+    const devices = await this.devices.getByIds(deviceIds);
     return rows.map((row) => {
-      const device = row.deviceId ? devices.get(row.deviceId) : null;
+      const device = row.deviceId ? (devices.get(row.deviceId) ?? null) : null;
       return {
         id: row.id,
         subnetId: row.subnetId,

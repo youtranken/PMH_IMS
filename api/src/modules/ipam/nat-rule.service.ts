@@ -663,28 +663,22 @@ export class NatRuleService {
   private async decorate(
     rows: (typeof natRuleTable.$inferSelect)[],
   ): Promise<NatRuleRecord[]> {
+    /*
+     * HAI lượt hỏi cho cả trang, không phải hai lượt mỗi dòng.
+     *
+     * Bản trước là N+1 LỒNG, và đây là chỗ tệ nhất trong cả repo: mỗi rule tra thiết bị
+     * (`getById` = 8 truy vấn), rồi tra hồ sơ IP, mà `IpAddressService.findOne` LẠI tra thiết
+     * bị của hồ sơ đó thêm một lượt 8 câu nữa. Sổ NAT của một router có 40 rule tốn hơn 600
+     * câu cho một lần mở.
+     */
     const deviceIds = [...new Set(rows.map((row) => row.deviceId))];
-    const devices = new Map(
-      await Promise.all(
-        deviceIds.map(async (id) => {
-          const device = await this.devices.getById(id).catch(() => null);
-          return [id, device] as const;
-        }),
-      ),
-    );
+    const devices = await this.devices.getByIds(deviceIds);
     const ipIds = [...new Set(rows.map((row) => row.ipAddressId).filter(Boolean))] as string[];
-    const ips = new Map(
-      await Promise.all(
-        ipIds.map(async (id) => {
-          const ip = await this.addresses.findOne(id).catch(() => null);
-          return [id, ip] as const;
-        }),
-      ),
-    );
+    const ips = await this.addresses.findByIds(ipIds);
 
     return rows.map((row) => {
-      const device = devices.get(row.deviceId);
-      const ip = row.ipAddressId ? ips.get(row.ipAddressId) : null;
+      const device = devices.get(row.deviceId) ?? null;
+      const ip = row.ipAddressId ? (ips.get(row.ipAddressId) ?? null) : null;
       return {
         id: row.id,
         deviceId: row.deviceId,

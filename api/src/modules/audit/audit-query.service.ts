@@ -34,6 +34,15 @@ export interface AuditRow {
 }
 
 /** Viewer audit log (6.2) — CHỈ đọc (AD-10 append-only); ranh giới ngày theo VN (nhất quán 6.1). */
+/**
+ * Trần của câu đếm. 10.000 là con số người đọc còn dùng được ("quá nhiều, lọc hẹp lại"),
+ * và đủ nhỏ để câu đếm luôn dừng sớm dù bảng có bao nhiêu triệu dòng.
+ *
+ * KHÔNG vào `system_config`: AD-11 dành cho tham số NGHIỆP VỤ (ngưỡng hạn, số lần sai được
+ * phép). Đây là một cái phanh kỹ thuật, đổi nó không đổi luật gì của công ty.
+ */
+const COUNT_CAP = 10_000;
+
 @Injectable()
 export class AuditQueryService {
   constructor(@Inject(DRIZZLE_DB) private readonly db: Database) {}
@@ -41,6 +50,8 @@ export class AuditQueryService {
   async listAudit(q: AuditQuery): Promise<{
     items: AuditRow[];
     total: number;
+    /** `true` = còn nhiều hơn `total`; màn hình phải hiện "10.000+" chứ không phải một con số. */
+    totalCapped: boolean;
     page: number;
     pageSize: number;
   }> {
@@ -100,10 +111,28 @@ export class AuditQueryService {
         ORDER BY a.created_at DESC, a.id DESC
         LIMIT ${q.pageSize} OFFSET ${offset}
       `),
+      /*
+       * ĐẾM CÓ TRẦN, KHÔNG ĐẾM TOÀN BẢNG.
+       *
+       * `audit_log` là bảng CHỈ-THÊM giữ VĨNH VIỄN (NFR-03) — nó chỉ có thể to lên, không bao
+       * giờ nhỏ lại. `count(*)` không có `WHERE` (mở màn lần đầu, không lọc gì) bắt Postgres
+       * quét trọn bảng cho MỖI lần bấm sang trang, và cái giá đó lớn lên mãi mãi. Đây là loại
+       * chậm không ai để ý lúc viết và không ai gỡ được sau hai năm chạy.
+       *
+       * `LIMIT` trong câu con là thứ chặn công việc lại: Postgres dừng ngay khi gom đủ
+       * `COUNT_CAP + 1` dòng khớp, bất kể bảng có bao nhiêu dòng. Không cần index, không cần
+       * `ORDER BY`.
+       *
+       * Đổi lại là con số có trần, và điều đó phải nói ra chứ không giấu: `totalCapped` để màn
+       * hình hiện "10.000+". Một con số sai mà trông như số thật thì tệ hơn hẳn một con số
+       * thành thật rằng nó bị cắt — nhật ký an ninh là chỗ người ta đếm để đối chiếu.
+       */
       this.db.execute<{ n: number }>(sql`
-        SELECT count(*)::int AS n FROM audit_log a ${where}
+        SELECT count(*)::int AS n
+        FROM (SELECT 1 FROM audit_log a ${where} LIMIT ${COUNT_CAP + 1}) capped
       `),
     ]);
+    const counted = totalRows.rows[0]?.n ?? 0;
     return {
       items: items.rows.map((r) => ({
         id: r.id,
@@ -116,7 +145,8 @@ export class AuditQueryService {
         detail: r.detail,
         createdAt: new Date(r.created_at).toISOString(),
       })),
-      total: totalRows.rows[0]?.n ?? 0,
+      total: Math.min(counted, COUNT_CAP),
+      totalCapped: counted > COUNT_CAP,
       page: q.page,
       pageSize: q.pageSize,
     };

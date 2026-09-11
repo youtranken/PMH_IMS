@@ -314,18 +314,28 @@ export class IspLineService {
     const lists = await this.catalog.lists({ includeInactive: true });
     const sites = new Map(lists.sites.map((site) => [site.id, site]));
 
+    /*
+     * MỘT lượt hỏi cho cả trang. Bản trước gọi `getById` cho từng dòng, mà hàm đó tốn 8 truy
+     * vấn — danh sách 30 đường truyền là 240 câu cho một lần mở.
+     *
+     * Hành vi với thiết bị hỏng dữ liệu KHÔNG đổi: vắng mặt trong map thì vẫn hiện
+     * "(thiết bị không còn)". Đây là màn người ta mở lúc đang mất mạng, nên một hàng hỏng
+     * không được làm sập cả bảng.
+     */
+    const devices = await this.devices.getByIds(
+      rows.map((row) => row.deviceId).filter(Boolean) as string[],
+    );
+
     const out: IspLineListItem[] = [];
     for (const row of rows) {
       let deviceCode: string | null = null;
       let deviceName: string | null = null;
       if (row.deviceId) {
-        try {
-          const device = await this.devices.getById(row.deviceId);
+        const device = devices.get(row.deviceId);
+        if (device) {
           deviceCode = device.code;
           deviceName = device.name;
-        } catch {
-          // Thiết bị hỏng dữ liệu KHÔNG được làm sập danh sách đường truyền — đây là màn
-          // người ta mở lúc đang mất mạng.
+        } else {
           deviceCode = '(thiết bị không còn)';
         }
       }
