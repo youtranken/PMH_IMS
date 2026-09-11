@@ -20,6 +20,20 @@ export class DevicesApiService {
   }
 
   /**
+   * Tra NHIỀU thiết bị trong MỘT lượt. **Đây là cửa cho mọi đường DANH SÁCH.**
+   *
+   * `getById` KHÔNG rẻ: nó tốn 8 truy vấn (một câu đọc hàng `device`, rồi `catalog.lists()`
+   * bắn 7 câu không cache). Gọi nó trong vòng lặp là nhân 8 với số dòng — một dải /24 gán đầy
+   * từng tốn ~2000 câu cho một lần mở màn.
+   *
+   * Id không tồn tại thì VẮNG MẶT trong map chứ không ném: nơi gọi tự quyết hiện gì cho hàng
+   * dữ liệu hỏng ("(thiết bị không còn)"), và một hàng hỏng không được làm sập cả bảng.
+   */
+  getByIds(ids: string[]): Promise<Map<string, DeviceListItem>> {
+    return this.devices.findByIds(ids);
+  }
+
+  /**
    * "Thiết bị này còn nhận thêm được không?" — cửa DUY NHẤT cho module khác hỏi trước khi ghi
    * bất cứ thứ gì trỏ tới một `deviceId` người dùng chọn.
    *

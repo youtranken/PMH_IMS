@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, ne, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -107,6 +107,36 @@ export class DevicesService {
       });
     }
     return (await this.decorate(rows))[0];
+  }
+
+  /**
+   * Tra NHIỀU thiết bị trong MỘT lượt — bản chống N+1 của `findOne`.
+   *
+   * ===== VÌ SAO CẦN =====
+   *
+   * `findOne` tốn 8 truy vấn, không phải 1: một câu đọc hàng `device`, rồi `decorate` gọi
+   * `catalog.lists()` mà hàm đó bắn 7 câu song song và KHÔNG cache. Con số đó vô hại khi mở
+   * một hồ sơ, và tai hại khi năm chỗ khác nhau gọi nó trong vòng lặp:
+   *
+   *   · `IpAddressService.decorate`  — một dải /24 gán đầy: 254 × 8 ≈ 2000 câu cho MỘT lần
+   *     mở màn dải;
+   *   · `NatRuleService.decorate`    — tệ hơn, N+1 LỒNG: mỗi rule tra thiết bị (8 câu) và tra
+   *     hồ sơ IP, mà `IpAddressService.findOne` lại tra thiết bị lần nữa;
+   *   · `IspLineService.decorate`, `LicenseAssignmentService.decorate` — mỗi dòng một lượt.
+   *
+   * Trả `Map` chứ không phải mảng: nơi gọi luôn cần tra theo id, và trả mảng thì mỗi nơi lại
+   * tự dựng `Map` một lần — ba bản của cùng một việc.
+   *
+   * Id không tồn tại thì VẮNG MẶT trong map, không ném. Bốn nơi gọi đều đang `catch` rồi hiện
+   * "(thiết bị không còn)", và hành vi đó phải giữ: một hàng dữ liệu hỏng không được làm sập
+   * cả bảng.
+   */
+  async findByIds(ids: string[]): Promise<Map<string, DeviceListItem>> {
+    const unique = [...new Set(ids)];
+    if (unique.length === 0) return new Map();
+    const rows = await this.db.select().from(deviceTable).where(inArray(deviceTable.id, unique));
+    const decorated = await this.decorate(rows);
+    return new Map(decorated.map((item) => [item.id, item]));
   }
 
   /**
