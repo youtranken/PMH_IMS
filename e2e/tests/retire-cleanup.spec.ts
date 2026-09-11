@@ -5,6 +5,7 @@ import {
   resetCatalog,
   resetDevices,
   resetIpam,
+  resetIsp,
   resetSoftware,
   resetUsers,
   sql,
@@ -33,6 +34,7 @@ test.beforeEach(() => {
   resetIpam();
   resetSoftware();
   resetCatalog();
+  resetIsp();
 });
 
 interface Kit {
@@ -341,5 +343,267 @@ test.describe('Thanh lý trên giao diện — ô tick "Dọn hết thứ liên 
         ),
       ),
     ).toBe(0);
+  });
+});
+
+/**
+ * HAI CHỦ NỢ KHÔNG AI NHẬN — nợ cũ trên `master`, đóng ngày 11/09.
+ *
+ * ===== LỖ ĐANG VÁ =====
+ *
+ * Sáu bảng mang khóa ngoại trỏ tới `device`, tất cả đều `ON DELETE RESTRICT`. Tới 11/09
+ * `DeviceRetirementRegistry` chỉ có HAI người đăng ký — `ipam` (IP + rule NAT) và `software`
+ * (ghế license). Hai bảng còn lại không ai nhận:
+ *
+ *   · `device_port.connected_device_id` (0013) — cổng đấu chéo. `0013` ghi rõ một sợi dây chỉ
+ *     tạo MỘT bản ghi, không có bản đối xứng, nên bản ghi trỏ tới máy bị thanh lý nằm trên
+ *     hồ sơ của MÁY KHÁC — một máy vẫn đang chạy.
+ *   · `isp_line.device_id` (0016) — đường truyền cắm vào thiết bị biên.
+ *
+ * Nên thanh lý con router: IP được thu, rule NAT được gỡ, ghế license được trả — còn sơ đồ
+ * đấu nối của con switch bên cạnh vẫn trỏ vào một máy đã ra khỏi công ty, và hồ sơ đường
+ * truyền vẫn ghi nó đang cắm vào đó.
+ *
+ * Hậu quả không phải lý thuyết: chú thích trong `IspLineService.prepare` kể lại rằng "máy đã
+ * thanh lý mà vẫn còn đường truyền cắm vào là chuyện CÓ THẬT với dữ liệu cũ", và hàng rào
+ * `assertUsable` từng nhốt người dùng lại, không cho sửa chính cái liên kết hỏng đó. Bản vá
+ * 08/09 nới hàng rào để đi tiếp được — tức vá phần ngọn. Đây là phần gốc.
+ */
+test.describe('Thanh lý router — cổng đấu chéo và đường truyền', () => {
+  interface RouterKit {
+    headers: Record<string, string>;
+    routerId: string;
+    routerCode: string;
+    switchId: string;
+    switchCode: string;
+    portId: string;
+    ispId: string;
+    ispCode: string;
+  }
+
+  /** Con router sắp thanh lý: một switch đang đấu vào nó, và một đường truyền cắm vào nó. */
+  async function routerWithCrossConnectAndIsp(page: Page, stamp: string): Promise<RouterKit> {
+    const headers = await writeHeaders(page);
+    const catalog = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/catalog', { credentials: 'include' });
+      return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
+    });
+    const anyType = catalog.deviceTypes[0].id;
+    const rtType = catalog.deviceTypes.find((t) => t.name === 'Router')?.id ?? anyType;
+    const swType = catalog.deviceTypes.find((t) => t.name === 'Switch')?.id ?? anyType;
+
+    const routerCode = `RT-E2E-XC-${stamp}`;
+    const router = await page.request.post('/api/v1/devices', {
+      headers,
+      data: { code: routerCode, name: 'Router E2E sap thanh ly', deviceTypeId: rtType },
+    });
+    expect(router.status()).toBe(201);
+    const routerId = ((await router.json()) as { device: { id: string } }).device.id;
+
+    const switchCode = `SW-E2E-XC-${stamp}`;
+    const sw = await page.request.post('/api/v1/devices', {
+      headers,
+      data: { code: switchCode, name: 'Switch E2E con chay', deviceTypeId: swType },
+    });
+    expect(sw.status()).toBe(201);
+    const switchId = ((await sw.json()) as { device: { id: string } }).device.id;
+
+    // Cổng NẰM TRÊN switch, TRỎ TỚI router. Chiều này mới là chiều bị bỏ quên.
+    const port = await page.request.post(`/api/v1/devices/${switchId}/ports`, {
+      headers,
+      data: {
+        portLabel: 'GI1/0/24',
+        connectedDeviceId: routerId,
+        connectedPort: 'LAN1',
+        usedBy: 'Uplink E2E',
+      },
+    });
+    expect(port.status()).toBe(201);
+    const portId = ((await port.json()) as { id: string }).id;
+
+    const ispCode = `ISP-E2E-XC-${stamp}`;
+    const isp = await page.request.post('/api/v1/isp-lines', {
+      headers,
+      data: {
+        code: ispCode,
+        provider: 'VNPT E2E',
+        bandwidth: '100 Mbps',
+        contractNo: `HD-E2E-${stamp}`,
+        hotline: '18001166',
+        deviceId: routerId,
+      },
+    });
+    expect(isp.status()).toBe(201);
+    const ispId = ((await isp.json()) as { id: string }).id;
+
+    return { headers, routerId, routerCode, switchId, switchCode, portId, ispId, ispCode };
+  }
+
+  test('không tick dọn → BỊ CHẶN, và lỗi gọi đích danh cổng lẫn đường truyền', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const kit = await routerWithCrossConnectAndIsp(page, stamp);
+
+    const blocked = await page.request.patch(`/api/v1/devices/${kit.routerId}/status`, {
+      headers: kit.headers,
+      data: { status: 'retired', cleanup: false },
+    });
+    expect(
+      blocked.status(),
+      'hai chủ nợ này trước 11/09 không ai nhận, nên lượt thanh lý đi thẳng qua',
+    ).toBe(409);
+
+    const body = (await blocked.json()) as { code?: string; message?: string };
+    expect(body.code).toBe('DEVICE_HAS_HOLDINGS');
+    expect(body.message, 'phải nêu TÊN CỔNG, không phải uuid').toContain('GI1/0/24');
+    expect(body.message, 'phải nêu MÁY ĐANG GIỮ bản ghi cổng').toContain(kit.switchCode);
+    expect(body.message, 'phải nêu mã đường truyền').toContain(kit.ispCode);
+
+    // Bị chặn thì không được đổi gì — chặn nửa vời tệ hơn không chặn.
+    expect(sql(`SELECT status FROM device WHERE id = '${kit.routerId}'`)).toBe('in_use');
+    expect(
+      sql(
+        `SELECT coalesce(connected_device_id::text,'<null>') FROM device_port WHERE id = '${kit.portId}'`,
+      ),
+    ).toBe(kit.routerId);
+  });
+
+  test('tick dọn → cổng gỡ liên kết nhưng GIỮ CHỮ, đường truyền rời máy mà hồ sơ còn nguyên', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const kit = await routerWithCrossConnectAndIsp(page, stamp);
+
+    const done = await page.request.patch(`/api/v1/devices/${kit.routerId}/status`, {
+      headers: kit.headers,
+      data: { status: 'retired', cleanup: true },
+    });
+    expect(done.status(), 'tick dọn thì phải chạy trọn').toBeLessThan(300);
+    expect(sql(`SELECT status FROM device WHERE id = '${kit.routerId}'`)).toBe('retired');
+
+    // ── Cổng đấu chéo ───────────────────────────────────────────────────────────
+    expect(
+      sql(
+        `SELECT coalesce(connected_device_id::text,'<null>') FROM device_port WHERE id = '${kit.portId}'`,
+      ),
+      'liên kết tới máy đã thanh lý phải được gỡ',
+    ).toBe('<null>');
+    expect(
+      sql(`SELECT coalesce(connected_label,'<null>') FROM device_port WHERE id = '${kit.portId}'`),
+      'gỡ liên kết KHÔNG được xoá trắng: sáu tháng sau vẫn phải đọc ra đầu kia từng là máy nào',
+    ).toContain(kit.routerCode);
+    expect(
+      sql(`SELECT port_label FROM device_port WHERE id = '${kit.portId}'`),
+      'bản ghi cổng của máy còn sống không được xoá theo',
+    ).toBe('GI1/0/24');
+    expect(
+      Number(
+        sql(
+          `SELECT count(*) FROM device_history WHERE device_id = '${kit.switchId}' AND action = 'port-unlinked'`,
+        ),
+      ),
+      'lịch sử phải ghi vào máy GIỮ BẢN GHI, để tab Lịch sử của switch giải thích được',
+    ).toBe(1);
+
+    // ── Đường truyền ────────────────────────────────────────────────────────────
+    expect(
+      sql(`SELECT coalesce(device_id::text,'<null>') FROM isp_line WHERE id = '${kit.ispId}'`),
+      'đường truyền phải rời khỏi máy đã thanh lý',
+    ).toBe('<null>');
+    expect(
+      sql(`SELECT status FROM isp_line WHERE id = '${kit.ispId}'`),
+      'RANH GIỚI: thanh lý MÁY không được thanh lý HỢP ĐỒNG — hoá đơn vẫn về hằng tháng',
+    ).toBe('active');
+    expect(
+      sql(`SELECT contract_no FROM isp_line WHERE id = '${kit.ispId}'`),
+      'số hợp đồng phải còn nguyên',
+    ).toBe(`HD-E2E-${stamp}`);
+    expect(
+      Number(
+        sql(
+          `SELECT count(*) FROM isp_line_history WHERE isp_line_id = '${kit.ispId}' AND action = 'device-detached'`,
+        ),
+      ),
+      'AD-13: rời khỏi router nào, ngày nào — câu sẽ có người hỏi lúc đối soát',
+    ).toBe(1);
+  });
+
+  /**
+   * VẾ ĐỐI CHỨNG, và là ranh giới dễ vượt nhất.
+   *
+   * Cổng NẰM TRÊN chính máy bị thanh lý là hồ sơ của nó, và phải ở lại:
+   * `DevicePortsService.remove` đã giải thích vì sao ("bằng chứng hồi đó nó cắm vào đâu"). Một
+   * bản vá dọn quá tay sẽ xoá đúng thứ người ta cần lúc truy vết, và không bài nào ở trên bắt
+   * được chuyện đó.
+   */
+  test('cổng nằm TRÊN máy bị thanh lý thì ở lại — chỉ chiều trỏ TỚI nó mới được gỡ', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const kit = await routerWithCrossConnectAndIsp(page, stamp);
+
+    // Một cổng của chính con router, đấu sang switch.
+    const own = await page.request.post(`/api/v1/devices/${kit.routerId}/ports`, {
+      headers: kit.headers,
+      data: { portLabel: 'LAN2', connectedDeviceId: kit.switchId, usedBy: 'Xuong duoi E2E' },
+    });
+    expect(own.status()).toBe(201);
+    const ownPortId = ((await own.json()) as { id: string }).id;
+
+    expect(
+      (
+        await page.request.patch(`/api/v1/devices/${kit.routerId}/status`, {
+          headers: kit.headers,
+          data: { status: 'retired', cleanup: true },
+        })
+      ).status(),
+    ).toBeLessThan(300);
+
+    expect(
+      Number(sql(`SELECT count(*) FROM device_port WHERE id = '${ownPortId}'`)),
+      'hồ sơ cổng của máy đã thanh lý là bằng chứng, không được dọn theo',
+    ).toBe(1);
+    expect(
+      sql(
+        `SELECT coalesce(connected_device_id::text,'<null>') FROM device_port WHERE id = '${ownPortId}'`,
+      ),
+      'và liên kết của nó sang máy còn sống cũng giữ nguyên',
+    ).toBe(kit.switchId);
+  });
+
+  /**
+   * VẾ ĐỐI CHỨNG THỨ HAI: máy không giữ hai thứ này thì hàng rào phải im lặng. Không có bài
+   * này thì một bản "luôn báo còn giữ đồ" cũng xanh hai bài đầu, và không ai thanh lý được gì.
+   */
+  test('router trống thì vẫn thanh lý thẳng, hai chủ nợ mới không được làm phiền', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const headers = await writeHeaders(page);
+    const catalog = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/catalog', { credentials: 'include' });
+      return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
+    });
+    const created = await page.request.post('/api/v1/devices', {
+      headers,
+      data: {
+        code: `RT-E2E-XCE-${stamp}`,
+        name: 'Router E2E trong',
+        deviceTypeId: catalog.deviceTypes[0].id,
+      },
+    });
+    const deviceId = ((await created.json()) as { device: { id: string } }).device.id;
+
+    const res = await page.request.patch(`/api/v1/devices/${deviceId}/status`, {
+      headers,
+      data: { status: 'retired' },
+    });
+    expect(res.status()).toBeLessThan(300);
+    expect(sql(`SELECT status FROM device WHERE id = '${deviceId}'`)).toBe('retired');
   });
 });

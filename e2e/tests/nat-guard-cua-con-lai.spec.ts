@@ -313,3 +313,65 @@ test.describe('Bật lại hồ sơ IP', () => {
   });
 
 });
+
+/**
+ * QUÊN CHỌN ROUTER PHẢI LÀ 400, KHÔNG PHẢI 500 — rà soát 11/09.
+ *
+ * `NatBodyDto` để `deviceId` là tuỳ chọn vì cùng một DTO phục vụ cả `POST` lẫn `PATCH`. Bản
+ * trước lấp chỗ trống ở controller bằng `body.deviceId ?? ''`, và chuỗi rỗng đi thẳng xuống
+ * `eq(deviceTable.id, '')`: Postgres từ chối ép '' sang uuid (`22P02`), lỗi bung ra ngoài
+ * thành 500 kèm một câu tiếng Anh về kiểu dữ liệu.
+ *
+ * Đây không phải chuyện thẩm mỹ. 500 nghĩa là "máy chủ hỏng": người trực gọi điện báo sự cố,
+ * còn người trực tổng đài đi tìm một sự cố không tồn tại — trong khi việc thật chỉ là quên
+ * chọn một ô. Và nó làm bẩn đúng cái tín hiệu dùng để phát hiện sự cố thật.
+ */
+test.describe('Rule NAT thiếu router', () => {
+  test('POST /ipam/nat không kèm deviceId → 400 nói rõ thiếu gì, không phải 500', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const headers = await writeHeaders(page);
+
+    const res = await page.request.post('/api/v1/ipam/nat', {
+      headers,
+      data: {
+        protocol: 'tcp',
+        externalPorts: '9099',
+        internalIp: '172.30.9.9',
+        internalPort: 80,
+        usedBy: 'Kiem thieu router E2E',
+        reason: 'Kiem thieu router E2E',
+      },
+    });
+
+    expect(res.status(), 'quên một ô là lỗi của người dùng, không phải sự cố máy chủ').toBe(400);
+    const body = (await res.json()) as { code?: string; message?: string };
+    expect(body.code).toBe('FIELD_REQUIRED');
+    expect(body.message, 'phải nói bằng tiếng Việt là thiếu CÁI GÌ').toContain('router');
+  });
+
+  /**
+   * VẾ ĐỐI CHỨNG: có router thì vẫn tạo được. Không có nó thì một bản "luôn ném FIELD_REQUIRED"
+   * cũng xanh bài trên, và sổ NAT hết dựng được rule.
+   */
+  test('có deviceId thì vẫn tạo được như thường', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    const f = await setUp(page, stamp);
+
+    const res = await page.request.post('/api/v1/ipam/nat', {
+      headers: f.headers,
+      data: {
+        deviceId: f.routerId,
+        protocol: 'tcp',
+        externalPorts: '9098',
+        internalIp: f.internalIp,
+        internalPort: 80,
+        usedBy: 'Kiem co router E2E',
+        reason: 'Kiem co router E2E',
+      },
+    });
+    expect(res.status()).toBe(201);
+  });
+});

@@ -1,4 +1,4 @@
-import { Global, Injectable, Module } from '@nestjs/common';
+import { Global, Injectable, Module, OnApplicationBootstrap } from '@nestjs/common';
 import type { Tx } from './tx';
 
 /**
@@ -37,13 +37,21 @@ import type { Tx } from './tx';
 /** Một module đang giữ tài sản gắn với thiết bị. */
 export interface DeviceReleaser {
   /**
+   * Tên định danh, dùng cho lượt điểm danh lúc khởi động (`MUST_REGISTER`).
+   *
+   * Không lấy `constructor.name`: bản build production bị minify thì tên lớp đổi, và lượt
+   * điểm danh sẽ đỏ vì một lý do chẳng liên quan gì tới hàng rào.
+   */
+  readonly name: string;
+
+  /**
    * Những thứ máy này còn giữ, mô tả bằng tiếng Việt cho NGƯỜI ĐỌC — "IP 172.16.10.5",
    * "2 rule NAT", "1 ghế license Office 2021". Rỗng = không giữ gì.
    *
    * Đây là thứ hiện thẳng trong thông điệp chặn, nên đừng trả về id: người trực cần biết đi
    * gỡ CÁI GÌ, không cần biết uuid của nó.
    */
-  holdingsOf(deviceId: string): Promise<string[]>;
+  holdingsOf(tx: Tx, deviceId: string): Promise<string[]>;
 
   /**
    * Trả lại mọi thứ máy này đang giữ, TRONG transaction của lượt thanh lý.
@@ -55,9 +63,49 @@ export interface DeviceReleaser {
   releaseWithin(tx: Tx, actor: string, deviceId: string): Promise<void>;
 }
 
+/**
+ * Ai BẮT BUỘC phải có mặt trong sổ lúc api khởi động.
+ *
+ * ===== VÌ SAO CẦN DANH SÁCH NÀY =====
+ *
+ * Sổ này FAIL-OPEN theo bản chất: không ai đăng ký thì `holdings()` trả mảng rỗng, và
+ * `setStatus` đọc mảng rỗng thành "máy không giữ gì" rồi thanh lý trong im lặng. Không có
+ * request nào hỏng, không có test nào đỏ — chỉ có tài sản ở lại trên một cái máy đã ra khỏi
+ * công ty.
+ *
+ * Mà việc đăng ký xảy ra trong `onModuleInit` của bốn lớp nằm ở ba module khác nhau: đổi thứ
+ * tự `imports`, tách một module, đặt nhầm một `forwardRef` là đủ để một trong số đó ngừng
+ * chạy. Đây đúng là lớp lỗi đã bắt `OwnerAccessRegistry` phải điểm danh lúc boot (08/09), và
+ * lý do ở đây giống hệt.
+ *
+ * ===== VÌ SAO LÀ TÊN CHỨ KHÔNG PHẢI SỐ LƯỢNG =====
+ *
+ * `releasers.length >= 4` cũng xanh khi ai đó đăng ký nhầm hai lần một module và mất một
+ * module khác. Điểm danh theo tên thì thông điệp lỗi nói thẳng ai vắng.
+ */
+const MUST_REGISTER = ['ipam', 'software', 'device-ports', 'isp-line'] as const;
+
 @Injectable()
-export class DeviceRetirementRegistry {
+export class DeviceRetirementRegistry implements OnApplicationBootstrap {
   private readonly releasers: DeviceReleaser[] = [];
+
+  /**
+   * Chạy SAU khi mọi `onModuleInit` đã xong — lúc duy nhất biết được sổ đã đủ người hay chưa.
+   * Ném thì Nest dừng khởi động, và đó là hành vi đúng: một api không lên là sự cố nhìn thấy
+   * ngay, còn một api chạy mà thanh lý bỏ sót tài sản thì không ai thấy cho tới lúc kiểm kê.
+   */
+  onApplicationBootstrap(): void {
+    const present = new Set(this.releasers.map((releaser) => releaser.name));
+    const missing = MUST_REGISTER.filter((name) => !present.has(name));
+    if (missing.length > 0) {
+      throw new Error(
+        `DeviceRetirementRegistry: thiếu người dọn cho ${missing.join(', ')}. ` +
+          'Thiếu thì lượt thanh lý đọc "máy không giữ gì" và đi tiếp trong im lặng, để lại ' +
+          'IP/rule NAT/ghế license/cổng đấu chéo/đường truyền treo trên một máy đã ra khỏi ' +
+          'công ty. Kiểm `onModuleInit` của lớp tương ứng còn chạy không.',
+      );
+    }
+  }
 
   register(releaser: DeviceReleaser): void {
     // Idempotent: `onModuleInit` có thể chạy lại trong test khi dựng nhiều lần TestingModule.
@@ -65,10 +113,26 @@ export class DeviceRetirementRegistry {
     this.releasers.push(releaser);
   }
 
-  /** Gộp mô tả từ mọi module. Rỗng = thanh lý được ngay. */
-  async holdings(deviceId: string): Promise<string[]> {
-    const lists = await Promise.all(this.releasers.map((r) => r.holdingsOf(deviceId)));
-    return lists.flat();
+  /**
+   * Gộp mô tả từ mọi module. Rỗng = thanh lý được ngay.
+   *
+   * ===== VÌ SAO ĐỌC TRONG `tx`, KHÔNG PHẢI TRÊN POOL =====
+   *
+   * Đây là câu hỏi quyết định CHẶN hay CHO ĐI TIẾP, và nó phải nhìn cùng một thế giới với
+   * lượt ghi ngay sau nó. Đọc trên pool là mở lại đúng khe hở mà `setStatus` vừa đóng bằng
+   * `FOR UPDATE`: giữa lúc đọc "máy không giữ gì" và lúc lật `status` có một khoảng, và
+   * người khác kịp gán một IP vào đó trong khoảng ấy.
+   *
+   * Tuần tự, KHÔNG `Promise.all`: cùng một transaction chạy nhiều câu song song trên một
+   * connection là lỗi thời gian chạy của node-postgres — cùng lý do đã ghi ở
+   * `releaseAllWithin`. Bản trước chạy song song được vì nó đọc trên pool.
+   */
+  async holdingsWithin(tx: Tx, deviceId: string): Promise<string[]> {
+    const out: string[] = [];
+    for (const releaser of this.releasers) {
+      out.push(...(await releaser.holdingsOf(tx, deviceId)));
+    }
+    return out;
   }
 
   /**

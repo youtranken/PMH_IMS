@@ -117,8 +117,6 @@ export class DevicePortsService {
   }
 
   async create(actor: string, deviceId: string, input: PortInput): Promise<PortRow> {
-    // Máy đã thanh lý thì sơ đồ đấu nối đóng băng — xem `DevicesService.assertNotRetired`.
-    await this.devices.assertUsable(deviceId);
     const values = await this.prepare(deviceId, input, null);
     if (!values.portLabel) {
       throw new BadRequestException({
@@ -127,6 +125,10 @@ export class DevicePortsService {
       });
     }
     const id = await this.db.transaction(async (tx) => {
+      // Máy đã thanh lý thì sơ đồ đấu nối đóng băng — xem `DevicesService.assertNotRetired`.
+      // TRONG `tx` và có khoá: hỏi trên pool rồi mới mở transaction là chừa lại đúng khoảng
+      // hở để một lượt thanh lý chen vào giữa (xem `assertUsableWithin`).
+      await this.devices.assertUsableWithin(tx, deviceId);
       let inserted;
       try {
         inserted = await tx
@@ -150,10 +152,10 @@ export class DevicePortsService {
     portId: string,
     input: PortInput,
   ): Promise<PortRow> {
-    await this.devices.assertUsable(deviceId);
     const before = await this.requireRow(deviceId, portId);
     const values = await this.prepare(deviceId, input, portId);
     await this.db.transaction(async (tx) => {
+      await this.devices.assertUsableWithin(tx, deviceId);
       try {
         await tx
           .update(devicePortTable)
@@ -177,9 +179,9 @@ export class DevicePortsService {
      * GỠ cũng chặn, có chủ ý. Sơ đồ đấu nối của một máy đã thanh lý là bằng chứng "hồi đó nó
      * cắm vào đâu" — xóa sau khi máy đã đi là làm mất đúng thứ người ta cần lúc truy vết.
      */
-    await this.devices.assertUsable(deviceId);
     const before = await this.requireRow(deviceId, portId);
     await this.db.transaction(async (tx) => {
+      await this.devices.assertUsableWithin(tx, deviceId);
       await this.devices.recordWithin(tx, actor, deviceId, 'port-removed', {
         portLabel: { before: before.portLabel, after: null },
       });

@@ -215,24 +215,56 @@ export class DevicesService {
     status: DeviceStatus,
     options: { cleanup?: boolean } = {},
   ): Promise<void> {
-    const before = await this.requireRow(id);
-    if (before.status === status) return;
-
-    if (status === 'retired' && !options.cleanup) {
-      const holdings = await this.retirement.holdings(id);
-      if (holdings.length > 0) {
-        throw new ConflictException({
-          code: 'DEVICE_HAS_HOLDINGS',
-          message:
-            `Thiết bị ${before.code} còn đang giữ: ${holdings.join(', ')}. ` +
-            'Gỡ những thứ này trước, hoặc tick "Dọn hết thứ liên quan" để hệ thống trả lại ' +
-            'trong cùng lượt thanh lý.',
-          holdings,
-        });
-      }
-    }
-
     await this.db.transaction(async (tx) => {
+      /*
+       * KHOÁ HÀNG THIẾT BỊ TRƯỚC KHI ĐỌC BẤT CỨ THỨ GÌ KHÁC.
+       *
+       * Bản trước đọc `requireRow` và đếm `holdings` NGOÀI transaction rồi mới mở transaction
+       * để ghi — đúng mẫu "M2" mà `common/cas.ts` mô tả, và ở đây nó hỏng theo hai đường:
+       *
+       *   1. HAI LƯỢT THANH LÝ SONG SONG. Cả hai đọc `status = 'active'`, cả hai thấy không
+       *      giữ gì, cả hai chạy `releaseAllWithin`, cả hai ghi. Một lần thanh lý ra HAI dòng
+       *      `status-changed` trong `device_history` — bảng chỉ-thêm mà FR-007 dựng lên để
+       *      trả lời "ai làm gì hôm đó".
+       *
+       *   2. THANH LÝ ĐUA VỚI MỘT LƯỢT GẮN TÀI SẢN. Nguy hiểm hơn nhiều. Lượt thanh lý đếm
+       *      `holdings` thấy rỗng; cùng lúc đó một người khác đang gán IP/ghế license cho
+       *      chính máy này trong transaction của họ, chưa commit nên ta không thấy. Hai bên
+       *      commit, và kết quả là một máy `retired` vẫn đang giữ tài sản — đúng cái trạng
+       *      thái mà cả `DeviceRetirementRegistry` sinh ra để loại trừ.
+       *
+       * `FOR UPDATE` ở đây bắt cặp với `FOR SHARE` mà `assertUsableWithin` đặt trên cùng hàng
+       * đó. Hai lượt không còn chồng lên nhau được nữa, theo cả hai thứ tự:
+       *
+       *   · thanh lý khoá trước → lượt gắn xếp hàng, rồi đọc lại thấy `retired` → `DEVICE_RETIRED`;
+       *   · lượt gắn khoá trước → thanh lý xếp hàng, rồi đếm `holdings` thấy tài sản vừa được
+       *     gán → `DEVICE_HAS_HOLDINGS`.
+       *
+       * Cùng một nước cờ `LicenseAssignmentService` đã dùng để chặn vượt seat, chỉ là đặt trên
+       * hàng `device` thay vì hàng `software`.
+       */
+      const before = await this.requireRowWithin(tx, id, 'update');
+      /*
+       * Đọc lại SAU khi có khoá, nên lượt thứ hai của hai lượt thanh lý song song thấy đúng
+       * trạng thái lượt thứ nhất vừa ghi và lặng lẽ không làm gì. Trả 409 ở đây mới là sai:
+       * người trực bấm Thanh lý, máy ĐÃ thanh lý — đúng ý họ rồi, không có gì để báo lỗi.
+       */
+      if (before.status === status) return;
+
+      if (status === 'retired' && !options.cleanup) {
+        const holdings = await this.retirement.holdingsWithin(tx, id);
+        if (holdings.length > 0) {
+          throw new ConflictException({
+            code: 'DEVICE_HAS_HOLDINGS',
+            message:
+              `Thiết bị ${before.code} còn đang giữ: ${holdings.join(', ')}. ` +
+              'Gỡ những thứ này trước, hoặc tick "Dọn hết thứ liên quan" để hệ thống trả lại ' +
+              'trong cùng lượt thanh lý.',
+            holdings,
+          });
+        }
+      }
+
       /*
        * Dọn TRƯỚC khi lật trạng thái.
        *
@@ -439,9 +471,36 @@ export class DevicesService {
     });
   }
 
-  /** Bản tra-rồi-kiểm. Ném `NotFoundException` nếu không có hồ sơ. */
+  /**
+   * Bản tra-rồi-kiểm KHÔNG khoá — chỉ dùng cho đường ĐỌC (dựng gợi ý, kiểm tra sớm để trả lỗi
+   * đẹp trước khi làm việc nặng). Đường GHI phải dùng `assertUsableWithin`.
+   */
   async assertUsable(id: string): Promise<void> {
     this.assertNotRetired(await this.requireRow(id));
+  }
+
+  /**
+   * "Máy này còn nhận thêm được không" — bản dùng cho ĐƯỜNG GHI, và nó GIỮ KHOÁ.
+   *
+   * ===== VÌ SAO BẢN KHÔNG KHOÁ LÀ CHƯA ĐỦ =====
+   *
+   * `assertUsable` đọc trên pool, trả lời xong là buông. Giữa câu trả lời đó và câu `INSERT`
+   * của người gọi có một khoảng, và một lượt thanh lý lọt vừa vào khoảng ấy: nó đếm tài sản
+   * (chưa thấy gì), lật `status` sang `retired`, commit. Người gọi ghi tiếp và thành công.
+   * Kết quả là một ghế license / một địa chỉ IP vừa được cấp cho máy đã ra khỏi công ty, và
+   * KHÔNG bên nào gặp lỗi.
+   *
+   * `FOR SHARE` đóng khoảng đó: nhiều lượt ghi cùng lúc vẫn chạy song song với nhau (chúng chỉ
+   * đọc hàng `device`), nhưng `FOR UPDATE` của lượt thanh lý phải đợi tất cả xong. Chia sẻ —
+   * không xếp hàng — là điểm mấu chốt: dùng `FOR UPDATE` ở đây thì hai người cấp IP cho hai
+   * máy... vẫn chạy song song, nhưng hai người cấp IP cho CÙNG một máy sẽ nối đuôi nhau vô cớ.
+   *
+   * Nơi gọi phải truyền `tx` CỦA CHÍNH LƯỢT GHI. Khoá của Postgres sống theo transaction, nên
+   * gọi hàm này trên một transaction khác (hay trên pool) là lấy khoá rồi buông ngay — đúng
+   * bằng không làm gì.
+   */
+  async assertUsableWithin(tx: Tx, id: string): Promise<void> {
+    this.assertNotRetired(await this.requireRowWithin(tx, id, 'share'));
   }
 
   /**
@@ -455,8 +514,15 @@ export class DevicesService {
   async requireRowWithin(
     tx: Pick<Database, 'select'>,
     id: string,
+    /**
+     * Khoá hàng tới hết transaction. `'update'` cho lượt ĐỔI TRẠNG THÁI (độc quyền),
+     * `'share'` cho lượt GHI TÀI SẢN vào máy (nhiều lượt cùng lúc vẫn được, nhưng chặn lượt
+     * thanh lý chen vào giữa). Bỏ trống = đọc thuần, không khoá.
+     */
+    lock?: 'update' | 'share',
   ): Promise<typeof deviceTable.$inferSelect> {
-    const rows = await tx.select().from(deviceTable).where(eq(deviceTable.id, id));
+    const query = tx.select().from(deviceTable).where(eq(deviceTable.id, id));
+    const rows = await (lock ? query.for(lock) : query);
     if (rows.length === 0) {
       throw new NotFoundException({
         code: 'DEVICE_NOT_FOUND',

@@ -10,6 +10,7 @@ import { DevicesApiService } from './devices.api';
 import { DevicesController } from './devices.controller';
 import { DevicesService } from './devices.service';
 import { DeviceOwnerResolver } from './device-owner-resolver';
+import { PortDeviceRetirement } from './port-device-retirement';
 
 /**
  * Chủ sở hữu `device` + `device_history` (AD-3).
@@ -22,6 +23,7 @@ import { DeviceOwnerResolver } from './device-owner-resolver';
     DevicesService,
     DeviceOwnerResolver,
     DevicePortsService,
+    PortDeviceRetirement,
     DeviceImportService,
     DeviceExpirySource,
     DevicesApiService,

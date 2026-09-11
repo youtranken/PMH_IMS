@@ -1,6 +1,4 @@
-import { Inject, Injectable, OnModuleInit } from '@nestjs/common';
-import { DRIZZLE_DB } from '../../database/database.module';
-import type { Database } from '../../database/database.module';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import type { DeviceReleaser } from '../../common/device-retirement.registry';
 import { DeviceRetirementRegistry } from '../../common/device-retirement.registry';
 import type { Tx } from '../../common/tx';
@@ -16,8 +14,9 @@ import { NatRuleService } from './nat-rule.service';
  */
 @Injectable()
 export class IpDeviceRetirement implements DeviceReleaser, OnModuleInit {
+  readonly name = 'ipam';
+
   constructor(
-    @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly registry: DeviceRetirementRegistry,
     private readonly addresses: IpAddressService,
     private readonly nat: NatRuleService,
@@ -27,11 +26,18 @@ export class IpDeviceRetirement implements DeviceReleaser, OnModuleInit {
     this.registry.register(this);
   }
 
-  async holdingsOf(deviceId: string): Promise<string[]> {
-    // Đường CHẶN chỉ để dựng thông điệp, không ghi gì — đọc trên pool là đủ.
-    const ips = await this.addresses.listForDeviceWithin(this.db, deviceId);
+  async holdingsOf(tx: Tx, deviceId: string): Promise<string[]> {
+    /*
+     * Đọc bằng CHÍNH `tx` — lý do y hệt cái đã ghi ở `releaseWithin` ngay bên dưới, và bản
+     * trước bỏ sót đúng một nửa: "đọc trên kết nối khác thì một IP vừa được cấp cho máy này
+     * sẽ không có trong danh sách, và máy được thanh lý khi vẫn đang giữ nó."
+     *
+     * Câu đó đúng cho đường DỌN thì cũng đúng cho đường CHẶN, thậm chí đúng hơn: đường chặn
+     * là đường mặc định, `cleanup` chỉ chạy khi người trực chủ động tick ô.
+     */
+    const ips = await this.addresses.listForDeviceWithin(tx, deviceId);
     const rules = await this.nat.rulesTouchingDevice(
-      this.db,
+      tx,
       deviceId,
       ips.map((ip) => ip.address),
     );

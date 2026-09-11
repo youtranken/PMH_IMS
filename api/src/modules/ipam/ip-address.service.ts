@@ -230,11 +230,11 @@ export class IpAddressService {
   async create(actor: string, input: IpAddressInput): Promise<IpAddressRecord> {
     const cidr = await this.subnets.cidrOf(input.subnetId);
     const address = this.requireHost(input.address, cidr);
-    await this.requireDevice(input.deviceId);
     const status = input.status ?? (input.deviceId || input.usedBy ? 'assigned' : 'free');
 
     try {
       const row = await this.db.transaction(async (tx) => {
+        await this.requireDeviceWithin(tx, input.deviceId);
         const rows = await tx
           .insert(ipAddressTable)
           .values({
@@ -289,7 +289,6 @@ export class IpAddressService {
       values.address = this.requireHost(input.address, cidr);
     }
     if (input.deviceId !== undefined) {
-      await this.requireDevice(input.deviceId);
       values.deviceId = input.deviceId || null;
     }
     if (input.usedBy !== undefined) values.usedBy = input.usedBy?.trim() || null;
@@ -345,6 +344,7 @@ export class IpAddressService {
 
     try {
       const row = await this.db.transaction(async (tx) => {
+        await this.requireDeviceWithin(tx, values.deviceId);
         if (addressMoves || ownerMoves) {
           await this.assertNoLiveNatWithin(
             tx,
@@ -464,7 +464,7 @@ export class IpAddressService {
       // Cấp (hoặc cấp lại) thường đi kèm chủ mới — nhận luôn ở đây để không phải gọi hai
       // lượt và để lịch sử ghi "cấp lại cho máy X" thành MỘT dòng, đúng như việc thật.
       if (options.deviceId !== undefined) {
-        await this.requireDevice(options.deviceId);
+        await this.requireDeviceWithin(tx, options.deviceId);
         values.deviceId = options.deviceId || null;
       }
       /*
@@ -804,11 +804,19 @@ export class IpAddressService {
     });
   }
 
-  private async requireDevice(deviceId: string | null | undefined): Promise<void> {
+  /**
+   * Máy nhận địa chỉ này còn dùng được không — hỏi TRONG `tx` và giữ khoá tới hết lượt ghi.
+   *
+   * `assertUsable*` chứ không `exists`: máy đã thanh lý không được nhận thêm IP (rà soát
+   * 07/09). Thông điệp và mã lỗi do `devices.api` giữ — bốn cửa phải nói cùng một câu.
+   *
+   * Bản `Within` chứ không phải bản trên pool: hỏi xong rồi mới mở transaction là chừa lại
+   * đúng khoảng hở để một lượt thanh lý chen vào giữa, và địa chỉ được cấp cho một máy vừa ra
+   * khỏi công ty mà không bên nào gặp lỗi (xem `DevicesApiService.assertUsableWithin`).
+   */
+  private async requireDeviceWithin(tx: Tx, deviceId: string | null | undefined): Promise<void> {
     if (!deviceId) return;
-    // `assertUsable` chứ không `exists`: máy đã thanh lý không được nhận thêm IP (rà soát
-    // 07/09). Thông điệp và mã lỗi do `devices.api` giữ — bốn cửa phải nói cùng một câu.
-    await this.devices.assertUsable(deviceId);
+    await this.devices.assertUsableWithin(tx, deviceId);
   }
 
   /** Tra một hồ sơ KỂ CẢ đã ẩn — đường đọc lịch sử, và đường BẬT LẠI (`restore`). */
