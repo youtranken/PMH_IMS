@@ -61,8 +61,53 @@ const MAY_GROW: Record<string, string> = {
     'Lượt dọn THU HỒI phiên (`revoked_at`) chứ không xoá — dấu vết "ai đăng nhập lúc nào" là thứ NFR-01 cần giữ.',
 };
 
+/**
+ * Bảng KHÔNG có `created_at` — cửa canh không nhìn thấy chúng, và đó là điểm mù DUY NHẤT còn lại.
+ *
+ * Không có cột đó thì không trả lời được câu "hàng này sinh ra trong lượt chạy nào", nên không
+ * có cách nào phân biệt rác của bài kiểm với dữ liệu có sẵn.
+ *
+ * Đo ngày 11/09, sau một lượt chạy đầy đủ: cả năm bảng SẠCH. Hai bảng đầu là hạ tầng, ba bảng
+ * sau đều có đường dọn riêng và không sót hàng nào. Nên KHÔNG dựng thêm cơ chế chụp-số-đếm cho
+ * một vấn đề chưa xảy ra — thứ đáng canh không phải năm bảng này, mà là bảng thứ SÁU.
+ *
+ * Danh sách này chính là chỗ canh điều đó: bảng mới nào ra đời mà thiếu `created_at` sẽ làm
+ * lượt E2E đỏ NGAY, kèm câu hỏi phải trả lời — thay vì lặng lẽ mở rộng điểm mù.
+ */
+const NO_CREATED_AT: Record<string, string> = {
+  _migrations: 'Sổ migration của chính runner — không phải dữ liệu nghiệp vụ.',
+  system_config: 'Bảng cấu hình, 17 hàng cố định. Lượt dọn chỉ SỬA giá trị, không thêm hàng.',
+  known_device:
+    'Dọn theo `user_id` trong vùng `users`. Đo 11/09: chỉ còn 3 hàng của `sa@pmh.com.vn` thật.',
+  license_assignment:
+    'Dọn theo khoá ngoại trong cả vùng `devices` lẫn `software`. Đo 11/09: còn 1 hàng của dữ liệu thật.',
+  login_failure:
+    'Dọn theo `user_id` trong vùng `users`, và có sweeper tự dọn hàng nguội. Đo 11/09: 0 hàng.',
+};
+
 export function markRunStart(): void {
   writeFileSync(RUN_START_FILE, new Date().toISOString(), 'utf8');
+}
+
+/**
+ * Bảng mới nào vừa mở rộng điểm mù — tức không có `created_at` và cũng chưa ai khai lý do.
+ *
+ * Trả về danh sách tên, rỗng là ổn. Đây là nửa "mặc định đóng" của chính cửa canh: nó không
+ * tự nhận là nhìn thấy mọi thứ, nhưng nó BIẾT chỗ nó không nhìn thấy, và kêu khi chỗ đó rộng ra.
+ */
+function newBlindSpots(): string[] {
+  const known = Object.keys(NO_CREATED_AT)
+    .map((t) => `'${t}'`)
+    .join(', ');
+  return psql(
+    `SELECT t.table_name FROM information_schema.tables t
+      WHERE t.table_schema = 'public' AND t.table_type = 'BASE TABLE'
+        AND t.table_name NOT IN (${known})
+        AND NOT EXISTS (SELECT 1 FROM information_schema.columns c
+                         WHERE c.table_schema = 'public' AND c.table_name = t.table_name
+                           AND c.column_name = 'created_at')
+      ORDER BY t.table_name`,
+  );
 }
 
 /**
@@ -92,6 +137,12 @@ export function findLeakedRows(): string {
 
   try {
     const parts: string[] = [];
+    const blind = newBlindSpots();
+    if (blind.length > 0) {
+      parts.push(
+        `  [ĐIỂM MÙ MỚI] bảng không có \`created_at\`, cửa canh không nhìn được: ${blind.join(', ')}`,
+      );
+    }
     for (const { table, column } of survivorsSince(since)) {
       const rows = psql(
         `SELECT ${column} FROM ${table} WHERE created_at > '${since}'::timestamptz ` +

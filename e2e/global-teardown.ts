@@ -44,7 +44,14 @@ Sửa tên trong spec vừa thêm. Số đã lỡ tạo thì đổi tên là đ�
 
 Nếu bảng này ĐÚNG LÀ được phép giữ hàng lại (chỉ-thêm, sổ sự kiện…), khai nó vào
 \`MAY_GROW\` trong \`e2e/leak-guard.ts\` KÈM LÝ DO — đó là ngoại lệ phải giải thích
-được, không phải chỗ để dập tắt cảnh báo.`,
+được, không phải chỗ để dập tắt cảnh báo.
+
+Còn nếu dòng trên ghi [ĐIỂM MÙ MỚI]: có một bảng vừa ra đời mà KHÔNG có cột
+\`created_at\`, nên cửa canh không phân biệt được rác của bài kiểm với dữ liệu có
+sẵn. Hai đường đi, chọn một:
+  · thêm \`created_at timestamptz NOT NULL DEFAULT now()\` cho bảng đó — gần như
+    luôn là đường đúng, vì câu "hàng này có từ bao giờ" sớm muộn ai cũng hỏi;
+  · hoặc khai nó vào \`NO_CREATED_AT\` KÈM LÝ DO nó không cần bị canh.`,
     );
   }
 }
