@@ -2,6 +2,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 import { RATE_LIMIT_BACKUP_FILE } from './rate-limit-backup';
 import { clearRunStart, findLeakedRows } from './leak-guard';
+import { E2E_LOGIN_RATE_LIMIT } from './tests/helpers';
 
 /**
  * Dọn dẹp cuối lượt chạy — HAI việc, và chúng khác hẳn nhau về tính chất.
@@ -57,7 +58,29 @@ sẵn. Hai đường đi, chọn một:
 }
 
 function restoreRateLimit(): void {
-  if (!existsSync(RATE_LIMIT_BACKUP_FILE)) return;
+  if (!existsSync(RATE_LIMIT_BACKUP_FILE)) {
+    /*
+     * KHÔNG có bản cất — và im lặng đi ra là sai, vì trạng thái lúc này gần như chắc chắn bẩn.
+     *
+     * `global-setup` từ chối cất con số mà bộ test tự đặt (xem `saveBackup`), nên "không có
+     * file" nghĩa là một lượt trước đã chết giữa chừng hoặc ai đó chạy `reset-e2e.mjs` bằng
+     * tay. Cả hai trường hợp đều để DB nằm ở ngưỡng 500 — tức hàng rào chống dò mật khẩu của
+     * NFR-01 đang TẮT trên môi trường mà người ta hay lấy dữ liệu để diễn tập khôi phục.
+     *
+     * `global-setup` đã cảnh báo chuyện này, nhưng nó in ở ĐẦU lượt chạy và bị 400 dòng kết
+     * quả test đẩy đi mất — tôi vừa bỏ lỡ đúng cảnh báo đó ba lượt liền. Nên nói lại ở CUỐI,
+     * chỗ người ta thật sự nhìn.
+     */
+    const current = readRateLimit();
+    if (current && current === String(E2E_LOGIN_RATE_LIMIT)) {
+      console.error(
+        `[e2e] CẢNH BÁO: login.rate_limit_per_ip đang là ${current} (ngưỡng của bộ test) và ` +
+          `không có bản cất nào để trả lại — hàng rào chống dò mật khẩu đang TẮT. Đặt lại tay:\n` +
+          `  UPDATE system_config SET value = '20' WHERE key = 'login.rate_limit_per_ip';`,
+      );
+    }
+    return;
+  }
 
   const original = readFileSync(RATE_LIMIT_BACKUP_FILE, 'utf8').trim();
   if (!original) return;
@@ -77,5 +100,20 @@ function restoreRateLimit(): void {
     );
   } finally {
     rmSync(RATE_LIMIT_BACKUP_FILE, { force: true });
+  }
+}
+
+/** Giá trị hiện tại của trần đăng nhập, hoặc chuỗi rỗng nếu không hỏi được. */
+function readRateLimit(): string {
+  try {
+    return execSync(
+      'docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml exec -T postgres ' +
+        `psql -U ims -d ims -tAc "SELECT value#>>'{}' FROM system_config WHERE key = 'login.rate_limit_per_ip'"`,
+      { cwd: '..', stdio: 'pipe' },
+    )
+      .toString()
+      .trim();
+  } catch {
+    return '';
   }
 }
