@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Pool, type PoolClient } from 'pg';
 import { runMigrations } from '../src/database/migration-runner';
-import { createScratchDb, migrationsDir, testDbUrl, type ScratchDb } from './db';
+import { createScratchDb, migrationsDir, testDbUrl, type ScratchDb, waitForLock } from './db';
 
 /**
  * ĐỔI DẢI vs KHAI IP — cuộc đua chỉ hai kết nối THẬT mới hỏi được.
@@ -235,24 +235,3 @@ describe('Đổi dải và khai IP không được đè lên nhau', () => {
     expect(body.slice(countAt - 200, countAt)).toContain('await tx'); // đếm chạy trên `tx`
   });
 });
-
-/**
- * Chờ tới khi Postgres THẬT SỰ ghi nhận một câu lệnh đang chờ khóa.
- *
- * Hỏi `pg_stat_activity` chứ không `sleep`: một mốc thời gian cố định vừa chậm vừa hay đỏ oan
- * trên máy đang tải. Đây là điều kiện quan sát được, nên chờ đúng điều kiện đó.
- */
-async function waitForLock(pool: Pool): Promise<void> {
-  const deadline = Date.now() + 10_000;
-  for (;;) {
-    const { rows } = await pool.query<{ n: number }>(
-      `SELECT count(*)::int AS n FROM pg_stat_activity
-        WHERE wait_event_type = 'Lock' AND datname = current_database()`,
-    );
-    if (rows[0].n > 0) return;
-    if (Date.now() > deadline) {
-      throw new Error('Không có câu lệnh nào chờ khóa sau 10 giây — hợp đồng khóa đã hỏng.');
-    }
-    await new Promise((resolve) => setTimeout(resolve, 50));
-  }
-}

@@ -150,8 +150,19 @@ export class LicenseAssignmentService {
    * AD-3). Thứ AD-2 cấm là join sang bảng của module KHÁC — nên mã/tên máy vẫn phải hỏi
    * qua `devices.api`, và ở đây thì không cần hỏi vì máy đã biết trước.
    */
-  async installedForDevice(deviceId: string): Promise<InstalledLicenseRow[]> {
-    const rows = await this.db
+  installedForDevice(deviceId: string): Promise<InstalledLicenseRow[]> {
+    return this.installedForDeviceWithin(this.db, deviceId);
+  }
+
+  /**
+   * Bản đọc TRONG transaction — lượt thanh lý phải thấy cả ghế vừa được gán ở một transaction
+   * khác vừa commit, chứ không phải ảnh chụp từ một kết nối khác.
+   */
+  async installedForDeviceWithin(
+    tx: Pick<Database, 'select'>,
+    deviceId: string,
+  ): Promise<InstalledLicenseRow[]> {
+    const rows = await tx
       .select({
         id: licenseAssignmentTable.id,
         softwareId: softwareTable.id,
@@ -219,13 +230,19 @@ export class LicenseAssignmentService {
         message: 'Chỉ hồ sơ loại License mới gán được vào máy.',
       });
     }
-    // Máy đã thanh lý không được ăn thêm một ghế license nào (rà soát 07/09).
-    await this.devices.assertUsable(input.deviceId);
-
     const terms = normalizeTerms(input);
     assertTerms(terms, software.licenseModel);
 
     const { id, warnings } = await this.db.transaction(async (tx) => {
+      /*
+       * Máy đã thanh lý không được ăn thêm một ghế license nào (rà soát 07/09).
+       *
+       * KHOÁ THIẾT BỊ TRƯỚC, LICENSE SAU — thứ tự này là bắt buộc và phải giống nhau ở mọi
+       * đường ghi, nếu không hai lượt khoá chéo nhau sẽ chết cứng (deadlock). Đường thanh lý
+       * (`DevicesService.setStatus` → `releaseForDeviceWithin`) cũng đi đúng chiều này: khoá
+       * `device` rồi mới đụng tới `license_assignment`, và không khoá `software` lần nào.
+       */
+      await this.devices.assertUsableWithin(tx, input.deviceId);
       /*
        * ĐẾM SEAT TRONG TRANSACTION, sau khi đã khóa hàng license.
        *

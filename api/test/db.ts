@@ -113,6 +113,34 @@ export async function createScratchDb(prefix: string): Promise<ScratchDb> {
   };
 }
 
+/**
+ * Chờ tới khi CÓ ÍT NHẤT MỘT câu lệnh đang nằm chờ khóa trong database này.
+ *
+ * Bài kiểm hợp đồng khóa nào cũng cần đúng một câu hỏi: "câu lệnh thứ hai có ĐỨNG LẠI không?"
+ * Không có cách nào hỏi nó bằng `await` — câu lệnh đang chờ khóa thì promise chưa settle, mà
+ * "chưa settle" thì không phân biệt được với "chậm". `pg_stat_activity` là nơi Postgres nói
+ * thẳng, nên đây là cách duy nhất hỏi mà không phải `sleep` một con số đoán mò.
+ *
+ * NÉM khi hết giờ chứ không trả về lặng lẽ: không ai chờ khóa nghĩa là hợp đồng khóa đã hỏng,
+ * và đó chính là thứ bài kiểm muốn biết.
+ */
+export async function waitForLock(pool: Pool, timeoutMs = 10_000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  for (;;) {
+    const { rows } = await pool.query<{ n: number }>(
+      `SELECT count(*)::int AS n FROM pg_stat_activity
+        WHERE wait_event_type = 'Lock' AND datname = current_database()`,
+    );
+    if (rows[0].n > 0) return;
+    if (Date.now() > deadline) {
+      throw new Error(
+        `Không có câu lệnh nào chờ khóa sau ${timeoutMs / 1000} giây — hợp đồng khóa đã hỏng.`,
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
 /** Thư mục migration thật của dự án — cùng nguồn với runtime, không phải bản chép. */
 export function migrationsDir(): string {
   return join(__dirname, '..', 'src', 'migrations');

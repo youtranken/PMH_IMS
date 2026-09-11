@@ -11,6 +11,7 @@ import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { escapeLike, pgErrorCode, PG_CHECK_VIOLATION } from '../../common/sql';
+import { requireCas } from '../../common/cas';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { DevicesApiService } from '../devices/devices.api';
@@ -180,7 +181,6 @@ export class NatRuleService {
   }
 
   async create(actor: string, input: NatRuleInput): Promise<NatRuleRecord> {
-    await this.requireDraytek(input.deviceId);
     // Chuẩn hóa IP TRƯỚC mọi thứ: `linkIp` so chuỗi thô với `host(address)`, nên một dấu cách
     // thừa là không nối được vào hồ sơ IP dù hồ sơ đó có thật (code review Epic 5, finding 5).
     const clean: NatRuleInput = { ...input, internalIp: input.internalIp.trim() };
@@ -192,6 +192,7 @@ export class NatRuleService {
 
     try {
       const row = await this.db.transaction(async (tx) => {
+        await this.requireDraytekWithin(tx, clean.deviceId);
         const rows = await tx
           .insert(natRuleTable)
           .values({
@@ -258,7 +259,6 @@ export class NatRuleService {
      * lại là 8020-8010, ngược đầu. Đúng bài học của import thiết bị ở Epic 2.
      */
     const warnings = this.requireValid(merged);
-    if (input.deviceId) await this.requireDraytek(input.deviceId);
     await this.requireNoProtocolOverlap(merged, id);
 
     /*
@@ -273,6 +273,7 @@ export class NatRuleService {
 
     try {
       const row = await this.db.transaction(async (tx) => {
+        if (input.deviceId) await this.requireDraytekWithin(tx, input.deviceId);
         const rows = await tx
           .update(natRuleTable)
           .set({
@@ -365,10 +366,29 @@ export class NatRuleService {
       });
     }
     {
-      await tx
+      /*
+       * VỊ TỪ `voided_at IS NULL` ĐI CÙNG CÂU GHI (mẫu CAS — `common/cas.ts`).
+       *
+       * `requireAliveWithin` ở đầu hàm đọc rồi quyết định, nhưng câu UPDATE bên dưới trước đây
+       * ghi VÔ ĐIỀU KIỆN. Mức cô lập là READ COMMITTED, nên hai lượt gỡ cùng một rule chen
+       * nhau vừa khít: cả hai đọc thấy rule còn sống, cả hai ghi đè `voided_at`/`voided_by`/
+       * `void_reason`, và lượt sau đè lên lượt trước.
+       *
+       * Thứ mất đi không phải trạng thái — rule vẫn bị gỡ, đó là thứ người dùng muốn. Thứ mất
+       * là SỔ: `nat_rule_history` và `audit_log` nhận HAI dòng "đã gỡ" cho MỘT lần gỡ, với hai
+       * người và hai lý do khác nhau, còn hàng thật thì mang lý do của người bấm sau. "Port
+       * 8080 đóng ngày nào, ai đóng, vì sao" — câu mà chú thích của `voidForDeviceWithin` nói
+       * là sẽ có người hỏi — có hai câu trả lời mâu thuẫn và không cách nào biết câu nào đúng.
+       */
+      const voided = await tx
         .update(natRuleTable)
         .set({ voidedAt: new Date(), voidedBy: actor, voidReason: text })
-        .where(eq(natRuleTable.id, id));
+        .where(and(eq(natRuleTable.id, id), isNull(natRuleTable.voidedAt)))
+        .returning({ id: natRuleTable.id });
+      requireCas(voided, {
+        code: 'NAT_ALREADY_VOIDED',
+        message: 'Rule này vừa được người khác gỡ. Tải lại sổ NAT để xem trạng thái mới.',
+      });
       await this.audit.appendWithin(tx, {
         actor,
         action: 'nat.voided',
@@ -508,10 +528,13 @@ export class NatRuleService {
    * story nói "thiết bị Draytek", nhưng hôm nào PMH đổi sang hãng khác thì cuốn sổ vẫn phải
    * dùng được — chặn theo hãng chỉ tổ đẻ ra một loại thiết bị giả để lách.
    */
-  private async requireDraytek(deviceId: string): Promise<void> {
+  private async requireDraytekWithin(tx: Tx, deviceId: string): Promise<void> {
     // Router ĐÃ THÁO thì rule trỏ vào hư không — mở port trên một hộp không còn cắm điện chỉ
     // làm sổ NAT nói dối về việc "port nào đang mở" (rà soát 07/09).
-    await this.devices.assertUsable(deviceId);
+    //
+    // Bản `Within` và có khoá: hỏi trên pool rồi mới mở transaction là chừa lại đúng khoảng hở
+    // để lượt thanh lý router chen vào giữa (xem `DevicesApiService.assertUsableWithin`).
+    await this.devices.assertUsableWithin(tx, deviceId);
   }
 
   /** Nối mềm sang hồ sơ IP nếu có — không có cũng lưu được, chỉ là mất đường bấm sang. */

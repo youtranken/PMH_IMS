@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import type { Tx } from '../../common/tx';
 import { DevicesService } from './devices.service';
 import type { DeviceListItem } from './devices.types';
 
@@ -40,13 +41,31 @@ export class DevicesApiService {
    * máy đang sửa — một hàng rào chặn việc hợp lệ là hàng rào sẽ bị tìm cách lách.
    */
   async assertUsable(id: string): Promise<void> {
+    await this.guarded(() => this.devices.assertUsable(id));
+  }
+
+  /**
+   * Bản dùng cho ĐƯỜNG GHI: hỏi câu y hệt, nhưng GIỮ KHOÁ trên hàng thiết bị tới hết
+   * transaction của người gọi.
+   *
+   * Mọi module ghi thứ gì đó trỏ tới một `deviceId` phải gọi bản NÀY, bên trong `tx` của
+   * chính lượt ghi — bản không khoá ở trên chỉ còn dành cho đường đọc. Xem
+   * `DevicesService.assertUsableWithin` để biết khoảng hở mà nó đóng, và vì sao `FOR SHARE`
+   * chứ không phải `FOR UPDATE`.
+   */
+  async assertUsableWithin(tx: Tx, id: string): Promise<void> {
+    await this.guarded(() => this.devices.assertUsableWithin(tx, id));
+  }
+
+  /** Phần dịch lỗi dùng chung cho hai cửa trên — một bản chữ, một cách cư xử. */
+  private async guarded(run: () => Promise<void>): Promise<void> {
     try {
       /*
        * Uỷ quyền cho `DevicesService`: câu "còn nhận thêm được không" và câu chữ của lỗi chỉ
        * được có MỘT bản (AD-15). Trước 08/09 nó nằm nguyên ở đây, nên ba đường ghi nội bộ của
        * chính module `devices` không với tới được và đã hở suốt.
        */
-      await this.devices.assertUsable(id);
+      await run();
     } catch (error) {
       /*
        * CHỈ nuốt đúng lỗi "không tìm thấy". `catch` trần ở đây biến một sự cố DB thành câu

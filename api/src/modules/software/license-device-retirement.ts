@@ -23,6 +23,8 @@ import { LicenseAssignmentService } from './license-assignment.service';
  */
 @Injectable()
 export class LicenseDeviceRetirement implements DeviceReleaser, OnModuleInit {
+  readonly name = 'software';
+
   constructor(
     private readonly registry: DeviceRetirementRegistry,
     private readonly assignments: LicenseAssignmentService,
@@ -32,10 +34,10 @@ export class LicenseDeviceRetirement implements DeviceReleaser, OnModuleInit {
     this.registry.register(this);
   }
 
-  async holdingsOf(deviceId: string): Promise<string[]> {
+  async holdingsOf(tx: Tx, deviceId: string): Promise<string[]> {
     // `installedForDevice` chứ không `listForDevice`: nó kèm sẵn mã + tên hồ sơ phần mềm, mà
     // thông điệp chặn phải gọi đúng tên thứ người trực đi gỡ ("Office 2021"), không phải uuid.
-    const rows = await this.assignments.installedForDevice(deviceId);
+    const rows = await this.assignments.installedForDeviceWithin(tx, deviceId);
     return rows.map((row) => `ghế license ${row.softwareCode} — ${row.softwareName}`);
   }
 

@@ -489,7 +489,7 @@ export class IpamController {
   createNat(@Body() body: NatBodyDto, @Req() req: AuthedRequest) {
     const ports = requirePorts(body.externalPorts);
     return this.nat.create(actor(req), {
-      deviceId: body.deviceId ?? '',
+      deviceId: requireDeviceId(body.deviceId),
       protocol: body.protocol ?? 'tcp',
       externalFrom: ports.from,
       externalTo: ports.to,
@@ -549,6 +549,25 @@ function actor(req: AuthedRequest): string {
  * Đổi ô "8080" / "8000-8010" thành cặp số. Lỗi nói ĐÚNG chỗ sai (viết ngược đầu ≠ sai định
  * dạng) — người gõ biết mình muốn gì, chỉ cần được chỉ đúng chỗ.
  */
+/**
+ * Rule NAT phải có router — và thiếu nó phải là 400, không phải 500.
+ *
+ * `NatBodyDto` để `deviceId` là tuỳ chọn vì cùng một DTO phục vụ cả `POST` lẫn `PATCH`, mà
+ * `PATCH` thì được phép không gửi. Bản trước lấp chỗ trống bằng `body.deviceId ?? ''`, và
+ * chuỗi rỗng đi thẳng xuống `eq(deviceTable.id, '')`: Postgres từ chối ép '' sang uuid
+ * (`22P02`), lỗi bung ra ngoài thành 500 kèm một câu tiếng Anh về kiểu dữ liệu. Người trực
+ * quên chọn router thì đáng nhận một câu tiếng Việt nói họ quên gì, không phải một sự cố máy
+ * chủ.
+ */
+function requireDeviceId(value: string | undefined): string {
+  const id = value?.trim();
+  if (id) return id;
+  throw new BadRequestException({
+    code: 'FIELD_REQUIRED',
+    message: 'Chọn thiết bị (router) cho rule NAT này.',
+  });
+}
+
 function requirePorts(value: string | undefined): { from: number; to: number } {
   const parsed = parsePortRange(value ?? '');
   if (parsed.ok) return { from: parsed.from, to: parsed.to };
