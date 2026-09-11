@@ -68,6 +68,32 @@ const NO_BEST_EFFORT_AUDIT = /** @type {const} */ ({
 });
 
 /**
+ * NFR-04: cấm nhét `.message` của một lỗi thẳng vào dòng log.
+ *
+ * ===== LỖ ĐÃ ĐÓNG NGÀY 11/09 =====
+ *
+ * drizzle ≥0.36 ném `DrizzleQueryError`, và `.message` của nó là
+ * `Failed query: <sql>\nparams: <THAM SỐ ĐÃ BIND>`. Một câu INSERT vào `users` hỏng vì bất kỳ
+ * ràng buộc nào sẽ in nguyên hash Argon2, ciphertext TOTP secret, email, họ tên, số điện
+ * thoại vào `docker logs` — ngoài ranh giới PII mà NFR-04/AD-4 dựng quanh DB. Không ai phải
+ * cố ý làm gì.
+ *
+ * `common/log-redact.ts` sinh ra đúng để chặn chuyện đó, nhưng tới 11/09 nó được gọi ở ĐÚNG
+ * MỘT chỗ (`GlobalExceptionFilter`), còn 13 chỗ khác vẫn viết `(error as Error).message`.
+ * Vá 13 chỗ đó chỉ mua được thời gian tới chỗ thứ 14 — nên hàng rào phải nằm ở CỔNG.
+ *
+ * Selector nhắm đúng hình dạng đã gặp: một `.message` nằm trong chuỗi mẫu, bên trong lời gọi
+ * `logger.log/warn/error/debug/verbose`. Hẹp có chủ ý — cấm mọi `.message` ở mọi nơi thì lập
+ * tức thành luật bị tắt.
+ */
+const NO_RAW_ERROR_MESSAGE_IN_LOG = /** @type {const} */ ({
+  selector:
+    "CallExpression[callee.property.name=/^(log|warn|error|debug|verbose)$/] TemplateLiteral MemberExpression[property.name='message']",
+  message:
+    'NFR-04: đừng ghi `.message` của lỗi ra log — `DrizzleQueryError.message` chở cả THAM SỐ ĐÃ BIND (hash Argon2, ciphertext TOTP, email, họ tên). Dùng `redactMessage(error)` của `common/log-redact.ts`.',
+});
+
+/**
  * @param {{ crossModule?: boolean, extraExceptions?: string, allowLibraries?: string[] }} [opts]
  *   `allowLibraries` — BỎ đúng vài thư viện khỏi danh sách cấm mà GIỮ NGUYÊN AD-2.
  *
@@ -147,7 +173,12 @@ export default tseslint.config(
     files: ['src/**/*.ts'],
     rules: {
       'no-restricted-imports': ad2Rule({ crossModule: false }),
-      'no-restricted-syntax': ['error', ...RESTRICTED_SYNTAX, NO_BEST_EFFORT_AUDIT],
+      'no-restricted-syntax': [
+        'error',
+        ...RESTRICTED_SYNTAX,
+        NO_BEST_EFFORT_AUDIT,
+        NO_RAW_ERROR_MESSAGE_IN_LOG,
+      ],
     },
   },
   {

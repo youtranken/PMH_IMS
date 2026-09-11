@@ -80,7 +80,7 @@ test.describe('Bề mặt quản trị tài khoản đòi step-up', () => {
     const blocked = await page.request.post('/api/v1/accounts', {
       headers,
       data: {
-        email: `leo-thang-${stamp}@pmh.com.vn`,
+        email: `e2e-tao-moi-leo-thang-${stamp}@pmh.com.vn`,
         fullName: 'Tai khoan leo thang',
         role: 'sa',
         totpLoginRequired: false,
@@ -96,7 +96,7 @@ test.describe('Bề mặt quản trị tài khoản đòi step-up', () => {
 
     // Và KHÔNG được tạo ra gì cả — chặn mà vẫn ghi thì tệ hơn không chặn.
     expect(
-      sql(`SELECT count(*)::text FROM users WHERE email = 'leo-thang-${stamp}@pmh.com.vn'`),
+      sql(`SELECT count(*)::text FROM users WHERE email = 'e2e-tao-moi-leo-thang-${stamp}@pmh.com.vn'`),
     ).toBe('0');
   });
 
@@ -115,7 +115,7 @@ test.describe('Bề mặt quản trị tài khoản đòi step-up', () => {
     const created = await page.request.post('/api/v1/accounts', {
       headers,
       data: {
-        email: `sau-ma-${stamp}@pmh.com.vn`,
+        email: `e2e-tao-moi-sau-ma-${stamp}@pmh.com.vn`,
         fullName: 'Tai khoan hop le',
         role: 'member',
         totpLoginRequired: true,
@@ -141,7 +141,7 @@ test.describe('Bề mặt quản trị tài khoản đòi step-up', () => {
     const victim = await page.request.post('/api/v1/accounts', {
       headers,
       data: {
-        email: `nan-nhan-${stamp}@pmh.com.vn`,
+        email: `e2e-tao-moi-nan-nhan-${stamp}@pmh.com.vn`,
         fullName: 'Nan nhan',
         role: 'member',
         totpLoginRequired: true,
@@ -177,7 +177,7 @@ test.describe('Bắt đổi mật khẩu tạm là hàng rào của SERVER, khô
       headers,
       data: { token: await freshTotpCode(secret) },
     });
-    const email = `tam-${stamp}@pmh.com.vn`;
+    const email = `e2e-tao-moi-tam-${stamp}@pmh.com.vn`;
     const created = await page.request.post('/api/v1/accounts', {
       headers,
       data: { email, fullName: 'Mat khau tam', role: 'member', totpLoginRequired: false },

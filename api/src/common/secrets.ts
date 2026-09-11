@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { redactMessage } from './log-redact';
 
 /**
  * AD-11: bí mật (master key, pepper, SMTP pass) đọc từ FILE docker secret — không env,
@@ -23,7 +24,7 @@ export function readSecretFile(envVar: string, required = true): string {
     return value;
   } catch (error) {
     throw new Error(
-      `Không đọc được secret từ ${envVar}=${path}: ${(error as Error).message}`,
+      `Không đọc được secret từ ${envVar}=${path}: ${redactMessage(error)}`,
       { cause: error },
     );
   }

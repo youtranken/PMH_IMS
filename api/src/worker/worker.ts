@@ -13,13 +13,22 @@ import {
   SWEEP_JOB_OPTIONS,
   redisConnectionOptions,
 } from '../modules/queue/queue.constants';
+import { redactMessage, redactPii } from '../common/log-redact';
 
 const RELAY_INTERVAL_MS = 2_000;
 const SWEEP_EVERY_MS = 60_000;
 
-/** Lỗi SMTP hay nhúng địa chỉ người nhận — che email trước khi ghi log/DLQ (NFR-04). */
-function redactPii(message: string): string {
-  return message.replace(/[\w.+-]+@[\w-]+(?:\.[\w-]+)*/g, '[email]');
+/**
+ * Lỗi của một job, đã chà hai lớp trước khi ghi ra log hoặc vào `outbox.fail_reason`.
+ *
+ *   · `redactMessage` bỏ THAM SỐ ĐÃ BIND của lỗi truy vấn (hash Argon2, ciphertext TOTP,
+ *     email, họ tên — NFR-04/AD-4);
+ *   · `redactPii` che địa chỉ email, vì lỗi SMTP hay nhúng nguyên địa chỉ người nhận.
+ *
+ * Trước 11/09 chỗ này chỉ có lớp thứ hai, nên một job hỏng vì lỗi DB vẫn in trọn `params`.
+ */
+function jobFailure(error: unknown): string {
+  return redactPii(redactMessage(error));
 }
 
 /**
@@ -57,7 +66,7 @@ async function bootstrap(): Promise<void> {
   eventsWorker.on('failed', (job, err) => {
     const made = job?.attemptsMade ?? 0;
     const max = job?.opts.attempts ?? 1;
-    const reason = redactPii(err.message);
+    const reason = jobFailure(err);
     if (made < max) {
       logger.warn(`EVENTS job ${job?.id} attempt ${made}/${max} lỗi: ${reason}`);
       return;
@@ -67,13 +76,13 @@ async function bootstrap(): Promise<void> {
     if (id) {
       void outbox
         .markFailed(id, reason)
-        .catch((e) => logger.error(`markFailed lỗi: ${(e as Error).message}`));
+        .catch((e) => logger.error(`markFailed lỗi: ${jobFailure(e)}`));
     }
   });
 
   const sweepWorker = new Worker(SWEEP_QUEUE, async () => sweep.runAll(), { connection });
   sweepWorker.on('failed', (job, err) => {
-    logger.error(`SWEEP job ${job?.id} lỗi: ${err.message}`);
+    logger.error(`SWEEP job ${job?.id} lỗi: ${jobFailure(err)}`);
   });
 
   await sweepQueue.add(
@@ -85,7 +94,7 @@ async function bootstrap(): Promise<void> {
   const relayTimer = setInterval(() => {
     void outbox
       .relayBatch(eventsQueue)
-      .catch((e) => logger.error(`relay lỗi: ${(e as Error).message}`));
+      .catch((e) => logger.error(`relay lỗi: ${jobFailure(e)}`));
   }, RELAY_INTERVAL_MS);
 
   logger.log(

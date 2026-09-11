@@ -3,6 +3,7 @@ import { currentRequestIp } from '../../common/request-context';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { auditLogTable } from './audit.schema';
+import { redactMessage } from '../../common/log-redact';
 
 export interface AuditEntry {
   /** user `sub` hoặc 'system' */
@@ -74,7 +75,7 @@ export class AuditWriterService {
     try {
       await this.append(entry);
     } catch (error) {
-      this.logger.error(`Ghi audit thất bại (${entry.action}): ${(error as Error).message}`);
+      this.logger.error(`Ghi audit thất bại (${entry.action}): ${redactMessage(error)}`);
     }
   }
 }

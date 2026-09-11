@@ -17,6 +17,7 @@ import {
 } from './digest-schedule';
 import { expiryRuleTable } from './expiry.schema';
 import { ExpiryService } from './expiry.service';
+import { redactMessage } from '../../common/log-redact';
 
 export interface DigestRuleInput {
   name?: string;
@@ -140,7 +141,7 @@ export class ExpiryDigestService {
         // handler, nên để lỗi thoát ra đây là mọi luật xếp sau ngừng gửi mà tín hiệu duy
         // nhất là một dòng log mỗi phút (code review Epic 3).
         this.logger.error(
-          `Luật "${rule.name}" lỗi khi gửi báo cáo: ${(error as Error).message}`,
+          `Luật "${rule.name}" lỗi khi gửi báo cáo: ${redactMessage(error)}`,
         );
       }
     }
