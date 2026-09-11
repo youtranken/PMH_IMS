@@ -4,6 +4,7 @@ import { SystemConfigService } from '../config-sys/system-config.service';
 import { OutboxService } from '../outbox/outbox.service';
 import { SweepService } from '../queue/sweep.service';
 import { ApprovalsService } from './approvals.service';
+import { redactMessage } from '../../common/log-redact';
 
 /** Đã nhắc rồi thì thôi — cờ nằm trong `payload`, không cần thêm cột. */
 const REMINDED_KEY = 'remindedAt';
@@ -73,7 +74,7 @@ export class ApprovalSweepService implements OnModuleInit {
         });
       } catch (error) {
         this.logger.warn(
-          `nhắc yêu cầu ${request.id} lỗi: ${error instanceof Error ? error.message : 'không rõ'}`,
+          `nhắc yêu cầu ${request.id} lỗi: ${redactMessage(error)}`,
         );
       }
     }

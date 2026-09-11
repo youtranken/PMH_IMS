@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Pool } from 'pg';
+import { redactMessage } from '../common/log-redact';
 
 /** Khóa advisory cố định — 2 instance api cùng khởi động không chạy migration chồng nhau. */
 const MIGRATION_LOCK_ID = 727_001;
@@ -106,7 +107,7 @@ export async function runMigrations(
           );
         } catch (error) {
           throw new Error(
-            `Migration ${file} (no-transaction) thất bại: ${(error as Error).message}`,
+            `Migration ${file} (no-transaction) thất bại: ${redactMessage(error)}`,
             { cause: error },
           );
         }
@@ -122,7 +123,7 @@ export async function runMigrations(
         } catch (error) {
           await client.query('ROLLBACK');
           throw new Error(
-            `Migration ${file} thất bại: ${(error as Error).message}`,
+            `Migration ${file} thất bại: ${redactMessage(error)}`,
             {
               cause: error,
             },

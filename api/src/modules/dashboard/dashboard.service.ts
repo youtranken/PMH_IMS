@@ -8,6 +8,7 @@ import { IpamApiService } from '../ipam/ipam.api';
 import { VaultApiService } from '../vault/vault.api';
 import type { UserRole } from '../auth/types';
 import { pickLoadedSubnets, pickRecent, pickStaleOwners } from './dashboard-rules';
+import { redactMessage } from '../../common/log-redact';
 
 /** Cửa sổ "tuần qua" của các khối tính theo tuần. */
 const WEEK_DAYS = 7;
@@ -346,5 +347,5 @@ function emptyBlock<T>(): DashboardBlock<T> {
 }
 
 function message(error: unknown): string {
-  return error instanceof Error ? error.message : 'không rõ';
+  return redactMessage(error);
 }

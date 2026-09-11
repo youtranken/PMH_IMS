@@ -1,5 +1,6 @@
 import { Global, Injectable, Logger, Module } from '@nestjs/common';
 import type { ExpiryItem, ExpirySource } from './expiry-source';
+import { redactMessage } from '../log-redact';
 
 /**
  * Sổ đăng ký nguồn hạn (AD-7).
@@ -51,7 +52,7 @@ export class ExpirySourceRegistry {
           return await source.findExpiring(from, to);
         } catch (error) {
           this.logger.error(
-            `Nguồn hạn "${source.sourceKind}" lỗi: ${(error as Error).message}`,
+            `Nguồn hạn "${source.sourceKind}" lỗi: ${redactMessage(error)}`,
           );
           return [] as ExpiryItem[];
         }

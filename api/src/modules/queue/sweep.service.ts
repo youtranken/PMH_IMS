@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { redactMessage } from '../../common/log-redact';
 
 export interface SweepHandler {
   name: string;
@@ -27,7 +28,7 @@ export class SweepService {
         await h.run();
       } catch (error) {
         this.logger.error(
-          `sweep handler '${h.name}' lỗi: ${(error as Error).message}`,
+          `sweep handler '${h.name}' lỗi: ${redactMessage(error)}`,
         );
       }
     }

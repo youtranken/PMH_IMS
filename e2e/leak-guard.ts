@@ -37,6 +37,20 @@ const WATCHED: { table: string; column: string }[] = [
   { table: 'subnet', column: 'name' },
   { table: 'software', column: 'code' },
   { table: 'device', column: 'code' },
+  /*
+   * `users` thêm ngày 11/09, sau khi đúng chuyện cửa này sinh ra để chặn xảy ra lần thứ hai.
+   *
+   * `leo-thang-quyen.spec.ts` (do chính đợt vá 10/09 viết) tạo tài khoản tên `sau-ma-…`,
+   * `nan-nhan-…`, `tam-…` — không chữ "E2E" nào, nên `reset-e2e.mjs` không bao giờ đụng tới.
+   * Sau hai ngày, bảng `users` có 24 hàng rác, và bài "SA tạo tài khoản mới" bắt đầu đỏ vì
+   * hàng vừa tạo bị đẩy khỏi trang 1 (danh sách sắp theo tên, `limit=20`).
+   *
+   * Bài đỏ đó KHÔNG nói gì về tài khoản; nó nói về phân trang. Đó mới là cái giá thật của rác:
+   * nó làm một bài kiểm đỏ ở chỗ chẳng liên quan, và người đọc đi tìm lỗi ở chỗ không có lỗi.
+   * Ba bảng đầu được canh vì lý do y hệt (rà soát 09/09) — chỉ là lần đó chưa ai nghĩ tới
+   * `users`.
+   */
+  { table: 'users', column: 'email' },
 ];
 
 export function markRunStart(): void {

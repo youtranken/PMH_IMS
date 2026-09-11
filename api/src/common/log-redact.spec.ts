@@ -1,4 +1,4 @@
-import { redactForLog } from './log-redact';
+import { redactForLog, redactMessage, redactPii } from './log-redact';
 
 /**
  * LỖI 500 KHÔNG ĐƯỢC MANG HASH MẬT KHẨU RA FILE LOG.
@@ -120,5 +120,110 @@ describe('redactForLog — SQL ra log, tham số thì không', () => {
     const b = new Error('b', { cause: a });
     Object.assign(a, { cause: b });
     expect(() => redactForLog(a)).not.toThrow();
+  });
+});
+
+/**
+ * Bản MỘT DÒNG, dùng ở 13 chỗ ghi `logger.warn`/`logger.error` (vá 11/09).
+ *
+ * Ranh giới với `redactForLog` là ĐỘ DÀI, không phải mức độ che: cả hai giấu `params` y như
+ * nhau. Nếu bài nào dưới đây để lọt một tham số thì bản ngắn đã che nhẹ tay hơn bản dài, và
+ * 13 chỗ kia lại là 13 lỗ.
+ */
+describe('redactMessage — một dòng, vẫn không lọt tham số', () => {
+  function queryError(query: string, params: unknown[], cause?: Error): Error {
+    const error = new Error(`Failed query: ${query}\nparams: ${params.join(',')}`);
+    Object.assign(error, { query, params, cause });
+    return error;
+  }
+
+  const ARGON2 = '$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHQ$3aVn8mCVCFCTsJ2ZmZ0N4Q';
+
+  it('lỗi truy vấn: KHÔNG in một tham số nào, và cũng không in cả câu SQL', () => {
+    const text = redactMessage(
+      queryError('insert into "users" ("email", "password_hash") values ($1, $2)', [
+        'nguyen.van.a@pmh.com.vn',
+        ARGON2,
+      ]),
+    );
+
+    expect(text).not.toContain(ARGON2);
+    expect(text).not.toContain('nguyen.van.a@pmh.com.vn');
+    // Nói được "đây là lỗi DB và có 2 tham số" là đủ cho một dòng cảnh báo.
+    expect(text).toContain('2 tham số');
+  });
+
+  it('một dòng nghĩa là MỘT dòng — không kèm stack', () => {
+    const text = redactMessage(new Error('Không mở được két'));
+
+    expect(text).toContain('Không mở được két');
+    // Stack là thứ làm dòng cảnh báo phình lên vài chục dòng; log không ai đọc thì bằng không.
+    expect(text).not.toContain('log-redact.spec.ts');
+    expect(text.split('\n')).toHaveLength(1);
+  });
+
+  it('giữ mã lỗi Postgres — đó là thứ người trực cần nhất trong một dòng', () => {
+    const error = new Error('duplicate key value violates unique constraint');
+    Object.assign(error, { code: '23505' });
+
+    expect(redactMessage(error)).toContain('23505');
+  });
+
+  /**
+   * Cùng lý do đã ghi cho `redactForLog`: tầng trên hay bọc thêm một lớp ("Ghi audit thất
+   * bại"), và lớp ngoài đó chẳng nói gì. Đi hết chuỗi `cause` mới biết là lỗi DB hay lỗi mạng.
+   */
+  it('lỗi truy vấn nằm trong `cause` cũng bị che, và vẫn nêu được nguyên nhân', () => {
+    const outer = new Error('Ghi audit thất bại', {
+      cause: queryError('insert into "audit_log" ...', [ARGON2]),
+    });
+
+    const text = redactMessage(outer);
+    expect(text).toContain('Ghi audit thất bại');
+    expect(text).toContain('nguyên nhân');
+    expect(text).not.toContain(ARGON2);
+  });
+
+  it('vòng lặp `cause` không làm treo', () => {
+    const a = new Error('a');
+    const b = new Error('b', { cause: a });
+    Object.assign(a, { cause: b });
+    expect(() => redactMessage(a)).not.toThrow();
+  });
+
+  it.each([
+    ['null', null],
+    ['undefined', undefined],
+    ['chuỗi', 'hỏng ở đâu đó'],
+    ['số', 42],
+  ])('thứ ném ra không phải Error (%s) vẫn ra chuỗi, không tự ném', (_name, thrown) => {
+    expect(typeof redactMessage(thrown)).toBe('string');
+  });
+});
+
+/**
+ * `redactPii` chuyển từ `worker/worker.ts` về đây ngày 11/09 (AD-15: những gì phải chà trước
+ * khi ghi log có MỘT nhà). Lúc còn nằm riêng trong worker nó KHÔNG có bài kiểm nào — và nó là
+ * thứ quyết định một địa chỉ email có rơi vào `outbox.fail_reason` hay không.
+ */
+describe('redactPii — che email trước khi chuỗi đi vào log hoặc DLQ', () => {
+  it('che địa chỉ trong câu lỗi SMTP', () => {
+    const text = redactPii('550 5.1.1 <nguyen.van.a@pmh.com.vn>: Recipient address rejected');
+
+    expect(text).not.toContain('nguyen.van.a@pmh.com.vn');
+    expect(text).toContain('[email]');
+    // Phần còn lại phải giữ nguyên, nếu không người trực mất luôn lý do thật.
+    expect(text).toContain('Recipient address rejected');
+  });
+
+  it('che HẾT, không chỉ địa chỉ đầu tiên', () => {
+    const text = redactPii('gửi tới an@pmh.com.vn và binh.c+tag@sub.pmh.com.vn thất bại');
+
+    expect(text).not.toContain('@pmh.com.vn');
+    expect(text.match(/\[email\]/g)).toHaveLength(2);
+  });
+
+  it('chuỗi không có email thì không đụng tới', () => {
+    expect(redactPii('ECONNREFUSED 127.0.0.1:25')).toBe('ECONNREFUSED 127.0.0.1:25');
   });
 });

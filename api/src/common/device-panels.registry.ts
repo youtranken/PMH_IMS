@@ -1,5 +1,6 @@
 import { Global, Injectable, Logger, Module } from '@nestjs/common';
 import type { DevicePanel, DevicePanelProvider } from './device-panels';
+import { redactMessage } from './log-redact';
 
 /**
  * Sổ đăng ký khu mở rộng của trang chi tiết thiết bị (story 2.5).
@@ -31,7 +32,7 @@ export class DevicePanelRegistry {
           // Một module phụ hỏng KHÔNG được làm sập cả trang chi tiết thiết bị: hồ sơ,
           // bảo hành, port map, giấy tờ vẫn phải xem được — đó là màn tra cứu lúc có sự cố.
           this.logger.error(
-            `Khu mở rộng "${provider.panelKey}" lỗi: ${(error as Error).message}`,
+            `Khu mở rộng "${provider.panelKey}" lỗi: ${redactMessage(error)}`,
           );
           return null;
         }

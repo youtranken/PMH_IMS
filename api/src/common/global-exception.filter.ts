@@ -43,9 +43,23 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // Response đã gửi (stream/write dở) → không thể đổi status; chỉ log, tránh
     // ERR_HTTP_HEADERS_SENT thứ cấp nuốt mất lỗi gốc.
     if (response.headersSent) {
+      /*
+       * NGOẠI LỆ CÓ KIỂM CỦA LUẬT `NO_RAW_ERROR_MESSAGE_IN_LOG` (11/09).
+       *
+       * Luật đó bắt `.message` trong dòng log vì `DrizzleQueryError.message` chở tham số đã
+       * bind. Ở đây `body` KHÔNG phải lỗi gốc — nó là body đã đi qua `toBody`, mà hàm đó trả
+       * đúng chuỗi `'Internal server error'` cho mọi lỗi không đoán trước, còn nhánh
+       * `HttpException` thì `message` là câu do chính ta viết ra và sắp gửi cho client.
+       *
+       * Giữ `body.message` chứ không đổi sang `redactMessage(exception)`: dòng log này trả lời
+       * câu "response nào đã bị nuốt", nên nó phải in đúng thứ lẽ ra client nhận được. Lỗi gốc
+       * đã được ghi đầy đủ ở khối `>= 500` bên trên.
+       */
+      /* eslint-disable no-restricted-syntax -- `body` đã qua `toBody`, không phải lỗi gốc */
       this.logger.error(
         `Exception sau khi headers đã gửi (status ${body.statusCode}): ${body.message}`,
       );
+      /* eslint-enable no-restricted-syntax */
       return;
     }
     response.status(body.statusCode).json(body);

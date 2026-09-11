@@ -26,6 +26,43 @@
 const MAX_CAUSE_DEPTH = 5;
 
 export function redactForLog(error: unknown): string {
+  return walkCauses(error, describe, '\n  ← nguyên nhân: ');
+}
+
+/**
+ * Bản MỘT DÒNG — cho `logger.warn`/`logger.error` chỉ muốn một câu, không muốn cả stack.
+ *
+ * ===== VÌ SAO CÓ HAI BẢN, CHỨ KHÔNG PHẢI MỘT =====
+ *
+ * `redactForLog` sinh ra cho lỗi 500 ở `GlobalExceptionFilter`: ở đó stack là thứ duy nhất
+ * còn lại để lần ra, nên phải giữ. Nhưng 13 chỗ khác trong repo chỉ đang ghi một dòng cảnh
+ * báo ("khối sắp-hết-hạn lỗi: …"), và nhét nguyên stack vào đó sẽ làm log ồn tới mức không
+ * ai đọc — mà log không ai đọc thì bằng không có log.
+ *
+ * Nên chúng nhận bản ngắn. Ranh giới giữa hai bản là ĐỘ DÀI, không phải mức độ che: cả hai
+ * che `params` y như nhau, vì đó mới là chỗ PII rò ra.
+ *
+ * ===== VÌ SAO KHÔNG ĐỂ CHÚNG TỰ VIẾT `.message` =====
+ *
+ * Đó chính là trạng thái trước 11/09: 13 chỗ viết `(error as Error).message`, và với
+ * `DrizzleQueryError` thì `.message` là `Failed query: <sql>\nparams: <THAM SỐ ĐÃ BIND>` —
+ * hash Argon2, ciphertext TOTP secret, email, họ tên, số điện thoại rơi thẳng vào
+ * `docker logs`, ngoài ranh giới PII mà NFR-04/AD-4 dựng quanh DB. Không ai phải cố ý làm
+ * gì; chỉ cần một ràng buộc bị vi phạm ở một câu INSERT vào `users`.
+ *
+ * Vẫn đi hết chuỗi `cause`: một lỗi bọc ngoài thường chẳng nói gì ("Ghi audit thất bại"), và
+ * mắt xích bên trong mới cho biết đó là lỗi DB hay lỗi mạng.
+ */
+export function redactMessage(error: unknown): string {
+  return walkCauses(error, describeShort, ' ← nguyên nhân: ');
+}
+
+/** Đi hết chuỗi `cause`, chặn cả lỗi tự trỏ vòng lẫn chuỗi bọc quá dài. */
+function walkCauses(
+  error: unknown,
+  render: (link: unknown) => string,
+  separator: string,
+): string {
   const seen = new Set<unknown>();
   const parts: string[] = [];
 
@@ -34,12 +71,12 @@ export function redactForLog(error: unknown): string {
     if (seen.has(current)) break;
     seen.add(current);
 
-    parts.push(describe(current));
+    parts.push(render(current));
     current = (current as { cause?: unknown }).cause;
   }
 
   if (parts.length === 0) return String(error);
-  return parts.join('\n  ← nguyên nhân: ');
+  return parts.join(separator);
 }
 
 /** Một mắt xích trong chuỗi lỗi. */
@@ -59,6 +96,39 @@ function describe(error: unknown): string {
     return `${error.stack ?? error.message}${suffix}`;
   }
 
+  return String(error);
+}
+
+/**
+ * Che ĐỊA CHỈ EMAIL trong một chuỗi sắp ghi ra log.
+ *
+ * Khác hẳn hai hàm trên, và hai việc này KHÔNG được gộp:
+ *   · `redactMessage`/`redactForLog` che THAM SỐ ĐÃ BIND của một lỗi truy vấn;
+ *   · hàm này che email trong một chuỗi bất kỳ — lỗi SMTP hay nhúng nguyên địa chỉ người
+ *     nhận vào message, và chuỗi đó còn đi tiếp vào `outbox.fail_reason` chứ không chỉ ra log.
+ *
+ * Chỉ dùng ở đường MAIL/JOB. Không bọc nó quanh mọi dòng log: `audit_log.actor` là email và
+ * nó có mặt trong log một cách CÓ CHỦ Ý — che hết thì mất luôn đường lần ra ai làm gì.
+ *
+ * Trước 11/09 hàm này nằm riêng trong `worker/worker.ts`, cạnh đúng một chỗ dùng. Chuyển về
+ * đây để "những gì phải chà trước khi ghi log" có MỘT nhà (AD-15), và để chỗ dùng ghép được
+ * hai lớp: `redactPii(redactMessage(err))`.
+ */
+export function redactPii(message: string): string {
+  return message.replace(/[\w.+-]+@[\w-]+(?:\.[\w-]+)*/g, '[email]');
+}
+
+/** Một mắt xích, bản MỘT DÒNG: bỏ stack, giữ nguyên phần che `params`. */
+function describeShort(error: unknown): string {
+  const query = asQueryError(error);
+  if (query) {
+    return `Câu truy vấn hỏng (${query.params.length} tham số đã che — NFR-04)`;
+  }
+  if (error instanceof Error) {
+    const code = (error as { code?: unknown }).code;
+    const suffix = typeof code === 'string' || typeof code === 'number' ? ` [code ${code}]` : '';
+    return `${error.message}${suffix}`;
+  }
   return String(error);
 }
 
