@@ -88,6 +88,14 @@ thu hẹp được union phân biệt bằng cờ boolean** (`if (!r.ok) r.reaso
 - Không dùng `sleep`; chỉ `expect(...).toBeVisible()` / `waitForResponse`. Selector ưu tiên `getByRole`/`getByLabel`, cấm CSS class selector.
 - Email dev bắt qua **Mailpit** (API `http://localhost:8025/api/v1/messages` — Playwright chạy
   NGOÀI docker nên hostname `mailpit` không phân giải được), không đọc log.
+- **Mọi hàng bài kiểm tạo ra phải mang chữ `E2E` trong tên** (`device.code`, `software.code`,
+  `subnet.name`, `isp_line.code`, `site.code`…; riêng tài khoản là `e2e-tao-moi-…@`). Đó là
+  thứ DUY NHẤT `api/scripts/reset-e2e.mjs` nhìn vào để dọn. Đặt sai tên thì hàng đó không
+  thuộc về ai — không lượt dọn nào xoá, và rác sẽ làm ĐỎ MỘT BÀI KHÁC sau vài ngày: 09/09 là
+  27 dải + 11 hồ sơ phần mềm (8 bài đỏ trông như hồi quy API), 11/09 là 24 tài khoản (bài "SA
+  tạo tài khoản mới" đỏ vì hàng mới bị đẩy khỏi trang 1). Từ 11/09 `e2e/global-teardown.ts`
+  chạy trọn lượt dọn ở cuối rồi ĐỎ ngay nếu còn hàng sống sót, nên sai quy ước sẽ lộ ở đúng
+  lượt chạy sinh ra nó.
 
 **Definition of Done — story chỉ `done` khi đủ 8 gạch:**
 
