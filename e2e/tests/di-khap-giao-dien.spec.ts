@@ -3468,7 +3468,9 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await page.getByRole('tab', { name: /^Máy đang dùng/ }).click();
     const seatRow = page.getByRole('row', { name: new RegExp(deviceCode) });
     await expect(seatRow, 'Ghế vừa gán phải hiện trong tab Máy đang dùng').toBeVisible();
-    await seatRow.getByRole('button', { name: 'Sửa', exact: true }).click();
+    /* "Sửa" và "Gỡ" nay ở trong menu ba chấm, không còn hai nút sát nhau (rà UI/UX #21). */
+    await seatRow.getByRole('button', { name: /^Thao tác với / }).click();
+    await page.getByRole('menuitem', { name: 'Sửa', exact: true }).click();
 
     const editSeat = page.getByRole('dialog', { name: `Sửa ghế license — ${deviceCode}` });
     await expect(editSeat, 'Hộp sửa ghế phải mang mã máy trên tiêu đề').toBeVisible();

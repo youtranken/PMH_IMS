@@ -939,6 +939,7 @@ function RemoveDialog({
  * `NatForm` thì nó chạy cả lúc THÊM MỚI, gọi `/nat/undefined/history` và nhận 400.
  */
 function NatHistory({ ruleId }: { ruleId: string }) {
+  const { t } = useTranslation();
   const history = useQuery({
     queryKey: ['ipam', 'nat', ruleId, 'history'],
     queryFn: () => apiFetch<NatHistoryRow[]>(`/api/v1/ipam/nat/${ruleId}/history`),
@@ -946,5 +947,5 @@ function NatHistory({ ruleId }: { ruleId: string }) {
 
   if (history.isLoading) return <Loading />;
   if (history.isError) return <LoadError error={history.error} onRetry={() => void history.refetch()} />;
-  return <HistoryPanel entries={toNatHistory(history.data ?? [])} />;
+  return <HistoryPanel entries={toNatHistory(history.data ?? [], t)} />;
 }

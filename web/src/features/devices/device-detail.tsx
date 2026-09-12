@@ -223,6 +223,30 @@ export function DeviceDetail({ me }: { me: Me }) {
                     });
                     if (!answer.ok) return;
                     cleanup = answer.checked;
+                  } else {
+                    /*
+                     * ===== NHÁNH "ĐƯA LẠI VÀO DÙNG" CŨNG PHẢI HỎI (12/09, rà UI/UX #21) =====
+                     *
+                     * Mục #21 nói đúng một nửa: nút này CÙNG TỌA ĐỘ với "Thanh lý" hôm trước,
+                     * nên trí nhớ cơ bắp dẫn tay tới đây. Bản trước nhánh `retired` đi thẳng
+                     * vào `mutate` — tức một cú bấm theo quán tính đổi luôn trạng thái hồ sơ.
+                     *
+                     * VÌ SAO KHÔNG DỒN VÀO `RowActions` NHƯ HAI CHỖ BẢNG: đầu trang này chỉ có
+                     * HAI nút, và một trong hai ("Sửa hồ sơ") là hành động chính của màn. Đẩy
+                     * nút còn lại vào menu là dựng một menu MỘT MỤC — đúng thứ
+                     * `docs/SHARED-REGISTRY.md` viết rõ là KHÔNG dùng ("thêm một cú bấm mà
+                     * không giấu được gì"). Nên chỗ này vá cái hở thật: không tọa độ nào trên
+                     * đầu trang đổi được trạng thái hồ sơ mà không hỏi một câu.
+                     */
+                    const ok = await askConfirm({
+                      title: t("common.titleOf", {
+                        action: t("devices.reopen"),
+                        subject: item.code,
+                      }),
+                      message: t("devices.confirmReopen", { name: item.code }),
+                      confirmLabel: t("devices.reopen"),
+                    });
+                    if (!ok) return;
                   }
                   setStatus.mutate(
                     { status: retired ? "in_use" : "retired", cleanup },
@@ -397,7 +421,7 @@ export function DeviceDetail({ me }: { me: Me }) {
         ) : history.isError ? (
           <LoadError error={history.error} onRetry={() => void history.refetch()} />
         ) : (
-          <HistoryPanel entries={toHistoryEntries(history.data ?? [])} />
+          <HistoryPanel entries={toHistoryEntries(history.data ?? [], t)} />
         )}
       </TabPanel>
 

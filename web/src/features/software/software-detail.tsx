@@ -293,7 +293,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
         ) : history.isError ? (
           <LoadError error={history.error} onRetry={() => void history.refetch()} />
         ) : (
-          <HistoryPanel entries={toSoftwareHistory(history.data ?? [])} />
+          <HistoryPanel entries={toSoftwareHistory(history.data ?? [], t)} />
         )}
       </TabPanel>
 

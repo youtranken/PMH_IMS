@@ -208,6 +208,7 @@ export function CatalogForm({
           <>
             <Field label={t('catalog.site')} required>
               <Select
+                required
                 value={form.siteId}
                 ariaLabel={t('catalog.site')}
                 placeholder={t('catalog.pickSite')}

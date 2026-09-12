@@ -28,6 +28,15 @@ interface ComboboxProps<T> {
    * rồi khai một máy trùng, hoặc chọn đại máy khác — cả hai đều ghi vào DB và không tự sửa.
    */
   failed?: boolean;
+  /**
+   * Ô BẮT BUỘC. Khác `Select`, `Combobox` render ra một `<input>` THẬT, nên đây là `required`
+   * của TRÌNH DUYỆT — chặn submit thật, không chỉ là một thuộc tính `aria`.
+   *
+   * Đó chính là điều mục #24 bản rà soát nói: dấu `*` của `Field` có HAI hành vi tuỳ điều
+   * khiển bên dưới, và người viết form không có cách nào biết mình đang được vế nào. Nay
+   * `Combobox` có vế đầy đủ, `Select` có vế `aria` (nó là `<button>`, không có gì hơn để cho).
+   */
+  required?: boolean;
 }
 
 /**
@@ -49,6 +58,7 @@ export function Combobox<T>({
   ariaLabel,
   action,
   failed,
+  required,
 }: ComboboxProps<T>) {
   const { t } = useTranslation();
   const [active, setActive] = useState(0);
@@ -163,6 +173,7 @@ export function Combobox<T>({
         value={query}
         disabled={disabled}
         role="combobox"
+        required={required}
         aria-label={ariaLabel}
         aria-expanded={open}
         aria-controls={open ? listId : undefined}

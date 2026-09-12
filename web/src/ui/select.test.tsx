@@ -61,3 +61,30 @@ describe('Select — phân biệt "không có lựa chọn" với "không tải 
     expect(onChange).toHaveBeenCalledWith('pc');
   });
 });
+
+/**
+ * DẤU `*` PHẢI CÓ NGHĨA VỚI CẢ NGƯỜI KHÔNG NHÌN THẤY NÓ (rà UI/UX #24).
+ *
+ * `Field required` chỉ VẼ dấu `*` (`page-header.tsx`), còn chặn thật thì tuỳ điều khiển bên
+ * dưới: `<input>` có `required` của trình duyệt, `Select` render ra `<button>` nên KHÔNG có
+ * gì. Hậu quả tới 12/09: năm ô đội dấu `*` mà trình đọc màn hình không nghe thấy chữ "bắt
+ * buộc" nào — dấu ấy là thứ chỉ người sáng mắt đọc được.
+ *
+ * Vế đối chứng ở dưới cũng cần: `aria-required` trên MỌI ô chọn thì thuộc tính đó hết nghĩa.
+ */
+describe('Select — ô bắt buộc', () => {
+  it('có `required` thì nút mở menu mang aria-required', () => {
+    renderWithI18n(
+      <Select required value="" onChange={() => {}} options={[]} ariaLabel="Loại thiết bị" />,
+    );
+    expect(screen.getByRole('button', { name: 'Loại thiết bị' })).toHaveAttribute(
+      'aria-required',
+      'true',
+    );
+  });
+
+  it('không có `required` thì KHÔNG mang thuộc tính đó', () => {
+    renderWithI18n(<Select value="" onChange={() => {}} options={[]} ariaLabel="Tủ mạng" />);
+    expect(screen.getByRole('button', { name: 'Tủ mạng' })).not.toHaveAttribute('aria-required');
+  });
+});

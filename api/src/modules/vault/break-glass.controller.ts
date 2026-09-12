@@ -24,11 +24,11 @@ class RequestDto {
    * Trần thật nằm ở `breakglass.max_grant_hours` (AD-11) và service KẸP theo nó. Chặn 168 ở
    * đây chỉ để một con số vô lý không đi xa hơn cửa vào — không phải để thay cho trần cấu hình.
    */
-  @IsInt() @Min(1) @Max(168) hours!: number;
+  @Min(1) @Max(168) @IsInt() hours!: number;
 }
 
 class DecisionDto {
-  @IsOptional() @IsInt() @Min(1) @Max(168) hours?: number;
+  @IsOptional() @Min(1) @Max(168) @IsInt() hours?: number;
   @IsOptional() @IsString() @Length(0, 500) note?: string;
 }
 

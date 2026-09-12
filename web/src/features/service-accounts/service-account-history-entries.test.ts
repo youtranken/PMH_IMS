@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import i18n from '@/lib/i18n';
 import { toServiceAccountHistory } from './service-account-history-entries';
 import type { ServiceAccountHistoryRow } from './service-account-types';
+
+/*
+ * `t` truyền vào đây là `t` THẬT của app (`@/lib/i18n`, đã nạp bản dịch tiếng Việt), KHÔNG
+ * phải một stub trả lại chính cái khóa.
+ *
+ * Đó là chỗ bài kiểm này đáng giá hơn trước: mọi câu khẳng định bên dưới so với CHỮ THẬT trên
+ * màn hình, nên một khóa gõ sai hay một khóa quên khai trong `vi.ts` sẽ làm đỏ ngay tại đây —
+ * đúng lớp lỗi của mục #1 bản rà soát (i18next rơi về chính cái khóa và không ai thấy).
+ */
+const t = i18n.t;
 
 function row(over: Partial<ServiceAccountHistoryRow> = {}): ServiceAccountHistoryRow {
   return {
@@ -23,17 +34,17 @@ describe('toServiceAccountHistory — dịch lịch sử thô thành câu ngư�
 
   for (const { action, label } of actions) {
     it(`"${action}" → "${label}"`, () => {
-      expect(toServiceAccountHistory([row({ action })])[0].action).toBe(label);
+      expect(toServiceAccountHistory([row({ action })], t)[0].action).toBe(label);
     });
   }
 
   // Hành động chưa có nhãn thì hiện NGUYÊN mã, không hiện rỗng: người đọc còn biết đường hỏi.
   it('hành động lạ giữ nguyên mã thô', () => {
-    expect(toServiceAccountHistory([row({ action: 'exported' })])[0].action).toBe('exported');
+    expect(toServiceAccountHistory([row({ action: 'exported' })], t)[0].action).toBe('exported');
   });
 
   it('không có thay đổi thì detail là null', () => {
-    expect(toServiceAccountHistory([row()])[0].detail).toBeNull();
+    expect(toServiceAccountHistory([row()], t)[0].detail).toBeNull();
   });
 
   const details: { name: string; changes: ServiceAccountHistoryRow['changes']; expected: string }[] =
@@ -89,12 +100,12 @@ describe('toServiceAccountHistory — dịch lịch sử thô thành câu ngư�
 
   for (const { name, changes, expected } of details) {
     it(name, () => {
-      expect(toServiceAccountHistory([row({ changes })])[0].detail).toBe(expected);
+      expect(toServiceAccountHistory([row({ changes })], t)[0].detail).toBe(expected);
     });
   }
 
   it('giữ nguyên mốc thời gian và người làm', () => {
-    const entry = toServiceAccountHistory([row()])[0];
+    const entry = toServiceAccountHistory([row()], t)[0];
     expect(entry.at).toBe('2026-08-26T10:00:00Z');
     expect(entry.actor).toBe('sa@pmh.com.vn');
   });

@@ -1,3 +1,4 @@
+import type { TFunction } from 'i18next';
 import type { HistoryEntry } from '@/ui/history-panel';
 import type { DeviceHistoryRow } from '@/lib/device-types';
 
@@ -10,74 +11,87 @@ import type { DeviceHistoryRow } from '@/lib/device-types';
 
 /** Tên trường → nhãn tiếng Việt. Trường lạ giữ nguyên tên còn hơn giấu đi. */
 const FIELD_LABEL: Record<string, string> = {
-  code: 'mã',
-  name: 'tên',
-  deviceTypeId: 'loại',
-  model: 'model',
-  serial: 'serial',
-  siteId: 'site',
-  cabinetId: 'tủ mạng',
-  vendorId: 'nhà cung cấp',
-  assignedTo: 'người sử dụng',
-  department: 'bộ phận',
-  purchaseDate: 'ngày mua',
-  warrantyStart: 'bảo hành từ',
-  warrantyEnd: 'bảo hành đến',
-  status: 'trạng thái',
-  note: 'ghi chú',
-  portLabel: 'cổng',
+  code: 'history.devices.fCode',
+  name: 'history.fName',
+  deviceTypeId: 'history.devices.fDeviceTypeId',
+  model: 'history.devices.fModel',
+  serial: 'history.devices.fSerial',
+  siteId: 'history.fSiteId',
+  cabinetId: 'history.devices.fCabinetId',
+  vendorId: 'history.fVendorId',
+  assignedTo: 'history.devices.fAssignedTo',
+  department: 'history.fDepartment',
+  purchaseDate: 'history.devices.fPurchaseDate',
+  warrantyStart: 'history.devices.fWarrantyStart',
+  warrantyEnd: 'history.devices.fWarrantyEnd',
+  status: 'history.fStatus',
+  note: 'history.fNote',
+  portLabel: 'history.devices.fPortLabel',
 };
 
 export const ACTION_LABEL: Record<string, string> = {
-  created: 'Tạo hồ sơ',
-  updated: 'Sửa hồ sơ',
-  'status-changed': 'Đổi trạng thái',
-  imported: 'Nhập từ Excel',
-  'imported-update': 'Cập nhật khi nhập từ Excel',
-  'port-added': 'Thêm cổng port map',
-  'port-updated': 'Sửa cổng port map',
-  'port-removed': 'Xóa cổng port map',
+  created: 'history.devices.actCreated',
+  updated: 'history.devices.actUpdated',
+  'status-changed': 'history.devices.actStatusChanged',
+  imported: 'history.devices.actImported',
+  'imported-update': 'history.devices.actImportedUpdate',
+  'port-added': 'history.devices.actPortAdded',
+  'port-updated': 'history.devices.actPortUpdated',
+  'port-removed': 'history.devices.actPortRemoved',
   /*
    * Dòng này do MÁY KHÁC sinh ra, không phải do ai sửa hồ sơ máy này: thanh lý một thiết bị
    * thì cổng bên máy còn lại bị gỡ liên kết (`port-device-retirement.ts`). Nhãn phải nói rõ
    * "vì sao tự nhiên cổng của tôi rời ra", nếu không người đọc đi tìm người đã sửa.
    */
-  'port-unlinked': 'Gỡ liên kết cổng (máy đầu kia đã thanh lý)',
+  'port-unlinked': 'history.devices.actPortUnlinked',
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  in_use: 'Đang dùng',
-  spare: 'Dự phòng',
-  broken: 'Hỏng',
-  retired: 'Đã thanh lý',
+  in_use: 'history.devices.stInUse',
+  spare: 'history.devices.stSpare',
+  broken: 'history.devices.stBroken',
+  retired: 'history.devices.stRetired',
 };
 
-export function toHistoryEntries(rows: DeviceHistoryRow[]): HistoryEntry[] {
+/*
+ * `t` đi vào bằng THAM SỐ, không phải `useTranslation()` bên trong.
+ *
+ * Mấy hàm này là hàm THUẦN, và đó là lý do chúng có bài kiểm bảng dữ liệu không cần dựng
+ * React (`CLAUDE.md`: "Logic thuần phải có test bảng dữ liệu"). Gọi hook ở đây là biến chúng
+ * thành component và mất luôn cái đó. Có tiền lệ trong repo: `catalog-screen.tsx` cũng nhận
+ * `(t: TFunction) => …`.
+ */
+export function toHistoryEntries(rows: DeviceHistoryRow[], t: TFunction): HistoryEntry[] {
   return rows.map((row) => ({
     id: row.id,
     at: row.createdAt,
     actor: row.actor,
-    action: ACTION_LABEL[row.action] ?? row.action,
-    detail: describeChanges(row.changes),
+    /* Mã lạ (migration sau, dữ liệu cũ) GIỮ NGUYÊN — hiện mã còn hơn hiện ô trống. */
+    action: ACTION_LABEL[row.action] ? t(ACTION_LABEL[row.action]) : row.action,
+    detail: describeChanges(row.changes, t),
   }));
 }
 
 function describeChanges(
   changes: Record<string, { before: unknown; after: unknown }> | null,
+  t: TFunction,
 ): string | null {
   if (!changes) return null;
   const parts = Object.entries(changes)
     // Id danh mục là chuỗi uuid, hiện ra chỉ tổ rối; nói rõ "đã đổi" là đủ dùng.
     .map(([field, change]) => {
-      const label = FIELD_LABEL[field] ?? field;
-      if (field.endsWith('Id')) return `đổi ${label}`;
-      return `${label}: ${display(field, change.before)} → ${display(field, change.after)}`;
+      const label = FIELD_LABEL[field] ? t(FIELD_LABEL[field]) : field;
+      if (field.endsWith('Id')) return t('history.changedOnly', { field: label });
+      return `${label}: ${display(field, change.before, t)} → ${display(field, change.after, t)}`;
     });
   return parts.length > 0 ? parts.join('; ') : null;
 }
 
-function display(field: string, value: unknown): string {
-  if (value === null || value === undefined || value === '') return '(trống)';
-  if (field === 'status') return STATUS_LABEL[String(value)] ?? String(value);
+function display(field: string, value: unknown, t: TFunction): string {
+  if (value === null || value === undefined || value === '') return t('history.blank');
+  if (field === 'status') {
+    const khoa = STATUS_LABEL[String(value)];
+    return khoa ? t(khoa) : String(value);
+  }
   return String(value);
 }

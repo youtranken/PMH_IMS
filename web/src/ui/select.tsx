@@ -27,6 +27,7 @@ export function Select({
   className,
   disabled,
   failed,
+  required,
 }: {
   /**
    * Gắn lên chính nút mở menu, để `<Field htmlFor>` còn trỏ vào một điều khiển CÓ THẬT.
@@ -53,6 +54,23 @@ export function Select({
    * xong. Cùng một hàng rào với `Combobox.failed` — hai cửa này không được lệch nhau.
    */
   failed?: boolean;
+  /**
+   * Ô BẮT BUỘC — đặt `aria-required` lên nút mở menu.
+   *
+   * ===== VÌ SAO CẦN, VÀ VÌ SAO CHỈ CÓ THẾ =====
+   *
+   * `Field required` chỉ VẼ dấu `*` (`page-header.tsx`), còn việc chặn thật thì tuỳ loại điều
+   * khiển: `<input>` có `required` của trình duyệt, còn `Select` render ra `<button>` nên
+   * KHÔNG có gì cả. Hậu quả trước 12/09: năm ô đội dấu `*` mà trình đọc màn hình không nghe
+   * thấy chữ "bắt buộc" nào — dấu ấy là thứ chỉ người sáng mắt đọc được.
+   *
+   * Cờ này vá đúng phần đó. Nó KHÔNG dựng thêm hàng rào chặn submit, và cố ý: năm form ấy đã
+   * tự kiểm trong `submit()` rồi báo bằng một câu tiếng Việt đọc được ("Cần ít nhất: mã thiết
+   * bị, tên và loại thiết bị.") — tốt hơn bong bóng mặc định của trình duyệt. Nhồi thêm một
+   * `<input required>` ẩn để ép trình duyệt chặn là dựng hàng rào THỨ HAI cho cùng một luật,
+   * và hai hàng rào cho một luật thì sớm muộn nói khác nhau.
+   */
+  required?: boolean;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -121,6 +139,7 @@ export function Select({
         className="fsel-trigger"
         aria-label={ariaLabel}
         aria-haspopup="listbox"
+        aria-required={required ? true : undefined}
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
         aria-activedescendant={open && options[active] ? optionId(active) : undefined}

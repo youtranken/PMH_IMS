@@ -4,7 +4,6 @@
  */
 export default {
   app: {
-    title: 'IMS — Quản lý hệ thống IT',
     brand: 'IMS',
     brandFull: 'Quản lý hệ thống IT · PMH',
     loading: 'Đang tải…',
@@ -48,7 +47,6 @@ export default {
   lightbox: {
     title: 'Xem ảnh',
     close: 'Đóng',
-    closeDialog: 'Đóng hộp thoại',
     prev: 'Ảnh trước',
     next: 'Ảnh sau',
   },
@@ -104,14 +102,12 @@ export default {
        "common.delete" trên màn Địa chỉ IP. i18next trả về chính cái khóa khi không tìm thấy,
        nên lỗi loại này không đỏ ở đâu cả, chỉ lộ ra khi có người nhìn màn hình. */
     delete: 'Xóa',
-    back: 'Quay lại',
     sortBy: 'Sắp xếp theo {{column}}',
     expandRow: 'Mở rộng dòng',
     collapseRow: 'Thu gọn dòng',
     loading: 'Đang tải…',
     empty: 'Chưa có dữ liệu',
     error: 'Có lỗi xảy ra',
-    retry: 'Thử lại',
     export: 'Xuất Excel',
     filter: 'Bộ lọc',
     actions: 'Thao tác',
@@ -130,8 +126,6 @@ export default {
     page: 'Trang',
     of: 'trên',
     rows: 'dòng',
-    required: 'Bắt buộc',
-    theme: 'Giao diện',
     logout: 'Đăng xuất',
   },
   auth: {
@@ -160,7 +154,6 @@ export default {
     passwordMismatch: 'Hai mật khẩu nhập không khớp.',
     stepUpTitle: 'Xác nhận danh tính',
     stepUpSub: 'Nhập mã xác thực để xem thông tin bí mật',
-    stepUpValidFor: 'Có hiệu lực {{minutes}} phút',
   },
   nav: {
     dashboard: 'Bảng điều khiển',
@@ -176,9 +169,6 @@ export default {
     vault: 'Két sắt',
     disposal: 'Kho thanh lý',
     documents: 'Tài liệu',
-    sheets: 'Phiếu ISO',
-    incidents: 'Sự cố',
-    admin: 'Quản trị',
     accounts: 'Tài khoản',
     auditLog: 'Nhật ký',
     catalog: 'Danh mục',
@@ -208,7 +198,6 @@ export default {
     addIspProvider: 'Thêm nhà mạng',
     addServicePort: 'Thêm dịch vụ',
     edit: 'Sửa',
-    history: 'Lịch sử',
     deactivate: 'Vô hiệu',
     activate: 'Bật lại',
     delete: 'Xóa',
@@ -255,15 +244,8 @@ export default {
     deleted: 'Đã xóa.',
     saved: 'Đã lưu.',
     importTitle: 'Nhập danh mục từ Excel',
-    importPick: 'Chọn file .xlsx',
     importHint: 'Dùng đúng file tải từ nút "Tải file mẫu". Dòng đánh dấu VÍ DỤ sẽ được bỏ qua.',
-    importCheck: 'Đối chiếu',
-    importConfirm: 'Xác nhận ghi',
-    importNothing: 'Không có dòng nào cần ghi — file trùng khớp với dữ liệu đang có.',
-    importHasErrors: 'Còn dòng lỗi. Sửa trong file rồi đối chiếu lại — chưa ghi gì cả.',
-    importDone: 'Đã nhập: thêm {{created}}, cập nhật {{updated}}.',
     emptyHint: 'Chưa khai mục nào. Thêm tay, hoặc dùng "Nhập Excel" với file tải từ nút "Tải file mẫu".',
-    templateHint: 'Chưa có danh mục? Tải file mẫu, điền rồi nhập lại — nhanh hơn gõ tay từng mục.',
     readOnly: 'Bạn chỉ có quyền xem danh mục. Cần sửa thì nhờ Admin.',
   },
   devices: {
@@ -317,7 +299,6 @@ export default {
     cabinetHint: 'Tủ nào trong site đã chọn. Máy để bàn hay máy lẻ thì bỏ trống.',
     pickType: '— Chọn loại —',
     noSitePick: '— Chưa gán site —',
-    phPurchase: 'VD 12.500.000',
     tabProfile: 'Hồ sơ',
     tabHistory: 'Lịch sử',
     tabAttachments: 'Giấy tờ',
@@ -340,22 +321,19 @@ export default {
       'Thu hồi IP, gỡ rule NAT và trả ghế license của máy này. Hồ sơ phần mềm giữ nguyên — chỉ gỡ máy khỏi license.',
     retire: 'Thanh lý',
     reopen: 'Đưa lại vào dùng',
+    confirmReopen:
+      'Đưa "{{name}}" lại vào dùng? Hồ sơ mở lại để sửa, và máy tính lại hạn bảo hành — ' +
+      'nó sẽ xuất hiện lại trong email nhắc gia hạn.',
     retiredLocked: 'Thiết bị đã thanh lý — mở lại mới sửa được hồ sơ.',
     empty: 'Chưa có thiết bị nào khớp bộ lọc.',
     emptyHint: 'Thêm thiết bị hoặc dùng Nhập từ Excel để đưa cả danh sách vào một lần.',
-    back: 'Về danh sách',
     downloadTemplate: 'Tải file mẫu',
     importExcel: 'Nhập từ Excel',
     importTitle: 'Nhập thiết bị từ Excel',
     importHint:
       'Dùng file tải từ nút "Tải file mẫu" (hoặc file vừa Xuất Excel). Danh mục phải khai trước — ' +
       'hệ thống không tự tạo site, tủ mạng, loại thiết bị hay nhà cung cấp.',
-    exportHint: 'Xuất đúng những gì đang lọc trên màn hình.',
     noteHint: 'KHÔNG ghi mật khẩu ở đây. Mật khẩu thiết bị cất trong Két sắt.',
-    historyCreated: 'Tạo hồ sơ',
-    historyUpdated: 'Sửa hồ sơ',
-    historyStatus: 'Đổi trạng thái',
-    historyImported: 'Nhập từ Excel',
   },
   attachments: {
     title: 'Giấy tờ đính kèm',
@@ -388,7 +366,6 @@ export default {
     vlan: 'VLAN',
     vlanHint: 'Số VLAN của cổng, hoặc "trunk" nếu cổng chở nhiều VLAN (uplink).',
     usedByPlaceholder: 'Chọn bộ phận hoặc gõ tên người…',
-    title: 'Port map',
     own: 'Cổng của thiết bị này',
     incoming: 'Đang cắm vào thiết bị này',
     incomingHint:
@@ -420,6 +397,7 @@ export default {
     check: 'Đối chiếu',
     /* Nút Ghi xám vì BA lý do khác nhau; hai câu dưới đã có sẵn, thiếu mỗi câu này. */
     needCheck: 'Bấm "Đối chiếu" trước để xem file sẽ ghi những gì.',
+    needFile: 'Chọn file .xlsx trước đã.',
     confirm: 'Xác nhận ghi',
     nothing: 'Không có dòng nào cần ghi — file trùng khớp với dữ liệu đang có.',
     hasErrors: 'Còn dòng lỗi. Sửa trong file rồi đối chiếu lại — chưa ghi gì cả.',
@@ -463,7 +441,6 @@ export default {
     emptyHint: 'Thêm license, SSL hoặc tên miền để hệ thống nhắc gia hạn giúp.',
     saved: 'Đã lưu hồ sơ.',
     needMinimum: 'Cần ít nhất: mã hồ sơ và tên hồ sơ.',
-    back: 'Về danh sách',
     tabProfile: 'Hồ sơ',
     tabDevices: 'Máy đang dùng',
     tabAttachments: 'Giấy tờ',
@@ -487,7 +464,6 @@ export default {
     deviceSearch: 'Tìm máy trong kho…',
     pickDevice: 'Chọn máy để gán.',
     assignedAt: 'Gán lúc',
-    assignedBy: 'Người gán',
     user: 'Người dùng',
     cost: 'Chi phí',
     costHint: 'Tiền đồng, chỉ nhập số. Để trống nếu chưa rõ — khác với 0đ (được tặng kèm).',
@@ -501,8 +477,6 @@ export default {
     termFromProfile: 'Theo hồ sơ',
     seatsHeader: '{{seats}} ghế đã gán',
     editSeatTitle: 'Sửa ghế license',
-    editSeatOf: 'Sửa ghế của máy {{device}}',
-    releaseSeatOf: 'Gỡ license khỏi máy {{device}}',
     seatSaved: 'Đã lưu ghế của máy {{device}}.',
     emptySeats: 'Chưa gán license này vào máy nào.',
     note: 'Ghi chú',
@@ -552,13 +526,11 @@ export default {
     emptyHint: 'Thêm đường ISP để lúc sự cố có hotline và số hợp đồng trong 30 giây.',
     saved: 'Đã lưu hồ sơ đường truyền.',
     needMinimum: 'Cần ít nhất: mã đường truyền và tên nhà mạng.',
-    back: 'Về danh sách',
     tabProfile: 'Hồ sơ',
     tabAttachments: 'Giấy tờ',
     tabHistory: 'Lịch sử',
     renew: 'Gia hạn hợp đồng',
     renewed: 'Đã gia hạn hợp đồng.',
-    callNow: 'Gọi ngay',
   },
   expiry: {
     /* Bốn khóa dưới đây dùng cho THANH THỜI HẠN (ui/warranty-timeline.tsx) — bảo hành thiết
@@ -662,8 +634,6 @@ export default {
     unlock: 'Mở khóa',
     disable: 'Vô hiệu hóa',
     reactivate: 'Kích hoạt lại',
-    neverLoggedIn: 'Chưa đăng nhập lần nào',
-    temporaryPassword: 'Mật khẩu tạm',
     temporaryPasswordOf: 'Mật khẩu tạm — {{who}}',
     temporaryPasswordNote:
       'Đọc mật khẩu này cho người dùng qua kênh an toàn. Hệ thống sẽ không hiển thị lại, ' +
@@ -746,7 +716,6 @@ export default {
     /* Cảnh báo, KHÔNG chặn: phần lớn secret là mật khẩu của thiết bị ngoài đã có sẵn — chặn
        cứng chỉ đẩy người dùng ghi mật khẩu thật vào ô Ghi chú, chỗ không mã hóa. */
     strengthWeak: 'Giá trị này chưa đủ mạnh — vẫn lưu được, nhưng nếu là mật khẩu do mình đặt thì nên đổi.',
-    autoHide: 'Tự ẩn sau {{seconds}} giây',
     autoHideShort: 'còn lại trước khi tự ẩn',
     /* Hai số nên phải nói rõ số nào là số nào — "60s / 600s" đứng trơ thì không ai đoán ra. */
     countdownNote: 'tự ẩn / còn mở két được (chưa phải gõ lại mã)',
@@ -775,7 +744,6 @@ export default {
   ipam: {
     title: 'Địa chỉ IP',
     subtitle: 'Chỉ quản IP tĩnh — mọi IP đều có chủ, không ai cấp trùng',
-    back: 'Về danh sách dải',
     railTitle: 'Dải mạng / VLAN',
     railLabel: 'Danh sách dải mạng',
     vlan: 'VLAN',
@@ -798,7 +766,6 @@ export default {
     site: 'Site',
     noSite: 'Không gắn site',
     description: 'Mô tả',
-    usage: 'Mức sử dụng',
     usageLabel: '{{used}}/{{total}} · còn {{free}}',
     usageOf: 'Mức sử dụng dải {{cidr}}',
     gateway: 'Gateway',
@@ -814,7 +781,6 @@ export default {
     disabledBadge: 'Đã vô hiệu hóa',
     disabledSince: 'Vô hiệu hóa {{date}} · {{reason}}',
     restore: 'Bật lại',
-    restoreSubnetOf: 'Bật lại dải {{cidr}}',
     restoreTitle: 'Bật lại dải {{cidr}}?',
     restoreConfirm:
       'Dải {{cidr}} trở lại danh sách như cũ, và {{count}} hồ sơ IP đã tắt cùng nó cũng sống lại. Những hồ sơ bị xóa lẻ trước đó thì không — chúng đã xóa vì lý do riêng.',
@@ -842,7 +808,6 @@ export default {
       'Hồ sơ hiện lại trên bảng cùng trạng thái cũ, và lịch sử của nó nối tiếp chứ không bắt đầu lại. Nếu địa chỉ này đã có hồ sơ khác dùng sau khi ẩn thì phải xử lý hồ sơ kia trước.',
     voidReasonWas: 'Lý do đã ẩn:',
     addressRestored: 'Đã bật lại hồ sơ IP.',
-    onlyUsed: 'Chỉ hiện IP đã cấp',
     address: 'Địa chỉ',
     status: 'Trạng thái',
     statusFree: 'Trống',
@@ -1097,7 +1062,6 @@ export default {
     defaultDenied:
       'Mặc định là KHÔNG có quyền: người chưa được gán gì thì không xem được, và cũng không xin được. Gán thêm để mở, gỡ đi để đóng.',
     noPeople: 'Không có tài khoản nào khớp',
-    none: 'Chưa gán quyền nào — hiện không xem và không xin được gì.',
     adminNote: 'Quản trị và Super Admin đã xem được mọi secret theo vai, không cần gán ở đây.',
     add: 'Gán quyền',
     grantTitle: 'Gán quyền cho {{member}}',
@@ -1134,10 +1098,6 @@ export default {
     summary:
       '{{people}} tài khoản · {{rules}} dòng quyền · {{scopes}} nhóm đối tượng, trong đó {{empty}} nhóm chưa gán cho ai.',
     noScopes: 'Không có nhóm đối tượng nào khớp',
-    scopeEmpty: 'Chưa ai được gán nhóm này — hiện không ai xem và không ai xin được.',
-    tierEmpty: 'chưa có ai',
-    addPeople: 'Gán cho người…',
-    removeOf: 'Gỡ quyền của {{member}} trên {{scope}}',
     grantScopeTitle: 'Gán "{{scope}}" cho người dùng',
     people: 'Chọn người',
     noMembers: 'Chưa có tài khoản Member nào. Quản trị và Super Admin không cần gán ở đây.',
@@ -1185,6 +1145,158 @@ export default {
     stateCancelled: 'Đã hủy',
     stateExpired: 'Hết hạn',
     stateRevoked: 'Đã thu hồi',
+  },
+  /**
+   * SỔ LỊCH SỬ — mọi nhãn của tab "Lịch sử" trên sáu trang chi tiết.
+   *
+   * Trước 12/09 chúng là 117 chuỗi VIẾT CỨNG trong sáu file `*-history-entries.ts`, tức
+   * vi phạm DoD gạch 6 ("UI tiếng Việt qua `lib/i18n`, không chuỗi cứng"). Chúng lọt lâu vì
+   * nằm trong `Record<string, string>` chứ không trên JSX — chỗ mắt không quét tới.
+   *
+   * Mười khóa ĐẦU là phần dùng chung: cùng mã, cùng chữ, ở từ hai sổ trở lên. Phần còn
+   * lại nằm trong namespace của từng sổ, vì cùng một mã KHÔNG phải lúc nào cũng cùng chữ —
+   * `created` là "Tạo hồ sơ" ở năm sổ nhưng là "Mở rule" ở sổ NAT, `active` là "Đang dùng"
+   * ở phần mềm mà "Đang chạy" ở đường truyền. Gộp bừa là làm sai nghĩa để đỡ một dòng.
+   *
+   * Tên trường (`f*`) viết CHỮ THƯỜNG: chúng ghép vào giữa câu — "mã: A → B".
+   */
+  history: {
+    fDepartment: 'bộ phận',
+    fEndDate: 'ngày hết hạn',
+    fKind: 'loại',
+    fName: 'tên',
+    fNote: 'ghi chú',
+    fReason: 'lý do',
+    fSiteId: 'site',
+    fStartDate: 'ngày bắt đầu',
+    fStatus: 'trạng thái',
+    fVendorId: 'nhà cung cấp',
+
+    /* Chữ NỐI của câu mô tả thay đổi — cũng là chuỗi cứng trước 12/09, chỉ nằm rải trong
+       thân hàm nên đếm sót ở lượt rà đầu. */
+    blank: '(trống)',
+    changedOnly: 'đổi {{field}}',
+
+    /* Sổ thiết bị */
+    devices: {
+      fCode: 'mã',
+      fDeviceTypeId: 'loại',
+      fModel: 'model',
+      fSerial: 'serial',
+      fCabinetId: 'tủ mạng',
+      fAssignedTo: 'người sử dụng',
+      fPurchaseDate: 'ngày mua',
+      fWarrantyStart: 'bảo hành từ',
+      fWarrantyEnd: 'bảo hành đến',
+      fPortLabel: 'cổng',
+      actCreated: 'Tạo hồ sơ',
+      actUpdated: 'Sửa hồ sơ',
+      actStatusChanged: 'Đổi trạng thái',
+      actImported: 'Nhập từ Excel',
+      actImportedUpdate: 'Cập nhật khi nhập từ Excel',
+      actPortAdded: 'Thêm cổng port map',
+      actPortUpdated: 'Sửa cổng port map',
+      actPortRemoved: 'Xóa cổng port map',
+      actPortUnlinked: 'Gỡ liên kết cổng (máy đầu kia đã thanh lý)',
+      stInUse: 'Đang dùng',
+      stSpare: 'Dự phòng',
+      stBroken: 'Hỏng',
+      stRetired: 'Đã thanh lý',
+    },
+
+    /* Sổ phần mềm / license */
+    software: {
+      fCode: 'mã',
+      fSeatTotal: 'số seat',
+      fLicenseModel: 'kỳ hạn',
+      fDevice: 'ghế',
+      fCost: 'chi phí',
+      fContract: 'hợp đồng',
+      fOverSeatReason: 'lý do vượt seat',
+      actCreated: 'Tạo hồ sơ',
+      actUpdated: 'Sửa hồ sơ',
+      actRenewed: 'Gia hạn',
+      actLicenseAssigned: 'Gán license vào máy',
+      actLicenseReleased: 'Gỡ license khỏi máy',
+      actLicenseTermsUpdated: 'Sửa ghế license',
+      kindLicense: 'License phần mềm',
+      kindSsl: 'Chứng chỉ SSL',
+      kindDomain: 'Tên miền',
+      kindMaintenance: 'Hợp đồng bảo trì',
+      kindOther: 'Khác',
+      lmSubscription: 'Thuê bao',
+      lmPerpetual: 'Vĩnh viễn',
+      stActive: 'Đang dùng',
+      stExpiredOk: 'Hết hạn, không gia hạn',
+      stRetired: 'Đã bỏ',
+    },
+
+    /* Sổ tài khoản dịch vụ */
+    serviceAccounts: {
+      fCode: 'mã',
+      fLogin: 'tên đăng nhập',
+      fOwnerName: 'người phụ trách',
+      fGroupName: 'nhóm VPN',
+      fAllowedIps: 'dải IP được phép',
+      actCreated: 'Tạo hồ sơ',
+      actUpdated: 'Sửa hồ sơ',
+      actDisabled: 'Vô hiệu hóa',
+      actEnabled: 'Bật lại',
+      kindShared: 'Tài khoản dùng chung',
+      kindVpn: 'Tài khoản VPN',
+      stActive: 'Đang dùng',
+      stDisabled: 'Đã vô hiệu',
+    },
+
+    /* Sổ đường truyền */
+    isp: {
+      fCode: 'mã đường',
+      fProvider: 'nhà mạng',
+      fBandwidth: 'băng thông',
+      fWanIp: 'IP WAN',
+      fDeviceId: 'thiết bị biên',
+      fHotline: 'hotline',
+      fContractNo: 'số hợp đồng',
+      actCreated: 'Tạo hồ sơ',
+      actUpdated: 'Sửa hồ sơ',
+      actRenewed: 'Gia hạn hợp đồng',
+      actDeviceDetached: 'Rời khỏi thiết bị (máy đã thanh lý) — hợp đồng giữ nguyên',
+      stActive: 'Đang chạy',
+      stSuspended: 'Tạm ngưng',
+      stTerminated: 'Đã cắt',
+    },
+
+    /* Sổ NAT */
+    nat: {
+      stEnabledOn: 'Đang bật',
+      stEnabledOff: 'Đã tắt',
+      fPorts: 'port ngoài',
+      fProtocol: 'giao thức',
+      fInternalIp: 'IP trong',
+      fInternalPort: 'port trong',
+      fUsedBy: 'mở cho ai',
+      fEnabled: 'trạng thái',
+      actCreated: 'Mở rule',
+      actUpdated: 'Sửa rule',
+      actVoided: 'Gỡ rule',
+    },
+
+    /* Sổ hồ sơ IP */
+    ip: {
+      previous: 'trước đó: {{who}}',
+      previousDevice: 'thiết bị đã gắn',
+      assignedTo: 'cấp cho: {{who}}',
+      reasonIs: 'lý do: {{reason}}',
+      stFree: 'Trống',
+      stAssigned: 'Đang cấp',
+      stSuspectDead: 'Nghi chết',
+      stReclaimed: 'Đã thu hồi',
+      actCreated: 'Tạo hồ sơ',
+      actUpdated: 'Sửa hồ sơ',
+      actAssigned: 'Gán chủ',
+      actVoided: 'Xóa hồ sơ',
+      actRestored: 'Bật lại',
+    },
   },
   dashboard: {
     title: 'Xin chào {{name}}',

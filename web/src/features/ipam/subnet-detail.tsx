@@ -790,7 +790,7 @@ function IpHistoryDialog({
         <LoadError error={history.error} onRetry={() => void history.refetch()} />
       ) : (
         <HistoryPanel
-          entries={toIpHistoryEntries(history.data ?? [])}
+          entries={toIpHistoryEntries(history.data ?? [], t)}
           emptyText={t("ipam.historyEmpty")}
         />
       )}

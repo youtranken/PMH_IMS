@@ -68,7 +68,7 @@ class SoftwareBodyDto {
   // Chuỗi rỗng = bỏ gán nhà cung cấp, nên không ép UUID trong trường hợp đó.
   @IsOptional() @ValidateIf((_o, value) => value !== '') @IsUUID() vendorId?: string;
 
-  @IsOptional() @ValidateIf((_o, value) => value !== null) @IsInt() @Min(1)
+  @IsOptional() @ValidateIf((_o, value) => value !== null) @Min(1) @IsInt()
   seatTotal?: number | null;
 
   @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày bắt đầu phải dạng YYYY-MM-DD.' })
@@ -98,7 +98,7 @@ class AssignmentTermsDto {
    * Tiền đồng, số nguyên. `null` = xóa giá trị đang có; service kiểm giới hạn trên
    * (`Number.MAX_SAFE_INTEGER`) vì cột là bigint, quá ngưỡng thì JS đọc ra số khác.
    */
-  @IsOptional() @ValidateIf((_o, value) => value !== null) @IsInt() @Min(0)
+  @IsOptional() @ValidateIf((_o, value) => value !== null) @Min(0) @IsInt()
   cost?: number | null;
 
   @IsOptional() @IsString() @Length(0, 200) contract?: string;

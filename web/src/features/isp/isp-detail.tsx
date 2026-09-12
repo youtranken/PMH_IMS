@@ -233,7 +233,7 @@ export function IspDetail({ me }: { me: Me }) {
         ) : history.isError ? (
           <LoadError error={history.error} onRetry={() => void history.refetch()} />
         ) : (
-          <HistoryPanel entries={toIspHistory(history.data ?? [])} />
+          <HistoryPanel entries={toIspHistory(history.data ?? [], t)} />
         )}
       </TabPanel>
 

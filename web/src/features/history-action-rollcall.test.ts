@@ -6,6 +6,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
+import vi from '@/locales/vi';
+
 import { ACTION_LABEL as DEVICE_ACTIONS } from './devices/device-history-entries';
 import { ACTION_LABEL as SOFTWARE_ACTIONS } from './software/software-history-entries';
 import { ACTION_LABEL as SERVICE_ACCOUNT_ACTIONS } from './service-accounts/service-account-history-entries';
@@ -88,14 +90,27 @@ function actionsWrittenByApi(): Map<string, string> {
  */
 const KHONG_HIEN_TREN_GIAO_DIEN = new Set(['deleted']);
 
-const LABELLED = new Set([
-  ...Object.keys(DEVICE_ACTIONS),
-  ...Object.keys(SOFTWARE_ACTIONS),
-  ...Object.keys(SERVICE_ACCOUNT_ACTIONS),
-  ...Object.keys(ISP_ACTIONS),
-  ...Object.keys(NAT_ACTIONS),
-  ...Object.keys(IP_ACTIONS),
-]);
+const MOI_BANG = [
+  DEVICE_ACTIONS,
+  SOFTWARE_ACTIONS,
+  SERVICE_ACCOUNT_ACTIONS,
+  ISP_ACTIONS,
+  NAT_ACTIONS,
+  IP_ACTIONS,
+];
+
+const LABELLED = new Set(MOI_BANG.flatMap((bang) => Object.keys(bang)));
+
+/** `history.devices.actCreated` → chuỗi thật trong `vi.ts`, hoặc `undefined` nếu chưa khai. */
+function traKhoa(khoa: string): unknown {
+  return khoa
+    .split('.')
+    .reduce<unknown>(
+      (nut, phan) =>
+        nut && typeof nut === 'object' ? (nut as Record<string, unknown>)[phan] : undefined,
+      vi,
+    );
+}
 
 describe('Nhãn thao tác trong sổ lịch sử', () => {
   const written = actionsWrittenByApi();
@@ -109,6 +124,26 @@ describe('Nhãn thao tác trong sổ lịch sử', () => {
    */
   it('đọc được mã nguồn API (nếu không thì cả bài này vô nghĩa)', () => {
     expect(written.size).toBeGreaterThanOrEqual(14);
+  });
+
+  /*
+   * ===== CỬA THỨ HAI, MỞ RA TỪ 12/09 =====
+   *
+   * Từ khi 117 nhãn sổ lịch sử dời vào `vi.ts` (mục #7), sáu bảng này không còn chứa CHỮ mà
+   * chứa KHÓA. Thế là có một lối hỏng mới: ô trong bảng trỏ tới một khóa không tồn tại, và
+   * i18next rơi về chính cái khóa — tab Lịch sử in ra `history.devices.actCreated`.
+   *
+   * Đó đúng là lớp lỗi của mục #1 (bảng điều khiển in `warranty`, `license`), chỉ khác chỗ
+   * xảy ra. Nên nó phải có cửa canh của riêng nó, không phải một lời hứa.
+   */
+  it('mọi khóa trong sáu bảng nhãn đều có thật trong vi.ts', () => {
+    const hong: string[] = [];
+    for (const bang of MOI_BANG) {
+      for (const [ma, khoa] of Object.entries(bang)) {
+        if (typeof traKhoa(khoa) !== 'string') hong.push(`${ma} → ${khoa}`);
+      }
+    }
+    expect(hong).toEqual([]);
   });
 
   it('mọi mã thao tác API ghi ra đều có nhãn tiếng Việt', () => {

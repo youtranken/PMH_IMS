@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, formatMoney, orDash } from '@/lib/format';
 import { useConfirm } from '@/ui/confirm-provider';
+import { RowActions } from '@/ui/row-actions';
 import { useToast } from '@/ui/toast';
 import { AssignDialog } from './license-assignments-panel';
 import { SeatEndCell } from './seat-cells';
@@ -119,49 +120,55 @@ export function LicenseSeatsExpand({
                 {orDash(seat.note)}
               </div>
               <div className="seat-menu">
-                <button
-                  type="button"
-                  className="btn sm"
-                  aria-label={t('license.editSeatOf', { device: seat.deviceCode })}
-                  onClick={() => setEditing(seat)}
-                >
-                  {t('common.edit')}
-                </button>
-                {/* Gỡ ghế = thu lại license khỏi một máy đang dùng. Hộp hỏi lại đã `danger`
-                    từ đầu, nhưng chính cái nút thì vẫn xám y như nút Sửa bên cạnh. */}
-                <button
-                  type="button"
-                  className="btn sm danger"
-                  disabled={release.isPending}
-                  aria-label={t('license.releaseSeatOf', { device: seat.deviceCode })}
-                  onClick={() => {
-                    void (async () => {
-                      const ok = await askConfirm({
-                        title: t('common.titleOf', {
-                          action: t('license.release'),
-                          subject: seat.deviceCode,
-                        }),
-                        message: t('license.confirmRelease', { device: seat.deviceCode }),
-                        danger: true,
-                        confirmLabel: t('license.release'),
-                      });
-                      if (!ok) return;
-                      release.mutate(
-                        { id: seat.id },
-                        {
-                          onSuccess: () => {
-                            toast({ message: t('license.releasedDone') });
-                            void refresh();
-                          },
-                          onError: (error) =>
-                            toast({ message: errorMessage(error), tone: 'error' }),
-                        },
-                      );
-                    })();
-                  }}
-                >
-                  {t('license.release')}
-                </button>
+                {/*
+                  "Gỡ ghế" vào MENU, không đứng cạnh "Sửa" (rà UI/UX #21).
+
+                  Chú thích cũ ở đây đã tự nhận ra một nửa vấn đề — "chính cái nút thì vẫn xám
+                  y như nút Sửa bên cạnh" — rồi vá bằng cách tô đỏ. Tô đỏ không giải quyết
+                  chuyện HAI NÚT SÁT NHAU: trượt tay một ô là thu license khỏi một máy đang
+                  dùng. `RowActions` tự đẩy mục `danger` xuống cuối menu.
+                */}
+                <RowActions
+                  label={t('common.actionsOf', { subject: seat.deviceCode })}
+                  items={[
+                    {
+                      key: 'edit',
+                      label: t('common.edit'),
+                      onSelect: () => setEditing(seat),
+                    },
+                    {
+                      key: 'release',
+                      label: t('license.release'),
+                      danger: true,
+                      disabled: release.isPending,
+                      onSelect: () => {
+                        void (async () => {
+                          const ok = await askConfirm({
+                            title: t('common.titleOf', {
+                              action: t('license.release'),
+                              subject: seat.deviceCode,
+                            }),
+                            message: t('license.confirmRelease', { device: seat.deviceCode }),
+                            danger: true,
+                            confirmLabel: t('license.release'),
+                          });
+                          if (!ok) return;
+                          release.mutate(
+                            { id: seat.id },
+                            {
+                              onSuccess: () => {
+                                toast({ message: t('license.releasedDone') });
+                                void refresh();
+                              },
+                              onError: (error) =>
+                                toast({ message: errorMessage(error), tone: 'error' }),
+                            },
+                          );
+                        })();
+                      },
+                    },
+                  ]}
+                />
               </div>
             </div>
           ))}

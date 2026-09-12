@@ -162,7 +162,10 @@ test.describe('Kho thiết bị', () => {
     // Sổ tài sản không có nút xóa, ở đâu cũng vậy.
     await expect(page.getByRole('button', { name: 'Xóa' })).toHaveCount(0);
 
+    /* Nút này CÙNG TỌA ĐỘ với "Thanh lý" hôm trước, nên trí nhớ cơ bắp dẫn tay tới đây —
+       từ 12/09 nó hỏi lại trước khi đổi trạng thái (rà UI/UX #21). */
     await page.getByRole('button', { name: 'Đưa lại vào dùng' }).click();
+    await confirmAction(page, 'Đưa lại vào dùng');
     await expect(page.getByRole('button', { name: 'Sửa hồ sơ' })).toBeEnabled();
   });
 

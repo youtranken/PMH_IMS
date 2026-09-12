@@ -211,6 +211,7 @@ export function DeviceForm({
 
           <Field label={t('devices.type')} required>
             <Select
+              required
               value={form.deviceTypeId}
               ariaLabel={t('devices.type')}
               placeholder={t('devices.pickType')}

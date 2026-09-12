@@ -10,6 +10,7 @@ import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
+import { RowActions } from '@/ui/row-actions';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import type { DeviceRow } from '@/lib/device-types';
@@ -147,48 +148,61 @@ export function LicenseAssignmentsPanel({
                     )}
                   </td>
                   <td>
+                    {/*
+                      "Gỡ" vào MENU, không đứng cạnh "Sửa" (rà UI/UX #21).
+
+                      Hai nút sát nhau, một xám một đỏ, cùng cỡ `btn sm`: trượt tay một ô là
+                      thu license khỏi một máy đang dùng. `RowActions` tự đẩy mục `danger`
+                      xuống cuối, nên khoảng cách không còn phụ thuộc vào việc ai viết trước.
+                      `software-screen.tsx` CÙNG MODULE đã làm vậy từ đầu — chỗ này là chỗ
+                      sót lại.
+                    */}
                     {row.releasedAt ? null : (
-                      <button
-                        type="button"
-                        className="btn sm"
-                        onClick={() => setEditing(row)}
-                      >
-                        {t('common.edit')}
-                      </button>
-                    )}
-                    {row.releasedAt ? null : (
-                      <button
-                        type="button"
-                        className="btn sm danger"
-                        disabled={release.isPending}
-                        onClick={() => {
-                          void (async () => {
-                            const ok = await askConfirm({
-                              title: t('common.titleOf', {
-                                action: t('license.release'),
-                                subject: row.deviceCode,
-                              }),
-                              message: t('license.confirmRelease', { device: row.deviceCode }),
+                      <div className="action-cell">
+                        <RowActions
+                          label={t('common.actionsOf', { subject: row.deviceCode })}
+                          items={[
+                            {
+                              key: 'edit',
+                              label: t('common.edit'),
+                              onSelect: () => setEditing(row),
+                            },
+                            {
+                              key: 'release',
+                              label: t('license.release'),
                               danger: true,
-                              confirmLabel: t('license.release'),
-                            });
-                            if (!ok) return;
-                            release.mutate(
-                              { id: row.id },
-                              {
-                                onSuccess: () => {
-                                  toast({ message: t('license.releasedDone') });
-                                  void refresh();
-                                },
-                                onError: (error) =>
-                                  toast({ message: errorMessage(error), tone: 'error' }),
+                              disabled: release.isPending,
+                              onSelect: () => {
+                                void (async () => {
+                                  const ok = await askConfirm({
+                                    title: t('common.titleOf', {
+                                      action: t('license.release'),
+                                      subject: row.deviceCode,
+                                    }),
+                                    message: t('license.confirmRelease', {
+                                      device: row.deviceCode,
+                                    }),
+                                    danger: true,
+                                    confirmLabel: t('license.release'),
+                                  });
+                                  if (!ok) return;
+                                  release.mutate(
+                                    { id: row.id },
+                                    {
+                                      onSuccess: () => {
+                                        toast({ message: t('license.releasedDone') });
+                                        void refresh();
+                                      },
+                                      onError: (error) =>
+                                        toast({ message: errorMessage(error), tone: 'error' }),
+                                    },
+                                  );
+                                })();
                               },
-                            );
-                          })();
-                        }}
-                      >
-                        {t('license.release')}
-                      </button>
+                            },
+                          ]}
+                        />
+                      </div>
                     )}
                   </td>
                 </tr>

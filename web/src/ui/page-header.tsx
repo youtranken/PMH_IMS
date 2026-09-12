@@ -66,6 +66,23 @@ export function Field({
   children,
 }: {
   label: string;
+  /**
+   * Ô bắt buộc — vẽ dấu `*` và, với `Select`/`Combobox`, kéo theo `aria-required`/`required`.
+   *
+   * ===== DẤU `*` CHỈ CÓ NGHĨA KHI NÓ PHÂN BIỆT ĐƯỢC CÁI GÌ =====
+   *
+   * Rà UI/UX 12/09 (mục #24) liệt kê "4 màn `auth/` không có dấu nào" như một chỗ thiếu. Tôi
+   * đã đi thêm dấu vào đó, rồi nhận ra đó là bản vá SAI — và nhận ra theo cách đắt nhất: bốn
+   * nhãn ấy làm `getByLabel('Mật khẩu', { exact: true })` trong `helpers.ts` không khớp nữa
+   * (Playwright khớp theo TEXT của thẻ nhãn, kể cả phần `aria-hidden`), nên MỌI bài E2E đỏ.
+   *
+   * Nhưng lý do bỏ dấu không phải vì bài kiểm đỏ. Màn đăng nhập có hai ô, cả hai bắt buộc;
+   * màn đổi mật khẩu có ba ô, cả ba bắt buộc. Đánh dấu MỌI ô là nói không được điều gì —
+   * giá trị của dấu `*` đến từ việc nó tách ô bắt buộc khỏi ô không bắt buộc. Form nghiệp vụ
+   * thì có trộn thật (Mã* Tên* Loại* cạnh Model, Serial, Ghi chú), và đó là chỗ nó đáng có.
+   *
+   * Cùng lý do đã bỏ dấu ở hai màn dùng `OtpInput`: một ô duy nhất, bắt buộc hiển nhiên.
+   */
   required?: boolean;
   hint?: string;
   error?: string | null;
@@ -80,8 +97,16 @@ export function Field({
         {/* Dấu * chỉ là chỉ dấu thị giác: aria-hidden để tên gọi trợ năng của ô nhập là
             đúng nhãn ("Email"), không thành "Email *". Bắt buộc thật nằm ở thuộc tính
             `required` của input. */}
+        {/*
+          `field-req`, KHÔNG phải `req` (sửa 12/09).
+
+          `form-layout.css:211` khai `.field-req { color: var(--danger) }`, nhưng chỗ này viết
+          `className="req"` — một lớp không tồn tại. Nên dấu `*` vẫn hiện, chỉ là cùng màu với
+          nhãn: đúng cái bẫy `CLAUDE.md` cảnh báo cho `.dark` — một khối CSS hợp lệ mà không
+          bao giờ chạy, và không có gì đỏ vì trang vẫn dựng ra bình thường.
+        */}
         {required ? (
-          <span className="req" aria-hidden="true">
+          <span className="field-req" aria-hidden="true">
             *
           </span>
         ) : null}

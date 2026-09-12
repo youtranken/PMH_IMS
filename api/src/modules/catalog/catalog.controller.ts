@@ -46,7 +46,7 @@ class CatalogBodyDto {
   @IsOptional() @IsString() @Length(0, 400) address?: string;
   @IsOptional() @IsUUID() siteId?: string;
   @IsOptional() @IsString() @Length(0, 400) description?: string;
-  @IsOptional() @IsInt() @Min(1) @Max(60) uHeight?: number;
+  @IsOptional() @Min(1) @Max(60) @IsInt() uHeight?: number;
   @IsOptional() @IsBoolean() hasPortMap?: boolean;
   @IsOptional() @IsString() @Length(0, 200) supplies?: string;
   @IsOptional() @IsString() @Length(0, 40) phone?: string;
@@ -60,8 +60,8 @@ class CatalogBodyDto {
   @IsIn(['tcp', 'udp', 'both'], { message: 'Giao thức phải là TCP, UDP hoặc cả hai.' })
   protocol?: string;
 
-  @IsOptional() @IsInt() @Min(1) @Max(65535) portFrom?: number;
-  @IsOptional() @IsInt() @Min(1) @Max(65535) portTo?: number;
+  @IsOptional() @Min(1) @Max(65535) @IsInt() portFrom?: number;
+  @IsOptional() @Min(1) @Max(65535) @IsInt() portTo?: number;
 }
 
 class ActiveDto {

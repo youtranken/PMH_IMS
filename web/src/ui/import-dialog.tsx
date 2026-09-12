@@ -104,6 +104,10 @@ export function ImportDialog<TRow>({
             type="button"
             className="btn"
             disabled={!file || busy}
+            /* Nút NÀY cũng xám, và vì một lý do khác hẳn nút bên phải: chưa chọn file. Lượt
+               lái tay 12/09 bắt được chỗ sót — bản vá #22 nói lý do cho nút "Ghi" mà bỏ nút
+               "Đối chiếu" ngay cạnh, tức vá một nửa hộp. */
+            title={!file && !busy ? t('importDialog.needFile') : undefined}
             onClick={() => void run('preview')}
           >
             {busy && !plan ? t('common.loading') : t('importDialog.check')}

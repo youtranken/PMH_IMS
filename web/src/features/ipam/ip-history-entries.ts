@@ -1,3 +1,5 @@
+import type { TFunction } from 'i18next';
+import { orDash } from '@/lib/format';
 import type { HistoryEntry } from '@/ui/history-panel';
 
 /**
@@ -21,15 +23,23 @@ export interface IpHistoryRow {
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  free: 'Trống',
-  assigned: 'Đang cấp',
-  suspect_dead: 'Nghi chết',
-  reclaimed: 'Đã thu hồi',
+  free: 'history.ip.stFree',
+  assigned: 'history.ip.stAssigned',
+  suspect_dead: 'history.ip.stSuspectDead',
+  reclaimed: 'history.ip.stReclaimed',
 };
 
-export function statusLabel(status: string | null | undefined): string {
-  if (!status) return '—';
-  return STATUS_LABEL[status] ?? status;
+/*
+ * `t` đi vào bằng THAM SỐ, không phải `useTranslation()` bên trong: mấy hàm này là hàm THUẦN,
+ * và đó là lý do chúng có bài kiểm bảng dữ liệu không cần dựng React.
+ */
+export function statusLabel(status: string | null | undefined, t: TFunction): string {
+  /* `orDash` chứ KHÔNG phải một khóa i18n cho dấu gạch: dấu gạch là dấu câu, không phải ngôn
+     ngữ, và `lib/format.ts` đã là nơi duy nhất quyết định nó trông thế nào. Khai thêm một
+     khóa `noStatus: '—'` là dựng nguồn thứ hai cho cùng một ký tự. */
+  if (!status) return orDash(null);
+  const khoa = STATUS_LABEL[status];
+  return khoa ? t(khoa) : status;
 }
 
 /**
@@ -43,35 +53,36 @@ export function statusLabel(status: string | null | undefined): string {
  * Khóa lạ (migration sau, dữ liệu cũ) GIỮ NGUYÊN — hiện "ip.somethingNew" còn hơn hiện ô trống.
  */
 export const ACTION_LABEL: Record<string, string> = {
-  'ip.created': 'Tạo hồ sơ',
-  'ip.updated': 'Sửa hồ sơ',
-  'ip.assigned': 'Gán chủ',
-  'ip.voided': 'Xóa hồ sơ',
-  'ip.restored': 'Bật lại',
+  'ip.created': 'history.ip.actCreated',
+  'ip.updated': 'history.ip.actUpdated',
+  'ip.assigned': 'history.ip.actAssigned',
+  'ip.voided': 'history.ip.actVoided',
+  'ip.restored': 'history.ip.actRestored',
 };
 
-export function actionLabel(action: string): string {
-  return ACTION_LABEL[action] ?? action;
+export function actionLabel(action: string, t: TFunction): string {
+  const khoa = ACTION_LABEL[action];
+  return khoa ? t(khoa) : action;
 }
 
-export function toIpHistoryEntries(rows: IpHistoryRow[]): HistoryEntry[] {
+export function toIpHistoryEntries(rows: IpHistoryRow[], t: TFunction): HistoryEntry[] {
   return rows.map((row) => ({
     id: row.id,
-    action: actionLabel(row.action),
-    detail: describe(row),
+    action: actionLabel(row.action, t),
+    detail: describe(row, t),
     actor: row.actor,
     at: row.createdAt,
   }));
 }
 
-function describe(row: IpHistoryRow): string | undefined {
+function describe(row: IpHistoryRow, t: TFunction): string | undefined {
   const parts: string[] = [];
   const changes = row.changes ?? {};
 
   if (row.fromStatus && row.toStatus) {
-    parts.push(`${statusLabel(row.fromStatus)} → ${statusLabel(row.toStatus)}`);
+    parts.push(`${statusLabel(row.fromStatus, t)} → ${statusLabel(row.toStatus, t)}`);
   } else if (row.toStatus) {
-    parts.push(statusLabel(row.toStatus));
+    parts.push(statusLabel(row.toStatus, t));
   }
 
   /**
@@ -82,17 +93,19 @@ function describe(row: IpHistoryRow): string | undefined {
   const previousDevice = text(changes.previousDeviceId);
   const stillHasOwner = text(changes.usedBy) || text(changes.deviceId);
   if (!stillHasOwner && (previousUser || previousDevice)) {
-    parts.push(`trước đó: ${previousUser ?? 'thiết bị đã gắn'}`);
+    parts.push(
+      t('history.ip.previous', { who: previousUser ?? t('history.ip.previousDevice') }),
+    );
   }
 
   const newUser = text(changes.usedBy);
-  if (newUser && row.toStatus === 'assigned') parts.push(`cấp cho: ${newUser}`);
+  if (newUser && row.toStatus === 'assigned') parts.push(t('history.ip.assignedTo', { who: newUser }));
 
   const address = text(changes.address);
   if (address) parts.push(address);
 
   const reason = text(changes.reason);
-  if (reason) parts.push(`lý do: ${reason}`);
+  if (reason) parts.push(t('history.ip.reasonIs', { reason }));
 
   return parts.length > 0 ? parts.join(' · ') : undefined;
 }

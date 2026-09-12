@@ -141,7 +141,7 @@ class NatBodyDto {
   @IsString()
   @Length(1, 15)
   internalIp?: string;
-  @IsOptional() @IsInt() @Min(1) @Max(65535) internalPort?: number;
+  @IsOptional() @Min(1) @Max(65535) @IsInt() internalPort?: number;
   @IsOptional() @IsString() @Length(1, 160) usedBy?: string;
   @IsOptional() @IsString() @Length(1, 500) reason?: string;
   @IsOptional() @IsBoolean() enabled?: boolean;

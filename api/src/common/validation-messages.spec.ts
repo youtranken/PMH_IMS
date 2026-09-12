@@ -32,12 +32,27 @@ class DtoMau {
   @IsUUID(undefined, { message: 'Mã thiết bị không hợp lệ.' })
   deviceId!: string;
 
-  @IsInt()
+  /*
+   * ===== `@IsInt()` PHẢI ĐỨNG SÁT TÊN TRƯỜNG =====
+   *
+   * Với `stopAtFirstError: true`, class-validator báo ĐÚNG MỘT ràng buộc cho mỗi trường, và
+   * nó chọn cái gần thuộc tính nhất. Đặt `@IsInt()` ở TRÊN `@Max()` thì gõ chữ vào ô số nhận
+   * được "Port trong không được lớn hơn 65535." — một câu SAI về nguyên nhân: giá trị không
+   * quá to, nó không phải số. (`Number('abc')` ra `NaN`, và `NaN <= 65535` là `false`, nên
+   * `max` hỏng trước.)
+   *
+   * Bản tiếng Anh trước 12/09 cũng sai y như vậy — chỉ khác là không ai đọc nó. Dịch xong thì
+   * câu sai trở thành câu sai ĐỌC ĐƯỢC, và lượt lái tay 12/09 nhìn ra ngay.
+   *
+   * Thứ tự dưới đây khớp 12 trường `@IsInt()` trong `*.controller.ts`. Hai ca kiểm bên dưới
+   * giữ nó — đảo lại là đỏ.
+   */
   @Max(65535)
+  @IsInt()
   internalPort!: number;
 
-  @IsInt()
   @Min(1)
+  @IsInt()
   seatTotal!: number;
 
   @IsString()
@@ -94,6 +109,23 @@ describe('Câu lỗi nhập liệu — tiếng Việt cho MỌI validator', () =
 
   it('Min giữ được mốc dưới', async () => {
     expect(await cauLoiCho({ seatTotal: 0 })).toContain('Tổng số ghế không được nhỏ hơn 1.');
+  });
+
+  /*
+   * HAI CA NÀY ĐI ĐÔI, và cặp ấy mới là điều đáng giữ: cùng một trường phải nói ĐÚNG nguyên
+   * nhân của mình. Thiếu ca "gõ chữ" thì đảo thứ tự decorator vẫn xanh — và câu lỗi quay về
+   * nói sai lý do. Thiếu ca "quá to" thì một bản vá bỏ hẳn `@Max` cũng xanh.
+   */
+  it('gõ CHỮ vào ô số → nói là phải là số nguyên, KHÔNG nói là quá lớn', async () => {
+    expect(await cauLoiCho({ internalPort: 'khong-phai-so' })).toContain(
+      'Port trong phải là số nguyên.',
+    );
+  });
+
+  it('số quá to vẫn nói đúng là quá to', async () => {
+    expect(await cauLoiCho({ internalPort: 99999 })).toContain(
+      'Port trong không được lớn hơn 65535.',
+    );
   });
 
   it('Length phân biệt được vế ngắn và vế dài', async () => {

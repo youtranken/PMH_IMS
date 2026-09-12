@@ -794,6 +794,7 @@ function GrantDialog({
       >
         <Field label={t('access.scope')} required hint={t('access.scopeHint')}>
           <Select
+            required
             value={scopeKey}
             onChange={setScopeKey}
             ariaLabel={t('access.scope')}

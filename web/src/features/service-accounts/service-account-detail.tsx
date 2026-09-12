@@ -180,7 +180,7 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
         ) : history.isError ? (
           <LoadError error={history.error} onRetry={() => void history.refetch()} />
         ) : (
-          <HistoryPanel entries={toServiceAccountHistory(history.data ?? [])} />
+          <HistoryPanel entries={toServiceAccountHistory(history.data ?? [], t)} />
         )}
       </TabPanel>
     </>

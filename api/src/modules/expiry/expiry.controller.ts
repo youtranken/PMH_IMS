@@ -52,7 +52,7 @@ class RuleBodyDto {
   /** Mảng rỗng = mọi loại đang đăng ký. */
   @IsOptional() @IsArray() @IsString({ each: true }) kinds?: string[];
 
-  @IsOptional() @IsInt() @Min(1) @Max(365) withinDays?: number;
+  @IsOptional() @Min(1) @Max(365) @IsInt() withinDays?: number;
 
   @IsOptional() @IsArray() @IsString({ each: true }) recipients?: string[];
 
@@ -60,10 +60,10 @@ class RuleBodyDto {
   @IsIn(['daily', 'weekly', 'monthly'], { message: 'Tần suất không hợp lệ.' })
   frequency?: DigestFrequency;
 
-  @IsOptional() @IsInt() @Min(0) @Max(23) hour?: number;
-  @IsOptional() @IsInt() @Min(1) @Max(7) weekday?: number;
+  @IsOptional() @Min(0) @Max(23) @IsInt() hour?: number;
+  @IsOptional() @Min(1) @Max(7) @IsInt() weekday?: number;
   // Giới hạn 28 để tháng nào cũng có ngày đó.
-  @IsOptional() @IsInt() @Min(1) @Max(28) dayOfMonth?: number;
+  @IsOptional() @Min(1) @Max(28) @IsInt() dayOfMonth?: number;
   @IsOptional() @IsBoolean() active?: boolean;
 }
 

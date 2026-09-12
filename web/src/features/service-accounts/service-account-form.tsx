@@ -265,6 +265,7 @@ export function ServiceAccountForm({
           </Field>
           <Field label={t('serviceAccounts.kind')} required hint={t('serviceAccounts.kindHint')}>
             <Select
+              required
               value={form.kind}
               ariaLabel={t('serviceAccounts.kind')}
               options={SERVICE_ACCOUNT_KINDS.map((kind) => ({

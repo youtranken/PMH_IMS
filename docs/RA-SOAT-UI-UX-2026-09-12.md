@@ -9,10 +9,15 @@ Rà toàn bộ `web/src/` (204 file) + tầng DTO của API. **Không lặp lạ
 
 ## Bảng theo dõi — 39 mục
 
-**Xong 35 · Làm một phần 1 · Còn lại 3.**
+**Xong 39/39. Không còn mục nào.**
 
-Đợt A xong 12/09, đã lái tay qua trình duyệt thật (biên bản:
-`docs/BIEN-BAN-TEST-TAY-DOT-A-2026-09-12.md`). Đợt B, C và phần lớn D xong 12/09.
+Cả năm đợt xong 12/09, và đều đã lái tay qua trình duyệt thật — hai biên bản:
+`docs/BIEN-BAN-TEST-TAY-DOT-A-2026-09-12.md` (đợt A) và
+`docs/BIEN-BAN-TEST-TAY-DOT-E-2026-09-12.md` (đợt B/C/D/E).
+
+Lượt lái tay thứ hai tìm ra **ba thứ E2E không thấy**, trong đó một cái là khuyến nghị SAI của
+chính bản rà soát này (mục #24) và một cái là lỗi nằm im từ đầu dự án mà việc DỊCH đã làm nó
+lộ ra (xem biên bản).
 
 ### Đợt D đã làm gì — 23 mục, gom theo lớp lỗi
 
@@ -48,23 +53,70 @@ giữ được luật.
 giờ vào kho được; "Ghi chú" in hai lần chồng nhau cách nhau 8px; 14 placeholder viết cứng ngoài
 `vi.ts`; và "— giờ" — một chỗ trống đội lốt câu trả lời.
 
-### Ba mục CÒN LẠI, và vì sao chúng còn
+### Đợt E — ba mục cuối, và nửa sau của #7
 
-| # | Mục | Vì sao chưa làm |
-|---|---|---|
-| 7 | 123 nhãn lịch sử viết cứng | Phần HỎNG THẬT đã vá từ `d016847` (hai nhãn thiếu + cửa điểm danh). Phần còn lại là dời chuỗi đã đúng tiếng Việt, đang hiện đúng, sang `vi.ts` — thay đổi cơ học trên 7 file có sẵn bài kiểm mà người dùng không thấy khác gì. Đáng làm, nhưng không đáng làm CÙNG một đợt với 23 mục khác: nó sẽ che mất mọi thay đổi có ý nghĩa trong cùng một diff. |
-| 21 | Nút nguy hiểm sát nút hay bấm, và đổi nghĩa tại chỗ | Đây là đổi BỐ CỤC (dồn việc phá vào `RowActions`), không phải đổi chữ. Nó đụng ba màn và làm lệch một loạt bài E2E đang bám vị trí nút. Cần một đợt riêng có lượt lái tay của chính nó. |
-| 24 | Dấu `*` có hai hành vi khác nhau | `Field` chỉ VẼ dấu; chặn thật nằm ở `required` của `<input>`, mà `Select`/`SuggestInput` không nhận. Vá đúng là cho hai component đó nhận `required` và tự chặn — một thay đổi ở tầng nền, đáng đứng riêng. |
-| 36 | Khóa chết trong `vi.ts` | Số 46 của lượt rà đầu nay đã sai: đợt A–D vừa xoá một loạt khóa chết (`vaultHome.kind*`, `approvals.subject_*`, `vaultHome.devices/software/serviceAccounts`) và làm sống lại hai khóa (`app.serverUnreachable`, `accounts.disable`). Phải ĐO LẠI trước, và thứ đáng làm không phải xoá tay một lần mà là một cửa canh đếm khóa chết. |
+**#7 — 117 chuỗi sổ lịch sử vào `vi.ts`.** Con số 123 của lượt rà đầu hơi lệch: đếm lại được
+117, và trong đó có những chuỗi lượt rà đầu bỏ sót vì chúng nằm trong THÂN HÀM chứ không trong
+bảng nhãn (`'(trống)'`, `'đổi …'`, `'trước đó: …'`, `'Đang bật'`). `ipam-types.ts` thì vốn đã
+dùng khóa i18n từ đầu — đó là mẫu đã đi theo.
 
-Mục **38** (nội dung toast đến thẳng từ server, không qua `t()`) tính là XONG ở đợt C: từ khi
-`ValidationPipe` đi qua `validation-messages.ts`, mọi câu server gửi về ĐỀU là tiếng Việt, nên
-việc bê thẳng vào toast không còn là lỗ ngôn ngữ. Bọc thêm một lớp `t()` ở client cho một chuỗi
-server đã dịch là dựng bản luật thứ hai — đúng thứ cả bốn đợt này đi dẹp.
+Mười khóa là phần dùng chung (cùng mã, cùng chữ, ở ≥2 sổ); phần còn lại nằm trong namespace của
+từng sổ, vì **cùng một mã không phải lúc nào cũng cùng chữ**: `created` là "Tạo hồ sơ" ở năm sổ
+nhưng là "Mở rule" ở sổ NAT, `active` là "Đang dùng" ở phần mềm mà "Đang chạy" ở đường truyền.
+Gộp bừa là làm sai nghĩa để đỡ một dòng.
 
-Cột **Kiểm**: `✓` = tôi đã tự mở code xác minh lại, không chỉ tin báo cáo. **13 mục** đã kiểm —
-#10 và #20 kiểm thêm trong lúc chờ E2E của đợt A, và cả hai đều đúng như bản rà soát mô tả.
-Cột **Đợt**: nhóm đã đề xuất làm cùng nhau — xem "Thứ tự đề xuất" ở cuối file.
+`t` đi vào bằng THAM SỐ chứ không `useTranslation()` bên trong: mấy hàm ấy là hàm thuần, và đó
+là lý do chúng có bài kiểm bảng dữ liệu không cần dựng React. Các bài kiểm nay nhận `t` THẬT của
+app — nên chúng vừa so với chữ thật trên màn hình, vừa thành cửa canh rằng khóa phân giải đúng.
+Cộng thêm một vế mới trong `history-action-rollcall.test.ts`: mọi khóa trong sáu bảng phải có
+thật trong `vi.ts`, vì từ giờ bảng chứa KHÓA chứ không chứa CHỮ — một lối hỏng mới, đúng lớp
+lỗi của mục #1.
+
+**#24 — dấu `*` có hai hành vi.** `Select` nay nhận `required` → `aria-required` trên nút mở
+menu (nó là `<button>`, không có gì hơn để cho); `Combobox` render ra `<input>` thật nên nhận
+`required` của TRÌNH DUYỆT. Năm ô đội dấu `*` đã được truyền xuống.
+
+**Nhưng vế "4 màn `auth/` không có dấu nào" của bản rà soát là SAI, và tôi đã đi theo nó trước
+khi nhận ra.** Thêm dấu vào bốn nhãn đó làm `getByLabel('Mật khẩu', { exact: true })` trong
+`helpers.ts` không khớp nữa — Playwright khớp theo TEXT của thẻ nhãn, kể cả phần `aria-hidden`,
+điều mà repo ĐÃ ghi chú ở `accounts.spec.ts:32` và `nat.spec.ts:216` mà tôi không đọc. Hậu quả:
+mọi bài E2E đỏ, vì `fillLogin` là helper cả bộ dùng.
+
+Lý do bỏ dấu không phải vì bài kiểm đỏ. Màn đăng nhập có hai ô, cả hai bắt buộc; màn đổi mật
+khẩu có ba ô, cả ba bắt buộc. Đánh dấu MỌI ô thì dấu ấy không nói được điều gì — giá trị của
+`*` đến từ việc nó TÁCH ô bắt buộc khỏi ô không bắt buộc. Form nghiệp vụ có trộn thật (Mã*
+Tên* Loại* cạnh Model, Serial, Ghi chú), và đó là chỗ nó đáng có. Cùng lý do đã bỏ dấu ở hai
+màn dùng `OtpInput`. Lập luận này ghi ở `ui/page-header.tsx`, chỗ người sửa tiếp sẽ đọc.
+
+Và một thứ moi ra được dọc đường: `Field` vẽ `className="req"` trong khi stylesheet khai
+`.field-req` — **dấu `*` chưa bao giờ được tô màu**. Đúng cái bẫy `CLAUDE.md` cảnh báo cho
+`.dark`: một khối CSS hợp lệ mà không bao giờ chạy, và không có gì đỏ vì trang vẫn dựng ra
+bình thường.
+
+**#36 — khóa chết.** Con số 46 của lượt rà đầu đã sai khi đo lại: **42** khóa chết (bốn đợt
+trước vừa xoá một loạt và vừa làm sống lại `app.serverUnreachable`, `accounts.disable`). Đã xoá
+cả 42. Nhưng thứ đáng giá không phải lượt xoá — là `locales/dead-keys-rollcall.test.ts`: nó
+nhận ra cả BA cách một khóa được dùng (viết thẳng · dựng theo tiền tố `` `vault.tierNote_${…}` ``
+· dựng theo hậu tố `` `history.${mod}.actCreated` ``), vì nhận sai hai cách sau là cách nhanh
+nhất để bài kiểm thành vô dụng rồi bị tắt đi. Đã gieo đột biến để xác nhận nó đỏ đúng chỗ.
+
+Danh sách ngoại lệ `DUOC_PHEP_KHONG_DUNG` đang **rỗng**, và giữ được như vậy là điều đáng giá.
+
+**#21 — nút phá sát nút hay bấm.** Ba chỗ, nhưng KHÔNG cùng một cách vá:
+
+· Hai chỗ bảng (`license-assignments-panel`, `license-seats-expand`) dồn vào `RowActions` — nó
+  tự đẩy mục `danger` xuống cuối, nên khoảng cách không còn phụ thuộc vào ai viết trước.
+  `software-screen.tsx` cùng module đã làm vậy từ đầu; hai chỗ này là chỗ sót.
+
+· Đầu trang thiết bị thì KHÔNG. Ở đó chỉ có hai nút và một trong hai ("Sửa hồ sơ") là hành
+  động chính của màn, nên đẩy nút còn lại vào menu là dựng một menu MỘT MỤC — đúng thứ
+  `docs/SHARED-REGISTRY.md` viết rõ là không dùng ("thêm một cú bấm mà không giấu được gì").
+  Thay vào đó vá cái hở thật: nhánh "Đưa lại vào dùng" trước đây đi THẲNG vào `mutate`, nên
+  một cú bấm theo quán tính đổi luôn trạng thái hồ sơ. Nay nó cũng hỏi lại — không tọa độ nào
+  trên đầu trang đổi được trạng thái mà không hỏi một câu.
+
+Và cửa canh khóa chết bắt được **chính thay đổi này** ngay trong cùng một lượt: hai `aria-label`
+của hai nút vừa dồn vào menu (`license.editSeatOf`, `license.releaseSeatOf`) thành khóa chết.
 
 | # | Mục | Mức | Kiểm | Đợt | Xong |
 |---|---|---|---|---|---|
@@ -74,7 +126,7 @@ Cột **Đợt**: nhóm đã đề xuất làm cùng nhau — xem "Thứ tự đ
 | 4 | "Thu hồi sớm" cắt quyền đang chạy, không hỏi lại | cao | ✓ | B | **[x]** đợt B |
 | 5 | Câu lỗi tiếng Anh lọt ra giao diện (354/434 validator + lỗi 500) | cao | ✓ | C | **[x]** đợt C |
 | 6 | `LoadError` vứt câu giải thích của API — 38 chỗ gọi | cao | ✓ | A | **[x]** đợt A |
-| 7 | Nhãn lịch sử: mã thao tác không có nhãn + 123 nhãn cứng | cao | ✓ | D | **[~]** `d016847` |
+| 7 | Nhãn lịch sử: mã thao tác không có nhãn + 123 nhãn cứng | cao | ✓ | D | **[x]** `d016847` + đợt E |
 | 8 | 15/19 hộp xác nhận đội tiêu đề trống "Xác nhận" | cao | ✓ | D | **[x]** đợt D |
 | 9 | Tiêu đề hộp sửa chỉ một chữ "Sửa" (dùng chung cho 7 tab danh mục) | cao | ✓ | D | **[x]** đợt D |
 | 10 | Đóng hộp giữa chừng là mất trắng; 8 hộp thiếu hẳn `dismissible` | cao | ✓ | B | **[x]** đợt B |
@@ -88,10 +140,10 @@ Cột **Đợt**: nhóm đã đề xuất làm cùng nhau — xem "Thứ tự đ
 | 18 | Tiêu đề hứa "cả hệ thống" nhưng đường truyền không vào kho được | vừa | ✓ | D | **[x]** đợt D |
 | 19 | "Gửi thử" bắn email THẬT cho người nhận, không hỏi lại | vừa | ✓ | B | **[x]** đợt B |
 | 20 | Ba việc không hoàn tác được mà không một chữ cảnh báo | vừa | ✓ | B | **[x]** đợt B |
-| 21 | Nút nguy hiểm sát nút hay bấm nhất, và đổi nghĩa tại chỗ | vừa | — | D | [ ] |
+| 21 | Nút nguy hiểm sát nút hay bấm nhất, và đổi nghĩa tại chỗ | vừa | ✓ | D | **[x]** đợt E |
 | 22 | Nút mờ không nói vì sao (5 chỗ) | vừa | ✓ | D | **[x]** đợt D |
 | 23 | `Field` giấu gợi ý đúng lúc người dùng cần nó nhất | vừa | ✓ | D | **[x]** đợt D |
-| 24 | Dấu `*` có hai hành vi khác nhau; 4 màn `auth/` không có dấu nào | vừa | — | D | [ ] |
+| 24 | Dấu `*` có hai hành vi khác nhau; 4 màn `auth/` không có dấu nào | vừa | ✓ | D | **[x]** đợt E |
 | 25 | Từ vựng lệch: Seat/ghế · Máy/Thiết bị · Gỡ/Xóa/Thu hồi · … | vừa | — | D | [ ] |
 | 26 | `stateDenied: 'Từ chối'` lệch thì với 5 khóa anh em | nhẹ | ✓ | D | **[x]** đợt D |
 | 27 | Giá trị trống ghép thành cụm vô nghĩa ("— giờ") | nhẹ | ✓ | D | **[x]** đợt D |
@@ -103,30 +155,37 @@ Cột **Đợt**: nhóm đã đề xuất làm cùng nhau — xem "Thứ tự đ
 | 33 | `emptyText` ghép máy móc hai câu hoàn chỉnh bằng gạch ngang | nhẹ | ✓ | D | **[x]** đợt D |
 | 34 | "Sửa trong hồ sơ" nằm ở cột Thao tác, trông như nút hỏng | nhẹ | ✓ | D | **[x]** đợt D |
 | 35 | "Ghi chú" in hai lần chồng nhau | nhẹ | ✓ | D | **[x]** đợt D |
-| 36 | 46 khóa chết trong `vi.ts` | nhẹ | — | D | [ ] |
+| 36 | 46 khóa chết trong `vi.ts` | nhẹ | ✓ | D | **[x]** đợt E |
 | 37 | `toast` dùng `aria-live="polite"` cho cả thông báo lỗi | nhẹ | ✓ | D | **[x]** đợt D |
 | 38 | Nội dung toast đến thẳng từ server, không qua `t()` | nhẹ | ✓ | D | **[x]** đợt C |
 | 39 | 17 placeholder ví dụ viết cứng | nhẹ | ✓ | D | **[x]** đợt D |
 
-### Mục 7 vì sao là `[~]` chứ không `[x]`
+### Thứ tự đã đi — cả năm đợt đều XONG
 
-Đã làm: khai hai nhãn thiếu (`port-unlinked`, `device-detached` — cả hai do bản vá nhóm 3
-đẻ ra), và dựng cửa điểm danh `web/src/features/history-action-rollcall.test.ts` đọc thẳng
-mã nguồn API nên lớp lỗi này không tái diễn âm thầm được nữa.
-
-CHƯA làm: dời 123 nhãn viết cứng vào `vi.ts`. Chúng đã là tiếng Việt và hiện đúng; dời đi
-là thay đổi cơ học trên 7 file có sẵn bài kiểm mà người dùng không thấy khác gì.
-
-### Thứ tự đề xuất
-
-- **Đợt A — #2, #6, #16.** Cùng một lớp lỗi: hệ thống nói một đằng làm một nẻo. #2 có một
-  link dẫn sang trang SAI trên chính màn bản-đồ-bí-mật; #6 làm 403, 404, mất mạng và máy
-  chủ sập ra cùng một câu; #16 gọi sai tên việc ở màn quản trị tài khoản.
+- **Đợt A — #2, #6, #16.** Cùng một lớp lỗi: hệ thống nói một đằng làm một nẻo.
 - **Đợt B — #4, #19, #10, #20.** Hàng rào cho việc phá và việc không hoàn tác được.
-- **Đợt C — #5.** Quét ngôn ngữ. ~349 validator thiếu `message`. Cơ học và lớn, nên làm
-  một lượt riêng kèm một cửa canh chứ không sửa tay từng chỗ.
-- **Đợt D — phần còn lại.** Nhất quán, nhãn, từ vựng. Thật, nhưng không ai làm sai việc vì
-  chúng.
+- **Đợt C — #5.** Quét ngôn ngữ, bằng MỘT cửa ở `ValidationPipe` chứ không 354 bản vá tay.
+- **Đợt D — 23 mục.** Nhất quán, nhãn, từ vựng, và ba chỗ màn nói sai về dữ liệu.
+- **Đợt E — #7 (nửa sau), #21, #24, #36.** Ba mục từng để lại vì "cần một đợt riêng", cộng
+  117 chuỗi sổ lịch sử vào `vi.ts`.
+
+### Cái để lại KHÔNG phải danh sách việc, mà là sáu cửa canh
+
+Bản rà soát này sẽ cũ đi; mấy bài kiểm dưới đây thì không. Mỗi cái canh một LỚP lỗi, không
+phải một chỗ hỏng:
+
+| Cửa canh | Canh điều gì |
+|---|---|
+| `features/history-action-rollcall.test.ts` | mã thao tác API mới mà thiếu nhãn · khóa trong bảng nhãn không tồn tại trong `vi.ts` |
+| `lib/secret-owner-rollcall.test.ts` | danh sách loại chủ thể của web lệch khỏi API |
+| `lib/load-error-text.test.ts` | bốn nguyên nhân lỗi tải lại nói cùng một câu |
+| `ui/confirm-title-rollcall.test.ts` | hộp hỏi lại không nói nó đang hỏi về cái gì |
+| `ui/toast.test.ts` | câu lỗi rơi vào vùng `polite` · vùng `alert` rỗng thường trực |
+| `locales/dead-keys-rollcall.test.ts` | khóa dịch chết mọc lại |
+| `api/common/validation-messages.spec.ts` | validator mới không có câu tiếng Việt · nâng cấp class-validator làm rơi mất con số trong câu lỗi |
+
+Năm trong bảy cửa có **sàn chống regex hụt**, đặt theo SỐ ĐO chứ không phải số tròn: đổi cách
+viết mã làm bộ dò trả về rỗng thì bài đỏ ngay, thay vì xanh rực trong khi chẳng kiểm gì.
 
 ## MỨC CAO
 

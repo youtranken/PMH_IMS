@@ -98,7 +98,9 @@ test.describe('Gán license theo seat', () => {
     await expect(row).toBeVisible();
     await expect(row.getByText('Đang dùng')).toBeVisible();
 
-    await row.getByRole('button', { name: 'Gỡ' }).click();
+    /* "Gỡ" nay nằm trong menu ba chấm, không còn đứng cạnh "Sửa" (rà UI/UX #21). */
+    await row.getByRole('button', { name: /^Thao tác với / }).click();
+    await page.getByRole('menuitem', { name: 'Gỡ' }).click();
     await confirmAction(page);
     await expect(page.getByText('Chưa gán license này vào máy nào.')).toBeVisible();
 
@@ -293,7 +295,8 @@ test.describe('Gán license theo seat', () => {
     await expandLicense(page, `LIC-E2E-EDIT-${stamp}`);
     await expect(page.getByText('1.000.000 ₫')).toBeVisible();
 
-    await page.getByRole('button', { name: `Sửa ghế của máy ${deviceCode}` }).click();
+    await page.getByRole('button', { name: `Thao tác với ${deviceCode}` }).click();
+    await page.getByRole('menuitem', { name: 'Sửa' }).click();
     const form = page.getByRole('dialog');
     // Máy KHÔNG sửa được ở đây: đổi máy phải là gỡ rồi gán lại, nếu không thì lịch sử
     // "key này từng nhập máy nào" mất một chặng.

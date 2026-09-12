@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
+import i18n from '@/lib/i18n';
 import { toNatHistory, type NatHistoryRow } from './nat-history-entries';
+
+/*
+ * `t` truyền vào đây là `t` THẬT của app (`@/lib/i18n`, đã nạp bản dịch tiếng Việt), KHÔNG
+ * phải một stub trả lại chính cái khóa.
+ *
+ * Đó là chỗ bài kiểm này đáng giá hơn trước: mọi câu khẳng định bên dưới so với CHỮ THẬT trên
+ * màn hình, nên một khóa gõ sai hay một khóa quên khai trong `vi.ts` sẽ làm đỏ ngay tại đây —
+ * đúng lớp lỗi của mục #1 bản rà soát (i18next rơi về chính cái khóa và không ai thấy).
+ */
+const t = i18n.t;
 
 function row(over: Partial<NatHistoryRow> = {}): NatHistoryRow {
   return {
@@ -25,16 +36,16 @@ describe('toNatHistory — dịch lịch sử rule NAT thành câu người đ�
 
   for (const { action, label } of actions) {
     it(`"${action}" → "${label}"`, () => {
-      expect(toNatHistory([row({ action })])[0].action).toBe(label);
+      expect(toNatHistory([row({ action })], t)[0].action).toBe(label);
     });
   }
 
   it('hành động lạ giữ nguyên mã thô — người đọc còn biết đường hỏi', () => {
-    expect(toNatHistory([row({ action: 'exported' })])[0].action).toBe('exported');
+    expect(toNatHistory([row({ action: 'exported' })], t)[0].action).toBe('exported');
   });
 
   it('không có thay đổi thì detail là null', () => {
-    expect(toNatHistory([row()])[0].detail).toBeNull();
+    expect(toNatHistory([row()], t)[0].detail).toBeNull();
   });
 
   const details: { name: string; changes: NatHistoryRow['changes']; expected: string }[] = [
@@ -78,7 +89,7 @@ describe('toNatHistory — dịch lịch sử rule NAT thành câu người đ�
 
   for (const { name, changes, expected } of details) {
     it(name, () => {
-      expect(toNatHistory([row({ changes })])[0].detail).toBe(expected);
+      expect(toNatHistory([row({ changes })], t)[0].detail).toBe(expected);
     });
   }
 });

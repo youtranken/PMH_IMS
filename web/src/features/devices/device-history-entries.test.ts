@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
+import i18n from '@/lib/i18n';
 import { toHistoryEntries } from './device-history-entries';
 import type { DeviceHistoryRow } from '@/lib/device-types';
+
+/*
+ * `t` truyền vào đây là `t` THẬT của app (`@/lib/i18n`, đã nạp bản dịch tiếng Việt), KHÔNG
+ * phải một stub trả lại chính cái khóa.
+ *
+ * Đó là chỗ bài kiểm này đáng giá hơn trước: mọi câu khẳng định bên dưới so với CHỮ THẬT trên
+ * màn hình, nên một khóa gõ sai hay một khóa quên khai trong `vi.ts` sẽ làm đỏ ngay tại đây —
+ * đúng lớp lỗi của mục #1 bản rà soát (i18next rơi về chính cái khóa và không ai thấy).
+ */
+const t = i18n.t;
 
 function row(over: Partial<DeviceHistoryRow>): DeviceHistoryRow {
   return {
@@ -17,7 +28,7 @@ describe('toHistoryEntries — tab Lịch sử phải ĐỌC ĐƯỢC (FR-007)',
   it('đổi hạn bảo hành hiện rõ giá trị cũ → mới', () => {
     const [entry] = toHistoryEntries([
       row({ changes: { warrantyEnd: { before: '2026-08-30', after: '2027-08-30' } } }),
-    ]);
+    ], t);
     expect(entry.action).toBe('Sửa hồ sơ');
     expect(entry.detail).toBe('bảo hành đến: 2026-08-30 → 2027-08-30');
   });
@@ -25,14 +36,14 @@ describe('toHistoryEntries — tab Lịch sử phải ĐỌC ĐƯỢC (FR-007)',
   it('giá trị rỗng hiện "(trống)" chứ không phải null', () => {
     const [entry] = toHistoryEntries([
       row({ changes: { serial: { before: null, after: 'FOC1234' } } }),
-    ]);
+    ], t);
     expect(entry.detail).toBe('serial: (trống) → FOC1234');
   });
 
   it('trạng thái hiện nhãn tiếng Việt, không phải mã máy', () => {
     const [entry] = toHistoryEntries([
       row({ action: 'status-changed', changes: { status: { before: 'in_use', after: 'retired' } } }),
-    ]);
+    ], t);
     expect(entry.action).toBe('Đổi trạng thái');
     expect(entry.detail).toBe('trạng thái: Đang dùng → Đã thanh lý');
   });
@@ -47,7 +58,7 @@ describe('toHistoryEntries — tab Lịch sử phải ĐỌC ĐƯỢC (FR-007)',
           },
         },
       }),
-    ]);
+    ], t);
     expect(entry.detail).toBe('đổi tủ mạng');
   });
 
@@ -59,20 +70,20 @@ describe('toHistoryEntries — tab Lịch sử phải ĐỌC ĐƯỢC (FR-007)',
           department: { before: null, after: 'Kế toán' },
         },
       }),
-    ]);
+    ], t);
     expect(entry.detail).toBe(
       'người sử dụng: anh Nam → chị Lan; bộ phận: (trống) → Kế toán',
     );
   });
 
   it('không có changes thì không bịa ra mô tả', () => {
-    const [entry] = toHistoryEntries([row({ action: 'created', changes: null })]);
+    const [entry] = toHistoryEntries([row({ action: 'created', changes: null })], t);
     expect(entry.action).toBe('Tạo hồ sơ');
     expect(entry.detail).toBeNull();
   });
 
   it('hành động lạ giữ nguyên tên thay vì hiện chuỗi rỗng', () => {
-    const [entry] = toHistoryEntries([row({ action: 'thao-tac-moi' })]);
+    const [entry] = toHistoryEntries([row({ action: 'thao-tac-moi' })], t);
     expect(entry.action).toBe('thao-tac-moi');
   });
 });

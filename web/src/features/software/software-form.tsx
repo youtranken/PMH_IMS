@@ -213,6 +213,7 @@ export function SoftwareForm({
 
           <Field label={t('software.kind')} required>
             <Select
+              required
               value={form.kind}
               ariaLabel={t('software.kind')}
               options={SOFTWARE_KINDS.map((kind) => ({
