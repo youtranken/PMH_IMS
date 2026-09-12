@@ -28,7 +28,7 @@ const FIELD_LABEL: Record<string, string> = {
   portLabel: 'cổng',
 };
 
-const ACTION_LABEL: Record<string, string> = {
+export const ACTION_LABEL: Record<string, string> = {
   created: 'Tạo hồ sơ',
   updated: 'Sửa hồ sơ',
   'status-changed': 'Đổi trạng thái',
@@ -37,6 +37,12 @@ const ACTION_LABEL: Record<string, string> = {
   'port-added': 'Thêm cổng port map',
   'port-updated': 'Sửa cổng port map',
   'port-removed': 'Xóa cổng port map',
+  /*
+   * Dòng này do MÁY KHÁC sinh ra, không phải do ai sửa hồ sơ máy này: thanh lý một thiết bị
+   * thì cổng bên máy còn lại bị gỡ liên kết (`port-device-retirement.ts`). Nhãn phải nói rõ
+   * "vì sao tự nhiên cổng của tôi rời ra", nếu không người đọc đi tìm người đã sửa.
+   */
+  'port-unlinked': 'Gỡ liên kết cổng (máy đầu kia đã thanh lý)',
 };
 
 const STATUS_LABEL: Record<string, string> = {

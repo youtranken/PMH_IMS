@@ -10,6 +10,7 @@ import { PageHeader } from '@/ui/page-header';
 import { OWNER_PATH, PATHS } from '@/lib/routes';
 import { UsageBar } from '@/ui/usage-bar';
 import { DISPOSAL_KIND_KEY, type DisposalKind } from '@/lib/disposal-kinds';
+import { expiryKindLabel, useExpiryKinds } from '@/lib/expiry-kinds';
 
 interface Block<T> {
   available: boolean;
@@ -90,6 +91,16 @@ export function DashboardScreen({ me }: { me: Me }) {
     queryFn: () => apiFetch<Dashboard>('/api/v1/dashboard'),
   });
 
+  /*
+   * PHẢI gọi TRƯỚC hai lệnh `return` sớm bên dưới — hook không được nằm sau một nhánh thoát,
+   * nếu không thứ tự hook đổi giữa các lượt render và React đổ.
+   *
+   * Dùng chung `queryKey` với màn `/expiry` nên đây không phải một lượt gọi mới: react-query
+   * gộp và chia cache. Và cố ý KHÔNG chặn màn khi nó hỏng — nhãn loại hạn là thứ trang trí
+   * cho một dòng, mất nó không đáng làm cả bảng điều khiển trắng xóa.
+   */
+  const kinds = useExpiryKinds();
+
   if (data.isLoading) return <Loading />;
   if (data.isError) return <LoadError onRetry={() => void data.refetch()} />;
 
@@ -120,7 +131,7 @@ export function DashboardScreen({ me }: { me: Me }) {
                   <ExpiryBadge end={item.endDate} />
                 </div>
                 <span className="muted">
-                  {t(`expiry.kind_${item.kind}`, item.kind)} · {formatDate(item.endDate)}
+                  {expiryKindLabel(kinds.data, item.kind)} · {formatDate(item.endDate)}
                 </span>
               </li>
             ))}

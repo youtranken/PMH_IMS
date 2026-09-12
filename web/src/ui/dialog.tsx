@@ -29,6 +29,7 @@ export function Dialog({
   open,
   onOpenChange,
   dismissible = true,
+  requireExplicitClose = false,
   className = 'sheet',
   overlayClassName = 'modal-backdrop',
   maxWidth,
@@ -52,8 +53,22 @@ export function Dialog({
   closeLabel?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  // false = chặn đóng bằng Esc/click-ngoài (vd đang busy) — nút đóng tự disable.
+  // false = chặn đóng bằng Esc/click-ngoài (vd đang busy) — nút ✕ tự disable, VÀ cả chân hộp
+  // thành trơ (xem chú thích ở `.sheet-footer` bên dưới).
   dismissible?: boolean;
+  /**
+   * true = đóng phải CÓ CHỦ Ý: chặn Esc, chặn click-nền, tắt nút ✕ — nhưng chân hộp VẪN SỐNG.
+   *
+   * Tách khỏi `dismissible` vì hai nhu cầu khác hẳn nhau đang bị gộp làm một:
+   *   · `dismissible={false}` = "đang có lượt ghi BAY, đừng đóng bằng bất cứ gì" — nên nó nuốt
+   *     luôn click ở chân hộp. Hộp tự mở lại khi ghi xong, người dùng không kẹt.
+   *   · `requireExplicitClose` = "đóng nhầm là MẤT DỮ LIỆU, nên phải bấm nút" — chân hộp bắt
+   *     buộc phải bấm được, nếu không hộp thành KHÔNG CÓ LỐI RA.
+   *
+   * Dùng nhầm cái đầu cho vế thứ hai là dựng một hộp không đóng được bằng gì cả. Bài
+   * `accounts.spec.ts` bắt đúng lỗi đó ngày 12/09, khi hộp mật khẩu tạm vá bằng nhầm prop.
+   */
+  requireExplicitClose?: boolean;
   // Class hộp nội dung: 'sheet' (header/body/footer) hoặc 'modal' (hộp gọn), + biến thể.
   className?: string;
   // Class nền mờ. Dialog LỒNG (vd cascade trên form) dùng 'modal-backdrop bare' để
@@ -63,7 +78,8 @@ export function Dialog({
   children: ReactNode;
 }) {
   const { t } = useTranslation();
-  const block = dismissible ? undefined : (e: Event) => e.preventDefault();
+  const block =
+    dismissible && !requireExplicitClose ? undefined : (e: Event) => e.preventDefault();
   const [portalEl, setPortalEl] = useState<HTMLDivElement | null>(null);
 
   /*
@@ -89,7 +105,7 @@ export function Dialog({
    * Không cần sổ đăng ký, không cần context thứ hai, và không thể quên cập nhật.
    */
   const onEscapeKeyDown = (event: KeyboardEvent) => {
-    if (!dismissible) {
+    if (!dismissible || requireExplicitClose) {
       event.preventDefault();
       return;
     }
@@ -169,7 +185,7 @@ export function Dialog({
                         /* KHÔNG dùng chung nhãn "Đóng" với nút ở chân hộp: hai nút cùng tên trong một
                            hộp thì trình đọc màn hình đọc "Đóng, nút" hai lần, không phân biệt được. */
                         aria-label={closeLabel ?? t('common.closeDialog')}
-                        disabled={!dismissible}
+                        disabled={!dismissible || requireExplicitClose}
                       >
                         ✕
                       </button>

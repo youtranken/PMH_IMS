@@ -18,10 +18,16 @@ const FIELD_LABEL: Record<string, string> = {
   status: 'trạng thái',
 };
 
-const ACTION_LABEL: Record<string, string> = {
+export const ACTION_LABEL: Record<string, string> = {
   created: 'Tạo hồ sơ',
   updated: 'Sửa hồ sơ',
   renewed: 'Gia hạn hợp đồng',
+  /*
+   * Sinh ra khi THIẾT BỊ đang cắm đường này bị thanh lý (`isp-device-retirement.ts`) — hợp
+   * đồng giữ nguyên, chỉ rời khỏi máy. Nhãn phải nói đủ vế sau, vì người mở sổ lúc ấy đang lo
+   * đúng một câu: "đường truyền của tôi có bị cắt không?".
+   */
+  'device-detached': 'Rời khỏi thiết bị (máy đã thanh lý) — hợp đồng giữ nguyên',
 };
 
 const STATUS_LABEL: Record<string, string> = {

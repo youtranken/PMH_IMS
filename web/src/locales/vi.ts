@@ -603,8 +603,11 @@ export default {
     disable: 'Vô hiệu hóa',
     neverLoggedIn: 'Chưa đăng nhập lần nào',
     temporaryPassword: 'Mật khẩu tạm',
+    temporaryPasswordOf: 'Mật khẩu tạm — {{who}}',
     temporaryPasswordNote:
-      'Đọc mật khẩu này cho người dùng qua kênh an toàn. Hệ thống sẽ không hiển thị lại.',
+      'Đọc mật khẩu này cho người dùng qua kênh an toàn. Hệ thống sẽ không hiển thị lại, ' +
+      'và cũng không có cách nào xem lại — đóng hộp này là mất. Chưa ghi lại được thì đừng đóng.',
+    temporaryPasswordDone: 'Tôi đã ghi lại mật khẩu này',
     confirmLock: 'Khóa tài khoản {{name}}? Mọi phiên đang mở sẽ bị đăng xuất ngay.',
     confirmResetPassword: 'Đặt lại mật khẩu cho {{name}}? Người dùng sẽ phải đổi mật khẩu ở lần đăng nhập tới.',
     confirmResetTotp: 'Đặt lại xác thực 2 lớp cho {{name}}? Người dùng sẽ phải quét lại mã QR.',

@@ -42,7 +42,7 @@ export function statusLabel(status: string | null | undefined): string {
  *
  * Khóa lạ (migration sau, dữ liệu cũ) GIỮ NGUYÊN — hiện "ip.somethingNew" còn hơn hiện ô trống.
  */
-const ACTION_LABEL: Record<string, string> = {
+export const ACTION_LABEL: Record<string, string> = {
   'ip.created': 'Tạo hồ sơ',
   'ip.updated': 'Sửa hồ sơ',
   'ip.assigned': 'Gán chủ',

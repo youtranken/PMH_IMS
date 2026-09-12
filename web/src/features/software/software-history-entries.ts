@@ -25,7 +25,7 @@ const FIELD_LABEL: Record<string, string> = {
   overSeatReason: 'lý do vượt seat',
 };
 
-const ACTION_LABEL: Record<string, string> = {
+export const ACTION_LABEL: Record<string, string> = {
   created: 'Tạo hồ sơ',
   updated: 'Sửa hồ sơ',
   renewed: 'Gia hạn',

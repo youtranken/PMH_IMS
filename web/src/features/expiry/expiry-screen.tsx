@@ -4,6 +4,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
+import { useExpiryKinds } from '@/lib/expiry-kinds';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
@@ -32,11 +33,6 @@ interface ExpiryRow {
   canRenew: boolean;
 }
 
-interface ExpiryKind {
-  kind: string;
-  label: string;
-  canRenew: boolean;
-}
 
 interface ExpiryResponse {
   items: ExpiryRow[];
@@ -62,10 +58,8 @@ export function ExpiryScreen({ me }: { me: Me }) {
   const [renewing, setRenewing] = useState<ExpiryRow | null>(null);
   const [tab, setTab] = useState('list');
 
-  const kinds = useQuery({
-    queryKey: ['expiry', 'kinds'],
-    queryFn: () => apiFetch<ExpiryKind[]>('/api/v1/expiry/kinds'),
-  });
+  /* Nguồn nhãn loại hạn dùng chung với bảng điều khiển — xem `lib/expiry-kinds.ts` (AD-15). */
+  const kinds = useExpiryKinds();
 
   const expiry = useQuery({
     queryKey: ['expiry', withinDays, kind],

@@ -88,6 +88,27 @@ test.describe('Bảng điều khiển', () => {
     expect(urgent).toBeGreaterThanOrEqual(0);
     expect(urgent).toBeLessThan(relaxed);
 
+    /*
+     * DÒNG PHỤ PHẢI LÀ TIẾNG VIỆT, KHÔNG PHẢI MÃ MÁY — rà UI/UX 12/09.
+     *
+     * Bản trước gọi `t('expiry.kind_' + kind, kind)` trong khi `vi.ts` không có khóa
+     * `expiry.kind_*` nào, nên i18next lặng lẽ rơi về tham số mặc định: chính cái mã. Khối
+     * đầu tiên của màn mở đầu mỗi ngày in ra `license · 27/08/2026`, `warranty · …`.
+     *
+     * Hỏng theo kiểu khó thấy, và đó mới là điều đáng chốt: `license` trông vừa đủ giống một
+     * nhãn để mắt lướt qua. Lượt test tay 12/09 đi qua đúng khối này mà không nhận ra.
+     *
+     * Chốt CẢ HAI vế. Chỉ đòi "có chữ License phần mềm" thì một bản in ra cả hai
+     * (`license License phần mềm`) cũng xanh; chỉ cấm chữ `license` thì một bản in ra ô trống
+     * cũng xanh.
+     */
+    const urgentLine = labels[urgent];
+    expect(urgentLine, 'phải hiện nhãn tiếng Việt lấy từ API').toContain('License phần mềm');
+    expect(
+      urgentLine.split('·')[1] ?? urgentLine,
+      'không được để lọt mã máy ra dòng phụ',
+    ).not.toMatch(/\blicense\b/);
+
     // Khối sự cố PHẢI hiện và nói rõ là chưa có phần này (Epic 9 chưa mở).
     const incidents = page.locator('section').filter({ hasText: 'Sự cố tuần qua' });
     await expect(incidents.getByText(/chưa mở/i)).toBeVisible();

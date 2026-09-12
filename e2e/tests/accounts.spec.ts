@@ -34,14 +34,37 @@ test.describe('Quản trị tài khoản', () => {
     await page.getByRole('textbox', { name: 'Email' }).fill(unique);
     await page.getByRole('button', { name: 'Lưu' }).click();
 
-    // Mật khẩu tạm chỉ hiện MỘT LẦN.
-    await expect(page.getByText('Mật khẩu tạm')).toBeVisible();
+    /*
+     * Mật khẩu tạm chỉ hiện MỘT LẦN — và tiêu đề phải nói nó của AI (rà UI/UX 12/09).
+     * Mở hộp này từ dòng thứ sáu trong bảng thì tiêu đề trần "Mật khẩu tạm" không đủ để
+     * người đọc biết đang đặt lại cho ai.
+     */
+    await expect(page.getByText(`Mật khẩu tạm — ${unique}`)).toBeVisible();
     const temp = await page.getByTestId('temp-password').innerText();
     expect(temp.trim().length).toBeGreaterThanOrEqual(12);
 
-    // `exact`: nút ✕ của hộp thoại có nhãn "Đóng hộp thoại", đừng bắt nhầm nó.
-    await page.getByRole('button', { name: 'Đóng', exact: true }).click();
-    await expect(page.getByText(unique)).toBeVisible();
+    /*
+     * ESC KHÔNG ĐƯỢC ĐÓNG HỘP NÀY, và đây là cả lý do bài kiểm này dài thêm.
+     *
+     * Chuỗi vừa hiện không tồn tại ở đâu khác: API sinh ra, trả về một lần, rồi quên. Bản
+     * trước để `dismissible` mặc định (true), nên một phím Esc lỡ tay là mất hẳn — trong khi
+     * chính chú thích trong hộp ghi "Hệ thống sẽ không hiển thị lại".
+     */
+    await page.keyboard.press('Escape');
+    await expect(
+      page.getByTestId('temp-password'),
+      'Esc không được đóng hộp chứa thứ không xem lại được',
+    ).toBeVisible();
+
+    /*
+     * Nhãn nút đóng là một LỜI XÁC NHẬN, không phải "Đóng": người bấm phải tự khẳng định đã
+     * ghi lại. `exact` vì nút ✕ của hộp thoại có nhãn "Đóng hộp thoại".
+     */
+    await page.getByRole('button', { name: 'Tôi đã ghi lại mật khẩu này', exact: true }).click();
+    await expect(page.getByTestId('temp-password'), 'bấm nút thì PHẢI đóng được').toHaveCount(0);
+
+    // Chốt vào DÒNG BẢNG: email nay xuất hiện ở cả tiêu đề hộp, `getByText` trần sẽ khớp hai chỗ.
+    await expect(page.getByRole('row', { name: new RegExp(unique) })).toBeVisible();
   });
 
   test('member không thấy mục Tài khoản và bị chặn khi gõ thẳng URL', async ({ page }) => {

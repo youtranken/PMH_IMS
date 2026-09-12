@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ExpiryKind } from '@/lib/expiry-kinds';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
@@ -27,10 +28,6 @@ interface DigestRule {
   lastSentAt: string | null;
 }
 
-interface ExpiryKind {
-  kind: string;
-  label: string;
-}
 
 /**
  * Luật gửi báo cáo "sắp hết hạn" (story 3.5, FR-013).

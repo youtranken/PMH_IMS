@@ -42,7 +42,8 @@ export function AccountForm({
   account: AccountProfile | null;
   csrfToken: string;
   onClose: () => void;
-  onCreated: (temporaryPassword: string) => void;
+  /* Kèm email để hộp mật khẩu tạm nói được nó thuộc về AI — xem `accounts-screen.tsx`. */
+  onCreated: (temporaryPassword: string, email: string) => void;
   onSaved: () => void;
 }) {
   const { t } = useTranslation();
@@ -111,7 +112,7 @@ export function AccountForm({
           create.mutate(
             { ...contact, email: email.trim(), role, totpLoginRequired },
             {
-              onSuccess: (result) => onCreated(result.temporaryPassword),
+              onSuccess: (result) => onCreated(result.temporaryPassword, email.trim()),
               onError: (err) => setError(errorMessage(err, 'Không tạo được tài khoản.')),
             },
           );

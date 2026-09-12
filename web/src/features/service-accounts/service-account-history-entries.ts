@@ -21,7 +21,7 @@ const FIELD_LABEL: Record<string, string> = {
   reason: 'lý do',
 };
 
-const ACTION_LABEL: Record<string, string> = {
+export const ACTION_LABEL: Record<string, string> = {
   created: 'Tạo hồ sơ',
   updated: 'Sửa hồ sơ',
   disabled: 'Vô hiệu hóa',

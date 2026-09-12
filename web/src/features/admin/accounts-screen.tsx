@@ -57,7 +57,10 @@ export function AccountsScreen({ me }: { me: Me }) {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'fullName', desc: false }]);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<AccountRow | null>(null);
-  const [temporaryPassword, setTemporaryPassword] = useState<string | null>(null);
+  /* Giữ kèm CHỦ của mật khẩu: mở từ dòng thứ sáu trong bảng thì không ai nhớ đang reset cho ai. */
+  const [temporaryPassword, setTemporaryPassword] = useState<{ password: string; who: string } | null>(
+    null,
+  );
   const [sessionsFor, setSessionsFor] = useState<AccountRow | null>(null);
 
   // Tìm kiếm chạy PHÍA SERVER: lọc phía client chỉ lọc đúng 20 dòng đang xem, nên tên nằm ở
@@ -218,7 +221,10 @@ export function AccountsScreen({ me }: { me: Me }) {
                           { id: account.id },
                           {
                             onSuccess: (result) => {
-                              setTemporaryPassword(result.temporaryPassword);
+                              setTemporaryPassword({
+                                password: result.temporaryPassword,
+                                who: account.email,
+                              });
                               void refresh();
                             },
                             onError: (err) =>
@@ -351,9 +357,9 @@ export function AccountsScreen({ me }: { me: Me }) {
           account={null}
           csrfToken={csrfToken}
           onClose={() => setCreating(false)}
-          onCreated={(password) => {
+          onCreated={(password, email) => {
             setCreating(false);
-            setTemporaryPassword(password);
+            setTemporaryPassword({ password, who: email });
             void refresh();
           }}
           onSaved={() => setCreating(false)}
@@ -379,14 +385,33 @@ export function AccountsScreen({ me }: { me: Me }) {
           open
           onOpenChange={() => setTemporaryPassword(null)}
           maxWidth={460}
-          title={t('accounts.temporaryPassword')}
+          /*
+           * KHÔNG cho đóng bằng Esc hay bấm ra nền (rà UI/UX 12/09).
+           *
+           * Chuỗi này chỉ tồn tại đúng một lần: API sinh ra, trả về, rồi quên. Mọi hộp khác
+           * trong màn đóng dễ là đúng — đóng nhầm thì mở lại. Riêng hộp này đóng nhầm là
+           * người dùng mới không đăng nhập được, SA phải đặt lại mật khẩu, và vòng đó lặp
+           * cho tới khi có người đọc kịp.
+           *
+           * Chính câu chú thích bên trong hộp đã nói "sẽ không hiển thị lại" — nay hộp cư xử
+           * đúng như lời nó nói.
+           */
+          requireExplicitClose
+          title={t('accounts.temporaryPasswordOf', { who: temporaryPassword.who })}
           footer={
             <button type="button" className="btn primary" onClick={() => setTemporaryPassword(null)}>
-              {t('common.close')}
+              {t('accounts.temporaryPasswordDone')}
             </button>
           }
         >
-          <p className="mono temp-password" data-testid="temp-password">{temporaryPassword}</p>
+          {/*
+            CỐ Ý KHÔNG CÓ NÚT CHÉP, dù bôi đen chuỗi `mono` là thao tác dễ trượt.
+            `ui/copy-button.tsx` đã chốt luật đó cho giá trị secret: clipboard sống qua cả
+            phiên đăng nhập, dán nhầm vào ô chat là mất luôn. Mật khẩu tạm cũng là secret.
+          */}
+          <p className="mono temp-password" data-testid="temp-password">
+            {temporaryPassword.password}
+          </p>
           <p className="muted">{t('accounts.temporaryPasswordNote')}</p>
         </Dialog>
       ) : null}

@@ -26,7 +26,7 @@ const FIELD_LABEL: Record<string, string> = {
   note: 'ghi chú',
 };
 
-const ACTION_LABEL: Record<string, string> = {
+export const ACTION_LABEL: Record<string, string> = {
   created: 'Mở rule',
   updated: 'Sửa rule',
   voided: 'Gỡ rule',

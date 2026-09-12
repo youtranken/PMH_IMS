@@ -874,8 +874,12 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
       'mật khẩu tạm phải đủ dài — đây là thứ duy nhất mở được tài khoản mới',
     ).toBeGreaterThanOrEqual(12);
 
-    // `exact`: nút ✕ của hộp thoại mang nhãn "Đóng hộp thoại", đừng bắt nhầm nó.
-    await page.getByRole('button', { name: 'Đóng', exact: true }).click();
+    /*
+     * Nhãn nút là một LỜI XÁC NHẬN chứ không phải "Đóng" (rà UI/UX 12/09): hộp này chặn Esc
+     * và chặn click-nền, nên bấm nút là đường ra DUY NHẤT — và người bấm phải tự khẳng định
+     * đã ghi lại mật khẩu, vì không có lần hiện thứ hai.
+     */
+    await page.getByRole('button', { name: 'Tôi đã ghi lại mật khẩu này', exact: true }).click();
 
     const dong = page.getByRole('row', { name: new RegExp(ADMIN_NAME) });
     await expect(dong).toBeVisible();
@@ -1657,8 +1661,11 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
         temporaryPassword.length,
         'mật khẩu tạm chỉ hiện MỘT LẦN — không hiện ra là SA phải làm lại cả quy trình',
       ).toBeGreaterThanOrEqual(12);
-      // `exact`: nút ✕ của hộp thoại mang nhãn "Đóng hộp thoại", đừng bắt nhầm nó.
-      await page.getByRole('button', { name: 'Đóng', exact: true }).click();
+      // Nhãn nút là LỜI XÁC NHẬN, không phải "Đóng": hộp chặn Esc và click-nền nên đây là
+      // đường ra duy nhất, và người bấm phải tự khẳng định đã ghi lại (rà UI/UX 12/09).
+      await page
+        .getByRole('button', { name: 'Tôi đã ghi lại mật khẩu này', exact: true })
+        .click();
 
       expect(
         sql(`SELECT must_change_password FROM users WHERE ${memberWhere}`),
@@ -7189,8 +7196,11 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       (await page.getByTestId('temp-password').innerText()).trim().length,
       'tạo xong mà không có mật khẩu tạm thì SA không có gì để đọc cho người dùng',
     ).toBeGreaterThanOrEqual(12);
-    // `exact`: nút ✕ mang nhãn "Đóng hộp thoại", đừng bắt nhầm nó.
-    await page.getByRole('button', { name: 'Đóng', exact: true }).click();
+    // Nhãn nút là LỜI XÁC NHẬN, không phải "Đóng": hộp chặn Esc và click-nền nên đây là
+    // đường ra duy nhất, và người bấm phải tự khẳng định đã ghi lại (rà UI/UX 12/09).
+    await page
+      .getByRole('button', { name: 'Tôi đã ghi lại mật khẩu này', exact: true })
+      .click();
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     // ===== CHẾ ĐỘ SỬA =====
