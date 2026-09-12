@@ -134,6 +134,7 @@ export function CatalogForm({
       /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!save.isPending}
+      guardUnsaved
       maxWidth={560}
       title={row ? t('catalog.edit') : t(ADD_KEY[entity])}
       footer={

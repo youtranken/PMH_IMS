@@ -1,5 +1,6 @@
 import * as RD from '@radix-ui/react-dialog';
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useConfirm } from '@/ui/confirm-context';
 import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
 
@@ -30,6 +31,7 @@ export function Dialog({
   onOpenChange,
   dismissible = true,
   requireExplicitClose = false,
+  guardUnsaved = false,
   className = 'sheet',
   overlayClassName = 'modal-backdrop',
   maxWidth,
@@ -69,6 +71,35 @@ export function Dialog({
    * `accounts.spec.ts` bắt đúng lỗi đó ngày 12/09, khi hộp mật khẩu tạm vá bằng nhầm prop.
    */
   requireExplicitClose?: boolean;
+  /**
+   * true = Esc / bấm nền / ✕ chỉ đóng khi KHÔNG có gì đang gõ dở; có thì hỏi lại.
+   *
+   * ===== VẤN ĐỀ =====
+   *
+   * `dismissible={!save.isPending}` chỉ chặn lúc lượt ghi ĐANG BAY. Trước khi bấm Lưu thì Esc,
+   * bấm nền hay ✕ đóng thẳng và xoá sạch — 10 form trong repo đang như vậy, nặng nhất là
+   * `device-form` (15 ô) và `service-account-form` (có cả ô Mật khẩu). Không một chữ hỏi lại.
+   *
+   * ===== VÌ SAO ĐO Ở DOM, KHÔNG BẮT MỖI FORM TỰ KHAI "DIRTY" =====
+   *
+   * Bắt 10 form cùng dựng một đối tượng `values` rồi so với ảnh chụp ban đầu là 10 chỗ phải
+   * nhớ cập nhật khi thêm ô mới — và chỗ thứ mười một sẽ quên, đúng cách 17/18 hộp đã quên
+   * `disabled` nút Hủy (xem chú thích ở `.sheet-footer`). Ở đây thì một lần đọc
+   * `input/textarea/select` trong thân hộp là phủ mọi form, kể cả form viết sau.
+   *
+   * GIỚI HẠN PHẢI BIẾT: ô chọn ngày, combobox và `Select` của repo render ra `<button>`, không
+   * phải `<input>`, nên đổi RIÊNG chúng thì cửa này không thấy. Chấp nhận: nó không bao giờ
+   * báo động giả (chỉ hỏi khi có thay đổi thật), và vẫn bắt đúng cảnh hay gặp nhất — gõ tay
+   * một lúc rồi lỡ Esc. Thà bắt được phần lớn còn hơn bắt 0% như hiện nay.
+   *
+   * KHÔNG canh nút "Hủy" ở chân hộp: bấm Hủy là CỐ Ý bỏ, hỏi lại ở đó chỉ là thêm một cú bấm
+   * cho việc người ta vừa nói rõ là muốn làm. Cửa này dành cho ba lối đóng TÌNH CỜ.
+   *
+   * Ảnh chụp gốc lấy sau lượt render đầu, nên form nào nạp dữ liệu BÊN TRONG hộp (thay vì nhận
+   * qua prop) sẽ trông như vừa bị sửa lúc dữ liệu về. 10 form đang bật cờ này đều khởi tạo
+   * `useState` từ prop, nên không dính; đó cũng là lý do prop này phải TỰ KHAI, không bật sẵn.
+   */
+  guardUnsaved?: boolean;
   // Class hộp nội dung: 'sheet' (header/body/footer) hoặc 'modal' (hộp gọn), + biến thể.
   className?: string;
   // Class nền mờ. Dialog LỒNG (vd cascade trên form) dùng 'modal-backdrop bare' để
@@ -78,9 +109,74 @@ export function Dialog({
   children: ReactNode;
 }) {
   const { t } = useTranslation();
-  const block =
-    dismissible && !requireExplicitClose ? undefined : (e: Event) => e.preventDefault();
+  const askConfirm = useConfirm();
   const [portalEl, setPortalEl] = useState<HTMLDivElement | null>(null);
+
+  /*
+   * ===== CANH DỮ LIỆU CHƯA LƯU (12/09) — xem chú thích của prop `guardUnsaved` =====
+   *
+   * `bodyRef` trỏ vào thân hộp. Chữ ký là danh sách cặp (tên ô, giá trị) của mọi ô nhập
+   * NATIVE bên trong, đem `JSON.stringify`.
+   *
+   * Dùng JSON chứ không nối chuỗi bằng một dấu phân cách tự chọn: mọi dấu phân cách đều có
+   * thể xuất hiện TRONG giá trị người dùng gõ, và lúc đó hai form khác nhau băm ra cùng một
+   * chữ ký — cửa canh im lặng bỏ sót. JSON tự lo việc thoát ký tự, nên không có cảnh đó.
+   */
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+  const banDau = useRef<string | null>(null);
+
+  const chuKyCacO = useCallback((): string => {
+    const root = bodyRef.current;
+    if (!root) return '';
+    return JSON.stringify(
+      // `Array.from` chứ không phải spread: `tsconfig.app.json` nhắm bản ES cũ hơn nên
+      // `NodeListOf` chưa có `[Symbol.iterator]`.
+      Array.from(root.querySelectorAll('input, textarea, select')).map((el) => {
+        const o = el as HTMLInputElement;
+        const gia = o.type === 'checkbox' || o.type === 'radio' ? String(o.checked) : o.value;
+        return [o.name || o.id || '', gia];
+      }),
+    );
+  }, []);
+
+  useEffect(() => {
+    /*
+     * CHỜ `portalEl` rồi mới chụp — đây là chỗ bản đầu sai và bài kiểm bắt được ngay.
+     *
+     * `RD.Portal` dựng thùng chứa của nó trong một layout effect, nên ở lượt effect ĐẦU của
+     * component này thân hộp CHƯA nằm trong tài liệu: `bodyRef.current` còn `null`, chữ ký
+     * chụp được là chuỗi rỗng. Tới lúc người dùng bấm Esc thì chữ ký thật khác chuỗi rỗng, và
+     * MỌI hộp đều bị coi là "đang gõ dở" — cửa canh hỏi lại cả khi người ta chưa gõ gì.
+     *
+     * `portalEl` do `<div ref={setPortalEl} />` BÊN TRONG `RD.Content` đặt, nên nó khác `null`
+     * đúng vào lúc thân hộp đã mount. Không cần thêm cờ nào khác.
+     */
+    if (!guardUnsaved || !open || !portalEl) return;
+    banDau.current = chuKyCacO();
+  }, [guardUnsaved, open, portalEl, chuKyCacO]);
+
+  /** Đang chờ người dùng trả lời câu "bỏ hay ở lại" — đừng hỏi chồng lên nhau. */
+  const dangHoi = useRef(false);
+
+  const thuDong = useCallback(() => {
+    if (banDau.current === null || chuKyCacO() === banDau.current) {
+      onOpenChange(false);
+      return;
+    }
+    if (dangHoi.current) return;
+    dangHoi.current = true;
+    void (async () => {
+      const ok = await askConfirm({
+        title: t('app.discardTitle'),
+        message: t('app.discardMessage'),
+        confirmLabel: t('app.discardConfirm'),
+        cancelLabel: t('app.discardCancel'),
+        danger: true,
+      });
+      dangHoi.current = false;
+      if (ok) onOpenChange(false);
+    })();
+  }, [askConfirm, chuKyCacO, onOpenChange, t]);
 
   /*
    * ===== ESC LÚC MENU Ô CHỌN ĐANG MỞ CHỈ ĐƯỢC ĐÓNG MENU (10/09) =====
@@ -109,7 +205,32 @@ export function Dialog({
       event.preventDefault();
       return;
     }
-    if (portalEl && portalEl.childElementCount > 0) event.preventDefault();
+    if (portalEl && portalEl.childElementCount > 0) {
+      event.preventDefault();
+      return;
+    }
+    if (!guardUnsaved) return;
+    // Radix tự đóng nếu ta không cản; cản rồi tự quyết sau khi hỏi xong.
+    event.preventDefault();
+    thuDong();
+  };
+
+  /*
+   * Bấm ra ngoài hộp: Radix bắn CẢ HAI sự kiện dưới đây, nên cả hai phải cản, nhưng chỉ MỘT
+   * được phép mở câu hỏi — nếu không sẽ hỏi hai lần cho một cú bấm.
+   */
+  const onPointerDownOutside = (event: Event) => {
+    if (!dismissible || requireExplicitClose) {
+      event.preventDefault();
+      return;
+    }
+    if (!guardUnsaved) return;
+    event.preventDefault();
+    thuDong();
+  };
+
+  const onInteractOutside = (event: Event) => {
+    if (!dismissible || requireExplicitClose || guardUnsaved) event.preventDefault();
   };
 
   /*
@@ -167,8 +288,8 @@ export function Dialog({
             className={className}
             style={maxWidth ? { maxWidth } : undefined}
             onEscapeKeyDown={onEscapeKeyDown}
-            onPointerDownOutside={block}
-            onInteractOutside={block}
+            onPointerDownOutside={onPointerDownOutside}
+            onInteractOutside={onInteractOutside}
           >
             <DialogPortalContext.Provider value={portalEl}>
               {title === undefined ? (
@@ -178,20 +299,39 @@ export function Dialog({
                   <div className="sheet-header">
                     <RD.Title className="sheet-title">{title}</RD.Title>
                     <span className="spacer" />
-                    <RD.Close asChild>
+                    {/*
+                      `RD.Close` đóng hộp NGAY, không hỏi ai — nên khi đang canh dữ liệu chưa
+                      lưu thì phải là nút thường đi qua `thuDong()`. Hai nhánh cùng class, cùng
+                      nhãn trợ năng: người dùng không thấy khác gì.
+                    */}
+                    {guardUnsaved ? (
                       <button
                         type="button"
                         className="sheet-close"
-                        /* KHÔNG dùng chung nhãn "Đóng" với nút ở chân hộp: hai nút cùng tên trong một
-                           hộp thì trình đọc màn hình đọc "Đóng, nút" hai lần, không phân biệt được. */
                         aria-label={closeLabel ?? t('common.closeDialog')}
                         disabled={!dismissible || requireExplicitClose}
+                        onClick={thuDong}
                       >
                         ✕
                       </button>
-                    </RD.Close>
+                    ) : (
+                      <RD.Close asChild>
+                        <button
+                          type="button"
+                          className="sheet-close"
+                          /* KHÔNG dùng chung nhãn "Đóng" với nút ở chân hộp: hai nút cùng tên trong một
+                             hộp thì trình đọc màn hình đọc "Đóng, nút" hai lần, không phân biệt được. */
+                          aria-label={closeLabel ?? t('common.closeDialog')}
+                          disabled={!dismissible || requireExplicitClose}
+                        >
+                          ✕
+                        </button>
+                      </RD.Close>
+                    )}
                   </div>
-                  <div className="sheet-body">{children}</div>
+                  <div className="sheet-body" ref={bodyRef}>
+                    {children}
+                  </div>
                   {footer ? (
                     /*
                      * ===== CỬA THỨ TƯ CỦA `dismissible` (10/09) =====

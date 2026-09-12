@@ -457,6 +457,11 @@ function CellDialog({
     <Dialog
       open
       onOpenChange={onClose}
+      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
+         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ.
+         `guardUnsaved`: chưa bấm Lưu mà lỡ Esc thì hỏi lại, đừng xoá trắng. */
+      dismissible={!save.isPending}
+      guardUnsaved
       maxWidth={480}
       title={`${account.fullName} — ${scope.label}`}
       footer={
@@ -593,6 +598,11 @@ function GrantToScopeDialog({
     <Dialog
       open
       onOpenChange={onClose}
+      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
+         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ.
+         `guardUnsaved`: chưa bấm Lưu mà lỡ Esc thì hỏi lại, đừng xoá trắng. */
+      dismissible={!saving}
+      guardUnsaved
       maxWidth={560}
       title={t('access.grantScopeTitle', { scope: scope.label })}
       footer={
@@ -742,6 +752,11 @@ function GrantDialog({
     <Dialog
       open
       onOpenChange={onClose}
+      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
+         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ.
+         `guardUnsaved`: chưa bấm Lưu mà lỡ Esc thì hỏi lại, đừng xoá trắng. */
+      dismissible={!save.isPending}
+      guardUnsaved
       maxWidth={520}
       title={t('access.grantTitle', { member: memberEmail })}
       footer={

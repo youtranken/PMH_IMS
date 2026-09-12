@@ -156,6 +156,7 @@ export function DeviceForm({
       /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!busy}
+      guardUnsaved
       maxWidth={860}
       title={device ? `${t('devices.edit')} — ${device.code}` : t('devices.add')}
       footer={

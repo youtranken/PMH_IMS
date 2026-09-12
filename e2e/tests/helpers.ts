@@ -478,6 +478,24 @@ export async function waitForMail(subjectPart: string, attempts = 40): Promise<M
   }
 }
 
+/**
+ * Chụp danh sách thư HIỆN CÓ — khác `waitForMail` ở chỗ nó không chờ gì cả.
+ *
+ * Sinh ra cho vế phủ định: "bấm Hủy thì KHÔNG được có thư nào rời đi". Dùng `waitForMail` cho
+ * việc đó là sai công cụ — nó chờ tới 20 giây rồi trả mảng rỗng, nên bài kiểm vừa chậm vừa
+ * không phân biệt được "không gửi" với "gửi chậm".
+ */
+export async function mailpitMessages(): Promise<MailSummary[]> {
+  const api = await request.newContext();
+  try {
+    const res = await api.get(`${MAILPIT}/api/v1/messages`);
+    if (!res.ok()) return [];
+    return ((await res.json()) as { messages: MailSummary[] }).messages;
+  } finally {
+    await api.dispose();
+  }
+}
+
 export async function mailBody(id: string): Promise<string> {
   const api = await request.newContext();
   const res = await api.get(`${MAILPIT}/api/v1/message/${id}`);

@@ -115,6 +115,7 @@ export function ServiceAccountForm({
       // Đang ghi thì không cho đóng bằng Esc / bấm nền: hộp đóng nhưng chuỗi `await` bên dưới
       // vẫn chạy tiếp và ghi nốt, nên người dùng tin là đã hủy trong khi dữ liệu đã vào.
       dismissible={!busy}
+      guardUnsaved
       maxWidth={780}
       title={row ? `${t('serviceAccounts.edit')} — ${row.code}` : t('serviceAccounts.add')}
       footer={

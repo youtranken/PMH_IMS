@@ -139,21 +139,41 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
                               key: 'test',
                               label: t('digest.test'),
                               disabled: sendTest.isPending,
-                              onSelect: () =>
-                                sendTest.mutate(
-                                  { id: rule.id },
-                                  {
-                                    onSuccess: (result) =>
-                                      toast({
-                                        message: t('digest.testSent', {
-                                          count: result.items,
-                                          to: result.recipients.join(', '),
+                              /*
+                               * "Gửi thử" KHÔNG gửi vào một hộp thư nháp nào cả — nó bắn email
+                               * THẬT tới đúng danh sách người nhận của luật, mà danh sách ấy
+                               * thường là sếp và cả phòng. Chữ "thử" làm người ta tưởng ngược
+                               * lại, nên đây là chỗ hiếm hoi phải hỏi lại dù thao tác không
+                               * ghi gì xuống DB: cái không hoàn tác được là email đã rời đi.
+                               *
+                               * Câu hỏi NÊU ĐÍCH DANH người nhận — đó mới là thông tin giúp
+                               * người dùng dừng lại đúng lúc, chứ không phải chữ "chắc chưa?".
+                               */
+                              onSelect: () => {
+                                void (async () => {
+                                  const ok = await askConfirm({
+                                    message: t('digest.confirmTest', {
+                                      to: rule.recipients.join(', '),
+                                    }),
+                                    confirmLabel: t('digest.test'),
+                                  });
+                                  if (!ok) return;
+                                  sendTest.mutate(
+                                    { id: rule.id },
+                                    {
+                                      onSuccess: (result) =>
+                                        toast({
+                                          message: t('digest.testSent', {
+                                            count: result.items,
+                                            to: result.recipients.join(', '),
+                                          }),
                                         }),
-                                      }),
-                                    onError: (error) =>
-                                      toast({ message: errorMessage(error), tone: 'error' }),
-                                  },
-                                ),
+                                      onError: (error) =>
+                                        toast({ message: errorMessage(error), tone: 'error' }),
+                                    },
+                                  );
+                                })();
+                              },
                             },
                             {
                               key: 'delete',
@@ -254,6 +274,7 @@ function RuleForm({
       /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!save.isPending}
+      guardUnsaved
       maxWidth={640}
       title={rule ? t('digest.edit') : t('digest.add')}
       footer={

@@ -9,10 +9,13 @@ Rà toàn bộ `web/src/` (204 file) + tầng DTO của API. **Không lặp lạ
 
 ## Bảng theo dõi — 39 mục
 
-**Xong 6 · Làm một phần 1 · Còn lại 32.**  ·  Đợt A xong 12/09, đã lái tay qua trình duyệt thật
-(biên bản: `docs/BIEN-BAN-TEST-TAY-DOT-A-2026-09-12.md`).
+**Xong 10 · Làm một phần 1 · Còn lại 28.**
 
-Cột **Kiểm**: `✓` = tôi đã tự mở code xác minh lại, không chỉ tin báo cáo. Chín mục đã kiểm.
+Đợt A xong 12/09, đã lái tay qua trình duyệt thật (biên bản:
+`docs/BIEN-BAN-TEST-TAY-DOT-A-2026-09-12.md`). Đợt B xong 12/09.
+
+Cột **Kiểm**: `✓` = tôi đã tự mở code xác minh lại, không chỉ tin báo cáo. **13 mục** đã kiểm —
+#10 và #20 kiểm thêm trong lúc chờ E2E của đợt A, và cả hai đều đúng như bản rà soát mô tả.
 Cột **Đợt**: nhóm đã đề xuất làm cùng nhau — xem "Thứ tự đề xuất" ở cuối file.
 
 | # | Mục | Mức | Kiểm | Đợt | Xong |
@@ -20,13 +23,13 @@ Cột **Đợt**: nhóm đã đề xuất làm cùng nhau — xem "Thứ tự đ
 | 1 | Bảng điều khiển in mã máy tiếng Anh (`warranty`, `license`) | cao | ✓ | — | **[x]** `d016847` |
 | 2 | Két sắt + Duyệt yêu cầu mù loại "Đường truyền" — 3 hỏng cùng gốc | cao | ✓ | A | **[x]** đợt A |
 | 3 | Mật khẩu tạm: một phím Esc là mất vĩnh viễn | cao | ✓ | — | **[x]** `d016847` |
-| 4 | "Thu hồi sớm" cắt quyền đang chạy, không hỏi lại | cao | ✓ | B | [ ] |
+| 4 | "Thu hồi sớm" cắt quyền đang chạy, không hỏi lại | cao | ✓ | B | **[x]** đợt B |
 | 5 | Câu lỗi tiếng Anh lọt ra giao diện (349/429 validator + lỗi 500) | cao | ✓ | C | [ ] |
 | 6 | `LoadError` vứt câu giải thích của API — 38 chỗ gọi | cao | ✓ | A | **[x]** đợt A |
 | 7 | Nhãn lịch sử: mã thao tác không có nhãn + 123 nhãn cứng | cao | ✓ | D | **[~]** `d016847` |
 | 8 | 15/19 hộp xác nhận đội tiêu đề trống "Xác nhận" | cao | — | D | [ ] |
 | 9 | Tiêu đề hộp sửa chỉ một chữ "Sửa" (dùng chung cho 7 tab danh mục) | cao | — | D | [ ] |
-| 10 | Đóng hộp giữa chừng là mất trắng; 8 hộp thiếu hẳn `dismissible` | cao | — | B | [ ] |
+| 10 | Đóng hộp giữa chừng là mất trắng; 8 hộp thiếu hẳn `dismissible` | cao | ✓ | B | **[x]** đợt B |
 | 11 | Câu lỗi hiện ra là cái NHÃN của ô ("Hết hạn") | vừa | — | D | [ ] |
 | 12 | Ba form gốc, ba câu lỗi cứng khác nhau, hiện ngoài màn hình | vừa | — | D | [ ] |
 | 13 | Hint ô "Tủ mạng" nói "Không nằm trong tủ" | vừa | — | D | [ ] |
@@ -35,8 +38,8 @@ Cột **Đợt**: nhóm đã đề xuất làm cùng nhau — xem "Thứ tự đ
 | 16 | Nút "Mở khóa" hiện trên tài khoản đang bị **vô hiệu hóa** | vừa | ✓ | A | **[x]** đợt A |
 | 17 | Kho thanh lý báo "đang trống" khi chỉ là lọc không ra | vừa | — | D | [ ] |
 | 18 | Tiêu đề hứa "cả hệ thống" nhưng đường truyền không vào kho được | vừa | — | D | [ ] |
-| 19 | "Gửi thử" bắn email THẬT cho người nhận, không hỏi lại | vừa | ✓ | B | [ ] |
-| 20 | Ba việc không hoàn tác được mà không một chữ cảnh báo | vừa | — | B | [ ] |
+| 19 | "Gửi thử" bắn email THẬT cho người nhận, không hỏi lại | vừa | ✓ | B | **[x]** đợt B |
+| 20 | Ba việc không hoàn tác được mà không một chữ cảnh báo | vừa | ✓ | B | **[x]** đợt B |
 | 21 | Nút nguy hiểm sát nút hay bấm nhất, và đổi nghĩa tại chỗ | vừa | — | D | [ ] |
 | 22 | Nút mờ không nói vì sao (5 chỗ) | vừa | — | D | [ ] |
 | 23 | `Field` giấu gợi ý đúng lúc người dùng cần nó nhất | vừa | — | D | [ ] |
@@ -111,6 +114,10 @@ nhưng hộp đóng dễ nhất trong cả app. Không có nút Sao chép. Tiêu
 `features/vault/approvals-screen.tsx:236` — đi thẳng vào `revoke.mutate()`. Là hành động phá DUY NHẤT
 trong cụm Két sắt không qua `askConfirm({ danger: true })` (so với `access-matrix-screen.tsx:118`
 và `ui/vault-panel.tsx:316` đều có).
+**ĐÃ VÁ (đợt B)**: qua `askConfirm({ danger: true })`, và câu hỏi nói rõ thứ đang bị cắt —
+*"Quyền này ĐANG chạy — nếu họ đang mở két giữa lúc xử sự cố thì lượt xem kế tiếp bị chặn."*
+Bài E2E chốt cả vế phủ định: mới mở hộp hỏi lại thì `approval.state` PHẢI còn `approved` —
+một bản vá dựng hộp lên rồi vẫn gọi API ngay cũng làm vế khẳng định xanh.
 
 ### 5. Câu lỗi tiếng Anh không chỉ ở break-glass
 `api/src/modules/ipam/ipam.controller.ts:110` `internalPort` không có `message`; ô "Port trong"
@@ -172,6 +179,34 @@ Trong khi `device-form.tsx:160` và `account-form.tsx:79` đã làm đúng (kèm
 `approvals-screen.tsx:311` · `access-matrix-screen.tsx:457,593,742` · `software-detail.tsx:348` ·
 `isp-detail.tsx:288` · `expiry-screen.tsx:277` · `service-accounts-screen.tsx:333`.
 
+Kiểm lại 12/09 bằng cách quét MỌI `<Dialog>` trong `web/src`: đúng 8 hộp như trên, cộng ba hộp
+nữa cũng không có `dismissible` nhưng **đúng là không cần** — danh sách phiên, lịch sử hồ sơ IP,
+popup két: chỉ đọc, đóng không mất gì. Bản rà soát đã loại đúng ba cái này.
+
+**ĐÃ VÁ (đợt B) — hai lớp, hai prop:**
+
+1. Tám hộp trên nhận `dismissible={!…isPending}`.
+2. Lớp còn lại, lớn hơn nhiều, cần một cửa MỚI: `Dialog guardUnsaved` (bật ở 18 hộp). Esc /
+   bấm nền / ✕ nay chỉ vứt form khi thật sự không có gì đã gõ.
+
+**Vì sao đo ở DOM, không bắt mỗi form tự khai "dirty":** bắt 18 nơi gọi cùng dựng một đối tượng
+`values` rồi so với ảnh chụp là 18 chỗ phải nhớ cập nhật khi thêm ô mới — và chỗ thứ mười chín
+sẽ quên, đúng cách 17/18 hộp đã quên `disabled` nút Hủy. Một lần đọc `input/textarea/select`
+trong thân hộp thì phủ mọi form, kể cả form viết sau.
+
+**Đánh đổi đã biết và chấp nhận:** ô chọn ngày, combobox và `Select` render ra `<button>` nên đổi
+RIÊNG chúng thì cửa không thấy. Bù lại nó KHÔNG BAO GIỜ báo động giả — mà báo động giả mới là thứ
+bào mòn cửa canh nhanh nhất: hỏi thừa mỗi lần sẽ dạy người dùng bấm "Bỏ và đóng" theo phản xạ,
+rồi họ bấm nó cả vào hôm có dữ liệu thật. Nút "Hủy" ở chân hộp cố ý KHÔNG canh: bấm Hủy là cố ý.
+
+**Hai chuyện học được khi làm:**
+· `ui/dialog.tsx` cần `useConfirm`, mà `confirm-provider → confirm-dialog → dialog` — import ngược
+  là vòng phụ thuộc, depcruise chặn thẳng. Tách context ra `ui/confirm-context.ts`; `confirm-provider`
+  re-export nên hơn 30 chỗ gọi không sửa dòng nào.
+· Ảnh chụp gốc phải chờ `portalEl` khác `null`. `RD.Portal` dựng thùng chứa trong một layout
+  effect, nên ở lượt effect ĐẦU thân hộp chưa vào tài liệu: chữ ký chụp được là chuỗi rỗng và
+  MỌI hộp bị coi là đang gõ dở. Bài kiểm đơn vị bắt ngay ở lần chạy đầu.
+
 ## MỨC VỪA
 
 11. **Câu lỗi là cái nhãn của ô** — `isp-detail.tsx:317` `setError(t("isp.endDate"))` → khối đỏ hiện chữ "Hết hạn".
@@ -197,8 +232,19 @@ Trong khi `device-form.tsx:160` và `account-form.tsx:79` đã làm đúng (kèm
 18. **Tiêu đề hứa "cả hệ thống" nhưng đường truyền không bao giờ vào kho** — `vi.ts:967`;
     `isp-detail.tsx:105-122` không có nút ngừng dùng nào, nên hợp đồng "Đã cắt" (`vi.ts:502`) không hiện ở đâu.
 19. **"Gửi thử" bắn email thật cho sếp, không hỏi lại** — `digest-rules-panel.tsx:141`.
+    **ĐÃ VÁ (đợt B)**: hỏi lại, và câu hỏi NÊU ĐÍCH DANH người nhận — đó mới là thứ giúp người
+    dùng dừng đúng lúc, chứ không phải chữ "chắc chưa?". Đây là chỗ hiếm hoi phải hỏi lại dù
+    thao tác không ghi gì xuống DB: cái không hoàn tác được là email đã rời đi. Bài E2E chốt
+    bằng chính HỘP THƯ — bấm Hủy xong mà Mailpit nhận thêm thư thì câu hỏi chỉ là trang trí.
 20. **Việc không hoàn tác được mà không một chữ cảnh báo** — `vi.ts:298` (ô tick "Dọn hết" thả ra 3 thao tác phá) ·
     `vi.ts:229` (nửa sau nói về tình huống KHÔNG xảy ra → yên tâm nhầm) · `vi.ts:634` (không nói giá trị mật khẩu mất luôn).
+    **ĐÃ VÁ (đợt B)** — viết lại cả ba để chúng nói đúng thứ sắp mất:
+    · thanh lý thiết bị thêm *"…nhưng ô bên dưới thì KHÔNG hoàn tác được, đọc kỹ trước khi tick"*,
+      và nhãn ô tick thành "Dọn hết thứ liên quan (không hoàn tác được)";
+    · vô hiệu danh mục bỏ vế trấn an về hồ sơ cũ, nói thẳng *"Từ giờ KHÔNG form nào chọn được mục này nữa"*;
+    · thu hồi ngăn két nói *"GIÁ TRỊ mật khẩu bị xoá vĩnh viễn — không có cách nào xem lại, kể cả
+      Super Admin. Nhật ký chỉ giữ vết ai đã cất và lúc nào."* — câu cũ đọc ra như mật khẩu còn
+      nằm đâu đó lấy lại được.
 21. **Nút nguy hiểm sát nút hay bấm nhất, và đổi nghĩa tại chỗ** — `device-detail.tsx:185-238`: "Thanh lý" (đỏ)
     sát "Sửa hồ sơ", và CÙNG tọa độ chuột hôm sau là "Đưa lại vào dùng" (xám).
     Cùng vấn đề `license-assignments-panel.tsx:151` và `license-seats-expand.tsx:122`, trong khi

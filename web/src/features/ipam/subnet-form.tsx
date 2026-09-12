@@ -42,6 +42,7 @@ export function SubnetForm({
       /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!save.isPending}
+      guardUnsaved
       maxWidth={560}
       title={subnet ? t('ipam.editSubnet') : t('ipam.addSubnet')}
       footer={
@@ -224,6 +225,7 @@ export function HideDialog({
       /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!hide.isPending}
+      guardUnsaved
       maxWidth={480}
       title={t('ipam.hideSubnetTitle', { cidr: subnet.cidr })}
       footer={

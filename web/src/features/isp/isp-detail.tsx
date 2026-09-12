@@ -288,6 +288,11 @@ function RenewDialog({
     <Dialog
       open
       onOpenChange={onClose}
+      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
+         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ.
+         `guardUnsaved`: chưa bấm Lưu mà lỡ Esc thì hỏi lại, đừng xoá trắng. */
+      dismissible={!renew.isPending}
+      guardUnsaved
       maxWidth={480}
       title={`${t("isp.renew")} — ${line.code}`}
       footer={

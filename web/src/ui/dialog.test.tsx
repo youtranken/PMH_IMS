@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { ConfirmProvider } from '@/ui/confirm-provider';
 import { Dialog } from '@/ui/dialog';
 import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
 
@@ -60,5 +61,104 @@ describe('Dialog — chân hộp không được ăn click khi đang bận', () 
     const { onCancel } = setup(true);
     await userEvent.click(screen.getByRole('button', { name: 'Hủy' }));
     expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * `guardUnsaved` — Esc / bấm nền / ✕ chỉ vứt dữ liệu khi người dùng NÓI là được vứt.
+ *
+ * ===== LỖ =====
+ *
+ * `dismissible={!save.isPending}` chỉ chặn lúc lượt ghi đang bay. TRƯỚC khi bấm Lưu thì Esc
+ * đóng thẳng và xoá sạch — 10 form trong repo như vậy, nặng nhất là `device-form` (15 ô).
+ * Không một chữ hỏi lại, và không có Ctrl+Z cho một cái hộp đã tháo khỏi cây React.
+ *
+ * ===== HAI VẾ PHẢI ĐI ĐÔI =====
+ *
+ * Bài "có gõ thì hỏi" một mình là chưa đủ. Một bản vá lười — hỏi lại ở MỌI lần đóng — cũng
+ * làm nó xanh, mà đó là bản tệ hơn hiện trạng: mở nhầm hộp rồi Esc là việc xảy ra suốt ngày,
+ * và một câu hỏi thừa mỗi lần sẽ dạy người dùng bấm "Bỏ và đóng" theo phản xạ — tới hôm có
+ * dữ liệu thật thì họ cũng bấm nó, không đọc. Nên vế thứ hai ("không gõ gì thì đóng thẳng")
+ * mới là vế giữ cho cửa này còn có nghĩa.
+ */
+describe('Dialog — guardUnsaved: không vứt dữ liệu đang gõ dở', () => {
+  const setup = () => {
+    const onOpenChange = vi.fn();
+    renderWithI18n(
+      <ConfirmProvider>
+        <Dialog open onOpenChange={onOpenChange} guardUnsaved title="Thêm thiết bị">
+          <input aria-label="Mã máy" defaultValue="" />
+        </Dialog>
+      </ConfirmProvider>,
+    );
+    return { onOpenChange };
+  };
+
+  it('chưa gõ gì: Esc đóng thẳng, KHÔNG hỏi thừa một câu', async () => {
+    const { onOpenChange } = setup();
+    await userEvent.keyboard('{Escape}');
+    expect(
+      screen.queryByText('Bỏ những gì vừa nhập?'),
+      'hộp trắng trơn mà vẫn hỏi thì người dùng sẽ học cách bấm "Bỏ" không đọc',
+    ).not.toBeInTheDocument();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('đã gõ: Esc hỏi lại, và chưa đóng gì cả', async () => {
+    const { onOpenChange } = setup();
+    await userEvent.type(screen.getByRole('textbox', { name: 'Mã máy' }), 'PC-01');
+    await userEvent.keyboard('{Escape}');
+    expect(await screen.findByText('Bỏ những gì vừa nhập?')).toBeInTheDocument();
+    expect(onOpenChange, 'hỏi xong mới được đóng — hỏi rồi đóng luôn là hỏi cho có').not.toHaveBeenCalled();
+  });
+
+  it('đã gõ rồi chọn "Ở lại nhập tiếp": hộp vẫn mở, chữ vẫn còn', async () => {
+    const { onOpenChange } = setup();
+    const o = screen.getByRole('textbox', { name: 'Mã máy' });
+    await userEvent.type(o, 'PC-01');
+    await userEvent.keyboard('{Escape}');
+    // `ConfirmDialog` dùng `cancelLabel` cho CẢ nút ✕ lẫn nút chân hộp, nên tên này trúng
+    // hai nút. Lấy cái CUỐI — chân hộp nằm sau phần đầu hộp trong tài liệu.
+    const nut = await screen.findAllByRole('button', { name: 'Ở lại nhập tiếp' });
+    await userEvent.click(nut[nut.length - 1]);
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(o).toHaveValue('PC-01');
+  });
+
+  it('đã gõ rồi chọn "Bỏ và đóng": lúc đó mới đóng', async () => {
+    const { onOpenChange } = setup();
+    await userEvent.type(screen.getByRole('textbox', { name: 'Mã máy' }), 'PC-01');
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(await screen.findByRole('button', { name: 'Bỏ và đóng' }));
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  /*
+   * Gõ rồi xoá về đúng chỗ cũ thì KHÔNG còn gì để mất — hỏi ở đây là báo động giả, và báo
+   * động giả là thứ bào mòn lòng tin vào cửa canh nhanh nhất.
+   */
+  it('gõ rồi xoá sạch về như cũ: đóng thẳng', async () => {
+    const { onOpenChange } = setup();
+    const o = screen.getByRole('textbox', { name: 'Mã máy' });
+    await userEvent.type(o, 'PC-01');
+    await userEvent.clear(o);
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByText('Bỏ những gì vừa nhập?')).not.toBeInTheDocument();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('không bật cờ thì hành vi cũ nguyên vẹn: Esc đóng ngay dù đang gõ dở', async () => {
+    const onOpenChange = vi.fn();
+    renderWithI18n(
+      <ConfirmProvider>
+        <Dialog open onOpenChange={onOpenChange} title="Thêm thiết bị">
+          <input aria-label="Mã máy" defaultValue="" />
+        </Dialog>
+      </ConfirmProvider>,
+    );
+    await userEvent.type(screen.getByRole('textbox', { name: 'Mã máy' }), 'PC-01');
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByText('Bỏ những gì vừa nhập?')).not.toBeInTheDocument();
+    expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });

@@ -24,6 +24,7 @@ import {
   resetSoftware,
   resetUsers,
   rowAction,
+  mailpitMessages,
   rowActionNames,
   sql,
   writeHeaders,
@@ -195,8 +196,8 @@ import {
  *     → Phòng Bộ giao diện liệt kê đủ mọi khu, đúng thứ tự
  *
  * ── PHÒNG KÉT SẮT, QUYỀN XEM, DUYỆT YÊU CẦU và BẢNG ĐIỀU KHIỂN ──────────────
- * [x] Trang tổng Két sắt: ba nút lọc đổi bảng THẬT · popup · luật của két
- *     → Trang tổng Két sắt: ba nút lọc đổi bảng thật, popup mở đúng két, luật đủ bốn gạch
+ * [x] Trang tổng Két sắt: bốn nút lọc đổi bảng THẬT · popup · luật của két
+ *     → Trang tổng Két sắt: bốn nút lọc đổi bảng thật, popup mở đúng két, luật đủ bốn gạch
  * [x] Ma trận Quyền: đủ cột · Member có nút gán · SA/Admin chỉ có lời giải thích
  *     → Ma trận Quyền xem két sắt: lưới đủ cột, Member có nút gán, SA/Admin chỉ có lời giải thích
  * [x] Duyệt yêu cầu: đủ ba ngăn, phiếu treo nói đủ và có đúng hai nút
@@ -1222,6 +1223,29 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await page.getByRole('tab', { name: 'Nhật ký' }).click();
     await expect(page.getByText(lyDoDuocDuyet)).toBeVisible();
     await page.getByRole('button', { name: 'Thu hồi sớm' }).click();
+
+    /*
+     * TỪ 12/09 NÚT NÀY PHẢI HỎI LẠI (rà UI/UX #4).
+     *
+     * Nó cắt một quyền ĐANG CHẠY của người khác — có thể họ đang mở két giữa lúc xử sự cố —
+     * mà lại nằm ngay dưới cặp Duyệt/Từ chối trên cùng một thẻ phiếu, nên trượt tay là cắt
+     * nhầm. Hai chỗ anh em trong cụm Két sắt (gỡ quyền ở ma trận, thu hồi ngăn ở panel) đều
+     * đã qua `askConfirm({ danger: true })`; riêng chỗ này đi thẳng vào `mutate`.
+     *
+     * Vế "chưa xác nhận thì CHƯA thu hồi" mới là vế có giá trị: một bản vá dựng hộp lên rồi
+     * vẫn gọi API ngay cũng làm câu `toBeVisible` phía dưới xanh.
+     */
+    const hopThuHoi = page.getByRole('dialog');
+    await expect(
+      hopThuHoi.getByText(/Quyền này ĐANG chạy/),
+      'câu hỏi lại phải nói rõ đang cắt thứ đang chạy, không phải một câu "chắc chưa?"',
+    ).toBeVisible();
+    expect(
+      sql(`SELECT state FROM approval WHERE reason = '${lyDoDuocDuyet}'`),
+      'mới mở hộp hỏi lại thì TUYỆT ĐỐI chưa được đụng vào sổ',
+    ).toBe('approved');
+
+    await confirmAction(page, 'Thu hồi sớm');
     await expect(page.getByText('Đã thu hồi quyền.')).toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Thu hồi sớm' }),
@@ -2475,8 +2499,15 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect(hop, 'và hộp vẫn phải mở để người dùng sửa nốt').toBeVisible();
 
     /* HAI ĐƯỜNG ĐÓNG, KHÔNG LƯU GÌ. */
+    /* Form đã gõ dở, nên từ 12/09 lối đóng TÌNH CỜ phải hỏi lại trước
+       (`Dialog guardUnsaved`, rà UI/UX #10) — trả lời xong mới đóng. */
     await page.keyboard.press('Escape');
-    await expect(hop, 'Esc phải đóng được hộp thêm thiết bị (nó chưa ở trạng thái đang ghi)').toHaveCount(0);
+    await expect(
+      page.getByRole('dialog', { name: 'Bỏ những gì vừa nhập?' }),
+      'form 15 ô đã gõ hai ô mà Esc xoá trắng không hỏi là chỗ mất mát nặng nhất của repo',
+    ).toBeVisible();
+    await confirmAction(page, 'Bỏ và đóng');
+    await expect(hop, 'trả lời xong thì Esc phải đóng được hộp thêm thiết bị').toHaveCount(0);
 
     await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
     await expect(hop).toBeVisible();
@@ -3242,7 +3273,10 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toBeVisible();
 
     // ===== HAI ĐƯỜNG ĐÓNG HỘP =====
+    /* Form đã gõ dở, nên từ 12/09 lối đóng TÌNH CỜ phải hỏi lại trước
+       (`Dialog guardUnsaved`, rà UI/UX #10) — trả lời xong mới đóng. */
     await add.getByRole('button', { name: 'Đóng hộp thoại' }).click();
+    await confirmAction(page, 'Bỏ và đóng');
     await expect(add, 'Nút ✕ phải đóng được hộp').toHaveCount(0);
 
     await page.getByRole('button', { name: 'Thêm hồ sơ' }).click();
@@ -3886,6 +3920,30 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Menu của một dòng luật: Sửa luật · Gửi thử · Xóa (việc nguy hiểm xếp cuối)',
     ).toEqual(['Sửa luật', 'Gửi thử', 'Xóa']);
 
+    /*
+     * "GỬI THỬ" PHẢI HỎI LẠI, VÀ CÂU HỎI PHẢI NÊU ĐÍCH DANH NGƯỜI NHẬN (rà UI/UX #19).
+     *
+     * Chữ "thử" đọc ra như gửi vào đâu đó an toàn. Nó không: lượt này bắn email THẬT tới đúng
+     * danh sách người nhận của luật — ở đây là `sep@pmh.com.vn` — và thư đã đi thì không thu
+     * lại được. Đây là chỗ hiếm hoi phải hỏi lại dù thao tác không ghi gì xuống DB.
+     *
+     * Vế chốt là HỘP THƯ: bấm Hủy xong mà Mailpit vẫn nhận thêm thư thì câu hỏi lại chỉ là
+     * trang trí — hộp hiện lên trong khi lượt gửi đã chạy ở phía sau.
+     */
+    const thuTruoc = (await mailpitMessages()).length;
+    await rowAction(page, ruleName, 'Gửi thử');
+    await expect(
+      page.getByRole('dialog').getByText(/sep@pmh\.com\.vn/),
+      'câu hỏi phải nói THẲNG thư sẽ tới hộp nào — đó mới là thứ giúp người ta dừng đúng lúc',
+    ).toBeVisible();
+
+    await page.getByTestId('dialog-footer').getByRole('button').first().click();
+    await expect(page.getByRole('dialog'), 'bấm Hủy thì hộp phải đóng').toHaveCount(0);
+    expect(
+      (await mailpitMessages()).length,
+      'bấm Hủy mà hộp thư vẫn nhận thêm thư nghĩa là câu hỏi lại chỉ để trang trí',
+    ).toBe(thuTruoc);
+
     // ===== BÊN TRONG HỘP "THÊM LUẬT" =====
     await page.getByRole('button', { name: 'Thêm luật', exact: true }).click();
     const add = page.getByRole('dialog', { name: 'Thêm luật' });
@@ -3976,8 +4034,14 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toHaveText('Nhập ít nhất một email người nhận.');
     await expect(add, 'Lưu hỏng thì hộp phải ở lại').toBeVisible();
 
+    /*
+     * Form đã gõ hai ô, nên từ 12/09 Esc HỎI LẠI thay vì đóng thẳng (`Dialog guardUnsaved`,
+     * rà UI/UX #10). Phải trả lời xong mới đóng — bỏ bước này thì hộp hỏi lại đứng chắn giữa
+     * màn và mọi cú bấm sau đó trong bài đều treo.
+     */
     await page.keyboard.press('Escape');
-    await expect(add, 'Esc đóng được hộp thêm luật').toHaveCount(0);
+    await confirmAction(page, 'Bỏ và đóng');
+    await expect(add, 'trả lời "Bỏ và đóng" rồi thì hộp thêm luật phải đóng').toHaveCount(0);
 
     // ===== HỘP "SỬA LUẬT" PHẢI MANG CẤU HÌNH CŨ VÀO =====
     await rowAction(page, ruleName, 'Sửa luật');
@@ -5520,7 +5584,10 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await expect(hop, 'Báo lỗi thì hộp phải Ở LẠI để người dùng sửa, không được đóng').toBeVisible();
 
     // ĐƯỜNG ĐÓNG THỨ NHẤT: phím Esc.
+    /* Form đã gõ dở, nên từ 12/09 lối đóng TÌNH CỜ phải hỏi lại trước
+       (`Dialog guardUnsaved`, rà UI/UX #10) — trả lời xong mới đóng. */
     await page.keyboard.press('Escape');
+    await confirmAction(page, 'Bỏ và đóng');
     await expect(hop, 'Esc phải đóng được hộp khi chưa có lượt ghi nào đang chạy').toHaveCount(0);
 
     // ĐƯỜNG ĐÓNG THỨ HAI: nút ✕. Hai đường, hai đoạn code khác nhau — kiểm cả hai.
@@ -5864,6 +5931,55 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       hopSua.getByRole('textbox', { name: 'Ghi chú', exact: true }),
       'Chữ đang gõ dở phải còn nguyên sau khi bỏ danh sách chọn',
     ).toHaveValue('đang gõ dở E2E');
+
+    /*
+     * ===== VÀ CÚ ESC THỨ HAI: KHÔNG CÒN MENU NÀO, NHƯNG VẪN CÒN CHỮ ĐANG GÕ (12/09, #10) =====
+     *
+     * Tới 12/09 cú Esc này đóng thẳng hộp và ném đi cả form — `dismissible={!save.isPending}`
+     * chỉ chặn lúc lượt ghi ĐANG BAY, còn trước khi bấm Lưu thì không có hàng rào nào. Mười
+     * form trong repo như vậy, nặng nhất là form Thiết bị với 15 ô.
+     *
+     * Nay `Dialog guardUnsaved` so chữ ký các ô nhập với ảnh chụp lúc mở hộp. Hai vế phải đi
+     * đôi, và vế thứ hai (ở dưới) mới là vế giữ cho cửa này có nghĩa: hỏi lại ở MỌI lần đóng
+     * cũng làm vế thứ nhất xanh, mà đó là bản tệ hơn — người dùng sẽ học cách bấm "Bỏ và đóng"
+     * theo phản xạ, rồi bấm nó cả vào hôm có dữ liệu thật.
+     */
+    await page.keyboard.press('Escape');
+    await expect(
+      page.getByRole('dialog', { name: 'Bỏ những gì vừa nhập?' }),
+      'còn chữ đang gõ mà Esc đóng thẳng là ném đi công sức người dùng, không hỏi một câu',
+    ).toBeVisible();
+
+    /*
+     * KHÔNG khẳng định `hopSua` còn nhìn thấy Ở ĐÂY, dù nó vẫn nằm nguyên trong DOM.
+     *
+     * Radix đánh `aria-hidden` lên mọi thứ phía sau một modal đang mở — đúng chuẩn, để trình
+     * đọc màn hình không lạc ra ngoài lớp trên cùng. Mà `aria-hidden` thì biến mất khỏi CÂY
+     * TRỢ NĂNG, nên `getByRole('dialog')` không còn tìm ra nó. Một khẳng định ở đây sẽ đỏ vì
+     * lý do chẳng liên quan gì tới thứ bài này muốn bảo vệ.
+     *
+     * Vế "hộp gốc sống sót" được chốt ngay bên dưới, SAU khi lớp trên đóng lại — lúc đó nó
+     * trở lại cây trợ năng, và câu trả lời mới có nghĩa.
+     */
+
+    // Chọn "Ở lại nhập tiếp" → hộp gốc còn, và chữ vẫn y nguyên.
+    await page.getByTestId('dialog-footer').last().getByRole('button').first().click();
+    await expect(hopSua).toBeVisible();
+    await expect(
+      hopSua.getByRole('textbox', { name: 'Ghi chú', exact: true }),
+    ).toHaveValue('đang gõ dở E2E');
+
+    /*
+     * VẾ ĐỐI CHỨNG: xoá về đúng như lúc mở hộp thì KHÔNG còn gì để mất, và Esc phải đóng
+     * thẳng như mọi hộp khác. Thiếu vế này thì một bản vá chặn Esc vô điều kiện vẫn xanh.
+     */
+    await hopSua.getByRole('textbox', { name: 'Ghi chú', exact: true }).fill('');
+    await page.keyboard.press('Escape');
+    await expect(
+      page.getByRole('dialog', { name: 'Bỏ những gì vừa nhập?' }),
+      'không còn gì khác lúc mở hộp thì hỏi lại là báo động giả',
+    ).toHaveCount(0);
+    await expect(hopSua, 'và lúc đó Esc phải đóng hộp như cũ').toBeHidden();
   });
 
   /*
@@ -6843,7 +6959,10 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     ).toHaveText('Số U phải là số nguyên từ 1 đến 60.');
     await expect(hop).toBeVisible();
 
+    /* Form đã gõ dở, nên từ 12/09 lối đóng TÌNH CỜ phải hỏi lại trước
+       (`Dialog guardUnsaved`, rà UI/UX #10) — trả lời xong mới đóng. */
     await page.keyboard.press('Escape');
+    await confirmAction(page, 'Bỏ và đóng');
     await expect(page.getByRole('dialog')).toHaveCount(0);
   });
 

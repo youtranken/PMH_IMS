@@ -76,6 +76,7 @@ export function AccountForm({
       /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!busy}
+      guardUnsaved
       maxWidth={620}
       title={editing ? `${t('accounts.edit')} — ${account.email}` : t('accounts.create')}
       footer={

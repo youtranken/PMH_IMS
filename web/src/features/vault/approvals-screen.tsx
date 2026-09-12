@@ -11,6 +11,7 @@ import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
 import { TabPanel, Tabs } from '@/ui/tabs';
+import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 
 interface ApprovalRow {
@@ -60,6 +61,7 @@ const STATE_TONE: Record<string, string> = {
 export function ApprovalsScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
+  const askConfirm = useConfirm();
   const queryClient = useQueryClient();
   const canDecide = me.role === 'sa' || me.role === 'admin';
   /**
@@ -239,19 +241,35 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                       type="button"
                       className="btn sm danger"
                       disabled={revoke.isPending}
-                      onClick={() =>
-                        revoke.mutate(
-                          { id: row.id },
-                          {
-                            onSuccess: () => {
-                              toast({ message: t('approvals.revoked') });
-                              void refresh();
+                      /*
+                       * PHẢI hỏi lại: nút này CẮT một quyền ĐANG CHẠY của người khác — có thể
+                       * họ đang mở két giữa lúc xử sự cố. Đây là thao tác phá duy nhất trong
+                       * cụm Két sắt đi thẳng vào `mutate`, trong khi hai chỗ anh em
+                       * (`access-matrix-screen` gỡ quyền, `vault-panel` thu hồi ngăn) đều qua
+                       * `askConfirm({ danger: true })`. Nút lại nằm ngay dưới cặp Duyệt/Từ chối
+                       * trên cùng một thẻ phiếu, nên trượt tay là cắt nhầm.
+                       */
+                      onClick={() => {
+                        void (async () => {
+                          const ok = await askConfirm({
+                            message: t('approvals.confirmRevoke', { member: row.requester }),
+                            danger: true,
+                            confirmLabel: t('approvals.revoke'),
+                          });
+                          if (!ok) return;
+                          revoke.mutate(
+                            { id: row.id },
+                            {
+                              onSuccess: () => {
+                                toast({ message: t('approvals.revoked') });
+                                void refresh();
+                              },
+                              onError: (error) =>
+                                toast({ message: errorMessage(error), tone: 'error' }),
                             },
-                            onError: (error) =>
-                              toast({ message: errorMessage(error), tone: 'error' }),
-                          },
-                        )
-                      }
+                          );
+                        })();
+                      }}
                     >
                       {t('approvals.revoke')}
                     </button>
@@ -314,6 +332,11 @@ function DecisionDialog({
     <Dialog
       open
       onOpenChange={onClose}
+      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
+         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ.
+         `guardUnsaved`: chưa bấm Lưu mà lỡ Esc thì hỏi lại, đừng xoá trắng. */
+      dismissible={!decide.isPending}
+      guardUnsaved
       maxWidth={460}
       title={t(approve ? 'approvals.approveTitle' : 'approvals.denyTitle', {
         member: row.requester,

@@ -1,7 +1,17 @@
-import { createContext, useCallback, useContext, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ConfirmCtx } from '@/ui/confirm-context';
+import type { ConfirmFn, ConfirmOptions } from '@/ui/confirm-context';
 import { ConfirmDialog } from '@/ui/confirm-dialog';
+
+/*
+ * Cái context và `useConfirm` nay ở `ui/confirm-context.ts` — `ui/dialog.tsx` cần chúng cho
+ * prop `guardUnsaved`, mà import ngược file này sẽ thành vòng phụ thuộc (depcruise chặn).
+ * Re-export để mọi chỗ gọi sẵn có vẫn viết `from '@/ui/confirm-provider'` như cũ.
+ */
+export { useConfirm } from '@/ui/confirm-context';
+export type { ConfirmOptions, ConfirmResult, ConfirmFn } from '@/ui/confirm-context';
 
 /**
  * Thay window.confirm bằng ConfirmDialog (Radix) qua một API async dùng chung:
@@ -9,32 +19,6 @@ import { ConfirmDialog } from '@/ui/confirm-dialog';
  *   if (!(await askConfirm({ message, danger: true }))) return;
  * Một dialog duy nhất ở gốc app — nơi gọi chỉ đổi 1 dòng, không tự quản state/JSX.
  */
-export type ConfirmOptions = {
-  message: string;
-  title?: string;
-  confirmLabel?: string;
-  cancelLabel?: string;
-  danger?: boolean;
-  /**
-   * Một lựa chọn phụ hiện kèm câu hỏi — vd "Dọn hết thứ liên quan" khi thanh lý thiết bị.
-   * Khai `checkbox` thì kết quả trả về là object; không khai thì vẫn là boolean như cũ, nên
-   * hơn 30 chỗ gọi sẵn có không phải sửa một dòng nào.
-   */
-  checkbox?: { label: string; hint?: string; defaultChecked?: boolean };
-};
-
-/** Kết quả khi có `checkbox`: bấm gì, và ô tick ở trạng thái nào lúc bấm. */
-export type ConfirmResult = { ok: boolean; checked: boolean };
-
-type ConfirmFn = {
-  (o: ConfirmOptions & { checkbox: NonNullable<ConfirmOptions['checkbox']> }): Promise<ConfirmResult>;
-  (o: ConfirmOptions): Promise<boolean>;
-};
-
-const ConfirmCtx = createContext<ConfirmFn>(
-  (() => Promise.resolve(false)) as unknown as ConfirmFn,
-);
-
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   const [opts, setOpts] = useState<ConfirmOptions | null>(null);
@@ -87,8 +71,4 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       )}
     </ConfirmCtx.Provider>
   );
-}
-
-export function useConfirm() {
-  return useContext(ConfirmCtx);
 }

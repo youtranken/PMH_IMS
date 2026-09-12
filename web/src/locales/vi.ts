@@ -22,6 +22,14 @@ export default {
     backHome: 'Về trang chủ',
     confirmTitle: 'Xác nhận',
     confirmOk: 'Đồng ý',
+    /* Câu hỏi khi Esc / bấm nền / ✕ trên một hộp đang có dữ liệu gõ dở (`Dialog guardUnsaved`).
+       Nút xác nhận nói rõ việc SẼ xảy ra ("Bỏ và đóng"), nút hủy nói rõ việc KHÔNG xảy ra
+       ("Ở lại nhập tiếp") — cặp "Đồng ý / Hủy" ở đây là hai chữ không ai đoán được nghĩa. */
+    discardTitle: 'Bỏ những gì vừa nhập?',
+    discardMessage:
+      'Hộp này đang có dữ liệu chưa lưu. Đóng lại là mất hết, không khôi phục được.',
+    discardConfirm: 'Bỏ và đóng',
+    discardCancel: 'Ở lại nhập tiếp',
     openNav: 'Mở menu',
     closeNav: 'Đóng menu',
     /** Tên của landmark điều hướng chính — trình đọc màn hình đọc lên khi nhảy tới khối này. */
@@ -230,7 +238,12 @@ export default {
     searchDepartment: 'Tìm theo tên bộ phận',
     searchIspProvider: 'Tìm theo tên nhà mạng',
     searchServicePort: 'Tìm theo tên dịch vụ',
-    confirmDeactivate: 'Vô hiệu "{{name}}"? Mục này sẽ biến khỏi ô chọn nhưng hồ sơ cũ vẫn đọc được.',
+    /* Câu cũ: "…sẽ biến khỏi ô chọn nhưng hồ sơ cũ vẫn đọc được." Nửa sau nói về chuyện KHÔNG
+       xảy ra (chẳng ai sợ mất hồ sơ cũ), nên nó trấn an nhầm — còn chuyện THẬT SỰ xảy ra thì
+       không ai nói: từ giờ mọi form thêm mới không chọn được mục này nữa. */
+    confirmDeactivate:
+      'Vô hiệu "{{name}}"? Từ giờ KHÔNG form nào chọn được mục này nữa — hồ sơ đang dùng nó ' +
+      'thì giữ nguyên và vẫn đọc được. Bật lại bất cứ lúc nào.',
     confirmActivate: 'Bật lại "{{name}}"?',
     confirmDelete: 'Xóa hẳn "{{name}}"? Không xóa được nếu đang có dữ liệu tham chiếu.',
     deleted: 'Đã xóa.',
@@ -297,8 +310,13 @@ export default {
     tabPortMap: 'Port map',
     saved: 'Đã lưu hồ sơ thiết bị.',
     statusChanged: 'Đã đổi trạng thái thiết bị.',
-    confirmRetire: 'Chuyển "{{name}}" sang ĐÃ THANH LÝ? Hồ sơ vẫn còn trong sổ, chỉ khóa lại.',
-    retireCleanup: 'Dọn hết thứ liên quan',
+    /* Câu cũ kết bằng "Hồ sơ vẫn còn trong sổ, chỉ khóa lại." — đúng, nhưng nó trấn an về
+       phần KHÔNG mất, ngay bên cạnh một ô tick thả ra BA thao tác phá không hoàn tác được.
+       Người đọc lướt lấy đúng vế trấn an rồi tick cho nhanh. */
+    confirmRetire:
+      'Chuyển "{{name}}" sang ĐÃ THANH LÝ? Hồ sơ vẫn còn trong sổ, chỉ khóa lại — ' +
+      'nhưng ô bên dưới thì KHÔNG hoàn tác được, đọc kỹ trước khi tick.',
+    retireCleanup: 'Dọn hết thứ liên quan (không hoàn tác được)',
     // Nói RÕ "gỡ khỏi máy" chứ không phải "xóa": license là tài sản công ty, thanh lý máy
     // không đụng tới hồ sơ phần mềm. Không tick thì hệ thống chặn và liệt kê để tự đi gỡ.
     retireCleanupHint:
@@ -557,6 +575,11 @@ export default {
     deleted: 'Đã xóa luật.',
     saved: 'Đã lưu luật gửi báo cáo.',
     test: 'Gửi thử',
+    /* Chữ "thử" dễ đọc thành "gửi vào đâu đó an toàn". Câu hỏi lại phải nói thẳng là THẬT,
+       và nêu đích danh người nhận — đó mới là thứ giúp người dùng dừng đúng lúc. */
+    confirmTest:
+      'Gửi NGAY một email thật tới: {{to}}? Đây không phải bản nháp — hộp thư của họ sẽ nhận ' +
+      'thư y như một kỳ gửi bình thường, và không thu lại được.',
     testSent: 'Đã đẩy email thử ({{count}} mục) tới {{to}}.',
     name: 'Tên luật',
     nameRequired: 'Đặt tên cho luật này (vd "SSL sắp hết hạn → sếp").',
@@ -649,7 +672,12 @@ export default {
     rotateHint: 'Giá trị mới sẽ mã hóa lại từ đầu. Giá trị cũ không xem lại được nữa.',
     revoke: 'Thu hồi',
     revoked: 'Đã thu hồi secret.',
-    confirmRevoke: 'Thu hồi "{{label}}"? Secret sẽ biến khỏi danh sách nhưng vết cất vẫn còn trong nhật ký.',
+    /* Câu cũ: "…nhưng vết cất vẫn còn trong nhật ký." Nhật ký giữ VẾT (ai cất, lúc nào),
+       KHÔNG giữ GIÁ TRỊ — mà câu ấy đọc ra như mật khẩu còn nằm đâu đó lấy lại được. Đây là
+       thao tác xoá vĩnh viễn một giá trị đã mã hóa; phải nói thẳng ra như vậy. */
+    confirmRevoke:
+      'Thu hồi "{{label}}"? GIÁ TRỊ mật khẩu bị xoá vĩnh viễn — không có cách nào xem lại, ' +
+      'kể cả Super Admin. Nhật ký chỉ giữ vết ai đã cất và lúc nào. Chưa có bản khác thì đừng thu hồi.',
     saved: 'Đã lưu vào két.',
     rotated: 'Đã xoay giá trị.',
     empty: 'Chưa cất secret nào',
@@ -1084,6 +1112,9 @@ export default {
     approve: 'Duyệt',
     deny: 'Từ chối',
     revoke: 'Thu hồi sớm',
+    confirmRevoke:
+      'Thu hồi quyền của {{member}} ngay bây giờ? Quyền này ĐANG chạy — nếu họ đang mở két ' +
+      'giữa lúc xử sự cố thì lượt xem kế tiếp bị chặn. Muốn cấp lại thì phải duyệt một yêu cầu mới.',
     revoked: 'Đã thu hồi quyền.',
     approved: 'Đã duyệt.',
     denied: 'Đã từ chối.',
