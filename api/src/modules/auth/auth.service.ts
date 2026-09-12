@@ -232,8 +232,14 @@ export class AuthService {
        *
        * Với `needsTotp` thì tới đây người dùng MỚI qua cửa mật khẩu, chưa vào được — đóng dấu
        * lúc này là ghi một lần đăng nhập chưa từng hoàn tất, và kẻ có mật khẩu nhưng bị chặn ở
-       * cửa TOTP sẽ để lại đúng dấu vết của một lần vào bình thường. Nhánh còn lại do
-       * `verifyLoginTotp` đóng dấu, trong chính transaction cấp phiên mới.
+       * cửa TOTP sẽ để lại đúng dấu vết của một lần vào bình thường.
+       *
+       * CÓ BA ĐƯỜNG kết thúc bằng một phiên đã xác thực đủ, không phải hai — bản đầu viết
+       * "nhánh còn lại" ở đây và bỏ sót mất một đường (test tay 12/09):
+       *   1. chính nhánh này, khi tài khoản không bắt TOTP lúc đăng nhập;
+       *   2. `verifyLoginTotp` — người đã cài TOTP, gõ mã để vào;
+       *   3. `confirmTotpEnrollment` — LẦN ĐẦU, vừa quét QR xong và được cấp phiên ngay.
+       * Cả ba đều phải đóng dấu, nếu không thì có người vào thật mà màn Tài khoản vẫn ghi "—".
        */
       if (!needsTotp) await this.users.markLoginCompletedWithin(tx, user.id);
       await this.noticeNewDevice(tx, user, ctx);
@@ -512,6 +518,17 @@ export class AuthService {
         totpPending: false,
       });
       await this.sessions.completeTotpWithin(tx, created.id);
+      /*
+       * ĐÓNG DẤU Ở ĐÂY LUÔN — đây là đường thứ ba tới một phiên đã xác thực đủ (vá 12/09).
+       *
+       * Dòng `auth.login.ok` ngay dưới đã tự nói rằng đây LÀ một lần đăng nhập thành công.
+       * Thiếu dòng này thì hai chỗ nói ngược nhau: nhật ký ghi người ta đã vào, còn cột
+       * "Đăng nhập lần cuối" trên màn Tài khoản vẫn là "—". SA rà tài khoản bỏ quên sẽ tin
+       * cột hiển thị chứ không đi đọc nhật ký — nên chỗ sai là chỗ người ta tin.
+       *
+       * Và nó chỉ sai với LẦN ĐẦU của mỗi tài khoản, tức đúng lúc cột đó đáng tin nhất.
+       */
+      await this.users.markLoginCompletedWithin(tx, user.id);
       await this.audit.appendWithin(tx, {
         actor: user.email,
         action: 'auth.login.ok',

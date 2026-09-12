@@ -99,7 +99,24 @@ class VoidDto {
 }
 
 class NatBodyDto {
-  @IsOptional() @IsUUID(undefined, { message: 'Mã thiết bị không hợp lệ.' }) deviceId?: string;
+  /*
+   * `@ValidateIf` cho chuỗi RỖNG đi qua cửa DTO — giống hệt `IpBodyDto` và `TransitionDto`
+   * ngay trên, và vì đúng một lý do (test tay 12/09).
+   *
+   * Màn Sổ NAT khởi tạo ô router bằng `useState('')` rồi gửi nguyên biến đó, nên "chưa chọn"
+   * tới đây là `deviceId: ''`, không phải khoá vắng mặt. `@IsOptional()` chỉ bỏ qua
+   * `undefined`/`null`, nên bản trước chặn `''` ngay tại đây với câu "Mã thiết bị không hợp
+   * lệ." — và `requireDeviceId()` bên dưới, cùng câu tiếng Việt nói rõ người dùng quên gì,
+   * không bao giờ chạy tới trên đường giao diện thật đi.
+   *
+   * Nới ở đây KHÔNG làm mất lớp chặn: giá trị rỗng rơi xuống `requireDeviceId()` ở `POST`
+   * (400 `FIELD_REQUIRED`), còn `PATCH` vẫn được phép không gửi khoá này. Chuỗi rác không
+   * phải uuid vẫn bị `@IsUUID` chặn như cũ.
+   */
+  @IsOptional()
+  @ValidateIf((_o, value) => value !== '')
+  @IsUUID(undefined, { message: 'Mã thiết bị không hợp lệ.' })
+  deviceId?: string;
 
   @IsOptional()
   @IsIn([...NAT_PROTOCOLS], { message: 'Giao thức phải là TCP, UDP hoặc cả hai.' })

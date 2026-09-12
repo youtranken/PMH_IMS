@@ -204,6 +204,53 @@ test.describe('Dấu "đăng nhập lần cuối"', () => {
     );
   }
 
+  /**
+   * ĐƯỜNG THỨ BA — lần đăng nhập ĐẦU TIÊN, đi qua màn "Cài xác thực 2 lớp" (test tay 12/09).
+   *
+   * Hai bài dưới phủ hai đường: `login()` khi tài khoản không bắt TOTP, và `verifyLoginTotp()`
+   * khi tài khoản đã cài rồi. Nhưng có BA đường kết thúc bằng một phiên đã xác thực đủ —
+   * đường thứ ba là `confirmTotpEnrollment()`, lúc người dùng vừa quét QR xong. Nó cấp phiên
+   * mới và ghi `auth.login.ok`, nhưng bản trước không đóng dấu `last_login_at`.
+   *
+   * Vì sao không bài nào bắt được: cả hai bài dưới đều mở màn bằng `firstLogin()` rồi
+   * `UPDATE users SET last_login_at = NULL` để dọn nền — tức chính bước dọn đã XOÁ đúng cái
+   * dấu mà đường thứ ba lẽ ra phải để lại. Bài này làm ngược: xoá TRƯỚC, rồi mới đăng nhập.
+   *
+   * Hậu quả của lỗ: tài khoản vừa được SA tạo, người ta đăng nhập lần đầu xong, cột "Đăng nhập
+   * lần cuối" trên màn Tài khoản vẫn là "—". SA rà tài khoản bỏ quên sẽ đọc thành "người này
+   * chưa từng vào" — trong khi nhật ký cùng lúc ghi họ đã vào. Hai chỗ nói ngược nhau, và cột
+   * hiển thị là chỗ người ta tin.
+   */
+  test('lần đăng nhập ĐẦU TIÊN (qua màn cài 2 lớp) cũng phải đóng dấu', async ({ page }) => {
+    /*
+     * `resetUsers()` ở beforeEach gỡ TOTP và bật lại `must_change_password`, nhưng KHÔNG đụng
+     * `last_login_at` — nên phải tự xoá, để mốc quan sát được chắc chắn là của lượt này.
+     */
+    sql(`UPDATE users SET last_login_at = NULL WHERE email = '${E2E_SA.email}'`);
+    expect(lastLoginAt(), 'nền phải sạch thì quan sát sau mới có nghĩa').toBe('');
+
+    await firstLogin(page, E2E_SA);
+
+    expect(
+      lastLoginAt(),
+      'vừa đi hết ba màn và đang đứng trong app thì đó LÀ một lần đăng nhập',
+    ).not.toBe('');
+
+    /*
+     * VẾ ĐỐI CHỨNG, và là vế nói đúng bản chất lỗi: hệ thống ĐÃ tự ghi nhận đây là một lần
+     * đăng nhập thành công. Chốt cả hai cạnh nhau thì lần sau ai gỡ một trong hai sẽ thấy
+     * ngay chúng mâu thuẫn, thay vì mâu thuẫn âm thầm suốt như vừa rồi.
+     */
+    expect(
+      Number(
+        sql(
+          `SELECT count(*) FROM audit_log WHERE action = 'auth.login.ok' AND actor = '${E2E_SA.email}'`,
+        ),
+      ),
+      'nhật ký và cột hiển thị phải nói cùng một chuyện',
+    ).toBeGreaterThan(0);
+  });
+
   test('qua mật khẩu nhưng CHƯA qua TOTP thì không được đóng dấu', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
     await logout(page);

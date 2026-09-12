@@ -327,6 +327,76 @@ test.describe('Bật lại hồ sơ IP', () => {
  * chọn một ô. Và nó làm bẩn đúng cái tín hiệu dùng để phát hiện sự cố thật.
  */
 test.describe('Rule NAT thiếu router', () => {
+  /**
+   * BÀI NÀY ĐI ĐÚNG ĐƯỜNG MÀ GIAO DIỆN ĐI — và đó là cả lý do nó tồn tại (test tay 12/09).
+   *
+   * Bài ngay dưới gửi payload KHÔNG CÓ khoá `deviceId`. Màn Sổ NAT không bao giờ làm vậy:
+   * `nat-screen.tsx` khởi tạo `useState('')` rồi gửi nguyên biến đó, nên chưa chọn router
+   * nghĩa là `deviceId: ''` — một khoá CÓ MẶT, giá trị rỗng.
+   *
+   * Hai payload đó rẽ hai nhánh khác nhau ở class-validator: `@IsOptional()` bỏ qua
+   * `undefined`, nhưng KHÔNG bỏ qua chuỗi rỗng. Nên bản trước chặn `''` ngay ở cửa DTO với
+   * câu "Mã thiết bị không hợp lệ." — và `requireDeviceId()` cùng câu tiếng Việt tử tế của nó
+   * không bao giờ chạy tới trên đường người dùng thật đi.
+   *
+   * Bài cũ vẫn xanh suốt, vì nó hỏi một câu mà giao diện không hỏi. Đó là thứ đáng ghi lại
+   * hơn cả bản vá: một bài kiểm xanh chỉ chứng minh đúng cái đường mà NÓ đi.
+   */
+  test('POST /ipam/nat với deviceId RỖNG (đúng payload của giao diện) → vẫn là câu nói thiếu router', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const headers = await writeHeaders(page);
+
+    const res = await page.request.post('/api/v1/ipam/nat', {
+      headers,
+      data: {
+        deviceId: '',
+        protocol: 'tcp',
+        externalPorts: '9097',
+        internalIp: '172.30.9.7',
+        internalPort: 80,
+        usedBy: 'Kiem router rong E2E',
+        reason: 'Kiem router rong E2E',
+      },
+    });
+
+    expect(res.status()).toBe(400);
+    const body = (await res.json()) as { code?: string; message?: string };
+    /*
+     * Chốt vào MÃ LỖI chứ không chỉ status: cả hai nhánh đều trả 400, nên một bài chỉ kiểm
+     * 400 sẽ xanh cho cả bản hỏng. `FIELD_REQUIRED` mới phân biệt được "bạn quên chọn" với
+     * "cái bạn gửi sai định dạng" — và đó đúng là khác biệt mà người trực cần đọc thấy.
+     */
+    expect(body.code, 'quên chọn là THIẾU Ô, không phải gõ sai định dạng').toBe('FIELD_REQUIRED');
+    expect(body.message, 'phải nói bằng tiếng Việt là thiếu CÁI GÌ').toContain('router');
+
+    /*
+     * VẾ ĐỐI CHỨNG: nới cửa cho chuỗi RỖNG không được nới luôn cho chuỗi RÁC.
+     *
+     * Bản vá thêm `@ValidateIf(value !== '')` vào `NatBodyDto.deviceId`. Viết hụt thành
+     * `@ValidateIf(() => false)` thì bài trên vẫn xanh, nhưng một mã thiết bị gõ sai sẽ trôi
+     * xuống tận `eq(deviceTable.id, 'abc')` — đúng cái 500 mà cả describe này sinh ra để chặn.
+     */
+    const rac = await page.request.post('/api/v1/ipam/nat', {
+      headers,
+      data: {
+        deviceId: 'khong-phai-uuid',
+        protocol: 'tcp',
+        externalPorts: '9096',
+        internalIp: '172.30.9.6',
+        internalPort: 80,
+        usedBy: 'Kiem router rac E2E',
+        reason: 'Kiem router rac E2E',
+      },
+    });
+    expect(rac.status(), 'gõ rác vẫn là lỗi người dùng, không được thành 500').toBe(400);
+    expect(
+      ((await rac.json()) as { message?: string }).message,
+      'gõ sai định dạng thì nói sai định dạng — khác hẳn câu "bạn quên chọn"',
+    ).toContain('không hợp lệ');
+  });
+
   test('POST /ipam/nat không kèm deviceId → 400 nói rõ thiếu gì, không phải 500', async ({
     page,
   }) => {
