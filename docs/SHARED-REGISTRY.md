@@ -91,6 +91,7 @@
 
 | Tên | Đường dẫn | Dùng ở đâu | Khi nào KHÔNG dùng |
 | --- | --- | --- | --- |
+| `messagesOf`, `vietnameseFor`, `FIELD_LABEL` | `common/validation-messages.ts` | Nơi DUY NHẤT dịch câu lỗi nhập liệu sang tiếng Việt — `ValidationPipe` trong `app.setup.ts` đi qua nó, nên phủ MỌI DTO của mọi module | Đừng đi gõ `message:` cho từng validator để "cho chắc": 12/09 đo được 434 validator mà chỉ 80 cái có câu, và bản vá thủ công ấy vẫn để cửa mở cho validator thứ 435. DTO có câu RIÊNG thì câu đó vẫn thắng — chỉ khai khi nói được điều cụ thể hơn tên trường + loại ràng buộc. Quy ước "toàn ASCII = chưa dịch" có cửa canh trong `validation-messages.spec.ts`; thêm ràng buộc kiểu mới hoặc trường mới mà quên nhãn là bài đó ĐỎ |
 | `EnvelopeCryptoService` | `common/crypto/envelope.service.ts` | Mọi thứ cần mã hóa: TOTP secret, két sắt (Epic 4) | Cấm tự gọi `createCipheriv` (eslint chặn) |
 | `MasterKeyRing` | `common/crypto/master-key-ring.ts` | Chùm chìa + xoay version | — |
 | `ExcelExportService` | `common/excel/excel-export.service.ts` | FR-028 — mọi bảng; `buildWorkbook` cho file nhiều sheet | Cấm import `exceljs` trực tiếp (eslint chặn) |

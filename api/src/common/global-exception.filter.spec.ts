@@ -41,7 +41,10 @@ describe('GlobalExceptionFilter — nhánh biên', () => {
     expect(response.json).toHaveBeenCalledWith({
       statusCode: 500,
       code: 'INTERNAL_ERROR',
-      message: 'Internal server error',
+      /* Câu 500 dịch sang tiếng Việt 12/09 — và vẫn CHUNG CHUNG, đó mới là điểm của nó.
+         Bài này chốt đúng chuỗi ấy để không ai 'tiện tay' thêm chi tiết nội bộ vào. */
+      message:
+        'Máy chủ gặp lỗi không mong đợi. Thử lại sau ít phút; nếu vẫn vậy thì báo bộ phận IT.',
     });
   });
 });

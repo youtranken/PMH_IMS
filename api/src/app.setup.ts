@@ -1,4 +1,5 @@
-import { ValidationPipe, type INestApplication } from '@nestjs/common';
+import { BadRequestException, ValidationPipe, type INestApplication } from '@nestjs/common';
+import { messagesOf } from './common/validation-messages';
 import type { Express, NextFunction, Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
@@ -55,8 +56,22 @@ export function setupApp(app: INestApplication): void {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
-      // Message tiếng Việt do DTO khai; giữ nguyên shape lỗi của GlobalExceptionFilter.
       stopAtFirstError: true,
+      /*
+       * MẶC ĐỊNH ĐÓNG cho câu chữ (12/09).
+       *
+       * Trước đây chú thích ở đây ghi "Message tiếng Việt do DTO khai" — đúng ý định, sai
+       * thực tế: đo ra 434 validator mà chỉ 80 cái khai `message`, nên ~354 cái còn lại nhả
+       * nguyên câu tiếng Anh của class-validator ra màn hình người dùng.
+       *
+       * Đi qua `messagesOf` thì mọi validator — kể cả cái viết năm sau, kể cả cái người viết
+       * quên `message` — đều ra tiếng Việt. DTO nào có câu riêng thì câu đó vẫn THẮNG.
+       *
+       * Giữ NGUYÊN hình dạng lỗi cũ (`BadRequestException(string[])`) để
+       * `GlobalExceptionFilter` nối bằng '; ' và gắn `code: 'BAD_REQUEST'` y như trước —
+       * đây là bản vá câu chữ, không phải dịp đổi hợp đồng API.
+       */
+      exceptionFactory: (errors) => new BadRequestException(messagesOf(errors)),
     }),
   );
 

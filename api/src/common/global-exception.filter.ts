@@ -48,7 +48,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
        *
        * Luật đó bắt `.message` trong dòng log vì `DrizzleQueryError.message` chở tham số đã
        * bind. Ở đây `body` KHÔNG phải lỗi gốc — nó là body đã đi qua `toBody`, mà hàm đó trả
-       * đúng chuỗi `'Internal server error'` cho mọi lỗi không đoán trước, còn nhánh
+       * đúng MỘT câu chung chung cho mọi lỗi không đoán trước, còn nhánh
        * `HttpException` thì `message` là câu do chính ta viết ra và sắp gửi cho client.
        *
        * Giữ `body.message` chứ không đổi sang `redactMessage(exception)`: dòng log này trả lời
@@ -98,11 +98,18 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       }
       return { ...extras, statusCode, code, message };
     }
-    // Lỗi không đoán trước: không lộ chi tiết nội bộ ra body.
+    /*
+     * Lỗi không đoán trước: không lộ chi tiết nội bộ ra body.
+     *
+     * Dịch sang tiếng Việt 12/09 và GIỮ NGUYÊN tính chung chung — đó mới là điểm của câu này.
+     * Người dùng đọc được thứ mình cần làm; kẻ dò thì vẫn không biết gì hơn về phía trong.
+     * ĐỪNG nhân tiện thêm tên bảng, tên hàm hay mã lỗi kỹ thuật vào đây: chi tiết thật nằm ở
+     * log phía máy chủ (`logException` bên trên), nơi chỉ người vận hành đọc được.
+     */
     return {
       statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
       code: 'INTERNAL_ERROR',
-      message: 'Internal server error',
+      message: 'Máy chủ gặp lỗi không mong đợi. Thử lại sau ít phút; nếu vẫn vậy thì báo bộ phận IT.',
     };
   }
 

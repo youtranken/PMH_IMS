@@ -9,10 +9,10 @@ Rà toàn bộ `web/src/` (204 file) + tầng DTO của API. **Không lặp lạ
 
 ## Bảng theo dõi — 39 mục
 
-**Xong 10 · Làm một phần 1 · Còn lại 28.**
+**Xong 11 · Làm một phần 1 · Còn lại 27.**
 
 Đợt A xong 12/09, đã lái tay qua trình duyệt thật (biên bản:
-`docs/BIEN-BAN-TEST-TAY-DOT-A-2026-09-12.md`). Đợt B xong 12/09.
+`docs/BIEN-BAN-TEST-TAY-DOT-A-2026-09-12.md`). Đợt B và C xong 12/09.
 
 Cột **Kiểm**: `✓` = tôi đã tự mở code xác minh lại, không chỉ tin báo cáo. **13 mục** đã kiểm —
 #10 và #20 kiểm thêm trong lúc chờ E2E của đợt A, và cả hai đều đúng như bản rà soát mô tả.
@@ -24,7 +24,7 @@ Cột **Đợt**: nhóm đã đề xuất làm cùng nhau — xem "Thứ tự đ
 | 2 | Két sắt + Duyệt yêu cầu mù loại "Đường truyền" — 3 hỏng cùng gốc | cao | ✓ | A | **[x]** đợt A |
 | 3 | Mật khẩu tạm: một phím Esc là mất vĩnh viễn | cao | ✓ | — | **[x]** `d016847` |
 | 4 | "Thu hồi sớm" cắt quyền đang chạy, không hỏi lại | cao | ✓ | B | **[x]** đợt B |
-| 5 | Câu lỗi tiếng Anh lọt ra giao diện (349/429 validator + lỗi 500) | cao | ✓ | C | [ ] |
+| 5 | Câu lỗi tiếng Anh lọt ra giao diện (354/434 validator + lỗi 500) | cao | ✓ | C | **[x]** đợt C |
 | 6 | `LoadError` vứt câu giải thích của API — 38 chỗ gọi | cao | ✓ | A | **[x]** đợt A |
 | 7 | Nhãn lịch sử: mã thao tác không có nhãn + 123 nhãn cứng | cao | ✓ | D | **[~]** `d016847` |
 | 8 | 15/19 hộp xác nhận đội tiêu đề trống "Xác nhận" | cao | — | D | [ ] |
@@ -123,12 +123,43 @@ một bản vá dựng hộp lên rồi vẫn gọi API ngay cũng làm vế kh�
 `api/src/modules/ipam/ipam.controller.ts:110` `internalPort` không có `message`; ô "Port trong"
 (`nat-screen.tsx:608`) không kiểm gì phía web. Gõ `99999` → `internalPort must not be greater than 65535`.
 Ô "Port ngoài" CÙNG FORM lại báo tiếng Việt (`vi.ts:829`). Hai ô cạnh nhau, hai ngôn ngữ.
-Toàn hệ (đo lại 12/09): **80 `message:` trên 429 validator** trong `*.controller.ts` — tức ~349
+Toàn hệ (đo lại 12/09): **80 `message:` trên 434 validator** trong `*.controller.ts` — tức ~354
 validator câm, nhiều hơn con số 81/237 mà lượt rà đầu ước.
 Thêm: `api/src/common/global-exception.filter.ts:105` trả `'Internal server error'` cho mọi 500,
 và `lib/api.ts:11` bê thẳng vào toast. LƯU Ý khi vá: chuỗi đó CỐ Ý chung chung để không lộ nội
 bộ (đọc chú thích ngay trên nó) — dịch sang tiếng Việt thì giữ nguyên tính chất ấy, đừng thêm
 chi tiết kỹ thuật vào.
+
+**ĐÃ VÁ (đợt C) — và KHÔNG bằng cách đi gõ 354 câu `message`.**
+
+Gõ tay 354 câu là bản vá cho HÔM NAY: cửa vẫn mở mặc định, nên người viết DTO thứ 435 quên
+`message` thì lại lọt một câu tiếng Anh và không có gì đỏ. Thay vào đó, `ValidationPipe` nhận
+một `exceptionFactory` đi qua `api/src/common/validation-messages.ts` — mọi validator, kể cả
+cái viết năm sau, đều ra tiếng Việt mà không cần ai nhớ gì. DTO nào có câu riêng thì câu đó
+vẫn THẮNG: nó biết chuyện cụ thể, còn bản dịch chung chỉ biết tên trường và loại ràng buộc.
+
+Cách phân biệt "câu mặc định" với "câu người viết": câu của class-validator TOÀN ASCII, câu
+tiếng Việt của repo luôn có dấu. Đó là một quy ước, nên nó có cửa canh riêng — bài điểm danh
+đọc mọi `message:` trong controller và đỏ nếu có câu nào không dấu.
+
+Ví dụ đúng cái ô đã nêu ở trên, `internalPort` không khai `message`:
+· trước: `internalPort must not be greater than 65535`
+· sau:   `Port trong không được lớn hơn 65535.`
+
+Các mốc (độ dài, min/max, danh sách cho phép) đọc NGƯỢC ra từ chính câu mặc định —
+`ValidationError` chỉ đưa câu đã dựng, không đưa tham số decorator. Vì thế
+`validation-messages.spec.ts` cho `ValidationPipe` THẬT chạy trên DTO mẫu rồi so câu đầu ra,
+thay vì tin vào một giả định về thư viện: nâng cấp class-validator mà câu mặc định đổi chữ
+thì chỗ đó đỏ ngay, kèm đúng câu sai.
+
+Bốn cửa canh, ba trong số đó có sàn chống regex hụt:
+· mọi loại ràng buộc đang dùng trong controller đều có bản dịch;
+· mọi trường CÓ validator đều có nhãn tiếng Việt (`FIELD_LABEL`, 95 mục);
+· mọi câu `message` khai tay đều có dấu;
+· và vế bao trùm: không câu nào đi ra khỏi pipe mà còn là tiếng Anh.
+
+Câu 500 cũng đã dịch, GIỮ NGUYÊN tính chung chung — `global-exception.filter.spec.ts` chốt
+đúng chuỗi ấy để không ai "tiện tay" thêm chi tiết nội bộ vào.
 
 ### 6. `LoadError` vứt bỏ câu giải thích tiếng Việt mà API vừa gửi về (38 chỗ gọi)
 `ui/load-state.tsx:63` — `LoadError({ onRetry })` KHÔNG nhận `error`, nên 403 / 404 / 500 / mất mạng

@@ -41,13 +41,14 @@ describe('describeLoadError', () => {
     },
     {
       /*
-       * `global-exception.filter.ts` trả 'Internal server error' cho MỌI 500, CỐ Ý chung chung
-       * để không lộ nội bộ. Bê nguyên nó ra màn hình là một câu tiếng Anh vô nghĩa với người
-       * dùng; ta thay bằng câu tiếng Việt nói đúng việc cần làm, và KHÔNG thêm chi tiết nào
-       * về phía trong.
+       * `global-exception.filter.ts` trả MỘT câu chung chung cho mọi 500, cố ý, để không lộ
+       * nội bộ (từ 12/09 câu đó đã là tiếng Việt). Web vẫn dùng câu CỦA MÌNH thay vì bê câu
+       * ấy ra: hai bên nói cùng một ý, nhưng chữ trên màn hình là việc của tầng giao diện —
+       * và quan trọng hơn, quy tắc "500 thì đừng tin câu của server" phải đúng cả cho những
+       * 500 KHÔNG đi qua filter (nginx sập, gateway chết) — lúc đó câu trả về là HTML.
        */
       ten: '500 → câu tiếng Việt của ta, không mượn câu của filter',
-      error: new ApiError(500, { message: 'Internal server error' }),
+      error: new ApiError(500, { message: 'Máy chủ gặp lỗi không mong đợi.' }),
       key: 'app.serverError',
       text: null,
     },
