@@ -9,7 +9,7 @@ Rà toàn bộ `web/src/` (204 file) + tầng DTO của API. **Không lặp lạ
 
 ## Bảng theo dõi — 39 mục
 
-**Xong 3 · Làm một phần 1 · Còn lại 35.**
+**Xong 6 · Làm một phần 1 · Còn lại 32.**  ·  Đợt A xong 12/09.
 
 Cột **Kiểm**: `✓` = tôi đã tự mở code xác minh lại, không chỉ tin báo cáo. Chín mục đã kiểm.
 Cột **Đợt**: nhóm đã đề xuất làm cùng nhau — xem "Thứ tự đề xuất" ở cuối file.
@@ -17,11 +17,11 @@ Cột **Đợt**: nhóm đã đề xuất làm cùng nhau — xem "Thứ tự đ
 | # | Mục | Mức | Kiểm | Đợt | Xong |
 |---|---|---|---|---|---|
 | 1 | Bảng điều khiển in mã máy tiếng Anh (`warranty`, `license`) | cao | ✓ | — | **[x]** `d016847` |
-| 2 | Két sắt + Duyệt yêu cầu mù loại "Đường truyền" — 3 hỏng cùng gốc | cao | ✓ | A | [ ] |
+| 2 | Két sắt + Duyệt yêu cầu mù loại "Đường truyền" — 3 hỏng cùng gốc | cao | ✓ | A | **[x]** đợt A |
 | 3 | Mật khẩu tạm: một phím Esc là mất vĩnh viễn | cao | ✓ | — | **[x]** `d016847` |
 | 4 | "Thu hồi sớm" cắt quyền đang chạy, không hỏi lại | cao | ✓ | B | [ ] |
 | 5 | Câu lỗi tiếng Anh lọt ra giao diện (349/429 validator + lỗi 500) | cao | ✓ | C | [ ] |
-| 6 | `LoadError` vứt câu giải thích của API — 68 chỗ gọi | cao | ✓ | A | [ ] |
+| 6 | `LoadError` vứt câu giải thích của API — 38 chỗ gọi | cao | ✓ | A | **[x]** đợt A |
 | 7 | Nhãn lịch sử: mã thao tác không có nhãn + 123 nhãn cứng | cao | ✓ | D | **[~]** `d016847` |
 | 8 | 15/19 hộp xác nhận đội tiêu đề trống "Xác nhận" | cao | — | D | [ ] |
 | 9 | Tiêu đề hộp sửa chỉ một chữ "Sửa" (dùng chung cho 7 tab danh mục) | cao | — | D | [ ] |
@@ -31,7 +31,7 @@ Cột **Đợt**: nhóm đã đề xuất làm cùng nhau — xem "Thứ tự đ
 | 13 | Hint ô "Tủ mạng" nói "Không nằm trong tủ" | vừa | — | D | [ ] |
 | 14 | Viết tắt và tiếng lóng: NCC · SA · "đá phiên" · "Cửa sổ" · pool | vừa | — | D | [ ] |
 | 15 | Chữ "epic" hiện ở 3 nơi người dùng nhìn thấy | vừa | — | D | [ ] |
-| 16 | Nút "Mở khóa" hiện trên tài khoản đang bị **vô hiệu hóa** | vừa | ✓ | A | [ ] |
+| 16 | Nút "Mở khóa" hiện trên tài khoản đang bị **vô hiệu hóa** | vừa | ✓ | A | **[x]** đợt A |
 | 17 | Kho thanh lý báo "đang trống" khi chỉ là lọc không ra | vừa | — | D | [ ] |
 | 18 | Tiêu đề hứa "cả hệ thống" nhưng đường truyền không vào kho được | vừa | — | D | [ ] |
 | 19 | "Gửi thử" bắn email THẬT cho người nhận, không hỏi lại | vừa | ✓ | B | [ ] |
@@ -93,6 +93,13 @@ render hẳn `<VaultPanel ownerType="isp">`. Hậu quả khi cất mật khẩu 
 (c) "Mở hồ sơ đầy đủ" dẫn sang trang PHẦN MỀM với id đường truyền (nhánh vét `:39`).
 Cùng gốc ở `approvals-screen.tsx:184`: `vi.ts` chỉ có `subject_device`/`subject_software`.
 **Sửa**: dùng `Record<SecretOwnerType, string>` như `lib/disposal-kinds.ts:16` đã làm — ở đó thiếu nhãn là lỗi biên dịch.
+**ĐÃ VÁ (đợt A)**: gom cả BỐN bản chép tay về `web/src/lib/secret-owner-kinds.ts` (`SECRET_OWNER_TYPES` ·
+`SecretOwnerType` · `SECRET_OWNER_KIND_KEY`), khai vào sổ AD-15. Trang tổng két nay duyệt thẳng
+`SECRET_OWNER_TYPES` để sinh nút lọc (thêm loại là tự có nút), và dùng `OWNER_PATH` thay chuỗi `if`
+tự dựng nên "Mở hồ sơ đầy đủ" hết dẫn nhầm. `ApprovalRow.subjectType` đổi từ `string` sang
+`SecretOwnerType` — đó mới là chỗ bản cũ lọt. Khóa dịch dồn về namespace trung tính `ownerKind.*`;
+`vaultHome.kind*` và `approvals.subject_*` xóa hẳn, kèm ba khóa chết `vaultHome.devices/software/serviceAccounts`.
+Cửa canh: `web/src/lib/secret-owner-rollcall.test.ts` đọc thẳng `vault.service.ts` bên API rồi so danh sách.
 
 ### 3. Mật khẩu tạm: một phím Esc là mất vĩnh viễn
 `features/admin/accounts-screen.tsx:377` — `<Dialog>` KHÔNG truyền `dismissible={false}`
@@ -115,10 +122,19 @@ và `lib/api.ts:11` bê thẳng vào toast. LƯU Ý khi vá: chuỗi đó CỐ �
 bộ (đọc chú thích ngay trên nó) — dịch sang tiếng Việt thì giữ nguyên tính chất ấy, đừng thêm
 chi tiết kỹ thuật vào.
 
-### 6. `LoadError` vứt bỏ câu giải thích tiếng Việt mà API vừa gửi về (68 chỗ gọi)
+### 6. `LoadError` vứt bỏ câu giải thích tiếng Việt mà API vừa gửi về (38 chỗ gọi)
 `ui/load-state.tsx:63` — `LoadError({ onRetry })` KHÔNG nhận `error`, nên 403 / 404 / 500 / mất mạng
 đều ra đúng một câu "Không tải được dữ liệu." + nút "Thử lại". `lib/api.ts:8 errorMessage()` đã có sẵn
 câu tiếng Việt của API. Khóa `app.serverUnreachable` (`vi.ts:12`) là khóa chết, không nơi nào dùng.
+(Con số 68 của lượt rà đầu là số LẦN xuất hiện chữ `LoadError`, tức đã đếm cả dòng `import`.
+Đếm lại 12/09: **38 khối `<LoadError>` thật**, 36 trong đó ở màn, 2 trong bài kiểm.)
+**ĐÃ VÁ (đợt A)**: `error` thành prop **bắt buộc** — để tùy chọn thì 38 chỗ gọi sẽ cứ thế bỏ qua như
+suốt từ đầu dự án; bắt buộc thì mỗi chỗ là một lỗi biên dịch cho tới khi có người nối lỗi thật vào.
+Bảng nguyên nhân → câu chữ tách ra hàm thuần `web/src/lib/load-error-text.ts` (có bảng test riêng):
+câu của API đi trước, rồi 403 → thiếu quyền · 404 → không tìm thấy · ≥500 → máy chủ sự cố · không
+phải `ApiError` → mất kết nối (`app.serverUnreachable` sống lại). 500 KHÔNG mượn câu của
+`global-exception.filter.ts`: chuỗi đó cố ý chung chung, ta thay bằng câu tiếng Việt của mình và
+không thêm chi tiết nội bộ. Khối lỗi thêm `role="alert"` — nó thay chỗ nội dung vừa biến mất.
 
 ### 7. 123 nhãn viết cứng ngoài i18n — và `port-unlinked` đang lọt ra màn Lịch sử
 7 file map nhãn: `devices/device-history-entries.ts:12,31,42` · `software/software-history-entries.ts:10,28,39,47,52` ·
@@ -169,6 +185,12 @@ Trong khi `device-form.tsx:160` và `account-form.tsx:79` đã làm đúng (kèm
 15. **Chữ "epic" hiện ở 3 nơi người dùng thấy** — `vi.ts:15,169,1089`.
 16. **Nút "Mở khóa" hiện trên tài khoản đang bị vô hiệu hóa** — `accounts-screen.tsx:177` chỉ có 2 nhánh cho 3 trạng thái.
     `accounts.disable` (`vi.ts:603`) là khóa chết.
+    **ĐÃ VÁ (đợt A)**: `STATUS_ACTIONS: Record<AccountStatus, StatusAction[]>` — mỗi trạng thái khai
+    thẳng những việc hợp lệ của nó, nên trạng thái thứ tư sẽ là lỗi biên dịch. `disabled` nay có
+    "Kích hoạt lại" (hỏi lại) thay vì "Mở khóa"; `active` và `locked` có thêm "Vô hiệu hóa", tức khóa
+    dịch chết kia sống lại và trạng thái thứ ba thôi phải đặt bằng `curl` — API đã nhận `disabled` từ
+    lâu, có `assertNotLastSa` canh trong transaction. Badge tách màu: khóa là `warn` (tạm), vô hiệu
+    hóa là `danger` (dứt), đúng như `auth.service.ts` đã cố ý tách `ACCOUNT_LOCKED`/`ACCOUNT_DISABLED`.
 17. **Kho thanh lý báo "đang trống" khi chỉ là lọc không ra** — `disposal-screen.tsx:114` dùng `rows` SAU lọc.
     Hint còn thiếu chữ "có": *"Chưa hồ sơ nào…"*.
 18. **Tiêu đề hứa "cả hệ thống" nhưng đường truyền không bao giờ vào kho** — `vi.ts:967`;

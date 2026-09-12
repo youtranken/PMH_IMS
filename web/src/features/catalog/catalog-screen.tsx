@@ -441,7 +441,7 @@ export function CatalogScreen({ me }: { me: Me }) {
         {rows.isLoading ? (
           <Loading />
         ) : rows.isError ? (
-          <LoadError onRetry={() => void rows.refetch()} />
+          <LoadError error={rows.error} onRetry={() => void rows.refetch()} />
         ) : (
           <>
             <DataTable

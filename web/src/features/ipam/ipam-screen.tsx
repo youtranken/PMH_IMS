@@ -159,7 +159,7 @@ export function IpamScreen({ me }: { me: Me }) {
       {subnets.isLoading ? (
         <Loading />
       ) : subnets.isError ? (
-        <LoadError onRetry={() => void subnets.refetch()} />
+        <LoadError error={subnets.error} onRetry={() => void subnets.refetch()} />
       ) : rows.length === 0 ? (
         <EmptyState title={t('ipam.empty')} hint={t('ipam.emptyHint')} />
       ) : (

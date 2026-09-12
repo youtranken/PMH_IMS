@@ -223,7 +223,7 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
       {accounts.isLoading ? (
         <Loading />
       ) : accounts.isError ? (
-        <LoadError onRetry={() => void accounts.refetch()} />
+        <LoadError error={accounts.error} onRetry={() => void accounts.refetch()} />
       ) : rows.length === 0 ? (
         <EmptyState title={t('serviceAccounts.empty')} hint={t('serviceAccounts.emptyHint')} />
       ) : (

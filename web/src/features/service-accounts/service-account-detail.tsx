@@ -71,7 +71,7 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
     return account.error instanceof ApiError && account.error.status === 404 ? (
       <NotFound />
     ) : (
-      <LoadError onRetry={() => void account.refetch()} />
+      <LoadError error={account.error} onRetry={() => void account.refetch()} />
     );
   }
 
@@ -178,7 +178,7 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
         ) : history.isLoading ? (
           <Loading />
         ) : history.isError ? (
-          <LoadError onRetry={() => void history.refetch()} />
+          <LoadError error={history.error} onRetry={() => void history.refetch()} />
         ) : (
           <HistoryPanel entries={toServiceAccountHistory(history.data ?? [])} />
         )}

@@ -5,24 +5,20 @@ import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
-import { PATHS } from '@/lib/routes';
+import { OWNER_PATH } from '@/lib/routes';
+import {
+  SECRET_OWNER_KIND_KEY,
+  SECRET_OWNER_TYPES,
+  type SecretOwnerType,
+} from '@/lib/secret-owner-kinds';
 import { Dialog } from '@/ui/dialog';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { VaultPanel } from '@/ui/vault-panel';
 
-type OwnerType = 'device' | 'software' | 'service_account';
-
-/** Nhãn của từng loại chủ thể — MỘT chỗ, dùng cho cả nút lọc lẫn cột Loại. */
-const OWNER_LABEL: Record<OwnerType, string> = {
-  device: 'vaultHome.kindDevice',
-  software: 'vaultHome.kindSoftware',
-  service_account: 'vaultHome.kindServiceAccount',
-};
-
 interface VaultOwner {
-  ownerType: OwnerType;
+  ownerType: SecretOwnerType;
   ownerId: string;
   code: string;
   name: string;
@@ -30,13 +26,6 @@ interface VaultOwner {
   secretCount: number;
   lastChangeAt: string;
   orphan: boolean;
-}
-
-/** Đường sang hồ sơ đầy đủ của chủ thể đang mở. */
-function recordPathOf(owner: VaultOwner): string {
-  if (owner.ownerType === 'device') return PATHS.device(owner.ownerId);
-  if (owner.ownerType === 'service_account') return PATHS.serviceAccount(owner.ownerId);
-  return PATHS.softwareItem(owner.ownerId);
 }
 
 /**
@@ -56,7 +45,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   /** Lọc theo loại — chọn được NHIỀU cùng lúc; rỗng = xem tất cả. */
-  const [kinds, setKinds] = useState<OwnerType[]>([]);
+  const [kinds, setKinds] = useState<SecretOwnerType[]>([]);
   const [opened, setOpened] = useState<VaultOwner | null>(null);
 
   const owners = useQuery({
@@ -98,7 +87,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
 
   const all = owners.data ?? [];
   const totalSecrets = all.reduce((sum, row) => sum + row.secretCount, 0);
-  const toggle = (kind: OwnerType) =>
+  const toggle = (kind: SecretOwnerType) =>
     setKinds((current) =>
       current.includes(kind) ? current.filter((item) => item !== kind) : [...current, kind],
     );
@@ -114,9 +103,13 @@ export function VaultHomeScreen({ me }: { me: Me }) {
         onSearchChange={setSearch}
         searchPlaceholder={t('vaultHome.searchPlaceholder')}
       >
-        {/* Hai nút bật/tắt độc lập, không phải một ô chọn: "xem cả thiết bị lẫn phần mềm"
-            là trạng thái thường gặp nhất, mà ô chọn một-giá-trị không diễn tả được. */}
-        {(['device', 'software', 'service_account'] as const).map((kind) => (
+        {/* Các nút bật/tắt độc lập, không phải một ô chọn: "xem cả thiết bị lẫn phần mềm"
+            là trạng thái thường gặp nhất, mà ô chọn một-giá-trị không diễn tả được.
+
+            Duyệt thẳng `SECRET_OWNER_TYPES` chứ KHÔNG gõ lại danh sách ở đây: bản gõ tay cũ
+            thiếu `isp`, nên bật bất kỳ nút nào cũng làm mọi dòng đường truyền biến mất im
+            lặng — người dùng đọc ra "đường truyền không có két", còn két thì vẫn ở đó. */}
+        {SECRET_OWNER_TYPES.map((kind) => (
           <button
             key={kind}
             type="button"
@@ -124,7 +117,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
             aria-pressed={kinds.includes(kind)}
             onClick={() => toggle(kind)}
           >
-            {t(OWNER_LABEL[kind])}
+            {t(SECRET_OWNER_KIND_KEY[kind])}
           </button>
         ))}
       </FilterBar>
@@ -132,7 +125,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
       {owners.isLoading ? (
         <Loading />
       ) : owners.isError ? (
-        <LoadError onRetry={() => void owners.refetch()} />
+        <LoadError error={owners.error} onRetry={() => void owners.refetch()} />
       ) : all.length === 0 ? (
         <EmptyState title={t('vaultHome.empty')} hint={t('vaultHome.emptyHint')} />
       ) : (
@@ -166,7 +159,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
                         </span>
                       </td>
                       <td data-label={t('vaultHome.ownerKind')}>
-                        <span className="badge plain">{t(OWNER_LABEL[row.ownerType])}</span>
+                        <span className="badge plain">{t(SECRET_OWNER_KIND_KEY[row.ownerType])}</span>
                       </td>
                       <td className="num" data-label={t('vaultHome.secretCount')}>
                         {row.secretCount}
@@ -207,7 +200,10 @@ export function VaultHomeScreen({ me }: { me: Me }) {
               {opened.orphan ? null : (
                 <Link
                   className="btn"
-                  to={recordPathOf(opened)}
+                  /* `OWNER_PATH` (lib/routes) chứ không phải chuỗi `if` tại chỗ: bản cũ kết
+                     bằng `return PATHS.softwareItem(...)`, nên một đường truyền rơi vào
+                     nhánh vét và cái nút này mở trang PHẦN MỀM với id đường truyền. */
+                  to={OWNER_PATH[opened.ownerType](opened.ownerId)}
                 >
                   {t('vaultHome.openRecord')}
                 </Link>

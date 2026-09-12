@@ -160,7 +160,7 @@ export function AttachmentPanel({
       {files.isLoading ? (
         <Loading />
       ) : files.isError ? (
-        <LoadError onRetry={() => void files.refetch()} />
+        <LoadError error={files.error} onRetry={() => void files.refetch()} />
       ) : rows.length === 0 ? (
         <EmptyState title={t('attachments.empty')} hint={t('attachments.noPreview')} />
       ) : (

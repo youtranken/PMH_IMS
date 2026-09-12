@@ -66,7 +66,7 @@ export function IspDetail({ me }: { me: Me }) {
     return line.error instanceof ApiError && line.error.status === 404 ? (
       <NotFound />
     ) : (
-      <LoadError onRetry={() => void line.refetch()} />
+      <LoadError error={line.error} onRetry={() => void line.refetch()} />
     );
   }
 
@@ -231,7 +231,7 @@ export function IspDetail({ me }: { me: Me }) {
         ) : history.isLoading ? (
           <Loading />
         ) : history.isError ? (
-          <LoadError onRetry={() => void history.refetch()} />
+          <LoadError error={history.error} onRetry={() => void history.refetch()} />
         ) : (
           <HistoryPanel entries={toIspHistory(history.data ?? [])} />
         )}

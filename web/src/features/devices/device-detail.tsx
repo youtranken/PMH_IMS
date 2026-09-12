@@ -137,7 +137,7 @@ export function DeviceDetail({ me }: { me: Me }) {
     return device.error instanceof ApiError && device.error.status === 404 ? (
       <NotFound />
     ) : (
-      <LoadError onRetry={() => void device.refetch()} />
+      <LoadError error={device.error} onRetry={() => void device.refetch()} />
     );
   }
 
@@ -354,7 +354,7 @@ export function DeviceDetail({ me }: { me: Me }) {
             */}
             {panels.isError ? (
               <div className="card device-panel">
-                <LoadError onRetry={() => void panels.refetch()} />
+                <LoadError error={panels.error} onRetry={() => void panels.refetch()} />
               </div>
             ) : (
               <ExtensionPanels
@@ -391,7 +391,7 @@ export function DeviceDetail({ me }: { me: Me }) {
         ) : history.isLoading ? (
           <Loading />
         ) : history.isError ? (
-          <LoadError onRetry={() => void history.refetch()} />
+          <LoadError error={history.error} onRetry={() => void history.refetch()} />
         ) : (
           <HistoryPanel entries={toHistoryEntries(history.data ?? [])} />
         )}

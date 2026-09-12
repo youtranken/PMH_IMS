@@ -219,7 +219,7 @@ export function SubnetPane({
       {slots.isLoading ? (
         <Loading />
       ) : slots.isError ? (
-        <LoadError onRetry={() => void slots.refetch()} />
+        <LoadError error={slots.error} onRetry={() => void slots.refetch()} />
       ) : (
         <>
           <div className="table-wrap">
@@ -787,7 +787,7 @@ function IpHistoryDialog({
       {history.isLoading ? (
         <Loading />
       ) : history.isError ? (
-        <LoadError onRetry={() => void history.refetch()} />
+        <LoadError error={history.error} onRetry={() => void history.refetch()} />
       ) : (
         <HistoryPanel
           entries={toIpHistoryEntries(history.data ?? [])}

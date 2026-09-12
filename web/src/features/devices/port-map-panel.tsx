@@ -97,7 +97,7 @@ export function PortMapPanel({
       {map.isLoading ? (
         <Loading />
       ) : map.isError ? (
-        <LoadError onRetry={() => void map.refetch()} />
+        <LoadError error={map.error} onRetry={() => void map.refetch()} />
       ) : (
         <>
           <h3 className="form-section-title">{t('ports.own')}</h3>

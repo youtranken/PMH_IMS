@@ -186,7 +186,7 @@ export function IspScreen({ me }: { me: Me }) {
       {lines.isLoading ? (
         <Loading />
       ) : lines.isError ? (
-        <LoadError onRetry={() => void lines.refetch()} />
+        <LoadError error={lines.error} onRetry={() => void lines.refetch()} />
       ) : rows.length === 0 ? (
         <EmptyState title={t('isp.empty')} hint={t('isp.emptyHint')} />
       ) : (

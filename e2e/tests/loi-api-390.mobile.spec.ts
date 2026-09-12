@@ -33,7 +33,14 @@ test.beforeEach(() => {
   resetSoftware();
 });
 
-const LOAD_ERROR = 'Không tải được dữ liệu.';
+/*
+ * Câu của khối lỗi khi API trả 500 — đổi 12/09 (mục #6 bản rà soát UI/UX).
+ *
+ * `LoadError` nay chọn câu THEO NGUYÊN NHÂN: 403 nói thiếu quyền, 404 nói không tìm thấy,
+ * mất mạng nói mất kết nối, và 500 ra câu này. Trước đó cả bốn dùng chung 'Không tải được
+ * dữ liệu.' — bài này giả lập 500, nên đây mới là câu đúng của nó.
+ */
+const LOAD_ERROR = 'Máy chủ đang gặp sự cố. Thử lại sau ít phút; vẫn vậy thì báo bộ phận IT.';
 
 /** Bắt một đường API trả 500 — giống `breakRoute` của bài desktop, cùng hình dạng lỗi. */
 async function breakRoute(page: Page, pattern: RegExp): Promise<void> {

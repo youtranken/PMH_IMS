@@ -5,6 +5,7 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDateTime, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
+import { SECRET_OWNER_KIND_KEY, type SecretOwnerType } from '@/lib/secret-owner-kinds';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
@@ -17,7 +18,9 @@ interface ApprovalRow {
   kind: string;
   state: string;
   requester: string;
-  subjectType: string;
+  /* `break-glass.service.ts` gõ trường này là `SecretOwnerType`, tức BỐN loại. Khai `string`
+     ở đây là chỗ bản cũ lọt: nhãn chỉ có hai loại mà TS không có cách nào biết. */
+  subjectType: SecretOwnerType;
   subjectId: string;
   reason: string;
   payload: { hours?: number } | null;
@@ -151,7 +154,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
         {loading ? (
           <Loading />
         ) : failed ? (
-          <LoadError onRetry={() => void active.refetch()} />
+          <LoadError error={active.error} onRetry={() => void active.refetch()} />
         ) : items.length === 0 ? (
           <EmptyState
             title={t(
@@ -181,7 +184,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                   <div className="field">
                     <dt className="lbl-t">{t('approvals.subject')}</dt>
                     <dd className="mono">
-                      {t(`approvals.subject_${row.subjectType}`)} · {row.subjectId.slice(0, 8)}
+                      {t(SECRET_OWNER_KIND_KEY[row.subjectType])} · {row.subjectId.slice(0, 8)}
                     </dd>
                   </div>
                   <div className="field">

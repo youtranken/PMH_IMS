@@ -110,7 +110,7 @@ export function DisposalScreen() {
       {items.isLoading ? (
         <Loading />
       ) : items.isError ? (
-        <LoadError onRetry={() => void items.refetch()} />
+        <LoadError error={items.error} onRetry={() => void items.refetch()} />
       ) : rows.length === 0 ? (
         <EmptyState title={t('disposal.empty')} hint={t('disposal.emptyHint')} />
       ) : (

@@ -130,7 +130,7 @@ export function NatScreen({ me }: { me: Me }) {
       {rules.isLoading ? (
         <Loading />
       ) : rules.isError ? (
-        <LoadError onRetry={() => void rules.refetch()} />
+        <LoadError error={rules.error} onRetry={() => void rules.refetch()} />
       ) : rows.length === 0 ? (
         <EmptyState title={t('nat.empty')} hint={t('nat.emptyHint')} />
       ) : (
@@ -937,6 +937,6 @@ function NatHistory({ ruleId }: { ruleId: string }) {
   });
 
   if (history.isLoading) return <Loading />;
-  if (history.isError) return <LoadError onRetry={() => void history.refetch()} />;
+  if (history.isError) return <LoadError error={history.error} onRetry={() => void history.refetch()} />;
   return <HistoryPanel entries={toNatHistory(history.data ?? [])} />;
 }

@@ -177,7 +177,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
             theo dõi RỖNG — nó không bao giờ gửi email, và không có gì trên màn nói vì sao.
           */}
           {kinds.isError ? (
-            <LoadError onRetry={() => void kinds.refetch()} />
+            <LoadError error={kinds.error} onRetry={() => void kinds.refetch()} />
           ) : (
             <DigestRulesPanel me={me} kinds={kinds.data ?? []} />
           )}
@@ -209,7 +209,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
       {expiry.isLoading ? (
         <Loading />
       ) : expiry.isError ? (
-        <LoadError onRetry={() => void expiry.refetch()} />
+        <LoadError error={expiry.error} onRetry={() => void expiry.refetch()} />
       ) : rows.length === 0 ? (
         <EmptyState title={t('expiry.empty')} hint={t('expiry.emptyHint')} />
       ) : (

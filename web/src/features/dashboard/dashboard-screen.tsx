@@ -102,7 +102,7 @@ export function DashboardScreen({ me }: { me: Me }) {
   const kinds = useExpiryKinds();
 
   if (data.isLoading) return <Loading />;
-  if (data.isError) return <LoadError onRetry={() => void data.refetch()} />;
+  if (data.isError) return <LoadError error={data.error} onRetry={() => void data.refetch()} />;
 
   const board = data.data!;
 

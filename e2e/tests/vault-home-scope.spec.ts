@@ -7,6 +7,7 @@ import {
   logout,
   resetAccessList,
   resetDevices,
+  resetIsp,
   resetSecrets,
   resetSoftware,
   resetUsers,
@@ -25,6 +26,7 @@ test.beforeEach(() => {
   resetAccessList();
   resetDevices();
   resetSoftware();
+  resetIsp();
   resetSecrets();
 });
 
@@ -52,7 +54,9 @@ async function createDevice(page: Page, code: string): Promise<string> {
 /** Cất một secret vào một chủ thể, để trang tổng có cái mà liệt kê. */
 async function stash(
   page: Page,
-  ownerType: 'device' | 'software',
+  /* `isp` là loại thứ TƯ, thêm ở 0036 — `file.owner_type` nhận đường truyền từ lâu nên hợp
+     đồng PDF đính vào được mà mật khẩu PPPoE thì không, và người ta chép nó vào ô Ghi chú. */
+  ownerType: 'device' | 'software' | 'isp',
   ownerId: string,
   label: string,
 ): Promise<void> {
@@ -128,6 +132,78 @@ test.describe('Trang tổng Két sắt', () => {
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(swCode);
     await expect(swRow).toBeVisible();
     await expect(deviceRow).toHaveCount(0);
+  });
+
+  /**
+   * LOẠI THỨ TƯ: đường truyền. Ba hỏng cùng một gốc (rà UI/UX 12/09, mục #2).
+   *
+   * `SECRET_OWNER_TYPES` bên API có bốn loại, và `isp-detail.tsx` render hẳn
+   * `<VaultPanel ownerType="isp">` — nhưng trang tổng khai một union RIÊNG chỉ có ba. Không
+   * có gì đỏ, vì cả ba chỗ dùng nó đều kết bằng một nhánh vét:
+   *
+   *   (a) cột "Loại" tra `OWNER_LABEL['isp']` → `undefined` → ô TRỐNG;
+   *   (b) dãy nút lọc gõ tay ba loại, mà lọc là "giữ dòng nào thuộc loại ĐÃ CHỌN" → bật bất kỳ
+   *       nút nào là mọi dòng đường truyền biến mất, không một lời;
+   *   (c) "Mở hồ sơ đầy đủ" chạy chuỗi `if` kết bằng `return PATHS.softwareItem(...)` → mở
+   *       trang PHẦN MỀM với id của đường truyền.
+   *
+   * Ba vế dưới đây soi đúng ba cái đó. Bài này CHỈ có nghĩa khi màn thật sự có dòng đường
+   * truyền, nên vế đầu chốt luôn điều ấy.
+   */
+  test('đường truyền cũng là chủ két: hiện đúng loại, lọc được, và link mở đúng hồ sơ', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+
+    const ispCode = `ISP-E2E-VK-${stamp}`;
+    const line = await page.request.post('/api/v1/isp-lines', {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+      data: {
+        code: ispCode,
+        provider: 'FPT Telecom',
+        bandwidth: '200 Mbps',
+        contractNo: `HD-${stamp}`,
+        endDate: '2027-06-30',
+      },
+    });
+    expect(line.status()).toBe(201);
+    const ispId = String(((await line.json()) as { id: string }).id);
+    await stash(page, 'isp', ispId, `pppoe-${stamp}`);
+
+    const deviceCode = `PC-E2E-VK-${stamp}`;
+    const deviceId = await createDevice(page, deviceCode);
+    await stash(page, 'device', deviceId, `pw-${stamp}`);
+
+    await page.goto('/vault');
+    const ispRow = page.getByRole('row', { name: new RegExp(ispCode) });
+    const deviceRow = page.getByRole('row', { name: new RegExp(deviceCode) });
+    await expect(ispRow).toBeVisible();
+
+    // (a) Cột "Loại" phải có chữ — ô trống là dấu hiệu `Record` thiếu khóa.
+    await expect(
+      ispRow.getByText('Đường truyền'),
+      'cột Loại của một dòng đường truyền không được để trống',
+    ).toBeVisible();
+
+    // (b) Lọc "Thiết bị" thì đường truyền đi; lọc thêm "Đường truyền" thì nó phải QUAY LẠI.
+    await page.getByRole('button', { name: 'Thiết bị', exact: true }).click();
+    await expect(deviceRow).toBeVisible();
+    await expect(ispRow).toHaveCount(0);
+    await page.getByRole('button', { name: 'Đường truyền', exact: true }).click();
+    await expect(
+      ispRow,
+      'ĐÂY LÀ LỖI ĐÃ VÁ: trước 12/09 không có nút này, nên bật lọc là đường truyền mất hẳn',
+    ).toBeVisible();
+
+    // (c) "Mở hồ sơ đầy đủ" phải dẫn về hồ sơ ĐƯỜNG TRUYỀN, không phải phần mềm.
+    await ispRow.getByRole('button', { name: `Mở két của ${ispCode}` }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toBeVisible();
+    await expect(
+      dialog.getByRole('link', { name: 'Mở hồ sơ đầy đủ' }),
+      'nhánh vét cũ đưa id đường truyền sang trang phần mềm — một trang trắng không lỗi nào báo',
+    ).toHaveAttribute('href', `/isp-lines/${ispId}`);
   });
 
   /**

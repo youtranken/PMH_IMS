@@ -32,6 +32,86 @@ interface AccountRow {
   lastLoginAt: string | null;
 }
 
+type AccountStatus = AccountRow['status'];
+
+/**
+ * BA trạng thái tài khoản, và việc đổi trạng thái hợp lệ ở từng trạng thái.
+ *
+ * ===== VÌ SAO LÀ BẢNG CHỨ KHÔNG PHẢI `if` =====
+ *
+ * Bản trước hỏi đúng một câu — `status === 'active'` — rồi chia đôi: hoạt động thì hiện
+ * "Khóa", CÒN LẠI thì hiện "Mở khóa". Nghĩa là một tài khoản đang **vô hiệu hóa** cũng được
+ * mời "Mở khóa", trong khi nó có bị khóa đâu.
+ *
+ * Câu chữ ấy không phải chuyện nhỏ: `auth.service.ts` cố ý trả HAI mã lỗi khác nhau
+ * (`ACCOUNT_LOCKED` / `ACCOUNT_DISABLED`) đúng vì khóa là tạm còn vô hiệu hóa là cho người đã
+ * nghỉ hẳn — người trực cần biết nên bảo người dùng chờ hay bảo họ gặp SA. Rồi màn quản trị
+ * gộp cả hai lại làm một cái nút.
+ *
+ * Kèm theo: `accounts.disable` là khóa dịch CHẾT — API nhận `disabled` từ lâu (`StatusDto`,
+ * có `assertNotLastSa` canh), nhưng giao diện không có đường nào đi tới, nên trạng thái thứ
+ * ba chỉ đặt được bằng `curl`. Bảng này mở đường đó ra.
+ *
+ * `Record<AccountStatus, …>` nên thêm trạng thái thứ tư là lỗi BIÊN DỊCH, không phải một
+ * dòng menu ghi nhầm việc.
+ */
+interface StatusAction {
+  key: string;
+  /** Khóa i18n của nhãn menu — dùng lại làm nhãn nút xác nhận, để hai chỗ không nói khác nhau. */
+  label: string;
+  /** Trạng thái sẽ ghi xuống. */
+  to: AccountStatus;
+  danger: boolean;
+  /** Khóa i18n của câu hỏi lại. `null` = không hỏi — việc TRẢ lại quyền thì không cần rào. */
+  confirm: string | null;
+}
+
+const STATUS_ACTIONS: Record<AccountStatus, StatusAction[]> = {
+  active: [
+    { key: 'lock', label: 'accounts.lock', to: 'locked', danger: true, confirm: 'accounts.confirmLock' },
+    {
+      key: 'disable',
+      label: 'accounts.disable',
+      to: 'disabled',
+      danger: true,
+      confirm: 'accounts.confirmDisable',
+    },
+  ],
+  locked: [
+    { key: 'unlock', label: 'accounts.unlock', to: 'active', danger: false, confirm: null },
+    {
+      key: 'disable',
+      label: 'accounts.disable',
+      to: 'disabled',
+      danger: true,
+      confirm: 'accounts.confirmDisable',
+    },
+  ],
+  /* Bật lại một tài khoản đã cho nghỉ thì PHẢI hỏi: nó khác hẳn mở một cái khóa tạm. */
+  disabled: [
+    {
+      key: 'reactivate',
+      label: 'accounts.reactivate',
+      to: 'active',
+      danger: false,
+      confirm: 'accounts.confirmReactivate',
+    },
+  ],
+};
+
+const STATUS_LABEL: Record<AccountStatus, string> = {
+  active: 'accounts.statusActive',
+  locked: 'accounts.statusLocked',
+  disabled: 'accounts.statusDisabled',
+};
+
+/** Khóa là tạm (`warn`), vô hiệu hóa là dứt (`danger`) — bản cũ tô cả hai cùng một màu đỏ. */
+const STATUS_TONE: Record<AccountStatus, string> = {
+  active: 'ok',
+  locked: 'warn',
+  disabled: 'danger',
+};
+
 interface SessionRow {
   id: string;
   ip: string | null;
@@ -143,14 +223,8 @@ export function AccountsScreen({ me }: { me: Me }) {
         accessorKey: 'status',
         header: t('accounts.status'),
         cell: ({ row }) => (
-          <span className={`badge ${row.original.status === 'active' ? 'ok' : 'danger'}`}>
-            {t(
-              row.original.status === 'active'
-                ? 'accounts.statusActive'
-                : row.original.status === 'locked'
-                  ? 'accounts.statusLocked'
-                  : 'accounts.statusDisabled',
-            )}
+          <span className={`badge ${STATUS_TONE[row.original.status]}`}>
+            {t(STATUS_LABEL[row.original.status])}
           </span>
         ),
       },
@@ -177,7 +251,6 @@ export function AccountsScreen({ me }: { me: Me }) {
         cell: ({ row }) => {
           const account = row.original;
           const rowBusy = setStatus.isPending || resetPassword.isPending || resetTotp.isPending;
-          const locking = account.status === 'active';
           return (
             <div className="action-cell">
               {/*
@@ -261,24 +334,24 @@ export function AccountsScreen({ me }: { me: Me }) {
                       })();
                     },
                   },
-                  {
-                    key: 'lock',
-                    label: locking ? t('accounts.lock') : t('accounts.unlock'),
-                    /* Khóa là lấy đi (người ta không đăng nhập được nữa); mở khóa thì không. */
-                    danger: locking,
+                  ...STATUS_ACTIONS[account.status].map((action) => ({
+                    key: action.key,
+                    label: t(action.label),
+                    /* Việc LẤY ĐI quyền (khóa, vô hiệu hóa) mới đỏ; trả lại thì không. */
+                    danger: action.danger,
                     disabled: setStatus.isPending,
                     onSelect: () => {
                       void (async () => {
-                        if (locking) {
+                        if (action.confirm) {
                           const ok = await askConfirm({
-                            message: t('accounts.confirmLock', { name: account.fullName }),
-                            danger: true,
-                            confirmLabel: t('accounts.lock'),
+                            message: t(action.confirm, { name: account.fullName }),
+                            danger: action.danger,
+                            confirmLabel: t(action.label),
                           });
                           if (!ok) return;
                         }
                         setStatus.mutate(
-                          { id: account.id, status: locking ? 'locked' : 'active' },
+                          { id: account.id, status: action.to },
                           {
                             onSuccess: () => void refresh(),
                             onError: (err) =>
@@ -287,7 +360,7 @@ export function AccountsScreen({ me }: { me: Me }) {
                         );
                       })();
                     },
-                  },
+                  })),
                 ]}
               />
             </div>
@@ -322,7 +395,7 @@ export function AccountsScreen({ me }: { me: Me }) {
       {accounts.isLoading ? (
         <Loading />
       ) : accounts.isError ? (
-        <LoadError onRetry={() => void accounts.refetch()} />
+        <LoadError error={accounts.error} onRetry={() => void accounts.refetch()} />
       ) : (
         <>
           <DataTable
@@ -470,7 +543,7 @@ function SessionsDialog({
          * bị chiếm — đọc "không còn phiên nào" rồi đóng lại là để nguyên phiên của kẻ đang
          * đăng nhập, và tin rằng mình đã kiểm tra xong.
          */
-        <LoadError onRetry={() => void sessions.refetch()} />
+        <LoadError error={sessions.error} onRetry={() => void sessions.refetch()} />
       ) : (sessions.data ?? []).length === 0 ? (
         <p className="muted">{t('common.empty')}</p>
       ) : (

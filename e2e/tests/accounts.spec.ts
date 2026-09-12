@@ -6,6 +6,7 @@ import {
   firstLogin,
   resetUsers,
   rowAction,
+  rowActionNames,
   SECOND_BROWSER,
   writeHeaders,
 } from './helpers';
@@ -101,6 +102,55 @@ test.describe('Quản trị tài khoản', () => {
 
     await rowAction(page, 'E2E Thành viên', 'Mở khóa');
     await expect(row.getByText('Đang hoạt động')).toBeVisible();
+  });
+
+  /*
+   * VÔ HIỆU HÓA LÀ VIỆC KHÁC KHÓA — và menu phải gọi đúng tên việc (rà UI/UX 12/09, mục #16).
+   *
+   * `users.status` có BA giá trị, `auth.service.ts` cố ý trả hai mã lỗi khác nhau cho hai
+   * trong số đó (khóa là tạm, vô hiệu hóa là cho người đã nghỉ hẳn), nhưng màn quản trị chỉ
+   * hỏi `status === 'active'` rồi chia đôi. Hậu quả: một tài khoản ĐANG VÔ HIỆU HÓA được mời
+   * bấm "Mở khóa" — trong khi nó có bị khóa đâu. Và vì giao diện không có đường nào đặt
+   * `disabled`, trạng thái thứ ba chỉ tới được bằng `curl`, nên chẳng ai nhìn thấy câu sai đó.
+   *
+   * Bài này đi cả vòng qua giao diện, và vế chốt là `not.toContain('Mở khóa')`.
+   */
+  test('vô hiệu hóa rồi kích hoạt lại — và tài khoản đã vô hiệu hóa KHÔNG được mời "Mở khóa"', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
+
+    const row = page.getByRole('row', { name: /E2E Thành viên/ });
+    await expect(row.getByText('Đang hoạt động')).toBeVisible();
+
+    expect(
+      await rowActionNames(page, 'E2E Thành viên'),
+      'tài khoản đang hoạt động phải có CẢ HAI đường: khóa tạm, và vô hiệu hóa hẳn',
+    ).toEqual(expect.arrayContaining(['Khóa', 'Vô hiệu hóa']));
+
+    await rowAction(page, 'E2E Thành viên', 'Vô hiệu hóa');
+    await confirmAction(page, 'Vô hiệu hóa');
+    await expect(
+      row.getByText('Vô hiệu hóa'),
+      'huy hiệu phải nói đúng trạng thái — "Đang khóa" ở đây là một câu sai',
+    ).toBeVisible();
+
+    const menu = await rowActionNames(page, 'E2E Thành viên');
+    expect(
+      menu,
+      'ĐÂY LÀ LỖI ĐÃ VÁ: tài khoản vô hiệu hóa không bị khóa, nên không có gì để "Mở khóa"',
+    ).not.toContain('Mở khóa');
+    expect(menu, 'thay vào đó là "Kích hoạt lại" — đúng tên việc sẽ xảy ra').toContain(
+      'Kích hoạt lại',
+    );
+
+    await rowAction(page, 'E2E Thành viên', 'Kích hoạt lại');
+    await confirmAction(page, 'Kích hoạt lại');
+    await expect(
+      row.getByText('Đang hoạt động'),
+      'kích hoạt lại phải mở THẬT, không chỉ đổi chữ',
+    ).toBeVisible();
   });
 
   test('tìm kiếm chạy phía server: tìm được cả người không nằm ở trang đang xem', async ({

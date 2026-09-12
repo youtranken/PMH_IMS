@@ -232,7 +232,7 @@ export function SoftwareScreen({ me }: { me: Me }) {
       {software.isLoading ? (
         <Loading />
       ) : software.isError ? (
-        <LoadError onRetry={() => void software.refetch()} />
+        <LoadError error={software.error} onRetry={() => void software.refetch()} />
       ) : rows.length === 0 ? (
         <EmptyState title={t('software.empty')} hint={t('software.emptyHint')} />
       ) : (

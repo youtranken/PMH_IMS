@@ -284,7 +284,7 @@ export function DevicesScreen({ me }: { me: Me }) {
       {devices.isLoading ? (
         <Loading />
       ) : devices.isError ? (
-        <LoadError onRetry={() => void devices.refetch()} />
+        <LoadError error={devices.error} onRetry={() => void devices.refetch()} />
       ) : rows.length === 0 ? (
         <EmptyState title={t('devices.empty')} hint={t('devices.emptyHint')} />
       ) : (

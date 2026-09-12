@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { describeLoadError } from '@/lib/load-error-text';
 
 /**
  * Hợp đồng loading/empty/error dùng chung (review nguyên tắc #8): mọi màn fetch phải PHÂN BIỆT
@@ -59,13 +60,27 @@ export function Loading({ label }: { label?: string }) {
   );
 }
 
-/** Khối "không tải được + Thử lại" dùng chung khi một màn fetch thất bại. */
-export function LoadError({ onRetry }: { onRetry: () => void }) {
+/**
+ * Khối "không tải được + Thử lại" dùng chung khi một màn fetch thất bại.
+ *
+ * `error` là BẮT BUỘC, cố ý. Nó vốn là prop tùy chọn trong đầu — và tùy chọn nghĩa là 38 chỗ
+ * gọi sẽ cứ thế bỏ qua, y như chúng đã bỏ qua suốt từ đầu dự án. Bắt buộc thì mỗi chỗ gọi mới
+ * là một lỗi biên dịch cho tới khi có người nối cái lỗi thật vào. Truyền `undefined` vẫn được
+ * (nhánh hỏng tự dựng, bài kiểm) nhưng phải VIẾT RA, tức là một quyết định chứ không phải
+ * một chỗ quên.
+ *
+ * Bảng nguyên nhân → câu chữ nằm ở `lib/load-error-text.ts` (hàm thuần, có bài kiểm riêng).
+ *
+ * `role="alert"`: khối này thay chỗ nội dung vừa biến mất, nên trình đọc màn hình phải nghe
+ * được ngay — chờ người dùng tự tab tới thì họ chỉ nghe thấy một trang trống.
+ */
+export function LoadError({ onRetry, error }: { onRetry: () => void; error: unknown }) {
   const { t } = useTranslation();
+  const described = describeLoadError(error);
   return (
-    <div className="load-error" style={{ padding: '1rem 0' }}>
+    <div className="load-error" role="alert" style={{ padding: '1rem 0' }}>
       <p style={{ color: 'var(--danger)', marginBottom: '.5rem' }}>
-        {t('app.loadError')}
+        {described.text ?? t(described.key)}
       </p>
       <button type="button" className="primary sm" onClick={onRetry}>
         {t('app.retry')}

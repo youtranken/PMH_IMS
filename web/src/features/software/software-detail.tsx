@@ -126,7 +126,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
       software.error.status === 404 ? (
       <NotFound />
     ) : (
-      <LoadError onRetry={() => void software.refetch()} />
+      <LoadError error={software.error} onRetry={() => void software.refetch()} />
     );
   }
 
@@ -291,7 +291,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
         ) : history.isLoading ? (
           <Loading />
         ) : history.isError ? (
-          <LoadError onRetry={() => void history.refetch()} />
+          <LoadError error={history.error} onRetry={() => void history.refetch()} />
         ) : (
           <HistoryPanel entries={toSoftwareHistory(history.data ?? [])} />
         )}

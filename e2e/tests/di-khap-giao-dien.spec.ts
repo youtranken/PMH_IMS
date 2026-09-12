@@ -1006,10 +1006,18 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     ).toHaveCount(0);
 
     // Nhưng bảng phải nói ra là nó hỏng, không được hoá thành "không có ai".
+    //
+    // Và từ 12/09 nó phải nói ra HỎNG VÌ SAO: `LoadError` nhận `error` rồi in đúng câu
+    // `roles.guard.ts` vừa gửi. Câu chung "Không tải được dữ liệu." ở đây là một câu SAI —
+    // nó mời người ta bấm "Thử lại" cho một lượt sẽ 403 y hệt, mãi mãi.
     await expect(
-      page.getByText('Không tải được dữ liệu.'),
+      page.getByText('Bạn không có quyền thực hiện thao tác này.'),
       'API 403 phải hiện thành lỗi tải; nuốt nó thành danh sách rỗng là nói dối người quản trị',
     ).toBeVisible();
+    await expect(
+      page.getByText('Không tải được dữ liệu.'),
+      'và KHÔNG được rơi về câu chung — câu của API cụ thể hơn, phải thắng',
+    ).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Thử lại' })).toBeVisible();
     await expect(
       page.getByText('Chưa có dữ liệu'),
@@ -1424,10 +1432,10 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
         `${path}: màn vẫn render vì hàng rào nằm ở API, không ở router`,
       ).toBeVisible();
 
-      // Vế quan trọng nhất: lỗi quyền phải NÓI RA LÀ LỖI.
+      // Vế quan trọng nhất: lỗi quyền phải NÓI RA LÀ LỖI — và nói đúng là lỗi QUYỀN.
       await expect(
-        page.getByText('Không tải được dữ liệu.'),
-        `${path}: 403 phải hiện thành khối lỗi + "Thử lại"`,
+        page.getByText('Bạn không có quyền thực hiện thao tác này.'),
+        `${path}: 403 phải hiện thành khối lỗi + "Thử lại", kèm đúng lý do`,
       ).toBeVisible();
       await expect(
         page.getByText(mustNotSay),
@@ -7087,8 +7095,19 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
      */
     expect(
       sapXep(await rowActionNames(page, hoTenSa)),
-      'menu của một tài khoản ĐANG HOẠT ĐỘNG phải còn đủ năm việc — rụng một mục là SA mất một cửa vào đúng lúc cần',
-    ).toEqual(sapXep(['Sửa', 'Phiên đang mở', 'Đặt lại mật khẩu', 'Đặt lại 2 lớp', 'Khóa']));
+      'menu của một tài khoản ĐANG HOẠT ĐỘNG phải còn đủ sáu việc — rụng một mục là SA mất một cửa vào đúng lúc cần',
+    ).toEqual(
+      /* "Vô hiệu hóa" thêm 12/09 (mục #16 bản rà soát): API nhận `disabled` từ lâu nhưng
+         giao diện không có đường nào tới, nên trạng thái thứ ba chỉ đặt được bằng `curl`. */
+      sapXep([
+        'Sửa',
+        'Phiên đang mở',
+        'Đặt lại mật khẩu',
+        'Đặt lại 2 lớp',
+        'Khóa',
+        'Vô hiệu hóa',
+      ]),
+    );
 
     // --- Bên trong hộp "Phiên đang mở". SA đang ngồi đây, nên chắc chắn có ít nhất một phiên.
     await rowAction(page, hoTenSa, 'Phiên đang mở');

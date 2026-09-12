@@ -8,8 +8,14 @@ export default {
     brand: 'IMS',
     brandFull: 'Quản lý hệ thống IT · PMH',
     loading: 'Đang tải…',
+    /* Bốn câu dưới đây là BỐN NGUYÊN NHÂN khác nhau của cùng một khối "không tải được", và
+       mỗi câu dẫn tới một việc khác nhau. Trước 12/09 cả bốn đều ra `loadError`. Bảng chọn
+       câu nằm ở `lib/load-error-text.ts`. */
     loadError: 'Không tải được dữ liệu.',
     serverUnreachable: 'Không kết nối được máy chủ. Kiểm tra mạng nội bộ rồi thử lại.',
+    forbidden: 'Bạn không có quyền xem phần này. Cần thì nhờ Quản trị cấp quyền.',
+    notFoundData: 'Không tìm thấy dữ liệu. Hồ sơ có thể đã bị xóa, hoặc đường dẫn đã cũ.',
+    serverError: 'Máy chủ đang gặp sự cố. Thử lại sau ít phút; vẫn vậy thì báo bộ phận IT.',
     retry: 'Thử lại',
     notFoundTitle: 'Không tìm thấy trang',
     notFoundHint: 'Trang bạn tìm không tồn tại hoặc thuộc epic chưa mở.',
@@ -601,6 +607,7 @@ export default {
     lock: 'Khóa',
     unlock: 'Mở khóa',
     disable: 'Vô hiệu hóa',
+    reactivate: 'Kích hoạt lại',
     neverLoggedIn: 'Chưa đăng nhập lần nào',
     temporaryPassword: 'Mật khẩu tạm',
     temporaryPasswordOf: 'Mật khẩu tạm — {{who}}',
@@ -608,7 +615,15 @@ export default {
       'Đọc mật khẩu này cho người dùng qua kênh an toàn. Hệ thống sẽ không hiển thị lại, ' +
       'và cũng không có cách nào xem lại — đóng hộp này là mất. Chưa ghi lại được thì đừng đóng.',
     temporaryPasswordDone: 'Tôi đã ghi lại mật khẩu này',
-    confirmLock: 'Khóa tài khoản {{name}}? Mọi phiên đang mở sẽ bị đăng xuất ngay.',
+    confirmLock:
+      'Khóa tài khoản {{name}}? Mọi phiên đang mở sẽ bị đăng xuất ngay. Đây là khóa TẠM — ' +
+      'dùng khi nghi tài khoản bị chiếm, và mở lại được bất cứ lúc nào.',
+    confirmDisable:
+      'Vô hiệu hóa tài khoản {{name}}? Mọi phiên đang mở sẽ bị đăng xuất ngay. Trạng thái này ' +
+      'dành cho người đã nghỉ hẳn — người dùng sẽ được bảo liên hệ SA, chứ không phải chờ mở.',
+    confirmReactivate:
+      'Cho tài khoản {{name}} hoạt động lại? Người dùng đăng nhập được ngay bằng mật khẩu cũ. ' +
+      'Nếu nghi mật khẩu đã lộ thì đặt lại mật khẩu trước rồi hãy bật.',
     confirmResetPassword: 'Đặt lại mật khẩu cho {{name}}? Người dùng sẽ phải đổi mật khẩu ở lần đăng nhập tới.',
     confirmResetTotp: 'Đặt lại xác thực 2 lớp cho {{name}}? Người dùng sẽ phải quét lại mã QR.',
     confirmKillSession: 'Đá phiên đăng nhập này?',
@@ -934,20 +949,25 @@ export default {
     tabAttachments: 'Giấy tờ',
     tabHistory: 'Lịch sử',
   },
+  /**
+   * Nhãn LOẠI CHỦ THỂ cất secret — dùng chung cho trang tổng két và màn Duyệt yêu cầu.
+   * Khóa nào có ở đây thì `lib/secret-owner-kinds.ts` giữ danh sách; thêm loại là TS đỏ.
+   */
+  ownerKind: {
+    device: 'Thiết bị',
+    software: 'Phần mềm',
+    serviceAccount: 'Tài khoản dịch vụ',
+    isp: 'Đường truyền',
+  },
   vaultHome: {
     title: 'Két sắt',
-    subtitle: 'Mọi thiết bị và phần mềm đang có mật khẩu cất trong hệ thống',
+    subtitle: 'Mọi hồ sơ đang có mật khẩu cất trong hệ thống — thiết bị, phần mềm, tài khoản dịch vụ, đường truyền',
     whereItLives:
       'Trang này liệt kê CHỦ THỂ đang giữ bí mật — máy nào, hồ sơ nào, mấy ngăn. Cố ý KHÔNG hiện tên hay giá trị của từng ngăn: không tồn tại một trang nào đọc được toàn bộ bí mật của công ty (FR-026). Bấm "Mở két" để xem từng ngăn, và vẫn phải gõ mã 6 số.',
     searchPlaceholder: 'Tìm theo mã, tên hoặc site…',
-    devices: 'Thiết bị',
-    software: 'Phần mềm',
     owner: 'Hồ sơ',
+    // Tiêu đề cột "Loại"; nhãn của từng loại nằm ở `ownerKind.*` (dùng chung với màn Duyệt).
     ownerKind: 'Loại',
-    kindDevice: 'Thiết bị',
-    kindSoftware: 'Phần mềm',
-    kindServiceAccount: 'Tài khoản dịch vụ',
-    serviceAccounts: 'Tài khoản dịch vụ',
     secretCount: 'Số ngăn',
     lastChange: 'Thay đổi gần nhất',
     open: 'Mở két',
@@ -1044,7 +1064,7 @@ export default {
   },
   approvals: {
     title: 'Duyệt yêu cầu',
-    subtitle: 'Yêu cầu xem tạm thời mật khẩu thiết bị và phần mềm.',
+    subtitle: 'Yêu cầu xem tạm thời mật khẩu đang cất trong két.',
     tabPending: 'Chờ duyệt',
     tabLog: 'Nhật ký',
     tabMine: 'Yêu cầu của tôi',
@@ -1053,9 +1073,9 @@ export default {
     emptyLog: 'Chưa có yêu cầu nào',
     // Tab "Yêu cầu của tôi" trước đây rơi vào nhánh else và mượn thông điệp của Nhật ký.
     emptyMine: 'Bạn chưa gửi yêu cầu nào',
+    // Nhãn của từng loại đối tượng nằm ở `ownerKind.*` — trước 12/09 ở đây chỉ có hai trên
+    // bốn loại, nên yêu cầu cho tài khoản dịch vụ và đường truyền in ra chính cái khóa.
     subject: 'Đối tượng',
-    subject_device: 'Thiết bị',
-    subject_software: 'Phần mềm',
     asked: 'Xin',
     hours: '{{hours}} giờ',
     decidedBy: 'Người quyết',

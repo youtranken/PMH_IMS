@@ -79,7 +79,7 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
       {rules.isLoading ? (
         <Loading />
       ) : rules.isError ? (
-        <LoadError onRetry={() => void rules.refetch()} />
+        <LoadError error={rules.error} onRetry={() => void rules.refetch()} />
       ) : rows.length === 0 ? (
         <EmptyState title={t('digest.empty')} hint={t('digest.emptyHint')} />
       ) : (

@@ -5,6 +5,7 @@ import { errorCode, errorMessage, useApiMutation } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
 import { formatDateTime, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
+import type { SecretOwnerType } from '@/lib/secret-owner-kinds';
 import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
@@ -17,16 +18,12 @@ import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 
-/**
- * SOI GƯƠNG `SECRET_OWNER_TYPES` phía API (`api/src/modules/vault/vault.service.ts`).
- * Thêm loại mới phải sửa CẢ HAI đầu — thiếu một bên là 400 lúc cất secret.
- */
 /*
- * Phải khớp `SECRET_OWNER_TYPES` bên API và CHECK `secret_owner_type_check` ở tầng DB.
- * Bài học 0033: whitelist ba tầng, tầng DB là tầng bị quên — TS xanh, unit test xanh, rồi 500
- * lúc chạy thật.
+ * Danh sách loại chủ thể đã dọn về `lib/secret-owner-kinds.ts` (12/09) — ở đó nó đứng cạnh
+ * bảng nhãn và có bài điểm danh đối chiếu thẳng mã nguồn API. Re-export để mọi nơi đang
+ * `import type { SecretOwnerType } from '@/ui/vault-panel'` vẫn đúng, mà chỉ còn MỘT khai báo.
  */
-export type SecretOwnerType = 'device' | 'software' | 'service_account' | 'isp';
+export type { SecretOwnerType };
 export type SecretKind = 'password' | 'license_key' | 'other';
 
 export interface AccessVerdict {
@@ -200,7 +197,7 @@ export function VaultPanel({
    * xem được", và thông điệp đó nghe hợp lý tới mức che mất một lỗi 404. Sai vì thiếu quyền
    * và sai vì hỏng phải nói ra hai câu khác nhau.
    */
-  if (verdict.isError) return <LoadError onRetry={() => void verdict.refetch()} />;
+  if (verdict.isError) return <LoadError error={verdict.error} onRetry={() => void verdict.refetch()} />;
   if (!allowed) return <p className="alert">{t('vault.noPermission')}</p>;
 
   const rows = secrets.data ?? [];
@@ -236,7 +233,7 @@ export function VaultPanel({
       {secrets.isLoading ? (
         <Loading />
       ) : secrets.isError ? (
-        <LoadError onRetry={() => void secrets.refetch()} />
+        <LoadError error={secrets.error} onRetry={() => void secrets.refetch()} />
       ) : rows.length === 0 ? (
         <EmptyState title={t('vault.empty')} hint={t('vault.emptyHint')} />
       ) : (

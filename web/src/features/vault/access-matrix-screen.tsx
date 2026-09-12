@@ -233,15 +233,15 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
       {loading ? (
         <Loading />
       ) : rules.isError ? (
-        <LoadError onRetry={() => void rules.refetch()} />
+        <LoadError error={rules.error} onRetry={() => void rules.refetch()} />
       ) : scopes.isError ? (
         // CỘT dựng từ `scopes`: thiếu nó thì lưới còn mỗi cột tên người — mọi nhóm chưa ai
         // được gán biến mất, đúng tập mà màn này sinh ra để chỉ ra.
-        <LoadError onRetry={() => void scopes.refetch()} />
+        <LoadError error={scopes.error} onRetry={() => void scopes.refetch()} />
       ) : accounts.isError ? (
         // DÒNG dựng từ `accounts`: thiếu nó thì lưới rỗng và đọc như "hệ thống chưa có ai",
         // chứ không phải một request hỏng.
-        <LoadError onRetry={() => void accounts.refetch()} />
+        <LoadError error={accounts.error} onRetry={() => void accounts.refetch()} />
       ) : people.length === 0 ? (
         <EmptyState title={t('access.noPeople')} />
       ) : columns.length === 0 ? (

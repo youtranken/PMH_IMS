@@ -91,7 +91,7 @@ export function LicenseAssignmentsPanel({
       {assignments.isLoading ? (
         <Loading />
       ) : assignments.isError ? (
-        <LoadError onRetry={() => void assignments.refetch()} />
+        <LoadError error={assignments.error} onRetry={() => void assignments.refetch()} />
       ) : rows.length === 0 ? (
         <EmptyState title={t('license.empty')} hint={t('license.emptyHint')} />
       ) : (
