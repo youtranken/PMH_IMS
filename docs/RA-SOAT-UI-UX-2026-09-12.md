@@ -9,7 +9,8 @@ Rà toàn bộ `web/src/` (204 file) + tầng DTO của API. **Không lặp lạ
 
 ## Bảng theo dõi — 39 mục
 
-**Xong 6 · Làm một phần 1 · Còn lại 32.**  ·  Đợt A xong 12/09.
+**Xong 6 · Làm một phần 1 · Còn lại 32.**  ·  Đợt A xong 12/09, đã lái tay qua trình duyệt thật
+(biên bản: `docs/BIEN-BAN-TEST-TAY-DOT-A-2026-09-12.md`).
 
 Cột **Kiểm**: `✓` = tôi đã tự mở code xác minh lại, không chỉ tin báo cáo. Chín mục đã kiểm.
 Cột **Đợt**: nhóm đã đề xuất làm cùng nhau — xem "Thứ tự đề xuất" ở cuối file.
