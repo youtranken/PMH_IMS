@@ -169,7 +169,9 @@ test.describe('Trang tổng Két sắt', () => {
     });
     expect(line.status()).toBe(201);
     const ispId = String(((await line.json()) as { id: string }).id);
-    await stash(page, 'isp', ispId, `pppoe-${stamp}`);
+    /* Nhãn phải mang chữ E2E: nếu hồ sơ gốc đã bị xoá trước thì ngăn két thành mồ côi,
+       và `secrets: DELETE ... label ILIKE '%E2E%'` là đường dọn CUỐI với tới nó. */
+    await stash(page, 'isp', ispId, `pppoe E2E ${stamp}`);
 
     const deviceCode = `PC-E2E-VK-${stamp}`;
     const deviceId = await createDevice(page, deviceCode);

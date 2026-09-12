@@ -181,6 +181,20 @@ const DOMAINS = {
   ],
 
   isp: [
+    /*
+     * LỖ ĐÃ VÁ 12/09: migration 0036 cho `secret.owner_type` nhận thêm `isp`, và dòng `file`
+     * ngay dưới được thêm cùng lúc — nhưng `secret` thì không. Ba loại chủ thể kia đều có
+     * dòng dọn secret của mình (`device` ở dòng 66, `software` 89, `service_account` 152);
+     * đường truyền đứng ngoài suốt.
+     *
+     * Hậu quả không phải rác nằm im: một ngăn két cất vào đường truyền E2E sống sót qua trọn
+     * lượt dọn, và `e2e/leak-guard.ts` làm ĐỎ cả lượt chạy — đúng như nó đã làm hôm nay, với
+     * một dòng `secret` owner_type='isp' duy nhất.
+     *
+     * PHẢI đứng TRƯỚC `DELETE FROM isp_line` bên dưới: xoá hồ sơ trước thì truy vấn con này
+     * không còn gì để khớp, và ngăn két thành mồ côi — không lượt dọn nào với tới nữa.
+     */
+    `DELETE FROM secret WHERE owner_type = 'isp' AND owner_id IN (SELECT id FROM isp_line WHERE code ILIKE '%E2E%')`,
     `DELETE FROM file WHERE owner_type = 'isp' AND owner_id IN (SELECT id FROM isp_line WHERE code ILIKE '%E2E%')`,
     `ALTER TABLE isp_line_history DISABLE TRIGGER isp_line_history_no_delete`,
     `DELETE FROM isp_line_history WHERE isp_line_id IN (SELECT id FROM isp_line WHERE code ILIKE '%E2E%')`,

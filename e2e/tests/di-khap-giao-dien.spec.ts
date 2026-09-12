@@ -7491,7 +7491,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
    * đủ" (xem xong két là cụt đường sang hồ sơ); hoặc một gạch trong "Luật của két" biến mất —
    * đó là chỗ DUY NHẤT trong sản phẩm nói cho người dùng biết luật mở két.
    */
-  test('Trang tổng Két sắt: ba nút lọc đổi bảng thật, popup mở đúng két, luật đủ bốn gạch', async ({
+  test('Trang tổng Két sắt: bốn nút lọc đổi bảng thật, popup mở đúng két, luật đủ bốn gạch', async ({
     page,
   }) => {
     test.setTimeout(150_000);
@@ -7516,20 +7516,27 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await expect(page.getByRole('heading', { level: 1, name: 'Két sắt' })).toBeVisible();
 
     /*
-     * BA nút lọc, khoanh bằng THUỘC TÍNH `aria-pressed` chứ không bằng tên.
+     * BỐN nút lọc, khoanh bằng THUỘC TÍNH `aria-pressed` chứ không bằng tên.
      *
-     * Chỉ ba nút lọc mang thuộc tính đó (`vault-home-screen.tsx`), nên lưới này khoanh trúng
-     * cả họ mà không phải liệt kê tên trước — nút lọc THỨ TƯ mọc thêm cũng rơi vào và làm đỏ.
+     * Chỉ nút lọc mang thuộc tính đó (`vault-home-screen.tsx`), nên lưới này khoanh trúng cả
+     * họ mà không phải liệt kê tên trước — nút lọc mọc thêm cũng rơi vào và làm đỏ.
+     *
+     * VÀ NÓ ĐÃ LÀM ĐÚNG VIỆC ĐÓ, 12/09: bản vá mục #2 thêm nút "Đường truyền" và bài này đỏ
+     * ngay. Trước bản vá, dãy nút gõ tay ba loại trong khi API có bốn — nên bật bất kỳ nút
+     * nào cũng làm mọi dòng đường truyền biến mất im lặng. Danh sách dưới đây nay sinh ra từ
+     * `SECRET_OWNER_TYPES`, tức thứ tự này là thứ tự khai bên API.
      */
     const table = main.getByRole('table');
     await expect(table, 'phải có bảng chủ thể trước khi đếm nút lọc').toBeVisible();
     expect(
       await toggleButtons(main),
-      'trang tổng phải có ĐÚNG ba nút lọc loại, và lúc mới vào cả ba đều đang TẮT',
+      'trang tổng phải có ĐÚNG bốn nút lọc loại — một cho mỗi loại chủ thể cất được secret — ' +
+        'và lúc mới vào cả bốn đều đang TẮT',
     ).toEqual([
       { ten: 'Thiết bị', bat: false },
       { ten: 'Phần mềm', bat: false },
       { ten: 'Tài khoản dịch vụ', bat: false },
+      { ten: 'Đường truyền', bat: false },
     ]);
 
     const deviceRow = table.getByRole('row', { name: new RegExp(deviceCode) });
@@ -7553,11 +7560,12 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
      */
     expect(
       await toggleButtons(main),
-      'bấm "Thiết bị" thì đúng một nút được bật, hai nút kia phải giữ nguyên trạng thái tắt',
+      'bấm "Thiết bị" thì đúng một nút được bật, ba nút kia phải giữ nguyên trạng thái tắt',
     ).toEqual([
       { ten: 'Thiết bị', bat: true },
       { ten: 'Phần mềm', bat: false },
       { ten: 'Tài khoản dịch vụ', bat: false },
+      { ten: 'Đường truyền', bat: false },
     ]);
 
     const rowsAfter = await table.getByRole('row').count();
