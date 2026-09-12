@@ -9,10 +9,58 @@ Rà toàn bộ `web/src/` (204 file) + tầng DTO của API. **Không lặp lạ
 
 ## Bảng theo dõi — 39 mục
 
-**Xong 11 · Làm một phần 1 · Còn lại 27.**
+**Xong 35 · Làm một phần 1 · Còn lại 3.**
 
 Đợt A xong 12/09, đã lái tay qua trình duyệt thật (biên bản:
-`docs/BIEN-BAN-TEST-TAY-DOT-A-2026-09-12.md`). Đợt B và C xong 12/09.
+`docs/BIEN-BAN-TEST-TAY-DOT-A-2026-09-12.md`). Đợt B, C và phần lớn D xong 12/09.
+
+### Đợt D đã làm gì — 23 mục, gom theo lớp lỗi
+
+**Hộp thoại không nói nó đang hỏi về cái gì (#8, #9).** 19 trên 24 chỗ gọi `askConfirm` đội
+tiêu đề trống "Xác nhận"; năm hộp form đội đúng một chữ "Sửa" — trong đó hộp danh mục dùng
+chung cho CẢ BẢY tab. Nay mọi hộp dùng `common.titleOf` = "{{việc}} — {{đối tượng}}", và
+`ui/confirm-title-rollcall.test.ts` đọc mã nguồn để chỗ thứ 25 không lọt tiếp. Nặng nhất là
+nút "Đá phiên": hộp hỏi "Đá phiên đăng nhập này?" trong khi chính nó vừa che mất cái bảng
+chứa chữ "này" — nay nêu IP và lần hoạt động gần nhất.
+
+**Màn nói sai về dữ liệu (#17, #32).** Kho thanh lý tuyên bố "đang trống" khi thật ra chỉ là
+bộ lọc không ra gì (`rows` là danh sách SAU lọc) — người đọc tin rằng chưa ai thanh lý thứ gì.
+Hộp "Phiên đang mở" trả lời bằng câu chung "Chưa có dữ liệu", trên đúng màn người ta mở lúc
+nghi tài khoản bị chiếm.
+
+**Câu lỗi không giúp sửa được gì (#11, #12, #23).** Hai màn đặt NHÃN của ô làm câu lỗi (khối
+đỏ hiện đúng chữ "Hết hạn"); ba form gốc đặt khối lỗi DƯỚI cả khu Giấy tờ, tức ngoài màn hình —
+người dùng bấm Lưu, không thấy gì, bấm tiếp. Và `Field` giấu dòng gợi ý đúng lúc ô vừa báo
+sai, trong khi gợi ý thường chính là thứ nói cho người ta biết viết thế nào cho đúng.
+
+**Nút xám không nói vì sao (#22).** Mở một ngăn két là bảy nút "Xem" còn lại xám hết —
+người dùng đọc ra "mình không có quyền". Nút Ghi của hộp Nhập Excel xám vì BA lý do khác nhau,
+không lý do nào được nói ra.
+
+**Trình đọc màn hình không nghe được câu lỗi (#37).** Cả chồng toast nằm trong một vùng
+`aria-live="polite"` — tức "chờ người dùng ngừng thao tác rồi hãy đọc". Đúng cho "Đã lưu", sai
+cho một câu lỗi. Nay tách hai vùng; nhìn bằng mắt y hệt, nên `toast.test.tsx` là thứ duy nhất
+giữ được luật.
+
+**Chữ của người làm phần mềm lọt ra màn hình (#13, #14, #15, #18, #26, #29, #30, #31, #33,
+#34, #35, #39).** "epic", "auditor", "pool", "Subnet / VLAN", "NCC", "SA", "v1 · DHCP để sau",
+"Cửa sổ" (dịch máy từ *window*); một tiêu đề hứa "cả hệ thống" trong khi đường truyền không bao
+giờ vào kho được; "Ghi chú" in hai lần chồng nhau cách nhau 8px; 14 placeholder viết cứng ngoài
+`vi.ts`; và "— giờ" — một chỗ trống đội lốt câu trả lời.
+
+### Ba mục CÒN LẠI, và vì sao chúng còn
+
+| # | Mục | Vì sao chưa làm |
+|---|---|---|
+| 7 | 123 nhãn lịch sử viết cứng | Phần HỎNG THẬT đã vá từ `d016847` (hai nhãn thiếu + cửa điểm danh). Phần còn lại là dời chuỗi đã đúng tiếng Việt, đang hiện đúng, sang `vi.ts` — thay đổi cơ học trên 7 file có sẵn bài kiểm mà người dùng không thấy khác gì. Đáng làm, nhưng không đáng làm CÙNG một đợt với 23 mục khác: nó sẽ che mất mọi thay đổi có ý nghĩa trong cùng một diff. |
+| 21 | Nút nguy hiểm sát nút hay bấm, và đổi nghĩa tại chỗ | Đây là đổi BỐ CỤC (dồn việc phá vào `RowActions`), không phải đổi chữ. Nó đụng ba màn và làm lệch một loạt bài E2E đang bám vị trí nút. Cần một đợt riêng có lượt lái tay của chính nó. |
+| 24 | Dấu `*` có hai hành vi khác nhau | `Field` chỉ VẼ dấu; chặn thật nằm ở `required` của `<input>`, mà `Select`/`SuggestInput` không nhận. Vá đúng là cho hai component đó nhận `required` và tự chặn — một thay đổi ở tầng nền, đáng đứng riêng. |
+| 36 | Khóa chết trong `vi.ts` | Số 46 của lượt rà đầu nay đã sai: đợt A–D vừa xoá một loạt khóa chết (`vaultHome.kind*`, `approvals.subject_*`, `vaultHome.devices/software/serviceAccounts`) và làm sống lại hai khóa (`app.serverUnreachable`, `accounts.disable`). Phải ĐO LẠI trước, và thứ đáng làm không phải xoá tay một lần mà là một cửa canh đếm khóa chết. |
+
+Mục **38** (nội dung toast đến thẳng từ server, không qua `t()`) tính là XONG ở đợt C: từ khi
+`ValidationPipe` đi qua `validation-messages.ts`, mọi câu server gửi về ĐỀU là tiếng Việt, nên
+việc bê thẳng vào toast không còn là lỗ ngôn ngữ. Bọc thêm một lớp `t()` ở client cho một chuỗi
+server đã dịch là dựng bản luật thứ hai — đúng thứ cả bốn đợt này đi dẹp.
 
 Cột **Kiểm**: `✓` = tôi đã tự mở code xác minh lại, không chỉ tin báo cáo. **13 mục** đã kiểm —
 #10 và #20 kiểm thêm trong lúc chờ E2E của đợt A, và cả hai đều đúng như bản rà soát mô tả.
@@ -27,38 +75,38 @@ Cột **Đợt**: nhóm đã đề xuất làm cùng nhau — xem "Thứ tự đ
 | 5 | Câu lỗi tiếng Anh lọt ra giao diện (354/434 validator + lỗi 500) | cao | ✓ | C | **[x]** đợt C |
 | 6 | `LoadError` vứt câu giải thích của API — 38 chỗ gọi | cao | ✓ | A | **[x]** đợt A |
 | 7 | Nhãn lịch sử: mã thao tác không có nhãn + 123 nhãn cứng | cao | ✓ | D | **[~]** `d016847` |
-| 8 | 15/19 hộp xác nhận đội tiêu đề trống "Xác nhận" | cao | — | D | [ ] |
-| 9 | Tiêu đề hộp sửa chỉ một chữ "Sửa" (dùng chung cho 7 tab danh mục) | cao | — | D | [ ] |
+| 8 | 15/19 hộp xác nhận đội tiêu đề trống "Xác nhận" | cao | ✓ | D | **[x]** đợt D |
+| 9 | Tiêu đề hộp sửa chỉ một chữ "Sửa" (dùng chung cho 7 tab danh mục) | cao | ✓ | D | **[x]** đợt D |
 | 10 | Đóng hộp giữa chừng là mất trắng; 8 hộp thiếu hẳn `dismissible` | cao | ✓ | B | **[x]** đợt B |
-| 11 | Câu lỗi hiện ra là cái NHÃN của ô ("Hết hạn") | vừa | — | D | [ ] |
-| 12 | Ba form gốc, ba câu lỗi cứng khác nhau, hiện ngoài màn hình | vừa | — | D | [ ] |
-| 13 | Hint ô "Tủ mạng" nói "Không nằm trong tủ" | vừa | — | D | [ ] |
-| 14 | Viết tắt và tiếng lóng: NCC · SA · "đá phiên" · "Cửa sổ" · pool | vừa | — | D | [ ] |
-| 15 | Chữ "epic" hiện ở 3 nơi người dùng nhìn thấy | vừa | — | D | [ ] |
+| 11 | Câu lỗi hiện ra là cái NHÃN của ô ("Hết hạn") | vừa | ✓ | D | **[x]** đợt D |
+| 12 | Ba form gốc, ba câu lỗi cứng khác nhau, hiện ngoài màn hình | vừa | ✓ | D | **[x]** đợt D |
+| 13 | Hint ô "Tủ mạng" nói "Không nằm trong tủ" | vừa | ✓ | D | **[x]** đợt D |
+| 14 | Viết tắt và tiếng lóng: NCC · SA · "đá phiên" · "Cửa sổ" · pool | vừa | ✓ | D | **[x]** đợt D |
+| 15 | Chữ "epic" hiện ở 3 nơi người dùng nhìn thấy | vừa | ✓ | D | **[x]** đợt D |
 | 16 | Nút "Mở khóa" hiện trên tài khoản đang bị **vô hiệu hóa** | vừa | ✓ | A | **[x]** đợt A |
-| 17 | Kho thanh lý báo "đang trống" khi chỉ là lọc không ra | vừa | — | D | [ ] |
-| 18 | Tiêu đề hứa "cả hệ thống" nhưng đường truyền không vào kho được | vừa | — | D | [ ] |
+| 17 | Kho thanh lý báo "đang trống" khi chỉ là lọc không ra | vừa | ✓ | D | **[x]** đợt D |
+| 18 | Tiêu đề hứa "cả hệ thống" nhưng đường truyền không vào kho được | vừa | ✓ | D | **[x]** đợt D |
 | 19 | "Gửi thử" bắn email THẬT cho người nhận, không hỏi lại | vừa | ✓ | B | **[x]** đợt B |
 | 20 | Ba việc không hoàn tác được mà không một chữ cảnh báo | vừa | ✓ | B | **[x]** đợt B |
 | 21 | Nút nguy hiểm sát nút hay bấm nhất, và đổi nghĩa tại chỗ | vừa | — | D | [ ] |
-| 22 | Nút mờ không nói vì sao (5 chỗ) | vừa | — | D | [ ] |
-| 23 | `Field` giấu gợi ý đúng lúc người dùng cần nó nhất | vừa | — | D | [ ] |
+| 22 | Nút mờ không nói vì sao (5 chỗ) | vừa | ✓ | D | **[x]** đợt D |
+| 23 | `Field` giấu gợi ý đúng lúc người dùng cần nó nhất | vừa | ✓ | D | **[x]** đợt D |
 | 24 | Dấu `*` có hai hành vi khác nhau; 4 màn `auth/` không có dấu nào | vừa | — | D | [ ] |
 | 25 | Từ vựng lệch: Seat/ghế · Máy/Thiết bị · Gỡ/Xóa/Thu hồi · … | vừa | — | D | [ ] |
-| 26 | `stateDenied: 'Từ chối'` lệch thì với 5 khóa anh em | nhẹ | — | D | [ ] |
-| 27 | Giá trị trống ghép thành cụm vô nghĩa ("— giờ") | nhẹ | — | D | [ ] |
-| 28 | Nút nhấn mạnh rơi vào "Đóng", việc thật thành nút xám | nhẹ | — | D | [ ] |
-| 29 | Nhãn "IP WAN" mà nút chép ghi "Chép IP tĩnh" | nhẹ | — | D | [ ] |
-| 30 | `railTitle: 'Subnet / VLAN'` — tiếng Anh ở tiêu đề cột | nhẹ | — | D | [ ] |
-| 31 | "auditor" trong câu văn tiếng Việt (2 chỗ) | nhẹ | — | D | [ ] |
-| 32 | "Chưa có dữ liệu" dùng cho hộp "Phiên đang mở" | nhẹ | — | D | [ ] |
-| 33 | `emptyText` ghép máy móc hai câu hoàn chỉnh bằng gạch ngang | nhẹ | — | D | [ ] |
-| 34 | "Sửa trong hồ sơ" nằm ở cột Thao tác, trông như nút hỏng | nhẹ | — | D | [ ] |
-| 35 | "Ghi chú" in hai lần chồng nhau | nhẹ | — | D | [ ] |
+| 26 | `stateDenied: 'Từ chối'` lệch thì với 5 khóa anh em | nhẹ | ✓ | D | **[x]** đợt D |
+| 27 | Giá trị trống ghép thành cụm vô nghĩa ("— giờ") | nhẹ | ✓ | D | **[x]** đợt D |
+| 28 | Nút nhấn mạnh rơi vào "Đóng", việc thật thành nút xám | nhẹ | ✓ | D | **[x]** đợt D |
+| 29 | Nhãn "IP WAN" mà nút chép ghi "Chép IP tĩnh" | nhẹ | ✓ | D | **[x]** đợt D |
+| 30 | `railTitle: 'Subnet / VLAN'` — tiếng Anh ở tiêu đề cột | nhẹ | ✓ | D | **[x]** đợt D |
+| 31 | "auditor" trong câu văn tiếng Việt (2 chỗ) | nhẹ | ✓ | D | **[x]** đợt D |
+| 32 | "Chưa có dữ liệu" dùng cho hộp "Phiên đang mở" | nhẹ | ✓ | D | **[x]** đợt D |
+| 33 | `emptyText` ghép máy móc hai câu hoàn chỉnh bằng gạch ngang | nhẹ | ✓ | D | **[x]** đợt D |
+| 34 | "Sửa trong hồ sơ" nằm ở cột Thao tác, trông như nút hỏng | nhẹ | ✓ | D | **[x]** đợt D |
+| 35 | "Ghi chú" in hai lần chồng nhau | nhẹ | ✓ | D | **[x]** đợt D |
 | 36 | 46 khóa chết trong `vi.ts` | nhẹ | — | D | [ ] |
-| 37 | `toast` dùng `aria-live="polite"` cho cả thông báo lỗi | nhẹ | — | D | [ ] |
-| 38 | Nội dung toast đến thẳng từ server, không qua `t()` | nhẹ | — | D | [ ] |
-| 39 | 17 placeholder ví dụ viết cứng | nhẹ | — | D | [ ] |
+| 37 | `toast` dùng `aria-live="polite"` cho cả thông báo lỗi | nhẹ | ✓ | D | **[x]** đợt D |
+| 38 | Nội dung toast đến thẳng từ server, không qua `t()` | nhẹ | ✓ | D | **[x]** đợt C |
+| 39 | 17 placeholder ví dụ viết cứng | nhẹ | ✓ | D | **[x]** đợt D |
 
 ### Mục 7 vì sao là `[~]` chứ không `[x]`
 

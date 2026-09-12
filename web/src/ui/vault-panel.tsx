@@ -210,10 +210,15 @@ export function VaultPanel({
           không hiểu vì sao. */}
       {!isAdmin && verdict.data ? (
         <p className={verdict.data.canReveal ? 'alert' : 'alert warn'}>
+          {/* `expiresAt` rỗng thì `formatDateTime` trả dấu gạch, và câu thành "Bạn được xem
+              tới —. Hết giờ là tự cắt." — một câu tự mâu thuẫn. Quyền không hạn thì nói là
+              không hạn. */}
           {verdict.data.grant
-            ? t('vault.grantUntil', {
-                until: formatDateTime(verdict.data.grant.expiresAt ?? ''),
-              })
+            ? verdict.data.grant.expiresAt
+              ? t('vault.grantUntil', {
+                  until: formatDateTime(verdict.data.grant.expiresAt),
+                })
+              : t('vault.grantNoLimit')
             : t(`vault.tierNote_${verdict.data.tier}`)}
         </p>
       ) : null}
@@ -268,6 +273,14 @@ export function VaultPanel({
                           type="button"
                           className="btn sm"
                           disabled={opening !== null}
+                          /* Mở MỘT ngăn là bảy nút "Xem" còn lại xám hết, và không gì nói vì
+                             sao — người dùng đọc ra "mình không có quyền". Nói thẳng: đang
+                             bận mở cái kia, xong thì bấm được. */
+                          title={
+                            opening !== null && opening !== secret.id
+                              ? t('vault.revealBusy')
+                              : undefined
+                          }
                           onClick={() => void openSecret(secret)}
                         >
                           {opening === secret.id ? t('common.loading') : t('vault.reveal')}
@@ -311,6 +324,10 @@ export function VaultPanel({
                               onSelect: () => {
                                 void (async () => {
                                   const ok = await askConfirm({
+                                    title: t('common.titleOf', {
+                                      action: t('vault.revoke'),
+                                      subject: secret.label,
+                                    }),
                                     message: t('vault.confirmRevoke', { label: secret.label }),
                                     danger: true,
                                     confirmLabel: t('vault.revoke'),

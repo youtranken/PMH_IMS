@@ -120,7 +120,10 @@ test.describe('API hỏng phải nói ra, không được hóa thành rỗng', (
      * Vế phủ định là vế quan trọng: chính "Chưa có dữ liệu" mới là câu nói dối. Thiếu dòng
      * này thì một bản sửa hiện CẢ HAI câu cùng lúc vẫn xanh, mà màn hình thì vẫn lừa người đọc.
      */
-    await expect(dialog.getByText('Chưa có dữ liệu')).toHaveCount(0);
+    /* Câu rỗng của hộp này đổi 12/09: 'Chưa có dữ liệu' là chữ của một cái bảng trống,
+       còn màn NÀY người ta mở đúng lúc nghi tài khoản bị chiếm — câu trả lời phải là một
+       khẳng định đọc được. Bài vẫn chốt đúng điều cũ: API hỏng thì KHÔNG được nói câu đó. */
+    await expect(dialog.getByText('Không còn phiên đăng nhập nào đang mở.')).toHaveCount(0);
   });
 
   test('ô chọn thiết bị ở form NAT: tìm kiếm hỏng thì nói hỏng, không nói "không có máy"', async ({

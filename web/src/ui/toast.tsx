@@ -73,7 +73,6 @@ function ToastIcon({ tone }: { tone: ToastTone }) {
  * rê ra thì đồng hồ chạy tiếp đúng phần thời gian còn lại.
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const { t } = useTranslation();
   const [items, setItems] = useState<ToastItem[]>([]);
   const nextId = useRef(1);
   const timers = useRef(new Map<number, ToastTimer>());
@@ -122,28 +121,69 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
+      {/*
+        CÂU LỖI PHẢI ĐƯỢC ĐỌC NGAY (12/09) — và vai `alert` nằm trên TỪNG DÒNG, không phải
+        trên vùng chứa.
+
+        Vấn đề: cả chồng toast nằm trong một `aria-live="polite"`, nghĩa là "chờ người dùng
+        ngừng thao tác rồi hãy đọc". Đúng cho "Đã lưu hồ sơ", SAI cho một câu lỗi — người dùng
+        vừa bấm Lưu và đang gõ tiếp, trình đọc màn hình lặng lẽ xếp hàng, và họ đi tiếp trong
+        khi lượt ghi đã hỏng.
+
+        BẢN ĐẦU dựng HAI vùng chứa, vùng lỗi mang `role="alert"`. Sai, và bộ E2E chỉ ra ngay:
+        vùng ấy luôn nằm trong DOM kể cả khi rỗng, nên MỌI trang của sản phẩm bỗng có thêm một
+        `alert` thứ hai — sáu bài đang hỏi "câu lỗi trên màn đăng nhập nói gì" đỏ vì
+        `getByRole('alert')` trúng hai phần tử. Đó không chỉ là phiền cho bài kiểm: một vùng
+        `alert` rỗng vĩnh viễn là thứ trình đọc màn hình phải bước qua trên mọi trang.
+
+        Bản này đặt `role="alert"` lên chính DÒNG toast lỗi. Một phần tử mang vai `alert` vừa
+        được chèn vào trang thì được đọc ngay — đúng thứ ta cần — và khi không có lỗi thì
+        không có `alert` nào tồn tại cả. Vùng chứa giữ nguyên `role="status"`, nên mọi chỗ
+        đang bám `getByRole('status')` vẫn đúng.
+      */}
       <div className="toast-stack" role="status" aria-live="polite">
         {items.map((item) => (
-          <div
-            key={item.id}
-            className={`toast toast-${item.tone}`}
-            onMouseEnter={() => pause(item.id)}
-            onMouseLeave={() => resume(item.id)}
-          >
-            <ToastIcon tone={item.tone} />
-            <span>{item.message}</span>
-            <button
-              type="button"
-              className="toast-close"
-              aria-label={t('toast.close')}
-              onClick={() => remove(item.id)}
-            >
-              ×
-            </button>
-          </div>
+          <ToastRow key={item.id} item={item} onPause={pause} onResume={resume} onClose={remove} />
         ))}
       </div>
     </ToastContext.Provider>
+  );
+}
+
+/** Một dòng toast. Tách ra để hai vùng `aria-live` dùng chung đúng MỘT bản đánh dấu —
+ *  hai bản chép tay sẽ trôi lệch, và cái trôi lệch là cái ít người nhìn: vùng báo lỗi. */
+function ToastRow({
+  item,
+  onPause,
+  onResume,
+  onClose,
+}: {
+  item: ToastItem;
+  onPause: (id: number) => void;
+  onResume: (id: number) => void;
+  onClose: (id: number) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div
+      className={`toast toast-${item.tone}`}
+      /* Chỉ dòng LỖI mang vai `alert`; "Đã lưu" mà cắt ngang thứ người dùng đang nghe thì
+         họ sẽ tắt hẳn thông báo đi. */
+      role={item.tone === 'error' ? 'alert' : undefined}
+      onMouseEnter={() => onPause(item.id)}
+      onMouseLeave={() => onResume(item.id)}
+    >
+      <ToastIcon tone={item.tone} />
+      <span>{item.message}</span>
+      <button
+        type="button"
+        className="toast-close"
+        aria-label={t('toast.close')}
+        onClick={() => onClose(item.id)}
+      >
+        ×
+      </button>
+    </div>
   );
 }
 

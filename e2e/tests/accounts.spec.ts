@@ -83,7 +83,7 @@ test.describe('Quản trị tài khoản', () => {
 
     await rowAction(page, 'E2E Super Admin', 'Phiên đang mở');
     await expect(page.getByRole('dialog')).toContainText('Phiên đang mở');
-    await expect(page.getByRole('button', { name: 'Đá phiên' }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Đóng phiên' }).first()).toBeVisible();
   });
 
   test('khóa rồi mở lại tài khoản (hồi quy: body chỉ được chứa field của DTO)', async ({ page }) => {
@@ -227,7 +227,7 @@ test.describe('Quản trị tài khoản', () => {
       // Lọc theo nội dung: lát nữa hộp xác nhận mở chồng lên, `getByRole('dialog')` trơ
       // sẽ khớp hai cái và Playwright báo strict mode.
       const dialog = page.getByRole('dialog').filter({ hasText: 'Phiên đang mở' });
-      await dialog.getByRole('button', { name: 'Đá phiên' }).first().click();
+      await dialog.getByRole('button', { name: 'Đóng phiên' }).first().click();
       // Đá phiên có hỏi lại ("Đá phiên đăng nhập này?") — không bấm Đồng ý thì chưa có gì xảy ra.
       await confirmAction(page);
 

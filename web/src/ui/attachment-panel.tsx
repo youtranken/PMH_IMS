@@ -205,6 +205,10 @@ export function AttachmentPanel({
                           onClick={() => {
                             void (async () => {
                               const ok = await askConfirm({
+                                title: t('common.titleOf', {
+                                  action: t('attachments.remove'),
+                                  subject: row.originalName,
+                                }),
                                 message: t('attachments.confirmRemove', {
                                   name: row.originalName,
                                 }),

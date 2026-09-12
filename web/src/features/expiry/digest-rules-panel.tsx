@@ -152,6 +152,10 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
                               onSelect: () => {
                                 void (async () => {
                                   const ok = await askConfirm({
+                                    title: t('common.titleOf', {
+                                      action: t('digest.test'),
+                                      subject: rule.name,
+                                    }),
                                     message: t('digest.confirmTest', {
                                       to: rule.recipients.join(', '),
                                     }),
@@ -182,6 +186,10 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
                               onSelect: () => {
                                 void (async () => {
                                   const ok = await askConfirm({
+                                    title: t('common.titleOf', {
+                                      action: t('digest.delete'),
+                                      subject: rule.name,
+                                    }),
                                     message: t('digest.confirmDelete', { name: rule.name }),
                                     danger: true,
                                     confirmLabel: t('digest.delete'),
@@ -276,7 +284,11 @@ function RuleForm({
       dismissible={!save.isPending}
       guardUnsaved
       maxWidth={640}
-      title={rule ? t('digest.edit') : t('digest.add')}
+      title={
+        rule
+          ? t('common.titleOf', { action: t('digest.edit'), subject: rule.name })
+          : t('digest.add')
+      }
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>

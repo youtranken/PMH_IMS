@@ -112,6 +112,19 @@ export function ImportDialog<TRow>({
             type="button"
             className="btn primary"
             disabled={!plan || hasErrors || writable === 0 || busy}
+            /* BỐN lý do làm nút này xám, và bản cũ không nói lý do nào. Người dùng đối chiếu
+               xong, thấy nút chết, và không biết là do file sai hay do mình chưa bấm gì. */
+            title={
+              busy
+                ? undefined
+                : !plan
+                  ? t('importDialog.needCheck')
+                  : hasErrors
+                    ? t('importDialog.hasErrors')
+                    : writable === 0
+                      ? t('importDialog.nothing')
+                      : undefined
+            }
             onClick={() => void run('commit')}
           >
             {t('importDialog.confirm')}

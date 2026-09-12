@@ -7,6 +7,7 @@ import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
 import {
+  catalogLabel,
   SERVICE_PROTOCOLS,
   type CabinetRow,
   type CatalogEntity,
@@ -136,7 +137,13 @@ export function CatalogForm({
       dismissible={!save.isPending}
       guardUnsaved
       maxWidth={560}
-      title={row ? t('catalog.edit') : t(ADD_KEY[entity])}
+      /* Hộp này dùng chung cho CẢ BẢY tab danh mục, nên một chữ "Sửa" không nói được
+         đang sửa cái gì của nhóm nào. */
+      title={
+        row
+          ? t('common.titleOf', { action: t('catalog.edit'), subject: catalogLabel(entity, row) })
+          : t(ADD_KEY[entity])
+      }
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
@@ -203,7 +210,7 @@ export function CatalogForm({
               <Select
                 value={form.siteId}
                 ariaLabel={t('catalog.site')}
-                placeholder="— Chọn site —"
+                placeholder={t('catalog.pickSite')}
                 failed={lists.isError}
                 options={(lists.data?.sites ?? []).map((site) => ({
                   value: site.id,

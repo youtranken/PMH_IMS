@@ -130,7 +130,7 @@ export function IspForm({
           e.preventDefault();
           setError(null);
           if (!form.code.trim() || !form.provider.trim()) {
-            setError('Cần ít nhất mã đường truyền và tên nhà mạng.');
+            setError(t('isp.needMinimum'));
             return;
           }
           save.mutate(
@@ -179,6 +179,18 @@ export function IspForm({
           );
         }}
       >
+        {/*
+          Khối lỗi nằm ở ĐẦU form, không phải ở cuối (12/09, rà UI/UX #12).
+
+          Bản cũ đặt nó ngay trên `</form>`, tức DƯỚI cả khu Giấy tờ đính kèm. Trên một form
+          dài như thế này thì nó nằm ngoài màn hình: người dùng bấm Lưu, không thấy gì xảy
+          ra, và bấm tiếp vài lần nữa. Câu lỗi có tồn tại cũng như không.
+        */}
+        {error ? (
+          <p className="alert error" role="alert">
+            {error}
+          </p>
+        ) : null}
         <FormSection title={t('isp.tabProfile')} columns={3}>
           <Field label={t('isp.code')} required htmlFor="isp-code">
             <input
@@ -340,11 +352,6 @@ export function IspForm({
           <AttachmentDraftSection draft={draft} disabled={busy} />
         )}
 
-        {error ? (
-          <p className="alert error" role="alert">
-            {error}
-          </p>
-        ) : null}
       </form>
     </Dialog>
   );

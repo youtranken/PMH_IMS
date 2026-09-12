@@ -258,7 +258,7 @@ export function ServiceAccountForm({
               id="sa-login"
               className="inp mono"
               required={!form.code.trim()}
-              placeholder="ketoan@pmh.com.vn"
+              placeholder={t('serviceAccounts.phLogin')}
               value={form.login}
               onChange={(e) => set('login', e.target.value)}
             />
@@ -368,7 +368,7 @@ export function ServiceAccountForm({
                 id="sa-ips"
                 className="inp mono"
                 rows={2}
-                placeholder="203.113.1.5, 118.70.2.0/24"
+                placeholder={t('serviceAccounts.phAllowedIps')}
                 value={form.allowedIps}
                 onChange={(e) => set('allowedIps', e.target.value)}
               />
@@ -404,7 +404,9 @@ export function ServiceAccountForm({
           </FormSection>
         )}
 
-        <FormSection title={t('serviceAccounts.note')} columns={1}>
+        {/* Khu chỉ có ĐÚNG một ô, nên tiêu đề khu và nhãn ô nói y hệt nhau, hai dòng chồng
+            nhau cách nhau 8px. Bỏ tiêu đề khu — nhãn ô mới là thứ ô nhập cần. */}
+        <FormSection columns={1}>
           <Field label={t('serviceAccounts.note')} hint={t('serviceAccounts.noteHint')} htmlFor="sa-note">
             <textarea
               id="sa-note"

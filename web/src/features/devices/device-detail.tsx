@@ -209,6 +209,10 @@ export function DeviceDetail({ me }: { me: Me }) {
                      * nó phải là điều người dùng nói ra.
                      */
                     const answer = await askConfirm({
+                      title: t("common.titleOf", {
+                        action: t("devices.retire"),
+                        subject: item.code,
+                      }),
                       message: t("devices.confirmRetire", { name: item.code }),
                       danger: true,
                       confirmLabel: t("devices.retire"),

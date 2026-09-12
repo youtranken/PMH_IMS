@@ -112,7 +112,20 @@ export function DisposalScreen() {
       ) : items.isError ? (
         <LoadError error={items.error} onRetry={() => void items.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState title={t('disposal.empty')} hint={t('disposal.emptyHint')} />
+        /*
+         * "KHO ĐANG TRỐNG" ≠ "BỘ LỌC KHÔNG RA GÌ" — và bản cũ nói cả hai bằng một câu.
+         *
+         * `rows` là danh sách SAU lọc, nên gõ một từ khóa không khớp là màn tuyên bố kho rỗng.
+         * Người đọc tin rằng chưa ai thanh lý thứ gì, trong khi có thể đang có vài chục hồ sơ
+         * nằm đó — chỉ là không khớp chữ vừa gõ. Hỏi `items.data` (TRƯỚC lọc) mới phân biệt
+         * được, và mỗi vế dẫn tới một việc khác nhau: một bên là bỏ bớt lọc, bên kia là
+         * không có gì để làm cả.
+         */
+        (items.data ?? []).length === 0 ? (
+          <EmptyState title={t('disposal.empty')} hint={t('disposal.emptyHint')} />
+        ) : (
+          <EmptyState title={t('disposal.noHit')} hint={t('disposal.noHitHint')} />
+        )
       ) : (
         <div className="table-wrap">
           <table className="table table-stack">

@@ -162,6 +162,10 @@ export function PortMapPanel({
                                   onSelect: () => {
                                     void (async () => {
                                       const ok = await askConfirm({
+                                        title: t('common.titleOf', {
+                                          action: t('ports.remove'),
+                                          subject: port.portLabel,
+                                        }),
                                         message: t('ports.confirmRemove', {
                                           port: port.portLabel,
                                         }),
@@ -317,7 +321,11 @@ function PortForm({
       dismissible={!save.isPending}
       guardUnsaved
       maxWidth={620}
-      title={port ? t('ports.edit') : t('ports.add')}
+      title={
+        port
+          ? t('common.titleOf', { action: t('ports.edit'), subject: port.portLabel })
+          : t('ports.add')
+      }
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
@@ -420,7 +428,7 @@ function PortForm({
           <input
             id="port-vlan"
             className="inp mono"
-            placeholder="20"
+            placeholder={t('ports.phPort')}
             value={vlan}
             onChange={(e) => setVlan(e.target.value)}
           />

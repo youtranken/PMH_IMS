@@ -137,6 +137,10 @@ export function LicenseSeatsExpand({
                   onClick={() => {
                     void (async () => {
                       const ok = await askConfirm({
+                        title: t('common.titleOf', {
+                          action: t('license.release'),
+                          subject: seat.deviceCode,
+                        }),
                         message: t('license.confirmRelease', { device: seat.deviceCode }),
                         danger: true,
                         confirmLabel: t('license.release'),

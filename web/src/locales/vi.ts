@@ -18,7 +18,7 @@ export default {
     serverError: 'Máy chủ đang gặp sự cố. Thử lại sau ít phút; vẫn vậy thì báo bộ phận IT.',
     retry: 'Thử lại',
     notFoundTitle: 'Không tìm thấy trang',
-    notFoundHint: 'Trang bạn tìm không tồn tại hoặc thuộc epic chưa mở.',
+    notFoundHint: 'Trang bạn tìm không tồn tại, hoặc thuộc phần chưa mở trong bản này.',
     backHome: 'Về trang chủ',
     confirmTitle: 'Xác nhận',
     confirmOk: 'Đồng ý',
@@ -119,6 +119,10 @@ export default {
        trong bảng mang cùng một tên: trình đọc màn hình đọc y hệt nhau, và `getByRole` của bài
        kiểm khớp cả hai chục dòng cùng lúc. */
     actionsOf: 'Thao tác với {{subject}}',
+    /* Tiêu đề của MỌI hộp — hỏi lại lẫn form: việc sắp làm — với cái gì. Trước 12/09, 19 trên 24 hộp
+       đội tiêu đề trống "Xác nhận" (`app.confirmTitle`), nên hộp mở ra từ dòng thứ sáu trong
+       một bảng thì không còn gì nói cho người đọc biết họ đang đụng vào hàng nào. */
+    titleOf: '{{action}} — {{subject}}',
     yes: 'Có',
     no: 'Không',
     copy: 'Sao chép',
@@ -141,6 +145,7 @@ export default {
     totpSub: 'Mở ứng dụng Authenticator và nhập mã 6 số',
     totpCode: 'Mã xác thực',
     totpVerify: 'Xác nhận',
+    totpNeedSix: 'Nhập đủ 6 số rồi mới bấm được.',
     enrollTitle: 'Cài xác thực 2 lớp',
     enrollSub: 'Quét mã QR bằng Google Authenticator hoặc Microsoft Authenticator',
     enrollQrAlt: 'Mã QR cài xác thực 2 lớp',
@@ -180,7 +185,7 @@ export default {
     components: 'Bộ giao diện',
     groupWork: 'Nghiệp vụ',
     groupAdmin: 'Hệ thống',
-    plannedHint: 'Màn hình thuộc epic sau — chưa mở',
+    plannedHint: 'Phần này chưa mở trong bản hiện tại',
   },
   catalog: {
     title: 'Danh mục',
@@ -231,6 +236,7 @@ export default {
     status: 'Trạng thái',
     active: 'Đang dùng',
     inactive: 'Đã vô hiệu',
+    pickSite: '— Chọn site —',
     searchSite: 'Tìm theo mã hoặc tên site',
     searchCabinet: 'Tìm theo mã tủ, site hoặc mô tả',
     searchDeviceType: 'Tìm theo tên loại',
@@ -256,6 +262,7 @@ export default {
     importNothing: 'Không có dòng nào cần ghi — file trùng khớp với dữ liệu đang có.',
     importHasErrors: 'Còn dòng lỗi. Sửa trong file rồi đối chiếu lại — chưa ghi gì cả.',
     importDone: 'Đã nhập: thêm {{created}}, cập nhật {{updated}}.',
+    emptyHint: 'Chưa khai mục nào. Thêm tay, hoặc dùng "Nhập Excel" với file tải từ nút "Tải file mẫu".',
     templateHint: 'Chưa có danh mục? Tải file mẫu, điền rồi nhập lại — nhanh hơn gõ tay từng mục.',
     readOnly: 'Bạn chỉ có quyền xem danh mục. Cần sửa thì nhờ Admin.',
   },
@@ -302,13 +309,23 @@ export default {
     allCabinets: 'Tất cả tủ',
     allTypes: 'Tất cả loại',
     allStatuses: 'Mọi trạng thái',
-    noCabinet: 'Không nằm trong tủ',
-    noVendor: 'Chưa rõ nhà cung cấp',
+    /* `noCabinet`/`noVendor` là nhãn của LỰA CHỌN RỖNG trong ô chọn, không phải lời giải
+       thích cho cả ô. Trước 12/09 `noCabinet` bị đem làm `hint` của ô "Tủ mạng", nên dưới ô
+       hiện dòng xám "Không nằm trong tủ" — đọc như một khẳng định về cái máy đang khai. */
+    noCabinet: '— Không nằm trong tủ —',
+    noVendor: '— Chưa rõ nhà cung cấp —',
+    cabinetHint: 'Tủ nào trong site đã chọn. Máy để bàn hay máy lẻ thì bỏ trống.',
+    pickType: '— Chọn loại —',
+    noSitePick: '— Chưa gán site —',
+    phPurchase: 'VD 12.500.000',
     tabProfile: 'Hồ sơ',
     tabHistory: 'Lịch sử',
     tabAttachments: 'Giấy tờ',
     tabPortMap: 'Port map',
     saved: 'Đã lưu hồ sơ thiết bị.',
+    /* Ba câu "cần ít nhất…" của ba form gốc trước 12/09 viết CỨNG trong component, mỗi
+       form một kiểu, và lọt qua vì chúng nằm trong `setError('…')` chứ không phải trên JSX. */
+    needMinimum: 'Cần ít nhất: mã thiết bị, tên và loại thiết bị.',
     statusChanged: 'Đã đổi trạng thái thiết bị.',
     /* Câu cũ kết bằng "Hồ sơ vẫn còn trong sổ, chỉ khóa lại." — đúng, nhưng nó trấn an về
        phần KHÔNG mất, ngay bên cạnh một ô tick thả ra BA thao tác phá không hoàn tác được.
@@ -331,7 +348,8 @@ export default {
     importExcel: 'Nhập từ Excel',
     importTitle: 'Nhập thiết bị từ Excel',
     importHint:
-      'Dùng file tải từ nút "Tải file mẫu" (hoặc file vừa Xuất Excel). Danh mục phải khai trước — hệ thống không tự tạo site/tủ/loại/NCC.',
+      'Dùng file tải từ nút "Tải file mẫu" (hoặc file vừa Xuất Excel). Danh mục phải khai trước — ' +
+      'hệ thống không tự tạo site, tủ mạng, loại thiết bị hay nhà cung cấp.',
     exportHint: 'Xuất đúng những gì đang lọc trên màn hình.',
     noteHint: 'KHÔNG ghi mật khẩu ở đây. Mật khẩu thiết bị cất trong Két sắt.',
     historyCreated: 'Tạo hồ sơ',
@@ -380,6 +398,7 @@ export default {
     edit: 'Sửa',
     remove: 'Xóa',
     port: 'Cổng',
+    phPort: '20',
     connectedTo: 'Đầu kia',
     peerDevice: 'Thiết bị đầu kia',
     peerDeviceHint: 'Gõ ít nhất 2 ký tự để tìm theo mã, tên hoặc serial.',
@@ -399,6 +418,8 @@ export default {
   importDialog: {
     pick: 'Chọn file .xlsx',
     check: 'Đối chiếu',
+    /* Nút Ghi xám vì BA lý do khác nhau; hai câu dưới đã có sẵn, thiếu mỗi câu này. */
+    needCheck: 'Bấm "Đối chiếu" trước để xem file sẽ ghi những gì.',
     confirm: 'Xác nhận ghi',
     nothing: 'Không có dòng nào cần ghi — file trùng khớp với dữ liệu đang có.',
     hasErrors: 'Còn dòng lỗi. Sửa trong file rồi đối chiếu lại — chưa ghi gì cả.',
@@ -441,6 +462,7 @@ export default {
     empty: 'Chưa có hồ sơ nào khớp bộ lọc.',
     emptyHint: 'Thêm license, SSL hoặc tên miền để hệ thống nhắc gia hạn giúp.',
     saved: 'Đã lưu hồ sơ.',
+    needMinimum: 'Cần ít nhất: mã hồ sơ và tên hồ sơ.',
     back: 'Về danh sách',
     tabProfile: 'Hồ sơ',
     tabDevices: 'Máy đang dùng',
@@ -497,7 +519,7 @@ export default {
   isp: {
     title: 'Đường truyền',
     contract: 'Hợp đồng',
-    copyWanIp: 'Chép IP tĩnh',
+    copyWanIp: 'Chép IP WAN',
     subtitle: 'Đứt cáp lúc 2 giờ sáng: hotline và số hợp đồng có ngay trên danh sách',
     add: 'Thêm đường truyền',
     edit: 'Sửa hồ sơ',
@@ -529,6 +551,7 @@ export default {
     empty: 'Chưa có đường truyền nào khớp bộ lọc.',
     emptyHint: 'Thêm đường ISP để lúc sự cố có hotline và số hợp đồng trong 30 giây.',
     saved: 'Đã lưu hồ sơ đường truyền.',
+    needMinimum: 'Cần ít nhất: mã đường truyền và tên nhà mạng.',
     back: 'Về danh sách',
     tabProfile: 'Hồ sơ',
     tabAttachments: 'Giấy tờ',
@@ -551,7 +574,7 @@ export default {
     kind: 'Loại',
     end: 'Hết hạn',
     state: 'Tình trạng',
-    window: 'Cửa sổ',
+    window: 'Khoảng thời gian',
     windowDays: 'Trong {{days}} ngày tới',
     allKinds: 'Tất cả loại',
     expired: 'Đã quá hạn',
@@ -562,7 +585,9 @@ export default {
     renewHint: 'Nhập hạn MỚI. Hạn cũ được giữ trong lịch sử gia hạn để đối chiếu.',
     newEnd: 'Hạn mới',
     pickDate: 'Chọn hạn mới.',
-    notRenewable: 'Sửa trong hồ sơ',
+    /* Nằm ở cột Thao tác nên nó đọc như một NÚT, mà bấm thì không có gì xảy ra. Viết lại
+       thành một câu trạng thái: loại hạn này không gia hạn tại đây được. */
+    notRenewable: 'Không gia hạn tại đây',
     tabList: 'Danh sách',
     empty: 'Không có gì sắp hết hạn trong cửa sổ này.',
     emptyHint: 'Nới cửa sổ ra 90 hoặc 180 ngày để nhìn xa hơn.',
@@ -586,7 +611,7 @@ export default {
     scope: 'Theo dõi loại',
     scopeHint: 'Không tick loại nào = theo dõi MỌI loại, kể cả loại thêm về sau.',
     allKinds: 'Mọi loại',
-    withinDays: 'Cửa sổ (ngày)',
+    withinDays: 'Trong vòng (ngày)',
     within: 'Trong {{days}} ngày tới',
     recipients: 'Người nhận',
     recipientsHint: 'Nhiều email cách nhau bằng dấu phẩy. Người nhận không cần có tài khoản IMS.',
@@ -604,11 +629,13 @@ export default {
   },
   accounts: {
     title: 'Tài khoản',
-    subtitle: 'SA tạo, khóa, đặt lại mật khẩu và đá phiên đăng nhập',
+    subtitle: 'Super Admin tạo, khóa, đặt lại mật khẩu và đóng phiên đăng nhập từ xa',
     create: 'Thêm tài khoản',
     edit: 'Sửa hồ sơ',
     profileSaved: 'Đã lưu hồ sơ tài khoản.',
     fullName: 'Họ tên',
+    phPhone: '0912 345 678',
+    phEmployeeCode: 'NV-0123',
     email: 'Email',
     phone: 'Số điện thoại',
     birthDate: 'Ngày sinh',
@@ -621,7 +648,11 @@ export default {
     totpRequired: 'Bắt buộc 2 lớp',
     totpEnrolled: 'Đã cài 2 lớp',
     sessions: 'Phiên đang mở',
-    killSession: 'Đá phiên',
+    noSessions: 'Không còn phiên đăng nhập nào đang mở.',
+    /* KHÔNG dùng chữ "Đăng xuất": sidebar đã có một nút tên đúng như vậy, và hai việc
+       khác hẳn nhau (tự thoát ra / buộc người khác thoát). Cửa canh
+       `e2e/tests/logout-qua-mot-cua.spec.ts` cũng quét đúng chữ đó. */
+    killSession: 'Đóng phiên',
     resetPassword: 'Đặt lại mật khẩu',
     resetTotp: 'Đặt lại 2 lớp',
     /* Chuỗi này trước đây viết CỨNG trong `accounts-screen.tsx` — lọt qua vì nó nằm trong
@@ -649,7 +680,13 @@ export default {
       'Nếu nghi mật khẩu đã lộ thì đặt lại mật khẩu trước rồi hãy bật.',
     confirmResetPassword: 'Đặt lại mật khẩu cho {{name}}? Người dùng sẽ phải đổi mật khẩu ở lần đăng nhập tới.',
     confirmResetTotp: 'Đặt lại xác thực 2 lớp cho {{name}}? Người dùng sẽ phải quét lại mã QR.',
-    confirmKillSession: 'Đá phiên đăng nhập này?',
+    /* "Phiên NÀY" là chữ chỉ có nghĩa khi người đọc còn nhìn thấy cái bảng — mà hộp thoại
+       vừa che nó đi. Nêu thẳng IP và lần hoạt động gần nhất: đó là hai thứ phân biệt được
+       phiên của chính mình với phiên của kẻ đang chiếm tài khoản. */
+    confirmKillSession:
+      'Đá phiên đăng nhập từ IP {{ip}} (hoạt động gần nhất {{seen}})? Người đang dùng phiên đó ' +
+      'bị đăng xuất ngay. Nếu đó là phiên của chính bạn thì bạn sẽ phải đăng nhập lại.',
+    sessionKilled: 'Đã đóng phiên đó — người dùng bị đăng xuất ngay.',
     roleSa: 'Super Admin',
     roleAdmin: 'Quản trị',
     roleMember: 'Thành viên',
@@ -697,6 +734,7 @@ export default {
     noteHint: 'Đừng viết mật khẩu vào đây — ghi chú không được mã hóa.',
     updatedAt: 'Cập nhật',
     reveal: 'Xem',
+    revealBusy: 'Đang mở một ngăn khác — xong sẽ bấm được.',
     strengthLabel: 'Độ khó của giá trị',
     strengthLength: 'từ 8 ký tự',
     strengthLower: 'chữ thường',
@@ -729,15 +767,16 @@ export default {
       'Đã gửi yêu cầu, nhưng số giờ xin vượt trần hệ thống — chỉ còn {{hours}} giờ khi được duyệt.',
     awaitingApproval: 'Đang chờ duyệt',
     grantUntil: 'Bạn được xem tới {{until}}. Hết giờ là tự cắt.',
+    grantNoLimit: 'Bạn đang được xem ngăn này, không đặt hạn giờ.',
     tierNote_needs_approval: 'Đối tượng này cần được duyệt trước khi xem. Bấm "Xin quyền xem".',
     tierNote_whitelist: 'Bạn xem thẳng được — vẫn phải gõ mã 6 số mỗi lần.',
     tierNote_denied: 'Bạn không có quyền trên đối tượng này.',
   },
   ipam: {
     title: 'Địa chỉ IP',
-    subtitle: 'v1 chỉ quản IP tĩnh · DHCP để sau — mọi IP có chủ, không cấp trùng',
+    subtitle: 'Chỉ quản IP tĩnh — mọi IP đều có chủ, không ai cấp trùng',
     back: 'Về danh sách dải',
-    railTitle: 'Subnet / VLAN',
+    railTitle: 'Dải mạng / VLAN',
     railLabel: 'Danh sách dải mạng',
     vlan: 'VLAN',
     vlanBadge: 'VLAN {{vlan}}',
@@ -751,6 +790,9 @@ export default {
     empty: 'Chưa khai dải nào',
     emptyHint: 'Khai dải LAN (vd 172.16.10.0/24) rồi mới tạo được hồ sơ IP bên trong.',
     cidr: 'Dải',
+    phCidr: '172.16.10.0/24',
+    phVlan: '20',
+    phGateway: '172.16.10.1',
     cidrHint: 'Dạng 172.16.10.0/24. Gõ IP bất kỳ kèm /24 cũng được — hệ thống tự quy về địa chỉ mạng.',
     name: 'Tên gọi',
     site: 'Site',
@@ -825,7 +867,8 @@ export default {
     transitioned: 'Đã đổi trạng thái.',
     reasonHint: 'Ghi lại để sau này còn tra. Không bắt buộc, nhưng nên có.',
     reclaimHint:
-      'Thu hồi sẽ gỡ thiết bị và người dùng khỏi hồ sơ, trả địa chỉ về pool. Lịch sử vẫn giữ nguyên — sau này vẫn tra được IP này từng của ai.',
+      'Thu hồi sẽ gỡ thiết bị và người dùng khỏi hồ sơ, trả địa chỉ về danh sách IP còn trống. ' +
+      'Lịch sử vẫn giữ nguyên — sau này vẫn tra được IP này từng của ai.',
     trAssign: 'Cấp IP',
     trSuspect: 'Nghi chết',
     trReclaim: 'Thu hồi',
@@ -841,7 +884,8 @@ export default {
     saved: 'Đã lưu rule NAT.',
     removed: 'Đã gỡ rule.',
     empty: 'Chưa có rule NAT nào',
-    emptyHint: 'Mỗi lần mở port trên Draytek thì ghi vào đây — auditor sẽ hỏi, và cuốn sổ này là câu trả lời.',
+    emptyHint:
+      'Mỗi lần mở port trên Draytek thì ghi vào đây — bên kiểm toán sẽ hỏi, và cuốn sổ này là câu trả lời.',
     search: 'Tìm theo port, IP, người dùng hoặc lý do…',
     site: 'Site',
     allSites: 'Mọi site',
@@ -894,10 +938,12 @@ export default {
     sectionWhy: 'Mở cho ai và vì sao',
     internal: 'Đích bên trong',
     internalIp: 'IP trong',
+    phExternalPorts: '80',
+    phInternalIp: '172.16.10.5',
     internalPort: 'Port trong',
     usedBy: 'Mở cho ai',
     usedByPlaceholder: 'Chọn bộ phận hoặc gõ tên người…',
-    usedByHint: 'Người hoặc bộ phận dùng dịch vụ này. Đây là câu auditor sẽ hỏi.',
+    usedByHint: 'Người hoặc bộ phận dùng dịch vụ này. Đây là câu bên kiểm toán sẽ hỏi.',
     reason: 'Lý do mở',
     reasonHint: 'Không có lý do thì sau này không ai dám đóng, và port cứ nằm mở mãi.',
     enabled: 'Đang bật',
@@ -911,6 +957,8 @@ export default {
     removeReasonPlaceholder: 'vd: dịch vụ đã ngừng',
   },
   serviceAccounts: {
+    phLogin: 'ketoan@pmh.com.vn',
+    phAllowedIps: '203.113.1.5, 118.70.2.0/24',
     title: 'Tài khoản dịch vụ',
     subtitle: 'Tài khoản dùng chung và tài khoản VPN — mật khẩu cất trong két, không nằm ở đây',
     add: 'Thêm tài khoản',
@@ -1015,7 +1063,10 @@ export default {
   },
   disposal: {
     title: 'Kho thanh lý',
-    subtitle: 'Mọi hồ sơ đã ngừng dùng của cả hệ thống về một chỗ — thiết bị, phần mềm, tài khoản',
+    /* Câu cũ hứa "cả hệ thống" nhưng đường truyền KHÔNG bao giờ vào kho này: `isp-detail`
+       không có nút ngừng dùng nào, nên hợp đồng "Đã cắt" không hiện ở đâu cả. Nói đúng ba
+       loại đang có, thay vì hứa một thứ sản phẩm chưa làm. */
+    subtitle: 'Thiết bị, phần mềm và tài khoản dịch vụ đã ngừng dùng — gom về một chỗ',
     note: 'Hồ sơ trong kho KHÔNG còn được tính hạn và không vào email nhắc gia hạn. Muốn dùng lại thì mở hồ sơ gốc và đổi trạng thái.',
     search: 'Tìm theo mã, tên hoặc loại…',
     filterKind: 'Lọc theo loại hồ sơ',
@@ -1033,7 +1084,11 @@ export default {
       'Đưa hồ sơ {{code}} vào kho thanh lý? Nó sẽ không còn được tính hạn và không vào email nhắc gia hạn. Ghế đã gán vẫn giữ nguyên để tra cứu.',
     done: 'Đã đưa vào kho thanh lý.',
     empty: 'Kho thanh lý đang trống',
-    emptyHint: 'Chưa hồ sơ nào bị thanh lý hay vô hiệu hóa.',
+    emptyHint: 'Chưa có hồ sơ nào bị thanh lý hay vô hiệu hóa.',
+    /* Hai câu này KHÁC HẲN câu trên: kho có hàng, chỉ là bộ lọc đang che đi. Gộp làm một là
+       tuyên bố sai về dữ liệu của công ty (rà UI/UX 12/09, mục #17). */
+    noHit: 'Không có hồ sơ nào khớp bộ lọc',
+    noHitHint: 'Kho vẫn có hồ sơ — thử bỏ bớt lọc loại, hoặc tìm bằng mã (vd SRV-01).',
   },
   access: {
     title: 'Quyền xem két sắt',
@@ -1106,6 +1161,7 @@ export default {
     subject: 'Đối tượng',
     asked: 'Xin',
     hours: '{{hours}} giờ',
+    hoursUnknown: 'Không ghi số giờ',
     decidedBy: 'Người quyết',
     expiresAt: 'Hết hạn',
     alreadyOver: 'Đã qua hạn — quyền đã tự cắt.',
@@ -1125,7 +1181,7 @@ export default {
     note: 'Ghi chú cho người xin',
     statePending: 'Chờ duyệt',
     stateApproved: 'Đã duyệt',
-    stateDenied: 'Từ chối',
+    stateDenied: 'Đã từ chối',
     stateCancelled: 'Đã hủy',
     stateExpired: 'Hết hạn',
     stateRevoked: 'Đã thu hồi',
@@ -1140,7 +1196,10 @@ export default {
     incidents: 'Sự cố tuần qua',
     incidentsEmpty: 'Tuần qua không có sự cố nào.',
     // "Chưa có phần này" KHÁC HẲN "tuần qua không có sự cố" — đọc nhầm là tưởng mọi thứ yên.
-    incidentsNotYet: 'Phần quản lý sự cố chưa mở (Epic 9). Hệ thống CHƯA theo dõi mục này.',
+    /* "Epic 9" là cách ĐỘI LÀM đánh số công việc, không phải thứ người dùng biết. Câu này
+       vẫn phải giữ nguyên sức nặng: nói THẲNG là hệ thống chưa theo dõi, đừng để khối
+       rỗng làm sếp yên tâm nhầm. */
+    incidentsNotYet: 'Phần quản lý sự cố chưa mở trong bản này. Hệ thống CHƯA theo dõi mục này.',
     breakGlass: 'Break-glass tuần qua',
     breakGlassEmpty: 'Tuần qua không ai xin quyền xem tạm thời.',
     seeAllBreakGlass: 'Xem nhật ký đầy đủ',

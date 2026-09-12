@@ -120,7 +120,7 @@ export function DeviceForm({
   const submit = () => {
     setError(null);
     if (!form.code.trim() || !form.name.trim() || !form.deviceTypeId) {
-      setError('Cần ít nhất: mã thiết bị, tên và loại thiết bị.');
+      setError(t('devices.needMinimum'));
       return;
     }
     save.mutate(buildBody(form), {
@@ -177,6 +177,18 @@ export function DeviceForm({
           submit();
         }}
       >
+        {/*
+          Khối lỗi nằm ở ĐẦU form, không phải ở cuối (12/09, rà UI/UX #12).
+
+          Bản cũ đặt nó ngay trên `</form>`, tức DƯỚI cả khu Giấy tờ đính kèm. Trên một form
+          dài như thế này thì nó nằm ngoài màn hình: người dùng bấm Lưu, không thấy gì xảy
+          ra, và bấm tiếp vài lần nữa. Câu lỗi có tồn tại cũng như không.
+        */}
+        {error ? (
+          <p className="alert error" role="alert">
+            {error}
+          </p>
+        ) : null}
         <FormSection title={t('devices.tabProfile')} columns={3}>
           <Field label={t('devices.code')} required htmlFor="device-code">
             <input
@@ -201,7 +213,7 @@ export function DeviceForm({
             <Select
               value={form.deviceTypeId}
               ariaLabel={t('devices.type')}
-              placeholder="— Chọn loại —"
+              placeholder={t('devices.pickType')}
               options={(lists.data?.deviceTypes ?? []).map((type) => ({
                 value: type.id,
                 label: type.name,
@@ -255,7 +267,7 @@ export function DeviceForm({
             <Select
               value={form.siteId}
               ariaLabel={t('devices.site')}
-              placeholder="— Chưa gán site —"
+              placeholder={t('devices.noSitePick')}
               options={(lists.data?.sites ?? []).map((site) => ({
                 value: site.id,
                 label: `${site.code} — ${site.name}`,
@@ -264,11 +276,11 @@ export function DeviceForm({
               onChange={(value) => set('siteId', value)}
             />
           </Field>
-          <Field label={t('devices.cabinet')} hint={t('devices.noCabinet')}>
+          <Field label={t('devices.cabinet')} hint={t('devices.cabinetHint')}>
             <Select
               value={form.cabinetId}
               ariaLabel={t('devices.cabinet')}
-              placeholder="— Không nằm trong tủ —"
+              placeholder={t('devices.noCabinet')}
               options={cabinets.map((cabinet) => ({
                 value: cabinet.id,
                 label: `${cabinet.siteCode} · ${cabinet.code}`,
@@ -306,7 +318,7 @@ export function DeviceForm({
             <Select
               value={form.vendorId}
               ariaLabel={t('devices.vendor')}
-              placeholder="— Chưa rõ NCC —"
+              placeholder={t('devices.noVendor')}
               options={(lists.data?.vendors ?? []).map((vendor) => ({
                 value: vendor.id,
                 label: vendor.name,
@@ -370,11 +382,6 @@ export function DeviceForm({
           <AttachmentDraftSection draft={draft} disabled={busy} />
         )}
 
-        {error ? (
-          <p className="alert error" role="alert">
-            {error}
-          </p>
-        ) : null}
       </form>
     </Dialog>
   );

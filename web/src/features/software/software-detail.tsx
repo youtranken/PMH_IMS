@@ -379,7 +379,9 @@ function RenewDialog({
           e.preventDefault();
           setError(null);
           if (!endDate) {
-            setError(t("software.renewHint"));
+            /* Bản cũ đặt chính câu HINT đang hiện xám ngay trên ô làm câu lỗi: khối đỏ và
+               dòng xám nói y hệt nhau, nên người dùng đọc xong vẫn không biết phải sửa gì. */
+            setError(t("expiry.pickDate"));
             return;
           }
           renew.mutate(

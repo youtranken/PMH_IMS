@@ -164,6 +164,10 @@ export function LicenseAssignmentsPanel({
                         onClick={() => {
                           void (async () => {
                             const ok = await askConfirm({
+                              title: t('common.titleOf', {
+                                action: t('license.release'),
+                                subject: row.deviceCode,
+                              }),
                               message: t('license.confirmRelease', { device: row.deviceCode }),
                               danger: true,
                               confirmLabel: t('license.release'),

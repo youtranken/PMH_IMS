@@ -319,7 +319,9 @@ function RenewDialog({
           e.preventDefault();
           setError(null);
           if (!endDate) {
-            setError(t("isp.endDate"));
+            /* `isp.endDate` là NHÃN của ô ("Hết hạn"). Đặt nó làm câu lỗi thì khối đỏ hiện
+               đúng một chữ "Hết hạn" — không nói được là thiếu, sai, hay quá khứ. */
+            setError(t("expiry.pickDate"));
             return;
           }
           renew.mutate(

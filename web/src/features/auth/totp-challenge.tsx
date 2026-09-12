@@ -35,7 +35,13 @@ export function TotpChallenge() {
         }}
       >
         <OtpInput value={token} onChange={setToken} label={t('auth.totpCode')} />
-        <button type="submit" className="btn primary" disabled={verify.isPending || token.length !== 6}>
+        <button
+          type="submit"
+          className="btn primary"
+          disabled={verify.isPending || token.length !== 6}
+          /* Nút xám vì mã chưa đủ 6 số — nói ra, đừng để người dùng bấm rồi tự đoán. */
+          title={token.length !== 6 ? t('auth.totpNeedSix') : undefined}
+        >
           {t('auth.totpVerify')}
         </button>
       </form>

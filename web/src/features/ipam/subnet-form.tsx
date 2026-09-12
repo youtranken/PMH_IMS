@@ -44,7 +44,11 @@ export function SubnetForm({
       dismissible={!save.isPending}
       guardUnsaved
       maxWidth={560}
-      title={subnet ? t('ipam.editSubnet') : t('ipam.addSubnet')}
+      title={
+        subnet
+          ? t('common.titleOf', { action: t('ipam.editSubnet'), subject: subnet.cidr })
+          : t('ipam.addSubnet')
+      }
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
@@ -93,7 +97,7 @@ export function SubnetForm({
             id="subnet-cidr"
             className="inp mono"
             required
-            placeholder="172.16.10.0/24"
+            placeholder={t('ipam.phCidr')}
             value={cidr}
             onChange={(e) => setCidr(e.target.value)}
           />
@@ -114,7 +118,7 @@ export function SubnetForm({
             id="subnet-vlan"
             className="inp mono"
             inputMode="numeric"
-            placeholder="20"
+            placeholder={t('ipam.phVlan')}
             value={vlan}
             onChange={(e) => setVlan(e.target.value)}
           />
@@ -126,7 +130,7 @@ export function SubnetForm({
           <input
             id="subnet-gateway"
             className="inp mono"
-            placeholder="172.16.10.1"
+            placeholder={t('ipam.phGateway')}
             value={gateway}
             onChange={(e) => setGateway(e.target.value)}
           />

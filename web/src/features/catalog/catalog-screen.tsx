@@ -321,6 +321,12 @@ export function CatalogScreen({ me }: { me: Me }) {
                   onSelect: () => {
                     void (async () => {
                       const ok = await askConfirm({
+                        title: t('common.titleOf', {
+                          action: t(
+                            catalogRow.active ? 'catalog.deactivate' : 'catalog.activate',
+                          ),
+                          subject: name,
+                        }),
                         message: t(
                           catalogRow.active
                             ? 'catalog.confirmDeactivate'
@@ -351,6 +357,10 @@ export function CatalogScreen({ me }: { me: Me }) {
                   onSelect: () => {
                     void (async () => {
                       const ok = await askConfirm({
+                        title: t('common.titleOf', {
+                          action: t('catalog.delete'),
+                          subject: name,
+                        }),
                         message: t('catalog.confirmDelete', { name }),
                         danger: true,
                         confirmLabel: t('catalog.delete'),
@@ -447,7 +457,9 @@ export function CatalogScreen({ me }: { me: Me }) {
             <DataTable
               data={items}
               columns={columns}
-              emptyText={`${t('common.empty')} — ${t('catalog.templateHint')}`}
+              /* Ghép hai CÂU HOÀN CHỈNH bằng gạch ngang ra một câu thứ ba không ai viết:
+                 "Chưa có dữ liệu — Dùng file tải từ nút…". Một câu nói đủ cả hai việc. */
+              emptyText={t('catalog.emptyHint')}
               stackOnMobile
               rowClassName={(row) => (row.active ? '' : 'row-muted')}
               manualSorting

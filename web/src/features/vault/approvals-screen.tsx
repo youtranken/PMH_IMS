@@ -191,7 +191,14 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                   </div>
                   <div className="field">
                     <dt className="lbl-t">{t('approvals.asked')}</dt>
-                    <dd>{t('approvals.hours', { hours: row.payload?.hours ?? '—' })}</dd>
+                    <dd>
+                      {/* KHÔNG ghép dấu gạch với đơn vị: "— giờ" không phải một câu trả lời,
+                          nó là một chỗ trống đội lốt câu trả lời. Không biết thì nói không
+                          biết. */}
+                      {row.payload?.hours === undefined
+                        ? t('approvals.hoursUnknown')
+                        : t('approvals.hours', { hours: row.payload.hours })}
+                    </dd>
                   </div>
                   {row.decidedBy ? (
                     <div className="field">
@@ -252,6 +259,10 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                       onClick={() => {
                         void (async () => {
                           const ok = await askConfirm({
+                            title: t('common.titleOf', {
+                              action: t('approvals.revoke'),
+                              subject: row.requester,
+                            }),
                             message: t('approvals.confirmRevoke', { member: row.requester }),
                             danger: true,
                             confirmLabel: t('approvals.revoke'),

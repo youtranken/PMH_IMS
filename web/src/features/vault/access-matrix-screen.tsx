@@ -116,6 +116,10 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
    */
   const removeRule = async (rule: AccessRule) => {
     const ok = await askConfirm({
+      title: t('common.titleOf', {
+        action: t('access.remove'),
+        subject: rule.memberEmail,
+      }),
       message: t('access.confirmRemove', { member: rule.memberEmail, scope: rule.scopeLabel }),
       danger: true,
       confirmLabel: t('access.remove'),

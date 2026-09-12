@@ -441,7 +441,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
       expect(
         host.title,
         `"${planned}" phải tự giải thích vì sao bấm không được, không im lặng`,
-      ).toBe('Màn hình thuộc epic sau — chưa mở');
+      ).toBe('Phần này chưa mở trong bản hiện tại');
     }
   });
 
@@ -2669,7 +2669,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toBeDisabled();
     await expect(
       hopNhap.getByText(
-        'Dùng file tải từ nút "Tải file mẫu" (hoặc file vừa Xuất Excel). Danh mục phải khai trước — hệ thống không tự tạo site/tủ/loại/NCC.',
+        'Dùng file tải từ nút "Tải file mẫu" (hoặc file vừa Xuất Excel). Danh mục phải khai trước — ' +
+        'hệ thống không tự tạo site, tủ mạng, loại thiết bị hay nhà cung cấp.',
       ),
       'Hộp nhập phải tự nói ra điều kiện tiên quyết, không để người dùng đoán',
     ).toBeVisible();
@@ -3266,7 +3267,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(
       add.getByRole('alert'),
       'Lưu hồ sơ trống phải nói rõ thiếu gì, đúng câu trong vi.ts',
-    ).toHaveText('Cần ít nhất mã hồ sơ và tên hồ sơ.');
+    ).toHaveText('Cần ít nhất: mã hồ sơ và tên hồ sơ.');
     await expect(
       add,
       'Lưu hỏng thì hộp phải Ở LẠI — đóng mất là người dùng tưởng đã lưu xong',
@@ -3690,7 +3691,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
    * thường, và cả hệ thống lặng lẽ ngừng cảnh báo một loại tài sản.
    *
    * Cột "Thao tác" của màn này cũng có một luật ẩn: nguồn nào khai `renew` thì có NÚT "Gia
-   * hạn", nguồn nào không thì chỉ có chữ mờ "Sửa trong hồ sơ" — bảo hành do nhà cung cấp
+   * hạn", nguồn nào không thì chỉ có chữ mờ "Không gia hạn tại đây" — bảo hành do nhà cung cấp
    * quyết, không phải thứ bấm một nút là xong.
    *
    * ĐỎ KHI: một nguồn hạn biến khỏi bộ lọc; danh sách cửa sổ ngày đổi; bảng đổi cột; một dòng
@@ -3750,7 +3751,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toHaveCount(1);
 
     // ===== Ô CHỌN CỬA SỔ NGÀY =====
-    await page.getByRole('button', { name: 'Cửa sổ', exact: true }).click();
+    await page.getByRole('button', { name: 'Khoảng thời gian', exact: true }).click();
     expect(
       (await page.getByRole('option').allInnerTexts()).map((text) => text.trim()),
       'Sáu mốc cửa sổ ngày — không cho gõ số tùy ý, nhưng cũng không được thiếu mốc nào',
@@ -3802,14 +3803,14 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'License gia hạn được ngay tại đây — module chủ có hàm renew',
     ).toHaveCount(1);
     await expect(
-      licenseRow.getByText('Sửa trong hồ sơ'),
-      'Dòng gia hạn được thì KHÔNG được kèm chữ mờ "Sửa trong hồ sơ"',
+      licenseRow.getByText('Không gia hạn tại đây'),
+      'Dòng gia hạn được thì KHÔNG được kèm chữ mờ "Không gia hạn tại đây"',
     ).toHaveCount(0);
 
     const warrantyRow = page.getByRole('row', { name: new RegExp(deviceCode) });
     await expect(warrantyRow, 'Bảo hành sắp hết cũng phải có mặt').toBeVisible();
     await expect(
-      warrantyRow.getByText('Sửa trong hồ sơ'),
+      warrantyRow.getByText('Không gia hạn tại đây'),
       'Bảo hành do nhà cung cấp quyết — nói thẳng thay vì để một cái nút chết',
     ).toHaveCount(1);
     await expect(
@@ -3951,9 +3952,9 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
     await expect(
       add.getByRole('textbox'),
-      'Form luật có đúng 3 ô gõ chữ: Tên luật · Cửa sổ (ngày) · Người nhận',
+      'Form luật có đúng 3 ô gõ chữ: Tên luật · Trong vòng (ngày) · Người nhận',
     ).toHaveCount(3);
-    for (const name of ['Tên luật', 'Cửa sổ (ngày)', 'Người nhận']) {
+    for (const name of ['Tên luật', 'Trong vòng (ngày)', 'Người nhận']) {
       await expect(
         add.getByRole('textbox', { name, exact: true }),
         `Form luật phải có đúng một ô "${name}"`,
@@ -4057,8 +4058,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Danh sách người nhận cũ phải nằm sẵn trong ô — mở ra trống là bấm Lưu một phát mất hết',
     ).toHaveValue('sep@pmh.com.vn');
     await expect(
-      edit.getByRole('textbox', { name: 'Cửa sổ (ngày)', exact: true }),
-      'Cửa sổ ngày cũ phải nằm sẵn trong ô',
+      edit.getByRole('textbox', { name: 'Trong vòng (ngày)', exact: true }),
+      'Số ngày cũ phải nằm sẵn trong ô',
     ).toHaveValue('45');
     await expect(
       edit.getByRole('checkbox', { name: 'Chứng chỉ SSL', exact: true }),
@@ -4366,7 +4367,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       rail,
       'rail phải là một landmark CÓ TÊN RIÊNG — không thì nó lẫn với thanh điều hướng chính',
     ).toBeVisible();
-    await expect(rail.getByRole('heading', { level: 2 })).toHaveText(['Subnet / VLAN']);
+    await expect(rail.getByRole('heading', { level: 2 })).toHaveText(['Dải mạng / VLAN']);
     await expect(
       rail.getByRole('button', { name: `Thao tác với ${emptyCidr}`, exact: true }),
     ).toHaveCount(1);
@@ -4504,7 +4505,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     // Hai tiêu đề cấp hai của cả màn: đầu rail và đầu pane (thẻ dải là LINK, không phải tiêu
     // đề — nên dải lạ của máy không chen vào đây). Nhiều hơn nghĩa là có khối mới mọc ra.
     await expect(page.getByRole('heading', { level: 2 })).toHaveText([
-      'Subnet / VLAN',
+      'Dải mạng / VLAN',
       `${cidr} — ${name}`,
     ]);
 
@@ -4803,12 +4804,14 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     /* ----- Hộp SỬA DẢI ----- */
     await rowAction(page, cidr, 'Sửa');
-    const form = page.getByRole('dialog', { name: 'Sửa dải' });
+    const form = page.getByRole('dialog', { name: /^Sửa dải — / });
     await expect(form).toBeVisible();
     await expect(
       form.getByRole('heading', { level: 2 }),
       'hộp sửa dải vẫn là một khối phẳng — khu giấy tờ ở đây không dựng FormSection riêng',
-    ).toHaveText(['Sửa dải']);
+      /* Tiêu đề hộp LÀ một `h2`, nên nó nằm trong danh sách này. Từ 12/09 tiêu đề kèm luôn
+         đối tượng (rà UI/UX #9) — một chữ "Sửa dải" không nói được đang sửa dải nào. */
+    ).toHaveText([`Sửa dải — ${cidr}`]);
 
     await expect(form.getByRole('textbox', { name: 'Dải', exact: true })).toHaveValue(cidr);
     await expect(form.getByRole('textbox', { name: 'Tên gọi', exact: true })).toHaveValue(name);
@@ -5155,15 +5158,16 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     await page.goto('/nat');
     await rowAction(page, 'UDP 9000-9010', 'Sửa');
-    const form = page.getByRole('dialog', { name: 'Sửa rule' });
+    const form = page.getByRole('dialog', { name: /^Sửa rule — / });
     await expect(form).toBeVisible();
 
     /* ----- Sửa mở thêm HAI khối mà hộp Thêm không có ----- */
     await expect(
       form.getByRole('heading', { level: 2 }),
       'sửa một rule đang có thì mở luôn giấy tờ và lịch sử — đó là câu auditor hỏi nhiều nhất',
+      /* Tiêu đề hộp LÀ một `h2` — từ 12/09 nó kèm giao thức và cổng (rà UI/UX #9). */
     ).toHaveText([
-      'Sửa rule',
+      'Sửa rule — UDP 9000-9010',
       'Cổng mở ra ngoài',
       'Chuyển tới máy bên trong',
       'Mở cho ai và vì sao',
@@ -5580,7 +5584,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await expect(
       hop.getByRole('alert'),
       'Thiếu nhà mạng phải hiện đúng câu của `isp-form.tsx`, không phải im lặng',
-    ).toHaveText('Cần ít nhất mã đường truyền và tên nhà mạng.');
+    ).toHaveText('Cần ít nhất: mã đường truyền và tên nhà mạng.');
     await expect(hop, 'Báo lỗi thì hộp phải Ở LẠI để người dùng sửa, không được đóng').toBeVisible();
 
     // ĐƯỜNG ĐÓNG THỨ NHẤT: phím Esc.
@@ -5691,8 +5695,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      */
     expect(
       await tenTheoVaiTro(main, 'button'),
-      'Đầu trang hồ sơ đường truyền có đúng ba nút: Chép IP tĩnh · Sửa hồ sơ · Gia hạn hợp đồng',
-    ).toEqual(sap(['Chép IP tĩnh', 'Sửa hồ sơ', 'Gia hạn hợp đồng']));
+      'Đầu trang hồ sơ đường truyền có đúng ba nút: Chép IP WAN · Sửa hồ sơ · Gia hạn hợp đồng',
+    ).toEqual(sap(['Chép IP WAN', 'Sửa hồ sơ', 'Gia hạn hợp đồng']));
 
     /*
      * BỐN TAB, ĐÚNG THỨ TỰ. Nhãn hai tab giữa có số đếm nối sau ("Két sắt 0"), nên cắt phần số
@@ -5806,8 +5810,9 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       .click();
     await expect(
       hopGiaHan.getByRole('alert'),
-      'Bỏ trống ngày thì hộp báo đúng chuỗi `isp.endDate` — hiện là "Hết hạn"',
-    ).toHaveText('Hết hạn');
+      'câu lỗi phải NÓI ĐƯỢC VIỆC PHẢI LÀM. Tới 12/09 chỗ này đặt NHÃN của ô làm câu lỗi, nên ' +
+        'khối đỏ hiện đúng một chữ "Hết hạn" — không nói được là thiếu, sai, hay quá khứ',
+    ).toHaveText('Chọn hạn mới.');
     await expect(hopGiaHan, 'Gia hạn hỏng thì hộp phải ở lại').toBeVisible();
 
     await hopGiaHan.getByRole('button', { name: 'Đóng hộp thoại' }).click();
@@ -6217,7 +6222,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Hồ sơ',
         'Thuộc về ai',
         'Mật khẩu (cất vào két luôn)',
-        'Ghi chú',
+        /* Khu Ghi chú KHÔNG còn tiêu đề riêng: nó chỉ có một ô, mà nhãn ô cũng là
+           "Ghi chú" — hai dòng y hệt chồng nhau (rà UI/UX 12/09, mục #35). */
         'Giấy tờ đính kèm',
       ]),
     );
@@ -6276,7 +6282,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Thuộc về ai',
         'Cấu hình VPN',
         'Mật khẩu (cất vào két luôn)',
-        'Ghi chú',
+        /* Khu Ghi chú KHÔNG còn tiêu đề riêng: nó chỉ có một ô, mà nhãn ô cũng là
+           "Ghi chú" — hai dòng y hệt chồng nhau (rà UI/UX 12/09, mục #35). */
         'Giấy tờ đính kèm',
       ]),
     );
@@ -7027,7 +7034,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
 
     // --- Hộp SỬA phải mang theo cả ba giá trị cũ.
     await rowAction(page, maSite, 'Sửa');
-    const hopSua = page.getByRole('dialog', { name: 'Sửa', exact: true });
+    const hopSua = page.getByRole('dialog', { name: /^Sửa — / });
     await expect(hopSua).toBeVisible();
     await expect(
       hopSua.getByLabel(nhan('Mã')),
@@ -7242,7 +7249,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     ).toHaveText(['IP', 'Trình duyệt', 'Hoạt động gần nhất', '']);
 
     await expect(
-      hopPhien.getByRole('button', { name: 'Đá phiên' }).first(),
+      hopPhien.getByRole('button', { name: 'Đóng phiên' }).first(),
       'phiên của chính SA đang mở phải hiện ra kèm nút đá — bảng rỗng ở đây nghĩa là hộp không hỏi được server',
     ).toBeVisible();
 
@@ -8065,7 +8072,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
      * hiện một ô trống — là cách nhanh nhất để sếp yên tâm nhầm.
      */
     await expect(
-      page.getByText('Phần quản lý sự cố chưa mở (Epic 9). Hệ thống CHƯA theo dõi mục này.'),
+      page.getByText('Phần quản lý sự cố chưa mở trong bản này. Hệ thống CHƯA theo dõi mục này.'),
       'khối "Sự cố tuần qua" phải nói thẳng là epic chưa mở, không được im lặng như một khối rỗng',
     ).toBeVisible();
 

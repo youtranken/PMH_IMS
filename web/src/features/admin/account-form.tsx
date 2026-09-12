@@ -155,7 +155,7 @@ export function AccountForm({
             type="tel"
             inputMode="tel"
             maxLength={32}
-            placeholder="0912 345 678"
+            placeholder={t('accounts.phPhone')}
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
           />
@@ -170,7 +170,7 @@ export function AccountForm({
             id="acc-emp"
             className="inp mono"
             maxLength={32}
-            placeholder="NV-0123"
+            placeholder={t('accounts.phEmployeeCode')}
             value={employeeCode}
             onChange={(e) => setEmployeeCode(e.target.value)}
           />

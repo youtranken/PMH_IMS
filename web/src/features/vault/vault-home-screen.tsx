@@ -212,7 +212,10 @@ export function VaultHomeScreen({ me }: { me: Me }) {
                   đường phần lớn người dùng đóng hộp, mà bản trước chỉ làm mới ở
                   `onOpenChange` (Esc / bấm nền) — nên đúng lối đi thường nhất lại không nạp
                   lại danh sách. */}
-              <button type="button" className="btn primary" onClick={closePopup}>
+              {/* KHÔNG `primary`: nút nhấn mạnh của một hộp là việc người ta tới đây để làm,
+                  mà ở đây việc đó là "Mở hồ sơ đầy đủ" — "Đóng" chỉ là lối ra. Tô đậm lối ra
+                  là dạy người dùng bấm nút sáng nhất mà không đọc. */}
+              <button type="button" className="btn" onClick={closePopup}>
                 {t('common.close')}
               </button>
             </>

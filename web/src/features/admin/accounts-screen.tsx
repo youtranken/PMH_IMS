@@ -283,6 +283,10 @@ export function AccountsScreen({ me }: { me: Me }) {
                     onSelect: () => {
                       void (async () => {
                         const ok = await askConfirm({
+                          title: t('common.titleOf', {
+                            action: t('accounts.resetPassword'),
+                            subject: account.fullName,
+                          }),
                           message: t('accounts.confirmResetPassword', {
                             name: account.fullName,
                           }),
@@ -315,6 +319,10 @@ export function AccountsScreen({ me }: { me: Me }) {
                     onSelect: () => {
                       void (async () => {
                         const ok = await askConfirm({
+                          title: t('common.titleOf', {
+                            action: t('accounts.resetTotp'),
+                            subject: account.fullName,
+                          }),
                           message: t('accounts.confirmResetTotp', { name: account.fullName }),
                           danger: true,
                           confirmLabel: t('accounts.resetTotp'),
@@ -344,6 +352,10 @@ export function AccountsScreen({ me }: { me: Me }) {
                       void (async () => {
                         if (action.confirm) {
                           const ok = await askConfirm({
+                            title: t('common.titleOf', {
+                              action: t(action.label),
+                              subject: account.fullName,
+                            }),
                             message: t(action.confirm, { name: account.fullName }),
                             danger: action.danger,
                             confirmLabel: t(action.label),
@@ -545,7 +557,12 @@ function SessionsDialog({
          */
         <LoadError error={sessions.error} onRetry={() => void sessions.refetch()} />
       ) : (sessions.data ?? []).length === 0 ? (
-        <p className="muted">{t('common.empty')}</p>
+        /*
+         * "Chưa có dữ liệu" là câu của một cái bảng trống. Màn NÀY người ta mở đúng lúc nghi
+         * một tài khoản bị chiếm, nên câu trả lời phải là một KHẲNG ĐỊNH đọc được: không còn
+         * phiên nào đang mở. Chữ chung chung ở đây để người đọc tự hiểu thành "chưa hỏi được".
+         */
+        <p className="muted">{t('accounts.noSessions')}</p>
       ) : (
         <div className="table-wrap">
           <table className="table">
@@ -573,7 +590,17 @@ function SessionsDialog({
                         void (async () => {
                           if (
                             !(await askConfirm({
-                              message: t('accounts.confirmKillSession'),
+                              /* Hộp che mất cái bảng, nên "phiên NÀY" không còn chỉ vào đâu
+                                 cả. Nêu IP + lần hoạt động gần nhất: đó là hai thứ phân biệt
+                                 phiên của chính mình với phiên của kẻ đang chiếm tài khoản. */
+                              title: t('common.titleOf', {
+                                action: t('accounts.killSession'),
+                                subject: orDash(session.ip),
+                              }),
+                              message: t('accounts.confirmKillSession', {
+                                ip: orDash(session.ip),
+                                seen: formatDateTime(session.lastSeenAt),
+                              }),
                               danger: true,
                               confirmLabel: t('accounts.killSession'),
                             }))
@@ -583,7 +610,7 @@ function SessionsDialog({
                             { id: session.id },
                             {
                               onSuccess: () => {
-                                toast({ message: 'Đã đá phiên.' });
+                                toast({ message: t('accounts.sessionKilled') });
                                 void sessions.refetch();
                               },
                               onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),

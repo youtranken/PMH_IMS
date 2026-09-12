@@ -428,7 +428,14 @@ function NatForm({
       dismissible={!busy}
       guardUnsaved
       maxWidth={720}
-      title={rule ? t('nat.edit') : t('nat.add')}
+      title={
+        rule
+          ? t('common.titleOf', {
+              action: t('nat.edit'),
+              subject: `${rule.protocol.toUpperCase()} ${rule.externalPorts}`,
+            })
+          : t('nat.add')
+      }
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
@@ -611,7 +618,7 @@ function NatForm({
               className="inp mono"
               required
               inputMode="numeric"
-              placeholder="80"
+              placeholder={t('nat.phExternalPorts')}
               value={internalPort}
               onChange={(e) => setInternalPort(e.target.value)}
             />
@@ -708,7 +715,7 @@ function NatForm({
                   id="nat-internal-ip"
                   className="inp mono"
                   required
-                  placeholder="172.16.10.5"
+                  placeholder={t('nat.phInternalIp')}
                   value={internalIp}
                   onChange={(e) => setInternalIp(e.target.value)}
                 />
