@@ -1,7 +1,80 @@
 # Rà soát UI/UX — IMS · 12/09/2026
 
 Rà toàn bộ `web/src/` (204 file) + tầng DTO của API. **Không lặp lại** 10 lỗi ở
-`BIEN-BAN-TEST-TAY-2026-09-12.md`. Bốn mục đầu đã được kiểm chứng lại bằng tay.
+`BIEN-BAN-TEST-TAY-2026-09-12.md`.
+
+> **Bảng theo dõi nằm ngay dưới đây, trong CHÍNH file này** — cố ý không tách ra file riêng.
+> Hai file phải giữ đồng bộ bằng tay thì sớm muộn lệch nhau, và bản lệch là bản người đọc tin.
+> Sửa xong một mục thì tick vào bảng, ngay cạnh phần mô tả của nó.
+
+## Bảng theo dõi — 39 mục
+
+**Xong 3 · Làm một phần 1 · Còn lại 35.**
+
+Cột **Kiểm**: `✓` = tôi đã tự mở code xác minh lại, không chỉ tin báo cáo. Chín mục đã kiểm.
+Cột **Đợt**: nhóm đã đề xuất làm cùng nhau — xem "Thứ tự đề xuất" ở cuối file.
+
+| # | Mục | Mức | Kiểm | Đợt | Xong |
+|---|---|---|---|---|---|
+| 1 | Bảng điều khiển in mã máy tiếng Anh (`warranty`, `license`) | cao | ✓ | — | **[x]** `d016847` |
+| 2 | Két sắt + Duyệt yêu cầu mù loại "Đường truyền" — 3 hỏng cùng gốc | cao | ✓ | A | [ ] |
+| 3 | Mật khẩu tạm: một phím Esc là mất vĩnh viễn | cao | ✓ | — | **[x]** `d016847` |
+| 4 | "Thu hồi sớm" cắt quyền đang chạy, không hỏi lại | cao | ✓ | B | [ ] |
+| 5 | Câu lỗi tiếng Anh lọt ra giao diện (349/429 validator + lỗi 500) | cao | ✓ | C | [ ] |
+| 6 | `LoadError` vứt câu giải thích của API — 68 chỗ gọi | cao | ✓ | A | [ ] |
+| 7 | Nhãn lịch sử: mã thao tác không có nhãn + 123 nhãn cứng | cao | ✓ | D | **[~]** `d016847` |
+| 8 | 15/19 hộp xác nhận đội tiêu đề trống "Xác nhận" | cao | — | D | [ ] |
+| 9 | Tiêu đề hộp sửa chỉ một chữ "Sửa" (dùng chung cho 7 tab danh mục) | cao | — | D | [ ] |
+| 10 | Đóng hộp giữa chừng là mất trắng; 8 hộp thiếu hẳn `dismissible` | cao | — | B | [ ] |
+| 11 | Câu lỗi hiện ra là cái NHÃN của ô ("Hết hạn") | vừa | — | D | [ ] |
+| 12 | Ba form gốc, ba câu lỗi cứng khác nhau, hiện ngoài màn hình | vừa | — | D | [ ] |
+| 13 | Hint ô "Tủ mạng" nói "Không nằm trong tủ" | vừa | — | D | [ ] |
+| 14 | Viết tắt và tiếng lóng: NCC · SA · "đá phiên" · "Cửa sổ" · pool | vừa | — | D | [ ] |
+| 15 | Chữ "epic" hiện ở 3 nơi người dùng nhìn thấy | vừa | — | D | [ ] |
+| 16 | Nút "Mở khóa" hiện trên tài khoản đang bị **vô hiệu hóa** | vừa | ✓ | A | [ ] |
+| 17 | Kho thanh lý báo "đang trống" khi chỉ là lọc không ra | vừa | — | D | [ ] |
+| 18 | Tiêu đề hứa "cả hệ thống" nhưng đường truyền không vào kho được | vừa | — | D | [ ] |
+| 19 | "Gửi thử" bắn email THẬT cho người nhận, không hỏi lại | vừa | ✓ | B | [ ] |
+| 20 | Ba việc không hoàn tác được mà không một chữ cảnh báo | vừa | — | B | [ ] |
+| 21 | Nút nguy hiểm sát nút hay bấm nhất, và đổi nghĩa tại chỗ | vừa | — | D | [ ] |
+| 22 | Nút mờ không nói vì sao (5 chỗ) | vừa | — | D | [ ] |
+| 23 | `Field` giấu gợi ý đúng lúc người dùng cần nó nhất | vừa | — | D | [ ] |
+| 24 | Dấu `*` có hai hành vi khác nhau; 4 màn `auth/` không có dấu nào | vừa | — | D | [ ] |
+| 25 | Từ vựng lệch: Seat/ghế · Máy/Thiết bị · Gỡ/Xóa/Thu hồi · … | vừa | — | D | [ ] |
+| 26 | `stateDenied: 'Từ chối'` lệch thì với 5 khóa anh em | nhẹ | — | D | [ ] |
+| 27 | Giá trị trống ghép thành cụm vô nghĩa ("— giờ") | nhẹ | — | D | [ ] |
+| 28 | Nút nhấn mạnh rơi vào "Đóng", việc thật thành nút xám | nhẹ | — | D | [ ] |
+| 29 | Nhãn "IP WAN" mà nút chép ghi "Chép IP tĩnh" | nhẹ | — | D | [ ] |
+| 30 | `railTitle: 'Subnet / VLAN'` — tiếng Anh ở tiêu đề cột | nhẹ | — | D | [ ] |
+| 31 | "auditor" trong câu văn tiếng Việt (2 chỗ) | nhẹ | — | D | [ ] |
+| 32 | "Chưa có dữ liệu" dùng cho hộp "Phiên đang mở" | nhẹ | — | D | [ ] |
+| 33 | `emptyText` ghép máy móc hai câu hoàn chỉnh bằng gạch ngang | nhẹ | — | D | [ ] |
+| 34 | "Sửa trong hồ sơ" nằm ở cột Thao tác, trông như nút hỏng | nhẹ | — | D | [ ] |
+| 35 | "Ghi chú" in hai lần chồng nhau | nhẹ | — | D | [ ] |
+| 36 | 46 khóa chết trong `vi.ts` | nhẹ | — | D | [ ] |
+| 37 | `toast` dùng `aria-live="polite"` cho cả thông báo lỗi | nhẹ | — | D | [ ] |
+| 38 | Nội dung toast đến thẳng từ server, không qua `t()` | nhẹ | — | D | [ ] |
+| 39 | 17 placeholder ví dụ viết cứng | nhẹ | — | D | [ ] |
+
+### Mục 7 vì sao là `[~]` chứ không `[x]`
+
+Đã làm: khai hai nhãn thiếu (`port-unlinked`, `device-detached` — cả hai do bản vá nhóm 3
+đẻ ra), và dựng cửa điểm danh `web/src/features/history-action-rollcall.test.ts` đọc thẳng
+mã nguồn API nên lớp lỗi này không tái diễn âm thầm được nữa.
+
+CHƯA làm: dời 123 nhãn viết cứng vào `vi.ts`. Chúng đã là tiếng Việt và hiện đúng; dời đi
+là thay đổi cơ học trên 7 file có sẵn bài kiểm mà người dùng không thấy khác gì.
+
+### Thứ tự đề xuất
+
+- **Đợt A — #2, #6, #16.** Cùng một lớp lỗi: hệ thống nói một đằng làm một nẻo. #2 có một
+  link dẫn sang trang SAI trên chính màn bản-đồ-bí-mật; #6 làm 403, 404, mất mạng và máy
+  chủ sập ra cùng một câu; #16 gọi sai tên việc ở màn quản trị tài khoản.
+- **Đợt B — #4, #19, #10, #20.** Hàng rào cho việc phá và việc không hoàn tác được.
+- **Đợt C — #5.** Quét ngôn ngữ. ~349 validator thiếu `message`. Cơ học và lớn, nên làm
+  một lượt riêng kèm một cửa canh chứ không sửa tay từng chỗ.
+- **Đợt D — phần còn lại.** Nhất quán, nhãn, từ vựng. Thật, nhưng không ai làm sai việc vì
+  chúng.
 
 ## MỨC CAO
 
@@ -35,11 +108,14 @@ và `ui/vault-panel.tsx:316` đều có).
 `api/src/modules/ipam/ipam.controller.ts:110` `internalPort` không có `message`; ô "Port trong"
 (`nat-screen.tsx:608`) không kiểm gì phía web. Gõ `99999` → `internalPort must not be greater than 65535`.
 Ô "Port ngoài" CÙNG FORM lại báo tiếng Việt (`vi.ts:829`). Hai ô cạnh nhau, hai ngôn ngữ.
-Toàn hệ: 81 `message:` trên 237 validator trong `*.controller.ts`.
+Toàn hệ (đo lại 12/09): **80 `message:` trên 429 validator** trong `*.controller.ts` — tức ~349
+validator câm, nhiều hơn con số 81/237 mà lượt rà đầu ước.
 Thêm: `api/src/common/global-exception.filter.ts:105` trả `'Internal server error'` cho mọi 500,
-và `lib/api.ts:11` bê thẳng vào toast.
+và `lib/api.ts:11` bê thẳng vào toast. LƯU Ý khi vá: chuỗi đó CỐ Ý chung chung để không lộ nội
+bộ (đọc chú thích ngay trên nó) — dịch sang tiếng Việt thì giữ nguyên tính chất ấy, đừng thêm
+chi tiết kỹ thuật vào.
 
-### 6. 38 chỗ vứt bỏ câu giải thích tiếng Việt mà API vừa gửi về
+### 6. `LoadError` vứt bỏ câu giải thích tiếng Việt mà API vừa gửi về (68 chỗ gọi)
 `ui/load-state.tsx:63` — `LoadError({ onRetry })` KHÔNG nhận `error`, nên 403 / 404 / 500 / mất mạng
 đều ra đúng một câu "Không tải được dữ liệu." + nút "Thử lại". `lib/api.ts:8 errorMessage()` đã có sẵn
 câu tiếng Việt của API. Khóa `app.serverUnreachable` (`vi.ts:12`) là khóa chết, không nơi nào dùng.
