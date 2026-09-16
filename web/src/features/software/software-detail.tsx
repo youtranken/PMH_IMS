@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useParams, useSearchParams } from "react-router-dom";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { errorMessage, useApiMutation } from "@/lib/api";
-import { formatDate, orDash } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { DatePicker } from "@/ui/date-picker";
@@ -13,7 +13,13 @@ import { ExpiryBadge } from "@/ui/expiry-badge";
 import { Field } from "@/ui/page-header";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
-import { BlankFields, DetailHeader, Stat, StatGrid, StatIfSet } from "@/ui/detail-header";
+import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
+import {
+  DetailLayout,
+  RailCard,
+  RailRow,
+  RailRowIfSet,
+} from "@/ui/detail-layout";
 import { DisposeButton } from "@/ui/dispose-button";
 import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
@@ -157,16 +163,18 @@ export function SoftwareDetail({ me }: { me: Me }) {
         }
         actions={
           <>
+            {/* "Sửa hồ sơ" là việc chính của màn nên nó mang trọng số primary; "Gia hạn" lùi
+                về nút thường. Trước 16/09 hai cái ngược nhau. */}
             <button
               type="button"
-              className="btn"
+              className="btn primary"
               onClick={() => setEditing(true)}
             >
               {t("software.edit")}
             </button>
             <button
               type="button"
-              className="btn primary"
+              className="btn"
               onClick={() => setRenewing(true)}
             >
               {t("software.renew")}
@@ -185,71 +193,69 @@ export function SoftwareDetail({ me }: { me: Me }) {
         }
       />
 
-      {/* Bốn chỉ số RIÊNG của phần mềm: hạn và GHẾ ĐÃ DÙNG là hai con số quyết định "có mua
-          thêm không" — trước đây ghế nằm sâu trong tab, phải bấm mới thấy. */}
-      <StatGrid>
-        <Stat
-          label={t("software.status")}
-          note={item.startDate ? `${t("expiry.from")} ${formatDate(item.startDate)}` : undefined}
-        >
-          <span className={`badge ${STATUS_TONE[item.status]}`}>
-            {t(STATUS_KEY[item.status])}
-          </span>
-        </Stat>
+      <DetailLayout
+        rail={
+          <RailCard title={t("detail.identityCard")}>
+            <RailRow
+              label={t("software.status")}
+              note={
+                item.startDate
+                  ? `${t("expiry.from")} ${formatDate(item.startDate)}`
+                  : undefined
+              }
+            >
+              <span className={`badge ${STATUS_TONE[item.status]}`}>
+                {t(STATUS_KEY[item.status])}
+              </span>
+            </RailRow>
 
-        {/*
-          Thẻ hạn CHỈ hiện khi tab Hồ sơ KHÔNG vẽ thanh đầy đủ — tức là license vĩnh viễn
-          (không có quãng đường nào) hoặc hồ sơ chưa khai hạn.
-
-          Còn lại thì thanh đầy đủ ngay dưới đã nói đủ, và một thanh mini lặp lại nó cách đó
-          hai dòng là hai lần cùng một câu — đúng lỗi mà dải chỉ số sinh ra để dọn.
-        */}
-        {item.licenseModel === "perpetual" ? (
-          <Stat label={t("software.endDate")}>
-            <span className="badge ok plain">{t("software.perpetual")}</span>
-          </Stat>
-        ) : item.endDate ? null : (
-          <Stat label={t("software.endDate")}>
-            <ExpiryBadge end={null} />
-          </Stat>
-        )}
-
-        {supportsSeats(item.kind) ? (
-          <Stat label={t("software.seats")} note={t("software.seatsNote")}>
-            <span className="mono">{seatLabel(item)}</span>
-          </Stat>
-        ) : null}
-
-        {/* Thẻ rỗng là ô chết chiếm chỗ của một chỉ số có ích — dải chỉ có bốn chỗ. */}
-        <StatIfSet label={t("software.vendor")} value={item.vendorName} />
-        <StatIfSet label={t("software.note")} value={item.note} />
-      </StatGrid>
-
-      <Tabs
-        items={tabItems}
-        value={safeTab}
-        onChange={setTab}
-        ariaLabel={t("software.title")}
-      />
-
-      <TabPanel tabKey={safeTab}>
-        {safeTab === "profile" ? (
-          <>
-            {/* Thanh hạn ĐẦY ĐỦ. License vĩnh viễn thì không có quãng đường nào để vẽ. */}
-            {item.licenseModel !== "perpetual" && item.endDate ? (
-              <section className="card">
-                <h2 className="form-section-title">{t("software.endDate")}</h2>
+            {/*
+             * HẠN NẰM Ở ĐÂY, KHÔNG CÒN THẺ THỨ HAI Ở CỘT CHÍNH (16/09/2026).
+             *
+             * Trước đây tab Hồ sơ vẽ một thẻ "Hết hạn" chiếm trọn bề ngang, còn dải chỉ số vẽ
+             * lại chính nó ở dạng gọn cách đó hai dòng. License vĩnh viễn thì không có quãng
+             * đường nào để vẽ nên vẫn chỉ là một huy hiệu.
+             */}
+            <RailRow label={t("software.endDate")}>
+              {item.licenseModel === "perpetual" ? (
+                <span className="badge ok plain">{t("software.perpetual")}</span>
+              ) : item.endDate ? (
                 <WarrantyTimeline
                   start={item.startDate}
                   end={item.endDate}
                   startLabel={t("software.startDate")}
                   endLabel={t("software.endDate")}
                 />
-              </section>
+              ) : (
+                <ExpiryBadge end={null} />
+              )}
+            </RailRow>
+
+            {/* Ghế đã dùng là con số quyết định "có phải mua thêm không" — nó thuộc về thẻ
+                định danh, không phải nằm sâu trong một tab. */}
+            {supportsSeats(item.kind) ? (
+              <RailRow label={t("software.seats")} note={t("software.seatsNote")}>
+                <span className="mono">{seatLabel(item)}</span>
+              </RailRow>
             ) : null}
 
-            {/* Loại · nhà cung cấp ĐÃ ở dòng định danh; trạng thái · hạn · ghế ĐÃ ở dải chỉ
-                số. Lưới chỉ còn phần chưa nói ở đâu cả. */}
+            <RailRowIfSet label={t("software.vendor")} value={item.vendorName} />
+          </RailCard>
+        }
+      >
+        <Tabs
+          items={tabItems}
+          value={safeTab}
+          onChange={setTab}
+          ariaLabel={t("software.title")}
+        />
+
+        <TabPanel tabKey={safeTab}>
+        {safeTab === "profile" ? (
+          <>
+            {/* Loại · nhà cung cấp ĐÃ ở dòng định danh; trạng thái · hạn · ghế ĐÃ ở thẻ định
+                danh bên phải. Lưới chỉ còn phần chưa nói ở đâu cả. Ngày bắt đầu cũng bỏ: nó là
+                mốc đầu của chính thanh hạn bên phải. */}
             <dl className="data-grid">
               <Item label={t("software.licenseModel")}>
                 {supportsSeats(item.kind)
@@ -260,10 +266,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
                     )
                   : "—"}
               </Item>
-              <Item label={t("software.startDate")}>
-                {orDash(formatDate(item.startDate))}
-              </Item>
-              <Item label={t("software.note")}>{orDash(item.note)}</Item>
+              <DataItemIfSet label={t("software.note")} value={item.note} />
             </dl>
             <BlankFields
               labels={[
@@ -295,7 +298,8 @@ export function SoftwareDetail({ me }: { me: Me }) {
         ) : (
           <HistoryPanel entries={toSoftwareHistory(history.data ?? [], t)} />
         )}
-      </TabPanel>
+        </TabPanel>
+      </DetailLayout>
 
       {editing ? (
         <SoftwareForm

@@ -68,7 +68,13 @@
   font-size: var(--fs-xs);
   color: var(--ink-3);
 }
-.detail-actions { display: flex; gap: var(--space-3); flex-wrap: wrap; }
+.detail-actions { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+/* Việc PHÁ phải cách việc thường một quãng, để tay không trượt vào. Trên màn hẹp thì nó
+   xuống dòng và nép phải — KHÔNG kéo hết bề ngang: to bằng nút chính là mời bấm nhầm. */
+.detail-actions .danger-ghost { margin-left: var(--space-10); }
+@media (max-width: 680px) {
+  .detail-actions .danger-ghost { margin-left: auto; }
+}
 
 /* Nút chép (ui/copy-button.tsx) — nhỏ nhưng vùng bấm vẫn phải đủ ngón tay chạm trúng. */
 .copy-btn {
@@ -119,6 +125,86 @@
 
 .blank-fields { font-size: var(--fs-xs); margin-top: var(--space-4); }
 
+/* --- Bố cục hai cột của trang chi tiết (ui/detail-layout.tsx) ----------------
+ * Vì sao bỏ dải chỉ số ngang: `auto-fit, minmax(180px,1fr)` nghĩa là hồ sơ nào chỉ khai được
+ * hai chỉ số thì mỗi ô phình ra nửa màn hình để chứa chữ "Dự phòng" — mà hồ sơ khai sơ sài là
+ * đa số. Đổi thành một CỘT PHẢI rộng cố định: bề ngang không còn phụ thuộc số chỉ số, và nó
+ * DÍNH khi cuộn nên thứ cần lúc đang đứng cạnh tủ rack (mã, vị trí, trạng thái, hạn) không
+ * trôi mất.
+ *
+ * Chia việc theo NGHĨA: cột phải trả lời "cái này là gì, ở đâu, của ai, còn hạn không";
+ * cột chính trả lời "nó dính tới cái gì, và đã xảy ra chuyện gì". Một trường chỉ được xuất
+ * hiện MỘT lần trên toàn trang.
+ * ---------------------------------------------------------------------------- */
+.detail-2col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--space-12);
+  align-items: start;
+}
+.detail-main { min-width: 0; }
+.detail-rail {
+  min-width: 0;
+  position: sticky;
+  top: var(--space-10);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-9);
+}
+.rail-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--space-9);
+  box-shadow: var(--shadow-sm);
+}
+.rail-h {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: var(--space-8);
+}
+.rail-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-5) 0;
+  border-top: 1px solid var(--border);
+}
+.rail-row:first-of-type { border-top: none; padding-top: 0; }
+.rail-k {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.rail-v { font-size: var(--fs-md); font-weight: var(--fw-semibold); overflow-wrap: anywhere; }
+.rail-note { font-size: var(--fs-xs); color: var(--ink-3); overflow-wrap: anywhere; }
+/* Thanh hạn trong cột phải: bỏ đệm dư, chữ hai đầu xuống cỡ nhỏ cho vừa 320px. */
+.rail-row .wt { margin-top: var(--space-3); }
+.rail-row .wt-ends,
+.rail-row .wt-legend { font-size: var(--fs-2xs); }
+
+@media (max-width: 1199px) {
+  /* Một cột. Thẻ định danh nhảy LÊN TRƯỚC: trên màn hẹp người ta cần trạng thái/vị trí ngay,
+     không phải cuộn qua bảng license mới thấy. */
+  .detail-2col { grid-template-columns: 1fr; gap: var(--space-11); }
+  .detail-rail { position: static; order: -1; }
+  .rail-card {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: var(--space-7) var(--space-9);
+  }
+  .rail-h { grid-column: 1 / -1; margin-bottom: 0; }
+  .rail-row { border-top: none; padding: 0; }
+}
+@media (max-width: 680px) {
+  .rail-card { grid-template-columns: 1fr 1fr; }
+}
+
 /* --- Data grid (chi tiết tài sản: cặp nhãn/giá trị) ----------------------- */
 .data-grid {
   display: grid;
@@ -147,16 +233,12 @@
   font-weight: 500;
   overflow-wrap: anywhere;
 }
-/* Nội dung tab (lịch sử/mượn/ghi chú): dài thì cuộn trong khung, thead dính đầu. */
-.detail-tabs-body .table-wrap {
-  max-height: 460px;
-  overflow-y: auto;
-}
-.detail-tabs-body .table thead th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
-}
+/*
+ * ĐÃ XÓA (16/09/2026): khối `.detail-tabs-body .table-wrap { max-height: 460px }` cùng luật
+ * `thead` dính kèm theo. Không một `.tsx` nào đặt lớp `detail-tabs-body` — grep toàn bộ web/src
+ * ra rỗng — nên hai luật đó CHƯA TỪNG chạy. Bảng lịch sử dài vẫn đẩy cả trang dài ra, đúng cái
+ * mà luật này tưởng là đã chặn. Xoá đi cho khỏi ai đọc rồi tưởng có.
+ */
 
 /* --- Tabs (chi tiết tài sản) ---------------------------------------------- */
 .tabs {
@@ -172,6 +254,9 @@
 .tab {
   flex-shrink: 0;
   white-space: nowrap;
+  /* Container flex để `.tab-count` và `.tab-dot` canh giữa theo chữ, không nhảy baseline. */
+  display: inline-flex;
+  align-items: center;
   padding: var(--space-3) var(--space-7);
   border: none;
   border-bottom: 2px solid transparent;
@@ -189,6 +274,30 @@
   color: var(--primary-ink);
   border-bottom-color: var(--primary);
 }
+/*
+ * Thanh tab DÍNH khi cuộn (16/09/2026). Bảng port map và lịch sử dài; cuộn tới dòng 40 mà
+ * muốn đổi tab thì trước đây phải cuộn ngược lên đầu trang.
+ */
+.tabs {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  background: var(--canvas);
+}
+/*
+ * Chấm cảnh báo trên tab: bên trong có thứ cần để mắt thì tab NÓI RA, khỏi phải mở từng tab
+ * để dò. Luôn đi kèm chữ ẩn (`.sr-only` trong `ui/tabs.tsx`) — màu không được là kênh thông
+ * tin duy nhất (WCAG 1.4.1).
+ */
+.tab-dot {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-radius: 50%;
+  background: var(--warn);
+  margin-left: var(--space-2);
+}
+.tab-dot.danger { background: var(--danger); }
 /*
  * Khoảng thở giữa thanh tab và nội dung tab.
  *

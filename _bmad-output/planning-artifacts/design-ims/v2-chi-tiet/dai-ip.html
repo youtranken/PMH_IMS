@@ -1,0 +1,848 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMS — Chi tiết dải IP</title>
+<style>
+:root{
+  --canvas:#f7f6f2; --surface:#ffffff; --surface-2:#f2f1ea;
+  --ink:#1f231c; --ink-2:#5a615a; --ink-3:#5c635c;
+  --border:#e9eae2; --border-2:#d8dbd0;
+  --primary:#0e9f6e; --primary-ink:#0a7d54; --primary-soft:#e5f6ee;
+  --warm:#f59e0b; --warm-ink:#ea580c; --warm-soft:#fef2df;
+  --grad:linear-gradient(135deg,#0e9f6e,#f59e0b);
+  --sidebar-bg:#16231b; --sidebar-ink:#8ea595; --sidebar-ink-2:#eaf3ee;
+  --sidebar-active-bg:rgba(245,158,11,.16); --sidebar-active-ink:#ffe1b3;
+  --sidebar-border:#24352a; --sidebar-label:#9fb0a5;
+  --ok:#0f7a55; --ok-soft:#e4f4ee; --warn:#a34d08; --warn-soft:#fdf0e3;
+  --danger:#c0392b; --danger-soft:#fdeceb; --muted:#5f665f; --muted-soft:#efeee7;
+  --on-accent:#ffffff; --on-brand:#0b2018; --danger-strong:#a5271b;
+  --border-ok:#bfe4d4; --border-warn:#f2d9b8; --border-danger:#f4cfcb;
+  --ring:0 0 0 3px rgba(14,159,110,.22);
+  --r-sm:8px; --r:10px; --r-lg:14px; --radius-pill:999px;
+  --space-1:.25rem; --space-2:.4rem; --space-3:.5rem; --space-4:.6rem; --space-5:.75rem;
+  --space-6:.85rem; --space-7:1rem; --space-8:1.1rem; --space-9:1.25rem; --space-10:1.5rem;
+  --space-11:2.25rem; --space-12:3rem; --space-13:4.25rem;
+  --fs-2xs:.72rem; --fs-xs:.8rem; --fs-sm:.88rem; --fs-md:1rem; --fs-lg:1.1rem;
+  --fs-xl:1.3rem; --fs-2xl:1.5rem; --fs-3xl:1.95rem;
+  --fw-medium:500; --fw-semibold:600; --fw-bold:700;
+  --shadow-sm:0 1px 2px rgba(16,24,40,.05);
+  --shadow:0 1px 3px rgba(16,24,40,.08),0 1px 2px rgba(16,24,40,.05);
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:ui-monospace,'Cascadia Code','SF Mono',Consolas,monospace;
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+html[data-theme='dark']{
+  --canvas:#0f140f; --surface:#161d16; --surface-2:#1d261d;
+  --ink:#e9ede7; --ink-2:#a7b0a5; --ink-3:#9aa39a;
+  --border:#26312a; --border-2:#37453a;
+  --primary:#34d399; --primary-ink:#6ee7b7; --primary-soft:#123024;
+  --warm:#fbbf24; --warm-ink:#f59e0b; --warm-soft:#3a2c14;
+  --grad:linear-gradient(135deg,#34d399,#fbbf24);
+  --ok:#43c294; --ok-soft:#13312a; --warn:#e0a35a; --warn-soft:#3a2c18;
+  --danger:#ef6f63; --danger-soft:#3a1f1d; --muted:#9aa59a; --muted-soft:#232d23;
+  --on-accent:#0f140f; --on-brand:#0f140f; --danger-strong:#ef8f85;
+  --border-ok:#1d4a3a; --border-warn:#4a3a1c; --border-danger:#4d2b27;
+  --sidebar-bg:#0e140f; --sidebar-border:#1e2a22;
+  --ring:0 0 0 3px rgba(52,211,153,.3);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+  --shadow:0 1px 3px rgba(0,0,0,.4),0 1px 2px rgba(0,0,0,.3);
+  color-scheme:dark;
+}
+*{margin:0;box-sizing:border-box}
+html{font-size:14px}
+body{min-height:100vh;overflow-x:hidden;font-family:var(--font);font-size:var(--fs-sm);
+  line-height:1.5;color:var(--ink);background:var(--canvas);-webkit-font-smoothing:antialiased}
+a{color:var(--primary-ink);text-decoration:none}
+a:hover{text-decoration:underline}
+.mono{font-family:var(--mono)}
+.muted{color:var(--ink-3)}
+
+.shell{display:flex;min-height:100vh}
+.sb{width:236px;flex:0 0 236px;background:var(--sidebar-bg);border-right:1px solid var(--sidebar-border);
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.sb-brand{display:flex;align-items:center;gap:var(--space-5);padding:var(--space-9) var(--space-9);
+  color:var(--sidebar-ink-2);font-weight:var(--fw-bold);font-size:var(--fs-lg)}
+.sb-logo{width:28px;height:28px;border-radius:var(--r-sm);background:var(--grad);display:grid;
+  place-items:center;color:var(--on-brand);font-size:var(--fs-2xs);font-weight:var(--fw-bold)}
+.sb-nav{flex:1;overflow-y:auto;padding:var(--space-3) var(--space-5)}
+.sb-label{padding:var(--space-7) var(--space-4) var(--space-3);font-size:var(--fs-2xs);
+  letter-spacing:.08em;text-transform:uppercase;color:var(--sidebar-label);font-weight:var(--fw-bold)}
+.sb-item{display:flex;align-items:center;gap:var(--space-5);padding:var(--space-4) var(--space-5);
+  border-radius:var(--r-sm);color:var(--sidebar-ink);font-size:var(--fs-sm);margin-bottom:2px}
+.sb-item:hover{background:rgba(255,255,255,.05);color:var(--sidebar-ink-2);text-decoration:none}
+.sb-item.active{background:var(--sidebar-active-bg);color:var(--sidebar-active-ink);font-weight:var(--fw-semibold)}
+.sb-item svg{width:17px;height:17px;flex:0 0 17px}
+/* Mục của epic sau (`planned` trong shell/app-nav.ts): KHÔNG phải link, mờ, con trỏ cấm.
+   Thiếu luật này thì nó đậm y hệt mục thật và người dùng bấm mãi không được. */
+.sb-item.is-planned{opacity:.45;cursor:not-allowed}
+.sb-item.is-planned:hover{background:none;color:var(--sidebar-ink)}
+.sb-foot{display:flex;align-items:center;gap:var(--space-5);padding:var(--space-7);
+  border-top:1px solid var(--sidebar-border);color:var(--sidebar-ink)}
+.sb-ava{width:30px;height:30px;flex:0 0 30px;border-radius:50%;display:grid;place-items:center;
+  background:var(--sidebar-active-bg);color:var(--sidebar-active-ink);font-size:var(--fs-2xs);
+  font-weight:var(--fw-bold)}
+.sb-who{flex:1;min-width:0;line-height:1.3}
+.sb-who b{display:block;color:var(--sidebar-ink-2);font-size:var(--fs-sm);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.sb-who span{font-size:var(--fs-2xs)}
+.sb-out{width:30px;height:30px;flex:0 0 30px;display:grid;place-items:center;border-radius:var(--r-sm);
+  border:1px solid var(--sidebar-border);background:transparent;color:var(--sidebar-ink);cursor:pointer}
+.sb-out:hover{color:var(--sidebar-ink-2);border-color:var(--sidebar-ink)}
+.sb-out svg{width:15px;height:15px}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{height:52px;flex:0 0 52px;display:flex;align-items:center;gap:var(--space-7);
+  padding:0 var(--space-10);border-bottom:1px solid var(--border);background:var(--surface)}
+.topbar .grow{flex:1;min-width:0;color:var(--ink-3);font-size:var(--fs-xs)}
+.icon-btn{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--border-2);
+  border-radius:var(--r-sm);background:var(--surface);color:var(--ink-2);cursor:pointer}
+.icon-btn:hover{border-color:var(--primary);color:var(--primary-ink)}
+.icon-btn svg{width:17px;height:17px}
+/* Bề ngang trang — LẤY ĐÚNG luật của app thật (css/base.css): min(1880px, 95vw).
+   Bản xem trước trước đây kẹp 1560px, hẹp hơn chính app: trên màn 24" (1920) nó bỏ phí
+   124px, trên 27" (2560) bỏ phí 764px — đúng chỗ chủ dự án nói "chưa full màn hình".
+   Đệm trên cũng về var(--space-10) = 21px như app, thay vì 31,5px: khoảng hở dưới thanh
+   topbar đang rộng hơn cần thiết. */
+.page{padding:var(--space-10) var(--space-10) var(--space-12);max-width:min(1880px,95vw);
+  width:100%;margin-inline:auto}
+
+.crumbs{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-2);font-size:var(--fs-xs);
+  color:var(--ink-3);margin-bottom:var(--space-7)}
+.crumb-back{display:inline-flex;align-items:center;gap:var(--space-1);padding:3px var(--space-5) 3px var(--space-4);
+  border:1px solid var(--border-2);border-radius:var(--radius-pill);background:var(--surface);
+  color:var(--ink);font-weight:var(--fw-semibold)}
+.crumb-back:hover{border-color:var(--primary);color:var(--primary-ink);text-decoration:none}
+.crumb-sep{opacity:.5;padding:0 var(--space-1)}
+.dtitle-row{display:flex;align-items:flex-start;gap:var(--space-10);flex-wrap:wrap;
+  padding-bottom:var(--space-10);border-bottom:1px solid var(--border);margin-bottom:var(--space-11)}
+.dtitle-main{flex:1 1 22rem;min-width:0}
+.dcode{display:flex;align-items:baseline;flex-wrap:wrap;gap:var(--space-5);font-family:var(--mono);
+  font-size:var(--fs-3xl);font-weight:var(--fw-bold);letter-spacing:-.02em;line-height:1.15}
+.dname{font-family:var(--font);font-size:var(--fs-lg);font-weight:var(--fw-medium);color:var(--ink-2)}
+.dsub{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-4);
+  font-size:var(--fs-xs);color:var(--ink-3)}
+.dsub .dot{opacity:.45}
+.dactions{display:flex;align-items:center;gap:var(--space-4);flex-wrap:wrap}
+.act-gap{width:var(--space-10)}
+
+.btn{display:inline-flex;align-items:center;gap:var(--space-3);padding:var(--space-4) var(--space-8);
+  min-height:34px;border:1px solid var(--border-2);border-radius:var(--r-sm);background:var(--surface);
+  color:var(--ink);font:inherit;font-weight:var(--fw-semibold);font-size:var(--fs-sm);cursor:pointer;
+  transition:background .15s var(--ease),border-color .15s var(--ease)}
+.btn:hover{background:var(--surface-2)}
+.btn:focus-visible{outline:none;box-shadow:var(--ring)}
+.btn.primary{background:var(--grad);border-color:transparent;color:var(--on-brand);
+  box-shadow:0 8px 18px -10px var(--warm-ink)}
+.btn.primary:hover{filter:brightness(1.04)}
+.btn.danger-ghost{background:transparent;border-color:var(--border-danger);color:var(--danger-strong)}
+.btn.danger-ghost:hover{background:var(--danger-soft)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--ink-2)}
+.btn.ghost:hover{background:var(--muted-soft);color:var(--ink)}
+.btn.sm{min-height:28px;padding:var(--space-2) var(--space-5);font-size:var(--fs-xs)}
+.btn svg{width:15px;height:15px}
+.copy-btn{display:inline-grid;place-items:center;width:22px;height:22px;border:1px solid var(--border-2);
+  border-radius:6px;background:var(--surface);color:var(--ink-3);cursor:pointer;vertical-align:-5px}
+.copy-btn:hover{color:var(--primary-ink);border-color:var(--primary)}
+.copy-btn svg{width:12px;height:12px}
+
+.detail-2col{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:var(--space-12);align-items:start}
+.dmain{min-width:0}
+.drail{min-width:0;position:sticky;top:var(--space-10);display:flex;flex-direction:column;gap:var(--space-9)}
+.rail-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:var(--space-9) var(--space-9);box-shadow:var(--shadow-sm)}
+.rail-h{font-size:var(--fs-2xs);font-weight:var(--fw-bold);letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:var(--space-8)}
+.rail-row{display:flex;flex-direction:column;gap:2px;padding:var(--space-5) 0;border-top:1px solid var(--border)}
+.rail-row:first-of-type{border-top:none;padding-top:0}
+.rail-k{font-size:var(--fs-2xs);font-weight:var(--fw-semibold);letter-spacing:.05em;
+  text-transform:uppercase;color:var(--ink-3)}
+.rail-v{font-size:var(--fs-md);font-weight:var(--fw-semibold);overflow-wrap:anywhere}
+.rail-note{font-size:var(--fs-xs);color:var(--ink-3)}
+
+.tabs{display:flex;gap:var(--space-1);border-bottom:1px solid var(--border);overflow-x:auto;
+  scrollbar-width:none;margin-bottom:var(--space-11)}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;white-space:nowrap;padding:var(--space-5) var(--space-9);border:none;
+  border-bottom:2px solid transparent;background:none;color:var(--ink-3);font:inherit;
+  font-weight:var(--fw-semibold);font-size:var(--fs-sm);cursor:pointer;margin-bottom:-1px}
+.tab:hover:not(.active){color:var(--ink-2)}
+.tab.active{color:var(--primary-ink);border-bottom-color:var(--primary)}
+.tab-count{display:inline-block;min-width:18px;padding:0 5px;margin-left:var(--space-3);
+  border-radius:var(--radius-pill);background:var(--muted-soft);color:var(--ink-3);
+  font-size:var(--fs-2xs);font-weight:var(--fw-bold);text-align:center}
+.tab.active .tab-count{background:var(--primary-soft);color:var(--primary-ink)}
+.tabpanel{display:none}
+.tabpanel.show{display:block}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:var(--space-9) var(--space-10);box-shadow:var(--shadow-sm);margin-bottom:var(--space-11)}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:var(--space-7);
+  margin-bottom:var(--space-9)}
+.card-h h2{font-size:var(--fs-md);font-weight:var(--fw-semibold);letter-spacing:-.005em}
+.card-h .sub{font-size:var(--fs-xs);color:var(--ink-3);font-weight:var(--fw-medium)}
+.data-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--space-8) var(--space-10)}
+.data-item{min-width:0}
+.data-item dt{font-size:var(--fs-2xs);font-weight:var(--fw-semibold);letter-spacing:.05em;
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:2px}
+.data-item dd{font-size:var(--fs-md);font-weight:var(--fw-medium);overflow-wrap:anywhere}
+.blank-fields{margin-top:var(--space-9);padding-top:var(--space-7);border-top:1px dashed var(--border-2);
+  font-size:var(--fs-xs);color:var(--ink-3)}
+
+.badge{display:inline-flex;align-items:center;gap:var(--space-2);padding:2px var(--space-5);
+  border-radius:var(--radius-pill);border:1px solid var(--border-2);background:var(--muted-soft);
+  color:var(--ink-2);font-size:var(--fs-xs);font-weight:var(--fw-semibold);white-space:nowrap}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.badge.ok{background:var(--ok-soft);border-color:var(--border-ok);color:var(--ok)}
+.badge.warn{background:var(--warn-soft);border-color:var(--border-warn);color:var(--warn)}
+.badge.danger{background:var(--danger-soft);border-color:var(--border-danger);color:var(--danger-strong)}
+
+.table-wrap{overflow-x:auto}
+.table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+.table th{text-align:left;font-size:var(--fs-2xs);font-weight:var(--fw-bold);letter-spacing:.05em;
+  text-transform:uppercase;color:var(--ink-3);padding:var(--space-4) var(--space-6);
+  border-bottom:1px solid var(--border)}
+.table td{padding:var(--space-6);border-bottom:1px solid var(--border);vertical-align:top}
+.table tr:last-child td{border-bottom:none}
+.table tbody tr:hover{background:var(--surface-2)}
+.col-right{text-align:right}
+/* Bảng nhiều cột KHÔNG được bóp cho vừa cột chính — bóp lại thì mỗi ô xuống ba dòng và bảng
+   hết đọc được. Đặt SÀN bề ngang rồi để .table-wrap cuộn ngang TRONG thẻ. Chỉ áp ở ≥961px:
+   dưới mốc đó .table-stack đã gập bảng thành thẻ dọc, đặt sàn ở đó là tự sinh cuộn ngang. */
+@media (min-width:961px){
+  .table.wide{min-width:66rem}
+  /* Số tiền, IP, serial, mã cổng KHÔNG được xuống dòng giữa chừng: "3.150.000 đ" gãy chữ "đ"
+     xuống dòng dưới là một con số đọc ra hai lần. Chỉ ở ≥961px — dưới đó bảng đã là thẻ dọc. */
+  .table td.mono, .table td.col-right{white-space:nowrap}
+}
+
+.wbar-meta{display:flex;justify-content:space-between;gap:var(--space-7);font-size:var(--fs-xs);
+  color:var(--ink-3);margin-bottom:var(--space-4)}
+.wbar-track{height:8px;border-radius:var(--radius-pill);background:var(--muted-soft);overflow:hidden}
+.wbar-fill{height:100%;border-radius:var(--radius-pill);background:var(--ok)}
+.wbar-fill.warn{background:var(--warn)}
+.wbar-fill.danger{background:var(--danger)}
+.wbar-foot{display:flex;justify-content:space-between;gap:var(--space-7);font-size:var(--fs-xs);
+  margin-top:var(--space-4);color:var(--ink-3)}
+.wbar-foot strong{color:var(--ink);font-weight:var(--fw-semibold)}
+.wmini .wbar-track{height:6px}
+
+.tl{position:relative;padding-left:var(--space-10)}
+.tl::before{content:"";position:absolute;left:4px;top:6px;bottom:6px;width:1px;background:var(--border)}
+.tl-day{font-size:var(--fs-2xs);font-weight:var(--fw-bold);letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-3);margin:var(--space-9) 0 var(--space-5)}
+.tl-day:first-child{margin-top:0}
+.tl-item{position:relative;padding:0 0 var(--space-9)}
+.tl-item::before{content:"";position:absolute;left:calc(-1 * var(--space-10) + 1px);top:5px;
+  width:9px;height:9px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 3px var(--surface)}
+.tl-t{font-weight:var(--fw-semibold)}
+.tl-d{font-size:var(--fs-xs);color:var(--ink-2);margin-top:2px}
+.tl-m{font-size:var(--fs-xs);color:var(--ink-3);margin-top:2px}
+
+.empty{padding:var(--space-12) var(--space-9);text-align:center;color:var(--ink-3);
+  border:1px dashed var(--border-2);border-radius:var(--r-lg);background:var(--surface-2)}
+.empty h3{font-size:var(--fs-md);color:var(--ink-2);margin-bottom:var(--space-3)}
+.empty p{font-size:var(--fs-xs);max-width:42ch;margin-inline:auto}
+
+.spec-note{margin:var(--space-12) 0 var(--space-9);padding:var(--space-8) var(--space-9);
+  border-left:3px solid var(--warm);background:var(--warm-soft);border-radius:0 var(--r) var(--r) 0;
+  font-size:var(--fs-xs);color:var(--ink-2)}
+.spec-note b{color:var(--ink)}
+.spec-note + .spec-note{margin-top:calc(-1 * var(--space-7))}
+
+.panel-list{display:grid;gap:var(--space-4)}
+.panel-row{display:flex;align-items:center;gap:var(--space-7);padding:var(--space-5) 0;
+  border-bottom:1px solid var(--border)}
+.panel-row:last-child{border-bottom:none}
+.panel-row .k{flex:0 0 9rem;font-family:var(--mono);font-weight:var(--fw-semibold);min-width:0;
+  overflow-wrap:anywhere}
+.panel-row .v{flex:1;min-width:0;color:var(--ink-2);overflow-wrap:anywhere}
+.hint{font-size:var(--fs-xs);color:var(--ink-3);margin-bottom:var(--space-8)}
+.sec-h{font-size:var(--fs-sm);font-weight:var(--fw-bold);letter-spacing:.03em;margin-bottom:var(--space-6)}
+.uploader{display:flex;align-items:center;gap:var(--space-7);flex-wrap:wrap;padding:var(--space-8);
+  border:1px dashed var(--border-2);border-radius:var(--r);background:var(--surface-2);
+  margin-bottom:var(--space-9)}
+
+@media (max-width:1199px){
+  .detail-2col{grid-template-columns:1fr;gap:var(--space-11)}
+  .drail{position:static;order:-1}
+  .rail-card{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+    gap:var(--space-7) var(--space-9)}
+  .rail-h{grid-column:1/-1;margin-bottom:0}
+  .rail-row{border-top:none;padding:0}
+}
+@media (max-width:960px){
+  .sb{position:fixed;left:-260px;z-index:40;transition:left .2s var(--ease)}
+  .sb.open{left:0}
+  .table-stack thead{display:none}
+  .table-stack tr{display:block;padding:var(--space-5) 0;border-bottom:1px solid var(--border)}
+  .table-stack tr:hover{background:none}
+  .table-stack td{display:flex;justify-content:space-between;gap:var(--space-9);border:none;
+    padding:var(--space-2) 0}
+  .table-stack td::before{content:attr(data-label);font-weight:var(--fw-semibold);color:var(--ink-3);
+    font-size:var(--fs-xs);flex:0 0 auto}
+  .panel-row{flex-direction:column;align-items:flex-start;gap:var(--space-1)}
+  .panel-row .k{flex:none}
+}
+@media (min-width:961px){ .sb-toggle{display:none} }
+@media (max-width:680px){
+  .page{padding:var(--space-9) var(--space-7) var(--space-12)}
+  .dcode{font-size:var(--fs-2xl)}
+  .dtitle-row{gap:var(--space-8)}
+  .dactions{width:100%}
+  .dactions .btn{flex:1 1 auto;justify-content:center;min-height:40px}
+  .act-gap{display:none}
+  /* Nút phá KHÔNG kéo hết bề ngang: to bằng nút chính là mời tay bấm nhầm. Xuống dòng,
+     nép phải, rộng vừa đủ chữ. */
+  .dactions .btn.danger-ghost{flex:0 0 auto;margin-top:var(--space-5);margin-left:auto;
+    padding-inline:var(--space-10)}
+  .card{padding:var(--space-8);border-radius:var(--r)}
+  .rail-card{grid-template-columns:1fr 1fr}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* --- Riêng màn dải IP (thanh lọc · phân trang · menu dòng) ---------------- */
+.filterbar{display:flex;align-items:center;justify-content:space-between;gap:var(--space-7);
+  flex-wrap:wrap;margin-bottom:var(--space-9)}
+.segmented{display:flex;flex-wrap:wrap;gap:var(--space-2);padding:var(--space-1);
+  border:1px solid var(--border-2);border-radius:var(--radius-pill);background:var(--surface-2)}
+.segmented button{display:inline-flex;align-items:center;gap:var(--space-3);
+  padding:var(--space-3) var(--space-7);border:none;border-radius:var(--radius-pill);background:none;
+  color:var(--ink-2);font:inherit;font-size:var(--fs-xs);font-weight:var(--fw-semibold);
+  cursor:pointer;white-space:nowrap}
+.segmented button:hover{color:var(--ink)}
+.segmented button.on{background:var(--surface);color:var(--primary-ink);box-shadow:var(--shadow-sm)}
+.segmented button:focus-visible{outline:none;box-shadow:var(--ring)}
+.seg-count{min-width:18px;padding:0 5px;border-radius:var(--radius-pill);background:var(--muted-soft);
+  color:var(--ink-3);font-size:var(--fs-2xs);font-weight:var(--fw-bold);text-align:center}
+.segmented button.on .seg-count{background:var(--primary-soft);color:var(--primary-ink)}
+.check-row{display:inline-flex;align-items:center;gap:var(--space-3);font-size:var(--fs-xs);
+  color:var(--ink-2);cursor:pointer;white-space:nowrap}
+.check-row input{width:15px;height:15px;accent-color:var(--primary)}
+.col-center{text-align:center}
+.row-muted td{color:var(--ink-3)}
+.action-cell{display:flex;justify-content:center;align-items:center;gap:var(--space-3)}
+.kebab{display:inline-grid;place-items:center;width:28px;height:28px;border:1px solid var(--border-2);
+  border-radius:var(--r-sm);background:var(--surface);color:var(--ink-2);cursor:pointer}
+.kebab:hover{border-color:var(--primary);color:var(--primary-ink)}
+.kebab:focus-visible{outline:none;box-shadow:var(--ring)}
+.kebab svg{width:15px;height:15px}
+.pager{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:var(--space-5);
+  margin-top:var(--space-9);padding-top:var(--space-7);border-top:1px solid var(--border);
+  font-size:var(--fs-xs);color:var(--ink-3)}
+.pager-info{margin-right:auto}
+.pager-page{font-weight:var(--fw-semibold);color:var(--ink-2)}
+.pager-nav svg{width:14px;height:14px}
+.rail-card .blank-fields{grid-column:1/-1;margin-top:var(--space-5)}
+@media (max-width:960px){
+  .action-cell{justify-content:flex-end}
+  .pager{justify-content:center}
+  .pager-info{flex:1 1 100%;margin-right:0;text-align:center}
+}
+@media (max-width:680px){
+  /* Trang này có BA nút ở hàng tiêu đề, nên cụm chính vừa đúng một hàng và nút phá không tự
+     xuống dòng như trang hai nút. Ép nó xuống: việc phá phải cách việc thường một quãng. */
+  .dactions .act-gap{display:block;flex:1 0 100%;height:0}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sb" id="sb">
+    <div class="sb-brand"><span class="sb-logo">IMS</span> IMS</div>
+    <nav class="sb-nav">
+      <div class="sb-label">Nghiệp vụ</div>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Bảng điều khiển</a>
+      <a class="sb-item" href="thiet-bi.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg> Thiết bị</a>
+      <a class="sb-item" href="phan-mem.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.9 4.9l2.9 2.9M16.2 16.2l2.9 2.9M2 12h4M18 12h4"/></svg> Phần mềm</a>
+      <a class="sb-item" href="duong-truyen.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg> Đường truyền</a>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Sắp hết hạn</a>
+      <a class="sb-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg> Địa chỉ IP</a>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h13l-3-3M20 17H7l3 3"/></svg> Sổ NAT</a>
+      <a class="sb-item" href="tai-khoan-dich-vu.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2.2"/><path d="M14 10h5M14 14h3"/></svg> Tài khoản dịch vụ</a>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m8 12 3 3 5-6"/></svg> Duyệt yêu cầu</a>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Két sắt</a>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9 12h6"/></svg> Kho thanh lý</a>
+      <span class="sb-item is-planned" title="Phần này chưa mở trong bản hiện tại"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg> Tài liệu</span>
+      <div class="sb-label">Hệ thống</div>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c.8-3.4 3.2-5 6-5s5.2 1.6 6 5"/><circle cx="18" cy="9" r="2.4"/></svg> Tài khoản</a>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8.5 11 4l8 4.5v7L11 20l-8-4.5z"/></svg> Danh mục</a>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 5 6v5c0 4.4 2.9 8.4 7 10 4.1-1.6 7-5.6 7-10V6z"/></svg> Quyền két sắt</a>
+      <span class="sb-item is-planned" title="Phần này chưa mở trong bản hiện tại"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Nhật ký</span>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="m3 7 9 5 9-5M12 12v10"/></svg> Bộ giao diện</a>
+    </nav>
+    <div class="sb-foot">
+      <span class="sb-ava" aria-hidden="true">NH</span>
+      <span class="sb-who"><b>Nguyễn Minh Hoàng</b><span>Super Admin</span></span>
+      <button class="sb-out" type="button" aria-label="Đăng xuất" title="Đăng xuất">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 17l5-5-5-5M20 12H9M12 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h6"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn sb-toggle" id="sbToggle" aria-label="Mở menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="grow">Quản lý hệ thống IT · PMH</div>
+      <button class="icon-btn" id="themeBtn" aria-label="Đổi giao diện sáng/tối">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg>
+      </button>
+    </header>
+
+
+
+    <main class="page">
+      <div class="spec-note" style="border-left-color:var(--danger);background:var(--danger-soft);margin-top:0">
+        <b>CẢNH BÁO — khung của trang này vẽ SAI kiến trúc thật, đừng port nguyên xi.</b>
+        Kiểm lại trên stack ngày 14/09: <span class="mono">/ip-addresses</span> và
+        <span class="mono">/ip-addresses/:id</span> cùng render <span class="mono">IpamScreen</span>,
+        và nó ĐÃ là bố cục <b>hai khung</b> — danh sách dải bên trái, <span class="mono">SubnetPane</span>
+        bên phải. Màn thật KHÔNG có breadcrumb và KHÔNG có <span class="mono">DetailHeader</span>, vì
+        khung trái chính là đường điều hướng. Lượt trước tôi đọc thiếu chỗ này và đặt đề bài sai cho
+        trang xem trước.
+        <br><br>
+        <b>Phần vẫn dùng được:</b> cột bảng, chip lọc, phân trang, hành động từng dòng, thẻ định danh
+        của dải và trạng thái rỗng — tất cả lấy đúng từ <span class="mono">subnet-detail.tsx</span>.
+        <b>Phải dựng lại trước khi port:</b> cái khung — bỏ breadcrumb + hàng tiêu đề kiểu trang chi
+        tiết, thay bằng tiêu đề trang "Địa chỉ IP" + hai khung, và thẻ định danh bên phải chuyển
+        thành thẻ dải đang chọn trong danh sách bên trái.
+      </div>
+
+      <nav class="crumbs" aria-label="breadcrumb">
+        <a class="crumb-back" href="#"><span aria-hidden="true">‹</span> Địa chỉ IP</a>
+        <span class="crumb-sep" aria-hidden="true">›</span><span>LAN Văn phòng tầng 3</span>
+      </nav>
+
+      <div class="dtitle-row">
+        <div class="dtitle-main">
+          <h1 class="dcode">172.16.10.0/24 <span class="dname">LAN Văn phòng tầng 3</span></h1>
+        </div>
+        <div class="dactions">
+          <button class="btn primary" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg>
+            Sửa dải
+          </button>
+          <button class="btn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M7 11l5 5 5-5M4 20h16"/></svg>
+            Xuất Excel
+          </button>
+          <span class="act-gap" aria-hidden="true"></span>
+          <button class="btn danger-ghost" type="button">Vô hiệu hóa</button>
+        </div>
+      </div>
+
+      <div class="detail-2col">
+        <!-- ============ CỘT NỘI DUNG ============ -->
+        <div class="dmain">
+          <div class="card">
+            <div class="filterbar">
+              <div class="segmented" role="group" aria-label="Trạng thái">
+                <button type="button" class="on" aria-pressed="true">Tất cả <span class="seg-count">254</span></button>
+                <button type="button" aria-pressed="false">Đang cấp <span class="seg-count">41</span></button>
+                <button type="button" aria-pressed="false">Trống <span class="seg-count">206</span></button>
+                <button type="button" aria-pressed="false">Nghi chết <span class="seg-count">4</span></button>
+                <button type="button" aria-pressed="false">Đã thu hồi <span class="seg-count">3</span></button>
+              </div>
+              <label class="check-row"><input type="checkbox" checked> Hiện cả hồ sơ đã ẩn</label>
+            </div>
+
+            <div class="table-wrap">
+              <table class="table table-stack wide">
+                <thead><tr>
+                  <th>Địa chỉ</th><th>Trạng thái</th><th>Thiết bị</th>
+                  <th>Người / bộ phận dùng</th><th>Ngày cấp</th><th class="col-center">Thao tác</th>
+                </tr></thead>
+                <tbody>
+                  <tr>
+                    <td data-label="Địa chỉ"><span class="mono">172.16.10.1</span></td>
+                    <td data-label="Trạng thái"><span class="badge ok">Đang cấp</span></td>
+                    <td data-label="Thiết bị"><a href="thiet-bi.html">RT-LST-01</a></td>
+                    <td data-label="Người / bộ phận dùng">Phòng CNTT</td>
+                    <td data-label="Ngày cấp">12/03/2025</td>
+                    <td data-label="Thao tác" class="col-center"><div class="action-cell">
+                      <button class="kebab" type="button" aria-label="Thao tác với 172.16.10.1">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>
+                      </button>
+                    </div></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Địa chỉ"><span class="mono">172.16.10.2</span></td>
+                    <td data-label="Trạng thái"><span class="badge ok">Đang cấp</span></td>
+                    <td data-label="Thiết bị"><a href="thiet-bi.html">SW-CORE-01</a></td>
+                    <td data-label="Người / bộ phận dùng">Phòng CNTT</td>
+                    <td data-label="Ngày cấp">12/03/2025</td>
+                    <td data-label="Thao tác" class="col-center"><div class="action-cell">
+                      <button class="kebab" type="button" aria-label="Thao tác với 172.16.10.2">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>
+                      </button>
+                    </div></td>
+                  </tr>
+                  <tr class="row-muted">
+                    <td data-label="Địa chỉ"><span class="mono">172.16.10.3</span></td>
+                    <td data-label="Trạng thái"><span class="badge">Trống</span></td>
+                    <td data-label="Thiết bị">—</td>
+                    <td data-label="Người / bộ phận dùng">—</td>
+                    <td data-label="Ngày cấp">—</td>
+                    <td data-label="Thao tác" class="col-center"><div class="action-cell">
+                      <button class="btn sm" type="button">Cấp IP này</button>
+                    </div></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Địa chỉ"><span class="mono">172.16.10.4</span></td>
+                    <td data-label="Trạng thái"><span class="badge" title="gõ nhầm địa chỉ">Đã ẩn</span></td>
+                    <td data-label="Thiết bị">—</td>
+                    <td data-label="Người / bộ phận dùng">Phòng Kế toán</td>
+                    <td data-label="Ngày cấp">02/09/2026</td>
+                    <td data-label="Thao tác" class="col-center"><div class="action-cell">
+                      <button class="kebab" type="button" aria-label="Thao tác với 172.16.10.4">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>
+                      </button>
+                    </div></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Địa chỉ"><span class="mono">172.16.10.5</span></td>
+                    <td data-label="Trạng thái"><span class="badge ok">Đang cấp</span></td>
+                    <td data-label="Thiết bị"><a href="thiet-bi.html">PRN-KT-02</a></td>
+                    <td data-label="Người / bộ phận dùng">Phòng Kế toán</td>
+                    <td data-label="Ngày cấp">18/07/2025</td>
+                    <td data-label="Thao tác" class="col-center"><div class="action-cell">
+                      <button class="kebab" type="button" aria-label="Thao tác với 172.16.10.5">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>
+                      </button>
+                    </div></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Địa chỉ"><span class="mono">172.16.10.6</span></td>
+                    <td data-label="Trạng thái"><span class="badge warn">Nghi chết</span></td>
+                    <td data-label="Thiết bị"><a href="thiet-bi.html">PC-KD-021</a></td>
+                    <td data-label="Người / bộ phận dùng">Anh Dũng — Kinh doanh</td>
+                    <td data-label="Ngày cấp">09/01/2026</td>
+                    <td data-label="Thao tác" class="col-center"><div class="action-cell">
+                      <button class="kebab" type="button" aria-label="Thao tác với 172.16.10.6">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>
+                      </button>
+                    </div></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Địa chỉ"><span class="mono">172.16.10.7</span></td>
+                    <td data-label="Trạng thái"><span class="badge">Đã thu hồi</span></td>
+                    <td data-label="Thiết bị">—</td>
+                    <td data-label="Người / bộ phận dùng">—</td>
+                    <td data-label="Ngày cấp">—</td>
+                    <td data-label="Thao tác" class="col-center"><div class="action-cell">
+                      <button class="kebab" type="button" aria-label="Thao tác với 172.16.10.7">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>
+                      </button>
+                    </div></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Địa chỉ"><span class="mono">172.16.10.8</span></td>
+                    <td data-label="Trạng thái"><span class="badge ok">Đang cấp</span></td>
+                    <td data-label="Thiết bị">—</td>
+                    <td data-label="Người / bộ phận dùng">Chị Lan — Kế toán</td>
+                    <td data-label="Ngày cấp">04/06/2026</td>
+                    <td data-label="Thao tác" class="col-center"><div class="action-cell">
+                      <button class="kebab" type="button" aria-label="Thao tác với 172.16.10.8">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>
+                      </button>
+                    </div></td>
+                  </tr>
+                  <tr class="row-muted">
+                    <td data-label="Địa chỉ"><span class="mono">172.16.10.9</span></td>
+                    <td data-label="Trạng thái"><span class="badge">Trống</span></td>
+                    <td data-label="Thiết bị">—</td>
+                    <td data-label="Người / bộ phận dùng">—</td>
+                    <td data-label="Ngày cấp">—</td>
+                    <td data-label="Thao tác" class="col-center"><div class="action-cell">
+                      <button class="btn sm" type="button">Cấp IP này</button>
+                    </div></td>
+                  </tr>
+                  <tr>
+                    <td data-label="Địa chỉ"><span class="mono">172.16.10.10</span></td>
+                    <td data-label="Trạng thái"><span class="badge ok">Đang cấp</span></td>
+                    <td data-label="Thiết bị"><a href="thiet-bi.html">PC-NS-007</a></td>
+                    <td data-label="Người / bộ phận dùng">Phòng Nhân sự</td>
+                    <td data-label="Ngày cấp">22/08/2026</td>
+                    <td data-label="Thao tác" class="col-center"><div class="action-cell">
+                      <button class="kebab" type="button" aria-label="Thao tác với 172.16.10.10">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>
+                      </button>
+                    </div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <nav class="pager" aria-label="Trang">
+              <span class="pager-info muted">1–50 trên 254 dòng</span>
+              <button class="btn sm pager-nav" type="button" aria-label="Trang trước" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6"/></svg>
+              </button>
+              <span class="pager-page">Trang 1/6</span>
+              <button class="btn sm pager-nav" type="button" aria-label="Trang sau">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+            </nav>
+          </div>
+
+          <div class="spec-note">
+            <b>Bảng trên rút gọn còn 10 dòng cho dễ nhìn</b> — màn thật cắt 50 dòng một trang
+            (<span class="mono">SLOT_PAGE_SIZE</span>), nên một dải /24 là 6 trang. Con số trên
+            từng nút lọc tính trên TOÀN dải chứ không phải trên trang đang xem: "còn mấy chỗ
+            trống" phải trả lời được bằng một cái liếc.
+          </div>
+
+          <div class="spec-note">
+            <b>Nút ba chấm ở cột Thao tác</b> mở đúng những việc ĐI ĐƯỢC từ trạng thái của dòng
+            đó: <i>Đang cấp</i> → "Nghi chết" · "Thu hồi" · "Lịch sử" · "Sửa" · "Xóa";
+            <i>Nghi chết</i> → "Vẫn dùng" · "Thu hồi" · …; <i>Đã thu hồi</i> → "Cấp lại" · …;
+            dòng <i>Đã ẩn</i> chỉ còn "Bật lại" và "Lịch sử". Ô còn trống không có menu — nó có
+            đúng một việc, và việc đó là cái nút <i>Cấp IP này</i> nằm thẳng trên dòng.
+          </div>
+
+          <div class="card">
+            <div class="card-h"><h2>Lịch sử của 172.16.10.6</h2></div>
+            <div class="tl">
+              <div class="tl-day">Hôm nay · 14/09/2026</div>
+              <div class="tl-item">
+                <p class="tl-t">Đánh dấu nghi chết</p>
+                <p class="tl-d">Đang cấp → Nghi chết · lý do: ping không phản hồi từ 09/09</p>
+                <p class="tl-m">hoang.nm@pmh.com.vn · 08:26</p>
+              </div>
+              <div class="tl-day">09/01/2026</div>
+              <div class="tl-item">
+                <p class="tl-t">Cấp IP</p>
+                <p class="tl-d">Trống → Đang cấp · cấp cho: Anh Dũng — Kinh doanh</p>
+                <p class="tl-m">thao.pt@pmh.com.vn · 10:12</p>
+              </div>
+              <div class="tl-day">04/08/2025</div>
+              <div class="tl-item">
+                <p class="tl-t">Thu hồi</p>
+                <p class="tl-d">Đang cấp → Đã thu hồi · trước đó: Chị Hà — Kinh doanh · lý do: nghỉ việc, thu máy</p>
+                <p class="tl-m">thao.pt@pmh.com.vn · 16:40</p>
+              </div>
+              <div class="tl-item">
+                <p class="tl-t">Tạo hồ sơ</p>
+                <p class="tl-d">Đang cấp · 172.16.10.6</p>
+                <p class="tl-m">sa@pmh.com.vn · 09:05</p>
+              </div>
+            </div>
+            <div class="spec-note" style="margin-bottom:0">
+              <b>Trong màn thật khu này là HỘP THOẠI</b> mở từ menu ba chấm → "Lịch sử" của một
+              địa chỉ, không phải một khu cố định trên trang — vẽ ra đây để thấy nó dùng chung
+              <span class="mono">HistoryPanel</span> với bốn màn chi tiết kia. Dòng "Thu hồi"
+              là dòng quan trọng nhất: sau khi thu hồi thì hồ sơ IP không còn giữ tên chủ cũ,
+              chỉ còn lịch sử trả lời được câu "IP này từng của ai".
+            </div>
+          </div>
+
+          <div class="spec-note">
+            <b>Những gì màn thật KHÔNG có, nên bản này cũng không vẽ:</b> không thanh tab
+            (màn dải chưa bao giờ có tab), không dải chỉ số ngang, không biểu đồ hay "bản đồ
+            nhiệt IP", không khu giấy tờ / két sắt. Thứ duy nhất thêm vào so với bản hiện tại
+            là <i>breadcrumb</i> và <i>hàng tiêu đề</i> — để vào mục này ở sidebar không còn
+            lạc ra một cái màn dựng riêng như trước.
+          </div>
+        </div>
+
+        <!-- ============ CỘT THẺ ĐỊNH DANH ============ -->
+        <aside class="drail">
+          <div class="rail-card">
+            <div class="rail-h">Thẻ định danh</div>
+            <div class="rail-row">
+              <span class="rail-k">Mức sử dụng</span>
+              <span class="rail-v">18% · 45/254 · còn 209</span>
+              <div class="wmini" style="margin-top:var(--space-3)">
+                <div class="wbar-track"><div class="wbar-fill" style="width:18%"></div></div>
+              </div>
+            </div>
+            <div class="rail-row">
+              <span class="rail-k">Site</span>
+              <span class="rail-v">LST</span>
+            </div>
+            <div class="rail-row">
+              <span class="rail-k">VLAN</span>
+              <span class="rail-v">20</span>
+            </div>
+            <div class="rail-row">
+              <span class="rail-k">Gateway</span>
+              <span class="rail-v mono">172.16.10.1</span>
+            </div>
+            <div class="rail-row">
+              <span class="rail-k">Mô tả</span>
+              <span class="rail-v">Máy trạm tầng 3 tòa A</span>
+              <span class="rail-note">Kế toán · Kinh doanh · Nhân sự</span>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- ============ §B — dải mới, chưa cấp IP nào ============ -->
+      <div class="spec-note">
+        <b>§B — cùng màn này với một dải vừa khai xong, chưa cấp IP nào.</b>
+        Đây là trạng thái thường gặp nhất ngay sau khi thêm một dải, và là chỗ bản hiện tại
+        hỏng nặng nhất: thẻ dải vẫn vẽ đủ ô <i>VLAN</i>, <i>Gateway</i>, <i>Mô tả</i> chỉ chứa
+        dấu gạch ngang. Bản v2: ô trống KHÔNG được vẽ, cả ba gom vào một dòng "Chưa khai".
+        Bảng thì không rỗng — 254 ô còn trống vẫn là 254 dòng bấm cấp được ngay, vì câu hỏi
+        thật lúc cắm máy là "còn chỗ nào trống".
+      </div>
+
+      <div class="dtitle-row">
+        <div class="dtitle-main">
+          <h1 class="dcode">192.168.50.0/24 <span class="dname">Camera kho Long Thành</span></h1>
+        </div>
+        <div class="dactions">
+          <button class="btn primary" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg>
+            Sửa dải
+          </button>
+          <button class="btn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M7 11l5 5 5-5M4 20h16"/></svg>
+            Xuất Excel
+          </button>
+          <span class="act-gap" aria-hidden="true"></span>
+          <button class="btn danger-ghost" type="button">Xóa</button>
+        </div>
+      </div>
+
+      <div class="detail-2col">
+        <div class="dmain">
+          <div class="card">
+            <div class="filterbar">
+              <div class="segmented" role="group" aria-label="Trạng thái">
+                <button type="button" class="on" aria-pressed="true">Tất cả <span class="seg-count">254</span></button>
+                <button type="button" aria-pressed="false">Đang cấp <span class="seg-count">0</span></button>
+                <button type="button" aria-pressed="false">Trống <span class="seg-count">254</span></button>
+                <button type="button" aria-pressed="false">Nghi chết <span class="seg-count">0</span></button>
+                <button type="button" aria-pressed="false">Đã thu hồi <span class="seg-count">0</span></button>
+              </div>
+              <label class="check-row"><input type="checkbox"> Hiện cả hồ sơ đã ẩn</label>
+            </div>
+
+            <div class="table-wrap">
+              <table class="table table-stack wide">
+                <thead><tr>
+                  <th>Địa chỉ</th><th>Trạng thái</th><th>Thiết bị</th>
+                  <th>Người / bộ phận dùng</th><th>Ngày cấp</th><th class="col-center">Thao tác</th>
+                </tr></thead>
+                <tbody>
+                  <tr class="row-muted">
+                    <td data-label="Địa chỉ"><span class="mono">192.168.50.1</span></td>
+                    <td data-label="Trạng thái"><span class="badge">Trống</span></td>
+                    <td data-label="Thiết bị">—</td>
+                    <td data-label="Người / bộ phận dùng">—</td>
+                    <td data-label="Ngày cấp">—</td>
+                    <td data-label="Thao tác" class="col-center"><div class="action-cell">
+                      <button class="btn sm" type="button">Cấp IP này</button>
+                    </div></td>
+                  </tr>
+                  <tr class="row-muted">
+                    <td data-label="Địa chỉ"><span class="mono">192.168.50.2</span></td>
+                    <td data-label="Trạng thái"><span class="badge">Trống</span></td>
+                    <td data-label="Thiết bị">—</td>
+                    <td data-label="Người / bộ phận dùng">—</td>
+                    <td data-label="Ngày cấp">—</td>
+                    <td data-label="Thao tác" class="col-center"><div class="action-cell">
+                      <button class="btn sm" type="button">Cấp IP này</button>
+                    </div></td>
+                  </tr>
+                  <tr class="row-muted">
+                    <td data-label="Địa chỉ"><span class="mono">192.168.50.3</span></td>
+                    <td data-label="Trạng thái"><span class="badge">Trống</span></td>
+                    <td data-label="Thiết bị">—</td>
+                    <td data-label="Người / bộ phận dùng">—</td>
+                    <td data-label="Ngày cấp">—</td>
+                    <td data-label="Thao tác" class="col-center"><div class="action-cell">
+                      <button class="btn sm" type="button">Cấp IP này</button>
+                    </div></td>
+                  </tr>
+                  <tr class="row-muted">
+                    <td data-label="Địa chỉ"><span class="mono">192.168.50.4</span></td>
+                    <td data-label="Trạng thái"><span class="badge">Trống</span></td>
+                    <td data-label="Thiết bị">—</td>
+                    <td data-label="Người / bộ phận dùng">—</td>
+                    <td data-label="Ngày cấp">—</td>
+                    <td data-label="Thao tác" class="col-center"><div class="action-cell">
+                      <button class="btn sm" type="button">Cấp IP này</button>
+                    </div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <nav class="pager" aria-label="Trang">
+              <span class="pager-info muted">1–50 trên 254 dòng</span>
+              <button class="btn sm pager-nav" type="button" aria-label="Trang trước" disabled>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 6-6 6 6 6"/></svg>
+              </button>
+              <span class="pager-page">Trang 1/6</span>
+              <button class="btn sm pager-nav" type="button" aria-label="Trang sau">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 6 6 6-6 6"/></svg>
+              </button>
+            </nav>
+          </div>
+
+          <div class="spec-note" style="margin-top:var(--space-9)">
+            <b>Nút phá đổi theo dữ liệu, không bắt người dùng đoán:</b> dải này chưa từng có hồ
+            sơ IP nào nên nút là <i>Xóa</i> (xóa hẳn, khai lại được). Dải đã từng dùng thì nút
+            đó là <i>Vô hiệu hóa</i> như §A — vì lịch sử "IP nào từng của máy nào" phải giữ
+            vĩnh viễn, không xóa hẳn được.
+          </div>
+        </div>
+
+        <aside class="drail">
+          <div class="rail-card">
+            <div class="rail-h">Thẻ định danh</div>
+            <div class="rail-row">
+              <span class="rail-k">Mức sử dụng</span>
+              <span class="rail-v">0% · 0/254 · còn 254</span>
+              <div class="wmini" style="margin-top:var(--space-3)">
+                <div class="wbar-track"><div class="wbar-fill" style="width:0%"></div></div>
+              </div>
+            </div>
+            <div class="rail-row">
+              <span class="rail-k">Site</span>
+              <span class="rail-v">LTH</span>
+            </div>
+            <p class="blank-fields">Chưa khai: VLAN, Gateway, Mô tả.</p>
+          </div>
+        </aside>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+document.getElementById('themeBtn').onclick = function(){
+  var r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark';
+};
+document.getElementById('sbToggle').onclick = function(){
+  document.getElementById('sb').classList.toggle('open');
+};
+document.querySelectorAll('.tab').forEach(function(tab){
+  tab.onclick = function(){
+    document.querySelectorAll('.tab').forEach(function(t){
+      t.classList.remove('active'); t.setAttribute('aria-selected','false');
+    });
+    document.querySelectorAll('.tabpanel').forEach(function(p){ p.classList.remove('show'); });
+    tab.classList.add('active'); tab.setAttribute('aria-selected','true');
+    var el = document.getElementById('panel-' + tab.dataset.tab);
+    if (el) el.classList.add('show');
+  };
+});
+document.querySelectorAll('.segmented').forEach(function(group){
+  group.querySelectorAll('button').forEach(function(btn){
+    btn.onclick = function(){
+      group.querySelectorAll('button').forEach(function(b){
+        b.classList.remove('on'); b.setAttribute('aria-pressed','false');
+      });
+      btn.classList.add('on'); btn.setAttribute('aria-pressed','true');
+    };
+  });
+});
+</script>
+</body>
+</html>

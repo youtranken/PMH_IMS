@@ -160,6 +160,22 @@ button.danger {
 button.danger:hover:not(:disabled) {
   background: var(--danger-strong);
 }
+/*
+ * Nút phá ở ĐẦU TRANG chi tiết (16/09/2026): đỏ nhưng KHÔNG đặc.
+ *
+ * Nền đỏ đặc để dành cho nút xác nhận TRONG hộp thoại — chỗ người dùng đã đọc câu hỏi. Ở đầu
+ * trang thì nút đặc ấy nặng hơn cả nút chính của màn, tức việc làm mỗi ngày thì thì thầm còn
+ * việc không hoàn tác được thì hét lên, ngay tại góc phải nơi mắt và chuột tìm nút chính.
+ */
+button.danger-ghost {
+  background: transparent;
+  border-color: var(--border-danger);
+  color: var(--danger-strong);
+}
+button.danger-ghost:hover:not(:disabled) {
+  background: var(--danger-soft);
+  border-color: var(--danger);
+}
 button.ghost {
   background: transparent;
   border-color: transparent;

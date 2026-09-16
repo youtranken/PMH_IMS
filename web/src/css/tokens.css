@@ -80,6 +80,13 @@
   --space-8: 1.1rem;
   --space-9: 1.25rem;
   --space-10: 1.5rem;
+  /* Ba nấc trên — thêm 16/09/2026. Thang cũ dừng ở 1.5rem, mà root là 14px nên nấc lớn nhất
+     chỉ 21px: KHÔNG có khoảng nào để tách KHU với KHU, mọi thứ trôi thành một khối. Đây là
+     lý do thật của cảm giác "trang chi tiết nhìn chưa đẹp". Dùng: 11 = tách hai khối trong
+     một khu, 12 = tách khu với khu (và khe giữa hai cột), 13 = đệm đáy trang. */
+  --space-11: 2.25rem;
+  --space-12: 3rem;
+  --space-13: 4.25rem;
   --fs-2xs: 0.72rem;
   --fs-xs: 0.8rem;
   --fs-sm: 0.88rem;
@@ -87,6 +94,10 @@
   --fs-lg: 1.1rem;
   --fs-xl: 1.3rem;
   --fs-2xl: 1.5rem;
+  /* Mã hồ sơ ở đầu trang chi tiết. Trước 16/09 nó dùng --fs-xl (18,2px) trong khi tiêu đề
+     trang DANH SÁCH dùng --fs-2xl (21px) — đi từ danh sách vào chi tiết thì tiêu đề NHỎ LẠI,
+     tức cấp bậc ngược. */
+  --fs-3xl: 1.95rem;
   --fw-medium: 500;
   --fw-semibold: 600;
   --fw-bold: 700;

@@ -1,14 +1,20 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { errorMessage, useApiMutation } from "@/lib/api";
-import { formatDate, orDash } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { CopyButton } from "@/ui/copy-button";
-import { BlankFields, DetailHeader, Stat, StatGrid, StatIfSet } from "@/ui/detail-header";
+import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
+import {
+  DetailLayout,
+  RailCard,
+  RailRow,
+  RailRowIfSet,
+} from "@/ui/detail-layout";
 import { ExpiryBadge } from "@/ui/expiry-badge";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
@@ -83,6 +89,22 @@ export function DeviceDetail({ me }: { me: Me }) {
     enabled: tab === "history",
   });
 
+  /*
+   * Đếm cổng cho huy hiệu trên tab Port map.
+   *
+   * Trước 16/09 chỉ Giấy tờ và Két sắt có số, nên tab DÀY nhất lại là tab duy nhất trông như
+   * rỗng — người đọc suy "không có số nghĩa là không có gì".
+   *
+   * Dùng ĐÚNG `queryKey` của `PortMapPanel` nên đây không phải lượt gọi thứ hai: bấm sang tab
+   * là dữ liệu đã nằm sẵn trong cache, tab mở ra không còn quay vòng chờ.
+   */
+  const ports = useQuery({
+    queryKey: ["devices", id, "ports"],
+    queryFn: () =>
+      apiFetch<{ ports: unknown[] }>(`/api/v1/devices/${id}/ports`),
+    enabled: device.data?.hasPortMap === true,
+  });
+
   const setStatus = useApiMutation<{ status: string; cleanup?: boolean }, unknown>(
     `/api/v1/devices/${id}/status`,
     { method: "PATCH", csrfToken: me.csrfToken, refreshMe: false },
@@ -111,7 +133,13 @@ export function DeviceDetail({ me }: { me: Me }) {
     // Tab Port map CHỈ hiện với loại có port (FR-006) — bảng port của một cái máy in
     // là chỗ trống vô nghĩa.
     ...(device.data?.hasPortMap
-      ? [{ key: "ports", label: t("devices.tabPortMap") }]
+      ? [
+          {
+            key: "ports",
+            label: t("devices.tabPortMap"),
+            count: ports.data?.ports.length,
+          },
+        ]
       : []),
     {
       key: "attachments",
@@ -160,31 +188,31 @@ export function DeviceDetail({ me }: { me: Me }) {
         ]}
         code={item.code}
         name={item.name}
+        /*
+         * Dòng định danh CHỈ còn serial (16/09/2026).
+         *
+         * Loại thiết bị đã nằm ở breadcrumb ngay phía trên, model là một ô của lưới Hồ sơ ngay
+         * phía dưới — in lại ở đây là nói ba lần cùng một chuyện trong vòng 200px, và chủ dự án
+         * chỉ ra đúng chỗ đó. Serial thì ở lại: nó là thứ người ta chép đi dán vào terminal,
+         * nên nút chép phải nằm chỗ dễ với nhất.
+         */
         subline={
-          <>
-            <span>{item.deviceTypeName}</span>
-            {item.model ? (
-              <>
-                <span aria-hidden="true">·</span>
-                <span>{item.model}</span>
-              </>
-            ) : null}
-            {item.serial ? (
-              <>
-                <span aria-hidden="true">·</span>
-                <span>
-                  S/N <span className="mono">{item.serial}</span>
-                  <CopyButton value={item.serial} label={t("devices.copySerial")} />
-                </span>
-              </>
-            ) : null}
-          </>
+          item.serial ? (
+            <span>
+              S/N <span className="mono">{item.serial}</span>
+              <CopyButton value={item.serial} label={t("devices.copySerial")} />
+            </span>
+          ) : null
         }
         actions={
           <>
+            {/* NÚT CHÍNH của màn phải NẶNG HƠN nút phá (16/09/2026).
+                Trước đây "Sửa hồ sơ" là nút viền xám còn "Thanh lý" là nút nền đỏ đặc: việc
+                làm mỗi ngày thì thì thầm, còn việc một năm một lần và không lấy lại được thì
+                hét lên — ngay tại góc phải, đúng chỗ mắt và chuột tìm nút chính. */}
             <button
               type="button"
-              className="btn"
+              className="btn primary"
               disabled={retired}
               title={retired ? t("devices.retiredLocked") : undefined}
               onClick={() => setEditing(true)}
@@ -197,7 +225,10 @@ export function DeviceDetail({ me }: { me: Me }) {
                 thành trang trí và lần sau người dùng không còn đọc nó như một cảnh báo nữa. */}
             <button
               type="button"
-              className={retired ? "btn" : "btn danger"}
+              /* `danger-ghost` chứ không phải `danger` nền đặc: đỏ vẫn nói "việc này lấy đi
+                 cái gì đó", nhưng không còn là thứ nặng nhất trên màn. Nền đỏ đặc để dành cho
+                 nút xác nhận TRONG hộp thoại — chỗ người ta đã đọc câu hỏi rồi. */
+              className={retired ? "btn" : "btn danger-ghost"}
               onClick={() => {
                 void (async () => {
                   let cleanup = false;
@@ -268,81 +299,86 @@ export function DeviceDetail({ me }: { me: Me }) {
         }
       />
 
-      {/* Bốn chỉ số cần biết trong 2 giây khi đang đứng xử lý sự cố. Chúng bị BỎ khỏi lưới
-          bên dưới — bản trước lặp cả hai chỗ, cách nhau 40px. */}
-      <StatGrid>
-        <Stat
-          label={t("devices.status")}
-          note={item.purchaseDate ? t("devices.since", { date: formatDate(item.purchaseDate) }) : undefined}
-        >
-          <span className={`badge ${STATUS_TONE[item.status]}`}>
-            {t(STATUS_KEY[item.status])}
-          </span>
-        </Stat>
-        {/* Thẻ bảo hành CHỈ hiện khi tab Hồ sơ không vẽ thanh đầy đủ — máy chưa khai hạn.
-            Có hạn thì thanh dưới đã nói đủ; lặp lại ở đây là hai lần cùng một câu. */}
-        {item.warrantyEnd ? null : (
-          <Stat label={t("devices.warranty")}>
-            <ExpiryBadge end={null} />
-          </Stat>
-        )}
-        <Stat label={t("devices.location")} note={orDash(item.cabinetCode)}>
-          <span className="mono">{locationLabel(item)}</span>
-        </Stat>
-        <StatIfSet
-          label={t("devices.assignedTo")}
-          value={item.assignedTo}
-          note={item.department ?? undefined}
-        />
-        <StatIfSet label={t("devices.department")} value={item.department} />
-      </StatGrid>
-
       {retired ? <p className="alert">{t("devices.retiredLocked")}</p> : null}
 
-      <Tabs
-        items={tabItems}
-        value={safeTab}
-        onChange={setTab}
-        ariaLabel={t("devices.title")}
-      />
-
-      <TabPanel tabKey={safeTab}>
-        {safeTab === "profile" ? (
-          <>
-            {/* Thanh bảo hành ĐẦY ĐỦ: mốc mua → hôm nay → hết hạn.
-                Ba ô ngày rời nhau ("ngày mua", "bảo hành từ", "bảo hành đến") bắt người đọc
-                tự trừ trong đầu mới biết đã đi hết bao nhiêu phần đường. */}
-            {item.warrantyEnd ? (
-              <section className="card">
-                <h2 className="form-section-title">{t("devices.warranty")}</h2>
+      <DetailLayout
+        rail={
+          <RailCard title={t("detail.identityCard")}>
+            <RailRow
+              label={t("devices.status")}
+              note={
+                item.purchaseDate
+                  ? t("devices.since", { date: formatDate(item.purchaseDate) })
+                  : undefined
+              }
+            >
+              <span className={`badge ${STATUS_TONE[item.status]}`}>
+                {t(STATUS_KEY[item.status])}
+              </span>
+            </RailRow>
+            {/* KHÔNG kèm `note={cabinetCode}`: `locationLabel` đã ghép sẵn "LST · T-1", nên
+                dòng chú bên dưới in lại đúng mã tủ ấy lần thứ hai trong cùng một ô. */}
+            <RailRow label={t("devices.location")}>
+              <span className="mono">{locationLabel(item)}</span>
+            </RailRow>
+            <RailRowIfSet
+              label={t("devices.assignedTo")}
+              value={item.assignedTo}
+              note={item.department ?? undefined}
+            />
+            {/*
+             * THANH HẠN NẰM Ở ĐÂY, KHÔNG CÒN Ở CỘT CHÍNH NỮA (16/09/2026).
+             *
+             * Trước đây tab Hồ sơ có hẳn một thẻ "Bảo hành" chiếm trọn bề ngang, in lại đúng ba
+             * con số mà dải chỉ số đã có (còn N ngày, đến ngày nào, nhà cung cấp) — hai chỗ cách
+             * nhau 40px. Và một thanh tiến độ kéo dài 1150px thì phần kéo dài ấy không nói thêm
+             * gì cả. Hạn là TRẠNG THÁI của hồ sơ nên nó thuộc về thẻ định danh.
+             *
+             * Vẫn là `WarrantyTimeline` ĐẦY ĐỦ chứ không phải bản `compact`: bản gọn giấu hai
+             * mốc ngày và dòng "Đã đi N%", mà đó là những thứ thanh này sinh ra để nói.
+             */}
+            <RailRow label={t("devices.warranty")}>
+              {item.warrantyEnd ? (
                 <WarrantyTimeline
                   start={item.warrantyStart ?? item.purchaseDate}
                   end={item.warrantyEnd}
-                  startLabel={item.warrantyStart ? t("devices.warrantyStart") : t("devices.purchaseDate")}
+                  startLabel={
+                    item.warrantyStart
+                      ? t("devices.warrantyStart")
+                      : t("devices.purchaseDate")
+                  }
                   endLabel={t("devices.warrantyEnd")}
                 />
-              </section>
-            ) : null}
+              ) : (
+                <ExpiryBadge end={null} />
+              )}
+            </RailRow>
+            <RailRowIfSet label={t("devices.vendor")} value={item.vendorName} />
+            <RailRowIfSet
+              label={t("devices.purchaseDate")}
+              value={formatDate(item.purchaseDate)}
+            />
+          </RailCard>
+        }
+      >
+        <Tabs
+          items={tabItems}
+          value={safeTab}
+          onChange={setTab}
+          ariaLabel={t("devices.title")}
+        />
 
-            {/* Trạng thái · vị trí · người dùng · bảo hành ĐÃ nằm ở dải chỉ số trên — không
-                lặp lại ở đây. Lưới này chỉ còn thứ chưa nói ở đâu cả. */}
+        <TabPanel tabKey={safeTab}>
+        {safeTab === "profile" ? (
+          <>
+            {/*
+             * Lưới này chỉ còn thứ CHƯA nói ở đâu khác. Thanh bảo hành, trạng thái, vị trí,
+             * người dùng, nhà cung cấp, ngày mua đều đã ở thẻ định danh bên phải; serial thì ở
+             * dòng định danh dưới tiêu đề, chỗ có nút chép. In lại ở đây là đúng lỗi bản trước.
+             */}
             <dl className="data-grid">
-              <Item label={t("devices.model")}>{orDash(item.model)}</Item>
-              <Item label={t("devices.serial")}>
-                {item.serial ? (
-                  <>
-                    <span className="mono">{item.serial}</span>
-                    <CopyButton value={item.serial} label={t("devices.copySerial")} />
-                  </>
-                ) : (
-                  "—"
-                )}
-              </Item>
-              <Item label={t("devices.vendor")}>{orDash(item.vendorName)}</Item>
-              <Item label={t("devices.purchaseDate")}>
-                {orDash(formatDate(item.purchaseDate))}
-              </Item>
-              <Item label={t("devices.note")}>{orDash(item.note)}</Item>
+              <DataItemIfSet label={t("devices.model")} value={item.model} />
+              <DataItemIfSet label={t("devices.note")} value={item.note} />
             </dl>
 
             {/* Ô chưa khai gom về MỘT dòng, thay cho một dãy hộp chỉ chứa dấu gạch ngang —
@@ -423,7 +459,8 @@ export function DeviceDetail({ me }: { me: Me }) {
         ) : (
           <HistoryPanel entries={toHistoryEntries(history.data ?? [], t)} />
         )}
-      </TabPanel>
+        </TabPanel>
+      </DetailLayout>
 
       {editing ? (
         <DeviceForm
@@ -494,11 +531,4 @@ function ExtensionPanels({ panels }: { panels: DevicePanel[] }) {
   );
 }
 
-function Item({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="data-item">
-      <dt>{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
-}
+

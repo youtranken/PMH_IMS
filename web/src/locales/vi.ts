@@ -84,6 +84,10 @@ export default {
   toast: {
     close: 'Đóng thông báo',
   },
+  // Chữ dùng chung của MỌI trang chi tiết (ui/detail-layout.tsx).
+  detail: {
+    identityCard: 'Thẻ định danh',
+  },
   common: {
     save: 'Lưu',
     cancel: 'Hủy',

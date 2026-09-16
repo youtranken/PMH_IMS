@@ -5,6 +5,12 @@ export interface TabItem {
   label: ReactNode;
   /** Số nhỏ bên phải nhãn (vd số dòng trong tab). */
   count?: number;
+  /**
+   * Chấm cảnh báo: bên trong tab có thứ cần để mắt (secret quá hạn xoay, license sắp hết
+   * hạn…). `label` là chữ ẩn cho trình đọc màn hình — bắt buộc, vì màu KHÔNG được là kênh
+   * thông tin duy nhất (WCAG 1.4.1). Không có nó thì muốn biết phải mở từng tab để dò.
+   */
+  dot?: { label: string; tone?: 'warn' | 'danger' };
 }
 
 /**
@@ -78,6 +84,14 @@ export function Tabs({
             <>
               {' '}
               <span className="tab-count">{item.count}</span>
+            </>
+          ) : null}
+          {item.dot ? (
+            <>
+              <span className={`tab-dot${item.dot.tone === 'danger' ? ' danger' : ''}`} aria-hidden="true" />
+              {/* Dấu cách RÕ RÀNG như với `.tab-count`: tên khả truy cập ghép thẳng hai node
+                  văn bản, thiếu nó là trình đọc màn hình đọc dính vào nhãn tab. */}{' '}
+              <span className="sr-only">{item.dot.label}</span>
             </>
           ) : null}
         </button>

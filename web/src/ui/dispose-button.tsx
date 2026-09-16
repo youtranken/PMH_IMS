@@ -89,7 +89,10 @@ export function DisposeButton({
       /* Đỏ (28/08/2026): đưa vào kho thanh lý là dừng tính hạn, cắt khỏi email nhắc gia hạn
          và khóa hồ sơ lại. Nó đứng cạnh "Sửa" và "Gia hạn" — cùng một sắc xám thì ba việc
          trông ngang nhau, trong khi chỉ một cái lấy đi thứ gì đó. */
-      className="btn sm danger"
+      /* `danger-ghost` chứ không phải `danger` nền đặc (16/09/2026): cùng một luật với nút
+         "Thanh lý" ở trang chi tiết thiết bị. Nền đỏ đặc để dành cho nút xác nhận TRONG hộp
+         thoại — chỗ người dùng đã đọc câu hỏi rồi. */
+      className="btn sm danger-ghost"
       disabled={disabled || isPending}
       onClick={(event) => {
         // Dòng của bảng có `onRowClick` mở trang chi tiết — không chặn thì bấm nút này cũng

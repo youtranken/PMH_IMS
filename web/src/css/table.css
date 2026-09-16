@@ -117,6 +117,24 @@ table.table tbody tr.row-highlight td:first-child {
 }
 
 /* Bảng gom nhóm license (/phan-mem): cột số căn phải + hàng click sang chi tiết. */
+/*
+ * Bảng nhiều cột KHÔNG được bóp cho vừa khung hẹp (16/09/2026).
+ *
+ * Từ khi trang chi tiết chia hai cột, bảng 7 cột (license, port map, két sắt) nằm trong cột
+ * chính ~800px và mỗi ô bị ép xuống ba dòng — "3.150.000 đ" còn gãy chữ "đ" xuống dòng dưới,
+ * tức một con số đọc ra hai lần. Đặt SÀN bề ngang rồi để `.table-wrap` cuộn ngang TRONG thẻ:
+ * cuộn một bảng dễ chịu hơn đọc một bảng đã nát.
+ *
+ * Chỉ áp ở ≥961px — dưới mốc đó `.table-stack` đã gập bảng thành thẻ dọc, đặt sàn ở đó là tự
+ * sinh cuộn ngang cho cả trang.
+ */
+@media (min-width: 961px) {
+  table.table.wide { min-width: 66rem; }
+  /* Số tiền, IP, serial, mã cổng không xuống dòng giữa chừng. */
+  .table td.mono,
+  .table td.col-right { white-space: nowrap; }
+}
+
 .table th.num,
 .table td.num {
   text-align: right;

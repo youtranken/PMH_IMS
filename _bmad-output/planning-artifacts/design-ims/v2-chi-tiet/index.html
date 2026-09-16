@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMS — Bản xem trước "Trang chi tiết v2"</title>
+<style>
+:root{
+  --canvas:#f7f6f2; --surface:#ffffff; --surface-2:#f2f1ea;
+  --ink:#1f231c; --ink-2:#5a615a; --ink-3:#5c635c;
+  --border:#e9eae2; --border-2:#d8dbd0;
+  --primary:#0e9f6e; --primary-ink:#0a7d54; --primary-soft:#e5f6ee;
+  --warm:#f59e0b; --warm-ink:#ea580c; --warm-soft:#fef2df;
+  --grad:linear-gradient(135deg,#0e9f6e,#f59e0b);
+  --ok:#0f7a55; --ok-soft:#e4f4ee; --warn:#a34d08; --warn-soft:#fdf0e3;
+  --danger:#c0392b; --danger-soft:#fdeceb; --muted:#5f665f; --muted-soft:#efeee7;
+  --on-brand:#0b2018; --danger-strong:#a5271b;
+  --border-ok:#bfe4d4; --border-warn:#f2d9b8; --border-danger:#f4cfcb;
+  --r-sm:8px; --r:10px; --r-lg:14px; --radius-pill:999px;
+  --space-1:.25rem; --space-2:.4rem; --space-3:.5rem; --space-4:.6rem; --space-5:.75rem;
+  --space-6:.85rem; --space-7:1rem; --space-8:1.1rem; --space-9:1.25rem; --space-10:1.5rem;
+  --space-11:2.25rem; --space-12:3rem; --space-13:4.25rem;
+  --fs-2xs:.72rem; --fs-xs:.8rem; --fs-sm:.88rem; --fs-md:1rem; --fs-lg:1.1rem;
+  --fs-xl:1.3rem; --fs-2xl:1.5rem; --fs-3xl:1.95rem;
+  --fw-medium:500; --fw-semibold:600; --fw-bold:700;
+  --shadow-sm:0 1px 2px rgba(16,24,40,.05);
+  --shadow:0 1px 3px rgba(16,24,40,.08),0 1px 2px rgba(16,24,40,.05);
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:ui-monospace,'Cascadia Code','SF Mono',Consolas,monospace;
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+html[data-theme='dark']{
+  --canvas:#0f140f; --surface:#161d16; --surface-2:#1d261d;
+  --ink:#e9ede7; --ink-2:#a7b0a5; --ink-3:#9aa39a;
+  --border:#26312a; --border-2:#37453a;
+  --primary:#34d399; --primary-ink:#6ee7b7; --primary-soft:#123024;
+  --warm:#fbbf24; --warm-ink:#f59e0b; --warm-soft:#3a2c14;
+  --grad:linear-gradient(135deg,#34d399,#fbbf24);
+  --ok:#43c294; --ok-soft:#13312a; --warn:#e0a35a; --warn-soft:#3a2c18;
+  --danger:#ef6f63; --danger-soft:#3a1f1d; --muted:#9aa59a; --muted-soft:#232d23;
+  --on-brand:#0f140f; --danger-strong:#ef8f85;
+  --border-ok:#1d4a3a; --border-warn:#4a3a1c; --border-danger:#4d2b27;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+  --shadow:0 1px 3px rgba(0,0,0,.4),0 1px 2px rgba(0,0,0,.3);
+  color-scheme:dark;
+}
+*{margin:0;box-sizing:border-box}
+html{font-size:14px}
+body{min-height:100vh;overflow-x:hidden;font-family:var(--font);font-size:var(--fs-sm);
+  line-height:1.6;color:var(--ink);background:var(--canvas);-webkit-font-smoothing:antialiased}
+a{color:var(--primary-ink)}
+.mono{font-family:var(--mono)}
+.wrap{max-width:1080px;margin-inline:auto;padding:var(--space-12) var(--space-10) var(--space-13)}
+.head{display:flex;align-items:flex-start;gap:var(--space-10);flex-wrap:wrap;
+  padding-bottom:var(--space-10);border-bottom:1px solid var(--border);margin-bottom:var(--space-12)}
+.head .grow{flex:1;min-width:16rem}
+h1{font-size:var(--fs-3xl);font-weight:var(--fw-bold);letter-spacing:-.02em;line-height:1.15}
+.lede{margin-top:var(--space-5);color:var(--ink-2);max-width:62ch}
+h2{font-size:var(--fs-xl);font-weight:var(--fw-bold);letter-spacing:-.01em;margin-bottom:var(--space-8)}
+.icon-btn{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--border-2);
+  border-radius:var(--r-sm);background:var(--surface);color:var(--ink-2);cursor:pointer}
+.icon-btn:hover{border-color:var(--primary);color:var(--primary-ink)}
+.icon-btn svg{width:17px;height:17px}
+section{margin-bottom:var(--space-13)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:var(--space-9)}
+.card{display:block;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:var(--space-9) var(--space-10);box-shadow:var(--shadow-sm);color:inherit;text-decoration:none;
+  transition:border-color .15s var(--ease),box-shadow .15s var(--ease)}
+a.card:hover{border-color:var(--primary);box-shadow:var(--shadow);text-decoration:none}
+.card h3{font-size:var(--fs-md);font-weight:var(--fw-semibold);margin-bottom:var(--space-3)}
+.card p{font-size:var(--fs-xs);color:var(--ink-3)}
+.card .path{font-family:var(--mono);font-size:var(--fs-2xs);color:var(--ink-3);margin-top:var(--space-6);
+  display:block;overflow-wrap:anywhere}
+.badge{display:inline-flex;align-items:center;gap:var(--space-2);padding:2px var(--space-5);
+  border-radius:var(--radius-pill);border:1px solid var(--border-2);background:var(--muted-soft);
+  color:var(--ink-2);font-size:var(--fs-2xs);font-weight:var(--fw-semibold);white-space:nowrap}
+.badge.ok{background:var(--ok-soft);border-color:var(--border-ok);color:var(--ok)}
+.badge.warn{background:var(--warn-soft);border-color:var(--border-warn);color:var(--warn)}
+ol.fix{counter-reset:f;list-style:none;display:grid;gap:var(--space-7)}
+ol.fix li{position:relative;padding-left:var(--space-13);background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r);padding:var(--space-8) var(--space-9) var(--space-8) 3.4rem}
+ol.fix li::before{counter-increment:f;content:counter(f);position:absolute;left:var(--space-9);top:var(--space-8);
+  width:22px;height:22px;border-radius:50%;background:var(--danger-soft);color:var(--danger-strong);
+  display:grid;place-items:center;font-size:var(--fs-2xs);font-weight:var(--fw-bold)}
+ol.fix b{font-weight:var(--fw-semibold)}
+ol.fix .to{display:block;margin-top:var(--space-3);color:var(--ink-2);font-size:var(--fs-xs)}
+table{width:100%;border-collapse:collapse;font-size:var(--fs-sm);background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
+th{text-align:left;font-size:var(--fs-2xs);text-transform:uppercase;letter-spacing:.05em;
+  color:var(--ink-3);padding:var(--space-6);border-bottom:1px solid var(--border)}
+td{padding:var(--space-6);border-bottom:1px solid var(--border);vertical-align:top}
+tr:last-child td{border-bottom:none}
+.note{padding:var(--space-9) var(--space-10);border-left:3px solid var(--warm);background:var(--warm-soft);
+  border-radius:0 var(--r) var(--r) 0;color:var(--ink-2);font-size:var(--fs-xs)}
+.note b{color:var(--ink)}
+@media (max-width:680px){ .wrap{padding:var(--space-10) var(--space-7) var(--space-12)} h1{font-size:var(--fs-2xl)} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="head">
+    <div class="grow">
+      <h1>Trang chi tiết v2 — bản xem trước</h1>
+      <p class="lede">Năm trang chi tiết của IMS, dựng lại theo bố cục hai cột. Đây là HTML tĩnh,
+        chưa đụng gì vào <span class="mono">web/src</span> — mở bằng trình duyệt, duyệt bằng mắt,
+        duyệt xong mới port. Mỗi trang có nút đổi sáng/tối ở góc phải trên và chạy được ở 390px.</p>
+    </div>
+    <button class="icon-btn" id="themeBtn" aria-label="Đổi giao diện sáng/tối">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg>
+    </button>
+  </header>
+
+  <section>
+    <h2>Năm màn</h2>
+    <div class="grid">
+      <a class="card" href="thiet-bi-danh-sach.html">
+        <h3>Danh sách thiết bị <span class="badge warn">mới 16/09</span></h3>
+        <p><b>200 máy mẫu</b> để thử đúng câu "nhiều máy thì tìm bằng cách nào". Ba thứ màn thật
+          chưa có: <b>bộ lọc nằm trên URL</b> (F5 giữ nguyên, gửi link được, Back từ trang chi
+          tiết về đúng kết quả cũ), <b>ô tìm debounce 250ms</b> (màn thật gõ 10 ký tự là 10 lượt
+          gọi API), và <b>chip lọc nhanh + chọn nhiều dòng</b>. Kèm <b>⌘K</b>
+          (<kbd>Ctrl</kbd>+<kbd>K</kbd>) tìm xuyên thiết bị · phần mềm · đường truyền · tài khoản
+          dịch vụ · dải IP — dựng đúng cấu trúc DOM mà
+          <span class="mono">css/command-palette.css</span> (230 dòng, đã có sẵn trong repo,
+          chưa component nào dùng) đang chờ. Giữ nguyên <b>nút bung dòng</b> của màn thật: chỉ
+          dòng đang cài phần mềm mới có mũi tên, bung ra là bảng license y như khu ở trang chi
+          tiết.</p>
+        <span class="path">/devices — features/devices/devices-screen.tsx</span>
+      </a>
+      <a class="card" href="thiet-bi.html">
+        <h3>Chi tiết thiết bị <span class="badge ok">bản chốt</span></h3>
+        <p><b>Thanh tab giữ nguyên, tab đầu đổi thành "Tổng quan"</b> và chứa bản đồ quan hệ:
+          máy ở giữa, mỗi sợi dây đi ra một thứ nó đang giữ. Nút trên bản đồ có tab riêng
+          (Port map · Giấy tờ · Két sắt) thì <b>chuyển tab</b>; nút không có tab (IP · NAT · ISP ·
+          License) thì nhảy tới thẻ ngay dưới bản đồ. Một mô hình điều hướng, không phải hai.
+          <br>Kèm ba sửa cho chính thanh tab: đếm đủ ở mọi tab đếm được (Port map giờ có số 6),
+          chấm cảnh báo khi bên trong có thứ cần để mắt, và thanh tab dính khi cuộn.
+          Nút <b>"Xem lượt thanh lý cắt gì"</b> tô đỏ đúng năm sợi mà
+          <span class="mono">releaseAllWithin</span> sẽ cắt. Bố cục bản đồ do mã tính: 8 thứ thì
+          8 nút, 3 thứ thì 3 nút và vòng co lại, 0 thứ thì hạch đứng một mình — cuối trang có
+          sẵn cả ba trường hợp để so.</p>
+        <span class="path">/devices/:id — không dùng thư viện vẽ nào · gộp bản A + bản C (16/09)</span>
+      </a>
+      <a class="card" href="phan-mem.html">
+        <h3>Chi tiết phần mềm</h3>
+        <p>Hạn license, số ghế, chi phí, máy đang dùng.</p>
+        <span class="path">/software/:id — features/software/software-detail.tsx</span>
+      </a>
+      <a class="card" href="duong-truyen.html">
+        <h3>Chi tiết đường truyền</h3>
+        <p>Hotline và hạn hợp đồng lên đầu — thứ người ta mở trang này ra để tìm lúc mạng đứt.</p>
+        <span class="path">/isp-lines/:id — features/isp/isp-detail.tsx</span>
+      </a>
+      <a class="card" href="tai-khoan-dich-vu.html">
+        <h3>Chi tiết tài khoản dịch vụ</h3>
+        <p>Tên đăng nhập chép được, két sắt chỉ hiện tên gọi — không bao giờ hiện giá trị.</p>
+        <span class="path">/service-accounts/:id — features/service-accounts/service-account-detail.tsx</span>
+      </a>
+      <a class="card" href="dai-ip.html">
+        <h3>Chi tiết dải IP <span class="badge warn">khung vẽ sai, phải dựng lại</span></h3>
+        <p>Màn thật ĐÃ là bố cục <b>hai khung</b> (danh sách dải trái · <span class="mono">SubnetPane</span>
+          phải) nên nó không cần breadcrumb hay <span class="mono">DetailHeader</span> — tôi đọc thiếu
+          chỗ này nên đặt sai đề bài. Nội dung bảng · chip lọc · phân trang vẫn đúng và dùng lại được;
+          cái khung thì phải dựng lại trước khi port. Chi tiết ghi ngay đầu trang.</p>
+        <span class="path">/ip-addresses/:id — features/ipam/subnet-detail.tsx</span>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Tám lỗi đo được trên bản đang chạy, và bản v2 trả lời thế nào</h2>
+    <ol class="fix">
+      <li><b>Trọng số nút lộn ngược.</b> "Thanh lý" nền đỏ đặc nổi hơn "Sửa hồ sơ" viền xám — việc
+        không hoàn tác được thì hét, việc làm hằng ngày thì thì thầm.
+        <span class="to">→ Nút chính <span class="mono">.btn.primary</span>; nút phá
+          <span class="mono">.btn.danger-ghost</span>, cách cụm chính một khoảng
+          <span class="mono">--space-10</span>. Đỏ đặc để dành cho nút xác nhận TRONG hộp thoại.</span></li>
+      <li><b>Ô chưa khai hiện hai lần.</b> Lưới vẽ <span class="mono">Model: —</span> rồi ngay dưới
+        lại có dòng "Chưa khai: Model…". Trên 390px là ba màn cuộn cho ba ô không nói gì.
+        <span class="to">→ Ô trống KHÔNG được vẽ. Một dòng <span class="mono">.blank-fields</span> là nơi duy nhất nói về nó.</span></li>
+      <li><b>Dải chỉ số kéo giãn.</b> <span class="mono">auto-fit minmax(180px,1fr)</span> — hai chỉ số
+        thì mỗi ô phình ra 580px để chứa chữ "Dự phòng".
+        <span class="to">→ Bỏ dải ngang. Chuyển thành thẻ định danh ở cột phải, rộng cố định 320px.</span></li>
+      <li><b>Một cột dài trên màn 1440.</b> 70% chiều cao là nền trắng, mà dòng
+        <span class="mono">Nhà cung cấp: Viettel</span> vẫn bị kéo ngang 1160px.
+        <span class="to">→ Hai cột: nội dung + thẻ định danh dính (sticky). Dưới 1200px gập một cột và
+          thẻ định danh nhảy LÊN TRƯỚC.</span></li>
+      <li><b>Trùng giá trị trong cùng một ô.</b> <span class="mono">Vị trí: LST · T-1</span> với ghi chú
+        <span class="mono">T-1</span> ngay dưới.
+        <span class="to">→ Một trường chỉ xuất hiện một lần trên toàn trang.</span></li>
+      <li><b>Panel hai tiêu đề chồng nhau.</b> "LICENSE ĐANG CÀI" rồi "PHẦN MỀM ĐANG CÀI (1)".
+        <span class="to">→ Một tiêu đề, số lượng đẩy sang phải thành chữ phụ.</span></li>
+      <li><b>Badge đếm hiện số 0.</b>
+        <span class="to">→ <span class="mono">count === 0</span> thì không vẽ badge.</span></li>
+      <li><b>Thang cách và cỡ chữ cụt đầu trên.</b> <span class="mono">--space-10</span> chỉ 1.5rem
+        (21px ở root 14px) nên không có nấc nào tách KHU với KHU; tiêu đề trang chi tiết
+        (<span class="mono">--fs-xl</span> = 18,2px) còn nhỏ hơn tiêu đề trang danh sách
+        (<span class="mono">--fs-2xl</span> = 21px).
+        <span class="to">→ Thêm 4 token: <span class="mono">--space-11/12/13</span> và
+          <span class="mono">--fs-3xl</span>. Xem bảng dưới.</span></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Bốn token mới cần thêm vào <span class="mono">tokens.css</span> khi port</h2>
+    <table>
+      <thead><tr><th>Token</th><th>Giá trị</th><th>Dùng ở đâu</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">--space-11</td><td class="mono">2.25rem</td><td>tách hai khối trong cùng một khu (thẻ ↔ thẻ)</td></tr>
+        <tr><td class="mono">--space-12</td><td class="mono">3rem</td><td>tách KHU với KHU; khe giữa hai cột</td></tr>
+        <tr><td class="mono">--space-13</td><td class="mono">4.25rem</td><td>đệm đáy trang</td></tr>
+        <tr><td class="mono">--fs-3xl</td><td class="mono">1.95rem</td><td>mã hồ sơ ở đầu trang chi tiết</td></tr>
+      </tbody>
+    </table>
+    <p class="note" style="margin-top:var(--space-9)"><b>Không có token màu mới.</b> Toàn bộ bản
+      xem trước dùng đúng bảng "Sunset Grove" hiện hành, không thêm một mã hex nào — đổi màu về sau
+      vẫn chỉ sửa một chỗ (AD-15).</p>
+  </section>
+
+  <section>
+    <h2>Đọc bản xem trước thế nào</h2>
+    <table>
+      <tbody>
+        <tr><td style="width:12rem"><b>Sáng / tối</b></td><td>Nút tròn góc phải trên của mỗi trang. Cả hai phải đọc được như nhau.</td></tr>
+        <tr><td><b>390px</b></td><td>Thu hẹp cửa sổ trình duyệt, hoặc F12 → chế độ điện thoại. Không trang nào được cuộn ngang.</td></tr>
+        <tr><td><b>Tab</b></td><td>Bấm được thật — mỗi tab có nội dung riêng, không phải ảnh.</td></tr>
+        <tr><td><b>Khối §B</b></td><td>Cuối mỗi trang: CÙNG màn đó nhưng với hồ sơ khai sơ sài. Đây là trạng thái thường gặp nhất trong dữ liệu thật.</td></tr>
+        <tr><td><b>Khối nền cam</b></td><td>Ghi chú của bản xem trước, giải thích vì sao đổi. KHÔNG port sang app.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Sau khi duyệt</h2>
+    <p class="note"><b>Chưa có dòng nào trong <span class="mono">web/src</span> bị đổi.</b>
+      Khi anh duyệt, việc port đi theo thứ tự: (1) thêm 4 token vào <span class="mono">tokens.css</span>;
+      (2) sửa lớp dùng chung <span class="mono">ui/detail-header.tsx</span> +
+      <span class="mono">css/detail-tabs.css</span> — bốn màn thiết bị · phần mềm · đường truyền ·
+      tài khoản dịch vụ được cùng lúc vì chúng dùng chung (AD-15); (3) mỗi màn sửa phần chia
+      cột phải / cột chính của riêng nó; (4) màn dải IP là một story riêng vì nó phải chuyển từ
+      bản tự dựng sang <span class="mono">DetailHeader</span>; (5) chạy
+      <span class="mono">ops/ci-local.sh --e2e</span> — các bài E2E đang bám vào
+      <span class="mono">getByRole</span> nên đổi bố cục mà không đổi vai trò thì chúng vẫn xanh.</p>
+  </section>
+</div>
+<script>
+document.getElementById('themeBtn').onclick = function(){
+  var r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark';
+};
+</script>
+</body>
+</html>

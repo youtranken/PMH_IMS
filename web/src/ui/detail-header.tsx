@@ -151,3 +151,32 @@ export function BlankFields({ labels }: { labels: string[] }) {
   if (labels.length === 0) return null;
   return <p className="blank-fields muted">Chưa khai: {labels.join(', ')}.</p>;
 }
+
+/**
+ * Một ô của lưới `data-grid`, và CHỈ vẽ khi có giá trị.
+ *
+ * Sinh ra 16/09/2026 vì bản cũ làm cả hai việc cùng lúc: lưới vẽ ô `Model: —`, rồi ngay dưới
+ * `BlankFields` lại viết "Chưa khai: Model…". Hai lần cho một sự thật, mà lần đầu trông như
+ * dữ liệu hỏng chứ không phải việc còn thiếu. Chú thích của `BlankFields` nói đúng ý định —
+ * gom ô trống về một dòng — nhưng không ai gỡ mấy cái ô trống đi, nên nó thành CỘNG THÊM.
+ *
+ * Từ nay: có giá trị thì vào lưới, không có thì vào một dòng duy nhất bên dưới.
+ */
+export function DataItemIfSet({
+  label,
+  value,
+  children,
+}: {
+  label: string;
+  /** Thứ quyết định vẽ hay không. `children` là cách hiển thị (mono, nút chép, huy hiệu…). */
+  value: string | null | undefined;
+  children?: ReactNode;
+}) {
+  if (!value) return null;
+  return (
+    <div className="data-item">
+      <dt>{label}</dt>
+      <dd>{children ?? value}</dd>
+    </div>
+  );
+}

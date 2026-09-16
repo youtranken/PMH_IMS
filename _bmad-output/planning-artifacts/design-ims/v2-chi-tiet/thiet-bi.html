@@ -1,0 +1,1062 @@
+<!doctype html>
+<html lang="vi" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMS — Chi tiết thiết bị</title>
+<style>
+:root{
+  --canvas:#f7f6f2; --surface:#ffffff; --surface-2:#f2f1ea;
+  --ink:#1f231c; --ink-2:#5a615a; --ink-3:#5c635c;
+  --border:#e9eae2; --border-2:#d8dbd0;
+  --primary:#0e9f6e; --primary-ink:#0a7d54; --primary-soft:#e5f6ee;
+  --warm:#f59e0b; --warm-ink:#ea580c; --warm-soft:#fef2df;
+  --grad:linear-gradient(135deg,#0e9f6e,#f59e0b);
+  --sidebar-bg:#16231b; --sidebar-ink:#8ea595; --sidebar-ink-2:#eaf3ee;
+  --sidebar-active-bg:rgba(245,158,11,.16); --sidebar-active-ink:#ffe1b3;
+  --sidebar-border:#24352a; --sidebar-label:#9fb0a5;
+  --ok:#0f7a55; --ok-soft:#e4f4ee; --warn:#a34d08; --warn-soft:#fdf0e3;
+  --danger:#c0392b; --danger-soft:#fdeceb; --muted:#5f665f; --muted-soft:#efeee7;
+  --on-accent:#ffffff; --on-brand:#0b2018; --danger-strong:#a5271b;
+  --border-ok:#bfe4d4; --border-warn:#f2d9b8; --border-danger:#f4cfcb;
+  --ring:0 0 0 3px rgba(14,159,110,.22);
+  --r-sm:8px; --r:10px; --r-lg:14px; --radius-pill:999px;
+  --space-1:.25rem; --space-2:.4rem; --space-3:.5rem; --space-4:.6rem; --space-5:.75rem;
+  --space-6:.85rem; --space-7:1rem; --space-8:1.1rem; --space-9:1.25rem; --space-10:1.5rem;
+  --space-11:2.25rem; --space-12:3rem; --space-13:4.25rem;
+  --fs-2xs:.72rem; --fs-xs:.8rem; --fs-sm:.88rem; --fs-md:1rem; --fs-lg:1.1rem;
+  --fs-xl:1.3rem; --fs-2xl:1.5rem; --fs-3xl:1.95rem;
+  --fw-medium:500; --fw-semibold:600; --fw-bold:700;
+  --shadow-sm:0 1px 2px rgba(16,24,40,.05);
+  --shadow:0 1px 3px rgba(16,24,40,.08),0 1px 2px rgba(16,24,40,.05);
+  --font:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:ui-monospace,'Cascadia Code','SF Mono',Consolas,monospace;
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+html[data-theme='dark']{
+  --canvas:#0f140f; --surface:#161d16; --surface-2:#1d261d;
+  --ink:#e9ede7; --ink-2:#a7b0a5; --ink-3:#9aa39a;
+  --border:#26312a; --border-2:#37453a;
+  --primary:#34d399; --primary-ink:#6ee7b7; --primary-soft:#123024;
+  --warm:#fbbf24; --warm-ink:#f59e0b; --warm-soft:#3a2c14;
+  --grad:linear-gradient(135deg,#34d399,#fbbf24);
+  --ok:#43c294; --ok-soft:#13312a; --warn:#e0a35a; --warn-soft:#3a2c18;
+  --danger:#ef6f63; --danger-soft:#3a1f1d; --muted:#9aa59a; --muted-soft:#232d23;
+  --on-accent:#0f140f; --on-brand:#0f140f; --danger-strong:#ef8f85;
+  --border-ok:#1d4a3a; --border-warn:#4a3a1c; --border-danger:#4d2b27;
+  --sidebar-bg:#0e140f; --sidebar-border:#1e2a22;
+  --ring:0 0 0 3px rgba(52,211,153,.3);
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);
+  --shadow:0 1px 3px rgba(0,0,0,.4),0 1px 2px rgba(0,0,0,.3);
+  color-scheme:dark;
+}
+*{margin:0;box-sizing:border-box}
+html{font-size:14px}
+body{min-height:100vh;overflow-x:hidden;font-family:var(--font);font-size:var(--fs-sm);
+  line-height:1.5;color:var(--ink);background:var(--canvas);-webkit-font-smoothing:antialiased}
+a{color:var(--primary-ink);text-decoration:none}
+a:hover{text-decoration:underline}
+.mono{font-family:var(--mono)}
+.muted{color:var(--ink-3)}
+
+.shell{display:flex;min-height:100vh}
+.sb{width:236px;flex:0 0 236px;background:var(--sidebar-bg);border-right:1px solid var(--sidebar-border);
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.sb-brand{display:flex;align-items:center;gap:var(--space-5);padding:var(--space-9) var(--space-9);
+  color:var(--sidebar-ink-2);font-weight:var(--fw-bold);font-size:var(--fs-lg)}
+.sb-logo{width:28px;height:28px;border-radius:var(--r-sm);background:var(--grad);display:grid;
+  place-items:center;color:var(--on-brand);font-size:var(--fs-2xs);font-weight:var(--fw-bold)}
+.sb-nav{flex:1;overflow-y:auto;padding:var(--space-3) var(--space-5)}
+.sb-label{padding:var(--space-7) var(--space-4) var(--space-3);font-size:var(--fs-2xs);
+  letter-spacing:.08em;text-transform:uppercase;color:var(--sidebar-label);font-weight:var(--fw-bold)}
+.sb-item{display:flex;align-items:center;gap:var(--space-5);padding:var(--space-4) var(--space-5);
+  border-radius:var(--r-sm);color:var(--sidebar-ink);font-size:var(--fs-sm);margin-bottom:2px}
+.sb-item:hover{background:rgba(255,255,255,.05);color:var(--sidebar-ink-2);text-decoration:none}
+.sb-item.active{background:var(--sidebar-active-bg);color:var(--sidebar-active-ink);font-weight:var(--fw-semibold)}
+.sb-item svg{width:17px;height:17px;flex:0 0 17px}
+/* Mục của epic sau (`planned` trong shell/app-nav.ts): KHÔNG phải link, mờ, con trỏ cấm.
+   Thiếu luật này thì nó đậm y hệt mục thật và người dùng bấm mãi không được. */
+.sb-item.is-planned{opacity:.45;cursor:not-allowed}
+.sb-item.is-planned:hover{background:none;color:var(--sidebar-ink)}
+.sb-foot{display:flex;align-items:center;gap:var(--space-5);padding:var(--space-7);
+  border-top:1px solid var(--sidebar-border);color:var(--sidebar-ink)}
+.sb-ava{width:30px;height:30px;flex:0 0 30px;border-radius:50%;display:grid;place-items:center;
+  background:var(--sidebar-active-bg);color:var(--sidebar-active-ink);font-size:var(--fs-2xs);
+  font-weight:var(--fw-bold)}
+.sb-who{flex:1;min-width:0;line-height:1.3}
+.sb-who b{display:block;color:var(--sidebar-ink-2);font-size:var(--fs-sm);overflow:hidden;
+  text-overflow:ellipsis;white-space:nowrap}
+.sb-who span{font-size:var(--fs-2xs)}
+.sb-out{width:30px;height:30px;flex:0 0 30px;display:grid;place-items:center;border-radius:var(--r-sm);
+  border:1px solid var(--sidebar-border);background:transparent;color:var(--sidebar-ink);cursor:pointer}
+.sb-out:hover{color:var(--sidebar-ink-2);border-color:var(--sidebar-ink)}
+.sb-out svg{width:15px;height:15px}
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{height:52px;flex:0 0 52px;display:flex;align-items:center;gap:var(--space-7);
+  padding:0 var(--space-10);border-bottom:1px solid var(--border);background:var(--surface)}
+.topbar .grow{flex:1;min-width:0;color:var(--ink-3);font-size:var(--fs-xs)}
+.icon-btn{width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--border-2);
+  border-radius:var(--r-sm);background:var(--surface);color:var(--ink-2);cursor:pointer}
+.icon-btn:hover{border-color:var(--primary);color:var(--primary-ink)}
+.icon-btn svg{width:17px;height:17px}
+/* Bề ngang trang — LẤY ĐÚNG luật của app thật (css/base.css): min(1880px, 95vw).
+   Bản xem trước trước đây kẹp 1560px, hẹp hơn chính app: trên màn 24" (1920) nó bỏ phí
+   124px, trên 27" (2560) bỏ phí 764px — đúng chỗ chủ dự án nói "chưa full màn hình".
+   Đệm trên cũng về var(--space-10) = 21px như app, thay vì 31,5px: khoảng hở dưới thanh
+   topbar đang rộng hơn cần thiết. */
+.page{padding:var(--space-10) var(--space-10) var(--space-12);max-width:min(1880px,95vw);
+  width:100%;margin-inline:auto}
+
+.crumbs{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-2);font-size:var(--fs-xs);
+  color:var(--ink-3);margin-bottom:var(--space-7)}
+.crumb-back{display:inline-flex;align-items:center;gap:var(--space-1);padding:3px var(--space-5) 3px var(--space-4);
+  border:1px solid var(--border-2);border-radius:var(--radius-pill);background:var(--surface);
+  color:var(--ink);font-weight:var(--fw-semibold)}
+.crumb-back:hover{border-color:var(--primary);color:var(--primary-ink);text-decoration:none}
+.crumb-sep{opacity:.5;padding:0 var(--space-1)}
+.dtitle-row{display:flex;align-items:flex-start;gap:var(--space-10);flex-wrap:wrap;
+  padding-bottom:var(--space-10);border-bottom:1px solid var(--border);margin-bottom:var(--space-11)}
+.dtitle-main{flex:1 1 22rem;min-width:0}
+.dcode{display:flex;align-items:baseline;flex-wrap:wrap;gap:var(--space-5);font-family:var(--mono);
+  font-size:var(--fs-3xl);font-weight:var(--fw-bold);letter-spacing:-.02em;line-height:1.15}
+.dname{font-family:var(--font);font-size:var(--fs-lg);font-weight:var(--fw-medium);color:var(--ink-2)}
+.dsub{display:flex;align-items:center;flex-wrap:wrap;gap:var(--space-3);margin-top:var(--space-4);
+  font-size:var(--fs-xs);color:var(--ink-3)}
+.dsub .dot{opacity:.45}
+.dactions{display:flex;align-items:center;gap:var(--space-4);flex-wrap:wrap}
+.act-gap{width:var(--space-10)}
+
+.btn{display:inline-flex;align-items:center;gap:var(--space-3);padding:var(--space-4) var(--space-8);
+  min-height:34px;border:1px solid var(--border-2);border-radius:var(--r-sm);background:var(--surface);
+  color:var(--ink);font:inherit;font-weight:var(--fw-semibold);font-size:var(--fs-sm);cursor:pointer;
+  transition:background .15s var(--ease),border-color .15s var(--ease)}
+.btn:hover{background:var(--surface-2)}
+.btn:focus-visible{outline:none;box-shadow:var(--ring)}
+.btn.primary{background:var(--grad);border-color:transparent;color:var(--on-brand);
+  box-shadow:0 8px 18px -10px var(--warm-ink)}
+.btn.primary:hover{filter:brightness(1.04)}
+.btn.danger-ghost{background:transparent;border-color:var(--border-danger);color:var(--danger-strong)}
+.btn.danger-ghost:hover{background:var(--danger-soft)}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--ink-2)}
+.btn.ghost:hover{background:var(--muted-soft);color:var(--ink)}
+.btn.sm{min-height:28px;padding:var(--space-2) var(--space-5);font-size:var(--fs-xs)}
+.btn svg{width:15px;height:15px}
+.copy-btn{display:inline-grid;place-items:center;width:22px;height:22px;border:1px solid var(--border-2);
+  border-radius:6px;background:var(--surface);color:var(--ink-3);cursor:pointer;vertical-align:-5px}
+.copy-btn:hover{color:var(--primary-ink);border-color:var(--primary)}
+.copy-btn svg{width:12px;height:12px}
+
+.detail-2col{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:var(--space-12);align-items:start}
+.dmain{min-width:0}
+.drail{min-width:0;position:sticky;top:var(--space-10);display:flex;flex-direction:column;gap:var(--space-9)}
+.rail-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:var(--space-9) var(--space-9);box-shadow:var(--shadow-sm)}
+.rail-h{font-size:var(--fs-2xs);font-weight:var(--fw-bold);letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-3);margin-bottom:var(--space-8)}
+.rail-row{display:flex;flex-direction:column;gap:2px;padding:var(--space-5) 0;border-top:1px solid var(--border)}
+.rail-row:first-of-type{border-top:none;padding-top:0}
+.rail-k{font-size:var(--fs-2xs);font-weight:var(--fw-semibold);letter-spacing:.05em;
+  text-transform:uppercase;color:var(--ink-3)}
+.rail-v{font-size:var(--fs-md);font-weight:var(--fw-semibold);overflow-wrap:anywhere}
+.rail-note{font-size:var(--fs-xs);color:var(--ink-3)}
+
+.tabs{display:flex;gap:var(--space-1);border-bottom:1px solid var(--border);overflow-x:auto;
+  scrollbar-width:none;margin-bottom:var(--space-11)}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex-shrink:0;white-space:nowrap;padding:var(--space-5) var(--space-9);border:none;
+  border-bottom:2px solid transparent;background:none;color:var(--ink-3);font:inherit;
+  font-weight:var(--fw-semibold);font-size:var(--fs-sm);cursor:pointer;margin-bottom:-1px}
+.tab:hover:not(.active){color:var(--ink-2)}
+.tab.active{color:var(--primary-ink);border-bottom-color:var(--primary)}
+.tab-count{display:inline-block;min-width:18px;padding:0 5px;margin-left:var(--space-3);
+  border-radius:var(--radius-pill);background:var(--muted-soft);color:var(--ink-3);
+  font-size:var(--fs-2xs);font-weight:var(--fw-bold);text-align:center}
+.tab.active .tab-count{background:var(--primary-soft);color:var(--primary-ink)}
+.tabpanel{display:none}
+.tabpanel.show{display:block}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:var(--space-9) var(--space-10);box-shadow:var(--shadow-sm);margin-bottom:var(--space-11)}
+.card-h{display:flex;align-items:center;justify-content:space-between;gap:var(--space-7);
+  margin-bottom:var(--space-9)}
+.card-h h2{font-size:var(--fs-md);font-weight:var(--fw-semibold);letter-spacing:-.005em}
+.card-h .sub{font-size:var(--fs-xs);color:var(--ink-3);font-weight:var(--fw-medium)}
+.data-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:var(--space-8) var(--space-10)}
+.data-item{min-width:0}
+.data-item dt{font-size:var(--fs-2xs);font-weight:var(--fw-semibold);letter-spacing:.05em;
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:2px}
+.data-item dd{font-size:var(--fs-md);font-weight:var(--fw-medium);overflow-wrap:anywhere}
+.blank-fields{margin-top:var(--space-9);padding-top:var(--space-7);border-top:1px dashed var(--border-2);
+  font-size:var(--fs-xs);color:var(--ink-3)}
+
+.badge{display:inline-flex;align-items:center;gap:var(--space-2);padding:2px var(--space-5);
+  border-radius:var(--radius-pill);border:1px solid var(--border-2);background:var(--muted-soft);
+  color:var(--ink-2);font-size:var(--fs-xs);font-weight:var(--fw-semibold);white-space:nowrap}
+.badge::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.badge.ok{background:var(--ok-soft);border-color:var(--border-ok);color:var(--ok)}
+.badge.warn{background:var(--warn-soft);border-color:var(--border-warn);color:var(--warn)}
+.badge.danger{background:var(--danger-soft);border-color:var(--border-danger);color:var(--danger-strong)}
+
+.table-wrap{overflow-x:auto}
+.table{width:100%;border-collapse:collapse;font-size:var(--fs-sm)}
+.table th{text-align:left;font-size:var(--fs-2xs);font-weight:var(--fw-bold);letter-spacing:.05em;
+  text-transform:uppercase;color:var(--ink-3);padding:var(--space-4) var(--space-6);
+  border-bottom:1px solid var(--border)}
+.table td{padding:var(--space-6);border-bottom:1px solid var(--border);vertical-align:top}
+.table tr:last-child td{border-bottom:none}
+.table tbody tr:hover{background:var(--surface-2)}
+.col-right{text-align:right}
+/* Bảng nhiều cột KHÔNG được bóp cho vừa cột chính — bóp lại thì mỗi ô xuống ba dòng và bảng
+   hết đọc được. Đặt SÀN bề ngang rồi để .table-wrap cuộn ngang TRONG thẻ. Chỉ áp ở ≥961px:
+   dưới mốc đó .table-stack đã gập bảng thành thẻ dọc, đặt sàn ở đó là tự sinh cuộn ngang. */
+@media (min-width:961px){
+  .table.wide{min-width:66rem}
+  /* Số tiền, IP, serial, mã cổng KHÔNG được xuống dòng giữa chừng: "3.150.000 đ" gãy chữ "đ"
+     xuống dòng dưới là một con số đọc ra hai lần. Chỉ ở ≥961px — dưới đó bảng đã là thẻ dọc. */
+  .table td.mono, .table td.col-right{white-space:nowrap}
+}
+
+.wbar-meta{display:flex;justify-content:space-between;gap:var(--space-7);font-size:var(--fs-xs);
+  color:var(--ink-3);margin-bottom:var(--space-4)}
+.wbar-track{height:8px;border-radius:var(--radius-pill);background:var(--muted-soft);overflow:hidden}
+.wbar-fill{height:100%;border-radius:var(--radius-pill);background:var(--ok)}
+.wbar-fill.warn{background:var(--warn)}
+.wbar-fill.danger{background:var(--danger)}
+.wbar-foot{display:flex;justify-content:space-between;gap:var(--space-7);font-size:var(--fs-xs);
+  margin-top:var(--space-4);color:var(--ink-3)}
+.wbar-foot strong{color:var(--ink);font-weight:var(--fw-semibold)}
+.wmini .wbar-track{height:6px}
+
+.tl{position:relative;padding-left:var(--space-10)}
+.tl::before{content:"";position:absolute;left:4px;top:6px;bottom:6px;width:1px;background:var(--border)}
+.tl-day{font-size:var(--fs-2xs);font-weight:var(--fw-bold);letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-3);margin:var(--space-9) 0 var(--space-5)}
+.tl-day:first-child{margin-top:0}
+.tl-item{position:relative;padding:0 0 var(--space-9)}
+.tl-item::before{content:"";position:absolute;left:calc(-1 * var(--space-10) + 1px);top:5px;
+  width:9px;height:9px;border-radius:50%;background:var(--primary);box-shadow:0 0 0 3px var(--surface)}
+.tl-t{font-weight:var(--fw-semibold)}
+.tl-d{font-size:var(--fs-xs);color:var(--ink-2);margin-top:2px}
+.tl-m{font-size:var(--fs-xs);color:var(--ink-3);margin-top:2px}
+
+.empty{padding:var(--space-12) var(--space-9);text-align:center;color:var(--ink-3);
+  border:1px dashed var(--border-2);border-radius:var(--r-lg);background:var(--surface-2)}
+.empty h3{font-size:var(--fs-md);color:var(--ink-2);margin-bottom:var(--space-3)}
+.empty p{font-size:var(--fs-xs);max-width:42ch;margin-inline:auto}
+
+.spec-note{margin:var(--space-12) 0 var(--space-9);padding:var(--space-8) var(--space-9);
+  border-left:3px solid var(--warm);background:var(--warm-soft);border-radius:0 var(--r) var(--r) 0;
+  font-size:var(--fs-xs);color:var(--ink-2)}
+.spec-note b{color:var(--ink)}
+.spec-note + .spec-note{margin-top:calc(-1 * var(--space-7))}
+
+.panel-list{display:grid;gap:var(--space-4)}
+.panel-row{display:flex;align-items:center;gap:var(--space-7);padding:var(--space-5) 0;
+  border-bottom:1px solid var(--border)}
+.panel-row:last-child{border-bottom:none}
+.panel-row .k{flex:0 0 9rem;font-family:var(--mono);font-weight:var(--fw-semibold);min-width:0;
+  overflow-wrap:anywhere}
+.panel-row .v{flex:1;min-width:0;color:var(--ink-2);overflow-wrap:anywhere}
+.hint{font-size:var(--fs-xs);color:var(--ink-3);margin-bottom:var(--space-8)}
+.sec-h{font-size:var(--fs-sm);font-weight:var(--fw-bold);letter-spacing:.03em;margin-bottom:var(--space-6)}
+.uploader{display:flex;align-items:center;gap:var(--space-7);flex-wrap:wrap;padding:var(--space-8);
+  border:1px dashed var(--border-2);border-radius:var(--r);background:var(--surface-2);
+  margin-bottom:var(--space-9)}
+
+@media (max-width:1199px){
+  .detail-2col{grid-template-columns:1fr;gap:var(--space-11)}
+  .drail{position:static;order:-1}
+  .rail-card{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+    gap:var(--space-7) var(--space-9)}
+  .rail-h{grid-column:1/-1;margin-bottom:0}
+  .rail-row{border-top:none;padding:0}
+}
+@media (max-width:960px){
+  .sb{position:fixed;left:-260px;z-index:40;transition:left .2s var(--ease)}
+  .sb.open{left:0}
+  .table-stack thead{display:none}
+  .table-stack tr{display:block;padding:var(--space-5) 0;border-bottom:1px solid var(--border)}
+  .table-stack tr:hover{background:none}
+  .table-stack td{display:flex;justify-content:space-between;gap:var(--space-9);border:none;
+    padding:var(--space-2) 0}
+  .table-stack td::before{content:attr(data-label);font-weight:var(--fw-semibold);color:var(--ink-3);
+    font-size:var(--fs-xs);flex:0 0 auto}
+  .panel-row{flex-direction:column;align-items:flex-start;gap:var(--space-1)}
+  .panel-row .k{flex:none}
+}
+@media (min-width:961px){ .sb-toggle{display:none} }
+@media (max-width:680px){
+  .page{padding:var(--space-9) var(--space-7) var(--space-12)}
+  .dcode{font-size:var(--fs-2xl)}
+  .dtitle-row{gap:var(--space-8)}
+  .dactions{width:100%}
+  .dactions .btn{flex:1 1 auto;justify-content:center;min-height:40px}
+  .act-gap{display:none}
+  /* Nút phá KHÔNG kéo hết bề ngang: to bằng nút chính là mời tay bấm nhầm. Xuống dòng,
+     nép phải, rộng vừa đủ chữ. */
+  .dactions .btn.danger-ghost{flex:0 0 auto;margin-top:var(--space-5);margin-left:auto;
+    padding-inline:var(--space-10)}
+  .card{padding:var(--space-8);border-radius:var(--r)}
+  .rail-card{grid-template-columns:1fr 1fr}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* ===================== BẢN C — BẢN ĐỒ QUAN HỆ (bản 2) =====================
+ * Đổi so với bản 1: bấm một nút KHÔNG cuộn xuống nữa mà mở một hộp trượt bên phải
+ * Thanh tab GIỮ NGUYÊN (16/09): tab đầu đổi thành "Tổng quan" và chứa bản đồ; các tab sau
+ * vẫn là chỗ làm việc. Bản đồ là tầng tổng quan, tab là tầng làm việc — không tranh nhau.
+ * Bố cục nút do MÃ TÍNH: máy có 8 thứ thì vẽ 8, có 3 thì vẽ 3 và vòng co lại, không ô trống.
+ * ------------------------------------------------------------------------------------ */
+/* (bỏ override .page riêng — luật chung ở trên đã là min(1880px,95vw)) */
+
+.map-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);
+  padding:var(--space-9) var(--space-10) var(--space-10);box-shadow:var(--shadow-sm);
+  margin-bottom:var(--space-11)}
+.map-h{display:flex;align-items:center;justify-content:space-between;gap:var(--space-7);
+  flex-wrap:wrap;margin-bottom:var(--space-8)}
+.map-h h2{font-size:var(--fs-md);font-weight:var(--fw-semibold)}
+.map-legend{display:flex;align-items:center;gap:var(--space-8);flex-wrap:wrap;
+  font-size:var(--fs-2xs);color:var(--ink-3)}
+.map-legend span{display:inline-flex;align-items:center;gap:var(--space-3)}
+.lg-dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+.lg-dot.warn{background:var(--warn)}
+.lg-dot.cut{background:var(--danger)}
+
+.map{position:relative;width:100%}
+.map-svg{position:absolute;inset:0;width:100%;height:100%}
+.map-svg path{fill:none;stroke:var(--border-2);stroke-width:1.5;
+  vector-effect:non-scaling-stroke;transition:stroke .2s var(--ease)}
+
+.mhub{position:absolute;display:flex;flex-direction:column;justify-content:center;
+  gap:var(--space-2);padding:var(--space-7);border-radius:var(--r-lg);
+  background:var(--grad);color:var(--on-brand);box-shadow:var(--shadow);text-align:center}
+.mhub b{font-family:var(--mono);font-size:var(--fs-xl);font-weight:var(--fw-bold);letter-spacing:-.01em}
+.mhub span{font-size:var(--fs-2xs);opacity:.85}
+
+.mnode{position:absolute;display:flex;flex-direction:column;gap:var(--space-2);
+  padding:var(--space-6) var(--space-7);border:1px solid var(--border);border-radius:var(--r);
+  background:var(--surface);color:var(--ink);box-shadow:var(--shadow-sm);overflow:hidden;
+  text-align:left;font:inherit;cursor:pointer;
+  transition:border-color .15s var(--ease),box-shadow .15s var(--ease),background .2s var(--ease)}
+.mnode:hover{border-color:var(--primary);box-shadow:var(--shadow)}
+.mnode:focus-visible{outline:none;box-shadow:var(--ring)}
+.mn-h{display:flex;align-items:center;gap:var(--space-3);font-size:var(--fs-xs);
+  font-weight:var(--fw-bold);white-space:nowrap}
+.mn-h svg{width:14px;height:14px;flex:0 0 14px;color:var(--ink-3)}
+.mn-n{margin-left:auto;min-width:20px;padding:0 5px;border-radius:var(--radius-pill);
+  background:var(--muted-soft);color:var(--ink-3);font-family:var(--mono);
+  font-size:var(--fs-2xs);font-weight:var(--fw-bold);text-align:center}
+.mn-i{font-size:var(--fs-2xs);color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mn-i.warn{color:var(--warn);font-weight:var(--fw-semibold)}
+
+/* Máy chưa giữ gì: hạch đứng một mình, và nói thẳng ra là đứng một mình. */
+.map-alone{position:absolute;left:50%;transform:translateX(-50%);bottom:var(--space-5);
+  font-size:var(--fs-xs);color:var(--ink-3);text-align:center;max-width:34rem}
+/* Thứ CHƯA gắn gom về một dòng — cùng lối với `BlankFields`, không vẽ ô rỗng. */
+.map-blank{margin-top:var(--space-9);padding-top:var(--space-7);border-top:1px dashed var(--border-2);
+  font-size:var(--fs-xs);color:var(--ink-3)}
+
+/* Chế độ "thanh lý sẽ cắt gì" — ngữ nghĩa lấy từ `**-device-retirement.ts`. */
+.map.show-cut .mnode.cut{border-color:var(--border-danger);background:var(--danger-soft)}
+.map.show-cut .mnode.cut .mn-h{color:var(--danger-strong)}
+.map.show-cut .mnode.cut .mn-h svg{color:var(--danger-strong)}
+.map.show-cut .mnode.cut .mn-n{background:var(--surface);color:var(--danger-strong)}
+.map.show-cut .mnode.keep{opacity:.42}
+.map.show-cut .e-cut{stroke:var(--danger);stroke-dasharray:6 5}
+.cut-sum{display:none;margin-top:var(--space-9);padding:var(--space-8) var(--space-9);
+  border-left:3px solid var(--danger);background:var(--danger-soft);
+  border-radius:0 var(--r) var(--r) 0;font-size:var(--fs-xs);color:var(--ink-2)}
+.cut-sum b{color:var(--ink)}
+.map.show-cut ~ .cut-sum{display:block}
+
+/* Bản thay thế ở màn hẹp — cùng danh sách ấy, dạng dòng, bấm ra cùng hộp đó. */
+.map-list{display:none;flex-direction:column;gap:var(--space-3)}
+.map-list button{display:flex;align-items:center;gap:var(--space-5);width:100%;
+  padding:var(--space-6) var(--space-7);border:1px solid var(--border);border-radius:var(--r);
+  background:var(--surface);color:var(--ink);font:inherit;font-size:var(--fs-sm);
+  font-weight:var(--fw-semibold);text-align:left;cursor:pointer}
+.map-list button:hover{border-color:var(--primary)}
+.map-list .ml-i{flex:1;min-width:0;font-weight:var(--fw-medium);color:var(--ink-3);
+  font-size:var(--fs-xs);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+.map-extra{display:flex;align-items:center;gap:var(--space-4);flex-wrap:wrap;
+  margin-top:var(--space-8);font-size:var(--fs-xs);color:var(--ink-3)}
+
+.dmain{display:grid;grid-template-columns:1fr;gap:var(--space-11);align-content:start}
+.dmain > *{min-width:0}
+.dmain .card{margin-bottom:0}
+.span-2{grid-column:1/-1}
+
+@media (min-width:1600px){ .detail-2col{grid-template-columns:minmax(0,1fr) 340px} }
+@media (max-width:900px){
+  .map{display:none}
+  .map-list{display:flex}
+  .map-card{padding:var(--space-8)}
+}
+
+/* --- THANH TAB: ba sửa theo rà soát 16/09 -----------------------------------
+ * (a) Huy hiệu đếm có ở MỌI tab đếm được — Port map cũng phải có số. Trước đây chỉ Giấy tờ
+ *     và Két sắt có, nên tab dày nhất lại trông như tab rỗng. `count === 0` thì không vẽ.
+ * (b) Chấm cảnh báo: bên trong có thứ cần để mắt thì tab NÓI RA, khỏi phải mở từng tab để
+ *     dò. Kèm chữ ẩn cho trình đọc màn hình — không dựa vào mỗi màu (WCAG 1.4.1).
+ * (c) Thanh tab DÍNH khi cuộn: bảng port map và lịch sử dài, cuộn tới dòng 40 mà muốn đổi
+ *     tab thì không phải cuộn ngược lên đầu trang.
+ * -------------------------------------------------------------------------- */
+.tabs{position:sticky;top:0;z-index:20;background:var(--canvas);
+  padding-top:var(--space-3);margin-bottom:var(--space-11)}
+.tab{display:inline-flex;align-items:center;gap:var(--space-3)}
+.tab-dot{width:7px;height:7px;border-radius:50%;background:var(--warn);flex:0 0 7px}
+.tab-dot.danger{background:var(--danger)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* Khu trong tab Tổng quan: màn rộng thì thẻ hẹp đứng cạnh nhau, bảng rộng vắt ngang. */
+@media (min-width:1600px){
+  #panel-tong-quan.show{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    grid-auto-flow:row dense;gap:var(--space-11);align-items:start}
+  #panel-tong-quan.show > *{min-width:0;margin-bottom:0}
+  #panel-tong-quan.show > .span-2{grid-column:1/-1}
+}
+
+/* Thẻ vừa được nhảy tới thì nháy một cái, để mắt bắt được chỗ. */
+.sec{scroll-margin-top:72px}
+.sec.flash{animation:secFlash 1.6s var(--ease)}
+@keyframes secFlash{0%{box-shadow:0 0 0 3px var(--primary-soft)}100%{box-shadow:var(--shadow-sm)}}
+@media (prefers-reduced-motion:reduce){ .sec.flash{animation:none} }
+
+/* Ô "—" trong bảng: xám hẳn đi, đừng đọc như một giá trị. */
+.table td.nil{color:var(--ink-3)}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sb" id="sb">
+    <div class="sb-brand"><span class="sb-logo">IMS</span> IMS</div>
+    <nav class="sb-nav">
+      <div class="sb-label">Nghiệp vụ</div>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg> Bảng điều khiển</a>
+      <a class="sb-item active" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="4" width="20" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg> Thiết bị</a>
+      <a class="sb-item" href="phan-mem.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.9 4.9l2.9 2.9M16.2 16.2l2.9 2.9M2 12h4M18 12h4"/></svg> Phần mềm</a>
+      <a class="sb-item" href="duong-truyen.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/></svg> Đường truyền</a>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Sắp hết hạn</a>
+      <a class="sb-item" href="dai-ip.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg> Địa chỉ IP</a>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h13l-3-3M20 17H7l3 3"/></svg> Sổ NAT</a>
+      <a class="sb-item" href="tai-khoan-dich-vu.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2"/><circle cx="8" cy="12" r="2.2"/><path d="M14 10h5M14 14h3"/></svg> Tài khoản dịch vụ</a>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m8 12 3 3 5-6"/></svg> Duyệt yêu cầu</a>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg> Két sắt</a>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9 12h6"/></svg> Kho thanh lý</a>
+      <span class="sb-item is-planned" title="Phần này chưa mở trong bản hiện tại"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg> Tài liệu</span>
+      <div class="sb-label">Hệ thống</div>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c.8-3.4 3.2-5 6-5s5.2 1.6 6 5"/><circle cx="18" cy="9" r="2.4"/></svg> Tài khoản</a>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8.5 11 4l8 4.5v7L11 20l-8-4.5z"/></svg> Danh mục</a>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3 5 6v5c0 4.4 2.9 8.4 7 10 4.1-1.6 7-5.6 7-10V6z"/></svg> Quyền két sắt</a>
+      <span class="sb-item is-planned" title="Phần này chưa mở trong bản hiện tại"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg> Nhật ký</span>
+      <a class="sb-item" href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2 3 7v10l9 5 9-5V7z"/><path d="m3 7 9 5 9-5M12 12v10"/></svg> Bộ giao diện</a>
+    </nav>
+    <div class="sb-foot">
+      <span class="sb-ava" aria-hidden="true">NH</span>
+      <span class="sb-who"><b>Nguyễn Minh Hoàng</b><span>Super Admin</span></span>
+      <button class="sb-out" type="button" aria-label="Đăng xuất" title="Đăng xuất">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 17l5-5-5-5M20 12H9M12 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h6"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn sb-toggle" id="sbToggle" aria-label="Mở menu">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="grow">Quản lý hệ thống IT · PMH</div>
+      <button class="icon-btn" id="themeBtn" aria-label="Đổi giao diện sáng/tối">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg>
+      </button>
+    </header>
+
+    <main class="page">
+      <nav class="crumbs" aria-label="breadcrumb">
+        <a class="crumb-back" href="#"><span aria-hidden="true">‹</span> Thiết bị</a>
+        <span class="crumb-sep" aria-hidden="true">›</span><span>Switch</span>
+        <span class="crumb-sep" aria-hidden="true">›</span><span>SW-CORE-01</span>
+      </nav>
+
+      <div class="dtitle-row">
+        <div class="dtitle-main">
+          <h1 class="dcode">SW-CORE-01 <span class="dname">Switch lõi tầng 3 — phòng máy chủ</span></h1>
+          <!-- Dòng định danh CHỈ giữ serial: "Switch" đã ở breadcrumb, model là trường của
+               khu Hồ sơ. Serial ở lại vì nó là thứ người ta chép đi dán vào terminal. -->
+          <div class="dsub">
+            <span>S/N <span class="mono">FOC2531L0AB</span>
+              <button class="copy-btn" aria-label="Chép serial" title="Chép serial">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>
+              </button>
+            </span>
+          </div>
+        </div>
+        <div class="dactions">
+          <button class="btn primary" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 20h4L19 9a2.1 2.1 0 0 0-3-3L5 17z"/></svg>
+            Sửa hồ sơ
+          </button>
+          <span class="act-gap" aria-hidden="true"></span>
+          <button class="btn danger-ghost" type="button">Thanh lý</button>
+        </div>
+      </div>
+
+      <div class="tabs" role="tablist" aria-label="Thiết bị">
+        <button class="tab active" data-tab="tong-quan" role="tab" aria-selected="true">Tổng quan</button>
+        <button class="tab" data-tab="port" role="tab" aria-selected="false">Port map <span class="tab-count">6</span></button>
+        <button class="tab" data-tab="giay-to" role="tab" aria-selected="false">Giấy tờ <span class="tab-count">3</span></button>
+        <button class="tab" data-tab="ket-sat" role="tab" aria-selected="false">Két sắt <span class="tab-count">2</span>
+          <span class="tab-dot" aria-hidden="true"></span><span class="sr-only">— có secret quá hạn xoay</span></button>
+        <button class="tab" data-tab="lich-su" role="tab" aria-selected="false">Lịch sử</button>
+      </div>
+
+      <div class="detail-2col">
+        <div class="dmain">
+
+          <!-- ================= TAB 1 — TỔNG QUAN ================= -->
+          <section class="tabpanel show" id="panel-tong-quan" role="tabpanel">
+
+            <section class="map-card span-2">
+              <div class="map-h">
+                <h2>Bản đồ quan hệ</h2>
+                <div class="map-legend">
+                  <span><i class="lg-dot"></i> bình thường</span>
+                  <span><i class="lg-dot warn"></i> cần để mắt</span>
+                  <span><i class="lg-dot cut"></i> sẽ bị gỡ khi thanh lý</span>
+                </div>
+                <button class="btn sm" type="button" data-cut="full">Xem lượt thanh lý cắt gì</button>
+              </div>
+              <div class="map" data-map="full"></div>
+              <div class="map-list" data-list="full"></div>
+              <p class="map-blank" data-blank="full"></p>
+              <div class="cut-sum">
+                <b>Tick "Dọn hết thứ liên quan" sẽ CẮT 5 sợi:</b> thu hồi 3 địa chỉ IP · gỡ 2 rule NAT ·
+                trả 1 ghế license (hồ sơ phần mềm giữ nguyên, chỉ gỡ máy khỏi license) · gỡ 1 đường
+                truyền khỏi máy · gỡ liên kết cổng <span class="mono">Gi0/1</span> của SW-ACC-02 (ô đó
+                còn lại dòng chữ "SW-CORE-01 (đã thanh lý)", không thành ô trắng).
+                <br><br>
+                <b>GIỮ nguyên:</b> 6 cổng của chính máy này (sơ đồ đấu nối là hồ sơ của nó) · 2 secret
+                trong két · 3 giấy tờ · toàn bộ lịch sử. Không tick thì hệ thống CHẶN và đọc tên từng
+                thứ đang giữ, chứ không lẳng lặng thanh lý.
+              </div>
+            </section>
+
+            <section class="card sec" id="sec-ho-so">
+              <div class="card-h"><h2>Hồ sơ</h2></div>
+              <dl class="data-grid">
+                <div class="data-item"><dt>Model</dt><dd>Catalyst 9300-48P</dd></div>
+                <div class="data-item"><dt>Ghi chú</dt><dd>Uplink lên FW qua Te1/1/1. Không tắt nguồn ngoài giờ.</dd></div>
+              </dl>
+            </section>
+
+            <!-- BẢNG CÓ TIÊU ĐỀ CỘT, không còn nhồi ba sự thật vào một chuỗi. -->
+            <section class="card sec" id="sec-ip">
+              <div class="card-h"><h2>Địa chỉ IP</h2><span class="sub">3 địa chỉ</span></div>
+              <div class="table-wrap">
+                <table class="table table-stack">
+                  <thead><tr><th>Địa chỉ</th><th>Trạng thái</th><th>Người / bộ phận dùng</th><th>Dải</th></tr></thead>
+                  <tbody>
+                    <tr>
+                      <td data-label="Địa chỉ" class="mono">10.20.0.2</td>
+                      <td data-label="Trạng thái"><span class="badge ok">Đang cấp</span></td>
+                      <td data-label="Người / bộ phận dùng">Quản trị switch lõi</td>
+                      <td data-label="Dải"><a href="dai-ip.html" class="mono">10.20.0.0/24</a></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Địa chỉ" class="mono">10.20.0.254</td>
+                      <td data-label="Trạng thái"><span class="badge ok">Đang cấp</span></td>
+                      <td data-label="Người / bộ phận dùng">Gateway VLAN 20</td>
+                      <td data-label="Dải"><a href="dai-ip.html" class="mono">10.20.0.0/24</a></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Địa chỉ" class="mono">10.20.0.31</td>
+                      <td data-label="Trạng thái"><span class="badge warn">Nghi chết</span></td>
+                      <td data-label="Người / bộ phận dùng" class="nil">—</td>
+                      <td data-label="Dải"><a href="dai-ip.html" class="mono">10.20.0.0/24</a></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="card sec" id="sec-isp">
+              <div class="card-h"><h2>Đường truyền ISP</h2></div>
+              <div class="table-wrap">
+                <table class="table table-stack">
+                  <thead><tr><th>Mã đường truyền</th><th>Nhà mạng</th><th>Hotline</th><th>IP WAN</th><th>Số hợp đồng</th></tr></thead>
+                  <tbody>
+                    <tr>
+                      <td data-label="Mã đường truyền"><a href="duong-truyen.html" class="mono">FTTH-LST-01</a></td>
+                      <td data-label="Nhà mạng">Viettel</td>
+                      <td data-label="Hotline" class="mono">18008098</td>
+                      <td data-label="IP WAN" class="mono">113.161.72.18</td>
+                      <td data-label="Số hợp đồng" class="mono">HD-VTL-2025-0417</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="card sec span-2" id="sec-nat">
+              <div class="card-h"><h2>Sổ NAT</h2><span class="sub">2 rule trỏ về máy này</span></div>
+              <div class="table-wrap">
+                <table class="table table-stack wide">
+                  <thead><tr>
+                    <th>Giao thức</th><th>Cổng ngoài</th><th>Đích bên trong</th>
+                    <th>Người / bộ phận dùng</th><th>Lý do mở</th><th>Trạng thái</th>
+                  </tr></thead>
+                  <tbody>
+                    <tr>
+                      <td data-label="Giao thức" class="mono">TCP</td>
+                      <td data-label="Cổng ngoài" class="mono">22022</td>
+                      <td data-label="Đích bên trong" class="mono">10.20.0.2:22</td>
+                      <td data-label="Người / bộ phận dùng">Phòng CNTT</td>
+                      <td data-label="Lý do mở">SSH quản trị từ VPN</td>
+                      <td data-label="Trạng thái"><span class="badge ok">Đang bật</span></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Giao thức" class="mono">TCP</td>
+                      <td data-label="Cổng ngoài" class="mono">8443</td>
+                      <td data-label="Đích bên trong" class="mono">10.20.0.2:443</td>
+                      <td data-label="Người / bộ phận dùng">Phòng CNTT</td>
+                      <td data-label="Lý do mở">Web quản trị</td>
+                      <td data-label="Trạng thái"><span class="badge">Đã tắt</span></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="card sec span-2" id="sec-license">
+              <div class="card-h"><h2>License đang cài</h2><span class="sub">1 ghế</span></div>
+              <div class="table-wrap">
+                <table class="table table-stack wide">
+                  <thead><tr><th>Phần mềm</th><th>Kỳ hạn</th><th class="col-right">Chi phí</th><th>Bắt đầu</th><th>Kết thúc</th><th>Hợp đồng</th><th>Ghi chú</th></tr></thead>
+                  <tbody>
+                    <tr>
+                      <td data-label="Phần mềm"><a href="phan-mem.html">Cisco DNA Advantage</a></td>
+                      <td data-label="Kỳ hạn">Thuê bao</td>
+                      <td data-label="Chi phí" class="col-right mono">18.500.000 đ</td>
+                      <td data-label="Bắt đầu">12/03/2025</td>
+                      <td data-label="Kết thúc"><span class="badge warn">Còn 41 ngày</span></td>
+                      <td data-label="Hợp đồng" class="mono">HD-2025-114</td>
+                      <td data-label="Ghi chú" class="nil">—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <div class="spec-note span-2">
+              <b>Hai bảng IP và NAT ở trên cần API mở rộng một chút.</b> Hôm nay
+              <span class="mono">DevicePanelItem</span> chỉ có <span class="mono">{label, value}</span>,
+              nên <span class="mono">nat-device-panel.ts</span> phải nhồi ba sự thật vào một chuỗi:
+              <span class="mono">"→ 10.20.0.2:22 · Phòng CNTT · SSH quản trị từ VPN"</span> — nhìn vào
+              không biết đâu là đích, đâu là người dùng, đâu là lý do. Đề nghị thêm
+              <span class="mono">columns?: string[]</span> + <span class="mono">rows?: Cell[][]</span>
+              vào <span class="mono">DevicePanel</span>; khu nào khai cột thì web vẽ bảng, khu nào
+              không thì vẫn vẽ <i>nhãn: giá trị</i> như cũ. Đổi kiểu THÊM, không phá:
+              vault · software · isp giữ nguyên, chỉ ipam và nat khai thêm cột.
+            </div>
+          </section>
+
+          <!-- ================= TAB 2 — PORT MAP ================= -->
+          <section class="tabpanel" id="panel-port" role="tabpanel">
+            <section class="card">
+              <div class="card-h">
+                <h2>Cổng của thiết bị này</h2>
+                <button class="btn sm" type="button">Thêm cổng</button>
+              </div>
+              <div class="table-wrap">
+                <table class="table table-stack wide">
+                  <thead><tr><th>Cổng</th><th>Đầu kia</th><th>Cổng đầu kia</th><th>Người dùng</th><th>VLAN</th><th>Ghi chú</th><th></th></tr></thead>
+                  <tbody>
+                    <tr>
+                      <td data-label="Cổng" class="mono">Gi1/0/1</td>
+                      <td data-label="Đầu kia"><a href="#">AP-LST-03</a></td>
+                      <td data-label="Cổng đầu kia" class="mono">LAN</td>
+                      <td data-label="Người dùng">Phòng Kinh doanh</td>
+                      <td data-label="VLAN" class="mono">30</td>
+                      <td data-label="Ghi chú">PoE</td>
+                      <td data-label="" class="col-right"><button class="btn sm ghost" type="button">Sửa</button></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Cổng" class="mono">Gi1/0/24</td>
+                      <td data-label="Đầu kia"><a href="#">SRV-ERP-01</a></td>
+                      <td data-label="Cổng đầu kia" class="mono">NIC1</td>
+                      <td data-label="Người dùng">Phòng Kế toán</td>
+                      <td data-label="VLAN" class="mono">20</td>
+                      <td data-label="Ghi chú" class="nil">—</td>
+                      <td data-label="" class="col-right"><button class="btn sm ghost" type="button">Sửa</button></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Cổng" class="mono">Te1/1/1</td>
+                      <td data-label="Đầu kia">Uplink FW — mô tả tự do</td>
+                      <td data-label="Cổng đầu kia" class="nil">—</td>
+                      <td data-label="Người dùng">Phòng CNTT</td>
+                      <td data-label="VLAN" class="mono">trunk</td>
+                      <td data-label="Ghi chú">Sợi quang LC/LC</td>
+                      <td data-label="" class="col-right"><button class="btn sm ghost" type="button">Sửa</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <h3 class="sec-h" style="margin-top:var(--space-11)">Đang cắm vào thiết bị này</h3>
+              <p class="hint">Đây là chiều ngược của dòng do thiết bị kia giữ — sửa ở trang thiết bị đó,
+                một sợi dây chỉ có một bản ghi (AD-14).</p>
+              <div class="table-wrap">
+                <table class="table table-stack">
+                  <thead><tr><th>Từ thiết bị</th><th>Cổng</th><th>Cổng đầu kia</th><th>Ghi chú</th></tr></thead>
+                  <tbody>
+                    <tr>
+                      <td data-label="Từ thiết bị"><a href="#">SW-ACC-02</a></td>
+                      <td data-label="Cổng" class="mono">Gi0/1</td>
+                      <td data-label="Cổng đầu kia" class="mono">Gi1/0/47</td>
+                      <td data-label="Ghi chú">Uplink tầng 2</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <!-- ================= TAB 3 — GIẤY TỜ ================= -->
+          <section class="tabpanel" id="panel-giay-to" role="tabpanel">
+            <section class="card">
+              <div class="card-h"><h2>Giấy tờ đính kèm</h2>
+                <button class="btn sm" type="button">Chọn file để đính kèm</button></div>
+              <div class="table-wrap">
+                <table class="table table-stack">
+                  <thead><tr><th>Tên file</th><th>Dung lượng</th><th>Tải lên lúc</th><th></th></tr></thead>
+                  <tbody>
+                    <tr><td data-label="Tên file">hoa-don-sw-core-01.pdf</td><td data-label="Dung lượng">412 KB</td><td data-label="Tải lên lúc">09:12 12/03/2025</td><td data-label="" class="col-right"><button class="btn sm" type="button">Tải về</button></td></tr>
+                    <tr><td data-label="Tên file">bien-ban-ban-giao.pdf</td><td data-label="Dung lượng">287 KB</td><td data-label="Tải lên lúc">14:40 12/03/2025</td><td data-label="" class="col-right"><button class="btn sm" type="button">Tải về</button></td></tr>
+                    <tr><td data-label="Tên file">phieu-bao-hanh.jpg</td><td data-label="Dung lượng">1,2 MB</td><td data-label="Tải lên lúc">14:41 12/03/2025</td><td data-label="" class="col-right"><button class="btn sm" type="button">Tải về</button></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="hint" style="margin-top:var(--space-8)">File luôn được TẢI VỀ, không mở trực
+                tiếp trong trình duyệt (chống mã độc qua file).</p>
+            </section>
+          </section>
+
+          <!-- ================= TAB 4 — KÉT SẮT ================= -->
+          <section class="tabpanel" id="panel-ket-sat" role="tabpanel">
+            <section class="card">
+              <div class="card-h"><h2>Két sắt</h2><button class="btn sm" type="button">Cất secret</button></div>
+              <p class="hint">Nơi cất mật khẩu và license key. Giá trị được mã hóa, chỉ xem được qua
+                bước xác thực 2 lớp — bảng dưới đây chỉ hiện tên gọi.</p>
+              <div class="table-wrap">
+                <table class="table table-stack wide">
+                  <thead><tr><th>Tên gọi</th><th>Loại</th><th>Tên đăng nhập</th><th>Ghi chú</th><th>Cập nhật lúc</th><th></th></tr></thead>
+                  <tbody>
+                    <tr>
+                      <td data-label="Tên gọi">SSH quản trị</td><td data-label="Loại">Mật khẩu</td>
+                      <td data-label="Tên đăng nhập" class="mono">admin</td>
+                      <td data-label="Ghi chú">Đổi sau mỗi lần bảo trì</td>
+                      <td data-label="Cập nhật lúc"><span class="badge warn">08:05 02/09/2026</span></td>
+                      <td data-label="" class="col-right"><button class="btn sm" type="button">Mở xem</button></td>
+                    </tr>
+                    <tr>
+                      <td data-label="Tên gọi">SNMP community</td><td data-label="Loại">Khác</td>
+                      <td data-label="Tên đăng nhập" class="nil">—</td>
+                      <td data-label="Ghi chú">Chỉ đọc, dùng cho Zabbix</td>
+                      <td data-label="Cập nhật lúc">16:20 18/07/2026</td>
+                      <td data-label="" class="col-right"><button class="btn sm" type="button">Mở xem</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p class="hint" style="margin-top:var(--space-8)">Chấm cam trên tab Két sắt là vì dòng
+                <b>SSH quản trị</b> đã quá hạn xoay theo ngưỡng ở <span class="mono">system_config</span> —
+                cùng luật mà khối "Két lâu chưa đổi" trên Bảng điều khiển đang dùng.</p>
+            </section>
+          </section>
+
+          <!-- ================= TAB 5 — LỊCH SỬ ================= -->
+          <section class="tabpanel" id="panel-lich-su" role="tabpanel">
+            <section class="card">
+              <div class="card-h"><h2>Lịch sử</h2></div>
+              <div class="tl">
+                <div class="tl-day">Hôm nay · 16/09/2026</div>
+                <div class="tl-item"><p class="tl-t">Sửa hồ sơ</p>
+                  <p class="tl-d">Ghi chú: (trống) → "Uplink lên FW qua Te1/1/1…"</p>
+                  <p class="tl-m">hoang.nm@pmh.com.vn · 09:41</p></div>
+                <div class="tl-day">02/09/2026</div>
+                <div class="tl-item"><p class="tl-t">Thêm cổng</p>
+                  <p class="tl-d">Cổng: Te1/1/1</p>
+                  <p class="tl-m">hoang.nm@pmh.com.vn · 15:08</p></div>
+                <div class="tl-item"><p class="tl-t">Đổi trạng thái</p>
+                  <p class="tl-d">Trạng thái: Dự phòng → Đang dùng</p>
+                  <p class="tl-m">hoang.nm@pmh.com.vn · 14:55</p></div>
+                <div class="tl-day">12/03/2025</div>
+                <div class="tl-item"><p class="tl-t">Tạo hồ sơ</p>
+                  <p class="tl-d">Mã: (trống) → SW-CORE-01</p>
+                  <p class="tl-m">sa@pmh.com.vn · 09:12</p></div>
+              </div>
+            </section>
+          </section>
+        </div>
+
+        <aside class="drail">
+          <div class="rail-card">
+            <div class="rail-h">Thẻ định danh</div>
+            <div class="rail-row"><span class="rail-k">Trạng thái</span>
+              <span class="rail-v"><span class="badge ok">Đang dùng</span></span>
+              <span class="rail-note">từ 12/03/2025</span></div>
+            <div class="rail-row"><span class="rail-k">Vị trí và người giữ</span>
+              <span class="rail-v mono">LST · T-1</span>
+              <span class="rail-note">Phòng máy chủ tầng 1</span></div>
+            <div class="rail-row"><span class="rail-k">Người sử dụng</span>
+              <span class="rail-v">Nguyễn Minh Hoàng</span>
+              <span class="rail-note">Phòng CNTT</span></div>
+            <div class="rail-row"><span class="rail-k">Bảo hành</span>
+              <span class="rail-v">Còn 545 ngày</span>
+              <div class="wmini" style="margin-top:var(--space-3)">
+                <div class="wbar-track"><div class="wbar-fill" style="width:50%"></div></div>
+              </div>
+              <span class="rail-note">12/03/2025 → 12/03/2028 · đã đi 50%</span></div>
+            <div class="rail-row"><span class="rail-k">Nhà cung cấp</span><span class="rail-v">NTS Việt Nam</span></div>
+            <div class="rail-row"><span class="rail-k">Ngày mua</span><span class="rail-v">12/03/2025</span></div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- ============ §B — máy chỉ gắn với 3 thứ ============ -->
+      <div class="spec-note">
+        <b>§B — máy chỉ gắn với 3 thứ.</b> Bố cục bản đồ do mã tính từ danh sách nút CÓ THẬT:
+        ba nút thì vẽ ba, vòng co lại, khung thấp xuống — không ô nào bị bỏ trống. Thứ chưa gắn
+        gom về một dòng xám, đúng lối <span class="mono">BlankFields</span>.
+      </div>
+      <div class="dtitle-row">
+        <div class="dtitle-main">
+          <h1 class="dcode">PRN-KT-02 <span class="dname">Máy in phòng Kế toán</span></h1>
+          <div class="dsub"><span>S/N <span class="mono">VNC3K12345</span></span></div>
+        </div>
+        <div class="dactions">
+          <button class="btn primary" type="button">Sửa hồ sơ</button>
+          <span class="act-gap" aria-hidden="true"></span>
+          <button class="btn danger-ghost" type="button">Thanh lý</button>
+        </div>
+      </div>
+      <section class="map-card">
+        <div class="map-h"><h2>Bản đồ quan hệ</h2>
+          <button class="btn sm" type="button" data-cut="ba">Xem lượt thanh lý cắt gì</button></div>
+        <div class="map" data-map="ba"></div>
+        <div class="map-list" data-list="ba"></div>
+        <p class="map-blank" data-blank="ba"></p>
+        <div class="cut-sum">
+          <b>Cắt 1 sợi:</b> thu hồi địa chỉ IP <span class="mono">10.20.30.41</span>.
+          <b>Giữ:</b> 2 giấy tờ và toàn bộ lịch sử. Máy in không có port map, không NAT,
+          không license — lượt thanh lý gần như không kéo theo gì.
+        </div>
+      </section>
+
+      <!-- ============ §C — máy chưa gắn gì ============ -->
+      <div class="spec-note">
+        <b>§C — máy chưa gắn với gì.</b> Không nút nào, không sợi nào, và bản đồ nói thẳng ra
+        điều đó thành một câu — thay vì bày một vòng ô rỗng để người đọc tự đoán là dữ liệu
+        hỏng hay chưa khai.
+      </div>
+      <div class="dtitle-row">
+        <div class="dtitle-main">
+          <h1 class="dcode">CAM-LST-07 <span class="dname">Camera hành lang tầng 1</span></h1>
+        </div>
+        <div class="dactions">
+          <button class="btn primary" type="button">Sửa hồ sơ</button>
+          <span class="act-gap" aria-hidden="true"></span>
+          <button class="btn danger-ghost" type="button">Thanh lý</button>
+        </div>
+      </div>
+      <section class="map-card">
+        <div class="map-h"><h2>Bản đồ quan hệ</h2></div>
+        <div class="map" data-map="rong"></div>
+        <div class="map-list" data-list="rong"></div>
+        <p class="map-blank" data-blank="rong"></p>
+      </section>
+    </main>
+  </div>
+</div>
+
+<script>
+document.getElementById('themeBtn').onclick = function(){
+  var r = document.documentElement;
+  r.dataset.theme = r.dataset.theme === 'dark' ? 'light' : 'dark';
+};
+document.getElementById('sbToggle').onclick = function(){
+  document.getElementById('sb').classList.toggle('open');
+};
+
+/* ---------------------------------------------------------------------------
+ * DỮ LIỆU BẢN ĐỒ
+ *
+ * Bản đồ chỉ vẽ QUAN HỆ — thứ là một bản ghi khác. Thuộc tính của chính máy (trạng thái,
+ * vị trí, người dùng, bảo hành, nhà cung cấp) nằm ở thẻ định danh bên phải.
+ *
+ * `tab` = nút này có hẳn một tab riêng → bấm là CHUYỂN TAB.
+ * `sec` = nút này là một thẻ nằm trong tab Tổng quan → bấm là nhảy tới thẻ đó và nháy một cái.
+ * `cut` = sợi bị cắt khi thanh lý có tick "Dọn hết thứ liên quan", theo đúng các file
+ *         *-device-retirement.ts dưới api/src/modules.
+ * ------------------------------------------------------------------------ */
+var ICON = {
+  port: '<rect x="3" y="8" width="18" height="8" rx="2"/><path d="M7 8V6M12 8V6M17 8V6"/>',
+  arrow: '<path d="M4 7h13l-3-3M20 17H7l3 3"/>',
+  ip: '<path d="M12 21s7-6.3 7-11a7 7 0 1 0-14 0c0 4.7 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18"/>',
+  lic: '<circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M4.9 4.9l2.9 2.9M16.2 16.2l2.9 2.9M2 12h4M18 12h4"/>',
+  lock: '<rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/>',
+  doc: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/>'
+};
+
+var MAPS = {
+  full: {
+    missing: [],
+    nodes: [
+      { t:'Cổng của máy này',    n:6, ic:'port',  tab:'port',        cut:false, lines:[{x:'Gi1/0/1 · Gi1/0/24 · Te1/1/1', mono:true}] },
+      { t:'Đang cắm vào máy này',n:1, ic:'arrow', tab:'port',        cut:true,  lines:[{x:'SW-ACC-02 · Gi0/1', mono:true}] },
+      { t:'Địa chỉ IP',          n:3, ic:'ip',    sec:'sec-ip',      cut:true,  lines:[{x:'10.20.0.2 · 10.20.0.254', mono:true},{x:'10.20.0.31 — nghi chết', tone:'warn'}] },
+      { t:'Sổ NAT',              n:2, ic:'arrow', sec:'sec-nat',     cut:true,  lines:[{x:'TCP 22022 → 10.20.0.2:22', mono:true},{x:'TCP 8443 — đã tắt'}] },
+      { t:'Đường truyền ISP',    n:1, ic:'globe', sec:'sec-isp',     cut:true,  lines:[{x:'FTTH-LST-01 · Viettel', mono:true},{x:'IP WAN 113.161.72.18'}] },
+      { t:'License đang cài',    n:1, ic:'lic',   sec:'sec-license', cut:true,  lines:[{x:'Cisco DNA Advantage'},{x:'Còn 41 ngày', tone:'warn'}] },
+      { t:'Két sắt',             n:2, ic:'lock',  tab:'ket-sat',     cut:false, lines:[{x:'SSH quản trị · SNMP community'},{x:'1 secret quá hạn xoay', tone:'warn'}] },
+      { t:'Giấy tờ',             n:3, ic:'doc',   tab:'giay-to',     cut:false, lines:[{x:'hoá đơn · biên bản · phiếu BH'},{x:'giữ nguyên khi thanh lý'}] }
+    ]
+  },
+  ba: {
+    missing: ['Port map', 'Sổ NAT', 'Đường truyền ISP', 'License đang cài'],
+    nodes: [
+      { t:'Địa chỉ IP', n:1, ic:'ip',   sec:'sec-ip',  cut:true,  lines:[{x:'10.20.30.41', mono:true}] },
+      { t:'Giấy tờ',    n:2, ic:'doc',  tab:'giay-to', cut:false, lines:[{x:'hoá đơn · phiếu bảo hành'}] },
+      { t:'Két sắt',    n:1, ic:'lock', tab:'ket-sat', cut:false, lines:[{x:'Mật khẩu web quản trị'}] }
+    ]
+  },
+  rong: {
+    missing: ['Port map','Địa chỉ IP','Sổ NAT','Đường truyền ISP','License đang cài','Két sắt','Giấy tờ'],
+    nodes: []
+  }
+};
+
+var HUB = { full:{c:'SW-CORE-01'}, ba:{c:'PRN-KT-02'}, rong:{c:'CAM-LST-07'} };
+
+/* --- Bố cục do MÃ TÍNH, không đóng đinh toạ độ --------------------------- */
+var W = 1200, HUB_W = 240, HUB_H = 100, ND_W = 214, ND_H = 96;
+function heightFor(n){ return n === 0 ? 300 : n <= 2 ? 420 : n <= 4 ? 520 : n <= 6 ? 640 : 780; }
+function edgePoint(cx, cy, w, h, dx, dy){
+  var tx = dx === 0 ? Infinity : (w / 2) / Math.abs(dx);
+  var ty = dy === 0 ? Infinity : (h / 2) / Math.abs(dy);
+  var t = Math.min(tx, ty);
+  return [cx + dx * t, cy + dy * t];
+}
+function esc(s){ return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+function target(nd){ return nd.tab ? ' data-go-tab="' + nd.tab + '"' : ' data-go-sec="' + nd.sec + '"'; }
+
+function draw(key){
+  var cfg = MAPS[key], hub = HUB[key];
+  var mapEl = document.querySelector('.map[data-map="' + key + '"]');
+  var listEl = document.querySelector('.map-list[data-list="' + key + '"]');
+  var blankEl = document.querySelector('.map-blank[data-blank="' + key + '"]');
+  var n = cfg.nodes.length, H = heightFor(n), cx = W / 2, cy = H / 2;
+  var rx = n <= 3 ? 330 : n <= 5 ? 390 : 430, ry = Math.max(80, H / 2 - 120);
+  var paths = '', html = '', list = '';
+
+  cfg.nodes.forEach(function(nd, i){
+    var a = (180 - i * (360 / n)) * Math.PI / 180;
+    var nx = cx + rx * Math.cos(a), ny = cy - ry * Math.sin(a);
+    var dx = nx - cx, dy = ny - cy;
+    var p1 = edgePoint(cx, cy, HUB_W, HUB_H, dx, dy);
+    var p2 = edgePoint(nx, ny, ND_W, ND_H, -dx, -dy);
+    var len = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) || 1;
+    var ox = -(p2[1] - p1[1]) / len * len * 0.07, oy = (p2[0] - p1[0]) / len * len * 0.07;
+    paths += '<path class="' + (nd.cut ? 'e-cut' : 'e-keep') + '" d="M' + p1[0].toFixed(1) + ',' +
+      p1[1].toFixed(1) + ' Q' + ((p1[0] + p2[0]) / 2 + ox).toFixed(1) + ',' +
+      ((p1[1] + p2[1]) / 2 + oy).toFixed(1) + ' ' + p2[0].toFixed(1) + ',' + p2[1].toFixed(1) + '"/>';
+
+    var lines = nd.lines.map(function(l){
+      return '<span class="mn-i' + (l.tone ? ' ' + l.tone : '') + (l.mono ? ' mono' : '') + '">' + esc(l.x) + '</span>';
+    }).join('');
+    html += '<button type="button" class="mnode ' + (nd.cut ? 'cut' : 'keep') + '"' + target(nd) +
+      ' style="left:' + ((nx - ND_W / 2) / W * 100).toFixed(2) + '%;top:' + ((ny - ND_H / 2) / H * 100).toFixed(2) +
+      '%;width:' + (ND_W / W * 100).toFixed(2) + '%;height:' + (ND_H / H * 100).toFixed(2) + '%">' +
+      '<span class="mn-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">' +
+      ICON[nd.ic] + '</svg>' + esc(nd.t) + '<b class="mn-n">' + nd.n + '</b></span>' + lines + '</button>';
+
+    list += '<button type="button"' + target(nd) + '><span>' + esc(nd.t) + '</span>' +
+      '<span class="ml-i">' + esc(nd.lines[0].x) + '</span><span class="badge">' + nd.n + '</span></button>';
+  });
+
+  mapEl.style.aspectRatio = W + '/' + H;
+  mapEl.innerHTML =
+    '<svg class="map-svg" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">' + paths + '</svg>' +
+    '<div class="mhub" style="left:' + ((cx - HUB_W / 2) / W * 100).toFixed(2) + '%;top:' +
+      ((cy - HUB_H / 2) / H * 100).toFixed(2) + '%;width:' + (HUB_W / W * 100).toFixed(2) + '%;height:' +
+      (HUB_H / H * 100).toFixed(2) + '%"><b>' + esc(hub.c) + '</b></div>' +
+    html +
+    (n === 0 ? '<p class="map-alone">Máy này chưa giữ gì của ai — không IP, không rule NAT, không cổng, không license, không giấy tờ. Thanh lý nó không kéo theo gì cả.</p>' : '');
+
+  listEl.innerHTML = list || '<button type="button" disabled><span>Chưa gắn với gì cả</span></button>';
+  blankEl.textContent = cfg.missing.length ? 'Chưa gắn: ' + cfg.missing.join(', ') + '.' : '';
+  blankEl.style.display = cfg.missing.length ? '' : 'none';
+}
+['full', 'ba', 'rong'].forEach(draw);
+
+/* --- Thanh tab ------------------------------------------------------------ */
+function showTab(key){
+  document.querySelectorAll('.tab').forEach(function(t){
+    var on = t.dataset.tab === key;
+    t.classList.toggle('active', on);
+    t.setAttribute('aria-selected', on ? 'true' : 'false');
+    t.tabIndex = on ? 0 : -1;
+  });
+  document.querySelectorAll('.tabpanel').forEach(function(p){
+    p.classList.toggle('show', p.id === 'panel-' + key);
+  });
+}
+var TABS = [].slice.call(document.querySelectorAll('.tab'));
+TABS.forEach(function(tab, i){
+  tab.onclick = function(){ showTab(tab.dataset.tab); };
+  // Bàn phím theo chuẩn tablist — giữ đúng như `ui/tabs.tsx` đang làm.
+  tab.onkeydown = function(e){
+    var j = null;
+    if (e.key === 'ArrowRight') j = (i + 1) % TABS.length;
+    else if (e.key === 'ArrowLeft') j = (i - 1 + TABS.length) % TABS.length;
+    else if (e.key === 'Home') j = 0;
+    else if (e.key === 'End') j = TABS.length - 1;
+    if (j === null) return;
+    e.preventDefault();
+    showTab(TABS[j].dataset.tab);
+    TABS[j].focus();
+  };
+});
+
+/* --- Bấm một nút trên bản đồ ---------------------------------------------
+ * Có tab riêng → chuyển tab (không cuộn đi đâu). Không có tab → nhảy tới thẻ của nó ngay
+ * dưới bản đồ và nháy một cái. Một mô hình điều hướng, không phải hai.
+ * ------------------------------------------------------------------------ */
+function flash(id){
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  el.classList.remove('flash');
+  void el.offsetWidth;
+  el.classList.add('flash');
+}
+document.addEventListener('click', function(e){
+  var goTab = e.target.closest('[data-go-tab]');
+  if (goTab) { showTab(goTab.dataset.goTab); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+  var goSec = e.target.closest('[data-go-sec]');
+  if (goSec) flash(goSec.dataset.goSec);
+});
+
+/* --- Chế độ "thanh lý sẽ cắt gì" ----------------------------------------- */
+document.querySelectorAll('[data-cut]').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var m = document.querySelector('.map[data-map="' + btn.dataset.cut + '"]');
+    var on = m.classList.toggle('show-cut');
+    btn.textContent = on ? 'Về bản đồ thường' : 'Xem lượt thanh lý cắt gì';
+  });
+});
+</script>
+</body>
+</html>
