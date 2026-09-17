@@ -189,15 +189,9 @@ export function RelationMap({
           ))}
         </svg>
 
-        <div
-          className="rmap-hub"
-          style={{
-            left: pct(cx - HUB_W / 2, W),
-            top: pct(cy - HUB_H / 2, H),
-            width: pct(HUB_W, W),
-            height: pct(HUB_H, H),
-          }}
-        >
+        {/* Đặt theo TÂM rồi dịch về một nửa, và KHÔNG khoá chiều cao — xem chú thích ở
+            `.rmap-node` trong css/relation-map.css. */}
+        <div className="rmap-hub" style={{ left: pct(cx, W), top: pct(cy, H), width: pct(HUB_W, W) }}>
           {hubCode}
         </div>
 
@@ -207,12 +201,18 @@ export function RelationMap({
             type="button"
             className={`rmap-node ${node.cut ? 'cut' : 'keep'}`}
             onClick={node.onOpen}
-            style={{
-              left: pct(nx - ND_W / 2, W),
-              top: pct(ny - ND_H / 2, H),
-              width: pct(ND_W, W),
-              height: pct(ND_H, H),
-            }}
+            /*
+             * CHỈ khoá bề ngang, KHÔNG khoá chiều cao (17/09/2026).
+             *
+             * Trước đây chiều cao cũng tính theo phần trăm của khung, mà khung thì co theo bề
+             * ngang cột — còn CHỮ thì không co. Khung hẹp lại là nút thấp xuống trong khi chữ
+             * vẫn nguyên cỡ, nên dòng cuối bị cắt ngang. Đúng cái chủ dự án chụp được ở nút
+             * "License đang cài".
+             *
+             * Giờ nút cao theo nội dung và neo theo TÂM (`translate(-50%, -50%)` trong CSS),
+             * nên tâm vẫn nằm đúng chỗ vòng tròn tính ra.
+             */
+            style={{ left: pct(nx, W), top: pct(ny, H), width: pct(ND_W, W) }}
           >
             <span className="rn-h">
               <Glyph name={node.icon} />

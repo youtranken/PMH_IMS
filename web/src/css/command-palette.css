@@ -128,6 +128,30 @@
   min-width: 0;
   font-weight: 500;
 }
+/*
+ * Hai dòng, không phải một (17/09/2026).
+ *
+ * File này viết trước component cả tháng và chỉ định nghĩa `.it-name`, không định nghĩa hai
+ * thẻ con — nên khi `ui/command-palette.tsx` ra đời, mã và tên dính liền thành
+ * "E2E-SW-1LQ-01Microsoft 365 Business Standard". Mã là thứ người ta gõ để tìm nên nó đứng
+ * riêng một dòng, dạng mono; tên là dòng phụ.
+ */
+.cp-item .it-name b {
+  display: block;
+  font-family: var(--mono);
+  font-weight: var(--fw-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cp-item .it-name span {
+  display: block;
+  font-size: var(--fs-2xs);
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .cp-item .it-arrow {
   display: grid;
   place-items: center;

@@ -5,6 +5,7 @@ import { useApiMutation } from '@/lib/api';
 import { LOGIN_PATH, type Me } from '@/lib/me';
 import { visibleGroups } from '@/shell/app-nav';
 import { NavIcon } from '@/ui/nav-icon';
+import { CommandPalette } from '@/ui/command-palette';
 import { ThemeSwitch } from '@/ui/switches';
 
 /**
@@ -180,6 +181,8 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
             <span className="spacer" />
             <ThemeSwitch />
           </header>
+          {/* ⌘K — nằm ở shell nên bấm được từ BẤT KỲ màn nào, không phải chỉ màn danh sách. */}
+          <CommandPalette me={me} />
           <main className="page">{children}</main>
         </div>
       </div>

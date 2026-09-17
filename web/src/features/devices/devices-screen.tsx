@@ -10,6 +10,7 @@ import { DataTable } from '@/ui/data-table';
 import { sortQuery } from '@/lib/sort-query';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { FilterBar } from '@/ui/filter-bar';
+import { useListUrlState } from '@/ui/use-list-url-state';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
@@ -31,7 +32,9 @@ import { useCatalogLists } from '@/ui/use-catalog-lists';
 
 const DEFAULT_LIMIT = 20;
 
-interface Filters {
+/* `[key: string]: string` để khớp ràng buộc của `useListUrlState` — hook đọc/ghi bộ lọc theo
+   TÊN KHÓA lên URL nên nó phải duyệt được các khóa. `status` vẫn giữ union hẹp cho chỗ dùng. */
+interface Filters extends Record<string, string> {
   search: string;
   siteId: string;
   cabinetId: string;
@@ -51,13 +54,24 @@ const EMPTY_FILTERS: Filters = {
 export function DevicesScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
-  /** Số dòng/trang do NGƯỜI DÙNG chọn (10/20/50/100), không còn là hằng số cứng. */
-  const [limit, setLimit] = useState(DEFAULT_LIMIT);
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  /*
+   * Bộ lọc · trang · số dòng · cột sắp nằm trên THANH ĐỊA CHỈ, không trong `useState` nữa
+   * (17/09/2026). Nhờ vậy: F5 giữ nguyên bộ lọc, gửi được link "máy hỏng ở tủ T-1" cho đồng
+   * nghiệp, và bấm Back từ trang chi tiết về ĐÚNG kết quả cũ thay vì một danh sách trắng.
+   * Ô tìm cũng có debounce 250ms — trước đây mỗi phím là một lượt gọi API.
+   */
+  const url = useListUrlState<Filters>({
+    emptyFilters: EMPTY_FILTERS,
+    defaultLimit: DEFAULT_LIMIT,
+    defaultSort: { key: 'code', desc: false },
+  });
+  const { page, limit } = url;
+  const filters = url.filters;
   // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả kho — sai mà không có dấu hiệu nào.
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'code', desc: false }]);
+  const sorting: SortingState = [{ id: url.sorting.key, desc: url.sorting.desc }];
+  const setPage = url.setPage;
+  const setLimit = url.setLimit;
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<DeviceRow | null>(null);
@@ -72,12 +86,12 @@ export function DevicesScreen({ me }: { me: Me }) {
       ),
   });
 
-  // Mọi bộ lọc đều đưa về trang 1: giữ nguyên trang 5 khi đổi lọc thì bảng trông như rỗng.
+  // Mọi bộ lọc đều đưa về trang 1 (hook tự xoá `page`): giữ nguyên trang 5 khi đổi lọc thì
+  // bảng trông như rỗng. Đổi SITE thì bỏ luôn tủ đang chọn — tủ thuộc về site cũ.
   const setFilter = <K extends keyof Filters>(key: K, value: Filters[K]) => {
-    setFilters((current) =>
-      key === 'siteId' ? { ...current, siteId: value as string, cabinetId: '' } : { ...current, [key]: value },
-    );
-    setPage(1);
+    if (key === 'siteId' && filters.cabinetId) url.setFilter('cabinetId', '');
+    url.setFilter(key, value as string);
+    void 0;
   };
 
   const cabinets = (lists.data?.cabinets ?? []).filter(
@@ -223,8 +237,8 @@ export function DevicesScreen({ me }: { me: Me }) {
       />
 
       <FilterBar
-        search={filters.search}
-        onSearchChange={(value) => setFilter('search', value)}
+        search={url.searchInput}
+        onSearchChange={url.setSearchInput}
         searchPlaceholder={t('devices.search')}
       >
         <Select
@@ -311,12 +325,11 @@ export function DevicesScreen({ me }: { me: Me }) {
             manualSorting
             sorting={sorting}
             onSortingChange={(updater) => {
-              setSorting((current) =>
-                typeof updater === 'function' ? updater(current) : updater,
-              );
-              // Đổi cột sắp xếp thì về trang 1: giữ nguyên trang 5 của thứ tự CŨ là nhìn vào
-              // một lát cắt chẳng liên quan gì tới thứ tự vừa chọn.
-              setPage(1);
+              const next = typeof updater === 'function' ? updater(sorting) : updater;
+              const first = next[0];
+              // Đổi cột sắp xếp thì hook tự bỏ `page` khỏi URL: giữ nguyên trang 5 của thứ tự
+              // CŨ là nhìn vào một lát cắt chẳng liên quan gì tới thứ tự vừa chọn.
+              url.setSorting(first ? { key: String(first.id), desc: !!first.desc } : { key: 'code', desc: false });
             }}
           />
 

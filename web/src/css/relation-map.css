@@ -68,6 +68,8 @@
 
 .rmap-hub {
   position: absolute;
+  /* Neo theo TÂM: toạ độ truyền vào là tâm của hạch, không phải góc trên trái. */
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -84,8 +86,20 @@
   overflow-wrap: anywhere;
 }
 
+/*
+ * KHÔNG khoá chiều cao (sửa 17/09/2026).
+ *
+ * Bản đầu đặt cả `height` theo phần trăm của khung. Khung thì co theo bề ngang cột, còn CHỮ
+ * thì giữ nguyên cỡ — nên cột hẹp lại là nút thấp xuống mà nội dung vẫn thế, và dòng cuối bị
+ * CẮT NGANG. Chủ dự án chụp đúng cảnh đó ở nút "License đang cài".
+ *
+ * Giờ nút cao theo nội dung, neo theo TÂM, và có sàn bề ngang để ở cột hẹp chữ không bị ép
+ * thành một cột dọc.
+ */
 .rmap-node {
   position: absolute;
+  transform: translate(-50%, -50%);
+  min-width: 168px;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);

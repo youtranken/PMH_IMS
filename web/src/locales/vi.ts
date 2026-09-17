@@ -84,6 +84,17 @@ export default {
   toast: {
     close: 'Đóng thông báo',
   },
+  // Tìm nhanh ⌘K (ui/command-palette.tsx).
+  palette: {
+    title: 'Tìm nhanh',
+    placeholder: 'Tìm thiết bị, phần mềm, đường truyền, tài khoản…',
+    hint: 'Gõ ít nhất 2 ký tự: mã, tên hoặc serial. Tìm xuyên thiết bị · phần mềm · đường truyền · tài khoản dịch vụ, và cả tên màn hình.',
+    empty: 'Không có hồ sơ nào khớp "{{q}}".',
+    groupNav: 'Màn hình',
+    footMove: 'di chuyển',
+    footOpen: 'mở',
+    footClose: 'đóng',
+  },
   // Chữ dùng chung của MỌI trang chi tiết (ui/detail-layout.tsx).
   detail: {
     identityCard: 'Thẻ định danh',
