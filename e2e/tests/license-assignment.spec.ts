@@ -75,6 +75,16 @@ async function expandLicense(page: Page, licenseCode: string) {
   await page.getByRole('searchbox', { name: /Tìm/ }).fill(licenseCode);
   const row = page.getByRole('row', { name: new RegExp(licenseCode) });
   await expect(row).toBeVisible();
+  /*
+   * CHỜ BẢNG THU LẠI RỒI MỚI BẤM (thêm 17/09/2026).
+   *
+   * Ô tìm có debounce 250ms từ khi trạng thái danh sách chuyển lên thanh địa chỉ. Dòng cần tìm
+   * hiện ra ngay từ trước khi lọc — nó vốn đã nằm trong bảng — nên `toBeVisible()` xanh sớm,
+   * rồi cú bấm rơi vào đúng khoảnh khắc trước lượt vẽ lại. Bung được dòng, nhưng 250ms sau
+   * bảng vẽ lại và khu vừa bung đóng sập, còn bài kiểm thì đứng chờ một hộp thoại không bao
+   * giờ tới. Hai dòng = đúng một cái header + đúng một kết quả: đó mới là "đã lọc xong".
+   */
+  await expect(page.getByRole('row')).toHaveCount(2);
   await row.getByRole('button').first().click();
   return row;
 }

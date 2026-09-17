@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api-client';
 import { formatDate, formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { ExpiryBadge } from '@/ui/expiry-badge';
+import { KpiStrip, KpiTile } from '@/ui/kpi-strip';
 import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { OWNER_PATH, PATHS } from '@/lib/routes';
@@ -326,7 +327,7 @@ export function DashboardScreen({ me }: { me: Me }) {
         subtitle={t('dashboard.subtitle')}
       />
 
-      <KpiStrip board={board} />
+      <BoardKpis board={board} />
 
       {loud.length > 0 ? <div className="dashboard">{loud}</div> : null}
       {quiet.length > 0 ? <div className="dash-quiet">{quiet}</div> : null}
@@ -348,7 +349,7 @@ export function DashboardScreen({ me }: { me: Me }) {
  * Chỉ HAI ô được tô màu: "sắp hết hạn" và "dải mạng sắp đầy" — hai thứ đến hạn mà không ai
  * làm gì thì hỏng việc thật. Tô cả năm ô thì không ô nào còn nghĩa.
  */
-function KpiStrip({ board }: { board: Dashboard }) {
+function BoardKpis({ board }: { board: Dashboard }) {
   const { t } = useTranslation();
 
   const tiles: { key: string; label: string; total: number; to: string; warn: boolean }[] = [
@@ -403,19 +404,17 @@ function KpiStrip({ board }: { board: Dashboard }) {
 
   return (
     <>
-      <div className="dash-kpis">
+      <KpiStrip>
         {tiles.map((tile) => (
-          <Link
+          <KpiTile
             key={tile.key}
-            /* Số 0 KHÔNG bao giờ được tô: "không có gì" là tin tốt, tô vàng lên là báo động giả. */
-            className={`kpi${tile.warn && tile.total > 0 ? ' warn' : ''}${tile.total === 0 ? ' zero' : ''}`}
+            value={tile.total}
+            label={tile.label}
+            tone={tile.warn ? 'warn' : undefined}
             to={tile.to}
-          >
-            <span className="kpi-n">{tile.total}</span>
-            <span className="kpi-l">{tile.label}</span>
-          </Link>
+          />
         ))}
-      </div>
+      </KpiStrip>
       {tiles.every((tile) => tile.total === 0) ? (
         <p className="dash-calm">{t('dashboard.kpiCalm')}</p>
       ) : null}

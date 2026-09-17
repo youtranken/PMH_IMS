@@ -14,8 +14,10 @@ import { Dialog } from '@/ui/dialog';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
+import { KpiStrip, KpiTile } from '@/ui/kpi-strip';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
+import { useExpiryThresholds } from '@/ui/use-expiry-thresholds';
 import { Select } from '@/ui/select';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useToast } from '@/ui/toast';
@@ -57,6 +59,15 @@ export function ExpiryScreen({ me }: { me: Me }) {
   const [kind, setKind] = useState('');
   const [renewing, setRenewing] = useState<ExpiryRow | null>(null);
   const [tab, setTab] = useState('list');
+  /** Ô số nào đang được bấm để lọc. Rỗng = xem tất cả. Lọc ở CLIENT — xem chú thích dưới. */
+  const [state, setState] = useState<'' | 'expired' | 'critical' | 'warning'>('');
+
+  /*
+   * Cùng NGUỒN ngưỡng với chip đếm của server và với `ExpiryBadge` (AD-15, `use-expiry-thresholds`).
+   * Tự chế lại hai con số 7/30 ở đây là cách chắc chắn nhất để ô "Gấp (≤7 ngày)" ghi 2 mà lọc
+   * ra 3 dòng — và không bài kiểm nào bắt được vì mỗi bên tự nhất quán với chính nó.
+   */
+  const thresholds = useExpiryThresholds();
 
   /* Nguồn nhãn loại hạn dùng chung với bảng điều khiển — xem `lib/expiry-kinds.ts` (AD-15). */
   const kinds = useExpiryKinds();
@@ -72,8 +83,25 @@ export function ExpiryScreen({ me }: { me: Me }) {
   const kindLabel = (value: string) =>
     kinds.data?.find((item) => item.kind === value)?.label ?? value;
 
-  const rows = expiry.data?.items ?? [];
+  const allRows = expiry.data?.items ?? [];
   const summary = expiry.data?.summary;
+
+  /*
+   * LỌC Ở CLIENT, có chủ ý. Màn này KHÔNG phân trang — API lọc theo `withinDays` rồi trả về hết
+   * — nên lọc ở đây là lọc đúng toàn bộ tập kết quả, không phải chỉ trang đang xem. Đổi lại
+   * không tốn thêm một lượt gọi mạng nào, bấm là bảng đổi ngay.
+   *
+   * Ba nhóm KHÔNG phủ kín bảng, và đó là đúng: dòng còn xa hơn ngưỡng "sắp tới" không thuộc
+   * nhóm nào (server cũng đếm y như vậy — xem `summarize()` trong `expiry.service.ts`). Ba ô
+   * cộng lại không bằng số dòng; chúng đếm "cần chú ý", không đếm "có bao nhiêu dòng".
+   */
+  const rows = allRows.filter((row) => {
+    if (state === '') return true;
+    if (row.daysLeft < 0) return state === 'expired';
+    if (row.daysLeft <= thresholds.criticalDays) return state === 'critical';
+    if (row.daysLeft <= thresholds.warningDays) return state === 'warning';
+    return false;
+  });
 
   const columns = useMemo<ColumnDef<ExpiryRow, unknown>[]>(
     () => [
@@ -113,11 +141,15 @@ export function ExpiryScreen({ me }: { me: Me }) {
         meta: { className: 'col-center' },
         cell: ({ row }) =>
           row.original.canRenew ? (
-            <button
-              type="button"
-              className="btn sm primary"
-              onClick={() => setRenewing(row.original)}
-            >
+            /*
+             * Nút THƯỜNG, không phải nút chính (hạ cấp 17/09/2026).
+             *
+             * Bảng này hay dài ba chục dòng, và trước đây MỖI dòng mang một nút nền gradient
+             * thương hiệu. Ba chục nút cùng hét lên thì không nút nào còn to tiếng: mắt mất
+             * luôn chỗ bấu víu, và cái thật sự quan trọng trên màn — dòng nào ĐỎ vì đã quá
+             * hạn — bị chính hàng nút xanh át đi. Màu chính để dành cho việc chính của trang.
+             */
+            <button type="button" className="btn sm" onClick={() => setRenewing(row.original)}>
               {t('expiry.renew')}
             </button>
           ) : (
@@ -143,19 +175,38 @@ export function ExpiryScreen({ me }: { me: Me }) {
         }
       />
 
-      {/* Ba con số này là thứ người ta nhìn đầu tiên mỗi sáng. */}
+      {/*
+        BA CON SỐ NÀY LÀ THỨ NGƯỜI TA NHÌN ĐẦU TIÊN MỖI SÁNG — nên chúng phải ĐỌC ĐƯỢC và
+        BẤM ĐƯỢC (dựng lại 17/09/2026).
+        Trước đây là ba cái pill 11px nằm sát nhau ("Đã quá hạn: 4  Gấp (≤7 ngày): 2  Sắp tới:
+        11"): muốn biết có bao nhiêu thứ quá hạn thì phải dí mắt vào đọc, và biết rồi cũng
+        không làm gì được với nó — vẫn phải tự dò trong bảng 30 dòng xem cái nào quá hạn.
+        Giờ bấm một ô là bảng thu về đúng nhóm ấy; bấm lại là bỏ lọc.
+      */}
       {summary ? (
-        <div className="device-summary">
-          <span className={`badge ${summary.expired > 0 ? 'danger' : 'muted'}`}>
-            {t('expiry.expired')}: {summary.expired}
-          </span>
-          <span className={`badge ${summary.critical > 0 ? 'danger' : 'muted'}`}>
-            {t('expiry.critical')}: {summary.critical}
-          </span>
-          <span className={`badge ${summary.warning > 0 ? 'warn' : 'muted'}`}>
-            {t('expiry.warning')}: {summary.warning}
-          </span>
-        </div>
+        <KpiStrip>
+          <KpiTile
+            value={summary.expired}
+            label={t('expiry.expired')}
+            tone="danger"
+            active={state === 'expired'}
+            onClick={() => setState(state === 'expired' ? '' : 'expired')}
+          />
+          <KpiTile
+            value={summary.critical}
+            label={t('expiry.critical')}
+            tone="danger"
+            active={state === 'critical'}
+            onClick={() => setState(state === 'critical' ? '' : 'critical')}
+          />
+          <KpiTile
+            value={summary.warning}
+            label={t('expiry.warning')}
+            tone="warn"
+            active={state === 'warning'}
+            onClick={() => setState(state === 'warning' ? '' : 'warning')}
+          />
+        </KpiStrip>
       ) : null}
 
       <Tabs
@@ -211,7 +262,13 @@ export function ExpiryScreen({ me }: { me: Me }) {
       ) : expiry.isError ? (
         <LoadError error={expiry.error} onRetry={() => void expiry.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState title={t('expiry.empty')} hint={t('expiry.emptyHint')} />
+        /* Rỗng vì ĐANG LỌC thì phải nói đúng lý do đó. Câu "nới cửa sổ ra 90 ngày" là lời
+           khuyên sai khi thứ chặn lại là cái ô số vừa bấm — người dùng nới cửa sổ, vẫn rỗng,
+           và không hiểu vì sao. */
+        <EmptyState
+          title={state ? t('expiry.emptyFiltered') : t('expiry.empty')}
+          hint={state ? t('expiry.emptyFilteredHint') : t('expiry.emptyHint')}
+        />
       ) : (
         <DataTable
           data={rows}

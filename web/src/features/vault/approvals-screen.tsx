@@ -42,6 +42,18 @@ const STATE_LABEL: Record<string, string> = {
   revoked: 'approvals.stateRevoked',
 };
 
+/**
+ * Phiếu ĐÃ DUYỆT nhưng quyền đã hết hiệu lực.
+ *
+ * `state` chỉ ghi lại một QUYẾT ĐỊNH đã xảy ra và không bao giờ đổi nữa; còn "có đang xem được
+ * secret không" là câu trả lời của ĐỒNG HỒ, và server đưa nó xuống qua `active` (AD-6 — client
+ * tuyệt đối không tự so giờ). Hai thứ đó khác nhau, và chỗ duy nhất người đọc thấy sự khác
+ * nhau ấy là cái huy hiệu trên đầu thẻ.
+ */
+function expiredGrant(row: { state: string; active: boolean }): boolean {
+  return row.state === 'approved' && !row.active;
+}
+
 const STATE_TONE: Record<string, string> = {
   pending: 'warn',
   approved: 'ok',
@@ -173,8 +185,18 @@ export function ApprovalsScreen({ me }: { me: Me }) {
             {items.map((row) => (
               <section key={row.id} className="card device-panel">
                 <div className="row" style={{ gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-                  <span className={`badge ${STATE_TONE[row.state] ?? 'muted'}`}>
-                    {t(STATE_LABEL[row.state] ?? row.state)}
+                  {/*
+                    QUYỀN ĐÃ HẾT HIỆU LỰC THÌ KHÔNG ĐƯỢC ĐEO HUY HIỆU XANH (sửa 17/09/2026).
+                    Theo AD-6, hiệu lực tính bằng ĐỒNG HỒ chứ không bằng một lượt ghi, nên một
+                    phiếu đã qua hạn vẫn giữ nguyên `state='approved'` và chỉ có `active=false`.
+                    Badge lấy theo `state` nên nó vẫn xanh "Đã duyệt", còn sự thật — quyền đã
+                    tự cắt — nằm ở dòng chữ nhỏ nhất trên thẻ. Người lướt qua sổ đọc ra đúng
+                    điều ngược lại với thực tế. Giờ badge đọc cả `active`.
+                  */}
+                  <span className={`badge ${expiredGrant(row) ? 'muted' : STATE_TONE[row.state] ?? 'muted'}`}>
+                    {expiredGrant(row)
+                      ? t('approvals.stateApprovedOver')
+                      : t(STATE_LABEL[row.state] ?? row.state)}
                   </span>
                   <strong>{row.requester}</strong>
                   <span className="muted">{formatDateTime(row.createdAt)}</span>
@@ -377,8 +399,29 @@ function DecisionDialog({
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          /*
+           * KHÔNG ĐƯỢC ÂM THẦM RƠI VỀ 4 GIỜ (sửa 17/09/2026).
+           *
+           * Bản cũ viết `Number(hours) || 4`. Gõ "2 tiếng" ra `NaN`, gõ "0" ra `0` — cả hai đều
+           * falsy, và cả hai đều lặng lẽ thành **cấp 4 giờ**, khác hẳn con số người duyệt vừa
+           * gõ và cũng khác con số người xin đề nghị. Đây là màn cấp quyền đọc mật khẩu: một
+           * con số sai ở đây là một cửa mở lâu hơn dự định, và không có gì trên màn nói ra.
+           * Nói thẳng là không hiểu, để người duyệt gõ lại.
+           */
+          if (approve) {
+            const asked = Number(hours.trim());
+            if (!Number.isInteger(asked) || asked <= 0) {
+              setError(t('approvals.grantHoursInvalid'));
+              return;
+            }
+            decide.mutate(
+              { hours: asked, note: note.trim() },
+              { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
+            );
+            return;
+          }
           decide.mutate(
-            approve ? { hours: Number(hours) || 4, note: note.trim() } : { note: note.trim() },
+            { note: note.trim() },
             { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
           );
         }}

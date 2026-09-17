@@ -3766,12 +3766,21 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Phòng Sắp hết hạn có đúng hai tab',
     ).toEqual(['Danh sách', 'Luật gửi báo cáo']);
 
-    // ===== BA CON SỐ NGƯỜI TA NHÌN ĐẦU TIÊN MỖI SÁNG =====
+    /*
+     * ===== BA CON SỐ NGƯỜI TA NHÌN ĐẦU TIÊN MỖI SÁNG =====
+     *
+     * Dựng lại 17/09/2026: ba cái pill 11px "Đã quá hạn: 4" thành ba Ô SỐ — số to đứng trước,
+     * nhãn nhỏ bên dưới — và mỗi ô là một NÚT LỌC. Bài kiểm đổi theo, nhưng giữ đúng câu hỏi
+     * cũ ("ba con số ấy có mặt không") và siết thêm một vế: chúng phải bấm được, và phải khai
+     * `aria-pressed` để trình đọc màn hình biết đây là nút bật/tắt chứ không phải nút lệnh.
+     */
     for (const label of ['Đã quá hạn', 'Gấp \\(≤7 ngày\\)', 'Sắp tới']) {
+      const o = page.getByRole('button', { name: new RegExp(`\\d+\\s*${label}`) });
+      await expect(o, `Dải tóm tắt phải có con số "${label}"`).toHaveCount(1);
       await expect(
-        page.getByText(new RegExp(`${label}: \\d+`)),
-        `Dải tóm tắt phải có con số "${label}"`,
-      ).toBeVisible();
+        o,
+        `Ô số "${label}" phải là nút lọc bật/tắt — con số mà không bấm được thì biết rồi vẫn phải tự dò trong bảng`,
+      ).toHaveAttribute('aria-pressed', 'false');
     }
 
     await expect(
@@ -7749,10 +7758,19 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'tiêu đề popup phải nói RÕ đang mở két của chủ thể nào — mở nhầm két là xem nhầm mật khẩu',
     ).toBeVisible();
 
-    expect(
-      await popup.getByRole('columnheader').allTextContents(),
-      'bảng secret trong popup phải đủ sáu cột metadata (và KHÔNG có cột giá trị — FR-026)',
-    ).toEqual(['Tên gọi', 'Loại', 'Tên đăng nhập', 'Ghi chú', 'Cập nhật', 'Thao tác']);
+    /*
+     * `expect.poll`, KHÔNG phải `expect(await …)` — cùng cái bẫy đã ghi ở bài Port map trong
+     * chính file này. Popup hiện ra TRƯỚC khi bảng bên trong có dữ liệu: nó còn phải hỏi
+     * `/vault/:ownerType/:ownerId` rồi mới vẽ. Đọc một phát bằng `await` là đọc trúng khoảnh
+     * khắc đó và KHÔNG có lần đọc thứ hai — mảng rỗng, bài đỏ, ảnh chụp thì thấy đủ sáu cột
+     * nằm sờ sờ. Lượt chạy 17/09/2026 đỏ đúng kiểu ấy.
+     */
+    await expect
+      .poll(() => popup.getByRole('columnheader').allTextContents(), {
+        message:
+          'bảng secret trong popup phải đủ sáu cột metadata (và KHÔNG có cột giá trị — FR-026)',
+      })
+      .toEqual(['Tên gọi', 'Loại', 'Tên đăng nhập', 'Ghi chú', 'Cập nhật', 'Thao tác']);
     await expect(
       popup.getByRole('cell', { name: secretLabel }).first(),
       'popup phải liệt kê đúng ngăn vừa cất',

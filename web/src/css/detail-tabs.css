@@ -395,7 +395,9 @@ input.search {
   .table-stack td {
     display: flex;
     justify-content: space-between;
-    gap: var(--space-7);
+    /* `wrap` để dòng phụ (`.cell-sub`) rơi xuống hàng riêng — xem luật ngay dưới. */
+    flex-wrap: wrap;
+    gap: var(--space-1) var(--space-7);
     border: none;
     padding: var(--space-1) var(--space-5);
   }
@@ -403,6 +405,32 @@ input.search {
     content: attr(data-label);
     font-weight: 600;
     color: var(--ink-2);
+    /* Nhãn không co lại nhường chỗ cho giá trị dài — nếu không, "Ngày đưa vào kho" bị bóp
+       thành ba dòng một chữ trong khi giá trị bên phải nằm thênh thang. */
+    flex: 0 0 auto;
+  }
+  /*
+   * Dòng phụ trong ô (tên hồ sơ dưới mã, site dưới mã máy) PHẢI xuống dòng riêng.
+   *
+   * `.cell-sub` khai `display: block`, nhưng ở đây ô là `display: flex` nên nó thành một
+   * flex-item ngang hàng, và `justify-content: space-between` đẩy ba mảnh (nhãn · giá trị ·
+   * dòng phụ) ra ba phía. Nhìn ra thành "MÃ   E2E-DEV-001   Máy trạm Kế toán" trên một hàng
+   * thay vì tên nằm nhỏ bên dưới mã như ở desktop.
+   */
+  .table-stack td .cell-sub {
+    flex-basis: 100%;
+    text-align: right;
+  }
+  /*
+   * Ghi chú dài: ở BẢNG thì rút một dòng cho khỏi bóp các cột khác, ở THẺ DỌC thì trả lại đủ.
+   * Trên điện thoại không có cột nào để bảo vệ nữa, mà cắt mất câu "vì sao mở cổng này" thì
+   * đúng thứ người trực cần đọc lúc 2 giờ sáng lại là thứ duy nhất không đọc được.
+   */
+  .table-stack td .cell-note {
+    max-width: none;
+    white-space: normal;
+    overflow: visible;
+    text-align: right;
   }
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router-dom";
@@ -9,7 +9,7 @@ import type { Me } from "@/lib/me";
 import { Combobox } from "@/ui/combobox";
 import { Dialog } from "@/ui/dialog";
 import { DatePicker } from "@/ui/date-picker";
-import { LoadError, Loading } from "@/ui/load-state";
+import { EmptyState, LoadError, Loading } from "@/ui/load-state";
 import { Field } from "@/ui/page-header";
 import { Pagination } from "@/ui/pagination";
 import { RowActions } from "@/ui/row-actions";
@@ -28,12 +28,14 @@ import {
   type SubnetSlot,
 } from "./ipam-types";
 import {
+  BURIED_FREE,
   clampPage,
   countSlots,
   filterSlots,
   pageSlots,
   SLOT_FILTERS,
   SLOT_PAGE_SIZE,
+  WORTH_ISOLATING,
   type SlotFilter,
 } from "./slot-paging";
 import { toIpHistoryEntries, type IpHistoryRow } from "./ip-history-entries";
@@ -66,7 +68,11 @@ export function SubnetPane({
   const toast = useToast();
   const queryClient = useQueryClient();
   const id = item.id;
-  const [status, setStatus] = useState<SlotFilter>("all");
+  /*
+   * `null` = NGƯỜI DÙNG CHƯA CHỌN GÌ, để bên dưới tự chọn hộ theo dải đang mở. Khác hẳn
+   * `"all"` — đó là một lựa chọn thật sự của người dùng và phải được tôn trọng.
+   */
+  const [status, setStatus] = useState<SlotFilter | null>(null);
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<{
     record: IpRow | null;
@@ -127,7 +133,35 @@ export function SubnetPane({
    */
   const all = slots.data ?? [];
   const counts = useMemo(() => countSlots(all), [all]);
-  const filtered = useMemo(() => filterSlots(all, status), [all, status]);
+
+  /*
+   * MẶC ĐỊNH CHỌN HỘ — nhưng chỉ MỘT LẦN, lúc dải vừa mở ra.
+   *
+   * Vấn đề thật: một /24 đã dùng 12 địa chỉ thì mở ra là 242 ô trống xếp trước mặt, 12 dòng có
+   * dữ liệu nằm rải trong sáu trang. Câu hỏi hay gặp nhất — "dải này đang cấp cho những ai" —
+   * phải tự đi tìm. Nhưng cũng KHÔNG được mặc định "Đang cấp" cho mọi dải: một /29 mới khai có
+   * 6 ô trống thì "Đang cấp" mở ra một bảng rỗng, mà chính 6 ô trống ấy mới là thứ người ta
+   * vào để bấm "Cấp IP này".
+   *
+   * Ngưỡng: chỉ chọn hộ khi ô trống ĐỦ NHIỀU để chôn mất dữ liệu, và khi thật sự có dữ liệu
+   * để xem.
+   *
+   * VÌ SAO PHẢI GHIM BẰNG `ref` THAY VÌ TÍNH LẠI MỖI LƯỢT RENDER: tính lại thì ngay sau khi
+   * người dùng bấm "Cấp IP này" trên một dải rộng, `assigned` nhảy từ 0 lên 1 và bộ lọc tự
+   * đổi dưới tay họ — danh sách ô trống họ đang làm việc biến mất giữa chừng.
+   */
+  const decidedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!slots.data || decidedFor.current === id) return;
+    decidedFor.current = id;
+    const fresh = countSlots(slots.data);
+    setStatus(
+      fresh.assigned >= WORTH_ISOLATING && fresh.free > BURIED_FREE ? "assigned" : "all",
+    );
+  }, [slots.data, id]);
+
+  const shown: SlotFilter = status ?? "all";
+  const filtered = useMemo(() => filterSlots(all, shown), [all, shown]);
 
   /**
    * Phân trang Ở CLIENT, cố ý.
@@ -147,14 +181,19 @@ export function SubnetPane({
   }, [filtered.length]);
 
   /*
-   * Đổi DẢI thì về trang 1, không phải chỉ kẹp lại.
+   * Đổi DẢI thì về trang 1 VÀ bỏ bộ lọc cũ.
    *
    * Đang ở trang 4 của một /24 rồi bấm sang dải khác mà vẫn ở trang 4 là mở ra dòng 151–200
    * của dải mới, còn 150 địa chỉ đầu thì biến mất — không có gì trên màn hình giải thích vì
    * sao. Nút lọc đã `setPage(1)` rồi; đổi dải cũng phải vậy.
+   *
+   * BỘ LỌC cũng phải theo (thêm 17/09/2026): bản trước chỉ đặt lại trang. Đang soi "Nghi chết"
+   * ở dải A rồi bấm sang dải B là gặp một bảng TRỐNG TRƠN cho một dải đầy địa chỉ — bộ lọc
+   * thì nằm tít trên, và không ai nghĩ dải mới lại thừa hưởng bộ lọc của dải cũ.
    */
   useEffect(() => {
     setPage(1);
+    setStatus(null);
   }, [id]);
 
   return (
@@ -184,8 +223,8 @@ export function SubnetPane({
           <button
             key={key}
             type="button"
-            className={status === key ? "on" : undefined}
-            aria-pressed={status === key}
+            className={shown === key ? "on" : undefined}
+            aria-pressed={shown === key}
             onClick={() => {
               setStatus(key);
               setPage(1);
@@ -249,7 +288,10 @@ export function SubnetPane({
                       <td data-label={t("ipam.device")}>—</td>
                       <td data-label={t("ipam.usedBy")}>—</td>
                       <td data-label={t("ipam.assignedAt")}>—</td>
-                      <td>
+                      {/* Ô Thao tác cũng phải có `data-label`: ở ≤960px bảng gập thẻ dọc và
+                          năm ô kia đều tự xưng tên, riêng ô này thì không — thành ra một cái
+                          nút lửng lơ không biết thuộc cột nào. */}
+                      <td data-label={t("common.actions")}>
                         {canWrite ? (
                           <button
                             type="button"
@@ -299,7 +341,7 @@ export function SubnetPane({
                       <td data-label={t("ipam.assignedAt")}>
                         {orDash(formatDate(slot.assignedAt))}
                       </td>
-                      <td>
+                      <td data-label={t("common.actions")}>
                         <div className="action-cell">
                           {/*
                             Năm cái nút cạnh nhau trước đây ("Đánh dấu nghi chết" · "Thu hồi" ·
@@ -383,6 +425,20 @@ export function SubnetPane({
               </tbody>
             </table>
           </div>
+
+          {/*
+            BẢNG RỖNG PHẢI NÓI VÌ SAO RỖNG.
+            Trước 17/09/2026 pane này không có nhánh rỗng nào: lọc "Nghi chết" trên một dải
+            không có ô nào nghi chết cho ra một cái khung bảng trắng với đúng hàng tiêu đề, và
+            người dùng không có cách nào biết đó là "dải sạch" hay "màn hỏng". Câu trả lời nằm
+            ngay ở con số 0 trên chính nút họ vừa bấm — nhưng phải nói ra.
+          */}
+          {filtered.length === 0 ? (
+            <EmptyState
+              title={t("ipam.slotEmpty")}
+              hint={shown === "all" ? t("ipam.slotEmptyAll") : t("ipam.slotEmptyFiltered")}
+            />
+          ) : null}
 
           <Pagination
             page={clampPage(page, filtered.length)}

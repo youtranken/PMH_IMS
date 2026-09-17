@@ -164,6 +164,25 @@ async function expectLegibleBadge(badge: Locator, what: string): Promise<void> {
   );
 }
 
+/**
+ * Như `expectLegibleBadge` nhưng cho CON SỐ trong ô số — thứ không có nền tint riêng.
+ *
+ * Giữ nguyên hai vế quan trọng nhất: phép đo phải tìm được một lớp nền đục (không thì con số
+ * tương phản là con số bịa), và tỉ lệ tương phản phải đạt AA. Bỏ vế "có nền riêng khác nền
+ * phía sau" — ô số cố ý không tô nền, xem `ui/kpi-strip.tsx`.
+ */
+async function expectLegibleNumber(so: Locator, what: string): Promise<void> {
+  await expect(so, `${what}: phải hiện ra đã`).toBeVisible();
+  const paint = await paintOf(so);
+  const detail = `${what} — chữ ${paint.color} trên nền ${paint.effectiveBackground}`;
+  expect(paint.opaqueFound, `${detail}: không tìm thấy lớp nền đục nào (phép đo không tin được)`)
+    .toBe(true);
+  expect(
+    paint.ratio,
+    `${detail}: tương phản ${paint.ratio.toFixed(2)} < ${AA}`,
+  ).toBeGreaterThanOrEqual(AA);
+}
+
 test('huy hiệu hạn ở màn Sắp hết hạn đọc được ở CẢ chế độ sáng lẫn tối', async ({ page }) => {
   await firstLogin(page, E2E_SA);
   const stamp = Date.now().toString().slice(-6);
@@ -191,8 +210,18 @@ test('huy hiệu hạn ở màn Sắp hết hạn đọc được ở CẢ chế
    * Regex neo hai đầu, cố ý: `getByText('Gấp')` khớp cả cái `<div>` bọc ba con số (chuỗi con),
    * và lúc đó bài kiểm đo màu của khung chứ không phải của huy hiệu — xanh vì đo nhầm chỗ.
    */
-  const chipCritical = page.getByText(/^Gấp \(≤7 ngày\): \d+$/);
-  const chipWarning = page.getByText(/^Sắp tới: \d+$/);
+  /*
+   * BA CON SỐ ĐẦU MÀN ĐỔI HÌNH 17/09/2026: từ ba cái pill "Gấp (≤7 ngày): 2" thành ba Ô SỐ
+   * bấm được (số to đứng trước, nhãn nhỏ bên dưới, cả ô là nút lọc).
+   *
+   * Thứ MANG MÀU giờ là CON SỐ, không phải một cái pill có nền tint. Nên phép đo đổi chỗ bám —
+   * vẫn đo đúng hai điều cũ (đọc được ở cả hai chế độ, và hai mức phải khác màu nhau), chỉ bỏ
+   * vế "phải có nền riêng" vì ô số cố ý không tô nền: năm ô tô nền cạnh nhau thì mắt không còn
+   * thứ tự nào để đọc (xem `ui/kpi-strip.tsx`).
+   */
+  const soCua = (nhan: RegExp) => page.getByRole('button', { name: nhan }).getByText(/^\d+$/);
+  const chipCritical = soCua(/Gấp \(≤7 ngày\)/);
+  const chipWarning = soCua(/Sắp tới/);
   const badgeCritical = page
     .getByRole('row')
     .filter({ hasText: `Chứng chỉ gấp ${stamp}` })
@@ -204,8 +233,8 @@ test('huy hiệu hạn ở màn Sắp hết hạn đọc được ở CẢ chế
 
   for (const theme of ['light', 'dark'] as const) {
     await useTheme(page, theme);
-    await expectLegibleBadge(chipCritical, `[${theme}] chip "Gấp"`);
-    await expectLegibleBadge(chipWarning, `[${theme}] chip "Sắp tới"`);
+    await expectLegibleNumber(chipCritical, `[${theme}] ô số "Gấp"`);
+    await expectLegibleNumber(chipWarning, `[${theme}] ô số "Sắp tới"`);
     await expectLegibleBadge(badgeCritical, `[${theme}] huy hiệu hạn gấp trong bảng`);
     await expectLegibleBadge(badgeWarning, `[${theme}] huy hiệu hạn sắp trong bảng`);
   }

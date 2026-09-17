@@ -241,6 +241,10 @@ export function AccountsScreen({ me }: { me: Me }) {
       {
         accessorKey: 'lastLoginAt',
         header: t('accounts.lastLogin'),
+        /* `col-right` = KHÔNG gãy dòng (table.css). Mốc "17/09/2026 14:03" mà rơi xuống hai
+           dòng thì mọi hàng của bảng cao gấp đôi vì đúng một cột — và đây là bảng có tới ba
+           cột huy hiệu ngắn ngủn bên cạnh, tức luôn có chỗ để nó nằm gọn một dòng. */
+        meta: { className: 'col-right' },
         cell: ({ row }) =>
           orDash(row.original.lastLoginAt ? formatDateTime(row.original.lastLoginAt) : null),
       },

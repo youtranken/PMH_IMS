@@ -70,6 +70,23 @@ const ENTITY_DEFAULT_SORT: Record<CatalogEntity, SortingState> = {
  * lên trong `?sort=`. Cột chỉ có `id` (không `accessorKey`) sẽ không có nút sắp: đúng ý với
  * `siteCode` của tủ mạng, giá trị đó lấy qua JOIN sang bảng site nên KHÔNG được sắp (AD-2).
  */
+/**
+ * Ô chữ dài (địa chỉ · mô tả · cung cấp gì) — rút đúng MỘT dòng, đủ câu thì rê chuột.
+ *
+ * Bảy tab dùng chung một khung bảng, và cột chữ tự do là thứ duy nhất không có trần: một mô tả
+ * ba dòng kéo cao cả hàng và bóp mọi cột còn lại, mà bảng thì đã có tab 6 cột. `.cell-note` có
+ * sẵn trong `table.css` từ lâu với đúng ý đồ này nhưng chưa màn nào dùng; ở ≤960px bảng gập
+ * thẻ dọc nên nó tự nhả ra, đọc đủ trên điện thoại.
+ */
+function note(value: string | null | undefined) {
+  const text = orDash(value);
+  return (
+    <span className="cell-note" title={value ?? undefined}>
+      {text}
+    </span>
+  );
+}
+
 const ENTITY_COLUMNS: Record<CatalogEntity, (t: TFunction) => ColumnDef<CatalogRow, unknown>[]> = {
   site: (t) => [
     {
@@ -85,7 +102,7 @@ const ENTITY_COLUMNS: Record<CatalogEntity, (t: TFunction) => ColumnDef<CatalogR
     {
       accessorKey: 'address',
       header: t('catalog.address'),
-      cell: ({ row }) => orDash((row.original as SiteRow).address),
+      cell: ({ row }) => note((row.original as SiteRow).address),
     },
   ],
   cabinet: (t) => [
@@ -103,11 +120,14 @@ const ENTITY_COLUMNS: Record<CatalogEntity, (t: TFunction) => ColumnDef<CatalogR
     {
       accessorKey: 'description',
       header: t('catalog.description'),
-      cell: ({ row }) => orDash((row.original as CabinetRow).description),
+      cell: ({ row }) => note((row.original as CabinetRow).description),
     },
     {
       accessorKey: 'uHeight',
       header: t('catalog.uHeight'),
+      /* Cột SỐ căn phải (`.num` — có sẵn trong table.css, chưa màn nào dùng): số căn trái thì
+         "6" và "42" không thẳng hàng đơn vị, mắt phải đọc từng ô thay vì quét một cột. */
+      meta: { className: 'num' },
       cell: ({ row }) => orDash((row.original as CabinetRow).uHeight),
     },
   ],
@@ -129,7 +149,7 @@ const ENTITY_COLUMNS: Record<CatalogEntity, (t: TFunction) => ColumnDef<CatalogR
     {
       accessorKey: 'description',
       header: t('catalog.description'),
-      cell: ({ row }) => orDash((row.original as DeviceTypeRow).description),
+      cell: ({ row }) => note((row.original as DeviceTypeRow).description),
     },
   ],
   vendor: (t) => [
@@ -141,7 +161,7 @@ const ENTITY_COLUMNS: Record<CatalogEntity, (t: TFunction) => ColumnDef<CatalogR
     {
       accessorKey: 'supplies',
       header: t('catalog.supplies'),
-      cell: ({ row }) => orDash((row.original as VendorRow).supplies),
+      cell: ({ row }) => note((row.original as VendorRow).supplies),
     },
     {
       accessorKey: 'phone',
@@ -163,7 +183,7 @@ const ENTITY_COLUMNS: Record<CatalogEntity, (t: TFunction) => ColumnDef<CatalogR
     {
       accessorKey: 'description',
       header: t('catalog.description'),
-      cell: ({ row }) => orDash((row.original as DepartmentRow).description),
+      cell: ({ row }) => note((row.original as DepartmentRow).description),
     },
   ],
   isp_provider: (t) => [
@@ -220,7 +240,7 @@ const ENTITY_COLUMNS: Record<CatalogEntity, (t: TFunction) => ColumnDef<CatalogR
     {
       accessorKey: 'description',
       header: t('catalog.description'),
-      cell: ({ row }) => orDash((row.original as ServicePortRow).description),
+      cell: ({ row }) => note((row.original as ServicePortRow).description),
     },
   ],
 };

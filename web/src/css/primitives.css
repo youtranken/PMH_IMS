@@ -447,13 +447,10 @@ table.table tbody tr.exp:hover td {
 }
 .subnet-pane .segmented {
   margin-bottom: var(--space-7);
-  /* Năm trạng thái không đời nào vừa 390px. Cho cuộn ngang TRONG chính điều khiển thay vì
-     để nó đẩy cả trang tràn ra — trang tràn ngang thì mọi thứ khác cũng lệch theo.
-     `max-width` phải có: `inline-flex` tự co theo nội dung, không tự nhận giới hạn của cha. */
-  max-width: 100%;
-  overflow-x: auto;
 }
-.subnet-pane .segmented button {
+/* Nhãn nút lọc không được gãy dòng — nâng lên cho MỌI dải nút: dải đã cuộn ngang được trong
+   chính nó (`form-layout.css`), nên nút gãy đôi chỉ làm dải cao lên chứ không cứu được gì. */
+.segmented button {
   white-space: nowrap;
 }
 /* Con số đi kèm nhãn lọc ("Trống 137"). Nhạt hơn và nhỏ hơn chữ nhãn: nó là số liệu bổ trợ,

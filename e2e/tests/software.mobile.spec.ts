@@ -120,6 +120,10 @@ test('khu bung dòng ghế license gập thành thẻ dọc có nhãn ở 390px'
   // dòng cụ thể là bám vào thứ đang biến dạng.
   await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
   await expect(page.getByRole('link', { name: code })).toBeVisible();
+  /* Ô tìm có debounce 250ms (trạng thái danh sách nằm trên thanh địa chỉ từ 17/09/2026), mà
+     dòng cần tìm vốn đã có sẵn trong bảng nên `toBeVisible()` xanh TRƯỚC khi lọc kịp chạy.
+     Chờ đúng một mũi tên bung dòng — đó mới là điều câu chú thích trên hứa. */
+  await expect(page.getByRole('button', { name: 'Mở rộng dòng' })).toHaveCount(1);
   await page.getByRole('button', { name: 'Mở rộng dòng' }).click();
 
   const cost = page.getByText('3.500.000 ₫');

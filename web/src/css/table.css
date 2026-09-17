@@ -130,8 +130,17 @@ table.table tbody tr.row-highlight td:first-child {
  */
 @media (min-width: 961px) {
   table.table.wide { min-width: 66rem; }
-  /* Số tiền, IP, serial, mã cổng không xuống dòng giữa chừng. */
+  /*
+   * Số tiền, IP, serial, mã cổng, mốc thời gian — không xuống dòng giữa chừng.
+   *
+   * `.table td .mono` (có dấu cách) thêm 17/09/2026. Luật cũ chỉ nhắm `td.mono`, tức chỉ ăn
+   * khi cả Ô mang class. Nhưng gần như mọi màn lại bọc giá trị trong `<span className="mono">`
+   * BÊN TRONG ô — mã site, mã tủ, mã nhân viên, mã hồ sơ — nên luật này chưa từng chạm tới
+   * chúng, và một cái mã 12 ký tự vẫn gãy làm hai dòng khi cột bị bóp. Giữ cả hai dạng để
+   * không phải đi sửa hàng chục chỗ gọi.
+   */
   .table td.mono,
+  .table td .mono,
   .table td.col-right { white-space: nowrap; }
 }
 
@@ -139,7 +148,16 @@ table.table tbody tr.row-highlight td:first-child {
 .table td.num {
   text-align: right;
 }
-.table th.col-center,
+/*
+ * `col-center` trên THEAD: rà 17/09/2026 thì **12/12 chỗ dùng đều là cột "Thao tác"**, và nút
+ * trong ô thì bám mép PHẢI qua `.action-cell`. Căn giữa tiêu đề trong khi nội dung bám phải là
+ * lệch nhau đúng nửa cột — nhìn thấy ngay ở mọi bảng có menu ⋯. Chú thích ở `.action-cell` còn
+ * viết "thẳng header ACTION (cũng căn phải qua .num)"; lời hứa đó chưa từng đúng.
+ * Sửa ở đây thay vì đi đổi 12 chỗ gọi.
+ */
+.table th.col-center {
+  text-align: right;
+}
 .table td.col-center {
   text-align: center;
 }

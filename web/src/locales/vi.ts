@@ -610,6 +610,10 @@ export default {
     tabList: 'Danh sách',
     empty: 'Không có gì sắp hết hạn trong cửa sổ này.',
     emptyHint: 'Nới cửa sổ ra 90 hoặc 180 ngày để nhìn xa hơn.',
+    /* Rỗng vì ô số đang bật, KHÁC với rỗng vì cửa sổ ngày quá hẹp — hai nguyên nhân, hai lời
+       khuyên. Nói nhầm thì người dùng đi nới cửa sổ, vẫn rỗng, và không hiểu vì sao. */
+    emptyFiltered: 'Không có mục nào ở nhóm đang chọn.',
+    emptyFilteredHint: 'Bấm lại ô số đang bật để xem toàn bộ danh sách.',
   },
   digest: {
     tab: 'Luật gửi báo cáo',
@@ -848,6 +852,10 @@ export default {
       'Dùng cho bản ghi KHAI NHẦM: địa chỉ trở lại thành chỗ trống. Máy đang thật sự dùng địa chỉ này thì bấm Thu hồi — nó giữ lại lịch sử "IP này từng của máy nào".',
     voidAddressPlaceholder: 'vd: gõ nhầm địa chỉ',
     addressVoided: 'Đã xóa hồ sơ IP.',
+    /* Bảng rỗng phải nói VÌ SAO rỗng — hai nguyên nhân, hai lời khuyên khác hẳn nhau. */
+    slotEmpty: 'Không có dòng nào để hiện.',
+    slotEmptyAll: 'Dải này chưa có địa chỉ nào, kể cả ô trống — kiểm lại khai báo CIDR.',
+    slotEmptyFiltered: 'Không có địa chỉ nào ở trạng thái đang chọn. Bấm "Tất cả" để xem cả dải.',
     showVoided: 'Hiện cả hồ sơ đã ẩn',
     voidedBadge: 'Đã ẩn',
     restoreAddress: 'Bật lại',
@@ -1090,6 +1098,10 @@ export default {
     code: 'Mã',
     detail: 'Chi tiết',
     at: 'Ngày đưa vào kho',
+    /* Tên trạng thái GIỮ NGUYÊN theo module chủ: thiết bị/phần mềm gọi là "đã thanh lý", tài
+       khoản dịch vụ gọi là "đã vô hiệu hóa". Đúng cái khác biệt mà màn này sinh ra để bày. */
+    statusRetired: 'Đã thanh lý',
+    statusDisabled: 'Đã vô hiệu hóa',
     dispose: 'Đưa vào kho thanh lý',
     confirmTitle: 'Đưa vào kho thanh lý',
     confirmSoftware:
@@ -1185,9 +1197,14 @@ export default {
     denyTitle: 'Từ chối yêu cầu của {{member}}',
     grantHours: 'Cấp trong bao lâu (giờ)',
     grantHoursHint: 'Sửa được — cấp vừa đủ việc, đừng cấp thừa. Vượt trần hệ thống sẽ bị kẹp xuống.',
+    /* Nói RÕ ô nào sai và nhận cái gì. Trước đây ô này nuốt mọi thứ rồi tự cấp 4 giờ. */
+    grantHoursInvalid: 'Số giờ phải là một số nguyên lớn hơn 0. Ví dụ: 4',
     note: 'Ghi chú cho người xin',
     statePending: 'Chờ duyệt',
     stateApproved: 'Đã duyệt',
+    /* "Đã duyệt" mà quyền đã tự cắt thì huy hiệu phải nói ra, không để nguyên màu xanh của một
+       quyền đang chạy. Vẫn giữ chữ "đã duyệt" vì quyết định ấy có thật và không mất đi. */
+    stateApprovedOver: 'Đã duyệt · hết hiệu lực',
     stateDenied: 'Đã từ chối',
     stateCancelled: 'Đã hủy',
     stateExpired: 'Hết hạn',

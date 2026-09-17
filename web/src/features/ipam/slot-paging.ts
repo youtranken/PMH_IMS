@@ -15,6 +15,22 @@ export const SLOT_FILTERS: SlotFilter[] = [
 export const SLOT_PAGE_SIZE = 50;
 
 /**
+ * Khi nào thì màn chi tiết tự mở sẵn bộ lọc "Đang cấp" thay vì đổ ra cả bãi ô trống.
+ *
+ * Phải thỏa CẢ HAI, và mỗi vế chặn một kiểu chọn-hộ-sai:
+ *
+ * · `BURIED_FREE` (32 ≈ một dải /27) — dưới mức này cả dải vẫn lọt trong một trang, mắt tự
+ *   quét được, và chọn hộ chỉ tổ giấu đi mấy ô trống mà người ta vào để bấm "Cấp IP này".
+ *
+ * · `WORTH_ISOLATING` (5) — một /24 vừa khai, mới cấp đúng một địa chỉ thì KHÔNG có gì đang
+ *   bị chôn cả: người mở nó ra gần như chắc chắn đang muốn cấp tiếp, và giấu 253 ô trống đi
+ *   là lấy mất đúng thứ họ cần. Chuyện "12 dòng dữ liệu nằm rải trong sáu trang ô trống" chỉ
+ *   thành vấn đề khi trong dải đã có một lượng hồ sơ thật sự.
+ */
+export const BURIED_FREE = 32;
+export const WORTH_ISOLATING = 5;
+
+/**
  * Trạng thái của một ô trong dải.
  *
  * Ô CHƯA CÓ HỒ SƠ (`kind: 'free'`) và ô có hồ sơ mang trạng thái `free` là hai chuyện khác

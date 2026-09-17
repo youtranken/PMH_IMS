@@ -89,7 +89,10 @@ export function DisposalScreen() {
             aria-pressed={kind === ''}
             onClick={() => setKind('')}
           >
-            {t('disposal.allKinds')} {(items.data ?? []).length}
+            {/* Số đi kèm nhãn lọc phải NHẠT và NHỎ hơn chữ nhãn (`.seg-count`, dùng chung với
+                màn Dải mạng): để cùng cỡ cùng đậm thì mắt đọc "Tất cả 12" thành hai từ ngang
+                hàng chứ không phải một nhãn kèm một con số. */}
+            {t('disposal.allKinds')} <span className="seg-count">{(items.data ?? []).length}</span>
           </button>
           {(Object.keys(KIND_KEY) as DisposalKind[]).map((key) => (
             <button
@@ -99,7 +102,7 @@ export function DisposalScreen() {
               aria-pressed={kind === key}
               onClick={() => setKind(key)}
             >
-              {t(KIND_KEY[key])} {countOf(key)}
+              {t(KIND_KEY[key])} <span className="seg-count">{countOf(key)}</span>
             </button>
           ))}
         </div>
@@ -150,6 +153,14 @@ export function DisposalScreen() {
                   </td>
                   <td data-label={t('disposal.kind')}>
                     <span className="badge plain">{t(KIND_KEY[item.kind])}</span>
+                    {/*
+                      TÊN GỐC CỦA TRẠNG THÁI — thứ cả màn này sinh ra để nói (17/09/2026).
+                      `status` được API trả về từ đầu và giữ nguyên tên của module chủ ("đã
+                      thanh lý" / "đã bỏ" / "đã vô hiệu"), nhưng bảng chưa bao giờ in nó ra.
+                      Thành thử màn dựng lên vì "ba trạng thái mang ba cái tên khác nhau" lại
+                      là màn duy nhất không cho biết hồ sơ này mang cái tên nào.
+                    */}
+                    <span className="cell-sub">{statusLabel(item.status, t)}</span>
                   </td>
                   <td data-label={t('disposal.detail')}>{orDash(item.detail)}</td>
                   <td data-label={t('disposal.at')}>{orDash(formatDate(item.updatedAt))}</td>
@@ -161,4 +172,18 @@ export function DisposalScreen() {
       )}
     </>
   );
+}
+
+/**
+ * Trạng thái THEO TÊN CỦA MODULE CHỦ, không dịch về một tên chung.
+ *
+ * Cố ý không gom ba thứ này thành một chữ "đã bỏ": người dùng quay lại module chủ sẽ thấy đúng
+ * chữ ấy trên hồ sơ, và một cái tên thứ tư chỉ tồn tại ở màn này là thêm một thứ phải học.
+ * Trạng thái lạ (module thứ tư vào kho mà quên khai ở đây) thì in nguyên văn — thà thấy một
+ * chuỗi kỹ thuật còn hơn thấy một ô trống.
+ */
+function statusLabel(status: string, t: (key: string) => string): string {
+  if (status === 'retired') return t('disposal.statusRetired');
+  if (status === 'disabled') return t('disposal.statusDisabled');
+  return status;
 }

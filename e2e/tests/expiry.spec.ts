@@ -219,6 +219,10 @@ test.describe('Cỗ máy Expiry', () => {
     await page.goto('/expiry');
     await expect(page.getByRole('link', { name: new RegExp(`SSL-E2E-OLD-${stamp}`) })).toBeVisible();
     await expect(page.getByText(/Quá hạn \d+ ngày/).first()).toBeVisible();
-    await expect(page.getByText(/Đã quá hạn: [1-9]/)).toBeVisible();
+    /* Ô số ở đầu màn: từ 17/09/2026 là "số to đứng trước, nhãn nhỏ bên dưới" và bấm được để
+       lọc — không còn khuôn "Đã quá hạn: 4" của ba cái pill cũ. */
+    await expect(
+      page.getByRole('button', { name: /[1-9]\d*\s*Đã quá hạn/ }),
+    ).toHaveCount(1);
   });
 });

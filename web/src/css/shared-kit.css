@@ -359,10 +359,24 @@
   background: var(--danger-soft);
 }
 
-/* Dòng danh mục đã vô hiệu — mờ đi nhưng vẫn đọc được (không ẩn hẳn). */
+/*
+ * Dòng đã vô hiệu / đã tắt / đã gỡ — LÙI XUỐNG NHƯNG VẪN ĐỌC ĐƯỢC (sửa 17/09/2026).
+ *
+ * Bản cũ dùng `opacity: 0.55` cho cả ô. Với chữ `--ink-3` vốn đã nhạt thì tích hai lần độ mờ
+ * rơi xuống dưới ngưỡng tương phản AA — và trớ trêu là nó rơi đúng vào những dòng người ta
+ * cần soi KỸ NHẤT: một rule NAT đã tắt nhưng còn trong sổ, một danh mục vừa bị vô hiệu, một
+ * ghế license vừa bị gỡ. "Mờ" ở đây phải là một TÔNG khác, không phải một lớp sương phủ lên
+ * chữ; nền nhạt gánh phần tín hiệu, chữ giữ nguyên độ đọc.
+ */
 .table tr.row-muted td {
-  opacity: 0.55;
+  color: var(--ink-3);
 }
+/*
+ * CỐ Ý KHÔNG tô nền cho dòng mờ: màn Dải mạng dùng đúng class này cho MỌI ô trống, nên một /24
+ * mới khai sẽ có 242/254 dòng bị tô — nền thôi không còn là tín hiệu của cái gì nữa. Việc
+ * "dòng này đã tắt/đã vô hiệu" do huy hiệu ngay trong dòng nói (Trống · Đã tắt · Đã vô hiệu),
+ * tức bằng CHỮ chứ không bằng mỗi sắc độ (WCAG 1.4.1).
+ */
 
 /* --- Panel giấy tờ đính kèm (ui/attachment-panel.tsx) --------------------- */
 .attachment-panel {
@@ -375,8 +389,9 @@
 /* --- Bảng điều khiển (features/dashboard/dashboard-screen.tsx) ------------ */
 
 /*
- * Hàng số ở đầu trang. Mỗi ô là một LINK: con số cũng là cái bấm được, không phải một nhãn
- * trang trí để rồi phải đi tìm đường vào bên dưới.
+ * Hàng số ở đầu trang (`ui/kpi-strip.tsx`). Mỗi ô bấm được: hoặc là LINK sang màn đầy đủ (Bảng
+ * điều khiển), hoặc là NÚT LỌC thu hẹp chính bảng bên dưới (Sắp hết hạn). Con số không bao giờ
+ * chỉ là một nhãn trang trí để rồi phải đi tìm đường vào.
  */
 .dash-kpis {
   display: grid;
@@ -396,10 +411,21 @@
   color: var(--ink);
   text-decoration: none;
   min-width: 0;
+  /* Ô có thể là `<a>` hoặc `<button>` — dập mọi mặc định của nút để hai thứ trông y hệt nhau. */
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
   transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
 }
 .kpi:hover { border-color: var(--primary); box-shadow: var(--shadow-sm); }
 .kpi:focus-visible { outline: none; box-shadow: var(--ring); }
+/* Ô lọc ĐANG BẬT. Không chỉ đổi màu: viền dày lên và nền đổi, để người không phân biệt được
+   màu vẫn thấy ô nào đang bật (WCAG 1.4.1 — đừng nói bằng mỗi màu). */
+.kpi.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  box-shadow: inset 0 0 0 1px var(--primary);
+}
 .kpi-n {
   font-family: var(--mono);
   font-size: var(--fs-2xl);
@@ -414,10 +440,14 @@
 }
 /* Có việc phải làm thì ô đổi màu ở VIỀN TRÁI và ở con số — không tô nền cả ô, vì năm ô tô
    nền cạnh nhau thì mắt không còn thứ tự nào để đọc. */
-.kpi.warn { border-left-color: var(--warn); }
+.kpi.kpi-warn { border-left-color: var(--warn); }
 /* `--warn` vốn đã là bản ĐẬM đủ tương phản cho chữ (#a34d08 — ghi rõ ở tokens.css sau lượt
    axe 06/08), nên dùng thẳng, không cần một sắc riêng cho chữ. */
-.kpi.warn .kpi-n { color: var(--warn); }
+.kpi.kpi-warn .kpi-n { color: var(--warn); }
+/* `--danger-strong` là bản ĐẬM dành riêng cho CHỮ lỗi trên nền sáng (tokens.css); `--danger`
+   thuần là màu viền/nền, đặt lên chữ nhỏ thì tương phản hụt ở chế độ sáng. */
+.kpi.kpi-danger { border-left-color: var(--danger); }
+.kpi.kpi-danger .kpi-n { color: var(--danger-strong); }
 /* Số 0 thì nhạt đi: "không có gì" vẫn phải đọc được, nhưng không được tranh chỗ với số khác. */
 .kpi.zero .kpi-n { color: var(--ink-3); font-weight: var(--fw-semibold); }
 .dash-calm {
@@ -523,6 +553,35 @@
   background: var(--surface-2);
   color: var(--ink);
   overflow-wrap: anywhere;
+  /* Đây là thứ người duyệt PHẢI đọc kỹ nhất, mà trên màn 1920 nó lại là thứ dài nhất: một
+     dòng chạy hết 1800px thì mắt lạc hàng ngay. Cùng ngưỡng với `.alert` (68ch ≈ mép trên
+     của khoảng đọc được 60-75 ký tự). */
+  max-width: 68ch;
+}
+
+/*
+ * Nhãn trong thẻ phiếu break-glass. Cho tới 17/09/2026 nó mang class `lbl-t` — một class chỉ
+ * tồn tại trong `auth.css` dưới bộ chọn `.auth-form .lbl-t`, tức KHÔNG BAO GIỜ khớp ở đây.
+ * Hệ quả: `<dt>` và `<dd>` cùng cỡ, cùng màu, cùng độ đậm — "Đối tượng" đọc ngang hàng với
+ * giá trị của chính nó, thẻ phiếu mất hẳn một tầng phân cấp.
+ */
+/*
+ * `auto-fit` chứ không `auto-fill` cho lưới trong thẻ phiếu.
+ *
+ * `.data-grid` dùng chung khai `auto-fill`, nghĩa là trên màn rộng nó ĐẺ RA đủ số rãnh 220px
+ * dù có bấy nhiêu nội dung. Thẻ phiếu đang treo chỉ có hai ô (Đối tượng · Xin), nên ở 1920 nó
+ * ngồi nép bên trái cạnh bốn năm rãnh rỗng. `auto-fit` thì rãnh rỗng co về 0 và hai ô chia
+ * nhau bề ngang thật.
+ */
+.approval-list .data-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+}
+.approval-list dt {
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
 
 /* --- Ma trận quyền két sắt (features/vault/access-matrix-screen.tsx) ------
@@ -554,6 +613,21 @@ table.access-grid .access-row-head {
   min-width: 13rem;
   border-right: 1px solid var(--border-2);
   display: table-cell;
+  /*
+   * Cột tên người là `<th scope="row">` nằm trong TBODY, mà `table.css` chỉ có luật cho
+   * `thead th` và `tbody td` — không luật nào chạm `tbody th`. Hệ quả trước 17/09: cột dính
+   * trái dùng padding mặc định của trình duyệt (~1px, chữ dí sát mép) và MẤT đường kẻ ngăn
+   * hàng, nên vạch kẻ của bảng dừng lại đúng ở mép cột tên.
+   */
+  padding: var(--space-5) var(--space-7);
+  border-bottom: 1px solid var(--border);
+}
+/*
+ * Sọc hàng chẵn: luật chung nhắm `tbody td` nên cột dính (là `th`) không đổi màu theo, và ở
+ * hàng chẵn nó lệch hẳn một tông so với phần còn lại của chính hàng đó.
+ */
+table.access-grid tbody tr:nth-child(even) .access-row-head {
+  background: var(--surface-2);
 }
 table.access-grid thead th {
   position: sticky;
@@ -587,6 +661,16 @@ table.access-grid thead .access-row-head {
   font-weight: 600;
   color: var(--ink-2);
   text-align: center;
+  /*
+   * `white-space: normal` PHẢI khai tường minh (vá 17/09/2026).
+   *
+   * `all: unset` ở dòng đầu đặt MỌI thuộc tính về `unset`, mà với thuộc tính KẾ THỪA thì
+   * `unset` nghĩa là `inherit` — nên nút này thừa hưởng `white-space: nowrap` từ
+   * `table.table thead th` (table.css). Có `nowrap` thì `max-width: 8rem` ngay trên và
+   * `overflow-wrap: anywhere` ngay dưới đều vô nghĩa: nhãn cột dài ("Chứng chỉ SSL", tên site
+   * dài) không xuống dòng mà tràn khỏi ô, đẩy lưới rộng thêm mà vẫn chồng chữ.
+   */
+  white-space: normal;
   overflow-wrap: anywhere;
 }
 .access-col-btn:hover { color: var(--primary-ink); }
@@ -755,14 +839,8 @@ table.access-grid thead .access-row-head {
 }
 
 /* --- Trang chi tiết thiết bị (story 2.5) ---------------------------------- */
-.device-summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3) var(--space-5);
-  margin-bottom: var(--space-4);
-  font-size: var(--fs-sm);
-}
+/* `.device-summary` bỏ ngày 17/09/2026: tên nói là của trang thiết bị nhưng nơi duy nhất dùng
+   nó lại là màn "Sắp hết hạn", và ba cái pill ấy đã thành hàng ô số bấm được (`.dash-kpis`). */
 .device-panels {
   display: flex;
   flex-direction: column;

@@ -135,7 +135,15 @@ export function NatScreen({ me }: { me: Me }) {
         <EmptyState title={t('nat.empty')} hint={t('nat.emptyHint')} />
       ) : (
         <div className="table-wrap">
-          <table className="table table-stack">
+          {/*
+            `wide` — sàn bề ngang 66rem (table.css), bật 17/09/2026.
+            Sáu cột mà không có sàn thì ở cột chính ~800px trình duyệt bóp đều tay: cột "Lý do
+            mở" (văn xuôi) và cột "Đích bên trong" (IP + port + mã máy + tên chủ) cùng bị ép
+            xuống gãy ba bốn dòng. Có sàn thì bảng cuộn ngang TRONG khung của nó — cuộn là
+            chuyện nhỏ, đọc không ra mới là chuyện lớn. Dưới 961px `.table-stack` đã gập thẻ
+            dọc nên sàn không áp, không sinh cuộn ngang cho cả trang.
+          */}
+          <table className="table table-stack wide">
             <thead>
               <tr>
                 <th>{t('nat.router')}</th>
@@ -157,7 +165,16 @@ export function NatScreen({ me }: { me: Me }) {
                     <span className="mono">
                       {rule.protocol.toUpperCase()} {rule.externalPorts}
                     </span>
-                    {!rule.enabled ? <span className="cell-sub">{t('nat.disabled')}</span> : null}
+                    {/*
+                      "Đã tắt" là một HUY HIỆU, không phải dòng chữ phụ (17/09/2026).
+                      Nó là trạng thái của CẢ rule, và là thứ auditor soi kỹ nhất: một cổng còn
+                      nằm trong sổ nhưng đã tắt trên router. Trước đây nó mang đúng hình dạng
+                      của dòng-phụ-mã-site ở cột bên cạnh, tức trông như một mẩu dữ liệu của
+                      cột port, lại còn bị cả dòng phủ một lớp mờ lên.
+                    */}
+                    {!rule.enabled ? (
+                      <span className="badge muted">{t('nat.disabled')}</span>
+                    ) : null}
                   </td>
                   <td data-label={t('nat.internal')}>
                     <span className="mono">
@@ -177,7 +194,18 @@ export function NatScreen({ me }: { me: Me }) {
                     ) : null}
                   </td>
                   <td data-label={t('nat.usedBy')}>{rule.usedBy}</td>
-                  <td data-label={t('nat.reason')}>{rule.reason}</td>
+                  {/*
+                    Lý do mở là văn xuôi người ta gõ tự do — một câu dài kéo cao cả dòng và bóp
+                    năm cột còn lại. `.cell-note` (có sẵn trong `table.css` từ lâu mà chưa màn
+                    nào dùng) giữ nó đúng một dòng; `title` để rê chuột đọc trọn câu, và ở
+                    ≤960px bảng gập thẻ dọc thì `.cell-note` không áp nên vẫn đọc đủ trên
+                    điện thoại — đúng chỗ bài kiểm 390px đang canh.
+                  */}
+                  <td data-label={t('nat.reason')}>
+                    <span className="cell-note" title={rule.reason}>
+                      {rule.reason}
+                    </span>
+                  </td>
                   <td>
                     <div className="action-cell">
                       <RowActions
