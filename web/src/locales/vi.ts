@@ -88,6 +88,31 @@ export default {
   detail: {
     identityCard: 'Thẻ định danh',
   },
+  // Bản đồ quan hệ ở tab Tổng quan của trang thiết bị.
+  relationMap: {
+    title: 'Bản đồ quan hệ',
+    legendOk: 'bình thường',
+    legendWarn: 'cần để mắt',
+    legendCut: 'sẽ bị gỡ khi thanh lý',
+    cutOn: 'Xem lượt thanh lý cắt gì',
+    cutOff: 'Về bản đồ thường',
+    missing: 'Chưa gắn: {{list}}.',
+    alone:
+      'Máy này chưa giữ gì của ai — không IP, không rule NAT, không cổng, không license, ' +
+      'không giấy tờ. Thanh lý nó không kéo theo gì cả.',
+    aloneShort: 'Chưa gắn với gì cả',
+    ownPorts: 'Cổng của máy này',
+    incomingPorts: 'Đang cắm vào máy này',
+    attachments: 'Giấy tờ',
+    /* Câu tóm tắt lượt thanh lý. Danh sách "cắt" dựng từ chính các khu đang có, nên nó không
+       bao giờ hứa cắt một thứ máy không giữ. */
+    cutLead: 'Tick "Dọn hết thứ liên quan" sẽ CẮT: {{list}}.',
+    cutKeep:
+      'GIỮ nguyên: cổng của chính máy này (sơ đồ đấu nối là hồ sơ của nó), két sắt, giấy tờ ' +
+      'và toàn bộ lịch sử. Không tick thì hệ thống CHẶN và đọc tên từng thứ đang giữ, chứ ' +
+      'không lẳng lặng thanh lý.',
+    cutNothing: 'Máy này không giữ gì phải gỡ — thanh lý không kéo theo thứ nào.',
+  },
   common: {
     save: 'Lưu',
     cancel: 'Hủy',
@@ -303,7 +328,9 @@ export default {
     cabinetHint: 'Tủ nào trong site đã chọn. Máy để bàn hay máy lẻ thì bỏ trống.',
     pickType: '— Chọn loại —',
     noSitePick: '— Chưa gán site —',
-    tabProfile: 'Hồ sơ',
+    /* Tab đầu của trang thiết bị đổi tên 17/09/2026: nó không còn chỉ là lưới hồ sơ mà là
+       BẢN ĐỒ toàn cảnh + phần hồ sơ. Khóa `?tab=profile` giữ nguyên nên link cũ vẫn chạy. */
+    tabProfile: 'Tổng quan',
     tabHistory: 'Lịch sử',
     tabAttachments: 'Giấy tờ',
     tabPortMap: 'Port map',

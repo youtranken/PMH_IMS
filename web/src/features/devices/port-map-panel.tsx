@@ -42,7 +42,7 @@ export interface IncomingPortRow {
   note: string | null;
 }
 
-interface PortMap {
+export interface PortMap {
   ports: PortRow[];
   incoming: IncomingPortRow[];
 }

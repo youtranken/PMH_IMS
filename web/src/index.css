@@ -10,7 +10,8 @@
 @import './css/overlays.css';        /* alert, field, modal, command palette */
 @import './css/auth.css';            /* màn đăng nhập */
 @import './css/form-layout.css';     /* segmented, form section, combobox, chip */
-@import './css/detail-tabs.css';     /* data grid, tabs, filter bar, stat card */
+@import './css/detail-tabs.css';     /* data grid, tabs, filter bar, bố cục 2 cột + thẻ định danh */
+@import './css/relation-map.css';    /* bản đồ quan hệ ở tab Tổng quan của trang thiết bị */
 @import './css/filters.css';         /* chip lọc đang bật */
 @import './css/primitives.css';      /* primitive dùng chung */
 @import './css/profile.css';         /* hồ sơ người dùng */

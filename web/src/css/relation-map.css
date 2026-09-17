@@ -1,0 +1,228 @@
+/* ============================================================================
+ * Bản đồ quan hệ của trang chi tiết thiết bị (features/devices/relation-map.tsx).
+ *
+ * Thiết bị là chỗ MỌI module cắm vào — `/devices/:id/panels` sinh ra chính vì thế — nên màn
+ * này vẽ nó đúng như vậy: một hạch ở giữa, mỗi sợi dây đi ra một thứ nó đang giữ.
+ *
+ * Bản đồ KHÔNG thay dữ liệu. Nó là tầng ĐIỀU HƯỚNG + tầng CẢNH BÁO: bấm một nút là nhảy tới
+ * đúng tab hoặc đúng thẻ bên dưới, và mọi khu vẫn nằm nguyên trên trang để đọc, để in, để
+ * trình đọc màn hình đi qua. Dưới 900px bản đồ ẩn hẳn — một sơ đồ 1200px trên điện thoại là
+ * một bức ảnh không đọc được — và thay bằng đúng danh sách ấy ở dạng dòng.
+ *
+ * Không dùng thư viện vẽ nào: SVG thuần + thẻ định vị theo phần trăm. Toạ độ tính từ chỉ số
+ * nên hai lần mở cùng một máy luôn ra cùng một hình (không mô phỏng vật lý, không rung).
+ * ========================================================================== */
+
+.rmap-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--space-9) var(--space-10) var(--space-10);
+  box-shadow: var(--shadow-sm);
+  margin-bottom: var(--space-11);
+}
+.rmap-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-7);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-8);
+}
+.rmap-head h2 {
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semibold);
+}
+.rmap-legend {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  flex-wrap: wrap;
+  font-size: var(--fs-2xs);
+  color: var(--ink-3);
+}
+.rmap-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.rmap-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+.rmap-dot.warn { background: var(--warn); }
+.rmap-dot.cut { background: var(--danger); }
+
+.rmap { position: relative; width: 100%; }
+.rmap-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.rmap-svg path {
+  fill: none;
+  stroke: var(--border-2);
+  stroke-width: 1.5;
+  /* Hộp co giãn theo bề ngang cột nên nét vẽ phải giữ nguyên độ dày. */
+  vector-effect: non-scaling-stroke;
+  transition: stroke 0.2s var(--ease);
+}
+
+.rmap-hub {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-7);
+  border-radius: var(--r-lg);
+  background: var(--grad);
+  color: var(--on-brand);
+  box-shadow: var(--shadow);
+  text-align: center;
+  font-family: var(--mono);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.rmap-node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-7);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease),
+    background 0.2s var(--ease);
+}
+.rmap-node:hover { border-color: var(--primary); box-shadow: var(--shadow); }
+.rmap-node:focus-visible { outline: none; box-shadow: var(--ring); }
+.rmap-node .rn-h {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  white-space: nowrap;
+}
+.rmap-node .rn-h svg { width: 14px; height: 14px; flex: 0 0 14px; color: var(--ink-3); }
+.rmap-node .rn-n {
+  margin-left: auto;
+  min-width: 20px;
+  padding: 0 5px;
+  border-radius: var(--radius-pill);
+  background: var(--muted-soft);
+  color: var(--ink-3);
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  text-align: center;
+}
+.rmap-node .rn-i {
+  font-size: var(--fs-2xs);
+  color: var(--ink-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rmap-node .rn-i.warn { color: var(--warn); font-weight: var(--fw-semibold); }
+.rmap-node .rn-i.danger { color: var(--danger-strong); font-weight: var(--fw-semibold); }
+
+/* Máy chưa giữ gì: hạch đứng một mình, và nói thẳng ra là đứng một mình. */
+.rmap-alone {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: var(--space-5);
+  max-width: 34rem;
+  text-align: center;
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+/* Thứ CHƯA gắn gom về một dòng — cùng lối với `BlankFields`, không vẽ ô rỗng. */
+.rmap-blank {
+  margin-top: var(--space-9);
+  padding-top: var(--space-7);
+  border-top: 1px dashed var(--border-2);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+
+/* === Chế độ "thanh lý sẽ cắt gì" ===
+ * Ngữ nghĩa lấy từ các file *-device-retirement.ts: thu hồi IP, gỡ rule NAT, trả ghế license,
+ * gỡ đường truyền, gỡ liên kết cổng của MÁY KHÁC đang đấu sang. Cổng của chính máy này, két
+ * sắt, giấy tờ và lịch sử thì GIỮ. Đây là câu mà `DEVICE_HAS_HOLDINGS` đang phải trả lời bằng
+ * một thông báo lỗi dài — ở đây nhìn thấy được TRƯỚC KHI bấm. */
+.rmap.show-cut .rmap-node.cut {
+  border-color: var(--border-danger);
+  background: var(--danger-soft);
+}
+.rmap.show-cut .rmap-node.cut .rn-h { color: var(--danger-strong); }
+.rmap.show-cut .rmap-node.cut .rn-h svg { color: var(--danger-strong); }
+.rmap.show-cut .rmap-node.cut .rn-n { background: var(--surface); color: var(--danger-strong); }
+.rmap.show-cut .rmap-node.keep { opacity: 0.42; }
+.rmap.show-cut .e-cut { stroke: var(--danger); stroke-dasharray: 6 5; }
+
+.rmap-cut-sum {
+  margin-top: var(--space-9);
+  padding: var(--space-8) var(--space-9);
+  border-left: 3px solid var(--danger);
+  background: var(--danger-soft);
+  border-radius: 0 var(--r) var(--r) 0;
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+  max-width: 68ch;
+}
+
+/* Bản thay thế ở màn hẹp — cùng danh sách ấy, dạng dòng, bấm ra cùng chỗ. */
+.rmap-list { display: none; flex-direction: column; gap: var(--space-3); }
+.rmap-list button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  width: 100%;
+  padding: var(--space-6) var(--space-7);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  text-align: left;
+  cursor: pointer;
+}
+.rmap-list button:hover { border-color: var(--primary); }
+.rmap-list .rl-i {
+  flex: 1;
+  min-width: 0;
+  font-weight: var(--fw-medium);
+  color: var(--ink-3);
+  font-size: var(--fs-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Thẻ vừa được nhảy tới thì nháy một cái, để mắt bắt được chỗ. */
+.sec-flash { animation: secFlash 1.6s var(--ease); }
+@keyframes secFlash {
+  0% { box-shadow: 0 0 0 3px var(--primary-soft); }
+  100% { box-shadow: var(--shadow-sm); }
+}
+
+@media (max-width: 900px) {
+  .rmap { display: none; }
+  .rmap-list { display: flex; }
+  .rmap-card { padding: var(--space-8); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sec-flash { animation: none; }
+}

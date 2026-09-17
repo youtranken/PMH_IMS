@@ -1,10 +1,10 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { errorMessage, useApiMutation } from "@/lib/api";
-import { formatDate, orDash } from "@/lib/format";
+import { formatDate } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { DatePicker } from "@/ui/date-picker";
@@ -13,7 +13,13 @@ import { ExpiryBadge } from "@/ui/expiry-badge";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
 import { CopyButton } from "@/ui/copy-button";
-import { BlankFields, DetailHeader, Stat, StatGrid, StatIfSet } from "@/ui/detail-header";
+import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
+import {
+  DetailLayout,
+  RailCard,
+  RailRow,
+  RailRowIfSet,
+} from "@/ui/detail-layout";
 import { Field } from "@/ui/page-header";
 import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { TabPanel, Tabs } from "@/ui/tabs";
@@ -104,16 +110,18 @@ export function IspDetail({ me }: { me: Me }) {
         }
         actions={
           <>
+            {/* "Sửa hồ sơ" là việc chính của màn nên mang trọng số primary; "Gia hạn" lùi
+                về nút thường — trước 17/09 hai cái ngược nhau. */}
             <button
               type="button"
-              className="btn"
+              className="btn primary"
               onClick={() => setEditing(true)}
             >
               {t("isp.edit")}
             </button>
             <button
               type="button"
-              className="btn primary"
+              className="btn"
               onClick={() => setRenewing(true)}
             >
               {t("isp.renew")}
@@ -122,33 +130,44 @@ export function IspDetail({ me }: { me: Me }) {
         }
       />
 
-      {/* HOTLINE đứng ô ĐẦU TIÊN, và là một link bấm gọi được.
-          Đây là trang mở ra lúc 2 giờ sáng khi đứt cáp — thứ cần đầu tiên là số điện thoại,
-          không phải mã hợp đồng. */}
-      <StatGrid>
-        <Stat label={t("isp.hotline")} note={item.provider}>
-          {item.hotline ? (
-            <a className="mono" href={`tel:${item.hotline.replace(/\s/g, "")}`}>
-              {item.hotline}
-            </a>
-          ) : (
-            "—"
-          )}
-        </Stat>
-        <Stat label={t("isp.status")}>
-          <span className={`badge ${STATUS_TONE[item.status]}`}>
-            {t(STATUS_KEY[item.status])}
-          </span>
-        </Stat>
-        {/* Thanh hợp đồng đầy đủ nằm ở tab Hồ sơ — thẻ này chỉ còn ý nghĩa khi chưa khai hạn. */}
-        {item.endDate ? null : (
-          <Stat label={t("isp.contract")}>
-            <ExpiryBadge end={null} />
-          </Stat>
-        )}
-        <StatIfSet label={t("isp.contractNo")} value={item.contractNo} />
-        <StatIfSet label={t("isp.bandwidth")} value={item.bandwidth} />
-      </StatGrid>
+      <DetailLayout
+        rail={
+          <RailCard title={t("detail.identityCard")}>
+            {/* HOTLINE đứng DÒNG ĐẦU, và là một link bấm gọi được. Đây là trang mở ra lúc 2 giờ
+                sáng khi đứt cáp — thứ cần đầu tiên là số điện thoại, không phải mã hợp đồng. */}
+            <RailRow label={t("isp.hotline")} note={item.provider}>
+              {item.hotline ? (
+                <a className="mono" href={`tel:${item.hotline.replace(/\s/g, "")}`}>
+                  {item.hotline}
+                </a>
+              ) : (
+                "—"
+              )}
+            </RailRow>
+            <RailRow label={t("isp.status")}>
+              <span className={`badge ${STATUS_TONE[item.status]}`}>
+                {t(STATUS_KEY[item.status])}
+              </span>
+            </RailRow>
+            {/* Thanh hợp đồng nằm HẲN ở đây, không còn thẻ thứ hai ở cột chính (17/09/2026). */}
+            <RailRow label={t("isp.contract")}>
+              {item.endDate ? (
+                <WarrantyTimeline
+                  start={item.startDate}
+                  end={item.endDate}
+                  startLabel={t("isp.startDate")}
+                  endLabel={t("isp.endDate")}
+                />
+              ) : (
+                <ExpiryBadge end={null} />
+              )}
+            </RailRow>
+            <RailRowIfSet label={t("isp.contractNo")} value={item.contractNo} />
+            <RailRowIfSet label={t("isp.bandwidth")} value={item.bandwidth} />
+            <RailRowIfSet label={t("isp.site")} value={item.siteCode} />
+          </RailCard>
+        }
+      >
 
       <Tabs
         items={[
@@ -175,33 +194,16 @@ export function IspDetail({ me }: { me: Me }) {
       <TabPanel tabKey={tab}>
         {tab === "profile" ? (
           <>
-            {/* Thanh hợp đồng ĐẦY ĐỦ — hai ô ngày rời nhau bắt người đọc tự trừ trong đầu. */}
-            {item.endDate ? (
-              <section className="card">
-                <h2 className="form-section-title">{t("isp.contract")}</h2>
-                <WarrantyTimeline
-                  start={item.startDate}
-                  end={item.endDate}
-                  startLabel={t("isp.startDate")}
-                  endLabel={t("isp.endDate")}
-                />
-              </section>
-            ) : null}
-
             {/* Nhà mạng · băng thông · IP tĩnh ĐÃ ở dòng định danh; hotline · trạng thái ·
-                hợp đồng · số hợp đồng ĐÃ ở dải chỉ số. Lưới chỉ còn phần chưa nói. */}
+                hợp đồng · số hợp đồng · site ĐÃ ở thẻ định danh bên phải. Lưới chỉ còn phần
+                chưa nói ở đâu, và ô nào trống thì KHÔNG vẽ. */}
             <dl className="data-grid">
-              <Item label={t("isp.site")}>{orDash(item.siteCode)}</Item>
-              <Item label={t("isp.device")}>
-                {item.deviceId ? (
-                  <Link className="mono" to={PATHS.device(item.deviceId)}>
-                    {item.deviceCode}
-                  </Link>
-                ) : (
-                  "—"
-                )}
-              </Item>
-              <Item label={t("isp.note")}>{orDash(item.note)}</Item>
+              <DataItemIfSet label={t("isp.device")} value={item.deviceId}>
+                <Link className="mono" to={PATHS.device(item.deviceId!)}>
+                  {item.deviceCode}
+                </Link>
+              </DataItemIfSet>
+              <DataItemIfSet label={t("isp.note")} value={item.note} />
             </dl>
             <BlankFields
               labels={[
@@ -236,6 +238,7 @@ export function IspDetail({ me }: { me: Me }) {
           <HistoryPanel entries={toIspHistory(history.data ?? [], t)} />
         )}
       </TabPanel>
+      </DetailLayout>
 
       {editing ? (
         <IspForm
@@ -356,11 +359,4 @@ function RenewDialog({
   );
 }
 
-function Item({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="data-item">
-      <dt>{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
-}
+

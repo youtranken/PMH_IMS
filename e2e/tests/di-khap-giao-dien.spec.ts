@@ -2738,7 +2738,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
             'Hồ sơ một con Switch phải có ĐỦ NĂM tab — Port map chỉ có mặt vì loại này bật has_port_map (FR-006)',
         },
       )
-      .toEqual(['Hồ sơ', 'Port map', 'Giấy tờ', 'Két sắt', 'Lịch sử']);
+      .toEqual(['Tổng quan', 'Port map', 'Giấy tờ', 'Két sắt', 'Lịch sử']);
 
     const main = page.getByRole('main');
     const panel = page.getByRole('tabpanel');

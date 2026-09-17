@@ -62,7 +62,7 @@ test.describe('Trang chi tiết thiết bị', () => {
     await expect(page.getByText(/Còn \d+ ngày/).first()).toBeVisible();
 
     // Đủ 4 tab (switch có port map).
-    for (const name of ['Hồ sơ', 'Port map', 'Giấy tờ', 'Lịch sử']) {
+    for (const name of ['Tổng quan', 'Port map', 'Giấy tờ', 'Lịch sử']) {
       await expect(page.getByRole('tab', { name })).toBeVisible();
     }
 
@@ -138,7 +138,7 @@ test.describe('Trang chi tiết thiết bị', () => {
     await page.goto(`/devices/${id}?tab=ports`);
     await expect(page.getByRole('heading', { name: new RegExp(`PR-E2E-TAB-${stamp}`) })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Port map' })).toHaveCount(0);
-    await expect(page.getByRole('tab', { name: 'Hồ sơ', selected: true })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Tổng quan', selected: true })).toBeVisible();
   });
 
   test('mở thiết bị không tồn tại → trang 404 tử tế, không phải khối lỗi đỏ', async ({ page }) => {

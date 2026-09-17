@@ -1,16 +1,21 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useParams, useSearchParams } from "react-router-dom";
 import { ApiError, apiFetch } from "@/lib/api-client";
-import { orDash } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { PATHS } from "@/lib/routes";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
 import { CopyButton } from "@/ui/copy-button";
-import { BlankFields, DetailHeader, Stat, StatGrid, StatIfSet } from "@/ui/detail-header";
+import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
+import {
+  DetailLayout,
+  RailCard,
+  RailRow,
+  RailRowIfSet,
+} from "@/ui/detail-layout";
 import { TabPanel, Tabs, initialTab } from "@/ui/tabs";
 import { useTabCounts } from "@/ui/tab-counts";
 import { VaultPanel } from "@/ui/vault-panel";
@@ -103,27 +108,30 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
         }
       />
 
-      {/* Trang này trước đây nghèo nhất: dải tóm tắt chỉ có badge trạng thái và tên đăng
-          nhập. Thiếu người phụ trách, thiếu bộ phận — và thiếu cả câu hay hỏi nhất về một
-          tài khoản dùng chung. */}
-      <StatGrid>
-        <Stat label={t("serviceAccounts.status")}>
-          <span className={`badge ${STATUS_TONE[item.status]}`}>
-            {t(STATUS_KEY[item.status])}
-          </span>
-        </Stat>
-        <StatIfSet
-          label={t("serviceAccounts.ownerName")}
-          value={item.ownerName}
-          note={item.department ?? undefined}
-        />
-        {vpn ? <StatIfSet label={t("serviceAccounts.groupName")} value={item.groupName} /> : null}
-        {vpn ? (
-          <StatIfSet label={t("serviceAccounts.allowedIps")} value={item.allowedIps} />
-        ) : (
-          <StatIfSet label={t("serviceAccounts.note")} value={item.note} />
-        )}
-      </StatGrid>
+      <DetailLayout
+        rail={
+          <RailCard title={t("detail.identityCard")}>
+            <RailRow label={t("serviceAccounts.status")}>
+              <span className={`badge ${STATUS_TONE[item.status]}`}>
+                {t(STATUS_KEY[item.status])}
+              </span>
+            </RailRow>
+            <RailRowIfSet
+              label={t("serviceAccounts.ownerName")}
+              value={item.ownerName}
+              note={item.department ?? undefined}
+            />
+            {/* Nhóm VPN và dải IP được phép CHỈ có nghĩa với tài khoản VPN — hồ sơ dùng chung
+                không có hai trường đó, vẽ ra là hai dòng chết. */}
+            {vpn ? (
+              <RailRowIfSet label={t("serviceAccounts.groupName")} value={item.groupName} />
+            ) : null}
+            {vpn ? (
+              <RailRowIfSet label={t("serviceAccounts.allowedIps")} value={item.allowedIps} />
+            ) : null}
+          </RailCard>
+        }
+      >
 
       <Tabs
         items={[
@@ -145,13 +153,10 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
         {tab === "profile" ? (
           <>
             {/* Loại · tên đăng nhập ĐÃ nằm ở dòng định danh dưới tiêu đề; trạng thái · người
-                phụ trách · bộ phận · nhóm VPN · dải IP ĐÃ nằm ở dải chỉ số. Lưới này chỉ còn
-                thứ chưa nói ở đâu cả — lặp lại chúng là hai lần cùng một câu trong nửa màn. */}
+                phụ trách · bộ phận · nhóm VPN · dải IP ĐÃ nằm ở thẻ định danh bên phải. Lưới
+                này chỉ còn thứ chưa nói ở đâu cả, và ô trống thì KHÔNG vẽ. */}
             <dl className="data-grid">
-              <Item label={t("serviceAccounts.department")}>
-                {orDash(item.department)}
-              </Item>
-              <Item label={t("serviceAccounts.note")}>{orDash(item.note)}</Item>
+              <DataItemIfSet label={t("serviceAccounts.note")} value={item.note} />
             </dl>
             <BlankFields
               labels={[
@@ -183,15 +188,9 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
           <HistoryPanel entries={toServiceAccountHistory(history.data ?? [], t)} />
         )}
       </TabPanel>
+      </DetailLayout>
     </>
   );
 }
 
-function Item({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="data-item">
-      <dt>{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
-}
+

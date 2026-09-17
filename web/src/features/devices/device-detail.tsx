@@ -27,7 +27,8 @@ import { useToast } from "@/ui/toast";
 import { DeviceLicensesExpand } from "@/features/software/device-licenses-expand";
 import { DeviceForm } from "./device-form";
 import { toHistoryEntries } from "./device-history-entries";
-import { PortMapPanel } from "./port-map-panel";
+import { PortMapPanel, type PortMap } from "./port-map-panel";
+import { RelationMap, type RelationNode } from "./relation-map";
 import {
   STATUS_KEY,
   STATUS_TONE,
@@ -100,8 +101,7 @@ export function DeviceDetail({ me }: { me: Me }) {
    */
   const ports = useQuery({
     queryKey: ["devices", id, "ports"],
-    queryFn: () =>
-      apiFetch<{ ports: unknown[] }>(`/api/v1/devices/${id}/ports`),
+    queryFn: () => apiFetch<PortMap>(`/api/v1/devices/${id}/ports`),
     enabled: device.data?.hasPortMap === true,
   });
 
@@ -177,6 +177,130 @@ export function DeviceDetail({ me }: { me: Me }) {
   const softwarePanel = (panels.data ?? []).find(
     (panel) => panel.key === "software",
   );
+
+  /* =====================================================================
+   * BẢN ĐỒ QUAN HỆ — dựng từ ĐÚNG thứ API đã trả, không thêm endpoint nào.
+   *
+   * Nút nào có tab riêng thì bấm là CHUYỂN TAB (cổng, két sắt, giấy tờ); nút nào là một thẻ
+   * ngay dưới bản đồ thì bấm là nhảy tới thẻ đó rồi nháy một cái. Một mô hình điều hướng,
+   * không phải hai.
+   * ===================================================================== */
+  const goTab = (key: string) => {
+    setTab(key);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const goSection = (key: string) => {
+    const el = document.getElementById(`sec-${key}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+    el.classList.remove("sec-flash");
+    // Ép trình duyệt tính lại layout để animation chạy lại cho lần bấm thứ hai.
+    void el.offsetWidth;
+    el.classList.add("sec-flash");
+  };
+
+  const panelOf = (key: string) =>
+    (panels.data ?? []).find((panel) => panel.key === key);
+
+  /** Khu quan hệ vẽ được: có panel VÀ panel có dòng. `tone` của item chính là cảnh báo. */
+  const relationFromPanel = (
+    key: string,
+    icon: RelationNode["icon"],
+    cut: boolean,
+    onOpen: () => void,
+  ): RelationNode | null => {
+    const panel = panelOf(key);
+    if (!panel || panel.items.length === 0) return null;
+    return {
+      key,
+      title: panel.title,
+      count: panel.items.length,
+      icon,
+      cut,
+      onOpen,
+      lines: panel.items.slice(0, 2).map((entry) => ({
+        text: `${entry.label} · ${entry.value}`,
+        tone: entry.tone === "warn" || entry.tone === "danger" ? entry.tone : undefined,
+      })),
+    };
+  };
+
+  const ownPorts = ports.data?.ports ?? [];
+  const incomingPorts = ports.data?.incoming ?? [];
+  const relationNodes: RelationNode[] = [
+    ownPorts.length > 0
+      ? {
+          key: "ports",
+          title: t("relationMap.ownPorts"),
+          count: ownPorts.length,
+          icon: "port" as const,
+          // Cổng của CHÍNH máy này được GIỮ khi thanh lý — `port-device-retirement.ts` nói rõ:
+          // sơ đồ đấu nối của một máy đã thanh lý vẫn là hồ sơ của nó.
+          cut: false,
+          onOpen: () => goTab("ports"),
+          lines: [
+            {
+              text: ownPorts.slice(0, 3).map((port) => port.portLabel).join(" · "),
+              mono: true,
+            },
+          ],
+        }
+      : null,
+    incomingPorts.length > 0
+      ? {
+          key: "incoming",
+          title: t("relationMap.incomingPorts"),
+          count: incomingPorts.length,
+          icon: "arrow" as const,
+          // Cổng trên máy KHÁC trỏ vào máy này thì BỊ gỡ liên kết (giữ lại chữ, không thành ô trắng).
+          cut: true,
+          onOpen: () => goTab("ports"),
+          lines: [
+            {
+              text: incomingPorts
+                .slice(0, 2)
+                .map((row) => `${row.deviceCode} · ${row.portLabel}`)
+                .join(" · "),
+              mono: true,
+            },
+          ],
+        }
+      : null,
+    relationFromPanel("ipam", "ip", true, () => goSection("ipam")),
+    relationFromPanel("nat", "arrow", true, () => goSection("nat")),
+    relationFromPanel("isp", "globe", true, () => goSection("isp")),
+    relationFromPanel("software", "lic", true, () => goSection("software")),
+    relationFromPanel("vault", "lock", false, () => goTab("vault")),
+    counts.files
+      ? {
+          key: "attachments",
+          title: t("relationMap.attachments"),
+          count: counts.files,
+          icon: "doc" as const,
+          cut: false,
+          onOpen: () => goTab("attachments"),
+          lines: [],
+        }
+      : null,
+  ].filter((node): node is RelationNode => node !== null);
+
+  /** Khu KHÔNG có gì — gom về một dòng xám, không vẽ ô rỗng (cùng lối `BlankFields`). */
+  const relationMissing = [
+    device.data?.hasPortMap && ownPorts.length === 0 ? t("devices.tabPortMap") : null,
+    panelOf("ipam") ? null : t("nav.ipam"),
+    panelOf("nat") ? null : t("nav.nat"),
+    panelOf("isp") ? null : t("nav.isp"),
+    panelOf("software") ? null : t("nav.software"),
+    panelOf("vault") ? null : t("vault.tab"),
+    counts.files ? null : t("devices.tabAttachments"),
+  ].filter((label): label is string => label !== null);
+
+  /* Câu tóm tắt lượt thanh lý — dựng từ CHÍNH những khu đang có, nên nó không bao giờ hứa cắt
+     một thứ mà máy không giữ. Đây là câu mà `DEVICE_HAS_HOLDINGS` đang phải trả lời bằng một
+     thông báo lỗi dài, chỉ khác là ở đây nhìn thấy TRƯỚC KHI bấm. */
+  const cutList = relationNodes
+    .filter((node) => node.cut)
+    .map((node) => `${node.title} (${node.count})`);
 
   return (
     <>
@@ -371,6 +495,24 @@ export function DeviceDetail({ me }: { me: Me }) {
         <TabPanel tabKey={safeTab}>
         {safeTab === "profile" ? (
           <>
+            <RelationMap
+              hubCode={item.code}
+              nodes={relationNodes}
+              missing={relationMissing}
+              cutSummary={
+                cutList.length > 0 ? (
+                  <>
+                    <b>{t("relationMap.cutLead", { list: cutList.join(" · ") })}</b>
+                    <br />
+                    <br />
+                    {t("relationMap.cutKeep")}
+                  </>
+                ) : (
+                  t("relationMap.cutNothing")
+                )
+              }
+            />
+
             {/*
              * Lưới này chỉ còn thứ CHƯA nói ở đâu khác. Thanh bảo hành, trạng thái, vị trí,
              * người dùng, nhà cung cấp, ngày mua đều đã ở thẻ định danh bên phải; serial thì ở
@@ -403,7 +545,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                 nên nó cũng là nơi quyết định khu ấy tên gì. Đặt tên riêng ở đây là để hai
                 chỗ trôi lệch nhau, và bài kiểm e2e đã bắt đúng lúc chúng bắt đầu lệch. */}
             {softwarePanel ? (
-              <section className="card device-panel">
+              <section className="card device-panel" id="sec-software">
                 <h2 className="form-section-title">{softwarePanel.title}</h2>
                 <DeviceLicensesExpand deviceId={item.id} />
               </section>
@@ -422,8 +564,13 @@ export function DeviceDetail({ me }: { me: Me }) {
               </div>
             ) : (
               <ExtensionPanels
+                /* Bỏ CẢ HAI khu khỏi cột chính:
+                   - `software`: đã có bảng riêng ngay trên;
+                   - `vault`: trang đã có hẳn một TAB "Két sắt", vẽ thêm một khu nữa ở đây là
+                     cùng một dữ liệu ở hai chỗ cách nhau một cú bấm. Nút Két sắt trên bản đồ
+                     chuyển thẳng sang tab đó. */
                 panels={(panels.data ?? []).filter(
-                  (panel) => panel.key !== "software",
+                  (panel) => panel.key !== "software" && panel.key !== "vault",
                 )}
               />
             )}
@@ -492,7 +639,7 @@ function ExtensionPanels({ panels }: { panels: DevicePanel[] }) {
   return (
     <div className="device-panels">
       {panels.map((panel) => (
-        <section key={panel.key} className="card device-panel">
+        <section key={panel.key} id={`sec-${panel.key}`} className="card device-panel">
           <h2 className="form-section-title">{panel.title}</h2>
           {panel.items.length === 0 ? (
             <p className="muted">{panel.emptyText ?? "—"}</p>
