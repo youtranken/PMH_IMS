@@ -7627,7 +7627,14 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       nodes
         .filter((node) => node.hasAttribute('aria-pressed'))
         .map((node) => ({
-          ten: (node.textContent ?? '').replace(/\s+/g, ' ').trim(),
+          /* Cắt SỐ ĐẾM ở đuôi nhãn ("Thiết bị 3" → "Thiết bị"), thêm 17/09/2026 khi trang tổng
+             Két sắt gắn số vào nút lọc như Kho thanh lý và Dải mạng. Bài này hỏi "có đúng bốn
+             loại không", không hỏi "mỗi loại có mấy cái" — con số đổi theo dữ liệu gieo nên
+             chốt cứng nó vào đây là tự tạo một bài kiểm đỏ ngẫu nhiên. */
+          ten: (node.textContent ?? '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/\s+\d+$/, ''),
           bat: node.getAttribute('aria-pressed') === 'true',
         })),
     );
@@ -7716,7 +7723,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     expect(rowsBefore, 'đã gieo hai chủ thể nên bảng phải có ít nhất hai dòng dữ liệu')
       .toBeGreaterThanOrEqual(3);
 
-    await main.getByRole('button', { name: 'Thiết bị', exact: true }).click();
+    await main.getByRole('button', { name: /^Thiết bị \d+$/ }).click();
 
     /*
      * Bật lọc "Thiết bị" phải làm BẢNG đổi, không chỉ làm cái nút sáng lên.
@@ -7746,7 +7753,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       .toHaveCount(0);
 
     // Tắt lại — nút bật/tắt phải đi được cả hai chiều, không phải một chiều.
-    await main.getByRole('button', { name: 'Thiết bị', exact: true }).click();
+    await main.getByRole('button', { name: /^Thiết bị \d+$/ }).click();
     await expect(swRow, 'tắt lọc thì dòng phần mềm phải quay lại').toBeVisible();
 
     /* ---- POPUP của một dòng: mở ra rồi soi bên trong ---- */
@@ -7802,10 +7809,21 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     expect(
       await page.getByRole('main').getByRole('listitem').allTextContents(),
       '"Luật của két" phải đủ BỐN gạch: cất · gõ mã · tự ẩn · ghi nhật ký',
+    /*
+     * BA CÂU ĐỔI NGÀY 17/09/2026, và đúng như chú thích trên đòi hỏi: có ý thức.
+     *
+     * · gạch 1 — bản cũ chỉ người dùng đi vòng qua trang thiết bị để làm đúng cái việc mà
+     *   popup "Mở két" ngay trên màn này đã làm được;
+     * · gạch 2 — bản cũ nói "mỗi phiên", trong khi luật thật là một khoảng ÂN HẠN
+     *   (`secret.stepup_grace_minutes`) và chính hộp mở két có đồng hồ đếm ngược nói điều đó.
+     *   Chữ ở chân trang nói ngược cái đồng hồ thì người dùng bị hỏi mã giữa chừng và tưởng
+     *   hệ thống hỏng;
+     * · gạch 3 — "vài chục giây" là ước lượng, trong khi màn hình có đồng hồ thật.
+     */
     ).toEqual([
-      'Cất bí mật: mở hồ sơ → tab "Két sắt" → "Cất secret". Chỉ Quản trị và Super Admin ghi được.',
-      'Xem giá trị: phải gõ mã 6 số (TOTP) mỗi phiên, kể cả khi đã đăng nhập rồi.',
-      'Giá trị hiện ra rồi TỰ ẨN sau vài chục giây, và không có nút sao chép hàng loạt.',
+      'Cất bí mật: bấm "Mở két" ngay tại bảng trên, hoặc vào tab "Két sắt" của hồ sơ. Chỉ Quản trị và Super Admin ghi được.',
+      'Xem giá trị: phải gõ mã 6 số (TOTP). Gõ một lần rồi thì mở tiếp được trong ít phút, hết khoảng đó phải gõ lại.',
+      'Giá trị hiện ra rồi TỰ ẨN — có đồng hồ đếm ngược ngay trên hộp — và không có nút sao chép hàng loạt.',
       'Mỗi lần mở đều ghi nhật ký: ai xem, xem của ai, lúc nào — không xoá được.',
     ]);
   });
