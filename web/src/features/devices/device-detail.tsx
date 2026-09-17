@@ -99,10 +99,25 @@ export function DeviceDetail({ me }: { me: Me }) {
    * Dùng ĐÚNG `queryKey` của `PortMapPanel` nên đây không phải lượt gọi thứ hai: bấm sang tab
    * là dữ liệu đã nằm sẵn trong cache, tab mở ra không còn quay vòng chờ.
    */
+  /*
+   * HỎI CỔNG CHO MỌI MÁY, không chỉ máy có port map (sửa 17/09/2026).
+   *
+   * Trước đây lượt gọi này bị tắt khi loại thiết bị không bật `has_port_map`. Nghe hợp lý —
+   * máy in thì không có bảng cổng. Nhưng `/ports` trả về HAI chiều: cổng của chính máy này,
+   * VÀ cổng của máy khác đang đấu vào nó. Chiều thứ hai chính là chiều mà một cái máy trạm có:
+   * nó không có cổng nào để khai, nhưng ba con switch đang cắm vào nó — và cho tới hôm nay
+   * hồ sơ của nó KHÔNG hiện chuyện đó ở bất cứ đâu.
+   *
+   * Hai chỗ hỏng vì thế: bản đồ quan hệ thiếu hẳn một nhánh, và quan trọng hơn, lượt xem
+   * "thanh lý sẽ cắt gì" nói thiếu — trong khi `port-device-retirement.ts` sẽ gỡ đúng những
+   * liên kết ấy. Tức là màn hình hứa ít hơn việc thật sự xảy ra.
+   *
+   * FR-006 vẫn nguyên: cái nó cấm là bày một BẢNG CỔNG rỗng cho máy in, và điều đó do danh
+   * sách tab bên dưới quyết định, không phải do bịt lượt gọi này.
+   */
   const ports = useQuery({
     queryKey: ["devices", id, "ports"],
     queryFn: () => apiFetch<PortMap>(`/api/v1/devices/${id}/ports`),
-    enabled: device.data?.hasPortMap === true,
   });
 
   const setStatus = useApiMutation<{ status: string; cleanup?: boolean }, unknown>(
@@ -128,16 +143,26 @@ export function DeviceDetail({ me }: { me: Me }) {
    * Lúc hồ sơ chưa về thì chỉ có Hồ sơ + Giấy tờ + Lịch sử, nhưng cũng chưa vẽ gì.
    */
   const counts = useTabCounts("device", id, me);
+  /* Số trên tab = số DÒNG tab đó bày ra, và tab Port map bày cả hai chiều (AD-14: một sợi dây
+     một bản ghi, nhìn từ đầu nào cũng phải thấy). */
+  const portRowCount =
+    (ports.data?.ports.length ?? 0) + (ports.data?.incoming.length ?? 0);
   const tabItems = [
     { key: "profile", label: t("devices.tabProfile") },
-    // Tab Port map CHỈ hiện với loại có port (FR-006) — bảng port của một cái máy in
-    // là chỗ trống vô nghĩa.
-    ...(device.data?.hasPortMap
+    /*
+     * Tab Port map hiện khi loại máy có port (FR-006) — HOẶC khi thật sự có dòng để bày.
+     *
+     * Vế sau là cho cái máy trạm bị ba con switch cắm vào: nó không có cổng nào của riêng
+     * mình, nhưng "ai đang cắm vào tôi" là câu có thật và trước nay không trả lời được ở đâu.
+     * Điều FR-006 cấm — bày một bảng RỖNG cho máy in — vẫn được giữ nguyên: máy in không có
+     * dòng nào thì cả hai vế đều sai và tab vẫn không mọc ra.
+     */
+    ...(device.data?.hasPortMap || portRowCount > 0
       ? [
           {
             key: "ports",
             label: t("devices.tabPortMap"),
-            count: ports.data?.ports.length,
+            count: portRowCount,
           },
         ]
       : []),
@@ -545,8 +570,14 @@ export function DeviceDetail({ me }: { me: Me }) {
                 nên nó cũng là nơi quyết định khu ấy tên gì. Đặt tên riêng ở đây là để hai
                 chỗ trôi lệch nhau, và bài kiểm e2e đã bắt đúng lúc chúng bắt đầu lệch. */}
             {softwarePanel ? (
-              <section className="card device-panel" id="sec-software">
-                <h2 className="form-section-title">{softwarePanel.title}</h2>
+              <section
+                className="card device-panel"
+                id="sec-software"
+                aria-labelledby="sec-software-title"
+              >
+                <h2 className="form-section-title" id="sec-software-title">
+                  {softwarePanel.title}
+                </h2>
                 <DeviceLicensesExpand deviceId={item.id} />
               </section>
             ) : null}
@@ -638,9 +669,26 @@ function ExtensionPanels({ panels }: { panels: DevicePanel[] }) {
   if (panels.length === 0) return null;
   return (
     <div className="device-panels">
+      {/*
+        `aria-labelledby` biến mỗi khu thành một LANDMARK CÓ TÊN ("Địa chỉ IP", "Sổ NAT",
+        "Đường truyền ISP"). `<section>` không có tên thì trình đọc màn hình coi như một cái hộp
+        vô danh — người dùng không nhảy giữa các khu được, phải nghe tuần tự từ đầu.
+
+        Tác dụng thứ hai, thấy ngay hôm nay: bản đồ quan hệ ở trên cố ý nhắc lại vài giá trị của
+        các khu này, nên "tìm chữ 172.16.31.1 trên trang" giờ ra ba chỗ. Có tên khu thì bài kiểm
+        hỏi được đúng câu nó muốn hỏi — "trong khu Địa chỉ IP có dòng này không" — thay vì bám
+        vào `id` hay tên class.
+      */}
       {panels.map((panel) => (
-        <section key={panel.key} id={`sec-${panel.key}`} className="card device-panel">
-          <h2 className="form-section-title">{panel.title}</h2>
+        <section
+          key={panel.key}
+          id={`sec-${panel.key}`}
+          className="card device-panel"
+          aria-labelledby={`sec-${panel.key}-title`}
+        >
+          <h2 className="form-section-title" id={`sec-${panel.key}-title`}>
+            {panel.title}
+          </h2>
           {panel.items.length === 0 ? (
             <p className="muted">{panel.emptyText ?? "—"}</p>
           ) : (

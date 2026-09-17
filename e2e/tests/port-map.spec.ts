@@ -126,7 +126,7 @@ test.describe('Port map', () => {
     const printerId = await createDevice(page, `PC-E2E-NOPORT-${stamp}`, 'Printer');
 
     await page.goto(`/devices/${printerId}`);
-    await expect(page.getByRole('tab', { name: 'Hồ sơ' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Tổng quan' })).toBeVisible();
     await expect(page.getByRole('tab', { name: 'Port map' })).toHaveCount(0);
   });
 

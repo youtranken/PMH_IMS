@@ -51,6 +51,18 @@ const E2E_LOGIN_RATE_LIMIT = 500;
  * Quy ước xuyên suốt: chỉ đụng dữ liệu mang dấu E2E (`code ILIKE '%E2E%'`,
  * `name ILIKE '%E2E%'`, `email LIKE 'e2e-tao-moi-%'`). Không câu nào có thể chạm dữ liệu
  * thật của PMH trong stack dev.
+ *
+ * ===== THỨ TỰ KHAI Ở ĐÂY CHÍNH LÀ THỨ TỰ DỌN =====
+ *
+ * `all` chạy các vùng theo đúng thứ tự khai trong object này, nên vùng nào bị vùng khác TRỎ
+ * TỚI thì phải nằm SAU. Cụ thể: `catalog` (site · tủ · nhà cung cấp · loại thiết bị · cổng
+ * dịch vụ · phòng ban · nhà mạng) là thứ MỌI vùng khác trỏ vào, nên nó phải là vùng CUỐI.
+ *
+ * Trước 17/09 `catalog` nằm giữa danh sách, ngay trước `isp`. Chạy được suốt vì các bài ISP
+ * của bộ E2E không gắn đường truyền vào site E2E nào. Nhưng gieo một lô dữ liệu thử có gắn
+ * — đúng cảnh dùng thật — là `DELETE FROM site` đâm vào `isp_line_site_id_fkey`, cả vùng
+ * `catalog` ROLLBACK, và cửa canh rác ở `e2e/global-teardown.ts` đỏ ở CUỐI lượt chạy với một
+ * thông báo khoá ngoại chẳng liên quan gì tới bài vừa chạy.
  */
 const DOMAINS = {
   /** Tài khoản do bài "SA tạo tài khoản mới" đẻ ra + trần đăng nhập cho môi trường test. */
@@ -109,42 +121,6 @@ const DOMAINS = {
     `DELETE FROM subnet WHERE name ILIKE '%E2E%'`,
   ],
 
-  /*
-   * QUY ƯỚC: tên CHỨA chữ "E2E", không phải BẮT ĐẦU bằng "E2E-".
-   *
-   * Ba dòng `site`/`vendor`/`device_type` trước 11/09 dùng `LIKE 'E2E-%'` — khác hẳn sáu vùng
-   * còn lại, và khác vì một lý do không ai nhớ. Hậu quả đo được: spec đặt tên `S-E2E-MIXA-…`
-   * (có tiền tố `S-`) nên không bao giờ bị dọn, và `cabinet` của nó ở lại theo. Cửa canh rác
-   * 11/09 tìm ra — đúng lớp lỗi "hai bản luật cho cùng một khái niệm".
-   *
-   * `catalog_history` cũng chưa từng được dọn: 793 hàng tích lại. Nó là bảng chỉ-thêm (AD-13)
-   * nên phải tắt trigger đúng như sáu bảng lịch sử khác trong file này.
-   */
-  catalog: [
-    `ALTER TABLE catalog_history DISABLE TRIGGER catalog_history_no_delete`,
-    /*
-     * Hai vế, và vế thứ hai mới là vế bắt buộc.
-     *
-     * Danh mục XOÁ HẲN được qua API (không phải ẩn), còn lịch sử thì ở lại — đó là thiết kế:
-     * dòng "đã xoá" là thứ duy nhất còn chứng minh mục đó từng tồn tại. Hệ quả với E2E: hàng
-     * lịch sử MỒ CÔI, không còn hàng gốc nào để dọn theo, nên vế `entity_id IN (…)` không bao
-     * giờ với tới.
-     *
-     * Lọc theo NGƯỜI THỰC HIỆN là cách vùng `approvals` ngay dưới đã dùng (`requester ILIKE
-     * '%e2e%'`) — không phải quy ước mới, và không đụng tới lịch sử của người dùng thật (năm
-     * tài khoản thật không ai có chữ "e2e" trong email).
-     */
-    `DELETE FROM catalog_history WHERE actor ILIKE '%e2e%' OR entity_id IN (SELECT id FROM site WHERE code ILIKE '%E2E%' UNION ALL SELECT id FROM cabinet WHERE code ILIKE '%E2E%' UNION ALL SELECT id FROM vendor WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM device_type WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM service_port WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM department WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM isp_provider WHERE name ILIKE '%E2E%')`,
-    `ALTER TABLE catalog_history ENABLE TRIGGER catalog_history_no_delete`,
-    `DELETE FROM cabinet WHERE code ILIKE '%E2E%' OR site_id IN (SELECT id FROM site WHERE code ILIKE '%E2E%')`,
-    `DELETE FROM site WHERE code ILIKE '%E2E%'`,
-    `DELETE FROM vendor WHERE name ILIKE '%E2E%'`,
-    `DELETE FROM device_type WHERE name ILIKE '%E2E%'`,
-    `DELETE FROM service_port WHERE name ILIKE '%E2E%'`,
-    `DELETE FROM department WHERE name ILIKE '%E2E%'`,
-    `DELETE FROM isp_provider WHERE name ILIKE '%E2E%'`,
-  ],
-
   secrets: [`DELETE FROM secret WHERE label ILIKE '%E2E%'`],
 
   'service-accounts': [
@@ -200,6 +176,44 @@ const DOMAINS = {
     `DELETE FROM isp_line_history WHERE isp_line_id IN (SELECT id FROM isp_line WHERE code ILIKE '%E2E%')`,
     `ALTER TABLE isp_line_history ENABLE TRIGGER isp_line_history_no_delete`,
     `DELETE FROM isp_line WHERE code ILIKE '%E2E%'`,
+  ],
+
+  /*
+   * PHẢI LÀ VÙNG CUỐI CÙNG — xem chú thích ngay trên `DOMAINS`.
+   *
+   * QUY ƯỚC: tên CHỨA chữ "E2E", không phải BẮT ĐẦU bằng "E2E-".
+   *
+   * Ba dòng `site`/`vendor`/`device_type` trước 11/09 dùng `LIKE 'E2E-%'` — khác hẳn sáu vùng
+   * còn lại, và khác vì một lý do không ai nhớ. Hậu quả đo được: spec đặt tên `S-E2E-MIXA-…`
+   * (có tiền tố `S-`) nên không bao giờ bị dọn, và `cabinet` của nó ở lại theo. Cửa canh rác
+   * 11/09 tìm ra — đúng lớp lỗi "hai bản luật cho cùng một khái niệm".
+   *
+   * `catalog_history` cũng chưa từng được dọn: 793 hàng tích lại. Nó là bảng chỉ-thêm (AD-13)
+   * nên phải tắt trigger đúng như sáu bảng lịch sử khác trong file này.
+   */
+  catalog: [
+    `ALTER TABLE catalog_history DISABLE TRIGGER catalog_history_no_delete`,
+    /*
+     * Hai vế, và vế thứ hai mới là vế bắt buộc.
+     *
+     * Danh mục XOÁ HẲN được qua API (không phải ẩn), còn lịch sử thì ở lại — đó là thiết kế:
+     * dòng "đã xoá" là thứ duy nhất còn chứng minh mục đó từng tồn tại. Hệ quả với E2E: hàng
+     * lịch sử MỒ CÔI, không còn hàng gốc nào để dọn theo, nên vế `entity_id IN (…)` không bao
+     * giờ với tới.
+     *
+     * Lọc theo NGƯỜI THỰC HIỆN là cách vùng `approvals` ngay dưới đã dùng (`requester ILIKE
+     * '%e2e%'`) — không phải quy ước mới, và không đụng tới lịch sử của người dùng thật (năm
+     * tài khoản thật không ai có chữ "e2e" trong email).
+     */
+    `DELETE FROM catalog_history WHERE actor ILIKE '%e2e%' OR entity_id IN (SELECT id FROM site WHERE code ILIKE '%E2E%' UNION ALL SELECT id FROM cabinet WHERE code ILIKE '%E2E%' UNION ALL SELECT id FROM vendor WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM device_type WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM service_port WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM department WHERE name ILIKE '%E2E%' UNION ALL SELECT id FROM isp_provider WHERE name ILIKE '%E2E%')`,
+    `ALTER TABLE catalog_history ENABLE TRIGGER catalog_history_no_delete`,
+    `DELETE FROM cabinet WHERE code ILIKE '%E2E%' OR site_id IN (SELECT id FROM site WHERE code ILIKE '%E2E%')`,
+    `DELETE FROM site WHERE code ILIKE '%E2E%'`,
+    `DELETE FROM vendor WHERE name ILIKE '%E2E%'`,
+    `DELETE FROM device_type WHERE name ILIKE '%E2E%'`,
+    `DELETE FROM service_port WHERE name ILIKE '%E2E%'`,
+    `DELETE FROM department WHERE name ILIKE '%E2E%'`,
+    `DELETE FROM isp_provider WHERE name ILIKE '%E2E%'`,
   ],
 };
 

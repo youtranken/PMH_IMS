@@ -158,7 +158,10 @@
   padding: var(--space-9);
   box-shadow: var(--shadow-sm);
 }
+/* Là `<h2>` từ 17/09 (khu có tên cho trình đọc màn hình) — nên phải dập lề mặc định của thẻ
+   tiêu đề, nếu không thẻ định danh tự dưng thụt xuống một khoảng so với cột bên trái. */
 .rail-h {
+  margin-top: 0;
   font-size: var(--fs-2xs);
   font-weight: var(--fw-bold);
   letter-spacing: 0.07em;

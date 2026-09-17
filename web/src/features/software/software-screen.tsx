@@ -19,6 +19,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
+import { useListUrlState } from '@/ui/use-list-url-state';
 import { useToast } from '@/ui/toast';
 import { AssignDialog } from './license-assignments-panel';
 import { SoftwareForm } from './software-form';
@@ -38,7 +39,10 @@ import { PATHS } from '@/lib/routes';
 
 const DEFAULT_LIMIT = 20;
 
-interface Filters {
+/* `[key: string]: string` để khớp ràng buộc của `useListUrlState` — hook đọc/ghi bộ lọc theo
+   TÊN KHÓA lên URL nên nó phải duyệt được các khóa. `kind`/`status` vẫn giữ union hẹp cho chỗ
+   dùng. */
+interface Filters extends Record<string, string> {
   search: string;
   kind: '' | SoftwareKind;
   status: '' | SoftwareStatus;
@@ -51,13 +55,26 @@ export function SoftwareScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
+  /*
+   * Bộ lọc · trang · số dòng · cột sắp nằm trên THANH ĐỊA CHỈ, không trong `useState` nữa
+   * (17/09/2026). Nhờ vậy: F5 giữ nguyên bộ lọc, gửi được link "license sắp hết hạn" cho đồng
+   * nghiệp, và bấm Back từ trang chi tiết về ĐÚNG kết quả cũ thay vì một danh sách trắng.
+   * Ô tìm cũng có debounce 250ms — trước đây mỗi phím là một lượt gọi API.
+   */
+  const url = useListUrlState<Filters>({
+    emptyFilters: EMPTY_FILTERS,
+    defaultLimit: DEFAULT_LIMIT,
+    defaultSort: { key: 'code', desc: false },
+    searchKey: 'search',
+  });
   /** Số dòng/trang do NGƯỜI DÙNG chọn (10/20/50/100), không còn là hằng số cứng. */
-  const [limit, setLimit] = useState(DEFAULT_LIMIT);
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const { page, limit } = url;
+  const filters = url.filters;
   // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả danh sách — sai mà không có dấu hiệu nào.
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'code', desc: false }]);
+  const sorting: SortingState = [{ id: url.sorting.key, desc: url.sorting.desc }];
+  const setPage = url.setPage;
+  const setLimit = url.setLimit;
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<SoftwareRow | null>(null);
   const [assigning, setAssigning] = useState<SoftwareRow | null>(null);
@@ -77,10 +94,10 @@ export function SoftwareScreen({ me }: { me: Me }) {
       ),
   });
 
+  // Mọi bộ lọc đều đưa về trang 1 (hook tự xoá `page`): đổi bộ lọc mà giữ nguyên trang 5 thì
+  // bảng trông như rỗng.
   const setFilter = <K extends keyof Filters>(key: K, value: Filters[K]) => {
-    setFilters((current) => ({ ...current, [key]: value }));
-    // Đổi bộ lọc mà giữ nguyên trang 5 thì bảng trông như rỗng.
-    setPage(1);
+    url.setFilter(key, value as string);
   };
 
   const rows = software.data?.items ?? [];
@@ -200,8 +217,8 @@ export function SoftwareScreen({ me }: { me: Me }) {
       />
 
       <FilterBar
-        search={filters.search}
-        onSearchChange={(value) => setFilter('search', value)}
+        search={url.searchInput}
+        onSearchChange={url.setSearchInput}
         searchPlaceholder={t('software.search')}
       >
         <Select
@@ -252,12 +269,13 @@ export function SoftwareScreen({ me }: { me: Me }) {
             manualSorting
             sorting={sorting}
             onSortingChange={(updater) => {
-              setSorting((current) =>
-                typeof updater === 'function' ? updater(current) : updater,
+              const next = typeof updater === 'function' ? updater(sorting) : updater;
+              const first = next[0];
+              // Đổi cột sắp xếp thì hook tự bỏ `page` khỏi URL: giữ nguyên trang 5 của thứ tự
+              // CŨ là nhìn vào một lát cắt chẳng liên quan gì tới thứ tự vừa chọn.
+              url.setSorting(
+                first ? { key: String(first.id), desc: !!first.desc } : { key: 'code', desc: false },
               );
-              // Đổi cột sắp xếp thì về trang 1: giữ nguyên trang 5 của thứ tự CŨ là nhìn vào
-              // một lát cắt chẳng liên quan gì tới thứ tự vừa chọn.
-              setPage(1);
             }}
           />
 

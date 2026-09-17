@@ -169,7 +169,7 @@ test.describe('Két sắt', () => {
     expect(create.status()).toBe(403);
 
     await page.goto(`/devices/${deviceId}`);
-    await expect(page.getByRole('tab', { name: 'Hồ sơ' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Tổng quan' })).toBeVisible();
     // Tab CÓ hiện (story 6.3) nhưng nội dung nói rõ là không có quyền — không phải bảng trống.
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByText(/không có quyền/i)).toBeVisible();

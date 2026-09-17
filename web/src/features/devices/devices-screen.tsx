@@ -64,6 +64,7 @@ export function DevicesScreen({ me }: { me: Me }) {
     emptyFilters: EMPTY_FILTERS,
     defaultLimit: DEFAULT_LIMIT,
     defaultSort: { key: 'code', desc: false },
+    searchKey: 'search',
   });
   const { page, limit } = url;
   const filters = url.filters;
@@ -91,7 +92,6 @@ export function DevicesScreen({ me }: { me: Me }) {
   const setFilter = <K extends keyof Filters>(key: K, value: Filters[K]) => {
     if (key === 'siteId' && filters.cabinetId) url.setFilter('cabinetId', '');
     url.setFilter(key, value as string);
-    void 0;
   };
 
   const cabinets = (lists.data?.cabinets ?? []).filter(

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 /**
  * Bố cục hai cột của MỌI trang chi tiết (AD-15): nội dung bên trái, thẻ định danh bên phải.
@@ -28,13 +28,26 @@ export function DetailLayout({ rail, children }: { rail: ReactNode; children: Re
   );
 }
 
-/** Thẻ định danh. `title` mặc định để mọi trang gọi cùng một tên, khỏi mỗi nơi một kiểu. */
+/**
+ * Thẻ định danh. `title` mặc định để mọi trang gọi cùng một tên, khỏi mỗi nơi một kiểu.
+ *
+ * LÀ MỘT KHU CÓ TÊN, không phải một cái hộp (sửa 17/09/2026). Bản đầu dựng tiêu đề bằng một
+ * `<div class="rail-h">` — nhìn thì y hệt, nhưng với trình đọc màn hình nó chỉ là chữ trôi
+ * giữa trang: không nhảy tới được, không biết mấy dòng dưới thuộc về nó.
+ *
+ * Thẻ này lại đang giữ đúng những thứ người ta cần gấp nhất (mã, vị trí, trạng thái, còn bao
+ * nhiêu ngày bảo hành/hạn), và từ đợt dựng lại thì hạn CHỈ còn ở đây — cột chính không vẽ lại
+ * nữa. Một khu quan trọng đến thế mà không có tên thì đường vào duy nhất là nghe hết cả trang.
+ */
 export function RailCard({ title, children }: { title: string; children: ReactNode }) {
+  const id = useId();
   return (
-    <div className="rail-card">
-      <div className="rail-h">{title}</div>
+    <section className="rail-card" aria-labelledby={id}>
+      <h2 className="rail-h" id={id}>
+        {title}
+      </h2>
       {children}
-    </div>
+    </section>
   );
 }
 

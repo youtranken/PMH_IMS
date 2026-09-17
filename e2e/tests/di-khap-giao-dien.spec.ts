@@ -507,7 +507,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
       `Hồ sơ thiết bị phải có ít nhất 4 tab, đang thấy: ${tabNames.join(' · ')}`,
     ).toBeGreaterThanOrEqual(4);
 
-    for (const required of [/^Hồ sơ/, /^Giấy tờ/, /^Két sắt/, /^Lịch sử/]) {
+    for (const required of [/^Tổng quan/, /^Giấy tờ/, /^Két sắt/, /^Lịch sử/]) {
       await expect(
         page.getByRole('tab', { name: required }),
         `Thanh tab của hồ sơ thiết bị thiếu đúng một tab khớp ${required}`,
@@ -2749,13 +2749,25 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         message:
           'Đầu hồ sơ thiết bị có đúng hai việc làm được: sửa hồ sơ, và thanh lý (nút đỏ vì nó LẤY ĐI thứ gì đó)',
       })
-      .toEqual(['Sửa hồ sơ', 'Thanh lý']);
+      // Cái thứ ba không phải một VIỆC mà là một CÁCH NHÌN: bản đồ quan hệ lật sang lượt xem
+      // "thanh lý sẽ cắt gì" — chỉ tô lại những nút sẽ bị gỡ, không ghi gì xuống DB.
+      .toEqual(['Sửa hồ sơ', 'Thanh lý', 'Xem lượt thanh lý cắt gì']);
 
+    /*
+     * MỖI Ô KỂ MỘT LẦN — hoặc là một ô có giá trị, hoặc là một cái tên trong dòng "Chưa khai".
+     *
+     * Bản trước của bài này đòi CẢ HAI cùng lúc: phải có ô "Model" (rỗng, một dấu gạch ngang)
+     * VÀ phải có dòng "Chưa khai: Model, …". Máy trong bài không khai ô nào, nên bản cũ khoá
+     * lại đúng cái nhược điểm mà lượt dựng lại 17/09 đi sửa: một lưới toàn gạch ngang, rồi
+     * ngay dưới là một câu nói lại y hệt danh sách ấy.
+     *
+     * Luật mới, và đây là thứ bài kiểm giữ từ giờ: ô KHÔNG có giá trị thì không vẽ ra ô nào.
+     */
     for (const nhan of ['Model', 'Serial', 'Nhà cung cấp', 'Ngày mua', 'Ghi chú']) {
       await expect(
         panel.getByText(nhan, { exact: true }),
-        `Lưới hồ sơ phải có ô "${nhan}" — trạng thái/vị trí/người giữ đã nằm ở dải chỉ số trên, không lặp xuống đây`,
-      ).toHaveCount(1);
+        `Máy này chưa khai "${nhan}" nên KHÔNG được vẽ một ô rỗng cho nó — tên của nó chỉ được xuất hiện trong dòng "Chưa khai"`,
+      ).toHaveCount(0);
     }
     await expect(
       panel.getByText('Chưa khai: Model, Serial, Nhà cung cấp, Bộ phận, Ngày mua, Ghi chú.'),
@@ -3594,10 +3606,25 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
     // ===== TAB HỒ SƠ =====
     const profile = page.getByRole('tabpanel');
+    /*
+     * HẠN NẰM Ở THẺ ĐỊNH DANH, KHÔNG CÒN Ở TAB HỒ SƠ (đợt dựng lại 16-17/09/2026).
+     *
+     * Bản trước của bài này đòi một `<h2>Hết hạn</h2>` bên trong tab. Đúng với bố cục cũ, và
+     * chính bố cục cũ là thứ đem sửa: nó vẽ một thẻ "Hết hạn" chiếm trọn bề ngang ở cột chính,
+     * rồi dải chỉ số vẽ LẠI y hệt cách đó hai dòng. Giờ hạn chỉ còn một chỗ — cột phải.
+     *
+     * Bài kiểm vì thế đổi CHỖ HỎI chứ không hạ yêu cầu: vẫn phải có thanh thời hạn đầy đủ
+     * (thanh tiến trình + hai mốc ngày), và cột chính KHÔNG được vẽ lại lần nữa.
+     */
+    const theDinhDanh = page.getByRole('region', { name: 'Thẻ định danh' });
     await expect(
-      profile.getByRole('heading', { level: 2, name: 'Hết hạn' }),
-      'Hồ sơ có hạn thì tab Hồ sơ phải vẽ thanh thời hạn đầy đủ',
+      theDinhDanh.getByRole('progressbar'),
+      'Hồ sơ có hạn thì thẻ định danh phải vẽ thanh thời hạn đầy đủ',
     ).toHaveCount(1);
+    await expect(
+      profile.getByRole('progressbar'),
+      'Cột chính KHÔNG được vẽ lại thanh thời hạn — đó đúng là chỗ trùng lặp đợt dựng lại đi bỏ',
+    ).toHaveCount(0);
     for (const label of ['Kỳ hạn', 'Ghi chú']) {
       await expect(
         profile.getByText(label, { exact: true }),
@@ -5717,8 +5744,11 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       {
         ten: /^Hồ sơ$/,
         dauHieu: async () => {
+          /* Thời hạn hợp đồng chuyển sang THẺ ĐỊNH DANH ở cột phải (đợt dựng lại 16-17/09),
+             cùng một nước đi với hạn license bên phòng Phần mềm: một giá trị, một chỗ. Thẻ
+             định danh dính theo tab Hồ sơ nên đây vẫn là dấu hiệu riêng của tab này. */
           await expect(
-            main.getByRole('heading', { level: 2, name: 'Hợp đồng' }),
+            page.getByRole('region', { name: 'Thẻ định danh' }).getByRole('progressbar'),
             'Tab Hồ sơ phải có thanh thời hạn hợp đồng (hồ sơ này đã khai ngày hết hạn)',
           ).toBeVisible();
           await expect(

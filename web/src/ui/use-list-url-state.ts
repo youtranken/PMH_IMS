@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 /**
@@ -49,8 +49,13 @@ export function useListUrlState<F extends Record<string, string>>(options: {
   emptyFilters: F;
   defaultLimit: number;
   defaultSort: SortState;
+  /**
+   * Khóa trong `F` nhận giá trị ô tìm ĐÃ LẮNG (thường là `'search'`). Khai nó thì `filters` trả
+   * về đã có sẵn từ khoá, nên `buildFilterQuery(filters)` của màn không phải đổi một chữ.
+   */
+  searchKey?: keyof F;
 }): ListUrlState<F> {
-  const { emptyFilters, defaultLimit, defaultSort } = options;
+  const { emptyFilters, defaultLimit, defaultSort, searchKey } = options;
   const [params, setParams] = useSearchParams();
 
   const read = useCallback(
@@ -58,17 +63,26 @@ export function useListUrlState<F extends Record<string, string>>(options: {
     [params],
   );
 
+  const search = read('q');
+
   const filters = useMemo(() => {
     const out = { ...emptyFilters };
     for (const key of Object.keys(emptyFilters)) {
       (out as Record<string, string>)[key] = params.get(key) ?? '';
     }
+    /*
+     * Ô tìm sống dưới khóa NGẮN `q` trên URL, nhưng mọi màn danh sách đã có sẵn một hàm
+     * `buildFilterQuery(filters)` đọc `filters.search` để dựng tham số gửi API. Không nối hai
+     * chỗ đó lại thì ô tìm vẫn gõ được, URL vẫn đổi `?q=…`, mà **API không bao giờ nhận
+     * `search=`** — bảng đứng yên và không có lỗi nào để lần. Chính cái bẫy đó đã lọt vào
+     * `devices-screen.tsx` ở lượt port đầu; đặt lời giải ở đây để bảy màn còn lại khỏi vấp lại.
+     */
+    if (searchKey) (out as Record<string, string>)[searchKey as string] = search;
     return out;
-    // `params` đổi là đọc lại; `emptyFilters` là hằng của màn nên không cần theo dõi.
+    // `params`/`search` đổi là đọc lại; `emptyFilters` và `searchKey` là hằng của màn.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [params]);
+  }, [params, search]);
 
-  const search = read('q');
   const page = Math.max(1, Number.parseInt(read('page', '1'), 10) || 1);
   const limit = Number.parseInt(read('limit', String(defaultLimit)), 10) || defaultLimit;
   const sortKey = read('sort', defaultSort.key);
@@ -87,23 +101,40 @@ export function useListUrlState<F extends Record<string, string>>(options: {
   const [searchInput, setSearchInput] = useState(search);
   useEffect(() => setSearchInput(search), [search]);
 
+  /*
+   * BẢN MỚI NHẤT CỦA THAM SỐ, giữ trong một ref — không đọc lại từ `params` của lượt render.
+   *
+   * VÌ SAO (bắt được 17/09/2026 bởi bài "phân trang ăn thật"). `ui/pagination.tsx` gọi HAI lượt
+   * ghi liền nhau trong cùng một nhịp khi người dùng đổi số dòng:
+   *     onLimitChange(10);   // → ghi limit
+   *     onPageChange(1);     // → xoá page
+   * Chưa có lượt render nào xen vào giữa, nên cả hai cùng dựng URL mới từ CÙNG một bản gốc, và
+   * lượt sau đè mất `limit=10` của lượt trước. Triệu chứng đúng như bài kiểm mô tả: bấm "10"
+   * xong bảng vẫn 20 dòng, ô "Số dòng" trông như chỉ để trang trí.
+   *
+   * Thời `useState` không lộ ra vì `limit` và `page` là hai ô state rời nhau. Gom cả bốn thứ
+   * lên một sợi dây duy nhất (thanh địa chỉ) thì thứ tự ghi bắt đầu có nghĩa — và đây là cái
+   * giá phải trả, trả một lần ở đây thay vì bắt mỗi màn tự nhớ.
+   */
+  const latest = useRef(params);
+  latest.current = params;
+
   const write = useCallback(
     (patch: Record<string, string | number | boolean | null>, resetPage = true) => {
-      setParams(
-        (current) => {
-          const next = new URLSearchParams(current);
-          for (const [key, value] of Object.entries(patch)) {
-            const text = value === null || value === false ? '' : String(value);
-            if (text === '') next.delete(key);
-            else next.set(key, text);
-          }
-          if (resetPage) next.delete('page');
-          return next;
-        },
+      const next = new URLSearchParams(latest.current);
+      for (const [key, value] of Object.entries(patch)) {
+        const text = value === null || value === false ? '' : String(value);
+        if (text === '') next.delete(key);
+        else next.set(key, text);
+      }
+      if (resetPage) next.delete('page');
+      // Ghi lại ngay để lượt ghi THỨ HAI trong cùng nhịp nối tiếp bản này, không quay về bản cũ.
+      latest.current = next;
+      setParams(next, {
         // `replace` để mỗi lần đổi bộ lọc KHÔNG thêm một mục lịch sử: người dùng bấm Back là
         // muốn rời khỏi màn, không phải đi lùi qua mười hai lần chỉnh bộ lọc.
-        { replace: true },
-      );
+        replace: true,
+      });
     },
     [setParams],
   );

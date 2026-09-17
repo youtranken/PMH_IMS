@@ -373,11 +373,85 @@
 }
 
 /* --- Bảng điều khiển (features/dashboard/dashboard-screen.tsx) ------------ */
-/* auto-fit + minmax: ba khối nằm ngang trên desktop, tự xếp dọc ở 390px mà không cần
-   media query riêng — cùng nếp với các lưới khác của bộ dùng chung. */
+
+/*
+ * Hàng số ở đầu trang. Mỗi ô là một LINK: con số cũng là cái bấm được, không phải một nhãn
+ * trang trí để rồi phải đi tìm đường vào bên dưới.
+ */
+.dash-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9.5rem), 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--border-2);
+  border-radius: var(--r);
+  background: var(--surface);
+  color: var(--ink);
+  text-decoration: none;
+  min-width: 0;
+  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+.kpi:hover { border-color: var(--primary); box-shadow: var(--shadow-sm); }
+.kpi:focus-visible { outline: none; box-shadow: var(--ring); }
+.kpi-n {
+  font-family: var(--mono);
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-bold);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+.kpi-l {
+  font-size: var(--fs-2xs);
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+/* Có việc phải làm thì ô đổi màu ở VIỀN TRÁI và ở con số — không tô nền cả ô, vì năm ô tô
+   nền cạnh nhau thì mắt không còn thứ tự nào để đọc. */
+.kpi.warn { border-left-color: var(--warn); }
+/* `--warn` vốn đã là bản ĐẬM đủ tương phản cho chữ (#a34d08 — ghi rõ ở tokens.css sau lượt
+   axe 06/08), nên dùng thẳng, không cần một sắc riêng cho chữ. */
+.kpi.warn .kpi-n { color: var(--warn); }
+/* Số 0 thì nhạt đi: "không có gì" vẫn phải đọc được, nhưng không được tranh chỗ với số khác. */
+.kpi.zero .kpi-n { color: var(--ink-3); font-weight: var(--fw-semibold); }
+.dash-calm {
+  margin: calc(var(--space-6) * -1) 0 var(--space-6);
+  padding-top: var(--space-2);
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+
+/*
+ * Lưới khối ĐANG CÓ VIỆC — xếp theo CỘT, không theo hàng (sửa 17/09/2026).
+ *
+ * Bản cũ để `grid` với `auto-fit, minmax(280px, 1fr)`. Hai chuyện cùng lúc: trên màn 24in nó
+ * chia ra SÁU cột nên cả sáu khối nằm một hàng ngang; và vì là grid nên mọi ô trên một hàng
+ * phải bắt đầu ở cùng một mốc — khối "Sắp hết hạn" 8 dòng cao vống lên, khối bên cạnh một
+ * dòng, và phần chênh nhau là khoảng trắng chết. Đó là chỗ 65% chiều cao màn hình đi mất.
+ *
+ * Bản này giữ `grid` nhưng chặn cả hai đầu:
+ *   · sàn bề rộng cột = MỘT PHẦN BA khung → không bao giờ quá ba cột, dù màn rộng bao nhiêu;
+ *   · `auto-fit` → cột nào KHÔNG có thẻ thì co về 0 và nhường chỗ, nên hai khối trên màn 24in
+ *     dàn ra nửa-nửa chứ không nằm nép sang trái chừa một cột chết.
+ * Đã thử `columns` (multi-column): hết hàng, hết lệch chiều cao, nhưng cột rỗng vẫn chiếm chỗ
+ * vì multi-column chia đều bề ngang trước rồi mới rót nội dung vào.
+ *
+ * `align-items: start` để thẻ thấp KHÔNG bị kéo cao bằng thẻ cạnh nó.
+ */
 .dashboard {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  /* `min(100%, …)` là cái chốt cho điện thoại: sàn 22rem mà không chặn thì ở màn hẹp hơn 22rem
+     cột rộng hơn khung và cả trang trôi ngang (UX-DR2 đo đúng chỗ này ở 390px). */
+  grid-template-columns: repeat(
+    auto-fit,
+    minmax(min(100%, max(22rem, (100% - var(--space-4) * 2) / 3)), 1fr)
+  );
   gap: var(--space-4);
   align-items: start;
 }
@@ -387,6 +461,31 @@
   gap: var(--space-3);
   min-width: 0;
 }
+
+/*
+ * Nhóm ĐANG YÊN — mỗi khối một dòng, xếp dọc dưới chân trang.
+ *
+ * Tin tốt vẫn phải nói ra: "chưa dải nào chạm ngưỡng" khác hẳn "chưa ai đo bao giờ", và khối
+ * Sự cố còn phải nói thẳng là hệ thống CHƯA theo dõi. Nhưng một câu tin tốt không đáng một ô
+ * cao bằng ô có tám dòng việc.
+ */
+.dash-quiet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.dash-card.slim {
+  flex-direction: row;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-2);
+  margin-bottom: 0;
+}
+.dash-card.slim .row { flex: 0 0 auto; }
+.dash-card.slim p { margin: 0; }
 .dash-list {
   list-style: none;
   margin: 0;

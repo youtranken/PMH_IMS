@@ -342,6 +342,11 @@ export default {
     /* Tab đầu của trang thiết bị đổi tên 17/09/2026: nó không còn chỉ là lưới hồ sơ mà là
        BẢN ĐỒ toàn cảnh + phần hồ sơ. Khóa `?tab=profile` giữ nguyên nên link cũ vẫn chạy. */
     tabProfile: 'Tổng quan',
+    /* KHỐI ĐẦU CỦA FORM, KHÔNG PHẢI TAB — hai thứ khác nhau và từ 17/09 mang hai tên khác nhau.
+       Trước đó cả hai cùng đọc `tabProfile`, nên lượt đổi tên tab kéo theo cả tiêu đề khối
+       trong hộp "Thêm thiết bị" ("là máy gì → đứng ở đâu → mua của ai"), nơi chữ "Tổng quan"
+       vô nghĩa vì chưa có gì để tổng quan. E2E bắt được; người dùng thì chỉ thấy lạ. */
+    formSectionProfile: 'Hồ sơ',
     tabHistory: 'Lịch sử',
     tabAttachments: 'Giấy tờ',
     tabPortMap: 'Port map',
@@ -1342,8 +1347,16 @@ export default {
   },
   dashboard: {
     title: 'Xin chào {{name}}',
-    subtitle:
-      'Những khối cần nhìn trước giờ họp: sắp hết hạn, dải mạng sắp đầy, két lâu chưa đổi, sự cố và break-glass tuần qua, và những gì vừa vào kho thanh lý.',
+    subtitle: 'Số liệu tính lúc mở trang. Bấm một ô để xem danh sách đầy đủ.',
+
+    /* Hàng số ở đầu trang. KHÔNG phải số liệu mới: đúng bằng `total` của từng khối bên dưới —
+       thứ trước đây nằm trong một cái pill 11px cạnh tiêu đề, đọc được thì phải đi tìm. */
+    kpiExpiring: 'Sắp hết hạn · 30 ngày',
+    kpiSubnets: 'Dải mạng sắp đầy',
+    kpiStale: 'Két lâu chưa đổi',
+    kpiBreakGlass: 'Break-glass · 7 ngày',
+    kpiDisposed: 'Vừa thanh lý · 7 ngày',
+    kpiCalm: 'Không có gì gấp sáng nay.',
     expiring: 'Sắp hết hạn (30 ngày)',
     expiringEmpty: 'Không có gì hết hạn trong 30 ngày tới.',
     seeAllExpiring: 'Xem toàn bộ danh sách hạn',

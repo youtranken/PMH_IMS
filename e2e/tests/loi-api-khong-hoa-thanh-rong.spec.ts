@@ -176,7 +176,7 @@ test.describe('API hỏng phải nói ra, không được hóa thành rỗng', (
     const deviceId = await makeDevice(page, `PC-E2E-M3OK-${Date.now().toString().slice(-4)}`);
 
     await page.goto(`/devices/${deviceId}`);
-    await expect(page.getByRole('button', { name: 'Thanh lý' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Thanh lý', exact: true })).toBeVisible();
     await expect(page.getByText(LOAD_ERROR)).toHaveCount(0);
 
     await page.goto('/devices');

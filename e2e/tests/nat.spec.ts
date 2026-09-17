@@ -595,8 +595,17 @@ test.describe('Sổ NAT', () => {
 
     await page.goto(`/devices/${routerId}`);
     await expect(page.getByRole('heading', { name: 'Sổ NAT' })).toBeVisible();
-    await expect(page.getByText('TCP 8443')).toBeVisible();
-    await expect(page.getByText(/phần mềm thuế truy cập từ ngoài/)).toBeVisible();
+    /*
+     * Hỏi TRONG KHU "Sổ NAT", không phải "ở đâu đó trên trang".
+     *
+     * Từ 17/09 đầu trang có bản đồ quan hệ, và nó cố ý nhắc lại một dòng tóm tắt của mỗi khu
+     * (kèm một bản dự phòng dạng danh sách cho màn hẹp, luôn nằm trong DOM). "TCP 8443" vì thế
+     * khớp ba chỗ và Playwright dừng ở strict mode. Bản đồ đang làm đúng việc của nó — cái sai
+     * là câu hỏi quá rộng: bài này muốn biết KHU SỔ NAT có dòng ấy hay không.
+     */
+    const khuNat = page.getByRole('region', { name: 'Sổ NAT' });
+    await expect(khuNat.getByText('TCP 8443')).toBeVisible();
+    await expect(khuNat.getByText(/phần mềm thuế truy cập từ ngoài/)).toBeVisible();
   });
 
   /**
@@ -648,8 +657,10 @@ test.describe('Panel IP trên trang thiết bị', () => {
 
     await page.goto(`/devices/${routerId}`);
     await expect(page.getByRole('heading', { name: 'Địa chỉ IP' })).toBeVisible();
-    await expect(page.getByText(`172.16.${octet}.1`)).toBeVisible();
-    await expect(page.getByText('cổng mặc định')).toBeVisible();
+    // Hỏi trong KHU "Địa chỉ IP": bản đồ quan hệ ở trên cũng nhắc lại địa chỉ này (xem bài NAT).
+    const khuIp = page.getByRole('region', { name: 'Địa chỉ IP' });
+    await expect(khuIp.getByText(`172.16.${octet}.1`)).toBeVisible();
+    await expect(khuIp.getByText('cổng mặc định')).toBeVisible();
     // IP của máy khác KHÔNG được lọt vào panel của con router này.
     await expect(page.getByText(internalIp)).toHaveCount(0);
   });
@@ -660,7 +671,7 @@ test.describe('Panel IP trên trang thiết bị', () => {
     const { routerId } = await setUp(page, stamp);
 
     await page.goto(`/devices/${routerId}`);
-    await expect(page.getByRole('tab', { name: 'Hồ sơ' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Tổng quan' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Địa chỉ IP' })).toHaveCount(0);
     await expect(page.getByRole('heading', { name: 'Sổ NAT' })).toHaveCount(0);
   });

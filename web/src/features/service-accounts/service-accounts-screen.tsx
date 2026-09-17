@@ -18,6 +18,7 @@ import { Pagination } from '@/ui/pagination';
 import { RowActions } from '@/ui/row-actions';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
+import { useListUrlState } from '@/ui/use-list-url-state';
 import { ServiceAccountForm } from './service-account-form';
 import {
   KIND_KEY,
@@ -32,7 +33,10 @@ import {
 
 const DEFAULT_LIMIT = 20;
 
-interface Filters {
+/* `[key: string]: string` để khớp ràng buộc của `useListUrlState` — hook đọc/ghi bộ lọc theo
+   TÊN KHÓA lên URL nên nó phải duyệt được các khóa. `kind`/`status` vẫn giữ union hẹp cho
+   chỗ dùng. */
+interface Filters extends Record<string, string> {
   search: string;
   kind: '' | ServiceAccountKind;
   status: '' | ServiceAccountStatus;
@@ -51,11 +55,24 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
-  /** Số dòng/trang do NGƯỜI DÙNG chọn (10/20/50/100), không còn là hằng số cứng. */
-  const [limit, setLimit] = useState(DEFAULT_LIMIT);
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'code', desc: false }]);
+  /*
+   * Bộ lọc · trang · số dòng · cột sắp nằm trên THANH ĐỊA CHỈ, không trong `useState` nữa
+   * (17/09/2026). Nhờ vậy: F5 giữ nguyên bộ lọc, gửi được link "tài khoản VPN đã đóng" cho
+   * đồng nghiệp, và bấm Back từ trang chi tiết về ĐÚNG kết quả cũ thay vì một danh sách
+   * trắng. Ô tìm cũng có debounce 250ms — trước đây mỗi phím là một lượt gọi API.
+   */
+  const url = useListUrlState<Filters>({
+    emptyFilters: EMPTY_FILTERS,
+    defaultLimit: DEFAULT_LIMIT,
+    defaultSort: { key: 'code', desc: false },
+    searchKey: 'search',
+  });
+  const { page, limit } = url;
+  const filters = url.filters;
+  // Sắp xếp chạy ở SERVER (`manualSorting`), nên dựng lại `SortingState` cho `DataTable`.
+  const sorting: SortingState = [{ id: url.sorting.key, desc: url.sorting.desc }];
+  const setPage = url.setPage;
+  const setLimit = url.setLimit;
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<ServiceAccountRow | null>(null);
   /** Hồ sơ đang chờ đổi trạng thái, kèm chiều đổi — cùng một hộp cho cả đóng lẫn mở lại. */
@@ -77,9 +94,10 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['service-accounts'] });
 
+  // Mọi bộ lọc đều đưa về trang 1 (hook tự xoá `page`): giữ nguyên trang 5 khi đổi lọc thì
+  // bảng trông như rỗng.
   const setFilter = <K extends keyof Filters>(key: K, value: Filters[K]) => {
-    setFilters((current) => ({ ...current, [key]: value }));
-    setPage(1);
+    url.setFilter(key, value as string);
   };
 
   const rows = accounts.data?.items ?? [];
@@ -191,8 +209,8 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
       />
 
       <FilterBar
-        search={filters.search}
-        onSearchChange={(value) => setFilter('search', value)}
+        search={url.searchInput}
+        onSearchChange={url.setSearchInput}
         searchPlaceholder={t('serviceAccounts.search')}
       >
         <Select
@@ -236,10 +254,13 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
             manualSorting
             sorting={sorting}
             onSortingChange={(updater) => {
-              setSorting((current) =>
-                typeof updater === 'function' ? updater(current) : updater,
+              const next = typeof updater === 'function' ? updater(sorting) : updater;
+              const first = next[0];
+              // Đổi cột sắp xếp thì hook tự bỏ `page` khỏi URL: giữ nguyên trang 5 của thứ tự
+              // CŨ là nhìn vào một lát cắt chẳng liên quan gì tới thứ tự vừa chọn.
+              url.setSorting(
+                first ? { key: String(first.id), desc: !!first.desc } : { key: 'code', desc: false },
               );
-              setPage(1);
             }}
           />
           <Pagination

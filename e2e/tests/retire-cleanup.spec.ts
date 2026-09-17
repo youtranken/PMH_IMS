@@ -281,7 +281,7 @@ test.describe('Thanh lý trên giao diện — ô tick "Dọn hết thứ liên 
     const kit = await deviceHoldingEverything(page, stamp);
 
     await page.goto(`/devices/${kit.deviceId}`);
-    await page.getByRole('button', { name: 'Thanh lý' }).click();
+    await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
 
     const dialog = page.getByRole('dialog');
     // Ô tick phải CÓ MẶT và mặc định KHÔNG tick — dọn hàng loạt không được là mặc định êm ái.
@@ -319,7 +319,7 @@ test.describe('Thanh lý trên giao diện — ô tick "Dọn hết thứ liên 
     const kit = await deviceHoldingEverything(page, stamp);
 
     await page.goto(`/devices/${kit.deviceId}`);
-    await page.getByRole('button', { name: 'Thanh lý' }).click();
+    await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
 
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('checkbox', { name: /Dọn hết thứ liên quan/ }).check();

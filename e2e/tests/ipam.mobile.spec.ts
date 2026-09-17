@@ -101,8 +101,11 @@ test.describe('Địa chỉ IP ở 390px', () => {
 
     await page.goto(`/devices/${deviceId}`);
     await expect(page.getByRole('heading', { name: 'Địa chỉ IP' })).toBeVisible();
-    await expect(page.getByText(`172.17.${octet}.1`)).toBeVisible();
-    await expect(page.getByText('cổng quản trị switch tầng 3')).toBeVisible();
+    // Hỏi trong KHU "Địa chỉ IP" — ở 390px bản đồ quan hệ ẩn đi, nhưng bản danh sách thay thế
+    // của nó vẫn nằm trong DOM và vẫn mang đúng chuỗi này.
+    const khuIp = page.getByRole('region', { name: 'Địa chỉ IP' });
+    await expect(khuIp.getByText(`172.17.${octet}.1`)).toBeVisible();
+    await expect(khuIp.getByText('cổng quản trị switch tầng 3')).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   });
 });

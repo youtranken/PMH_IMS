@@ -189,7 +189,7 @@ export function DeviceForm({
             {error}
           </p>
         ) : null}
-        <FormSection title={t('devices.tabProfile')} columns={3}>
+        <FormSection title={t('devices.formSectionProfile')} columns={3}>
           <Field label={t('devices.code')} required htmlFor="device-code">
             <input
               id="device-code"
