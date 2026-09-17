@@ -130,6 +130,37 @@ describe('Step-up mặc định đóng (FR-022)', () => {
       route: "@Post(':id/reveal')",
       why: 'đường DUY NHẤT plaintext rời khỏi hệ thống',
     },
+    /*
+     * BỐN CỬA GHI CỦA KÉT — thêm 17/09/2026.
+     *
+     * Bản trước chỉ khoá đường ĐỌC. Nhưng lớp mang `@NoStepUp()`, nên `@RequiresStepUp()` ở
+     * từng route là thứ DUY NHẤT bắt gõ mã ở bốn cửa này; gỡ một dòng đi là cửa đó lặng lẽ rơi
+     * về "không cần gõ". Và không bài kiểm nào bắt được: mọi bài E2E đều cất/sửa secret ngay
+     * sau `firstLogin`, tức còn trong thời gian ân hạn, nên hàng rào chưa bao giờ bị chạm tới.
+     *
+     * Đây đúng mẫu lỗi mà chính file này dựng ra để chống: hàng rào có ở cửa được nhớ tới,
+     * thiếu ở những cửa tương đương ngay bên cạnh.
+     */
+    {
+      file: 'modules/vault/vault.controller.ts',
+      route: '@Post()',
+      why: 'cất secret mới — phiên bị chiếm không được phép ghi vào két',
+    },
+    {
+      file: 'modules/vault/vault.controller.ts',
+      route: "@Patch(':id')",
+      why: 'sửa metadata của ngăn (nhãn, tên đăng nhập)',
+    },
+    {
+      file: 'modules/vault/vault.controller.ts',
+      route: "@Post(':id/rotate')",
+      why: 'xoay giá trị — ghi đè mật khẩu đang dùng',
+    },
+    {
+      file: 'modules/vault/vault.controller.ts',
+      route: "@Delete(':id')",
+      why: 'thu hồi ngăn',
+    },
   ];
 
   it.each(LOCKED)('$file $route đòi step-up ($why)', ({ file, route }) => {

@@ -1,5 +1,5 @@
 import { Global, Injectable, Logger, Module } from '@nestjs/common';
-import type { DevicePanel, DevicePanelProvider } from './device-panels';
+import type { DevicePanel, DevicePanelProvider, PanelViewer } from './device-panels';
 import { redactMessage } from './log-redact';
 
 /**
@@ -23,11 +23,11 @@ export class DevicePanelRegistry {
     this.providers.push(provider);
   }
 
-  async listFor(deviceId: string): Promise<DevicePanel[]> {
+  async listFor(deviceId: string, viewer: PanelViewer): Promise<DevicePanel[]> {
     const results = await Promise.all(
       this.providers.map(async (provider) => {
         try {
-          return await provider.buildFor(deviceId);
+          return await provider.buildFor(deviceId, viewer);
         } catch (error) {
           // Một module phụ hỏng KHÔNG được làm sập cả trang chi tiết thiết bị: hồ sơ,
           // bảo hành, port map, giấy tờ vẫn phải xem được — đó là màn tra cứu lúc có sự cố.

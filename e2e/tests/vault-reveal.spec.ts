@@ -11,6 +11,7 @@ import {
   expireStepUp,
   firstLogin,
   freshTotpCode,
+  lastAudit,
   loginWithTotp,
   logout,
   resetDevices,
@@ -188,6 +189,90 @@ test.describe('Mở két với TOTP step-up', () => {
       expect(((await opened.json()) as { value: string }).value).toBe(`Web#Pass#${stamp}`);
       expect(countAudit('vault.secret.revealed', ids[0])).toBe(i);
     }
+
+    /*
+     * DÒNG AUDIT PHẢI GHI ĐÚNG NGƯỜI — thêm 17/09/2026.
+     *
+     * Ba khẳng định ở trên chỉ ĐẾM. Đổi `actor` trong `vault.service.ts` thành hằng `'system'`
+     * thì cả ba vẫn xanh, và nhật ký nộp auditor nói "có người xem" mà không nói được ai — thứ
+     * vô dụng đúng vào lúc cần nó nhất.
+     */
+    const row = lastAudit('vault.secret.revealed', ids[0]);
+    expect(row?.actor, 'dòng audit phải mang email người vừa mở, không phải một hằng số').toBe(
+      E2E_SA.email,
+    );
+  });
+
+  /**
+   * THU HỒI LÀ CHẤM DỨT, KHÔNG PHẢI ẨN ĐI — bài này thêm 17/09/2026.
+   *
+   * Người ta bấm thu hồi đúng vào lúc nghi một mật khẩu đã lộ. Bộ kiểm trước đó chỉ khẳng định
+   * "ngăn biến khỏi danh sách" — mà biến khỏi danh sách và không mở được là HAI chuyện khác
+   * nhau: `listFor()` có vị từ `revokedAt` riêng của nó, nên bỏ hẳn vế `isNull(revokedAt)` ở
+   * `requireAlive()` vẫn để danh sách sạch sẽ trong khi mọi id cũ vẫn mở ra plaintext. Toàn bộ
+   * bộ kiểm khi đó vẫn xanh.
+   *
+   * Vế đầu (mở được TRƯỚC khi thu hồi) là vế đối chứng: thiếu nó thì bài này xanh cả khi đường
+   * mở két hỏng hoàn toàn.
+   */
+  /**
+   * CHỐNG REPLAY Ở ĐƯỜNG MỞ KÉT — bài này thêm 17/09/2026, và trước đó chỗ này trống.
+   *
+   * Mã Authenticator sống 30 giây; mối lo là người nhìn qua vai (hoặc bắt được gói tin) bắn lại
+   * CHÍNH mã đó khi còn hạn. Hệ thống có chống — "đốt" mã bằng CAS trong cùng transaction với
+   * lượt mở phiên — nhưng bộ kiểm chỉ canh điều đó ở đường ĐĂNG NHẬP (`auth.spec.ts`) và ở
+   * tầng câu SQL (`api/test/totp-replay-cas.spec.ts`). Cửa `POST /auth/step-up` là một cửa gõ
+   * mã KHÁC, và chưa bài nào gửi lại một mã đã dùng tới đó. Đổi `lastUsedTimeStep` thành `null`
+   * trong `stepUp()` là xanh hết.
+   *
+   * Cố ý KHÔNG dùng `freshTotpCode` cho lượt thứ hai: chính helper đó tránh dùng lại mã, tức
+   * tránh đúng thứ bài này sinh ra để thử.
+   */
+  test('mã 6 số đã dùng để mở két không dùng lại được', async ({ page }) => {
+    const totpSecret = await firstLogin(page, E2E_SA);
+    const code = await freshTotpCode(totpSecret);
+
+    // Về trạng thái "cần gõ mã" rồi mới gõ — nếu không, lượt đầu đã nằm trong thời gian ân hạn.
+    expireStepUp(E2E_SA.email);
+    const first = await page.request.post('/api/v1/auth/step-up', {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+      data: { token: code },
+    });
+    expect(first.status(), 'vế đối chứng: mã còn hạn phải qua được bước xác thực').toBe(200);
+
+    // Đẩy phiên về "cần gõ lại", rồi bắn lại ĐÚNG mã vừa dùng.
+    expireStepUp(E2E_SA.email);
+    const replay = await page.request.post('/api/v1/auth/step-up', {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+      data: { token: code },
+    });
+    expect(
+      replay.status(),
+      `mã đã dùng phải bị từ chối; nhận được ${replay.status()} ${await replay.text()}`,
+    ).not.toBe(200);
+  });
+
+  test('thu hồi rồi thì id cũ KHÔNG mở ra giá trị nữa', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const { ids } = await setUpDeviceWithSecrets(page, stamp, [
+      { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
+    ]);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
+
+    const before = await page.request.post(`/api/v1/vault/secrets/${ids[0]}/reveal`, { headers });
+    expect(before.status(), 'chưa thu hồi thì phải mở được — vế đối chứng').toBe(200);
+
+    const revoked = await page.request.delete(`/api/v1/vault/secrets/${ids[0]}`, { headers });
+    expect(revoked.status()).toBe(200);
+
+    const after = await page.request.post(`/api/v1/vault/secrets/${ids[0]}/reveal`, { headers });
+    expect(after.status(), 'ngăn đã thu hồi mà vẫn mở được là thu hồi không có nghĩa gì').toBe(404);
+    expect(await after.json()).toMatchObject({ code: 'SECRET_NOT_FOUND' });
+    expect(
+      await after.text(),
+      'và thân phản hồi tuyệt đối không được mang theo giá trị cũ',
+    ).not.toContain(`Web#Pass#${stamp}`);
   });
 
   test('Member gọi đường mở két nhận 403, không phải lời mời gõ mã', async ({ page }) => {

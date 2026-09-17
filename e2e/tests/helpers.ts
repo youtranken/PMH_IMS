@@ -191,6 +191,37 @@ export function expireStepUp(email: string): void {
 }
 
 /** Đếm số dòng audit của một hành động trên một secret — dùng để kiểm "mỗi lần mở = một dòng". */
+/**
+ * ĐỌC NỘI DUNG dòng audit mới nhất, không chỉ đếm.
+ *
+ * `countAudit` trả lời "có mấy dòng" — và cho tới 17/09/2026 đó là TẤT CẢ những gì bộ kiểm hỏi
+ * về nhật ký mở két. Nghĩa là đổi `actor` thành hằng `'system'`, hay bỏ mất `grantId` (thứ nói
+ * "mở được là nhờ phiếu break-glass nào"), đều không làm bài nào đỏ — trong khi tờ giấy nộp
+ * auditor sẽ nói "có người xem" mà không nói được ai, hoặc không nói được bằng quyền gì.
+ *
+ * Trả `actor` và `detail` thô (JSON dạng chuỗi) để nơi gọi tự khẳng định.
+ */
+export function lastAudit(
+  action: string,
+  objectId: string,
+): { actor: string; detail: string } | null {
+  /*
+   * Ghép hai cột TRONG SQL thay vì dùng `-F` của psql: tham số `-F '|'` đi qua `execSync` trên
+   * Windows thì dấu nháy đơn không sống sót, psql thoát với status 255 và bài kiểm đỏ vì một
+   * lý do chẳng liên quan gì tới thứ nó kiểm. `countAudit` ngay dưới không vấp vì nó chỉ có
+   * một cột. Dấu ngăn phải là chuỗi không thể xuất hiện trong email hay JSON.
+   */
+  const out = dockerExec(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
+      `"SELECT actor || '~|~' || coalesce(detail::text, '') FROM audit_log ` +
+      `WHERE action = '${action}' AND object_id = '${objectId}' ORDER BY created_at DESC LIMIT 1"`,
+    'Đọc dòng audit mới nhất',
+  ).trim();
+  if (!out) return null;
+  const at = out.indexOf('~|~');
+  return { actor: out.slice(0, at), detail: out.slice(at + 3) };
+}
+
 export function countAudit(action: string, objectId: string): number {
   const out = dockerExec(
     `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +

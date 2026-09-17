@@ -35,10 +35,45 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
     expect(ownerDto).toContain('ownerId!');
   });
 
-  it('không có route xuất/tải hàng loạt', () => {
-    for (const forbidden of ['export', 'download', 'xlsx', 'csv', 'all']) {
-      expect(controller.toLowerCase()).not.toContain(`@get('${forbidden}`);
-      expect(controller.toLowerCase()).not.toContain(`@post('${forbidden}`);
+  /**
+   * QUÉT CẢ MODULE, KHÔNG PHẢI MỘT FILE (sửa 17/09/2026).
+   *
+   * Bản trước chỉ soi `vault.controller.ts`. Trong khi đó `break-glass.controller.ts:82` viết
+   * nguyên văn "`vault-surface.spec.ts` khóa luật này lại" ngay trên một `@Get('export.xlsx')`
+   * — một lời hứa KHÔNG CÓ THẬT: file đó chưa bao giờ được đọc ở đây. Thêm một route xuất file
+   * vào `break-glass.controller.ts` hay `vault-access.controller.ts` là lọt cổng FR-026 ở tầng
+   * mã nguồn, và người sửa sau đọc chú thích kia rồi yên tâm không kiểm nữa.
+   *
+   * Và so bằng regex thay vì `toContain('@get(\'...')`: bản cũ chỉ bắt nháy ĐƠN, nên
+   * `@Get("export.xlsx")` với nháy kép đi qua sạch sẽ.
+   *
+   * NGOẠI LỆ CÓ TÊN: `break-glass.controller.ts` được phép có `export.xlsx` — đó là nhật ký
+   * DUYỆT (ai xin, đối tượng nào, lý do, ai quyết), không cột nào chạm giá trị trong két, và
+   * FR-025 đòi nộp được cho auditor. Ngoại lệ khai ở đây, ngay cạnh luật, chứ không nằm trong
+   * một chú thích ở file khác.
+   */
+  it('không có route xuất/tải hàng loạt — quét MỌI controller của module', () => {
+    const CHO_PHEP = new Map([['break-glass.controller.ts', ["@Get('export.xlsx')"]]]);
+    const controllers = readdirSync(__dirname).filter((file) => file.endsWith('.controller.ts'));
+
+    // Chốt sàn: quét 0 file thì bài này xanh mà chẳng kiểm gì — đúng bẫy mà chốt sàn ở cuối
+    // file dựng ra để chặn.
+    expect(controllers.length).toBeGreaterThanOrEqual(4);
+
+    for (const file of controllers) {
+      const src = readFileSync(join(__dirname, file), 'utf8');
+      const duocPhep = CHO_PHEP.get(file) ?? [];
+      for (const forbidden of ['export', 'download', 'xlsx', 'csv', 'all']) {
+        const route = new RegExp(`@(?:Get|Post)\\(\\s*['"\`]${forbidden}`, 'i');
+        const hits = src.match(new RegExp(route.source, 'gi')) ?? [];
+        const laVietPhamThat = hits.some(
+          (hit) => !duocPhep.some((ok) => ok.toLowerCase().startsWith(hit.toLowerCase())),
+        );
+        /* Gói cả `file` và `forbidden` vào giá trị được so: Jest không nhận tham số message
+           (chỉ Playwright/Vitest có), nên muốn thông báo lỗi nói được "file nào, từ khóa nào"
+           thì phải để chúng nằm trong chính cái object đem so. */
+        expect({ file, forbidden, viPham: laVietPhamThat }).toMatchObject({ viPham: false });
+      }
     }
   });
 

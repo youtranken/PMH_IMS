@@ -246,8 +246,13 @@ export class DevicesController {
    */
   @Roles('sa', 'admin', 'member')
   @Get(':id/panels')
-  panelsFor(@Param() params: IdParamDto) {
-    return this.panels.listFor(params.id);
+  panelsFor(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    /* Truyền NGƯỜI ĐANG XEM xuống provider: khu "Két sắt" phải tự hỏi ma trận quyền, và
+       trước 17/09/2026 nó không có gì để hỏi (xem `common/device-panels.ts`). */
+    return this.panels.listFor(params.id, {
+      email: req.user!.email,
+      role: req.user!.role,
+    });
   }
 
   @Roles('sa', 'admin', 'member')

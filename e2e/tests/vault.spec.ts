@@ -7,6 +7,7 @@ import {
   E2E_MEMBER,
   E2E_SA,
   firstLogin,
+  lastAudit,
   logout,
   resetDevices,
   resetSecrets,
@@ -173,6 +174,124 @@ test.describe('Két sắt', () => {
     // Tab CÓ hiện (story 6.3) nhưng nội dung nói rõ là không có quyền — không phải bảng trống.
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByText(/không có quyền/i)).toBeVisible();
+  });
+
+  /**
+   * SỬA METADATA CỦA MỘT NGĂN — `PATCH /vault/secrets/:id`.
+   *
+   * Cho tới 17/09/2026 cửa này KHÔNG có một dòng kiểm nào, ở bất kỳ tầng nào: không unit,
+   * không E2E, và chuỗi "Sửa thông tin" không xuất hiện trong cả thư mục `e2e/`. Nghĩa là
+   * `updateMeta` có thể trả về mà không ghi gì, hoặc bỏ luôn dòng audit trong transaction, và
+   * không có gì báo cho tới khi người dùng kêu.
+   *
+   * Bài này khẳng định ba vế: metadata đổi thật, GIÁ TRỊ không hề đổi theo (sửa nhãn không
+   * được đụng tới mật khẩu), và có đúng một dòng audit mang tên người sửa.
+   */
+  test('sửa metadata của ngăn: đổi nhãn không đụng tới giá trị, và có vết', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const deviceId = await createSwitch(page, `SW-E2E-EDIT-${stamp}`);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
+    const value = `Gia#Tri#${stamp}`;
+
+    const created = await page.request.post('/api/v1/vault/secrets', {
+      headers,
+      data: {
+        ownerType: 'device',
+        ownerId: deviceId,
+        kind: 'password',
+        label: `nhãn cũ E2E ${stamp}`,
+        username: 'root',
+        value,
+      },
+    });
+    expect(created.status()).toBe(201);
+    const id = ((await created.json()) as { id: string }).id;
+
+    const patched = await page.request.patch(`/api/v1/vault/secrets/${id}`, {
+      headers,
+      data: { label: `nhãn mới E2E ${stamp}`, username: 'admin' },
+    });
+    expect(patched.status()).toBe(200);
+
+    const list = (await (
+      await page.request.get(`/api/v1/vault/secrets?ownerType=device&ownerId=${deviceId}`)
+    ).json()) as { id: string; label: string; username: string | null }[];
+    const row = list.find((item) => item.id === id);
+    expect(row?.label).toBe(`nhãn mới E2E ${stamp}`);
+    expect(row?.username).toBe('admin');
+
+    /* Sửa NHÃN không được đụng tới GIÁ TRỊ — hai thứ nằm hai cột, và một bản cài đặt lỡ tay
+       mã lại giá trị bằng chuỗi rỗng sẽ không làm khẳng định nào ở trên đỏ. */
+    const opened = await page.request.post(`/api/v1/vault/secrets/${id}/reveal`, { headers });
+    expect(opened.status()).toBe(200);
+    expect(((await opened.json()) as { value: string }).value).toBe(value);
+
+    const row2 = lastAudit('vault.secret.updated', id);
+    expect(row2?.actor, 'lượt sửa phải để lại vết mang tên người sửa').toBe(E2E_SA.email);
+  });
+
+  /**
+   * LỖ RÒ ĐÃ BỊT 17/09/2026 — và đây là bài canh nó.
+   *
+   * `GET /devices/:id/panels` mở cho vai `member` (hồ sơ máy là việc hàng ngày), nhưng khu
+   * "Két sắt" trong đó bày NHÃN NGĂN và TÊN ĐĂNG NHẬP. Trước bản vá, provider chỉ nhận
+   * `deviceId` nên không có gì để hỏi ma trận quyền: cùng một dữ liệu mà `GET /vault/secrets`
+   * trả 403 thì cửa này trả 200. Lặp `GET /devices` rồi gọi panel từng máy là lấy được bản đồ
+   * "công ty giữ bí mật ở đâu" — đúng thứ `/vault/owners` khoá lại cho SA/Admin — và đường
+   * này KHÔNG ghi một dòng audit nào.
+   *
+   * Vế SA ở đầu bài là vế đối chứng, không phải thừa: thiếu nó thì bài vẫn xanh trọn vẹn kể cả
+   * khi ai đó gỡ hẳn khu Két sắt khỏi trang thiết bị.
+   */
+  test('khu "Két sắt" trên trang thiết bị không lọt cho Member ngoài ma trận quyền', async ({
+    page,
+  }) => {
+    // Hai luồng đăng nhập lần đầu (SA rồi Member) trong cùng một bài.
+    test.setTimeout(150_000);
+
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const deviceId = await createSwitch(page, `SW-E2E-PANEL-${stamp}`);
+    const label = `admin web E2E ${stamp}`;
+    const username = `root-E2E-${stamp}`;
+
+    const created = await page.request.post('/api/v1/vault/secrets', {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+      data: {
+        ownerType: 'device',
+        ownerId: deviceId,
+        kind: 'password',
+        label,
+        username,
+        value: 'mat-khau-that',
+      },
+    });
+    expect(created.status(), 'không cất được secret thì phần còn lại của bài vô nghĩa').toBe(201);
+
+    const panelsOf = async () =>
+      (await (await page.request.get(`/api/v1/devices/${deviceId}/panels`)).json()) as {
+        key: string;
+      }[];
+
+    const asSa = await panelsOf();
+    expect(
+      asSa.map((panel) => panel.key),
+      'SA phải thấy khu Két sắt — không có vế này thì bài xanh cả khi khu đó bị gỡ hẳn',
+    ).toContain('vault');
+
+    await logout(page);
+    await firstLogin(page, E2E_MEMBER);
+
+    const asMember = await panelsOf();
+    expect(
+      asMember.map((panel) => panel.key),
+      'Member ngoài ma trận quyền KHÔNG được nhận khu Két sắt qua cửa /panels',
+    ).not.toContain('vault');
+    expect(
+      JSON.stringify(asMember),
+      'và không mẩu metadata nào của ngăn được lọt ra: nhãn là bản đồ, tên đăng nhập là một nửa thông tin đăng nhập',
+    ).not.toContain(username);
   });
 
   test('DB chỉ chứa rác: giá trị cất vào không tìm thấy ở dạng chữ trong bảng secret', async ({
