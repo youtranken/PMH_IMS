@@ -15,6 +15,7 @@ import { Dialog } from '@/ui/dialog';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
+import { useListUrlState } from '@/ui/use-list-url-state';
 import { VaultPanel } from '@/ui/vault-panel';
 
 interface VaultOwner {
@@ -43,9 +44,29 @@ interface VaultOwner {
 export function VaultHomeScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
-  /** Lọc theo loại — chọn được NHIỀU cùng lúc; rỗng = xem tất cả. */
-  const [kinds, setKinds] = useState<SecretOwnerType[]>([]);
+  /*
+   * Ô tìm và bộ lọc nằm trên THANH ĐỊA CHỈ (17/09/2026), như bốn màn danh sách kia.
+   *
+   * `docs/SHARED-REGISTRY.md` viết thẳng: "Cấm quay lại `useState` cho bốn thứ đó". Đường đi
+   * CHÍNH của màn này làm lộ đúng lý do: lọc + gõ tìm → mở két → bấm "Mở hồ sơ đầy đủ" → xem
+   * xong bấm Back, và quay lại một danh sách trắng, phải gõ lại từ đầu. Chưa kể không gửi được
+   * cho đồng nghiệp cái link "đây, mấy cái đường truyền đang giữ mật khẩu".
+   *
+   * Lọc loại là ĐA CHỌN nên nằm trên URL dưới dạng danh sách ngăn bằng dấu phẩy (`?kinds=device,isp`).
+   */
+  const url = useListUrlState<{ kinds: string }>({
+    emptyFilters: { kinds: '' },
+  });
+  const search = url.search;
+  const kinds = useMemo<SecretOwnerType[]>(
+    () =>
+      url.filters.kinds
+        .split(',')
+        .filter((item): item is SecretOwnerType =>
+          (SECRET_OWNER_TYPES as readonly string[]).includes(item),
+        ),
+    [url.filters.kinds],
+  );
   const [opened, setOpened] = useState<VaultOwner | null>(null);
 
   const owners = useQuery({
@@ -86,11 +107,22 @@ export function VaultHomeScreen({ me }: { me: Me }) {
   };
 
   const all = owners.data ?? [];
-  const totalSecrets = all.reduce((sum, row) => sum + row.secretCount, 0);
   const toggle = (kind: SecretOwnerType) =>
-    setKinds((current) =>
-      current.includes(kind) ? current.filter((item) => item !== kind) : [...current, kind],
+    url.setFilter(
+      'kinds',
+      (kinds.includes(kind) ? kinds.filter((item) => item !== kind) : [...kinds, kind]).join(','),
     );
+
+  /*
+   * ĐẾM TRÊN TOÀN BỘ, không theo tập đang lọc — cùng luật với Kho thanh lý và Dải mạng.
+   * Con số trên nút trả lời "có bao nhiêu thứ thuộc loại này", nên nó không được nhảy theo
+   * chính cái nút vừa bấm; nếu không, tắt một bộ lọc rồi là không còn cách nào biết để bật lại.
+   */
+  const countOf = (kind: SecretOwnerType) =>
+    all.filter((row) => row.ownerType === kind).length;
+
+  /* Con số của tập ĐANG XEM thì nằm ở dòng tổng kết ngay trên bảng — xem chú thích ở đó. */
+  const shownSecrets = rows.reduce((sum, row) => sum + row.secretCount, 0);
 
   return (
     <>
@@ -99,8 +131,8 @@ export function VaultHomeScreen({ me }: { me: Me }) {
       <p className="alert">{t('vaultHome.whereItLives')}</p>
 
       <FilterBar
-        search={search}
-        onSearchChange={setSearch}
+        search={url.searchInput}
+        onSearchChange={url.setSearchInput}
         searchPlaceholder={t('vaultHome.searchPlaceholder')}
       >
         {/* Các nút bật/tắt độc lập, không phải một ô chọn: "xem cả thiết bị lẫn phần mềm"
@@ -109,17 +141,32 @@ export function VaultHomeScreen({ me }: { me: Me }) {
             Duyệt thẳng `SECRET_OWNER_TYPES` chứ KHÔNG gõ lại danh sách ở đây: bản gõ tay cũ
             thiếu `isp`, nên bật bất kỳ nút nào cũng làm mọi dòng đường truyền biến mất im
             lặng — người dùng đọc ra "đường truyền không có két", còn két thì vẫn ở đó. */}
-        {SECRET_OWNER_TYPES.map((kind) => (
-          <button
-            key={kind}
-            type="button"
-            className={`btn${kinds.includes(kind) ? ' primary' : ''}`}
-            aria-pressed={kinds.includes(kind)}
-            onClick={() => toggle(kind)}
-          >
-            {t(SECRET_OWNER_KIND_KEY[kind])}
-          </button>
-        ))}
+        {/* `role="group"` + tên nhóm: bốn nút rời rạc thì trình đọc màn hình đọc ra bốn cái nút
+            không biết thuộc về đâu — Kho thanh lý và Dải mạng đều đã khai nhóm. */}
+        <span role="group" aria-label={t('vaultHome.filterKind')} className="row">
+          {SECRET_OWNER_TYPES.map((kind) => (
+            <button
+              key={kind}
+              type="button"
+              className={`btn${kinds.includes(kind) ? ' primary' : ''}`}
+              aria-pressed={kinds.includes(kind)}
+              onClick={() => toggle(kind)}
+            >
+              {/* Số đếm đi kèm nhãn: "có đường truyền nào giữ két không" là câu hỏi màn này
+                  sinh ra để trả lời, bắt bấm vào rồi mới đếm là bắt làm hai lần một việc — và
+                  bấm ra bảng trống thì không phân biệt được "không có" với "mình lọc sai". */}
+              {t(SECRET_OWNER_KIND_KEY[kind])}{' '}
+              <span className="seg-count">{countOf(kind)}</span>
+            </button>
+          ))}
+          {kinds.length > 0 ? (
+            /* Đường GỠ lọc. Bốn nút bật/tắt độc lập thì muốn về ban đầu phải bấm đúng từng cái
+               đang bật — không ai nhớ mình đã bật những cái nào. */
+            <button type="button" className="btn" onClick={() => url.setFilter('kinds', '')}>
+              {t('vaultHome.clearKinds')}
+            </button>
+          ) : null}
+        </span>
       </FilterBar>
 
       {owners.isLoading ? (
@@ -130,8 +177,14 @@ export function VaultHomeScreen({ me }: { me: Me }) {
         <EmptyState title={t('vaultHome.empty')} hint={t('vaultHome.emptyHint')} />
       ) : (
         <>
+          {/*
+            DÒNG NÀY PHẢI NÓI SỐ CỦA TẬP ĐANG XEM (sửa 17/09/2026).
+            Bản trước luôn đếm trên `all`, nên lọc "Thiết bị" còn 3 dòng mà ngay phía trên vẫn
+            đọc "12 hồ sơ đang giữ két · tổng 47 ngăn" — hai con số mâu thuẫn trên cùng một màn
+            hình, và con số duy nhất người dùng đang cần thì không có ở đâu cả.
+          */}
           <p className="muted">
-            {t('vaultHome.summary', { owners: all.length, secrets: totalSecrets })}
+            {t('vaultHome.summary', { owners: rows.length, secrets: shownSecrets })}
           </p>
 
           {rows.length === 0 ? (
@@ -167,7 +220,8 @@ export function VaultHomeScreen({ me }: { me: Me }) {
                       <td data-label={t('vaultHome.lastChange')}>
                         {formatDateTime(row.lastChangeAt)}
                       </td>
-                      <td>
+                      {/* Ô Thao tác cũng phải tự xưng tên ở ≤960px như bốn ô kia. */}
+                      <td data-label={t('common.actions')}>
                         <div className="action-cell">
                           <button
                             type="button"
@@ -193,7 +247,14 @@ export function VaultHomeScreen({ me }: { me: Me }) {
           open
           onOpenChange={closePopup}
           maxWidth={860}
-          title={`${t('vaultHome.title')} — ${opened.code}${opened.name ? ` · ${opened.name}` : ''}`}
+          /* Dòng MỒ CÔI (hồ sơ chủ đã bị xoá, ngăn còn treo) có `code = '—'` và `name = ''`,
+             nên khuôn cũ cho ra tiêu đề "Két sắt — —": cái hộp không tự giới thiệu được nó
+             đang là két của ai. Nói thẳng ra là hồ sơ chủ không còn. */
+          title={
+            opened.orphan
+              ? `${t('vaultHome.title')} — ${t('vaultHome.orphan')}`
+              : `${t('vaultHome.title')} — ${opened.code}${opened.name ? ` · ${opened.name}` : ''}`
+          }
           footer={
             <>
               {/* Đường sang hồ sơ đầy đủ vẫn giữ: xem két xong thường là muốn xem cả máy. */}
@@ -221,11 +282,20 @@ export function VaultHomeScreen({ me }: { me: Me }) {
             </>
           }
         >
+          {/*
+            DÒNG MỒ CÔI THÌ CHỈ ĐỌC — và nói ra vì sao.
+
+            Hồ sơ chủ đã bị xoá, nên `assertExists` ở tầng API sẽ từ chối mọi lượt ghi. Trước
+            bản này popup vẫn bày nút "Cất secret": người dùng gõ xong cả form, gõ cả mã step-up
+            rồi mới nhận lỗi — trả xong giá mà không được gì. Việc đúng ở đây là dọn ngăn treo,
+            nhưng nó nằm trong menu ⋯ của từng dòng, nên câu giải thích phải có mặt.
+          */}
+          {opened.orphan ? <p className="alert warn">{t('vaultHome.orphanNote')}</p> : null}
           <VaultPanel
             ownerType={opened.ownerType}
             ownerId={opened.ownerId}
             me={me}
-            canEdit={canEdit}
+            canEdit={canEdit && !opened.orphan}
           />
         </Dialog>
       ) : null}

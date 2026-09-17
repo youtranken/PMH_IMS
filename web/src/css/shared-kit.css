@@ -288,14 +288,10 @@
   overflow-y: auto;
 }
 
-/* --- Cửa vào két sắt (features/vault/vault-home-screen.tsx) --------------- */
-.vault-hits {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: var(--space-7);
-  margin-top: var(--space-5);
-}
-.vault-hit-list,
+/* --- Cửa vào két sắt (features/vault/vault-home-screen.tsx) ---------------
+ * `.vault-hits` và `.vault-hit-list` bỏ ngày 17/09/2026: tàn dư của một bố cục lưới thẻ đã bị
+ * thay bằng bảng từ lâu, không `.tsx` nào còn dùng. Để lại thì người sửa màn này sau đọc chúng
+ * như một phần đang sống. */
 .vault-rules {
   display: flex;
   flex-direction: column;

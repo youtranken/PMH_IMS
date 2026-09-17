@@ -717,6 +717,10 @@ export default {
   },
   vault: {
     tab: 'Két sắt',
+    /* Hộp giá trị tự đóng khi hết giờ. Không nói gì thì người dùng không phân biệt được "hết
+       giờ" với "mình lỡ bấm Ẩn" hay "trình duyệt vừa lỗi" — và phản xạ là bấm Xem lần nữa,
+       tức thêm một dòng nhật ký mở két cho một lần không cần thiết. */
+    autoHidden: 'Đã tự ẩn giá trị. Bấm "Xem" nếu cần mở lại.',
     intro:
       'Nơi cất mật khẩu và license key. Giá trị được mã hóa, chỉ xem được qua bước xác thực 2 lớp — bảng dưới đây chỉ hiện tên gọi.',
     // Từ story 6.3, Member CÓ THỂ có quyền — chỉ là không có trên đối tượng NÀY. Câu cũ
@@ -1070,15 +1074,25 @@ export default {
     openOf: 'Mở két của {{code}}',
     openRecord: 'Mở hồ sơ đầy đủ',
     orphan: '(hồ sơ đã bị xóa — còn secret treo lại)',
+    orphanNote: 'Hồ sơ chủ của mấy ngăn này đã bị xóa, nên không cất thêm hay sửa được nữa. Việc còn làm được là thu hồi từng ngăn treo trong menu ⋯.',
+    filterKind: 'Lọc theo loại hồ sơ',
+    clearKinds: 'Bỏ lọc',
     summary: '{{owners}} hồ sơ đang giữ két · tổng {{secrets}} ngăn.',
     empty: 'Chưa có hồ sơ nào cất mật khẩu',
-    emptyHint: 'Mở một thiết bị hoặc hồ sơ phần mềm → tab "Két sắt" → "Cất secret".',
+    /* Đường NGẮN NHẤT nằm ngay trên màn này: bấm "Mở két" của một hồ sơ rồi "Cất secret"
+       trong popup. Câu cũ chỉ người dùng đi vòng qua trang thiết bị để làm đúng cái việc mà
+       cái popup họ vừa đóng đã làm được. */
+    emptyHint: 'Bấm "Mở két" ở một hồ sơ rồi chọn "Cất secret" — hoặc vào tab "Két sắt" của chính hồ sơ đó.',
     noHit: 'Không có hồ sơ nào khớp bộ lọc',
     noHitHint: 'Thử bỏ bớt bộ lọc loại, hoặc tìm bằng mã máy (vd SRV-01).',
     rulesTitle: 'Luật của két',
-    rule1: 'Cất bí mật: mở hồ sơ → tab "Két sắt" → "Cất secret". Chỉ Quản trị và Super Admin ghi được.',
-    rule2: 'Xem giá trị: phải gõ mã 6 số (TOTP) mỗi phiên, kể cả khi đã đăng nhập rồi.',
-    rule3: 'Giá trị hiện ra rồi TỰ ẨN sau vài chục giây, và không có nút sao chép hàng loạt.',
+    rule1: 'Cất bí mật: bấm "Mở két" ngay tại bảng trên, hoặc vào tab "Két sắt" của hồ sơ. Chỉ Quản trị và Super Admin ghi được.',
+    /* KHÔNG nói "mỗi phiên": luật thật là một khoảng ÂN HẠN do `secret.stepup_grace_minutes`
+       quy định, và chính màn hình có đồng hồ đếm ngược nói điều đó (`reveal-dialog.tsx` —
+       "còn mở két được, chưa phải gõ lại mã"). Chữ ở chân trang mà nói ngược cái đồng hồ thì
+       người dùng bị hỏi mã giữa chừng và tưởng hệ thống hỏng. */
+    rule2: 'Xem giá trị: phải gõ mã 6 số (TOTP). Gõ một lần rồi thì mở tiếp được trong ít phút, hết khoảng đó phải gõ lại.',
+    rule3: 'Giá trị hiện ra rồi TỰ ẨN — có đồng hồ đếm ngược ngay trên hộp — và không có nút sao chép hàng loạt.',
     rule4: 'Mỗi lần mở đều ghi nhật ký: ai xem, xem của ai, lúc nào — không xoá được.',
   },
   disposal: {

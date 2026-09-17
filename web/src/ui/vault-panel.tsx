@@ -399,6 +399,9 @@ export function VaultPanel({
           seconds={revealed.seconds}
           stepUpSecondsLeft={revealed.stepUpSecondsLeft}
           onClose={() => setRevealed(null)}
+          /* Hết giờ thì NÓI RA. Hộp biến mất không một lời là thứ khiến người dùng bấm "Xem"
+             lần nữa cho chắc — và mỗi lần bấm là thêm một dòng nhật ký mở két. */
+          onExpire={() => toast({ message: t('vault.autoHidden') })}
         />
       ) : null}
 

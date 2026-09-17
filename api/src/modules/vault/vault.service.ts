@@ -171,6 +171,20 @@ export class VaultService {
 
     try {
       return await this.db.transaction(async (tx) => {
+        /*
+         * HỒ SƠ ĐÃ NGỪNG DÙNG THÌ KÉT ĐÓNG BĂNG (thêm 17/09/2026).
+         *
+         * Trang chi tiết thiết bị đã dạy người dùng luật này từ lâu (`canEdit={… && !retired}`)
+         * nhưng nó chỉ sống ở MỘT màn: `/vault` không xét trạng thái hồ sơ và API không chặn,
+         * nên đi đường đó là cất được mật khẩu mới vào một cái máy đã thanh lý. Giờ luật ở
+         * tầng ghi, tức đúng ở mọi cửa.
+         *
+         * Nằm TRONG transaction và giữ khoá: hỏi ngoài rồi ghi trong là chừa một khoảng hở cho
+         * lượt thanh lý chen vào giữa — cùng lý do mà port map, IP và license đều gọi bản
+         * `…Within` (xem `DevicesService.assertUsableWithin`).
+         */
+        await this.owners.assertUsableWithin(tx, input.ownerType, input.ownerId);
+
         const rows = await tx
           .insert(secretTable)
           .values({
@@ -217,9 +231,11 @@ export class VaultService {
         message: 'Chưa nhập giá trị mới.',
       });
     }
-    await this.requireAlive(id);
+    const current = await this.requireAlive(id);
     const sealed = this.crypto.seal(value, { table: AAD_TABLE, recordId: id });
     await this.db.transaction(async (tx) => {
+      // Hồ sơ đã ngừng dùng thì két đóng băng — xem chú thích ở `create()`.
+      await this.owners.assertUsableWithin(tx, current.ownerType, current.ownerId);
       await tx
         .update(secretTable)
         .set({
@@ -260,6 +276,8 @@ export class VaultService {
 
     try {
       return await this.db.transaction(async (tx) => {
+        // Hồ sơ đã ngừng dùng thì két đóng băng — xem chú thích ở `create()`.
+        await this.owners.assertUsableWithin(tx, before.ownerType, before.ownerId);
         const rows = await tx
           .update(secretTable)
           .set({ ...values, updatedAt: new Date() })
@@ -287,6 +305,11 @@ export class VaultService {
   async revoke(actor: string, id: string): Promise<void> {
     const secret = await this.requireAlive(id);
     await this.db.transaction(async (tx) => {
+      /* Hồ sơ đã ngừng dùng thì két đóng băng — kể cả THU HỒI. Nghe ngược đời, nhưng đó là
+         đúng luật mà phần còn lại của hồ sơ đang theo: "mở lại mới sửa được". Cho thu hồi
+         riêng lẻ thì màn `/vault` lại bày một nút chạy được cạnh ba nút bị chặn, và người
+         dùng học ra một luật thứ ba. Muốn dọn thì mở lại hồ sơ, dọn, rồi thanh lý tiếp. */
+      await this.owners.assertUsableWithin(tx, secret.ownerType, secret.ownerId);
       await tx
         .update(secretTable)
         .set({ revokedAt: new Date(), revokedBy: actor })

@@ -1,4 +1,5 @@
 import { BadRequestException, Global, Injectable, Module } from '@nestjs/common';
+import type { Tx } from './tx';
 
 /**
  * Sổ đăng ký "chủ thể này có thật không" — hỏi trước khi gắn BẤT CỨ THỨ GÌ vào một
@@ -53,6 +54,20 @@ export interface OwnerResolver {
    * vừa chọn, và để nơi gọi khỏi phải hỏi lần thứ hai.
    */
   labelFor(ownerType: string, ownerId: string): Promise<string | null>;
+
+  /**
+   * "Hồ sơ này còn NHẬN THÊM được không" — khác hẳn `labelFor` ("có thật không").
+   *
+   * KHÔNG BẮT BUỘC. Không khai = module chủ chưa có khái niệm ngừng dùng cho loại này, và mọi
+   * lượt ghi đi qua. Hôm nay (17/09/2026) chỉ `device` khai: thiết bị đã thanh lý thì đóng
+   * băng, đúng như phần còn lại của hồ sơ ("mở lại mới sửa được"). Phần mềm đã bỏ và tài khoản
+   * dịch vụ đã vô hiệu chưa có hàng rào tương đương ở module chủ, nên chưa khai ở đây — khai
+   * một hàng rào rỗng còn tệ hơn không khai, vì nó trông như đã canh.
+   *
+   * Nhận `tx` và GIỮ KHOÁ tới hết transaction của người gọi: hỏi xong mới ghi thì có khoảng hở
+   * cho một lượt thanh lý chen vào giữa. Xem `DevicesService.assertUsableWithin`.
+   */
+  assertUsableWithin?(tx: Tx, ownerType: string, ownerId: string): Promise<void>;
 }
 
 @Injectable()
@@ -66,6 +81,10 @@ export class OwnerExistsRegistry {
 
   /** Nhãn của chủ thể, hoặc `null` nếu không có thật. Ném nếu không ai làm chủ loại đó. */
   async labelFor(ownerType: string, ownerId: string): Promise<string | null> {
+    return this.resolverFor(ownerType).labelFor(ownerType, ownerId);
+  }
+
+  private resolverFor(ownerType: string): OwnerResolver {
     const resolver = this.resolvers.find((r) => r.ownerTypes.includes(ownerType));
     if (!resolver) {
       throw new BadRequestException({
@@ -75,7 +94,19 @@ export class OwnerExistsRegistry {
           'Đây là lỗi cấu hình của hệ thống, báo quản trị viên.',
       });
     }
-    return resolver.labelFor(ownerType, ownerId);
+    return resolver;
+  }
+
+  /**
+   * Ném nếu chủ thể ĐÃ NGỪNG DÙNG — câu chữ do chính module chủ đặt, không dịch lại ở đây.
+   *
+   * Loại nào chưa khai `assertUsableWithin` thì đi qua: xem lý do ở chỗ khai interface. Vẫn
+   * ném `OWNER_TYPE_UNRESOLVABLE` khi không ai làm chủ loại đó — thiếu registrar là lỗi lập
+   * trình, và im lặng ở đây là dựng một hàng rào khớp đúng số không chuỗi.
+   */
+  async assertUsableWithin(tx: Tx, ownerType: string, ownerId: string): Promise<void> {
+    const resolver = this.resolverFor(ownerType);
+    await resolver.assertUsableWithin?.(tx, ownerType, ownerId);
   }
 
   /** Ném `400 OWNER_NOT_FOUND` nếu chủ thể không tồn tại. */

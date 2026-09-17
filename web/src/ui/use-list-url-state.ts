@@ -47,15 +47,26 @@ export interface ListUrlState<F extends Record<string, string>> {
 export function useListUrlState<F extends Record<string, string>>(options: {
   /** Khóa bộ lọc và giá trị rỗng của chúng, vd `{ siteId: '', status: '' }`. */
   emptyFilters: F;
-  defaultLimit: number;
-  defaultSort: SortState;
+  /**
+   * Hai thứ này KHÔNG bắt buộc (nới 17/09/2026): có màn danh sách không phân trang và không
+   * sắp theo cột — Két sắt là một, nó tải cả danh sách rồi lọc ở client. Bắt chúng khai hai
+   * tham số vô nghĩa chỉ để dùng được ô tìm là cách chắc chắn để người sau gõ đại một con số
+   * rồi tưởng nó có tác dụng.
+   */
+  defaultLimit?: number;
+  defaultSort?: SortState;
   /**
    * Khóa trong `F` nhận giá trị ô tìm ĐÃ LẮNG (thường là `'search'`). Khai nó thì `filters` trả
    * về đã có sẵn từ khoá, nên `buildFilterQuery(filters)` của màn không phải đổi một chữ.
    */
   searchKey?: keyof F;
 }): ListUrlState<F> {
-  const { emptyFilters, defaultLimit, defaultSort, searchKey } = options;
+  const {
+    emptyFilters,
+    defaultLimit = 20,
+    defaultSort = { key: '', desc: false },
+    searchKey,
+  } = options;
   const [params, setParams] = useSearchParams();
 
   const read = useCallback(

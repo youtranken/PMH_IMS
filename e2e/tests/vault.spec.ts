@@ -177,6 +177,108 @@ test.describe('Két sắt', () => {
   });
 
   /**
+   * MÁY ĐÃ THANH LÝ THÌ KÉT ĐÓNG BĂNG — ở MỌI CỬA, không chỉ trên một màn.
+   *
+   * Trước 17/09/2026 luật này chỉ tồn tại ở trang chi tiết thiết bị, dưới dạng một biểu thức
+   * trong JSX (`canEdit={canVaultWrite && !retired}`). Màn `/vault` không xét trạng thái hồ sơ
+   * và API không có một dòng `retired` nào trong cả module vault — nên đi đường `/vault` là
+   * cất được mật khẩu mới vào một cái máy đã thanh lý. Người dùng học một luật ở màn này rồi
+   * phát hiện màn kia không theo, và không test nào bắt được vì cả hai đều "xanh".
+   *
+   * Thu hồi cũng bị chặn, và đó là chủ ý: cùng luật với phần còn lại của hồ sơ ("mở lại mới
+   * sửa được"). Vế cuối của bài kiểm chính là đường thoát — mở lại thì làm được ngay.
+   */
+  test('máy đã thanh lý: mọi cửa ghi vào két đều bị chặn, mở lại thì làm được', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const deviceId = await createSwitch(page, `SW-E2E-FROZEN-${stamp}`);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
+
+    const created = await page.request.post('/api/v1/vault/secrets', {
+      headers,
+      data: {
+        ownerType: 'device',
+        ownerId: deviceId,
+        kind: 'password',
+        label: `ngăn trước thanh lý E2E ${stamp}`,
+        value: 'truoc-khi-thanh-ly',
+      },
+    });
+    expect(created.status(), 'vế đối chứng: máy còn dùng thì cất được').toBe(201);
+    const secretId = ((await created.json()) as { id: string }).id;
+
+    const retire = await page.request.patch(`/api/v1/devices/${deviceId}/status`, {
+      headers,
+      data: { status: 'retired' },
+    });
+    expect(retire.status()).toBe(200);
+
+    /* BỐN cửa ghi, không phải một: hàng rào dựng ở cửa được nhớ tới và thiếu ở những cửa
+       tương đương ngay bên cạnh là lớp lỗi đã lặp lại nhiều lần trong repo này. */
+    const cuaGhi: { ten: string; goi: () => Promise<{ status: () => number }> }[] = [
+      {
+        ten: 'cất ngăn mới',
+        goi: () =>
+          page.request.post('/api/v1/vault/secrets', {
+            headers,
+            data: {
+              ownerType: 'device',
+              ownerId: deviceId,
+              kind: 'password',
+              label: `ngăn sau thanh lý E2E ${stamp}`,
+              value: 'sau-khi-thanh-ly',
+            },
+          }),
+      },
+      {
+        ten: 'sửa metadata',
+        goi: () =>
+          page.request.patch(`/api/v1/vault/secrets/${secretId}`, {
+            headers,
+            data: { label: `đổi nhãn E2E ${stamp}` },
+          }),
+      },
+      {
+        ten: 'xoay giá trị',
+        goi: () =>
+          page.request.post(`/api/v1/vault/secrets/${secretId}/rotate`, {
+            headers,
+            data: { value: 'gia-tri-moi' },
+          }),
+      },
+      {
+        ten: 'thu hồi',
+        goi: () => page.request.delete(`/api/v1/vault/secrets/${secretId}`, { headers }),
+      },
+    ];
+
+    for (const cua of cuaGhi) {
+      const res = await cua.goi();
+      expect(res.status(), `cửa "${cua.ten}" phải bị chặn khi máy đã thanh lý`).toBe(400);
+    }
+
+    // ĐỌC thì vẫn được: biên bản thanh lý là thứ người ta cần tra nhất sau khi máy đã đi.
+    const list = await page.request.get(
+      `/api/v1/vault/secrets?ownerType=device&ownerId=${deviceId}`,
+    );
+    expect(list.status(), 'thanh lý là đóng băng chứ không phải giấu đi').toBe(200);
+
+    // Mở lại máy thì mọi thứ làm được ngay — đó là đường thoát, và nó phải có thật.
+    const reopen = await page.request.patch(`/api/v1/devices/${deviceId}/status`, {
+      headers,
+      data: { status: 'in_use' },
+    });
+    expect(reopen.status()).toBe(200);
+    const again = await page.request.patch(`/api/v1/vault/secrets/${secretId}`, {
+      headers,
+      data: { label: `đổi được rồi E2E ${stamp}` },
+    });
+    expect(again.status(), 'mở lại hồ sơ thì két phải sửa được ngay').toBe(200);
+  });
+
+  /**
    * SỬA METADATA CỦA MỘT NGĂN — `PATCH /vault/secrets/:id`.
    *
    * Cho tới 17/09/2026 cửa này KHÔNG có một dòng kiểm nào, ở bất kỳ tầng nào: không unit,

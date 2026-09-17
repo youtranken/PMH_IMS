@@ -25,6 +25,7 @@ export function RevealDialog({
   seconds,
   stepUpSecondsLeft,
   onClose,
+  onExpire,
 }: {
   label: string;
   value: string;
@@ -32,6 +33,15 @@ export function RevealDialog({
   /** Grace step-up còn lại lúc MỞ, do server tính. Không có thì chỉ hiện một đồng hồ. */
   stepUpSecondsLeft?: number;
   onClose: () => void;
+  /**
+   * Gọi khi hộp tự đóng VÌ HẾT GIỜ — khác với người dùng bấm Ẩn ngay hay Esc.
+   *
+   * Trước 17/09/2026 hai lối ra gọi chung một `onClose`, nên không nơi nào phân biệt được và
+   * hộp cứ thế biến mất không một lời. Người vừa quay sang gõ mật khẩu vào cái switch trước
+   * mặt, nhìn lại màn hình thì hộp không còn — không biết là hết giờ, là mình lỡ bấm, hay là
+   * trình duyệt vừa lỗi.
+   */
+  onExpire?: () => void;
 }) {
   const { t } = useTranslation();
   const openedAt = useRef(Date.now());
@@ -50,6 +60,7 @@ export function RevealDialog({
        */
       setGraceLeft(Math.max(0, graceTotal - Math.floor((Date.now() - openedAt.current) / 1000)));
       if (remaining <= 0) {
+        onExpire?.();
         onClose();
         return;
       }
@@ -62,7 +73,7 @@ export function RevealDialog({
       clearInterval(timer);
       document.removeEventListener('visibilitychange', tick);
     };
-  }, [onClose, graceTotal]);
+  }, [onClose, onExpire, graceTotal]);
 
   const tone = countdownTone(left, seconds);
   const graceTone = countdownTone(graceLeft, graceTotal);

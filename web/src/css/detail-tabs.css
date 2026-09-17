@@ -326,6 +326,12 @@
   box-shadow: var(--shadow-sm);
   margin-bottom: var(--space-8);
 }
+/* Nhóm nút lọc bên trong thanh lọc phải TỰ XUỐNG DÒNG. `.row` dùng chung không có `wrap`
+   (cố ý — phần lớn chỗ dùng nó là hai ba thứ nằm ngang), nên bốn nút lọc kèm số đếm cộng nút
+   "Bỏ lọc" đẩy cả trang tràn ngang ở 390px. Bài kiểm 390px của màn Két sắt bắt đúng chuyện đó. */
+.filter-bar [role='group'] {
+  flex-wrap: wrap;
+}
 .filter-bar .grow {
   flex: 1;
   min-width: 200px;

@@ -319,7 +319,7 @@ test.describe('Tài khoản dịch vụ', () => {
     await expect(row.getByText('Tài khoản dịch vụ')).toBeVisible();
 
     // Lọc riêng loại này ra được.
-    await page.getByRole('button', { name: 'Tài khoản dịch vụ', exact: true }).click();
+    await page.getByRole('button', { name: /^Tài khoản dịch vụ \d+$/ }).click();
     await expect(row).toBeVisible();
   });
 

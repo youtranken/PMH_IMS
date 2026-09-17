@@ -120,12 +120,12 @@ test.describe('Trang tổng Két sắt', () => {
     await expect(swRow).toBeVisible();
 
     // Bật lọc "Thiết bị": phần mềm biến mất.
-    await page.getByRole('button', { name: 'Thiết bị', exact: true }).click();
+    await page.getByRole('button', { name: /^Thiết bị \d+$/ }).click();
     await expect(deviceRow).toBeVisible();
     await expect(swRow).toHaveCount(0);
 
     // Bật thêm "Phần mềm" — hai nút độc lập, chọn cả hai thì thấy cả hai.
-    await page.getByRole('button', { name: 'Phần mềm', exact: true }).click();
+    await page.getByRole('button', { name: /^Phần mềm \d+$/ }).click();
     await expect(deviceRow).toBeVisible();
     await expect(swRow).toBeVisible();
 
@@ -189,10 +189,10 @@ test.describe('Trang tổng Két sắt', () => {
     ).toBeVisible();
 
     // (b) Lọc "Thiết bị" thì đường truyền đi; lọc thêm "Đường truyền" thì nó phải QUAY LẠI.
-    await page.getByRole('button', { name: 'Thiết bị', exact: true }).click();
+    await page.getByRole('button', { name: /^Thiết bị \d+$/ }).click();
     await expect(deviceRow).toBeVisible();
     await expect(ispRow).toHaveCount(0);
-    await page.getByRole('button', { name: 'Đường truyền', exact: true }).click();
+    await page.getByRole('button', { name: /^Đường truyền \d+$/ }).click();
     await expect(
       ispRow,
       'ĐÂY LÀ LỖI ĐÃ VÁ: trước 12/09 không có nút này, nên bật lọc là đường truyền mất hẳn',
