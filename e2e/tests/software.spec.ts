@@ -1,5 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
-import { APP_ORIGIN, E2E_SA, firstLogin, resetSoftware, resetUsers, rowAction, writeHeaders } from './helpers';
+import {
+  APP_ORIGIN,
+  E2E_SA,
+  firstLogin,
+  resetSoftware,
+  resetUsers,
+  rowAction,
+  timVaChoLoc,
+  writeHeaders,
+} from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -284,7 +293,7 @@ test.describe('Hồ sơ phần mềm', () => {
 
     // Trên danh sách: cột hạn nói "Vĩnh viễn", không phải badge ngày.
     await page.goto('/software');
-    await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
+    await timVaChoLoc(page, code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toContainText('Vĩnh viễn');
 

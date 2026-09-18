@@ -7,6 +7,7 @@ import {
   resetIpam,
   resetUsers,
   rowAction,
+  timVaChoLoc,
 } from './helpers';
 
 /**
@@ -288,6 +289,9 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     expect(created.status()).toBe(201);
 
     await page.goto('/nat');
+    /* KHÔNG dùng `timVaChoLoc` ở đây: màn `/nat` chưa chuyển sang `useListUrlState` nên
+       không có `q=` trên thanh địa chỉ để mà chờ — và vì thế cũng chưa có debounce 250ms
+       để mà đua. Ngày nào màn này lên URL thì đổi luôn dòng dưới. */
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(`SSH tạm ${stamp}`);
     await rowAction(page, /7001/, 'Sửa');
 
@@ -518,7 +522,7 @@ test.describe('Popup Sửa có chỗ quản lý giấy tờ', () => {
     expect(created.status()).toBe(201);
 
     await page.goto('/devices');
-    await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
+    await timVaChoLoc(page, code);
     await page.getByRole('button', { name: `Sửa máy ${code}` }).click();
 
     const form = page.getByRole('dialog');

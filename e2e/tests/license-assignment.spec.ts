@@ -8,6 +8,7 @@ import {
   resetSoftware,
   resetUsers,
   rowAction,
+  timVaChoLoc,
   rowActionNames,
 } from './helpers';
 
@@ -453,7 +454,7 @@ test.describe('Gán license theo seat', () => {
     expect(created.status()).toBe(201);
 
     await page.goto('/software');
-    await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
+    await timVaChoLoc(page, code);
     // Cột Thao tác là menu ba chấm từ 28/08/2026: mục chỉ có trong DOM khi menu đang mở.
     const names = await rowActionNames(page, code);
     expect(names).toContain('Sửa');

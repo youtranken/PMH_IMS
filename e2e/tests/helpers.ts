@@ -741,6 +741,35 @@ export function horizontalOverflow(page: Page): Promise<number> {
 }
 
 /**
+ * Gõ vào ô tìm rồi CHỜ BỘ LỌC ĂN — dùng trước mọi thao tác lên dòng kết quả.
+ *
+ * ===== LỖ ĐANG VÁ (M-7 của rà soát 18/09/2026) =====
+ *
+ * Từ khi trạng thái danh sách chuyển lên thanh địa chỉ (`ui/use-list-url-state.ts`), ô tìm có
+ * DEBOUNCE 250ms. Dòng cần tìm thường đã nằm sẵn trong bảng từ trước khi lọc, nên
+ * `expect(row).toBeVisible()` xanh SỚM, và thao tác ngay sau đó rơi vào đúng khoảnh khắc
+ * trước lượt vẽ lại: menu ba chấm vừa mở thì bảng vẽ lại và menu đóng sập, hoặc khu vừa bung
+ * biến mất, còn bài kiểm đứng chờ một thứ không bao giờ tới.
+ *
+ * Lượt E2E đầy đủ 18/09 đỏ đúng một bài vì chuyện này (`license-assignment.spec.ts`), và bài
+ * đó chạy riêng thì 3/3 xanh — tức đây là loại đỏ ngẫu nhiên, mỗi lần một chỗ khác nhau.
+ *
+ * ===== CHỜ BẰNG URL, KHÔNG BẰNG SỐ DÒNG =====
+ *
+ * Đếm dòng (`toHaveCount(2)`) chỉ đúng với màn biết trước còn đúng một kết quả, nên không
+ * dùng lại được. Còn `q=` trên thanh địa chỉ là dấu hiệu CHUNG cho mọi màn đã chuyển sang
+ * `useListUrlState`: nó chỉ xuất hiện khi nhịp debounce đã bắn, tức lượt gọi API mới đã đi và
+ * React đã có dữ liệu để vẽ lại.
+ *
+ * Màn chưa dùng hook (ví dụ `/admin/accounts`) thì không có `q=` — gọi hàm này ở đó sẽ chờ vô
+ * ích rồi hết giờ, nên đừng gọi. Đó cũng là một cách để biết màn nào còn đứng ngoài luật.
+ */
+export async function timVaChoLoc(page: Page, tuKhoa: string): Promise<void> {
+  await page.getByRole('searchbox', { name: /Tìm/ }).fill(tuKhoa);
+  await expect(page).toHaveURL(/[?&]q=/);
+}
+
+/**
  * Mở menu ba chấm của một dòng rồi chọn một việc trong đó (28/08/2026).
  *
  * Cột "Thao tác" của mọi bảng danh sách đã đổi từ dãy nút phẳng sang menu ba chấm
