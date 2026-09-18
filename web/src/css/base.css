@@ -330,7 +330,10 @@ a.linkbtn:hover {
   position: fixed;
   inset: 0;
   z-index: 9;
-  background: rgba(20, 26, 20, 0.44);
+  /* `var(--scrim)` — bản viết tay ở đây BẰNG ĐÚNG giá trị của token, nhưng không có cặp cho
+     chế độ tối. Và đây là nền mờ của drawer ở ≤900px, tức màn 390px là chỗ DUY NHẤT nó xuất
+     hiện: đúng chỗ ít ai soi nhất. */
+  background: var(--scrim);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   animation: rowIn 0.15s var(--ease) both;
@@ -373,7 +376,10 @@ a.linkbtn:hover {
   font-weight: 600;
 }
 .page {
-  padding: var(--space-10);
+  /* Đệm ĐÁY dày hơn ba phía kia (`--space-13`, xem thang trong `tokens.css`): nội dung cuối
+     trang dính mép dưới thì trông như trang bị cắt ngang. Token này được thêm vào cùng đợt
+     UI/UX đúng cho việc này rồi bỏ không — 0 chỗ dùng cho tới 18/09/2026. */
+  padding: var(--space-10) var(--space-10) var(--space-13);
   /* Dùng gần trọn bề ngang màn lớn. Trước đây kẹp 1180px nên trên màn 24" (1920px) bảng bị
      bó vào giữa, chừa hơn 270px trống MỖI BÊN — mà đây là app đầy bảng, bề ngang là thứ
      đáng tiền nhất. Vẫn có trần để trên màn siêu rộng dòng không dài vô tận. */

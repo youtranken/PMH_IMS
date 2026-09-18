@@ -31,6 +31,7 @@ export default {
     discardCancel: 'Ở lại nhập tiếp',
     openNav: 'Mở menu',
     closeNav: 'Đóng menu',
+    skipToContent: 'Bỏ qua menu, vào thẳng nội dung',
     /** Tên của landmark điều hướng chính — trình đọc màn hình đọc lên khi nhảy tới khối này. */
     mainNav: 'Điều hướng chính',
   },

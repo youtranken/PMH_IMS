@@ -83,12 +83,15 @@
   .detail-code { font-size: var(--fs-2xl); }
 }
 
-/* Nút chép (ui/copy-button.tsx) — nhỏ nhưng vùng bấm vẫn phải đủ ngón tay chạm trúng. */
+/* Nút chép (ui/copy-button.tsx) — nhỏ nhưng vùng bấm vẫn phải đủ ngón tay chạm trúng.
+   1.75rem = 24,5px: SÀN của WCAG 2.5.8 (AA, WCAG 2.2) là 24×24 CSS px, mà 1.6rem chỉ ra
+   22,4px. Ngoại lệ "đủ khoảng cách" không cứu được, vì trong `.detail-subline` các mục chỉ
+   cách nhau `--space-3` (7px). */
 .copy-btn {
   display: inline-grid;
   place-items: center;
-  width: 1.6rem;
-  height: 1.6rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border: 1px solid var(--border-2);
   border-radius: 6px;
   background: var(--surface);
@@ -130,7 +133,14 @@
 .stat-v { font-weight: 600; overflow-wrap: anywhere; }
 .stat-note { font-size: var(--fs-xs); color: var(--ink-3); overflow-wrap: anywhere; }
 
-.blank-fields { font-size: var(--fs-xs); margin-top: var(--space-4); }
+/* Dòng "Chưa khai: …" phải TÁCH khỏi lưới bằng một đường kẻ, không dính sát nó: sát quá thì
+   mắt đọc ra như một ô nữa của lưới, mà nó là câu nói về những ô KHÔNG có ở đó. */
+.blank-fields {
+  font-size: var(--fs-xs);
+  margin-top: var(--space-9);
+  padding-top: var(--space-7);
+  border-top: 1px dashed var(--border-2);
+}
 
 /* --- Bố cục hai cột của trang chi tiết (ui/detail-layout.tsx) ----------------
  * Vì sao bỏ dải chỉ số ngang: `auto-fit, minmax(180px,1fr)` nghĩa là hồ sơ nào chỉ khai được
@@ -240,6 +250,10 @@
 .data-item dd {
   margin: 0;
   color: var(--ink);
+  /* CÙNG CỠ với `.rail-v` của cột phải (`--fs-md`). Không khai thì nó thừa kế `--fs-sm`
+     (12,3px) của thẻ cha, và hai cột trên cùng một trang, cùng loại thông tin "nhãn + giá
+     trị", lại đọc ra hai cỡ chữ khác nhau. */
+  font-size: var(--fs-md);
   font-weight: 500;
   overflow-wrap: anywhere;
 }
@@ -293,6 +307,11 @@
   top: 0;
   z-index: var(--z-sticky);
   background: var(--canvas);
+  /* CHỪA CHỖ CHO VÒNG TIÊU ĐIỂM. `.tabs` là một khung cuộn ngang (`overflow-x: auto` ở khối
+     khai trên), mà `button:focus-visible` của `base.css` vẽ vòng bằng `box-shadow: 0 0 0 3px`
+     — bóng NGOÀI, nên nó bị khung cắt cụt. Người đi bằng phím mũi tên (roving tabindex ở
+     `ui/tabs.tsx` làm rất đúng) không thấy mình đang đứng ở tab nào. */
+  padding: 3px 3px 0;
 }
 /*
  * Chấm cảnh báo trên tab: bên trong có thứ cần để mắt thì tab NÓI RA, khỏi phải mở từng tab

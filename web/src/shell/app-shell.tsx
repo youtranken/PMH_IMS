@@ -64,6 +64,16 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
 
   return (
     <div className="ims shell-root">
+      {/*
+        BỎ QUA NAV → NỘI DUNG (WCAG 2.4.1).
+        `css/base.css` có sẵn luật `.skip-link` từ lâu — ẩn off-screen, hiện ra khi Tab tới —
+        nhưng tới 18/09/2026 KHÔNG component nào render nó, nên luật ấy là CSS chết và người
+        dùng bàn phím phải Tab qua trọn sidebar (7 nhóm điều hướng) ở MỖI lần đổi trang.
+        Phải là phần tử ĐẦU TIÊN trong cây để nó là điểm dừng Tab đầu tiên.
+      */}
+      <a className="skip-link" href="#noi-dung">
+        {t('app.skipToContent')}
+      </a>
       {/* Tên lớp PHẢI là `app-shell` — đây là lớp duy nhất có `display:flex` (base.css).
           Đặt sai tên → sidebar và .content xếp chồng theo chiều dọc, .content bị đẩy
           xuống dưới 100vh của sidebar nên "bên phải trống trơn ở mọi trang". */}
@@ -183,7 +193,9 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
           </header>
           {/* ⌘K — nằm ở shell nên bấm được từ BẤT KỲ màn nào, không phải chỉ màn danh sách. */}
           <CommandPalette me={me} />
-          <main className="page">{children}</main>
+          <main className="page" id="noi-dung" tabIndex={-1}>
+            {children}
+          </main>
         </div>
       </div>
     </div>

@@ -94,6 +94,8 @@ import {
  *     → Đổi sáng/tối trên máy bàn và nó dính lại sau khi đổi trang
  * [x] Bàn phím: Tab tới nút, Enter mở hộp, Esc đóng, tiêu điểm TRẢ về nút
  *     → Bàn phím một mình cũng đi được: Tab tới nút, Enter mở, Esc đóng
+ * [x] Bàn phím: điểm dừng Tab ĐẦU TIÊN là "Bỏ qua menu", và nó trỏ vào vùng nội dung
+ *     → Tab lần đầu chạm ngay "Bỏ qua menu", và nó trỏ vào vùng nội dung
  *
  * ── BA VAI NGƯỜI DÙNG — ai mở được cửa nào ──────────────────────────────────
  * [x] SA dựng tài khoản Quản trị qua giao diện; người đó đăng nhập lần đầu, menu đúng vai
@@ -697,6 +699,33 @@ test.describe('SA đi một vòng cả hệ thống', () => {
    * ĐỎ KHI: nút "Thêm thiết bị" không tới được bằng Tab, Enter không mở hộp, tiêu điểm không
    * vào trong hộp, Esc không đóng, hoặc đóng xong tiêu điểm rơi mất.
    */
+  /**
+   * ĐIỂM DỪNG TAB ĐẦU TIÊN LÀ "BỎ QUA MENU" (WCAG 2.4.1, thêm 18/09/2026).
+   *
+   * `css/base.css` có sẵn luật `.skip-link` từ lâu — ẩn off-screen, hiện ra khi Tab tới —
+   * nhưng tới 18/09 KHÔNG component nào render nó, nên luật ấy là CSS chết và người đi bàn
+   * phím phải Tab qua trọn sidebar ở MỖI lần đổi trang. Bài "Bàn phím một mình cũng đi được"
+   * ngay dưới đây đếm tới 80 lượt Tab để tới được nút đầu trang — đó chính là quãng đường ấy.
+   *
+   * Phải là một bài RIÊNG, ngay sau một lượt nạp trang: sau khi bấm chuột vào link điều hướng
+   * thì tiêu điểm đang nằm ở link đó, nên Tab kế tiếp đi tới phần tử SAU nó chứ không quay về
+   * đầu tài liệu — bản gộp vào bài kia đỏ đúng vì lý do này.
+   *
+   * Kiểm luôn nó ĐI TỚI ĐÂU: một skip-link trỏ vào hư không còn tệ hơn không có.
+   */
+  test('Tab lần đầu chạm ngay "Bỏ qua menu", và nó trỏ vào vùng nội dung', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    await page.goto('/devices');
+    await expect(page.getByRole('heading', { level: 1, name: /^Thiết bị$/ })).toBeVisible();
+
+    await page.keyboard.press('Tab');
+    const skip = page.getByRole('link', { name: /Bỏ qua menu/ });
+    await expect(skip).toBeFocused();
+    await expect(skip).toHaveAttribute('href', '#noi-dung');
+    // Đích đến phải CÓ THẬT, và phải đúng là vùng nội dung chính.
+    await expect(page.getByRole('main')).toHaveAttribute('id', 'noi-dung');
+  });
+
   test('Bàn phím một mình cũng đi được: Tab tới nút, Enter mở, Esc đóng', async ({ page }) => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);

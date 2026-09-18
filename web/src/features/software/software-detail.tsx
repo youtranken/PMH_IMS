@@ -257,15 +257,20 @@ export function SoftwareDetail({ me }: { me: Me }) {
                 danh bên phải. Lưới chỉ còn phần chưa nói ở đâu cả. Ngày bắt đầu cũng bỏ: nó là
                 mốc đầu của chính thanh hạn bên phải. */}
             <dl className="data-grid">
-              <Item label={t("software.licenseModel")}>
-                {supportsSeats(item.kind)
-                  ? t(
-                      item.licenseModel === "perpetual"
-                        ? "software.perpetual"
-                        : "software.subscription",
-                    )
-                  : "—"}
-              </Item>
+              {/* KHÔNG vẽ ô chỉ để chứa một dấu gạch ngang (`_SPEC.md:53`, gạch nghiệm thu
+                  `:528`): với SSL và tên miền thì "Kỳ hạn" không có nghĩa, nên ô ấy trước đây
+                  được vẽ ra chỉ để đựng "—". Lưới CHỈ vẽ ô có giá trị; dòng "Chưa khai" bên
+                  dưới là nơi DUY NHẤT nói về ô trống. Bốn màn chi tiết kia đã theo luật này,
+                  riêng chỗ này còn dùng `Item` trần. */}
+              {supportsSeats(item.kind) ? (
+                <Item label={t("software.licenseModel")}>
+                  {t(
+                    item.licenseModel === "perpetual"
+                      ? "software.perpetual"
+                      : "software.subscription",
+                  )}
+                </Item>
+              ) : null}
               <DataItemIfSet label={t("software.note")} value={item.note} />
             </dl>
             <BlankFields
