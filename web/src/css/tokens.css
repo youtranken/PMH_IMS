@@ -112,6 +112,16 @@
    * vốn đã tối bị phủ thêm 44% đen nên bảng phía sau gần như đen tuyền.
    */
   --scrim: rgba(20, 26, 20, 0.44);
+  /*
+   * Bản ĐẬM, dành cho lớp phủ toàn màn hình xem ảnh (`lightbox.css`). Ở đó nền phải lùi hẳn
+   * đi để mắt chỉ còn thấy tấm ảnh, nên 0.44 là quá nhạt — đây không phải hộp thoại có nội
+   * dung cần đọc song song với trang phía sau.
+   *
+   * Tách token riêng thay vì để `lightbox.css` viết tay `rgba(20,26,20,.62)` như trước
+   * 18/09/2026: bản viết tay ấy không có cặp cho chế độ tối, nên ở theme tối nó phủ thêm 62%
+   * sắc XANH lên một nền vốn đã tối — ảnh bị ám màu.
+   */
+  --scrim-strong: rgba(20, 26, 20, 0.62);
 
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
@@ -180,6 +190,8 @@ html[data-theme='dark'] {
   /* Chế độ tối: nền đã tối sẵn nên lớp phủ phải THUẦN ĐEN và đậm hơn một chút mới tách được
      hộp ra khỏi trang; dùng lại sắc xanh của bản sáng thì hai lớp hòa vào nhau. */
   --scrim: rgba(0, 0, 0, 0.62);
+  /* Cùng lý do: thuần đen, và đậm hơn bản thường một nấc. */
+  --scrim-strong: rgba(0, 0, 0, 0.78);
   color-scheme: dark;
 
     --on-accent:#0f140f; --on-overlay:#ffffff;

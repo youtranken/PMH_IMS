@@ -40,9 +40,6 @@ export interface ListUrlState<F extends Record<string, string>> {
   setLimit: (value: number) => void;
   sorting: SortState;
   setSorting: (value: SortState) => void;
-  /** Có ít nhất một điều kiện đang bật (kể cả ô tìm). */
-  dirty: boolean;
-  clearAll: () => void;
 }
 
 export function useListUrlState<F extends Record<string, string>>(options: {
@@ -123,7 +120,20 @@ export function useListUrlState<F extends Record<string, string>>(options: {
    * trình duyệt, bấm Back mười lần mới thoát khỏi một từ vừa gõ.
    */
   const [searchInput, setSearchInput] = useState(search);
-  useEffect(() => setSearchInput(search), [search]);
+  /*
+   * ĐỒNG BỘ NGƯỢC CHỈ KHI URL ĐỔI TỪ BÊN NGOÀI (18/09/2026).
+   *
+   * Effect này sinh ra cho Back/Forward và cho link sâu: URL đổi thì ô nhập phải theo. Nhưng
+   * bản trước ghi đè VÔ ĐIỀU KIỆN, kể cả khi URL vừa đổi do CHÍNH lượt debounce của nó — và
+   * vì lượt ghi có `.trim()`, dấu cách người dùng vừa gõ bị nuốt mất ngay dưới con trỏ: gõ
+   * "máy in " rồi dừng 250ms là mất dấu cách, gõ tiếp thành "máy inHP".
+   *
+   * So bằng bản ĐÃ TRIM: nếu ô nhập rút gọn lại đúng bằng `search` thì không có gì từ bên
+   * ngoài để áp vào cả, đừng động vào thứ người ta đang gõ.
+   */
+  useEffect(() => {
+    setSearchInput((dangGo) => (dangGo.trim() === search ? dangGo : search));
+  }, [search]);
 
   /*
    * BẢN MỚI NHẤT CỦA THAM SỐ, giữ trong một ref — không đọc lại từ `params` của lượt render.
@@ -187,12 +197,21 @@ export function useListUrlState<F extends Record<string, string>>(options: {
         sort: value.key === defaultSort.key && value.desc === defaultSort.desc ? '' : value.key,
         dir: value.desc ? 'desc' : '',
       }),
-    dirty:
-      search !== '' || Object.values(filters).some((value) => value !== ''),
-    clearAll: () => {
-      const patch: Record<string, string> = { q: '' };
-      for (const key of Object.keys(emptyFilters)) patch[key] = '';
-      write(patch);
-    },
+    /*
+     * ===== ĐÃ GỠ `dirty` VÀ `clearAll` (18/09/2026) =====
+     *
+     * Hai thứ đó được xuất ra từ đầu nhưng KHÔNG một màn nào gọi — grep toàn `web/src` chỉ ra
+     * đúng file này. Nhìn tên thì đoán được ý định: một nút "Xóa lọc" hiện khi đang có bộ lọc.
+     * Nút ấy chưa bao giờ được làm, và `ui/filter-bar.tsx` cũng không có prop nào nhận nó.
+     *
+     * Nên đây là mã CHƯA TỪNG CHẠY — không ai biết nó đúng hay sai, nó chỉ trông như đã sẵn
+     * sàng. `dirty` còn tính lại `Object.values(filters).some(...)` ở mỗi lượt render cho một
+     * câu hỏi không ai đặt. Đó đúng là thứ mà đợt rà soát 18/09 gặp lặp đi lặp lại: token màu
+     * khai xong không dùng, luật CSS nằm chờ cả tháng, `.skip-link` có đủ kiểu dáng mà không
+     * ai đặt lên trang — mỗi cái đều làm người đọc sau tưởng việc đã xong.
+     *
+     * Thêm nút vào năm màn danh sách là QUYẾT ĐỊNH THIẾT KẾ, không phải dọn dẹp. Ngày nào cần
+     * thật thì lấy lại hai hàm này trong lịch sử git — chúng ở commit trước commit này.
+     */
   };
 }

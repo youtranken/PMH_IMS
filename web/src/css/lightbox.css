@@ -7,7 +7,7 @@
   align-items: center;
   justify-content: center;
   padding: 24px;
-  background: rgba(20, 26, 20, 0.62);
+  background: var(--scrim-strong);
   backdrop-filter: blur(6px);
 }
 .lightbox .lb-stage {

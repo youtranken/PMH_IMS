@@ -187,7 +187,24 @@ export function RelationMap({
           </span>
         </div>
         {cutSummary ? (
-          <button type="button" className="btn sm" onClick={() => setShowCut((on) => !on)}>
+          /*
+            CÔNG TẮC HAI TRẠNG THÁI, PHẢI KHAI RA (18/09/2026).
+
+            Nhãn đổi giữa "Xem lượt thanh lý cắt gì" / "Về bản đồ thường" nên mắt thấy được
+            trạng thái, nhưng trình đọc màn hình thì không: không `aria-pressed` thì nó đọc ra
+            hai cái nút khác nhau chứ không phải một công tắc đang bật.
+
+            `aria-controls` trỏ tới khu tóm tắt vì khu ấy nằm ở CUỐI `<section>`, cách nút cả
+            danh sách nút và dòng "Chưa gắn" — không có dây nối thì người dùng bấm xong không
+            biết có gì vừa hiện ra, và ở đâu.
+          */
+          <button
+            type="button"
+            className="btn sm"
+            aria-pressed={showCut}
+            aria-controls="rmap-cut-sum"
+            onClick={() => setShowCut((on) => !on)}
+          >
             {showCut ? t('relationMap.cutOff') : t('relationMap.cutOn')}
           </button>
         ) : null}
@@ -197,8 +214,12 @@ export function RelationMap({
         {/* `preserveAspectRatio="none"` an toàn ở đây vì hộp giữ đúng tỉ lệ của viewBox, nên
             tỉ lệ co giãn hai chiều bằng nhau — không méo. */}
         <svg className="rmap-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
+          {/* Chỉ đặt class khi sợi dây THẬT SỰ có luật riêng. `e-keep` trước đây được gán cho
+              mọi sợi "giữ" nhưng `relation-map.css` chưa từng khai luật nào cho nó — markup
+              gọi tên một lớp không tồn tại, đúng họ lỗi mà `table.css` đã gọi tên. Sợi "giữ"
+              dùng luật chung `.rmap-svg path`, thế là đủ. */}
           {placed.map(({ node, d }) => (
-            <path key={node.key} className={node.cut ? 'e-cut' : 'e-keep'} d={d} />
+            <path key={node.key} className={node.cut ? 'e-cut' : undefined} d={d} />
           ))}
         </svg>
 
@@ -277,7 +298,12 @@ export function RelationMap({
         <p className="rmap-blank">{t('relationMap.missing', { list: missing.join(', ') })}</p>
       ) : null}
 
-      {showCut && cutSummary ? <div className="rmap-cut-sum">{cutSummary}</div> : null}
+      {/* `role="status"` để nội dung vừa bật ra được đọc lên, không chỉ hiện ra. */}
+      {showCut && cutSummary ? (
+        <div className="rmap-cut-sum" id="rmap-cut-sum" role="status">
+          {cutSummary}
+        </div>
+      ) : null}
     </section>
   );
 }
