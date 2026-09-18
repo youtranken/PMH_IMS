@@ -10,6 +10,21 @@ import type { ReactNode } from 'react';
  * TRONG Content; popover portal ra document.body sẽ bị chặn click LẪN cuộn (bánh xe giờ).
  * Portal vào mount-point này (nằm trong Content) → thuộc vùng cho phép. Ngoài dialog = null → body.
  */
+/**
+ * Đếm ĐỘ SÂU hộp thoại đang mở, để hộp LỒNG không phủ mờ chồng lên hộp cha.
+ *
+ * `overlays.css` có sẵn `.modal-backdrop.bare` (trong suốt) và prop `overlayClassName` có sẵn
+ * chú thích bảo hộp lồng phải dùng nó — nhưng rà ngày 18/09/2026 thì KHÔNG một nơi gọi nào
+ * truyền chuỗi đó: luật CSS chết, và chú thích mô tả một cơ chế chưa từng được đấu dây. Ở Két
+ * sắt, lồng hộp là đường đi CHÍNH (mở két → gõ mã 6 số → hiện giá trị), nên tới hộp thứ ba nền
+ * đã phủ ba lớp, khoảng 0,69 độ đen, blur chồng blur.
+ *
+ * Để hộp TỰ BIẾT thay vì bắt từng nơi gọi tự khai: nơi gọi không phải lúc nào cũng biết mình
+ * đang nằm trong một hộp khác — `VaultPanel` dùng ở cả trang chi tiết lẫn trong popup của
+ * `/vault`, cùng một đoạn mã, hai độ sâu khác nhau.
+ */
+const DialogDepthContext = createContext(0);
+
 const DialogPortalContext = createContext<HTMLElement | null>(null);
 export const useDialogPortal = () => useContext(DialogPortalContext);
 
@@ -33,7 +48,7 @@ export function Dialog({
   requireExplicitClose = false,
   guardUnsaved = false,
   className = 'sheet',
-  overlayClassName = 'modal-backdrop',
+  overlayClassName,
   maxWidth,
   title,
   footer,
@@ -110,6 +125,7 @@ export function Dialog({
 }) {
   const { t } = useTranslation();
   const askConfirm = useConfirm();
+  const depth = useContext(DialogDepthContext);
   const [portalEl, setPortalEl] = useState<HTMLDivElement | null>(null);
 
   /*
@@ -282,7 +298,9 @@ export function Dialog({
   return (
     <RD.Root open={open} onOpenChange={onOpenChange}>
       <RD.Portal>
-        <RD.Overlay className={overlayClassName} />
+        <RD.Overlay
+          className={overlayClassName ?? (depth > 0 ? 'modal-backdrop bare' : 'modal-backdrop')}
+        />
         <div className="dialog-viewport">
           <RD.Content
             className={className}
@@ -330,7 +348,11 @@ export function Dialog({
                     )}
                   </div>
                   <div className="sheet-body" ref={bodyRef}>
-                    {children}
+                    {/* Con của hộp này nằm SÂU HƠN một tầng: hộp nào mở ra từ đây là hộp lồng
+                        và sẽ tự dùng nền trong suốt. */}
+                    <DialogDepthContext.Provider value={depth + 1}>
+                      {children}
+                    </DialogDepthContext.Provider>
                   </div>
                   {footer ? (
                     /*

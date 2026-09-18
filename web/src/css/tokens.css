@@ -106,6 +106,12 @@
   --shadow-lg: 0 24px 60px -20px rgba(16, 24, 40, 0.35),
     0 8px 20px -12px rgba(16, 24, 40, 0.2);
   --shadow-pop: 0 12px 28px -10px rgba(16, 24, 40, 0.25);
+  /*
+   * Lớp phủ sau hộp thoại. Trước 18/09/2026 nó là `rgba(20,26,20,.44)` viết thẳng trong
+   * `overlays.css` — màu duy nhất nằm ngoài file này, và KHÔNG có cặp cho chế độ tối: trang
+   * vốn đã tối bị phủ thêm 44% đen nên bảng phía sau gần như đen tuyền.
+   */
+  --scrim: rgba(20, 26, 20, 0.44);
 
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
@@ -171,6 +177,9 @@ html[data-theme='dark'] {
   --shadow-lg: 0 24px 60px -20px rgba(0, 0, 0, 0.7),
     0 8px 20px -12px rgba(0, 0, 0, 0.5);
   --shadow-pop: 0 12px 28px -10px rgba(0, 0, 0, 0.6);
+  /* Chế độ tối: nền đã tối sẵn nên lớp phủ phải THUẦN ĐEN và đậm hơn một chút mới tách được
+     hộp ra khỏi trang; dùng lại sắc xanh của bản sáng thì hai lớp hòa vào nhau. */
+  --scrim: rgba(0, 0, 0, 0.62);
   color-scheme: dark;
 
     --on-accent:#0f140f; --on-overlay:#ffffff;
