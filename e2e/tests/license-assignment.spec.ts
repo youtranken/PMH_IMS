@@ -69,22 +69,37 @@ async function assign(
   });
 }
 
-/** Bung dòng license đang hiện trên danh sách và trả về khu vừa mở. */
-async function expandLicense(page: Page, licenseCode: string) {
+/**
+ * Tìm một license trên danh sách và CHỜ BẢNG LỌC XONG rồi mới trả dòng về.
+ *
+ * ===== VÌ SAO PHẢI CHỜ (17/09/2026, đỏ thật một lượt ngày 18/09) =====
+ *
+ * Ô tìm có debounce 250ms từ khi trạng thái danh sách chuyển lên thanh địa chỉ. Dòng cần tìm
+ * hiện ra ngay TỪ TRƯỚC khi lọc — nó vốn đã nằm trong bảng — nên `toBeVisible()` xanh sớm,
+ * rồi thao tác tiếp theo rơi vào đúng khoảnh khắc trước lượt vẽ lại: bung được dòng, nhưng
+ * 250ms sau bảng vẽ lại và khu vừa bung đóng sập.
+ *
+ * Hai dòng = đúng một cái header + đúng một kết quả. Đó mới là "đã lọc xong".
+ *
+ * ===== VÌ SAO TÁCH RA KHỎI `expandLicense` =====
+ *
+ * Bản trước chôn phép chờ này bên trong `expandLicense`, nên bài nào cần khẳng định một điều
+ * gì đó TRƯỚC khi bung (ví dụ "chưa bung thì mã máy chưa có mặt") không dùng lại được và đã
+ * chép tay phần `goto + fill + toBeVisible` — thiếu đúng dòng chờ. Lượt E2E đầy đủ 18/09 đỏ
+ * ở đúng chỗ đó. Tách ra thì cả hai đường đều đi qua một phép chờ duy nhất.
+ */
+async function timLicense(page: Page, licenseCode: string) {
   await page.goto('/software');
   await page.getByRole('searchbox', { name: /Tìm/ }).fill(licenseCode);
   const row = page.getByRole('row', { name: new RegExp(licenseCode) });
   await expect(row).toBeVisible();
-  /*
-   * CHỜ BẢNG THU LẠI RỒI MỚI BẤM (thêm 17/09/2026).
-   *
-   * Ô tìm có debounce 250ms từ khi trạng thái danh sách chuyển lên thanh địa chỉ. Dòng cần tìm
-   * hiện ra ngay từ trước khi lọc — nó vốn đã nằm trong bảng — nên `toBeVisible()` xanh sớm,
-   * rồi cú bấm rơi vào đúng khoảnh khắc trước lượt vẽ lại. Bung được dòng, nhưng 250ms sau
-   * bảng vẽ lại và khu vừa bung đóng sập, còn bài kiểm thì đứng chờ một hộp thoại không bao
-   * giờ tới. Hai dòng = đúng một cái header + đúng một kết quả: đó mới là "đã lọc xong".
-   */
   await expect(page.getByRole('row')).toHaveCount(2);
+  return row;
+}
+
+/** Bung dòng license đang hiện trên danh sách và trả về khu vừa mở. */
+async function expandLicense(page: Page, licenseCode: string) {
+  const row = await timLicense(page, licenseCode);
   await row.getByRole('button').first().click();
   return row;
 }
@@ -229,10 +244,10 @@ test.describe('Gán license theo seat', () => {
     const deviceId = await createDevice(page, deviceCode);
     expect((await assign(page, licenseId, deviceId)).status()).toBe(201);
 
-    await page.goto('/software');
-    await page.getByRole('searchbox', { name: /Tìm/ }).fill(`LIC-E2E-EXP-${stamp}`);
-    const row = page.getByRole('row', { name: new RegExp(`LIC-E2E-EXP-${stamp}`) });
-    await expect(row).toBeVisible();
+    // `timLicense` chờ bảng LỌC XONG rồi mới trả dòng — xem chú thích của nó. Chép tay ba
+    // dòng `goto + fill + toBeVisible` ở đây là thiếu đúng phép chờ ấy, và lượt E2E đầy đủ
+    // ngày 18/09 đã đỏ ở đúng chỗ này.
+    const row = await timLicense(page, `LIC-E2E-EXP-${stamp}`);
 
     // Chưa bung thì mã máy CHƯA có mặt trên màn.
     await expect(page.getByRole('link', { name: deviceCode })).toHaveCount(0);

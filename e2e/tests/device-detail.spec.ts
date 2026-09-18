@@ -231,14 +231,24 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
   });
 
   /**
-   * Số trên nhãn tab (28/08/2026) — "Giấy tờ 0", "Két sắt 1".
+   * Số trên nhãn tab (28/08/2026) — "Két sắt 1".
    *
-   * Trước đây phải bấm vào từng tab mới biết trong đó có gì, kể cả khi rỗng. Số `0` là một câu
-   * trả lời THẬT và vẫn hiện; chỉ khi chưa biết (đang tải, hoặc không có quyền xem két) mới
-   * không hiện gì.
+   * Trước đây phải bấm vào từng tab mới biết trong đó có gì. Số trên nhãn trả lời trước.
    *
    * Đếm ở web qua chính truy vấn mà panel dùng, không phải một endpoint mới: `vault.module` đã
    * import `devices`, nên cho `devices` gọi ngược `vault.api` để đếm là vòng phụ thuộc.
+   *
+   * ===== VẾ "SỐ 0 VẪN HIỆN" ĐÃ BỊ ĐẢO (18/09/2026) =====
+   *
+   * Bản 28/08 khẳng định `0` là câu trả lời THẬT và vẫn phải hiện. Đợt thiết kế v2 đảo lại, và
+   * đảo có văn bản: `design-ims/v2-chi-tiet/_SPEC.md:61` xếp "Badge đếm hiện số 0" vào danh
+   * sách LỖI của bản cũ, `:529` đưa thành gạch nghiệm thu — `count === 0` thì KHÔNG vẽ
+   * `.tab-count`. Lý do: số 0 không nói thêm gì so với việc mở tab ra thấy khu rỗng, nhưng nó
+   * làm hàng tab của hồ sơ mới trông như đang hỏng ("Tổng quan · Giấy tờ 0 · Két sắt 0").
+   *
+   * Cái bài này canh thì KHÔNG đổi, và đó mới là phần đáng giá: số chỉ xuất hiện khi có thứ
+   * để đếm, và nó phải KHỚP với nội dung panel — hai chỗ dùng chung một truy vấn nên không
+   * thể nói hai con số khác nhau.
    */
   test('nhãn tab mang sẵn số — không phải bấm vào mới biết trong đó có gì', async ({ page }) => {
     await firstLogin(page, E2E_SA);
@@ -247,9 +257,9 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     await page.goto(`/devices/${deviceId}`);
-    // Rỗng vẫn đề 0 — "chưa có gì" khác "chưa biết", và người đọc cần phân biệt được.
-    await expect(page.getByRole('tab', { name: 'Giấy tờ 0' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Két sắt 0' })).toBeVisible();
+    // Rỗng thì tab KHÔNG đeo số nào — `name` khớp CHÍNH XÁC nên "Giấy tờ 0" sẽ không lọt qua.
+    await expect(page.getByRole('tab', { name: 'Giấy tờ', exact: true })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Két sắt', exact: true })).toBeVisible();
 
     const secret = await page.request.post('/api/v1/vault/secrets', {
       headers,
@@ -264,8 +274,9 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
     expect(secret.status()).toBe(201);
 
     await page.goto(`/devices/${deviceId}`);
+    // Có một ngăn → số mọc ra đúng ở tab đó, và CHỈ ở tab đó.
     await expect(page.getByRole('tab', { name: 'Két sắt 1' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Giấy tờ 0' })).toBeVisible();
+    await expect(page.getByRole('tab', { name: 'Giấy tờ', exact: true })).toBeVisible();
 
     /*
      * Bấm sang tab là dữ liệu đã nằm sẵn trong cache — số và nội dung panel dùng CHUNG một
