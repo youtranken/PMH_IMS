@@ -1,10 +1,12 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { and, count, eq, gt, inArray, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { OutboxService } from '../outbox/outbox.service';
 import { auditLogTable } from './audit.schema';
+import { AuditWriterService } from './audit-writer.service';
+import { redactMessage } from '../../common/log-redact';
 
 /**
  * Canh người đang DÒ DẪM quanh két, và báo cho quản trị khi đủ đáng ngờ.
@@ -41,10 +43,13 @@ const ALERTED_ACTION = 'security.probe.alerted';
 
 @Injectable()
 export class SecurityProbeService {
+  private readonly logger = new Logger(SecurityProbeService.name);
+
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly config: SystemConfigService,
     private readonly outbox: OutboxService,
+    private readonly audit: AuditWriterService,
   ) {}
 
   /**
@@ -115,10 +120,19 @@ export class SecurityProbeService {
           );
         if ((alerted?.n ?? 0) > 0) return;
 
-        /* Vết và thư đi CÙNG một transaction (AD-5). Rời ra thì hoặc thư đi mà không có vết
-           (lần sau lại gửi tiếp, vì thời gian nghỉ đọc từ chính cái vết ấy), hoặc có vết mà
-           thư không đi — và không ai biết là đã có cảnh báo bị nuốt. */
-        await tx.insert(auditLogTable).values({
+        /*
+         * Vết và thư đi CÙNG một transaction (AD-5). Rời ra thì hoặc thư đi mà không có vết
+         * (lần sau lại gửi tiếp, vì thời gian nghỉ đọc từ chính cái vết ấy), hoặc có vết mà
+         * thư không đi — và không ai biết là đã có cảnh báo bị nuốt.
+         *
+         * `appendWithin` chứ không phải `tx.insert` tay: chỉ đường kia mới đi qua `toRow()`,
+         * nơi cột `ip` được lấy từ `currentRequestIp()`. Insert thẳng thì `ip` LUÔN NULL —
+         * đúng khoảng trống NFR-03 mà rà soát 07/09 vừa vá ("cột này có trong
+         * `0004_audit_log.sql` từ ngày đầu nhưng THIẾU ở bảng drizzle suốt 9 epic"), nay tái
+         * xuất ở dòng an ninh đáng giá nhất. `noteFailure` chạy trong ngữ cảnh request nên
+         * `currentRequestIp()` CÓ giá trị, và "dò từ máy nào" là câu điều tra viên hỏi đầu tiên.
+         */
+        await this.audit.appendWithin(tx, {
           actor,
           action: ALERTED_ACTION,
           objectType: 'session',
@@ -131,11 +145,21 @@ export class SecurityProbeService {
           windowMinutes,
         });
       });
-    } catch {
+    } catch (error) {
       /*
-       * Nuốt có chủ ý — xem chú thích ở đầu hàm. Không ghi log ở đây để tránh một đường rò
-       * thứ hai: thông điệp lỗi có thể mang theo tên người và id ngăn vừa bị thử.
+       * Nuốt có chủ ý — xem chú thích ở đầu hàm — NHƯNG PHẢI KÊU LÊN (18/09/2026).
+       *
+       * Bản trước là `catch {}` rỗng, không một chữ nào. Nghĩa là nếu `db.transaction` hỏng,
+       * `outbox.enqueueWithin` hỏng, hay `config.getNumber` ném (bảng `system_config` lỗi) thì
+       * hàng rào PHÁT HIỆN chết vĩnh viễn: không thư, không dòng `security.probe.alerted`,
+       * không log — và không cách nào biết ngoài việc ngồi chờ một cuộc tấn công thật rồi thấy
+       * hộp thư im lặng.
+       *
+       * Lý do cũ ("thông điệp lỗi có thể mang tên người và id ngăn") không đứng vững: repo đã
+       * có sẵn `redactMessage` dùng đúng cho việc này ở `DevicePanelRegistry` và
+       * `AuditWriterService`. Vẫn không ném, vẫn không lộ gì.
        */
+      this.logger.error(`Canh dò két hỏng, KHÔNG có cảnh báo nào đi: ${redactMessage(error)}`);
     }
   }
 

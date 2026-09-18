@@ -2,9 +2,11 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   Header,
   HttpCode,
+  NotFoundException,
   Param,
   Patch,
   Post,
@@ -266,17 +268,46 @@ export class VaultController {
     try {
       return await run();
     } catch (error) {
+      /*
+       * CHỈ ĐẾM LƯỢT BỊ TỪ CHỐI, KHÔNG ĐẾM LƯỢT HỎNG (18/09/2026).
+       *
+       * Bản trước bắt MỌI lỗi, nên ngoài 403/404 nó nuốt trọn cả lỗi giải mã (`crypto.openText`
+       * ném khi `key_version` không còn trong chùm chìa, hoặc tag lệch), lỗi DB chớp, lỗi
+       * `config.getNumber`. Hai hậu quả cụ thể:
+       *
+       *   · Một SA mở ba lần một ngăn có ciphertext hỏng — đúng tình huống `secrets/README.md`
+       *     mô tả sau khi lỡ xoá dòng chìa cũ — sinh ra ba dòng `reveal_denied` mang
+       *     `code: 'UNKNOWN'` kèm một email TỐ CÁO CHÍNH SA ĐÓ đang dò dẫm quanh két, trong
+       *     khi sự thật là hệ thống hỏng.
+       *   · Lỗi xảy ra SAU khi `vault.reveal()` đã ghi `vault.secret.revealed` để lại cả
+       *     "đã mở" lẫn "bị từ chối" cho cùng một lượt gọi — sổ nói hai điều ngược nhau đúng
+       *     ở chỗ điều tra viên đọc.
+       *
+       * Lỗi khác ném thẳng cho `global-exception.filter` xử như 500 thật.
+       */
+      if (!(error instanceof ForbiddenException || error instanceof NotFoundException)) {
+        throw error;
+      }
       const code =
         typeof (error as { response?: { code?: unknown } })?.response?.code === 'string'
           ? ((error as { response: { code: string } }).response.code)
           : 'UNKNOWN';
-      await this.audit.append({
-        actor: who,
-        action: 'vault.secret.reveal_denied',
-        objectType: 'secret',
-        objectId: secretId,
-        detail: { code },
-      });
+      /*
+       * GHI VẾT KHÔNG ĐƯỢC LÀM HỎNG CÂU TRẢ LỜI. `append` là bản NÉM, nên một nhịp DB nghẽn
+       * biến 403 đúng của người dùng thành 500 — và chính đường đang bị tấn công là đường dễ
+       * nghẽn nhất. Nuốt lỗi ghi, giữ nguyên lỗi gốc; `AuditWriterService` đã tự log.
+       */
+      try {
+        await this.audit.append({
+          actor: who,
+          action: 'vault.secret.reveal_denied',
+          objectType: 'secret',
+          objectId: secretId,
+          detail: { code },
+        });
+      } catch {
+        /* đã log ở tầng dưới — xem chú thích ngay trên */
+      }
       // Đếm và cảnh báo — không ném ra ngoài dù gửi thư hỏng (xem `SecurityProbeService`).
       await this.probe.noteSecurityFailure(who);
       throw error;

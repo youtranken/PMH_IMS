@@ -64,10 +64,31 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
       const src = readFileSync(join(__dirname, file), 'utf8');
       const duocPhep = CHO_PHEP.get(file) ?? [];
       for (const forbidden of ['export', 'download', 'xlsx', 'csv', 'all']) {
-        const route = new RegExp(`@(?:Get|Post)\\(\\s*['"\`]${forbidden}`, 'i');
+        /*
+         * TỪ KHÓA Ở BẤT KỲ ĐÂU TRONG ĐƯỜNG DẪN, KHÔNG CHỈ Ở ĐẦU (18/09/2026).
+         *
+         * Bản trước ghim từ khóa NGAY SAU dấu nháy, nên nó chỉ bắt được route đặt ở gốc.
+         * Ba dạng dưới đây — đúng hình dạng mà người thêm chức năng xuất sẽ viết — đi qua
+         * sạch sẽ: `@Get(':id/export.xlsx')`, `@Get('secrets/download')`,
+         * `@Post('owners/export')`.
+         *
+         * `[^'"\`]*` cho phép từ khóa nằm giữa đường dẫn; `\\b` giữ cho nó vẫn là một TỪ,
+         * không khớp nhầm `overall` hay `installed`.
+         *
+         * Khớp TRỌN lời gọi (tới hết `')`), không cắt ngang chuỗi: danh sách trắng bên dưới
+         * so BẰNG ĐÚNG, nên hai bên phải cùng một hình dạng thì mới đối chiếu được.
+         */
+        const route = new RegExp(
+          `@(?:Get|Post)\\(\\s*(['"\`])[^'"\`]*\\b${forbidden}\\b[^'"\`]*\\1\\)`,
+          'i',
+        );
         const hits = src.match(new RegExp(route.source, 'gi')) ?? [];
+        /*
+         * So BẰNG ĐÚNG chuỗi, không phải tiền tố: `startsWith` tha luôn cả
+         * `@Get('export.xlsx-tat-ca')` chỉ vì nó bắt đầu giống hệt mục được phép.
+         */
         const laVietPhamThat = hits.some(
-          (hit) => !duocPhep.some((ok) => ok.toLowerCase().startsWith(hit.toLowerCase())),
+          (hit) => !duocPhep.some((ok) => ok.toLowerCase() === hit.toLowerCase()),
         );
         /* Gói cả `file` và `forbidden` vào giá trị được so: Jest không nhận tham số message
            (chỉ Playwright/Vitest có), nên muốn thông báo lỗi nói được "file nào, từ khóa nào"

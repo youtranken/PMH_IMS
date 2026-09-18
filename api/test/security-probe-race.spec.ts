@@ -1,6 +1,7 @@
 import { runMigrations } from '../src/database/migration-runner';
 import { SecurityProbeService } from '../src/modules/audit/security-probe.service';
 import { OutboxService } from '../src/modules/outbox/outbox.service';
+import { AuditWriterService } from '../src/modules/audit/audit-writer.service';
 import type { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
@@ -65,7 +66,12 @@ describe('Cảnh báo dò két không nhân lên khi bị bắn song song', () =
   beforeAll(async () => {
     scratch = await createScratchDb('ims_probe');
     await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
-    probe = new SecurityProbeService(scratch.db, config, new OutboxService(scratch.db));
+    probe = new SecurityProbeService(
+      scratch.db,
+      config,
+      new OutboxService(scratch.db),
+      new AuditWriterService(scratch.db),
+    );
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
