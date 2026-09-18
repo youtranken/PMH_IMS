@@ -323,7 +323,25 @@ async function main() {
    * nhật, và quên cập nhật thì cửa canh mù đúng vùng vừa thêm.
    */
   const requested = process.argv.slice(2);
-  const domains = requested.includes('all') ? ['users', ...Object.keys(DOMAINS)] : requested;
+  /*
+   * SẮP LẠI THEO THỨ TỰ KHAI CỦA `DOMAINS`, KHÔNG THEO THỨ TỰ THAM SỐ (18/09/2026).
+   *
+   * Banner ở đầu file tuyên bố "THỨ TỰ KHAI Ở ĐÂY CHÍNH LÀ THỨ TỰ DỌN", và điều đó chỉ đúng
+   * với `all`. Mọi `beforeEach` bên E2E gọi `flushResets()`, mà hàm đó truyền tên vùng theo
+   * `DOMAIN_ORDER` trong `e2e/tests/helpers.ts` — một mảng có thứ tự KHÁC HẲN (`devices` đứng
+   * thứ 9 thay vì thứ 2). Tức là có HAI bản luật cho cùng một khái niệm, đúng thứ chính file
+   * này lên án ở đoạn dưới.
+   *
+   * Hiện chưa nổ vì `catalog` tình cờ cũng nằm cuối `DOMAIN_ORDER` — mà `catalog` phải cuối
+   * chính là bất biến quan trọng nhất ở đây. Một lần sắp lại mảng bên kia là hỏng, và hỏng
+   * dưới dạng lỗi khoá ngoại ở một bài chẳng liên quan.
+   *
+   * Sắp ở ĐÂY thì thứ tự tham số thôi có nghĩa, và nơi gọi không cần nhớ luật nào cả.
+   */
+  const thuTu = ['users', ...Object.keys(DOMAINS)];
+  const domains = (requested.includes('all') ? thuTu : requested)
+    .slice()
+    .sort((a, b) => thuTu.indexOf(a) - thuTu.indexOf(b));
   const unknown = domains.filter((d) => d !== 'users' && !(d in DOMAINS));
   if (unknown.length > 0) {
     console.error(

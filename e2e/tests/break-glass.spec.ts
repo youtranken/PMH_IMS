@@ -1,12 +1,15 @@
+import { execSync } from 'node:child_process';
 import { expect, test, type Page } from '@playwright/test';
 import {
   APP_ORIGIN,
+  COMPOSE,
   E2E_MEMBER,
   E2E_SA,
   NEW_PASSWORD,
   expireStepUp,
   firstLogin,
   freshTotpCode,
+  lastAudit,
   loginWithTotp,
   logout,
   resetAccessList,
@@ -148,6 +151,37 @@ test.describe('Break-glass', () => {
     await page.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
     await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận' }).click();
     await expect(page.getByTestId('secret-value')).toHaveText(secretValue);
+
+    /*
+     * VẾT PHẢI NÓI XEM ĐƯỢC NHỜ PHIẾU NÀO (FR-025, thêm 18/09/2026).
+     *
+     * `VaultService.reveal` ghi `grantId` vào `detail` kèm chú thích "thiếu trường này thì
+     * nhật ký break-glass chỉ nói 'có người xem' mà không nói được là xem hợp lệ theo grant
+     * nào". `lastAudit` cũng được viết ra ĐÚNG để bắt việc mất trường đó — docblock của nó
+     * nói y như vậy — nhưng tới 18/09 cả ba nơi gọi đều chỉ đọc `.actor`, nên gỡ `grantId`
+     * khỏi service không làm bài nào đỏ.
+     *
+     * Đây là tờ giấy nộp cho auditor: "ai xem" mà không có "bằng quyền gì" thì trả lời được
+     * một nửa câu hỏi, và nửa còn lại mới là nửa chứng minh quy trình duyệt có thật.
+     */
+    const vet = lastAudit('vault.secret.revealed', secretId);
+    expect(vet?.actor, 'vết phải mang tên người vừa xem').toBe(E2E_MEMBER.email);
+    const chiTiet = JSON.parse(vet?.detail ?? '{}') as { grantId?: string | null };
+    expect(
+      chiTiet.grantId,
+      'xem qua đường break-glass thì vết PHẢI trỏ tới phiếu đã duyệt, không được null',
+    ).toEqual(expect.any(String));
+
+    // Và phải đúng phiếu của chính lượt xin này, không phải một phiếu cũ nào đó.
+    const phieu = execSync(
+      `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
+        `"SELECT id FROM approval WHERE reason = 'switch tầng 3 mất kết nối' ` +
+        `ORDER BY created_at DESC LIMIT 1"`,
+      { cwd: '..', stdio: 'pipe' },
+    )
+      .toString()
+      .trim();
+    expect(chiTiet.grantId, 'phải là ĐÚNG phiếu vừa được duyệt').toBe(phieu);
   });
 
   /**

@@ -8,13 +8,16 @@ import {
   E2E_SA,
   clearMailbox,
   countAudit,
+  countAuditByActor,
   firstLogin,
+  getConfig,
   lastAudit,
   mailBody,
   logout,
   resetDevices,
   waitForMail,
   resetSecrets,
+  resetAccessList,
   resetUsers,
   rowAction,
 } from './helpers';
@@ -23,6 +26,19 @@ test.beforeEach(() => {
   resetUsers();
   resetSecrets();
   resetDevices();
+  /*
+   * DỌN CẢ MA TRẬN QUYỀN (thêm 18/09/2026).
+   *
+   * Hai bài của file này — "Member chưa được gán gì: đọc 403" và "khu Két sắt không lọt cho
+   * Member ngoài ma trận quyền" — đều GIẢ ĐỊNH `E2E_MEMBER` không có phiếu quyền nào. Điều
+   * đó tới nay đúng nhờ MAY: `vault-reveal.spec.ts` chạy ngay trước theo thứ tự tên file, và
+   * `beforeEach` của nó có `resetAccessList()` nên dọn hộ.
+   *
+   * Nghĩa là chạy `vault.spec.ts` một mình bằng `--grep`, hoặc chỉ cần đổi thứ tự khai test
+   * bên file kia, là hai bài này đỏ vì một lý do chẳng liên quan gì tới thứ chúng đang canh.
+   * Một bài kiểm không được dựa vào hàng xóm để có điều kiện đầu vào của chính nó.
+   */
+  resetAccessList();
 });
 
 async function csrfOf(page: Page): Promise<string> {
@@ -246,8 +262,24 @@ test.describe('Két sắt', () => {
     await firstLogin(page, prober);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
-    // Member ngoài ma trận quyền: sáu lượt thử, cả sáu phải bị chặn.
-    for (let i = 0; i < 6; i += 1) {
+    /*
+     * NGƯỠNG ĐỌC TỪ `system_config`, KHÔNG GÕ CỨNG (AD-11, sửa 18/09/2026).
+     *
+     * Bản trước chốt "sáu lượt" và ngầm giả định ngưỡng là 3. Hai chuyện hỏng theo:
+     * đổi `secret.probe_alert_threshold` — đúng đường lùi mà migration 0046 quảng cáo — là
+     * bài này đỏ vì một lý do chẳng liên quan; còn HẠ ngưỡng xuống 1 thì bài vẫn xanh mà
+     * thời gian nghỉ không còn được kiểm đúng cảnh (phải vượt ngưỡng rồi mới nói được là
+     * "nhiều lượt chỉ một thư").
+     *
+     * Bài `vault-reveal.spec.ts` đã đọc `secretRevealSeconds` từ `/auth/me` theo đúng lối
+     * này; đây chỉ là áp cùng một luật cho con số thứ hai.
+     */
+    const nguong = Number(getConfig('secret.probe_alert_threshold'));
+    expect(nguong, 'ngưỡng phải là một số dương thì bài này mới có nghĩa').toBeGreaterThan(0);
+    const soLuot = nguong * 2;
+
+    // Member ngoài ma trận quyền: bắn gấp đôi ngưỡng, tất cả phải bị chặn.
+    for (let i = 0; i < soLuot; i += 1) {
       const denied = await page.request.post(`/api/v1/vault/secrets/${secretId}/reveal`, {
         headers,
       });
@@ -261,7 +293,7 @@ test.describe('Két sắt', () => {
     expect(
       countAudit('vault.secret.reveal_denied', secretId),
       'mỗi lượt bị chặn phải là MỘT dòng vết — đây là thứ trước đây không có',
-    ).toBe(6);
+    ).toBe(soLuot);
 
     const row = lastAudit('vault.secret.reveal_denied', secretId);
     expect(row?.actor, 'vết phải mang tên người vừa thử').toBe(prober.email);
@@ -271,10 +303,18 @@ test.describe('Két sắt', () => {
     ).not.toContain('ngăn bị dò');
 
     const mails = await waitForMail('lượt thất bại quanh két');
-    expect(mails.length, 'đủ ngưỡng thì phải có thư cảnh báo').toBeGreaterThanOrEqual(1);
+    expect(mails.length, 'đủ ngưỡng thì phải có thư cảnh báo ĐI THẬT').toBeGreaterThanOrEqual(1);
+
+    /*
+     * "ĐÚNG MỘT LẦN" hỏi DB, không hỏi hộp thư — xem chú thích của `countAuditByActor`.
+     * Bản trước dùng `expect(mails.length).toBe(1)`, và đó là một cuộc đua: `waitForMail` trả
+     * về ngay lượt poll đầu thấy ≥1 lá, nên bỏ trọn khối thời-gian-nghỉ vẫn XANH — bốn lá
+     * thừa còn đang trên đường qua outbox → BullMQ → SMTP.
+     */
     expect(
-      mails.length,
-      'và ĐÚNG MỘT lá dù sáu lượt: thời gian nghỉ chặn việc làm ngập hộp thư quản trị',
+      countAuditByActor('security.probe.alerted', prober.email),
+      `${soLuot} lượt thất bại chỉ được sinh ĐÚNG MỘT lượt cảnh báo: thời gian nghỉ là thứ ` +
+        'chặn chính cảnh báo trở thành công cụ làm ngập hộp thư quản trị',
     ).toBe(1);
 
     const body = await mailBody(mails[0].ID);

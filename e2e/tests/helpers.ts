@@ -232,6 +232,36 @@ export function countAudit(action: string, objectId: string): number {
 }
 
 /**
+ * Đếm dòng audit theo NGƯỜI — cho những hành động không gắn với một đối tượng nào.
+ *
+ * ===== VÌ SAO CẦN NÓ, THAY VÌ ĐẾM THƯ TRONG HỘP =====
+ *
+ * `security.probe.alerted` có `object_id = NULL` (nó nói về một PHIÊN dò dẫm, không về một
+ * ngăn cụ thể), nên `countAudit` không hỏi được.
+ *
+ * Nhưng lý do thật sự quan trọng hơn: câu "đủ ngưỡng thì CHỈ một lá thư" trước đây được hỏi
+ * bằng `expect((await waitForMail(...)).length).toBe(1)`, và đó là một CUỘC ĐUA chứ không
+ * phải một khẳng định. `waitForMail` trả về NGAY ở lượt poll đầu tiên thấy ≥1 thư khớp — nó
+ * không chờ hộp thư lắng. Xoá trọn khối thời-gian-nghỉ trong `SecurityProbeService` thì lượt
+ * 3,4,5,6 mỗi lượt đẩy một job, nhưng bốn lá ấy đi qua outbox → BullMQ → SMTP BẤT ĐỒNG BỘ;
+ * bài kiểm poll mỗi 500ms và chỉ cần thấy lá đầu là trả về `[1 lá]` → `toBe(1)` XANH.
+ *
+ * Dòng vết thì khác: nó commit ĐỒNG BỘ, trong cùng transaction với lượt đẩy thư, trước khi
+ * request thứ N trả về. Hỏi DB là hỏi đúng thứ đã xảy ra, không phải thứ vừa kịp tới nơi.
+ *
+ * Giữ `waitForMail(...).length >= 1` cho vế "thư có đi thật" — hai câu hỏi khác nhau, hai
+ * công cụ khác nhau.
+ */
+export function countAuditByActor(action: string, actor: string): number {
+  const out = dockerExec(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
+      `"SELECT count(*) FROM audit_log WHERE action = '${action}' AND actor = '${actor}'"`,
+    'Đếm dòng audit theo người',
+  );
+  return Number(out.trim());
+}
+
+/**
  * ===== GOM MỌI LỆNH DỌN VÀO MỘT LƯỢT `docker compose exec` =====
  *
  * Bản trước có 11 hàm reset, mỗi hàm tự `execSync` một lệnh riêng, và mỗi `beforeEach` gọi

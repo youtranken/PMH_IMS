@@ -264,6 +264,19 @@ export class VaultController {
    * một chữ nào ở phía client. `code` đi vào vết để sau này phân biệt được ba tình huống rất
    * khác nhau: id không có thật, có thật nhưng ngoài quyền, và có thật nhưng cần xin duyệt.
    */
+  /**
+   * `code` nghiệp vụ trong thân lỗi HTTP của Nest, đọc từ một giá trị `unknown`.
+   *
+   * Tách ra thành hàm riêng để nơi gọi đọc nó TRƯỚC khi thu hẹp kiểu — xem chú thích tại chỗ.
+   * Ba tình huống rất khác nhau đi vào vết nhờ giá trị này: id không có thật, có thật nhưng
+   * ngoài quyền, và có thật nhưng cần xin duyệt.
+   */
+  private static maLoiCua(error: unknown): string {
+    const than = (error as { response?: unknown } | null)?.response;
+    const ma = (than as { code?: unknown } | null | undefined)?.code;
+    return typeof ma === 'string' ? ma : 'UNKNOWN';
+  }
+
   private async watched<T>(who: string, secretId: string, run: () => Promise<T>): Promise<T> {
     try {
       return await run();
@@ -285,13 +298,16 @@ export class VaultController {
        *
        * Lỗi khác ném thẳng cho `global-exception.filter` xử như 500 thật.
        */
+      /*
+       * ĐỌC `code` KHI `error` CÒN LÀ `unknown`, trước phép thu hẹp bên dưới. Sau `instanceof`
+       * thì TS biết đây là `ForbiddenException | NotFoundException`, mà hai lớp ấy khai
+       * `response` là `private` — ép kiểu sang `{ response: … }` lúc đó là lỗi biên dịch
+       * TS2352, không phải chuyện phong cách.
+       */
+      const code = VaultController.maLoiCua(error);
       if (!(error instanceof ForbiddenException || error instanceof NotFoundException)) {
         throw error;
       }
-      const code =
-        typeof (error as { response?: { code?: unknown } })?.response?.code === 'string'
-          ? ((error as { response: { code: string } }).response.code)
-          : 'UNKNOWN';
       /*
        * GHI VẾT KHÔNG ĐƯỢC LÀM HỎNG CÂU TRẢ LỜI. `append` là bản NÉM, nên một nhịp DB nghẽn
        * biến 403 đúng của người dùng thành 500 — và chính đường đang bị tấn công là đường dễ

@@ -136,7 +136,9 @@ export class SecurityProbeService {
           actor,
           action: ALERTED_ACTION,
           objectType: 'session',
-          objectId: null,
+          /* `undefined`, không phải `null`: `AuditEntry.objectId` khai `string | undefined`.
+             Dòng này nói về một PHIÊN dò dẫm, không về một ngăn cụ thể. */
+          objectId: undefined,
           detail: { count: recent?.n ?? 0, windowMinutes },
         });
         await this.outbox.enqueueWithin(tx, 'security.probe.alert', {
