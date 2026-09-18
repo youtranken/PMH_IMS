@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, count, eq, gt, inArray } from 'drizzle-orm';
+import { and, count, eq, gt, inArray, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { SystemConfigService } from '../config-sys/system-config.service';
@@ -74,25 +74,50 @@ export class SecurityProbeService {
       if ((recent?.n ?? 0) < threshold) return;
 
       const cooldownMinutes = await this.config.getNumber('secretProbeCooldownMinutes');
-      const quietSince = new Date(Date.now() - cooldownMinutes * 60_000);
-      const [alerted] = await this.db
-        .select({ n: count() })
-        .from(auditLogTable)
-        .where(
-          and(
-            eq(auditLogTable.actor, actor),
-            eq(auditLogTable.action, ALERTED_ACTION),
-            gt(auditLogTable.createdAt, quietSince),
-          ),
-        );
-      if ((alerted?.n ?? 0) > 0) return;
 
       /*
-       * MỘT transaction cho vết + thư (AD-5). Rời ra thì hoặc thư đi mà không có vết (lần sau
-       * lại gửi tiếp, vì thời gian nghỉ đọc từ chính cái vết ấy), hoặc có vết mà thư không đi —
-       * và không ai biết là đã có cảnh báo bị nuốt.
+       * MỘT transaction cho CẢ BA việc: khoá người → đọc thời gian nghỉ → ghi vết + thư.
+       *
+       * ===== VÌ SAO PHÉP KIỂM PHẢI NẰM TRONG ĐÂY (18/09/2026) =====
+       *
+       * Bản trước đọc "đã cảnh báo chưa" bằng `this.db` ở NGOÀI, rồi mới mở transaction để
+       * ghi. Giữa hai bước đó không có gì giữ chỗ, nên nhiều lượt song song cùng đọc ra số 0
+       * rồi cùng ghi — đúng thứ thời gian nghỉ sinh ra để chặn.
+       *
+       * Không phải lỗ hẹp: trần của cửa mở ngăn là 30 lượt mỗi phút cho mỗi người
+       * (`@Throttle` ở `vault.controller.ts`), và một Member không có quyền gì trên két vẫn
+       * bắn được đủ 30 lượt ấy song song. Cả 30 lượt đều 403, cả 30 đều gọi vào đây, cả 30
+       * đều đọc thấy "chưa cảnh báo" → 30 lá thư tới MỌI SA và Admin trong một nhịp, rồi lặp
+       * lại sau mỗi 60 phút. Tức là chính cái cảnh báo trở thành công cụ làm ngập hộp thư —
+       * đúng câu mà chú thích "VÌ SAO CÓ THỜI GIAN NGHỈ" ở đầu file tuyên bố đã chặn được.
+       *
+       * `pg_advisory_xact_lock` xếp hàng theo TỪNG NGƯỜI, và tự nhả khi transaction kết thúc
+       * (kể cả khi rollback) — không có đường nào quên mở khoá. Hai người khác nhau vẫn chạy
+       * song song bình thường vì khoá băm từ chính `actor`.
+       *
+       * `hashtext` cho khoá 32 bit nên hai email khác nhau có thể đụng nhau; hậu quả tệ nhất
+       * của một lượt đụng là hai người đó phải xếp hàng sau nhau trong vài mili giây, không
+       * ai mất cảnh báo. Đánh đổi rẻ hơn hẳn một bảng khoá riêng.
        */
       await this.db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${actor}))`);
+
+        const quietSince = new Date(Date.now() - cooldownMinutes * 60_000);
+        const [alerted] = await tx
+          .select({ n: count() })
+          .from(auditLogTable)
+          .where(
+            and(
+              eq(auditLogTable.actor, actor),
+              eq(auditLogTable.action, ALERTED_ACTION),
+              gt(auditLogTable.createdAt, quietSince),
+            ),
+          );
+        if ((alerted?.n ?? 0) > 0) return;
+
+        /* Vết và thư đi CÙNG một transaction (AD-5). Rời ra thì hoặc thư đi mà không có vết
+           (lần sau lại gửi tiếp, vì thời gian nghỉ đọc từ chính cái vết ấy), hoặc có vết mà
+           thư không đi — và không ai biết là đã có cảnh báo bị nuốt. */
         await tx.insert(auditLogTable).values({
           actor,
           action: ALERTED_ACTION,

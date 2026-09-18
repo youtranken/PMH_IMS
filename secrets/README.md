@@ -49,8 +49,13 @@ Ba file dưới đây KHÔNG bao giờ commit (đã có trong .gitignore) và KH
 4. Bước xoá dòng cũ chỉ được làm khi đếm ra **0 bản ghi** ở version cũ. Đếm bằng:
 
    ```sql
-   -- Ngăn trong két, theo từng version chìa
-   SELECT key_version, count(*) FROM secret WHERE revoked_at IS NULL GROUP BY 1 ORDER BY 1;
+   -- Ngăn trong két, theo từng version chìa.
+   -- KHÔNG lọc `revoked_at IS NULL`: ngăn đã thu hồi VẪN giữ nguyên ciphertext
+   -- (xem `VaultService.revoke` — "mật khẩu cũ vẫn cần tra khi điều tra sự cố").
+   -- Lọc chúng ra là đếm thiếu, xoá chìa, và mất vĩnh viễn toàn bộ mật khẩu lịch sử
+   -- — kể cả trong bản sao lưu.
+   SELECT key_version, revoked_at IS NULL AS con_dung, count(*)
+     FROM secret GROUP BY 1, 2 ORDER BY 1, 2;
    -- Khoá TOTP của tài khoản — cùng chùm chìa, hay bị quên
    SELECT totp_key_version, count(*) FROM users WHERE totp_key_version IS NOT NULL GROUP BY 1;
    ```
