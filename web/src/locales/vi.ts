@@ -105,6 +105,9 @@ export default {
   // Chữ dùng chung của MỌI trang chi tiết (ui/detail-layout.tsx).
   detail: {
     identityCard: 'Thẻ định danh',
+    /* Tên KHU "Hồ sơ" ở đầu cột chính. Không dùng lại `*.tabProfile` được: bên thiết bị khoá
+       ấy là "Tổng quan" (tên cả cái TAB), còn đây là tên một khu BÊN TRONG tab đó. */
+    profileSection: 'Hồ sơ',
   },
   // Bản đồ quan hệ ở tab Tổng quan của trang thiết bị.
   relationMap: {

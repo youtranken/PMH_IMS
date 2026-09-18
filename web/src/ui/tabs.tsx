@@ -5,12 +5,24 @@ export interface TabItem {
   label: ReactNode;
   /** Số nhỏ bên phải nhãn (vd số dòng trong tab). */
   count?: number;
-  /**
-   * Chấm cảnh báo: bên trong tab có thứ cần để mắt (secret quá hạn xoay, license sắp hết
-   * hạn…). `label` là chữ ẩn cho trình đọc màn hình — bắt buộc, vì màu KHÔNG được là kênh
-   * thông tin duy nhất (WCAG 1.4.1). Không có nó thì muốn biết phải mở từng tab để dò.
+  /*
+   * ===== ĐÃ GỠ `dot` (19/09/2026) =====
+   *
+   * Prop chấm cảnh báo được viết đủ bộ — kiểu, CSS `.tab-dot`, chữ ẩn `.sr-only` cho trình
+   * đọc màn hình (WCAG 1.4.1) — nhưng KHÔNG một màn nào truyền nó, từ lúc ra đời tới lúc gỡ.
+   *
+   * Lý do gỡ chứ không đấu dây: hệ thống chưa có TÍN HIỆU nào để quyết khi nào chấm sáng.
+   * Mockup `thiet-bi.html:510` có vẽ một chấm ở tab Két sắt nhưng không nói chấm ấy nghĩa là
+   * gì — "secret quá hạn xoay" là suy đoán, và chưa chỗ nào tính được con số đó. Đấu bừa vào
+   * một tín hiệu tự nghĩ ra là thêm một lời hứa không ai kiểm được.
+   *
+   * Đây cũng đúng thứ đợt rà soát 18/09 gặp lặp đi lặp lại: token màu khai xong không dùng,
+   * luật CSS nằm chờ cả tháng, `.skip-link` có đủ kiểu dáng mà không ai đặt lên trang. Mỗi
+   * cái đều làm người đọc sau tưởng việc đã xong.
+   *
+   * Ngày nào chốt được chấm ấy BÁO ĐIỀU GÌ thì lấy lại trong lịch sử git — nó ở commit ngay
+   * trước commit này, kèm cả luật CSS.
    */
-  dot?: { label: string; tone?: 'warn' | 'danger' };
 }
 
 /**
@@ -93,14 +105,6 @@ export function Tabs({
             <>
               {' '}
               <span className="tab-count">{item.count}</span>
-            </>
-          ) : null}
-          {item.dot ? (
-            <>
-              <span className={`tab-dot${item.dot.tone === 'danger' ? ' danger' : ''}`} aria-hidden="true" />
-              {/* Dấu cách RÕ RÀNG như với `.tab-count`: tên khả truy cập ghép thẳng hai node
-                  văn bản, thiếu nó là trình đọc màn hình đọc dính vào nhãn tab. */}{' '}
-              <span className="sr-only">{item.dot.label}</span>
             </>
           ) : null}
         </button>

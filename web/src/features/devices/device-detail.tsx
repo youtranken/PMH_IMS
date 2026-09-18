@@ -602,23 +602,47 @@ export function DeviceDetail({ me }: { me: Me }) {
              * người dùng, nhà cung cấp, ngày mua đều đã ở thẻ định danh bên phải; serial thì ở
              * dòng định danh dưới tiêu đề, chỗ có nút chép. In lại ở đây là đúng lỗi bản trước.
              */}
-            <dl className="data-grid">
-              <DataItemIfSet label={t("devices.model")} value={item.model} />
-              <DataItemIfSet label={t("devices.note")} value={item.note} />
-            </dl>
+            {/*
+              KHU "HỒ SƠ" CÓ THẺ VÀ TIÊU ĐỀ NHƯ MỌI KHU KHÁC (19/09/2026).
 
-            {/* Ô chưa khai gom về MỘT dòng, thay cho một dãy hộp chỉ chứa dấu gạch ngang —
-                hồ sơ khai sơ sài trông như dữ liệu hỏng chứ không phải việc còn thiếu. */}
-            <BlankFields
-              labels={[
-                item.model ? null : t("devices.model"),
-                item.serial ? null : t("devices.serial"),
-                item.vendorName ? null : t("devices.vendor"),
-                item.department ? null : t("devices.department"),
-                item.purchaseDate ? null : t("devices.purchaseDate"),
-                item.note ? null : t("devices.note"),
-              ].filter((label): label is string => label !== null)}
-            />
+              Trước đó lưới này render trần — không nền, không viền, không landmark có tên —
+              trong khi MỌI khu bên dưới đều là `<section class="card" aria-labelledby>`. Khu
+              ĐẦU TIÊN của cột chính lại là khu duy nhất lơ lửng, nên mắt đọc ra như phần thừa
+              của thanh tab chứ không phải một khu riêng.
+
+              Dùng đúng lớp của repo (`card device-panel` + `form-section-title`) chứ không
+              phải tên lớp trong mockup (`card sec` + `card-h`): mục đích là khu này trông
+              GIỐNG HỆT các khu bên dưới nó, mà các khu ấy đã dựng theo lớp của repo.
+
+              Dòng "Chưa khai" nằm TRONG thẻ, không ngoài: nó nói về chính những ô của khu này,
+              và `.blank-fields` đã có đường kẻ đứt riêng để tách khỏi lưới.
+            */}
+            <section
+              className="card device-panel"
+              id="sec-ho-so"
+              aria-labelledby="sec-ho-so-title"
+            >
+              <h2 className="form-section-title" id="sec-ho-so-title">
+                {t("detail.profileSection")}
+              </h2>
+              <dl className="data-grid">
+                <DataItemIfSet label={t("devices.model")} value={item.model} />
+                <DataItemIfSet label={t("devices.note")} value={item.note} />
+              </dl>
+
+              {/* Ô chưa khai gom về MỘT dòng, thay cho một dãy hộp chỉ chứa dấu gạch ngang —
+                  hồ sơ khai sơ sài trông như dữ liệu hỏng chứ không phải việc còn thiếu. */}
+              <BlankFields
+                labels={[
+                  item.model ? null : t("devices.model"),
+                  item.serial ? null : t("devices.serial"),
+                  item.vendorName ? null : t("devices.vendor"),
+                  item.department ? null : t("devices.department"),
+                  item.purchaseDate ? null : t("devices.purchaseDate"),
+                  item.note ? null : t("devices.note"),
+                ].filter((label): label is string => label !== null)}
+              />
+            </section>
 
             {/* Phần mềm đang cài dùng BẢNG GHẾ đầy đủ (kỳ hạn · chi phí · hợp đồng), không
                 phải khu `nhãn: giá trị` chung — cùng một bảng với khu bung dòng ở danh sách

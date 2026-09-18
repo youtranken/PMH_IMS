@@ -278,7 +278,7 @@
 .tab {
   flex-shrink: 0;
   white-space: nowrap;
-  /* Container flex để `.tab-count` và `.tab-dot` canh giữa theo chữ, không nhảy baseline. */
+  /* Container flex để `.tab-count` canh giữa theo chữ, không nhảy baseline. */
   display: inline-flex;
   align-items: center;
   padding: var(--space-3) var(--space-7);
@@ -313,20 +313,9 @@
      `ui/tabs.tsx` làm rất đúng) không thấy mình đang đứng ở tab nào. */
   padding: 3px 3px 0;
 }
-/*
- * Chấm cảnh báo trên tab: bên trong có thứ cần để mắt thì tab NÓI RA, khỏi phải mở từng tab
- * để dò. Luôn đi kèm chữ ẩn (`.sr-only` trong `ui/tabs.tsx`) — màu không được là kênh thông
- * tin duy nhất (WCAG 1.4.1).
- */
-.tab-dot {
-  width: 7px;
-  height: 7px;
-  flex: 0 0 7px;
-  border-radius: 50%;
-  background: var(--warn);
-  margin-left: var(--space-2);
-}
-.tab-dot.danger { background: var(--danger); }
+/* ĐÃ GỠ (19/09/2026): `.tab-dot` + `.tab-dot.danger` — chấm cảnh báo trên tab. Luật viết đủ
+   nhưng KHÔNG màn nào đặt lớp ấy, vì hệ thống chưa có tín hiệu nào để quyết khi nào chấm
+   sáng. Xem chú thích dài ở `ui/tabs.tsx`, chỗ prop `dot` từng đứng. */
 /*
  * Khoảng thở giữa thanh tab và nội dung tab.
  *

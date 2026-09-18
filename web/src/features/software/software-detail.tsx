@@ -256,7 +256,17 @@ export function SoftwareDetail({ me }: { me: Me }) {
             {/* Loại · nhà cung cấp ĐÃ ở dòng định danh; trạng thái · hạn · ghế ĐÃ ở thẻ định
                 danh bên phải. Lưới chỉ còn phần chưa nói ở đâu cả. Ngày bắt đầu cũng bỏ: nó là
                 mốc đầu của chính thanh hạn bên phải. */}
-            <dl className="data-grid">
+            {/* Khu "Hồ sơ" có thẻ + tiêu đề như mọi khu khác — xem chú thích dài ở
+                `features/devices/device-detail.tsx`, chỗ cùng luật. */}
+            <section
+              className="card device-panel"
+              id="sec-ho-so"
+              aria-labelledby="sec-ho-so-title"
+            >
+              <h2 className="form-section-title" id="sec-ho-so-title">
+                {t("detail.profileSection")}
+              </h2>
+              <dl className="data-grid">
               {/* KHÔNG vẽ ô chỉ để chứa một dấu gạch ngang (`_SPEC.md:53`, gạch nghiệm thu
                   `:528`): với SSL và tên miền thì "Kỳ hạn" không có nghĩa, nên ô ấy trước đây
                   được vẽ ra chỉ để đựng "—". Lưới CHỈ vẽ ô có giá trị; dòng "Chưa khai" bên
@@ -271,15 +281,16 @@ export function SoftwareDetail({ me }: { me: Me }) {
                   )}
                 </Item>
               ) : null}
-              <DataItemIfSet label={t("software.note")} value={item.note} />
-            </dl>
-            <BlankFields
-              labels={[
-                item.vendorName ? null : t("software.vendor"),
-                item.startDate ? null : t("software.startDate"),
-                item.note ? null : t("software.note"),
-              ].filter((label): label is string => label !== null)}
-            />
+                <DataItemIfSet label={t("software.note")} value={item.note} />
+              </dl>
+              <BlankFields
+                labels={[
+                  item.vendorName ? null : t("software.vendor"),
+                  item.startDate ? null : t("software.startDate"),
+                  item.note ? null : t("software.note"),
+                ].filter((label): label is string => label !== null)}
+              />
+            </section>
           </>
         ) : safeTab === "vault" ? (
           <VaultPanel
