@@ -12,6 +12,19 @@ export const CONFIG_KEYS = {
   secretRevealSeconds: { key: 'secret.reveal_seconds', fallback: 60 },
   secretStepUpGraceMinutes: { key: 'secret.stepup_grace_minutes', fallback: 10 },
   secretStepUpMaxFailures: { key: 'secret.stepup_max_failures', fallback: 5 },
+  /*
+   * Canh người DÒ DẪM quanh két (0046) — xem `audit/security-probe.service.ts`.
+   *
+   * Ngưỡng 3 là con số chủ dự án chọn. Cửa sổ 15 phút để ba lần rải rác trong một ngày làm
+   * việc KHÔNG thành báo động giả — gõ nhầm mã một lần sáng, một lần chiều là chuyện thường.
+   * Nghỉ 60 phút giữa hai lần cảnh báo: không có nó thì kẻ bắn liên tục sẽ làm ngập hộp thư
+   * quản trị, và chính cái cảnh báo trở thành công cụ tấn công.
+   *
+   * Đặt ngưỡng = 0 là TẮT hẳn cảnh báo (vẫn ghi nhật ký) — có đường tắt mà không phải sửa code.
+   */
+  secretProbeAlertThreshold: { key: 'secret.probe_alert_threshold', fallback: 3 },
+  secretProbeWindowMinutes: { key: 'secret.probe_window_minutes', fallback: 15 },
+  secretProbeCooldownMinutes: { key: 'secret.probe_cooldown_minutes', fallback: 60 },
   breakGlassMaxGrantHours: { key: 'breakglass.max_grant_hours', fallback: 24 },
   approvalReminderHours: { key: 'approval.reminder_hours', fallback: 4 },
   mailFromAddress: { key: 'mail.from_address', fallback: 'ims@pmh.com.vn' },

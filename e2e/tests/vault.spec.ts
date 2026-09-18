@@ -6,10 +6,14 @@ import {
   confirmAction,
   E2E_MEMBER,
   E2E_SA,
+  clearMailbox,
+  countAudit,
   firstLogin,
   lastAudit,
+  mailBody,
   logout,
   resetDevices,
+  waitForMail,
   resetSecrets,
   resetUsers,
   rowAction,
@@ -174,6 +178,111 @@ test.describe('Két sắt', () => {
     // Tab CÓ hiện (story 6.3) nhưng nội dung nói rõ là không có quyền — không phải bảng trống.
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByText(/không có quyền/i)).toBeVisible();
+  });
+
+  /**
+   * MỌI LƯỢT KHÔNG MỞ ĐƯỢC ĐỀU ĐỂ LẠI VẾT, VÀ ĐỦ NGƯỠNG THÌ BÁO CHO QUẢN TRỊ (0046).
+   *
+   * Trước 18/09/2026 nhật ký két chỉ có lượt THÀNH CÔNG: `assertCanReveal` ném trước khi
+   * `vault.reveal()` chạy, mà dòng audit lại nằm bên trong hàm đó — nên "ai đã mở" thì có, "ai
+   * đã thử mà bị chặn" thì không ở đâu cả. Đúng câu mà một hàng rào PHÁT HIỆN phải trả lời.
+   *
+   * Bài này đi trọn chuỗi: SÁU lượt bị từ chối → sáu dòng vết → đúng MỘT lá thư tới SA/Admin.
+   *
+   * Sáu chứ không phải ba, vì ba lượt chỉ kiểm được vế "đủ ngưỡng thì kêu". Lượt thứ tư, năm,
+   * sáu đều đã VƯỢT ngưỡng — nếu thời gian nghỉ không làm việc thì đây là bốn lá thư. Mà vế đó
+   * quan trọng ngang vế "có thư": không có nghỉ thì kẻ bắn liên tục làm ngập hộp thư quản trị,
+   * thư thật chìm nghỉm, và chính cái cảnh báo trở thành công cụ tấn công.
+   *
+   * ===== VÌ SAO TÀI KHOẢN DÙNG MỘT LẦN, KHÔNG DÙNG `E2E_MEMBER` =====
+   *
+   * Bộ đếm nhìn theo NGƯỜI, trong một cửa sổ thời gian, và im một tiếng sau mỗi lá thư. Dùng
+   * một tài khoản cố định thì lượt chạy đầu xanh, còn mọi lượt trong một tiếng kế tiếp ĐỎ — vì
+   * thời gian nghỉ đang làm đúng việc của nó. Người đọc sẽ tưởng mình vừa làm hỏng cảnh báo.
+   *
+   * Và không có đường dọn: `audit_log` bị trigger chặn cả UPDATE lẫn DELETE ở tầng DB (0005,
+   * NFR-03) — đúng như nó phải vậy. Một hàm trợ giúp tắt được trigger đó là khẩu súng đã lên
+   * đạn nằm sẵn trong repo. Nên bài kiểm lấy lịch sử rỗng bằng cách đổi NGƯỜI, không bằng cách
+   * xoá vết. (Bẫy đã ăn một lượt gỡ rối ngày 18/09/2026.)
+   */
+  test('bị từ chối mở két: ghi vết mỗi lượt, vượt ngưỡng vẫn chỉ đúng một thư cảnh báo', async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const deviceId = await createSwitch(page, `SW-E2E-PROBE-${stamp}`);
+    const created = await page.request.post('/api/v1/vault/secrets', {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+      data: {
+        ownerType: 'device',
+        ownerId: deviceId,
+        kind: 'password',
+        label: `ngăn bị dò E2E ${stamp}`,
+        value: 'khong-ai-doc-duoc',
+      },
+    });
+    expect(created.status()).toBe(201);
+    const secretId = ((await created.json()) as { id: string }).id;
+
+    // Người dò dẫm dùng một lần: tiền tố `e2e-tao-moi-` là mẫu `resetUsers()` nhìn vào để dọn.
+    const hired = await page.request.post('/api/v1/accounts', {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+      data: {
+        email: `e2e-tao-moi-do-ket-${stamp}@pmh.com.vn`,
+        fullName: 'Nguoi do ket E2E',
+        role: 'member',
+      },
+    });
+    expect(hired.status(), 'tạo tài khoản dò dẫm dùng một lần').toBe(201);
+    const prober = {
+      email: `e2e-tao-moi-do-ket-${stamp}@pmh.com.vn`,
+      password: ((await hired.json()) as { temporaryPassword: string }).temporaryPassword,
+    };
+
+    await logout(page);
+    await clearMailbox();
+    await firstLogin(page, prober);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
+
+    // Member ngoài ma trận quyền: sáu lượt thử, cả sáu phải bị chặn.
+    for (let i = 0; i < 6; i += 1) {
+      const denied = await page.request.post(`/api/v1/vault/secrets/${secretId}/reveal`, {
+        headers,
+      });
+      expect(denied.status(), 'Member ngoài ma trận quyền không được mở').toBe(403);
+      expect(
+        await denied.text(),
+        'và thân phản hồi tuyệt đối không mang theo giá trị',
+      ).not.toContain('khong-ai-doc-duoc');
+    }
+
+    expect(
+      countAudit('vault.secret.reveal_denied', secretId),
+      'mỗi lượt bị chặn phải là MỘT dòng vết — đây là thứ trước đây không có',
+    ).toBe(6);
+
+    const row = lastAudit('vault.secret.reveal_denied', secretId);
+    expect(row?.actor, 'vết phải mang tên người vừa thử').toBe(prober.email);
+    expect(
+      row?.detail ?? '',
+      'vết KHÔNG được mang nhãn ngăn — nhãn chính là thứ người này không được phép biết',
+    ).not.toContain('ngăn bị dò');
+
+    const mails = await waitForMail('lượt thất bại quanh két');
+    expect(mails.length, 'đủ ngưỡng thì phải có thư cảnh báo').toBeGreaterThanOrEqual(1);
+    expect(
+      mails.length,
+      'và ĐÚNG MỘT lá dù sáu lượt: thời gian nghỉ chặn việc làm ngập hộp thư quản trị',
+    ).toBe(1);
+
+    const body = await mailBody(mails[0].ID);
+    expect(body, 'thư phải nói ai đang dò').toContain(prober.email);
+    expect(
+      body,
+      'nhưng KHÔNG được nói ngăn nào bị thử — thư là thứ dễ chuyển tiếp nhất trong hệ thống',
+    ).not.toContain('ngăn bị dò');
   });
 
   /**

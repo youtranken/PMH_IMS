@@ -10,6 +10,7 @@ import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { EnvelopeCryptoService } from '../../common/crypto/envelope.service';
 import { AuditWriterService } from '../audit/audit-writer.service';
+import { AuditApiService } from '../audit/audit.api';
 import { OutboxService } from '../outbox/outbox.service';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { UsersService } from '../users/users.service';
@@ -53,6 +54,7 @@ export class AuthService {
     private readonly config: SystemConfigService,
     private readonly devices: KnownDeviceService,
     private readonly loginFailures: LoginFailureService,
+    private readonly probe: AuditApiService,
   ) {}
 
   async login(email: string, password: string, ctx: LoginContext): Promise<LoginOutcome> {
@@ -578,6 +580,9 @@ export class AuthService {
         objectId: session.id,
         detail: { reason: result.reason },
       });
+      /* Đếm chung với lượt bị từ chối mở ngăn, và báo cho quản trị khi đủ đáng ngờ. Tách hai
+         bộ đếm thì một kẻ khôn ngoan chỉ cần xen kẽ hai kiểu là không chạm ngưỡng nào cả. */
+      await this.probe.noteSecurityFailure(user.email);
       /**
        * Sai liên tiếp đủ ngưỡng → THU HỒI PHIÊN (code review Epic 4, finding 1).
        *

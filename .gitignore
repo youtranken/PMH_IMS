@@ -23,6 +23,10 @@ ops/certs/*.dev-bak
 # Giá trị gốc của login.rate_limit_per_ip, do global-setup cất và global-teardown trả lại.
 e2e/.rate-limit-original
 
+# Mốc thời gian bắt đầu một lượt chạy, cũng do global-setup đổ ra. Cùng loại với dòng trên:
+# sản phẩm phụ của MỘT lượt chạy trên MỘT máy, không có nghĩa gì với máy khác.
+e2e/.e2e-run-start
+
 # Ảnh chụp cây trợ năng do Playwright MCP đổ ra mỗi lần lái tay — sản phẩm phụ của
 # công cụ, không phải của dự án. Biên bản test tay là thứ đáng giữ, không phải 35 file này.
 .playwright-mcp/

@@ -14,6 +14,8 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { IsIn, IsOptional, IsString, IsUUID, Length } from 'class-validator';
 import { Audited } from '../audit/audited.decorator';
+import { AuditWriterService } from '../audit/audit-writer.service';
+import { AuditApiService } from '../audit/audit.api';
 import { Roles } from '../auth/roles.decorator';
 import { stepUpSecondsLeft } from '../auth/session-policy';
 import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
@@ -98,6 +100,8 @@ export class VaultController {
     private readonly vault: VaultService,
     private readonly config: SystemConfigService,
     private readonly breakGlass: BreakGlassService,
+    private readonly audit: AuditWriterService,
+    private readonly probe: AuditApiService,
   ) {}
 
 
@@ -201,7 +205,20 @@ export class VaultController {
   @Audited('vault.secret.revealed', 'secret', { writtenByService: true })
   async reveal(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
     const who = actor(req);
-    const meta = await this.vault.findMeta(params.id);
+    /*
+     * MỌI LƯỢT KHÔNG MỞ ĐƯỢC ĐỀU PHẢI ĐỂ LẠI VẾT (17/09/2026).
+     *
+     * Trước bản này nhật ký chỉ có lượt THÀNH CÔNG: `findMeta` ném 404, hoặc `assertCanReveal`
+     * ném 403, đều xảy ra TRƯỚC khi `vault.reveal()` chạy — mà dòng audit lại nằm bên trong
+     * hàm đó, và `@Audited(..., writtenByService: true)` nghĩa là lớp chặn ngoài cũng không
+     * ghi hộ. Nên "ai đã mở" thì có, "ai đã thử mà bị chặn" thì không ở đâu cả — trong khi
+     * chính chú thích trên endpoint này gọi audit là hàng rào PHÁT HIỆN.
+     *
+     * Dòng vết KHÔNG mang nhãn ngăn: nhãn chính là thứ người này không được phép biết, viết
+     * vào nhật ký là mở một đường rò thứ hai ngay trong hàng rào vừa dựng.
+     */
+    return this.watched(who, params.id, async () => {
+      const meta = await this.vault.findMeta(params.id);
 
     /**
      * Ba tầng của story 6.2 gặp bộ máy duyệt của 6.1 ĐÚNG TẠI ĐÂY, và kiểm ở MỖI lần mở —
@@ -230,11 +247,40 @@ export class VaultController {
      * lại mã 6 số. Con số phải PHẢI do server nói: client không biết `stepped_up_at`, và tự
      * đếm từ lần gõ mã gần nhất thì mỗi tab ra một số khác nhau.
      */
-    return {
-      ...opened,
-      revealSeconds,
-      stepUpSecondsLeft: stepUpSecondsLeft(req.user!.steppedUpAt, graceMinutes, new Date()),
-    };
+      return {
+        ...opened,
+        revealSeconds,
+        stepUpSecondsLeft: stepUpSecondsLeft(req.user!.steppedUpAt, graceMinutes, new Date()),
+      };
+    });
+  }
+
+  /**
+   * Chạy một lượt mở két và GHI VẾT NẾU HỎNG.
+   *
+   * Ghi rồi ném lại nguyên lỗi cũ — người gọi vẫn nhận đúng mã 404/403 như trước, không đổi
+   * một chữ nào ở phía client. `code` đi vào vết để sau này phân biệt được ba tình huống rất
+   * khác nhau: id không có thật, có thật nhưng ngoài quyền, và có thật nhưng cần xin duyệt.
+   */
+  private async watched<T>(who: string, secretId: string, run: () => Promise<T>): Promise<T> {
+    try {
+      return await run();
+    } catch (error) {
+      const code =
+        typeof (error as { response?: { code?: unknown } })?.response?.code === 'string'
+          ? ((error as { response: { code: string } }).response.code)
+          : 'UNKNOWN';
+      await this.audit.append({
+        actor: who,
+        action: 'vault.secret.reveal_denied',
+        objectType: 'secret',
+        objectId: secretId,
+        detail: { code },
+      });
+      // Đếm và cảnh báo — không ném ra ngoài dù gửi thư hỏng (xem `SecurityProbeService`).
+      await this.probe.noteSecurityFailure(who);
+      throw error;
+    }
   }
 
   /** "Xóa" = thu hồi mềm. Ciphertext ở lại để còn đối chiếu khi điều tra sự cố. */

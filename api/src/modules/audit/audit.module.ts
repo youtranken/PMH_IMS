@@ -2,8 +2,10 @@ import { Global, Module } from '@nestjs/common';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AuditController } from './audit.controller';
 import { AuditInterceptor } from './audit.interceptor';
+import { AuditApiService } from './audit.api';
 import { AuditQueryService } from './audit-query.service';
 import { AuditWriterService } from './audit-writer.service';
+import { SecurityProbeService } from './security-probe.service';
 
 /**
  * AD-9 — hạ tầng audit.
@@ -22,8 +24,10 @@ import { AuditWriterService } from './audit-writer.service';
   providers: [
     AuditWriterService,
     AuditQueryService,
+    SecurityProbeService,
+    AuditApiService,
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
-  exports: [AuditWriterService],
+  exports: [AuditWriterService, AuditApiService],
 })
 export class AuditModule {}

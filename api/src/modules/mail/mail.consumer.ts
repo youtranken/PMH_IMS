@@ -103,7 +103,15 @@ export class MailConsumer {
 
   private async build(
     topic: string,
-    payload: { userId?: string; ruleId?: string; isTest?: boolean; approvalId?: string },
+    payload: {
+      userId?: string;
+      ruleId?: string;
+      isTest?: boolean;
+      approvalId?: string;
+      who?: string;
+      count?: number;
+      windowMinutes?: number;
+    },
   ) {
     // Báo cáo tổng hợp không gắn với một user nào — xử riêng trước khi tra user.
     // Nội dung DỰNG LẠI từ `ruleId`: outbox chỉ giữ id tham chiếu, không PII (AD-11/NFR-04).
@@ -175,6 +183,45 @@ export class MailConsumer {
         return {
           to: sa.map((r) => r.email),
           subject: `[IMS] Dò mật khẩu tài khoản ${user.email}`,
+          html,
+          text,
+        };
+      }
+      /*
+       * CÓ NGƯỜI ĐANG DÒ DẪM QUANH KÉT (0046) — em ruột của lá thư ngay trên.
+       *
+       * Khác một điểm quyết định: lá trên nói về cửa ĐĂNG NHẬP nên gắn được `userId`; lá này
+       * nói về cửa KÉT, nơi người dò đã đăng nhập hợp lệ rồi — payload vì thế chỉ mang EMAIL,
+       * số lượt và cửa sổ thời gian, không có `userId` để tra.
+       *
+       * Và thư tuyệt đối KHÔNG nói ngăn nào bị thử: nhãn ngăn chính là thứ người kia không
+       * được phép biết, còn một lá thư là thứ dễ chuyển tiếp nhất trong cả hệ thống. Vế này có
+       * bài kiểm canh (`vault.spec.ts`), không trông vào lời hứa ở đây.
+       */
+      case 'security.probe.alert': {
+        if (!payload.who) return null;
+        const admins = await this.users.recipientsByRole(['sa', 'admin']);
+        if (admins.length === 0) return null;
+        const { html, text } = renderMail({
+          title: 'Có người đang dò dẫm quanh két sắt',
+          intro:
+            `${payload.who} vừa có ${payload.count ?? 0} lượt thất bại quanh két trong ` +
+            `${payload.windowMinutes ?? 0} phút — bị từ chối quyền mở ngăn, hoặc gõ sai mã 6 số. ` +
+            'Hàng rào đã chặn từng lượt; thư này chỉ để có người NHÌN vào.',
+          rows: [
+            { label: 'Tài khoản', value: payload.who },
+            { label: 'Số lượt', value: String(payload.count ?? 0) },
+            { label: 'Trong', value: `${payload.windowMinutes ?? 0} phút` },
+            { label: 'Thời điểm', value: new Date().toLocaleString('vi-VN') },
+          ],
+          ctaLabel: 'Xem nhật ký',
+          ctaUrl: `${APP_URL()}/quan-tri/nhat-ky`,
+          footnote:
+            'Lọc nhật ký theo tài khoản này để xem họ thử những gì. Phần lớn trường hợp là người dùng thật gõ nhầm mã hoặc bấm vào một hồ sơ chưa được gán quyền — nhưng đó là điều cần XEM rồi mới kết luận. Thư này im trong một giờ sau mỗi lần gửi, nên không phản ánh tổng số lượt.',
+        });
+        return {
+          to: admins.map((r) => r.email),
+          subject: `[IMS] ${payload.count ?? 0} lượt thất bại quanh két — ${payload.who}`,
           html,
           text,
         };
