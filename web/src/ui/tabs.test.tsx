@@ -60,11 +60,11 @@ describe('Tabs dùng chung', () => {
    * 3 (tab "Máy đang dùng" đã có `count`) tới 28/08/2026 mới lộ, vì tới lúc đó mới có bài kiểm
    * nào đọc tên tab kèm số.
    */
-  it('số trên nhãn tách khỏi chữ, kể cả khi số là 0', () => {
+  it('số trên nhãn tách khỏi chữ', () => {
     renderWithI18n(
       <Tabs
         items={[
-          { key: 'files', label: 'Giấy tờ', count: 0 },
+          { key: 'files', label: 'Giấy tờ', count: 3 },
           { key: 'vault', label: 'Két sắt', count: 12 },
           { key: 'history', label: 'Lịch sử' },
         ]}
@@ -74,11 +74,43 @@ describe('Tabs dùng chung', () => {
       />,
     );
 
-    // 0 là câu trả lời THẬT ("chưa đính giấy tờ nào") và vẫn phải hiện.
-    expect(screen.getByRole('tab', { name: 'Giấy tờ 0' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Giấy tờ 3' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Két sắt 12' })).toBeInTheDocument();
     // Không truyền `count` thì không có số nào bám vào nhãn.
     expect(screen.getByRole('tab', { name: 'Lịch sử' })).toBeInTheDocument();
+  });
+
+  /*
+   * ===== QUYẾT ĐỊNH VỀ SỐ 0 ĐÃ ĐẢO (18/09/2026) =====
+   *
+   * Bản 28/08 của bài trên khẳng định ngược lại: "0 là câu trả lời THẬT (chưa đính giấy tờ
+   * nào) và vẫn phải hiện". Đợt thiết kế v2 đảo lại, và đảo có văn bản chứ không phải theo ý
+   * thích: `design-ims/v2-chi-tiet/_SPEC.md:61` xếp "Badge đếm hiện số 0" vào danh sách LỖI
+   * của bản cũ, và `:529` đưa nó thành gạch nghiệm thu — "`count === 0` thì KHÔNG vẽ
+   * `.tab-count`".
+   *
+   * Lý do: số 0 không nói thêm gì so với việc mở tab ra và thấy khu rỗng, nhưng nó làm hàng
+   * tab của một hồ sơ mới trông như đang hỏng — đo trên trình duyệt thật thì một thiết bị
+   * trống cho ra "Tổng quan · Giấy tờ 0 · Két sắt 0 · Lịch sử".
+   *
+   * Ý định gốc của bài trên (dấu cách giữa nhãn và số, để trình đọc màn hình không đọc
+   * "Giấy tờ0" thành một từ) vẫn còn nguyên giá trị — nên nó được giữ, chỉ đổi số mẫu.
+   */
+  it('count = 0 thì không vẽ số nào cả', () => {
+    renderWithI18n(
+      <Tabs
+        items={[
+          { key: 'files', label: 'Giấy tờ', count: 0 },
+          { key: 'history', label: 'Lịch sử' },
+        ]}
+        value="files"
+        onChange={() => {}}
+        ariaLabel="Thiết bị"
+      />,
+    );
+
+    expect(screen.getByRole('tab', { name: 'Giấy tờ' })).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Giấy tờ 0' })).toBeNull();
   });
 
   it('bấm chuột cũng đổi tab', async () => {

@@ -54,9 +54,14 @@
   flex-wrap: wrap;
   gap: var(--space-3);
   margin: 0;
-  font-size: var(--fs-xl);
+  /* `--fs-3xl` (27,3px), KHÔNG phải `--fs-xl` (18,2px). Token này được thêm vào `tokens.css`
+     đúng để sửa cấp bậc ngược — mã hồ sơ ở trang CHI TIẾT nhỏ hơn tiêu đề trang DANH SÁCH
+     (`.page-header h1` dùng `--fs-2xl` = 21px) — nhưng tới 18/09/2026 chưa chỗ nào dùng nó,
+     nên cấp bậc vẫn ngược. Đo trên trình duyệt thật: 18.2px so với 21px. */
+  font-size: var(--fs-3xl);
   font-weight: 700;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
 }
 .detail-name { font-family: var(--font); font-size: var(--fs-md); font-weight: 500; color: var(--ink-2); }
 .detail-subline {
@@ -74,6 +79,8 @@
 .detail-actions .danger-ghost { margin-left: var(--space-10); }
 @media (max-width: 680px) {
   .detail-actions .danger-ghost { margin-left: auto; }
+  /* Hạ một bậc ở màn hẹp: mã dài kiểu `172.16.10.0/24` ở 27,3px tràn khỏi 390px. */
+  .detail-code { font-size: var(--fs-2xl); }
 }
 
 /* Nút chép (ui/copy-button.tsx) — nhỏ nhưng vùng bấm vẫn phải đủ ngón tay chạm trúng. */

@@ -181,7 +181,29 @@
 .rmap.show-cut .rmap-node.cut .rn-h { color: var(--danger-strong); }
 .rmap.show-cut .rmap-node.cut .rn-h svg { color: var(--danger-strong); }
 .rmap.show-cut .rmap-node.cut .rn-n { background: var(--surface); color: var(--danger-strong); }
-.rmap.show-cut .rmap-node.keep { opacity: 0.42; }
+/*
+ * NÚT "GIỮ" LÙI VỀ SAU BẰNG TÔNG, KHÔNG BẰNG ĐỘ MỜ (18/09/2026).
+ *
+ * `opacity: 0.42` hoà `--ink` với nền trắng thành `#a1a3a0` — 2,54:1 — và dòng phụ
+ * (`--ink-3`) xuống tới 1,89:1. Ở chế độ tối cũng trượt: 3,60:1 và 2,23:1. Đây là ngưỡng
+ * AA 4,5:1 cho chữ nhỏ, mà mấy nút này là `<button>` THẬT, nằm trong luồng Tab và bấm được —
+ * không phải hoạ tiết nền.
+ *
+ * Trớ trêu là cùng đợt này `.table tr.row-muted` (shared-kit.css) vừa gỡ `opacity: 0.55` với
+ * đúng lý do đó rồi đổi sang `color: var(--ink-3)`. Đây là cùng một bài học, áp cho cùng một
+ * loại phần tử: làm nhạt thì đổi MÀU CHỮ và viền, đừng phủ sương lên cả cụm.
+ *
+ * Tương phản sau khi đổi: `--ink-3` trên `--surface` = 6,19:1 (sáng) và 6,61:1 (tối).
+ */
+.rmap.show-cut .rmap-node.keep {
+  border-color: var(--border);
+  background: var(--surface);
+}
+.rmap.show-cut .rmap-node.keep .rn-h,
+.rmap.show-cut .rmap-node.keep .rn-i {
+  color: var(--ink-3);
+}
+.rmap.show-cut .rmap-node.keep .rn-h svg { color: var(--ink-3); }
 .rmap.show-cut .e-cut { stroke: var(--danger); stroke-dasharray: 6 5; }
 
 .rmap-cut-sum {

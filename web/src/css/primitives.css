@@ -455,13 +455,26 @@ table.table tbody tr.exp:hover td {
 }
 /* Con số đi kèm nhãn lọc ("Trống 137"). Nhạt hơn và nhỏ hơn chữ nhãn: nó là số liệu bổ trợ,
    không phải tên nút — để cùng cỡ thì mắt đọc thành hai từ ngang hàng. */
+/*
+ * NHẠT BẰNG CỠ CHỮ, KHÔNG BẰNG ĐỘ MỜ (18/09/2026).
+ *
+ * `opacity: 0.7` trên chữ 11,2px hoà `--ink-2` với nền thành `#888c85` — 3,02:1, dưới ngưỡng
+ * AA (4,5:1) cho chữ nhỏ. Nút đang bật cũng không thoát: đo trên trình duyệt thật ra 3,89:1.
+ * Mà đây là SỐ LIỆU THẬT ("Tất cả 12"), không phải hoạ tiết trang trí.
+ *
+ * Cùng một bài học đã rút ở `.table tr.row-muted` trong `shared-kit.css` — độ mờ là công cụ
+ * sai cho việc "làm nhạt chữ", vì nó kéo tương phản xuống theo cấp số nhân chứ không theo ý
+ * người thiết kế. Ở đây phân cấp đã có sẵn bằng cỡ chữ (`--fs-xs` so với `--fs-sm` của nhãn)
+ * và bằng `color: inherit` — số theo đúng màu nút, đậm nhạt theo trạng thái nút.
+ *
+ * Bỏ luôn luật `.segmented button.on .seg-count`: nó nâng độ mờ lên 0,85 — vẫn trượt AA — và
+ * `.on` chỉ được `disposal-screen.tsx` đặt, hai màn còn lại (`nat-screen`, `subnet-detail`)
+ * dùng `aria-pressed`, nên cùng một con số có hai độ mờ khác nhau tuỳ màn.
+ */
 .seg-count {
   font-size: var(--fs-xs);
   font-variant-numeric: tabular-nums;
-  opacity: 0.7;
-}
-.segmented button.on .seg-count {
-  opacity: 0.85;
+  color: inherit;
 }
 
 /* Dưới 1100px hai cột thành một: cột trái 300px + bảng 6 cột không còn đủ chỗ, và cột trái

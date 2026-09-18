@@ -80,7 +80,16 @@ export function Tabs({
             văn bản, nên thiếu nó là trình đọc màn hình đọc "Giấy tờ0" thành một từ — và mọi
             selector theo tên tab cũng phải viết dính vào nhau mới khớp.
           */}
-          {item.count !== undefined ? (
+          {/*
+            SỐ 0 THÌ KHÔNG VẼ SỐ (18/09/2026).
+            `!== undefined` để số 0 lọt, nên tab hiện ra "Giấy tờ 0" — đo trên trình duyệt
+            thật thì tab Giấy tờ và Két sắt của một hồ sơ trống đều mang đuôi "0". Con số đó
+            không nói thêm gì so với việc mở tab ra và thấy khu rỗng, mà lại làm tab trông như
+            đang hỏng. `_SPEC.md:61` xếp đây là lỗi số 7 của đợt.
+            Dùng phép thử truthy CHỦ Ý: nó gộp `0` với `undefined` ("chưa biết" — xem hợp đồng
+            của `useTabCounts`) vào cùng một nhánh không-vẽ, đúng thứ ta muốn ở cả hai.
+          */}
+          {item.count ? (
             <>
               {' '}
               <span className="tab-count">{item.count}</span>
