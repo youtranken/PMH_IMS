@@ -37,7 +37,21 @@ export class VaultDevicePanel implements DevicePanelProvider, OnModuleInit {
      * Trả `null` chứ không ném: người không có quyền thì khu này KHÔNG TỒN TẠI với họ, y như
      * một máy chưa cất secret nào — không phải một ô báo lỗi mách rằng "ở đây có thứ gì đó".
      */
-    if (viewer.role === 'member') {
+    /*
+     * HỎI "KHÔNG PHẢI SA/ADMIN", KHÔNG HỎI "CÓ PHẢI MEMBER" (18/09/2026).
+     *
+     * Hai câu nghe giống nhau nhưng hỏng ngược nhau. `role === 'member'` là mẫu MỞ MẶC ĐỊNH:
+     * mọi vai KHÁC đi thẳng, không qua ma trận quyền. AD-9 nói ngược lại — quyền mặc định đóng.
+     *
+     * Hôm nay chưa chết vì `UserRole` chỉ có ba giá trị. Nhưng `PanelViewer.role` khai là
+     * `string` CÓ CHỦ Ý (để `common` không phải phụ thuộc `auth`, AD-2), nên trình biên dịch
+     * KHÔNG bắt được ngày thêm vai thứ tư — và vai đó lập tức đọc được nhãn ngăn két cùng tên
+     * đăng nhập của mọi máy, im lặng, không ai biết.
+     *
+     * Đây là chỗ `access-list.service.ts` dùng mẫu `never` exhaustiveness để chống đúng lớp
+     * lỗi này; ở đây không dùng được vì kiểu là `string`, nên phải đảo vị từ.
+     */
+    if (viewer.role !== 'sa' && viewer.role !== 'admin') {
       const tier = await this.access.tierFor(viewer.email, 'device', deviceId);
       if (tier === 'denied') return null;
     }

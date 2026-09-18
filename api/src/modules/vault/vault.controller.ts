@@ -117,7 +117,9 @@ export class VaultController {
   @Roles('sa', 'admin', 'member')
   @Get()
   async list(@Query() query: OwnerQueryDto, @Req() req: AuthedRequest) {
-    if (req.user!.role === 'member') {
+    /* Mặc định ĐÓNG (AD-9): hỏi "không phải SA/Admin" chứ không hỏi "có phải Member" — vai
+       thứ tư thêm vào ngày nào cũng phải đi qua ma trận quyền, không được đi thẳng. */
+    if (req.user!.role !== 'sa' && req.user!.role !== 'admin') {
       await this.breakGlass.assertCanSeeMetadata(actor(req), query.ownerType, query.ownerId);
     }
     return this.vault.listFor(query.ownerType, query.ownerId);
@@ -230,7 +232,8 @@ export class VaultController {
      * chính mình chỉ tạo ra một bước thừa mà ai cũng sẽ tìm cách bỏ qua.
      */
     let grantId: string | null = null;
-    if (req.user!.role === 'member') {
+    /* Mặc định ĐÓNG (AD-9) — xem chú thích cùng luật ở `list()` bên trên. */
+    if (req.user!.role !== 'sa' && req.user!.role !== 'admin') {
       ({ grantId } = await this.breakGlass.assertCanReveal(who, meta.ownerType, meta.ownerId));
     }
 

@@ -111,6 +111,9 @@ export class MailConsumer {
       who?: string;
       count?: number;
       windowMinutes?: number;
+      /* Thời gian nghỉ THẬT của cảnh báo dò két, đọc từ `system_config` lúc đẩy outbox. Tùy
+         chọn vì hàng outbox ghi trước 18/09/2026 không có trường này. */
+      cooldownMinutes?: number;
     },
   ) {
     // Báo cáo tổng hợp không gắn với một user nào — xử riêng trước khi tra user.
@@ -216,8 +219,14 @@ export class MailConsumer {
           ],
           ctaLabel: 'Xem nhật ký',
           ctaUrl: `${APP_URL()}/quan-tri/nhat-ky`,
+          /* Thời gian nghỉ NỘI SUY từ payload, không viết cứng "một giờ": nó là
+             `secret.probe_cooldown_minutes` trong `system_config` (AD-11) và đổi được bất cứ
+             lúc nào. Viết cứng thì đổi tham số là lá thư nói dối về chính cơ chế của nó, mà
+             không cổng nào đỏ lên. Còn `?? 60` chỉ là lưới đỡ cho hàng outbox cũ ghi trước
+             18/09 — chúng không có trường này. */
           footnote:
-            'Lọc nhật ký theo tài khoản này để xem họ thử những gì. Phần lớn trường hợp là người dùng thật gõ nhầm mã hoặc bấm vào một hồ sơ chưa được gán quyền — nhưng đó là điều cần XEM rồi mới kết luận. Thư này im trong một giờ sau mỗi lần gửi, nên không phản ánh tổng số lượt.',
+            'Lọc nhật ký theo tài khoản này để xem họ thử những gì. Phần lớn trường hợp là người dùng thật gõ nhầm mã hoặc bấm vào một hồ sơ chưa được gán quyền — nhưng đó là điều cần XEM rồi mới kết luận. ' +
+            `Thư này im trong ${payload.cooldownMinutes ?? 60} phút sau mỗi lần gửi, nên không phản ánh tổng số lượt.`,
         });
         return {
           to: admins.map((r) => r.email),

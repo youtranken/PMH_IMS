@@ -41,6 +41,24 @@ export class OutboxService {
   /**
    * Ghi sự kiện nghiệp vụ vào outbox TRONG transaction nghiệp vụ (AD-11) — enqueue
    * sang BullMQ tách rời (relay). Payload CHỈ id tham chiếu, KHÔNG PII.
+   *
+   * Lý do luật: bảng `outbox` KHÔNG có retention. Mọi hàng nằm lại vĩnh viễn và đi vào mọi
+   * bản `pg_dump` đêm, nên thứ gì rơi vào đây là tự nhân bản ra nhiều nơi.
+   *
+   * ===== NGOẠI LỆ DUY NHẤT, CÓ TÊN: `security.probe.alert` (18/09/2026) =====
+   *
+   * Topic ấy mang `who: <email>` chứ không mang id, và đó là lựa chọn có cân nhắc chứ không
+   * phải sơ sót — rà soát 18/09 bắt đúng chỗ này rồi quyết giữ:
+   *
+   *   · Email KHÔNG phải PII lạc chỗ ở đây, nó LÀ nội dung của cảnh báo. Lá thư báo "có người
+   *     đang dò quanh két" mà không nói được ai thì báo để làm gì.
+   *   · Đổi sang `userId` thì cửa két không tra được: người dò đã đăng nhập hợp lệ rồi, chỗ
+   *     gọi (`SecurityProbeService`) chỉ nhận được `actor` là email. Muốn có id phải cho
+   *     `audit` gọi sang `users.api` — một cạnh phụ thuộc MỚI giữa hai module đang cố giữ
+   *     tách rời (AD-2). Đắt hơn hẳn thứ nó sửa.
+   *
+   * Thêm ngoại lệ thứ hai thì khai Ở ĐÂY, ngay cạnh luật — đừng để nó sống trong một chú
+   * thích ở file khác rồi hai nơi nói ngược nhau.
    */
   async enqueueWithin(
     tx: Pick<Database, 'execute'>,

@@ -137,7 +137,19 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
     );
     if (decorators.includes("'member'")) {
       expect(body).toContain('assertCanReveal');
-      expect(body).toContain("role === 'member'");
+      /*
+       * HÀNG RÀO PHẢI Ở DẠNG "KHÔNG PHẢI SA/ADMIN", KHÔNG PHẢI "CÓ PHẢI MEMBER" (18/09/2026).
+       *
+       * Bản trước chốt chuỗi `role === 'member'`, tức khóa đúng mẫu MỞ MẶC ĐỊNH: mọi vai khác
+       * đi thẳng, không qua ma trận quyền — ngược AD-9. Bài kiểm khi ấy đang bảo vệ chính cái
+       * hình dạng cần bỏ.
+       *
+       * Chốt vị từ đảo lại thì ngày thêm vai thứ tư, vai đó vẫn phải đi qua `assertCanReveal`.
+       * Vẫn là so CHUỖI NGUỒN chứ không chạy thử: thứ đang khóa ở đây là "dòng gác không được
+       * biến mất", mà việc nó biến mất thì không test nghiệp vụ nào đỏ.
+       */
+      expect(body).toContain("role !== 'sa'");
+      expect(body).toContain("role !== 'admin'");
     } else {
       expect(decorators).toContain("@Roles('sa', 'admin')");
     }

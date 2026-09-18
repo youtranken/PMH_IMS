@@ -27,6 +27,7 @@ import {
   mailpitMessages,
   rowActionNames,
   sql,
+  timVaChoLoc,
   writeHeaders,
 } from './helpers';
 
@@ -2746,9 +2747,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await form.getByRole('button', { name: 'Lưu' }).click();
     await expect(form, 'lưu xong thì hộp phải đóng').toHaveCount(0);
 
-    await page
-      .getByRole('searchbox', { name: 'Tìm theo mã, tên, serial hoặc model' })
-      .fill(code);
+    await timVaChoLoc(page, code);
     await page.getByRole('main').getByRole('link', { name: code, exact: true }).click();
     await expect(page.getByRole('heading', { level: 1, name: new RegExp(code) })).toBeVisible();
 
@@ -3332,7 +3331,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      * Form sửa mở ra trống là kiểu hỏng tệ nhất của màn nhập: bấm Lưu một phát là ghi đè sạch
      * mọi thứ, và trên màn hình không có gì báo rằng dữ liệu vừa bị xóa.
      */
-    await page.getByRole('searchbox', { name: 'Tìm theo mã, tên hoặc ghi chú' }).fill(code);
+    await timVaChoLoc(page, code);
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
     await rowAction(page, code, 'Sửa');
 
@@ -3425,7 +3424,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
     // ===== CHẾ ĐỘ GÁN MỚI, mở thẳng từ menu ba chấm của danh sách =====
     await page.goto('/software');
-    await page.getByRole('searchbox', { name: 'Tìm theo mã, tên hoặc ghi chú' }).fill(licenseCode);
+    await timVaChoLoc(page, licenseCode);
     await expect(page.getByRole('row', { name: new RegExp(licenseCode) })).toBeVisible();
     await rowAction(page, licenseCode, 'Gán vào máy');
 
@@ -5728,9 +5727,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     expect(created.status(), 'Dàn cảnh: tạo đường truyền đầy đủ trường phải thành công').toBe(201);
 
     await page.goto('/isp-lines');
-    await page
-      .getByRole('searchbox', { name: 'Tìm theo mã, nhà mạng, IP WAN hoặc số hợp đồng' })
-      .fill(ma);
+    await timVaChoLoc(page, ma);
 
     // BẤM vào mã — không `goto`. Đây chính là sợi dây mà mọi bài kiểm khác đi vòng qua.
     await page.getByRole('main').getByRole('link', { name: ma, exact: true }).click();

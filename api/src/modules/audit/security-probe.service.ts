@@ -141,10 +141,14 @@ export class SecurityProbeService {
           objectId: undefined,
           detail: { count: recent?.n ?? 0, windowMinutes },
         });
+        /* `cooldownMinutes` đi kèm để lá thư nói đúng thời gian nghỉ THẬT thay vì viết cứng
+           "một giờ" — xem chú thích ở `mail.consumer.ts`. `who` là email chứ không phải id:
+           ngoại lệ có tên, khai ở `outbox.service.ts` cạnh chính luật "payload không PII". */
         await this.outbox.enqueueWithin(tx, 'security.probe.alert', {
           who: actor,
           count: recent?.n ?? 0,
           windowMinutes,
+          cooldownMinutes,
         });
       });
     } catch (error) {

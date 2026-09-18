@@ -761,8 +761,21 @@ export function horizontalOverflow(page: Page): Promise<number> {
  * `useListUrlState`: nó chỉ xuất hiện khi nhịp debounce đã bắn, tức lượt gọi API mới đã đi và
  * React đã có dữ liệu để vẽ lại.
  *
- * Màn chưa dùng hook (ví dụ `/admin/accounts`) thì không có `q=` — gọi hàm này ở đó sẽ chờ vô
- * ích rồi hết giờ, nên đừng gọi. Đó cũng là một cách để biết màn nào còn đứng ngoài luật.
+ * Màn chưa dùng hook thì không có `q=` — gọi hàm này ở đó sẽ chờ vô ích rồi hết giờ, nên đừng
+ * gọi. Đó cũng là một cách để biết màn nào còn đứng ngoài luật.
+ *
+ * ===== MÀN NÀO DÙNG ĐƯỢC (rà 18/09/2026) =====
+ *
+ *   DÙNG ĐƯỢC : /devices · /software · /isp-lines · /service-accounts · /vault · /expiry
+ *   CHƯA      : /approvals · /nat · /disposal · /admin/accounts
+ *
+ * Danh sách "CHƯA" không phải việc còn sót của bộ kiểm — những màn đó chưa chuyển sang
+ * `useListUrlState` nên ô tìm của chúng KHÔNG có debounce, tức cũng không có cuộc đua nào để
+ * mà chờ. Ngày nào chúng lên URL thì đổi luôn các chỗ gọi tương ứng.
+ *
+ * Và không phải chỗ nào trên màn "DÙNG ĐƯỢC" cũng cần hàm này: chỗ đã tự chờ bằng
+ * `expect(page.getByRole('row')).toHaveCount(2)` là đã hỏi đúng câu "đã lọc xong chưa" rồi,
+ * đổi sang đây chỉ là thay một phép chờ đúng bằng một phép chờ đúng khác.
  */
 export async function timVaChoLoc(page: Page, tuKhoa: string): Promise<void> {
   await page.getByRole('searchbox', { name: /Tìm/ }).fill(tuKhoa);
