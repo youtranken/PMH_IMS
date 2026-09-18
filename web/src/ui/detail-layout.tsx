@@ -89,7 +89,22 @@ export function RailRowIfSet({
   value: string | null | undefined;
   note?: ReactNode;
 }) {
-  if (!value) return null;
+  /*
+   * KHÔNG CÓ `value` NHƯNG CÓ `note` THÌ VẪN PHẢI VẼ (18/09/2026).
+   *
+   * Bản trước trả `null` ngay khi `value` rỗng, và thế là nuốt luôn cả `note`. Mà `note` đang
+   * là chỗ DUY NHẤT vài trường tồn tại trên trang đọc: `department` chỉ xuất hiện dưới dạng
+   * chú của dòng "Người dùng" / "Người phụ trách".
+   *
+   * Cảnh hỏng: một máy đã gán cho phòng Kế toán nhưng chưa ghi tên người dùng cụ thể. Trang
+   * chi tiết KHÔNG hiện bộ phận ở bất cứ đâu — và `BlankFields` cũng bỏ qua nó, vì
+   * `item.department` CÓ giá trị nên nó không nằm trong danh sách "Chưa khai". Giá trị có
+   * trong DB, có trong form sửa, chỉ trang đọc là không.
+   *
+   * Vẽ ô với `value` rỗng thì dòng chú đứng một mình dưới nhãn — vẫn đọc được, và vẫn đúng
+   * luật "không vẽ ô RỖNG": ô này không rỗng, nó có nội dung, chỉ là nội dung nằm ở `note`.
+   */
+  if (!value && !note) return null;
   return (
     <RailRow label={label} note={note}>
       {value}

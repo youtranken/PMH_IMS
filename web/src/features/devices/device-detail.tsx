@@ -305,6 +305,9 @@ export function DeviceDetail({ me }: { me: Me }) {
     relationFromPanel("isp", "globe", true, () => goSection("isp")),
     relationFromPanel("software", "lic", true, () => goSection("software")),
     relationFromPanel("vault", "lock", false, () => goTab("vault")),
+    // `counts.files` có thể là `undefined` ("chưa biết") — phép thử truthy gộp nó với 0, và
+    // ở ĐÂY thì gộp đúng: chưa biết cũng như chưa có, đều không vẽ nút. Chỗ phân biệt hai
+    // nghĩa là dòng "Chưa gắn" bên dưới.
     counts.files
       ? {
           key: "attachments",
@@ -318,15 +321,41 @@ export function DeviceDetail({ me }: { me: Me }) {
       : null,
   ].filter((node): node is RelationNode => node !== null);
 
-  /** Khu KHÔNG có gì — gom về một dòng xám, không vẽ ô rỗng (cùng lối `BlankFields`). */
+  /**
+   * Khu KHÔNG có gì — gom về một dòng xám, không vẽ ô rỗng (cùng lối `BlankFields`).
+   *
+   * BA TRẠNG THÁI, KHÔNG PHẢI HAI (18/09/2026). Mỗi khu có thể ở một trong ba tình huống:
+   *   · CÓ dòng            → vẽ nút trên bản đồ;
+   *   · KHÔNG có dòng      → kể tên vào dòng "Chưa gắn";
+   *   · CHƯA BIẾT          → không được nói gì cả.
+   *
+   * Hai lỗi cùng họ mà bản trước mắc:
+   *
+   * 1. `counts.files` được đọc bằng phép thử truthy, trong khi `ui/tab-counts.ts` khai rõ
+   *    `undefined` = "chưa biết (đang tải, hoặc không có quyền xem), KHÔNG phải 0". Một hồ sơ
+   *    có 4 giấy tờ mà `/attachments` chưa về sẽ bị khẳng định là "Chưa gắn: Giấy tờ".
+   *
+   * 2. Nút vẽ theo `panel.items.length > 0` nhưng dòng "Chưa gắn" lại theo `panelOf(key)` —
+   *    hai vị từ khác nhau cho cùng một câu hỏi. Module `ipam` đăng ký panel nhưng máy chưa
+   *    có IP nào → panel TỒN TẠI, `items` rỗng → không có nút, cũng KHÔNG có tên trong dòng
+   *    "Chưa gắn". Khu đó tàng hình: người đọc không phân biệt được với "module chưa deploy".
+   */
+  const khuRong = (key: string): boolean => {
+    const panel = panelOf(key);
+    // Chưa đọc được sổ khu mở rộng → chưa biết, `chuaBiet` của bản đồ đã lo phần nói năng.
+    if (!panels.data) return false;
+    // Panel không tồn tại (module chưa deploy) HOẶC tồn tại mà rỗng — với người đọc là một.
+    return !panel || panel.items.length === 0;
+  };
+
   const relationMissing = [
     device.data?.hasPortMap && ownPorts.length === 0 ? t("devices.tabPortMap") : null,
-    panelOf("ipam") ? null : t("nav.ipam"),
-    panelOf("nat") ? null : t("nav.nat"),
-    panelOf("isp") ? null : t("nav.isp"),
-    panelOf("software") ? null : t("nav.software"),
-    panelOf("vault") ? null : t("vault.tab"),
-    counts.files ? null : t("devices.tabAttachments"),
+    khuRong("ipam") ? t("nav.ipam") : null,
+    khuRong("nat") ? t("nav.nat") : null,
+    khuRong("isp") ? t("nav.isp") : null,
+    khuRong("software") ? t("nav.software") : null,
+    khuRong("vault") ? t("vault.tab") : null,
+    counts.files === undefined ? null : counts.files === 0 ? t("devices.tabAttachments") : null,
   ].filter((label): label is string => label !== null);
 
   /* Câu tóm tắt lượt thanh lý — dựng từ CHÍNH những khu đang có, nên nó không bao giờ hứa cắt
@@ -479,11 +508,23 @@ export function DeviceDetail({ me }: { me: Me }) {
             <RailRow label={t("devices.location")}>
               <span className="mono">{locationLabel(item)}</span>
             </RailRow>
-            <RailRowIfSet
-              label={t("devices.assignedTo")}
-              value={item.assignedTo}
-              note={item.department ?? undefined}
-            />
+            {/*
+              BỘ PHẬN KHÔNG ĐƯỢC BIẾN MẤT CÙNG NGƯỜI DÙNG (18/09/2026).
+              `department` chỉ sống dưới dạng CHÚ của dòng này, mà `RailRowIfSet` ẩn cả dòng
+              khi `assignedTo` rỗng — nên một máy đã gán cho phòng Kế toán nhưng chưa ghi tên
+              người cụ thể thì không hiện bộ phận ở đâu cả, và `BlankFields` cũng bỏ qua vì
+              `item.department` CÓ giá trị. Chưa có người thì bộ phận đứng thành dòng RIÊNG,
+              mang đúng nhãn của nó — chứ không phải một dòng "Người dùng" trống kèm chú.
+            */}
+            {item.assignedTo ? (
+              <RailRowIfSet
+                label={t("devices.assignedTo")}
+                value={item.assignedTo}
+                note={item.department ?? undefined}
+              />
+            ) : (
+              <RailRowIfSet label={t("devices.department")} value={item.department} />
+            )}
             {/*
              * THANH HẠN NẰM Ở ĐÂY, KHÔNG CÒN Ở CỘT CHÍNH NỮA (16/09/2026).
              *

@@ -28,14 +28,13 @@ import {
   type SubnetSlot,
 } from "./ipam-types";
 import {
-  BURIED_FREE,
   clampPage,
   countSlots,
   filterSlots,
+  nenLocSanDangCap,
   pageSlots,
   SLOT_FILTERS,
   SLOT_PAGE_SIZE,
-  WORTH_ISOLATING,
   type SlotFilter,
 } from "./slot-paging";
 import { toIpHistoryEntries, type IpHistoryRow } from "./ip-history-entries";
@@ -151,13 +150,42 @@ export function SubnetPane({
    * đổi dưới tay họ — danh sách ô trống họ đang làm việc biến mất giữa chừng.
    */
   const decidedFor = useRef<string | null>(null);
+
+  /*
+   * Đổi DẢI thì về trang 1, bỏ bộ lọc cũ, VÀ cho phép quyết lại.
+   *
+   * ===== VÌ SAO KHỐI NÀY PHẢI KHAI TRƯỚC KHỐI QUYẾT (18/09/2026) =====
+   *
+   * React chạy effect theo THỨ TỰ KHAI. Bản trước đặt khối này ở cuối file, sau khối quyết,
+   * nên khi `id` đổi trong cùng một commit thì:
+   *
+   *     khối quyết:  decidedFor.current = 'B'; setStatus('assigned')
+   *     khối reset:  setStatus(null)            → bộ lọc rơi về "Tất cả"
+   *
+   * và vì `decidedFor.current` đã bị ghim là 'B', khối quyết KHÔNG BAO GIỜ chạy lại cho dải
+   * B — tính năng tự huỷ. Cảnh dựng lại được: mở dải A → sang B → quay lại A. Lần này
+   * `slots.data` của A có sẵn trong cache react-query nên có ngay ở lượt render đầu, hai
+   * effect cùng bắn, và một /24 có 12 địa chỉ lại đổ ra 242 ô trống — đúng thứ đoạn mã này
+   * viết ra để chặn. Chỉ lần mở ĐẦU TIÊN (chưa cache, `slots.data` còn `undefined`) là chạy
+   * đúng, nên lỗi trông như "lúc được lúc không".
+   *
+   * Đặt trước + nhả ghim thì thứ tự thành: reset → quyết, và dải mới được quyết lại tử tế.
+   *
+   * BỘ LỌC phải theo trang (17/09/2026): đang soi "Nghi chết" ở dải A rồi bấm sang dải B là
+   * gặp một bảng TRỐNG TRƠN cho một dải đầy địa chỉ — nút lọc nằm tít trên, và không ai nghĩ
+   * dải mới lại thừa hưởng bộ lọc của dải cũ.
+   */
+  useEffect(() => {
+    setPage(1);
+    setStatus(null);
+    decidedFor.current = null;
+  }, [id]);
+
   useEffect(() => {
     if (!slots.data || decidedFor.current === id) return;
     decidedFor.current = id;
     const fresh = countSlots(slots.data);
-    setStatus(
-      fresh.assigned >= WORTH_ISOLATING && fresh.free > BURIED_FREE ? "assigned" : "all",
-    );
+    setStatus(nenLocSanDangCap(fresh.assigned, fresh.free) ? "assigned" : "all");
   }, [slots.data, id]);
 
   const shown: SlotFilter = status ?? "all";
@@ -179,22 +207,6 @@ export function SubnetPane({
   useEffect(() => {
     setPage((current) => clampPage(current, filtered.length));
   }, [filtered.length]);
-
-  /*
-   * Đổi DẢI thì về trang 1 VÀ bỏ bộ lọc cũ.
-   *
-   * Đang ở trang 4 của một /24 rồi bấm sang dải khác mà vẫn ở trang 4 là mở ra dòng 151–200
-   * của dải mới, còn 150 địa chỉ đầu thì biến mất — không có gì trên màn hình giải thích vì
-   * sao. Nút lọc đã `setPage(1)` rồi; đổi dải cũng phải vậy.
-   *
-   * BỘ LỌC cũng phải theo (thêm 17/09/2026): bản trước chỉ đặt lại trang. Đang soi "Nghi chết"
-   * ở dải A rồi bấm sang dải B là gặp một bảng TRỐNG TRƠN cho một dải đầy địa chỉ — bộ lọc
-   * thì nằm tít trên, và không ai nghĩ dải mới lại thừa hưởng bộ lọc của dải cũ.
-   */
-  useEffect(() => {
-    setPage(1);
-    setStatus(null);
-  }, [id]);
 
   return (
     <>

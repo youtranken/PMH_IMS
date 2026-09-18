@@ -116,11 +116,17 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
                 {t(STATUS_KEY[item.status])}
               </span>
             </RailRow>
-            <RailRowIfSet
-              label={t("serviceAccounts.ownerName")}
-              value={item.ownerName}
-              note={item.department ?? undefined}
-            />
+            {/* Cùng luật với trang thiết bị: chưa có người phụ trách thì bộ phận đứng thành
+                dòng riêng, đừng để nó biến mất theo. */}
+            {item.ownerName ? (
+              <RailRowIfSet
+                label={t("serviceAccounts.ownerName")}
+                value={item.ownerName}
+                note={item.department ?? undefined}
+              />
+            ) : (
+              <RailRowIfSet label={t("serviceAccounts.department")} value={item.department} />
+            )}
             {/* Nhóm VPN và dải IP được phép CHỈ có nghĩa với tài khoản VPN — hồ sơ dùng chung
                 không có hai trường đó, vẽ ra là hai dòng chết. */}
             {vpn ? (

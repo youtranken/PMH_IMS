@@ -3,6 +3,7 @@ import {
   clampPage,
   countSlots,
   filterSlots,
+  nenLocSanDangCap,
   pageSlots,
   slotStatus,
   SLOT_PAGE_SIZE,
@@ -139,4 +140,30 @@ describe('pageSlots — cắt đúng 50 dòng một trang', () => {
   it('dải nhỏ hơn một trang thì trả hết trong một trang', () => {
     expect(pageSlots(hosts(12), 1)).toHaveLength(12);
   });
+});
+
+/**
+ * Luật "có nên tự mở sẵn bộ lọc Đang cấp không" — bốn ca biên quanh hai ngưỡng.
+ *
+ * Trước 18/09 luật này là một biểu thức viết thẳng trong JSX của `subnet-detail.tsx`, nên
+ * không có đường nào hỏi nó mà không dựng cả màn hình lên. Cả hai vế phải THỎA, và mỗi vế
+ * chặn một kiểu chọn-hộ-sai — xem chú thích ở `slot-paging.ts`.
+ */
+describe('nenLocSanDangCap', () => {
+  const ca: [string, number, number, boolean][] = [
+    ['dưới ngưỡng hồ sơ: /24 mới cấp 4 địa chỉ → đừng giấu ô trống đi', 4, 33, false],
+    ['đúng sàn ô trống (32) thì vẫn KHÔNG lọc: cả dải còn lọt một trang', 5, 32, false],
+    ['vừa đủ cả hai vế → lọc', 5, 33, true],
+    ['/24 dùng thật: 12 hồ sơ nằm rải trong 242 ô trống → lọc', 12, 242, true],
+    ['dải /27 đã dùng nhiều nhưng nhỏ → không lọc, mắt tự quét được', 20, 10, false],
+    ['dải rỗng hoàn toàn → không có gì đang bị chôn', 0, 254, false],
+  ];
+
+  // `oTrong` chứ không phải `free`: tên sau trùng hàm dựng ô trống ở đầu file, và che nó đi
+  // trong cả vòng lặp — bài sau thêm vào đây sẽ gọi `free('10.0.0.1')` rồi nhận một con số.
+  for (const [ten, assigned, oTrong, mongDoi] of ca) {
+    it(ten, () => {
+      expect(nenLocSanDangCap(assigned, oTrong)).toBe(mongDoi);
+    });
+  }
 });

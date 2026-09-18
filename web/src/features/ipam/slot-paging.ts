@@ -31,6 +31,17 @@ export const BURIED_FREE = 32;
 export const WORTH_ISOLATING = 5;
 
 /**
+ * Luật quyết định, tách thành HÀM THUẦN để kiểm được bằng bảng dữ liệu.
+ *
+ * Trước 18/09 nó là một biểu thức viết thẳng trong JSX của `subnet-detail.tsx`, nên không có
+ * đường nào hỏi nó bốn ca biên (4/33 · 5/32 · 5/33 · 5/253) mà không dựng cả màn hình lên.
+ * Hai hằng số thì export sẵn từ lâu; chỉ mỗi phép so là kẹt trong component.
+ */
+export function nenLocSanDangCap(assigned: number, free: number): boolean {
+  return assigned >= WORTH_ISOLATING && free > BURIED_FREE;
+}
+
+/**
  * Trạng thái của một ô trong dải.
  *
  * Ô CHƯA CÓ HỒ SƠ (`kind: 'free'`) và ô có hồ sơ mang trạng thái `free` là hai chuyện khác

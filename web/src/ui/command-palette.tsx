@@ -229,6 +229,33 @@ export function CommandPalette({ me }: { me: Me }) {
 
   useEffect(() => setAt(0), [q]);
 
+  /*
+   * GIỮ LỰA CHỌN THEO ĐÍCH ĐẾN, KHÔNG THEO CHỖ NGỒI (18/09/2026).
+   *
+   * `at` là một CHỈ SỐ vào `hits`, mà `hits` ghép theo thứ tự cố định (thiết bị → phần mềm →
+   * ISP → tài khoản → điều hướng) từ bốn truy vấn giải quyết ĐỘC LẬP. `setAt(0)` chỉ chạy lại
+   * khi `q` đổi, nên trong lúc người dùng đang chọn thì mảng bên dưới vẫn có thể dài ra.
+   *
+   * Cảnh hỏng: gõ "core", nhóm Phần mềm về trước (cache, hoặc mạng nhanh hơn), người dùng bấm
+   * ↓↓ để chọn dòng thứ ba — đúng lúc đó truy vấn Thiết bị về và CHÈN 5 dòng vào ĐẦU mảng.
+   * Enter mở một hồ sơ hoàn toàn khác với dòng đang sáng lúc bấm.
+   *
+   * Ghi lại `to` của dòng đang chọn rồi tìm lại nó sau mỗi lượt `hits` đổi: dòng cũ còn thì
+   * con trỏ bám theo nó, dòng cũ mất thì về đầu danh sách.
+   */
+  const dangChon = useRef<string | null>(null);
+  useEffect(() => {
+    dangChon.current = hits[at]?.to ?? null;
+  }, [at, hits]);
+  useEffect(() => {
+    const cu = dangChon.current;
+    if (cu === null) return;
+    const moi = hits.findIndex((hit) => hit.to === cu);
+    setAt(moi >= 0 ? moi : 0);
+    // Chỉ chạy khi DANH SÁCH đổi; `at` đổi là do chính người dùng, đừng kéo ngược lại.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hits]);
+
   if (!open) return null;
 
   const go = (hit: Hit | undefined) => {

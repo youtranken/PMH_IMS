@@ -45,7 +45,23 @@ const DUOC_PHEP_KHONG_DUNG: Record<string, string> = {};
 function moiFile(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
     const full = join(dir, e.name);
-    if (e.isDirectory()) return moiFile(full);
+    /*
+     * BỎ QUA THƯ MỤC DÒ CỦA `lint-rules.test.ts` (18/09/2026).
+     *
+     * Bài đó `mkdtempSync(join(WEB_ROOT, under, '__lint-probe__'))` để thử xem luật eslint có
+     * bắt được một file vi phạm không, rồi xoá đi. Vitest chạy các file test SONG SONG, nên
+     * bài này có thể liệt kê được thư mục ấy rồi 20ms sau đọc phải một đường dẫn đã biến mất:
+     *
+     *   ENOENT: open 'web/src/__lint-probe__E1j2jq/probe.tsx'
+     *
+     * Đỏ CẢ FILE chứ không đỏ một assertion nào — nên nó trông như hỏng hệ thống, và người
+     * đọc log sẽ đi tìm ở nhầm chỗ. Lượt chạy 18/09 vấp đúng cảnh này.
+     *
+     * Bỏ qua theo TÊN thay vì bọc `try/catch` quanh `readFileSync`: nuốt ENOENT là nuốt luôn
+     * mọi lỗi đọc thật, và bài này sống bằng việc đọc được HẾT mọi file nguồn — sót một file
+     * là một khóa dịch bị kết luận nhầm là chết.
+     */
+    if (e.isDirectory()) return e.name.startsWith('__lint-probe__') ? [] : moiFile(full);
     if (!e.isFile()) return [];
     return /\.tsx?$/.test(e.name) && e.name !== 'vi.ts' ? [full] : [];
   });
