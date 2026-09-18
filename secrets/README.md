@@ -8,9 +8,20 @@ Ba file dưới đây KHÔNG bao giờ commit (đã có trong .gitignore) và KH
 | `password_pepper` | `openssl rand -hex 32 > secrets/password_pepper` | Pepper Argon2id. Đổi pepper = mọi mật khẩu cũ hỏng → chỉ đổi khi reset toàn bộ. |
 | `smtp_password` | `printf '%s' 'mat-khau-smtp' > secrets/smtp_password` | Dev để file rỗng (mailpit không auth). |
 
-## Xoay chìa (key rotation)
+## Xoay chìa (key rotation) — thủ tục PHÁ KÍNH, không phải lịch định kỳ
 
-> ### ⚠️ CHƯA XOAY ĐƯỢC TRỌN VẸN — ĐỌC HẾT MỤC NÀY TRƯỚC KHI ĐỘNG VÀO FILE
+> ### Đây là một lựa chọn có chủ ý, không phải việc bỏ dở
+>
+> **Quyết định của chủ dự án, 18/09/2026: KHÔNG xoay chìa theo lịch, và chưa dựng job xoay.**
+> IMS là hệ nội bộ, không mở ra internet; xoay định kỳ cho một hệ như vậy tốn công mà gần như
+> không đổi lại được gì. Ai đọc mục này về sau đừng coi cái job còn thiếu là nợ kỹ thuật cần
+> trả gấp — nó là thứ cố ý chưa làm.
+>
+> **Nhưng cái làm chìa lộ không đi qua internet.** Ba đường thật: file `.env`/`secrets/` trên
+> máy chủ và mọi bản sao lưu của máy đó; một bản dump DB ai đó copy về máy để thử; và người
+> từng có quyền vào máy chủ rồi nghỉ việc — bản chìa họ đã thấy thì không thu lại được. Nếu
+> một trong ba việc đó xảy ra thì **xoay chìa là việc phải làm, và lúc đó bước đầu tiên là
+> DỰNG CÁI JOB**, chứ không phải chạy quy trình dưới đây.
 >
 > Hàm `rewrap()` (`api/src/common/crypto/envelope.service.ts`) mã lại MỘT bản ghi sang chìa mới
 > và đã có bài kiểm đầy đủ — nhưng **chưa có lệnh/job nào gọi nó** (rà 17/09/2026: grep toàn
@@ -22,6 +33,13 @@ Ba file dưới đây KHÔNG bao giờ commit (đã có trong .gitignore) và KH
 > - ciphertext trong **bản sao lưu** cũng không còn chìa nào mở được — backup không cứu được;
 > - `users.totp_key_version` (migration 0002) dùng CHUNG chùm chìa này, nên **không ai step-up
 >   được nữa** — kể cả người cần vào để sửa.
+>
+> ### Và bộ khung `key_version` thì GIỮ NGUYÊN, đừng dọn
+>
+> Nhìn từ xa nó dễ trông như đồ thừa của một tính năng chưa làm. Không phải: `key_version` nằm
+> trong AAD của AES-GCM và `MasterKeyRing` tra chìa theo version, nên gỡ nó ra là hỏng luôn
+> đường giải mã bình thường — không liên quan gì tới xoay chìa. Giữ nó cũng có nghĩa là ngày
+> cần xoay thật, chỗ còn thiếu chỉ là cái job, không phải dựng lại từ đầu.
 
 1. Thêm dòng mới vào `master_key`: `2=<hex mới>` — **giữ nguyên dòng cũ**, nếu không dữ liệu cũ không giải được.
 2. Restart api/worker. Từ đây bản ghi MỚI dùng chìa 2; bản ghi cũ vẫn ở chìa 1 và vẫn đọc được.
