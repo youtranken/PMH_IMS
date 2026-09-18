@@ -42,17 +42,34 @@ export function daysUntil(end: string | Date, now: Date = new Date()): number {
   return Math.round((endDate.getTime() - startOfDay(now).getTime()) / MS_PER_DAY);
 }
 
+/**
+ * THANG PHÂN LOẠI, nhận thẳng SỐ NGÀY còn lại.
+ *
+ * Tách khỏi `expiryLevel` ngày 18/09/2026 vì có nơi đã có sẵn `daysLeft` do server tính —
+ * màn Sắp hết hạn nhận `daysLeft` trong từng dòng — và nó đã viết lại đúng ba nhánh này ở
+ * tầng màn hình. Đó là bản thứ HAI của thứ mà `docs/SHARED-REGISTRY.md` gọi là "luật 'sắp hết
+ * hạn' DUY NHẤT của hệ thống"; hai bản thì sẽ có ngày chúng trả lời khác nhau.
+ *
+ * Không trả `'none'`: ở đây đã có một con số, tức đã có hạn. Vế "không có hạn" là việc của
+ * `expiryLevel`, nơi `end` có thể `null`.
+ */
+export function levelFromDays(
+  days: number,
+  thresholds: ExpiryThresholds = DEFAULT_EXPIRY_THRESHOLDS,
+): Exclude<ExpiryLevel, 'none'> {
+  if (days < 0) return 'expired';
+  if (days <= thresholds.criticalDays) return 'critical';
+  if (days <= thresholds.warningDays) return 'warning';
+  return 'ok';
+}
+
 export function expiryLevel(
   end: string | Date | null | undefined,
   now: Date = new Date(),
   thresholds: ExpiryThresholds = DEFAULT_EXPIRY_THRESHOLDS,
 ): ExpiryLevel {
   if (!end) return 'none';
-  const days = daysUntil(end, now);
-  if (days < 0) return 'expired';
-  if (days <= thresholds.criticalDays) return 'critical';
-  if (days <= thresholds.warningDays) return 'warning';
-  return 'ok';
+  return levelFromDays(daysUntil(end, now), thresholds);
 }
 
 /** Nhãn tiếng Việt ngắn để hiện trong badge. */

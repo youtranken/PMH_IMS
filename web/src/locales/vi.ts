@@ -610,7 +610,10 @@ export default {
     windowDays: 'Trong {{days}} ngày tới',
     allKinds: 'Tất cả loại',
     expired: 'Đã quá hạn',
-    critical: 'Gấp (≤7 ngày)',
+    /* Số ngày NỘI SUY, không gõ cứng: ngưỡng thật nằm ở `system_config` (AD-11) và ô số này
+       giờ THẬT SỰ lọc bảng theo nó. Admin đổi `expiry.critical_days` thành 14 mà nhãn vẫn ghi
+       "≤7 ngày" là màn hình nói dối về chính việc nó vừa làm. */
+    critical: 'Gấp (≤{{days}} ngày)',
     warning: 'Sắp tới',
     renew: 'Gia hạn',
     renewed: 'Đã gia hạn.',

@@ -225,4 +225,46 @@ test.describe('Cỗ máy Expiry', () => {
       page.getByRole('button', { name: /[1-9]\d*\s*Đã quá hạn/ }),
     ).toHaveCount(1);
   });
+
+  /**
+   * BỘ LỌC MÀN SẮP HẾT HẠN SỐNG TRÊN THANH ĐỊA CHỈ (18/09/2026).
+   *
+   * Ba bộ lọc của màn này — cửa sổ nhìn tới, loại hạn, và ô số — nằm trong `useState` cho tới
+   * 18/09, trong khi `docs/SHARED-REGISTRY.md` viết thẳng: "Cấm quay lại `useState` cho bốn
+   * thứ đó — mất bộ lọc khi F5, không gửi được link, và bấm Back từ trang chi tiết rơi về một
+   * danh sách trắng."
+   *
+   * Bài này canh đúng ba lời hứa ấy, bằng ba thao tác người dùng thật làm: bấm lọc, F5, và
+   * bấm Back từ hồ sơ vừa mở.
+   */
+  test('bộ lọc lên URL: F5 còn nguyên, Back từ hồ sơ về đúng bảng đã lọc', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    await post(page, '/api/v1/software', {
+      code: `SSL-E2E-URL-${stamp}`,
+      name: 'SSL cho bai kiem URL',
+      kind: 'ssl',
+      endDate: inDays(-3),
+    });
+
+    await page.goto('/expiry');
+    const hang = page.getByRole('link', { name: new RegExp(`SSL-E2E-URL-${stamp}`) });
+    await expect(hang).toBeVisible();
+
+    // Bấm ô "Đã quá hạn" → trạng thái phải hiện lên thanh địa chỉ, không nằm trong bộ nhớ.
+    await page.getByRole('button', { name: /\d+\s*Đã quá hạn/ }).click();
+    await expect(page).toHaveURL(/[?&]state=expired/);
+
+    // F5: bộ lọc còn nguyên, và dòng vẫn ở đó.
+    await page.reload();
+    await expect(page).toHaveURL(/[?&]state=expired/);
+    await expect(hang).toBeVisible();
+
+    // Mở hồ sơ rồi bấm Back — không được rơi về một bảng chưa lọc.
+    await hang.click();
+    await expect(page).toHaveURL(/\/software\//);
+    await page.goBack();
+    await expect(page).toHaveURL(/[?&]state=expired/);
+    await expect(hang).toBeVisible();
+  });
 });

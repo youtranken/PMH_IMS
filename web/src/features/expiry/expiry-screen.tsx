@@ -17,10 +17,12 @@ import { FilterBar } from '@/ui/filter-bar';
 import { KpiStrip, KpiTile } from '@/ui/kpi-strip';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
+import { levelFromDays } from '@/lib/expiry';
 import { useExpiryThresholds } from '@/ui/use-expiry-thresholds';
 import { Select } from '@/ui/select';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useToast } from '@/ui/toast';
+import { useListUrlState } from '@/ui/use-list-url-state';
 import { DigestRulesPanel } from './digest-rules-panel';
 
 interface ExpiryRow {
@@ -39,6 +41,17 @@ interface ExpiryRow {
 interface ExpiryResponse {
   items: ExpiryRow[];
   summary: { expired: number; critical: number; warning: number };
+  /*
+   * `expiry.service.ts:129` trả KÈM ngưỡng đã dùng để đếm `summary`. Trước 18/09 khai báo này
+   * bỏ sót nó, nên trường ấy bị vứt đi và màn phải hỏi lại `/expiry/thresholds` — một truy vấn
+   * THỨ HAI, có `retry: false`, và khi nó hỏng thì lùi về 7/30 cứng.
+   *
+   * Hậu quả: ô số đếm bằng ngưỡng của server, bảng lọc bằng ngưỡng của truy vấn kia. Admin đặt
+   * `expiry.critical_days = 14` rồi `/expiry/thresholds` lỗi một lượt → ô "Gấp" ghi 6, bấm vào
+   * bảng còn 3 dòng, ba dòng kia lặng lẽ chạy sang nhóm "Sắp tới". Hai con số mâu thuẫn trên
+   * cùng một màn hình, và không bài kiểm nào bắt được vì mỗi bên tự nhất quán với chính nó.
+   */
+  thresholds: { criticalDays: number; warningDays: number };
 }
 
 /** Cửa sổ nhìn tới — mấy mốc người ta thật sự dùng, không cho gõ số tùy ý cho rối. */
@@ -55,17 +68,47 @@ export function ExpiryScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const [withinDays, setWithinDays] = useState(30);
-  const [kind, setKind] = useState('');
   const [renewing, setRenewing] = useState<ExpiryRow | null>(null);
   const [tab, setTab] = useState('list');
-  /** Ô số nào đang được bấm để lọc. Rỗng = xem tất cả. Lọc ở CLIENT — xem chú thích dưới. */
-  const [state, setState] = useState<'' | 'expired' | 'critical' | 'warning'>('');
 
   /*
-   * Cùng NGUỒN ngưỡng với chip đếm của server và với `ExpiryBadge` (AD-15, `use-expiry-thresholds`).
-   * Tự chế lại hai con số 7/30 ở đây là cách chắc chắn nhất để ô "Gấp (≤7 ngày)" ghi 2 mà lọc
-   * ra 3 dòng — và không bài kiểm nào bắt được vì mỗi bên tự nhất quán với chính nó.
+   * BA BỘ LỌC SỐNG TRÊN THANH ĐỊA CHỈ, KHÔNG TRONG `useState` (18/09/2026).
+   *
+   * `docs/SHARED-REGISTRY.md` viết thẳng về `useListUrlState`: "Cấm quay lại `useState` cho
+   * bốn thứ đó — mất bộ lọc khi F5, không gửi được link, và bấm Back từ trang chi tiết rơi về
+   * một danh sách trắng". Màn này vẫn `useState` cả ba, và ô số `state` thì MỚI SINH RA trong
+   * chính nhánh này — tức luật vừa viết đã có ngoại lệ ngay lập tức.
+   *
+   * Lý do kỹ thuật "màn này không phân trang" không còn đứng được:
+   * `features/vault/vault-home-screen.tsx` đã chứng minh hook dùng được cho màn không phân
+   * trang — khai `emptyFilters`, bỏ `defaultLimit`/`defaultSort`, xong.
+   *
+   * `withinDays` để dạng chuỗi trong URL rồi mới `Number()`: hook giữ mọi bộ lọc là chuỗi, và
+   * một link ai đó sửa tay (`?withinDays=abc`) phải rơi về mặc định chứ không thành `NaN` đi
+   * thẳng vào `queryKey`.
+   */
+  const url = useListUrlState<{ withinDays: string; kinds: string; state: string }>({
+    emptyFilters: { withinDays: '', kinds: '', state: '' },
+  });
+  const withinDays = WINDOWS.includes(Number(url.filters.withinDays))
+    ? Number(url.filters.withinDays)
+    : 30;
+  const kind = url.filters.kinds;
+  /** Ô số nào đang được bấm để lọc. Rỗng = xem tất cả. Lọc ở CLIENT — xem chú thích dưới. */
+  const state = (['expired', 'critical', 'warning'] as const).includes(
+    url.filters.state as 'expired',
+  )
+    ? (url.filters.state as 'expired' | 'critical' | 'warning')
+    : '';
+  const setWithinDays = (value: number) => url.setFilter('withinDays', String(value));
+  const setKind = (value: string) => url.setFilter('kinds', value);
+  const setState = (value: '' | 'expired' | 'critical' | 'warning') =>
+    url.setFilter('state', value);
+
+  /*
+   * `useExpiryThresholds()` vẫn dùng cho `ExpiryBadge` và cho NHÃN ô số — nó là nguồn chung
+   * của cả hệ thống (AD-15). Nhưng phép LỌC bảng thì đọc ngưỡng đi KÈM chính lượt trả về, vì
+   * đó mới đúng là bộ ngưỡng mà `summary` đã dùng để đếm. Xem chú thích ở `ExpiryResponse`.
    */
   const thresholds = useExpiryThresholds();
 
@@ -94,14 +137,19 @@ export function ExpiryScreen({ me }: { me: Me }) {
    * Ba nhóm KHÔNG phủ kín bảng, và đó là đúng: dòng còn xa hơn ngưỡng "sắp tới" không thuộc
    * nhóm nào (server cũng đếm y như vậy — xem `summarize()` trong `expiry.service.ts`). Ba ô
    * cộng lại không bằng số dòng; chúng đếm "cần chú ý", không đếm "có bao nhiêu dòng".
+   *
+   * Ngưỡng ĐI KÈM lượt trả về, không phải từ `useExpiryThresholds()` — chỉ bộ này mới chắc
+   * chắn là bộ mà `summary` đã dùng để đếm. Chưa về thì lùi về hook (nó có bản dự phòng
+   * riêng); lúc đó `allRows` cũng còn rỗng nên phép lọc chưa lọc gì cả.
+   *
+   * Và thang phân loại lấy từ `lib/expiry.ts` — "luật sắp hết hạn DUY NHẤT của hệ thống"
+   * (SHARED-REGISTRY). Bản trước viết lại đúng ba nhánh `<0 / <=critical / <=warning` ngay
+   * tại đây, tức bản thứ hai của cùng một luật ở cùng một tầng.
    */
-  const rows = allRows.filter((row) => {
-    if (state === '') return true;
-    if (row.daysLeft < 0) return state === 'expired';
-    if (row.daysLeft <= thresholds.criticalDays) return state === 'critical';
-    if (row.daysLeft <= thresholds.warningDays) return state === 'warning';
-    return false;
-  });
+  const nguong = expiry.data?.thresholds ?? thresholds;
+  const rows = allRows.filter((row) =>
+    state === '' ? true : levelFromDays(row.daysLeft, nguong) === state,
+  );
 
   const columns = useMemo<ColumnDef<ExpiryRow, unknown>[]>(
     () => [
@@ -194,7 +242,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
           />
           <KpiTile
             value={summary.critical}
-            label={t('expiry.critical')}
+            label={t('expiry.critical', { days: nguong.criticalDays })}
             tone="danger"
             active={state === 'critical'}
             onClick={() => setState(state === 'critical' ? '' : 'critical')}
