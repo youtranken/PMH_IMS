@@ -1,5 +1,14 @@
 import * as RD from '@radix-ui/react-dialog';
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { useConfirm } from '@/ui/confirm-context';
 import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
@@ -24,6 +33,48 @@ import type { ReactNode } from 'react';
  * `/vault`, cùng một đoạn mã, hai độ sâu khác nhau.
  */
 const DialogDepthContext = createContext(0);
+
+/**
+ * SỔ HỘP ĐANG MỞ — nửa thứ hai của cùng một câu hỏi, cho những hộp KHÔNG nằm trong cây của
+ * hộp cha.
+ *
+ * `DialogDepthContext` đo vị trí trong cây React, nên nó chỉ thấy hộp lồng theo đúng nghĩa
+ * đen: hộp dựng bên trong `sheet-body` của hộp khác (đường của Két sắt). Nó MÙ với hai cảnh
+ * còn lại, và cảnh đầu mới là cảnh hay gặp nhất:
+ *
+ *   1. `ConfirmProvider` dựng `ConfirmDialog` ở GỐC app, là anh em của `children` chứ không
+ *      nằm trong hộp nào — nên nó luôn đọc ra `depth = 0`. Mà `guardUnsaved` của chính file
+ *      này gọi `askConfirm` (xem `thuDong`), nghĩa là mọi hộp có canh dữ liệu chưa lưu khi
+ *      bấm Esc đều đẻ ra một lớp nền mờ THỨ HAI đè lên lớp của chính nó. Đo ngày 18/09/2026:
+ *      hai lớp `rgba(20,26,20,.44)` chồng nhau, không lớp nào `bare`.
+ *   2. Hai hộp anh em trong cùng một component (`{a && <Dialog/>}{b && <Dialog/>}`) cũng đều
+ *      `depth = 0`.
+ *
+ * Ghi tên và đọc sổ đều làm trong `useLayoutEffect` — xem chú thích tại chỗ trong `Dialog` để
+ * biết vì sao không đọc lúc render (hai hộp anh em cùng một commit sẽ cùng đọc ra sổ rỗng).
+ */
+let soHopDangMo = 0;
+const nguoiTheoDoiHop = new Set<() => void>();
+
+function dangKyTheoDoiHop(bao: () => void): () => void {
+  nguoiTheoDoiHop.add(bao);
+  return () => {
+    nguoiTheoDoiHop.delete(bao);
+  };
+}
+
+/** Có hộp thoại nào đang mở không — bản đọc một phát, cho handler bàn phím. */
+export function coHopThoaiDangMo(): boolean {
+  return soHopDangMo > 0;
+}
+
+/**
+ * Bản phản ứng: component nào cần TỰ ĐÓNG khi có hộp thoại mở ra thì dùng cái này.
+ * `getServerSnapshot` trả `false` vì trên server chưa hộp nào mở được.
+ */
+export function useCoHopThoaiDangMo(): boolean {
+  return useSyncExternalStore(dangKyTheoDoiHop, coHopThoaiDangMo, () => false);
+}
 
 const DialogPortalContext = createContext<HTMLElement | null>(null);
 export const useDialogPortal = () => useContext(DialogPortalContext);
@@ -276,6 +327,37 @@ export function Dialog({
   }
   wasOpen.current = open;
 
+  /*
+   * GHI TÊN VÀO SỔ, VÀ CHỐT "MÌNH CÓ PHẢI HỘP LỒNG KHÔNG" — cùng một layout effect.
+   *
+   * ===== VÌ SAO LÀ `useLayoutEffect`, KHÔNG PHẢI ĐỌC LÚC RENDER =====
+   *
+   * Đọc sổ trong lúc render thì hai hộp ANH EM mở trong CÙNG một commit
+   * (`{a && <Dialog/>}{b && <Dialog/>}`) đều đọc ra sổ rỗng — chưa hộp nào kịp ghi tên — nên
+   * cả hai cùng lấy nền đặc. Bài `dialog-nested-backdrop.test.tsx` bắt đúng cảnh đó.
+   *
+   * Layout effect thì chạy theo thứ tự cây: hộp anh ghi tên xong mới tới lượt hộp em đọc, nên
+   * hộp em thấy sổ có một tên và tự biết mình là lớp thứ hai. Đổi lại là một lượt render nữa,
+   * nhưng layout effect chạy TRƯỚC khi trình duyệt vẽ nên không có nháy hình.
+   *
+   * ===== VÌ SAO VẪN GIỮ `depth` =====
+   *
+   * Hộp lồng THẬT (hộp con dựng trong `sheet-body` của hộp cha) có thứ tự ngược lại: layout
+   * effect của con chạy TRƯỚC của cha, nên con đọc sổ vẫn thấy rỗng. `depth` lo đúng cảnh đó.
+   * Hai cơ chế phủ kín nhau, không cái nào thừa.
+   */
+  const [laHopLong, setLaHopLong] = useState(false);
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    setLaHopLong(depth > 0 || soHopDangMo > 0);
+    soHopDangMo += 1;
+    for (const bao of nguoiTheoDoiHop) bao();
+    return () => {
+      soHopDangMo -= 1;
+      for (const bao of nguoiTheoDoiHop) bao();
+    };
+  }, [open, depth]);
+
   const returnFocus = useCallback(() => {
     const el = opener.current;
     opener.current = null;
@@ -299,7 +381,9 @@ export function Dialog({
     <RD.Root open={open} onOpenChange={onOpenChange}>
       <RD.Portal>
         <RD.Overlay
-          className={overlayClassName ?? (depth > 0 ? 'modal-backdrop bare' : 'modal-backdrop')}
+          className={
+            overlayClassName ?? (laHopLong ? 'modal-backdrop bare' : 'modal-backdrop')
+          }
         />
         <div className="dialog-viewport">
           <RD.Content

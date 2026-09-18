@@ -90,6 +90,11 @@ export default {
     placeholder: 'Tìm thiết bị, phần mềm, đường truyền, tài khoản…',
     hint: 'Gõ ít nhất 2 ký tự: mã, tên hoặc serial. Tìm xuyên thiết bị · phần mềm · đường truyền · tài khoản dịch vụ, và cả tên màn hình.',
     empty: 'Không có hồ sơ nào khớp "{{q}}".',
+    /* Một trong bốn nhóm hỏng thì KHÔNG được nói "không có gì khớp" — người trực sẽ đi khai
+       trùng một hồ sơ đã tồn tại. Nói rõ là danh sách đang thiếu, và thiếu nhóm nào. */
+    partial: 'Chưa tìm được trong: {{list}}. Danh sách dưới đây còn thiếu.',
+    emptyPartial:
+      'Chưa tìm được trong: {{list}}, nên chưa nói được là có hồ sơ nào khớp "{{q}}" hay không.',
     groupNav: 'Màn hình',
     footMove: 'di chuyển',
     footOpen: 'mở',
@@ -123,6 +128,14 @@ export default {
       'và toàn bộ lịch sử. Không tick thì hệ thống CHẶN và đọc tên từng thứ đang giữ, chứ ' +
       'không lẳng lặng thanh lý.',
     cutNothing: 'Máy này không giữ gì phải gỡ — thanh lý không kéo theo thứ nào.',
+    /* Ba câu cho cảnh CHƯA BIẾT. Im lặng ở đây không được phép đọc thành "sạch rồi": đó đúng
+       là câu người ta mở trang này ra để hỏi trước khi thanh lý. */
+    unknown:
+      'Chưa đọc được máy này đang giữ những gì — bản đồ bên dưới có thể thiếu. Đừng dựa vào ' +
+      'nó để quyết định thanh lý cho tới khi tải lại được.',
+    cutUnknown:
+      'Chưa đọc được danh sách thứ máy đang giữ, nên chưa nói được lượt thanh lý sẽ cắt gì. ' +
+      'Tải lại khu bên dưới rồi xem lại.',
   },
   common: {
     save: 'Lưu',

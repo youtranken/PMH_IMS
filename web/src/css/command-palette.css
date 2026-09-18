@@ -14,7 +14,10 @@
   align-items: flex-start;
   padding: 12vh var(--space-10) var(--space-10);
   z-index: var(--z-palette);
-  background: rgba(20, 26, 20, 0.42);
+  /* `var(--scrim)`, không phải một mã màu viết thẳng: `tokens.css` dựng token này đúng để dẹp
+     màu nền mờ cuối cùng còn nằm ngoài file đó, và bản viết tay ở đây KHÔNG có cặp cho chế độ
+     tối — trang vốn đã tối lại bị phủ thêm 42% đen. */
+  background: var(--scrim);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
 }
@@ -188,6 +191,20 @@
 }
 
 /* --- trạng thái rỗng --- */
+/* Dải cảnh báo "danh sách còn thiếu" — một trong bốn nhóm vừa hỏng. Dùng tông cảnh báo của
+   hệ màu, không phải tông lỗi: kết quả bên dưới vẫn dùng được, chỉ là chưa đủ. */
+.cp-warn {
+  margin: 0;
+  padding: var(--space-5) var(--space-8);
+  border-bottom: 1px solid var(--border);
+  background: var(--warn-soft);
+  /* `--warn` chứ không phải một token `--warn-strong` — token đó không tồn tại trong
+     `tokens.css`, và `--warn` vốn đã được chọn đủ đậm để đạt AA trên `--warn-soft`
+     (ghi chú axe 2026-08-06). Cả hai đều có cặp cho chế độ tối. */
+  color: var(--warn);
+  font-size: var(--fs-xs);
+}
+
 .cp-empty {
   display: flex;
   flex-direction: column;

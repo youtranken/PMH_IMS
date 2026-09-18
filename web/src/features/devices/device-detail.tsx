@@ -157,12 +157,21 @@ export function DeviceDetail({ me }: { me: Me }) {
      * Điều FR-006 cấm — bày một bảng RỖNG cho máy in — vẫn được giữ nguyên: máy in không có
      * dòng nào thì cả hai vế đều sai và tab vẫn không mọc ra.
      */
-    ...(device.data?.hasPortMap || portRowCount > 0
+    /*
+     * Vế thứ ba (`ports.isError`): CHƯA ĐỌC ĐƯỢC thì tab phải ở lại.
+     *
+     * `ports.data?.ports.length ?? 0` biến một lỗi 500 thành số 0, nên với máy không bật
+     * `has_port_map` cả hai vế đầu đều sai và TAB BIẾN MẤT HẲN — người dùng kết luận máy này
+     * không có gì để xem, trong khi sự thật là lượt gọi vừa hỏng. Giữ tab lại thì
+     * `PortMapPanel` tự bày lỗi của nó và có nút thử lại.
+     */
+    ...(device.data?.hasPortMap || portRowCount > 0 || ports.isError
       ? [
           {
             key: "ports",
             label: t("devices.tabPortMap"),
-            count: portRowCount,
+            // Chưa đọc được thì không có số nào để nói — `undefined`, không phải 0.
+            count: ports.isError || ports.isPending ? undefined : portRowCount,
           },
         ]
       : []),
@@ -524,8 +533,17 @@ export function DeviceDetail({ me }: { me: Me }) {
               hubCode={item.code}
               nodes={relationNodes}
               missing={relationMissing}
+              /* Hai nguồn nuôi bản đồ: khu mở rộng (`/panels`) và cổng (`/ports`). Bất kỳ cái
+                 nào chưa về hoặc hỏng thì bản đồ CHƯA BIẾT — không được nói "chưa giữ gì".
+                 `counts` (giấy tờ, két) là nguồn thứ ba nhưng nó tự phân biệt được
+                 `undefined` với 0, nên xử riêng ở `relationNodes`/`relationMissing`. */
+              chuaBiet={
+                panels.isError || panels.isPending || ports.isError || ports.isPending
+              }
               cutSummary={
-                cutList.length > 0 ? (
+                panels.isError || panels.isPending || ports.isError || ports.isPending
+                  ? t("relationMap.cutUnknown")
+                  : cutList.length > 0 ? (
                   <>
                     <b>{t("relationMap.cutLead", { list: cutList.join(" · ") })}</b>
                     <br />

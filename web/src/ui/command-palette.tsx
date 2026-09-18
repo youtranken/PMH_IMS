@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api-client';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
 import { visibleGroups } from '@/shell/app-nav';
+import { coHopThoaiDangMo, useCoHopThoaiDangMo } from '@/ui/dialog';
 
 /**
  * Tìm nhanh ⌘K — đường ngắn nhất từ "tôi nhớ mang máng cái mã" tới đúng hồ sơ.
@@ -90,14 +91,40 @@ export function CommandPalette({ me }: { me: Me }) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        /*
+         * ĐANG CÓ HỘP THOẠI THÌ KHÔNG MỞ (18/09/2026).
+         *
+         * Hộp Radix đặt `pointer-events: none` lên `body` và chỉ mở lại cho vùng bên trong
+         * `Content`. Palette gắn ở shell, tức NGOÀI vùng ấy — nên khi mở chồng lên một hộp
+         * thoại nó thành một lớp phủ chết: `--z-palette` (85) cao hơn `--z-modal` (60) nên
+         * nó che kín màn hình, mà `pointer-events` kế thừa `none` nên không bấm được, tiêu
+         * điểm vẫn nằm trong hộp thoại nên gõ không vào ô tìm, và Esc rơi xuống đóng nhầm
+         * hộp bên dưới. Đo ngày 18/09/2026: gõ "abc" xong giá trị ô tìm vẫn là chuỗi rỗng.
+         *
+         * Kể cả nếu bấm được thì `go()` gọi thẳng `navigate()`, đi vòng qua `guardUnsaved`
+         * của hộp đang mở — mất trắng dữ liệu đang gõ mà không một câu hỏi lại.
+         *
+         * Không nuốt luôn phím: để `event.preventDefault()` cho nhánh này thì trình duyệt
+         * cũng không nhận được Ctrl+K, mà người dùng thì không hiểu vì sao không có gì xảy ra.
+         */
+        if (!open && coHopThoaiDangMo()) return;
         event.preventDefault();
-        openedBy.current = document.activeElement;
+        // Chỉ ghi chỗ đứng cũ ở nhánh MỞ: lúc đóng, `activeElement` chính là ô tìm sắp bị
+        // tháo, ghi lại rồi `.focus()` lên một node đã rời DOM là tiêu điểm rơi về `<body>`.
+        if (!open) openedBy.current = document.activeElement;
         setOpen((was) => !was);
       }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, []);
+  }, [open]);
+
+  /* Hộp thoại mở ra trong lúc palette đang mở (nút trên một kết quả, một luồng nào đó tự mở
+     hộp) — palette phải nhường đường, vì từ giây đó trở đi nó là lớp phủ chết. */
+  const coHopThoai = useCoHopThoaiDangMo();
+  useEffect(() => {
+    if (coHopThoai) setOpen(false);
+  }, [coHopThoai]);
 
   useEffect(() => {
     if (open) {
@@ -226,7 +253,27 @@ export function CommandPalette({ me }: { me: Me }) {
     }
   };
 
-  const loading = enabled && (devices.isFetching || software.isFetching);
+  /*
+   * BỐN NHÓM, KHÔNG PHẢI HAI (18/09/2026).
+   *
+   * `loading` trước đây chỉ đọc `devices` và `software`, bỏ sót `isp` và `accounts` — nên chỉ
+   * cần một nhóm về chậm hơn hai nhóm kia là hộp nháy "Không có hồ sơ nào khớp" rồi mới đổ
+   * kết quả ra.
+   *
+   * Nặng hơn là nhánh LỖI: cả bốn nhóm đều `?? []`, nên một lượt 500 hoá thành danh sách rỗng
+   * và hộp khẳng định thẳng là không có gì khớp. Đo bằng cách ép `/isp-lines` trả 500: gõ
+   * "fpt" ra đúng câu "Không có hồ sơ nào khớp "fpt"" — người trực đọc xong sẽ đi khai trùng
+   * một đường truyền đã có trong hệ thống.
+   */
+  const nhomHong = [
+    isp.isError ? t('nav.isp') : null,
+    devices.isError ? t('nav.devices') : null,
+    software.isError ? t('nav.software') : null,
+    accounts.isError ? t('nav.serviceAccounts') : null,
+  ].filter((ten): ten is string => ten !== null);
+  const loading =
+    enabled &&
+    (devices.isFetching || software.isFetching || isp.isFetching || accounts.isFetching);
   let lastGroup: string | null = null;
 
   return (
@@ -257,6 +304,13 @@ export function CommandPalette({ me }: { me: Me }) {
         </div>
 
         <div className="cp-list">
+          {/* Có kết quả nhưng danh sách KHÔNG đầy đủ — nói ra, đừng để người dùng tin là đã
+              thấy hết. `role="status"` để trình đọc màn hình cũng nghe được. */}
+          {nhomHong.length > 0 && hits.length > 0 ? (
+            <p className="cp-warn" role="status">
+              {t('palette.partial', { list: nhomHong.join(', ') })}
+            </p>
+          ) : null}
           {q.length < 2 ? (
             <div className="cp-empty">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
@@ -271,7 +325,13 @@ export function CommandPalette({ me }: { me: Me }) {
                 <circle cx="11" cy="11" r="7" />
                 <path d="m20 20-3.5-3.5" />
               </svg>
-              <p>{loading ? t('app.loading') : t('palette.empty', { q })}</p>
+              <p>
+                {loading
+                  ? t('app.loading')
+                  : nhomHong.length > 0
+                    ? t('palette.emptyPartial', { list: nhomHong.join(', '), q })
+                    : t('palette.empty', { q })}
+              </p>
             </div>
           ) : (
             hits.map((hit, index) => {

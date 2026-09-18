@@ -120,6 +120,7 @@ export function RelationMap({
   nodes,
   missing,
   cutSummary,
+  chuaBiet = false,
 }: {
   hubCode: string;
   nodes: RelationNode[];
@@ -127,6 +128,18 @@ export function RelationMap({
   missing: string[];
   /** Câu nói rõ lượt thanh lý cắt gì, giữ gì. Không có thì không hiện nút chế độ. */
   cutSummary?: ReactNode;
+  /**
+   * CHƯA ĐỌC ĐƯỢC nguồn nuôi bản đồ (lượt gọi đang bay, hoặc vừa hỏng).
+   *
+   * Không có cờ này thì mọi nguồn lỗi đều đi qua `?? []` và hoá thành danh sách rỗng — bản
+   * đồ in ra "Máy này chưa giữ gì của ai… Thanh lý nó không kéo theo gì cả" cho một cái máy
+   * đang giữ IP, rule NAT và ghế license. Đo ngày 18/09/2026 bằng cách ép `/panels` trả 500:
+   * đúng câu đó hiện lên, kèm "Chưa gắn:" liệt kê trọn sáu khu.
+   *
+   * Trang vẫn có khối `LoadError` ở dưới, nhưng nó nằm SAU bản đồ và nói ngược lại — người
+   * đọc tin câu khẳng định ở trên, đó là câu họ vào đây để tìm.
+   */
+  chuaBiet?: boolean;
 }) {
   const { t } = useTranslation();
   const [showCut, setShowCut] = useState(false);
@@ -230,7 +243,10 @@ export function RelationMap({
           </button>
         ))}
 
-        {n === 0 ? <p className="rmap-alone">{t('relationMap.alone')}</p> : null}
+        {/* Chưa biết thì KHÔNG được nói "chưa giữ gì" — hai câu đó khác hẳn nhau. */}
+        {n === 0 && !chuaBiet ? (
+          <p className="rmap-alone">{t('relationMap.alone')}</p>
+        ) : null}
       </div>
 
       {/* Màn hẹp: cùng danh sách ấy ở dạng dòng, bấm ra cùng chỗ. Đây cũng là bản mà trình
@@ -238,7 +254,7 @@ export function RelationMap({
       <div className="rmap-list">
         {n === 0 ? (
           <button type="button" disabled>
-            <span>{t('relationMap.aloneShort')}</span>
+            <span>{chuaBiet ? t('relationMap.unknown') : t('relationMap.aloneShort')}</span>
           </button>
         ) : (
           nodes.map((node) => (
@@ -251,7 +267,13 @@ export function RelationMap({
         )}
       </div>
 
-      {missing.length > 0 ? (
+      {/* Dòng "Chưa gắn:" là một KHẲNG ĐỊNH về thứ máy không có. Chưa đọc được nguồn thì nó
+          sai ở đúng chiều nguy hiểm, nên nhường chỗ cho câu nói thật về việc chưa biết. */}
+      {chuaBiet ? (
+        <p className="rmap-blank" role="status">
+          {t('relationMap.unknown')}
+        </p>
+      ) : missing.length > 0 ? (
         <p className="rmap-blank">{t('relationMap.missing', { list: missing.join(', ') })}</p>
       ) : null}
 
