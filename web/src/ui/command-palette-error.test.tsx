@@ -59,7 +59,9 @@ describe('⌘K khi một nguồn hỏng', () => {
       </MemoryRouter>,
     );
     await user.keyboard('{Control>}k{/Control}');
-    await user.type(screen.getByRole('textbox', { name: /tìm nhanh/i }), chu);
+    /* `combobox`, không phải `textbox`: từ 18/09 ô tìm khai `role="combobox"` +
+       `aria-activedescendant` để mũi tên ↑/↓ nói được với trình đọc màn hình. */
+    await user.type(screen.getByRole('combobox', { name: /tìm nhanh/i }), chu);
   };
 
   it('không kết quả nào: KHÔNG được khẳng định "không có hồ sơ nào khớp"', async () => {

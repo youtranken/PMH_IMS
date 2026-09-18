@@ -97,7 +97,7 @@ export function LicenseAssignmentsPanel({
         <EmptyState title={t('license.empty')} hint={t('license.emptyHint')} />
       ) : (
         <div className="table-wrap">
-          <table className="table table-stack">
+          <table className="table table-stack wide">
             <thead>
               <tr>
                 <th>{t('license.device')}</th>

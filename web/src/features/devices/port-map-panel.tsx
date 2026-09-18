@@ -105,7 +105,7 @@ export function PortMapPanel({
             <EmptyState title={t('ports.empty')} hint={t('ports.emptyHint')} />
           ) : (
             <div className="table-wrap">
-              <table className="table table-stack">
+              <table className="table table-stack wide">
                 <thead>
                   <tr>
                     <th>{t('ports.port')}</th>
@@ -208,7 +208,7 @@ export function PortMapPanel({
             <p className="muted">{t('ports.incomingEmpty')}</p>
           ) : (
             <div className="table-wrap">
-              <table className="table table-stack">
+              <table className="table table-stack wide">
                 <thead>
                   <tr>
                     <th>{t('ports.fromDevice')}</th>

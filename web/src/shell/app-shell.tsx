@@ -5,7 +5,7 @@ import { useApiMutation } from '@/lib/api';
 import { LOGIN_PATH, type Me } from '@/lib/me';
 import { visibleGroups } from '@/shell/app-nav';
 import { NavIcon } from '@/ui/nav-icon';
-import { CommandPalette } from '@/ui/command-palette';
+import { CommandPalette, moTimNhanh } from '@/ui/command-palette';
 import { ThemeSwitch } from '@/ui/switches';
 
 /**
@@ -189,6 +189,30 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
               {t('app.brandFull')} — <strong>{me.fullName}</strong>
             </span>
             <span className="spacer" />
+            {/*
+              ĐƯỜNG VÀO THẤY ĐƯỢC CHO ⌘K (18/09/2026).
+              Trước đó hộp tìm nhanh chỉ mở bằng phím tắt: trên điện thoại (UX-DR2) nó KHÔNG
+              tồn tại, còn với người dùng chuột thì không có gì trên màn hình nói là nó có.
+              Gợi ý phím tắt nằm trong nhãn trợ năng để người đi bàn phím học được đường tắt.
+            */}
+            <button
+              type="button"
+              className="nav-toggle"
+              aria-label={t('palette.openHint')}
+              onClick={moTimNhanh}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+              </svg>
+            </button>
             <ThemeSwitch />
           </header>
           {/* ⌘K — nằm ở shell nên bấm được từ BẤT KỲ màn nào, không phải chỉ màn danh sách. */}

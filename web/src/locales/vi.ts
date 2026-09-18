@@ -88,6 +88,7 @@ export default {
   // Tìm nhanh ⌘K (ui/command-palette.tsx).
   palette: {
     title: 'Tìm nhanh',
+    openHint: 'Tìm nhanh (Ctrl+K)',
     placeholder: 'Tìm thiết bị, phần mềm, đường truyền, tài khoản…',
     hint: 'Gõ ít nhất 2 ký tự: mã, tên hoặc serial. Tìm xuyên thiết bị · phần mềm · đường truyền · tài khoản dịch vụ, và cả tên màn hình.',
     empty: 'Không có hồ sơ nào khớp "{{q}}".',

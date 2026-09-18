@@ -69,6 +69,26 @@ interface Page<T> {
   items: T[];
 }
 
+/**
+ * Tên sự kiện để MỞ hộp tìm nhanh từ nơi khác (nút trên topbar).
+ *
+ * ===== VÌ SAO LÀ SỰ KIỆN, KHÔNG PHẢI KÉO STATE LÊN SHELL =====
+ *
+ * Tới 18/09/2026 hộp này chỉ mở được bằng ⌘K/Ctrl+K. Trên điện thoại — nơi UX-DR2 bắt màn ĐỌC
+ * phải dùng được ở 390px — không có phím tắt, nên tính năng KHÔNG TỒN TẠI; với người dùng
+ * chuột thì nó tồn tại nhưng không ai biết, vì không có gì trên màn hình nói ra.
+ *
+ * Kéo `open` lên `AppShell` thì shell phải giữ state của một thứ nó không sở hữu, và mọi màn
+ * render lại theo. Một sự kiện trên `window` giữ nguyên ranh giới: nút chỉ biết "tôi xin mở",
+ * hộp vẫn là chủ state của chính nó.
+ */
+export const SU_KIEN_MO_TIM_NHANH = 'ims:mo-tim-nhanh';
+
+/** Mở hộp tìm nhanh từ bất kỳ đâu. Dùng ở nút tìm trên topbar. */
+export function moTimNhanh(): void {
+  window.dispatchEvent(new CustomEvent(SU_KIEN_MO_TIM_NHANH));
+}
+
 export function CommandPalette({ me }: { me: Me }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -118,6 +138,17 @@ export function CommandPalette({ me }: { me: Me }) {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [open]);
+
+  /* Nút tìm trên topbar xin mở. Cùng hàng rào với phím tắt: đang có hộp thoại thì không mở. */
+  useEffect(() => {
+    const onMo = () => {
+      if (coHopThoaiDangMo()) return;
+      openedBy.current = document.activeElement;
+      setOpen(true);
+    };
+    window.addEventListener(SU_KIEN_MO_TIM_NHANH, onMo);
+    return () => window.removeEventListener(SU_KIEN_MO_TIM_NHANH, onMo);
+  }, []);
 
   /* Hộp thoại mở ra trong lúc palette đang mở (nút trên một kết quả, một luồng nào đó tự mở
      hộp) — palette phải nhường đường, vì từ giây đó trở đi nó là lớp phủ chết. */
@@ -318,6 +349,17 @@ export function CommandPalette({ me }: { me: Me }) {
               <path d="m20 20-3.5-3.5" />
             </svg>
           </span>
+          {/*
+            MẪU COMBOBOX CHUẨN (18/09/2026).
+
+            Bản trước chỉ có `aria-label`. Mũi tên ↑/↓ đổi dòng đang chọn nhưng tiêu điểm KHÔNG
+            rời ô nhập, nên với trình đọc màn hình không có gì thay đổi cả: người dùng nghe
+            được ô tìm rồi... hết. Danh sách kết quả cũng chỉ là một đống `<button>` rời, không
+            phải một listbox, nên không ai đọc được "dòng 3 trên 12".
+
+            `aria-activedescendant` là cách chuẩn để nói "tiêu điểm ở ô nhập, nhưng mục ĐANG
+            CHỌN là cái kia" — đúng cơ chế mà bàn phím ở đây đang dùng.
+          */}
           <input
             ref={inputRef}
             type="text"
@@ -326,11 +368,16 @@ export function CommandPalette({ me }: { me: Me }) {
             onKeyDown={onKeyDown}
             placeholder={t('palette.placeholder')}
             aria-label={t('palette.title')}
+            role="combobox"
+            aria-expanded={hits.length > 0}
+            aria-controls="cp-ket-qua"
+            aria-autocomplete="list"
+            aria-activedescendant={hits.length > 0 ? `cp-hit-${at}` : undefined}
           />
           <kbd>Esc</kbd>
         </div>
 
-        <div className="cp-list">
+        <div className="cp-list" id="cp-ket-qua" role="listbox" aria-label={t('palette.title')}>
           {/* Có kết quả nhưng danh sách KHÔNG đầy đủ — nói ra, đừng để người dùng tin là đã
               thấy hết. `role="status"` để trình đọc màn hình cũng nghe được. */}
           {nhomHong.length > 0 && hits.length > 0 ? (
@@ -369,6 +416,9 @@ export function CommandPalette({ me }: { me: Me }) {
                   {head ? <p className="cp-group-title">{head}</p> : null}
                   <button
                     type="button"
+                    id={`cp-hit-${index}`}
+                    role="option"
+                    aria-selected={index === at}
                     className={`cp-item${index === at ? ' active' : ''}`}
                     onMouseEnter={() => setAt(index)}
                     onClick={() => go(hit)}

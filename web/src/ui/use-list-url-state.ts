@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { PAGE_SIZES } from '@/ui/pagination';
 
 /**
  * Trạng thái của MỘT màn danh sách — bộ lọc, trang, số dòng, cột sắp — sống trên THANH ĐỊA CHỈ
@@ -95,7 +96,19 @@ export function useListUrlState<F extends Record<string, string>>(options: {
   }, [params, search]);
 
   const page = Math.max(1, Number.parseInt(read('page', '1'), 10) || 1);
-  const limit = Number.parseInt(read('limit', String(defaultLimit)), 10) || defaultLimit;
+  /*
+   * `limit` PHẢI nằm trong danh sách mà ô "Số dòng" bày ra (18/09/2026).
+   *
+   * `page` đã kẹp `Math.max(1, …)` từ đầu, `limit` thì không — và `|| defaultLimit` không cứu
+   * được vì số ÂM là truthy. Nên `?limit=-5` đi thẳng vào `queryKey` rồi lên API, `?limit=99999`
+   * cũng vậy: một người sửa tay thanh địa chỉ (hoặc một link ai đó gửi) bắt server dựng một
+   * trang 99999 dòng. Trần đó là việc của server, nhưng web không có lý do gì để HỎI.
+   *
+   * Kẹp về đúng `PAGE_SIZES` — tập mà `ui/pagination.tsx` cho chọn — nên trạng thái trên URL
+   * luôn là trạng thái mà giao diện dựng lại được. Giá trị lạ rơi về mặc định của màn.
+   */
+  const limitTho = Number.parseInt(read('limit', String(defaultLimit)), 10);
+  const limit = (PAGE_SIZES as readonly number[]).includes(limitTho) ? limitTho : defaultLimit;
   const sortKey = read('sort', defaultSort.key);
   const dirParam = params.get('dir');
   const sorting: SortState = {

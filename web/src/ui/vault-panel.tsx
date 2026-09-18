@@ -243,7 +243,7 @@ export function VaultPanel({
         <EmptyState title={t('vault.empty')} hint={t('vault.emptyHint')} />
       ) : (
         <div className="table-wrap">
-          <table className="table table-stack">
+          <table className="table table-stack wide">
             <thead>
               <tr>
                 <th>{t('vault.label')}</th>
