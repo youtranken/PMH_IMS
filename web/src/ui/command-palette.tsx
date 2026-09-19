@@ -339,6 +339,25 @@ export function CommandPalette({ me }: { me: Me }) {
     } else if (event.key === 'Enter') {
       event.preventDefault();
       go(hits[at]);
+    } else if (event.key === 'Tab') {
+      /*
+       * TIÊU ĐIỂM KHÔNG ĐƯỢC RỜI HỘP (19/09/2026).
+       *
+       * Hộp này khai `role="dialog" aria-modal="true"` từ lâu, nhưng chưa bao giờ giữ tiêu
+       * điểm lại. Đo ngày 19/09: mở ⌘K rồi gõ Tab một lần là `activeElement` về `<body>`, gõ
+       * tiếp thì đi vào sidebar và nội dung trang phía sau. Mà `aria-modal="true"` chính là
+       * lời dặn trình đọc màn hình CẤT toàn bộ phần ngoài hộp khỏi bộ đệm ảo — nên người dùng
+       * đang Tab vào những phần tử mà họ không nghe thấy gì, và không có dấu hiệu nào cho biết
+       * mình đã rời hộp.
+       *
+       * Ở mẫu combobox thì ô nhập là chỗ dừng Tab DUY NHẤT trong hộp: các dòng kết quả mang
+       * `tabIndex={-1}` và được điều khiển bằng ↑/↓ + `aria-activedescendant`, không phải bằng
+       * Tab. Nên "vòng lại" ở đây rút gọn thành "ở nguyên" — không cần quét danh sách phần tử
+       * bấm được, không cần vòng lặp. Đường ra khỏi hộp là Esc, và `<kbd>Esc</kbd>` nằm ngay
+       * cạnh ô nhập để nói điều đó.
+       */
+      event.preventDefault();
+      inputRef.current?.focus();
     }
   };
 
@@ -372,6 +391,20 @@ export function CommandPalette({ me }: { me: Me }) {
         if (event.target === event.currentTarget) setOpen(false);
       }}
     >
+      {/*
+        `aria-modal="true"` Ở LẠI, CÓ CHỦ Ý (19/09/2026).
+
+        Đợt rà soát đề xuất hai đường: dựng lại hộp bằng `ui/dialog.tsx`, hoặc BỎ `aria-modal`
+        rồi tự vòng Tab. Thứ thật sự hỏng là cái thứ hai trong cặp — hộp khai mình chặn mà
+        không chặn. Bỏ lời khai đi thì khai đúng, nhưng đổi lại trình đọc màn hình lại được
+        phép dạo qua nội dung phía sau bằng con trỏ ảo, trong khi màn hình đang bị hộp này phủ
+        kín (`--z-palette` 85 > `--z-modal` 60) và bàn phím thì đã bị giữ lại. Ba giác quan nói
+        ba chuyện khác nhau.
+
+        `aria-modal` CHÍNH LÀ cách khai báo "phần ngoài hộp coi như không có" — nên giữ nó và
+        bổ sung phép giữ tiêu điểm (xem nhánh `Tab` trong `onKeyDown`) làm lời khai ấy thành
+        SỰ THẬT, thay vì hạ lời khai xuống cho khớp một hiện trạng sai.
+      */}
       <div className="cp" role="dialog" aria-modal="true" aria-label={t('palette.title')}>
         <div className="cp-search">
           <span className="cp-search-ic">
@@ -447,6 +480,10 @@ export function CommandPalette({ me }: { me: Me }) {
                   {head ? <p className="cp-group-title">{head}</p> : null}
                   <button
                     type="button"
+                    /* Không phải chỗ dừng Tab: dòng đang chọn do ↑/↓ + `aria-activedescendant`
+                       quyết định, tiêu điểm thật luôn ở ô nhập. Để chúng nhận Tab là biến một
+                       hộp tìm nhanh thành hai mươi nhịp Tab. */
+                    tabIndex={-1}
                     id={`cp-hit-${index}`}
                     role="option"
                     aria-selected={index === at}
