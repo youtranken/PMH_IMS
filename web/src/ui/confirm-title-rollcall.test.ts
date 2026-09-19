@@ -1,7 +1,8 @@
 /// <reference types="node" />
 // `tsconfig.app.json` đặt `types: ['vite/client']` nên `node:fs` không tự phân giải.
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { quetNguon } from '@/test/quet-nguon';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
@@ -34,13 +35,9 @@ const KHONG_CAN_TIEU_DE: Record<string, string> = {
     'Trang trình diễn bộ giao diện ở /dev/components — nó cố ý gọi `askConfirm` ở dạng TRẦN NHẤT để người đọc thấy API tối thiểu trông thế nào. Thêm `title` vào đây là làm ví dụ nói dối về cái tối thiểu.',
 };
 
-function walk(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) return walk(full);
-    return entry.isFile() && entry.name.endsWith('.tsx') ? [full] : [];
-  });
-}
+/* Bản dùng chung: nó bỏ qua thư mục `__lint-probe__*` mà `lint-rules.test.ts` tạo/xoá song
+   song — thiếu điều đó thì bài này đỏ ngẫu nhiên với ENOENT. Xem `test/quet-nguon.ts`. */
+const walk = (dir: string): string[] => quetNguon(dir, /\.tsx$/);
 
 /**
  * Bỏ các khối chú thích trước khi quét.

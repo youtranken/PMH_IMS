@@ -142,6 +142,11 @@ export function RailRowIfSet({
    *
    * Vẽ ô với `value` rỗng thì dòng chú đứng một mình dưới nhãn — vẫn đọc được, và vẫn đúng
    * luật "không vẽ ô RỖNG": ô này không rỗng, nó có nội dung, chỉ là nội dung nằm ở `note`.
+   *
+   * Lớp ternary ở nơi gọi (`device-detail`, `service-account-detail`) KHÔNG phải bản chép của
+   * phép canh này — nó chọn cái NHÃN: có người phụ trách thì bộ phận là chú của dòng ấy, không
+   * có thì bộ phận đứng thành dòng riêng mang đúng nhãn của nó. Gỡ nó đi vì tưởng trùng lặp là
+   * mất lại đúng lỗi mà cả hai chỗ sinh ra để vá.
    */
   if (!value && !note) return null;
   return (

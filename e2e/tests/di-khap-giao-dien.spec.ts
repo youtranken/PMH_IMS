@@ -2752,8 +2752,13 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect(page.getByRole('heading', { level: 1, name: new RegExp(code) })).toBeVisible();
 
     /*
-     * Nhãn tab mang số đếm nối sau ("Giấy tờ 0"), và số đó về SAU hồ sơ một nhịp mạng — nên
-     * cắt phần số đi rồi mới so tập hợp, và chờ bằng `expect.poll` thay vì đọc một lần.
+     * Nhãn tab có thể mang số đếm nối sau ("Giấy tờ 3"), và số đó về SAU hồ sơ một nhịp mạng
+     * — nên cắt phần số đi rồi mới so tập hợp, và chờ bằng `expect.poll` thay vì đọc một lần.
+     *
+     * Ví dụ cũ ở đây là "Giấy tờ 0", nhưng từ 19/09 luật đã đảo: `ui/tabs.tsx` dùng phép thử
+     * truthy nên số `0` KHÔNG vẽ ra nữa (`_SPEC.md:61`, `:529`). Phép `.replace(/\s+\d+$/,'')`
+     * vẫn đúng cho cả hai thời kỳ — chỉ cái ví dụ là lạc hậu, và nó mâu thuẫn trực tiếp với
+     * `device-detail.spec.ts` vừa sửa cùng đợt.
      */
     await expect
       .poll(

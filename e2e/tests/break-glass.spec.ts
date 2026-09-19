@@ -172,10 +172,14 @@ test.describe('Break-glass', () => {
       'xem qua đường break-glass thì vết PHẢI trỏ tới phiếu đã duyệt, không được null',
     ).toEqual(expect.any(String));
 
-    // Và phải đúng phiếu của chính lượt xin này, không phải một phiếu cũ nào đó.
+    /* Và phải đúng phiếu của chính lượt xin này, không phải một phiếu cũ nào đó.
+       LỌC CẢ NGƯỜI XIN (19/09/2026): lý do là một chuỗi cố định, nên một phiếu demo hay phiếu
+       thật trùng lý do — `du-lieu-demo` có gieo — sẽ bị `ORDER BY created_at DESC LIMIT 1` bốc
+       nhầm và làm bài đỏ oan ở dòng khẳng định ngay dưới. */
     const phieu = execSync(
       `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
         `"SELECT id FROM approval WHERE reason = 'switch tầng 3 mất kết nối' ` +
+        `AND requester = '${E2E_MEMBER.email}' ` +
         `ORDER BY created_at DESC LIMIT 1"`,
       { cwd: '..', stdio: 'pipe' },
     )

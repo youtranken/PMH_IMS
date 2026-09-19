@@ -166,7 +166,16 @@ export function DeviceDetail({ me }: { me: Me }) {
      * không có gì để xem, trong khi sự thật là lượt gọi vừa hỏng. Giữ tab lại thì
      * `PortMapPanel` tự bày lỗi của nó và có nút thử lại.
      */
-    ...(device.data?.hasPortMap || portRowCount > 0 || ports.isError
+    /*
+     * `ports.isPending` cũng phải giữ tab lại (19/09/2026).
+     *
+     * `useVisibleTab` bên dưới kẹp `tab` về `'profile'` khi khoá hiện tại không có trong danh
+     * sách này — và nó chạy NGAY ở lượt render đầu, lúc `device.data` còn `undefined` và
+     * `portRowCount` là 0. Nên mở thẳng `/devices/<id>?tab=ports` (link dán cho đồng nghiệp,
+     * hoặc F5 khi đang đứng ở tab Cổng) thì tab chưa kịp mọc đã bị kẹp về Tổng quan; dữ liệu
+     * về sau đó, tab mọc lại, nhưng `tab` đã bị đổi rồi — link sâu mất vĩnh viễn.
+     */
+    ...(device.data?.hasPortMap || portRowCount > 0 || ports.isError || ports.isPending
       ? [
           {
             key: "ports",
@@ -582,8 +591,15 @@ export function DeviceDetail({ me }: { me: Me }) {
               chuaBiet={
                 panels.isError || panels.isPending || ports.isError || ports.isPending
               }
+              /* Tách "đang tải" khỏi "hỏng": cả hai đều là CHƯA BIẾT, nhưng chỉ cái sau xứng
+                 một lời cảnh báo. Xem chú thích prop `dangTai`. */
+              dangTai={
+                !panels.isError && !ports.isError && (panels.isPending || ports.isPending)
+              }
               cutSummary={
-                panels.isError || panels.isPending || ports.isError || ports.isPending
+                panels.isPending || ports.isPending
+                  ? t("relationMap.cutLoading")
+                  : panels.isError || ports.isError
                   ? t("relationMap.cutUnknown")
                   : cutList.length > 0 ? (
                   <>

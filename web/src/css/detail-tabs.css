@@ -324,8 +324,18 @@
   /* CHỪA CHỖ CHO VÒNG TIÊU ĐIỂM. `.tabs` là một khung cuộn ngang (`overflow-x: auto` ở khối
      khai trên), mà `button:focus-visible` của `base.css` vẽ vòng bằng `box-shadow: 0 0 0 3px`
      — bóng NGOÀI, nên nó bị khung cắt cụt. Người đi bằng phím mũi tên (roving tabindex ở
-     `ui/tabs.tsx` làm rất đúng) không thấy mình đang đứng ở tab nào. */
-  padding: 3px 3px 0;
+     `ui/tabs.tsx` làm rất đúng) không thấy mình đang đứng ở tab nào.
+
+     BA PHÍA LÀ CHƯA ĐỦ (19/09/2026). Bản trước là `3px 3px 0` — đáy để 0. Nhưng theo spec,
+     `overflow-y: visible` đi kèm một trục `auto` sẽ tự tính thành `auto`, nên khung cắt CẢ
+     chiều dọc tại mép hộp đệm: vòng sáng hở ba cạnh và CỤT ở cạnh dưới — đúng cạnh nằm sát
+     gạch chân "tab đang chọn", nên hai tín hiệu lẫn vào nhau.
+
+     `margin-bottom: -3px` kéo hộp xuống đúng 3px vừa chừa ra, nên đường kẻ chân thanh tab
+     không bị đẩy đi đâu cả — `.tab` vẫn `margin-bottom: -1px` như cũ và vẫn chồng đúng lên
+     đường kẻ ấy. */
+  padding: 3px;
+  margin-bottom: -3px;
 }
 /* ĐÃ GỠ (19/09/2026): `.tab-dot` + `.tab-dot.danger` — chấm cảnh báo trên tab. Luật viết đủ
    nhưng KHÔNG màn nào đặt lớp ấy, vì hệ thống chưa có tín hiệu nào để quyết khi nào chấm

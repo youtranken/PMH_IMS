@@ -338,7 +338,10 @@ async function main() {
    *
    * Sắp ở ĐÂY thì thứ tự tham số thôi có nghĩa, và nơi gọi không cần nhớ luật nào cả.
    */
-  const thuTu = ['users', ...Object.keys(DOMAINS)];
+  /* `users` ĐÃ là khoá đầu của `DOMAINS`, nên `['users', ...keys]` đếm nó hai lần và lượt
+     `all` chạy vùng ấy hai lượt (vô hại vì các câu đều idempotent, nhưng là một mâu thuẫn
+     hiển hiện với banner). Lọc ra — sửa 19/09/2026. */
+  const thuTu = ['users', ...Object.keys(DOMAINS).filter((d) => d !== 'users')];
   const domains = (requested.includes('all') ? thuTu : requested)
     .slice()
     .sort((a, b) => thuTu.indexOf(a) - thuTu.indexOf(b));

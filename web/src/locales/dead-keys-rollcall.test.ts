@@ -96,8 +96,25 @@ function khoaCuaViTs(): string[] {
 
 describe('Khóa dịch chết trong vi.ts', () => {
   const khoa = khoaCuaViTs();
+  /*
+   * LỘT CHÚ THÍCH, VÀ BỎ FILE KIỂM, TRƯỚC KHI DÒ (19/09/2026).
+   *
+   * Phép "có ai dùng không" là `nguon.includes("'khóa'")` trên VĂN BẢN THÔ, nên một khóa chỉ
+   * được NHẮC TỚI trong một dòng chú thích — hoặc chỉ còn sống trong một file `*.test.tsx` —
+   * vẫn được tính là còn người dùng. Đợt rà 19/09 chứng minh bằng đột biến: chèn 2 khóa chết,
+   * bài đỏ cả 2; thêm một dòng chú thích nhắc tên khóa thứ hai vào `ui/tabs.tsx`, bài chỉ còn
+   * đỏ 1. Lỗ ấy chưa nuôi khóa chết nào (đo lại sau khi lột: 0 khóa chênh lệch), nên đây là
+   * bịt lỗ chứ không phải trả nợ.
+   *
+   * Vì sao bỏ file kiểm: một khóa mà NƠI DÙNG DUY NHẤT là bài kiểm của chính nó thì nó đã
+   * chết trong sản phẩm — đúng thứ bài này sinh ra để tìm.
+   */
   const nguon = moiFile(SRC)
+    .filter((f) => !/\.test\.tsx?$/.test(f))
     .map((f) => readFileSync(f, 'utf8'))
+    .map((noiDung) =>
+      noiDung.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1'),
+    )
     .join('\n');
 
   /* Tiền tố của mọi khóa dựng động: `` `abc.def_${…}` `` → 'abc.def_'. */

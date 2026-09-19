@@ -382,7 +382,20 @@ export function CommandPalette({ me }: { me: Me }) {
   const loading =
     enabled &&
     (devices.isFetching || software.isFetching || isp.isFetching || accounts.isFetching);
-  let lastGroup: string | null = null;
+  /*
+   * Gom `hits` thành từng nhóm LIỀN NHAU để mỗi nhóm thành một `role="group"` thật.
+   *
+   * `hits` vốn đã xếp theo nhóm (thiết bị → phần mềm → ISP → tài khoản → điều hướng), nên chỉ
+   * cần so với nhóm của phần tử liền trước — không cần sắp lại, và thứ tự hiển thị giữ nguyên.
+   * `index` đi kèm vì nó là chỉ số vào `hits` mà `aria-activedescendant` và `at` đang dùng;
+   * đánh số lại theo từng nhóm sẽ làm `cp-hit-${index}` trỏ nhầm.
+   */
+  const nhomKetQua: { ten: string; mucs: { hit: Hit; index: number }[] }[] = [];
+  hits.forEach((hit, index) => {
+    const cuoi = nhomKetQua[nhomKetQua.length - 1];
+    if (cuoi && cuoi.ten === hit.group) cuoi.mucs.push({ hit, index });
+    else nhomKetQua.push({ ten: hit.group, mucs: [{ hit, index }] });
+  });
 
   return (
     <div
@@ -441,14 +454,27 @@ export function CommandPalette({ me }: { me: Me }) {
           <kbd>Esc</kbd>
         </div>
 
-        <div className="cp-list" id="cp-ket-qua" role="listbox" aria-label={t('palette.title')}>
-          {/* Có kết quả nhưng danh sách KHÔNG đầy đủ — nói ra, đừng để người dùng tin là đã
-              thấy hết. `role="status"` để trình đọc màn hình cũng nghe được. */}
-          {nhomHong.length > 0 && hits.length > 0 ? (
-            <p className="cp-warn" role="status">
-              {t('palette.partial', { list: nhomHong.join(', ') })}
-            </p>
-          ) : null}
+        {/*
+          DẢI CẢNH BÁO Ở NGOÀI KHUNG CUỘN VÀ NGOÀI LISTBOX (19/09/2026).
+
+          Trước đó nó là con ĐẦU TIÊN của `.cp-list` — mà `.cp-list` vừa là `role="listbox"`
+          vừa có `overflow-y: auto`. Hai hỏng cùng lúc: (1) ARIA chỉ cho `listbox` chứa
+          `option`/`group`, nên NVDA/JAWS có quyền lược bỏ đoạn này — người dùng trình đọc màn
+          hình nghe đủ kết quả nhưng KHÔNG nghe câu "danh sách còn thiếu", rồi đi khai trùng
+          đúng thứ họ vừa tìm không ra; (2) nó cuộn theo danh sách, nên bấm ↓ vài lần là câu
+          cảnh báo trôi khỏi màn hình và người ta chọn tiếp trong một danh sách mà họ không còn
+          biết là khuyết.
+
+          Ra ngoài `.cp-list` thì nó đứng yên dưới ô nhập, và chạm được hai mép hộp như một dải
+          thật (xem `.cp-warn` trong `css/command-palette.css`).
+        */}
+        {nhomHong.length > 0 && hits.length > 0 ? (
+          <p className="cp-warn" role="status">
+            {t('palette.partial', { list: nhomHong.join(', ') })}
+          </p>
+        ) : null}
+
+        <div className="cp-list">
           {q.length < 2 ? (
             <div className="cp-empty">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
@@ -471,14 +497,31 @@ export function CommandPalette({ me }: { me: Me }) {
                     : t('palette.empty', { q })}
               </p>
             </div>
-          ) : (
-            hits.map((hit, index) => {
-              const head = hit.group !== lastGroup ? hit.group : null;
-              lastGroup = hit.group;
-              return (
-                <div key={`${hit.to}-${index}`} className={head ? 'cp-group' : undefined}>
-                  {head ? <p className="cp-group-title">{head}</p> : null}
+          ) : null}
+
+          {/*
+            LISTBOX CHỈ CHỨA `option` VÀ `group` (19/09/2026).
+
+            Bản trước để dải cảnh báo, hai khối rỗng và các `<p>` tên nhóm nằm thẳng trong
+            `role="listbox"`, còn mỗi `option` thì bị bọc trong một `<div>` trơn — tức option
+            KHÔNG phải con của listbox. Quan hệ sở hữu listbox→option đứt thì trình đọc màn
+            hình không nói được "mục 3 trên 8", và vài bộ bỏ qua hẳn option không được listbox
+            sở hữu. Đúng thứ mẫu combobox dựng ngày 18/09 sinh ra để cung cấp.
+
+            `role="group"` ĐƯỢC phép đứng giữa listbox và option, nên tên nhóm nay là
+            `aria-label` của group (và `<p>` chỉ còn là phần nhìn, `aria-hidden` để khỏi đọc
+            hai lần). Listbox LUÔN có mặt kể cả khi rỗng — `aria-controls="cp-ket-qua"` trên ô
+            nhập phải luôn có đích, nếu không lại là một IDREF chết.
+          */}
+          <div id="cp-ket-qua" role="listbox" aria-label={t('palette.title')}>
+            {nhomKetQua.map((nhom) => (
+              <div key={nhom.ten} className="cp-group" role="group" aria-label={nhom.ten}>
+                <p className="cp-group-title" aria-hidden="true">
+                  {nhom.ten}
+                </p>
+                {nhom.mucs.map(({ hit, index }) => (
                   <button
+                    key={`${hit.to}-${index}`}
                     type="button"
                     /* Không phải chỗ dừng Tab: dòng đang chọn do ↑/↓ + `aria-activedescendant`
                        quyết định, tiêu điểm thật luôn ở ô nhập. Để chúng nhận Tab là biến một
@@ -506,10 +549,10 @@ export function CommandPalette({ me }: { me: Me }) {
                       </svg>
                     </span>
                   </button>
-                </div>
-              );
-            })
-          )}
+                ))}
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="cp-foot">

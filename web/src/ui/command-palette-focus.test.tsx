@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { CommandPalette } from '@/ui/command-palette';
-import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, waitFor } from '@/test/test-utils';
 import type { Me } from '@/lib/me';
 
 /**
@@ -60,7 +60,10 @@ describe('⌘K giữ tiêu điểm trong hộp', () => {
     await user.keyboard('{Control>}k{/Control}');
 
     const oTim = screen.getByRole('combobox', { name: /tìm nhanh/i });
-    expect(document.activeElement).toBe(oTim);
+    /* CHỜ, đừng khẳng định ngay: hộp lấy tiêu điểm trong `requestAnimationFrame`, nên dưới tải
+       của lượt chạy đầy đủ nó chưa chắc xong ở nhịp này. Bản đầu của bài kiểm này khẳng định
+       thẳng và đỏ ngẫu nhiên đúng một lượt — tự nó thành thứ nó sinh ra để chặn. */
+    await waitFor(() => expect(document.activeElement).toBe(oTim));
 
     await user.tab();
     expect(document.activeElement).toBe(oTim);

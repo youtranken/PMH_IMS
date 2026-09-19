@@ -121,6 +121,7 @@ export function RelationMap({
   missing,
   cutSummary,
   chuaBiet = false,
+  dangTai = false,
 }: {
   hubCode: string;
   nodes: RelationNode[];
@@ -140,6 +141,21 @@ export function RelationMap({
    * đọc tin câu khẳng định ở trên, đó là câu họ vào đây để tìm.
    */
   chuaBiet?: boolean;
+  /**
+   * CHƯA BIẾT VÌ ĐANG TẢI — khác hẳn chưa biết vì HỎNG (19/09/2026).
+   *
+   * Cả hai đều phải chặn câu "máy này chưa giữ gì" và dòng "Chưa gắn:", nên cả hai đều bật
+   * `chuaBiet`. Nhưng câu NÓI RA thì không được giống nhau: `relationMap.unknown` là một lời
+   * cảnh báo kèm chỉ dẫn ("Đừng dựa vào nó để quyết định thanh lý cho tới khi tải lại được"),
+   * đúng cho lúc hỏng và sai cho một nhịp chờ vài trăm mili giây.
+   *
+   * Đo ngày 19/09: `device` về trước, `/panels` còn đang bay, nên MỌI lượt mở trang chi tiết
+   * đều nháy câu cảnh báo ấy — và vì nó nằm trong `role="status"`, trình đọc màn hình đọc
+   * trọn hai câu lên rồi nó biến mất. Người dùng nhận một cảnh báo sai ở mỗi lượt mở trang.
+   *
+   * Bật cờ này thì khu nói "Đang đọc…" và KHÔNG dùng vùng sống.
+   */
+  dangTai?: boolean;
 }) {
   const { t } = useTranslation();
   const [showCut, setShowCut] = useState(false);
@@ -201,7 +217,9 @@ export function RelationMap({
           <button
             type="button"
             className="btn sm"
-            aria-pressed={showCut}
+            /* `aria-expanded`, KHÔNG phải `aria-pressed`: nút này bung một khu ra chứ không
+               bật/tắt một trạng thái của chính nó. Xem khối chú thích ở `#rmap-cut-sum`. */
+            aria-expanded={showCut}
             aria-controls="rmap-cut-sum"
             onClick={() => setShowCut((on) => !on)}
           >
@@ -275,7 +293,13 @@ export function RelationMap({
       <div className="rmap-list">
         {n === 0 ? (
           <button type="button" disabled>
-            <span>{chuaBiet ? t('relationMap.unknown') : t('relationMap.aloneShort')}</span>
+            <span>
+              {dangTai
+                ? t('relationMap.loadingShort')
+                : chuaBiet
+                  ? t('relationMap.unknown')
+                  : t('relationMap.aloneShort')}
+            </span>
           </button>
         ) : (
           nodes.map((node) => (
@@ -290,7 +314,11 @@ export function RelationMap({
 
       {/* Dòng "Chưa gắn:" là một KHẲNG ĐỊNH về thứ máy không có. Chưa đọc được nguồn thì nó
           sai ở đúng chiều nguy hiểm, nên nhường chỗ cho câu nói thật về việc chưa biết. */}
-      {chuaBiet ? (
+      {dangTai ? (
+        /* ĐANG TẢI thì im lặng: không `role="status"`, không câu cảnh báo. Xem chú thích của
+           prop `dangTai`. */
+        <p className="rmap-blank">{t('relationMap.loading')}</p>
+      ) : chuaBiet ? (
         <p className="rmap-blank" role="status">
           {t('relationMap.unknown')}
         </p>
@@ -298,12 +326,27 @@ export function RelationMap({
         <p className="rmap-blank">{t('relationMap.missing', { list: missing.join(', ') })}</p>
       ) : null}
 
-      {/* `role="status"` để nội dung vừa bật ra được đọc lên, không chỉ hiện ra. */}
-      {showCut && cutSummary ? (
-        <div className="rmap-cut-sum" id="rmap-cut-sum" role="status">
-          {cutSummary}
-        </div>
-      ) : null}
+      {/*
+        KHU NÀY LUÔN Ở TRONG DOM, CHỈ ẨN/HIỆN (19/09/2026).
+
+        Hai lỗi của bản trước, cùng một gốc là "tháo hẳn khỏi cây":
+
+        1. `aria-controls="rmap-cut-sum"` trên nút trỏ vào một id CHỈ tồn tại khi đã bấm — tức
+           trỏ vào hư vô ở đúng trạng thái mặc định. axe báo `aria-valid-attr-value`, và người
+           dùng JAWS đứng ở nút rồi ra lệnh "nhảy tới khu được điều khiển" thì không có gì.
+
+        2. `role="status"` trên một node được TẠO RA cùng lúc với nội dung của nó thì gần như
+           chắc chắn câm: trình đọc màn hình chỉ theo dõi những vùng sống đã có mặt TRƯỚC khi
+           nội dung đổi. Người dùng nghe "nút, đã nhấn" rồi hết — đúng thứ chú thích cũ hứa là
+           sẽ đọc lên.
+
+        Đây vốn là mẫu DISCLOSURE (người dùng tự bấm để bung), không phải THÔNG BÁO (tin tự
+        đến). Nên đúng vai là `aria-expanded` trên nút + khu thường trực có `hidden`, và bỏ hẳn
+        `role="status"`: trình đọc màn hình tự đi tới khu vừa bung qua `aria-controls`.
+      */}
+      <div className="rmap-cut-sum" id="rmap-cut-sum" hidden={!showCut || !cutSummary}>
+        {cutSummary}
+      </div>
     </section>
   );
 }

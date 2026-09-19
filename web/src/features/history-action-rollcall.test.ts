@@ -1,8 +1,9 @@
 /// <reference types="node" />
 // `tsconfig.app.json` đặt `types: ['vite/client']` nên `node:fs` không tự phân giải.
 // Tham chiếu ở đây mở đúng cho MỘT file, thay vì kéo kiểu Node vào toàn bộ mã app.
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { quetNguon } from '@/test/quet-nguon';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
@@ -55,13 +56,8 @@ const API_SRC = join(HERE, '..', '..', '..', 'api', 'src');
 /** `x.recordWithin(tx, actor, id, 'ten-thao-tac'` — dạng gọi duy nhất đang dùng để ghi sổ. */
 const RECORD_CALL = /recordWithin\(\s*tx\s*,[^;]{0,200}?,\s*'([a-z0-9-]+)'/g;
 
-function walk(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = join(dir, entry.name);
-    if (entry.isDirectory()) return walk(full);
-    return entry.isFile() && entry.name.endsWith('.ts') ? [full] : [];
-  });
-}
+/* Bản dùng chung — xem `test/quet-nguon.ts` (bỏ qua thư mục dò của `lint-rules.test.ts`). */
+const walk = (dir: string): string[] => quetNguon(dir, /\.ts$/);
 
 function actionsWrittenByApi(): Map<string, string> {
   /* Mã thao tác → file đầu tiên ghi nó, để câu báo lỗi chỉ thẳng chỗ cần sửa. */

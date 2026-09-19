@@ -273,8 +273,16 @@ export function countAuditByActor(action: string, actor: string): number {
  * `flushResets()`, do fixture `test.beforeEach` trong `tests/fixtures.ts` gọi. Nhờ vậy call
  * site trong 47 spec không phải sửa một dòng nào, mà số lần `exec` giảm từ ~900 xuống ~264.
  *
- * Thứ tự dọn KHÔNG phụ thuộc thứ tự gọi: script `reset-e2e.mjs` tự xếp theo phụ thuộc khóa
- * ngoại (devices phải sau software vì `license_assignment` trỏ cả hai chiều).
+ * Thứ tự dọn KHÔNG phụ thuộc thứ tự gọi: `reset-e2e.mjs` tự xếp lại theo THỨ TỰ KHAI của
+ * `DOMAINS` bên trong chính nó. Mảng dưới đây vì thế chỉ còn quyết định VÙNG NÀO được gọi tới,
+ * không quyết định thứ tự — thứ tự của nó là thứ chết, giữ lại chỉ để bài
+ * `reset-domains-rollcall.spec.ts` đối chiếu TẬP HỢP hai bên.
+ *
+ * Bản trước nói script "tự xếp theo phụ thuộc khóa ngoại (devices phải sau software)" — SAI ở
+ * cả hai vế (sửa 19/09/2026). Trong `DOMAINS`, `devices` đứng thứ 2 còn `software` thứ 3, tức
+ * devices chạy TRƯỚC; và không có ràng buộc khoá ngoại nào bắt thứ tự đó, vì mỗi vùng tự dọn
+ * `license_assignment` của mình trước khi xoá hồ sơ cha. Bất biến THẬT chỉ có một: `catalog`
+ * phải ở CUỐI, và đó mới là thứ bài rollcall canh.
  */
 const DOMAIN_ORDER = [
   'users',
@@ -766,12 +774,20 @@ export function horizontalOverflow(page: Page): Promise<number> {
  *
  * ===== MÀN NÀO DÙNG ĐƯỢC (rà 18/09/2026) =====
  *
- *   DÙNG ĐƯỢC : /devices · /software · /isp-lines · /service-accounts · /vault · /expiry
+ *   DÙNG ĐƯỢC : /devices · /software · /isp-lines · /service-accounts · /vault
  *   CHƯA      : /approvals · /nat · /disposal · /admin/accounts
+ *   KHÔNG CÓ Ô TÌM : /expiry
  *
  * Danh sách "CHƯA" không phải việc còn sót của bộ kiểm — những màn đó chưa chuyển sang
  * `useListUrlState` nên ô tìm của chúng KHÔNG có debounce, tức cũng không có cuộc đua nào để
  * mà chờ. Ngày nào chúng lên URL thì đổi luôn các chỗ gọi tương ứng.
+ *
+ * `/expiry` là ca THỨ BA, sửa 19/09/2026: nó ĐÃ dùng `useListUrlState` (ba bộ lọc lên URL
+ * ngày 18/09) nhưng khai hook KHÔNG kèm `searchKey`, và `DataTable` ở đó không nhận
+ * `searchPlaceholder` — mà `ui/data-table.tsx` chỉ vẽ `SearchBox` khi prop ấy khác
+ * `undefined`. Tức màn không có ô tìm nào. Bản trước xếp nó vào "DÙNG ĐƯỢC": ai tin danh sách
+ * ấy sẽ ăn timeout ở `getByRole('searchbox')` với thông báo chẳng liên quan gì tới thứ họ
+ * đang kiểm.
  *
  * Và không phải chỗ nào trên màn "DÙNG ĐƯỢC" cũng cần hàm này: chỗ đã tự chờ bằng
  * `expect(page.getByRole('row')).toHaveCount(2)` là đã hỏi đúng câu "đã lọc xong chưa" rồi,
@@ -779,7 +795,22 @@ export function horizontalOverflow(page: Page): Promise<number> {
  */
 export async function timVaChoLoc(page: Page, tuKhoa: string): Promise<void> {
   await page.getByRole('searchbox', { name: /Tìm/ }).fill(tuKhoa);
-  await expect(page).toHaveURL(/[?&]q=/);
+  /*
+   * CHỜ ĐÚNG GIÁ TRỊ, KHÔNG CHỜ "CÓ `q=` LÀ ĐƯỢC" (19/09/2026).
+   *
+   * Bản trước chờ `/[?&]q=/` bất kể giá trị, nên lượt gọi THỨ HAI trong cùng một bài trả về
+   * NGAY: `q=` của lượt trước vẫn còn trên thanh địa chỉ, khớp regex, hàm trả về trước khi
+   * nhịp debounce của từ khoá mới kịp bắn. Hôm nay chưa nổ vì không màn nào bật
+   * `placeholderData: keepPreviousData` (đã grep: 0 kết quả) nên bảng về trạng thái tải và
+   * Playwright tự chờ tiếp — nhưng đó là may, không phải thiết kế: bật tối ưu rất-thường-gặp
+   * ấy lên là cuộc đua quay lại y nguyên, và helper này sẽ nói dối là đã chờ.
+   */
+  /* Mã hoá bằng CHÍNH `URLSearchParams` — thứ `useListUrlState` dùng để ghi. Không dùng
+     `encodeURIComponent`: nó cho dấu cách thành `%20`, còn `URLSearchParams` cho `+`, nên một
+     từ khoá có dấu cách sẽ không bao giờ khớp. */
+  const mong = new URLSearchParams({ q: tuKhoa }).toString();
+  const ma = mong.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  await expect(page).toHaveURL(new RegExp(`[?&]${ma}(&|$)`));
 }
 
 /**

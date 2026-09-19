@@ -141,6 +141,15 @@ export default {
     cutUnknown:
       'Chưa đọc được danh sách thứ máy đang giữ, nên chưa nói được lượt thanh lý sẽ cắt gì. ' +
       'Tải lại khu bên dưới rồi xem lại.',
+    /* Hai câu cho cảnh ĐANG TẢI — tách khỏi ba câu CHƯA ĐỌC ĐƯỢC ở trên (19/09/2026).
+       Cùng là "chưa biết", nhưng "đang tải" là chuyện bình thường của mỗi lượt mở trang, còn
+       "chưa đọc được" là một lời CẢNH BÁO kèm chỉ dẫn ("đừng dựa vào nó để quyết định thanh
+       lý"). Dùng câu cảnh báo cho nhịp chờ vài trăm mili giây nghĩa là mọi lượt mở trang đều
+       nháy một cảnh báo sai — và vì nó nằm trong vùng sống, trình đọc màn hình đọc trọn nó
+       lên rồi nó biến mất. */
+    loading: 'Đang đọc máy này đang giữ những gì…',
+    loadingShort: 'Đang đọc…',
+    cutLoading: 'Đang đọc danh sách thứ máy đang giữ…',
   },
   common: {
     save: 'Lưu',

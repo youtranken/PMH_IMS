@@ -69,8 +69,9 @@ describe('⌘K khi một nguồn hỏng', () => {
     await moVaGo('fpt');
 
     // Câu phải nói ra là ĐANG THIẾU, và thiếu nhóm nào.
-    const noiThieu = await screen.findByText(/Chưa tìm được trong:.*Đường truyền/s);
-    expect(noiThieu).toBeTruthy();
+    // `findByText` đã NÉM khi không thấy, nên `toBeTruthy()` sau nó không thể đỏ — bỏ đi để
+    // đừng dạy sai người đọc sau. Phép chờ nằm ở chính `findByText`.
+    await screen.findByText(/Chưa tìm được trong:.*Đường truyền/s);
     expect(screen.queryByText(/Không có hồ sơ nào khớp/)).toBeNull();
   });
 
@@ -78,7 +79,7 @@ describe('⌘K khi một nguồn hỏng', () => {
     gaLapFetch([{ id: 'd1', code: 'SW-CORE-01', name: 'Switch lõi', siteCode: 'HN' }]);
     await moVaGo('sw');
 
-    expect(await screen.findByText('SW-CORE-01')).toBeTruthy();
-    expect(await screen.findByText(/Danh sách dưới đây còn thiếu/)).toBeTruthy();
+    await screen.findByText('SW-CORE-01');
+    await screen.findByText(/Danh sách dưới đây còn thiếu/);
   });
 });

@@ -98,13 +98,21 @@ export function SoftwareDetail({ me }: { me: Me }) {
   const counts = useTabCounts("software", id, me);
   const tabItems = [
     { key: "profile", label: t("software.tabProfile") },
-    // Tab "Máy đang dùng" chỉ có nghĩa với license (story 3.2).
-    ...(software.data && supportsSeats(software.data.kind)
+    /*
+     * Tab "Máy đang dùng" chỉ có nghĩa với license (story 3.2) — NHƯNG khi hồ sơ chưa về thì
+     * chưa biết nó là loại gì, và "chưa biết" không được xử như "không phải license".
+     *
+     * `useVisibleTab` kẹp `tab` về `'profile'` ngay ở lượt render đầu nếu khoá hiện tại không
+     * có trong danh sách này. Mở thẳng `/software/<id>?tab=devices` (hoặc F5 khi đang đứng ở
+     * đó) thì `software.data` còn `undefined` → tab chưa mọc → bị kẹp → dữ liệu về, tab mọc
+     * lại, nhưng `tab` đã là `'profile'`. Cùng một lỗi với `?tab=ports` bên trang thiết bị.
+     */
+    ...(software.isPending || (software.data && supportsSeats(software.data.kind))
       ? [
           {
             key: "devices",
             label: t("software.tabDevices"),
-            count: software.data.seatUsed,
+            count: software.data?.seatUsed,
           },
         ]
       : []),

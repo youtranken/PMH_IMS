@@ -33,8 +33,24 @@ function vungCuaScript(): string[] {
   const src = readFileSync(join(GOC, 'api', 'scripts', 'reset-e2e.mjs'), 'utf8');
   const khoi = /const DOMAINS = \{([\s\S]*?)\n\};/.exec(src);
   expect(khoi, 'không tìm thấy khối DOMAINS trong reset-e2e.mjs').not.toBeNull();
-  // Khóa ở mức thụt lề 2 dấu cách; có dấu gạch ngang thì nằm trong nháy đơn.
-  return [...khoi![1].matchAll(/^ {2}'?([a-z-]+)'?:/gm)].map((m) => m[1]);
+  /*
+   * NỚI REGEX, RỒI CHỐT SÀN (19/09/2026).
+   *
+   * Bản trước ghim CẢ mức thụt lề (`^ {2}`) LẪN bộ ký tự (`[a-z-]`), nên nó giòn hai chiều:
+   *   · prettier hay ai đó đổi sang 4 dấu cách → danh sách rỗng → bài đỏ với thông báo trỏ
+   *     sai chỗ hoàn toàn ("thiếu vùng X") thay vì "không đọc được file";
+   *   · thêm một vùng có chữ số hoặc chữ hoa (`nat2`, `ipamV6`) → regex bỏ qua → bài 2 XANH
+   *     dù vùng ấy chưa ai gọi tới, và rác của nó sống sót qua mọi `beforeEach`.
+   *
+   * `\[` ở cuối để không dính khoá lồng bên trong mỗi vùng. Chốt sàn bên dưới bắt cảnh "đọc
+   * ra rỗng" phải đỏ như một lỗi đọc file, không giả dạng thành lỗi thiếu vùng.
+   */
+  const ten = [...khoi![1].matchAll(/^\s{1,4}'?([A-Za-z0-9-]+)'?:\s*\[/gm)].map((m) => m[1]);
+  expect(
+    ten.length,
+    'đọc ra quá ít vùng từ DOMAINS — regex hỏng chứ không phải script thiếu vùng',
+  ).toBeGreaterThanOrEqual(10);
+  return ten;
 }
 
 function vungCuaHelpers(): string[] {
@@ -47,7 +63,9 @@ function vungCuaHelpers(): string[] {
 test.describe('Sổ vùng dọn tự canh chính nó', () => {
   test('mọi vùng `helpers.ts` gọi đều CÓ THẬT trong reset-e2e.mjs', () => {
     const script = vungCuaScript();
-    // `users` được script xử riêng (không nằm trong DOMAINS) nhưng vẫn là tham số hợp lệ.
+    /* `users` CÓ nằm trong `DOMAINS` (là khoá đầu) — chú thích cũ ở đây nói ngược, sửa
+       19/09/2026. Giữ nó trong tập hợp lệ vì banner của script vẫn liệt kê nó riêng, và vì
+       `flushResets()` gọi tên đó trực tiếp. */
     const hopLe = new Set(['users', ...script]);
     const thua = vungCuaHelpers().filter((v) => !hopLe.has(v));
     expect(thua, 'vùng chỉ có ở helpers.ts — script sẽ thoát mã 1 ngay ở beforeEach').toEqual([]);
