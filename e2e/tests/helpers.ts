@@ -276,7 +276,9 @@ export function countAuditByActor(action: string, actor: string): number {
 export function auditIpOf(action: string, actor: string): string {
   return dockerExec(
     `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
-      `"SELECT coalesce(host(ip), '') FROM audit_log WHERE action = '${chuoiSql(action)}' ` +
+      /* `ip` là cột **text**, không phải `inet` — `host()` chỉ nhận `inet` và ném
+         "function host(text) does not exist". Đã đo: `information_schema` báo `ip|text`. */
+      `"SELECT coalesce(ip, '') FROM audit_log WHERE action = '${chuoiSql(action)}' ` +
       `AND actor = '${chuoiSql(actor)}' ORDER BY created_at DESC LIMIT 1"`,
     'Đọc IP của dòng audit',
   ).trim();
