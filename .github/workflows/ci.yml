@@ -62,13 +62,12 @@ jobs:
       - name: Lint + ranh giới tầng (AD-15)
         run: npm run lint
         working-directory: web
+      # 19/09: bản `grep` thô từng nằm ở đây đã bị gỡ. Nó không bỏ chú thích trước khi soi, nên
+      # nó ĐỎ trên ba file mà lỗi duy nhất là có chú thích ghi lại mã màu đo được — trong khi
+      # cổng nội bộ (đã sửa 18/09) xanh sạch trên đúng ba file ấy. Hai bản luật cho một khái
+      # niệm thì bản nào cũng có ngày nói khác bản kia; giờ cả hai gọi chung một file.
       - name: Cấm hex màu ngoài tokens.css (AD-15)
-        run: |
-          rogue=$(grep -rlE "#[0-9a-fA-F]{3,8}\b" src --include="*.css" | grep -v "css/tokens.css" || true)
-          if [ -n "$rogue" ]; then
-            echo "Có hex màu ngoài tokens.css:"; echo "$rogue"; exit 1
-          fi
-        working-directory: web
+        run: bash ops/gate-hex.sh
       - name: Test đơn vị
         run: npm test
         working-directory: web

@@ -173,10 +173,24 @@ export function useListUrlState<F extends Record<string, string>>(options: {
     [setParams],
   );
 
-  /* Gõ xong 250ms mới đẩy lên URL (và do đó mới gọi API). Trước đây mỗi phím là một request:
-     gõ "SW-CORE-01" là mười lượt gọi, chín lượt vứt đi. */
+  /*
+   * Gõ xong 250ms mới đẩy lên URL (và do đó mới gọi API). Trước đây mỗi phím là một request:
+   * gõ "SW-CORE-01" là mười lượt gọi, chín lượt vứt đi.
+   *
+   * SO BẰNG BẢN ĐÃ TRIM, GIỐNG HỆT EFFECT ĐỒNG BỘ NGƯỢC BÊN TRÊN (19/09/2026).
+   *
+   * Chốt cũ `searchInput === search` KHÔNG BAO GIỜ đúng khi ô nhập còn dấu cách thừa — vì lượt
+   * ghi `.trim()` trước khi lên URL, còn effect đồng bộ ngược thì cố ý GIỮ dấu cách ấy lại. Hai
+   * bản vá đúng, ghép vào nhau thành một chốt chết: effect này sống mãi. Mà mỗi lần
+   * `location.search` đổi thì `setParams` của react-router đổi định danh → `write` đổi → effect
+   * bắn lại → 250ms sau `write({ q })` chạy với `resetPage` mặc định TRUE và xoá `page`.
+   *
+   * Người dùng gõ "máy in " (có dấu cách cuối) rồi bấm sang trang 3: một phần tư giây sau bảng
+   * tự nhảy về trang 1, không thao tác nào giải thích. Gõ không dấu cách thì không sao — nên nó
+   * rất khó lần. Dính cả `setFilter` và `setSorting` vì cả hai đều đổi `location.search`.
+   */
   useEffect(() => {
-    if (searchInput === search) return;
+    if (searchInput.trim() === search) return;
     const timer = setTimeout(() => write({ q: searchInput.trim() }), 250);
     return () => clearTimeout(timer);
   }, [searchInput, search, write]);

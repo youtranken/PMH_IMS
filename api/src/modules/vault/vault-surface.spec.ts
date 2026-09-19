@@ -131,12 +131,27 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
      * dòng `await this.breakGlass.assertCanReveal(...)` thì mọi test nghiệp vụ vẫn xanh và
      * mọi Member bỗng xem được mật khẩu của cả công ty. Không có gì đỏ để báo.
      */
-    const body = controller.slice(
-      controller.indexOf('async reveal('),
-      controller.indexOf('/** "Xóa" = thu hồi mềm.'),
-    );
+    /*
+     * LỘT CHÚ THÍCH TRƯỚC KHI SO, VÀ SO HÌNH DẠNG LỜI GỌI CHỨ KHÔNG SO CÁI TÊN (19/09/2026).
+     *
+     * Bản trước so `toContain('assertCanReveal')` trên lát cắt THÔ. Trong lát ấy có một dòng
+     * chú thích nhắc tới `assertCanReveal` — nên khẳng định được thỏa bởi CHÚ THÍCH, không phải
+     * bởi hàng rào. Đợt rà 19/09 gieo đột biến chứng minh: thay lời gọi thật bằng
+     * `grantId = null` — tức bỏ trắng break-glass cho mọi vai không phải SA/Admin, đúng lỗ hổng
+     * mà khối chú thích ngay trên đây gọi là "thứ đáng khóa nhất của cả epic" — bài vẫn 9/9
+     * XANH. Bài kiểm càng viết chú thích cẩn thận thì càng dễ tự thỏa mãn chính mình.
+     *
+     * Bài anh em ở cuối file (`ownersService`) đã lột chú thích từ đầu; đây là chỗ sót.
+     */
+    const body = controller
+      .slice(
+        controller.indexOf('async reveal('),
+        controller.indexOf('/** "Xóa" = thu hồi mềm.'),
+      )
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '');
     if (decorators.includes("'member'")) {
-      expect(body).toContain('assertCanReveal');
+      expect(body).toContain('await this.breakGlass.assertCanReveal(');
       /*
        * HÀNG RÀO PHẢI Ở DẠNG "KHÔNG PHẢI SA/ADMIN", KHÔNG PHẢI "CÓ PHẢI MEMBER" (18/09/2026).
        *

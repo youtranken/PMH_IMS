@@ -7,6 +7,7 @@ import {
   Header,
   HttpCode,
   NotFoundException,
+  Logger,
   Param,
   Patch,
   Post,
@@ -14,6 +15,7 @@ import {
   Req,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
+import { redactMessage } from '../../common/log-redact';
 import { IsIn, IsOptional, IsString, IsUUID, Length } from 'class-validator';
 import { Audited } from '../audit/audited.decorator';
 import { AuditWriterService } from '../audit/audit-writer.service';
@@ -98,6 +100,8 @@ class IdParamDto {
 @NoStepUp()
 @Controller('api/v1/vault/secrets')
 export class VaultController {
+  private readonly logger = new Logger(VaultController.name);
+
   constructor(
     private readonly vault: VaultService,
     private readonly config: SystemConfigService,
@@ -314,7 +318,19 @@ export class VaultController {
       /*
        * GHI VẾT KHÔNG ĐƯỢC LÀM HỎNG CÂU TRẢ LỜI. `append` là bản NÉM, nên một nhịp DB nghẽn
        * biến 403 đúng của người dùng thành 500 — và chính đường đang bị tấn công là đường dễ
-       * nghẽn nhất. Nuốt lỗi ghi, giữ nguyên lỗi gốc; `AuditWriterService` đã tự log.
+       * nghẽn nhất. Nuốt lỗi ghi, giữ nguyên lỗi gốc.
+       *
+       * NHƯNG NUỐT THÌ PHẢI KÊU (19/09/2026). Bản trước là `catch {}` rỗng, biện minh bằng câu
+       * "`AuditWriterService` đã tự log" — câu ấy SAI: `append()` chỉ có đúng một dòng
+       * `db.insert`, không try/catch, không một lời gọi logger nào; chỉ `appendBestEffort()`
+       * mới log. Hậu quả không dừng ở việc mất một dòng nhật ký: `SecurityProbeService` đếm
+       * lượt dò bằng cách ĐỌC LẠI `audit_log`, nên dòng này mất là bộ đếm không bao giờ chạm
+       * ngưỡng — không thư, không vết, không dấu hiệu, đúng lúc đang bị dò. Hàng rào PHÁT HIỆN
+       * tắt lịm ở đúng nhịp nó sinh ra để canh.
+       *
+       * Đây cũng chính là mẫu `catch {}` mà commit cùng đợt vừa gỡ khỏi `security-probe.service.ts`
+       * — nó tái sinh cách đó hai file. Ghi log là đường duy nhất còn lại để người trực biết
+       * hàng rào vừa thủng.
        */
       try {
         await this.audit.append({
@@ -324,8 +340,12 @@ export class VaultController {
           objectId: secretId,
           detail: { code },
         });
-      } catch {
-        /* đã log ở tầng dưới — xem chú thích ngay trên */
+      } catch (loiGhi) {
+        // Tên khác `error` có chủ ý: `throw error` bên dưới phải ném lỗi GỐC của người dùng,
+        // không phải lỗi ghi vết. Trùng tên là một phép che biến chực chờ đổi nghĩa dòng ấy.
+        this.logger.error(
+          `Mất vết từ chối mở két (bộ đếm dò dẫm sẽ thiếu một lượt): ${redactMessage(loiGhi)}`,
+        );
       }
       // Đếm và cảnh báo — không ném ra ngoài dù gửi thư hỏng (xem `SecurityProbeService`).
       await this.probe.noteSecurityFailure(who);

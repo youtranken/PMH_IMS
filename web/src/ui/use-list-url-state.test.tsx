@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -160,5 +160,68 @@ describe('useListUrlState — searchKey', () => {
     });
     expect(result.current.url.search).toBe('SW-CORE');
     expect(result.current.url.filters.search).toBe('');
+  });
+});
+
+/**
+ * DEBOUNCE 250ms + ĐỒNG BỘ NGƯỢC — hai lời hứa ghép vào nhau từng thành một chốt chết.
+ *
+ * Đợt rà 19/09/2026 chỉ ra 18 ca bên trên KHÔNG ca nào gọi `setSearchInput`, tức không ca nào
+ * chạm hai lời hứa vừa vá ngày 18/09. Gỡ phép so đã-trim ra khỏi hook thì cả 18 vẫn xanh.
+ *
+ * Hai ca dưới đây khoá đúng hai lời hứa ấy, và ca thứ hai khoá hậu quả mà chúng gây ra khi
+ * ghép: dấu cách thừa làm chốt `searchInput === search` không bao giờ đúng, effect debounce
+ * sống mãi, và mỗi lần `location.search` đổi là 250ms sau `page` bị xoá — bảng nhảy về trang 1
+ * dưới tay người đang đọc trang 3.
+ */
+describe('useListUrlState — ô tìm: debounce và dấu cách', () => {
+  it('gõ xong thì 250ms sau mới lên URL, và dấu cách người dùng gõ KHÔNG bị nuốt', async () => {
+    vi.useFakeTimers();
+    try {
+      const { result } = dung('/devices', {
+        emptyFilters: { status: '', search: '' },
+        searchKey: 'search',
+      });
+
+      act(() => result.current.url.setSearchInput('máy in '));
+      // Chưa tới hạn: URL còn im, ô nhập giữ nguyên từng ký tự.
+      expect(result.current.thanhDiaChi).toBe('');
+      await act(async () => {
+        vi.advanceTimersByTime(250);
+      });
+
+      expect(result.current.thanhDiaChi).toContain('q=m');
+      // URL nhận bản đã rút gọn; ô nhập GIỮ dấu cách để gõ tiếp không thành "máy inHP".
+      expect(result.current.url.search).toBe('máy in');
+      expect(result.current.url.searchInput).toBe('máy in ');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('dấu cách thừa KHÔNG được làm bảng nhảy về trang 1 khi người dùng đổi trang', async () => {
+    vi.useFakeTimers();
+    try {
+      const { result } = dung('/devices', {
+        emptyFilters: { status: '', search: '' },
+        searchKey: 'search',
+      });
+
+      act(() => result.current.url.setSearchInput('máy in '));
+      await act(async () => {
+        vi.advanceTimersByTime(250);
+      });
+
+      act(() => result.current.url.setPage(3));
+      expect(result.current.url.page).toBe(3);
+
+      // Nhịp debounce kế tiếp không được phép động tới `page`.
+      await act(async () => {
+        vi.advanceTimersByTime(500);
+      });
+      expect(result.current.url.page).toBe(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

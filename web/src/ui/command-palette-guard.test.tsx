@@ -38,6 +38,28 @@ const me = {
 describe('⌘K và hộp thoại không giẫm lên nhau', () => {
   const oTim = () => screen.queryByRole('dialog', { name: /tìm nhanh/i });
 
+  /*
+   * HỎI DOM, KHÔNG HỎI CÂY TRỢ NĂNG — CHỈ Ở BÀI THỨ HAI (19/09/2026).
+   *
+   * Khi một hộp Radix đang mở, nó đặt `aria-hidden="true"` lên MỌI nhánh anh em ngoài
+   * `Content`. `CommandPalette` gắn ở shell, tức nằm trong một nhánh như thế — nên
+   * `queryByRole` trả `null` DÙ palette đã render và đang phủ kín màn hình. Bài thứ hai vì vậy
+   * từng xanh vì lý do sai: đợt rà 19/09 vô hiệu hoá đúng dòng bản vá
+   * (`if (!open && coHopThoaiDangMo()) return;`) và bài vẫn 2/2 XANH, trong khi dump DOM cho
+   * thấy `.cp-wrap` + `role="dialog"` có mặt đầy đủ — đúng lớp phủ chết mà cả khối chú thích
+   * trên đây mô tả (`--z-palette` 85 > `--z-modal` 60).
+   *
+   * Người dùng thật không nhìn bằng cây trợ năng; thứ che mất màn hình là DOM. Bài 1 thì GIỮ
+   * `queryByRole`: ở đó không có hộp nào, cây trợ năng còn sạch, và "palette có được phơi ra
+   * cho trình đọc màn hình không" là một câu hỏi đáng giữ.
+   */
+  const oTimTrongDom = () =>
+    // `Array.from`, không phải spread: `tsconfig.app.json` không bật `downlevelIteration`, nên
+    // `[...NodeListOf]` là lỗi biên dịch TS2488 — và cổng kiểu của web là `npm run build`.
+    Array.from(document.querySelectorAll('[role="dialog"]')).find((el) =>
+      /tìm nhanh/i.test(el.getAttribute('aria-label') ?? ''),
+    ) ?? null;
+
   it('không có hộp thoại: ⌘K mở được', async () => {
     const user = userEvent.setup();
     renderWithI18n(
@@ -68,6 +90,6 @@ describe('⌘K và hộp thoại không giẫm lên nhau', () => {
 
     await screen.findByText('thân hộp');
     await user.keyboard('{Control>}k{/Control}');
-    expect(oTim()).toBeNull();
+    expect(oTimTrongDom()).toBeNull();
   });
 });

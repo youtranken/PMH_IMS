@@ -95,6 +95,9 @@ export function CommandPalette({ me }: { me: Me }) {
   const [open, setOpen] = useState(false);
   const [raw, setRaw] = useState('');
   const [at, setAt] = useState(0);
+  /** Đích đến của dòng đang chọn. Khai ở đây vì hai lượt đặt lại `at` về 0 nằm phía trên chỗ
+      dùng chính — xem khối chú thích dài ở `chon()` bên dưới. */
+  const dangChon = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const openedBy = useRef<Element | null>(null);
 
@@ -161,6 +164,7 @@ export function CommandPalette({ me }: { me: Me }) {
     if (open) {
       setRaw('');
       setQ('');
+      dangChon.current = null;
       setAt(0);
       // Ô tìm phải nhận tiêu điểm ngay, nếu không người dùng gõ vào khoảng không.
       requestAnimationFrame(() => inputRef.current?.focus());
@@ -258,7 +262,12 @@ export function CommandPalette({ me }: { me: Me }) {
     ];
   }, [enabled, devices.data, software.data, isp.data, accounts.data, navHits, t]);
 
-  useEffect(() => setAt(0), [q]);
+  /* Đổi từ khoá = bỏ neo. Giữ neo lại thì effect khôi phục bên dưới sẽ kéo con trỏ về dòng của
+     từ khoá CŨ ngay khi kết quả mới về — người dùng gõ từ mới mà con trỏ đứng ở dòng 8. */
+  useEffect(() => {
+    dangChon.current = null;
+    setAt(0);
+  }, [q]);
 
   /*
    * GIỮ LỰA CHỌN THEO ĐÍCH ĐẾN, KHÔNG THEO CHỖ NGỒI (18/09/2026).
@@ -273,16 +282,38 @@ export function CommandPalette({ me }: { me: Me }) {
    *
    * Ghi lại `to` của dòng đang chọn rồi tìm lại nó sau mỗi lượt `hits` đổi: dòng cũ còn thì
    * con trỏ bám theo nó, dòng cũ mất thì về đầu danh sách.
+   *
+   * ───────────────────────────────────────────────────────────────────────────────────────
+   * GHI NEO Ở NƠI NGƯỜI DÙNG ĐỔI LỰA CHỌN, KHÔNG GHI TRONG EFFECT (19/09/2026).
+   *
+   * Bản 18/09 dựng đúng ý tưởng trên nhưng đấu dây sai, thành một no-op hoàn chỉnh: neo được
+   * ghi trong một `useEffect([at, hits])` khai TRƯỚC effect khôi phục. React chạy effect theo
+   * thứ tự khai trong cùng một commit, nên khi `hits` đổi thì effect ghi chạy trước — với
+   * `hits` MỚI và `at` CŨ — và đè neo thành phần tử ở đúng CHỖ NGỒI cũ. Effect khôi phục sau đó
+   * đi tìm chính giá trị vừa bị đè, thấy nó ở đúng chỉ số cũ, rồi `setAt` một con số không
+   * đổi. Cảnh hỏng mô tả bên trên vì thế vẫn xảy ra nguyên vẹn; đợt rà 19/09 dựng lại được nó
+   * bằng hai bài độc lập (`SW-3` → `DEV-3` sau khi nhóm Thiết bị về muộn). Nó còn kéo theo một
+   * hệ quả thứ hai: `setAt(0)` khi đổi từ khoá cũng bị kéo ngược, nên gõ từ mới mà con trỏ
+   * đứng nguyên ở dòng 8.
+   *
+   * Cách chữa là bỏ hẳn effect ghi. `at` chỉ đổi ở BA chỗ do người dùng (mũi tên, rê chuột, và
+   * lượt đặt lại về 0), nên ghi neo ngay tại đó là ghi đúng ý định — không lượt render nào chen
+   * vào giữa được nữa.
    */
-  const dangChon = useRef<string | null>(null);
-  useEffect(() => {
-    dangChon.current = hits[at]?.to ?? null;
-  }, [at, hits]);
+  /** Đổi dòng đang chọn: kẹp vào biên, ghi neo, rồi mới đặt chỉ số. Dùng cho MỌI lượt đổi. */
+  const chon = (toi: number) => {
+    const kep = Math.max(0, Math.min(toi, hits.length - 1));
+    dangChon.current = hits[kep]?.to ?? null;
+    setAt(kep);
+  };
   useEffect(() => {
     const cu = dangChon.current;
     if (cu === null) return;
     const moi = hits.findIndex((hit) => hit.to === cu);
-    setAt(moi >= 0 ? moi : 0);
+    const den = moi >= 0 ? moi : 0;
+    // Dòng cũ mất thì neo phải theo dòng mới, nếu không lượt `hits` sau lại kéo về 0 lần nữa.
+    dangChon.current = hits[den]?.to ?? null;
+    setAt(den);
     // Chỉ chạy khi DANH SÁCH đổi; `at` đổi là do chính người dùng, đừng kéo ngược lại.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hits]);
@@ -301,10 +332,10 @@ export function CommandPalette({ me }: { me: Me }) {
       setOpen(false);
     } else if (event.key === 'ArrowDown') {
       event.preventDefault();
-      setAt((i) => Math.min(i + 1, hits.length - 1));
+      chon(at + 1);
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
-      setAt((i) => Math.max(i - 1, 0));
+      chon(at - 1);
     } else if (event.key === 'Enter') {
       event.preventDefault();
       go(hits[at]);
@@ -420,7 +451,7 @@ export function CommandPalette({ me }: { me: Me }) {
                     role="option"
                     aria-selected={index === at}
                     className={`cp-item${index === at ? ' active' : ''}`}
-                    onMouseEnter={() => setAt(index)}
+                    onMouseEnter={() => chon(index)}
                     onClick={() => go(hit)}
                   >
                     <span className="it-ic">

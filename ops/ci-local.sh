@@ -85,29 +85,10 @@ step "WEB — lint + depcruise (AD-15 ranh giới tầng, cấm window.confirm)"
 npm --prefix web run lint
 
 step "WEB — cấm hex màu ngoài tokens.css (AD-15)"
-#
-# BỎ CHÚ THÍCH TRƯỚC KHI SOI (18/09/2026). Bản trước `grep` thẳng vào file, nên nó không phân
-# biệt được một LUẬT CSS đặt màu cứng với một CHÚ THÍCH nhắc tới mã màu — mà chú thích kiểu
-# "`--warn` vốn đã là bản ĐẬM (#a34d08)" hay "hoà ra #a1a3a0 → 2,54:1" chính là thứ nên
-# khuyến khích: nó ghi lại con số ĐO ĐƯỢC, giải thích vì sao luật bên dưới viết như vậy.
-#
-# Hậu quả của bản cũ không phải phiền phức nhỏ: một dòng chú thích thêm vào `shared-kit.css`
-# trong đợt UI/UX làm cổng này ĐỎ, và vì nó nằm ở TẦNG MỘT nên `--e2e` không bao giờ chạy tới.
-# Nhánh `feat/ui-chi-tiet-v2` vì thế đóng 7 story mà chưa lượt E2E đầy đủ nào chạy được — DoD
-# gạch 7 hổng suốt, trong khi mọi cổng khác vẫn báo xanh. Cổng báo sai chỗ còn tệ hơn không có
-# cổng: nó vừa chặn nhầm, vừa che mất thứ nó phải canh.
-#
-# `perl -0777` nuốt trọn file rồi xoá mọi khối `/* … */` (kể cả nhiều dòng), sau đó mới soi.
-step_rogue=""
-while IFS= read -r f; do
-  [ -z "$f" ] && continue
-  if perl -0777 -pe 's{/\*.*?\*/}{}gs' "$f" | grep -qE "#[0-9a-fA-F]{3,8}\b"; then
-    step_rogue="${step_rogue}${f}"$'\n'
-  fi
-done < <(find web/src -name "*.css" ! -name "tokens.css")
-if [ -n "$step_rogue" ]; then
-  echo "Có hex màu trong LUẬT CSS ngoài tokens.css:"; echo "$step_rogue"; exit 1
-fi
+# Luật nằm trong `ops/gate-hex.sh` — MỘT bản, gọi từ cả đây lẫn `.github/workflows/ci.yml`.
+# Đừng chép lại nó vào đây: đúng việc chép đôi ấy đã làm cổng nội bộ xanh còn cổng chặn merge
+# đỏ suốt, xem khối chú thích đầu file kia.
+bash ops/gate-hex.sh
 
 step "WEB — test đơn vị"
 npm --prefix web test
