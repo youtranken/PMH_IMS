@@ -743,3 +743,86 @@ bảng mới; một cột mới trên đường ĐỌC và một tài sản dùn
 6. **"Hủy" trong dự án này là nút HỦY BỎ HỘP THOẠI (`common.cancel`), không phải "hủy phiếu".**
    Tô đỏ nó là dạy người dùng bỏ qua màu đỏ, rồi tới nút thật sự nguy hiểm họ cũng không đọc
    nữa. Màu đỏ chỉ dành cho việc LẤY ĐI thứ gì đó.
+
+## Đợt rà soát 19/09/2026 — góp gì (nhánh `feat/ui-chi-tiet-v2`)
+
+Không epic mới, không bảng mới. Một đội bảy chuyên gia đọc lại toàn bộ 16 commit của nhánh
+(kiến trúc · bảo mật · React · UI/UX · trợ năng · chất lượng bài kiểm · ops), rồi sửa theo kết
+quả — thành 20 commit. Con số đáng nhớ không phải số finding mà là **thành phần** của chúng:
+
+> Phần lớn mục HIGH không phải lỗi mới. Chúng là **bản vá của đợt trước KHÔNG CHẠY** — code
+> trông đúng, chú thích giải thích rành mạch, bài kiểm xanh, cơ chế chết.
+
+### Tài sản dùng chung mới (AD-15)
+
+| Tài sản | Đường dẫn | Thay cho |
+| --- | --- | --- |
+| `DetailSection` | `web/src/ui/detail-layout.tsx` | Vỏ khu "Hồ sơ" chép nguyên văn vào 4 file `features/` |
+| `quetNguon` | `web/src/test/quet-nguon.ts` | Ba bản `walk()` chép tay trong ba bài điểm danh |
+| `ops/gate-hex.sh` | (script) | Hai bản luật cấm hex: một `perl` ở `ci-local.sh`, một `grep` thô ở `ci.yml` |
+
+`levelFromDays`, `moTimNhanh`/`SU_KIEN_MO_TIM_NHANH` sinh ra ở đợt trước nhưng chưa khai —
+đã bổ sung vào `docs/SHARED-REGISTRY.md` trong đợt này.
+
+### Hợp đồng cho epic sau
+
+- **Một cổng chất lượng = MỘT file, nhiều nơi gọi.** `ops/gate-hex.sh` là bản duy nhất; cả
+  `ci-local.sh` lẫn `.github/workflows/ci.yml` gọi vào đó. Chép luật sang nơi thứ hai là tái
+  tạo đúng sự cố 18–19/09: bản nội bộ được sửa, bản chặn merge thì không, và nhánh xanh ở máy
+  mà đỏ ở cổng.
+- **Cổng phải FAIL-CLOSED khi thiếu công cụ.** `perl … | grep -q` nằm trong điều kiện `if` nên
+  `set -e` không áp: thiếu `perl` thì mọi file "sạch" và script vẫn in "Tất cả kiểm tra đã
+  xanh". Mọi cổng mới phải kiểm sự tồn tại của công cụ nó dựa vào.
+- **File migration đã apply là BẤT BIẾN.** `database/migration-runner.ts` băm SHA-256 nội dung
+  và *fail to* khi lệch. Chú thích sai trong một migration đã chạy KHÔNG sửa được — đính chính
+  phải đi chỗ khác (`docs/NO-KY-THUAT-*.md`).
+- **`DetailSection` có prop `compact`, và nó nói một điều CÓ THẬT.** Bật khi các khu anh em
+  trên cùng màn là `device-panel` (hiện chỉ trang chi tiết thiết bị); ba màn kia khu này đứng
+  một mình nên `.card` trần mới khớp với thẻ định danh bên phải. Đừng bật "cho đều".
+- **Ở mẫu combobox, `role="listbox"` chỉ được chứa `option` và `group`.** Dải cảnh báo, khối
+  rỗng, tên nhóm đều phải nằm ngoài hoặc bọc bằng `role="group"`. Và listbox phải LUÔN có mặt
+  kể cả khi rỗng, vì `aria-controls` trên ô nhập cần một đích thật.
+- **`timVaChoLoc` chờ đúng GIÁ TRỊ của `q=`, không chờ "có `q=`".** Màn `/expiry` KHÔNG dùng
+  được helper này: nó có `useListUrlState` nhưng không khai `searchKey` nên không có ô tìm nào.
+
+### Bẫy đã gặp
+
+1. **Bản vá có thể tự vô hiệu hoá chính nó, và chú thích càng hay thì càng khó thấy.** Cơ chế
+   "giữ lựa chọn theo đích đến" trong `command-palette.tsx` có 20 dòng chú thích mô tả đúng
+   cảnh hỏng — nhưng hai `useEffect` khai SAI THỨ TỰ, nên effect ghi neo chạy trước effect đọc
+   neo và đè nó bằng phần tử ở chỗ ngồi cũ. Toàn bộ cơ chế là một no-op. React chạy effect theo
+   thứ tự khai trong cùng một commit: **thứ tự khai là ngữ nghĩa, không phải phong cách**.
+2. **Chú thích của chính mình có thể làm hỏng bài kiểm đứng cạnh.** `vault-surface.spec.ts`
+   khẳng định `expect(body).toContain('assertCanReveal')` trên lát cắt THÔ của source. Trong
+   lát ấy có một dòng chú thích nhắc tên hàm — nên khẳng định được thỏa bởi chú thích, không
+   phải bởi hàng rào. Gỡ trắng break-glass: 9/9 vẫn xanh. **Bài kiểm đọc source phải lột chú
+   thích trước, và so HÌNH DẠNG lời gọi chứ không so cái tên.**
+3. **Bài kiểm có thể xanh vì lý do sai.** `command-palette-guard.test.tsx` dùng
+   `getByRole('dialog')` để khẳng định palette KHÔNG mở. Nhưng hộp Radix đặt `aria-hidden` lên
+   mọi nhánh anh em, nên truy vấn ấy luôn trả `null` — kể cả khi palette đang phủ kín màn hình.
+   Vô hiệu hoá bản vá: 2/2 vẫn xanh. **Thứ che mất màn hình là DOM, không phải cây trợ năng.**
+4. **Hai bản vá đúng, ghép vào nhau thành một chốt chết.** `use-list-url-state.ts`: bản vá
+   "không nuốt dấu cách đang gõ" cố ý giữ `searchInput = "máy in "` trong khi `search` là
+   `"máy in"`; chốt của effect debounce là `searchInput === search` nên **không bao giờ đúng**.
+   Effect sống mãi, và mỗi lần `location.search` đổi là 250ms sau `page` bị xoá — bảng nhảy về
+   trang 1 dưới tay người đang đọc trang 3. Gõ không dấu cách thì không sao, nên rất khó lần.
+5. **Một cổng vặt ở tầng rẻ âm thầm vô hiệu hoá mọi tầng đắt phía sau.** Cổng cấm hex đỏ vì một
+   mã màu nằm trong CHÚ THÍCH; nó ở tầng một nên `--e2e` không bao giờ chạy tới. Bảy story đóng
+   lại với DoD gạch 7 hổng, trong khi mọi cổng khác báo xanh. **Chưa có quyết định** về việc
+   chuyển loại cổng ratchet (hex, `--max-warnings=0`) xuống sau khối E2E — mục duy nhất của đợt
+   này còn treo.
+6. **Bài kiểm chập chờn không tên là thứ đắt nhất: nó dạy người ta chạy lại thay vì đọc.** Một
+   file Vitest đỏ rồi tự xanh qua ba lượt; chỉ khi giữ TRỌN log mới thấy
+   `ENOENT: open 'web/src/__lint-probe__ImooEl/probe.tsx'` — `lint-rules.test.ts` tạo/xoá thư
+   mục dò ngay trong `src`, Vitest chạy song song, bài nào quét cây có thể đọc trúng thư mục
+   vừa biến mất. `dead-keys-rollcall` đã được vá 18/09; hai bản `walk()` còn lại thì không.
+   **Vá bản thứ hai rồi chờ bản thứ ba là sai AD-15** — nay một `quetNguon`, ba nơi gọi. Bỏ qua
+   theo TÊN chứ không `try/catch`: nuốt ENOENT là nuốt mọi lỗi đọc thật.
+7. **"Đang tải" không phải "hỏng".** `chuaBiet` gộp `isPending` với `isError`, mà câu đi kèm là
+   một CẢNH BÁO có chỉ dẫn ("đừng dựa vào nó để quyết định thanh lý"). Mọi lượt mở trang chi
+   tiết thiết bị đều nháy cảnh báo sai đó, và vì nằm trong `role="status"` nên trình đọc màn
+   hình đọc trọn nó lên rồi nó biến mất.
+8. **`role="status"` trên node được TẠO RA cùng nội dung thì câm.** Trình đọc màn hình chỉ theo
+   dõi vùng sống đã có mặt TRƯỚC khi nội dung đổi. Khu "cắt gì" của bản đồ quan hệ là mẫu
+   DISCLOSURE, không phải thông báo — đúng vai là `aria-expanded` trên nút + khu thường trực
+   mang `hidden`, và bỏ hẳn `role="status"`.
