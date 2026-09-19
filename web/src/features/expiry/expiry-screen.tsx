@@ -106,9 +106,13 @@ export function ExpiryScreen({ me }: { me: Me }) {
     url.setFilter('state', value);
 
   /*
-   * `useExpiryThresholds()` vẫn dùng cho `ExpiryBadge` và cho NHÃN ô số — nó là nguồn chung
-   * của cả hệ thống (AD-15). Nhưng phép LỌC bảng thì đọc ngưỡng đi KÈM chính lượt trả về, vì
-   * đó mới đúng là bộ ngưỡng mà `summary` đã dùng để đếm. Xem chú thích ở `ExpiryResponse`.
+   * `useExpiryThresholds()` chỉ còn là NGUỒN DỰ PHÒNG của màn này (sửa 19/09/2026).
+   *
+   * Mọi thứ trên màn — phép lọc bảng, nhãn ô số, VÀ huy hiệu ở cột Trạng thái — nay đọc `nguong`
+   * bên dưới, tức ngưỡng đi KÈM chính lượt trả về, vì đó mới đúng là bộ ngưỡng mà `summary` đã
+   * dùng để đếm. Bản 18/09 chỉ chuyển phép lọc và nhãn, để huy hiệu tự hỏi hook — nên màn có hai
+   * nguồn: hook giữ cache 10 phút, admin đổi `expiry.critical_days` thành 14 là bảng lọc theo 14
+   * còn huy hiệu tô theo 7. Lượt rà soát 19/09 tìm ra; bản vá dời lỗi chứ chưa diệt lỗi.
    */
   const thresholds = useExpiryThresholds();
 
@@ -181,7 +185,10 @@ export function ExpiryScreen({ me }: { me: Me }) {
         accessorKey: 'daysLeft',
         header: t('expiry.state'),
         // AD-15: luật "sắp hết hạn" chỉ có một, ở lib/expiry.ts
-        cell: ({ row }) => <ExpiryBadge end={row.original.end} />,
+        /* Truyền `nguong` — cùng bộ ngưỡng mà phép lọc và nhãn ô số dùng. Không truyền là màn
+           này có hai nguồn: bảng lọc theo ngưỡng của lượt trả về, huy hiệu tô theo cache 10
+           phút của hook. Xem chú thích prop `thresholds` ở `ui/expiry-badge.tsx`. */
+        cell: ({ row }) => <ExpiryBadge end={row.original.end} thresholds={nguong} />,
       },
       {
         id: 'actions',

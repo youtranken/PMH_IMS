@@ -1,6 +1,12 @@
 # Nợ kỹ thuật mức LOW — gom từ đợt rà soát 18/09/2026
 
 Sáu chuyên gia soi song song nhánh `feat/ui-chi-tiet-v2` (12 commit, 92 file, ~10.6k dòng).
+
+> **Đính chính 19/09:** con số trên là của LƯỢT RÀ 18/09 (sáu chuyên gia, 12 commit đầu của
+> nhánh). Đừng đọc lẫn với mục "Đợt rà soát 19/09/2026" trong `docs/EPIC-MAP.md` — lượt đó là
+> **bảy** chuyên gia trên **16** commit, rồi một lượt thứ ba (`/bmad-code-review`, bảy lớp) trên
+> **21** commit / 68 file. Ba lượt khác nhau, ba bộ số khác nhau; tên file ghi `-2026-09-19` vì
+> nó được VIẾT ngày 19/09, còn nội dung gom từ lượt 18/09.
 Kết quả: **1 BLOCKER · 15 mục báo HIGH · ~26 MEDIUM · ~28 LOW**.
 
 BLOCKER, HIGH và MEDIUM **đã xử hết** trong 12 commit của nhánh đó — mỗi bản sửa đều đo lại
@@ -99,16 +105,23 @@ phải một lượt dọn:
 `.tab-dot`, chữ ẩn cho trình đọc màn hình (WCAG 1.4.1). Nhưng **0 màn truyền nó**, và hệ thống
 chưa có tín hiệu nào sẵn sàng để quyết khi nào chấm sáng. Mockup `thiet-bi.html:510` có dùng
 (tab Két sắt mang chấm) nhưng không nói chấm ấy nghĩa là gì.
-→ **Cần chốt:** chấm báo điều gì (secret quá hạn xoay? license sắp hết hạn?), hay gỡ cho tới
-khi có nhu cầu thật?
+→ **ĐÃ CHỐT 19/09/2026, commit `26f505d`: GỠ.** Prop, luật CSS `.tab-dot`/`.tab-dot.danger` và
+chữ ẩn đều đã xoá. Lý do: hệ thống không có tín hiệu nào để quyết khi nào chấm sáng, và một khả
+năng không ai đấu dây thì chỉ là chú thích tốn chỗ. Ngày nào chốt được chấm ấy báo điều gì thì
+lấy lại trong git — lý do gỡ ghi ngay chỗ prop từng đứng.
 
 **B. Khu "Hồ sơ" trên 4 trang chi tiết không có thẻ và tiêu đề.** Mockup vẽ
 `<section class="card"><h2>Hồ sơ</h2><dl>…`; code render `<dl class="data-grid">` trần — không
 nền, không viền, không landmark có tên. Mọi khu bên dưới đều là `<section class="card"
 aria-labelledby>`, nên khu ĐẦU TIÊN lại là khu duy nhất lơ lửng.
-→ **Có thể là chủ ý:** đợt này đã dọn bớt, lưới ấy giờ chỉ còn 1–2 ô (Model, Ghi chú) vì mọi
-thứ khác đã sang cột phải — bọc khung cho hai ô lẻ có khi rườm rà hơn.
-→ **Cần chốt:** giữ như hiện tại, hay trả lại thẻ + tiêu đề theo mockup?
+→ **ĐÃ CHỐT 19/09/2026: TRẢ LẠI THẺ + TIÊU ĐỀ.** Dựng ở commit `26f505d`, rồi gom về một bản
+dùng chung `DetailSection` (`ui/detail-layout.tsx`) ở commit `feba63b` — bản đầu chép nguyên văn
+vào cả bốn file `features/`, vi phạm AD-15, và chính việc đó khiến hai khiếm khuyết trình bày của
+nó phải vá bốn lần thay vì một.
+
+**Hai mục trên đã được quyết trong chính lượt commit sinh ra tài liệu này**, nên bản đầu của file
+vẫn hỏi "cần chốt" cho hai việc đã xong — lượt rà soát 19/09 chỉ ra. Ai đọc sau sẽ đi mở lại một
+cuộc thảo luận đã kết thúc; sửa để không ai mất công thêm lần nữa.
 
 ---
 

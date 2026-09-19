@@ -339,25 +339,6 @@ export function CommandPalette({ me }: { me: Me }) {
     } else if (event.key === 'Enter') {
       event.preventDefault();
       go(hits[at]);
-    } else if (event.key === 'Tab') {
-      /*
-       * TIÊU ĐIỂM KHÔNG ĐƯỢC RỜI HỘP (19/09/2026).
-       *
-       * Hộp này khai `role="dialog" aria-modal="true"` từ lâu, nhưng chưa bao giờ giữ tiêu
-       * điểm lại. Đo ngày 19/09: mở ⌘K rồi gõ Tab một lần là `activeElement` về `<body>`, gõ
-       * tiếp thì đi vào sidebar và nội dung trang phía sau. Mà `aria-modal="true"` chính là
-       * lời dặn trình đọc màn hình CẤT toàn bộ phần ngoài hộp khỏi bộ đệm ảo — nên người dùng
-       * đang Tab vào những phần tử mà họ không nghe thấy gì, và không có dấu hiệu nào cho biết
-       * mình đã rời hộp.
-       *
-       * Ở mẫu combobox thì ô nhập là chỗ dừng Tab DUY NHẤT trong hộp: các dòng kết quả mang
-       * `tabIndex={-1}` và được điều khiển bằng ↑/↓ + `aria-activedescendant`, không phải bằng
-       * Tab. Nên "vòng lại" ở đây rút gọn thành "ở nguyên" — không cần quét danh sách phần tử
-       * bấm được, không cần vòng lặp. Đường ra khỏi hộp là Esc, và `<kbd>Esc</kbd>` nằm ngay
-       * cạnh ô nhập để nói điều đó.
-       */
-      event.preventDefault();
-      inputRef.current?.focus();
     }
   };
 
@@ -418,7 +399,29 @@ export function CommandPalette({ me }: { me: Me }) {
         bổ sung phép giữ tiêu điểm (xem nhánh `Tab` trong `onKeyDown`) làm lời khai ấy thành
         SỰ THẬT, thay vì hạ lời khai xuống cho khớp một hiện trạng sai.
       */}
-      <div className="cp" role="dialog" aria-modal="true" aria-label={t('palette.title')}>
+      <div
+        className="cp"
+        role="dialog"
+        aria-modal="true"
+        aria-label={t('palette.title')}
+        /*
+         * BẪY TAB ĐẶT Ở PHẦN TỬ BỌC, KHÔNG PHẢI Ở Ô NHẬP (19/09/2026).
+         *
+         * Bản vài giờ trước xử `Tab` trong `onKeyDown` của `<input>`, nên nó chỉ giữ được khi
+         * tiêu điểm ĐANG ở ô nhập. Các dòng kết quả mang `tabIndex={-1}` — không nhận Tab, nhưng
+         * VẪN nhận tiêu điểm khi bấm CHUỘT (Safari/Firefox focus nút được click). Từ đó gõ Tab
+         * là thoát ra ngoài hộp, đúng cảnh mà `aria-modal="true"` đang hứa là không thể. Bài
+         * `command-palette-focus.test.tsx` không bắt được vì nó chỉ thử Tab ngay sau khi mở.
+         *
+         * Đặt ở đây thì mọi đường vào đều đi qua: sự kiện bàn phím nổi bọt lên phần tử bọc dù
+         * tiêu điểm đang ở đâu bên trong hộp.
+         */
+        onKeyDown={(event) => {
+          if (event.key !== 'Tab') return;
+          event.preventDefault();
+          inputRef.current?.focus();
+        }}
+      >
         <div className="cp-search">
           <span className="cp-search-ic">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -468,11 +471,24 @@ export function CommandPalette({ me }: { me: Me }) {
           Ra ngoài `.cp-list` thì nó đứng yên dưới ô nhập, và chạm được hai mép hộp như một dải
           thật (xem `.cp-warn` trong `css/command-palette.css`).
         */}
-        {nhomHong.length > 0 && hits.length > 0 ? (
-          <p className="cp-warn" role="status">
-            {t('palette.partial', { list: nhomHong.join(', ') })}
-          </p>
-        ) : null}
+        {/*
+          VÙNG SỐNG PHẢI CÓ MẶT TRƯỚC KHI NỘI DUNG ĐỔI (19/09/2026).
+
+          Bản vài giờ trước chỉ render `<p role="status">` KHI có nhóm hỏng — tức node và chữ
+          sinh ra cùng một lượt. Trình đọc màn hình chỉ theo dõi những vùng sống đã có mặt TRƯỚC
+          đó, nên một node mới chèn vào kèm sẵn chữ thường không được đọc lên: người dùng NVDA
+          nghe đủ kết quả mà KHÔNG nghe câu "danh sách còn thiếu", rồi đi khai trùng đúng thứ họ
+          vừa tìm không ra. Đúng lỗi mà cùng đợt này vừa gỡ ở `#rmap-cut-sum` — và tôi dựng lại
+          nó ở đây trong chính lượt sửa ấy.
+
+          Nay `<p>` thường trực, `hidden` khi rỗng: DOM không vẽ gì, nhưng vùng sống đã được
+          đăng ký từ lượt mở hộp nên lời cảnh báo tới sau sẽ được đọc.
+        */}
+        <p className="cp-warn" role="status" hidden={!(nhomHong.length > 0 && hits.length > 0)}>
+          {nhomHong.length > 0 && hits.length > 0
+            ? t('palette.partial', { list: nhomHong.join(', ') })
+            : null}
+        </p>
 
         <div className="cp-list">
           {q.length < 2 ? (

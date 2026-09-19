@@ -143,7 +143,7 @@ import {
  *     → Phòng Sắp hết hạn — tab Danh sách: bộ lọc, bảng, và nút Gia hạn chỉ ở nơi gia hạn được
  * [x] Sắp hết hạn — tab Luật gửi báo cáo, và bên trong hộp Thêm luật
  *     → Phòng Sắp hết hạn — tab Luật gửi báo cáo, và bên trong hộp "Thêm luật"
- * [~] Link sâu ?tab= mở đúng tab — TREO vì `useVisibleTab` kẹp trước khi dữ liệu về
+ * [x] Link sâu ?tab= mở đúng tab — VÁ 19/09: tab mọc-theo-dữ-liệu ở lại trong lúc đang tải
  *     → Link sâu ?tab=devices phải mở đúng tab "Máy đang dùng", không rơi về tab Hồ sơ
  *
  * ── PHÒNG ĐỊA CHỈ IP và PHÒNG SỔ NAT ────────────────────────────────────────
@@ -4173,9 +4173,18 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
    * HƯỚNG VÁ (gợi ý, không phải phần việc của bài kiểm): `useVisibleTab` chỉ được kẹp khi
    * danh sách tab đã CHỐT — truyền thêm cờ "đã tải xong" và bỏ qua hiệu ứng lúc còn đang tải.
    *
-   * Bỏ `fixme` khi đã vá.
+   * ĐÃ VÁ 19/09/2026, `fixme` GỠ CÙNG NGÀY. Bản vá đi theo hướng trên nhưng gọn hơn: thay vì
+   * thêm cờ, giữ luôn tab mọc-theo-dữ-liệu trong danh sách KHI TRUY VẤN CÒN ĐANG TẢI —
+   * `software-detail.tsx` (`software.isPending || …`) và `device-detail.tsx`
+   * (`… || ports.isPending`). Danh sách khi ấy không bao giờ thiếu khóa ở lượt render đầu, nên
+   * `useVisibleTab` không có gì để kẹp.
+   *
+   * BÀI NÀY TỪNG LÀ BÀI DUY NHẤT BỊ BỎ QUA trong cả 440 bài của bộ E2E — và nó cũng là bài duy
+   * nhất chứng minh bản vá kia chạy. Suốt năm lượt chạy đầy đủ, dòng tổng kết "439 passed,
+   * 1 skipped" ĐÃ nói ra chuyện đó; chỉ là không ai hỏi "bài nào?". Một bài `fixme` mà không ai
+   * đọc tên thì không khác gì một bài không tồn tại.
    */
-  test.fixme(
+  test(
     'Link sâu ?tab=devices phải mở đúng tab "Máy đang dùng", không rơi về tab Hồ sơ',
     async ({ page }) => {
       test.setTimeout(150_000);

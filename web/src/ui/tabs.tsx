@@ -64,7 +64,21 @@ export function Tabs({
           role="tab"
           id={`tab-${item.key}`}
           aria-selected={item.key === value}
-          aria-controls={`tabpanel-${item.key}`}
+          /*
+           * `aria-controls` CHỈ trên tab đang chọn (19/09/2026).
+           *
+           * Bản trước đặt nó lên MỌI tab, trỏ tới `tabpanel-<khoá>` của từng tab. Nhưng cả bốn
+           * trang chi tiết (và `catalog`, `expiry`, `approvals`) đều render đúng MỘT `TabPanel`
+           * — cái của tab đang chọn. Nên với mọi tab còn lại, `aria-controls` trỏ vào một id
+           * không tồn tại: axe báo `aria-valid-attr-value`, và người dùng JAWS đứng ở tab "Cổng"
+           * chưa bấm rồi ra lệnh "nhảy tới khu được điều khiển" thì không có gì để nhảy tới.
+           *
+           * Hai đường sửa: render đủ mọi panel rồi ẩn bằng `hidden` (đúng cách đợt này vừa làm
+           * cho `#rmap-cut-sum`), hoặc chỉ khai quan hệ khi nó CÓ THẬT. Chọn cách sau vì render
+           * đủ panel nghĩa là mọi tab đều chạy truy vấn của nó ngay khi mở trang — đắt hơn hẳn,
+           * và `TabPanel` hiện được dùng ở 8 màn.
+           */
+          aria-controls={item.key === value ? `tabpanel-${item.key}` : undefined}
           // Chỉ tab đang chọn nằm trong luồng Tab; các tab khác đi bằng phím mũi tên.
           tabIndex={item.key === value ? 0 : -1}
           className={`tab${item.key === value ? ' active' : ''}`}

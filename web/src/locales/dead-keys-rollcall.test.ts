@@ -1,9 +1,10 @@
 /// <reference types="node" />
 // `tsconfig.app.json` đặt `types: ['vite/client']` nên `node:fs` không tự phân giải.
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { quetNguon } from '@/test/quet-nguon';
 
 /**
  * ĐIỂM DANH: `vi.ts` không được chứa khóa mà không nơi nào dùng.
@@ -42,29 +43,20 @@ const SRC = join(HERE, '..');
  */
 const DUOC_PHEP_KHONG_DUNG: Record<string, string> = {};
 
+/*
+ * DÙNG BẢN CHUNG `quetNguon` (19/09/2026) — luật bỏ qua `__lint-probe__*` nay sống ở MỘT chỗ.
+ *
+ * File này từng là bản DUY NHẤT được vá cho cuộc đua ENOENT ngày 18/09, và nó được lấy làm dẫn
+ * chứng khi `test/quet-nguon.ts` ra đời ngày 19/09 — nhưng chính nó lại không được chuyển sang
+ * bản chung. Docblock của `quet-nguon.ts` và mục EPIC-MAP cùng khai "ba nơi gọi" trong khi thật
+ * ra chỉ có hai. Lượt rà soát 19/09 đếm ra. Bản vá chống-chép-bản-sao để lại đúng một bản sao,
+ * ở đúng file nó viện dẫn.
+ *
+ * `vi.ts` lọc SAU khi quét chứ không nhét vào `quetNguon`: đó là luật riêng của bài này (không
+ * đếm chính file khai khóa là "nơi dùng khóa"), không phải luật chung của phép quét cây.
+ */
 function moiFile(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
-    const full = join(dir, e.name);
-    /*
-     * BỎ QUA THƯ MỤC DÒ CỦA `lint-rules.test.ts` (18/09/2026).
-     *
-     * Bài đó `mkdtempSync(join(WEB_ROOT, under, '__lint-probe__'))` để thử xem luật eslint có
-     * bắt được một file vi phạm không, rồi xoá đi. Vitest chạy các file test SONG SONG, nên
-     * bài này có thể liệt kê được thư mục ấy rồi 20ms sau đọc phải một đường dẫn đã biến mất:
-     *
-     *   ENOENT: open 'web/src/__lint-probe__E1j2jq/probe.tsx'
-     *
-     * Đỏ CẢ FILE chứ không đỏ một assertion nào — nên nó trông như hỏng hệ thống, và người
-     * đọc log sẽ đi tìm ở nhầm chỗ. Lượt chạy 18/09 vấp đúng cảnh này.
-     *
-     * Bỏ qua theo TÊN thay vì bọc `try/catch` quanh `readFileSync`: nuốt ENOENT là nuốt luôn
-     * mọi lỗi đọc thật, và bài này sống bằng việc đọc được HẾT mọi file nguồn — sót một file
-     * là một khóa dịch bị kết luận nhầm là chết.
-     */
-    if (e.isDirectory()) return e.name.startsWith('__lint-probe__') ? [] : moiFile(full);
-    if (!e.isFile()) return [];
-    return /\.tsx?$/.test(e.name) && e.name !== 'vi.ts' ? [full] : [];
-  });
+  return quetNguon(dir, /\.tsx?$/).filter((f) => !f.endsWith('vi.ts'));
 }
 
 /** Mọi khóa LÁ của `vi.ts`, dạng `a.b.c`. Đọc bằng thụt lề chứ không `import` — xem chú thích. */

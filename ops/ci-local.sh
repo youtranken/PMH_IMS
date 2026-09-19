@@ -84,23 +84,11 @@ step "WEB — lint + depcruise (AD-15 ranh giới tầng, cấm window.confirm)"
 # dependency-cruiser lần đầu (trước đó vòng lặp phụ thuộc bên web không ai canh).
 npm --prefix web run lint
 
-step "WEB — cấm hex màu ngoài tokens.css (AD-15)"
-# Luật nằm trong `ops/gate-hex.sh` — MỘT bản, gọi từ cả đây lẫn `.github/workflows/ci.yml`.
-# Đừng chép lại nó vào đây: đúng việc chép đôi ấy đã làm cổng nội bộ xanh còn cổng chặn merge
-# đỏ suốt, xem khối chú thích đầu file kia.
-bash ops/gate-hex.sh
-
 step "WEB — test đơn vị"
 npm --prefix web test
 
 step "WEB — build (đây mới là cổng kiểm KIỂU của web, không phải tsc --noEmit)"
 npm --prefix web run build
-
-step "E2E — lint (cấm sleep, ghim trần selector CSS)"
-# 08/09: `e2e/` là thư mục DUY NHẤT của repo chưa có lint (rà soát 07/09 #16), nên mọi luật
-# E2E trong CLAUDE.md có 0 cưỡng chế. `--max-warnings` ghim nợ selector CSS ở con số hôm nay —
-# nó không được lớn thêm. Xem đầu `e2e/eslint.config.mjs`.
-npm --prefix e2e run lint
 
 step "E2E — kiểm kiểu (tsc --noEmit)"
 # Playwright transpile TS nhưng KHÔNG kiểm kiểu, nên trước 07/09 thư mục e2e không có cổng
@@ -139,6 +127,44 @@ if [ "$MODE" = "--e2e" ] || [ "$MODE" = "--e2e-fast" ]; then
     (cd e2e && npx playwright test)
   fi
 fi
+
+# =============================================================================================
+# CỔNG KIỂU RATCHET — CHẠY CUỐI CÙNG, SAU E2E (quyết định 19/09/2026)
+# =============================================================================================
+#
+# "Ratchet" = cờ-lê cóc, chỉ quay được một chiều: đã dọn sạch thì không cho tụt lại. Hai cổng
+# dưới đây đúng kiểu ấy — hex màu ngoài `tokens.css` ghim ở 0, selector CSS trong `e2e/` ghim ở
+# 0 (`--max-warnings=0`, từ 25 chỗ đã dọn hết ngày 09/09). Ý tưởng tốt, giữ nguyên.
+#
+# ĐỔI CHỖ, KHÔNG ĐỔI ĐỘ NGHIÊM. Chúng vẫn ĐỎ y như trước; chỉ thôi đứng CHẮN cửa.
+#
+# VÌ SAO. Script chạy với `set -e` nên bước nào đỏ là dừng tất cả. Đặt hai cổng này ở tầng một
+# nghĩa là một lỗi HÌNH THỨC — một mã màu nằm trong dòng CHÚ THÍCH, một selector CSS mới trong
+# bài kiểm — có quyền chặn luôn E2E, phép kiểm HÀNH VI duy nhất chạy trên trình duyệt thật.
+#
+# Đó không phải giả thuyết. Một chú thích chứa `#a34d08` trong `shared-kit.css` làm cổng hex đỏ;
+# `--e2e` không bao giờ chạy tới; BẢY story đóng lại với DoD gạch 7 hổng trong khi mọi cổng khác
+# báo xanh. Không ai nghi gì suốt nhiều ngày — vì cổng đỏ thì người ta sửa cái đỏ rồi chạy lại,
+# không ai hỏi "thế cái gì đã KHÔNG chạy".
+#
+# ĐÁNH ĐỔI đã cân nhắc và chấp nhận: giờ có lúc phải chờ hết 34 phút E2E rồi mới biết mình quên
+# một dấu chấm. Đổi lại, một dấu chấm không bao giờ che được một lỗi hành vi nữa.
+#
+# ĐỪNG CHUYỂN LÊN LẠI. Thấy phiền vì phải chờ thì chạy `bash ops/gate-hex.sh` và
+# `npm --prefix e2e run lint` bằng tay trước — hai lệnh, vài giây — chứ đừng đổi thứ tự ở đây.
+# =============================================================================================
+
+step "RATCHET — cấm hex màu ngoài tokens.css (AD-15)"
+# Luật nằm trong `ops/gate-hex.sh` — MỘT bản, gọi từ cả đây lẫn `.github/workflows/ci.yml`.
+# Đừng chép lại nó vào đây: đúng việc chép đôi ấy đã làm cổng nội bộ xanh còn cổng chặn merge
+# đỏ suốt, xem khối chú thích đầu file kia.
+bash ops/gate-hex.sh
+
+step "RATCHET — E2E lint (cấm sleep, ghim trần selector CSS)"
+# 08/09: `e2e/` là thư mục DUY NHẤT của repo chưa có lint (rà soát 07/09 #16), nên mọi luật
+# E2E trong CLAUDE.md có 0 cưỡng chế. `--max-warnings` ghim nợ selector CSS ở con số hôm nay —
+# nó không được lớn thêm. Xem đầu `e2e/eslint.config.mjs`.
+npm --prefix e2e run lint
 
 printf '\n\033[32mTất cả kiểm tra đã xanh.\033[0m\n'
 if [ "$MODE" != "--e2e" ]; then

@@ -149,6 +149,9 @@ export default {
        lên rồi nó biến mất. */
     loading: 'Đang đọc máy này đang giữ những gì…',
     loadingShort: 'Đang đọc…',
+    /* Bản NGẮN của `unknown`, cho danh sách dạng dòng ở màn hẹp — bản đầy đủ kèm chỉ dẫn chỉ
+       được nói MỘT chỗ, nếu không ở 390px nó hiện hai lần và bản trong nút thì bị mờ 50%. */
+    unknownShort: 'Chưa đọc được',
     cutLoading: 'Đang đọc danh sách thứ máy đang giữ…',
   },
   common: {

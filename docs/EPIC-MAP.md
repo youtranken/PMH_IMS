@@ -816,7 +816,9 @@ quả — thành 20 commit. Con số đáng nhớ không phải số finding mà
    `ENOENT: open 'web/src/__lint-probe__ImooEl/probe.tsx'` — `lint-rules.test.ts` tạo/xoá thư
    mục dò ngay trong `src`, Vitest chạy song song, bài nào quét cây có thể đọc trúng thư mục
    vừa biến mất. `dead-keys-rollcall` đã được vá 18/09; hai bản `walk()` còn lại thì không.
-   **Vá bản thứ hai rồi chờ bản thứ ba là sai AD-15** — nay một `quetNguon`, ba nơi gọi. Bỏ qua
+   **Vá bản thứ hai rồi chờ bản thứ ba là sai AD-15** — nay một `quetNguon`, ba nơi gọi (bản
+   đầu chỉ đấu được HAI: `dead-keys-rollcall` — chính file lấy làm dẫn chứng — vẫn giữ bản sao
+   riêng, lượt rà soát cùng ngày đếm ra). Bỏ qua
    theo TÊN chứ không `try/catch`: nuốt ENOENT là nuốt mọi lỗi đọc thật.
 7. **"Đang tải" không phải "hỏng".** `chuaBiet` gộp `isPending` với `isError`, mà câu đi kèm là
    một CẢNH BÁO có chỉ dẫn ("đừng dựa vào nó để quyết định thanh lý"). Mọi lượt mở trang chi

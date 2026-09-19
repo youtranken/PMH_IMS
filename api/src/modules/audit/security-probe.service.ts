@@ -41,6 +41,15 @@ const PROBE_ACTIONS = ['vault.secret.reveal_denied', 'auth.stepup.failed'];
 /** Dòng ghi lại "đã cảnh báo cho người này rồi" — chính nó là bộ nhớ của thời gian nghỉ. */
 const ALERTED_ACTION = 'security.probe.alerted';
 
+/**
+ * Mã LỚP cho khoá advisory dạng hai tham số — xem chú thích tại chỗ khoá.
+ *
+ * Dạng `(int, int)` là một không gian khoá RIÊNG, không đụng `pg_advisory_lock(727001)` mà
+ * `database/migration-runner.ts` (`MIGRATION_LOCK_ID`) giữ ở mức phiên. Thêm khoá advisory mới
+ * ở đâu thì cấp cho nó một mã lớp khác và ghi cạnh đây.
+ */
+const PROBE_LOCK_CLASS = 42_001;
+
 @Injectable()
 export class SecurityProbeService {
   private readonly logger = new Logger(SecurityProbeService.name);
@@ -64,6 +73,24 @@ export class SecurityProbeService {
       const windowMinutes = await this.config.getNumber('secretProbeWindowMinutes');
       const threshold = await this.config.getNumber('secretProbeAlertThreshold');
       if (threshold <= 0) return;
+      /*
+       * BA THAM SỐ, BA CÁCH HỎNG KHÁC NHAU KHI BẰNG 0 (19/09/2026).
+       *
+       * `threshold <= 0` là công tắc TẮT có chủ ý — migration 0046 khai đúng như vậy.
+       * Hai cái còn lại thì không, và hỏng ngược nhau:
+       *   · `windowMinutes <= 0` → `since` = hiện tại → `recent` luôn 0 → hàng rào tắt TRONG IM
+       *     LẶNG, trông y hệt "chưa ai dò". Nguy hiểm hơn hẳn công tắc tắt tường minh.
+       *   · `cooldownMinutes <= 0` → `quietSince` = hiện tại → không lá thư nào tính là "vừa
+       *     gửi" → mỗi lượt thất bại một lá, đúng nạn ngập hộp thư mà thời gian nghỉ sinh ra để
+       *     chặn.
+       * Cả hai đều là cấu hình VÔ NGHĨA, không phải ý định — nên dừng và kêu, đừng đoán hộ.
+       */
+      if (windowMinutes <= 0) {
+        this.logger.error(
+          `secretProbeWindowMinutes = ${windowMinutes} (phải > 0) — bỏ qua lượt canh dò dẫm`,
+        );
+        return;
+      }
 
       const since = new Date(Date.now() - windowMinutes * 60_000);
       const [recent] = await this.db
@@ -79,6 +106,12 @@ export class SecurityProbeService {
       if ((recent?.n ?? 0) < threshold) return;
 
       const cooldownMinutes = await this.config.getNumber('secretProbeCooldownMinutes');
+      if (cooldownMinutes <= 0) {
+        this.logger.error(
+          `secretProbeCooldownMinutes = ${cooldownMinutes} (phải > 0) — bỏ qua để khỏi làm ngập hộp thư`,
+        );
+        return;
+      }
 
       /*
        * MỘT transaction cho CẢ BA việc: khoá người → đọc thời gian nghỉ → ghi vết + thư.
@@ -105,7 +138,51 @@ export class SecurityProbeService {
        * ai mất cảnh báo. Đánh đổi rẻ hơn hẳn một bảng khoá riêng.
        */
       await this.db.transaction(async (tx) => {
-        await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${actor}))`);
+        /*
+         * TRẦN CHỜ KHOÁ (19/09/2026). `pg_advisory_xact_lock` là khoá CHỜ, và lượt chờ ấy giữ
+         * một connection của pool trong lúc `vault.controller` đang `await` nó TRƯỚC khi ném
+         * 403 về cho người dùng. Đo ngày 19/09: `lock_timeout`, `statement_timeout` và
+         * `idle_in_transaction_session_timeout` của DB đều là 0, `new Pool({connectionString})`
+         * không khai `max` (mặc định pg = 10) cũng không khai `connectionTimeoutMillis`. Một
+         * phiên kẹt `idle in transaction` khi đang giữ cùng khoá là mọi lượt sau chờ MÃI MÃI,
+         * mỗi lượt ăn một trong 10 connection — cạn 10 là toàn bộ API đứng, không riêng đường
+         * két, và không có gì tự gỡ. Hết 2 giây thì lệnh ném, `catch` bên ngoài đã ghi log sẵn,
+         * và thứ mất đi chỉ là một lá thư cảnh báo trùng.
+         */
+        await tx.execute(sql`SET LOCAL lock_timeout = '2s'`);
+        /*
+         * DẠNG HAI THAM SỐ, ĐỂ TÁCH HẲN KHÔNG GIAN KHOÁ (19/09/2026).
+         *
+         * `pg_advisory_xact_lock(bigint)` và `pg_advisory_xact_lock(int, int)` là HAI không gian
+         * khoá riêng của Postgres. Bản trước dùng dạng một tham số, tức nằm chung không gian với
+         * `pg_advisory_lock(727001)` mà `database/migration-runner.ts:51` giữ ở MỨC PHIÊN suốt
+         * cả lượt migration. Một email băm ra đúng 727001 sẽ xếp hàng sau lượt migration ấy —
+         * xác suất ~1/4,3 tỉ, nhưng hậu quả là vĩnh viễn với đúng người đó. Dạng hai tham số với
+         * một mã lớp riêng thì hai không gian không bao giờ gặp nhau, và không tốn gì.
+         */
+        await tx.execute(sql`SELECT pg_advisory_xact_lock(${PROBE_LOCK_CLASS}, hashtext(${actor}))`);
+
+        /*
+         * ĐẾM LẠI SAU KHI ĐÃ CÓ KHOÁ (19/09/2026).
+         *
+         * `recent` ở trên được đọc TRƯỚC khi xếp hàng, chỉ để quyết định có mở transaction hay
+         * không — nó là phép sàng lọc rẻ, không phải con số để ghi. Bản trước đem chính nó đi
+         * ghi vào `audit_log.detail` và `outbox.payload`, nên 30 lượt dò cùng một nhịp đều đọc
+         * ra 3 và lượt thắng khoá ghi `{"count": 3}`. Đo trên DB dev ngày 19/09: **50/50** hàng
+         * `security.probe.alert` đều mang đúng `"count": 3`. Điều tra viên nhận một con số thấp
+         * hơn sự thật cả một bậc độ lớn, ở đúng dòng cảnh báo an ninh.
+         */
+        const [dem] = await tx
+          .select({ n: count() })
+          .from(auditLogTable)
+          .where(
+            and(
+              eq(auditLogTable.actor, actor),
+              inArray(auditLogTable.action, PROBE_ACTIONS),
+              gt(auditLogTable.createdAt, since),
+            ),
+          );
+        const soLuot = dem?.n ?? recent?.n ?? 0;
 
         const quietSince = new Date(Date.now() - cooldownMinutes * 60_000);
         const [alerted] = await tx
@@ -139,14 +216,14 @@ export class SecurityProbeService {
           /* `undefined`, không phải `null`: `AuditEntry.objectId` khai `string | undefined`.
              Dòng này nói về một PHIÊN dò dẫm, không về một ngăn cụ thể. */
           objectId: undefined,
-          detail: { count: recent?.n ?? 0, windowMinutes },
+          detail: { count: soLuot, windowMinutes },
         });
         /* `cooldownMinutes` đi kèm để lá thư nói đúng thời gian nghỉ THẬT thay vì viết cứng
            "một giờ" — xem chú thích ở `mail.consumer.ts`. `who` là email chứ không phải id:
            ngoại lệ có tên, khai ở `outbox.service.ts` cạnh chính luật "payload không PII". */
         await this.outbox.enqueueWithin(tx, 'security.probe.alert', {
           who: actor,
-          count: recent?.n ?? 0,
+          count: soLuot,
           windowMinutes,
           cooldownMinutes,
         });

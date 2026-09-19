@@ -255,10 +255,47 @@ export function countAudit(action: string, objectId: string): number {
 export function countAuditByActor(action: string, actor: string): number {
   const out = dockerExec(
     `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
-      `"SELECT count(*) FROM audit_log WHERE action = '${action}' AND actor = '${actor}'"`,
+      `"SELECT count(*) FROM audit_log WHERE action = '${chuoiSql(action)}' AND actor = '${chuoiSql(actor)}'"`,
     'Đếm dòng audit theo người',
   );
   return Number(out.trim());
+}
+
+/**
+ * Cột `ip` của dòng audit gần nhất theo hành động + người — rỗng nghĩa là NULL.
+ *
+ * ===== VÌ SAO PHÉP KIỂM NÀY PHẢI Ở TẦNG E2E =====
+ *
+ * `security.probe.alerted` được ghi bằng `AuditWriterService.appendWithin`, không phải
+ * `tx.insert` gõ tay, và lý do DUY NHẤT là cột `ip`: chỉ đường kia mới chạy `toRow()`, nơi `ip`
+ * lấy từ `currentRequestIp()`. Bài `api/test/security-probe-race.spec.ts` dựng service bằng tay
+ * NGOÀI ngữ cảnh request nên `ip` là NULL ở cả hai đường — không phân biệt được, đã gieo đột
+ * biến ngày 19/09 và xác nhận. Chỉ ở đây, nơi lượt gọi đi qua controller thật trong một request
+ * thật, câu hỏi "dòng an ninh có ghi lại dò từ máy nào không" mới trả lời được.
+ */
+export function auditIpOf(action: string, actor: string): string {
+  return dockerExec(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
+      `"SELECT coalesce(host(ip), '') FROM audit_log WHERE action = '${chuoiSql(action)}' ` +
+      `AND actor = '${chuoiSql(actor)}' ORDER BY created_at DESC LIMIT 1"`,
+    'Đọc IP của dòng audit',
+  ).trim();
+}
+
+/**
+ * Thoát chuỗi cho câu SQL nhúng trong lệnh shell `docker compose exec … psql -c "…"`.
+ *
+ * Hai tầng thoát ký tự chồng lên nhau ở đây, nên một dấu nháy đơn trong tham số làm VỠ câu lệnh
+ * và bài đỏ ở `beforeEach` với một thông báo cú pháp SQL chẳng liên quan tới thứ nó đang kiểm.
+ * Hôm nay chưa nổ vì mọi actor đều là email `e2e-…@pmh.com.vn` — nhưng "hôm nay chưa nổ" không
+ * phải một hàng rào. Nhân đôi nháy đơn là phép thoát của chính SQL, và chặn luôn ký tự lạ để
+ * hỏng SỚM với câu nói đúng bệnh.
+ */
+function chuoiSql(v: string): string {
+  if (!/^[\w.@+\- :]*$/.test(v)) {
+    throw new Error(`Tham số SQL có ký tự lạ, từ chối ghép vào câu lệnh: ${JSON.stringify(v)}`);
+  }
+  return v.replace(/'/g, "''");
 }
 
 /**
@@ -810,7 +847,10 @@ export async function timVaChoLoc(page: Page, tuKhoa: string): Promise<void> {
      từ khoá có dấu cách sẽ không bao giờ khớp. */
   const mong = new URLSearchParams({ q: tuKhoa }).toString();
   const ma = mong.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  await expect(page).toHaveURL(new RegExp(`[?&]${ma}(&|$)`));
+  /* `(&|#|$)`: skip-link đặt `#noi-dung` lên thanh địa chỉ, nên `q=` không phải lúc nào cũng ở
+     CUỐI chuỗi. Thiếu `#` là helper chờ tới hết giờ với thông báo chẳng liên quan tới thứ đang
+     kiểm — đúng loại lỗi khó lần nhất trong một bộ E2E 34 phút. */
+  await expect(page).toHaveURL(new RegExp(`[?&]${ma}(&|#|$)`));
 }
 
 /**

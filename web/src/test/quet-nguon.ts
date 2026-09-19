@@ -21,6 +21,13 @@ import { join } from 'node:path';
  *
  * Vá bản thứ hai rồi chờ bản thứ ba là sai luật AD-15. Một bản, ba nơi gọi.
  *
+ * ĐÍNH CHÍNH 19/09 (cùng ngày): bản đầu của file này chỉ được đấu vào HAI nơi —
+ * `confirm-title-rollcall` và `history-action-rollcall` — trong khi câu trên đã viết "ba".
+ * `dead-keys-rollcall`, chính file được viện dẫn làm dẫn chứng ở trên, vẫn giữ bản `walk()`
+ * riêng kèm bản sao của luật bỏ qua `__lint-probe__`. Lượt rà soát cùng ngày đếm ra. Nay đủ ba.
+ * Ghi lại vì nó là ví dụ sạch nhất cho thói xấu mà cả đợt này lên án: vá đúng chỗ được chỉ
+ * đích danh, không đi tìm ổ còn lại — rồi viết chú thích như thể đã tìm.
+ *
  * ===== VÌ SAO BỎ QUA THEO TÊN, KHÔNG PHẢI `try/catch` =====
  *
  * Nuốt ENOENT quanh `readFileSync` là nuốt luôn mọi lỗi đọc THẬT, mà các bài này sống bằng

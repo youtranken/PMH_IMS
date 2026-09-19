@@ -7,6 +7,7 @@ import {
   E2E_MEMBER,
   E2E_SA,
   clearMailbox,
+  auditIpOf,
   countAudit,
   countAuditByActor,
   firstLogin,
@@ -317,8 +318,29 @@ test.describe('Két sắt', () => {
         'chặn chính cảnh báo trở thành công cụ làm ngập hộp thư quản trị',
     ).toBe(1);
 
+    /*
+     * DÒNG AN NINH PHẢI GHI LẠI DÒ TỪ MÁY NÀO (19/09/2026).
+     *
+     * Đây là lý do DUY NHẤT `security-probe.service.ts` dùng `audit.appendWithin` thay vì
+     * `tx.insert` gõ tay: chỉ đường kia mới chạy `toRow()`, nơi `ip` lấy từ `currentRequestIp()`.
+     * Insert thẳng thì `ip` LUÔN NULL — đúng khoảng trống NFR-03 mà rà soát 07/09 vừa vá, tái
+     * xuất ở dòng an ninh đáng giá nhất. Lượt rà 19/09 chỉ ra không bài nào đọc cột ấy, và bài
+     * `api/test/security-probe-race.spec.ts` KHÔNG đọc được vì nó chạy ngoài ngữ cảnh request.
+     * Ở đây thì có: lượt gọi đi qua controller thật, trong một request thật.
+     */
+    expect(
+      { ipCuaDongCanhBao: auditIpOf('security.probe.alerted', prober.email) === '' },
+      'dòng `security.probe.alerted` phải mang IP — "dò từ máy nào" là câu điều tra viên hỏi đầu tiên',
+    ).toEqual({ ipCuaDongCanhBao: false });
+
     const body = await mailBody(mails[0].ID);
     expect(body, 'thư phải nói ai đang dò').toContain(prober.email);
+    /* Chân thư phải nói ĐÚNG thời gian nghỉ đang cấu hình, không phải một con số viết cứng.
+       `?? 60` cũ trùng đúng giá trị seed nên không bài nào phân biệt được hai nguồn — bỏ hẳn
+       trường khỏi payload thì chuỗi vẫn y nguyên. Đọc từ `system_config` rồi so. */
+    expect(body, 'chân thư phải nói đúng thời gian nghỉ đang đặt').toContain(
+      `im trong ${getConfig('secret.probe_cooldown_minutes')} phút`,
+    );
     expect(
       body,
       'nhưng KHÔNG được nói ngăn nào bị thử — thư là thứ dễ chuyển tiếp nhất trong hệ thống',

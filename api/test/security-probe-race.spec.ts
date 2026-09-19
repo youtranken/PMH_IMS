@@ -122,6 +122,20 @@ describe('Cảnh báo dò két không nhân lên khi bị bắn song song', () =
       // thư đi qua outbox → BullMQ → SMTP bất đồng bộ, hỏi nó là hỏi một cuộc đua khác.
       expect(await demCanhBao(actor)).toBe(1);
       expect(await demThu(actor)).toBe(1);
+
+      /*
+       * KHÔNG khẳng định cột `ip` ở ĐÂY — và đây là lý do, ghi ra để lần sau khỏi thử lại.
+       *
+       * Lý do duy nhất để đổi `tx.insert` sang `appendWithin` là cột `ip`, vì chỉ đường kia mới
+       * chạy `toRow()` (`audit-writer.service.ts:83`). Nhưng `toRow()` lấy `ip` từ
+       * `currentRequestIp()`, mà bài này dựng service bằng tay NGOÀI ngữ cảnh request — nên
+       * `ip` là NULL ở cả hai đường, không phân biệt được. Mọi cột còn lại (`objectType`,
+       * `detail`, …) đều do nơi gọi truyền vào, nên một `tx.insert` gõ tay vẫn điền đúng.
+       *
+       * Thử ngày 19/09: gieo đột biến quay về `tx.insert` — bài vẫn xanh, đúng như suy luận.
+       * Phép kiểm cho cột `ip` vì thế nằm ở `e2e/tests/vault.spec.ts`, nơi lượt gọi đi qua
+       * controller thật trong một request thật.
+       */
     },
     TEST_TIMEOUT,
   );
@@ -166,6 +180,25 @@ describe('Cảnh báo dò két không nhân lên khi bị bắn song song', () =
       expect(await demCanhBao(hai)).toBe(1);
       expect(await demThu(mot)).toBe(1);
       expect(await demThu(hai)).toBe(1);
+
+      /*
+       * BÀI NÀY CHỈ CHỨNG MINH ĐƯỢC NỬA SAU CỦA LỜI HỨA — nói thẳng ra, 19/09/2026.
+       *
+       * Bốn khẳng định trên bắt được cảnh "phép đếm thời gian nghỉ quên lọc theo người". Chúng
+       * KHÔNG bắt được cảnh "khoá bị siết thành một khoá CHUNG cho cả hệ thống": khi ấy hai
+       * transaction chạy nối tiếp thay vì song song, nhưng phép đếm đã lọc theo `actor` nên T1
+       * vẫn đếm 0 cho `mot`, T2 vẫn đếm 0 cho `hai`, và cả bốn `toBe(1)` vẫn xanh. Chuyên gia DB
+       * của lượt rà 19/09 suy ra tất định; tôi gieo `pg_advisory_xact_lock(1, 1)` và xác nhận.
+       *
+       * Đã thử một bài đo độ song song (giữ một transaction mở với khoá của `mot`, rồi xem lượt
+       * của người thứ ba có phải chờ không) và nó KHÔNG hiệu lực: bài phải tự dựng khoá theo
+       * đúng công thức của code, nên đột biến đổi công thức làm hai bên thôi đụng nhau và bài
+       * lại xanh. Muốn canh thật thì phải đo từ `pg_stat_activity` trong lúc `noteFailure` đang
+       * chạy — một bài riêng, không nhét vào đây.
+       *
+       * Ghi ra thay vì để trống: một lời hứa không ai canh mà KHÔNG ai biết là không được canh
+       * thì tệ hơn hẳn một lời hứa được ghi rõ là chưa canh.
+       */
     },
     TEST_TIMEOUT,
   );

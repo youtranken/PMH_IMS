@@ -226,7 +226,24 @@ export class MailConsumer {
              18/09 — chúng không có trường này. */
           footnote:
             'Lọc nhật ký theo tài khoản này để xem họ thử những gì. Phần lớn trường hợp là người dùng thật gõ nhầm mã hoặc bấm vào một hồ sơ chưa được gán quyền — nhưng đó là điều cần XEM rồi mới kết luận. ' +
-            `Thư này im trong ${payload.cooldownMinutes ?? 60} phút sau mỗi lần gửi, nên không phản ánh tổng số lượt.`,
+            /*
+             * KHÔNG ĐOÁN HỘ MỘT CON SỐ MÌNH KHÔNG BIẾT (19/09/2026).
+             *
+             * Lưới đỡ `?? 60` có hai chỗ hỏng, cả hai lộ ra trong lượt rà soát cùng ngày:
+             *   · `??` chỉ chặn `null`/`undefined`, nên `cooldownMinutes = 0` lọt qua và thư ghi
+             *     "im trong 0 phút";
+             *   · 60 TRÙNG ĐÚNG giá trị seed của `secret.probe_cooldown_minutes`, nên không bài
+             *     kiểm nào phân biệt được hai nguồn — bỏ hẳn trường khỏi payload thì chuỗi vẫn y
+             *     nguyên, đúng mẫu `expect(x ?? DEFAULT).toBe(DEFAULT)`. Admin đặt 30 phút mà
+             *     hàng outbox cũ vẫn nói "60 phút": lá thư nói dối về chính cơ chế của nó, và
+             *     không cổng nào đỏ — đúng cái tật chú thích ngay trên đây tuyên bố đã dẹp.
+             *
+             * Hàng cũ (ghi trước 18/09) không có trường này. Với chúng, BỎ HẲN mệnh đề thay vì
+             * đoán: câu ngắn hơn mà đúng, hơn là câu đầy đủ mà sai.
+             */
+            (typeof payload.cooldownMinutes === 'number' && payload.cooldownMinutes > 0
+              ? `Thư này im trong ${payload.cooldownMinutes} phút sau mỗi lần gửi, nên không phản ánh tổng số lượt.`
+              : 'Thư này có thời gian nghỉ sau mỗi lần gửi, nên không phản ánh tổng số lượt.'),
         });
         return {
           to: admins.map((r) => r.email),

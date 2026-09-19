@@ -183,11 +183,46 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
    * 403, không phải một danh sách rỗng lặng lẽ.
    */
   it('đường đọc metadata của Member có kiểm tầng', () => {
-    const body = controller.slice(
-      controller.indexOf('async list('),
-      controller.indexOf("@Get('verdict')"),
-    );
+    /*
+     * LỘT CHÚ THÍCH + KHOÁ CẢ VỊ TỪ MẶC-ĐỊNH-ĐÓNG (19/09/2026).
+     *
+     * Hai lỗ của bản trước, cùng lộ ra trong một lượt rà soát:
+     *
+     * 1. So trên lát cắt THÔ. Hôm nay chưa nổ vì chú thích ở `list()` không nhắc tên hàm — đó
+     *    là MAY, không phải thiết kế: bài anh em ngay trên đã từng xanh nhờ đúng một dòng chú
+     *    thích như thế. Lột trước rồi so.
+     *
+     * 2. Chỉ hỏi "còn gọi `assertCanSeeMetadata` không". Chuyên gia BE của lượt rà 19/09 gieo
+     *    đột biến: đảo vị từ ở `vault.controller.ts` về `role === 'member'` — tức về đúng mẫu
+     *    MỞ MẶC ĐỊNH mà đợt này vừa bỏ — và bài này XANH, vì chuỗi kia không mất đi. Cùng đột
+     *    biến ấy ở `reveal()` thì bị bắt. Nên khoá luôn hình dạng vị từ ở cả hai đường.
+     */
+    const body = controller
+      .slice(controller.indexOf('async list('), controller.indexOf("@Get('verdict')"))
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '');
     expect(body).toContain('assertCanSeeMetadata');
+    expect(body).toContain("role !== 'sa'");
+    expect(body).toContain("role !== 'admin'");
+  });
+
+  /**
+   * `VaultDevicePanel.buildFor` là hàng rào THỨ TƯ của cùng một luật, và trước 19/09/2026 nó
+   * KHÔNG có bài kiểm nào — không spec đơn vị, không E2E phân biệt được.
+   *
+   * Vì sao E2E không đủ: `role === 'member'` và `role !== 'sa' && role !== 'admin'` cho kết quả
+   * GIỐNG HỆT nhau chừng nào hệ thống chỉ có ba vai. Bài E2E "khu Két sắt không lọt cho Member"
+   * vì thế xanh ở cả hai hình dạng, kể cả hình dạng sai. Chỉ phép so hình dạng mới phân biệt
+   * được — và đó chính là lý do file này tồn tại.
+   */
+  it('khu Két sắt trên trang thiết bị cũng mặc định ĐÓNG', () => {
+    const panel = readFileSync(join(__dirname, 'vault-device-panel.ts'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '');
+    expect(panel).toContain("role !== 'sa'");
+    expect(panel).toContain("role !== 'admin'");
+    // Và KHÔNG được quay lại mẫu "có phải member": nó cho mọi vai khác đi thẳng.
+    expect(panel).not.toContain("role === 'member'");
   });
 
   /**

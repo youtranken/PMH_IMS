@@ -32,13 +32,36 @@ command -v perl >/dev/null 2>&1 || {
   exit 1
 }
 
+# MIỄN TRỪ THEO ĐƯỜNG DẪN, KHÔNG THEO TÊN FILE (19/09/2026). Bản trước dùng `! -name
+# "tokens.css"`, tức miễn cho BẤT KỲ file nào tên `tokens.css` ở bất kỳ đâu dưới `web/src` —
+# một `features/x/tokens.css` tương lai được cấp quyền viết hex mà không ai quyết. Bản `grep`
+# cũ trên GitHub ghim đúng đường dẫn; gộp hai cổng làm một đã vô tình nới luật ra.
 rogue=""
+soFile=0
 while IFS= read -r f; do
   [ -z "$f" ] && continue
-  if perl -0777 -pe 's{/\*.*?\*/}{}gs' "$f" | grep -qE "#[0-9a-fA-F]{3,8}\b"; then
+  soFile=$((soFile + 1))
+  # Bắt lỗi perl TƯỜNG MINH: `perl … | grep -q` nằm trong `if` thì `set -e`/`pipefail` không
+  # áp, nên perl chết giữa chừng (file lỗi mã hoá, hết bộ nhớ) sẽ cho ra đầu vào rỗng và file
+  # được coi là SẠCH. Gán vào biến trước rồi mới soi.
+  sach=$(perl -0777 -pe 's{/\*.*?\*/}{}gs' "$f") || {
+    printf '\033[31m✗ perl hỏng khi đọc %s — không coi đây là XANH.\033[0m\n' "$f"
+    exit 1
+  }
+  if printf '%s' "$sach" | grep -qE "#[0-9a-fA-F]{3,8}\b"; then
     rogue="${rogue}${f}"$'\n'
   fi
-done < <(find web/src -name "*.css" ! -name "tokens.css")
+done < <(find web/src -name "*.css" ! -path "*/css/tokens.css")
+
+# CHỐT SÀN SỐ FILE. `find` nằm trong process substitution nên mã thoát của nó KHÔNG được kiểm:
+# đổi tên thư mục, chạy sai gốc, hay `web/src` biến mất đều cho vòng lặp đọc 0 dòng → `rogue`
+# rỗng → exit 0, cổng XANH mà không soi file nào. Đúng chế độ hỏng im lặng mà khối chú thích
+# `command -v perl` bên trên tuyên bố đã vá — chỉ vá được một nửa. Repo hiện có ~20 file `.css`;
+# sàn 10 đủ rộng để không đỏ oan khi ai đó gộp vài file, đủ hẹp để bắt cảnh quét trượt cả cây.
+if [ "$soFile" -lt 10 ]; then
+  printf '\033[31m✗ Chỉ quét được %s file .css (chờ ≥10) — cổng không soi đúng cây nguồn.\033[0m\n' "$soFile"
+  exit 1
+fi
 
 if [ -n "$rogue" ]; then
   printf '\033[31mCó hex màu trong LUẬT CSS ngoài tokens.css:\033[0m\n%s' "$rogue"

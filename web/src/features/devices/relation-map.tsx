@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 /**
@@ -159,6 +159,12 @@ export function RelationMap({
 }) {
   const { t } = useTranslation();
   const [showCut, setShowCut] = useState(false);
+  /* `useId` chứ không phải chuỗi cứng `"rmap-cut-sum"` — cùng lý lẽ đã viết cho `DetailSection`
+     ở `ui/detail-layout.tsx`: id gõ tay chỉ an toàn chừng nào không trang nào vẽ hai bản đồ cùng
+     lúc, và đó là điều kiện không ai cưỡng chế được. Ngày nó vỡ thì `aria-controls` trỏ nhầm khu
+     TRONG IM LẶNG. Lượt rà soát 19/09 chỉ ra rằng chính commit dựng `DetailSection` lại gõ tay id
+     ở đây, tức luật vừa viết ra đã có ngoại lệ trong cùng một lượt. */
+  const idKhuCat = useId();
 
   const n = nodes.length;
   const H = heightFor(n);
@@ -220,7 +226,7 @@ export function RelationMap({
             /* `aria-expanded`, KHÔNG phải `aria-pressed`: nút này bung một khu ra chứ không
                bật/tắt một trạng thái của chính nó. Xem khối chú thích ở `#rmap-cut-sum`. */
             aria-expanded={showCut}
-            aria-controls="rmap-cut-sum"
+            aria-controls={idKhuCat}
             onClick={() => setShowCut((on) => !on)}
           >
             {showCut ? t('relationMap.cutOff') : t('relationMap.cutOn')}
@@ -293,11 +299,21 @@ export function RelationMap({
       <div className="rmap-list">
         {n === 0 ? (
           <button type="button" disabled>
+            {/*
+              BẢN NGẮN, KHÔNG PHẢI BẢN ĐẦY ĐỦ (19/09/2026).
+
+              Ở ≤900px `.rmap` bị ẩn và `.rmap-list` hiện, nên đặt `relationMap.unknown` vào đây
+              là in trọn hai câu cảnh báo HAI LẦN trên cùng một màn: một lần trong nút này, một
+              lần ở `.rmap-blank` ngay dưới. Tệ hơn: nút mang `disabled`, mà `base.css` hạ opacity
+              nút vô hiệu xuống 50% — nên lời cảnh báo an toàn nhất của màn lại là chữ có tương
+              phản THẤP nhất (~3:1, dưới AA cho chữ nhỏ). Bản ngắn nói đủ để người ta biết chưa
+              đọc được, còn câu đầy đủ kèm chỉ dẫn thì để một chỗ duy nhất nói.
+            */}
             <span>
               {dangTai
                 ? t('relationMap.loadingShort')
                 : chuaBiet
-                  ? t('relationMap.unknown')
+                  ? t('relationMap.unknownShort')
                   : t('relationMap.aloneShort')}
             </span>
           </button>
@@ -314,17 +330,27 @@ export function RelationMap({
 
       {/* Dòng "Chưa gắn:" là một KHẲNG ĐỊNH về thứ máy không có. Chưa đọc được nguồn thì nó
           sai ở đúng chiều nguy hiểm, nên nhường chỗ cho câu nói thật về việc chưa biết. */}
-      {dangTai ? (
-        /* ĐANG TẢI thì im lặng: không `role="status"`, không câu cảnh báo. Xem chú thích của
-           prop `dangTai`. */
-        <p className="rmap-blank">{t('relationMap.loading')}</p>
-      ) : chuaBiet ? (
-        <p className="rmap-blank" role="status">
-          {t('relationMap.unknown')}
-        </p>
-      ) : missing.length > 0 ? (
-        <p className="rmap-blank">{t('relationMap.missing', { list: missing.join(', ') })}</p>
-      ) : null}
+      {/*
+        MỘT `<p>` THƯỜNG TRỰC, CHỈ ĐỔI CHỮ BÊN TRONG (19/09/2026).
+
+        Bản trước dùng ba nhánh ternary, mỗi nhánh một `<p>` riêng, và chỉ nhánh `chuaBiet` mang
+        `role="status"`. React tái dùng node `<p>` khi chuyển nhánh (cùng type, cùng vị trí con),
+        nên thuộc tính `role="status"` và chữ mới đến CÙNG một lượt — đúng kiểu vùng sống câm mà
+        cùng đợt này vừa gỡ ở `#rmap-cut-sum`, và tôi dựng lại nó ở đây trong chính lượt sửa ấy.
+
+        Vùng sống đăng ký từ lượt render đầu và ở lại; chữ đổi sau đó mới được đọc lên. Nhánh
+        "đang tải" và "Chưa gắn:" cũng đi qua nó — cả hai đều là thông tin đáng nghe, và giữ một
+        node duy nhất là cách duy nhất để lời cảnh báo `unknown` được đọc khi nó tới.
+      */}
+      <p className="rmap-blank" role="status" hidden={!dangTai && !chuaBiet && missing.length === 0}>
+        {dangTai
+          ? t('relationMap.loading')
+          : chuaBiet
+            ? t('relationMap.unknown')
+            : missing.length > 0
+              ? t('relationMap.missing', { list: missing.join(', ') })
+              : null}
+      </p>
 
       {/*
         KHU NÀY LUÔN Ở TRONG DOM, CHỈ ẨN/HIỆN (19/09/2026).
@@ -344,7 +370,7 @@ export function RelationMap({
         đến). Nên đúng vai là `aria-expanded` trên nút + khu thường trực có `hidden`, và bỏ hẳn
         `role="status"`: trình đọc màn hình tự đi tới khu vừa bung qua `aria-controls`.
       */}
-      <div className="rmap-cut-sum" id="rmap-cut-sum" hidden={!showCut || !cutSummary}>
+      <div className="rmap-cut-sum" id={idKhuCat} hidden={!showCut || !cutSummary}>
         {cutSummary}
       </div>
     </section>

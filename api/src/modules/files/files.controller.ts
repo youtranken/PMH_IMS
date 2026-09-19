@@ -75,10 +75,22 @@ export class FilesController {
    *
    * Loại chủ thể chưa có ai canh (`subnet`, `nat_rule`) đi qua: với chúng khái niệm tầng quyền
    * không tồn tại. Mặc-định-cấm nằm TRONG ma trận, không nằm ở đây.
+   *
+   * VỊ TỪ Ở DẠNG "KHÔNG PHẢI SA/ADMIN", KHÔNG PHẢI "CÓ PHẢI MEMBER" (19/09/2026).
+   *
+   * Bản trước là `if (user.role !== 'member') return;` — nghe giống nhưng hỏng ngược: nó cho MỌI
+   * vai khác `member` đi thẳng, bỏ qua hoàn toàn ma trận quyền. Đó là mẫu MỞ MẶC ĐỊNH, ngược
+   * AD-9. Hôm nay chưa thủng vì `@Roles` bên dưới chỉ cho ba vai đi qua; nhưng ngày thêm vai thứ
+   * tư, vai ấy đọc được mọi giấy tờ đính kèm — biên bản bàn giao, hợp đồng license, file cấu
+   * hình VPN — mà không ai hỏi một câu.
+   *
+   * Đợt 18/09 đã đảo đúng vị từ này ở ba chỗ bên `vault` (`vault.controller.ts` ×2,
+   * `vault-device-panel.ts`) với đúng lý lẽ ấy, rồi BỎ SÓT ổ thứ tư ở đây. Lượt rà soát 19/09
+   * tìm ra. Ghi lại để lần sau ai đổi một vị từ quyền thì đi tìm hết họ hàng của nó trước.
    */
   private async assertCanRead(req: AuthedRequest, ownerType: FileOwnerType, ownerId: string) {
     const user = requireUser(req);
-    if (user.role !== 'member') return;
+    if (user.role === 'sa' || user.role === 'admin') return;
     await this.access.assertCanRead(user.email, ownerType, ownerId);
   }
 
