@@ -16,6 +16,7 @@ import { LoadError, Loading, NotFound } from "@/ui/load-state";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
 import {
   DetailLayout,
+  DetailSection,
   RailCard,
   RailRow,
   RailRowIfSet,
@@ -257,15 +258,9 @@ export function SoftwareDetail({ me }: { me: Me }) {
                 danh bên phải. Lưới chỉ còn phần chưa nói ở đâu cả. Ngày bắt đầu cũng bỏ: nó là
                 mốc đầu của chính thanh hạn bên phải. */}
             {/* Khu "Hồ sơ" có thẻ + tiêu đề như mọi khu khác — xem chú thích dài ở
-                `features/devices/device-detail.tsx`, chỗ cùng luật. */}
-            <section
-              className="card device-panel"
-              id="sec-ho-so"
-              aria-labelledby="sec-ho-so-title"
-            >
-              <h2 className="form-section-title" id="sec-ho-so-title">
-                {t("detail.profileSection")}
-              </h2>
+                `ui/detail-layout.tsx`, chỗ khai `DetailSection`. KHÔNG `compact`: khu này đứng
+                một mình trong cột chính, thứ để mắt so là thẻ định danh bên phải. */}
+            <DetailSection title={t("detail.profileSection")}>
               <dl className="data-grid">
               {/* KHÔNG vẽ ô chỉ để chứa một dấu gạch ngang (`_SPEC.md:53`, gạch nghiệm thu
                   `:528`): với SSL và tên miền thì "Kỳ hạn" không có nghĩa, nên ô ấy trước đây
@@ -290,7 +285,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
                   item.note ? null : t("software.note"),
                 ].filter((label): label is string => label !== null)}
               />
-            </section>
+            </DetailSection>
           </>
         ) : safeTab === "vault" ? (
           <VaultPanel

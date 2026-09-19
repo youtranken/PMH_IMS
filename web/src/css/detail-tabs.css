@@ -160,6 +160,20 @@
   align-items: start;
 }
 .detail-main { min-width: 0; }
+/*
+ * NHỊP DỌC CỦA CỘT CHÍNH — MỘT LUẬT, KHÔNG PHẢI MỖI KHU MỘT LỀ (19/09/2026).
+ *
+ * `.detail-main` trước đây chỉ có `min-width: 0`: không `gap`, không `margin`, mà `tokens.css`
+ * đã xoá lề mặc định bằng `* { margin: 0 }`. Chừng nào khu đầu tiên còn là một `<dl>` trần thì
+ * không ai gặp; ngày 19/09 nó thành một thẻ có viền, và hai thẻ liền nhau dính sát — hai đường
+ * viền 1px chồng thành một vạch 2px, mắt đọc ra MỘT hộp cao chia đôi chứ không phải hai khu.
+ *
+ * Chọn `--space-11` vì `.rmap-card` đã dùng đúng con số ấy làm khoảng cách tới khu kế tiếp, nên
+ * cả cột về một nhịp thay vì ba nhịp khác nhau (31,5px → 0 → 11,9px như đo được hôm rà soát).
+ * Luật này đặc hiệu hơn `.device-panels { margin-top: --space-6 }` nên nó thắng, và lề dưới của
+ * `.rmap-card` thì tự gộp (lề dọc của hai phần tử anh em luôn gộp, không cộng dồn).
+ */
+.detail-main .tab-panel > * + * { margin-top: var(--space-11); }
 .detail-rail {
   min-width: 0;
   position: sticky;

@@ -16,6 +16,7 @@ import { CopyButton } from "@/ui/copy-button";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
 import {
   DetailLayout,
+  DetailSection,
   RailCard,
   RailRow,
   RailRowIfSet,
@@ -198,15 +199,9 @@ export function IspDetail({ me }: { me: Me }) {
                 hợp đồng · số hợp đồng · site ĐÃ ở thẻ định danh bên phải. Lưới chỉ còn phần
                 chưa nói ở đâu, và ô nào trống thì KHÔNG vẽ. */}
             {/* Khu "Hồ sơ" có thẻ + tiêu đề như mọi khu khác — xem chú thích dài ở
-                `features/devices/device-detail.tsx`, chỗ cùng luật. */}
-            <section
-              className="card device-panel"
-              id="sec-ho-so"
-              aria-labelledby="sec-ho-so-title"
-            >
-              <h2 className="form-section-title" id="sec-ho-so-title">
-                {t("detail.profileSection")}
-              </h2>
+                `ui/detail-layout.tsx`, chỗ khai `DetailSection`. KHÔNG `compact`: khu này đứng
+                một mình trong cột chính, thứ để mắt so là thẻ định danh bên phải. */}
+            <DetailSection title={t("detail.profileSection")}>
               <dl className="data-grid">
                 <DataItemIfSet label={t("isp.device")} value={item.deviceId}>
                   <Link className="mono" to={PATHS.device(item.deviceId!)}>
@@ -225,7 +220,7 @@ export function IspDetail({ me }: { me: Me }) {
                   item.note ? null : t("isp.note"),
                 ].filter((label): label is string => label !== null)}
               />
-            </section>
+            </DetailSection>
           </>
         ) : tab === "vault" ? (
           <VaultPanel

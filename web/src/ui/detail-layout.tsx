@@ -52,6 +52,45 @@ export function RailCard({ title, children }: { title: string; children: ReactNo
 }
 
 /**
+ * Một KHU CÓ TÊN ở cột chính — bản anh em của `RailCard` cho nửa bên trái.
+ *
+ * VÌ SAO NÓ RA ĐỜI (19/09/2026). Khu "Hồ sơ" thêm ngày 19/09 được chép NGUYÊN VĂN vào bốn file
+ * `features/` — cùng `<section className="card device-panel" id="sec-ho-so" aria-labelledby=…>`,
+ * cùng `<h2 className="form-section-title">`, từng ký tự. Đó là fork bản sao, thứ AD-15 cấm
+ * thẳng ("cần khác đi thì thêm prop, CẤM copy ra bản riêng"), và `RailCard` ngay trên đây đã là
+ * khuôn mẫu sẵn có cho cột phải — cột trái chỉ thiếu bản của mình. Hậu quả đo được ngay: đổi
+ * một chi tiết phải sửa bốn chỗ, và hai khiếm khuyết trình bày của khu ấy cũng phải vá bốn lần.
+ *
+ * `useId` thay cho `id="sec-ho-so"` gõ tay: id gõ tay chỉ an toàn chừng nào không màn nào vẽ
+ * hai khu cùng lúc — một điều kiện không ai cưỡng chế được, và ngày nó vỡ thì `aria-labelledby`
+ * trỏ nhầm trong im lặng.
+ *
+ * `compact` = dùng cho màn mà các khu ANH EM của nó đã là `device-panel` (hiện chỉ trang chi
+ * tiết thiết bị). Ở đó khu này phải bó đúng bằng hàng xóm; ở ba màn còn lại nó đứng một mình
+ * trong cột chính, và thứ để mắt so sánh là thẻ định danh bên phải — nên `.card` trần mới là
+ * bản khớp. Đừng đặt `compact` "cho đều": nó đang nói một điều CÓ THẬT về màn đang vẽ.
+ */
+export function DetailSection({
+  title,
+  children,
+  compact,
+}: {
+  title: string;
+  children: ReactNode;
+  compact?: boolean;
+}) {
+  const id = useId();
+  return (
+    <section className={compact ? 'card device-panel' : 'card'} aria-labelledby={id}>
+      <h2 className="form-section-title" id={id}>
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+/**
  * Một dòng của thẻ định danh: nhãn · giá trị · chú thích.
  *
  * `children` cho phép nhét cả huy hiệu hay thanh hạn vào chỗ giá trị — `WarrantyTimeline`

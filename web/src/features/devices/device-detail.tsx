@@ -11,6 +11,7 @@ import { CopyButton } from "@/ui/copy-button";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
 import {
   DetailLayout,
+  DetailSection,
   RailCard,
   RailRow,
   RailRowIfSet,
@@ -610,21 +611,14 @@ export function DeviceDetail({ me }: { me: Me }) {
               ĐẦU TIÊN của cột chính lại là khu duy nhất lơ lửng, nên mắt đọc ra như phần thừa
               của thanh tab chứ không phải một khu riêng.
 
-              Dùng đúng lớp của repo (`card device-panel` + `form-section-title`) chứ không
-              phải tên lớp trong mockup (`card sec` + `card-h`): mục đích là khu này trông
-              GIỐNG HỆT các khu bên dưới nó, mà các khu ấy đã dựng theo lớp của repo.
+              `compact` vì ở ĐÂY các khu anh em đều là `device-panel`; ba màn chi tiết còn lại
+              không truyền, xem chú thích của `DetailSection`. Vỏ khu nằm trong bản dùng chung
+              chứ không chép ra đây (AD-15) — bản chép tay đã tồn tại đúng một ngày.
 
               Dòng "Chưa khai" nằm TRONG thẻ, không ngoài: nó nói về chính những ô của khu này,
               và `.blank-fields` đã có đường kẻ đứt riêng để tách khỏi lưới.
             */}
-            <section
-              className="card device-panel"
-              id="sec-ho-so"
-              aria-labelledby="sec-ho-so-title"
-            >
-              <h2 className="form-section-title" id="sec-ho-so-title">
-                {t("detail.profileSection")}
-              </h2>
+            <DetailSection title={t("detail.profileSection")} compact>
               <dl className="data-grid">
                 <DataItemIfSet label={t("devices.model")} value={item.model} />
                 <DataItemIfSet label={t("devices.note")} value={item.note} />
@@ -642,7 +636,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                   item.note ? null : t("devices.note"),
                 ].filter((label): label is string => label !== null)}
               />
-            </section>
+            </DetailSection>
 
             {/* Phần mềm đang cài dùng BẢNG GHẾ đầy đủ (kỳ hạn · chi phí · hợp đồng), không
                 phải khu `nhãn: giá trị` chung — cùng một bảng với khu bung dòng ở danh sách

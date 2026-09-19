@@ -116,7 +116,12 @@ export function Tabs({
 /** Vùng nội dung của một tab — gắn aria đúng cặp với `Tabs`. */
 export function TabPanel({ tabKey, children }: { tabKey: string; children: ReactNode }) {
   return (
-    <div role="tabpanel" id={`tabpanel-${tabKey}`} aria-labelledby={`tab-${tabKey}`}>
+    <div
+      className="tab-panel"
+      role="tabpanel"
+      id={`tabpanel-${tabKey}`}
+      aria-labelledby={`tab-${tabKey}`}
+    >
       {children}
     </div>
   );
