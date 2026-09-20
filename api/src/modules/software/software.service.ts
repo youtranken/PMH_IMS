@@ -9,6 +9,7 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
+import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
 import { conflictOnUnique, escapeLike } from '../../common/sql';
@@ -334,15 +335,22 @@ export class SoftwareService {
 
     // Luật phải chạy trên giá trị SAU KHI GHÉP với hồ sơ đang có — sửa một trường vẫn có
     // thể làm cả hồ sơ thành không hợp lệ (bài học từ code review Epic 2).
+    //
+    // Ghép bằng `effectiveOf` chứ KHÔNG bằng `??`: xoá một ô (giá trị `null` có mặt trong
+    // `values`) khác hẳn không đụng tới ô đó, và `??` bóp hai thứ đó thành một. Đúng chỗ
+    // này từng cho `{"endDate":""}` xoá vĩnh viễn hạn của một chứng chỉ SSL — xem docblock
+    // của `common/merge-effective.ts` (A-03, rà soát 19/09).
     const current = id ? await this.requireRow(id) : null;
+    const effective = effectiveOf(values);
     const errors = validateSoftware({
-      kind: (values.kind ?? current?.kind ?? 'other') as SoftwareKind,
-      licenseModel: (values.licenseModel ??
-        current?.licenseModel ??
-        'subscription') as LicenseModel,
-      seatTotal: (values.seatTotal ?? current?.seatTotal ?? null) as number | null,
-      startDate: (values.startDate ?? current?.startDate ?? null) as string | null,
-      endDate: (values.endDate ?? current?.endDate ?? null) as string | null,
+      kind: effective<SoftwareKind>('kind', (current?.kind as SoftwareKind) ?? 'other'),
+      licenseModel: effective<LicenseModel>(
+        'licenseModel',
+        (current?.licenseModel as LicenseModel) ?? 'subscription',
+      ),
+      seatTotal: effective<number | null>('seatTotal', current?.seatTotal ?? null),
+      startDate: effective<string | null>('startDate', current?.startDate ?? null),
+      endDate: effective<string | null>('endDate', current?.endDate ?? null),
     });
     if (errors.length > 0) {
       throw new BadRequestException({ code: 'SOFTWARE_INVALID', message: errors.join(' ') });

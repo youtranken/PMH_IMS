@@ -190,6 +190,25 @@ export function expireStepUp(email: string): void {
   );
 }
 
+/**
+ * Đẩy ngày sinh của mọi phiên CÒN CHỜ TOTP của một người lùi 1 giờ — giả lập "phiên chờ bị
+ * bỏ quên" mà không phải ngồi đợi 15 phút.
+ *
+ * Vì sao không hạ `totp.enroll_reauth_minutes` xuống 0 cho nhanh: làm thế thì bài kiểm chỉ
+ * chứng minh được là tham số CÓ ĐƯỢC ĐỌC, không chứng minh được phép so TUỔI. Với ngưỡng 0
+ * thì `now - created >= 0` luôn đúng, kể cả khi ai đó lỡ tay đổi `created_at` thành
+ * `last_seen_at` — mà đó lại đúng là cái sai nguy hiểm (kẻ trộm cookie tự đẩy `last_seen_at`
+ * tới trước ở mỗi request, tức tự gia hạn cửa cho mình).
+ *
+ * Khoanh vào ĐÚNG MỘT NGƯỜI, cùng lý do đã ghi ở `expireStepUp`.
+ */
+export function agePendingSession(email: string): void {
+  dockerExec(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "UPDATE sessions SET created_at = now() - interval '1 hour' WHERE revoked_at IS NULL AND totp_pending = true AND user_id = (SELECT id FROM users WHERE email = '${email}')"`,
+    'Làm cũ phiên chờ TOTP',
+  );
+}
+
 /** Đếm số dòng audit của một hành động trên một secret — dùng để kiểm "mỗi lần mở = một dòng". */
 /**
  * ĐỌC NỘI DUNG dòng audit mới nhất, không chỉ đếm.

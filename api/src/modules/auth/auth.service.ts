@@ -18,6 +18,7 @@ import type { UserCredentials } from '../users/users.types';
 import { isLocked, lockRemainingSeconds } from '../../common/lockout';
 import { PasswordService } from './password.service';
 import { checkPasswordStrength } from './password-policy';
+import { canEnrollWithoutPassword } from './session-policy';
 import { SessionService, type SessionRecord } from './session.service';
 import { TotpService } from './totp.service';
 import { KnownDeviceService } from './known-device.service';
@@ -413,9 +414,101 @@ export class AuthService {
     return user?.totpEnrolledAt !== null && user !== null;
   }
 
+  /**
+   * Cửa này có được miễn gõ lại mật khẩu không (A-02).
+   *
+   * Miễn đúng MỘT trường hợp: phiên còn cờ `totp_pending` VÀ còn trẻ hơn
+   * `totp.enroll_reauth_minutes`. Đó là người đang đứng giữa luồng đăng nhập bắt buộc cài
+   * 2 lớp — mật khẩu vừa được chứng minh để tạo ra chính phiên này, và phiên đó chưa mở
+   * được gì ngoài ba route của luồng đăng nhập.
+   *
+   * Vì sao phải kèm điều kiện TUỔI: "còn chờ" không tự hết. Bỏ dở giữa chừng rồi để máy mở
+   * thì cái cửa ấy đứng đó tới khi phiên hết hạn tuyệt đối — 12 giờ. Hàng rào đo bằng lúc
+   * phiên SINH RA, không phải lúc nó được dùng gần nhất: `last_seen_at` bị chính kẻ trộm
+   * đẩy tới trước mỗi request, nên dựa vào nó là để đối thủ tự gia hạn cửa cho mình.
+   */
+  private async enrollNeedsPassword(session: SessionRecord): Promise<boolean> {
+    // AD-11: cửa sổ đọc từ `system_config`, không viết cứng. Phép so nằm ở hàm thuần trong
+    // `session-policy.ts` — có bài kiểm bảng dữ liệu, cùng chỗ với `isStepUpValid`.
+    const minutes = await this.config.getNumber('totpEnrollReauthMinutes');
+    return !canEnrollWithoutPassword(session, minutes, new Date());
+  }
+
   /** Enroll TOTP: sinh secret, envelope, trả QR. Chưa bật cho tới khi xác nhận đúng mã. */
-  async startTotpEnrollment(userId: string): Promise<{ secret: string; qrDataUrl: string }> {
-    const user = await this.requireUser(userId);
+  async startTotpEnrollment(
+    session: SessionRecord,
+    currentPassword: string | undefined,
+  ): Promise<{ secret: string; qrDataUrl: string }> {
+    const user = await this.requireUser(session.userId);
+
+    /*
+     * Chặn TRƯỚC khi sinh secret, và trước cả câu "đã enroll rồi" bên dưới.
+     *
+     * Thứ tự này là một phần của hàng rào: hai mã lỗi khác nhau trả về cho hai tình huống
+     * khác nhau sẽ nói cho người gọi biết tài khoản kia đã cài 2 lớp hay chưa — một câu
+     * mà phiên chưa chứng minh lại mình thì không có quyền hỏi.
+     */
+    if (await this.enrollNeedsPassword(session)) {
+      if (currentPassword === undefined) {
+        throw new UnauthorizedException({
+          code: 'REAUTH_REQUIRED',
+          message: 'Nhập mật khẩu hiện tại để cài xác thực 2 lớp.',
+        });
+      }
+      if (!(await this.passwords.verify(user.passwordHash, currentPassword))) {
+        await this.audit.append({
+          actor: user.email,
+          action: 'auth.totp.enroll.reauth_failed',
+          objectType: 'user',
+          objectId: user.id,
+          detail: { sessionId: session.id },
+        });
+        /* Đếm chung với lượt gõ sai mã ở cửa két: cửa này dẫn thẳng tới step-up, và một người
+           đang đoán mật khẩu ở đây là dấu hiệu rõ nhất rằng có cookie đang ở nhầm tay. */
+        await this.probe.noteSecurityFailure(user.email);
+
+        /*
+         * ĐOÁN ĐỦ NGƯỠNG THÌ MẤT PHIÊN — dùng lại NGUYÊN cơ chế của cửa két, cả bộ đếm lẫn
+         * ngưỡng (`secret.stepup_max_failures`).
+         *
+         * Vì sao không phải một trần theo phút: trần theo phút cho kẻ tấn công thử lại MÃI,
+         * chỉ chậm hơn — 10 lượt/phút vẫn là mười bốn nghìn lần đoán mỗi ngày. Thu hồi phiên
+         * thì cái cookie trộm được CHẾT sau năm lần, và muốn có cookie mới thì phải có... mật
+         * khẩu. Hàng rào chặn đúng thứ nó định chặn thay vì làm nó chậm đi.
+         *
+         * Và đây là lý do bộ đếm dùng CHUNG với cửa két chứ không dựng bộ thứ hai: hai cửa
+         * hỏi cùng một câu ("chứng minh lại đi"), nên năm lần sai ở hai cửa xen kẽ cũng phải
+         * chết y như năm lần sai ở một cửa.
+         *
+         * Thu hồi PHIÊN chứ không khóa TÀI KHOẢN, cùng lý do đã ghi ở `stepUp`: khóa tài
+         * khoản thì chính kẻ tấn công lại khóa được người dùng thật ra ngoài.
+         */
+        const failures = await this.sessions.registerStepUpFailure(session.id);
+        const maxFailures = await this.config.getNumber('secretStepUpMaxFailures');
+        if (failures >= maxFailures) {
+          await this.db.transaction(async (tx) => {
+            await this.sessions.revokeWithin(tx, session.id, 'enroll-reauth-brute-force');
+            await this.audit.appendWithin(tx, {
+              actor: user.email,
+              action: 'auth.totp.enroll.session_revoked',
+              objectType: 'session',
+              objectId: session.id,
+              detail: { failures },
+            });
+          });
+          throw new UnauthorizedException({
+            code: 'SESSION_REVOKED',
+            message: `Gõ sai mật khẩu ${failures} lần — phiên đã bị thu hồi. Đăng nhập lại.`,
+          });
+        }
+        throw new UnauthorizedException({
+          code: 'CURRENT_PASSWORD_WRONG',
+          message: 'Mật khẩu hiện tại không đúng.',
+          attemptsLeft: maxFailures - failures,
+        });
+      }
+    }
+
     if (user.totpEnrolledAt !== null) {
       throw new BadRequestException({
         code: 'TOTP_ALREADY_ENROLLED',

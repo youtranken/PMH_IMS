@@ -15,7 +15,7 @@ import { clientIp } from '../../common/client-ip';
 import { Audited } from '../audit/audited.decorator';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { AuthService } from './auth.service';
-import { ChangePasswordDto, LoginDto, TotpTokenDto } from './auth.dto';
+import { ChangePasswordDto, LoginDto, TotpEnrollStartDto, TotpTokenDto } from './auth.dto';
 import { clearSessionCookie, setSessionCookie } from './cookie';
 import { LoginRateGuard } from './login-rate.guard';
 import { Public } from './public.decorator';
@@ -95,15 +95,34 @@ export class AuthController {
     };
   }
 
+  /**
+   * A-02: cửa này TRẢ RA secret base32 nguyên văn, nên nó là cửa quyết định ai giữ chìa khóa
+   * thứ hai của tài khoản về sau — không phải một cửa đọc. Phải chứng minh lại mình là ai.
+   *
+   * ===== VÌ SAO KHÔNG CÓ `@Throttle` RIÊNG Ở ĐÂY =====
+   *
+   * Bản đầu đặt trần 10 lượt/phút theo USER, cùng con số với `step-up`. Lượt chạy E2E đầy đủ
+   * bác bỏ nó trong mười ba bài: cửa này KHÔNG chỉ là cửa nhận mật khẩu — nó còn là bước bắt
+   * buộc của luồng đăng nhập lần đầu, và luồng đó gọi nó một lần mỗi lần đăng nhập. Trần theo
+   * phút vì thế chặn đúng đường ĐÚNG trước khi chặn được đường sai.
+   *
+   * Và nó cũng là hàng rào sai loại: trần theo phút cho kẻ tấn công thử lại mãi, chỉ chậm
+   * hơn. Hàng rào thật nằm ở service — sai đủ `secret.stepup_max_failures` lần thì THU HỒI
+   * PHIÊN, chung bộ đếm với cửa két. Cookie trộm được chết sau năm lần, và muốn cookie mới
+   * thì phải có mật khẩu.
+   */
   @AllowTotpPending()
   @Roles(...ALL_ROLES)
   @AllowPasswordPending()
   @Post('totp/enroll')
   @HttpCode(200)
   @Audited('auth.totp.enroll.start', 'user', { writtenByService: true })
-  async startEnroll(@Req() req: AuthedRequest) {
-    const user = req.user!;
-    const { secret, qrDataUrl } = await this.auth.startTotpEnrollment(user.id);
+  async startEnroll(@Body() dto: TotpEnrollStartDto, @Req() req: AuthedRequest) {
+    const session = await this.requireSession(req);
+    const { secret, qrDataUrl } = await this.auth.startTotpEnrollment(
+      session,
+      dto.currentPassword,
+    );
     // Secret hiện một lần lúc cài đặt; response không được cache (app.setup đặt no-store).
     return { secret, qrDataUrl };
   }

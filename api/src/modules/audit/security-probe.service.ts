@@ -36,7 +36,17 @@ import { redactMessage } from '../../common/log-redact';
  */
 
 /** Những hành động tính là "dò dẫm". Thêm loại mới thì thêm vào đây, đừng đếm ở nơi gọi. */
-const PROBE_ACTIONS = ['vault.secret.reveal_denied', 'auth.stepup.failed'];
+const PROBE_ACTIONS = [
+  'vault.secret.reveal_denied',
+  'auth.stepup.failed',
+  /*
+   * Đoán mật khẩu ở cửa GẮN yếu tố thứ hai (A-02, 20/09). Cùng một người, cùng một mục tiêu:
+   * cửa này dẫn thẳng tới step-up, và step-up dẫn thẳng vào két. Không đếm nó thì kẻ cầm
+   * cookie trộm được có 10 lần đoán mỗi phút mà không sinh ra một lời cảnh báo nào — trong
+   * khi chính nó là dấu hiệu rõ nhất rằng có một cookie đang ở nhầm tay.
+   */
+  'auth.totp.enroll.reauth_failed',
+];
 
 /** Dòng ghi lại "đã cảnh báo cho người này rồi" — chính nó là bộ nhớ của thời gian nghỉ. */
 const ALERTED_ACTION = 'security.probe.alerted';

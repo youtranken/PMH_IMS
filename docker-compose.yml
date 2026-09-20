@@ -39,7 +39,12 @@ services:
     user: '1000:1000'
     environment: &api_env
       NODE_ENV: ${NODE_ENV:-production}
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ims}
+      # D-01: ứng dụng chạy bằng role HẸP (`ims_app`), migration chạy bằng CHỦ SỞ HỮU.
+      # Trước 20/09 cả hai là một, và role đó là superuser — nên câu REVOKE giữ sổ nhật ký
+      # chỉ-thêm (NFR-03) không có hiệu lực nào. Xem `0048_app_role_split.sql`.
+      DATABASE_URL: postgresql://${APP_DB_USER:-ims_app}:${APP_DB_PASSWORD:?bắt buộc — mật khẩu role ứng dụng, xem 0048}@postgres:5432/${POSTGRES_DB:-ims}
+      MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ims}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       APP_BASE_URL: ${APP_BASE_URL:?bắt buộc — dùng để kiểm Origin chống CSRF}
       MASTER_KEY_FILE: /run/secrets/ims_master_key

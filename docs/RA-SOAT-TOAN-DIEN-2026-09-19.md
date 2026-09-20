@@ -23,6 +23,10 @@ HEAD lúc rà: `0349a8a`.
 | **Định danh trong mã** | **4,0** | 237 định danh + 15 tệp mang tên tiếng Việt; không cổng nào chặn cái mới sinh ra |
 | **Nợ kỹ thuật đã ghi sổ** | **3,0** | 30/32 mục LOW **còn nguyên** — 0 mục được xử trong 4 commit sau khi lập sổ |
 
+> Bảng điểm này là ẢNH CHỤP ngày 19/09 và **cố ý không sửa lại** — sửa nó là xoá mất chỗ
+> xuất phát. Việc đã làm từ đó ghi ở **mục 16 (đợt A — cổng)** và **mục 17 (đợt B — ba lỗ,
+> ba cửa)**; checklist ở mục 8 là nơi tra nhanh cái gì đã tick.
+
 ---
 
 ## 1. Lượt lái trình duyệt — điều đã tự tay kiểm
@@ -650,9 +654,9 @@ Excel thì mở cửa sau"*. **Cửa sau HTTP còn rộng hơn Excel và chưa a
 
 ### 8.1 Chặn phát hành (3)
 
-- [ ] **A-01** Chặn `status: 'retired'` ở DTO `PATCH/POST /devices` — bắt đi qua `setStatus`, y như `device-import.ts:472` đã làm
+- [x] **A-01** Chặn `status: 'retired'` ở DTO `PATCH/POST /devices` — bắt đi qua `setStatus`, y như `device-import.ts:472` đã làm
 - [x] **F-01** Thêm `nguong` vào deps của `useMemo` ở `expiry-screen.tsx:216` (hoặc bỏ memo) + một bài Vitest cho `features/expiry/`
-- [ ] **D-01** Tách role `ims_app` không-superuser trước khi lên prod — nếu không, AD-9/NFR-03 không đúng với thực tế đang chạy
+- [x] **D-01** Tách role `ims_app` không-superuser trước khi lên prod — nếu không, AD-9/NFR-03 không đúng với thực tế đang chạy
 
 ### 8.2 Cổng — làm trước thì mọi mục dưới rẻ đi (5)
 
@@ -664,8 +668,8 @@ Excel thì mở cửa sau"*. **Cửa sau HTTP còn rộng hơn Excel và chưa a
 
 ### 8.3 Đúng đắn — CAO (12)
 
-- [ ] **A-02** Đòi xác thực lại trước khi gắn yếu tố thứ hai
-- [ ] **A-03** `field in values` thay cho `??` ở `software.service.ts:345` + `isp-line.service.ts:390`
+- [x] **A-02** Đòi xác thực lại trước khi gắn yếu tố thứ hai
+- [x] **A-03** `field in values` thay cho `??` ở `software.service.ts:345` + `isp-line.service.ts:390` *(và `devices.service.ts:442-455` — chỗ thứ ba, rà soát bỏ sót; xem 17.2)*
 - [ ] **A-04** Đưa `siblings` vào trong transaction + khóa hàng `device`
 - [ ] **A-05** Đọc lại cả hàng `software` trong chính câu `.for("update")`
 - [ ] **A-06** `becomesAssigned` phủ cả `reclaimed`; `listForDeviceWithin` lọc status
@@ -1573,3 +1577,250 @@ allowlist bây giờ là dựng một thứ sẽ phải viết lại. Làm cùng
 **Năm lượt gieo đột biến, cả năm đều ĐỎ đúng chỗ**: F-01 (deps) · A-09 (câu `FOR UPDATE`) ·
 A-10 ×2 (mặc-định-đóng của `RolesGuard`, `assertOrigin` của `CsrfGuard`, và `@Roles` của một
 route) · T-03 (khoá chết gieo vào `vi.ts`).
+
+
+---
+
+## 17. Đợt B (ba lỗ, ba cửa) — ĐÃ LÀM 20/09/2026
+
+Ba mục còn lại của hai ô "chặn phát hành" và "CAO": **A-02** (gắn yếu tố thứ hai không cần
+xác thực lại) · **A-03** (xoá ô ngày đi vòng qua luật) · **D-01** (app chạy bằng superuser).
+
+Cả ba đều được chứng minh bằng một bài kiểm **ĐỎ TRƯỚC**, chạy trên stack thật, rồi mới vá.
+
+### 17.1 A-02 — cái cookie tự gắn chìa khoá thứ hai cho mình
+
+**Đo được trước khi vá.** Tạo một tài khoản `totpLoginRequired: false` (chưa cài 2 lớp), đăng
+nhập bằng API, rồi gửi `POST /auth/totp/enroll` với **body rỗng**:
+
+```
+Expected: 401
+Received: 200        ← và kèm secret base32 nguyên văn
+```
+
+Từ đó đi tiếp là chuyện số học: sinh mã 6 số từ secret → `step-up` → `reveal`. Đúng bốn bước
+mà docblock của `step-up.guard.ts` tự viết ra hồi 10/09 khi giải thích vì sao step-up phải
+mặc-định-đóng. Ba bước kia đã bịt; bước `totp/enroll` là bước còn lại.
+
+**Hàng rào.** `POST /auth/totp/enroll` đòi mật khẩu hiện tại — mẫu "sudo mode". Cửa này không
+phải cửa đọc: nó **trả ra** secret, tức nó quyết định ai giữ chìa khoá thứ hai của tài khoản
+về sau.
+
+**Và một hàng rào bị lượt chạy E2E bác bỏ — đáng ghi hơn cả hàng rào được giữ.** Bản đầu kèm
+trần **10 lượt/phút theo USER**, chép từ `step-up`. Lượt chạy đầy đủ cho **mười ba bài đỏ liên
+tiếp** ở `catalog.spec.ts`, tất cả cùng một chỗ: `firstLogin` chờ mã QR mãi không thấy. Lý do
+hiển nhiên khi đã nhìn thấy nó — cửa này KHÔNG chỉ là cửa nhận mật khẩu, nó còn là **bước bắt
+buộc của mọi lần đăng nhập lần đầu**, nên trần theo phút chặn đường ĐÚNG trước khi chặn được
+đường sai.
+
+Nó còn là hàng rào **sai loại**: trần theo phút cho kẻ tấn công thử lại mãi, chỉ chậm hơn —
+10 lượt/phút vẫn là mười bốn nghìn lần đoán mỗi ngày. Thay bằng đúng cơ chế mà cửa két đã
+dùng: sai đủ `secret.stepup_max_failures` lần thì **THU HỒI PHIÊN**, dùng chung bộ đếm với
+step-up (hai cửa hỏi cùng một câu, nên năm lần sai xen kẽ hai cửa cũng phải chết y như năm
+lần sai ở một cửa). Cookie trộm được **chết sau năm lần**, và muốn cookie mới thì phải có
+đúng thứ nó đang đi đoán. Thu hồi PHIÊN chứ không khoá TÀI KHOẢN — khoá tài khoản thì chính
+kẻ tấn công lại khoá được người dùng thật ra ngoài.
+
+**Ngoại lệ, và vì sao nó phải có hạn.** Luồng đăng nhập bắt buộc cài 2 lớp đưa người dùng
+thẳng từ ô mật khẩu sang màn quét QR. Hỏi lại ở đó là hỏi lại thứ vừa gõ xong, và phiên
+`totp_pending` chưa mở được gì ngoài ba route của chính luồng đăng nhập. Nên ngoại lệ ấy tồn
+tại — nhưng tính theo **tuổi phiên**, hết sau `totp.enroll_reauth_minutes` (0047, mặc định 15):
+một phiên chờ bị bỏ quên trên máy bỏ ngỏ không được là cửa mở tới 12 giờ.
+
+Và đo từ `created_at`, **không** từ `last_seen_at`. `last_seen_at` bị đẩy tới trước ở mỗi
+request, nên đo theo nó là để chính kẻ đang giữ cookie tự gia hạn cửa cho mình — hàng rào sẽ
+không bao giờ đóng với đúng người nó sinh ra để chặn. Bài kiểm khoá lại chuyện đó bằng cách
+làm cũ `created_at` rồi bắn lại cùng cái cookie.
+
+**Chặn mà không kêu vẫn là nửa hàng rào.** Người duy nhất biết chuyện đang xảy ra là người
+đi đọc nhật ký — tức là không ai. `SecurityProbeService` (0046) đã có sẵn bộ đếm và đường gửi
+thư, và chú thích của chính nó mời: *"thêm loại mới thì thêm vào đây, đừng đếm ở nơi gọi"*.
+Cửa mới đăng ký vào `PROBE_ACTIONS`, đếm CHUNG với lượt gõ sai mã ở cửa két — tách hai bộ đếm
+thì kẻ khôn ngoan chỉ cần xen kẽ hai kiểu là không chạm ngưỡng nào cả.
+
+**Client không đoán lại luật.** `totp-enroll.tsx` cứ gọi, và chỉ dựng ô mật khẩu khi server
+trả `REAUTH_REQUIRED`. "Ai được miễn" vì thế sống đúng một chỗ — nơi biết tuổi phiên và cờ
+`totp_pending`. Đoán lại ở client là bản sao thứ hai, và bản sao sẽ lệch đúng vào hôm luật đổi.
+
+| Bài | Canh gì |
+| --- | --- |
+| `totp-enroll-reauth.spec.ts` ×4 | cookie trần bị chặn (và **không rò secret**) · đoán sai mật khẩu cũng không rò · năm lần đoán ⇒ thư cảnh báo đi thật **và cookie chết hẳn** (`/auth/me` sau đó là 401) · phiên chờ quá hạn hết miễn · luồng cài lần đầu KHÔNG bị hỏi mật khẩu |
+| `totp-enroll-reauth.test.tsx` ×3 (Vitest) | màn hình dựng được ô mật khẩu khi server đòi — và **không ai bị đá về đăng nhập** |
+| `session-policy.spec.ts` +6 | bảng dữ liệu cho `canEnrollWithoutPassword`, gồm biên đóng đúng 15 phút và hàng "phiên đã đăng nhập đủ, vừa tạo xong → vẫn phải gõ" |
+
+**Và một lỗ thứ hai, do chính bản vá A-02 sinh ra.** `apiFetch` coi MỌI 401 là "phiên chết"
+trừ một danh sách loại trừ, và loại trừ là cố ý — quên khai một mã mới thì người dùng bị đưa
+về màn đăng nhập, phiền nhưng an toàn và **tự thoát được**.
+
+Chỉ có điều `REAUTH_REQUIRED` không tự thoát được: phiên vẫn sống, nên đăng nhập lại đưa người
+dùng về đúng màn vừa đá họ ra, màn đó lại gọi `enroll`, lại 401, lại bị đá. Một vòng kín,
+không lời giải thích. Bản vá phía API xanh hết mọi cổng và vẫn để lại cái vòng đó — vì **không
+bài E2E nào đi qua đường "phiên đã đăng nhập thường đi cài 2 lớp"**: E2E luôn cài trong luồng
+đăng nhập bắt buộc, tức đường ĐƯỢC MIỄN.
+
+Ba bài Vitest mới (`totp-enroll-reauth.test.tsx`) canh đúng đường đó. Và bài đầu tiên của
+chúng **cũng sai** ở bản đầu: nó chỉ hỏi "ô mật khẩu có hiện không", nên đột biến (bỏ
+`'REAUTH_REQUIRED'` khỏi danh sách) **sống sót** — trong jsdom, `window.location.href = ...`
+không đi đâu cả, không điều hướng, không ném, chỉ ghi một dòng "Not implemented". `apiFetch`
+vẫn ném như thường và ô mật khẩu vẫn hiện. Bài xanh, người dùng thật thì đang ở màn đăng nhập.
+
+Sửa bằng cách thay `location` bằng một vật có setter đếm được và khẳng định thẳng: `href`
+KHÔNG được đổi. Đột biến khi đó đỏ đúng chỗ — `expected '/login' to be null`.
+
+> Đây là lần thứ ba trong hai đợt rà soát mà **bài kiểm suýt nói dối theo hướng dễ chịu**, và
+> cả ba lần cái cứu nó là một phép gieo đột biến chạy ngay sau khi viết bài. Một bài kiểm chưa
+> từng đỏ thì chưa biết nó canh cái gì.
+
+**Điều bản vá này KHÔNG làm, nói thẳng:** chuỗi trong docblock của `step-up.guard.ts` bắt đầu
+bằng "SA tạo một tài khoản mới rồi lấy mật khẩu tạm". Kẻ đi đường đó **có** mật khẩu, nên hỏi
+mật khẩu không chặn được nó. Đường ấy đã bịt từ 10/09 bằng việc `/accounts/*` đòi step-up —
+A-02 bịt đường còn lại: cookie của một người chưa từng cài 2 lớp.
+
+### 17.2 A-03 — xoá một ô ngày không giống bỏ trống nó
+
+**Đo được trước khi vá.** Một chứng chỉ SSL có hạn `2027-01-31`, gửi `PATCH {"endDate":""}`:
+
+```
+Expected: 400
+Received: 200        ← và end_date trong bảng đã thành NULL
+```
+
+`dateOnly("")` trả `null` = "người dùng đã xoá ô này". Nhưng `(values.endDate ?? current?.endDate
+?? null)` coi `null` y hệt `undefined` = "không đụng tới ô này", nên `validateSoftware` soi
+trên ngày **CŨ**, `requiresEndDate` không nổ, và câu ghi vẫn ghi `NULL`. Vì `findExpiringBetween`
+lọc `end_date IS NOT NULL`, hồ sơ **biến khỏi mọi lời nhắc gia hạn, vĩnh viễn, không một dòng
+lỗi.** Không lưới DB.
+
+Lỗi này sai **theo cả hai chiều**, và chiều thứ hai chỉ lộ ra khi viết bài kiểm: đường truyền
+ISP xoá ngày bắt đầu rồi đặt hạn sớm hơn ngày bắt đầu CŨ thì bị **từ chối** — bởi một giá trị
+vừa bị xoá. Đúng cái bẫy "hàng rào tự nhốt người dùng vào trong" mà chú thích
+`assertDeviceWithin` đã mô tả cho liên kết thiết bị hồi 08/09, lặp lại nguyên hình ở cặp ngày.
+
+**Chỗ thứ ba mà rà soát 19/09 bỏ sót.** Quét `?? current?.` toàn `api/src` ra **ba** file, không
+phải hai: `devices.service.ts:442-455` ghép cặp ngày bảo hành và **bốn** tham chiếu danh mục
+bằng đúng phép ghép sai ấy. Hậu quả cụ thể: một thiết bị trỏ vào site đã bị gỡ khỏi danh mục
+thì **không xoá được liên kết đó nữa** — gửi `siteId: ""` lên, luật đi kiểm site CŨ, và site
+cũ không còn tồn tại.
+
+**Bản vá.** Phép ghép chuyển thành một tài sản dùng chung, `common/merge-effective.ts`, hỏi
+đúng câu cần hỏi: `field in values` — "yêu cầu này có nói gì về ô đó không?". Ba service HTTP
+dùng nó, và `device-import.ts` — nơi idiom này ra đời từ 08/09 và làm ĐÚNG suốt — bỏ bản lambda
+riêng để dùng bản chung (AD-15: một bản đúng nằm riêng trong một file thì bản thứ hai sẽ được
+viết lại từ đầu, và viết sai).
+
+> Lại đúng hình dạng của A-01: **cửa Excel được canh, cửa HTTP bỏ ngỏ.** Ba trên bảy lỗi CAO
+> của rà soát này có cùng hình dạng đó. Nó không phải trùng hợp — đường Excel được viết sau,
+> bởi người vừa đọc luật, nên nó nhớ; đường HTTP viết trước, và không ai quay lại.
+
+| Bài | Canh gì |
+| --- | --- |
+| `clear-date-guard.spec.ts` ×3 | SSL không xoá được hạn **và hạn cũ còn nguyên sau lượt bị từ chối** · hợp đồng bảo trì VẪN xoá được (vế phủ định — luật mới không chặn nhầm đường đúng) · ISP xoá ngày bắt đầu rồi rút hạn về sớm hơn thì lưu được |
+| `merge-effective.spec.ts` ×6 | bảng ba trạng thái, và mỗi hàng **viết lại nguyên văn bản `??` cũ** để bảng là bằng chứng chứ không phải lời kể — đúng một hàng lệch, và đó là hàng sinh ra A-03 |
+
+### 17.3 D-01 — sổ chỉ-thêm chỉ chỉ-thêm với những người tử tế
+
+**Đo được trước khi vá.** `SELECT rolsuper FROM pg_roles WHERE rolname='ims'` cho `t`. Ứng dụng
+kết nối bằng chính role đó, và role đó vừa là superuser vừa là **chủ sở hữu** mọi bảng. Nên:
+
+- câu `REVOKE UPDATE, DELETE, TRUNCATE ON audit_log` ở `0005` là **trang trí** — superuser bỏ
+  qua toàn bộ ACL. Chú thích của chính migration ấy ghi "role `ims_app` do docker entrypoint
+  tạo"; role đó **chưa bao giờ tồn tại**;
+- AD-9 ("REVOKE UPDATE/DELETE ở tầng DB role") vì thế **không đúng với thực tế đang chạy**;
+- trigger là lưới thật, nhưng `0039` đã tự khai lỗ còn lại: chủ sở hữu làm được
+  `ALTER TABLE audit_log DISABLE TRIGGER ALL` rồi `DELETE` sạch dấu vết.
+
+**Bản vá — hai role, hai kết nối.**
+
+| Role | Dùng lúc nào | Làm được gì |
+| --- | --- | --- |
+| `ims` (chủ sở hữu) | Mấy giây đầu mỗi lần boot: tạo role, chạy migration, rồi **đóng pool hẳn** | Tất cả |
+| `ims_app` | Cả đời tiến trình | DML bảng nghiệp vụ; `audit_log` chỉ `SELECT` + `INSERT` |
+
+`0048_app_role_split.sql` phát quyền, kèm `ALTER DEFAULT PRIVILEGES` — không có nó thì bảng
+của migration 0049 ra đời **không** có quyền cho `ims_app`, và lỗi hiện ra ở production giữa
+một nghiệp vụ, dưới dạng một câu "permission denied". Mật khẩu role do `main.ts` đặt lúc boot
+từ `APP_DB_PASSWORD`, không nằm trong file migration đi vào git.
+
+**Và một cổng cho chính bước triển khai.** Nửa thứ hai của D-01 nằm trong `.env` của từng nơi
+cài, tức ngoài git của ai cả: migration chạy xong mà `.env` chưa đổi thì mọi thứ vẫn xanh, vẫn
+chạy, và NFR-03 vẫn sai y như trước — đúng kiểu "sẽ không tự rơi vào epic nào" mà mục 5.1 đã
+nói. Nên `main.ts` tự hỏi mỗi lần khởi động, bằng chính kết nối nó sẽ dùng cả đời: *role này
+có phải superuser không, và nó có sở hữu `audit_log` không*. Ở production thì **ném**; ngoài
+production thì kêu to.
+
+Hai câu hỏi chứ không phải một: vế thứ hai ít hiển nhiên hơn và nguy hiểm ngang — một
+`ims_app` lỡ được cấp quyền sở hữu bảng thì "đã tách role" trở thành câu nói đúng về giấy tờ
+mà sai về thực tế.
+
+**Bài kiểm chốt MÃ LỖI, không chốt "có ném".** `UPDATE audit_log` bị chặn bởi HAI lớp — ACL và
+trigger. Chỉ khẳng định "câu lệnh ném lỗi" thì bài xanh cả khi ACL không có tác dụng gì, vì
+trigger một mình cũng làm nó xanh. Mà trigger là lớp chủ sở hữu **tháo được**; ACL mới là lớp
+`ims_app` không chạm tới. Nên bài chốt `42501` (`insufficient_privilege`), khác hẳn `P0001` mà
+`RAISE EXCEPTION` trong trigger sinh ra — đó là khác biệt giữa "có hàng rào" và "có ĐÚNG hàng
+rào mà AD-9 hứa".
+
+| Bài | Canh gì |
+| --- | --- |
+| `app-role-privileges.spec.ts` ×6 (tầng DB thật) | `INSERT` được · `UPDATE`/`DELETE`/`TRUNCATE` chặn ở **42501** · `DISABLE TRIGGER` và `DROP TRIGGER` chặn ở **42501** · DML bảng nghiệp vụ bình thường · **bảng tạo SAU 0048 vẫn có quyền** · cổng khởi động cho chủ sở hữu TRƯỢT và cho app ĐẬU |
+| `app-role.spec.ts` ×4 | bảng dữ liệu cho phép phán xét, gồm hàng "không superuser nhưng sở hữu `audit_log`", và một bài chốt câu lỗi có nói ra chỗ phải sửa |
+
+**Bước triển khai — phải làm tay đúng một lần mỗi nơi cài.** Thêm hai dòng vào `.env`
+(`APP_DB_USER`, `APP_DB_PASSWORD`; `.env.example` đã có mẫu). Thiếu thì `docker compose up`
+dừng ngay với câu "bắt buộc — mật khẩu role ứng dụng", chứ không chạy nửa vời.
+
+### 17.4 Và một hệ quả mà chỉ lượt chạy đầy đủ mới lôi ra
+
+Lượt E2E đầu tiên sau khi tách role **đỏ gần như toàn bộ**, tất cả cùng một câu:
+
+```
+Reset E2E thất bại: reset vùng "catalog" thất bại: must be owner of table catalog_history
+```
+
+`api/scripts/reset-e2e.mjs` — công cụ dọn dữ liệu giữa các bài — chạy
+`ALTER TABLE ... DISABLE TRIGGER` trên **mười mấy** bảng lịch sử để xoá được hàng do bài kiểm
+sinh ra. Câu lệnh ấy đòi quyền sở hữu, và tới hôm qua nó chạy được **chỉ vì** ứng dụng kết nối
+bằng một role vừa superuser vừa chủ sở hữu.
+
+Nói cách khác: script dọn rác của bộ test là **bằng chứng sống** cho chính lỗ mà D-01 mô tả.
+Nó đã dùng quyền tháo-trigger suốt nhiều tháng, và không ai để ý, vì quyền ấy có sẵn.
+
+Sửa: script lấy đường riêng (`MIGRATION_DATABASE_URL`). Nó KHÔNG phải một phần của ứng dụng —
+cố ý không nằm trong ảnh production, chỉ được mount bởi file override E2E, và còn đòi
+`ALLOW_E2E_RESET=1`. Quét lại toàn repo: **không còn chỗ nào khác** cần quyền sở hữu.
+
+> Đây là loại phát hiện mà không bài kiểm đơn lẻ nào tìm ra được. Sáu bài DB-tier của D-01 đều
+> xanh, ba bài E2E mới đều xanh, và lỗi vẫn nằm đó — ở một đoạn hạ tầng mà không ai coi là
+> "code". Chỉ lượt chạy 443 bài mới hỏi được câu "cả hệ thống có còn sống dưới role hẹp không".
+
+### 17.5 Kiểm chứng sau trọn đợt B
+
+| Cổng | Sau đợt A | Sau đợt B |
+| --- | ---: | ---: |
+| lint api · web · e2e (`--max-warnings=0`) | 0 | **0** |
+| depcruise api · web | no violations | **no violations** |
+| Jest đơn vị | 55 suite / 926 | 57 suite / **942** |
+| `test:db` (DB thật) | 14 / 74 | 15 / **80** |
+| Vitest | 44 file / 370 | 45 file / **373** |
+| Playwright | 443 | **450** |
+
+**Sáu lượt gieo đột biến, cả sáu đỏ đúng chỗ** — và hai trong số đó nói ra điều mà một lượt
+"chạy thử cho chắc" không bao giờ nói được:
+
+| Đột biến | Kết quả |
+| --- | --- |
+| Tắt cổng xác thực lại của A-02 | **3 bài đỏ**, và bài "luồng cài lần đầu được miễn" vẫn **xanh** — đúng phân vai |
+| `if (!totpPending) return false` → `return true` | bảng dữ liệu đỏ đúng hàng "phiên đã đăng nhập đủ" |
+| Gỡ nhánh thu hồi phiên | `Expected "SESSION_REVOKED", Received "CURRENT_PASSWORD_WRONG"` |
+| Gỡ cửa mới khỏi `PROBE_ACTIONS` | thư cảnh báo không bao giờ tới |
+| Trả `endDate` về phép ghép `??` | SSL lại xoá được hạn; hai bài kia vẫn xanh |
+| **Gỡ câu `REVOKE` khỏi 0048** | `Expected "42501", Received "P0001"` |
+
+Hàng cuối là hàng đáng đọc lại. Bỏ hẳn cái REVOKE mà `UPDATE audit_log` **vẫn ném lỗi** —
+trigger bắt nó. Một bài kiểm viết kiểu "câu lệnh này phải ném" sẽ XANH với bản vá đã bị gỡ
+mất, và AD-9 lại quay về là một câu nói đúng về giấy tờ. Chỉ vì bài chốt **mã lỗi** nên nó
+phân biệt được "có hàng rào" với "có ĐÚNG hàng rào".
+
+> Lint của chính repo bắt được một lỗi của tôi trong lúc làm D-01: `logger.error(error.message)`
+> ở pool migration — luật NFR-04 "đừng ghi `.message` của lỗi ra log, nó chở cả tham số đã
+> bind". Đúng loại rò rỉ mà không ai đọc code review nào bắt được. Cổng dựng ở đợt A trả lãi
+> ngay trong đợt B.

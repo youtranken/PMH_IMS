@@ -12,6 +12,7 @@ import {
   type ParsedRow,
   type ParsedSheets,
 } from '../../common/import-plan';
+import { effectiveOf } from '../../common/merge-effective';
 import type { DeviceStatus } from './devices.types';
 
 /**
@@ -374,9 +375,12 @@ function planRow(
    * thiết bị sẽ mang tủ của site cũ — form nhập chặn chuyện này, import cũng phải chặn.
    * Cùng lẽ đó với cặp ngày bảo hành: file chỉ sửa một đầu vẫn có thể thành khoảng ngược.
    * (Trước đây hai lỗi này lọt xuống DB: một cái sai lặng lẽ, một cái bung 500 không rõ dòng.)
+   *
+   * Phép ghép chuyển sang `common/merge-effective.ts` ngày 20/09: ba service HTTP viết sau
+   * file này đều dùng `??` và đều sai theo cùng một kiểu (A-03). Một bản đúng nằm riêng
+   * trong một module thì bản thứ hai sẽ được viết lại từ đầu — và viết sai.
    */
-  const effective = <T,>(field: string, fallback: T): T =>
-    (field in values ? (values[field] as T) : fallback);
+  const effective = effectiveOf(values);
 
   const siteId = effective<string | null>('siteId', existing?.siteId ?? null);
   const cabinetId = effective<string | null>('cabinetId', existing?.cabinetId ?? null);

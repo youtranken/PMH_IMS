@@ -9,6 +9,7 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
+import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
 import { conflictOnUnique, escapeLike } from '../../common/sql';
@@ -385,10 +386,15 @@ export class IspLineService {
       }
     }
 
-    // Kiểm trên giá trị SAU KHI GHÉP với hồ sơ đang có (bài học code review Epic 2).
+    // Kiểm trên giá trị SAU KHI GHÉP với hồ sơ đang có (bài học code review Epic 2), và ghép
+    // bằng `effectiveOf` chứ KHÔNG bằng `??` — xoá một ô khác không đụng tới nó. Với `??`,
+    // xoá ngày bắt đầu rồi đặt hạn sớm hơn ngày bắt đầu CŨ bị từ chối bởi một giá trị không
+    // còn tồn tại: đúng cái bẫy "hàng rào tự nhốt người dùng vào trong" mà chú thích
+    // `assertDeviceWithin` bên dưới đã mô tả cho liên kết thiết bị (A-03, rà soát 19/09).
     const current = id ? await this.requireRow(id) : null;
-    const start = (values.startDate ?? current?.startDate ?? null) as string | null;
-    const end = (values.endDate ?? current?.endDate ?? null) as string | null;
+    const effective = effectiveOf(values);
+    const start = effective<string | null>('startDate', current?.startDate ?? null);
+    const end = effective<string | null>('endDate', current?.endDate ?? null);
     if (start && end && end < start) {
       throw new BadRequestException({
         code: 'ISP_RANGE_INVALID',
@@ -396,7 +402,7 @@ export class IspLineService {
       });
     }
 
-    const siteId = (values.siteId ?? current?.siteId ?? null) as string | null;
+    const siteId = effective<string | null>('siteId', current?.siteId ?? null);
     if (siteId) {
       const errors = await this.catalog.validateRefs({ siteId });
       if (errors.length > 0) {

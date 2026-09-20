@@ -215,6 +215,9 @@ export default {
     enrollQrAlt: 'Mã QR cài xác thực 2 lớp',
     enrollManual: 'Không quét được? Nhập tay khóa này:',
     enrollConfirm: 'Nhập mã 6 số đầu tiên để xác nhận',
+    enrollReauthSub:
+      'Nhập mật khẩu hiện tại để xác nhận đây là bạn — từ bước sau, điện thoại này sẽ là chìa khóa thứ hai của tài khoản',
+    enrollReauthSubmit: 'Tiếp tục',
     changePasswordTitle: 'Đổi mật khẩu',
     changePasswordSub: 'Lần đăng nhập đầu bắt buộc đổi mật khẩu tạm',
     currentPassword: 'Mật khẩu hiện tại',

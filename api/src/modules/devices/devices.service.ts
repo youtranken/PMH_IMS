@@ -12,6 +12,7 @@ import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { DeviceRetirementRegistry } from '../../common/device-retirement.registry';
 import { requireCas } from '../../common/cas';
+import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
 import { conflictOnUnique, escapeLike } from '../../common/sql';
@@ -437,10 +438,16 @@ export class DevicesService {
     }
 
     // Ngày bảo hành: kiểm ở đây để báo tiếng Việt tử tế thay vì để CHECK constraint
-    // ném ra một câu SQL. Phải ghép với giá trị ĐANG CÓ khi người dùng chỉ sửa một đầu.
+    // ném ra một câu SQL. Phải ghép với giá trị ĐANG CÓ khi người dùng chỉ sửa một đầu —
+    // và ghép bằng `effectiveOf`, không bằng `??`: ô bị XOÁ (`null` có mặt trong `values`)
+    // không phải ô không đụng tới. Với `??`, xoá ngày bắt đầu bảo hành rồi đặt ngày kết
+    // thúc sớm hơn ngày bắt đầu CŨ bị từ chối bởi một giá trị vừa bị xoá, và xoá một site
+    // đã bị gỡ khỏi danh mục thì không bao giờ xoá được. Đường Excel dùng đúng phép ghép
+    // này từ 08/09; ba service HTTP thì không (A-03, rà soát 19/09).
     const current = id ? await this.requireRow(id) : null;
-    const start = (values.warrantyStart ?? current?.warrantyStart ?? null) as string | null;
-    const end = (values.warrantyEnd ?? current?.warrantyEnd ?? null) as string | null;
+    const effective = effectiveOf(values);
+    const start = effective<string | null>('warrantyStart', current?.warrantyStart ?? null);
+    const end = effective<string | null>('warrantyEnd', current?.warrantyEnd ?? null);
     if (start && end && end < start) {
       throw new BadRequestException({
         code: 'WARRANTY_RANGE_INVALID',
@@ -449,10 +456,10 @@ export class DevicesService {
     }
 
     const errors = await this.catalog.validateRefs({
-      siteId: (values.siteId ?? current?.siteId ?? null) as string | null,
-      cabinetId: (values.cabinetId ?? current?.cabinetId ?? null) as string | null,
-      deviceTypeId: (values.deviceTypeId ?? current?.deviceTypeId ?? null) as string | null,
-      vendorId: (values.vendorId ?? current?.vendorId ?? null) as string | null,
+      siteId: effective<string | null>('siteId', current?.siteId ?? null),
+      cabinetId: effective<string | null>('cabinetId', current?.cabinetId ?? null),
+      deviceTypeId: effective<string | null>('deviceTypeId', current?.deviceTypeId ?? null),
+      vendorId: effective<string | null>('vendorId', current?.vendorId ?? null),
     });
     if (errors.length > 0) {
       throw new BadRequestException({ code: 'CATALOG_REF_INVALID', message: errors.join(' ') });

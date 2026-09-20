@@ -353,7 +353,23 @@ async function main() {
     process.exit(1);
   }
 
-  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  /*
+   * KẾT NỐI BẰNG CHỦ SỞ HỮU, KHÔNG BẰNG ROLE ỨNG DỤNG (D-01, 20/09).
+   *
+   * Script này `ALTER TABLE ... DISABLE TRIGGER` trên mười mấy bảng lịch sử — câu lệnh đòi
+   * QUYỀN SỞ HỮU. Tới 20/09 nó chạy được là vì ứng dụng kết nối bằng một role vừa superuser
+   * vừa chủ sở hữu; tức chính nó là bằng chứng sống rằng `DATABASE_URL` khi ấy rộng tới mức
+   * nào. Sau khi tách role, `ims_app` không tháo trigger được nữa — và đó là điều mong muốn.
+   *
+   * Nên công cụ dọn dữ liệu test lấy đường riêng. Nó KHÔNG phải một phần của ứng dụng: file
+   * này cố ý không nằm trong ảnh production (xem `api/Dockerfile`), chỉ được mount bởi
+   * `docker-compose.override.e2e.yml`, và `main()` còn đòi `ALLOW_E2E_RESET=1` trước khi chạy.
+   *
+   * Lùi về `DATABASE_URL` khi chưa tách role, để nơi cài cũ không đứng hình.
+   */
+  const pool = new pg.Pool({
+    connectionString: process.env.MIGRATION_DATABASE_URL ?? process.env.DATABASE_URL,
+  });
   try {
     if (domains.includes('users')) await resetUsers(pool);
 
