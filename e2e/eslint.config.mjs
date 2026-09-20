@@ -36,6 +36,22 @@ import tseslint from 'typescript-eslint';
  */
 
 /** Ngủ theo đồng hồ thay vì chờ điều kiện. */
+/**
+ * AD-16 — TÊN ĐỊNH DANH PHẢI LÀ TIẾNG ANH.
+ *
+ * Tiếng Việt chỉ ở: giá trị chuỗi i18n, chú thích, và mô tả `describe`/`it`/`test`. Tên
+ * hàm/biến/hằng/kiểu thì không.
+ *
+ * LỚP NÀY CHỈ BẮT ĐỊNH DANH **CÓ DẤU**. Tiếng Việt không dấu (`timVaChoLoc`, `quetNguon`…)
+ * cần một từ điển ~900 âm tiết — đó là lớp hai, một bài điểm danh làm cùng đợt đổi tên.
+ * Xem mục 3.4 của `docs/RA-SOAT-TOAN-DIEN-2026-09-19.md`.
+ */
+const NO_VIETNAMESE_IDENT = /** @type {const} */ ({
+  selector: 'Identifier[name=/[À-ỹ]/]',
+  message:
+    'AD-16: tên định danh phải là tiếng Anh. Tiếng Việt chỉ ở GIAO DIỆN (qua lib/i18n), ' +
+    'chú thích và mô tả bài kiểm.',
+});
 const NO_SLEEP = /** @type {const} */ ({
   selector: "CallExpression[callee.property.name='waitForTimeout']",
   message:
@@ -93,7 +109,7 @@ export default tseslint.config(
      */
     files: ['tests/**/*.ts', '*.ts'],
     rules: {
-      'no-restricted-syntax': ['warn', NO_CSS_SELECTOR, NO_TAG_CLASS_SELECTOR],
+      'no-restricted-syntax': ['warn', NO_CSS_SELECTOR, NO_TAG_CLASS_SELECTOR, NO_VIETNAMESE_IDENT],
       'no-restricted-properties': [
         'error',
         {

@@ -1,34 +1,17 @@
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+/*
+ * `allControllers` và `classDecoratorsOf` chuyển sang `src/test/source-text.ts` ngày
+ * 20/09/2026: `roles-surface.spec.ts` cần đúng hai hàm ấy, và chép sang là dựng bản thứ hai
+ * của cùng một bộ quét (AD-15). Bản dùng chung cũng vá một lỗi mà bản ở đây có:
+ * `classDecoratorsOf` cũ chỉ đi LÊN từ `@Controller(...)`, nên nó đọc hụt decorator đặt ở
+ * dòng NGAY DƯỚI — như `@Roles` của `audit.controller.ts`.
+ */
+import { allControllers, classDecoratorsOf } from '../../test/source-text';
 
 const SRC = join(__dirname, '..', '..');
 
-function allControllers(dir: string): string[] {
-  return readdirSync(dir).flatMap((entry) => {
-    const full = join(dir, entry);
-    if (statSync(full).isDirectory()) return allControllers(full);
-    return full.endsWith('.controller.ts') ? [full] : [];
-  });
-}
-
 const CONTROLLERS = allControllers(SRC);
-
-/**
- * Khối decorator NGAY TRÊN `@Controller(...)`.
- *
- * Không dùng `src.slice(0, indexOf('export class'))`: `accounts.controller.ts` có
- * `export class RealDateOrEmpty` (một ValidatorConstraint) ở đầu file, nên cách cắt đó dừng
- * lại trước cả phần cần đọc và báo thiếu cho một file KHÔNG thiếu. Bài kiểm sai theo hướng
- * đó còn tệ hơn không có bài kiểm: nó dạy người ta bỏ qua màu đỏ.
- */
-function classDecoratorsOf(src: string): string {
-  const lines = src.split(/\r?\n/);
-  const at = lines.findIndex((line) => line.startsWith('@Controller('));
-  if (at < 0) return '';
-  let from = at;
-  while (from > 0 && (lines[from - 1].startsWith('@') || lines[from - 1].trim() === '')) from -= 1;
-  return lines.slice(from, at + 1).join('\n');
-}
 
 /**
  * CỔNG CANH CỔNG — `StepUpGuard` mặc định đóng chỉ có tác dụng nếu nó thật sự được cắm.

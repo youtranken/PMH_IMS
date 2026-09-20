@@ -172,7 +172,7 @@ export class SecurityProbeService {
          * `security.probe.alert` đều mang đúng `"count": 3`. Điều tra viên nhận một con số thấp
          * hơn sự thật cả một bậc độ lớn, ở đúng dòng cảnh báo an ninh.
          */
-        const [dem] = await tx
+        const [counted] = await tx
           .select({ n: count() })
           .from(auditLogTable)
           .where(
@@ -182,7 +182,7 @@ export class SecurityProbeService {
               gt(auditLogTable.createdAt, since),
             ),
           );
-        const soLuot = dem?.n ?? recent?.n ?? 0;
+        const attemptCount = counted?.n ?? recent?.n ?? 0;
 
         const quietSince = new Date(Date.now() - cooldownMinutes * 60_000);
         const [alerted] = await tx
@@ -216,14 +216,14 @@ export class SecurityProbeService {
           /* `undefined`, không phải `null`: `AuditEntry.objectId` khai `string | undefined`.
              Dòng này nói về một PHIÊN dò dẫm, không về một ngăn cụ thể. */
           objectId: undefined,
-          detail: { count: soLuot, windowMinutes },
+          detail: { count: attemptCount, windowMinutes },
         });
         /* `cooldownMinutes` đi kèm để lá thư nói đúng thời gian nghỉ THẬT thay vì viết cứng
            "một giờ" — xem chú thích ở `mail.consumer.ts`. `who` là email chứ không phải id:
            ngoại lệ có tên, khai ở `outbox.service.ts` cạnh chính luật "payload không PII". */
         await this.outbox.enqueueWithin(tx, 'security.probe.alert', {
           who: actor,
-          count: soLuot,
+          count: attemptCount,
           windowMinutes,
           cooldownMinutes,
         });

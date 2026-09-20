@@ -38,8 +38,8 @@ export function statusLabel(status: string | null | undefined, t: TFunction): st
      ngữ, và `lib/format.ts` đã là nơi duy nhất quyết định nó trông thế nào. Khai thêm một
      khóa `noStatus: '—'` là dựng nguồn thứ hai cho cùng một ký tự. */
   if (!status) return orDash(null);
-  const khoa = STATUS_LABEL[status];
-  return khoa ? t(khoa) : status;
+  const key = STATUS_LABEL[status];
+  return key ? t(key) : status;
 }
 
 /**
@@ -61,8 +61,8 @@ export const ACTION_LABEL: Record<string, string> = {
 };
 
 export function actionLabel(action: string, t: TFunction): string {
-  const khoa = ACTION_LABEL[action];
-  return khoa ? t(khoa) : action;
+  const key = ACTION_LABEL[action];
+  return key ? t(key) : action;
 }
 
 export function toIpHistoryEntries(rows: IpHistoryRow[], t: TFunction): HistoryEntry[] {

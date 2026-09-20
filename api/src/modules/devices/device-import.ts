@@ -82,7 +82,7 @@ const STATUS_ALIASES: Record<string, DeviceStatus> = {
   kho: 'spare',
   spare: 'spare',
   hong: 'broken',
-  hỏng: 'broken',
+  'hỏng': 'broken',
   broken: 'broken',
   'da thanh ly': 'retired',
   'đã thanh lý': 'retired',

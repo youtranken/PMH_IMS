@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
@@ -161,7 +161,12 @@ export function AccountsScreen({ me }: { me: Me }) {
       ),
   });
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['accounts'] });
+  // `useCallback` vì `refresh` nằm trong deps của `columns`: hàm mới mỗi render sẽ làm
+  // memo tính lại mỗi render, tức vô hiệu hoá chính nó. `queryClient` bền tham chiếu.
+  const refresh = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: ['accounts'] }),
+    [queryClient],
+  );
   const csrfToken = me.csrfToken;
 
   // `id` nằm ở ĐƯỜNG DẪN, không được lọt vào body: ValidationPipe bật forbidNonWhitelisted
@@ -384,7 +389,21 @@ export function AccountsScreen({ me }: { me: Me }) {
         },
       },
     ],
-    [t, setStatus.isPending, resetPassword.isPending, resetTotp.isPending],
+    /*
+     * Khai ĐỦ dep (20/09/2026). Sáu cái thêm vào đều BỀN tham chiếu — `askConfirm`/`toast`
+     * đến từ context, `.mutate` của TanStack v5 ổn định, `refresh` vừa được bọc
+     * `useCallback` ngay trong lượt sửa này (bản đầu tôi tưởng nó đã bọc sẵn — không) — nên
+     * memo không vì thế mà tính lại thêm lần nào. Đổi lại, cổng thôi bỏ qua file này.
+     */
+    [
+      t,
+      setStatus,
+      resetPassword,
+      resetTotp,
+      askConfirm,
+      refresh,
+      toast,
+    ],
   );
 
   return (

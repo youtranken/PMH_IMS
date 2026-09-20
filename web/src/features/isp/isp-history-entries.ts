@@ -69,8 +69,8 @@ function describe(
 function display(field: string, value: unknown, t: TFunction): string {
   if (value === null || value === undefined || value === '') return t('history.blank');
   if (field === 'status') {
-    const khoa = STATUS_LABEL[String(value)];
-    return khoa ? t(khoa) : String(value);
+    const key = STATUS_LABEL[String(value)];
+    return key ? t(key) : String(value);
   }
   return String(value);
 }

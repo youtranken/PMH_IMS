@@ -36,7 +36,10 @@ export function WarrantyTimeline({
   const progress = warrantyProgress({ start, end, now, thresholds: useExpiryThresholds() });
   // Không có hạn thì không có quãng đường nào để vẽ — thanh rỗng chỉ làm người đọc tưởng
   // dữ liệu bị mất.
-  if (!progress) return null;
+  // `end` luôn có mặt khi `progress` khác null (xem `warrantyProgress`), nhưng
+  // `strictNullChecks` đang TẮT nên TS không tự suy ra được — kiểm tường minh thay vì
+  // khẳng định bằng `!`. Ba dấu `!` cũ ở đây là lời khẳng định không ai kiểm.
+  if (!progress || !end) return null;
 
   const tone = TONE[progress.level];
   const percent = progress.percent ?? 100;
@@ -46,10 +49,10 @@ export function WarrantyTimeline({
       {compact || !progress.hasStart ? null : (
         <div className="wt-ends">
           <span>
-            {startLabel ?? t('expiry.from')} <b>{formatDate(start!)}</b>
+            {startLabel ?? t('expiry.from')} <b>{formatDate(start)}</b>
           </span>
           <span>
-            {endLabel ?? t('expiry.to')} <b>{formatDate(end!)}</b>
+            {endLabel ?? t('expiry.to')} <b>{formatDate(end)}</b>
           </span>
         </div>
       )}
@@ -60,7 +63,7 @@ export function WarrantyTimeline({
         aria-valuenow={percent}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label={`${endLabel ?? t('expiry.to')} ${formatDate(end!)} — ${progress.label}`}
+        aria-label={`${endLabel ?? t('expiry.to')} ${formatDate(end)} — ${progress.label}`}
       >
         <div className={`wt-fill ${tone}`} style={{ right: `${100 - percent}%` }} />
         {/* Mốc HÔM NAY: cái tam giác là thứ trả lời "mình đang đứng ở đâu trên quãng đường",

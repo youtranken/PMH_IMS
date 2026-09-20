@@ -213,7 +213,17 @@ export function DeviceDetail({ me }: { me: Me }) {
     );
   }
 
-  const item = device.data!;
+  /*
+   * `!device.data` chứ KHÔNG phải `device.data!` (sửa 20/09/2026, lỗi F-02).
+   *
+   * `lib/api-client.ts` không khai `networkMode`, nên TanStack v5 chạy mặc định `'online'`:
+   * mất mạng ⇒ `fetchStatus: 'paused'` ⇒ `isFetching === false` ⇒ **`isLoading === false`**,
+   * mà `isError` cũng false và `data` là `undefined`. Cả hai nhánh thoát bên trên đều trượt,
+   * rồi dòng dưới đọc `item.status` và ném `TypeError` — không ErrorBoundary nào được gắn
+   * (`ChunkErrorBoundary` chưa từng đấu dây), nên người dùng nhận TRANG TRẮNG.
+   */
+  if (!device.data) return <Loading />;
+  const item = device.data;
   const retired = item.status === "retired";
   /** Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày ra nút để bấm rồi 403. */
   const canVaultWrite = me.role === "sa" || me.role === "admin";
@@ -350,9 +360,9 @@ export function DeviceDetail({ me }: { me: Me }) {
    *    có IP nào → panel TỒN TẠI, `items` rỗng → không có nút, cũng KHÔNG có tên trong dòng
    *    "Chưa gắn". Khu đó tàng hình: người đọc không phân biệt được với "module chưa deploy".
    */
-  const khuRong = (key: string): boolean => {
+  const moduleEnabled = (key: string): boolean => {
     const panel = panelOf(key);
-    // Chưa đọc được sổ khu mở rộng → chưa biết, `chuaBiet` của bản đồ đã lo phần nói năng.
+    // Chưa đọc được sổ khu mở rộng → chưa biết, `isUnknown` của bản đồ đã lo phần nói năng.
     if (!panels.data) return false;
     // Panel không tồn tại (module chưa deploy) HOẶC tồn tại mà rỗng — với người đọc là một.
     return !panel || panel.items.length === 0;
@@ -360,11 +370,11 @@ export function DeviceDetail({ me }: { me: Me }) {
 
   const relationMissing = [
     device.data?.hasPortMap && ownPorts.length === 0 ? t("devices.tabPortMap") : null,
-    khuRong("ipam") ? t("nav.ipam") : null,
-    khuRong("nat") ? t("nav.nat") : null,
-    khuRong("isp") ? t("nav.isp") : null,
-    khuRong("software") ? t("nav.software") : null,
-    khuRong("vault") ? t("vault.tab") : null,
+    moduleEnabled("ipam") ? t("nav.ipam") : null,
+    moduleEnabled("nat") ? t("nav.nat") : null,
+    moduleEnabled("isp") ? t("nav.isp") : null,
+    moduleEnabled("software") ? t("nav.software") : null,
+    moduleEnabled("vault") ? t("vault.tab") : null,
     counts.files === undefined ? null : counts.files === 0 ? t("devices.tabAttachments") : null,
   ].filter((label): label is string => label !== null);
 
@@ -588,12 +598,12 @@ export function DeviceDetail({ me }: { me: Me }) {
                  nào chưa về hoặc hỏng thì bản đồ CHƯA BIẾT — không được nói "chưa giữ gì".
                  `counts` (giấy tờ, két) là nguồn thứ ba nhưng nó tự phân biệt được
                  `undefined` với 0, nên xử riêng ở `relationNodes`/`relationMissing`. */
-              chuaBiet={
+              isUnknown={
                 panels.isError || panels.isPending || ports.isError || ports.isPending
               }
               /* Tách "đang tải" khỏi "hỏng": cả hai đều là CHƯA BIẾT, nhưng chỉ cái sau xứng
-                 một lời cảnh báo. Xem chú thích prop `dangTai`. */
-              dangTai={
+                 một lời cảnh báo. Xem chú thích prop `isLoading`. */
+              isLoading={
                 !panels.isError && !ports.isError && (panels.isPending || ports.isPending)
               }
               cutSummary={

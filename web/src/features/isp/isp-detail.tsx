@@ -77,7 +77,10 @@ export function IspDetail({ me }: { me: Me }) {
     );
   }
 
-  const item = line.data!;
+  // Mất mạng ⇒ `fetchStatus:'paused'` ⇒ `isLoading` false, `isError` false, `data` undefined:
+  // hai nhánh trên đều trượt. Xem chú thích đầy đủ ở `devices/device-detail.tsx` (lỗi F-02).
+  if (!line.data) return <Loading />;
+  const item = line.data;
 
   return (
     <>
@@ -204,7 +207,11 @@ export function IspDetail({ me }: { me: Me }) {
             <DetailSection title={t("detail.profileSection")}>
               <dl className="data-grid">
                 <DataItemIfSet label={t("isp.device")} value={item.deviceId}>
-                  <Link className="mono" to={PATHS.device(item.deviceId!)}>
+                  {/* `?? ''` chứ KHÔNG `!`: JSX dựng `children` TRƯỚC khi `DataItemIfSet`
+                      quyết định `return null`, nên dòng này CHẠY THẬT cả khi `deviceId` rỗng
+                      — `!` ở đây là một lời khẳng định sai ở đúng nhánh nó khẳng định. Link
+                      không được render nên đường dẫn rỗng vô hại. */}
+                  <Link className="mono" to={PATHS.device(item.deviceId ?? '')}>
                     {item.deviceCode}
                   </Link>
                 </DataItemIfSet>

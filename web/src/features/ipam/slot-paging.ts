@@ -37,7 +37,7 @@ export const WORTH_ISOLATING = 5;
  * đường nào hỏi nó bốn ca biên (4/33 · 5/32 · 5/33 · 5/253) mà không dựng cả màn hình lên.
  * Hai hằng số thì export sẵn từ lâu; chỉ mỗi phép so là kẹt trong component.
  */
-export function nenLocSanDangCap(assigned: number, free: number): boolean {
+export function shouldIsolateAssigned(assigned: number, free: number): boolean {
   return assigned >= WORTH_ISOLATING && free > BURIED_FREE;
 }
 

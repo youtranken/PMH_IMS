@@ -61,6 +61,23 @@ const RESTRICTED_SYNTAX = /** @type {const} */ ([
  * Đường ghi mới cần audit thì dùng `appendWithin` trong chính transaction nghiệp vụ, kèm
  * `@Audited(..., { writtenByService: true })`.
  */
+/**
+ * AD-16 — TÊN ĐỊNH DANH PHẢI LÀ TIẾNG ANH.
+ *
+ * Tiếng Việt chỉ ở: chú thích, mô tả `describe`/`it`/`test`, và BẢNG ÁNH XẠ NHÃN NHẬP-EXCEL
+ * (`devices/device-import.ts`, `catalog/catalog-import.ts`) — ở đó chuỗi tiếng Việt là DỮ
+ * LIỆU người dùng gõ vào file, đổi là hỏng chức năng nhập.
+ *
+ * LỚP NÀY CHỈ BẮT ĐỊNH DANH **CÓ DẤU**. Tiếng Việt không dấu cần một từ điển ~900 âm tiết —
+ * đó là lớp hai, làm cùng đợt đổi tên. Xem mục 3.4 của
+ * `docs/RA-SOAT-TOAN-DIEN-2026-09-19.md`.
+ */
+const NO_VIETNAMESE_IDENT = /** @type {const} */ ({
+  selector: 'Identifier[name=/[À-ỹ]/]',
+  message:
+    'AD-16: tên định danh phải là tiếng Anh. Tiếng Việt chỉ ở chú thích, mô tả bài kiểm ' +
+    'và bảng ánh xạ nhãn nhập-Excel.',
+});
 const NO_BEST_EFFORT_AUDIT = /** @type {const} */ ({
   selector: "CallExpression[callee.property.name='appendBestEffort']",
   message:
@@ -178,6 +195,7 @@ export default tseslint.config(
         ...RESTRICTED_SYNTAX,
         NO_BEST_EFFORT_AUDIT,
         NO_RAW_ERROR_MESSAGE_IN_LOG,
+        NO_VIETNAMESE_IDENT,
       ],
     },
   },

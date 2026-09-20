@@ -90,7 +90,7 @@ const SHEET_ALIASES: Record<string, ImportableEntity> = {
   'danh sách site': 'site',
   'tủ mạng': 'cabinet',
   'tu mang': 'cabinet',
-  tủ: 'cabinet',
+  'tủ': 'cabinet',
   cabinet: 'cabinet',
   'loại thiết bị': 'device_type',
   'loai thiet bi': 'device_type',

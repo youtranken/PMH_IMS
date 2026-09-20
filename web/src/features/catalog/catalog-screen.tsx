@@ -463,7 +463,7 @@ export function CatalogScreen({ me }: { me: Me }) {
             setSearch(value);
             setPage(1);
           }}
-          searchPlaceholder={t(TAB_KEYS.find((tab) => tab.key === entity)!.searchKey)}
+          searchPlaceholder={t(TAB_KEYS.find((tab) => tab.key === entity)?.searchKey ?? 'common.search')}
         />
 
         {!canEdit ? <p className="muted">{t('catalog.readOnly')}</p> : null}

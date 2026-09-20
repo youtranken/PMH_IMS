@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { stripComments } from '../src/test/source-text';
 import { Pool, type PoolClient } from 'pg';
 import { runMigrations } from '../src/database/migration-runner';
 import { createScratchDb, migrationsDir, testDbUrl, type ScratchDb, waitForLock } from './db';
@@ -222,7 +223,20 @@ describe('Đổi dải và khai IP không được đè lên nhau', () => {
       'utf8',
     );
 
-    const body = source.slice(source.indexOf('async update('), source.indexOf('async voidSubnet('));
+    /*
+     * LỘT CHÚ THÍCH TRƯỚC KHI SO (vá 20/09/2026).
+     *
+     * Trên lát THÔ, chuỗi `FOR UPDATE` xuất hiện lần đầu ở `subnet.service.ts:253` — bên
+     * trong block comment giải thích vì sao cần khóa — còn câu SQL thật ở dòng 257.
+     * `indexOf` không phân biệt code với chú thích, nên **xóa hẳn câu SQL mà giữ chú thích
+     * thì cả 4 khẳng định dưới đây vẫn xanh**, và 3 bài đua phía trên cũng xanh: cả file này
+     * trở thành lưới rách mà không ai biết.
+     *
+     * Cùng lớp lỗi mà `vault-surface.spec.ts` đã vá ngày 19/09; file này bị sót.
+     */
+    const body = stripComments(
+      source.slice(source.indexOf('async update('), source.indexOf('async voidSubnet(')),
+    );
     const lockAt = body.indexOf('FOR UPDATE');
     const countAt = body.indexOf('.select({ used: count() })');
     const txAt = body.indexOf('this.db.transaction');

@@ -341,10 +341,10 @@ async function main() {
   /* `users` ĐÃ là khoá đầu của `DOMAINS`, nên `['users', ...keys]` đếm nó hai lần và lượt
      `all` chạy vùng ấy hai lượt (vô hại vì các câu đều idempotent, nhưng là một mâu thuẫn
      hiển hiện với banner). Lọc ra — sửa 19/09/2026. */
-  const thuTu = ['users', ...Object.keys(DOMAINS).filter((d) => d !== 'users')];
-  const domains = (requested.includes('all') ? thuTu : requested)
+  const order = ['users', ...Object.keys(DOMAINS).filter((d) => d !== 'users')];
+  const domains = (requested.includes('all') ? order : requested)
     .slice()
-    .sort((a, b) => thuTu.indexOf(a) - thuTu.indexOf(b));
+    .sort((a, b) => order.indexOf(a) - order.indexOf(b));
   const unknown = domains.filter((d) => d !== 'users' && !(d in DOMAINS));
   if (unknown.length > 0) {
     console.error(

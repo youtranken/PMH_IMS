@@ -36,6 +36,28 @@ const CROSS_FEATURE_EXCEPTIONS = [
   '!@/features/devices/device-form',
 ];
 
+/**
+ * AD-16 — TÊN ĐỊNH DANH PHẢI LÀ TIẾNG ANH.
+ *
+ * Tiếng Việt chỉ ở: giá trị chuỗi i18n (`src/locales/vi.ts`), chú thích, mô tả
+ * `describe`/`it`/`test`, và bảng ánh xạ nhãn nhập-Excel bên api. Tên hàm/biến/hằng/kiểu thì
+ * không — đó là thứ lập trình viên, log và công cụ đọc.
+ *
+ * LỚP NÀY CHỈ BẮT ĐỊNH DANH **CÓ DẤU**. Phần lớn nợ hiện tại là tiếng Việt KHÔNG dấu
+ * (`quetNguon`, `timVaChoLoc`, `moTimNhanh`…), và bắt được chúng cần một từ điển ~900 âm tiết
+ * cộng một phép tính tỉ lệ — không nhét vừa một selector. Lớp hai là một bài điểm danh, làm
+ * cùng đợt đổi tên (xem mục 3.4 của `docs/RA-SOAT-TOAN-DIEN-2026-09-19.md`).
+ *
+ * Dải `À-ỹ` phủ chữ Latin có dấu phụ, gồm trọn khối Latin Extended Additional nơi
+ * chứa gần hết nguyên âm tiếng Việt. Không chạm tới chuỗi hay chú thích — selector `Identifier`
+ * chỉ khớp TÊN.
+ */
+const NO_VIETNAMESE_IDENT = /** @type {const} */ ({
+  selector: 'Identifier[name=/[\u00C0-\u1EF9]/]',
+  message:
+    'AD-16: tên định danh phải là tiếng Anh. Tiếng Việt chỉ ở GIAO DIỆN (qua lib/i18n), ' +
+    'chú thích và mô tả bài kiểm. Xem docs/SHARED-REGISTRY.md.',
+});
 /** Cấm `window.confirm` / `alert` / `prompt` — cả dạng trần lẫn dạng có tiền tố đối tượng. */
 const NO_NATIVE_DIALOG = /** @type {const} */ ([
   'error',
@@ -71,7 +93,7 @@ export default tseslint.config(
       'react-hooks/exhaustive-deps': 'warn',
 
       eqeqeq: ['error', 'always', { null: 'ignore' }],
-      'no-restricted-syntax': NO_NATIVE_DIALOG,
+      'no-restricted-syntax': [...NO_NATIVE_DIALOG, NO_VIETNAMESE_IDENT],
 
       /*
        * `tsconfig.app.json` KHÔNG bật strict, nên compiler không ép gì. Ba luật này giữ nếp
@@ -150,7 +172,25 @@ export default tseslint.config(
     // trình con để probe chính cái cổng này.
     files: ['src/**/*.{test,spec}.{ts,tsx}'],
     languageOptions: { globals: { ...globals.node } },
-    rules: { 'no-restricted-syntax': 'off' },
+    rules: {
+      /*
+       * Tắt luật cấm `confirm/alert/prompt` (bài kiểm CẦN gọi tiến trình con để probe cổng),
+       * nhưng GIỮ AD-16: bài kiểm cũng là mã, và một tên có dấu mới sinh ra ở đây thì cũng
+       * phải đỏ. Viết lại cả mảng thay vì `'off'` — `'off'` tắt trọn gói cả hai.
+       */
+      'no-restricted-syntax': ['error', NO_VIETNAMESE_IDENT],
+      /*
+       * `!` được phép TRONG BÀI KIỂM (20/09/2026).
+       *
+       * Bài kiểm dựng dữ liệu mẫu của chính nó rồi khẳng định trên đó, nên `rows[0]!` là một
+       * lời khẳng định mà nếu sai thì BÀI KIỂM ĐỎ — đúng thứ ta muốn. Ở mã sản phẩm thì `!`
+       * sai nghĩa là người dùng nhận trang trắng, nên ở đó rule vẫn `error`.
+       *
+       * Không nới bằng cách hạ rule toàn cục xuống `warn`: làm thế là 11 chỗ trong bài kiểm
+       * che mất bất kỳ `!` MỚI nào lọt vào `features/`.
+       */
+      '@typescript-eslint/no-non-null-assertion': 'off',
+    },
   },
   {
     // File cấu hình chạy bằng Node, không phải trong trình duyệt. `.cjs` là CommonJS thật

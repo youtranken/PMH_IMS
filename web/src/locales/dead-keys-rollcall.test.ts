@@ -41,7 +41,34 @@ const SRC = join(HERE, '..');
  * giải thích được trong PR — "sẽ dùng ở story sau" là lý do hợp lệ, "không biết tại sao còn"
  * thì không: cái đó nghĩa là xoá được.
  */
-const DUOC_PHEP_KHONG_DUNG: Record<string, string> = {};
+const DUOC_PHEP_KHONG_DUNG: Record<string, string> = {
+  /*
+   * Câu ĐÚNG, chưa được đấu dây — không phải rác (rà soát 19/09, mục 6).
+   *
+   * `features/ipam/service-port-picker.tsx` khi lọc không ra đang rơi về `select.noOptions`
+   * ("— Không có lựa chọn —"), trong khi câu dưới đây nói được phải làm gì tiếp. Nó chưa hiện
+   * ra vì `ui/combobox.tsx` chưa có prop `empty`. Giữ lại thay vì xoá: xoá xong thì lượt đấu
+   * dây sau lại phải nghĩ lại câu chữ.
+   */
+  'nat.serviceEmpty':
+    'chưa đấu dây — cần prop `empty` cho `ui/combobox.tsx`, xem mục 6 của RA-SOAT-TOAN-DIEN-2026-09-19',
+};
+
+/**
+ * Khóa mà một template RỘNG (`` t(`ns.${bien}`) ``) thật sự dựng ra.
+ *
+ * Khai tay vì bộ quét cố ý không cứu theo tiền tố phủ cả namespace — xem chú thích ở chỗ
+ * dựng `tienTo`. Thêm nhánh mới cho `ipCheck.reason` hay `done` thì thêm dòng ở đây; quên
+ * thì bài này đỏ, và đỏ đúng chỗ.
+ */
+const KHOA_DUNG_DONG = new Set<string>([
+  // `features/ipam/nat-screen.tsx` — `` t(`nat.${ipCheck.reason}`) ``
+  'nat.internalIpRequired',
+  'nat.internalIpNotOfTarget',
+  // `features/service-accounts/service-accounts-screen.tsx` — `` t(`serviceAccounts.${done}`) ``
+  'serviceAccounts.disabled',
+  'serviceAccounts.enabled',
+]);
 
 /*
  * DÙNG BẢN CHUNG `quetNguon` (19/09/2026) — luật bỏ qua `__lint-probe__*` nay sống ở MỘT chỗ.
@@ -109,9 +136,29 @@ describe('Khóa dịch chết trong vi.ts', () => {
     )
     .join('\n');
 
-  /* Tiền tố của mọi khóa dựng động: `` `abc.def_${…}` `` → 'abc.def_'. */
+  /*
+   * Tiền tố của mọi khóa dựng động: `` `abc.def_${…}` `` → 'abc.def_'.
+   *
+   * ===== TIỀN TỐ PHỦ CẢ NAMESPACE BỊ TỪ CHỐI (T-03, sửa 20/09/2026) =====
+   *
+   * Luật cứu-theo-tiền-tố có một lỗ: hai template trong repo rộng đến mức phủ trọn một
+   * namespace —
+   *
+   *   · `features/ipam/nat-screen.tsx:503`            → `` t(`nat.${ipCheck.reason}`) ``
+   *   · `features/service-accounts/…-screen.tsx:298`  → `` t(`serviceAccounts.${done}`) ``
+   *
+   * Tiền tố chúng sinh ra là `'nat.'` và `'serviceAccounts.'`, và `k.startsWith(t)` vì thế
+   * cứu **118 khóa** (60 + 58) khỏi mọi phép kiểm. Thực tế mỗi template chỉ dùng HAI khóa.
+   * Đo được hậu quả: 8 khóa chết sống sót qua cổng này.
+   *
+   * Nên: tiền tố kết thúc bằng `.` KHÔNG được tự động cứu ai. Khóa mà template rộng thật sự
+   * dùng thì khai tay ở `KHOA_DUNG_DONG` — danh sách ngắn, đọc được, và khi thêm nhánh mới
+   * cho `ipCheck.reason` thì phải khai, đúng như khi thêm một khóa thường.
+   */
   const tienTo = new Set(
-    [...nguon.matchAll(/[`]([A-Za-z0-9_.]*?)\$\{/g)].map((m) => m[1]).filter(Boolean),
+    [...nguon.matchAll(/[`]([A-Za-z0-9_.]*?)\$\{/g)]
+      .map((m) => m[1])
+      .filter((t) => t && !t.endsWith('.')),
   );
   /* Hậu tố khi phần đầu là biến: `` `${mod}.actCreated` `` → 'actCreated'. */
   const hauTo = new Set([...nguon.matchAll(/\$\{[^}]*\}\.([A-Za-z0-9_]+)/g)].map((m) => m[1]));
@@ -128,6 +175,7 @@ describe('Khóa dịch chết trong vi.ts', () => {
   it('mọi khóa đều có nơi dùng', () => {
     const chet = khoa.filter((k) => {
       if (k in DUOC_PHEP_KHONG_DUNG) return false;
+      if (KHOA_DUNG_DONG.has(k)) return false;
       if (nguon.includes(`'${k}'`) || nguon.includes(`"${k}"`)) return false;
       for (const t of tienTo) if (k.startsWith(t)) return false;
       return !hauTo.has(k.split('.').pop() as string);

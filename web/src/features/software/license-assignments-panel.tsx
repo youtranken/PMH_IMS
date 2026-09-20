@@ -364,7 +364,8 @@ export function AssignDialog({
           save.mutate(
             editing
               ? terms
-              : { deviceId: device!.id, overSeatReason: overSeatReason.trim(), ...terms },
+              : // `device` chắc chắn có: nhánh này là `!editing`, và cửa canh ở trên đã `return`.
+                { deviceId: device.id, overSeatReason: overSeatReason.trim(), ...terms },
             {
               onSuccess: (result) => onDone(result.warnings ?? []),
               onError: (err) => {

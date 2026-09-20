@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
@@ -127,8 +127,14 @@ export function ExpiryScreen({ me }: { me: Me }) {
       ),
   });
 
-  const kindLabel = (value: string) =>
-    kinds.data?.find((item) => item.kind === value)?.label ?? value;
+  /*
+   * `useCallback` chứ không phải hàm trần: nó nằm trong deps của `columns` bên dưới, và một
+   * hàm mới mỗi render sẽ làm memo tính lại mỗi render — tức vô hiệu hoá chính cái memo.
+   */
+  const kindLabel = useCallback(
+    (value: string) => kinds.data?.find((item) => item.kind === value)?.label ?? value,
+    [kinds.data],
+  );
 
   const allRows = expiry.data?.items ?? [];
   const summary = expiry.data?.summary;
@@ -213,7 +219,19 @@ export function ExpiryScreen({ me }: { me: Me }) {
           ),
       },
     ],
-    [t, kinds.data],
+    /*
+     * `nguong` PHẢI có mặt ở đây (sửa 20/09/2026, lỗi F-01).
+     *
+     * Thiếu nó thì `cell` của cột Tình trạng đóng băng bộ ngưỡng của lượt render ĐẦU —
+     * lúc `expiry.data` còn `undefined` nên `nguong` là `DEFAULT_EXPIRY_THRESHOLDS` (7/30).
+     * Dữ liệu về mang ngưỡng thật (ví dụ 14/30), `rows` ở dòng trên lọc theo 14, còn huy hiệu
+     * vẫn tô theo 7: ô "Gấp" ghi 6, bấm vào ra 6 dòng, chỉ 2 dòng đỏ. Đúng cảnh mà khối chú
+     * thích ở `ui/expiry-badge.tsx:38-40` sinh ra để dẹp.
+     *
+     * Không bài kiểm nào bắt được vì 7/30 cũng là seed của migration 0041 — mọi lượt chạy
+     * dev/E2E đều ở đúng cấu hình che lỗi.
+     */
+    [t, kindLabel, nguong],
   );
 
   return (
