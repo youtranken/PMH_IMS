@@ -92,6 +92,44 @@ describe('Combobox — phân biệt "không có" với "không tải được"',
 
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   });
+  /*
+   * ===== LỌC KHÔNG RA THÌ PHẢI NÓI RA (20/09/2026) =====
+   *
+   * `Combobox` không có trạng thái rỗng nào: lọc không ra thì menu chỉ còn mỗi dòng `action`
+   * (hoặc trống hẳn). Người dùng gõ một từ, nhìn vào khoảng trống, và phải tự đoán — chưa
+   * khai? gõ sai? hay hệ thống đang nghĩ? Ở màn NAT, câu trả lời đúng đã nằm sẵn trong
+   * `vi.ts` (`nat.serviceEmpty`) và luật CSS `.combo-empty` cũng đã có sẵn trong
+   * `form-layout.css` — chỉ thiếu mẩu nối giữa hai đầu. Cả hai vì thế bị cổng canh khoá/CSS
+   * chết báo là rác.
+   *
+   * Ba bài dưới đây khoá cả hình dạng lẫn VAI TRÒ của dòng ấy.
+   */
+  it('rỗng + có `empty`: hiện câu chỉ đường thay vì im lặng', async () => {
+    setup({ empty: 'Chưa có dịch vụ nào khớp. Bấm "+ Thêm dịch vụ".' });
+    await userEvent.click(screen.getByRole('combobox'));
+    expect(screen.getByText(/Chưa có dịch vụ nào khớp/)).toBeInTheDocument();
+  });
+
+  it('câu ấy KHÔNG phải một lựa chọn — ↓/Enter không chạm tới được', async () => {
+    /*
+     * Nếu nó mang `role="option"` thì trình đọc màn hình đọc ra một thiết bị CÓ THẬT, và
+     * người dùng bấm Enter lên một câu giải thích. `role="presentation"` là đúng vai.
+     */
+    setup({ empty: 'Chưa có dịch vụ nào khớp.' });
+    await userEvent.click(screen.getByRole('combobox'));
+    expect(screen.queryAllByRole('option')).toHaveLength(0);
+    expect(screen.getByRole('listbox')).toBeInTheDocument();
+  });
+
+  it('nguồn HỎNG thì ưu tiên câu báo hỏng, không nói "không có gì khớp"', async () => {
+    /*
+     * Hai chuyện khác hẳn nhau. Nói "không có gì khớp" khi thật ra không tải được là khẳng
+     * định một điều chưa đọc được — đúng lớp lỗi mà cả file này sinh ra để chặn.
+     */
+    setup({ failed: true, empty: 'Chưa có dịch vụ nào khớp.' });
+    await userEvent.click(screen.getByRole('combobox'));
+    expect(screen.queryByText(/Chưa có dịch vụ nào khớp/)).not.toBeInTheDocument();
+  });
 });
 
 describe('SuggestInput chuyển tiếp cờ hỏng', () => {

@@ -1539,7 +1539,22 @@ hàm · tham số · thuộc tính có dấu) và **1 ca phủ định** — chu
 khoá đã-đặt-trong-nháy **không được** báo lỗi. Vế phủ định quan trọng ngang vế khẳng định: một
 luật bắt nhầm cả đường đi đúng sẽ bị tắt trong vòng một tuần.
 
-**Lớp 2 (tiếng Việt KHÔNG dấu) hoãn có chủ ý.** Nó cần từ điển ~900 âm tiết cộng một phép tính
+**Lớp 2 (tiếng Việt KHÔNG dấu) — CHỐT THỨ TỰ: làm SAU khi đổi tên xong (chủ dự án duyệt 20/09).**
+
+> Không xây lớp 2 trước. Nó cần một **danh sách miễn trừ** cho 175 tên còn lại trong mã kiểm
+> thử — mà chính đợt G sẽ xoá gần hết. Xây bây giờ là viết một danh sách 175 dòng để rồi vứt.
+> Làm ngược lại thì sạch: đợt 3 (tên tệp) → đợt 4 (mã kiểm thử) → đợt 5 (`di-khap-giao-dien`),
+> xong thì danh sách miễn trừ **RỖNG**, và luật chỉ cần nói "không được có tên tiếng Việt,
+> chấm hết" — không ngoại lệ để ai cãi.
+>
+> **Rủi ro trong lúc chờ:** ai đó thêm tên tiếng Việt không dấu mới. Đánh giá THẤP — đúng giai
+> đoạn đó cả đội đang chủ động xoá chúng, và lớp 1 vẫn chặn mọi tên CÓ DẤU.
+>
+> Nếu rủi ro ấy thành thật (ví dụ đợt G bị hoãn dài), bản rẻ hơn (~1 giờ) là một **bộ đếm**:
+> "hôm nay có 175 tên tiếng Việt, con số này chỉ được phép GIẢM". Không cần từ điển hoàn hảo,
+> chỉ cần đếm được — và nó chặn đúng thứ cần chặn là THÊM MỚI.
+
+Lý do kỹ thuật ban đầu vẫn giữ: Nó cần từ điển ~900 âm tiết cộng một phép tính
 tỉ lệ, và một allowlist của 222 tên hiện có — mà chính đợt G sẽ làm danh sách ấy co lại. Dựng
 allowlist bây giờ là dựng một thứ sẽ phải viết lại. Làm cùng đợt 3 của mục 3.2.
 

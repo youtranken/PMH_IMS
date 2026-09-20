@@ -41,18 +41,7 @@ const SRC = join(HERE, '..');
  * giải thích được trong PR — "sẽ dùng ở story sau" là lý do hợp lệ, "không biết tại sao còn"
  * thì không: cái đó nghĩa là xoá được.
  */
-const DUOC_PHEP_KHONG_DUNG: Record<string, string> = {
-  /*
-   * Câu ĐÚNG, chưa được đấu dây — không phải rác (rà soát 19/09, mục 6).
-   *
-   * `features/ipam/service-port-picker.tsx` khi lọc không ra đang rơi về `select.noOptions`
-   * ("— Không có lựa chọn —"), trong khi câu dưới đây nói được phải làm gì tiếp. Nó chưa hiện
-   * ra vì `ui/combobox.tsx` chưa có prop `empty`. Giữ lại thay vì xoá: xoá xong thì lượt đấu
-   * dây sau lại phải nghĩ lại câu chữ.
-   */
-  'nat.serviceEmpty':
-    'chưa đấu dây — cần prop `empty` cho `ui/combobox.tsx`, xem mục 6 của RA-SOAT-TOAN-DIEN-2026-09-19',
-};
+const DUOC_PHEP_KHONG_DUNG: Record<string, string> = {};
 
 /**
  * Khóa mà một template RỘNG (`` t(`ns.${bien}`) ``) thật sự dựng ra.

@@ -408,6 +408,103 @@ test.describe('Ba cửa ghi trong chính module devices', () => {
   });
 });
 
+/**
+ * THANH LÝ CHỈ CÓ MỘT CỬA (A-01, vá 20/09/2026).
+ *
+ * ===== LỖ ĐANG VÁ =====
+ *
+ * `UpdateDto` của `PATCH /api/v1/devices/:id` nhận `status`, và `DEVICE_STATUSES` có
+ * `'retired'`. Nên đổi trạng thái qua ĐƯỜNG SỬA HỒ SƠ ghi thẳng chữ "đã thanh lý" vào bảng,
+ * đi vòng qua trọn vẹn chốt của `PATCH :id/status`:
+ *
+ *   · không `FOR UPDATE` ⇒ mất hàng rào đua;
+ *   · không hỏi `holdingsWithin` ⇒ IP vẫn `assigned`, rule NAT vẫn mở, ghế license bị chiếm;
+ *   · ghi `device.updated` thay vì `device.status-changed` ⇒ lượt thanh lý VÔ HÌNH.
+ *
+ * Và **vai `member` là đủ** — `@Roles('sa','admin','member')` trên route sửa.
+ *
+ * ===== BÀI NÀY HỎI GÌ =====
+ *
+ * Không chỉ hỏi "có trả lỗi không". Vế thứ hai mới là vế đắt: sau lượt bị từ chối, cái IP
+ * vẫn phải còn nguyên chủ của nó. Một bản vá chặn được request nhưng đã kịp ghi gì đó thì
+ * vẫn hỏng, và chỉ vế ấy nhìn ra.
+ */
+test.describe('Thanh lý chỉ đi được bằng cửa Thanh lý', () => {
+  test('đường sửa hồ sơ KHÔNG thanh lý được, và không đụng gì tới tài sản máy đang giữ', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const deviceId = await makeDevice(page, 'E2E-A01-01', 'Switch');
+
+    // Dựng cảnh: máy đang GIỮ một địa chỉ IP. Đây chính là thứ cửa Thanh lý hỏi tới.
+    const subnet = await page.request.post('/api/v1/ipam/subnets', {
+      headers: await writeHeaders(page),
+      data: { name: 'E2E A01', cidr: '10.77.7.0/24' },
+    });
+    expect(subnet.status()).toBe(201);
+    const subnetId = ((await subnet.json()) as { id: string }).id;
+    const ip = await page.request.post('/api/v1/ipam/addresses', {
+      headers: await writeHeaders(page),
+      data: { subnetId, address: '10.77.7.10', deviceId, usedBy: 'E2E A01' },
+    });
+    expect(ip.status(), 'dựng cảnh phải chạy được').toBe(201);
+
+    // CỬA SAU: đổi trạng thái bằng đường SỬA HỒ SƠ.
+    const res = await page.request.patch(`/api/v1/devices/${deviceId}`, {
+      headers: await writeHeaders(page),
+      data: { status: 'retired' },
+    });
+    expect(res.status(), 'đường sửa hồ sơ không được phép thanh lý').toBe(400);
+    expect(((await res.json()) as { code?: string }).code).toBe('RETIRE_VIA_UPDATE');
+
+    // Máy vẫn còn dùng được...
+    const after = await page.request.get(`/api/v1/devices/${deviceId}`, {
+      headers: await writeHeaders(page),
+    });
+    expect(((await after.json()) as { status: string }).status).not.toBe('retired');
+
+    // ...và IP vẫn nguyên chủ của nó. Đây là vế mà một bản vá "chặn muộn" sẽ trượt.
+    const slots = await page.request.get(`/api/v1/ipam/subnets/${subnetId}/addresses`, {
+      headers: await writeHeaders(page),
+    });
+    const rows = (await slots.json()) as { address: string; status: string }[];
+    const giu = rows.find((r) => r.address === '10.77.7.10');
+    expect(giu?.status, 'IP phải vẫn đang được cấp cho máy đó').toBe('assigned');
+  });
+
+  test('cửa Thanh lý thật thì vẫn chạy — bản vá không được chặn nhầm việc đúng', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const deviceId = await makeDevice(page, 'E2E-A01-02', 'Switch');
+    await retire(page, deviceId);
+
+    const after = await page.request.get(`/api/v1/devices/${deviceId}`, {
+      headers: await writeHeaders(page),
+    });
+    expect(((await after.json()) as { status: string }).status).toBe('retired');
+  });
+
+  test('mở lại một máy đã thanh lý vẫn đi được bằng đường sửa — chốt chỉ chặn chiều VÀO', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const deviceId = await makeDevice(page, 'E2E-A01-03', 'Switch');
+    await retire(page, deviceId);
+
+    /*
+     * Chiều RA khỏi `retired` phải còn mở: bấm nhầm Thanh lý một lần mà hồ sơ chết vĩnh viễn
+     * thì bản vá này đắt hơn lỗi nó sửa. `assertNotRetired` chặn đường sửa của máy đã thanh
+     * lý, nên đường mở lại đúng là `PATCH :id/status` — bài này chốt nó còn sống.
+     */
+    const res = await page.request.patch(`/api/v1/devices/${deviceId}/status`, {
+      headers: await writeHeaders(page),
+      data: { status: 'in_use' },
+    });
+    expect(res.status(), 'mở lại hồ sơ thanh lý nhầm phải chạy được').toBeLessThan(300);
+  });
+});
+
 /** File .xlsx tối thiểu — cột Trạng thái có mặt để thử được đường "thanh lý bằng Excel". */
 async function buildFile(path: string, rows: string[][]): Promise<string> {
   const wb = new ExcelJS.Workbook();
