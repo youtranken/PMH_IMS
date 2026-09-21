@@ -3,6 +3,7 @@ import {
   agePendingSession,
   APP_ORIGIN,
   clearMailbox,
+  configNumber,
   countAuditByActor,
   E2E_SA,
   firstLogin,
@@ -148,7 +149,8 @@ test.describe('Gắn yếu tố thứ hai phải chứng minh lại mình là ai
     await loginAs(page, victim);
     await clearMailbox();
 
-    const maxFailures = 5; // `secret.stepup_max_failures`
+    // Đọc từ `system_config`, không viết cứng: DoD gạch 8 áp cho cả bài kiểm (sửa 21/09).
+    const maxFailures = configNumber('secret.stepup_max_failures');
     for (let i = 1; i <= maxFailures; i += 1) {
       const wrong = await page.request.post('/api/v1/auth/totp/enroll', {
         headers: await writeHeaders(page),
@@ -179,6 +181,78 @@ test.describe('Gắn yếu tố thứ hai phải chứng minh lại mình là ai
 
     const mails = await waitForMail('lượt thất bại quanh két');
     expect(mails.length, 'đủ ngưỡng thì phải có thư cảnh báo ĐI THẬT').toBeGreaterThanOrEqual(1);
+  });
+
+  /*
+   * ===== GÕ ĐÚNG THÌ BỘ ĐẾM PHẢI VỀ 0 =====
+   *
+   * Cửa này dùng CHUNG cột `sessions.stepup_failures` với cửa két và cửa nhập mã lúc đăng
+   * nhập — cố ý, vì ba cửa hỏi cùng một câu ("chứng minh lại đi") nên năm lần sai xen kẽ ba
+   * cửa phải chết y như năm lần sai ở một cửa.
+   *
+   * Nhưng dùng chung thì phải dùng chung CẢ HAI CHIỀU. Cửa két xoá bộ đếm khi gõ đúng
+   * (`markSteppedUpWithin`); cửa này ở bản đầu chỉ biết CỘNG. Hệ quả: người gõ nhầm mật khẩu
+   * bốn lần rồi gõ đúng vẫn mang `stepup_failures = 4` suốt đời phiên, và lần gõ hụt mã đầu
+   * tiên sau đó thu hồi phiên kèm câu "Gõ sai mã 5 lần" — một câu nói sai sự thật với người
+   * vừa sai đúng một lần.
+   *
+   * Docblock của `registerStepUpFailure` viết "số lần sai LIÊN TIẾP". Bản đầu không liên
+   * tiếp; nó tích luỹ vĩnh viễn. Bài này canh đúng chữ "liên tiếp" đó.
+   *
+   * KHÔNG dùng `markSteppedUpWithin` để xoá: hàm đó còn đóng dấu `stepped_up_at`, tức gõ
+   * đúng mật khẩu ở cửa cài 2 lớp sẽ mở luôn cửa KÉT. Hai cửa chia nhau bộ đếm, không chia
+   * nhau quyền.
+   */
+  test('gõ đúng mật khẩu thì bộ đếm về 0 — "liên tiếp" phải đúng nghĩa liên tiếp', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const victim = await accountWithoutTotp(page);
+    await loginAs(page, victim);
+
+    const maxFailures = configNumber('secret.stepup_max_failures');
+
+    // Sai tới sát ngưỡng, còn đúng MỘT lần nữa là mất phiên.
+    for (let i = 1; i < maxFailures; i += 1) {
+      const wrong = await page.request.post('/api/v1/auth/totp/enroll', {
+        headers: await writeHeaders(page),
+        data: { currentPassword: `Sai#MatKhau#${i}` },
+      });
+      expect(wrong.status()).toBe(401);
+      expect((await wrong.json()) as { code: string }).toMatchObject({
+        code: 'CURRENT_PASSWORD_WRONG',
+      });
+    }
+
+    // Rồi nhớ ra mật khẩu.
+    const ok = await page.request.post('/api/v1/auth/totp/enroll', {
+      headers: await writeHeaders(page),
+      data: { currentPassword: victim.password },
+    });
+    expect(ok.status(), await ok.text()).toBe(200);
+    expect((await ok.json()) as { secret: string }).toHaveProperty('secret');
+
+    /*
+     * Vế canh: một lượt sai SAU đó phải là lượt sai THỨ NHẤT, không phải thứ năm.
+     *
+     * Chốt bằng `attemptsLeft` chứ không chỉ bằng "phiên còn sống": bản hỏng trả
+     * `SESSION_REVOKED` ngay ở đây, nhưng một bản hỏng NỬA VỜI (xoá bộ đếm sai chỗ) vẫn có
+     * thể cho phiên sống mà con số đếm còn bẩn. Con số mới là thứ người dùng đọc.
+     */
+    const again = await page.request.post('/api/v1/auth/totp/enroll', {
+      headers: await writeHeaders(page),
+      data: { currentPassword: 'Sai#MatKhau#sau-khi-go-dung' },
+    });
+    expect(again.status()).toBe(401);
+    const body = (await again.json()) as { code: string; attemptsLeft?: number };
+    expect(body.code, 'gõ đúng rồi thì lượt sai kế tiếp không được là giọt nước tràn ly').toBe(
+      'CURRENT_PASSWORD_WRONG',
+    );
+    expect(body.attemptsLeft, 'bộ đếm phải đếm lại từ đầu').toBe(maxFailures - 1);
+
+    // Và cookie vẫn sống — vế mà người dùng thật cảm nhận được.
+    const me = await page.request.get('/api/v1/auth/me');
+    expect(me.status(), 'không ai được mất phiên vì một lần gõ nhầm').toBe(200);
   });
 
   test('phiên chờ bị bỏ quên hết quyền miễn — cửa sổ có HẠN, không phải mở vĩnh viễn', async ({

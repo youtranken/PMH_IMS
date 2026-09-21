@@ -56,19 +56,19 @@ import type { Me } from '@/lib/me';
 const me = { role: 'sa', csrfToken: 'x', email: 'sa@pmh.com.vn' } as unknown as Me;
 
 /** Ngày ISO cách hôm nay `days` hôm — tính theo ngày lịch, khớp `daysUntil`. */
-function ngayCachDay(days: number): string {
+function daysFromNow(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() + days);
   return d.toISOString().slice(0, 10);
 }
 
-const CON_10_NGAY = {
+const TEN_DAYS_LEFT = {
   id: 'r1',
   label: 'DM-000001 — Máy trạm kế toán',
   sublabel: null,
   kind: 'device_warranty',
   start: null,
-  end: ngayCachDay(10),
+  end: daysFromNow(10),
   link: '/devices/r1',
   daysLeft: 10,
   canRenew: false,
@@ -82,7 +82,7 @@ const CON_10_NGAY = {
  * vì đó chính là lý do `thresholds` tồn tại như một prop: bảng và huy hiệu phải cùng đọc
  * ngưỡng đi kèm lượt trả về.
  */
-function gaLapFetch() {
+function stubFetch() {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
@@ -99,7 +99,7 @@ function gaLapFetch() {
       if (url.includes('/expiry')) {
         return Promise.resolve(
           jsonResponse(200, {
-            items: [CON_10_NGAY],
+            items: [TEN_DAYS_LEFT],
             summary: { expired: 0, critical: 1, warning: 0 },
             thresholds: { criticalDays: 14, warningDays: 30 },
           }),
@@ -114,7 +114,7 @@ describe('Màn Sắp hết hạn — ngưỡng của lượt trả về', () => 
   afterEach(() => vi.unstubAllGlobals());
 
   it('huy hiệu tô theo ngưỡng server trả về, không phải ngưỡng lúc chờ dữ liệu', async () => {
-    gaLapFetch();
+    stubFetch();
 
     /* Cache ấm sẵn: đúng trạng thái sau khi người dùng vừa ở Bảng điều khiển. */
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -138,15 +138,15 @@ describe('Màn Sắp hết hạn — ngưỡng của lượt trả về', () => 
     );
 
     // Chờ dòng về — tức đã qua lượt render có `expiry.data === undefined`, đúng lượt sinh lỗi.
-    const nhan = await screen.findByText(/Còn 10 ngày/i, {}, { timeout: 5000 });
+    const badge = await screen.findByText(/Còn 10 ngày/i, {}, { timeout: 5000 });
 
     await waitFor(() => {
       /*
        * So bằng LỚP CSS chứ không bằng chữ: nhãn "Còn 10 ngày" giống hệt nhau ở cả hai
        * ngưỡng — chỉ MÀU nói ra hệ thống đang phân loại nó là gấp hay chỉ là sắp tới.
        */
-      expect(nhan.className).toContain('danger');
-      expect(nhan.className).not.toContain('warn');
+      expect(badge.className).toContain('danger');
+      expect(badge.className).not.toContain('warn');
     });
   });
 });

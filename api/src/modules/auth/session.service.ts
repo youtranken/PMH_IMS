@@ -111,6 +111,25 @@ export class SessionService {
   }
 
   /**
+   * Xoá bộ đếm sai mà KHÔNG cấp quyền gì — dùng cho cửa xác thực lại ở màn cài 2 lớp (A-02).
+   *
+   * Vì sao không gọi thẳng `markSteppedUpWithin`: hàm đó còn đóng dấu `stepped_up_at`, tức
+   * gõ đúng MẬT KHẨU ở cửa cài 2 lớp sẽ mở luôn cửa KÉT — mà cửa két được dựng để đòi đúng
+   * một thứ khác: mã 6 số trên điện thoại. Ba cửa chia nhau BỘ ĐẾM, không chia nhau QUYỀN.
+   *
+   * Vì sao phải có nó (thiếu tới 21/09): cửa enroll chỉ biết CỘNG. Người gõ nhầm bốn lần rồi
+   * gõ đúng vẫn mang `stepup_failures = 4` suốt đời phiên, và lần gõ hụt mã đầu tiên sau đó
+   * thu hồi phiên kèm câu "Gõ sai mã 5 lần" — sai sự thật với người vừa sai một lần. Docblock
+   * ngay dưới đây hứa "LIÊN TIẾP"; không có hàm này thì nó là tích luỹ vĩnh viễn.
+   */
+  async clearStepUpFailuresWithin(tx: Tx, id: string): Promise<void> {
+    await tx
+      .update(sessionsTable)
+      .set({ stepupFailures: 0 })
+      .where(eq(sessionsTable.id, id));
+  }
+
+  /**
    * Gõ sai mã step-up: tăng bộ đếm và trả về số lần sai LIÊN TIẾP sau khi tăng.
    *
    * Tăng bằng SQL (`+ 1` trên chính cột) chứ không đọc-rồi-ghi: hai request gõ sai cùng lúc

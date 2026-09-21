@@ -118,3 +118,51 @@ export async function ensureAppRole(
     client.release();
   }
 }
+
+/**
+ * Nơi cài được phép chạy bằng role rộng — DANH SÁCH CHO PHÉP, không phải danh sách CẤM.
+ *
+ * Bản đầu (20/09) viết `if (NODE_ENV === 'production') throw`, tức một danh sách cấm gồm
+ * đúng một phần tử. Mọi tên khác — `staging`, `preprod`, `uat`, hay không đặt gì — rơi vào
+ * nhánh "chỉ cảnh báo", nghĩa là chạy bằng superuser mà không ai bị chặn, ở đúng những nơi
+ * giống production nhất và cũng hay bị quên `.env` nhất.
+ *
+ * Đảo lại thì một cái tên môi trường chưa ai nghĩ tới mặc định được BẢO VỆ thay vì mặc định
+ * bỏ ngỏ. Cái giá phải trả là thật và cố ý chấp nhận: một nơi cài có `.env` cũ sẽ CHẾT lúc
+ * boot thay vì chạy tiếp. Đó là điều mong muốn — nó chết kèm một câu nói đúng chỗ hỏng, thay
+ * vì chạy ba tháng rồi mới lộ ra là AD-9 chưa từng đúng.
+ */
+const ENVS_ALLOWED_TO_RUN_WIDE = new Set(['development', 'test']);
+
+/**
+ * Hỏi bằng chính kết nối mà ứng dụng sẽ dùng cả đời: role này có rộng quá không (D-01).
+ *
+ * ===== VÌ SAO HÀM NÀY NẰM Ở ĐÂY CHỨ KHÔNG Ở `main.ts` =====
+ *
+ * Nó ở `main.ts` tới 21/09, và vì thế KHÔNG bài kiểm nào chạy vào được: `main.ts` gọi
+ * `bootstrap()` ngay khi nạp module, nên import nó vào một bài kiểm là dựng cả ứng dụng.
+ * Đo được hậu quả: gỡ hẳn câu `throw` thì mọi cổng vẫn xanh — vì mọi lượt chạy đều ở cấu
+ * hình ĐÚNG, nơi hàm thoát ngay dòng đầu. Một hàng rào không đột biến nào làm đỏ được thì
+ * chưa phải hàng rào.
+ *
+ * `nodeEnv` là THAM SỐ BẮT BUỘC, không có giá trị mặc định và không đọc thẳng `process.env`.
+ * Hai lý do, lý do thứ hai chỉ lộ ra khi bài kiểm đỏ:
+ *
+ *  1. Bài kiểm phải đặt được nó mà không vặn biến môi trường toàn cục — thứ rò sang bài khác.
+ *  2. Với `nodeEnv = process.env.NODE_ENV` làm mặc định thì truyền `undefined` TƯỜNG MINH
+ *     vẫn rơi về giá trị mặc định (đó là ngữ nghĩa của tham số mặc định trong JS). Nghĩa là
+ *     ca "nơi cài không đặt NODE_ENV" — ca đáng lo NHẤT, vì nó mặc định thành `''` và phải
+ *     bị chặn — trở thành ca KHÔNG diễn đạt được. Bỏ mặc định đi thì nó diễn đạt được.
+ */
+export async function assertNarrowRole(
+  pool: Pool,
+  logger: { warn: (message: string) => void },
+  nodeEnv: string | undefined,
+): Promise<void> {
+  const verdict = appRoleVerdict(await readAppRoleFacts(pool));
+  if (verdict.ok || verdict.reason === null) return;
+  if (!ENVS_ALLOWED_TO_RUN_WIDE.has(nodeEnv ?? '')) {
+    throw new Error(verdict.reason);
+  }
+  logger.warn(verdict.reason);
+}

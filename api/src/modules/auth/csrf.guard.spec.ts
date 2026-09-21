@@ -56,16 +56,16 @@ async function expectForbidden(p: Promise<unknown>, code: string): Promise<void>
 const ORIGIN = 'https://ims.pmh.com.vn';
 
 describe('CsrfGuard — AD-8, hai lớp', () => {
-  const truoc = process.env.APP_BASE_URL;
+  const previousBaseUrl = process.env.APP_BASE_URL;
   beforeEach(() => {
     process.env.APP_BASE_URL = ORIGIN;
   });
   afterAll(() => {
-    if (truoc === undefined) delete process.env.APP_BASE_URL;
-    else process.env.APP_BASE_URL = truoc;
+    if (previousBaseUrl === undefined) delete process.env.APP_BASE_URL;
+    else process.env.APP_BASE_URL = previousBaseUrl;
   });
 
-  const ghi = (headers: Record<string, string | undefined>, sessionId?: string): FakeReq => ({
+  const writeReq = (headers: Record<string, string | undefined>, sessionId?: string): FakeReq => ({
     method: 'POST',
     headers,
     user: sessionId ? { sessionId } : undefined,
@@ -89,14 +89,14 @@ describe('CsrfGuard — AD-8, hai lớp', () => {
     // Thứ tự quan trọng: `assertOrigin` chạy trước nhánh `isPublic`. Màn đăng nhập chưa có
     // phiên nào, nên Origin là lớp DUY NHẤT bảo vệ nó.
     await expectForbidden(
-      guard(true).canActivate(contextFor(ghi({ origin: 'https://ke-tan-cong.example' }))),
+      guard(true).canActivate(contextFor(writeReq({ origin: 'https://ke-tan-cong.example' }))),
       'ORIGIN_MISMATCH',
     );
   });
 
   it('Origin khác hoa/thường và thừa dấu / vẫn được chấp nhận', async () => {
     await expect(
-      guard().canActivate(contextFor(ghi({ origin: 'HTTPS://IMS.PMH.COM.VN/', 'x-csrf-token': CSRF }, 's1'))),
+      guard().canActivate(contextFor(writeReq({ origin: 'HTTPS://IMS.PMH.COM.VN/', 'x-csrf-token': CSRF }, 's1'))),
     ).resolves.toBe(true);
   });
 
@@ -108,16 +108,16 @@ describe('CsrfGuard — AD-8, hai lớp', () => {
    */
   it('KHÔNG có header Origin: bỏ qua lớp 1, vẫn kiểm token (đánh đổi có ý)', async () => {
     await expect(
-      guard().canActivate(contextFor(ghi({ 'x-csrf-token': CSRF }, 's1'))),
+      guard().canActivate(contextFor(writeReq({ 'x-csrf-token': CSRF }, 's1'))),
     ).resolves.toBe(true);
     // ...nhưng thiếu token thì vẫn chặn — bỏ qua Origin KHÔNG phải bỏ qua cả guard.
-    await expectForbidden(guard().canActivate(contextFor(ghi({}, 's1'))), 'CSRF_TOKEN_INVALID');
+    await expectForbidden(guard().canActivate(contextFor(writeReq({}, 's1'))), 'CSRF_TOKEN_INVALID');
   });
 
   it('thiếu APP_BASE_URL: bỏ qua lớp 1, lớp 2 vẫn đứng', async () => {
     delete process.env.APP_BASE_URL;
     await expectForbidden(
-      guard().canActivate(contextFor(ghi({ origin: 'https://ke-tan-cong.example' }, 's1'))),
+      guard().canActivate(contextFor(writeReq({ origin: 'https://ke-tan-cong.example' }, 's1'))),
       'CSRF_TOKEN_INVALID',
     );
   });
@@ -126,7 +126,7 @@ describe('CsrfGuard — AD-8, hai lớp', () => {
 
   it('token đúng + Origin đúng ⇒ qua', async () => {
     await expect(
-      guard().canActivate(contextFor(ghi({ origin: ORIGIN, 'x-csrf-token': CSRF }, 's1'))),
+      guard().canActivate(contextFor(writeReq({ origin: ORIGIN, 'x-csrf-token': CSRF }, 's1'))),
     ).resolves.toBe(true);
   });
 
@@ -140,26 +140,26 @@ describe('CsrfGuard — AD-8, hai lớp', () => {
     const headers: Record<string, string | undefined> = { origin: ORIGIN };
     if (token !== undefined) headers['x-csrf-token'] = token;
     await expectForbidden(
-      guard().canActivate(contextFor(ghi(headers, 's1'))),
+      guard().canActivate(contextFor(writeReq(headers, 's1'))),
       'CSRF_TOKEN_INVALID',
     );
   });
 
   it('phiên không tìm thấy ⇒ chặn, không "không có phiên nên thôi"', async () => {
     await expectForbidden(
-      guard(false, null).canActivate(contextFor(ghi({ origin: ORIGIN, 'x-csrf-token': CSRF }, 's1'))),
+      guard(false, null).canActivate(contextFor(writeReq({ origin: ORIGIN, 'x-csrf-token': CSRF }, 's1'))),
       'CSRF_TOKEN_INVALID',
     );
   });
 
   it('route KHÔNG công khai mà không có sessionId ⇒ mã riêng CSRF_NO_SESSION', async () => {
     await expectForbidden(
-      guard().canActivate(contextFor(ghi({ origin: ORIGIN, 'x-csrf-token': CSRF }))),
+      guard().canActivate(contextFor(writeReq({ origin: ORIGIN, 'x-csrf-token': CSRF }))),
       'CSRF_NO_SESSION',
     );
   });
 
   it('route công khai (đăng nhập) chỉ cần Origin đúng, không cần token', async () => {
-    await expect(guard(true).canActivate(contextFor(ghi({ origin: ORIGIN })))).resolves.toBe(true);
+    await expect(guard(true).canActivate(contextFor(writeReq({ origin: ORIGIN })))).resolves.toBe(true);
   });
 });

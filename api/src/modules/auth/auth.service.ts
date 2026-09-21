@@ -507,6 +507,20 @@ export class AuthService {
           attemptsLeft: maxFailures - failures,
         });
       }
+
+      /*
+       * GÕ ĐÚNG THÌ XOÁ BỘ ĐẾM — nửa còn lại của việc "dùng chung cơ chế cửa két".
+       *
+       * Thiếu câu này (tới 21/09) thì bộ đếm chỉ biết cộng: sai bốn lần rồi gõ đúng vẫn để
+       * lại `stepup_failures = 4` trên phiên, và lần gõ hụt mã ĐẦU TIÊN ở cửa két sau đó
+       * thu hồi phiên, kèm câu "Gõ sai mã 5 lần" nói sai sự thật. Dùng chung bộ đếm thì phải
+       * dùng chung cả hai chiều, nếu không "liên tiếp" chỉ là một chữ trong chú thích.
+       *
+       * `clearStepUpFailuresWithin` chứ không phải `markSteppedUpWithin`: cửa này chứng minh
+       * MẬT KHẨU, không chứng minh điện thoại — đóng dấu `stepped_up_at` ở đây là mở cửa két
+       * bằng đúng thứ mà cửa két cố ý không nhận.
+       */
+      await this.db.transaction((tx) => this.sessions.clearStepUpFailuresWithin(tx, session.id));
     }
 
     if (user.totpEnrolledAt !== null) {

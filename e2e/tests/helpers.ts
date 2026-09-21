@@ -132,6 +132,28 @@ export function getLoginRateLimit(): string {
 }
 
 /**
+ * Đọc MỘT SỐ trong `system_config` — DoD gạch 8 áp cho cả bài kiểm.
+ *
+ * Viết cứng `const maxFailures = 5` thì đổi ngưỡng trong `system_config` — đúng đường AD-11
+ * mở ra để đổi — làm bài đỏ vì một lý do chẳng liên quan tới thứ nó canh. Và một bài đỏ vì
+ * lý do sai là bài sẽ bị ai đó sửa cho xanh, chứ không phải bị đọc.
+ *
+ * Ném chứ không trả `NaN` khi khoá không tồn tại: một ngưỡng `NaN` làm mọi so sánh thành
+ * `false`, tức bài vẫn chạy tới cùng rồi xanh mà chẳng canh gì.
+ */
+export function configNumber(key: string): number {
+  const raw = dockerExec(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -tAc "SELECT value FROM system_config WHERE key = '${key}'"`,
+    `Đọc tham số ${key}`,
+  ).trim();
+  const value = Number(raw);
+  if (!Number.isFinite(value)) {
+    throw new Error(`system_config."${key}" không phải một số: ${JSON.stringify(raw)}`);
+  }
+  return value;
+}
+
+/**
  * Đặt trần đăng nhập theo IP. CHỈ dùng trong E2E.
  *
  * ===== VÌ SAO PHẢI `flushResets()` TRƯỚC =====

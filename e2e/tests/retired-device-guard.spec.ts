@@ -468,8 +468,8 @@ test.describe('Thanh lý chỉ đi được bằng cửa Thanh lý', () => {
       headers: await writeHeaders(page),
     });
     const rows = (await slots.json()) as { address: string; status: string }[];
-    const giu = rows.find((r) => r.address === '10.77.7.10');
-    expect(giu?.status, 'IP phải vẫn đang được cấp cho máy đó').toBe('assigned');
+    const heldAddress = rows.find((r) => r.address === '10.77.7.10');
+    expect(heldAddress?.status, 'IP phải vẫn đang được cấp cho máy đó').toBe('assigned');
   });
 
   test('cửa Thanh lý thật thì vẫn chạy — bản vá không được chặn nhầm việc đúng', async ({

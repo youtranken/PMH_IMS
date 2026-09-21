@@ -75,7 +75,7 @@ describe('Quyền mặc định đóng (AD-9) — mọi route phải khai vai', 
    * `routesOf` đọc hụt. Gieo một controller giả thiếu `@Roles` và đòi nó bị bắt.
    */
   it('bộ quét bắt được một route thiếu @Roles (tự kiểm chính nó)', () => {
-    const gia = [
+    const fakeSource = [
       '@Controller("api/v1/gia")',
       'export class GiaController {',
       "  @Roles('sa')",
@@ -87,7 +87,7 @@ describe('Quyền mặc định đóng (AD-9) — mọi route phải khai vai', 
       '}',
     ].join('\n');
 
-    const routes = routesOf(gia);
+    const routes = routesOf(fakeSource);
     expect(routes).toHaveLength(2);
     expect(routes[0].decorators).toContain('@Roles(');
     // Route thứ hai KHÔNG được thừa hưởng `@Roles` của route đứng trên nó.

@@ -50,7 +50,7 @@ const DUOC_PHEP_KHONG_DUNG: Record<string, string> = {};
  * dựng `tienTo`. Thêm nhánh mới cho `ipCheck.reason` hay `done` thì thêm dòng ở đây; quên
  * thì bài này đỏ, và đỏ đúng chỗ.
  */
-const KHOA_DUNG_DONG = new Set<string>([
+const KEYS_USED_DYNAMICALLY = new Set<string>([
   // `features/ipam/nat-screen.tsx` — `` t(`nat.${ipCheck.reason}`) ``
   'nat.internalIpRequired',
   'nat.internalIpNotOfTarget',
@@ -141,7 +141,7 @@ describe('Khóa dịch chết trong vi.ts', () => {
    * Đo được hậu quả: 8 khóa chết sống sót qua cổng này.
    *
    * Nên: tiền tố kết thúc bằng `.` KHÔNG được tự động cứu ai. Khóa mà template rộng thật sự
-   * dùng thì khai tay ở `KHOA_DUNG_DONG` — danh sách ngắn, đọc được, và khi thêm nhánh mới
+   * dùng thì khai tay ở `KEYS_USED_DYNAMICALLY` — danh sách ngắn, đọc được, và khi thêm nhánh mới
    * cho `ipCheck.reason` thì phải khai, đúng như khi thêm một khóa thường.
    */
   const tienTo = new Set(
@@ -164,7 +164,7 @@ describe('Khóa dịch chết trong vi.ts', () => {
   it('mọi khóa đều có nơi dùng', () => {
     const chet = khoa.filter((k) => {
       if (k in DUOC_PHEP_KHONG_DUNG) return false;
-      if (KHOA_DUNG_DONG.has(k)) return false;
+      if (KEYS_USED_DYNAMICALLY.has(k)) return false;
       if (nguon.includes(`'${k}'`) || nguon.includes(`"${k}"`)) return false;
       for (const t of tienTo) if (k.startsWith(t)) return false;
       return !hauTo.has(k.split('.').pop() as string);

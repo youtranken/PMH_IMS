@@ -6,7 +6,7 @@ import { AppModule } from './app.module';
 import { setupApp } from './app.setup';
 import { PG_POOL } from './database/database.module';
 import { redactMessage } from './common/log-redact';
-import { appRoleVerdict, ensureAppRole, readAppRoleFacts } from './database/app-role';
+import { assertNarrowRole, ensureAppRole } from './database/app-role';
 import { resolveMigrationsDir, runMigrations } from './database/migration-runner';
 
 /** Biến bắt buộc — thiếu là chết ngay lúc boot, không chạy nửa vời (AD-11). */
@@ -42,21 +42,14 @@ async function migrate(logger: Logger): Promise<void> {
   }
 }
 
-/**
- * Hỏi bằng chính kết nối mà ứng dụng sẽ dùng cả đời: role này có rộng quá không (D-01).
+/*
+ * `assertNarrowRole` ĐÃ CHUYỂN sang `database/app-role.ts` (21/09).
  *
- * Ở production thì NÉM — đây là hạng mục "chặn phát hành" của rà soát 19/09, và một lời cảnh
- * báo trong log là thứ không ai đọc lúc 2 giờ sáng. Ngoài production thì chỉ kêu to: máy dev
- * và stack E2E của người khác không được chết vì một file `.env` chưa kịp cập nhật.
+ * Nó ở đây thì không bài kiểm nào chạm tới được — `main.ts` gọi `bootstrap()` ngay lúc nạp
+ * module. Và một cổng không bài nào chạm tới là một cổng có thể bị gỡ mà không gì đỏ: đã đo,
+ * xoá câu `throw` mà Jest, test:db, Vitest, build lẫn E2E đều xanh. Xem bảng bốn ca ở
+ * `api/test/app-role-privileges.spec.ts`, trong đó có ca "tên môi trường lạ vẫn phải NÉM".
  */
-async function assertNarrowRole(pool: Pool, logger: Logger): Promise<void> {
-  const verdict = appRoleVerdict(await readAppRoleFacts(pool));
-  if (verdict.ok || verdict.reason === null) return;
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error(verdict.reason);
-  }
-  logger.warn(verdict.reason);
-}
 
 async function bootstrap(): Promise<void> {
   const missing = REQUIRED_ENV.filter((name) => !process.env[name]);
@@ -72,7 +65,7 @@ async function bootstrap(): Promise<void> {
   app.useLogger(app.get(PinoLogger));
   setupApp(app);
 
-  await assertNarrowRole(app.get<Pool>(PG_POOL), new Logger('DbRole'));
+  await assertNarrowRole(app.get<Pool>(PG_POOL), new Logger('DbRole'), process.env.NODE_ENV);
 
   app.enableShutdownHooks();
   await app.listen(Number(process.env.PORT ?? 3000), '0.0.0.0');

@@ -655,7 +655,7 @@ Excel thì mở cửa sau"*. **Cửa sau HTTP còn rộng hơn Excel và chưa a
 
 ### 8.1 Chặn phát hành (3)
 
-- [x] **A-01** Chặn `status: 'retired'` ở DTO `PATCH/POST /devices` — bắt đi qua `setStatus`, y như `device-import.ts:472` đã làm
+- [x] **A-01** Chặn `status: 'retired'` trên đường **`PATCH /devices/:id`** — bắt đi qua `setStatus`, y như `device-import.ts:472` đã làm. **Sửa lại lời khai 21/09:** ô này từng ghi `PATCH/POST`, nhưng `POST` cố ý KHÔNG chặn — tạo mới một máy đã ở trạng thái thanh lý là việc thật (nạp kho lịch sử lần đầu), và `device-import.ts:423-427` đã quyết định đúng như vậy kèm lý do: một bản ghi vừa sinh ra thì chưa giữ IP/NAT/ghế license nào để mà dọn. Chốt `setStatus` sinh ra để hỏi đúng câu đó, nên nó không có việc gì ở đường tạo mới. Hai tầng rà soát chéo đều báo đây là lỗ vì đọc `create()` thấy thiếu chốt mà không mở nhánh create của đường Excel — lời khai sai của ô tick này là thứ dẫn họ tới đó.
 - [x] **F-01** Thêm `nguong` vào deps của `useMemo` ở `expiry-screen.tsx:216` (hoặc bỏ memo) + một bài Vitest cho `features/expiry/`
 - [x] **D-01** Tách role `ims_app` không-superuser trước khi lên prod — nếu không, AD-9/NFR-03 không đúng với thực tế đang chạy
 
@@ -1480,6 +1480,12 @@ chung chứ không phải bản thứ năm: cùng cặp `.replace()` ấy đang 
 Đặt ở `src/test/` theo tiền lệ `web/src/test/quet-nguon.ts`; `jest.config.js` không nhặt nó vì
 tên không mang `.spec.`, còn `test/jest-db.cjs` import bằng đường dẫn tương đối.
 
+> **Đánh số nhảy một bậc (không có 16.6).** Rà soát chéo 21/09 bắt được chỗ này và đặt đúng
+> câu hỏi: một mục biến mất khỏi sổ nghiệm thu là dấu hiệu nội dung bị cắt lúc soạn. Đã tra
+> `git log -S` trên cả bốn commit chạm vào tệp này — **`### 16.6` chưa từng tồn tại**, nên
+> không có gì mất. Giữ nguyên số thay vì đánh lại: mục 16.7 và 16.8 đang được trích dẫn ở
+> nhiều chỗ, đổi số để bảng mục lục đẹp hơn thì đổi lấy một loạt tham chiếu trỏ hụt.
+
 ### 16.7 A-10 · T-03 · AD-16 — ĐÃ LÀM 20/09/2026
 
 **A-10 — hai hàng rào bảo mật thôi là chuyện truyền miệng.**
@@ -1873,3 +1879,111 @@ phân biệt được "có hàng rào" với "có ĐÚNG hàng rào".
 > ở pool migration — luật NFR-04 "đừng ghi `.message` của lỗi ra log, nó chở cả tham số đã
 > bind". Đúng loại rò rỉ mà không ai đọc code review nào bắt được. Cổng dựng ở đợt A trả lãi
 > ngay trong đợt B.
+
+---
+
+## 18. Rà soát chéo đợt A + B — 21/09/2026
+
+Bốn tầng đọc độc lập trên `master..HEAD` (6 commit, 99 file, 7.500 dòng sau khi lọc nhiễu
+xuống dòng): **Blind Hunter** (24 mục) · **Edge Case Hunter** (22) · **Verification Gap** (9) ·
+**Acceptance Auditor** (15). Gộp trùng và bỏ nhiễu còn **39**.
+
+Tầng Acceptance Auditor được giao một việc khác thường: **chính tài liệu này vừa là chuẩn đối
+chiếu vừa nằm trong diff.** Mục 16, mục 17 và các ô tick ở mục 8 do cùng một người viết mã
+viết ra, trong cùng commit. Nên câu hỏi giao cho nó là: *ô nào tick mà thực ra chưa làm tới
+nơi.* Nó tìm được hai — R-03 và R-04 dưới đây, cả hai đã tự kiểm lại bằng cách mở mã ra đọc.
+
+Mọi mục dưới đây đã được kiểm chứng trên mã nguồn, không chấm theo lời kể của reviewer.
+
+### Review Findings
+
+- [x] [Review][Decision] **Cổng D-01 chỉ ném ở `NODE_ENV=production`** — staging/preprod chạy bằng superuser mà chỉ có một dòng `logger.warn`. Đảo thành "ném ở mọi nơi TRỪ development/test"? Đổi lại: stack E2E hoặc máy dev của người khác có `.env` cũ sẽ chết lúc boot thay vì kêu to. [api/src/main.ts:55]
+- [x] [Review][Decision] **Mười định danh tiếng Việt MỚI sinh ra trong chính commit lập cổng AD-16** — lớp 1 chỉ bắt chữ CÓ DẤU nên `ngayCachDay`, `CON_10_NGAY`, `gaLapFetch`, `nhan`, `truoc`, `ghi`, `gia`, `giu`, `KHOA_DUNG_DONG` lọt hết. Mục 16.7 chấm rủi ro chờ-lớp-2 là "THẤP vì cả đội đang chủ động xoá chúng"; lượt này là phản chứng đo được. Đổi tên ngay trong đợt này, hay giữ kế hoạch gộp vào đợt G?
+
+- [x] [Review][Dismiss] ~~A-01 mới đóng NỬA cửa~~ — **BÁC BỎ sau khi đọc mã, 21/09.** Hai tầng rà soát báo `POST /devices {"status":"retired"}` là một lỗ, vì `create()` không gọi `assertNotRetiringViaUpdate`. Nhưng `device-import.ts:423-427` đã quyết định ngược lại, có ghi lý do: tạo mới một máy đã thanh lý là việc THẬT (nạp kho lịch sử lần đầu), và một bản ghi vừa sinh ra chưa giữ IP/NAT/ghế license nào để mà dọn — tức đúng câu mà chốt `setStatus` sinh ra để hỏi. `POST` đi cùng đường với import-create, và đường đó cố ý mở. Thứ SAI là **ô tick §8.1**, đã sửa. Ghi lại nguyên mục này thay vì xoá: một finding bị bác bỏ mà không để lại vết thì lượt rà soát sau sẽ tìm ra y hệt, và lần sau có thể không ai mở nhánh create của đường Excel ra đọc.
+- [x] [Review][Patch] A-03 sót một nơi: quét dùng mẫu `?? current?.` nên bỏ lọt biến thể `?? before.`. `PATCH {"note": null}` bị nuốt — người dùng xoá ghi chú, hệ thống giữ ghi chú cũ, không một dòng lỗi. [api/src/modules/ipam/nat-rule.service.ts:244]
+- [x] [Review][Patch] `stepup_failures` được cửa enroll CỘNG mà không bao giờ TRỪ: gõ đúng mật khẩu không xoá bộ đếm. Sai 4 lần rồi gõ đúng ⇒ lần gõ hụt mã đầu tiên ở cửa két sau đó thu hồi phiên, kèm câu "Gõ sai mã 5 lần" nói sai sự thật. Docblock `session.service.ts:113` viết "số lần sai LIÊN TIẾP" — thực tế là tích luỹ vĩnh viễn. [api/src/modules/auth/auth.service.ts:511]
+- [x] [Review][Patch] `assertNarrowRole` — hàng rào triển khai DUY NHẤT của D-01 — không bài kiểm nào chạy vào. Gỡ hẳn câu `throw` thì Jest, test:db, Vitest, build và cả lượt E2E đầy đủ đều xanh, vì mọi lượt chạy đều ở cấu hình ĐÚNG và hàm thoát ở dòng 54. [api/src/main.ts:52]
+- [x] [Review][Patch] `0048` cấp `UPDATE, DELETE` cho cả 9 bảng chỉ-thêm mà `0039` liệt kê; chỉ `audit_log` có câu REVOKE. Chín bảng kia vẫn chỉ dựa vào trigger — đúng thứ mà chính migration này lập luận là chưa đủ. [api/src/migrations/0048_app_role_split.sql:48]
+- [x] [Review][Patch] AD-16 có vùng mù: luật chỉ cắm trong khối `files: ['src/**/*.ts']`, nên **`api/test/**` chưa bao giờ được nó soi** — đúng tầng mà đợt này vừa thêm file mới. Khối ở `:291` khai lại `RESTRICTED_SYNTAX` cho hai file `audit` mà không kèm AD-16. [api/eslint.config.mjs:190]
+- [ ] [Review][Patch] `stripComments` hứa "cắt nhầm chỉ có thể làm bài kiểm ĐỎ, không bao giờ làm nó xanh sai" — sai với sáu khẳng định PHỦ ĐỊNH đang gọi nó (`vault-surface.spec.ts:34,125,174,224,245,267`). Với khẳng định phủ định, cắt thừa làm bài XANH SAI. [api/src/test/source-text.ts:43]
+- [x] [Review][Patch] Bài "không nhầm khoá kế thừa từ prototype" KHÔNG THỂ ĐỎ: nó chỉ thử `'endDate'`, mà `'endDate' in {}` là `false` với cả hai cách viết. Ca thật là `'toString'`. [api/src/common/merge-effective.spec.ts:52]
+- [x] [Review][Patch] AD-16 được ba cấu hình lint viện dẫn trong thông điệp lỗi nhưng KHÔNG tồn tại trong `ARCHITECTURE-SPINE.md` lẫn `CLAUDE.md`. Người bị lint chặn hôm nay không tra được nó ở đâu. [web/eslint.config.mjs:58]
+- [ ] [Review][Patch] Chú thích deps khẳng định `.mutate` của TanStack v5 ổn định — nhưng thứ đưa vào deps là OBJECT mutation, dựng lại mỗi render. `columns` nay tính lại ở mọi render, đúng cái bẫy mà cùng lượt sửa này đang vá cho `kindLabel` và `refresh`. [web/src/features/admin/accounts-screen.tsx:392]
+- [ ] [Review][Patch] `errorMessage(..., nearLimit)` đấu vào BA cửa, chỉ MỘT cửa có bài canh. Xoá tham số thứ ba ở cửa két thì mọi cổng vẫn xanh. [web/src/ui/step-up-dialog.tsx:76]
+- [ ] [Review][Patch] `worker` thừa hưởng `*api_env` nên mang `MIGRATION_DATABASE_URL` (DSN chủ sở hữu) suốt vòng đời dù không bao giờ chạy migration; nó cũng không chạy `assertNarrowRole`. Chú thích `main.ts:20` đúng về POOL nhưng dễ đọc thành đúng về QUYỀN. [docker-compose.yml:78]
+- [ ] [Review][Patch] Cổng vai trò thiếu câu hỏi thứ ba: `GRANT ims TO ims_app` cho thừa kế trọn quyền chủ sở hữu trong khi `rolsuper` = false và `relowner` ≠ current_user ⇒ cổng vẫn ĐẬU. Thiếu `pg_has_role`. Kèm: `relname = 'audit_log'` không khoá schema lẫn `relkind`. [api/src/database/app-role.ts:66]
+- [ ] [Review][Patch] `ensureAppRole` bị bỏ qua IM LẶNG khi thiếu `APP_DB_PASSWORD`, và `REQUIRED_ENV` không kê hai biến mới — nơi cài quên biến sẽ chạy nửa vời rồi chết bằng một câu lỗi xác thực không chỉ ra chỗ hỏng. [api/src/main.ts:34]
+- [ ] [Review][Patch] `APP_DB_USER` là núm không nối dây: `.env.example`, `docker-compose.yml` và `api/test/db.ts` đọc nó, nhưng `main.ts:15` và 9 câu lệnh trong `0048` viết cứng `ims_app`. Đặt khác đi ⇒ một `.env` hợp lệ, một role chưa từng được tạo, một API không boot. [.env.example:12]
+- [ ] [Review][Patch] `gate-eol.sh` KHÔNG loại trừ `api/src/migrations/*.sql`. Các file đó khai `-text` vì checksum băm byte thô; làm theo đúng chỉ dẫn sửa mà chính cổng in ra sẽ làm vỡ checksum một migration ĐÃ ÁP và mọi DB không boot lại được. [ops/gate-eol.sh:40]
+- [ ] [Review][Patch] Lint của `e2e/` không có cổng chặn merge — `ci.yml` chỉ có job `e2e-typecheck` chạy `tsc --noEmit`. AD-16 ở đó lại đặt mức `warn`. Bảng §16.8 xếp "e2e lint" cạnh hai dòng web/api vốn LÀ cổng GitHub, nên đọc ra thành cả ba đều chặn merge. [.github/workflows/ci.yml:84]
+- [ ] [Review][Patch] `moduleEnabled` trả `true` khi khu RỖNG hoặc KHÔNG TỒN TẠI — tên ngược hẳn với giá trị, ở đúng một lượt đổi tên nhằm làm tên dễ đọc hơn. [web/src/features/devices/device-detail.tsx:363]
+- [ ] [Review][Patch] `Combobox` không phân biệt "đang tải" với "không có gì khớp": trong lúc danh mục dịch vụ còn tải, người dùng được mời đi khai trùng một dịch vụ đã có. Có `failed`, chưa có `pending`. [web/src/ui/combobox.tsx:147]
+- [ ] [Review][Patch] `ALTER ROLE … LOGIN PASSWORD '…'` chạy ở MỌI lần boot, mật khẩu nằm trong văn bản câu lệnh — với `log_statement=ddl` là nó vào log dạng rõ. Chỉ nên chạy khi mật khẩu thật sự đổi. [api/src/database/app-role.ts:116]
+- [ ] [Review][Patch] `api/src/test/source-text.ts` chưa khai vào `SHARED-REGISTRY.md` — DoD gạch 4. Bốn bài đã dùng chung nó; người anh em bên web (`quetNguon`) thì có hẳn một dòng. [docs/SHARED-REGISTRY.md]
+- [ ] [Review][Patch] `@IsOptional` cho `null` đi qua, nên `{"currentPassword": null}` không rơi vào nhánh `REAUTH_REQUIRED` (chỉ xét `=== undefined`) mà rơi vào nhánh sai mật khẩu — tiêu một lượt đoán. Cùng hình dạng với `kind`/`licenseModel` bên software. [api/src/modules/auth/auth.dto.ts:26]
+- [ ] [Review][Patch] `routesOf` lấy `prev.endsWith('{')` làm ranh giới khối, nên `@Throttle({` viết xuống dòng sẽ cắt cụt và báo một route ĐÃ khai `@Roles` là thiếu. Hôm nay chưa nổ vì cả 4 chỗ đều viết một dòng — mìn chờ lượt `prettier` đầu tiên. [api/src/test/source-text.ts:128]
+- [x] [Review][Patch] `ignoreKnown` ngược nghĩa: biến giữ các vùng script dọn được mà KHÔNG bài nào gọi tới, tức "bị bỏ quên", không phải "bỏ qua cái đã biết". Câu lỗi ngay dưới vẫn mô tả nghĩa cũ. [e2e/tests/reset-domains-rollcall.spec.ts:76]
+- [x] [Review][Patch] E2E viết cứng `maxFailures = 5` — DoD gạch 8. Đổi `secret.stepup_max_failures` trong `system_config` làm bài đỏ vì lý do không liên quan tới thứ nó canh. [e2e/tests/totp-enroll-reauth.spec.ts:151]
+- [ ] [Review][Patch] `reset-e2e.mjs` lùi về `DATABASE_URL` trong im lặng: nơi cài ĐÃ tách role mà quên biến mới sẽ chết giữa một lượt dọn dở dang bằng đúng câu `must be owner of table catalog_history`. Nên kiểm quyền MỘT lần trước khi bắt đầu. [api/scripts/reset-e2e.mjs:359]
+- [ ] [Review][Patch] Câu lỗi `@Length(1, 200, { message: 'Chưa nhập mật khẩu hiện tại.' })` nói sai cho nhánh QUÁ DÀI. [api/src/modules/auth/auth.dto.ts:28]
+- [ ] [Review][Patch] `SELECT setseed(0.42)` vô tác dụng — 305 dòng còn lại không gọi `random()` lần nào. Để nguyên là dạy người sau rằng thêm `random()` vào đây vẫn tái lập được. [ops/seed-demo.sql:33]
+- [x] [Review][Patch] Tài liệu này thiếu hẳn mục 16.6 (nhảy 16.5 → 16.7); và §16.7 còn mô tả `nat.serviceEmpty` như một khoản nợ, trong khi đợt B đã đấu dây xong. [docs/RA-SOAT-TOAN-DIEN-2026-09-19.md:1461]
+- [ ] [Review][Patch] Chú thích `main.ts` hứa "mọi nơi cài cũ vẫn phải chạy được", nhưng `docker-compose.yml:45` chặn cứng bằng `${APP_DB_PASSWORD:?…}` — mọi `docker compose up` với `.env` chưa cập nhật chết trước khi Node chạy dòng nào. [api/src/main.ts:23]
+- [ ] [Review][Patch] `gate-eol.sh` dùng danh sách CHO PHÉP đuôi tệp nên bỏ lọt `Dockerfile`, `web/nginx.conf`, `.env.example` — đúng loại tệp bị script sửa và đọc theo dòng. Thêm: `set -e` làm "cổng hỏng" và "có file lẫn EOL" trông giống nhau. [ops/gate-eol.sh:38]
+- [ ] [Review][Patch] Bài canh cổng lint không bao giờ dùng tên `*.test.tsx` (probe luôn là `probe.tsx`), nên ngoại lệ CỐ Ý ở `web/eslint.config.mjs:181` — giữ AD-16 cho file test thay vì `'off'` trọn gói — không được bài nào ghim lại. [web/src/lint-rules.test.ts:40]
+- [ ] [Review][Patch] `{...window.location}` trong jsdom cho ra object gần như rỗng (thuộc tính `Location` là accessor trên prototype), nên `location.origin`/`pathname` là `undefined`. Bài hiện xanh vì đường đi này không đọc chúng — may, không phải thiết kế. [web/src/features/auth/totp-enroll-reauth.test.tsx:108]
+- [ ] [Review][Patch] `Combobox` nuốt phím Enter khi lọc ra 0 option: form không submit, không lời giải thích. [web/src/ui/combobox.tsx:228]
+
+- [x] [Review][Defer] `ChangePasswordDto` mang cùng lỗi câu thông báo `@Length` — có trước đợt A, bản vá chỉ chép lại. [api/src/modules/auth/auth.dto.ts:34] — deferred, pre-existing
+- [x] [Review][Defer] `ensureAppRole` có thể đua `CREATE ROLE` (SQLSTATE 42710) nếu hai tiến trình boot song song; compose hiện chỉ dựng một `api`. [api/src/database/app-role.ts:112] — deferred, pre-existing
+- [x] [Review][Defer] `api/test/db.ts` dùng `encodeURIComponent` cho mật khẩu còn `docker-compose.yml` thì không — lệch nếu mật khẩu chứa `%`. `.env.example` đã ràng buộc bộ ký tự, nên chưa nổ. [api/test/db.ts:85] — deferred, pre-existing
+
+**Bỏ đi 7 mục nhiễu:** năm chỗ `?? before.` ở `device-ports`, `ip-address`, `subnet`, `vault`
+(dựng nhãn audit và câu lỗi, không phải phép ghép bản sửa) · trường `_lint_note` trong
+`package.json` (npm bỏ qua khoá lạ, lý lẽ đáng giữ) · `audit.append` ném trước khi tăng bộ đếm
+(chỉ xảy ra khi DB đã chết, lúc đó mọi thứ đã hỏng).
+
+### 18.1 Đã xử ngay trong lượt — 21/09/2026
+
+Mười hai mục, mỗi mục một bài kiểm ĐỎ trước khi vá. Ba mục đáng đọc lại vì chúng nói về
+chính cách đợt B tự kiểm tra mình:
+
+**Phép quét hẹp cho cảm giác đã soi hết.** Đợt B quét mẫu `?? current?.` và sửa ba file,
+rồi mục 17.2 khai là xong. `nat-rule.service.ts` đặt tên biến cũ là `before` nên không lọt
+vào mẫu — mười dòng ghép `??` liền nhau sống sót. Bài đỏ viết ra còn lòi thêm một lỗi mà
+không tầng reviewer nào nêu: `PATCH /ipam/nat/:id {"deviceId": ""}` trả **500** (`22P02` từ
+Postgres) thay vì 400, vì `NatBodyDto` cố ý cho chuỗi rỗng qua cửa DTO với lập luận
+"`requireDeviceId()` ở POST sẽ bắt" — lập luận đúng với POST và không đúng với PATCH.
+
+**Tài sản dùng chung có hợp đồng NGẦM.** Vá `nat-rule` bằng `effectiveOf` xong thì bài đỏ
+theo chiều ngược: `{note: null}` trả `FIELD_REQUIRED: Chưa chọn router`. Lý do —
+`effectiveValue` hỏi `field in values`, mà controller dựng object ĐỦ KHOÁ, khoá không gửi
+mang `undefined`. Ba nơi đợt B sửa thoát nạn chỉ vì `values` ở đó do `put()` dựng, và
+`put()` bỏ qua `undefined`. Tức hàm dùng chung đang sống nhờ một điều kiện mà nơi gọi phải
+nhớ, và nơi gọi thứ tư không nhớ. Nay nó tự đứng vững (`hasOwnProperty` + coi `undefined`
+là vắng mặt) — và đó cũng là mục mà bài kiểm cũ ĐẶT TÊN nhưng không canh: ca thật là
+`'toString' in {}` (`true`), không phải `'endDate' in {}` (`false` với mọi cách viết).
+
+**Cổng không ai canh thì không phải cổng.** `assertNarrowRole` nằm trong `main.ts` nên không
+bài kiểm nào chạm tới được — `main.ts` gọi `bootstrap()` ngay lúc nạp module. Đã đo: gỡ hẳn
+câu `throw` thì Jest, test:db, Vitest, build lẫn E2E đều xanh. Chuyển sang `database/
+app-role.ts`, thêm bốn ca, và đảo luôn danh sách môi trường thành CHO PHÉP (R-01). Cùng hình
+dạng ở AD-16: luật chỉ nằm trong khối `files: ['src/**']` nên cả tầng `api/test/**` chưa bao
+giờ được soi, và khối ngoại lệ `audit` khai lại mảng luật thì đánh rơi BA luật trong khi chú
+thích của chính nó nói là bỏ một — kèm cả NFR-04, ở đúng file ghi log lỗi.
+
+| Đo được | Trước | Sau |
+| --- | ---: | ---: |
+| Jest đơn vị | 943 | **948** |
+| Tầng chạm DB thật | 80 | **103** |
+| Vitest | 375 | 375 |
+| Migration | 48 | **49** |
+| Định danh tiếng Việt do đợt A+B đẻ ra | 10 | **0** |
+
+Và một mục bị **BÁC BỎ**: xem dòng A-01 ở trên. Hai tầng cùng báo một lỗ không tồn tại vì cả
+hai đọc `create()` thấy thiếu chốt rồi suy ra hậu quả, không ai mở nhánh create của đường
+Excel — nơi có sẵn một quyết định ngược lại kèm lý do. Con số "hai tầng cùng nói" không phải
+bằng chứng; nó chỉ là hai lần cùng một cách đọc.
+
+Hai mươi bốn mục còn lại vẫn là ô trống ở trên — việc tồn đọng, không phải việc đã quên.
