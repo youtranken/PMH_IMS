@@ -160,6 +160,11 @@ step "RATCHET — cấm hex màu ngoài tokens.css (AD-15)"
 # đỏ suốt, xem khối chú thích đầu file kia.
 bash ops/gate-hex.sh
 
+step "RATCHET — cấm file lẫn kiểu xuống dòng"
+# Cùng khuôn `gate-hex.sh`: MỘT bản luật, gọi từ cả đây lẫn `.github/workflows/ci.yml`.
+# Chạy 2 giây, và nó canh thứ không cổng nào khác nhìn thấy — xem đầu `ops/gate-eol.sh`.
+bash ops/gate-eol.sh
+
 step "RATCHET — E2E lint (cấm sleep, ghim trần selector CSS)"
 # 08/09: `e2e/` là thư mục DUY NHẤT của repo chưa có lint (rà soát 07/09 #16), nên mọi luật
 # E2E trong CLAUDE.md có 0 cưỡng chế. `--max-warnings` ghim nợ selector CSS ở con số hôm nay —

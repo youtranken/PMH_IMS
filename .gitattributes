@@ -15,3 +15,20 @@
 # `-text` = không bao giờ chuẩn hóa xuống dòng, cả lúc checkout lẫn lúc commit.
 # ĐỪNG sửa hàm checksum để "cho linh hoạt hơn" — làm thế là hỏng đúng thứ nó sinh ra để giữ.
 api/src/migrations/*.sql -text
+
+# Script shell là thứ Linux ĐỌC, không phải thứ Windows soạn — đóng băng LF.
+#
+# Đo ngày 21/09/2026: `ops/ci-local.sh` và `design-ims/build.sh` được lưu CRLF toàn bộ.
+# Git Bash trên Windows nuốt được nên không ai thấy gì suốt nhiều tháng. `bash` trên Linux
+# thì không — chạy thử trong container `bash:5`:
+#
+#     /x/ci-local.sh: line 43: syntax error near unexpected token `$'in''
+#
+# Nghĩa là ngay khi dự án chuyển sang Ubuntu (kế hoạch đã nêu), cổng CI nội bộ NGỪNG CHẠY —
+# mà `CLAUDE.md` gọi chính nó là "ràng buộc duy nhất giữ E2E sống". Hỏng ở một chỗ không ai
+# nghĩ là code, và hỏng đúng lúc chuyển môi trường, tức lúc người ta đang bận nghi ngờ mọi
+# thứ khác.
+#
+# `text eol=lf` = git chuẩn hoá lúc commit VÀ luôn trả LF lúc checkout, kể cả trên Windows.
+# An toàn với checksum migration vì luật `-text` ở trên khoanh riêng `*.sql` của migration.
+*.sh text eol=lf

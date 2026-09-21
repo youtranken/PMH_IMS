@@ -68,6 +68,8 @@ jobs:
       # niệm thì bản nào cũng có ngày nói khác bản kia; giờ cả hai gọi chung một file.
       - name: Cấm hex màu ngoài tokens.css (AD-15)
         run: bash ops/gate-hex.sh
+      - name: Cấm file lẫn kiểu xuống dòng
+        run: bash ops/gate-eol.sh
       - name: Test đơn vị
         run: npm test
         working-directory: web
