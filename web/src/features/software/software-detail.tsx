@@ -145,7 +145,10 @@ export function SoftwareDetail({ me }: { me: Me }) {
     );
   }
 
-  const item = software.data!;
+  // Mất mạng ⇒ `fetchStatus:'paused'` ⇒ `isLoading` false, `isError` false, `data` undefined:
+  // hai nhánh trên đều trượt. Xem chú thích đầy đủ ở `devices/device-detail.tsx` (lỗi F-02).
+  if (!software.data) return <Loading />;
+  const item = software.data;
   /** Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày ra nút để bấm rồi 403. */
   const canVaultWrite = me.role === "sa" || me.role === "admin";
 

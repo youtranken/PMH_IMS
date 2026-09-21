@@ -298,6 +298,39 @@ async function resetUsers(pool) {
   }
 }
 
+/**
+ * Role đang kết nối có tháo được trigger không — hỏi TRƯỚC khi xoá dòng nào.
+ *
+ * Hỏi bằng `pg_class.relowner` chứ không bằng cách thử `ALTER TABLE`: thử thật thì hoặc phải
+ * bọc trong transaction rồi rollback (thêm một đường hỏng), hoặc để lại một bảng vừa bị tháo
+ * trigger nếu tiến trình chết đúng lúc đó.
+ *
+ * `catalog_history` là bảng mà lượt dọn chạm tới muộn — chọn nó làm mẫu thì câu hỏi này bao
+ * đúng cái ca đã gây ra sự cố. Chủ sở hữu bảng lịch sử nào cũng là một, nên một bảng là đủ.
+ */
+async function assertCanDisableTriggers(pool) {
+  const { rows } = await pool.query(
+    `SELECT current_user::text AS me,
+            pg_get_userbyid(c.relowner) AS owner
+       FROM pg_class c
+      WHERE c.oid = to_regclass('public.catalog_history')`,
+  );
+  const row = rows[0];
+  if (!row) return; // Lược đồ chưa dựng — `resetDomain` sẽ tự nói ra bằng lỗi của nó.
+  if (row.me === row.owner) return;
+
+  console.error(
+    `Lượt dọn E2E cần QUYỀN SỞ HỮU bảng để tháo trigger, nhưng đang kết nối bằng "${row.me}" ` +
+      `trong khi chủ sở hữu là "${row.owner}".`,
+  );
+  console.error(
+    'Nguyên nhân thường gặp: đã tách role (D-01) nhưng container chạy script này chưa được ' +
+      'khai MIGRATION_DATABASE_URL, nên nó lùi về DATABASE_URL của role hẹp.',
+  );
+  console.error('DỪNG TRƯỚC KHI XOÁ GÌ — dọn dở dang tệ hơn không dọn.');
+  process.exit(1);
+}
+
 async function main() {
   /*
    * CHẶN THẬT, không chỉ cảnh báo: script này đặt lại mật khẩu về một chuỗi có sẵn trong repo
@@ -341,10 +374,10 @@ async function main() {
   /* `users` ĐÃ là khoá đầu của `DOMAINS`, nên `['users', ...keys]` đếm nó hai lần và lượt
      `all` chạy vùng ấy hai lượt (vô hại vì các câu đều idempotent, nhưng là một mâu thuẫn
      hiển hiện với banner). Lọc ra — sửa 19/09/2026. */
-  const thuTu = ['users', ...Object.keys(DOMAINS).filter((d) => d !== 'users')];
-  const domains = (requested.includes('all') ? thuTu : requested)
+  const order = ['users', ...Object.keys(DOMAINS).filter((d) => d !== 'users')];
+  const domains = (requested.includes('all') ? order : requested)
     .slice()
-    .sort((a, b) => thuTu.indexOf(a) - thuTu.indexOf(b));
+    .sort((a, b) => order.indexOf(a) - order.indexOf(b));
   const unknown = domains.filter((d) => d !== 'users' && !(d in DOMAINS));
   if (unknown.length > 0) {
     console.error(
@@ -353,7 +386,34 @@ async function main() {
     process.exit(1);
   }
 
-  const pool = new pg.Pool({ connectionString: process.env.DATABASE_URL });
+  /*
+   * KẾT NỐI BẰNG CHỦ SỞ HỮU, KHÔNG BẰNG ROLE ỨNG DỤNG (D-01, 20/09).
+   *
+   * Script này `ALTER TABLE ... DISABLE TRIGGER` trên mười mấy bảng lịch sử — câu lệnh đòi
+   * QUYỀN SỞ HỮU. Tới 20/09 nó chạy được là vì ứng dụng kết nối bằng một role vừa superuser
+   * vừa chủ sở hữu; tức chính nó là bằng chứng sống rằng `DATABASE_URL` khi ấy rộng tới mức
+   * nào. Sau khi tách role, `ims_app` không tháo trigger được nữa — và đó là điều mong muốn.
+   *
+   * Nên công cụ dọn dữ liệu test lấy đường riêng. Nó KHÔNG phải một phần của ứng dụng: file
+   * này cố ý không nằm trong ảnh production (xem `api/Dockerfile`), chỉ được mount bởi
+   * `docker-compose.override.e2e.yml`, và `main()` còn đòi `ALLOW_E2E_RESET=1` trước khi chạy.
+   *
+   * Lùi về `DATABASE_URL` khi chưa tách role, để nơi cài cũ không đứng hình — NHƯNG hỏi
+   * quyền MỘT LẦN trước khi bắt đầu (§18 #16, vá 21/09).
+   *
+   * Phép lùi ấy im lặng, nên một nơi cài ĐÃ tách role mà quên khai `MIGRATION_DATABASE_URL`
+   * cho container chạy script sẽ đi được vài bảng rồi chết giữa chừng bằng đúng câu
+   * `must be owner of table catalog_history` — một lượt dọn DỞ DANG, với vài vùng đã xoá và
+   * vài vùng chưa, và một câu lỗi Postgres không nói gì về biến môi trường nào thiếu.
+   *
+   * Dọn dở dang tệ hơn hẳn không dọn: bộ E2E sau đó chạy trên một DB nửa sạch nửa bẩn, và
+   * những bài đỏ vì rác sẽ trông như hồi quy API — đúng hai lần đã xảy ra (09/09 và 11/09,
+   * xem CLAUDE.md).
+   */
+  const pool = new pg.Pool({
+    connectionString: process.env.MIGRATION_DATABASE_URL ?? process.env.DATABASE_URL,
+  });
+  await assertCanDisableTriggers(pool);
   try {
     if (domains.includes('users')) await resetUsers(pool);
 

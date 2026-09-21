@@ -73,9 +73,9 @@ test.describe('Sổ vùng dọn tự canh chính nó', () => {
 
   test('mọi vùng script biết dọn đều được `helpers.ts` gọi tới', () => {
     const goiDuoc = new Set(vungCuaHelpers());
-    const bỏQuen = vungCuaScript().filter((v) => !goiDuoc.has(v));
+    const forgottenDomains = vungCuaScript().filter((v) => !goiDuoc.has(v));
     expect(
-      bỏQuen,
+      forgottenDomains,
       'vùng script dọn được nhưng không bài nào gọi — rác của vùng đó sống sót qua mọi beforeEach',
     ).toEqual([]);
   });

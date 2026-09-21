@@ -2,6 +2,39 @@
 # postgres/redis KHÔNG publish cổng ra host (NFR-04 zero-trust); `web` là cổng vào duy nhất.
 # Bí mật (master key, pepper, SMTP pass) đi qua docker secret dạng FILE, không env (AD-11).
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Môi trường DÙNG CHUNG của api và worker — CỐ Ý không chứa `MIGRATION_DATABASE_URL`.
+#
+# Tới 20/09 `worker` khai `environment: *api_env`, tức dùng lại nguyên khối của api, nên nó
+# mang DSN của CHỦ SỞ HỮU suốt vòng đời dù `worker.ts` không bao giờ đọc biến ấy — biến đó chỉ
+# được `main.ts` dùng, trong mấy giây đầu của api, rồi pool đóng hẳn. Thứ gì đọc được môi
+# trường của worker (một job hàng đợi chạy sai, bản dump lúc sập, `docker inspect`) là có
+# thẳng quyền tháo trigger append-only. Đúng thứ D-01 dựng ra để không còn ai có (§18 #4).
+#
+# Worker cũng KHÔNG chạy `assertNarrowRole`, nên nếu nó cầm nhầm DSN thì không cổng nào kêu.
+# ─────────────────────────────────────────────────────────────────────────────
+x-app-env: &app_env
+  NODE_ENV: ${NODE_ENV:-production}
+  # D-01: ứng dụng chạy bằng role HẸP (`ims_app`), migration chạy bằng CHỦ SỞ HỮU.
+  # Trước 20/09 cả hai là một, và role đó là superuser — nên câu REVOKE giữ sổ nhật ký
+  # chỉ-thêm (NFR-03) không có hiệu lực nào. Xem `0048_app_role_split.sql`.
+  #
+  # Tên role viết THẲNG, không qua biến (§18 #7): `0048` tạo role bằng đúng chuỗi `ims_app` ở
+  # chín câu lệnh, và migration đã chạy thì không sửa được. Một biến `APP_DB_USER` đổi được
+  # chỉ là cái núm không nối dây — đặt khác đi cho ra một `.env` hợp lệ, một role chưa từng
+  # được tạo, và một API không boot.
+  DATABASE_URL: postgresql://ims_app:${APP_DB_PASSWORD:?bắt buộc — mật khẩu role ứng dụng, xem 0048}@postgres:5432/${POSTGRES_DB:-ims}
+  REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+  APP_BASE_URL: ${APP_BASE_URL:?bắt buộc — dùng để kiểm Origin chống CSRF}
+  MASTER_KEY_FILE: /run/secrets/ims_master_key
+  PASSWORD_PEPPER_FILE: /run/secrets/ims_password_pepper
+  SMTP_HOST: ${SMTP_HOST:-mailpit}
+  SMTP_PORT: ${SMTP_PORT:-1025}
+  SMTP_USER: ${SMTP_USER:-}
+  SMTP_PASSWORD_FILE: /run/secrets/ims_smtp_password
+  FILE_STORAGE_DIR: /data/files
+  TZ: Asia/Ho_Chi_Minh
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -37,19 +70,11 @@ services:
     build: ./api
     restart: unless-stopped
     user: '1000:1000'
-    environment: &api_env
-      NODE_ENV: ${NODE_ENV:-production}
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ims}
-      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
-      APP_BASE_URL: ${APP_BASE_URL:?bắt buộc — dùng để kiểm Origin chống CSRF}
-      MASTER_KEY_FILE: /run/secrets/ims_master_key
-      PASSWORD_PEPPER_FILE: /run/secrets/ims_password_pepper
-      SMTP_HOST: ${SMTP_HOST:-mailpit}
-      SMTP_PORT: ${SMTP_PORT:-1025}
-      SMTP_USER: ${SMTP_USER:-}
-      SMTP_PASSWORD_FILE: /run/secrets/ims_smtp_password
-      FILE_STORAGE_DIR: /data/files
-      TZ: Asia/Ho_Chi_Minh
+    environment:
+      # Hai biến CHỈ api có: nó là nơi duy nhất chạy migration và tạo role ứng dụng.
+      <<: *app_env
+      MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ims}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
     secrets: &api_secrets
       - ims_master_key
       - ims_password_pepper
@@ -70,7 +95,7 @@ services:
     restart: unless-stopped
     user: '1000:1000'
     command: ['node', 'dist/worker/worker.js']
-    environment: *api_env
+    environment: *app_env
     secrets: *api_secrets
     volumes:
       - filesdata:/data/files

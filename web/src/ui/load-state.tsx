@@ -5,7 +5,7 @@ import { describeLoadError } from '@/lib/load-error-text';
 /**
  * Hợp đồng loading/empty/error dùng chung (review nguyên tắc #8): mọi màn fetch phải PHÂN BIỆT
  * "đang tải" ≠ "rỗng" ≠ "lỗi". Trước đây nhiều màn nuốt lỗi thành 0 hoặc kẹt "…" vô hạn (P0).
- * (fetchJson tách sang ./fetch-json để file này chỉ export component — fast-refresh.)
+ * (Lượt gọi mạng đi qua `lib/api-client.ts`; file này chỉ export component — fast-refresh.)
  */
 
 /**

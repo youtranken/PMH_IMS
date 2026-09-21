@@ -81,7 +81,7 @@ describe('Bản đồ quan hệ — khu "cắt gì" là disclosure', () => {
  * in ra "Máy này chưa giữ gì của ai… Thanh lý nó không kéo theo gì cả" — cho một cái máy đang
  * giữ IP, rule NAT và ghế license. Đo được ngày 18/09/2026 bằng cách ép `/panels` trả 500.
  *
- * Bản vá thêm hai prop `chuaBiet`/`dangTai`, kèm bốn khối chú thích dài. Lượt rà soát 19/09 chỉ
+ * Bản vá thêm hai prop `isUnknown`/`isLoading`, kèm bốn khối chú thích dài. Lượt rà soát 19/09 chỉ
  * ra rằng KHÔNG bài nào truyền hai prop ấy — cả cơ chế chỉ có chú thích canh, đúng mẫu hỏng mà
  * chính đợt này gọi tên: "bản vá của đợt trước KHÔNG CHẠY".
  *
@@ -98,7 +98,7 @@ describe('Bản đồ quan hệ — chưa biết thì đừng khẳng định', 
     );
 
   it('HỎNG: nói "chưa đọc được", và KHÔNG nói "chưa gắn với gì cả"', () => {
-    dungVoi({ chuaBiet: true });
+    dungVoi({ isUnknown: true });
     expect(screen.getByText(/Chưa đọc được máy này đang giữ những gì/)).toBeTruthy();
     // Hai lời khẳng định sai ở đúng chiều nguy hiểm — cả hai phải im.
     expect(screen.queryByText(/chưa giữ gì của ai/i)).toBeNull();
@@ -106,7 +106,7 @@ describe('Bản đồ quan hệ — chưa biết thì đừng khẳng định', 
   });
 
   it('ĐANG TẢI: nói "đang đọc", KHÔNG dùng câu cảnh báo thanh lý', () => {
-    dungVoi({ chuaBiet: true, dangTai: true });
+    dungVoi({ isUnknown: true, isLoading: true });
     expect(screen.getByText(/Đang đọc máy này đang giữ những gì/)).toBeTruthy();
     /* Câu cảnh báo kèm chỉ dẫn ("đừng dựa vào nó để quyết định thanh lý") là câu cho lúc HỎNG.
        Dùng nó cho một nhịp chờ vài trăm mili giây là mọi lượt mở trang đều nháy một cảnh báo

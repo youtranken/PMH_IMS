@@ -76,8 +76,8 @@ function display(field: string, value: unknown, t: TFunction): string {
   if (value === null || value === undefined || value === '') return t('history.blank');
   const bang = field === 'kind' ? KIND_LABEL : field === 'status' ? STATUS_LABEL : null;
   if (bang) {
-    const khoa = bang[String(value)];
-    return khoa ? t(khoa) : String(value);
+    const key = bang[String(value)];
+    return key ? t(key) : String(value);
   }
   return String(value);
 }

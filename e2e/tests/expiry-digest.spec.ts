@@ -45,6 +45,36 @@ function inDays(days: number): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
+/**
+ * Lịch gửi KHÔNG BAO GIỜ tới hạn hôm nay — và đây là cả điểm mấu chốt của hai bài dưới.
+ *
+ * ===== BÀI KIỂM NÀY TỪNG ĐỎ ĐÚNG MỘT NGÀY TRONG TUẦN =====
+ *
+ * Bản trước khai `frequency: 'weekly', weekday: 1, hour: 8` — tức "thứ Hai 8 giờ". Lượt chạy
+ * cổng ngày 21/09/2026 lúc 18:50 rơi đúng **thứ Hai**, nên `shouldSendNow` trả `true` (đúng
+ * thứ · đã qua giờ · `lastSentAt` còn rỗng vì luật vừa tạo) và sweep gửi một digest THẬT —
+ * cộng thêm thư `[Gửi thử]` của chính bài. Hai thư, `toHaveLength(1)` đỏ.
+ *
+ * Nó chập chờn chứ không đỏ hẳn vì sweep chạy mỗi phút: rơi trúng khoảng vài giây giữa lúc
+ * tạo luật và lúc đếm thư thì đỏ, không thì xanh. Hai lượt cổng cùng ngày (12:14 và 17:04)
+ * né được; 18:50 thì không. Một bài kiểm hỏng theo NGÀY TRONG TUẦN là bài sẽ bị đổ cho "chập
+ * chờn" rồi chạy lại cho qua — đúng thứ làm người ta thôi tin bộ bài kiểm.
+ *
+ * Bài "lọc theo loại" còn hở rộng hơn: `frequency: 'daily'` tới hạn MỌI ngày sau 8 giờ. Nó
+ * chỉ chưa đỏ vì assertion của nó đúng với cả hai thư — may, không phải đúng.
+ *
+ * Cách vá: chọn ngày cách hôm nay BA ngày. Không phải "ngày mai" — lệch múi giờ giữa máy chạy
+ * Playwright và múi giờ ứng dụng có thể biến "ngày mai" thành "hôm nay" ở quanh nửa đêm.
+ *
+ * Phần đang kiểm — "MỘT thư cho nhiều mục" và "lọc đúng loại" — không phụ thuộc vào ngày gửi,
+ * nên đổi lịch không làm yếu bài đi chút nào.
+ */
+function lichKhongToiHanHomNay(): { frequency: 'weekly'; weekday: number; hour: number } {
+  const js = new Date().getDay();
+  const isoToday = js === 0 ? 7 : js;
+  return { frequency: 'weekly', weekday: ((isoToday - 1 + 3) % 7) + 1, hour: 8 };
+}
+
 test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
   test('MỘT email tổng hợp cho nhiều mục, không phải mail lẻ từng món', async ({ page }) => {
     await firstLogin(page, E2E_SA);
@@ -75,9 +105,7 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
       kinds: ['ssl', 'isp'],
       withinDays: 30,
       recipients: ['sep@pmh.com.vn', 'it@pmh.com.vn'],
-      frequency: 'weekly',
-      hour: 8,
-      weekday: 1,
+      ...lichKhongToiHanHomNay(),
     });
     expect(rule.status).toBe(201);
 
@@ -124,8 +152,7 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
       kinds: ['ssl'],
       withinDays: 30,
       recipients: ['ssl@pmh.com.vn'],
-      frequency: 'daily',
-      hour: 8,
+      ...lichKhongToiHanHomNay(),
     });
     const sent = await post(page, `/api/v1/expiry/rules/${String(rule.body.id)}/test`, {});
     expect(sent.body).toMatchObject({ items: 1 });

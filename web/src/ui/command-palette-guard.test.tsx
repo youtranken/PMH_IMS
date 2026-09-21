@@ -45,7 +45,7 @@ describe('⌘K và hộp thoại không giẫm lên nhau', () => {
    * `Content`. `CommandPalette` gắn ở shell, tức nằm trong một nhánh như thế — nên
    * `queryByRole` trả `null` DÙ palette đã render và đang phủ kín màn hình. Bài thứ hai vì vậy
    * từng xanh vì lý do sai: đợt rà 19/09 vô hiệu hoá đúng dòng bản vá
-   * (`if (!open && coHopThoaiDangMo()) return;`) và bài vẫn 2/2 XANH, trong khi dump DOM cho
+   * (`if (!open && isAnyDialogOpen()) return;`) và bài vẫn 2/2 XANH, trong khi dump DOM cho
    * thấy `.cp-wrap` + `role="dialog"` có mặt đầy đủ — đúng lớp phủ chết mà cả khối chú thích
    * trên đây mô tả (`--z-palette` 85 > `--z-modal` 60).
    *

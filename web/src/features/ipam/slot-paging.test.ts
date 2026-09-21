@@ -3,7 +3,7 @@ import {
   clampPage,
   countSlots,
   filterSlots,
-  nenLocSanDangCap,
+  shouldIsolateAssigned,
   pageSlots,
   slotStatus,
   SLOT_PAGE_SIZE,
@@ -149,7 +149,7 @@ describe('pageSlots — cắt đúng 50 dòng một trang', () => {
  * không có đường nào hỏi nó mà không dựng cả màn hình lên. Cả hai vế phải THỎA, và mỗi vế
  * chặn một kiểu chọn-hộ-sai — xem chú thích ở `slot-paging.ts`.
  */
-describe('nenLocSanDangCap', () => {
+describe('shouldIsolateAssigned', () => {
   const ca: [string, number, number, boolean][] = [
     ['dưới ngưỡng hồ sơ: /24 mới cấp 4 địa chỉ → đừng giấu ô trống đi', 4, 33, false],
     ['đúng sàn ô trống (32) thì vẫn KHÔNG lọc: cả dải còn lọt một trang', 5, 32, false],
@@ -163,7 +163,7 @@ describe('nenLocSanDangCap', () => {
   // trong cả vòng lặp — bài sau thêm vào đây sẽ gọi `free('10.0.0.1')` rồi nhận một con số.
   for (const [ten, assigned, oTrong, mongDoi] of ca) {
     it(ten, () => {
-      expect(nenLocSanDangCap(assigned, oTrong)).toBe(mongDoi);
+      expect(shouldIsolateAssigned(assigned, oTrong)).toBe(mongDoi);
     });
   }
 });

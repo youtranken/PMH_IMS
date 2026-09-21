@@ -12,6 +12,7 @@ import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { DeviceRetirementRegistry } from '../../common/device-retirement.registry';
 import { requireCas } from '../../common/cas';
+import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
 import { conflictOnUnique, escapeLike } from '../../common/sql';
@@ -197,6 +198,7 @@ export class DevicesService {
      */
     this.assertNotRetired(before);
     const values = await this.prepare(input, id);
+    this.assertNotRetiringViaUpdate(before, values.status as DeviceStatus | undefined);
     const changes = diffDevice(before, values);
     const warnings =
       values.serial !== undefined
@@ -436,10 +438,16 @@ export class DevicesService {
     }
 
     // Ngày bảo hành: kiểm ở đây để báo tiếng Việt tử tế thay vì để CHECK constraint
-    // ném ra một câu SQL. Phải ghép với giá trị ĐANG CÓ khi người dùng chỉ sửa một đầu.
+    // ném ra một câu SQL. Phải ghép với giá trị ĐANG CÓ khi người dùng chỉ sửa một đầu —
+    // và ghép bằng `effectiveOf`, không bằng `??`: ô bị XOÁ (`null` có mặt trong `values`)
+    // không phải ô không đụng tới. Với `??`, xoá ngày bắt đầu bảo hành rồi đặt ngày kết
+    // thúc sớm hơn ngày bắt đầu CŨ bị từ chối bởi một giá trị vừa bị xoá, và xoá một site
+    // đã bị gỡ khỏi danh mục thì không bao giờ xoá được. Đường Excel dùng đúng phép ghép
+    // này từ 08/09; ba service HTTP thì không (A-03, rà soát 19/09).
     const current = id ? await this.requireRow(id) : null;
-    const start = (values.warrantyStart ?? current?.warrantyStart ?? null) as string | null;
-    const end = (values.warrantyEnd ?? current?.warrantyEnd ?? null) as string | null;
+    const effective = effectiveOf(values);
+    const start = effective<string | null>('warrantyStart', current?.warrantyStart ?? null);
+    const end = effective<string | null>('warrantyEnd', current?.warrantyEnd ?? null);
     if (start && end && end < start) {
       throw new BadRequestException({
         code: 'WARRANTY_RANGE_INVALID',
@@ -448,10 +456,10 @@ export class DevicesService {
     }
 
     const errors = await this.catalog.validateRefs({
-      siteId: (values.siteId ?? current?.siteId ?? null) as string | null,
-      cabinetId: (values.cabinetId ?? current?.cabinetId ?? null) as string | null,
-      deviceTypeId: (values.deviceTypeId ?? current?.deviceTypeId ?? null) as string | null,
-      vendorId: (values.vendorId ?? current?.vendorId ?? null) as string | null,
+      siteId: effective<string | null>('siteId', current?.siteId ?? null),
+      cabinetId: effective<string | null>('cabinetId', current?.cabinetId ?? null),
+      deviceTypeId: effective<string | null>('deviceTypeId', current?.deviceTypeId ?? null),
+      vendorId: effective<string | null>('vendorId', current?.vendorId ?? null),
     });
     if (errors.length > 0) {
       throw new BadRequestException({ code: 'CATALOG_REF_INVALID', message: errors.join(' ') });
@@ -498,6 +506,49 @@ export class DevicesService {
     throw new BadRequestException({
       code: 'DEVICE_RETIRED',
       message: `Thiết bị ${row.code} đã thanh lý nên không nhận thêm được nữa. Chọn thiết bị khác, hoặc mở lại hồ sơ trong Kho thanh lý nếu thanh lý nhầm.`,
+    });
+  }
+
+  /**
+   * THANH LÝ PHẢI ĐI QUA `setStatus`, KHÔNG ĐI QUA ĐƯỜNG SỬA HỒ SƠ (A-01, vá 20/09/2026).
+   *
+   * ===== LỖ ĐANG BỊT =====
+   *
+   * `UpdateDto` nhận `status`, và `DEVICE_STATUSES` có `'retired'`. Nên
+   * `PATCH /api/v1/devices/:id` với body `{"status":"retired"}` ghi thẳng chữ "đã thanh lý"
+   * vào bảng — **vai `member` là đủ**, và nó đi vòng qua TRỌN VẸN chốt thanh lý của
+   * `setStatus`:
+   *
+   *   · không `FOR UPDATE` ⇒ mất luôn hàng rào đua mà khối chú thích ở `setStatus` dựng lên;
+   *   · không hỏi `DeviceRetirementRegistry.holdingsWithin` ⇒ IP vẫn `assigned` và vẫn trỏ về
+   *     một máy đã bỏ, rule NAT vẫn mở trên tường lửa, ghế license bị chiếm VĨNH VIỄN (máy mới
+   *     đụng trần seat, người trực bị ép khai `overSeatReason` sai sự thật pháp lý);
+   *   · lịch sử ghi `action: 'updated'` và audit ghi `device.updated`, nên lượt thanh lý VÔ
+   *     HÌNH với ai tra theo `device.status-changed` — đúng câu hỏi mà FR-007 sinh ra để trả lời.
+   *
+   * ===== VÌ SAO Ở TẦNG SERVICE, KHÔNG Ở DTO =====
+   *
+   * Chặn bằng `@IsIn` trong DTO chỉ đóng cửa HTTP. Chính chú thích của `assertNotRetired` ngay
+   * trên đây đã nói ra bài học đó: "nút bấm là gợi ý; import, script dọn dữ liệu và mọi tích
+   * hợp về sau đều đi thẳng vào đường này". Đặt ở đây thì mọi nơi gọi `update()` đều bị chặn.
+   *
+   * Bằng chứng đây là lỗi chứ không phải ý đồ: đường nhập Excel ĐÃ bịt đúng cửa này từ trước
+   * (`device-import.ts:472-479`), kèm câu từ chối gần như y hệt câu dưới đây. Người viết đã
+   * nghĩ tới cửa sau và bịt cửa Excel; cửa HTTP còn rộng hơn và chưa ai đóng.
+   *
+   * MỞ LẠI thì vẫn đi đường này được: chốt chỉ chặn chiều VÀO `retired`. Một máy đang `retired`
+   * đã bị `assertNotRetired` chặn từ trước đó rồi, nên nhánh này chỉ gặp chiều đi tới.
+   */
+  private assertNotRetiringViaUpdate(
+    before: { code: string; status: string },
+    next: DeviceStatus | undefined,
+  ): void {
+    if (next !== 'retired' || before.status === 'retired') return;
+    throw new BadRequestException({
+      code: 'RETIRE_VIA_UPDATE',
+      message:
+        `Không thanh lý được bằng đường sửa hồ sơ: thanh lý ${before.code} phải đi qua nút ` +
+        '"Thanh lý" để hệ thống còn hỏi thiết bị có đang giữ IP, rule NAT hay ghế license nào không.',
     });
   }
 

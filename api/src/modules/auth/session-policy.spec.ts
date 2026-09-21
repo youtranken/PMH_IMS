@@ -1,4 +1,9 @@
-import { evaluateSession, isStepUpValid, stepUpSecondsLeft } from './session-policy';
+import {
+  canEnrollWithoutPassword,
+  evaluateSession,
+  isStepUpValid,
+  stepUpSecondsLeft,
+} from './session-policy';
 
 const NOW = new Date('2026-08-22T10:00:00Z');
 const alive = {
@@ -84,4 +89,59 @@ describe('stepUpSecondsLeft — còn bao lâu nữa phải gõ lại mã', () =>
       expect(stepUpSecondsLeft(at === null ? null : new Date(at), grace, NOW)).toBe(expected);
     });
   }
+});
+
+/**
+ * A-02: ai được miễn gõ lại mật khẩu khi cài yếu tố thứ hai.
+ *
+ * Bảng dữ liệu vì đây là một phép AND hai vế, và cả hai vế đều có một biên dễ viết ngược:
+ * `totp_pending` là vế "đang ở giữa luồng đăng nhập", tuổi phiên là vế "chưa bị bỏ quên".
+ */
+describe('canEnrollWithoutPassword — cửa sổ miễn xác thực lại', () => {
+  const REAUTH_MINUTES = 15;
+
+  const cases: { name: string; totpPending: boolean; createdAt: string; expected: boolean }[] = [
+    {
+      name: 'phiên còn chờ, vừa tạo 1 phút trước → miễn (đúng luồng cài 2 lớp bắt buộc)',
+      totpPending: true,
+      createdAt: '2026-08-22T09:59:00Z',
+      expected: true,
+    },
+    {
+      name: 'phiên còn chờ, 14 phút trước → vẫn miễn',
+      totpPending: true,
+      createdAt: '2026-08-22T09:46:00Z',
+      expected: true,
+    },
+    {
+      name: 'phiên còn chờ, ĐÚNG 15 phút trước → hết miễn (biên đóng)',
+      totpPending: true,
+      createdAt: '2026-08-22T09:45:00Z',
+      expected: false,
+    },
+    {
+      name: 'phiên còn chờ bị bỏ quên 1 giờ → hết miễn',
+      totpPending: true,
+      createdAt: '2026-08-22T09:00:00Z',
+      expected: false,
+    },
+    {
+      name: 'phiên ĐÃ đăng nhập đủ, vừa tạo xong → vẫn phải gõ mật khẩu (đây là A-02)',
+      totpPending: false,
+      createdAt: '2026-08-22T09:59:59Z',
+      expected: false,
+    },
+  ];
+
+  for (const c of cases) {
+    it(c.name, () => {
+      const session = { totpPending: c.totpPending, createdAt: new Date(c.createdAt) };
+      expect(canEnrollWithoutPassword(session, REAUTH_MINUTES, NOW)).toBe(c.expected);
+    });
+  }
+
+  it('ngưỡng 0 = không ai được miễn, kể cả phiên vừa sinh ra', () => {
+    const session = { totpPending: true, createdAt: NOW };
+    expect(canEnrollWithoutPassword(session, 0, NOW)).toBe(false);
+  });
 });

@@ -61,6 +61,41 @@ const RESTRICTED_SYNTAX = /** @type {const} */ ([
  * Đường ghi mới cần audit thì dùng `appendWithin` trong chính transaction nghiệp vụ, kèm
  * `@Audited(..., { writtenByService: true })`.
  */
+/**
+ * AD-16 — TÊN ĐỊNH DANH PHẢI LÀ TIẾNG ANH.
+ *
+ * Tiếng Việt chỉ ở: chú thích, mô tả `describe`/`it`/`test`, và BẢNG ÁNH XẠ NHÃN NHẬP-EXCEL
+ * (`devices/device-import.ts`, `catalog/catalog-import.ts`) — ở đó chuỗi tiếng Việt là DỮ
+ * LIỆU người dùng gõ vào file, đổi là hỏng chức năng nhập.
+ *
+ * LỚP NÀY CHỈ BẮT ĐỊNH DANH **CÓ DẤU**. Tiếng Việt không dấu cần một từ điển ~900 âm tiết —
+ * đó là lớp hai, làm cùng đợt đổi tên. Xem mục 3.4 của
+ * `docs/RA-SOAT-TOAN-DIEN-2026-09-19.md`.
+ */
+const NO_VIETNAMESE_IDENT = /** @type {const} */ ({
+  selector: 'Identifier[name=/[À-ỹ]/]',
+  message:
+    'AD-16: tên định danh phải là tiếng Anh. Tiếng Việt chỉ ở chú thích, mô tả bài kiểm ' +
+    'và bảng ánh xạ nhãn nhập-Excel.',
+});
+/**
+ * MỘT danh sách luật cú pháp, khai đúng một lần — và các khối ngoại lệ BỚT ĐI từ nó.
+ *
+ * Trước 21/09 mỗi khối tự liệt kê lại từng phần tử, và khối ngoại lệ `audit` (cuối file) vì
+ * thế đánh rơi BA luật trong khi chú thích của chính nó nói là bỏ một: AD-16, NFR-04
+ * (`NO_RAW_ERROR_MESSAGE_IN_LOG`) và `NO_BEST_EFFORT_AUDIT` — mà `audit.interceptor.ts` lại
+ * đúng là nơi ghi log lỗi, tức nơi NFR-04 cần nhất.
+ *
+ * Liệt kê tay thì thêm một luật mới phải nhớ thêm vào N chỗ, và chỗ quên được sẽ im lặng.
+ * `filter` thì ngoại lệ tự nói ra nó bỏ CÁI GÌ, và luật mới tự động áp cho mọi khối.
+ */
+const SYNTAX_RULES_FOR_SOURCE = () => [
+  ...RESTRICTED_SYNTAX,
+  NO_BEST_EFFORT_AUDIT,
+  NO_RAW_ERROR_MESSAGE_IN_LOG,
+  NO_VIETNAMESE_IDENT,
+];
+
 const NO_BEST_EFFORT_AUDIT = /** @type {const} */ ({
   selector: "CallExpression[callee.property.name='appendBestEffort']",
   message:
@@ -170,15 +205,19 @@ export default tseslint.config(
   },
   {
     // ===== AD-2/AD-15: chặn "làm riêng lẻ" ngay ở CI, không trông vào review =====
-    files: ['src/**/*.ts'],
+    /*
+     * `test/**` có trong danh sách từ 21/09. Trước đó khối này chỉ khai `src/**`, nên CẢ TẦNG
+     * bài kiểm chạm DB chưa bao giờ được AD-16 soi — đúng tầng mà đợt B vừa mở thêm file mới.
+     * Vùng mù ấy vô hình vì không bài nào canh chính cái cổng; nay có:
+     * `src/ad16-gate.lint.spec.ts`.
+     *
+     * `no-restricted-imports` (AD-2) cũng áp theo ở đây, nhưng khối `test/**` phía dưới đã
+     * tắt nó có chủ ý — bài kiểm được phép import xuyên module. Thứ tự khối lo việc đó.
+     */
+    files: ['src/**/*.ts', 'test/**/*.ts'],
     rules: {
       'no-restricted-imports': ad2Rule({ crossModule: false }),
-      'no-restricted-syntax': [
-        'error',
-        ...RESTRICTED_SYNTAX,
-        NO_BEST_EFFORT_AUDIT,
-        NO_RAW_ERROR_MESSAGE_IN_LOG,
-      ],
+      'no-restricted-syntax': ['error', ...SYNTAX_RULES_FOR_SOURCE()],
     },
   },
   {
@@ -269,11 +308,26 @@ export default tseslint.config(
      * Khối này khai lại `no-restricted-syntax` KHÔNG kèm luật đó, chứ không tắt cả rule: tắt
      * hẳn thì hai file này cũng thoát luôn luật cấm `createCipheriv` và luật cấm đọc bí mật từ
      * `process.env` — mở một lỗ chẳng ai định mở.
+     *
+     * SỬA 21/09: câu trên mô tả ĐÚNG ý định và SAI thực tế. Khối này từng viết
+     * `[...RESTRICTED_SYNTAX]`, tức đánh rơi BA luật chứ không một: `NO_BEST_EFFORT_AUDIT`
+     * (cố ý), nhưng kèm cả AD-16 và NFR-04 — mà `audit.interceptor.ts` chính là nơi ghi log
+     * lỗi, tức nơi NFR-04 cần nhất. Đó là hình dạng mà chính chú thích này cảnh báo, xảy ra
+     * ngay trong chú thích cảnh báo nó: một luật thêm vào khối `src/**` về sau không có cách
+     * nào tự đi vào đây.
+     *
+     * Nay ngoại lệ BỚT ĐI từ danh sách chung thay vì chép lại nó, nên nó chỉ bỏ được đúng
+     * thứ nó gọi tên, và luật mới tự động áp.
      */
     files: [
       'src/modules/audit/audit.interceptor.ts',
       'src/modules/audit/audit-writer.service.spec.ts',
     ],
-    rules: { 'no-restricted-syntax': ['error', ...RESTRICTED_SYNTAX] },
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        ...SYNTAX_RULES_FOR_SOURCE().filter((rule) => rule !== NO_BEST_EFFORT_AUDIT),
+      ],
+    },
   },
 );

@@ -38,7 +38,8 @@ function Wheel({ count, render, value, onChange, ariaLabel }: WheelProps) {
   onChangeRef.current = onChange;
 
   useEffect(() => {
-    const col = colRef.current!;
+    const col = colRef.current;
+    if (!col) return;
     const clamp = (v: number) => (v < 0 ? 0 : v > count - 1 ? count - 1 : v);
     const glide = (i: number) => col.scrollTo({ top: clamp(i) * ITEM_H, behavior: 'smooth' });
 
@@ -141,7 +142,8 @@ function Wheel({ count, render, value, onChange, ariaLabel }: WheelProps) {
 
   // value đổi từ ngoài (Now/Cancel/nhập tay) → cuộn tới, bỏ qua nếu đã ở đúng vị trí (tránh lặp).
   useEffect(() => {
-    const col = colRef.current!;
+    const col = colRef.current;
+    if (!col) return;
     if (Math.round(col.scrollTop / ITEM_H) === value) return;
     emitted.current = value;
     col.scrollTo({ top: value * ITEM_H, behavior: 'smooth' });

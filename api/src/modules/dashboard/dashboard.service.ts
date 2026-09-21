@@ -12,8 +12,18 @@ import { redactMessage } from '../../common/log-redact';
 
 /** Cửa sổ "tuần qua" của các khối tính theo tuần. */
 const WEEK_DAYS = 7;
-/** Cửa sổ mặc định của khối "sắp hết hạn" — cùng con số với màn Expiry để hai chỗ khớp nhau. */
-const EXPIRY_WINDOW_DAYS = 30;
+/*
+ * KHÔNG CÓ HẰNG SỐ CỬA SỔ "SẮP HẾT HẠN" Ở ĐÂY — và chỗ trống này là cố ý.
+ *
+ * Từng có `const EXPIRY_WINDOW_DAYS = 30`, kèm chú thích "cùng con số với màn Expiry để hai
+ * chỗ khớp nhau". Ý định đúng, hệ quả sai: con số thật nằm ở `expiry.warning_days` trong
+ * `system_config` (AD-11, DoD gạch 8), nên truyền 30 vào là GHI ĐÈ cấu hình. Sếp nâng ngưỡng
+ * lên 60 ngày thì màn "Sắp hết hạn" nghe lời còn trang chủ vẫn 30 — mà trang chủ mới là chỗ
+ * người ta đọc (A-08, vá 21/09).
+ *
+ * Hai bản sao của một con số chỉ khớp nhau cho tới lần đầu ai đó đổi một bản. Nên dashboard
+ * thôi biết gì về cửa sổ: `expiry.list()` không tham số nghĩa là "anh tự quyết theo cấu hình".
+ */
 /**
  * Số dòng tối đa mỗi khối.
  *
@@ -169,15 +179,23 @@ export class DashboardService {
 
   private async expiringBlock(): Promise<Dashboard['expiring']> {
     try {
-      const { items } = await this.expiry.list(EXPIRY_WINDOW_DAYS);
+      /*
+       * XIN ĐÚNG SỐ DÒNG SẼ BÀY, KHÔNG KÉO CẢ KHO VỀ RỒI CẮT (N-01, vá 21/09).
+       *
+       * Khối này hiện tối đa `MAX_ITEMS` dòng, nhưng bản trước kéo trọn cửa sổ qua ranh giới
+       * module — đo được 7.662 bản ghi để bày 8 dòng. `total` nay là con số máy chủ đếm, nên
+       * câu "còn bao nhiêu mục sắp hết hạn" vẫn đúng dù chỉ tải về 8 dòng.
+       *
+       * Nguồn đã sắp theo ngày hết hạn tăng dần, mà `daysLeft` suy ra từ chính ngày ấy — nên
+       * `limit` cắt đúng những mục GẤP NHẤT, không cắt bừa.
+       */
+      const { items, total } = await this.expiry.list({ limit: MAX_ITEMS });
       return {
         available: true,
-        total: items.length,
-        // Gấp nhất lên đầu — sếp đọc từ trên xuống và thường chỉ đọc mấy dòng đầu.
+        total,
         items: items
           .slice()
           .sort((a, b) => a.daysLeft - b.daysLeft)
-          .slice(0, 8)
           .map((row) => ({
             kind: row.kind,
             label: row.label,

@@ -99,12 +99,30 @@ export function Select({
     maxHeight: 288,
   });
 
-  // Mở → active = option đang chọn.
+  /*
+   * Mở → active = option đang chọn. PHỤ THUỘC VÀO MỘT SỐ, KHÔNG VÀO MẢNG (F-05, vá 21/09).
+   *
+   * Bản trước nghe `[open, options, value]`. `options` gần như KHÔNG BAO GIỜ ổn định về
+   * identity ở nơi gọi thật — các màn viết `options={lists.data?.x ?? []}`, `.filter().map()`,
+   * hoặc `useMemo` phụ thuộc một ô đang gõ — nên mỗi lượt CHA render là một mảng mới, và
+   * effect chạy lại KÉO DÒNG SÁNG VỀ option đang chọn trong khi menu vẫn đang mở.
+   *
+   * Người dùng bấm ↓ ba lần, một query anh em trả về, dòng sáng nhảy ngược. Bấm Enter thì
+   * chọn nhầm — một thao tác bàn phím bình thường cho ra kết quả sai, im lặng.
+   *
+   * `Combobox` gặp đúng cơ chế này và vá 10/09 (`combobox.tsx:129`); `Select` bị sót — mẫu
+   * N1, vá một cửa quên cửa song song.
+   *
+   * Ở đây không cần băm cả danh sách như Combobox: thứ effect cần chỉ là CHỈ MỤC của option
+   * đang chọn. Đó là một số, ổn định theo giá trị — cha render lại mà nội dung không đổi thì
+   * nó không đổi. Danh sách đổi thật (option đang chọn dời chỗ) thì nó đổi, và dòng sáng đi
+   * theo, đúng như phải thế.
+   */
+  const selectedIndex = options.findIndex((o) => o.value === value);
   useEffect(() => {
     if (!open) return;
-    const idx = options.findIndex((o) => o.value === value);
-    setActive(idx < 0 ? 0 : idx);
-  }, [open, options, value]);
+    setActive(selectedIndex < 0 ? 0 : selectedIndex);
+  }, [open, selectedIndex]);
 
   useEffect(() => {
     if (!open) return;

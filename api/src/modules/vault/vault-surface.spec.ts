@@ -1,5 +1,6 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { stripComments } from '../../test/source-text';
 import { VaultApiService } from './vault.api';
 
 const SRC = join(__dirname, '..', '..');
@@ -143,13 +144,12 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
      *
      * Bài anh em ở cuối file (`ownersService`) đã lột chú thích từ đầu; đây là chỗ sót.
      */
-    const body = controller
-      .slice(
+    const body = stripComments(
+      controller.slice(
         controller.indexOf('async reveal('),
         controller.indexOf('/** "Xóa" = thu hồi mềm.'),
-      )
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '');
+      ),
+    );
     if (decorators.includes("'member'")) {
       expect(body).toContain('await this.breakGlass.assertCanReveal(');
       /*
@@ -197,10 +197,9 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
      *    MỞ MẶC ĐỊNH mà đợt này vừa bỏ — và bài này XANH, vì chuỗi kia không mất đi. Cùng đột
      *    biến ấy ở `reveal()` thì bị bắt. Nên khoá luôn hình dạng vị từ ở cả hai đường.
      */
-    const body = controller
-      .slice(controller.indexOf('async list('), controller.indexOf("@Get('verdict')"))
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '');
+    const body = stripComments(
+      controller.slice(controller.indexOf('async list('), controller.indexOf("@Get('verdict')")),
+    );
     expect(body).toContain('assertCanSeeMetadata');
     expect(body).toContain("role !== 'sa'");
     expect(body).toContain("role !== 'admin'");
@@ -216,9 +215,9 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
    * được — và đó chính là lý do file này tồn tại.
    */
   it('khu Két sắt trên trang thiết bị cũng mặc định ĐÓNG', () => {
-    const panel = readFileSync(join(__dirname, 'vault-device-panel.ts'), 'utf8')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-      .replace(/\/\/.*$/gm, '');
+    const panel = stripComments(
+      readFileSync(join(__dirname, 'vault-device-panel.ts'), 'utf8'),
+    );
     expect(panel).toContain("role !== 'sa'");
     expect(panel).toContain("role !== 'admin'");
     // Và KHÔNG được quay lại mẫu "có phải member": nó cho mọi vai khác đi thẳng.
@@ -239,9 +238,7 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
     it('không đụng tới nhãn, loại hay giá trị của secret', () => {
       // Bóc chú thích trước: bản thân đoạn giải thích ở đầu file có viết "không `label`,
       // không `kind`" — soi cả chú thích thì test đỏ vì đúng câu nói rằng nó không làm.
-      const code = ownersService
-        .replace(/\/\*[\s\S]*?\*\//g, '')
-        .replace(/\/\/.*$/gm, '');
+      const code = stripComments(ownersService);
       for (const forbidden of ['label', 'kind', 'value', 'plaintext', 'reveal', 'listFor']) {
         // Jest (khác Vitest) không nhận tham số thứ hai của `expect` — gắn tên vào chính
         // vòng lặp thì thông điệp lỗi vẫn chỉ đúng từ nào vi phạm.

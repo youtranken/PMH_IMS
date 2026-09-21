@@ -278,10 +278,10 @@ export class VaultController {
    * Ba tình huống rất khác nhau đi vào vết nhờ giá trị này: id không có thật, có thật nhưng
    * ngoài quyền, và có thật nhưng cần xin duyệt.
    */
-  private static maLoiCua(error: unknown): string {
-    const than = (error as { response?: unknown } | null)?.response;
-    const ma = (than as { code?: unknown } | null | undefined)?.code;
-    return typeof ma === 'string' ? ma : 'UNKNOWN';
+  private static errorCodeOf(error: unknown): string {
+    const body = (error as { response?: unknown } | null)?.response;
+    const code = (body as { code?: unknown } | null | undefined)?.code;
+    return typeof code === 'string' ? code : 'UNKNOWN';
   }
 
   private async watched<T>(who: string, secretId: string, run: () => Promise<T>): Promise<T> {
@@ -311,7 +311,7 @@ export class VaultController {
        * `response` là `private` — ép kiểu sang `{ response: … }` lúc đó là lỗi biên dịch
        * TS2352, không phải chuyện phong cách.
        */
-      const code = VaultController.maLoiCua(error);
+      const code = VaultController.errorCodeOf(error);
       if (!(error instanceof ForbiddenException || error instanceof NotFoundException)) {
         throw error;
       }
@@ -340,11 +340,11 @@ export class VaultController {
           objectId: secretId,
           detail: { code },
         });
-      } catch (loiGhi) {
+      } catch (writeError) {
         // Tên khác `error` có chủ ý: `throw error` bên dưới phải ném lỗi GỐC của người dùng,
         // không phải lỗi ghi vết. Trùng tên là một phép che biến chực chờ đổi nghĩa dòng ấy.
         this.logger.error(
-          `Mất vết từ chối mở két (bộ đếm dò dẫm sẽ thiếu một lượt): ${redactMessage(loiGhi)}`,
+          `Mất vết từ chối mở két (bộ đếm dò dẫm sẽ thiếu một lượt): ${redactMessage(writeError)}`,
         );
       }
       // Đếm và cảnh báo — không ném ra ngoài dù gửi thư hỏng (xem `SecurityProbeService`).

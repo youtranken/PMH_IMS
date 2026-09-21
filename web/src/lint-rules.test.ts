@@ -124,4 +124,40 @@ describe('web/eslint.config.mjs — cổng AD-15 phải THẬT SỰ bắt đư�
     expect(failed, `Đầu ra:\n${output}`).toBe(true);
     expect(output).toMatch(/AD-15/);
   });
+  /*
+   * ===== AD-16 — CANH CHÍNH CÁI CỔNG =====
+   *
+   * Luật chặn định danh tiếng Việt có dấu cắm ngày 20/09/2026. Không có bài này thì nó có
+   * thể chết y như `no-restricted-globals` đã chết: selector viết đúng, cắm sai chỗ, khớp 0
+   * chuỗi, và repo vẫn sạch nên không gì đỏ để ai biết.
+   *
+   * Hai vế, và vế PHỦ ĐỊNH quan trọng ngang vế khẳng định: một luật bắt nhầm cả đường đi
+   * ĐÚNG (chuỗi i18n, chú thích) sẽ bị người ta tắt đi trong vòng một tuần.
+   */
+  it.each([
+    ['biến có dấu', `export const bỏQuen = 1;`],
+    ['hàm có dấu', `export function xóaHết() {}`],
+    ['tham số có dấu', `export const f = (giá: number) => giá;`],
+    ['thuộc tính có dấu', `export const o = { hỏng: 1 };`],
+  ])('AD-16 BẮT được %s', (_ten, code) => {
+    const { output, failed } = lintSnippet(code);
+    expect(failed, `eslint phải báo lỗi. Đầu ra:
+${output}`).toBe(true);
+    expect(output).toMatch(/AD-16/);
+  });
+
+  it('AD-16 KHÔNG bắt nhầm chuỗi tiếng Việt, chú thích, hay khóa đã đặt trong nháy', () => {
+    const { output, failed } = lintSnippet(
+      `// Hộp thoại xác nhận — chú thích tiếng Việt là ĐÚNG luật.
+` +
+        `export const label = 'Xoá thiết bị?';
+` +
+        `export const key = 'devices.deleteTitle';
+` +
+        `export const map = { 'hỏng': 'broken' };
+`,
+    );
+    expect(failed, `eslint không được báo lỗi. Đầu ra:
+${output}`).toBe(false);
+  });
 });

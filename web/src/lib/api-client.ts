@@ -32,6 +32,16 @@ const USER_INPUT_401_CODES = new Set([
   // Hết hạn step-up KHÔNG phải phiên chết: phiên vẫn sống, chỉ cần gõ lại mã 6 số. Thiếu
   // dòng này thì bấm Xem một secret sau 10 phút là bị đá thẳng về màn đăng nhập (FR-022).
   'STEPUP_REQUIRED',
+  /*
+   * Cùng hình dạng với `STEPUP_REQUIRED`, và cùng cái bẫy (A-02, 20/09): phiên VẪN SỐNG, chỉ
+   * là cửa cài 2 lớp muốn thấy mật khẩu trước. Thiếu dòng này thì `totp-enroll.tsx` không bao
+   * giờ dựng được ô mật khẩu — người dùng bị đá thẳng về màn đăng nhập, đăng nhập lại, và rơi
+   * vào đúng màn vừa đá họ ra. Một vòng kín, không lối thoát, không lời giải thích.
+   *
+   * `SESSION_REVOKED` thì NGƯỢC LẠI — cố ý KHÔNG có ở đây. Sai mật khẩu đủ ngưỡng thì phiên
+   * chết thật, và đá về màn đăng nhập là đúng việc phải làm.
+   */
+  'REAUTH_REQUIRED',
 ]);
 
 /**

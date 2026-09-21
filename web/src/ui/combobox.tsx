@@ -29,6 +29,20 @@ interface ComboboxProps<T> {
    */
   failed?: boolean;
   /**
+   * Câu hiện khi LỌC KHÔNG RA — khác `failed` (nguồn hỏng) và khác im lặng.
+   *
+   * Không truyền thì menu chỉ còn mỗi dòng `action` (nếu có), tức người dùng gõ một từ rồi
+   * nhìn vào một khoảng trống và phải tự đoán: chưa khai? gõ sai? hay hệ thống đang nghĩ?
+   * Truyền vào thì đó là chỗ nói cho họ biết phải làm gì tiếp.
+   *
+   * `role="presentation"` chứ không `option`: nó không phải một thiết bị chọn được, nên
+   * ↓/Enter không được chạm tới và trình đọc màn hình không được đọc nó như một lựa chọn.
+   * Cũng KHÔNG `role="alert"` như dòng báo hỏng — lọc không ra là kết quả bình thường của
+   * một phép lọc, không phải sự cố, và cắt ngang người đang gõ để báo chuyện thường là thói
+   * quen làm người ta thôi nghe.
+   */
+  empty?: ReactNode;
+  /**
    * Ô BẮT BUỘC. Khác `Select`, `Combobox` render ra một `<input>` THẬT, nên đây là `required`
    * của TRÌNH DUYỆT — chặn submit thật, không chỉ là một thuộc tính `aria`.
    *
@@ -58,6 +72,7 @@ export function Combobox<T>({
   ariaLabel,
   action,
   failed,
+  empty,
   required,
 }: ComboboxProps<T>) {
   const { t } = useTranslation();
@@ -116,9 +131,20 @@ export function Combobox<T>({
     setActive(0);
   }, [optionKeys]);
 
-  // `failed` cũng mở menu: người dùng phải THẤY câu "không tải được" ở đúng chỗ họ đang nhìn,
-  // chứ không phải suy ra từ việc gõ mãi không thấy gì.
-  const open = touched && !closed && (options.length > 0 || action !== undefined || failed === true);
+  /*
+   * `failed` cũng mở menu: người dùng phải THẤY câu "không tải được" ở đúng chỗ họ đang
+   * nhìn, chứ không phải suy ra từ việc gõ mãi không thấy gì.
+   *
+   * `empty` cũng vậy (20/09/2026) — và đây là chỗ dễ quên nhất khi thêm một trạng thái mới:
+   * viết xong phần RENDER mà không mở menu thì câu ấy không bao giờ hiện ra, và bài kiểm
+   * duy nhất bắt được là bài đi qua đúng đường người dùng đi. Tôi đã quên đúng chỗ này ở
+   * lượt đầu, và bài kiểm bắt được — nó báo "không tìm thấy listbox" chứ không phải "không
+   * tìm thấy chữ", tức nó chỉ thẳng ra menu chưa từng mở.
+   */
+  const open =
+    touched &&
+    !closed &&
+    (options.length > 0 || action !== undefined || failed === true || empty !== undefined);
   const { refs, floatingStyles } = useAnchoredMenu(open, {
     matchWidth: true,
     maxHeight: 260,
@@ -255,6 +281,11 @@ export function Combobox<T>({
             {failed ? (
               <li className="combo-error" role="presentation">
                 <span role="alert">{t('common.optionsLoadError')}</span>
+              </li>
+            ) : null}
+            {!failed && empty && options.length === 0 ? (
+              <li className="combo-empty" role="presentation">
+                <span>{empty}</span>
               </li>
             ) : null}
             {/*

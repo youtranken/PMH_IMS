@@ -761,7 +761,7 @@ quả — thành 20 commit. Con số đáng nhớ không phải số finding mà
 | `quetNguon` | `web/src/test/quet-nguon.ts` | Ba bản `walk()` chép tay trong ba bài điểm danh |
 | `ops/gate-hex.sh` | (script) | Hai bản luật cấm hex: một `perl` ở `ci-local.sh`, một `grep` thô ở `ci.yml` |
 
-`levelFromDays`, `moTimNhanh`/`SU_KIEN_MO_TIM_NHANH` sinh ra ở đợt trước nhưng chưa khai —
+`levelFromDays`, `openCommandPalette`/`OPEN_PALETTE_EVENT` sinh ra ở đợt trước nhưng chưa khai —
 đã bổ sung vào `docs/SHARED-REGISTRY.md` trong đợt này.
 
 ### Hợp đồng cho epic sau
@@ -820,7 +820,7 @@ quả — thành 20 commit. Con số đáng nhớ không phải số finding mà
    đầu chỉ đấu được HAI: `dead-keys-rollcall` — chính file lấy làm dẫn chứng — vẫn giữ bản sao
    riêng, lượt rà soát cùng ngày đếm ra). Bỏ qua
    theo TÊN chứ không `try/catch`: nuốt ENOENT là nuốt mọi lỗi đọc thật.
-7. **"Đang tải" không phải "hỏng".** `chuaBiet` gộp `isPending` với `isError`, mà câu đi kèm là
+7. **"Đang tải" không phải "hỏng".** `isUnknown` gộp `isPending` với `isError`, mà câu đi kèm là
    một CẢNH BÁO có chỉ dẫn ("đừng dựa vào nó để quyết định thanh lý"). Mọi lượt mở trang chi
    tiết thiết bị đều nháy cảnh báo sai đó, và vì nằm trong `role="status"` nên trình đọc màn
    hình đọc trọn nó lên rồi nó biến mất.

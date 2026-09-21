@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "eslint . && depcruise src --config .dependency-cruiser.cjs",
+    "_lint_note": "--max-warnings=0 tu 20/09/2026: 30 canh bao da don het (F-01 deps cua expiry-screen, 6 cho data! gay trang trang, 11 dau ! trong bai kiem duoc nới qua eslint.config.mjs, 1 chi thi disable thua). TRAN NAY KHONG DUOC NANG LAI — mot canh bao di qua cong la mot loi di qua cong: F-01 da song sot dung theo duong do.",
+    "lint": "eslint . --max-warnings=0 && depcruise src --config .dependency-cruiser.cjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "preview": "vite preview",

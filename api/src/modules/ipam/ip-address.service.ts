@@ -17,10 +17,12 @@ import { isoDateInTz } from '../../common/today';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { DevicesApiService } from '../devices/devices.api';
-import { enumerateHosts, hostOf, parseAddress } from './ip-rules';
+import { enumerateHosts, hostOf, keepPreferredByAddress, parseAddress } from './ip-rules';
 import {
   IP_LIFECYCLE_STATUSES,
+  OCCUPYING_STATUSES,
   canTransition,
+  isOccupying,
   nextStatuses,
   transitionLabel,
   type IpStatus,
@@ -138,7 +140,14 @@ export class IpAddressService {
     const records = await this.listRecords(subnetId, {
       includeVoided: includeVoided || frame.voidedAt !== null,
     });
-    const byAddress = new Map(records.map((row) => [row.address, row]));
+    /*
+     * `keepPreferredByAddress`, KHÔNG phải `new Map(records.map(...))` (F-10, vá 21/09).
+     *
+     * `ip_address_key` là UNIQUE một phần (`WHERE voided_at IS NULL`), nên một địa chỉ có thể
+     * có 1 hàng sống + N hàng đã ẩn — và bản trước giữ hàng CUỐI, mà "cuối" do Postgres quyết.
+     * Xem luật và hậu quả ở chính hàm ấy.
+     */
+    const byAddress = keepPreferredByAddress(records);
 
     return enumerateHosts(frame.cidr).map<SubnetSlot>((address) => {
       const record = byAddress.get(address);
@@ -170,6 +179,20 @@ export class IpAddressService {
    * Lượt thanh lý phải đọc bằng chính `tx` của nó: đọc bằng `this.db` là đọc trên MỘT KẾT NỐI
    * KHÁC, ngoài transaction — một IP vừa được cấp cho máy này sẽ không có trong danh sách và
    * máy được thanh lý trong khi vẫn đang giữ nó. Đó đúng là mẫu M2 mà cả đợt rà soát này dọn.
+   *
+   * ===== CHỈ NHỮNG ĐỊA CHỈ ĐANG CHIẾM CHỖ (A-06, vá 21/09) =====
+   *
+   * Hai nơi gọi hàm này — `holdingsOf` ("máy còn giữ gì") và `releaseWithin` ("trả lại những
+   * gì nó giữ") — đều hỏi về TÀI SẢN ĐANG GIỮ. Một địa chỉ đã `reclaimed` thì đã trả về pool
+   * rồi; cột `device_id` còn ghi tên máy chỉ là dấu vết lịch sử ("IP này từng là máy in kế
+   * toán"), không phải một thứ đang bị chiếm.
+   *
+   * Không lọc thì hàng lai `device_id = X, status = reclaimed` khóa cứng thiết bị X: đường
+   * chặn báo `DEVICE_HAS_HOLDINGS`, đường dọn thì `transitionWithin(…, 'reclaimed')` đâm vào
+   * `IP_TRANSITION_INVALID` và kéo cả lượt thanh lý rollback. Cả hai lối đều tắc.
+   *
+   * Phép lọc này là vế cho DỮ LIỆU ĐÃ LỠ SINH RA. Vế chặn nguồn nằm ở `update()` bên dưới;
+   * thiếu vế này thì những hàng lai đang nằm sẵn trong DB vẫn khóa máy của chúng mãi mãi.
    */
   async listForDeviceWithin(
     tx: Pick<Database, 'select'>,
@@ -178,7 +201,13 @@ export class IpAddressService {
     const rows = await tx
       .select({ id: ipAddressTable.id, address: ipAddressTable.address })
       .from(ipAddressTable)
-      .where(and(eq(ipAddressTable.deviceId, deviceId), isNull(ipAddressTable.voidedAt)))
+      .where(
+        and(
+          eq(ipAddressTable.deviceId, deviceId),
+          isNull(ipAddressTable.voidedAt),
+          inArray(ipAddressTable.status, OCCUPYING_STATUSES),
+        ),
+      )
       .orderBy(asc(ipAddressTable.address));
     return rows.map((row) => ({ id: row.id, address: hostOf(row.address) }));
   }
@@ -332,13 +361,30 @@ export class IpAddressService {
      *
      * Vẫn KHÔNG nhận `status` từ body (AC 5.2: đổi trạng thái phải qua `transition`) — đây là
      * hệ quả TỰ SUY từ việc gán chủ, đúng luật mà `create()` đã dùng từ đầu.
+     *
+     * ===== HỎI `isOccupying`, ĐỪNG LIỆT KÊ TAY MỘT TRẠNG THÁI (A-06, vá 21/09) =====
+     *
+     * Bản trước viết `before.status === 'free'`. Nhưng `reclaimed` CŨNG là chỗ trống — nó
+     * không nằm trong `OCCUPYING_STATUSES`, và `reclaimed → assigned` là đường đi hợp lệ có
+     * hẳn tên tiếng Việt ("Cấp lại"). Bỏ sót nó đẻ ra một hàng lai `device_id = X` mà
+     * `status = reclaimed`, và hàng lai đó KHÓA CỨNG thiết bị X: không tick dọn thì
+     * `DEVICE_HAS_HOLDINGS` chặn, có tick dọn thì `IP_TRANSITION_INVALID` làm rollback cả
+     * lượt thanh lý. Người trực nhận một câu lỗi nói về thứ họ không hề đụng tới.
+     *
+     * `suspect_dead` thì CHIẾM chỗ, nên nó không rơi vào đây — và đúng như vậy:
+     * `suspect_dead → assigned` là lượt "Xác nhận vẫn dùng", một quyết định của con người có
+     * nhãn riêng và dòng lịch sử riêng. Tự suy hộ là cướp mất quyết định đó.
+     *
+     * Vị từ dùng chung trả lời đúng cả ba ca mà không phải liệt kê ca nào — và trạng thái thứ
+     * năm ra đời mai sau sẽ được nó trả lời sẵn, thay vì chờ ai đó nhớ ra chỗ này.
      */
     const nextOwner = {
       deviceId: values.deviceId !== undefined ? values.deviceId : before.deviceId,
       usedBy: values.usedBy !== undefined ? values.usedBy : before.usedBy,
     };
     const becomesAssigned =
-      before.status === 'free' && Boolean(nextOwner.deviceId || nextOwner.usedBy);
+      !isOccupying(before.status as IpStatus) &&
+      Boolean(nextOwner.deviceId || nextOwner.usedBy);
 
     /*
      * ĐỔI CHỦ hoặc DỜI ĐỊA CHỈ qua đường sửa hồ sơ cũng phải hỏi sổ NAT (rà soát 10/09).

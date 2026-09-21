@@ -5,7 +5,7 @@ import { useApiMutation } from '@/lib/api';
 import { LOGIN_PATH, type Me } from '@/lib/me';
 import { visibleGroups } from '@/shell/app-nav';
 import { NavIcon } from '@/ui/nav-icon';
-import { CommandPalette, moTimNhanh } from '@/ui/command-palette';
+import { CommandPalette, openCommandPalette } from '@/ui/command-palette';
 import { ThemeSwitch } from '@/ui/switches';
 
 /**
@@ -199,7 +199,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
               type="button"
               className="nav-toggle"
               aria-label={t('palette.openHint')}
-              onClick={moTimNhanh}
+              onClick={openCommandPalette}
             >
               <svg
                 viewBox="0 0 24 24"

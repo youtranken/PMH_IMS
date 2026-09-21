@@ -4,6 +4,21 @@ import { normalizeKey } from '../../common/import-plan';
 import type { CatalogSnapshot } from './catalog.types';
 
 /**
+ * Câu từ chối cho "gắn tủ mà không khai site" — MỘT bản chữ cho CẢ HAI cửa (AD-15).
+ *
+ * Cửa Excel (`device-import.ts`) chặn chuyện này từ 08/09; cửa HTTP thì không, và đó là A-11.
+ * Vá xong mà mỗi cửa tự viết một câu thì hai câu sẽ trôi khỏi nhau đúng như hai phép kiểm vừa
+ * trôi khỏi nhau — nên chữ cũng phải dùng chung, không chỉ luật.
+ *
+ * Câu phải nêu được MÃ TỦ (người sửa cần biết vướng cái nào) và cả HAI đường ra: khai site,
+ * hoặc bỏ tủ. Chỉ nói "thiếu site" thì người đang cố gỡ một hồ sơ cũ khỏi tủ sẽ không biết
+ * rằng họ được phép làm thế.
+ */
+export function cabinetWithoutSiteMessage(cabinetCode: string): string {
+  return `Thiết bị đang gắn tủ "${cabinetCode}" mà không có site. Khai Site, hoặc bỏ trống ô Tủ mạng.`;
+}
+
+/**
  * AD-2: public api DUY NHẤT của module `catalog`. Module `devices` (và sau này ipam,
  * software, sheets) inject class này — KHÔNG import catalog.service/catalog.schema và
  * KHÔNG query bảng site/cabinet/device_type/vendor.
@@ -43,7 +58,22 @@ export class CatalogApiService {
       const cabinet = lists.cabinets.find((c) => c.id === refs.cabinetId);
       if (!cabinet) {
         errors.push('Tủ mạng không tồn tại.');
-      } else if (refs.siteId && cabinet.siteId !== refs.siteId) {
+      } else if (!refs.siteId) {
+        /*
+         * TỦ MÀ KHÔNG CÓ SITE — A-11, vá 21/09.
+         *
+         * Bản trước viết `else if (refs.siteId && cabinet.siteId !== refs.siteId)`. Vế
+         * `refs.siteId &&` ở đầu làm cả phép kiểm BIẾN MẤT khi site trống, nên
+         * `{"siteId": ""}` trên một thiết bị đang gắn tủ đi qua cửa trọn vẹn — và hàng ra có
+         * `cabinet_id` mà không có `site_id`: không lọc được bằng site nào, và trang chi tiết
+         * hiện một cái tủ không biết nằm ở đâu.
+         *
+         * Cái điều kiện ấy sinh ra để tránh báo oan khi người dùng KHÔNG chọn site. Nhưng
+         * "không chọn site" chỉ vô hại khi cũng không có tủ; có tủ rồi thì nó là một câu hỏi
+         * chưa trả lời, không phải một ô để trống.
+         */
+        errors.push(cabinetWithoutSiteMessage(cabinet.code));
+      } else if (cabinet.siteId !== refs.siteId) {
         // Bẫy hay gặp khi import: chọn site A nhưng gõ mã tủ của site B.
         errors.push(`Tủ "${cabinet.code}" không thuộc site đã chọn.`);
       }

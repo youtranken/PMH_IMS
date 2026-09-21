@@ -208,3 +208,53 @@ export function subnetUsage(cidr: string, usedCount: number): SubnetUsage {
   const percent = total === 0 ? 0 : Math.min(100, Math.round((usedCount / total) * 100));
   return { total, used: usedCount, free, percent };
 }
+
+/**
+ * Gom hồ sơ theo ĐỊA CHỈ, và khi một địa chỉ có nhiều hồ sơ thì HÀNG SỐNG THẮNG (F-10).
+ *
+ * ===== VÌ SAO MỘT ĐỊA CHỈ CÓ NHIỀU HÀNG =====
+ *
+ * `ip_address_key` là UNIQUE **một phần**: `(subnet_id, address) WHERE voided_at IS NULL`.
+ * Một hàng sống cộng N hàng đã ẩn cùng địa chỉ là hợp lệ, và là đường đi bình thường — ẩn
+ * nhầm một hồ sơ rồi cấp lại địa chỉ ấy cho máy khác.
+ *
+ * ===== VÌ SAO `new Map(rows.map(...))` LÀ SAI =====
+ *
+ * Nó giữ hàng CUỐI, mà "cuối" do Postgres quyết: `ORDER BY address` không định nghĩa thứ tự
+ * giữa hai hàng CÙNG địa chỉ. Nên màn hình dán badge "Đã ẩn" lên một địa chỉ đang dùng, bộ
+ * đếm "Đang cấp" hụt một, và menu bày nút "Bật lại" cho hàng đang sống → API trả `IP_TAKEN`.
+ * Lúc đúng lúc sai, không ai dựng lại được để báo.
+ *
+ * ===== LUẬT =====
+ *
+ * Sống thắng ẩn. Giữa hai hàng cùng đã ẩn thì hàng ẩn SAU thắng: nó là chương gần nhất của
+ * địa chỉ này, và đó là thứ người mở "Hiện hồ sơ đã ẩn" đang đi tìm.
+ *
+ * KHÔNG bỏ hẳn hàng đã ẩn: cửa `restore()` cần một đường tới nó, và một hồ sơ ẩn nhầm mà
+ * không màn nào hiện ra thì "Bật lại" chỉ là một endpoint không ai gọi được.
+ *
+ * Hàm THUẦN và tổng quát theo hình dạng hàng — nơi gọi truyền gì vào cũng được, miễn có
+ * `address` và `voidedAt`. Viết ở đây thay vì nội tuyến trong service để nó có bài kiểm bảng
+ * dữ liệu riêng: thứ tự heap của Postgres không phải hợp đồng, nên luật phải tự đứng được mà
+ * không cần một cái DB để hỏi.
+ */
+export function keepPreferredByAddress<T extends { address: string; voidedAt: Date | null }>(
+  rows: T[],
+): Map<string, T> {
+  const byAddress = new Map<string, T>();
+  for (const row of rows) {
+    const seen = byAddress.get(row.address);
+    if (seen === undefined || beatsForDisplay(row, seen)) byAddress.set(row.address, row);
+  }
+  return byAddress;
+}
+
+/** `challenger` có xứng thay `holder` ở ô địa chỉ không. */
+function beatsForDisplay(
+  challenger: { voidedAt: Date | null },
+  holder: { voidedAt: Date | null },
+): boolean {
+  if (holder.voidedAt === null) return false;
+  if (challenger.voidedAt === null) return true;
+  return challenger.voidedAt.getTime() >= holder.voidedAt.getTime();
+}

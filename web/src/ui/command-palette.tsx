@@ -6,7 +6,7 @@ import { apiFetch } from '@/lib/api-client';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
 import { visibleGroups } from '@/shell/app-nav';
-import { coHopThoaiDangMo, useCoHopThoaiDangMo } from '@/ui/dialog';
+import { isAnyDialogOpen, useAnyDialogOpen } from '@/ui/dialog';
 
 /**
  * Tìm nhanh ⌘K — đường ngắn nhất từ "tôi nhớ mang máng cái mã" tới đúng hồ sơ.
@@ -82,11 +82,11 @@ interface Page<T> {
  * render lại theo. Một sự kiện trên `window` giữ nguyên ranh giới: nút chỉ biết "tôi xin mở",
  * hộp vẫn là chủ state của chính nó.
  */
-export const SU_KIEN_MO_TIM_NHANH = 'ims:mo-tim-nhanh';
+export const OPEN_PALETTE_EVENT = 'ims:open-command-palette';
 
 /** Mở hộp tìm nhanh từ bất kỳ đâu. Dùng ở nút tìm trên topbar. */
-export function moTimNhanh(): void {
-  window.dispatchEvent(new CustomEvent(SU_KIEN_MO_TIM_NHANH));
+export function openCommandPalette(): void {
+  window.dispatchEvent(new CustomEvent(OPEN_PALETTE_EVENT));
 }
 
 export function CommandPalette({ me }: { me: Me }) {
@@ -96,8 +96,8 @@ export function CommandPalette({ me }: { me: Me }) {
   const [raw, setRaw] = useState('');
   const [at, setAt] = useState(0);
   /** Đích đến của dòng đang chọn. Khai ở đây vì hai lượt đặt lại `at` về 0 nằm phía trên chỗ
-      dùng chính — xem khối chú thích dài ở `chon()` bên dưới. */
-  const dangChon = useRef<string | null>(null);
+      dùng chính — xem khối chú thích dài ở `select()` bên dưới. */
+  const anchoredTo = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const openedBy = useRef<Element | null>(null);
 
@@ -130,7 +130,7 @@ export function CommandPalette({ me }: { me: Me }) {
          * Không nuốt luôn phím: để `event.preventDefault()` cho nhánh này thì trình duyệt
          * cũng không nhận được Ctrl+K, mà người dùng thì không hiểu vì sao không có gì xảy ra.
          */
-        if (!open && coHopThoaiDangMo()) return;
+        if (!open && isAnyDialogOpen()) return;
         event.preventDefault();
         // Chỉ ghi chỗ đứng cũ ở nhánh MỞ: lúc đóng, `activeElement` chính là ô tìm sắp bị
         // tháo, ghi lại rồi `.focus()` lên một node đã rời DOM là tiêu điểm rơi về `<body>`.
@@ -144,27 +144,27 @@ export function CommandPalette({ me }: { me: Me }) {
 
   /* Nút tìm trên topbar xin mở. Cùng hàng rào với phím tắt: đang có hộp thoại thì không mở. */
   useEffect(() => {
-    const onMo = () => {
-      if (coHopThoaiDangMo()) return;
+    const onOpen = () => {
+      if (isAnyDialogOpen()) return;
       openedBy.current = document.activeElement;
       setOpen(true);
     };
-    window.addEventListener(SU_KIEN_MO_TIM_NHANH, onMo);
-    return () => window.removeEventListener(SU_KIEN_MO_TIM_NHANH, onMo);
+    window.addEventListener(OPEN_PALETTE_EVENT, onOpen);
+    return () => window.removeEventListener(OPEN_PALETTE_EVENT, onOpen);
   }, []);
 
   /* Hộp thoại mở ra trong lúc palette đang mở (nút trên một kết quả, một luồng nào đó tự mở
      hộp) — palette phải nhường đường, vì từ giây đó trở đi nó là lớp phủ chết. */
-  const coHopThoai = useCoHopThoaiDangMo();
+  const dialogOpen = useAnyDialogOpen();
   useEffect(() => {
-    if (coHopThoai) setOpen(false);
-  }, [coHopThoai]);
+    if (dialogOpen) setOpen(false);
+  }, [dialogOpen]);
 
   useEffect(() => {
     if (open) {
       setRaw('');
       setQ('');
-      dangChon.current = null;
+      anchoredTo.current = null;
       setAt(0);
       // Ô tìm phải nhận tiêu điểm ngay, nếu không người dùng gõ vào khoảng không.
       requestAnimationFrame(() => inputRef.current?.focus());
@@ -265,7 +265,7 @@ export function CommandPalette({ me }: { me: Me }) {
   /* Đổi từ khoá = bỏ neo. Giữ neo lại thì effect khôi phục bên dưới sẽ kéo con trỏ về dòng của
      từ khoá CŨ ngay khi kết quả mới về — người dùng gõ từ mới mà con trỏ đứng ở dòng 8. */
   useEffect(() => {
-    dangChon.current = null;
+    anchoredTo.current = null;
     setAt(0);
   }, [q]);
 
@@ -301,21 +301,23 @@ export function CommandPalette({ me }: { me: Me }) {
    * vào giữa được nữa.
    */
   /** Đổi dòng đang chọn: kẹp vào biên, ghi neo, rồi mới đặt chỉ số. Dùng cho MỌI lượt đổi. */
-  const chon = (toi: number) => {
-    const kep = Math.max(0, Math.min(toi, hits.length - 1));
-    dangChon.current = hits[kep]?.to ?? null;
-    setAt(kep);
+  const select = (to: number) => {
+    const clamped = Math.max(0, Math.min(to, hits.length - 1));
+    anchoredTo.current = hits[clamped]?.to ?? null;
+    setAt(clamped);
   };
   useEffect(() => {
-    const cu = dangChon.current;
-    if (cu === null) return;
-    const moi = hits.findIndex((hit) => hit.to === cu);
-    const den = moi >= 0 ? moi : 0;
+    const previous = anchoredTo.current;
+    if (previous === null) return;
+    const next = hits.findIndex((hit) => hit.to === previous);
+    const target = next >= 0 ? next : 0;
     // Dòng cũ mất thì neo phải theo dòng mới, nếu không lượt `hits` sau lại kéo về 0 lần nữa.
-    dangChon.current = hits[den]?.to ?? null;
-    setAt(den);
+    anchoredTo.current = hits[target]?.to ?? null;
+    setAt(target);
     // Chỉ chạy khi DANH SÁCH đổi; `at` đổi là do chính người dùng, đừng kéo ngược lại.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // (Không cần `eslint-disable`: `anchoredTo` là ref và `setAt` bền tham chiếu, nên
+    //  `exhaustive-deps` không đòi gì thêm. Chỉ thị disable cũ đã thừa và bị gỡ 20/09/2026 —
+    //  một disable thừa sẽ nuốt im một cảnh báo THẬT về sau.)
   }, [hits]);
 
   if (!open) return null;
@@ -332,10 +334,10 @@ export function CommandPalette({ me }: { me: Me }) {
       setOpen(false);
     } else if (event.key === 'ArrowDown') {
       event.preventDefault();
-      chon(at + 1);
+      select(at + 1);
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
-      chon(at - 1);
+      select(at - 1);
     } else if (event.key === 'Enter') {
       event.preventDefault();
       go(hits[at]);
@@ -354,12 +356,12 @@ export function CommandPalette({ me }: { me: Me }) {
    * "fpt" ra đúng câu "Không có hồ sơ nào khớp "fpt"" — người trực đọc xong sẽ đi khai trùng
    * một đường truyền đã có trong hệ thống.
    */
-  const nhomHong = [
+  const failedGroups = [
     isp.isError ? t('nav.isp') : null,
     devices.isError ? t('nav.devices') : null,
     software.isError ? t('nav.software') : null,
     accounts.isError ? t('nav.serviceAccounts') : null,
-  ].filter((ten): ten is string => ten !== null);
+  ].filter((name): name is string => name !== null);
   const loading =
     enabled &&
     (devices.isFetching || software.isFetching || isp.isFetching || accounts.isFetching);
@@ -371,11 +373,11 @@ export function CommandPalette({ me }: { me: Me }) {
    * `index` đi kèm vì nó là chỉ số vào `hits` mà `aria-activedescendant` và `at` đang dùng;
    * đánh số lại theo từng nhóm sẽ làm `cp-hit-${index}` trỏ nhầm.
    */
-  const nhomKetQua: { ten: string; mucs: { hit: Hit; index: number }[] }[] = [];
+  const resultGroups: { name: string; items: { hit: Hit; index: number }[] }[] = [];
   hits.forEach((hit, index) => {
-    const cuoi = nhomKetQua[nhomKetQua.length - 1];
-    if (cuoi && cuoi.ten === hit.group) cuoi.mucs.push({ hit, index });
-    else nhomKetQua.push({ ten: hit.group, mucs: [{ hit, index }] });
+    const last = resultGroups[resultGroups.length - 1];
+    if (last && last.name === hit.group) last.items.push({ hit, index });
+    else resultGroups.push({ name: hit.group, items: [{ hit, index }] });
   });
 
   return (
@@ -484,9 +486,9 @@ export function CommandPalette({ me }: { me: Me }) {
           Nay `<p>` thường trực, `hidden` khi rỗng: DOM không vẽ gì, nhưng vùng sống đã được
           đăng ký từ lượt mở hộp nên lời cảnh báo tới sau sẽ được đọc.
         */}
-        <p className="cp-warn" role="status" hidden={!(nhomHong.length > 0 && hits.length > 0)}>
-          {nhomHong.length > 0 && hits.length > 0
-            ? t('palette.partial', { list: nhomHong.join(', ') })
+        <p className="cp-warn" role="status" hidden={!(failedGroups.length > 0 && hits.length > 0)}>
+          {failedGroups.length > 0 && hits.length > 0
+            ? t('palette.partial', { list: failedGroups.join(', ') })
             : null}
         </p>
 
@@ -508,8 +510,8 @@ export function CommandPalette({ me }: { me: Me }) {
               <p>
                 {loading
                   ? t('app.loading')
-                  : nhomHong.length > 0
-                    ? t('palette.emptyPartial', { list: nhomHong.join(', '), q })
+                  : failedGroups.length > 0
+                    ? t('palette.emptyPartial', { list: failedGroups.join(', '), q })
                     : t('palette.empty', { q })}
               </p>
             </div>
@@ -530,12 +532,12 @@ export function CommandPalette({ me }: { me: Me }) {
             nhập phải luôn có đích, nếu không lại là một IDREF chết.
           */}
           <div id="cp-ket-qua" role="listbox" aria-label={t('palette.title')}>
-            {nhomKetQua.map((nhom) => (
-              <div key={nhom.ten} className="cp-group" role="group" aria-label={nhom.ten}>
+            {resultGroups.map((group) => (
+              <div key={group.name} className="cp-group" role="group" aria-label={group.name}>
                 <p className="cp-group-title" aria-hidden="true">
-                  {nhom.ten}
+                  {group.name}
                 </p>
-                {nhom.mucs.map(({ hit, index }) => (
+                {group.items.map(({ hit, index }) => (
                   <button
                     key={`${hit.to}-${index}`}
                     type="button"
@@ -547,7 +549,7 @@ export function CommandPalette({ me }: { me: Me }) {
                     role="option"
                     aria-selected={index === at}
                     className={`cp-item${index === at ? ' active' : ''}`}
-                    onMouseEnter={() => chon(index)}
+                    onMouseEnter={() => select(index)}
                     onClick={() => go(hit)}
                   >
                     <span className="it-ic">

@@ -44,7 +44,7 @@ const DialogDepthContext = createContext(0);
  *
  *   1. `ConfirmProvider` dựng `ConfirmDialog` ở GỐC app, là anh em của `children` chứ không
  *      nằm trong hộp nào — nên nó luôn đọc ra `depth = 0`. Mà `guardUnsaved` của chính file
- *      này gọi `askConfirm` (xem `thuDong`), nghĩa là mọi hộp có canh dữ liệu chưa lưu khi
+ *      này gọi `askConfirm` (xem `tryClose`), nghĩa là mọi hộp có canh dữ liệu chưa lưu khi
  *      bấm Esc đều đẻ ra một lớp nền mờ THỨ HAI đè lên lớp của chính nó. Đo ngày 18/09/2026:
  *      hai lớp `rgba(20,26,20,.44)` chồng nhau, không lớp nào `bare`.
  *   2. Hai hộp anh em trong cùng một component (`{a && <Dialog/>}{b && <Dialog/>}`) cũng đều
@@ -53,27 +53,27 @@ const DialogDepthContext = createContext(0);
  * Ghi tên và đọc sổ đều làm trong `useLayoutEffect` — xem chú thích tại chỗ trong `Dialog` để
  * biết vì sao không đọc lúc render (hai hộp anh em cùng một commit sẽ cùng đọc ra sổ rỗng).
  */
-let soHopDangMo = 0;
-const nguoiTheoDoiHop = new Set<() => void>();
+let openDialogCount = 0;
+const dialogSubscribers = new Set<() => void>();
 
-function dangKyTheoDoiHop(bao: () => void): () => void {
-  nguoiTheoDoiHop.add(bao);
+function subscribeToDialogs(notify: () => void): () => void {
+  dialogSubscribers.add(notify);
   return () => {
-    nguoiTheoDoiHop.delete(bao);
+    dialogSubscribers.delete(notify);
   };
 }
 
 /** Có hộp thoại nào đang mở không — bản đọc một phát, cho handler bàn phím. */
-export function coHopThoaiDangMo(): boolean {
-  return soHopDangMo > 0;
+export function isAnyDialogOpen(): boolean {
+  return openDialogCount > 0;
 }
 
 /**
  * Bản phản ứng: component nào cần TỰ ĐÓNG khi có hộp thoại mở ra thì dùng cái này.
  * `getServerSnapshot` trả `false` vì trên server chưa hộp nào mở được.
  */
-export function useCoHopThoaiDangMo(): boolean {
-  return useSyncExternalStore(dangKyTheoDoiHop, coHopThoaiDangMo, () => false);
+export function useAnyDialogOpen(): boolean {
+  return useSyncExternalStore(subscribeToDialogs, isAnyDialogOpen, () => false);
 }
 
 const DialogPortalContext = createContext<HTMLElement | null>(null);
@@ -190,18 +190,21 @@ export function Dialog({
    * chữ ký — cửa canh im lặng bỏ sót. JSON tự lo việc thoát ký tự, nên không có cảnh đó.
    */
   const bodyRef = useRef<HTMLDivElement | null>(null);
-  const banDau = useRef<string | null>(null);
+  const initialSignature = useRef<string | null>(null);
 
-  const chuKyCacO = useCallback((): string => {
+  const fieldSignature = useCallback((): string => {
     const root = bodyRef.current;
     if (!root) return '';
     return JSON.stringify(
       // `Array.from` chứ không phải spread: `tsconfig.app.json` nhắm bản ES cũ hơn nên
       // `NodeListOf` chưa có `[Symbol.iterator]`.
       Array.from(root.querySelectorAll('input, textarea, select')).map((el) => {
-        const o = el as HTMLInputElement;
-        const gia = o.type === 'checkbox' || o.type === 'radio' ? String(o.checked) : o.value;
-        return [o.name || o.id || '', gia];
+        const field = el as HTMLInputElement;
+        const value =
+          field.type === 'checkbox' || field.type === 'radio'
+            ? String(field.checked)
+            : field.value;
+        return [field.name || field.id || '', value];
       }),
     );
   }, []);
@@ -219,19 +222,19 @@ export function Dialog({
      * đúng vào lúc thân hộp đã mount. Không cần thêm cờ nào khác.
      */
     if (!guardUnsaved || !open || !portalEl) return;
-    banDau.current = chuKyCacO();
-  }, [guardUnsaved, open, portalEl, chuKyCacO]);
+    initialSignature.current = fieldSignature();
+  }, [guardUnsaved, open, portalEl, fieldSignature]);
 
   /** Đang chờ người dùng trả lời câu "bỏ hay ở lại" — đừng hỏi chồng lên nhau. */
-  const dangHoi = useRef(false);
+  const asking = useRef(false);
 
-  const thuDong = useCallback(() => {
-    if (banDau.current === null || chuKyCacO() === banDau.current) {
+  const tryClose = useCallback(() => {
+    if (initialSignature.current === null || fieldSignature() === initialSignature.current) {
       onOpenChange(false);
       return;
     }
-    if (dangHoi.current) return;
-    dangHoi.current = true;
+    if (asking.current) return;
+    asking.current = true;
     void (async () => {
       const ok = await askConfirm({
         title: t('app.discardTitle'),
@@ -240,10 +243,10 @@ export function Dialog({
         cancelLabel: t('app.discardCancel'),
         danger: true,
       });
-      dangHoi.current = false;
+      asking.current = false;
       if (ok) onOpenChange(false);
     })();
-  }, [askConfirm, chuKyCacO, onOpenChange, t]);
+  }, [askConfirm, fieldSignature, onOpenChange, t]);
 
   /*
    * ===== ESC LÚC MENU Ô CHỌN ĐANG MỞ CHỈ ĐƯỢC ĐÓNG MENU (10/09) =====
@@ -279,7 +282,7 @@ export function Dialog({
     if (!guardUnsaved) return;
     // Radix tự đóng nếu ta không cản; cản rồi tự quyết sau khi hỏi xong.
     event.preventDefault();
-    thuDong();
+    tryClose();
   };
 
   /*
@@ -293,7 +296,7 @@ export function Dialog({
     }
     if (!guardUnsaved) return;
     event.preventDefault();
-    thuDong();
+    tryClose();
   };
 
   const onInteractOutside = (event: Event) => {
@@ -346,15 +349,15 @@ export function Dialog({
    * effect của con chạy TRƯỚC của cha, nên con đọc sổ vẫn thấy rỗng. `depth` lo đúng cảnh đó.
    * Hai cơ chế phủ kín nhau, không cái nào thừa.
    */
-  const [laHopLong, setLaHopLong] = useState(false);
+  const [isNested, setIsNested] = useState(false);
   useLayoutEffect(() => {
     if (!open) return undefined;
-    setLaHopLong(depth > 0 || soHopDangMo > 0);
-    soHopDangMo += 1;
-    for (const bao of nguoiTheoDoiHop) bao();
+    setIsNested(depth > 0 || openDialogCount > 0);
+    openDialogCount += 1;
+    for (const notify of dialogSubscribers) notify();
     return () => {
-      soHopDangMo -= 1;
-      for (const bao of nguoiTheoDoiHop) bao();
+      openDialogCount -= 1;
+      for (const notify of dialogSubscribers) notify();
     };
   }, [open, depth]);
 
@@ -382,7 +385,7 @@ export function Dialog({
       <RD.Portal>
         <RD.Overlay
           className={
-            overlayClassName ?? (laHopLong ? 'modal-backdrop bare' : 'modal-backdrop')
+            overlayClassName ?? (isNested ? 'modal-backdrop bare' : 'modal-backdrop')
           }
         />
         <div className="dialog-viewport">
@@ -403,7 +406,7 @@ export function Dialog({
                     <span className="spacer" />
                     {/*
                       `RD.Close` đóng hộp NGAY, không hỏi ai — nên khi đang canh dữ liệu chưa
-                      lưu thì phải là nút thường đi qua `thuDong()`. Hai nhánh cùng class, cùng
+                      lưu thì phải là nút thường đi qua `tryClose()`. Hai nhánh cùng class, cùng
                       nhãn trợ năng: người dùng không thấy khác gì.
                     */}
                     {guardUnsaved ? (
@@ -412,7 +415,7 @@ export function Dialog({
                         className="sheet-close"
                         aria-label={closeLabel ?? t('common.closeDialog')}
                         disabled={!dismissible || requireExplicitClose}
-                        onClick={thuDong}
+                        onClick={tryClose}
                       >
                         ✕
                       </button>

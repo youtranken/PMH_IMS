@@ -81,7 +81,10 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
     );
   }
 
-  const item = account.data!;
+  // Mất mạng ⇒ `fetchStatus:'paused'` ⇒ `isLoading` false, `isError` false, `data` undefined:
+  // hai nhánh trên đều trượt. Xem chú thích đầy đủ ở `devices/device-detail.tsx` (lỗi F-02).
+  if (!account.data) return <Loading />;
+  const item = account.data;
   const vpn = supportsVpnFields(item.kind);
   /** Ghi vào két chỉ SA/Admin — API chặn, UI đừng bày nút ra để bấm rồi 403. */
   const canVaultWrite = me.role === "sa" || me.role === "admin";

@@ -132,7 +132,7 @@ export function useListUrlState<F extends Record<string, string>>(options: {
    * ngoài để áp vào cả, đừng động vào thứ người ta đang gõ.
    */
   useEffect(() => {
-    setSearchInput((dangGo) => (dangGo.trim() === search ? dangGo : search));
+    setSearchInput((previous) => (previous.trim() === search ? previous : search));
   }, [search]);
 
   /*

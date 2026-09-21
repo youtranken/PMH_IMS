@@ -6,6 +6,7 @@ import { AuditApiService } from './audit.api';
 import { AuditQueryService } from './audit-query.service';
 import { AuditWriterService } from './audit-writer.service';
 import { SecurityProbeService } from './security-probe.service';
+import { UsersModule } from '../users/users.module';
 
 /**
  * AD-9 — hạ tầng audit.
@@ -20,6 +21,15 @@ import { SecurityProbeService } from './security-probe.service';
  */
 @Global()
 @Module({
+  /*
+   * `users` vào đây để `AuditQueryService` tra được tên người thao tác qua cửa chính, thay
+   * cho `LEFT JOIN users` nó từng tự viết (A-07, vá 21/09).
+   *
+   * Cạnh phụ thuộc chỉ đi MỘT chiều, audit → users. Chiều ngược lại không cần khai: module
+   * này `@Global()` nên `UsersService` lấy `AuditWriterService` mà không phải import gì —
+   * tức là không có vòng nào ở đây, dù nhìn thoáng qua thì trông như có.
+   */
+  imports: [UsersModule],
   controllers: [AuditController],
   providers: [
     AuditWriterService,

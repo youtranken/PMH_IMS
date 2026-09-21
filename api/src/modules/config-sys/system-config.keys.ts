@@ -22,6 +22,17 @@ export const CONFIG_KEYS = {
    *
    * Đặt ngưỡng = 0 là TẮT hẳn cảnh báo (vẫn ghi nhật ký) — có đường tắt mà không phải sửa code.
    */
+  /*
+   * Cửa sổ MIỄN gõ lại mật khẩu khi cài yếu tố thứ hai lần đầu (0047, A-02).
+   *
+   * Cài 2 lớp ngay sau màn đăng nhập bắt buộc thì mật khẩu vừa được chứng minh vài giây
+   * trước — hỏi lại là ma sát không đổi lấy được gì. Nhưng một phiên chờ bị bỏ quên trên
+   * máy bỏ ngỏ thì không được là cửa mở vĩnh viễn, nên ngoại lệ ấy có hạn.
+   *
+   * 15 phút: đủ cho người lần đầu tải ứng dụng authenticator về máy, và ngắn hơn hẳn
+   * `session.idle_minutes` (30) nên nó luôn là cái hết trước.
+   */
+  totpEnrollReauthMinutes: { key: 'totp.enroll_reauth_minutes', fallback: 15 },
   secretProbeAlertThreshold: { key: 'secret.probe_alert_threshold', fallback: 3 },
   secretProbeWindowMinutes: { key: 'secret.probe_window_minutes', fallback: 15 },
   secretProbeCooldownMinutes: { key: 'secret.probe_cooldown_minutes', fallback: 60 },

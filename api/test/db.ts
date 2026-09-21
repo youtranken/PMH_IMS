@@ -69,6 +69,32 @@ export function testDbUrl(dbName = 'postgres'): string {
   return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@127.0.0.1:${port}/${dbName}`;
 }
 
+/**
+ * Chuỗi kết nối bằng ROLE ỨNG DỤNG (`ims_app`) — dùng để hỏi "role hẹp có thật sự hẹp không"
+ * (D-01). Đọc cùng `.env` mà compose đọc, nên bài kiểm và stack đang chạy nói về CÙNG một
+ * role với CÙNG một mật khẩu: bài kiểm không được phép đổi mật khẩu dưới chân stack.
+ */
+export function appDbUrl(dbName: string): string {
+  const env = { ...repoEnv(), ...process.env };
+  const user = env.APP_DB_USER ?? 'ims_app';
+  const password = env.APP_DB_PASSWORD;
+  if (!password) {
+    throw new Error('Thiếu APP_DB_PASSWORD — tầng test DB đọc nó từ .env ở gốc repo (D-01).');
+  }
+  const port = env.POSTGRES_TEST_PORT ?? '55432';
+  return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@127.0.0.1:${port}/${dbName}`;
+}
+
+/** Mật khẩu role ứng dụng như `.env` khai — `ensureAppRole` trong test phải đặt đúng cái này. */
+export function appDbPassword(): string {
+  const env = { ...repoEnv(), ...process.env };
+  const password = env.APP_DB_PASSWORD;
+  if (!password) {
+    throw new Error('Thiếu APP_DB_PASSWORD — tầng test DB đọc nó từ .env ở gốc repo (D-01).');
+  }
+  return password;
+}
+
 export interface ScratchDb {
   name: string;
   pool: Pool;

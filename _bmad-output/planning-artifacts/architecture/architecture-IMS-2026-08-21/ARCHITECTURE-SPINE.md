@@ -53,6 +53,7 @@ graph TD
 - **Binds:** all
 - **Prevents:** vòng phụ thuộc kiểu `assets-write→software-license→assets.service` của QLTS; SQL lậu xuyên module.
 - **Rule:** mỗi module nghiệp vụ export đúng **một** `*.api.ts` (public api service) qua module exports. Module nghiệp vụ được inject public api của module khác để **đọc/ghi chéo** — cấm import bất kỳ file nội bộ nào của module khác, cấm SQL/JOIN đụng bảng module khác. Đồ thị phụ thuộc giữa các module nghiệp vụ **phải acyclic** — enforce bằng `dependency-cruiser` chạy trong CI, không chỉ review. Tầng nền không import tầng nghiệp vụ.
+- **Enforce — vế SQL cần một cổng RIÊNG.** `dependency-cruiser` và eslint canh vế import, và chỉ vế import: cái thứ nhất khớp **đường dẫn đã resolve**, cái thứ hai khớp **chuỗi import**. Một câu SQL thô không phải cái nào trong hai thứ đó, nên `audit-query.service.ts` viết `LEFT JOIN users u ON u.email = a.actor` và sống **chín epic** dưới mũi cả hai cổng (A-07, 21/09) — trong khi `users.api.ts` có sẵn dòng chữ cấm đúng việc ấy. Cái giá đã trả hai lần: `u.sub` không tồn tại nên endpoint 500 ở mọi lần gọi, và `created_at` mơ hồ làm vỡ mỗi lượt lọc ngày. Bản canh: `api/src/ad2-raw-sql.spec.ts` — đọc chủ sở hữu bảng từ chính các `*.schema.ts` (AD-3, không phải danh sách chép tay) rồi quét mọi file đã **lột chú thích**. Cùng doctrine với AD-16: một luật không có bài canh là một luật có thể khớp đúng số không chuỗi mà không ai biết.
 
 ### AD-3 — Mỗi bảng một chủ; mọi truy cập chéo qua public api của chủ
 
@@ -94,7 +95,7 @@ graph TD
 
 - **Binds:** all controllers
 - **Prevents:** endpoint quên audit hoặc quên phân quyền lọt ra production.
-- **Rule:** endpoint ghi thiếu `@Audited` = review chặn; controller không khai `@Roles(...)` = 401 (default-secure). Bảng audit append-only (REVOKE UPDATE/DELETE tầng DB role).
+- **Rule:** endpoint ghi thiếu `@Audited` = review chặn; controller không khai `@Roles(...)` = 401 (default-secure). Bảng audit append-only (REVOKE UPDATE/DELETE tầng DB role). **Từ 20/09/2026 câu đó mới ĐÚNG với thực tế đang chạy:** trước đó ứng dụng kết nối bằng `ims` — vừa superuser vừa chủ sở hữu — nên REVOKE của `0005` không có hiệu lực nào và chủ sở hữu còn tháo được cả trigger. `0048_app_role_split.sql` tách role `ims_app` (migration chạy bằng chủ sở hữu, ứng dụng chạy bằng role hẹp), và `assertNarrowRole` trong `main.ts` chặn boot ở production nếu `.env` chưa đổi.
 
 ### AD-10 — Migration chỉ tiến, seed danh mục là migration
 
@@ -131,6 +132,14 @@ graph TD
 - **Binds:** toàn bộ UI, FR-028, FR-012..014, FR-022, FR-029, AD-13
 - **Prevents:** mỗi màn tự chế popup confirm / dialog / chọn lịch; `ExcelExportService` viết ở Epic 2 rồi viết lại ở Epic 7; badge "sắp hết hạn" mỗi nơi tính một kiểu; sửa một hành vi phải đi sửa 9 chỗ.
 - **Rule:** thứ nào dùng ở **≥2 màn hoặc ≥2 module** là tài sản dùng chung — đặt tại `web/src/ui` (UI + hook) hoặc `src/common` + module nền (API), **không** nằm trong `features/` hay module nghiệp vụ. Story sinh ra nó phải khai ngay vào `docs/SHARED-REGISTRY.md` (tên · đường dẫn · dùng ở đâu · khi nào KHÔNG dùng). Story sau **bắt buộc đọc registry trước khi viết mới**; cần khác biệt thì mở rộng bằng prop/tham số/provider, **cấm fork bản sao**. Cụ thể cấm: `window.confirm`/`window.alert`, dialog tự dựng trong `features/`, hex màu ngoài `tokens.css`, tự viết logic phân trang / export xlsx / tính trạng thái hạn. Enforce bằng eslint (`no-restricted-syntax`, `no-restricted-imports`) trong CI, cùng chỗ với `dependency-cruiser` của AD-2 — không chỉ trông vào review.
+
+### AD-16 — Tên định danh trong mã phải là tiếng Anh
+
+- **Binds:** toàn bộ `api/src`, `api/test`, `web/src`, `e2e` — mã sản phẩm và mã kiểm như nhau
+- **Prevents:** một cơ sở mã hai ngôn ngữ, nơi `soLuong` và `quantity` cùng tồn tại và không ai biết cái nào là thật; `git grep` tìm một khái niệm phải đoán người viết nghĩ bằng tiếng gì; và cái giá lớn nhất — mỗi định danh tiếng Việt mới sinh ra làm đợt đổi tên sau đó đắt thêm, nên nợ tự nuôi chính nó. Đo 19/09: **237 định danh + 15 tên tệp**, không cổng nào chặn cái mới.
+- **Rule:** định danh (biến, hàm, lớp, hằng, thuộc tính, tên tệp) viết bằng **tiếng Anh**. Tiếng Việt chỉ được ở ba nơi: **chú thích**, **mô tả bài kiểm** (`describe`/`it`/`test`), và **bảng ánh xạ nhãn nhập-Excel** (`devices/device-import.ts`, `catalog/catalog-import.ts`) — ở đó chuỗi tiếng Việt là DỮ LIỆU người dùng gõ vào tệp, đổi là hỏng chức năng nhập. Chuỗi hiển thị cho người dùng đi qua `lib/i18n` (DoD gạch 6), không phải ngoại lệ của luật này.
+- **Enforce:** `no-restricted-syntax` với selector `Identifier[name=/[À-ỹ]/]` trong cả ba cấu hình eslint (api · web · e2e), cùng chỗ với AD-2/AD-15. **Lớp này chỉ bắt định danh CÓ DẤU**; tiếng Việt không dấu (`soLuong`, `ghi`, `truoc`) cần một từ điển âm tiết — đó là lớp hai, làm cùng đợt đổi tên (mục 3.4 của `docs/RA-SOAT-TOAN-DIEN-2026-09-19.md`).
+- **Cổng phải có bài canh cổng.** Luật lint không có bài kiểm là luật có thể khớp **đúng số không chuỗi** mà repo vẫn sạch nên không ai biết — đã xảy ra hai lần ở repo này (AD-2 bên api, 28/08, chín epic; `window.confirm` bên web, 07/09). Bản canh cổng: `api/src/ad16-gate.lint.spec.ts` và `web/src/lint-rules.test.ts`. Rà soát chéo 21/09 tìm ra AD-16 chưa hề áp cho `api/test/**` và bị một khối ngoại lệ đánh rơi ở hai tệp `audit` — cả hai vô hình cho tới khi có bài canh.
 
 ## Consistency Conventions
 

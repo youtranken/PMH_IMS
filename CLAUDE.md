@@ -19,7 +19,7 @@ là cổng chặn merge.
 | Cần gì | Đọc ở đâu |
 | --- | --- |
 | Yêu cầu (FR/NFR) | `_bmad-output/planning-artifacts/prds/prd-IMS-2026-08-19/prd.md` + `addendum.md` |
-| Luật kiến trúc AD-1..AD-15 | `_bmad-output/planning-artifacts/architecture/architecture-IMS-2026-08-21/ARCHITECTURE-SPINE.md` |
+| Luật kiến trúc AD-1..AD-16 | `_bmad-output/planning-artifacts/architecture/architecture-IMS-2026-08-21/ARCHITECTURE-SPINE.md` |
 | Epic 1..9 + story + AC | `_bmad-output/planning-artifacts/epics.md` |
 | Trạng thái story | `_bmad-output/implementation-artifacts/sprint-status.yaml` |
 | Thiết kế màn hình (13 màn HTML) | `_bmad-output/planning-artifacts/design-ims/` |
@@ -100,7 +100,7 @@ thu hẹp được union phân biệt bằng cờ boolean** (`if (!r.ok) r.reaso
 **Definition of Done — story chỉ `done` khi đủ 8 gạch:**
 
 1. Mọi AC trong `epics.md` có test tương ứng, tất cả xanh.
-2. Không vi phạm AD-1..AD-15; `dependency-cruiser` + eslint xanh.
+2. Không vi phạm AD-1..AD-16; `dependency-cruiser` + eslint xanh.
 3. Endpoint ghi có `@Audited` + `@Roles` + transaction `tx` tường minh (AD-5, AD-9).
 4. Thứ dùng chung mới đã khai vào `docs/SHARED-REGISTRY.md` (AD-15).
 5. Migration đánh số 4 chữ số, chỉ tiến, chạy sạch trên DB trắng (AD-10).

@@ -189,16 +189,29 @@ export function VaultPanel({
     [me.csrfToken, toast],
   );
 
-  if (verdict.isLoading) return <Loading />;
-  /**
-   * Lỗi tải verdict KHÔNG được rơi xuống thành "bạn không có quyền".
+  /*
+   * BA CHỐT NÀY CHỈ ÁP CHO NGƯỜI CẦN `verdict` (F-07, vá 21/09).
    *
-   * Đúng cái bẫy vừa gặp: URL sai → 404 → `verdict.data` undefined → panel nói "chỉ Quản trị
-   * xem được", và thông điệp đó nghe hợp lý tới mức che mất một lỗi 404. Sai vì thiếu quyền
-   * và sai vì hỏng phải nói ra hai câu khác nhau.
+   * `useOwnerSecrets` tính `allowed = isAdmin || …` và chú thích ở đó tuyên bố thẳng:
+   * "SA/Admin không chờ `verdict`". Nhưng bản trước đặt ba chốt này lên trước mọi thứ, nên
+   * `/vault/secrets/verdict` trả 500 là SA/Admin MẤT SẠCH panel Két sắt — dù quyền của họ
+   * không hề phụ thuộc vào câu trả lời ấy, và `secrets` (`enabled: allowed`) đã tải xong.
+   *
+   * Chú thích mô tả đúng ý định, mã làm một việc khác. Nay cái chốt đi theo đúng câu chú thích.
    */
-  if (verdict.isError) return <LoadError error={verdict.error} onRetry={() => void verdict.refetch()} />;
-  if (!allowed) return <p className="alert">{t('vault.noPermission')}</p>;
+  if (!isAdmin) {
+    if (verdict.isLoading) return <Loading />;
+    /**
+     * Lỗi tải verdict KHÔNG được rơi xuống thành "bạn không có quyền".
+     *
+     * Đúng cái bẫy vừa gặp: URL sai → 404 → `verdict.data` undefined → panel nói "chỉ Quản trị
+     * xem được", và thông điệp đó nghe hợp lý tới mức che mất một lỗi 404. Sai vì thiếu quyền
+     * và sai vì hỏng phải nói ra hai câu khác nhau.
+     */
+    if (verdict.isError)
+      return <LoadError error={verdict.error} onRetry={() => void verdict.refetch()} />;
+    if (!allowed) return <p className="alert">{t('vault.noPermission')}</p>;
+  }
 
   const rows = secrets.data ?? [];
 
@@ -293,8 +306,23 @@ export function VaultPanel({
                         >
                           {t('vault.request')}
                         </button>
-                      ) : (
+                      ) : verdict.data?.pending ? (
+                        /*
+                         * ĐỌC `pending`, KHÔNG SUY BẰNG PHÉP LOẠI TRỪ (F-07, vá 21/09).
+                         *
+                         * Bản trước để "Đang chờ duyệt" làm nhánh `else` cuối. Hôm nay nó
+                         * đúng, vì server tính `canRequest = grant === null && pending === null`
+                         * nên phần còn lại vừa khít "có phiếu treo". Nhưng đó là một sự TRÙNG
+                         * KHỚP giữa hai module, không phải một hợp đồng: ngày nào
+                         * `break-glass.service.ts` thêm một lý do thứ ba làm `canRequest` sai
+                         * (trần số phiếu, chủ thể bị đóng băng, người dùng bị khoá) thì badge
+                         * nói dối — im lặng, và không gì đỏ.
+                         *
+                         * Server đã gửi hẳn `pending` sang. Đọc nó là đọc sự thật.
+                         */
                         <span className="badge warn">{t('vault.awaitingApproval')}</span>
+                      ) : (
+                        <span className="badge">{t('vault.cannotReveal')}</span>
                       )}
                       {/*
                         "Xem" ở NGOÀI, ba việc còn lại vào menu — mẫu "nút chính + tràn".

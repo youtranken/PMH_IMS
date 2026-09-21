@@ -150,7 +150,7 @@ export function isDefaultMessage(message: string): boolean {
 }
 
 /** Con số ràng buộc nằm trong câu mặc định (`must not be greater than 65535`). */
-function soDau(message: string): string | null {
+function firstNumberIn(message: string): string | null {
   return /(\d+)/.exec(message)?.[1] ?? null;
 }
 
@@ -167,52 +167,54 @@ export function vietnameseFor(
   constraintKey: string,
   englishDefault: string,
 ): string {
-  const ten = fieldLabel(property);
-  const so = soDau(englishDefault);
+  const label = fieldLabel(property);
+  const limit = firstNumberIn(englishDefault);
 
   switch (constraintKey) {
     case 'isString':
-      return `${ten} phải là chuỗi ký tự.`;
+      return `${label} phải là chuỗi ký tự.`;
     case 'isInt':
-      return `${ten} phải là số nguyên.`;
+      return `${label} phải là số nguyên.`;
     case 'isNumber':
-      return `${ten} phải là một con số.`;
+      return `${label} phải là một con số.`;
     case 'isBoolean':
-      return `${ten} chỉ nhận đúng hoặc sai.`;
+      return `${label} chỉ nhận đúng hoặc sai.`;
     case 'isArray':
-      return `${ten} phải là một danh sách.`;
+      return `${label} phải là một danh sách.`;
     case 'isUuid':
-      return `${ten} không hợp lệ.`;
+      return `${label} không hợp lệ.`;
     case 'isEmail':
-      return `${ten} không đúng định dạng email.`;
+      return `${label} không đúng định dạng email.`;
     case 'isDateString':
-      return `${ten} phải là ngày hợp lệ.`;
+      return `${label} phải là ngày hợp lệ.`;
     case 'isNotEmpty':
-      return `${ten} không được để trống.`;
+      return `${label} không được để trống.`;
     case 'min':
-      return so ? `${ten} không được nhỏ hơn ${so}.` : `${ten} nhỏ hơn mức cho phép.`;
+      return limit ? `${label} không được nhỏ hơn ${limit}.` : `${label} nhỏ hơn mức cho phép.`;
     case 'max':
-      return so ? `${ten} không được lớn hơn ${so}.` : `${ten} vượt quá mức cho phép.`;
+      return limit ? `${label} không được lớn hơn ${limit}.` : `${label} vượt quá mức cho phép.`;
     case 'maxLength':
-      return so ? `${ten} tối đa ${so} ký tự.` : `${ten} quá dài.`;
+      return limit ? `${label} tối đa ${limit} ký tự.` : `${label} quá dài.`;
     case 'minLength':
-      return so ? `${ten} tối thiểu ${so} ký tự.` : `${ten} quá ngắn.`;
+      return limit ? `${label} tối thiểu ${limit} ký tự.` : `${label} quá ngắn.`;
     case 'isLength': {
       /*
        * `@Length(a, b)` sinh HAI câu khác nhau tùy vế nào hỏng — "longer than or equal to a"
        * hoặc "shorter than or equal to b". Bám vào chữ để biết đang hỏng vế nào; không có
        * chữ nào khớp thì nói chung chung còn hơn nói sai vế.
        */
-      if (/longer than/.test(englishDefault) && so) return `${ten} tối thiểu ${so} ký tự.`;
-      if (/shorter than/.test(englishDefault) && so) return `${ten} tối đa ${so} ký tự.`;
-      return `${ten} có độ dài không hợp lệ.`;
+      if (/longer than/.test(englishDefault) && limit) return `${label} tối thiểu ${limit} ký tự.`;
+      if (/shorter than/.test(englishDefault) && limit) return `${label} tối đa ${limit} ký tự.`;
+      return `${label} có độ dài không hợp lệ.`;
     }
     case 'isIn': {
-      const ds = /values:\s*(.+)$/.exec(englishDefault)?.[1];
-      return ds ? `${ten} chỉ nhận một trong: ${ds}.` : `${ten} không nằm trong danh sách cho phép.`;
+      const allowed = /values:\s*(.+)$/.exec(englishDefault)?.[1];
+      return allowed
+        ? `${label} chỉ nhận một trong: ${allowed}.`
+        : `${label} không nằm trong danh sách cho phép.`;
     }
     case 'matches':
-      return `${ten} sai định dạng.`;
+      return `${label} sai định dạng.`;
     case 'whitelistValidation':
       /*
        * `forbidNonWhitelisted` — client gửi field lạ. Đây là lỗi LẬP TRÌNH phía web, không
@@ -226,20 +228,20 @@ export function vietnameseFor(
        * ngôn ngữ còn hơn nói chi tiết bằng thứ tiếng người dùng không đọc được. Bài điểm danh
        * làm đỏ khi có ràng buộc mới chưa khai, nên nhánh này gần như không bao giờ chạy thật.
        */
-      return `${ten} không hợp lệ.`;
+      return `${label} không hợp lệ.`;
   }
 }
 
 /** Rút mọi câu lỗi của một cây `ValidationError` ra thành danh sách câu tiếng Việt. */
 export function messagesOf(errors: ValidationError[]): string[] {
   const out: string[] = [];
-  const di = (err: ValidationError, duongDan: string) => {
-    const ten = duongDan ? `${duongDan}.${err.property}` : err.property;
-    for (const [khoa, cau] of Object.entries(err.constraints ?? {})) {
-      out.push(isDefaultMessage(cau) ? vietnameseFor(err.property, khoa, cau) : cau);
+  const walk = (err: ValidationError, path: string) => {
+    const fullPath = path ? `${path}.${err.property}` : err.property;
+    for (const [key, message] of Object.entries(err.constraints ?? {})) {
+      out.push(isDefaultMessage(message) ? vietnameseFor(err.property, key, message) : message);
     }
-    for (const con of err.children ?? []) di(con, ten);
+    for (const child of err.children ?? []) walk(child, fullPath);
   };
-  for (const err of errors) di(err, '');
+  for (const err of errors) walk(err, '');
   return out;
 }

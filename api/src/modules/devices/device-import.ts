@@ -12,6 +12,8 @@ import {
   type ParsedRow,
   type ParsedSheets,
 } from '../../common/import-plan';
+import { effectiveOf } from '../../common/merge-effective';
+import { cabinetWithoutSiteMessage } from '../catalog/catalog.api';
 import type { DeviceStatus } from './devices.types';
 
 /**
@@ -82,7 +84,7 @@ const STATUS_ALIASES: Record<string, DeviceStatus> = {
   kho: 'spare',
   spare: 'spare',
   hong: 'broken',
-  hỏng: 'broken',
+  'hỏng': 'broken',
   broken: 'broken',
   'da thanh ly': 'retired',
   'đã thanh lý': 'retired',
@@ -374,9 +376,12 @@ function planRow(
    * thiết bị sẽ mang tủ của site cũ — form nhập chặn chuyện này, import cũng phải chặn.
    * Cùng lẽ đó với cặp ngày bảo hành: file chỉ sửa một đầu vẫn có thể thành khoảng ngược.
    * (Trước đây hai lỗi này lọt xuống DB: một cái sai lặng lẽ, một cái bung 500 không rõ dòng.)
+   *
+   * Phép ghép chuyển sang `common/merge-effective.ts` ngày 20/09: ba service HTTP viết sau
+   * file này đều dùng `??` và đều sai theo cùng một kiểu (A-03). Một bản đúng nằm riêng
+   * trong một module thì bản thứ hai sẽ được viết lại từ đầu — và viết sai.
    */
-  const effective = <T,>(field: string, fallback: T): T =>
-    (field in values ? (values[field] as T) : fallback);
+  const effective = effectiveOf(values);
 
   const siteId = effective<string | null>('siteId', existing?.siteId ?? null);
   const cabinetId = effective<string | null>('cabinetId', existing?.cabinetId ?? null);
@@ -392,7 +397,8 @@ function planRow(
         ...base,
         action: 'error',
         label,
-        message: `Thiết bị đang gắn tủ "${cabinet.code}" mà không có site. Ghi cột Site, hoặc bỏ trống cột Tủ mạng.`,
+        // MỘT bản chữ cho cả cửa Excel lẫn cửa HTTP (AD-15) — xem `cabinetWithoutSiteMessage`.
+        message: cabinetWithoutSiteMessage(cabinet.code),
       };
     }
     if (cabinet.siteId !== siteId) {

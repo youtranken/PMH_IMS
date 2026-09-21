@@ -132,6 +132,28 @@ export function getLoginRateLimit(): string {
 }
 
 /**
+ * Đọc MỘT SỐ trong `system_config` — DoD gạch 8 áp cho cả bài kiểm.
+ *
+ * Viết cứng `const maxFailures = 5` thì đổi ngưỡng trong `system_config` — đúng đường AD-11
+ * mở ra để đổi — làm bài đỏ vì một lý do chẳng liên quan tới thứ nó canh. Và một bài đỏ vì
+ * lý do sai là bài sẽ bị ai đó sửa cho xanh, chứ không phải bị đọc.
+ *
+ * Ném chứ không trả `NaN` khi khoá không tồn tại: một ngưỡng `NaN` làm mọi so sánh thành
+ * `false`, tức bài vẫn chạy tới cùng rồi xanh mà chẳng canh gì.
+ */
+export function configNumber(key: string): number {
+  const raw = dockerExec(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -tAc "SELECT value FROM system_config WHERE key = '${key}'"`,
+    `Đọc tham số ${key}`,
+  ).trim();
+  const value = Number(raw);
+  if (!Number.isFinite(value)) {
+    throw new Error(`system_config."${key}" không phải một số: ${JSON.stringify(raw)}`);
+  }
+  return value;
+}
+
+/**
  * Đặt trần đăng nhập theo IP. CHỈ dùng trong E2E.
  *
  * ===== VÌ SAO PHẢI `flushResets()` TRƯỚC =====
@@ -187,6 +209,25 @@ export function expireStepUp(email: string): void {
   dockerExec(
     `${COMPOSE} exec -T postgres psql -U ims -d ims -c "UPDATE sessions SET stepped_up_at = now() - interval '1 hour' WHERE revoked_at IS NULL AND user_id = (SELECT id FROM users WHERE email = '${email}')"`,
     'Hết hạn step-up',
+  );
+}
+
+/**
+ * Đẩy ngày sinh của mọi phiên CÒN CHỜ TOTP của một người lùi 1 giờ — giả lập "phiên chờ bị
+ * bỏ quên" mà không phải ngồi đợi 15 phút.
+ *
+ * Vì sao không hạ `totp.enroll_reauth_minutes` xuống 0 cho nhanh: làm thế thì bài kiểm chỉ
+ * chứng minh được là tham số CÓ ĐƯỢC ĐỌC, không chứng minh được phép so TUỔI. Với ngưỡng 0
+ * thì `now - created >= 0` luôn đúng, kể cả khi ai đó lỡ tay đổi `created_at` thành
+ * `last_seen_at` — mà đó lại đúng là cái sai nguy hiểm (kẻ trộm cookie tự đẩy `last_seen_at`
+ * tới trước ở mỗi request, tức tự gia hạn cửa cho mình).
+ *
+ * Khoanh vào ĐÚNG MỘT NGƯỜI, cùng lý do đã ghi ở `expireStepUp`.
+ */
+export function agePendingSession(email: string): void {
+  dockerExec(
+    `${COMPOSE} exec -T postgres psql -U ims -d ims -c "UPDATE sessions SET created_at = now() - interval '1 hour' WHERE revoked_at IS NULL AND totp_pending = true AND user_id = (SELECT id FROM users WHERE email = '${email}')"`,
+    'Làm cũ phiên chờ TOTP',
   );
 }
 

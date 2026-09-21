@@ -120,8 +120,8 @@ export function RelationMap({
   nodes,
   missing,
   cutSummary,
-  chuaBiet = false,
-  dangTai = false,
+  isUnknown = false,
+  isLoading = false,
 }: {
   hubCode: string;
   nodes: RelationNode[];
@@ -140,12 +140,12 @@ export function RelationMap({
    * Trang vẫn có khối `LoadError` ở dưới, nhưng nó nằm SAU bản đồ và nói ngược lại — người
    * đọc tin câu khẳng định ở trên, đó là câu họ vào đây để tìm.
    */
-  chuaBiet?: boolean;
+  isUnknown?: boolean;
   /**
    * CHƯA BIẾT VÌ ĐANG TẢI — khác hẳn chưa biết vì HỎNG (19/09/2026).
    *
    * Cả hai đều phải chặn câu "máy này chưa giữ gì" và dòng "Chưa gắn:", nên cả hai đều bật
-   * `chuaBiet`. Nhưng câu NÓI RA thì không được giống nhau: `relationMap.unknown` là một lời
+   * `isUnknown`. Nhưng câu NÓI RA thì không được giống nhau: `relationMap.unknown` là một lời
    * cảnh báo kèm chỉ dẫn ("Đừng dựa vào nó để quyết định thanh lý cho tới khi tải lại được"),
    * đúng cho lúc hỏng và sai cho một nhịp chờ vài trăm mili giây.
    *
@@ -155,7 +155,7 @@ export function RelationMap({
    *
    * Bật cờ này thì khu nói "Đang đọc…" và KHÔNG dùng vùng sống.
    */
-  dangTai?: boolean;
+  isLoading?: boolean;
 }) {
   const { t } = useTranslation();
   const [showCut, setShowCut] = useState(false);
@@ -289,7 +289,7 @@ export function RelationMap({
         ))}
 
         {/* Chưa biết thì KHÔNG được nói "chưa giữ gì" — hai câu đó khác hẳn nhau. */}
-        {n === 0 && !chuaBiet ? (
+        {n === 0 && !isUnknown ? (
           <p className="rmap-alone">{t('relationMap.alone')}</p>
         ) : null}
       </div>
@@ -310,9 +310,9 @@ export function RelationMap({
               đọc được, còn câu đầy đủ kèm chỉ dẫn thì để một chỗ duy nhất nói.
             */}
             <span>
-              {dangTai
+              {isLoading
                 ? t('relationMap.loadingShort')
-                : chuaBiet
+                : isUnknown
                   ? t('relationMap.unknownShort')
                   : t('relationMap.aloneShort')}
             </span>
@@ -333,7 +333,7 @@ export function RelationMap({
       {/*
         MỘT `<p>` THƯỜNG TRỰC, CHỈ ĐỔI CHỮ BÊN TRONG (19/09/2026).
 
-        Bản trước dùng ba nhánh ternary, mỗi nhánh một `<p>` riêng, và chỉ nhánh `chuaBiet` mang
+        Bản trước dùng ba nhánh ternary, mỗi nhánh một `<p>` riêng, và chỉ nhánh `isUnknown` mang
         `role="status"`. React tái dùng node `<p>` khi chuyển nhánh (cùng type, cùng vị trí con),
         nên thuộc tính `role="status"` và chữ mới đến CÙNG một lượt — đúng kiểu vùng sống câm mà
         cùng đợt này vừa gỡ ở `#rmap-cut-sum`, và tôi dựng lại nó ở đây trong chính lượt sửa ấy.
@@ -342,10 +342,10 @@ export function RelationMap({
         "đang tải" và "Chưa gắn:" cũng đi qua nó — cả hai đều là thông tin đáng nghe, và giữ một
         node duy nhất là cách duy nhất để lời cảnh báo `unknown` được đọc khi nó tới.
       */}
-      <p className="rmap-blank" role="status" hidden={!dangTai && !chuaBiet && missing.length === 0}>
-        {dangTai
+      <p className="rmap-blank" role="status" hidden={!isLoading && !isUnknown && missing.length === 0}>
+        {isLoading
           ? t('relationMap.loading')
-          : chuaBiet
+          : isUnknown
             ? t('relationMap.unknown')
             : missing.length > 0
               ? t('relationMap.missing', { list: missing.join(', ') })

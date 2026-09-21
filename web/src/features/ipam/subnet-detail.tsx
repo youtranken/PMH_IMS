@@ -31,7 +31,7 @@ import {
   clampPage,
   countSlots,
   filterSlots,
-  nenLocSanDangCap,
+  shouldIsolateAssigned,
   pageSlots,
   SLOT_FILTERS,
   SLOT_PAGE_SIZE,
@@ -130,7 +130,14 @@ export function SubnetPane({
    * Thay ô tick "chỉ hiện IP đã cấp" cũ: ô tick chỉ mở/đóng được MỘT trạng thái, nên câu hỏi
    * hay gặp thứ hai — "còn chỗ nào trống" — vẫn phải tự dò bằng mắt giữa 254 dòng.
    */
-  const all = slots.data ?? [];
+  /*
+   * `useMemo` cho `all` (20/09/2026): `slots.data ?? []` sinh một MẢNG MỚI mỗi lượt render
+   * khi dữ liệu chưa về, và mảng ấy là dep của hai memo bên dưới. Tác động thực tế gần 0
+   * — có dữ liệu rồi thì `all === slots.data` nhờ structural sharing của TanStack — nhưng
+   * để nguyên là một cảnh báo `exhaustive-deps` đứng mãi trong cổng, và một cảnh báo đứng
+   * mãi là chỗ những cảnh báo THẬT về sau nấp vào.
+   */
+  const all = useMemo(() => slots.data ?? [], [slots.data]);
   const counts = useMemo(() => countSlots(all), [all]);
 
   /*
@@ -185,7 +192,7 @@ export function SubnetPane({
     if (!slots.data || decidedFor.current === id) return;
     decidedFor.current = id;
     const fresh = countSlots(slots.data);
-    setStatus(nenLocSanDangCap(fresh.assigned, fresh.free) ? "assigned" : "all");
+    setStatus(shouldIsolateAssigned(fresh.assigned, fresh.free) ? "assigned" : "all");
   }, [slots.data, id]);
 
   const shown: SlotFilter = status ?? "all";

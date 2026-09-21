@@ -22,7 +22,7 @@ export function ExpiryBadge({
   end,
   now,
   showDate = false,
-  thresholds: nguongTruyenVao,
+  thresholds: thresholdsProp,
 }: {
   end: string | Date | null | undefined;
   now?: Date;
@@ -43,7 +43,7 @@ export function ExpiryBadge({
 }) {
   // Ngưỡng đọc TỪ SERVER (AD-11), không phải bản sao trong web — xem `use-expiry-thresholds`.
   const nguongHook = useExpiryThresholds();
-  const thresholds = nguongTruyenVao ?? nguongHook;
+  const thresholds = thresholdsProp ?? nguongHook;
   const level = expiryLevel(end, now, thresholds);
   const label = expiryLabel(end, now);
   return (

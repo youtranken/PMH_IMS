@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
+import { UsersApiService } from '../users/users.api';
 
 export interface AuditQuery {
   actor?: string;
@@ -45,7 +46,10 @@ const COUNT_CAP = 10_000;
 
 @Injectable()
 export class AuditQueryService {
-  constructor(@Inject(DRIZZLE_DB) private readonly db: Database) {}
+  constructor(
+    @Inject(DRIZZLE_DB) private readonly db: Database,
+    private readonly users: UsersApiService,
+  ) {}
 
   async listAudit(q: AuditQuery): Promise<{
     items: AuditRow[];
@@ -83,19 +87,28 @@ export class AuditQueryService {
 
     const offset = (q.page - 1) * q.pageSize;
     /*
-     * JOIN theo EMAIL. Cột `actor` của audit_log lưu email (xem AuditWriterService).
+     * TÊN NGƯỜI THAO TÁC TRA QUA `UsersApiService`, KHÔNG JOIN BẢNG `users` (A-07, vá 21/09).
      *
-     * Bản trước join `u.sub = a.actor` — bảng `users` chưa bao giờ có cột `sub`; đó là mảnh
-     * sót của bản QLTS mà AD-12 dặn phải grep bỏ. Postgres ném 42703 nên endpoint này 500 ở
-     * MỌI lần gọi. Không có gì đỏ vì đây là raw SQL (TypeScript và `npm run build` không
-     * thấy), màn web còn `planned: true` nên chưa ai bấm vào, và không có test nào chạm tới.
-     * `users.email` là citext UNIQUE nên join này có index.
+     * Bản trước viết `LEFT JOIN users u ON u.email = a.actor` ngay trong câu SQL này. AD-2
+     * cấm tường minh — `users.api.ts` còn viết đúng câu bị vi phạm — nhưng nó sống chín epic
+     * vì không cổng nào nhìn thấy: eslint khớp CHUỖI IMPORT (ở đây không có import nào),
+     * `dependency-cruiser` khớp ĐƯỜNG DẪN ĐÃ RESOLVE (một câu SQL không resolve thành gì cả).
+     *
+     * Và cái giá của việc tự suy đoán lược đồ của module khác đã được trả hai lần, cả hai
+     * đều ghi lại ở đây: bản đầu join `u.sub = a.actor` — bảng `users` chưa bao giờ có cột
+     * `sub`, đó là mảnh sót của QLTS mà AD-12 dặn phải grep bỏ — nên Postgres ném 42703 và
+     * endpoint này 500 ở MỌI lần gọi, suốt chín epic, không gì đỏ. Lần thứ hai là `created_at`
+     * mơ hồ giữa hai bảng, vỡ mỗi lượt lọc theo ngày.
+     *
+     * Một câu hỏi thêm cho mỗi trang, không phải mỗi dòng: gom email distinct của trang rồi
+     * hỏi một lượt. Viewer hiện 50 dòng và phần lớn do vài người thao tác.
+     *
+     * `ad2-raw-sql.spec.ts` nay canh chỗ này — cổng thứ ba, cho đúng cửa mà hai cổng kia mù.
      */
     const [items, totalRows] = await Promise.all([
       this.db.execute<{
         id: string;
         actor: string;
-        actor_name: string | null;
         action: string;
         object_type: string | null;
         object_id: string | null;
@@ -103,10 +116,9 @@ export class AuditQueryService {
         detail: unknown;
         created_at: string;
       }>(sql`
-        SELECT a.id, a.actor, u.full_name AS actor_name, a.action,
+        SELECT a.id, a.actor, a.action,
                a.object_type, a.object_id, a.ip, a.detail, a.created_at
         FROM audit_log a
-        LEFT JOIN users u ON u.email = a.actor
         ${where}
         ORDER BY a.created_at DESC, a.id DESC
         LIMIT ${q.pageSize} OFFSET ${offset}
@@ -133,11 +145,24 @@ export class AuditQueryService {
       `),
     ]);
     const counted = totalRows.rows[0]?.n ?? 0;
+
+    /*
+     * Hỏi tên theo MẺ. Map trả về đã hạ chữ thường vì `users.email` là `citext`: DB khớp
+     * không phân biệt hoa-thường, còn `Map.get()` thì có — tra bằng đúng chuỗi trong `actor`
+     * sẽ hụt những hàng chỉ khác nhau cái chữ hoa, và hiện ra như "không có tên".
+     */
+    const actors = [...new Set(items.rows.map((r) => r.actor))];
+    const names = await this.users.namesByEmails(actors);
+
     return {
       items: items.rows.map((r) => ({
         id: r.id,
         actor: r.actor,
-        actorName: r.actor_name,
+        /*
+         * `null` cho actor không phải người dùng trong sổ — job nền (`system`), tài khoản đã
+         * xóa. Đó là câu trả lời ĐÚNG, không phải dữ liệu thiếu: FE tự dịch.
+         */
+        actorName: names.get(r.actor.toLowerCase()) ?? null,
         action: r.action,
         objectType: r.object_type,
         objectId: r.object_id,

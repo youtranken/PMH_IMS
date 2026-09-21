@@ -14,11 +14,26 @@ export class ExpiryApiService {
     private readonly digest: ExpiryDigestService,
   ) {}
 
+  /**
+   * `withinDays` KHÔNG BẮT BUỘC, và bỏ trống là cách dùng đúng của hầu hết nơi gọi.
+   *
+   * Bỏ trống = "cửa sổ mặc định", và mặc định ấy là `expiry.warning_days` trong `system_config`
+   * (AD-11) — module `expiry` là chủ của câu hỏi "sắp hết hạn nghĩa là trong bao nhiêu ngày".
+   * Chỉ truyền số khi NGƯỜI DÙNG tự chọn một cửa sổ khác trên màn hình.
+   *
+   * Tham số này từng là bắt buộc, nên dashboard phải bịa ra một con số để mà truyền — và nó
+   * bịa `30`, ghi đè cấu hình suốt từ Epic 7 (A-08, vá 21/09). Một tham số bắt buộc mà nơi
+   * gọi không có gì để điền là một cái bẫy: người ta sẽ điền hằng số.
+   */
   list(
-    withinDays: number,
-    kinds?: string[],
-  ): Promise<{ items: ExpiryRow[]; summary: ExpirySummary }> {
-    return this.expiry.list({ withinDays, kinds });
+    options: {
+      withinDays?: number;
+      kinds?: string[];
+      /** Chỉ lấy `limit` dòng đầu — nơi gọi chỉ bày vài dòng thì đừng kéo cả kho về (N-01). */
+      limit?: number;
+    } = {},
+  ): Promise<{ items: ExpiryRow[]; total: number; summary: ExpirySummary }> {
+    return this.expiry.list(options);
   }
 
   /**

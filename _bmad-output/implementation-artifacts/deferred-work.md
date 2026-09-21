@@ -85,3 +85,9 @@ acceptance-auditor · ba chuyên gia FE/BE/DB.
   thúc dòng. Một thay đổi thật giấu trong đó sẽ không ai thấy khi review. Nên chốt bằng
   `.gitattributes` (`* text=auto`, `*.ts text eol=lf`) thay vì sửa tay từng lượt — đây là lần thứ
   hai chuyện này vào commit message.
+
+## Deferred from: code review of RA-SOAT-TOAN-DIEN-2026-09-19 (2026-09-21)
+
+- **`ChangePasswordDto` mang cùng lỗi câu thông báo `@Length`.** `@Length(1, 200, { message: 'Chưa nhập mật khẩu hiện tại.' })` nói sai cho nhánh QUÁ DÀI. Có trước đợt A; bản vá A-02 chỉ chép lại khuôn cũ sang `TotpEnrollStartDto`. Sửa thì sửa cả hai cùng lúc, qua `common/validation-messages.ts`. [api/src/modules/auth/auth.dto.ts:34]
+- **`ensureAppRole` có thể đua `CREATE ROLE` (SQLSTATE 42710).** Hai tiến trình boot song song cùng chạy `SELECT 1` rồi `CREATE ROLE`; nó chạy TRƯỚC advisory lock của migration nên lock đó không che. Compose hiện chỉ dựng một `api`, nên chưa nổ — sẽ nổ ở ngày đầu tiên chạy nhiều replica. [api/src/database/app-role.ts:112]
+- **`api/test/db.ts` mã hoá URL mật khẩu, `docker-compose.yml` thì không.** Bài kiểm và stack thật dựng ra hai chuỗi kết nối khác nhau nếu mật khẩu chứa `%`, `/` hoặc `#`. `.env.example` đã ràng buộc bộ ký tự nên chưa nổ, nhưng ràng buộc đó là một dòng chú thích chứ không phải một cổng. [api/test/db.ts:85]

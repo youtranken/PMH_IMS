@@ -12,6 +12,7 @@ import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { escapeLike, pgErrorCode, PG_CHECK_VIOLATION } from '../../common/sql';
 import { requireCas } from '../../common/cas';
+import { effectiveOf } from '../../common/merge-effective';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { DevicesApiService } from '../devices/devices.api';
@@ -238,19 +239,69 @@ export class NatRuleService {
     }
   }
 
+  /**
+   * Một ô BẮT BUỘC sau khi ghép: phải có giá trị thật, nếu không thì 400 nói rõ thiếu ô nào.
+   *
+   * Chuỗi rỗng cũng bị chặn ở đây, và đó là vế đắt nhất. `NatBodyDto` CỐ Ý cho `''` đi qua
+   * cửa DTO (chú thích `ipam.controller.ts:102-115`: màn Sổ NAT khởi tạo ô router bằng
+   * `useState('')`), với lập luận rằng `requireDeviceId()` ở `POST` sẽ bắt nó. Lập luận đó
+   * đúng với `POST` và KHÔNG đúng với `PATCH` — đường sửa không có ai bắt, nên `''` chạy
+   * thẳng tới `SET device_id = ''` và Postgres ném `22P02`, tức một **500** cho một lỗi
+   * nhập liệu. Đo ngày 21/09 trên stack thật trước khi vá.
+   */
+  private requireField<T>(value: T | null | undefined, label: string): T {
+    if (value === null || value === undefined || (typeof value === 'string' && !value.trim())) {
+      throw new BadRequestException({ code: 'FIELD_REQUIRED', message: `Chưa chọn ${label}.` });
+    }
+    return value;
+  }
+
   async update(actor: string, id: string, input: Partial<NatRuleInput>): Promise<NatRuleRecord> {
     const before = await this.requireAlive(id);
+
+    /**
+     * GHÉP BẰNG `effectiveOf`, KHÔNG BẰNG `??` — A-03, rà soát 19/09.
+     *
+     * Đợt B quét mẫu `?? current?.` và sửa ba file. Mẫu đó bỏ lọt chính chỗ này, nơi biến cũ
+     * tên là `before`. Sót tới 21/09, tìm ra ở lượt rà soát chéo — và bài học nằm ở CÁCH
+     * QUÉT chứ không ở mười dòng dưới đây: một mẫu grep hẹp cho cảm giác đã soi hết.
+     *
+     * `??` bóp hai ý định khác nhau thành một: "không gửi khoá này" (giữ nguyên) và "gửi
+     * `null`" (xoá đi). Với `note` — ô DUY NHẤT xoá được — đó là mất dữ liệu im lặng: người
+     * dùng xoá ghi chú, bấm Lưu, hệ thống trả 200 và giữ nguyên chữ cũ.
+     *
+     * Chín ô còn lại KHÔNG xoá được. Với chúng, một `null` gửi lên là lỗi của người gọi, nên
+     * `requireField` trả 400 nói rõ thiếu gì — thay vì âm thầm dùng lại giá trị cũ, mà im
+     * lặng thì người gọi tưởng bản sửa đã vào.
+     */
+    const effective = effectiveOf(input);
     const merged: NatRuleInput = {
-      deviceId: input.deviceId ?? before.deviceId,
-      protocol: (input.protocol ?? before.protocol) as NatProtocol,
-      externalFrom: input.externalFrom ?? before.externalFrom,
-      externalTo: input.externalTo ?? before.externalTo,
-      internalIp: (input.internalIp ?? hostOf(before.internalIp)).trim(),
-      internalPort: input.internalPort ?? before.internalPort,
-      usedBy: input.usedBy ?? before.usedBy,
-      reason: input.reason ?? before.reason,
-      enabled: input.enabled ?? before.enabled,
-      note: input.note ?? before.note,
+      deviceId: this.requireField(effective<string | null>('deviceId', before.deviceId), 'router'),
+      protocol: this.requireField(
+        effective<NatProtocol | null>('protocol', before.protocol as NatProtocol),
+        'giao thức',
+      ),
+      externalFrom: this.requireField(
+        effective<number | null>('externalFrom', before.externalFrom),
+        'port ngoài',
+      ),
+      externalTo: this.requireField(
+        effective<number | null>('externalTo', before.externalTo),
+        'port ngoài',
+      ),
+      internalIp: this.requireField(
+        effective<string | null>('internalIp', hostOf(before.internalIp)),
+        'IP nội bộ',
+      ).trim(),
+      internalPort: this.requireField(
+        effective<number | null>('internalPort', before.internalPort),
+        'port nội bộ',
+      ),
+      usedBy: this.requireField(effective<string | null>('usedBy', before.usedBy), 'người dùng'),
+      reason: this.requireField(effective<string | null>('reason', before.reason), 'lý do'),
+      enabled: effective<boolean | undefined>('enabled', before.enabled),
+      // Ô DUY NHẤT xoá được: `null` ở đây là một ý định, không phải một thiếu sót.
+      note: effective<string | null>('note', before.note),
     };
     /**
      * Kiểm trên giá trị ĐÃ TRỘN với bản ghi cũ, không phải trên mỗi phần gửi lên.
@@ -488,13 +539,28 @@ export class NatRuleService {
   }
 
   /**
-   * Chặn `both` chồng lên `tcp`/`udp` (và ngược lại) trên cùng router.
+   * Câu lỗi TỬ TẾ cho chuyện chồng port — KHÔNG còn là trọng tài (A-04, vá 21/09).
    *
-   * Ràng buộc `EXCLUDE` của DB so `protocol WITH =` nên nó KHÔNG thấy chuyện này — mà `both`
-   * theo định nghĩa phủ cả hai giao thức. Không chặn thì sổ có hai câu trả lời cho TCP/8080,
-   * đúng thứ bảng này sinh ra để tránh (code review Epic 5, finding 4).
+   * ===== NÓ TỪNG LÀ TRỌNG TÀI DUY NHẤT, VÀ ĐÓ LÀ LỖ =====
    *
-   * `tcp` vs `udp` vẫn cho qua: Draytek khai riêng hai giao thức cùng port là việc hợp lệ.
+   * `EXCLUDE` của 0022 so `protocol WITH =` nên không thấy `both` va `tcp`, và migration ấy
+   * nhường hẳn việc cho hàm này. Nhưng hàm này chạy trên `this.db` — ngoài mọi transaction,
+   * trước khi `db.transaction` mở ra — nên nó là một phép đọc-rồi-quyết không khóa gì: hai
+   * lượt ghi song song cùng đọc thấy sổ trống, cả hai qua cửa, cả hai ghi.
+   *
+   * Migration `0050` chuyển trọng tài xuống DB bằng cách ánh xạ giao thức thành KHOẢNG
+   * (`tcp → [1,1]`, `udp → [2,2]`, `both → [1,2]`) rồi hỏi `&&` thay cho `=`. Không khóa nào,
+   * và không ai phải nhớ gì.
+   *
+   * ===== VÌ SAO VẪN GIỮ HÀM NÀY =====
+   *
+   * `23P01` dịch qua `translate()` chỉ nói được "port này đã có rule khác". Hàm này đọc sổ
+   * nên nói được ĐỤNG RULE NÀO — thứ người trực cần để đi sửa. Nó là đường nhanh cho câu lỗi
+   * tốt; khi nó lỡ mất (đọc xong thì người khác vừa ghi) thì DB bắt, và người dùng vẫn nhận
+   * 409 tiếng Việt chứ không phải 500.
+   *
+   * `tcp` vs `udp` vẫn cho qua ở CẢ HAI tầng: Draytek khai riêng hai giao thức cùng port là
+   * việc hợp lệ.
    */
   private async requireNoProtocolOverlap(
     input: NatRuleInput,

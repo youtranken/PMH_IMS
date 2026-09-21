@@ -106,7 +106,10 @@ export function DashboardScreen({ me }: { me: Me }) {
   if (data.isLoading) return <Loading />;
   if (data.isError) return <LoadError error={data.error} onRetry={() => void data.refetch()} />;
 
-  const board = data.data!;
+  // Mất mạng ⇒ `fetchStatus:'paused'` ⇒ `isLoading` false, `isError` false, `data` undefined:
+  // hai nhánh trên đều trượt. Xem chú thích đầy đủ ở `devices/device-detail.tsx` (lỗi F-02).
+  if (!data.data) return <Loading />;
+  const board = data.data;
 
   /*
    * HAI NHÓM, không còn sáu ô ngang hàng.
