@@ -1,9 +1,11 @@
 import { randomBytes } from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
 import { and, eq, isNull, lt, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
+import { SystemConfigService } from '../config-sys/system-config.service';
+import { SweepService } from '../queue/sweep.service';
 import { sessionsTable } from './sessions.schema';
 
 export interface SessionRecord {
@@ -26,8 +28,24 @@ export interface SessionRecord {
  * để SA đá phiên là chết NGAY, không chờ token hết hạn.
  */
 @Injectable()
-export class SessionService {
-  constructor(@Inject(DRIZZLE_DB) private readonly db: Database) {}
+export class SessionService implements OnModuleInit {
+  constructor(
+    @Inject(DRIZZLE_DB) private readonly db: Database,
+    private readonly config: SystemConfigService,
+    private readonly sweep: SweepService,
+  ) {}
+
+  /**
+   * CẮM LƯỢT DỌN VÀO SWEEP (D-02, vá 21/09).
+   *
+   * `purgeOld()` có từ lâu và chú thích của nó ghi hẳn "Gọi từ sweep (worker)" — nhưng không
+   * ai gọi. Một hàm dọn không ai gọi trông y hệt một hàm dọn đang chạy: mã đọc vào thì yên
+   * tâm, bảng thì lớn mãi. Đúng lớp lỗi mà cả đợt rà soát này gặp đi gặp lại — một cơ chế
+   * đứng đó đủ hình hài nhưng không có ai bật công tắc.
+   */
+  onModuleInit(): void {
+    this.sweep.register({ name: 'session-purge', run: () => this.purgeOld().then(() => undefined) });
+  }
 
   /** Tạo phiên mới TRONG transaction đăng nhập (AD-5). */
   async createWithin(
@@ -198,11 +216,21 @@ export class SessionService {
     return rows;
   }
 
-  /** Dọn phiên chết quá 30 ngày — chặn bảng phình vô hạn. Gọi từ sweep (worker). */
+  /**
+   * Dọn phiên đã chết — chặn bảng phình vô hạn. Chạy từ sweep (xem `onModuleInit`).
+   *
+   * Ngưỡng đọc từ `system_config` (AD-11, DoD gạch 8), không viết cứng 30: "giữ vết đăng nhập
+   * bao lâu" là quyết định của bộ phận IT và sẽ được siết dần — siết bằng một câu UPDATE thì
+   * không phải dựng lại ảnh docker.
+   *
+   * Cắt theo `last_seen_at`, không theo `expires_at`: một phiên hết hạn hôm qua nhưng vừa
+   * được dùng thì vẫn là dữ kiện cho câu "ai đăng nhập từ máy nào" lúc điều tra sự cố.
+   */
   async purgeOld(): Promise<number> {
+    const days = await this.config.getNumber('sessionRetentionDays');
     const rows = await this.db
       .delete(sessionsTable)
-      .where(lt(sessionsTable.lastSeenAt, sql`now() - interval '30 days'`))
+      .where(lt(sessionsTable.lastSeenAt, sql`now() - make_interval(days => ${days})`))
       .returning({ id: sessionsTable.id });
     return rows.length;
   }

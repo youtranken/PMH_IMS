@@ -68,6 +68,19 @@ export const CONFIG_KEYS = {
    * nhận rằng thư này có thứ không cần đọc.
    */
   expiryDigestExpiredDays: { key: 'expiry.digest_expired_days', fallback: 30 },
+  /*
+   * GIỮ BAO LÂU RỒI DỌN (0051) — hai ngưỡng, hai bảng chỉ-lớn-lên.
+   *
+   * Vào `system_config` chứ không viết cứng: "giữ vết bao lâu" là một quyết định của bộ phận
+   * IT, và nó sẽ được siết dần — một bản ghi audit cần giữ lâu hơn một dòng outbox đã gửi
+   * xong. Siết bằng một câu UPDATE thì không phải dựng lại ảnh docker.
+   *
+   * KHÔNG áp cho `audit_log` và các bảng `*_history`: những bảng ấy chỉ-thêm và giữ VĨNH VIỄN
+   * theo NFR-03/AD-13. Hai ngưỡng dưới đây chỉ nói về vết KỸ THUẬT — phiên đã chết và thư đã
+   * gửi — chứ không phải về sổ nghiệp vụ.
+   */
+  sessionRetentionDays: { key: 'session.retention_days', fallback: 30 },
+  outboxRetentionDays: { key: 'outbox.retention_days', fallback: 30 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;

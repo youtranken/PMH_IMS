@@ -37,7 +37,7 @@ acceptance-auditor · ba chuyên gia FE/BE/DB.
 
 ### Dữ liệu lưu lâu
 
-- **`outbox` không có chính sách xoá.** Đo trên DB dev 19/09: **54.536 hàng, 100% đã
+- [x] **ĐÃ LÀM 21/09 (migration `0051`)** — ~~`outbox` không có chính sách xoá.~~ Đo trên DB dev 19/09: **54.536 hàng, 100% đã
   `processed_at`**, tất cả vẫn giữ nguyên `payload` — trong đó hàng `security.probe.alert` mang
   email đầy đủ của người bị nghi dò két. Sau `processed_at` thì payload không còn ai cần, nhưng
   nó đi vào mọi bản `pg_dump` đêm. (`audit_log` 223.640 hàng cũng không có retention, nhưng ở đó

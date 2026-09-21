@@ -1,8 +1,10 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 import type { Queue } from 'bullmq';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
+import { SystemConfigService } from '../config-sys/system-config.service';
+import { SweepService } from '../queue/sweep.service';
 
 export interface OutboxEvent {
   id: string;
@@ -33,10 +35,53 @@ export interface FailedNotification {
 const MAX_RELAY_ATTEMPTS = 10;
 
 @Injectable()
-export class OutboxService {
+export class OutboxService implements OnModuleInit {
   private readonly logger = new Logger(OutboxService.name);
 
-  constructor(@Inject(DRIZZLE_DB) private readonly db: Database) {}
+  constructor(
+    @Inject(DRIZZLE_DB) private readonly db: Database,
+    private readonly config: SystemConfigService,
+    private readonly sweep: SweepService,
+  ) {}
+
+  onModuleInit(): void {
+    this.sweep.register({
+      name: 'outbox-purge',
+      run: () => this.purgeProcessed().then(() => undefined),
+    });
+  }
+
+  /**
+   * Dọn dòng ĐÃ XỬ LÝ XONG và đã quá hạn giữ. Chạy từ sweep.
+   *
+   * ===== VÌ SAO BẢNG NÀY CẦN RETENTION =====
+   *
+   * Đo trên DB dev 21/09: 69.583 hàng, 100% đã xử lý, và không có đường dọn nào — nó chỉ có
+   * một chiều. Trong đó 109 hàng `security.probe.alert` mang `who: <email>`.
+   *
+   * Email trong payload là NGOẠI LỆ CÓ TÊN, khai sẵn cạnh luật "payload không PII"
+   * (AD-11/NFR-04) — không phải vi phạm, và không đụng tới ở đây. Nhưng ngoại lệ ấy được cấp
+   * cho việc ĐI ĐƯỜNG: để email tới được consumer mail. Giữ lại VĨNH VIỄN sau khi đã gửi
+   * xong chưa bao giờ nằm trong phần được cấp — và mỗi bản `pg_dump` đêm chở theo danh sách
+   * những người từng bị nghi dò két.
+   *
+   * ===== `processed_at IS NOT NULL` LÀ ĐIỀU KIỆN KHÔNG ĐƯỢC BỎ =====
+   *
+   * Chưa xử lý nghĩa là việc CHƯA XONG: relay còn phải đẩy lại (`relayBatch` chọn đúng những
+   * hàng ấy), và SA còn thấy chúng ở `listFailed`. Dọn nhầm một hàng như thế là đánh mất một
+   * lá thư mà không ai biết, vĩnh viễn — nên dù cũ tới đâu cũng không đụng.
+   *
+   * Ngưỡng đọc từ `system_config` (AD-11, DoD gạch 8).
+   */
+  async purgeProcessed(): Promise<number> {
+    const days = await this.config.getNumber('outboxRetentionDays');
+    const { rowCount } = await this.db.execute(sql`
+      DELETE FROM outbox
+      WHERE processed_at IS NOT NULL
+        AND processed_at < now() - make_interval(days => ${days})
+    `);
+    return rowCount ?? 0;
+  }
 
   /**
    * Ghi sự kiện nghiệp vụ vào outbox TRONG transaction nghiệp vụ (AD-11) — enqueue
