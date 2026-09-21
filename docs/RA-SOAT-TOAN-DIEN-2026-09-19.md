@@ -678,10 +678,10 @@ Excel thì mở cửa sau"*. **Cửa sau HTTP còn rộng hơn Excel và chưa a
 - [x] **A-07** Gỡ JOIN `users` khỏi `audit` — đi qua `UsersApiService` *(+ cổng tĩnh mới cho SQL thô)*
 - [x] **A-08** ~~Dashboard đọc `expiry.warning_days`~~ → **dashboard thôi biết gì về cửa sổ**; một chủ, một con số
 - [x] **F-02** 6 chốt `isLoading` + `data!` → `if (!q.data)`
-- [ ] **F-04** `shared-kit.css:170` → `box-shadow: var(--ring)` (14 chỗ khác đã đúng)
-- [ ] **F-05** `select.tsx` so nội dung `options` như `combobox.tsx:92-117`
-- [ ] **F-07** `vault-panel`: đưa chốt `isAdmin` lên trước `verdict.isLoading/isError`; "Đang chờ duyệt" đọc state thật
-- [ ] **F-10** `subnet-detail.tsx:289` khoá `Map` theo `id`, không theo `address`
+- [x] **F-04** `shared-kit.css:170` → `box-shadow: var(--ring)` (14 chỗ khác đã đúng) *(+ cổng mới `token-usage.test.ts`: token dùng đúng KIỂU, không chỉ đúng tên)*
+- [x] **F-05** ~~`select.tsx` so nội dung `options`~~ → phụ thuộc vào **chỉ mục** option đang chọn (một SỐ), rẻ và hẹp hơn băm cả danh sách
+- [x] **F-07** `vault-panel`: đưa chốt `isAdmin` lên trước `verdict.isLoading/isError`; "Đang chờ duyệt" đọc state thật *(vế (a) là lỗi thật; vế (b) KHÔNG tới được — xem 20.2)*
+- [x] **F-10** ~~`subnet-detail.tsx:289`~~ → lỗi đã DỜI XUỐNG API (`ip-address.service.ts:143`); vá bằng `keepPreferredByAddress` — xem 20.1
 
 ### 8.4 Dữ liệu & vận hành (7)
 
@@ -2073,3 +2073,105 @@ Một bài kiểm xanh chưa nói lên điều gì cho tới khi có thứ làm 
 
 Mục 8.3 còn **bốn** ô trống, đều là frontend (F-04 · F-05 · F-07 · F-10). Cả sổ mục 8 còn
 **48** ô, mục 18 còn **23** — việc tồn đọng, không phải việc đã quên.
+
+## 20. Đợt D (bốn mục CAO frontend) — ĐÃ LÀM 21/09/2026
+
+Bốn ô cuối của mục 8.3, và mục 8.3 **đóng lại** ở đây (13/13).
+
+Nói thẳng một chuyện trước: đợt C tôi gom sáu mục backend rồi gọi đó là "đợt C" mà **không nói
+là đang để bốn mục frontend ra ngoài** — trong khi chúng cùng mục, cùng hạng CAO. Nhãn A/B/C/D
+không hề có trong sổ này; nó là cách tôi chia việc, và chia xong thì phải nói ra phần bị cắt.
+
+| Mục | Bài kiểm đỏ trước khi vá |
+| --- | --- |
+| **F-04** | lượt quét CSS tìm thấy đúng **một** token phi-màu nằm ở ô cần màu |
+| **F-05** | bấm ↓ hai lần rồi cha render lại → dòng sáng nhảy từ "Firewall" về "Switch" |
+| **F-07** | `/verdict` trả 500 → Admin mất sạch panel Két sắt |
+| **F-10** | hàng SỐNG gieo trước, hàng ĐÃ ẨN gieo sau → ô hiện chủ cũ đã gỡ |
+
+### 20.1 F-10 — finding đúng, `file:dòng` sai, và lỗi thì rộng hơn
+
+Sổ ghi F-10 ở `web/src/features/ipam/subnet-detail.tsx:289`. Mở ra thì file ấy **không còn
+`Map` nào** — luồng web giờ là `filterSlots → pageSlots`. Rất dễ kết luận "đã vá rồi, tick đi".
+
+Lỗi không biến mất. Nó **dời xuống api**, `IpAddressService.listBySubnet`:
+
+    const byAddress = new Map(records.map((row) => [row.address, row]));
+
+Nên nó còn rộng hơn lúc được ghi: hồi đó một màn sai, nay **mọi nơi gọi** đều sai.
+
+`ip_address_key` là UNIQUE **một phần** (`WHERE voided_at IS NULL`), nên 1 hàng sống + N hàng
+đã ẩn cùng địa chỉ là hợp lệ — và là đường đi bình thường (ẩn nhầm rồi cấp lại). `new Map` giữ
+hàng CUỐI, mà "cuối" do Postgres quyết: `ORDER BY address` không định nghĩa thứ tự giữa hai
+hàng CÙNG địa chỉ. Badge "Đã ẩn" cho địa chỉ đang dùng, bộ đếm "Đang cấp" hụt một, nút "Bật
+lại" bày cho hàng đang sống → `IP_TAKEN`.
+
+Bài học không nằm ở mười dòng code: **một finding ghi theo `file:dòng` sẽ lệch khỏi mã nguồn**,
+và người đọc lại sau hai tuần rất dễ tick nhầm vì đường dẫn không còn khớp.
+
+Luật mới (`keepPreferredByAddress`, hàm thuần): **sống thắng ẩn**; giữa hai hàng cùng ẩn thì
+hàng ẩn SAU thắng. KHÔNG bỏ hàng ẩn đi — `restore()` cần một đường tới nó.
+
+Bài kiểm để ở **hai tầng**, có lý do: bài DB gieo hàng theo một thứ tự rồi trông vào thứ tự
+heap của Postgres để dựng lại thế thua — mà thứ tự ấy không phải hợp đồng. Nếu một ngày
+Postgres trả ngược lại, bài DB sẽ **xanh trên một bản đã hỏng**. Bảng dữ liệu ở
+`ip-rules.spec.ts` không phụ thuộc gì cả.
+
+### 20.2 F-07 — một vế là lỗi thật, một vế thì sổ ghi mạnh hơn sự thật
+
+**Vế (a) — lỗi thật.** `useOwnerSecrets` tính `allowed = isAdmin || …`, chú thích ở đó tuyên bố
+thẳng *"SA/Admin không chờ `verdict`"*. Nhưng phần render đặt `if (verdict.isLoading)` và
+`if (verdict.isError)` lên **trước** mọi thứ. `/vault/secrets/verdict` trả 500 là SA/Admin mất
+sạch panel Két sắt — dù quyền của họ không phụ thuộc vào câu trả lời ấy, và danh sách ngăn đã
+tải xong. Lại đúng hình dạng gặp bốn lần trong đợt này: chú thích mô tả đúng ý định, mã làm
+việc khác.
+
+**Vế (b) — KHÔNG tới được.** Sổ viết *"Member bị `denied` và chưa gửi phiếu nào vẫn đọc 'Đang
+chờ duyệt'"*. Sai: `denied` làm `allowed` sai, và panel dừng ở `vault.noPermission` **trước
+khi** chạm tới badge. Đây là finding thứ hai của cả đợt rà soát bị bác bỏ sau khi đọc mã (cái
+đầu là A-01).
+
+Nhưng thứ finding ấy **nhìn thấy** thì có thật: badge suy ra bằng phép LOẠI TRỪ, trong khi
+server gửi hẳn `pending` sang. Hôm nay hai thứ trùng nhau vì
+`canRequest = grant === null && pending === null`. Đó là một **sự trùng khớp giữa hai module**,
+không phải một hợp đồng — thêm một lý do thứ ba làm `canRequest` sai là badge nói dối, im lặng.
+`VaultPanel` là tài sản dùng chung (`web/src/ui`), nên đã đổi sang đọc `pending`, và nhánh cuối
+có câu thật của riêng nó.
+
+### 20.3 F-04 — cổng hỏi sai câu hỏi
+
+`outline: 2px solid var(--ring)`. Tên token đúng, thuộc tính hợp lệ, không màu viết thẳng nào —
+`gate-hex.sh` không có gì để nói. Nhưng `--ring` là **giá trị box-shadow**, nên dòng ấy không
+parse được và trình duyệt **vứt cả khai báo**, im lặng. `<input>` thật bị `clip: rect(0 0 0 0)`
+nên label là thứ duy nhất nhìn thấy: **Tab tới ô chọn file không có tín hiệu nào** (WCAG 2.4.7),
+ở mọi hộp Import và mọi khu đính kèm.
+
+Cổng cũ hỏi "có màu viết thẳng ngoài `tokens.css` không". Câu cần hỏi là khác: "token này có
+dùng đúng KIỂU của nó không". `web/src/token-usage.test.ts` hỏi câu ấy — phân loại token bằng
+chính giá trị trong `tokens.css` (lần theo cả `var()` trỏ sang token khác) rồi soi những thuộc
+tính chỉ nhận `<color>`.
+
+`background` CỐ Ý đứng ngoài danh sách: nó nhận cả `<image>`, và `--grad`/`--auth-bg` là
+gradient dùng đúng chỗ ở bảy nơi. Một cổng bắt oan bảy chỗ đúng để bắt một chỗ sai là một cổng
+sẽ bị tắt — bản nháp đầu của tôi đúng như thế, và lượt quét thử trước khi viết đã lộ ra.
+
+### 20.4 Hai lần bài kiểm của tôi đo nhầm thứ cần đo
+
+- **F-05.** Bản đầu dựng một nút "Cha render lại" rồi bấm vào. Nó đỏ — nhưng đỏ vì bấm ra ngoài
+  menu là **click ngoài**, và `Select` đóng menu theo đúng thiết kế. Tin nó thì tôi đã đi "vá"
+  một hành vi đang đúng. Cảnh thật không có cú bấm nào: một query anh em trả về trong khi tay
+  người dùng còn trên bàn phím.
+- **Cổng EOL bắt tôi lần thứ ba.** Chèn chú thích F-10 vào một file CRLF bằng chuỗi `
+` →
+  `CR=974 LF=981`. Đúng cái bẫy đã ghi trong sổ tay, lặp lại lần thứ ba trong ba đợt.
+
+### 20.5 Đo được
+
+| Đo được | Trước đợt D | Sau |
+| --- | ---: | ---: |
+| Jest đơn vị | 981 | **991** |
+| Tầng chạm DB thật | 126 | **131** |
+| Vitest | 375 | **392** |
+| Cổng tĩnh mới | — | `token-usage.test.ts` |
+
+**Mục 8.3 đóng: 13/13.** Cả sổ mục 8 còn **44** ô, mục 18 còn **23**.

@@ -163,3 +163,92 @@ describe('VaultPanel — hộp Xin quyền xem khóa lại khi đang gửi', () 
     expect(screen.getByRole('button', { name: 'Đang tải…' })).toBeInTheDocument();
   });
 });
+
+/**
+ * F-07 — HAI VẾ, VÀ CHỈ MỘT VẾ LÀ LỖI THẬT.
+ *
+ * ===== VẾ (a): ADMIN BỊ CHẶN BỞI MỘT TRUY VẤN HỌ KHÔNG CẦN — LỖI THẬT =====
+ *
+ * `useOwnerSecrets` tính `allowed = isAdmin || …`, và chú thích ở đó tuyên bố thẳng: "SA/Admin
+ * không chờ `verdict`: `isAdmin` đã đủ". Nhưng phần render đặt `if (verdict.isLoading)` và
+ * `if (verdict.isError)` LÊN TRƯỚC mọi thứ, nên `/vault/secrets/verdict` trả 500 là SA/Admin
+ * mất sạch panel Két sắt dù quyền của họ không hề phụ thuộc vào câu trả lời ấy.
+ *
+ * Lại đúng hình dạng đã gặp ba lần trong đợt rà soát này: chú thích mô tả đúng ý định, và mã
+ * làm một việc khác.
+ *
+ * ===== VẾ (b): "ĐANG CHỜ DUYỆT" LÀ NHÁNH `else` — CHƯA PHẢI LỖI, NHƯNG LÀ MÌN =====
+ *
+ * Nói thẳng, vì sổ rà soát ghi mạnh hơn sự thật: finding viết *"Member bị `denied` và chưa gửi
+ * phiếu nào vẫn đọc 'Đang chờ duyệt'"*. Ca đó KHÔNG tới được. `denied` làm `allowed` sai, và
+ * panel dừng ở `vault.noPermission` trước khi chạm tới badge.
+ *
+ * Nhưng cái mà finding nhìn thấy vẫn có thật: badge suy ra bằng phép LOẠI TRỪ, trong khi
+ * server gửi hẳn `pending` sang. Hôm nay hai thứ trùng nhau vì
+ * `canRequest = grant === null && pending === null` — tức nhánh `else` đúng bằng "có phiếu
+ * treo". Ngày nào `break-glass.service.ts` thêm một lý do thứ ba làm `canRequest` sai (trần
+ * số phiếu, chủ thể bị đóng băng, người dùng bị khóa), badge sẽ nói dối, im lặng, và không
+ * gì đỏ.
+ *
+ * `VaultPanel` là tài sản dùng chung (`web/src/ui`), nên hợp đồng của nó không được phụ thuộc
+ * vào logic nội bộ hiện thời của một service anh em. Badge đọc `pending` là đọc sự thật.
+ */
+describe('VaultPanel — F-07', () => {
+  /** Verdict hỏng, mọi thứ khác lành — đúng cảnh "/verdict 500". */
+  function mockVerdictDown(rows: SecretMeta[]) {
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+      if (method === 'GET' && url.includes('/vault/secrets/verdict')) {
+        return Promise.resolve(jsonResponse(500, { code: 'INTERNAL', message: 'hỏng' }));
+      }
+      if (method === 'GET' && url.includes('/vault/secrets')) {
+        return Promise.resolve(jsonResponse(200, rows));
+      }
+      return new Promise<Response>(() => {});
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  it('(a) /verdict trả 500: Admin VẪN thấy panel và danh sách ngăn', async () => {
+    mockVerdictDown([SECRET]);
+    renderPanel();
+
+    // Quyền của Admin không đến từ `verdict`, nên một truy vấn hỏng không được cướp mất panel.
+    expect(await screen.findByText('admin web')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Thử lại/ })).not.toBeInTheDocument();
+  });
+
+  it('(a) /verdict trả 500: Member thì VẪN phải thấy lỗi, không rơi thành "không có quyền"', async () => {
+    // Vế đối chứng, và nó giữ một bản vá cũ: lỗi tải verdict KHÔNG được rơi xuống thành
+    // "bạn không có quyền" — sai vì thiếu quyền và sai vì hỏng là hai câu khác nhau.
+    mockVerdictDown([SECRET]);
+    renderPanel({ ...ME, role: 'member' });
+
+    expect(await screen.findByRole('button', { name: /Thử lại/ })).toBeInTheDocument();
+    expect(screen.queryByText('Bạn chưa được cấp quyền')).not.toBeInTheDocument();
+  });
+
+  it('(b) có phiếu treo → badge "Đang chờ duyệt" (vế đối chứng: câu ĐÚNG vẫn phải hiện)', async () => {
+    mockApi(
+      { ...NEEDS_APPROVAL, canRequest: false, pending: { id: 'p1' } },
+      [SECRET],
+    );
+    renderPanel({ ...ME, role: 'member' });
+
+    expect(await screen.findByText('Đang chờ duyệt')).toBeInTheDocument();
+  });
+
+  it('(b) KHÔNG phiếu treo mà cũng không xin được → không được nói "Đang chờ duyệt"', async () => {
+    // Hình dạng này server hôm nay KHÔNG sinh ra — xem docblock trên. Bài kiểm khoá HỢP ĐỒNG
+    // của component dùng chung, để ngày nào server sinh ra nó thì badge không nói dối.
+    mockApi({ ...NEEDS_APPROVAL, canReveal: false, canRequest: false, pending: null }, [
+      SECRET,
+    ]);
+    renderPanel({ ...ME, role: 'member' });
+
+    await screen.findByText('admin web');
+    expect(screen.queryByText('Đang chờ duyệt')).not.toBeInTheDocument();
+  });
+});

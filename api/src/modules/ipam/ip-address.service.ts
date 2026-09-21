@@ -17,7 +17,7 @@ import { isoDateInTz } from '../../common/today';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { DevicesApiService } from '../devices/devices.api';
-import { enumerateHosts, hostOf, parseAddress } from './ip-rules';
+import { enumerateHosts, hostOf, keepPreferredByAddress, parseAddress } from './ip-rules';
 import {
   IP_LIFECYCLE_STATUSES,
   OCCUPYING_STATUSES,
@@ -140,7 +140,14 @@ export class IpAddressService {
     const records = await this.listRecords(subnetId, {
       includeVoided: includeVoided || frame.voidedAt !== null,
     });
-    const byAddress = new Map(records.map((row) => [row.address, row]));
+    /*
+     * `keepPreferredByAddress`, KHÔNG phải `new Map(records.map(...))` (F-10, vá 21/09).
+     *
+     * `ip_address_key` là UNIQUE một phần (`WHERE voided_at IS NULL`), nên một địa chỉ có thể
+     * có 1 hàng sống + N hàng đã ẩn — và bản trước giữ hàng CUỐI, mà "cuối" do Postgres quyết.
+     * Xem luật và hậu quả ở chính hàm ấy.
+     */
+    const byAddress = keepPreferredByAddress(records);
 
     return enumerateHosts(frame.cidr).map<SubnetSlot>((address) => {
       const record = byAddress.get(address);

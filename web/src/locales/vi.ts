@@ -827,6 +827,9 @@ export default {
     requestHoursClamped:
       'Đã gửi yêu cầu, nhưng số giờ xin vượt trần hệ thống — chỉ còn {{hours}} giờ khi được duyệt.',
     awaitingApproval: 'Đang chờ duyệt',
+    // Nhánh CUỐI của badge: không xem được, không xin được, mà cũng không có phiếu nào đang
+    // treo. Phải là một câu THẬT chứ không mượn câu "Đang chờ duyệt" — xem F-07.
+    cannotReveal: 'Chưa có quyền xem',
     grantUntil: 'Bạn được xem tới {{until}}. Hết giờ là tự cắt.',
     grantNoLimit: 'Bạn đang được xem ngăn này, không đặt hạn giờ.',
     tierNote_needs_approval: 'Đối tượng này cần được duyệt trước khi xem. Bấm "Xin quyền xem".',

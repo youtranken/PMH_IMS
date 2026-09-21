@@ -166,9 +166,24 @@
   font-weight: var(--fw-medium);
   cursor: pointer;
 }
+/*
+ * VÒNG TIÊU ĐIỂM VẼ BẰNG `box-shadow`, KHÔNG BẰNG `outline` (F-04, vá 21/09).
+ *
+ * Bản trước viết `outline: 2px solid var(--ring)`. Tên token đúng, thuộc tính hợp lệ, không
+ * màu viết thẳng nào — nên không cổng nào có gì để nói. Nhưng `--ring` là một giá trị
+ * BOX-SHADOW (`0 0 0 3px rgba(...)`), nên dòng ấy thành `outline: 2px solid 0 0 0 3px rgba(...)`,
+ * không parse được, và trình duyệt vứt CẢ khai báo mà không báo gì.
+ *
+ * `<input>` thật bị giấu bằng `clip: rect(0 0 0 0)`, nên label là thứ duy nhất nhìn thấy —
+ * và vòng tiêu điểm của nó chưa bao giờ vẽ ra. Tab tới ô chọn file không có tín hiệu nào
+ * (WCAG 2.4.7), ở mọi hộp Import và mọi khu đính kèm. 14 chỗ khác trong chính file này viết
+ * đúng; đây là chỗ duy nhất sai.
+ *
+ * `src/token-usage.test.ts` nay canh đúng câu hỏi ấy: token có dùng đúng KIỂU của nó không.
+ */
 .file-picker-input:focus-visible + .file-picker-label {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--ring);
 }
 .file-picker-label:hover {
   border-color: var(--primary);

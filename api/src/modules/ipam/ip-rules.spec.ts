@@ -3,6 +3,7 @@ import {
   enumerateHosts,
   hostRole,
   hostRoleIn,
+  keepPreferredByAddress,
   isHostInSubnet,
   longToAddress,
   normalizeSubnet,
@@ -224,5 +225,56 @@ describe('addressToLong / longToAddress — đi và về không mất mát', () 
   /** Bit cao của 255.x.x.x làm phép dịch bit trong JS ra số ÂM — phải dùng >>> 0. */
   it('địa chỉ có bit cao bật không ra số âm', () => {
     expect(addressToLong('255.255.255.255')).toBe(4_294_967_295);
+  });
+});
+
+/**
+ * Luật "một địa chỉ nhiều hồ sơ" (F-10) — bảng dữ liệu, không cần DB.
+ *
+ * Vế DB-tier nằm ở `api/test/subnet-slot-merge.spec.ts`. Cần CẢ HAI, và lý do rất cụ thể:
+ * bài DB gieo hàng theo một thứ tự rồi trông vào thứ tự heap của Postgres để dựng lại thế
+ * thua — mà thứ tự ấy KHÔNG phải hợp đồng. Nếu một ngày Postgres trả ngược lại, bài DB sẽ
+ * xanh trên một bản đã hỏng. Bảng dưới không phụ thuộc gì cả: nó hỏi thẳng cái luật.
+ */
+describe('keepPreferredByAddress — một địa chỉ, nhiều hồ sơ', () => {
+  const HOM_QUA = new Date('2026-09-20T03:00:00Z');
+  const HOM_NAY = new Date('2026-09-21T03:00:00Z');
+
+  const live = (tag: string) => ({ tag, address: '10.0.0.5', voidedAt: null });
+  const hidden = (tag: string, at: Date) => ({ tag, address: '10.0.0.5', voidedAt: at });
+
+  it.each([
+    [[live('song'), hidden('an', HOM_NAY)], 'song', 'ẩn gieo SAU — thế thua của bản cũ'],
+    [[hidden('an', HOM_NAY), live('song')], 'song', 'ẩn gieo TRƯỚC'],
+    [
+      [hidden('a', HOM_QUA), live('song'), hidden('b', HOM_NAY)],
+      'song',
+      'sống bị kẹp giữa hai hàng ẩn',
+    ],
+    [[hidden('cu', HOM_QUA), hidden('moi', HOM_NAY)], 'moi', 'chỉ có hàng ẩn: hàng ẩn SAU thắng'],
+    [[hidden('moi', HOM_NAY), hidden('cu', HOM_QUA)], 'moi', 'và không phụ thuộc thứ tự gieo'],
+    [[hidden('mot', HOM_NAY)], 'mot', 'một hàng ẩn duy nhất vẫn phải hiện ra'],
+    [[live('song')], 'song', 'một hàng sống duy nhất'],
+  ])('%#: chọn %p (%s)', (rows, winner) => {
+    expect(keepPreferredByAddress(rows).get('10.0.0.5')?.tag).toBe(winner);
+  });
+
+  it('địa chỉ khác nhau thì không đụng nhau', () => {
+    const map = keepPreferredByAddress([
+      { tag: 'nam', address: '10.0.0.5', voidedAt: null },
+      { tag: 'sau', address: '10.0.0.6', voidedAt: null },
+    ]);
+    expect(map.size).toBe(2);
+    expect(map.get('10.0.0.6')?.tag).toBe('sau');
+  });
+
+  it('KHÔNG bỏ hàng đã ẩn đi — `restore()` cần một đường tới nó', () => {
+    // Luật là "sống thắng ẩn", không phải "lọc sạch hàng ẩn". Lọc sạch thì một hồ sơ ẩn nhầm
+    // không màn nào hiện ra, và nút "Bật lại" thành một endpoint không ai gọi được.
+    expect(keepPreferredByAddress([hidden('an', HOM_NAY)]).size).toBe(1);
+  });
+
+  it('danh sách rỗng ra map rỗng, không ném', () => {
+    expect(keepPreferredByAddress([]).size).toBe(0);
   });
 });
