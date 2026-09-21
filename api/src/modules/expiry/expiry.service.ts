@@ -55,6 +55,25 @@ export interface ExpiryQuery {
    * rác, kể cả những dòng THẬT SỰ gấp.
    */
   expiredWithinDays?: number;
+  /**
+   * Phân trang MÁY CHỦ (N-01). Bỏ trống cả hai = trả trọn bộ.
+   *
+   * "Trọn bộ" vẫn phải tồn tại và là mặc định của TẦNG SERVICE: email digest và
+   * `GET /expiry/export.xlsx` đều cần đủ dòng, và một cửa mặc định cắt 50 dòng sẽ lặng lẽ
+   * xuất thiếu — một file Excel thiếu dòng trông y hệt một file Excel đủ. Cửa HTTP của MÀN
+   * HÌNH thì ngược lại: nó luôn truyền `page`/`limit`, xem `expiry.controller.ts`.
+   */
+  page?: number;
+  limit?: number;
+  /**
+   * Lọc theo NHÓM của ba nút đầu màn: `expired` · `critical` · `warning`.
+   *
+   * Phép lọc này từng nằm ở client, và chú thích tại chỗ giải thích đúng vì sao được phép:
+   * *"Màn này KHÔNG phân trang — API trả về hết — nên lọc ở đây là lọc đúng toàn bộ tập kết
+   * quả."* Câu ấy ngừng đúng ngay khi phân trang, nên phép lọc phải đi xuống cùng chuyến —
+   * nếu không, bấm "Gấp" chỉ lọc trong 50 dòng đang xem trong khi nút ngay trên đầu đề số 87.
+   */
+  state?: ExpiryLevel | '';
 }
 
 /**
@@ -103,6 +122,8 @@ export class ExpiryService {
 
   async list(query: ExpiryQuery): Promise<{
     items: ExpiryRow[];
+    /** Tổng số mục khớp cửa sổ — CẢ KHO, không phải số dòng của trang đang trả. */
+    total: number;
     summary: ExpirySummary;
     thresholds: ExpiryThresholds;
   }> {
@@ -126,7 +147,27 @@ export class ExpiryService {
       canRenew: renewable.has(item.kind),
     }));
 
-    return { items: rows, summary: summarize(rows, thresholds), thresholds };
+    /*
+     * `items` là MỘT TRANG; `total` và `summary` là CẢ KHO (N-01).
+     *
+     * Đây là chỗ dễ vá sai nhất của bản phân trang này. Ba con số "Quá hạn / Gấp / Sắp tới"
+     * nằm trên NÚT LỌC ở đầu màn — đếm chúng trên trang đang xem thì chúng trả lời câu "có
+     * bao nhiêu mục gấp TRONG 50 dòng này", một câu không ai hỏi, hiển thị ở đúng chỗ người
+     * ta đọc câu "có bao nhiêu mục gấp". Không gì đỏ, không ai báo lỗi; người ta chỉ lặng lẽ
+     * tin vào một con số nhỏ hơn sự thật.
+     *
+     * Nên `summarize` chạy TRƯỚC khi cắt, và luôn chạy trên `rows` đầy đủ.
+     */
+    const summary = summarize(rows, thresholds);
+    /*
+     * THỨ TỰ LÀ BẮT BUỘC: đếm CẢ KHO → lọc nhóm → cắt trang.
+     *
+     * Đảo hai bước đầu thì ba con số trên nút lọc đổi mỗi lần người dùng bấm vào chính nó —
+     * bấm "Gấp" xong thấy "Gấp 8" tụt xuống "Gấp 8 / Quá hạn 0 / Sắp tới 0". Đảo hai bước sau
+     * thì phép lọc chỉ chạy trong trang đang xem.
+     */
+    const picked = query.state ? rows.filter((row) => levelOf(row.daysLeft, thresholds) === query.state) : rows;
+    return { items: pageOf(picked, query), total: picked.length, summary, thresholds };
   }
 
   /**
@@ -236,14 +277,47 @@ export class ExpiryService {
  * Người đọc thấy một con số cảnh báo và một bảng không có gì cảnh báo. Ba chip cộng lại KHÔNG
  * còn bằng số dòng — và đó là ĐÚNG: chúng đếm "cần chú ý", không đếm "có bao nhiêu dòng".
  */
+/** Ba nhóm của màn — và `null` cho mục còn xa hơn ngưỡng "sắp tới". */
+export type ExpiryLevel = 'expired' | 'critical' | 'warning';
+
+/**
+ * Một mục thuộc nhóm nào — MỘT bản luật, dùng cho cả phép đếm lẫn phép lọc.
+ *
+ * Tách ra khỏi `summarize` vì từ 21/09 có hai nơi hỏi cùng câu ấy. Hai bản chép tay của ba
+ * nhánh `<0 / <=critical / <=warning` sẽ trôi khỏi nhau ở lần ai đó sửa một bản — đúng thứ
+ * F-09 vừa chứng minh là có thật (5 bản sao panel Lịch sử, và chúng ĐÃ lệch).
+ */
+export function levelOf(daysLeft: number, thresholds: ExpiryThresholds): ExpiryLevel | null {
+  if (daysLeft < 0) return 'expired';
+  if (daysLeft <= thresholds.criticalDays) return 'critical';
+  if (daysLeft <= thresholds.warningDays) return 'warning';
+  return null;
+}
+
 function summarize(rows: ExpiryRow[], thresholds: ExpiryThresholds): ExpirySummary {
   const summary: ExpirySummary = { expired: 0, critical: 0, warning: 0 };
   for (const row of rows) {
-    if (row.daysLeft < 0) summary.expired += 1;
-    else if (row.daysLeft <= thresholds.criticalDays) summary.critical += 1;
-    else if (row.daysLeft <= thresholds.warningDays) summary.warning += 1;
+    const level = levelOf(row.daysLeft, thresholds);
+    if (level) summary[level] += 1;
   }
   return summary;
+}
+
+/**
+ * Cắt một trang — hàm THUẦN.
+ *
+ * Thiếu cả `page` lẫn `limit` thì KHÔNG cắt: xem chú thích ở `ExpiryQuery.page`.
+ *
+ * Xin quá trang cuối thì trả RỖNG, không quay vòng về đầu. Quay vòng là cách hỏng tệ nhất ở
+ * đây — người dùng bấm "sau", thấy lại đúng dòng đầu, rồi kết luận mình đã đọc hết trong khi
+ * còn nguyên phần giữa.
+ */
+function pageOf(rows: ExpiryRow[], query: ExpiryQuery): ExpiryRow[] {
+  if (query.page === undefined && query.limit === undefined) return rows;
+  const limit = Math.max(1, Math.trunc(query.limit ?? 50));
+  const page = Math.max(1, Math.trunc(query.page ?? 1));
+  const from = (page - 1) * limit;
+  return rows.slice(from, from + limit);
 }
 
 /** Nhìn lùi tối đa một năm — mặc định của MÀN HÌNH. */

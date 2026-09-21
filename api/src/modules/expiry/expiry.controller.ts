@@ -31,6 +31,8 @@ import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { ExpiryDigestService } from './expiry-digest.service';
 import type { DigestFrequency } from './digest-schedule';
+import { parsePageQuery } from '../../common/pagination';
+import type { ExpiryLevel } from './expiry.service';
 import { ExpiryService } from './expiry.service';
 import { NoStepUp } from '../auth/step-up.decorator';
 
@@ -106,14 +108,45 @@ export class ExpiryController {
     return this.expiry.thresholds();
   }
 
+  /**
+   * CỬA CỦA MÀN HÌNH — LUÔN PHÂN TRANG (N-01, vá 21/09).
+   *
+   * `parsePageQuery` mặc định `page=1, limit=50`, nên một client KHÔNG gửi gì vẫn nhận đúng
+   * một trang. Đó là chủ ý: để mặc định là "trọn bộ" thì lỗ chỉ đóng cho client mới, còn
+   * đường cũ vẫn kéo 7.662 dòng — và không gì đỏ để ai biết.
+   *
+   * Đường `export.xlsx` bên dưới CỐ Ý không truyền `page`/`limit`: file Excel phải đủ dòng, và
+   * một file thiếu dòng trông y hệt một file đủ.
+   */
   @Roles('sa', 'admin', 'member')
   @Get()
-  list(@Query() query: { withinDays?: string; kinds?: string; includeExpired?: string }) {
+  list(
+    @Query()
+    query: {
+      withinDays?: string;
+      kinds?: string;
+      includeExpired?: string;
+      page?: string;
+      limit?: string;
+      state?: string;
+    },
+  ) {
+    const paging = parsePageQuery(query);
     return this.expiry.list({
       withinDays: query.withinDays ? Number(query.withinDays) : undefined,
       // `?kinds=license,ssl` — nhiều loại một lần, tránh gọi API lặp.
       kinds: query.kinds ? query.kinds.split(',').filter(Boolean) : undefined,
       includeExpired: query.includeExpired !== 'false',
+      page: paging.page,
+      limit: paging.limit,
+      /*
+       * Giá trị lạ coi như KHÔNG LỌC, không phải "lọc ra rỗng".
+       *
+       * `?state=Gap` (gõ tay, bookmark cũ, một bản web cũ) mà trả bảng rỗng thì người đọc kết
+       * luận "không có mục nào gấp" — một câu SAI đọc y hệt câu đúng. Bỏ qua bộ lọc thì họ
+       * thấy nhiều hơn mong đợi, và đó là kiểu sai tự lộ ra.
+       */
+      state: isExpiryLevel(query.state) ? query.state : undefined,
     });
   }
 
@@ -210,4 +243,9 @@ export class ExpiryController {
     await this.expiry.renew(req.user!.email, body.kind, body.id, body.endDate);
     return { status: 'renewed' };
   }
+}
+
+/** `?state=` chỉ nhận đúng ba nhóm của màn — xem `levelOf` trong `expiry.service.ts`. */
+function isExpiryLevel(value: string | undefined): value is ExpiryLevel {
+  return value === 'expired' || value === 'critical' || value === 'warning';
 }

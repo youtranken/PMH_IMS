@@ -179,17 +179,23 @@ export class DashboardService {
 
   private async expiringBlock(): Promise<Dashboard['expiring']> {
     try {
-      const { items } = await this.expiry.list();
+      /*
+       * XIN ĐÚNG SỐ DÒNG SẼ BÀY, KHÔNG KÉO CẢ KHO VỀ RỒI CẮT (N-01, vá 21/09).
+       *
+       * Khối này hiện tối đa `MAX_ITEMS` dòng, nhưng bản trước kéo trọn cửa sổ qua ranh giới
+       * module — đo được 7.662 bản ghi để bày 8 dòng. `total` nay là con số máy chủ đếm, nên
+       * câu "còn bao nhiêu mục sắp hết hạn" vẫn đúng dù chỉ tải về 8 dòng.
+       *
+       * Nguồn đã sắp theo ngày hết hạn tăng dần, mà `daysLeft` suy ra từ chính ngày ấy — nên
+       * `limit` cắt đúng những mục GẤP NHẤT, không cắt bừa.
+       */
+      const { items, total } = await this.expiry.list({ limit: MAX_ITEMS });
       return {
         available: true,
-        total: items.length,
-        // Gấp nhất lên đầu — sếp đọc từ trên xuống và thường chỉ đọc mấy dòng đầu.
+        total,
         items: items
           .slice()
           .sort((a, b) => a.daysLeft - b.daysLeft)
-          // `MAX_ITEMS`, không phải `8` viết lại lần nữa — hằng số ngay trên đầu file này
-          // sinh ra đúng để mọi khối cắt cùng một chỗ.
-          .slice(0, MAX_ITEMS)
           .map((row) => ({
             kind: row.kind,
             label: row.label,

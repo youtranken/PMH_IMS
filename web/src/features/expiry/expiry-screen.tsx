@@ -9,6 +9,7 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { DataTable } from '@/ui/data-table';
+import { Pagination } from '@/ui/pagination';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { ExpiryBadge } from '@/ui/expiry-badge';
@@ -17,7 +18,6 @@ import { FilterBar } from '@/ui/filter-bar';
 import { KpiStrip, KpiTile } from '@/ui/kpi-strip';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
-import { levelFromDays } from '@/lib/expiry';
 import { useExpiryThresholds } from '@/ui/use-expiry-thresholds';
 import { Select } from '@/ui/select';
 import { TabPanel, Tabs } from '@/ui/tabs';
@@ -39,7 +39,10 @@ interface ExpiryRow {
 
 
 interface ExpiryResponse {
+  /** MỘT TRANG kể từ 21/09 (N-01) — không còn là trọn bộ cửa sổ. */
   items: ExpiryRow[];
+  /** Tổng số mục khớp bộ lọc — CẢ KHO, để `Pagination` biết có bao nhiêu trang. */
+  total: number;
   summary: { expired: number; critical: number; warning: number };
   /*
    * `expiry.service.ts:129` trả KÈM ngưỡng đã dùng để đếm `summary`. Trước 18/09 khai báo này
@@ -119,11 +122,23 @@ export function ExpiryScreen({ me }: { me: Me }) {
   /* Nguồn nhãn loại hạn dùng chung với bảng điều khiển — xem `lib/expiry-kinds.ts` (AD-15). */
   const kinds = useExpiryKinds();
 
+  /*
+   * PHÂN TRANG VÀ LỌC NHÓM Ở MÁY CHỦ (N-01, vá 21/09).
+   *
+   * Tới 20/09 màn này kéo TRỌN cửa sổ về rồi lọc/sắp/bày tại chỗ — 7.662 dòng ở 30k hồ sơ, và
+   * ở 200k thì không dùng được. Nó còn làm bẩn cả phiên: mở `/expiry` một lần thì màn kế tiếp
+   * cũng chậm theo (9.730ms so với 582ms khi đo một mình), vì trình duyệt còn đang dọn 841k node.
+   *
+   * `state` đi CÙNG lên server, không lọc ở client nữa. Giữ lại ở client thì bấm "Gấp" chỉ lọc
+   * trong 50 dòng đang xem trong khi nút ngay trên đầu đề số 87 — một màn tự mâu thuẫn, và nó
+   * sinh ra do chính bản vá này chứ không phải lỗi cũ.
+   */
   const expiry = useQuery({
-    queryKey: ['expiry', withinDays, kind],
+    queryKey: ['expiry', withinDays, kind, state, url.page, url.limit],
     queryFn: () =>
       apiFetch<ExpiryResponse>(
-        `/api/v1/expiry?withinDays=${withinDays}${kind ? `&kinds=${kind}` : ''}`,
+        `/api/v1/expiry?withinDays=${withinDays}&page=${url.page}&limit=${url.limit}` +
+          `${kind ? `&kinds=${kind}` : ''}${state ? `&state=${state}` : ''}`,
       ),
   });
 
@@ -136,35 +151,27 @@ export function ExpiryScreen({ me }: { me: Me }) {
     [kinds.data],
   );
 
-  const allRows = expiry.data?.items ?? [];
   const summary = expiry.data?.summary;
 
   /*
-   * LỌC Ở CLIENT, có chủ ý. Màn này KHÔNG phân trang — API lọc theo `withinDays` rồi trả về hết
-   * — nên lọc ở đây là lọc đúng toàn bộ tập kết quả, không phải chỉ trang đang xem. Đổi lại
-   * không tốn thêm một lượt gọi mạng nào, bấm là bảng đổi ngay.
-   *
    * Ba nhóm KHÔNG phủ kín bảng, và đó là đúng: dòng còn xa hơn ngưỡng "sắp tới" không thuộc
-   * nhóm nào (server cũng đếm y như vậy — xem `summarize()` trong `expiry.service.ts`). Ba ô
-   * cộng lại không bằng số dòng; chúng đếm "cần chú ý", không đếm "có bao nhiêu dòng".
+   * nhóm nào (server đếm y như vậy — xem `levelOf()` trong `expiry.service.ts`). Ba ô cộng lại
+   * không bằng số dòng; chúng đếm "cần chú ý", không đếm "có bao nhiêu dòng".
    *
-   * Ngưỡng ĐI KÈM lượt trả về, không phải từ `useExpiryThresholds()` — chỉ bộ này mới chắc
-   * chắn là bộ mà `summary` đã dùng để đếm. Chưa về thì lùi về hook (nó có bản dự phòng
-   * riêng); lúc đó `allRows` cũng còn rỗng nên phép lọc chưa lọc gì cả.
+   * Ngưỡng ĐI KÈM lượt trả về, không phải từ `useExpiryThresholds()` — chỉ bộ này mới chắc chắn
+   * là bộ mà `summary` đã dùng để đếm. Chưa về thì lùi về hook (nó có bản dự phòng riêng).
    *
-   * Và thang phân loại lấy từ `lib/expiry.ts` — "luật sắp hết hạn DUY NHẤT của hệ thống"
-   * (SHARED-REGISTRY). Bản trước viết lại đúng ba nhánh `<0 / <=critical / <=warning` ngay
-   * tại đây, tức bản thứ hai của cùng một luật ở cùng một tầng.
+   * Phép LỌC theo nhóm đã chuyển xuống server 21/09 (N-01); ở đây `nguong` chỉ còn để TÔ MÀU.
    */
   const nguong = expiry.data?.thresholds ?? thresholds;
-  const rows = allRows.filter((row) =>
-    state === '' ? true : levelFromDays(row.daysLeft, nguong) === state,
-  );
+  const rows = expiry.data?.items ?? [];
 
   const columns = useMemo<ColumnDef<ExpiryRow, unknown>[]>(
     () => [
       {
         accessorKey: 'label',
+        // Sắp ở client chỉ đảo chỗ trang đang xem — xem chú thích ở <DataTable>.
+        enableSorting: false,
         header: t('expiry.item'),
         cell: ({ row }) => (
           <>
@@ -177,11 +184,15 @@ export function ExpiryScreen({ me }: { me: Me }) {
       },
       {
         accessorKey: 'kind',
+        // Sắp ở client chỉ đảo chỗ trang đang xem — xem chú thích ở <DataTable>.
+        enableSorting: false,
         header: t('expiry.kind'),
         cell: ({ row }) => kindLabel(row.original.kind),
       },
       {
         accessorKey: 'end',
+        // Sắp ở client chỉ đảo chỗ trang đang xem — xem chú thích ở <DataTable>.
+        enableSorting: false,
         header: t('expiry.end'),
         cell: ({ row }) => orDash(formatDate(row.original.end)),
       },
@@ -189,6 +200,8 @@ export function ExpiryScreen({ me }: { me: Me }) {
         // Sắp theo "còn bao nhiêu ngày" chứ không theo chữ trên badge: xếp theo chữ thì
         // "Quá hạn 40 ngày" và "Quá hạn 2 ngày" đứng cạnh nhau vô nghĩa.
         accessorKey: 'daysLeft',
+        // Sắp ở client chỉ đảo chỗ trang đang xem — xem chú thích ở <DataTable>.
+        enableSorting: false,
         header: t('expiry.state'),
         // AD-15: luật "sắp hết hạn" chỉ có một, ở lib/expiry.ts
         /* Truyền `nguong` — cùng bộ ngưỡng mà phép lọc và nhãn ô số dùng. Không truyền là màn
@@ -348,13 +361,29 @@ export function ExpiryScreen({ me }: { me: Me }) {
           columns={columns}
           emptyText={t('expiry.empty')}
           stackOnMobile
-          // Màn này KHÔNG phân trang (API lọc theo `withinDays` rồi trả hết), nên sắp ở client
-          // là sắp đúng toàn bộ tập kết quả — khác các màn danh sách phân trang, ở đó sắp
-          // client chỉ đảo chỗ trang đang xem nên phải nhờ server.
-          initialSort={[{ id: 'end', desc: false }]}
+          /*
+           * KHÔNG `initialSort` nữa, và các cột KHÔNG cho bấm sắp (N-01, vá 21/09).
+           *
+           * Chú thích cũ ở đây nói sắp-ở-client là đúng "vì màn này không phân trang". Câu ấy
+           * ngừng đúng ngay khi phân trang: sắp client chỉ đảo chỗ 50 dòng đang xem, nên bấm
+           * cột "Hồ sơ" cho ra một thứ tự chỉ đúng trong trang — đúng lớp lỗi mà chính câu chú
+           * thích ấy cảnh báo.
+           *
+           * Server đã sắp theo ngày hết hạn tăng dần, tức GẤP NHẤT LÊN ĐẦU — đó là lý do màn
+           * này tồn tại, nên giữ nguyên thứ tự ấy là câu trả lời đúng chứ không phải một hạn
+           * chế. Muốn sắp theo cột khác thì phải có `?sort=` ở server; ghi vào mục 8.9.
+           */
           rowClassName={(row) => (row.daysLeft < 0 ? 'row-danger' : '')}
         />
       )}
+
+      <Pagination
+        page={url.page}
+        limit={url.limit}
+        onLimitChange={url.setLimit}
+        total={expiry.data?.total ?? 0}
+        onPageChange={url.setPage}
+      />
 
         </TabPanel>
       )}

@@ -26,10 +26,14 @@ export class ExpiryApiService {
    * gọi không có gì để điền là một cái bẫy: người ta sẽ điền hằng số.
    */
   list(
-    withinDays?: number,
-    kinds?: string[],
-  ): Promise<{ items: ExpiryRow[]; summary: ExpirySummary }> {
-    return this.expiry.list({ withinDays, kinds });
+    options: {
+      withinDays?: number;
+      kinds?: string[];
+      /** Chỉ lấy `limit` dòng đầu — nơi gọi chỉ bày vài dòng thì đừng kéo cả kho về (N-01). */
+      limit?: number;
+    } = {},
+  ): Promise<{ items: ExpiryRow[]; total: number; summary: ExpirySummary }> {
+    return this.expiry.list(options);
   }
 
   /**

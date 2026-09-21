@@ -33,15 +33,21 @@ import type { SystemConfigService } from '../config-sys/system-config.service';
  * "sắp hết hạn nghĩa là trong bao nhiêu ngày", và nó đã trả lời sẵn khi không ai ép.
  */
 
-/** Cửa sổ mà dashboard hỏi module `expiry` — `undefined` = "anh tự quyết theo cấu hình". */
+/**
+ * Cửa sổ mà dashboard hỏi module `expiry` — `undefined` = "anh tự quyết theo cấu hình".
+ *
+ * Từ 21/09 `list()` nhận một object (thêm `limit` cho N-01), nên bài này đọc `options.withinDays`
+ * thay vì tham số vị trí thứ nhất. HỢP ĐỒNG không đổi: dashboard không được áp cửa sổ của
+ * riêng mình. Chỉ hình dạng lời gọi đổi.
+ */
 let windowAsked: number | undefined | 'chưa hỏi' = 'chưa hỏi';
 
 function buildService(): DashboardService {
   windowAsked = 'chưa hỏi';
   const expiry = {
-    list: (withinDays?: number) => {
-      windowAsked = withinDays;
-      return Promise.resolve({ items: [], summary: {} });
+    list: (options: { withinDays?: number } = {}) => {
+      windowAsked = options.withinDays;
+      return Promise.resolve({ items: [], total: 0, summary: {} });
     },
   } as unknown as ExpiryApiService;
 
