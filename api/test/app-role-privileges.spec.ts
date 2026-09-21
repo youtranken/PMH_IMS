@@ -216,6 +216,105 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
     expect(appFacts.ownsAuditLog).toBe(false);
     expect(appRoleVerdict(appFacts)).toEqual({ ok: true, reason: null });
   });
+  /**
+   * ĐẶT LẠI MẬT KHẨU CHỈ KHI NÓ THẬT SỰ ĐỔI (§18 #12).
+   *
+   * `ensureAppRole` chạy `ALTER ROLE … LOGIN PASSWORD '…'` ở MỌI lần boot. Mật khẩu không
+   * bind được (Postgres không nhận tham số cho ALTER ROLE) nên nó nằm trong VĂN BẢN câu lệnh
+   * — và với `log_statement = ddl`, một cấu hình rất thường gặp ở nơi cài cẩn thận, câu ấy
+   * vào log máy chủ dạng rõ. Mỗi lần khởi động một dòng, giữ theo chính sách log.
+   *
+   * Nghịch lý đáng nói: càng bật log kỹ để soi DDL thì càng lưu nhiều mật khẩu.
+   *
+   * Cách quan sát: `pg_authid.rolpassword` giữ verifier SCRAM, mà mỗi lượt ALTER sinh SALT
+   * MỚI — nên chuỗi ấy đổi sau mỗi lần đặt lại, kể cả khi mật khẩu y hệt. Không đổi = không
+   * có câu ALTER nào chạy.
+   */
+  describe('ensureAppRole — không đặt lại mật khẩu khi nó không đổi', () => {
+    async function verifier(): Promise<string> {
+      const { rows } = await scratch.pool.query<{ p: string | null }>(
+        `SELECT rolpassword::text AS p FROM pg_authid WHERE rolname = 'ims_app'`,
+      );
+      return rows[0]?.p ?? '';
+    }
+
+    it('gọi lại với CÙNG mật khẩu → không chạy ALTER ROLE lần nữa', async () => {
+      const pass = appDbPassword();
+      await ensureAppRole(scratch.pool, 'ims_app', pass, appDbUrl(scratch.name));
+      const before = await verifier();
+      expect(before).not.toBe('');
+
+      await ensureAppRole(scratch.pool, 'ims_app', pass, appDbUrl(scratch.name));
+      expect(await verifier()).toBe(before);
+    });
+
+    it('đổi mật khẩu trong .env → VẪN đặt lại (vế đối chứng: nó không tắt hẳn)', async () => {
+      const pass = appDbPassword();
+      const before = await verifier();
+      await ensureAppRole(scratch.pool, 'ims_app', `${pass}-khac`, appDbUrl(scratch.name));
+      expect(await verifier()).not.toBe(before);
+      // Trả lại đúng mật khẩu mà stack đang dùng — bài kiểm không được đổi mật khẩu dưới chân stack.
+      await ensureAppRole(scratch.pool, 'ims_app', pass, appDbUrl(scratch.name));
+    });
+  });
+
+  /**
+   * CÂU HỎI THỨ BA: THỪA KẾ VAI (§18 #5).
+   *
+   * Cổng hỏi hai câu — "có phải superuser không" và "có sở hữu audit_log không". Cả hai đều
+   * hỏi về CHÍNH role đang kết nối. Nhưng Postgres còn một đường thứ ba tới đúng quyền ấy:
+   *
+   *     GRANT ims TO ims_app;
+   *
+   * Sau câu đó, `ims_app` vẫn `rolsuper = false`, vẫn KHÔNG phải `relowner` của `audit_log` —
+   * nên cổng vẫn ĐẬU. Nhưng nó thừa hưởng trọn quyền của `ims`, tức `ALTER TABLE audit_log
+   * DISABLE TRIGGER ALL` rồi `DELETE` thoải mái. Đúng thứ D-01 sinh ra để chặn, đi vòng qua
+   * cửa sau, và cổng không thấy gì.
+   *
+   * Một dòng `GRANT` là đủ. Nó không nằm trong git của ai — y như `.env`, đúng lý do cổng này
+   * tồn tại.
+   *
+   * Bài dưới GIEO chính dòng ấy rồi hỏi lại cổng. Trên bản chưa vá, cổng trả `ok: true`.
+   */
+  describe('thừa kế vai — đường thứ ba tới quyền chủ sở hữu', () => {
+    afterEach(async () => {
+      await scratch.pool.query(`REVOKE ims FROM ims_app`).catch(() => undefined);
+    });
+
+    it('GRANT vai chủ sở hữu cho ims_app → cổng phải TRƯỢT', async () => {
+      await scratch.pool.query(`GRANT ims TO ims_app`);
+      const verdict = appRoleVerdict(await readAppRoleFacts(app));
+      expect(verdict.ok).toBe(false);
+      expect(verdict.reason).toMatch(/THÀNH VIÊN|SET ROLE/);
+    });
+
+    it('gỡ GRANT ra thì cổng đậu lại (vế đối chứng: nó đo thừa kế, không đo thứ khác)', async () => {
+      await scratch.pool.query(`GRANT ims TO ims_app`);
+      await scratch.pool.query(`REVOKE ims FROM ims_app`);
+      expect(appRoleVerdict(await readAppRoleFacts(app))).toEqual({ ok: true, reason: null });
+    });
+
+    /**
+     * `relname = 'audit_log'` không khoá schema lẫn `relkind`.
+     *
+     * Một VIEW tên `audit_log` ở schema khác, do `ims_app` sở hữu, làm `owns_audit_log` thành
+     * `true` và cổng trượt OAN — chặn một nơi cài đang đúng. Sai theo hướng an toàn, nhưng
+     * vẫn là sai, và câu lỗi sẽ chỉ người ta đi sửa một thứ không hỏng.
+     */
+    it('bảng CÙNG TÊN ở schema khác không làm cổng trượt oan', async () => {
+      await scratch.pool.query(`CREATE SCHEMA IF NOT EXISTS phu AUTHORIZATION ims_app`);
+      await scratch.pool.query(`CREATE TABLE IF NOT EXISTS phu.audit_log (id int)`);
+      // CHỦ phải là `ims_app`, nếu không probe chẳng hỏi gì: bản đầu của bài này để `ims` làm
+      // chủ nên nó xanh trên cả bản chưa vá — một vế đối chứng không thể đỏ là một vế rỗng.
+      await scratch.pool.query(`ALTER TABLE phu.audit_log OWNER TO ims_app`);
+      try {
+        expect(appRoleVerdict(await readAppRoleFacts(app))).toEqual({ ok: true, reason: null });
+      } finally {
+        await scratch.pool.query(`DROP SCHEMA phu CASCADE`);
+      }
+    });
+  });
+
   /*
    * ===== CHÍNH CÁI CỔNG, KHÔNG PHẢI CHỈ CÁI PHÉP PHÁN XÉT =====
    *

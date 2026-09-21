@@ -1,4 +1,4 @@
-import type { Pool } from 'pg';
+import { Pool } from 'pg';
 
 /**
  * D-01: ứng dụng KHÔNG được chạy bằng superuser, cũng không bằng chủ sở hữu bảng.
@@ -21,11 +21,34 @@ import type { Pool } from 'pg';
  *
  * Bỏ sót câu thứ hai thì "đã tách role" trở thành một câu nói đúng về giấy tờ mà sai về
  * thực tế: `ims_app` không phải superuser, nhưng nếu nó sở hữu bảng thì chẳng có gì đổi.
+ *
+ * ===== CÂU THỨ BA: THỪA KẾ VAI (§18 #5, vá 21/09) =====
+ *
+ * Hai câu trên đều hỏi về CHÍNH role đang kết nối. Postgres còn một đường thứ ba tới đúng
+ * quyền ấy, và nó chỉ dài một dòng:
+ *
+ *     GRANT ims TO ims_app;
+ *
+ * Sau câu đó `ims_app` vẫn `rolsuper = false`, vẫn KHÔNG phải `relowner` của `audit_log` —
+ * nên cổng hai câu vẫn ĐẬU. Nhưng nó đã là thành viên của chủ sở hữu, tức làm được
+ * `ALTER TABLE audit_log DISABLE TRIGGER ALL` rồi `DELETE` thoải mái.
+ *
+ * Hỏi bằng `pg_has_role(..., 'MEMBER')` chứ không phải `'USAGE'`: một thành viên `NOINHERIT`
+ * không tự động có quyền, nhưng `SET ROLE ims` một câu là có — `USAGE` bỏ lọt đúng ca đó.
+ *
+ * ===== VÀ BẢNG PHẢI ĐƯỢC CHỈ ĐÍCH DANH =====
+ *
+ * Câu hỏi thứ hai từng lọc bằng `relname = 'audit_log'`, không khoá schema lẫn `relkind`. Một
+ * bảng hay view CÙNG TÊN ở schema khác, do `ims_app` sở hữu, làm cổng TRƯỢT OAN — chặn một
+ * nơi cài đang đúng, và câu lỗi chỉ người ta đi sửa một thứ không hỏng. `to_regclass` giải
+ * đúng một quan hệ theo `search_path` đã ghi rõ.
  */
 export interface AppRoleFacts {
   currentUser: string;
   isSuperuser: boolean;
   ownsAuditLog: boolean;
+  /** Có là THÀNH VIÊN của role sở hữu `audit_log` không — đường thứ ba, xem chú thích dưới. */
+  inheritsOwner: boolean;
 }
 
 export interface AppRoleVerdict {
@@ -53,6 +76,16 @@ export function appRoleVerdict(facts: AppRoleFacts): AppRoleVerdict {
         'còn nghĩa gì. Đổi DATABASE_URL sang role ims_app (xem 0048_app_role_split.sql).',
     };
   }
+  if (facts.inheritsOwner) {
+    return {
+      ok: false,
+      reason:
+        `Role "${facts.currentUser}" là THÀNH VIÊN của role sở hữu bảng audit_log. Nó không ` +
+        'sở hữu bảng, nhưng một câu SET ROLE là có trọn quyền chủ sở hữu — tháo được trigger ' +
+        'append-only, và REVOKE không còn nghĩa gì. Gỡ bằng: REVOKE <chủ sở hữu> FROM ' +
+        `${facts.currentUser}; (xem 0048_app_role_split.sql).`,
+    };
+  }
   return { ok: true, reason: null };
 }
 
@@ -62,6 +95,7 @@ export async function readAppRoleFacts(pool: Pool): Promise<AppRoleFacts> {
     role_name: string;
     is_superuser: boolean;
     owns_audit_log: boolean;
+    inherits_owner: boolean;
   }>(
     `SELECT current_user::text AS role_name,
             COALESCE((SELECT rolsuper FROM pg_roles WHERE rolname = current_user), false)
@@ -69,14 +103,23 @@ export async function readAppRoleFacts(pool: Pool): Promise<AppRoleFacts> {
             EXISTS (
               SELECT 1 FROM pg_class c
               JOIN pg_roles r ON r.oid = c.relowner
-              WHERE c.relname = 'audit_log' AND r.rolname = current_user
-            ) AS owns_audit_log`,
+              WHERE c.oid = to_regclass('public.audit_log')
+                AND r.rolname = current_user
+            ) AS owns_audit_log,
+            EXISTS (
+              SELECT 1 FROM pg_class c
+              JOIN pg_roles r ON r.oid = c.relowner
+              WHERE c.oid = to_regclass('public.audit_log')
+                AND r.rolname <> current_user
+                AND pg_has_role(current_user, r.oid, 'MEMBER')
+            ) AS inherits_owner`,
   );
   const row = rows[0];
   return {
     currentUser: row.role_name,
     isSuperuser: row.is_superuser === true,
     ownsAuditLog: row.owns_audit_log === true,
+    inheritsOwner: row.inherits_owner === true,
   };
 }
 
@@ -89,12 +132,32 @@ export async function readAppRoleFacts(pool: Pool): Promise<AppRoleFacts> {
  *
  * Idempotent — chạy lại mỗi lần boot, và đó là tính năng: đổi mật khẩu trong `.env` rồi khởi
  * động lại là đủ, không cần nhớ một câu `psql` nào.
+ *
+ * ===== NHƯNG CHỈ ĐẶT LẠI KHI NÓ THẬT SỰ ĐỔI (§18 #12, vá 21/09) =====
+ *
+ * `ALTER ROLE … PASSWORD` không bind tham số được, nên mật khẩu nằm trong VĂN BẢN câu lệnh.
+ * Với `log_statement = ddl` — một cấu hình rất thường gặp ở nơi cài cẩn thận — câu ấy vào log
+ * máy chủ dạng rõ, mỗi lần khởi động một dòng, giữ theo chính sách log.
+ *
+ * Nghịch lý đáng nói ra: càng bật log kỹ để soi DDL thì càng lưu nhiều mật khẩu.
+ *
+ * Nên hỏi trước bằng câu hỏi thẳng nhất: THỬ ĐĂNG NHẬP. Đăng nhập được nghĩa là mật khẩu
+ * trong `.env` đúng bằng thứ DB đang giữ, và không có gì để đặt lại.
+ *
+ * Không đọc `pg_authid` để so verifier: bảng đó chỉ superuser đọc được, mà chủ sở hữu ở một
+ * nơi cài làm đúng thì KHÔNG phải superuser — phép kiểm sẽ hỏng ở đúng nơi nó cần chạy nhất.
+ * Một lượt kết nối thử thì không cần quyền gì.
+ *
+ * Lỗi KHÔNG phải sai mật khẩu (DB chưa sẵn sàng, mạng chập) cũng rơi vào nhánh đặt lại — thà
+ * chạy thừa một câu ALTER còn hơn bỏ qua rồi để api không kết nối nổi.
  */
 export async function ensureAppRole(
   ownerPool: Pool,
   roleName: string,
   password: string,
+  appUrl?: string,
 ): Promise<void> {
+  if (appUrl && (await canLogIn(appUrl, roleName, password))) return;
   const client = await ownerPool.connect();
   try {
     /*
@@ -116,6 +179,51 @@ export async function ensureAppRole(
     await client.query(`ALTER ROLE ${ident} LOGIN PASSWORD ${lit}`);
   } finally {
     client.release();
+  }
+}
+
+/**
+ * Role này đăng nhập được bằng chuỗi kết nối kia không — một lượt thử, rồi đóng.
+ *
+ * `max: 1` và timeout ngắn: đây là một câu hỏi lúc boot, không phải một pool để dùng. Nuốt
+ * MỌI lỗi thành `false` — nơi gọi chỉ cần biết "có chắc chắn đăng nhập được không", và câu
+ * trả lời an toàn khi không chắc là "không", vì nó dẫn tới việc đặt lại mật khẩu.
+ */
+async function canLogIn(appUrl: string, roleName: string, password: string): Promise<boolean> {
+  /*
+   * DÙNG MẬT KHẨU SẮP ĐẶT, không dùng cái đang nằm trong `appUrl`.
+   *
+   * Bản đầu của bản vá này nối thẳng `appUrl` vào probe, nên nó hỏi nhầm câu: "mật khẩu CŨ
+   * còn đăng nhập được không". Đăng nhập được thì nó bỏ qua — kể cả khi `.env` vừa khai một
+   * mật khẩu MỚI. Tức là đổi mật khẩu trong `.env` rồi khởi động lại sẽ không có tác dụng gì,
+   * im lặng, và đó đúng là tính năng mà chú thích ngay trên hàm này hứa.
+   *
+   * Vế đối chứng của bài kiểm bắt được — nó tồn tại chính để bản vá không tắt hẳn phép đặt lại.
+   *
+   * `appUrl` vì thế chỉ còn góp host/port/database; danh tính thì lấy từ tham số.
+   */
+  let dsn: URL;
+  try {
+    dsn = new URL(appUrl);
+  } catch {
+    // DSN không phân giải được thì thôi không đoán — cứ đặt lại mật khẩu như bản cũ vẫn làm.
+    return false;
+  }
+  dsn.username = encodeURIComponent(roleName);
+  dsn.password = encodeURIComponent(password);
+  const probe = new Pool({
+    connectionString: dsn.toString(),
+    max: 1,
+    connectionTimeoutMillis: 5_000,
+  });
+  probe.on('error', () => undefined);
+  try {
+    await probe.query('SELECT 1');
+    return true;
+  } catch {
+    return false;
+  } finally {
+    await probe.end().catch(() => undefined);
   }
 }
 

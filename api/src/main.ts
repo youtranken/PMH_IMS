@@ -20,9 +20,19 @@ const APP_DB_ROLE = 'ims_app';
  * Hai kết nối, hai quyền khác nhau, và kết nối chủ sở hữu SỐNG ĐÚNG mấy giây đầu rồi đóng
  * hẳn — không có pool nào giữ quyền `ALTER TABLE` mở suốt vòng đời tiến trình.
  *
- * `MIGRATION_DATABASE_URL` không đặt = chưa tách role. Không chết ở đây (dev và mọi nơi cài
- * cũ vẫn phải chạy được), nhưng `assertNarrowRole` bên dưới sẽ nói rõ ra, và ở production
- * thì nó chặn hẳn.
+ * `MIGRATION_DATABASE_URL` không đặt = chưa tách role. Không chết ở đây: chạy thẳng bằng
+ * `node` với một `.env` cũ vẫn lên được, và `assertNarrowRole` bên dưới sẽ nói rõ ra (ở
+ * production thì nó chặn hẳn).
+ *
+ * NHƯNG ĐỪNG ĐỌC CÂU TRÊN THÀNH "MỌI NƠI CÀI CŨ VẪN CHẠY ĐƯỢC" (§18 #19, sửa 21/09). Với
+ * docker — tức mọi nơi cài thật — `docker-compose.yml` chặn cứng bằng
+ * `${APP_DB_PASSWORD:?…}`, nên một `.env` chưa cập nhật chết TRƯỚC khi Node chạy dòng nào.
+ * Chú thích cũ hứa một sự khoan dung mà tầng dưới không hề có; nói rõ ra thì người đi nâng
+ * cấp biết phải sửa `.env` chứ không đi tìm lỗi trong mã.
+ *
+ * Và khi ĐÃ khai `MIGRATION_DATABASE_URL` thì `APP_DB_PASSWORD` thành BẮT BUỘC (§18 #6):
+ * khai một nửa việc tách role rồi bỏ qua nửa kia trong im lặng là cách hỏng tệ nhất — api
+ * vẫn lên, vẫn chạy, và role hẹp thì chưa bao giờ tồn tại.
  */
 async function migrate(logger: Logger): Promise<void> {
   const url = process.env.MIGRATION_DATABASE_URL ?? process.env.DATABASE_URL;
@@ -31,9 +41,17 @@ async function migrate(logger: Logger): Promise<void> {
   owner.on('error', (error) => logger.error(`[migrate-pool] ${redactMessage(error)}`));
   try {
     const password = process.env.APP_DB_PASSWORD;
-    if (process.env.MIGRATION_DATABASE_URL && password) {
-      await ensureAppRole(owner, APP_DB_ROLE, password);
-      logger.log(`Role ứng dụng "${APP_DB_ROLE}" đã sẵn sàng.`);
+    if (process.env.MIGRATION_DATABASE_URL) {
+      if (!password) {
+        throw new Error(
+          'Đã khai MIGRATION_DATABASE_URL (tức đã tách role D-01) nhưng thiếu APP_DB_PASSWORD. ' +
+            'Không tạo được role ứng dụng, và bỏ qua trong im lặng thì api vẫn lên trong khi ' +
+            'role hẹp chưa bao giờ tồn tại. Thêm APP_DB_PASSWORD vào .env — xem .env.example.',
+        );
+      }
+      // Truyền DSN ứng dụng vào: `ensureAppRole` thử đăng nhập trước, và chỉ đặt lại mật
+      // khẩu khi nó thật sự đổi — xem chú thích ở đó (§18 #12).
+      await ensureAppRole(owner, APP_DB_ROLE, password, process.env.DATABASE_URL);
     }
     const applied = await runMigrations(owner, resolveMigrationsDir(), logger);
     logger.log(applied.length > 0 ? `Đã áp ${applied.length} migration.` : 'Schema đã mới nhất.');
