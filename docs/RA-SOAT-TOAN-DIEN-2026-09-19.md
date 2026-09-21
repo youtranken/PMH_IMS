@@ -653,6 +653,27 @@ Excel thì mở cửa sau"*. **Cửa sau HTTP còn rộng hơn Excel và chưa a
 
 ## 8. Checklist — tick khi đã xong
 
+> ### Đọc mã lỗi thế nào — và một cái bẫy tên gọi
+>
+> Chữ cái đầu của mỗi mã cho biết nó được tìm thấy Ở MỤC NÀO, **không** phải nó thuộc đợt làm
+> việc nào:
+>
+> | Mã | Sinh ra ở | Số mục |
+> | --- | --- | ---: |
+> | **A-xx** | §7 Backend / API | 11 |
+> | **B-xx** | §1 Lượt lái trình duyệt · §11 Lượt năm | 19 |
+> | **D-xx** | §5 CSDL | 5 |
+> | **F-xx** | §6 Frontend | 10 |
+> | **T-xx** | §4 Văn bản giao diện | 3 |
+> | **N-xx** | §13 Đo trên 30.000 hồ sơ | 3 |
+> | **M-xx** | §8 Checklist | 1 |
+>
+> **Bẫy:** các mục §16–§20 từng mang tên "đợt A/B/C/D" — một hệ chữ cái THỨ HAI, đặt ra trong
+> lúc làm việc và chồng lên hệ trên. "Đợt C" vá toàn mã **A-**, "đợt D" vá toàn mã **F-**, còn
+> **D-02** thì chẳng liên quan gì tới "đợt D" và vẫn chưa làm. Câu "đợt D xong rồi" và "D-02
+> vẫn còn" đúng cùng lúc — không trí nhớ nào chịu nổi. Từ 21/09 các lượt đánh **số**, và mỗi
+> tiêu đề giữ một dòng đối chiếu sang commit vì commit đã đẩy đi, không viết lại được.
+
 ### 8.1 Chặn phát hành (3)
 
 - [x] **A-01** Chặn `status: 'retired'` trên đường **`PATCH /devices/:id`** — bắt đi qua `setStatus`, y như `device-import.ts:472` đã làm. **Sửa lại lời khai 21/09:** ô này từng ghi `PATCH/POST`, nhưng `POST` cố ý KHÔNG chặn — tạo mới một máy đã ở trạng thái thanh lý là việc thật (nạp kho lịch sử lần đầu), và `device-import.ts:423-427` đã quyết định đúng như vậy kèm lý do: một bản ghi vừa sinh ra thì chưa giữ IP/NAT/ghế license nào để mà dọn. Chốt `setStatus` sinh ra để hỏi đúng câu đó, nên nó không có việc gì ở đường tạo mới. Hai tầng rà soát chéo đều báo đây là lỗ vì đọc `create()` thấy thiếu chốt mà không mở nhánh create của đường Excel — lời khai sai của ô tick này là thứ dẫn họ tới đó.
@@ -715,6 +736,67 @@ Excel thì mở cửa sau"*. **Cửa sau HTTP còn rộng hơn Excel và chưa a
 - [ ] **B-04** Chip "Đã ẩn" riêng, đừng đếm vào "Trống"
 - [ ] **B-05** Ẩn `ExpiryBadge` cho hồ sơ `retired`
 - [ ] **F-06 nhóm a11y** `Loading` thành vùng sống thường trực · drawer 390px quản lý tiêu điểm · `Field` nối `htmlFor` (thêm prop `id` cho `Combobox`) · `aria-describedby` cho `hint`/`error`
+
+### 8.9 SÓT KHỎI CHECKLIST — bổ sung 21/09/2026 (16)
+
+Mười sáu mã lỗi được ghi trong các mục chuyên môn (§1 · §6 · §11 · §13) mà **chưa bao giờ có
+một ô tick nào** ở mục 8. Chúng không bị bỏ qua có chủ ý — chúng chỉ đơn giản không được chép
+sang đây, nên mọi lượt đếm "còn bao nhiêu việc" từ trước tới nay đều thiếu.
+
+Tìm ra bằng cách đối chiếu máy móc: lấy mọi mã `X-nn` xuất hiện trong cả sổ (52), trừ đi tập
+mã có mặt trong mục 8 (36). Không phải bằng cách đọc lại — đọc lại là thứ đã bỏ lọt chúng
+suốt ba ngày.
+
+**Bài học, và nó lớn hơn 16 dòng dưới đây:** một checklist chép tay từ các bảng finding sẽ
+thiếu, và cái thiếu đó vô hình vì checklist trông vẫn đầy đủ. Cùng đúng hình dạng "cổng khớp
+đúng số không chuỗi" đã gặp bốn lần ở phần mã nguồn — lần này nạn nhân là chính cuốn sổ.
+
+#### Chặn phát hành
+
+- [ ] **N-01** **CHẶN** (§14.5 nâng từ CAO) — `/expiry` đổ **7.662 dòng vào một bảng, không phân
+  trang**; `@Get()` của `expiry.controller.ts` không nhận `page`/`limit`, và `grep -c Pagination`
+  trên `expiry-screen.tsx` = **0**. Ở 200k hồ sơ màn này **không dùng được**, và nó tăng theo
+  *thời gian* chứ không theo quy mô đội máy — không tự khỏi. Hệ quả đo được: mở `/expiry` một
+  lần làm **màn kế tiếp cũng chậm theo** (`/nat` 9.730ms ngay sau đó, so với 582ms khi đo một
+  mình). Dùng lại đúng khuôn phân trang máy chủ của 6 màn đã có
+
+#### Đúng đắn — VỪA
+
+- [ ] **B-07** API tự dựng **8 đường dẫn tiếng Việt bản cũ** (`/thiet-bi/`, `/phan-mem/`,
+  `/duong-truyen/`, `/dia-chi-ip/`) trong khi `web/src/lib/routes.ts` tự khai là "NGUỒN DUY
+  NHẤT" và quyết định 26/08 là URL tiếng Anh. Những đường này đi vào **email** gửi ra ngoài
+- [ ] **B-09** Member mở được **vỏ** của `/admin/accounts` và `/admin/vault-access`: đủ `h1`,
+  phụ đề, và **nút "Thêm tài khoản" bấm được**, rồi mới báo không có quyền. Dữ liệu không rò
+  (API 403 sạch) nhưng `/vault` và `/dev/components` chặn đúng bằng 404 — hai cửa lệch nhau
+- [ ] **F-08** `attachment-panel.tsx:103` đọc `queryClient.getQueryData(ME_KEY)` **không
+  subscribe**, mà `useApiMutation` invalidate `ME_KEY` sau MỌI mutation ⇒ Admin mất nút Xoá và
+  component không re-render khi cache về. Chú thích `:98` khẳng định "`me` luôn có sẵn" — một
+  giả định, không phải hàng rào
+- [ ] **F-09** **AD-15 — 5 bản sao của `display()`+`describe()` panel Lịch sử, và chúng ĐÃ
+  trôi lệch**: `isp:62` có `if (field.endsWith('Id')) return t('history.changedOnly')` mà bốn
+  bản kia không có → sửa `siteId` ở màn NAT **in nguyên một UUID** ra màn hình
+
+#### Nhẹ
+
+- [ ] **N-02** `/nat` (800 dòng) · `/disposal` (582 dòng) chưa phân trang — §14.5 **hạ từ VỪA
+  xuống NHẸ** sau khi đo ở 200k: hai màn này vẫn lành. Xử khi tiện
+- [ ] **N-03** `dashboard` là API chậm nhất (327ms ở 30k → 855–1.111ms ở 200k). Chưa đau; đặt
+  mốc xem lại ở 500k
+- [ ] **B-10** `app-shell.tsx:113-122` — `aria-disabled` trên `<span>` không `role` **không có
+  nghĩa**; mục "sắp có" thành node chữ trần với trình đọc màn hình, lời giải thích nằm duy
+  nhất trong `title=` (chỉ mở được bằng chuột)
+- [ ] **B-11** Nhãn cột ở 390px thừa hưởng font mono của ô (`table-stack td::before` không đặt
+  lại `font-family`)
+- [ ] **B-12** `device-detail.tsx` — hai tiêu đề chồng nhau cho cùng một bảng: "LICENSE ĐANG
+  CÀI" rồi ngay dưới "PHẦN MỀM ĐANG CÀI (2)"
+- [ ] **B-13** Thẻ "SỰ CỐ TUẦN QUA" nói cùng một điều hai lần
+- [ ] **B-14** Thẻ dải đã tắt hiện `void_reason` **không nhãn** (đọc như số rác) và **thiếu
+  `voided_by`** — trái luật tự đặt ở `EPIC-MAP.md`: "nói rõ **ai** tắt, khi nào, vì sao"
+- [ ] **B-16** Vùng cuộn ngang giấu nội dung — 1/15 màn
+- [ ] **B-17** `/admin/vault-access` — chú giải ký hiệu nằm DƯỚI bảng, sau 60 dấu `–`
+- [ ] **B-18** Thiếu "Xuất Excel" ở `/service-accounts` · `/disposal` · `/admin/accounts` ·
+  `/approvals` trong khi 6 màn danh sách khác đều có
+- [ ] **B-19** `/admin/catalog` — mười điều khiển chen trên một hàng, gần kín 1280px
 
 ### 8.7 Định danh tiếng Việt — 6 đợt (mục 3.2)
 
@@ -1377,7 +1459,10 @@ trước lượt E2E kế tiếp.**
 
 ---
 
-## 16. Đợt A (cổng) — ĐÃ LÀM 20/09/2026
+## 16. Lượt 1 — cổng (ĐÃ LÀM 20/09/2026)
+
+> Trong commit `2a01e08` lượt này được gọi là **"đợt A"**. Xem ô chú giải ở đầu mục 8 để
+> biết vì sao cái tên ấy bị bỏ.
 
 Đợt đầu của kế hoạch ở §9. Mục tiêu không phải sửa nhiều lỗi mà là **làm cho lỗi không sống
 sót qua cổng được nữa**.
@@ -1589,7 +1674,9 @@ route) · T-03 (khoá chết gieo vào `vi.ts`).
 
 ---
 
-## 17. Đợt B (ba lỗ, ba cửa) — ĐÃ LÀM 20/09/2026
+## 17. Lượt 2 — ba lỗ, ba cửa (ĐÃ LÀM 20/09/2026)
+
+> Commit `ca18bc9` · `c2c8fdb` · `c64d892`, trong đó gọi là **"đợt B"**.
 
 Ba mục còn lại của hai ô "chặn phát hành" và "CAO": **A-02** (gắn yếu tố thứ hai không cần
 xác thực lại) · **A-03** (xoá ô ngày đi vòng qua luật) · **D-01** (app chạy bằng superuser).
@@ -1882,7 +1969,9 @@ phân biệt được "có hàng rào" với "có ĐÚNG hàng rào".
 
 ---
 
-## 18. Rà soát chéo đợt A + B — 21/09/2026
+## 18. Rà soát chéo Lượt 1 + 2 — 21/09/2026
+
+> Commit `136c532`, trong đó gọi là **"rà soát chéo đợt A+B"**.
 
 Bốn tầng đọc độc lập trên `master..HEAD` (6 commit, 99 file, 7.500 dòng sau khi lọc nhiễu
 xuống dòng): **Blind Hunter** (24 mục) · **Edge Case Hunter** (22) · **Verification Gap** (9) ·
@@ -1988,7 +2077,10 @@ bằng chứng; nó chỉ là hai lần cùng một cách đọc.
 
 Hai mươi bốn mục còn lại vẫn là ô trống ở trên — việc tồn đọng, không phải việc đã quên.
 
-## 19. Đợt C (sáu mục CAO còn lại) — ĐÃ LÀM 21/09/2026
+## 19. Lượt 3 — sáu mục CAO của backend (ĐÃ LÀM 21/09/2026)
+
+> Commit `df0899a`, trong đó gọi là **"đợt C"**. Lượt này vá các mục mang mã **A-**04·05·06·07·08·11
+> — một lượt tên "C" chứa toàn mã "A", và đó chính là lý do cái tên bị bỏ.
 
 Sáu ô trống cuối cùng của mục 8.3: A-11 · A-04 · A-05 · A-06 · A-07 · A-08. Mỗi mục một bài
 kiểm ĐỎ trước, rồi mới vá.
@@ -2074,7 +2166,10 @@ Một bài kiểm xanh chưa nói lên điều gì cho tới khi có thứ làm 
 Mục 8.3 còn **bốn** ô trống, đều là frontend (F-04 · F-05 · F-07 · F-10). Cả sổ mục 8 còn
 **48** ô, mục 18 còn **23** — việc tồn đọng, không phải việc đã quên.
 
-## 20. Đợt D (bốn mục CAO frontend) — ĐÃ LÀM 21/09/2026
+## 20. Lượt 4 — bốn mục CAO của frontend (ĐÃ LÀM 21/09/2026)
+
+> Commit `3e3faf2`, trong đó gọi là **"đợt D"**. Lượt này vá các mục mang mã **F-**04·05·07·10.
+> Đừng nhầm với **D-02**, một mã CSDL vẫn còn nguyên.
 
 Bốn ô cuối của mục 8.3, và mục 8.3 **đóng lại** ở đây (13/13).
 
