@@ -706,7 +706,7 @@ Excel thì mở cửa sau"*. **Cửa sau HTTP còn rộng hơn Excel và chưa a
 
 ### 8.4 Dữ liệu & vận hành (7)
 
-- [ ] **D-02** Một dòng `sweep.register(purgeOld)` — 54.904 phiên chết đang nằm đó
+- [x] **D-02** Một dòng `sweep.register(purgeOld)` — ~~54.904 phiên chết đang nằm đó~~ → **ĐÃ LÀM 21/09**. Kèm luôn retention cho `outbox` (mục hoãn). Đo lại 21/09 thì con số KHÁC sổ: outbox 69.583 (100% đã xử lý), sessions 67.394 nhưng chỉ **1** hàng quá 30 ngày — lượt gieo 200k hồ sơ đẻ ra toàn hàng mới. Lỗ vẫn nguyên vì nó là lỗ CẤU TRÚC: `purgeOld()` có sẵn, chú thích ghi "Gọi từ sweep", và không ai gọi. Ngưỡng vào `system_config` (`0051`), không viết cứng
 - [ ] **D-03** CHECK cho `approval.state`/`kind`/`subject_type`
 - [ ] **D-04 + D-05** Một FK chung cho `department`/`isp_provider`/`service_port`: `ON UPDATE CASCADE ON DELETE RESTRICT`
 - [ ] **M-03** Handler `outbox-purge` (56.507 hàng, 0 chưa xử lý)
