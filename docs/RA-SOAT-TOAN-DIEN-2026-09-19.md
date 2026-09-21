@@ -753,12 +753,18 @@ thiếu, và cái thiếu đó vô hình vì checklist trông vẫn đầy đủ
 
 #### Chặn phát hành
 
-- [ ] **N-01** **CHẶN** (§14.5 nâng từ CAO) — `/expiry` đổ **7.662 dòng vào một bảng, không phân
-  trang**; `@Get()` của `expiry.controller.ts` không nhận `page`/`limit`, và `grep -c Pagination`
-  trên `expiry-screen.tsx` = **0**. Ở 200k hồ sơ màn này **không dùng được**, và nó tăng theo
-  *thời gian* chứ không theo quy mô đội máy — không tự khỏi. Hệ quả đo được: mở `/expiry` một
-  lần làm **màn kế tiếp cũng chậm theo** (`/nat` 9.730ms ngay sau đó, so với 582ms khi đo một
-  mình). Dùng lại đúng khuôn phân trang máy chủ của 6 màn đã có
+- [x] **N-01** **CHẶN** — ĐÃ LÀM 21/09 (commit `eb2cdef`). Phân trang máy chủ cho `/expiry`;
+  phép lọc theo nhóm và phép sắp cột cũng xuống server cùng chuyến, vì cả hai chú thích tại chỗ
+  đều nói chúng chỉ đúng *khi màn không phân trang*. Dashboard thôi kéo 7.662 bản ghi để bày 8
+  dòng. Thứ tự bắt buộc ở server: đếm cả kho → lọc nhóm → cắt trang
+- [ ] **N-01b** Phân trang tận GỐC — `registry.collect()` vẫn hỏi trọn cửa sổ từ mọi nguồn rồi
+  mới sắp/lọc/cắt. Bản vá 21/09 bỏ được phần đắt nhất đã đo (tuần tự hoá 7.662 bản ghi, đẩy qua
+  dây, 841k node DOM) nhưng KHÔNG bỏ chi phí truy vấn ở các nguồn. Cắt tận gốc đòi đổi hợp đồng
+  `ExpirySource.findExpiring(from, to)` cho mọi module đã đăng ký (AD-7) + một phép trộn k-đường
+  có thứ tự giữa các nguồn — **một story, không phải một bản vá**
+- [ ] **N-01c** `?sort=` ở server cho `/expiry`. Sắp cột ở client đã tắt 21/09 (nó chỉ đảo chỗ
+  trang đang xem). Thứ tự hiện tại — gấp nhất lên đầu — là câu trả lời đúng cho màn này, nên đây
+  là việc NHẸ; chỉ làm nếu có người thật sự cần sắp theo cột khác
 
 #### Đúng đắn — VỪA
 
