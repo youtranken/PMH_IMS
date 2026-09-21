@@ -52,7 +52,7 @@ const SECRET = 'JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP';
  * Tầng mạng giả: lượt gọi ĐẦU bị từ chối vì chưa có mật khẩu, lượt gọi có mật khẩu thì qua.
  * Đúng hợp đồng của `startTotpEnrollment` sau bản vá A-02.
  */
-function stubEnrollApi(): { calls: () => number } {
+function stubEnrollApi(attemptsLeft = 4): { calls: () => number } {
   let calls = 0;
   vi.stubGlobal(
     'fetch',
@@ -74,7 +74,7 @@ function stubEnrollApi(): { calls: () => number } {
           jsonResponse(401, {
             code: 'CURRENT_PASSWORD_WRONG',
             message: 'Mật khẩu hiện tại không đúng.',
-            attemptsLeft: 4,
+            attemptsLeft,
           }),
         );
       }
@@ -160,5 +160,36 @@ describe('Màn cài 2 lớp — bước xác thực lại (A-02)', () => {
     );
     expect(screen.getByLabelText('Mật khẩu hiện tại')).toHaveValue('');
     expect(screen.queryByTestId('totp-secret')).toBeNull();
+  });
+
+  /*
+   * "Còn mấy lần" — hai vế, và vế PHỦ ĐỊNH quan trọng ngang vế khẳng định.
+   *
+   * Sai đủ ngưỡng thì phiên bị THU HỒI, nên người gõ nhầm phải được báo trước. Nhưng báo ngay
+   * từ lần sai đầu thì tới lần thật sự sát ngưỡng câu ấy đã thành tiếng ồn quen tai — và một
+   * bài kiểm chỉ có vế khẳng định sẽ để lọt đúng lỗi đó.
+   */
+  it('sát ngưỡng thì nói thẳng còn mấy lần', async () => {
+    stubEnrollApi(1);
+    renderEnroll();
+
+    await userEvent.type(await screen.findByLabelText('Mật khẩu hiện tại'), 'sai-mat-khau');
+    await userEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+
+    await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Còn 1 lần'));
+    expect(screen.getByRole('alert')).toHaveTextContent('phải đăng nhập lại');
+  });
+
+  it('còn xa ngưỡng thì IM — một lần gõ nhầm không phải lúc doạ ai', async () => {
+    stubEnrollApi(4);
+    renderEnroll();
+
+    await userEvent.type(await screen.findByLabelText('Mật khẩu hiện tại'), 'sai-mat-khau');
+    await userEvent.click(screen.getByRole('button', { name: 'Tiếp tục' }));
+
+    await waitFor(() =>
+      expect(screen.getByRole('alert')).toHaveTextContent('Mật khẩu hiện tại không đúng.'),
+    );
+    expect(screen.getByRole('alert')).not.toHaveTextContent('Còn');
   });
 });

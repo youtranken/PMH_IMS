@@ -73,7 +73,11 @@ export function StepUpDialog({
                 // Mã sai thì XÓA ô nhập: mã TOTP chỉ sống 30 giây, giữ lại con số cũ chỉ
                 // dụ người ta bấm Gửi lần nữa với đúng cái mã vừa bị từ chối.
                 setToken('');
-                setError(errorMessage(err));
+                setError(
+                  errorMessage(err, undefined, (left) =>
+                    t('auth.attemptsLeft', { count: left }),
+                  ),
+                );
               },
             },
           );

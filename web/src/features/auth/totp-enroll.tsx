@@ -75,7 +75,11 @@ export function TotpEnroll() {
                 onSuccess: setEnroll,
                 onError: (err) => {
                   setPassword('');
-                  setError(errorMessage(err, 'Mật khẩu hiện tại không đúng.'));
+                  setError(
+                    errorMessage(err, 'Mật khẩu hiện tại không đúng.', (left) =>
+                      t('auth.attemptsLeft', { count: left }),
+                    ),
+                  );
                 },
               },
             );

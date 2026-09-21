@@ -601,6 +601,7 @@ Excel thì mở cửa sau"*. **Cửa sau HTTP còn rộng hơn Excel và chưa a
 | --- | --- | --- |
 | **A-02** | `auth.controller.ts:98-130` | **Gắn yếu tố thứ hai không cần xác thực lại.** Tài khoản chưa enroll + cookie bị trộm → kẻ tấn công enroll authenticator **của chính nó** → step-up → mở két. Đúng mô hình đe dọa mà `step-up.guard.ts` tự nêu, và `stepUp()` còn trả câu chỉ đường |
 | **A-03** | `software.service.ts:345` · `isp-line.service.ts:390` | **`{"endDate":""}` xóa được ngày hết hạn mà luật không thấy.** `dateOnly("")` trả `null` = "xóa ngày", nhưng `(values.endDate ?? current?.endDate ?? null)` coi `null` y hệt `undefined` nên `validateSoftware` soi trên ngày **CŨ** ⇒ `requiresEndDate` không nổ, `updateWithin` ghi `end_date = NULL`. Chứng chỉ SSL không có hạn — đúng thứ `software-rules.ts:141-145` sinh ra để cấm — và vì `findExpiringBetween` lọc `end_date IS NOT NULL`, hồ sơ **biến mất khỏi mọi lời nhắc gia hạn, vĩnh viễn, không một dòng lỗi**. Không lưới DB. **Đường import làm ĐÚNG với cùng bài toán** (`device-import.ts:378-379` dùng `field in values`) — hai bản của một luật, một bản sai |
+| **A-11** | `catalog.api.ts:41-49` · `devices.service.ts` | **Máy nằm trong một cái tủ thuộc về hư không.** `validateRefs` chỉ kiểm "tủ có thuộc site đã chọn không" **khi `refs.siteId` khác rỗng**. Gửi `{"siteId":""}` lên một thiết bị đang gắn tủ thì phép kiểm ấy bị bỏ qua trọn vẹn, và hàng ra có `cabinet_id` mà không có `site_id` — không lọc ra được bằng site nào, và trang chi tiết hiện một cái tủ không biết nằm ở đâu. **Đường Excel chặn đúng chuyện này** (`device-import.ts:388-397`, kèm câu từ chối tử tế); cửa HTTP thì không. Phát hiện 20/09 trong lúc vá A-03 — cùng họ, cùng hình dạng "cửa Excel được canh, cửa HTTP bỏ ngỏ", nhưng KHÔNG sửa cùng: bản vá A-03 chỉ đổi phép GHÉP, còn lỗ này cần thêm một LUẬT mới vào `validateRefs`, và luật mới có thể chặn dữ liệu cũ đang chạy |
 | **A-04** | `nat-rule.service.ts:499-513` | **Trọng tài duy nhất cho chồng `both` vs `tcp/udp` chạy NGOÀI transaction** (`this.db`, gọi trước `db.transaction`). EXCLUDE của DB dùng `protocol WITH =` nên **không bao giờ** bắt `both` va `tcp`. Hai người cùng khai `TCP 8080` và `BOTH 8080` trên một router → cả hai qua cửa → sổ NAT có **hai câu trả lời cho TCP/8080** |
 | **A-05** | `license-assignment.service.ts:226,263-271` | **Khóa hàng nhưng đọc trần cũ.** `.for("update")` chỉ `select({id})`; `used` đếm trong tx (đúng) nhưng `software.seatTotal` là ảnh chụp từ `:226` **ngoài tx**. Hạ `seat_total` 10→9 song song ⇒ gán thành 10/9 **không đòi `overSeatReason`**. Sửa: đọc lại cả hàng trong chính câu `.for("update")` |
 | **A-06** | `ip-address.service.ts:307,340` | **Gán thiết bị cho IP `reclaimed` làm thiết bị KHÓA CỨNG, không thanh lý được.** `becomesAssigned` chỉ phủ `free`, nên hàng ra có `device_id = X` mà `status = reclaimed`. Rồi `listForDeviceWithin` **không lọc status** ⇒ thanh lý X **không** tick dọn → `DEVICE_HAS_HOLDINGS` chặn; **có** tick dọn → `transitionWithin(…,"reclaimed")` trên hàng đã `reclaimed` → `IP_TRANSITION_INVALID` và **cả transaction thanh lý rollback**. Cả hai lối đều tắc, và câu lỗi nói về một thứ người trực không hề đụng tới |
@@ -666,10 +667,11 @@ Excel thì mở cửa sau"*. **Cửa sau HTTP còn rộng hơn Excel và chưa a
 - [x] **T-03** Vá luật cứu-theo-tiền-tố của `dead-keys-rollcall` (từ chối tiền tố kết thúc bằng `.`); gieo `nat.zzz` để chắc nó đỏ
 - [x] **Đợt 0 của mục 3** Luật lint chặn định danh tiếng Việt MỚI *(lớp 1 — có dấu; lớp 2 hoãn, xem 16.7)* (hai lớp + bài canh chính cái cổng, có cả vế phủ định)
 
-### 8.3 Đúng đắn — CAO (12)
+### 8.3 Đúng đắn — CAO (13)
 
 - [x] **A-02** Đòi xác thực lại trước khi gắn yếu tố thứ hai
 - [x] **A-03** `field in values` thay cho `??` ở `software.service.ts:345` + `isp-line.service.ts:390` *(và `devices.service.ts:442-455` — chỗ thứ ba, rà soát bỏ sót; xem 17.2)*
+- [ ] **A-11** `validateRefs` kiểm cặp tủ↔site cả khi site bị XOÁ, không chỉ khi site có giá trị (đếm trước xem dữ liệu đang chạy có bao nhiêu hàng `cabinet_id IS NOT NULL AND site_id IS NULL`)
 - [ ] **A-04** Đưa `siblings` vào trong transaction + khóa hàng `device`
 - [ ] **A-05** Đọc lại cả hàng `software` trong chính câu `.for("update")`
 - [ ] **A-06** `becomesAssigned` phủ cả `reclaimed`; `listForDeviceWithin` lọc status
@@ -1792,7 +1794,51 @@ cố ý không nằm trong ảnh production, chỉ được mount bởi file ove
 > xanh, ba bài E2E mới đều xanh, và lỗi vẫn nằm đó — ở một đoạn hạ tầng mà không ai coi là
 > "code". Chỉ lượt chạy 443 bài mới hỏi được câu "cả hệ thống có còn sống dưới role hẹp không".
 
-### 17.5 Kiểm chứng sau trọn đợt B
+### 17.5 Ba mục dọn nốt — 21/09/2026
+
+Ba thứ tôi tự khai là còn sót khi tổng kết đợt B, làm nốt trong một lượt.
+
+**(1) Một phát hiện tôi định ghi và đã quên.** Trong lúc vá A-03 tôi thấy `validateRefs` chỉ
+kiểm cặp tủ↔site **khi `refs.siteId` khác rỗng** — nên gửi `{"siteId":""}` lên một thiết bị
+đang gắn tủ thì phép kiểm bị bỏ qua trọn vẹn, và hàng ra có `cabinet_id` mà không có
+`site_id`. Máy nằm trong một cái tủ thuộc về hư không: không lọc ra được bằng site nào.
+Đường Excel chặn đúng chuyện này từ lâu. Nay là **A-11** ở mục 7.2 và một gạch ở 8.3.
+
+Vẫn **không sửa** trong đợt này, và lý do ghi thẳng vào mục: A-03 chỉ đổi phép GHÉP, còn lỗ
+này cần một LUẬT MỚI trong `validateRefs` — mà luật mới thì có thể chặn dữ liệu cũ đang chạy.
+Phải đếm `cabinet_id IS NOT NULL AND site_id IS NULL` trên DB thật trước đã.
+
+**(2) Một chú thích nay nói sai về code.** Docblock của `step-up.guard.ts` mô tả chuỗi 6 bước
+mà kẻ tấn công đi được, và bước 4 chính là lỗ A-02 vừa bịt. Để nguyên thì người đọc sau này
+tưởng lỗ còn đó. Đã thêm một khối nói rõ **bước 2 đóng 10/09, bước 4 đóng 20/09** — và giữ
+nguyên chuỗi cũ, kèm lý do giữ: nó là LÝ DO guard ấy mặc-định-đóng, không phải mô tả hiện
+trạng. Bịt hai mắt xích không làm lý do yếu đi.
+
+**(3) Người dùng không được báo trước khi mất phiên.** API trả kèm `attemptsLeft` ở **ba**
+cửa — gõ sai mã lúc đăng nhập, gõ sai mã ở cửa két, và (từ A-02) gõ sai mật khẩu ở cửa cài
+2 lớp — nhưng **không màn nào đọc con số đó**. Người gõ nhầm thấy "sai mã, sai mã, sai mã,
+sai mã" rồi đột ngột bị đá ra. Lỗ này **có sẵn từ trước**, không do đợt B tạo ra; đợt B chỉ
+thêm cửa thứ ba vào đó.
+
+Phép quyết định nằm **một chỗ** (`errorMessage` nhận thêm một tham số), câu chữ vẫn do màn
+hình dựng bằng `t()` — `lib/` không kéo i18n vào, và DoD gạch 6 cấm chuỗi tiếng Việt cứng.
+
+Và nó **chỉ nói khi còn ≤ 2 lần**. Báo ngay từ lần sai đầu thì tới lúc thật sự sát ngưỡng,
+câu cảnh báo đã thành tiếng ồn quen tai. Chuyện này có hệ quả đo được: bài
+`di-khap-giao-dien.spec.ts:8487` chốt **nguyên văn** `'Mã xác thực không đúng.'` sau MỘT lần
+gõ sai — ngưỡng 2 giữ bài đó đúng như cũ, còn một bản "luôn cảnh báo" sẽ làm nó đỏ.
+
+Hai đột biến, hai vế:
+
+| Đột biến | Kết quả |
+| --- | --- |
+| Ngưỡng → 99 (luôn cảnh báo) | bài **"còn xa ngưỡng thì IM"** đỏ |
+| Ngưỡng → 0 (không bao giờ cảnh báo) | bài **"sát ngưỡng thì nói thẳng"** đỏ |
+
+> Vế phủ định ở đây không phải cho đủ bộ. Một lời cảnh báo bật ở mọi lượt sai là một lời cảnh
+> báo không ai đọc — và lúc nó thật sự quan trọng thì mắt đã lướt qua nó bốn lần rồi.
+
+### 17.6 Kiểm chứng sau trọn đợt B
 
 | Cổng | Sau đợt A | Sau đợt B |
 | --- | ---: | ---: |
@@ -1800,10 +1846,10 @@ cố ý không nằm trong ảnh production, chỉ được mount bởi file ove
 | depcruise api · web | no violations | **no violations** |
 | Jest đơn vị | 55 suite / 926 | 57 suite / **942** |
 | `test:db` (DB thật) | 14 / 74 | 15 / **80** |
-| Vitest | 44 file / 370 | 45 file / **373** |
+| Vitest | 44 file / 370 | 45 file / **375** |
 | Playwright | 443 | **450** |
 
-**Sáu lượt gieo đột biến, cả sáu đỏ đúng chỗ** — và hai trong số đó nói ra điều mà một lượt
+**Chín lượt gieo đột biến, cả chín đỏ đúng chỗ** — và hai trong số đó nói ra điều mà một lượt
 "chạy thử cho chắc" không bao giờ nói được:
 
 | Đột biến | Kết quả |
@@ -1813,9 +1859,12 @@ cố ý không nằm trong ảnh production, chỉ được mount bởi file ove
 | Gỡ nhánh thu hồi phiên | `Expected "SESSION_REVOKED", Received "CURRENT_PASSWORD_WRONG"` |
 | Gỡ cửa mới khỏi `PROBE_ACTIONS` | thư cảnh báo không bao giờ tới |
 | Trả `endDate` về phép ghép `??` | SSL lại xoá được hạn; hai bài kia vẫn xanh |
+| Gỡ `REAUTH_REQUIRED` khỏi danh sách loại trừ 401 | `expected '/login' to be null` — và bản ĐẦU của bài đó để đột biến này SỐNG SÓT (xem 17.1) |
 | **Gỡ câu `REVOKE` khỏi 0048** | `Expected "42501", Received "P0001"` |
+| Ngưỡng cảnh báo → 99 | bài "còn xa ngưỡng thì IM" đỏ (17.5) |
+| Ngưỡng cảnh báo → 0 | bài "sát ngưỡng thì nói thẳng" đỏ (17.5) |
 
-Hàng cuối là hàng đáng đọc lại. Bỏ hẳn cái REVOKE mà `UPDATE audit_log` **vẫn ném lỗi** —
+Hàng `REVOKE` là hàng đáng đọc lại. Bỏ hẳn nó mà `UPDATE audit_log` **vẫn ném lỗi** —
 trigger bắt nó. Một bài kiểm viết kiểu "câu lệnh này phải ném" sẽ XANH với bản vá đã bị gỡ
 mất, và AD-9 lại quay về là một câu nói đúng về giấy tờ. Chỉ vì bài chốt **mã lỗi** nên nó
 phân biệt được "có hàng rào" với "có ĐÚNG hàng rào".

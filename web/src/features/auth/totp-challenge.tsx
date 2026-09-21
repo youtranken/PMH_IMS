@@ -28,7 +28,11 @@ export function TotpChallenge() {
             {
               onError: (err) => {
                 setToken('');
-                setError(errorMessage(err, 'Mã xác thực không đúng.'));
+                setError(
+                  errorMessage(err, 'Mã xác thực không đúng.', (left) =>
+                    t('auth.attemptsLeft', { count: left }),
+                  ),
+                );
               },
             },
           );

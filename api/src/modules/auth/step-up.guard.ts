@@ -39,6 +39,20 @@ export class StepUpGuard implements CanActivate {
    *
    * Cửa két được dựng để "kể cả root cũng phải gõ mã". Đường trên vô hiệu hoá đúng lời hứa đó.
    *
+   * ===== HAI BƯỚC TRONG CHUỖI ĐÓ NAY ĐÃ BỊT (đừng đọc nó như mô tả hiện trạng) =====
+   *
+   * Bước 2 đóng ngay bằng chính guard này (10/09): `/accounts/*` từ đó đòi step-up, nên phiên
+   * SA bị chiếm không tạo nổi tài khoản mới để lấy mật khẩu tạm.
+   *
+   * Bước 4 đóng ngày 20/09 (A-02, rà soát 19/09): `POST /auth/totp/enroll` nay đòi mật khẩu
+   * hiện tại, trừ phiên đang ở GIỮA luồng đăng nhập bắt buộc cài 2 lớp và còn trẻ hơn
+   * `totp.enroll_reauth_minutes`. Sai đủ ngưỡng thì phiên bị thu hồi. Xem
+   * `AuthService.startTotpEnrollment` và `canEnrollWithoutPassword` ở `session-policy.ts`.
+   *
+   * Chuỗi trên giữ nguyên ở đây vì nó là LÝ DO guard này mặc-định-đóng, không phải vì nó còn
+   * đi được. Bịt hai bước không làm lý do ấy yếu đi: nó cho thấy một route quên khai lập
+   * trường step-up là một mắt xích, và mắt xích thì phải tìm từng cái một mới thấy.
+   *
    * `RolesGuard` trong chính repo này đã giải bài cùng hình dạng từ lâu: route quên `@Roles`
    * bị 403 `ROLES_NOT_DECLARED`, "Đây là lỗi lập trình". Đây là vế tương ứng cho step-up —
    * không phải để bắt mọi route gõ mã, mà để bắt mọi route TRẢ LỜI câu hỏi đó.

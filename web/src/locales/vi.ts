@@ -218,6 +218,7 @@ export default {
     enrollReauthSub:
       'Nhập mật khẩu hiện tại để xác nhận đây là bạn — từ bước sau, điện thoại này sẽ là chìa khóa thứ hai của tài khoản',
     enrollReauthSubmit: 'Tiếp tục',
+    attemptsLeft: 'Còn {{count}} lần nữa là phiên bị thu hồi và phải đăng nhập lại.',
     changePasswordTitle: 'Đổi mật khẩu',
     changePasswordSub: 'Lần đăng nhập đầu bắt buộc đổi mật khẩu tạm',
     currentPassword: 'Mật khẩu hiện tại',
