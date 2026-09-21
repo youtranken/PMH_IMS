@@ -278,7 +278,7 @@ export function lookBackDays(query: {
  * ngưỡng "vàng" phải là CÙNG một con số, nếu không thì màn mở ra đã sẵn có hàng nằm ngoài
  * ngưỡng cảnh báo mà vẫn bị gọi tên là sắp hết hạn.
  */
-function clampWindow(value: number | undefined, fallback: number): number {
+export function clampWindow(value: number | undefined, fallback: number): number {
   if (value === undefined || Number.isNaN(value)) return fallback;
   return Math.min(365, Math.max(1, Math.trunc(value)));
 }

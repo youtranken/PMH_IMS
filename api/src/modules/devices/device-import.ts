@@ -13,6 +13,7 @@ import {
   type ParsedSheets,
 } from '../../common/import-plan';
 import { effectiveOf } from '../../common/merge-effective';
+import { cabinetWithoutSiteMessage } from '../catalog/catalog.api';
 import type { DeviceStatus } from './devices.types';
 
 /**
@@ -396,7 +397,8 @@ function planRow(
         ...base,
         action: 'error',
         label,
-        message: `Thiết bị đang gắn tủ "${cabinet.code}" mà không có site. Ghi cột Site, hoặc bỏ trống cột Tủ mạng.`,
+        // MỘT bản chữ cho cả cửa Excel lẫn cửa HTTP (AD-15) — xem `cabinetWithoutSiteMessage`.
+        message: cabinetWithoutSiteMessage(cabinet.code),
       };
     }
     if (cabinet.siteId !== siteId) {

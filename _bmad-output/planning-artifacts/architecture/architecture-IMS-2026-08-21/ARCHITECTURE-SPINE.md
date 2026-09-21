@@ -53,6 +53,7 @@ graph TD
 - **Binds:** all
 - **Prevents:** vòng phụ thuộc kiểu `assets-write→software-license→assets.service` của QLTS; SQL lậu xuyên module.
 - **Rule:** mỗi module nghiệp vụ export đúng **một** `*.api.ts` (public api service) qua module exports. Module nghiệp vụ được inject public api của module khác để **đọc/ghi chéo** — cấm import bất kỳ file nội bộ nào của module khác, cấm SQL/JOIN đụng bảng module khác. Đồ thị phụ thuộc giữa các module nghiệp vụ **phải acyclic** — enforce bằng `dependency-cruiser` chạy trong CI, không chỉ review. Tầng nền không import tầng nghiệp vụ.
+- **Enforce — vế SQL cần một cổng RIÊNG.** `dependency-cruiser` và eslint canh vế import, và chỉ vế import: cái thứ nhất khớp **đường dẫn đã resolve**, cái thứ hai khớp **chuỗi import**. Một câu SQL thô không phải cái nào trong hai thứ đó, nên `audit-query.service.ts` viết `LEFT JOIN users u ON u.email = a.actor` và sống **chín epic** dưới mũi cả hai cổng (A-07, 21/09) — trong khi `users.api.ts` có sẵn dòng chữ cấm đúng việc ấy. Cái giá đã trả hai lần: `u.sub` không tồn tại nên endpoint 500 ở mọi lần gọi, và `created_at` mơ hồ làm vỡ mỗi lượt lọc ngày. Bản canh: `api/src/ad2-raw-sql.spec.ts` — đọc chủ sở hữu bảng từ chính các `*.schema.ts` (AD-3, không phải danh sách chép tay) rồi quét mọi file đã **lột chú thích**. Cùng doctrine với AD-16: một luật không có bài canh là một luật có thể khớp đúng số không chuỗi mà không ai biết.
 
 ### AD-3 — Mỗi bảng một chủ; mọi truy cập chéo qua public api của chủ
 

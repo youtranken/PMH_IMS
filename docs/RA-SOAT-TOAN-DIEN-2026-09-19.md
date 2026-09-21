@@ -671,12 +671,12 @@ Excel thì mở cửa sau"*. **Cửa sau HTTP còn rộng hơn Excel và chưa a
 
 - [x] **A-02** Đòi xác thực lại trước khi gắn yếu tố thứ hai
 - [x] **A-03** `field in values` thay cho `??` ở `software.service.ts:345` + `isp-line.service.ts:390` *(và `devices.service.ts:442-455` — chỗ thứ ba, rà soát bỏ sót; xem 17.2)*
-- [ ] **A-11** `validateRefs` kiểm cặp tủ↔site cả khi site bị XOÁ, không chỉ khi site có giá trị (đếm trước xem dữ liệu đang chạy có bao nhiêu hàng `cabinet_id IS NOT NULL AND site_id IS NULL`)
-- [ ] **A-04** Đưa `siblings` vào trong transaction + khóa hàng `device`
-- [ ] **A-05** Đọc lại cả hàng `software` trong chính câu `.for("update")`
-- [ ] **A-06** `becomesAssigned` phủ cả `reclaimed`; `listForDeviceWithin` lọc status
-- [ ] **A-07** Gỡ JOIN `users` khỏi `audit` — đi qua `UsersApiService`
-- [ ] **A-08** Dashboard đọc `expiry.warning_days` thay vì 30 viết cứng
+- [x] **A-11** `validateRefs` kiểm cặp tủ↔site cả khi site bị XOÁ, không chỉ khi site có giá trị (đếm trước xem dữ liệu đang chạy có bao nhiêu hàng `cabinet_id IS NOT NULL AND site_id IS NULL`)
+- [x] **A-04** ~~Đưa `siblings` vào trong transaction + khóa hàng `device`~~ → **vá ở DB thay vì thêm khóa**: `0050` ánh xạ giao thức thành khoảng rồi so `&&` (xem 19.1)
+- [x] **A-05** Đọc lại cả hàng `software` trong chính câu `.for("update")`
+- [x] **A-06** `becomesAssigned` phủ cả `reclaimed`; `listForDeviceWithin` lọc status *(hỏi `isOccupying` chứ không liệt kê tay)*
+- [x] **A-07** Gỡ JOIN `users` khỏi `audit` — đi qua `UsersApiService` *(+ cổng tĩnh mới cho SQL thô)*
+- [x] **A-08** ~~Dashboard đọc `expiry.warning_days`~~ → **dashboard thôi biết gì về cửa sổ**; một chủ, một con số
 - [x] **F-02** 6 chốt `isLoading` + `data!` → `if (!q.data)`
 - [ ] **F-04** `shared-kit.css:170` → `box-shadow: var(--ring)` (14 chỗ khác đã đúng)
 - [ ] **F-05** `select.tsx` so nội dung `options` như `combobox.tsx:92-117`
@@ -1987,3 +1987,89 @@ Excel — nơi có sẵn một quyết định ngược lại kèm lý do. Con s
 bằng chứng; nó chỉ là hai lần cùng một cách đọc.
 
 Hai mươi bốn mục còn lại vẫn là ô trống ở trên — việc tồn đọng, không phải việc đã quên.
+
+## 19. Đợt C (sáu mục CAO còn lại) — ĐÃ LÀM 21/09/2026
+
+Sáu ô trống cuối cùng của mục 8.3: A-11 · A-04 · A-05 · A-06 · A-07 · A-08. Mỗi mục một bài
+kiểm ĐỎ trước, rồi mới vá.
+
+| Mục | Bài kiểm đỏ trước khi vá |
+| --- | --- |
+| **A-04** | hai kết nối thật cùng khai `TCP/8080` và `BOTH/8080` trên một router → cả hai lọt, sổ có hai câu trả lời |
+| **A-05** | trần seat hạ 5→1 trong lúc lượt gán đang chờ khóa → ghế thứ hai vào license 1 ghế, không lỗi, không cảnh báo |
+| **A-06** | gán máy cho IP `reclaimed` → hàng lai `device_id` + `reclaimed`; rồi `holdingsOf` trả về nó và `releaseWithin` ném `IP_TRANSITION_INVALID` |
+| **A-07** | lượt quét toàn `src/modules` tìm thấy đúng **một** vi phạm: `audit` đọc bảng `users` bằng SQL thô |
+| **A-08** | dashboard hỏi module `expiry` với cửa sổ `30`, ghi đè `expiry.warning_days` |
+| **A-11** | `{cabinetId, siteId: ""}` qua cửa trọn vẹn — bốn ca đỏ, năm ca đối chứng xanh |
+
+### 19.1 A-04 — chỗ đáng bàn nhất: thêm một cái khóa, hay đổi ràng buộc
+
+Mục 8.3 ghi sẵn cách vá: *"đưa `siblings` vào trong transaction + khóa hàng `device`"*. Cách
+ấy chạy được. Nhưng nó đẻ ra một **quy ước**: "ai ghi vào `nat_rule` thì nhớ khóa router
+trước". Và quy ước là thứ người ta quên — cả đợt rà soát 19-21/09 này, **sáu trên sáu** lỗ
+đều là một quy ước bị quên ở đúng một cửa trong nhiều cửa. Thêm một quy ước nữa để vá hậu quả
+của những quy ước bị quên là đi vòng quanh.
+
+Ràng buộc DB thì không quên được. Mẹo: ánh xạ giao thức thành một **khoảng** rồi hỏi `&&`
+thay cho `=` —
+
+    tcp → [1,1]        udp → [2,2]        both → [1,2]
+
+`tcp && udp` rỗng nên hai giao thức riêng vẫn khai chung port được, đúng thứ Draytek cho phép
+và migration `0022` cố ý chừa. `tcp && both` khác rỗng nên bị chặn, **ở mọi mức đồng thời,
+không cần khóa nào**. Không phải thêm extension: `btree_gist` đã có từ `0022`.
+
+Phép kiểm trong service KHÔNG gỡ — nó vẫn là đường cho câu lỗi tử tế (nói rõ đụng rule nào).
+Nó chỉ thôi làm **trọng tài duy nhất**.
+
+Migration `0050` tự hỏi trước xem dữ liệu đang chạy có cặp nào phạm luật mới không, và nếu có
+thì `RAISE EXCEPTION` nêu đích danh từng cặp kèm việc phải làm. Migration chạy trước
+`app.listen`, nên một câu `23P01` trần trụi ở đó là một api không lên được cộng một câu lỗi
+không nói phải làm gì.
+
+### 19.2 A-07 — cổng thứ ba, cho cái cửa hai cổng kia mù
+
+`LEFT JOIN users u ON u.email = a.actor` sống chín epic dưới mũi **hai** cổng AD-2:
+
+- eslint `no-restricted-imports` khớp **chuỗi import** — ở đây không có import nào;
+- `dependency-cruiser` khớp **đường dẫn đã resolve** — một câu SQL không resolve thành gì cả.
+
+Hai cổng, cùng một điểm mù, hình dạng là "ranh giới bị phá bằng một công cụ khác công cụ mà
+cổng biết đọc". `ad2-raw-sql.spec.ts` đọc chủ sở hữu bảng từ chính các `*.schema.ts` (AD-3,
+không phải danh sách chép tay) rồi quét mọi file đã lột chú thích. Quét trọn file chứ không
+bóc riêng khối ``sql`…` ``: một `${...}` lồng backtick sẽ cắt cụt khối, và khối bị cắt cụt thì
+cổng lặng lẽ khớp ít đi — đúng lớp lỗi mục 16 vừa dọn hai lần.
+
+Cổng có **ba ca đối chứng phủ định** và **sáu ca khẳng định** trước khi tin lượt quét: một
+cổng khớp đúng số không chuỗi trông y hệt một cổng không có gì để bắt.
+
+### 19.3 Một bài kiểm không có răng, bắt được bằng đột biến
+
+Bài "email khác chữ hoa-thường vẫn ra tên" viết xong thì **xanh** — và vẫn xanh cả khi gieo
+đột biến bỏ hẳn `.toLowerCase()`. Lý do: bài dàn cảnh "sổ lưu chữ thường, nhật ký ghi chữ
+hoa", mà khóa map lúc ấy là chuỗi ĐANG LƯU nên vốn đã chữ thường; hai vế gặp nhau, bẫy không
+bung. Bẫy thật ở chiều ngược lại — `citext` **chấp nhận lưu** `Chu.Hoa@PMH.com.vn` nguyên
+dạng. Thêm chiều ấy vào bảng dữ liệu thì đột biến chết ngay.
+
+Một bài kiểm xanh chưa nói lên điều gì cho tới khi có thứ làm nó đỏ.
+
+### 19.4 Và hai chỗ dọn kèm, vì đang mở đúng file đó
+
+- `dashboard.service.ts` cắt khối "sắp hết hạn" bằng số `8` viết tay trong khi `MAX_ITEMS = 8`
+  nằm ngay đầu file, sinh ra đúng để mọi khối cắt cùng một chỗ.
+- Câu từ chối "gắn tủ mà không khai site" nay là **một bản chữ** dùng chung cho cả cửa Excel
+  lẫn cửa HTTP (`cabinetWithoutSiteMessage`). Vá xong mà mỗi cửa tự viết một câu thì hai câu
+  sẽ trôi khỏi nhau đúng như hai phép kiểm vừa trôi khỏi nhau.
+
+### 19.5 Đo được
+
+| Đo được | Trước đợt C | Sau |
+| --- | ---: | ---: |
+| Jest đơn vị | 948 | **981** |
+| Tầng chạm DB thật | 103 | **126** |
+| Vitest | 375 | 375 |
+| Migration | 49 | **50** |
+| Vi phạm AD-2 bằng SQL thô | 1 | **0** |
+
+Mục 8.3 còn **bốn** ô trống, đều là frontend (F-04 · F-05 · F-07 · F-10). Cả sổ mục 8 còn
+**48** ô, mục 18 còn **23** — việc tồn đọng, không phải việc đã quên.

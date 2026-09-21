@@ -539,13 +539,28 @@ export class NatRuleService {
   }
 
   /**
-   * Chặn `both` chồng lên `tcp`/`udp` (và ngược lại) trên cùng router.
+   * Câu lỗi TỬ TẾ cho chuyện chồng port — KHÔNG còn là trọng tài (A-04, vá 21/09).
    *
-   * Ràng buộc `EXCLUDE` của DB so `protocol WITH =` nên nó KHÔNG thấy chuyện này — mà `both`
-   * theo định nghĩa phủ cả hai giao thức. Không chặn thì sổ có hai câu trả lời cho TCP/8080,
-   * đúng thứ bảng này sinh ra để tránh (code review Epic 5, finding 4).
+   * ===== NÓ TỪNG LÀ TRỌNG TÀI DUY NHẤT, VÀ ĐÓ LÀ LỖ =====
    *
-   * `tcp` vs `udp` vẫn cho qua: Draytek khai riêng hai giao thức cùng port là việc hợp lệ.
+   * `EXCLUDE` của 0022 so `protocol WITH =` nên không thấy `both` va `tcp`, và migration ấy
+   * nhường hẳn việc cho hàm này. Nhưng hàm này chạy trên `this.db` — ngoài mọi transaction,
+   * trước khi `db.transaction` mở ra — nên nó là một phép đọc-rồi-quyết không khóa gì: hai
+   * lượt ghi song song cùng đọc thấy sổ trống, cả hai qua cửa, cả hai ghi.
+   *
+   * Migration `0050` chuyển trọng tài xuống DB bằng cách ánh xạ giao thức thành KHOẢNG
+   * (`tcp → [1,1]`, `udp → [2,2]`, `both → [1,2]`) rồi hỏi `&&` thay cho `=`. Không khóa nào,
+   * và không ai phải nhớ gì.
+   *
+   * ===== VÌ SAO VẪN GIỮ HÀM NÀY =====
+   *
+   * `23P01` dịch qua `translate()` chỉ nói được "port này đã có rule khác". Hàm này đọc sổ
+   * nên nói được ĐỤNG RULE NÀO — thứ người trực cần để đi sửa. Nó là đường nhanh cho câu lỗi
+   * tốt; khi nó lỡ mất (đọc xong thì người khác vừa ghi) thì DB bắt, và người dùng vẫn nhận
+   * 409 tiếng Việt chứ không phải 500.
+   *
+   * `tcp` vs `udp` vẫn cho qua ở CẢ HAI tầng: Draytek khai riêng hai giao thức cùng port là
+   * việc hợp lệ.
    */
   private async requireNoProtocolOverlap(
     input: NatRuleInput,

@@ -259,26 +259,51 @@ export class LicenseAssignmentService {
        * buộc phải nối đuôi, nên người thứ hai đếm được `used = 10` và bị chặn đúng luật.
        * Khóa trên hàng license (không phải trên các dòng gán) vì dòng gán của người kia CHƯA
        * TỒN TẠI lúc ta đếm — không có gì để mà khóa.
+       *
+       * ĐỌC LẠI `seat_total` TRONG CHÍNH CÂU KHÓA NÀY, không dùng lại `software.seatTotal`.
+       *
+       * Bản trước chỉ `select({ id })`: hàng được KHÓA mà không được ĐỌC. Phép so bên dưới vẫn
+       * lấy con số từ `findOne()` ở đầu hàm — chạy trên pool, trước khi có bất kỳ khóa nào.
+       * Giữa hai chỗ đó, một lượt hạ trần (`PATCH /software/:id`, hoặc import sửa hồ sơ) chen
+       * vào được: lượt gán đứng chờ khóa, rồi đếm `used` rất đúng và đem so với một cái trần
+       * ĐÃ KHÔNG CÒN. Ghế vượt seat lọt vào mà không ai phải khai `overSeatReason` — đúng thứ
+       * AC 3.2 dựng ra để chặn (A-05, rà soát 21/09).
+       *
+       * Khóa đúng chỗ nhưng đọc sai nguồn thì cái khóa chỉ còn là nghi lễ.
        */
-      await tx
-        .select({ id: softwareTable.id })
+      const locked = await tx
+        .select({ seatTotal: softwareTable.seatTotal })
         .from(softwareTable)
         .where(eq(softwareTable.id, softwareId))
         .for('update');
+      /*
+       * Hàng biến mất giữa chừng thì DỪNG, đừng suy ra "license không giới hạn ghế".
+       *
+       * `findOne()` ở đầu hàm đã khẳng định nó tồn tại; nếu tới đây không còn thì ai đó vừa xóa
+       * hồ sơ ngay dưới chân lượt gán, và `?? null` ở đây sẽ lặng lẽ biến chuyện đó thành "trần
+       * là null" — tức là bỏ qua trọn vẹn phép kiểm seat.
+       */
+      if (locked.length === 0) {
+        throw new NotFoundException({
+          code: 'SOFTWARE_NOT_FOUND',
+          message: 'Hồ sơ phần mềm vừa bị xóa, không gán được.',
+        });
+      }
+      const seatTotal = locked[0].seatTotal;
 
       const used = await this.usedWithin(tx, softwareId);
       const warnings: string[] = [];
-      if (software.seatTotal !== null && used >= software.seatTotal) {
+      if (seatTotal !== null && used >= seatTotal) {
         // AC 3.2: cho ghi đè nhưng PHẢI có lý do — vượt seat là chuyện pháp lý với nhà cung
         // cấp, không thể để lặng lẽ.
         if (!input.overSeatReason?.trim()) {
           throw new BadRequestException({
             code: 'SEAT_LIMIT_REACHED',
-            message: `License này đã dùng hết ${software.seatTotal} seat. Vẫn gán được nhưng phải ghi lý do.`,
+            message: `License này đã dùng hết ${seatTotal} seat. Vẫn gán được nhưng phải ghi lý do.`,
           });
         }
         warnings.push(
-          `Đang vượt seat: ${used + 1}/${software.seatTotal}. Lý do đã được ghi vào lịch sử.`,
+          `Đang vượt seat: ${used + 1}/${seatTotal}. Lý do đã được ghi vào lịch sử.`,
         );
       }
 

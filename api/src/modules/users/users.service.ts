@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, ilike, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -376,6 +376,28 @@ export class UsersService {
       .update(usersTable)
       .set({ lastLoginAt: new Date() })
       .where(eq(usersTable.id, userId));
+  }
+
+  /**
+   * `email → họ tên` cho một mẻ email — cửa thay cho `LEFT JOIN users` mà module khác từng tự
+   * viết (A-07, vá 21/09).
+   *
+   * MỘT câu hỏi cho cả trang, không phải một câu mỗi dòng: viewer audit hiện 50 dòng/trang và
+   * phần lớn do vài người thao tác, nên mẻ thật thường chỉ vài email.
+   *
+   * KHÓA CỦA MAP LÀ EMAIL ĐÃ HẠ CHỮ THƯỜNG, và đó không phải chuyện làm đẹp. Cột `email` là
+   * `citext` nên `WHERE email IN (...)` khớp không phân biệt hoa-thường ở tầng DB — nhưng
+   * `Map.get()` bên JS thì phân biệt. Trả về map khóa theo đúng chữ DB đang lưu thì một dòng
+   * audit ghi `Sep@pmh.com.vn` sẽ tra hụt một hàng `sep@pmh.com.vn` tìm thấy được, và hiện ra
+   * như "không có tên" — sai lặng lẽ, đúng kiểu sai mà không gì đỏ.
+   */
+  async namesByEmails(emails: string[]): Promise<Map<string, string>> {
+    if (emails.length === 0) return new Map();
+    const rows = await this.db
+      .select({ email: usersTable.email, fullName: usersTable.fullName })
+      .from(usersTable)
+      .where(inArray(usersTable.email, emails));
+    return new Map(rows.map((row) => [row.email.toLowerCase(), row.fullName]));
   }
 
   async listRecipients(roles: UserRole[]): Promise<{ email: string; fullName: string }[]> {

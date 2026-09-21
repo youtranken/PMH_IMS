@@ -12,8 +12,18 @@ import { redactMessage } from '../../common/log-redact';
 
 /** Cửa sổ "tuần qua" của các khối tính theo tuần. */
 const WEEK_DAYS = 7;
-/** Cửa sổ mặc định của khối "sắp hết hạn" — cùng con số với màn Expiry để hai chỗ khớp nhau. */
-const EXPIRY_WINDOW_DAYS = 30;
+/*
+ * KHÔNG CÓ HẰNG SỐ CỬA SỔ "SẮP HẾT HẠN" Ở ĐÂY — và chỗ trống này là cố ý.
+ *
+ * Từng có `const EXPIRY_WINDOW_DAYS = 30`, kèm chú thích "cùng con số với màn Expiry để hai
+ * chỗ khớp nhau". Ý định đúng, hệ quả sai: con số thật nằm ở `expiry.warning_days` trong
+ * `system_config` (AD-11, DoD gạch 8), nên truyền 30 vào là GHI ĐÈ cấu hình. Sếp nâng ngưỡng
+ * lên 60 ngày thì màn "Sắp hết hạn" nghe lời còn trang chủ vẫn 30 — mà trang chủ mới là chỗ
+ * người ta đọc (A-08, vá 21/09).
+ *
+ * Hai bản sao của một con số chỉ khớp nhau cho tới lần đầu ai đó đổi một bản. Nên dashboard
+ * thôi biết gì về cửa sổ: `expiry.list()` không tham số nghĩa là "anh tự quyết theo cấu hình".
+ */
 /**
  * Số dòng tối đa mỗi khối.
  *
@@ -169,7 +179,7 @@ export class DashboardService {
 
   private async expiringBlock(): Promise<Dashboard['expiring']> {
     try {
-      const { items } = await this.expiry.list(EXPIRY_WINDOW_DAYS);
+      const { items } = await this.expiry.list();
       return {
         available: true,
         total: items.length,
@@ -177,7 +187,9 @@ export class DashboardService {
         items: items
           .slice()
           .sort((a, b) => a.daysLeft - b.daysLeft)
-          .slice(0, 8)
+          // `MAX_ITEMS`, không phải `8` viết lại lần nữa — hằng số ngay trên đầu file này
+          // sinh ra đúng để mọi khối cắt cùng một chỗ.
+          .slice(0, MAX_ITEMS)
           .map((row) => ({
             kind: row.kind,
             label: row.label,

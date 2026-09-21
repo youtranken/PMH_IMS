@@ -1,5 +1,7 @@
 import { Pool } from 'pg';
 import { runMigrations } from '../src/database/migration-runner';
+import { UsersApiService } from '../src/modules/users/users.api';
+import { UsersService } from '../src/modules/users/users.service';
 import { AuditQueryService } from '../src/modules/audit/audit-query.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
@@ -36,7 +38,14 @@ describe('Đếm nhật ký an ninh có trần', () => {
     scratch = await createScratchDb('ims_audit_cap');
     await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
     pool = scratch.pool;
-    service = new AuditQueryService(scratch.db);
+    /*
+     * `UsersApiService` THẬT, chạy trên chính scratch DB — không phải bản giả.
+     *
+     * Từ 21/09 viewer audit tra tên người thao tác qua cửa này thay vì `LEFT JOIN users`
+     * (A-07). Cắm một bản giả trả map rỗng thì bài kiểm bên dưới vẫn xanh trong khi đường
+     * tra tên hỏng hoàn toàn — mà đó đúng là thứ vừa được thay.
+     */
+    service = new AuditQueryService(scratch.db, new UsersApiService(new UsersService(scratch.db)));
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
@@ -128,6 +137,83 @@ describe('Đếm nhật ký an ninh có trần', () => {
     },
     TEST_TIMEOUT,
   );
+
+  /**
+   * VẾ THAY CHO `LEFT JOIN users` (A-07, vá 21/09).
+   *
+   * Gỡ một câu JOIN mà không có bài nào hỏi "tên còn hiện ra không" thì bản vá AD-2 đổi một
+   * lỗi kiến trúc lấy một lỗi hiển thị — và lỗi hiển thị ấy im lặng: cột Người thao tác chỉ
+   * trống đi, không ai 500, không gì đỏ.
+   */
+  describe('tên người thao tác, tra qua cửa chính thay vì JOIN', () => {
+    it(
+      'hiện tên của người có trong sổ, và `null` cho actor không phải người dùng',
+      async () => {
+        await pool.query(
+          `INSERT INTO users (email, full_name, role, password_hash)
+           VALUES ('nguoi.that@pmh.com.vn', 'Nguyễn Văn Thật', 'admin', 'x')`,
+        );
+        await addRows(1, 'test.actor-name');
+        await pool.query(
+          `INSERT INTO audit_log (actor, action, object_type, object_id)
+           VALUES ('nguoi.that@pmh.com.vn', 'test.actor-name', 'device', 'co-ten'),
+                  ('system', 'test.actor-name', 'device', 'khong-ten')`,
+        );
+
+        const page = await service.listAudit({
+          action: 'test.actor-name',
+          page: 1,
+          pageSize: 50,
+        });
+        const byObject = new Map(page.items.map((row) => [row.objectId, row.actorName]));
+        expect(byObject.get('co-ten')).toBe('Nguyễn Văn Thật');
+        // Job nền không phải một người trong sổ — `null` là câu trả lời đúng, không phải thiếu.
+        expect(byObject.get('khong-ten')).toBeNull();
+      },
+      TEST_TIMEOUT,
+    );
+
+    /**
+     * HAI CHIỀU, VÀ CHIỀU THỨ HAI MỚI LÀ CHIỀU CÓ RĂNG.
+     *
+     * Bản đầu của bài này chỉ có chiều "sổ lưu chữ thường, nhật ký ghi chữ hoa" — và nó XANH
+     * cả khi gỡ `.toLowerCase()` khỏi khóa map. Lý do: khóa map lúc ấy là `row.email`, tức
+     * chuỗi ĐANG LƯU, vốn đã chữ thường; còn vế tra thì `r.actor.toLowerCase()` cũng ra chữ
+     * thường. Hai vế gặp nhau, bẫy không bung.
+     *
+     * Bẫy thật nằm ở chiều ngược lại: `users.email` là `citext` nên nó CHẤP NHẬN lưu
+     * `Sep@PMH.com.vn` nguyên dạng, và `WHERE email IN (...)` vẫn khớp. Lúc đó khóa map là
+     * chuỗi có chữ hoa, tra bằng chuỗi đã hạ thì hụt — và cột Người thao tác trống đi, im
+     * lặng, không ai 500.
+     *
+     * Đã gieo đột biến (bỏ `.toLowerCase()`) để kiểm: ca dưới ĐỎ, ca trên vẫn xanh.
+     */
+    it.each([
+      ['hoa.thuong@pmh.com.vn', 'Hoa.Thuong@PMH.com.vn', 'sổ thường, nhật ký hoa'],
+      ['Chu.Hoa@PMH.com.vn', 'chu.hoa@pmh.com.vn', 'sổ HOA, nhật ký thường — chiều có răng'],
+    ])(
+      'citext: lưu %p, nhật ký ghi %p → vẫn ra tên (%s)',
+      async (stored, logged) => {
+        await pool.query(
+          `INSERT INTO users (email, full_name, role, password_hash)
+           VALUES ($1, 'Lê Thị Hoa', 'member', 'x')`,
+          [stored],
+        );
+        await pool.query(
+          `INSERT INTO audit_log (actor, action, object_type, object_id)
+           VALUES ($1, $2, 'device', 'ca-citext')`,
+          [logged, `test.citext.${stored}`],
+        );
+        const page = await service.listAudit({
+          action: `test.citext.${stored}`,
+          page: 1,
+          pageSize: 50,
+        });
+        expect(page.items[0]?.actorName).toBe('Lê Thị Hoa');
+      },
+      TEST_TIMEOUT,
+    );
+  });
 });
 
 interface PlanNode {
