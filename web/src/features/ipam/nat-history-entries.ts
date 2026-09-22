@@ -1,5 +1,6 @@
 import type { TFunction } from 'i18next';
 import type { HistoryEntry } from '@/ui/history-panel';
+import { describeFieldChanges, type FieldChanges } from '@/ui/history-changes';
 
 /**
  * Đổi `nat_rule_history` thô thành dòng người đọc được cho `HistoryPanel` dùng chung.
@@ -48,25 +49,17 @@ export function toNatHistory(rows: NatHistoryRow[], t: TFunction): HistoryEntry[
   }));
 }
 
-function describe(
-  changes: Record<string, { before: unknown; after: unknown }> | null,
-  t: TFunction,
-): string | null {
-  if (!changes) return null;
-  const parts = Object.entries(changes).map(([field, change]) => {
-    const label = FIELD_LABEL[field] ? t(FIELD_LABEL[field]) : field;
-    // Trường KHÔNG đổi đi kèm chỉ để làm bối cảnh (vd `ports` trong dòng "Gỡ rule") — vẽ
-    // "A → A" là bắt người đọc dừng lại tìm xem đã đổi gì.
-    if (change.before === change.after) return `${label} ${display(field, change.after, t)}`;
-    return `${label}: ${display(field, change.before, t)} → ${display(field, change.after, t)}`;
+/** Nhãn + cách đọc riêng của sổ NAT; phần chung ở `ui/history-changes.ts` (AD-15, F-09). */
+function describe(changes: FieldChanges, t: TFunction): string | null {
+  return describeFieldChanges(changes, t, {
+    label: (field) => (FIELD_LABEL[field] ? t(FIELD_LABEL[field]) : field),
+    // `enabled` là boolean trong DB nhưng "true/false" không phải tiếng Việt.
+    display: (field, value) =>
+      field === 'enabled'
+        ? t(value === true ? 'history.nat.stEnabledOn' : 'history.nat.stEnabledOff')
+        : undefined,
+    // `ports` đi kèm dòng "Gỡ rule" chỉ để làm bối cảnh — xem chú thích ở hàm dùng chung.
+    unchangedAsContext: true,
   });
-  return parts.length > 0 ? parts.join('; ') : null;
 }
 
-function display(field: string, value: unknown, t: TFunction): string {
-  if (value === null || value === undefined || value === '') return t('history.blank');
-  // `enabled` là boolean trong DB nhưng "true/false" không phải tiếng Việt.
-  if (field === 'enabled')
-    return t(value === true ? 'history.nat.stEnabledOn' : 'history.nat.stEnabledOff');
-  return String(value);
-}

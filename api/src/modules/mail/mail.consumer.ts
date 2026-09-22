@@ -6,6 +6,7 @@ import { OutboxService } from '../outbox/outbox.service';
 import { UsersApiService } from '../users/users.api';
 import { renderMail } from './mail-layout';
 import { MailTransportService } from './mail-transport.service';
+import { UI_PATHS } from '../../common/ui-paths';
 
 const APP_URL = () => process.env.APP_BASE_URL ?? 'https://ims.pmh.com.vn';
 
@@ -86,7 +87,7 @@ export class MailConsumer {
         { label: 'Lúc', value: request.createdAt.toLocaleString('vi-VN') },
       ],
       ctaLabel: 'Mở màn duyệt',
-      ctaUrl: `${APP_URL()}/duyet-yeu-cau`,
+      ctaUrl: `${APP_URL()}${UI_PATHS.approvals}`,
       footnote:
         'Duyệt được trên điện thoại. Quyền cấp ra luôn có thời hạn và tự cắt khi hết giờ.',
     });

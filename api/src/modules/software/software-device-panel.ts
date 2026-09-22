@@ -3,6 +3,7 @@ import type { DevicePanel, DevicePanelProvider } from '../../common/device-panel
 import { DevicePanelRegistry } from '../../common/device-panels.registry';
 import { LicenseAssignmentService } from './license-assignment.service';
 import { SoftwareService } from './software.service';
+import { UI_PATHS } from '../../common/ui-paths';
 
 /**
  * Khu "License đang cài" trên trang chi tiết thiết bị (story 3.2 + cơ chế 2.5).
@@ -37,7 +38,7 @@ export class SoftwareDevicePanel implements DevicePanelProvider, OnModuleInit {
         return {
           label: license.name,
           value: license.code,
-          link: `/phan-mem/${license.id}`,
+          link: UI_PATHS.software(license.id),
         };
       }),
     );

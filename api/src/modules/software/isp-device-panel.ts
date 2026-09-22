@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import type { DevicePanel, DevicePanelProvider } from '../../common/device-panels';
 import { DevicePanelRegistry } from '../../common/device-panels.registry';
 import { IspLineService } from './isp-line.service';
+import { UI_PATHS } from '../../common/ui-paths';
 
 /**
  * Khu "Đường truyền ISP" trên trang thiết bị biên (AC 3.3: trang Draytek hiển thị các đường
@@ -28,7 +29,7 @@ export class IspDevicePanel implements DevicePanelProvider, OnModuleInit {
     if (lines.length === 0) return null;
 
     const items = lines.flatMap((line) => [
-      { label: line.code, value: line.provider, link: `/duong-truyen/${line.id}` },
+      { label: line.code, value: line.provider, link: UI_PATHS.ispLine(line.id) },
       ...(line.hotline ? [{ label: 'Hotline', value: line.hotline }] : []),
       ...(line.contractNo ? [{ label: 'Số hợp đồng', value: line.contractNo }] : []),
       ...(line.wanIp ? [{ label: 'IP WAN', value: line.wanIp }] : []),
