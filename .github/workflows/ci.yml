@@ -82,6 +82,7 @@ jobs:
   # cổng nào; đó là cơ chế đã để lọt lỗi `__dirname` trong gói ESM hôm 03/09 (globalSetup chết,
   # KHÔNG bài nào chạy, lệnh vẫn thoát 0).
   e2e-typecheck:
+    name: e2e — kiểm kiểu + lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -94,6 +95,20 @@ jobs:
         working-directory: e2e
       - name: Kiểm kiểu bộ E2E (tsc --noEmit)
         run: npm run typecheck
+        working-directory: e2e
+      # LINT BỘ E2E CŨNG CHẠY Ở ĐÂY (§18 #5, thêm 22/09).
+      #
+      # Trước đó job này chỉ có `tsc --noEmit`, nên lint của `e2e/` KHÔNG có cổng chặn merge —
+      # nó chỉ sống trong `ops/ci-local.sh`, thứ duy nhất ép nó là người chạy tay. Ba luật
+      # đang nằm sau nó: cấm `sleep`, cấm ghim trần selector CSS, và AD-16 (định danh tiếng
+      # Việt). Bảng §16.8 của sổ rà soát xếp "e2e lint" cạnh hai dòng web/api vốn LÀ cổng
+      # GitHub, nên đọc lướt sẽ tưởng cả ba đều chặn merge — nay thì đúng là cả ba.
+      #
+      # `--max-warnings=0` nằm sẵn trong `e2e/package.json`, nên mức `warn` của
+      # `no-restricted-syntax` vẫn làm job này ĐỎ. Mức ấy để phân biệt hai nhóm luật khi đọc
+      # log, không phải để nới.
+      - name: Lint bộ E2E
+        run: npm run lint
         working-directory: e2e
 
   # ===================================================================================

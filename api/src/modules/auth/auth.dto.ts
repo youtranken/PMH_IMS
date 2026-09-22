@@ -1,4 +1,12 @@
-import { IsEmail, IsOptional, IsString, Length, Matches } from 'class-validator';
+import {
+  IsEmail,
+  IsString,
+  Length,
+  Matches,
+  MaxLength,
+  MinLength,
+  ValidateIf,
+} from 'class-validator';
 
 export class LoginDto {
   @IsEmail({}, { message: 'Email không hợp lệ.' })
@@ -23,15 +31,34 @@ export class TotpTokenDto {
  * phải của DTO: nó cần biết tuổi phiên và cờ `totp_pending`, hai thứ DTO không thấy.
  */
 export class TotpEnrollStartDto {
-  @IsOptional()
+  /**
+   * `@ValidateIf` CHỨ KHÔNG `@IsOptional` (§18 #9, vá 22/09).
+   *
+   * `@IsOptional()` của class-validator bỏ qua mọi luật khi giá trị là `undefined` HOẶC
+   * `null`. Nên `{"currentPassword": null}` qua được cửa, rồi tới service:
+   *
+   *     if (currentPassword === undefined) → REAUTH_REQUIRED
+   *
+   * `null !== undefined`, nên nó KHÔNG rơi vào nhánh "chưa chứng minh lại mình" mà rơi xuống
+   * `passwords.verify(hash, null)` — tức nhánh SAI MẬT KHẨU. Người dùng tiêu một lượt đoán,
+   * và một dòng `auth.totp.enroll.reauth_failed` vào sổ, cho một request chưa hề gửi mật khẩu.
+   *
+   * `@ValidateIf(… !== undefined)` chỉ miễn đúng ca VẮNG MẶT — thứ mà luồng đăng nhập bắt
+   * buộc cài 2 lớp cần. Gửi `null` tường minh thì phải trượt ở cửa, không đi tiếp.
+   *
+   * Cùng hình dạng với `kind`/`licenseModel` bên software.
+   */
+  @ValidateIf((dto: TotpEnrollStartDto) => dto.currentPassword !== undefined)
   @IsString()
-  @Length(1, 200, { message: 'Chưa nhập mật khẩu hiện tại.' })
+  @MinLength(1, { message: 'Chưa nhập mật khẩu hiện tại.' })
+  @MaxLength(200, { message: 'Mật khẩu hiện tại quá dài (tối đa 200 ký tự).' })
   currentPassword?: string;
 }
 
 export class ChangePasswordDto {
   @IsString()
-  @Length(1, 200, { message: 'Chưa nhập mật khẩu hiện tại.' })
+  @MinLength(1, { message: 'Chưa nhập mật khẩu hiện tại.' })
+  @MaxLength(200, { message: 'Mật khẩu hiện tại quá dài (tối đa 200 ký tự).' })
   currentPassword!: string;
 
   @IsString()

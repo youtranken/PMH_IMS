@@ -39,12 +39,45 @@ import { join } from 'node:path';
  * Xử lý cả block comment (kể cả nhiều dòng) lẫn `//` tới hết dòng.
  *
  * GIỚI HẠN PHẢI BIẾT: đây là phép thay chuỗi, không phải bộ phân tích cú pháp. Một chuỗi ký tự
- * chứa `//` bên trong nó cũng bị cắt. Với việc đang làm — tìm tên hàm, từ khóa SQL và decorator
- * trong thân một lớp — điều đó vô hại, và nó thiên về phía AN TOÀN: cắt nhầm chỉ có thể làm
- * bài kiểm ĐỎ, không bao giờ làm nó xanh sai. Cần chính xác hơn thì dùng AST, đừng nới hàm này.
+ * chứa `//` bên trong nó — một URL chẳng hạn — làm phần còn lại của DÒNG biến mất.
+ *
+ * ===== SỬA LẠI MỘT LỜI HỨA SAI (§18 #1, 22/09) =====
+ *
+ * Docblock cũ viết: *"cắt nhầm chỉ có thể làm bài kiểm ĐỎ, không bao giờ làm nó xanh sai"*.
+ * Câu ấy đúng với khẳng định KHẲNG ĐỊNH (`toContain`) và SAI với khẳng định PHỦ ĐỊNH
+ * (`not.toContain`) — mà `vault-surface.spec.ts` có sáu khẳng định phủ định.
+ *
+ * Với `not.toContain`, cắt THỪA làm bài XANH: thứ nó đang canh biến mất vì bị cắt, chứ không
+ * vì mã đã đúng. Một lời hứa an toàn sai hướng còn nguy hơn không hứa gì — người viết bài sau
+ * đọc nó rồi thôi không nghĩ nữa.
+ *
+ * Nên: khẳng định PHỦ ĐỊNH thì dùng `stripCommentsKeeping` bên dưới, khai rõ đoạn mã phải còn
+ * lại những gì. Cần chính xác hơn nữa thì dùng AST, đừng nới hàm này.
  */
 export function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+}
+
+/**
+ * `stripComments` + NEO: ném nếu phép cắt ăn mất thứ mà nơi gọi khai là phải còn.
+ *
+ * Dùng cho mọi khẳng định PHỦ ĐỊNH (`not.toContain`). Neo là đoạn mã ĐỨNG QUANH thứ đang
+ * canh — nó còn thì phép cắt chưa chạm tới vùng đó, nên câu "không tìm thấy X" mới có nghĩa.
+ *
+ * Ném chứ không trả rỗng hay `null`: nơi gọi là một bài kiểm, và thứ nó cần nhất là ĐỎ kèm
+ * lý do đúng. Trả về một chuỗi đã cắt cụt chính là cách lỗi này sống được từ đầu.
+ */
+export function stripCommentsKeeping(source: string, ...anchors: string[]): string {
+  const stripped = stripComments(source);
+  const lost = anchors.filter((anchor) => !stripped.includes(anchor));
+  if (lost.length > 0) {
+    throw new Error(
+      `stripComments đã ăn mất neo: ${lost.join(' · ')}. Đoạn mã có chuỗi chứa "//" ` +
+        '(URL?) nên phần còn lại của dòng bị cắt — khẳng định phủ định trên kết quả này sẽ ' +
+        'XANH SAI. Xem chú thích ở stripComments.',
+    );
+  }
+  return stripped;
 }
 
 /* ─────────────────────────── Quét controller ─────────────────────────── */
@@ -119,13 +152,34 @@ export function routesOf(src: string): RouteBlock[] {
   for (let i = 0; i < lines.length; i += 1) {
     if (!HTTP_DECORATOR.test(lines[i].trim())) continue;
     let from = i;
+    let depth = 0;
     while (from > 0) {
       const prev = lines[from - 1].trim();
       // Ranh giới = hết thân member trước (`}`) hoặc dòng mở lớp (`… {`). Dòng trống và dòng
       // chú thích KHÔNG phải ranh giới: docblock hay nằm giữa `@Roles` và `@Get`.
       // `endsWith('}')` phủ cả thân method một dòng (`a() {}`), không chỉ dòng `}` đứng riêng.
       // Decorator không bao giờ kết thúc bằng `}` (chúng đóng bằng `)`), nên không cắt nhầm.
-      if (prev.endsWith('}') || prev.endsWith('{')) break;
+      /*
+       * RANH GIỚI CHỈ TÍNH KHI NGOẶC ĐƠN ĐÃ CÂN (§18 #10, vá 22/09).
+       *
+       * Bản trước lấy thẳng `prev.endsWith('{')`, kèm lập luận "decorator không bao giờ kết
+       * thúc bằng `}` (chúng đóng bằng `)`)". Lập luận ấy nói về `}` và bỏ quên `{` — mà
+       * `@Throttle({` kết thúc đúng bằng `{`.
+       *
+       * Nên một decorator viết XUỐNG DÒNG cắt cụt khối, và `@Roles` ở phía trên biến mất khỏi
+       * tầm nhìn: cổng AD-9 báo một route ĐÃ khai `@Roles` là THIẾU. Đỏ oan, và người ta sẽ
+       * đi "sửa" một route không hỏng. Hôm nay chưa nổ vì cả bốn chỗ `@Throttle` đều viết một
+       * dòng — lượt `prettier` đầu tiên bẻ chúng xuống dòng là nổ.
+       *
+       * Đếm ngoặc trong lúc đi ngược: đang ở giữa một decorator nhiều dòng thì `depth > 0`,
+       * và mọi `{`/`}` gặp trong đó là chuyện NỘI BỘ của decorator, không phải ranh giới.
+       */
+      depth += (prev.match(/\)/g)?.length ?? 0) - (prev.match(/\(/g)?.length ?? 0);
+      // Và một dòng MỞ DECORATOR không bao giờ là ranh giới, dù nó kết thúc bằng `{`:
+      // `@Throttle({` cân ngoặc ngay tại chính nó (một `(` mở, đóng ở `})` phía dưới),
+      // nên nếu chỉ xét `depth === 0` thì nó tự cắt cụt khối của chính mình.
+      const isDecorator = prev.startsWith('@');
+      if (depth === 0 && !isDecorator && (prev.endsWith('}') || prev.endsWith('{'))) break;
       from -= 1;
     }
     out.push({
