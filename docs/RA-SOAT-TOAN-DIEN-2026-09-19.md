@@ -709,7 +709,7 @@ Excel thì mở cửa sau"*. **Cửa sau HTTP còn rộng hơn Excel và chưa a
 - [x] **D-02** Một dòng `sweep.register(purgeOld)` — ~~54.904 phiên chết đang nằm đó~~ → **ĐÃ LÀM 21/09**. Kèm luôn retention cho `outbox` (mục hoãn). Đo lại 21/09 thì con số KHÁC sổ: outbox 69.583 (100% đã xử lý), sessions 67.394 nhưng chỉ **1** hàng quá 30 ngày — lượt gieo 200k hồ sơ đẻ ra toàn hàng mới. Lỗ vẫn nguyên vì nó là lỗ CẤU TRÚC: `purgeOld()` có sẵn, chú thích ghi "Gọi từ sweep", và không ai gọi. Ngưỡng vào `system_config` (`0051`), không viết cứng
 - [ ] **D-03** CHECK cho `approval.state`/`kind`/`subject_type`
 - [ ] **D-04 + D-05** Một FK chung cho `department`/`isp_provider`/`service_port`: `ON UPDATE CASCADE ON DELETE RESTRICT`
-- [ ] **M-03** Handler `outbox-purge` (56.507 hàng, 0 chưa xử lý)
+- [x] **M-03** Handler `outbox-purge` — **ĐÃ LÀM 21/09** cùng D-02, migration `0051`. *(Ô này suýt bị bỏ quên: tôi tick D-02 và mục hoãn nhưng sót M-03, tuy cả ba nói về cùng một handler. Đúng lớp lỗi mà mục 8.9 vừa dọn — một việc nằm ở ba chỗ thì tick hai chỗ trông đã xong.)* Đo lại 21/09: 69.583 hàng, không phải 56.507
 - [ ] **B-06** Tách hai nguyên nhân trong `mail.consumer.ts:36-40`: thiếu mẫu = lỗi, hồ sơ đã xóa = vô hại
 - [ ] **B-15** `UPDATE system_config SET value = '20' WHERE key = 'login.rate_limit_per_ip'`
 - [ ] **B-08 / T-02** Bỏ nút CTA khỏi hai email cảnh báo bảo mật (đang dẫn tới 404)
