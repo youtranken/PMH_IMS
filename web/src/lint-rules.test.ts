@@ -34,11 +34,26 @@ const WEB_ROOT = join(__dirname, '..');
  * Đặt file probe sai chỗ là bài kiểm xanh/đỏ vì lý do chẳng liên quan — tôi đã dính đúng lỗi
  * đó lúc viết bài này.
  */
-function lintSnippet(code: string, under = 'src'): { output: string; failed: boolean } {
+function lintSnippet(
+  code: string,
+  under = 'src',
+  /**
+   * TÊN FILE PROBE — và nó KHÔNG phải chi tiết vặt (§18 #14, thêm 22/09).
+   *
+   * Mọi probe trước nay đều tên `probe.tsx`, nên cấu hình dành riêng cho FILE KIỂM
+   * (`web/eslint.config.mjs`, khối `**\/*.test.tsx`) chưa bao giờ được bài nào đi qua. Khối
+   * đó khai lại `'no-restricted-syntax': ['error', NO_VIETNAMESE_IDENT]` — tức tắt luật
+   * `window.confirm` nhưng CỐ Ý GIỮ AD-16 cho file kiểm.
+   *
+   * Một ngoại lệ cố ý mà không bài nào ghim lại là một ngoại lệ sẽ bị "dọn" thành `'off'`
+   * trọn gói ở lần refactor đầu tiên, và AD-16 lặng lẽ biến mất khỏi toàn bộ bài kiểm web.
+   */
+  fileName = 'probe.tsx',
+): { output: string; failed: boolean } {
   // Đặt trong `src/` chứ không phải thư mục tạm hệ thống: cấu hình áp theo đường dẫn tương đối
   // so với gốc `web/`, nên file nằm ngoài `src/` không nhận đúng luật.
   const dir = mkdtempSync(join(WEB_ROOT, under, '__lint-probe__'));
-  const file = join(dir, 'probe.tsx');
+  const file = join(dir, fileName);
   try {
     writeFileSync(file, code, 'utf8');
     try {
@@ -159,5 +174,25 @@ ${output}`).toBe(true);
     );
     expect(failed, `eslint không được báo lỗi. Đầu ra:
 ${output}`).toBe(false);
+  });
+});
+
+/**
+ * NGOẠI LỆ CỐ Ý CHO FILE KIỂM — giữ AD-16, bỏ luật `window.confirm` (§18 #14).
+ *
+ * `web/eslint.config.mjs` viết LẠI cả mảng `no-restricted-syntax` cho `**\/*.test.tsx` thay
+ * vì đặt `'off'`, kèm chú thích giải thích vì sao. Hai bài dưới đây là thứ giữ cho lời giải
+ * thích ấy còn đúng.
+ */
+describe('cấu hình riêng cho FILE KIỂM — cả hai vế', () => {
+  it('bài kiểm ĐƯỢC gọi `confirm` (đó là lý do có ngoại lệ)', () => {
+    const { failed } = lintSnippet('confirm("probe");\n', 'src', 'probe.test.tsx');
+    expect(failed).toBe(false);
+  });
+
+  it('nhưng AD-16 thì VẪN áp — bài kiểm cũng là mã', () => {
+    const { output, failed } = lintSnippet('const soLượng = 1;\n', 'src', 'probe.test.tsx');
+    expect(failed).toBe(true);
+    expect(output).toContain('AD-16');
   });
 });

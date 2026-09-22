@@ -633,6 +633,7 @@ function NatForm({
             {ports.length >= maxPorts ? null : (
               <ServicePortPicker
                 services={services}
+                pending={lists.isPending}
                 label={t('nat.external')}
                 onPick={(service) => applyService(service, 'external')}
                 onAdd={() => setAddingService('external')}
@@ -652,6 +653,7 @@ function NatForm({
             />
             <ServicePortPicker
               services={services}
+              pending={lists.isPending}
               label={t('nat.internalPort')}
               onPick={(service) => applyService(service, 'internal')}
               onAdd={() => setAddingService('internal')}

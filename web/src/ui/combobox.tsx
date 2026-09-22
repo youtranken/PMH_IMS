@@ -29,6 +29,17 @@ interface ComboboxProps<T> {
    */
   failed?: boolean;
   /**
+   * Nguồn lựa chọn ĐANG TẢI — nơi gọi truyền `query.isPending` vào đây.
+   *
+   * Thiếu cờ này thì "chưa biết" và "không có gì khớp" đọc y hệt nhau: trong lúc danh mục còn
+   * bay, `options` là `[]` và menu nói "không có dịch vụ nào khớp" kèm dòng "＋ Khai mới".
+   * Người dùng được MỜI đi khai trùng một dịch vụ đã có — và cái khai trùng ấy vào DB.
+   *
+   * Cùng họ với `failed`: ba trạng thái, ba câu. `failed` phân biệt "hỏng" với "rỗng";
+   * `pending` phân biệt "chưa biết" với "rỗng".
+   */
+  pending?: boolean;
+  /**
    * Câu hiện khi LỌC KHÔNG RA — khác `failed` (nguồn hỏng) và khác im lặng.
    *
    * Không truyền thì menu chỉ còn mỗi dòng `action` (nếu có), tức người dùng gõ một từ rồi
@@ -72,6 +83,7 @@ export function Combobox<T>({
   ariaLabel,
   action,
   failed,
+  pending,
   empty,
   required,
 }: ComboboxProps<T>) {
@@ -144,7 +156,11 @@ export function Combobox<T>({
   const open =
     touched &&
     !closed &&
-    (options.length > 0 || action !== undefined || failed === true || empty !== undefined);
+    (options.length > 0 ||
+      action !== undefined ||
+      failed === true ||
+      pending === true ||
+      empty !== undefined);
   const { refs, floatingStyles } = useAnchoredMenu(open, {
     matchWidth: true,
     maxHeight: 260,
@@ -226,9 +242,20 @@ export function Combobox<T>({
             e.preventDefault();
             setActive((i) => Math.max(i - 1, 0));
           } else if (e.key === 'Enter') {
-            e.preventDefault();
+            /*
+             * CHỈ NUỐT `Enter` KHI CÓ GÌ ĐÓ ĐỂ CHỌN (§18 #16, vá 22/09).
+             *
+             * Bản trước gọi `preventDefault()` vô điều kiện. Lọc ra 0 dòng thì
+             * `options[active]` là `undefined` — không có gì để chọn, nhưng phím vẫn bị nuốt.
+             * Người dùng gõ xong, bấm Enter để lưu phiếu, và KHÔNG CÓ GÌ XẢY RA: form không
+             * submit, menu không nói gì. Họ bấm lại, vẫn không gì, rồi kết luận hệ thống treo.
+             *
+             * Không có dòng nào thì để phím đi tiếp — form submit như mọi ô input khác.
+             */
             const option = options[active];
-            if (option) choose(option);
+            if (!option) return;
+            e.preventDefault();
+            choose(option);
           } else if (e.key === 'Escape') {
             // đóng menu tại chỗ — KHÔNG để Escape lan lên đóng cả modal
             e.stopPropagation();
@@ -259,7 +286,12 @@ export function Combobox<T>({
             {/* Dòng "tạo mới" ghim ở đầu, KHÔNG nằm trong danh sách chọn: nó không phải một
                 lựa chọn, và phải với tới được cả khi lọc ra rỗng — đúng lúc người dùng cần
                 nó nhất là lúc thứ họ tìm chưa tồn tại. */}
-            {action ? (
+            {pending ? (
+              <li className="combo-empty" role="presentation">
+                <span>{t('common.loading')}</span>
+              </li>
+            ) : null}
+            {!pending && action ? (
               <li className="combo-action-row" role="presentation">
                 <button
                   type="button"
@@ -283,7 +315,7 @@ export function Combobox<T>({
                 <span role="alert">{t('common.optionsLoadError')}</span>
               </li>
             ) : null}
-            {!failed && empty && options.length === 0 ? (
+            {!failed && !pending && empty && options.length === 0 ? (
               <li className="combo-empty" role="presentation">
                 <span>{empty}</span>
               </li>

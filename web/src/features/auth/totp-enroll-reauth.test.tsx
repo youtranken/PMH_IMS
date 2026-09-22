@@ -106,7 +106,22 @@ function renderEnroll() {
 function watchNavigation(): { to: () => string | null } {
   let target: string | null = null;
   vi.stubGlobal('location', {
-    ...window.location,
+    /*
+     * KHAI TỪNG THUỘC TÍNH, KHÔNG `{...window.location}` (§18 #15, sửa 22/09).
+     *
+     * Trong jsdom, các thuộc tính của `Location` là ACCESSOR nằm trên prototype, nên phép
+     * spread — vốn chỉ chép thuộc tính RIÊNG, khả liệt kê — cho ra một object gần như rỗng.
+     * `location.origin` và `location.pathname` thành `undefined`.
+     *
+     * Bài này xanh vì đường đi của nó không đọc hai thứ đó — may, không phải thiết kế. Bài
+     * kế tiếp ai đó viết trên cùng cái stub này sẽ gặp `undefined` và đi tìm lỗi ở chỗ khác.
+     */
+    origin: window.location.origin,
+    pathname: window.location.pathname,
+    search: window.location.search,
+    hash: window.location.hash,
+    host: window.location.host,
+    protocol: window.location.protocol,
     get href() {
       return 'http://localhost/';
     },

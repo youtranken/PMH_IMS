@@ -16,11 +16,19 @@ import { portRangeLabel, type ServicePortRow } from '@/lib/catalog-types';
  */
 export function ServicePortPicker({
   services,
+  pending,
   onPick,
   onAdd,
   label,
 }: {
   services: ServicePortRow[];
+  /**
+   * Danh mục dịch vụ ĐANG TẢI — nối thẳng `lists.isPending` vào đây (§18 #7).
+   *
+   * Thiếu nó thì trong lúc danh mục còn bay, menu nói "không có dịch vụ nào khớp" kèm dòng
+   * "＋ Khai dịch vụ mới" — tức MỜI người dùng khai trùng một dịch vụ đã có sẵn.
+   */
+  pending?: boolean;
   onPick: (service: ServicePortRow) => void;
   onAdd: () => void;
   /** Ghép vào tên trợ năng — "Chọn dịch vụ cho Port ngoài". */
@@ -68,6 +76,7 @@ export function ServicePortPicker({
          đã nằm sẵn trong `vi.ts` từ lâu nhưng chưa ai nối vào — `.combo-empty` bên
          `form-layout.css` cũng vậy. Đấu dây 20/09/2026. */
       empty={t('nat.serviceEmpty')}
+      pending={pending}
     />
   );
 }

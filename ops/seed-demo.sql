@@ -30,7 +30,16 @@
 BEGIN;
 
 -- Cùng một hạt giống ⇒ hai lượt gieo cho cùng một bộ dữ liệu, so sánh được.
-SELECT setseed(0.42);
+-- KHÔNG có `setseed` ở đây, và chỗ trống này là cố ý (§18 #12, bỏ 22/09).
+--
+-- Từng có `SELECT setseed(0.42);` với ý "gieo cùng một hạt để lượt gieo tái lập được". Nhưng
+-- 305 dòng còn lại của file KHÔNG gọi `random()` lần nào — dữ liệu demo là hằng số viết tay.
+-- Cái hại không phải một dòng thừa: nó DẠY người sau rằng thêm `random()` vào đây vẫn tái lập
+-- được. Sai — `setseed` chỉ ảnh hưởng `random()` trong CÙNG một phiên, mà lượt gieo này chạy
+-- qua `psql` nhiều lần, nhiều phiên.
+--
+-- Cần ngẫu nhiên mà tái lập được thì gieo lại `setseed` NGAY TRƯỚC mỗi câu dùng `random()`,
+-- trong cùng phiên, và nói rõ ra.
 
 -- Mốc thời gian: mọi ngày tháng tính LÙI/TỚI từ hôm nay, để màn "Sắp hết hạn"
 -- luôn có nội dung dù gieo lại sau vài tháng.

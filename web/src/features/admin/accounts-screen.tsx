@@ -390,16 +390,38 @@ export function AccountsScreen({ me }: { me: Me }) {
       },
     ],
     /*
-     * Khai ĐỦ dep (20/09/2026). Sáu cái thêm vào đều BỀN tham chiếu — `askConfirm`/`toast`
-     * đến từ context, `.mutate` của TanStack v5 ổn định, `refresh` vừa được bọc
-     * `useCallback` ngay trong lượt sửa này (bản đầu tôi tưởng nó đã bọc sẵn — không) — nên
-     * memo không vì thế mà tính lại thêm lần nào. Đổi lại, cổng thôi bỏ qua file này.
+     * DEP LÀ GIÁ TRỊ ĐƯỢC DÙNG, KHÔNG PHẢI CẢ ĐỐI TƯỢNG MUTATION (§18 #2, sửa 22/09).
+     *
+     * Chú thích cũ viết: *"`.mutate` của TanStack v5 ổn định, nên memo không vì thế mà tính
+     * lại thêm lần nào"*. Câu ấy đúng về `.mutate` và SAI về thứ thật sự nằm trong deps —
+     * đó là cả `setStatus` / `resetPassword` / `resetTotp`, tức ĐỐI TƯỢNG mutation, và
+     * TanStack dựng lại chúng sau mỗi lần render.
+     *
+     * Nên `columns` tính lại ở MỌI lượt render, và `useMemo` ở đây chỉ còn là trang trí —
+     * đúng cái bẫy mà cùng lượt sửa 20/09 đang vá cho `kindLabel` và `refresh`. Chú thích mô
+     * tả đúng ý định và sai về hệ quả, lần thứ tư trong đợt rà soát này.
+     *
+     * Nay khai đúng hai thứ đang dùng: `.mutate` (bền theo hợp đồng của v5) và `.isPending`
+     * (một boolean). Memo tính lại khi một cờ chờ lật — đúng lúc cần, và chỉ lúc đó.
      */
+    /*
+     * `exhaustive-deps` muốn CẢ ĐỐI TƯỢNG mutation ở đây, và làm theo nó là dựng lại đúng lỗi
+     * vừa vá: đối tượng ấy được TanStack tạo mới sau mỗi render, nên memo tính lại mọi lượt.
+     *
+     * Luật không đọc được "hai thuộc tính này là tất cả những gì tôi dùng" — `.mutate` bền
+     * theo hợp đồng của v5, `.isPending` là boolean. Tắt đúng một dòng, và nói ra cái giá:
+     * thêm một thuộc tính mới của ba mutation này vào thân memo thì phải tự nhớ khai xuống
+     * dưới. Đó là lý do danh sách dưới đây liệt kê từng thuộc tính chứ không gộp.
+     */
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       t,
-      setStatus,
-      resetPassword,
-      resetTotp,
+      setStatus.mutate,
+      setStatus.isPending,
+      resetPassword.mutate,
+      resetPassword.isPending,
+      resetTotp.mutate,
+      resetTotp.isPending,
       askConfirm,
       refresh,
       toast,

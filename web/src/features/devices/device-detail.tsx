@@ -360,7 +360,17 @@ export function DeviceDetail({ me }: { me: Me }) {
    *    có IP nào → panel TỒN TẠI, `items` rỗng → không có nút, cũng KHÔNG có tên trong dòng
    *    "Chưa gắn". Khu đó tàng hình: người đọc không phân biệt được với "module chưa deploy".
    */
-  const moduleEnabled = (key: string): boolean => {
+  /**
+   * ĐỔI TÊN: `moduleEnabled` → `looksAbsent` (§18 #6, 22/09).
+   *
+   * Tên cũ nói NGƯỢC hẳn với giá trị: hàm trả `true` khi panel KHÔNG tồn tại hoặc RỖNG —
+   * tức khi khu ấy trông như không có gì. Đọc `moduleEnabled("ipam") ? … : null` mà hiểu
+   * đúng thì phải đọc ngược lại trong đầu, mỗi lần.
+   *
+   * Và nó ra đời ở đúng một lượt đổi tên nhằm làm tên DỄ ĐỌC HƠN — nên đây không phải nợ cũ
+   * sót lại, mà là một cái tên vừa được chọn sai.
+   */
+  const looksAbsent = (key: string): boolean => {
     const panel = panelOf(key);
     // Chưa đọc được sổ khu mở rộng → chưa biết, `isUnknown` của bản đồ đã lo phần nói năng.
     if (!panels.data) return false;
@@ -370,11 +380,11 @@ export function DeviceDetail({ me }: { me: Me }) {
 
   const relationMissing = [
     device.data?.hasPortMap && ownPorts.length === 0 ? t("devices.tabPortMap") : null,
-    moduleEnabled("ipam") ? t("nav.ipam") : null,
-    moduleEnabled("nat") ? t("nav.nat") : null,
-    moduleEnabled("isp") ? t("nav.isp") : null,
-    moduleEnabled("software") ? t("nav.software") : null,
-    moduleEnabled("vault") ? t("vault.tab") : null,
+    looksAbsent("ipam") ? t("nav.ipam") : null,
+    looksAbsent("nat") ? t("nav.nat") : null,
+    looksAbsent("isp") ? t("nav.isp") : null,
+    looksAbsent("software") ? t("nav.software") : null,
+    looksAbsent("vault") ? t("vault.tab") : null,
     counts.files === undefined ? null : counts.files === 0 ? t("devices.tabAttachments") : null,
   ].filter((label): label is string => label !== null);
 

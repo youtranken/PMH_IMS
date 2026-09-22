@@ -242,3 +242,94 @@ describe('Combobox — Esc đóng menu, cha render lại không được bung l�
     expect(input.getAttribute('aria-activedescendant')).toBe(options[1].id);
   });
 });
+
+/**
+ * HAI LỖ CÒN LẠI CỦA CÙNG Ô CHỌN NÀY (§18 #7 và #16).
+ *
+ * Cả hai cùng một gốc với docblock ở đầu file: component im lặng ở đúng chỗ người dùng cần
+ * một câu trả lời. Lần trước là "không tải được"; lần này là "đang tải" và "phím Enter".
+ */
+describe('Combobox — đang tải, và phím Enter khi lọc ra 0 dòng', () => {
+  const OPTIONS = ['HTTP 80', 'HTTPS 443'];
+
+  function renderIn(
+    props: Partial<Parameters<typeof Combobox<string>>[0]> = {},
+    onSubmit = vi.fn(),
+  ) {
+    renderWithI18n(
+      <form onSubmit={onSubmit}>
+        <Combobox
+          placeholder="Tìm dịch vụ"
+          ariaLabel="Tìm dịch vụ"
+          query=""
+          onQuery={() => {}}
+          options={[]}
+          getKey={(option) => option}
+          renderOption={(option) => <span>{option}</span>}
+          onSelect={vi.fn()}
+          {...props}
+        />
+      </form>,
+    );
+    return { onSubmit };
+  }
+
+  /**
+   * §18 #16 — `Enter` gọi `e.preventDefault()` VÔ ĐIỀU KIỆN.
+   *
+   * Lọc ra 0 dòng thì `options[active]` là `undefined`, không có gì để chọn — nhưng phím vẫn
+   * bị nuốt. Người dùng gõ xong, bấm Enter để lưu phiếu, và KHÔNG CÓ GÌ XẢY RA: form không
+   * submit, menu không nói gì, không một dòng giải thích. Họ bấm lại, vẫn không gì, rồi đi
+   * tìm nút Lưu bằng chuột — hoặc kết luận là hệ thống treo.
+   */
+  it('lọc ra 0 dòng: Enter KHÔNG bị nuốt, form vẫn submit được', async () => {
+    const { onSubmit } = renderIn({ empty: 'Không có dịch vụ nào khớp' });
+    const box = screen.getByRole('combobox');
+    await userEvent.click(box);
+    await userEvent.type(box, '{Enter}');
+
+    expect(onSubmit).toHaveBeenCalled();
+  });
+
+  it('CÓ dòng để chọn: Enter vẫn chọn dòng đó và KHÔNG submit (vế đối chứng)', async () => {
+    // Vế này giữ cho bản vá không nới tay quá: Enter ở đây là "chọn", không phải "gửi form".
+    const onSelect = vi.fn();
+    const { onSubmit } = renderIn({ options: OPTIONS, onSelect });
+    const box = screen.getByRole('combobox');
+    await userEvent.click(box);
+    await userEvent.type(box, '{Enter}');
+
+    expect(onSelect).toHaveBeenCalledWith('HTTP 80');
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  /**
+   * §18 #7 — "đang tải" và "không có gì khớp" đọc y hệt nhau.
+   *
+   * Trong lúc danh mục dịch vụ còn bay, `options` là `[]` và menu nói "Không có dịch vụ nào
+   * khớp" kèm dòng "＋ Khai dịch vụ mới". Người dùng được MỜI đi khai trùng một dịch vụ đã
+   * có — và cái khai trùng ấy vào DB, không tự sửa được.
+   *
+   * Cùng họ với `failed` đã vá 20/09: `failed` phân biệt "hỏng" với "rỗng"; `pending` phân
+   * biệt "chưa biết" với "rỗng". Ba trạng thái, ba câu.
+   */
+  it('đang tải: KHÔNG nói "không có gì khớp", và KHÔNG mời khai mới', async () => {
+    renderIn({
+      pending: true,
+      empty: 'Không có dịch vụ nào khớp',
+      action: { label: '＋ Khai dịch vụ mới', onClick: vi.fn() },
+    });
+    await userEvent.click(screen.getByRole('combobox'));
+
+    expect(screen.queryByText('Không có dịch vụ nào khớp')).not.toBeInTheDocument();
+    expect(screen.queryByText('＋ Khai dịch vụ mới')).not.toBeInTheDocument();
+    expect(screen.getByText('Đang tải…')).toBeInTheDocument();
+  });
+
+  it('tải xong mà rỗng thật: MỚI nói "không có gì khớp" (vế đối chứng)', async () => {
+    renderIn({ pending: false, empty: 'Không có dịch vụ nào khớp' });
+    await userEvent.click(screen.getByRole('combobox'));
+
+    expect(screen.getByText('Không có dịch vụ nào khớp')).toBeInTheDocument();
+  });
+});
