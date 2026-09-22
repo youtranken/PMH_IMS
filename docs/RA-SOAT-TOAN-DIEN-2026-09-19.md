@@ -768,17 +768,17 @@ thiếu, và cái thiếu đó vô hình vì checklist trông vẫn đầy đủ
 
 #### Đúng đắn — VỪA
 
-- [ ] **B-07** API tự dựng **8 đường dẫn tiếng Việt bản cũ** (`/thiet-bi/`, `/phan-mem/`,
+- [x] **B-07** API tự dựng **8 đường dẫn tiếng Việt bản cũ** (`/thiet-bi/`, `/phan-mem/`,
   `/duong-truyen/`, `/dia-chi-ip/`) trong khi `web/src/lib/routes.ts` tự khai là "NGUỒN DUY
   NHẤT" và quyết định 26/08 là URL tiếng Anh. Những đường này đi vào **email** gửi ra ngoài
-- [ ] **B-09** Member mở được **vỏ** của `/admin/accounts` và `/admin/vault-access`: đủ `h1`,
+- [x] **B-09** Member mở được **vỏ** của `/admin/accounts` và `/admin/vault-access`: đủ `h1`,
   phụ đề, và **nút "Thêm tài khoản" bấm được**, rồi mới báo không có quyền. Dữ liệu không rò
   (API 403 sạch) nhưng `/vault` và `/dev/components` chặn đúng bằng 404 — hai cửa lệch nhau
 - [ ] **F-08** `attachment-panel.tsx:103` đọc `queryClient.getQueryData(ME_KEY)` **không
   subscribe**, mà `useApiMutation` invalidate `ME_KEY` sau MỌI mutation ⇒ Admin mất nút Xoá và
   component không re-render khi cache về. Chú thích `:98` khẳng định "`me` luôn có sẵn" — một
   giả định, không phải hàng rào
-- [ ] **F-09** **AD-15 — 5 bản sao của `display()`+`describe()` panel Lịch sử, và chúng ĐÃ
+- [x] **F-09** **AD-15 — 5 bản sao của `display()`+`describe()` panel Lịch sử, và chúng ĐÃ
   trôi lệch**: `isp:62` có `if (field.endsWith('Id')) return t('history.changedOnly')` mà bốn
   bản kia không có → sửa `siteId` ở màn NAT **in nguyên một UUID** ra màn hình
 

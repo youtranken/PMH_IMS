@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ExpirySourceRegistry } from '../../common/expiry/expiry-registry';
 import type { ExpiryItem, ExpirySource } from '../../common/expiry/expiry-source';
 import { DevicesService } from './devices.service';
+import { UI_PATHS } from '../../common/ui-paths';
 
 /**
  * Nguồn hạn "bảo hành thiết bị" (AD-7, story 3.4).
@@ -32,7 +33,7 @@ export class DeviceExpirySource implements ExpirySource, OnModuleInit {
       kind: this.sourceKind,
       start: row.warrantyStart,
       end: row.warrantyEnd!,
-      link: `/thiet-bi/${row.id}`,
+      link: UI_PATHS.device(row.id),
     }));
   }
 }

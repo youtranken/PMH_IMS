@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 import type { HistoryEntry } from '@/ui/history-panel';
 import type { ServiceAccountHistoryRow } from './service-account-types';
+import { describeFieldChanges, type FieldChanges } from '@/ui/history-changes';
 
 /**
  * Đổi `service_account_history` thô thành dòng người đọc được cho `HistoryPanel` dùng chung.
@@ -57,27 +58,18 @@ export function toServiceAccountHistory(
   }));
 }
 
-function describe(
-  changes: Record<string, { before: unknown; after: unknown }> | null,
-  t: TFunction,
-): string | null {
-  if (!changes) return null;
-  const parts = Object.entries(changes).map(([field, change]) => {
-    const label = FIELD_LABEL[field] ? t(FIELD_LABEL[field]) : field;
-    // Trường KHÔNG đổi đi kèm chỉ để làm bối cảnh — vẽ "A → A" là bắt người đọc dừng lại
-    // tìm xem đã đổi gì.
-    if (change.before === change.after) return `${label} ${display(field, change.after, t)}`;
-    return `${label}: ${display(field, change.before, t)} → ${display(field, change.after, t)}`;
+/** Nhãn + cách đọc riêng của tài khoản dịch vụ; phần chung ở `ui/history-changes.ts`. */
+function describe(changes: FieldChanges, t: TFunction): string | null {
+  return describeFieldChanges(changes, t, {
+    label: (field) => (FIELD_LABEL[field] ? t(FIELD_LABEL[field]) : field),
+    display: (field, value) => {
+      if (value === null || value === undefined || value === '') return undefined;
+      const table = field === 'kind' ? KIND_LABEL : field === 'status' ? STATUS_LABEL : null;
+      if (!table) return undefined;
+      const key = table[String(value)];
+      return key ? t(key) : String(value);
+    },
+    unchangedAsContext: true,
   });
-  return parts.length > 0 ? parts.join('; ') : null;
 }
 
-function display(field: string, value: unknown, t: TFunction): string {
-  if (value === null || value === undefined || value === '') return t('history.blank');
-  const bang = field === 'kind' ? KIND_LABEL : field === 'status' ? STATUS_LABEL : null;
-  if (bang) {
-    const key = bang[String(value)];
-    return key ? t(key) : String(value);
-  }
-  return String(value);
-}

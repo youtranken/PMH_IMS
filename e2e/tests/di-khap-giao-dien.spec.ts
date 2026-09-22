@@ -1026,34 +1026,35 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     ).toBe(403);
 
     await page.goto('/admin/accounts');
-    await expect(
-      page.getByRole('heading', { name: 'Tài khoản', exact: true }),
-      'ĐÂY LÀ SỰ THẬT, không phải điều mong muốn: route /admin/accounts không gác vai ở web ' +
-        '(App.tsx), nên màn vẫn dựng ra cho admin',
-    ).toBeVisible();
+    /*
+     * `/admin/accounts` — HAI HÀNG RÀO, và bài này chốt cả hai (B-09, sửa 22/09).
+     *
+     * Bản trước chốt rằng màn VẪN dựng ra cho admin, kèm câu "ĐÂY LÀ SỰ THẬT, không phải điều
+     * mong muốn … ai muốn 404 thì phải sửa App.tsx, sửa xong hãy sửa bài này". Đã sửa
+     * `App.tsx` (bảng `ROUTE_ROLES`), nên sửa bài này theo — đúng lời dặn của chính nó.
+     *
+     * Vế API ngay trên giữ NGUYÊN: router gác là tiện cho người dùng, `@Roles('sa')` mới là
+     * hàng rào. Bỏ vế ấy thì một lượt "dọn dẹp" App.tsx sau này gỡ mất lớp router mà không gì
+     * kêu lên rằng cửa sau đang mở.
+     */
     await expect(
       page.getByRole('heading', { name: 'Không tìm thấy trang' }),
-      'và nó KHÔNG ra 404 — ai muốn 404 thì phải sửa App.tsx, sửa xong hãy sửa bài này',
-    ).toHaveCount(0);
-
-    // Nhưng bảng phải nói ra là nó hỏng, không được hoá thành "không có ai".
-    //
-    // Và từ 12/09 nó phải nói ra HỎNG VÌ SAO: `LoadError` nhận `error` rồi in đúng câu
-    // `roles.guard.ts` vừa gửi. Câu chung "Không tải được dữ liệu." ở đây là một câu SAI —
-    // nó mời người ta bấm "Thử lại" cho một lượt sẽ 403 y hệt, mãi mãi.
-    await expect(
-      page.getByText('Bạn không có quyền thực hiện thao tác này.'),
-      'API 403 phải hiện thành lỗi tải; nuốt nó thành danh sách rỗng là nói dối người quản trị',
+      'từ 22/09 router cũng gác: admin gõ thẳng URL của SA chỉ nhận 404',
     ).toBeVisible();
-    await expect(
-      page.getByText('Không tải được dữ liệu.'),
-      'và KHÔNG được rơi về câu chung — câu của API cụ thể hơn, phải thắng',
-    ).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Thử lại' })).toBeVisible();
-    await expect(
-      page.getByText('Chưa có dữ liệu'),
-      '"chưa có dữ liệu" là câu trả lời cho một câu hỏi đã hỏi được — 403 thì chưa hỏi được',
-    ).toHaveCount(0);
+
+    /*
+     * KHỐI "403 phải nói ra là lỗi QUYỀN" ĐÃ RỜI KHỎI ĐÂY (B-09, 22/09).
+     *
+     * Vế cũ chốt một điều thật sự đáng giá: 403 phải hiện thành khối lỗi nói rõ "Bạn không có
+     * quyền", KHÔNG được hoá thành "Chưa có dữ liệu" — câu đọc lên nghe như "công ty chưa có
+     * tài khoản nào", một lời nói dối với người vừa bị từ chối.
+     *
+     * Route đã 404 thì admin không còn tới được nhánh ấy qua cửa này, nên vế đó không còn chỗ
+     * đứng Ở ĐÂY. Nó KHÔNG mất: `web/src/ui/load-state.test.tsx` canh đúng hành vi đó ở tầng
+     * component — "in đúng câu API gửi về" và "403 không có câu kèm → nói là thiếu quyền,
+     * không nói là lỗi tải". Đó mới là chỗ đúng của một component dùng chung: nó áp cho MỌI
+     * màn, không chỉ cho hai màn quản trị.
+     */
   });
 
   /**
@@ -1469,32 +1470,23 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
      * vai), rồi lượt `GET /api/v1/accounts` nhận 403 và khối bảng đổi thành `LoadError`.
      * Hàng rào thật là `@Roles('sa')` ở API, và vế cuối bài này chốt đúng nó.
      */
-    for (const [path, title, mustNotSay] of [
-      // Chuỗi thứ ba là câu RỖNG của chính màn đó — thứ tuyệt đối không được hiện ra thay cho
-      // một lượt bị từ chối quyền. Mỗi màn một câu khác nhau, nên không gộp làm một được.
-      ['/admin/accounts', 'Tài khoản', 'Chưa có dữ liệu'],
-      ['/admin/vault-access', 'Quyền xem két sắt', 'Không có tài khoản nào khớp'],
-    ] as const) {
+    /*
+     * HAI CỬA NÀY NAY CŨNG 404 (B-09, sửa 22/09).
+     *
+     * Chú thích ngay trên đây từng ghi: "Viết `toBeVisible()` cho tiêu đề 404 ở đây là viết
+     * một bài kiểm sai sự thật", và bài chị em ở trên dặn thẳng: "ai muốn 404 thì phải sửa
+     * App.tsx, sửa xong hãy sửa bài này". Đã sửa `App.tsx` — quyền theo đường dẫn nay nằm
+     * trong bảng `ROUTE_ROLES` và cả năm cửa gác cùng một kiểu — nên bài này sửa theo.
+     *
+     * Vế "403 phải nói ra là lỗi QUYỀN, không hoá thành Chưa có dữ liệu" chuyển về
+     * `web/src/ui/load-state.test.tsx`, nơi nó áp cho MỌI màn chứ không riêng hai màn này.
+     */
+    for (const path of ['/admin/accounts', '/admin/vault-access'] as const) {
       await page.goto(path);
-
       await expect(
         page.getByRole('heading', { name: 'Không tìm thấy trang' }),
-        `${path}: router KHÔNG gác vai ở đây — đừng khẳng định 404 cho một cửa vẫn mở`,
-      ).toHaveCount(0);
-      await expect(
-        page.getByRole('heading', { name: title, exact: true }),
-        `${path}: màn vẫn render vì hàng rào nằm ở API, không ở router`,
+        `${path}: từ 22/09 router gác vai — Member gõ thẳng URL chỉ nhận 404`,
       ).toBeVisible();
-
-      // Vế quan trọng nhất: lỗi quyền phải NÓI RA LÀ LỖI — và nói đúng là lỗi QUYỀN.
-      await expect(
-        page.getByText('Bạn không có quyền thực hiện thao tác này.'),
-        `${path}: 403 phải hiện thành khối lỗi + "Thử lại", kèm đúng lý do`,
-      ).toBeVisible();
-      await expect(
-        page.getByText(mustNotSay),
-        `${path}: "bị từ chối quyền" mà hoá thành "${mustNotSay}" là hệ thống nói dối`,
-      ).toHaveCount(0);
     }
 
     // Hàng rào THẬT, ở đúng chỗ nó nằm.

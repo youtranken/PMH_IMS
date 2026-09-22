@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 import type { HistoryEntry } from '@/ui/history-panel';
 import type { IspHistoryRow } from './isp-types';
+import { describeFieldChanges, type FieldChanges } from '@/ui/history-changes';
 
 /** Đổi `isp_line_history` thô thành dòng đọc được cho `HistoryPanel` dùng chung. */
 
@@ -52,25 +53,14 @@ export function toIspHistory(rows: IspHistoryRow[], t: TFunction): HistoryEntry[
   }));
 }
 
-function describe(
-  changes: Record<string, { before: unknown; after: unknown }> | null,
-  t: TFunction,
-): string | null {
-  if (!changes) return null;
-  const parts = Object.entries(changes).map(([field, change]) => {
-    const label = FIELD_LABEL[field] ? t(FIELD_LABEL[field]) : field;
-    // Id là uuid — hiện ra chỉ tổ rối, nói "đã đổi" là đủ dùng.
-    if (field.endsWith('Id')) return t('history.changedOnly', { field: label });
-    return `${label}: ${display(field, change.before, t)} → ${display(field, change.after, t)}`;
+/** Nhãn + cách đọc riêng của màn này; phần chung ở `ui/history-changes.ts` (AD-15). */
+function describe(changes: FieldChanges, t: TFunction): string | null {
+  return describeFieldChanges(changes, t, {
+    label: (field) => (FIELD_LABEL[field] ? t(FIELD_LABEL[field]) : field),
+    display: (field, value) => {
+      if (field !== 'status' || value === null || value === undefined || value === '') return undefined;
+      const key = STATUS_LABEL[String(value)];
+      return key ? t(key) : String(value);
+    },
   });
-  return parts.length > 0 ? parts.join('; ') : null;
-}
-
-function display(field: string, value: unknown, t: TFunction): string {
-  if (value === null || value === undefined || value === '') return t('history.blank');
-  if (field === 'status') {
-    const key = STATUS_LABEL[String(value)];
-    return key ? t(key) : String(value);
-  }
-  return String(value);
 }

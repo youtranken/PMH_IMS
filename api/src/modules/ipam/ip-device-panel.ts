@@ -2,6 +2,7 @@ import { Injectable, OnModuleInit } from '@nestjs/common';
 import type { DevicePanel, DevicePanelProvider } from '../../common/device-panels';
 import { DevicePanelRegistry } from '../../common/device-panels.registry';
 import { IpAddressService } from './ip-address.service';
+import { UI_PATHS } from '../../common/ui-paths';
 
 /**
  * Khu "Địa chỉ IP" trên trang chi tiết thiết bị (story 5.4, AC: một trang đủ thông tin khi
@@ -31,7 +32,7 @@ export class IpDevicePanel implements DevicePanelProvider, OnModuleInit {
       items: rows.map((ip) => ({
         label: ip.address,
         value: ip.usedBy ?? STATUS_LABEL[ip.status],
-        link: `/dia-chi-ip/${ip.subnetId}`,
+        link: UI_PATHS.subnet(ip.subnetId),
         tone: TONE[ip.status],
       })),
     };

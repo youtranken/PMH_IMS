@@ -15,7 +15,7 @@ import {
   TOTP_ENROLL_PATH,
   nextStepPath,
 } from '@/lib/me';
-import { LEGACY_ROUTES, PATHS } from '@/lib/routes';
+import { LEGACY_ROUTES, PATHS, canSeeRoute } from '@/lib/routes';
 import { AppShell } from '@/shell/app-shell';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { Loading, NotFound } from '@/ui/load-state';
@@ -128,12 +128,22 @@ function AppRoutes() {
     <AppShell me={me}>
       <Routes>
         <Route path={PATHS.dashboard} element={<DashboardScreen me={me} />} />
-        <Route path={PATHS.adminAccounts} element={<AccountsScreen me={me} />} />
-        <Route path={PATHS.adminCatalog} element={<CatalogScreen me={me} />} />
-        <Route path={PATHS.adminVaultAccess} element={<AccessMatrixScreen me={me} />} />
+        {/* Gác theo BẢNG `ROUTE_ROLES`, không bằng mấy câu `? :` rải rác (B-09, 22/09).
+            Hai màn quản trị dưới đây từng dựng đủ h1 + nút bấm được cho Member rồi mới từ
+            chối — trong khi `/vault` ngay bên dưới gác đúng ở route. Bảng cho phép hỏi "có
+            đường /admin nào chưa khai vai không", câu mà JSX không trả lời được. */}
+        {canSeeRoute(PATHS.adminAccounts, me.role) ? (
+          <Route path={PATHS.adminAccounts} element={<AccountsScreen me={me} />} />
+        ) : null}
+        {canSeeRoute(PATHS.adminCatalog, me.role) ? (
+          <Route path={PATHS.adminCatalog} element={<CatalogScreen me={me} />} />
+        ) : null}
+        {canSeeRoute(PATHS.adminVaultAccess, me.role) ? (
+          <Route path={PATHS.adminVaultAccess} element={<AccessMatrixScreen me={me} />} />
+        ) : null}
         <Route path={PATHS.approvals} element={<ApprovalsScreen me={me} />} />
         {/* Gác ở CẢ route, không chỉ ẩn mục menu: gõ thẳng URL cũng chỉ nhận 404. */}
-        {me.role === 'sa' || me.role === 'admin' ? (
+        {canSeeRoute(PATHS.vault, me.role) ? (
           <Route path={PATHS.vault} element={<VaultHomeScreen me={me} />} />
         ) : null}
         {/* Kho thanh lý mở cho MỌI vai — khác trang tổng Két sắt ngay trên: kho chỉ nói
@@ -157,7 +167,7 @@ function AppRoutes() {
           element={<ServiceAccountDetail me={me} />}
         />
         {/* Bộ giao diện là trang nội bộ: member/admin vào thẳng URL cũng chỉ nhận 404. */}
-        {me.role === 'sa' ? (
+        {canSeeRoute(PATHS.devComponents, me.role) ? (
           <Route path={PATHS.devComponents} element={<ComponentsGallery />} />
         ) : null}
         {/* Link tiếng Việt đã ghim/đã gửi cho nhau vẫn mở được, và thanh địa chỉ đổi luôn

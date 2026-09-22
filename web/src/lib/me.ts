@@ -1,9 +1,17 @@
+/**
+ * Ba vai của hệ thống — MỘT nguồn cho cả web (22/09).
+ *
+ * Tách ra khỏi `Me` vì `routes.ts` cần nó để khai bảng quyền theo đường dẫn, và union này gõ
+ * tay lần thứ hai ở đó là đúng cái hình dạng mà B-09 vừa dọn.
+ */
+export type UserRole = 'sa' | 'admin' | 'member';
+
 /** Người dùng của phiên hiện tại — shape đúng bằng `GET /api/v1/auth/me`. */
 export interface Me {
   id: string;
   email: string;
   fullName: string;
-  role: 'sa' | 'admin' | 'member';
+  role: UserRole;
   mustChangePassword: boolean;
   /** Đúng mật khẩu nhưng chưa qua TOTP — chỉ vài route được phép. */
   totpPending: boolean;

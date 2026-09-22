@@ -4,6 +4,7 @@ import type { ExpiryItem, ExpirySource } from '../../common/expiry/expiry-source
 import { IspLineService } from './isp-line.service';
 import { KIND_LABEL, type SoftwareKind } from './software-rules';
 import { SoftwareService } from './software.service';
+import { UI_PATHS } from '../../common/ui-paths';
 
 /**
  * Nguồn hạn của module `software` (AD-7, story 3.4).
@@ -45,7 +46,7 @@ export class SoftwareExpiryRegistrar implements OnModuleInit {
             kind,
             start: row.startDate,
             end: row.endDate!,
-            link: `/phan-mem/${row.id}`,
+            link: UI_PATHS.software(row.id),
           }));
       },
       renew: async (actor, id, newEnd) => {
@@ -68,7 +69,7 @@ export class SoftwareExpiryRegistrar implements OnModuleInit {
           kind: 'isp',
           start: row.startDate,
           end: row.endDate!,
-          link: `/duong-truyen/${row.id}`,
+          link: UI_PATHS.ispLine(row.id),
         }));
       },
       renew: async (actor, id, newEnd) => {

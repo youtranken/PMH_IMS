@@ -1,6 +1,7 @@
 import type { TFunction } from 'i18next';
 import type { HistoryEntry } from '@/ui/history-panel';
 import type { DeviceHistoryRow } from '@/lib/device-types';
+import { describeFieldChanges, type FieldChanges } from '@/ui/history-changes';
 
 /**
  * Đổi bản ghi `device_history` thô thành dòng người đọc được cho `HistoryPanel` dùng chung.
@@ -72,26 +73,15 @@ export function toHistoryEntries(rows: DeviceHistoryRow[], t: TFunction): Histor
   }));
 }
 
-function describeChanges(
-  changes: Record<string, { before: unknown; after: unknown }> | null,
-  t: TFunction,
-): string | null {
-  if (!changes) return null;
-  const parts = Object.entries(changes)
-    // Id danh mục là chuỗi uuid, hiện ra chỉ tổ rối; nói rõ "đã đổi" là đủ dùng.
-    .map(([field, change]) => {
-      const label = FIELD_LABEL[field] ? t(FIELD_LABEL[field]) : field;
-      if (field.endsWith('Id')) return t('history.changedOnly', { field: label });
-      return `${label}: ${display(field, change.before, t)} → ${display(field, change.after, t)}`;
-    });
-  return parts.length > 0 ? parts.join('; ') : null;
+/** Nhãn + cách đọc riêng của màn thiết bị; phần chung ở `ui/history-changes.ts` (AD-15). */
+function describeChanges(changes: FieldChanges, t: TFunction): string | null {
+  return describeFieldChanges(changes, t, {
+    label: (field) => (FIELD_LABEL[field] ? t(FIELD_LABEL[field]) : field),
+    display: (field, value) => {
+      if (field !== 'status' || value === null || value === undefined || value === '') return undefined;
+      const key = STATUS_LABEL[String(value)];
+      return key ? t(key) : String(value);
+    },
+  });
 }
 
-function display(field: string, value: unknown, t: TFunction): string {
-  if (value === null || value === undefined || value === '') return t('history.blank');
-  if (field === 'status') {
-    const key = STATUS_LABEL[String(value)];
-    return key ? t(key) : String(value);
-  }
-  return String(value);
-}

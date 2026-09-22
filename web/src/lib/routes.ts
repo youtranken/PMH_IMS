@@ -1,4 +1,5 @@
 import type { SecretOwnerType } from '@/lib/secret-owner-kinds';
+import type { UserRole } from '@/lib/me';
 
 /**
  * Đường dẫn của IMS — NGUỒN DUY NHẤT (AD-15).
@@ -100,3 +101,50 @@ export const LEGACY_ROUTES: LegacyRoute[] = [
   { from: '/quan-tri/quyen-ket-sat', to: PATHS.adminVaultAccess },
   { from: '/quan-tri/nhat-ky', to: PATHS.adminAuditLog },
 ];
+
+/**
+ * VAI NÀO ĐƯỢC VÀO ĐƯỜNG NÀO — mặc-định-ĐÓNG cho mọi màn quản trị (B-09, 22/09).
+ *
+ * ===== LỖ ĐANG VÁ =====
+ *
+ * `/vault` và `/dev/components` gác ngay ở `<Route>`: gõ thẳng URL cũng chỉ nhận 404.
+ * `/admin/accounts` và `/admin/vault-access` thì KHÔNG — Member gõ URL vào là màn dựng đủ
+ * `h1`, phụ đề, và một nút "Thêm tài khoản" BẤM ĐƯỢC, rồi mới báo không có quyền.
+ *
+ * Dữ liệu không rò (API trả 403 sạch), nên đây không phải lỗ bảo mật. Nhưng nó dạy sai: một
+ * màn dựng ra đủ hình hài rồi mới từ chối trông như một lỗi hệ thống, không như một ranh giới
+ * quyền. Người dùng bấm nút, bị từ chối, và báo là "hệ thống hỏng". Hai cửa cùng loại mà cư
+ * xử khác nhau thì cái nào đúng cũng không ai tin nữa.
+ *
+ * ===== VÌ SAO LÀ MỘT BẢNG, KHÔNG PHẢI MẤY CÂU `? :` TRONG JSX =====
+ *
+ * Gác bằng biểu thức rải trong `App.tsx` thì màn thứ năm viết sau sẽ quên — đúng như hai màn
+ * này đã quên. Bảng ở đây cho phép hỏi một câu mà JSX không trả lời được: "có đường `/admin`
+ * nào CHƯA khai vai không?" Bài kiểm hỏi đúng câu đó, nên thêm màn quản trị mà quên khai vai
+ * là ĐỎ ngay, không phải chờ ai đó gõ URL bằng tay.
+ *
+ * Danh sách vai lấy đúng theo `@Roles` của API tương ứng — giao diện không được rộng hơn cửa
+ * sau nó, cũng không được hẹp hơn (hẹp hơn thì giấu mất một màn người ta có quyền xem).
+ */
+export const ROUTE_ROLES: Record<string, readonly UserRole[]> = {
+  // `accounts.controller.ts` — toàn bộ là `@Roles('sa')`.
+  [PATHS.adminAccounts]: ['sa'],
+  // `vault-access.controller.ts` — `@Roles('sa', 'admin')`.
+  [PATHS.adminVaultAccess]: ['sa', 'admin'],
+  /*
+   * `audit.controller.ts` — `@Roles('sa', 'admin')` ở cấp lớp. Màn này CHƯA dựng (chưa có
+   * `<Route>` nào trong `App.tsx`); khai sẵn để lúc dựng thì hàng rào đã đứng đó, thay vì
+   * phải nhớ ra — đúng thứ hai màn kia đã quên.
+   */
+  [PATHS.adminAuditLog]: ['sa', 'admin'],
+  // `catalog.controller.ts` — đường ĐỌC mở cho cả `member`, nên màn này không gác theo vai.
+  [PATHS.adminCatalog]: ['sa', 'admin', 'member'],
+  [PATHS.vault]: ['sa', 'admin'],
+  [PATHS.devComponents]: ['sa'],
+};
+
+/** Vai này vào được đường kia không. Đường không khai trong bảng = mở cho mọi vai. */
+export function canSeeRoute(path: string, role: UserRole): boolean {
+  const allowed = ROUTE_ROLES[path];
+  return allowed === undefined || allowed.includes(role);
+}
