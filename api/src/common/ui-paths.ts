@@ -36,4 +36,5 @@ export const UI_PATHS = {
   subnet: (id: string) => `/ip-addresses/${id}`,
   serviceAccount: (id: string) => `/service-accounts/${id}`,
   approvals: '/approvals',
+  expiry: '/expiry',
 } as const;

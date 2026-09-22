@@ -15,7 +15,37 @@ const APP_URL = () => process.env.APP_BASE_URL ?? 'https://ims.pmh.com.vn';
  * Mỗi topic có một hàm dựng nội dung; thêm topic mới = thêm một nhánh ở đây,
  * KHÔNG rải nodemailer khắp module nghiệp vụ (AD-15).
  */
+/**
+ * TOPIC NÀO CÓ MẪU THƯ — danh sách tường minh (B-06, 22/09).
+ *
+ * `build()` trả `null` cho HAI chuyện khác hẳn nhau:
+ *
+ *   1. **Không có mẫu thư cho topic này** — ai đó đẩy một topic mà consumer chưa từng biết.
+ *      Đây là LỖI: một sự kiện nghiệp vụ vừa xảy ra và không ai được báo, vĩnh viễn.
+ *   2. **Có mẫu, nhưng không còn gì để gửi** — hồ sơ tham chiếu đã xoá, phiếu đã được quyết,
+ *      không còn người nhận nào. Đây là chuyện BÌNH THƯỜNG, xảy ra hằng ngày.
+ *
+ * Bản trước ghi CÙNG MỘT dòng `warn` cho cả hai. Hậu quả: một lỗi thật nằm lẫn giữa hàng trăm
+ * dòng vô hại, nên không ai lọc ra được — và ai đọc log thì quen mắt tới mức thôi đọc.
+ *
+ * Danh sách này gõ tay và phải khớp các `case` bên dưới. Đổi bên nào cũng phải đổi bên kia —
+ * `mail-topics.spec.ts` đối chiếu hai nơi, nên lệch là đỏ.
+ */
+export const HANDLED_MAIL_TOPICS: ReadonlySet<string> = new Set([
+  'expiry.digest',
+  'approval.requested',
+  'approval.reminder',
+  'auth.account.locked',
+  'security.probe.alert',
+  'auth.device.new',
+  'account.created',
+  'auth.password.changed',
+  'account.password.reset',
+  'account.mfa.reset',
+]);
+
 @Injectable()
+
 export class MailConsumer {
   private readonly logger = new Logger(MailConsumer.name);
 
@@ -35,11 +65,28 @@ export class MailConsumer {
     const payload = row.payload as { userId?: string; ruleId?: string; isTest?: boolean };
     const built = await this.build(topic, payload);
     if (!built) {
-      // `null` = "không có gì để gửi, và đây là kết luận cuối" — thiếu mẫu, hoặc hồ sơ tham
-      // chiếu đã bị xóa/đã xử lý xong. Đánh dấu processed để job không quay lại mãi mãi.
-      this.logger.warn(
-        `Topic ${topic} không dựng được thư (thiếu mẫu, hoặc hồ sơ tham chiếu đã xóa) — bỏ qua.`,
-      );
+      /*
+       * HAI NGUYÊN NHÂN, HAI MỨC LOG (B-06, vá 22/09).
+       *
+       * Bản trước gộp làm một dòng `warn`. Nhưng "không có mẫu thư cho topic này" là một LỖI
+       * — một sự kiện nghiệp vụ vừa xảy ra và sẽ không ai được báo — còn "hồ sơ tham chiếu đã
+       * xoá" là chuyện bình thường, xảy ra hằng ngày. Gộp lại thì lỗi thật nằm lẫn giữa hàng
+       * trăm dòng vô hại, và người đọc log quen mắt tới mức thôi đọc.
+       *
+       * Cả hai vẫn `markProcessed`: dù vì lý do nào thì lượt này cũng không gửi được, và để
+       * job quay lại mãi mãi chỉ làm hàng đợi kẹt thêm.
+       */
+      if (!HANDLED_MAIL_TOPICS.has(topic)) {
+        this.logger.error(
+          `Topic "${topic}" KHÔNG có mẫu thư nào xử lý — sự kiện này sẽ không ai được báo. ` +
+            'Thêm một `case` vào `build()` và khai vào `HANDLED_MAIL_TOPICS`.',
+        );
+      } else {
+        this.logger.debug(
+          `Topic ${topic}: không còn gì để gửi (hồ sơ tham chiếu đã xoá, phiếu đã quyết, ` +
+            'hoặc không còn người nhận) — bỏ qua, đây là chuyện bình thường.',
+        );
+      }
       await this.outbox.markProcessed(outboxId);
       return;
     }
@@ -179,10 +226,25 @@ export class MailConsumer {
             { label: 'Người dùng', value: `${user.fullName} (${user.email})` },
             { label: 'Thời điểm', value: new Date().toLocaleString('vi-VN') },
           ],
-          ctaLabel: 'Xem nhật ký đăng nhập',
-          ctaUrl: `${APP_URL()}/quan-tri/nhat-ky`,
+          /*
+           * KHÔNG CÓ NÚT — màn nhật ký chưa được dựng (B-08/T-02, vá 22/09).
+           *
+           * Nút cũ trỏ `/quan-tri/nhat-ky`. Đường ấy CÓ trong `LEGACY_ROUTES` nên nó chuyển
+           * hướng đúng sang `/admin/audit-log` — nhưng `/admin/audit-log` không có `<Route>`
+           * nào trong `App.tsx`, nên lượt chuyển hướng rơi thẳng vào trang 404.
+           *
+           * Đây là thư CẢNH BÁO BẢO MẬT, loại người ta mở đúng lúc đang lo. Một cái nút hỏng
+           * ở đây không chỉ vô dụng — nó bào mòn lòng tin vào cả kênh cảnh báo, và lá thư
+           * thật sự khẩn lần sau sẽ không ai bấm nữa.
+           *
+           * Câu dặn cũng phải đổi: "Mở nhật ký xem các lượt sai đến từ một nơi hay nhiều nơi"
+           * là lời khuyên KHÔNG LÀM THEO ĐƯỢC. Nay dặn đúng việc người nhận làm được hôm nay.
+           *
+           * `mail-cta.spec.ts` sẽ ĐỎ vào ngày màn nhật ký được dựng thật — để người dựng nó
+           * nhớ trả cái nút về đây.
+           */
           footnote:
-            'Mở nhật ký xem các lượt sai đến từ một nơi hay nhiều nơi. Nếu thấy đáng ngờ, vào màn Tài khoản KHÓA TAY tài khoản này — khóa tay chặn mọi nơi và chỉ SA mở được.',
+            'Vào màn Tài khoản để KHÓA TAY tài khoản này nếu thấy đáng ngờ — khóa tay chặn mọi nơi và chỉ SA mở được. (Màn nhật ký đăng nhập chưa có trong bản này.)',
         });
         return {
           to: sa.map((r) => r.email),
@@ -218,15 +280,15 @@ export class MailConsumer {
             { label: 'Trong', value: `${payload.windowMinutes ?? 0} phút` },
             { label: 'Thời điểm', value: new Date().toLocaleString('vi-VN') },
           ],
-          ctaLabel: 'Xem nhật ký',
-          ctaUrl: `${APP_URL()}/quan-tri/nhat-ky`,
+          // Không có nút: màn nhật ký chưa dựng — xem chú thích ở lá thư ngay trên (B-08/T-02).
+
           /* Thời gian nghỉ NỘI SUY từ payload, không viết cứng "một giờ": nó là
              `secret.probe_cooldown_minutes` trong `system_config` (AD-11) và đổi được bất cứ
              lúc nào. Viết cứng thì đổi tham số là lá thư nói dối về chính cơ chế của nó, mà
              không cổng nào đỏ lên. Còn `?? 60` chỉ là lưới đỡ cho hàng outbox cũ ghi trước
              18/09 — chúng không có trường này. */
           footnote:
-            'Lọc nhật ký theo tài khoản này để xem họ thử những gì. Phần lớn trường hợp là người dùng thật gõ nhầm mã hoặc bấm vào một hồ sơ chưa được gán quyền — nhưng đó là điều cần XEM rồi mới kết luận. ' +
+            'Phần lớn trường hợp là người dùng thật gõ nhầm mã hoặc bấm vào một hồ sơ chưa được gán quyền. Hỏi thẳng người này trước khi kết luận; màn nhật ký để lọc theo tài khoản chưa có trong bản này. ' +
             /*
              * KHÔNG ĐOÁN HỘ MỘT CON SỐ MÌNH KHÔNG BIẾT (19/09/2026).
              *
@@ -365,7 +427,7 @@ function buildDigestMail(digest: DigestContent, isTest: boolean) {
       'ngày tới, kèm những mục đã quá hạn mà chưa ai xử.',
     rows,
     ctaLabel: 'Mở màn Sắp hết hạn',
-    ctaUrl: `${APP_URL()}/sap-het-han`,
+    ctaUrl: `${APP_URL()}${UI_PATHS.expiry}`,
     footnote: isTest
       ? 'Đây là email gửi thử từ màn cấu hình luật. Kỳ gửi thật không bị ảnh hưởng.'
       : 'Email tự động từ IMS. Đổi người nhận hoặc tần suất ở màn Sắp hết hạn › Luật gửi báo cáo.',
