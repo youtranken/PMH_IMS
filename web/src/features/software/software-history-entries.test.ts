@@ -37,8 +37,10 @@ describe('toSoftwareHistory — tab Lịch sử hồ sơ phần mềm phải đ�
     const [entry] = toSoftwareHistory([
       row({ changes: { kind: { before: 'license', after: 'ssl' }, status: { before: 'active', after: 'retired' } } }),
     ], t);
+    // 'Đã thanh lý' từ 23/09 — trước đó riêng `/software` gọi trạng thái này là 'Đã bỏ',
+    // trong khi cùng hồ sơ ấy sang màn Kho thanh lý lại đọc 'Đã thanh lý'.
     expect(entry.detail).toBe(
-      'loại: License phần mềm → Chứng chỉ SSL; trạng thái: Đang dùng → Đã bỏ',
+      'loại: License phần mềm → Chứng chỉ SSL; trạng thái: Đang dùng → Đã thanh lý',
     );
   });
 

@@ -132,7 +132,7 @@ test.describe('Quản trị tài khoản', () => {
     await rowAction(page, 'E2E Thành viên', 'Vô hiệu hóa');
     await confirmAction(page, 'Vô hiệu hóa');
     await expect(
-      row.getByText('Vô hiệu hóa'),
+      row.getByText('Đã vô hiệu hóa', { exact: true }),
       'huy hiệu phải nói đúng trạng thái — "Đang khóa" ở đây là một câu sai',
     ).toBeVisible();
 
@@ -208,12 +208,12 @@ test.describe('Quản trị tài khoản', () => {
   });
 
   /**
-   * G-05 — Story 1.4 AC-3: nút "Đá phiên" thật sự cắt phiên.
+   * G-05 — Story 1.4 AC-3: nút "Đóng phiên" thật sự cắt phiên.
    *
    * Bài cũ dừng ở `toBeVisible()` trên chính nút đó. Một nút hiện ra và một nút làm được
    * việc là hai chuyện khác nhau.
    */
-  test('SA bấm đá phiên thì trình duyệt kia bị đá về đăng nhập', async ({ page, browser }) => {
+  test('SA bấm đóng phiên thì trình duyệt kia bị đẩy về đăng nhập', async ({ page, browser }) => {
     const memberCtx = await browser.newContext(SECOND_BROWSER);
     const memberPage = await memberCtx.newPage();
     try {
@@ -228,7 +228,7 @@ test.describe('Quản trị tài khoản', () => {
       // sẽ khớp hai cái và Playwright báo strict mode.
       const dialog = page.getByRole('dialog').filter({ hasText: 'Phiên đang mở' });
       await dialog.getByRole('button', { name: 'Đóng phiên' }).first().click();
-      // Đá phiên có hỏi lại ("Đá phiên đăng nhập này?") — không bấm Đồng ý thì chưa có gì xảy ra.
+      // Đóng phiên có hỏi lại ("Đóng phiên đăng nhập từ IP …?") — không bấm Đồng ý thì chưa có gì xảy ra.
       await confirmAction(page);
 
       await expect

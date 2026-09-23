@@ -243,9 +243,17 @@ export function TimePicker({ value = DEFAULT, onDone, onCancel }: TimePickerProp
     onDone?.({ hour: h + 1, minute: m, pm });
   };
 
+  /*
+   * `aria-labelledby` trỏ vào chính thẻ tiêu đề, thay vì `aria-label` chép lại chữ ấy — một
+   * nguồn, nên tên trợ năng và chữ trên màn không thể lệch nhau. Trước 23/09 tiêu đề nhìn thấy
+   * được là chuỗi cứng "Select Time" còn `aria-label` đọc `timePicker.choose`: hai câu khác
+   * hẳn nhau cho cùng một hộp, và không cổng nào đỏ.
+   */
   return (
-    <section className="tp" aria-label={t('timePicker.choose')}>
-      <p className="tp-title">Select Time</p>
+    <section className="tp" aria-labelledby="tp-title">
+      <p className="tp-title" id="tp-title">
+        {t('timePicker.choose')}
+      </p>
 
       <div className="tp-field" ref={fieldRef}>
         <ClockIcon />
@@ -270,11 +278,11 @@ export function TimePicker({ value = DEFAULT, onDone, onCancel }: TimePickerProp
       <div className="tp-seg">
         <button type="button" className="on">
           <ClockIcon />
-          Time
+          {t('timePicker.tab')}
         </button>
         <button type="button" onClick={now}>
           <SunIcon />
-          Now
+          {t('timePicker.now')}
         </button>
       </div>
 
@@ -297,10 +305,10 @@ export function TimePicker({ value = DEFAULT, onDone, onCancel }: TimePickerProp
 
       <div className="tp-actions">
         <button type="button" className="ghost" onClick={reset}>
-          Cancel
+          {t('common.cancel')}
         </button>
         <button type="button" className="solid" onClick={done}>
-          Done
+          {t('common.save')}
         </button>
       </div>
     </section>

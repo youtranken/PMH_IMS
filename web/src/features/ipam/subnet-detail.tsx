@@ -428,7 +428,7 @@ export function SubnetPane({
                                 ? [
                                     {
                                       key: "void",
-                                      label: t("common.delete"),
+                                      label: t("ipam.voidAddress"),
                                       onSelect: () => setVoiding(slot),
                                       danger: true,
                                     },
@@ -980,7 +980,7 @@ function VoidAddressDialog({
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!remove.isPending}
       maxWidth={480}
-      title={`${t("common.delete")} — ${record.address}`}
+      title={`${t("ipam.voidAddress")} — ${record.address}`}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
@@ -992,7 +992,7 @@ function VoidAddressDialog({
             className="btn danger"
             disabled={remove.isPending}
           >
-            {remove.isPending ? t("common.loading") : t("common.delete")}
+            {remove.isPending ? t("common.loading") : t("ipam.voidAddress")}
           </button>
         </>
       }

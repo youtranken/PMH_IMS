@@ -3078,7 +3078,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Tên hồ sơ',
       'Loại',
       'Nhà cung cấp',
-      'Seat',
+      'Ghế',
       'Tình trạng hạn',
       'Trạng thái',
       'Thao tác',
@@ -3211,9 +3211,9 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     // ===== Ô GÕ CHỮ =====
     await expect(
       add.getByRole('textbox'),
-      'Form thêm hồ sơ có đúng 4 ô gõ chữ: Mã hồ sơ · Tên hồ sơ · Số seat · Ghi chú',
+      'Form thêm hồ sơ có đúng 4 ô gõ chữ: Mã hồ sơ · Tên hồ sơ · Số ghế · Ghi chú',
     ).toHaveCount(4);
-    for (const name of ['Mã hồ sơ', 'Tên hồ sơ', 'Số seat', 'Ghi chú']) {
+    for (const name of ['Mã hồ sơ', 'Tên hồ sơ', 'Số ghế', 'Ghi chú']) {
       await expect(
         add.getByRole('textbox', { name, exact: true }),
         `Ô "${name}" phải là ô gõ chữ và phải có đúng một cái`,
@@ -3344,8 +3344,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Ô tên phải mang tên cũ',
     ).toHaveValue('License để mở form sửa');
     await expect(
-      edit.getByRole('textbox', { name: 'Số seat', exact: true }),
-      'Ô số seat phải mang số cũ',
+      edit.getByRole('textbox', { name: 'Số ghế', exact: true }),
+      'Ô số ghế phải mang số cũ',
     ).toHaveValue('7');
     await expect(
       edit.getByRole('textbox', { name: 'Ghi chú', exact: true }),
@@ -3373,7 +3373,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     expect(
       (await page.getByRole('option').allInnerTexts()).map((text) => text.trim()),
       'Ba trạng thái của một hồ sơ phần mềm, không hơn',
-    ).toEqual(['Đang dùng', 'Hết hạn, không gia hạn', 'Đã bỏ']);
+    ).toEqual(['Đang dùng', 'Hết hạn, không gia hạn', 'Đã thanh lý']);
     await statusSelect.click();
     await expect(page.getByRole('option'), 'Danh sách trạng thái phải đóng lại').toHaveCount(0);
 
@@ -5093,7 +5093,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expectHandles(
       form,
       'button',
-      ['Đóng hộp thoại', 'Thêm', 'TCP', 'UDP', 'Cả TCP và UDP', 'Hủy', 'Lưu'],
+      ['Đóng hộp thoại', 'Thêm', 'TCP', 'UDP', 'TCP + UDP', 'Hủy', 'Lưu'],
       'Hộp "Thêm rule"',
     );
     /*
@@ -5108,8 +5108,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     const protocols = form.getByRole('group', { name: 'Giao thức' });
     await expect(
       protocols.getByRole('button'),
-      'mất "Cả TCP và UDP" thì mọi rule VPN phải khai làm hai dòng',
-    ).toHaveText(['TCP', 'UDP', 'Cả TCP và UDP']);
+      'mất "TCP + UDP" thì mọi rule VPN phải khai làm hai dòng',
+    ).toHaveText(['TCP', 'UDP', 'TCP + UDP']);
     await expect(protocols.getByRole('button', { name: 'TCP', exact: true })).toHaveAttribute(
       'aria-pressed',
       'true',

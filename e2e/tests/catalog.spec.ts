@@ -62,9 +62,9 @@ test.describe('Danh mục', () => {
     await expect(cabinetRow.getByRole('cell', { name: '42', exact: true })).toBeVisible();
 
     // Vô hiệu rồi bật lại — mục vẫn còn, chỉ đổi trạng thái.
-    await rowAction(page, new RegExp(cabinetCode), 'Vô hiệu');
+    await rowAction(page, new RegExp(cabinetCode), 'Vô hiệu hóa');
     await confirmAction(page);
-    await expect(cabinetRow.getByText('Đã vô hiệu')).toBeVisible();
+    await expect(cabinetRow.getByText('Đã vô hiệu hóa')).toBeVisible();
 
     await rowAction(page, new RegExp(cabinetCode), 'Bật lại');
     await confirmAction(page);

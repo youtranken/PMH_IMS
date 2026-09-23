@@ -623,7 +623,11 @@ function NatForm({
                     aria-pressed={protocol === item}
                     onClick={() => setProtocol(item)}
                   >
-                    {item === 'both' ? t('nat.protocolBoth') : item.toUpperCase()}
+                    {/* `catalog.protocolBoth`, KHÔNG phải một khoá riêng của `nat`: ô chọn cổng
+                        dịch vụ ngay dưới form này đọc đúng khoá ấy, và hai nhãn khác chữ cho
+                        cùng một giao thức nằm cách nhau 3cm là thứ người dùng đọc ra thành hai
+                        lựa chọn khác nhau. */}
+                    {item === 'both' ? t('catalog.protocolBoth') : item.toUpperCase()}
                   </button>
                 ))}
               </div>

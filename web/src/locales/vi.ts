@@ -63,6 +63,19 @@ export default {
   timePicker: {
     choose: 'Chọn giờ',
     hourMinute: 'Giờ : phút',
+    /*
+     * Bốn khoá thêm 23/09 (T-01). `DateTimePicker` chưa màn nào dùng, nên bốn chuỗi tiếng Anh
+     * viết cứng trong nó chưa ai thấy — nhưng `docs/SHARED-REGISTRY.md` khai nó là bản dùng
+     * chung BẮT BUỘC cho "mọi ô chọn ngày/giờ", tức sổ đăng ký đang chỉ người viết story sau
+     * vào đúng cái hộp tiếng Anh ấy. `term-consistency.test.ts` canh để nó không quay lại.
+     *
+     * KHÔNG thêm khoá `title` cho tiêu đề nhìn thấy được: nó sẽ mang đúng chữ của `choose` —
+     * một khái niệm hai khoá, đúng thứ bài kiểm này sinh ra để chặn. Thay vào đó `<section>`
+     * trỏ `aria-labelledby` vào chính thẻ tiêu đề, nên tên trợ năng và chữ trên màn không thể
+     * lệch nhau. `Cancel`/`Done` dùng `common.cancel`/`common.save` có sẵn, không đẻ khoá mới.
+     */
+    now: 'Bây giờ',
+    tab: 'Giờ',
   },
   theme: {
     dark: 'Chế độ tối',
@@ -272,7 +285,9 @@ export default {
     addIspProvider: 'Thêm nhà mạng',
     addServicePort: 'Thêm dịch vụ',
     edit: 'Sửa',
-    deactivate: 'Vô hiệu',
+    /* 'Vô hiệu hóa', không phải 'Vô hiệu' — cùng động từ với `serviceAccounts.disable`.
+       Ba màn dùng chung khái niệm này; `term-consistency.test.ts` canh chúng không lệch lại. */
+    deactivate: 'Vô hiệu hóa',
     activate: 'Bật lại',
     delete: 'Xóa',
     code: 'Mã',
@@ -298,7 +313,9 @@ export default {
     portHint: 'Một port (443) hoặc đầu của một dải (50000, rồi điền 52000 ở ô bên).',
     status: 'Trạng thái',
     active: 'Đang dùng',
-    inactive: 'Đã vô hiệu',
+    /* Cùng chữ với `accounts.statusDisabled` · `serviceAccounts.statusDisabled` ·
+       `disposal.statusDisabled` — bốn màn, một trạng thái. Trước 23/09 là bốn cách viết. */
+    inactive: 'Đã vô hiệu hóa',
     pickSite: '— Chọn site —',
     searchSite: 'Tìm theo mã hoặc tên site',
     searchCabinet: 'Tìm theo mã tủ, site hoặc mô tả',
@@ -320,7 +337,7 @@ export default {
     importTitle: 'Nhập danh mục từ Excel',
     importHint: 'Dùng đúng file tải từ nút "Tải file mẫu". Dòng đánh dấu VÍ DỤ sẽ được bỏ qua.',
     emptyHint: 'Chưa khai mục nào. Thêm tay, hoặc dùng "Nhập Excel" với file tải từ nút "Tải file mẫu".',
-    readOnly: 'Bạn chỉ có quyền xem danh mục. Cần sửa thì nhờ Admin.',
+    readOnly: 'Bạn chỉ có quyền xem danh mục. Cần sửa thì nhờ Quản trị.',
   },
   devices: {
     title: 'Thiết bị',
@@ -495,8 +512,9 @@ export default {
     name: 'Tên hồ sơ',
     kind: 'Loại',
     vendor: 'Nhà cung cấp',
-    seats: 'Seat',
-    seatTotal: 'Số seat',
+    /* 'Ghế', không phải 'Seat' — `seatsNote` ngay dưới cột này đã nói "ghế đã gán". */
+    seats: 'Ghế',
+    seatTotal: 'Số ghế',
     licenseModel: 'Kỳ hạn',
     licenseModelHint: 'Mua đứt thì chỉ cần ngày bắt đầu — hệ thống sẽ không nhắc gia hạn.',
     subscription: 'Thuê bao',
@@ -514,7 +532,9 @@ export default {
     kindOther: 'Khác',
     statusActive: 'Đang dùng',
     statusExpiredOk: 'Hết hạn, không gia hạn',
-    statusRetired: 'Đã bỏ',
+    /* 'Đã thanh lý', không phải 'Đã bỏ': ba module đổ về CÙNG màn Kho thanh lý, và ở đó hồ sơ
+       phần mềm từng hiện "Đã thanh lý license" trong khi màn `/software` gọi nó là "Đã bỏ". */
+    statusRetired: 'Đã thanh lý',
     allKinds: 'Tất cả loại',
     allStatuses: 'Mọi trạng thái',
     noVendor: 'Chưa rõ nhà cung cấp',
@@ -684,7 +704,7 @@ export default {
     never: 'Chưa gửi lần nào',
     empty: 'Chưa có luật gửi báo cáo nào.',
     emptyHint: 'Tạo một luật để sếp và team nhận đúng thứ cần, không bị spam từng món.',
-    readOnly: 'Bạn xem được luật nhưng không sửa được. Cần đổi thì nhờ Admin.',
+    readOnly: 'Bạn xem được luật nhưng không sửa được. Cần đổi thì nhờ Quản trị.',
     confirmDelete: 'Xóa luật "{{name}}"? Sẽ không còn email tổng hợp theo luật này nữa.',
   },
   accounts: {
@@ -741,8 +761,10 @@ export default {
     /* "Phiên NÀY" là chữ chỉ có nghĩa khi người đọc còn nhìn thấy cái bảng — mà hộp thoại
        vừa che nó đi. Nêu thẳng IP và lần hoạt động gần nhất: đó là hai thứ phân biệt được
        phiên của chính mình với phiên của kẻ đang chiếm tài khoản. */
+    /* Câu hỏi phải dùng đúng động từ của cái nút đã mở ra nó (`killSession` = 'Đóng phiên').
+       Đợt D 12/09 đổi cái NÚT khỏi tiếng lóng "đá phiên" nhưng bỏ quên câu hỏi bên trong. */
     confirmKillSession:
-      'Đá phiên đăng nhập từ IP {{ip}} (hoạt động gần nhất {{seen}})? Người đang dùng phiên đó ' +
+      'Đóng phiên đăng nhập từ IP {{ip}} (hoạt động gần nhất {{seen}})? Người đang dùng phiên đó ' +
       'bị đăng xuất ngay. Nếu đó là phiên của chính bạn thì bạn sẽ phải đăng nhập lại.',
     sessionKilled: 'Đã đóng phiên đó — người dùng bị đăng xuất ngay.',
     roleSa: 'Super Admin',
@@ -750,7 +772,10 @@ export default {
     roleMember: 'Thành viên',
     statusActive: 'Đang hoạt động',
     statusLocked: 'Đang khóa',
-    statusDisabled: 'Vô hiệu hóa',
+    /* NHÃN trạng thái, không phải NÚT — trước đây trùng y hệt `disable` ('Vô hiệu hóa'), nên
+       trên cùng một hàng của bảng Tài khoản, badge và nút đọc giống hệt nhau và không ai phân
+       biệt được "đang bị vô hiệu" với "bấm để vô hiệu". Cùng chữ với `disposal.statusDisabled`. */
+    statusDisabled: 'Đã vô hiệu hóa',
   },
   vault: {
     tab: 'Két sắt',
@@ -895,7 +920,21 @@ export default {
     voidAddressHint:
       'Dùng cho bản ghi KHAI NHẦM: địa chỉ trở lại thành chỗ trống. Máy đang thật sự dùng địa chỉ này thì bấm Thu hồi — nó giữ lại lịch sử "IP này từng của máy nào".',
     voidAddressPlaceholder: 'vd: gõ nhầm địa chỉ',
-    addressVoided: 'Đã xóa hồ sơ IP.',
+    /*
+     * Tên của chính HÀNH ĐỘNG — thêm 23/09. Trước đó ba chỗ của luồng này (mục menu, tiêu đề
+     * hộp, nút gửi) đều đọc `common.delete` = 'Xóa', trong khi kết quả của nó là 'Đã ẩn' và có
+     * hẳn nút 'Bật lại'. Chính chú thích tại chỗ ở `subnet-detail.tsx:425` đã viết "Vẫn là ẩn ở
+     * tầng DB, không DELETE" — code biết đúng, chỉ có chữ trên màn nói sai.
+     *
+     * Và "Xóa" phải được giữ cho việc xoá THẬT: `ipam.subnetDeleted` ('Đã xóa dải.') là một
+     * lượt xoá không hoàn tác được. Dùng cùng một chữ cho hai việc — một cái lùi được, một cái
+     * không — là chỗ người dùng trả giá.
+     */
+    voidAddress: 'Ẩn hồ sơ',
+    /* "Ẩn", không phải "xóa" — câu này phải nói ĐÚNG việc vừa làm. Hồ sơ không biến mất: nó
+       ẩn đi, hiện lại được bằng "Hiện cả hồ sơ đã ẩn" và bật lại được bằng "Bật lại". Người
+       dùng đọc "Đã xóa" rồi đi khai lại từ đầu là mất công thật, không phải chuyện chữ nghĩa. */
+    addressVoided: 'Đã ẩn hồ sơ IP.',
     /* Bảng rỗng phải nói VÌ SAO rỗng — hai nguyên nhân, hai lời khuyên khác hẳn nhau. */
     slotEmpty: 'Không có dòng nào để hiện.',
     slotEmptyAll: 'Dải này chưa có địa chỉ nào, kể cả ô trống — kiểm lại khai báo CIDR.',
@@ -962,7 +1001,17 @@ export default {
     routerHint: 'Router/firewall mang rule này — lấy từ kho thiết bị, chưa có thì thêm ngay trong danh sách.',
     routerSearch: 'Chọn hoặc gõ để lọc…',
     protocol: 'Giao thức',
-    protocolBoth: 'Cả TCP và UDP',
+    /*
+     * `nat.protocolBoth` ĐÃ GỠ (23/09) — nó là bản thứ hai của `catalog.protocolBoth`, và hai
+     * bản ấy hiện trong CÙNG MỘT FORM cách nhau 3cm: ô chọn giao thức của luật NAT đọc bản này
+     * ('Cả TCP và UDP'), ô chọn cổng dịch vụ ngay bên cạnh đọc bản kia ('TCP + UDP').
+     *
+     * Không sửa bằng cách cho hai khoá cùng giá trị: hai khoá thì hai người sửa hai nơi, và
+     * chúng lệch lại — đúng chuyện đã xảy ra với năm bản sao `display()` ở panel Lịch sử
+     * (F-09). Một khoá, `catalog.protocolBoth`, vì danh mục cổng dịch vụ là chủ của khái niệm
+     * này (AD-3). Chữ chọn là 'TCP + UDP' để đứng cùng hàng với hai lựa chọn anh em, vốn in ra
+     * 'TCP' và 'UDP' viết hoa.
+     */
     external: 'Port ngoài',
     externalHint:
       'Gõ "8080" hoặc "8000-8010" rồi Enter. Thêm được nhiều khoảng — mỗi khoảng thành một dòng riêng trong sổ, dùng chung router, IP trong và lý do.',
@@ -1045,7 +1094,8 @@ export default {
     noteHint: 'KHÔNG ghi mật khẩu ở đây — mật khẩu thuộc về tab Két sắt.',
     status: 'Trạng thái',
     statusActive: 'Đang dùng',
-    statusDisabled: 'Đã vô hiệu',
+    /* Cùng chữ với `accounts.statusDisabled` và `disposal.statusDisabled` — ba màn, một trạng thái. */
+    statusDisabled: 'Đã vô hiệu hóa',
     statusHint: 'Đổi bằng nút Vô hiệu hóa / Bật lại ngoài danh sách — hai đường đó bắt ghi lý do.',
     copyLogin: 'Chép tên đăng nhập',
     codeAutoHint: 'Để trống thì hệ thống tự đặt theo tên đăng nhập.',
@@ -1207,7 +1257,7 @@ export default {
     noScopes: 'Không có nhóm đối tượng nào khớp',
     grantScopeTitle: 'Gán "{{scope}}" cho người dùng',
     people: 'Chọn người',
-    noMembers: 'Chưa có tài khoản Member nào. Quản trị và Super Admin không cần gán ở đây.',
+    noMembers: 'Chưa có tài khoản Thành viên nào. Quản trị và Super Admin không cần gán ở đây.',
     pickPeople: 'Chọn ít nhất một người.',
     willGrant: 'Bấm Lưu sẽ tạo {{count}} dòng quyền, cùng tầng và cùng ghi chú.',
     grantedMany: 'Đã gán quyền cho {{count}} người.',
@@ -1340,7 +1390,12 @@ export default {
       lmPerpetual: 'Vĩnh viễn',
       stActive: 'Đang dùng',
       stExpiredOk: 'Hết hạn, không gia hạn',
-      stRetired: 'Đã bỏ',
+      /* Cùng chữ với `software.statusRetired`. Panel Lịch sử giữ MỘT BỘ NHÃN RIÊNG song song
+         với nhãn trên bảng — nên một khái niệm ở đây có tới SÁU khoá (3 màn + 3 sổ lịch sử),
+         và bản `history.software` đã trôi lệch thật: bảng đọc 'Đã thanh lý', dòng lịch sử ngay
+         dưới nó đọc 'Đã bỏ'. §4.2 của sổ chỉ đếm ba khoá màn; ba khoá lịch sử lộ ra 23/09 lúc
+         một bài kiểm dùng `t` THẬT đỏ lên. `term-consistency.test.ts` khoá từng cặp lại. */
+      stRetired: 'Đã thanh lý',
     },
 
     /* Sổ tài khoản dịch vụ */
@@ -1357,7 +1412,8 @@ export default {
       kindShared: 'Tài khoản dùng chung',
       kindVpn: 'Tài khoản VPN',
       stActive: 'Đang dùng',
-      stDisabled: 'Đã vô hiệu',
+      /* Cùng chữ với `serviceAccounts.statusDisabled` — xem chú thích ở `history.software.stRetired`. */
+      stDisabled: 'Đã vô hiệu hóa',
     },
 
     /* Sổ đường truyền */

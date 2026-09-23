@@ -632,12 +632,12 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
     const ipId = ((await created.json()) as { id: string }).id;
 
     await page.goto(`/ip-addresses/${subnetId}`);
-    await rowAction(page, `172.16.${octet}.2`, 'Xóa');
+    await rowAction(page, `172.16.${octet}.2`, 'Ẩn hồ sơ');
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Lý do' }).fill('gõ nhầm địa chỉ');
-    await form.getByRole('button', { name: 'Xóa' }).click();
+    await form.getByRole('button', { name: 'Ẩn hồ sơ' }).click();
 
-    await expect(page.getByText('Đã xóa hồ sơ IP.')).toBeVisible();
+    await expect(page.getByText('Đã ẩn hồ sơ IP.')).toBeVisible();
     // Địa chỉ trở lại thành chỗ TRỐNG, có nút cấp — chứ không nằm lại trong sổ vĩnh viễn.
     await expect(
       page.getByRole('row', { name: new RegExp(`172\\.16\\.${octet}\\.2`) })

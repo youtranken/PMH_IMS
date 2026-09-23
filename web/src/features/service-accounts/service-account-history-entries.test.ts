@@ -62,13 +62,13 @@ describe('toServiceAccountHistory — dịch lịch sử thô thành câu ngư�
       {
         name: 'trạng thái dịch sang tiếng Việt',
         changes: { status: { before: 'active', after: 'disabled' } },
-        expected: 'trạng thái: Đang dùng → Đã vô hiệu',
+        expected: 'trạng thái: Đang dùng → Đã vô hiệu hóa',
       },
       // Chiều ngược lại cũng phải đọc được — bật lại là một dòng lịch sử ngang hàng với đóng.
       {
         name: 'bật lại: trạng thái đi ngược',
         changes: { status: { before: 'disabled', after: 'active' } },
-        expected: 'trạng thái: Đã vô hiệu → Đang dùng',
+        expected: 'trạng thái: Đã vô hiệu hóa → Đang dùng',
       },
       // Ô rỗng phải đọc ra "(trống)" chứ không phải một khoảng trắng không ai thấy.
       {

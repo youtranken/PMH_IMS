@@ -25,7 +25,7 @@ async function fillSoftware(
   await form.getByRole('button', { name: 'Loại', exact: true }).click();
   await page.getByRole('option', { name: values.kind, exact: true }).click();
   if (values.seats) {
-    await form.getByRole('textbox', { name: 'Số seat' }).fill(values.seats);
+    await form.getByRole('textbox', { name: 'Số ghế' }).fill(values.seats);
   }
   if (values.end) {
     await form.getByRole('button', { name: 'Hết hạn' }).click();
