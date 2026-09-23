@@ -78,7 +78,7 @@ Ghi ra để lượt rà sau khỏi mất công:
 
 | # | Mức | Chỗ | Chuyện gì |
 | --- | :---: | --- | --- |
-| **B-01** | **CAO** | `web/src/ui/command-palette.tsx:216-219` + 11 chỗ `ilike(` bên api | **Tìm kiếm không khớp tiếng Việt KHÔNG DẤU.** Đo trực tiếp: gõ `thiet` → **0 kết quả**; gõ `Thiết` → 1. `ket` → 0; `két` → 2. Nguyên nhân hai tầng: web dùng `toLowerCase().includes()` trần; api dùng `ILIKE`, mà `ILIKE` **không** gấp dấu (`SELECT 'Thiết bị họp' ILIKE '%thiet%'` → `f`, đã chạy trên DB thật) và extension `unaccent` **chưa cài** (`pg_extension` → 0 dòng). Người Việt gõ không dấu là chuyện thường ngày; đây là khiếm khuyết dùng-được lớn nhất tìm được. Trớ trêu: repo **đã có** hàm gấp dấu ở `api/src/common/import-plan.ts:41-46` và `service-account-rules.ts:105` — hai bản, chưa bản nào dùng chung (AD-15) |
+| **B-01** | **CAO** | `web/src/ui/command-palette.tsx:216-219` + ~~11 chỗ `ilike(`~~ **30 vị trí ILIKE trên 8 file** bên api *(đếm lại 23/09)* | **Tìm kiếm không khớp tiếng Việt KHÔNG DẤU.** Đo trực tiếp: gõ `thiet` → **0 kết quả**; gõ `Thiết` → 1. `ket` → 0; `két` → 2. Nguyên nhân hai tầng: web dùng `toLowerCase().includes()` trần; api dùng `ILIKE`, mà `ILIKE` **không** gấp dấu (`SELECT 'Thiết bị họp' ILIKE '%thiet%'` → `f`, đã chạy trên DB thật) và extension `unaccent` **chưa cài** (`pg_extension` → 0 dòng). Người Việt gõ không dấu là chuyện thường ngày; đây là khiếm khuyết dùng-được lớn nhất tìm được. Trớ trêu: repo **đã có** hàm gấp dấu ở `api/src/common/import-plan.ts:41-46` và `service-account-rules.ts:105` — hai bản, chưa bản nào dùng chung (AD-15) |
 | **B-02** | VỪA | `web/src/features/admin/accounts-screen.tsx` | **Màn danh sách DUY NHẤT không giữ trạng thái trong URL.** Đo: `/devices` gõ "CC" → URL `?q=CC`, reload giữ nguyên. `/admin/accounts` gõ "Cao" → lọc còn 1 dòng nhưng URL **không đổi**; bấm sắp xếp → URL **không đổi**; reload → về 7 dòng, ô tìm trắng. Không chia sẻ được link đã lọc, và nút Back của trình duyệt rời trang thay vì gỡ bộ lọc. Các màn khác đều dùng `useListUrlState` |
 | **B-03** | VỪA | `web/index.html` + mọi route | **`document.title` giống hệt nhau trên cả 21 màn** — kể cả trang 404 — luôn là `"IMS — Quản lý hệ thống IT"`. Mở 5 tab là 5 tab không phân biệt được; lịch sử trình duyệt và bookmark vô dụng |
 | **B-04** | VỪA | `web/src/features/ipam/subnet-detail.tsx` | **Trạng thái "Đã ẩn" không có ô đếm, và bị gộp vào "Trống".** Dải `172.16.15.0/24`: chip đếm `Tất cả 254 · Đang cấp 0 · Trống 254 · Nghi chết 0 · Đã thu hồi 0`, nhưng hàng `172.16.15.3` hiện chữ **"Đã ẩn"**. Bấm lọc "Trống" → dòng "Đã ẩn" **hiện lên trong kết quả**. DB xác nhận: `ip_address.status='free'` kèm `voided_at` khác null. Ngay phía trên, thẻ dải nói *"Giữ lại vì còn 1 hồ sơ IP mang lịch sử — không xóa hẳn được"*. Hai câu trên một màn nói ngược nhau, và bên nói sai là bên bảo ô đó **trống, cấp được** |
@@ -166,6 +166,7 @@ L-06 là **4** nhãn chứ không phải 3.
 | **4 · Hộp thoại + đồng hồ két** | L-21 · L-22 · L-23 | ~1 giờ | L-22 là bài chứng minh L-21 không hỏng gì — gieo đột biến trước khi tin nó |
 | **5 · Bản đồ quan hệ** | L-18 · L-19 | ~40 phút | thấp |
 | **6 · Màu trong data-URI** | L-17 (cả **3** chỗ) | ~2 giờ | **Cao nhất.** Dọn màu TRƯỚC, nới `ops/gate-hex.sh` SAU |
+| **7 · Hạt giống trùng của E2E** | **L-25** — *thêm 23/09; bảng này trước đó không có nó ở BẤT KỲ hàng nào, kể cả hàng "không xếp lượt"* | ~30 phút, 40 file | thấp — nhưng giữ chữ `E2E` trong tên, nếu không `reset-e2e.mjs` không dọn được |
 | **Không xếp lượt** | L-01 (cần story Admin `system_config`, đã hoãn có chủ ý **4** lần) · L-20 (chọn Tooltip vs Dialog trước) · L-29/L-30/L-31/L-32 (vận hành + đánh đổi đã ghi) | | |
 
 **Đừng báo lại ở lượt rà thứ tư:** L-01 (đã nêu ở `CODE-REVIEW-2026-08-28.md:127` + EPIC-MAP
@@ -487,7 +488,7 @@ Không ai phải đọc nó — xem F-03.
 | **F-05** | `ui/select.tsx:103-107` | **Bản vá của `Combobox` chưa bao giờ áp cho `Select`.** `options` gần như không bao giờ bền identity (`pagination.tsx:316` — `PAGE_SIZES.map(...)`, mảng mới mỗi render). Mở menu, ↓ ba lần, cha render lại (refetch nền) → **dòng đang sáng nhảy về mục đang chọn**. Đúng cái `combobox.tsx:92-117` viết cả khối chú thích để chữa. `select.test.tsx` không có bài nào chạm `active` |
 | **F-06** | `ui/date-picker.tsx:98-106` · `ui/time-field.tsx:138-145` | **Hai chú thích mô tả một cơ chế bất khả thi.** Chúng nói "capture + `stopPropagation` chặn Radix Dialog". Không thể: Radix cũng nghe ở `document` pha bắt và đăng ký lúc `RD.Content` mount, **tức trước**. Chính `dialog.tsx:255-259` đã ghi đúng sự thật này cho `select.tsx`. Thứ **thật sự** giữ form là `dialog.tsx:275`. **Ai gỡ dòng 275 vì tin hai chú thích kia sẽ làm Esc xoá trắng form đang gõ** |
 | **F-07** | `ui/vault-panel.tsx:192,200` · `:295` | Hai lỗi cùng file. (a) **Admin bị chặn bởi một truy vấn họ không cần**: đường hiển thị là `isAdmin \|\| verdict.data?.canReveal`, nhưng `if (verdict.isLoading)` / `if (verdict.isError)` chạy **trước** ⇒ `/verdict` trả 500 thì SA/Admin **mất sạch panel Két sắt** dù quyền đủ — đúng thứ chú thích `:63` tuyên bố không xảy ra. (b) **"Đang chờ duyệt" là nhánh `else`, không phải sự thật**: Member bị `denied` và **chưa gửi phiếu nào** vẫn đọc "Đang chờ duyệt" → ngồi đợi một phiếu không tồn tại |
-| **F-08** | `ui/attachment-panel.tsx:103` | **Đọc cache không đăng ký theo dõi.** `queryClient.getQueryData<Me>(ME_KEY)` không subscribe; `useApiMutation` invalidate `ME_KEY` sau **mọi** mutation ⇒ Admin mất nút Xoá, **và component không re-render khi cache về**. Chú thích `:98` khẳng định "`me` luôn có sẵn" — đó là giả định, không phải hàng rào |
+| **F-08** | `ui/attachment-panel.tsx:103` | **Đọc cache không đăng ký theo dõi.** `queryClient.getQueryData<Me>(ME_KEY)` không subscribe. ~~`useApiMutation` invalidate `ME_KEY` sau **mọi** mutation ⇒ Admin mất nút Xoá~~ · ~~chú thích `:98` là giả định, không phải hàng rào~~ → **BÁC BỎ 23/09, xem ô ở §8.9 Nhẹ:** có chốt `refreshMe !== false` (46/85 lời gọi truyền `false`), `invalidateQueries` không xoá dữ liệu cache, và `App.tsx:74-76` chặn dựng màn tới khi `me` về — nên chú thích `:98` ĐÚNG. Còn thật: dây mảnh treo vào thứ tự khởi động ở file khác |
 | **F-09** | AD-15 — 5 cụm bản sao, **và chúng ĐÃ trôi lệch** | `display()`+`describe()` của panel Lịch sử **chép 5 lần** (`device`/`isp`/`nat`/`software`/`service-account` `-history-entries.ts`). Hai bản đầu giống nhau **từng byte**; nhưng `isp:62` có `if (field.endsWith('Id')) return t('history.changedOnly')` mà **bốn bản kia không** → sửa `siteId` ở màn NAT **in nguyên một UUID**. Ngược lại `nat`/`service-account` có luật tránh vẽ "A → A", ba bản kia không. `history-action-rollcall.test.ts` điểm danh **khoá i18n**, không điểm danh **luật hiển thị**. Cùng nhóm: `RenewDialog` chép nguyên khối (`isp-detail.tsx:553-642` ↔ `software-detail.tsx:351-446`); hook chọn thiết bị chép **3+1** lần; `buildFilterQuery` liệt kê TAY ở **5 màn** — chính cơ chế đã làm mất `search=` hồi 17/09, vá ở một chỗ, còn 5 cơ hội lặp lại |
 | **F-10** | `ipam/subnet-detail.tsx:289` | **Hai hàng cùng địa chỉ, hàng SỐNG bị hàng ĐÃ ẨN nuốt.** `Map` khoá theo `address`; bật "Hiện hồ sơ đã ẩn" thì địa chỉ từng bị ẩn rồi cấp lại có **hai** hàng, `Map` giữ hàng cuối, **thứ tự do Postgres quyết**. Badge "Đã ẩn" cho địa chỉ đang dùng, "Đang cấp" hụt 1, menu bày "Bật lại" → API `IP_TAKEN`. Trông như "lúc đúng lúc sai" |
 
@@ -674,6 +675,32 @@ Excel thì mở cửa sau"*. **Cửa sau HTTP còn rộng hơn Excel và chưa a
 > vẫn còn" đúng cùng lúc — không trí nhớ nào chịu nổi. Từ 21/09 các lượt đánh **số**, và mỗi
 > tiêu đề giữ một dòng đối chiếu sang commit vì commit đã đẩy đi, không viết lại được.
 
+> ### Đính chính 23/09/2026 — bốn ô nói sai về chính việc của chúng
+>
+> Lượt này **không sửa một dòng code nào**: chỉ mở từng ô còn trống ra đối chiếu với code đang
+> chạy. Bốn ô nói sai, và cả bốn sai theo hướng làm người đọc **tưởng mình biết việc phải làm**:
+>
+> | Ô | Sổ nói | Code nói |
+> | --- | --- | --- |
+> | **F-08** | "Admin mất nút Xoá" | Hậu quả đó KHÔNG tới được (3 chốt chặn) — hạ xuống NHẸ ở §8.9 |
+> | **B-01** | "11 chỗ `ilike`" | 30 vị trí ILIKE trên 8 file; thiếu hẳn `catalog` |
+> | **F-06** | "`Field` nối `htmlFor`" | Prop ĐÃ CÓ; việc thật là 56/145 chỗ GỌI + `Combobox` thiếu `id`. **§6.4 ghi đúng từ đầu** |
+> | **§8.7** | 6 đợt đều trống | Đợt 0·1·2 đã làm (§8.2 và §12 nói thế) |
+>
+> Và hai ô trong §8.8 vốn là **quyết định KHÔNG làm** (`users` bỏ qua có chủ ý · GIỮ cặp index
+> `audit_log`) — chúng đã đổi thành dòng thường, vì một ô vuông trống đọc như việc chưa làm.
+>
+> **Cách bốn lỗi này sinh ra giống hệt nhau, và đây là phần đáng nhớ:** ô ở mục 8 là bản NÉN
+> của một mục chuyên môn ở trên, và phép nén làm rơi mất thứ quyết định việc phải làm. F-06 là
+> ví dụ sạch nhất — **§6.4 ghi đủ và ghi đúng** ("56/145 `<Field>` không có `htmlFor`", "gốc rễ:
+> `combobox.tsx` không nhận prop `id`", "`aria-describedby` = 0 lần"); dòng §8.6 nén nó thành
+> "`Field` nối `htmlFor`", và người xếp lượt đọc dòng nén chứ không đọc §6.4. B-01 thì nén một
+> lượt `grep "ilike("` — lưới đó bỏ qua mọi vế ILIKE viết trong `sql` template, tức phần lớn.
+>
+> Cùng hình dạng với bài học của §8.9, chỉ khác là lần đó checklist thiếu MỤC, lần này nó sai
+> NỘI DUNG — và nội dung sai thì không đối chiếu máy móc nào bắt được, phải mở code ra đọc.
+> **Luật rút ra: ô ở mục 8 phải mang `file:dòng` hoặc một con số đếm được, không mang lời tóm.**
+
 ### 8.1 Chặn phát hành (3)
 
 - [x] **A-01** Chặn `status: 'retired'` trên đường **`PATCH /devices/:id`** — bắt đi qua `setStatus`, y như `device-import.ts:472` đã làm. **Sửa lại lời khai 21/09:** ô này từng ghi `PATCH/POST`, nhưng `POST` cố ý KHÔNG chặn — tạo mới một máy đã ở trạng thái thanh lý là việc thật (nạp kho lịch sử lần đầu), và `device-import.ts:423-427` đã quyết định đúng như vậy kèm lý do: một bản ghi vừa sinh ra thì chưa giữ IP/NAT/ghế license nào để mà dọn. Chốt `setStatus` sinh ra để hỏi đúng câu đó, nên nó không có việc gì ở đường tạo mới. Hai tầng rà soát chéo đều báo đây là lỗ vì đọc `create()` thấy thiếu chốt mà không mở nhánh create của đường Excel — lời khai sai của ô tick này là thứ dẫn họ tới đó.
@@ -714,7 +741,7 @@ Excel thì mở cửa sau"*. **Cửa sau HTTP còn rộng hơn Excel và chưa a
 - [x] **B-15** ~~`UPDATE system_config …`~~ → **ĐÃ ĐÚNG SẴN.** Đo 22/09: giá trị đang là `20`. `e2e/global-teardown` trả nó về 20 sau mỗi lượt chạy, nên con số trong sổ là ảnh chụp giữa một lượt E2E chứ không phải trạng thái thật. Không sửa gì
 - [x] **B-08 / T-02** Bỏ nút CTA khỏi hai email cảnh báo bảo mật. Cơ chế: `/quan-tri/nhat-ky` CÓ trong `LEGACY_ROUTES` nên chuyển hướng đúng sang `/admin/audit-log` — nhưng màn đó **chưa bao giờ được dựng**, nên lượt chuyển hướng rơi vào 404. Sửa cả lời dặn ("Mở nhật ký xem…" là lời khuyên không làm theo được). `mail-cta.spec.ts` sẽ ĐỎ vào ngày màn nhật ký dựng xong, để nhắc trả nút về
 
-### 8.5 Dọn — mỗi ô một commit (6)
+### 8.5 Dọn — mỗi ô một commit (7)
 
 - [ ] **Lượt 1** CSS chết: L-11..L-16 + 3 cụm bonus + `filters.css` + `profile.css` + `shell.css:71-194` → **~550 dòng**
 - [ ] **Lượt 2** Chú thích nói đúng về code: L-24 · L-26 · L-27 · L-28 · L-32 · F-06
@@ -722,20 +749,33 @@ Excel thì mở cửa sau"*. **Cửa sau HTTP còn rộng hơn Excel và chưa a
 - [ ] **Lượt 4** L-21 · L-22 · L-23
 - [ ] **Lượt 5** L-18 · L-19
 - [ ] **Lượt 6** L-17 — cả 3 chỗ; dọn màu TRƯỚC, nới `gate-hex.sh` SAU
+- [ ] **Lượt 7** **L-25** hạt giống trùng của bộ E2E — **bổ sung 23/09, và nó chưa từng có ô nào
+  ở đâu.** L-25 nằm trong `NO-KY-THUAT-LOW-2026-09-19.md` nhưng **không xuất hiện một lần nào**
+  trong cả cuốn sổ này, cũng không nằm trong danh sách "Không xếp lượt" của §2.3 — nó rơi qua
+  đúng kẽ giữa hai file. Và quy mô rộng hơn lời khai của L-25 (chỉ nói `vault.spec.ts`): đếm
+  23/09 được **190 chỗ `Date.now().toString().slice(-6)` trên 40 file** trong `e2e/`. Sáu chữ
+  số mili-giây lặp lại sau mỗi 1000 giây, nên hai lượt chạy cách nhau dưới một giờ có thể sinh
+  trùng tên hàng; lượt trước đang nghỉ thì nuốt lá thư của lượt sau, và bài đỏ với một thông báo
+  không chỉ về đâu. Đổi sang `crypto.randomUUID().slice(0, 8)`. **Giữ nguyên chữ `E2E` trong
+  tên** — đó là thứ duy nhất `reset-e2e.mjs` nhìn vào để dọn
 
-### 8.6 Văn bản & trợ năng (10)
+### 8.6 Văn bản & trợ năng (11)
 
 - [ ] **T-01** 6 chuỗi tiếng Anh trong `ui/time-picker.tsx` (2 khóa đã có sẵn)
 - [ ] 5 khái niệm mang hai tên (4.2) — bắt đầu từ `ipam.addressVoided` vì nó **nói sai việc vừa làm**
 - [ ] `accounts.statusDisabled` → `'Đã vô hiệu hóa'` (đang trùng y hệt nút)
 - [ ] `Member`/`Admin` trong câu tiếng Việt → `Thành viên`/`Quản trị`
 - [ ] 4 màn tách câu rỗng "chưa có gì" khỏi "lọc không ra"
-- [ ] **B-01** Gấp dấu tiếng Việt: hàm dùng chung cho web + `unaccent` (hoặc cột sinh) cho 11 chỗ `ilike`
+- [ ] **B-01** Gấp dấu tiếng Việt: hàm dùng chung cho web + `unaccent` (hoặc cột sinh) cho **30 vị trí ILIKE trên 8 file**. *(Đếm lại 23/09 — con số "11 chỗ" cũ SAI vì nó là kết quả của `grep "ilike("`, tức chỉ lời gọi trợ giúp của drizzle; phần lớn vế tìm kiếm viết thẳng trong `sql` template nên không lọt lưới đó. Bản thật theo file: `catalog` 5 · `service-account` 5 · `users` 4 · `isp-line` 4 · `devices` 4 · `software` 3 · `nat-rule` 3 · `audit` 2. Làm theo con số 11 thì bỏ sót đúng hai file đông nhất.)* Đi cùng khối "Tìm kiếm" của §8.8 — vế web và vế DB là một việc, tách ra làm hai lần thì lần đầu không chứng minh được gì
 - [ ] **B-02** `/admin/accounts` dùng `useListUrlState`
 - [ ] **B-03** `document.title` theo màn
 - [ ] **B-04** Chip "Đã ẩn" riêng, đừng đếm vào "Trống"
 - [ ] **B-05** Ẩn `ExpiryBadge` cho hồ sơ `retired`
-- [ ] **F-06 nhóm a11y** `Loading` thành vùng sống thường trực · drawer 390px quản lý tiêu điểm · `Field` nối `htmlFor` (thêm prop `id` cho `Combobox`) · `aria-describedby` cho `hint`/`error`
+- [ ] **F-06 nhóm a11y** — **viết lại 23/09, lời cũ nói sai việc.** Ô này từng ghi "`Field` nối `htmlFor`", đọc ra thành "phải thêm prop cho component". Mở `ui/page-header.tsx:64,89,95` thì prop **đã có và đã dùng**. **§6.4 nói đúng từ đầu — chỉ dòng checklist này nén sai**, và người xếp lượt đọc dòng checklist chứ không đọc §6.4. Ba việc thật, theo đúng §6.4:
+  - **56/145 chỗ gọi `<Field>` chưa truyền `htmlFor`** (trong đó **8 chỗ** con cũng không có tên trợ năng nào) — nhãn không nối được vào ô nhập. Việc gõ tay, không phải việc thiết kế; làm kèm một cổng đếm thì nó không mọc lại
+  - **`Combobox` chưa có prop `id`** để mà nối vào — đây mới là chỗ phải sửa component, và là GỐC RỄ (§6.4 gọi đúng tên nó)
+  - **`aria-describedby` = 0 lần trong cả `web/src`.** `hint` và `error` hiện là chữ nằm cạnh ô, trình đọc màn hình không biết chúng thuộc về ô nào
+  - Hai vế cũ giữ nguyên: `Loading` thành vùng sống **thường trực** (`load-state.tsx:56` đang khai `role="status"` trên chính node chỉ xuất hiện lúc đang tải — vùng sống sinh ra cùng nội dung thì phần lớn trình đọc màn hình không đọc) · drawer 390px quản lý tiêu điểm
 
 ### 8.9 SÓT KHỎI CHECKLIST — bổ sung 21/09/2026 (16)
 
@@ -774,16 +814,32 @@ thiếu, và cái thiếu đó vô hình vì checklist trông vẫn đầy đủ
 - [x] **B-09** Member mở được **vỏ** của `/admin/accounts` và `/admin/vault-access`: đủ `h1`,
   phụ đề, và **nút "Thêm tài khoản" bấm được**, rồi mới báo không có quyền. Dữ liệu không rò
   (API 403 sạch) nhưng `/vault` và `/dev/components` chặn đúng bằng 404 — hai cửa lệch nhau
-- [ ] **F-08** `attachment-panel.tsx:103` đọc `queryClient.getQueryData(ME_KEY)` **không
-  subscribe**, mà `useApiMutation` invalidate `ME_KEY` sau MỌI mutation ⇒ Admin mất nút Xoá và
-  component không re-render khi cache về. Chú thích `:98` khẳng định "`me` luôn có sẵn" — một
-  giả định, không phải hàng rào
+**F-08 — DỜI XUỐNG "Nhẹ" ngày 23/09.** Ô cũ ở đây ghi "⇒ Admin mất nút Xoá"; đo lại thì hậu
+quả ấy không tới được. Ô thật nằm dưới, trong nhóm Nhẹ, kèm ba chốt chặn đường. Để lại dòng
+này chứ không xoá, vì "F-08 ở nhóm VỪA" đã đi vào hai lượt đếm việc trước đó.
 - [x] **F-09** **AD-15 — 5 bản sao của `display()`+`describe()` panel Lịch sử, và chúng ĐÃ
   trôi lệch**: `isp:62` có `if (field.endsWith('Id')) return t('history.changedOnly')` mà bốn
   bản kia không có → sửa `siteId` ở màn NAT **in nguyên một UUID** ra màn hình
 
 #### Nhẹ
 
+- [ ] **F-08** `attachment-panel.tsx:103` đọc `queryClient.getQueryData(ME_KEY)` **không
+  subscribe** — **hạ từ VỪA xuống NHẸ 23/09**, vì hậu quả sổ ghi ("Admin mất nút Xoá") có **ba**
+  chốt chặn đường, và cả ba đo được:
+  1. `lib/api.ts:116` — `if (options.refreshMe !== false)`. Sổ viết "invalidate sau MỌI
+     mutation"; thật ra **46 trên 85** lời gọi `useApiMutation` truyền `refreshMe: false`, kể cả
+     chính nút Xoá của panel này
+  2. `invalidateQueries` **không xoá dữ liệu khỏi cache** — nó đánh dấu cũ rồi nạp lại. Không
+     chỗ nào trong `web/src` gọi `removeQueries` hay `queryClient.clear`. Nên `getQueryData`
+     vẫn trả `me` cũ suốt lượt nạp lại, và trả `me` cũ cả khi lượt nạp lại HỎNG
+  3. `App.tsx:74-76` — `if (isLoading) return <Loading />` chặn dựng mọi màn cho tới khi `me`
+     về. Panel không thể mount trước khi cache có `me`
+  ⇒ chú thích `:98` ("`me` luôn có sẵn vì shell nạp nó trước") **đúng**, không phải "một giả
+  định" như ô cũ nói. Phần còn thật và đáng sửa: đọc không-subscribe là một sợi dây mảnh treo
+  vào thứ tự khởi động ở file khác, và chú thích tự khẳng định một bảo đảm mà nó không tự giữ —
+  ngày ai đó gỡ chốt `isLoading` ở `App.tsx` thì chỗ này hỏng câm. Sửa bằng `useMe()` (subscribe
+  thật), không phải bằng prop thứ tám. **Đây là lần thứ ba cùng một hình dạng** — F-07 vế (b) và
+  B-15 đã vậy: sổ ghi hậu quả mạnh hơn thứ chứng minh được
 - [ ] **N-02** `/nat` (800 dòng) · `/disposal` (582 dòng) chưa phân trang — §14.5 **hạ từ VỪA
   xuống NHẸ** sau khi đo ở 200k: hai màn này vẫn lành. Xử khi tiện
 - [ ] **N-03** `dashboard` là API chậm nhất (327ms ở 30k → 855–1.111ms ở 200k). Chưa đau; đặt
@@ -806,7 +862,19 @@ thiếu, và cái thiếu đó vô hình vì checklist trông vẫn đầy đủ
 
 ### 8.7 Định danh tiếng Việt — 6 đợt (mục 3.2)
 
-- [ ] Đợt 0 cổng → [ ] Đợt 1 mặt tiền (9) → [ ] Đợt 2 sản phẩm (38) → [ ] Đợt 3 tên tệp (15) → [ ] Đợt 4 test (~92) → [ ] Đợt 5 `di-khap-giao-dien` (83) → [ ] Đợt 6 siết `error`
+- [x] **Đợt 0** cổng lint *(đã tick ở §8.2 từ 20/09)*
+- [x] **Đợt 1** mặt tiền (9) · **Đợt 2** sản phẩm (38) — **ĐÃ LÀM 19/09, xem §12.**
+- [ ] **Đợt 3** tên tệp (15)
+- [ ] **Đợt 4** test (~92)
+- [ ] **Đợt 5** `di-khap-giao-dien` (83)
+- [ ] **Đợt 6** siết `error`
+
+> **Sửa 23/09:** dòng này trước đây để **cả sáu đợt trống**, trong khi §8.2 đã tick đợt 0 và
+> §12 ghi hẳn một mục "Đợt 1 + 2 — ĐÃ LÀM trong chính lượt này (19/09/2026)". Ba chỗ trong cùng
+> một file nói ba điều khác nhau về cùng một việc. Đo lại 23/09 để chốt: **0 tên tệp còn dấu
+> tiếng Việt** trong `web/src` · `api/src` · `e2e`, nên đợt 3 là các tên KHÔNG dấu còn lại
+> (`di-khap-giao-dien.spec.ts`, `leo-thang-quyen.spec.ts`, `loi-api-390.mobile.spec.ts`,
+> `esc-giua-luot-ghi.spec.ts`… đếm được 13-15 file, khớp con số 15 của mục 3.2).
 
 ### 8.8 Chỉ số (index) & quy mô — bổ sung 20/09/2026
 
@@ -828,7 +896,7 @@ cũng mang. Index trên `lower(serial)` cũng không phục vụ `ORDER BY seria
 - [ ] **`software`** — `(name, id)` · `(seat_total, id)` · `(start_date, id)` · `(status, id)` · `(end_date, id)` *(không partial)*
 - [ ] **`service_account`** — `(name, id)` · `(status, id)` · `(kind, id)` *(không partial)*
 - [ ] **`isp_line`** — `(hotline, id)` · `(contract_no, id)` · `(status, id)` · `(end_date, id)` *(không partial)*
-- [ ] `users` — **cố ý BỎ QUA**: bảng này là danh sách nhân sự IT nội bộ, sẽ luôn dưới vài trăm dòng. Ghi ra để lượt rà sau không báo lại.
+**`users` — cố ý BỎ QUA, không phải việc chưa làm.** Bảng này là danh sách nhân sự IT nội bộ, sẽ luôn dưới vài trăm dòng. Ghi ra để lượt rà sau không báo lại. *(Bỏ ô vuông ngày 23/09: một ô trống đọc như việc còn nợ, và nó đã bị đếm vào "còn bao nhiêu việc" ít nhất một lần.)*
 
 Kèm `id` làm cột thứ hai để thứ tự **ổn định** (hai hàng cùng `name` mà không có tie-breaker
 thì trang 2 có thể lặp lại một dòng của trang 1) và để mở đường cho keyset sau này.
@@ -836,8 +904,8 @@ thì trang 2 có thể lặp lại một dòng của trang 1) và để mở đ�
 #### Tìm kiếm — một migration cho cả đúng đắn lẫn tốc độ
 
 - [ ] `CREATE EXTENSION unaccent` + hàm bọc `ims_norm(text)` **IMMUTABLE** (bắt buộc — `unaccent()` là STABLE nên không index trực tiếp được; phải truyền tên từ điển tường minh `'public.unaccent'`)
-- [ ] Cột sinh `search_norm` + `CREATE INDEX CONCURRENTLY … USING gin (search_norm gin_trgm_ops)` cho **`device` · `software` · `service_account` · `isp_line` · `nat_rule`**
-- [ ] Đổi `buildWhere` của 5 module: bốn `ILIKE` → một `search_norm LIKE ims_norm(…)`
+- [ ] Cột sinh `search_norm` + `CREATE INDEX CONCURRENTLY … USING gin (search_norm gin_trgm_ops)` cho **`device` · `software` · `service_account` · `isp_line` · `nat_rule` · `catalog`** *(thêm `catalog` ngày 23/09 — nó có **5** vế ILIKE, nhiều ngang `service_account`, trong đó hai vế nằm trên `cabinet.code` và `site.code`. Danh sách 5 bảng cũ bỏ sót nó.)*
+- [ ] Đổi `buildWhere` của 6 module: các vế `ILIKE` → một `search_norm LIKE ims_norm(…)`. **Đếm đúng trước khi sửa: 30 vị trí trên 8 file**, không phải 11 — xem ô B-01 ở §8.6. Hai file còn lại (`users` · `audit`) cố ý để ngoài đợt này: `users` luôn dưới vài trăm dòng (lý do đã ghi ở bảng index trên), còn `audit.actor` tìm theo email nên không có dấu tiếng Việt để mà gấp
 
 Đo trên 1 triệu hàng: **951ms / 0 kết quả (SAI)** → **241ms / 83.333 kết quả (ĐÚNG)**. Chi phí
 86 MB index. **Đây cũng là lượt để diễn tập `ims:no-transaction` + `CREATE INDEX CONCURRENTLY`**
@@ -856,7 +924,7 @@ thì trang 2 có thể lặp lại một dòng của trang 1) và để mở đ�
 - [ ] **`DROP INDEX audit_log_actor_trgm`** — 11 MB GIN trên bảng ghi nóng nhất, **0 lượt quét/28 ngày**; `EXPLAIN` cho thấy planner không bao giờ chọn nó
 - [ ] `device_port` — thêm UNIQUE `(connected_device_id, connected_port)`: AD-14 nói "một bản ghi/kết nối" nhưng **không chỗ nào ép**
 - [ ] `department` · `isp_provider` · `service_port` — thêm FK `ON UPDATE CASCADE ON DELETE RESTRICT` (D-04/D-05: hiện **0 FK nào trỏ tới**, nên `CatalogService.remove()` luôn thành công và để lại chuỗi mồ côi)
-- [ ] **GIỮ** cặp `audit_log_actor_idx` + `actor_action_at_idx` — L-30 nghi chúng trùng, nhưng đo ra 554 và 865 lượt quét, cả hai Index Only Scan. **Đóng mục L-30.**
+**GIỮ cặp `audit_log_actor_idx` + `actor_action_at_idx` — đây là KẾT LUẬN, không phải việc.** L-30 nghi chúng trùng, nhưng đo ra 554 và 865 lượt quét, cả hai Index Only Scan. **Đóng mục L-30.** *(Bỏ ô vuông ngày 23/09, cùng lý do với dòng `users` trên.)*
 
 #### Quy mô dài hạn (10-20 năm)
 
@@ -2276,3 +2344,72 @@ sẽ bị tắt — bản nháp đầu của tôi đúng như thế, và lượt
 | Cổng tĩnh mới | — | `token-usage.test.ts` |
 
 **Mục 8.3 đóng: 13/13.** Cả sổ mục 8 còn **44** ô, mục 18 còn **23**.
+
+> Con số 44 là ảnh chụp ngày 21/09 — giữ nguyên vì nó là số đo của lượt ĐÓ. Số hiện hành ở
+> §21.1, và nó KHÔNG so sánh được trực tiếp: lượt 23/09 tách dòng §8.7 thành 6 ô, thêm Lượt 7
+> vào §8.5, và bỏ 2 ô ở §8.8 vốn là quyết định không làm.
+
+---
+
+## 21. Lượt soi lại chính cuốn sổ — 23/09/2026 (KHÔNG sửa code)
+
+Câu hỏi đặt ra: *ngoài §8.6 còn gì chưa làm, và sổ có nói đúng về chúng không.* Lượt này mở
+từng ô còn trống ra đối chiếu với code đang chạy trên `e04f6d2`. **Không một dòng code nào
+đổi** — chỉ cuốn sổ đổi.
+
+### 21.1 Bốn ô nói sai, đã sửa lời
+
+Bảng tóm ở đầu §8; chi tiết nằm ngay trong từng ô (F-08 ở §8.9 Nhẹ · B-01 và F-06 ở §8.6 ·
+§8.7). Hai ô "quyết định KHÔNG làm" ở §8.8 đã bỏ ô vuông. **L-25 được chép vào §8.5 làm Lượt
+7** — nó chưa từng có ô nào ở bất kỳ đâu, và quy mô thật là 190 chỗ trên 40 file, không phải
+một file như lời khai gốc.
+
+Hai tiêu đề đếm sai cũng đã sửa: §8.6 ghi "(10)" trong khi có **11** ô, §8.5 lên "(7)".
+
+**Số ô sau lượt này: 54.** Xếp theo mục — §8.4: 1 · §8.5: 7 · **§8.6: 11** · §8.7: 4 · §8.8: 17
+· §8.9: 14. Đừng so thẳng với con số 44 của §20.5: lượt này tách dòng §8.7 thành 6 ô rời (nó
+vốn là MỘT dòng cho cả sáu đợt), thêm Lượt 7, và bỏ 2 ô không phải việc. Số tăng vì cách đếm
+trung thực hơn, không phải vì có thêm việc.
+
+### 21.2 Mười bảy ô đo ra ĐÚNG — đừng rà lại
+
+| Ô | Chứng cứ trên code |
+| --- | --- |
+| T-01 | `time-picker.tsx` còn "Select Time" · "Time" · "Now" · "Cancel" · AM/PM |
+| `statusDisabled` | `vi.ts:723 disable: 'Vô hiệu hóa'` trùng y hệt `:753 statusDisabled` |
+| 5 khái niệm hai tên | `addressVoided:'Đã xóa hồ sơ IP.'` · `voidedBadge:'Đã ẩn'` · `hide:'Vô hiệu hóa'` — ba chữ, một việc |
+| `Member`/`Admin` | `vi.ts:1210` · `:323` · `:687` |
+| B-02 | `accounts-screen.tsx` không import `useListUrlState`; 6 màn khác có |
+| B-03 | **0** chỗ `document.title` trong `web/src` (chỉ có `documentElement.lang`) |
+| B-01 | không hàm gấp dấu bên web, không migration `unaccent`/`search_norm` |
+| D-04/D-05 | **không có `0052`**; 0 FK trỏ tới `department`/`isp_provider` — đúng là đã lùi |
+| N-01c | **0** chỗ `sort` trong cả module `expiry` |
+| B-10 | `app-shell.tsx:113` `<span aria-disabled="true" title=…>` không `role` |
+| B-11 | 4 cột khai `meta:{className:'mono'}` ⇒ `td` mang `.mono` ⇒ `::before` thừa hưởng `var(--mono)` + `0.85em` |
+| B-13 | dashboard render cả `incidentsEmpty` lẫn `incidentsNotYet` |
+| B-18 | `ExportXlsxButton` dùng ở **7** màn — con số "6 màn khác đều có" của sổ đúng |
+| §8.8 index | `device` chỉ có partial `warranty_end` + `lower(serial)`; không cột `(name, id)` nào |
+| §8.8 trần count | khuôn `COUNT_CAP` có thật ở `audit-query.service.ts`, chưa nhân bản đi đâu |
+| §8.8 drop | `audit_log_actor_trgm` vẫn còn ở `0042:21`; `device_port` vẫn không UNIQUE |
+| L-11..L-17 | `filters.css` chết **100%** (3/3 lớp không xuất hiện trong tsx) · `profile.css` 6/8 nhóm chết · `shell.css:71-194` 6/8 chết · đúng **3** chỗ `%238a908a` |
+
+### 21.3 Bản đồ graphify — không mâu thuẫn gì
+
+Dựng từ đúng `e04f6d25` (= HEAD), 4557 node · 380 community. **Import cycles: none.** God node
+top 15 đều là hạ tầng dùng chung (`Roles()` 144 · `Tx` 108 · `AuthedRequest` 105 · `Audited()`
+88 · `Database` 84) cộng helper E2E — **không file nội bộ nào thành hub**, nên không có nghi
+phạm AD-2. Bản đồ cũng xác nhận N-01 đã làm thật: có node `expiry-paging.spec.ts`.
+
+### 21.4 Còn chưa kiểm được bằng cách đọc code
+
+B-16 · B-17 · B-19 · N-02 · N-03 (cần mắt người hoặc một lượt đo), §8.5 lượt 2-5 (L-18…L-28),
+bốn mục dài hạn của §8.8, và **13 mục trong `_bmad-output/implementation-artifacts/deferred-work.md`**
+— nhóm cuối mới đọc tiêu đề, chưa đối chiếu code lần nào.
+
+### 21.5 Điều lượt này thay đổi về thứ tự việc
+
+Sau khi hạ F-08, **ngoài §8.6 không còn ô nào là lỗi đúng đắn** — phần còn lại là dọn, index/quy
+mô, và ba thứ sổ đã tự gọi là story (D-04/D-05 · N-01b · vòng đời hồ sơ quá hạn). Nghĩa là đề
+nghị "làm §8.6 trước" đứng vững hơn lúc chưa kiểm. Hai điều chỉnh khi xếp lượt: **B-01 phải đi
+cùng khối "Tìm kiếm" của §8.8** (một việc, hai vế), và **§8.9 nhóm Nhẹ có 9 mục cũng là mặt
+tiền người dùng chạm được** (B-10…B-19) — §8.6 không phải toàn bộ lớp đó.
