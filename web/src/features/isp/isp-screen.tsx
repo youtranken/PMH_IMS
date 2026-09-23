@@ -210,13 +210,19 @@ export function IspScreen({ me }: { me: Me }) {
       ) : lines.isError ? (
         <LoadError error={lines.error} onRetry={() => void lines.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState title={t('isp.empty')} hint={t('isp.emptyHint')} />
+        <EmptyState
+          /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
+             ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
+             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. */
+          title={url.isFiltered ? t('isp.emptyFiltered') : t('isp.empty')}
+          hint={url.isFiltered ? t('isp.emptyFilteredHint') : t('isp.emptyHint')}
+        />
       ) : (
         <>
           <DataTable
             data={rows}
             columns={columns}
-            emptyText={t('isp.empty')}
+            emptyText={url.isFiltered ? t('isp.emptyFiltered') : t('isp.empty')}
             stackOnMobile
             manualSorting
             sorting={sorting}

@@ -300,13 +300,19 @@ export function DevicesScreen({ me }: { me: Me }) {
       ) : devices.isError ? (
         <LoadError error={devices.error} onRetry={() => void devices.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState title={t('devices.empty')} hint={t('devices.emptyHint')} />
+        <EmptyState
+          /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
+             ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
+             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. */
+          title={url.isFiltered ? t('devices.emptyFiltered') : t('devices.empty')}
+          hint={url.isFiltered ? t('devices.emptyFilteredHint') : t('devices.emptyHint')}
+        />
       ) : (
         <>
           <DataTable
             data={rows}
             columns={columns}
-            emptyText={t('devices.empty')}
+            emptyText={url.isFiltered ? t('devices.emptyFiltered') : t('devices.empty')}
             stackOnMobile
             /* Bung dòng ra là thấy máy này đang cài license nào — cùng nếp với danh sách
                phần mềm. Chỉ hiện mũi tên khi thật sự có phần mềm đang cài. */

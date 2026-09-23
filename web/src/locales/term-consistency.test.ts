@@ -157,6 +157,41 @@ describe('Nhãn trạng thái không được trùng nút bấm', () => {
   });
 });
 
+/**
+ * "Chưa có gì" và "lọc không ra" là HAI cảnh, và lời khuyên cho chúng ngược nhau: một bên mời
+ * thêm bản ghi đầu tiên, một bên mời nới bộ lọc. Bốn màn từng dùng chung một câu, nên một hệ
+ * thống vừa cài xong báo "Chưa có thiết bị nào **khớp bộ lọc**" — người dùng mới đọc câu đó đi
+ * tìm cái bộ lọc không tồn tại.
+ *
+ * Vị từ ở đây cố ý HẸP: câu `empty` (cảnh chưa lọc gì) không được nhắc tới bộ lọc. Nó không
+ * bắt ai phải viết câu nào, chỉ chặn đúng lỗi đã xảy ra — và chặn được cho cả màn thứ năm.
+ */
+describe('Câu rỗng: "chưa có gì" không được nói về bộ lọc', () => {
+  const MAN_HINH = ['devices', 'software', 'isp', 'serviceAccounts'];
+
+  it.each(MAN_HINH)('%s có đủ cặp câu, và chúng khác nhau', (ns) => {
+    expect(lookup(`${ns}.empty`)).not.toBe(lookup(`${ns}.emptyFiltered`));
+    expect(lookup(`${ns}.emptyHint`)).not.toBe(lookup(`${ns}.emptyFilteredHint`));
+  });
+
+  it.each(MAN_HINH)('%s.empty không nhắc tới bộ lọc', (ns) => {
+    expect(lookup(`${ns}.empty`).toLowerCase()).not.toContain('bộ lọc');
+    expect(lookup(`${ns}.emptyHint`).toLowerCase()).not.toContain('bộ lọc');
+  });
+
+  it.each(MAN_HINH)('%s: màn thật sự chọn câu theo `isFiltered`', (ns) => {
+    const FILE: Record<string, string> = {
+      devices: 'features/devices/devices-screen.tsx',
+      software: 'features/software/software-screen.tsx',
+      isp: 'features/isp/isp-screen.tsx',
+      serviceAccounts: 'features/service-accounts/service-accounts-screen.tsx',
+    };
+    // Khai đủ hai câu trong `vi.ts` mà màn không rẽ nhánh thì câu thứ hai là khoá chết đẹp đẽ.
+    const source = readFileSync(join(SRC, FILE[ns]), 'utf8');
+    expect(source).toContain(`url.isFiltered ? t('${ns}.emptyFiltered')`);
+  });
+});
+
 describe('Không tiếng Anh lẫn trong câu tiếng Việt', () => {
   /**
    * Tên vai trò trong UI là 'Thành viên' / 'Quản trị' (`accounts.roleMember`, `accounts.roleAdmin`),

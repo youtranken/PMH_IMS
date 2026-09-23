@@ -2087,7 +2087,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      */
     await timKiem.fill(`KHONG-CO-MAY-NAO-E2E-${stamp}`);
     await expect(
-      main.getByText('Chưa có thiết bị nào khớp bộ lọc.'),
+      main.getByText('Không có thiết bị nào khớp bộ lọc.'),
       'lọc về rỗng phải ra empty-state, không phải bảng trắng',
     ).toBeVisible();
 
@@ -3035,7 +3035,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      */
     await search.fill(`KHONG-CO-HO-SO-NAO-E2E-${stamp}`);
     await expect(
-      page.getByText('Chưa có hồ sơ nào khớp bộ lọc.'),
+      page.getByText('Không có hồ sơ nào khớp bộ lọc.'),
       'Lọc không ra gì phải nói rõ là rỗng, không phải bảng trắng',
     ).toBeVisible();
 

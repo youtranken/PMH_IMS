@@ -423,8 +423,16 @@ export default {
       'Đưa "{{name}}" lại vào dùng? Hồ sơ mở lại để sửa, và máy tính lại hạn bảo hành — ' +
       'nó sẽ xuất hiện lại trong email nhắc gia hạn.',
     retiredLocked: 'Thiết bị đã thanh lý — mở lại mới sửa được hồ sơ.',
-    empty: 'Chưa có thiết bị nào khớp bộ lọc.',
+    /*
+     * HAI câu cho HAI cảnh, đừng gộp lại (23/09). Trước đó bốn màn danh sách dùng chung một
+     * câu có chữ "khớp bộ lọc", nên một hệ thống vừa cài xong, chưa ai lọc gì, vẫn báo "Chưa
+     * có thiết bị nào khớp bộ lọc" — và người dùng mới đi tìm cái bộ lọc không tồn tại.
+     * Câu nào hiện ra do `url.isFiltered` của `useListUrlState` quyết.
+     */
+    empty: 'Kho thiết bị đang trống.',
     emptyHint: 'Thêm thiết bị hoặc dùng Nhập từ Excel để đưa cả danh sách vào một lần.',
+    emptyFiltered: 'Không có thiết bị nào khớp bộ lọc.',
+    emptyFilteredHint: 'Nới bộ lọc, hoặc xóa ô tìm để xem lại toàn bộ kho.',
     downloadTemplate: 'Tải file mẫu',
     importExcel: 'Nhập từ Excel',
     importTitle: 'Nhập thiết bị từ Excel',
@@ -538,8 +546,11 @@ export default {
     allKinds: 'Tất cả loại',
     allStatuses: 'Mọi trạng thái',
     noVendor: 'Chưa rõ nhà cung cấp',
-    empty: 'Chưa có hồ sơ nào khớp bộ lọc.',
+    /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
+    empty: 'Chưa có hồ sơ license, SSL hay tên miền nào.',
     emptyHint: 'Thêm license, SSL hoặc tên miền để hệ thống nhắc gia hạn giúp.',
+    emptyFiltered: 'Không có hồ sơ nào khớp bộ lọc.',
+    emptyFilteredHint: 'Nới bộ lọc, hoặc xóa ô tìm để xem lại toàn bộ danh sách.',
     saved: 'Đã lưu hồ sơ.',
     needMinimum: 'Cần ít nhất: mã hồ sơ và tên hồ sơ.',
     tabProfile: 'Hồ sơ',
@@ -623,8 +634,11 @@ export default {
     statusTerminated: 'Đã cắt',
     allSites: 'Tất cả site',
     allStatuses: 'Mọi trạng thái',
-    empty: 'Chưa có đường truyền nào khớp bộ lọc.',
+    /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
+    empty: 'Chưa khai đường truyền nào.',
     emptyHint: 'Thêm đường ISP để lúc sự cố có hotline và số hợp đồng trong 30 giây.',
+    emptyFiltered: 'Không có đường truyền nào khớp bộ lọc.',
+    emptyFilteredHint: 'Nới bộ lọc, hoặc xóa ô tìm để xem lại toàn bộ danh sách.',
     saved: 'Đã lưu hồ sơ đường truyền.',
     needMinimum: 'Cần ít nhất: mã đường truyền và tên nhà mạng.',
     tabProfile: 'Hồ sơ',
@@ -1115,8 +1129,11 @@ export default {
     enableReasonPlaceholder: 'vd: nhân sự mới nhận bàn giao',
     allKinds: 'Tất cả loại',
     allStatuses: 'Mọi trạng thái',
-    empty: 'Chưa có tài khoản dịch vụ nào khớp bộ lọc.',
+    /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
+    empty: 'Chưa có tài khoản dịch vụ nào.',
     emptyHint: 'Khai email dùng chung, tài khoản VPN, cổng nhà mạng… rồi cất mật khẩu vào két.',
+    emptyFiltered: 'Không có tài khoản nào khớp bộ lọc.',
+    emptyFilteredHint: 'Nới bộ lọc, hoặc xóa ô tìm để xem lại toàn bộ danh sách.',
     sectionProfile: 'Hồ sơ',
     sectionOwner: 'Thuộc về ai',
     sectionVpn: 'Cấu hình VPN',

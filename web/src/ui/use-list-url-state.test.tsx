@@ -224,4 +224,65 @@ describe('useListUrlState — ô tìm: debounce và dấu cách', () => {
       vi.useRealTimers();
     }
   });
+
+  /**
+   * ===== `isFiltered` — câu hỏi mà bốn màn đang trả lời SAI =====
+   *
+   * Bốn màn danh sách (`devices` · `software` · `isp` · `serviceAccounts`) dùng MỘT câu rỗng
+   * cho HAI cảnh khác hẳn nhau, nên một hệ thống mới tinh chưa ai lọc gì vẫn báo "Chưa có
+   * thiết bị nào **khớp bộ lọc**". Người dùng mới đọc câu đó sẽ đi tìm cái bộ lọc không tồn tại.
+   *
+   * Câu trả lời nằm sẵn trong hook: nó giữ cả `filters` lẫn `search`. Đặt ở đây chứ không để
+   * mỗi màn tự tính `Object.values(...).some(...)` — sáu bản chép tay là sáu cơ hội quên một
+   * khoá (AD-15).
+   *
+   * ĐÂY LÀ LẦN THỨ HAI thứ này được thêm vào hook. Bản đầu tên `dirty`, bị GỠ ngày 18/09 vì
+   * **không một màn nào gọi** — nó được viết sẵn cho một cái nút "Xóa lọc" chưa bao giờ làm,
+   * và chú thích chỗ gỡ nói đúng: mã chưa từng chạy chỉ làm người đọc sau tưởng việc đã xong.
+   * Lần này khác ở đúng một chỗ đáng kể: nó ra đời CÙNG bốn nơi gọi, trong cùng một commit.
+   */
+  describe('isFiltered — "đang lọc" khác "chưa có gì"', () => {
+    const BANG: ReadonlyArray<readonly [string, string, boolean]> = [
+      ['mở màn trơn', '/devices', false],
+      // Phân trang và sắp cột KHÔNG phải là lọc: chúng không giấu dòng nào đi.
+      ['chỉ có phân trang', '/devices?page=3&limit=50', false],
+      ['chỉ có sắp cột', '/devices?sort=name&dir=desc', false],
+      ['một bộ lọc đang bật', '/devices?status=in_use', true],
+      ['ô tìm có chữ', '/devices?q=may%20in', true],
+      ['bộ lọc khai rỗng thì không tính', '/devices?status=', false],
+    ];
+
+    it.each(BANG)('%s → %s', (_ten, duongDan, mongDoi) => {
+      const { result } = dung(duongDan, {
+        emptyFilters: { status: '', siteId: '', search: '' },
+        searchKey: 'search',
+      });
+      expect(result.current.url.isFiltered).toBe(mongDoi);
+    });
+
+    it('gõ vào ô tìm rồi xóa đi thì quay lại "chưa lọc"', async () => {
+      vi.useFakeTimers();
+      try {
+        const { result } = dung('/devices', {
+          emptyFilters: { status: '', search: '' },
+          searchKey: 'search',
+        });
+        expect(result.current.url.isFiltered).toBe(false);
+
+        act(() => result.current.url.setSearchInput('may in'));
+        await act(async () => {
+          vi.advanceTimersByTime(500);
+        });
+        expect(result.current.url.isFiltered).toBe(true);
+
+        act(() => result.current.url.setSearchInput(''));
+        await act(async () => {
+          vi.advanceTimersByTime(500);
+        });
+        expect(result.current.url.isFiltered).toBe(false);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+  });
 });

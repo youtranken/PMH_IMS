@@ -87,10 +87,17 @@ test.describe('Màn danh sách hỏng, đọc ở 390px', () => {
     await page.goto('/devices');
 
     /*
-     * Vế phủ định là vế quan trọng. "Chưa có thiết bị nào khớp bộ lọc" đọc y như một kho sạch
-     * — người trực đóng máy về, và cái máy họ đang đi tìm vẫn nằm đó.
+     * Vế phủ định là vế quan trọng: một lượt gọi API hỏng KHÔNG được đọc ra thành một cái kho
+     * sạch — người trực đóng máy về, và cái máy họ đang đi tìm vẫn nằm đó.
+     *
+     * Từ 23/09 có HAI câu rỗng phải loại trừ, không phải một: màn đã tách "chưa khai gì" khỏi
+     * "lọc không ra". Và câu NGUY HIỂM hơn lại là câu mới ('Kho thiết bị đang trống.') — nó
+     * khẳng định thẳng thừng rằng kho rỗng, trong khi câu cũ ít ra còn nhắc tới bộ lọc. Kiểm
+     * thiếu một vế là cổng này khớp đúng số không chuỗi: nó xanh vì đang canh một câu không
+     * còn xuất hiện ở cảnh này nữa.
      */
-    await expect(page.getByText('Chưa có thiết bị nào khớp bộ lọc.')).toHaveCount(0);
+    await expect(page.getByText('Không có thiết bị nào khớp bộ lọc.')).toHaveCount(0);
+    await expect(page.getByText('Kho thiết bị đang trống.')).toHaveCount(0);
     await expectErrorBlockFits(page);
   });
 

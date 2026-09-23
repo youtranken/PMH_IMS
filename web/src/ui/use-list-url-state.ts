@@ -40,6 +40,17 @@ export interface ListUrlState<F extends Record<string, string>> {
   setLimit: (value: number) => void;
   sorting: SortState;
   setSorting: (value: SortState) => void;
+  /**
+   * Có bộ lọc nào đang bật, hoặc ô tìm có chữ, hay không.
+   *
+   * Dùng để chọn giữa HAI câu rỗng khác hẳn nhau: "chưa khai gì" (mời người dùng thêm bản ghi
+   * đầu tiên) và "lọc không ra" (mời họ nới bộ lọc). Trước 23/09 bốn màn dùng chung một câu,
+   * nên hệ thống mới tinh chưa ai lọc gì vẫn báo "Chưa có thiết bị nào khớp bộ lọc".
+   *
+   * `page`/`limit`/`sort` KHÔNG tính: chúng không giấu dòng nào đi, nên nới chúng ra cũng
+   * không làm bảng có thêm gì.
+   */
+  isFiltered: boolean;
 }
 
 export function useListUrlState<F extends Record<string, string>>(options: {
@@ -200,6 +211,16 @@ export function useListUrlState<F extends Record<string, string>>(options: {
     setSearchInput,
     search,
     filters,
+    /*
+     * Đọc từ `filters` chứ không từ `params`: `filters` đã gộp sẵn ô tìm vào khoá `searchKey`
+     * (xem chú thích chỗ dựng nó), nên một chỗ này phủ cả hai nguồn. Đọc `params` thì phải tự
+     * nhớ loại `page`/`limit`/`sort`/`dir` ra — và người thêm tham số URL thứ năm sẽ quên.
+     *
+     * Dùng `search` ĐÃ LẮNG chứ không phải `searchInput`: câu rỗng phải khớp với DỮ LIỆU đang
+     * bày, mà dữ liệu chỉ đổi sau nhịp debounce. Lấy `searchInput` thì trong 300ms gõ dở, màn
+     * đã đổi sang câu "lọc không ra" trong khi bảng vẫn đang hiện kết quả cũ.
+     */
+    isFiltered: Object.values(filters).some((value) => value !== ''),
     setFilter: (key, value) => write({ [key as string]: value }),
     page,
     setPage: (value) => write({ page: value === 1 ? '' : value }, false),
