@@ -363,7 +363,7 @@ test.describe('Tài khoản dịch vụ', () => {
     await offForm.getByRole('button', { name: 'Vô hiệu hóa' }).click();
 
     await expect(page.getByText('Đã vô hiệu hóa tài khoản.')).toBeVisible();
-    await expect(row.getByText('Đã vô hiệu')).toBeVisible();
+    await expect(row.getByText('Đã vô hiệu hóa')).toBeVisible();
     // Đã đóng rồi thì không còn nút đóng nữa — bấm lần hai chỉ đẻ thêm một dòng lịch sử rỗng nghĩa.
     // Cột Thao tác là menu ba chấm từ 28/08/2026 — mở ra mới đọc được có mục nào.
     expect(await rowActionNames(page, code)).not.toContain('Vô hiệu hóa');
@@ -373,7 +373,7 @@ test.describe('Tài khoản dịch vụ', () => {
     const entry = page.getByRole('listitem').filter({ hasText: 'Vô hiệu hóa' });
     await expect(entry).toBeVisible();
     await expect(entry).toContainText('nhân sự phụ trách đã nghỉ');
-    await expect(entry).toContainText('Đang dùng → Đã vô hiệu');
+    await expect(entry).toContainText('Đang dùng → Đã vô hiệu hóa');
   });
 
   /*
@@ -416,7 +416,7 @@ test.describe('Tài khoản dịch vụ', () => {
     // Cửa trước: nút Bật lại ngay trên dòng, kèm ô lý do.
     await page.goto('/service-accounts');
     const row = page.getByRole('row', { name: new RegExp(code) });
-    await expect(row.getByText('Đã vô hiệu')).toBeVisible();
+    await expect(row.getByText('Đã vô hiệu hóa')).toBeVisible();
     await rowAction(page, code, 'Bật lại');
     const onForm = page.getByRole('dialog');
     await onForm.getByRole('textbox', { name: 'Lý do bật lại' }).fill('nhân sự mới nhận bàn giao');

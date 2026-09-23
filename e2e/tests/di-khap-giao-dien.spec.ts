@@ -4792,7 +4792,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     expect(
       await rowActionNames(page, address),
       'từ "Đang cấp" đi được sang Nghi chết và Thu hồi; Lịch sử luôn có; Sửa/Xóa của SA. Hai việc nguy hiểm xếp CUỐI',
-    ).toEqual(['Nghi chết', 'Lịch sử', 'Sửa', 'Thu hồi', 'Xóa']);
+    ).toEqual(['Nghi chết', 'Lịch sử', 'Sửa', 'Thu hồi', 'Ẩn hồ sơ']);
 
     /* ----- Hộp chuyển trạng thái: bước KHÔNG cấp cho ai thì KHÔNG hỏi chủ mới ----- */
     await rowAction(page, address, 'Nghi chết');
@@ -4822,7 +4822,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     expect(
       await rowActionNames(page, address),
       'từ "Nghi chết" bước quay lại là "Vẫn dùng", KHÔNG còn "Nghi chết" nữa — menu đứng im nghĩa là nó không đọc trạng thái của chính hàng nó',
-    ).toEqual(['Vẫn dùng', 'Lịch sử', 'Sửa', 'Thu hồi', 'Xóa']);
+    ).toEqual(['Vẫn dùng', 'Lịch sử', 'Sửa', 'Thu hồi', 'Ẩn hồ sơ']);
 
     /* ----- Và hộp "Vẫn dùng" thì NGƯỢC LẠI: có hỏi chủ, kèm chủ cũ điền sẵn ----- */
     await rowAction(page, address, 'Vẫn dùng');
@@ -7103,7 +7103,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     expect(
       await rowActionNames(page, maSite),
       'menu của một hồ sơ ĐANG DÙNG phải là Sửa · Vô hiệu · Xóa, việc lấy đi xếp cuối',
-    ).toEqual(['Sửa', 'Vô hiệu', 'Xóa']);
+    ).toEqual(['Sửa', 'Vô hiệu hóa', 'Xóa']);
 
     // --- Hộp SỬA phải mang theo cả ba giá trị cũ.
     await rowAction(page, maSite, 'Sửa');
@@ -7136,10 +7136,10 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await page.getByRole('searchbox').fill(maSite);
     await expect(dongSite).toBeVisible();
 
-    await rowAction(page, maSite, 'Vô hiệu');
-    await confirmAction(page, 'Vô hiệu');
+    await rowAction(page, maSite, 'Vô hiệu hóa');
+    await confirmAction(page, 'Vô hiệu hóa');
     await expect(
-      dongSite.getByText('Đã vô hiệu'),
+      dongSite.getByText('Đã vô hiệu hóa'),
       'vô hiệu xong bảng phải nói ra điều đó — không thì SA bấm lại lần nữa',
     ).toBeVisible();
 

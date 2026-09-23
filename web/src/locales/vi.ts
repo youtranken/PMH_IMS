@@ -648,6 +648,15 @@ export default {
     renewed: 'Đã gia hạn hợp đồng.',
   },
   expiry: {
+    /*
+     * Huy hiệu hạn của một hồ sơ ĐÃ NGỪNG DÙNG (B-05). Câu này phải khớp với chữ mà
+     * `/disposal` đang nói — "Hồ sơ trong kho KHÔNG còn được tính hạn" — vì người dùng đi từ
+     * màn nọ sang màn kia và phải nhận ra đó là cùng một điều.
+     *
+     * KHÔNG dùng 'Không có hạn' (`lib/expiry.ts`): hồ sơ này CÓ ngày hết hạn, chỉ là ngày ấy
+     * thôi có nghĩa. Hai câu nghe giống nhau nhưng nói hai chuyện khác hẳn.
+     */
+    notCounted: 'Không tính hạn',
     /* Bốn khóa dưới đây dùng cho THANH THỜI HẠN (ui/warranty-timeline.tsx) — bảo hành thiết
        bị, hạn license/SSL/tên miền, hợp đồng đường truyền. Đặt trong chính khối `expiry` vì
        khai một khối `expiry` thứ hai ở đầu file thì khối sau đè mất khối trước. */

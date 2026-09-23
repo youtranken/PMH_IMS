@@ -141,7 +141,14 @@ export function IspScreen({ me }: { me: Me }) {
       {
         accessorKey: 'endDate',
         header: t('isp.expiry'),
-        cell: ({ row }) => <ExpiryBadge end={row.original.endDate} />,
+        // `notCounted`: đường đã cắt thì hạn hợp đồng thôi có nghĩa. Trạng thái ở đây tên là
+        // `terminated` chứ không phải `retired` — lý do prop đặt tên theo Ý NGHĨA.
+        cell: ({ row }) => (
+          <ExpiryBadge
+            end={row.original.endDate}
+            notCounted={row.original.status === 'terminated'}
+          />
+        ),
       },
       {
         accessorKey: 'status',

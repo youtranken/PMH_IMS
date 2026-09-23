@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import {
   expiryLabel,
   expiryLevel,
@@ -22,11 +23,27 @@ export function ExpiryBadge({
   end,
   now,
   showDate = false,
+  notCounted = false,
   thresholds: thresholdsProp,
 }: {
   end: string | Date | null | undefined;
   now?: Date;
   showDate?: boolean;
+  /**
+   * Hồ sơ đã ở trạng thái cuối đời, tức KHÔNG còn được tính hạn (B-05).
+   *
+   * Ba nguồn hạn bên API đều loại trạng thái ấy ra khỏi phép tính (`device`/`software` là
+   * `retired`, `isp_line` là `terminated`), nhưng ba màn danh sách lại vẽ huy hiệu vô điều
+   * kiện — nên cùng một hồ sơ, `/software` kêu "Quá hạn 23 ngày" còn `/expiry` báo "0 Đã quá
+   * hạn" và `/disposal` nói "Hồ sơ trong kho KHÔNG còn được tính hạn". Ba màn, ba câu trả lời.
+   *
+   * Tên theo Ý NGHĨA chứ không theo tên trạng thái của một module (`retired`): ISP gọi nó là
+   * `terminated`, và màn thứ tư không phải tự hỏi prop này có dành cho mình không.
+   *
+   * KHÔNG trả về `null`: một ô trống trong bảng đọc ra thành "thiếu dữ liệu", và người dùng đi
+   * tìm xem ai quên nhập ngày hết hạn.
+   */
+  notCounted?: boolean;
   /**
    * Ngưỡng ĐI KÈM lượt trả về, cho màn nào có nó (19/09/2026).
    *
@@ -41,8 +58,23 @@ export function ExpiryBadge({
    */
   thresholds?: ExpiryThresholds;
 }) {
+  const { t } = useTranslation();
   // Ngưỡng đọc TỪ SERVER (AD-11), không phải bản sao trong web — xem `use-expiry-thresholds`.
   const nguongHook = useExpiryThresholds();
+
+  /*
+   * Chốt này đứng trước mọi phép tính hạn — nhưng SAU hai lượt gọi hook ở trên, vì luật hook
+   * không cho `return` sớm chen vào giữa. Hồ sơ không được tính hạn thì không có câu nào về
+   * hạn là đúng cả: "Quá hạn 23 ngày" sai, mà "Không có hạn" cũng sai — nó CÓ ngày hết hạn,
+   * chỉ là ngày ấy thôi có nghĩa.
+   *
+   * `plain` để nó không tranh màu với huy hiệu TRẠNG THÁI nằm ngay cột bên cạnh — cùng lối
+   * với nhánh "Vĩnh viễn" của `software-screen.tsx`.
+   */
+  if (notCounted) {
+    return <span className="badge muted plain">{t('expiry.notCounted')}</span>;
+  }
+
   const thresholds = thresholdsProp ?? nguongHook;
   const level = expiryLevel(end, now, thresholds);
   const label = expiryLabel(end, now);

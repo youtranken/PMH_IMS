@@ -164,8 +164,12 @@ export function SoftwareScreen({ me }: { me: Me }) {
             // dừng lại tự hỏi, trong khi đây là trạng thái hoàn toàn bình thường.
             <span className="badge ok plain">{t('software.perpetual')}</span>
           ) : (
-            // AD-15: luật "sắp hết hạn" chỉ có một, ở lib/expiry.ts
-            <ExpiryBadge end={row.original.endDate} />
+            // AD-15: luật "sắp hết hạn" chỉ có một, ở lib/expiry.ts. `notCounted` để hồ sơ đã
+            // thanh lý thôi kêu "Quá hạn N ngày" trong khi `findExpiringBetween` đã loại nó ra.
+            <ExpiryBadge
+              end={row.original.endDate}
+              notCounted={row.original.status === 'retired'}
+            />
           ),
       },
       {

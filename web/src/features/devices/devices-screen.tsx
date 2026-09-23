@@ -172,7 +172,14 @@ export function DevicesScreen({ me }: { me: Me }) {
         accessorKey: 'warrantyEnd',
         header: t('devices.warranty'),
         // AD-15: luật "sắp hết hạn" chỉ có một, ở lib/expiry.ts
-        cell: ({ row }) => <ExpiryBadge end={row.original.warrantyEnd} />,
+        // `notCounted`: máy đã thanh lý thì bảo hành thôi có nghĩa — `findWarrantyExpiring` đã
+        // loại nó ra, nên để huy hiệu kêu "Quá hạn" là hai màn nói ngược nhau.
+        cell: ({ row }) => (
+          <ExpiryBadge
+            end={row.original.warrantyEnd}
+            notCounted={row.original.status === 'retired'}
+          />
+        ),
       },
       {
         accessorKey: 'status',

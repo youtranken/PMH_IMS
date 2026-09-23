@@ -71,19 +71,22 @@ describe('countSlots + filterSlots — con số trên nút phải khớp số d�
     free('10.0.0.7'),
   ];
 
-  it('đếm đủ năm nhóm, "tất cả" bằng tổng', () => {
+  it('đếm đủ sáu nhóm, "tất cả" bằng tổng', () => {
     expect(countSlots(slots)).toEqual({
       all: 7,
       assigned: 2,
       free: 3,
       suspect_dead: 1,
       reclaimed: 1,
+      // Rổ thứ sáu từ 23/09 (B-04). `toEqual` trên cả vật thể là có chủ ý: thêm một rổ mà
+      // quên khai ở đây thì bài này đỏ, thay vì để một rổ mới lặng lẽ không ai kiểm.
+      voided: 0,
     });
   });
 
   it('mỗi con số đếm được phải bằng đúng số dòng lọc ra', () => {
     const counts = countSlots(slots);
-    for (const filter of ['all', 'assigned', 'free', 'suspect_dead', 'reclaimed'] as const) {
+    for (const filter of ['all', 'assigned', 'free', 'suspect_dead', 'reclaimed', 'voided'] as const) {
       expect(filterSlots(slots, filter)).toHaveLength(counts[filter]);
     }
   });
@@ -95,6 +98,7 @@ describe('countSlots + filterSlots — con số trên nút phải khớp số d�
       free: 0,
       suspect_dead: 0,
       reclaimed: 0,
+      voided: 0,
     });
   });
 });
@@ -166,4 +170,74 @@ describe('shouldIsolateAssigned', () => {
       expect(shouldIsolateAssigned(assigned, oTrong)).toBe(mongDoi);
     });
   }
+});
+
+/**
+ * HỒ SƠ ĐÃ ẨN LÀ MỘT RỔ RIÊNG, KHÔNG PHẢI "TRỐNG" (B-04).
+ *
+ * ===== LỖ ĐANG VÁ =====
+ *
+ * Đo trên dải `172.16.15.0/24`: chip đếm `Tất cả 254 · Đang cấp 0 · Trống 254 · Nghi chết 0 ·
+ * Đã thu hồi 0`, nhưng hàng `172.16.15.3` hiện chữ "Đã ẩn". Bấm lọc "Trống" thì dòng "Đã ẩn"
+ * HIỆN LÊN trong kết quả. DB xác nhận: `status='free'` kèm `voided_at` khác null.
+ *
+ * Ngay phía trên, thẻ dải nói *"Giữ lại vì còn 1 hồ sơ IP mang lịch sử — không xóa hẳn được"*.
+ * Hai câu trên cùng một màn nói ngược nhau, và bên nói sai là bên bảo ô đó **trống, cấp được**
+ * — tức bên sẽ khiến ai đó cấp đè lên một địa chỉ đang mang lịch sử.
+ *
+ * ===== VÌ SAO SỬA Ở `slotStatus` =====
+ *
+ * Chú thích của chính hàm ấy đã nói ra chỗ đúng: *"Gộp ở đúng một chỗ này để bộ lọc, con số
+ * đếm và bảng không bao giờ trả lời lệch nhau."* Nó gộp đúng một cặp (ô chưa có hồ sơ ↔ hồ sơ
+ * trạng thái `free`) rồi dừng lại, không hỏi tiếp `voided_at`. Vá ở `countSlots` thôi thì con
+ * số đúng mà bộ lọc vẫn sai; vá ở `filterSlots` thôi thì ngược lại. Một chỗ, ba nơi hưởng.
+ */
+describe('slotStatus — hồ sơ đã ẩn không đội lốt "trống"', () => {
+  function daAn(address: string, status: IpStatus): SubnetSlot {
+    return { ...(record(address, status) as Extract<SubnetSlot, { kind: 'record' }>), voidedAt: '2026-09-01T00:00:00Z' };
+  }
+
+  it('hồ sơ đã ẩn mang trạng thái free vẫn KHÔNG phải "trống"', () => {
+    expect(slotStatus(daAn('10.0.0.5', 'free'))).toBe('voided');
+  });
+
+  it('ẩn thắng cả trạng thái vòng đời khác', () => {
+    // `voided_at` là một tầng khác `status`: một hồ sơ từng "đã thu hồi" rồi bị ẩn thì thứ
+    // người dùng cần biết trước hết là nó đã bị ẩn.
+    expect(slotStatus(daAn('10.0.0.6', 'reclaimed'))).toBe('voided');
+  });
+
+  it('countSlots tách hẳn rổ "đã ẩn" ra khỏi "trống"', () => {
+    const slots = [free('10.0.0.1'), record('10.0.0.2', 'free'), daAn('10.0.0.3', 'free')];
+    const counts = countSlots(slots);
+    expect(counts.free).toBe(2);
+    expect(counts.voided).toBe(1);
+    // "Tất cả" vẫn là tất cả — rổ mới không được rơi ra ngoài tổng.
+    expect(counts.all).toBe(3);
+  });
+
+  it('lọc "Trống" KHÔNG kéo theo hồ sơ đã ẩn', () => {
+    const anRoi = daAn('10.0.0.3', 'free');
+    const slots = [free('10.0.0.1'), record('10.0.0.2', 'free'), anRoi];
+    expect(filterSlots(slots, 'free')).not.toContain(anRoi);
+    expect(filterSlots(slots, 'voided')).toEqual([anRoi]);
+  });
+
+  it('tổng các rổ đúng bằng "Tất cả" (vế đối chứng)', () => {
+    /*
+     * Ô này bắt đúng cái lỗi mà một bản vá ẩu sẽ gây ra: loại hồ sơ đã ẩn khỏi `free` nhưng
+     * quên cho nó một rổ, thì nó biến mất khỏi mọi bộ lọc và người dùng không còn đường nào
+     * nhìn thấy nó — tệ hơn hiện trạng, vì hiện trạng ít nhất còn hiện ra (dù sai chỗ).
+     */
+    const slots = [
+      free('10.0.0.1'),
+      record('10.0.0.2', 'assigned'),
+      record('10.0.0.3', 'suspect_dead'),
+      daAn('10.0.0.4', 'free'),
+      daAn('10.0.0.5', 'reclaimed'),
+    ];
+    const counts = countSlots(slots);
+    const tong = counts.assigned + counts.free + counts.suspect_dead + counts.reclaimed + counts.voided;
+    expect(tong).toBe(counts.all);
+  });
 });

@@ -28,6 +28,7 @@ import {
   type SubnetSlot,
 } from "./ipam-types";
 import {
+  BUCKET_KEY,
   clampPage,
   countSlots,
   filterSlots,
@@ -35,6 +36,7 @@ import {
   pageSlots,
   SLOT_FILTERS,
   SLOT_PAGE_SIZE,
+  VOIDED_FILTER,
   type SlotFilter,
 } from "./slot-paging";
 import { toIpHistoryEntries, type IpHistoryRow } from "./ip-history-entries";
@@ -238,7 +240,18 @@ export function SubnetPane({
           Con số đi kèm ngay trên nút: "còn mấy chỗ trống" là câu hỏi màn này sinh ra để trả
           lời, bắt bấm vào rồi mới đếm là bắt làm hai lần một việc. */}
       <div className="segmented" role="group" aria-label={t("ipam.status")}>
-        {SLOT_FILTERS.map((key) => (
+        {/*
+          Chip "Đã ẩn" chỉ mọc ra khi ô tick bên dưới đang bật (B-04, 23/09).
+
+          Trước đó hồ sơ đã ẩn KHÔNG có rổ nào: nó mang `status='free'` trong DB nên rơi vào
+          chip "Trống", và bấm "Trống" là nó hiện lên như một ô cấp được — trong khi thẻ dải
+          ngay phía trên nói "Giữ lại vì còn 1 hồ sơ IP mang lịch sử".
+
+          Không bày chip thường trực vì API chỉ trả hồ sơ đã ẩn khi `?includeVoided=true`: một
+          chip "Đã ẩn 0" đứng mãi ở đó là mời người dùng bấm vào một rổ luôn rỗng rồi kết luận
+          dải này không có hồ sơ nào bị ẩn — đúng cái kết luận sai đang phải sửa.
+        */}
+        {[...SLOT_FILTERS, ...(showVoided ? [VOIDED_FILTER] : [])].map((key) => (
           <button
             key={key}
             type="button"
@@ -249,7 +262,7 @@ export function SubnetPane({
               setPage(1);
             }}
           >
-            {t(key === "all" ? "ipam.filterAll" : STATUS_KEY[key])}{" "}
+            {t(key === "all" ? "ipam.filterAll" : BUCKET_KEY[key])}{" "}
             <span className="seg-count">{counts[key]}</span>
           </button>
         ))}
@@ -267,6 +280,12 @@ export function SubnetPane({
             checked={showVoided}
             onChange={(e) => {
               setShowVoided(e.target.checked);
+              /*
+               * Tắt ô tick trong khi đang đứng ở chip "Đã ẩn" thì chip ấy biến mất cùng dữ
+               * liệu của nó: không chip nào sáng, bảng rỗng trơn, và người dùng kết luận dải
+               * này không còn gì. Trả bộ lọc về "Tất cả" là đưa họ về chỗ nhìn thấy được.
+               */
+              if (!e.target.checked && shown === VOIDED_FILTER) setStatus("all");
               setPage(1);
             }}
           />
