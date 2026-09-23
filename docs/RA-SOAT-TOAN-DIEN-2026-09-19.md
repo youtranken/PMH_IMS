@@ -761,17 +761,17 @@ Excel thì mở cửa sau"*. **Cửa sau HTTP còn rộng hơn Excel và chưa a
 
 ### 8.6 Văn bản & trợ năng (11)
 
-- [ ] **T-01** 6 chuỗi tiếng Anh trong `ui/time-picker.tsx` (2 khóa đã có sẵn)
-- [ ] 5 khái niệm mang hai tên (4.2) — bắt đầu từ `ipam.addressVoided` vì nó **nói sai việc vừa làm**
-- [ ] `accounts.statusDisabled` → `'Đã vô hiệu hóa'` (đang trùng y hệt nút)
-- [ ] `Member`/`Admin` trong câu tiếng Việt → `Thành viên`/`Quản trị`
-- [ ] 4 màn tách câu rỗng "chưa có gì" khỏi "lọc không ra"
+- [x] **T-01** ~~6~~ **4** chuỗi tiếng Anh trong `ui/time-picker.tsx` — **ĐÃ LÀM 23/09** (`fb6c981`). AM/PM giữ nguyên: ký hiệu giờ quốc tế, không phải câu tiếng Anh. Tiêu đề nhìn thấy được và `aria-label` từng là HAI câu khác hẳn nhau cho cùng một hộp; nay `aria-labelledby` trỏ vào chính thẻ tiêu đề. *(Số cũ: (2 khóa đã có sẵn)
+- [x] ~~5~~ **6** khái niệm mang hai tên (4.2) — **ĐÃ LÀM 23/09** (`fb6c981`), và đo ra ba bản sao SỔ KHÔNG ĐẾM: panel Lịch sử giữ một bộ nhãn RIÊNG (`history.<module>.st*`) song song với nhãn trên bảng, và `history.software.stRetired` đã trôi lệch thật. Chỉ lộ ra vì `software-history-entries.test.ts` dùng `t` THẬT chứ không dùng stub. Cổng mới: `term-consistency.test.ts`. *(Ghi chú cũ: — bắt đầu từ `ipam.addressVoided` vì nó **nói sai việc vừa làm**
+- [x] `accounts.statusDisabled` → `'Đã vô hiệu hóa'` — **ĐÃ LÀM 23/09** (`fb6c981`). Kèm hai cách viết thứ ba và thứ tư của cùng trạng thái (`serviceAccounts.statusDisabled`, `catalog.inactive`) mà §4.3 không đếm
+- [x] `Member`/`Admin` trong câu tiếng Việt → `Thành viên`/`Quản trị` — **ĐÃ LÀM 23/09** (`fb6c981`). 'Super Admin' giữ nguyên: tên riêng của vai SA
+- [x] 4 màn tách câu rỗng "chưa có gì" khỏi "lọc không ra" — **ĐÃ LÀM 23/09** (`ccb855b`). `isFiltered` đặt trong `useListUrlState` chứ không để mỗi màn tự tính (AD-15) — **lần thứ HAI** thứ này vào hook, bản đầu tên `dirty` bị gỡ 18/09 vì không màn nào gọi; lần này nó ra đời CÙNG bốn nơi gọi. Màn thứ năm được cổng canh
 - [ ] **B-01** Gấp dấu tiếng Việt: hàm dùng chung cho web + `unaccent` (hoặc cột sinh) cho **30 vị trí ILIKE trên 8 file**. *(Đếm lại 23/09 — con số "11 chỗ" cũ SAI vì nó là kết quả của `grep "ilike("`, tức chỉ lời gọi trợ giúp của drizzle; phần lớn vế tìm kiếm viết thẳng trong `sql` template nên không lọt lưới đó. Bản thật theo file: `catalog` 5 · `service-account` 5 · `users` 4 · `isp-line` 4 · `devices` 4 · `software` 3 · `nat-rule` 3 · `audit` 2. Làm theo con số 11 thì bỏ sót đúng hai file đông nhất.)* Đi cùng khối "Tìm kiếm" của §8.8 — vế web và vế DB là một việc, tách ra làm hai lần thì lần đầu không chứng minh được gì
-- [ ] **B-02** `/admin/accounts` dùng `useListUrlState`
-- [ ] **B-03** `document.title` theo màn
-- [ ] **B-04** Chip "Đã ẩn" riêng, đừng đếm vào "Trống"
-- [ ] **B-05** Ẩn `ExpiryBadge` cho hồ sơ `retired`
-- [ ] **F-06 nhóm a11y** — **viết lại 23/09, lời cũ nói sai việc.** Ô này từng ghi "`Field` nối `htmlFor`", đọc ra thành "phải thêm prop cho component". Mở `ui/page-header.tsx:64,89,95` thì prop **đã có và đã dùng**. **§6.4 nói đúng từ đầu — chỉ dòng checklist này nén sai**, và người xếp lượt đọc dòng checklist chứ không đọc §6.4. Ba việc thật, theo đúng §6.4:
+- [x] **B-02** `/admin/accounts` dùng `useListUrlState` — **ĐÃ LÀM 23/09** (`dce72f1`). Kèm ô `common.empty` của §4.3; sửa xong thì `dead-keys-rollcall` ĐỎ vì khoá `common.empty` mất nơi gọi cuối cùng — cổng làm đúng việc, nên gỡ hẳn khoá ấy
+- [x] **B-03** `document.title` theo màn — **ĐÃ LÀM 23/09** (`f250c98`). BẢNG trong `routes.ts` chứ không `useEffect` rải ở 15 màn; dùng LẠI khoá `nav.*`, không đẻ bộ khoá thứ hai
+- [x] **B-04** Chip "Đã ẩn" riêng, đừng đếm vào "Trống" — **ĐÃ LÀM 23/09** (`f197fef`). Sửa ở `slotStatus`, đúng chỗ chú thích của chính hàm ấy đã chỉ ra; vá riêng `countSlots` thì con số đúng mà bộ lọc vẫn sai
+- [x] **B-05** ~~Ẩn~~ **Đổi nhãn** `ExpiryBadge` cho hồ sơ `retired` — **ĐÃ LÀM 23/09** (`f197fef`). Sổ nêu một màn; đo ra **BA** (cả ba nguồn hạn bên API đều loại trạng thái cuối đời, cả ba màn danh sách đều vẽ vô điều kiện). Prop `notCounted` chứ không ba nhánh `? :` chép tay; KHÔNG trả `null` vì ô trống đọc ra thành "thiếu dữ liệu"
+- [ ] **F-06 nhóm a11y — 3/4 VẾ ĐÃ LÀM 23/09** (`3669ad2`): vùng sống thường trực · `Field` tự nối `id` · `aria-describedby` (kèm `Combobox` nhận `id`, gốc rễ §6.4 gọi tên). **CÒN VẾ 4: drawer 390px quản lý tiêu điểm** — nó đổi hành vi bàn phím của cả shell ở bề ngang điện thoại, và muốn tin được thì phải đo trên trình duyệt thật ở 390px chứ không phải trên jsdom. — **viết lại 23/09, lời cũ nói sai việc.** Ô này từng ghi "`Field` nối `htmlFor`", đọc ra thành "phải thêm prop cho component". Mở `ui/page-header.tsx:64,89,95` thì prop **đã có và đã dùng**. **§6.4 nói đúng từ đầu — chỉ dòng checklist này nén sai**, và người xếp lượt đọc dòng checklist chứ không đọc §6.4. Ba việc thật, theo đúng §6.4:
   - **56/145 chỗ gọi `<Field>` chưa truyền `htmlFor`** (trong đó **8 chỗ** con cũng không có tên trợ năng nào) — nhãn không nối được vào ô nhập. Việc gõ tay, không phải việc thiết kế; làm kèm một cổng đếm thì nó không mọc lại
   - **`Combobox` chưa có prop `id`** để mà nối vào — đây mới là chỗ phải sửa component, và là GỐC RỄ (§6.4 gọi đúng tên nó)
   - **`aria-describedby` = 0 lần trong cả `web/src`.** `hint` và `error` hiện là chữ nằm cạnh ô, trình đọc màn hình không biết chúng thuộc về ô nào
