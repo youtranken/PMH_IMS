@@ -28,6 +28,7 @@ export function Select({
   disabled,
   failed,
   required,
+  'aria-describedby': describedBy,
 }: {
   /**
    * Gắn lên chính nút mở menu, để `<Field htmlFor>` còn trỏ vào một điều khiển CÓ THẬT.
@@ -37,6 +38,13 @@ export function Select({
    * bài kiểm cũng không tìm ra ô.
    */
   id?: string;
+  /**
+   * Nối `hint`/`error` của `Field` vào chính nút mở menu (F-06, 23/09).
+   *
+   * `Field` tự truyền — nơi gọi không phải biết. Thiếu nó thì dòng "tối thiểu 12 ký tự…" chỉ
+   * là chữ nằm cạnh ô, trình đọc màn hình không biết nó thuộc về ô nào.
+   */
+  'aria-describedby'?: string;
   value: string;
   onChange: (v: string) => void;
   options: SelectOption[];
@@ -153,6 +161,7 @@ export function Select({
       <button
         ref={triggerRef}
         id={id}
+        aria-describedby={describedBy}
         type="button"
         className="fsel-trigger"
         aria-label={ariaLabel}

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { describeLoadError } from '@/lib/load-error-text';
+import { useAnnounce } from '@/ui/live-region';
 
 /**
  * Hợp đồng loading/empty/error dùng chung (review nguyên tắc #8): mọi màn fetch phải PHÂN BIỆT
@@ -49,13 +50,30 @@ export function NotFound() {
   );
 }
 
-/** Khối "đang tải" dùng chung — phân biệt với rỗng/lỗi (S1). role=status + aria-busy cho SR. */
+/**
+ * Khối "đang tải" dùng chung — phân biệt với rỗng/lỗi (S1).
+ *
+ * ===== `role="status"` ĐÃ GỠ KHỎI NODE NÀY (23/09, F-06) =====
+ *
+ * Nó từng nằm ngay đây, và vì thế KHÔNG BAO GIỜ được đọc lên: node và nội dung của nó sinh ra
+ * cùng một lượt, mà trình đọc màn hình chỉ theo dõi những vùng sống đã có mặt TRƯỚC đó. 39 chỗ
+ * "đang tải" trên toàn web đều câm — người dùng bấm một nút, nội dung biến mất, và không nghe
+ * thấy gì cho tới khi dữ liệu về.
+ *
+ * Cùng lỗi này đã được nhận ra và vá hai lần ở chỗ khác (`relation-map`, rồi `command-palette`),
+ * cả hai lần đều vá TẠI CHỖ; bản dùng chung thì không ai vá. Nay lời loan báo đi qua
+ * `useAnnounce` tới một vùng sống thường trực gắn ở shell (`ui/live-region.tsx`).
+ *
+ * `aria-busy` GIỮ LẠI trên node này: nó nói về chính vùng đang bận, không phải một lời loan báo.
+ */
 export function Loading({ label }: { label?: string }) {
   const { t } = useTranslation();
+  const text = label ?? t('app.loading', 'Đang tải…');
+  useAnnounce(text);
   return (
-    <div className="load-state" role="status" aria-busy="true">
+    <div className="load-state" aria-busy="true">
       <span className="spinner" aria-hidden="true" />
-      <span className="muted">{label ?? t('app.loading', 'Đang tải…')}</span>
+      <span className="muted">{text}</span>
     </div>
   );
 }

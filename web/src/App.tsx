@@ -44,12 +44,20 @@ import { TotpChallenge } from '@/features/auth/totp-challenge';
 import { TotpEnroll } from '@/features/auth/totp-enroll';
 import { ComponentsGallery } from '@/features/dev/components-gallery';
 import { usePageTitle } from '@/ui/use-page-title';
+import { LiveRegion } from '@/ui/live-region';
 
 export default function App() {
   return (
     <BrowserRouter>
       <ToastProvider>
         <ConfirmProvider>
+          {/*
+            Vùng sống thường trực, gắn NGOÀI `AppRoutes` (F-06). Phải nằm ngoài vì `AppRoutes`
+            tự `return <Loading/>` trong lúc hỏi `/auth/me`: đặt bên trong thì đúng lượt tải
+            đầu tiên — lượt duy nhất người dùng chắc chắn phải chờ — lại không có vùng sống
+            nào đang đứng sẵn để loan báo.
+          */}
+          <LiveRegion />
           <AppRoutes />
         </ConfirmProvider>
       </ToastProvider>

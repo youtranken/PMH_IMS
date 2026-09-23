@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { cloneElement, isValidElement, useId, type ReactElement, type ReactNode } from 'react';
 
 /**
  * Đầu trang dùng chung (AD-15): tiêu đề + mô tả + vùng thao tác bên phải.
@@ -90,9 +90,45 @@ export function Field({
   span?: 2 | 3;
   children: ReactNode;
 }) {
+  /*
+   * ===== `Field` TỰ NỐI NHÃN, GỢI Ý VÀ LỖI VÀO Ô NHẬP (F-06, 23/09) =====
+   *
+   * Trước đây `htmlFor` là việc của NƠI GỌI, và 56 trên 145 chỗ gọi không truyền — nhãn không
+   * nối được vào ô, bấm vào nhãn không xảy ra gì, và `getByLabel` của bài kiểm không tìm ra.
+   * Tám trong số đó thì ô con cũng không có tên trợ năng nào, tức hoàn toàn câm.
+   *
+   * Và `aria-describedby` thì **0 lần trong cả `web/src`**: `hint`/`error` chỉ là chữ nằm
+   * cạnh ô, trình đọc màn hình không biết chúng thuộc về ô nào — người dùng nghe "Mật khẩu,
+   * ô nhập" rồi tự đoán, trong khi dòng gợi ý ngay dưới đang nói "tối thiểu 12 ký tự".
+   *
+   * Cách sửa hiển nhiên là đi sửa 56 nơi gọi. Nhưng nơi gọi thứ 146 sẽ quên, và quên thì
+   * KHÔNG gì đỏ — form vẫn dựng ra bình thường. Nên `Field` tự làm: nó sinh một `id` khi nơi
+   * gọi không cho, rồi GẮN id ấy cùng `aria-describedby` vào chính đứa con của nó.
+   *
+   * Không đè lên thứ nơi gọi đã tự khai: một ô đã có `id` riêng (để `Select` và `<input>` thay
+   * nhau ở cùng một chỗ, hoặc để bài kiểm bám vào) thì giữ nguyên id ấy.
+   *
+   * Đứa con không nhận `id`/`aria-describedby` thì phép gắn này lặng lẽ không làm gì — đó là
+   * lý do `page-header.test.tsx` dựng thật từng loại điều khiển trong `Field` rồi ĐO lại, thay
+   * vì tin rằng đã gắn.
+   */
+  const autoId = useId();
+  const id = htmlFor ?? autoId;
+  const hintId = hint ? `${id}-hint` : undefined;
+  const errorId = error ? `${id}-error` : undefined;
+  const describedBy = [errorId, hintId].filter(Boolean).join(' ') || undefined;
+
+  const control = isValidElement(children)
+    ? cloneElement(children as ReactElement<Record<string, unknown>>, {
+        id: (children.props as { id?: string }).id ?? id,
+        'aria-describedby':
+          (children.props as { 'aria-describedby'?: string })['aria-describedby'] ?? describedBy,
+      })
+    : children;
+
   return (
     <div className={`field${span ? ` span-${span}` : ''}`}>
-      <label className="lbl-t" htmlFor={htmlFor}>
+      <label className="lbl-t" htmlFor={id}>
         {label}{' '}
         {/* Dấu * chỉ là chỉ dấu thị giác: aria-hidden để tên gọi trợ năng của ô nhập là
             đúng nhãn ("Email"), không thành "Email *". Bắt buộc thật nằm ở thuộc tính
@@ -111,7 +147,7 @@ export function Field({
           </span>
         ) : null}
       </label>
-      {children}
+      {control}
       {/*
         LỖI VÀ GỢI Ý KHÔNG LOẠI TRỪ NHAU (12/09).
 
@@ -123,11 +159,15 @@ export function Field({
         Thứ tự: lỗi TRƯỚC (đỏ, `role="alert"`, trình đọc màn hình đọc ngay), gợi ý ở dưới.
       */}
       {error ? (
-        <span className="field-error" role="alert">
+        <span className="field-error" role="alert" id={errorId}>
           {error}
         </span>
       ) : null}
-      {hint ? <span className="field-hint muted">{hint}</span> : null}
+      {hint ? (
+        <span className="field-hint muted" id={hintId}>
+          {hint}
+        </span>
+      ) : null}
     </div>
   );
 }

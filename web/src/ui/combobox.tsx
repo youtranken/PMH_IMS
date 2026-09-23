@@ -62,6 +62,19 @@ interface ComboboxProps<T> {
    * `Combobox` có vế đầy đủ, `Select` có vế `aria` (nó là `<button>`, không có gì hơn để cho).
    */
   required?: boolean;
+  /**
+   * `id` của chính `<input>` — thêm 23/09 (F-06).
+   *
+   * Đây là GỐC RỄ mà §6.4 chỉ đích danh: `Field` nhả `htmlFor` vào đứa con của nó, nhưng
+   * `Combobox` không nhận `id` nên về nguyên tắc `htmlFor` **không dùng được** với nó — bấm vào
+   * nhãn không đưa tiêu điểm vào ô, và `getByLabel` của bài kiểm không tìm ra nó.
+   *
+   * Nhận qua props chứ không tự sinh bằng `useId`: `Field` là bên biết cả nhãn lẫn ô, nên nó
+   * phải là bên đặt tên. Tự sinh ở đây thì hai bên sinh hai id và chẳng bên nào nối được với ai.
+   */
+  id?: string;
+  /** Nối `hint`/`error` của `Field` vào ô — `Field` tự truyền, nơi gọi không phải biết. */
+  'aria-describedby'?: string;
 }
 
 /**
@@ -86,6 +99,8 @@ export function Combobox<T>({
   pending,
   empty,
   required,
+  id,
+  'aria-describedby': describedBy,
 }: ComboboxProps<T>) {
   const { t } = useTranslation();
   const [active, setActive] = useState(0);
@@ -211,6 +226,8 @@ export function Combobox<T>({
     <div className={`combo${open ? ' open' : ''}`} ref={refs.setReference}>
       <input
         ref={inputRef}
+        id={id}
+        aria-describedby={describedBy}
         placeholder={placeholder}
         value={query}
         disabled={disabled}
