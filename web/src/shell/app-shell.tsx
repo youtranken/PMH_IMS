@@ -7,6 +7,7 @@ import { visibleGroups } from '@/shell/app-nav';
 import { NavIcon } from '@/ui/nav-icon';
 import { CommandPalette, openCommandPalette } from '@/ui/command-palette';
 import { ThemeSwitch } from '@/ui/switches';
+import { useFocusTrap } from '@/ui/focus-trap';
 
 /**
  * Ngưỡng "màn hẹp" — PHẢI khớp `@media (max-width: 900px)` trong css/shell.css. Lệch một
@@ -42,6 +43,13 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   const { pathname } = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const showSidebar = !narrow || drawerOpen;
+  /*
+   * Bẫy tiêu điểm CHỈ bật ở màn hẹp khi drawer đang mở (F-06, vế 4).
+   *
+   * Desktop thì sidebar là một phần của trang, không phải lớp phủ — khoá tiêu điểm vào đó là
+   * dựng một cái bẫy cho người không hề yêu cầu mở gì.
+   */
+  const drawerRef = useFocusTrap<HTMLDivElement>(narrow && drawerOpen);
 
   // Chọn xong một mục thì drawer phải tự khép, không che mất trang vừa mở.
   useEffect(() => {
@@ -95,6 +103,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
           tên trợ năng THẬT, đổi class không làm hỏng bài kiểm.
         */}
         {showSidebar ? (
+        <DrawerShell narrow={narrow} label={t('app.mainNav')} trapRef={drawerRef}>
         <nav
           className={narrow ? 'sidebar is-drawer' : 'sidebar'}
           aria-label={t('app.mainNav')}
@@ -159,6 +168,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
             </button>
           </div>
         </nav>
+        </DrawerShell>
         ) : null}
 
         <div className="content">
@@ -217,11 +227,83 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
           </header>
           {/* ⌘K — nằm ở shell nên bấm được từ BẤT KỲ màn nào, không phải chỉ màn danh sách. */}
           <CommandPalette me={me} />
-          <main className="page" id="noi-dung" tabIndex={-1}>
+          {/*
+            `inert` khi drawer đang mở ở màn hẹp (F-06, vế 4) — nội dung trang thôi nhận chuột,
+            tiêu điểm và trình đọc màn hình.
+
+            Chỉ `<main>`, KHÔNG phải cả `.content`: nút đóng drawer nằm trong topbar, và topbar
+            là con của `.content`. Làm cả khối `inert` là khoá luôn chính cái nút để thoát ra —
+            và cả chỗ mà bẫy tiêu điểm sẽ trả tiêu điểm về.
+
+            Đây là lớp thứ BA, không phải lớp duy nhất: bẫy tiêu điểm lo bàn phím, backdrop lo
+            chuột, `aria-modal` lo con trỏ ảo của trình đọc màn hình. `inert` để ba lớp ấy
+            không phải lớp nào cũng đúng tuyệt đối thì mới an toàn.
+          */}
+          {/*
+            `data-testid` vì bài kiểm KHÔNG bám được vào vai `main` ở đây: `inert` gỡ phần tử
+            khỏi CÂY TRỢ NĂNG, nên đúng lúc cần khẳng định "nội dung đang inert" thì
+            `getByRole('main')` không còn tìm thấy gì. Đó cũng chính là bằng chứng `inert` đang
+            làm việc — nhưng một khẳng định không phân biệt được "đã inert" với "không tồn tại"
+            thì không khẳng định được gì.
+          */}
+          <main
+            className="page"
+            id="noi-dung"
+            data-testid="page-main"
+            tabIndex={-1}
+            inert={narrow && drawerOpen}
+          >
             {children}
           </main>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Lớp bọc biến sidebar thành một HỘP THOẠI ở màn hẹp — và chỉ ở màn hẹp (F-06, vế 4).
+ *
+ * ===== VÌ SAO BỌC NGOÀI, KHÔNG ĐẶT `role="dialog"` LÊN CHÍNH `<nav>` =====
+ *
+ * Đặt lên `<nav>` là XOÁ landmark điều hướng: `role` ghi đè vai mặc định, nên trình đọc màn
+ * hình mất đường nhảy thẳng tới menu bằng phím tắt landmark — đúng thứ quyết định 09/09 dựng
+ * ra khi đổi `<aside>` thành `<nav>`. Và `getByRole('navigation', { name: 'Điều hướng chính' })`
+ * của bộ E2E sẽ không còn khớp ở màn hẹp, tức một bản vá trợ năng làm hỏng bài kiểm trợ năng.
+ *
+ * Bọc ngoài thì cả hai cùng đúng: AT thấy một hộp thoại chứa MỘT landmark điều hướng.
+ *
+ * ===== `<div>` TRẦN TRONG FLEX LÀ AN TOÀN, ĐÃ KIỂM =====
+ *
+ * `.app-shell` là `display:flex` và **không có `gap`** (`base.css:212`), còn `.sidebar.is-drawer`
+ * là `position:fixed` — con nằm ngoài luồng, nên lớp bọc này là một flex-item rộng 0 và không
+ * đẩy gì. Thêm `gap` vào `.app-shell` về sau thì phải xem lại chỗ này.
+ *
+ * KHÔNG dùng `display:contents` để "cho lớp bọc biến mất": một số trình duyệt từng gỡ luôn
+ * phần tử ấy khỏi cây trợ năng, tức mất đúng cái `role="dialog"` vừa thêm.
+ */
+function DrawerShell({
+  narrow,
+  label,
+  trapRef,
+  children,
+}: {
+  narrow: boolean;
+  label: string;
+  trapRef: React.RefObject<HTMLDivElement | null>;
+  children: ReactNode;
+}) {
+  if (!narrow) return <>{children}</>;
+  return (
+    <div
+      ref={trapRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={label}
+      /* Nhận được tiêu điểm bằng mã khi drawer rỗng, nhưng KHÔNG nằm trong vòng Tab. */
+      tabIndex={-1}
+    >
+      {children}
     </div>
   );
 }
