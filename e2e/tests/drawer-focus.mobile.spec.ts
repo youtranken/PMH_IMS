@@ -89,15 +89,26 @@ test('desktop KHÔNG bị khoá tiêu điểm vào sidebar (vế đối chứng)
    */
   await page.setViewportSize({ width: 1280, height: 900 });
   await firstLogin(page, E2E_SA);
-  await page.goto('/');
+  // `/devices` chứ không phải `/`: bảng điều khiển không có ô tìm để đặt tiêu điểm ra ngoài sidebar.
+  await page.goto('/devices');
 
   await expect(page.getByRole('dialog', { name: 'Điều hướng chính' })).toHaveCount(0);
   await expect(page.getByTestId('page-main')).not.toHaveAttribute('inert', '');
 
-  // Tab đi được từ sidebar ra tới nội dung — không có gì giữ lại.
-  await page.getByRole('navigation', { name: 'Điều hướng chính' }).getByRole('link').first().focus();
-  for (let i = 0; i < 40; i += 1) await page.keyboard.press('Tab');
+  /*
+   * Tiêu điểm đặt NGOÀI sidebar rồi Tab: nếu bẫy lỡ bật ở màn rộng thì lượt Tab ấy bị kéo
+   * ngược vào sidebar.
+   *
+   * **Bản đầu của ô này SAI.** Nó bấm Tab 40 lượt từ link đầu sidebar rồi đòi tiêu điểm phải
+   * nằm ngoài sidebar — nhưng vòng Tab của trang là một VÒNG KHÉP KÍN: đi hết trang thì nó
+   * quay lại đầu, tức trở về sidebar. Bài đỏ vì phép đo sai, không phải vì sản phẩm sai. Đếm
+   * số lượt Tab để suy ra tiêu điểm đang ở đâu là một phép đo không bao giờ chắc.
+   */
+  const oTim = page.getByRole('searchbox').first();
+  await oTim.focus();
+  await page.keyboard.press('Tab');
   await expect(
     page.getByRole('navigation', { name: 'Điều hướng chính' }).locator(':focus'),
+    'màn rộng KHÔNG được kéo tiêu điểm về sidebar — sidebar ở đây là một phần của trang',
   ).toHaveCount(0);
 });

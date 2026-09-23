@@ -168,9 +168,14 @@ test.describe('Quản trị tài khoản', () => {
     ).toBeVisible();
     await expect(page.getByRole('cell', { name: /E2E Super Admin/ })).toHaveCount(0);
 
-    // Từ khóa không khớp ai: phải nói rõ "chưa có dữ liệu", không để bảng trắng.
+    /*
+     * Từ khóa không khớp ai: phải nói rõ là LỌC KHÔNG RA, không để bảng trắng — và cũng
+     * không nói "Chưa có dữ liệu" như trước 23/09. Câu đó (`common.empty`, dùng chung cho
+     * mọi màn) tuyên bố hệ thống chưa có tài khoản nào — trên chính màn quản trị tài khoản,
+     * nơi nó đọc như một sự cố. Khoá `common.empty` nay đã gỡ hẳn.
+     */
     await page.getByRole('searchbox').fill('khong-ton-tai-zzz');
-    await expect(page.getByText('Chưa có dữ liệu')).toBeVisible();
+    await expect(page.getByText('Không có tài khoản nào khớp ô tìm.')).toBeVisible();
   });
 
   /**
@@ -302,7 +307,7 @@ test.describe('Quản trị tài khoản', () => {
  * Hệ quả đáng kiểm không phải tiện nghi mà là **nút Back**: sáu màn kia gỡ bộ lọc, màn này RỜI
  * TRANG. Cùng một phản xạ, hai kết quả khác nhau — và người dùng học phản xạ từ sáu màn kia.
  */
-test('/admin/accounts giữ ô tìm và thứ tự trên URL, qua cả reload lẫn nút Back', async ({ page }) => {
+test('/admin/accounts giữ ô tìm và thứ tự trên URL — chia sẻ được, reload giữ nguyên', async ({ page }) => {
   await firstLogin(page, E2E_SA);
   await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/accounts$/);
@@ -320,10 +325,18 @@ test('/admin/accounts giữ ô tìm và thứ tự trên URL, qua cả reload l�
   await expect(page).toHaveURL(/[?&]sort=/);
 
   /*
-   * 3. Nút Back GỠ bộ lọc chứ không RỜI TRANG. Đây là vế duy nhất không thể suy ra từ hai vế
-   * trên: một bản dùng `replace` thay vì `push` sẽ làm cả hai vế kia xanh, rồi Back vẫn nhảy
-   * thắng ra khỏi màn.
+   * 3. Nút Back RỜI MÀN — và ĐÓ LÀ THIẾT KẾ, không phải lỗi.
+   *
+   * **Đính chính 24/09.** Bản đầu của bài này khẳng định ngược lại, vì nó chép theo vế thứ hai
+   * của finding B-02 trong sổ: *"nút Back của trình duyệt rời trang thay vì gỡ bộ lọc"*. Vế ấy
+   * SAI. `useListUrlState` ghi bằng `replace` CÓ CHỦ Ý, kèm lý do viết ngay tại chỗ — *"người
+   * dùng bấm Back là muốn rời khỏi màn, không phải đi lùi qua mười hai lần chỉnh bộ lọc"*. Sáu
+   * màn kia cũng vậy, nên đây là hành vi ĐỒNG NHẤT chứ không phải chỗ `/admin/accounts` lệch đi.
+   *
+   * Chỉ E2E phát hiện được: bài đỏ, đọc lại hook, và thứ sai hóa ra là câu trong sổ.
+   *
+   * Khoá lại hành vi THẬT ở đây, vì nó là một quyết định đáng giữ: Back phải rời màn.
    */
   await page.goBack();
-  await expect(page).toHaveURL(/\/admin\/accounts/);
+  await expect(page).not.toHaveURL(/\/admin\/accounts/);
 });

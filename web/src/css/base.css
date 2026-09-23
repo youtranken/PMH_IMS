@@ -317,12 +317,26 @@ a.linkbtn:hover {
   font-weight: 500;
 }
 /* Drawer mobile (≤900px): sidebar cố định trượt vào, có backdrop mờ ấm. */
-.sidebar.is-drawer {
+/*
+ * ĐỊNH VỊ NẰM TRÊN LỚP BỌC, KHÔNG TRÊN `.sidebar` (24/09).
+ *
+ * Lớp bọc là cái mang `role="dialog"` (xem `DrawerShell` trong `app-shell.tsx`). Để `position:
+ * fixed` ở con thì con ra khỏi luồng, và lớp bọc thành một flex-item RỘNG 0 — tức chính cái
+ * hộp thoại không có kích thước. Playwright đọc ra "hidden" và bài đỏ; đáng lo hơn là một
+ * phần tử không kích thước thì các phép đo "có nhìn thấy không" khác cũng có quyền bỏ qua nó.
+ *
+ * Nay lớp bọc giữ phần ĐỊNH VỊ, `.sidebar.is-drawer` giữ phần HÌNH THỨC. Hai vai tách đôi,
+ * và cái đeo `role="dialog"` là cái có kích thước thật.
+ */
+.drawer-dialog {
   position: fixed;
   top: 0;
   bottom: 0;
   left: 0;
   z-index: 10;
+}
+.sidebar.is-drawer {
+  height: 100%;
   box-shadow: var(--shadow-lg);
   animation: drawerIn 0.2s var(--ease) both;
 }

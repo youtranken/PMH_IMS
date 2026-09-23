@@ -428,7 +428,7 @@ test.describe('Tài khoản dịch vụ', () => {
     await page.goto(`/service-accounts/${id}?tab=history`);
     const entry = page.getByRole('listitem').filter({ hasText: 'Bật lại' });
     await expect(entry).toContainText('nhân sự mới nhận bàn giao');
-    await expect(entry).toContainText('Đã vô hiệu → Đang dùng');
+    await expect(entry).toContainText('Đã vô hiệu hóa → Đang dùng');
 
     // Mở một tài khoản đang mở không đẻ ra dòng lịch sử rỗng nghĩa.
     const again = await page.request.patch(`/api/v1/service-accounts/${id}/enable`, {

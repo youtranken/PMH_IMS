@@ -5611,14 +5611,17 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      * HAI ô này là `combobox`, KHÔNG phải `textbox`.
      *
      * "Nhà mạng" gõ tự do được nhưng có gợi ý từ danh mục (`SuggestInput`); "Thiết bị biên"
-     * tra ngược vào kho thiết bị. Ô tìm thiết bị KHÔNG có `aria-label` — tên khả truy cập của
-     * nó rơi về `placeholder`. Ghi ra đây đúng như thật, vì đó chính là thứ trình đọc màn hình
-     * đọc lên; đổi placeholder là đổi tên một tay nắm.
+     * tra ngược vào kho thiết bị.
+     *
+     * **ĐỔI 24/09 (F-06).** Trước đó ô tra thiết bị không có nhãn nối vào, nên tên khả truy cập
+     * của nó rơi về `placeholder` — trình đọc màn hình đọc "Tìm thiết bị trong kho…" thay vì tên
+     * của ô. Bản cũ của bài này khoá đúng hiện trạng ấy và ghi rõ là nó khoá một placeholder.
+     * Nay `Field` tự nối `id` vào `Combobox`, nên tên là NHÃN thật: "Thiết bị biên".
      */
     expect(
       await tenTheoVaiTro(hop, 'combobox'),
       'Hộp có đúng hai ô gợi ý: Nhà mạng và ô tra thiết bị biên',
-    ).toEqual(sap(['Nhà mạng', 'Tìm thiết bị trong kho…']));
+    ).toEqual(sap(['Nhà mạng', 'Thiết bị biên']));
 
     /*
      * "Chọn file để đính kèm" nằm trong bộ NÚT chứ không phải bộ ô nhập, và đó là điều đúng:

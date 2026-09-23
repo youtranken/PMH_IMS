@@ -68,6 +68,28 @@ describe('Field — nối nhãn vào ô', () => {
     expect(labelOf('Router').getAttribute('role')).toBe('combobox');
   });
 
+  it('con là một <label> BỌC NGOÀI thì KHÔNG bị gắn id — hồi quy 24/09', () => {
+    /*
+     * Hình dạng thật ở `catalog-form.tsx:246`: `Field` bọc một `<label className="row">`, và
+     * checkbox thật nằm BÊN TRONG nó kèm `id` riêng. Bản đầu gắn `id` vào cái `<label>` bọc,
+     * nên HAI phần tử mang cùng một id; `htmlFor` phân giải vào cái đầu tiên (không phải điều
+     * khiển) và tên trợ năng của checkbox rơi về câu gợi ý dài bên trong.
+     *
+     * Vitest 519/519 xanh suốt vì không bài nào dựng đúng hình dạng này. Bài E2E đếm tên trợ
+     * năng mới bắt được — nên ô này ở đây để lần sau bắt được sớm hơn 37 phút.
+     */
+    render(
+      <Field label="Có port map" htmlFor="catalog-portmap">
+        <label className="row">
+          <input id="catalog-portmap" type="checkbox" />
+          <span className="muted">Loại này sẽ hiện bảng port map ở trang chi tiết thiết bị.</span>
+        </label>
+      </Field>,
+    );
+    expect(document.querySelectorAll('#catalog-portmap')).toHaveLength(1);
+    expect(labelOf('Có port map').getAttribute('type')).toBe('checkbox');
+  });
+
   it('nơi gọi đã tự khai `id` thì GIỮ NGUYÊN id ấy', () => {
     /*
      * Một ô đổi qua lại giữa `<input>` và `Select` tùy trạng thái (ô "IP trong" của form NAT)

@@ -273,11 +273,15 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
  *
  * Bọc ngoài thì cả hai cùng đúng: AT thấy một hộp thoại chứa MỘT landmark điều hướng.
  *
- * ===== `<div>` TRẦN TRONG FLEX LÀ AN TOÀN, ĐÃ KIỂM =====
+ * ===== LỚP BỌC PHẢI CÓ KÍCH THƯỚC THẬT (sửa 24/09) =====
  *
- * `.app-shell` là `display:flex` và **không có `gap`** (`base.css:212`), còn `.sidebar.is-drawer`
- * là `position:fixed` — con nằm ngoài luồng, nên lớp bọc này là một flex-item rộng 0 và không
- * đẩy gì. Thêm `gap` vào `.app-shell` về sau thì phải xem lại chỗ này.
+ * Bản đầu để `<div>` trần và giữ `position:fixed` ở `.sidebar.is-drawer`. Con ra khỏi luồng,
+ * nên lớp bọc thành một flex-item RỘNG 0 — tức chính cái hộp thoại không có kích thước.
+ * Playwright đọc ra `hidden` và bài đỏ; đáng lo hơn bài đỏ là chuyện một phần tử không kích
+ * thước thì mọi phép đo "có nhìn thấy không" đều có quyền bỏ qua nó.
+ *
+ * Nay `.drawer-dialog` giữ phần ĐỊNH VỊ, `.sidebar.is-drawer` giữ phần HÌNH THỨC. Cái đeo
+ * `role="dialog"` là cái có kích thước thật.
  *
  * KHÔNG dùng `display:contents` để "cho lớp bọc biến mất": một số trình duyệt từng gỡ luôn
  * phần tử ấy khỏi cây trợ năng, tức mất đúng cái `role="dialog"` vừa thêm.
@@ -297,6 +301,7 @@ function DrawerShell({
   return (
     <div
       ref={trapRef}
+      className="drawer-dialog"
       role="dialog"
       aria-modal="true"
       aria-label={label}

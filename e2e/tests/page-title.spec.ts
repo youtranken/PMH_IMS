@@ -57,7 +57,9 @@ test('trang chi tiết đội tên khu vực của nó, không rơi về tên s�
   await firstLogin(page, E2E_SA);
 
   await page.goto('/devices');
-  const link = page.getByRole('link', { name: /^E2E-/ }).first();
+  // Mã thiết bị của bộ E2E có dạng `PC-E2E-123456` — chữ `E2E` ở GIỮA, không ở đầu.
+  // Bản đầu dùng `/^E2E-/` nên chờ hết 60 giây một link không tồn tại.
+  const link = page.getByRole('link', { name: /E2E/ }).first();
   await link.click();
   await expect(page).toHaveURL(/\/devices\/[0-9a-f-]{36}$/);
 

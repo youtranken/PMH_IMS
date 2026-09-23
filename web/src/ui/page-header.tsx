@@ -55,6 +55,38 @@ export function FormSection({
   );
 }
 
+/**
+ * Đứa con của `Field` có phải thứ ĐEO ĐƯỢC `id` của nhãn hay không.
+ *
+ * ===== HỒI QUY ĐÃ DÍNH, 24/09 — VÀ CHỈ E2E BẮT ĐƯỢC =====
+ *
+ * Bản đầu gắn `id` vào BẤT KỲ phần tử con nào. Ở `catalog-form.tsx:246` con của `Field` là một
+ * `<label className="row">` BỌC NGOÀI cái checkbox thật, và checkbox ấy đã tự khai
+ * `id="catalog-portmap"` — đúng cái id mà `Field` đang dùng. Kết quả: HAI phần tử mang cùng một
+ * `id`, `htmlFor` phân giải vào phần tử ĐẦU TIÊN (cái `<label>` bọc, không phải điều khiển),
+ * nên nhãn của `Field` thôi nối vào checkbox và tên trợ năng của nó rơi về câu gợi ý dài bên
+ * trong. Tên đổi từ "Có port map" thành "Loại này sẽ hiện bảng port map ở trang chi tiết…".
+ *
+ * Vitest 519/519 xanh suốt vì không bài nào dựng đúng hình dạng "Field bọc một label bọc một
+ * input". Bài E2E `di-khap-giao-dien` — vốn đếm TÊN TRỢ NĂNG của từng điều khiển trong hộp —
+ * là thứ duy nhất bắt được. Chú thích cũ của tôi ghi "đứa con không nhận `id` thì phép gắn
+ * lặng lẽ không làm gì"; sai — nó làm SAI, chứ không phải không làm.
+ *
+ * ===== LUẬT =====
+ *
+ * · thẻ HTML trần: chỉ gắn cho phần tử NHÃN NỐI ĐƯỢC (`<label for>` hợp lệ với chúng);
+ * · component (hàm): gắn — `Select` và `Combobox` đều nhận `id` rồi chuyển xuống phần tử thật,
+ *   và `field-a11y.test.tsx` dựng thật cả hai để chắc chuyện đó;
+ * · còn lại (`<div>`, `<label>`, mảnh ghép, chuỗi): KHÔNG gắn, để nơi gọi tự lo như trước.
+ */
+const LABELABLE = new Set(['input', 'select', 'textarea', 'button', 'meter', 'output', 'progress']);
+
+function canTakeId(children: ReactNode): children is ReactElement<Record<string, unknown>> {
+  if (!isValidElement(children)) return false;
+  const type = (children as ReactElement).type;
+  return typeof type === 'string' ? LABELABLE.has(type) : true;
+}
+
 /** Một ô nhập có nhãn — gói lại để nhãn/khoảng cách/aria nhất quán toàn app. */
 export function Field({
   label,
@@ -118,7 +150,7 @@ export function Field({
   const errorId = error ? `${id}-error` : undefined;
   const describedBy = [errorId, hintId].filter(Boolean).join(' ') || undefined;
 
-  const control = isValidElement(children)
+  const control = canTakeId(children)
     ? cloneElement(children as ReactElement<Record<string, unknown>>, {
         id: (children.props as { id?: string }).id ?? id,
         'aria-describedby':

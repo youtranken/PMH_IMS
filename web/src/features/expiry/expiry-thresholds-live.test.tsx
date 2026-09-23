@@ -55,11 +55,27 @@ import type { Me } from '@/lib/me';
 
 const me = { role: 'sa', csrfToken: 'x', email: 'sa@pmh.com.vn' } as unknown as Me;
 
-/** Ngày ISO cách hôm nay `days` hôm — tính theo ngày lịch, khớp `daysUntil`. */
+/**
+ * Ngày cách hôm nay `days` hôm, tính theo NGÀY LỊCH ĐỊA PHƯƠNG — khớp `daysUntil`.
+ *
+ * ===== `toISOString()` Ở ĐÂY LÀ MỘT BÀI HỎNG BẢY TIẾNG MỖI NGÀY (sửa 24/09) =====
+ *
+ * Bản cũ dựng ngày bằng `d.toISOString().slice(0, 10)`, tức chuyển sang giờ UTC. Việt Nam là
+ * UTC+7, nên trong khoảng **00:00–07:00 giờ địa phương** ngày UTC còn là HÔM QUA: fixture ghi
+ * ra một ngày sớm hơn một hôm, huy hiệu đọc "Còn 9 ngày", và `findByText(/Còn 10 ngày/i)`
+ * không tìm thấy gì.
+ *
+ * Đo được lúc 00:36 ngày 24/09: `toISOString` cho `2026-10-03` trong khi +10 hôm theo lịch địa
+ * phương là `2026-10-04`. Bài xanh suốt buổi chiều rồi đỏ ngay sau nửa đêm, ở MỌI commit —
+ * kiểu hỏng tệ nhất, vì nó dạy người ta chạy lại thay vì đọc.
+ *
+ * `toLocaleDateString('sv')` cho đúng dạng `YYYY-MM-DD` theo lịch ĐỊA PHƯƠNG, cùng hệ quy
+ * chiếu với `daysUntil` — hai bên nay đếm cùng một loại ngày.
+ */
 function daysFromNow(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return d.toLocaleDateString('sv');
 }
 
 const TEN_DAYS_LEFT = {
@@ -113,7 +129,19 @@ function stubFetch() {
 describe('Màn Sắp hết hạn — ngưỡng của lượt trả về', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('huy hiệu tô theo ngưỡng server trả về, không phải ngưỡng lúc chờ dữ liệu', async () => {
+  /*
+   * `timeout` của CẢ BÀI phải LỚN HƠN hạn chờ bên trong nó (sửa 24/09).
+   *
+   * Vitest mặc định 5000ms, đúng bằng `findByText(..., { timeout: 5000 })` ở dưới. Hai con số
+   * bằng nhau nghĩa là bài CHẾT TRƯỚC khi phép chờ kịp báo cái nó không tìm thấy: máy bận hơn
+   * một chút là đỏ với "Test timed out in 5000ms" — một thông báo chẳng nói gì về huỳ hiệu,
+   * huỳ hiệu là thứ bài này sinh ra để canh. Đã bắt được đúng như vậy: cùng commit, lượt trước
+   * xanh, lượt sau đỏ, và thông báo không chỉ về đâu cả.
+   *
+   * Nâng hạn của bài, KHÔNG nâng hạn chờ bên trong: giữ 5s cho phép chờ nghĩa là bài vẫn đỏ
+   * nếu dòng không bao giờ về — chỉ khác là nó đỏ KÈM LÝ DO.
+   */
+  it('huy hiệu tô theo ngưỡng server trả về, không phải ngưỡng lúc chờ dữ liệu', { timeout: 20_000 }, async () => {
     stubFetch();
 
     /* Cache ấm sẵn: đúng trạng thái sau khi người dùng vừa ở Bảng điều khiển. */
