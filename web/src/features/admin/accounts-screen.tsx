@@ -10,6 +10,7 @@ import { sortQuery } from '@/lib/sort-query';
 import { DataTable } from '@/ui/data-table';
 import { Dialog } from '@/ui/dialog';
 import { FilterBar } from '@/ui/filter-bar';
+import { useListUrlState } from '@/ui/use-list-url-state';
 import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
@@ -128,13 +129,30 @@ export function AccountsScreen({ me }: { me: Me }) {
   const toast = useToast();
   const askConfirm = useConfirm();
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
-  /** Số dòng/trang do NGƯỜI DÙNG chọn (10/20/50/100), không còn là hằng số cứng. */
-  const [limit, setLimit] = useState(DEFAULT_LIMIT);
-  const [search, setSearch] = useState('');
+  /*
+   * TRẠNG THÁI DANH SÁCH SỐNG TRÊN THANH ĐỊ CHỈ (B-02, 23/09).
+   *
+   * Đây là màn danh sách CUỐI CÙNG còn giữ trang/ô tìm/thứ tự trong `useState`. Đo được trước khi
+   * sửa: gõ "Cao" thì bảng còn 1 dòng nhưng URL không đổi; bấm sắp xếp, URL không đổi; reload thì
+   * về 7 dòng và ô tìm trắng. Hệ quả không nằm ở tiện nghi: **không chia sẻ được link đã lọc**, và
+   * nút Back của trình duyệt RỜI TRANG thay vì gỡ bộ lọc — sáu màn kia thì ngược lại, nên cùng một
+   * phản xạ cho hai kết quả khác nhau.
+   *
+   * Ô tìm cũng được debounce 250ms kèm theo — trước đây mỗi phím là một lượt gọi API.
+   */
+  const url = useListUrlState<{ search: string }>({
+    emptyFilters: { search: '' },
+    defaultLimit: DEFAULT_LIMIT,
+    defaultSort: { key: 'fullName', desc: false },
+    searchKey: 'search',
+  });
+  const { page, limit } = url;
+  const search = url.search;
+  const setPage = url.setPage;
+  const setLimit = url.setLimit;
   // Sắp xếp chạy ở SERVER (`manualSorting`): danh sách phân trang 20 dòng/trang, sắp ở client
   // chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả bảng — sai mà không có dấu hiệu nào.
-  const [sorting, setSorting] = useState<SortingState>([{ id: 'fullName', desc: false }]);
+  const sorting: SortingState = [{ id: url.sorting.key, desc: url.sorting.desc }];
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<AccountRow | null>(null);
   /* Giữ kèm CHỦ của mật khẩu: mở từ dòng thứ sáu trong bảng thì không ai nhớ đang reset cho ai. */
@@ -440,12 +458,11 @@ export function AccountsScreen({ me }: { me: Me }) {
         }
       />
 
+      {/* Hook tự bỏ `page` khỏi URL khi ô tìm đổi: đổi từ khóa mà giữ nguyên trang 5 thì kết
+          quả trông như rỗng. */}
       <FilterBar
-        search={search}
-        onSearchChange={(value) => {
-          setSearch(value);
-          setPage(1); // đổi từ khóa mà giữ nguyên trang 5 thì kết quả trông như rỗng
-        }}
+        search={url.searchInput}
+        onSearchChange={url.setSearchInput}
         searchPlaceholder={`${t('common.search')} theo tên hoặc email`}
       />
 
@@ -458,17 +475,26 @@ export function AccountsScreen({ me }: { me: Me }) {
           <DataTable
             data={rows}
             columns={columns}
-            emptyText={t('common.empty')}
+            /*
+             * Trước 23/09 đây là chỗ DUY NHẤT trong 14 chỗ còn dùng `common.empty` = "Chưa có
+             * dữ liệu": gõ một từ không khớp là màn tuyên bố hệ thống chưa có tài khoản nào —
+             * trên chính màn quản trị tài khoản, nơi câu đó đọc như một sự cố. Cùng lớp lỗi
+             * với bốn màn danh sách vừa tách câu rỗng, và nay dùng được `isFiltered` của hook.
+             */
+            emptyText={url.isFiltered ? t('accounts.emptyFiltered') : t('accounts.empty')}
             stackOnMobile
             manualSorting
             sorting={sorting}
             onSortingChange={(updater) => {
-              setSorting((current) =>
-                typeof updater === 'function' ? updater(current) : updater,
+              const next = typeof updater === 'function' ? updater(sorting) : updater;
+              const first = next[0];
+              // Đổi cột sắp xếp thì hook tự bỏ `page` khỏi URL: giữ nguyên trang 5 của thứ tự CŨ
+              // là nhìn vào một lát cắt chẳng liên quan gì tới thứ tự vừa chọn.
+              url.setSorting(
+                first
+                  ? { key: String(first.id), desc: !!first.desc }
+                  : { key: 'fullName', desc: false },
               );
-              // Đổi cột sắp xếp thì về trang 1: giữ nguyên trang 5 của thứ tự CŨ là nhìn vào
-              // một lát cắt chẳng liên quan gì tới thứ tự vừa chọn.
-              setPage(1);
             }}
           />
 

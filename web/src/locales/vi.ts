@@ -189,7 +189,17 @@ export default {
     expandRow: 'Mở rộng dòng',
     collapseRow: 'Thu gọn dòng',
     loading: 'Đang tải…',
-    empty: 'Chưa có dữ liệu',
+    /*
+     * `common.empty` = 'Chưa có dữ liệu' ĐÃ GỠ (23/09).
+     *
+     * Nơi gọi cuối cùng là `accounts-screen.tsx`, và nó chính là lỗi: gõ một từ không khớp thì
+     * màn tuyên bố hệ thống chưa có tài khoản nào. Một câu rỗng DÙNG CHUNG cho mọi màn không
+     * thể đúng, vì mỗi màn rỗng vì một lý do khác nhau và lời khuyên đi kèm cũng khác nhau —
+     * đó là cả nội dung của ô "4 màn tách câu rỗng" trong §8.6.
+     *
+     * Đừng khai lại nó. Màn mới thì khai `<ns>.empty` + `<ns>.emptyFiltered` của riêng mình;
+     * `term-consistency.test.ts` canh cặp ấy.
+     */
     error: 'Có lỗi xảy ra',
     export: 'Xuất Excel',
     filter: 'Bộ lọc',
@@ -793,6 +803,13 @@ export default {
     roleSa: 'Super Admin',
     roleAdmin: 'Quản trị',
     roleMember: 'Thành viên',
+    /*
+     * Hai cảnh, hai câu — xem chú thích ở `devices.empty`. Riêng màn này câu "chưa có gì" gần
+     * như không bao giờ đúng: muốn đọc được màn Tài khoản thì phải có ít nhất tài khoản SA
+     * đang đăng nhập. Nên nó viết như một dấu hiệu bất thường, không như một lời mời.
+     */
+    empty: 'Không đọc được danh sách tài khoản.',
+    emptyFiltered: 'Không có tài khoản nào khớp ô tìm.',
     statusActive: 'Đang hoạt động',
     statusLocked: 'Đang khóa',
     /* NHÃN trạng thái, không phải NÚT — trước đây trùng y hệt `disable` ('Vô hiệu hóa'), nên

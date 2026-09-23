@@ -7,6 +7,7 @@ import {
   resetUsers,
   rowAction,
   rowActionNames,
+  timVaChoLoc,
   SECOND_BROWSER,
   writeHeaders,
 } from './helpers';
@@ -288,4 +289,41 @@ test.describe('Quản trị tài khoản', () => {
     // Cột Hành động không có dữ liệu để sắp — không phải nút bấm được.
     await expect(head.getByRole('button', { name: 'Hành động' })).toHaveCount(0);
   });
+});
+
+
+/**
+ * TRẠNG THÁI DANH SÁCH SỐNG TRÊN THANH ĐỊA CHỈ (B-02).
+ *
+ * Đo trước khi sửa: `/devices` gõ "CC" thì URL thành `?q=CC` và reload giữ nguyên; `/admin/accounts`
+ * gõ "Cao" thì bảng còn 1 dòng nhưng URL **không đổi**, bấm sắp xếp URL cũng không đổi, reload
+ * thì về đủ dòng và ô tìm trắng.
+ *
+ * Hệ quả đáng kiểm không phải tiện nghi mà là **nút Back**: sáu màn kia gỡ bộ lọc, màn này RỜI
+ * TRANG. Cùng một phản xạ, hai kết quả khác nhau — và người dùng học phản xạ từ sáu màn kia.
+ */
+test('/admin/accounts giữ ô tìm và thứ tự trên URL, qua cả reload lẫn nút Back', async ({ page }) => {
+  await firstLogin(page, E2E_SA);
+  await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
+  await expect(page).toHaveURL(/\/admin\/accounts$/);
+
+  await timVaChoLoc(page, 'e2e-thanh-vien');
+  const soDong = await page.getByRole('row').count();
+
+  // 1. Reload giữ nguyên kết quả — tức link chia sẻ được.
+  await page.reload();
+  await expect(page.getByRole('searchbox', { name: /Tìm/ })).toHaveValue('e2e-thanh-vien');
+  await expect(page.getByRole('row')).toHaveCount(soDong);
+
+  // 2. Sắp xếp cũng đi vào URL.
+  await page.getByRole('button', { name: 'Họ tên' }).click();
+  await expect(page).toHaveURL(/[?&]sort=/);
+
+  /*
+   * 3. Nút Back GỠ bộ lọc chứ không RỜI TRANG. Đây là vế duy nhất không thể suy ra từ hai vế
+   * trên: một bản dùng `replace` thay vì `push` sẽ làm cả hai vế kia xanh, rồi Back vẫn nhảy
+   * thắng ra khỏi màn.
+   */
+  await page.goBack();
+  await expect(page).toHaveURL(/\/admin\/accounts/);
 });
