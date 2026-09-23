@@ -148,3 +148,59 @@ export function canSeeRoute(path: string, role: UserRole): boolean {
   const allowed = ROUTE_ROLES[path];
   return allowed === undefined || allowed.includes(role);
 }
+
+/**
+ * Đường dẫn → khoá i18n làm TÊN TAB TRÌNH DUYỆT (B-03).
+ *
+ * Dùng LẠI khoá `nav.*` chứ không đẻ bộ khoá thứ hai: tab trình duyệt và mục sidebar trỏ vào
+ * cùng một màn, nên hai cái tên khác nhau cho nó là đúng thứ `term-consistency.test.ts` vừa
+ * phải dọn sáu lần. Đổi nhãn sidebar thì tab đổi theo, không lệch được.
+ *
+ * Bảng, không phải `useEffect` rải ở mười lăm màn: thiếu một dòng effect thì trang vẫn dựng
+ * ra bình thường và không gì đỏ, nên màn thứ mười sáu sẽ quên. Ở đây thì `routes.test.ts` hỏi
+ * được "có đường nào trong `PATHS` chưa có tên tab không".
+ */
+export const ROUTE_TITLE_KEY: Record<string, string> = {
+  [PATHS.dashboard]: 'nav.dashboard',
+  [PATHS.devices]: 'nav.devices',
+  [PATHS.software]: 'nav.software',
+  [PATHS.ispLines]: 'nav.isp',
+  [PATHS.expiry]: 'nav.expiry',
+  [PATHS.ipAddresses]: 'nav.ipam',
+  [PATHS.nat]: 'nav.nat',
+  [PATHS.serviceAccounts]: 'nav.serviceAccounts',
+  [PATHS.approvals]: 'nav.approvals',
+  [PATHS.vault]: 'nav.vault',
+  [PATHS.disposal]: 'nav.disposal',
+  [PATHS.documents]: 'nav.documents',
+  [PATHS.adminAccounts]: 'nav.accounts',
+  [PATHS.adminCatalog]: 'nav.catalog',
+  [PATHS.adminVaultAccess]: 'nav.vaultAccess',
+  [PATHS.adminAuditLog]: 'nav.auditLog',
+  [PATHS.devComponents]: 'nav.components',
+};
+
+/**
+ * Tên tab cho một `pathname` — `null` nếu không nhận ra.
+ *
+ * Trang CHI TIẾT (`/devices/<id>`) đội tên của danh sách nó thuộc về: người dùng nhận ra khu
+ * vực trước, còn tên riêng của hồ sơ đã nằm trên `h1` của chính trang. Ghép tên hồ sơ vào tab
+ * thì phải chờ API trả về, tức tab đổi tên hai lần mỗi lượt mở màn.
+ *
+ * `'/'` bị loại khỏi phép khớp tiền tố một cách tường minh — nó là tiền tố của MỌI đường, nên
+ * quên vế đó thì mọi màn đội tên "Bảng điều khiển", và bảng kiểm khai theo đường cụ thể vẫn
+ * xanh vì `/` chỉ thắng ở những đường KHÔNG khai.
+ *
+ * Trả `null` chứ không đoán bừa: tab của một trang 404 mà mang tên một màn có thật là nói với
+ * người dùng rằng trang ấy tồn tại.
+ */
+export function titleKeyOf(pathname: string): string | null {
+  const exact = ROUTE_TITLE_KEY[pathname];
+  if (exact) return exact;
+
+  const prefix = Object.keys(ROUTE_TITLE_KEY)
+    .filter((path) => path !== '/' && pathname.startsWith(`${path}/`))
+    .sort((a, b) => b.length - a.length)[0];
+
+  return prefix ? ROUTE_TITLE_KEY[prefix] : null;
+}

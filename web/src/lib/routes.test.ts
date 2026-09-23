@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { PATHS, ROUTE_ROLES, canSeeRoute } from '@/lib/routes';
+import { PATHS, ROUTE_ROLES, canSeeRoute, titleKeyOf } from '@/lib/routes';
+
+/** Mọi đường tĩnh trong `PATHS` (bỏ các hàm dựng đường chi tiết). */
+const STRING_PATHS = (Object.values(PATHS) as unknown[]).filter(
+  (value) => typeof value === 'string',
+) as string[];
 
 /**
  * VAI NÀO VÀO ĐƯỢC ĐƯỜNG NÀO (B-09).
@@ -87,5 +92,65 @@ describe('mọi đường /admin phải khai vai', () => {
     // và nó sẽ được chép sang khi ai đó thêm màn mới.
     const known = new Set<string>(stringPaths);
     expect(Object.keys(ROUTE_ROLES).filter((path) => !known.has(path))).toEqual([]);
+  });
+});
+
+/**
+ * TÊN TAB TRÌNH DUYỆT (B-03).
+ *
+ * ===== LỖ ĐANG VÁ =====
+ *
+ * `document.title` KHÔNG được đặt ở đâu trong `web/src` — mười lăm màn dùng chung đúng một
+ * cái tên trong `index.html`. Hậu quả không nằm ở thẩm mỹ:
+ *
+ *   - mở bốn tab IMS để đối chiếu thì cả bốn đọc y hệt nhau, phải bấm từng cái để tìm;
+ *   - lịch sử duyệt và dấu trang đều mang một cái tên, nên không tìm lại được bằng tên;
+ *   - trình đọc màn hình đọc tên tài liệu khi chuyển tab — nghe cùng một câu ở mọi màn.
+ *
+ * ===== VÌ SAO LÀ MỘT BẢNG TRONG `routes.ts` =====
+ *
+ * Cách hiển nhiên là mỗi màn tự gọi `useEffect(() => { document.title = … })`. Mười lăm bản
+ * chép tay, và màn thứ mười sáu sẽ quên — không gì đỏ, vì thiếu một dòng effect thì trang
+ * vẫn dựng ra bình thường. Đó đúng là lớp lỗi mà `ROUTE_ROLES` ngay trên đây sinh ra để chặn.
+ *
+ * Bảng thì hỏi được câu JSX không trả lời nổi: *"có đường nào trong `PATHS` chưa có tên tab
+ * không?"* — và ô cuối của mục này hỏi đúng câu đó.
+ *
+ * Tên tab dùng LẠI khoá `nav.*` chứ không đẻ bộ khoá thứ hai: tab trình duyệt và mục sidebar
+ * là cùng một màn, hai cái tên khác nhau cho nó là đúng thứ `term-consistency.test.ts` vừa
+ * dọn sáu lần.
+ */
+describe('titleKeyOf — tên tab theo màn', () => {
+  it.each([
+    [PATHS.dashboard, 'nav.dashboard'],
+    [PATHS.devices, 'nav.devices'],
+    [PATHS.software, 'nav.software'],
+    [PATHS.expiry, 'nav.expiry'],
+    [PATHS.adminAccounts, 'nav.accounts'],
+    [PATHS.adminVaultAccess, 'nav.vaultAccess'],
+    // Trang CHI TIẾT đội tên của danh sách nó thuộc về — người dùng nhận ra khu vực trước,
+    // còn tên riêng của hồ sơ thì đã nằm trên `h1` của chính trang.
+    [PATHS.device('abc-123'), 'nav.devices'],
+    [PATHS.subnet('xyz'), 'nav.ipam'],
+    [PATHS.serviceAccount('k1'), 'nav.serviceAccounts'],
+  ] as const)('%s → %s', (path, key) => {
+    expect(titleKeyOf(path)).toBe(key);
+  });
+
+  it('đường lạ thì trả `null`, không đoán bừa', () => {
+    // `null` để nơi gọi rơi về tên sản phẩm. Đoán bừa một cái tên cho trang 404 thì tab nói
+    // rằng trang ấy tồn tại.
+    expect(titleKeyOf('/khong-co-duong-nay')).toBeNull();
+  });
+
+  it('`/` KHÔNG được khớp như tiền tố của mọi đường', () => {
+    // Bẫy của phép khớp tiền tố: '/' là tiền tố của tất cả, nên làm ẩu thì mọi màn đội tên
+    // Bảng điều khiển và bài trên vẫn xanh vì nó chỉ kiểm các đường có khai.
+    expect(titleKeyOf('/devices/abc')).not.toBe('nav.dashboard');
+  });
+
+  it('mọi đường trong PATHS đều có tên tab', () => {
+    const missing = STRING_PATHS.filter((path) => titleKeyOf(path) === null);
+    expect(missing).toEqual([]);
   });
 });

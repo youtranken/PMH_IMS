@@ -43,6 +43,7 @@ import { LoginScreen } from '@/features/auth/login-screen';
 import { TotpChallenge } from '@/features/auth/totp-challenge';
 import { TotpEnroll } from '@/features/auth/totp-enroll';
 import { ComponentsGallery } from '@/features/dev/components-gallery';
+import { usePageTitle } from '@/ui/use-page-title';
 
 export default function App() {
   return (
@@ -73,6 +74,15 @@ function LegacyRedirect({ to, withId }: { to: string; withId?: boolean }) {
 function AppRoutes() {
   const { data: me, isLoading } = useMe();
   const location = useLocation();
+  /*
+   * Gọi ở ĐÂY, trước mọi lượt `return` sớm, vì hai lý do:
+   *
+   *   1. luật hook — `usePageTitle` phải chạy ở mọi lượt render của component này;
+   *   2. nó phủ luôn màn đăng nhập và trang 404, tức những màn KHÔNG nằm trong shell. Đặt
+   *      trong `app-shell.tsx` thì đăng xuất xong tab vẫn đội tên màn cuối cùng vừa xem —
+   *      một cái tên nói rằng người dùng vẫn đang ở trong đó.
+   */
+  usePageTitle();
   if (isLoading) return <Loading />;
 
   const step = nextStepPath(me ?? null);
