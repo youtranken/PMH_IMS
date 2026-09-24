@@ -2,6 +2,7 @@ import { expect, test, type Locator, type Page } from '@playwright/test';
 import {
   E2E_SA,
   firstLogin,
+  isoInDays,
   resetDevices,
   resetSoftware,
   resetUsers,
@@ -187,8 +188,7 @@ test('huy hiệu hạn ở màn Sắp hết hạn đọc được ở CẢ chế
   await firstLogin(page, E2E_SA);
   const stamp = Date.now().toString().slice(-6);
   const headers = await writeHeaders(page);
-  const day = (offset: number) =>
-    new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+  const day = isoInDays;
 
   // Một món GẤP (≤7 ngày → tone `danger`) và một món SẮP (≤30 ngày → tone `warn`). Hai tone
   // này là toàn bộ ngôn ngữ màu của màn — xám chỉ xuất hiện khi con số bằng 0.

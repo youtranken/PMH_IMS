@@ -1,5 +1,13 @@
 import { expect, test, type Page } from '@playwright/test';
-import { APP_ORIGIN, E2E_SA, firstLogin, resetIpam, resetSoftware, resetUsers } from './helpers';
+import {
+  APP_ORIGIN,
+  E2E_SA,
+  firstLogin,
+  isoInDays,
+  resetIpam,
+  resetSoftware,
+  resetUsers,
+} from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -33,7 +41,7 @@ test.describe('Bảng điều khiển ở 390px', () => {
         code: `LIC-E2E-M390-${stamp}`,
         name: 'License có tên rất dài để thử tràn ngang trên điện thoại',
         kind: 'license',
-        endDate: new Date(Date.now() + 5 * 86_400_000).toISOString().slice(0, 10),
+        endDate: isoInDays(5),
       },
     });
 

@@ -1,6 +1,7 @@
 import { execSync } from 'node:child_process';
 import { expect, request, type Page } from '@playwright/test';
 import { NobleCryptoPlugin, ScureBase32Plugin, TOTP } from 'otplib';
+import { APP_TIMEZONE } from '../app-timezone';
 
 /**
  * Origin của ứng dụng — NGUỒN DUY NHẤT cho mọi request thủ công trong bộ E2E.
@@ -926,4 +927,45 @@ export async function rowActionNames(page: Page, subject: string): Promise<strin
   const names = await page.getByRole('menuitem').allTextContents();
   await page.keyboard.press('Escape');
   return names;
+}
+
+
+/**
+ * Ngày `YYYY-MM-DD` cách hôm nay `days` hôm, tính theo LỊCH CỦA MÚI GIỜ ỨNG DỤNG.
+ *
+ * ===== VÌ SAO KHÔNG DÙNG `toISOString()` =====
+ *
+ * `toISOString()` đổi sang UTC trên MỌI hệ điều hành. Việt Nam là UTC+7, nên trong khoảng
+ * 00:00–07:00 giờ ta, ngày UTC còn là HÔM QUA — fixture ghi ra một ngày sớm hơn một hôm.
+ *
+ * Mà trình duyệt của bộ kiểm thì bị ghim `timezoneId: 'Asia/Ho_Chi_Minh'`
+ * (`playwright.config.ts`), và `web/src/lib/expiry.ts` cố ý tính theo NGÀY ĐỊA PHƯƠNG
+ * (`parseDateOnly` có hẳn chú thích "nếu không ngày sẽ lệch 1 ở múi giờ +07"). Hai bên khi ấy
+ * dùng hai đồng hồ khác nhau: fixture nói "còn 10 ngày", huy hiệu đọc "còn 9 ngày".
+ *
+ * Đã xảy ra thật, 24/09: `expiry-thresholds-live.test.tsx` đỏ đúng cửa sổ 7 tiếng ấy, ở MỌI
+ * commit — xanh suốt buổi chiều rồi đỏ ngay sau nửa đêm.
+ *
+ * ===== VÌ SAO GHIM MÚI GIỜ TƯỜNG MINH, KHÔNG LẤY GIỜ MÁY =====
+ *
+ * Tiến trình Node chạy các file `.spec.ts` KHÔNG bị `timezoneId` ghim — cờ ấy chỉ ghim trình
+ * duyệt. Nên trên máy chủ CI Ubuntu (mặc định UTC), "giờ địa phương" của tiến trình là UTC
+ * còn trình duyệt vẫn ở giờ VN: lệch nhau CẢ NGÀY, không chỉ 7 tiếng. Truyền `timeZone`
+ * tường minh là cách duy nhất khiến hàm này đúng bất kể máy nào chạy nó.
+ *
+ * `'sv'` cho ra đúng dạng `YYYY-MM-DD` — tiếng Thụy Điển viết ngày theo chuẩn ISO.
+ *
+ * Hôm nay các fixture dùng offset 3 · 5 · 10 · 20, lệch một ngày không vượt ngưỡng 7/30 nên
+ * chưa ai thấy. Nhưng đó là may, không phải thiết kế: ngày ai đó viết một bài với offset
+ * **7 hoặc 30** — đúng hai con số ngưỡng của hệ thống — bài đó sẽ đỏ 7 tiếng và xanh 17 tiếng
+ * mỗi ngày. Gom về đây để không có bản chép tay thứ tám.
+ */
+export function isoInDays(days: number): string {
+  const at = new Date(Date.now() + days * 86_400_000);
+  return at.toLocaleDateString('sv', { timeZone: APP_TIMEZONE });
+}
+
+/** Hôm nay theo lịch của múi giờ ứng dụng — xem chú thích `isoInDays`. */
+export function isoToday(): string {
+  return isoInDays(0);
 }

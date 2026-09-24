@@ -3,6 +3,7 @@ import {
   E2E_SA,
   firstLogin,
   horizontalOverflow,
+  isoInDays,
   resetDevices,
   resetSoftware,
   resetUsers,
@@ -27,7 +28,7 @@ test('màn Sắp hết hạn đọc được ở 390px, sáng và tối', async 
   await firstLogin(page, E2E_SA);
   const stamp = Date.now().toString().slice(-6);
   const headers = await writeHeaders(page);
-  const soon = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10);
+  const soon = isoInDays(10);
 
   const created = await page.request.post('/api/v1/software', {
     headers,

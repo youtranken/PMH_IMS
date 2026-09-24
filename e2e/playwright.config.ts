@@ -1,4 +1,5 @@
 import { defineConfig, devices } from '@playwright/test';
+import { APP_TIMEZONE } from './app-timezone';
 
 /**
  * E2E chạy trên STACK THẬT (docker compose), không mock API — DoD story.
@@ -28,7 +29,13 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     locale: 'vi-VN',
-    timezoneId: 'Asia/Ho_Chi_Minh',
+    /*
+     * Ghim đồng hồ của TRÌNH DUYỆT. Đọc từ `../app-timezone` chứ không gõ lại chuỗi: cùng
+     * múi giờ ấy còn phải dùng ở `tests/helpers.ts` để dựng ngày fixture, và hai đồng hồ đó
+     * lệch nhau thì fixture nói "còn 10 ngày" còn huy hiệu đọc "còn 9 ngày" — đã xảy ra thật
+     * ngày 24/09, đỏ đúng 7 tiếng mỗi ngày.
+     */
+    timezoneId: APP_TIMEZONE,
   },
   projects: [
     {

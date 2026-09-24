@@ -17,6 +17,7 @@ import {
   resetCatalog,
   resetDevices,
   resetDigestRules,
+  isoInDays,
   resetIpam,
   resetIsp,
   resetSecrets,
@@ -568,7 +569,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     await firstLogin(page, E2E_SA);
 
     const stamp = Date.now().toString().slice(-6);
-    const soon = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
+    const soon = isoInDays(3);
     const seeded = await page.request.post('/api/v1/software', {
       headers: await writeHeaders(page),
       data: {

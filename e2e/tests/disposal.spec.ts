@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 import {
   E2E_SA,
   firstLogin,
+  isoInDays,
   resetDevices,
   resetServiceAccounts,
   resetSoftware,
@@ -144,9 +145,4 @@ test('hồ sơ trong kho KHÔNG còn được tính hạn', async ({ page }) => 
   await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
 });
 
-/** Ngày ISO cách hôm nay N ngày — bài kiểm cần hạn tương đối, không phải một ngày cố định. */
-function isoInDays(days: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
-}
+// `isoInDays` dã chuyển sang `helpers.ts` (24/09) — xem chú thích ở đó về bẫy múi giờ.

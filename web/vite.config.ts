@@ -44,5 +44,25 @@ export default defineConfig({
     css: false,
     restoreMocks: true,
     unstubGlobals: true,
+    /**
+     * MÚI GIỜ CỦA BÀI KIỂM GHIM CỨNG, KHÔNG LẤY CỦA MÁY (24/09/2026).
+     *
+     * Mọi tầng SẢN PHẨM đã ghim giờ VN bất kể máy chạy hệ gì: `docker-compose.yml` đặt
+     * `TZ: Asia/Ho_Chi_Minh` cho ba dịch vụ, API đọc `app.timezone` qua `isoDateInTz()`,
+     * truy vấn nhật ký viết thẳng `AT TIME ZONE 'Asia/Ho_Chi_Minh'`, và trình duyệt của E2E
+     * bị ghim bằng `timezoneId`. Chỉ tầng chạy bài kiểm bằng Node là còn lấy giờ của máy.
+     *
+     * Hậu quả nếu để yên: máy dev ở VN chạy bài theo giờ VN, máy chủ CI Ubuntu mặc định UTC
+     * chạy bài theo UTC. Cùng một commit, hai kết quả — và kiểu hỏng tệ hơn là kiểu XANH:
+     * `lib/expiry.ts` cố ý tính theo NGÀY ĐỊA PHƯƠNG (`parseDateOnly` có hẳn chú thích "nếu
+     * không ngày sẽ lệch 1 ở múi giờ +07"), nên một bộ kiểm chạy ở UTC thôi không còn chạm
+     * vào chính cái luật ấy nữa. Nó không đỏ, nó chỉ ngừng canh.
+     *
+     * Đây là lần thứ BA cùng một bẫy trong repo: `api/src/common/today.spec.ts` ghi lại lần
+     * đầu ("lỗi thật E2E story 3.4 bắt được: 6 giờ sáng giờ VN, UTC vẫn là hôm qua"), lần hai
+     * là `parseDateOnly` bên web, lần ba là fixture của `expiry-thresholds-live.test.tsx`
+     * (đỏ 7 tiếng mỗi ngày, 24/09). Ghim ở đây để không có lần thứ tư.
+     */
+    env: { TZ: 'Asia/Ho_Chi_Minh' },
   },
 })

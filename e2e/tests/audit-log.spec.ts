@@ -1,5 +1,13 @@
 import { expect, request, test } from '@playwright/test';
-import { APP_ORIGIN, E2E_MEMBER, E2E_SA, firstLogin, resetUsers, sql } from './helpers';
+import {
+  APP_ORIGIN,
+  E2E_MEMBER,
+  E2E_SA,
+  firstLogin,
+  isoToday,
+  resetUsers,
+  sql,
+} from './helpers';
 
 test.beforeEach(() => resetUsers());
 
@@ -60,12 +68,31 @@ test.describe('Nhật ký kiểm toán — API', () => {
   test('lọc theo actor và theo khoảng ngày chạy được, không ném 500', async ({ page }) => {
     await firstLogin(page, E2E_SA);
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = isoToday();
     const filtered = await page.request.get(
       `/api/v1/admin/audit?actor=${encodeURIComponent(E2E_SA.email)}&from=${today}&to=${today}`,
     );
     expect(filtered.status()).toBe(200);
     const body = (await filtered.json()) as { items: { actor: string }[] };
+
+    /*
+     * VẾ KHẲNG ĐỊNH DƯƠNG, THÊM 24/09 — thiếu nó thì bài này XANH VÌ LÝ DO SAI.
+     *
+     * Bản cũ chỉ có vòng `for (const row of body.items) expect(...)`. Danh sách rỗng thì thân
+     * vòng KHÔNG chạy lần nào và bài xanh mà không kiểm gì — đúng hình dạng "cổng khớp đúng
+     * số không chuỗi" mà §18 vừa phải dọn mười sáu chỗ.
+     *
+     * Và nó rỗng thật được: `today` trước đây tính bằng `toISOString()`, tức giờ UTC, nên từ
+     * 00:00 đến 07:00 giờ VN bộ lọc đi hỏi NGÀY HÔM QUA. Hai lỗi chồng nhau — một cái làm
+     * dữ liệu biến mất, một cái làm chuyện đó không ai thấy.
+     *
+     * `firstLogin` ngay phía trên vừa ghi ít nhất một dòng đăng nhập của chính actor này
+     * trong hôm nay, nên đòi ≥ 1 dòng là đòi một thứ chắc chắn có.
+     */
+    expect(
+      body.items.length,
+      'lọc theo actor của chính phiên vừa đăng nhập phải ra ít nhất một dòng — rỗng nghĩa là bộ lọc đang hỏi sai ngày',
+    ).toBeGreaterThan(0);
     for (const row of body.items) expect(row.actor).toContain(E2E_SA.email);
 
     const actions = await page.request.get('/api/v1/admin/audit/actions');

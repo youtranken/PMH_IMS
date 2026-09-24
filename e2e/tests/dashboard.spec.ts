@@ -5,6 +5,7 @@ import {
   E2E_SA,
   NEW_PASSWORD,
   firstLogin,
+  isoInDays,
   loginWithTotp,
   logout,
   resetAccessList,
@@ -376,7 +377,4 @@ test.describe('Bảng điều khiển', () => {
   });
 });
 
-function isoInDays(days: number): string {
-  const at = new Date(Date.now() + days * 86_400_000);
-  return at.toISOString().slice(0, 10);
-}
+// `isoInDays` dã chuyển sang `helpers.ts` (24/09) — xem chú thích ở đó về bẫy múi giờ.
