@@ -5,6 +5,8 @@
  * có nghĩa với tài khoản VPN. Khai chúng cho một email dùng chung là ghi ra dữ liệu vô nghĩa
  * mà sáu tháng sau không ai dám xóa vì không biết nó từng có ý gì.
  */
+import { stripDiacritics } from '../../common/search-fold';
+
 export const SERVICE_ACCOUNT_KINDS = ['shared', 'vpn'] as const;
 export type ServiceAccountKind = (typeof SERVICE_ACCOUNT_KINDS)[number];
 
@@ -101,13 +103,10 @@ export function checkAllowedIps(value: string): AllowedIpsCheck {
  */
 export function codeFromLogin(login: string): string {
   const local = login.trim().split('@')[0] ?? '';
-  const ascii = local
-    .normalize('NFD')
-    // Bỏ dấu thanh + dấu mũ; `đ/Đ` không phải tổ hợp nên phải thay riêng.
-    .replace(/[̀-ͯ]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D');
-  const slug = ascii
+  // Bỏ dấu qua bản DÙNG CHUNG (B-01): bốn dòng viết tay ở đây là bản sao thứ hai của cùng
+  // phép gấp dấu, và nó dùng lớp ký tự tổ hợp viết TRẦN trong mã nguồn — đúng thứ chú thích
+  // của `search-fold.ts` cảnh báo là formatter có thể nuốt mất mà không ai thấy.
+  const slug = stripDiacritics(local)
     .toUpperCase()
     .replace(/[^A-Z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');

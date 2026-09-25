@@ -1701,7 +1701,12 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
 
       // Lọc trước rồi mới bấm: danh sách phân trang 20 dòng, và người cần tìm không nhất
       // thiết nằm ở trang đang xem.
-      await page.getByRole('searchbox').fill('E2E Thành viên');
+      // Chờ bộ lọc ÁP XONG chứ không chỉ chờ hàng hiện ra: hàng cần tìm vốn đã nằm ở trang 1
+      // của danh sách CHƯA lọc, nên câu chờ xanh ngay, rồi lượt nạp lại đổ xuống giữa lúc menu
+      // ba chấm đang mở và giật nó khỏi DOM. Lý do đầy đủ: `di-khap-giao-dien.spec.ts`, bài
+      // "Phòng Tài khoản" (25/09/2026).
+      await timVaChoLoc(page, 'E2E Thành viên');
+      await expect(page.getByRole('table').getByRole('row')).toHaveCount(2);
       await expect(page.getByRole('button', { name: 'Thao tác với E2E Thành viên' })).toBeVisible();
 
       // ===== CỬA 1: ĐẶT LẠI MẬT KHẨU =====
@@ -7288,8 +7293,28 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     const hoTenSa = sql(`SELECT full_name FROM users WHERE email = '${E2E_SA.email}'`);
     expect(hoTenSa.length, 'tài khoản SA hạt giống phải có họ tên để bám vào').toBeGreaterThan(0);
 
-    // Lọc trước: bảng phân trang 20 dòng, SA không chắc nằm ở trang đang xem.
-    await page.getByRole('searchbox').fill(E2E_SA.email);
+    /*
+     * Lọc trước: bảng phân trang 20 dòng, SA không chắc nằm ở trang đang xem.
+     *
+     * PHẢI CHỜ BỘ LỌC ÁP XONG, KHÔNG CHỈ CHỜ HÀNG HIỆN RA (25/09/2026).
+     *
+     * Bản trước gọi thẳng `fill()` rồi khẳng định nút ba chấm của SA đã hiện — nhưng hàng SA
+     * VỐN ĐÃ nằm ở trang 1 của danh sách CHƯA lọc, nên câu khẳng định ấy xanh ngay lập tức,
+     * trước khi nhịp lắng 300ms của ô tìm kịp bắn. Bài đi tiếp, mở menu ba chấm, rồi lượt nạp
+     * lại đổ xuống giữa chừng: bảng từ 7 dòng còn 1 dòng, hàng được dựng lại, và mục menu đang
+     * mở bị giật khỏi DOM. Playwright báo "element is not stable" rồi "detached", đợi đủ 150
+     * giây mới chịu thua — một thông báo chẳng liên quan gì tới thứ bài này đang kiểm.
+     *
+     * Cuộc đua ấy nằm sẵn ở đây từ lâu và trước nay vẫn thắng nhờ MAY: quãng `rowActionNames`
+     * (mở menu · đọc chữ · Esc) tình cờ dài hơn 300ms. Đo được ngày 25/09 khi một thay đổi
+     * khác làm lệch nhịp vài chục mili-giây và mặt sấp luôn ngửa lên.
+     *
+     * `timVaChoLoc` chờ đúng GIÁ TRỊ `q=` trên thanh địa chỉ — tức nhịp lắng đã bắn thật.
+     * Kèm thêm câu chốt "bảng còn đúng một dòng" để chắc rằng dữ liệu ĐÃ LỌC cũng đã về, chứ
+     * không chỉ cái URL đổi.
+     */
+    await timVaChoLoc(page, E2E_SA.email);
+    await expect(page.getByRole('table').getByRole('row')).toHaveCount(2);
     await expect(page.getByRole('button', { name: `Thao tác với ${hoTenSa}` })).toBeVisible();
 
     /*
@@ -7426,7 +7451,12 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     // ===== CHẾ ĐỘ SỬA =====
-    await page.getByRole('searchbox').fill(email);
+    // Chờ bộ lọc ÁP XONG chứ không chỉ chờ hàng hiện ra: hàng cần tìm vốn đã nằm ở trang 1
+    // của danh sách CHƯA lọc, nên câu chờ xanh ngay, rồi lượt nạp lại đổ xuống giữa lúc menu
+    // ba chấm đang mở và giật nó khỏi DOM. Lý do đầy đủ: `di-khap-giao-dien.spec.ts`, bài
+    // "Phòng Tài khoản" (25/09/2026).
+    await timVaChoLoc(page, email);
+    await expect(page.getByRole('table').getByRole('row')).toHaveCount(2);
     await expect(page.getByRole('button', { name: `Thao tác với ${hoTen}` })).toBeVisible();
     await rowAction(page, hoTen, 'Sửa');
 

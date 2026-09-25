@@ -7,6 +7,7 @@ import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
 import { visibleGroups } from '@/shell/app-nav';
 import { isAnyDialogOpen, useAnyDialogOpen } from '@/ui/dialog';
+import { foldSearch } from '@/lib/search-fold';
 
 /**
  * Tìm nhanh ⌘K — đường ngắn nhất từ "tôi nhớ mang máng cái mã" tới đúng hồ sơ.
@@ -213,10 +214,12 @@ export function CommandPalette({ me }: { me: Me }) {
   /** Màn hình cũng tìm được — gõ "nat" là nhảy thẳng sang Sổ NAT, khỏi rê chuột xuống sidebar. */
   const navHits = useMemo<Hit[]>(() => {
     if (q.length < 2) return [];
-    const needle = q.toLowerCase();
+    // Gấp dấu cả hai vế (B-01): nhãn màn hình là tiếng Việt có dấu ("Thiết bị", "Sổ NAT"),
+    // nên gõ `thiet` phải nhảy được sang màn Thiết bị.
+    const needle = foldSearch(q);
     return visibleGroups(me)
       .flatMap((group) => group.items)
-      .filter((item) => !item.planned && t(item.key).toLowerCase().includes(needle))
+      .filter((item) => !item.planned && foldSearch(t(item.key)).includes(needle))
       .slice(0, 4)
       .map((item) => ({
         group: t('palette.groupNav'),

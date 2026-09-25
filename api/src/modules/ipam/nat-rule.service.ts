@@ -10,7 +10,7 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
-import { escapeLike, pgErrorCode, PG_CHECK_VIOLATION } from '../../common/sql';
+import { searchNormLike, pgErrorCode, PG_CHECK_VIOLATION } from '../../common/sql';
 import { requireCas } from '../../common/cas';
 import { effectiveOf } from '../../common/merge-effective';
 import { AuditWriterService } from '../audit/audit-writer.service';
@@ -121,12 +121,11 @@ export class NatRuleService {
     if (filters.deviceId) where.push(eq(natRuleTable.deviceId, filters.deviceId));
     if (filters.search?.trim()) {
       const text = filters.search.trim();
-      const term = `%${escapeLike(text)}%`;
-      const conditions: SQL[] = [
-        sql`${natRuleTable.usedBy} ILIKE ${term}`,
-        sql`${natRuleTable.reason} ILIKE ${term}`,
-        sql`host(${natRuleTable.internalIp}) ILIKE ${term}`,
-      ];
+      // Người dùng · lý do · IP nội bộ, cả ba trong cột sinh `nat_rule.search_norm` (0052) và
+      // đã gấp dấu. Ba vế `ILIKE` trước đây không gấp dấu — B-01. Cột sinh giữ nguyên
+      // `host(internal_ip)` chứ không `internal_ip::text`, để gõ "10.0.0.5" vẫn khớp mà
+      // không bị mặt nạ mạng chen vào.
+      const conditions: SQL[] = [searchNormLike(natRuleTable, text)];
       /**
        * Gõ một SỐ thì tìm theo port, và tìm cả BÊN TRONG khoảng.
        *

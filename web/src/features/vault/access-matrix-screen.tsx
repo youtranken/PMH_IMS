@@ -11,6 +11,7 @@ import { Field, PageHeader } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
+import { foldSearch } from '@/lib/search-fold';
 
 /** Phải khớp `SCOPE_TYPES` bên API (`access-tier.ts`) và CHECK ở tầng DB. */
 type ScopeType =
@@ -166,12 +167,11 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
   const columns = columnGroups.flatMap((group) => group.scopes);
 
   const people = (accounts.data?.items ?? []).filter((account) => {
-    const term = search.trim().toLowerCase();
+    // Gấp dấu cả hai vế (B-01) — `fullName` là họ tên tiếng Việt, đúng chỗ dấu làm hỏng
+    // việc tìm nhất: gõ `nguyen thi` phải ra `Nguyễn Thị`.
+    const term = foldSearch(search.trim());
     if (!term) return true;
-    return (
-      account.email.toLowerCase().includes(term) ||
-      account.fullName.toLowerCase().includes(term)
-    );
+    return foldSearch(account.email).includes(term) || foldSearch(account.fullName).includes(term);
   });
 
   const totalRules = (rules.data ?? []).length;

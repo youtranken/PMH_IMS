@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -12,7 +12,7 @@ import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
-import { conflictOnUnique, escapeLike } from '../../common/sql';
+import { conflictOnUnique, searchNormLike } from '../../common/sql';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { ExpiryApiService } from '../expiry/expiry.api';
@@ -504,16 +504,9 @@ function buildWhere(filter: IspFilter): SQL | undefined {
   const parts: (SQL | undefined)[] = [];
   const term = filter.search?.trim();
   if (term) {
-    const like = `%${escapeLike(term)}%`;
-    // Lúc đứt cáp người ta gõ bất cứ thứ gì nhớ được: mã, nhà mạng, IP, số hợp đồng.
-    parts.push(
-      or(
-        sql`${ispLineTable.code}::text ILIKE ${like}`,
-        sql`${ispLineTable.provider} ILIKE ${like}`,
-        sql`${ispLineTable.wanIp} ILIKE ${like}`,
-        sql`${ispLineTable.contractNo} ILIKE ${like}`,
-      ),
-    );
+    // Lúc đứt cáp người ta gõ bất cứ thứ gì nhớ được: mã, nhà mạng, IP, số hợp đồng. Cả bốn
+    // nằm trong cột sinh `isp_line.search_norm` (0052), đã gấp dấu — B-01.
+    parts.push(searchNormLike(ispLineTable, term));
   }
   if (filter.siteId) parts.push(eq(ispLineTable.siteId, filter.siteId));
   if (filter.provider) parts.push(eq(ispLineTable.provider, filter.provider));

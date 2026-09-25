@@ -4,14 +4,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, ilike, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
-import { conflictOnUnique, escapeLike } from '../../common/sql';
+import { conflictOnUnique, escapeLike, searchNormLike } from '../../common/sql';
 import { diffRecord, hasChanges } from '../../common/record-diff';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import {
@@ -379,15 +379,10 @@ function buildWhere(filter: ServiceAccountFilter): SQL | undefined {
   const parts: SQL[] = [];
   const term = filter.search?.trim();
   if (term) {
-    const like = `%${escapeLike(term)}%`;
-    const search = or(
-      ilike(serviceAccountTable.code, like),
-      ilike(serviceAccountTable.name, like),
-      ilike(serviceAccountTable.login, like),
-      ilike(serviceAccountTable.department, like),
-      ilike(serviceAccountTable.ownerName, like),
-    );
-    if (search) parts.push(search);
+    // Mã · tên · tên đăng nhập · phòng ban · người phụ trách — cả năm nằm trong cột sinh
+    // `service_account.search_norm` (0052) và đã gấp dấu. Năm vế `ilike()` trước đây không
+    // gấp dấu, nên gõ "ke toan" không ra "Kế toán" — B-01.
+    parts.push(searchNormLike(serviceAccountTable, term));
   }
   if (filter.kind) parts.push(eq(serviceAccountTable.kind, filter.kind));
   if (filter.status) parts.push(eq(serviceAccountTable.status, filter.status));

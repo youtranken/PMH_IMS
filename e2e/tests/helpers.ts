@@ -873,6 +873,27 @@ export function horizontalOverflow(page: Page): Promise<number> {
  * Và không phải chỗ nào trên màn "DÙNG ĐƯỢC" cũng cần hàm này: chỗ đã tự chờ bằng
  * `expect(page.getByRole('row')).toHaveCount(2)` là đã hỏi đúng câu "đã lọc xong chưa" rồi,
  * đổi sang đây chỉ là thay một phép chờ đúng bằng một phép chờ đúng khác.
+ *
+ * ===== CÁI BẪY NGƯỢC LẠI: `fill()` TRẦN RỒI CHỜ CHÍNH HÀNG MÌNH TÌM (25/09/2026) =====
+ *
+ * Đây mới là hình dạng nguy hiểm, và nó trông vô hại:
+ *
+ *     await page.getByRole('searchbox').fill(email);
+ *     await expect(page.getByRole('button', { name: `Thao tác với ${ten}` })).toBeVisible();
+ *     await rowAction(page, ten, 'Sửa');
+ *
+ * Câu chờ ở giữa **không** chờ bộ lọc: hàng cần tìm vốn đã nằm ở trang 1 của danh sách CHƯA
+ * lọc, nên nó xanh sau vài mili-giây. Bài đi tiếp, mở menu ba chấm, rồi nhịp lắng 300ms mới
+ * bắn — lượt nạp lại dựng lại bảng và GIẬT mục menu đang mở khỏi DOM. Playwright báo
+ * "element is not stable" rồi "detached", và đợi hết giờ mới chịu thua.
+ *
+ * Cuộc đua đó nằm sẵn ở bốn bài suốt nhiều tháng và luôn THẮNG nhờ may: quãng mở menu · đọc
+ * chữ · Esc tình cờ dài hơn 300ms. Ngày 25/09 một thay đổi chẳng liên quan làm lệch nhịp vài
+ * chục mili-giây và cả bốn lật mặt. Triệu chứng không hề chỉ về ô tìm, nên nó ngốn nửa buổi.
+ *
+ * Luật: trên màn CÓ nhịp lắng, đừng bao giờ `fill()` trần. Dùng hàm này — nó chờ `q=` lên
+ * thanh địa chỉ, tức nhịp lắng đã bắn thật — rồi chốt thêm số dòng của bảng nếu bước sau có
+ * đụng vào menu của một hàng.
  */
 export async function timVaChoLoc(page: Page, tuKhoa: string): Promise<void> {
   await page.getByRole('searchbox', { name: /Tìm/ }).fill(tuKhoa);

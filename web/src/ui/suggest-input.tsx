@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { Combobox } from '@/ui/combobox';
+import { foldSearch } from '@/lib/search-fold';
 
 /**
  * Ô nhập chữ CÓ GỢI Ý từ một danh sách, nhưng vẫn gõ tự do được (AD-15).
@@ -31,13 +32,15 @@ export function SuggestInput({
   placeholder: string;
   ariaLabel: string;
 }) {
-  const term = value.trim().toLowerCase();
+  // Gấp dấu cả hai vế (B-01): danh sách gợi ý là tên phòng ban, nhà cung cấp… toàn tiếng
+  // Việt có dấu, nên gõ `ke toan` phải ra `Kế toán`.
+  const term = foldSearch(value.trim());
   const filtered = useMemo(
     () =>
       // Đang gõ đúng một mục thì thôi gợi ý lại chính nó — menu che ô ngay sau khi chọn xong.
+      // So bằng cũng phải gấp dấu, nếu không "Kế toán" gõ đủ dấu vẫn bị gợi ý lại chính nó.
       options.filter(
-        (option) =>
-          option.toLowerCase() !== term && (!term || option.toLowerCase().includes(term)),
+        (option) => foldSearch(option) !== term && (!term || foldSearch(option).includes(term)),
       ),
     [options, term],
   );

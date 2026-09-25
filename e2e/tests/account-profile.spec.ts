@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { APP_ORIGIN, E2E_SA, firstLogin, resetUsers, rowAction } from './helpers';
+import { APP_ORIGIN, E2E_SA, firstLogin, resetUsers, rowAction, timVaChoLoc } from './helpers';
 
 /**
  * Hồ sơ tài khoản có SĐT, mã nhân viên và ngày sinh (migration 0031).
@@ -26,7 +26,12 @@ test.describe('Hồ sơ tài khoản', () => {
     const stamp = Date.now().toString().slice(-6);
 
     await page.goto('/admin/accounts');
-    await page.getByRole('searchbox', { name: /Tìm/ }).fill(E2E_SA.email);
+    // Chờ bộ lọc ÁP XONG chứ không chỉ chờ hàng hiện ra: hàng cần tìm vốn đã nằm ở trang 1
+    // của danh sách CHƯA lọc, nên câu chờ xanh ngay, rồi lượt nạp lại đổ xuống giữa lúc menu
+    // ba chấm đang mở và giật nó khỏi DOM. Lý do đầy đủ: `di-khap-giao-dien.spec.ts`, bài
+    // "Phòng Tài khoản" (25/09/2026).
+    await timVaChoLoc(page, E2E_SA.email);
+    await expect(page.getByRole('table').getByRole('row')).toHaveCount(2);
     await rowAction(page, 'E2E Super Admin', 'Sửa');
 
     const form = page.getByRole('dialog');

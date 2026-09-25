@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, ne, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -15,7 +15,7 @@ import { requireCas } from '../../common/cas';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
-import { conflictOnUnique, escapeLike } from '../../common/sql';
+import { conflictOnUnique, searchNormLike } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { diffDevice, hasChanges, type DeviceChanges } from './device-changes';
@@ -664,16 +664,14 @@ function buildWhere(filter: DeviceFilter): SQL | undefined {
   const parts: (SQL | undefined)[] = [];
   const term = filter.search?.trim();
   if (term) {
-    const like = `%${escapeLike(term)}%`;
-    // Tra cứu thực tế: người ta gõ mã, tên, serial hoặc model — tìm cả bốn trong một ô.
-    parts.push(
-      or(
-        sql`${deviceTable.code}::text ILIKE ${like}`,
-        sql`${deviceTable.name} ILIKE ${like}`,
-        sql`${deviceTable.serial} ILIKE ${like}`,
-        sql`${deviceTable.model} ILIKE ${like}`,
-      ),
-    );
+    /*
+     * Tra cứu thực tế: người ta gõ mã, tên, serial hoặc model — tìm cả bốn trong một ô. Cả
+     * bốn nằm trong cột sinh `device.search_norm` (migration 0052), đã gấp dấu.
+     *
+     * Bốn vế `ILIKE` trước đây KHÔNG gấp dấu, nên gõ `may tram` ra 0 dòng trong khi
+     * `Máy trạm` ra 2.500 (B-01, §13.3 sổ rà soát).
+     */
+    parts.push(searchNormLike(deviceTable, term));
   }
   if (filter.siteId) parts.push(eq(deviceTable.siteId, filter.siteId));
   if (filter.cabinetId) parts.push(eq(deviceTable.cabinetId, filter.cabinetId));

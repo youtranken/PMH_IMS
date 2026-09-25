@@ -1,4 +1,5 @@
 import { ConflictException } from '@nestjs/common';
+import { sql, type SQL, type SQLWrapper, type Table } from 'drizzle-orm';
 
 /**
  * Escape ký tự đặc biệt của LIKE/ILIKE — search chứa % _ \ không thành wildcard
@@ -6,6 +7,46 @@ import { ConflictException } from '@nestjs/common';
  */
 export function escapeLike(input: string): string {
   return input.replace(/[\\%_]/g, '\\$&');
+}
+
+/**
+ * VẾ TÌM KIẾM GẤP DẤU — một bản, sáu màn (B-01, 25/09/2026).
+ *
+ * ===== VẤN ĐỀ NÓ CHỮA =====
+ *
+ * `ILIKE` **không** gấp dấu: `SELECT 'Thiết bị họp' ILIKE '%thiet%'` trả `f`. Đo trên 30.000
+ * thiết bị thật, gõ `may tram` ra **0 dòng** trong khi `Máy trạm` ra 2.500 — 7.500/30.000 hồ
+ * sơ vô hình với người gõ không dấu, và màn hình còn khẳng định "Chưa có thiết bị nào khớp
+ * bộ lọc". Chi tiết ở §13.3 sổ rà soát.
+ *
+ * ===== HAI HÌNH DẠNG, CHỌN THEO KÍCH CỠ BẢNG =====
+ *
+ * `searchNormLike` đọc CỘT SINH `search_norm` (migration 0052) — có chỉ mục GIN trigram nên
+ * chạy được ở cỡ triệu dòng. Dùng cho 5 bảng nghiệp vụ.
+ *
+ * `imsNormLike` gọi `ims_norm()` ngay tại chỗ trên một cột — KHÔNG chỉ mục nào phục vụ được
+ * nó, nên chỉ dùng cho bảng tra cứu nhỏ (danh mục: site, tủ, hãng, phòng ban… vài chục tới
+ * vài trăm dòng). Ở cỡ ấy quét tuần tự là chuyện không đáng bàn, còn dựng cột sinh + chỉ mục
+ * GIN cho mỗi bảng là trả giá mà không mua được gì.
+ *
+ * ===== VÌ SAO `LIKE` CHỨ KHÔNG `ILIKE` =====
+ *
+ * `ims_norm()` đã hạ chữ thường cả hai vế rồi. Dùng `ILIKE` ở đây là hạ chữ thường LẦN HAI —
+ * vô hại về kết quả nhưng làm chỉ mục `gin_trgm_ops` trên `search_norm` không còn khớp toán
+ * tử, tức là mất chỉ mục trong im lặng.
+ */
+export function searchNormLike(table: Table, term: string): SQL {
+  return sql`${table}.search_norm LIKE ims_norm(${`%${escapeLike(term)}%`})`;
+}
+
+/**
+ * Vế tìm kiếm gấp dấu TÍNH TẠI CHỖ — cho bảng tra cứu nhỏ, không có cột sinh.
+ *
+ * `::text` vì phần lớn cột mã/tên của danh mục là `citext`. `ims_norm` là STRICT nên cột
+ * `NULL` cho ra `NULL` → không khớp, đúng y như `ILIKE` trên `NULL` trước đây.
+ */
+export function imsNormLike(column: SQLWrapper, term: string): SQL {
+  return sql`ims_norm(${column}::text) LIKE ims_norm(${`%${escapeLike(term)}%`})`;
 }
 
 /**

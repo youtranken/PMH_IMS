@@ -1,0 +1,55 @@
+{
+  "_doc": [
+    "BẢNG CHUẨN GẤP DẤU TIẾNG VIỆT — một bản, BA tầng đọc (B-01, 25/09/2026).",
+    "",
+    "Cùng một phép gấp dấu phải sống ở ba nơi không thể import lẫn nhau:",
+    "  · api/src/common/search-fold.ts   — JS, dùng cho import Excel và sinh mã",
+    "  · web/src/lib/search-fold.ts      — JS, dùng cho 6 chỗ lọc tại chỗ trên trình duyệt",
+    "  · ims_norm(text) trong Postgres   — SQL, dùng cho cột sinh search_norm và mọi câu tìm",
+    "",
+    "api/ web/ e2e/ là ba dự án npm độc lập (mỗi cái một lockfile, web/tsconfig.app.json chỉ",
+    "include 'src'), nên KHÔNG có đường nào để ba bản kia dùng chung một hàm. Thứ dùng chung",
+    "được là DỮ LIỆU: file này. Ba bộ kiểm cùng đọc nó bằng readFileSync và cùng phải đúng.",
+    "Một bản trôi khỏi hai bản kia thì bài kiểm của chính nó đỏ, chứ không phải người dùng phát",
+    "hiện ra bằng cách gõ 'thiet' và nhận 0 kết quả.",
+    "",
+    "Mọi hàng dưới đây đã ĐO, không suy: cột `strip`/`fold` của JS và `ims_norm` của Postgres 17",
+    "khớp nhau từng byte trên cả 15 hàng (25/09/2026, unaccent 1.1).",
+    "",
+    "  input → strip : bỏ dấu, GIỮ NGUYÊN hoa/thường (sinh mã tài khoản cần chữ hoa)",
+    "  input → fold  : strip rồi hạ chữ thường — đây là thứ ims_norm() trả về"
+  ],
+  "cases": [
+    { "input": "Thiết bị họp", "strip": "Thiet bi hop", "fold": "thiet bi hop" },
+    { "input": "Máy trạm kế toán", "strip": "May tram ke toan", "fold": "may tram ke toan" },
+    {
+      "input": "Đường truyền dự phòng",
+      "strip": "Duong truyen du phong",
+      "fold": "duong truyen du phong"
+    },
+    { "input": "PHÁT SÓNG TẦNG 3", "strip": "PHAT SONG TANG 3", "fold": "phat song tang 3" },
+    {
+      "input": "àáảãạ ăằắẳẵặ âầấẩẫậ",
+      "strip": "aaaaa aaaaaa aaaaaa",
+      "fold": "aaaaa aaaaaa aaaaaa"
+    },
+    { "input": "èéẻẽẹ êềếểễệ", "strip": "eeeee eeeeee", "fold": "eeeee eeeeee" },
+    { "input": "ìíỉĩị", "strip": "iiiii", "fold": "iiiii" },
+    {
+      "input": "òóỏõọ ôồốổỗộ ơờớởỡợ",
+      "strip": "ooooo oooooo oooooo",
+      "fold": "ooooo oooooo oooooo"
+    },
+    { "input": "ùúủũụ ưừứửữự", "strip": "uuuuu uuuuuu", "fold": "uuuuu uuuuuu" },
+    { "input": "ỳýỷỹỵ", "strip": "yyyyy", "fold": "yyyyy" },
+    { "input": "đĐăâêôơư", "strip": "dDaaeoou", "fold": "ddaaeoou" },
+    { "input": "DM-000123", "strip": "DM-000123", "fold": "dm-000123" },
+    { "input": "Catalyst 2960-X", "strip": "Catalyst 2960-X", "fold": "catalyst 2960-x" },
+    { "input": "100% tải · 50_50", "strip": "100% tai · 50_50", "fold": "100% tai · 50_50" },
+    {
+      "input": "Nguyễn Thị Hồng Ánh",
+      "strip": "Nguyen Thi Hong Anh",
+      "fold": "nguyen thi hong anh"
+    }
+  ]
+}

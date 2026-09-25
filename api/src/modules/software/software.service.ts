@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -12,7 +12,7 @@ import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
-import { conflictOnUnique, escapeLike } from '../../common/sql';
+import { conflictOnUnique, searchNormLike } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { ExpiryApiService } from '../expiry/expiry.api';
 import { CatalogApiService } from '../catalog/catalog.api';
@@ -434,14 +434,9 @@ function buildWhere(filter: SoftwareFilter): SQL | undefined {
   const parts: (SQL | undefined)[] = [];
   const term = filter.search?.trim();
   if (term) {
-    const like = `%${escapeLike(term)}%`;
-    parts.push(
-      or(
-        sql`${softwareTable.code}::text ILIKE ${like}`,
-        sql`${softwareTable.name} ILIKE ${like}`,
-        sql`${softwareTable.note} ILIKE ${like}`,
-      ),
-    );
+    // Mã · tên · ghi chú, cả ba trong cột sinh `software.search_norm` (0052) và đã gấp dấu.
+    // Ba vế `ILIKE` trước đây không gấp dấu — B-01.
+    parts.push(searchNormLike(softwareTable, term));
   }
   if (filter.kind) parts.push(eq(softwareTable.kind, filter.kind));
   if (filter.status) parts.push(eq(softwareTable.status, filter.status));

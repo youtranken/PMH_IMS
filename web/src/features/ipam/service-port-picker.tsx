@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Combobox } from '@/ui/combobox';
 import { portRangeLabel, type ServicePortRow } from '@/lib/catalog-types';
+import { foldSearch } from '@/lib/search-fold';
 
 /**
  * Ô chọn dịch vụ/port (0028) — DROPDOWN xổ khi bấm, không phải bảng bày sẵn.
@@ -37,11 +38,14 @@ export function ServicePortPicker({
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
 
-  const term = query.trim().toLowerCase();
+  // Gấp dấu cả hai vế (B-01) — tên dịch vụ là tiếng Việt ("Quản trị từ xa"), nhãn dải port
+  // thì không, nhưng cho cả hai đi qua cùng một phép gấp là cách duy nhất để chúng cùng luật.
+  const term = foldSearch(query.trim());
   const rows = term
     ? services.filter(
         (service) =>
-          service.name.toLowerCase().includes(term) || portRangeLabel(service).includes(term),
+          foldSearch(service.name).includes(term) ||
+          foldSearch(portRangeLabel(service)).includes(term),
       )
     : services;
 

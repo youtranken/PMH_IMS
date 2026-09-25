@@ -17,6 +17,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { useListUrlState } from '@/ui/use-list-url-state';
 import { VaultPanel } from '@/ui/vault-panel';
+import { foldSearch } from '@/lib/search-fold';
 
 interface VaultOwner {
   ownerType: SecretOwnerType;
@@ -78,14 +79,16 @@ export function VaultHomeScreen({ me }: { me: Me }) {
   const canEdit = me.role === 'sa' || me.role === 'admin';
 
   const rows = useMemo(() => {
-    const term = search.trim().toLowerCase();
+    // Gấp dấu cả hai vế (B-01): tên chủ sở hữu là tên thiết bị / phần mềm / tài khoản, toàn
+    // tiếng Việt có dấu.
+    const term = foldSearch(search.trim());
     return (owners.data ?? []).filter((row) => {
       if (kinds.length > 0 && !kinds.includes(row.ownerType)) return false;
       if (!term) return true;
       return (
-        row.code.toLowerCase().includes(term) ||
-        row.name.toLowerCase().includes(term) ||
-        (row.siteCode ?? '').toLowerCase().includes(term)
+        foldSearch(row.code).includes(term) ||
+        foldSearch(row.name).includes(term) ||
+        foldSearch(row.siteCode ?? '').includes(term)
       );
     });
   }, [owners.data, kinds, search]);

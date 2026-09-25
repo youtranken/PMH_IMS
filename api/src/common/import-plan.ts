@@ -34,20 +34,15 @@ export type DateCell = { ok: true; value: string | null } | { ok: false };
 export const EXAMPLE_HEADERS = ['ghi chú nhập', 'ghi chu nhap'];
 
 /**
- * Dải dấu thanh/dấu phụ Unicode dùng cho `stripDiacritics`. Dựng bằng `new RegExp` từ CHUỖI ESCAPE, không viết ký tự
- * tổ hợp trần trong mã nguồn: editor hay formatter nào chuẩn hóa/nuốt mất mấy ký tự đó là
- * toàn bộ việc khớp tên cột không dấu im lặng ngừng hoạt động (code review Epic 2).
+ * Gấp dấu tiếng Việt — bản cài đặt đã dọn về `search-fold.ts` (B-01, 25/09/2026).
+ *
+ * Re-export chứ không bắt mọi nơi gọi đổi import: `stripDiacritics` là một phần hợp đồng công
+ * khai của bộ import (bài kiểm gọi, và bốn chỗ trong chính file này gọi). Thứ bỏ được là BẢN
+ * CÀI ĐẶT THỨ HAI — đúng thứ AD-15 cấm — chứ không phải cái tên.
  */
-const COMBINING_MARKS = new RegExp('[\u0300-\u036f]', 'g');
+import { stripDiacritics } from './search-fold';
 
-/** Bỏ dấu tiếng Việt — CHỈ để so tên cột/nhãn, KHÔNG dùng cho dữ liệu lưu xuống DB. */
-export function stripDiacritics(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(COMBINING_MARKS, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D');
-}
+export { stripDiacritics };
 
 /** Tên cột: bỏ dấu `*`, gộp khoảng trắng, về chữ thường. "Mã site *" = "mã site". */
 export function normalizeHeader(header: string): string {

@@ -12,6 +12,7 @@ import {
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
+import { foldSearch } from '@/lib/search-fold';
 
 interface DisposalItem {
   kind: DisposalKind;
@@ -56,14 +57,16 @@ export function DisposalScreen() {
   });
 
   const rows = useMemo(() => {
-    const term = search.trim().toLowerCase();
+    // Gấp dấu CẢ HAI VẾ (B-01): gõ `may tram` phải ra `Máy trạm`, và gõ `Máy trạm` cũng vẫn
+    // phải ra. Gấp một vế thôi là chữa bệnh này rồi mắc bệnh ngược lại.
+    const term = foldSearch(search.trim());
     return (items.data ?? []).filter((item) => {
       if (kind && item.kind !== kind) return false;
       if (!term) return true;
       return (
-        item.code.toLowerCase().includes(term) ||
-        item.name.toLowerCase().includes(term) ||
-        (item.detail ?? '').toLowerCase().includes(term)
+        foldSearch(item.code).includes(term) ||
+        foldSearch(item.name).includes(term) ||
+        foldSearch(item.detail ?? '').includes(term)
       );
     });
   }, [items.data, search, kind]);

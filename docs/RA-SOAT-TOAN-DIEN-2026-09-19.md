@@ -78,7 +78,7 @@ Ghi ra để lượt rà sau khỏi mất công:
 
 | # | Mức | Chỗ | Chuyện gì |
 | --- | :---: | --- | --- |
-| **B-01** | **CAO** | `web/src/ui/command-palette.tsx:216-219` + ~~11 chỗ `ilike(`~~ **30 vị trí ILIKE trên 8 file** bên api *(đếm lại 23/09)* | **Tìm kiếm không khớp tiếng Việt KHÔNG DẤU.** Đo trực tiếp: gõ `thiet` → **0 kết quả**; gõ `Thiết` → 1. `ket` → 0; `két` → 2. Nguyên nhân hai tầng: web dùng `toLowerCase().includes()` trần; api dùng `ILIKE`, mà `ILIKE` **không** gấp dấu (`SELECT 'Thiết bị họp' ILIKE '%thiet%'` → `f`, đã chạy trên DB thật) và extension `unaccent` **chưa cài** (`pg_extension` → 0 dòng). Người Việt gõ không dấu là chuyện thường ngày; đây là khiếm khuyết dùng-được lớn nhất tìm được. Trớ trêu: repo **đã có** hàm gấp dấu ở `api/src/common/import-plan.ts:41-46` và `service-account-rules.ts:105` — hai bản, chưa bản nào dùng chung (AD-15) |
+| **B-01** ✅ **XONG 25/09** | **CAO** | `web/src/ui/command-palette.tsx:216-219` + ~~11 chỗ `ilike(`~~ **30 vị trí ILIKE trên 8 file** bên api *(đếm lại 23/09)* | **Tìm kiếm không khớp tiếng Việt KHÔNG DẤU.** Đo trực tiếp: gõ `thiet` → **0 kết quả**; gõ `Thiết` → 1. `ket` → 0; `két` → 2. Nguyên nhân hai tầng: web dùng `toLowerCase().includes()` trần; api dùng `ILIKE`, mà `ILIKE` **không** gấp dấu (`SELECT 'Thiết bị họp' ILIKE '%thiet%'` → `f`, đã chạy trên DB thật) và extension `unaccent` **chưa cài** (`pg_extension` → 0 dòng). Người Việt gõ không dấu là chuyện thường ngày; đây là khiếm khuyết dùng-được lớn nhất tìm được. Trớ trêu: repo **đã có** hàm gấp dấu ở `api/src/common/import-plan.ts:41-46` và `service-account-rules.ts:105` — hai bản, chưa bản nào dùng chung (AD-15) |
 | **B-02** | VỪA | `web/src/features/admin/accounts-screen.tsx` | **Màn danh sách DUY NHẤT không giữ trạng thái trong URL.** Đo: `/devices` gõ "CC" → URL `?q=CC`, reload giữ nguyên. `/admin/accounts` gõ "Cao" → lọc còn 1 dòng nhưng URL **không đổi**; bấm sắp xếp → URL **không đổi**; reload → về 7 dòng, ô tìm trắng. Không chia sẻ được link đã lọc, và nút Back của trình duyệt rời trang thay vì gỡ bộ lọc. Các màn khác đều dùng `useListUrlState` |
 | **B-03** | VỪA | `web/index.html` + mọi route | **`document.title` giống hệt nhau trên cả 21 màn** — kể cả trang 404 — luôn là `"IMS — Quản lý hệ thống IT"`. Mở 5 tab là 5 tab không phân biệt được; lịch sử trình duyệt và bookmark vô dụng |
 | **B-04** | VỪA | `web/src/features/ipam/subnet-detail.tsx` | **Trạng thái "Đã ẩn" không có ô đếm, và bị gộp vào "Trống".** Dải `172.16.15.0/24`: chip đếm `Tất cả 254 · Đang cấp 0 · Trống 254 · Nghi chết 0 · Đã thu hồi 0`, nhưng hàng `172.16.15.3` hiện chữ **"Đã ẩn"**. Bấm lọc "Trống" → dòng "Đã ẩn" **hiện lên trong kết quả**. DB xác nhận: `ip_address.status='free'` kèm `voided_at` khác null. Ngay phía trên, thẻ dải nói *"Giữ lại vì còn 1 hồ sơ IP mang lịch sử — không xóa hẳn được"*. Hai câu trên một màn nói ngược nhau, và bên nói sai là bên bảo ô đó **trống, cấp được** |
@@ -766,7 +766,7 @@ Excel thì mở cửa sau"*. **Cửa sau HTTP còn rộng hơn Excel và chưa a
 - [x] `accounts.statusDisabled` → `'Đã vô hiệu hóa'` — **ĐÃ LÀM 23/09** (`fb6c981`). Kèm hai cách viết thứ ba và thứ tư của cùng trạng thái (`serviceAccounts.statusDisabled`, `catalog.inactive`) mà §4.3 không đếm
 - [x] `Member`/`Admin` trong câu tiếng Việt → `Thành viên`/`Quản trị` — **ĐÃ LÀM 23/09** (`fb6c981`). 'Super Admin' giữ nguyên: tên riêng của vai SA
 - [x] 4 màn tách câu rỗng "chưa có gì" khỏi "lọc không ra" — **ĐÃ LÀM 23/09** (`ccb855b`). `isFiltered` đặt trong `useListUrlState` chứ không để mỗi màn tự tính (AD-15) — **lần thứ HAI** thứ này vào hook, bản đầu tên `dirty` bị gỡ 18/09 vì không màn nào gọi; lần này nó ra đời CÙNG bốn nơi gọi. Màn thứ năm được cổng canh
-- [ ] **B-01** Gấp dấu tiếng Việt: hàm dùng chung cho web + `unaccent` (hoặc cột sinh) cho **30 vị trí ILIKE trên 8 file**. *(Đếm lại 23/09 — con số "11 chỗ" cũ SAI vì nó là kết quả của `grep "ilike("`, tức chỉ lời gọi trợ giúp của drizzle; phần lớn vế tìm kiếm viết thẳng trong `sql` template nên không lọt lưới đó. Bản thật theo file: `catalog` 5 · `service-account` 5 · `users` 4 · `isp-line` 4 · `devices` 4 · `software` 3 · `nat-rule` 3 · `audit` 2. Làm theo con số 11 thì bỏ sót đúng hai file đông nhất.)* Đi cùng khối "Tìm kiếm" của §8.8 — vế web và vế DB là một việc, tách ra làm hai lần thì lần đầu không chứng minh được gì
+- [x] **B-01** Gấp dấu tiếng Việt — **ĐÃ LÀM 25/09**, trọn cả khối "Tìm kiếm" của §8.8 trong một lượt (vế web và vế DB là một việc). *(Đếm lại 23/09 — con số "11 chỗ" cũ SAI vì nó là kết quả của `grep "ilike("`, tức chỉ lời gọi trợ giúp của drizzle; phần lớn vế tìm kiếm viết thẳng trong `sql` template nên không lọt lưới đó. Bản thật theo file: `catalog` 5 · `service-account` 5 · `users` 4 · `isp-line` 4 · `devices` 4 · `software` 3 · `nat-rule` 3 · `audit` 2.)* Làm ra: `ims_norm(text)` IMMUTABLE + cột sinh `search_norm` + chỉ mục GIN trigram trên **5** bảng (0052–0057, lượt đầu tiên dự án dùng `ims:no-transaction` thật); `searchNormLike`/`imsNormLike` trong `common/sql.ts`; `search-fold.ts` gộp hai bản gấp dấu viết tay cũ; `web/src/lib/search-fold.ts` cho 6 chỗ lọc tại chỗ. **Ba điều chỉnh so với kế hoạch, xem §8.8.**
 - [x] **B-02** `/admin/accounts` dùng `useListUrlState` — **ĐÃ LÀM 23/09** (`dce72f1`). Kèm ô `common.empty` của §4.3; sửa xong thì `dead-keys-rollcall` ĐỎ vì khoá `common.empty` mất nơi gọi cuối cùng — cổng làm đúng việc, nên gỡ hẳn khoá ấy
 - [x] **B-03** `document.title` theo màn — **ĐÃ LÀM 23/09** (`f250c98`). BẢNG trong `routes.ts` chứ không `useEffect` rải ở 15 màn; dùng LẠI khoá `nav.*`, không đẻ bộ khoá thứ hai
 - [x] **B-04** Chip "Đã ẩn" riêng, đừng đếm vào "Trống" — **ĐÃ LÀM 23/09** (`f197fef`). Sửa ở `slotStatus`, đúng chỗ chú thích của chính hàm ấy đã chỉ ra; vá riêng `countSlots` thì con số đúng mà bộ lọc vẫn sai
@@ -903,9 +903,27 @@ thì trang 2 có thể lặp lại một dòng của trang 1) và để mở đ�
 
 #### Tìm kiếm — một migration cho cả đúng đắn lẫn tốc độ
 
-- [ ] `CREATE EXTENSION unaccent` + hàm bọc `ims_norm(text)` **IMMUTABLE** (bắt buộc — `unaccent()` là STABLE nên không index trực tiếp được; phải truyền tên từ điển tường minh `'public.unaccent'`)
-- [ ] Cột sinh `search_norm` + `CREATE INDEX CONCURRENTLY … USING gin (search_norm gin_trgm_ops)` cho **`device` · `software` · `service_account` · `isp_line` · `nat_rule` · `catalog`** *(thêm `catalog` ngày 23/09 — nó có **5** vế ILIKE, nhiều ngang `service_account`, trong đó hai vế nằm trên `cabinet.code` và `site.code`. Danh sách 5 bảng cũ bỏ sót nó.)*
-- [ ] Đổi `buildWhere` của 6 module: các vế `ILIKE` → một `search_norm LIKE ims_norm(…)`. **Đếm đúng trước khi sửa: 30 vị trí trên 8 file**, không phải 11 — xem ô B-01 ở §8.6. Hai file còn lại (`users` · `audit`) cố ý để ngoài đợt này: `users` luôn dưới vài trăm dòng (lý do đã ghi ở bảng index trên), còn `audit.actor` tìm theo email nên không có dấu tiếng Việt để mà gấp
+- [x] `CREATE EXTENSION unaccent` + hàm bọc `ims_norm(text)` **IMMUTABLE** — **ĐÃ LÀM 25/09** (`0052_search_norm.sql`). Đo lại trên Postgres 17.10: **CẢ HAI** dạng `unaccent()` đều STABLE (`provolatile='s'`), kể cả dạng hai tham số — nên bọc lại là bắt buộc thật, không phải phòng xa. Dùng thân hàm kiểu mới (`RETURN …`) để tên được phân giải NGAY LÚC TẠO, `search_path` lúc gọi không đổi được ý nghĩa
+- [x] Cột sinh `search_norm` + `CREATE INDEX CONCURRENTLY … USING gin (search_norm gin_trgm_ops)` — **ĐÃ LÀM 25/09** cho **5** bảng (`device` · `software` · `service_account` · `isp_line` · `nat_rule`), mỗi bảng một file no-tx (0053–0057, vì một file `ims:no-transaction` chỉ được chứa MỘT câu lệnh). **`catalog` bị gỡ khỏi danh sách và đây là một sửa sai của chính sổ này:** "catalog" không phải một bảng mà là **BẢY** bảng tra cứu (`site` · `cabinet` · `device_type` · `vendor` · `department` · `isp_provider` · `service_port`), mỗi bảng vài chục tới vài trăm dòng. Dựng bảy cột sinh + bảy chỉ mục GIN cho chúng là trả giá lưu trữ và giá ghi mà không mua được gì; chúng gọi `ims_norm()` tại chỗ — vẫn ĐÚNG, chỉ là không nhanh, và ở cỡ ấy thì không cần nhanh. Quyết định có ô canh trong `api/test/search-norm.spec.ts` để lượt rà sau không báo lại nó như một thiếu sót
+- [x] Đổi `buildWhere` của 6 module — **ĐÃ LÀM 25/09**, và thêm `users` thành **7**. *(Sửa sai của chính sổ: kế hoạch cũ loại `users` ra vì "luôn dưới vài trăm dòng" — nhưng đó là lý lẽ về TỐC ĐỘ, còn B-01 là lỗi về ĐÚNG ĐẮN, và `users.full_name` là họ tên tiếng Việt, tức đúng chỗ dấu làm hỏng việc tìm nhất. Để nguyên thì màn Tài khoản gõ `nguyen thi` vẫn ra bảng rỗng — B-01 đóng ở sáu màn mà còn nguyên ở màn thứ bảy. Nó đi đường `imsNormLike` như danh mục: gấp dấu, không chỉ mục.)* Chỉ `audit` còn đứng ngoài, và lý do đó vẫn đúng: `actor` là email, `object_id` là mã — không có dấu tiếng Việt để mà gấp
+
+> **Ba điều chỉnh so với kế hoạch, ghi lại để lần sau không phải đo lại.**
+>
+> **(1) `concat_ws` KHÔNG dùng được trong cột sinh** — nó là STABLE (nó gọi được hàm xuất kiểu
+> của kiểu bất kỳ), và Postgres từ chối STABLE ở đó. Phải viết `coalesce(x,'') || ' ' || …`.
+> `host(inet)` thì IMMUTABLE nên dùng được, giữ nguyên được nếp tìm theo `host(internal_ip)`
+> của Sổ NAT.
+>
+> **(2) Chỉ mục trigram PHỤC VỤ ĐƯỢC tham số ràng buộc, không chỉ hằng số.** Đây là ẩn số lớn
+> nhất của cả khối: drizzle gửi từ khóa dưới dạng `$1`, và nếu trigram chỉ dùng được với hằng
+> số thì 86 MB chỉ mục kia vô dụng trong sản phẩm thật. Đo trên 200.003 hàng:
+> `Index Cond: (search_norm ~~ ims_norm($1))` — Bitmap Index Scan, 26ms so với quét tuần tự.
+>
+> **(3) Không có file `DROP INDEX CONCURRENTLY` đi trước, và đó là cố ý.** Chú thích trong
+> `migration-runner.ts` khuyên nếp ấy, nhưng đọc kỹ luồng thì nó không mua thêm gì: file DROP
+> vào journal ngay lượt đầu, nên lượt chạy lại sẽ BỎ QUA nó — thứ thật sự cứu là lưới
+> `NOT indisvalid` của runner, và lưới ấy đã có. Thêm năm file không làm gì là thêm năm chỗ để
+> hiểu sai về sau. Lý do đầy đủ ghi trong `0053_device_search_norm_trgm.sql`.
 
 Đo trên 1 triệu hàng: **951ms / 0 kết quả (SAI)** → **241ms / 83.333 kết quả (ĐÚNG)**. Chi phí
 86 MB index. **Đây cũng là lượt để diễn tập `ims:no-transaction` + `CREATE INDEX CONCURRENTLY`**
@@ -1487,7 +1505,7 @@ trang quá ~100 chỉ là trang trí.
 | # | Việc | Đo được | Khi nào |
 | --- | --- | --- | --- |
 | 1 | **Index mọi cột sắp xếp được** — `(name, id)`, `(assigned_to, id)`, `(serial, id)`, `(warranty_end, id)` không partial | 340ms → **0,083ms** | **Ngay.** Rẻ nhất, lợi nhất |
-| 2 | **`unaccent` + GIN trgm** cho 5 bảng tra cứu | 951ms/sai → 241ms/đúng | **Ngay** — gộp với B-01 |
+| 2 | ~~**`unaccent` + GIN trgm** cho 5 bảng tra cứu~~ | 951ms/sai → 241ms/đúng | ✅ **XONG 25/09** — migration 0052–0057 |
 | 3 | **Trần cho `count(*)`** theo khuôn `COUNT_CAP` đã có | 184ms → ~1ms | Ngay, rẻ |
 | 4 | **Phân trang máy chủ cho `/expiry`** + tách rổ quá hạn | 213.333 dòng đang đổ vào một bảng | **Gấp nhất** |
 | 5 | **Cửa sổ số trang** + ô nhảy trang | 7.430 cú bấm → 1 | Khi làm UI |

@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, or, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -13,7 +13,7 @@ import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { requireCas } from '../../common/cas';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
-import { PG_FOREIGN_KEY_VIOLATION, conflictOnUnique, escapeLike, pgErrorCode } from '../../common/sql';
+import { PG_FOREIGN_KEY_VIOLATION, conflictOnUnique, imsNormLike, pgErrorCode } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import {
   cabinetTable,
@@ -150,16 +150,27 @@ export class CatalogService {
     search?: string,
     sort?: SortQuery<string>,
   ): Promise<Page<CatalogRecord>> {
-    const term = search?.trim();
-    const like = term ? `%${escapeLike(term)}%` : null;
+    const term = search?.trim() || null;
     const effectiveSort = sort ?? CATALOG_SORT_DEFAULT[entity];
 
+    /*
+     * Danh mục gấp dấu bằng `imsNormLike` — TÍNH TẠI CHỖ, không qua cột sinh.
+     *
+     * Bảy bảng danh mục đều là bảng tra cứu vài chục tới vài trăm dòng. Dựng cột sinh
+     * `search_norm` + chỉ mục GIN cho từng bảng (như năm bảng nghiệp vụ ở migration 0052) là
+     * trả giá lưu trữ và giá ghi mà không mua được gì: ở cỡ ấy quét tuần tự đã là chuyện
+     * không đáng bàn. Cái CẦN chữa ở đây là sự ĐÚNG ĐẮN — `ILIKE` không gấp dấu nên gõ
+     * `tru so` không ra `Trụ sở` — chứ không phải tốc độ (B-01).
+     *
+     * Quyết định này có ô canh ở `api/test/search-norm.spec.ts`, để lượt rà soát sau không
+     * báo lại nó như một thiếu sót.
+     */
     if (entity === 'cabinet') {
-      const where = like
+      const where = term
         ? or(
-            sql`${cabinetTable.code}::text ILIKE ${like}`,
-            ilike(cabinetTable.description, like),
-            sql`${siteTable.code}::text ILIKE ${like}`,
+            imsNormLike(cabinetTable.code, term),
+            imsNormLike(cabinetTable.description, term),
+            imsNormLike(siteTable.code, term),
           )
         : undefined;
       const [rows, totalRows] = await Promise.all([
@@ -185,10 +196,10 @@ export class CatalogService {
 
     const table = tableOf(entity);
     const labelColumn = entity === 'site' ? siteTable.code : nameColumn(entity);
-    const where = like
+    const where = term
       ? entity === 'site'
-        ? or(sql`${siteTable.code}::text ILIKE ${like}`, ilike(siteTable.name, like))
-        : sql`${labelColumn}::text ILIKE ${like}`
+        ? or(imsNormLike(siteTable.code, term), imsNormLike(siteTable.name, term))
+        : imsNormLike(labelColumn, term)
       : undefined;
     const [rows, totalRows] = await Promise.all([
       this.db

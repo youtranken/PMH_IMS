@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, ilike, inArray, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, lt, or, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -7,6 +7,7 @@ import type { Page, PageQuery } from '../../common/pagination';
 import { pageOffset } from '../../common/pagination';
 import type { SealedValue } from '../../common/crypto/envelope.types';
 import type { SortQuery } from '../../common/sorting';
+import { imsNormLike } from '../../common/sql';
 import { registerFailure, type LockoutPolicy, type LockoutState } from '../../common/lockout';
 import type { UserRole } from '../auth/types';
 import { usersTable } from './users.schema';
@@ -48,14 +49,26 @@ export class UsersService {
     sort: SortQuery<UserSortKey> = USER_SORT_DEFAULT,
   ): Promise<Page<UserRecord>> {
     const term = search?.trim();
+    /*
+     * Gấp dấu TÍNH TẠI CHỖ (B-01, 25/09) — `imsNormLike`, không cột sinh.
+     *
+     * Bảng này là nhân sự IT nội bộ, luôn dưới vài trăm dòng, nên nó cố ý đứng ngoài đợt dựng
+     * cột sinh + chỉ mục GIN của migration 0052. Nhưng "không cần chỉ mục" và "không cần gấp
+     * dấu" là HAI chuyện khác nhau, và kế hoạch ban đầu của sổ rà soát gộp nhầm chúng làm một:
+     * `full_name` là họ tên tiếng Việt, tức đúng chỗ dấu làm hỏng việc tìm nhất. Để nguyên
+     * `ILIKE` thì gõ `nguyen thi` ở màn Tài khoản vẫn ra bảng rỗng — B-01 sửa xong ở sáu màn
+     * kia mà vẫn còn nguyên ở màn này.
+     *
+     * Giá phải trả: một lượt quét tuần tự có gọi hàm. Ở vài trăm dòng thì đó không phải giá.
+     */
     const where = term
       ? or(
-          ilike(usersTable.fullName, `%${term}%`),
-          sql`${usersTable.email}::text ILIKE ${`%${term}%`}`,
+          imsNormLike(usersTable.fullName, term),
+          imsNormLike(usersTable.email, term),
           // Tra theo SĐT và mã nhân viên: Nhân sự đưa sang một danh sách mã, người trực gõ
           // một số điện thoại — cả hai đều là cách tìm THẬT, không phải chỉ tìm theo tên.
-          ilike(usersTable.phone, `%${term}%`),
-          ilike(usersTable.employeeCode, `%${term}%`),
+          imsNormLike(usersTable.phone, term),
+          imsNormLike(usersTable.employeeCode, term),
         )
       : undefined;
     const [rows, totalRows] = await Promise.all([
