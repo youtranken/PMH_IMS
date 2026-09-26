@@ -9,7 +9,7 @@ export interface SheetRow {
 
 export type SheetData = Record<string, SheetRow[]>;
 
-/** Trần chống zip-bomb / file khổng lồ làm nghẽn worker (khớp trần upload 20MB của NFR-4). */
+/** Trần chống zip-bomb / file khổng lồ làm nghẽn worker (khớp trần upload 10MB ở `XLSX_UPLOAD_LIMIT`). */
 const MAX_ROWS_PER_SHEET = 20_000;
 
 /**

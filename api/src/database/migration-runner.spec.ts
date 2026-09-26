@@ -11,7 +11,7 @@ import { runMigrations } from './migration-runner';
  * Postgres không bao giờ đọc chuỗi SQL nào. File này chỉ chứng minh được những thứ ở tầng
  * ĐIỀU KHIỂN của runner — có gửi "BEGIN" đi không, có chặn tên file sai format không.
  *
- * Nó KHÔNG chứng minh — và trước 08/09 đã bị hiểu nhầm là có chứng minh — rằng 40 file
+ * Nó KHÔNG chứng minh — và trước 08/09 đã bị hiểu nhầm là có chứng minh — rằng các file
  * migration của dự án hợp lệ. Journal giả luôn rỗng nên nhánh "đã apply rồi" và nhánh
  * "checksum lệch" cũng chưa từng chạy ở đây.
  *

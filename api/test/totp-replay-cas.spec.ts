@@ -42,7 +42,7 @@ import { createScratchDb, migrationsDir, type ScratchDb } from './db';
  * ===== GIỚI HẠN, NÓI THẲNG =====
  *
  * Bài này khoá hợp đồng của CÂU SQL, không chứng minh service phát ra đúng câu đó — cùng giới
- * hạn đã ghi cho `subnet-lock-contract`. Vế còn lại do `auth.spec.ts` giữ: nó chạy replay tuần
+ * hạn đã ghi ở `subnet-cidr-race.spec.ts`. Vế còn lại do `auth.spec.ts` giữ: nó chạy replay tuần
  * tự qua service thật và đòi đúng chữ "đã được dùng".
  */
 

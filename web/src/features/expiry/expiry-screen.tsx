@@ -97,7 +97,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
     ? Number(url.filters.withinDays)
     : 30;
   const kind = url.filters.kinds;
-  /** Ô số nào đang được bấm để lọc. Rỗng = xem tất cả. Lọc ở CLIENT — xem chú thích dưới. */
+  /** Ô số nào đang được bấm để lọc. Rỗng = xem tất cả. Lọc ở SERVER — xem chú thích dưới. */
   const state = (['expired', 'critical', 'warning'] as const).includes(
     url.filters.state as 'expired',
   )

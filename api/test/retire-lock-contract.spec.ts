@@ -37,8 +37,11 @@ import { createScratchDb, migrationsDir, testDbUrl, waitForLock, type ScratchDb 
  *
  * Bài này khóa hợp đồng của CÂU SQL, không chứng minh service phát ra đúng câu đó — cùng giới
  * hạn đã ghi cho `subnet-cidr-race` và `totp-replay-cas`. Vế còn lại do E2E giữ
- * (`e2e/tests/thanh-ly-du-no.spec.ts`) và do `device-retirement.registry.spec.ts` giữ ở phía
- * "đủ người dọn hay chưa".
+ * (`e2e/tests/retire-cleanup.spec.ts` và `e2e/tests/retired-device-guard.spec.ts`) và do
+ * `device-retirement.registry.spec.ts` giữ ở phía "đủ người dọn hay chưa".
+ *
+ * Dòng trên trước 26/09 trỏ vào `e2e/tests/thanh-ly-du-no.spec.ts` — một file CHƯA TỪNG tồn
+ * tại trong repo, kể cả trong lịch sử git.
  */
 
 const TEST_TIMEOUT = 120_000;

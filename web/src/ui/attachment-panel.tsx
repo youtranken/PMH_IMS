@@ -98,7 +98,7 @@ export function AttachmentPanel({
    * bảy lần phải nhớ truyền, và quên một chỗ thì lỗi quay lại y như cũ. `me` luôn có sẵn
    * trong cache vì shell nạp nó trước khi dựng bất kỳ màn nào.
    *
-   * Đây đúng luật mà `device-detail.tsx:361` tự đặt ra: "UI đừng bày nút ra để bấm rồi 403".
+   * Đây đúng luật mà `device-detail.tsx:228` tự đặt ra: "UI đừng bày nút ra để bấm rồi 403".
    */
   const me = queryClient.getQueryData<Me>(ME_KEY);
   const canDelete = canEdit && (me?.role === 'sa' || me?.role === 'admin');

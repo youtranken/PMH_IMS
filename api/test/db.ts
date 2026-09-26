@@ -14,7 +14,8 @@ import type { Database } from '../src/database/database.module';
  *
  *   - `migration-runner.spec.ts` chạy trên một `Pool` GIẢ: `client.query()` trả
  *     `{rows: [], rowCount: 0]}` cho mọi câu lệnh. Không một dòng SQL nào được Postgres đọc,
- *     nên 40 file migration của dự án CHƯA TỪNG được parse trong bất kỳ bài kiểm nào. Nhánh
+ *     nên MỌI file migration của dự án CHƯA TỪNG được parse trong bất kỳ bài kiểm nào (40 file
+ *     lúc dựng tầng này ngày 08/09; con số ấy trôi mỗi epic nên đừng ghim nó lại). Nhánh
  *     "đã apply rồi" và nhánh "checksum lệch" cũng chưa từng chạy — journal giả luôn rỗng.
  *
  *   - Cấm mock drizzle (CLAUDE.md), nên mọi lỗi RANH GIỚI TRANSACTION chỉ chứng minh được

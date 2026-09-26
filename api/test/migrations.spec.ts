@@ -16,7 +16,7 @@ import { createScratchDb, migrationsDir, type ScratchDb } from './db';
  *
  * Postgres không bao giờ đọc chuỗi SQL đó. Nên bài kiểm cũ chứng minh được đúng một điều —
  * runner có gửi chuỗi "BEGIN" đi hay không — và KHÔNG chứng minh được điều người ta tưởng nó
- * chứng minh: rằng 40 file SQL của dự án hợp lệ.
+ * chứng minh: rằng MỌI file SQL của dự án hợp lệ.
  *
  * Hai nhánh quan trọng nhất của runner cũng chưa từng chạy, vì journal giả luôn rỗng:
  * nhánh "file đã apply → bỏ qua" và nhánh "checksum lệch → NÉM". Cái thứ hai là hàng rào duy
@@ -43,7 +43,7 @@ describe('Migration chạy trên DATABASE TRẮNG thật', () => {
   }, TEST_TIMEOUT);
 
   it(
-    'cả 40 file apply sạch từ số không, đúng thứ tự tên file',
+    'cả bộ migration apply sạch từ số không, đúng thứ tự tên file',
     async () => {
       const onDisk = (await readdir(migrationsDir()))
         .filter((f) => f.endsWith('.sql'))

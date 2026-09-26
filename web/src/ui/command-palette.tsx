@@ -16,7 +16,7 @@ import { foldSearch } from '@/lib/search-fold';
  * danh sách, gõ ô tìm, chờ bảng vẽ lại, rồi bấm. Với người trực đang cầm điện thoại hỏi "cái
  * SW-CORE-01 ở tủ nào", ba bước đó là ba lần quá nhiều.
  *
- * PHẦN CSS ĐÃ NẰM SẴN TRONG REPO TỪ TRƯỚC. `css/command-palette.css` có đủ 230 dòng và vẫn
+ * PHẦN CSS ĐÃ NẰM SẴN TRONG REPO TỪ TRƯỚC. `css/command-palette.css` có đủ 275 dòng và vẫn
  * được `@import` ở `index.css`, nhưng **chưa component nào dùng** — grep `.cp-wrap` trong
  * `web/src` ra rỗng. Tức là bundle vẫn chở nguyên khối CSS chết, còn cái hộp mà `CLAUDE.md`
  * viết như đã có ("shell (sidebar + command palette)") thì chưa từng được dựng. Component này

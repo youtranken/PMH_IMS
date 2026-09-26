@@ -8343,7 +8343,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     /*
      * PHẢI GÕ KHOẢNG TRẮNG, KHÔNG ĐƯỢC BỎ TRỐNG HẲN (10/09).
      *
-     * Ô "Tên gọi" mang `required` (`ui/vault-panel.tsx:529`), nên bỏ trống hẳn thì TRÌNH DUYỆT
+     * Ô "Tên gọi" mang `required` (`ui/vault-panel.tsx`, `Field` của `vault.label`), nên bỏ trống hẳn thì TRÌNH DUYỆT
      * chặn `submit` trước — `setError(t('vault.labelRequired'))` ở tầng React không bao giờ
      * chạy, và không có `role="alert"` nào ra đời. Bài kiểm đứng chờ một câu tiếng Việt mà
      * chính nó vừa ngăn không cho xuất hiện.
@@ -8352,7 +8352,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
      * đó mới là đường tới hàng rào tiếng Việt, tức thứ bài này sinh ra để kiểm. Hàng rào của
      * trình duyệt đã có bài riêng ở khối khác canh.
      *
-     * Và phải điền LUÔN ô "Giá trị": nó cũng mang `required` (`vault-panel.tsx:566`), bỏ trống
+     * Và phải điền LUÔN ô "Giá trị": nó cũng mang `required` (`vault-panel.tsx`, `Field` của `vault.secretValue`), bỏ trống
      * thì trình duyệt chặn ở ĐÓ và ta lại không tới được câu cần kiểm. Muốn chạm vào hàng rào
      * thứ nhất của React thì mọi hàng rào của trình duyệt phải được thoả trước — đó là thứ tự
      * thật, không phải thứ tự ta mong.
@@ -8443,7 +8443,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     /*
      * Cùng chuyện với ô "Giá trị" của hộp Cất: ô này cũng mang `required`
-     * (`vault-panel.tsx:667`), nên hàng rào chặn một lượt xoay RỖNG là của TRÌNH DUYỆT, và
+     * (`vault-panel.tsx`, `Field` của `vault.newValue`), nên hàng rào chặn một lượt xoay RỖNG
+     * là của TRÌNH DUYỆT, và
      * nhánh `setError` tương ứng ở React không tới được từ giao diện. Khẳng định đúng thứ
      * thật sự canh cửa, chứ không đòi một câu chưa ai từng nhìn thấy.
      */

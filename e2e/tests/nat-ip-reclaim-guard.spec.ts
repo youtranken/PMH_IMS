@@ -75,7 +75,7 @@ async function setUp(page: Page, stamp: string): Promise<Fixture> {
   const subnetId = ((await subnet.json()) as { id: string }).id;
 
   const internalIp = `172.16.${octet}.5`;
-  // `usedBy` khác rỗng → `create()` đặt status 'assigned' (ip-address.service.ts:173).
+  // `usedBy` khác rỗng → `create()` đặt status 'assigned' (ip-address.service.ts:278).
   const ip = await page.request.post('/api/v1/ipam/addresses', {
     headers,
     data: { subnetId, address: internalIp, usedBy: 'Camera tang 2' },

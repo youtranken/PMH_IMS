@@ -19,7 +19,10 @@
  *   · chặn cái phải cho qua — xoá ngày bắt đầu rồi đặt hạn sớm hơn ngày bắt đầu CŨ bị từ
  *     chối bởi một giá trị không còn tồn tại, và người dùng không có đường nào thoát ra.
  *
- * `field in values` hỏi đúng câu cần hỏi: "yêu cầu này có nói gì về ô đó không?".
+ * Câu cần hỏi là "yêu cầu này có NÓI GÌ về ô đó không?", và `hasOwnProperty` là cách hỏi
+ * đúng — khối ngay dưới đây giải thích vì sao `field in values`, bản đầu tiên, thì không.
+ * (Dòng này trước 26/09 viết ngược: nó giới thiệu `field in values` như cách làm hiện hành,
+ * trong khi chính khối kế tiếp nói đã bỏ nó, và code ở dưới dùng `hasOwnProperty`.)
  *
  * Bản đầu tiên của idiom này nằm trong `device-import.ts` từ 08/09 (rà soát 07/09 bắt được
  * đúng lớp lỗi trên cặp ngày bảo hành và cặp site/tủ của đường Excel). Ba service HTTP viết

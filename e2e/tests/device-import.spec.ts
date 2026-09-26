@@ -225,8 +225,10 @@ async function buildDeviceFile(path: string, rows: string[][]): Promise<string> 
  *
  * Nên giá trị thật của bài này là: khóa lại hình dạng ĐÚNG của `changes` (diff thật, `before`
  * là giá trị cũ thật), để nếu ai đó đổi cách dựng khóa hoặc quay lại dùng ảnh chụp thì nó đỏ.
- * Chứng minh trực tiếp hai vế trên cần tầng integration chạm DB thật — thứ repo chưa có
- * (`api/test/` rỗng) và đã ghi là nợ số một ở `docs/CODE-REVIEW-2026-09-07.md` mục 9.
+ * Chứng minh trực tiếp hai vế trên cần tầng integration chạm DB thật. Lúc viết bài này tầng
+ * đó chưa tồn tại (`api/test/` rỗng, nợ số một ở `docs/CODE-REVIEW-2026-09-07.md` mục 9); nó
+ * đã được dựng ngày 08/09 và nay có hơn hai chục bài, nên hai vế trên LÀM ĐƯỢC ở đó — đây là
+ * việc còn nợ, không còn là việc bất khả.
  */
 test.describe('Import cập nhật — lịch sử phải là THẬT (finding #10)', () => {
   test('sửa MỘT ô qua import thì lịch sử chỉ ghi đúng ô đó, không phải "mọi trường từ trống"', async ({

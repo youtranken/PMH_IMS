@@ -76,7 +76,7 @@ export function Tabs({
            * Hai đường sửa: render đủ mọi panel rồi ẩn bằng `hidden` (đúng cách đợt này vừa làm
            * cho `#rmap-cut-sum`), hoặc chỉ khai quan hệ khi nó CÓ THẬT. Chọn cách sau vì render
            * đủ panel nghĩa là mọi tab đều chạy truy vấn của nó ngay khi mở trang — đắt hơn hẳn,
-           * và `TabPanel` hiện được dùng ở 8 màn.
+           * và `TabPanel` hiện được dùng ở 8 chỗ gọi trên 7 màn (`expiry-screen` gọi hai lần).
            */
           aria-controls={item.key === value ? `tabpanel-${item.key}` : undefined}
           // Chỉ tab đang chọn nằm trong luồng Tab; các tab khác đi bằng phím mũi tên.

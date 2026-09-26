@@ -33,7 +33,9 @@ import { createScratchDb, migrationsDir, testDbUrl, type ScratchDb, waitForLock 
  * qua service: dựng cả `SubnetService` cần audit + catalog + Nest container, trong khi thứ
  * đang kiểm là hành vi của Postgres. Đổi lại, hai câu lệnh ở đây phải KHỚP NGUYÊN VĂN thứ
  * service chạy — nếu ai đó bỏ `FOR UPDATE` khỏi service thì bài này vẫn xanh mà lỗi quay lại.
- * Bài `subnet-lock-contract` ở cuối file canh đúng chuyện đó.
+ * Bài cuối file — "service giữ đúng hợp đồng khóa: FOR UPDATE trước, đếm sau, cùng một tx" —
+ * canh đúng chuyện đó. (Trước 26/09 ba file gọi nó bằng tên thân mật `subnet-lock-contract`,
+ * một định danh không tồn tại ở đâu trong repo, nên ai đi tìm đều không thấy.)
  */
 
 const TEST_TIMEOUT = 120_000;

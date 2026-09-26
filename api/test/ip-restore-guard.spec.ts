@@ -163,7 +163,7 @@ describe('Bật lại hồ sơ IP không được đưa một địa chỉ ra ng
  * transaction mở tường minh, và khe hở được ép ra chứ không trông chờ vào may rủi lịch biểu.
  *
  * GIỚI HẠN, nói thẳng: bài này khoá hợp đồng của CÂU SQL, không chứng minh service dùng đúng
- * câu đó — giống hệt điều tôi đã ghi cho `subnet-lock-contract`. Vế còn lại do bài E2E
+ * câu đó — giống hệt điều đã ghi ở `subnet-cidr-race.spec.ts`. Vế còn lại do bài E2E
  * "ẩn IP rồi bật lại khi dải không đổi" giữ: nó chạy qua service thật.
  */
 describe('Bật lại hai lượt chồng nhau chỉ được thắng một', () => {

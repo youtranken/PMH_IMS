@@ -132,11 +132,15 @@ export function AccountsScreen({ me }: { me: Me }) {
   /*
    * TRẠNG THÁI DANH SÁCH SỐNG TRÊN THANH ĐỊ CHỈ (B-02, 23/09).
    *
-   * Đây là màn danh sách CUỐI CÙNG còn giữ trang/ô tìm/thứ tự trong `useState`. Đo được trước khi
-   * sửa: gõ "Cao" thì bảng còn 1 dòng nhưng URL không đổi; bấm sắp xếp, URL không đổi; reload thì
-   * về 7 dòng và ô tìm trắng. Hệ quả không nằm ở tiện nghi: **không chia sẻ được link đã lọc**, và
-   * nút Back của trình duyệt RỜI TRANG thay vì gỡ bộ lọc — sáu màn kia thì ngược lại, nên cùng một
-   * phản xạ cho hai kết quả khác nhau.
+   * Đây là màn danh sách thứ bảy lên `useListUrlState`. Đo được trước khi sửa: gõ "Cao" thì bảng
+   * còn 1 dòng nhưng URL không đổi; bấm sắp xếp, URL không đổi; reload thì về 7 dòng và ô tìm
+   * trắng. Hệ quả không nằm ở tiện nghi: **không chia sẻ được link đã lọc**, và nút Back của
+   * trình duyệt RỜI TRANG thay vì gỡ bộ lọc — sáu màn kia thì ngược lại, nên cùng một phản xạ
+   * cho hai kết quả khác nhau.
+   *
+   * KHÔNG phải màn CUỐI CÙNG, dù dòng này trước 26/09 viết vậy: `catalog-screen.tsx` và
+   * `disposal-screen.tsx` vẫn giữ ô tìm/bộ lọc trong `useState`. Hai màn ấy chưa chuyển vì lý
+   * do riêng của chúng, nhưng viết "cuối cùng" ở đây làm người đọc tin rằng việc đã xong.
    *
    * Ô tìm cũng được debounce 250ms kèm theo — trước đây mỗi phím là một lượt gọi API.
    */
@@ -281,7 +285,8 @@ export function AccountsScreen({ me }: { me: Me }) {
           return (
             <div className="action-cell">
               {/*
-                Năm việc trên một dòng — nhiều nhất trong cả hệ thống. Dãy nút phẳng ở đây làm
+                Sáu việc trên một dòng — nhiều nhất trong cả hệ thống (bốn việc cố định cộng hai mục
+                theo trạng thái; riêng `disabled` chỉ có một nên ra năm). Dãy nút phẳng ở đây làm
                 cột thao tác rộng hơn cả năm cột dữ liệu cộng lại, và bốn trong năm cái là việc
                 vài tháng mới làm một lần (đặt lại mật khẩu, đặt lại 2FA, khóa tài khoản).
               */}

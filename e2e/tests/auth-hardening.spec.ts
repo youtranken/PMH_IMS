@@ -44,7 +44,7 @@ test.describe('Siết cửa xác thực', () => {
    *
    * Hệ quả: N lần đoán chỉ tốn 1 lượt đếm. NFR-01 nói sai 5 lần thì khóa — hàng rào đó gần như
    * vô hiệu trước một kẻ tấn công biết bắn song song. Repo đã làm ĐÚNG chỗ tương đương ở
-   * `session.service.ts:92` (`SET stepup_failures = stepup_failures + 1`), chỉ đường login là sót.
+   * `session.service.ts:160` (`SET stepup_failures = stepup_failures + 1`), chỉ đường login là sót.
    */
   test('đếm sai mật khẩu: sáu lượt sai đồng thời phải tính đủ SÁU, không phải một', async () => {
     const BURST = 6;
@@ -136,7 +136,7 @@ test.describe('Siết cửa xác thực', () => {
        *
        * Hàng rào thật ở đây là THU HỒI PHIÊN sau `secret.stepup_max_failures` (mặc định 5)
        * lượt sai — cùng khuôn với `/auth/step-up`. Nó nổ TRƯỚC cái trần 10/phút vì `SessionGuard`
-       * đứng đầu chuỗi guard (`app.module.ts:102`): phiên chết rồi thì request sau không đi tới
+       * đứng đầu chuỗi guard (`app.module.ts:109`): phiên chết rồi thì request sau không đi tới
        * throttler nữa. Nên khẳng định theo mã HTTP là sai — mọi lượt đều 401, cả trước lẫn sau.
        */
       const codes: string[] = [];

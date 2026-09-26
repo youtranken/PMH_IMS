@@ -11,15 +11,14 @@ import { apiFetch } from '@/lib/api-client';
  * HAI cho cùng một khái niệm — thêm loại hạn ở API thì một trong hai bản sẽ lệch, và bản lệch
  * là bản người dùng nhìn thấy.
  *
- * ===== LỖI ĐANG VÁ (rà UI/UX 12/09) =====
+ * ===== LỖI ĐÃ VÁ — giữ lại vì luật ở trên sinh ra từ nó (rà UI/UX 12/09) =====
  *
- * Bảng điều khiển gọi `t('expiry.kind_' + kind, kind)` trong khi `vi.ts` KHÔNG có khóa
- * `expiry.kind_*` nào. i18next lặng lẽ rơi về tham số mặc định — tức chính cái mã — nên khối
- * "Sắp hết hạn" của màn mở đầu mỗi ngày in ra `warranty · 21/09/2026`, `license · 27/08/2026`.
- * Màn `/expiry` cùng lúc lại hiện đúng "Bảo hành thiết bị", vì nó hỏi API.
- *
- * Hỏng theo kiểu khó thấy: `license` trông đủ giống một nhãn để mắt lướt qua. Lượt test tay
- * 12/09 đi qua đúng khối này và đọc nhầm thành rác dữ liệu.
+ * Bảng điều khiển từng gọi `t('expiry.kind_' + kind, kind)` trong khi `vi.ts` không có khóa
+ * `expiry.kind_*` nào; i18next lặng lẽ rơi về tham số mặc định, nên khối "Sắp hết hạn" in ra
+ * `warranty · 21/09/2026` trong khi màn `/expiry` cùng lúc hiện đúng "Bảo hành thiết bị".
+ * Hỏng theo kiểu khó thấy: `license` trông đủ giống một nhãn để mắt lướt qua, và lượt test tay
+ * 12/09 đi qua đúng khối này rồi đọc nhầm thành rác dữ liệu. Nay mọi nơi gọi `expiryKindLabel`
+ * ở dưới.
  *
  * ===== CÙNG MỘT `queryKey` LÀ CỐ Ý =====
  *

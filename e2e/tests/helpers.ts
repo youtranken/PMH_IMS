@@ -21,11 +21,6 @@ export const E2E_SA = { email: 'e2e-sa@pmh.com.vn', password: 'E2e@Test#2026' };
 export const E2E_MEMBER = { email: 'e2e-member@pmh.com.vn', password: 'E2e@Test#2026' };
 export const NEW_PASSWORD = 'Ims#Manh2026!ok';
 
-/**
- * Đưa tài khoản E2E về trạng thái vừa-được-tạo. Gọi ở beforeEach vì test đăng nhập
- * làm THAY ĐỔI trạng thái thật (đổi mật khẩu, cài TOTP, khóa tài khoản) — không reset
- * thì test sau ăn theo test trước và đỏ ngẫu nhiên.
- */
 export const COMPOSE =
   'docker compose -f docker-compose.yml -f docker-compose.override.e2e.yml';
 
@@ -232,7 +227,6 @@ export function agePendingSession(email: string): void {
   );
 }
 
-/** Đếm số dòng audit của một hành động trên một secret — dùng để kiểm "mỗi lần mở = một dòng". */
 /**
  * ĐỌC NỘI DUNG dòng audit mới nhất, không chỉ đếm.
  *
@@ -264,6 +258,12 @@ export function lastAudit(
   return { actor: out.slice(0, at), detail: out.slice(at + 3) };
 }
 
+/**
+ * Đếm số dòng audit của một hành động trên một đối tượng — dùng để kiểm "mỗi lần mở = một dòng".
+ *
+ * Docstring này trước 26/09 nằm lạc chỗ: nó đứng NGAY TRÊN docblock của `lastAudit`, nên người
+ * đọc gán nó cho hàm đó và tin rằng `lastAudit` đếm. `lastAudit` thì ĐỌC NỘI DUNG, không đếm.
+ */
 export function countAudit(action: string, objectId: string): number {
   const out = dockerExec(
     `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
@@ -724,14 +724,6 @@ export const SECOND_BROWSER = {
 } as const;
 
 /**
- * Số pixel trang bị tràn ngang. 0 (hoặc 1 do làm tròn) = không tràn.
- *
- * TỪNG có NĂM bản chép của hàm này, mỗi file `*.mobile.spec.ts` một bản — và chúng ĐÃ TRÔI:
- * bốn bản trả về số pixel, riêng bản trong `shared-kit.mobile.spec.ts` trả về boolean với
- * ngưỡng `+1` nằm bên trong. Cùng một cái tên, hai ý nghĩa khác nhau, không có gì báo.
- * Đúng lý do AD-15 cấm bản sao: bản sao không sai lúc chép, nó sai dần về sau.
- */
-/**
  * Bấm nút XÁC NHẬN trong hộp hỏi lại (`ConfirmDialog`).
  *
  * Không bám vào chữ trên nút: nhãn giờ là ĐỘNG TỪ của hành động ("Khoá", "Xoá", "Gỡ"…) chứ
@@ -823,6 +815,16 @@ export async function openNavDrawer(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Mở menu' }).click();
 }
 
+/**
+ * Số pixel trang bị tràn ngang. 0 (hoặc 1 do làm tròn) = không tràn.
+ *
+ * TỪNG có NĂM bản chép của hàm này, mỗi file `*.mobile.spec.ts` một bản — và chúng ĐÃ TRÔI:
+ * bốn bản trả về số pixel, riêng bản trong `shared-kit.mobile.spec.ts` trả về boolean với
+ * ngưỡng `+1` nằm bên trong. Cùng một cái tên, hai ý nghĩa khác nhau, không có gì báo.
+ * Đúng lý do AD-15 cấm bản sao: bản sao không sai lúc chép, nó sai dần về sau.
+ *
+ * Docstring này trước 26/09 nằm lạc chỗ: nó đứng NGAY TRÊN docblock của `confirmAction`.
+ */
 export function horizontalOverflow(page: Page): Promise<number> {
   return page.evaluate(
     () => document.documentElement.scrollWidth - document.documentElement.clientWidth,

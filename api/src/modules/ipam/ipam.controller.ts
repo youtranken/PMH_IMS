@@ -563,10 +563,6 @@ function actor(req: AuthedRequest): string {
 }
 
 /**
- * Đổi ô "8080" / "8000-8010" thành cặp số. Lỗi nói ĐÚNG chỗ sai (viết ngược đầu ≠ sai định
- * dạng) — người gõ biết mình muốn gì, chỉ cần được chỉ đúng chỗ.
- */
-/**
  * Rule NAT phải có router — và thiếu nó phải là 400, không phải 500.
  *
  * `NatBodyDto` để `deviceId` là tuỳ chọn vì cùng một DTO phục vụ cả `POST` lẫn `PATCH`, mà
@@ -585,6 +581,14 @@ function requireDeviceId(value: string | undefined): string {
   });
 }
 
+/**
+ * Đổi ô "8080" / "8000-8010" thành cặp số. Lỗi nói ĐÚNG chỗ sai (viết ngược đầu ≠ sai định
+ * dạng) — người gõ biết mình muốn gì, chỉ cần được chỉ đúng chỗ.
+ *
+ * Khối này trước 26/09 nằm lạc chỗ: nó đứng NGAY TRÊN docblock của `requireDeviceId`, nên
+ * người đọc gán nó cho hàm đó và tin rằng `requireDeviceId` làm việc phân tích chuỗi port.
+ * Hàm nó thật sự tả — chính hàm này — thì không có docstring nào.
+ */
 function requirePorts(value: string | undefined): { from: number; to: number } {
   const parsed = parsePortRange(value ?? '');
   if (parsed.ok) return { from: parsed.from, to: parsed.to };

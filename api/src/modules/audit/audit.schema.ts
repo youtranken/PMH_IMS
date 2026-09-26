@@ -1,6 +1,6 @@
 import { jsonb, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 
-/** audit_log APPEND-ONLY (AD-10) — tạo bằng migration 0003_audit_log.sql. */
+/** audit_log APPEND-ONLY (AD-10) — tạo bằng migration `0004_audit_log.sql`. */
 export const auditLogTable = pgTable('audit_log', {
   id: uuid('id').primaryKey().defaultRandom(),
   actor: text('actor').notNull(),

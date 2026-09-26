@@ -894,13 +894,6 @@ function IpHistoryDialog({
 
 
 /**
- * Xóa (ẩn) MỘT hồ sơ IP, kèm lý do.
- *
- * Cùng khuôn với hộp ẩn dải và hộp gỡ rule NAT: "địa chỉ này biến đi đâu" là câu sáu tháng
- * sau sẽ có người hỏi, và chỉ dòng lịch sử trả lời được. Dùng hộp riêng chứ không dùng
- * `useConfirm` chung vì lý do ở đây là DỮ LIỆU bắt buộc, không phải một câu có/không.
- */
-/**
  * Bật lại một hồ sơ đã ẩn.
  *
  * Là hộp thoại chứ không phải một cú bấm thẳng: API có thể từ chối vì địa chỉ đã bị hồ sơ khác
@@ -972,6 +965,17 @@ function RestoreAddressDialog({
   );
 }
 
+/**
+ * Xóa (ẩn) MỘT hồ sơ IP, kèm lý do.
+ *
+ * Cùng khuôn với hộp ẩn dải và hộp gỡ rule NAT: "địa chỉ này biến đi đâu" là câu sáu tháng
+ * sau sẽ có người hỏi, và chỉ dòng lịch sử trả lời được. Dùng hộp riêng chứ không dùng
+ * `useConfirm` chung vì lý do ở đây là DỮ LIỆU bắt buộc, không phải một câu có/không.
+ *
+ * Khối này trước 26/09 nằm lạc chỗ: nó đứng NGAY TRÊN docblock của `RestoreAddressDialog` —
+ * hộp BẬT LẠI — nên người đọc gán nó cho hộp đó và tin rằng hộp bật lại đòi lý do bắt buộc.
+ * Hộp nó thật sự tả, chính hộp này, thì không có docstring nào.
+ */
 function VoidAddressDialog({
   record,
   csrfToken,

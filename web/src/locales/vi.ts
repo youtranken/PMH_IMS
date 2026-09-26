@@ -963,7 +963,7 @@ export default {
     /*
      * Tên của chính HÀNH ĐỘNG — thêm 23/09. Trước đó ba chỗ của luồng này (mục menu, tiêu đề
      * hộp, nút gửi) đều đọc `common.delete` = 'Xóa', trong khi kết quả của nó là 'Đã ẩn' và có
-     * hẳn nút 'Bật lại'. Chính chú thích tại chỗ ở `subnet-detail.tsx:425` đã viết "Vẫn là ẩn ở
+     * hẳn nút 'Bật lại'. Chính chú thích tại chỗ ở `subnet-detail.tsx:444` đã viết "Vẫn là ẩn ở
      * tầng DB, không DELETE" — code biết đúng, chỉ có chữ trên màn nói sai.
      *
      * Và "Xóa" phải được giữ cho việc xoá THẬT: `ipam.subnetDeleted` ('Đã xóa dải.') là một
