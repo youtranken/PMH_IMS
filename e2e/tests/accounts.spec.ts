@@ -313,6 +313,8 @@ test('/admin/accounts giữ ô tìm và thứ tự trên URL — chia sẻ đư�
   await expect(page).toHaveURL(/\/admin\/accounts$/);
 
   await timVaChoLoc(page, 'e2e-thanh-vien');
+  // Đếm khi bảng đã vẽ xong; đếm sớm ra 0 rồi so với bảng sau reload là đỏ chập chờn.
+  await expect(page.getByRole('row').first()).toBeVisible();
   const soDong = await page.getByRole('row').count();
 
   // 1. Reload giữ nguyên kết quả — tức link chia sẻ được.

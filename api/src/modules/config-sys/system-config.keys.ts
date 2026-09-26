@@ -8,6 +8,8 @@ export const CONFIG_KEYS = {
   loginMaxFailedAttempts: { key: 'login.max_failed_attempts', fallback: 5 },
   loginLockoutMinutes: { key: 'login.lockout_minutes', fallback: 15 },
   loginRateLimitPerIp: { key: 'login.rate_limit_per_ip', fallback: 20 },
+  // Bậc chờ khi một tài khoản bị đoán sai nhiều lần (0060, SEC-03). Xem `common/lockout.ts`.
+  loginAccountBackoffMinutes: { key: 'login.account_backoff_minutes', fallback: '5,15,30,60' },
   // 60s (0034): 30 chỉ vừa đủ đọc xong thì hộp đóng, người dùng bấm Xem lại — mỗi lần một dòng audit.
   secretRevealSeconds: { key: 'secret.reveal_seconds', fallback: 60 },
   secretStepUpGraceMinutes: { key: 'secret.stepup_grace_minutes', fallback: 10 },

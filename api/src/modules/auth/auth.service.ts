@@ -15,7 +15,12 @@ import { OutboxService } from '../outbox/outbox.service';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { UsersService } from '../users/users.service';
 import type { UserCredentials } from '../users/users.types';
-import { isLocked, lockRemainingSeconds } from '../../common/lockout';
+import {
+  isLocked,
+  lockRemainingSeconds,
+  parseBackoffSteps,
+  type BackoffPolicy,
+} from '../../common/lockout';
 import { PasswordService } from './password.service';
 import { checkPasswordStrength } from './password-policy';
 import { canEnrollWithoutPassword } from './session-policy';
@@ -114,19 +119,12 @@ export class AuthService {
 
     const now = new Date();
     /*
-     * KHOÁ TỰ ĐỘNG ĐỌC THEO CẶP (NGƯỜI DÙNG, IP) — đổi 11/09.
-     *
-     * Bản trước đọc `users.failed_attempts`/`users.locked_until`, tức khoá đặt lên TÀI KHOẢN.
-     * Hệ quả không ai định: cái khoá đó ai kích cũng được. Biết email của một người là khoá
-     * được họ ra ngoài bằng năm request, lặp lại tuỳ thích — và người đáng khoá nhất là SA,
-     * đúng lúc đang có sự cố cần đăng nhập để xử lý.
-     *
-     * Khoá sinh ra để chặn một người đang ĐOÁN, mà người đoán thì ngồi ở một chỗ. Chặn đúng
-     * chỗ đó là đủ; người dùng thật ngồi ở bàn của họ không việc gì phải chịu hậu quả.
-     *
-     * Xem `0045_login_failure_per_ip.sql` để biết vì sao KHÔNG thêm một trần chặn ở tầng tài
-     * khoản, kể cả ở mức cao.
+     * Hai tầng chặn:
+     *   · theo TÀI KHOẢN, chậm dần (SEC-03, Q-06) — thấy kẻ dò đổi IP. Chờ tối đa một bậc cuối
+     *     nên người lạ không khoá vĩnh viễn được người dùng thật.
+     *   · theo cặp (người dùng, IP) — chặn nơi đang đoán, chặt hơn và nhanh hơn.
      */
+    await this.assertAccountNotBackedOff(user, now);
     const lockState = await this.loginFailures.stateFor(user.id, ctx.ip);
     if (isLocked(lockState, now)) {
       const seconds = lockRemainingSeconds(lockState, now);
@@ -141,42 +139,18 @@ export class AuthService {
     const ok = await this.passwords.verify(user.passwordHash, password);
     if (!ok) {
       /*
-       * MỘT transaction cho cả ba việc: cộng bộ đếm, ghi audit, và (nếu vừa khóa) đẩy email
-       * báo SA vào outbox.
-       *
-       * Bản trước làm ba bước rời: `applyLockoutState` chạy trên pool và COMMIT NGAY, rồi mới
-       * mở một transaction khác cho audit + outbox. Hai lỗi cộng dồn:
-       *
-       * 1. ĐUA (finding #5). Bộ đếm là đọc-rồi-ghi-đè quanh một lần Argon2 ~200ms, nên N lượt
-       *    đoán song song chỉ tốn 1 lượt đếm. Nay `registerLoginFailureWithin` cộng nguyên tử
-       *    ngay trong câu UPDATE.
-       * 2. MẤT EMAIL (mẫu N3). `locked_until` đã commit mà transaction thứ hai hỏng — pool
-       *    cạn, worker bị kill — thì tài khoản BỊ KHÓA nhưng SA không bao giờ nhận được thư,
-       *    và không có đường bù: lần thử sau bị `isLocked()` chặn ở trên nên `justLocked`
-       *    không bao giờ đúng lần nữa.
+       * MỘT transaction cho: cộng hai bộ đếm, ghi audit, và (nếu vừa lên bậc chờ) đẩy thư báo
+       * vào outbox (AD-5). Tách rời thì bộ đếm có thể đã commit mà thư thì không bao giờ đi.
        */
+      const backoff = await this.accountBackoffPolicy();
       await this.db.transaction(async (tx) => {
-        const policy = { maxFailedAttempts: maxFailed, lockoutMinutes };
-        /*
-         * HAI BỘ ĐẾM, HAI VAI KHÁC HẲN NHAU (11/09):
-         *
-         *   · theo CẶP (người dùng, IP) — bộ đếm CHẶN. Đây là thứ quyết định lượt sau có vào
-         *     được không.
-         *   · trên hàng `users` — bộ đếm CẢNH BÁO. Nó không chặn ai nữa, nhưng là chỗ DUY NHẤT
-         *     nhìn thấy bức tranh "tài khoản này đang bị dò từ nhiều nơi": bộ đếm theo cặp,
-         *     chia nhỏ theo IP, không bao giờ thấy điều đó.
-         *
-         * Vẫn dùng chung `registerFailure` của `common/lockout.ts` cho cả hai, nên luật (ngưỡng,
-         * "khoá hết hạn thì đếm lại từ 0", `justLocked`) chỉ có MỘT bản.
-         */
         const local = await this.loginFailures.registerFailureWithin(
           tx,
           user.id,
           ctx.ip,
-          policy,
+          { maxFailedAttempts: maxFailed, lockoutMinutes },
           now,
         );
-        const state = await this.users.registerLoginFailureWithin(tx, user.id, policy, now);
         await this.audit.appendWithin(tx, {
           actor: user.email,
           action: 'auth.login.failed',
@@ -184,27 +158,7 @@ export class AuthService {
           objectId: user.id,
           detail: { reason: 'bad-password', ipLocked: local.lockedUntil !== null },
         });
-        /*
-         * `justLocked` nay đọc là "VỪA CHẠM NGƯỠNG CẢNH BÁO", không còn là "vừa bị khoá".
-         *
-         * Tên cờ và tên mã audit (`auth.account.locked`) giữ nguyên có chủ ý: đổi chúng là
-         * làm gãy mọi truy vấn nhật ký đã viết và mọi bài kiểm đang chốt chúng, đổi lấy một
-         * chữ đẹp hơn. Chỗ PHẢI đổi là thứ người ta ĐỌC — nội dung lá thư gửi SA, xem
-         * `mail.consumer.ts`. `users.locked_until` vẫn được ghi, nay với vai CỬA SỔ CHỐNG SPAM
-         * THƯ: không báo lại cho tới khi nó qua.
-         */
-        if (state.justLocked) {
-          await this.audit.appendWithin(tx, {
-            actor: user.email,
-            action: 'auth.account.locked',
-            objectType: 'user',
-            objectId: user.id,
-            detail: { failedAttempts: state.failedAttempts },
-          });
-          // Email báo SA đi qua outbox (AD-5) — không gửi thẳng trong request.
-          await this.outbox.enqueueWithin(tx, 'auth.account.locked', { userId: user.id });
-        }
-        return state;
+        await this.registerAccountFailureWithin(tx, user, backoff, now);
       });
       throw new UnauthorizedException({
         code: 'LOGIN_FAILED',
@@ -249,15 +203,15 @@ export class AuthService {
       return created;
     });
 
-    // Mật khẩu đã đúng → xoá dấu vết ĐOÁN MẬT KHẨU. Việc này đúng ở đây kể cả khi còn cửa TOTP:
-    // hai bộ đếm đó đếm lượt đoán mật khẩu, mà việc đó vừa kết thúc.
-    await this.users.clearLoginFailures(user.id);
     /*
-     * Vào được từ NƠI NÀY → xoá dấu vết của chính nơi này.
-     *
-     * Cố ý không xoá hàng của IP khác: nếu có ai đang dò tài khoản này từ chỗ khác thì khoá
-     * bên đó phải còn nguyên. Người dùng thật đăng nhập được không phải là bằng chứng rằng kẻ
-     * kia đã thôi gõ.
+     * Bộ đếm theo TÀI KHOẢN chỉ xoá khi đăng nhập TRỌN VẸN. Còn cửa TOTP thì chưa xoá: nếu xoá
+     * ở đây, kẻ có mật khẩu lặp "đăng nhập → đoán 5 mã → đăng nhập" mãi mà không lên bậc chờ
+     * nào (SEC-02).
+     */
+    if (!needsTotp) await this.users.clearLoginFailures(user.id);
+    /*
+     * Bộ đếm theo cặp (người dùng, IP) đếm lượt đoán MẬT KHẨU từ nơi này, và việc đó vừa xong.
+     * Cố ý không xoá hàng của IP khác: nơi khác đang dò thì khoá bên đó phải còn nguyên.
      */
     await this.loginFailures.clearFor(user.id, ctx.ip);
 
@@ -291,6 +245,9 @@ export class AuthService {
     }
 
     const user = await this.requireUser(session.userId);
+    const now = new Date();
+    // Phiên chờ mở TRƯỚC khi tài khoản lên bậc chờ cũng không được dùng để đoán tiếp.
+    await this.assertAccountNotBackedOff(user, now);
     const secret = this.openTotpSecret(user);
     const result = await this.totp.verify({
       token,
@@ -298,13 +255,19 @@ export class AuthService {
       lastUsedTimeStep: user.totpLastTimestep,
     });
     if (!result.ok) {
-      await this.audit.append({
-        actor: user.email,
-        action: 'auth.totp.failed',
-        objectType: 'session',
-        objectId: session.id,
-        detail: { reason: result.reason },
+      const backoff = await this.accountBackoffPolicy();
+      await this.db.transaction(async (tx) => {
+        await this.audit.appendWithin(tx, {
+          actor: user.email,
+          action: 'auth.totp.failed',
+          objectType: 'session',
+          objectId: session.id,
+          detail: { reason: result.reason },
+        });
+        // Sai mã TOTP cũng là một lượt đoán vào tài khoản (SEC-02).
+        await this.registerAccountFailureWithin(tx, user, backoff, now);
       });
+      await this.probe.noteSecurityFailure(user.email);
 
       /*
        * ĐẾM SAI VÀ THU HỒI PHIÊN — cùng khuôn với `stepUp()` (finding #2).
@@ -405,6 +368,7 @@ export class AuthService {
       return created;
     });
 
+    await this.users.clearLoginFailures(user.id);
     return { session: fresh, mustChangePassword: user.mustChangePassword };
   }
 
@@ -648,6 +612,7 @@ export class AuthService {
       return { session: created, newToken: created.token };
     });
 
+    if (fresh.newToken) await this.users.clearLoginFailures(user.id);
     return fresh;
   }
 
@@ -868,6 +833,46 @@ export class AuthService {
    * `AuditWriterService` tự lấy từ ngữ cảnh request (`common/request-context.ts`). Ghi thêm
    * vào `detail` nữa là hai chỗ giữ cùng một sự thật — đúng cách chúng trôi khỏi nhau.
    */
+  private async accountBackoffPolicy(): Promise<BackoffPolicy> {
+    const [threshold, raw] = await Promise.all([
+      this.config.getNumber('loginMaxFailedAttempts'),
+      this.config.getString('loginAccountBackoffMinutes'),
+    ]);
+    return { threshold, stepsMinutes: parseBackoffSteps(raw) };
+  }
+
+  /** Tài khoản đang trong bậc chờ (SEC-03) thì từ chối trước khi tốn công băm hay xác minh gì. */
+  private async assertAccountNotBackedOff(user: UserCredentials, now: Date): Promise<void> {
+    const state = { failedAttempts: user.failedAttempts, lockedUntil: user.lockedUntil };
+    if (!isLocked(state, now)) return;
+    const seconds = lockRemainingSeconds(state, now);
+    await this.auditFailure(user, 'account-backoff');
+    throw new UnauthorizedException({
+      code: 'ACCOUNT_LOCKED',
+      message: `Tài khoản đang bị khóa tạm do đăng nhập sai nhiều lần. Thử lại sau ${Math.ceil(seconds / 60)} phút.`,
+      retryAfterSeconds: seconds,
+    });
+  }
+
+  /** Cộng một lượt sai vào tài khoản; vừa lên bậc chờ thì ghi audit và báo chủ tài khoản + SA. */
+  private async registerAccountFailureWithin(
+    tx: Tx,
+    user: UserCredentials,
+    policy: BackoffPolicy,
+    now: Date,
+  ): Promise<void> {
+    const state = await this.users.registerLoginFailureWithin(tx, user.id, policy, now);
+    if (!state.justLocked) return;
+    await this.audit.appendWithin(tx, {
+      actor: user.email,
+      action: 'auth.account.locked',
+      objectType: 'user',
+      objectId: user.id,
+      detail: { failedAttempts: state.failedAttempts, lockedUntil: state.lockedUntil },
+    });
+    await this.outbox.enqueueWithin(tx, 'auth.account.locked', { userId: user.id });
+  }
+
   private async auditFailure(user: UserCredentials, reason: string): Promise<void> {
     await this.audit.append({
       actor: user.email,

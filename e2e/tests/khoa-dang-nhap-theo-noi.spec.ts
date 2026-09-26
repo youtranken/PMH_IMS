@@ -1,38 +1,33 @@
 import { expect, request as pwRequest, test, type APIRequestContext } from '@playwright/test';
-import { APP_ORIGIN, E2E_SA, clearMailbox, mailBody, resetUsers, sql, waitForMail } from './helpers';
+import {
+  APP_ORIGIN,
+  E2E_MEMBER,
+  E2E_SA,
+  NEW_PASSWORD,
+  clearMailbox,
+  firstLogin,
+  freshTotpCode,
+  logout,
+  mailBody,
+  resetUsers,
+  sql,
+  waitForMail,
+} from './helpers';
 
 /**
- * KHOÁ ĐĂNG NHẬP CHUYỂN TỪ "MỘT TÀI KHOẢN" SANG "MỘT TÀI KHOẢN TẠI MỘT NƠI" — NFR-01, 11/09.
+ * Chặn đăng nhập hai tầng (NFR-01, `docs/QUYET-DINH.md` Q-06):
+ *   · theo cặp (người dùng, IP) — chặn nơi đang đoán;
+ *   · theo TÀI KHOẢN, chậm dần 5 → 15 → 30 → 60 phút — thấy kẻ dò đổi IP (SEC-03), và đếm cả
+ *     lượt sai mã TOTP lúc đăng nhập (SEC-02).
  *
- * ===== LỖ ĐANG VÁ =====
- *
- * Bộ đếm gõ sai nằm trên hàng `users`, nên cái khoá đặt lên TÀI KHOẢN — và cái khoá đó ai kích
- * cũng được. Biết email của một người là khoá được họ ra ngoài bằng năm request, lặp lại tuỳ
- * thích. Trần theo IP không cứu: khoá chỉ cần 5 lượt nên một IP khoá được khoảng 4 tài khoản
- * mỗi phút, một buổi sáng là hết công ty. Và người đáng khoá nhất là SA, đúng lúc đang có sự
- * cố cần đăng nhập để xử lý.
- *
- * ===== BÀI NÀY GIỮ VẾ NÀO =====
- *
- * Vế "hai nơi đếm riêng nhau" không dựng được ở đây: Playwright chạy trên một máy, mà nginx
- * ghi `X-Forwarded-For` bằng `$proxy_add_x_forwarded_for` (NỐI THÊM địa chỉ socket thật) và
- * Express đặt `trust proxy = 1`, nên client KHÔNG tự khai IP của mình được. Hàng rào đó đúng,
- * và nó khiến E2E mù đúng chỗ này — vế ấy do `api/test/login-lockout-per-ip.spec.ts` giữ.
- *
- * Vế ở ĐÂY là vế mà chỉ chạy thật mới trả lời được: `login()` có ĐỌC bộ đếm mới không, hay nó
- * vẫn đọc `users.locked_until` như cũ. Cách hỏi: gõ sai cho tới khi bị chặn, rồi DỜI hàng khoá
- * sang một IP khác bằng SQL — tức dựng lại đúng tình huống "khoá thuộc về nơi khác" — và đòi
- * lượt đăng nhập ĐÚNG mật khẩu phải đi qua.
- *
- * Bản trước sẽ đỏ ở đúng bước đó, vì `users.locked_until` lúc ấy vẫn còn hiệu lực.
+ * Playwright chạy trên một máy nên không tự khai IP khác được (nginx nối thêm địa chỉ socket
+ * thật vào X-Forwarded-For). Tình huống "nơi khác" dựng bằng cách dời hàng khoá sang IP khác.
  */
 
 const WRONG = 'chac-chan-sai-#2026';
 
-function lockedUntilOfUser(): string {
-  return sql(
-    `SELECT coalesce(locked_until::text, '') FROM users WHERE email = '${E2E_SA.email}'`,
-  );
+function userColumn(email: string, column: 'failed_attempts' | 'locked_until'): string {
+  return sql(`SELECT coalesce(${column}::text, '') FROM users WHERE email = '${email}'`);
 }
 
 function lockRowCount(): number {
@@ -52,118 +47,135 @@ function rawClient(): Promise<APIRequestContext> {
   });
 }
 
-function login(api: APIRequestContext, password: string) {
-  return api.post('/api/v1/auth/login', { data: { email: E2E_SA.email, password } });
+function login(api: APIRequestContext, email: string, password: string) {
+  return api.post('/api/v1/auth/login', { data: { email, password } });
+}
+
+async function codeOf(res: { json: () => Promise<unknown> }): Promise<string | undefined> {
+  return ((await res.json()) as { code?: string }).code;
 }
 
 test.beforeEach(() => {
   resetUsers();
 });
 
-test.describe('Khoá đăng nhập theo NƠI, không theo tài khoản', () => {
-  test('gõ sai đủ ngưỡng thì chính nơi đang gõ bị chặn — kể cả khi sau đó gõ ĐÚNG', async () => {
+test.describe('Chặn đăng nhập theo nơi và theo tài khoản', () => {
+  test('gõ sai đủ ngưỡng thì bị chặn — kể cả khi sau đó gõ ĐÚNG', async () => {
     const api = await rawClient();
     try {
-      for (let i = 0; i < 6; i += 1) {
-        const res = await login(api, WRONG);
-        expect(res.status()).toBeGreaterThanOrEqual(400);
+      for (let i = 0; i < 5; i += 1) {
+        expect((await login(api, E2E_SA.email, WRONG)).status()).toBe(401);
       }
-
-      // Đúng mật khẩu nhưng vẫn bị chặn: khoá phải có tác dụng thật, không chỉ là một con số.
-      const blocked = await login(api, E2E_SA.password);
+      const blocked = await login(api, E2E_SA.email, E2E_SA.password);
       expect(blocked.status()).toBe(401);
-      expect(((await blocked.json()) as { code?: string }).code).toBe('ACCOUNT_LOCKED');
-
-      // Và nó phải là hàng khoá MỚI, không phải cột cũ trên `users`.
+      expect(await codeOf(blocked)).toBe('ACCOUNT_LOCKED');
       expect(lockRowCount()).toBe(1);
     } finally {
       await api.dispose();
     }
   });
 
-  test('ĐÂY LÀ CẢ BÀI: khoá thuộc về nơi KHÁC thì tài khoản vẫn đăng nhập được', async () => {
+  test('SEC-03: đổi nơi cũng không thoát — tài khoản chờ bậc đầu ở MỌI nơi', async () => {
     const api = await rawClient();
     try {
-      for (let i = 0; i < 6; i += 1) await login(api, WRONG);
-      expect((await login(api, E2E_SA.password)).status()).toBe(401);
+      for (let i = 0; i < 5; i += 1) await login(api, E2E_SA.email, WRONG);
 
-      /*
-       * Dời hàng khoá sang một IP khác — dựng lại đúng tình huống thật: kẻ tấn công gõ sai từ
-       * chỗ họ, còn người dùng thật ngồi ở bàn của mình.
-       */
+      // Kẻ dò chuyển sang IP khác: dời hàng khoá theo IP đi, chỉ còn chặn theo tài khoản.
       sql(
         `UPDATE login_failure SET ip = '203.0.113.77' WHERE user_id = (SELECT id FROM users WHERE email = '${E2E_SA.email}')`,
       );
+      const blocked = await login(api, E2E_SA.email, E2E_SA.password);
+      expect(blocked.status()).toBe(401);
+      const body = (await blocked.json()) as { code?: string; retryAfterSeconds?: number };
+      expect(body.code).toBe('ACCOUNT_LOCKED');
+      expect(body.retryAfterSeconds).toBeGreaterThan(0);
+      expect(body.retryAfterSeconds).toBeLessThanOrEqual(5 * 60);
 
-      /*
-       * CÂU CHỐT, và nó chỉ có nghĩa khi bộ đếm CŨ vẫn đang "khoá": `users.locked_until` lúc
-       * này vẫn nằm ở tương lai. Bản trước đọc đúng cột đó nên sẽ trả 401 ở đây — tức người
-       * dùng thật bị nhốt ra ngoài bởi việc người khác gõ sai.
-       */
-      expect(lockedUntilOfUser()).not.toBe('');
-
-      const ok = await login(api, E2E_SA.password);
+      // Hết bậc chờ thì vào lại được; bộ đếm không tự về 0 (5 lần sai kế sẽ lên bậc thứ hai).
+      sql(`UPDATE users SET locked_until = now() - interval '1 second' WHERE email = '${E2E_SA.email}'`);
+      const ok = await login(api, E2E_SA.email, E2E_SA.password);
       expect(ok.status()).toBeLessThan(300);
-
-      // Khoá của nơi kia KHÔNG được xoá theo: người dùng thật vào được không phải bằng chứng
-      // rằng kẻ đang dò đã thôi gõ.
+      // Còn bước TOTP (cài hoặc nhập mã) nên CHƯA xoá bộ đếm theo tài khoản (SEC-02).
+      expect(userColumn(E2E_SA.email, 'failed_attempts')).toBe('5');
+      // Khoá của nơi kia vẫn nguyên.
       expect(lockRowCount()).toBe(1);
     } finally {
       await api.dispose();
     }
   });
 
-  /**
-   * VẾ ĐỐI CHỨNG: SA KHOÁ TAY vẫn chặn mọi nơi.
-   *
-   * Không có bài này thì một bản "bỏ hẳn mọi thứ chặn đăng nhập" cũng xanh hai bài trên — và
-   * cái nút Khoá tài khoản mà SA bấm khi nghi một tài khoản bị chiếm sẽ không làm gì cả. Đó
-   * đúng là lỗ đã phải vá ngày 09/09.
-   */
-  test('SA khoá tay thì chặn ở MỌI nơi, không liên quan tới bộ đếm theo IP', async () => {
+  test('SEC-02: đúng mật khẩu rồi đoán sai mã TOTP cũng bị đếm — đăng nhập lại bị chặn', async ({
+    page,
+  }) => {
+    const secret = await firstLogin(page, E2E_MEMBER);
+    await logout(page);
+    await clearMailbox();
+
+    const api = await rawClient();
+    try {
+      const first = await login(api, E2E_MEMBER.email, NEW_PASSWORD);
+      expect(first.status()).toBe(200);
+      const { csrfToken } = (await first.json()) as { csrfToken: string };
+
+      // Một mã chắc chắn sai: lệch mã thật một đơn vị.
+      const real = Number(await freshTotpCode(secret));
+      const wrong = String((real + 1) % 1_000_000).padStart(6, '0');
+      let last = await api.post('/api/v1/auth/login/totp', {
+        headers: { 'X-CSRF-Token': csrfToken },
+        data: { token: wrong },
+      });
+      for (let i = 1; i < 5; i += 1) {
+        last = await api.post('/api/v1/auth/login/totp', {
+          headers: { 'X-CSRF-Token': csrfToken },
+          data: { token: wrong },
+        });
+      }
+      expect(await codeOf(last)).toBe('SESSION_REVOKED');
+
+      // Bản cũ xoá bộ đếm khi mật khẩu đúng, nên vòng "đăng nhập → đoán 5 mã" lặp được mãi.
+      const again = await login(api, E2E_MEMBER.email, NEW_PASSWORD);
+      expect(again.status()).toBe(401);
+      expect(await codeOf(again)).toBe('ACCOUNT_LOCKED');
+
+      // Chủ tài khoản nhận thư, và thư nói đúng việc đã xảy ra.
+      const mails = await waitForMail('Đoán mật khẩu');
+      expect(mails[0].To.map((t) => t.Address)).toContain(E2E_MEMBER.email);
+    } finally {
+      await api.dispose();
+    }
+  });
+
+  test('SA khoá tay thì chặn ở MỌI nơi, không liên quan tới bộ đếm', async () => {
     const api = await rawClient();
     try {
       sql(`UPDATE users SET status = 'locked' WHERE email = '${E2E_SA.email}'`);
-      expect(lockRowCount()).toBe(0); // chưa gõ sai lần nào
+      expect(lockRowCount()).toBe(0);
 
-      const res = await login(api, E2E_SA.password);
+      const res = await login(api, E2E_SA.email, E2E_SA.password);
       expect(res.status()).toBe(401);
-      expect(((await res.json()) as { code?: string }).code).toBe('ACCOUNT_LOCKED');
+      expect(await codeOf(res)).toBe('ACCOUNT_LOCKED');
     } finally {
       await api.dispose();
     }
   });
 });
 
-/**
- * LÁ THƯ BÁO SA PHẢI NÓI ĐÚNG CHUYỆN VỪA XẢY RA.
- *
- * Từ 11/09 chạm ngưỡng KHÔNG còn khoá tài khoản, chỉ khoá nơi đang gõ. Lá thư cũ viết "vừa bị
- * khóa tạm thời" và "khóa tự mở sau thời gian cấu hình" — cả hai câu nay đều sai, và sai theo
- * hướng tệ nhất: SA đọc xong tưởng hệ thống đã tự xử lý nên không làm gì.
- *
- * Thư này giờ là thứ DUY NHẤT khiến một CON NGƯỜI nhìn thấy một lượt dò rải rác, nên nội dung
- * của nó là một phần của hàng rào, không phải chuyện chữ nghĩa.
- */
-test.describe('Thư báo SA khi một tài khoản bị dò', () => {
-  test('thư vẫn gửi, và KHÔNG được nói rằng tài khoản đã bị khoá', async () => {
+test.describe('Thư báo khi một tài khoản bị đoán mật khẩu', () => {
+  test('thư nói rõ tài khoản đang bị TẠM CHẶN và chỉ việc cần làm', async () => {
     await clearMailbox();
     const api = await rawClient();
     try {
-      for (let i = 0; i < 6; i += 1) await login(api, WRONG);
+      for (let i = 0; i < 5; i += 1) await login(api, E2E_SA.email, WRONG);
     } finally {
       await api.dispose();
     }
 
-    const mails = await waitForMail('Dò mật khẩu');
+    const mails = await waitForMail('Đoán mật khẩu');
     expect(mails.length).toBeGreaterThan(0);
-
     const body = await mailBody(mails[0].ID);
-    // Phải nói rõ tài khoản VẪN vào được từ chỗ khác — đó là lý do SA cần đọc thư này.
-    expect(body).toContain('VẪN ĐĂNG NHẬP ĐƯỢC');
-    // Và phải chỉ ra việc cần làm: khoá tay là thứ chặn được mọi nơi.
+    expect(body).toContain('TẠM CHẶN');
     expect(body).toContain('KHÓA TAY');
-    // Câu cũ, nay sai, không được còn ở đây.
-    expect(body).not.toContain('Khóa tự mở sau thời gian cấu hình');
+    // Câu của luật cũ (chỉ chặn theo nơi), nay sai, không được còn.
+    expect(body).not.toContain('VẪN ĐĂNG NHẬP ĐƯỢC');
   });
 });

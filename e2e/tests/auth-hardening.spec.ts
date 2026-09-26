@@ -278,13 +278,12 @@ test.describe('Dấu "đăng nhập lần cuối"', () => {
       expect(lastLoginAt()).toBe('');
 
       /*
-       * VẾ ĐỐI CHỨNG, và nó nằm ngay đây chứ không ở bài riêng: bộ đếm sai PHẢI đã bị xoá.
-       * Thiếu vế này thì một bản "dời cả hai việc xuống sau TOTP" cũng xanh — và khi đó một
-       * người gõ đúng mật khẩu ở lần thứ 5 sẽ vẫn còn nguyên 5 lượt sai trên hồ sơ.
+       * Bộ đếm theo tài khoản CHƯA được xoá khi còn cửa TOTP (SEC-02): xoá ở đây thì kẻ có mật
+       * khẩu lặp "đăng nhập → đoán mã" mãi mà không lên bậc chờ nào. Nó chỉ xoá khi vào trọn vẹn.
        */
-      expect(Number(sql(`SELECT failed_attempts FROM users WHERE email = '${E2E_SA.email}'`))).toBe(
-        0,
-      );
+      const failedAttempts = () =>
+        Number(sql(`SELECT failed_attempts FROM users WHERE email = '${E2E_SA.email}'`));
+      expect(failedAttempts()).toBe(3);
 
       const step2 = await api.post('/api/v1/auth/login/totp', {
         headers: { 'X-CSRF-Token': body.csrfToken },
@@ -294,8 +293,9 @@ test.describe('Dấu "đăng nhập lần cuối"', () => {
         200,
       );
 
-      // Giờ mới thật sự vào được → giờ mới được đóng dấu.
+      // Giờ mới thật sự vào được → giờ mới được đóng dấu, và bộ đếm mới được xoá.
       expect(lastLoginAt()).not.toBe('');
+      expect(failedAttempts()).toBe(0);
     } finally {
       await api.dispose();
     }

@@ -64,8 +64,8 @@ Sổ thay cho `CAN-XAC-NHAN.md` (đã xoá ngày 27/09/2026, còn trong lịch s
 
 - Production seed **2 SA**: `sa@pmh.com.vn` và `caothuan@pmh.com.vn`. Mật khẩu tạm sinh ngẫu nhiên,
   in ra đúng một lần. Admin và member tạo qua giao diện.
-- Sai mật khẩu nhiều lần vào một tài khoản (từ bất kỳ IP nào): **chậm dần**. Sau 5 lần sai phải
-  chờ 1 phút, sau đó 5, 15 rồi 60 phút. Chủ tài khoản và SA nhận mail. Không khoá cứng, để kẻ xấu
+- Sai mật khẩu nhiều lần vào một tài khoản (từ bất kỳ IP nào): **chậm dần**. Cứ mỗi 5 lần sai phải
+  chờ 5, rồi 15, 30, 60 phút (bậc cuối lặp lại). Sai mã TOTP lúc đăng nhập cũng tính. Chủ tài khoản và SA nhận mail. Không khoá cứng, để kẻ xấu
   không cố ý khoá được tài khoản của người khác. Các ngưỡng nằm trong `system_config`.
 
 ### Q-07 · Master key: làm công cụ rewrap TRƯỚC go-live

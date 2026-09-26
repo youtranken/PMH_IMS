@@ -58,7 +58,7 @@ xem tận mắt lần thứ hai.
   - **Kiểm:** test đơn vị "cookie ≠ mọi giá trị trong audit_log"; E2E "đặt cookie bằng objectId lấy
     từ audit → 401".
 
-- [ ] **SEC-02 · Dò được mã TOTP lúc đăng nhập** ✔ đã tự kiểm
+- [x] **SEC-02 · Dò được mã TOTP lúc đăng nhập** ✔ đã tự kiểm
   - **Vấn đề:**
     - Mỗi lần mật khẩu đúng, `login()` xoá cả hai bộ đếm sai (`auth.service.ts:254,262`) và cấp phiên
       chờ mới với bộ đếm bằng 0.
@@ -72,7 +72,7 @@ xem tận mắt lần thứ hai.
   - **Kiểm:** test "mật khẩu đúng không reset bộ đếm TOTP"; test "sai TOTP N lần → khoá + mail
     cảnh báo".
 
-- [ ] **SEC-03 · Khoá tài khoản chỉ theo cặp (tài khoản, IP)**
+- [x] **SEC-03 · Khoá tài khoản chỉ theo cặp (tài khoản, IP)**
   - **Vấn đề:**
     - `users.locked_until` có được ghi nhưng `login()` không đọc để chặn.
     - `LoginRateGuard` đếm trong bộ nhớ theo IP.
@@ -492,7 +492,7 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
   - Gỡ `ispSource` khỏi registry nhắc hạn (`software-expiry-sources.ts:58`) và bỏ gia hạn ISP.
   - Trạng thái `terminated` hiện là "Thanh lý", ghi ngày và người thanh lý.
   - Cột `end_date` giữ trong DB (migration chỉ tiến) nhưng không còn trên form hay màn.
-- [ ] **DOM-05 · Đăng nhập sai: chậm dần theo tài khoản** (Q-06). Gộp với SEC-03.
+- [x] **DOM-05 · Đăng nhập sai: chậm dần theo tài khoản** (Q-06). Gộp với SEC-03.
 
 ### P1
 
