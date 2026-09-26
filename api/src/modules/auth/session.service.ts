@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
 import { and, eq, isNull, lt, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
@@ -23,9 +23,29 @@ export interface SessionRecord {
   revokedAt: Date | null;
 }
 
+/** Phiên vừa tạo: kèm token thô để đặt vào cookie. Chỉ tồn tại ở đúng lượt tạo này. */
+export interface CreatedSession extends SessionRecord {
+  token: string;
+}
+
+/** Dòng hiển thị ở màn quản trị phiên — cố ý không có csrfToken hay bản băm token. */
+export interface SessionSummary {
+  id: string;
+  ip: string | null;
+  userAgent: string | null;
+  createdAt: Date;
+  lastSeenAt: Date;
+}
+
+export function hashSessionToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
+
 /**
- * Phiên server-side (AD-8). Cookie chỉ mang id; mọi quyết định sống/chết đọc từ DB
- * để SA đá phiên là chết NGAY, không chờ token hết hạn.
+ * Phiên server-side (AD-8). Mọi quyết định sống/chết đọc từ DB để SA đá phiên là chết NGAY.
+ *
+ * Cookie mang một token ngẫu nhiên, DB chỉ giữ SHA-256 của nó (SEC-01). `id` là định danh nội
+ * bộ, xuất hiện trong audit và ở màn quản trị, nên không bao giờ được dùng để tra phiên từ cookie.
  */
 @Injectable()
 export class SessionService implements OnModuleInit {
@@ -57,23 +77,36 @@ export class SessionService implements OnModuleInit {
       absoluteHours: number;
       totpPending: boolean;
     },
-  ): Promise<SessionRecord> {
+  ): Promise<CreatedSession> {
+    const token = randomBytes(32).toString('base64url');
     const rows = await tx
       .insert(sessionsTable)
       .values({
         userId: params.userId,
         csrfToken: randomBytes(32).toString('hex'),
+        tokenHash: hashSessionToken(token),
         ip: params.ip,
         userAgent: params.userAgent,
         totpPending: params.totpPending,
         absoluteExpiresAt: new Date(Date.now() + params.absoluteHours * 3_600_000),
       })
       .returning();
-    return rows[0];
+    return { ...rows[0], token };
   }
 
+  /** Tra theo id nội bộ — chỉ cho code phía server đã biết phiên nào (không dùng cho cookie). */
   async find(id: string): Promise<SessionRecord | null> {
     const rows = await this.db.select().from(sessionsTable).where(eq(sessionsTable.id, id));
+    return rows[0] ?? null;
+  }
+
+  /** Tra theo token trong cookie. */
+  async findByToken(token: string): Promise<SessionRecord | null> {
+    if (!token) return null;
+    const rows = await this.db
+      .select()
+      .from(sessionsTable)
+      .where(eq(sessionsTable.tokenHash, hashSessionToken(token)));
     return rows[0] ?? null;
   }
 
@@ -208,12 +241,17 @@ export class SessionService implements OnModuleInit {
   }
 
   /** Danh sách phiên đang mở của một user — màn SA quản trị phiên (story 1.4). */
-  async listActive(userId: string): Promise<SessionRecord[]> {
-    const rows = await this.db
-      .select()
+  async listActive(userId: string): Promise<SessionSummary[]> {
+    return this.db
+      .select({
+        id: sessionsTable.id,
+        ip: sessionsTable.ip,
+        userAgent: sessionsTable.userAgent,
+        createdAt: sessionsTable.createdAt,
+        lastSeenAt: sessionsTable.lastSeenAt,
+      })
       .from(sessionsTable)
       .where(and(eq(sessionsTable.userId, userId), isNull(sessionsTable.revokedAt)));
-    return rows;
   }
 
   /**

@@ -1,5 +1,15 @@
 import { expect, test } from '@playwright/test';
-import { APP_ORIGIN, E2E_MEMBER, NEW_PASSWORD, fillLogin, firstLogin, freshTotpCode, logout, resetUsers } from './helpers';
+import {
+  APP_ORIGIN,
+  E2E_MEMBER,
+  NEW_PASSWORD,
+  fillLogin,
+  firstLogin,
+  freshTotpCode,
+  logout,
+  resetUsers,
+  sql,
+} from './helpers';
 
 test.beforeEach(() => resetUsers());
 
@@ -32,6 +42,33 @@ test.describe('Hàng rào an ninh', () => {
     // Phải bị chặn vì tài khoản ĐÃ enroll — không được cấp phiên đã xác thực qua đường này.
     expect(response.status()).toBe(400);
     expect(await response.json()).toMatchObject({ code: 'TOTP_ALREADY_ENROLLED' });
+  });
+
+  test('mã phiên đọc được trong nhật ký audit không dùng làm cookie được (SEC-01)', async ({
+    page,
+    request,
+  }) => {
+    await firstLogin(page, E2E_MEMBER);
+    const sessionIdInAudit = sql(
+      `SELECT object_id FROM audit_log WHERE action = 'auth.login.ok' ` +
+        `AND actor = '${E2E_MEMBER.email}' ORDER BY created_at DESC LIMIT 1`,
+    ).trim();
+    expect(sessionIdInAudit).toMatch(/^[0-9a-f-]{36}$/);
+
+    const cookies = await page.context().cookies();
+    const real = cookies.find((c) => c.name === 'ims_session');
+    expect(real?.value).toBeTruthy();
+    expect(real?.value).not.toBe(sessionIdInAudit);
+
+    const forged = await request.get('/api/v1/auth/me', {
+      headers: { Cookie: `ims_session=${sessionIdInAudit}` },
+    });
+    expect(forged.status()).toBe(401);
+
+    const genuine = await request.get('/api/v1/auth/me', {
+      headers: { Cookie: `ims_session=${real!.value}` },
+    });
+    expect(genuine.status()).toBe(200);
   });
 
   test('member không mở được trang nội bộ /dev/components', async ({ page }) => {

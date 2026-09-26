@@ -19,7 +19,7 @@ import { isLocked, lockRemainingSeconds } from '../../common/lockout';
 import { PasswordService } from './password.service';
 import { checkPasswordStrength } from './password-policy';
 import { canEnrollWithoutPassword } from './session-policy';
-import { SessionService, type SessionRecord } from './session.service';
+import { SessionService, type CreatedSession, type SessionRecord } from './session.service';
 import { TotpService } from './totp.service';
 import { KnownDeviceService } from './known-device.service';
 import { LoginFailureService } from './login-failure.service';
@@ -33,9 +33,9 @@ export interface LoginContext {
 }
 
 export type LoginOutcome =
-  | { status: 'authenticated'; session: SessionRecord; mustChangePassword: boolean }
-  | { status: 'totp-required'; session: SessionRecord }
-  | { status: 'totp-enroll-required'; session: SessionRecord };
+  | { status: 'authenticated'; session: CreatedSession; mustChangePassword: boolean }
+  | { status: 'totp-required'; session: CreatedSession }
+  | { status: 'totp-enroll-required'; session: CreatedSession };
 
 /**
  * Luồng đăng nhập (NFR-01, AD-8). Mọi ghi đi trong transaction tường minh (AD-5),
@@ -274,7 +274,7 @@ export class AuthService {
     session: SessionRecord,
     token: string,
     ctx: LoginContext,
-  ): Promise<{ session: SessionRecord; mustChangePassword: boolean }> {
+  ): Promise<{ session: CreatedSession; mustChangePassword: boolean }> {
     /*
      * CHỈ nhận phiên ĐANG CHỜ mã. Bản trước không kiểm gì cả.
      *
@@ -555,7 +555,7 @@ export class AuthService {
     session: SessionRecord,
     token: string,
     ctx: LoginContext,
-  ): Promise<{ session: SessionRecord }> {
+  ): Promise<{ session: SessionRecord; newToken: string | null }> {
     const user = await this.requireUser(session.userId);
     // Endpoint này CẤP PHIÊN ĐÃ XÁC THỰC, nên nó phải chặt bằng đúng bước 2 của đăng nhập:
     //  - Đã enroll rồi thì không được vào đây nữa. Nếu không, kẻ có mật khẩu + một mã đã dùng
@@ -616,7 +616,7 @@ export class AuthService {
         objectType: 'user',
         objectId: user.id,
       });
-      if (!session.totpPending) return session;
+      if (!session.totpPending) return { session, newToken: null };
 
       await this.sessions.revokeWithin(tx, session.id, 'totp-enroll-regenerate');
       const created = await this.sessions.createWithin(tx, {
@@ -645,10 +645,10 @@ export class AuthService {
         objectId: created.id,
         detail: { viaTotpEnroll: true },
       });
-      return created;
+      return { session: created, newToken: created.token };
     });
 
-    return { session: fresh };
+    return fresh;
   }
 
   /**

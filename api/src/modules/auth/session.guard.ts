@@ -37,10 +37,10 @@ export class SessionGuard implements CanActivate {
     if (isPublic) return true;
 
     const request = context.switchToHttp().getRequest<AuthedRequest>();
-    const sessionId = (request.cookies as Record<string, string> | undefined)?.[SESSION_COOKIE];
-    if (!sessionId) throw unauthorized('SESSION_MISSING', 'Chưa đăng nhập.');
+    const token = (request.cookies as Record<string, string> | undefined)?.[SESSION_COOKIE];
+    if (!token) throw unauthorized('SESSION_MISSING', 'Chưa đăng nhập.');
 
-    const session = await this.sessions.find(sessionId);
+    const session = await this.sessions.findByToken(token);
     if (!session) throw unauthorized('SESSION_MISSING', 'Phiên không tồn tại. Đăng nhập lại.');
 
     const idleMinutes = await this.config.getNumber('sessionIdleMinutes');

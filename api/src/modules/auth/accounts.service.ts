@@ -17,7 +17,7 @@ import { OutboxService } from "../outbox/outbox.service";
 import { UsersService, type UserSortKey } from "../users/users.service";
 import type { UserRecord } from "../users/users.types";
 import { PasswordService } from "./password.service";
-import { SessionService, type SessionRecord } from "./session.service";
+import { SessionService, type SessionSummary } from "./session.service";
 import type { UserRole } from "./types";
 
 export interface ActorRef {
@@ -340,7 +340,7 @@ export class AccountsService {
     });
   }
 
-  listSessions(userId: string): Promise<SessionRecord[]> {
+  listSessions(userId: string): Promise<SessionSummary[]> {
     return this.sessions.listActive(userId);
   }
 

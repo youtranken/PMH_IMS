@@ -42,7 +42,7 @@ xem tận mắt lần thứ hai.
 
 ### P0
 
-- [ ] **SEC-01 · Admin chiếm được phiên đăng nhập của SA** ✔ đã tự kiểm
+- [x] **SEC-01 · Admin chiếm được phiên đăng nhập của SA** ✔ đã tự kiểm
   - **Vấn đề:**
     - Cookie `ims_session` chính là `sessions.id` (`api/src/modules/auth/cookie.ts:21`).
     - Mã này bị ghi nguyên văn vào `audit_log.object_id` ở `auth.service.ts:230, 402, 645, 768`.
