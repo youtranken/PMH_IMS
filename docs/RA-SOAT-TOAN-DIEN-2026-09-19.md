@@ -892,10 +892,44 @@ cũng mang. Index trên `lower(serial)` cũng không phục vụ `ORDER BY seria
 
 #### Cột sắp xếp được nhưng thiếu index
 
-- [ ] **`device`** — `(name, id)` · `(assigned_to, id)` · `(serial, id)` · `(warranty_end, id)` *(bản không partial; giữ cả bản partial cho màn Sắp hết hạn)*
-- [ ] **`software`** — `(name, id)` · `(seat_total, id)` · `(start_date, id)` · `(status, id)` · `(end_date, id)` *(không partial)*
-- [ ] **`service_account`** — `(name, id)` · `(status, id)` · `(kind, id)` *(không partial)*
-- [ ] **`isp_line`** — `(hotline, id)` · `(contract_no, id)` · `(status, id)` · `(end_date, id)` *(không partial)*
+- [x] **`device`** — 5 chỉ mục `(name, code)` · `(serial, code)` · `(assigned_to, code)` · `(status, code)` · `(warranty_end, code)` — **ĐÃ LÀM 26/09** (`0058`). Giữ nguyên cả `device_warranty_idx` partial cho màn Sắp hết hạn
+- [x] **`software`** — 6 chỉ mục: thêm `(kind, code)` mà bảng cũ bỏ sót — **ĐÃ LÀM 26/09**
+- [x] **`service_account`** — 3 chỉ mục — **ĐÃ LÀM 26/09**
+- [x] **`isp_line`** — 5 chỉ mục: thêm `(provider, code)` mà bảng cũ bỏ sót — **ĐÃ LÀM 26/09**
+
+> **BA CHỖ BẢNG TRÊN GHI SAI, và cả ba chỉ lộ ra khi đọc `EXPLAIN` chứ không khi đọc code.**
+>
+> **(1) Khoá chốt hạ là `code`, KHÔNG phải `id`.** Cả bốn service viết `[primary, asc(code)]`.
+> Dựng `(name, id)` theo đúng chữ của bảng trên là dựng 16 chỉ mục mà planner không bao giờ
+> chọn — đúng cái bệnh mà chính §8.8 mở đầu bằng cách cảnh báo ("đã thêm index" ≠ "câu truy vấn
+> CÓ DÙNG index đó"). Nếu lượt này làm theo sổ, nó sẽ đóng 16 ô, chạy sạch mọi cổng, và không
+> sửa được gì.
+>
+> **(2) Hướng của khoá chốt hạ phải đi theo hướng chính — và đây là phần đắt nhất.** Nếp cũ
+> chốt hạ CỐ ĐỊNH `asc`, nên sắp giảm sinh ra `ORDER BY name DESC, code ASC`. btree chỉ quét
+> xuôi `(ASC,ASC)` và ngược `(DESC,DESC)`, nên hình dạng trộn hướng buộc Postgres chồng thêm
+> `Incremental Sort`. Đo trên 200.003 hàng, trang 1, ca xấu nhất là cột ít giá trị khác nhau:
+>
+> | `ORDER BY` | Kế hoạch | Thời gian |
+> | --- | --- | ---: |
+> | `status DESC, code ASC` (nếp cũ) | Incremental Sort, đọc 50.001 hàng | **192,08 ms** |
+> | `status DESC, code DESC` (nếp mới) | Index Scan Backward, dừng ở 20 | **0,069 ms** |
+>
+> Chênh **2.783 lần** từ một dòng sửa. Luật đã gom về `orderByStable` trong `common/sorting.ts`
+> (AD-15) — bốn nơi gọi, một chỗ giữ lý do. Cách còn lại là dựng 38 chỉ mục thay vì 19.
+>
+> **(3) Có 19 cột sắp được, không phải 16.** Bảng trên bỏ sót `device.status`, `software.kind`,
+> `isp_line.provider`. Hai cột đầu có chỉ mục MỘT cột sẵn nên trông như đã phủ — nhưng một cột
+> thì Postgres vẫn phải Incremental Sort phần `code` còn lại; `isp_line.provider` thì không có
+> chỉ mục nào.
+>
+> **Đo được sau khi làm:** trang 1 sắp theo tên, 200k hàng: **41,7ms → 0,074ms** (Sort +
+> Parallel Seq Scan 2.671 buffer → Index Scan 8 buffer). **Giá phải trả, cũng đo:** 41 MB cho
+> năm chỉ mục của `device` ở 200k ⇒ ~205 MB ở 1 triệu thiết bị.
+>
+> **Một thứ chỉ mục KHÔNG chữa được, và nó vẫn là ô trống dưới đây:** trang sâu. `OFFSET 199980`
+> vẫn mất **132ms** dù chỉ mục hoàn hảo, vì `OFFSET` phải đi bộ qua 200k mục chỉ mục. Đó đúng là
+> việc của ô "keyset cho `‹` `›`".
 **`users` — cố ý BỎ QUA, không phải việc chưa làm.** Bảng này là danh sách nhân sự IT nội bộ, sẽ luôn dưới vài trăm dòng. Ghi ra để lượt rà sau không báo lại. *(Bỏ ô vuông ngày 23/09: một ô trống đọc như việc còn nợ, và nó đã bị đếm vào "còn bao nhiêu việc" ít nhất một lần.)*
 
 Kèm `id` làm cột thứ hai để thứ tự **ổn định** (hai hàng cùng `name` mà không có tie-breaker

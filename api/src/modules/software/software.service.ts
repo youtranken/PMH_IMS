@@ -11,7 +11,7 @@ import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
-import type { SortQuery } from '../../common/sorting';
+import { orderByStable, type SortQuery } from '../../common/sorting';
 import { conflictOnUnique, searchNormLike } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { ExpiryApiService } from '../expiry/expiry.api';
@@ -414,7 +414,8 @@ export const SOFTWARE_SORT_KEYS = [
 export type SoftwareSortKey = (typeof SOFTWARE_SORT_KEYS)[number];
 export const SOFTWARE_SORT_DEFAULT: SortQuery<SoftwareSortKey> = { key: 'code', dir: 'asc' };
 
-function softwareOrderBy(sort: SortQuery<SoftwareSortKey>): SQL[] {
+/** Mở ra cho `api/test/sort-index.spec.ts` đọc `EXPLAIN` của ĐÚNG câu này (0058). */
+export function softwareOrderBy(sort: SortQuery<SoftwareSortKey>): SQL[] {
   const column = {
     code: softwareTable.code,
     name: softwareTable.name,
@@ -424,10 +425,9 @@ function softwareOrderBy(sort: SortQuery<SoftwareSortKey>): SQL[] {
     endDate: softwareTable.endDate,
     status: softwareTable.status,
   }[sort.key];
-  const primary = sort.dir === 'desc' ? desc(column) : asc(column);
-  // Chốt hạ bằng `code`: thiếu nó thì hai hồ sơ cùng giá trị có thể đổi chỗ nhau giữa hai
-  // lần tải — sang trang 2 lại thấy đúng bản ghi vừa xem ở trang 1, hoặc mất hẳn một dòng.
-  return sort.key === 'code' ? [primary] : [primary, asc(softwareTable.code)];
+  // Xem `orderByStable` — khoá chốt hạ phải đi CÙNG HƯỚNG, nếu không chỉ mục (0058) vô dụng
+  // ở đúng một nửa số lượt sắp xếp.
+  return orderByStable(sort.dir, column, softwareTable.code);
 }
 
 function buildWhere(filter: SoftwareFilter): SQL | undefined {

@@ -4,13 +4,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, ilike, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
-import type { SortQuery } from '../../common/sorting';
+import { orderByStable, type SortQuery } from '../../common/sorting';
 import { conflictOnUnique, escapeLike, searchNormLike } from '../../common/sql';
 import { diffRecord, hasChanges } from '../../common/record-diff';
 import { AuditWriterService } from '../audit/audit-writer.service';
@@ -75,7 +75,7 @@ export class ServiceAccountService {
         .select()
         .from(serviceAccountTable)
         .where(where)
-        .orderBy(...orderBy(sort))
+        .orderBy(...serviceAccountOrderBy(sort))
         .limit(query.limit)
         .offset(pageOffset(query)),
       this.db.select({ value: count() }).from(serviceAccountTable).where(where),
@@ -389,17 +389,22 @@ function buildWhere(filter: ServiceAccountFilter): SQL | undefined {
   return parts.length === 0 ? undefined : and(...parts);
 }
 
-function orderBy(sort: SortQuery<ServiceAccountSortKey>): SQL[] {
+/**
+ * Mở ra cho `api/test/sort-index.spec.ts` đọc `EXPLAIN` của ĐÚNG câu này (0058).
+ *
+ * Đổi tên từ `orderBy` sang `serviceAccountOrderBy`: ba service kia đã mang tiền tố module,
+ * và một hàm tên `orderBy` xuất khẩu ra khỏi file thì nơi gọi không biết nó sắp bảng nào.
+ */
+export function serviceAccountOrderBy(sort: SortQuery<ServiceAccountSortKey>): SQL[] {
   const column = {
     code: serviceAccountTable.code,
     name: serviceAccountTable.name,
     kind: serviceAccountTable.kind,
     status: serviceAccountTable.status,
   }[sort.key];
-  const primary = sort.dir === 'desc' ? desc(column) : asc(column);
-  // Khóa phụ cố định: hai dòng cùng giá trị cột đang sắp thì thứ tự phải ỔN ĐỊNH giữa các
-  // trang, không thì sang trang 2 có dòng lặp lại và có dòng biến mất.
-  return [primary, asc(serviceAccountTable.code)];
+  // Xem `orderByStable`. Bản trước ở đây còn thiếu cả cái chốt `sort.key === 'code'` mà ba
+  // service kia có, nên sắp theo mã giảm dần sinh ra `ORDER BY code DESC, code ASC`.
+  return orderByStable(sort.dir, column, serviceAccountTable.code);
 }
 
 function toRecord(row: typeof serviceAccountTable.$inferSelect): ServiceAccountRecord {

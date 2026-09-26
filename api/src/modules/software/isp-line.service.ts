@@ -11,7 +11,7 @@ import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
-import type { SortQuery } from '../../common/sorting';
+import { orderByStable, type SortQuery } from '../../common/sorting';
 import { conflictOnUnique, searchNormLike } from '../../common/sql';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
 import { AuditWriterService } from '../audit/audit-writer.service';
@@ -485,7 +485,8 @@ export const ISP_SORT_KEYS = [
 export type IspSortKey = (typeof ISP_SORT_KEYS)[number];
 export const ISP_SORT_DEFAULT: SortQuery<IspSortKey> = { key: 'code', dir: 'asc' };
 
-function ispOrderBy(sort: SortQuery<IspSortKey>): SQL[] {
+/** Mở ra cho `api/test/sort-index.spec.ts` đọc `EXPLAIN` của ĐÚNG câu này (0058). */
+export function ispOrderBy(sort: SortQuery<IspSortKey>): SQL[] {
   const column = {
     code: ispLineTable.code,
     provider: ispLineTable.provider,
@@ -494,10 +495,8 @@ function ispOrderBy(sort: SortQuery<IspSortKey>): SQL[] {
     endDate: ispLineTable.endDate,
     status: ispLineTable.status,
   }[sort.key];
-  const primary = sort.dir === 'desc' ? desc(column) : asc(column);
-  // Chốt hạ bằng `code`: thiếu nó thì hai đường cùng trạng thái/hạn có thể đổi chỗ nhau
-  // giữa hai lần tải — sang trang 2 lại thấy đúng dòng vừa xem ở trang 1, hoặc mất hẳn 1 dòng.
-  return sort.key === 'code' ? [primary] : [primary, asc(ispLineTable.code)];
+  // Xem `orderByStable` — khoá chốt hạ phải đi CÙNG HƯỚNG với cột đang sắp (0058).
+  return orderByStable(sort.dir, column, ispLineTable.code);
 }
 
 function buildWhere(filter: IspFilter): SQL | undefined {

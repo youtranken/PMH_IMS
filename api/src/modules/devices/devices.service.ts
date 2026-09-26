@@ -14,7 +14,7 @@ import { DeviceRetirementRegistry } from '../../common/device-retirement.registr
 import { requireCas } from '../../common/cas';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
-import type { SortQuery } from '../../common/sorting';
+import { orderByStable, type SortQuery } from '../../common/sorting';
 import { conflictOnUnique, searchNormLike } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
@@ -645,7 +645,8 @@ export const DEVICE_SORT_KEYS = [
 export type DeviceSortKey = (typeof DEVICE_SORT_KEYS)[number];
 export const DEVICE_SORT_DEFAULT: SortQuery<DeviceSortKey> = { key: 'code', dir: 'asc' };
 
-function deviceOrderBy(sort: SortQuery<DeviceSortKey>): SQL[] {
+/** Mở ra cho `api/test/sort-index.spec.ts` đọc `EXPLAIN` của ĐÚNG câu này (0058). */
+export function deviceOrderBy(sort: SortQuery<DeviceSortKey>): SQL[] {
   const column = {
     code: deviceTable.code,
     name: deviceTable.name,
@@ -654,10 +655,9 @@ function deviceOrderBy(sort: SortQuery<DeviceSortKey>): SQL[] {
     status: deviceTable.status,
     warrantyEnd: deviceTable.warrantyEnd,
   }[sort.key];
-  const primary = sort.dir === 'desc' ? desc(column) : asc(column);
-  // Chốt hạ bằng `code`: thiếu nó thì hai máy cùng trạng thái có thể đổi chỗ nhau giữa hai
-  // lần tải — sang trang 2 lại thấy đúng bản ghi vừa xem ở trang 1, hoặc mất hẳn một dòng.
-  return sort.key === 'code' ? [primary] : [primary, asc(deviceTable.code)];
+  // Chốt hạ bằng `code`, CÙNG HƯỚNG với cột đang sắp — `orderByStable` giữ luật đó một chỗ,
+  // và chú thích ở đó nói vì sao hướng phải đi theo nhau (không thì mất chỉ mục, 0058).
+  return orderByStable(sort.dir, column, deviceTable.code);
 }
 
 function buildWhere(filter: DeviceFilter): SQL | undefined {
