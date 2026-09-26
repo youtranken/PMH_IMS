@@ -454,7 +454,7 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
   - Ghi chú: `shred` vô dụng trên SSD/VM; diễn tập xong thì xoá hẳn VM.
 - [ ] **DOC-02 (P0) · Kế hoạch ngày go-live:** giờ bắt đầu, ai làm gì, điểm quyết định rollback,
   thông báo người dùng.
-- [ ] **DOC-03 (P1) · Cập nhật `CLAUDE.md`:**
+- [x] **DOC-03 (P1) · Cập nhật `CLAUDE.md`:**
   - Bỏ số liệu trạng thái đã sai ("7 epic done, 40 migration", thực tế epic 4 còn `in-progress` và
     có 59 migration); trỏ sang `sprint-status.yaml`.
   - Thêm luật chú thích (mục 9) và luật migration sau go-live (mục 3).
