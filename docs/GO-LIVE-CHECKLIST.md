@@ -125,7 +125,7 @@ xem tận mắt lần thứ hai.
 - [ ] **SEC-11 · Kiểm Origin bị bỏ qua khi thiếu header** (`csrf.guard.ts:66`), mở khả năng login-CSRF.
 - [ ] **SEC-12 · Member đính file được vào mọi đối tượng chỉ có quyền đọc**
   (`files.controller.ts`, `assertCanRead`). Cần chủ dự án xác nhận đây là chủ ý.
-- [ ] **SEC-13 · Quyền theo nhà mạng gắn theo tên** (`isp_provider` dùng `provider.name`). Đổi tên thì
+- [x] **SEC-13 · Quyền theo nhà mạng gắn theo tên** (`isp_provider` dùng `provider.name`). Đổi tên thì
   mất quyền, tên cũ dùng lại thì thừa kế sai người.
 - [ ] **SEC-14 · Mật khẩu tạm không tự ẩn** (`accounts-screen.tsx:544-576`).
 
@@ -535,7 +535,7 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
 
 ### P1
 
-- [ ] **OLD-DB-01 (CAO) · Không có FK cho `department`, `isp_provider`, `service_port`.** Không có
+- [x] **OLD-DB-01 (CAO) · Không có FK cho `department`, `isp_provider`, `service_port`.** Không có
   `REFERENCES` nào; xoá danh mục luôn thành công và để lại chuỗi mồ côi. Cần một story riêng, kèm
   quyết định sản phẩm ở mục 11.
 - [x] **OLD-DB-02 · `device_port` thiếu UNIQUE `(connected_device_id, connected_port)`**, trái AD-14.
