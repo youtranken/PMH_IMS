@@ -1,8 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useApiMutation } from '@/lib/api';
-import { LOGIN_PATH, type Me } from '@/lib/me';
+import { type Me } from '@/lib/me';
+import { afterLogout } from '@/lib/after-logout';
+import { ErrorBoundary } from '@/ui/error-boundary';
 import { visibleGroups } from '@/shell/app-nav';
 import { NavIcon } from '@/ui/nav-icon';
 import { CommandPalette, openCommandPalette } from '@/ui/command-palette';
@@ -66,6 +69,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [drawerOpen]);
 
+  const queryClient = useQueryClient();
   const logout = useApiMutation<undefined, { status: string }>('/api/v1/auth/logout', {
     csrfToken: me.csrfToken,
   });
@@ -161,7 +165,11 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
               className="btn sm"
               disabled={logout.isPending}
               onClick={() => {
-                logout.mutate(undefined, { onSuccess: () => navigate(LOGIN_PATH) });
+                // onSettled chứ không onSuccess: đăng xuất lỗi (mất mạng, lệch CSRF) cũng không được
+                // để lại dữ liệu người trước trên máy dùng chung (FE-02).
+                logout.mutate(undefined, {
+                  onSettled: () => afterLogout(queryClient, navigate),
+                });
               }}
             >
               {t('common.logout')}
@@ -253,7 +261,9 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
             tabIndex={-1}
             inert={narrow && drawerOpen}
           >
-            {children}
+            {/* Một màn hỏng lúc render chỉ thay chính nó bằng khối báo lỗi; sidebar vẫn dùng được,
+                và bấm sang màn khác (pathname đổi) là thoát (FE-01). */}
+            <ErrorBoundary resetKey={pathname}>{children}</ErrorBoundary>
           </main>
         </div>
       </div>

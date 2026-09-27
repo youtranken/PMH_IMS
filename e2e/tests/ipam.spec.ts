@@ -272,7 +272,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
       data: { cidr: `172.16.${octet}.0/24`, name: `LAN trùng E2E ${stamp}` },
     });
     expect(second.status()).toBe(409);
-    expect(await second.json()).toMatchObject({ code: 'SUBNET_TAKEN' });
+    expect(await second.json()).toMatchObject({ code: 'SUBNET_OVERLAP' });
   });
 
   /**

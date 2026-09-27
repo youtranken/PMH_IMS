@@ -19,6 +19,12 @@ export default {
     notFoundTitle: 'Không tìm thấy trang',
     notFoundHint: 'Trang bạn tìm không tồn tại, hoặc thuộc phần chưa mở trong bản này.',
     backHome: 'Về trang chủ',
+    /* Khối thay cho một màn vừa hỏng lúc hiển thị (ErrorBoundary). Nói rõ phần còn lại vẫn
+       dùng được, và việc người dùng làm được ngay. */
+    screenErrorTitle: 'Màn này gặp lỗi khi hiển thị',
+    screenErrorHint:
+      'Các phần khác của hệ thống vẫn dùng bình thường. Tải lại trang để thử lại; nếu vẫn lỗi, báo bộ phận IT kèm đường dẫn đang mở.',
+    reload: 'Tải lại trang',
     confirmTitle: 'Xác nhận',
     confirmOk: 'Đồng ý',
     /* Câu hỏi khi Esc / bấm nền / ✕ trên một hộp đang có dữ liệu gõ dở (`Dialog guardUnsaved`).

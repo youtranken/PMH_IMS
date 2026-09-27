@@ -212,7 +212,7 @@ Kết quả: 0 lỗi, đủ 37 bảng, chạy lần 2 áp 0 file. **Không squas
 
 - [x] **DB-01 · `ims_app` sửa và xoá được bảng `_migrations`.** Tạo `0059_…sql` với
   `REVOKE ALL ON _migrations FROM ims_app;` và thêm một ca vào `api/test/app-role-privileges.spec.ts`.
-- [ ] **DB-02 · Dải IP chồng được lên nhau.** ✔ đã tự kiểm: không có EXCLUDE ở migration nào,
+- [x] **DB-02 · Dải IP chồng được lên nhau.** ✔ đã tự kiểm: không có EXCLUDE ở migration nào,
   `subnet.service.ts` cũng không kiểm.
   - **Hậu quả:** một IP có hai chủ; NAT gắn ngẫu nhiên vào một trong hai (`nat-rule.service.ts:611`,
     `rows[0]` không có ORDER BY).
@@ -245,11 +245,11 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
 
 ### P0
 
-- [ ] **FE-01 · Cả app không có ErrorBoundary.** Một màn lỗi render là trắng toàn trang.
+- [x] **FE-01 · Cả app không có ErrorBoundary.** Một màn lỗi render là trắng toàn trang.
   - Gắn `web/src/ui/chunk-error-boundary.tsx` (đã viết sẵn nhưng chưa dùng ở đâu).
   - Bọc `<Routes>` trong `AppShell` với `resetKeys={location.pathname}`, và bọc thêm ở gốc
     `main.tsx`.
-- [ ] **FE-02 · Đăng xuất không xoá cache react-query** (`shell/app-shell.tsx:69-71,164`). Người dùng
+- [x] **FE-02 · Đăng xuất không xoá cache react-query** (`shell/app-shell.tsx:69-71,164`). Người dùng
   kế tiếp trên cùng máy thấy dữ liệu người trước. Gọi `queryClient.clear()` trong `onSettled`.
 
 ### P1

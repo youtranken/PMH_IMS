@@ -7,5 +7,7 @@
       t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
     document.documentElement.dataset.theme = t;
-  } catch (e) {}
+  } catch {
+    // localStorage bị chặn (chế độ riêng tư, chính sách trình duyệt): giữ theme mặc định của CSS.
+  }
 })();

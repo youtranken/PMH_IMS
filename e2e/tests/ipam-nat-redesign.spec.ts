@@ -630,7 +630,8 @@ test.describe('Sổ NAT — lịch sử và giấy tờ', () => {
 
     const subnet = await page.request.post('/api/v1/ipam/subnets', {
       headers,
-      data: { cidr: '172.16.198.0/29', name: `LAN giấy tờ E2E ${stamp}` },
+      // Vùng 172.30 không bài nào khác dùng: dải chồng dải đang dùng bị từ chối (DB-02).
+      data: { cidr: '172.30.198.0/29', name: `LAN giấy tờ E2E ${stamp}` },
     });
     const subnetId = ((await subnet.json()) as { id: string }).id;
 
