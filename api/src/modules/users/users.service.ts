@@ -304,6 +304,25 @@ export class UsersService {
   }
 
   /**
+   * Đọc bộ đếm sai của tài khoản và GIỮ khoá hàng tới hết `tx`.
+   *
+   * Cửa cấp phiên phải kiểm lại bậc chờ ở đây chứ không tin lần đọc đầu `login()`: lần đó chạy
+   * ngoài transaction, nên một lượt sai song song có thể đẩy tài khoản lên bậc chờ trong lúc
+   * lượt đúng còn đang băm Argon2 (SEC-03, khe L8).
+   */
+  async lockLoginStateWithin(tx: Tx, userId: string): Promise<LockoutState> {
+    const rows = await tx
+      .select({
+        failedAttempts: usersTable.failedAttempts,
+        lockedUntil: usersTable.lockedUntil,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .for('update');
+    return rows[0] ?? { failedAttempts: 0, lockedUntil: null };
+  }
+
+  /**
    * Cộng MỘT lượt sai đăng nhập (mật khẩu hoặc TOTP) vào bộ đếm của tài khoản, trong `tx`.
    *
    * `SELECT ... FOR UPDATE` bắt các lượt song song xếp hàng ở hàng này, nên mỗi lượt đếm đúng

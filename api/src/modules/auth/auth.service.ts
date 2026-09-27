@@ -20,6 +20,7 @@ import {
   lockRemainingSeconds,
   parseBackoffSteps,
   type BackoffPolicy,
+  type LockoutState,
 } from '../../common/lockout';
 import { PasswordService } from './password.service';
 import { checkPasswordStrength } from './password-policy';
@@ -169,7 +170,10 @@ export class AuthService {
     const needsTotp = user.totpLoginRequired;
     const enrolled = user.totpEnrolledAt !== null;
 
-    const session = await this.db.transaction(async (tx) => {
+    type Granted = { blocked: LockoutState } | { session: CreatedSession };
+    const granted = await this.db.transaction(async (tx): Promise<Granted> => {
+      const current = await this.users.lockLoginStateWithin(tx, user.id);
+      if (isLocked(current, now)) return { blocked: current };
       const created = await this.sessions.createWithin(tx, {
         userId: user.id,
         ip: ctx.ip,
@@ -200,8 +204,11 @@ export class AuthService {
        */
       if (!needsTotp) await this.users.markLoginCompletedWithin(tx, user.id);
       await this.noticeNewDevice(tx, user, ctx);
-      return created;
+      return { session: created };
     });
+    // Kiểm lại dưới khoá hàng (L8): lượt sai song song vừa đẩy tài khoản lên bậc chờ.
+    if ('blocked' in granted) return this.rejectBackedOff(user, granted.blocked, now);
+    const { session } = granted;
 
     /*
      * Bộ đếm theo TÀI KHOẢN chỉ xoá khi đăng nhập TRỌN VẸN. Còn cửa TOTP thì chưa xoá: nếu xoá
@@ -804,6 +811,14 @@ export class AuthService {
   private async assertAccountNotBackedOff(user: UserCredentials, now: Date): Promise<void> {
     const state = { failedAttempts: user.failedAttempts, lockedUntil: user.lockedUntil };
     if (!isLocked(state, now)) return;
+    await this.rejectBackedOff(user, state, now);
+  }
+
+  private async rejectBackedOff(
+    user: UserCredentials,
+    state: LockoutState,
+    now: Date,
+  ): Promise<never> {
     const seconds = lockRemainingSeconds(state, now);
     await this.auditFailure(user, 'account-backoff');
     throw new UnauthorizedException({
