@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
@@ -18,6 +19,7 @@ import {
   validateAssignmentTerms,
   type AssignmentTerms,
   type LicenseModel,
+  type SoftwareKind,
 } from './software-rules';
 
 export interface AssignmentRow extends AssignmentTerms {
@@ -272,7 +274,12 @@ export class LicenseAssignmentService {
        * Khóa đúng chỗ nhưng đọc sai nguồn thì cái khóa chỉ còn là nghi lễ.
        */
       const locked = await tx
-        .select({ seatTotal: softwareTable.seatTotal })
+        .select({
+          seatTotal: softwareTable.seatTotal,
+          kind: softwareTable.kind,
+          licenseModel: softwareTable.licenseModel,
+          status: softwareTable.status,
+        })
         .from(softwareTable)
         .where(eq(softwareTable.id, softwareId))
         .for('update');
@@ -289,6 +296,23 @@ export class LicenseAssignmentService {
           message: 'Hồ sơ phần mềm vừa bị xóa, không gán được.',
         });
       }
+      /*
+       * Loại, kỳ hạn và Thanh lý cũng đọc lại từ hàng đã khóa: kiểm ở đầu hàm dựa trên ảnh chụp
+       * ngoài transaction, và một lượt thanh lý hay đổi loại commit vào giữa sẽ lọt qua.
+       */
+      if (locked[0].status === 'retired') {
+        throw new ConflictException({
+          code: 'SOFTWARE_RETIRED',
+          message: 'Hồ sơ này đã thanh lý, không gán thêm máy được.',
+        });
+      }
+      if (!supportsSeats(locked[0].kind as SoftwareKind)) {
+        throw new BadRequestException({
+          code: 'NOT_A_LICENSE',
+          message: 'Chỉ hồ sơ loại License mới gán được vào máy.',
+        });
+      }
+      assertTerms(terms, locked[0].licenseModel as LicenseModel);
       const seatTotal = locked[0].seatTotal;
 
       const used = await this.usedWithin(tx, softwareId);

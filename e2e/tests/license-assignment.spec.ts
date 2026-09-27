@@ -173,6 +173,34 @@ test.describe('Gán license theo seat', () => {
     expect(await again.json()).toMatchObject({ code: 'ALREADY_ASSIGNED' });
   });
 
+  /** BE-09: sửa hồ sơ không được bỏ rơi ghế đang gán; hồ sơ đã thanh lý không nhận ghế mới. */
+  test('sửa hồ sơ đang có ghế bị chặn, gán vào hồ sơ đã thanh lý bị chặn', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    const licenseId = await createLicense(page, `LIC-E2E-GUARD-${stamp}`, 5);
+    const first = await createDevice(page, `PC-E2E-G1-${stamp}`);
+    const second = await createDevice(page, `PC-E2E-G2-${stamp}`);
+    expect((await assign(page, licenseId, first)).status()).toBe(201);
+    expect((await assign(page, licenseId, second)).status()).toBe(201);
+
+    const patch = async (id: string, data: Record<string, unknown>) =>
+      page.request.patch(`/api/v1/software/${id}`, {
+        headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+        data,
+      });
+    for (const data of [{ seatTotal: 1 }, { status: 'retired' }]) {
+      const res = await patch(licenseId, data);
+      expect(res.status()).toBe(409);
+      expect(await res.json()).toMatchObject({ code: 'SOFTWARE_SEATS_IN_USE' });
+    }
+
+    const retiredId = await createLicense(page, `LIC-E2E-RETIRED-${stamp}`, 5);
+    expect((await patch(retiredId, { status: 'retired' })).status()).toBe(200);
+    const blocked = await assign(page, retiredId, first);
+    expect(blocked.status()).toBe(409);
+    expect(await blocked.json()).toMatchObject({ code: 'SOFTWARE_RETIRED' });
+  });
+
   test('gỡ rồi gán lại cùng máy là hợp lệ (máy cài lại)', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);

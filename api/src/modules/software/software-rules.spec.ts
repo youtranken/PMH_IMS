@@ -1,6 +1,7 @@
 import {
   effectiveSoftwareStatus,
   requiresEndDate,
+  seatConflicts,
   supportsSeats,
   validateAssignmentTerms,
   validateSoftware,
@@ -229,5 +230,32 @@ describe('effectiveSoftwareStatus — DOM-03: hạn quyết trạng thái, ngư�
     ['retired', '2030-01-01', 'retired'],
   ] as const)('%s + hạn %s → %s', (status, endDate, expected) => {
     expect(effectiveSoftwareStatus(status, endDate, TODAY)).toBe(expected);
+  });
+});
+
+/**
+ * BE-09 — sửa hồ sơ không được bỏ rơi ghế đang gán: đổi loại, chuyển vĩnh viễn khi ghế còn
+ * hạn, hạ tổng seat dưới số đang dùng, hay thanh lý khi còn máy dùng đều để lại những dòng
+ * gán mà luật của chính hồ sơ không còn nhận.
+ */
+describe('seatConflicts — sửa hồ sơ khi đang có ghế gán', () => {
+  const lic = { kind: 'license', licenseModel: 'subscription', seatTotal: 10, status: 'active' } as const;
+  const busy = { used: 4, withEndDate: 2 };
+
+  it.each([
+    ['không đổi gì', lic, busy, 0],
+    ['đổi sang SSL khi còn ghế', { ...lic, kind: 'ssl' }, busy, 1],
+    ['đổi loại khi KHÔNG còn ghế', { ...lic, kind: 'ssl' }, { used: 0, withEndDate: 0 }, 0],
+    ['vĩnh viễn khi 2 ghế còn hạn', { ...lic, licenseModel: 'perpetual' }, busy, 1],
+    ['vĩnh viễn khi ghế không hạn', { ...lic, licenseModel: 'perpetual' }, { used: 4, withEndDate: 0 }, 0],
+    ['hạ seat xuống 3 khi dùng 4', { ...lic, seatTotal: 3 }, busy, 1],
+    ['hạ seat xuống đúng 4', { ...lic, seatTotal: 4 }, busy, 0],
+    ['bỏ trần seat', { ...lic, seatTotal: null }, busy, 0],
+    ['thanh lý khi còn ghế', { ...lic, status: 'retired' }, busy, 1],
+    ['thanh lý khi hết ghế', { ...lic, status: 'retired' }, { used: 0, withEndDate: 0 }, 0],
+  ] as const)('%s → %i lỗi', (_name, next, seats, count) => {
+    const errors = seatConflicts(next, seats);
+    expect(errors).toHaveLength(count);
+    for (const error of errors) expect(error).toMatch(/ghế/);
   });
 });

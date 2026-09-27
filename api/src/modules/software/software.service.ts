@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
@@ -22,6 +23,7 @@ import { isoDateInTz } from '../../common/today';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
 import {
   effectiveSoftwareStatus,
+  seatConflicts,
   validateSoftware,
   type LicenseModel,
   type SoftwareInputShape,
@@ -217,6 +219,7 @@ export class SoftwareService {
       // `prepare` tính lại trạng thái theo hạn từ ảnh chụp ngoài transaction: một lượt thanh
       // lý commit vào giữa sẽ bị tính đè thành "Đang dùng".
       await this.requireUnchangedWithin(tx, before);
+      await this.requireSeatsFitWithin(tx, before, values);
       const updated = await this.updateWithin(tx, id, values);
       await this.recordWithin(tx, actor, id, 'updated', changes);
       return updated;
@@ -453,6 +456,41 @@ export class SoftwareService {
       });
     }
     return rows[0];
+  }
+
+  /**
+   * Ghế đang gán phải còn hợp với hồ sơ SAU khi sửa — xem `seatConflicts`.
+   *
+   * Đếm trong `tx`, sau khi hàng `software` đã bị khóa `FOR UPDATE`: lượt gán ghế cũng khóa
+   * đúng hàng đó trước khi chèn, nên không ghế nào chen vào giữa lúc đếm và lúc ghi.
+   */
+  private async requireSeatsFitWithin(
+    tx: Tx,
+    before: typeof softwareTable.$inferSelect,
+    values: Record<string, unknown>,
+  ): Promise<void> {
+    const rows = await tx
+      .select({ used: count(), withEndDate: count(licenseAssignmentTable.endDate) })
+      .from(licenseAssignmentTable)
+      .where(
+        and(
+          eq(licenseAssignmentTable.softwareId, before.id),
+          isNull(licenseAssignmentTable.releasedAt),
+        ),
+      );
+    const effective = effectiveOf(values);
+    const errors = seatConflicts(
+      {
+        kind: effective<SoftwareKind>('kind', before.kind as SoftwareKind),
+        licenseModel: effective<LicenseModel>('licenseModel', before.licenseModel as LicenseModel),
+        seatTotal: effective<number | null>('seatTotal', before.seatTotal),
+        status: effective<SoftwareStatus>('status', before.status as SoftwareStatus),
+      },
+      { used: Number(rows[0]?.used ?? 0), withEndDate: Number(rows[0]?.withEndDate ?? 0) },
+    );
+    if (errors.length > 0) {
+      throw new ConflictException({ code: 'SOFTWARE_SEATS_IN_USE', message: errors.join(' ') });
+    }
   }
 
   /** Khóa hàng tới hết transaction và đòi nó còn đúng là hàng `seen` — xem `requireUnchangedSince`. */
