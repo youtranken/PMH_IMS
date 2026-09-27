@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import type { Page } from '../../common/pagination';
 import type { Tx } from '../../common/tx';
 import { DevicesService } from './devices.service';
 import type { DeviceListItem } from './devices.types';
@@ -103,8 +104,12 @@ export class DevicesApiService {
    * đúng cái tên mà module đó vốn dùng — thiết bị là `retired`.
    */
   async listRetired(): Promise<DeviceListItem[]> {
-    const page = await this.devices.list({ page: 1, limit: 500 }, { status: 'retired' });
-    return page.items;
+    return (await this.retiredPage()).items;
+  }
+
+  /** Như `listRetired`, kèm `total` thật để kho biết mình có bị cắt ở trần 500 dòng không. */
+  retiredPage(): Promise<Page<DeviceListItem>> {
+    return this.devices.list({ page: 1, limit: 500 }, { status: 'retired' });
   }
 
   /** Gợi ý cho ô chọn thiết bị ở màn khác (port map, IP, secret). */

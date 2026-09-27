@@ -1224,6 +1224,8 @@ export default {
     done: 'Đã đưa vào kho thanh lý.',
     empty: 'Kho thanh lý đang trống',
     emptyHint: 'Chưa có hồ sơ nào bị thanh lý hay vô hiệu hóa.',
+    truncated:
+      'Kho quá lớn nên {{kinds}} chưa hiện hết — màn này chỉ tải tối đa 500 hồ sơ mỗi loại. Tra hồ sơ cũ hơn ở màn gốc của loại đó, lọc trạng thái đã ngừng dùng.',
     /* Hai câu này KHÁC HẲN câu trên: kho có hàng, chỉ là bộ lọc đang che đi. Gộp làm một là
        tuyên bố sai về dữ liệu của công ty (rà UI/UX 12/09, mục #17). */
     noHit: 'Không có hồ sơ nào khớp bộ lọc',

@@ -25,6 +25,12 @@ interface DisposalItem {
   updatedAt: string | null;
 }
 
+interface DisposalInventory {
+  items: DisposalItem[];
+  /** Loại có nhiều hồ sơ hơn trần dòng của máy chủ — `items` đang thiếu phần của chúng. */
+  truncated: DisposalKind[];
+}
+
 /**
  * Đường về hồ sơ gốc — kho thanh lý chỉ NHÌN, sửa thì về đúng module chủ.
  *
@@ -52,16 +58,18 @@ export function DisposalScreen() {
   const [search, setSearch] = useState('');
   const [kind, setKind] = useState<'' | DisposalKind>('');
 
-  const items = useQuery({
+  const inventory = useQuery({
     queryKey: ['disposal'],
-    queryFn: () => apiFetch<DisposalItem[]>('/api/v1/disposal'),
+    queryFn: () => apiFetch<DisposalInventory>('/api/v1/disposal'),
   });
+  const all = useMemo(() => inventory.data?.items ?? [], [inventory.data]);
+  const truncated = inventory.data?.truncated ?? [];
 
   const rows = useMemo(() => {
     // Gấp dấu CẢ HAI VẾ (B-01): gõ `may tram` phải ra `Máy trạm`, và gõ `Máy trạm` cũng vẫn
     // phải ra. Gấp một vế thôi là chữa bệnh này rồi mắc bệnh ngược lại.
     const term = foldSearch(search.trim());
-    return (items.data ?? []).filter((item) => {
+    return all.filter((item) => {
       if (kind && item.kind !== kind) return false;
       if (!term) return true;
       return (
@@ -70,12 +78,12 @@ export function DisposalScreen() {
         foldSearch(item.detail ?? '').includes(term)
       );
     });
-  }, [items.data, search, kind]);
+  }, [all, search, kind]);
 
   /* Đếm theo loại trên TOÀN BỘ, không theo tập đang lọc: nút lọc mà mang con số của chính
      tập đã lọc thì bấm vào đâu cũng thấy "đúng", và nó hết là bộ đếm. */
   const countOf = (target: DisposalKind) =>
-    (items.data ?? []).filter((item) => item.kind === target).length;
+    all.filter((item) => item.kind === target).length;
 
   return (
     <>
@@ -96,7 +104,7 @@ export function DisposalScreen() {
             {/* Số đi kèm nhãn lọc phải NHẠT và NHỎ hơn chữ nhãn (`.seg-count`, dùng chung với
                 màn Dải mạng): để cùng cỡ cùng đậm thì mắt đọc "Tất cả 12" thành hai từ ngang
                 hàng chứ không phải một nhãn kèm một con số. */}
-            {t('disposal.allKinds')} <span className="seg-count">{(items.data ?? []).length}</span>
+            {t('disposal.allKinds')} <span className="seg-count">{all.length}</span>
           </button>
           {(Object.keys(KIND_KEY) as DisposalKind[]).map((key) => (
             <button
@@ -113,22 +121,29 @@ export function DisposalScreen() {
       </FilterBar>
 
       <p className="alert">{t('disposal.note')}</p>
+      {truncated.length > 0 ? (
+        <p className="alert">
+          {t('disposal.truncated', {
+            kinds: truncated.map((key) => t(KIND_KEY[key])).join(', '),
+          })}
+        </p>
+      ) : null}
 
-      {items.isLoading ? (
+      {inventory.isLoading ? (
         <Loading />
-      ) : items.isError ? (
-        <LoadError error={items.error} onRetry={() => void items.refetch()} />
+      ) : inventory.isError ? (
+        <LoadError error={inventory.error} onRetry={() => void inventory.refetch()} />
       ) : rows.length === 0 ? (
         /*
          * "KHO ĐANG TRỐNG" ≠ "BỘ LỌC KHÔNG RA GÌ" — và bản cũ nói cả hai bằng một câu.
          *
          * `rows` là danh sách SAU lọc, nên gõ một từ khóa không khớp là màn tuyên bố kho rỗng.
          * Người đọc tin rằng chưa ai thanh lý thứ gì, trong khi có thể đang có vài chục hồ sơ
-         * nằm đó — chỉ là không khớp chữ vừa gõ. Hỏi `items.data` (TRƯỚC lọc) mới phân biệt
+         * nằm đó — chỉ là không khớp chữ vừa gõ. Hỏi `all` (TRƯỚC lọc) mới phân biệt
          * được, và mỗi vế dẫn tới một việc khác nhau: một bên là bỏ bớt lọc, bên kia là
          * không có gì để làm cả.
          */
-        (items.data ?? []).length === 0 ? (
+        all.length === 0 ? (
           <EmptyState title={t('disposal.empty')} hint={t('disposal.emptyHint')} />
         ) : (
           <EmptyState title={t('disposal.noHit')} hint={t('disposal.noHitHint')} />

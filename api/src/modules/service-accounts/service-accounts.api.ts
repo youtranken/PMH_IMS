@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Page } from '../../common/pagination';
 import { ServiceAccountService } from './service-account.service';
 import type { ServiceAccountRecord } from './service-account.types';
 
@@ -26,7 +27,11 @@ export class ServiceAccountsApiService {
 
   /** Tài khoản đã vô hiệu hóa — màn Kho thanh lý gom qua đây. */
   async listDisabled(): Promise<ServiceAccountRecord[]> {
-    const page = await this.accounts.list({ page: 1, limit: 500 }, { status: 'disabled' });
-    return page.items;
+    return (await this.disabledPage()).items;
+  }
+
+  /** Như `listDisabled`, kèm `total` thật để kho biết mình có bị cắt ở trần 500 dòng không. */
+  disabledPage(): Promise<Page<ServiceAccountRecord>> {
+    return this.accounts.list({ page: 1, limit: 500 }, { status: 'disabled' });
   }
 }
