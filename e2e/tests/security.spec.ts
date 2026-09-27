@@ -71,6 +71,31 @@ test.describe('Hàng rào an ninh', () => {
     expect(genuine.status()).toBe(200);
   });
 
+  test('đoán mật khẩu hiện tại ở cửa Đổi mật khẩu: đủ ngưỡng thì phiên chết (SEC-06)', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_MEMBER);
+    const csrf = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
+      return ((await res.json()) as { csrfToken: string }).csrfToken;
+    });
+    const guess = () =>
+      page.request.post('/api/v1/auth/change-password', {
+        headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
+        data: { currentPassword: 'doan-sai-#2026', newPassword: 'Ims#MoiHoanToan2026!' },
+      });
+
+    const first = await guess();
+    expect(first.status()).toBe(401);
+    expect(await first.json()).toMatchObject({ code: 'CURRENT_PASSWORD_WRONG', attemptsLeft: 4 });
+    for (let i = 0; i < 3; i += 1) await guess();
+    const fifth = await guess();
+    expect(await fifth.json()).toMatchObject({ code: 'SESSION_REVOKED' });
+
+    const me = await page.request.get('/api/v1/auth/me');
+    expect(me.status()).toBe(401);
+  });
+
   test('member không mở được trang nội bộ /dev/components', async ({ page }) => {
     await firstLogin(page, E2E_MEMBER);
     await expect(page.getByRole('link', { name: 'Bộ giao diện' })).toHaveCount(0);

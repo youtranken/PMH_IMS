@@ -420,55 +420,10 @@ export class AuthService {
         });
       }
       if (!(await this.passwords.verify(user.passwordHash, currentPassword))) {
-        await this.audit.append({
-          actor: user.email,
-          action: 'auth.totp.enroll.reauth_failed',
-          objectType: 'user',
-          objectId: user.id,
-          detail: { sessionId: session.id },
-        });
-        /* Đếm chung với lượt gõ sai mã ở cửa két: cửa này dẫn thẳng tới step-up, và một người
-           đang đoán mật khẩu ở đây là dấu hiệu rõ nhất rằng có cookie đang ở nhầm tay. */
-        await this.probe.noteSecurityFailure(user.email);
-
-        /*
-         * ĐOÁN ĐỦ NGƯỠNG THÌ MẤT PHIÊN — dùng lại NGUYÊN cơ chế của cửa két, cả bộ đếm lẫn
-         * ngưỡng (`secret.stepup_max_failures`).
-         *
-         * Vì sao không phải một trần theo phút: trần theo phút cho kẻ tấn công thử lại MÃI,
-         * chỉ chậm hơn — 10 lượt/phút vẫn là mười bốn nghìn lần đoán mỗi ngày. Thu hồi phiên
-         * thì cái cookie trộm được CHẾT sau năm lần, và muốn có cookie mới thì phải có... mật
-         * khẩu. Hàng rào chặn đúng thứ nó định chặn thay vì làm nó chậm đi.
-         *
-         * Và đây là lý do bộ đếm dùng CHUNG với cửa két chứ không dựng bộ thứ hai: hai cửa
-         * hỏi cùng một câu ("chứng minh lại đi"), nên năm lần sai ở hai cửa xen kẽ cũng phải
-         * chết y như năm lần sai ở một cửa.
-         *
-         * Thu hồi PHIÊN chứ không khóa TÀI KHOẢN, cùng lý do đã ghi ở `stepUp`: khóa tài
-         * khoản thì chính kẻ tấn công lại khóa được người dùng thật ra ngoài.
-         */
-        const failures = await this.sessions.registerStepUpFailure(session.id);
-        const maxFailures = await this.config.getNumber('secretStepUpMaxFailures');
-        if (failures >= maxFailures) {
-          await this.db.transaction(async (tx) => {
-            await this.sessions.revokeWithin(tx, session.id, 'enroll-reauth-brute-force');
-            await this.audit.appendWithin(tx, {
-              actor: user.email,
-              action: 'auth.totp.enroll.session_revoked',
-              objectType: 'session',
-              objectId: session.id,
-              detail: { failures },
-            });
-          });
-          throw new UnauthorizedException({
-            code: 'SESSION_REVOKED',
-            message: `Gõ sai mật khẩu ${failures} lần — phiên đã bị thu hồi. Đăng nhập lại.`,
-          });
-        }
-        throw new UnauthorizedException({
-          code: 'CURRENT_PASSWORD_WRONG',
-          message: 'Mật khẩu hiện tại không đúng.',
-          attemptsLeft: maxFailures - failures,
+        await this.failReauth(session, user, {
+          failedAction: 'auth.totp.enroll.reauth_failed',
+          revokedAction: 'auth.totp.enroll.session_revoked',
+          revokeReason: 'enroll-reauth-brute-force',
         });
       }
 
@@ -743,9 +698,11 @@ export class AuthService {
   ): Promise<void> {
     const user = await this.requireUser(session.userId);
     if (!(await this.passwords.verify(user.passwordHash, currentPassword))) {
-      throw new UnauthorizedException({
-        code: 'CURRENT_PASSWORD_WRONG',
-        message: 'Mật khẩu hiện tại không đúng.',
+      // SEC-06: cookie bị lộ không được thành chỗ dò mật khẩu hiện tại không giới hạn.
+      await this.failReauth(session, user, {
+        failedAction: 'auth.password.change_failed',
+        revokedAction: 'auth.password.session_revoked',
+        revokeReason: 'password-change-brute-force',
       });
     }
     const check = checkPasswordStrength(newPassword);
@@ -761,6 +718,8 @@ export class AuthService {
     const hash = await this.passwords.hash(newPassword);
     await this.db.transaction(async (tx) => {
       await this.users.setPasswordWithin(tx, user.id, hash, false);
+      // Chứng minh được mật khẩu thì bộ đếm "gõ sai liên tiếp" về 0 (cùng luật với cửa cài TOTP).
+      await this.sessions.clearStepUpFailuresWithin(tx, session.id);
       const killed = await this.sessions.revokeAllForUserWithin(
         tx,
         user.id,
@@ -871,6 +830,50 @@ export class AuthService {
       detail: { failedAttempts: state.failedAttempts, lockedUntil: state.lockedUntil },
     });
     await this.outbox.enqueueWithin(tx, 'auth.account.locked', { userId: user.id });
+  }
+
+  /**
+   * Gõ sai mật khẩu ở một cửa bắt chứng minh lại (cài TOTP, đổi mật khẩu). Một luật cho mọi cửa:
+   * ghi audit, báo probe, cộng bộ đếm DÙNG CHUNG với cửa két (năm lần sai xen kẽ giữa các cửa
+   * cũng chết như năm lần ở một cửa), đủ ngưỡng thì thu hồi PHIÊN — không khoá tài khoản, vì khoá
+   * tài khoản thì chính kẻ tấn công khoá được người dùng thật. Luôn ném.
+   */
+  private async failReauth(
+    session: SessionRecord,
+    user: UserCredentials,
+    names: { failedAction: string; revokedAction: string; revokeReason: string },
+  ): Promise<never> {
+    await this.audit.append({
+      actor: user.email,
+      action: names.failedAction,
+      objectType: 'user',
+      objectId: user.id,
+      detail: { sessionId: session.id },
+    });
+    await this.probe.noteSecurityFailure(user.email);
+    const failures = await this.sessions.registerStepUpFailure(session.id);
+    const maxFailures = await this.config.getNumber('secretStepUpMaxFailures');
+    if (failures >= maxFailures) {
+      await this.db.transaction(async (tx) => {
+        await this.sessions.revokeWithin(tx, session.id, names.revokeReason);
+        await this.audit.appendWithin(tx, {
+          actor: user.email,
+          action: names.revokedAction,
+          objectType: 'session',
+          objectId: session.id,
+          detail: { failures },
+        });
+      });
+      throw new UnauthorizedException({
+        code: 'SESSION_REVOKED',
+        message: `Gõ sai mật khẩu ${failures} lần — phiên đã bị thu hồi. Đăng nhập lại.`,
+      });
+    }
+    throw new UnauthorizedException({
+      code: 'CURRENT_PASSWORD_WRONG',
+      message: 'Mật khẩu hiện tại không đúng.',
+      attemptsLeft: maxFailures - failures,
+    });
   }
 
   private async auditFailure(user: UserCredentials, reason: string): Promise<void> {

@@ -108,7 +108,7 @@ xem tận mắt lần thứ hai.
 
 ### P1
 
-- [ ] **SEC-06 · `/auth/change-password` không đếm sai.** `auth.service.ts:780`. Dùng lại cơ chế của
+- [x] **SEC-06 · `/auth/change-password` không đếm sai.** `auth.service.ts:780`. Dùng lại cơ chế của
   `startTotpEnrollment`: `registerStepUpFailure` + probe + thu hồi phiên khi chạm ngưỡng.
 - [ ] **SEC-07 · Logger có thể ghi `Set-Cookie`.** Thêm `res.headers["set-cookie"]` vào danh sách
   redact (`app.module.ts:61-71`). Kiểm bằng một dòng log thật.
