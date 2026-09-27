@@ -33,6 +33,10 @@ jobs:
           cache-dependency-path: api/package-lock.json
       - run: npm ci
         working-directory: api
+      # OPS-12: thư viện chạy ở production có lỗ high/critical thì chặn merge.
+      - name: npm audit (production)
+        run: npm audit --omit=dev --audit-level=high
+        working-directory: api
       - name: Lint (kèm luật AD-15 no-restricted-imports/syntax)
         run: npm run lint
         working-directory: api
@@ -56,6 +60,9 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
+        working-directory: web
+      - name: npm audit (production)
+        run: npm audit --omit=dev --audit-level=high
         working-directory: web
       # 07/09: web dùng ESLint (không còn oxlint) để cả repo một phương ngữ luật, và `lint`
       # gọi luôn dependency-cruiser — thứ web chưa từng có trước đó.
@@ -110,6 +117,23 @@ jobs:
       - name: Lint bộ E2E
         run: npm run lint
         working-directory: e2e
+
+  # OPS-12: dựng đúng hai image production. Lỗi ở Dockerfile / .dockerignore / nginx.conf trước đây
+  # chỉ lộ ra khi đã lên máy chủ.
+  images:
+    name: docker build (api, web)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ảnh api
+        run: docker build -t ims-api:ci ./api
+      - name: Build ảnh web
+        run: docker build -t ims-web:ci ./web
+      - name: Cấu hình nginx trong ảnh web hợp lệ
+        run: |
+          mkdir -p /tmp/certs
+          openssl req -x509 -newkey rsa:2048 -nodes -days 1 -subj "/CN=ci"             -keyout /tmp/certs/privkey.pem -out /tmp/certs/fullchain.pem 2>/dev/null
+          docker run --rm --add-host api:127.0.0.1 -v /tmp/certs:/etc/nginx/certs:ro ims-web:ci nginx -t
 
   # ===================================================================================
   # E2E chạy ở MÁY NỘI BỘ, không ở đây — xem ghi chú đầu file.

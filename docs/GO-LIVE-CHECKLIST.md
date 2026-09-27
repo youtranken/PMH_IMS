@@ -334,7 +334,7 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
   `outbox.service.ts:35,140`).
   - Backoff dài hơn, trần tính theo thời gian (24 giờ).
   - Thêm nút requeue hàng loạt.
-- [ ] **OPS-12 · CI:**
+- [x] **OPS-12 · CI:**
   - Thêm bước `docker build` cho cả hai image.
   - Thêm `npm audit --omit=dev`.
   - Thêm quét image (trivy).
