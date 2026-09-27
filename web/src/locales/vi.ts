@@ -208,6 +208,10 @@ export default {
   },
   auth: {
     signInTitle: 'Đăng nhập',
+    /* Đăng xuất gọi API hỏng: dữ liệu trên máy đã xoá, nhưng phiên phía máy chủ có thể còn
+       sống — nói rõ để người dùng không rời máy dùng chung với một phiên mở. */
+    logoutFailed:
+      'Đăng xuất chưa thành công trên máy chủ (mất kết nối?). Dữ liệu trên máy này đã được xoá; nếu vẫn vào được hệ thống, hãy bấm Đăng xuất lần nữa.',
     signInSub: 'Hệ thống nội bộ — chỉ dành cho team IT',
     email: 'Email',
     password: 'Mật khẩu',
