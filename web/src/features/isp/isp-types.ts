@@ -15,7 +15,6 @@ export interface IspRow {
   hotline: string | null;
   contractNo: string | null;
   startDate: string | null;
-  endDate: string | null;
   note: string | null;
   status: IspStatus;
   createdAt: string;

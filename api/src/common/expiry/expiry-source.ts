@@ -10,7 +10,7 @@ export interface ExpiryItem {
   label: string;
   /** Mô tả phụ hiện dưới nhãn (nhà cung cấp, site, model…). */
   sublabel?: string | null;
-  /** Loại để luật digest lọc: 'license' | 'ssl' | 'domain' | 'isp' | 'warranty' | 'maintenance'… */
+  /** Loại để luật digest lọc: 'license' | 'ssl' | 'domain' | 'warranty' | 'maintenance'… */
   kind: string;
   start: string | null;
   /** Ngày hết hạn, dạng YYYY-MM-DD. */

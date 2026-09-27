@@ -8,7 +8,6 @@ import {
   mailBody,
   resetDevices,
   resetDigestRules,
-  resetIsp,
   resetSoftware,
   resetUsers,
   waitForMail,
@@ -17,7 +16,6 @@ import {
 test.beforeEach(async () => {
   resetUsers();
   resetSoftware();
-  resetIsp();
   // PHẢI dọn cả thiết bị: luật dưới đây tính "mọi loại", nên một cái máy sót lại từ spec
   // khác có bảo hành sắp hết là số mục đếm được lệch ngay (code review Epic 3).
   resetDevices();
@@ -93,16 +91,17 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
       kind: 'ssl',
       endDate: inDays(12),
     });
-    await post(page, '/api/v1/isp-lines', {
-      code: `ISP-E2E-D1-${stamp}`,
-      provider: 'FPT',
+    await post(page, '/api/v1/software', {
+      code: `DOM-E2E-D1-${stamp}`,
+      name: 'pmh.com.vn',
+      kind: 'domain',
       endDate: inDays(20),
     });
 
     const rule = await post(page, '/api/v1/expiry/rules', {
       name: `Luật E2E ${stamp}`,
       // Khoanh đúng hai loại vừa tạo — không phụ thuộc vào dữ liệu thật có sẵn trong DB.
-      kinds: ['ssl', 'isp'],
+      kinds: ['ssl', 'domain'],
       withinDays: 30,
       recipients: ['sep@pmh.com.vn', 'it@pmh.com.vn'],
       ...lichKhongToiHanHomNay(),
@@ -125,9 +124,9 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
     // Mỗi dòng nêu đủ tên + loại + hạn để đọc xong quyết được ngay.
     const body = await mailBody(messages[0].ID);
     expect(body).toContain(`SSL-E2E-D1-${stamp}`);
-    expect(body).toContain(`ISP-E2E-D1-${stamp}`);
+    expect(body).toContain(`DOM-E2E-D1-${stamp}`);
     expect(body).toContain('Chứng chỉ SSL');
-    expect(body).toContain('Hợp đồng đường truyền');
+    expect(body).toContain('Tên miền');
   });
 
   test('luật lọc theo loại chỉ gửi đúng loại đó', async ({ page }) => {

@@ -99,7 +99,7 @@ test('ba loại hồ sơ đã ngừng dùng cùng hiện trong một bảng', as
   await expect(page.getByRole('row', { name: new RegExp(`PC-E2E-DIS-${stamp}`) })).toBeVisible();
   await expect(page.getByRole('row', { name: new RegExp(`LIC-E2E-DIS-${stamp}`) })).toHaveCount(0);
 
-  /* Đường truyền KHÔNG vào kho (chốt 28/08): hợp đồng đã cắt vẫn tra ở màn Đường truyền. */
+  /* Đường truyền KHÔNG vào kho: line đã thanh lý vẫn tra ở màn Đường truyền (lọc theo trạng thái). */
   await expect(page.getByRole('button', { name: /Đường truyền/ })).toHaveCount(0);
 
   /*

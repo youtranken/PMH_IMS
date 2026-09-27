@@ -52,7 +52,7 @@ export class ExpiryApiService {
   /**
    * Ghi một lượt gia hạn vào `renewal_history` NGAY TRONG transaction của module chủ (AC 3.4).
    *
-   * Module chủ (`software`, `isp-line`) gọi cửa này ở cuối `renew()` của mình. Nhờ vậy hai nút
+   * Module chủ (`software`) gọi cửa này ở cuối `renew()` của mình. Nhờ vậy hai nút
    * "Gia hạn" trên web — nút ở màn "Sắp hết hạn" và nút trong chính trang hồ sơ — dẫn tới cùng
    * một hệ quả, thay vì cửa sau đổi `end_date` mà không để lại dòng nào (rà soát 07/09, #7).
    *

@@ -30,7 +30,11 @@ import { NoStepUp } from '../auth/step-up.decorator';
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
 const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
 
-class IspBodyDto {
+/**
+ * KHÔNG có `endDate` (Q-04): đường truyền không có hạn. `forbidNonWhitelisted` bật toàn cục nên
+ * client cũ còn gửi trường đó nhận 400 thay vì tưởng đã lưu.
+ */
+export class IspBodyDto {
   @IsOptional() @IsString() @Length(1, 60) code?: string;
   @IsOptional() @IsString() @Length(1, 120) provider?: string;
   @IsOptional() @IsString() @Length(0, 60) bandwidth?: string;
@@ -46,19 +50,11 @@ class IspBodyDto {
   @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày bắt đầu phải dạng YYYY-MM-DD.' })
   startDate?: string;
 
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày hết hạn phải dạng YYYY-MM-DD.' })
-  endDate?: string;
-
   @IsOptional() @IsString() @Length(0, 2000) note?: string;
 
   @IsOptional()
   @IsIn([...ISP_STATUSES], { message: 'Trạng thái đường truyền không hợp lệ.' })
   status?: IspStatus;
-}
-
-class RenewDto {
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Hạn mới phải dạng YYYY-MM-DD.' })
-  endDate!: string;
 }
 
 class IdParamDto {
@@ -146,7 +142,6 @@ export class IspLineController {
         { header: 'Hotline', width: 16, value: (r) => r.hotline ?? '' },
         { header: 'Số hợp đồng', width: 20, value: (r) => r.contractNo ?? '' },
         { header: 'Bắt đầu', width: 14, value: (r) => r.startDate ?? '' },
-        { header: 'Hết hạn', width: 14, value: (r) => r.endDate ?? '' },
         { header: 'Trạng thái', width: 16, value: (r) => ISP_STATUS_LABEL[r.status] ?? r.status },
       ],
       rows,
@@ -179,21 +174,15 @@ export class IspLineController {
   update(@Param() params: IdParamDto, @Body() body: IspBodyDto, @Req() req: AuthedRequest) {
     return this.isp.update(actor(req), params.id, body);
   }
-
-  @Roles('sa', 'admin', 'member')
-  @Post(':id/renew')
-  @Audited('isp.renewed', 'isp_line', { writtenByService: true })
-  renew(@Param() params: IdParamDto, @Body() body: RenewDto, @Req() req: AuthedRequest) {
-    return this.isp.renew(actor(req), params.id, body.endDate);
-  }
 }
 
 function actor(req: AuthedRequest): string {
   return req.user!.email;
 }
 
+/** Cùng chữ với màn `/isp-lines` (`isp.status*` trong `web/src/locales/vi.ts`). */
 const ISP_STATUS_LABEL: Record<string, string> = {
-  active: 'Đang chạy',
+  active: 'Đang dùng',
   suspended: 'Tạm ngưng',
-  terminated: 'Đã cắt',
+  terminated: 'Thanh lý',
 };

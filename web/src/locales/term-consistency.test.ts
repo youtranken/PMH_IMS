@@ -140,10 +140,20 @@ describe('Nhãn ở panel Lịch sử không được lệch nhãn trên bảng'
     ['history.software.stRetired', 'software.statusRetired'],
     ['history.serviceAccounts.stActive', 'serviceAccounts.statusActive'],
     ['history.serviceAccounts.stDisabled', 'serviceAccounts.statusDisabled'],
+    ['history.isp.stActive', 'isp.statusActive'],
+    ['history.isp.stSuspended', 'isp.statusSuspended'],
+    ['history.isp.stTerminated', 'isp.statusTerminated'],
   ];
 
   it.each(PAIRS)('%s đọc giống %s', (historyKey, screenKey) => {
     expect(lookup(historyKey)).toBe(lookup(screenKey));
+  });
+
+  /** Q-04 chốt đúng ba chữ này cho đường truyền; file Excel phía API dùng cùng ba chữ. */
+  it('đường truyền: Đang dùng / Tạm ngưng / Thanh lý', () => {
+    expect(lookup('isp.statusActive')).toBe('Đang dùng');
+    expect(lookup('isp.statusSuspended')).toBe('Tạm ngưng');
+    expect(lookup('isp.statusTerminated')).toBe('Thanh lý');
   });
 });
 

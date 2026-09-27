@@ -377,7 +377,6 @@ const KIND_LABEL: Record<string, string> = {
   ssl: 'Chứng chỉ SSL',
   domain: 'Tên miền',
   maintenance: 'Hợp đồng bảo trì',
-  isp: 'Hợp đồng đường truyền',
 };
 
 /**

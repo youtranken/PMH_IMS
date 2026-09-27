@@ -164,7 +164,7 @@ test.describe('Trang tổng Két sắt', () => {
         provider: 'FPT Telecom',
         bandwidth: '200 Mbps',
         contractNo: `HD-${stamp}`,
-        endDate: '2027-06-30',
+        startDate: '2026-06-30',
       },
     });
     expect(line.status()).toBe(201);

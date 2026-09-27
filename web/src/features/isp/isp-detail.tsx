@@ -3,13 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router-dom";
 import { ApiError, apiFetch } from "@/lib/api-client";
-import { errorMessage, useApiMutation } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
-import { DatePicker } from "@/ui/date-picker";
-import { Dialog } from "@/ui/dialog";
-import { ExpiryBadge } from "@/ui/expiry-badge";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
 import { CopyButton } from "@/ui/copy-button";
@@ -21,14 +17,11 @@ import {
   RailRow,
   RailRowIfSet,
 } from "@/ui/detail-layout";
-import { Field } from "@/ui/page-header";
-import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { TabPanel, Tabs } from "@/ui/tabs";
 import { useTabCounts } from "@/ui/tab-counts";
 import { VaultPanel } from "@/ui/vault-panel";
-import { useToast } from "@/ui/toast";
 import { IspForm } from "./isp-form";
-import { toIspHistory } from "./isp-history-entries";
+import { liquidationOf, toIspHistory } from "./isp-history-entries";
 import {
   STATUS_KEY,
   STATUS_TONE,
@@ -43,12 +36,10 @@ import { PATHS } from "@/lib/routes";
  */
 export function IspDetail({ me }: { me: Me }) {
   const { t } = useTranslation();
-  const toast = useToast();
   const queryClient = useQueryClient();
   const { id = "" } = useParams();
   const [tab, setTab] = useState("profile");
   const [editing, setEditing] = useState(false);
-  const [renewing, setRenewing] = useState(false);
 
   /* Trước mọi nhánh `return` sớm bên dưới: đây là hook, đặt sau `if (isLoading) return` thì
      số hook giữa hai lượt render lệch nhau. */
@@ -63,7 +54,9 @@ export function IspDetail({ me }: { me: Me }) {
   const history = useQuery({
     queryKey: ["isp", id, "history"],
     queryFn: () => apiFetch<IspHistoryRow[]>(`/api/v1/isp-lines/${id}/history`),
-    enabled: tab === "history",
+    // Line đã thanh lý thì thẻ định danh phải nói ai thanh lý, lúc nào (Q-04) — thông tin đó
+    // chỉ nằm trong sổ lịch sử, nên hỏi sổ ngay cả khi chưa mở tab.
+    enabled: tab === "history" || line.data?.status === "terminated",
   });
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["isp"] });
@@ -81,6 +74,8 @@ export function IspDetail({ me }: { me: Me }) {
   // hai nhánh trên đều trượt. Xem chú thích đầy đủ ở `devices/device-detail.tsx` (lỗi F-02).
   if (!line.data) return <Loading />;
   const item = line.data;
+  const liquidation =
+    item.status === "terminated" ? liquidationOf(history.data ?? []) : null;
 
   return (
     <>
@@ -113,24 +108,15 @@ export function IspDetail({ me }: { me: Me }) {
           </>
         }
         actions={
-          <>
-            {/* "Sửa hồ sơ" là việc chính của màn nên mang trọng số primary; "Gia hạn" lùi
-                về nút thường — trước 17/09 hai cái ngược nhau. */}
-            <button
-              type="button"
-              className="btn primary"
-              onClick={() => setEditing(true)}
-            >
-              {t("isp.edit")}
-            </button>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => setRenewing(true)}
-            >
-              {t("isp.renew")}
-            </button>
-          </>
+          /* Không có nút Gia hạn: đường truyền không có hạn (Q-04). Thôi dùng thì đổi trạng
+             thái sang Thanh lý trong Sửa hồ sơ. */
+          <button
+            type="button"
+            className="btn primary"
+            onClick={() => setEditing(true)}
+          >
+            {t("isp.edit")}
+          </button>
         }
       />
 
@@ -148,24 +134,25 @@ export function IspDetail({ me }: { me: Me }) {
                 "—"
               )}
             </RailRow>
-            <RailRow label={t("isp.status")}>
+            <RailRow
+              label={t("isp.status")}
+              note={
+                liquidation
+                  ? t("isp.liquidated", {
+                      date: formatDate(liquidation.at),
+                      actor: liquidation.actor,
+                    })
+                  : undefined
+              }
+            >
               <span className={`badge ${STATUS_TONE[item.status]}`}>
                 {t(STATUS_KEY[item.status])}
               </span>
             </RailRow>
-            {/* Thanh hợp đồng nằm HẲN ở đây, không còn thẻ thứ hai ở cột chính (17/09/2026). */}
-            <RailRow label={t("isp.contract")}>
-              {item.endDate ? (
-                <WarrantyTimeline
-                  start={item.startDate}
-                  end={item.endDate}
-                  startLabel={t("isp.startDate")}
-                  endLabel={t("isp.endDate")}
-                />
-              ) : (
-                <ExpiryBadge end={null} />
-              )}
-            </RailRow>
+            <RailRowIfSet
+              label={t("isp.startDate")}
+              value={item.startDate ? formatDate(item.startDate) : null}
+            />
             <RailRowIfSet label={t("isp.contractNo")} value={item.contractNo} />
             <RailRowIfSet label={t("isp.bandwidth")} value={item.bandwidth} />
             <RailRowIfSet label={t("isp.site")} value={item.siteCode} />
@@ -264,112 +251,6 @@ export function IspDetail({ me }: { me: Me }) {
           }}
         />
       ) : null}
-
-      {renewing ? (
-        <RenewDialog
-          line={item}
-          csrfToken={me.csrfToken}
-          onClose={() => setRenewing(false)}
-          onDone={() => {
-            setRenewing(false);
-            toast({ message: t("isp.renewed") });
-            void refresh();
-          }}
-        />
-      ) : null}
     </>
   );
 }
-
-function RenewDialog({
-  line,
-  csrfToken,
-  onClose,
-  onDone,
-}: {
-  line: IspRow;
-  csrfToken: string;
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const { t } = useTranslation();
-  const [endDate, setEndDate] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const renew = useApiMutation<{ endDate: string }, unknown>(
-    `/api/v1/isp-lines/${line.id}/renew`,
-    { csrfToken, refreshMe: false },
-  );
-
-  return (
-    <Dialog
-      open
-      onOpenChange={onClose}
-      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
-         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ.
-         `guardUnsaved`: chưa bấm Lưu mà lỡ Esc thì hỏi lại, đừng xoá trắng. */
-      dismissible={!renew.isPending}
-      guardUnsaved
-      maxWidth={480}
-      title={`${t("isp.renew")} — ${line.code}`}
-      footer={
-        <>
-          <button type="button" className="btn" onClick={onClose}>
-            {t("common.cancel")}
-          </button>
-          <button
-            type="submit"
-            form="isp-renew-form"
-            className="btn primary"
-            disabled={renew.isPending}
-          >
-            {renew.isPending ? t("common.loading") : t("isp.renew")}
-          </button>
-        </>
-      }
-    >
-      <form
-        id="isp-renew-form"
-        className="form-grid"
-        data-columns={1}
-        onSubmit={(e) => {
-          e.preventDefault();
-          setError(null);
-          if (!endDate) {
-            /* `isp.endDate` là NHÃN của ô ("Hết hạn"). Đặt nó làm câu lỗi thì khối đỏ hiện
-               đúng một chữ "Hết hạn" — không nói được là thiếu, sai, hay quá khứ. */
-            setError(t("expiry.pickDate"));
-            return;
-          }
-          renew.mutate(
-            { endDate },
-            {
-              onSuccess: onDone,
-              onError: (err) => setError(errorMessage(err)),
-            },
-          );
-        }}
-      >
-        <p className="muted">
-          {t("isp.endDate")}: {line.endDate ? formatDate(line.endDate) : "—"}
-        </p>
-        <Field label={t("isp.endDate")} required>
-          <DatePicker
-            value={endDate}
-            ariaLabel={t("isp.renew")}
-            /* Hạn mới phải sau hạn cũ — chặn trên lịch cho đỡ bấm nhầm; API vẫn kiểm lại. */
-            min={line.endDate ?? undefined}
-            onChange={setEndDate}
-          />
-        </Field>
-
-        {error ? (
-          <p className="alert error" role="alert">
-            {error}
-          </p>
-        ) : null}
-      </form>
-    </Dialog>
-  );
-}
-
-

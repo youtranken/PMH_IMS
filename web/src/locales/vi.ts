@@ -596,7 +596,6 @@ export default {
   },
   isp: {
     title: 'Đường truyền',
-    contract: 'Hợp đồng',
     copyWanIp: 'Chép IP WAN',
     subtitle: 'Đứt cáp lúc 2 giờ sáng: hotline và số hợp đồng có ngay trên danh sách',
     add: 'Thêm đường truyền',
@@ -613,17 +612,17 @@ export default {
     deviceHint: 'Draytek/firewall đang cắm đường này. Trang thiết bị đó sẽ hiện ngược lại đường truyền.',
     deviceSearch: 'Tìm thiết bị trong kho…',
     hotline: 'Hotline',
-    // Khối thứ hai của form — KHÔNG đặt tên là "Hotline": nó chứa cả số hợp đồng và kỳ hạn.
+    // Khối thứ hai của form — KHÔNG đặt tên là "Hotline": nó chứa cả số hợp đồng và ngày bắt đầu.
     sectionContract: 'Hợp đồng và liên hệ sự cố',
     contractNo: 'Số hợp đồng',
     startDate: 'Bắt đầu',
-    endDate: 'Hết hạn',
-    expiry: 'Tình trạng hạn',
     note: 'Ghi chú',
     status: 'Trạng thái',
-    statusActive: 'Đang chạy',
+    /* Ba chữ do Q-04 chốt; `isp-line.controller.ts` ghi cùng ba chữ vào file Excel. */
+    statusActive: 'Đang dùng',
     statusSuspended: 'Tạm ngưng',
-    statusTerminated: 'Đã cắt',
+    statusTerminated: 'Thanh lý',
+    liquidated: 'Thanh lý ngày {{date}} bởi {{actor}}',
     allSites: 'Tất cả site',
     allStatuses: 'Mọi trạng thái',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
@@ -636,8 +635,6 @@ export default {
     tabProfile: 'Hồ sơ',
     tabAttachments: 'Giấy tờ',
     tabHistory: 'Lịch sử',
-    renew: 'Gia hạn hợp đồng',
-    renewed: 'Đã gia hạn hợp đồng.',
   },
   expiry: {
     /*
@@ -650,7 +647,7 @@ export default {
      */
     notCounted: 'Không tính hạn',
     /* Bốn khóa dưới đây dùng cho THANH THỜI HẠN (ui/warranty-timeline.tsx) — bảo hành thiết
-       bị, hạn license/SSL/tên miền, hợp đồng đường truyền. Đặt trong chính khối `expiry` vì
+       bị, hạn license/SSL/tên miền. Đặt trong chính khối `expiry` vì
        khai một khối `expiry` thứ hai ở đầu file thì khối sau đè mất khối trước. */
     from: 'Từ',
     to: 'Đến',
@@ -1201,9 +1198,8 @@ export default {
   },
   disposal: {
     title: 'Kho thanh lý',
-    /* Câu cũ hứa "cả hệ thống" nhưng đường truyền KHÔNG bao giờ vào kho này: `isp-detail`
-       không có nút ngừng dùng nào, nên hợp đồng "Đã cắt" không hiện ở đâu cả. Nói đúng ba
-       loại đang có, thay vì hứa một thứ sản phẩm chưa làm. */
+    /* Đường truyền KHÔNG vào kho này: line "Thanh lý" vẫn nằm ở màn Đường truyền, lọc theo
+       trạng thái. Nói đúng ba loại đang có, thay vì hứa một thứ sản phẩm chưa làm. */
     subtitle: 'Thiết bị, phần mềm và tài khoản dịch vụ đã ngừng dùng — gom về một chỗ',
     note: 'Hồ sơ trong kho KHÔNG còn được tính hạn và không vào email nhắc gia hạn. Muốn dùng lại thì mở hồ sơ gốc và đổi trạng thái.',
     search: 'Tìm theo mã, tên hoặc loại…',
@@ -1337,8 +1333,9 @@ export default {
    *
    * Mười khóa ĐẦU là phần dùng chung: cùng mã, cùng chữ, ở từ hai sổ trở lên. Phần còn
    * lại nằm trong namespace của từng sổ, vì cùng một mã KHÔNG phải lúc nào cũng cùng chữ —
-   * `created` là "Tạo hồ sơ" ở năm sổ nhưng là "Mở rule" ở sổ NAT, `active` là "Đang dùng"
-   * ở phần mềm mà "Đang chạy" ở đường truyền. Gộp bừa là làm sai nghĩa để đỡ một dòng.
+   * `created` là "Tạo hồ sơ" ở năm sổ nhưng là "Mở rule" ở sổ NAT, `retired` là "Đã thanh
+   * lý" ở phần mềm mà `terminated` là "Thanh lý" ở đường truyền. Gộp bừa là làm sai nghĩa để
+   * đỡ một dòng.
    *
    * Tên trường (`f*`) viết CHỮ THƯỜNG: chúng ghép vào giữa câu — "mã: A → B".
    */
@@ -1449,11 +1446,13 @@ export default {
       fContractNo: 'số hợp đồng',
       actCreated: 'Tạo hồ sơ',
       actUpdated: 'Sửa hồ sơ',
+      /* Không còn lượt gia hạn mới (Q-04), nhưng sổ chỉ-thêm vẫn giữ các dòng cũ. */
       actRenewed: 'Gia hạn hợp đồng',
+      actTerminated: 'Thanh lý đường truyền',
       actDeviceDetached: 'Rời khỏi thiết bị (máy đã thanh lý) — hợp đồng giữ nguyên',
-      stActive: 'Đang chạy',
+      stActive: 'Đang dùng',
       stSuspended: 'Tạm ngưng',
-      stTerminated: 'Đã cắt',
+      stTerminated: 'Thanh lý',
     },
 
     /* Sổ NAT */

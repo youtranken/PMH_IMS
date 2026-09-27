@@ -3844,7 +3844,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     const kindOptions = (await page.getByRole('option').allInnerTexts()).map((text) => text.trim());
     expect(
       [...kindOptions].sort(),
-      'Bộ lọc loại phải bày đủ 6 nguồn hạn đang đăng ký, cộng mục "tất cả"',
+      'Bộ lọc loại phải bày đủ 5 nguồn hạn đang đăng ký, cộng mục "tất cả" — đường truyền không có hạn (Q-04)',
     ).toEqual(
       [
         'Tất cả loại',
@@ -3852,7 +3852,6 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
         'Chứng chỉ SSL',
         'Tên miền',
         'Hợp đồng bảo trì',
-        'Hợp đồng đường truyền',
         'Bảo hành thiết bị',
       ].sort(),
     );
@@ -4036,14 +4035,13 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      */
     await expect(
       add.getByRole('checkbox'),
-      'Sáu ô tick loại (đúng bằng số nguồn hạn) cộng một ô tick "đang chạy"',
-    ).toHaveCount(7);
+      'Năm ô tick loại (đúng bằng số nguồn hạn) cộng một ô tick "đang chạy"',
+    ).toHaveCount(6);
     for (const label of [
       'License phần mềm',
       'Chứng chỉ SSL',
       'Tên miền',
       'Hợp đồng bảo trì',
-      'Hợp đồng đường truyền',
       'Bảo hành thiết bị',
       'Bỏ tick để tạm ngưng mà không mất cấu hình.',
     ]) {
@@ -5428,7 +5426,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
    * server. Cả hai đều bấm đúng vào cái nút cần bấm. Không bài nào hỏi "màn này có ĐÚNG những
    * nút nào" — mà đó lại là câu duy nhất bắt được một nút LẠ mọc thêm.
    *
-   * Điểm riêng của màn này: nó KHÔNG có cột Thao tác, không có menu ba chấm. Sửa và gia hạn
+   * Điểm riêng của màn này: nó KHÔNG có cột Thao tác, không có menu ba chấm. Sửa và thanh lý
    * chỉ làm được từ trang hồ sơ. Đó không phải chuyện tình cờ mà là hình dạng thật của
    * `isp-screen.tsx`, và nếu một ngày có người thêm `RowActions` vào đây thì phải có cái gì đó
    * đỏ lên để hỏi lại "đã bàn chưa".
@@ -5483,14 +5481,13 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     // ĐỦ CỘT, ĐÚNG THỨ TỰ. Cột rơi mất là một thông tin không ai còn đọc được trên danh sách.
     expect(
       await tenCotBang(main),
-      'Bảng đường truyền phải có đúng 7 cột, đúng thứ tự của `isp-screen.tsx`',
+      'Bảng đường truyền phải có đúng 6 cột, đúng thứ tự của `isp-screen.tsx` — không có cột hạn (Q-04)',
     ).toEqual([
       'Mã đường',
       'Nhà mạng',
       'Site',
       'Hotline',
       'Số hợp đồng',
-      'Tình trạng hạn',
       'Trạng thái',
     ]);
 
@@ -5547,7 +5544,6 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Sắp xếp theo Nhà mạng',
         'Sắp xếp theo Hotline',
         'Sắp xếp theo Số hợp đồng',
-        'Sắp xếp theo Tình trạng hạn',
         'Sắp xếp theo Trạng thái',
         'Số dòng',
         'Trang trước',
@@ -5558,7 +5554,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     // Nói thẳng ra điều vừa suy ra được từ tập hợp trên — để lúc đỏ đọc log là hiểu ngay.
     await expect(
       main.getByRole('button', { name: /^Thao tác với/ }),
-      'Màn Đường truyền KHÔNG có cột Thao tác: sửa và gia hạn chỉ làm từ trang hồ sơ',
+      'Màn Đường truyền KHÔNG có cột Thao tác: sửa và thanh lý chỉ làm từ trang hồ sơ',
     ).toHaveCount(0);
   });
 
@@ -5633,19 +5629,20 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      */
     expect(
       await tenTheoVaiTro(hop, 'button'),
-      'Bộ nút trong hộp thêm mới: ô chọn Site, hai ô ngày, ô chọn file, ✕, Hủy, Lưu — không gì khác',
+      'Bộ nút trong hộp thêm mới: ô chọn Site, ô ngày Bắt đầu, ô chọn file, ✕, Hủy, Lưu — ' +
+        'không có ô Hết hạn vì đường truyền không có hạn (Q-04)',
     ).toEqual(
-      sap(['Đóng hộp thoại', 'Site', 'Bắt đầu', 'Hết hạn', 'Chọn file để đính kèm', 'Hủy', 'Lưu']),
+      sap(['Đóng hộp thoại', 'Site', 'Bắt đầu', 'Chọn file để đính kèm', 'Hủy', 'Lưu']),
     );
 
     /*
      * Ô TRẠNG THÁI CHỈ CÓ Ở LƯỢT SỬA — nói thẳng ra, đừng để nó chìm trong tập hợp trên.
      * Bày một ô chọn có đúng một câu trả lời hợp lý ở lượt thêm mới là mở đường cho một hồ sơ
-     * vừa tạo đã mang trạng thái "đã cắt".
+     * vừa tạo đã mang trạng thái "Thanh lý".
      */
     await expect(
       hop.getByRole('button', { name: 'Trạng thái', exact: true }),
-      'Hộp THÊM MỚI không được có ô Trạng thái — hồ sơ mới luôn là "đang chạy"',
+      'Hộp THÊM MỚI không được có ô Trạng thái — hồ sơ mới luôn là "Đang dùng"',
     ).toHaveCount(0);
 
     /*
@@ -5692,7 +5689,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
   });
 
   /*
-   * ===== BÀI 3 — HỒ SƠ ĐƯỜNG TRUYỀN: MỖI TAB CÓ GÌ, VÀ HAI CÁI HỘP CỦA NÓ =====
+   * ===== BÀI 3 — HỒ SƠ ĐƯỜNG TRUYỀN: MỖI TAB CÓ GÌ, VÀ HỘP SỬA CỦA NÓ =====
    *
    * VÌ SAO BÀI NÀY TỒN TẠI
    *
@@ -5703,16 +5700,14 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
    * Bài này vào bằng cách BẤM từ danh sách (không `goto`): đường `PATHS.ispLine(id)` ghép sai
    * thì không bài nào khác đỏ, vì mọi bài khác tự gõ URL đúng.
    *
-   * Hộp "Gia hạn hợp đồng" được soi kỹ vì nó là hộp NGHÈO NHẤT hệ thống — đúng một ô ngày —
-   * nên cũng là hộp dễ hỏng nhất mà không ai để ý: ô ngày ở đó mang `aria-label` là "Gia hạn
-   * hợp đồng" chứ không phải "Hết hạn", và lời báo lỗi khi bỏ trống chỉ vỏn vẹn hai chữ "Hết
-   * hạn". Ghi lại đúng như thật, vì đó là điều người dùng THẬT SỰ nghe và đọc.
+   * Đường truyền không có hạn (Q-04): không nút Gia hạn, không thanh thời hạn, không ô Hết
+   * hạn trong form Sửa. Bài này khoá cả ba vế vắng mặt đó.
    *
    * ĐỎ KHI: link mã trên bảng trỏ sai; một nút đầu trang hồ sơ mất/mọc thêm; một tab biến mất;
-   * một tab mở ra khoảng trắng; hộp gia hạn đổi hình dạng; hoặc form Sửa hiện ra TRỐNG (kiểu
+   * một tab mở ra khoảng trắng; cái gì đó về hạn quay lại; hoặc form Sửa hiện ra TRỐNG (kiểu
    * hỏng ghi đè sạch dữ liệu cũ ngay khi bấm Lưu).
    */
-  test('Hồ sơ đường truyền: bấm từ danh sách, đủ nút và đủ tab, mở hộp Gia hạn và hộp Sửa', async ({
+  test('Hồ sơ đường truyền: bấm từ danh sách, đủ nút và đủ tab, không có gì về hạn, mở hộp Sửa', async ({
     page,
   }) => {
     test.setTimeout(150_000);
@@ -5731,7 +5726,6 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         hotline: '18001166',
         contractNo: `HD-E2E-${stamp}`,
         startDate: '2026-01-01',
-        endDate: '2027-12-31',
         note: ghiChu,
       },
     });
@@ -5762,16 +5756,16 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     const main = page.getByRole('main');
 
     /*
-     * ĐÚNG BỘ NÚT ĐẦU TRANG. Ba cái, không hơn:
+     * ĐÚNG BỘ NÚT ĐẦU TRANG. Hai cái, không hơn:
      *   - "Chép IP tĩnh" (nằm ở dòng định danh, chỉ vẽ khi hồ sơ có IP WAN),
-     *   - "Sửa hồ sơ" và "Gia hạn hợp đồng" ở góc phải.
-     * Mã hồ sơ CỐ Ý không có nút chép (bỏ 28/08/2026) — nó là tiêu đề, bôi đen chép như mọi
-     * chữ khác. Tập hợp này giữ đúng quyết định đó.
+     *   - "Sửa hồ sơ" ở góc phải. KHÔNG có "Gia hạn hợp đồng" — line không có hạn (Q-04).
+     * Mã hồ sơ CỐ Ý không có nút chép — nó là tiêu đề, bôi đen chép như mọi chữ khác. Tập hợp
+     * này giữ đúng quyết định đó.
      */
     expect(
       await tenTheoVaiTro(main, 'button'),
-      'Đầu trang hồ sơ đường truyền có đúng ba nút: Chép IP WAN · Sửa hồ sơ · Gia hạn hợp đồng',
-    ).toEqual(sap(['Chép IP WAN', 'Sửa hồ sơ', 'Gia hạn hợp đồng']));
+      'Đầu trang hồ sơ đường truyền có đúng hai nút: Chép IP WAN · Sửa hồ sơ',
+    ).toEqual(sap(['Chép IP WAN', 'Sửa hồ sơ']));
 
     /*
      * BỐN TAB, ĐÚNG THỨ TỰ. Nhãn hai tab giữa có số đếm nối sau ("Két sắt 0"), nên cắt phần số
@@ -5790,13 +5784,17 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       {
         ten: /^Hồ sơ$/,
         dauHieu: async () => {
-          /* Thời hạn hợp đồng chuyển sang THẺ ĐỊNH DANH ở cột phải (đợt dựng lại 16-17/09),
-             cùng một nước đi với hạn license bên phòng Phần mềm: một giá trị, một chỗ. Thẻ
-             định danh dính theo tab Hồ sơ nên đây vẫn là dấu hiệu riêng của tab này. */
+          /* Thẻ định danh ở cột phải hiện ngày bắt đầu, và KHÔNG còn thanh thời hạn: đường
+             truyền không có hạn (Q-04). */
+          const the = page.getByRole('region', { name: 'Thẻ định danh' });
           await expect(
-            page.getByRole('region', { name: 'Thẻ định danh' }).getByRole('progressbar'),
-            'Tab Hồ sơ phải có thanh thời hạn hợp đồng (hồ sơ này đã khai ngày hết hạn)',
+            the.getByText('Bắt đầu', { exact: true }),
+            'Thẻ định danh phải hiện ngày bắt đầu đã khai',
           ).toBeVisible();
+          await expect(
+            the.getByRole('progressbar'),
+            'Không còn thanh thời hạn hợp đồng — line không có hạn',
+          ).toHaveCount(0);
           await expect(
             main.getByText(ghiChu, { exact: true }),
             'Tab Hồ sơ phải hiện lại đúng ghi chú đã khai',
@@ -5851,52 +5849,6 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     }
 
     /*
-     * ===== HỘP "GIA HẠN HỢP ĐỒNG" =====
-     */
-    await page.getByRole('button', { name: 'Gia hạn hợp đồng' }).click();
-    const hopGiaHan = page.getByRole('dialog', { name: new RegExp(`^Gia hạn hợp đồng — ${ma}$`) });
-    await expect(hopGiaHan, 'Nút Gia hạn phải mở ra hộp mang đúng mã đường truyền').toBeVisible();
-
-    expect(
-      await tenKhoiTrongHop(hopGiaHan),
-      'Hộp gia hạn KHÔNG chia khối — nó chỉ có đúng tiêu đề hộp',
-    ).toEqual([`Gia hạn hợp đồng — ${ma}`]);
-    expect(
-      await tenTheoVaiTro(hopGiaHan, 'textbox'),
-      'Hộp gia hạn không có ô gõ chữ nào — chỉ một ô chọn ngày',
-    ).toEqual([]);
-    /*
-     * Ô ngày ở đây mang `aria-label` là "Gia hạn hợp đồng", TRÙNG tên với nút Lưu ở chân hộp.
-     * Đó là hình dạng thật của `isp-detail.tsx` (`ariaLabel={t('isp.renew')}`). Ghi ra đúng như
-     * vậy: người dùng trình đọc màn hình nghe hai tay nắm cùng tên trong một hộp, và hôm nào
-     * ai đó sửa nó thành "Hết hạn mới" thì bài này phải đỏ để nói rằng ĐÃ TỐT LÊN.
-     */
-    expect(
-      await tenTheoVaiTro(hopGiaHan, 'button'),
-      'Hộp gia hạn có đúng bốn nút, trong đó ô ngày trùng tên với nút Lưu ở chân hộp',
-    ).toEqual(sap(['Đóng hộp thoại', 'Gia hạn hợp đồng', 'Hủy', 'Gia hạn hợp đồng']));
-
-    await expect(
-      hopGiaHan.getByText(/^Hết hạn:/),
-      'Hộp phải nhắc lại hạn ĐANG CÓ — không nhắc thì người ta gia hạn mù',
-    ).toBeVisible();
-
-    // Bỏ trống ngày rồi bấm Gia hạn: lời báo lỗi vỏn vẹn tên trường, và hộp Ở LẠI.
-    await hopGiaHan
-      .getByTestId('dialog-footer')
-      .getByRole('button', { name: 'Gia hạn hợp đồng' })
-      .click();
-    await expect(
-      hopGiaHan.getByRole('alert'),
-      'câu lỗi phải NÓI ĐƯỢC VIỆC PHẢI LÀM. Tới 12/09 chỗ này đặt NHÃN của ô làm câu lỗi, nên ' +
-        'khối đỏ hiện đúng một chữ "Hết hạn" — không nói được là thiếu, sai, hay quá khứ',
-    ).toHaveText('Chọn hạn mới.');
-    await expect(hopGiaHan, 'Gia hạn hỏng thì hộp phải ở lại').toBeVisible();
-
-    await hopGiaHan.getByRole('button', { name: 'Đóng hộp thoại' }).click();
-    await expect(hopGiaHan, 'Nút ✕ phải đóng được hộp gia hạn').toHaveCount(0);
-
-    /*
      * ===== HỘP "SỬA HỒ SƠ" — GIÁ TRỊ PHẢI ĐIỀN SẴN =====
      *
      * Form sửa hiện ra trống là kiểu hỏng tệ nhất trong nhóm này: nó không báo lỗi gì cả, chỉ
@@ -5924,9 +5876,13 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       'Ô Nhà mạng cũng phải điền sẵn — nó là ô BẮT BUỘC, trống là lưu không nổi',
     ).toHaveValue('VNPT E2E');
     await expect(
+      hopSua.getByRole('button', { name: 'Bắt đầu' }),
+      'Ô ngày bắt đầu phải hiện lại năm 2026 đã khai',
+    ).toContainText('2026');
+    await expect(
       hopSua.getByRole('button', { name: 'Hết hạn' }),
-      'Ô ngày hết hạn phải hiện lại năm 2027 đã khai',
-    ).toContainText('2027');
+      'Form Sửa không còn ô Hết hạn — đường truyền không có hạn (Q-04)',
+    ).toHaveCount(0);
 
     /*
      * Ô Trạng thái CHỈ có ở lượt sửa, và nó có đúng ba lựa chọn.
@@ -5936,7 +5892,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     expect(
       (await page.getByRole('option').allTextContents()).map(gonNhan),
       'Trạng thái đường truyền có đúng ba giá trị của `ISP_STATUSES`',
-    ).toEqual(['Đang chạy', 'Tạm ngưng', 'Đã cắt']);
+    ).toEqual(['Đang dùng', 'Tạm ngưng', 'Thanh lý']);
 
     /*
      * ĐÓNG DANH SÁCH bằng cách bấm lại chính ô chọn, rồi đóng hộp bằng nút ✕.

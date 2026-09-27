@@ -2,7 +2,6 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   E2E_SA,
   firstLogin,
-  resetIsp,
   resetSoftware,
   resetUsers,
   sql,
@@ -24,8 +23,6 @@ import {
  * báo cáo cuối năm lẫn khối "gia hạn gần đây" trên dashboard sếp. Cả hai trả rỗng, và không
  * vá ngược được. AC 3.4.
  *
- * Cùng lỗi ở `isp-line.service.ts` — hợp đồng đường truyền cũng có hai cửa.
- *
  * ===== BÀI NÀY GIỮ GÌ =====
  *
  * Không phải "nút gia hạn chạy được" (`software.spec.ts` đã giữ). Mà là: HAI cửa dẫn tới CÙNG
@@ -36,7 +33,6 @@ import {
 test.beforeEach(() => {
   resetUsers();
   resetSoftware();
-  resetIsp();
 });
 
 function renewalRowsFor(objectId: string): number {
@@ -92,32 +88,6 @@ test.describe('Gia hạn — hai cửa phải cùng ghi sổ (AC 3.4)', () => {
     expect(oldEnd).toBe('2026-12-31');
     expect(newEnd).toBe('2027-12-31');
     expect(actor).toBe(E2E_SA.email);
-  });
-
-  test('đường truyền: nút trong trang hồ sơ cũng phải ghi renewal_history', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
-
-    const created = await page.request.post('/api/v1/isp-lines', {
-      headers: await writeHeaders(page),
-      data: {
-        code: `ISP-E2E-RH-${stamp}`,
-        provider: 'Viettel',
-        startDate: '2025-01-01',
-        endDate: '2026-12-31',
-      },
-    });
-    expect(created.status()).toBe(201);
-    const id = ((await created.json()) as { id: string }).id;
-
-    const renewed = await page.request.post(`/api/v1/isp-lines/${id}/renew`, {
-      headers: await writeHeaders(page),
-      data: { endDate: '2027-12-31' },
-    });
-    expect(renewed.status()).toBe(201);
-
-    expect(renewalRowsFor(id), 'hợp đồng đường truyền cũng có hai cửa, cũng phải cùng ghi').toBe(1);
-    expect(sql(`SELECT object_kind FROM renewal_history WHERE object_id = '${id}'`)).toBe('isp');
   });
 
   /**
