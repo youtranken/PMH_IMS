@@ -199,6 +199,14 @@ test.describe('Gán license theo seat', () => {
     const blocked = await assign(page, retiredId, first);
     expect(blocked.status()).toBe(409);
     expect(await blocked.json()).toMatchObject({ code: 'SOFTWARE_RETIRED' });
+
+    // BE-13: gia hạn gọi thẳng API không được hồi sinh hồ sơ đã thanh lý.
+    const renewed = await page.request.post(`/api/v1/software/${retiredId}/renew`, {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+      data: { endDate: '2030-12-31' },
+    });
+    expect(renewed.status()).toBe(409);
+    expect(await renewed.json()).toMatchObject({ code: 'SOFTWARE_RETIRED' });
   });
 
   test('gỡ rồi gán lại cùng máy là hợp lệ (máy cài lại)', async ({ page }) => {

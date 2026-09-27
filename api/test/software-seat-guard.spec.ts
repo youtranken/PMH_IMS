@@ -9,7 +9,7 @@ import { SoftwareService } from '../src/modules/software/software.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
 /**
- * BE-09 — sửa hồ sơ và gán ghế phải xét ghế đang gán và trạng thái Thanh lý.
+ * BE-09 · BE-13 — sửa, gia hạn và gán ghế phải xét ghế đang gán và trạng thái Thanh lý.
  *
  * Luật thuần đã có bảng (`seatConflicts` trong software-rules.spec). Bài này hỏi phần chỉ
  * Postgres trả lời được: đếm ghế trên hàng ĐÃ KHÓA trong transaction ghi, và đọc trạng thái
@@ -31,7 +31,7 @@ async function failure(action: Promise<unknown>): Promise<Failure | null> {
   );
 }
 
-describe('BE-09 · hồ sơ phần mềm và ghế đang gán', () => {
+describe('BE-09 · BE-13 · hồ sơ phần mềm và ghế đang gán', () => {
   let scratch: ScratchDb;
   let software: SoftwareService;
   let seats: LicenseAssignmentService;
@@ -137,6 +137,22 @@ describe('BE-09 · hồ sơ phần mềm và ghế đang gán', () => {
         [id],
       );
       expect(rows[0].n).toBe(0);
+    });
+  });
+
+  describe('BE-13 · gia hạn hồ sơ đã thanh lý', () => {
+    it('→ 409 SOFTWARE_RETIRED, vẫn Thanh lý, hạn không đổi', async () => {
+      const id = await license('LIC-E2E-GH-TL', 0);
+      await scratch.pool.query(`UPDATE software SET status = 'retired' WHERE id = $1`, [id]);
+      expect(await failure(software.renew(ACTOR, id, '2031-01-01'))).toEqual({
+        status: 409,
+        code: 'SOFTWARE_RETIRED',
+      });
+      const { rows } = await scratch.pool.query(
+        `SELECT status, end_date::text AS end FROM software WHERE id = $1`,
+        [id],
+      );
+      expect(rows[0]).toEqual({ status: 'retired', end: '2030-01-01' });
     });
   });
 });

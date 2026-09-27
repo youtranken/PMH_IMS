@@ -232,6 +232,14 @@ export class SoftwareService {
    */
   async renew(actor: string, id: string, newEnd: string): Promise<SoftwareRecord> {
     const before = await this.requireRow(id);
+    // Gia hạn đặt lại `status = active`; cho qua ở đây là hồi sinh một hồ sơ người đã chủ ý
+    // thanh lý. `requireUnchangedWithin` bên dưới giữ cho ảnh chụp này còn đúng lúc ghi.
+    if (before.status === 'retired') {
+      throw new ConflictException({
+        code: 'SOFTWARE_RETIRED',
+        message: 'Hồ sơ này đã thanh lý, không gia hạn được.',
+      });
+    }
     const errors = validateSoftware({
       kind: before.kind as SoftwareKind,
       licenseModel: before.licenseModel as LicenseModel,
