@@ -31,7 +31,7 @@ Sổ thay cho `CAN-XAC-NHAN.md` (đã xoá ngày 27/09/2026, còn trong lịch s
 | --- | --- | --- | --- |
 | **Đang dùng** | mặc định; **tự** quay về khi nhập ngày hết hạn mới (sau ngày hôm nay) | có, "Sắp hết hạn" theo ngưỡng | tính |
 | **Hết hạn** (không gia hạn) | **hệ thống tự chuyển** khi qua ngày hết hạn mà chưa có ngày mới | **không**, vì mail "sắp hết hạn" đã gửi trước đó | tính (vẫn cài trên máy) |
-| **Thanh lý** | người bấm | không | **giải phóng ghế** |
+| **Thanh lý** | người bấm, **hoặc hệ thống tự chuyển sau 30 ngày Hết hạn (Q-13)** | không | **giải phóng ghế** |
 
 - "Sắp hết hạn", "còn hạn" là **nhãn màu tự tính** từ ngày hết hạn, không phải trạng thái.
 - Không có trạng thái "Đang chờ gia hạn".
@@ -107,6 +107,20 @@ Sổ thay cho `CAN-XAC-NHAN.md` (đã xoá ngày 27/09/2026, còn trong lịch s
 - **Vô hiệu hoá, xoá và nhập hàng loạt từ Excel vẫn chỉ SA/Admin** (thao tác có thể làm hỏng dữ
   liệu hàng loạt). Chủ dự án muốn mở thêm thì sửa mục này trước.
 - Đổi tên nhà mạng KHÔNG ghi vào lịch sử từng đường truyền — lịch sử danh mục đã ghi.
+
+### Q-13 · Phần mềm Hết hạn quá 30 ngày thì hệ thống tự Thanh lý (27/09/2026)
+
+Bổ sung Q-03. Lý do: hồ sơ đã hết hạn mà không gia hạn thì trên thực tế đã bỏ, để nó nằm mãi ở
+dashboard và màn Sắp hết hạn chỉ làm nhiễu danh sách cần xử lý.
+
+- Qua ngày hết hạn → **Hết hạn** (như Q-03). Trong **30 ngày ân hạn** hồ sơ vẫn hiện ở dashboard
+  và màn Sắp hết hạn (màu quá hạn) để còn kịp gia hạn; nhập ngày hết hạn mới thì về Đang dùng.
+- Hết hạn đủ 30 ngày mà chưa gia hạn → **hệ thống tự chuyển Thanh lý**: tự gỡ mọi ghế license
+  (mỗi ghế một dòng lịch sử, người thực hiện là `system`), ghi ngày thanh lý. Từ đó hồ sơ chỉ
+  nằm ở Kho thanh lý, không còn ở dashboard hay màn Sắp hết hạn.
+- Số ngày ân hạn nằm trong `system_config` (AD-11), mặc định 30.
+- Hồ sơ đã Thanh lý **không gia hạn được** (BE-13). Mua lại thì tạo hồ sơ mới.
+- Bản ghi vĩnh viễn (không có ngày hết hạn) không bị ảnh hưởng.
 
 ### Q-09 · Tài liệu
 
