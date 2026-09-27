@@ -119,7 +119,10 @@ dashboard và màn Sắp hết hạn chỉ làm nhiễu danh sách cần xử l�
   (mỗi ghế một dòng lịch sử, người thực hiện là `system`), ghi ngày thanh lý. Từ đó hồ sơ chỉ
   nằm ở Kho thanh lý, không còn ở dashboard hay màn Sắp hết hạn.
 - Số ngày ân hạn nằm trong `system_config` (AD-11), mặc định 30.
-- Hồ sơ đã Thanh lý **không gia hạn được** (BE-13). Mua lại thì tạo hồ sơ mới.
+- Hồ sơ đã Thanh lý (tay hoặc tự động) **khôi phục được bằng Sửa hồ sơ**: chọn trạng thái Đang
+  dùng và nhập ngày hết hạn mới từ hôm nay trở đi — vì thực tế có lúc gia hạn license trễ hơn 30
+  ngày. Ghế đã gỡ KHÔNG tự gán lại; gán lại bằng tay. Nút Gia hạn vẫn không dùng cho hồ sơ đã
+  Thanh lý (BE-13), để việc "hồi sinh" luôn là một thao tác Sửa có chủ ý.
 - Bản ghi vĩnh viễn (không có ngày hết hạn) không bị ảnh hưởng.
 
 ### Q-09 · Tài liệu
