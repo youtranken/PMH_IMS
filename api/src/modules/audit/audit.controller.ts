@@ -1,16 +1,8 @@
 import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
 import { Type } from 'class-transformer';
-import {
-  IsInt,
-  IsOptional,
-  IsString,
-  Matches,
-  Max,
-  MaxLength,
-  Min,
-} from 'class-validator';
+import { IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 import { Roles } from '../auth/roles.decorator';
-import { AuditQueryService } from './audit-query.service';
+import { AuditQueryService, COUNT_CAP } from './audit-query.service';
 import { NoStepUp } from '../auth/step-up.decorator';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -23,7 +15,7 @@ function assertValidDate(s: string): void {
   }
 }
 
-class AuditQueryDto {
+export class AuditQueryDto {
   @IsOptional()
   @IsString()
   @MaxLength(255)
@@ -52,10 +44,16 @@ class AuditQueryDto {
   @Matches(DATE_RE, { message: 'to phải dạng YYYY-MM-DD' })
   to?: string;
 
+  /*
+   * Trần = `COUNT_CAP`: câu đếm không bao giờ báo quá ngần ấy dòng, nên với `pageSize` nhỏ
+   * nhất (1) cũng không có trang hợp lệ nào vượt nó. Không trần thì `?page=1e15` bắt
+   * Postgres đi `OFFSET` qua toàn bộ một bảng chỉ-thêm giữ vĩnh viễn.
+   */
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
+  @Max(COUNT_CAP)
   page = 1;
 
   @IsOptional()

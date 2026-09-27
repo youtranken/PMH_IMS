@@ -21,6 +21,7 @@ import { ConfirmProvider } from '@/ui/confirm-provider';
 import { Loading, NotFound } from '@/ui/load-state';
 import { ToastProvider } from '@/ui/toast';
 import { AccountsScreen } from '@/features/admin/accounts-screen';
+import { AuditLogScreen } from '@/features/admin/audit-log-screen';
 import { CatalogScreen } from '@/features/catalog/catalog-screen';
 import { DeviceDetail } from '@/features/devices/device-detail';
 import { DevicesScreen } from '@/features/devices/devices-screen';
@@ -158,6 +159,9 @@ function AppRoutes() {
         ) : null}
         {canSeeRoute(PATHS.adminVaultAccess, me.role) ? (
           <Route path={PATHS.adminVaultAccess} element={<AccessMatrixScreen me={me} />} />
+        ) : null}
+        {canSeeRoute(PATHS.adminAuditLog, me.role) ? (
+          <Route path={PATHS.adminAuditLog} element={<AuditLogScreen />} />
         ) : null}
         <Route path={PATHS.approvals} element={<ApprovalsScreen me={me} />} />
         {/* Gác ở CẢ route, không chỉ ẩn mục menu: gõ thẳng URL cũng chỉ nhận 404. */}

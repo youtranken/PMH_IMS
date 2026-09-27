@@ -51,6 +51,12 @@ describe('UI_PATHS bên api khớp `routes.ts` bên web', () => {
   it('`approvals` — đường không tham số', () => {
     expect(UI_PATHS.approvals).toBe(webPathTemplate('approvals'));
   });
+
+  it('`auditLog` — đúng đường `adminAuditLog`, người thao tác đi trong `q` đã mã hoá', () => {
+    const url = new URL(UI_PATHS.auditLog('le+minh@pmh.com.vn'), 'http://x');
+    expect(url.pathname).toBe(webPathTemplate('adminAuditLog'));
+    expect(url.searchParams.get('q')).toBe('le+minh@pmh.com.vn');
+  });
 });
 
 /**

@@ -37,4 +37,10 @@ export const UI_PATHS = {
   serviceAccount: (id: string) => `/service-accounts/${id}`,
   approvals: '/approvals',
   expiry: '/expiry',
+  /**
+   * Màn Nhật ký, lọc sẵn theo người thao tác. `q` là khoá ô tìm của `useListUrlState` bên web
+   * — màn Nhật ký đặt ô tìm đó làm bộ lọc người thao tác; `audit-log-screen.test.tsx` canh
+   * rằng `?q=` thật sự thành `actor=` khi gọi API.
+   */
+  auditLog: (actor: string) => `/admin/audit-log?q=${encodeURIComponent(actor)}`,
 } as const;

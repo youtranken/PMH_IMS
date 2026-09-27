@@ -217,7 +217,6 @@ import {
  *
  * ── CHƯA ĐI — biết là chưa đi, và nói thẳng là chưa ─────────────────────────
  * [ ] Màn Tài liệu (`/documents`) — thuộc epic sau, chưa có route
- * [ ] Màn Nhật ký an ninh (`/admin/audit-log`) — chưa có màn, mới có API
  * [ ] Viewport 390px của từng phòng — nằm ở bộ `*.mobile.spec.ts` riêng
  * [ ] Nhập Excel đi trọn ba bước tới lúc GHI — `device-import.spec.ts` giữ phần đó
  */
@@ -356,8 +355,8 @@ test.describe('SA đi một vòng cả hệ thống', () => {
 
   /**
    * Bản đồ menu của vai SA, đúng thứ tự trong `web/src/shell/app-nav.ts`.
-   * Hai mục `planned` (Tài liệu, Nhật ký) KHÔNG có ở đây — chúng được kiểm riêng bên dưới,
-   * vì chúng không phải link.
+   * Mục `planned` (Tài liệu) KHÔNG có ở đây — nó được kiểm riêng bên dưới, vì nó không phải
+   * link.
    */
   const NAV_STOPS: NavStop[] = [
     { link: 'Bảng điều khiển', path: '/', heading: /^Xin chào/ },
@@ -374,6 +373,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     { link: 'Tài khoản', path: '/admin/accounts', heading: /^Tài khoản$/ },
     { link: 'Danh mục', path: '/admin/catalog', heading: /^Danh mục$/ },
     { link: 'Quyền két sắt', path: '/admin/vault-access', heading: /^Quyền xem két sắt$/ },
+    { link: 'Nhật ký', path: '/admin/audit-log', heading: /^Nhật ký$/ },
     { link: 'Bộ giao diện', path: '/dev/components', heading: /^Bộ giao diện$/ },
   ];
 
@@ -386,7 +386,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
    * đúng thay vì bấm menu.
    *
    * ĐỎ KHI: một mục menu trỏ sai đường, một route bị xóa hoặc gác nhầm vai (ra 404), một
-   * `<h1>` đổi chữ mà i18n không đổi theo, hoặc hai mục "chưa mở" bỗng thành link bấm được
+   * `<h1>` đổi chữ mà i18n không đổi theo, hoặc mục "chưa mở" bỗng thành link bấm được
    * (đưa người dùng vào màn của epic chưa làm).
    */
   test('SA đi hết mọi mục trên thanh điều hướng bằng chuột', async ({ page }) => {
@@ -415,11 +415,11 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     }
 
     /*
-     * Hai mục của epic sau: `<span aria-disabled="true" title="…">`, KHÔNG phải `<a>`.
-     * Chúng có mặt để bản đồ điều hướng không phải vẽ lại mỗi epic — nhưng có mặt mà bấm
+     * Mục của epic sau: `<span aria-disabled="true" title="…">`, KHÔNG phải `<a>`.
+     * Nó có mặt để bản đồ điều hướng không phải vẽ lại mỗi epic — nhưng có mặt mà bấm
      * được thì tệ hơn không có.
      */
-    for (const planned of ['Tài liệu', 'Nhật ký']) {
+    for (const planned of ['Tài liệu']) {
       await expect(
         nav.getByRole('link', { name: planned, exact: true }),
         `"${planned}" thuộc epic sau — nó KHÔNG được là link bấm được`,
@@ -952,15 +952,19 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     ).toHaveCount(0);
 
     /*
-     * Hai mục "chưa mở" (Tài liệu · Nhật ký) là `<span aria-disabled="true">`, KHÔNG phải
-     * link. Kiểm bằng "không có link mang tên đó" thay vì bám `title` — nếu một ngày ai đó
-     * biến chúng thành link trỏ vào hư không, bài này đỏ.
+     * Mục "chưa mở" (Tài liệu) là `<span aria-disabled="true">`, KHÔNG phải link. Kiểm bằng
+     * "không có link mang tên đó" thay vì bám `title` — nếu một ngày ai đó biến nó thành link
+     * trỏ vào hư không, bài này đỏ.
      */
     await expect(
       menu.getByRole('link', { name: 'Tài liệu', exact: true }),
       'màn thuộc epic sau chỉ được hiện mờ, không được là link',
     ).toHaveCount(0);
-    await expect(menu.getByRole('link', { name: 'Nhật ký', exact: true })).toHaveCount(0);
+    // `audit.controller.ts` mở cho sa + admin — menu phải khớp cửa sau nó.
+    await expect(
+      menu.getByRole('link', { name: 'Nhật ký', exact: true }),
+      'Quản trị viên phải thấy Nhật ký',
+    ).toBeVisible();
 
     // Và cửa Két sắt phải MỞ THẬT, không chỉ hiện trên menu.
     await menu.getByRole('link', { name: 'Két sắt', exact: true }).click();
@@ -982,8 +986,8 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
    *   • `/dev/components` — route chỉ được ĐĂNG KÝ khi `me.role === 'sa'` (App.tsx, khối
    *     `{me.role === 'sa' ? <Route …/> : null}`). Admin gõ URL rơi xuống `*` → 404. Gác thật
    *     ở web.
-   *   • `/documents` và `/admin/audit-log` — CHƯA có route nào cả (mục menu còn `planned`),
-   *     nên mọi vai đều nhận 404, kể cả SA.
+   *   • `/documents` — CHƯA có route nào cả (mục menu còn `planned`), nên mọi vai đều nhận
+   *     404, kể cả SA.
    *   • `/admin/accounts` — **KHÔNG gác vai ở web**. `<Route path={PATHS.adminAccounts}
    *     element={<AccountsScreen me={me} />} />` nằm ngoài mọi điều kiện vai; `app-nav.ts` chỉ
    *     ẩn MỤC MENU (`roles: ['sa']`). Admin gõ thẳng URL thì màn VẪN dựng ra.
@@ -996,7 +1000,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
    *      thành "Chưa có dữ liệu". Đây là kiểu hỏng nguy hiểm nhất của màn này: một Quản trị
    *      viên đọc "công ty không có tài khoản nào" và tin là mình vừa kiểm tra xong.
    *
-   * ĐỎ KHI: một trong ba route 404 bỗng mở ra cho admin; hoặc `/admin/accounts` nuốt 403
+   * ĐỎ KHI: một trong hai route 404 bỗng mở ra cho admin; hoặc `/admin/accounts` nuốt 403
    * thành bảng rỗng; hoặc API nới `@Roles` cho admin mà không ai bàn.
    */
   test('Quản trị viên gõ thẳng URL của SA thì hệ thống nói KHÔNG, chứ không im lặng', async ({
@@ -1010,8 +1014,8 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
 
     await firstLogin(page, { email: ADMIN_EMAIL, password: matKhauTam });
 
-    // --- Ba đường trả 404 thật.
-    for (const url of ['/dev/components', '/documents', '/admin/audit-log']) {
+    // --- Hai đường trả 404 thật.
+    for (const url of ['/dev/components', '/documents']) {
       await page.goto(url);
       await expect(
         page.getByRole('heading', { name: 'Không tìm thấy trang' }),

@@ -131,11 +131,7 @@ export const ROUTE_ROLES: Record<string, readonly UserRole[]> = {
   [PATHS.adminAccounts]: ['sa'],
   // `vault-access.controller.ts` — `@Roles('sa', 'admin')`.
   [PATHS.adminVaultAccess]: ['sa', 'admin'],
-  /*
-   * `audit.controller.ts` — `@Roles('sa', 'admin')` ở cấp lớp. Màn này CHƯA dựng (chưa có
-   * `<Route>` nào trong `App.tsx`); khai sẵn để lúc dựng thì hàng rào đã đứng đó, thay vì
-   * phải nhớ ra — đúng thứ hai màn kia đã quên.
-   */
+  // `audit.controller.ts` — `@Roles('sa', 'admin')` ở cấp lớp.
   [PATHS.adminAuditLog]: ['sa', 'admin'],
   // `catalog.controller.ts` — đường ĐỌC mở cho cả `member`, nên màn này không gác theo vai.
   [PATHS.adminCatalog]: ['sa', 'admin', 'member'],

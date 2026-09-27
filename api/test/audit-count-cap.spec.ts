@@ -3,6 +3,7 @@ import { runMigrations } from '../src/database/migration-runner';
 import { UsersApiService } from '../src/modules/users/users.api';
 import { UsersService } from '../src/modules/users/users.service';
 import { AuditQueryService } from '../src/modules/audit/audit-query.service';
+import { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
 /**
@@ -45,7 +46,11 @@ describe('Đếm nhật ký an ninh có trần', () => {
      * (A-07). Cắm một bản giả trả map rỗng thì bài kiểm bên dưới vẫn xanh trong khi đường
      * tra tên hỏng hoàn toàn — mà đó đúng là thứ vừa được thay.
      */
-    service = new AuditQueryService(scratch.db, new UsersApiService(new UsersService(scratch.db)));
+    service = new AuditQueryService(
+      scratch.db,
+      new UsersApiService(new UsersService(scratch.db)),
+      new SystemConfigService(scratch.db),
+    );
   }, TEST_TIMEOUT);
 
   afterAll(async () => {

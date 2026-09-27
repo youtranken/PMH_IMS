@@ -223,7 +223,10 @@ export class MailConsumer {
             { label: 'Chặn đến', value: user.lockedUntil ? fmt(user.lockedUntil) : '—' },
             { label: 'Thời điểm', value: fmt(new Date()) },
           ],
-          // Không có nút: màn nhật ký chưa được dựng (DOM-07). `mail-cta.spec.ts` sẽ đỏ khi có.
+          /* Chủ tài khoản cũng nhận thư này nhưng màn Nhật ký chỉ mở cho SA/Quản trị — nhãn
+             nói trước điều đó để người nhận không tưởng nút hỏng khi bấm ra trang 404. */
+          ctaLabel: 'Xem nhật ký của tài khoản (SA/Quản trị)',
+          ctaUrl: `${APP_URL()}${UI_PATHS.auditLog(user.email)}`,
           footnote:
             'Không phải bạn đang quên mật khẩu? Báo SA ngay. SA có thể KHÓA TAY tài khoản ở màn Tài khoản — khóa tay chặn mọi nơi và chỉ SA mở được.',
         });
@@ -263,7 +266,8 @@ export class MailConsumer {
             { label: 'Trong', value: `${payload.windowMinutes ?? 0} phút` },
             { label: 'Thời điểm', value: new Date().toLocaleString('vi-VN') },
           ],
-          // Không có nút: màn nhật ký chưa dựng — xem chú thích ở lá thư ngay trên (B-08/T-02).
+          ctaLabel: 'Xem nhật ký của tài khoản này',
+          ctaUrl: `${APP_URL()}${UI_PATHS.auditLog(payload.who)}`,
 
           /* Thời gian nghỉ NỘI SUY từ payload, không viết cứng "một giờ": nó là
              `secret.probe_cooldown_minutes` trong `system_config` (AD-11) và đổi được bất cứ
@@ -271,7 +275,7 @@ export class MailConsumer {
              không cổng nào đỏ lên. Còn `?? 60` chỉ là lưới đỡ cho hàng outbox cũ ghi trước
              18/09 — chúng không có trường này. */
           footnote:
-            'Phần lớn trường hợp là người dùng thật gõ nhầm mã hoặc bấm vào một hồ sơ chưa được gán quyền. Hỏi thẳng người này trước khi kết luận; màn nhật ký để lọc theo tài khoản chưa có trong bản này. ' +
+            'Phần lớn trường hợp là người dùng thật gõ nhầm mã hoặc bấm vào một hồ sơ chưa được gán quyền. Hỏi thẳng người này trước khi kết luận; nhật ký cho thấy các lượt đó diễn ra lúc nào và từ đâu. ' +
             /*
              * KHÔNG ĐOÁN HỘ MỘT CON SỐ MÌNH KHÔNG BIẾT (19/09/2026).
              *
