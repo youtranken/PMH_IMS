@@ -26,6 +26,7 @@ Trạng thái từng epic/story: đọc `sprint-status.yaml`, **không ghi số 
 | **Quyết định nghiệp vụ đã chốt** | `docs/QUYET-DINH.md` — thắng `epics.md` khi hai bên lệch nhau |
 | Việc còn lại trước/sau go-live | `docs/GO-LIVE-CHECKLIST.md` |
 | Deploy / sao lưu / khôi phục | `docs/RUNBOOK-4.3-dong-dot-1.md` |
+| Kế hoạch ngày go-live (ai, giờ, khi nào dừng) | `docs/KE-HOACH-GO-LIVE.md` |
 | Mỗi epic để lại gì | `docs/EPIC-MAP.md` |
 | Thiết kế màn hình | `_bmad-output/planning-artifacts/design-ims/` |
 

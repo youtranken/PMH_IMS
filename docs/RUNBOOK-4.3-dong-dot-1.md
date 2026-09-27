@@ -1,205 +1,283 @@
-# Runbook — Story 4.3: Đóng Đợt 1
+# Runbook — Đưa IMS lên production (Ubuntu + Docker)
 
-Đây là story DUY NHẤT của Đợt 1 mà máy không làm thay người được. Ba việc dưới đây cần
-tay người: mở phong bì niêm phong, đứng trước một máy sạch, và bấm nút deploy lên LAN thật.
+Runbook này là đường đi từ **một máy Ubuntu trắng** tới IMS chạy thật trên LAN, kèm sao lưu,
+diễn tập khôi phục và các thao tác vận hành về sau. Làm **đúng thứ tự A → H**; mỗi bước có ô tick.
 
-Ước lượng: **nửa ngày**, 2 người (một SA + một người giữ phong bì thứ hai).
-Làm theo thứ tự A → B → C. Mỗi phần có ô ghi biên bản ở cuối file.
+Ước lượng lần đầu: **1 ngày**, 2 người (một SA + một người giữ phong bì thứ hai).
 
-Chuẩn bị trước khi bắt đầu:
+Quy ước: `$` là lệnh chạy trên máy chủ prod, trong thư mục `/opt/ims`, bằng user thuộc nhóm
+`docker`. Lệnh nào cần root thì ghi `sudo`.
 
-- [ ] File Excel 300 thiết bị thật, đã đối chiếu với `docs/mau-du-lieu/mau-thiet-bi.xlsx`
-- [ ] Một máy sạch (hoặc một VM mới) có docker, **không** phải máy đang chạy IMS
-- [ ] NAS đã mount được từ máy chủ IMS
-- [ ] Cert wildcard `*.pmh.com.vn` (file `.crt` + `.key`)
-- [ ] Hai phong bì trắng + bút + máy in
+## 0. Chuẩn bị trước
 
----
-
-## A. Chìa và bản sao lưu
-
-### A1. Sinh master key thật cho production
-
-Chìa hiện tại trong `secrets/master_key` là chìa **dev**. Production phải có chìa riêng,
-sinh trên chính máy chủ prod, và không bao giờ đi qua chat/email/git.
-
-```bash
-# Trên MÁY CHỦ PROD
-openssl rand -hex 32
-```
-
-Ghi kết quả thành đúng một dòng `1=<64 ký tự hex>` vào `secrets/master_key`.
-
-> Vì sao bắt đầu từ version 1 chứ không phải 2: version là số thứ tự của chìa, không phải
-> phiên bản phần mềm. Xoay chìa lần đầu sau này sẽ thêm dòng `2=…`, và dòng `1=…` **ở lại**
-> để còn giải được dữ liệu chưa xoay. Xoá dòng cũ = mất vĩnh viễn mọi thứ mã bằng nó.
-
-### A2. In chìa ra giấy, hai phong bì, hai người giữ (AR-9)
-
-```bash
-cat secrets/master_key   # in ra màn hình, chụp lại bằng máy in, KHÔNG lưu file
-```
-
-- In **2 bản**. Mỗi bản ghi thêm: ngày in, tên hệ thống (IMS), và câu
-  *"Chìa giải mã két sắt IMS — không sao chép, không chụp ảnh"*.
-- Bỏ mỗi bản vào một phong bì, dán, **ký đè lên mép dán** (chữ ký vắt qua mép giấy: mở trộm
-  là thấy).
-- Hai người khác nhau giữ, ở hai chỗ khác nhau. Không ai giữ cả hai.
-
-> Vì sao hai bản chứ không phải một: một bản thì mất là hết. Vì sao không phải năm: mỗi bản
-> thêm là một chỗ nữa có thể lộ. Hai là số nhỏ nhất còn chịu được một tai nạn.
-
-### A3. Bật sao lưu hằng đêm sang NAS
-
-```bash
-# Trên MÁY CHỦ PROD — thử chạy tay một lần trước
-bash ops/backup-nightly.sh /mnt/nas/ims-backup
-
-# Chạy được rồi thì đặt cron 01:30 mỗi đêm
-crontab -e
-# 30 1 * * * cd /opt/ims && bash ops/backup-nightly.sh /mnt/nas/ims-backup >> /var/log/ims-backup.log 2>&1
-```
-
-Script sẽ **dừng** nếu thấy file master key nằm trong thư mục sao lưu. Đó là cố ý: dump chứa
-ciphertext của két; để chìa nằm cạnh nó thì ai lấy được NAS là mở được hết, và cả lớp mã hóa
-thành ra trang trí.
-
-- [ ] Chạy tay thành công, file `.gz` xuất hiện trên NAS
-- [ ] Cron đã đặt
-- [ ] Kiểm lại: `ls /mnt/nas/ims-backup` **không** có file nào tên `master_key*`
+- [ ] Máy chủ Ubuntu 22.04/24.04, ≥ 4 CPU, ≥ 8 GB RAM, ≥ 100 GB đĩa, IP LAN cố định
+- [ ] Một **VM trắng thứ hai** cho buổi diễn tập khôi phục (xoá sau khi xong)
+- [ ] NAS có thư mục riêng cho IMS, mount được từ máy chủ (NFS hoặc SMB)
+- [ ] Cert wildcard `*.pmh.com.vn`: file chứng chỉ + chuỗi trung gian, và khoá riêng
+- [ ] Hộp thư dịch vụ Google Workspace (ví dụ `ims@pmh.com.vn`) + **App Password** SMTP
+- [ ] DNS nội bộ trỏ được `ims.pmh.com.vn` về IP máy chủ
+- [ ] File Excel thiết bị thật, đã đối chiếu với `docs/mau-du-lieu/mau-thiet-bi.xlsx`
+- [ ] 3 phong bì trắng + bút + máy in (không nối mạng nếu có)
 
 ---
 
-## B. Diễn tập khôi phục
+## A. Dựng máy chủ
 
-Mục đích không phải "chứng minh backup chạy". Mục đích là **chứng minh chìa in trên giấy mở
-được dữ liệu trong backup** — thứ chỉ biết được khi thử thật.
+### A1. Cài Docker và lấy mã nguồn
 
-### B1. Cất một secret THỬ (làm trên prod, trước khi backup chạy)
+```bash
+# Docker Engine + compose plugin (theo hướng dẫn chính thức của Docker cho Ubuntu)
+sudo apt-get update && sudo apt-get install -y ca-certificates curl git
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker "$USER"      # đăng xuất / đăng nhập lại để nhận nhóm
 
-Vào IMS → một thiết bị bất kỳ → tab **Két sắt** → **Cất secret**:
+sudo mkdir -p /opt/ims && sudo chown "$USER" /opt/ims
+git clone https://github.com/youtranken/PMH_IMS.git /opt/ims
+cd /opt/ims && git checkout <tag-phát-hành>   # ví dụ v1.0.0 — KHÔNG chạy prod từ nhánh đang làm
+```
 
-| Trường | Giá trị |
+- [ ] `docker compose version` chạy được không cần sudo
+
+### A2. Tạo `.env`
+
+```bash
+$ cp .env.example .env
+$ nano .env
+```
+
+| Biến | Giá trị prod |
 | --- | --- |
-| Tên gọi | `drill 2026-08` (bắt buộc chứa chữ **drill**) |
-| Loại | Khác |
-| Giá trị | một chuỗi tự nghĩ, ví dụ `DrillOK#2026-08-23` |
-
-Ghi chuỗi đó vào biên bản ở cuối file này. Đây là chuỗi sẽ đem so ở bước B3.
-
-> Nhãn phải chứa "drill" vì script diễn tập **chỉ** mở được secret có nhãn như vậy. Két thật
-> không mở được bằng đường đó — nếu không thì chính buổi diễn tập đã là cửa hậu xuất két
-> (FR-026).
-
-Đợi cron chạy, hoặc chạy tay `bash ops/backup-nightly.sh /mnt/nas/ims-backup`.
-
-### B2. Khôi phục trên máy sạch
-
-Chép repo + file dump sang máy sạch (dump chép được; **chìa thì không** — chìa đi bằng phong bì).
+| `NODE_ENV` | `production` |
+| `POSTGRES_PASSWORD`, `APP_DB_PASSWORD`, `REDIS_PASSWORD` | ba mật khẩu **khác nhau**, sinh bằng `openssl rand -hex 24` (chỉ chữ + số, không `@` `:`) |
+| `APP_BASE_URL` | `https://ims.pmh.com.vn` |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` | `smtp.gmail.com` / `587` / `ims@pmh.com.vn` |
+| `TLS_CERT_DIR` | `./ops/certs` |
+| `WEB_HTTP_PORT`, `WEB_HTTPS_PORT` | để trống (mặc định 80/443) |
 
 ```bash
-# Trên MÁY SẠCH
-cp .env.example .env       # điền POSTGRES_USER/PASSWORD/REDIS_PASSWORD tuỳ ý, đây là máy tạm
-bash ops/restore-drill.sh /duong/dan/ims-20260823-013000.sql.gz
+$ chmod 600 .env
 ```
 
-Script sẽ hỏi `MAY SACH` để xác nhận (nó xoá sạch volume — hỏi để không ai chạy nhầm trên
-máy thật), rồi dừng ở bước 3 chờ **người giữ phong bì gõ chìa từ bản giấy**.
+- [ ] Không còn chuỗi `doi-mat-khau-nay` nào: `grep -c doi-mat-khau-nay .env` ra `0`
 
-Gõ tay, không copy-paste, không cắm USB. Cái đang được diễn tập chính là *"bản giấy này có
-thật sự dùng được không"* — nếu chìa vẫn nằm đâu đó trong ổ cứng thì hôm ổ cứng chết mới
-biết là không có chìa.
+### A3. Tạo bí mật (`secrets/`)
 
-### B3. Điều kiện ĐỖ
+Sinh **trên chính máy chủ prod**. Không bao giờ đi qua chat, email hay git.
 
-Bước 5 in ra chuỗi. **Khớp với chuỗi ghi ở B1 → ĐỖ.**
+```bash
+$ umask 077
+$ echo "1=$(openssl rand -hex 32)" > secrets/master_key
+$ openssl rand -hex 32 > secrets/password_pepper
+$ printf '%s' '<App Password của hộp thư SMTP>' > secrets/smtp_password
+$ sudo chown 1000:1000 secrets/*        # container api/worker chạy uid 1000
+```
 
-Lệch hoặc báo lỗi → **HỎNG**. Đừng sửa vội; ghi lại nguyên trạng rồi truy:
+- [ ] Ba file tồn tại, quyền `-rw-------`, chủ `1000`
+
+### A4. Chứng chỉ TLS
+
+nginx đọc **đúng hai tên** `fullchain.pem` và `privkey.pem` (`web/nginx.conf`).
+
+```bash
+$ cat <chứng-chỉ>.crt <chuỗi-trung-gian>.crt > ops/certs/fullchain.pem
+$ cp <khoá-riêng>.key ops/certs/privkey.pem
+$ chmod 600 ops/certs/privkey.pem
+$ openssl x509 -in ops/certs/fullchain.pem -noout -subject -enddate   # đúng *.pmh.com.vn, còn hạn
+```
+
+- [ ] Ghi ngày hết hạn cert vào lịch nhắc (trước 30 ngày)
+
+---
+
+## B. Deploy lần đầu
+
+```bash
+$ docker compose up -d --build        # KHÔNG có --profile dev: prod không chạy mailpit
+$ docker compose ps                   # postgres, redis, api, worker, web đều Up / healthy
+$ docker compose logs api | grep -E "Migration applied|Đã áp"   # đủ số migration trong api/src/migrations
+```
+
+Không dùng `docker-compose.override.e2e.yml` hay `docker-compose.override.drill.yml` ở máy prod.
+
+### B1. Tạo SA đầu tiên
+
+```bash
+$ docker compose exec api node dist/ops/seed-sa.main.js
+```
+
+Script tạo `sa@pmh.com.vn` và `caothuan@pmh.com.vn`, in **mật khẩu tạm ngẫu nhiên một lần duy
+nhất**. Chép ra giấy, trao tận tay, không gửi qua chat/email. Script từ chối chạy nếu đã có SA.
+
+- [ ] `sa@pmh.com.vn` đăng nhập, cài TOTP, đổi mật khẩu
+- [ ] `caothuan@pmh.com.vn` đăng nhập, cài TOTP, đổi mật khẩu
+- [ ] Các tài khoản admin/member tạo qua màn **Tài khoản**
+
+### B2. Kiểm từ máy người dùng
+
+- [ ] Mở `https://ims.pmh.com.vn` từ máy IT ở **mỗi site**: không cảnh báo cert, đăng nhập được
+- [ ] Trên điện thoại (390px): mở một thiết bị, đọc được hồ sơ
+- [ ] Màn Tài khoản → gửi thử một mail (vd. đặt lại mật khẩu cho một tài khoản test) → **mail tới
+      hộp thư thật**
+- [ ] `docker compose logs worker --since 10m` không có lỗi SMTP
+
+---
+
+## C. Chìa, pepper và `.env` — ba phong bì
+
+Mất **master key** = mất toàn bộ két và mọi TOTP. Mất **pepper** = mọi mật khẩu đăng nhập vô dụng,
+kể cả SA. Mất **`.env`** = không nối lại được DB đã khôi phục. Cả ba **không** nằm trong bản sao lưu.
+
+```bash
+$ cat secrets/master_key secrets/password_pepper   # in ra giấy, KHÔNG lưu thêm file nào
+$ cat .env                                          # in ra giấy (bản thứ ba)
+```
+
+- In **2 bản** chìa + pepper. Mỗi bản ghi thêm ngày in và câu
+  *"Chìa giải mã IMS — không sao chép, không chụp ảnh"*. Bỏ vào phong bì, dán, **ký đè lên mép
+  dán**. Hai người khác nhau giữ, ở hai chỗ khác nhau.
+- `.env` in **1 bản**, phong bì thứ ba, cất cùng chỗ với một trong hai phong bì chìa.
+
+> Hai bản chứ không phải một: một bản mất là hết. Không phải năm: mỗi bản thêm là một chỗ nữa
+> có thể lộ.
+
+- [ ] 2 phong bì chìa + pepper đã niêm phong, 2 người giữ
+- [ ] Phong bì `.env` đã niêm phong
+
+---
+
+## D. Sao lưu hằng đêm sang NAS
+
+### D1. Mount NAS cố định
+
+```bash
+sudo mkdir -p /mnt/nas/ims-backup
+# NFS:  echo "nas.pmh.local:/volume1/ims /mnt/nas/ims-backup nfs defaults,_netdev 0 0" | sudo tee -a /etc/fstab
+sudo mount -a && mountpoint /mnt/nas/ims-backup     # phải in "is a mountpoint"
+```
+
+### D2. Chạy tay một lần, rồi đặt cron
+
+```bash
+$ bash ops/backup-nightly.sh /mnt/nas/ims-backup
+$ crontab -e
+30 1 * * * cd /opt/ims && bash ops/backup-nightly.sh /mnt/nas/ims-backup >> /var/log/ims-backup.log 2>&1 || echo "IMS backup HỎNG $(date)" | mail -s "IMS backup HONG" it@pmh.com.vn
+$ sudo touch /var/log/ims-backup.log && sudo chown "$USER" /var/log/ims-backup.log
+```
+
+Mỗi lượt tạo `ims-<ngày>.sql.gz` (database, **giữ quyền của `ims_app`**) và `files-<ngày>.tgz`
+(file đính kèm). Script **dừng** khi: NAS chưa mount, thấy master key/pepper trong thư mục đích,
+dump quá nhỏ, hoặc dump thiếu GRANT. Bản cũ hơn 30 ngày tự xoá (`IMS_BACKUP_KEEP_DAYS`).
+
+- [ ] Chạy tay in `✓ Xong`, trên NAS có cả `.sql.gz` và `.tgz`
+- [ ] Cron đã đặt; sáng hôm sau `/var/log/ims-backup.log` có dòng `✓ Xong`
+- [ ] `ls /mnt/nas/ims-backup` **không** có `master_key*` hay `password_pepper*`
+
+---
+
+## E. Diễn tập khôi phục (trước khi nhập dữ liệu thật, và mỗi quý)
+
+Mục đích: **chứng minh chìa trên giấy mở được dữ liệu trong bản sao lưu**.
+
+### E1. Cất một secret THỬ trên prod
+
+IMS → một thiết bị bất kỳ → tab **Két sắt** → **Cất secret**: tên gọi chứa chữ **drill**
+(vd. `drill 2026-10`), loại Khác, giá trị tự nghĩ (vd. `DrillOK#2026-10`). Ghi chuỗi đó vào biên
+bản. Rồi chạy `bash ops/backup-nightly.sh /mnt/nas/ims-backup`.
+
+> Script diễn tập **chỉ** mở được secret có nhãn chứa "drill" — két thật không mở được bằng
+> đường đó (FR-026).
+
+### E2. Khôi phục trên VM trắng
+
+Trên VM: cài Docker + clone repo như A1. Tạo `.env` **với mật khẩu riêng của VM** (không dùng
+mật khẩu prod). Tạo `secrets/password_pepper` bằng `openssl rand -hex 32` (pepper giả là đủ — diễn
+tập chỉ mở két) và `secrets/smtp_password` rỗng. Chép hai file sao lưu từ NAS sang.
+
+```bash
+bash ops/restore-drill.sh ims-<ngày>.sql.gz files-<ngày>.tgz
+```
+
+Script hỏi `MAY SACH` (nó xoá mọi volume của máy này), tự **từ chối** nếu thấy đang đứng trên máy
+có dữ liệu IMS, rồi dừng chờ **người giữ phong bì gõ chìa từ bản giấy**. Gõ tay, không
+copy-paste, không cắm USB.
+
+### E3. Điều kiện ĐỖ
+
+Bước cuối in ra chuỗi. **Khớp với chuỗi ở E1 → ĐỖ.**
 
 | Triệu chứng | Nguyên nhân hay gặp |
 | --- | --- |
-| `Không có chìa version N trong bản giấy` | Bản sao lưu cũ hơn lần xoay chìa — phong bì thiếu dòng cũ |
+| `ims_app KHÔNG có quyền đọc bảng secret` | Dump tạo bằng bản `backup-nightly.sh` cũ (có `--no-privileges`) |
+| `Không có chìa version N` | Bản sao lưu cũ hơn lần xoay chìa — phong bì thiếu dòng cũ |
 | `Giải mã KHÔNG thành công` | Gõ nhầm một ký tự hex; gõ lại chậm, đọc từng cặp |
-| `không có secret nào để giải` | Backup chạy TRƯỚC khi cất secret thử — cất lại rồi backup lại |
+| `không có secret nào để giải` | Backup chạy TRƯỚC khi cất secret thử |
+| api không lên, log báo không đọc được `master_key` | `sudo chown 1000:1000 secrets/master_key` |
 
-- [ ] Drill ĐỖ, chuỗi khớp
-- [ ] Phong bì đã niêm phong lại, ký đè mép dán lần nữa
-- [ ] Ghi ngày diễn tập kế tiếp (6 tháng sau) vào lịch
-
-### B4. Dọn máy diễn tập
-
-```bash
-docker compose down -v
-shred -u secrets/master_key 2>/dev/null || rm -f secrets/master_key
-```
-
-Máy sạch giờ **không được** còn chìa. Nếu là VM thì xoá luôn VM.
+- [ ] Diễn tập ĐỖ, chuỗi khớp
+- [ ] Phong bì niêm phong lại, ký đè mép dán
+- [ ] **Xoá hẳn VM diễn tập** (`shred` không đáng tin trên SSD/VM)
+- [ ] Hẹn lần diễn tập kế tiếp (mỗi quý)
 
 ---
 
-## C. Dữ liệu thật và deploy LAN
+## F. Nhập dữ liệu thật
 
-### C1. Import 300 thiết bị
+Chỉ làm **sau khi E đỗ**. Dùng đúng luồng nhập Excel — không có đường nhập thẳng vào DB.
 
-Dùng đúng luồng của story 2.6 — không có đường nhập thẳng vào DB.
-
-IMS → **Thiết bị** → **Nhập Excel** → chọn file → xem bảng đối chiếu → **Xác nhận ghi**.
-
-Bảng đối chiếu hiện trước khi ghi: bao nhiêu dòng tạo mới, cập nhật, bỏ qua, lỗi. Đọc kỹ
-phần **lỗi** trước khi bấm xác nhận — sửa trong file Excel rồi nhập lại, đừng sửa tay sau
-khi đã ghi.
-
-Đối chiếu số liệu (AR-10):
+1. **Khai dải IP trước**: mỗi dải một lần. Hệ thống từ chối dải chồng lên dải đã có.
+2. IMS → **Thiết bị** → **Nhập Excel** → chọn file → xem bảng đối chiếu → **Xác nhận ghi**.
+   Đọc kỹ phần **lỗi** trước khi xác nhận; sửa trong Excel rồi nhập lại.
 
 | Kiểm | Cách |
 | --- | --- |
 | Tổng số thiết bị | Đếm dòng file Excel = số ở màn Thiết bị |
-| Theo site | Lọc từng site, so với subtotal trong Excel |
-| Theo loại | Lọc từng loại, so với subtotal |
+| Theo site / theo loại | Lọc từng site, từng loại, so với subtotal trong Excel |
 | Serial trùng | Màn nhập báo ở cột lỗi — phải bằng 0 |
 
-- [ ] Import xong, 0 dòng lỗi
-- [ ] Bốn phép đối chiếu trên đều khớp
+- [ ] Import xong, 0 dòng lỗi, bốn phép đối chiếu khớp
+- [ ] Chạy tay `bash ops/backup-nightly.sh /mnt/nas/ims-backup` ngay sau khi nhập xong
 
-### C2. Deploy LAN qua HTTPS 443
+---
 
-```bash
-# Cert wildcard vào ops/certs/ (tên file đúng như nginx.conf đang trỏ)
-cp /duong/dan/wildcard.pmh.com.vn.crt ops/certs/ims.crt
-cp /duong/dan/wildcard.pmh.com.vn.key ops/certs/ims.key
-chmod 600 ops/certs/ims.key
+## G. Khôi phục production thật (khi máy chủ hỏng)
 
-docker compose up -d --build
-docker compose ps        # cả 5 service phải healthy
-```
+1. Dựng máy mới theo **A1**. Lấy `.env` từ phong bì thứ ba; `master_key` và `password_pepper`
+   gõ lại từ phong bì chìa (`chown 1000:1000`, `chmod 600`). Cert theo **A4**.
+2. Chép bản sao lưu mới nhất (`ims-*.sql.gz` + `files-*.tgz`) từ NAS sang.
+3. Nạp database và file, **trước** khi bật api:
 
-DNS nội bộ: trỏ `ims.pmh.com.vn` về IP LAN của máy chủ.
+   ```bash
+   $ docker compose up -d postgres
+   $ docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "CREATE ROLE ims_app NOLOGIN"'
+   $ gzip -dc ims-<ngày>.sql.gz | docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -q'
+   $ docker compose run --rm --no-deps -T --entrypoint sh api -c 'tar xzf - -C /data/files' < files-<ngày>.tgz
+   $ docker compose up -d
+   ```
 
-> SMTP thật chỉ bật ở prod (quyết định của anh Thuận). Dev/CI vẫn dùng mailpit — đừng chép
-> `secrets/smtp_password` thật sang máy dev.
+   api tự đặt mật khẩu cho `ims_app` theo `APP_DB_PASSWORD` lúc khởi động.
+4. Kiểm như **B2**, rồi trỏ DNS sang máy mới. Chạy lại **D** trên máy mới.
 
-Kiểm từ **máy IT của cả 3 site**:
+---
 
-- [ ] Site 1 — mở `https://ims.pmh.com.vn`, đăng nhập được, không cảnh báo cert
-- [ ] Site 2 — như trên
-- [ ] Site 3 — như trên
-- [ ] Thử trên điện thoại (390px): mở một thiết bị, đọc được hồ sơ
+## H. Vận hành về sau
 
-### C3. Tạo và nhận tài khoản SA
+| Việc | Lệnh |
+| --- | --- |
+| Xem log | `docker compose logs -f --tail 200 api worker` |
+| Khởi động lại một service | `docker compose restart api` |
+| Nâng cấp lên bản mới | `git fetch --tags && git checkout <tag-mới> && docker compose up -d --build` (backup tay trước) |
+| Quay lại bản trước | `git checkout <tag-cũ> && docker compose up -d --build`. Migration chỉ tiến: nếu bản mới đã thêm migration thì bản cũ vẫn chạy trên schema mới — kiểm log api; hỏng thì khôi phục theo **G** từ bản sao lưu trước nâng cấp |
+| Thay cert | Chép đè hai file ở **A4** rồi `docker compose restart web` |
+| Xoay master key khi nghi lộ | Xem `secrets/README.md` mục "Xoay chìa". **Không xoá dòng chìa cũ** khi lệnh kiểm chưa báo 0 bản ghi |
 
-Chạy `docker compose exec api node dist/ops/seed-sa.main.js` đúng một lần. Script in mật khẩu
-tạm ngẫu nhiên của từng SA ra màn hình **một lần duy nhất**: chép ra giấy, trao tận tay, không
-gửi qua chat/email. Script từ chối chạy nếu hệ thống đã có SA. Đăng nhập lần đầu buộc đổi mật
-khẩu và cài TOTP — **làm ngay**, đừng để sang hôm sau.
-
-- [ ] `sa@pmh.com.vn` đã đổi mật khẩu + cài TOTP
-- [ ] `caothuan@pmh.com.vn` đã đổi mật khẩu + cài TOTP
+**Không bao giờ chạy trên máy prod:** `ops/ci-local.sh`, `ops/seed-demo.sql`,
+`ops/unseed-demo.sql`, `api/scripts/reset-e2e.mjs`, hay các file `docker-compose.override.*.yml`.
 
 ---
 
 ## Biên bản diễn tập khôi phục
 
-Điền bản này, in ra, ký, kẹp vào hồ sơ ISO cùng chỗ với các phiếu khác.
+Điền, in, ký, kẹp vào hồ sơ ISO.
 
 ```
 BIÊN BẢN DIỄN TẬP KHÔI PHỤC HỆ THỐNG IMS
@@ -208,7 +286,7 @@ Ngày diễn tập      : ____/____/________        Bắt đầu: ____:____  K�
 Người chủ trì (SA) : ______________________________
 Người giữ phong bì : ______________________________
 
-Bản sao lưu dùng   : ims-________________.sql.gz     Kích thước: __________
+Bản sao lưu dùng   : ims-________________.sql.gz  + files-________________.tgz
 Máy diễn tập       : ______________________________  (KHÔNG phải máy chạy IMS)
 
 Secret thử         : nhãn ..........................  id ..............................
@@ -220,21 +298,19 @@ KẾT QUẢ:   [ ] ĐỖ — hai chuỗi khớp        [ ] HỎNG — ghi rõ b�
 
 Ghi chú / sự cố gặp phải:
 _________________________________________________________________________
-_________________________________________________________________________
 
 Sau diễn tập:
 [ ] Phong bì đã niêm phong lại, ký đè mép dán
-[ ] Máy diễn tập đã xoá chìa và xoá volume
-[ ] Ngày diễn tập kế tiếp: ____/____/________  (6 tháng)
+[ ] VM diễn tập đã xoá hẳn
+[ ] Ngày diễn tập kế tiếp: ____/____/________  (mỗi quý)
 
 Chữ ký SA: ______________________   Chữ ký người giữ phong bì: ______________________
 ```
 
 ---
 
-## Sau khi xong cả A, B, C
+## Sau khi xong A → F lần đầu
 
-1. Đánh dấu `4-3-đóng-đợt-1-dữ-liệu-thật-và-diễn-tập-khôi-phục: done` và `epic-4: done`
-   trong `_bmad-output/implementation-artifacts/sprint-status.yaml`.
+1. Đánh dấu story 4.3 và `epic-4: done` trong `_bmad-output/implementation-artifacts/sprint-status.yaml`.
 2. Thêm mục **"Epic 4 đã đóng góp gì"** vào `docs/EPIC-MAP.md`.
-3. Chạy `graphify update . && graphify cluster-only . && graphify label . --missing-only`.
+3. `graphify update . && graphify cluster-only .`

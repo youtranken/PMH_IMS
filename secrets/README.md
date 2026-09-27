@@ -64,5 +64,6 @@ Ba file dưới đây KHÔNG bao giờ commit (đã có trong .gitignore) và KH
 
 ## Khôi phục
 
-Backup Postgres KHÔNG kèm master key (NFR-02). Restore drill mỗi quý phải kiểm: bê dump sang máy
-khác + chìa từ phong bì → giải mã được một bản ghi mẫu.
+Bản sao lưu (`ops/backup-nightly.sh`) KHÔNG kèm master key và pepper (NFR-02); cả hai nằm trong
+phong bì niêm phong. Diễn tập khôi phục mỗi quý: bê dump sang VM trắng + chìa gõ từ phong bì →
+giải mã được một secret thử (`ops/restore-drill.sh`, xem `docs/RUNBOOK-4.3-dong-dot-1.md` mục E).

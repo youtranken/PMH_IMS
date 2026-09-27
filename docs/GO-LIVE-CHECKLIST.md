@@ -351,22 +351,22 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
 
 ### P0
 
-- [ ] **DR-01 · Bản dump khôi phục ra một API không đọc được bảng nào** ✔ đã tự kiểm
+- [x] **DR-01 · Bản dump khôi phục ra một API không đọc được bảng nào** ✔ đã tự kiểm
   (`ops/backup-nightly.sh:32` có `--no-privileges`).
   - Bỏ `--no-privileges`, **hoặc** thêm `ops/post-restore-grants.sql` chép khối GRANT/REVOKE của
     0048/0049.
   - Thêm vào `restore-drill.sh` phép kiểm `has_table_privilege('ims_app','secret','SELECT')`.
-- [ ] **DR-02 · Lần backup nào cũng báo HỎNG giả** ✔ đã tự kiểm.
+- [x] **DR-02 · Lần backup nào cũng báo HỎNG giả** ✔ đã tự kiểm.
   - `set -o pipefail` + `gzip -dc | grep -q` (`backup-nightly.sh:14,40`) cho SIGPIPE 141.
   - Hệ quả: dòng xoá bản cũ (`:46`) không bao giờ chạy, NAS đầy dần.
   - Sửa: `zgrep -q`, hoặc tắt `pipefail` cục bộ quanh dòng đó.
-- [ ] **DR-03 · Thiếu thứ cần để khôi phục.**
+- [x] **DR-03 · Thiếu thứ cần để khôi phục.**
   - Backup volume `filesdata` (tar sang NAS).
   - In `password_pepper` vào phong bì cùng master key.
   - Cất `.env` (có `APP_DB_PASSWORD`, `POSTGRES_PASSWORD`) ở nơi an toàn.
-- [ ] **DR-04 · Backup chạy được khi NAS chưa mount.** Đổi `[ -d "$DEST" ]` (`:22`) thành
+- [x] **DR-04 · Backup chạy được khi NAS chưa mount.** Đổi `[ -d "$DEST" ]` (`:22`) thành
   `mountpoint -q "$DEST"`. Dump ra file `.tmp`, kiểm xong mới `mv`.
-- [ ] **DR-05 · Cron không nạp `.env`.** Chạy `pg_dump` bằng `sh -c` bên trong container để dùng
+- [x] **DR-05 · Cron không nạp `.env`.** Chạy `pg_dump` bằng `sh -c` bên trong container để dùng
   `$POSTGRES_USER` của container. Sửa tương tự ở `restore-drill.sh:25,31-32,50`.
 
 ### P1
@@ -374,7 +374,7 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
 - [ ] **DR-06 · Mã hoá bản dump trên NAS** (`age` hoặc `gpg`, khoá công khai). Bản dump có PII và
   hash mật khẩu.
 - [ ] **DR-07 · Báo động khi backup hỏng** (mail hoặc webhook).
-- [ ] **DR-08 · `restore-drill.sh`:** vòng `until pg_isready` cần sleep + timeout; `chown 1000:1000`
+- [x] **DR-08 · `restore-drill.sh`:** vòng `until pg_isready` cần sleep + timeout; `chown 1000:1000`
   cho `secrets/master_key`.
 - [ ] **DR-09 · Chặn chạy nhầm `seed-demo.sql`/`unseed-demo.sql` trên prod** (assert môi trường dev).
 
@@ -440,7 +440,7 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
 
 ## 10. Tài liệu và quy trình
 
-- [ ] **DOC-01 (P0) · Sửa `docs/RUNBOOK-4.3-dong-dot-1.md` cho đúng một máy Ubuntu trắng:**
+- [x] **DOC-01 (P0) · Sửa `docs/RUNBOOK-4.3-dong-dot-1.md` cho đúng một máy Ubuntu trắng:**
   - Thứ tự hiện tại không đi được: A3/B1 cần hệ thống đang chạy, mà deploy lại nằm ở C2. Đổi thành
     **dựng máy → deploy → seed SA → chìa và phong bì → backup → diễn tập → import**.
   - Thêm phần dựng môi trường:
@@ -455,7 +455,7 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
   - Chu kỳ diễn tập: runbook ghi 6 tháng, `secrets/README.md` ghi mỗi quý. Chọn một.
   - Thêm mục **"Khôi phục production thật"** (DB + `filesdata` + pepper + `.env` + cấp lại quyền).
   - Ghi chú: `shred` vô dụng trên SSD/VM; diễn tập xong thì xoá hẳn VM.
-- [ ] **DOC-02 (P0) · Kế hoạch ngày go-live:** giờ bắt đầu, ai làm gì, điểm quyết định rollback,
+- [x] **DOC-02 (P0) · Kế hoạch ngày go-live:** mẫu ở `docs/KE-HOACH-GO-LIVE.md`, **chủ dự án điền người và giờ**. giờ bắt đầu, ai làm gì, điểm quyết định rollback,
   thông báo người dùng.
 - [x] **DOC-03 (P1) · Cập nhật `CLAUDE.md`:**
   - Bỏ số liệu trạng thái đã sai ("7 epic done, 40 migration", thực tế epic 4 còn `in-progress` và
