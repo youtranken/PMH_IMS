@@ -1,5 +1,15 @@
 import { expect, test } from '@playwright/test';
-import { APP_ORIGIN, E2E_MEMBER, NEW_PASSWORD, fillLogin, firstLogin, freshTotpCode, logout, resetUsers } from './helpers';
+import {
+  APP_ORIGIN,
+  E2E_MEMBER,
+  NEW_PASSWORD,
+  fillLogin,
+  firstLogin,
+  freshTotpCode,
+  logout,
+  resetUsers,
+  sql,
+} from './helpers';
 
 test.beforeEach(() => resetUsers());
 
@@ -32,6 +42,58 @@ test.describe('Hàng rào an ninh', () => {
     // Phải bị chặn vì tài khoản ĐÃ enroll — không được cấp phiên đã xác thực qua đường này.
     expect(response.status()).toBe(400);
     expect(await response.json()).toMatchObject({ code: 'TOTP_ALREADY_ENROLLED' });
+  });
+
+  test('mã phiên đọc được trong nhật ký audit không dùng làm cookie được (SEC-01)', async ({
+    page,
+    request,
+  }) => {
+    await firstLogin(page, E2E_MEMBER);
+    const sessionIdInAudit = sql(
+      `SELECT object_id FROM audit_log WHERE action = 'auth.login.ok' ` +
+        `AND actor = '${E2E_MEMBER.email}' ORDER BY created_at DESC LIMIT 1`,
+    ).trim();
+    expect(sessionIdInAudit).toMatch(/^[0-9a-f-]{36}$/);
+
+    const cookies = await page.context().cookies();
+    const real = cookies.find((c) => c.name === 'ims_session');
+    expect(real?.value).toBeTruthy();
+    expect(real?.value).not.toBe(sessionIdInAudit);
+
+    const forged = await request.get('/api/v1/auth/me', {
+      headers: { Cookie: `ims_session=${sessionIdInAudit}` },
+    });
+    expect(forged.status()).toBe(401);
+
+    const genuine = await request.get('/api/v1/auth/me', {
+      headers: { Cookie: `ims_session=${real!.value}` },
+    });
+    expect(genuine.status()).toBe(200);
+  });
+
+  test('đoán mật khẩu hiện tại ở cửa Đổi mật khẩu: đủ ngưỡng thì phiên chết (SEC-06)', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_MEMBER);
+    const csrf = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
+      return ((await res.json()) as { csrfToken: string }).csrfToken;
+    });
+    const guess = () =>
+      page.request.post('/api/v1/auth/change-password', {
+        headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
+        data: { currentPassword: 'doan-sai-#2026', newPassword: 'Ims#MoiHoanToan2026!' },
+      });
+
+    const first = await guess();
+    expect(first.status()).toBe(401);
+    expect(await first.json()).toMatchObject({ code: 'CURRENT_PASSWORD_WRONG', attemptsLeft: 4 });
+    for (let i = 0; i < 3; i += 1) await guess();
+    const fifth = await guess();
+    expect(await fifth.json()).toMatchObject({ code: 'SESSION_REVOKED' });
+
+    const me = await page.request.get('/api/v1/auth/me');
+    expect(me.status()).toBe(401);
   });
 
   test('member không mở được trang nội bộ /dev/components', async ({ page }) => {

@@ -189,6 +189,18 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
     await app.query(`DELETE FROM device_type WHERE id = $1`, [type.rows[0].id]);
   });
 
+  it('DB-01: không đọc, sửa hay xoá được sổ migration `_migrations`', async () => {
+    // Lộ api mà sửa được sổ này là xoá được dòng journal (boot sau chết) hoặc chèn sẵn tên một
+    // migration tương lai để nó bị bỏ qua.
+    const { rows } = await scratch.pool.query<{ sel: boolean; upd: boolean; del: boolean; ins: boolean }>(
+      `SELECT has_table_privilege('ims_app', '_migrations', 'SELECT') AS sel,
+              has_table_privilege('ims_app', '_migrations', 'UPDATE') AS upd,
+              has_table_privilege('ims_app', '_migrations', 'DELETE') AS del,
+              has_table_privilege('ims_app', '_migrations', 'INSERT') AS ins`,
+    );
+    expect(rows[0]).toEqual({ sel: false, upd: false, del: false, ins: false });
+  });
+
   it('có quyền trên bảng migration TẠO SAU nó — nhờ ALTER DEFAULT PRIVILEGES', async () => {
     /*
      * Không có quyền mặc định thì bảng của migration kế tiếp ra đời KHÔNG có quyền cho

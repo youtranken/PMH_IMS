@@ -1,0 +1,8 @@
+# Không đưa vào build context: node_modules của máy build (Windows) sẽ đè bản Linux do npm ci cài,
+# còn dist/.env là rác hoặc bí mật (OPS-05).
+node_modules
+dist
+coverage
+.env*
+test-results
+playwright-report

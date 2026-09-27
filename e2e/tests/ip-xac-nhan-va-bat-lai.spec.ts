@@ -2,19 +2,12 @@ import { expect, test, type Page } from '@playwright/test';
 import { E2E_SA, firstLogin, resetIpam, resetUsers, writeHeaders } from './helpers';
 
 /**
- * HAI LỖ MIỀN NGHIỆP VỤ CỦA HỒ SƠ IP (rà soát 07/09, mục 6).
+ * Hồ sơ IP: thu hồi rồi cấp lại không hồi sinh chủ cũ, và ẩn hồ sơ không phải đường một chiều.
  *
- * 1. "XÁC NHẬN VẪN DÙNG" XÓA MẤT NGƯỜI DÙNG. Hộp thoại mở ra với ô "Người dùng" TRỐNG rồi
- *    gửi `usedBy: ''`, và `'' || null` biến nó thành `null`. Một hành động tên là "xác nhận
- *    vẫn dùng" xóa dòng chữ "Phòng Kế toán" khỏi hồ sơ — im lặng, và `ip_history` ghi lại
- *    việc đó như thể đó là ý người dùng.
- *
- * 2. ẨN HỒ SƠ LÀ ĐƯỜNG MỘT CHIỀU. `SubnetService.restore()` bật lại được cả một DẢI, còn một
- *    hồ sơ IP lẻ bấm nhầm thì không có cửa nào. Nó biến khỏi mọi màn, `findOne` trả 404 nên
- *    cũng không mở ra xem được lý do vừa ghi, và nhãn `'ip.restored'` trong
- *    `ip-history-entries.ts` không đường nào tới được. Ô `.5` hiện ra là TRỐNG, người khác cấp
- *    nó cho máy khác, và lịch sử "IP này từng là máy in kế toán" — thứ AC 5.2 bắt giữ vĩnh
- *    viễn — nằm mồ côi dưới một hàng không ai nhìn thấy.
+ * ẨN HỒ SƠ PHẢI BẬT LẠI ĐƯỢC. Thiếu cửa đó thì một hồ sơ IP lẻ bấm nhầm biến khỏi mọi màn,
+ * `findOne` trả 404 nên cũng không mở ra xem được lý do vừa ghi. Ô `.5` hiện ra là TRỐNG,
+ * người khác cấp nó cho máy khác, và lịch sử "IP này từng là máy in kế toán" — thứ AC 5.2 bắt
+ * giữ vĩnh viễn — nằm mồ côi dưới một hàng không ai nhìn thấy.
  */
 
 test.beforeEach(() => {
@@ -60,53 +53,7 @@ async function slotsOf(page: Page, subnetId: string, includeVoided = false) {
   }[];
 }
 
-test.describe('Hồ sơ IP — xác nhận vẫn dùng, và bật lại sau khi ẩn', () => {
-  test('"Xác nhận vẫn dùng" GIỮ NGUYÊN người dùng dù ô gửi lên rỗng', async ({ page }) => {
-    await firstLogin(page, E2E_SA);
-    const { subnetId, ipId } = await seed(page);
-    const headers = await writeHeaders(page);
-
-    const dead = await page.request.post(`/api/v1/ipam/addresses/${ipId}/transition`, {
-      headers,
-      data: { to: 'suspect_dead', reason: 'khong ping duoc' },
-    });
-    expect(dead.status()).toBeLessThan(300);
-
-    /*
-     * ĐÂY LÀ CÂU HỎI. Gửi `usedBy: ''` — đúng nguyên văn thứ hộp thoại gửi khi người trực để
-     * ô trống. Bản cũ trả về `usedBy: null`.
-     */
-    const alive = await page.request.post(`/api/v1/ipam/addresses/${ipId}/transition`, {
-      headers,
-      data: { to: 'assigned', reason: 'may van song', usedBy: '' },
-    });
-    expect(alive.status()).toBeLessThan(300);
-    expect(
-      ((await alive.json()) as { usedBy: string | null }).usedBy,
-      'xác nhận vẫn dùng KHÔNG được xóa chủ — máy vẫn là chính nó',
-    ).toBe(OWNER);
-
-    const rows = await slotsOf(page, subnetId);
-    expect(rows.find((r) => r.id === ipId)?.usedBy).toBe(OWNER);
-
-    /*
-     * VẾ ĐỐI CHỨNG, và là vế dễ hỏng nhất: gửi một chủ MỚI thì vẫn phải đổi được. Thiếu vế này
-     * thì một bản vá thô bạo (bỏ hẳn `usedBy` khỏi lượt chuyển) sẽ xanh ở trên mà làm hỏng
-     * đường "cấp lại cho máy X" — đúng loại hồi quy đợt C đã gây ra một lần.
-     */
-    const again = await page.request.post(`/api/v1/ipam/addresses/${ipId}/transition`, {
-      headers,
-      data: { to: 'suspect_dead', reason: 'lai nghi chet' },
-    });
-    expect(again.status()).toBeLessThan(300);
-    const moved = await page.request.post(`/api/v1/ipam/addresses/${ipId}/transition`, {
-      headers,
-      data: { to: 'assigned', reason: 'doi chu', usedBy: 'Phòng Kỹ thuật E2E' },
-    });
-    expect(moved.status()).toBeLessThan(300);
-    expect(((await moved.json()) as { usedBy: string | null }).usedBy).toBe('Phòng Kỹ thuật E2E');
-  });
-
+test.describe('Hồ sơ IP — cấp lại sau thu hồi, và bật lại sau khi ẩn', () => {
   test('cấp MỚI cho ô trống: ô người dùng rỗng vẫn là rỗng, không giữ lại gì', async ({
     page,
   }) => {
@@ -114,15 +61,17 @@ test.describe('Hồ sơ IP — xác nhận vẫn dùng, và bật lại sau khi 
     const { ipId } = await seed(page);
     const headers = await writeHeaders(page);
 
-    // assigned → reclaimed: chủ cũ đi khỏi, `usedBy` phải bị xóa.
+    // Thu hồi (assigned → free): chủ cũ đi khỏi, `usedBy` phải bị xóa.
     const reclaimed = await page.request.post(`/api/v1/ipam/addresses/${ipId}/transition`, {
       headers,
-      data: { to: 'reclaimed', reason: 'may da thanh ly' },
+      data: { to: 'free', reason: 'may da thanh ly' },
     });
     expect(reclaimed.status()).toBeLessThan(300);
-    expect(((await reclaimed.json()) as { usedBy: string | null }).usedBy).toBeNull();
+    const freed = (await reclaimed.json()) as { usedBy: string | null; status: string };
+    expect(freed.usedBy).toBeNull();
+    expect(freed.status).toBe('free');
 
-    // reclaimed → assigned với ô rỗng: chủ MỚI dọn vào, chưa biết ai. Không được hồi sinh
+    // free → assigned với ô rỗng: chủ MỚI dọn vào, chưa biết ai. Không được hồi sinh
     // chủ cũ — đó mới đúng là nói dối.
     const relet = await page.request.post(`/api/v1/ipam/addresses/${ipId}/transition`, {
       headers,

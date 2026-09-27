@@ -2,6 +2,8 @@ import { Inject, Injectable } from '@nestjs/common';
 import { sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
+import { escapeLike } from '../../common/sql';
+import { SystemConfigService } from '../config-sys/system-config.service';
 import { UsersApiService } from '../users/users.api';
 
 export interface AuditQuery {
@@ -9,7 +11,7 @@ export interface AuditQuery {
   action?: string;
   objectType?: string;
   objectId?: string;
-  /** Ngày VN YYYY-MM-DD (tùy chọn) — from inclusive, to inclusive (+1 ngày). */
+  /** Ngày YYYY-MM-DD theo `app.timezone` (tùy chọn) — from inclusive, to inclusive (+1 ngày). */
   from?: string;
   to?: string;
   page: number;
@@ -34,7 +36,7 @@ export interface AuditRow {
   createdAt: string;
 }
 
-/** Viewer audit log (6.2) — CHỈ đọc (AD-10 append-only); ranh giới ngày theo VN (nhất quán 6.1). */
+/** Viewer audit log (6.2) — CHỈ đọc (AD-10 append-only); ranh giới ngày theo `app.timezone`. */
 /**
  * Trần của câu đếm. 10.000 là con số người đọc còn dùng được ("quá nhiều, lọc hẹp lại"),
  * và đủ nhỏ để câu đếm luôn dừng sớm dù bảng có bao nhiêu triệu dòng.
@@ -42,13 +44,14 @@ export interface AuditRow {
  * KHÔNG vào `system_config`: AD-11 dành cho tham số NGHIỆP VỤ (ngưỡng hạn, số lần sai được
  * phép). Đây là một cái phanh kỹ thuật, đổi nó không đổi luật gì của công ty.
  */
-const COUNT_CAP = 10_000;
+export const COUNT_CAP = 10_000;
 
 @Injectable()
 export class AuditQueryService {
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly users: UsersApiService,
+    private readonly config: SystemConfigService,
   ) {}
 
   async listAudit(q: AuditQuery): Promise<{
@@ -69,21 +72,31 @@ export class AuditQueryService {
      * Lỗi này bị lỗi `u.sub` che khuất suốt 9 epic: join sai cột chết trước (42703) nên không
      * ai chạm tới được lớp thứ hai. Sửa lớp một xong, E2E lộ ra ngay lớp hai.
      */
+    /*
+     * Ranh giới ngày theo `app.timezone` (AD-11), không viết cứng: màn hiển thị giờ theo khóa
+     * đó, nên lọc "hôm nay" phải cắt ngày theo CÙNG khóa — lệch nhau là dòng lúc 23h hiện trên
+     * màn mà lọc theo ngày thì biến mất.
+     */
+    const timeZone = q.from || q.to ? await this.config.getString('appTimezone') : null;
+    /*
+     * `escapeLike`: người điều tra dán nguyên email/mã vào ô lọc, và `_` trong email
+     * (`le_minh@…`) là ký tự đại diện của LIKE — không escape thì nó khớp cả `lexminh@…`,
+     * tức nhật ký trả về hoạt động của NGƯỜI KHÁC dưới tên người đang bị điều tra.
+     */
     const conds = [
-      q.actor ? sql`a.actor ILIKE ${'%' + q.actor + '%'}` : null,
+      q.actor ? sql`a.actor ILIKE ${`%${escapeLike(q.actor)}%`}` : null,
       q.action ? sql`a.action = ${q.action}` : null,
       q.objectType ? sql`a.object_type = ${q.objectType}` : null,
-      q.objectId ? sql`a.object_id ILIKE ${'%' + q.objectId + '%'}` : null,
-      // VN: from 00:00, to inclusive → < (to + 1 ngày) 00:00 giờ VN
-      q.from
-        ? sql`a.created_at >= (${q.from}::date AT TIME ZONE 'Asia/Ho_Chi_Minh')`
-        : null,
-      q.to
-        ? sql`a.created_at < ((${q.to}::date + 1) AT TIME ZONE 'Asia/Ho_Chi_Minh')`
-        : null,
+      q.objectId ? sql`a.object_id ILIKE ${`%${escapeLike(q.objectId)}%`}` : null,
+      /*
+       * from 00:00, to inclusive → < (to + 1 ngày) 00:00, cả hai theo `app.timezone`.
+       * `::timestamp` bắt buộc: `date AT TIME ZONE` bị Postgres ép sang `timestamptz` theo
+       * múi của PHIÊN rồi đổi NGƯỢC chiều, nên chỉ ra đúng khi múi phiên trùng `app.timezone`.
+       */
+      q.from ? sql`a.created_at >= (${q.from}::date::timestamp AT TIME ZONE ${timeZone})` : null,
+      q.to ? sql`a.created_at < ((${q.to}::date + 1)::timestamp AT TIME ZONE ${timeZone})` : null,
     ].filter((c): c is NonNullable<typeof c> => c !== null);
-    const where =
-      conds.length > 0 ? sql`WHERE ${sql.join(conds, sql` AND `)}` : sql``;
+    const where = conds.length > 0 ? sql`WHERE ${sql.join(conds, sql` AND `)}` : sql``;
 
     const offset = (q.page - 1) * q.pageSize;
     /*

@@ -8,7 +8,6 @@ import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { DataTable } from '@/ui/data-table';
 import { sortQuery } from '@/lib/sort-query';
-import { ExpiryBadge } from '@/ui/expiry-badge';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
 import { useListUrlState } from '@/ui/use-list-url-state';
@@ -48,7 +47,7 @@ export function IspScreen({ me }: { me: Me }) {
   const queryClient = useQueryClient();
   /*
    * Bộ lọc · trang · số dòng · cột sắp nằm trên THANH ĐỊA CHỈ, không trong `useState` nữa
-   * (17/09/2026). Nhờ vậy: F5 giữ nguyên bộ lọc, gửi được link "đường truyền sắp hết hạn ở
+   * (17/09/2026). Nhờ vậy: F5 giữ nguyên bộ lọc, gửi được link "đường truyền tạm ngưng ở
    * chi nhánh X" cho đồng nghiệp, và bấm Back từ trang chi tiết về ĐÚNG kết quả cũ thay vì
    * một danh sách trắng. Ô tìm cũng có debounce 250ms — trước đây mỗi phím là một lượt gọi API.
    */
@@ -137,18 +136,6 @@ export function IspScreen({ me }: { me: Me }) {
         header: t('isp.contractNo'),
         meta: { className: 'mono' },
         cell: ({ row }) => orDash(row.original.contractNo),
-      },
-      {
-        accessorKey: 'endDate',
-        header: t('isp.expiry'),
-        // `notCounted`: đường đã cắt thì hạn hợp đồng thôi có nghĩa. Trạng thái ở đây tên là
-        // `terminated` chứ không phải `retired` — lý do prop đặt tên theo Ý NGHĨA.
-        cell: ({ row }) => (
-          <ExpiryBadge
-            end={row.original.endDate}
-            notCounted={row.original.status === 'terminated'}
-          />
-        ),
       },
       {
         accessorKey: 'status',

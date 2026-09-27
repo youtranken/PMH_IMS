@@ -23,9 +23,24 @@ export const KIND_LABEL: Record<SoftwareKind, string> = {
 
 export const STATUS_LABEL: Record<SoftwareStatus, string> = {
   active: 'Đang dùng',
-  expired_ok: 'Hết hạn, không gia hạn',
-  retired: 'Đã bỏ',
+  expired_ok: 'Hết hạn',
+  retired: 'Thanh lý',
 };
+
+/**
+ * Trạng thái hiệu lực (DOM-03, `docs/QUYET-DINH.md` Q-03). Người chỉ quyết Thanh lý; hai trạng
+ * thái còn lại do HẠN quyết: qua ngày hết hạn là Hết hạn (thôi nhắc — mail "sắp hết hạn" đã gửi
+ * trước đó), nhập ngày mới là về Đang dùng. Ngày hết hạn tính trọn ngày, nên hết hạn hôm nay vẫn
+ * là Đang dùng. `today` là ngày theo `app.timezone`, dạng YYYY-MM-DD.
+ */
+export function effectiveSoftwareStatus(
+  status: SoftwareStatus,
+  endDate: string | null,
+  today: string,
+): SoftwareStatus {
+  if (status === 'retired') return 'retired';
+  return endDate !== null && endDate < today ? 'expired_ok' : 'active';
+}
 
 export interface SoftwareInputShape {
   code?: string;

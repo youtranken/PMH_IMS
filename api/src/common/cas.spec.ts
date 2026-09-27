@@ -1,5 +1,5 @@
 import { ConflictException } from '@nestjs/common';
-import { requireCas } from './cas';
+import { requireCas, requireUnchangedSince } from './cas';
 
 /**
  * `requireCas` là chốt của mẫu compare-and-swap: câu UPDATE mang theo điều kiện đã kiểm,
@@ -47,5 +47,38 @@ describe('requireCas (AD-15 — chốt compare-and-swap)', () => {
     const run = () => requireCas(rows, conflict);
     if (nem) expect(run).toThrow();
     else expect(run()).toEqual(rows[0]);
+  });
+});
+
+describe('requireUnchangedSince (BE-02 — hàng đã khóa còn là hàng đã đọc)', () => {
+  const conflict = { code: 'X_ALREADY_CHANGED', message: 'Hồ sơ vừa được người khác sửa.' };
+  const at = (iso: string) => ({ updatedAt: new Date(iso) });
+
+  const cases: { ten: string; seen: string; locked: string; nem: boolean }[] = [
+    { ten: 'cùng thời điểm', seen: '2026-09-27T01:02:03.456Z', locked: '2026-09-27T01:02:03.456Z', nem: false },
+    { ten: 'lệch 1 ms', seen: '2026-09-27T01:02:03.456Z', locked: '2026-09-27T01:02:03.457Z', nem: true },
+    { ten: 'hàng khóa CŨ hơn ảnh chụp', seen: '2026-09-27T01:02:03.456Z', locked: '2026-09-26T01:02:03.456Z', nem: true },
+  ];
+  it.each(cases)('bảng dữ liệu: $ten → ném = $nem', ({ seen, locked, nem }) => {
+    const run = () => requireUnchangedSince(at(seen), at(locked), conflict);
+    if (nem) expect(run).toThrow(ConflictException);
+    else expect(run).not.toThrow();
+  });
+
+  it('so theo GIÁ TRỊ thời điểm, không theo danh tính object Date', () => {
+    expect(() =>
+      requireUnchangedSince(at('2026-09-27T00:00:00Z'), at('2026-09-27T00:00:00Z'), conflict),
+    ).not.toThrow();
+  });
+
+  it('409 mang đúng mã và thông điệp được truyền vào', () => {
+    let thrown: unknown = null;
+    try {
+      requireUnchangedSince(at('2026-09-27T00:00:00Z'), at('2026-09-27T00:00:01Z'), conflict);
+    } catch (error) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(ConflictException);
+    expect((thrown as ConflictException).getResponse()).toEqual(conflict);
   });
 });

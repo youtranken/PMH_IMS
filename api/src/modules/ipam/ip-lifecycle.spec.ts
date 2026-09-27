@@ -1,5 +1,6 @@
 import {
   ALLOWED_TRANSITIONS,
+  IP_LIFECYCLE_STATUSES,
   OCCUPYING_STATUSES,
   canTransition,
   isOccupying,
@@ -8,108 +9,80 @@ import {
   type IpStatus,
 } from './ip-lifecycle';
 
-describe('canTransition — máy trạng thái vòng đời IP (AC 5.2)', () => {
+describe('IP_LIFECYCLE_STATUSES — chỉ hai trạng thái (Q-02)', () => {
+  /**
+   * Thêm lại trạng thái thứ ba phải là một quyết định nghiệp vụ mới, không phải một dòng code
+   * lặng lẽ: CHECK ở DB, bộ lọc trên màn dải và nhãn trong vi.ts đều giả định đúng hai giá trị.
+   */
+  it('chỉ có trống và đang dùng', () => {
+    expect([...IP_LIFECYCLE_STATUSES]).toEqual(['free', 'assigned']);
+  });
+});
+
+describe('canTransition — máy trạng thái vòng đời IP (AC 5.2, Q-02)', () => {
   it.each([
     ['free', 'assigned', true],
-    ['assigned', 'suspect_dead', true],
-    ['assigned', 'reclaimed', true],
-    ['suspect_dead', 'reclaimed', true],
-    // Đính chính: hóa ra máy vẫn sống. Không có đường này thì người ta buộc phải thu hồi rồi
-    // cấp lại — hai dòng lịch sử sai sự thật cho một lần nhìn nhầm.
-    ['suspect_dead', 'assigned', true],
-    // AC 5.2: "IP đã thu hồi cấp lại được cho thiết bị khác".
-    ['reclaimed', 'assigned', true],
+    // Thu hồi = trả địa chỉ về pool. Lịch sử giữ "ai thu hồi, lúc nào", hàng thì trống lại.
+    ['assigned', 'free', true],
   ] as [IpStatus, IpStatus, boolean][])('%s → %s = %s', (from, to, expected) => {
     expect(canTransition(from, to)).toBe(expected);
   });
 
+  /**
+   * Trạng thái lạ (hàng cũ lọt qua, body gửi bừa) không được coi là đường đi hợp lệ — thiếu
+   * vế này thì `ALLOWED_TRANSITIONS[from]` trả `undefined` và `.includes` nổ thành lỗi 500.
+   */
   it.each([
-    ['free', 'reclaimed'],
-    ['free', 'suspect_dead'],
-    ['assigned', 'free'],
-    ['reclaimed', 'suspect_dead'],
-    ['suspect_dead', 'free'],
-    ['reclaimed', 'free'],
-  ] as [IpStatus, IpStatus][])('chặn %s → %s', (from, to) => {
+    ['suspect_dead', 'assigned'],
+    ['assigned', 'reclaimed'],
+    ['reclaimed', 'assigned'],
+  ] as unknown as [IpStatus, IpStatus][])('chặn trạng thái đã bỏ %s → %s', (from, to) => {
     expect(canTransition(from, to)).toBe(false);
   });
 
   /**
    * Đứng yên KHÔNG phải là một bước chuyển. Cho phép thì mỗi lần bấm nhầm lại đẻ thêm một
-   * dòng lịch sử "đang cấp → đang cấp" — lịch sử loãng ra và mất luôn giá trị tra cứu.
+   * dòng lịch sử "đang dùng → đang dùng" — lịch sử loãng ra và mất luôn giá trị tra cứu.
    */
-  it.each(['free', 'assigned', 'suspect_dead', 'reclaimed'] as IpStatus[])(
-    'chặn %s → chính nó',
-    (status) => {
-      expect(canTransition(status, status)).toBe(false);
-    },
-  );
-
-  it('mọi trạng thái đều có đường đi tiếp — không có ngõ cụt', () => {
-    for (const status of Object.keys(ALLOWED_TRANSITIONS) as IpStatus[]) {
-      expect(nextStatuses(status).length).toBeGreaterThan(0);
-    }
+  it.each(['free', 'assigned'] as IpStatus[])('chặn %s → chính nó', (status) => {
+    expect(canTransition(status, status)).toBe(false);
   });
 
-  /**
-   * Mọi trạng thái phải TỚI được từ `free` — trạng thái không tới được là trạng thái chết
-   * nằm trong bảng CHECK của DB mà không ai vào được, và sẽ có người tưởng nó dùng được.
-   */
-  it('mọi trạng thái đều tới được từ "trống"', () => {
-    const seen = new Set<IpStatus>(['free']);
-    const queue: IpStatus[] = ['free'];
-    while (queue.length > 0) {
-      for (const next of nextStatuses(queue.shift() as IpStatus)) {
-        if (!seen.has(next)) {
-          seen.add(next);
-          queue.push(next);
-        }
-      }
+  it('mọi trạng thái đều có đường đi tiếp — không có ngõ cụt', () => {
+    for (const status of IP_LIFECYCLE_STATUSES) {
+      expect(nextStatuses(status).length).toBeGreaterThan(0);
     }
-    expect([...seen].sort()).toEqual(['assigned', 'free', 'reclaimed', 'suspect_dead']);
+    expect(Object.keys(ALLOWED_TRANSITIONS).sort()).toEqual(['assigned', 'free']);
   });
 });
 
 describe('isOccupying — IP nào đang thực sự CHIẾM một địa chỉ (FR-020)', () => {
   it.each([
     ['assigned', true],
-    ['suspect_dead', true],
     ['free', false],
-    ['reclaimed', false],
   ] as [IpStatus, boolean][])('%s → %s', (status, expected) => {
     expect(isOccupying(status)).toBe(expected);
   });
 
-  /**
-   * "Đã thu hồi" KHÔNG chiếm chỗ: đó chính là ý nghĩa của thu hồi — trả địa chỉ về pool.
-   * Đếm nó là đang dùng thì mức sử dụng chỉ có tăng, không bao giờ giảm, và sau một năm màn
-   * hình báo dải đầy trong khi thực tế còn quá nửa.
-   */
-  it('thu hồi rồi thì trả chỗ về pool, không đếm là đang dùng', () => {
-    expect(isOccupying('reclaimed')).toBe(false);
-    expect(OCCUPYING_STATUSES).toEqual(['assigned', 'suspect_dead']);
-  });
-
-  /** "Nghi chết" VẪN chiếm chỗ: chưa ai xác nhận máy chết thì chưa được cấp cho người khác. */
-  it('nghi chết vẫn giữ chỗ cho tới khi thu hồi', () => {
-    expect(isOccupying('suspect_dead')).toBe(true);
+  it('chỉ "đang dùng" chiếm chỗ', () => {
+    expect(OCCUPYING_STATUSES).toEqual(['assigned']);
   });
 });
 
 describe('transitionLabel — tên thao tác bằng tiếng Việt', () => {
+  /**
+   * Chữ này đồng thời là cột `action` của `ip_history`. Giữ đúng "Thu hồi" như trước để tra
+   * lịch sử cũ và mới bằng cùng một chữ.
+   */
   it.each([
     ['free', 'assigned', 'Cấp IP'],
-    ['assigned', 'suspect_dead', 'Đánh dấu nghi chết'],
-    ['assigned', 'reclaimed', 'Thu hồi'],
-    ['suspect_dead', 'assigned', 'Xác nhận vẫn dùng'],
-    ['suspect_dead', 'reclaimed', 'Thu hồi'],
-    ['reclaimed', 'assigned', 'Cấp lại'],
+    ['assigned', 'free', 'Thu hồi'],
   ] as [IpStatus, IpStatus, string][])('%s → %s = %s', (from, to, expected) => {
     expect(transitionLabel(from, to)).toBe(expected);
   });
 
   it('mọi bước chuyển hợp lệ đều có tên — không nút nào hiện chữ undefined', () => {
-    for (const from of Object.keys(ALLOWED_TRANSITIONS) as IpStatus[]) {
+    for (const from of IP_LIFECYCLE_STATUSES) {
       for (const to of nextStatuses(from)) {
         expect(transitionLabel(from, to)).toBeTruthy();
       }

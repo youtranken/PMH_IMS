@@ -140,10 +140,31 @@ describe('Nhãn ở panel Lịch sử không được lệch nhãn trên bảng'
     ['history.software.stRetired', 'software.statusRetired'],
     ['history.serviceAccounts.stActive', 'serviceAccounts.statusActive'],
     ['history.serviceAccounts.stDisabled', 'serviceAccounts.statusDisabled'],
+    ['history.isp.stActive', 'isp.statusActive'],
+    ['history.isp.stSuspended', 'isp.statusSuspended'],
+    ['history.isp.stTerminated', 'isp.statusTerminated'],
+    ['history.ip.stFree', 'ipam.statusFree'],
+    ['history.ip.stAssigned', 'ipam.statusAssigned'],
   ];
 
   it.each(PAIRS)('%s đọc giống %s', (historyKey, screenKey) => {
     expect(lookup(historyKey)).toBe(lookup(screenKey));
+  });
+
+  /** Q-04 chốt đúng ba chữ này cho đường truyền; file Excel phía API dùng cùng ba chữ. */
+  it('đường truyền: Đang dùng / Tạm ngưng / Thanh lý', () => {
+    expect(lookup('isp.statusActive')).toBe('Đang dùng');
+    expect(lookup('isp.statusSuspended')).toBe('Tạm ngưng');
+    expect(lookup('isp.statusTerminated')).toBe('Thanh lý');
+  });
+
+  /**
+   * Q-10: IP có chủ đọc cùng chữ với phần mềm và đường truyền đang chạy. "Đang cấp" tả một
+   * động tác chứ không tả một tình trạng, và đứng cạnh nút "Cấp IP" thì đọc như chưa xong.
+   */
+  it('IP có chủ: cùng chữ "Đang dùng" với phần mềm và đường truyền', () => {
+    expect(lookup('ipam.statusAssigned')).toBe(lookup('isp.statusActive'));
+    expect(lookup('ipam.statusAssigned')).toBe(lookup('software.statusActive'));
   });
 });
 
@@ -206,34 +227,5 @@ describe('Không tiếng Anh lẫn trong câu tiếng Việt', () => {
     const sentence = lookup(key).replace(/Super Admin/g, '');
     expect(sentence).not.toMatch(/\bMember\b/);
     expect(sentence).not.toMatch(/\bAdmin\b/);
-  });
-});
-
-describe('T-01 — `ui/time-picker.tsx` không có chuỗi tiếng Anh viết cứng', () => {
-  /**
-   * Hôm nay chưa màn nào dùng `DateTimePicker`, nên không ai thấy. Nhưng
-   * `docs/SHARED-REGISTRY.md:55` khai nó là bản dùng chung BẮT BUỘC cho "mọi ô chọn ngày/giờ":
-   * sổ đăng ký đang chỉ người viết story sau vào đúng cái hộp tiếng Anh này, và lượt dùng đầu
-   * tiên ship nguyên "Select Time / Now / Cancel / Done" ra sản phẩm mà không cổng nào đỏ.
-   *
-   * Quét THÂN JSX chứ không quét cả file: `viewBox`, `'smooth'`, tên sự kiện `'pointerdown'`
-   * đều là tiếng Anh hợp lệ và sẽ không bao giờ hiện ra màn hình.
-   */
-  const SOURCE = readFileSync(join(SRC, 'ui/time-picker.tsx'), 'utf8');
-
-  const FORBIDDEN = ['Select Time', 'Cancel', 'Done', 'Now'];
-
-  it.each(FORBIDDEN)('không còn chuỗi "%s" nằm trong JSX', (word) => {
-    // Chữ đứng một mình giữa hai thẻ, hoặc trong `aria-label`/`title` — tức là chữ người đọc thấy.
-    expect(SOURCE).not.toMatch(new RegExp(`>\\s*${word}\\s*<`));
-    expect(SOURCE).not.toMatch(new RegExp(`(aria-label|title|placeholder)="${word}"`));
-  });
-
-  /**
-   * AM/PM giữ nguyên chữ — đó là ký hiệu giờ quốc tế, không phải câu tiếng Anh, và bản mockup
-   * ở `design-ims/` cũng dùng nó. Ghi ra để lượt rà sau không báo lại.
-   */
-  it('AM/PM được phép giữ nguyên', () => {
-    expect(SOURCE).toMatch(/'PM'\s*:\s*'AM'/);
   });
 });

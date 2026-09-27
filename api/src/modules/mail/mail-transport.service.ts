@@ -29,6 +29,12 @@ export class MailTransportService {
       host,
       port,
       secure: port === 465,
+      // 587 là STARTTLS: bắt buộc nâng cấp TLS, không để mật khẩu đi dạng rõ nếu server từ chối.
+      requireTLS: port === 587,
+      // Mặc định của nodemailer là 2 phút kết nối / 10 phút socket: firewall nuốt gói là hàng đợi đứng.
+      connectionTimeout: 30_000,
+      greetingTimeout: 30_000,
+      socketTimeout: 60_000,
       ...(user ? { auth: { user, pass } } : {}),
     });
     this.logger.log(`SMTP: ${host}:${port}${user ? ` (user ${user})` : ' (không auth — dev)'}`);

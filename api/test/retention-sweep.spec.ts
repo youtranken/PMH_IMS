@@ -98,8 +98,8 @@ describe('Dọn định kỳ — phiên chết và outbox đã xử lý', () => 
       [`phien-${lastSeenDaysAgo}-${Date.now()}@pmh.com.vn`],
     );
     await scratch.pool.query(
-      `INSERT INTO sessions (user_id, csrf_token, absolute_expires_at, last_seen_at)
-       VALUES ($1, $2, now() + interval '1 day', now() - ($3 || ' days')::interval)`,
+      `INSERT INTO sessions (user_id, csrf_token, token_hash, absolute_expires_at, last_seen_at)
+       VALUES ($1, $2, md5(random()::text) || md5(random()::text), now() + interval '1 day', now() - ($3 || ' days')::interval)`,
       [user.rows[0].id, `csrf-${Math.random()}`, lastSeenDaysAgo],
     );
   }

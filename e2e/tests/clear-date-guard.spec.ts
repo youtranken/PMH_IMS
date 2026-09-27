@@ -5,7 +5,6 @@ import {
   resetCatalog,
   resetDevices,
   resetIpam,
-  resetIsp,
   resetSoftware,
   resetUsers,
   writeHeaders,
@@ -20,16 +19,14 @@ import {
  *
  * `dateOnly("")` trả `null` — nghĩa là "người dùng đã xoá ô này". Nhưng `??` coi `null` y
  * hệt `undefined` ("người dùng không đụng tới ô này"), nên luật đi soi trên ngày **CŨ**.
- * Hai hậu quả ngược chiều nhau, và bài này canh cả hai:
+ * Hai hậu quả ngược chiều nhau:
  *
  *  1. **Lọt cái phải chặn.** `{"endDate":""}` trên một chứng chỉ SSL: `requiresEndDate` soi
  *     ngày cũ nên không nổ, rồi câu ghi vẫn ghi `end_date = NULL`. Hồ sơ mất hạn — đúng thứ
  *     `software-rules.ts` sinh ra để cấm — và vì `findExpiringBetween` lọc `end_date IS NOT
  *     NULL`, nó biến khỏi MỌI lời nhắc gia hạn, vĩnh viễn, không một dòng lỗi. Không lưới DB.
- *  2. **Chặn cái phải cho qua.** Đường truyền ISP xoá ngày bắt đầu rồi đặt hạn sớm hơn ngày
- *     bắt đầu CŨ: luật so với ngày cũ (ngày vừa bị xoá) và từ chối. Người trực bị nhốt lại
- *     bởi một giá trị không còn tồn tại — đúng cái bẫy mà chú thích `isp-line.service.ts`
- *     đã mô tả cho liên kết thiết bị, lặp lại ở cặp ngày.
+ *  2. **Chặn cái phải cho qua.** Xoá một ô rồi sửa ô khác: luật so với giá trị vừa bị xoá và
+ *     từ chối. Người dùng bị nhốt lại bởi một giá trị không còn tồn tại.
  *
  * Đường nhập Excel làm ĐÚNG với cùng bài toán từ trước (`device-import.ts` dùng `field in
  * values`). Lại là hình dạng của A-01: cửa Excel được canh, cửa HTTP bỏ ngỏ.
@@ -41,7 +38,6 @@ import {
 test.beforeEach(() => {
   resetUsers();
   resetSoftware();
-  resetIsp();
   // Thêm 21/09: khối "Sổ NAT" ở cuối file dựng router + dải + IP.
   resetIpam();
   resetDevices();
@@ -108,35 +104,6 @@ test.describe('Xoá ô ngày — luật phải soi giá trị MỚI, không ph�
     });
     expect(cleared.status(), await cleared.text()).toBe(200);
     expect(await endDateOf(page, id)).toBeNull();
-  });
-
-  test('đường truyền ISP: xoá ngày bắt đầu rồi đặt hạn sớm hơn ngày bắt đầu CŨ vẫn phải lưu được', async ({
-    page,
-  }) => {
-    await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
-    const created = await page.request.post('/api/v1/isp-lines', {
-      headers: await writeHeaders(page),
-      data: {
-        code: `ISP-E2E-${stamp}`,
-        provider: 'Nha mang E2E',
-        startDate: '2026-06-01',
-        endDate: '2026-12-31',
-      },
-    });
-    expect(created.status(), await created.text()).toBe(201);
-    const id = String(((await created.json()) as { id: string }).id);
-
-    const moved = await page.request.patch(`/api/v1/isp-lines/${id}`, {
-      headers: await writeHeaders(page),
-      data: { startDate: '', endDate: '2026-03-01' },
-    });
-    expect(moved.status(), await moved.text()).toBe(200);
-
-    const after = await page.request.get(`/api/v1/isp-lines/${id}`);
-    const line = (await after.json()) as { startDate: string | null; endDate: string | null };
-    expect(line.startDate).toBeNull();
-    expect(line.endDate).toBe('2026-03-01');
   });
 });
 

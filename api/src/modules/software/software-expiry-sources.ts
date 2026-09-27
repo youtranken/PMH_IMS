@@ -1,7 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { ExpirySourceRegistry } from '../../common/expiry/expiry-registry';
 import type { ExpiryItem, ExpirySource } from '../../common/expiry/expiry-source';
-import { IspLineService } from './isp-line.service';
 import { KIND_LABEL, type SoftwareKind } from './software-rules';
 import { SoftwareService } from './software.service';
 import { UI_PATHS } from '../../common/ui-paths';
@@ -15,20 +14,21 @@ import { UI_PATHS } from '../../common/ui-paths';
  *
  * Cả bốn loại đều gia hạn được từ màn Expiry — gọi ngược về `SoftwareService.renew`, tức là
  * đi qua đúng luật của module chủ (không tự UPDATE bảng).
+ *
+ * Đường truyền ISP KHÔNG đăng ký (Q-04): line không có hạn, sống tới khi thanh lý. Thêm lại
+ * nguồn đó là kéo ISP trở vào màn Sắp hết hạn, mail tổng hợp và bảng điều khiển cùng lúc.
  */
 @Injectable()
 export class SoftwareExpiryRegistrar implements OnModuleInit {
   constructor(
     private readonly registry: ExpirySourceRegistry,
     private readonly software: SoftwareService,
-    private readonly isp: IspLineService,
   ) {}
 
   onModuleInit(): void {
     for (const kind of ['license', 'ssl', 'domain', 'maintenance'] as SoftwareKind[]) {
       this.registry.register(this.softwareSource(kind));
     }
-    this.registry.register(this.ispSource());
   }
 
   private softwareSource(kind: SoftwareKind): ExpirySource {
@@ -47,33 +47,11 @@ export class SoftwareExpiryRegistrar implements OnModuleInit {
             start: row.startDate,
             end: row.endDate!,
             link: UI_PATHS.software(row.id),
+            quietInDigest: row.status === 'expired_ok',
           }));
       },
       renew: async (actor, id, newEnd) => {
         await this.software.renew(actor, id, newEnd);
-      },
-    };
-  }
-
-  private ispSource(): ExpirySource {
-    return {
-      sourceKind: 'isp',
-      sourceLabel: 'Hợp đồng đường truyền',
-      findExpiring: async (from, to): Promise<ExpiryItem[]> => {
-        const rows = await this.isp.findExpiringBetween(from, to);
-        return rows.map((row) => ({
-          id: row.id,
-          label: `${row.code} — ${row.provider}`,
-          // Hotline đi kèm ngay trong màn cảnh báo: thấy sắp hết hạn là gọi được luôn.
-          sublabel: [row.siteCode, row.hotline].filter(Boolean).join(' · ') || null,
-          kind: 'isp',
-          start: row.startDate,
-          end: row.endDate!,
-          link: UI_PATHS.ispLine(row.id),
-        }));
-      },
-      renew: async (actor, id, newEnd) => {
-        await this.isp.renew(actor, id, newEnd);
       },
     };
   }

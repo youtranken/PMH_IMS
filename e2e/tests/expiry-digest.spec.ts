@@ -8,7 +8,6 @@ import {
   mailBody,
   resetDevices,
   resetDigestRules,
-  resetIsp,
   resetSoftware,
   resetUsers,
   waitForMail,
@@ -17,7 +16,6 @@ import {
 test.beforeEach(async () => {
   resetUsers();
   resetSoftware();
-  resetIsp();
   // PHẢI dọn cả thiết bị: luật dưới đây tính "mọi loại", nên một cái máy sót lại từ spec
   // khác có bảo hành sắp hết là số mục đếm được lệch ngay (code review Epic 3).
   resetDevices();
@@ -93,16 +91,17 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
       kind: 'ssl',
       endDate: inDays(12),
     });
-    await post(page, '/api/v1/isp-lines', {
-      code: `ISP-E2E-D1-${stamp}`,
-      provider: 'FPT',
+    await post(page, '/api/v1/software', {
+      code: `DOM-E2E-D1-${stamp}`,
+      name: 'pmh.com.vn',
+      kind: 'domain',
       endDate: inDays(20),
     });
 
     const rule = await post(page, '/api/v1/expiry/rules', {
       name: `Luật E2E ${stamp}`,
       // Khoanh đúng hai loại vừa tạo — không phụ thuộc vào dữ liệu thật có sẵn trong DB.
-      kinds: ['ssl', 'isp'],
+      kinds: ['ssl', 'domain'],
       withinDays: 30,
       recipients: ['sep@pmh.com.vn', 'it@pmh.com.vn'],
       ...lichKhongToiHanHomNay(),
@@ -125,9 +124,45 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
     // Mỗi dòng nêu đủ tên + loại + hạn để đọc xong quyết được ngay.
     const body = await mailBody(messages[0].ID);
     expect(body).toContain(`SSL-E2E-D1-${stamp}`);
-    expect(body).toContain(`ISP-E2E-D1-${stamp}`);
+    expect(body).toContain(`DOM-E2E-D1-${stamp}`);
     expect(body).toContain('Chứng chỉ SSL');
-    expect(body).toContain('Hợp đồng đường truyền');
+    expect(body).toContain('Tên miền');
+  });
+
+  /*
+   * DOM-03: hồ sơ phần mềm đã qua hạn tự sang "Hết hạn" và THÔI NHẮC qua mail (mail "sắp hết
+   * hạn" đã gửi trước đó). Màn Sắp hết hạn vẫn hiện nó — xem expiry.spec "mục đã QUÁ HẠN".
+   */
+  test('hồ sơ phần mềm đã Hết hạn không vào mail, mục còn hạn thì vẫn vào', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    await post(page, '/api/v1/software', {
+      code: `SSL-E2E-QH-${stamp}`,
+      name: 'SSL đã quá hạn',
+      kind: 'ssl',
+      endDate: inDays(-3),
+    });
+    await post(page, '/api/v1/software', {
+      code: `SSL-E2E-CH-${stamp}`,
+      name: 'SSL còn hạn',
+      kind: 'ssl',
+      endDate: inDays(5),
+    });
+    const rule = await post(page, '/api/v1/expiry/rules', {
+      name: `Luật E2E quá hạn ${stamp}`,
+      kinds: ['ssl'],
+      withinDays: 30,
+      recipients: ['it@pmh.com.vn'],
+      ...lichKhongToiHanHomNay(),
+    });
+    expect(rule.status).toBe(201);
+
+    const sent = await post(page, `/api/v1/expiry/rules/${String(rule.body.id)}/test`, {});
+    expect(sent.status).toBe(201);
+    const messages = await waitForMail('sắp hết hạn');
+    const body = await mailBody(messages[0].ID);
+    expect(body).toContain(`SSL-E2E-CH-${stamp}`);
+    expect(body).not.toContain(`SSL-E2E-QH-${stamp}`);
   });
 
   test('luật lọc theo loại chỉ gửi đúng loại đó', async ({ page }) => {

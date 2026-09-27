@@ -46,7 +46,9 @@ async function post(page: Page, url: string, data: Record<string, unknown>) {
 }
 
 test.describe('Cỗ máy Expiry', () => {
-  test('gom license + ISP + bảo hành về một màn, sắp theo độ gấp', async ({ page }) => {
+  test('gom SSL + license + bảo hành về một màn, sắp theo độ gấp; ISP không có mặt', async ({
+    page,
+  }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
 
@@ -56,12 +58,19 @@ test.describe('Cỗ máy Expiry', () => {
     });
     const pc = catalog.deviceTypes.find((type) => type.name === 'PC')!;
 
-    // Ba loại, ba mốc khác nhau: ISP gấp nhất, rồi license, rồi bảo hành.
-    await post(page, '/api/v1/isp-lines', {
-      code: `ISP-E2E-EXP-${stamp}`,
-      provider: 'FPT',
+    // Ba loại, ba mốc khác nhau: SSL gấp nhất, rồi license, rồi bảo hành.
+    await post(page, '/api/v1/software', {
+      code: `SSL-E2E-EXP-${stamp}`,
+      name: 'SSL pmh.com.vn',
+      kind: 'ssl',
       endDate: inDays(3),
     });
+    // Đường truyền không có hạn (Q-04) — có mặt trong DB nhưng không được lên màn này.
+    const isp = await post(page, '/api/v1/isp-lines', {
+      code: `ISP-E2E-EXP-${stamp}`,
+      provider: 'FPT',
+    });
+    expect(isp.status).toBe(201);
     await post(page, '/api/v1/software', {
       code: `LIC-E2E-EXP-${stamp}`,
       name: 'Office',
@@ -79,16 +88,17 @@ test.describe('Cỗ máy Expiry', () => {
     await expect(page.getByRole('heading', { name: 'Sắp hết hạn' })).toBeVisible();
 
     const rows = page.getByRole('row');
-    await expect(page.getByRole('link', { name: new RegExp(`ISP-E2E-EXP-${stamp}`) })).toBeVisible();
+    await expect(page.getByRole('link', { name: new RegExp(`SSL-E2E-EXP-${stamp}`) })).toBeVisible();
     await expect(page.getByRole('link', { name: new RegExp(`LIC-E2E-EXP-${stamp}`) })).toBeVisible();
     await expect(page.getByRole('link', { name: new RegExp(`PC-E2E-EXP-${stamp}`) })).toBeVisible();
+    await expect(page.getByRole('link', { name: new RegExp(`ISP-E2E-EXP-${stamp}`) })).toHaveCount(0);
 
-    // Thứ gấp nhất phải nằm trên: ISP (3 ngày) trước license (10 ngày).
+    // Thứ gấp nhất phải nằm trên: SSL (3 ngày) trước license (10 ngày).
     const text = await rows.allInnerTexts();
-    const ispAt = text.findIndex((line) => line.includes(`ISP-E2E-EXP-${stamp}`));
+    const sslAt = text.findIndex((line) => line.includes(`SSL-E2E-EXP-${stamp}`));
     const licAt = text.findIndex((line) => line.includes(`LIC-E2E-EXP-${stamp}`));
-    expect(ispAt).toBeGreaterThan(0);
-    expect(ispAt).toBeLessThan(licAt);
+    expect(sslAt).toBeGreaterThan(0);
+    expect(sslAt).toBeLessThan(licAt);
   });
 
   test('lọc theo loại — danh sách loại lấy từ API, không viết cứng ở UI', async ({ page }) => {
@@ -108,14 +118,14 @@ test.describe('Cỗ máy Expiry', () => {
       endDate: inDays(15),
     });
 
-    // API phải khai đủ 6 nguồn: 4 loại phần mềm + ISP + bảo hành thiết bị.
+    // API phải khai đủ 5 nguồn: 4 loại phần mềm + bảo hành thiết bị. Đường truyền không có
+    // hạn nên không phải một nguồn (Q-04).
     const kinds = await page.evaluate(async () => {
       const res = await fetch('/api/v1/expiry/kinds', { credentials: 'include' });
       return (await res.json()) as { kind: string; canRenew: boolean }[];
     });
     expect(kinds.map((item) => item.kind).sort()).toEqual([
       'domain',
-      'isp',
       'license',
       'maintenance',
       'ssl',

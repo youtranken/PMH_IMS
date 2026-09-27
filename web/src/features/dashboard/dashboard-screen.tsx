@@ -272,7 +272,7 @@ export function DashboardScreen({ me }: { me: Me }) {
     );
   }
 
-  /* Tuần qua công ty bỏ những gì — ba loại gộp sẵn ở module `disposal`, không gộp lại. */
+  /* Tuần qua công ty bỏ những gì — các loại gộp sẵn ở module `disposal`, không gộp lại. */
   place(
     board.disposed,
     <BlockCard

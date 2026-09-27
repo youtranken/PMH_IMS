@@ -206,49 +206,35 @@ export class MailConsumer {
 
     switch (topic) {
       /*
-       * TÊN CHỦ ĐỀ GIỮ NGUYÊN, NỘI DUNG PHẢI ĐỔI (11/09).
-       *
-       * Từ khi khoá chuyển sang cặp (người dùng, IP), tài khoản KHÔNG còn bị khoá khi bộ đếm
-       * chạm ngưỡng — chỉ cái IP đang gõ mới bị. Lá thư cũ viết "vừa bị khóa tạm thời" và
-       * "khóa tự mở sau thời gian cấu hình": cả hai câu nay đều sai, và sai theo hướng tệ nhất
-       * — SA đọc xong tưởng hệ thống đã tự xử lý nên không làm gì.
-       *
-       * Thư này giờ là thứ DUY NHẤT khiến một CON NGƯỜI nhìn thấy một lượt dò rải rác (mỗi IP
-       * gõ vài lần rồi đổi IP, không IP nào chạm ngưỡng riêng). Nên nó phải nói rõ: chưa có ai
-       * bị chặn ở tầng tài khoản, và việc cần làm là của anh.
+       * Tài khoản vừa lên một bậc chờ (SEC-03, Q-06). Thư phải nói đúng việc hệ thống ĐÃ làm
+       * (chặn tạm ở mọi nơi) để người đọc biết việc còn lại của họ là gì.
        */
       case 'auth.account.locked': {
         if (!user) return null;
+        const timeZone = await this.config.getString('appTimezone');
+        const fmt = (d: Date) => d.toLocaleString('vi-VN', { timeZone });
         const { html, text } = renderMail({
-          title: 'Một tài khoản đang bị dò mật khẩu',
-          intro: `Tài khoản ${user.email} vừa nhập sai mật khẩu quá số lần cho phép. Nơi gõ sai đã bị chặn tạm thời, nhưng TÀI KHOẢN VẪN ĐĂNG NHẬP ĐƯỢC từ chỗ khác — kể cả từ chỗ của kẻ đang dò, nếu họ đổi mạng.`,
+          title: 'Một tài khoản đang bị đoán mật khẩu',
+          intro:
+            `Tài khoản ${user.email} vừa nhập sai mật khẩu hoặc mã xác thực ${user.failedAttempts} lần. ` +
+            'Đăng nhập vào tài khoản này đang bị TẠM CHẶN ở mọi nơi; mỗi lần sai tiếp, thời gian chờ dài thêm.',
           rows: [
             { label: 'Người dùng', value: `${user.fullName} (${user.email})` },
-            { label: 'Thời điểm', value: new Date().toLocaleString('vi-VN') },
+            { label: 'Chặn đến', value: user.lockedUntil ? fmt(user.lockedUntil) : '—' },
+            { label: 'Thời điểm', value: fmt(new Date()) },
           ],
-          /*
-           * KHÔNG CÓ NÚT — màn nhật ký chưa được dựng (B-08/T-02, vá 22/09).
-           *
-           * Nút cũ trỏ `/quan-tri/nhat-ky`. Đường ấy CÓ trong `LEGACY_ROUTES` nên nó chuyển
-           * hướng đúng sang `/admin/audit-log` — nhưng `/admin/audit-log` không có `<Route>`
-           * nào trong `App.tsx`, nên lượt chuyển hướng rơi thẳng vào trang 404.
-           *
-           * Đây là thư CẢNH BÁO BẢO MẬT, loại người ta mở đúng lúc đang lo. Một cái nút hỏng
-           * ở đây không chỉ vô dụng — nó bào mòn lòng tin vào cả kênh cảnh báo, và lá thư
-           * thật sự khẩn lần sau sẽ không ai bấm nữa.
-           *
-           * Câu dặn cũng phải đổi: "Mở nhật ký xem các lượt sai đến từ một nơi hay nhiều nơi"
-           * là lời khuyên KHÔNG LÀM THEO ĐƯỢC. Nay dặn đúng việc người nhận làm được hôm nay.
-           *
-           * `mail-cta.spec.ts` sẽ ĐỎ vào ngày màn nhật ký được dựng thật — để người dựng nó
-           * nhớ trả cái nút về đây.
-           */
+          /* Chủ tài khoản cũng nhận thư này nhưng màn Nhật ký chỉ mở cho SA/Quản trị — nhãn
+             nói trước điều đó để người nhận không tưởng nút hỏng khi bấm ra trang 404. */
+          ctaLabel: 'Xem nhật ký của tài khoản (SA/Quản trị)',
+          ctaUrl: `${APP_URL()}${UI_PATHS.auditLog(user.email)}`,
           footnote:
-            'Vào màn Tài khoản để KHÓA TAY tài khoản này nếu thấy đáng ngờ — khóa tay chặn mọi nơi và chỉ SA mở được. (Màn nhật ký đăng nhập chưa có trong bản này.)',
+            'Không phải bạn đang quên mật khẩu? Báo SA ngay. SA có thể KHÓA TAY tài khoản ở màn Tài khoản — khóa tay chặn mọi nơi và chỉ SA mở được.',
         });
+        // Chủ tài khoản cũng nhận: họ là người đầu tiên biết lượt sai đó có phải của mình không.
+        const to = [...new Set([user.email, ...sa.map((r) => r.email)])];
         return {
-          to: sa.map((r) => r.email),
-          subject: `[IMS] Dò mật khẩu tài khoản ${user.email}`,
+          to,
+          subject: `[IMS] Đoán mật khẩu tài khoản ${user.email}`,
           html,
           text,
         };
@@ -280,7 +266,8 @@ export class MailConsumer {
             { label: 'Trong', value: `${payload.windowMinutes ?? 0} phút` },
             { label: 'Thời điểm', value: new Date().toLocaleString('vi-VN') },
           ],
-          // Không có nút: màn nhật ký chưa dựng — xem chú thích ở lá thư ngay trên (B-08/T-02).
+          ctaLabel: 'Xem nhật ký của tài khoản này',
+          ctaUrl: `${APP_URL()}${UI_PATHS.auditLog(payload.who)}`,
 
           /* Thời gian nghỉ NỘI SUY từ payload, không viết cứng "một giờ": nó là
              `secret.probe_cooldown_minutes` trong `system_config` (AD-11) và đổi được bất cứ
@@ -288,7 +275,7 @@ export class MailConsumer {
              không cổng nào đỏ lên. Còn `?? 60` chỉ là lưới đỡ cho hàng outbox cũ ghi trước
              18/09 — chúng không có trường này. */
           footnote:
-            'Phần lớn trường hợp là người dùng thật gõ nhầm mã hoặc bấm vào một hồ sơ chưa được gán quyền. Hỏi thẳng người này trước khi kết luận; màn nhật ký để lọc theo tài khoản chưa có trong bản này. ' +
+            'Phần lớn trường hợp là người dùng thật gõ nhầm mã hoặc bấm vào một hồ sơ chưa được gán quyền. Hỏi thẳng người này trước khi kết luận; nhật ký cho thấy các lượt đó diễn ra lúc nào và từ đâu. ' +
             /*
              * KHÔNG ĐOÁN HỘ MỘT CON SỐ MÌNH KHÔNG BIẾT (19/09/2026).
              *
@@ -394,7 +381,6 @@ const KIND_LABEL: Record<string, string> = {
   ssl: 'Chứng chỉ SSL',
   domain: 'Tên miền',
   maintenance: 'Hợp đồng bảo trì',
-  isp: 'Hợp đồng đường truyền',
 };
 
 /**

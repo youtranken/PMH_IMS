@@ -25,7 +25,6 @@ interface FormState {
   hotline: string;
   contractNo: string;
   startDate: string;
-  endDate: string;
   note: string;
   status: IspStatus;
 }
@@ -40,7 +39,6 @@ function initialState(row: IspRow | null): FormState {
     hotline: row?.hotline ?? '',
     contractNo: row?.contractNo ?? '',
     startDate: row?.startDate ?? '',
-    endDate: row?.endDate ?? '',
     note: row?.note ?? '',
     status: row?.status ?? 'active',
   };
@@ -144,7 +142,6 @@ export function IspForm({
               hotline: form.hotline.trim(),
               contractNo: form.contractNo.trim(),
               startDate: form.startDate,
-              endDate: form.endDate,
               note: form.note.trim(),
               status: form.status,
             },
@@ -290,8 +287,9 @@ export function IspForm({
         </FormSection>
 
         {/* Hai ô đầu là lý do màn ISP tồn tại: 2 giờ sáng gọi ai, đọc số hợp đồng nào.
-            Tiêu đề khối KHÔNG còn là "Hotline" — khối này chứa cả hợp đồng và kỳ hạn, đặt
-            tên theo ô đầu tiên là nói sai về ba ô còn lại. */}
+            Tiêu đề khối KHÔNG là "Hotline" — khối này chứa cả hợp đồng và ngày bắt đầu, đặt
+            tên theo ô đầu tiên là nói sai về các ô còn lại. Không có ô hết hạn: đường truyền
+            không có hạn, dùng tới khi thanh lý (Q-04). */}
         <FormSection title={t('isp.sectionContract')} columns={3}>
           <Field label={t('isp.hotline')} htmlFor="isp-hotline">
             <input
@@ -314,13 +312,6 @@ export function IspForm({
               value={form.startDate}
               ariaLabel={t('isp.startDate')}
               onChange={(value) => set('startDate', value)}
-            />
-          </Field>
-          <Field label={t('isp.endDate')}>
-            <DatePicker
-              value={form.endDate}
-              ariaLabel={t('isp.endDate')}
-              onChange={(value) => set('endDate', value)}
             />
           </Field>
           <Field label={t('isp.note')} htmlFor="isp-note" span={2}>

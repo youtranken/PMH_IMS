@@ -48,9 +48,35 @@ export function toIspHistory(rows: IspHistoryRow[], t: TFunction): HistoryEntry[
     id: row.id,
     at: row.createdAt,
     actor: row.actor,
-    action: ACTION_LABEL[row.action] ? t(ACTION_LABEL[row.action]) : row.action,
+    action: actionLabel(row, t),
     detail: describe(row.changes, t),
   }));
+}
+
+/**
+ * Thanh lý không có hành động riêng trong sổ — nó là một lượt `updated` đổi trạng thái sang
+ * `terminated`. Q-04 đòi đọc ra được "ai thanh lý", nên dòng đó phải mang tên của nó thay vì
+ * lẫn vào giữa các lượt "Sửa hồ sơ".
+ */
+function actionLabel(row: IspHistoryRow, t: TFunction): string {
+  if (statusAfter(row) === 'terminated') return t('history.isp.actTerminated');
+  return ACTION_LABEL[row.action] ? t(ACTION_LABEL[row.action]) : row.action;
+}
+
+function statusAfter(row: IspHistoryRow): unknown {
+  return row.changes?.status?.after;
+}
+
+/**
+ * Lượt thanh lý đang có hiệu lực, hoặc `null`.
+ *
+ * `rows` đi theo thứ tự API trả (mới nhất trước). Chỉ lượt đổi trạng thái MỚI NHẤT quyết định:
+ * thanh lý rồi bật lại thì cái tên người thanh lý cũ không còn đúng với hồ sơ đang xem.
+ */
+export function liquidationOf(rows: IspHistoryRow[]): { at: string; actor: string } | null {
+  const latest = rows.find((row) => statusAfter(row) !== undefined);
+  if (!latest || statusAfter(latest) !== 'terminated') return null;
+  return { at: latest.createdAt, actor: latest.actor };
 }
 
 /** Nhãn + cách đọc riêng của màn này; phần chung ở `ui/history-changes.ts` (AD-15). */

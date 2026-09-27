@@ -1,4 +1,5 @@
 import {
+  effectiveSoftwareStatus,
   requiresEndDate,
   supportsSeats,
   validateAssignmentTerms,
@@ -211,5 +212,22 @@ describe('validateSoftware', () => {
     });
     // Thiếu hạn + seat trên loại không hỗ trợ = 2 lỗi cùng lúc.
     expect(errors).toHaveLength(2);
+  });
+});
+
+describe('effectiveSoftwareStatus — DOM-03: hạn quyết trạng thái, người chỉ quyết Thanh lý', () => {
+  const TODAY = '2026-10-01';
+  it.each([
+    // [trạng thái đang lưu, ngày hết hạn, → trạng thái hiệu lực]
+    ['active', '2026-10-01', 'active'], // hết hạn HÔM NAY vẫn còn dùng được trọn ngày
+    ['active', '2026-09-30', 'expired_ok'], // qua ngày hết hạn → hệ thống tự chuyển
+    ['expired_ok', '2027-01-01', 'active'], // nhập ngày mới → tự về Đang dùng
+    ['expired_ok', '2026-09-01', 'expired_ok'],
+    ['active', null, 'active'], // vĩnh viễn: không bao giờ hết hạn
+    ['expired_ok', null, 'active'],
+    ['retired', '2020-01-01', 'retired'], // Thanh lý là quyết định của người, hạn không đổi được nó
+    ['retired', '2030-01-01', 'retired'],
+  ] as const)('%s + hạn %s → %s', (status, endDate, expected) => {
+    expect(effectiveSoftwareStatus(status, endDate, TODAY)).toBe(expected);
   });
 });

@@ -231,16 +231,11 @@ INSERT INTO ip_address (subnet_id, address, device_id, used_by, assigned_by, ass
 SELECT
   sn.id,
   ('10.20.' || sn.n || '.' || (9 + h))::inet,
-  CASE WHEN h % 4 = 0 THEN NULL ELSE dv.id END,
-  CASE WHEN h % 4 = 0 THEN NULL ELSE 'DM ' || (ARRAY['Kế toán','Kỹ thuật','Kho vận','Sản xuất'])[1 + (h % 4)] END,
+  CASE WHEN h % 4 = 0 OR h % 53 = 0 THEN NULL ELSE dv.id END,
+  CASE WHEN h % 4 = 0 OR h % 53 = 0 THEN NULL ELSE 'DM ' || (ARRAY['Kế toán','Kỹ thuật','Kho vận','Sản xuất'])[1 + (h % 4)] END,
   'demo@pmh.com.vn',
   (SELECT d FROM _now) - ((h * 3) % 600),
-  CASE
-    WHEN h % 4  = 0 THEN 'free'
-    WHEN h % 37 = 0 THEN 'suspect_dead'
-    WHEN h % 53 = 0 THEN 'reclaimed'
-    ELSE 'assigned'
-  END,
+  CASE WHEN h % 4 = 0 OR h % 53 = 0 THEN 'free' ELSE 'assigned' END,
   NULL
 FROM (
   SELECT id, (split_part(host(cidr), '.', 3))::int AS n

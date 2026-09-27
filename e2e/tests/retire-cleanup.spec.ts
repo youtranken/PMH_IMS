@@ -168,7 +168,7 @@ test.describe('Thanh lý máy còn đang giữ đồ', () => {
     expect(
       sql(`SELECT status FROM ip_address WHERE id = '${kit.ipId}'`),
       'IP phải về pool',
-    ).toBe('reclaimed');
+    ).toBe('free');
     expect(
       sql(`SELECT coalesce(device_id::text,'<null>') FROM ip_address WHERE id = '${kit.ipId}'`),
       'thu hồi phải xóa cả chủ cũ khỏi hàng, không chỉ đổi trạng thái',
@@ -335,7 +335,7 @@ test.describe('Thanh lý trên giao diện — ô tick "Dọn hết thứ liên 
     expect(
       sql(`SELECT status FROM ip_address WHERE id = '${kit.ipId}'`),
       'tick trên giao diện phải dẫn tới ĐÚNG hành vi mà API đã chứng minh',
-    ).toBe('reclaimed');
+    ).toBe('free');
     expect(
       Number(
         sql(

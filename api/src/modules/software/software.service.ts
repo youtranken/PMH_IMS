@@ -9,6 +9,7 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
+import { requireUnchangedSince } from '../../common/cas';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import { orderByStable, type SortQuery } from '../../common/sorting';
@@ -16,8 +17,11 @@ import { conflictOnUnique, searchNormLike } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { ExpiryApiService } from '../expiry/expiry.api';
 import { CatalogApiService } from '../catalog/catalog.api';
+import { SystemConfigService } from '../config-sys/system-config.service';
+import { isoDateInTz } from '../../common/today';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
 import {
+  effectiveSoftwareStatus,
   validateSoftware,
   type LicenseModel,
   type SoftwareInputShape,
@@ -60,6 +64,7 @@ export class SoftwareService {
     private readonly catalog: CatalogApiService,
     private readonly audit: AuditWriterService,
     private readonly expiry: ExpiryApiService,
+    private readonly config: SystemConfigService,
   ) {}
 
   // ─────────────────────────── Đọc ───────────────────────────
@@ -134,7 +139,8 @@ export class SoftwareService {
           sql`${softwareTable.endDate} IS NOT NULL`,
           sql`${softwareTable.endDate} >= ${from}`,
           sql`${softwareTable.endDate} <= ${to}`,
-          // Hồ sơ đã bỏ thì thôi không nhắc nữa — nhắc thứ không ai định gia hạn là spam.
+          // Thanh lý thì không ai định gia hạn. Hết hạn vẫn lấy để màn hình hiện mục quá hạn;
+          // mail digest tự bỏ qua nó qua `quietInDigest` (DOM-03).
           sql`${softwareTable.status} <> 'retired'`,
         ),
       )
@@ -143,6 +149,48 @@ export class SoftwareService {
   }
 
   // ─────────────────────────── Ghi ───────────────────────────
+
+  /**
+   * Lượt dọn định kỳ (DOM-03): đưa trạng thái về đúng với hạn theo ngày `today`. Mỗi hồ sơ đổi
+   * trạng thái có một dòng lịch sử của `system`, để tab Lịch sử trả lời được "ai chuyển nó sang
+   * Hết hạn". Thanh lý không bao giờ bị đụng tới.
+   */
+  async syncExpiryStatuses(today: string): Promise<{ expired: number; reactivated: number }> {
+    return this.db.transaction(async (tx) => {
+      const expired = await tx
+        .update(softwareTable)
+        .set({ status: 'expired_ok', updatedAt: new Date() })
+        .where(
+          and(
+            eq(softwareTable.status, 'active'),
+            sql`${softwareTable.endDate} IS NOT NULL`,
+            sql`${softwareTable.endDate} < ${today}`,
+          ),
+        )
+        .returning({ id: softwareTable.id });
+      const reactivated = await tx
+        .update(softwareTable)
+        .set({ status: 'active', updatedAt: new Date() })
+        .where(
+          and(
+            eq(softwareTable.status, 'expired_ok'),
+            sql`(${softwareTable.endDate} IS NULL OR ${softwareTable.endDate} >= ${today})`,
+          ),
+        )
+        .returning({ id: softwareTable.id });
+      for (const row of expired) {
+        await this.recordWithin(tx, 'system', row.id, 'expired', {
+          status: { before: 'active', after: 'expired_ok' },
+        });
+      }
+      for (const row of reactivated) {
+        await this.recordWithin(tx, 'system', row.id, 'reactivated', {
+          status: { before: 'expired_ok', after: 'active' },
+        });
+      }
+      return { expired: expired.length, reactivated: reactivated.length };
+    });
+  }
 
   async create(actor: string, input: SoftwareInputShape): Promise<SoftwareRecord> {
     const values = await this.prepare(input, null);
@@ -166,6 +214,9 @@ export class SoftwareService {
     if (!hasChanges(changes)) return toRecord(before);
 
     return this.db.transaction(async (tx) => {
+      // `prepare` tính lại trạng thái theo hạn từ ảnh chụp ngoài transaction: một lượt thanh
+      // lý commit vào giữa sẽ bị tính đè thành "Đang dùng".
+      await this.requireUnchangedWithin(tx, before);
       const updated = await this.updateWithin(tx, id, values);
       await this.recordWithin(tx, actor, id, 'updated', changes);
       return updated;
@@ -195,6 +246,9 @@ export class SoftwareService {
       });
     }
     return this.db.transaction(async (tx) => {
+      // "Hạn mới phải sau hạn hiện tại" và `oldEnd` của sổ gia hạn đều đọc từ `before`. Hai
+      // lượt gia hạn cùng lúc thì lượt sau kéo hạn LÙI về và ghi sai hạn cũ vào sổ.
+      await this.requireUnchangedWithin(tx, before);
       const updated = await this.updateWithin(tx, id, { endDate: newEnd, status: 'active' });
       await this.recordWithin(tx, actor, id, 'renewed', {
         endDate: { before: before.endDate, after: newEnd },
@@ -356,6 +410,19 @@ export class SoftwareService {
       throw new BadRequestException({ code: 'SOFTWARE_INVALID', message: errors.join(' ') });
     }
 
+    // Trạng thái do hạn quyết, trừ Thanh lý (DOM-03): sửa ngày hết hạn sang tương lai là tự về
+    // Đang dùng; tạo hồ sơ với hạn đã qua là Hết hạn ngay.
+    const baseStatus = effective<SoftwareStatus>('status', (current?.status as SoftwareStatus) ?? 'active');
+    const today = isoDateInTz(await this.config.getString('appTimezone'));
+    const status = effectiveSoftwareStatus(
+      baseStatus,
+      effective<string | null>('endDate', current?.endDate ?? null),
+      today,
+    );
+    if (current === null || status !== current.status || values.status !== undefined) {
+      values.status = status;
+    }
+
     if (values.vendorId) {
       const refErrors = await this.catalog.validateRefs({ vendorId: values.vendorId as string });
       if (refErrors.length > 0) {
@@ -368,8 +435,17 @@ export class SoftwareService {
     return values;
   }
 
-  private async requireRow(id: string): Promise<typeof softwareTable.$inferSelect> {
-    const rows = await this.db.select().from(softwareTable).where(eq(softwareTable.id, id));
+  private requireRow(id: string): Promise<typeof softwareTable.$inferSelect> {
+    return this.requireRowWithin(this.db, id);
+  }
+
+  private async requireRowWithin(
+    tx: Pick<Database, 'select'>,
+    id: string,
+    lock?: 'update',
+  ): Promise<typeof softwareTable.$inferSelect> {
+    const query = tx.select().from(softwareTable).where(eq(softwareTable.id, id));
+    const rows = await (lock ? query.for(lock) : query);
     if (rows.length === 0) {
       throw new NotFoundException({
         code: 'SOFTWARE_NOT_FOUND',
@@ -377,6 +453,18 @@ export class SoftwareService {
       });
     }
     return rows[0];
+  }
+
+  /** Khóa hàng tới hết transaction và đòi nó còn đúng là hàng `seen` — xem `requireUnchangedSince`. */
+  private async requireUnchangedWithin(
+    tx: Tx,
+    seen: typeof softwareTable.$inferSelect,
+  ): Promise<void> {
+    const locked = await this.requireRowWithin(tx, seen.id, 'update');
+    requireUnchangedSince(seen, locked, {
+      code: 'SOFTWARE_ALREADY_CHANGED',
+      message: 'Hồ sơ vừa được người khác sửa — tải lại rồi thử lại.',
+    });
   }
 
   private translate(error: unknown): unknown {

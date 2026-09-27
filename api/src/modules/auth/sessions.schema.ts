@@ -8,6 +8,8 @@ export const sessionsTable = pgTable('sessions', {
     .notNull()
     .references(() => usersTable.id),
   csrfToken: text('csrf_token').notNull(),
+  /** SHA-256 (hex) của token trong cookie. Token thô không bao giờ nằm trong DB (0059). */
+  tokenHash: text('token_hash').notNull(),
   ip: text('ip'),
   userAgent: text('user_agent'),
   steppedUpAt: timestamp('stepped_up_at', { withTimezone: true }),

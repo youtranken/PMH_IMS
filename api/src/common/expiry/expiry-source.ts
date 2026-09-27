@@ -10,13 +10,18 @@ export interface ExpiryItem {
   label: string;
   /** Mô tả phụ hiện dưới nhãn (nhà cung cấp, site, model…). */
   sublabel?: string | null;
-  /** Loại để luật digest lọc: 'license' | 'ssl' | 'domain' | 'isp' | 'warranty' | 'maintenance'… */
+  /** Loại để luật digest lọc: 'license' | 'ssl' | 'domain' | 'warranty' | 'maintenance'… */
   kind: string;
   start: string | null;
   /** Ngày hết hạn, dạng YYYY-MM-DD. */
   end: string;
   /** Đường dẫn UI để email/màn Expiry trỏ về đúng hồ sơ. */
   link: string;
+  /**
+   * Vẫn hiện trên màn Sắp hết hạn và dashboard, nhưng KHÔNG vào mail digest. Dùng cho hồ sơ
+   * phần mềm đã chuyển sang Hết hạn (DOM-03): mail "sắp hết hạn" đã nhắc trước đó rồi.
+   */
+  quietInDigest?: boolean;
 }
 
 export interface ExpirySource {

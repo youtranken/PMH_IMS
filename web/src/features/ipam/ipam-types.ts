@@ -1,4 +1,5 @@
-export type IpStatus = 'free' | 'assigned' | 'suspect_dead' | 'reclaimed';
+/** Hai trạng thái vòng đời (Q-02) — khớp `IP_LIFECYCLE_STATUSES` phía API. */
+export type IpStatus = 'free' | 'assigned';
 
 export interface SubnetRow {
   id: string;
@@ -64,19 +65,11 @@ export type SubnetSlot = ({ kind: 'record' } & IpRow) | { kind: 'free'; address:
 export const STATUS_KEY: Record<IpStatus, string> = {
   free: 'ipam.statusFree',
   assigned: 'ipam.statusAssigned',
-  suspect_dead: 'ipam.statusSuspectDead',
-  reclaimed: 'ipam.statusReclaimed',
 };
 
-/**
- * "Nghi chết" là VÀNG chứ không đỏ: nó là một nghi ngờ chờ người đi kiểm, không phải một
- * sự cố. Để đỏ thì cả bảng đỏ rực và người ta thôi không nhìn màu nữa.
- */
 export const STATUS_TONE: Record<IpStatus, string> = {
   free: 'muted',
   assigned: 'ok',
-  suspect_dead: 'warn',
-  reclaimed: 'muted',
 };
 
 /**
@@ -88,16 +81,10 @@ export const STATUS_TONE: Record<IpStatus, string> = {
  */
 export const NEXT_STATUSES: Record<IpStatus, IpStatus[]> = {
   free: ['assigned'],
-  assigned: ['suspect_dead', 'reclaimed'],
-  suspect_dead: ['assigned', 'reclaimed'],
-  reclaimed: ['assigned'],
+  assigned: ['free'],
 };
 
 export const TRANSITION_LABEL: Record<string, string> = {
   'free->assigned': 'ipam.trAssign',
-  'assigned->suspect_dead': 'ipam.trSuspect',
-  'assigned->reclaimed': 'ipam.trReclaim',
-  'suspect_dead->assigned': 'ipam.trStillUsed',
-  'suspect_dead->reclaimed': 'ipam.trReclaim',
-  'reclaimed->assigned': 'ipam.trReassign',
+  'assigned->free': 'ipam.trReclaim',
 };

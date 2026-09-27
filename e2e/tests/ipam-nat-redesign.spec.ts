@@ -96,8 +96,8 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
     expect(created.status()).toBe(201);
 
     await page.goto(`/ip-addresses/${id}`);
-    // Nhãn nút mang luôn con số: "Đang cấp 1", "Trống 253" — đọc được bằng một cái liếc.
-    const assigned = page.getByRole('button', { name: 'Đang cấp 1' });
+    // Nhãn nút mang luôn con số: "Đang dùng 1", "Trống 253" — đọc được bằng một cái liếc.
+    const assigned = page.getByRole('button', { name: 'Đang dùng 1' });
     await expect(assigned).toBeVisible();
     await expect(page.getByRole('button', { name: 'Trống 253' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Tất cả 254' })).toBeVisible();
@@ -630,7 +630,8 @@ test.describe('Sổ NAT — lịch sử và giấy tờ', () => {
 
     const subnet = await page.request.post('/api/v1/ipam/subnets', {
       headers,
-      data: { cidr: '172.16.198.0/29', name: `LAN giấy tờ E2E ${stamp}` },
+      // Vùng 172.30 không bài nào khác dùng: dải chồng dải đang dùng bị từ chối (DB-02).
+      data: { cidr: '172.30.198.0/29', name: `LAN giấy tờ E2E ${stamp}` },
     });
     const subnetId = ((await subnet.json()) as { id: string }).id;
 

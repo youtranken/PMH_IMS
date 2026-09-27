@@ -1,5 +1,7 @@
 import {
   isLocked,
+  parseBackoffSteps,
+  registerAccountFailure,
   lockRemainingSeconds,
   registerFailure,
   registerSuccess,
@@ -118,5 +120,69 @@ describe('lockout — NFR-01: sai 5 lần khóa 15 phút, tự mở', () => {
     );
     expect(next.justLocked).toBe(true);
     expect(next.lockedUntil).toEqual(new Date('2026-08-22T11:00:00Z'));
+  });
+});
+
+describe('registerAccountFailure — SEC-03: chậm dần theo tài khoản (Q-06)', () => {
+  const BACKOFF = { threshold: 5, stepsMinutes: [1, 2, 3, 60] };
+  const at = (minutes: number) => new Date(NOW.getTime() + minutes * 60_000);
+
+  it.each([
+    // [số lần sai SAU lượt này, số phút phải chờ | null nếu chưa chặn]
+    [1, null],
+    [4, null],
+    [5, 1],
+    [6, null],
+    [10, 2],
+    [15, 3],
+    [20, 60],
+    [25, 60],
+    [100, 60],
+  ])('lần sai thứ %i → chờ %s phút', (after, minutes) => {
+    const next = registerAccountFailure(
+      { failedAttempts: after - 1, lockedUntil: null },
+      BACKOFF,
+      NOW,
+    );
+    expect(next.failedAttempts).toBe(after);
+    expect(next.lockedUntil).toEqual(minutes === null ? null : at(minutes));
+    expect(next.justLocked).toBe(minutes !== null);
+  });
+
+  it('bộ đếm KHÔNG về 0 khi hết thời gian chờ — chỉ đăng nhập thành công mới xoá', () => {
+    const expired = { failedAttempts: 5, lockedUntil: at(-1) };
+    const next = registerAccountFailure(expired, BACKOFF, NOW);
+    expect(next.failedAttempts).toBe(6);
+    expect(next.lockedUntil).toEqual(expired.lockedUntil);
+    expect(next.justLocked).toBe(false);
+  });
+
+  it('lượt sai giữa hai mốc giữ nguyên mốc chờ đang có, không rút ngắn nó', () => {
+    const locked = { failedAttempts: 20, lockedUntil: at(45) };
+    const next = registerAccountFailure(locked, BACKOFF, NOW);
+    expect(next.lockedUntil).toEqual(at(45));
+  });
+
+  it('ngưỡng 0 là TẮT chặn theo tài khoản', () => {
+    const next = registerAccountFailure(
+      { failedAttempts: 99, lockedUntil: null },
+      { threshold: 0, stepsMinutes: [1] },
+      NOW,
+    );
+    expect(next.lockedUntil).toBeNull();
+    expect(next.justLocked).toBe(false);
+  });
+});
+
+describe('parseBackoffSteps — đọc "5,15,30,60" từ system_config', () => {
+  it.each([
+    ['1,2,3,60', [1, 2, 3, 60]],
+    [' 1 , 5 ,15 ', [1, 5, 15]],
+    ['', [5, 15, 30, 60]],
+    ['abc', [5, 15, 30, 60]],
+    ['1,-2,3', [5, 15, 30, 60]],
+    ['0', [5, 15, 30, 60]],
+  ])('%j → %j', (raw, expected) => {
+    expect(parseBackoffSteps(raw)).toEqual(expected);
   });
 });

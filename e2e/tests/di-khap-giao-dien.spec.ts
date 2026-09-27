@@ -170,16 +170,16 @@ import {
  *     → Màn Đường truyền: đủ nút, đủ cột, ô tìm thu hẹp bảng thật, và KHÔNG có menu ba chấm
  * [x] Hộp Thêm đường truyền: đủ ô · đúng vai · chặn thiếu · đóng cả hai đường
  *     → Hộp "Thêm đường truyền": đủ ô, đúng loại tay nắm, chặn thiếu nhà mạng, đóng được cả hai đường
- * [x] Hồ sơ đường truyền: bấm từ danh sách · đủ nút · đủ tab · hộp Gia hạn
- *     → Hồ sơ đường truyền: bấm từ danh sách, đủ nút và đủ tab, mở hộp Gia hạn và hộp Sửa
+ * [x] Hồ sơ đường truyền: bấm từ danh sách · đủ nút · đủ tab · không còn gì về hạn
+ *     → Hồ sơ đường truyền: bấm từ danh sách, đủ nút và đủ tab, không có gì về hạn, mở hộp Sửa
  * [x] Esc khi ô chọn đang mở chỉ đóng ô chọn, không đóng hộp Sửa
  *     → Esc khi đang mở ô chọn chỉ đóng ô chọn, KHÔNG đóng cả hộp Sửa
  * [x] Tài khoản dịch vụ: menu dòng đúng ở CẢ HAI trạng thái; Thành viên không thấy
  *     → Tài khoản dịch vụ: menu dòng đúng ở cả hai trạng thái, hồ sơ chỉ có nút chép, Thành viên không thấy ba chấm
  * [x] Hộp Thêm tài khoản ĐỔI HÌNH theo loại; hộp Vô hiệu hóa bắt nhập lý do
  *     → Hộp "Thêm tài khoản" đổi hình theo loại, và hộp "Vô hiệu hóa" không cho bỏ trống lý do
- * [x] Kho thanh lý: bốn nút lọc kèm số đếm · bốn cột · KHÔNG một nút ghi nào
- *     → Kho thanh lý: bốn nút lọc kèm số đếm, bốn cột, một dòng ghi chú — và KHÔNG một nút ghi nào
+ * [x] Kho thanh lý: năm nút lọc kèm số đếm · bốn cột · KHÔNG một nút ghi nào
+ *     → Kho thanh lý: năm nút lọc kèm số đếm, bốn cột, một dòng ghi chú — và KHÔNG một nút ghi nào
  *
  * ── PHÒNG DANH MỤC, PHÒNG TÀI KHOẢN và PHÒNG BỘ GIAO DIỆN ───────────────────
  * [x] Danh mục: bảy ngăn, nhãn nút "Thêm …" và bộ cột ĐỔI theo từng ngăn
@@ -217,7 +217,6 @@ import {
  *
  * ── CHƯA ĐI — biết là chưa đi, và nói thẳng là chưa ─────────────────────────
  * [ ] Màn Tài liệu (`/documents`) — thuộc epic sau, chưa có route
- * [ ] Màn Nhật ký an ninh (`/admin/audit-log`) — chưa có màn, mới có API
  * [ ] Viewport 390px của từng phòng — nằm ở bộ `*.mobile.spec.ts` riêng
  * [ ] Nhập Excel đi trọn ba bước tới lúc GHI — `device-import.spec.ts` giữ phần đó
  */
@@ -356,8 +355,8 @@ test.describe('SA đi một vòng cả hệ thống', () => {
 
   /**
    * Bản đồ menu của vai SA, đúng thứ tự trong `web/src/shell/app-nav.ts`.
-   * Hai mục `planned` (Tài liệu, Nhật ký) KHÔNG có ở đây — chúng được kiểm riêng bên dưới,
-   * vì chúng không phải link.
+   * Mục `planned` (Tài liệu) KHÔNG có ở đây — nó được kiểm riêng bên dưới, vì nó không phải
+   * link.
    */
   const NAV_STOPS: NavStop[] = [
     { link: 'Bảng điều khiển', path: '/', heading: /^Xin chào/ },
@@ -374,6 +373,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     { link: 'Tài khoản', path: '/admin/accounts', heading: /^Tài khoản$/ },
     { link: 'Danh mục', path: '/admin/catalog', heading: /^Danh mục$/ },
     { link: 'Quyền két sắt', path: '/admin/vault-access', heading: /^Quyền xem két sắt$/ },
+    { link: 'Nhật ký', path: '/admin/audit-log', heading: /^Nhật ký$/ },
     { link: 'Bộ giao diện', path: '/dev/components', heading: /^Bộ giao diện$/ },
   ];
 
@@ -386,7 +386,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
    * đúng thay vì bấm menu.
    *
    * ĐỎ KHI: một mục menu trỏ sai đường, một route bị xóa hoặc gác nhầm vai (ra 404), một
-   * `<h1>` đổi chữ mà i18n không đổi theo, hoặc hai mục "chưa mở" bỗng thành link bấm được
+   * `<h1>` đổi chữ mà i18n không đổi theo, hoặc mục "chưa mở" bỗng thành link bấm được
    * (đưa người dùng vào màn của epic chưa làm).
    */
   test('SA đi hết mọi mục trên thanh điều hướng bằng chuột', async ({ page }) => {
@@ -415,11 +415,11 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     }
 
     /*
-     * Hai mục của epic sau: `<span aria-disabled="true" title="…">`, KHÔNG phải `<a>`.
-     * Chúng có mặt để bản đồ điều hướng không phải vẽ lại mỗi epic — nhưng có mặt mà bấm
+     * Mục của epic sau: `<span aria-disabled="true" title="…">`, KHÔNG phải `<a>`.
+     * Nó có mặt để bản đồ điều hướng không phải vẽ lại mỗi epic — nhưng có mặt mà bấm
      * được thì tệ hơn không có.
      */
-    for (const planned of ['Tài liệu', 'Nhật ký']) {
+    for (const planned of ['Tài liệu']) {
       await expect(
         nav.getByRole('link', { name: planned, exact: true }),
         `"${planned}" thuộc epic sau — nó KHÔNG được là link bấm được`,
@@ -952,15 +952,19 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     ).toHaveCount(0);
 
     /*
-     * Hai mục "chưa mở" (Tài liệu · Nhật ký) là `<span aria-disabled="true">`, KHÔNG phải
-     * link. Kiểm bằng "không có link mang tên đó" thay vì bám `title` — nếu một ngày ai đó
-     * biến chúng thành link trỏ vào hư không, bài này đỏ.
+     * Mục "chưa mở" (Tài liệu) là `<span aria-disabled="true">`, KHÔNG phải link. Kiểm bằng
+     * "không có link mang tên đó" thay vì bám `title` — nếu một ngày ai đó biến nó thành link
+     * trỏ vào hư không, bài này đỏ.
      */
     await expect(
       menu.getByRole('link', { name: 'Tài liệu', exact: true }),
       'màn thuộc epic sau chỉ được hiện mờ, không được là link',
     ).toHaveCount(0);
-    await expect(menu.getByRole('link', { name: 'Nhật ký', exact: true })).toHaveCount(0);
+    // `audit.controller.ts` mở cho sa + admin — menu phải khớp cửa sau nó.
+    await expect(
+      menu.getByRole('link', { name: 'Nhật ký', exact: true }),
+      'Quản trị viên phải thấy Nhật ký',
+    ).toBeVisible();
 
     // Và cửa Két sắt phải MỞ THẬT, không chỉ hiện trên menu.
     await menu.getByRole('link', { name: 'Két sắt', exact: true }).click();
@@ -982,8 +986,8 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
    *   • `/dev/components` — route chỉ được ĐĂNG KÝ khi `me.role === 'sa'` (App.tsx, khối
    *     `{me.role === 'sa' ? <Route …/> : null}`). Admin gõ URL rơi xuống `*` → 404. Gác thật
    *     ở web.
-   *   • `/documents` và `/admin/audit-log` — CHƯA có route nào cả (mục menu còn `planned`),
-   *     nên mọi vai đều nhận 404, kể cả SA.
+   *   • `/documents` — CHƯA có route nào cả (mục menu còn `planned`), nên mọi vai đều nhận
+   *     404, kể cả SA.
    *   • `/admin/accounts` — **KHÔNG gác vai ở web**. `<Route path={PATHS.adminAccounts}
    *     element={<AccountsScreen me={me} />} />` nằm ngoài mọi điều kiện vai; `app-nav.ts` chỉ
    *     ẩn MỤC MENU (`roles: ['sa']`). Admin gõ thẳng URL thì màn VẪN dựng ra.
@@ -996,7 +1000,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
    *      thành "Chưa có dữ liệu". Đây là kiểu hỏng nguy hiểm nhất của màn này: một Quản trị
    *      viên đọc "công ty không có tài khoản nào" và tin là mình vừa kiểm tra xong.
    *
-   * ĐỎ KHI: một trong ba route 404 bỗng mở ra cho admin; hoặc `/admin/accounts` nuốt 403
+   * ĐỎ KHI: một trong hai route 404 bỗng mở ra cho admin; hoặc `/admin/accounts` nuốt 403
    * thành bảng rỗng; hoặc API nới `@Roles` cho admin mà không ai bàn.
    */
   test('Quản trị viên gõ thẳng URL của SA thì hệ thống nói KHÔNG, chứ không im lặng', async ({
@@ -1010,8 +1014,8 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
 
     await firstLogin(page, { email: ADMIN_EMAIL, password: matKhauTam });
 
-    // --- Ba đường trả 404 thật.
-    for (const url of ['/dev/components', '/documents', '/admin/audit-log']) {
+    // --- Hai đường trả 404 thật.
+    for (const url of ['/dev/components', '/documents']) {
       await page.goto(url);
       await expect(
         page.getByRole('heading', { name: 'Không tìm thấy trang' }),
@@ -3378,8 +3382,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await statusSelect.click();
     expect(
       (await page.getByRole('option').allInnerTexts()).map((text) => text.trim()),
-      'Ba trạng thái của một hồ sơ phần mềm, không hơn',
-    ).toEqual(['Đang dùng', 'Hết hạn, không gia hạn', 'Đã thanh lý']);
+      'Người chỉ chọn Đang dùng / Thanh lý — "Hết hạn" do hệ thống tự đặt theo ngày (DOM-03)',
+    ).toEqual(['Đang dùng', 'Đã thanh lý']);
     await statusSelect.click();
     await expect(page.getByRole('option'), 'Danh sách trạng thái phải đóng lại').toHaveCount(0);
 
@@ -3844,7 +3848,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     const kindOptions = (await page.getByRole('option').allInnerTexts()).map((text) => text.trim());
     expect(
       [...kindOptions].sort(),
-      'Bộ lọc loại phải bày đủ 6 nguồn hạn đang đăng ký, cộng mục "tất cả"',
+      'Bộ lọc loại phải bày đủ 5 nguồn hạn đang đăng ký, cộng mục "tất cả" — đường truyền không có hạn (Q-04)',
     ).toEqual(
       [
         'Tất cả loại',
@@ -3852,7 +3856,6 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
         'Chứng chỉ SSL',
         'Tên miền',
         'Hợp đồng bảo trì',
-        'Hợp đồng đường truyền',
         'Bảo hành thiết bị',
       ].sort(),
     );
@@ -4036,14 +4039,13 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      */
     await expect(
       add.getByRole('checkbox'),
-      'Sáu ô tick loại (đúng bằng số nguồn hạn) cộng một ô tick "đang chạy"',
-    ).toHaveCount(7);
+      'Năm ô tick loại (đúng bằng số nguồn hạn) cộng một ô tick "đang chạy"',
+    ).toHaveCount(6);
     for (const label of [
       'License phần mềm',
       'Chứng chỉ SSL',
       'Tên miền',
       'Hợp đồng bảo trì',
-      'Hợp đồng đường truyền',
       'Bảo hành thiết bị',
       'Bỏ tick để tạm ngưng mà không mất cấu hình.',
     ]) {
@@ -4467,7 +4469,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     /*
      * Cả `main` có ĐÚNG ngần này nút. Dải đang chọn còn trống hoàn toàn (/29 = 6 host) nên
-     * phần bảng là con số biết trước: 5 nút lọc, 6 nút "Cấp IP này", 2 nút lật trang.
+     * phần bảng là con số biết trước: 3 nút lọc, 6 nút "Cấp IP này", 2 nút lật trang.
      */
     await expectHandleCounts(
       page.getByRole('main'),
@@ -4477,10 +4479,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
         ['Khai dải mới', 1],
         [/^Thao tác với /, cards],
         ['Tất cả 6', 1],
-        ['Đang cấp 0', 1],
+        ['Đang dùng 0', 1],
         ['Trống 6', 1],
-        ['Nghi chết 0', 1],
-        ['Đã thu hồi 0', 1],
         ['Cấp IP này', 6],
         ['Trang trước', 1],
         ['Trang sau', 1],
@@ -4556,7 +4556,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
    * trống". Câu thứ hai sống trong nhóm nút lọc `role="group"` mang con số đếm của CẢ dải, và
    * trong những dòng "Trống" có nút "Cấp IP này" ngay tại chỗ.
    *
-   * `ipam.spec.ts` đã kiểm rằng lọc ra ĐÚNG dòng. Bài này hỏi câu khác: nhóm lọc có ĐÚNG NĂM
+   * `ipam.spec.ts` đã kiểm rằng lọc ra ĐÚNG dòng. Bài này hỏi câu khác: nhóm lọc có ĐÚNG BA
    * lựa chọn ấy không, bảng có ĐÚNG SÁU cột ấy không, và dòng trống có đúng một nút.
    *
    * ĐỎ KHI: một trạng thái rơi khỏi `SLOT_FILTERS` (từ đó không lọc ra được nữa và cũng không
@@ -4587,12 +4587,12 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       `${cidr} — ${name}`,
     ]);
 
-    /* ----- Nhóm nút lọc: đúng năm lựa chọn, kèm con số của CẢ dải ----- */
+    /* ----- Nhóm nút lọc: đúng ba lựa chọn (Q-02), kèm con số của CẢ dải ----- */
     const filters = page.getByRole('group', { name: 'Trạng thái' });
     await expect(
       filters.getByRole('button'),
       '/29 = 6 host; một đã cấp nên còn 5 trống. Con số phải nằm NGAY trên nút, đúng thứ tự SLOT_FILTERS',
-    ).toHaveText(['Tất cả 6', 'Đang cấp 1', 'Trống 5', 'Nghi chết 0', 'Đã thu hồi 0']);
+    ).toHaveText(['Tất cả 6', 'Đang dùng 1', 'Trống 5']);
 
     /* ----- Bảng: đúng sáu cột ----- */
     const table = page.getByRole('table');
@@ -4617,11 +4617,11 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'lọc "Trống" thì hàng đã cấp phải biến khỏi bảng',
     ).toHaveCount(0);
 
-    await filters.getByRole('button', { name: /^Nghi chết/ }).click();
+    await filters.getByRole('button', { name: /^Đang dùng/ }).click();
     await expect(
       table.getByRole('row'),
-      'không có dòng nào nghi chết → chỉ còn hàng tiêu đề, chứ không phải bảng cũ đứng im',
-    ).toHaveCount(1);
+      'lọc "Đang dùng" còn đúng một dòng + tiêu đề, chứ không phải bảng cũ đứng im',
+    ).toHaveCount(2);
 
     await filters.getByRole('button', { name: /^Tất cả/ }).click();
     await expect(table.getByRole('row')).toHaveCount(7);
@@ -4794,57 +4794,55 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await page.goto(`/ip-addresses/${subnetId}`);
 
     /* ----- Trạng thái 1: ĐANG CẤP ----- */
-    await expect(ipRow(page, address).getByText('Đang cấp')).toBeVisible();
+    await expect(ipRow(page, address).getByText('Đang dùng')).toBeVisible();
     expect(
       await rowActionNames(page, address),
-      'từ "Đang cấp" đi được sang Nghi chết và Thu hồi; Lịch sử luôn có; Sửa/Xóa của SA. Hai việc nguy hiểm xếp CUỐI',
-    ).toEqual(['Nghi chết', 'Lịch sử', 'Sửa', 'Thu hồi', 'Ẩn hồ sơ']);
+      'từ "Đang dùng" chỉ đi được sang Thu hồi (Q-02); Lịch sử luôn có; Sửa/Ẩn của SA. Hai việc nguy hiểm xếp CUỐI',
+    ).toEqual(['Lịch sử', 'Sửa', 'Thu hồi', 'Ẩn hồ sơ']);
 
-    /* ----- Hộp chuyển trạng thái: bước KHÔNG cấp cho ai thì KHÔNG hỏi chủ mới ----- */
-    await rowAction(page, address, 'Nghi chết');
-    const suspect = page.getByRole('dialog', {
-      name: new RegExp(`Nghi chết\\s*—\\s*${esc(address)}`),
+    /* ----- Hộp "Thu hồi": KHÔNG hỏi chủ mới — chủ cũ đi khỏi, không ai dọn vào ----- */
+    await rowAction(page, address, 'Thu hồi');
+    const reclaim = page.getByRole('dialog', {
+      name: new RegExp(`Thu hồi\\s*—\\s*${esc(address)}`),
     });
-    await expect(suspect).toBeVisible();
-    await expectHandles(suspect, 'textbox', ['Lý do'], 'Hộp "Nghi chết"');
+    await expect(reclaim).toBeVisible();
+    await expectHandles(reclaim, 'textbox', ['Lý do'], 'Hộp "Thu hồi"');
     await expect(
-      suspect.getByRole('combobox'),
-      'đánh dấu nghi chết KHÔNG đổi chủ — hỏi "ai dùng" ở đây là một câu hỏi trá hình',
+      reclaim.getByRole('combobox'),
+      'thu hồi KHÔNG cấp cho ai — hỏi "ai dùng" ở đây là một câu hỏi trá hình',
     ).toHaveCount(0);
     await expectHandles(
-      suspect,
+      reclaim,
       'button',
       ['Đóng hộp thoại', 'Hủy', 'Xác nhận'],
-      'Hộp "Nghi chết"',
+      'Hộp "Thu hồi"',
     );
-    await suspect
-      .getByRole('textbox', { name: 'Lý do', exact: true })
-      .fill('ping không thấy 3 ngày');
+    await reclaim.getByRole('textbox', { name: 'Lý do', exact: true }).fill('máy đã thanh lý');
     await confirmAction(page, 'Xác nhận');
-    await expect(suspect).toHaveCount(0);
+    await expect(reclaim).toHaveCount(0);
 
-    /* ----- Trạng thái 2: NGHI CHẾT — menu phải ĐỔI ----- */
-    await expect(ipRow(page, address).getByText('Nghi chết')).toBeVisible();
+    /* ----- Trạng thái 2: TRỐNG — menu phải ĐỔI ----- */
+    await expect(ipRow(page, address).getByText('Trống', { exact: true })).toBeVisible();
     expect(
       await rowActionNames(page, address),
-      'từ "Nghi chết" bước quay lại là "Vẫn dùng", KHÔNG còn "Nghi chết" nữa — menu đứng im nghĩa là nó không đọc trạng thái của chính hàng nó',
-    ).toEqual(['Vẫn dùng', 'Lịch sử', 'Sửa', 'Thu hồi', 'Ẩn hồ sơ']);
+      'từ "Trống" bước đi tiếp là "Cấp IP", KHÔNG còn "Thu hồi" nữa — menu đứng im nghĩa là nó không đọc trạng thái của chính hàng nó',
+    ).toEqual(['Cấp IP', 'Lịch sử', 'Sửa', 'Ẩn hồ sơ']);
 
-    /* ----- Và hộp "Vẫn dùng" thì NGƯỢC LẠI: có hỏi chủ, kèm chủ cũ điền sẵn ----- */
-    await rowAction(page, address, 'Vẫn dùng');
-    const stillUsed = page.getByRole('dialog', {
-      name: new RegExp(`Vẫn dùng\\s*—\\s*${esc(address)}`),
+    /* ----- Và hộp "Cấp IP" thì NGƯỢC LẠI: có hỏi chủ MỚI, và ô mở ra trống ----- */
+    await rowAction(page, address, 'Cấp IP');
+    const assign = page.getByRole('dialog', {
+      name: new RegExp(`Cấp IP\\s*—\\s*${esc(address)}`),
     });
-    await expect(stillUsed).toBeVisible();
-    await expectHandles(stillUsed, 'combobox', ['Người / bộ phận dùng'], 'Hộp "Vẫn dùng"');
+    await expect(assign).toBeVisible();
+    await expectHandles(assign, 'combobox', ['Người / bộ phận dùng'], 'Hộp "Cấp IP"');
     await expect(
-      stillUsed.getByRole('combobox', { name: 'Người / bộ phận dùng', exact: true }),
-      'máy tưởng chết hóa ra còn sống thì nó vẫn là chính nó — ô trống ở đây từng xóa mất chủ cũ trong im lặng',
-    ).toHaveValue('Chị Lan — Kế toán');
-    await expectHandles(stillUsed, 'textbox', ['Lý do'], 'Hộp "Vẫn dùng"');
-    await stillUsed.getByRole('button', { name: 'Đóng hộp thoại' }).click();
-    await expect(stillUsed).toHaveCount(0);
-    await expect(ipRow(page, address).getByText('Nghi chết')).toBeVisible();
+      assign.getByRole('combobox', { name: 'Người / bộ phận dùng', exact: true }),
+      'chủ cũ đã đi khỏi lúc thu hồi — điền sẵn tên họ là hồi sinh một chủ không còn',
+    ).toHaveValue('');
+    await expectHandles(assign, 'textbox', ['Lý do'], 'Hộp "Cấp IP"');
+    await assign.getByRole('button', { name: 'Đóng hộp thoại' }).click();
+    await expect(assign).toHaveCount(0);
+    await expect(ipRow(page, address).getByText('Trống', { exact: true })).toBeVisible();
   });
 
   /**
@@ -5432,7 +5430,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
    * server. Cả hai đều bấm đúng vào cái nút cần bấm. Không bài nào hỏi "màn này có ĐÚNG những
    * nút nào" — mà đó lại là câu duy nhất bắt được một nút LẠ mọc thêm.
    *
-   * Điểm riêng của màn này: nó KHÔNG có cột Thao tác, không có menu ba chấm. Sửa và gia hạn
+   * Điểm riêng của màn này: nó KHÔNG có cột Thao tác, không có menu ba chấm. Sửa và thanh lý
    * chỉ làm được từ trang hồ sơ. Đó không phải chuyện tình cờ mà là hình dạng thật của
    * `isp-screen.tsx`, và nếu một ngày có người thêm `RowActions` vào đây thì phải có cái gì đó
    * đỏ lên để hỏi lại "đã bàn chưa".
@@ -5487,14 +5485,13 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     // ĐỦ CỘT, ĐÚNG THỨ TỰ. Cột rơi mất là một thông tin không ai còn đọc được trên danh sách.
     expect(
       await tenCotBang(main),
-      'Bảng đường truyền phải có đúng 7 cột, đúng thứ tự của `isp-screen.tsx`',
+      'Bảng đường truyền phải có đúng 6 cột, đúng thứ tự của `isp-screen.tsx` — không có cột hạn (Q-04)',
     ).toEqual([
       'Mã đường',
       'Nhà mạng',
       'Site',
       'Hotline',
       'Số hợp đồng',
-      'Tình trạng hạn',
       'Trạng thái',
     ]);
 
@@ -5551,7 +5548,6 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Sắp xếp theo Nhà mạng',
         'Sắp xếp theo Hotline',
         'Sắp xếp theo Số hợp đồng',
-        'Sắp xếp theo Tình trạng hạn',
         'Sắp xếp theo Trạng thái',
         'Số dòng',
         'Trang trước',
@@ -5562,7 +5558,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     // Nói thẳng ra điều vừa suy ra được từ tập hợp trên — để lúc đỏ đọc log là hiểu ngay.
     await expect(
       main.getByRole('button', { name: /^Thao tác với/ }),
-      'Màn Đường truyền KHÔNG có cột Thao tác: sửa và gia hạn chỉ làm từ trang hồ sơ',
+      'Màn Đường truyền KHÔNG có cột Thao tác: sửa và thanh lý chỉ làm từ trang hồ sơ',
     ).toHaveCount(0);
   });
 
@@ -5637,19 +5633,20 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      */
     expect(
       await tenTheoVaiTro(hop, 'button'),
-      'Bộ nút trong hộp thêm mới: ô chọn Site, hai ô ngày, ô chọn file, ✕, Hủy, Lưu — không gì khác',
+      'Bộ nút trong hộp thêm mới: ô chọn Site, ô ngày Bắt đầu, ô chọn file, ✕, Hủy, Lưu — ' +
+        'không có ô Hết hạn vì đường truyền không có hạn (Q-04)',
     ).toEqual(
-      sap(['Đóng hộp thoại', 'Site', 'Bắt đầu', 'Hết hạn', 'Chọn file để đính kèm', 'Hủy', 'Lưu']),
+      sap(['Đóng hộp thoại', 'Site', 'Bắt đầu', 'Chọn file để đính kèm', 'Hủy', 'Lưu']),
     );
 
     /*
      * Ô TRẠNG THÁI CHỈ CÓ Ở LƯỢT SỬA — nói thẳng ra, đừng để nó chìm trong tập hợp trên.
      * Bày một ô chọn có đúng một câu trả lời hợp lý ở lượt thêm mới là mở đường cho một hồ sơ
-     * vừa tạo đã mang trạng thái "đã cắt".
+     * vừa tạo đã mang trạng thái "Thanh lý".
      */
     await expect(
       hop.getByRole('button', { name: 'Trạng thái', exact: true }),
-      'Hộp THÊM MỚI không được có ô Trạng thái — hồ sơ mới luôn là "đang chạy"',
+      'Hộp THÊM MỚI không được có ô Trạng thái — hồ sơ mới luôn là "Đang dùng"',
     ).toHaveCount(0);
 
     /*
@@ -5696,7 +5693,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
   });
 
   /*
-   * ===== BÀI 3 — HỒ SƠ ĐƯỜNG TRUYỀN: MỖI TAB CÓ GÌ, VÀ HAI CÁI HỘP CỦA NÓ =====
+   * ===== BÀI 3 — HỒ SƠ ĐƯỜNG TRUYỀN: MỖI TAB CÓ GÌ, VÀ HỘP SỬA CỦA NÓ =====
    *
    * VÌ SAO BÀI NÀY TỒN TẠI
    *
@@ -5707,16 +5704,14 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
    * Bài này vào bằng cách BẤM từ danh sách (không `goto`): đường `PATHS.ispLine(id)` ghép sai
    * thì không bài nào khác đỏ, vì mọi bài khác tự gõ URL đúng.
    *
-   * Hộp "Gia hạn hợp đồng" được soi kỹ vì nó là hộp NGHÈO NHẤT hệ thống — đúng một ô ngày —
-   * nên cũng là hộp dễ hỏng nhất mà không ai để ý: ô ngày ở đó mang `aria-label` là "Gia hạn
-   * hợp đồng" chứ không phải "Hết hạn", và lời báo lỗi khi bỏ trống chỉ vỏn vẹn hai chữ "Hết
-   * hạn". Ghi lại đúng như thật, vì đó là điều người dùng THẬT SỰ nghe và đọc.
+   * Đường truyền không có hạn (Q-04): không nút Gia hạn, không thanh thời hạn, không ô Hết
+   * hạn trong form Sửa. Bài này khoá cả ba vế vắng mặt đó.
    *
    * ĐỎ KHI: link mã trên bảng trỏ sai; một nút đầu trang hồ sơ mất/mọc thêm; một tab biến mất;
-   * một tab mở ra khoảng trắng; hộp gia hạn đổi hình dạng; hoặc form Sửa hiện ra TRỐNG (kiểu
+   * một tab mở ra khoảng trắng; cái gì đó về hạn quay lại; hoặc form Sửa hiện ra TRỐNG (kiểu
    * hỏng ghi đè sạch dữ liệu cũ ngay khi bấm Lưu).
    */
-  test('Hồ sơ đường truyền: bấm từ danh sách, đủ nút và đủ tab, mở hộp Gia hạn và hộp Sửa', async ({
+  test('Hồ sơ đường truyền: bấm từ danh sách, đủ nút và đủ tab, không có gì về hạn, mở hộp Sửa', async ({
     page,
   }) => {
     test.setTimeout(150_000);
@@ -5735,7 +5730,6 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         hotline: '18001166',
         contractNo: `HD-E2E-${stamp}`,
         startDate: '2026-01-01',
-        endDate: '2027-12-31',
         note: ghiChu,
       },
     });
@@ -5766,16 +5760,16 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     const main = page.getByRole('main');
 
     /*
-     * ĐÚNG BỘ NÚT ĐẦU TRANG. Ba cái, không hơn:
+     * ĐÚNG BỘ NÚT ĐẦU TRANG. Hai cái, không hơn:
      *   - "Chép IP tĩnh" (nằm ở dòng định danh, chỉ vẽ khi hồ sơ có IP WAN),
-     *   - "Sửa hồ sơ" và "Gia hạn hợp đồng" ở góc phải.
-     * Mã hồ sơ CỐ Ý không có nút chép (bỏ 28/08/2026) — nó là tiêu đề, bôi đen chép như mọi
-     * chữ khác. Tập hợp này giữ đúng quyết định đó.
+     *   - "Sửa hồ sơ" ở góc phải. KHÔNG có "Gia hạn hợp đồng" — line không có hạn (Q-04).
+     * Mã hồ sơ CỐ Ý không có nút chép — nó là tiêu đề, bôi đen chép như mọi chữ khác. Tập hợp
+     * này giữ đúng quyết định đó.
      */
     expect(
       await tenTheoVaiTro(main, 'button'),
-      'Đầu trang hồ sơ đường truyền có đúng ba nút: Chép IP WAN · Sửa hồ sơ · Gia hạn hợp đồng',
-    ).toEqual(sap(['Chép IP WAN', 'Sửa hồ sơ', 'Gia hạn hợp đồng']));
+      'Đầu trang hồ sơ đường truyền có đúng hai nút: Chép IP WAN · Sửa hồ sơ',
+    ).toEqual(sap(['Chép IP WAN', 'Sửa hồ sơ']));
 
     /*
      * BỐN TAB, ĐÚNG THỨ TỰ. Nhãn hai tab giữa có số đếm nối sau ("Két sắt 0"), nên cắt phần số
@@ -5794,13 +5788,17 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       {
         ten: /^Hồ sơ$/,
         dauHieu: async () => {
-          /* Thời hạn hợp đồng chuyển sang THẺ ĐỊNH DANH ở cột phải (đợt dựng lại 16-17/09),
-             cùng một nước đi với hạn license bên phòng Phần mềm: một giá trị, một chỗ. Thẻ
-             định danh dính theo tab Hồ sơ nên đây vẫn là dấu hiệu riêng của tab này. */
+          /* Thẻ định danh ở cột phải hiện ngày bắt đầu, và KHÔNG còn thanh thời hạn: đường
+             truyền không có hạn (Q-04). */
+          const the = page.getByRole('region', { name: 'Thẻ định danh' });
           await expect(
-            page.getByRole('region', { name: 'Thẻ định danh' }).getByRole('progressbar'),
-            'Tab Hồ sơ phải có thanh thời hạn hợp đồng (hồ sơ này đã khai ngày hết hạn)',
+            the.getByText('Bắt đầu', { exact: true }),
+            'Thẻ định danh phải hiện ngày bắt đầu đã khai',
           ).toBeVisible();
+          await expect(
+            the.getByRole('progressbar'),
+            'Không còn thanh thời hạn hợp đồng — line không có hạn',
+          ).toHaveCount(0);
           await expect(
             main.getByText(ghiChu, { exact: true }),
             'Tab Hồ sơ phải hiện lại đúng ghi chú đã khai',
@@ -5855,52 +5853,6 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     }
 
     /*
-     * ===== HỘP "GIA HẠN HỢP ĐỒNG" =====
-     */
-    await page.getByRole('button', { name: 'Gia hạn hợp đồng' }).click();
-    const hopGiaHan = page.getByRole('dialog', { name: new RegExp(`^Gia hạn hợp đồng — ${ma}$`) });
-    await expect(hopGiaHan, 'Nút Gia hạn phải mở ra hộp mang đúng mã đường truyền').toBeVisible();
-
-    expect(
-      await tenKhoiTrongHop(hopGiaHan),
-      'Hộp gia hạn KHÔNG chia khối — nó chỉ có đúng tiêu đề hộp',
-    ).toEqual([`Gia hạn hợp đồng — ${ma}`]);
-    expect(
-      await tenTheoVaiTro(hopGiaHan, 'textbox'),
-      'Hộp gia hạn không có ô gõ chữ nào — chỉ một ô chọn ngày',
-    ).toEqual([]);
-    /*
-     * Ô ngày ở đây mang `aria-label` là "Gia hạn hợp đồng", TRÙNG tên với nút Lưu ở chân hộp.
-     * Đó là hình dạng thật của `isp-detail.tsx` (`ariaLabel={t('isp.renew')}`). Ghi ra đúng như
-     * vậy: người dùng trình đọc màn hình nghe hai tay nắm cùng tên trong một hộp, và hôm nào
-     * ai đó sửa nó thành "Hết hạn mới" thì bài này phải đỏ để nói rằng ĐÃ TỐT LÊN.
-     */
-    expect(
-      await tenTheoVaiTro(hopGiaHan, 'button'),
-      'Hộp gia hạn có đúng bốn nút, trong đó ô ngày trùng tên với nút Lưu ở chân hộp',
-    ).toEqual(sap(['Đóng hộp thoại', 'Gia hạn hợp đồng', 'Hủy', 'Gia hạn hợp đồng']));
-
-    await expect(
-      hopGiaHan.getByText(/^Hết hạn:/),
-      'Hộp phải nhắc lại hạn ĐANG CÓ — không nhắc thì người ta gia hạn mù',
-    ).toBeVisible();
-
-    // Bỏ trống ngày rồi bấm Gia hạn: lời báo lỗi vỏn vẹn tên trường, và hộp Ở LẠI.
-    await hopGiaHan
-      .getByTestId('dialog-footer')
-      .getByRole('button', { name: 'Gia hạn hợp đồng' })
-      .click();
-    await expect(
-      hopGiaHan.getByRole('alert'),
-      'câu lỗi phải NÓI ĐƯỢC VIỆC PHẢI LÀM. Tới 12/09 chỗ này đặt NHÃN của ô làm câu lỗi, nên ' +
-        'khối đỏ hiện đúng một chữ "Hết hạn" — không nói được là thiếu, sai, hay quá khứ',
-    ).toHaveText('Chọn hạn mới.');
-    await expect(hopGiaHan, 'Gia hạn hỏng thì hộp phải ở lại').toBeVisible();
-
-    await hopGiaHan.getByRole('button', { name: 'Đóng hộp thoại' }).click();
-    await expect(hopGiaHan, 'Nút ✕ phải đóng được hộp gia hạn').toHaveCount(0);
-
-    /*
      * ===== HỘP "SỬA HỒ SƠ" — GIÁ TRỊ PHẢI ĐIỀN SẴN =====
      *
      * Form sửa hiện ra trống là kiểu hỏng tệ nhất trong nhóm này: nó không báo lỗi gì cả, chỉ
@@ -5928,9 +5880,13 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       'Ô Nhà mạng cũng phải điền sẵn — nó là ô BẮT BUỘC, trống là lưu không nổi',
     ).toHaveValue('VNPT E2E');
     await expect(
+      hopSua.getByRole('button', { name: 'Bắt đầu' }),
+      'Ô ngày bắt đầu phải hiện lại năm 2026 đã khai',
+    ).toContainText('2026');
+    await expect(
       hopSua.getByRole('button', { name: 'Hết hạn' }),
-      'Ô ngày hết hạn phải hiện lại năm 2027 đã khai',
-    ).toContainText('2027');
+      'Form Sửa không còn ô Hết hạn — đường truyền không có hạn (Q-04)',
+    ).toHaveCount(0);
 
     /*
      * Ô Trạng thái CHỈ có ở lượt sửa, và nó có đúng ba lựa chọn.
@@ -5940,7 +5896,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     expect(
       (await page.getByRole('option').allTextContents()).map(gonNhan),
       'Trạng thái đường truyền có đúng ba giá trị của `ISP_STATUSES`',
-    ).toEqual(['Đang chạy', 'Tạm ngưng', 'Đã cắt']);
+    ).toEqual(['Đang dùng', 'Tạm ngưng', 'Thanh lý']);
 
     /*
      * ĐÓNG DANH SÁCH bằng cách bấm lại chính ô chọn, rồi đóng hộp bằng nút ✕.
@@ -6468,13 +6424,13 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
    * màn này sinh ra để giải quyết.
    *
    * Vì thế khẳng định ở đây là khẳng định TẬP HỢP RỖNG-TRỪ-BỘ-LỌC: toàn bộ nút trong vùng nội
-   * dung phải đúng bằng bốn nút lọc theo loại. Không nút thêm, không nút sửa, không nút xóa,
+   * dung phải đúng bằng năm nút lọc theo loại. Không nút thêm, không nút sửa, không nút xóa,
    * không một cái ba chấm nào.
    *
-   * ĐỎ KHI: bất kỳ nút nào khác bốn nút lọc xuất hiện; nhóm lọc thiếu/thừa một loại; con số
+   * ĐỎ KHI: bất kỳ nút nào khác năm nút lọc xuất hiện; nhóm lọc thiếu/thừa một loại; con số
    * đếm rời khỏi nút lọc; bảng đổi số cột; hoặc dòng ghi chú giải thích biến mất.
    */
-  test('Kho thanh lý: bốn nút lọc kèm số đếm, bốn cột, một dòng ghi chú — và KHÔNG một nút ghi nào', async ({
+  test('Kho thanh lý: năm nút lọc kèm số đếm, bốn cột, một dòng ghi chú — và KHÔNG một nút ghi nào', async ({
     page,
   }) => {
     test.setTimeout(150_000);
@@ -6544,14 +6500,14 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     /*
      * ===== KHẲNG ĐỊNH QUAN TRỌNG NHẤT =====
-     * Toàn bộ nút trong vùng nội dung = đúng bốn nút lọc theo loại. Con số đếm cắt ra so riêng,
+     * Toàn bộ nút trong vùng nội dung = đúng năm nút lọc theo loại. Con số đếm cắt ra so riêng,
      * vì nó thay đổi theo dữ liệu; phần CHỮ thì cố định.
      */
     const tenNut = await tenTheoVaiTro(main, 'button');
     expect(
       tenNut.map((ten) => ten.replace(/\s+\d+$/, '')),
-      'Kho thanh lý CHỈ được có bốn nút lọc theo loại — một nút ghi ở đây là một hồ sơ đã thanh lý bị sửa',
-    ).toEqual(sap(['Tất cả', 'Thiết bị', 'Phần mềm', 'Tài khoản dịch vụ']));
+      'Kho thanh lý CHỈ được có năm nút lọc theo loại — một nút ghi ở đây là một hồ sơ đã thanh lý bị sửa',
+    ).toEqual(sap(['Tất cả', 'Thiết bị', 'Phần mềm', 'Tài khoản dịch vụ', 'Đường truyền']));
     for (const ten of tenNut) {
       expect(ten, `Nút lọc "${ten}" phải mang số đếm — nút lọc không có số thì hết là bộ đếm`).toMatch(
         /\s\d+$/,
@@ -6571,7 +6527,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     }
 
     /*
-     * SỐ ĐẾM PHẢI LÀ SỐ ĐẾM: "Tất cả" bằng tổng ba loại. Đếm trên tập ĐÃ LỌC thì bấm vào đâu
+     * SỐ ĐẾM PHẢI LÀ SỐ ĐẾM: "Tất cả" bằng tổng bốn loại. Đếm trên tập ĐÃ LỌC thì bấm vào đâu
      * cũng thấy "đúng", và con số hết mang thông tin nào.
      */
     const soCua = (ten: string): number => {
@@ -6581,12 +6537,14 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     };
     expect(
       soCua('Tất cả'),
-      'Số của "Tất cả" phải bằng tổng ba loại — nếu không thì nó đang đếm trên tập đã lọc',
-    ).toBe(soCua('Thiết bị') + soCua('Phần mềm') + soCua('Tài khoản dịch vụ'));
+      'Số của "Tất cả" phải bằng tổng bốn loại — nếu không thì nó đang đếm trên tập đã lọc',
+    ).toBe(
+      soCua('Thiết bị') + soCua('Phần mềm') + soCua('Tài khoản dịch vụ') + soCua('Đường truyền'),
+    );
 
     await expect(
       main.getByRole('group', { name: 'Lọc theo loại hồ sơ' }),
-      'Bốn nút lọc phải nằm trong một nhóm có tên — rời rạc thì trình đọc màn hình không biết chúng là một bộ',
+      'Năm nút lọc phải nằm trong một nhóm có tên — rời rạc thì trình đọc màn hình không biết chúng là một bộ',
     ).toBeVisible();
 
     // ĐỦ CỘT: bốn, không hơn. Cột thứ năm ở đây gần như chắc chắn là cột thao tác.

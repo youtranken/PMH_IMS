@@ -16,7 +16,7 @@ const TONE: Record<ExpiryLevel, string> = {
 };
 
 /**
- * Nhãn trạng thái hạn — AD-15: mọi màn (thiết bị, phần mềm, ISP, expiry, dashboard)
+ * Nhãn trạng thái hạn — AD-15: mọi màn (thiết bị, phần mềm, expiry, dashboard)
  * dùng chung component này, nên "sắp hết hạn" ở đâu cũng cùng một luật và cùng một màu.
  */
 export function ExpiryBadge({
@@ -32,13 +32,13 @@ export function ExpiryBadge({
   /**
    * Hồ sơ đã ở trạng thái cuối đời, tức KHÔNG còn được tính hạn (B-05).
    *
-   * Ba nguồn hạn bên API đều loại trạng thái ấy ra khỏi phép tính (`device`/`software` là
-   * `retired`, `isp_line` là `terminated`), nhưng ba màn danh sách lại vẽ huy hiệu vô điều
-   * kiện — nên cùng một hồ sơ, `/software` kêu "Quá hạn 23 ngày" còn `/expiry` báo "0 Đã quá
-   * hạn" và `/disposal` nói "Hồ sơ trong kho KHÔNG còn được tính hạn". Ba màn, ba câu trả lời.
+   * Các nguồn hạn bên API đều loại trạng thái ấy ra khỏi phép tính (`device`/`software` là
+   * `retired`), nên màn danh sách vẽ huy hiệu vô điều kiện sẽ cãi nhau với chúng — cùng một hồ
+   * sơ, `/software` kêu "Quá hạn 23 ngày" còn `/expiry` báo "0 Đã quá hạn" và `/disposal` nói
+   * "Hồ sơ trong kho KHÔNG còn được tính hạn".
    *
-   * Tên theo Ý NGHĨA chứ không theo tên trạng thái của một module (`retired`): ISP gọi nó là
-   * `terminated`, và màn thứ tư không phải tự hỏi prop này có dành cho mình không.
+   * Tên theo Ý NGHĨA chứ không theo tên trạng thái của một module (`retired`): module sau gọi
+   * trạng thái cuối đời bằng tên khác thì không phải tự hỏi prop này có dành cho mình không.
    *
    * KHÔNG trả về `null`: một ô trống trong bảng đọc ra thành "thiếu dữ liệu", và người dùng đi
    * tìm xem ai quên nhập ngày hết hạn.

@@ -19,6 +19,12 @@ export default {
     notFoundTitle: 'Không tìm thấy trang',
     notFoundHint: 'Trang bạn tìm không tồn tại, hoặc thuộc phần chưa mở trong bản này.',
     backHome: 'Về trang chủ',
+    /* Khối thay cho một màn vừa hỏng lúc hiển thị (ErrorBoundary). Nói rõ phần còn lại vẫn
+       dùng được, và việc người dùng làm được ngay. */
+    screenErrorTitle: 'Màn này gặp lỗi khi hiển thị',
+    screenErrorHint:
+      'Các phần khác của hệ thống vẫn dùng bình thường. Tải lại trang để thử lại; nếu vẫn lỗi, báo bộ phận IT kèm đường dẫn đang mở.',
+    reload: 'Tải lại trang',
     confirmTitle: 'Xác nhận',
     confirmOk: 'Đồng ý',
     /* Câu hỏi khi Esc / bấm nền / ✕ trên một hộp đang có dữ liệu gõ dở (`Dialog guardUnsaved`).
@@ -43,13 +49,6 @@ export default {
     clear: 'Xóa ngày',
     prev: 'Tháng trước',
     next: 'Tháng sau',
-    time: 'giờ',
-  },
-  lightbox: {
-    title: 'Xem ảnh',
-    close: 'Đóng',
-    prev: 'Ảnh trước',
-    next: 'Ảnh sau',
   },
   pagination: {
     prev: 'Trang trước',
@@ -59,23 +58,6 @@ export default {
   dataTable: {
     selectAll: 'Chọn tất cả',
     selectRow: 'Chọn dòng',
-  },
-  timePicker: {
-    choose: 'Chọn giờ',
-    hourMinute: 'Giờ : phút',
-    /*
-     * Bốn khoá thêm 23/09 (T-01). `DateTimePicker` chưa màn nào dùng, nên bốn chuỗi tiếng Anh
-     * viết cứng trong nó chưa ai thấy — nhưng `docs/SHARED-REGISTRY.md` khai nó là bản dùng
-     * chung BẮT BUỘC cho "mọi ô chọn ngày/giờ", tức sổ đăng ký đang chỉ người viết story sau
-     * vào đúng cái hộp tiếng Anh ấy. `term-consistency.test.ts` canh để nó không quay lại.
-     *
-     * KHÔNG thêm khoá `title` cho tiêu đề nhìn thấy được: nó sẽ mang đúng chữ của `choose` —
-     * một khái niệm hai khoá, đúng thứ bài kiểm này sinh ra để chặn. Thay vào đó `<section>`
-     * trỏ `aria-labelledby` vào chính thẻ tiêu đề, nên tên trợ năng và chữ trên màn không thể
-     * lệch nhau. `Cancel`/`Done` dùng `common.cancel`/`common.save` có sẵn, không đẻ khoá mới.
-     */
-    now: 'Bây giờ',
-    tab: 'Giờ',
   },
   theme: {
     dark: 'Chế độ tối',
@@ -549,7 +531,7 @@ export default {
     kindMaintenance: 'Hợp đồng bảo trì',
     kindOther: 'Khác',
     statusActive: 'Đang dùng',
-    statusExpiredOk: 'Hết hạn, không gia hạn',
+    statusExpiredOk: 'Hết hạn',
     /* 'Đã thanh lý', không phải 'Đã bỏ': ba module đổ về CÙNG màn Kho thanh lý, và ở đó hồ sơ
        phần mềm từng hiện "Đã thanh lý license" trong khi màn `/software` gọi nó là "Đã bỏ". */
     statusRetired: 'Đã thanh lý',
@@ -614,7 +596,6 @@ export default {
   },
   isp: {
     title: 'Đường truyền',
-    contract: 'Hợp đồng',
     copyWanIp: 'Chép IP WAN',
     subtitle: 'Đứt cáp lúc 2 giờ sáng: hotline và số hợp đồng có ngay trên danh sách',
     add: 'Thêm đường truyền',
@@ -631,17 +612,17 @@ export default {
     deviceHint: 'Draytek/firewall đang cắm đường này. Trang thiết bị đó sẽ hiện ngược lại đường truyền.',
     deviceSearch: 'Tìm thiết bị trong kho…',
     hotline: 'Hotline',
-    // Khối thứ hai của form — KHÔNG đặt tên là "Hotline": nó chứa cả số hợp đồng và kỳ hạn.
+    // Khối thứ hai của form — KHÔNG đặt tên là "Hotline": nó chứa cả số hợp đồng và ngày bắt đầu.
     sectionContract: 'Hợp đồng và liên hệ sự cố',
     contractNo: 'Số hợp đồng',
     startDate: 'Bắt đầu',
-    endDate: 'Hết hạn',
-    expiry: 'Tình trạng hạn',
     note: 'Ghi chú',
     status: 'Trạng thái',
-    statusActive: 'Đang chạy',
+    /* Ba chữ do Q-04 chốt; `isp-line.controller.ts` ghi cùng ba chữ vào file Excel. */
+    statusActive: 'Đang dùng',
     statusSuspended: 'Tạm ngưng',
-    statusTerminated: 'Đã cắt',
+    statusTerminated: 'Thanh lý',
+    liquidated: 'Thanh lý ngày {{date}} bởi {{actor}}',
     allSites: 'Tất cả site',
     allStatuses: 'Mọi trạng thái',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
@@ -654,8 +635,6 @@ export default {
     tabProfile: 'Hồ sơ',
     tabAttachments: 'Giấy tờ',
     tabHistory: 'Lịch sử',
-    renew: 'Gia hạn hợp đồng',
-    renewed: 'Đã gia hạn hợp đồng.',
   },
   expiry: {
     /*
@@ -668,7 +647,7 @@ export default {
      */
     notCounted: 'Không tính hạn',
     /* Bốn khóa dưới đây dùng cho THANH THỜI HẠN (ui/warranty-timeline.tsx) — bảo hành thiết
-       bị, hạn license/SSL/tên miền, hợp đồng đường truyền. Đặt trong chính khối `expiry` vì
+       bị, hạn license/SSL/tên miền. Đặt trong chính khối `expiry` vì
        khai một khối `expiry` thứ hai ở đầu file thì khối sau đè mất khối trước. */
     from: 'Từ',
     to: 'Đến',
@@ -989,9 +968,7 @@ export default {
     address: 'Địa chỉ',
     status: 'Trạng thái',
     statusFree: 'Trống',
-    statusAssigned: 'Đang cấp',
-    statusSuspectDead: 'Nghi chết',
-    statusReclaimed: 'Đã thu hồi',
+    statusAssigned: 'Đang dùng',
     device: 'Thiết bị',
     deviceHint: 'Máy nào đang giữ IP này. Bỏ trống nếu chỉ cấp cho một người.',
     deviceSearch: 'Gõ mã hoặc tên thiết bị…',
@@ -1013,10 +990,7 @@ export default {
       'Thu hồi sẽ gỡ thiết bị và người dùng khỏi hồ sơ, trả địa chỉ về danh sách IP còn trống. ' +
       'Lịch sử vẫn giữ nguyên — sau này vẫn tra được IP này từng của ai.',
     trAssign: 'Cấp IP',
-    trSuspect: 'Nghi chết',
     trReclaim: 'Thu hồi',
-    trStillUsed: 'Vẫn dùng',
-    trReassign: 'Cấp lại',
   },
   nat: {
     title: 'Sổ NAT',
@@ -1224,10 +1198,7 @@ export default {
   },
   disposal: {
     title: 'Kho thanh lý',
-    /* Câu cũ hứa "cả hệ thống" nhưng đường truyền KHÔNG bao giờ vào kho này: `isp-detail`
-       không có nút ngừng dùng nào, nên hợp đồng "Đã cắt" không hiện ở đâu cả. Nói đúng ba
-       loại đang có, thay vì hứa một thứ sản phẩm chưa làm. */
-    subtitle: 'Thiết bị, phần mềm và tài khoản dịch vụ đã ngừng dùng — gom về một chỗ',
+    subtitle: 'Thiết bị, phần mềm, tài khoản dịch vụ và đường truyền đã ngừng dùng — gom về một chỗ',
     note: 'Hồ sơ trong kho KHÔNG còn được tính hạn và không vào email nhắc gia hạn. Muốn dùng lại thì mở hồ sơ gốc và đổi trạng thái.',
     search: 'Tìm theo mã, tên hoặc loại…',
     filterKind: 'Lọc theo loại hồ sơ',
@@ -1236,6 +1207,7 @@ export default {
     kindDevice: 'Thiết bị',
     kindSoftware: 'Phần mềm',
     kindServiceAccount: 'Tài khoản dịch vụ',
+    kindIsp: 'Đường truyền',
     code: 'Mã',
     detail: 'Chi tiết',
     at: 'Ngày đưa vào kho',
@@ -1243,6 +1215,8 @@ export default {
        khoản dịch vụ gọi là "đã vô hiệu hóa". Đúng cái khác biệt mà màn này sinh ra để bày. */
     statusRetired: 'Đã thanh lý',
     statusDisabled: 'Đã vô hiệu hóa',
+    // Đường truyền gọi trạng thái này là "Thanh lý" (Q-04) — kho giữ nguyên chữ của module chủ.
+    statusTerminated: 'Thanh lý',
     dispose: 'Đưa vào kho thanh lý',
     confirmTitle: 'Đưa vào kho thanh lý',
     confirmSoftware:
@@ -1254,6 +1228,27 @@ export default {
        tuyên bố sai về dữ liệu của công ty (rà UI/UX 12/09, mục #17). */
     noHit: 'Không có hồ sơ nào khớp bộ lọc',
     noHitHint: 'Kho vẫn có hồ sơ — thử bỏ bớt lọc loại, hoặc tìm bằng mã (vd SRV-01).',
+  },
+  audit: {
+    title: 'Nhật ký',
+    subtitle: 'Ai làm gì, lúc nào, từ đâu — chỉ đọc, không ai sửa hay xóa được',
+    searchActor: 'Lọc theo người thao tác (email)…',
+    action: 'Hành động',
+    allActions: 'Mọi hành động',
+    from: 'Từ ngày',
+    to: 'Đến ngày',
+    objectId: 'Mã đối tượng',
+    objectIdPlaceholder: 'Lọc theo mã đối tượng…',
+    time: 'Thời điểm',
+    actor: 'Người thao tác',
+    object: 'Đối tượng',
+    ip: 'IP',
+    /* Đếm có trần ở API: con số trên thanh phân trang là trần, không phải tổng thật. */
+    capped: 'Còn nhiều dòng khớp hơn con số trên — lọc hẹp lại (theo ngày, người thao tác) để xem đủ.',
+    empty: 'Nhật ký chưa có dòng nào',
+    emptyHint: 'Mỗi lượt đăng nhập và mỗi thay đổi dữ liệu sẽ ghi một dòng ở đây.',
+    emptyFiltered: 'Không có dòng nào khớp bộ lọc',
+    emptyFilteredHint: 'Thử nới khoảng ngày hoặc bỏ bớt điều kiện lọc.',
   },
   access: {
     title: 'Quyền xem két sắt',
@@ -1360,8 +1355,9 @@ export default {
    *
    * Mười khóa ĐẦU là phần dùng chung: cùng mã, cùng chữ, ở từ hai sổ trở lên. Phần còn
    * lại nằm trong namespace của từng sổ, vì cùng một mã KHÔNG phải lúc nào cũng cùng chữ —
-   * `created` là "Tạo hồ sơ" ở năm sổ nhưng là "Mở rule" ở sổ NAT, `active` là "Đang dùng"
-   * ở phần mềm mà "Đang chạy" ở đường truyền. Gộp bừa là làm sai nghĩa để đỡ một dòng.
+   * `created` là "Tạo hồ sơ" ở năm sổ nhưng là "Mở rule" ở sổ NAT, `retired` là "Đã thanh
+   * lý" ở phần mềm mà `terminated` là "Thanh lý" ở đường truyền. Gộp bừa là làm sai nghĩa để
+   * đỡ một dòng.
    *
    * Tên trường (`f*`) viết CHỮ THƯỜNG: chúng ghép vào giữa câu — "mã: A → B".
    */
@@ -1421,6 +1417,8 @@ export default {
       actCreated: 'Tạo hồ sơ',
       actUpdated: 'Sửa hồ sơ',
       actRenewed: 'Gia hạn',
+      actExpired: 'Tự chuyển sang Hết hạn (đã qua ngày hết hạn)',
+      actReactivated: 'Tự về Đang dùng (có ngày hết hạn mới)',
       actLicenseAssigned: 'Gán license vào máy',
       actLicenseReleased: 'Gỡ license khỏi máy',
       actLicenseTermsUpdated: 'Sửa ghế license',
@@ -1432,7 +1430,7 @@ export default {
       lmSubscription: 'Thuê bao',
       lmPerpetual: 'Vĩnh viễn',
       stActive: 'Đang dùng',
-      stExpiredOk: 'Hết hạn, không gia hạn',
+      stExpiredOk: 'Hết hạn',
       /* Cùng chữ với `software.statusRetired`. Panel Lịch sử giữ MỘT BỘ NHÃN RIÊNG song song
          với nhãn trên bảng — nên một khái niệm ở đây có tới SÁU khoá (3 màn + 3 sổ lịch sử),
          và bản `history.software` đã trôi lệch thật: bảng đọc 'Đã thanh lý', dòng lịch sử ngay
@@ -1470,11 +1468,13 @@ export default {
       fContractNo: 'số hợp đồng',
       actCreated: 'Tạo hồ sơ',
       actUpdated: 'Sửa hồ sơ',
+      /* Không còn lượt gia hạn mới (Q-04), nhưng sổ chỉ-thêm vẫn giữ các dòng cũ. */
       actRenewed: 'Gia hạn hợp đồng',
+      actTerminated: 'Thanh lý đường truyền',
       actDeviceDetached: 'Rời khỏi thiết bị (máy đã thanh lý) — hợp đồng giữ nguyên',
-      stActive: 'Đang chạy',
+      stActive: 'Đang dùng',
       stSuspended: 'Tạm ngưng',
-      stTerminated: 'Đã cắt',
+      stTerminated: 'Thanh lý',
     },
 
     /* Sổ NAT */
@@ -1499,7 +1499,8 @@ export default {
       assignedTo: 'cấp cho: {{who}}',
       reasonIs: 'lý do: {{reason}}',
       stFree: 'Trống',
-      stAssigned: 'Đang cấp',
+      stAssigned: 'Đang dùng',
+      // Hai trạng thái đã bỏ (Q-02): chỉ còn để đọc các dòng lịch sử cũ.
       stSuspectDead: 'Nghi chết',
       stReclaimed: 'Đã thu hồi',
       actCreated: 'Tạo hồ sơ',
@@ -1507,6 +1508,7 @@ export default {
       actAssigned: 'Gán chủ',
       actVoided: 'Xóa hồ sơ',
       actRestored: 'Bật lại',
+      actStatusMerged: 'Gộp trạng thái',
     },
   },
   dashboard: {

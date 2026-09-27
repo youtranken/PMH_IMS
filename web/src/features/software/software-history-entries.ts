@@ -31,6 +31,9 @@ export const ACTION_LABEL: Record<string, string> = {
   created: 'history.software.actCreated',
   updated: 'history.software.actUpdated',
   renewed: 'history.software.actRenewed',
+  // Hệ thống tự chuyển theo hạn (DOM-03), actor là `system`.
+  expired: 'history.software.actExpired',
+  reactivated: 'history.software.actReactivated',
   // Ba hành động này vẫn ghi vào lịch sử từ story 3.2 nhưng chưa bao giờ có nhãn — tab
   // Lịch sử hiện thẳng mã thô "license-assigned" cho người dùng đọc.
   'license-assigned': 'history.software.actLicenseAssigned',

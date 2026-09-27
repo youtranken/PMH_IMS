@@ -10,7 +10,7 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
-import { searchNormLike, pgErrorCode, PG_CHECK_VIOLATION } from '../../common/sql';
+import { searchNormLike, pgErrorCode, PG_CHECK_VIOLATION, PG_EXCLUSION_VIOLATION } from '../../common/sql';
 import { requireCas } from '../../common/cas';
 import { effectiveOf } from '../../common/merge-effective';
 import { AuditWriterService } from '../audit/audit-writer.service';
@@ -44,7 +44,6 @@ export const NAT_PROTOCOLS = ['tcp', 'udp', 'both'] as const;
 export type NatProtocol = (typeof NAT_PROTOCOLS)[number];
 
 /** SQLSTATE của vi phạm EXCLUDE — Postgres dùng chung mã với vi phạm ràng buộc loại trừ. */
-const PG_EXCLUSION_VIOLATION = '23P01';
 
 export interface NatRuleRecord {
   id: string;
@@ -639,9 +638,7 @@ export class NatRuleService {
   private warnIfUnowned(ip: { status: IpStatus } | null, internalIp: string): string[] {
     if (!ip || isOccupying(ip.status)) return [];
     return [
-      ip.status === 'reclaimed'
-        ? `${internalIp} đang ở trạng thái "đã thu hồi" trong sổ IP — rule này sẽ mở port vào một địa chỉ không còn chủ. Kiểm tra lại sổ IP.`
-        : `${internalIp} đang ở trạng thái "trống" trong sổ IP — chưa cấp cho máy nào. Kiểm tra lại sổ IP.`,
+      `${internalIp} đang ở trạng thái "trống" trong sổ IP — chưa cấp cho máy nào. Kiểm tra lại sổ IP.`,
     ];
   }
 

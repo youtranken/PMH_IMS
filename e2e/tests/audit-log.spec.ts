@@ -271,3 +271,48 @@ test.describe('Nhật ký kiểm toán — "từ đâu" (NFR-03)', () => {
     expect(login?.ip, 'GET /admin/audit phải trả cột ip ra ngoài').toBeTruthy();
   });
 });
+
+/**
+ * Màn Nhật ký (DOM-07). Thư cảnh báo bảo mật dẫn người đọc tới đây với bộ lọc người thao tác
+ * đặt sẵn trên URL, nên "tải lại vẫn giữ bộ lọc" là điều kiện để nút trong thư có nghĩa.
+ */
+test.describe('Nhật ký kiểm toán — màn hình', () => {
+  test('SA mở Nhật ký từ menu, lọc theo người thao tác, tải lại vẫn giữ lọc', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+
+    const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
+    await nav.getByRole('link', { name: 'Nhật ký', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Nhật ký' })).toBeVisible();
+    expect(new URL(page.url()).pathname).toBe('/admin/audit-log');
+
+    const filtered = page.waitForResponse(
+      (res) =>
+        res.url().includes('/api/v1/admin/audit?') &&
+        new URL(res.url()).searchParams.get('actor') === E2E_SA.email,
+    );
+    await page.getByRole('searchbox', { name: /người thao tác/ }).fill(E2E_SA.email);
+    expect((await filtered).status()).toBe(200);
+
+    // `firstLogin` vừa ghi dòng đăng nhập của chính tài khoản này.
+    const loginRow = page.getByText(/^auth\.(login|password)\.ok$/).first();
+    await expect(loginRow).toBeVisible();
+    expect(new URL(page.url()).searchParams.get('q')).toBe(E2E_SA.email);
+
+    await page.reload();
+    await expect(page.getByRole('searchbox', { name: /người thao tác/ })).toHaveValue(E2E_SA.email);
+    await expect(page.getByText(/^auth\.(login|password)\.ok$/).first()).toBeVisible();
+    await expect(page.getByText(E2E_SA.email).first()).toBeVisible();
+  });
+
+  test('đường hỏng: Thành viên không thấy mục Nhật ký, gõ thẳng URL nhận 404', async ({ page }) => {
+    await firstLogin(page, E2E_MEMBER);
+
+    const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
+    // Menu đã dựng xong thì vế "không có" bên dưới mới có nghĩa.
+    await expect(nav.getByRole('link', { name: 'Thiết bị', exact: true })).toBeVisible();
+    await expect(nav.getByText('Nhật ký', { exact: true })).toHaveCount(0);
+
+    await page.goto('/admin/audit-log');
+    await expect(page.getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible();
+  });
+});

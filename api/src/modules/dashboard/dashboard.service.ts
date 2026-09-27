@@ -85,7 +85,7 @@ export interface StaleSecretEntry {
   daysSince: number;
 }
 
-/** Hồ sơ vừa vào kho thanh lý — cùng ba loại với màn `/disposal`, không tự gộp lại lần nữa. */
+/** Hồ sơ vừa vào kho thanh lý — cùng các loại với màn `/disposal`, không tự gộp lại lần nữa. */
 export interface DisposedEntry {
   kind: string;
   id: string;
@@ -290,9 +290,9 @@ export class DashboardService {
   /**
    * "Tuần qua công ty bỏ những gì".
    *
-   * Đọc qua `disposal.api` chứ KHÔNG tự hỏi ba module rồi tự gộp: kho thanh lý đã là chỗ duy
+   * Đọc qua `disposal.api` chứ KHÔNG tự hỏi từng module rồi tự gộp: kho thanh lý đã là chỗ duy
    * nhất biết "ngừng dùng" gồm những loại nào, và bản gộp thứ hai ở đây sẽ lặng lẽ thiếu một
-   * loại đúng vào hôm có ai thêm loại thứ tư.
+   * loại đúng vào hôm có ai thêm một loại mới.
    */
   private async disposedBlock(now: Date): Promise<Dashboard['disposed']> {
     try {

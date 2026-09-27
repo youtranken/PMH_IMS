@@ -54,7 +54,7 @@ export class AuthController {
       ip: clientIp(req),
       userAgent: req.headers['user-agent'] ?? null,
     });
-    setSessionCookie(res, outcome.session.id);
+    setSessionCookie(res, outcome.session.token);
     return {
       status: outcome.status,
       csrfToken: outcome.session.csrfToken,
@@ -87,7 +87,7 @@ export class AuthController {
       ip: clientIp(req),
       userAgent: req.headers['user-agent'] ?? null,
     });
-    setSessionCookie(res, result.session.id);
+    setSessionCookie(res, result.session.token);
     return {
       status: 'authenticated',
       csrfToken: result.session.csrfToken,
@@ -143,8 +143,8 @@ export class AuthController {
       ip: clientIp(req),
       userAgent: req.headers['user-agent'] ?? null,
     });
-    // Phiên có thể đã được cấp lại (regenerate sau khi qua 2 lớp) → cập nhật cookie.
-    setSessionCookie(res, result.session.id);
+    // Chỉ khi phiên được cấp lại (regenerate sau khi qua 2 lớp) mới có token mới cho cookie.
+    if (result.newToken) setSessionCookie(res, result.newToken);
     return { status: 'enrolled', csrfToken: result.session.csrfToken };
   }
 

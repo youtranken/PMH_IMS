@@ -236,17 +236,20 @@ export class VaultService {
     await this.db.transaction(async (tx) => {
       // Hồ sơ đã ngừng dùng thì két đóng băng — xem chú thích ở `create()`.
       await this.owners.assertUsableWithin(tx, current.ownerType, current.ownerId);
-      await tx
-        .update(secretTable)
-        .set({
-          valueCt: sealed.ciphertext,
-          valueIv: sealed.iv,
-          valueTag: sealed.tag,
-          dekWrapped: sealed.wrappedDek,
-          keyVersion: sealed.keyVersion,
-          updatedAt: new Date(),
-        })
-        .where(eq(secretTable.id, id));
+      requireAliveRow(
+        await tx
+          .update(secretTable)
+          .set({
+            valueCt: sealed.ciphertext,
+            valueIv: sealed.iv,
+            valueTag: sealed.tag,
+            dekWrapped: sealed.wrappedDek,
+            keyVersion: sealed.keyVersion,
+            updatedAt: new Date(),
+          })
+          .where(aliveSecret(id))
+          .returning({ id: secretTable.id }),
+      );
       await this.audit.appendWithin(tx, {
         actor,
         action: 'vault.secret.rotated',
@@ -278,11 +281,13 @@ export class VaultService {
       return await this.db.transaction(async (tx) => {
         // Hồ sơ đã ngừng dùng thì két đóng băng — xem chú thích ở `create()`.
         await this.owners.assertUsableWithin(tx, before.ownerType, before.ownerId);
-        const rows = await tx
-          .update(secretTable)
-          .set({ ...values, updatedAt: new Date() })
-          .where(eq(secretTable.id, id))
-          .returning();
+        const row = requireAliveRow(
+          await tx
+            .update(secretTable)
+            .set({ ...values, updatedAt: new Date() })
+            .where(aliveSecret(id))
+            .returning(),
+        );
         await this.audit.appendWithin(tx, {
           actor,
           action: 'vault.secret.updated',
@@ -290,7 +295,7 @@ export class VaultService {
           objectId: id,
           detail: { label: values.label ?? before.label },
         });
-        return toMeta(rows[0]);
+        return toMeta(row);
       });
     } catch (error) {
       throw this.translate(error, values.label ?? before.label);
@@ -310,10 +315,13 @@ export class VaultService {
          riêng lẻ thì màn `/vault` lại bày một nút chạy được cạnh ba nút bị chặn, và người
          dùng học ra một luật thứ ba. Muốn dọn thì mở lại hồ sơ, dọn, rồi thanh lý tiếp. */
       await this.owners.assertUsableWithin(tx, secret.ownerType, secret.ownerId);
-      await tx
-        .update(secretTable)
-        .set({ revokedAt: new Date(), revokedBy: actor })
-        .where(eq(secretTable.id, id));
+      requireAliveRow(
+        await tx
+          .update(secretTable)
+          .set({ revokedAt: new Date(), revokedBy: actor })
+          .where(aliveSecret(id))
+          .returning({ id: secretTable.id }),
+      );
       await this.audit.appendWithin(tx, {
         actor,
         action: 'vault.secret.revoked',
@@ -364,17 +372,7 @@ export class VaultService {
   }
 
   private async requireAlive(id: string): Promise<typeof secretTable.$inferSelect> {
-    const rows = await this.db
-      .select()
-      .from(secretTable)
-      .where(and(eq(secretTable.id, id), isNull(secretTable.revokedAt)));
-    if (rows.length === 0) {
-      throw new NotFoundException({
-        code: 'SECRET_NOT_FOUND',
-        message: 'Không tìm thấy secret này (có thể đã thu hồi).',
-      });
-    }
-    return rows[0];
+    return requireAliveRow(await this.db.select().from(secretTable).where(aliveSecret(id)));
   }
 
   private translate(error: unknown, label: string): unknown {
@@ -383,6 +381,29 @@ export class VaultService {
       message: `Chủ thể này đã có secret nhãn "${label}". Đổi nhãn hoặc thu hồi cái cũ trước.`,
     });
   }
+}
+
+/**
+ * "Secret này còn hiệu lực" — đi cùng MỌI câu ghi, không chỉ câu đọc mở đầu.
+ *
+ * Câu đọc ở đầu mỗi hàm chạy ngoài transaction. Không mang điều kiện này vào câu UPDATE thì
+ * một lượt thu hồi commit vào giữa vẫn bị xoay mật khẩu / sửa nhãn đè lên, và lượt thu hồi
+ * thứ hai ghi đè "ai thu hồi" của lượt đầu. Postgres đánh giá lại `WHERE` sau khi chờ khóa
+ * hàng, nên lượt đến sau khớp 0 hàng thay vì ghi.
+ */
+function aliveSecret(id: string) {
+  return and(eq(secretTable.id, id), isNull(secretTable.revokedAt));
+}
+
+/** 0 hàng = secret không có hoặc đã bị thu hồi — với người gọi hai chuyện ấy là một: 404. */
+function requireAliveRow<T>(rows: readonly T[]): T {
+  if (rows.length === 0) {
+    throw new NotFoundException({
+      code: 'SECRET_NOT_FOUND',
+      message: 'Không tìm thấy secret này (có thể đã thu hồi).',
+    });
+  }
+  return rows[0];
 }
 
 /**

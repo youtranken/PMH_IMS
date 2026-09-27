@@ -32,7 +32,7 @@ import { createScratchDb, migrationsDir, type ScratchDb } from './db';
  *
  * Bật "Hiện hồ sơ đã ẩn" thì cả N+1 hàng cùng vào `records`, `new Map` giữ hàng CUỐI, và
  * "cuối" ở đây do Postgres quyết: `ORDER BY address` không định nghĩa thứ tự giữa hai hàng
- * CÙNG địa chỉ. Hậu quả: badge "Đã ẩn" cho một địa chỉ đang dùng, bộ đếm "Đang cấp" hụt 1, và
+ * CÙNG địa chỉ. Hậu quả: badge "Đã ẩn" cho một địa chỉ đang dùng, bộ đếm "Đang dùng" hụt 1, và
  * menu bày nút "Bật lại" cho hàng đang sống → API trả `IP_TAKEN`.
  *
  * Trông như "lúc đúng lúc sai" — kiểu lỗi không ai dựng lại được để báo.
@@ -96,7 +96,7 @@ describe('Ô địa chỉ trong dải khi một địa chỉ có nhiều hồ s�
     await scratch.pool.query(
       `INSERT INTO ip_address (subnet_id, address, status, used_by, assigned_by,
                                voided_at, voided_by, void_reason)
-       VALUES ($1, $2, 'reclaimed', $3, $4, now(), $4, 'Go nham')`,
+       VALUES ($1, $2, 'free', $3, $4, now(), $4, 'Go nham')`,
       [subnetId, ADDRESS, usedBy, ACTOR],
     );
   }

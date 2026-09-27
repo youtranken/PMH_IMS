@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -15,7 +15,6 @@ import { orderByStable, type SortQuery } from '../../common/sorting';
 import { conflictOnUnique, searchNormLike } from '../../common/sql';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
 import { AuditWriterService } from '../audit/audit-writer.service';
-import { ExpiryApiService } from '../expiry/expiry.api';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { DevicesApiService } from '../devices/devices.api';
 import { ispLineHistoryTable, ispLineTable } from './software.schema';
@@ -34,7 +33,6 @@ const TRACKED = [
   'hotline',
   'contractNo',
   'startDate',
-  'endDate',
   'note',
   'status',
 ] as const;
@@ -50,7 +48,6 @@ export interface IspLineRecord {
   hotline: string | null;
   contractNo: string | null;
   startDate: string | null;
-  endDate: string | null;
   note: string | null;
   status: IspStatus;
   createdAt: Date;
@@ -83,7 +80,6 @@ export interface IspLineInput {
   hotline?: string | null;
   contractNo?: string | null;
   startDate?: string | null;
-  endDate?: string | null;
   note?: string | null;
   status?: IspStatus;
 }
@@ -111,7 +107,6 @@ export class IspLineService {
     private readonly catalog: CatalogApiService,
     private readonly devices: DevicesApiService,
     private readonly audit: AuditWriterService,
-    private readonly expiry: ExpiryApiService,
   ) {}
 
   // ─────────────────────────── Đọc ───────────────────────────
@@ -183,24 +178,6 @@ export class IspLineService {
     return rows as IspLineHistoryRecord[];
   }
 
-  /** Hợp đồng hết hạn trong [from, to] — cỗ máy expiry (3.4) hỏi qua api. */
-  async findExpiringBetween(from: string, to: string): Promise<IspLineListItem[]> {
-    const rows = await this.db
-      .select()
-      .from(ispLineTable)
-      .where(
-        and(
-          sql`${ispLineTable.endDate} IS NOT NULL`,
-          sql`${ispLineTable.endDate} >= ${from}`,
-          sql`${ispLineTable.endDate} <= ${to}`,
-          // Đường đã cắt thì thôi không nhắc gia hạn nữa.
-          sql`${ispLineTable.status} <> 'terminated'`,
-        ),
-      )
-      .orderBy(asc(ispLineTable.endDate));
-    return this.decorate(rows);
-  }
-
   // ─────────────────────────── Ghi ───────────────────────────
 
   async create(actor: string, input: IspLineInput): Promise<IspLineRecord> {
@@ -225,40 +202,6 @@ export class IspLineService {
       await this.assertDeviceWithin(tx, values, before.deviceId);
       const updated = await this.updateWithin(tx, id, values);
       await this.recordWithin(tx, actor, id, 'updated', changes);
-      return updated;
-    });
-  }
-
-  /** Gia hạn hợp đồng — tách khỏi sửa hồ sơ để lịch sử đọc ra "gia hạn tới ngày X". */
-  async renew(actor: string, id: string, newEnd: string): Promise<IspLineRecord> {
-    const before = await this.requireRow(id);
-    if (before.endDate && newEnd <= before.endDate) {
-      throw new BadRequestException({
-        code: 'RENEW_NOT_FORWARD',
-        message: `Hạn mới (${newEnd}) phải sau hạn hiện tại (${before.endDate}). Sửa nhầm hạn thì dùng nút Sửa hồ sơ.`,
-      });
-    }
-    if (before.startDate && newEnd < before.startDate) {
-      throw new BadRequestException({
-        code: 'ISP_RANGE_INVALID',
-        message: 'Hạn mới không được sớm hơn ngày bắt đầu hợp đồng.',
-      });
-    }
-    return this.db.transaction(async (tx) => {
-      const updated = await this.updateWithin(tx, id, { endDate: newEnd, status: 'active' });
-      await this.recordWithin(tx, actor, id, 'renewed', {
-        endDate: { before: before.endDate, after: newEnd },
-      });
-      // Cùng lý do như `SoftwareService.renew` — đường truyền cũng có hai nút Gia hạn.
-      // `objectKind: 'isp'` khớp `sourceKind` mà `software-expiry-sources.ts` đăng ký.
-      await this.expiry.recordRenewalWithin(tx, {
-        objectKind: 'isp',
-        objectId: id,
-        label: `${before.code} — ${before.provider}`,
-        oldEnd: before.endDate,
-        newEnd,
-        actor,
-      });
       return updated;
     });
   }
@@ -371,7 +314,6 @@ export class IspLineService {
     put('hotline', text(input.hotline));
     put('contractNo', text(input.contractNo));
     put('startDate', dateOnly(input.startDate, 'Ngày bắt đầu'));
-    put('endDate', dateOnly(input.endDate, 'Ngày hết hạn'));
     put('note', text(input.note));
     put('status', input.status);
 
@@ -386,22 +328,10 @@ export class IspLineService {
       }
     }
 
-    // Kiểm trên giá trị SAU KHI GHÉP với hồ sơ đang có (bài học code review Epic 2), và ghép
-    // bằng `effectiveOf` chứ KHÔNG bằng `??` — xoá một ô khác không đụng tới nó. Với `??`,
-    // xoá ngày bắt đầu rồi đặt hạn sớm hơn ngày bắt đầu CŨ bị từ chối bởi một giá trị không
-    // còn tồn tại: đúng cái bẫy "hàng rào tự nhốt người dùng vào trong" mà chú thích
-    // `assertDeviceWithin` bên dưới đã mô tả cho liên kết thiết bị (A-03, rà soát 19/09).
+    // Kiểm trên giá trị SAU KHI GHÉP với hồ sơ đang có, và ghép bằng `effectiveOf` chứ KHÔNG
+    // bằng `??`: gửi chuỗi rỗng là bỏ gán, `??` sẽ lặng lẽ giữ lại site cũ để kiểm.
     const current = id ? await this.requireRow(id) : null;
     const effective = effectiveOf(values);
-    const start = effective<string | null>('startDate', current?.startDate ?? null);
-    const end = effective<string | null>('endDate', current?.endDate ?? null);
-    if (start && end && end < start) {
-      throw new BadRequestException({
-        code: 'ISP_RANGE_INVALID',
-        message: 'Ngày hết hạn hợp đồng phải sau ngày bắt đầu.',
-      });
-    }
-
     const siteId = effective<string | null>('siteId', current?.siteId ?? null);
     if (siteId) {
       const errors = await this.catalog.validateRefs({ siteId });
@@ -479,7 +409,6 @@ export const ISP_SORT_KEYS = [
   'provider',
   'hotline',
   'contractNo',
-  'endDate',
   'status',
 ] as const;
 export type IspSortKey = (typeof ISP_SORT_KEYS)[number];
@@ -492,7 +421,6 @@ export function ispOrderBy(sort: SortQuery<IspSortKey>): SQL[] {
     provider: ispLineTable.provider,
     hotline: ispLineTable.hotline,
     contractNo: ispLineTable.contractNo,
-    endDate: ispLineTable.endDate,
     status: ispLineTable.status,
   }[sort.key];
   // Xem `orderByStable` — khoá chốt hạ phải đi CÙNG HƯỚNG với cột đang sắp (0058).
@@ -514,8 +442,14 @@ function buildWhere(filter: IspFilter): SQL | undefined {
   return defined.length > 0 ? and(...defined) : undefined;
 }
 
+/**
+ * Cột `end_date` vẫn nằm trong bảng (migration chỉ tiến) nhưng KHÔNG ra khỏi API: đường truyền
+ * không có hạn (Q-04), và một ngày cũ lộ ra ở client nào đó sẽ bị đọc thành hạn thật.
+ */
 function toRecord(row: typeof ispLineTable.$inferSelect): IspLineRecord {
-  return { ...row, status: row.status as IspStatus };
+  const { endDate: _retired, ...rest } = row;
+  void _retired;
+  return { ...rest, status: row.status as IspStatus };
 }
 
 function text(value: string | null | undefined): string | null | undefined {

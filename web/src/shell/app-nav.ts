@@ -59,7 +59,7 @@ export const navGroups: NavGroup[] = [
       { key: 'nav.catalog', to: PATHS.adminCatalog },
       // Ma trận quyền két sắt là bản đồ phòng thủ — chỉ SA/Admin thấy.
       { key: 'nav.vaultAccess', to: PATHS.adminVaultAccess, roles: ['sa', 'admin'] },
-      { key: 'nav.auditLog', to: PATHS.adminAuditLog, roles: ['sa', 'admin'], planned: true },
+      { key: 'nav.auditLog', to: PATHS.adminAuditLog, roles: ['sa', 'admin'] },
       // Trang nội bộ của đội phát triển — chỉ SA thấy (khớp gác quyền ở App.tsx).
       { key: 'nav.components', to: PATHS.devComponents, roles: ['sa'] },
     ],

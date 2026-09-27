@@ -95,9 +95,9 @@ export function DatePicker({
         return;
       setOpen(false);
     };
-    // Esc chỉ đóng lịch: capture + stopPropagation chặn Radix Dialog (DismissableLayer) đóng
-    // luôn cả form đang mở và mất trắng thứ đang gõ. TimeField đã vá đúng cách này từ trước,
-    // comment ở đó ghi "(giống DatePicker)" — nhưng DatePicker thì chưa bao giờ được vá.
+    // Esc ở đây chỉ đóng LỊCH. Việc giữ cho hộp thoại chứa nó KHÔNG đóng theo nằm ở
+    // `onEscapeKeyDown` của `ui/dialog.tsx` (thấy điểm neo popover có con thì bỏ lượt đóng) —
+    // stopPropagation ở đây một mình không chặn được Radix, đừng gỡ phần bên dialog.
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.stopPropagation();

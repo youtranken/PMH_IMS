@@ -219,8 +219,8 @@ export function DeviceDetail({ me }: { me: Me }) {
    * `lib/api-client.ts` không khai `networkMode`, nên TanStack v5 chạy mặc định `'online'`:
    * mất mạng ⇒ `fetchStatus: 'paused'` ⇒ `isFetching === false` ⇒ **`isLoading === false`**,
    * mà `isError` cũng false và `data` là `undefined`. Cả hai nhánh thoát bên trên đều trượt,
-   * rồi dòng dưới đọc `item.status` và ném `TypeError` — không ErrorBoundary nào được gắn
-   * (`ChunkErrorBoundary` chưa từng đấu dây), nên người dùng nhận TRANG TRẮNG.
+   * rồi dòng dưới đọc `item.status` và ném `TypeError`. ErrorBoundary của shell sẽ bắt được,
+   * nhưng người dùng nên thấy "đang tải" chứ không phải khối báo lỗi.
    */
   if (!device.data) return <Loading />;
   const item = device.data;

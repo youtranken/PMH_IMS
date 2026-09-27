@@ -46,6 +46,10 @@ const PROBE_ACTIONS = [
    * khi chính nó là dấu hiệu rõ nhất rằng có một cookie đang ở nhầm tay.
    */
   'auth.totp.enroll.reauth_failed',
+  // Sai mã TOTP lúc đăng nhập: người này đã có mật khẩu, chỉ còn thiếu điện thoại (SEC-02).
+  'auth.totp.failed',
+  // Đoán mật khẩu hiện tại ở cửa Đổi mật khẩu bằng một cookie đang mở (SEC-06).
+  'auth.password.change_failed',
 ];
 
 /** Dòng ghi lại "đã cảnh báo cho người này rồi" — chính nó là bộ nhớ của thời gian nghỉ. */

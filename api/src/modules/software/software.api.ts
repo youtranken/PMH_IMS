@@ -55,4 +55,9 @@ export class SoftwareApiService {
     return page.items;
   }
 
+  /** Đường truyền đã thanh lý — màn Kho thanh lý gom qua đây, cùng lối với `listRetired`. */
+  async listTerminatedIsp(): Promise<IspLineListItem[]> {
+    const page = await this.isp.list({ page: 1, limit: 500 }, { status: 'terminated' });
+    return page.items;
+  }
 }

@@ -25,7 +25,7 @@ docker compose ps          # phải thấy đủ 5 service: postgres, redis, api
 
 Lần đầu tiên trên máy trắng thì làm thêm ba bước ở `README.md` mục "Chạy lần đầu": sinh
 `secrets/master_key` + `secrets/password_pepper`, sinh cert tự ký vào `ops/certs/`, rồi
-`docker compose exec api node scripts/seed-sa.mjs` để có tài khoản SA đầu tiên.
+`docker compose exec api node dist/ops/seed-sa.main.js` để có tài khoản SA đầu tiên (mật khẩu tạm in ra một lần).
 
 ### 0.2 Địa chỉ và tài khoản
 
@@ -215,7 +215,7 @@ Tra cứu AC: `epics.md` mục "Epic 1", story 1.1 → 1.5.
 ## Epic 5 — Quản lý IP & NAT
 
 > Hai luật đã tự chốt (`CAN-XAC-NHAN.md` mục 3 và 4): hệ thống **chỉ nhận IPv4**, và dải phải
-> **hẹp hơn hoặc bằng /8**. Trạng thái IP đúng bốn mức: `Trống · Đang cấp · Nghi chết · Đã thu hồi`.
+> **hẹp hơn hoặc bằng /8**. Trạng thái IP đúng hai mức: `Trống · Đang dùng`.
 
 | Mã | Kịch bản | Các bước | Kết quả mong đợi | AC gốc | Test Playwright tương ứng |
 | --- | --- | --- | --- | --- | --- |

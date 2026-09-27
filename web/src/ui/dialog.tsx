@@ -14,7 +14,7 @@ import { useTranslation } from 'react-i18next';
 import type { ReactNode } from 'react';
 
 /**
- * Nơi các popover (DatePicker/TimeField/Combobox/Select) portal VÀO khi mở trong dialog.
+ * Nơi các popover (DatePicker/Combobox/Select/RowActions) portal VÀO khi mở trong dialog.
  * Radix Dialog dùng react-remove-scroll + body{pointer-events:none} chỉ cho phép tương tác
  * TRONG Content; popover portal ra document.body sẽ bị chặn click LẪN cuộn (bánh xe giờ).
  * Portal vào mount-point này (nằm trong Content) → thuộc vùng cho phép. Ngoài dialog = null → body.
@@ -265,8 +265,8 @@ export function Dialog({
    * `preventDefault()` làm Radix bỏ lượt đóng, còn sự kiện vẫn bò tiếp nên ô chọn vẫn tự đóng
    * menu của nó. Mỗi bên đóng đúng phần của mình.
    *
-   * LÀM SAO BIẾT "CÓ POPOVER ĐANG MỞ": cả sáu thứ có thể mở đè lên hộp — `select`, `combobox`,
-   * `date-picker`, `time-field`, `row-actions` — đều `createPortal` vào ĐÚNG điểm neo dưới
+   * LÀM SAO BIẾT "CÓ POPOVER ĐANG MỞ": mọi thứ có thể mở đè lên hộp — `select`, `combobox`,
+   * `date-picker`, `row-actions` — đều `createPortal` vào ĐÚNG điểm neo dưới
    * đây (`portal ?? document.body`). Nên "điểm neo có con" chính là "đang có popover mở".
    * Không cần sổ đăng ký, không cần context thứ hai, và không thể quên cập nhật.
    */

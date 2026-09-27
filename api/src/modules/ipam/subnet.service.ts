@@ -8,7 +8,7 @@ import {
 import { and, asc, count, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
-import { conflictOnUnique } from '../../common/sql';
+import { conflictOnUnique, PG_EXCLUSION_VIOLATION, pgErrorCode } from '../../common/sql';
 import type { Tx } from '../../common/tx';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
@@ -384,6 +384,14 @@ export class SubnetService {
     }
     const stamp = row.voidedAt;
 
+    try {
+      await this.restoreWithin(actor, id, row.cidr, stamp);
+    } catch (error) {
+      throw this.translate(error, row.cidr);
+    }
+  }
+
+  private async restoreWithin(actor: string, id: string, cidr: string, stamp: Date): Promise<void> {
     await this.db.transaction(async (tx) => {
       const now = new Date();
       const children = await tx
@@ -415,7 +423,7 @@ export class SubnetService {
         action: 'subnet.restored',
         objectType: 'subnet',
         objectId: id,
-        detail: { cidr: row.cidr, addressesRestored: children.length },
+        detail: { cidr, addressesRestored: children.length },
       });
     });
   }
@@ -655,11 +663,17 @@ export class SubnetService {
     });
   }
 
+  /**
+   * Dải chồng dải đang dùng (DB-02): cả trùng y hệt (UNIQUE cũ) lẫn nằm trong/bao trùm (EXCLUDE
+   * `subnet_no_overlap`) đều ra cùng một mã, vì với người dùng đó là cùng một chuyện.
+   */
   private translate(error: unknown, cidr: string): unknown {
-    return conflictOnUnique(error, {
-      code: 'SUBNET_TAKEN',
-      message: `Dải ${cidr} đã được khai rồi.`,
-    });
+    const body = {
+      code: 'SUBNET_OVERLAP',
+      message: `Dải ${cidr} chồng lên một dải đang dùng. Mỗi địa chỉ IP chỉ được thuộc một dải.`,
+    };
+    if (pgErrorCode(error) === PG_EXCLUSION_VIOLATION) return new ConflictException(body);
+    return conflictOnUnique(error, body);
   }
 }
 

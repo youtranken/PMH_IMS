@@ -51,8 +51,8 @@ export const PATHS = {
 /**
  * Loại chủ thể → đường tới hồ sơ của nó.
  *
- * Khóa là `SecretOwnerType` — cùng danh sách với `SECRET_OWNER_TYPES` bên API, và đủ dùng cho
- * cả kho thanh lý (chỉ có ba loại đầu). Trước 12/09 union này gõ tay lần thứ hai ngay tại đây.
+ * Khóa là `SecretOwnerType` — cùng danh sách với `SECRET_OWNER_TYPES` bên API, và trùng khít
+ * bốn loại của kho thanh lý. Trước 12/09 union này gõ tay lần thứ hai ngay tại đây.
  *
  * Có mặt vì ba màn TỔNG — kho thanh lý, khối "vừa thanh lý" và khối "két lâu không đổi" trên
  * bảng điều khiển — đều nhận một cặp `(ownerType, id)` rồi phải tự dựng link. Ba bản chép tay
@@ -131,11 +131,7 @@ export const ROUTE_ROLES: Record<string, readonly UserRole[]> = {
   [PATHS.adminAccounts]: ['sa'],
   // `vault-access.controller.ts` — `@Roles('sa', 'admin')`.
   [PATHS.adminVaultAccess]: ['sa', 'admin'],
-  /*
-   * `audit.controller.ts` — `@Roles('sa', 'admin')` ở cấp lớp. Màn này CHƯA dựng (chưa có
-   * `<Route>` nào trong `App.tsx`); khai sẵn để lúc dựng thì hàng rào đã đứng đó, thay vì
-   * phải nhớ ra — đúng thứ hai màn kia đã quên.
-   */
+  // `audit.controller.ts` — `@Roles('sa', 'admin')` ở cấp lớp.
   [PATHS.adminAuditLog]: ['sa', 'admin'],
   // `catalog.controller.ts` — đường ĐỌC mở cho cả `member`, nên màn này không gác theo vai.
   [PATHS.adminCatalog]: ['sa', 'admin', 'member'],

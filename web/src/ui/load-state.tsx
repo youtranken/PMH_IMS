@@ -31,6 +31,28 @@ export function EmptyState({
   );
 }
 
+/**
+ * Khối hiện thay cho một màn vừa ném lỗi lúc render (`ErrorBoundary`). Không dùng router: nó
+ * còn được đặt ở gốc app, ngoài `BrowserRouter`.
+ */
+export function ScreenError() {
+  const { t } = useTranslation();
+  return (
+    <div className="error-state" role="alert">
+      <h1>{t('app.screenErrorTitle')}</h1>
+      <p className="muted">{t('app.screenErrorHint')}</p>
+      <div className="detail-actions">
+        <button type="button" className="primary" onClick={() => window.location.reload()}>
+          {t('app.reload')}
+        </button>
+        <button type="button" onClick={() => window.location.assign('/')}>
+          {t('app.backHome')}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** Màn 404 khi vào route không tồn tại (thay cho redirect câm về "/"). */
 export function NotFound() {
   const { t } = useTranslation();

@@ -8,7 +8,7 @@ import {
 import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
-import { requireCas } from '../../common/cas';
+import { requireCas, requireUnchangedSince } from '../../common/cas';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import type { Tx } from '../../common/tx';
 import { PG_CHECK_VIOLATION, conflictOnUnique, pgErrorCode } from '../../common/sql';
@@ -180,19 +180,14 @@ export class IpAddressService {
    * KHÁC, ngoài transaction — một IP vừa được cấp cho máy này sẽ không có trong danh sách và
    * máy được thanh lý trong khi vẫn đang giữ nó. Đó đúng là mẫu M2 mà cả đợt rà soát này dọn.
    *
-   * ===== CHỈ NHỮNG ĐỊA CHỈ ĐANG CHIẾM CHỖ (A-06, vá 21/09) =====
+   * ===== CHỈ NHỮNG ĐỊA CHỈ ĐANG CHIẾM CHỖ (A-06) =====
    *
    * Hai nơi gọi hàm này — `holdingsOf` ("máy còn giữ gì") và `releaseWithin` ("trả lại những
-   * gì nó giữ") — đều hỏi về TÀI SẢN ĐANG GIỮ. Một địa chỉ đã `reclaimed` thì đã trả về pool
-   * rồi; cột `device_id` còn ghi tên máy chỉ là dấu vết lịch sử ("IP này từng là máy in kế
-   * toán"), không phải một thứ đang bị chiếm.
+   * gì nó giữ") — đều hỏi về TÀI SẢN ĐANG GIỮ. Một địa chỉ đã trống thì đã trả về pool rồi.
    *
-   * Không lọc thì hàng lai `device_id = X, status = reclaimed` khóa cứng thiết bị X: đường
-   * chặn báo `DEVICE_HAS_HOLDINGS`, đường dọn thì `transitionWithin(…, 'reclaimed')` đâm vào
+   * Không lọc thì một hàng lai `device_id = X, status = free` khóa cứng thiết bị X: đường chặn
+   * báo `DEVICE_HAS_HOLDINGS`, đường dọn thì `transitionWithin(…, 'free')` đâm vào
    * `IP_TRANSITION_INVALID` và kéo cả lượt thanh lý rollback. Cả hai lối đều tắc.
-   *
-   * Phép lọc này là vế cho DỮ LIỆU ĐÃ LỠ SINH RA. Vế chặn nguồn nằm ở `update()` bên dưới;
-   * thiếu vế này thì những hàng lai đang nằm sẵn trong DB vẫn khóa máy của chúng mãi mãi.
    */
   async listForDeviceWithin(
     tx: Pick<Database, 'select'>,
@@ -355,28 +350,19 @@ export class IpAddressService {
      * Gán MÁY hoặc NGƯỜI DÙNG vào một hồ sơ đang TRỐNG thì nó thành ĐANG CẤP.
      *
      * Bản trước để `status` nguyên: một hàng vừa có tên máy vừa mang badge "Trống", còn nút
-     * lọc phía trên đếm "Đang cấp 0" — bảng và con số nói ngược nhau, và cả hai đều đúng theo
+     * lọc phía trên đếm "Đang dùng 0" — bảng và con số nói ngược nhau, và cả hai đều đúng theo
      * dữ liệu. Người dùng thấy ô đã có máy nên tưởng đã cấp, còn hệ thống thì vẫn coi địa chỉ
      * đó là chỗ trống và sẵn sàng cấp lần nữa cho máy khác.
      *
      * Vẫn KHÔNG nhận `status` từ body (AC 5.2: đổi trạng thái phải qua `transition`) — đây là
      * hệ quả TỰ SUY từ việc gán chủ, đúng luật mà `create()` đã dùng từ đầu.
      *
-     * ===== HỎI `isOccupying`, ĐỪNG LIỆT KÊ TAY MỘT TRẠNG THÁI (A-06, vá 21/09) =====
+     * ===== HỎI `isOccupying`, ĐỪNG LIỆT KÊ TAY MỘT TRẠNG THÁI (A-06) =====
      *
-     * Bản trước viết `before.status === 'free'`. Nhưng `reclaimed` CŨNG là chỗ trống — nó
-     * không nằm trong `OCCUPYING_STATUSES`, và `reclaimed → assigned` là đường đi hợp lệ có
-     * hẳn tên tiếng Việt ("Cấp lại"). Bỏ sót nó đẻ ra một hàng lai `device_id = X` mà
-     * `status = reclaimed`, và hàng lai đó KHÓA CỨNG thiết bị X: không tick dọn thì
-     * `DEVICE_HAS_HOLDINGS` chặn, có tick dọn thì `IP_TRANSITION_INVALID` làm rollback cả
-     * lượt thanh lý. Người trực nhận một câu lỗi nói về thứ họ không hề đụng tới.
-     *
-     * `suspect_dead` thì CHIẾM chỗ, nên nó không rơi vào đây — và đúng như vậy:
-     * `suspect_dead → assigned` là lượt "Xác nhận vẫn dùng", một quyết định của con người có
-     * nhãn riêng và dòng lịch sử riêng. Tự suy hộ là cướp mất quyết định đó.
-     *
-     * Vị từ dùng chung trả lời đúng cả ba ca mà không phải liệt kê ca nào — và trạng thái thứ
-     * năm ra đời mai sau sẽ được nó trả lời sẵn, thay vì chờ ai đó nhớ ra chỗ này.
+     * Bỏ sót một trạng thái "chỗ trống" ở đây đẻ ra hàng lai `device_id = X` mà vẫn trống, và
+     * hàng lai đó KHÓA CỨNG thiết bị X: không tick dọn thì `DEVICE_HAS_HOLDINGS` chặn, có tick
+     * dọn thì `IP_TRANSITION_INVALID` làm rollback cả lượt thanh lý. Vị từ dùng chung trả lời
+     * sẵn cho mọi trạng thái, kể cả trạng thái thêm về sau.
      */
     const nextOwner = {
       deviceId: values.deviceId !== undefined ? values.deviceId : before.deviceId,
@@ -406,6 +392,15 @@ export class IpAddressService {
 
     try {
       const row = await this.db.transaction(async (tx) => {
+        /*
+         * `becomesAssigned`, hàng rào NAT và diff đều tính từ `before` đọc ngoài transaction.
+         * Một lượt thu hồi commit vào giữa thì câu UPDATE dưới đây gắn chủ mới lên một hàng đã
+         * `free` mà không lật nó sang `assigned` — đúng hàng lai "trống mà có chủ".
+         */
+        requireUnchangedSince(before, await this.requireAliveWithin(tx, id, 'update'), {
+          code: 'IP_ALREADY_CHANGED',
+          message: 'Hồ sơ IP này vừa được người khác sửa — tải lại rồi thử lại.',
+        });
         await this.requireDeviceWithin(tx, values.deviceId);
         if (addressMoves || ownerMoves) {
           await this.assertNoLiveNatWithin(
@@ -467,7 +462,8 @@ export class IpAddressService {
    * Đây là đường DUY NHẤT đổi được `status` — `update()` từ chối thẳng. Máy trạng thái nằm
    * ở `ip-lifecycle.ts`, service chỉ hỏi rồi ghi.
    *
-   * Thu hồi thì XÓA thiết bị và người dùng khỏi hàng, nhưng lịch sử giữ nguyên: đó chính là
+   * Thu hồi (`assigned → free`, Q-02) thì XÓA thiết bị và người dùng khỏi hàng, giữ mọi thứ
+   * khác, và lịch sử giữ nguyên ai thu hồi lúc nào: đó chính là
    * cách trả lời "IP này từng là máy in kế toán" sau khi nó đã được cấp cho máy khác. Để
    * `device_id` lại thì màn hình nói IP đang thuộc một máy mà thực tế đã trả về pool.
    */
@@ -519,60 +515,35 @@ export class IpAddressService {
       assignedAt?: string | null;
     } = { status: to };
 
-    if (to === 'reclaimed') {
+    if (to === 'free') {
       values.deviceId = null;
       values.usedBy = null;
-    } else if (to === 'assigned') {
-      // Cấp (hoặc cấp lại) thường đi kèm chủ mới — nhận luôn ở đây để không phải gọi hai
-      // lượt và để lịch sử ghi "cấp lại cho máy X" thành MỘT dòng, đúng như việc thật.
+    } else {
+      // Cấp thường đi kèm chủ mới — nhận luôn ở đây để không phải gọi hai lượt và để lịch sử
+      // ghi "cấp cho máy X" thành MỘT dòng, đúng như việc thật. Chủ mới dọn vào nên ô người
+      // dùng để trống nghĩa là "chưa biết ai", không có gì của chủ cũ để giữ lại.
       if (options.deviceId !== undefined) {
         await this.requireDeviceWithin(tx, options.deviceId);
         values.deviceId = options.deviceId || null;
       }
-      /*
-       * "XÁC NHẬN VẪN DÙNG" KHÔNG ĐƯỢC XÓA MẤT NGƯỜI DÙNG (rà soát 07/09, mục 6 "Miền nghiệp vụ").
-       *
-       * `suspect_dead -> assigned` là lượt XÁC NHẬN: máy tưởng chết hóa ra còn sống, và nó vẫn
-       * là CHÍNH nó — chủ cũ không đi đâu cả. Nhưng hộp thoại bên web mở ra với ô "Người dùng"
-       * TRỐNG rồi gửi `usedBy: ''`, và `'' || null` biến nó thành `null`. Kết quả: hành động
-       * tên là "Xác nhận vẫn dùng" xóa mất dòng chữ "Phòng Kế toán" khỏi hồ sơ, im lặng, và
-       * `ip_history` ghi lại việc đó như thể đó là ý người dùng.
-       *
-       * Nên ô trống ở lượt XÁC NHẬN nghĩa là "không đổi gì". Ở lượt CẤP MỚI (`free`/`reclaimed`
-       * -> `assigned`) thì ngược lại: chủ mới dọn vào, ô trống đúng là "chưa biết ai", và
-       * không có gì để giữ lại.
-       *
-       * Muốn XÓA chủ khỏi một IP đang dùng thì đi đường sửa hồ sơ (`update`) — ở đó ô để trống
-       * là một câu nói rõ ràng, không phải một cái ô người ta chưa kịp điền.
-       */
-      if (options.usedBy !== undefined) {
-        const next = options.usedBy?.trim() || null;
-        if (next !== null || from !== 'suspect_dead') values.usedBy = next;
-      }
-      if (from === 'reclaimed' || from === 'free') {
-          values.assignedAt = isoDateInTz(await this.timezone());
-      }
+      if (options.usedBy !== undefined) values.usedBy = options.usedBy?.trim() || null;
+      values.assignedAt = isoDateInTz(await this.timezone());
     }
 
     {
       /*
-       * SỔ NAT PHẢI ĐƯỢC HỎI TRƯỚC KHI QUYỀN SỞ HỮU ĐỔI CHỦ (rà soát 07/09, #6).
+       * SỔ NAT PHẢI ĐƯỢC HỎI TRƯỚC KHI QUYỀN SỞ HỮU ĐỔI CHỦ.
        *
        * Kịch bản: rule `TCP 8080 → 172.16.10.5` cho "camera tầng 2". Camera chết, IT thu hồi
        * `.5`. Tuần sau `.5` cấp cho laptop kế toán — và port 8080 vẫn mở, giờ trỏ vào laptop
        * kế toán. Từng bước đều đúng; cái sai là hai cuốn sổ không hỏi nhau câu nào.
        *
-       * Chặn ở đúng HAI mốc quyền sở hữu đổi chủ, không phải ở mọi lượt chuyển:
-       *   - thu hồi (`* → reclaimed`): người thuê cũ đi khỏi;
-       *   - cấp mới (`free|reclaimed → assigned`): người thuê mới dọn vào.
-       * `suspect_dead ↔ assigned` KHÔNG chặn: máy tưởng chết hóa ra còn sống vẫn là CHÍNH nó,
-       * rule cũ vẫn đúng chủ. Chặn cả ở đó chỉ làm người trực khó chịu mà không giữ thêm gì.
+       * Cả hai bước chuyển đều là một mốc đổi chủ: thu hồi thì người thuê cũ đi khỏi, cấp thì
+       * người thuê mới dọn vào.
        *
-       * Trong transaction, không phải trước nó: kiểm ngoài rồi ghi trong là đúng mẫu M2 mà
-       * đợt trước vừa dọn xong ở năm chỗ.
+       * Trong transaction, không phải trước nó: kiểm ngoài rồi ghi trong là mẫu M2 (TOCTOU).
        */
-      const tenancyChanges = to === 'reclaimed' || (to === 'assigned' && from !== 'suspect_dead');
-      if (tenancyChanges) await this.assertNoLiveNatWithin(tx, before.address, to === 'reclaimed' ? 'reclaim' : 'assign');
+      await this.assertNoLiveNatWithin(tx, before.address, to === 'free' ? 'reclaim' : 'assign');
 
       /*
        * Điều kiện `status = from` VÀ `voided_at IS NULL` đi ngay trong câu UPDATE.
@@ -901,11 +872,13 @@ export class IpAddressService {
   private async requireAliveWithin(
     tx: Pick<Database, 'select'>,
     id: string,
+    lock?: 'update',
   ): Promise<typeof ipAddressTable.$inferSelect> {
-    const rows = await tx
+    const query = tx
       .select()
       .from(ipAddressTable)
       .where(and(eq(ipAddressTable.id, id), isNull(ipAddressTable.voidedAt)));
+    const rows = await (lock ? query.for(lock) : query);
     if (rows.length === 0) {
       throw new NotFoundException({
         code: 'IP_NOT_FOUND',
@@ -966,7 +939,7 @@ export class IpAddressService {
       code: 'IP_TAKEN',
       message:
         `Địa chỉ ${address} đã có hồ sơ trong dải này. Một IP chỉ có một chủ — ` +
-        'nếu hồ sơ cũ đã thu hồi thì dùng "Cấp lại" trên chính dòng đó, đừng tạo hồ sơ mới ' +
+        'nếu hồ sơ cũ đang trống thì dùng "Cấp IP" trên chính dòng đó, đừng tạo hồ sơ mới ' +
         '(tạo mới là mất lịch sử cũ).',
     });
   }
@@ -975,7 +948,5 @@ export class IpAddressService {
 /** Nhãn tiếng Việt cho thông điệp lỗi — khớp `STATUS_KEY` phía web. */
 const STATUS_LABEL: Record<IpStatus, string> = {
   free: 'Trống',
-  assigned: 'Đang cấp',
-  suspect_dead: 'Nghi chết',
-  reclaimed: 'Đã thu hồi',
+  assigned: 'Đang dùng',
 };

@@ -51,7 +51,7 @@ test.describe('Đường truyền ISP', () => {
       wanIp: '113.161.0.10',
       hotline: '1900 6600',
       contractNo: `HD-${stamp}`,
-      endDate: '2027-06-30',
+      startDate: '2026-01-01',
     });
     expect(created.status).toBe(201);
 
@@ -94,7 +94,7 @@ test.describe('Đường truyền ISP', () => {
     await expect(khuIsp.getByText(`HD-FW-${stamp}`)).toBeVisible();
   });
 
-  test('đường hỏng: thiếu nhà mạng, ngày ngược, thiết bị không tồn tại', async ({ page }) => {
+  test('đường hỏng: thiếu nhà mạng, gửi ngày hết hạn, thiết bị không tồn tại', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
 
@@ -102,14 +102,14 @@ test.describe('Đường truyền ISP', () => {
     expect(noProvider.status).toBe(400);
     expect(String(noProvider.body.message)).toContain('nhà mạng');
 
-    const badRange = await createLine(page, {
+    // Q-04: đường truyền không có hạn. Client cũ còn gửi `endDate` thì bị từ chối, không lặng
+    // lẽ bỏ qua — nếu không, người gửi tưởng hạn đã được lưu.
+    const withEnd = await createLine(page, {
       code: `ISP-E2E-BR-${stamp}`,
       provider: 'FPT',
-      startDate: '2027-01-01',
-      endDate: '2026-01-01',
+      endDate: '2027-01-01',
     });
-    expect(badRange.status).toBe(400);
-    expect(badRange.body).toMatchObject({ code: 'ISP_RANGE_INVALID' });
+    expect(withEnd.status).toBe(400);
 
     const ghostDevice = await createLine(page, {
       code: `ISP-E2E-GD-${stamp}`,
@@ -120,37 +120,56 @@ test.describe('Đường truyền ISP', () => {
     expect(ghostDevice.body).toMatchObject({ code: 'DEVICE_NOT_FOUND' });
   });
 
-  test('gia hạn: tiến về trước thì được, lùi lại bị chặn, lịch sử ghi rõ', async ({ page }) => {
+  /**
+   * Q-04: line không có hạn, sống tới khi thanh lý. Không còn cửa gia hạn, không còn cột hạn,
+   * không có mặt trong cỗ máy nhắc hạn — và thanh lý phải đọc ra được ai, ngày nào.
+   */
+  test('không hạn, không gia hạn; thanh lý ghi rõ người và ngày', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);
-    const created = await createLine(page, {
-      code: `ISP-E2E-RN-${stamp}`,
-      provider: 'VNPT',
-      endDate: '2026-12-31',
-    });
+    const code = `ISP-E2E-TL-${stamp}`;
+    const created = await createLine(page, { code, provider: 'VNPT' });
+    expect(created.status).toBe(201);
+    expect(created.body).not.toHaveProperty('endDate');
     const id = String(created.body.id);
     const csrf = await csrfOf(page);
 
-    const back = await page.request.post(`/api/v1/isp-lines/${id}/renew`, {
-      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
-      data: { endDate: '2026-01-01' },
-    });
-    expect(back.status()).toBe(400);
-    expect(await back.json()).toMatchObject({ code: 'RENEW_NOT_FORWARD' });
-
-    const forward = await page.request.post(`/api/v1/isp-lines/${id}/renew`, {
+    const renew = await page.request.post(`/api/v1/isp-lines/${id}/renew`, {
       headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
       data: { endDate: '2027-12-31' },
     });
-    expect(forward.status()).toBe(201);
+    expect(renew.status()).toBe(404);
+
+    const kinds = await page.request.get('/api/v1/expiry/kinds');
+    const kindList = ((await kinds.json()) as { kind: string }[]).map((item) => item.kind);
+    expect(kindList).not.toContain('isp');
+
+    await page.goto('/isp-lines');
+    await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: /Tình trạng hạn/ })).toHaveCount(0);
 
     await page.goto(`/isp-lines/${id}`);
-    await page.getByRole('tab', { name: 'Lịch sử' }).click();
-    // Nút "Gia hạn hợp đồng" trên đầu trang cũng mang đúng chữ này — chỉ kiểm DÒNG LỊCH SỬ.
+    await expect(page.getByRole('button', { name: 'Sửa hồ sơ' })).toBeVisible();
+    await expect(page.getByRole('button', { name: /Gia hạn/ })).toHaveCount(0);
+    await expect(page.getByText('Đang dùng', { exact: true })).toBeVisible();
+
+    const terminate = await page.request.patch(`/api/v1/isp-lines/${id}`, {
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
+      data: { status: 'terminated' },
+    });
+    expect(terminate.status()).toBe(200);
+
+    await page.reload();
+    await expect(page.getByText('Thanh lý', { exact: true })).toBeVisible();
     await expect(
-      page.getByRole('listitem').filter({ hasText: 'Gia hạn hợp đồng' }),
+      page.getByText(new RegExp(`Thanh lý ngày .+ bởi ${E2E_SA.email.replace(/\./g, '\\.')}`)),
     ).toBeVisible();
-    await expect(page.getByText(/ngày hết hạn: 2026-12-31 → 2027-12-31/)).toBeVisible();
+
+    await page.getByRole('tab', { name: 'Lịch sử' }).click();
+    await expect(
+      page.getByRole('listitem').filter({ hasText: 'Thanh lý đường truyền' }),
+    ).toBeVisible();
+    await expect(page.getByText('trạng thái: Đang dùng → Thanh lý')).toBeVisible();
   });
 
   test('file scan hợp đồng đính kèm được vào đường truyền', async ({ page }) => {

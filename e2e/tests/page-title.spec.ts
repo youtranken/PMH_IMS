@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { E2E_SA, firstLogin, resetUsers } from './helpers';
+import { APP_ORIGIN, E2E_SA, csrfOf, firstLogin, resetUsers } from './helpers';
 
 /**
  * TÊN TAB TRÌNH DUYỆT ĐỔI THEO MÀN (B-03).
@@ -56,11 +56,20 @@ test('trang chi tiết đội tên khu vực của nó, không rơi về tên s�
 }) => {
   await firstLogin(page, E2E_SA);
 
+  // Tự tạo thiết bị của mình: dựa vào hàng do bài khác để lại thì chạy lẻ bài này là đỏ.
+  const code = `PC-E2E-TITLE-${Date.now().toString().slice(-6)}`;
+  const catalog = await page.evaluate(async () => {
+    const res = await fetch('/api/v1/catalog', { credentials: 'include' });
+    return (await res.json()) as { deviceTypes: { id: string }[] };
+  });
+  const created = await page.request.post('/api/v1/devices', {
+    headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+    data: { code, name: 'Máy kiểm tên tab', deviceTypeId: catalog.deviceTypes[0].id },
+  });
+  expect(created.status()).toBe(201);
+
   await page.goto('/devices');
-  // Mã thiết bị của bộ E2E có dạng `PC-E2E-123456` — chữ `E2E` ở GIỮA, không ở đầu.
-  // Bản đầu dùng `/^E2E-/` nên chờ hết 60 giây một link không tồn tại.
-  const link = page.getByRole('link', { name: /E2E/ }).first();
-  await link.click();
+  await page.getByRole('link', { name: code }).click();
   await expect(page).toHaveURL(/\/devices\/[0-9a-f-]{36}$/);
 
   await expect(page, 'trang chi tiết thiết bị vẫn thuộc khu "Thiết bị"').toHaveTitle(
