@@ -30,3 +30,6 @@ e2e/.e2e-run-start
 # Ảnh chụp cây trợ năng do Playwright MCP đổ ra mỗi lần lái tay — sản phẩm phụ của
 # công cụ, không phải của dự án. Biên bản test tay là thứ đáng giữ, không phải 35 file này.
 .playwright-mcp/
+
+# Worktree tạm của agent Claude Code — không thuộc repo.
+.claude/worktrees/

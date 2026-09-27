@@ -16,6 +16,7 @@ import { SoftwareDevicePanel } from './software-device-panel';
 import { SoftwareApiService } from './software.api';
 import { SoftwareController } from './software.controller';
 import { SoftwareService } from './software.service';
+import { SoftwareStatusSweep } from './software-status-sweep';
 
 /**
  * Chủ sở hữu `software` + `software_history` (AD-3).
@@ -36,6 +37,7 @@ import { SoftwareService } from './software.service';
     SoftwareOwnerResolver,
     SoftwareDevicePanel,
     SoftwareApiService,
+    SoftwareStatusSweep,
   ],
   exports: [SoftwareApiService],
 })

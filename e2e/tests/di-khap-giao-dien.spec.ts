@@ -3378,8 +3378,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await statusSelect.click();
     expect(
       (await page.getByRole('option').allInnerTexts()).map((text) => text.trim()),
-      'Ba trạng thái của một hồ sơ phần mềm, không hơn',
-    ).toEqual(['Đang dùng', 'Hết hạn, không gia hạn', 'Đã thanh lý']);
+      'Người chỉ chọn Đang dùng / Thanh lý — "Hết hạn" do hệ thống tự đặt theo ngày (DOM-03)',
+    ).toEqual(['Đang dùng', 'Đã thanh lý']);
     await statusSelect.click();
     await expect(page.getByRole('option'), 'Danh sách trạng thái phải đóng lại').toHaveCount(0);
 

@@ -485,7 +485,7 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
   - Migration đổi CHECK: `suspect_dead` → `assigned`, `reclaimed` → `free`.
   - Sửa `ip-lifecycle.ts`: nút Thu hồi đưa về Trống.
   - Sửa màn, i18n và E2E.
-- [ ] **DOM-03 · Phần mềm còn 3 trạng thái, tự chuyển** (Q-03).
+- [x] **DOM-03 · Phần mềm còn 3 trạng thái, tự chuyển** (Q-03).
   - Đổi nhãn: `expired_ok` thành "Hết hạn", `retired` thành "Thanh lý".
   - Job hằng ngày chuyển `active` → `expired_ok` khi `end_date < hôm nay`, có ghi `software_history`
     với actor `system`.

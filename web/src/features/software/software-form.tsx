@@ -262,7 +262,11 @@ export function SoftwareForm({
               <Select
                 value={form.status}
                 ariaLabel={t('software.status')}
-                options={SOFTWARE_STATUSES.map((status) => ({
+                // "Hết hạn" do hệ thống tự đặt theo ngày hết hạn (DOM-03) — người chỉ chọn giữa
+                // Đang dùng và Thanh lý. Hồ sơ đang Hết hạn vẫn hiện đúng nhãn của nó.
+                options={SOFTWARE_STATUSES.filter(
+                  (status) => status !== 'expired_ok' || form.status === 'expired_ok',
+                ).map((status) => ({
                   value: status,
                   label: t(STATUS_KEY[status]),
                 }))}

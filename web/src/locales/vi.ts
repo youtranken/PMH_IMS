@@ -555,7 +555,7 @@ export default {
     kindMaintenance: 'Hợp đồng bảo trì',
     kindOther: 'Khác',
     statusActive: 'Đang dùng',
-    statusExpiredOk: 'Hết hạn, không gia hạn',
+    statusExpiredOk: 'Hết hạn',
     /* 'Đã thanh lý', không phải 'Đã bỏ': ba module đổ về CÙNG màn Kho thanh lý, và ở đó hồ sơ
        phần mềm từng hiện "Đã thanh lý license" trong khi màn `/software` gọi nó là "Đã bỏ". */
     statusRetired: 'Đã thanh lý',
@@ -1427,6 +1427,8 @@ export default {
       actCreated: 'Tạo hồ sơ',
       actUpdated: 'Sửa hồ sơ',
       actRenewed: 'Gia hạn',
+      actExpired: 'Tự chuyển sang Hết hạn (đã qua ngày hết hạn)',
+      actReactivated: 'Tự về Đang dùng (có ngày hết hạn mới)',
       actLicenseAssigned: 'Gán license vào máy',
       actLicenseReleased: 'Gỡ license khỏi máy',
       actLicenseTermsUpdated: 'Sửa ghế license',
@@ -1438,7 +1440,7 @@ export default {
       lmSubscription: 'Thuê bao',
       lmPerpetual: 'Vĩnh viễn',
       stActive: 'Đang dùng',
-      stExpiredOk: 'Hết hạn, không gia hạn',
+      stExpiredOk: 'Hết hạn',
       /* Cùng chữ với `software.statusRetired`. Panel Lịch sử giữ MỘT BỘ NHÃN RIÊNG song song
          với nhãn trên bảng — nên một khái niệm ở đây có tới SÁU khoá (3 màn + 3 sổ lịch sử),
          và bản `history.software` đã trôi lệch thật: bảng đọc 'Đã thanh lý', dòng lịch sử ngay

@@ -16,8 +16,11 @@ import { conflictOnUnique, searchNormLike } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { ExpiryApiService } from '../expiry/expiry.api';
 import { CatalogApiService } from '../catalog/catalog.api';
+import { SystemConfigService } from '../config-sys/system-config.service';
+import { isoDateInTz } from '../../common/today';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
 import {
+  effectiveSoftwareStatus,
   validateSoftware,
   type LicenseModel,
   type SoftwareInputShape,
@@ -60,6 +63,7 @@ export class SoftwareService {
     private readonly catalog: CatalogApiService,
     private readonly audit: AuditWriterService,
     private readonly expiry: ExpiryApiService,
+    private readonly config: SystemConfigService,
   ) {}
 
   // ─────────────────────────── Đọc ───────────────────────────
@@ -134,8 +138,9 @@ export class SoftwareService {
           sql`${softwareTable.endDate} IS NOT NULL`,
           sql`${softwareTable.endDate} >= ${from}`,
           sql`${softwareTable.endDate} <= ${to}`,
-          // Hồ sơ đã bỏ thì thôi không nhắc nữa — nhắc thứ không ai định gia hạn là spam.
-          sql`${softwareTable.status} <> 'retired'`,
+          // Chỉ nhắc hồ sơ Đang dùng: Hết hạn đã được nhắc trước khi hết, Thanh lý thì không ai
+          // định gia hạn (DOM-03).
+          sql`${softwareTable.status} = 'active'`,
         ),
       )
       .orderBy(asc(softwareTable.endDate));
@@ -143,6 +148,48 @@ export class SoftwareService {
   }
 
   // ─────────────────────────── Ghi ───────────────────────────
+
+  /**
+   * Lượt dọn định kỳ (DOM-03): đưa trạng thái về đúng với hạn theo ngày `today`. Mỗi hồ sơ đổi
+   * trạng thái có một dòng lịch sử của `system`, để tab Lịch sử trả lời được "ai chuyển nó sang
+   * Hết hạn". Thanh lý không bao giờ bị đụng tới.
+   */
+  async syncExpiryStatuses(today: string): Promise<{ expired: number; reactivated: number }> {
+    return this.db.transaction(async (tx) => {
+      const expired = await tx
+        .update(softwareTable)
+        .set({ status: 'expired_ok', updatedAt: new Date() })
+        .where(
+          and(
+            eq(softwareTable.status, 'active'),
+            sql`${softwareTable.endDate} IS NOT NULL`,
+            sql`${softwareTable.endDate} < ${today}`,
+          ),
+        )
+        .returning({ id: softwareTable.id });
+      const reactivated = await tx
+        .update(softwareTable)
+        .set({ status: 'active', updatedAt: new Date() })
+        .where(
+          and(
+            eq(softwareTable.status, 'expired_ok'),
+            sql`(${softwareTable.endDate} IS NULL OR ${softwareTable.endDate} >= ${today})`,
+          ),
+        )
+        .returning({ id: softwareTable.id });
+      for (const row of expired) {
+        await this.recordWithin(tx, 'system', row.id, 'expired', {
+          status: { before: 'active', after: 'expired_ok' },
+        });
+      }
+      for (const row of reactivated) {
+        await this.recordWithin(tx, 'system', row.id, 'reactivated', {
+          status: { before: 'expired_ok', after: 'active' },
+        });
+      }
+      return { expired: expired.length, reactivated: reactivated.length };
+    });
+  }
 
   async create(actor: string, input: SoftwareInputShape): Promise<SoftwareRecord> {
     const values = await this.prepare(input, null);
@@ -354,6 +401,19 @@ export class SoftwareService {
     });
     if (errors.length > 0) {
       throw new BadRequestException({ code: 'SOFTWARE_INVALID', message: errors.join(' ') });
+    }
+
+    // Trạng thái do hạn quyết, trừ Thanh lý (DOM-03): sửa ngày hết hạn sang tương lai là tự về
+    // Đang dùng; tạo hồ sơ với hạn đã qua là Hết hạn ngay.
+    const baseStatus = effective<SoftwareStatus>('status', (current?.status as SoftwareStatus) ?? 'active');
+    const today = isoDateInTz(await this.config.getString('appTimezone'));
+    const status = effectiveSoftwareStatus(
+      baseStatus,
+      effective<string | null>('endDate', current?.endDate ?? null),
+      today,
+    );
+    if (current === null || status !== current.status || values.status !== undefined) {
+      values.status = status;
     }
 
     if (values.vendorId) {
