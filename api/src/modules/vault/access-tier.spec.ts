@@ -1,6 +1,7 @@
 import {
   ACCESS_TIERS,
   groupsOfDevice,
+  groupsOfIsp,
   groupsOfSoftware,
   resolveTier,
   tierLabel,
@@ -42,6 +43,22 @@ describe('groupsOfSoftware', () => {
     expect(groupsOfSoftware({ kind: 'license' })).toEqual([
       { scopeType: 'software_kind', scopeRef: 'license' },
     ]);
+  });
+});
+
+/**
+ * SEC-13: đường truyền nhóm theo ID nhà mạng trong danh mục, không theo tên — đổi tên nhà mạng
+ * không được lặng lẽ tước quyền đã gán.
+ */
+describe('groupsOfIsp', () => {
+  it('nhóm theo id nhà mạng', () => {
+    expect(groupsOfIsp({ providerId: 'prov-1' })).toEqual([
+      { scopeType: 'isp_provider', scopeRef: 'prov-1' },
+    ]);
+  });
+
+  it('không có id (đường truyền không tra được) thì không thuộc nhóm nào', () => {
+    expect(groupsOfIsp({ providerId: '' })).toEqual([]);
   });
 });
 

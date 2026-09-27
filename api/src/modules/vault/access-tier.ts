@@ -77,13 +77,11 @@ export function groupsOfServiceAccount(account: { kind: string }): AccessGroup[]
 }
 
 /**
- * Đường truyền nhóm theo NHÀ MẠNG.
- *
- * `provider` là chuỗi lấy từ danh mục Nhà mạng nên nó viết đúng một kiểu — khác `department`
- * của tài khoản dịch vụ vốn gõ tự do.
+ * Đường truyền nhóm theo NHÀ MẠNG — bằng ID danh mục, không bằng tên (SEC-13): khoá theo tên
+ * thì đổi tên nhà mạng trong danh mục là lặng lẽ tước quyền của mọi người đã được gán.
  */
-export function groupsOfIsp(line: { provider: string }): AccessGroup[] {
-  return line.provider ? [{ scopeType: 'isp_provider', scopeRef: line.provider }] : [];
+export function groupsOfIsp(line: { providerId: string }): AccessGroup[] {
+  return line.providerId ? [{ scopeType: 'isp_provider', scopeRef: line.providerId }] : [];
 }
 
 /** Rộng → hẹp. Dùng để chọn khi nhiều luật cùng áp. */

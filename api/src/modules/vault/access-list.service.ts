@@ -100,13 +100,12 @@ export class AccessListService {
         label: `Tài khoản: ${kind.label}`,
       })),
       /*
-       * Nhà mạng lấy từ DANH MỤC, không phải từ các giá trị `provider` đang có trong bảng
-       * `isp_line`. Lấy từ dữ liệu thì gán được quyền cho một nhà mạng chỉ vì tình cờ đang có
-       * một đường truyền của họ, rồi xóa đường truyền đó là luật quyền trỏ vào hư không.
+       * Nhà mạng lấy từ DANH MỤC và khoá bằng ID (SEC-13): khoá bằng tên thì đổi tên trong danh
+       * mục là luật quyền trỏ vào hư không, người được gán mất quyền mà không ai hay.
        */
       ...lists.ispProviders.map((provider) => ({
         scopeType: 'isp_provider' as const,
-        scopeRef: provider.name,
+        scopeRef: provider.id,
         label: `Đường truyền: ${provider.name}`,
       })),
     ];
@@ -275,9 +274,9 @@ export class AccessListService {
     return { kind: account?.kind ?? '' };
   }
 
-  private async ispGroupKeys(id: string): Promise<{ provider: string }> {
+  private async ispGroupKeys(id: string): Promise<{ providerId: string }> {
     const line = await this.software.getIspById(id).catch(() => null);
-    return { provider: line?.provider ?? '' };
+    return { providerId: line?.providerId ?? '' };
   }
 
   private async deviceGroupKeys(
