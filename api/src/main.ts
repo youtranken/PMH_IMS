@@ -7,6 +7,8 @@ import { setupApp } from './app.setup';
 import { PG_POOL } from './database/database.module';
 import { redactMessage } from './common/log-redact';
 import { assertNarrowRole, ensureAppRole } from './database/app-role';
+import { MasterKeyRing } from './common/crypto/master-key-ring';
+import { assertKeyringCovers } from './ops/rewrap';
 import { resolveMigrationsDir, runMigrations } from './database/migration-runner';
 
 /** Biến bắt buộc — thiếu là chết ngay lúc boot, không chạy nửa vời (AD-11). */
@@ -84,6 +86,8 @@ async function bootstrap(): Promise<void> {
   setupApp(app);
 
   await assertNarrowRole(app.get<Pool>(PG_POOL), new Logger('DbRole'), process.env.NODE_ENV);
+  // Thiếu chìa mà dữ liệu còn cần thì không lên (DOM-01): két và TOTP ở version đó sẽ không mở được.
+  await assertKeyringCovers(app.get<Pool>(PG_POOL), MasterKeyRing.fromSecretFile());
 
   app.enableShutdownHooks();
   await app.listen(Number(process.env.PORT ?? 3000), '0.0.0.0');

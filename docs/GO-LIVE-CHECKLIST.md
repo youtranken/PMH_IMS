@@ -475,7 +475,7 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
 
 ### P0
 
-- [ ] **DOM-01 · Master key: công cụ rewrap** (Q-07).
+- [x] **DOM-01 · Master key: công cụ rewrap** (Q-07).
   - Lệnh `node dist/ops/rewrap.js`: chạy lại được nếu bị ngắt, xử lý theo lô, mỗi lô một transaction.
   - Có phép kiểm "còn N bản ghi dùng chìa X".
   - API không khởi động nếu thiếu chìa mà dữ liệu vẫn cần.
