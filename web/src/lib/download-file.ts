@@ -1,3 +1,5 @@
+import { readResponse } from '@/lib/api-client';
+
 /**
  * Tải file từ 1 endpoint (kèm cookie) và ÉP tên file đúng.
  *
@@ -11,7 +13,8 @@ export async function downloadFile(
   fallbackName: string,
 ): Promise<void> {
   const res = await fetch(url, { credentials: 'include' });
-  if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+  // Lỗi đi qua luật chung: phiên hết hạn thì về màn đăng nhập, không phải một lỗi câm.
+  if (!res.ok) await readResponse(res);
   const cd = res.headers.get('content-disposition') ?? '';
   const m = /filename\*?=(?:UTF-8'')?"?([^"();]+)"?/i.exec(cd);
   const name = m ? decodeURIComponent(m[1]) : fallbackName;

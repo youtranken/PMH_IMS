@@ -64,6 +64,16 @@ export async function apiFetch<T>(
     },
   });
 
+  return readResponse<T>(res);
+}
+
+/**
+ * Đọc một `Response` của API theo luật chung: lỗi → `ApiError`, 401-phiên-chết → về màn đăng
+ * nhập, 204 → `undefined`. MỌI đường gọi API (JSON lẫn multipart của `lib/upload.ts`) phải đi
+ * qua đây — đường nào tự đọc `res.ok` thì phiên hết hạn ở đó thành một toast chung chung thay
+ * vì đưa người dùng về đăng nhập.
+ */
+export async function readResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const errBody: unknown = await res.json().catch(() => null);
     const code = (errBody as { code?: string } | null)?.code;
