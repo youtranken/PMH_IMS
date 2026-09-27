@@ -376,7 +376,7 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
 - [x] **DR-07 · Báo động khi backup hỏng** (mail hoặc webhook).
 - [x] **DR-08 · `restore-drill.sh`:** vòng `until pg_isready` cần sleep + timeout; `chown 1000:1000`
   cho `secrets/master_key`.
-- [ ] **DR-09 · Chặn chạy nhầm `seed-demo.sql`/`unseed-demo.sql` trên prod** (assert môi trường dev).
+- [x] **DR-09 · Chặn chạy nhầm `seed-demo.sql`/`unseed-demo.sql` trên prod** (assert môi trường dev).
 
 ---
 
