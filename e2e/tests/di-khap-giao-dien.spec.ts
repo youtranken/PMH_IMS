@@ -11,6 +11,7 @@ import {
   fillLogin,
   firstLogin,
   freshTotpCode,
+  ispProviderId,
   logout,
   resetAccessList,
   resetApprovals,
@@ -5485,9 +5486,10 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       [maA, 'Alpha Telecom E2E'],
       [maB, 'Zulu Telecom E2E'],
     ]) {
+      const providerId = await ispProviderId(page, provider);
       const created = await page.request.post('/api/v1/isp-lines', {
         headers,
-        data: { code, provider, hotline: '18001166', contractNo: `HD-${stamp}` },
+        data: { code, providerId, hotline: '18001166', contractNo: `HD-${stamp}` },
       });
       expect(created.status(), `Dàn cảnh: tạo đường truyền ${code} phải thành công`).toBe(201);
     }
@@ -5602,8 +5604,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
    * E2E hiện có luôn `fill` đúng những ô nó cần rồi bấm Lưu, nên nó mù hoàn toàn với chuyện này.
    *
    * Bài này liệt kê HẾT ô trong hộp, theo ĐÚNG LOẠI tay nắm. Loại quan trọng ngang nội dung:
-   * "Nhà mạng" là `combobox` chứ không phải `textbox`, "Site" là một `button` chứ không phải
-   * `<select>` — nhầm vai nghĩa là người dùng bàn phím thao tác khác hẳn điều ta tưởng.
+   * "Nhà mạng" và "Site" là `button` mở danh sách chọn, không phải ô gõ — nhầm vai nghĩa là
+   * người dùng bàn phím thao tác khác hẳn điều ta tưởng.
    *
    * ĐỎ KHI: một ô rơi mất hoặc mọc thêm; một ô đổi loại tay nắm; ô Trạng thái (chỉ dành cho
    * lượt SỬA) lọt vào hộp thêm mới; lời báo lỗi đổi chữ; hoặc một trong hai đường đóng hộp
@@ -5617,6 +5619,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     const stamp = dauThoiGian();
     const ma = `ISP-E2E-HOP-${stamp}`;
+    // Dàn cảnh TRƯỚC khi mở màn: ô chọn Nhà mạng đọc danh mục lúc nạp trang (Q-11).
+    await ispProviderId(page, 'FPT E2E');
 
     await page.goto('/isp-lines');
     await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
@@ -5640,10 +5644,9 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(sap(['Mã đường', 'Băng thông', 'IP WAN', 'Hotline', 'Số hợp đồng', 'Ghi chú']));
 
     /*
-     * HAI ô này là `combobox`, KHÔNG phải `textbox`.
-     *
-     * "Nhà mạng" gõ tự do được nhưng có gợi ý từ danh mục (`SuggestInput`); "Thiết bị biên"
-     * tra ngược vào kho thiết bị.
+     * Ô này là `combobox`, KHÔNG phải `textbox`: "Thiết bị biên" tra ngược vào kho thiết bị.
+     * "Nhà mạng" KHÔNG còn ở đây — nó là khoá ngoại tới danh mục, chọn chứ không gõ (Q-11),
+     * nên nằm trong bộ nút bên dưới.
      *
      * **ĐỔI 24/09 (F-06).** Trước đó ô tra thiết bị không có nhãn nối vào, nên tên khả truy cập
      * của nó rơi về `placeholder` — trình đọc màn hình đọc "Tìm thiết bị trong kho…" thay vì tên
@@ -5652,8 +5655,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      */
     expect(
       await tenTheoVaiTro(hop, 'combobox'),
-      'Hộp có đúng hai ô gợi ý: Nhà mạng và ô tra thiết bị biên',
-    ).toEqual(sap(['Nhà mạng', 'Thiết bị biên']));
+      'Hộp có đúng một ô gợi ý: ô tra thiết bị biên',
+    ).toEqual(sap(['Thiết bị biên']));
 
     /*
      * "Chọn file để đính kèm" nằm trong bộ NÚT chứ không phải bộ ô nhập, và đó là điều đúng:
@@ -5663,10 +5666,18 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      */
     expect(
       await tenTheoVaiTro(hop, 'button'),
-      'Bộ nút trong hộp thêm mới: ô chọn Site, ô ngày Bắt đầu, ô chọn file, ✕, Hủy, Lưu — ' +
-        'không có ô Hết hạn vì đường truyền không có hạn (Q-04)',
+      'Bộ nút trong hộp thêm mới: ô chọn Nhà mạng, ô chọn Site, ô ngày Bắt đầu, ô chọn file, ' +
+        '✕, Hủy, Lưu — không có ô Hết hạn vì đường truyền không có hạn (Q-04)',
     ).toEqual(
-      sap(['Đóng hộp thoại', 'Site', 'Bắt đầu', 'Chọn file để đính kèm', 'Hủy', 'Lưu']),
+      sap([
+        'Đóng hộp thoại',
+        'Nhà mạng',
+        'Site',
+        'Bắt đầu',
+        'Chọn file để đính kèm',
+        'Hủy',
+        'Lưu',
+      ]),
     );
 
     /*
@@ -5684,7 +5695,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      *
      * Không thử "bỏ trống tất cả": ô Mã đường mang thuộc tính `required` của HTML nên trình
      * duyệt chặn ngay tại chỗ, `onSubmit` không chạy, và không có `role="alert"` nào để đọc.
-     * Ô Nhà mạng thì không có `required` — đó mới là đường đi tới lời báo lỗi do chính form viết.
+     * Ô Nhà mạng là nút chọn, không có `required` của trình duyệt — đó mới là đường đi tới lời
+     * báo lỗi do chính form viết.
      */
     await hop.getByRole('textbox', { name: 'Mã đường' }).fill(ma);
     await hop.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
@@ -5692,7 +5704,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await expect(
       hop.getByRole('alert'),
       'Thiếu nhà mạng phải hiện đúng câu của `isp-form.tsx`, không phải im lặng',
-    ).toHaveText('Cần ít nhất: mã đường truyền và tên nhà mạng.');
+    ).toHaveText('Cần ít nhất: mã đường truyền và nhà mạng.');
     await expect(hop, 'Báo lỗi thì hộp phải Ở LẠI để người dùng sửa, không được đóng').toBeVisible();
 
     // ĐƯỜNG ĐÓNG THỨ NHẤT: phím Esc.
@@ -5712,7 +5724,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
     const hopLan3 = page.getByRole('dialog', { name: 'Thêm đường truyền' });
     await hopLan3.getByRole('textbox', { name: 'Mã đường' }).fill(ma);
-    await hopLan3.getByRole('combobox', { name: 'Nhà mạng' }).fill('FPT E2E');
+    await hopLan3.getByRole('button', { name: 'Nhà mạng' }).click();
+    await page.getByRole('option', { name: 'FPT E2E', exact: true }).click();
     await hopLan3.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
 
     await expect(page.getByText('Đã lưu hồ sơ đường truyền.')).toBeVisible();
@@ -5754,7 +5767,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       headers: await writeHeaders(page),
       data: {
         code: ma,
-        provider: 'VNPT E2E',
+        providerId: await ispProviderId(page, 'VNPT E2E'),
         bandwidth: '100 Mbps',
         wanIp: '203.113.99.9',
         hotline: '18001166',
@@ -5906,9 +5919,9 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       ).toHaveValue(giaTri);
     }
     await expect(
-      hopSua.getByRole('combobox', { name: 'Nhà mạng' }),
-      'Ô Nhà mạng cũng phải điền sẵn — nó là ô BẮT BUỘC, trống là lưu không nổi',
-    ).toHaveValue('VNPT E2E');
+      hopSua.getByRole('button', { name: 'Nhà mạng' }),
+      'Ô Nhà mạng cũng phải chọn sẵn — nó là ô BẮT BUỘC, trống là lưu không nổi',
+    ).toContainText('VNPT E2E');
     await expect(
       hopSua.getByRole('button', { name: 'Bắt đầu' }),
       'Ô ngày bắt đầu phải hiện lại năm 2026 đã khai',
@@ -5977,7 +5990,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     const ma = `ISP-E2E-ESC-${stamp}`;
     const created = await page.request.post('/api/v1/isp-lines', {
       headers: await writeHeaders(page),
-      data: { code: ma, provider: 'VNPT E2E' },
+      data: { code: ma, providerId: await ispProviderId(page, 'VNPT E2E') },
     });
     expect(created.status(), 'Dàn cảnh: tạo một đường truyền để mở form Sửa').toBe(201);
     const id = ((await created.json()) as { id: string }).id;

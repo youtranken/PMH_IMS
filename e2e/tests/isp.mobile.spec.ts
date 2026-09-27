@@ -1,5 +1,14 @@
 import { expect, test } from '@playwright/test';
-import { E2E_SA, firstLogin, horizontalOverflow, resetIsp, resetUsers, writeHeaders, uniqueStamp } from './helpers';
+import {
+  E2E_SA,
+  firstLogin,
+  horizontalOverflow,
+  ispProviderId,
+  resetIsp,
+  resetUsers,
+  writeHeaders,
+  uniqueStamp,
+} from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -18,7 +27,7 @@ test('danh sách đường truyền đọc được ở 390px và hotline bấm 
 
   const created = await page.request.post('/api/v1/isp-lines', {
     headers: await writeHeaders(page),
-    data: { code, provider: 'Viettel', hotline: '1800 8119' },
+    data: { code, providerId: await ispProviderId(page, 'Viettel E2E'), hotline: '1800 8119' },
   });
   expect(created.status()).toBe(201);
 

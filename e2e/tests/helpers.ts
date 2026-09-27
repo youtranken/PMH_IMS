@@ -710,6 +710,26 @@ export async function writeHeaders(page: Page): Promise<Record<string, string>> 
 }
 
 /**
+ * Id nhà mạng trong danh mục, tạo nếu chưa có — đường truyền nhận `providerId`, không nhận chữ
+ * (Q-11). Tên PHẢI chứa "E2E": đó là thứ duy nhất vùng `catalog` của `reset-e2e.mjs` nhìn vào.
+ * Tạo mục danh mục cần quyền SA/Admin, nên gọi từ phiên SA.
+ */
+export async function ispProviderId(page: Page, name: string): Promise<string> {
+  if (!name.includes('E2E')) throw new Error(`Tên nhà mạng của bài kiểm phải chứa "E2E": ${name}`);
+  const lists = await page.request.get('/api/v1/catalog?includeInactive=true');
+  expect(lists.status()).toBe(200);
+  const existing = ((await lists.json()) as { ispProviders: { id: string; name: string }[] })
+    .ispProviders.find((item) => item.name.toLowerCase() === name.toLowerCase());
+  if (existing) return existing.id;
+  const created = await page.request.post('/api/v1/catalog/isp_provider', {
+    headers: await writeHeaders(page),
+    data: { name },
+  });
+  expect(created.status()).toBe(201);
+  return ((await created.json()) as { id: string }).id;
+}
+
+/**
  * Tuỳ chọn cho test cần MỘT TRÌNH DUYỆT THỨ HAI (`browser.newContext()`).
  *
  * `newContext()` KHÔNG thừa kế mục `use` trong `playwright.config.ts`. Thiếu

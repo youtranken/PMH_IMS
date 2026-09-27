@@ -80,7 +80,9 @@ export const licenseAssignmentTable = pgTable('license_assignment', {
 export const ispLineTable = pgTable('isp_line', {
   id: uuid('id').primaryKey().defaultRandom(),
   code: citext('code').notNull(),
-  provider: text('provider').notNull(),
+  // Bản sao tên danh mục, khoá bằng FK kép (provider_id, provider) ON UPDATE CASCADE — 0074.
+  provider: citext('provider').notNull(),
+  providerId: uuid('provider_id').notNull(),
   bandwidth: text('bandwidth'),
   wanIp: text('wan_ip'),
   siteId: uuid('site_id'),

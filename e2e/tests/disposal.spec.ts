@@ -3,6 +3,7 @@ import {
   E2E_SA,
   firstLogin,
   isoInDays,
+  ispProviderId,
   resetDevices,
   resetIsp,
   resetServiceAccounts,
@@ -125,7 +126,11 @@ test('đường truyền đã thanh lý vào kho, link về đúng trang đườ
 
   const created = await page.request.post('/api/v1/isp-lines', {
     headers,
-    data: { code: cut, provider: 'VNPT', bandwidth: '300 Mbps' },
+    data: {
+      code: cut,
+      providerId: await ispProviderId(page, 'VNPT E2E'),
+      bandwidth: '300 Mbps',
+    },
   });
   expect(created.status()).toBe(201);
   const cutId = ((await created.json()) as { id: string }).id;
@@ -133,7 +138,7 @@ test('đường truyền đã thanh lý vào kho, link về đúng trang đườ
     (
       await page.request.post('/api/v1/isp-lines', {
         headers,
-        data: { code: running, provider: 'FPT' },
+        data: { code: running, providerId: await ispProviderId(page, 'FPT E2E') },
       })
     ).status(),
   ).toBe(201);

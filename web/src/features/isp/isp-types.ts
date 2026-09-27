@@ -4,7 +4,9 @@ export type IspStatus = (typeof ISP_STATUSES)[number];
 export interface IspRow {
   id: string;
   code: string;
+  /** Tên nhà mạng lấy từ danh mục — server giữ khớp với `providerId`. */
   provider: string;
+  providerId: string;
   bandwidth: string | null;
   wanIp: string | null;
   siteId: string | null;

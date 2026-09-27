@@ -5,6 +5,7 @@ import {
   E2E_MEMBER,
   E2E_SA,
   firstLogin,
+  ispProviderId,
   resetAccessList,
   resetDevices,
   resetIsp,
@@ -271,7 +272,11 @@ test.describe('Két sắt và ma trận quyền với tới ISP + tài khoản d
 
     const line = await page.request.post('/api/v1/isp-lines', {
       headers,
-      data: { code: `FTTH-E2E-${stamp}`, provider: 'VNPT', bandwidth: '200 Mbps' },
+      data: {
+        code: `FTTH-E2E-${stamp}`,
+        providerId: await ispProviderId(page, 'VNPT E2E'),
+        bandwidth: '200 Mbps',
+      },
     });
     expect(line.status()).toBe(201);
     const lineId = ((await line.json()) as { id: string }).id;

@@ -13,7 +13,7 @@ import { SoftwareService } from '../src/modules/software/software.service';
 import type { AuditWriterService } from '../src/modules/audit/audit-writer.service';
 import type { ExpiryApiService } from '../src/modules/expiry/expiry.api';
 import type { SystemConfigService } from '../src/modules/config-sys/system-config.service';
-import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { createScratchDb, migrationsDir, seedIspProviders, type ScratchDb } from './db';
 
 /**
  * Kho thanh lý qua đủ bốn cửa THẬT của module chủ (AD-2), trên DB thật.
@@ -56,6 +56,7 @@ describe('Kho thanh lý — bốn nguồn, tầng DB', () => {
     );
 
     const pool = scratch.pool;
+    const providers = await seedIspProviders(pool, ['VNPT', 'FPT', 'Viettel']);
     const type = await pool.query<{ id: string }>(
       `INSERT INTO device_type (name) VALUES ('Loại QA-01') RETURNING id`,
     );
@@ -78,10 +79,11 @@ describe('Kho thanh lý — bốn nguồn, tầng DB', () => {
          ('DSP-SA-LIVE', 'shared', 'TK đang dùng', 'active', 't', '2026-09-10T00:00:00Z')`,
     );
     await pool.query(
-      `INSERT INTO isp_line (code, provider, bandwidth, status, updated_at) VALUES
-         ('DSP-ISP-OLD', 'VNPT', '1 Gbps', 'terminated', '2026-09-03T00:00:00Z'),
-         ('DSP-ISP-LIVE', 'FPT', null, 'active', '2026-09-10T00:00:00Z'),
-         ('DSP-ISP-PAUSE', 'Viettel', null, 'suspended', '2026-09-10T00:00:00Z')`,
+      `INSERT INTO isp_line (code, provider, provider_id, bandwidth, status, updated_at) VALUES
+         ('DSP-ISP-OLD', 'VNPT', $1, '1 Gbps', 'terminated', '2026-09-03T00:00:00Z'),
+         ('DSP-ISP-LIVE', 'FPT', $2, null, 'active', '2026-09-10T00:00:00Z'),
+         ('DSP-ISP-PAUSE', 'Viettel', $3, null, 'suspended', '2026-09-10T00:00:00Z')`,
+      [providers.VNPT, providers.FPT, providers.Viettel],
     );
   }, TEST_TIMEOUT);
 

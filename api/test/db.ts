@@ -168,6 +168,25 @@ export async function waitForLock(pool: Pool, timeoutMs = 10_000): Promise<void>
   }
 }
 
+/**
+ * Gieo nhà mạng vào danh mục, trả tên → id. `isp_line.provider_id` là khoá ngoại bắt buộc
+ * (0074), nên mọi bài gieo đường truyền đều cần bước này trước.
+ */
+export async function seedIspProviders(
+  pool: Pool,
+  names: string[],
+): Promise<Record<string, string>> {
+  const out: Record<string, string> = {};
+  for (const name of names) {
+    const { rows } = await pool.query<{ id: string }>(
+      `INSERT INTO isp_provider (name) VALUES ($1) RETURNING id`,
+      [name],
+    );
+    out[name] = rows[0].id;
+  }
+  return out;
+}
+
 /** Thư mục migration thật của dự án — cùng nguồn với runtime, không phải bản chép. */
 export function migrationsDir(): string {
   return join(__dirname, '..', 'src', 'migrations');

@@ -6,6 +6,7 @@ import {
   APP_ORIGIN,
   E2E_SA,
   firstLogin,
+  ispProviderId,
   resetDevices,
   resetIsp,
   resetSoftware,
@@ -132,13 +133,15 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
     const code = `ISP-E2E-ATT-${stamp}`;
+    await ispProviderId(page, 'FPT Telecom E2E');
 
     await page.goto('/isp-lines');
     await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
 
     const form = page.getByRole('dialog');
     await form.getByLabel('Mã đường').fill(code);
-    await form.getByRole('combobox', { name: 'Nhà mạng' }).fill('FPT Telecom');
+    await form.getByRole('button', { name: 'Nhà mạng' }).click();
+    await page.getByRole('option', { name: 'FPT Telecom E2E', exact: true }).click();
     await picker(page).setInputFiles(writePdf(`scan-hd-${stamp}.pdf`));
 
     await form.getByRole('button', { name: 'Lưu' }).click();

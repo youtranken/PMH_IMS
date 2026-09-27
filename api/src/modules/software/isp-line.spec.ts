@@ -56,7 +56,7 @@ describe('Q-04 · đường truyền không có ngày kết thúc', () => {
     await expect(
       run({
         code: 'FPT-01',
-        provider: 'FPT',
+        providerId: '6f1c1e0a-3b7e-4a51-9a39-5d1c0f6b2a10',
         bandwidth: '300Mbps',
         wanIp: '203.0.113.10',
         hotline: '1900 6600',
@@ -66,6 +66,25 @@ describe('Q-04 · đường truyền không có ngày kết thúc', () => {
         status: 'terminated',
       }),
     ).resolves.toBeDefined();
+  });
+
+  it('DTO nhận nhà mạng bằng id danh mục, từ chối tên gõ tay (Q-11)', async () => {
+    const pipe = new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+      stopAtFirstError: true,
+      exceptionFactory: (errors) => new BadRequestException(messagesOf(errors)),
+    });
+    const run = (payload: Record<string, unknown>) =>
+      pipe.transform(payload, { type: 'body', metatype: IspBodyDto });
+
+    await expect(run({ code: 'FPT-01', provider: 'FPT' })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    await expect(run({ code: 'FPT-01', providerId: 'FPT' })).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 
   it('file Excel không có cột hạn, và trạng thái cuối đọc là "Thanh lý"', async () => {

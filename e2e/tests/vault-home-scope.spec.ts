@@ -4,6 +4,7 @@ import {
   E2E_MEMBER,
   E2E_SA,
   firstLogin,
+  ispProviderId,
   logout,
   resetAccessList,
   resetDevices,
@@ -162,7 +163,7 @@ test.describe('Trang tổng Két sắt', () => {
       headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
       data: {
         code: ispCode,
-        provider: 'FPT Telecom',
+        providerId: await ispProviderId(page, 'FPT Telecom E2E'),
         bandwidth: '200 Mbps',
         contractNo: `HD-${stamp}`,
         startDate: '2026-06-30',

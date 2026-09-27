@@ -213,7 +213,12 @@ const DOMAINS = {
     `DELETE FROM device_type WHERE name ILIKE '%E2E%'`,
     `DELETE FROM service_port WHERE name ILIKE '%E2E%'`,
     `DELETE FROM department WHERE name ILIKE '%E2E%'`,
-    `DELETE FROM isp_provider WHERE name ILIKE '%E2E%'`,
+    /*
+     * Nhà mạng còn đường truyền trỏ vào thì để lại (FK RESTRICT, 0074): spec chỉ dọn vùng
+     * `catalog` mà không dọn `isp` sẽ đâm khoá ngoại và ROLLBACK cả vùng. Lượt `all` chạy `isp`
+     * trước nên cuối cùng vẫn dọn hết.
+     */
+    `DELETE FROM isp_provider WHERE name ILIKE '%E2E%' AND NOT EXISTS (SELECT 1 FROM isp_line WHERE isp_line.provider_id = isp_provider.id)`,
   ],
 };
 

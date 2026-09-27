@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   E2E_SA,
   firstLogin,
+  ispProviderId,
   resetCatalog,
   resetDevices,
   resetIpam,
@@ -426,7 +427,7 @@ test.describe('Thanh lý router — cổng đấu chéo và đường truyền',
       headers,
       data: {
         code: ispCode,
-        provider: 'VNPT E2E',
+        providerId: await ispProviderId(page, 'VNPT E2E'),
         bandwidth: '100 Mbps',
         contractNo: `HD-E2E-${stamp}`,
         hotline: '18001166',

@@ -3,6 +3,7 @@ import {
   APP_ORIGIN,
   E2E_SA,
   firstLogin,
+  ispProviderId,
   resetDevices,
   resetIsp,
   resetSoftware,
@@ -69,7 +70,7 @@ test.describe('Cỗ máy Expiry', () => {
     // Đường truyền không có hạn (Q-04) — có mặt trong DB nhưng không được lên màn này.
     const isp = await post(page, '/api/v1/isp-lines', {
       code: `ISP-E2E-EXP-${stamp}`,
-      provider: 'FPT',
+      providerId: await ispProviderId(page, 'FPT E2E'),
     });
     expect(isp.status).toBe(201);
     await post(page, '/api/v1/software', {

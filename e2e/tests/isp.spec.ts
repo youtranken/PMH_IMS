@@ -1,5 +1,14 @@
 import { expect, test, type Page } from '@playwright/test';
-import { APP_ORIGIN, E2E_SA, firstLogin, resetDevices, resetIsp, resetUsers, uniqueStamp } from './helpers';
+import {
+  APP_ORIGIN,
+  E2E_SA,
+  firstLogin,
+  ispProviderId,
+  resetDevices,
+  resetIsp,
+  resetUsers,
+  uniqueStamp,
+} from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -46,7 +55,7 @@ test.describe('Đường truyền ISP', () => {
 
     const created = await createLine(page, {
       code,
-      provider: 'FPT Telecom',
+      providerId: await ispProviderId(page, 'FPT Telecom E2E'),
       bandwidth: '200 Mbps',
       wanIp: '113.161.0.10',
       hotline: '1900 6600',
@@ -79,7 +88,7 @@ test.describe('Đường truyền ISP', () => {
 
     const created = await createLine(page, {
       code: `ISP-E2E-FW-${stamp}`,
-      provider: 'Viettel',
+      providerId: await ispProviderId(page, 'Viettel E2E'),
       deviceId,
       hotline: '18008098',
       contractNo: `HD-FW-${stamp}`,
@@ -104,16 +113,17 @@ test.describe('Đường truyền ISP', () => {
 
     // Q-04: đường truyền không có hạn. Client cũ còn gửi `endDate` thì bị từ chối, không lặng
     // lẽ bỏ qua — nếu không, người gửi tưởng hạn đã được lưu.
+    const fpt = await ispProviderId(page, 'FPT E2E');
     const withEnd = await createLine(page, {
       code: `ISP-E2E-BR-${stamp}`,
-      provider: 'FPT',
+      providerId: fpt,
       endDate: '2027-01-01',
     });
     expect(withEnd.status).toBe(400);
 
     const ghostDevice = await createLine(page, {
       code: `ISP-E2E-GD-${stamp}`,
-      provider: 'FPT',
+      providerId: fpt,
       deviceId: '00000000-0000-4000-8000-000000000000',
     });
     expect(ghostDevice.status).toBe(400);
@@ -128,7 +138,10 @@ test.describe('Đường truyền ISP', () => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
     const code = `ISP-E2E-TL-${stamp}`;
-    const created = await createLine(page, { code, provider: 'VNPT' });
+    const created = await createLine(page, {
+      code,
+      providerId: await ispProviderId(page, 'VNPT E2E'),
+    });
     expect(created.status).toBe(201);
     expect(created.body).not.toHaveProperty('endDate');
     const id = String(created.body.id);
@@ -177,7 +190,7 @@ test.describe('Đường truyền ISP', () => {
     const stamp = uniqueStamp();
     const created = await createLine(page, {
       code: `ISP-E2E-FILE-${stamp}`,
-      provider: 'FPT',
+      providerId: await ispProviderId(page, 'FPT E2E'),
     });
 
     await page.goto(`/isp-lines/${String(created.body.id)}`);
@@ -199,13 +212,13 @@ test.describe('Đường truyền ISP', () => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
     for (const [suffix, provider] of [
-      ['A', 'Zulu Telecom cuối bảng'],
-      ['B', 'Alpha Telecom đầu bảng'],
-      ['C', 'Mike Telecom giữa bảng'],
+      ['A', 'Zulu Telecom E2E cuối bảng'],
+      ['B', 'Alpha Telecom E2E đầu bảng'],
+      ['C', 'Mike Telecom E2E giữa bảng'],
     ]) {
       const created = await createLine(page, {
         code: `ISP-SORT-E2E-${stamp}-${suffix}`,
-        provider,
+        providerId: await ispProviderId(page, provider),
       });
       expect(created.status).toBe(201);
     }
@@ -222,12 +235,67 @@ test.describe('Đường truyền ISP', () => {
     // Phải bám vào ĐẦU BẢNG: ngoài kia thanh lọc cũng có nút tên "Site".
     const head = page.locator('thead');
     await head.getByRole('button', { name: 'Nhà mạng' }).click();
-    await expect(firstDataRow()).toContainText('Alpha Telecom đầu bảng');
+    await expect(firstDataRow()).toContainText('Alpha Telecom E2E đầu bảng');
 
     await head.getByRole('button', { name: 'Nhà mạng' }).click();
-    await expect(firstDataRow()).toContainText('Zulu Telecom cuối bảng');
+    await expect(firstDataRow()).toContainText('Zulu Telecom E2E cuối bảng');
 
     // Cột dựa vào danh mục: hiện chữ, nhưng KHÔNG phải nút bấm được.
     await expect(head.getByRole('button', { name: 'Site' })).toHaveCount(0);
+  });
+
+  /**
+   * Q-11: nhà mạng chọn từ danh mục — khoá ngoại thật. Đổi tên ở danh mục là đổi ở mọi đường
+   * truyền; xoá mục đang dùng bị chặn; id lạ và tên gõ tay bị từ chối.
+   */
+  test('nhà mạng là khoá ngoại: form chọn từ danh mục, đổi tên lan ra, xoá bị chặn', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const name = `Nha mang E2E ${stamp}`;
+    const providerId = await ispProviderId(page, name);
+    const code = `ISP-E2E-FK-${stamp}`;
+
+    await page.goto('/isp-lines');
+    await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Mã đường').fill(code);
+    await dialog.getByRole('button', { name: 'Nhà mạng' }).click();
+    await page.getByRole('option', { name }).click();
+    const saved = page.waitForResponse(
+      (r) => r.url().endsWith('/api/v1/isp-lines') && r.request().method() === 'POST',
+    );
+    await dialog.getByRole('button', { name: 'Lưu' }).click();
+    const response = await saved;
+    expect(response.status()).toBe(201);
+    const body = (await response.json()) as { id: string; providerId: string; provider: string };
+    expect(body).toMatchObject({ providerId, provider: name });
+
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
+    const renamed = `${name} moi`;
+    const rename = await page.request.patch(`/api/v1/catalog/isp_provider/${providerId}`, {
+      headers,
+      data: { name: renamed },
+    });
+    expect(rename.status()).toBe(200);
+    const line = await page.request.get(`/api/v1/isp-lines/${body.id}`);
+    expect(((await line.json()) as { provider: string }).provider).toBe(renamed);
+    await page.goto('/isp-lines');
+    await expect(page.getByRole('row', { name: new RegExp(code) })).toContainText(renamed);
+
+    const remove = await page.request.delete(`/api/v1/catalog/isp_provider/${providerId}`, {
+      headers,
+    });
+    expect(remove.status()).toBe(409);
+    expect(((await remove.json()) as { code: string }).code).toBe('CATALOG_IN_USE');
+
+    const ghost = await createLine(page, {
+      code: `ISP-E2E-GP-${stamp}`,
+      providerId: '00000000-0000-4000-8000-000000000000',
+    });
+    expect(ghost.status).toBe(400);
+    const byName = await createLine(page, { code: `ISP-E2E-TX-${stamp}`, provider: name });
+    expect(byName.status).toBe(400);
   });
 });
