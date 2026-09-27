@@ -1,3 +1,4 @@
+import { clampPage } from '@/lib/paging';
 import { STATUS_KEY, type IpStatus, type SubnetSlot } from './ipam-types';
 
 /**
@@ -109,18 +110,6 @@ export function countSlots(slots: SubnetSlot[]): Record<SlotFilter, number> {
   };
   for (const slot of slots) counts[slotStatus(slot)] += 1;
   return counts;
-}
-
-/**
- * Kéo số trang về khoảng còn tồn tại.
- *
- * Đang ở trang 5 của "Tất cả" rồi bấm sang "Trống" (chỉ có 3 dòng) mà giữ nguyên trang 5
- * thì bảng rỗng trơn — người dùng kết luận là không có dòng nào, trong khi có ba dòng ở
- * trang 1. Danh sách rỗng thật thì vẫn là trang 1, không phải trang 0.
- */
-export function clampPage(page: number, total: number, limit = SLOT_PAGE_SIZE): number {
-  const lastPage = Math.max(1, Math.ceil(total / limit));
-  return Math.min(Math.max(1, page), lastPage);
 }
 
 /** Lát cắt của một trang. Trang vượt khoảng được kéo về trước, nên không bao giờ trả rỗng oan. */

@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Chevron } from './chevron';
 import { Select } from './select';
+import { clampPage, lastPageOf } from '@/lib/paging';
 
 /**
  * Phân trang server-side dùng chung (AD-15) — đi cặp với API `{ items, total }`
@@ -11,7 +12,7 @@ import { Select } from './select';
 export const PAGE_SIZES = [10, 20, 50, 100] as const;
 
 export function Pagination({
-  page,
+  page: requestedPage,
   limit,
   total,
   onPageChange,
@@ -30,8 +31,11 @@ export function Pagination({
   onLimitChange?: (limit: number) => void;
 }) {
   const { t } = useTranslation();
-  const lastPage = Math.max(1, Math.ceil(total / limit));
+  const lastPage = lastPageOf(total, limit);
   if (total === 0) return null;
+  /* Hiển thị theo trang ĐÃ KẸP: trong nhịp giữa lúc `total` vừa co lại và lúc `useClampPage`
+     của màn kịp ghi lại URL, dòng đếm không được phép in ra "41–40 của 40". */
+  const page = clampPage(requestedPage, total, limit);
 
   const from = (page - 1) * limit + 1;
   const to = Math.min(total, page * limit);

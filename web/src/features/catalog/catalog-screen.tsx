@@ -12,6 +12,7 @@ import { sortQuery } from '@/lib/sort-query';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
 import { LoadError, Loading } from '@/ui/load-state';
+import { useClampPage } from '@/ui/use-list-url-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { RowActions } from '@/ui/row-actions';
@@ -278,6 +279,7 @@ export function CatalogScreen({ me }: { me: Me }) {
         `/api/v1/catalog/${entity}?${buildQuery(page, limit, search, sorting)}`,
       ),
   });
+  useClampPage({ page, limit, setPage }, rows.data?.total);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['catalog'] });
 

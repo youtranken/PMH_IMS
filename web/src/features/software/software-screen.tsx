@@ -19,7 +19,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
-import { useListUrlState } from '@/ui/use-list-url-state';
+import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { useToast } from '@/ui/toast';
 import { AssignDialog } from './license-assignments-panel';
 import { SoftwareForm } from './software-form';
@@ -93,6 +93,7 @@ export function SoftwareScreen({ me }: { me: Me }) {
         `/api/v1/software?${buildQuery(page, limit, filters, sorting)}`,
       ),
   });
+  useClampPage(url, software.data?.total);
 
   // Mọi bộ lọc đều đưa về trang 1 (hook tự xoá `page`): đổi bộ lọc mà giữ nguyên trang 5 thì
   // bảng trông như rỗng.

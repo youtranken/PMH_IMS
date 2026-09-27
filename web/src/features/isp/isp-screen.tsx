@@ -10,7 +10,7 @@ import { DataTable } from '@/ui/data-table';
 import { sortQuery } from '@/lib/sort-query';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
-import { useListUrlState } from '@/ui/use-list-url-state';
+import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
@@ -75,6 +75,7 @@ export function IspScreen({ me }: { me: Me }) {
         `/api/v1/isp-lines?${buildQuery(page, limit, filters, sorting)}`,
       ),
   });
+  useClampPage(url, lines.data?.total);
 
   // Mọi bộ lọc đều đưa về trang 1 (hook tự xoá `page`): giữ nguyên trang 5 khi đổi lọc thì
   // bảng trông như rỗng.

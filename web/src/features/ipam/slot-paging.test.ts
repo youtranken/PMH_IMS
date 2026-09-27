@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  clampPage,
   countSlots,
   filterSlots,
   shouldIsolateAssigned,
@@ -100,26 +99,6 @@ describe('countSlots + filterSlots — con số trên nút phải khớp số d�
       voided: 0,
     });
   });
-});
-
-describe('clampPage — đổi bộ lọc không được rơi vào trang rỗng', () => {
-  const cases: { name: string; page: number; total: number; expected: number }[] = [
-    { name: 'trang trong khoảng thì giữ nguyên', page: 2, total: 254, expected: 2 },
-    { name: 'trang cuối vừa khít', page: 6, total: 254, expected: 6 },
-    // 254 host / 50 = 6 trang; xin trang 7 là quá tay.
-    { name: 'trang vượt quá bị kéo về trang cuối', page: 7, total: 254, expected: 6 },
-    // Đang ở trang 5 rồi lọc còn 3 dòng — chỗ sinh ra bảng rỗng oan.
-    { name: 'lọc xong còn ít dòng thì về trang 1', page: 5, total: 3, expected: 1 },
-    { name: 'danh sách rỗng vẫn là trang 1', page: 3, total: 0, expected: 1 },
-    { name: 'trang 0 hoặc âm bị kéo lên 1', page: 0, total: 100, expected: 1 },
-    { name: 'trang âm bị kéo lên 1', page: -4, total: 100, expected: 1 },
-  ];
-
-  for (const { name, page, total, expected } of cases) {
-    it(name, () => {
-      expect(clampPage(page, total)).toBe(expected);
-    });
-  }
 });
 
 describe('pageSlots — cắt đúng 50 dòng một trang', () => {

@@ -18,7 +18,7 @@ import { Pagination } from '@/ui/pagination';
 import { RowActions } from '@/ui/row-actions';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
-import { useListUrlState } from '@/ui/use-list-url-state';
+import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { ServiceAccountForm } from './service-account-form';
 import {
   KIND_KEY,
@@ -91,6 +91,7 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         `/api/v1/service-accounts?${buildQuery(page, limit, filters, sorting)}`,
       ),
   });
+  useClampPage(url, accounts.data?.total);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['service-accounts'] });
 

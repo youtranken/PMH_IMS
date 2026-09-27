@@ -22,7 +22,7 @@ import { useExpiryThresholds } from '@/ui/use-expiry-thresholds';
 import { Select } from '@/ui/select';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useToast } from '@/ui/toast';
-import { useListUrlState } from '@/ui/use-list-url-state';
+import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { DigestRulesPanel } from './digest-rules-panel';
 
 interface ExpiryRow {
@@ -141,6 +141,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
           `${kind ? `&kinds=${kind}` : ''}${state ? `&state=${state}` : ''}`,
       ),
   });
+  useClampPage(url, expiry.data?.total);
 
   /*
    * `useCallback` chứ không phải hàm trần: nó nằm trong deps của `columns` bên dưới, và một

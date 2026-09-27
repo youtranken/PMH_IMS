@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { useListUrlState } from '@/ui/use-list-url-state';
+import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 
 /**
  * TRẠNG THÁI DANH SÁCH SỐNG TRÊN THANH ĐỊA CHỈ — bài kiểm bảng dữ liệu cho luật ấy.
@@ -284,5 +284,42 @@ describe('useListUrlState — ô tìm: debounce và dấu cách', () => {
         vi.useRealTimers();
       }
     });
+  });
+});
+
+describe('useClampPage — trang theo kịp tổng số dòng mới nhất', () => {
+  function dungKep(duongDan: string, total: number | undefined) {
+    return renderHook(
+      ({ tong }: { tong: number | undefined }) => {
+        const url = useListUrlState<Record<string, string>>({ emptyFilters: { status: '' } });
+        useClampPage(url, tong);
+        return { url, thanhDiaChi: useLocation().search };
+      },
+      { wrapper: boc(duongDan), initialProps: { tong: total } },
+    );
+  }
+
+  it('?page=99 mà chỉ có 40 dòng thì về trang 2', () => {
+    const { result } = dungKep('/devices?page=99', 40);
+    expect(result.current.url.page).toBe(2);
+    expect(result.current.thanhDiaChi).toBe('?page=2');
+  });
+
+  it('xoá dòng cuối của trang cuối (41 → 40) thì lùi về trang 2', () => {
+    const { result, rerender } = dungKep('/devices?page=3', 41);
+    expect(result.current.url.page).toBe(3);
+    rerender({ tong: 40 });
+    expect(result.current.url.page).toBe(2);
+  });
+
+  it('chưa có tổng (đang tải) thì không đụng vào trang', () => {
+    const { result } = dungKep('/devices?page=5', undefined);
+    expect(result.current.url.page).toBe(5);
+  });
+
+  it('danh sách rỗng hẳn thì về trang 1 và URL sạch', () => {
+    const { result } = dungKep('/devices?page=4', 0);
+    expect(result.current.url.page).toBe(1);
+    expect(result.current.thanhDiaChi).toBe('');
   });
 });

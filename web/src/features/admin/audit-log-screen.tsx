@@ -11,7 +11,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
-import { useListUrlState } from '@/ui/use-list-url-state';
+import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 
 export interface AuditRow {
   id: string;
@@ -95,6 +95,7 @@ export function AuditLogScreen() {
     queryFn: () =>
       apiFetch<AuditPage>(`/api/v1/admin/audit?${auditQuery(page, limit, filters)}`),
   });
+  useClampPage(url, list.data?.total);
   const actions = useQuery({
     queryKey: ['audit', 'actions'],
     queryFn: () => apiFetch<string[]>('/api/v1/admin/audit/actions'),

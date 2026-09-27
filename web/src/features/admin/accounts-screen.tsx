@@ -10,7 +10,7 @@ import { sortQuery } from '@/lib/sort-query';
 import { DataTable } from '@/ui/data-table';
 import { Dialog } from '@/ui/dialog';
 import { FilterBar } from '@/ui/filter-bar';
-import { useListUrlState } from '@/ui/use-list-url-state';
+import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
@@ -182,6 +182,7 @@ export function AccountsScreen({ me }: { me: Me }) {
         { credentials: 'include' },
       ),
   });
+  useClampPage(url, accounts.data?.total);
 
   // `useCallback` vì `refresh` nằm trong deps của `columns`: hàm mới mỗi render sẽ làm
   // memo tính lại mỗi render, tức vô hiệu hoá chính nó. `queryClient` bền tham chiếu.
