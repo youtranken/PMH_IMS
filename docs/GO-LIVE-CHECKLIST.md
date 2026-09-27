@@ -481,7 +481,7 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
   - API không khởi động nếu thiếu chìa mà dữ liệu vẫn cần.
   - Test bảng dữ liệu cho `rewrap()` và một bài `api/test/` chạy trên DB thật.
   - Mục runbook "Xoay chìa khi nghi lộ".
-- [ ] **DOM-02 · IP còn 2 trạng thái: Trống / Đang dùng** (Q-02).
+- [x] **DOM-02 · IP còn 2 trạng thái: Trống / Đang dùng** (Q-02).
   - Migration đổi CHECK: `suspect_dead` → `assigned`, `reclaimed` → `free`.
   - Sửa `ip-lifecycle.ts`: nút Thu hồi đưa về Trống.
   - Sửa màn, i18n và E2E.
@@ -491,7 +491,7 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
     với actor `system`.
   - Gia hạn có ngày mới thì tự về `active`.
   - `expired_ok` không vào mail và không vào mục "đã hết hạn" trên dashboard. Thay thế BE-06.
-- [ ] **DOM-04 · ISP bỏ ngày kết thúc** (Q-04).
+- [x] **DOM-04 · ISP bỏ ngày kết thúc** (Q-04).
   - Gỡ `ispSource` khỏi registry nhắc hạn (`software-expiry-sources.ts:58`) và bỏ gia hạn ISP.
   - Trạng thái `terminated` hiện là "Thanh lý", ghi ngày và người thanh lý.
   - Cột `end_date` giữ trong DB (migration chỉ tiến) nhưng không còn trên form hay màn.
