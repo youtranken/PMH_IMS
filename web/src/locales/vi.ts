@@ -1345,6 +1345,10 @@ export default {
     stateCancelled: 'Đã hủy',
     stateExpired: 'Hết hạn',
     stateRevoked: 'Đã thu hồi',
+    cardLabel: 'Yêu cầu của {{member}}',
+    fromMail: 'Yêu cầu trong thư',
+    focusGone:
+      'Yêu cầu trong thư không còn chờ duyệt — có thể người khác đã xử lý. Xem tab Nhật ký.',
   },
   /**
    * SỔ LỊCH SỬ — mọi nhãn của tab "Lịch sử" trên sáu trang chi tiết.

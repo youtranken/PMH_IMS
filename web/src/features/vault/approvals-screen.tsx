@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
@@ -95,6 +96,9 @@ export function ApprovalsScreen({ me }: { me: Me }) {
    */
   const [tab, setTab] = useState(canDecide ? 'pending' : 'mine');
   const [deciding, setDeciding] = useState<{ row: ApprovalRow; approve: boolean } | null>(null);
+  /* `?id=` đến từ nút trong thư duyệt: yêu cầu đó lên đầu hàng chờ và được đánh dấu. */
+  const [searchParams] = useSearchParams();
+  const focusId = searchParams.get('id');
   const [logPage, setLogPage] = useState(1);
   const [minePage, setMinePage] = useState(1);
 
@@ -136,8 +140,12 @@ export function ApprovalsScreen({ me }: { me: Me }) {
    * đều dùng `LoadError`; riêng màn này thì không import nó.
    */
   const active = tab === 'pending' ? pending : tab === 'log' ? log : mine;
-  const items =
+  const loaded =
     (tab === 'pending' ? pending.data : tab === 'log' ? log.data?.items : mine.data?.items) ?? [];
+  const focused = focusId && tab === 'pending' ? loaded.find((row) => row.id === focusId) : undefined;
+  const items = focused ? [focused, ...loaded.filter((row) => row !== focused)] : loaded;
+  // Yêu cầu trong thư đã được người khác xử lý: nói ra, đừng để người duyệt tưởng link hỏng.
+  const focusGone = Boolean(focusId) && tab === 'pending' && pending.isSuccess && !focused;
   // Hàng chờ duyệt tự giới hạn (mỗi người một yêu cầu treo trên một đối tượng) nên không phân trang.
   const paged =
     tab === 'log'
@@ -186,6 +194,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
       />
 
       <TabPanel tabKey={tab}>
+        {focusGone ? <p className="muted">{t('approvals.focusGone')}</p> : null}
         {loading ? (
           <Loading />
         ) : failed ? (
@@ -204,7 +213,12 @@ export function ApprovalsScreen({ me }: { me: Me }) {
         ) : (
           <div className="approval-list">
             {items.map((row) => (
-              <section key={row.id} className="card device-panel">
+              <section
+                key={row.id}
+                className="card device-panel"
+                aria-label={t('approvals.cardLabel', { member: row.requester })}
+                aria-current={row === focused ? 'true' : undefined}
+              >
                 <div className="row" style={{ gap: 'var(--space-3)', flexWrap: 'wrap' }}>
                   {/*
                     QUYỀN ĐÃ HẾT HIỆU LỰC THÌ KHÔNG ĐƯỢC ĐEO HUY HIỆU XANH (sửa 17/09/2026).
@@ -219,6 +233,9 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                       ? t('approvals.stateApprovedOver')
                       : t(STATE_LABEL[row.state] ?? row.state)}
                   </span>
+                  {row === focused ? (
+                    <span className="badge warn">{t('approvals.fromMail')}</span>
+                  ) : null}
                   <strong>{row.requester}</strong>
                   <span className="muted">{formatDateTime(row.createdAt)}</span>
                 </div>

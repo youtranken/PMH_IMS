@@ -83,3 +83,12 @@ describe('Giờ in trong thư là giờ sự kiện, theo múi giờ ứng dụn
     expect(sent[0].text).toContain(EXPECTED);
   });
 });
+
+/** DOM-06 — nút trong thư duyệt dẫn thẳng tới yêu cầu đó, không phải cả màn duyệt. */
+describe('Thư duyệt break-glass', () => {
+  it.each(['approval.requested', 'approval.reminder'])('%s trỏ tới /approvals?id=<yêu cầu>', async (topic) => {
+    const sent: { text: string; html?: string }[] = [];
+    await consumer(sent).handle(topic, 'o1');
+    expect(sent[0].text).toContain('/approvals?id=a1');
+  });
+});

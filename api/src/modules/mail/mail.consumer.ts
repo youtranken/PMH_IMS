@@ -144,8 +144,8 @@ export class MailConsumer {
         { label: 'Lý do', value: request.reason },
         { label: 'Lúc', value: at(request.createdAt) },
       ],
-      ctaLabel: 'Mở màn duyệt',
-      ctaUrl: `${APP_URL()}${UI_PATHS.approvals}`,
+      ctaLabel: 'Mở yêu cầu này',
+      ctaUrl: `${APP_URL()}${UI_PATHS.approval(request.id)}`,
       footnote:
         'Duyệt được trên điện thoại. Quyền cấp ra luôn có thời hạn và tự cắt khi hết giờ.',
     });
