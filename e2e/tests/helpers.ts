@@ -712,7 +712,6 @@ export async function writeHeaders(page: Page): Promise<Record<string, string>> 
 /**
  * Id nhà mạng trong danh mục, tạo nếu chưa có — đường truyền nhận `providerId`, không nhận chữ
  * (Q-11). Tên PHẢI chứa "E2E": đó là thứ duy nhất vùng `catalog` của `reset-e2e.mjs` nhìn vào.
- * Tạo mục danh mục cần quyền SA/Admin, nên gọi từ phiên SA.
  */
 export async function ispProviderId(page: Page, name: string): Promise<string> {
   if (!name.includes('E2E')) throw new Error(`Tên nhà mạng của bài kiểm phải chứa "E2E": ${name}`);
@@ -726,6 +725,27 @@ export async function ispProviderId(page: Page, name: string): Promise<string> {
     data: { name },
   });
   expect(created.status()).toBe(201);
+  return ((await created.json()) as { id: string }).id;
+}
+
+/**
+ * Tạo một mục danh mục (site, loại thiết bị…) qua API, trả id. Bài nào cần danh mục thì tự
+ * gieo, không mượn dữ liệu có sẵn trong DB: máy chủ mới dựng có danh mục trắng. Mã hoặc tên
+ * PHẢI chứa "E2E" để `reset-e2e.mjs` dọn được.
+ */
+export async function catalogItem(
+  page: Page,
+  entity: 'site' | 'device_type' | 'vendor' | 'cabinet',
+  data: Record<string, unknown>,
+): Promise<string> {
+  if (!JSON.stringify(data).includes('E2E')) {
+    throw new Error(`Mục danh mục của bài kiểm phải chứa "E2E": ${JSON.stringify(data)}`);
+  }
+  const created = await page.request.post(`/api/v1/catalog/${entity}`, {
+    headers: await writeHeaders(page),
+    data,
+  });
+  expect(created.status(), `gieo ${entity} cho bài kiểm`).toBe(201);
   return ((await created.json()) as { id: string }).id;
 }
 
@@ -966,9 +986,20 @@ export async function rowAction(
 
 /** Menu ba chấm của một dòng CÓ mục này không — dùng để kiểm việc bị ẩn theo quyền. */
 export async function rowActionNames(page: Page, subject: string): Promise<string[]> {
-  await page.getByRole('button', { name: `Thao tác với ${subject}` }).click();
-  const names = await page.getByRole('menuitem').allTextContents();
+  const items = page.getByRole('menuitem');
+  /*
+   * Chờ menu mở rồi mới đọc: `allTextContents` không tự chờ. Lặp cả cú bấm vì bảng có thể nạp
+   * lại đúng lúc bấm — nút cũ bị gỡ khỏi DOM, menu không bao giờ mở, và đọc ra mảng rỗng.
+   */
+  await expect(async () => {
+    if ((await items.count()) === 0) {
+      await page.getByRole('button', { name: `Thao tác với ${subject}` }).click();
+    }
+    await expect(items.first()).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
+  const names = await items.allTextContents();
   await page.keyboard.press('Escape');
+  await expect(items).toHaveCount(0);
   return names;
 }
 

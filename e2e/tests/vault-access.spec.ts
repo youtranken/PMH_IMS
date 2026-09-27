@@ -12,6 +12,7 @@ import {
   resetSecrets,
   resetServiceAccounts,
   resetUsers,
+  catalogItem,
   uniqueStamp,
 } from './helpers';
 
@@ -116,9 +117,14 @@ test.describe('Ma trận quyền két sắt', () => {
   test('nhiều luật cùng áp thì lấy tầng rộng nhất', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
+    // Tự gieo site: máy chủ mới dựng có danh mục trắng, không có nhóm theo site nào để mượn.
+    const siteId = await catalogItem(page, 'site', {
+      code: `S-E2E-WIDE-${uniqueStamp()}`,
+      name: 'Site E2E tầng rộng',
+    });
     const options = await scopes(page);
     const byType = options.find((o) => o.scopeType === 'device_type')!;
-    const bySite = options.find((o) => o.scopeType === 'device_site');
+    const bySite = options.find((o) => o.scopeType === 'device_site' && o.scopeRef === siteId);
 
     await page.request.post('/api/v1/vault/access', {
       headers,

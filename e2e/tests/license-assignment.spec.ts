@@ -359,11 +359,20 @@ test.describe('Gán license theo seat', () => {
     const deviceId = await createDevice(page, deviceCode);
     expect((await assign(page, licenseId, deviceId, '', { cost: 1_000_000 })).status()).toBe(201);
 
-    await expandLicense(page, `LIC-E2E-EDIT-${stamp}`);
-    await expect(page.getByText('1.000.000 ₫')).toBeVisible();
-
-    await page.getByRole('button', { name: `Thao tác với ${deviceCode}` }).click();
-    await page.getByRole('menuitem', { name: 'Sửa' }).click();
+    const row = await expandLicense(page, `LIC-E2E-EDIT-${stamp}`);
+    /*
+     * Danh sách có thể nạp lại ngay sau cú bung (số ghế vừa đổi), và lượt nạp lại gập khu bung
+     * dòng — menu vừa mở biến mất theo. Lặp tới khi mở được hộp Sửa.
+     */
+    await expect(async () => {
+      if (!(await page.getByText('1.000.000 ₫').isVisible())) {
+        await row.getByRole('button').first().click();
+      }
+      await expect(page.getByText('1.000.000 ₫')).toBeVisible({ timeout: 2_000 });
+      await page.getByRole('button', { name: `Thao tác với ${deviceCode}` }).click();
+      await page.getByRole('menuitem', { name: 'Sửa' }).click({ timeout: 2_000 });
+      await expect(page.getByRole('dialog')).toBeVisible({ timeout: 2_000 });
+    }).toPass({ timeout: 20_000 });
     const form = page.getByRole('dialog');
     // Máy KHÔNG sửa được ở đây: đổi máy phải là gỡ rồi gán lại, nếu không thì lịch sử
     // "key này từng nhập máy nào" mất một chặng.
