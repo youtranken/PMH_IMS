@@ -136,7 +136,7 @@ export class DevicePortsService {
           .values({ ...values, deviceId } as never)
           .returning();
       } catch (error) {
-        throw this.translate(error);
+        throw this.translate(error, (values.connectedPort as string | null | undefined) ?? null);
       }
       await this.devices.recordWithin(tx, actor, deviceId, 'port-added', {
         portLabel: { before: null, after: values.portLabel as string },
@@ -162,7 +162,12 @@ export class DevicePortsService {
           .set({ ...values, updatedAt: new Date() })
           .where(eq(devicePortTable.id, portId));
       } catch (error) {
-        throw this.translate(error);
+        throw this.translate(
+          error,
+          values.connectedPort !== undefined
+            ? (values.connectedPort as string | null)
+            : before.connectedPort,
+        );
       }
       await this.devices.recordWithin(tx, actor, deviceId, 'port-updated', {
         portLabel: {
@@ -266,10 +271,22 @@ export class DevicePortsService {
     return found;
   }
 
-  private translate(error: unknown): unknown {
-    return conflictOnUnique(error, {
-      code: 'PORT_LABEL_TAKEN',
-      message: 'Thiết bị này đã có dòng cho cổng đó.',
-    });
+  private translate(error: unknown, peerPort: string | null): unknown {
+    const peerTaken = conflictOnUnique(
+      error,
+      {
+        code: 'PORT_PEER_TAKEN',
+        message:
+          `Cổng ${peerPort ? `"${peerPort}" ` : ''}của thiết bị đầu kia đã có một dòng port map ` +
+          'khác ghi đấu vào. Một sợi dây chỉ ghi một lần — sửa dòng đang có thay vì thêm dòng mới.',
+      },
+      'device_port_peer_port_key',
+    );
+    if (peerTaken !== error) return peerTaken;
+    return conflictOnUnique(
+      error,
+      { code: 'PORT_LABEL_TAKEN', message: 'Thiết bị này đã có dòng cho cổng đó.' },
+      'device_port_label_key',
+    );
   }
 }

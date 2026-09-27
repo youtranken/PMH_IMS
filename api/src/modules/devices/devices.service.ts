@@ -624,6 +624,19 @@ export class DevicesService {
   }
 
   private translateWriteError(error: unknown): unknown {
+    // Chỉ có đường MỞ LẠI máy đã thanh lý chạm tới khoá này (trigger 0070): cổng máy này từng
+    // ghi đấu vào nay đã có máy khác chiếm. Không bắt riêng thì nó rơi xuống câu "trùng mã".
+    const peerTaken = conflictOnUnique(
+      error,
+      {
+        code: 'PORT_PEER_TAKEN',
+        message:
+          'Không mở lại được: port map của máy này ghi đấu vào một cổng mà nay đã có thiết bị ' +
+          'khác chiếm. Sửa hoặc gỡ dòng port map ở máy đang chiếm cổng đó trước rồi mở lại.',
+      },
+      'device_port_peer_port_key',
+    );
+    if (peerTaken !== error) return peerTaken;
     return conflictOnUnique(error, {
       code: 'DEVICE_CODE_TAKEN',
       message: 'Đã có thiết bị mang mã này (không phân biệt hoa-thường).',
