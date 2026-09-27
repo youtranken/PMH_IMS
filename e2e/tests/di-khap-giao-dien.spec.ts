@@ -7198,7 +7198,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     const hop = page.getByRole('dialog', { name: 'Nhập danh mục từ Excel', exact: true });
     await expect(hop).toBeVisible();
     await expect(
-      hop.getByText('Chọn file .xlsx'),
+      hop.getByText('Chọn file .xlsx', { exact: true }),
       'hộp nhập phải có chỗ chọn file — không thì ba cái nút ở chân chẳng để làm gì',
     ).toBeVisible();
     await expect(
