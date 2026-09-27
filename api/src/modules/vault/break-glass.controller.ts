@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Param, Post, Req, Res } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
 import { IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
 import { Audited } from '../audit/audited.decorator';
+import { parsePageQuery } from '../../common/pagination';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
@@ -56,8 +57,8 @@ export class BreakGlassController {
   /** Yêu cầu của CHÍNH MÌNH — Member mở màn này để xem đã được duyệt chưa. */
   @Roles('sa', 'admin', 'member')
   @Get('mine')
-  mine(@Req() req: AuthedRequest) {
-    return this.breakGlass.mine(actor(req));
+  mine(@Req() req: AuthedRequest, @Query() query: { page?: string; limit?: string }) {
+    return this.breakGlass.mine(actor(req), parsePageQuery(query));
   }
 
   /** Hàng chờ của người duyệt. */
@@ -70,8 +71,8 @@ export class BreakGlassController {
   /** FR-025: nhật ký đầy đủ — ai xin, lý do, ai duyệt, hết hạn lúc nào. Dashboard Epic 7 đọc. */
   @Roles('sa', 'admin')
   @Get('log')
-  log() {
-    return this.breakGlass.log();
+  log(@Query() query: { page?: string; limit?: string }) {
+    return this.breakGlass.log(parsePageQuery(query));
   }
 
   /**
@@ -85,7 +86,7 @@ export class BreakGlassController {
   @Audited('break_glass.exported', 'approval')
   @Get('export.xlsx')
   async export(@Res() res: Response) {
-    const rows = await this.breakGlass.log();
+    const rows = await this.breakGlass.logAll();
     const tz = await this.config.getString('appTimezone');
     const buffer = await this.excel.build({
       sheetName: 'Nhat ky break-glass',

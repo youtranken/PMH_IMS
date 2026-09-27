@@ -12,6 +12,7 @@ import type { Database } from '../../database/database.module';
 import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
 import { ApprovalsApiService, type ApprovalRecord } from '../approvals/approvals.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
+import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import { conflictOnUnique } from '../../common/sql';
 import { OutboxService } from '../outbox/outbox.service';
 import { AccessListService } from './access-list.service';
@@ -370,12 +371,23 @@ export class BreakGlassService implements OnModuleInit {
     return this.approvals.pending(BREAK_GLASS_KIND);
   }
 
-  mine(memberEmail: string): Promise<ApprovalRecord[]> {
-    return this.approvals.list({ kind: BREAK_GLASS_KIND, requester: memberEmail });
+  mine(memberEmail: string, paging: PageQuery): Promise<Page<ApprovalRecord>> {
+    return this.approvals.page(
+      { kind: BREAK_GLASS_KIND, requester: memberEmail },
+      { limit: paging.limit, offset: pageOffset(paging) },
+    );
   }
 
-  /** FR-025: nhật ký break-glass đầy đủ cho dashboard Epic 7. */
-  log(): Promise<ApprovalRecord[]> {
+  /** FR-025: nhật ký break-glass, từng trang cho màn hình. */
+  log(paging: PageQuery): Promise<Page<ApprovalRecord>> {
+    return this.approvals.page(
+      { kind: BREAK_GLASS_KIND },
+      { limit: paging.limit, offset: pageOffset(paging) },
+    );
+  }
+
+  /** Trọn nhật ký — chỉ cho file xuất nộp auditor, nơi thiếu dòng là sai. */
+  logAll(): Promise<ApprovalRecord[]> {
     return this.approvals.list({ kind: BREAK_GLASS_KIND });
   }
 

@@ -389,7 +389,7 @@ test.describe('Break-glass', () => {
     expect(await failed.json()).toMatchObject({ code: 'BREAK_GLASS_PENDING' });
 
     const mine = await page.request.get('/api/v1/vault/break-glass/mine');
-    const rows = (await mine.json()) as { state: string }[];
+    const rows = ((await mine.json()) as { items: { state: string }[] }).items;
     expect(rows.filter((r) => r.state === 'pending').length).toBe(1);
   });
 

@@ -10,6 +10,7 @@ import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
+import { Pagination } from '@/ui/pagination';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
@@ -31,6 +32,14 @@ interface ApprovalRow {
   expiresAt: string | null;
   createdAt: string;
   active: boolean;
+}
+
+/** Nhật ký và "của tôi" chỉ lớn lên theo thời gian — server cắt trang, màn này không tải cả kho. */
+const PAGE_LIMIT = 20;
+
+interface ApprovalPage {
+  items: ApprovalRow[];
+  total: number;
 }
 
 const STATE_LABEL: Record<string, string> = {
@@ -86,6 +95,8 @@ export function ApprovalsScreen({ me }: { me: Me }) {
    */
   const [tab, setTab] = useState(canDecide ? 'pending' : 'mine');
   const [deciding, setDeciding] = useState<{ row: ApprovalRow; approve: boolean } | null>(null);
+  const [logPage, setLogPage] = useState(1);
+  const [minePage, setMinePage] = useState(1);
 
 
   const pending = useQuery({
@@ -95,14 +106,16 @@ export function ApprovalsScreen({ me }: { me: Me }) {
   });
 
   const log = useQuery({
-    queryKey: ['break-glass', 'log'],
-    queryFn: () => apiFetch<ApprovalRow[]>('/api/v1/vault/break-glass/log'),
+    queryKey: ['break-glass', 'log', logPage],
+    queryFn: () =>
+      apiFetch<ApprovalPage>(`/api/v1/vault/break-glass/log?page=${logPage}&limit=${PAGE_LIMIT}`),
     enabled: canDecide && tab === 'log',
   });
 
   const mine = useQuery({
-    queryKey: ['break-glass', 'mine'],
-    queryFn: () => apiFetch<ApprovalRow[]>('/api/v1/vault/break-glass/mine'),
+    queryKey: ['break-glass', 'mine', minePage],
+    queryFn: () =>
+      apiFetch<ApprovalPage>(`/api/v1/vault/break-glass/mine?page=${minePage}&limit=${PAGE_LIMIT}`),
     enabled: tab === 'mine',
   });
 
@@ -123,7 +136,15 @@ export function ApprovalsScreen({ me }: { me: Me }) {
    * đều dùng `LoadError`; riêng màn này thì không import nó.
    */
   const active = tab === 'pending' ? pending : tab === 'log' ? log : mine;
-  const items = active.data ?? [];
+  const items =
+    (tab === 'pending' ? pending.data : tab === 'log' ? log.data?.items : mine.data?.items) ?? [];
+  // Hàng chờ duyệt tự giới hạn (mỗi người một yêu cầu treo trên một đối tượng) nên không phân trang.
+  const paged =
+    tab === 'log'
+      ? { page: logPage, set: setLogPage, total: log.data?.total ?? 0 }
+      : tab === 'mine'
+        ? { page: minePage, set: setMinePage, total: mine.data?.total ?? 0 }
+        : null;
   const loading = active.isLoading;
   const failed = active.isError;
 
@@ -310,6 +331,14 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                 ) : null}
               </section>
             ))}
+            {paged ? (
+              <Pagination
+                page={paged.page}
+                limit={PAGE_LIMIT}
+                total={paged.total}
+                onPageChange={paged.set}
+              />
+            ) : null}
           </div>
         )}
       </TabPanel>

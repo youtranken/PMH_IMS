@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { runMigrations } from '../src/database/migration-runner';
 import { ApprovalKindRegistry } from '../src/common/approvals/approvals-registry';
 import type { AuditWriterService } from '../src/modules/audit/audit-writer.service';
@@ -89,6 +90,50 @@ describe('ApprovalsService', () => {
         note: 'Xong việc sớm',
       });
       expect(revoked.decisionNote).toBeNull();
+    });
+  });
+
+  /**
+   * BE-10 — nhật ký break-glass, "yêu cầu của tôi" và khối trang chủ không được tải cả lịch
+   * sử rồi mới lọc/cắt trong JS: bảng chỉ lớn lên, mỗi lần mở trang chủ đọc lại toàn bộ.
+   */
+  describe('BE-10 · page(): lọc `since` và cắt trang trong SQL', () => {
+    const requester = 'member.page@pmh.com.vn';
+
+    beforeAll(async () => {
+      // Mỗi yêu cầu một đối tượng: mỗi người chỉ được treo một yêu cầu trên một đối tượng.
+      for (let i = 0; i < 5; i += 1) await create(requester, randomUUID());
+      // Hai yêu cầu cũ 30 ngày — ngoài cửa sổ "tuần qua".
+      const old = await create(requester, randomUUID());
+      const older = await create(requester, randomUUID());
+      await scratch.pool.query(
+        `UPDATE approval SET created_at = now() - interval '30 days' WHERE id = ANY($1)`,
+        [[old.id, older.id]],
+      );
+    }, TEST_TIMEOUT);
+
+    it.each([
+      { name: 'trang 1 cỡ 3', since: undefined, limit: 3, offset: 0, items: 3, total: 7 },
+      { name: 'trang cuối', since: undefined, limit: 3, offset: 6, items: 1, total: 7 },
+      { name: 'chỉ 7 ngày qua', since: 7, limit: 50, offset: 0, items: 5, total: 5 },
+      { name: '7 ngày qua, cắt 2', since: 7, limit: 2, offset: 0, items: 2, total: 5 },
+    ])('$name → $items dòng, total $total', async ({ since, limit, offset, items, total }) => {
+      const result = await approvals.page(
+        {
+          kind: KIND,
+          requester,
+          since: since === undefined ? undefined : new Date(Date.now() - since * 86_400_000),
+        },
+        { limit, offset },
+      );
+      expect(result.items).toHaveLength(items);
+      expect(result.total).toBe(total);
+    });
+
+    it('mới nhất lên đầu', async () => {
+      const { items } = await approvals.page({ kind: KIND, requester }, { limit: 50, offset: 0 });
+      const times = items.map((row) => row.createdAt.getTime());
+      expect(times).toEqual([...times].sort((a, b) => b - a));
     });
   });
 });

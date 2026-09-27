@@ -152,7 +152,7 @@ export class DashboardService {
       this.expiringBlock(),
       // AC: Member thấy dashboard RÚT GỌN — không có khối break-glass toàn cục. Họ vẫn xem
       // được yêu cầu của chính mình ở màn Duyệt yêu cầu.
-      isBoss ? this.breakGlassBlock() : emptyBlock<BreakGlassEntry>(),
+      isBoss ? this.breakGlassBlock(now) : emptyBlock<BreakGlassEntry>(),
       this.subnetLoadBlock(),
       /*
        * Khối két CHỈ cho SA/Admin, đúng bằng quyền của `GET /vault/owners` (26/08).
@@ -321,16 +321,19 @@ export class DashboardService {
     }
   }
 
-  private async breakGlassBlock(): Promise<Dashboard['breakGlass']> {
+  private async breakGlassBlock(now: Date): Promise<Dashboard['breakGlass']> {
     try {
-      const since = new Date(Date.now() - WEEK_DAYS * 86_400_000);
-      const all = await this.approvals.list({ kind: 'break_glass' });
-      const recent = all.filter((row) => row.createdAt.getTime() >= since.getTime());
+      // Lọc tuần và cắt 8 dòng trong SQL: bảng này chỉ lớn lên, trang chủ mở mỗi sáng.
+      const since = new Date(now.getTime() - WEEK_DAYS * 86_400_000);
+      const recent = await this.approvals.page(
+        { kind: 'break_glass', since },
+        { limit: MAX_ITEMS, offset: 0 },
+      );
 
       return {
         available: true,
-        total: recent.length,
-        items: await Promise.all(recent.slice(0, 8).map((row) => this.toEntry(row))),
+        total: recent.total,
+        items: await Promise.all(recent.items.map((row) => this.toEntry(row))),
       };
     } catch (error) {
       this.logger.warn(`khối break-glass lỗi: ${message(error)}`);
