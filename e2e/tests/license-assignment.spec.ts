@@ -177,7 +177,7 @@ test.describe('Gán license theo seat', () => {
   /** BE-09: sửa hồ sơ không được bỏ rơi ghế đang gán; hồ sơ đã thanh lý không nhận ghế mới. */
   test('sửa hồ sơ đang có ghế bị chặn, gán vào hồ sơ đã thanh lý bị chặn', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const licenseId = await createLicense(page, `LIC-E2E-GUARD-${stamp}`, 5);
     const first = await createDevice(page, `PC-E2E-G1-${stamp}`);
     const second = await createDevice(page, `PC-E2E-G2-${stamp}`);
