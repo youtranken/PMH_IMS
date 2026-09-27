@@ -511,7 +511,7 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
 - [x] **DOM-08 · Nhãn IP "Đang cấp" → "Đang dùng"** (Q-10).
 - [x] **DOM-09 · ISP đã Thanh lý hiện trong Kho thanh lý** (Q-10).
 - [x] **DOM-10 · Gỡ loại `isp` khỏi luật mail nhắc hạn cũ** (Q-10).
-- [ ] **DOM-11 · Member được tạo/sửa mọi danh mục** (Q-12): mở `@Roles` tạo/sửa của catalog cho
+- [x] **DOM-11 · Member được tạo/sửa mọi danh mục** (Q-12): mở `@Roles` tạo/sửa của catalog cho
   `member`; vô hiệu hoá/xoá/nhập Excel vẫn SA/Admin; web hiện nút Thêm/Sửa cho member; E2E.
 - [x] **DOM-06 · Mail duyệt break-glass trỏ thẳng tới yêu cầu cụ thể** (`mail.consumer.ts:137`), thay
   vì mở cả màn duyệt. Vẫn phải đăng nhập và qua TOTP.

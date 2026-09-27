@@ -141,7 +141,8 @@ export class CatalogController {
     return this.catalog.history(params.entity, params.id);
   }
 
-  @Roles('sa', 'admin')
+  // Q-12: member được tạo và sửa; vô hiệu hoá, xoá, nhập Excel vẫn chỉ SA/Admin.
+  @Roles('sa', 'admin', 'member')
   @Post(':entity')
   @Audited('catalog.created', 'catalog', { writtenByService: true })
   create(
@@ -152,7 +153,8 @@ export class CatalogController {
     return this.catalog.create(actor(req), params.entity, body);
   }
 
-  @Roles('sa', 'admin')
+  // Q-12: member được tạo và sửa; vô hiệu hoá, xoá, nhập Excel vẫn chỉ SA/Admin.
+  @Roles('sa', 'admin', 'member')
   @Patch(':entity/:id')
   @Audited('catalog.updated', 'catalog', { writtenByService: true })
   update(
