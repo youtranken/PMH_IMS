@@ -16,6 +16,9 @@ export default {
     notFoundData: 'Không tìm thấy dữ liệu. Hồ sơ có thể đã bị xóa, hoặc đường dẫn đã cũ.',
     serverError: 'Máy chủ đang gặp sự cố. Thử lại sau ít phút; vẫn vậy thì báo bộ phận IT.',
     retry: 'Thử lại',
+    /* Tiêu đề khi `/auth/me` hỏng vì lý do KHÁC 401 (API khởi động lại, mất mạng): chưa biết
+       phiên còn hay không, nên không được nói "bạn chưa đăng nhập". */
+    sessionCheckFailed: 'Chưa kiểm tra được phiên đăng nhập',
     notFoundTitle: 'Không tìm thấy trang',
     notFoundHint: 'Trang bạn tìm không tồn tại, hoặc thuộc phần chưa mở trong bản này.',
     backHome: 'Về trang chủ',

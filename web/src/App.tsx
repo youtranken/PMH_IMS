@@ -6,6 +6,7 @@ import {
   useLocation,
   useParams,
 } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useMe } from '@/lib/api';
 import {
   CHANGE_PASSWORD_PATH,
@@ -18,7 +19,7 @@ import {
 import { LEGACY_ROUTES, PATHS, canSeeRoute } from '@/lib/routes';
 import { AppShell } from '@/shell/app-shell';
 import { ConfirmProvider } from '@/ui/confirm-provider';
-import { Loading, NotFound } from '@/ui/load-state';
+import { LoadError, Loading, NotFound } from '@/ui/load-state';
 import { ToastProvider } from '@/ui/toast';
 import { AccountsScreen } from '@/features/admin/accounts-screen';
 import { AuditLogScreen } from '@/features/admin/audit-log-screen';
@@ -40,6 +41,7 @@ import { IspScreen } from '@/features/isp/isp-screen';
 import { SoftwareDetail } from '@/features/software/software-detail';
 import { SoftwareScreen } from '@/features/software/software-screen';
 import { ChangePassword } from '@/features/auth/change-password';
+import { AuthCard } from '@/features/auth/auth-card';
 import { LoginScreen } from '@/features/auth/login-screen';
 import { TotpChallenge } from '@/features/auth/totp-challenge';
 import { TotpEnroll } from '@/features/auth/totp-enroll';
@@ -81,7 +83,8 @@ function LegacyRedirect({ to, withId }: { to: string; withId?: boolean }) {
 }
 
 function AppRoutes() {
-  const { data: me, isLoading } = useMe();
+  const { t } = useTranslation();
+  const { data: me, isLoading, isError, error, refetch } = useMe();
   const location = useLocation();
   /*
    * Gọi ở ĐÂY, trước mọi lượt `return` sớm, vì hai lý do:
@@ -93,6 +96,20 @@ function AppRoutes() {
    */
   usePageTitle();
   if (isLoading) return <Loading />;
+
+  /*
+   * `/auth/me` hỏng (502 lúc API khởi động lại, mất mạng) KHÔNG phải "chưa đăng nhập" — 401
+   * đã được `useMe` đổi thành `null` rồi. Coi lỗi là chưa đăng nhập thì người có phiên hợp lệ
+   * bị đẩy về màn đăng nhập, và nếu API chưa lên thì màn đó cũng hỏng nốt. Chỉ chặn khi CHƯA
+   * có dữ liệu: lượt hỏi lại nền hỏng mà đã biết phiên thì cứ dùng bản đã biết.
+   */
+  if (isError && me === undefined) {
+    return (
+      <AuthCard title={t('app.sessionCheckFailed')}>
+        <LoadError error={error} onRetry={() => void refetch()} />
+      </AuthCard>
+    );
+  }
 
   const step = nextStepPath(me ?? null);
   /*
