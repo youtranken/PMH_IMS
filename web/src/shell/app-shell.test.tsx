@@ -18,7 +18,7 @@ const ME: Me = {
   config: { stepUpGraceMinutes: 10, secretRevealSeconds: 30 },
 };
 
-function dung() {
+function renderShell() {
   return renderWithI18n(
     <ToastProvider>
       <MemoryRouter initialEntries={['/']}>
@@ -56,7 +56,7 @@ afterEach(() => {
 describe('AppShell — đăng xuất', () => {
   it('đăng xuất lỗi (mất mạng) → vẫn về màn đăng nhập VÀ báo lỗi cho người dùng', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
-    dung();
+    renderShell();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Đăng xuất' }));
     expect(await screen.findByText('Màn đăng nhập')).toBeInTheDocument();
     expect(await screen.findByText(/Đăng xuất chưa thành công/)).toBeInTheDocument();
@@ -64,7 +64,7 @@ describe('AppShell — đăng xuất', () => {
 
   it('đăng xuất thành công → về màn đăng nhập, không có toast lỗi', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { status: 'ok' })));
-    dung();
+    renderShell();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Đăng xuất' }));
     expect(await screen.findByText('Màn đăng nhập')).toBeInTheDocument();
     expect(screen.queryByText(/Đăng xuất chưa thành công/)).not.toBeInTheDocument();
