@@ -149,7 +149,11 @@ export class ApprovalsService {
         // không được ghi đè tên người đã duyệt — nhật ký phải giữ đúng ai là người quyết.
         decidedBy: before.decidedBy ?? (decided ? input.actor : null),
         decidedAt: before.decidedAt ?? (decided ? new Date() : null),
-        decisionNote: input.note?.trim() || before.decisionNote,
+        // Cùng luật với `decidedBy`: ghi chú là lời của người QUYẾT. Lời của người thu hồi về
+        // sau chỉ vào lịch sử và audit, không được mượn tên người đã duyệt.
+        decisionNote: before.decidedBy
+          ? before.decisionNote
+          : (decided ? input.note?.trim() || null : before.decisionNote),
         expiresAt: input.expiresAt === undefined ? before.expiresAt : input.expiresAt,
         updatedAt: new Date(),
       })
