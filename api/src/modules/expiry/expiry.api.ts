@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import type { Tx } from '../../common/tx';
 import { ExpiryDigestService } from './expiry-digest.service';
-import { ExpiryService, type ExpiryRow, type ExpirySummary } from './expiry.service';
+import {
+  ExpiryService,
+  type ExpiryLevel,
+  type ExpiryRow,
+  type ExpirySummary,
+} from './expiry.service';
 
 /**
  * AD-2: public api DUY NHẤT của module `expiry`.
@@ -31,8 +36,17 @@ export class ExpiryApiService {
       kinds?: string[];
       /** Chỉ lấy `limit` dòng đầu — nơi gọi chỉ bày vài dòng thì đừng kéo cả kho về (N-01). */
       limit?: number;
+      /** false = chỉ mục chưa tới hạn (không nhìn lùi). */
+      includeExpired?: boolean;
+      /** Chỉ một nhóm: quá hạn · gấp · sắp tới. */
+      state?: ExpiryLevel;
     } = {},
-  ): Promise<{ items: ExpiryRow[]; total: number; summary: ExpirySummary }> {
+  ): Promise<{
+    items: ExpiryRow[];
+    total: number;
+    summary: ExpirySummary;
+    failedKinds: string[];
+  }> {
     return this.expiry.list(options);
   }
 

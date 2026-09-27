@@ -7,6 +7,7 @@ import {
   APP_ORIGIN,
   E2E_SA,
   firstLogin,
+  ispProviderId,
   resetCatalog,
   resetDevices,
   resetIpam,
@@ -14,6 +15,7 @@ import {
   resetSoftware,
   resetUsers,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -154,7 +156,11 @@ test.describe('Máy đã thanh lý không nhận thêm gì nữa', () => {
 
     const res = await page.request.post('/api/v1/isp-lines', {
       headers: await writeHeaders(page),
-      data: { code: `ISP-E2E-RT-${stamp}`, provider: 'Viettel', deviceId },
+      data: {
+        code: `ISP-E2E-RT-${stamp}`,
+        providerId: await ispProviderId(page, 'Viettel E2E'),
+        deviceId,
+      },
     });
     expect(res.status()).toBe(400);
     expect(((await res.json()) as { code?: string }).code).toBe(CODE);
@@ -299,7 +305,7 @@ test.describe('Ba cửa ghi trong chính module devices', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `SW-E2E-RTI-${stamp}`;
     const deviceId = await makeDevice(page, code, 'Switch');
     await retire(page, deviceId);
@@ -350,7 +356,7 @@ test.describe('Ba cửa ghi trong chính module devices', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `SW-E2E-RTS-${stamp}`;
     const deviceId = await makeDevice(page, code, 'Switch');
 

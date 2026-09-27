@@ -39,13 +39,20 @@ export class ExpirySourceRegistry {
    * Gom mọi mục hết hạn trong [from, to] từ TẤT CẢ nguồn đã đăng ký.
    *
    * Một nguồn hỏng chỉ mất phần của nguồn đó — màn cảnh báo hạn mà sập vì một module phụ
-   * thì đúng thứ nó sinh ra để chống (hết hạn bất ngờ) lại xảy ra.
+   * thì đúng thứ nó sinh ra để chống (hết hạn bất ngờ) lại xảy ra. Nhưng tên nguồn hỏng phải
+   * đi kèm kết quả: một danh sách thiếu phần trông y hệt một danh sách đủ, và nơi gọi (digest,
+   * dashboard, file xuất) mới biết được mình có được phép tin nó hay không.
    */
-  async collect(from: string, to: string, kinds?: string[]): Promise<ExpiryItem[]> {
+  async collect(
+    from: string,
+    to: string,
+    kinds?: string[],
+  ): Promise<{ items: ExpiryItem[]; failed: string[] }> {
     const wanted = kinds?.length
       ? this.sources.filter((source) => kinds.includes(source.sourceKind))
       : this.sources;
 
+    const failed: string[] = [];
     const results = await Promise.all(
       wanted.map(async (source) => {
         try {
@@ -54,12 +61,13 @@ export class ExpirySourceRegistry {
           this.logger.error(
             `Nguồn hạn "${source.sourceKind}" lỗi: ${redactMessage(error)}`,
           );
+          failed.push(source.sourceKind);
           return [] as ExpiryItem[];
         }
       }),
     );
     // Sắp theo ngày hết hạn: thứ gấp nhất nằm trên cùng, đó là lý do người ta mở màn này.
-    return results.flat().sort((a, b) => a.end.localeCompare(b.end));
+    return { items: results.flat().sort((a, b) => a.end.localeCompare(b.end)), failed };
   }
 }
 

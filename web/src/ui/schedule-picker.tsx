@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import i18n from '@/lib/i18n';
 
 export type ScheduleFrequency = 'daily' | 'weekly' | 'monthly';
 
@@ -12,14 +13,15 @@ export interface ScheduleValue {
   dayOfMonth?: number;
 }
 
+/** 1=Thứ Hai … 7=Chủ Nhật — cùng quy ước với API (ISO 8601). Chữ ở `vi.ts`. */
 const WEEKDAYS = [
-  { value: 1, label: 'Thứ Hai' },
-  { value: 2, label: 'Thứ Ba' },
-  { value: 3, label: 'Thứ Tư' },
-  { value: 4, label: 'Thứ Năm' },
-  { value: 5, label: 'Thứ Sáu' },
-  { value: 6, label: 'Thứ Bảy' },
-  { value: 7, label: 'Chủ Nhật' },
+  { value: 1, labelKey: 'schedule.weekday1' },
+  { value: 2, labelKey: 'schedule.weekday2' },
+  { value: 3, labelKey: 'schedule.weekday3' },
+  { value: 4, labelKey: 'schedule.weekday4' },
+  { value: 5, labelKey: 'schedule.weekday5' },
+  { value: 6, labelKey: 'schedule.weekday6' },
+  { value: 7, labelKey: 'schedule.weekday7' },
 ];
 
 /**
@@ -42,7 +44,7 @@ export function SchedulePicker({
     <div className="row" role="group" aria-label={t('common.filter')}>
       <div className="field">
         <label className="lbl-t" htmlFor={`${idPrefix}-freq`}>
-          Tần suất
+          {t('schedule.frequency')}
         </label>
         <select
           id={`${idPrefix}-freq`}
@@ -61,7 +63,7 @@ export function SchedulePicker({
       {value.frequency === 'weekly' ? (
         <div className="field">
           <label className="lbl-t" htmlFor={`${idPrefix}-weekday`}>
-            Vào thứ
+            {t('schedule.weekdayLabel')}
           </label>
           <select
             id={`${idPrefix}-weekday`}
@@ -71,7 +73,7 @@ export function SchedulePicker({
           >
             {WEEKDAYS.map((d) => (
               <option key={d.value} value={d.value}>
-                {d.label}
+                {t(d.labelKey)}
               </option>
             ))}
           </select>
@@ -81,7 +83,7 @@ export function SchedulePicker({
       {value.frequency === 'monthly' ? (
         <div className="field">
           <label className="lbl-t" htmlFor={`${idPrefix}-dom`}>
-            Ngày trong tháng
+            {t('schedule.dayOfMonthLabel')}
           </label>
           <select
             id={`${idPrefix}-dom`}
@@ -91,7 +93,7 @@ export function SchedulePicker({
           >
             {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
               <option key={d} value={d}>
-                Ngày {d}
+                {t('schedule.dayOfMonth', { day: d })}
               </option>
             ))}
           </select>
@@ -100,7 +102,7 @@ export function SchedulePicker({
 
       <div className="field">
         <label className="lbl-t" htmlFor={`${idPrefix}-hour`}>
-          Lúc
+          {t('schedule.hourLabel')}
         </label>
         <select
           id={`${idPrefix}-hour`}
@@ -119,13 +121,13 @@ export function SchedulePicker({
   );
 }
 
-/** Mô tả lịch bằng tiếng Việt — dùng ở bảng danh sách luật, email, tooltip. */
+/** Mô tả lịch thành một câu — dùng ở bảng danh sách luật, email, tooltip. Chữ ở `vi.ts`. */
 export function describeSchedule(value: ScheduleValue): string {
   const hour = `${String(value.hour).padStart(2, '0')}:00`;
-  if (value.frequency === 'daily') return `Hằng ngày lúc ${hour}`;
+  if (value.frequency === 'daily') return i18n.t('schedule.describeDaily', { hour });
   if (value.frequency === 'weekly') {
-    const day = WEEKDAYS.find((d) => d.value === (value.weekday ?? 1))?.label ?? 'Thứ Hai';
-    return `Hằng tuần, ${day} lúc ${hour}`;
+    const weekday = WEEKDAYS.find((d) => d.value === (value.weekday ?? 1)) ?? WEEKDAYS[0];
+    return i18n.t('schedule.describeWeekly', { day: i18n.t(weekday.labelKey), hour });
   }
-  return `Hằng tháng, ngày ${value.dayOfMonth ?? 1} lúc ${hour}`;
+  return i18n.t('schedule.describeMonthly', { day: value.dayOfMonth ?? 1, hour });
 }

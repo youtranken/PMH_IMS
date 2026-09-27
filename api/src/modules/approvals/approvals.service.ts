@@ -4,11 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, desc, eq, isNotNull, lt, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, lt, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
+import type { Page } from '../../common/pagination';
 import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
 import { isGrantActive } from '../../common/approvals/approval-flow';
 import { AuditWriterService } from '../audit/audit-writer.service';
@@ -31,6 +32,27 @@ export interface ApprovalRecord {
   updatedAt: Date;
   /** Tính tại thời điểm đọc bằng đồng hồ, KHÔNG đọc từ DB (AD-6). */
   active: boolean;
+}
+
+export interface ApprovalFilters {
+  kind?: string;
+  state?: string;
+  requester?: string;
+  subjectType?: string;
+  subjectId?: string;
+  /** Chỉ yêu cầu tạo từ mốc này trở đi — lọc trong SQL. */
+  since?: Date;
+}
+
+function whereOf(filters: ApprovalFilters): SQL | undefined {
+  const where: SQL[] = [];
+  if (filters.kind) where.push(eq(approvalTable.kind, filters.kind));
+  if (filters.state) where.push(eq(approvalTable.state, filters.state));
+  if (filters.requester) where.push(eq(approvalTable.requester, filters.requester));
+  if (filters.subjectType) where.push(eq(approvalTable.subjectType, filters.subjectType));
+  if (filters.subjectId) where.push(eq(approvalTable.subjectId, filters.subjectId));
+  if (filters.since) where.push(gte(approvalTable.createdAt, filters.since));
+  return where.length > 0 ? and(...where) : undefined;
 }
 
 export interface CreateApprovalInput {
@@ -149,7 +171,11 @@ export class ApprovalsService {
         // không được ghi đè tên người đã duyệt — nhật ký phải giữ đúng ai là người quyết.
         decidedBy: before.decidedBy ?? (decided ? input.actor : null),
         decidedAt: before.decidedAt ?? (decided ? new Date() : null),
-        decisionNote: input.note?.trim() || before.decisionNote,
+        // Cùng luật với `decidedBy`: ghi chú là lời của người QUYẾT. Lời của người thu hồi về
+        // sau chỉ vào lịch sử và audit, không được mượn tên người đã duyệt.
+        decisionNote: before.decidedBy
+          ? before.decisionNote
+          : (decided ? input.note?.trim() || null : before.decisionNote),
         expiresAt: input.expiresAt === undefined ? before.expiresAt : input.expiresAt,
         updatedAt: new Date(),
       })
@@ -215,26 +241,38 @@ export class ApprovalsService {
       .limit(HISTORY_PAGE_LIMIT);
   }
 
-  async list(filters: {
-    kind?: string;
-    state?: string;
-    requester?: string;
-    subjectType?: string;
-    subjectId?: string;
-  }): Promise<ApprovalRecord[]> {
-    const where: SQL[] = [];
-    if (filters.kind) where.push(eq(approvalTable.kind, filters.kind));
-    if (filters.state) where.push(eq(approvalTable.state, filters.state));
-    if (filters.requester) where.push(eq(approvalTable.requester, filters.requester));
-    if (filters.subjectType) where.push(eq(approvalTable.subjectType, filters.subjectType));
-    if (filters.subjectId) where.push(eq(approvalTable.subjectId, filters.subjectId));
-
+  /**
+   * Toàn bộ yêu cầu khớp bộ lọc. Chỉ dùng khi bộ lọc tự giới hạn (một người trên một đối tượng
+   * đang chờ) hoặc khi cần đủ lịch sử thật (file xuất cho auditor). Màn hình và trang chủ đi
+   * qua `page()`: bảng này chỉ lớn lên, tải hết rồi cắt trong JS thì mỗi lần mở trang chủ đọc
+   * lại cả lịch sử.
+   */
+  async list(filters: ApprovalFilters): Promise<ApprovalRecord[]> {
     const rows = await this.db
       .select()
       .from(approvalTable)
-      .where(where.length > 0 ? and(...where) : undefined)
+      .where(whereOf(filters))
       .orderBy(desc(approvalTable.createdAt));
     return rows.map(toRecord);
+  }
+
+  /** Một trang, mới nhất trước; `total` đếm cả bộ lọc (kể cả `since`) chứ không phải trang. */
+  async page(
+    filters: ApprovalFilters,
+    paging: { limit: number; offset: number },
+  ): Promise<Page<ApprovalRecord>> {
+    const where = whereOf(filters);
+    const [rows, counted] = await Promise.all([
+      this.db
+        .select()
+        .from(approvalTable)
+        .where(where)
+        .orderBy(desc(approvalTable.createdAt), desc(approvalTable.id))
+        .limit(paging.limit)
+        .offset(paging.offset),
+      this.db.select({ n: sql<number>`count(*)::int` }).from(approvalTable).where(where),
+    ]);
+    return { items: rows.map(toRecord), total: counted[0].n };
   }
 
   /**

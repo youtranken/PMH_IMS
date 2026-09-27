@@ -11,6 +11,7 @@ import {
   fillLogin,
   firstLogin,
   freshTotpCode,
+  ispProviderId,
   logout,
   resetAccessList,
   resetApprovals,
@@ -30,6 +31,7 @@ import {
   sql,
   timVaChoLoc,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -415,7 +417,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     }
 
     /*
-     * Mục của epic sau: `<span aria-disabled="true" title="…">`, KHÔNG phải `<a>`.
+     * Mục của epic sau: `<span title="…">` kèm lời giải thích `sr-only`, KHÔNG phải `<a>`.
      * Nó có mặt để bản đồ điều hướng không phải vẽ lại mỗi epic — nhưng có mặt mà bấm
      * được thì tệ hơn không có.
      */
@@ -432,16 +434,21 @@ test.describe('SA đi một vòng cả hệ thống', () => {
       ).toBeVisible();
 
       const host = await label.evaluate((el) => {
-        const owner = el.closest('[aria-disabled]');
+        const owner = el.closest('[title]');
         return {
-          disabled: owner?.getAttribute('aria-disabled') ?? null,
+          text: owner?.textContent ?? '',
           title: owner?.getAttribute('title') ?? null,
         };
       });
+      /*
+       * Lời giải thích phải nằm trong CHỮ của mục (bản `sr-only`) — `title` chỉ tới được người
+       * rê chuột, còn `aria-disabled` trên một <span> không vai trò thì trình đọc màn hình bỏ
+       * qua (OLD-A11Y-01).
+       */
       expect(
-        host.disabled,
-        `"${planned}" phải mang aria-disabled cho trình đọc màn hình`,
-      ).toBe('true');
+        host.text,
+        `"${planned}" phải tự giải thích bằng chữ mà trình đọc màn hình đọc được`,
+      ).toContain('Phần này chưa mở trong bản hiện tại');
       expect(
         host.title,
         `"${planned}" phải tự giải thích vì sao bấm không được, không im lặng`,
@@ -467,7 +474,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `SW-E2E-TOUR-${stamp}`;
 
     await page
@@ -568,7 +575,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const soon = isoInDays(3);
     const seeded = await page.request.post('/api/v1/software', {
       headers: await writeHeaders(page),
@@ -952,7 +959,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     ).toHaveCount(0);
 
     /*
-     * Mục "chưa mở" (Tài liệu) là `<span aria-disabled="true">`, KHÔNG phải link. Kiểm bằng
+     * Mục "chưa mở" (Tài liệu) là chữ thường `<span>`, KHÔNG phải link. Kiểm bằng
      * "không có link mang tên đó" thay vì bám `title` — nếu một ngày ai đó biến nó thành link
      * trỏ vào hư không, bài này đỏ.
      */
@@ -1086,7 +1093,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
 
     const adminTotp = await firstLogin(page, { email: ADMIN_EMAIL, password: matKhauTam });
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `SW-E2E-ADMIN-${stamp}`;
     // Chính việc tạo được thiết bị đã là một khẳng định: vai admin có quyền GHI hồ sơ.
     const deviceId = await taoThietBi(page, code, await loaiSwitch(page));
@@ -1171,7 +1178,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     // Ba lượt đăng nhập đầy đủ (SA → Member → admin mới), mỗi lượt một lần chờ mã TOTP mới.
     test.setTimeout(150_000);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const lyDoA = `E2E xin xem switch A ${stamp}`;
     const lyDoB = `E2E xin xem switch B ${stamp}`;
 
@@ -1416,7 +1423,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
 
     /*
      * "Tài liệu" là mục của epic sau: nó HIỆN RA (để bản đồ điều hướng không phải vẽ lại mỗi
-     * epic) nhưng KHÔNG phải link — `<span aria-disabled="true">`. Đây là chỗ dễ hỏng nhất
+     * epic) nhưng KHÔNG phải link — chữ thường `<span>`. Đây là chỗ dễ hỏng nhất
      * trong cả file `app-shell.tsx`: bỏ cờ `planned` sớm một epic là người dùng bấm vào và
      * rơi thẳng xuống trang 404, mà không lỗi biên dịch nào báo.
      */
@@ -1796,7 +1803,7 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
     test.setTimeout(150_000);
 
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     /*
      * Tài khoản DÙNG MỘT LẦN, không đụng vào `E2E_MEMBER` mà mấy chục bài khác đang dùng —
@@ -2064,7 +2071,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const headers = await writeHeaders(page);
     const deviceTypeId = await idLoaiSwitch(page);
 
@@ -2201,7 +2208,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const headers = await writeHeaders(page);
     const deviceTypeId = await idLoaiSwitch(page);
 
@@ -2360,6 +2367,30 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       pager.getByRole('button', { name: 'Trang trước' }),
       'và nút "Trang trước" phải bật lên',
     ).toBeEnabled();
+
+    // Dãy số trang: trang đang xem mang aria-current, bấm số là nhảy thẳng tới đó.
+    await expect(
+      pager.getByRole('button', { name: 'Trang 2', exact: true }),
+      'trang đang xem phải được đánh dấu aria-current="page"',
+    ).toHaveAttribute('aria-current', 'page');
+    await pager.getByRole('button', { name: 'Trang 1', exact: true }).click();
+    await expect(page.getByRole('row'), 'bấm số 1 thì về trang đầu, 10 dòng').toHaveCount(11);
+
+    /*
+     * FE-03 — trang KHÔNG TỒN TẠI trên thanh địa chỉ (link cũ, gõ tay) phải được kéo về trang
+     * cuối, không phải "91–12 trên 12 dòng" kèm câu rỗng "chưa có thiết bị nào".
+     */
+    const xa = new URL(page.url());
+    xa.searchParams.set('page', '99');
+    await page.goto(xa.toString());
+    await expect(page.getByRole('row'), '?page=99 của 12 dòng phải rơi về trang 2').toHaveCount(3);
+    await expect(
+      page.getByRole('navigation', { name: 'Trang', exact: true }).getByRole('button', {
+        name: 'Trang 2',
+        exact: true,
+      }),
+    ).toHaveAttribute('aria-current', 'page');
+    await expect(page).toHaveURL(/[?&]page=2(&|$)/);
   });
 
   /*
@@ -2390,7 +2421,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     await page.goto('/devices');
     await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
 
@@ -2579,7 +2610,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `TB-E2E-SUA-${stamp}`;
     const headers = await writeHeaders(page);
     const deviceTypeId = await idLoaiSwitch(page);
@@ -2735,7 +2766,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `TB-E2E-HOSO-${stamp}`;
 
     // Tạo qua GIAO DIỆN: lượt tạo này còn phải để lại một dòng trong tab Lịch sử ở cuối bài.
@@ -2917,7 +2948,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
   });
 
   /** Mã hồ sơ / mã máy / tên luật đều phải mang dấu "E2E" — script dọn bám vào đúng dấu đó. */
-  const stampOf = () => Date.now().toString().slice(-6);
+  const stampOf = () => uniqueStamp();
 
   async function createSoftware(
     page: Page,
@@ -5338,7 +5369,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
   });
 
   /** Sáu chữ số cuối của mốc thời gian — đủ riêng cho một lượt chạy, đủ ngắn để đọc trong log. */
-  const dauThoiGian = (): string => Date.now().toString().slice(-6);
+  const dauThoiGian = (): string => uniqueStamp();
 
   /**
    * Gọn một nhãn đọc được về dạng so sánh được: gộp mọi khoảng trắng, bỏ dấu `*` của ô bắt buộc.
@@ -5455,9 +5486,10 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       [maA, 'Alpha Telecom E2E'],
       [maB, 'Zulu Telecom E2E'],
     ]) {
+      const providerId = await ispProviderId(page, provider);
       const created = await page.request.post('/api/v1/isp-lines', {
         headers,
-        data: { code, provider, hotline: '18001166', contractNo: `HD-${stamp}` },
+        data: { code, providerId, hotline: '18001166', contractNo: `HD-${stamp}` },
       });
       expect(created.status(), `Dàn cảnh: tạo đường truyền ${code} phải thành công`).toBe(201);
     }
@@ -5572,8 +5604,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
    * E2E hiện có luôn `fill` đúng những ô nó cần rồi bấm Lưu, nên nó mù hoàn toàn với chuyện này.
    *
    * Bài này liệt kê HẾT ô trong hộp, theo ĐÚNG LOẠI tay nắm. Loại quan trọng ngang nội dung:
-   * "Nhà mạng" là `combobox` chứ không phải `textbox`, "Site" là một `button` chứ không phải
-   * `<select>` — nhầm vai nghĩa là người dùng bàn phím thao tác khác hẳn điều ta tưởng.
+   * "Nhà mạng" và "Site" là `button` mở danh sách chọn, không phải ô gõ — nhầm vai nghĩa là
+   * người dùng bàn phím thao tác khác hẳn điều ta tưởng.
    *
    * ĐỎ KHI: một ô rơi mất hoặc mọc thêm; một ô đổi loại tay nắm; ô Trạng thái (chỉ dành cho
    * lượt SỬA) lọt vào hộp thêm mới; lời báo lỗi đổi chữ; hoặc một trong hai đường đóng hộp
@@ -5587,6 +5619,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     const stamp = dauThoiGian();
     const ma = `ISP-E2E-HOP-${stamp}`;
+    // Dàn cảnh TRƯỚC khi mở màn: ô chọn Nhà mạng đọc danh mục lúc nạp trang (Q-11).
+    await ispProviderId(page, 'FPT E2E');
 
     await page.goto('/isp-lines');
     await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
@@ -5610,10 +5644,9 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(sap(['Mã đường', 'Băng thông', 'IP WAN', 'Hotline', 'Số hợp đồng', 'Ghi chú']));
 
     /*
-     * HAI ô này là `combobox`, KHÔNG phải `textbox`.
-     *
-     * "Nhà mạng" gõ tự do được nhưng có gợi ý từ danh mục (`SuggestInput`); "Thiết bị biên"
-     * tra ngược vào kho thiết bị.
+     * Ô này là `combobox`, KHÔNG phải `textbox`: "Thiết bị biên" tra ngược vào kho thiết bị.
+     * "Nhà mạng" KHÔNG còn ở đây — nó là khoá ngoại tới danh mục, chọn chứ không gõ (Q-11),
+     * nên nằm trong bộ nút bên dưới.
      *
      * **ĐỔI 24/09 (F-06).** Trước đó ô tra thiết bị không có nhãn nối vào, nên tên khả truy cập
      * của nó rơi về `placeholder` — trình đọc màn hình đọc "Tìm thiết bị trong kho…" thay vì tên
@@ -5622,8 +5655,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      */
     expect(
       await tenTheoVaiTro(hop, 'combobox'),
-      'Hộp có đúng hai ô gợi ý: Nhà mạng và ô tra thiết bị biên',
-    ).toEqual(sap(['Nhà mạng', 'Thiết bị biên']));
+      'Hộp có đúng một ô gợi ý: ô tra thiết bị biên',
+    ).toEqual(sap(['Thiết bị biên']));
 
     /*
      * "Chọn file để đính kèm" nằm trong bộ NÚT chứ không phải bộ ô nhập, và đó là điều đúng:
@@ -5633,10 +5666,18 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      */
     expect(
       await tenTheoVaiTro(hop, 'button'),
-      'Bộ nút trong hộp thêm mới: ô chọn Site, ô ngày Bắt đầu, ô chọn file, ✕, Hủy, Lưu — ' +
-        'không có ô Hết hạn vì đường truyền không có hạn (Q-04)',
+      'Bộ nút trong hộp thêm mới: ô chọn Nhà mạng, ô chọn Site, ô ngày Bắt đầu, ô chọn file, ' +
+        '✕, Hủy, Lưu — không có ô Hết hạn vì đường truyền không có hạn (Q-04)',
     ).toEqual(
-      sap(['Đóng hộp thoại', 'Site', 'Bắt đầu', 'Chọn file để đính kèm', 'Hủy', 'Lưu']),
+      sap([
+        'Đóng hộp thoại',
+        'Nhà mạng',
+        'Site',
+        'Bắt đầu',
+        'Chọn file để đính kèm',
+        'Hủy',
+        'Lưu',
+      ]),
     );
 
     /*
@@ -5654,7 +5695,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      *
      * Không thử "bỏ trống tất cả": ô Mã đường mang thuộc tính `required` của HTML nên trình
      * duyệt chặn ngay tại chỗ, `onSubmit` không chạy, và không có `role="alert"` nào để đọc.
-     * Ô Nhà mạng thì không có `required` — đó mới là đường đi tới lời báo lỗi do chính form viết.
+     * Ô Nhà mạng là nút chọn, không có `required` của trình duyệt — đó mới là đường đi tới lời
+     * báo lỗi do chính form viết.
      */
     await hop.getByRole('textbox', { name: 'Mã đường' }).fill(ma);
     await hop.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
@@ -5662,7 +5704,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await expect(
       hop.getByRole('alert'),
       'Thiếu nhà mạng phải hiện đúng câu của `isp-form.tsx`, không phải im lặng',
-    ).toHaveText('Cần ít nhất: mã đường truyền và tên nhà mạng.');
+    ).toHaveText('Cần ít nhất: mã đường truyền và nhà mạng.');
     await expect(hop, 'Báo lỗi thì hộp phải Ở LẠI để người dùng sửa, không được đóng').toBeVisible();
 
     // ĐƯỜNG ĐÓNG THỨ NHẤT: phím Esc.
@@ -5682,7 +5724,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
     const hopLan3 = page.getByRole('dialog', { name: 'Thêm đường truyền' });
     await hopLan3.getByRole('textbox', { name: 'Mã đường' }).fill(ma);
-    await hopLan3.getByRole('combobox', { name: 'Nhà mạng' }).fill('FPT E2E');
+    await hopLan3.getByRole('button', { name: 'Nhà mạng' }).click();
+    await page.getByRole('option', { name: 'FPT E2E', exact: true }).click();
     await hopLan3.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
 
     await expect(page.getByText('Đã lưu hồ sơ đường truyền.')).toBeVisible();
@@ -5724,7 +5767,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       headers: await writeHeaders(page),
       data: {
         code: ma,
-        provider: 'VNPT E2E',
+        providerId: await ispProviderId(page, 'VNPT E2E'),
         bandwidth: '100 Mbps',
         wanIp: '203.113.99.9',
         hotline: '18001166',
@@ -5876,9 +5919,9 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       ).toHaveValue(giaTri);
     }
     await expect(
-      hopSua.getByRole('combobox', { name: 'Nhà mạng' }),
-      'Ô Nhà mạng cũng phải điền sẵn — nó là ô BẮT BUỘC, trống là lưu không nổi',
-    ).toHaveValue('VNPT E2E');
+      hopSua.getByRole('button', { name: 'Nhà mạng' }),
+      'Ô Nhà mạng cũng phải chọn sẵn — nó là ô BẮT BUỘC, trống là lưu không nổi',
+    ).toContainText('VNPT E2E');
     await expect(
       hopSua.getByRole('button', { name: 'Bắt đầu' }),
       'Ô ngày bắt đầu phải hiện lại năm 2026 đã khai',
@@ -5947,7 +5990,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     const ma = `ISP-E2E-ESC-${stamp}`;
     const created = await page.request.post('/api/v1/isp-lines', {
       headers: await writeHeaders(page),
-      data: { code: ma, provider: 'VNPT E2E' },
+      data: { code: ma, providerId: await ispProviderId(page, 'VNPT E2E') },
     });
     expect(created.status(), 'Dàn cảnh: tạo một đường truyền để mở form Sửa').toBe(201);
     const id = ((await created.json()) as { id: string }).id;
@@ -7044,7 +7087,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
      * Mã sinh theo thời gian và BẮT ĐẦU BẰNG `E2E-`: đó là mẫu `resetCatalog()` dùng để dọn.
      * Mã cố định sẽ đụng bản ghi của lần chạy trước; mã sai mẫu thì ở lại DB vĩnh viễn.
      */
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const maSite = `E2E-${stamp}`;
     const tenSite = `Site soi phòng ${stamp}`;
     const diaChi = `Tầng ${stamp}, tòa E2E`;
@@ -7168,7 +7211,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     const hop = page.getByRole('dialog', { name: 'Nhập danh mục từ Excel', exact: true });
     await expect(hop).toBeVisible();
     await expect(
-      hop.getByText('Chọn file .xlsx'),
+      hop.getByText('Chọn file .xlsx', { exact: true }),
       'hộp nhập phải có chỗ chọn file — không thì ba cái nút ở chân chẳng để làm gì',
     ).toBeVisible();
     await expect(
@@ -7347,7 +7390,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
      * Tiền tố `e2e-tao-moi-` là mẫu `resetUsers()` dùng để dọn. Sai mẫu thì tài khoản này ở
      * lại DB vĩnh viễn và ràng buộc email duy nhất sẽ làm đỏ mọi lượt chạy sau.
      */
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const email = `e2e-tao-moi-${stamp}@pmh.com.vn`;
     const hoTen = `E2E Tạo Mới ${stamp}`;
     const soDienThoai = '0912 345 678';
@@ -7695,7 +7738,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const deviceCode = `PC-E2E-KS-${stamp}`;
     const deviceId = await seedDevice(page, deviceCode);
     const secretLabel = `admin web E2E ${stamp}`;
@@ -7983,7 +8026,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const typeId = await deviceTypeId(page, 'Switch');
     const deviceCode = `SW-E2E-DUYET-${stamp}`;
     const deviceId = await seedDevice(page, deviceCode, 'Switch');
@@ -8236,7 +8279,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     test.setTimeout(150_000);
     const totpSecret = await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const deviceCode = `PC-E2E-HOP-${stamp}`;
     const deviceId = await seedDevice(page, deviceCode);
     // Một ngăn có sẵn để trang tổng liệt kê được chủ thể này.
@@ -8546,7 +8589,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const typeId = await deviceTypeId(page, 'Switch');
     const deviceId = await seedDevice(page, `SW-E2E-HOPD-${stamp}`, 'Switch');
     await stash(page, 'device', deviceId, `admin web E2E ${stamp}`);
@@ -8760,7 +8803,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       test.setTimeout(150_000);
       await firstLogin(page, E2E_SA);
 
-      const stamp = Date.now().toString().slice(-6);
+      const stamp = uniqueStamp();
       const deviceCode = `PC-E2E-ESC-${stamp}`;
       const deviceId = await seedDevice(page, deviceCode);
       await stash(page, 'device', deviceId, `ngan-co-san E2E ${stamp}`);

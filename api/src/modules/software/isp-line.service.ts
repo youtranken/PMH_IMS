@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Inject,
   Injectable,
   NotFoundException,
@@ -12,7 +13,13 @@ import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import { orderByStable, type SortQuery } from '../../common/sorting';
-import { conflictOnUnique, searchNormLike } from '../../common/sql';
+import {
+  conflictOnUnique,
+  PG_FOREIGN_KEY_VIOLATION,
+  pgConstraint,
+  pgErrorCode,
+  searchNormLike,
+} from '../../common/sql';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
@@ -40,7 +47,9 @@ const TRACKED = [
 export interface IspLineRecord {
   id: string;
   code: string;
+  /** Tên nhà mạng — bản sao do Postgres giữ khớp với danh mục (0074). */
   provider: string;
+  providerId: string;
   bandwidth: string | null;
   wanIp: string | null;
   siteId: string | null;
@@ -72,7 +81,7 @@ export interface IspLineHistoryRecord {
 
 export interface IspLineInput {
   code?: string;
-  provider?: string;
+  providerId?: string;
   bandwidth?: string | null;
   wanIp?: string | null;
   siteId?: string | null;
@@ -87,7 +96,7 @@ export interface IspLineInput {
 export interface IspFilter {
   search?: string;
   siteId?: string;
-  provider?: string;
+  providerId?: string;
   status?: IspStatus;
 }
 
@@ -303,10 +312,6 @@ export class IspLineService {
     };
 
     put('code', input.code === undefined ? undefined : requireText(input.code, 'mã đường truyền'));
-    put(
-      'provider',
-      input.provider === undefined ? undefined : requireText(input.provider, 'tên nhà mạng'),
-    );
     put('bandwidth', text(input.bandwidth));
     put('wanIp', text(input.wanIp));
     put('siteId', input.siteId === undefined ? undefined : (input.siteId || null));
@@ -318,19 +323,20 @@ export class IspLineService {
     put('status', input.status);
 
     if (id === null) {
-      for (const required of ['code', 'provider'] as const) {
-        if (values[required] === undefined) {
-          throw new BadRequestException({
-            code: 'FIELD_REQUIRED',
-            message: `Thiếu ${required === 'code' ? 'mã đường truyền' : 'tên nhà mạng'}.`,
-          });
-        }
+      if (values.code === undefined) {
+        throw new BadRequestException({ code: 'FIELD_REQUIRED', message: 'Thiếu mã đường truyền.' });
+      }
+      if (!input.providerId) {
+        throw new BadRequestException({ code: 'FIELD_REQUIRED', message: 'Thiếu nhà mạng.' });
       }
     }
 
     // Kiểm trên giá trị SAU KHI GHÉP với hồ sơ đang có, và ghép bằng `effectiveOf` chứ KHÔNG
     // bằng `??`: gửi chuỗi rỗng là bỏ gán, `??` sẽ lặng lẽ giữ lại site cũ để kiểm.
     const current = id ? await this.requireRow(id) : null;
+    if (input.providerId) {
+      Object.assign(values, await this.providerValues(input.providerId, current?.providerId ?? null));
+    }
     const effective = effectiveOf(values);
     const siteId = effective<string | null>('siteId', current?.siteId ?? null);
     if (siteId) {
@@ -343,6 +349,33 @@ export class IspLineService {
       }
     }
     return values;
+  }
+
+  /**
+   * Nhà mạng phải có trong danh mục. Mục đã ngừng dùng chỉ qua được khi hồ sơ VỐN trỏ vào nó —
+   * không thì một đường truyền cũ của nhà mạng đã thôi hợp tác không sửa được hotline nữa.
+   *
+   * Ghi cả `provider` (tên) vì FK kép (provider_id, provider) đòi hai ô khớp nhau; lịch sử vì
+   * thế cũng ghi TÊN đổi, người đọc sổ không phải tra uuid.
+   */
+  private async providerValues(
+    providerId: string,
+    currentId: string | null,
+  ): Promise<{ providerId: string; provider: string }> {
+    const provider = await this.catalog.ispProvider(providerId);
+    if (!provider) {
+      throw new BadRequestException({
+        code: 'CATALOG_REF_INVALID',
+        message: 'Nhà mạng không có trong danh mục.',
+      });
+    }
+    if (!provider.active && provider.id !== currentId) {
+      throw new BadRequestException({
+        code: 'CATALOG_REF_INVALID',
+        message: `Nhà mạng "${provider.name}" đã ngừng dùng — chọn nhà mạng khác, hoặc bật lại trong Danh mục.`,
+      });
+    }
+    return { providerId: provider.id, provider: provider.name };
   }
 
   /**
@@ -390,6 +423,13 @@ export class IspLineService {
   }
 
   private translate(error: unknown): unknown {
+    // Nhà mạng bị xoá hoặc đổi tên giữa lúc kiểm và lúc ghi: FK kép trả 23503.
+    if (pgErrorCode(error) === PG_FOREIGN_KEY_VIOLATION && isProviderFk(error)) {
+      return new ConflictException({
+        code: 'ISP_PROVIDER_CHANGED',
+        message: 'Nhà mạng vừa được đổi tên hoặc xoá trong danh mục. Tải lại rồi chọn lại.',
+      });
+    }
     return conflictOnUnique(error, {
       code: 'ISP_CODE_TAKEN',
       message: 'Đã có đường truyền mang mã này (không phân biệt hoa-thường).',
@@ -436,7 +476,7 @@ function buildWhere(filter: IspFilter): SQL | undefined {
     parts.push(searchNormLike(ispLineTable, term));
   }
   if (filter.siteId) parts.push(eq(ispLineTable.siteId, filter.siteId));
-  if (filter.provider) parts.push(eq(ispLineTable.provider, filter.provider));
+  if (filter.providerId) parts.push(eq(ispLineTable.providerId, filter.providerId));
   if (filter.status) parts.push(eq(ispLineTable.status, filter.status));
   const defined = parts.filter((part): part is SQL => part !== undefined);
   return defined.length > 0 ? and(...defined) : undefined;
@@ -480,4 +520,9 @@ function requireText(value: string, label: string): string {
     throw new BadRequestException({ code: 'FIELD_REQUIRED', message: `Thiếu ${label}.` });
   }
   return trimmed;
+}
+
+function isProviderFk(error: unknown): boolean {
+  const constraint = pgConstraint(error);
+  return constraint === 'isp_line_provider_id_fkey' || constraint === 'isp_line_provider_name_fkey';
 }

@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { CatalogService, type CatalogLists } from './catalog.service';
 import { normalizeKey } from '../../common/import-plan';
-import type { CatalogSnapshot } from './catalog.types';
+import type { CatalogSnapshot, IspProviderRecord } from './catalog.types';
 
 /**
  * Câu từ chối cho "gắn tủ mà không khai site" — MỘT bản chữ cho CẢ HAI cửa (AD-15).
@@ -85,6 +85,15 @@ export class CatalogApiService {
       errors.push('Nhà cung cấp không tồn tại.');
     }
     return errors;
+  }
+
+  /**
+   * Một nhà mạng theo id, KỂ CẢ mục đã ngừng dùng (`null` = không có). Đường truyền cần biết
+   * `active` để chặn chọn MỚI một mục ngừng dùng mà vẫn cho sửa hồ sơ cũ đang trỏ vào nó.
+   */
+  async ispProvider(id: string): Promise<IspProviderRecord | null> {
+    const lists = await this.catalog.lists({ includeInactive: true });
+    return lists.ispProviders.find((provider) => provider.id === id) ?? null;
   }
 
   /** Loại này có bảng port map không (FR-006) — trang chi tiết thiết bị hỏi cái này. */

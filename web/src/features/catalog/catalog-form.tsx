@@ -116,7 +116,7 @@ export function CatalogForm({
     setError(null);
     const body = buildBody(entity, form);
     if (typeof body === 'string') {
-      setError(body);
+      setError(t(body));
       return;
     }
     save.mutate(body, {
@@ -403,7 +403,8 @@ const ADD_KEY: Record<CatalogEntity, string> = {
 };
 
 /**
- * Gom body gửi lên API. Trả về CHUỖI = thông báo lỗi hiện tại chỗ (không gọi API).
+ * Gom body gửi lên API. Trả về CHUỖI = KHÓA i18n của thông báo lỗi hiện tại chỗ (không gọi API).
+ * Trả khóa chứ không trả câu: hàm này không có `t`, và câu tiếng Việt chỉ sống ở `vi.ts`.
  * Chỉ gửi đúng trường của loại đang sửa: API bật `forbidNonWhitelisted`, thừa field là 400
  * (bài học story 1.4 — nút Khóa/Mở khóa từng luôn 400 vì lọt `id` vào body).
  */
@@ -412,7 +413,7 @@ function buildBody(entity: CatalogEntity, form: FormState): Record<string, unkno
     case 'site':
       return { code: form.code.trim(), name: form.name.trim(), address: form.address.trim() };
     case 'cabinet': {
-      if (!form.siteId) return 'Chọn site cho tủ này.';
+      if (!form.siteId) return 'catalog.cabinetSiteRequired';
       const body: Record<string, unknown> = {
         code: form.code.trim(),
         siteId: form.siteId,
@@ -426,7 +427,7 @@ function buildBody(entity: CatalogEntity, form: FormState): Record<string, unkno
       } else {
         const value = Number(raw);
         if (!Number.isInteger(value) || value < 1 || value > 60) {
-          return 'Số U phải là số nguyên từ 1 đến 60.';
+          return 'catalog.uHeightInvalid';
         }
         body.uHeight = value;
       }
@@ -455,12 +456,12 @@ function buildBody(entity: CatalogEntity, form: FormState): Record<string, unkno
       };
     case 'service_port': {
       const from = Number(form.portFrom.trim());
-      if (!isPort(from)) return 'Port phải là số nguyên từ 1 đến 65535.';
+      if (!isPort(from)) return 'catalog.portInvalid';
       // Bỏ trống ô "đến" = một port duy nhất, không phải dải hở đầu kia.
       const rawTo = form.portTo.trim();
       const to = rawTo === '' ? from : Number(rawTo);
-      if (!isPort(to)) return 'Port phải là số nguyên từ 1 đến 65535.';
-      if (to < from) return 'Dải port viết ngược — số đầu phải nhỏ hơn số cuối (vd 50000-52000).';
+      if (!isPort(to)) return 'catalog.portInvalid';
+      if (to < from) return 'catalog.portRangeReversed';
       return {
         name: form.name.trim(),
         protocol: form.protocol,

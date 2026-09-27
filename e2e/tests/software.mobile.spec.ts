@@ -7,6 +7,7 @@ import {
   resetSoftware,
   resetUsers,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -22,7 +23,7 @@ test.beforeEach(() => {
  */
 test('danh sách phần mềm và tab Máy đang dùng đọc được ở 390px', async ({ page }) => {
   await firstLogin(page, E2E_SA);
-  const stamp = Date.now().toString().slice(-6);
+  const stamp = uniqueStamp();
   const headers = await writeHeaders(page);
   const code = `LIC-E2E-M-${stamp}`;
   const deviceCode = `PC-E2E-M-${stamp}`;
@@ -79,7 +80,7 @@ test('danh sách phần mềm và tab Máy đang dùng đọc được ở 390px
  */
 test('khu bung dòng ghế license gập thành thẻ dọc có nhãn ở 390px', async ({ page }) => {
   await firstLogin(page, E2E_SA);
-  const stamp = Date.now().toString().slice(-6);
+  const stamp = uniqueStamp();
   const headers = await writeHeaders(page);
   const code = `LIC-E2E-MSEAT-${stamp}`;
   const deviceCode = `PC-E2E-MSEAT-${stamp}`;

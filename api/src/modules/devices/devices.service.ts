@@ -15,7 +15,13 @@ import { requireCas, requireUnchangedSince } from '../../common/cas';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import { orderByStable, type SortQuery } from '../../common/sorting';
-import { conflictOnUnique, searchNormLike } from '../../common/sql';
+import {
+  conflictOnUnique,
+  PG_FOREIGN_KEY_VIOLATION,
+  pgConstraint,
+  pgErrorCode,
+  searchNormLike,
+} from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { diffDevice, hasChanges, type DeviceChanges } from './device-changes';
@@ -624,6 +630,29 @@ export class DevicesService {
   }
 
   private translateWriteError(error: unknown): unknown {
+    // Khoá ngoại (site, tủ) của 0067 là lưới cuối khi lượt dời tủ đua với lượt ghi thiết bị (BE-08).
+    if (
+      pgErrorCode(error) === PG_FOREIGN_KEY_VIOLATION &&
+      pgConstraint(error) === 'device_cabinet_same_site_fkey'
+    ) {
+      return new ConflictException({
+        code: 'CABINET_SITE_MISMATCH',
+        message: 'Tủ mạng vừa được dời sang site khác — tải lại hồ sơ rồi chọn lại tủ.',
+      });
+    }
+    // Chỉ có đường MỞ LẠI máy đã thanh lý chạm tới khoá này (trigger 0070): cổng máy này từng
+    // ghi đấu vào nay đã có máy khác chiếm. Không bắt riêng thì nó rơi xuống câu "trùng mã".
+    const peerTaken = conflictOnUnique(
+      error,
+      {
+        code: 'PORT_PEER_TAKEN',
+        message:
+          'Không mở lại được: port map của máy này ghi đấu vào một cổng mà nay đã có thiết bị ' +
+          'khác chiếm. Sửa hoặc gỡ dòng port map ở máy đang chiếm cổng đó trước rồi mở lại.',
+      },
+      'device_port_peer_port_key',
+    );
+    if (peerTaken !== error) return peerTaken;
     return conflictOnUnique(error, {
       code: 'DEVICE_CODE_TAKEN',
       message: 'Đã có thiết bị mang mã này (không phân biệt hoa-thường).',

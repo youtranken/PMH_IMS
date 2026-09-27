@@ -6,6 +6,7 @@ import {
   resetUsers,
   sql,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -58,7 +59,7 @@ async function createSoftware(page: Page, code: string): Promise<string> {
 test.describe('Gia hạn — hai cửa phải cùng ghi sổ (AC 3.4)', () => {
   test('phần mềm: nút trong trang hồ sơ cũng phải ghi renewal_history', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const id = await createSoftware(page, `SW-E2E-RH-${stamp}`);
 
     expect(renewalRowsFor(id), 'chưa gia hạn thì chưa có dòng nào').toBe(0);
@@ -99,7 +100,7 @@ test.describe('Gia hạn — hai cửa phải cùng ghi sổ (AC 3.4)', () => {
    */
   test('cửa màn "Sắp hết hạn" vẫn chạy, và KHÔNG đẻ dòng thứ hai', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const id = await createSoftware(page, `SW-E2E-RH2-${stamp}`);
 
     const renewed = await page.request.post('/api/v1/expiry/renew', {
@@ -123,7 +124,7 @@ test.describe('Gia hạn — hai cửa phải cùng ghi sổ (AC 3.4)', () => {
    */
   test('bị chặn vì gia hạn lùi thì không được để lại dòng sổ nào', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const id = await createSoftware(page, `SW-E2E-RH3-${stamp}`);
 
     const back = await page.request.post(`/api/v1/software/${id}/renew`, {

@@ -1,4 +1,4 @@
-import { ApiError } from '@/lib/api-client';
+import { readResponse } from '@/lib/api-client';
 
 /**
  * Gửi MỘT file lên endpoint multipart (AD-15) — import danh mục (2.1), import thiết bị (2.6),
@@ -25,9 +25,6 @@ export async function uploadFile<T>(
     body: form,
   });
 
-  if (!res.ok) {
-    throw new ApiError(res.status, await res.json().catch(() => null));
-  }
-  if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  // Cùng luật với `apiFetch`, kể cả 401-phiên-chết → về màn đăng nhập.
+  return readResponse<T>(res);
 }

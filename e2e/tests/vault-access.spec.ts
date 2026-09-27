@@ -5,12 +5,14 @@ import {
   E2E_MEMBER,
   E2E_SA,
   firstLogin,
+  ispProviderId,
   resetAccessList,
   resetDevices,
   resetIsp,
   resetSecrets,
   resetServiceAccounts,
   resetUsers,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -265,12 +267,16 @@ test.describe('Ma trận quyền két sắt', () => {
 test.describe('Két sắt và ma trận quyền với tới ISP + tài khoản dịch vụ', () => {
   test('cất được mật khẩu PPPoE của đường truyền', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     const line = await page.request.post('/api/v1/isp-lines', {
       headers,
-      data: { code: `FTTH-E2E-${stamp}`, provider: 'VNPT', bandwidth: '200 Mbps' },
+      data: {
+        code: `FTTH-E2E-${stamp}`,
+        providerId: await ispProviderId(page, 'VNPT E2E'),
+        bandwidth: '200 Mbps',
+      },
     });
     expect(line.status()).toBe(201);
     const lineId = ((await line.json()) as { id: string }).id;
@@ -301,7 +307,7 @@ test.describe('Két sắt và ma trận quyền với tới ISP + tài khoản d
 
   test('gán quyền theo LOẠI tài khoản dịch vụ — Member hết bị cấm vĩnh viễn', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     const account = await page.request.post('/api/v1/service-accounts', {

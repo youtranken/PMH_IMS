@@ -36,6 +36,8 @@ export const UI_PATHS = {
   subnet: (id: string) => `/ip-addresses/${id}`,
   serviceAccount: (id: string) => `/service-accounts/${id}`,
   approvals: '/approvals',
+  /** Màn Duyệt yêu cầu, đưa đúng yêu cầu này lên đầu. Vẫn phải đăng nhập + TOTP (Q-05). */
+  approval: (id: string) => `/approvals?id=${encodeURIComponent(id)}`,
   expiry: '/expiry',
   /**
    * Màn Nhật ký, lọc sẵn theo người thao tác. `q` là khoá ô tìm của `useListUrlState` bên web

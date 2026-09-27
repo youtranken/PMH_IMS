@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { PAGE_SIZES } from '@/ui/pagination';
+import { clampPage } from '@/lib/paging';
 
 /**
  * Trạng thái của MỘT màn danh sách — bộ lọc, trang, số dòng, cột sắp — sống trên THANH ĐỊA CHỈ
@@ -51,6 +52,26 @@ export interface ListUrlState<F extends Record<string, string>> {
    * không làm bảng có thêm gì.
    */
   isFiltered: boolean;
+}
+
+/**
+ * Kéo `page` về trang cuối còn tồn tại mỗi khi API trả về `total` mới.
+ *
+ * Phải là hook RIÊNG gọi ở màn, không nằm trong `<Pagination>`: đứng ở trang không tồn tại thì
+ * API trả `items: []`, màn rẽ sang `<EmptyState>` và `<Pagination>` không còn được dựng — nên
+ * không còn ai để kéo trang về. `total` chưa có (đang tải lần đầu) thì không đụng vào gì.
+ */
+export function useClampPage(
+  state: { page: number; limit: number; setPage: (value: number) => void },
+  total: number | undefined,
+): void {
+  const { page, limit, setPage } = state;
+  const safe = total === undefined ? page : clampPage(page, total, limit);
+  useEffect(() => {
+    if (safe !== page) setPage(safe);
+    // `setPage` là hàm mới mỗi lượt render; chỉ cần chạy lại khi con số đổi.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [safe, page]);
 }
 
 export function useListUrlState<F extends Record<string, string>>(options: {

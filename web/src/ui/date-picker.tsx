@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { Chevron } from '@/ui/chevron';
@@ -58,14 +65,34 @@ export function DatePicker({
   // Ngày đang chọn (parse value) + tháng đang xem.
   const selected = useMemo(() => parseISO(value), [value]);
   const [cursor, setCursor] = useState(() => selected ?? new Date());
+  /*
+   * Ô ngày giữ tiêu điểm trong lưới — "roving tabindex": đúng MỘT ô nằm trong luồng Tab, phím
+   * mũi tên dời nó. `wantFocus` bật khi MỞ lịch hoặc khi đi bằng phím; bấm nút ‹ › bằng chuột
+   * thì tiêu điểm ở yên trên nút đó, không bị giật vào lưới.
+   */
+  const [focusDate, setFocusDate] = useState(() => stripTime(selected ?? new Date()));
+  const wantFocus = useRef(false);
+  const dayRefs = useRef(new Map<string, HTMLButtonElement>());
 
-  // Mở lại thì đưa con trỏ về tháng của ngày đã chọn (nếu có).
+  // Mở lại thì đưa con trỏ về tháng của ngày đã chọn (nếu có), và dời tiêu điểm vào lưới.
   useEffect(() => {
     if (open) {
-      setCursor(selected ?? new Date());
+      const start = stripTime(selected ?? new Date());
+      setCursor(start);
+      setFocusDate(start);
       setView('day');
+      wantFocus.current = true;
     }
   }, [open, selected]);
+
+  useEffect(() => {
+    if (!open || view !== 'day' || !wantFocus.current) return;
+    const cell = dayRefs.current.get(toISO(focusDate));
+    if (cell) {
+      cell.focus();
+      wantFocus.current = false;
+    }
+  });
 
   /**
    * ĐÓNG VÀ TRẢ FOCUS VỀ NÚT MỞ.
@@ -163,6 +190,36 @@ export function DatePicker({
       ),
     [i18n.language],
   );
+  const moveFocus = (next: Date) => {
+    setFocusDate(next);
+    if (next.getMonth() !== cursor.getMonth() || next.getFullYear() !== cursor.getFullYear()) {
+      setCursor(new Date(next.getFullYear(), next.getMonth(), 1));
+    }
+    wantFocus.current = true;
+  };
+
+  // Phím của lưới ngày theo mẫu "date picker dialog" của WAI-ARIA APG.
+  const onDayKeyDown = (event: ReactKeyboardEvent) => {
+    const weekday = (focusDate.getDay() + 6) % 7; // 0 = Thứ 2
+    const byKey: Record<string, () => Date> = {
+      ArrowLeft: () => addDays(focusDate, -1),
+      ArrowRight: () => addDays(focusDate, 1),
+      ArrowUp: () => addDays(focusDate, -7),
+      ArrowDown: () => addDays(focusDate, 7),
+      Home: () => addDays(focusDate, -weekday),
+      End: () => addDays(focusDate, 6 - weekday),
+      PageUp: () => addMonths(focusDate, event.shiftKey ? -12 : -1),
+      PageDown: () => addMonths(focusDate, event.shiftKey ? 12 : 1),
+    };
+    const next = byKey[event.key];
+    if (!next) return;
+    event.preventDefault();
+    moveFocus(next());
+  };
+
+  const dayLabel = (d: Date) =>
+    d.toLocaleDateString(i18n.language, { day: 'numeric', month: 'long', year: 'numeric' });
+
   const weekdayNames = useMemo(() => {
     // Bắt đầu Thứ 2 (VN). 2024-01-01 là Thứ 2.
     return Array.from({ length: 7 }, (_, i) =>
@@ -223,6 +280,8 @@ export function DatePicker({
           <div
             className="dp-pop"
             role="dialog"
+            // Tên của lịch = tên của ô mở nó ("Ngày mua"), để người nghe biết đang chọn ngày gì.
+            aria-label={ariaLabel ?? t('datePicker.choose')}
             style={floatingStyles}
             ref={refs.setFloating}
           >
@@ -259,16 +318,36 @@ export function DatePicker({
                     <span key={i}>{w}</span>
                   ))}
                 </div>
-                <div className="dp-grid days">
+                <div
+                  className="dp-grid days"
+                  role="group"
+                  aria-label={`${monthNames[cursor.getMonth()]} ${cursor.getFullYear()}`}
+                  onKeyDown={onDayKeyDown}
+                >
                   {buildDays(cursor).map((cell, i) => {
-                    const isSel = selected && sameDay(cell.date, selected);
+                    const isSel = !!selected && sameDay(cell.date, selected);
                     const isToday = sameDay(cell.date, new Date());
-                    const disabled = outOfRange(cell.date);
+                    const blocked = outOfRange(cell.date);
+                    const iso = toISO(cell.date);
                     return (
                       <button
                         key={i}
+                        ref={(el) => {
+                          if (el) dayRefs.current.set(iso, el);
+                          else dayRefs.current.delete(iso);
+                        }}
                         type="button"
-                        disabled={disabled}
+                        data-day={iso}
+                        /*
+                         * `aria-disabled` chứ không `disabled`: ô bị khoá vẫn phải nhận được
+                         * tiêu điểm, nếu không phím mũi tên đi tới một ngày bị khoá là tiêu
+                         * điểm rơi mất khỏi lưới. `pick()` tự từ chối ngày ngoài khoảng.
+                         */
+                        aria-disabled={blocked || undefined}
+                        aria-label={dayLabel(cell.date)}
+                        aria-pressed={isSel}
+                        aria-current={isToday ? 'date' : undefined}
+                        tabIndex={sameDay(cell.date, focusDate) ? 0 : -1}
                         className={`dp-cell${cell.dim ? ' dim' : ''}${isSel ? ' sel' : ''}${isToday && !isSel ? ' today' : ''}`}
                         onClick={() => pick(cell.date)}
                       >
@@ -348,6 +427,15 @@ function sameDay(a: Date, b: Date): boolean {
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate()
   );
+}
+function addDays(d: Date, days: number): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days);
+}
+/** Cộng tháng, kẹp ngày về cuối tháng đích (31/01 + 1 tháng = 28|29/02, không trôi sang 03). */
+function addMonths(d: Date, months: number): Date {
+  const target = new Date(d.getFullYear(), d.getMonth() + months, 1);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  return new Date(target.getFullYear(), target.getMonth(), Math.min(d.getDate(), lastDay));
 }
 function decadeStart(d: Date): number {
   return Math.floor(d.getFullYear() / 10) * 10;

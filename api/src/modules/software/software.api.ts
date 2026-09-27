@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Page } from '../../common/pagination';
 import { IspLineService, type IspLineListItem } from './isp-line.service';
 import { SoftwareService } from './software.service';
 import type { SoftwareListItem } from './software.types';
@@ -51,13 +52,20 @@ export class SoftwareApiService {
 
   /** Hồ sơ phần mềm đã bỏ — màn Kho thanh lý gom qua đây. */
   async listRetired(): Promise<SoftwareListItem[]> {
-    const page = await this.software.list({ page: 1, limit: 500 }, { status: 'retired' });
-    return page.items;
+    return (await this.retiredPage()).items;
+  }
+
+  /** Như `listRetired`, kèm `total` thật để kho biết mình có bị cắt ở trần 500 dòng không. */
+  retiredPage(): Promise<Page<SoftwareListItem>> {
+    return this.software.list({ page: 1, limit: 500 }, { status: 'retired' });
   }
 
   /** Đường truyền đã thanh lý — màn Kho thanh lý gom qua đây, cùng lối với `listRetired`. */
   async listTerminatedIsp(): Promise<IspLineListItem[]> {
-    const page = await this.isp.list({ page: 1, limit: 500 }, { status: 'terminated' });
-    return page.items;
+    return (await this.terminatedIspPage()).items;
+  }
+
+  terminatedIspPage(): Promise<Page<IspLineListItem>> {
+    return this.isp.list({ page: 1, limit: 500 }, { status: 'terminated' });
   }
 }

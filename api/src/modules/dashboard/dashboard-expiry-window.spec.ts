@@ -47,7 +47,7 @@ function buildService(): DashboardService {
   const expiry = {
     list: (options: { withinDays?: number } = {}) => {
       windowAsked = options.withinDays;
-      return Promise.resolve({ items: [], total: 0, summary: {} });
+      return Promise.resolve({ items: [], total: 0, summary: {}, failedKinds: [] });
     },
   } as unknown as ExpiryApiService;
 

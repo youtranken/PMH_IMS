@@ -1,9 +1,10 @@
 import { runMigrations } from '../src/database/migration-runner';
 import { IspLineService } from '../src/modules/software/isp-line.service';
 import type { AuditWriterService } from '../src/modules/audit/audit-writer.service';
-import type { CatalogApiService } from '../src/modules/catalog/catalog.api';
+import { CatalogApiService } from '../src/modules/catalog/catalog.api';
+import { CatalogService } from '../src/modules/catalog/catalog.service';
 import type { DevicesApiService } from '../src/modules/devices/devices.api';
-import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { createScratchDb, migrationsDir, seedIspProviders, type ScratchDb } from './db';
 
 /**
  * Q-04 (`docs/QUYET-DINH.md`) — đường truyền không có ngày kết thúc.
@@ -19,15 +20,14 @@ describe('Q-04 · đường truyền không có hạn — tầng DB', () => {
   let scratch: ScratchDb;
   let isp: IspLineService;
   const actor = 'q04@test';
+  let providers: Record<string, string>;
 
   beforeAll(async () => {
     scratch = await createScratchDb('ims_isp_no_end');
     await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
     const audit = { appendWithin: () => Promise.resolve() } as unknown as AuditWriterService;
-    const catalog = {
-      lists: () => Promise.resolve({ sites: [] }),
-      validateRefs: () => Promise.resolve([]),
-    } as unknown as CatalogApiService;
+    const catalog = new CatalogApiService(new CatalogService(scratch.db, audit));
+    providers = await seedIspProviders(scratch.pool, ['VNPT', 'FPT', 'Viettel']);
     const devices = { getByIds: () => Promise.resolve(new Map()) } as unknown as DevicesApiService;
     isp = new IspLineService(scratch.db, catalog, devices, audit);
   }, TEST_TIMEOUT);
@@ -50,8 +50,9 @@ describe('Q-04 · đường truyền không có hạn — tầng DB', () => {
 
   it('dòng cũ còn hạn trong DB: dời ngày bắt đầu qua hạn đó vẫn lưu được', async () => {
     const { rows } = await scratch.pool.query<{ id: string }>(
-      `INSERT INTO isp_line (code, provider, start_date, end_date)
-       VALUES ('Q04-CU-01', 'VNPT', '2024-01-01', '2025-06-30') RETURNING id`,
+      `INSERT INTO isp_line (code, provider, provider_id, start_date, end_date)
+       VALUES ('Q04-CU-01', 'VNPT', $1, '2024-01-01', '2025-06-30') RETURNING id`,
+      [providers.VNPT],
     );
     const updated = await isp.update(actor, rows[0].id, { startDate: '2026-01-01' });
     expect(updated.startDate).toBe('2026-01-01');
@@ -59,17 +60,18 @@ describe('Q-04 · đường truyền không có hạn — tầng DB', () => {
 
   it('API không trả `endDate` ra ngoài, kể cả khi DB còn giá trị', async () => {
     const { rows } = await scratch.pool.query<{ id: string }>(
-      `INSERT INTO isp_line (code, provider, end_date)
-       VALUES ('Q04-CU-02', 'FPT', '2027-12-31') RETURNING id`,
+      `INSERT INTO isp_line (code, provider, provider_id, end_date)
+       VALUES ('Q04-CU-02', 'FPT', $1, '2027-12-31') RETURNING id`,
+      [providers.FPT],
     );
     const one = await isp.findOne(rows[0].id);
     expect(one).not.toHaveProperty('endDate');
-    const created = await isp.create(actor, { code: 'Q04-MOI-01', provider: 'Viettel' });
+    const created = await isp.create(actor, { code: 'Q04-MOI-01', providerId: providers.Viettel });
     expect(created).not.toHaveProperty('endDate');
   });
 
   it('thanh lý ghi người và thời điểm vào lịch sử', async () => {
-    const line = await isp.create(actor, { code: 'Q04-TL-01', provider: 'FPT' });
+    const line = await isp.create(actor, { code: 'Q04-TL-01', providerId: providers.FPT });
     await isp.update('nguoi-thanh-ly@test', line.id, { status: 'terminated' });
 
     const history = await isp.history(line.id);

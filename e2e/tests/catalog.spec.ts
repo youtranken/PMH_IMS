@@ -11,6 +11,7 @@ import {
   resetCatalog,
   resetUsers,
   rowAction,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -32,7 +33,7 @@ test.describe('Danh mục', () => {
 
     // Mã sinh theo thời gian: dữ liệu danh mục KHÔNG bị reset giữa các lần chạy
     // (resetUsers chỉ đụng tới tài khoản), mã cố định sẽ đụng bản ghi của lần chạy trước.
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const siteCode = `E2E-${stamp}`;
     const cabinetCode = `R-${stamp}`;
     await page.getByRole('button', { name: 'Thêm site' }).click();
@@ -193,7 +194,7 @@ test.describe('Danh mục', () => {
    */
   test('sắp xếp theo cột chạy ở server, cột lấy qua join thì không có nút', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const siteCode = `E2E-SORT-${stamp}`;
     const csrf = await page.evaluate(async () => {
       const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
@@ -247,7 +248,7 @@ test.describe('Danh mục', () => {
    */
   test('ba danh mục mới thêm được, và bảng lịch sử chấp nhận chúng', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     await page.goto('/admin/catalog');
 
     // ── Bộ phận ───────────────────────────────────────────────────────────
@@ -300,7 +301,7 @@ test.describe('Danh mục', () => {
   /** Dải port viết ngược bị chặn — và chặn ở SERVER, không chỉ ở ô nhập. */
   test('đường hỏng: dải port viết ngược bị từ chối', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const csrf = await page.evaluate(async () => {
       const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
       return ((await res.json()) as { csrfToken: string }).csrfToken;

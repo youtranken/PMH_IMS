@@ -73,6 +73,36 @@
   color: var(--ink-2);
 }
 .pager-size select { font-size: var(--fs-sm); padding: 2px 1.6rem 2px var(--space-3); }
+/* Dãy số trang `1 … 4 5 6 … 20` — cùng ô bấm 32px với ‹ ›. */
+.pager-pages {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pager-num {
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 var(--space-3);
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+.pager-num.is-current {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary-ink);
+  font-weight: var(--fw-semibold);
+}
+.pager-gap { color: var(--muted); padding: 0 var(--space-1); }
+.pager-jump {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--ink-2);
+}
+.pager-jump .inp { width: 4.5rem; padding: 2px var(--space-3); font-size: var(--fs-sm); }
 
 /* Ô nhập: gợi ý + lỗi */
 .field-hint { font-size: var(--fs-xs); }
@@ -595,6 +625,48 @@
   color: var(--ink-3);
 }
 
+/* Lý do nút đang xám, bản hiện bằng chữ (ui/disabled-reason.tsx). Trong chân hộp thoại nó
+   đứng đầu hàng và đẩy các nút sang phải. */
+.disabled-reason {
+  margin-right: auto;
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+}
+
+/* --- Khung cuộn ngang có báo hiệu (ui/scroll-x.tsx) -----------------------
+ * Vệt mờ ở mép nào còn cột khuất + một dòng chữ phía trên. Vệt là lớp phủ tuyệt đối trên
+ * khung NGOÀI (không cuộn), nên nó đứng yên ở mép trong khi bảng trượt bên dưới.
+ * -------------------------------------------------------------------------- */
+.scroll-x { position: relative; }
+.scroll-x-hint { margin: 0 0 var(--space-3); font-size: var(--fs-xs); }
+.scroll-x::before,
+.scroll-x::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: var(--space-9);
+  height: var(--scroll-x-fade-h, 100%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s var(--ease);
+  z-index: 4;
+}
+/* Khi có dòng gợi ý thì vệt chỉ phủ phần bảng, không phủ lên chữ. */
+.scroll-x:has(> .scroll-x-hint) { --scroll-x-fade-h: calc(100% - var(--fs-xs) * 1.6 - var(--space-3)); }
+.scroll-x::before {
+  left: 0;
+  border-radius: var(--r-lg) 0 0 var(--r-lg);
+  background: linear-gradient(to right, var(--edge-fade), transparent);
+}
+.scroll-x::after {
+  right: 0;
+  border-radius: 0 var(--r-lg) var(--r-lg) 0;
+  background: linear-gradient(to left, var(--edge-fade), transparent);
+}
+.scroll-x[data-more-start='true']::before,
+.scroll-x[data-more-end='true']::after { opacity: 1; }
+.scroll-x > [role='region']:focus-visible { outline: none; box-shadow: var(--ring); }
+
 /* --- Ma trận quyền két sắt (features/vault/access-matrix-screen.tsx) ------
  * LƯỚI THẬT: hàng = người, cột = nhóm đối tượng. Đọc theo hàng ra "người này xem được gì",
  * đọc theo cột ra "nhóm này ai xem được" — hai câu cùng lúc, không phải bấm qua lại.
@@ -867,6 +939,8 @@ table.access-grid thead .access-row-head {
   .toast-stack { right: var(--space-5); left: var(--space-5); bottom: var(--space-5); max-width: none; }
   .pager { flex-wrap: wrap; gap: var(--space-4); }
   .pager-info { width: 100%; }
+  /* 390px: "Trang x/y" đã nói đủ vị trí; dãy số nhường chỗ cho ‹ › và ô "Tới trang". */
+  .pager-pages { display: none; }
 }
 
 /* --- Loading / rỗng / 404 (load-state.tsx) -------------------------------------

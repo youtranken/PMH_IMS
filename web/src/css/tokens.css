@@ -122,6 +122,8 @@
    * sắc XANH lên một nền vốn đã tối — ảnh bị ám màu.
    */
   --scrim-strong: rgba(20, 26, 20, 0.62);
+  /* Vệt mờ ở mép khung cuộn ngang còn nội dung khuất (`ui/scroll-x.tsx`). */
+  --edge-fade: rgba(16, 24, 40, 0.16);
 
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
@@ -192,6 +194,8 @@ html[data-theme='dark'] {
   --scrim: rgba(0, 0, 0, 0.62);
   /* Cùng lý do: thuần đen, và đậm hơn bản thường một nấc. */
   --scrim-strong: rgba(0, 0, 0, 0.78);
+  /* Nền tối: vệt phải thuần đen và đậm hơn mới thấy được trên mặt bảng tối. */
+  --edge-fade: rgba(0, 0, 0, 0.55);
   color-scheme: dark;
 
     --on-accent:#0f140f; --on-overlay:#ffffff;

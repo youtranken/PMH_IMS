@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
@@ -10,6 +11,7 @@ import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
+import { Pagination } from '@/ui/pagination';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
@@ -31,6 +33,14 @@ interface ApprovalRow {
   expiresAt: string | null;
   createdAt: string;
   active: boolean;
+}
+
+/** Nhật ký và "của tôi" chỉ lớn lên theo thời gian — server cắt trang, màn này không tải cả kho. */
+const PAGE_LIMIT = 20;
+
+interface ApprovalPage {
+  items: ApprovalRow[];
+  total: number;
 }
 
 const STATE_LABEL: Record<string, string> = {
@@ -86,6 +96,11 @@ export function ApprovalsScreen({ me }: { me: Me }) {
    */
   const [tab, setTab] = useState(canDecide ? 'pending' : 'mine');
   const [deciding, setDeciding] = useState<{ row: ApprovalRow; approve: boolean } | null>(null);
+  /* `?id=` đến từ nút trong thư duyệt: yêu cầu đó lên đầu hàng chờ và được đánh dấu. */
+  const [searchParams] = useSearchParams();
+  const focusId = searchParams.get('id');
+  const [logPage, setLogPage] = useState(1);
+  const [minePage, setMinePage] = useState(1);
 
 
   const pending = useQuery({
@@ -95,14 +110,16 @@ export function ApprovalsScreen({ me }: { me: Me }) {
   });
 
   const log = useQuery({
-    queryKey: ['break-glass', 'log'],
-    queryFn: () => apiFetch<ApprovalRow[]>('/api/v1/vault/break-glass/log'),
+    queryKey: ['break-glass', 'log', logPage],
+    queryFn: () =>
+      apiFetch<ApprovalPage>(`/api/v1/vault/break-glass/log?page=${logPage}&limit=${PAGE_LIMIT}`),
     enabled: canDecide && tab === 'log',
   });
 
   const mine = useQuery({
-    queryKey: ['break-glass', 'mine'],
-    queryFn: () => apiFetch<ApprovalRow[]>('/api/v1/vault/break-glass/mine'),
+    queryKey: ['break-glass', 'mine', minePage],
+    queryFn: () =>
+      apiFetch<ApprovalPage>(`/api/v1/vault/break-glass/mine?page=${minePage}&limit=${PAGE_LIMIT}`),
     enabled: tab === 'mine',
   });
 
@@ -123,7 +140,19 @@ export function ApprovalsScreen({ me }: { me: Me }) {
    * đều dùng `LoadError`; riêng màn này thì không import nó.
    */
   const active = tab === 'pending' ? pending : tab === 'log' ? log : mine;
-  const items = active.data ?? [];
+  const loaded =
+    (tab === 'pending' ? pending.data : tab === 'log' ? log.data?.items : mine.data?.items) ?? [];
+  const focused = focusId && tab === 'pending' ? loaded.find((row) => row.id === focusId) : undefined;
+  const items = focused ? [focused, ...loaded.filter((row) => row !== focused)] : loaded;
+  // Yêu cầu trong thư đã được người khác xử lý: nói ra, đừng để người duyệt tưởng link hỏng.
+  const focusGone = Boolean(focusId) && tab === 'pending' && pending.isSuccess && !focused;
+  // Hàng chờ duyệt tự giới hạn (mỗi người một yêu cầu treo trên một đối tượng) nên không phân trang.
+  const paged =
+    tab === 'log'
+      ? { page: logPage, set: setLogPage, total: log.data?.total ?? 0 }
+      : tab === 'mine'
+        ? { page: minePage, set: setMinePage, total: mine.data?.total ?? 0 }
+        : null;
   const loading = active.isLoading;
   const failed = active.isError;
 
@@ -165,6 +194,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
       />
 
       <TabPanel tabKey={tab}>
+        {focusGone ? <p className="muted">{t('approvals.focusGone')}</p> : null}
         {loading ? (
           <Loading />
         ) : failed ? (
@@ -183,7 +213,12 @@ export function ApprovalsScreen({ me }: { me: Me }) {
         ) : (
           <div className="approval-list">
             {items.map((row) => (
-              <section key={row.id} className="card device-panel">
+              <section
+                key={row.id}
+                className="card device-panel"
+                aria-label={t('approvals.cardLabel', { member: row.requester })}
+                aria-current={row === focused ? 'true' : undefined}
+              >
                 <div className="row" style={{ gap: 'var(--space-3)', flexWrap: 'wrap' }}>
                   {/*
                     QUYỀN ĐÃ HẾT HIỆU LỰC THÌ KHÔNG ĐƯỢC ĐEO HUY HIỆU XANH (sửa 17/09/2026).
@@ -198,6 +233,9 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                       ? t('approvals.stateApprovedOver')
                       : t(STATE_LABEL[row.state] ?? row.state)}
                   </span>
+                  {row === focused ? (
+                    <span className="badge warn">{t('approvals.fromMail')}</span>
+                  ) : null}
                   <strong>{row.requester}</strong>
                   <span className="muted">{formatDateTime(row.createdAt)}</span>
                 </div>
@@ -310,6 +348,14 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                 ) : null}
               </section>
             ))}
+            {paged ? (
+              <Pagination
+                page={paged.page}
+                limit={PAGE_LIMIT}
+                total={paged.total}
+                onPageChange={paged.set}
+              />
+            ) : null}
           </div>
         )}
       </TabPanel>

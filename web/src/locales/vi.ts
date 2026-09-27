@@ -16,6 +16,9 @@ export default {
     notFoundData: 'Không tìm thấy dữ liệu. Hồ sơ có thể đã bị xóa, hoặc đường dẫn đã cũ.',
     serverError: 'Máy chủ đang gặp sự cố. Thử lại sau ít phút; vẫn vậy thì báo bộ phận IT.',
     retry: 'Thử lại',
+    /* Tiêu đề khi `/auth/me` hỏng vì lý do KHÁC 401 (API khởi động lại, mất mạng): chưa biết
+       phiên còn hay không, nên không được nói "bạn chưa đăng nhập". */
+    sessionCheckFailed: 'Chưa kiểm tra được phiên đăng nhập',
     notFoundTitle: 'Không tìm thấy trang',
     notFoundHint: 'Trang bạn tìm không tồn tại, hoặc thuộc phần chưa mở trong bản này.',
     backHome: 'Về trang chủ',
@@ -54,10 +57,15 @@ export default {
     prev: 'Trang trước',
     next: 'Trang sau',
     perPage: 'Số dòng',
+    pageN: 'Trang {{page}}',
+    jumpTo: 'Tới trang',
+    jumpGo: 'Đi',
+    jumpGoLabel: 'Đi tới trang',
   },
   dataTable: {
     selectAll: 'Chọn tất cả',
     selectRow: 'Chọn dòng',
+    scrollHint: 'Bảng rộng hơn khung — kéo ngang (hoặc Shift + lăn chuột) để xem thêm cột.',
   },
   theme: {
     dark: 'Chế độ tối',
@@ -71,11 +79,37 @@ export default {
     content: 'Nội dung',
     result: 'Kết quả',
     note: 'Ghi chú',
+    actionCreate: 'Thêm mới',
+    actionUpdate: 'Cập nhật',
+    actionUnchanged: 'Không đổi',
+    actionSkip: 'Bỏ qua',
+    actionError: 'Lỗi',
+    hideNoisy: 'Ẩn {{count}} dòng không đổi / bỏ qua',
+    showNoisy: 'Hiện cả {{count}} dòng không đổi / bỏ qua',
+    nothingToWrite: 'Không có dòng nào cần ghi.',
   },
   schedule: {
     daily: 'Hằng ngày',
     weekly: 'Hằng tuần',
     monthly: 'Hằng tháng',
+    frequency: 'Tần suất',
+    weekdayLabel: 'Vào thứ',
+    dayOfMonthLabel: 'Ngày trong tháng',
+    dayOfMonth: 'Ngày {{day}}',
+    hourLabel: 'Lúc',
+    weekday1: 'Thứ Hai',
+    weekday2: 'Thứ Ba',
+    weekday3: 'Thứ Tư',
+    weekday4: 'Thứ Năm',
+    weekday5: 'Thứ Sáu',
+    weekday6: 'Thứ Bảy',
+    weekday7: 'Chủ Nhật',
+    describeDaily: 'Hằng ngày lúc {{hour}}',
+    describeWeekly: 'Hằng tuần, {{day}} lúc {{hour}}',
+    describeMonthly: 'Hằng tháng, ngày {{day}} lúc {{hour}}',
+  },
+  filePicker: {
+    clear: 'Bỏ chọn',
   },
   toast: {
     close: 'Đóng thông báo',
@@ -103,6 +137,7 @@ export default {
     /* Tên KHU "Hồ sơ" ở đầu cột chính. Không dùng lại `*.tabProfile` được: bên thiết bị khoá
        ấy là "Tổng quan" (tên cả cái TAB), còn đây là tên một khu BÊN TRONG tab đó. */
     profileSection: 'Hồ sơ',
+    blankFields: 'Chưa khai: {{list}}.',
   },
   // Bản đồ quan hệ ở tab Tổng quan của trang thiết bị.
   relationMap: {
@@ -183,6 +218,8 @@ export default {
      * `term-consistency.test.ts` canh cặp ấy.
      */
     error: 'Có lỗi xảy ra',
+    /* Câu dự phòng của `errorMessage()` khi API không gửi `message`. */
+    errorFallback: 'Có lỗi xảy ra.',
     export: 'Xuất Excel',
     filter: 'Bộ lọc',
     actions: 'Thao tác',
@@ -205,11 +242,21 @@ export default {
   },
   auth: {
     signInTitle: 'Đăng nhập',
+    /* Đăng xuất gọi API hỏng: dữ liệu trên máy đã xoá, nhưng phiên phía máy chủ có thể còn
+       sống — nói rõ để người dùng không rời máy dùng chung với một phiên mở. */
+    logoutFailed:
+      'Đăng xuất chưa thành công trên máy chủ (mất kết nối?). Dữ liệu trên máy này đã được xoá; nếu vẫn vào được hệ thống, hãy bấm Đăng xuất lần nữa.',
     signInSub: 'Hệ thống nội bộ — chỉ dành cho team IT',
     email: 'Email',
     password: 'Mật khẩu',
     signIn: 'Đăng nhập',
     signingIn: 'Đang đăng nhập…',
+    /* Câu dự phòng khi API không gửi `message` (mất mạng, trang lỗi HTML của nginx). */
+    loginFailed: 'Đăng nhập không thành công.',
+    changePasswordFailed: 'Không đổi được mật khẩu.',
+    totpInvalid: 'Mã xác thực không đúng.',
+    qrFailed: 'Không tạo được mã QR.',
+    currentPasswordWrong: 'Mật khẩu hiện tại không đúng.',
     totpTitle: 'Xác thực 2 lớp',
     totpSub: 'Mở ứng dụng Authenticator và nhập mã 6 số',
     totpCode: 'Mã xác thực',
@@ -290,6 +337,10 @@ export default {
     uHeight: 'Số U',
     hasPortMap: 'Có port map',
     hasPortMapHint: 'Loại này sẽ hiện bảng port map ở trang chi tiết thiết bị.',
+    cabinetSiteRequired: 'Chọn site cho tủ này.',
+    uHeightInvalid: 'Số U phải là số nguyên từ 1 đến 60.',
+    portInvalid: 'Port phải là số nguyên từ 1 đến 65535.',
+    portRangeReversed: 'Dải port viết ngược — số đầu phải nhỏ hơn số cuối (vd 50000-52000).',
     supplies: 'Cung cấp gì',
     phone: 'Điện thoại',
     contact: 'Email / người liên hệ',
@@ -603,8 +654,9 @@ export default {
     search: 'Tìm theo mã, nhà mạng, IP WAN hoặc số hợp đồng',
     code: 'Mã đường',
     provider: 'Nhà mạng',
-    providerPlaceholder: 'Chọn hoặc gõ tên nhà mạng…',
-    providerHint: 'Gợi ý lấy từ danh mục Nhà mạng. Nhà mạng mới thì cứ gõ, khai vào danh mục sau.',
+    providerPlaceholder: '— Chọn nhà mạng —',
+    providerHint: 'Chọn từ danh mục Nhà mạng. Nhà mạng mới thì khai vào Danh mục trước.',
+    providerInactive: 'ngừng dùng',
     bandwidth: 'Băng thông',
     wanIp: 'IP WAN',
     site: 'Site',
@@ -631,7 +683,7 @@ export default {
     emptyFiltered: 'Không có đường truyền nào khớp bộ lọc.',
     emptyFilteredHint: 'Nới bộ lọc, hoặc xóa ô tìm để xem lại toàn bộ danh sách.',
     saved: 'Đã lưu hồ sơ đường truyền.',
-    needMinimum: 'Cần ít nhất: mã đường truyền và tên nhà mạng.',
+    needMinimum: 'Cần ít nhất: mã đường truyền và nhà mạng.',
     tabProfile: 'Hồ sơ',
     tabAttachments: 'Giấy tờ',
     tabHistory: 'Lịch sử',
@@ -646,6 +698,11 @@ export default {
      * thôi có nghĩa. Hai câu nghe giống nhau nhưng nói hai chuyện khác hẳn.
      */
     notCounted: 'Không tính hạn',
+    /* Nhãn ngắn của huy hiệu hạn (`lib/expiry.ts` → `expiryLabel`). */
+    labelNone: 'Không có hạn',
+    labelOverdue: 'Quá hạn {{count}} ngày',
+    labelToday: 'Hết hạn hôm nay',
+    labelLeft: 'Còn {{count}} ngày',
     /* Bốn khóa dưới đây dùng cho THANH THỜI HẠN (ui/warranty-timeline.tsx) — bảo hành thiết
        bị, hạn license/SSL/tên miền. Đặt trong chính khối `expiry` vì
        khai một khối `expiry` thứ hai ở đầu file thì khối sau đè mất khối trước. */
@@ -720,6 +777,11 @@ export default {
     confirmDelete: 'Xóa luật "{{name}}"? Sẽ không còn email tổng hợp theo luật này nữa.',
   },
   accounts: {
+    searchPlaceholder: 'Tìm kiếm theo tên hoặc email',
+    sessionBrowser: 'Trình duyệt',
+    sessionLastSeen: 'Hoạt động gần nhất',
+    saveProfileFailed: 'Không lưu được hồ sơ.',
+    createFailed: 'Không tạo được tài khoản.',
     title: 'Tài khoản',
     subtitle: 'Super Admin tạo, khóa, đặt lại mật khẩu và đóng phiên đăng nhập từ xa',
     create: 'Thêm tài khoản',
@@ -1224,6 +1286,8 @@ export default {
     done: 'Đã đưa vào kho thanh lý.',
     empty: 'Kho thanh lý đang trống',
     emptyHint: 'Chưa có hồ sơ nào bị thanh lý hay vô hiệu hóa.',
+    truncated:
+      'Kho quá lớn nên {{kinds}} chưa hiện hết — màn này chỉ tải tối đa 500 hồ sơ mỗi loại. Tra hồ sơ cũ hơn ở màn gốc của loại đó, lọc trạng thái đã ngừng dùng.',
     /* Hai câu này KHÁC HẲN câu trên: kho có hàng, chỉ là bộ lọc đang che đi. Gộp làm một là
        tuyên bố sai về dữ liệu của công ty (rà UI/UX 12/09, mục #17). */
     noHit: 'Không có hồ sơ nào khớp bộ lọc',
@@ -1345,6 +1409,10 @@ export default {
     stateCancelled: 'Đã hủy',
     stateExpired: 'Hết hạn',
     stateRevoked: 'Đã thu hồi',
+    cardLabel: 'Yêu cầu của {{member}}',
+    fromMail: 'Yêu cầu trong thư',
+    focusGone:
+      'Yêu cầu trong thư không còn chờ duyệt — có thể người khác đã xử lý. Xem tab Nhật ký.',
   },
   /**
    * SỔ LỊCH SỬ — mọi nhãn của tab "Lịch sử" trên sáu trang chi tiết.
@@ -1362,6 +1430,7 @@ export default {
    * Tên trường (`f*`) viết CHỮ THƯỜNG: chúng ghép vào giữa câu — "mã: A → B".
    */
   history: {
+    emptyDefault: 'Chưa có thay đổi nào được ghi nhận.',
     fDepartment: 'bộ phận',
     fEndDate: 'ngày hết hạn',
     fKind: 'loại',

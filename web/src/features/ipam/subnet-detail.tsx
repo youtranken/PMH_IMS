@@ -29,7 +29,6 @@ import {
 } from "./ipam-types";
 import {
   BUCKET_KEY,
-  clampPage,
   countSlots,
   filterSlots,
   shouldIsolateAssigned,
@@ -41,6 +40,7 @@ import {
 } from "./slot-paging";
 import { toIpHistoryEntries, type IpHistoryRow } from "./ip-history-entries";
 import { PATHS } from "@/lib/routes";
+import { clampPage } from "@/lib/paging";
 
 interface DeviceOption {
   id: string;
@@ -214,7 +214,7 @@ export function SubnetPane({
   // Đổi bộ lọc thì số dòng đổi theo; giữ nguyên trang 5 của tập cũ là nhìn vào một bảng
   // rỗng và tưởng không có gì.
   useEffect(() => {
-    setPage((current) => clampPage(current, filtered.length));
+    setPage((current) => clampPage(current, filtered.length, SLOT_PAGE_SIZE));
   }, [filtered.length]);
 
   return (
@@ -478,7 +478,7 @@ export function SubnetPane({
           ) : null}
 
           <Pagination
-            page={clampPage(page, filtered.length)}
+            page={clampPage(page, filtered.length, SLOT_PAGE_SIZE)}
             limit={SLOT_PAGE_SIZE}
             total={filtered.length}
             onPageChange={setPage}

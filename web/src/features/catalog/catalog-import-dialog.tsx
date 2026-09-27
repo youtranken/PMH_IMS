@@ -14,11 +14,12 @@ interface ApiImportRow {
   message?: string;
 }
 
-const SHEET_LABEL: Record<ImportableEntity, string> = {
-  site: 'Site',
-  cabinet: 'Tủ mạng',
-  device_type: 'Loại thiết bị',
-  vendor: 'Nhà cung cấp',
+/** Tên sheet = tên tab của chính màn Danh mục — cùng một khóa, không thể lệch nhau. */
+const SHEET_LABEL_KEY: Record<ImportableEntity, string> = {
+  site: 'catalog.tabSite',
+  cabinet: 'catalog.tabCabinet',
+  device_type: 'catalog.tabDeviceType',
+  vendor: 'catalog.tabVendor',
 };
 
 /**
@@ -44,7 +45,7 @@ export function CatalogImportDialog({
       commitUrl="/api/v1/catalog/import/commit"
       csrfToken={csrfToken}
       mapRow={(row) => ({
-        group: SHEET_LABEL[row.sheet],
+        group: t(SHEET_LABEL_KEY[row.sheet]),
         rowNumber: row.rowNumber,
         action: row.action,
         label: row.label,

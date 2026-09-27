@@ -67,7 +67,7 @@ function addDays(iso: string, days: number): string {
 
 function serviceWith(all: ExpiryItem[]): ExpiryService {
   const registry = {
-    collect: () => Promise.resolve([...all]),
+    collect: () => Promise.resolve({ items: [...all], failed: [] }),
     list: () => [{ kind: 'license', label: 'License', canRenew: true }],
   } as unknown as ExpirySourceRegistry;
 

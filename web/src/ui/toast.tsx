@@ -189,6 +189,6 @@ function ToastRow({
 
 export function useToast(): (o: ToastOptions) => void {
   const ctx = useContext(ToastContext);
-  if (!ctx) throw new Error('useToast phải nằm trong <ToastProvider> (bọc ở App).');
+  if (!ctx) throw new Error('useToast must be used inside <ToastProvider> (wrapped in App).');
   return ctx;
 }

@@ -126,6 +126,11 @@ export class ExpiryService {
     total: number;
     summary: ExpirySummary;
     thresholds: ExpiryThresholds;
+    /**
+     * Nguồn hạn đã lỗi trong lượt này — kết quả THIẾU phần của chúng. Màn hình vẫn hiện phần
+     * còn lại; nơi nào cần danh sách đủ (digest, file xuất, trang chủ) phải từ chối tin nó.
+     */
+    failedKinds: string[];
   }> {
     const today = await this.today();
     const thresholds = await this.thresholds();
@@ -133,7 +138,7 @@ export class ExpiryService {
     const from = addDays(today, -lookBackDays(query));
     const to = addDays(today, withinDays);
 
-    const items = await this.registry.collect(from, to, query.kinds);
+    const { items, failed } = await this.registry.collect(from, to, query.kinds);
     const renewable = new Set(
       this.registry
         .list()
@@ -167,7 +172,13 @@ export class ExpiryService {
      * thì phép lọc chỉ chạy trong trang đang xem.
      */
     const picked = query.state ? rows.filter((row) => levelOf(row.daysLeft, thresholds) === query.state) : rows;
-    return { items: pageOf(picked, query), total: picked.length, summary, thresholds };
+    return {
+      items: pageOf(picked, query),
+      total: picked.length,
+      summary,
+      thresholds,
+      failedKinds: failed,
+    };
   }
 
   /**

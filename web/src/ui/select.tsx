@@ -216,7 +216,7 @@ export function Select({
             ) : options.length === 0 ? (
               /* Không có lựa chọn nào → báo rõ thay vì ô nổi trống trơ (review D3). */
               <li className="fsel-none" role="presentation">
-                {t('select.noOptions', '— Không có lựa chọn —')}
+                {t('select.noOptions')}
               </li>
             ) : null}
             {/*

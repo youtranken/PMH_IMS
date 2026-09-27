@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, apiFetch } from '@/lib/api-client';
 import type { Me } from '@/lib/me';
+import i18n from '@/lib/i18n';
 
 export const ME_KEY = ['auth', 'me'] as const;
 
@@ -29,7 +30,7 @@ const WARN_WHEN_ATTEMPTS_LEFT_AT_MOST = 2;
  */
 export function errorMessage(
   error: unknown,
-  fallback = 'Có lỗi xảy ra.',
+  fallback = i18n.t('common.errorFallback'),
   nearLimit?: (attemptsLeft: number) => string,
 ): string {
   if (error instanceof ApiError) {

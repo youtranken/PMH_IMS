@@ -139,3 +139,21 @@ function asQueryError(error: unknown): { query: string; params: unknown[] } | nu
   if (typeof candidate.query !== 'string' || !Array.isArray(candidate.params)) return null;
   return { query: candidate.query, params: candidate.params };
 }
+
+/**
+ * Trường pino-http phải che (NFR-04, SEC-07). Cookie phiên đi vào ở `req.headers.cookie` và đi ra
+ * ở `res.headers["set-cookie"]` — che một chiều là lộ chiều kia.
+ */
+export const LOG_REDACT_PATHS = [
+  'req.headers.cookie',
+  'req.headers.authorization',
+  'req.headers["x-csrf-token"]',
+  'res.headers["set-cookie"]',
+  'req.body.password',
+  'req.body.currentPassword',
+  'req.body.newPassword',
+  'req.body.token',
+  // Giá trị cất vào két + mã TOTP step-up (FR-021).
+  'req.body.value',
+  'req.body.totp',
+];

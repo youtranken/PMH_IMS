@@ -147,7 +147,7 @@ export function LicenseAssignmentsPanel({
                       <span className="badge ok">{t('license.active')}</span>
                     )}
                   </td>
-                  <td>
+                  <td data-label={t('common.actions')}>
                     {/*
                       "Gỡ" vào MENU, không đứng cạnh "Sửa" (rà UI/UX #21).
 

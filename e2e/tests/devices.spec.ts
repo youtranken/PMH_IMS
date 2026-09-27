@@ -10,6 +10,7 @@ import {
   resetUsers,
   timVaChoLoc,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -68,7 +69,7 @@ test.describe('Kho thiết bị', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const { siteCode } = await seedLocation(page, stamp);
     const code = `SW-E2E-${stamp}`;
 
@@ -112,7 +113,7 @@ test.describe('Kho thiết bị', () => {
 
   test('serial trùng chỉ CẢNH BÁO, vẫn lưu được', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const serial = `DUP-${stamp}`;
 
     await page.getByRole('link', { name: 'Thiết bị' }).click();
@@ -130,7 +131,7 @@ test.describe('Kho thiết bị', () => {
 
   test('đường hỏng: trùng mã thiết bị bị chặn, nói rõ lý do', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `PC-E2E-DUP-${stamp}`;
 
     await page.getByRole('link', { name: 'Thiết bị' }).click();
@@ -148,7 +149,7 @@ test.describe('Kho thiết bị', () => {
 
   test('thanh lý khóa hồ sơ, mở lại thì sửa được — không có đường xóa', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `UPS-E2E-${stamp}`;
 
     await page.getByRole('link', { name: 'Thiết bị' }).click();
@@ -174,7 +175,7 @@ test.describe('Kho thiết bị', () => {
 
   test('ngày hết bảo hành trước ngày bắt đầu bị từ chối (hàng rào ở SERVER)', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     // DatePicker trên UI không cho chọn khoảng ngày ngược, nên kiểm thẳng ở API:
     // chốt chặn thật phải nằm ở server, không phải ở widget.
@@ -246,6 +247,25 @@ test.describe('Kho thiết bị', () => {
     });
     expect(mismatched.status()).toBe(400);
     expect(await mismatched.json()).toMatchObject({ code: 'CATALOG_REF_INVALID' });
+
+    // BE-08: tủ còn máy thì không dời sang site khác — máy sẽ kẹt ở site cũ.
+    const inside = await page.request.post('/api/v1/devices', {
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
+      data: {
+        code: `NAS-E2E-TU-${stamp}`,
+        name: 'Máy trong tủ',
+        deviceTypeId: nas.id,
+        siteId: siteA,
+        cabinetId,
+      },
+    });
+    expect(inside.status()).toBe(201);
+    const move = await page.request.patch(`/api/v1/catalog/cabinet/${cabinetId}`, {
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
+      data: { siteId: siteB },
+    });
+    expect(move.status()).toBe(409);
+    expect(await move.json()).toMatchObject({ code: 'CABINET_HAS_DEVICES' });
   });
 
   /**
@@ -257,7 +277,7 @@ test.describe('Kho thiết bị', () => {
    */
   test('sửa thiết bị ngay trên danh sách, dùng đúng hộp Thêm thiết bị', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `PC-E2E-ROWEDIT-${stamp}`;
     const headers = await writeHeaders(page);
     const catalog = await page.evaluate(async () => {
@@ -304,7 +324,7 @@ test.describe('Kho thiết bị', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const headers = await writeHeaders(page);
     const catalog = await page.evaluate(async () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });
@@ -376,7 +396,7 @@ test.describe('Kho thiết bị', () => {
    */
   test('sắp xếp theo cột chạy ở server, cột không sắp được thì không có nút', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const csrf = await page.evaluate(async () => {
       const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
       return ((await res.json()) as { csrfToken: string }).csrfToken;

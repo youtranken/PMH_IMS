@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
+import { LOG_REDACT_PATHS } from './common/log-redact';
 import { GlobalExceptionFilter } from './common/global-exception.filter';
 import { UserThrottlerGuard } from './common/user-throttler.guard';
 import { ExcelExportService } from './common/excel/excel-export.service';
@@ -57,19 +58,8 @@ import { VaultModule } from './modules/vault/vault.module';
   imports: [
     LoggerModule.forRoot({
       pinoHttp: {
-        // Không để cookie/authorization/secret lọt vào log (NFR-04).
-        redact: [
-          'req.headers.cookie',
-          'req.headers.authorization',
-          'req.headers["x-csrf-token"]',
-          'req.body.password',
-          'req.body.currentPassword',
-          'req.body.newPassword',
-          'req.body.token',
-          // Giá trị cất vào két + mã TOTP step-up — không bao giờ được thấy trong log (FR-021).
-          'req.body.value',
-          'req.body.totp',
-        ],
+        // Không để cookie/authorization/secret lọt vào log — danh sách ở common/log-redact.ts.
+        redact: LOG_REDACT_PATHS,
         transport:
           process.env.NODE_ENV === 'development' ? { target: 'pino-pretty' } : undefined,
       },

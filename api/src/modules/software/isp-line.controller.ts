@@ -36,7 +36,8 @@ const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
  */
 export class IspBodyDto {
   @IsOptional() @IsString() @Length(1, 60) code?: string;
-  @IsOptional() @IsString() @Length(1, 120) provider?: string;
+  // Chọn từ danh mục Nhà mạng (Q-11). Tên gửi kèm bị từ chối: tên do danh mục quyết.
+  @IsOptional() @IsUUID(undefined, { message: 'Nhà mạng không hợp lệ.' }) providerId?: string;
   @IsOptional() @IsString() @Length(0, 60) bandwidth?: string;
   @IsOptional() @IsString() @Length(0, 120) wanIp?: string;
 
@@ -83,7 +84,7 @@ export class IspLineController {
       limit?: string;
       search?: string;
       siteId?: string;
-      provider?: string;
+      providerId?: string;
       status?: IspStatus;
       sort?: string;
       dir?: string;
@@ -94,7 +95,7 @@ export class IspLineController {
       {
         search: query.search,
         siteId: query.siteId,
-        provider: query.provider,
+        providerId: query.providerId,
         status: query.status,
       },
       parseSortQuery(query, ISP_SORT_KEYS, ISP_SORT_DEFAULT),
@@ -114,7 +115,7 @@ export class IspLineController {
     query: {
       search?: string;
       siteId?: string;
-      provider?: string;
+      providerId?: string;
       status?: IspStatus;
       sort?: string;
       dir?: string;
@@ -127,7 +128,7 @@ export class IspLineController {
       {
         search: query.search,
         siteId: query.siteId,
-        provider: query.provider,
+        providerId: query.providerId,
         status: query.status,
       },
       parseSortQuery(query, ISP_SORT_KEYS, ISP_SORT_DEFAULT),

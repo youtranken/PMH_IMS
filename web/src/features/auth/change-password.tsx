@@ -34,7 +34,7 @@ export function ChangePassword() {
           }
           change.mutate(
             { currentPassword, newPassword },
-            { onError: (err) => setError(errorMessage(err, 'Không đổi được mật khẩu.')) },
+            { onError: (err) => setError(errorMessage(err, t('auth.changePasswordFailed'))) },
           );
         }}
       >

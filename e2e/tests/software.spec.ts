@@ -8,6 +8,7 @@ import {
   rowAction,
   timVaChoLoc,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -53,7 +54,7 @@ async function createViaApi(
 test.describe('Hồ sơ phần mềm', () => {
   test('đường hạnh phúc: tạo license → lọc thấy → gia hạn → lịch sử ghi lại', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `LIC-E2E-${stamp}`;
 
     const created = await createViaApi(page, {
@@ -104,7 +105,7 @@ test.describe('Hồ sơ phần mềm', () => {
 
   test('license/SSL/tên miền KHÔNG có hạn thì bị từ chối, nói rõ vì sao cần', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     for (const kind of ['license', 'ssl', 'domain']) {
       const result = await createViaApi(page, {
@@ -127,7 +128,7 @@ test.describe('Hồ sơ phần mềm', () => {
 
   test('seat chỉ dành cho license; gia hạn lùi về quá khứ bị chặn', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     const wrongSeat = await createViaApi(page, {
       code: `SSL-E2E-${stamp}`,
@@ -165,7 +166,7 @@ test.describe('Hồ sơ phần mềm', () => {
    */
   test('key không nằm trong hồ sơ phần mềm mà ở tab Két sắt', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const created = await createViaApi(page, {
       code: `LIC-E2E-VAULT-${stamp}`,
       name: 'License có key ở két',
@@ -188,7 +189,7 @@ test.describe('Hồ sơ phần mềm', () => {
    */
   test('sắp xếp theo cột chạy ở server, cột không sắp được thì không có nút', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     for (const [suffix, name] of [
       ['A', 'Zulu hồ sơ cuối bảng'],
@@ -225,7 +226,7 @@ test.describe('Hồ sơ phần mềm', () => {
 
   test('tạo hồ sơ bằng form trên UI', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `MAINT-E2E-UI-${stamp}`;
 
     await page.goto('/software');
@@ -248,7 +249,7 @@ test.describe('Hồ sơ phần mềm', () => {
    */
   test('license vĩnh viễn: không cần ngày hết hạn, và không bị nhắc gia hạn', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const headers = await writeHeaders(page);
     const code = `LIC-E2E-PERP-${stamp}`;
 
@@ -311,7 +312,7 @@ test.describe('Hồ sơ phần mềm', () => {
    */
   test('sửa hồ sơ ngay từ cột Thao tác của danh sách', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `LIC-E2E-SUA-${stamp}`;
 
     expect(

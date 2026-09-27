@@ -125,7 +125,7 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
                     {rule.lastSentAt ? formatDateTime(rule.lastSentAt) : t('digest.never')}
                   </td>
                   {canEdit ? (
-                    <td>
+                    <td data-label={t('common.actions')}>
                       <div className="action-cell">
                         <RowActions
                           label={t('common.actionsOf', { subject: rule.name })}

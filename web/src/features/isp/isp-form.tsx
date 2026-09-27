@@ -10,7 +10,6 @@ import { Field, FormSection } from '@/ui/page-header';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
-import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
 import type { DeviceRow } from '@/lib/device-types';
 import { ISP_STATUSES, STATUS_KEY, type IspRow, type IspStatus } from './isp-types';
@@ -18,7 +17,7 @@ import { useCatalogLists } from '@/ui/use-catalog-lists';
 
 interface FormState {
   code: string;
-  provider: string;
+  providerId: string;
   bandwidth: string;
   wanIp: string;
   siteId: string;
@@ -32,7 +31,7 @@ interface FormState {
 function initialState(row: IspRow | null): FormState {
   return {
     code: row?.code ?? '',
-    provider: row?.provider ?? '',
+    providerId: row?.providerId ?? '',
     bandwidth: row?.bandwidth ?? '',
     wanIp: row?.wanIp ?? '',
     siteId: row?.siteId ?? '',
@@ -127,14 +126,14 @@ export function IspForm({
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          if (!form.code.trim() || !form.provider.trim()) {
+          if (!form.code.trim() || !form.providerId) {
             setError(t('isp.needMinimum'));
             return;
           }
           save.mutate(
             {
               code: form.code.trim(),
-              provider: form.provider.trim(),
+              providerId: form.providerId,
               bandwidth: form.bandwidth.trim(),
               wanIp: form.wanIp.trim(),
               siteId: form.siteId,
@@ -199,15 +198,22 @@ export function IspForm({
             />
           </Field>
           <Field label={t('isp.provider')} required hint={t('isp.providerHint')}>
-            {/* Gợi ý từ danh mục Nhà mạng, nhưng VẪN gõ tự do được: nhà mạng mới ký hợp đồng
-                lúc 5 giờ chiều thì phải khai được ngay, không chờ ai mở danh mục ra thêm. */}
-            <SuggestInput
-              value={form.provider}
-              onChange={(value) => set('provider', value)}
-              options={(lists.data?.ispProviders ?? []).map((item) => item.name)}
-              failed={lists.isError}
-              placeholder={t('isp.providerPlaceholder')}
+            {/* Chọn từ danh mục, không gõ tự do (Q-11): chữ gõ tay sinh ra "FPT" / "fpt " là
+                hai nhà mạng khác nhau, và đổi tên trong danh mục không tới được hồ sơ nào.
+                Mục ngừng dùng chỉ còn trong danh sách khi hồ sơ đang trỏ vào nó. */}
+            <Select
+              value={form.providerId}
               ariaLabel={t('isp.provider')}
+              placeholder={t('isp.providerPlaceholder')}
+              failed={lists.isError}
+              required
+              options={(lists.data?.ispProviders ?? [])
+                .filter((item) => item.active || item.id === row?.providerId)
+                .map((item) => ({
+                  value: item.id,
+                  label: item.active ? item.name : `${item.name} (${t('isp.providerInactive')})`,
+                }))}
+              onChange={(value) => set('providerId', value)}
             />
           </Field>
           <Field label={t('isp.bandwidth')} htmlFor="isp-bandwidth">

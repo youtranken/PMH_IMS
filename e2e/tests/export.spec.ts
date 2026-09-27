@@ -4,6 +4,7 @@ import {
   E2E_MEMBER,
   E2E_SA,
   firstLogin,
+  ispProviderId,
   resetAccessList,
   resetApprovals,
   resetDevices,
@@ -51,7 +52,11 @@ test.describe('Xuất Excel', () => {
     });
     await page.request.post('/api/v1/isp-lines', {
       headers,
-      data: { code: `ISP-E2E-EXP-${stamp}`, provider: 'Viettel', hotline: '18008119' },
+      data: {
+        code: `ISP-E2E-EXP-${stamp}`,
+        providerId: await ispProviderId(page, 'Viettel E2E'),
+        hotline: '18008119',
+      },
     });
     const octet = Number(stamp) % 200;
     const subnet = await page.request.post('/api/v1/ipam/subnets', {

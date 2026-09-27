@@ -6,10 +6,12 @@ import {
   APP_ORIGIN,
   E2E_SA,
   firstLogin,
+  ispProviderId,
   resetDevices,
   resetIsp,
   resetSoftware,
   resetUsers,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -69,7 +71,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `SW-E2E-ATT-${stamp}`;
 
     await page.goto('/devices');
@@ -100,7 +102,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `LIC-E2E-ATT-${stamp}`;
 
     await page.goto('/software');
@@ -129,15 +131,17 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
 
   test('đường truyền: chọn bản scan hợp đồng trong form Thêm đường truyền', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `ISP-E2E-ATT-${stamp}`;
+    await ispProviderId(page, 'FPT Telecom E2E');
 
     await page.goto('/isp-lines');
     await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
 
     const form = page.getByRole('dialog');
     await form.getByLabel('Mã đường').fill(code);
-    await form.getByRole('combobox', { name: 'Nhà mạng' }).fill('FPT Telecom');
+    await form.getByRole('button', { name: 'Nhà mạng' }).click();
+    await page.getByRole('option', { name: 'FPT Telecom E2E', exact: true }).click();
     await picker(page).setInputFiles(writePdf(`scan-hd-${stamp}.pdf`));
 
     await form.getByRole('button', { name: 'Lưu' }).click();
@@ -152,7 +156,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `LIC-E2E-BO-${stamp}`;
 
     await page.goto('/software');
@@ -173,7 +177,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
 
   test('đường hỏng: file giả mạo đuôi .pdf bị từ chối, hồ sơ VẪN được lưu', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `LIC-E2E-BAD-${stamp}`;
 
     // Đặt tên .pdf nhưng ruột là HTML. Hồ sơ đã ghi xuống DB trước khi file bay lên, nên
@@ -195,7 +199,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
 test.describe('Giấy tờ của hồ sơ phần mềm', () => {
   test('đính kèm thẳng ở tab Giấy tờ của trang chi tiết rồi xóa đi', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     const csrf = await page.evaluate(async () => {
       const res = await fetch('/api/v1/auth/me', { credentials: 'include' });

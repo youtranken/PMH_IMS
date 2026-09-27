@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
 /**
@@ -148,8 +149,9 @@ export function StatIfSet({
  * đúng: đây là việc còn thiếu, không phải lỗi.
  */
 export function BlankFields({ labels }: { labels: string[] }) {
+  const { t } = useTranslation();
   if (labels.length === 0) return null;
-  return <p className="blank-fields muted">Chưa khai: {labels.join(', ')}.</p>;
+  return <p className="blank-fields muted">{t('detail.blankFields', { list: labels.join(', ') })}</p>;
 }
 
 /**

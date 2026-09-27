@@ -145,6 +145,44 @@ export function supportsSeats(kind: SoftwareKind): boolean {
 }
 
 /**
+ * Hồ sơ sau khi sửa còn chứa nổi các ghế đang gán không (rỗng = được).
+ *
+ * Ghế gán là dữ liệu của máy khác, không phải của form này: đổi loại, chuyển vĩnh viễn, hạ
+ * trần hay thanh lý mà bỏ mặc chúng thì còn lại những dòng gán mà luật của chính hồ sơ không
+ * nhận — ghế của một "SSL", ghế có hạn trên license vĩnh viễn, 12/10 ghế không ai khai lý do
+ * vượt. Người sửa phải tự gỡ hay sửa ghế trước, để việc đó có tên người và dòng lịch sử.
+ */
+export function seatConflicts(
+  next: {
+    kind: SoftwareKind;
+    licenseModel: LicenseModel;
+    seatTotal: number | null;
+    status: SoftwareStatus;
+  },
+  seats: { used: number; withEndDate: number },
+): string[] {
+  if (seats.used === 0) return [];
+  const errors: string[] = [];
+  if (!supportsSeats(next.kind)) {
+    errors.push(
+      `Đang có ${seats.used} ghế gán vào máy — chỉ ${KIND_LABEL.license} mới có ghế. Gỡ hết ghế trước khi đổi loại.`,
+    );
+  }
+  if (next.licenseModel === 'perpetual' && seats.withEndDate > 0) {
+    errors.push(
+      `Có ${seats.withEndDate} ghế đang ghi ngày hết hạn — bản vĩnh viễn thì ghế không có hạn. Bỏ ngày hết hạn của các ghế đó trước.`,
+    );
+  }
+  if (next.seatTotal !== null && next.seatTotal < seats.used) {
+    errors.push(
+      `Đang dùng ${seats.used} ghế, không hạ tổng xuống ${next.seatTotal} được. Gỡ bớt ghế trước.`,
+    );
+  }
+  // Thanh lý khi còn ghế KHÔNG phải xung đột: service tự gỡ các ghế đó (QUYET-DINH Q-03).
+  return errors;
+}
+
+/**
  * Trả về danh sách lỗi tiếng Việt (rỗng = hợp lệ).
  *
  * Trả mảng thay vì ném ở lỗi đầu tiên: màn import (và cả form) muốn hiện HẾT chỗ sai của

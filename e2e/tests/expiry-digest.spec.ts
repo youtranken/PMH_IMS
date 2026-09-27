@@ -11,6 +11,7 @@ import {
   resetSoftware,
   resetUsers,
   waitForMail,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(async () => {
@@ -76,7 +77,7 @@ function lichKhongToiHanHomNay(): { frequency: 'weekly'; weekday: number; hour: 
 test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
   test('MỘT email tổng hợp cho nhiều mục, không phải mail lẻ từng món', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     // Ba mục sắp hết hạn thuộc hai loại khác nhau.
     await post(page, '/api/v1/software', {
@@ -135,7 +136,7 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
    */
   test('hồ sơ phần mềm đã Hết hạn không vào mail, mục còn hạn thì vẫn vào', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     await post(page, '/api/v1/software', {
       code: `SSL-E2E-QH-${stamp}`,
       name: 'SSL đã quá hạn',
@@ -167,7 +168,7 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
 
   test('luật lọc theo loại chỉ gửi đúng loại đó', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     await post(page, '/api/v1/software', {
       code: `SSL-E2E-F1-${stamp}`,
@@ -200,7 +201,7 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
 
   test('luật ĐANG CHẠY bắt buộc có người nhận; để dành thì phải tắt', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     /*
      * Luật đang chạy mà không có người nhận thì mỗi phút sweep lại đến kỳ, lại bỏ qua, lại
@@ -270,7 +271,7 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
 
   test('tạo luật trên UI bằng bộ chọn lịch dùng chung', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     await page.goto('/expiry');
     await page.getByRole('tab', { name: 'Luật gửi báo cáo' }).click();

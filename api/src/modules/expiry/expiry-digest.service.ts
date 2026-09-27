@@ -1,4 +1,11 @@
-import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { and, asc, eq, isNull, lt, or } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
@@ -263,11 +270,22 @@ export class ExpiryDigestService {
      * người nhận rằng thư này có thứ không cần đọc, và vài tuần sau cả lá thư vào thùng rác,
      * kể cả những dòng thật sự gấp.
      */
-    const { items } = await this.expiry.list({
+    const { items, failedKinds } = await this.expiry.list({
       withinDays: rule.withinDays,
       kinds: kinds.length > 0 ? kinds : undefined,
       expiredWithinDays: await this.config.getNumber('expiryDigestExpiredDays'),
     });
+    /*
+     * Ném TRƯỚC khi `runOne` mở transaction chốt kỳ. Một lá thư thiếu phần của nguồn hỏng
+     * trông y hệt một lá thư đủ, và chốt kỳ trên nó là mất lời nhắc của cả tuần/tháng. Ném ra
+     * thì kỳ vẫn "chưa gửi" và sweep phút sau thử lại, tới khi nguồn sống lại.
+     */
+    if (failedKinds.length > 0) {
+      throw new ServiceUnavailableException({
+        code: 'EXPIRY_SOURCE_FAILED',
+        message: `Không đọc được nguồn hạn: ${failedKinds.join(', ')}. Báo cáo chưa gửi, hệ thống sẽ thử lại.`,
+      });
+    }
     const rows = items.filter((item) => !item.quietInDigest).map((item) => ({
       label: item.label,
       kind: item.kind,

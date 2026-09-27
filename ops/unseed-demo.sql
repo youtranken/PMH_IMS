@@ -6,7 +6,7 @@
 -- khỏi trang 1 và làm đỏ những bài đi tìm dòng vừa tạo — đúng sự cố
 -- 09/09 và 11/09 (27 dải + 11 hồ sơ phần mềm, rồi 24 tài khoản).
 --
---   docker exec -i it_qlmgmtip-postgres-1 psql -U ims -d ims -v ON_ERROR_STOP=1 < ops/unseed-demo.sql
+--   docker exec -i it_qlmgmtip-postgres-1 psql -U ims -d ims -v ON_ERROR_STOP=1 -v allow_demo=1 < ops/unseed-demo.sql
 --
 -- ===== THỨ TỰ XOÁ LÀ THỨ TỰ KHOÁ NGOẠI, ĐỌC NGƯỢC =====
 --
@@ -34,6 +34,14 @@
 --   END LOOP; END $$;
 --
 -- (Chưa đo bản chia lô ở 1 triệu — đừng chép vào đây cho tới khi có người đo.)
+
+-- HÀNG RÀO (DR-09): không có `-v allow_demo=1` thì dừng trước khi chạm dòng dữ liệu nào.
+-- Chạy nhầm file này lên prod là trộn/xoá dữ liệu thật theo tiền tố DM%.
+\if :{?allow_demo}
+\else
+\echo 'DỪNG: script dữ liệu demo CHỈ dành cho máy dev. Chạy lại với -v allow_demo=1 nếu đúng là máy dev.'
+DO $$ BEGIN RAISE EXCEPTION 'thiếu -v allow_demo=1'; END $$;
+\endif
 
 \set ON_ERROR_STOP on
 BEGIN;

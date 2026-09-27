@@ -129,9 +129,18 @@ test.describe('Break-glass', () => {
     await logout(page);
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
 
-    await page.goto('/approvals');
-    await expect(page.getByText('switch tầng 3 mất kết nối')).toBeVisible();
-    await page.getByRole('button', { name: 'Duyệt', exact: true }).first().click();
+    // DOM-06: nút trong thư mở `/approvals?id=<yêu cầu>` — yêu cầu đó lên đầu và được đánh dấu.
+    const pending = (await (await page.request.get('/api/v1/vault/break-glass/pending')).json()) as {
+      id: string;
+      reason: string;
+    }[];
+    const requestId = pending.find((r) => r.reason === 'switch tầng 3 mất kết nối')!.id;
+    await page.goto(`/approvals?id=${requestId}`);
+    const card = page.getByRole('region', { name: /^Yêu cầu của / }).first();
+    await expect(card).toContainText('switch tầng 3 mất kết nối');
+    await expect(card).toHaveAttribute('aria-current', 'true');
+    await expect(card.getByText('Yêu cầu trong thư')).toBeVisible();
+    await card.getByRole('button', { name: 'Duyệt', exact: true }).click();
     const decide = page.getByRole('dialog');
     await decide.getByRole('textbox', { name: 'Cấp trong bao lâu (giờ)' }).fill('2');
     await decide.getByRole('button', { name: 'Duyệt', exact: true }).click();
@@ -389,7 +398,7 @@ test.describe('Break-glass', () => {
     expect(await failed.json()).toMatchObject({ code: 'BREAK_GLASS_PENDING' });
 
     const mine = await page.request.get('/api/v1/vault/break-glass/mine');
-    const rows = (await mine.json()) as { state: string }[];
+    const rows = ((await mine.json()) as { items: { state: string }[] }).items;
     expect(rows.filter((r) => r.state === 'pending').length).toBe(1);
   });
 

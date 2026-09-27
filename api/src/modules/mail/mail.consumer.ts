@@ -63,7 +63,14 @@ export class MailConsumer {
     if (!row || row.processedAt) return;
 
     const payload = row.payload as { userId?: string; ruleId?: string; isTest?: boolean };
-    const built = await this.build(topic, payload);
+    /*
+     * Giờ in trong thư là giờ SỰ KIỆN — lúc hàng outbox được ghi, cùng transaction với việc
+     * nghiệp vụ — chứ không phải lúc worker gửi: hàng đợi dồn thì thư đi trễ hàng giờ. Và
+     * luôn theo `appTimezone` (AD-11): không ghim thì in theo giờ container, tức UTC.
+     */
+    const timeZone = await this.config.getString('appTimezone');
+    const at = (date: Date) => date.toLocaleString('vi-VN', { timeZone });
+    const built = await this.build(topic, payload, { eventAt: at(row.createdAt), at });
     if (!built) {
       /*
        * HAI NGUYÊN NHÂN, HAI MỨC LOG (B-06, vá 22/09).
@@ -105,7 +112,11 @@ export class MailConsumer {
    * Thư KHÔNG chứa bất kỳ bí mật nào, kể cả tên secret: nó chỉ nói "có người xin quyền trên
    * đối tượng X, lý do Y" và đưa một đường dẫn. Ai muốn quyết thì phải đăng nhập.
    */
-  private async buildApprovalMail(approvalId: string, isReminder: boolean) {
+  private async buildApprovalMail(
+    approvalId: string,
+    isReminder: boolean,
+    at: (date: Date) => string,
+  ) {
     /*
      * Yêu cầu đã bị xử lý xong / xóa trước khi thư kịp đi → thôi, đừng làm phiền người duyệt.
      *
@@ -131,10 +142,10 @@ export class MailConsumer {
       rows: [
         { label: 'Người xin', value: request.requester },
         { label: 'Lý do', value: request.reason },
-        { label: 'Lúc', value: request.createdAt.toLocaleString('vi-VN') },
+        { label: 'Lúc', value: at(request.createdAt) },
       ],
-      ctaLabel: 'Mở màn duyệt',
-      ctaUrl: `${APP_URL()}${UI_PATHS.approvals}`,
+      ctaLabel: 'Mở yêu cầu này',
+      ctaUrl: `${APP_URL()}${UI_PATHS.approval(request.id)}`,
       footnote:
         'Duyệt được trên điện thoại. Quyền cấp ra luôn có thời hạn và tự cắt khi hết giờ.',
     });
@@ -163,6 +174,7 @@ export class MailConsumer {
          chọn vì hàng outbox ghi trước 18/09/2026 không có trường này. */
       cooldownMinutes?: number;
     },
+    time: { eventAt: string; at: (date: Date) => string },
   ) {
     // Báo cáo tổng hợp không gắn với một user nào — xử riêng trước khi tra user.
     // Nội dung DỰNG LẠI từ `ruleId`: outbox chỉ giữ id tham chiếu, không PII (AD-11/NFR-04).
@@ -198,7 +210,7 @@ export class MailConsumer {
      */
     if (topic === 'approval.requested' || topic === 'approval.reminder') {
       if (!payload.approvalId) return null;
-      return this.buildApprovalMail(payload.approvalId, topic === 'approval.reminder');
+      return this.buildApprovalMail(payload.approvalId, topic === 'approval.reminder', time.at);
     }
 
     const user = payload.userId ? await this.users.getById(payload.userId) : null;
@@ -211,8 +223,6 @@ export class MailConsumer {
        */
       case 'auth.account.locked': {
         if (!user) return null;
-        const timeZone = await this.config.getString('appTimezone');
-        const fmt = (d: Date) => d.toLocaleString('vi-VN', { timeZone });
         const { html, text } = renderMail({
           title: 'Một tài khoản đang bị đoán mật khẩu',
           intro:
@@ -220,8 +230,8 @@ export class MailConsumer {
             'Đăng nhập vào tài khoản này đang bị TẠM CHẶN ở mọi nơi; mỗi lần sai tiếp, thời gian chờ dài thêm.',
           rows: [
             { label: 'Người dùng', value: `${user.fullName} (${user.email})` },
-            { label: 'Chặn đến', value: user.lockedUntil ? fmt(user.lockedUntil) : '—' },
-            { label: 'Thời điểm', value: fmt(new Date()) },
+            { label: 'Chặn đến', value: user.lockedUntil ? time.at(user.lockedUntil) : '—' },
+            { label: 'Thời điểm', value: time.eventAt },
           ],
           /* Chủ tài khoản cũng nhận thư này nhưng màn Nhật ký chỉ mở cho SA/Quản trị — nhãn
              nói trước điều đó để người nhận không tưởng nút hỏng khi bấm ra trang 404. */
@@ -264,7 +274,7 @@ export class MailConsumer {
             { label: 'Tài khoản', value: payload.who },
             { label: 'Số lượt', value: String(payload.count ?? 0) },
             { label: 'Trong', value: `${payload.windowMinutes ?? 0} phút` },
-            { label: 'Thời điểm', value: new Date().toLocaleString('vi-VN') },
+            { label: 'Thời điểm', value: time.eventAt },
           ],
           ctaLabel: 'Xem nhật ký của tài khoản này',
           ctaUrl: `${APP_URL()}${UI_PATHS.auditLog(payload.who)}`,
@@ -307,7 +317,7 @@ export class MailConsumer {
         const { html, text } = renderMail({
           title: 'Đăng nhập từ thiết bị mới',
           intro: `Tài khoản của bạn vừa đăng nhập từ một thiết bị hoặc trình duyệt chưa từng dùng.`,
-          rows: [{ label: 'Thời điểm', value: new Date().toLocaleString('vi-VN') }],
+          rows: [{ label: 'Thời điểm', value: time.eventAt }],
           footnote: 'Nếu không phải bạn, đổi mật khẩu ngay và báo SA.',
         });
         return { to: [user.email], subject: '[IMS] Đăng nhập từ thiết bị mới', html, text };
@@ -336,7 +346,7 @@ export class MailConsumer {
           intro: reset
             ? 'SA vừa đặt lại mật khẩu cho tài khoản của bạn. Mọi phiên đang mở đã bị đăng xuất.'
             : 'Mật khẩu tài khoản của bạn vừa được đổi. Mọi phiên khác đã bị đăng xuất.',
-          rows: [{ label: 'Thời điểm', value: new Date().toLocaleString('vi-VN') }],
+          rows: [{ label: 'Thời điểm', value: time.eventAt }],
           footnote: 'Nếu không phải bạn thực hiện, báo SA ngay lập tức.',
         });
         return { to: [user.email], subject: '[IMS] Thay đổi mật khẩu', html, text };

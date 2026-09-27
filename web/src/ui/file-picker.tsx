@@ -1,4 +1,5 @@
 import { useId, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Ô chọn file dùng chung (AD-15): kéo-thả hoặc bấm chọn, hiện tên + dung lượng file đã chọn.
@@ -23,6 +24,7 @@ export function FilePicker({
   onPick: (file: File | null) => void;
   disabled?: boolean;
 }) {
+  const { t } = useTranslation();
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -75,7 +77,7 @@ export function FilePicker({
               if (inputRef.current) inputRef.current.value = '';
             }}
           >
-            Bỏ chọn
+            {t('filePicker.clear')}
           </button>
         </p>
       ) : null}

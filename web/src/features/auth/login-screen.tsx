@@ -31,7 +31,7 @@ export function LoginScreen() {
           // (nextStepPath) — xem App.tsx.
           login.mutate(
             { email: email.trim(), password },
-            { onError: (err) => setError(errorMessage(err, 'Đăng nhập không thành công.')) },
+            { onError: (err) => setError(errorMessage(err, t('auth.loginFailed'))) },
           );
         }}
       >

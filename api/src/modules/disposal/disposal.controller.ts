@@ -19,6 +19,6 @@ export class DisposalController {
   @Roles('sa', 'admin', 'member')
   @Get()
   list() {
-    return this.disposal.list();
+    return this.disposal.inventory();
   }
 }

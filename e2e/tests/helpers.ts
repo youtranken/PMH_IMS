@@ -710,6 +710,26 @@ export async function writeHeaders(page: Page): Promise<Record<string, string>> 
 }
 
 /**
+ * Id nhà mạng trong danh mục, tạo nếu chưa có — đường truyền nhận `providerId`, không nhận chữ
+ * (Q-11). Tên PHẢI chứa "E2E": đó là thứ duy nhất vùng `catalog` của `reset-e2e.mjs` nhìn vào.
+ * Tạo mục danh mục cần quyền SA/Admin, nên gọi từ phiên SA.
+ */
+export async function ispProviderId(page: Page, name: string): Promise<string> {
+  if (!name.includes('E2E')) throw new Error(`Tên nhà mạng của bài kiểm phải chứa "E2E": ${name}`);
+  const lists = await page.request.get('/api/v1/catalog?includeInactive=true');
+  expect(lists.status()).toBe(200);
+  const existing = ((await lists.json()) as { ispProviders: { id: string; name: string }[] })
+    .ispProviders.find((item) => item.name.toLowerCase() === name.toLowerCase());
+  if (existing) return existing.id;
+  const created = await page.request.post('/api/v1/catalog/isp_provider', {
+    headers: await writeHeaders(page),
+    data: { name },
+  });
+  expect(created.status()).toBe(201);
+  return ((await created.json()) as { id: string }).id;
+}
+
+/**
  * Tuỳ chọn cho test cần MỘT TRÌNH DUYỆT THỨ HAI (`browser.newContext()`).
  *
  * `newContext()` KHÔNG thừa kế mục `use` trong `playwright.config.ts`. Thiếu
@@ -991,4 +1011,29 @@ export function isoInDays(days: number): string {
 /** Hôm nay theo lịch của múi giờ ứng dụng — xem chú thích `isoInDays`. */
 export function isoToday(): string {
   return isoInDays(0);
+}
+
+/**
+ * Hậu tố duy nhất cho tên hàng E2E tạo ra — 6 chữ số, và vẫn là SỐ.
+ *
+ * Vì sao không `Date.now().toString().slice(-6)`: sáu số cuối của mili-giây quay vòng sau
+ * ~16 phút (một lượt E2E dài hơn thế), và hai lần gọi trong cùng mili-giây — hai hàng trong
+ * một bài — ra cùng một số.
+ *
+ * Số đầu là `TEST_WORKER_INDEX` — worker mới sinh ra sau một bài hỏng mang chỉ số mới, nên
+ * không đụng số worker cũ vừa phát trong cùng giây. Năm số sau là giây hiện tại (quay vòng sau
+ * ~27 giờ, nên lượt sau không đụng rác lượt trước) và luôn TĂNG trong một tiến trình: gọi dồn
+ * trong cùng giây thì lấy số kế tiếp chứ không lặp. Không trộn số ngẫu nhiên: với sáu chữ số,
+ * ngẫu nhiên phá đúng tính tăng dần — thứ bảo đảm không trùng trong một lượt.
+ *
+ * Phải là số vì nhiều bài lấy `Number(stamp) % 200` làm octet IP. Chữ số worker đứng ĐẦU vì
+ * thế: đứng cuối thì `% 200` chỉ còn 20 giá trị và các dải của hai bài liền nhau dễ chồng lên
+ * nhau; đứng đầu thì `% 200` là giây hiện tại, đủ 200 giá trị.
+ */
+let lastStampSecond = -1;
+export function uniqueStamp(): string {
+  const now = Math.floor(Date.now() / 1000) % 100_000;
+  lastStampSecond = now > lastStampSecond ? now : (lastStampSecond + 1) % 100_000;
+  const worker = Number(process.env.TEST_WORKER_INDEX ?? 0) % 10;
+  return `${worker}${lastStampSecond.toString().padStart(5, '0')}`;
 }

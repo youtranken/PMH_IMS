@@ -7,6 +7,7 @@ import { formatDateTime, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import type { SecretOwnerType } from '@/lib/secret-owner-kinds';
 import { Dialog } from '@/ui/dialog';
+import { useDisabledReason } from '@/ui/disabled-reason';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
@@ -128,6 +129,9 @@ export function VaultPanel({
   const [pendingStepUp, setPendingStepUp] = useState<SecretMeta | null>(null);
   /** Secret đang mở dở — chặn bấm đúp đẻ ra hai lần giải mã, hai dòng audit. */
   const [opening, setOpening] = useState<string | null>(null);
+  /* Mở MỘT ngăn là mọi nút "Xem" khác xám hết, và không gì nói vì sao — người dùng đọc ra
+     "mình không có quyền". Một câu dùng chung cho cả bảng, gắn vào từng nút đang xám. */
+  const busyReason = useDisabledReason(opening !== null ? t('vault.revealBusy') : null);
   const [requesting, setRequesting] = useState(false);
   const [revealed, setRevealed] = useState<
     { label: string; value: string; seconds: number; stepUpSecondsLeft: number } | null
@@ -256,6 +260,7 @@ export function VaultPanel({
         <EmptyState title={t('vault.empty')} hint={t('vault.emptyHint')} />
       ) : (
         <div className="table-wrap">
+          {busyReason.hint}
           <table className="table table-stack wide">
             <thead>
               <tr>
@@ -277,7 +282,7 @@ export function VaultPanel({
                   </td>
                   <td data-label={t('vault.note')}>{orDash(secret.note)}</td>
                   <td data-label={t('vault.updatedAt')}>{formatDateTime(secret.updatedAt)}</td>
-                  <td>
+                  <td data-label={t('common.actions')}>
                     <div className="action-cell">
                       {/* Xem được kể cả khi hồ sơ đã khóa: thiết bị thanh lý rồi vẫn có lúc
                           phải tra mật khẩu cũ để gỡ cấu hình. Khóa là khóa GHI. */}
@@ -286,14 +291,7 @@ export function VaultPanel({
                           type="button"
                           className="btn sm"
                           disabled={opening !== null}
-                          /* Mở MỘT ngăn là bảy nút "Xem" còn lại xám hết, và không gì nói vì
-                             sao — người dùng đọc ra "mình không có quyền". Nói thẳng: đang
-                             bận mở cái kia, xong thì bấm được. */
-                          title={
-                            opening !== null && opening !== secret.id
-                              ? t('vault.revealBusy')
-                              : undefined
-                          }
+                          {...(opening !== secret.id ? busyReason.buttonProps : {})}
                           onClick={() => void openSecret(secret)}
                         >
                           {opening === secret.id ? t('common.loading') : t('vault.reveal')}

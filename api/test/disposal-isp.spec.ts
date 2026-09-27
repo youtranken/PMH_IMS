@@ -3,11 +3,12 @@ import { DisposalService } from '../src/modules/disposal/disposal.service';
 import { IspLineService } from '../src/modules/software/isp-line.service';
 import { SoftwareApiService } from '../src/modules/software/software.api';
 import type { AuditWriterService } from '../src/modules/audit/audit-writer.service';
-import type { CatalogApiService } from '../src/modules/catalog/catalog.api';
+import { CatalogApiService } from '../src/modules/catalog/catalog.api';
+import { CatalogService } from '../src/modules/catalog/catalog.service';
 import type { DevicesApiService } from '../src/modules/devices/devices.api';
 import type { ServiceAccountsApiService } from '../src/modules/service-accounts/service-accounts.api';
 import type { SoftwareService } from '../src/modules/software/software.service';
-import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { createScratchDb, migrationsDir, seedIspProviders, type ScratchDb } from './db';
 
 /**
  * Q-10 — đường truyền đã thanh lý vào Kho thanh lý, đọc qua cửa `software.api` (AD-2).
@@ -24,15 +25,14 @@ describe('Q-10 · đường truyền thanh lý vào kho — tầng DB', () => {
   let isp: IspLineService;
   let api: SoftwareApiService;
   const actor = 'q10@test';
+  let providers: Record<string, string>;
 
   beforeAll(async () => {
     scratch = await createScratchDb('ims_disposal_isp');
     await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
+    providers = await seedIspProviders(scratch.pool, ['VNPT', 'FPT', 'Viettel']);
     const audit = { appendWithin: () => Promise.resolve() } as unknown as AuditWriterService;
-    const catalog = {
-      lists: () => Promise.resolve({ sites: [] }),
-      validateRefs: () => Promise.resolve([]),
-    } as unknown as CatalogApiService;
+    const catalog = new CatalogApiService(new CatalogService(scratch.db, audit));
     const devices = { getByIds: () => Promise.resolve(new Map()) } as unknown as DevicesApiService;
     isp = new IspLineService(scratch.db, catalog, devices, audit);
     api = new SoftwareApiService({} as SoftwareService, isp);
@@ -43,9 +43,9 @@ describe('Q-10 · đường truyền thanh lý vào kho — tầng DB', () => {
   }, TEST_TIMEOUT);
 
   it('chỉ đường truyền Thanh lý đi qua cửa; Đang dùng và Tạm ngưng ở lại màn Đường truyền', async () => {
-    const running = await isp.create(actor, { code: 'Q10-RUN', provider: 'VNPT' });
-    const paused = await isp.create(actor, { code: 'Q10-PAUSE', provider: 'FPT' });
-    const cut = await isp.create(actor, { code: 'Q10-CUT', provider: 'Viettel', bandwidth: '1 Gbps' });
+    const running = await isp.create(actor, { code: 'Q10-RUN', providerId: providers.VNPT });
+    const paused = await isp.create(actor, { code: 'Q10-PAUSE', providerId: providers.FPT });
+    const cut = await isp.create(actor, { code: 'Q10-CUT', providerId: providers.Viettel, bandwidth: '1 Gbps' });
     await isp.update(actor, paused.id, { status: 'suspended' });
     await isp.update(actor, cut.id, { status: 'terminated' });
 

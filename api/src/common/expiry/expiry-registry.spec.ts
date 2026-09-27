@@ -25,7 +25,10 @@ describe('ExpirySourceRegistry — engine không biết bảng nào tồn tại 
   it('chưa nguồn nào đăng ký → không có gì, màn vẫn mở được', async () => {
     const registry = new ExpirySourceRegistry();
     expect(registry.list()).toEqual([]);
-    await expect(registry.collect('2026-01-01', '2026-12-31')).resolves.toEqual([]);
+    await expect(registry.collect('2026-01-01', '2026-12-31')).resolves.toEqual({
+      items: [],
+      failed: [],
+    });
   });
 
   it('gom mọi nguồn và SẮP THEO NGÀY HẾT HẠN — thứ gấp nhất nằm trên', async () => {
@@ -34,8 +37,8 @@ describe('ExpirySourceRegistry — engine không biết bảng nào tồn tại 
     registry.register(source('license', [item('lic-1', 'license', '2026-08-25')]));
     registry.register(source('isp', [item('isp-1', 'isp', '2026-12-01')]));
 
-    const rows = await registry.collect('2026-01-01', '2026-12-31');
-    expect(rows.map((row) => row.id)).toEqual(['lic-1', 'ssl-1', 'isp-1']);
+    const { items } = await registry.collect('2026-01-01', '2026-12-31');
+    expect(items.map((row) => row.id)).toEqual(['lic-1', 'ssl-1', 'isp-1']);
   });
 
   it('lọc theo loại chỉ hỏi đúng nguồn đó', async () => {
@@ -43,28 +46,36 @@ describe('ExpirySourceRegistry — engine không biết bảng nào tồn tại 
     registry.register(source('ssl', [item('ssl-1', 'ssl', '2026-09-30')]));
     registry.register(source('license', [item('lic-1', 'license', '2026-08-25')]));
 
-    const rows = await registry.collect('2026-01-01', '2026-12-31', ['ssl']);
-    expect(rows.map((row) => row.id)).toEqual(['ssl-1']);
+    const { items } = await registry.collect('2026-01-01', '2026-12-31', ['ssl']);
+    expect(items.map((row) => row.id)).toEqual(['ssl-1']);
   });
 
   /**
-   * Màn cảnh báo hạn mà sập vì một module phụ thì đúng thứ nó sinh ra để chống
-   * (hết hạn bất ngờ) lại xảy ra.
+   * Màn cảnh báo hạn mà sập vì một module phụ thì đúng thứ nó sinh ra để chống lại xảy ra, nên
+   * phần còn lại vẫn trả về. Nhưng nguồn hỏng phải được NÊU TÊN: nuốt im lặng thì digest tưởng
+   * kỳ này không có gì và chốt kỳ, lời nhắc của cả tuần mất theo (BE-01).
    */
-  it('một nguồn ném lỗi chỉ mất phần của nguồn đó, phần còn lại vẫn hiện', async () => {
+  it.each([
+    [['vault'], ['lic-1', 'ssl-1']],
+    [['vault', 'ssl'], ['lic-1']],
+    [[], ['lic-1', 'ssl-1', 'vault-1']],
+  ])('nguồn hỏng %j → vẫn trả %j và nêu tên nguồn hỏng', async (broken, ids) => {
     const registry = new ExpirySourceRegistry();
-    registry.register(source('vault', [], { throws: true }));
+    registry.register(source('vault', [item('vault-1', 'vault', '2026-10-01')], { throws: broken.includes('vault') }));
     registry.register(source('license', [item('lic-1', 'license', '2026-08-25')]));
+    registry.register(source('ssl', [item('ssl-1', 'ssl', '2026-09-30')], { throws: broken.includes('ssl') }));
 
-    const rows = await registry.collect('2026-01-01', '2026-12-31');
-    expect(rows.map((row) => row.id)).toEqual(['lic-1']);
+    const { items, failed } = await registry.collect('2026-01-01', '2026-12-31');
+    expect(items.map((row) => row.id)).toEqual(ids);
+    expect(failed.slice().sort()).toEqual(broken.slice().sort());
   });
 
   it('đăng ký hai lần cùng một loại không nhân đôi kết quả', async () => {
     const registry = new ExpirySourceRegistry();
     registry.register(source('ssl', [item('ssl-1', 'ssl', '2026-09-30')]));
     registry.register(source('ssl', [item('ssl-1', 'ssl', '2026-09-30')]));
-    await expect(registry.collect('2026-01-01', '2026-12-31')).resolves.toHaveLength(1);
+    const { items } = await registry.collect('2026-01-01', '2026-12-31');
+    expect(items).toHaveLength(1);
   });
 
   it('nói rõ nguồn nào gia hạn được — bảo hành thiết bị thì không', () => {

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { formatDateTime } from '@/lib/format';
 
 export interface HistoryEntry {
@@ -15,13 +16,14 @@ export interface HistoryEntry {
  */
 export function HistoryPanel({
   entries,
-  emptyText = 'Chưa có thay đổi nào được ghi nhận.',
+  emptyText,
 }: {
   entries: HistoryEntry[];
   emptyText?: string;
 }) {
+  const { t } = useTranslation();
   if (entries.length === 0) {
-    return <p className="muted">{emptyText}</p>;
+    return <p className="muted">{emptyText ?? t('history.emptyDefault')}</p>;
   }
   return (
     <ol className="history">

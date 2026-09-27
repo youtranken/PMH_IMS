@@ -9,6 +9,7 @@ import {
   resetUsers,
   sql,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -84,7 +85,7 @@ test.describe('M2 — ghi song song trên cùng bản ghi', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     const created = await page.request.post('/api/v1/software', {
       headers: await writeHeaders(page),
@@ -145,7 +146,7 @@ test.describe('M2 — ghi song song trên cùng bản ghi', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     const created = await page.request.post('/api/v1/software', {
       headers: await writeHeaders(page),
@@ -260,7 +261,7 @@ test.describe('M2 — ghi song song trên cùng bản ghi', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     /*
      * Kịch bản chỉ có nghĩa ở ĐÚNG 3 SA hoạt động.

@@ -7,6 +7,7 @@ import {
   resetDevices,
   resetUsers,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -20,7 +21,7 @@ test.beforeEach(() => {
  */
 test('danh sách và chi tiết thiết bị dùng được ở 390px', async ({ page }) => {
   await firstLogin(page, E2E_SA);
-  const stamp = Date.now().toString().slice(-6);
+  const stamp = uniqueStamp();
   const code = `PC-E2E-${stamp}`;
 
   // Tạo qua API: form nhập là màn desktop-only, không phải thứ test ở 390px.
@@ -67,7 +68,7 @@ test('danh sách và chi tiết thiết bị dùng được ở 390px', async ({
  */
 test('bảng port map, cả chiều ngược, đọc được ở 390px', async ({ page }) => {
   await firstLogin(page, E2E_SA);
-  const stamp = Date.now().toString().slice(-6);
+  const stamp = uniqueStamp();
   const switchCode = `SW-E2E-390-${stamp}`;
   const serverCode = `SRV-E2E-390-${stamp}`;
   const headers = await writeHeaders(page);

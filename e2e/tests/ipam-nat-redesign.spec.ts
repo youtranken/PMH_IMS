@@ -8,6 +8,7 @@ import {
   resetUsers,
   rowAction,
   timVaChoLoc,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -161,7 +162,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const routerCode = `FW-E2E-${stamp}`;
     await createRouter(page, routerCode);
 
@@ -201,7 +202,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
 
   test('bấm ✕ bỏ một chip trước khi lưu thì port đó không vào sổ', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const routerCode = `FW-E2E-X-${stamp}`;
     await createRouter(page, routerCode);
 
@@ -233,7 +234,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
 
   test('đường hỏng: port sai định dạng báo ngay tại ô, không chờ bấm Lưu', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const routerCode = `FW-E2E-E-${stamp}`;
     await createRouter(page, routerCode);
 
@@ -269,7 +270,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
 
   test('sửa một rule thì chỉ giữ đúng một khoảng port', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const routerCode = `FW-E2E-S-${stamp}`;
     const deviceId = await createRouter(page, routerCode);
 
@@ -324,7 +325,7 @@ test.describe('Sổ NAT — lưu hỏng một phần', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const routerCode = `FW-E2E-P-${stamp}`;
     const deviceId = await createRouter(page, routerCode);
@@ -387,7 +388,7 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const routerCode = `FW-E2E-T-${stamp}`;
     await createRouter(page, routerCode);
@@ -469,7 +470,7 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const routerCode = `FW-E2E-NOIP-${stamp}`;
     await createRouter(page, routerCode);
@@ -507,7 +508,7 @@ test.describe('Sổ NAT — máy đích được NAT', () => {
 test.describe('Popup Sửa có chỗ quản lý giấy tờ', () => {
   test('sửa thiết bị: thấy panel giấy tờ, tải lên rồi xóa ngay trong hộp', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `PC-E2E-SUA-${stamp}`;
 
     const catalog = await page.evaluate(async () => {
@@ -542,7 +543,7 @@ test.describe('Popup Sửa có chỗ quản lý giấy tờ', () => {
 test.describe('Sổ NAT — lịch sử và giấy tờ', () => {
   test('mở rule → sửa → gỡ đều để lại dòng lịch sử nói rõ đổi gì', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const routerCode = `FW-E2E-HIST-${stamp}`;
     const routerId = await createRouter(page, routerCode);
@@ -610,7 +611,7 @@ test.describe('Sổ NAT — lịch sử và giấy tờ', () => {
 
   test('đính được giấy tờ vào rule NAT và vào dải mạng', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     const routerId = await createRouter(page, `FW-E2E-FILE-${stamp}`);

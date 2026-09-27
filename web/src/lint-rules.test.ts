@@ -114,9 +114,9 @@ describe('web/eslint.config.mjs — cổng AD-15 phải THẬT SỰ bắt đư�
     // Nếu bài này đỏ thì luật đang chặn cả đường đi ĐÚNG, và người ta sẽ tắt luật đi.
     const { output, failed } = lintSnippet(
       `import { useConfirm } from '@/ui/confirm-provider';\n` +
-        `export function F() {\n` +
+        `export function F({ title, body }: { title: string; body: string }) {\n` +
         `  const askConfirm = useConfirm();\n` +
-        `  return () => void askConfirm({ title: 'Xoá?', body: 'Không hoàn tác được.' });\n` +
+        `  return () => void askConfirm({ title, body });\n` +
         `}\n`,
     );
     expect(failed, `eslint không được báo lỗi. Đầu ra:\n${output}`).toBe(false);
@@ -171,9 +171,66 @@ ${output}`).toBe(true);
 ` +
         `export const map = { 'hỏng': 'broken' };
 `,
+      /*
+       * Probe đặt dưới `src/locales/`: chuỗi tiếng Việt ở MÃ SẢN PHẨM giờ đỏ vì luật DoD-6 (bài
+       * bên dưới) — một luật khác, thông báo khác. Ở `locales/` DoD-6 miễn trừ còn AD-16 vẫn
+       * áp, nên bài này hỏi đúng MỘT câu: AD-16 có bắt nhầm chuỗi không.
+       */
+      'src/locales',
     );
     expect(failed, `eslint không được báo lỗi. Đầu ra:
 ${output}`).toBe(false);
+  });
+});
+
+/**
+ * DoD gạch 6 — CHỮ GIAO DIỆN TIẾNG VIỆT CHỈ Ở `src/locales/vi.ts`.
+ *
+ * Hai vế như mọi luật ở đây: bắt được chuỗi cứng ở cả ba dạng cú pháp (chuỗi, template, chữ
+ * JSX), và KHÔNG bắt nhầm những chỗ được phép — chú thích, `vi.ts`, bài kiểm, và các ký tự
+ * không phải chữ (`×` của nút đóng, khối dấu kết hợp mà `search-fold.ts` dùng để bỏ dấu).
+ */
+describe('DoD-6 — chữ tiếng Việt viết cứng trong mã sản phẩm', { timeout: 60_000 }, () => {
+  it.each([
+    ['chữ JSX', `export const A = () => <th>Trình duyệt</th>;`],
+    ['chuỗi trong thuộc tính JSX', `export const A = () => <input placeholder="Tìm theo tên" />;`],
+    ['chuỗi trong {…} của JSX', `export const A = () => <p>{'Không có dữ liệu'}</p>;`],
+    ['template trong JSX', 'export const A = ({ n }: { n: number }) => <p>{`Còn ${n} ngày`}</p>;'],
+    ['chuỗi trong hàm thuần', `export const f = (x: string) => (x ? x : 'Có lỗi xảy ra.');`],
+    ['tham số mặc định', `export function f(fallback = 'Đăng nhập không thành công.') { return fallback; }`],
+  ])('BẮT được %s', (_ten, code) => {
+    const { output, failed } = lintSnippet(code);
+    expect(failed, `eslint phải báo lỗi. Đầu ra:\n${output}`).toBe(true);
+    expect(output).toMatch(/DoD-6/);
+  });
+
+  it.each([
+    ['ở file .ts ngoài features', 'src/lib', `export const x = 'Quá hạn';`],
+    ['ở features', 'src/features', `export const A = () => <b>Lỗi</b>;`],
+  ])('BẮT được %s', (_ten, under, code) => {
+    const { output, failed } = lintSnippet(code, under, 'probe.tsx');
+    expect(failed, `Đầu ra:\n${output}`).toBe(true);
+    expect(output).toMatch(/DoD-6/);
+  });
+
+  it('KHÔNG bắt nhầm: chú thích, khóa i18n, dấu ×, khối dấu kết hợp', () => {
+    const { output, failed } = lintSnippet(
+      `// Chú thích tiếng Việt có dấu là ĐÚNG luật.\n` +
+        `import { useTranslation } from 'react-i18next';\n` +
+        `export const MARKS = new RegExp('[\\u0300-\\u036f]', 'g');\n` +
+        `export function A() {\n` +
+        `  const { t } = useTranslation();\n` +
+        `  return <button aria-label={t('toast.close')}>×</button>;\n` +
+        `}\n`,
+    );
+    expect(failed, `eslint không được báo lỗi. Đầu ra:\n${output}`).toBe(false);
+  });
+
+  it('KHÔNG áp cho src/locales và cho bài kiểm', () => {
+    expect(lintSnippet(`export default { a: 'Đăng xuất' };\n`, 'src/locales').failed).toBe(false);
+    expect(
+      lintSnippet(`export const x = 'Đăng xuất';\n`, 'src', 'probe.test.tsx').failed,
+    ).toBe(false);
   });
 });
 

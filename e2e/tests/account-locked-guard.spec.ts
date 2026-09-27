@@ -6,6 +6,7 @@ import {
   resetUsers,
   sql,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -62,7 +63,7 @@ async function tryLogin(page: import('@playwright/test').Page, email: string, pa
 test.describe('Tài khoản bị SA khóa thì không đăng nhập được', () => {
   test('status = locked → login bị từ chối, và KHÔNG ghi auth.login.ok', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const who = await makeMember(page, stamp);
 
     // Mật khẩu tạm dùng được khi tài khoản còn `active` — chốt này giữ cho vế sau có nghĩa.
@@ -101,7 +102,7 @@ test.describe('Tài khoản bị SA khóa thì không đăng nhập được', (
 
   test('status = disabled vẫn bị chặn như cũ, và bằng MÃ LỖI RIÊNG', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const who = await makeMember(page, stamp);
 
     sql(`UPDATE users SET status = 'disabled' WHERE email = '${who.email}'`);
@@ -122,7 +123,7 @@ test.describe('Tài khoản bị SA khóa thì không đăng nhập được', (
    */
   test('mở khóa (về active) thì đăng nhập lại được ngay', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const who = await makeMember(page, stamp);
 
     sql(`UPDATE users SET status = 'locked' WHERE email = '${who.email}'`);

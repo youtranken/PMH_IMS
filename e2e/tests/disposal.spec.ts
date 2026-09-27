@@ -3,12 +3,14 @@ import {
   E2E_SA,
   firstLogin,
   isoInDays,
+  ispProviderId,
   resetDevices,
   resetIsp,
   resetServiceAccounts,
   resetSoftware,
   resetUsers,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -32,7 +34,7 @@ test.beforeEach(() => {
 
 test('ba loại hồ sơ đã ngừng dùng cùng hiện trong một bảng', async ({ page }) => {
   await firstLogin(page, E2E_SA);
-  const stamp = Date.now().toString().slice(-6);
+  const stamp = uniqueStamp();
   const headers = await writeHeaders(page);
 
   const catalog = await page.evaluate(async () => {
@@ -117,14 +119,18 @@ test('ba loại hồ sơ đã ngừng dùng cùng hiện trong một bảng', as
  */
 test('đường truyền đã thanh lý vào kho, link về đúng trang đường truyền', async ({ page }) => {
   await firstLogin(page, E2E_SA);
-  const stamp = Date.now().toString().slice(-6);
+  const stamp = uniqueStamp();
   const headers = await writeHeaders(page);
   const cut = `ISP-E2E-DIS-${stamp}`;
   const running = `ISP-E2E-RUN-${stamp}`;
 
   const created = await page.request.post('/api/v1/isp-lines', {
     headers,
-    data: { code: cut, provider: 'VNPT', bandwidth: '300 Mbps' },
+    data: {
+      code: cut,
+      providerId: await ispProviderId(page, 'VNPT E2E'),
+      bandwidth: '300 Mbps',
+    },
   });
   expect(created.status()).toBe(201);
   const cutId = ((await created.json()) as { id: string }).id;
@@ -132,7 +138,7 @@ test('đường truyền đã thanh lý vào kho, link về đúng trang đườ
     (
       await page.request.post('/api/v1/isp-lines', {
         headers,
-        data: { code: running, provider: 'FPT' },
+        data: { code: running, providerId: await ispProviderId(page, 'FPT E2E') },
       })
     ).status(),
   ).toBe(201);
@@ -170,7 +176,7 @@ test('đường truyền đã thanh lý vào kho, link về đúng trang đườ
  */
 test('hồ sơ trong kho KHÔNG còn được tính hạn', async ({ page }) => {
   await firstLogin(page, E2E_SA);
-  const stamp = Date.now().toString().slice(-6);
+  const stamp = uniqueStamp();
   const headers = await writeHeaders(page);
   const code = `LIC-E2E-QUIET-${stamp}`;
 

@@ -3,10 +3,12 @@ import {
   APP_ORIGIN,
   E2E_SA,
   firstLogin,
+  ispProviderId,
   resetDevices,
   resetIsp,
   resetSoftware,
   resetUsers,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -50,7 +52,7 @@ test.describe('Cỗ máy Expiry', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     const catalog = await page.evaluate(async () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });
@@ -68,7 +70,7 @@ test.describe('Cỗ máy Expiry', () => {
     // Đường truyền không có hạn (Q-04) — có mặt trong DB nhưng không được lên màn này.
     const isp = await post(page, '/api/v1/isp-lines', {
       code: `ISP-E2E-EXP-${stamp}`,
-      provider: 'FPT',
+      providerId: await ispProviderId(page, 'FPT E2E'),
     });
     expect(isp.status).toBe(201);
     await post(page, '/api/v1/software', {
@@ -103,7 +105,7 @@ test.describe('Cỗ máy Expiry', () => {
 
   test('lọc theo loại — danh sách loại lấy từ API, không viết cứng ở UI', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     await post(page, '/api/v1/software', {
       code: `SSL-E2E-F-${stamp}`,
@@ -144,7 +146,7 @@ test.describe('Cỗ máy Expiry', () => {
 
   test('gia hạn từ màn Expiry gọi về module chủ và ghi lịch sử gia hạn', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const created = await post(page, '/api/v1/software', {
       code: `LIC-E2E-RENEW-${stamp}`,
       name: 'License gia hạn',
@@ -188,7 +190,7 @@ test.describe('Cỗ máy Expiry', () => {
 
   test('bảo hành thiết bị không gia hạn được từ màn Expiry', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const catalog = await page.evaluate(async () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });
       return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
@@ -218,7 +220,7 @@ test.describe('Cỗ máy Expiry', () => {
 
   test('mục đã QUÁ HẠN vẫn hiện — đó mới là thứ nguy hiểm', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     await post(page, '/api/v1/software', {
       code: `SSL-E2E-OLD-${stamp}`,
       name: 'SSL đã hết hạn',
@@ -249,7 +251,7 @@ test.describe('Cỗ máy Expiry', () => {
    */
   test('bộ lọc lên URL: F5 còn nguyên, Back từ hồ sơ về đúng bảng đã lọc', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     await post(page, '/api/v1/software', {
       code: `SSL-E2E-URL-${stamp}`,
       name: 'SSL cho bai kiem URL',

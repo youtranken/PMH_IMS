@@ -7,7 +7,7 @@ import { ExpiryApiService } from '../expiry/expiry.api';
 import { IpamApiService } from '../ipam/ipam.api';
 import { VaultApiService } from '../vault/vault.api';
 import type { UserRole } from '../auth/types';
-import { pickLoadedSubnets, pickRecent, pickStaleOwners } from './dashboard-rules';
+import { pickExpiring, pickLoadedSubnets, pickRecent, pickStaleOwners } from './dashboard-rules';
 import { redactMessage } from '../../common/log-redact';
 
 /** Cửa sổ "tuần qua" của các khối tính theo tuần. */
@@ -33,6 +33,8 @@ const WEEK_DAYS = 7;
  * đường sang màn đầy đủ.
  */
 const MAX_ITEMS = 8;
+/** Số chỗ tối đa mục quá hạn được giữ trong khối "sắp hết hạn" khi còn mục sắp tới cần hiện. */
+const OVERDUE_SLOTS = 3;
 
 export interface DashboardBlock<T> {
   /**
@@ -150,7 +152,7 @@ export class DashboardService {
       this.expiringBlock(),
       // AC: Member thấy dashboard RÚT GỌN — không có khối break-glass toàn cục. Họ vẫn xem
       // được yêu cầu của chính mình ở màn Duyệt yêu cầu.
-      isBoss ? this.breakGlassBlock() : emptyBlock<BreakGlassEntry>(),
+      isBoss ? this.breakGlassBlock(now) : emptyBlock<BreakGlassEntry>(),
       this.subnetLoadBlock(),
       /*
        * Khối két CHỈ cho SA/Admin, đúng bằng quyền của `GET /vault/owners` (26/08).
@@ -180,29 +182,32 @@ export class DashboardService {
   private async expiringBlock(): Promise<Dashboard['expiring']> {
     try {
       /*
-       * XIN ĐÚNG SỐ DÒNG SẼ BÀY, KHÔNG KÉO CẢ KHO VỀ RỒI CẮT (N-01, vá 21/09).
-       *
-       * Khối này hiện tối đa `MAX_ITEMS` dòng, nhưng bản trước kéo trọn cửa sổ qua ranh giới
-       * module — đo được 7.662 bản ghi để bày 8 dòng. `total` nay là con số máy chủ đếm, nên
-       * câu "còn bao nhiêu mục sắp hết hạn" vẫn đúng dù chỉ tải về 8 dòng.
-       *
-       * Nguồn đã sắp theo ngày hết hạn tăng dần, mà `daysLeft` suy ra từ chính ngày ấy — nên
-       * `limit` cắt đúng những mục GẤP NHẤT, không cắt bừa.
+       * Hai câu hỏi riêng, mỗi câu chỉ xin đúng số dòng sẽ bày: kéo cả cửa sổ qua ranh giới
+       * module để bày 8 dòng là thứ N-01 đã chặn. Tách "sắp tới" khỏi "quá hạn" vì một danh
+       * sách chung sắp theo ngày luôn để quá hạn chiếm hết chỗ — xem `pickExpiring`.
        */
-      const { items, total } = await this.expiry.list({ limit: MAX_ITEMS });
+      const [upcoming, overdue] = await Promise.all([
+        this.expiry.list({ includeExpired: false, limit: MAX_ITEMS }),
+        this.expiry.list({ state: 'expired', limit: MAX_ITEMS }),
+      ]);
+      const failedKinds = [...new Set([...upcoming.failedKinds, ...overdue.failedKinds])];
+      // Thiếu phần của một nguồn mà vẫn hiện như đủ thì người đọc hiểu là "không còn gì khác".
+      if (failedKinds.length > 0) {
+        this.logger.warn(`khối sắp-hết-hạn thiếu nguồn: ${failedKinds.join(', ')}`);
+        return emptyBlock();
+      }
       return {
         available: true,
-        total,
-        items: items
-          .slice()
-          .sort((a, b) => a.daysLeft - b.daysLeft)
-          .map((row) => ({
+        total: upcoming.total + overdue.total,
+        items: pickExpiring(upcoming.items, overdue.items, MAX_ITEMS, OVERDUE_SLOTS).map(
+          (row) => ({
             kind: row.kind,
             label: row.label,
             endDate: row.end,
             daysLeft: row.daysLeft,
             link: row.link ?? null,
-          })),
+          }),
+        ),
       };
     } catch (error) {
       /**
@@ -316,16 +321,19 @@ export class DashboardService {
     }
   }
 
-  private async breakGlassBlock(): Promise<Dashboard['breakGlass']> {
+  private async breakGlassBlock(now: Date): Promise<Dashboard['breakGlass']> {
     try {
-      const since = new Date(Date.now() - WEEK_DAYS * 86_400_000);
-      const all = await this.approvals.list({ kind: 'break_glass' });
-      const recent = all.filter((row) => row.createdAt.getTime() >= since.getTime());
+      // Lọc tuần và cắt 8 dòng trong SQL: bảng này chỉ lớn lên, trang chủ mở mỗi sáng.
+      const since = new Date(now.getTime() - WEEK_DAYS * 86_400_000);
+      const recent = await this.approvals.page(
+        { kind: 'break_glass', since },
+        { limit: MAX_ITEMS, offset: 0 },
+      );
 
       return {
         available: true,
-        total: recent.length,
-        items: await Promise.all(recent.slice(0, 8).map((row) => this.toEntry(row))),
+        total: recent.total,
+        items: await Promise.all(recent.items.map((row) => this.toEntry(row))),
       };
     } catch (error) {
       this.logger.warn(`khối break-glass lỗi: ${message(error)}`);

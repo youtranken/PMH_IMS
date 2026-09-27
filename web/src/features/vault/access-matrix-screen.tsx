@@ -8,6 +8,7 @@ import { Dialog } from '@/ui/dialog';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
+import { ScrollX } from '@/ui/scroll-x';
 import { Select } from '@/ui/select';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
@@ -253,7 +254,11 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
       ) : (
         /* Cuộn ngang TRONG khung này, không phải cả trang — vài chục cột là chuyện bình
            thường, mà trang cuộn ngang thì cột tên người trôi mất và lưới hết đọc được. */
-        <div className="table-wrap access-grid-wrap" data-testid="access-grid">
+        <ScrollX
+          ariaLabel={t('access.title')}
+          className="table-wrap access-grid-wrap"
+          testId="access-grid"
+        >
           <table className="table access-grid">
             <thead>
               <tr>
@@ -336,7 +341,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
               ))}
             </tbody>
           </table>
-        </div>
+        </ScrollX>
       )}
 
       {!loading && !failed && columns.length > 0 ? (

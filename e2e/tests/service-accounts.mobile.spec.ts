@@ -6,6 +6,7 @@ import {
   resetServiceAccounts,
   resetUsers,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -22,7 +23,7 @@ test.beforeEach(() => {
  */
 test('danh sách và hồ sơ tài khoản dịch vụ đọc được ở 390px', async ({ page }) => {
   await firstLogin(page, E2E_SA);
-  const stamp = Date.now().toString().slice(-6);
+  const stamp = uniqueStamp();
   const code = `VPN-E2E-M390-${stamp}`;
 
   // Tạo qua API: form nhập là màn desktop-only, không phải thứ kiểm ở 390px.

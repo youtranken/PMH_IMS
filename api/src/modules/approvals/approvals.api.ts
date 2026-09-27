@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { Page } from '../../common/pagination';
 import type { Tx } from '../../common/tx';
 import {
   ApprovalsService,
@@ -43,6 +44,14 @@ export class ApprovalsApiService {
 
   list(filters: Parameters<ApprovalsService['list']>[0]): Promise<ApprovalRecord[]> {
     return this.approvals.list(filters);
+  }
+
+  /** Một trang lọc trong SQL — dùng cho màn hình và trang chủ thay vì `list()`. */
+  page(
+    filters: Parameters<ApprovalsService['page']>[0],
+    paging: Parameters<ApprovalsService['page']>[1],
+  ): Promise<Page<ApprovalRecord>> {
+    return this.approvals.page(filters, paging);
   }
 
   history(id: string): ReturnType<ApprovalsService['history']> {

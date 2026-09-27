@@ -7,6 +7,7 @@ import {
   isoToday,
   resetUsers,
   sql,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(() => resetUsers());
@@ -181,7 +182,7 @@ test.describe('Nhật ký kiểm toán — "từ đâu" (NFR-03)', () => {
   const FORGED_IP = '203.0.113.99';
 
   test('dòng ghi ngoài transaction có IP, và IP đó KHÔNG phải thứ client tự khai', async () => {
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     // Email không tồn tại → nhánh `not-found` của `login()`, dùng `append()` (bản NÉM lỗi).
     // Actor là duy nhất nên tìm lại đúng một dòng, không lẫn với dòng của bài khác.
     const ghost = `e2e-ip-${stamp}@pmh.com.vn`;

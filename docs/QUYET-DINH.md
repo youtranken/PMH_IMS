@@ -90,6 +90,24 @@ Sổ thay cho `CAN-XAC-NHAN.md` (đã xoá ngày 27/09/2026, còn trong lịch s
   khoản dịch vụ.
 - Luật mail nhắc hạn có loại `isp` được gỡ loại đó; luật chỉ còn mỗi `isp` thì tắt.
 
+### Q-11 · Chốt thêm ngày 27/09/2026 (đợt P1-2)
+
+- **Bản sao lưu trên NAS không mã hoá** — NAS nội bộ, có phân quyền riêng. Rủi ro chấp nhận (DR-06).
+- **Member được đính file** vào mọi hồ sơ họ xem được — người đi hiện trường chụp ảnh, biên bản
+  (SEC-12, đúng chủ ý).
+- **Nhà mạng bắt buộc chọn từ danh mục** (khoá ngoại thật); **người/bộ phận dùng** vẫn là ô chữ tự
+  do có gợi ý (OLD-DB-01).
+- **Thanh lý phần mềm khi còn ghế license: hệ thống tự gỡ các ghế đó**, mỗi ghế một dòng lịch sử
+  (làm rõ Q-03 — không chặn, không bắt gỡ tay trước).
+
+### Q-12 · Member được tạo và sửa danh mục (27/09/2026)
+
+- **Mọi member được TẠO và SỬA mục trong tất cả danh mục**: site, tủ mạng, loại thiết bị, nhà
+  cung cấp, phòng ban, nhà mạng, dịch vụ/port — không riêng nhà mạng.
+- **Vô hiệu hoá, xoá và nhập hàng loạt từ Excel vẫn chỉ SA/Admin** (thao tác có thể làm hỏng dữ
+  liệu hàng loạt). Chủ dự án muốn mở thêm thì sửa mục này trước.
+- Đổi tên nhà mạng KHÔNG ghi vào lịch sử từng đường truyền — lịch sử danh mục đã ghi.
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã

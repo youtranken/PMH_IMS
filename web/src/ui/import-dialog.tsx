@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { errorMessage } from '@/lib/api';
 import { uploadFile } from '@/lib/upload';
 import { Dialog } from '@/ui/dialog';
+import { useDisabledReason } from '@/ui/disabled-reason';
 import { FilePicker } from '@/ui/file-picker';
 import {
   ImportPreview,
@@ -87,6 +88,22 @@ export function ImportDialog<TRow>({
   const rows = plan?.rows.map(mapRow) ?? [];
   const writable = plan ? plan.summary.create + plan.summary.update : 0;
   const hasErrors = (plan?.summary.error ?? 0) > 0;
+  /* Nút "Đối chiếu" xám vì chưa chọn file; nút "Xác nhận ghi" xám vì BỐN lý do khác nhau.
+     Không nói lý do thì người dùng không biết là do file sai hay do mình chưa bấm gì. */
+  const previewReason = useDisabledReason(!file && !busy ? t('importDialog.needFile') : null);
+  const commitReason = useDisabledReason(
+    busy
+      ? null
+      : !plan
+        ? t('importDialog.needCheck')
+        : hasErrors
+          ? t('importDialog.hasErrors')
+          : writable === 0
+            ? t('importDialog.nothing')
+            : null,
+    // Hiện bằng chữ: đây là câu hỏi "vì sao chưa ghi được" mà ai nhìn hộp này cũng hỏi.
+    { visible: true },
+  );
 
   return (
     <Dialog
@@ -97,6 +114,8 @@ export function ImportDialog<TRow>({
       title={title}
       footer={
         <>
+          {commitReason.hint}
+          {previewReason.hint}
           <button type="button" className="btn" disabled={busy} onClick={onClose}>
             {t('common.cancel')}
           </button>
@@ -104,10 +123,7 @@ export function ImportDialog<TRow>({
             type="button"
             className="btn"
             disabled={!file || busy}
-            /* Nút NÀY cũng xám, và vì một lý do khác hẳn nút bên phải: chưa chọn file. Lượt
-               lái tay 12/09 bắt được chỗ sót — bản vá #22 nói lý do cho nút "Ghi" mà bỏ nút
-               "Đối chiếu" ngay cạnh, tức vá một nửa hộp. */
-            title={!file && !busy ? t('importDialog.needFile') : undefined}
+            {...previewReason.buttonProps}
             onClick={() => void run('preview')}
           >
             {busy && !plan ? t('common.loading') : t('importDialog.check')}
@@ -116,19 +132,7 @@ export function ImportDialog<TRow>({
             type="button"
             className="btn primary"
             disabled={!plan || hasErrors || writable === 0 || busy}
-            /* BỐN lý do làm nút này xám, và bản cũ không nói lý do nào. Người dùng đối chiếu
-               xong, thấy nút chết, và không biết là do file sai hay do mình chưa bấm gì. */
-            title={
-              busy
-                ? undefined
-                : !plan
-                  ? t('importDialog.needCheck')
-                  : hasErrors
-                    ? t('importDialog.hasErrors')
-                    : writable === 0
-                      ? t('importDialog.nothing')
-                      : undefined
-            }
+            {...commitReason.buttonProps}
             onClick={() => void run('commit')}
           >
             {t('importDialog.confirm')}

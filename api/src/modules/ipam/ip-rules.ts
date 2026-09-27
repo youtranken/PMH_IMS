@@ -141,10 +141,9 @@ export type HostRole = 'host' | 'network' | 'broadcast';
 /**
  * Địa chỉ này có gán cho máy được không, khi CHƯA biết dải?
  *
- * Suy từ octet cuối, và điều đó ĐÚNG TUYỆT ĐỐI trong hệ này vì `MIN_PREFIX = 24`: mọi dải
- * khai được đều là /24 hoặc hẹp hơn, mà trong bất kỳ dải nào như vậy, octet cuối 0 luôn là
- * địa chỉ mạng và 255 luôn là địa chỉ quảng bá (/25 chia thành .0 và .128 — hai địa chỉ
- * quảng bá là .127 và .255; /26 thì .63/.127/.191/.255; cứ thế).
+ * Suy từ octet cuối, nên chỉ là phép ĐOÁN: đúng cho /24 (.0 mạng, .255 quảng bá), nhưng bỏ
+ * sót .127/.128 của /25, .63/.64… của /26, và chặn nhầm .0/.255 khi chúng là máy trong /31 hay
+ * /32. Biết dải chứa địa chỉ thì dùng `hostRoleIn`; bản này chỉ cho IP nằm ngoài mọi dải.
  *
  * Vì sao cần: gán 172.16.0.0 cho một máy là dữ liệu không bao giờ đúng ngoài đời — gói tin
  * gửi tới đó không tới máy nào cả. Bên IPAM đã trừ sẵn hai địa chỉ này khi liệt kê dải, nhưng

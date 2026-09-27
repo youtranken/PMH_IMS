@@ -110,7 +110,7 @@ xem tận mắt lần thứ hai.
 
 - [x] **SEC-06 · `/auth/change-password` không đếm sai.** `auth.service.ts:780`. Dùng lại cơ chế của
   `startTotpEnrollment`: `registerStepUpFailure` + probe + thu hồi phiên khi chạm ngưỡng.
-- [ ] **SEC-07 · Logger có thể ghi `Set-Cookie`.** Thêm `res.headers["set-cookie"]` vào danh sách
+- [x] **SEC-07 · Logger có thể ghi `Set-Cookie`.** Thêm `res.headers["set-cookie"]` vào danh sách
   redact (`app.module.ts:61-71`). Kiểm bằng một dòng log thật.
 - [x] **SEC-08 · Container api giữ mật khẩu superuser Postgres** (`MIGRATION_DATABASE_URL`). Làm cùng
   OPS-07.
@@ -125,7 +125,7 @@ xem tận mắt lần thứ hai.
 - [ ] **SEC-11 · Kiểm Origin bị bỏ qua khi thiếu header** (`csrf.guard.ts:66`), mở khả năng login-CSRF.
 - [ ] **SEC-12 · Member đính file được vào mọi đối tượng chỉ có quyền đọc**
   (`files.controller.ts`, `assertCanRead`). Cần chủ dự án xác nhận đây là chủ ý.
-- [ ] **SEC-13 · Quyền theo nhà mạng gắn theo tên** (`isp_provider` dùng `provider.name`). Đổi tên thì
+- [x] **SEC-13 · Quyền theo nhà mạng gắn theo tên** (`isp_provider` dùng `provider.name`). Đổi tên thì
   mất quyền, tên cũ dùng lại thì thừa kế sai người.
 - [ ] **SEC-14 · Mật khẩu tạm không tự ẩn** (`accounts-screen.tsx:544-576`).
 
@@ -135,7 +135,7 @@ xem tận mắt lần thứ hai.
 
 ### P1
 
-- [ ] **BE-01 · Mail nhắc hạn nuốt lỗi mà vẫn chốt kỳ.**
+- [x] **BE-01 · Mail nhắc hạn nuốt lỗi mà vẫn chốt kỳ.**
   - **Vấn đề:** `common/expiry/expiry-registry.ts:49-60` catch rồi trả `[]`; `expiry-digest.service.ts`
     vẫn claim `lastSentAt`.
   - **Hậu quả:** một nguồn lỗi là mất lời nhắc cả tuần hoặc cả tháng.
@@ -154,19 +154,19 @@ xem tận mắt lần thứ hai.
 - [x] **BE-03 · Két: UPDATE không kiểm `revoked_at`.** `vault.service.ts:249,284,316`: có thể xoay
   hoặc sửa một secret vừa bị thu hồi, và `revoke` chạy đúp. Thêm `AND revoked_at IS NULL` +
   `.returning()` → 404.
-- [ ] **BE-04 · Ghi chú thu hồi đè ghi chú của người duyệt.** `approvals.service.ts:152`: file export
+- [x] **BE-04 · Ghi chú thu hồi đè ghi chú của người duyệt.** `approvals.service.ts:152`: file export
   cho auditor gán sai lời cho sai người. Chỉ đặt `decisionNote` ở lần quyết định đầu.
-- [ ] **BE-05 · Dashboard "sắp hết hạn" hiện sai mục.** `dashboard.service.ts:192` cắt 8 mục đã sort
+- [x] **BE-05 · Dashboard "sắp hết hạn" hiện sai mục.** `dashboard.service.ts:192` cắt 8 mục đã sort
   theo ngày tăng dần, nên SSL còn 2 ngày có thể không lên. Sắp theo mức độ trước rồi mới cắt.
 - [x] ~~**BE-06**~~ được thay bằng DOM-03.
-- [ ] **BE-07 · NAT đoán địa chỉ mạng/quảng bá theo octet cuối.** `nat-rules.ts:91` → `ip-rules.ts:155`
+- [x] **BE-07 · NAT đoán địa chỉ mạng/quảng bá theo octet cuối.** `nat-rules.ts:91` → `ip-rules.ts:155`
   sai với dải /25–/32. Tìm dải chứa IP rồi dùng `hostRoleIn`.
-- [ ] **BE-08 · Dời tủ mạng sang site khác làm kẹt thiết bị trong tủ.** `catalog.service.ts:497-514`.
+- [x] **BE-08 · Dời tủ mạng sang site khác làm kẹt thiết bị trong tủ.** `catalog.service.ts:497-514`.
   Chặn khi tủ còn thiết bị, hoặc dùng FK kép `(site_id, cabinet_id)`.
-- [ ] **BE-09 · Sửa phần mềm không xét ghế đang gán.** `software.service.ts:305-369` cho đổi kind,
+- [x] **BE-09 · Sửa phần mềm không xét ghế đang gán.** `software.service.ts:305-369` cho đổi kind,
   perpetual, giảm `seatTotal`, retire. `license-assignment.service.ts:226-245` vẫn gán được vào phần
   mềm đã retire.
-- [ ] **BE-10 · Query không LIMIT trên đường nóng.**
+- [x] **BE-10 · Query không LIMIT trên đường nóng.**
   - `approvals.service.ts:218-236` và `dashboard.service.ts:322` tải toàn bộ lịch sử break-glass mỗi
     lần mở trang chủ.
   - Thêm `since`/`limit` và lọc trong SQL.
@@ -180,7 +180,7 @@ xem tận mắt lần thứ hai.
 - [ ] **BE-12 · Import Excel:**
   - Quá 20.000 dòng thì bị cắt im lặng (`excel-import.service.ts:13,43`).
   - Ô công thức không có giá trị cache hoặc ô `#N/A` thành rỗng, xoá luôn dữ liệu đang có (`:91`).
-- [ ] **BE-13 · `renew` hồi sinh hồ sơ `terminated`/`retired`** khi gọi API thẳng.
+- [x] **BE-13 · `renew` hồi sinh hồ sơ `terminated`/`retired`** khi gọi API thẳng.
 - [ ] **BE-14 · Gắn được thiết bị vào site/loại/NCC đã vô hiệu hoá** (`catalog.api.ts:51`).
 - [ ] **BE-15 · Audit port map thiếu thông tin** (`device-ports.service.ts:167-171`); vẫn cắm được port
   sang máy đã thanh lý.
@@ -224,8 +224,8 @@ Kết quả: 0 lỗi, đủ 37 bảng, chạy lần 2 áp 0 file. **Không squas
 
 - [ ] **DB-03 · Migration chạy bằng superuser.** Tạo role chủ sở hữu riêng (không superuser, có
   `CREATEROLE`, là owner DB). Cả 5 extension là loại trusted nên vẫn cài được. Làm cùng OPS-07.
-- [ ] **DB-04 · Gắn tag `v1.0-schema`** ngay trước go-live.
-- [ ] **DB-05 · Postgres tuning:** `shm_size: 256m`, `shared_buffers`, `work_mem`,
+- [x] **DB-04 · Gắn tag `v1.0-schema`** ngay trước go-live.
+- [x] **DB-05 · Postgres tuning:** `shm_size: 256m`, `shared_buffers`, `work_mem`,
   `log_min_duration_statement=500ms`.
 
 ### Luật từ sau go-live (ghi vào `CLAUDE.md`)
@@ -254,13 +254,13 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
 
 ### P1
 
-- [ ] **FE-03 · Phân trang không kẹp trang** khi xoá dòng cuối, hiện "41–40 của 40"
+- [x] **FE-03 · Phân trang không kẹp trang** khi xoá dòng cuối, hiện "41–40 của 40"
   (`ui/pagination.tsx`, `ui/use-list-url-state.ts`). Đưa `clampPage` của IPAM thành bản dùng chung.
-- [ ] **FE-04 · `uploadFile` không xử lý 401** (`lib/upload.ts:21-29`). Tách phần xử lý lỗi của
+- [x] **FE-04 · `uploadFile` không xử lý 401** (`lib/upload.ts:21-29`). Tách phần xử lý lỗi của
   `apiFetch` thành hàm dùng chung.
-- [ ] **FE-05 · API 502 lúc tải trang thì bị đá về màn đăng nhập** (`App.tsx:83,100-113`). Hiện
+- [x] **FE-05 · API 502 lúc tải trang thì bị đá về màn đăng nhập** (`App.tsx:83,100-113`). Hiện
   `LoadError` kèm nút Thử lại.
-- [ ] **FE-06 · Chuỗi tiếng Việt viết cứng** (vi phạm DoD gạch 6):
+- [x] **FE-06 · Chuỗi tiếng Việt viết cứng** (vi phạm DoD gạch 6):
   - `accounts-screen.tsx:471,648-649`
   - `import-preview.tsx:23-27,63-67`
   - `schedule-picker.tsx:16-22`
@@ -270,7 +270,7 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
   - các fallback của `errorMessage`
 
   Thêm luật lint bắt ký tự có dấu trong JSX.
-- [ ] **FE-07 · Đăng xuất lỗi thì không có phản hồi.** Thêm `onError`, hoặc ép về màn đăng nhập.
+- [x] **FE-07 · Đăng xuất lỗi thì không có phản hồi.** Thêm `onError`, hoặc ép về màn đăng nhập.
 
 ### P2
 
@@ -322,19 +322,19 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
   - Bỏ `MIGRATION_DATABASE_URL` khỏi `api`.
   - Có thể gộp luôn `ensureAppRole` vào đây: tránh race khi scale (L1) và không để api giữ quyền
     superuser (SEC-08).
-- [ ] **OPS-08 · Redis bật AOF** (`--appendonly yes --appendfsync everysec`). Mật khẩu Redis chuyển
+- [x] **OPS-08 · Redis bật AOF** (`--appendonly yes --appendfsync everysec`). Mật khẩu Redis chuyển
   khỏi argv (dùng `REDISCLI_AUTH` hoặc file conf).
-- [ ] **OPS-09 · Ghim phiên bản image** (minor + digest). Image của app gắn tag theo git SHA để
+- [x] **OPS-09 · Ghim phiên bản image** (minor + digest). Image của app gắn tag theo git SHA để
   rollback được.
-- [ ] **OPS-10 · Hardening container:**
+- [x] **OPS-10 · Hardening container:**
   - `security_opt: [no-new-privileges:true]`, `cap_drop: [ALL]`.
   - api/worker: `read_only: true` + `tmpfs: /tmp`.
   - web: `nginx-unprivileged`.
-- [ ] **OPS-11 · SMTP chết quá khoảng 50 phút là thư bỏ luôn** (`queue.constants.ts:16-17`,
+- [x] **OPS-11 · SMTP chết quá khoảng 50 phút là thư bỏ luôn** (`queue.constants.ts:16-17`,
   `outbox.service.ts:35,140`).
   - Backoff dài hơn, trần tính theo thời gian (24 giờ).
   - Thêm nút requeue hàng loạt.
-- [ ] **OPS-12 · CI:**
+- [x] **OPS-12 · CI:**
   - Thêm bước `docker build` cho cả hai image.
   - Thêm `npm audit --omit=dev`.
   - Thêm quét image (trivy).
@@ -376,7 +376,7 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
 - [x] **DR-07 · Báo động khi backup hỏng** (mail hoặc webhook).
 - [x] **DR-08 · `restore-drill.sh`:** vòng `until pg_isready` cần sleep + timeout; `chown 1000:1000`
   cho `secrets/master_key`.
-- [ ] **DR-09 · Chặn chạy nhầm `seed-demo.sql`/`unseed-demo.sql` trên prod** (assert môi trường dev).
+- [x] **DR-09 · Chặn chạy nhầm `seed-demo.sql`/`unseed-demo.sql` trên prod** (assert môi trường dev).
 
 ---
 
@@ -502,7 +502,9 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
 - [x] **DOM-08 · Nhãn IP "Đang cấp" → "Đang dùng"** (Q-10).
 - [x] **DOM-09 · ISP đã Thanh lý hiện trong Kho thanh lý** (Q-10).
 - [x] **DOM-10 · Gỡ loại `isp` khỏi luật mail nhắc hạn cũ** (Q-10).
-- [ ] **DOM-06 · Mail duyệt break-glass trỏ thẳng tới yêu cầu cụ thể** (`mail.consumer.ts:137`), thay
+- [ ] **DOM-11 · Member được tạo/sửa mọi danh mục** (Q-12): mở `@Roles` tạo/sửa của catalog cho
+  `member`; vô hiệu hoá/xoá/nhập Excel vẫn SA/Admin; web hiện nút Thêm/Sửa cho member; E2E.
+- [x] **DOM-06 · Mail duyệt break-glass trỏ thẳng tới yêu cầu cụ thể** (`mail.consumer.ts:137`), thay
   vì mở cả màn duyệt. Vẫn phải đăng nhập và qua TOTP.
 - [x] **DOM-07 · Màn Nhật ký (audit log) chưa có giao diện.** Menu đánh dấu `planned`
   (`shell/app-nav.ts:62`), route `/admin/audit-log` chưa được dựng. API thì đã có. Với hệ thống
@@ -510,9 +512,9 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
 
 ### Còn chờ chủ dự án
 
-- [ ] **SEC-12:** member có được đính file vào đối tượng mà họ chỉ có quyền đọc không?
-- [ ] **DR-06:** mã hoá bản dump bằng công cụ gì, và ai giữ khoá?
-- [ ] **OLD-DB-01:** có bắt buộc chọn phòng ban và nhà mạng từ danh mục không? (liên quan FK, xem
+- [x] **SEC-12:** (Q-11: đúng chủ ý) member có được đính file vào đối tượng mà họ chỉ có quyền đọc không?
+- [x] **DR-06:** (Q-11: không mã hoá, rủi ro chấp nhận) mã hoá bản dump bằng công cụ gì, và ai giữ khoá?
+- [x] **OLD-DB-01:** (Q-11: nhà mạng bắt buộc, phòng ban tự do) có bắt buộc chọn phòng ban và nhà mạng từ danh mục không? (liên quan FK, xem
   mục 12)
 - [ ] Màn Admin sửa `system_config` (hoãn 4 lần): làm, hay tiếp tục sửa qua psql?
 - [ ] Nút Xuất Excel cho `/service-accounts`, `/disposal`, `/admin/accounts`: thêm, hay ghi rõ lý do
@@ -535,31 +537,31 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
 
 ### P1
 
-- [ ] **OLD-DB-01 (CAO) · Không có FK cho `department`, `isp_provider`, `service_port`.** Không có
+- [x] **OLD-DB-01 (CAO) · Không có FK cho `department`, `isp_provider`, `service_port`.** Không có
   `REFERENCES` nào; xoá danh mục luôn thành công và để lại chuỗi mồ côi. Cần một story riêng, kèm
   quyết định sản phẩm ở mục 11.
-- [ ] **OLD-DB-02 · `device_port` thiếu UNIQUE `(connected_device_id, connected_port)`**, trái AD-14.
+- [x] **OLD-DB-02 · `device_port` thiếu UNIQUE `(connected_device_id, connected_port)`**, trái AD-14.
 - [ ] **OLD-DB-03 · `audit_log` chưa phân vùng theo tháng và chưa có đường lưu trữ.** Bảng này chỉ
   thêm, không bao giờ xoá; phân vùng lúc còn nhỏ rẻ hơn nhiều so với lúc đã lớn.
-- [ ] **OLD-BE-01 · Mail in giờ GỬI thay vì giờ sự kiện**; `toLocaleString` không ghim múi giờ
+- [x] **OLD-BE-01 · Mail in giờ GỬI thay vì giờ sự kiện**; `toLocaleString` không ghim múi giờ
   (`mail.consumer.ts:227,281,323,352`).
-- [ ] **OLD-BE-02 · Kho thanh lý cắt im lặng ở 500 dòng** (`devices.api.ts:106`, `software.api.ts:54`,
+- [x] **OLD-BE-02 · Kho thanh lý cắt im lặng ở 500 dòng** (`devices.api.ts:106`, `software.api.ts:54`,
   `service-accounts.api.ts:29`).
-- [ ] **OLD-FE-01 · `/admin/vault-access` rộng 2253px, không có dấu hiệu còn cột bị khuất.** Cần kiểm
+- [x] **OLD-FE-01 · `/admin/vault-access` rộng 2253px, không có dấu hiệu còn cột bị khuất.** Cần kiểm
   trên trình duyệt thật.
-- [ ] **OLD-FE-02 · Phân trang chỉ có ‹ x/y ›**, không nhảy được tới trang (`pagination.tsx:77`).
-- [ ] **OLD-A11Y-01 · Trợ năng mức vừa:**
+- [x] **OLD-FE-02 · Phân trang chỉ có ‹ x/y ›**, không nhảy được tới trang (`pagination.tsx:77`).
+- [x] **OLD-A11Y-01 · Trợ năng mức vừa:**
   - Mục menu "sắp có" là `<span aria-disabled>` không có role (`app-shell.tsx:123-127`).
   - Lý do nút bị khoá chỉ nằm trong `title=` (`import-dialog.tsx:110,121`, `vault-panel.tsx:292`).
   - Date-picker: popover không có tên, không dời tiêu điểm vào, không điều hướng được bằng phím mũi
     tên (`date-picker.tsx:225`).
   - Ô Thao tác của NAT thiếu `data-label` ở 390px (`nat-screen.tsx:209`).
-- [ ] **OLD-QA-01 · `users` và `disposal` chưa có unit/DB test**; `approvals` gần như không có test.
-- [ ] **OLD-QA-02 · `history-action-rollcall.test.ts:57` chỉ quét `recordWithin(`**, bỏ sót
+- [x] **OLD-QA-01 · `users` và `disposal` chưa có unit/DB test**; `approvals` gần như không có test.
+- [x] **OLD-QA-02 · `history-action-rollcall.test.ts:57` chỉ quét `recordWithin(`**, bỏ sót
   `appendWithin` và `@Audited`.
-- [ ] **OLD-QA-03 · E2E sinh tên bằng `Date.now().toString().slice(-6)` ở 192 chỗ** (41 file); hai lượt
+- [x] **OLD-QA-03 · E2E sinh tên bằng `Date.now().toString().slice(-6)` ở 192 chỗ** (41 file); hai lượt
   chạy gần nhau có thể trùng tên.
-- [ ] **OLD-DOC-01 · Chú thích sai nguy hiểm** ở `date-picker.tsx:98` và `time-field.tsx:80` ("capture +
+- [x] **OLD-DOC-01 · Chú thích sai nguy hiểm** ở `date-picker.tsx:98` và `time-field.tsx:80` ("capture +
   stopPropagation chặn Radix Dialog"). Ai tin nó mà gỡ phần giữ form thì mất dữ liệu đang gõ.
 
 ### P2

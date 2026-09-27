@@ -10,6 +10,7 @@ import {
   resetUsers,
   sql,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -73,7 +74,7 @@ test.describe('Bề mặt quản trị tài khoản đòi step-up', () => {
   test('hết grace: TẠO TÀI KHOẢN bị chặn — mắt xích số 2 của chuỗi leo thang', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const headers = await writeHeaders(page);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     expireStepUp(E2E_SA.email);
 
@@ -103,7 +104,7 @@ test.describe('Bề mặt quản trị tài khoản đòi step-up', () => {
   test('VẾ ĐỐI CHỨNG: gõ mã xong thì SA vẫn tạo được tài khoản', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
     const headers = await writeHeaders(page);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     expireStepUp(E2E_SA.email);
     const stepUp = await page.request.post('/api/v1/auth/step-up', {
@@ -131,7 +132,7 @@ test.describe('Bề mặt quản trị tài khoản đòi step-up', () => {
   test('hết grace: XOÁ 2FA của người khác bị chặn', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
     const headers = await writeHeaders(page);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     expireStepUp(E2E_SA.email);
     await page.request.post('/api/v1/auth/step-up', {
@@ -170,7 +171,7 @@ test.describe('Bắt đổi mật khẩu tạm là hàng rào của SERVER, khô
   test('tài khoản chưa đổi mật khẩu tạm không gọi được API nghiệp vụ', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
     const headers = await writeHeaders(page);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     expireStepUp(E2E_SA.email);
     await page.request.post('/api/v1/auth/step-up', {
@@ -235,7 +236,7 @@ test.describe('Break-glass — nguyên tắc bốn mắt (FR-023)', () => {
   test('người xin không tự duyệt cho chính mình được', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
     const headers = await writeHeaders(page);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     const catalog = (await (
       await page.request.get('/api/v1/catalog', { headers })
@@ -285,7 +286,7 @@ test.describe('Break-glass — nguyên tắc bốn mắt (FR-023)', () => {
   test('người khác duyệt thì phiếu sang `approved`', async ({ page }) => {
     const secret = await firstLogin(page, E2E_SA);
     const headers = await writeHeaders(page);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     const catalog = (await (
       await page.request.get('/api/v1/catalog', { headers })

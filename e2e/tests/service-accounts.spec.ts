@@ -13,6 +13,7 @@ import {
   resetUsers,
   rowAction,
   rowActionNames,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -43,7 +44,7 @@ test.describe('Tài khoản dịch vụ', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `TK-E2E-${stamp}`;
 
     await page.goto('/service-accounts');
@@ -89,7 +90,7 @@ test.describe('Tài khoản dịch vụ', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const login = `ke-toan-e2e-${stamp}@pmh.com.vn`;
 
     await page.goto('/service-accounts');
@@ -120,7 +121,7 @@ test.describe('Tài khoản dịch vụ', () => {
 
   test('tài khoản VPN có thêm nhóm và dải IP; loại dùng chung thì không', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `VPN-E2E-${stamp}`;
 
     await page.goto('/service-accounts');
@@ -145,7 +146,7 @@ test.describe('Tài khoản dịch vụ', () => {
 
   test('đường hỏng: ô của loại VPN lọt vào tài khoản dùng chung thì bị chặn', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     // Dữ liệu vô nghĩa mà sáu tháng sau không ai dám xóa vì không biết nó từng có ý gì.
     const result = await createViaApi(page, {
@@ -163,7 +164,7 @@ test.describe('Tài khoản dịch vụ', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     const bad = await createViaApi(page, {
       code: `VPN-E2E-BAD-${stamp}`,
@@ -203,7 +204,7 @@ test.describe('Tài khoản dịch vụ', () => {
 
   test('đường hỏng: trùng mã bị chặn kèm chính cái mã đang trùng', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `TK-E2E-DUP-${stamp}`;
 
     expect((await createViaApi(page, { code, kind: 'shared', name: 'A' })).status).toBe(201);
@@ -215,7 +216,7 @@ test.describe('Tài khoản dịch vụ', () => {
 
   test('Member đọc được nhưng KHÔNG ghi được', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const created = await createViaApi(page, {
       code: `TK-E2E-ROLE-${stamp}`,
       kind: 'shared',
@@ -243,7 +244,7 @@ test.describe('Tài khoản dịch vụ', () => {
 
   test('Member KHÔNG xem được mật khẩu của tài khoản dịch vụ — mặc định CẤM', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const created = await createViaApi(page, {
       code: `TK-E2E-SEC-${stamp}`,
       kind: 'shared',
@@ -277,7 +278,7 @@ test.describe('Tài khoản dịch vụ', () => {
 
   test('đính kèm file cấu hình vào tài khoản VPN', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const created = await createViaApi(page, {
       code: `VPN-E2E-FILE-${stamp}`,
       kind: 'vpn',
@@ -298,7 +299,7 @@ test.describe('Tài khoản dịch vụ', () => {
 
   test('trang tổng Két sắt liệt kê cả tài khoản dịch vụ', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `TK-E2E-VAULT-${stamp}`;
     const created = await createViaApi(page, { code, kind: 'shared', name: 'Có két' });
     const id = String(created.body.id);
@@ -333,7 +334,7 @@ test.describe('Tài khoản dịch vụ', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `TK-E2E-OFF-${stamp}`;
     const created = await createViaApi(page, {
       code,
@@ -387,7 +388,7 @@ test.describe('Tài khoản dịch vụ', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `TK-E2E-ON-${stamp}`;
     const created = await createViaApi(page, { code, kind: 'shared', name: 'Tài khoản mở lại' });
     expect(created.status).toBe(201);
@@ -445,7 +446,7 @@ test.describe('Tài khoản dịch vụ', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const created = await createViaApi(page, {
       code: `TK-E2E-OFF-BAD-${stamp}`,
       kind: 'shared',

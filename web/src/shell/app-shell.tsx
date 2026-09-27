@@ -11,6 +11,7 @@ import { NavIcon } from '@/ui/nav-icon';
 import { CommandPalette, openCommandPalette } from '@/ui/command-palette';
 import { ThemeSwitch } from '@/ui/switches';
 import { useFocusTrap } from '@/ui/focus-trap';
+import { useToast } from '@/ui/toast';
 
 /**
  * Ngưỡng "màn hẹp" — PHẢI khớp `@media (max-width: 900px)` trong css/shell.css. Lệch một
@@ -70,6 +71,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   }, [drawerOpen]);
 
   const queryClient = useQueryClient();
+  const toast = useToast();
   const logout = useApiMutation<undefined, { status: string }>('/api/v1/auth/logout', {
     csrfToken: me.csrfToken,
   });
@@ -124,14 +126,21 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
               <p className="nav-label">{t(group.labelKey)}</p>
               {group.items.map((item) =>
                 item.planned ? (
+                  /*
+                   * CHỮ thường, không phải điều khiển: không có vai trò nào để `aria-disabled`
+                   * bám vào (trên một <span> trần nó là ARIA sai, trình đọc màn hình bỏ qua), và
+                   * nó cũng không được là link — bấm vào là rơi xuống 404. Lời giải thích nằm
+                   * trong chữ (`sr-only`) để trình đọc màn hình đọc được; `title` còn lại cho
+                   * người rê chuột.
+                   */
                   <span
                     key={item.key}
                     className="nav-item is-planned"
-                    aria-disabled="true"
                     title={t('nav.plannedHint')}
                   >
                     <NavIcon navKey={item.key} />
                     <span className="lbl">{t(item.key)}</span>
+                    <span className="sr-only">{t('nav.plannedHint')}</span>
                   </span>
                 ) : (
                   <NavLink
@@ -168,6 +177,11 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                 // onSettled chứ không onSuccess: đăng xuất lỗi (mất mạng, lệch CSRF) cũng không được
                 // để lại dữ liệu người trước trên máy dùng chung (FE-02).
                 logout.mutate(undefined, {
+                  // Lỗi thì PHẢI nói ra: phiên phía máy chủ có thể vẫn sống, và người dùng
+                  // tưởng đã thoát trên một máy dùng chung. Toast sống ngoài router nên vẫn
+                  // hiện sau khi đã chuyển trang.
+                  onError: () =>
+                    toast({ message: t('auth.logoutFailed'), tone: 'error', durationMs: 10_000 }),
                   onSettled: () => afterLogout(queryClient, navigate),
                 });
               }}

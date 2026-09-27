@@ -2,7 +2,7 @@ import { writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { APP_ORIGIN, E2E_SA, firstLogin, resetDevices, resetUsers } from './helpers';
+import { APP_ORIGIN, E2E_SA, firstLogin, resetDevices, resetUsers, uniqueStamp } from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -44,7 +44,7 @@ test.describe('Trang chi tiết thiết bị', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `SW-E2E-ALL-${stamp}`;
     const deviceId = await createSwitch(page, code);
     const csrf = await csrfOf(page);
@@ -89,7 +89,7 @@ test.describe('Trang chi tiết thiết bị', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const deviceId = await createSwitch(page, `SW-E2E-EXT-${stamp}`);
 
     const panels = await page.evaluate(async (id: string) => {
@@ -111,7 +111,7 @@ test.describe('Trang chi tiết thiết bị', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const csrf = await csrfOf(page);
     const catalog = await page.evaluate(async () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });
@@ -160,7 +160,7 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `SW-E2E-WT-${stamp}`;
     const csrf = await csrfOf(page);
     const catalog = await page.evaluate(async () => {
@@ -209,7 +209,7 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
   /* Không có hạn thì KHÔNG vẽ thanh — thanh rỗng chỉ làm người đọc tưởng dữ liệu bị mất. */
   test('máy không khai bảo hành thì không có thanh nào', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const csrf = await csrfOf(page);
     const catalog = await page.evaluate(async () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });
@@ -252,7 +252,7 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
    */
   test('nhãn tab mang sẵn số — không phải bấm vào mới biết trong đó có gì', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const deviceId = await createSwitch(page, `SW-E2E-CNT-${stamp}`);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 

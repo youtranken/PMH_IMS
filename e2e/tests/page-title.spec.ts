@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { APP_ORIGIN, E2E_SA, csrfOf, firstLogin, resetUsers } from './helpers';
+import { APP_ORIGIN, E2E_SA, csrfOf, firstLogin, resetUsers, uniqueStamp } from './helpers';
 
 /**
  * TÊN TAB TRÌNH DUYỆT ĐỔI THEO MÀN (B-03).
@@ -57,7 +57,7 @@ test('trang chi tiết đội tên khu vực của nó, không rơi về tên s�
   await firstLogin(page, E2E_SA);
 
   // Tự tạo thiết bị của mình: dựa vào hàng do bài khác để lại thì chạy lẻ bài này là đỏ.
-  const code = `PC-E2E-TITLE-${Date.now().toString().slice(-6)}`;
+  const code = `PC-E2E-TITLE-${uniqueStamp()}`;
   const catalog = await page.evaluate(async () => {
     const res = await fetch('/api/v1/catalog', { credentials: 'include' });
     return (await res.json()) as { deviceTypes: { id: string }[] };

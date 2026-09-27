@@ -144,7 +144,7 @@ export function PortMapPanel({
                       </td>
                       <td data-label={t('ports.note')}>{orDash(port.note)}</td>
                       {canEdit ? (
-                        <td>
+                        <td data-label={t('common.actions')}>
                           <div className="action-cell">
                             <RowActions
                               label={t('common.actionsOf', { subject: port.portLabel })}

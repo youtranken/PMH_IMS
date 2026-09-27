@@ -236,26 +236,49 @@ describe('OutboxService trên Postgres thật', () => {
     });
   });
 
+  describe('OPS-11: lease tăng dần theo số lần hỏng — SMTP chết vài giờ không làm mất thư', () => {
+    async function claimedAgo(failCount: number, minutes: number): Promise<number> {
+      await scratch.db.transaction((tx) => outbox.enqueueWithin(tx, 'mail.backoff'));
+      await scratch.pool.query(
+        `UPDATE outbox SET fail_count = $1, claimed_at = now() - make_interval(mins => $2)`,
+        [failCount, minutes],
+      );
+      return outbox.relayBatch(fakeQueue().queue);
+    }
+
+    it.each([
+      // [số lần hỏng, lease đã trôi (phút), có được đẩy lại chưa]
+      [0, 6, 1], // lease đầu 5 phút
+      [0, 4, 0],
+      [3, 30, 0], // lần hỏng thứ 3 → lease 40 phút
+      [3, 45, 1],
+      [9, 150, 0], // từ lần thứ 5 lease giữ ở 160 phút
+      [9, 170, 1],
+    ])('hỏng %i lần, lease trôi %i phút → đẩy %i', async (failCount, minutes, expected) => {
+      expect(await claimedAgo(failCount, minutes)).toBe(expected);
+    }, TEST_TIMEOUT);
+  });
+
   describe('điểm terminal: fail_count chạm trần thì relay buông, nhưng SA vẫn thấy', () => {
     it(
-      'fail_count = 10 → relay NGỪNG chọn lại, mà listFailed vẫn đếm',
+      'fail_count = 14 (~24 giờ thử lại) → relay NGỪNG chọn lại, mà listFailed vẫn đếm',
       async () => {
         await scratch.db.transaction((tx) => outbox.enqueueWithin(tx, 'mail.poison'));
         const id = (await rows())[0].id;
-        for (let i = 0; i < 10; i += 1) {
+        for (let i = 0; i < 14; i += 1) {
           await outbox.markFailed(id, `lỗi lần ${i}`);
         }
 
         const stuck = await rows();
-        expect(stuck[0].fail_count).toBe(10);
+        expect(stuck[0].fail_count).toBe(14);
         // Vẫn `processed_at IS NULL`, nhưng relay không được phép quay lại vòng lặp vô hạn.
         expect(await outbox.relayBatch(fakeQueue().queue)).toBe(0);
 
         const failed = await outbox.listFailed();
         expect(failed.total).toBe(1);
         expect(failed.items[0].id).toBe(id);
-        expect(failed.items[0].failCount).toBe(10);
-        expect(failed.items[0].lastError).toBe('lỗi lần 9');
+        expect(failed.items[0].failCount).toBe(14);
+        expect(failed.items[0].lastError).toBe('lỗi lần 13');
       },
       TEST_TIMEOUT,
     );
@@ -265,7 +288,7 @@ describe('OutboxService trên Postgres thật', () => {
       async () => {
         await scratch.db.transaction((tx) => outbox.enqueueWithin(tx, 'mail.revive'));
         const id = (await rows())[0].id;
-        for (let i = 0; i < 10; i += 1) await outbox.markFailed(id, 'x');
+        for (let i = 0; i < 14; i += 1) await outbox.markFailed(id, 'x');
 
         expect(await outbox.requeue(id)).toBe(true);
         expect(await outbox.relayBatch(fakeQueue().queue)).toBe(1);

@@ -9,6 +9,7 @@ import {
   firstLogin,
   resetDevices,
   resetUsers,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -44,7 +45,7 @@ async function createDevice(page: Page, code: string): Promise<string> {
 test.describe('Giấy tờ đính kèm thiết bị', () => {
   test('đường hạnh phúc: đính kèm → thấy trong danh sách → tải về → xóa', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const deviceId = await createDevice(page, `SRV-E2E-${stamp}`);
 
     await page.goto(`/devices/${deviceId}`);
@@ -71,7 +72,7 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
 
   test('file lạ định dạng bị từ chối theo MAGIC-BYTE, không tin đuôi file', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const deviceId = await createDevice(page, `SRV-E2E-BAD-${stamp}`);
 
     // Đặt tên .pdf nhưng ruột là HTML — đúng kiểu file dùng để chèn mã độc.
@@ -91,7 +92,7 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const deviceId = await createDevice(page, `SRV-E2E-HDR-${stamp}`);
 
     await page.goto(`/devices/${deviceId}`);
@@ -119,7 +120,7 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
 
   test('xóa rồi thì không tải về được nữa', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const deviceId = await createDevice(page, `SRV-E2E-DEL-${stamp}`);
 
     await page.goto(`/devices/${deviceId}`);

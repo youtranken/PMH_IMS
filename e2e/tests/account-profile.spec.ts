@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { APP_ORIGIN, E2E_SA, firstLogin, resetUsers, rowAction, timVaChoLoc } from './helpers';
+import { APP_ORIGIN, E2E_SA, firstLogin, resetUsers, rowAction, timVaChoLoc, uniqueStamp } from './helpers';
 
 /**
  * Hồ sơ tài khoản có SĐT, mã nhân viên và ngày sinh (migration 0031).
@@ -23,7 +23,7 @@ test.describe('Hồ sơ tài khoản', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     await page.goto('/admin/accounts');
     // Chờ bộ lọc ÁP XONG chứ không chỉ chờ hàng hiện ra: hàng cần tìm vốn đã nằm ở trang 1
@@ -59,7 +59,7 @@ test.describe('Hồ sơ tài khoản', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const phone = `097${stamp}`;
 
     const users = await page.request.get('/api/v1/accounts?limit=200');
@@ -83,7 +83,7 @@ test.describe('Hồ sơ tài khoản', () => {
 
   test('đường hỏng: mã nhân viên trùng bị chặn kèm lời giải thích', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     const users = await page.request.get('/api/v1/accounts?limit=200');

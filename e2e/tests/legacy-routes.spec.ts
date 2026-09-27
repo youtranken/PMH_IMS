@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { APP_ORIGIN, E2E_SA, firstLogin, resetUsers } from './helpers';
+import { APP_ORIGIN, E2E_SA, firstLogin, resetUsers, uniqueStamp } from './helpers';
 
 /**
  * Đường dẫn đổi sang tiếng Anh, nhưng link tiếng Việt đã gửi qua chat, đã ghim trong trình
@@ -34,7 +34,7 @@ test('link tiếng Việt cũ đưa sang đúng đường mới', async ({ page 
 
 test('link cũ có :id giữ nguyên id khi chuyển sang đường mới', async ({ page }) => {
   await firstLogin(page, E2E_SA);
-  const stamp = Date.now().toString().slice(-6);
+  const stamp = uniqueStamp();
 
   const csrf = await page.evaluate(async () => {
     const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
@@ -60,7 +60,7 @@ test('link cũ có :id giữ nguyên id khi chuyển sang đường mới', asyn
 
 test('link cũ giữ nguyên ?tab= khi chuyển sang đường mới', async ({ page }) => {
   await firstLogin(page, E2E_SA);
-  const stamp = Date.now().toString().slice(-6);
+  const stamp = uniqueStamp();
 
   const csrf = await page.evaluate(async () => {
     const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
