@@ -5,6 +5,8 @@
  *
  * Ngưỡng mặc định khớp luật digest (system_config, Epic 3): 30 ngày là "sắp", 7 ngày là "gấp".
  */
+import i18n from '@/lib/i18n';
+
 export type ExpiryLevel = 'expired' | 'critical' | 'warning' | 'ok' | 'none';
 
 export interface ExpiryThresholds {
@@ -72,17 +74,16 @@ export function expiryLevel(
   return levelFromDays(daysUntil(end, now), thresholds);
 }
 
-/** Nhãn tiếng Việt ngắn để hiện trong badge. */
+/** Nhãn ngắn để hiện trong badge — câu chữ ở `vi.ts` (`expiry.label*`). */
 export function expiryLabel(
   end: string | Date | null | undefined,
   now: Date = new Date(),
 ): string {
-  if (!end) return 'Không có hạn';
+  if (!end) return i18n.t('expiry.labelNone');
   const days = daysUntil(end, now);
-  if (days < 0) return `Quá hạn ${Math.abs(days)} ngày`;
-  if (days === 0) return 'Hết hạn hôm nay';
-  if (days === 1) return 'Còn 1 ngày';
-  return `Còn ${days} ngày`;
+  if (days < 0) return i18n.t('expiry.labelOverdue', { count: Math.abs(days) });
+  if (days === 0) return i18n.t('expiry.labelToday');
+  return i18n.t('expiry.labelLeft', { count: days });
 }
 
 function parseDateOnly(value: string): Date {

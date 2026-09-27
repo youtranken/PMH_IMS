@@ -55,11 +55,11 @@ export function TotpEnroll() {
             setNeedPassword(true);
             return;
           }
-          setError(errorMessage(err, 'Không tạo được mã QR.'));
+          setError(errorMessage(err, t('auth.qrFailed')));
         },
       },
     );
-  }, [me?.csrfToken, enroll, needPassword, startMutate]);
+  }, [me?.csrfToken, enroll, needPassword, startMutate, t]);
 
   if (needPassword && !enroll) {
     return (
@@ -76,7 +76,7 @@ export function TotpEnroll() {
                 onError: (err) => {
                   setPassword('');
                   setError(
-                    errorMessage(err, 'Mật khẩu hiện tại không đúng.', (left) =>
+                    errorMessage(err, t('auth.currentPasswordWrong'), (left) =>
                       t('auth.attemptsLeft', { count: left }),
                     ),
                   );
@@ -135,7 +135,7 @@ export function TotpEnroll() {
                 {
                   onError: (err) => {
                     setToken('');
-                    setError(errorMessage(err, 'Mã xác thực không đúng.'));
+                    setError(errorMessage(err, t('auth.totpInvalid')));
                   },
                 },
               );

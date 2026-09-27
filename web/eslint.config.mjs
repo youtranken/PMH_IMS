@@ -58,6 +58,32 @@ const NO_VIETNAMESE_IDENT = /** @type {const} */ ({
     'AD-16: tên định danh phải là tiếng Anh. Tiếng Việt chỉ ở GIAO DIỆN (qua lib/i18n), ' +
     'chú thích và mô tả bài kiểm. Xem docs/SHARED-REGISTRY.md.',
 });
+/**
+ * DoD gạch 6 — CHỮ GIAO DIỆN TIẾNG VIỆT CHỈ SỐNG Ở `src/locales/vi.ts`.
+ *
+ * Bắt mọi chuỗi (`'…'`, `` `…` ``) và chữ JSX có ký tự tiếng Việt CÓ DẤU trong mã sản phẩm.
+ * Chuỗi viết cứng thì không đổi được câu chữ ở một chỗ, `term-consistency.test.ts` không nhìn
+ * thấy nó, và cùng một khái niệm lặng lẽ mang hai tên ở hai màn.
+ *
+ * Lớp ký tự cố ý KHÔNG dùng dải `À-ỹ` của AD-16: dải đó nuốt cả `×` (U+00D7, nút đóng toast),
+ * `÷`, và khối dấu kết hợp U+0300–036F mà `lib/search-fold.ts` cần để bỏ dấu khi tìm. Ở đây chỉ
+ * lấy chữ Latin có dấu dựng sẵn: Latin-1 trừ `×`/`÷`, Latin Extended-A/B, và khối
+ * `Ạ-ỹ` của Latin Extended Additional.
+ *
+ * Ngoại lệ (xem khối `files:` bên dưới): `src/locales/**` (chính là chỗ của chữ), bài kiểm, và
+ * `src/features/dev/**` (gallery linh kiện cho lập trình viên, dữ liệu mẫu ở đó là cố ý).
+ * Thông báo lỗi dành cho LẬP TRÌNH VIÊN (`throw new Error(...)`) viết tiếng Anh.
+ */
+const VI_TEXT = '[À-ÖØ-öø-ɏẠ-ỹ]';
+const VI_TEXT_MESSAGE =
+  'DoD-6: chữ giao diện tiếng Việt phải nằm trong src/locales/vi.ts và đọc qua t(...). ' +
+  'Hàm thuần không có t thì trả KHÓA i18n, nơi gọi dịch.';
+const NO_VIETNAMESE_TEXT = /** @type {const} */ ([
+  { selector: `Literal[value=/${VI_TEXT}/]`, message: VI_TEXT_MESSAGE },
+  { selector: `TemplateElement[value.raw=/${VI_TEXT}/]`, message: VI_TEXT_MESSAGE },
+  { selector: `JSXText[value=/${VI_TEXT}/]`, message: VI_TEXT_MESSAGE },
+]);
+
 /** Cấm `window.confirm` / `alert` / `prompt` — cả dạng trần lẫn dạng có tiền tố đối tượng. */
 const NO_NATIVE_DIALOG = /** @type {const} */ ([
   'error',
@@ -165,6 +191,23 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  {
+    // DoD gạch 6 chỉ áp cho mã NGUỒN của web — file cấu hình ở gốc `web/` là chú thích công cụ.
+    files: ['src/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [...NO_NATIVE_DIALOG, NO_VIETNAMESE_IDENT, ...NO_VIETNAMESE_TEXT],
+    },
+  },
+  {
+    /*
+     * Nơi chữ tiếng Việt được PHÉP nằm: từ điển i18n, và gallery linh kiện cho lập trình viên.
+     * Viết lại cả mảng thay vì `'off'` để hai luật kia (hộp thoại gốc, AD-16) vẫn áp.
+     */
+    files: ['src/locales/**/*.{ts,tsx}', 'src/features/dev/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-syntax': [...NO_NATIVE_DIALOG, NO_VIETNAMESE_IDENT],
     },
   },
   {

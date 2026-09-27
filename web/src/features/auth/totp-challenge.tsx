@@ -29,7 +29,7 @@ export function TotpChallenge() {
               onError: (err) => {
                 setToken('');
                 setError(
-                  errorMessage(err, 'Mã xác thực không đúng.', (left) =>
+                  errorMessage(err, t('auth.totpInvalid'), (left) =>
                     t('auth.attemptsLeft', { count: left }),
                   ),
                 );

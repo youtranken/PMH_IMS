@@ -469,7 +469,7 @@ export function AccountsScreen({ me }: { me: Me }) {
       <FilterBar
         search={url.searchInput}
         onSearchChange={url.setSearchInput}
-        searchPlaceholder={`${t('common.search')} theo tên hoặc email`}
+        searchPlaceholder={t('accounts.searchPlaceholder')}
       />
 
       {accounts.isLoading ? (
@@ -646,8 +646,8 @@ function SessionsDialog({
             <thead>
               <tr>
                 <th>IP</th>
-                <th>Trình duyệt</th>
-                <th>Hoạt động gần nhất</th>
+                <th>{t('accounts.sessionBrowser')}</th>
+                <th>{t('accounts.sessionLastSeen')}</th>
                 <th />
               </tr>
             </thead>

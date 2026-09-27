@@ -74,11 +74,37 @@ export default {
     content: 'Nội dung',
     result: 'Kết quả',
     note: 'Ghi chú',
+    actionCreate: 'Thêm mới',
+    actionUpdate: 'Cập nhật',
+    actionUnchanged: 'Không đổi',
+    actionSkip: 'Bỏ qua',
+    actionError: 'Lỗi',
+    hideNoisy: 'Ẩn {{count}} dòng không đổi / bỏ qua',
+    showNoisy: 'Hiện cả {{count}} dòng không đổi / bỏ qua',
+    nothingToWrite: 'Không có dòng nào cần ghi.',
   },
   schedule: {
     daily: 'Hằng ngày',
     weekly: 'Hằng tuần',
     monthly: 'Hằng tháng',
+    frequency: 'Tần suất',
+    weekdayLabel: 'Vào thứ',
+    dayOfMonthLabel: 'Ngày trong tháng',
+    dayOfMonth: 'Ngày {{day}}',
+    hourLabel: 'Lúc',
+    weekday1: 'Thứ Hai',
+    weekday2: 'Thứ Ba',
+    weekday3: 'Thứ Tư',
+    weekday4: 'Thứ Năm',
+    weekday5: 'Thứ Sáu',
+    weekday6: 'Thứ Bảy',
+    weekday7: 'Chủ Nhật',
+    describeDaily: 'Hằng ngày lúc {{hour}}',
+    describeWeekly: 'Hằng tuần, {{day}} lúc {{hour}}',
+    describeMonthly: 'Hằng tháng, ngày {{day}} lúc {{hour}}',
+  },
+  filePicker: {
+    clear: 'Bỏ chọn',
   },
   toast: {
     close: 'Đóng thông báo',
@@ -106,6 +132,7 @@ export default {
     /* Tên KHU "Hồ sơ" ở đầu cột chính. Không dùng lại `*.tabProfile` được: bên thiết bị khoá
        ấy là "Tổng quan" (tên cả cái TAB), còn đây là tên một khu BÊN TRONG tab đó. */
     profileSection: 'Hồ sơ',
+    blankFields: 'Chưa khai: {{list}}.',
   },
   // Bản đồ quan hệ ở tab Tổng quan của trang thiết bị.
   relationMap: {
@@ -186,6 +213,8 @@ export default {
      * `term-consistency.test.ts` canh cặp ấy.
      */
     error: 'Có lỗi xảy ra',
+    /* Câu dự phòng của `errorMessage()` khi API không gửi `message`. */
+    errorFallback: 'Có lỗi xảy ra.',
     export: 'Xuất Excel',
     filter: 'Bộ lọc',
     actions: 'Thao tác',
@@ -217,6 +246,12 @@ export default {
     password: 'Mật khẩu',
     signIn: 'Đăng nhập',
     signingIn: 'Đang đăng nhập…',
+    /* Câu dự phòng khi API không gửi `message` (mất mạng, trang lỗi HTML của nginx). */
+    loginFailed: 'Đăng nhập không thành công.',
+    changePasswordFailed: 'Không đổi được mật khẩu.',
+    totpInvalid: 'Mã xác thực không đúng.',
+    qrFailed: 'Không tạo được mã QR.',
+    currentPasswordWrong: 'Mật khẩu hiện tại không đúng.',
     totpTitle: 'Xác thực 2 lớp',
     totpSub: 'Mở ứng dụng Authenticator và nhập mã 6 số',
     totpCode: 'Mã xác thực',
@@ -297,6 +332,10 @@ export default {
     uHeight: 'Số U',
     hasPortMap: 'Có port map',
     hasPortMapHint: 'Loại này sẽ hiện bảng port map ở trang chi tiết thiết bị.',
+    cabinetSiteRequired: 'Chọn site cho tủ này.',
+    uHeightInvalid: 'Số U phải là số nguyên từ 1 đến 60.',
+    portInvalid: 'Port phải là số nguyên từ 1 đến 65535.',
+    portRangeReversed: 'Dải port viết ngược — số đầu phải nhỏ hơn số cuối (vd 50000-52000).',
     supplies: 'Cung cấp gì',
     phone: 'Điện thoại',
     contact: 'Email / người liên hệ',
@@ -653,6 +692,11 @@ export default {
      * thôi có nghĩa. Hai câu nghe giống nhau nhưng nói hai chuyện khác hẳn.
      */
     notCounted: 'Không tính hạn',
+    /* Nhãn ngắn của huy hiệu hạn (`lib/expiry.ts` → `expiryLabel`). */
+    labelNone: 'Không có hạn',
+    labelOverdue: 'Quá hạn {{count}} ngày',
+    labelToday: 'Hết hạn hôm nay',
+    labelLeft: 'Còn {{count}} ngày',
     /* Bốn khóa dưới đây dùng cho THANH THỜI HẠN (ui/warranty-timeline.tsx) — bảo hành thiết
        bị, hạn license/SSL/tên miền. Đặt trong chính khối `expiry` vì
        khai một khối `expiry` thứ hai ở đầu file thì khối sau đè mất khối trước. */
@@ -727,6 +771,11 @@ export default {
     confirmDelete: 'Xóa luật "{{name}}"? Sẽ không còn email tổng hợp theo luật này nữa.',
   },
   accounts: {
+    searchPlaceholder: 'Tìm kiếm theo tên hoặc email',
+    sessionBrowser: 'Trình duyệt',
+    sessionLastSeen: 'Hoạt động gần nhất',
+    saveProfileFailed: 'Không lưu được hồ sơ.',
+    createFailed: 'Không tạo được tài khoản.',
     title: 'Tài khoản',
     subtitle: 'Super Admin tạo, khóa, đặt lại mật khẩu và đóng phiên đăng nhập từ xa',
     create: 'Thêm tài khoản',
@@ -1375,6 +1424,7 @@ export default {
    * Tên trường (`f*`) viết CHỮ THƯỜNG: chúng ghép vào giữa câu — "mã: A → B".
    */
   history: {
+    emptyDefault: 'Chưa có thay đổi nào được ghi nhận.',
     fDepartment: 'bộ phận',
     fEndDate: 'ngày hết hạn',
     fKind: 'loại',

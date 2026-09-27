@@ -19,12 +19,12 @@ export interface ImportPreviewSummary {
   error: number;
 }
 
-const ACTION_LABEL: Record<ImportPreviewRow['action'], string> = {
-  create: 'Thêm mới',
-  update: 'Cập nhật',
-  unchanged: 'Không đổi',
-  skip: 'Bỏ qua',
-  error: 'Lỗi',
+const ACTION_LABEL_KEY: Record<ImportPreviewRow['action'], string> = {
+  create: 'importPreview.actionCreate',
+  update: 'importPreview.actionUpdate',
+  unchanged: 'importPreview.actionUnchanged',
+  skip: 'importPreview.actionSkip',
+  error: 'importPreview.actionError',
 };
 
 const ACTION_TONE: Record<ImportPreviewRow['action'], string> = {
@@ -60,16 +60,18 @@ export function ImportPreview({
   return (
     <div className="import-preview">
       <div className="import-summary">
-        <SummaryChip tone="ok" label="Thêm mới" value={summary.create} />
-        <SummaryChip tone="warn" label="Cập nhật" value={summary.update} />
-        <SummaryChip tone="muted" label="Không đổi" value={summary.unchanged} />
-        <SummaryChip tone="muted" label="Bỏ qua" value={summary.skip} />
-        <SummaryChip tone="danger" label="Lỗi" value={summary.error} />
+        <SummaryChip tone="ok" label={t(ACTION_LABEL_KEY.create)} value={summary.create} />
+        <SummaryChip tone="warn" label={t(ACTION_LABEL_KEY.update)} value={summary.update} />
+        <SummaryChip tone="muted" label={t(ACTION_LABEL_KEY.unchanged)} value={summary.unchanged} />
+        <SummaryChip tone="muted" label={t(ACTION_LABEL_KEY.skip)} value={summary.skip} />
+        <SummaryChip tone="danger" label={t(ACTION_LABEL_KEY.error)} value={summary.error} />
       </div>
 
       {noisy > 0 ? (
         <button type="button" className="btn sm" onClick={() => setShowAll((v) => !v)}>
-          {showAll ? `Ẩn ${noisy} dòng không đổi / bỏ qua` : `Hiện cả ${noisy} dòng không đổi / bỏ qua`}
+          {showAll
+            ? t('importPreview.hideNoisy', { count: noisy })
+            : t('importPreview.showNoisy', { count: noisy })}
         </button>
       ) : null}
 
@@ -88,7 +90,7 @@ export function ImportPreview({
             {visible.length === 0 ? (
               <tr>
                 <td colSpan={5} className="muted" style={{ textAlign: 'center' }}>
-                  Không có dòng nào cần ghi.
+                  {t('importPreview.nothingToWrite')}
                 </td>
               </tr>
             ) : null}
@@ -102,7 +104,7 @@ export function ImportPreview({
                 <td>{row.label}</td>
                 <td>
                   <span className={`badge ${ACTION_TONE[row.action]}`}>
-                    {ACTION_LABEL[row.action]}
+                    {t(ACTION_LABEL_KEY[row.action])}
                   </span>
                 </td>
                 <td className="muted">{row.message ?? '—'}</td>

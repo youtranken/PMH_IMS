@@ -12,7 +12,7 @@ import { ErrorBoundary } from '@/ui/error-boundary';
  * React nói về `container`, chẳng chỉ ai về đâu. Ném ở đây thì thông báo nói đúng chỗ hỏng.
  */
 const rootEl = document.getElementById('root');
-if (!rootEl) throw new Error('Không tìm thấy #root trong index.html — không dựng được ứng dụng.');
+if (!rootEl) throw new Error('Missing #root element in index.html — cannot mount the app.');
 
 createRoot(rootEl).render(
   <StrictMode>

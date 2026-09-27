@@ -106,7 +106,7 @@ export function AccountForm({
           if (editing) {
             update.mutate(contact, {
               onSuccess: onSaved,
-              onError: (err) => setError(errorMessage(err, 'Không lưu được hồ sơ.')),
+              onError: (err) => setError(errorMessage(err, t('accounts.saveProfileFailed'))),
             });
             return;
           }
@@ -114,7 +114,7 @@ export function AccountForm({
             { ...contact, email: email.trim(), role, totpLoginRequired },
             {
               onSuccess: (result) => onCreated(result.temporaryPassword, email.trim()),
-              onError: (err) => setError(errorMessage(err, 'Không tạo được tài khoản.')),
+              onError: (err) => setError(errorMessage(err, t('accounts.createFailed'))),
             },
           );
         }}

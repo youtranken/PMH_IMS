@@ -59,13 +59,13 @@ export function NotFound() {
   return (
     <div className="error-state">
       <div className="error-code">404</div>
-      <h1>{t('app.notFoundTitle', 'Không tìm thấy trang')}</h1>
+      <h1>{t('app.notFoundTitle')}</h1>
       <p className="muted">
-        {t('app.notFoundHint', 'Trang bạn tìm không tồn tại hoặc đã được chuyển.')}
+        {t('app.notFoundHint')}
       </p>
       <Link to="/">
         <button type="button" className="primary">
-          {t('app.backHome', 'Về trang chủ')}
+          {t('app.backHome')}
         </button>
       </Link>
     </div>
@@ -90,7 +90,7 @@ export function NotFound() {
  */
 export function Loading({ label }: { label?: string }) {
   const { t } = useTranslation();
-  const text = label ?? t('app.loading', 'Đang tải…');
+  const text = label ?? t('app.loading');
   useAnnounce(text);
   return (
     <div className="load-state" aria-busy="true">
