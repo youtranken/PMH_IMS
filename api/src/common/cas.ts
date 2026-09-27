@@ -49,3 +49,34 @@ export function requireCas<T>(rows: readonly T[], conflict: { code: string; mess
   }
   return rows[0];
 }
+
+/**
+ * Chốt "hàng đã khóa vẫn là hàng tôi đã đọc" — nửa còn lại của mẫu CAS, cho đường ghi mà
+ * điều kiện đã kiểm KHÔNG gói được vào một vế `WHERE`.
+ *
+ * `requireCas` hợp khi quyết định dựa trên một cột (`status = from`). Đường SỬA HỒ SƠ thì
+ * khác: nó ghép body với cả hàng đang có, kiểm luật trên bản ghép, tính diff cho lịch sử rồi
+ * mới ghi. Mọi bước ấy đọc ảnh chụp ngoài transaction, nên một lượt thanh lý / vô hiệu hóa /
+ * gia hạn chen vào giữa bị câu `UPDATE ... WHERE id = $1` ghi đè mất: máy đã thanh lý sống
+ * lại, hạn gia hạn lùi về, tài khoản vừa khóa được mở lại.
+ *
+ * Cách dùng: trong transaction, đọc lại hàng bằng `SELECT ... FOR UPDATE`, rồi hỏi hàm này
+ * `updated_at` còn trùng ảnh chụp không. Trùng thì mọi phép kiểm đã làm vẫn đúng và khóa giữ
+ * nó đúng tới lúc commit; lệch thì 409 để người dùng tải lại, không đoán hộ họ.
+ *
+ * So bằng mili-giây ở phía JS chứ không đưa `updated_at` vào `WHERE`: cột là `timestamptz`
+ * (micro-giây, `DEFAULT now()`), còn `Date` của JS chỉ giữ mili-giây — so trong SQL thì hàng
+ * vừa INSERT không bao giờ khớp và lượt sửa đầu tiên nào cũng ra 409.
+ *
+ * KHÔNG dùng khi chưa khóa hàng: thiếu `FOR UPDATE` thì phép so này chỉ thu hẹp khe hở chứ
+ * không đóng nó.
+ */
+export function requireUnchangedSince(
+  seen: { updatedAt: Date },
+  locked: { updatedAt: Date },
+  conflict: { code: string; message: string },
+): void {
+  if (seen.updatedAt.getTime() !== locked.updatedAt.getTime()) {
+    throw new ConflictException(conflict);
+  }
+}

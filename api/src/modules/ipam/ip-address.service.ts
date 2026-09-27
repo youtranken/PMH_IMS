@@ -8,7 +8,7 @@ import {
 import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
-import { requireCas } from '../../common/cas';
+import { requireCas, requireUnchangedSince } from '../../common/cas';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import type { Tx } from '../../common/tx';
 import { PG_CHECK_VIOLATION, conflictOnUnique, pgErrorCode } from '../../common/sql';
@@ -392,6 +392,15 @@ export class IpAddressService {
 
     try {
       const row = await this.db.transaction(async (tx) => {
+        /*
+         * `becomesAssigned`, hàng rào NAT và diff đều tính từ `before` đọc ngoài transaction.
+         * Một lượt thu hồi commit vào giữa thì câu UPDATE dưới đây gắn chủ mới lên một hàng đã
+         * `free` mà không lật nó sang `assigned` — đúng hàng lai "trống mà có chủ".
+         */
+        requireUnchangedSince(before, await this.requireAliveWithin(tx, id, 'update'), {
+          code: 'IP_ALREADY_CHANGED',
+          message: 'Hồ sơ IP này vừa được người khác sửa — tải lại rồi thử lại.',
+        });
         await this.requireDeviceWithin(tx, values.deviceId);
         if (addressMoves || ownerMoves) {
           await this.assertNoLiveNatWithin(
@@ -863,11 +872,13 @@ export class IpAddressService {
   private async requireAliveWithin(
     tx: Pick<Database, 'select'>,
     id: string,
+    lock?: 'update',
   ): Promise<typeof ipAddressTable.$inferSelect> {
-    const rows = await tx
+    const query = tx
       .select()
       .from(ipAddressTable)
       .where(and(eq(ipAddressTable.id, id), isNull(ipAddressTable.voidedAt)));
+    const rows = await (lock ? query.for(lock) : query);
     if (rows.length === 0) {
       throw new NotFoundException({
         code: 'IP_NOT_FOUND',

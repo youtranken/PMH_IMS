@@ -9,6 +9,7 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
+import { requireUnchangedSince } from '../../common/cas';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import { orderByStable, type SortQuery } from '../../common/sorting';
 import { conflictOnUnique, escapeLike, searchNormLike } from '../../common/sql';
@@ -141,6 +142,12 @@ export class ServiceAccountService {
 
     try {
       const updated = await this.db.transaction(async (tx) => {
+        // `values.status` là trạng thái của ảnh chụp ngoài transaction: một lượt vô hiệu hóa
+        // commit vào giữa sẽ bị câu UPDATE này mở lại mà không ai ghi lý do.
+        requireUnchangedSince(before, await this.requireRowWithin(tx, id, 'update'), {
+          code: 'SERVICE_ACCOUNT_ALREADY_CHANGED',
+          message: 'Tài khoản này vừa được người khác sửa — tải lại rồi thử lại.',
+        });
         const rows = await tx
           .update(serviceAccountTable)
           .set({ ...values, updatedAt: new Date() })
@@ -182,7 +189,6 @@ export class ServiceAccountService {
     next: ServiceAccountStatus,
     reason: string,
   ): Promise<ServiceAccountRecord> {
-    const before = await this.requireRow(id);
     if (!reason.trim()) {
       throw new BadRequestException({
         code: 'REASON_REQUIRED',
@@ -192,24 +198,26 @@ export class ServiceAccountService {
             : 'Ghi lý do bật lại — sáu tháng sau sẽ có người hỏi vì sao.',
       });
     }
-    /*
-     * Đóng một tài khoản đã đóng (hoặc mở một tài khoản đang mở) KHÔNG được ghi gì.
-     *
-     * Không chặn thì hai lần bấm liên tiếp đẻ ra hai dòng "Vô hiệu hóa" với "trạng thái: Đã
-     * vô hiệu → Đã vô hiệu" — đúng thứ nhiễu làm người đọc lịch sử phải dừng lại tìm xem lần
-     * nào mới là lần thật.
-     */
-    if (before.status === next) {
-      throw new BadRequestException({
-        code: 'STATUS_UNCHANGED',
-        message:
-          next === 'disabled'
-            ? 'Tài khoản này đã bị vô hiệu hóa từ trước.'
-            : 'Tài khoản này đang dùng bình thường.',
-      });
-    }
     const action = next === 'disabled' ? 'disabled' : 'enabled';
     const updated = await this.db.transaction(async (tx) => {
+      /*
+       * Đọc trạng thái SAU khi khóa hàng, trong cùng transaction với câu ghi: hai lượt bấm
+       * cùng lúc thì lượt sau phải thấy trạng thái lượt trước vừa ghi.
+       *
+       * Đóng một tài khoản đã đóng (hoặc mở một tài khoản đang mở) KHÔNG được ghi gì — không
+       * chặn thì lịch sử có hai dòng "Vô hiệu hóa" với "Đã vô hiệu → Đã vô hiệu", và người đọc
+       * phải dừng lại tìm xem lần nào mới là lần thật.
+       */
+      const before = await this.requireRowWithin(tx, id, 'update');
+      if (before.status === next) {
+        throw new BadRequestException({
+          code: 'STATUS_UNCHANGED',
+          message:
+            next === 'disabled'
+              ? 'Tài khoản này đã bị vô hiệu hóa từ trước.'
+              : 'Tài khoản này đang dùng bình thường.',
+        });
+      }
       const rows = await tx
         .update(serviceAccountTable)
         .set({ status: next, updatedAt: new Date() })
@@ -353,11 +361,17 @@ export class ServiceAccountService {
     });
   }
 
-  private async requireRow(id: string): Promise<typeof serviceAccountTable.$inferSelect> {
-    const rows = await this.db
-      .select()
-      .from(serviceAccountTable)
-      .where(eq(serviceAccountTable.id, id));
+  private requireRow(id: string): Promise<typeof serviceAccountTable.$inferSelect> {
+    return this.requireRowWithin(this.db, id);
+  }
+
+  private async requireRowWithin(
+    tx: Pick<Database, 'select'>,
+    id: string,
+    lock?: 'update',
+  ): Promise<typeof serviceAccountTable.$inferSelect> {
+    const query = tx.select().from(serviceAccountTable).where(eq(serviceAccountTable.id, id));
+    const rows = await (lock ? query.for(lock) : query);
     if (rows.length === 0) {
       throw new NotFoundException({
         code: 'SERVICE_ACCOUNT_NOT_FOUND',

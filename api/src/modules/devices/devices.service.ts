@@ -11,7 +11,7 @@ import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { DeviceRetirementRegistry } from '../../common/device-retirement.registry';
-import { requireCas } from '../../common/cas';
+import { requireCas, requireUnchangedSince } from '../../common/cas';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import { orderByStable, type SortQuery } from '../../common/sorting';
@@ -212,6 +212,16 @@ export class DevicesService {
     }
 
     const device = await this.db.transaction(async (tx) => {
+      /*
+       * Mọi phép kiểm ở trên (đã thanh lý chưa, diff cho lịch sử) đọc ảnh chụp NGOÀI
+       * transaction. Một lượt thanh lý commit vào giữa thì form đang gửi `status: in_use` sẽ
+       * kéo máy sống lại mà không qua chốt của `setStatus`. Khóa hàng rồi hỏi nó còn là hàng
+       * đã đọc không; lệch thì 409 chứ không ghi đè.
+       */
+      requireUnchangedSince(before, await this.requireRowWithin(tx, id, 'update'), {
+        code: 'DEVICE_ALREADY_CHANGED',
+        message: 'Hồ sơ thiết bị vừa được người khác sửa — tải lại rồi thử lại. Chưa ghi gì cả.',
+      });
       const updated = await this.updateWithin(tx, id, values);
       await this.recordWithin(tx, actor, id, 'updated', changes);
       return updated;

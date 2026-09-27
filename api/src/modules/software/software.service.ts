@@ -9,6 +9,7 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
+import { requireUnchangedSince } from '../../common/cas';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import { orderByStable, type SortQuery } from '../../common/sorting';
@@ -213,6 +214,9 @@ export class SoftwareService {
     if (!hasChanges(changes)) return toRecord(before);
 
     return this.db.transaction(async (tx) => {
+      // `prepare` tính lại trạng thái theo hạn từ ảnh chụp ngoài transaction: một lượt thanh
+      // lý commit vào giữa sẽ bị tính đè thành "Đang dùng".
+      await this.requireUnchangedWithin(tx, before);
       const updated = await this.updateWithin(tx, id, values);
       await this.recordWithin(tx, actor, id, 'updated', changes);
       return updated;
@@ -242,6 +246,9 @@ export class SoftwareService {
       });
     }
     return this.db.transaction(async (tx) => {
+      // "Hạn mới phải sau hạn hiện tại" và `oldEnd` của sổ gia hạn đều đọc từ `before`. Hai
+      // lượt gia hạn cùng lúc thì lượt sau kéo hạn LÙI về và ghi sai hạn cũ vào sổ.
+      await this.requireUnchangedWithin(tx, before);
       const updated = await this.updateWithin(tx, id, { endDate: newEnd, status: 'active' });
       await this.recordWithin(tx, actor, id, 'renewed', {
         endDate: { before: before.endDate, after: newEnd },
@@ -428,8 +435,17 @@ export class SoftwareService {
     return values;
   }
 
-  private async requireRow(id: string): Promise<typeof softwareTable.$inferSelect> {
-    const rows = await this.db.select().from(softwareTable).where(eq(softwareTable.id, id));
+  private requireRow(id: string): Promise<typeof softwareTable.$inferSelect> {
+    return this.requireRowWithin(this.db, id);
+  }
+
+  private async requireRowWithin(
+    tx: Pick<Database, 'select'>,
+    id: string,
+    lock?: 'update',
+  ): Promise<typeof softwareTable.$inferSelect> {
+    const query = tx.select().from(softwareTable).where(eq(softwareTable.id, id));
+    const rows = await (lock ? query.for(lock) : query);
     if (rows.length === 0) {
       throw new NotFoundException({
         code: 'SOFTWARE_NOT_FOUND',
@@ -437,6 +453,18 @@ export class SoftwareService {
       });
     }
     return rows[0];
+  }
+
+  /** Khóa hàng tới hết transaction và đòi nó còn đúng là hàng `seen` — xem `requireUnchangedSince`. */
+  private async requireUnchangedWithin(
+    tx: Tx,
+    seen: typeof softwareTable.$inferSelect,
+  ): Promise<void> {
+    const locked = await this.requireRowWithin(tx, seen.id, 'update');
+    requireUnchangedSince(seen, locked, {
+      code: 'SOFTWARE_ALREADY_CHANGED',
+      message: 'Hồ sơ vừa được người khác sửa — tải lại rồi thử lại.',
+    });
   }
 
   private translate(error: unknown): unknown {

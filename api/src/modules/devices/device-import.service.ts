@@ -125,8 +125,12 @@ export class DeviceImportService {
            *
            * Đọc lại trong tx sửa cả hai vế: nội dung diff là thật, và hồ sơ đã biến mất thì
            * ném ngay tại đây thay vì `UPDATE` khớp 0 dòng rồi vẫn `updated += 1`.
+           *
+           * Khóa `FOR UPDATE` rồi hỏi lại "đã thanh lý chưa": plan chặn máy đã thanh lý theo
+           * ảnh chụp lúc đối chiếu, nên một lượt thanh lý commit sau đó vẫn bị file ghi đè.
            */
-          const before = await this.devices.requireRowWithin(tx, row.existingId!);
+          const before = await this.devices.requireRowWithin(tx, row.existingId!, 'update');
+          this.devices.assertNotRetired(before);
           await this.devices.updateWithin(tx, row.existingId!, values);
           updated += 1;
           // FR-007: tab Lịch sử phải trả lời "ai ĐỔI GÌ". Ghi `mã: SW-01 → SW-01` thì
