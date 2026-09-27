@@ -8,6 +8,7 @@ import {
   resetSoftware,
   resetUsers,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -64,7 +65,7 @@ test.describe('Xoá ô ngày — luật phải soi giá trị MỚI, không ph�
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const id = await createSoftware(page, {
       code: `SSL-E2E-${stamp}`,
       name: `Chung chi E2E ${stamp}`,
@@ -90,7 +91,7 @@ test.describe('Xoá ô ngày — luật phải soi giá trị MỚI, không ph�
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const id = await createSoftware(page, {
       code: `MTN-E2E-${stamp}`,
       name: `Bao tri E2E ${stamp}`,
@@ -212,7 +213,7 @@ async function natFixture(
   const routerType =
     catalog.deviceTypes.find((t) => t.name === 'Router') ?? catalog.deviceTypes[0];
 
-  const stamp = String(Date.now()).slice(-6);
+  const stamp = uniqueStamp();
   const router = await page.request.post('/api/v1/devices', {
     headers,
     data: { code: `RT-E2E-A03-${stamp}`, name: 'Draytek E2E A03', deviceTypeId: routerType.id },

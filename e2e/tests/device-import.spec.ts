@@ -11,6 +11,7 @@ import {
   resetDevices,
   resetUsers,
   sql,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -40,7 +41,7 @@ async function downloadTo(page: Page, buttonName: string, fileName: string): Pro
 test.describe('Import / export thiết bị', () => {
   test('đường hạnh phúc: tải mẫu → đối chiếu → xác nhận → thiết bị vào kho', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const csrf = await csrfOf(page);
 
     // Danh mục phải có trước — đúng thứ tự hệ thống bắt buộc.
@@ -90,7 +91,7 @@ test.describe('Import / export thiết bị', () => {
 
   test('đường hỏng: danh mục chưa có → báo rõ dòng nào, KHÔNG ghi gì cả', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     const bad = await buildDeviceFile(join(tmpdir(), `tb-loi-${stamp}.xlsx`), [
       [`SW-E2E-OK-${stamp}`, 'Dòng hợp lệ', 'Switch', '', ''],
@@ -115,7 +116,7 @@ test.describe('Import / export thiết bị', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const csrf = await csrfOf(page);
 
     // Gửi thẳng lên /commit một file còn lỗi: server phải từ chối cả file.
@@ -144,7 +145,7 @@ test.describe('Import / export thiết bị', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const csrf = await csrfOf(page);
     const catalog = await page.evaluate(async () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });
@@ -235,7 +236,7 @@ test.describe('Import cập nhật — lịch sử phải là THẬT (finding #1
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const csrf = await csrfOf(page);
     const code = `SW-E2E-DIFF-${stamp}`;
 

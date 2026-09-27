@@ -9,6 +9,7 @@ import {
   resetSecrets,
   resetUsers,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -49,7 +50,7 @@ async function createDeviceWithSecret(page: Page, code: string, label: string): 
 
 test('trang tổng Két sắt đọc được ở 390px, popup mở xem cũng vậy', async ({ page }) => {
   await firstLogin(page, E2E_SA);
-  const stamp = Date.now().toString().slice(-6);
+  const stamp = uniqueStamp();
   const code = `PC-E2E-VM390-${stamp}`;
   await createDeviceWithSecret(page, code, `admin-E2E-${stamp}`);
 

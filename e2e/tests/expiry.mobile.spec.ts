@@ -8,6 +8,7 @@ import {
   resetSoftware,
   resetUsers,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -26,7 +27,7 @@ test.beforeEach(() => {
  */
 test('màn Sắp hết hạn đọc được ở 390px, sáng và tối', async ({ page }) => {
   await firstLogin(page, E2E_SA);
-  const stamp = Date.now().toString().slice(-6);
+  const stamp = uniqueStamp();
   const headers = await writeHeaders(page);
   const soon = isoInDays(10);
 

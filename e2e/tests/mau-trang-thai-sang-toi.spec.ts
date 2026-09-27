@@ -7,6 +7,7 @@ import {
   resetSoftware,
   resetUsers,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -186,7 +187,7 @@ async function expectLegibleNumber(so: Locator, what: string): Promise<void> {
 
 test('huy hiệu hạn ở màn Sắp hết hạn đọc được ở CẢ chế độ sáng lẫn tối', async ({ page }) => {
   await firstLogin(page, E2E_SA);
-  const stamp = Date.now().toString().slice(-6);
+  const stamp = uniqueStamp();
   const headers = await writeHeaders(page);
   const day = isoInDays;
 

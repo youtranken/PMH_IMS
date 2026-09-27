@@ -9,6 +9,7 @@ import {
   resetDevices,
   resetSecrets,
   resetUsers,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -31,7 +32,7 @@ async function csrfOf(page: Page): Promise<string> {
 test.describe('Két sắt ở 390px', () => {
   test('bảng secret xếp dọc, đọc được, không tràn ngang', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     const csrf = await csrfOf(page);
     const catalog = await page.evaluate(async () => {
@@ -92,7 +93,7 @@ test.describe('Két sắt ở 390px', () => {
    */
   test('hộp nhập mã và hộp hiện giá trị đọc được ở 390px, không tràn ngang', async ({ page }) => {
     const totpSecret = await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const { deviceId } = await createDeviceWithSecret(page, stamp, {
       label: `mat khau rat dai E2E ${stamp}`,
       // Chuỗi dài, có ký tự đặc biệt: mật khẩu thiết bị thật trông đúng như vậy.

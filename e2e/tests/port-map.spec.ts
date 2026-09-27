@@ -7,6 +7,7 @@ import {
   resetDevices,
   resetUsers,
   rowAction,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -35,7 +36,7 @@ async function createDevice(page: Page, code: string, typeName: string): Promise
 test.describe('Port map', () => {
   test('AD-14: khai một dòng ở switch, trang server tự hiện chiều ngược', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const switchCode = `SW-E2E-${stamp}`;
     const serverCode = `SRV-E2E-${stamp}`;
     const switchId = await createDevice(page, switchCode, 'Switch');
@@ -85,7 +86,7 @@ test.describe('Port map', () => {
 
   test('trùng tên cổng trên cùng thiết bị bị chặn, nói rõ cổng nào', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const switchId = await createDevice(page, `SW-E2E-DUP-${stamp}`, 'Switch');
 
     await page.goto(`/devices/${switchId}`);
@@ -105,7 +106,7 @@ test.describe('Port map', () => {
 
   test('không cắm được thiết bị vào chính nó', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const switchId = await createDevice(page, `SW-E2E-SELF-${stamp}`, 'Switch');
 
     const csrf = await page.evaluate(async () => {
@@ -122,7 +123,7 @@ test.describe('Port map', () => {
 
   test('loại thiết bị không có port map thì không hiện tab', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const printerId = await createDevice(page, `PC-E2E-NOPORT-${stamp}`, 'Printer');
 
     await page.goto(`/devices/${printerId}`);
@@ -132,7 +133,7 @@ test.describe('Port map', () => {
 
   test('xóa dòng port map để lại vết trong lịch sử thiết bị', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const switchId = await createDevice(page, `SW-E2E-HIST-${stamp}`, 'Switch');
 
     await page.goto(`/devices/${switchId}`);

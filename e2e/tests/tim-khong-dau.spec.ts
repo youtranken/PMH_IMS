@@ -6,6 +6,7 @@ import {
   resetDevices,
   resetUsers,
   timVaChoLoc,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -58,7 +59,7 @@ test.describe('Tìm kiếm tiếng Việt không dấu', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = await taoThietBiCoDau(page, stamp);
     const row = page.getByRole('row', { name: new RegExp(code) });
 
@@ -84,7 +85,7 @@ test.describe('Tìm kiếm tiếng Việt không dấu', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = await taoThietBiCoDau(page, stamp);
 
     await timVaChoLoc(page, 'may chu ao hoa');
@@ -99,7 +100,7 @@ test.describe('Tìm kiếm tiếng Việt không dấu', () => {
 
   test('danh mục: gõ không dấu ra đúng site — đường ims_norm tính tại chỗ', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const siteCode = `E2E-TS-${stamp}`;
 
     await page.goto('/admin/catalog');

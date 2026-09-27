@@ -10,6 +10,7 @@ import {
   resetServiceAccounts,
   resetUsers,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -44,7 +45,7 @@ async function createServiceAccount(page: Page, code: string): Promise<string> {
 test.describe('C2 — ghi vào két cũng phải step-up', () => {
   test('hết grace thì XOAY và THU HỒI bị chặn, gõ mã xong mới làm được', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const ownerId = await createServiceAccount(page, `E2E-SU-${stamp}`);
 
     // Cất một bí mật lúc còn trong grace (vừa đăng nhập bằng TOTP).
@@ -117,7 +118,7 @@ test.describe('C1 — file đính kèm theo ma trận quyền của két', () =>
     browser,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const ownerId = await createServiceAccount(page, `E2E-FILE-${stamp}`);
 
     // SA đính một "biên bản bàn giao" vào tài khoản dịch vụ đó.
@@ -189,7 +190,7 @@ test.describe('C1 — file đính kèm theo ma trận quyền của két', () =>
     browser,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     const catalog = await page.evaluate(async () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });

@@ -10,6 +10,7 @@ import {
   timVaChoLoc,
   SECOND_BROWSER,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(() => resetUsers());
@@ -257,7 +258,7 @@ test.describe('Quản trị tài khoản', () => {
    */
   test('sắp xếp theo cột chạy ở server, cột không sắp được thì không có nút', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const headers = await writeHeaders(page);
 
     // Vai trò cố tình KHÔNG cùng thứ tự với họ tên: admin < member < sa theo bảng chữ cái,

@@ -992,3 +992,28 @@ export function isoInDays(days: number): string {
 export function isoToday(): string {
   return isoInDays(0);
 }
+
+/**
+ * Hậu tố duy nhất cho tên hàng E2E tạo ra — 6 chữ số, và vẫn là SỐ.
+ *
+ * Vì sao không `Date.now().toString().slice(-6)`: sáu số cuối của mili-giây quay vòng sau
+ * ~16 phút (một lượt E2E dài hơn thế), và hai lần gọi trong cùng mili-giây — hai hàng trong
+ * một bài — ra cùng một số.
+ *
+ * Số đầu là `TEST_WORKER_INDEX` — worker mới sinh ra sau một bài hỏng mang chỉ số mới, nên
+ * không đụng số worker cũ vừa phát trong cùng giây. Năm số sau là giây hiện tại (quay vòng sau
+ * ~27 giờ, nên lượt sau không đụng rác lượt trước) và luôn TĂNG trong một tiến trình: gọi dồn
+ * trong cùng giây thì lấy số kế tiếp chứ không lặp. Không trộn số ngẫu nhiên: với sáu chữ số,
+ * ngẫu nhiên phá đúng tính tăng dần — thứ bảo đảm không trùng trong một lượt.
+ *
+ * Phải là số vì nhiều bài lấy `Number(stamp) % 200` làm octet IP. Chữ số worker đứng ĐẦU vì
+ * thế: đứng cuối thì `% 200` chỉ còn 20 giá trị và các dải của hai bài liền nhau dễ chồng lên
+ * nhau; đứng đầu thì `% 200` là giây hiện tại, đủ 200 giá trị.
+ */
+let lastStampSecond = -1;
+export function uniqueStamp(): string {
+  const now = Math.floor(Date.now() / 1000) % 100_000;
+  lastStampSecond = now > lastStampSecond ? now : (lastStampSecond + 1) % 100_000;
+  const worker = Number(process.env.TEST_WORKER_INDEX ?? 0) % 10;
+  return `${worker}${lastStampSecond.toString().padStart(5, '0')}`;
+}

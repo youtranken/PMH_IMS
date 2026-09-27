@@ -10,6 +10,7 @@ import {
   rowAction,
   sql,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -40,7 +41,7 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
     test.setTimeout(150_000);
 
     const totpSecret = await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     const catalog = await page.evaluate(async () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });
@@ -123,7 +124,7 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
     test.setTimeout(150_000);
 
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     const catalog = await page.evaluate(async () => {
       const res = await fetch('/api/v1/catalog', { credentials: 'include' });

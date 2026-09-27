@@ -14,6 +14,7 @@ import {
   resetSoftware,
   resetUsers,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -299,7 +300,7 @@ test.describe('Ba cửa ghi trong chính module devices', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `SW-E2E-RTI-${stamp}`;
     const deviceId = await makeDevice(page, code, 'Switch');
     await retire(page, deviceId);
@@ -350,7 +351,7 @@ test.describe('Ba cửa ghi trong chính module devices', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `SW-E2E-RTS-${stamp}`;
     const deviceId = await makeDevice(page, code, 'Switch');
 

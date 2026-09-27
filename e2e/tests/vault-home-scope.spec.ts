@@ -12,6 +12,7 @@ import {
   resetSoftware,
   resetUsers,
   sql,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -72,7 +73,7 @@ test.describe('Trang tổng Két sắt', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `PC-E2E-VH-${stamp}`;
     const deviceId = await createDevice(page, code);
     await stash(page, 'device', deviceId, `admin-${stamp}`);
@@ -100,7 +101,7 @@ test.describe('Trang tổng Két sắt', () => {
 
   test('lọc theo loại chọn được nhiều cùng lúc, và tìm theo mã', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const deviceCode = `PC-E2E-VF-${stamp}`;
     const deviceId = await createDevice(page, deviceCode);
     await stash(page, 'device', deviceId, `pw-${stamp}`);
@@ -154,7 +155,7 @@ test.describe('Trang tổng Két sắt', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     const ispCode = `ISP-E2E-VK-${stamp}`;
     const line = await page.request.post('/api/v1/isp-lines', {
@@ -214,7 +215,7 @@ test.describe('Trang tổng Két sắt', () => {
    */
   test('trang tổng chỉ nói CHỦ THỂ, không nói trong két có gì', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const deviceId = await createDevice(page, `PC-E2E-VS-${stamp}`);
     const label = `ten-ngan-bi-mat-${stamp}`;
     await stash(page, 'device', deviceId, label);
@@ -280,7 +281,7 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
    */
   test('gán hàng loạt hỏng một phần: vẫn báo rõ ai không gán được', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const doomed = `e2e-tao-moi-${stamp}@pmh.com.vn`;
 

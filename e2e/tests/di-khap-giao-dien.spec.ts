@@ -30,6 +30,7 @@ import {
   sql,
   timVaChoLoc,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -472,7 +473,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `SW-E2E-TOUR-${stamp}`;
 
     await page
@@ -573,7 +574,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const soon = isoInDays(3);
     const seeded = await page.request.post('/api/v1/software', {
       headers: await writeHeaders(page),
@@ -1091,7 +1092,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
 
     const adminTotp = await firstLogin(page, { email: ADMIN_EMAIL, password: matKhauTam });
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `SW-E2E-ADMIN-${stamp}`;
     // Chính việc tạo được thiết bị đã là một khẳng định: vai admin có quyền GHI hồ sơ.
     const deviceId = await taoThietBi(page, code, await loaiSwitch(page));
@@ -1176,7 +1177,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     // Ba lượt đăng nhập đầy đủ (SA → Member → admin mới), mỗi lượt một lần chờ mã TOTP mới.
     test.setTimeout(150_000);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const lyDoA = `E2E xin xem switch A ${stamp}`;
     const lyDoB = `E2E xin xem switch B ${stamp}`;
 
@@ -1801,7 +1802,7 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
     test.setTimeout(150_000);
 
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     /*
      * Tài khoản DÙNG MỘT LẦN, không đụng vào `E2E_MEMBER` mà mấy chục bài khác đang dùng —
@@ -2069,7 +2070,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const headers = await writeHeaders(page);
     const deviceTypeId = await idLoaiSwitch(page);
 
@@ -2206,7 +2207,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const headers = await writeHeaders(page);
     const deviceTypeId = await idLoaiSwitch(page);
 
@@ -2419,7 +2420,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     await page.goto('/devices');
     await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
 
@@ -2608,7 +2609,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `TB-E2E-SUA-${stamp}`;
     const headers = await writeHeaders(page);
     const deviceTypeId = await idLoaiSwitch(page);
@@ -2764,7 +2765,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `TB-E2E-HOSO-${stamp}`;
 
     // Tạo qua GIAO DIỆN: lượt tạo này còn phải để lại một dòng trong tab Lịch sử ở cuối bài.
@@ -2946,7 +2947,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
   });
 
   /** Mã hồ sơ / mã máy / tên luật đều phải mang dấu "E2E" — script dọn bám vào đúng dấu đó. */
-  const stampOf = () => Date.now().toString().slice(-6);
+  const stampOf = () => uniqueStamp();
 
   async function createSoftware(
     page: Page,
@@ -5367,7 +5368,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
   });
 
   /** Sáu chữ số cuối của mốc thời gian — đủ riêng cho một lượt chạy, đủ ngắn để đọc trong log. */
-  const dauThoiGian = (): string => Date.now().toString().slice(-6);
+  const dauThoiGian = (): string => uniqueStamp();
 
   /**
    * Gọn một nhãn đọc được về dạng so sánh được: gộp mọi khoảng trắng, bỏ dấu `*` của ô bắt buộc.
@@ -7073,7 +7074,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
      * Mã sinh theo thời gian và BẮT ĐẦU BẰNG `E2E-`: đó là mẫu `resetCatalog()` dùng để dọn.
      * Mã cố định sẽ đụng bản ghi của lần chạy trước; mã sai mẫu thì ở lại DB vĩnh viễn.
      */
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const maSite = `E2E-${stamp}`;
     const tenSite = `Site soi phòng ${stamp}`;
     const diaChi = `Tầng ${stamp}, tòa E2E`;
@@ -7376,7 +7377,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
      * Tiền tố `e2e-tao-moi-` là mẫu `resetUsers()` dùng để dọn. Sai mẫu thì tài khoản này ở
      * lại DB vĩnh viễn và ràng buộc email duy nhất sẽ làm đỏ mọi lượt chạy sau.
      */
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const email = `e2e-tao-moi-${stamp}@pmh.com.vn`;
     const hoTen = `E2E Tạo Mới ${stamp}`;
     const soDienThoai = '0912 345 678';
@@ -7724,7 +7725,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const deviceCode = `PC-E2E-KS-${stamp}`;
     const deviceId = await seedDevice(page, deviceCode);
     const secretLabel = `admin web E2E ${stamp}`;
@@ -8012,7 +8013,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const typeId = await deviceTypeId(page, 'Switch');
     const deviceCode = `SW-E2E-DUYET-${stamp}`;
     const deviceId = await seedDevice(page, deviceCode, 'Switch');
@@ -8265,7 +8266,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     test.setTimeout(150_000);
     const totpSecret = await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const deviceCode = `PC-E2E-HOP-${stamp}`;
     const deviceId = await seedDevice(page, deviceCode);
     // Một ngăn có sẵn để trang tổng liệt kê được chủ thể này.
@@ -8575,7 +8576,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const typeId = await deviceTypeId(page, 'Switch');
     const deviceId = await seedDevice(page, `SW-E2E-HOPD-${stamp}`, 'Switch');
     await stash(page, 'device', deviceId, `admin web E2E ${stamp}`);
@@ -8789,7 +8790,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       test.setTimeout(150_000);
       await firstLogin(page, E2E_SA);
 
-      const stamp = Date.now().toString().slice(-6);
+      const stamp = uniqueStamp();
       const deviceCode = `PC-E2E-ESC-${stamp}`;
       const deviceId = await seedDevice(page, deviceCode);
       await stash(page, 'device', deviceId, `ngan-co-san E2E ${stamp}`);

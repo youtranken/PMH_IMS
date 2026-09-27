@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { APP_ORIGIN, E2E_SA, firstLogin, resetDevices, resetIsp, resetUsers } from './helpers';
+import { APP_ORIGIN, E2E_SA, firstLogin, resetDevices, resetIsp, resetUsers, uniqueStamp } from './helpers';
 
 test.beforeEach(() => {
   resetUsers();
@@ -41,7 +41,7 @@ async function createLine(page: Page, data: Record<string, unknown>) {
 test.describe('Đường truyền ISP', () => {
   test('đường hạnh phúc: hotline và số hợp đồng hiện NGAY trên danh sách', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `ISP-E2E-${stamp}`;
 
     const created = await createLine(page, {
@@ -70,7 +70,7 @@ test.describe('Đường truyền ISP', () => {
 
   test('gắn Draytek: trang thiết bị hiện ngược lại đường ISP kèm hotline', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const deviceId = await createDevice(page, `FW-E2E-${stamp}`);
 
     // Chưa gắn đường nào: khu mở rộng phải RỖNG.
@@ -96,7 +96,7 @@ test.describe('Đường truyền ISP', () => {
 
   test('đường hỏng: thiếu nhà mạng, gửi ngày hết hạn, thiết bị không tồn tại', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
 
     const noProvider = await createLine(page, { code: `ISP-E2E-NP-${stamp}` });
     expect(noProvider.status).toBe(400);
@@ -126,7 +126,7 @@ test.describe('Đường truyền ISP', () => {
    */
   test('không hạn, không gia hạn; thanh lý ghi rõ người và ngày', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `ISP-E2E-TL-${stamp}`;
     const created = await createLine(page, { code, provider: 'VNPT' });
     expect(created.status).toBe(201);
@@ -174,7 +174,7 @@ test.describe('Đường truyền ISP', () => {
 
   test('file scan hợp đồng đính kèm được vào đường truyền', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const created = await createLine(page, {
       code: `ISP-E2E-FILE-${stamp}`,
       provider: 'FPT',
@@ -197,7 +197,7 @@ test.describe('Đường truyền ISP', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     for (const [suffix, provider] of [
       ['A', 'Zulu Telecom cuối bảng'],
       ['B', 'Alpha Telecom đầu bảng'],

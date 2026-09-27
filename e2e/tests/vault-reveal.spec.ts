@@ -18,6 +18,7 @@ import {
   resetSecrets,
   resetAccessList,
   resetUsers,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -81,7 +82,7 @@ test.describe('Mở két với TOTP step-up', () => {
     page,
   }) => {
     const totpSecret = await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const { deviceId } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
       { label: `SSH root E2E ${stamp}`, value: `Ssh#Pass#${stamp}` },
@@ -133,7 +134,7 @@ test.describe('Mở két với TOTP step-up', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const { deviceId } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
     ]);
@@ -155,7 +156,7 @@ test.describe('Mở két với TOTP step-up', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const { ids } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
     ]);
@@ -170,7 +171,7 @@ test.describe('Mở két với TOTP step-up', () => {
 
   test('mỗi lần giải mã = một dòng audit, và response không được lưu đệm', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const { ids } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
     ]);
@@ -254,7 +255,7 @@ test.describe('Mở két với TOTP step-up', () => {
 
   test('thu hồi rồi thì id cũ KHÔNG mở ra giá trị nữa', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const { ids } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
     ]);
@@ -277,7 +278,7 @@ test.describe('Mở két với TOTP step-up', () => {
 
   test('Member gọi đường mở két nhận 403, không phải lời mời gõ mã', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const { ids } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
     ]);
@@ -297,7 +298,7 @@ test.describe('Mở két với TOTP step-up', () => {
    */
   test('giá trị tự ẩn sau đúng số giây trong system_config @slow', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const { deviceId } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
     ]);
@@ -330,7 +331,7 @@ test.describe('Mở két với TOTP step-up', () => {
     page,
   }) => {
     const totpSecret = await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const { ids } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
     ]);
@@ -380,7 +381,7 @@ test.describe('Mở két với TOTP step-up', () => {
     test.setTimeout(240_000);
     const testStart = Date.now();
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const { ids, typeId } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: `Web#Pass#${stamp}` },
     ]);
@@ -459,7 +460,7 @@ test.describe('Mở két với TOTP step-up', () => {
   test('mở két xong thì log của api không chứa giá trị secret', async ({ page }) => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const secretValue = `LogRedact#${stamp}`;
     const { ids } = await setUpDeviceWithSecrets(page, stamp, [
       { label: `admin web E2E ${stamp}`, value: secretValue },

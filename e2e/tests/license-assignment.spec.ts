@@ -10,6 +10,7 @@ import {
   rowAction,
   timVaChoLoc,
   rowActionNames,
+  uniqueStamp,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -110,7 +111,7 @@ test.describe('Gán license theo seat', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const licenseId = await createLicense(page, `LIC-E2E-SEAT-${stamp}`, 2);
     const deviceId = await createDevice(page, `PC-E2E-L1-${stamp}`);
 
@@ -139,7 +140,7 @@ test.describe('Gán license theo seat', () => {
 
   test('vượt seat: chặn lần đầu, cho ghi đè khi có lý do', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const licenseId = await createLicense(page, `LIC-E2E-OVER-${stamp}`, 1);
     const first = await createDevice(page, `PC-E2E-O1-${stamp}`);
     const second = await createDevice(page, `PC-E2E-O2-${stamp}`);
@@ -163,7 +164,7 @@ test.describe('Gán license theo seat', () => {
 
   test('cùng license gán trùng một máy bị chặn', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const licenseId = await createLicense(page, `LIC-E2E-DUP-${stamp}`, 5);
     const deviceId = await createDevice(page, `PC-E2E-D1-${stamp}`);
 
@@ -211,7 +212,7 @@ test.describe('Gán license theo seat', () => {
 
   test('gỡ rồi gán lại cùng máy là hợp lệ (máy cài lại)', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const licenseId = await createLicense(page, `LIC-E2E-RE-${stamp}`, 5);
     const deviceId = await createDevice(page, `PC-E2E-R1-${stamp}`);
     const csrf = await csrfOf(page);
@@ -232,7 +233,7 @@ test.describe('Gán license theo seat', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const csrf = await csrfOf(page);
     const ssl = await page.request.post('/api/v1/software', {
       headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
@@ -253,7 +254,7 @@ test.describe('Gán license theo seat', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const licenseId = await createLicense(page, `LIC-E2E-PANEL-${stamp}`, 5);
     const deviceId = await createDevice(page, `PC-E2E-P1-${stamp}`);
 
@@ -275,7 +276,7 @@ test.describe('Gán license theo seat', () => {
    */
   test('bung dòng license trên danh sách là thấy máy đang dùng', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const licenseId = await createLicense(page, `LIC-E2E-EXP-${stamp}`, 3);
     const deviceCode = `PC-E2E-EXP-${stamp}`;
     const deviceId = await createDevice(page, deviceCode);
@@ -307,7 +308,7 @@ test.describe('Gán license theo seat', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const licenseId = await createLicense(page, `LIC-E2E-TERM-${stamp}`, 5);
     const ktCode = `PC-E2E-KT-${stamp}`;
     const xuongCode = `PC-E2E-XU-${stamp}`;
@@ -348,7 +349,7 @@ test.describe('Gán license theo seat', () => {
   /** Sửa ghế NGAY TẠI khu bung dòng, bằng đúng hộp đã dùng để gán (AD-15). */
   test('sửa chi phí và hợp đồng của một ghế ngay trong khu bung dòng', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const licenseId = await createLicense(page, `LIC-E2E-EDIT-${stamp}`, 3);
     const deviceCode = `PC-E2E-ED-${stamp}`;
     const deviceId = await createDevice(page, deviceCode);
@@ -384,7 +385,7 @@ test.describe('Gán license theo seat', () => {
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const csrf = await csrfOf(page);
     const headers = { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN };
 
@@ -432,7 +433,7 @@ test.describe('Gán license theo seat', () => {
   /** Hồ sơ không có máy nào gắn thì KHÔNG được mọc mũi tên bấm ra rỗng. */
   test('license chưa gán máy nào thì không có mũi tên bung dòng', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     await createLicense(page, `LIC-E2E-NOEXP-${stamp}`, 5);
 
     await page.goto('/software');
@@ -453,7 +454,7 @@ test.describe('Gán license theo seat', () => {
    */
   test('gán license vào máy ngay từ cột Thao tác của danh sách', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `LIC-E2E-ROW-${stamp}`;
     await createLicense(page, code, 5);
     const deviceCode = `PC-E2E-ROW-${stamp}`;
@@ -479,7 +480,7 @@ test.describe('Gán license theo seat', () => {
   /** SSL, tên miền không có ghế — nút gán không được bày ra để bấm vào rồi báo lỗi. */
   test('hồ sơ không phải license thì cột Thao tác không có nút gán', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const stamp = Date.now().toString().slice(-6);
+    const stamp = uniqueStamp();
     const code = `SSL-E2E-ROW-${stamp}`;
     const csrf = await csrfOf(page);
     const created = await page.request.post('/api/v1/software', {

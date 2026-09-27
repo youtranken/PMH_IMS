@@ -9,6 +9,7 @@ import {
   resetSoftware,
   resetUsers,
   writeHeaders,
+  uniqueStamp,
 } from './helpers';
 
 /**
@@ -32,7 +33,7 @@ test.beforeEach(() => {
 
 test('ba loại hồ sơ đã ngừng dùng cùng hiện trong một bảng', async ({ page }) => {
   await firstLogin(page, E2E_SA);
-  const stamp = Date.now().toString().slice(-6);
+  const stamp = uniqueStamp();
   const headers = await writeHeaders(page);
 
   const catalog = await page.evaluate(async () => {
@@ -117,7 +118,7 @@ test('ba loại hồ sơ đã ngừng dùng cùng hiện trong một bảng', as
  */
 test('đường truyền đã thanh lý vào kho, link về đúng trang đường truyền', async ({ page }) => {
   await firstLogin(page, E2E_SA);
-  const stamp = Date.now().toString().slice(-6);
+  const stamp = uniqueStamp();
   const headers = await writeHeaders(page);
   const cut = `ISP-E2E-DIS-${stamp}`;
   const running = `ISP-E2E-RUN-${stamp}`;
@@ -170,7 +171,7 @@ test('đường truyền đã thanh lý vào kho, link về đúng trang đườ
  */
 test('hồ sơ trong kho KHÔNG còn được tính hạn', async ({ page }) => {
   await firstLogin(page, E2E_SA);
-  const stamp = Date.now().toString().slice(-6);
+  const stamp = uniqueStamp();
   const headers = await writeHeaders(page);
   const code = `LIC-E2E-QUIET-${stamp}`;
 
