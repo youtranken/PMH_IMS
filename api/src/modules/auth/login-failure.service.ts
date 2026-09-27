@@ -44,9 +44,12 @@ export class LoginFailureService implements OnModuleInit {
     return ip ?? 'unknown';
   }
 
-  /** Trạng thái khoá của cặp này, để `login()` kiểm TRƯỚC khi bỏ công băm mật khẩu. */
-  async stateFor(userId: string, ip: string | null): Promise<LockoutState> {
-    const rows = await this.db
+  /**
+   * Trạng thái khoá của cặp này. `login()` gọi hai lần: trước khi băm mật khẩu (bằng pool), và
+   * lại trong transaction cấp phiên sau khi đã khoá hàng `users` (khe L8).
+   */
+  async stateFor(userId: string, ip: string | null, tx?: Tx): Promise<LockoutState> {
+    const rows = await (tx ?? this.db)
       .select({
         failedAttempts: loginFailureTable.failedAttempts,
         lockedUntil: loginFailureTable.lockedUntil,
@@ -118,8 +121,8 @@ export class LoginFailureService implements OnModuleInit {
    * phải còn nguyên. Người dùng thật đăng nhập được không phải là bằng chứng rằng kẻ kia đã
    * thôi gõ.
    */
-  async clearFor(userId: string, ip: string | null): Promise<void> {
-    await this.db
+  async clearFor(userId: string, ip: string | null, tx?: Tx): Promise<void> {
+    await (tx ?? this.db)
       .delete(loginFailureTable)
       .where(
         and(

@@ -268,9 +268,8 @@ export function CatalogScreen({ me }: { me: Me }) {
   const [editing, setEditing] = useState<{ row: CatalogRow | null } | null>(null);
   const [importing, setImporting] = useState(false);
 
-  // Q-12: member thêm và sửa được; vô hiệu hoá, xoá, nhập Excel vẫn chỉ SA/Admin.
+  // Q-12: mọi vai thêm và sửa được; vô hiệu hoá, xoá, nhập Excel chỉ SA/Admin.
   const canManage = me.role === 'sa' || me.role === 'admin';
-  const canEdit = canManage || me.role === 'member';
   const csrfToken = me.csrfToken;
   const importable = (IMPORTABLE_ENTITIES as readonly string[]).includes(entity);
 
@@ -317,8 +316,6 @@ export function CatalogScreen({ me }: { me: Me }) {
         </span>
       ),
     };
-    if (!canEdit) return [...entityColumns, statusColumn];
-
     const actionsColumn: ColumnDef<CatalogRow, unknown> = {
       id: 'actions',
       header: t('common.actions'),
@@ -345,7 +342,7 @@ export function CatalogScreen({ me }: { me: Me }) {
     };
     return [...entityColumns, statusColumn, actionsColumn];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entity, t, canEdit, canManage]);
+  }, [entity, t, canManage]);
 
   /** Vô hiệu hoá / Xoá — chỉ SA/Admin (Q-12). */
   function manageItems(catalogRow: CatalogRow, name: string) {
@@ -433,29 +430,26 @@ export function CatalogScreen({ me }: { me: Me }) {
             {/* File mẫu và đường nhập Excel chỉ có nghĩa với bốn danh mục gốc. Ba danh mục
                 của 0028 vài chục dòng, khai tay là xong — bày nút "Nhập Excel" ở đó là hứa
                 một đường đi mà file mẫu không hề có sheet cho nó. */}
-            {importable ? (
-              <ExportXlsxButton
-                url="/api/v1/catalog/template"
-                fileName="mau-danh-muc.xlsx"
-                label={t('catalog.downloadTemplate')}
-              />
-            ) : null}
-            {canEdit ? (
+            {/* File mẫu chỉ để nhập, nên đi cùng quyền nhập (SA/Admin). */}
+            {importable && canManage ? (
               <>
-                {importable && canManage ? (
-                  <button type="button" className="btn" onClick={() => setImporting(true)}>
-                    {t('catalog.importExcel')}
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="btn primary"
-                  onClick={() => setEditing({ row: null })}
-                >
-                  {t(`catalog.add${TAB_SUFFIX[entity]}`)}
+                <ExportXlsxButton
+                  url="/api/v1/catalog/template"
+                  fileName="mau-danh-muc.xlsx"
+                  label={t('catalog.downloadTemplate')}
+                />
+                <button type="button" className="btn" onClick={() => setImporting(true)}>
+                  {t('catalog.importExcel')}
                 </button>
               </>
             ) : null}
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => setEditing({ row: null })}
+            >
+              {t(`catalog.add${TAB_SUFFIX[entity]}`)}
+            </button>
           </>
         }
       />
@@ -476,8 +470,6 @@ export function CatalogScreen({ me }: { me: Me }) {
           }}
           searchPlaceholder={t(TAB_KEYS.find((tab) => tab.key === entity)?.searchKey ?? 'common.search')}
         />
-
-        {!canEdit ? <p className="muted">{t('catalog.readOnly')}</p> : null}
 
         {rows.isLoading ? (
           <Loading />

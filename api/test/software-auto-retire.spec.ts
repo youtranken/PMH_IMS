@@ -157,7 +157,7 @@ describe('Q-13 · tự thanh lý phần mềm hết hạn quá ân hạn', () =>
     async () => {
       await software.syncExpiryStatuses(TODAY, GRACE);
       const id = await idOf('SW-QUA-31');
-      const restored = await software.update('sa', id, { status: 'active', endDate: '2027-08-31' });
+      const restored = await software.update('sa', id, { status: 'active', endDate: '2099-12-31' });
       expect(restored.status).toBe('active');
       await software.syncExpiryStatuses(TODAY, GRACE);
       expect(await statusOf('SW-QUA-31')).toBe('active');

@@ -221,7 +221,7 @@ describe('Không tiếng Anh lẫn trong câu tiếng Việt', () => {
    *
    * 'Super Admin' được phép: đó là tên riêng của vai SA, dùng nguyên vẹn ở mọi chỗ.
    */
-  const PROSE_KEYS = ['access.noMembers', 'catalog.readOnly', 'digest.readOnly'];
+  const PROSE_KEYS = ['access.noMembers', 'digest.readOnly'];
 
   it.each(PROSE_KEYS)('%s không chứa tên vai tiếng Anh', (key) => {
     const sentence = lookup(key).replace(/Super Admin/g, '');

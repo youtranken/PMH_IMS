@@ -378,8 +378,8 @@ export class UsersService {
    * theo hướng nguy hiểm: một kẻ có mật khẩu nhưng bị chặn ở cửa TOTP để lại đúng dấu vết của
    * một lần đăng nhập bình thường.
    */
-  async clearLoginFailures(userId: string): Promise<void> {
-    await this.db
+  async clearLoginFailures(userId: string, tx?: Tx): Promise<void> {
+    await (tx ?? this.db)
       .update(usersTable)
       .set({ failedAttempts: 0, lockedUntil: null })
       .where(eq(usersTable.id, userId));

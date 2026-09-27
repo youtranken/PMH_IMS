@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
 import { createTransport, type Transporter } from 'nodemailer';
 import { readSecretFile } from '../../common/secrets';
 
@@ -15,9 +15,16 @@ export interface MailMessage {
  * KHÔNG ai gọi thẳng service này trong request — mọi email đi qua outbox (AD-5).
  */
 @Injectable()
-export class MailTransportService {
+export class MailTransportService implements OnModuleInit {
   private readonly logger = new Logger(MailTransportService.name);
   private transporter: Transporter | null = null;
+
+  /** Thiếu SMTP_HOST thì chết ngay lúc khởi động, không đợi tới thư đầu tiên mới lộ (OPS-01). */
+  onModuleInit(): void {
+    if (!process.env.SMTP_HOST) {
+      throw new Error('Thiếu SMTP_HOST — prod là smtp.gmail.com, dev là mailpit.');
+    }
+  }
 
   private get transport(): Transporter {
     if (this.transporter) return this.transporter;

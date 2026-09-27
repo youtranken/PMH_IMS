@@ -127,15 +127,7 @@ export class AuthService {
      */
     await this.assertAccountNotBackedOff(user, now);
     const lockState = await this.loginFailures.stateFor(user.id, ctx.ip);
-    if (isLocked(lockState, now)) {
-      const seconds = lockRemainingSeconds(lockState, now);
-      await this.auditFailure(user, 'locked');
-      throw new UnauthorizedException({
-        code: 'ACCOUNT_LOCKED',
-        message: `Tài khoản đang bị khóa. Thử lại sau ${Math.ceil(seconds / 60)} phút.`,
-        retryAfterSeconds: seconds,
-      });
-    }
+    if (isLocked(lockState, now)) return this.rejectIpLocked(user, lockState, now);
 
     const ok = await this.passwords.verify(user.passwordHash, password);
     if (!ok) {
@@ -145,6 +137,9 @@ export class AuthService {
        */
       const backoff = await this.accountBackoffPolicy();
       await this.db.transaction(async (tx) => {
+        // Khoá hàng `users` TRƯỚC hàng theo IP — cùng thứ tự với lượt cấp phiên bên dưới, nếu
+        // không hai lượt song song giữ chéo hai khoá và Postgres huỷ một bên vì deadlock.
+        await this.registerAccountFailureWithin(tx, user, backoff, now);
         const local = await this.loginFailures.registerFailureWithin(
           tx,
           user.id,
@@ -159,7 +154,6 @@ export class AuthService {
           objectId: user.id,
           detail: { reason: 'bad-password', ipLocked: local.lockedUntil !== null },
         });
-        await this.registerAccountFailureWithin(tx, user, backoff, now);
       });
       throw new UnauthorizedException({
         code: 'LOGIN_FAILED',
@@ -170,10 +164,20 @@ export class AuthService {
     const needsTotp = user.totpLoginRequired;
     const enrolled = user.totpEnrolledAt !== null;
 
-    type Granted = { blocked: LockoutState } | { session: CreatedSession };
+    /*
+     * Kiểm lại cả hai tầng khoá SAU KHI giữ hàng `users` (khe L8): cửa đầu đọc ngoài
+     * transaction, nên một lượt sai song song có thể đã đẩy tài khoản hoặc cặp (người dùng, IP)
+     * lên khoá trong lúc lượt này còn băm Argon2. Lượt sai cũng khoá `users` trước, nên tới đây
+     * nó hoặc đã commit (và ta thấy), hoặc phải xếp hàng sau ta.
+     */
+    type Granted =
+      | { blocked: LockoutState; scope: 'account' | 'ip' }
+      | { session: CreatedSession };
     const granted = await this.db.transaction(async (tx): Promise<Granted> => {
       const current = await this.users.lockLoginStateWithin(tx, user.id);
-      if (isLocked(current, now)) return { blocked: current };
+      if (isLocked(current, now)) return { blocked: current, scope: 'account' };
+      const ipState = await this.loginFailures.stateFor(user.id, ctx.ip, tx);
+      if (isLocked(ipState, now)) return { blocked: ipState, scope: 'ip' };
       const created = await this.sessions.createWithin(tx, {
         userId: user.id,
         ip: ctx.ip,
@@ -204,23 +208,28 @@ export class AuthService {
        */
       if (!needsTotp) await this.users.markLoginCompletedWithin(tx, user.id);
       await this.noticeNewDevice(tx, user, ctx);
+      /*
+       * Xoá bộ đếm TRONG transaction này, khi còn giữ hàng `users`: xoá sau khi commit thì một
+       * lượt sai chen vào giữa bị xoá theo, mất luôn bậc chờ nó vừa gây ra.
+       *
+       * Bộ đếm theo TÀI KHOẢN chỉ xoá khi đăng nhập TRỌN VẸN. Còn cửa TOTP thì chưa xoá: nếu xoá
+       * ở đây, kẻ có mật khẩu lặp "đăng nhập → đoán 5 mã → đăng nhập" mãi mà không lên bậc chờ
+       * nào (SEC-02).
+       */
+      if (!needsTotp) await this.users.clearLoginFailures(user.id, tx);
+      /*
+       * Bộ đếm theo cặp (người dùng, IP) đếm lượt đoán MẬT KHẨU từ nơi này, và việc đó vừa xong.
+       * Cố ý không xoá hàng của IP khác: nơi khác đang dò thì khoá bên đó phải còn nguyên.
+       */
+      await this.loginFailures.clearFor(user.id, ctx.ip, tx);
       return { session: created };
     });
-    // Kiểm lại dưới khoá hàng (L8): lượt sai song song vừa đẩy tài khoản lên bậc chờ.
-    if ('blocked' in granted) return this.rejectBackedOff(user, granted.blocked, now);
+    if ('blocked' in granted) {
+      return granted.scope === 'account'
+        ? this.rejectBackedOff(user, granted.blocked, now)
+        : this.rejectIpLocked(user, granted.blocked, now);
+    }
     const { session } = granted;
-
-    /*
-     * Bộ đếm theo TÀI KHOẢN chỉ xoá khi đăng nhập TRỌN VẸN. Còn cửa TOTP thì chưa xoá: nếu xoá
-     * ở đây, kẻ có mật khẩu lặp "đăng nhập → đoán 5 mã → đăng nhập" mãi mà không lên bậc chờ
-     * nào (SEC-02).
-     */
-    if (!needsTotp) await this.users.clearLoginFailures(user.id);
-    /*
-     * Bộ đếm theo cặp (người dùng, IP) đếm lượt đoán MẬT KHẨU từ nơi này, và việc đó vừa xong.
-     * Cố ý không xoá hàng của IP khác: nơi khác đang dò thì khoá bên đó phải còn nguyên.
-     */
-    await this.loginFailures.clearFor(user.id, ctx.ip);
 
     if (needsTotp && !enrolled) return { status: 'totp-enroll-required', session };
     if (needsTotp) return { status: 'totp-required', session };
@@ -319,6 +328,9 @@ export class AuthService {
 
     const absoluteHours = await this.config.getNumber('sessionAbsoluteHours');
     const fresh = await this.db.transaction(async (tx) => {
+      // Khe L8 ở cửa mã: kiểm lại bậc chờ dưới khoá hàng `users`, như `login()`.
+      const current = await this.users.lockLoginStateWithin(tx, user.id);
+      if (isLocked(current, now)) await this.rejectBackedOff(user, current, now);
       await this.sessions.revokeWithin(tx, session.id, 'totp-regenerate');
       const created = await this.sessions.createWithin(tx, {
         userId: user.id,
@@ -372,10 +384,11 @@ export class AuthService {
         objectId: created.id,
         detail: { viaTotp: true },
       });
+      // Trong transaction, như `login()`: xoá sau commit là xoá luôn lượt sai vừa chen vào.
+      await this.users.clearLoginFailures(user.id, tx);
       return created;
     });
 
-    await this.users.clearLoginFailures(user.id);
     return { session: fresh, mustChangePassword: user.mustChangePassword };
   }
 
@@ -571,10 +584,10 @@ export class AuthService {
         objectId: created.id,
         detail: { viaTotpEnroll: true },
       });
+      await this.users.clearLoginFailures(user.id, tx);
       return { session: created, newToken: created.token };
     });
 
-    if (fresh.newToken) await this.users.clearLoginFailures(user.id);
     return fresh;
   }
 
@@ -812,6 +825,21 @@ export class AuthService {
     const state = { failedAttempts: user.failedAttempts, lockedUntil: user.lockedUntil };
     if (!isLocked(state, now)) return;
     await this.rejectBackedOff(user, state, now);
+  }
+
+  /** Cặp (người dùng, IP) này đang bị khoá — chặn nơi đang đoán. */
+  private async rejectIpLocked(
+    user: UserCredentials,
+    state: LockoutState,
+    now: Date,
+  ): Promise<never> {
+    const seconds = lockRemainingSeconds(state, now);
+    await this.auditFailure(user, 'locked');
+    throw new UnauthorizedException({
+      code: 'ACCOUNT_LOCKED',
+      message: `Tài khoản đang bị khóa. Thử lại sau ${Math.ceil(seconds / 60)} phút.`,
+      retryAfterSeconds: seconds,
+    });
   }
 
   private async rejectBackedOff(

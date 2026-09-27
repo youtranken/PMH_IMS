@@ -381,7 +381,7 @@ test.describe('Hồ sơ phần mềm', () => {
 
   test('Q-13: hồ sơ đã thanh lý, hạn còn hiệu lực → Sửa về Đang dùng được', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const id = await retiredViaApi(page, `SSL-E2E-KHOI-PHUC-${uniqueStamp()}`, '2030-12-31');
+    const id = await retiredViaApi(page, `SSL-E2E-KHOI-PHUC-${uniqueStamp()}`, '2099-12-31');
 
     await restoreInForm(page, id);
 

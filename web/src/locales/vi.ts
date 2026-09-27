@@ -380,7 +380,6 @@ export default {
     importTitle: 'Nhập danh mục từ Excel',
     importHint: 'Dùng đúng file tải từ nút "Tải file mẫu". Dòng đánh dấu VÍ DỤ sẽ được bỏ qua.',
     emptyHint: 'Chưa khai mục nào. Thêm tay, hoặc dùng "Nhập Excel" với file tải từ nút "Tải file mẫu".',
-    readOnly: 'Bạn chỉ có quyền xem danh mục. Cần sửa thì nhờ Quản trị.',
   },
   devices: {
     title: 'Thiết bị',

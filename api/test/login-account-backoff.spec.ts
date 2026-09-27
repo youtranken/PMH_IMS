@@ -189,4 +189,41 @@ describe('Trần đăng nhập theo tài khoản — AuthService trên DB thật
     },
     TEST_TIMEOUT,
   );
+
+  it(
+    'L8 cho khoá theo (người dùng, IP): lượt đúng chờ khoá hàng rồi phải thấy IP vừa bị khoá',
+    async () => {
+      const u = await makeUser(false);
+      const ip = from(7);
+      /*
+       * Lượt sai song song (đã khoá hàng `users` trước, như đường thật) vừa đẩy cặp (người
+       * dùng, IP này) lên khoá. Lượt đúng từ CÙNG IP đọc trạng thái IP cũ ở cửa đầu nên lọt;
+       * chỉ lần kiểm lại dưới khoá hàng mới thấy.
+       */
+      const holder = await scratch.pool.connect();
+      try {
+        await holder.query('BEGIN');
+        await holder.query('SELECT 1 FROM users WHERE id = $1 FOR UPDATE', [u.id]);
+        const attempt = outcome(auth.login(u.email, PASSWORD, ip));
+        await waitForLock(scratch.pool, 15_000);
+        await holder.query(
+          `INSERT INTO login_failure (user_id, ip, failed_attempts, locked_until, updated_at)
+           VALUES ($1, $2, $3, now() + interval '15 minutes', now())`,
+          [u.id, ip.ip, threshold],
+        );
+        await holder.query('COMMIT');
+        expect(await attempt).toBe('ACCOUNT_LOCKED');
+      } finally {
+        await holder.query('ROLLBACK').catch(() => undefined);
+        holder.release();
+      }
+      const { rows } = await scratch.pool.query<{ locked: boolean }>(
+        'SELECT locked_until IS NOT NULL AS locked FROM login_failure WHERE user_id = $1',
+        [u.id],
+      );
+      // Khoá của IP phải còn nguyên — không được lượt đúng xoá mất.
+      expect(rows).toEqual([{ locked: true }]);
+    },
+    TEST_TIMEOUT,
+  );
 });
