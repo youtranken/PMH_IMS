@@ -3,15 +3,11 @@
 # Bí mật (master key, pepper, SMTP pass) đi qua docker secret dạng FILE, không env (AD-11).
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Môi trường DÙNG CHUNG của api và worker — CỐ Ý không chứa `MIGRATION_DATABASE_URL`.
+# Môi trường DÙNG CHUNG của api và worker — CỐ Ý không chứa DSN của chủ sở hữu DB.
 #
-# Tới 20/09 `worker` khai `environment: *api_env`, tức dùng lại nguyên khối của api, nên nó
-# mang DSN của CHỦ SỞ HỮU suốt vòng đời dù `worker.ts` không bao giờ đọc biến ấy — biến đó chỉ
-# được `main.ts` dùng, trong mấy giây đầu của api, rồi pool đóng hẳn. Thứ gì đọc được môi
-# trường của worker (một job hàng đợi chạy sai, bản dump lúc sập, `docker inspect`) là có
-# thẳng quyền tháo trigger append-only. Đúng thứ D-01 dựng ra để không còn ai có (§18 #4).
-#
-# Worker cũng KHÔNG chạy `assertNarrowRole`, nên nếu nó cầm nhầm DSN thì không cổng nào kêu.
+# DSN chủ sở hữu (quyền ALTER/DROP, tháo được trigger append-only của audit_log) chỉ nằm trong
+# service `migrate`, chạy một lần rồi thoát (OPS-07). Thứ gì đọc được môi trường của api hay
+# worker (lỗi RCE, bản dump lúc sập, `docker inspect`) cũng không có quyền đó.
 # ─────────────────────────────────────────────────────────────────────────────
 # Log json-file mặc định không giới hạn dung lượng: pino ghi JSON ra stdout sẽ làm đầy đĩa (OPS-06).
 x-logging: &logging
@@ -80,19 +76,32 @@ services:
       timeout: 5s
       retries: 10
 
-  api:
+  # Chạy MỘT lần mỗi lần `up`: dựng role ims_app + áp migration bằng chủ sở hữu, rồi thoát (OPS-07).
+  # DSN chủ sở hữu CHỈ nằm ở đây — api và worker không bao giờ cầm nó.
+  migrate:
     image: ims-api:latest
     build: ./api
+    restart: 'no'
+    user: '1000:1000'
+    logging: *logging
+    command: ['node', 'dist/ops/migrate.main.js']
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      TZ: Asia/Ho_Chi_Minh
+      MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ims}
+      DATABASE_URL: postgresql://ims_app:${APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:-ims}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  api:
+    image: ims-api:latest
     restart: unless-stopped
     user: '1000:1000'
     logging: *logging
     mem_limit: 768m
     stop_grace_period: 30s
-    environment:
-      # Hai biến CHỈ api có: nó là nơi duy nhất chạy migration và tạo role ứng dụng.
-      <<: *app_env
-      MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ims}
-      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+    environment: *app_env
     secrets: &api_secrets
       - ims_master_key
       - ims_password_pepper
@@ -100,7 +109,7 @@ services:
     volumes:
       - filesdata:/data/files
     depends_on:
-      postgres: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
     healthcheck:
       test: ['CMD', 'node', '-e', "require('http').get('http://127.0.0.1:3000/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"]

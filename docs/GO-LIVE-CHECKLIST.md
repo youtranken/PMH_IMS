@@ -112,7 +112,7 @@ xem tận mắt lần thứ hai.
   `startTotpEnrollment`: `registerStepUpFailure` + probe + thu hồi phiên khi chạm ngưỡng.
 - [ ] **SEC-07 · Logger có thể ghi `Set-Cookie`.** Thêm `res.headers["set-cookie"]` vào danh sách
   redact (`app.module.ts:61-71`). Kiểm bằng một dòng log thật.
-- [ ] **SEC-08 · Container api giữ mật khẩu superuser Postgres** (`MIGRATION_DATABASE_URL`). Làm cùng
+- [x] **SEC-08 · Container api giữ mật khẩu superuser Postgres** (`MIGRATION_DATABASE_URL`). Làm cùng
   OPS-07.
 - [x] **SEC-09 · Topology proxy.** Đã chốt (Q-08): không có proxy, giữ `trust proxy = 1`. Nếu có reverse proxy đứng trước container `web` trên Ubuntu, đổi
   `trust proxy` (`app.setup.ts:16`) từ số hop `1` sang IP/CIDR của proxy. Nếu không, mọi người dùng
@@ -317,7 +317,7 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
 
 ### P1
 
-- [ ] **OPS-07 · Tách service `migrate` chạy một lần** (`restart: "no"`).
+- [x] **OPS-07 · Tách service `migrate` chạy một lần** (`restart: "no"`).
   - `api` `depends_on: migrate: service_completed_successfully`.
   - Bỏ `MIGRATION_DATABASE_URL` khỏi `api`.
   - Có thể gộp luôn `ensureAppRole` vào đây: tránh race khi scale (L1) và không để api giữ quyền

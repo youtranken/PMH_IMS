@@ -325,7 +325,7 @@ async function assertCanDisableTriggers(pool) {
   );
   console.error(
     'Nguyên nhân thường gặp: đã tách role (D-01) nhưng container chạy script này chưa được ' +
-      'khai MIGRATION_DATABASE_URL, nên nó lùi về DATABASE_URL của role hẹp.',
+      'khai E2E_RESET_DATABASE_URL (docker-compose.override.e2e.yml), nên nó lùi về DATABASE_URL của role hẹp.',
   );
   console.error('DỪNG TRƯỚC KHI XOÁ GÌ — dọn dở dang tệ hơn không dọn.');
   process.exit(1);
@@ -411,7 +411,12 @@ async function main() {
    * xem CLAUDE.md).
    */
   const pool = new pg.Pool({
-    connectionString: process.env.MIGRATION_DATABASE_URL ?? process.env.DATABASE_URL,
+    // E2E_RESET_DATABASE_URL: DSN chủ sở hữu, chỉ khai trong docker-compose.override.e2e.yml —
+    // từ OPS-07 container api không còn MIGRATION_DATABASE_URL.
+    connectionString:
+      process.env.E2E_RESET_DATABASE_URL ??
+      process.env.MIGRATION_DATABASE_URL ??
+      process.env.DATABASE_URL,
   });
   await assertCanDisableTriggers(pool);
   try {

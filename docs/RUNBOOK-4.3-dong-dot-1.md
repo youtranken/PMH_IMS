@@ -94,7 +94,7 @@ $ openssl x509 -in ops/certs/fullchain.pem -noout -subject -enddate   # đúng *
 ```bash
 $ docker compose up -d --build        # KHÔNG có --profile dev: prod không chạy mailpit
 $ docker compose ps                   # postgres, redis, api, worker, web đều Up / healthy
-$ docker compose logs api | grep -E "Migration applied|Đã áp"   # đủ số migration trong api/src/migrations
+$ docker compose logs migrate | grep -E "Migration applied|Đã áp|mới nhất"   # service migrate chạy một lần rồi thoát (Exited 0)
 ```
 
 Không dùng `docker-compose.override.e2e.yml` hay `docker-compose.override.drill.yml` ở máy prod.
