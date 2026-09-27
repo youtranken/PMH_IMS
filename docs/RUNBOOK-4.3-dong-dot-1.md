@@ -85,6 +85,7 @@ $ umask 077
 $ echo "1=$(openssl rand -hex 32)" > secrets/master_key
 $ openssl rand -hex 32 > secrets/password_pepper
 $ printf '%s' '<App Password của hộp thư SMTP>' > secrets/smtp_password
+$ chmod 600 secrets/master_key secrets/password_pepper secrets/smtp_password
 $ sudo chown 1000:1000 secrets/*        # container api/worker chạy uid 1000
 ```
 
@@ -263,6 +264,13 @@ Chỉ làm **sau khi E đỗ**. Dùng đúng luồng nhập Excel — không có
 1. **Khai dải IP trước**: mỗi dải một lần. Hệ thống từ chối dải chồng lên dải đã có.
 2. IMS → **Thiết bị** → **Nhập Excel** → chọn file → xem bảng đối chiếu → **Xác nhận ghi**.
    Đọc kỹ phần **lỗi** trước khi xác nhận; sửa trong Excel rồi nhập lại.
+3. **Phần mềm / license (Q-13):** hồ sơ có ngày hết hạn quá 30 ngày sẽ bị **tự Thanh lý và gỡ
+   ghế** ở lượt quét đầu tiên, vài phút sau khi nhập. Trước khi nhập: cập nhật ngày hết hạn
+   thật trong file, hoặc tạm tắt tự thanh lý rồi bật lại khi đã rà xong:
+   ```bash
+   $ docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "UPDATE system_config SET value = '"'"'0'"'"' WHERE key = '"'"'software.auto_retire_grace_days'"'"'"'
+   ```
+   Rà xong thì đặt lại `'30'` bằng cùng lệnh.
 
 | Kiểm | Cách |
 | --- | --- |
@@ -290,7 +298,7 @@ Chỉ làm **sau khi E đỗ**. Dùng đúng luồng nhập Excel — không có
    $ docker compose up -d
    ```
 
-   api tự đặt mật khẩu cho `ims_app` theo `APP_DB_PASSWORD` lúc khởi động.
+   Service `migrate` (chạy một lần trước `api`) đặt mật khẩu cho `ims_app` theo `APP_DB_PASSWORD`.
 4. Kiểm như **B2**, rồi trỏ DNS sang máy mới. Chạy lại **D** trên máy mới.
 
 ---

@@ -20,10 +20,18 @@ export class SoftwareStatusSweep implements OnModuleInit {
   }
 
   private async run(): Promise<void> {
-    const today = isoDateInTz(await this.config.getString('appTimezone'));
-    const { expired, reactivated } = await this.software.syncExpiryStatuses(today);
-    if (expired + reactivated > 0) {
-      this.logger.log(`phần mềm: ${expired} sang Hết hạn, ${reactivated} về Đang dùng`);
+    const [tz, graceDays] = await Promise.all([
+      this.config.getString('appTimezone'),
+      this.config.getNumber('softwareAutoRetireGraceDays'),
+    ]);
+    const { expired, reactivated, retired } = await this.software.syncExpiryStatuses(
+      isoDateInTz(tz),
+      graceDays,
+    );
+    if (expired + reactivated + retired > 0) {
+      this.logger.log(
+        `phần mềm: ${expired} sang Hết hạn, ${reactivated} về Đang dùng, ${retired} tự Thanh lý`,
+      );
     }
   }
 }

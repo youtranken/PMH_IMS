@@ -6,6 +6,7 @@ import {
   E2E_MEMBER,
   E2E_SA,
   SECOND_BROWSER,
+  catalogItem,
   confirmAction,
   expireStepUp,
   fillLogin,
@@ -2027,13 +2028,25 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    * chỉ có một thứ đóng, và đó đúng là thứ ta vừa mở.
    */
   async function luaChonCua(page: Page, trigger: Locator): Promise<string[]> {
-    await trigger.click();
     const options = page.getByRole('option');
-    await expect(options.first(), 'ô chọn mở ra phải có ít nhất một lựa chọn').toBeVisible();
-    // `allTextContents` chứ không phải `allInnerTexts` — xem chú thích ở `nhanCua`.
-    const names = await options.allTextContents();
-    await trigger.click();
-    await expect(options, 'bấm lại nút mở phải đóng danh sách lựa chọn').toHaveCount(0);
+    let names: string[] = [];
+    /*
+     * Lặp cả vòng mở–đọc–đóng: bảng nạp lại (sau khi sắp xếp, lọc) dựng lại thanh phân trang,
+     * nút cũ bị gỡ khỏi DOM giữa hai cú bấm và cú thứ hai rơi vào một nút MỚI đang đóng — tức
+     * là mở lại. Lỗi đó thuộc về nhịp của bài kiểm, không phải của `Select`.
+     */
+    await expect(async () => {
+      if ((await options.count()) === 0) await trigger.click();
+      await expect(options.first(), 'ô chọn mở ra phải có ít nhất một lựa chọn').toBeVisible({
+        timeout: 2_000,
+      });
+      // `allTextContents` chứ không phải `allInnerTexts` — xem chú thích ở `nhanCua`.
+      names = await options.allTextContents();
+      await trigger.click();
+      await expect(options, 'bấm lại nút mở phải đóng danh sách lựa chọn').toHaveCount(0, {
+        timeout: 2_000,
+      });
+    }).toPass({ timeout: 15_000 });
     return names.map((name) => name.trim());
   }
 
@@ -7006,6 +7019,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     page,
   }) => {
     await firstLogin(page, E2E_SA);
+    // Ô "Thuộc site" cần ít nhất một site; máy chủ mới dựng thì danh mục còn trắng.
+    await catalogItem(page, 'site', { code: `S-E2E-TU-${uniqueStamp()}`, name: 'Site E2E hộp tủ' });
     await moPhongDanhMuc(page);
 
     await page.getByRole('tab', { name: 'Tủ mạng', exact: true }).click();
@@ -7799,9 +7814,10 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
      * minh danh sách đã nghe theo. Thiếu vế thứ hai thì một `useState` không nối vào `rows`
      * vẫn xanh — và đó đúng là kiểu hỏng mà mắt không thấy vì cái nút vẫn đổi màu.
      */
-    expect(
-      await toggleButtons(main),
-      'bấm "Thiết bị" thì đúng một nút được bật, ba nút kia phải giữ nguyên trạng thái tắt',
+    // `poll`: đọc `aria-pressed` ngay sau cú bấm là đua với lượt render của React.
+    await expect.poll(
+      () => toggleButtons(main),
+      { message: 'bấm "Thiết bị" thì đúng một nút được bật, ba nút kia phải giữ nguyên trạng thái tắt' },
     ).toEqual([
       { ten: 'Thiết bị', bat: true },
       { ten: 'Phần mềm', bat: false },

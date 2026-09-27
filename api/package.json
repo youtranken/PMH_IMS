@@ -21,7 +21,7 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:db": "jest --config ./test/jest-db.cjs --runInBand",
-    "seed:sa": "node scripts/seed-sa.mjs",
+    "seed:sa": "node dist/ops/seed-sa.main.js",
     "make:templates": "ts-node scripts/dump-templates.ts",
     "test:e2e": "cd ../e2e && npm test"
   },

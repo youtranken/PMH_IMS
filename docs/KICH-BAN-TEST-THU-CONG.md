@@ -33,8 +33,8 @@ Lần đầu tiên trên máy trắng thì làm thêm ba bước ở `README.md`
 | --- | --- |
 | Web | `https://localhost` — cert **tự ký**, trình duyệt sẽ cảnh báo, bấm "Nâng cao → Đi tới localhost" |
 | Hộp thư dev (Mailpit) | `http://localhost:8025` — mọi email hệ thống gửi rơi vào đây, **không đọc log** |
-| Tài khoản SA #1 | `sa@pmh.com.vn` / `Pmh@1212` |
-| Tài khoản SA #2 | `caothuan@pmh.com.vn` / `Pmh@1212` (dual control, NFR-01) |
+| Tài khoản SA #1 | `sa@pmh.com.vn` / mật khẩu tạm do `seed-sa.main.js` in ra |
+| Tài khoản SA #2 | `caothuan@pmh.com.vn` / mật khẩu tạm do `seed-sa.main.js` in ra (dual control, NFR-01) |
 
 **Lần đăng nhập đầu của mỗi tài khoản** bắt buộc đi qua ba màn: nhập mật khẩu → **Cài xác
 thực 2 lớp** (quét QR bằng Google/Microsoft Authenticator, hoặc nhập tay chuỗi khóa hiện dưới
@@ -79,7 +79,7 @@ Tra cứu AC: `epics.md` mục "Epic 1", story 1.1 → 1.5.
 | Mã | Kịch bản | Các bước | Kết quả mong đợi | AC gốc | Test Playwright tương ứng |
 | --- | --- | --- | --- | --- | --- |
 | TC-1.1 | Stack dựng đủ 5 service và `/health` sống | 1. `docker compose --profile dev up -d`<br>2. `docker compose ps`<br>3. Mở `https://localhost/api/v1/health`<br>4. `docker compose port postgres 5432` và `docker compose port redis 6379` | Bước 2: đủ 5 service `Up` (postgres, redis, api, worker, web). Bước 3: trả `200`. Bước 4: **báo lỗi không có port publish** — pg/redis không được ló ra ngoài | Story 1.1 AC-1, AC-2 | **CHƯA TỰ ĐỘNG HOÁ** |
-| TC-1.2 | Đăng nhập lần đầu đi hết ba màn bắt buộc | 1. Mở `https://localhost` → màn **Đăng nhập**<br>2. Email `sa@pmh.com.vn`, Mật khẩu `Pmh@1212`, bấm **Đăng nhập**<br>3. Màn **Cài xác thực 2 lớp**: quét QR, nhập mã 6 số vào ô "Nhập mã 6 số đầu tiên để xác nhận", bấm **Xác nhận**<br>4. Màn **Đổi mật khẩu**: nhập mật khẩu hiện tại + mật khẩu mới (≥12 ký tự, đủ 3/4 nhóm) hai lần, bấm **Lưu** | Vào thẳng trang chủ, tiêu đề **"Xin chào …"**. Không bỏ qua được bước nào bằng cách gõ URL | Story 1.3 AC-2, Story 1.4 AC-1 | `auth.spec.ts` → `lần đầu: mật khẩu tạm → cài 2 lớp → đổi mật khẩu → vào được app` |
+| TC-1.2 | Đăng nhập lần đầu đi hết ba màn bắt buộc | 1. Mở `https://localhost` → màn **Đăng nhập**<br>2. Email `sa@pmh.com.vn`, Mật khẩu tạm in ra lúc seed, bấm **Đăng nhập**<br>3. Màn **Cài xác thực 2 lớp**: quét QR, nhập mã 6 số vào ô "Nhập mã 6 số đầu tiên để xác nhận", bấm **Xác nhận**<br>4. Màn **Đổi mật khẩu**: nhập mật khẩu hiện tại + mật khẩu mới (≥12 ký tự, đủ 3/4 nhóm) hai lần, bấm **Lưu** | Vào thẳng trang chủ, tiêu đề **"Xin chào …"**. Không bỏ qua được bước nào bằng cách gõ URL | Story 1.3 AC-2, Story 1.4 AC-1 | `auth.spec.ts` → `lần đầu: mật khẩu tạm → cài 2 lớp → đổi mật khẩu → vào được app` |
 | TC-1.3 | 🔴 Sai mật khẩu không lộ email có tồn tại hay không | 1. Màn Đăng nhập, nhập `khongcothat@pmh.com.vn` + mật khẩu bất kỳ → **Đăng nhập**<br>2. Nhập `sa@pmh.com.vn` + mật khẩu sai → **Đăng nhập** | **Cả hai lần cùng một câu lỗi tiếng Việt**, không câu nào nói "email không tồn tại" hay "mật khẩu sai" riêng biệt. Vẫn đứng tại màn đăng nhập, không bị đá đi đâu | Story 1.2 AC-2 | `auth.spec.ts` → `sai mật khẩu → báo lỗi tiếng Việt, không lộ email có tồn tại hay không` |
 | TC-1.4 | 🔴 Sai 5 lần liên tiếp thì khóa tài khoản 15 phút | 1. Nhập đúng email tài khoản Thành viên, mật khẩu sai<br>2. Lặp lại **5 lần** liên tiếp | Từ lần thứ 5: câu báo đổi thành **đang bị khóa, kèm thời gian chờ**. Nhập đúng mật khẩu ngay lúc đó cũng **không vào được**. Sau 15 phút tự mở, không cần ai can thiệp | Story 1.2 AC-2 | `auth.spec.ts` → `sai 5 lần liên tiếp → tài khoản bị khóa và báo rõ thời gian chờ` |
 | TC-1.5 | Khóa vì sai mật khẩu thì SA nhận email | Làm tiếp ngay sau TC-1.4: mở `http://localhost:8025` | Có một thư mới báo tài khoản bị khóa, gửi tới SA. **Chú ý**: thư đầu hộp có thể là thư "đăng nhập từ thiết bị mới" của bước trước — tìm theo **tiêu đề**, đừng lấy thư trên cùng | Story 1.2 AC-2 | **CHƯA TỰ ĐỘNG HOÁ** |

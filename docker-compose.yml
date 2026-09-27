@@ -122,6 +122,7 @@ services:
     <<: *node_hardening
     user: '1000:1000'
     logging: *logging
+    mem_limit: 256m
     command: ['node', 'dist/ops/migrate.main.js']
     environment:
       NODE_ENV: ${NODE_ENV:-production}

@@ -380,7 +380,6 @@ export default {
     importTitle: 'Nhập danh mục từ Excel',
     importHint: 'Dùng đúng file tải từ nút "Tải file mẫu". Dòng đánh dấu VÍ DỤ sẽ được bỏ qua.',
     emptyHint: 'Chưa khai mục nào. Thêm tay, hoặc dùng "Nhập Excel" với file tải từ nút "Tải file mẫu".',
-    readOnly: 'Bạn chỉ có quyền xem danh mục. Cần sửa thì nhờ Quản trị.',
   },
   devices: {
     title: 'Thiết bị',
@@ -1488,6 +1487,7 @@ export default {
       actRenewed: 'Gia hạn',
       actExpired: 'Tự chuyển sang Hết hạn (đã qua ngày hết hạn)',
       actReactivated: 'Tự về Đang dùng (có ngày hết hạn mới)',
+      actAutoRetired: 'Tự Thanh lý (hết hạn quá số ngày ân hạn, đã gỡ mọi ghế)',
       actLicenseAssigned: 'Gán license vào máy',
       actLicenseReleased: 'Gỡ license khỏi máy',
       actLicenseTermsUpdated: 'Sửa ghế license',

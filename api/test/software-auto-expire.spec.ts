@@ -56,9 +56,10 @@ describe('DOM-03 · phần mềm tự chuyển trạng thái theo hạn', () => 
   }
 
   it('đồng bộ theo ngày hôm nay: qua hạn → Hết hạn, có hạn mới → Đang dùng, Thanh lý giữ nguyên', async () => {
-    await expect(software.syncExpiryStatuses('2026-10-01')).resolves.toEqual({
+    await expect(software.syncExpiryStatuses('2026-10-01', 0)).resolves.toEqual({
       expired: 1,
       reactivated: 1,
+      retired: 0,
     });
     expect(await statusOf('SW-QUA-HAN')).toBe('expired_ok');
     expect(await statusOf('SW-HOM-NAY')).toBe('active');
@@ -79,9 +80,10 @@ describe('DOM-03 · phần mềm tự chuyển trạng thái theo hạn', () => 
   });
 
   it('chạy lại cùng ngày thì không đổi gì', async () => {
-    await expect(software.syncExpiryStatuses('2026-10-01')).resolves.toEqual({
+    await expect(software.syncExpiryStatuses('2026-10-01', 0)).resolves.toEqual({
       expired: 0,
       reactivated: 0,
+      retired: 0,
     });
   });
 

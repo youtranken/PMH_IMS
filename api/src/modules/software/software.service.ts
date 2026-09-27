@@ -153,11 +153,15 @@ export class SoftwareService {
   // ─────────────────────────── Ghi ───────────────────────────
 
   /**
-   * Lượt dọn định kỳ (DOM-03): đưa trạng thái về đúng với hạn theo ngày `today`. Mỗi hồ sơ đổi
-   * trạng thái có một dòng lịch sử của `system`, để tab Lịch sử trả lời được "ai chuyển nó sang
-   * Hết hạn". Thanh lý không bao giờ bị đụng tới.
+   * Lượt dọn định kỳ (DOM-03, Q-13): đưa trạng thái về đúng với hạn theo ngày `today`. Mỗi hồ sơ
+   * đổi trạng thái có một dòng lịch sử của `system`, để tab Lịch sử trả lời được "ai chuyển nó".
+   * Hết hạn quá `graceDays` ngày thì tự Thanh lý và gỡ ghế; `graceDays <= 0` là tắt bước đó.
+   * Hồ sơ đã Thanh lý không bao giờ bị lượt này kéo ra.
    */
-  async syncExpiryStatuses(today: string): Promise<{ expired: number; reactivated: number }> {
+  async syncExpiryStatuses(
+    today: string,
+    graceDays: number,
+  ): Promise<{ expired: number; reactivated: number; retired: number }> {
     return this.db.transaction(async (tx) => {
       const expired = await tx
         .update(softwareTable)
@@ -190,7 +194,31 @@ export class SoftwareService {
           status: { before: 'expired_ok', after: 'active' },
         });
       }
-      return { expired: expired.length, reactivated: reactivated.length };
+      // Chạy SAU bước Hết hạn: hồ sơ qua hạn lâu mà chưa từng được quét đi thẳng tới Thanh lý.
+      const retired =
+        graceDays > 0
+          ? await tx
+              .update(softwareTable)
+              .set({ status: 'retired', updatedAt: new Date() })
+              .where(
+                and(
+                  eq(softwareTable.status, 'expired_ok'),
+                  sql`${softwareTable.endDate} < ${today}::date - ${graceDays}::int`,
+                ),
+              )
+              .returning({ id: softwareTable.id })
+          : [];
+      for (const row of retired) {
+        await this.recordWithin(tx, 'system', row.id, 'auto-retired', {
+          status: { before: 'expired_ok', after: 'retired' },
+        });
+        await this.releaseAllSeatsWithin(tx, 'system', row.id);
+      }
+      return {
+        expired: expired.length,
+        reactivated: reactivated.length,
+        retired: retired.length,
+      };
     });
   }
 
@@ -212,6 +240,14 @@ export class SoftwareService {
   ): Promise<SoftwareRecord> {
     const before = await this.requireRow(id);
     const values = await this.prepare(input, id);
+    // Khôi phục hồ sơ đã Thanh lý (Q-13) phải kèm hạn còn hiệu lực: để hạn cũ thì nó về Hết
+    // hạn rồi lượt quét kế tiếp lại tự thanh lý, và các ghế người dùng vừa gán lại bị gỡ.
+    if (before.status === 'retired' && values.status === 'expired_ok') {
+      throw new BadRequestException({
+        code: 'RESTORE_NEEDS_FUTURE_END',
+        message: 'Khôi phục hồ sơ đã thanh lý cần ngày hết hạn mới từ hôm nay trở đi.',
+      });
+    }
     const changes = diffRecord(TRACKED, before, values);
     if (!hasChanges(changes)) return toRecord(before);
 
@@ -240,7 +276,8 @@ export class SoftwareService {
     if (before.status === 'retired') {
       throw new ConflictException({
         code: 'SOFTWARE_RETIRED',
-        message: 'Hồ sơ này đã thanh lý, không gia hạn được.',
+        message:
+          'Hồ sơ này đã thanh lý, không gia hạn được. Muốn dùng lại: bấm Sửa hồ sơ, chọn trạng thái Đang dùng và nhập ngày hết hạn mới.',
       });
     }
     const errors = validateSoftware({

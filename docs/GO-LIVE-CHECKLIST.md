@@ -210,7 +210,7 @@ Kết quả: 0 lỗi, đủ 37 bảng, chạy lần 2 áp 0 file. **Không squas
 
 ### P0
 
-- [x] **DB-01 · `ims_app` sửa và xoá được bảng `_migrations`.** Tạo `0059_…sql` với
+- [x] **DB-01 · `ims_app` sửa và xoá được bảng `_migrations`.** Đã làm ở `0061_migrations_journal_acl.sql`:
   `REVOKE ALL ON _migrations FROM ims_app;` và thêm một ca vào `api/test/app-role-privileges.spec.ts`.
 - [x] **DB-02 · Dải IP chồng được lên nhau.** ✔ đã tự kiểm: không có EXCLUDE ở migration nào,
   `subnet.service.ts` cũng không kiểm.
@@ -301,7 +301,9 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
   - Thêm `.on('error')` cho cả 4 đối tượng BullMQ.
   - `connectionTimeout`/`socketTimeout` 30 giây.
   - File heartbeat + healthcheck `find /tmp/hb -mmin -1`.
-  - `stop_grace_period: 60s`.
+  - `stop_grace_period: 30s` cho api/worker (không phải 60s): worker tự giới hạn 20 giây chờ
+    lượt relay đang chạy (OPS-14), nên 30s đã dư. Heartbeat + `on('error')` nằm trong bootstrap
+    `worker.ts`, không có unit test riêng; được kiểm bằng healthcheck compose đang chạy.
 - [x] **OPS-04 · nginx làm mất header bảo mật** ✔ đã tự kiểm.
   - `add_header` trong `location = /index.html` và `/static/` làm mất HSTS, `X-Frame-Options`,
     `nosniff`.
@@ -476,7 +478,7 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
 ### P0
 
 - [x] **DOM-01 · Master key: công cụ rewrap** (Q-07).
-  - Lệnh `node dist/ops/rewrap.js`: chạy lại được nếu bị ngắt, xử lý theo lô, mỗi lô một transaction.
+  - Lệnh `node dist/ops/rewrap.main.js` (`--check` để đếm): chạy lại được nếu bị ngắt, xử lý theo lô, mỗi lô một transaction.
   - Có phép kiểm "còn N bản ghi dùng chìa X".
   - API không khởi động nếu thiếu chìa mà dữ liệu vẫn cần.
   - Test bảng dữ liệu cho `rewrap()` và một bài `api/test/` chạy trên DB thật.
@@ -490,7 +492,14 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
   - Job hằng ngày chuyển `active` → `expired_ok` khi `end_date < hôm nay`, có ghi `software_history`
     với actor `system`.
   - Gia hạn có ngày mới thì tự về `active`.
-  - `expired_ok` không vào mail và không vào mục "đã hết hạn" trên dashboard. Thay thế BE-06.
+  - `expired_ok` không vào mail; vẫn hiện trên dashboard/màn Sắp hết hạn trong thời gian ân hạn
+    (Q-13 thay cho câu cũ "không vào dashboard"). Thay thế BE-06.
+- [x] **DOM-12 · Tự Thanh lý sau ân hạn, khôi phục bằng Sửa** (Q-13).
+  - `software.auto_retire_grace_days` (0076, mặc định 30, 0 = tắt). Lượt quét của worker chuyển
+    `expired_ok` quá ân hạn sang `retired`, gỡ mọi ghế, lịch sử `auto-retired` của `system`.
+  - Sửa hồ sơ đã Thanh lý về Đang dùng chỉ được khi hạn mới từ hôm nay trở đi
+    (`RESTORE_NEEDS_FUTURE_END`). Nút Gia hạn vẫn chặn hồ sơ đã Thanh lý (BE-13).
+  - Kiểm: `api/test/software-auto-retire.spec.ts`, E2E `software.spec.ts` hai bài Q-13.
 - [x] **DOM-04 · ISP bỏ ngày kết thúc** (Q-04).
   - Gỡ `ispSource` khỏi registry nhắc hạn (`software-expiry-sources.ts:58`) và bỏ gia hạn ISP.
   - Trạng thái `terminated` hiện là "Thanh lý", ghi ngày và người thanh lý.
@@ -502,7 +511,7 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
 - [x] **DOM-08 · Nhãn IP "Đang cấp" → "Đang dùng"** (Q-10).
 - [x] **DOM-09 · ISP đã Thanh lý hiện trong Kho thanh lý** (Q-10).
 - [x] **DOM-10 · Gỡ loại `isp` khỏi luật mail nhắc hạn cũ** (Q-10).
-- [ ] **DOM-11 · Member được tạo/sửa mọi danh mục** (Q-12): mở `@Roles` tạo/sửa của catalog cho
+- [x] **DOM-11 · Member được tạo/sửa mọi danh mục** (Q-12): mở `@Roles` tạo/sửa của catalog cho
   `member`; vô hiệu hoá/xoá/nhập Excel vẫn SA/Admin; web hiện nút Thêm/Sửa cho member; E2E.
 - [x] **DOM-06 · Mail duyệt break-glass trỏ thẳng tới yêu cầu cụ thể** (`mail.consumer.ts:137`), thay
   vì mở cả màn duyệt. Vẫn phải đăng nhập và qua TOTP.

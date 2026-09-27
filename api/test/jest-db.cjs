@@ -40,4 +40,6 @@ module.exports = {
       },
     ],
   },
+  // Cùng lý do với `jest.config.js`: otplib 13 + @scure ship ESM, bài nào chạm TotpService cần transform.
+  transformIgnorePatterns: ['node_modules/(?!(otplib|@otplib|@scure|@noble)/)'],
 };

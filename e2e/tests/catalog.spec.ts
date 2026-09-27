@@ -11,6 +11,7 @@ import {
   resetCatalog,
   resetUsers,
   rowAction,
+  rowActionNames,
   uniqueStamp,
 } from './helpers';
 
@@ -159,30 +160,63 @@ test.describe('Danh mục', () => {
     await expect(page.getByRole('button', { name: 'Xác nhận ghi' })).toBeDisabled();
   });
 
-  test('Member xem được danh mục nhưng không có nút sửa', async ({ page }) => {
+  // Q-12: member TẠO và SỬA được mọi danh mục; vô hiệu hoá, xoá, nhập Excel vẫn chỉ SA/Admin.
+  test('Member thêm và sửa được site trên màn, không có Vô hiệu hóa / Xóa / Nhập Excel', async ({
+    page,
+  }) => {
     await firstLogin(page, E2E_MEMBER);
     await page.getByRole('link', { name: 'Danh mục' }).click();
-
-    await expect(page.getByRole('tab', { name: 'Loại thiết bị' })).toBeVisible();
-    await page.getByRole('tab', { name: 'Loại thiết bị' }).click();
-    await expect(page.getByRole('row', { name: /Switch/ })).toBeVisible();
-
-    await expect(page.getByRole('button', { name: 'Thêm loại thiết bị' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Danh mục' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Nhập từ Excel' })).toHaveCount(0);
-    await expect(page.getByText('Bạn chỉ có quyền xem danh mục.')).toBeVisible();
+
+    const siteCode = `E2E-MEM-${uniqueStamp()}`;
+    await page.getByRole('button', { name: 'Thêm site' }).click();
+    const form = page.getByRole('dialog');
+    await form.getByLabel('Mã').fill(siteCode);
+    await form.getByLabel('Tên').fill('Site member tạo');
+    await form.getByRole('button', { name: 'Lưu' }).click();
+    await expect(page.getByRole('row', { name: new RegExp(siteCode) })).toBeVisible();
+
+    expect(await rowActionNames(page, siteCode)).toEqual(['Sửa']);
+    await rowAction(page, siteCode, 'Sửa');
+    await page.getByRole('dialog').getByLabel('Tên').fill('Site member đã sửa');
+    await page.getByRole('dialog').getByRole('button', { name: 'Lưu' }).click();
+    await expect(page.getByRole('row', { name: new RegExp(siteCode) })).toContainText(
+      'Site member đã sửa',
+    );
   });
 
-  test('Member gọi thẳng API ghi vẫn bị chặn (không chỉ ẩn nút)', async ({ page }) => {
+  test('Member gọi thẳng API: tạo/sửa được, vô hiệu hóa / xóa / nhập Excel bị chặn', async ({
+    page,
+  }) => {
     await firstLogin(page, E2E_MEMBER);
     const csrf = await page.evaluate(async () => {
       const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
       return ((await res.json()) as { csrfToken: string }).csrfToken;
     });
-    const response = await page.request.post('/api/v1/catalog/site', {
-      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
-      data: { code: 'HACK', name: 'Không được phép' },
+    const headers = { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN };
+    const created = await page.request.post('/api/v1/catalog/site', {
+      headers,
+      data: { code: `E2E-MEM-API-${uniqueStamp()}`, name: 'Member tạo qua API' },
     });
-    expect(response.status()).toBe(403);
+    expect(created.status()).toBe(201);
+    const id = ((await created.json()) as { id: string }).id;
+
+    const updated = await page.request.patch(`/api/v1/catalog/site/${id}`, {
+      headers,
+      data: { name: 'Member sửa qua API' },
+    });
+    expect(updated.status()).toBe(200);
+
+    const deactivated = await page.request.patch(`/api/v1/catalog/site/${id}/active`, {
+      headers,
+      data: { active: false },
+    });
+    expect(deactivated.status()).toBe(403);
+    const deleted = await page.request.delete(`/api/v1/catalog/site/${id}`, { headers });
+    expect(deleted.status()).toBe(403);
+    const imported = await page.request.post('/api/v1/catalog/import/preview', { headers });
+    expect(imported.status()).toBe(403);
   });
 
   /**

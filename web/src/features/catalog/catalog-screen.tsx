@@ -268,7 +268,8 @@ export function CatalogScreen({ me }: { me: Me }) {
   const [editing, setEditing] = useState<{ row: CatalogRow | null } | null>(null);
   const [importing, setImporting] = useState(false);
 
-  const canEdit = me.role === 'sa' || me.role === 'admin';
+  // Q-12: mọi vai thêm và sửa được; vô hiệu hoá, xoá, nhập Excel chỉ SA/Admin.
+  const canManage = me.role === 'sa' || me.role === 'admin';
   const csrfToken = me.csrfToken;
   const importable = (IMPORTABLE_ENTITIES as readonly string[]).includes(entity);
 
@@ -315,8 +316,6 @@ export function CatalogScreen({ me }: { me: Me }) {
         </span>
       ),
     };
-    if (!canEdit) return [...entityColumns, statusColumn];
-
     const actionsColumn: ColumnDef<CatalogRow, unknown> = {
       id: 'actions',
       header: t('common.actions'),
@@ -334,76 +333,7 @@ export function CatalogScreen({ me }: { me: Me }) {
                   label: t('catalog.edit'),
                   onSelect: () => setEditing({ row: catalogRow }),
                 },
-                {
-                  key: 'active',
-                  label: t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate'),
-                  /* Ngừng dùng là lấy đi (mục biến khỏi mọi ô chọn); dùng lại thì không.
-                     Cùng một nút, hai màu — vì đó là hai việc ngược nhau. */
-                  danger: catalogRow.active,
-                  onSelect: () => {
-                    void (async () => {
-                      const ok = await askConfirm({
-                        title: t('common.titleOf', {
-                          action: t(
-                            catalogRow.active ? 'catalog.deactivate' : 'catalog.activate',
-                          ),
-                          subject: name,
-                        }),
-                        message: t(
-                          catalogRow.active
-                            ? 'catalog.confirmDeactivate'
-                            : 'catalog.confirmActivate',
-                          { name },
-                        ),
-                        danger: catalogRow.active,
-                        confirmLabel: t(
-                          catalogRow.active ? 'catalog.deactivate' : 'catalog.activate',
-                        ),
-                      });
-                      if (!ok) return;
-                      setActive.mutate(
-                        { id: catalogRow.id, active: !catalogRow.active },
-                        {
-                          onSuccess: () => void refresh(),
-                          onError: (err) =>
-                            toast({ message: errorMessage(err), tone: 'error' }),
-                        },
-                      );
-                    })();
-                  },
-                },
-                {
-                  key: 'delete',
-                  label: t('catalog.delete'),
-                  danger: true,
-                  onSelect: () => {
-                    void (async () => {
-                      const ok = await askConfirm({
-                        title: t('common.titleOf', {
-                          action: t('catalog.delete'),
-                          subject: name,
-                        }),
-                        message: t('catalog.confirmDelete', { name }),
-                        danger: true,
-                        confirmLabel: t('catalog.delete'),
-                      });
-                      if (!ok) return;
-                      remove.mutate(
-                        { id: catalogRow.id },
-                        {
-                          onSuccess: () => {
-                            toast({ message: t('catalog.deleted') });
-                            void refresh();
-                          },
-                          // Xóa mục đang được thiết bị dùng → API trả 409 kèm câu gợi ý
-                          // "hãy vô hiệu hóa"; hiện nguyên văn cho người dùng.
-                          onError: (err) =>
-                            toast({ message: errorMessage(err), tone: 'error' }),
-                        },
-                      );
-                    })();
-                  },
-                },
+                ...(canManage ? manageItems(catalogRow, name) : []),
               ]}
             />
           </div>
@@ -412,7 +342,83 @@ export function CatalogScreen({ me }: { me: Me }) {
     };
     return [...entityColumns, statusColumn, actionsColumn];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entity, t, canEdit]);
+  }, [entity, t, canManage]);
+
+  /** Vô hiệu hoá / Xoá — chỉ SA/Admin (Q-12). */
+  function manageItems(catalogRow: CatalogRow, name: string) {
+    return [
+      {
+        key: 'active',
+        label: t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate'),
+        /* Ngừng dùng là lấy đi (mục biến khỏi mọi ô chọn); dùng lại thì không.
+           Cùng một nút, hai màu — vì đó là hai việc ngược nhau. */
+        danger: catalogRow.active,
+        onSelect: () => {
+          void (async () => {
+            const ok = await askConfirm({
+              title: t('common.titleOf', {
+                action: t(
+                  catalogRow.active ? 'catalog.deactivate' : 'catalog.activate',
+                ),
+                subject: name,
+              }),
+              message: t(
+                catalogRow.active
+                  ? 'catalog.confirmDeactivate'
+                  : 'catalog.confirmActivate',
+                { name },
+              ),
+              danger: catalogRow.active,
+              confirmLabel: t(
+                catalogRow.active ? 'catalog.deactivate' : 'catalog.activate',
+              ),
+            });
+            if (!ok) return;
+            setActive.mutate(
+              { id: catalogRow.id, active: !catalogRow.active },
+              {
+                onSuccess: () => void refresh(),
+                onError: (err) =>
+                  toast({ message: errorMessage(err), tone: 'error' }),
+              },
+            );
+          })();
+        },
+      },
+      {
+        key: 'delete',
+        label: t('catalog.delete'),
+        danger: true,
+        onSelect: () => {
+          void (async () => {
+            const ok = await askConfirm({
+              title: t('common.titleOf', {
+                action: t('catalog.delete'),
+                subject: name,
+              }),
+              message: t('catalog.confirmDelete', { name }),
+              danger: true,
+              confirmLabel: t('catalog.delete'),
+            });
+            if (!ok) return;
+            remove.mutate(
+              { id: catalogRow.id },
+              {
+                onSuccess: () => {
+                  toast({ message: t('catalog.deleted') });
+                  void refresh();
+                },
+                // Xóa mục đang được thiết bị dùng → API trả 409 kèm câu gợi ý
+                // "hãy vô hiệu hóa"; hiện nguyên văn cho người dùng.
+                onError: (err) =>
+                  toast({ message: errorMessage(err), tone: 'error' }),
+              },
+            );
+          })();
+        },
+      },
+    ];
+  }
 
   return (
     <>
@@ -424,29 +430,26 @@ export function CatalogScreen({ me }: { me: Me }) {
             {/* File mẫu và đường nhập Excel chỉ có nghĩa với bốn danh mục gốc. Ba danh mục
                 của 0028 vài chục dòng, khai tay là xong — bày nút "Nhập Excel" ở đó là hứa
                 một đường đi mà file mẫu không hề có sheet cho nó. */}
-            {importable ? (
-              <ExportXlsxButton
-                url="/api/v1/catalog/template"
-                fileName="mau-danh-muc.xlsx"
-                label={t('catalog.downloadTemplate')}
-              />
-            ) : null}
-            {canEdit ? (
+            {/* File mẫu chỉ để nhập, nên đi cùng quyền nhập (SA/Admin). */}
+            {importable && canManage ? (
               <>
-                {importable ? (
-                  <button type="button" className="btn" onClick={() => setImporting(true)}>
-                    {t('catalog.importExcel')}
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  className="btn primary"
-                  onClick={() => setEditing({ row: null })}
-                >
-                  {t(`catalog.add${TAB_SUFFIX[entity]}`)}
+                <ExportXlsxButton
+                  url="/api/v1/catalog/template"
+                  fileName="mau-danh-muc.xlsx"
+                  label={t('catalog.downloadTemplate')}
+                />
+                <button type="button" className="btn" onClick={() => setImporting(true)}>
+                  {t('catalog.importExcel')}
                 </button>
               </>
             ) : null}
+            <button
+              type="button"
+              className="btn primary"
+              onClick={() => setEditing({ row: null })}
+            >
+              {t(`catalog.add${TAB_SUFFIX[entity]}`)}
+            </button>
           </>
         }
       />
@@ -467,8 +470,6 @@ export function CatalogScreen({ me }: { me: Me }) {
           }}
           searchPlaceholder={t(TAB_KEYS.find((tab) => tab.key === entity)?.searchKey ?? 'common.search')}
         />
-
-        {!canEdit ? <p className="muted">{t('catalog.readOnly')}</p> : null}
 
         {rows.isLoading ? (
           <Loading />
