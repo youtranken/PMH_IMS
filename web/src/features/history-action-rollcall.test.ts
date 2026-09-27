@@ -53,23 +53,116 @@ import { ACTION_LABEL as IP_ACTIONS } from './ipam/ip-history-entries';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const API_SRC = join(HERE, '..', '..', '..', 'api', 'src');
 
-/** `x.recordWithin(tx, actor, id, 'ten-thao-tac'` — dạng gọi duy nhất đang dùng để ghi sổ. */
-const RECORD_CALL = /recordWithin\(\s*tx\s*,[^;]{0,200}?,\s*'([a-z0-9-]+)'/g;
+/*
+ * HAI NGẢ GHI VÀO SÁU SỔ MÀ `HistoryPanel` HIỆN RA:
+ *
+ *   1. Lời gọi `recordWithin(tx, …)` — hàm ghi sổ của từng module. Mã thao tác có thể là chữ
+ *      viết thẳng, một phép chọn giữa hai chữ (`active ? 'activated' : 'deactivated'`), hoặc
+ *      một biến `const action = …` khai trong cùng file.
+ *   2. Câu `tx.insert(<sổ>).values({ action: '…' })` viết thẳng — sổ IP ghi kiểu này, không qua
+ *      `recordWithin`, nên chỉ quét ngả 1 thì không bao giờ thấy nó.
+ *
+ * `appendWithin` và `@Audited` KHÔNG thuộc danh sách: chúng chỉ ghi `audit_log`, và màn Nhật ký
+ * hiện nguyên mã thao tác, không qua bảng nhãn nào. Quét chúng ở đây là đòi nhãn cho những mã
+ * chỉ có trong nhật ký như `ip.transitioned` — bài đỏ vì thứ không ai nhìn thấy.
+ *
+ * Lời gọi nào đọc không ra mã (hình dạng lạ) thì vào `khongDocDuoc` và bài đỏ, thay vì lặng lẽ
+ * bỏ qua — bài điểm danh bỏ sót im lặng thì xanh cả khi đã mù.
+ */
+const RECORD_CALL = /(?<!async |function )recordWithin\(/g;
+const PANEL_INSERT =
+  /\.insert\((deviceHistoryTable|softwareHistoryTable|serviceAccountHistoryTable|ispLineHistoryTable|natRuleHistoryTable|ipHistoryTable)\)\s*\.values\(/g;
+const CODE = "'([a-z0-9._-]+)'";
+const ACTION_ARG = new RegExp(`^(?:${CODE}|[\\w.!]+\\s*\\?\\s*${CODE}\\s*:\\s*${CODE})$`);
 
 /* Bản dùng chung — xem `test/quet-nguon.ts` (bỏ qua thư mục dò của `lint-rules.test.ts`). */
 const walk = (dir: string): string[] => quetNguon(dir, /\.ts$/);
 
-function actionsWrittenByApi(): Map<string, string> {
-  /* Mã thao tác → file đầu tiên ghi nó, để câu báo lỗi chỉ thẳng chỗ cần sửa. */
-  const found = new Map<string, string>();
-  for (const file of walk(API_SRC)) {
-    if (file.endsWith('.spec.ts')) continue;
-    const source = readFileSync(file, 'utf8');
-    for (const match of source.matchAll(RECORD_CALL)) {
-      if (!found.has(match[1])) found.set(match[1], file.slice(API_SRC.length + 1));
+/** Văn bản đối số của lời gọi có dấu `(` ở vị trí `open`, tới dấu đóng khớp với nó. */
+function argumentText(source: string, open: number): string {
+  let depth = 0;
+  for (let i = open; i < source.length; i += 1) {
+    if ('({['.includes(source[i])) depth += 1;
+    if (')}]'.includes(source[i])) depth -= 1;
+    if (depth === 0) return source.slice(open + 1, i);
+  }
+  return source.slice(open + 1);
+}
+
+/** Tách đối số ở tầng ngoài cùng — dấu phẩy trong `{…}` của `changes` không được cắt. */
+function topLevelArgs(text: string): string[] {
+  const out: string[] = [];
+  let depth = 0;
+  let from = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    if ('({['.includes(text[i])) depth += 1;
+    if (')}]'.includes(text[i])) depth -= 1;
+    if (text[i] === ',' && depth === 0) {
+      out.push(text.slice(from, i).trim());
+      from = i + 1;
     }
   }
-  return found;
+  out.push(text.slice(from).trim());
+  return out.filter(Boolean);
+}
+
+const codesIn = (text: string): string[] =>
+  [...text.matchAll(new RegExp(CODE, 'g'))].map((m) => m[1]);
+
+/** Mã thao tác của một lời gọi `recordWithin` — rỗng nghĩa là không đọc ra được. */
+function recordCallActions(args: string[], source: string): string[] {
+  // Bỏ `tx` và `actor` — actor cũng có thể là chữ viết thẳng (`'system'` của lượt quét hạn).
+  const rest = args.slice(2);
+  const literal = rest.find((arg) => ACTION_ARG.test(arg));
+  if (literal) return codesIn(literal);
+  // Không có chữ viết thẳng → mã đi qua một biến `const <tên> = …;` trong cùng file.
+  for (const arg of rest) {
+    if (!/^\w+$/.test(arg)) continue;
+    const decl = new RegExp(`const ${arg}\\s*=\\s*([^;]+);`).exec(source);
+    if (decl && codesIn(decl[1]).length > 0) return codesIn(decl[1]);
+  }
+  return [];
+}
+
+/**
+ * Sổ IP lưu thẳng NHÃN TIẾNG VIỆT cho bước chuyển trạng thái (`transitionLabel` → "Cấp IP",
+ * "Thu hồi"), không phải mã, và web in nguyên chữ đó. Không có mã thì không có nhãn để thiếu.
+ */
+const DA_LA_NHAN = /\baction:\s*transitionLabel\(/;
+
+function actionsWrittenByApi(): { found: Map<string, string>; khongDocDuoc: string[] } {
+  /* Mã thao tác → file đầu tiên ghi nó, để câu báo lỗi chỉ thẳng chỗ cần sửa. */
+  const found = new Map<string, string>();
+  const khongDocDuoc: string[] = [];
+  for (const file of walk(API_SRC)) {
+    if (file.endsWith('.spec.ts')) continue;
+    const rel = file.slice(API_SRC.length + 1).replace(/\\/g, '/');
+    if (KHONG_HIEN_TREN_GIAO_DIEN.some((dir) => rel.startsWith(dir))) continue;
+    const source = readFileSync(file, 'utf8');
+    const add = (action: string) => {
+      if (!found.has(action)) found.set(action, rel);
+    };
+
+    for (const match of source.matchAll(RECORD_CALL)) {
+      const args = topLevelArgs(argumentText(source, match.index + match[0].length - 1));
+      if (args[0] !== 'tx') continue;
+      const actions = recordCallActions(args, source);
+      if (actions.length === 0) khongDocDuoc.push(`recordWithin(${args.slice(0, 4).join(', ')})  ở ${rel}`);
+      actions.forEach(add);
+    }
+
+    for (const match of source.matchAll(PANEL_INSERT)) {
+      const body = argumentText(source, match.index + match[0].length - 1);
+      const actions = [...body.matchAll(new RegExp(`\\baction:\\s*${CODE}`, 'g'))].map((m) => m[1]);
+      // `action,` viết tắt = thân của chính hàm `recordWithin`; mã của nó đến từ ngả 1.
+      const viaHelper = /\baction\s*[,}]/.test(body);
+      if (actions.length === 0 && !viaHelper && !DA_LA_NHAN.test(body)) {
+        khongDocDuoc.push(`insert(${match[1]})  ở ${rel}`);
+      }
+      actions.forEach(add);
+    }
+  }
+  return { found, khongDocDuoc };
 }
 
 /**
@@ -79,12 +172,12 @@ function actionsWrittenByApi(): Map<string, string> {
  * thay vì nới vị từ cho tới khi bài hết đỏ.
  *
  * `catalog_history` có bảng, có `GET /catalog/history`, và lượt dọn E2E phải xử lý riêng nó —
- * nhưng KHÔNG màn nào trong `web/src` render lịch sử danh mục (kiểm 12/09: `HistoryPanel` xuất
- * hiện ở 6 màn, không có `catalog`). Không có giao diện thì không có nhãn để thiếu.
+ * nhưng KHÔNG màn nào trong `web/src` render lịch sử danh mục (`HistoryPanel` xuất hiện ở 6 màn,
+ * không có `catalog`). Không có giao diện thì không có nhãn để thiếu.
  *
  * Ngày nào mở màn đó ra, xoá dòng này đi — bài sẽ đỏ và nói luôn cần khai những nhãn nào.
  */
-const KHONG_HIEN_TREN_GIAO_DIEN = new Set(['deleted']);
+const KHONG_HIEN_TREN_GIAO_DIEN = ['modules/catalog/'];
 
 const MOI_BANG = [
   DEVICE_ACTIONS,
@@ -109,7 +202,7 @@ function traKhoa(khoa: string): unknown {
 }
 
 describe('Nhãn thao tác trong sổ lịch sử', () => {
-  const written = actionsWrittenByApi();
+  const { found: written, khongDocDuoc } = actionsWrittenByApi();
 
   /*
    * SÀN CHỐNG REGEX HỤT — và đây là vế giữ cho cả bài có nghĩa.
@@ -120,6 +213,23 @@ describe('Nhãn thao tác trong sổ lịch sử', () => {
    */
   it('đọc được mã nguồn API (nếu không thì cả bài này vô nghĩa)', () => {
     expect(written.size).toBeGreaterThanOrEqual(14);
+  });
+
+  /*
+   * Sàn riêng cho từng ngả phụ: mỗi ngả phải còn bắt được ít nhất một mã nó sinh ra để bắt.
+   * Sàn tổng ở trên không đủ — ngả 1 một mình đã vượt 14, nên ngả 2 mù hẳn vẫn không đỏ.
+   */
+  it('mỗi ngả ghi sổ đều còn đọc ra mã', () => {
+    // Ngả 2 — `insert(ipHistoryTable)` viết thẳng.
+    expect(written.get('ip.created')).toBe('modules/ipam/ip-address.service.ts');
+    expect(written.get('ip.voided')).toBeDefined();
+    // Ngả 1 qua biến `const action = …`.
+    expect(written.get('disabled')).toBe('modules/service-accounts/service-account.service.ts');
+    expect(written.get('enabled')).toBeDefined();
+  });
+
+  it('không có lời gọi ghi sổ nào mà bài không đọc ra mã', () => {
+    expect(khongDocDuoc).toEqual([]);
   });
 
   /*
@@ -144,7 +254,7 @@ describe('Nhãn thao tác trong sổ lịch sử', () => {
 
   it('mọi mã thao tác API ghi ra đều có nhãn tiếng Việt', () => {
     const thieu = [...written.entries()]
-      .filter(([action]) => !LABELLED.has(action) && !KHONG_HIEN_TREN_GIAO_DIEN.has(action))
+      .filter(([action]) => !LABELLED.has(action))
       .map(([action, file]) => `${action}  (ghi ở ${file})`);
 
     // Jest/Vitest in ra nguyên mảng khi đỏ, nên người đọc thấy luôn mã nào thiếu và ghi ở đâu.
