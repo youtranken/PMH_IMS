@@ -330,7 +330,7 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
   - `security_opt: [no-new-privileges:true]`, `cap_drop: [ALL]`.
   - api/worker: `read_only: true` + `tmpfs: /tmp`.
   - web: `nginx-unprivileged`.
-- [ ] **OPS-11 · SMTP chết quá khoảng 50 phút là thư bỏ luôn** (`queue.constants.ts:16-17`,
+- [x] **OPS-11 · SMTP chết quá khoảng 50 phút là thư bỏ luôn** (`queue.constants.ts:16-17`,
   `outbox.service.ts:35,140`).
   - Backoff dài hơn, trần tính theo thời gian (24 giờ).
   - Thêm nút requeue hàng loạt.

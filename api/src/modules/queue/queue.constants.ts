@@ -13,8 +13,9 @@ export const SWEEP_QUEUE = 'ims-sweep';
  * bằng chứng DLQ bền nằm ở outbox.fail_count/last_error (Postgres), không ở Redis.
  */
 export const EVENTS_JOB_OPTIONS: JobsOptions = {
+  // 30s, 60s, 120s, 240s: một lượt relay chịu được SMTP chớp ~7 phút; lâu hơn thì outbox lo (OPS-11).
   attempts: 5,
-  backoff: { type: 'exponential', delay: 1_000 },
+  backoff: { type: 'exponential', delay: 30_000 },
   removeOnComplete: { age: 3_600, count: 5_000 },
   removeOnFail: true,
 };

@@ -32,7 +32,12 @@ export interface FailedNotification {
  * relay NGỪNG chọn lại row (row vẫn `processed_at IS NULL`, còn hiện ở listFailed cho SA); chỉ
  * requeue tay (reset fail_count=0) mới hồi sinh. Chặn poison message re-drive vô hạn mỗi 5'.
  */
-const MAX_RELAY_ATTEMPTS = 10;
+/*
+ * OPS-11: lease tăng gấp đôi sau mỗi lần hỏng (5, 10, 20, 40, 80 rồi giữ 160 phút), nên 14 lần hỏng
+ * ≈ 24 giờ thử lại. SMTP chết vài giờ (Google bảo trì, mất Internet) không còn làm thư rơi vào
+ * trạng thái bỏ sau ~50 phút như khi lease cố định 5 phút và trần 10 lần.
+ */
+const MAX_RELAY_ATTEMPTS = 14;
 
 @Injectable()
 export class OutboxService implements OnModuleInit {
@@ -118,7 +123,7 @@ export class OutboxService implements OnModuleInit {
   /**
    * Relay (F1 + F3): claim event CHƯA XỬ (`processed_at IS NULL`) — không phải "chưa đẩy" —
    * bằng FOR UPDATE SKIP LOCKED (2 relay không tranh chấp), gán lease `claimed_at=now()`;
-   * lease hết 5' thì re-drive (row job cạn retry/DLQ hoặc Redis mất job KHÔNG bị nuốt — AD-11,
+   * lease hết (dài dần theo fail_count, xem MAX_RELAY_ATTEMPTS) thì re-drive (row job cạn retry/DLQ hoặc Redis mất job KHÔNG bị nuốt — AD-11,
    * AD-9 "quét lại được"). Consumer check-and-set `processed_at` khi xử xong → hết re-drive.
    *
    * `queue.add` chạy NGOÀI transaction claim (F3: không giữ FOR UPDATE + connection suốt I/O
@@ -137,7 +142,10 @@ export class OutboxService implements OnModuleInit {
         SELECT id, topic, payload FROM outbox
         WHERE processed_at IS NULL
           AND fail_count < ${MAX_RELAY_ATTEMPTS}
-          AND (claimed_at IS NULL OR claimed_at < now() - interval '5 minutes')
+          AND (
+            claimed_at IS NULL
+            OR claimed_at < now() - make_interval(mins => (5 * power(2, least(fail_count, 5)))::int)
+          )
         ORDER BY created_at
         FOR UPDATE SKIP LOCKED
         LIMIT ${limit}
