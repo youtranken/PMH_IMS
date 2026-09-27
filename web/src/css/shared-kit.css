@@ -625,6 +625,40 @@
   color: var(--ink-3);
 }
 
+/* --- Khung cuộn ngang có báo hiệu (ui/scroll-x.tsx) -----------------------
+ * Vệt mờ ở mép nào còn cột khuất + một dòng chữ phía trên. Vệt là lớp phủ tuyệt đối trên
+ * khung NGOÀI (không cuộn), nên nó đứng yên ở mép trong khi bảng trượt bên dưới.
+ * -------------------------------------------------------------------------- */
+.scroll-x { position: relative; }
+.scroll-x-hint { margin: 0 0 var(--space-3); font-size: var(--fs-xs); }
+.scroll-x::before,
+.scroll-x::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: var(--space-9);
+  height: var(--scroll-x-fade-h, 100%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s var(--ease);
+  z-index: 4;
+}
+/* Khi có dòng gợi ý thì vệt chỉ phủ phần bảng, không phủ lên chữ. */
+.scroll-x:has(> .scroll-x-hint) { --scroll-x-fade-h: calc(100% - var(--fs-xs) * 1.6 - var(--space-3)); }
+.scroll-x::before {
+  left: 0;
+  border-radius: var(--r-lg) 0 0 var(--r-lg);
+  background: linear-gradient(to right, var(--edge-fade), transparent);
+}
+.scroll-x::after {
+  right: 0;
+  border-radius: 0 var(--r-lg) var(--r-lg) 0;
+  background: linear-gradient(to left, var(--edge-fade), transparent);
+}
+.scroll-x[data-more-start='true']::before,
+.scroll-x[data-more-end='true']::after { opacity: 1; }
+.scroll-x > [role='region']:focus-visible { outline: none; box-shadow: var(--ring); }
+
 /* --- Ma trận quyền két sắt (features/vault/access-matrix-screen.tsx) ------
  * LƯỚI THẬT: hàng = người, cột = nhóm đối tượng. Đọc theo hàng ra "người này xem được gì",
  * đọc theo cột ra "nhóm này ai xem được" — hai câu cùng lúc, không phải bấm qua lại.

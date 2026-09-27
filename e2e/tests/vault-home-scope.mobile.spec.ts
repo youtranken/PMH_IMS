@@ -106,4 +106,13 @@ test('lưới ma trận quyền đọc được ở 390px, cuộn ngang trong kh
   const gridScrolls = await grid.evaluate((el) => el.scrollWidth > el.clientWidth);
   expect(gridScrolls).toBe(true);
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+
+  /*
+   * OLD-FE-01 — lưới cuộn được thì phải NÓI RA là còn cột khuất: thanh cuộn ngang chỉ hiện khi
+   * rê chuột, nên không có dòng này thì mép phải màn hình trông như cột cuối cùng.
+   */
+  const region = page.getByRole('region', { name: 'Quyền xem két sắt' });
+  await expect(region).toBeVisible();
+  await expect(page.getByText(/kéo ngang/)).toBeVisible();
+  await expect(region).toHaveAccessibleDescription(/kéo ngang/);
 });

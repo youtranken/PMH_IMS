@@ -65,6 +65,7 @@ export default {
   dataTable: {
     selectAll: 'Chọn tất cả',
     selectRow: 'Chọn dòng',
+    scrollHint: 'Bảng rộng hơn khung — kéo ngang (hoặc Shift + lăn chuột) để xem thêm cột.',
   },
   theme: {
     dark: 'Chế độ tối',
