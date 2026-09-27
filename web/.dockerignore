@@ -9,3 +9,4 @@ playwright-report
 **/*.spec.ts
 **/*.test.ts
 **/*.test.tsx
+src/test/
