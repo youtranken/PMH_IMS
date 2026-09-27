@@ -25,11 +25,11 @@ import {
   validateNatRule,
   type NatRuleSnapshot,
 } from './nat-rules';
-import { hostOf } from './ip-rules';
+import { hostOf, hostRole } from './ip-rules';
 // `isOccupying` là MỘT nguồn sự thật cho "địa chỉ này đang có máy chiếm" (ip-lifecycle.ts).
 // Cảnh báo dưới đây phải dùng đúng nó, không tự liệt kê lại danh sách trạng thái.
 import { isOccupying, type IpStatus } from './ip-lifecycle';
-import { ipAddressTable, natRuleHistoryTable, natRuleTable } from './ipam.schema';
+import { ipAddressTable, natRuleHistoryTable, natRuleTable, subnetTable } from './ipam.schema';
 
 export interface NatRuleHistoryRecord {
   id: string;
@@ -183,7 +183,7 @@ export class NatRuleService {
     // Chuẩn hóa IP TRƯỚC mọi thứ: `linkIp` so chuỗi thô với `host(address)`, nên một dấu cách
     // thừa là không nối được vào hồ sơ IP dù hồ sơ đó có thật (code review Epic 5, finding 5).
     const clean: NatRuleInput = { ...input, internalIp: input.internalIp.trim() };
-    const warnings = this.requireValid(clean);
+    const warnings = await this.requireValid(clean);
     await this.requireNoProtocolOverlap(clean, null);
     const ip = await this.lookupIp(clean.internalIp);
     const ipAddressId = ip?.id ?? null;
@@ -307,7 +307,7 @@ export class NatRuleService {
      * Sửa mỗi `externalTo` mà kiểm riêng nó thì "8010 hợp lệ" — trong khi hàng sau khi sửa
      * lại là 8020-8010, ngược đầu. Đúng bài học của import thiết bị ở Epic 2.
      */
-    const warnings = this.requireValid(merged);
+    const warnings = await this.requireValid(merged);
     await this.requireNoProtocolOverlap(merged, id);
 
     /*
@@ -521,19 +521,38 @@ export class NatRuleService {
    * người dùng — chặn nó là mâu thuẫn với chính thông điệp "nếu đúng ý thì cứ lưu", và làm
    * dải port camera không bao giờ vào nổi sổ (code review Epic 5, finding 1).
    */
-  private requireValid(input: NatRuleInput): string[] {
-    const { errors, warnings } = validateNatRule({
-      externalFrom: input.externalFrom,
-      externalTo: input.externalTo,
-      internalIp: input.internalIp,
-      internalPort: input.internalPort,
-      usedBy: input.usedBy,
-      reason: input.reason,
-    });
+  private async requireValid(input: NatRuleInput): Promise<string[]> {
+    const { errors, warnings } = validateNatRule(
+      {
+        externalFrom: input.externalFrom,
+        externalTo: input.externalTo,
+        internalIp: input.internalIp,
+        internalPort: input.internalPort,
+        usedBy: input.usedBy,
+        reason: input.reason,
+      },
+      await this.containingCidr(input.internalIp),
+    );
     if (errors.length > 0) {
       throw new BadRequestException({ code: 'NAT_INVALID', message: errors.join(' ') });
     }
     return warnings;
+  }
+
+  /**
+   * Dải đang sống chứa địa chỉ này — để xét địa chỉ mạng/quảng bá theo đúng prefix của dải.
+   * Chuỗi không phải IPv4 thì không hỏi DB: ép `::inet` một chuỗi rác là 500 thay vì câu lỗi
+   * định dạng mà `validateNatRule` sẽ nói.
+   */
+  private async containingCidr(address: string): Promise<string | null> {
+    if (hostRole(address) === null) return null;
+    const rows = await this.db
+      .select({ cidr: subnetTable.cidr })
+      .from(subnetTable)
+      .where(and(isNull(subnetTable.voidedAt), sql`${subnetTable.cidr} >>= ${address}::inet`))
+      .orderBy(desc(sql`masklen(${subnetTable.cidr})`))
+      .limit(1);
+    return rows[0]?.cidr ?? null;
   }
 
   /**

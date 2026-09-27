@@ -107,6 +107,33 @@ describe('validateNatRule — luật nghiệp vụ của một dòng sổ NAT (F
     },
   );
 
+  /**
+   * BE-07 — biết dải chứa IP thì xét theo prefix của dải, không đoán theo octet cuối: trong dải
+   * hẹp hơn /24, địa chỉ mạng/quảng bá nằm giữa chừng, còn /31 và /32 thì không có hai địa chỉ đó.
+   */
+  it.each([
+    ['172.16.10.127', '172.16.10.0/25', 'broadcast'],
+    ['172.16.10.128', '172.16.10.128/25', 'network'],
+    ['172.16.10.64', '172.16.10.64/26', 'network'],
+    ['172.16.10.191', '172.16.10.128/26', 'broadcast'],
+    ['172.16.10.3', '172.16.10.0/30', 'broadcast'],
+    ['172.16.10.126', '172.16.10.0/25', 'host'],
+    ['172.16.10.255', '172.16.10.254/31', 'host'],
+    ['172.16.10.0', '172.16.10.0/31', 'host'],
+    ['172.16.10.255', '172.16.10.255/32', 'host'],
+    ['172.16.10.5', '172.16.10.0/24', 'host'],
+    ['172.16.10.0', '172.16.10.0/24', 'network'],
+  ])('IP %s trong dải %s → %s', (internalIp, cidr, role) => {
+    const errors = validateNatRule({ ...base, internalIp }, cidr).errors;
+    if (role === 'host') expect(errors).toEqual([]);
+    else expect(errors.join(' ')).toMatch(role === 'network' ? /địa chỉ mạng/i : /địa chỉ quảng bá/i);
+  });
+
+  it('IP không thuộc dải nào đã khai → vẫn chặn .0/.255 theo octet cuối', () => {
+    expect(validateNatRule({ ...base, internalIp: '10.9.9.255' }, null).errors).toHaveLength(1);
+    expect(validateNatRule({ ...base, internalIp: '10.9.9.7' }, null).errors).toEqual([]);
+  });
+
   /** Sai định dạng báo MỘT lỗi định dạng, không kèm thêm lỗi "địa chỉ mạng" vô nghĩa. */
   it('IP sai định dạng chỉ báo lỗi định dạng, không báo chồng', () => {
     expect(validateNatRule({ ...base, internalIp: '172.16.10.999' }).errors).toHaveLength(1);

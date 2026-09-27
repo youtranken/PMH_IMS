@@ -8,7 +8,7 @@ import { diffRecord, type RecordChanges } from '../../common/record-diff';
  * và cứ thế port nằm mở mãi.
  */
 
-import { hostRole } from './ip-rules';
+import { hostRole, hostRoleIn } from './ip-rules';
 
 const MIN_PORT = 1;
 const MAX_PORT = 65535;
@@ -72,7 +72,15 @@ export interface NatRuleCheck {
  * Trả về danh sách lỗi + cảnh báo (thay vì ném ở lỗi đầu tiên): form NAT có sáu ô, sửa từng
  * lỗi một là sáu lần bấm Lưu.
  */
-export function validateNatRule(draft: NatRuleDraft): NatRuleCheck {
+export function validateNatRule(
+  draft: NatRuleDraft,
+  /**
+   * Dải đã khai chứa `internalIp`, nếu có. Có dải thì xét theo prefix của nó (`hostRoleIn`):
+   * octet cuối không nói được .127 là quảng bá của /25, hay .255 là một máy trong /31.
+   * `null`/bỏ trống = IP nằm ngoài mọi dải đã khai, chỉ còn cách đoán theo octet cuối.
+   */
+  subnetCidr?: string | null,
+): NatRuleCheck {
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -88,7 +96,12 @@ export function validateNatRule(draft: NatRuleDraft): NatRuleCheck {
    * Hai nhánh nối tiếp chứ không song song: chuỗi sai định dạng thì `hostRole` trả `null`, và
    * báo thêm "đây là địa chỉ mạng" lúc đó là báo chồng một điều chưa biết đúng hay sai.
    */
-  const role = hostRole(draft.internalIp);
+  const role =
+    hostRole(draft.internalIp) === null
+      ? null
+      : subnetCidr
+        ? hostRoleIn(draft.internalIp, subnetCidr)
+        : hostRole(draft.internalIp);
   if (role === null) {
     errors.push('IP trong phải là địa chỉ IPv4 hợp lệ, vd 172.16.10.5.');
   } else if (role !== 'host') {
