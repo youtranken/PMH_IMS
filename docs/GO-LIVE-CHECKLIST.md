@@ -501,7 +501,7 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
 
 - [ ] **DOM-08 · Nhãn IP "Đang cấp" → "Đang dùng"** (Q-10).
 - [ ] **DOM-09 · ISP đã Thanh lý hiện trong Kho thanh lý** (Q-10).
-- [ ] **DOM-10 · Gỡ loại `isp` khỏi luật mail nhắc hạn cũ** (Q-10).
+- [x] **DOM-10 · Gỡ loại `isp` khỏi luật mail nhắc hạn cũ** (Q-10).
 - [ ] **DOM-06 · Mail duyệt break-glass trỏ thẳng tới yêu cầu cụ thể** (`mail.consumer.ts:137`), thay
   vì mở cả màn duyệt. Vẫn phải đăng nhập và qua TOTP.
 - [ ] **DOM-07 · Màn Nhật ký (audit log) chưa có giao diện.** Menu đánh dấu `planned`

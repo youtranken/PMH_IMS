@@ -65,7 +65,7 @@ export class ExpiryDigestService {
   }
 
   async create(actor: string, input: DigestRuleInput) {
-    const values = prepare(input, true);
+    const values = prepareDigestRule(input, true, this.knownKinds());
     return this.db.transaction(async (tx) => {
       const rows = await tx.insert(expiryRuleTable).values(values as never).returning();
       await this.record(tx, actor, 'expiry.rule.created', rows[0].id, values);
@@ -75,7 +75,7 @@ export class ExpiryDigestService {
 
   async update(actor: string, id: string, input: DigestRuleInput) {
     await this.requireRule(id);
-    const values = prepare(input, false);
+    const values = prepareDigestRule(input, false, this.knownKinds());
     return this.db.transaction(async (tx) => {
       const rows = await tx
         .update(expiryRuleTable)
@@ -297,6 +297,10 @@ export class ExpiryDigestService {
     };
   }
 
+  private knownKinds(): string[] {
+    return this.expiry.kinds().map((k) => k.kind);
+  }
+
   private async requireRule(id: string) {
     const rows = await this.db.select().from(expiryRuleTable).where(eq(expiryRuleTable.id, id));
     if (rows.length === 0) {
@@ -326,7 +330,11 @@ export class ExpiryDigestService {
 }
 
 /** Chuẩn hóa + kiểm đầu vào của form luật. */
-function prepare(input: DigestRuleInput, isCreate: boolean): Record<string, unknown> {
+export function prepareDigestRule(
+  input: DigestRuleInput,
+  isCreate: boolean,
+  knownKinds: string[],
+): Record<string, unknown> {
   const values: Record<string, unknown> = {};
 
   if (input.name !== undefined) {
@@ -362,7 +370,16 @@ function prepare(input: DigestRuleInput, isCreate: boolean): Record<string, unkn
     }
   }
 
-  if (input.kinds !== undefined) values.kinds = input.kinds;
+  if (input.kinds !== undefined) {
+    const unknown = input.kinds.filter((kind) => !knownKinds.includes(kind));
+    if (unknown.length > 0) {
+      throw new BadRequestException({
+        code: 'RULE_KIND_UNKNOWN',
+        message: `Không có loại hạn: ${unknown.join(', ')}. Chọn trong danh sách loại đang có.`,
+      });
+    }
+    values.kinds = input.kinds;
+  }
   if (input.withinDays !== undefined) values.withinDays = input.withinDays;
   if (input.active !== undefined) values.active = input.active;
   if (input.hour !== undefined) values.hour = input.hour;
