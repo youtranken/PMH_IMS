@@ -9,6 +9,7 @@ import {
   Query,
   Req,
   Res,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import {
@@ -158,11 +159,18 @@ export class ExpiryController {
     @Query() query: { withinDays?: string; kinds?: string; includeExpired?: string },
     @Res() res: Response,
   ) {
-    const { items } = await this.expiry.list({
+    const { items, failedKinds } = await this.expiry.list({
       withinDays: query.withinDays ? Number(query.withinDays) : undefined,
       kinds: query.kinds ? query.kinds.split(',').filter(Boolean) : undefined,
       includeExpired: query.includeExpired !== 'false',
     });
+    // File thiếu dòng trông y hệt file đủ dòng — thà không xuất còn hơn xuất thiếu.
+    if (failedKinds.length > 0) {
+      throw new ServiceUnavailableException({
+        code: 'EXPIRY_SOURCE_FAILED',
+        message: `Không đọc được nguồn hạn: ${failedKinds.join(', ')}. Thử xuất lại sau.`,
+      });
+    }
     /**
      * Nhãn loại lấy từ sổ đăng ký nguồn hạn, không in mã máy.
      *

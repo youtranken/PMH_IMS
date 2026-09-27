@@ -32,7 +32,12 @@ export class ExpiryApiService {
       /** Chỉ lấy `limit` dòng đầu — nơi gọi chỉ bày vài dòng thì đừng kéo cả kho về (N-01). */
       limit?: number;
     } = {},
-  ): Promise<{ items: ExpiryRow[]; total: number; summary: ExpirySummary }> {
+  ): Promise<{
+    items: ExpiryRow[];
+    total: number;
+    summary: ExpirySummary;
+    failedKinds: string[];
+  }> {
     return this.expiry.list(options);
   }
 

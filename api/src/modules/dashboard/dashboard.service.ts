@@ -189,7 +189,12 @@ export class DashboardService {
        * Nguồn đã sắp theo ngày hết hạn tăng dần, mà `daysLeft` suy ra từ chính ngày ấy — nên
        * `limit` cắt đúng những mục GẤP NHẤT, không cắt bừa.
        */
-      const { items, total } = await this.expiry.list({ limit: MAX_ITEMS });
+      const { items, total, failedKinds } = await this.expiry.list({ limit: MAX_ITEMS });
+      // Thiếu phần của một nguồn mà vẫn hiện như đủ thì người đọc hiểu là "không còn gì khác".
+      if (failedKinds.length > 0) {
+        this.logger.warn(`khối sắp-hết-hạn thiếu nguồn: ${failedKinds.join(', ')}`);
+        return emptyBlock();
+      }
       return {
         available: true,
         total,
