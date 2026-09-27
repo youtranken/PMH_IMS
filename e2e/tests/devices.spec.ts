@@ -246,6 +246,25 @@ test.describe('Kho thiết bị', () => {
     });
     expect(mismatched.status()).toBe(400);
     expect(await mismatched.json()).toMatchObject({ code: 'CATALOG_REF_INVALID' });
+
+    // BE-08: tủ còn máy thì không dời sang site khác — máy sẽ kẹt ở site cũ.
+    const inside = await page.request.post('/api/v1/devices', {
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
+      data: {
+        code: `NAS-E2E-TU-${stamp}`,
+        name: 'Máy trong tủ',
+        deviceTypeId: nas.id,
+        siteId: siteA,
+        cabinetId,
+      },
+    });
+    expect(inside.status()).toBe(201);
+    const move = await page.request.patch(`/api/v1/catalog/cabinet/${cabinetId}`, {
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
+      data: { siteId: siteB },
+    });
+    expect(move.status()).toBe(409);
+    expect(await move.json()).toMatchObject({ code: 'CABINET_HAS_DEVICES' });
   });
 
   /**

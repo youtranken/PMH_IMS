@@ -13,7 +13,13 @@ import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { requireCas } from '../../common/cas';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import type { SortQuery } from '../../common/sorting';
-import { PG_FOREIGN_KEY_VIOLATION, conflictOnUnique, imsNormLike, pgErrorCode } from '../../common/sql';
+import {
+  PG_FOREIGN_KEY_VIOLATION,
+  conflictOnUnique,
+  imsNormLike,
+  pgConstraint,
+  pgErrorCode,
+} from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import {
   cabinetTable,
@@ -468,6 +474,14 @@ export class CatalogService {
   }
 
   private translateWriteError(error: unknown, entity: CatalogEntity): unknown {
+    // Khoá ngoại kép của 0067 — trọng tài duy nhất, vì `catalog` không được đếm bảng `device`.
+    if (pgConstraint(error) === 'device_cabinet_same_site_fkey') {
+      return new ConflictException({
+        code: 'CABINET_HAS_DEVICES',
+        message:
+          'Tủ này còn thiết bị (kể cả máy đã thanh lý) nên không dời sang site khác được — thiết bị sẽ bị kẹt ở site cũ. Chuyển các thiết bị ra khỏi tủ trước, hoặc tạo tủ mới ở site kia.',
+      });
+    }
     return conflictOnUnique(error, {
       code: 'CATALOG_DUPLICATE',
       message:
