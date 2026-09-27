@@ -170,8 +170,8 @@ import {
  *     → Màn Đường truyền: đủ nút, đủ cột, ô tìm thu hẹp bảng thật, và KHÔNG có menu ba chấm
  * [x] Hộp Thêm đường truyền: đủ ô · đúng vai · chặn thiếu · đóng cả hai đường
  *     → Hộp "Thêm đường truyền": đủ ô, đúng loại tay nắm, chặn thiếu nhà mạng, đóng được cả hai đường
- * [x] Hồ sơ đường truyền: bấm từ danh sách · đủ nút · đủ tab · hộp Gia hạn
- *     → Hồ sơ đường truyền: bấm từ danh sách, đủ nút và đủ tab, mở hộp Gia hạn và hộp Sửa
+ * [x] Hồ sơ đường truyền: bấm từ danh sách · đủ nút · đủ tab · không còn gì về hạn
+ *     → Hồ sơ đường truyền: bấm từ danh sách, đủ nút và đủ tab, không có gì về hạn, mở hộp Sửa
  * [x] Esc khi ô chọn đang mở chỉ đóng ô chọn, không đóng hộp Sửa
  *     → Esc khi đang mở ô chọn chỉ đóng ô chọn, KHÔNG đóng cả hộp Sửa
  * [x] Tài khoản dịch vụ: menu dòng đúng ở CẢ HAI trạng thái; Thành viên không thấy

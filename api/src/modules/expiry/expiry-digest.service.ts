@@ -268,7 +268,7 @@ export class ExpiryDigestService {
       kinds: kinds.length > 0 ? kinds : undefined,
       expiredWithinDays: await this.config.getNumber('expiryDigestExpiredDays'),
     });
-    const rows = items.map((item) => ({
+    const rows = items.filter((item) => !item.quietInDigest).map((item) => ({
       label: item.label,
       kind: item.kind,
       start: item.start,

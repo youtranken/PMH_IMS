@@ -129,6 +129,42 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
     expect(body).toContain('Tên miền');
   });
 
+  /*
+   * DOM-03: hồ sơ phần mềm đã qua hạn tự sang "Hết hạn" và THÔI NHẮC qua mail (mail "sắp hết
+   * hạn" đã gửi trước đó). Màn Sắp hết hạn vẫn hiện nó — xem expiry.spec "mục đã QUÁ HẠN".
+   */
+  test('hồ sơ phần mềm đã Hết hạn không vào mail, mục còn hạn thì vẫn vào', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-6);
+    await post(page, '/api/v1/software', {
+      code: `SSL-E2E-QH-${stamp}`,
+      name: 'SSL đã quá hạn',
+      kind: 'ssl',
+      endDate: inDays(-3),
+    });
+    await post(page, '/api/v1/software', {
+      code: `SSL-E2E-CH-${stamp}`,
+      name: 'SSL còn hạn',
+      kind: 'ssl',
+      endDate: inDays(5),
+    });
+    const rule = await post(page, '/api/v1/expiry/rules', {
+      name: `Luật E2E quá hạn ${stamp}`,
+      kinds: ['ssl'],
+      withinDays: 30,
+      recipients: ['it@pmh.com.vn'],
+      ...lichKhongToiHanHomNay(),
+    });
+    expect(rule.status).toBe(201);
+
+    const sent = await post(page, `/api/v1/expiry/rules/${String(rule.body.id)}/test`, {});
+    expect(sent.status).toBe(201);
+    const messages = await waitForMail('sắp hết hạn');
+    const body = await mailBody(messages[0].ID);
+    expect(body).toContain(`SSL-E2E-CH-${stamp}`);
+    expect(body).not.toContain(`SSL-E2E-QH-${stamp}`);
+  });
+
   test('luật lọc theo loại chỉ gửi đúng loại đó', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-6);

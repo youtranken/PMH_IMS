@@ -138,9 +138,9 @@ export class SoftwareService {
           sql`${softwareTable.endDate} IS NOT NULL`,
           sql`${softwareTable.endDate} >= ${from}`,
           sql`${softwareTable.endDate} <= ${to}`,
-          // Chỉ nhắc hồ sơ Đang dùng: Hết hạn đã được nhắc trước khi hết, Thanh lý thì không ai
-          // định gia hạn (DOM-03).
-          sql`${softwareTable.status} = 'active'`,
+          // Thanh lý thì không ai định gia hạn. Hết hạn vẫn lấy để màn hình hiện mục quá hạn;
+          // mail digest tự bỏ qua nó qua `quietInDigest` (DOM-03).
+          sql`${softwareTable.status} <> 'retired'`,
         ),
       )
       .orderBy(asc(softwareTable.endDate));

@@ -17,6 +17,11 @@ export interface ExpiryItem {
   end: string;
   /** Đường dẫn UI để email/màn Expiry trỏ về đúng hồ sơ. */
   link: string;
+  /**
+   * Vẫn hiện trên màn Sắp hết hạn và dashboard, nhưng KHÔNG vào mail digest. Dùng cho hồ sơ
+   * phần mềm đã chuyển sang Hết hạn (DOM-03): mail "sắp hết hạn" đã nhắc trước đó rồi.
+   */
+  quietInDigest?: boolean;
 }
 
 export interface ExpirySource {

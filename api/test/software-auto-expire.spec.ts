@@ -85,8 +85,11 @@ describe('DOM-03 · phần mềm tự chuyển trạng thái theo hạn', () => 
     });
   });
 
-  it('hồ sơ Hết hạn không còn nằm trong danh sách nhắc hạn', async () => {
-    const due = await software.findExpiringBetween('2026-01-01', '2026-12-31');
-    expect(due.map((s) => s.code)).toEqual(['SW-HOM-NAY']);
+  it('hồ sơ Hết hạn vẫn lấy cho màn hình (mục quá hạn phải thấy được), Thanh lý thì không', async () => {
+    const due = await software.findExpiringBetween('2020-01-01', '2026-12-31');
+    expect(due.map((s) => [s.code, s.status])).toEqual([
+      ['SW-QUA-HAN', 'expired_ok'],
+      ['SW-HOM-NAY', 'active'],
+    ]);
   });
 });

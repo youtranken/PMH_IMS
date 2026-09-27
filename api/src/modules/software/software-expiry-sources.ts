@@ -47,6 +47,7 @@ export class SoftwareExpiryRegistrar implements OnModuleInit {
             start: row.startDate,
             end: row.endDate!,
             link: UI_PATHS.software(row.id),
+            quietInDigest: row.status === 'expired_ok',
           }));
       },
       renew: async (actor, id, newEnd) => {
