@@ -1,3 +1,4 @@
+import { writeFile } from 'node:fs/promises';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { Queue, Worker } from 'bullmq';
@@ -17,6 +18,9 @@ import { redactMessage, redactPii } from '../common/log-redact';
 
 const RELAY_INTERVAL_MS = 2_000;
 const SWEEP_EVERY_MS = 60_000;
+const SHUTDOWN_GRACE_MS = 20_000;
+/** Healthcheck của compose đọc mtime file này (OPS-03). */
+const HEARTBEAT_FILE = process.env.WORKER_HEARTBEAT_FILE ?? '/tmp/worker-heartbeat';
 
 /**
  * Lỗi của một job, đã chà hai lớp trước khi ghi ra log hoặc vào `outbox.fail_reason`.
@@ -59,8 +63,20 @@ async function bootstrap(): Promise<void> {
       const data = job.data as { id?: string };
       if (data?.id) await mail.handle(job.name, data.id);
     },
-    { connection },
+    // SMTP chậm không được chặn cả hàng đợi: 4 thư gửi song song.
+    { connection, concurrency: 4 },
   );
+
+  /*
+   * Không có listener 'error' thì lỗi kết nối Redis (Redis khởi động lại, mạng chớp) thành
+   * uncaught exception và giết process — container restart lặp, job đang gửi bị gửi lại.
+   * Ghi log và để ioredis tự nối lại.
+   */
+  const onRedisError = (name: string) => (err: Error) =>
+    logger.error(`${name} lỗi Redis: ${jobFailure(err)}`);
+  eventsQueue.on('error', onRedisError('eventsQueue'));
+  sweepQueue.on('error', onRedisError('sweepQueue'));
+  eventsWorker.on('error', onRedisError('eventsWorker'));
 
   // BullMQ phát 'failed' MỖI attempt — chỉ ghi DLQ khi đã cạn retry, nếu không fail_count phồng.
   eventsWorker.on('failed', (job, err) => {
@@ -81,6 +97,7 @@ async function bootstrap(): Promise<void> {
   });
 
   const sweepWorker = new Worker(SWEEP_QUEUE, async () => sweep.runAll(), { connection });
+  sweepWorker.on('error', onRedisError('sweepWorker'));
   sweepWorker.on('failed', (job, err) => {
     logger.error(`SWEEP job ${job?.id} lỗi: ${jobFailure(err)}`);
   });
@@ -91,10 +108,23 @@ async function bootstrap(): Promise<void> {
     { ...SWEEP_JOB_OPTIONS, repeat: { every: SWEEP_EVERY_MS }, jobId: 'sweep-tick' },
   );
 
+  /*
+   * Heartbeat chỉ được ghi khi một lượt relay chạy xong VÀ Redis trả lời: healthcheck của compose
+   * đọc mtime file này, nên DB hỏng hay Redis mất đều làm worker báo unhealthy.
+   */
+  let inflight: Promise<void> | null = null;
   const relayTimer = setInterval(() => {
-    void outbox
+    if (inflight) return;
+    inflight = outbox
       .relayBatch(eventsQueue)
-      .catch((e) => logger.error(`relay lỗi: ${jobFailure(e)}`));
+      .then(async () => {
+        await eventsQueue.count(); // một lượt hỏi Redis thật
+        await writeFile(HEARTBEAT_FILE, String(Date.now()));
+      })
+      .catch((e) => logger.error(`relay lỗi: ${jobFailure(e)}`))
+      .finally(() => {
+        inflight = null;
+      });
   }, RELAY_INTERVAL_MS);
 
   logger.log(
@@ -103,6 +133,10 @@ async function bootstrap(): Promise<void> {
 
   const shutdown = async (): Promise<void> => {
     clearInterval(relayTimer);
+    // Đợi lượt relay đang chạy xong trước khi đóng pool, có trần để không treo quá stop_grace_period.
+    if (inflight) {
+      await Promise.race([inflight, new Promise((r) => setTimeout(r, SHUTDOWN_GRACE_MS))]);
+    }
     await eventsWorker.close();
     await sweepWorker.close();
     await eventsQueue.close();

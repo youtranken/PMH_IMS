@@ -210,7 +210,7 @@ Kết quả: 0 lỗi, đủ 37 bảng, chạy lần 2 áp 0 file. **Không squas
 
 ### P0
 
-- [ ] **DB-01 · `ims_app` sửa và xoá được bảng `_migrations`.** Tạo `0059_…sql` với
+- [x] **DB-01 · `ims_app` sửa và xoá được bảng `_migrations`.** Tạo `0059_…sql` với
   `REVOKE ALL ON _migrations FROM ims_app;` và thêm một ca vào `api/test/app-role-privileges.spec.ts`.
 - [ ] **DB-02 · Dải IP chồng được lên nhau.** ✔ đã tự kiểm: không có EXCLUDE ở migration nào,
   `subnet.service.ts` cũng không kiểm.
@@ -291,27 +291,27 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
 
 ### P0
 
-- [ ] **OPS-01 · `SMTP_HOST` mặc định `mailpit`** ✔ đã tự kiểm (`docker-compose.yml:31`).
+- [x] **OPS-01 · `SMTP_HOST` mặc định `mailpit`** ✔ đã tự kiểm (`docker-compose.yml:31`).
   - Đổi thành `${SMTP_HOST:?bắt buộc}`, `${SMTP_PORT:?}`, và để trống trong `.env.example`.
   - Thêm `requireTLS` khi cổng là 587 (`mail-transport.service.ts:28-33`).
-- [ ] **OPS-02 · `/health` luôn trả ok** ✔ đã tự kiểm (`health/health.controller.ts`).
+- [x] **OPS-02 · `/health` luôn trả ok** ✔ đã tự kiểm (`health/health.controller.ts`).
   - Chạy `SELECT 1` + Redis `PING`, có timeout.
-- [ ] **OPS-03 · Worker không có healthcheck, không có `on('error')`, SMTP không có timeout**
+- [x] **OPS-03 · Worker không có healthcheck, không có `on('error')`, SMTP không có timeout**
   (`worker.ts:50-63,83`).
   - Thêm `.on('error')` cho cả 4 đối tượng BullMQ.
   - `connectionTimeout`/`socketTimeout` 30 giây.
   - File heartbeat + healthcheck `find /tmp/hb -mmin -1`.
   - `stop_grace_period: 60s`.
-- [ ] **OPS-04 · nginx làm mất header bảo mật** ✔ đã tự kiểm.
+- [x] **OPS-04 · nginx làm mất header bảo mật** ✔ đã tự kiểm.
   - `add_header` trong `location = /index.html` và `/static/` làm mất HSTS, `X-Frame-Options`,
     `nosniff`.
   - Đưa header vào một file include, include ở cả ba chỗ.
   - Thêm CSP cho SPA (có hash của script theme).
   - Thêm `server_tokens off`, `gzip on`, danh sách cipher Mozilla intermediate.
-- [ ] **OPS-05 · Chưa có `.dockerignore`.** `web/Dockerfile` chạy `COPY . .` nên chép `node_modules`
+- [x] **OPS-05 · Chưa có `.dockerignore`.** `web/Dockerfile` chạy `COPY . .` nên chép `node_modules`
   của máy Windows đè lên kết quả `npm ci`. Thêm `.dockerignore` cho `api/` và `web/`: `node_modules`,
   `dist`, `.env*`, `coverage`, `*.test.*`.
-- [ ] **OPS-06 · Xoay log + giới hạn tài nguyên.**
+- [x] **OPS-06 · Xoay log + giới hạn tài nguyên.**
   - `logging: json-file, max-size 20m, max-file 5` cho mọi service.
   - `mem_limit` cho api/worker (khoảng 1g), postgres, redis (kèm `--maxmemory`).
 
@@ -343,7 +343,7 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
 
 - [ ] **OPS-13 · Chuyển lịch `repeat` + `jobId` sang `upsertJobScheduler`** (`worker.ts:88-92`).
   Đổi `SWEEP_EVERY_MS` hiện sẽ sinh ra hai nhịp chạy song song.
-- [ ] **OPS-14 · Worker shutdown không đợi `relayBatch` đang chạy xong.**
+- [x] **OPS-14 · Worker shutdown không đợi `relayBatch` đang chạy xong.**
 
 ---
 

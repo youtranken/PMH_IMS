@@ -5,18 +5,8 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>IMS — Quản lý hệ thống IT</title>
-    <!-- Đặt theme TRƯỚC khi render → không chớp sáng/tối. Lưu ý: chỉ theme, KHÔNG token (AD-8). -->
-    <script>
-      (function () {
-        try {
-          var t = localStorage.getItem('ims_theme');
-          if (t !== 'dark' && t !== 'light') {
-            t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-          }
-          document.documentElement.dataset.theme = t;
-        } catch (e) {}
-      })();
-    </script>
+    <!-- Script đồng bộ, chạy trước khi render: đặt theme không chớp (xem public/theme-init.js). -->
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>
