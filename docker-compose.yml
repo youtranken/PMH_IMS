@@ -16,6 +16,18 @@ x-logging: &logging
     max-size: '20m'
     max-file: '5'
 
+# Không cho tiến trình trong container tự nâng quyền (setuid) — OPS-10.
+x-hardening: &hardening
+  security_opt: ['no-new-privileges:true']
+
+# api/worker/migrate chạy node không cần quyền đặc biệt nào: bỏ hết capability, rootfs chỉ đọc
+# (chỗ ghi duy nhất là /tmp và volume file đính kèm).
+x-node-hardening: &node_hardening
+  security_opt: ['no-new-privileges:true']
+  cap_drop: ['ALL']
+  read_only: true
+  tmpfs: ['/tmp']
+
 x-app-env: &app_env
   NODE_ENV: ${NODE_ENV:-production}
   # D-01: ứng dụng chạy bằng role HẸP (`ims_app`), migration chạy bằng CHỦ SỞ HỮU.
@@ -42,11 +54,26 @@ x-app-env: &app_env
 
 services:
   postgres:
-    image: postgres:17-alpine
+    # Ghim bản vá (OPS-09): `17-alpine` trôi theo từng lần pull, hai máy build khác ngày ra hai bản.
+    image: postgres:17.10-alpine
     restart: unless-stopped
+    <<: *hardening
     logging: *logging
     mem_limit: 1g
     shm_size: 256m
+    # DB-05: ~1/4 RAM của container cho cache, log câu chậm để tìm chỗ cần index.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=256MB
+      - -c
+      - effective_cache_size=768MB
+      - -c
+      - work_mem=8MB
+      - -c
+      - maintenance_work_mem=64MB
+      - -c
+      - log_min_duration_statement=500
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?bắt buộc}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?bắt buộc}
@@ -61,17 +88,27 @@ services:
       retries: 10
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.4.11-alpine
     restart: unless-stopped
+    <<: *hardening
     logging: *logging
     mem_limit: 320m
-    # noeviction: BullMQ mất job nếu Redis đuổi key khi đầy bộ nhớ. maxmemory thấp hơn mem_limit để
-    # Redis báo lỗi ghi thay vì bị OOM-kill.
-    command: ['redis-server', '--requirepass', '${REDIS_PASSWORD:?bắt buộc}', '--maxmemory', '256mb', '--maxmemory-policy', 'noeviction']
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?bắt buộc}
+    # Mật khẩu đi qua file cấu hình tạm chứ không qua tham số dòng lệnh (không hiện trong `ps`).
+    # noeviction: BullMQ mất job nếu Redis đuổi key khi đầy; maxmemory thấp hơn mem_limit để Redis
+    # báo lỗi ghi thay vì bị OOM-kill. AOF everysec: Redis khởi động lại không mất job (OPS-08).
+    command:
+      - sh
+      - -c
+      - >-
+        echo "requirepass $$REDIS_PASSWORD" > /tmp/redis.conf &&
+        exec redis-server /tmp/redis.conf --maxmemory 256mb --maxmemory-policy noeviction
+        --appendonly yes --appendfsync everysec
     volumes:
       - redisdata:/data
     healthcheck:
-      test: ['CMD', 'redis-cli', '-a', '${REDIS_PASSWORD}', 'ping']
+      test: ['CMD-SHELL', 'REDISCLI_AUTH="$$REDIS_PASSWORD" redis-cli ping | grep -q PONG']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -82,6 +119,7 @@ services:
     image: ims-api:latest
     build: ./api
     restart: 'no'
+    <<: *node_hardening
     user: '1000:1000'
     logging: *logging
     command: ['node', 'dist/ops/migrate.main.js']
@@ -97,6 +135,7 @@ services:
   api:
     image: ims-api:latest
     restart: unless-stopped
+    <<: *node_hardening
     user: '1000:1000'
     logging: *logging
     mem_limit: 768m
@@ -120,6 +159,7 @@ services:
   worker:
     image: ims-api:latest
     restart: unless-stopped
+    <<: *node_hardening
     user: '1000:1000'
     logging: *logging
     mem_limit: 512m
@@ -144,6 +184,7 @@ services:
     image: ims-web:latest
     build: ./web
     restart: unless-stopped
+    <<: *hardening
     logging: *logging
     mem_limit: 128m
     healthcheck:

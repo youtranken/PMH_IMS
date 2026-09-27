@@ -1,5 +1,5 @@
 # ---- build ----
-FROM node:24-alpine AS builder
+FROM node:24.18.0-alpine AS builder
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 # ---- runtime ----
-FROM nginx:1.29-alpine AS runtime
+FROM nginx:1.29.8-alpine AS runtime
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY proxy-api-headers.conf /etc/nginx/proxy-api-headers.conf
 COPY security-headers.conf /etc/nginx/security-headers.conf

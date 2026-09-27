@@ -110,7 +110,7 @@ xem tận mắt lần thứ hai.
 
 - [x] **SEC-06 · `/auth/change-password` không đếm sai.** `auth.service.ts:780`. Dùng lại cơ chế của
   `startTotpEnrollment`: `registerStepUpFailure` + probe + thu hồi phiên khi chạm ngưỡng.
-- [ ] **SEC-07 · Logger có thể ghi `Set-Cookie`.** Thêm `res.headers["set-cookie"]` vào danh sách
+- [x] **SEC-07 · Logger có thể ghi `Set-Cookie`.** Thêm `res.headers["set-cookie"]` vào danh sách
   redact (`app.module.ts:61-71`). Kiểm bằng một dòng log thật.
 - [x] **SEC-08 · Container api giữ mật khẩu superuser Postgres** (`MIGRATION_DATABASE_URL`). Làm cùng
   OPS-07.
@@ -225,7 +225,7 @@ Kết quả: 0 lỗi, đủ 37 bảng, chạy lần 2 áp 0 file. **Không squas
 - [ ] **DB-03 · Migration chạy bằng superuser.** Tạo role chủ sở hữu riêng (không superuser, có
   `CREATEROLE`, là owner DB). Cả 5 extension là loại trusted nên vẫn cài được. Làm cùng OPS-07.
 - [x] **DB-04 · Gắn tag `v1.0-schema`** ngay trước go-live.
-- [ ] **DB-05 · Postgres tuning:** `shm_size: 256m`, `shared_buffers`, `work_mem`,
+- [x] **DB-05 · Postgres tuning:** `shm_size: 256m`, `shared_buffers`, `work_mem`,
   `log_min_duration_statement=500ms`.
 
 ### Luật từ sau go-live (ghi vào `CLAUDE.md`)
@@ -322,11 +322,11 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
   - Bỏ `MIGRATION_DATABASE_URL` khỏi `api`.
   - Có thể gộp luôn `ensureAppRole` vào đây: tránh race khi scale (L1) và không để api giữ quyền
     superuser (SEC-08).
-- [ ] **OPS-08 · Redis bật AOF** (`--appendonly yes --appendfsync everysec`). Mật khẩu Redis chuyển
+- [x] **OPS-08 · Redis bật AOF** (`--appendonly yes --appendfsync everysec`). Mật khẩu Redis chuyển
   khỏi argv (dùng `REDISCLI_AUTH` hoặc file conf).
-- [ ] **OPS-09 · Ghim phiên bản image** (minor + digest). Image của app gắn tag theo git SHA để
+- [x] **OPS-09 · Ghim phiên bản image** (minor + digest). Image của app gắn tag theo git SHA để
   rollback được.
-- [ ] **OPS-10 · Hardening container:**
+- [x] **OPS-10 · Hardening container:**
   - `security_opt: [no-new-privileges:true]`, `cap_drop: [ALL]`.
   - api/worker: `read_only: true` + `tmpfs: /tmp`.
   - web: `nginx-unprivileged`.
