@@ -174,6 +174,26 @@ dump quá nhỏ, hoặc dump thiếu GRANT. Bản cũ hơn 30 ngày tự xoá (`
 
 ---
 
+### D3. Giám sát — có người được báo khi hệ thống hỏng
+
+`ops/healthcheck.sh` kiểm 5 phút một lần: container đang chạy/healthy, `/health` trả 200, đĩa
+dưới 85%, không có thư kẹt quá 30 phút hay thư lỗi trong 24 giờ, cert còn hạn trên 30 ngày.
+Có vấn đề thì báo qua webhook (Google Chat/Teams/Slack/Telegram nhận JSON `{"text": ...}`) hoặc
+lệnh `mail`; cùng một vấn đề chỉ báo lại sau 60 phút, và báo "Đã ổn trở lại" khi hết.
+
+```bash
+$ IMS_ALERT_WEBHOOK='<url webhook>' bash ops/healthcheck.sh     # chạy tay: phải in OK
+$ crontab -e
+IMS_ALERT_WEBHOOK=<url webhook>
+IMS_DISK_PATHS="/ /var/lib/docker /mnt/nas/ims-backup"
+*/5 * * * * cd /opt/ims && bash ops/healthcheck.sh >> /var/log/ims-health.log 2>&1
+```
+
+- [ ] Chạy tay in `OK`
+- [ ] Thử hỏng: `docker compose stop worker`, chờ tối đa 5 phút → nhận được tin báo; `docker compose start worker` → nhận "Đã ổn trở lại"
+
+---
+
 ## E. Diễn tập khôi phục (trước khi nhập dữ liệu thật, và mỗi quý)
 
 Mục đích: **chứng minh chìa trên giấy mở được dữ liệu trong bản sao lưu**.

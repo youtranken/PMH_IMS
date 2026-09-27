@@ -141,7 +141,7 @@ xem tận mắt lần thứ hai.
   - **Hậu quả:** một nguồn lỗi là mất lời nhắc cả tuần hoặc cả tháng.
   - **Sửa:** `collect` trả thêm danh sách nguồn lỗi; `runOne` ném lỗi trước khi claim; dashboard đặt
     `available:false`.
-- [ ] **BE-02 · Hai người sửa cùng lúc đè nhau (lost update).** Chỗ bị:
+- [x] **BE-02 · Hai người sửa cùng lúc đè nhau (lost update).** Chỗ bị:
   - `devices.service.ts:189-218, 350-353`: sửa hồ sơ có thể mở lại máy vừa thanh lý.
   - `device-import.service.ts:129`.
   - `ip-address.service.ts:417-425`.
@@ -151,7 +151,7 @@ xem tận mắt lần thứ hai.
 
   **Sửa:** `SELECT … FOR UPDATE` trong transaction rồi kiểm lại, hoặc thêm điều kiện CAS
   (`updated_at`/`status`/`end_date`) vào `WHERE`. Viết một helper dùng chung ở `src/common` (AD-15).
-- [ ] **BE-03 · Két: UPDATE không kiểm `revoked_at`.** `vault.service.ts:249,284,316`: có thể xoay
+- [x] **BE-03 · Két: UPDATE không kiểm `revoked_at`.** `vault.service.ts:249,284,316`: có thể xoay
   hoặc sửa một secret vừa bị thu hồi, và `revoke` chạy đúp. Thêm `AND revoked_at IS NULL` +
   `.returning()` → 404.
 - [ ] **BE-04 · Ghi chú thu hồi đè ghi chú của người duyệt.** `approvals.service.ts:152`: file export
@@ -373,7 +373,7 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
 
 - [ ] **DR-06 · Mã hoá bản dump trên NAS** (`age` hoặc `gpg`, khoá công khai). Bản dump có PII và
   hash mật khẩu.
-- [ ] **DR-07 · Báo động khi backup hỏng** (mail hoặc webhook).
+- [x] **DR-07 · Báo động khi backup hỏng** (mail hoặc webhook).
 - [x] **DR-08 · `restore-drill.sh`:** vòng `until pg_isready` cần sleep + timeout; `chown 1000:1000`
   cho `secrets/master_key`.
 - [ ] **DR-09 · Chặn chạy nhầm `seed-demo.sql`/`unseed-demo.sql` trên prod** (assert môi trường dev).
@@ -386,14 +386,14 @@ Mảng này hiện gần như trống. Đây là thứ đội ít kinh nghiệm 
 
 ### P1
 
-- [ ] **MON-01 · Có người được báo khi hệ thống chết.** Tối thiểu một cron trên host, 5 phút một lần
+- [x] **MON-01 · Có người được báo khi hệ thống chết.** Tối thiểu một cron trên host, 5 phút một lần
   gọi `https://ims.pmh.com.vn/health`, lỗi thì gửi mail hoặc Telegram. Tốt hơn: Uptime Kuma (một
   container).
-- [ ] **MON-02 · Cảnh báo đĩa đầy** (Postgres, log, NAS). Cron `df` quá 85% thì báo.
-- [ ] **MON-03 · Theo dõi hàng đợi mail:** số dòng outbox `processed_at IS NULL` quá lâu, DLQ khác 0.
-- [ ] **MON-04 · Hạn cert TLS `*.pmh.com.vn`.** Nhắc trước 30 ngày; có thể tự nhập cert của chính
+- [x] **MON-02 · Cảnh báo đĩa đầy** (Postgres, log, NAS). Cron `df` quá 85% thì báo.
+- [x] **MON-03 · Theo dõi hàng đợi mail:** số dòng outbox `processed_at IS NULL` quá lâu, DLQ khác 0.
+- [x] **MON-04 · Hạn cert TLS `*.pmh.com.vn`.** Nhắc trước 30 ngày; có thể tự nhập cert của chính
   IMS vào màn Hạn.
-- [ ] **MON-05 · Sổ tay trực (1 trang):** xem log (`docker compose logs -f api worker`), khởi động lại
+- [x] **MON-05 · Sổ tay trực (1 trang):** xem log (`docker compose logs -f api worker`), khởi động lại
   một service, deploy bản mới, rollback về tag trước, xoay cert.
 
 ---
@@ -499,8 +499,8 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
 
 ### P1
 
-- [ ] **DOM-08 · Nhãn IP "Đang cấp" → "Đang dùng"** (Q-10).
-- [ ] **DOM-09 · ISP đã Thanh lý hiện trong Kho thanh lý** (Q-10).
+- [x] **DOM-08 · Nhãn IP "Đang cấp" → "Đang dùng"** (Q-10).
+- [x] **DOM-09 · ISP đã Thanh lý hiện trong Kho thanh lý** (Q-10).
 - [x] **DOM-10 · Gỡ loại `isp` khỏi luật mail nhắc hạn cũ** (Q-10).
 - [ ] **DOM-06 · Mail duyệt break-glass trỏ thẳng tới yêu cầu cụ thể** (`mail.consumer.ts:137`), thay
   vì mở cả màn duyệt. Vẫn phải đăng nhập và qua TOTP.
