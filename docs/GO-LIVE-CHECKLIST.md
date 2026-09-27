@@ -281,7 +281,7 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
   khỏi bundle chính, hoặc tắt nó ở prod.
 - [ ] **FE-10 · `retry: 1` áp cả cho 4xx** (`lib/api-client.ts:86`).
 - [ ] **FE-11 · Script inline đặt theme** (`index.html:9-18`) cần một hash trong CSP. Làm cùng OPS-04.
-- [ ] **FE-12 · Xoá 4 file UI chết:** `date-time-picker`, `time-picker`, `time-field`,
+- [x] **FE-12 · Xoá 4 file UI chết:** `date-time-picker`, `time-picker`, `time-field`,
   `photo-lightbox`. Sửa dòng tương ứng trong `SHARED-REGISTRY.md:60` và chú thích ở
   `ui/dialog.tsx:17,269`.
 
@@ -421,7 +421,7 @@ Test **không** vào image production (api build loại `*.spec.ts`, image web c
 Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 chỗ mang tính nhật ký
 ("Trước 20/09…", "rà soát #N", "Story N.M").
 
-- [ ] **CLEAN-01 (P0) · Sửa 3 chú thích đang nói SAI so với code:**
+- [x] **CLEAN-01 (P0) · Sửa 3 chú thích đang nói SAI so với code:**
   - `api/Dockerfile:18`: ghi `reset-e2e-user`, file thật là `reset-e2e.mjs`.
   - `SHARED-REGISTRY.md:60`: ghi `DateTimePicker` dùng mọi nơi, thực tế không ai import.
   - `ui/dialog.tsx:17,269`.

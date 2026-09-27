@@ -16,6 +16,5 @@
 @import './css/primitives.css';      /* primitive dùng chung */
 @import './css/profile.css';         /* hồ sơ người dùng */
 @import './css/datepicker.css';      /* DatePicker */
-@import './css/lightbox.css';        /* lightbox ảnh đính kèm */
 @import './css/command-palette.css'; /* command palette ⌘K */
 @import './css/shared-kit.css';      /* bộ dùng chung story 1.5: toast, pager, history, field lỗi */

@@ -49,13 +49,6 @@ export default {
     clear: 'Xóa ngày',
     prev: 'Tháng trước',
     next: 'Tháng sau',
-    time: 'giờ',
-  },
-  lightbox: {
-    title: 'Xem ảnh',
-    close: 'Đóng',
-    prev: 'Ảnh trước',
-    next: 'Ảnh sau',
   },
   pagination: {
     prev: 'Trang trước',
@@ -65,23 +58,6 @@ export default {
   dataTable: {
     selectAll: 'Chọn tất cả',
     selectRow: 'Chọn dòng',
-  },
-  timePicker: {
-    choose: 'Chọn giờ',
-    hourMinute: 'Giờ : phút',
-    /*
-     * Bốn khoá thêm 23/09 (T-01). `DateTimePicker` chưa màn nào dùng, nên bốn chuỗi tiếng Anh
-     * viết cứng trong nó chưa ai thấy — nhưng `docs/SHARED-REGISTRY.md` khai nó là bản dùng
-     * chung BẮT BUỘC cho "mọi ô chọn ngày/giờ", tức sổ đăng ký đang chỉ người viết story sau
-     * vào đúng cái hộp tiếng Anh ấy. `term-consistency.test.ts` canh để nó không quay lại.
-     *
-     * KHÔNG thêm khoá `title` cho tiêu đề nhìn thấy được: nó sẽ mang đúng chữ của `choose` —
-     * một khái niệm hai khoá, đúng thứ bài kiểm này sinh ra để chặn. Thay vào đó `<section>`
-     * trỏ `aria-labelledby` vào chính thẻ tiêu đề, nên tên trợ năng và chữ trên màn không thể
-     * lệch nhau. `Cancel`/`Done` dùng `common.cancel`/`common.save` có sẵn, không đẻ khoá mới.
-     */
-    now: 'Bây giờ',
-    tab: 'Giờ',
   },
   theme: {
     dark: 'Chế độ tối',
