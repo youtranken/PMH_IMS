@@ -625,6 +625,14 @@
   color: var(--ink-3);
 }
 
+/* Lý do nút đang xám, bản hiện bằng chữ (ui/disabled-reason.tsx). Trong chân hộp thoại nó
+   đứng đầu hàng và đẩy các nút sang phải. */
+.disabled-reason {
+  margin-right: auto;
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+}
+
 /* --- Khung cuộn ngang có báo hiệu (ui/scroll-x.tsx) -----------------------
  * Vệt mờ ở mép nào còn cột khuất + một dòng chữ phía trên. Vệt là lớp phủ tuyệt đối trên
  * khung NGOÀI (không cuộn), nên nó đứng yên ở mép trong khi bảng trượt bên dưới.

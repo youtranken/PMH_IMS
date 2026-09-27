@@ -3,13 +3,13 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import type { Me } from '@/lib/me';
 import { AppShell } from '@/shell/app-shell';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 
 const ME: Me = {
   id: 'u-1',
   email: 'it@pmh.com.vn',
   fullName: 'Nguyễn Văn A',
-  role: 'IT_ADMIN' as Me['role'],
+  role: 'admin',
   mustChangePassword: false,
   totpPending: false,
   totpEnrolled: true,
@@ -68,5 +68,21 @@ describe('AppShell — đăng xuất', () => {
     await userEvent.setup().click(screen.getByRole('button', { name: 'Đăng xuất' }));
     expect(await screen.findByText('Màn đăng nhập')).toBeInTheDocument();
     expect(screen.queryByText(/Đăng xuất chưa thành công/)).not.toBeInTheDocument();
+  });
+});
+
+describe('AppShell — mục "sắp có" trong menu', () => {
+  it('không phải link, và lời giải thích nằm trong CHỮ (không chỉ trong title)', () => {
+    vi.stubGlobal('fetch', vi.fn());
+    renderShell();
+    const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
+    expect(within(nav).queryByRole('link', { name: /Tài liệu/ })).not.toBeInTheDocument();
+
+    const label = within(nav).getByText('Tài liệu', { exact: true });
+    const item = label.parentElement as HTMLElement;
+    // `aria-disabled` trên một <span> không vai trò là ARIA sai — trình đọc màn hình bỏ qua nó.
+    expect(item).not.toHaveAttribute('aria-disabled');
+    expect(item).toHaveTextContent('Phần này chưa mở trong bản hiện tại');
+    expect(item).toHaveAttribute('title', 'Phần này chưa mở trong bản hiện tại');
   });
 });

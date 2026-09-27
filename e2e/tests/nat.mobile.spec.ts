@@ -63,6 +63,14 @@ test.describe('Sổ NAT ở 390px', () => {
     await expect(page.getByText('Phòng Nhân sự tầng 3')).toBeVisible();
     await expect(page.getByText(/phần mềm chấm công cần truy cập/)).toBeVisible();
 
+    // Ô Thao tác cũng mang nhãn ở thẻ dọc — không có nó thì nút ba chấm trôi không chữ nào.
+    const actions = page.getByRole('button', { name: 'Thao tác với TCP 8000-8010' });
+    await expect(actions).toBeVisible();
+    expect(
+      await actions.evaluate((el) => el.closest('td')?.getAttribute('data-label') ?? null),
+      'ô Thao tác của sổ NAT phải có data-label ở 390px (OLD-A11Y-01)',
+    ).toBe('Thao tác');
+
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
     );

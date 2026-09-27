@@ -180,7 +180,7 @@ export function AttachmentPanel({
                   <td data-label={t('attachments.name')}>{row.originalName}</td>
                   <td data-label={t('attachments.size')}>{formatSize(row.sizeBytes)}</td>
                   <td data-label={t('attachments.uploadedAt')}>{formatDateTime(row.createdAt)}</td>
-                  <td>
+                  <td data-label={t('common.actions')}>
                     <div className="action-cell">
                       <button
                         type="button"

@@ -206,7 +206,7 @@ export function NatScreen({ me }: { me: Me }) {
                       {rule.reason}
                     </span>
                   </td>
-                  <td>
+                  <td data-label={t('common.actions')}>
                     <div className="action-cell">
                       <RowActions
                         label={t('common.actionsOf', {

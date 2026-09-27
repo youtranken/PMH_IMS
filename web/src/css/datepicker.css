@@ -244,11 +244,14 @@
   outline: none;
   box-shadow: var(--ring);
 }
-.dp-cell:disabled {
+/* Ô ngày bị khoá dùng `aria-disabled` (vẫn nhận tiêu điểm khi đi bằng phím mũi tên). */
+.dp-cell:disabled,
+.dp-cell[aria-disabled='true'] {
   opacity: 0.3;
   cursor: not-allowed;
 }
-.dp-cell:disabled:hover {
+.dp-cell:disabled:hover,
+.dp-cell[aria-disabled='true']:hover {
   background: transparent;
 }
 

@@ -415,7 +415,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     }
 
     /*
-     * Mục của epic sau: `<span aria-disabled="true" title="…">`, KHÔNG phải `<a>`.
+     * Mục của epic sau: `<span title="…">` kèm lời giải thích `sr-only`, KHÔNG phải `<a>`.
      * Nó có mặt để bản đồ điều hướng không phải vẽ lại mỗi epic — nhưng có mặt mà bấm
      * được thì tệ hơn không có.
      */
@@ -432,16 +432,21 @@ test.describe('SA đi một vòng cả hệ thống', () => {
       ).toBeVisible();
 
       const host = await label.evaluate((el) => {
-        const owner = el.closest('[aria-disabled]');
+        const owner = el.closest('[title]');
         return {
-          disabled: owner?.getAttribute('aria-disabled') ?? null,
+          text: owner?.textContent ?? '',
           title: owner?.getAttribute('title') ?? null,
         };
       });
+      /*
+       * Lời giải thích phải nằm trong CHỮ của mục (bản `sr-only`) — `title` chỉ tới được người
+       * rê chuột, còn `aria-disabled` trên một <span> không vai trò thì trình đọc màn hình bỏ
+       * qua (OLD-A11Y-01).
+       */
       expect(
-        host.disabled,
-        `"${planned}" phải mang aria-disabled cho trình đọc màn hình`,
-      ).toBe('true');
+        host.text,
+        `"${planned}" phải tự giải thích bằng chữ mà trình đọc màn hình đọc được`,
+      ).toContain('Phần này chưa mở trong bản hiện tại');
       expect(
         host.title,
         `"${planned}" phải tự giải thích vì sao bấm không được, không im lặng`,
@@ -952,7 +957,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     ).toHaveCount(0);
 
     /*
-     * Mục "chưa mở" (Tài liệu) là `<span aria-disabled="true">`, KHÔNG phải link. Kiểm bằng
+     * Mục "chưa mở" (Tài liệu) là chữ thường `<span>`, KHÔNG phải link. Kiểm bằng
      * "không có link mang tên đó" thay vì bám `title` — nếu một ngày ai đó biến nó thành link
      * trỏ vào hư không, bài này đỏ.
      */
@@ -1416,7 +1421,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
 
     /*
      * "Tài liệu" là mục của epic sau: nó HIỆN RA (để bản đồ điều hướng không phải vẽ lại mỗi
-     * epic) nhưng KHÔNG phải link — `<span aria-disabled="true">`. Đây là chỗ dễ hỏng nhất
+     * epic) nhưng KHÔNG phải link — chữ thường `<span>`. Đây là chỗ dễ hỏng nhất
      * trong cả file `app-shell.tsx`: bỏ cờ `planned` sớm một epic là người dùng bấm vào và
      * rơi thẳng xuống trang 404, mà không lỗi biên dịch nào báo.
      */
