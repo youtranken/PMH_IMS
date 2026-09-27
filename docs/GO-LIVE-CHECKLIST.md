@@ -492,7 +492,14 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
   - Job hằng ngày chuyển `active` → `expired_ok` khi `end_date < hôm nay`, có ghi `software_history`
     với actor `system`.
   - Gia hạn có ngày mới thì tự về `active`.
-  - `expired_ok` không vào mail và không vào mục "đã hết hạn" trên dashboard. Thay thế BE-06.
+  - `expired_ok` không vào mail; vẫn hiện trên dashboard/màn Sắp hết hạn trong thời gian ân hạn
+    (Q-13 thay cho câu cũ "không vào dashboard"). Thay thế BE-06.
+- [x] **DOM-12 · Tự Thanh lý sau ân hạn, khôi phục bằng Sửa** (Q-13).
+  - `software.auto_retire_grace_days` (0076, mặc định 30, 0 = tắt). Lượt quét của worker chuyển
+    `expired_ok` quá ân hạn sang `retired`, gỡ mọi ghế, lịch sử `auto-retired` của `system`.
+  - Sửa hồ sơ đã Thanh lý về Đang dùng chỉ được khi hạn mới từ hôm nay trở đi
+    (`RESTORE_NEEDS_FUTURE_END`). Nút Gia hạn vẫn chặn hồ sơ đã Thanh lý (BE-13).
+  - Kiểm: `api/test/software-auto-retire.spec.ts`, E2E `software.spec.ts` hai bài Q-13.
 - [x] **DOM-04 · ISP bỏ ngày kết thúc** (Q-04).
   - Gỡ `ispSource` khỏi registry nhắc hạn (`software-expiry-sources.ts:58`) và bỏ gia hạn ISP.
   - Trạng thái `terminated` hiện là "Thanh lý", ghi ngày và người thanh lý.

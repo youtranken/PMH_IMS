@@ -1488,6 +1488,7 @@ export default {
       actRenewed: 'Gia hạn',
       actExpired: 'Tự chuyển sang Hết hạn (đã qua ngày hết hạn)',
       actReactivated: 'Tự về Đang dùng (có ngày hết hạn mới)',
+      actAutoRetired: 'Tự Thanh lý (hết hạn quá số ngày ân hạn, đã gỡ mọi ghế)',
       actLicenseAssigned: 'Gán license vào máy',
       actLicenseReleased: 'Gỡ license khỏi máy',
       actLicenseTermsUpdated: 'Sửa ghế license',

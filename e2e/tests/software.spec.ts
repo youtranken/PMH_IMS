@@ -348,4 +348,53 @@ test.describe('Hồ sơ phần mềm', () => {
       'Tên mới sau khi sửa',
     );
   });
+  /**
+   * Q-13: hồ sơ đã Thanh lý (tay hoặc tự thanh lý sau ân hạn) khôi phục được bằng Sửa hồ sơ,
+   * nhưng chỉ khi hạn còn hiệu lực — hạn cũ thì lượt quét kế tiếp lại tự thanh lý nó.
+   */
+  async function retiredViaApi(page: Page, code: string, endDate: string): Promise<string> {
+    const created = await createViaApi(page, { code, name: 'Hồ sơ Q-13', kind: 'ssl', endDate });
+    expect(created.status).toBe(201);
+    const id = created.body.id as string;
+    const csrf = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/auth/me', { credentials: 'include' });
+      return ((await res.json()) as { csrfToken: string }).csrfToken;
+    });
+    const retired = await page.request.patch(`/api/v1/software/${id}`, {
+      headers: { 'X-CSRF-Token': csrf, Origin: APP_ORIGIN },
+      data: { status: 'retired' },
+    });
+    expect(retired.status()).toBe(200);
+    return id;
+  }
+
+  async function restoreInForm(page: Page, id: string) {
+    await page.goto(`/software/${id}`);
+    await expect(page.getByText('Đã thanh lý').first()).toBeVisible();
+    await page.getByRole('button', { name: 'Sửa hồ sơ' }).click();
+    const form = page.getByRole('dialog');
+    await form.getByRole('button', { name: 'Trạng thái', exact: true }).click();
+    await page.getByRole('option', { name: 'Đang dùng', exact: true }).click();
+    await form.getByRole('button', { name: 'Lưu' }).click();
+    return form;
+  }
+
+  test('Q-13: hồ sơ đã thanh lý, hạn còn hiệu lực → Sửa về Đang dùng được', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const id = await retiredViaApi(page, `SSL-E2E-KHOI-PHUC-${uniqueStamp()}`, '2030-12-31');
+
+    await restoreInForm(page, id);
+
+    await expect(page.getByText('Đã lưu hồ sơ.')).toBeVisible();
+    await expect(page.getByText('Đang dùng').first()).toBeVisible();
+  });
+
+  test('Q-13: khôi phục mà hạn đã qua thì bị từ chối, nói rõ cần ngày hết hạn mới', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const id = await retiredViaApi(page, `SSL-E2E-KHOI-PHUC-CU-${uniqueStamp()}`, '2025-01-31');
+
+    const form = await restoreInForm(page, id);
+
+    await expect(form.getByText(/cần ngày hết hạn mới từ hôm nay trở đi/)).toBeVisible();
+  });
 });
