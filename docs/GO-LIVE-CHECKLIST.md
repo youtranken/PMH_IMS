@@ -403,7 +403,7 @@ Mảng này hiện gần như trống. Đây là thứ đội ít kinh nghiệm 
 Test **không** vào image production (api build loại `*.spec.ts`, image web chỉ có nginx + `dist`).
 **Không xoá test.** Chúng đang giữ lõi bảo mật: envelope, TOTP replay, lockout, CSRF, step-up.
 
-- [ ] **QA-01 (P0) · Mỗi mục P0 ở trên có test đỏ trước, xanh sau.** SEC-01, SEC-02, DB-02 phải có
+- [x] **QA-01 (P0) · Mỗi mục P0 ở trên có test đỏ trước, xanh sau.** SEC-01, SEC-02, DB-02 phải có
   bài ở `api/test/` chạy DB thật.
 - [ ] **QA-02 (P0) · Diễn tập trọn vòng trên VM Ubuntu trắng.** Dựng từ `.env` mới → seed → nhập 1
   secret + 1 file đính kèm → backup → xoá sạch → restore → mở được secret và tải được file.
