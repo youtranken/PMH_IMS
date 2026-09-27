@@ -504,7 +504,7 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
 - [x] **DOM-10 · Gỡ loại `isp` khỏi luật mail nhắc hạn cũ** (Q-10).
 - [ ] **DOM-06 · Mail duyệt break-glass trỏ thẳng tới yêu cầu cụ thể** (`mail.consumer.ts:137`), thay
   vì mở cả màn duyệt. Vẫn phải đăng nhập và qua TOTP.
-- [ ] **DOM-07 · Màn Nhật ký (audit log) chưa có giao diện.** Menu đánh dấu `planned`
+- [x] **DOM-07 · Màn Nhật ký (audit log) chưa có giao diện.** Menu đánh dấu `planned`
   (`shell/app-nav.ts:62`), route `/admin/audit-log` chưa được dựng. API thì đã có. Với hệ thống
   giữ két mật khẩu, SA cần xem được nhật ký mà không phải dùng psql.
 

@@ -14,7 +14,7 @@
 #   IMS_DISK_MAX_PERCENT mặc định 85
 #   IMS_CERT_WARN_DAYS   mặc định 30
 set -uo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/.." || exit 1
 
 URL="${IMS_URL:-https://127.0.0.1}"
 DISK_MAX="${IMS_DISK_MAX_PERCENT:-85}"
@@ -66,7 +66,8 @@ fi
 
 # ─── Báo ───
 send() {
-  local text="[IMS $(hostname)] $1"
+  local text
+  text="[IMS $(hostname)] $1"
   if [ -n "${IMS_ALERT_WEBHOOK:-}" ]; then
     curl -s -m 10 -H 'Content-Type: application/json' \
       -d "$(printf '{"text": %s}' "$(printf '%s' "$text" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')")" \

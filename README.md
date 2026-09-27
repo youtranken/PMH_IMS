@@ -13,6 +13,17 @@ phiếu ISO và sự cố. Kiến trúc: **modular monolith** NestJS + React (Vi
 | Epic trước để lại gì | `docs/EPIC-MAP.md` |
 | Quy tắc làm việc (TDD, DoD, đóng epic) | `CLAUDE.md` |
 
+## Cài lên production (Ubuntu)
+
+```bash
+git clone https://github.com/youtranken/PMH_IMS.git /opt/ims && cd /opt/ims
+git checkout <tag-phát-hành>
+bash ops/install-ubuntu.sh
+```
+
+Chi tiết và các việc phải làm tay (phong bì chìa, diễn tập khôi phục, nhập dữ liệu):
+`docs/RUNBOOK-4.3-dong-dot-1.md`.
+
 ## Chạy lần đầu (dev)
 
 ```bash

@@ -8,6 +8,22 @@ diễn tập khôi phục và các thao tác vận hành về sau. Làm **đúng
 Quy ước: `$` là lệnh chạy trên máy chủ prod, trong thư mục `/opt/ims`, bằng user thuộc nhóm
 `docker`. Lệnh nào cần root thì ghi `sudo`.
 
+## Lối tắt: script cài đặt
+
+Sau khi chuẩn bị xong mục 0, trên máy chủ Ubuntu chỉ cần:
+
+```bash
+git clone https://github.com/youtranken/PMH_IMS.git /opt/ims && cd /opt/ims
+git checkout <tag-phát-hành>
+bash ops/install-ubuntu.sh
+```
+
+Script làm hộ mục **A → D**: kiểm docker, tạo `.env` với mật khẩu ngẫu nhiên, sinh `secrets/`
+(chown uid 1000), chép cert, dựng stack, tạo 2 SA (in mật khẩu tạm một lần), đặt cron sao lưu +
+giám sát. Chạy lại được — bước nào đã xong thì bỏ qua, không ghi đè bí mật. Sau đó làm tay mục
+**C** (phong bì), **E** (diễn tập trên VM khác), **F** (nhập dữ liệu). Các mục dưới đây là giải
+thích chi tiết từng bước, dùng khi cần làm tay hoặc khi script dừng giữa chừng.
+
 ## 0. Chuẩn bị trước
 
 - [ ] Máy chủ Ubuntu 22.04/24.04, ≥ 4 CPU, ≥ 8 GB RAM, ≥ 100 GB đĩa, IP LAN cố định
