@@ -82,7 +82,7 @@ xem tận mắt lần thứ hai.
     - Sửa luôn khe L8: kiểm `isLocked` trong transaction.
   - **Kiểm:** test "N lần sai từ N IP khác nhau → tài khoản bị chặn tạm".
 
-- [ ] **SEC-04 · Tài khoản seed dùng chung mật khẩu `Pmh@1212`** ✔ đã tự kiểm
+- [x] **SEC-04 · Tài khoản seed dùng chung mật khẩu `Pmh@1212`** ✔ đã tự kiểm
   - **Vấn đề:**
     - `api/scripts/seed-sa.mjs:20-24` tạo 5 tài khoản.
     - Script được copy vào image prod (`api/Dockerfile`).
@@ -95,13 +95,16 @@ xem tận mắt lần thứ hai.
     - Tài khoản còn lại tạo qua giao diện.
   - **Kiểm:** chạy script 2 lần, lần 2 phải báo "đã có SA, dừng".
 
-- [ ] **SEC-05 · Thư viện có lỗ bảo mật (npm audit: 3 high)**
+- [x] **SEC-05 · Thư viện có lỗ bảo mật (npm audit: 3 high)**
   - **Vấn đề:** `multer` (qua `@nestjs/platform-express`) có 2 lỗi DoS multipart; `nodemailer` có
     lỗi bỏ qua `disableFileAccess` và lỗi IDN.
   - **Sửa:**
     - `npm audit fix` trong `api/`.
     - `uuid`/`exceljs` (moderate): xác nhận không dùng tham số `buf`, ghi nhận rủi ro chấp nhận.
   - **Kiểm:** `npm --prefix api audit --omit=dev` không còn high hay critical.
+  - **Đã làm:** multer 2.4.0, nodemailer 9.1.1, qs 6.16.0. Còn 2 moderate `uuid` qua `exceljs`:
+    `exceljs` chỉ gọi `uuid.v4()` không có `buf`, lỗ nằm ở v3/v5/v6 có `buf` nên không chạm tới —
+    chấp nhận, xem lại khi `exceljs` ra bản dùng `uuid` ≥ 11.1.1.
 
 ### P1
 

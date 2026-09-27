@@ -25,7 +25,7 @@ docker compose ps          # phải thấy đủ 5 service: postgres, redis, api
 
 Lần đầu tiên trên máy trắng thì làm thêm ba bước ở `README.md` mục "Chạy lần đầu": sinh
 `secrets/master_key` + `secrets/password_pepper`, sinh cert tự ký vào `ops/certs/`, rồi
-`docker compose exec api node scripts/seed-sa.mjs` để có tài khoản SA đầu tiên.
+`docker compose exec api node dist/ops/seed-sa.main.js` để có tài khoản SA đầu tiên (mật khẩu tạm in ra một lần).
 
 ### 0.2 Địa chỉ và tài khoản
 

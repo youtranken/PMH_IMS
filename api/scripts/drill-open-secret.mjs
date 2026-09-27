@@ -3,7 +3,7 @@
  * Diễn tập khôi phục (story 4.3, NFR-02): chứng minh chìa in trên giấy mở được ciphertext
  * trong bản sao lưu. In ra MỘT plaintext của MỘT secret thử.
  *
- * CỐ Ý KHÔNG nằm trong image production (xem api/Dockerfile — chỉ `seed-sa.mjs` được COPY).
+ * CỐ Ý KHÔNG nằm trong image production (api/Dockerfile không COPY thư mục scripts/).
  * Muốn dùng thì mount vào lúc diễn tập, giống `reset-e2e-user.mjs`:
  *
  *   docker compose -f docker-compose.yml -f docker-compose.override.drill.yml up -d api

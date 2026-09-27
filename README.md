@@ -35,7 +35,7 @@ cp .env.example .env      # sửa mật khẩu Postgres/Redis, APP_BASE_URL
 docker compose --profile dev up -d --build
 
 # 5. Tạo tài khoản đầu tiên
-docker compose exec api node scripts/seed-sa.mjs
+docker compose exec api node dist/ops/seed-sa.main.js   # in mật khẩu tạm MỘT lần
 ```
 
 Mở https://localhost (dev) hoặc https://ims.pmh.com.vn (prod). Hộp thư dev: http://localhost:8025

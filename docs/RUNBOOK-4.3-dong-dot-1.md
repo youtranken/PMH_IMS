@@ -185,10 +185,12 @@ Kiểm từ **máy IT của cả 3 site**:
 - [ ] Site 3 — như trên
 - [ ] Thử trên điện thoại (390px): mở một thiết bị, đọc được hồ sơ
 
-### C3. Đổi mật khẩu tài khoản SA thật
+### C3. Tạo và nhận tài khoản SA
 
-Tài khoản seed (`sa@pmh.com.vn`, `caothuan@pmh.com.vn`) đang dùng mật khẩu tạm có trong repo.
-Đăng nhập lần đầu trên prod, hệ thống buộc đổi — **đổi ngay**, đừng để sang hôm sau.
+Chạy `docker compose exec api node dist/ops/seed-sa.main.js` đúng một lần. Script in mật khẩu
+tạm ngẫu nhiên của từng SA ra màn hình **một lần duy nhất**: chép ra giấy, trao tận tay, không
+gửi qua chat/email. Script từ chối chạy nếu hệ thống đã có SA. Đăng nhập lần đầu buộc đổi mật
+khẩu và cài TOTP — **làm ngay**, đừng để sang hôm sau.
 
 - [ ] `sa@pmh.com.vn` đã đổi mật khẩu + cài TOTP
 - [ ] `caothuan@pmh.com.vn` đã đổi mật khẩu + cài TOTP

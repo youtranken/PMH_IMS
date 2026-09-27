@@ -152,7 +152,7 @@ jobs:
   #         done
   #         docker compose logs api; exit 1
   #     - name: Seed tài khoản
-  #       run: docker compose exec -T api node scripts/seed-sa.mjs
+  #       run: docker compose exec -T api node dist/ops/seed-sa.main.js
   #       env:
   #         ALLOW_E2E_RESET: '1'
   #     - name: E2E Playwright (desktop + 390px)
