@@ -8,16 +8,16 @@ import { SoftwareApiService } from '../software/software.api';
  *
  * Vì sao không thêm cột `disposed` hay bảng `disposal`: mỗi module ĐÃ CÓ trạng thái "ngừng
  * dùng" của riêng mình và đang là chủ vòng đời hồ sơ mình (AD-3) — thiết bị `retired`, phần
- * mềm `retired`, tài khoản dịch vụ `disabled`. Thêm một cờ thứ hai là tạo ra hai nguồn sự
- * thật, và chúng sẽ lệch nhau đúng vào lúc có người đi đối chiếu.
+ * mềm `retired`, tài khoản dịch vụ `disabled`, đường truyền `terminated`. Thêm một cờ thứ hai
+ * là tạo ra hai nguồn sự thật, và chúng sẽ lệch nhau đúng vào lúc có người đi đối chiếu.
  *
- * Cái THIẾU không phải trạng thái, mà là một chỗ để nhìn thấy chúng cùng lúc: ba trạng thái
- * nằm ở ba màn khác nhau, dưới ba cái tên khác nhau, nên câu "công ty đã bỏ những gì" không
+ * Cái THIẾU không phải trạng thái, mà là một chỗ để nhìn thấy chúng cùng lúc: bốn trạng thái
+ * nằm ở bốn màn khác nhau, dưới bốn cái tên khác nhau, nên câu "công ty đã bỏ những gì" không
  * ai trả lời được.
  *
- * KHÔNG gom đường truyền (chốt 28/08/2026, sau khi xem bản chạy thật): một hợp đồng đã cắt
- * vẫn là hợp đồng có số, có ngày, có nhà mạng — người ta tra nó ở chính màn Đường truyền.
- * Kho là chỗ cho những thứ RỜI KHỎI hệ thống: cái máy đã bán, license đã bỏ, tài khoản đã đóng.
+ * Đường truyền có mặt vì Q-10 (`docs/QUYET-DINH.md`): một đường đã cắt cũng là thứ công ty
+ * đã bỏ, và thiếu nó thì câu trả lời ở đây hụt đúng một loại. Hồ sơ vẫn tra được ở màn Đường
+ * truyền — kho chỉ nhìn, link dẫn về đúng trang chi tiết của nó.
  *
  * Chuyện "không tính hạn và không vào email digest" thì các module đã lo sẵn: mọi nguồn hạn
  * đều lọc `status <> retired` trong chính câu truy vấn `findExpiringBetween`. Màn này KHÔNG
@@ -25,7 +25,7 @@ import { SoftwareApiService } from '../software/software.api';
  *
  * Đọc qua `*.api.ts` của module chủ (AD-2), không SELECT bảng của họ.
  */
-export const DISPOSAL_KINDS = ['device', 'software', 'service_account'] as const;
+export const DISPOSAL_KINDS = ['device', 'software', 'service_account', 'isp'] as const;
 export type DisposalKind = (typeof DISPOSAL_KINDS)[number];
 
 export interface DisposalItem {
@@ -33,7 +33,10 @@ export interface DisposalItem {
   id: string;
   code: string;
   name: string;
-  /** Nhãn phụ: loại thiết bị, loại phần mềm, loại tài khoản — thứ giúp nhận ra nó là cái gì. */
+  /**
+   * Nhãn phụ: loại thiết bị, loại phần mềm, loại tài khoản, băng thông đường truyền — thứ giúp
+   * nhận ra nó là cái gì.
+   */
   detail: string | null;
   /** Trạng thái THẬT trong module chủ, giữ nguyên tên gốc để tra ngược không nhầm. */
   status: string;
@@ -50,13 +53,14 @@ export class DisposalService {
 
   async list(): Promise<DisposalItem[]> {
     /*
-     * Ba lượt gọi CHẠY SONG SONG. Nối tiếp thì màn này chờ bằng tổng ba lượt, mà chúng không
-     * phụ thuộc nhau chút nào.
+     * Bốn lượt gọi CHẠY SONG SONG. Nối tiếp thì màn này chờ bằng tổng bốn lượt, mà chúng
+     * không phụ thuộc nhau chút nào.
      */
-    const [devices, software, accounts] = await Promise.all([
+    const [devices, software, accounts, ispLines] = await Promise.all([
       this.devices.listRetired(),
       this.software.listRetired(),
       this.accounts.listDisabled(),
+      this.software.listTerminatedIsp(),
     ]);
 
     const items: DisposalItem[] = [
@@ -84,6 +88,16 @@ export class DisposalService {
         code: row.code,
         name: row.name,
         detail: row.kind,
+        status: row.status,
+        updatedAt: row.updatedAt ?? null,
+      })),
+      // Đường truyền không có "tên": nhà mạng là thứ người ta gọi nó bằng miệng ("line VNPT").
+      ...ispLines.map((row) => ({
+        kind: 'isp' as const,
+        id: row.id,
+        code: row.code,
+        name: row.provider,
+        detail: row.bandwidth ?? null,
         status: row.status,
         updatedAt: row.updatedAt ?? null,
       })),

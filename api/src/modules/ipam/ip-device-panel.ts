@@ -42,7 +42,7 @@ export class IpDevicePanel implements DevicePanelProvider, OnModuleInit {
 
 const STATUS_LABEL: Record<IpStatus, string> = {
   free: 'Trống',
-  assigned: 'Đang cấp',
+  assigned: 'Đang dùng',
 };
 
 const TONE: Record<IpStatus, 'ok' | 'warn' | 'muted'> = {

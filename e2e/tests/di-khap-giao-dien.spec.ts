@@ -178,8 +178,8 @@ import {
  *     → Tài khoản dịch vụ: menu dòng đúng ở cả hai trạng thái, hồ sơ chỉ có nút chép, Thành viên không thấy ba chấm
  * [x] Hộp Thêm tài khoản ĐỔI HÌNH theo loại; hộp Vô hiệu hóa bắt nhập lý do
  *     → Hộp "Thêm tài khoản" đổi hình theo loại, và hộp "Vô hiệu hóa" không cho bỏ trống lý do
- * [x] Kho thanh lý: bốn nút lọc kèm số đếm · bốn cột · KHÔNG một nút ghi nào
- *     → Kho thanh lý: bốn nút lọc kèm số đếm, bốn cột, một dòng ghi chú — và KHÔNG một nút ghi nào
+ * [x] Kho thanh lý: năm nút lọc kèm số đếm · bốn cột · KHÔNG một nút ghi nào
+ *     → Kho thanh lý: năm nút lọc kèm số đếm, bốn cột, một dòng ghi chú — và KHÔNG một nút ghi nào
  *
  * ── PHÒNG DANH MỤC, PHÒNG TÀI KHOẢN và PHÒNG BỘ GIAO DIỆN ───────────────────
  * [x] Danh mục: bảy ngăn, nhãn nút "Thêm …" và bộ cột ĐỔI theo từng ngăn
@@ -4475,7 +4475,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
         ['Khai dải mới', 1],
         [/^Thao tác với /, cards],
         ['Tất cả 6', 1],
-        ['Đang cấp 0', 1],
+        ['Đang dùng 0', 1],
         ['Trống 6', 1],
         ['Cấp IP này', 6],
         ['Trang trước', 1],
@@ -4588,7 +4588,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(
       filters.getByRole('button'),
       '/29 = 6 host; một đã cấp nên còn 5 trống. Con số phải nằm NGAY trên nút, đúng thứ tự SLOT_FILTERS',
-    ).toHaveText(['Tất cả 6', 'Đang cấp 1', 'Trống 5']);
+    ).toHaveText(['Tất cả 6', 'Đang dùng 1', 'Trống 5']);
 
     /* ----- Bảng: đúng sáu cột ----- */
     const table = page.getByRole('table');
@@ -4613,10 +4613,10 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'lọc "Trống" thì hàng đã cấp phải biến khỏi bảng',
     ).toHaveCount(0);
 
-    await filters.getByRole('button', { name: /^Đang cấp/ }).click();
+    await filters.getByRole('button', { name: /^Đang dùng/ }).click();
     await expect(
       table.getByRole('row'),
-      'lọc "Đang cấp" còn đúng một dòng + tiêu đề, chứ không phải bảng cũ đứng im',
+      'lọc "Đang dùng" còn đúng một dòng + tiêu đề, chứ không phải bảng cũ đứng im',
     ).toHaveCount(2);
 
     await filters.getByRole('button', { name: /^Tất cả/ }).click();
@@ -4790,10 +4790,10 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await page.goto(`/ip-addresses/${subnetId}`);
 
     /* ----- Trạng thái 1: ĐANG CẤP ----- */
-    await expect(ipRow(page, address).getByText('Đang cấp')).toBeVisible();
+    await expect(ipRow(page, address).getByText('Đang dùng')).toBeVisible();
     expect(
       await rowActionNames(page, address),
-      'từ "Đang cấp" chỉ đi được sang Thu hồi (Q-02); Lịch sử luôn có; Sửa/Ẩn của SA. Hai việc nguy hiểm xếp CUỐI',
+      'từ "Đang dùng" chỉ đi được sang Thu hồi (Q-02); Lịch sử luôn có; Sửa/Ẩn của SA. Hai việc nguy hiểm xếp CUỐI',
     ).toEqual(['Lịch sử', 'Sửa', 'Thu hồi', 'Ẩn hồ sơ']);
 
     /* ----- Hộp "Thu hồi": KHÔNG hỏi chủ mới — chủ cũ đi khỏi, không ai dọn vào ----- */
@@ -6420,13 +6420,13 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
    * màn này sinh ra để giải quyết.
    *
    * Vì thế khẳng định ở đây là khẳng định TẬP HỢP RỖNG-TRỪ-BỘ-LỌC: toàn bộ nút trong vùng nội
-   * dung phải đúng bằng bốn nút lọc theo loại. Không nút thêm, không nút sửa, không nút xóa,
+   * dung phải đúng bằng năm nút lọc theo loại. Không nút thêm, không nút sửa, không nút xóa,
    * không một cái ba chấm nào.
    *
-   * ĐỎ KHI: bất kỳ nút nào khác bốn nút lọc xuất hiện; nhóm lọc thiếu/thừa một loại; con số
+   * ĐỎ KHI: bất kỳ nút nào khác năm nút lọc xuất hiện; nhóm lọc thiếu/thừa một loại; con số
    * đếm rời khỏi nút lọc; bảng đổi số cột; hoặc dòng ghi chú giải thích biến mất.
    */
-  test('Kho thanh lý: bốn nút lọc kèm số đếm, bốn cột, một dòng ghi chú — và KHÔNG một nút ghi nào', async ({
+  test('Kho thanh lý: năm nút lọc kèm số đếm, bốn cột, một dòng ghi chú — và KHÔNG một nút ghi nào', async ({
     page,
   }) => {
     test.setTimeout(150_000);
@@ -6496,14 +6496,14 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     /*
      * ===== KHẲNG ĐỊNH QUAN TRỌNG NHẤT =====
-     * Toàn bộ nút trong vùng nội dung = đúng bốn nút lọc theo loại. Con số đếm cắt ra so riêng,
+     * Toàn bộ nút trong vùng nội dung = đúng năm nút lọc theo loại. Con số đếm cắt ra so riêng,
      * vì nó thay đổi theo dữ liệu; phần CHỮ thì cố định.
      */
     const tenNut = await tenTheoVaiTro(main, 'button');
     expect(
       tenNut.map((ten) => ten.replace(/\s+\d+$/, '')),
-      'Kho thanh lý CHỈ được có bốn nút lọc theo loại — một nút ghi ở đây là một hồ sơ đã thanh lý bị sửa',
-    ).toEqual(sap(['Tất cả', 'Thiết bị', 'Phần mềm', 'Tài khoản dịch vụ']));
+      'Kho thanh lý CHỈ được có năm nút lọc theo loại — một nút ghi ở đây là một hồ sơ đã thanh lý bị sửa',
+    ).toEqual(sap(['Tất cả', 'Thiết bị', 'Phần mềm', 'Tài khoản dịch vụ', 'Đường truyền']));
     for (const ten of tenNut) {
       expect(ten, `Nút lọc "${ten}" phải mang số đếm — nút lọc không có số thì hết là bộ đếm`).toMatch(
         /\s\d+$/,
@@ -6523,7 +6523,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     }
 
     /*
-     * SỐ ĐẾM PHẢI LÀ SỐ ĐẾM: "Tất cả" bằng tổng ba loại. Đếm trên tập ĐÃ LỌC thì bấm vào đâu
+     * SỐ ĐẾM PHẢI LÀ SỐ ĐẾM: "Tất cả" bằng tổng bốn loại. Đếm trên tập ĐÃ LỌC thì bấm vào đâu
      * cũng thấy "đúng", và con số hết mang thông tin nào.
      */
     const soCua = (ten: string): number => {
@@ -6533,12 +6533,14 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     };
     expect(
       soCua('Tất cả'),
-      'Số của "Tất cả" phải bằng tổng ba loại — nếu không thì nó đang đếm trên tập đã lọc',
-    ).toBe(soCua('Thiết bị') + soCua('Phần mềm') + soCua('Tài khoản dịch vụ'));
+      'Số của "Tất cả" phải bằng tổng bốn loại — nếu không thì nó đang đếm trên tập đã lọc',
+    ).toBe(
+      soCua('Thiết bị') + soCua('Phần mềm') + soCua('Tài khoản dịch vụ') + soCua('Đường truyền'),
+    );
 
     await expect(
       main.getByRole('group', { name: 'Lọc theo loại hồ sơ' }),
-      'Bốn nút lọc phải nằm trong một nhóm có tên — rời rạc thì trình đọc màn hình không biết chúng là một bộ',
+      'Năm nút lọc phải nằm trong một nhóm có tên — rời rạc thì trình đọc màn hình không biết chúng là một bộ',
     ).toBeVisible();
 
     // ĐỦ CỘT: bốn, không hơn. Cột thứ năm ở đây gần như chắc chắn là cột thao tác.

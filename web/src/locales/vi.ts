@@ -968,7 +968,7 @@ export default {
     address: 'Địa chỉ',
     status: 'Trạng thái',
     statusFree: 'Trống',
-    statusAssigned: 'Đang cấp',
+    statusAssigned: 'Đang dùng',
     device: 'Thiết bị',
     deviceHint: 'Máy nào đang giữ IP này. Bỏ trống nếu chỉ cấp cho một người.',
     deviceSearch: 'Gõ mã hoặc tên thiết bị…',
@@ -1198,9 +1198,7 @@ export default {
   },
   disposal: {
     title: 'Kho thanh lý',
-    /* Đường truyền KHÔNG vào kho này: line "Thanh lý" vẫn nằm ở màn Đường truyền, lọc theo
-       trạng thái. Nói đúng ba loại đang có, thay vì hứa một thứ sản phẩm chưa làm. */
-    subtitle: 'Thiết bị, phần mềm và tài khoản dịch vụ đã ngừng dùng — gom về một chỗ',
+    subtitle: 'Thiết bị, phần mềm, tài khoản dịch vụ và đường truyền đã ngừng dùng — gom về một chỗ',
     note: 'Hồ sơ trong kho KHÔNG còn được tính hạn và không vào email nhắc gia hạn. Muốn dùng lại thì mở hồ sơ gốc và đổi trạng thái.',
     search: 'Tìm theo mã, tên hoặc loại…',
     filterKind: 'Lọc theo loại hồ sơ',
@@ -1209,6 +1207,7 @@ export default {
     kindDevice: 'Thiết bị',
     kindSoftware: 'Phần mềm',
     kindServiceAccount: 'Tài khoản dịch vụ',
+    kindIsp: 'Đường truyền',
     code: 'Mã',
     detail: 'Chi tiết',
     at: 'Ngày đưa vào kho',
@@ -1216,6 +1215,8 @@ export default {
        khoản dịch vụ gọi là "đã vô hiệu hóa". Đúng cái khác biệt mà màn này sinh ra để bày. */
     statusRetired: 'Đã thanh lý',
     statusDisabled: 'Đã vô hiệu hóa',
+    // Đường truyền gọi trạng thái này là "Thanh lý" (Q-04) — kho giữ nguyên chữ của module chủ.
+    statusTerminated: 'Thanh lý',
     dispose: 'Đưa vào kho thanh lý',
     confirmTitle: 'Đưa vào kho thanh lý',
     confirmSoftware:
@@ -1477,7 +1478,7 @@ export default {
       assignedTo: 'cấp cho: {{who}}',
       reasonIs: 'lý do: {{reason}}',
       stFree: 'Trống',
-      stAssigned: 'Đang cấp',
+      stAssigned: 'Đang dùng',
       // Hai trạng thái đã bỏ (Q-02): chỉ còn để đọc các dòng lịch sử cũ.
       stSuspectDead: 'Nghi chết',
       stReclaimed: 'Đã thu hồi',

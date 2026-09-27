@@ -58,7 +58,7 @@ test.describe('Vòng đời IP', () => {
 
     await page.goto(`/ip-addresses/${subnetId}`);
     const row = page.getByRole('row', { name: new RegExp(address.replace(/\./g, '\\.')) });
-    await expect(row.getByText('Đang cấp')).toBeVisible();
+    await expect(row.getByText('Đang dùng')).toBeVisible();
 
     // Chỉ còn hai trạng thái (Q-02): đang cấp thì đường đi tiếp duy nhất là Thu hồi.
     // Cột thao tác là menu ba chấm — mục chỉ có trong DOM khi menu đang mở.
@@ -95,8 +95,8 @@ test.describe('Vòng đời IP', () => {
     const history = page.getByRole('dialog');
     await expect(history.getByText('trước đó: Máy in kế toán')).toBeVisible();
     await expect(history.getByText('lý do: máy đã thanh lý')).toBeVisible();
-    await expect(history.getByText('Đang cấp → Trống')).toBeVisible();
-    await expect(history.getByText('Trống → Đang cấp')).toBeVisible();
+    await expect(history.getByText('Đang dùng → Trống')).toBeVisible();
+    await expect(history.getByText('Trống → Đang dùng')).toBeVisible();
   });
 
   /**

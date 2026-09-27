@@ -350,7 +350,7 @@ export class IpAddressService {
      * Gán MÁY hoặc NGƯỜI DÙNG vào một hồ sơ đang TRỐNG thì nó thành ĐANG CẤP.
      *
      * Bản trước để `status` nguyên: một hàng vừa có tên máy vừa mang badge "Trống", còn nút
-     * lọc phía trên đếm "Đang cấp 0" — bảng và con số nói ngược nhau, và cả hai đều đúng theo
+     * lọc phía trên đếm "Đang dùng 0" — bảng và con số nói ngược nhau, và cả hai đều đúng theo
      * dữ liệu. Người dùng thấy ô đã có máy nên tưởng đã cấp, còn hệ thống thì vẫn coi địa chỉ
      * đó là chỗ trống và sẵn sàng cấp lần nữa cho máy khác.
      *
@@ -948,5 +948,5 @@ export class IpAddressService {
 /** Nhãn tiếng Việt cho thông điệp lỗi — khớp `STATUS_KEY` phía web. */
 const STATUS_LABEL: Record<IpStatus, string> = {
   free: 'Trống',
-  assigned: 'Đang cấp',
+  assigned: 'Đang dùng',
 };

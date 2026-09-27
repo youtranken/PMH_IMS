@@ -147,8 +147,8 @@ export function SubnetPane({
    *
    * Vấn đề thật: một /24 đã dùng 12 địa chỉ thì mở ra là 242 ô trống xếp trước mặt, 12 dòng có
    * dữ liệu nằm rải trong sáu trang. Câu hỏi hay gặp nhất — "dải này đang cấp cho những ai" —
-   * phải tự đi tìm. Nhưng cũng KHÔNG được mặc định "Đang cấp" cho mọi dải: một /29 mới khai có
-   * 6 ô trống thì "Đang cấp" mở ra một bảng rỗng, mà chính 6 ô trống ấy mới là thứ người ta
+   * phải tự đi tìm. Nhưng cũng KHÔNG được mặc định "Đang dùng" cho mọi dải: một /29 mới khai có
+   * 6 ô trống thì "Đang dùng" mở ra một bảng rỗng, mà chính 6 ô trống ấy mới là thứ người ta
    * vào để bấm "Cấp IP này".
    *
    * Ngưỡng: chỉ chọn hộ khi ô trống ĐỦ NHIỀU để chôn mất dữ liệu, và khi thật sự có dữ liệu
@@ -465,7 +465,7 @@ export function SubnetPane({
 
           {/*
             BẢNG RỖNG PHẢI NÓI VÌ SAO RỖNG.
-            Thiếu nhánh này thì lọc "Đang cấp" trên một dải chưa cấp ô nào cho ra một cái khung
+            Thiếu nhánh này thì lọc "Đang dùng" trên một dải chưa cấp ô nào cho ra một cái khung
             bảng trắng với đúng hàng tiêu đề, và người dùng không có cách nào biết đó là "dải
             sạch" hay "màn hỏng". Câu trả lời nằm
             ngay ở con số 0 trên chính nút họ vừa bấm — nhưng phải nói ra.

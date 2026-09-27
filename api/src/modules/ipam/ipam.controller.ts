@@ -606,5 +606,5 @@ const PORT_MESSAGE: Record<string, string> = {
 
 const IP_STATUS_LABEL: Record<string, string> = {
   free: 'Trống',
-  assigned: 'Đang cấp',
+  assigned: 'Đang dùng',
 };

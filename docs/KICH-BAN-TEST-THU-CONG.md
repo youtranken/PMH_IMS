@@ -215,7 +215,7 @@ Tra cứu AC: `epics.md` mục "Epic 1", story 1.1 → 1.5.
 ## Epic 5 — Quản lý IP & NAT
 
 > Hai luật đã tự chốt (`CAN-XAC-NHAN.md` mục 3 và 4): hệ thống **chỉ nhận IPv4**, và dải phải
-> **hẹp hơn hoặc bằng /8**. Trạng thái IP đúng bốn mức: `Trống · Đang cấp · Nghi chết · Đã thu hồi`.
+> **hẹp hơn hoặc bằng /8**. Trạng thái IP đúng hai mức: `Trống · Đang dùng`.
 
 | Mã | Kịch bản | Các bước | Kết quả mong đợi | AC gốc | Test Playwright tương ứng |
 | --- | --- | --- | --- | --- | --- |

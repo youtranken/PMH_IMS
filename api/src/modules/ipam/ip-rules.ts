@@ -222,7 +222,7 @@ export function subnetUsage(cidr: string, usedCount: number): SubnetUsage {
  *
  * Nó giữ hàng CUỐI, mà "cuối" do Postgres quyết: `ORDER BY address` không định nghĩa thứ tự
  * giữa hai hàng CÙNG địa chỉ. Nên màn hình dán badge "Đã ẩn" lên một địa chỉ đang dùng, bộ
- * đếm "Đang cấp" hụt một, và menu bày nút "Bật lại" cho hàng đang sống → API trả `IP_TAKEN`.
+ * đếm "Đang dùng" hụt một, và menu bày nút "Bật lại" cho hàng đang sống → API trả `IP_TAKEN`.
  * Lúc đúng lúc sai, không ai dựng lại được để báo.
  *
  * ===== LUẬT =====

@@ -34,7 +34,7 @@ describe('toIpHistoryEntries — lịch sử IP đọc được (story 5.2)', ()
   it('nói rõ chuyển từ trạng thái nào sang trạng thái nào, bằng tiếng Việt', () => {
     const [entry] = toIpHistoryEntries([row()], t);
     expect(entry.action).toBe('Thu hồi');
-    expect(entry.detail).toContain('Đang cấp → Trống');
+    expect(entry.detail).toContain('Đang dùng → Trống');
     expect(entry.actor).toBe('it01@pmh.com.vn');
   });
 
@@ -83,7 +83,7 @@ describe('toIpHistoryEntries — lịch sử IP đọc được (story 5.2)', ()
         changes: { usedBy: 'Anh Hùng — Kho', previousUsedBy: null },
       }),
     ], t);
-    expect(entry.detail).toContain('Trống → Đang cấp');
+    expect(entry.detail).toContain('Trống → Đang dùng');
     expect(entry.detail).toContain('cấp cho: Anh Hùng — Kho');
   });
 
@@ -92,9 +92,9 @@ describe('toIpHistoryEntries — lịch sử IP đọc được (story 5.2)', ()
    * vẫn mang `suspect_dead` / `reclaimed`, và vẫn phải đọc ra chữ, không phải khóa máy.
    */
   it.each([
-    ['Đánh dấu nghi chết', 'assigned', 'suspect_dead', 'Đang cấp → Nghi chết'],
+    ['Đánh dấu nghi chết', 'assigned', 'suspect_dead', 'Đang dùng → Nghi chết'],
     ['Thu hồi', 'suspect_dead', 'reclaimed', 'Nghi chết → Đã thu hồi'],
-    ['Cấp lại', 'reclaimed', 'assigned', 'Đã thu hồi → Đang cấp'],
+    ['Cấp lại', 'reclaimed', 'assigned', 'Đã thu hồi → Đang dùng'],
   ])('dòng lịch sử cũ "%s" vẫn đọc được', (action, fromStatus, toStatus, expected) => {
     const [entry] = toIpHistoryEntries([row({ action, fromStatus, toStatus })], t);
     expect(entry.action).toBe(action);
@@ -119,7 +119,7 @@ describe('toIpHistoryEntries — lịch sử IP đọc được (story 5.2)', ()
     const [entry] = toIpHistoryEntries([
       row({ action: 'Tạo hồ sơ', fromStatus: null, toStatus: 'assigned', changes: null }),
     ], t);
-    expect(entry.detail).toBe('Đang cấp');
+    expect(entry.detail).toBe('Đang dùng');
   });
 
   it('chuỗi rỗng trong changes không đẻ ra "lý do: " cụt lủn', () => {
@@ -166,7 +166,7 @@ describe('actionLabel — tên việc bằng tiếng Việt', () => {
 describe('statusLabel', () => {
   it.each([
     ['free', 'Trống'],
-    ['assigned', 'Đang cấp'],
+    ['assigned', 'Đang dùng'],
     // Hai trạng thái đã bỏ (Q-02) chỉ còn sống trong lịch sử cũ — nhãn phải giữ.
     ['suspect_dead', 'Nghi chết'],
     ['reclaimed', 'Đã thu hồi'],

@@ -6,7 +6,7 @@ import { DisposalService, type DisposalItem } from './disposal.service';
  *
  * Chỉ có bảng điều khiển gọi, cho khối "vừa đưa vào kho". Nó gọi qua ĐÂY chứ không tự hỏi
  * `devices` + `software` + `service-accounts` rồi tự gộp: bản gộp thứ hai sẽ trôi khỏi bản
- * gốc đúng lúc có ai thêm loại thứ tư vào kho, và khi đó bảng điều khiển im lặng thiếu một
+ * gốc đúng lúc có ai thêm một loại mới vào kho, và khi đó bảng điều khiển im lặng thiếu một
  * loại mà không test nào đỏ.
  *
  * Đổi lại, `dashboard` chỉ phụ thuộc một module thay vì ba.

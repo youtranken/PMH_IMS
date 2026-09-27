@@ -140,8 +140,8 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(5);
     await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();
 
-    // Nhãn nút lọc mang luôn con số của CẢ dải ("Đang cấp 1"), nên bám theo tiền tố.
-    await page.getByRole('button', { name: /^Đang cấp/ }).click();
+    // Nhãn nút lọc mang luôn con số của CẢ dải ("Đang dùng 1"), nên bám theo tiền tố.
+    await page.getByRole('button', { name: /^Đang dùng/ }).click();
     await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(0);
     await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();
 
@@ -597,7 +597,7 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
 
     /*
      * Rồi SỬA để gán người dùng. Bản trước giữ nguyên `status='free'`: bảng hiện một hàng vừa
-     * có tên chủ vừa mang badge "Trống", còn nút lọc phía trên đếm "Đang cấp 0" — và cả hai
+     * có tên chủ vừa mang badge "Trống", còn nút lọc phía trên đếm "Đang dùng 0" — và cả hai
      * đều đúng theo dữ liệu. Người dùng tưởng đã cấp, hệ thống vẫn coi là chỗ trống và sẵn
      * sàng cấp lại cho máy khác.
      */
@@ -608,9 +608,9 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
     expect(updated.status()).toBe(200);
     expect((await updated.json()) as { status: string }).toMatchObject({ status: 'assigned' });
 
-    // Con số trên màn hình phải đổi theo, không còn "Đang cấp 0".
+    // Con số trên màn hình phải đổi theo, không còn "Đang dùng 0".
     await page.goto(`/ip-addresses/${subnetId}`);
-    await expect(page.getByRole('button', { name: /^Đang cấp 1/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Đang dùng 1/ })).toBeVisible();
 
     // Và bước chuyển được ghi thành một dòng lịch sử riêng, không lẫn vào "sửa hồ sơ".
     const history = (await (

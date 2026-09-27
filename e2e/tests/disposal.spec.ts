@@ -4,6 +4,7 @@ import {
   firstLogin,
   isoInDays,
   resetDevices,
+  resetIsp,
   resetServiceAccounts,
   resetSoftware,
   resetUsers,
@@ -13,18 +14,20 @@ import {
 /**
  * Kho thanh lý (28/08/2026) — MỘT chỗ nhìn thấy mọi thứ công ty đã ngừng dùng.
  *
- * Vì sao cần: ba loại hồ sơ có ba trạng thái "ngừng dùng" mang ba cái tên khác nhau, nằm ở ba
- * màn khác nhau. Câu "công ty đã bỏ những gì" vì thế không ai trả lời được, dù dữ liệu đã có
- * đủ từ lâu.
+ * Vì sao cần: bốn loại hồ sơ có trạng thái "ngừng dùng" mang tên khác nhau, nằm ở bốn màn
+ * khác nhau. Câu "công ty đã bỏ những gì" vì thế không ai trả lời được, dù dữ liệu đã có đủ
+ * từ lâu.
  *
- * Bài này khóa đúng hai điều: (1) ba loại cùng hiện trong một bảng, và (2) hồ sơ trong kho
- * KHÔNG còn được tính hạn — thứ mà người dùng trông vào để email nhắc gia hạn thôi làm phiền.
+ * Bài này khóa ba điều: (1) các loại cùng hiện trong một bảng, (2) đường truyền đã thanh lý
+ * cũng vào kho và link về đúng trang của nó (Q-10), và (3) hồ sơ trong kho KHÔNG còn được
+ * tính hạn — thứ mà người dùng trông vào để email nhắc gia hạn thôi làm phiền.
  */
 test.beforeEach(() => {
   resetUsers();
   resetDevices();
   resetSoftware();
   resetServiceAccounts();
+  resetIsp();
 });
 
 test('ba loại hồ sơ đã ngừng dùng cùng hiện trong một bảng', async ({ page }) => {
@@ -99,15 +102,64 @@ test('ba loại hồ sơ đã ngừng dùng cùng hiện trong một bảng', as
   await expect(page.getByRole('row', { name: new RegExp(`PC-E2E-DIS-${stamp}`) })).toBeVisible();
   await expect(page.getByRole('row', { name: new RegExp(`LIC-E2E-DIS-${stamp}`) })).toHaveCount(0);
 
-  /* Đường truyền KHÔNG vào kho: line đã thanh lý vẫn tra ở màn Đường truyền (lọc theo trạng thái). */
-  await expect(page.getByRole('button', { name: /Đường truyền/ })).toHaveCount(0);
-
   /*
    * Vẫn mở được hồ sơ gốc: "đã thanh lý" không phải "đã xoá", và người ta mở nó ra chính để
    * đọc lịch sử vì sao bỏ.
    */
   await page.getByRole('link', { name: `PC-E2E-DIS-${stamp}` }).click();
   await expect(page.getByRole('heading', { name: new RegExp(`PC-E2E-DIS-${stamp}`) })).toBeVisible();
+});
+
+/**
+ * Q-10: đường truyền đã Thanh lý nằm trong kho cùng ba loại kia, mang đúng chữ của màn Đường
+ * truyền, và link dẫn về trang chi tiết đường truyền chứ không phải một trang khác cùng id.
+ * Đường truyền còn chạy thì KHÔNG vào kho — kho mà lẫn đồ đang dùng thì hết là kho.
+ */
+test('đường truyền đã thanh lý vào kho, link về đúng trang đường truyền', async ({ page }) => {
+  await firstLogin(page, E2E_SA);
+  const stamp = Date.now().toString().slice(-6);
+  const headers = await writeHeaders(page);
+  const cut = `ISP-E2E-DIS-${stamp}`;
+  const running = `ISP-E2E-RUN-${stamp}`;
+
+  const created = await page.request.post('/api/v1/isp-lines', {
+    headers,
+    data: { code: cut, provider: 'VNPT', bandwidth: '300 Mbps' },
+  });
+  expect(created.status()).toBe(201);
+  const cutId = ((await created.json()) as { id: string }).id;
+  expect(
+    (
+      await page.request.post('/api/v1/isp-lines', {
+        headers,
+        data: { code: running, provider: 'FPT' },
+      })
+    ).status(),
+  ).toBe(201);
+  expect(
+    (
+      await page.request.patch(`/api/v1/isp-lines/${cutId}`, {
+        headers,
+        data: { status: 'terminated' },
+      })
+    ).status(),
+  ).toBe(200);
+
+  await page.goto('/disposal');
+  const row = page.getByRole('row', { name: new RegExp(cut) });
+  await expect(row).toBeVisible();
+  await expect(row.getByText('Đường truyền', { exact: true })).toBeVisible();
+  await expect(row.getByText('Thanh lý', { exact: true })).toBeVisible();
+  await expect(row.getByText('300 Mbps')).toBeVisible();
+  await expect(page.getByRole('row', { name: new RegExp(running) })).toHaveCount(0);
+
+  // Loại này có nút lọc riêng, như ba loại kia.
+  await page.getByRole('button', { name: /^Đường truyền \d/ }).click();
+  await expect(row).toBeVisible();
+
+  await row.getByRole('link', { name: cut }).click();
+  await expect(page).toHaveURL(new RegExp(`/isp-lines/${cutId}$`));
+  await expect(page.getByRole('heading', { name: new RegExp(cut) })).toBeVisible();
 });
 
 /**

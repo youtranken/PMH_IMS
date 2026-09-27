@@ -60,7 +60,7 @@ describe('slotStatus — ô chưa có hồ sơ và hồ sơ trạng thái free �
 });
 
 describe('SLOT_FILTERS — chip lọc theo hai trạng thái (Q-02)', () => {
-  it('chỉ có Tất cả · Đang cấp · Trống', () => {
+  it('chỉ có Tất cả · Đang dùng · Trống', () => {
     expect(SLOT_FILTERS).toEqual(['all', 'assigned', 'free']);
   });
 });
@@ -146,7 +146,7 @@ describe('pageSlots — cắt đúng 50 dòng một trang', () => {
 });
 
 /**
- * Luật "có nên tự mở sẵn bộ lọc Đang cấp không" — bốn ca biên quanh hai ngưỡng.
+ * Luật "có nên tự mở sẵn bộ lọc Đang dùng không" — bốn ca biên quanh hai ngưỡng.
  *
  * Trước 18/09 luật này là một biểu thức viết thẳng trong JSX của `subnet-detail.tsx`, nên
  * không có đường nào hỏi nó mà không dựng cả màn hình lên. Cả hai vế phải THỎA, và mỗi vế

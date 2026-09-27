@@ -51,8 +51,8 @@ export const PATHS = {
 /**
  * Loại chủ thể → đường tới hồ sơ của nó.
  *
- * Khóa là `SecretOwnerType` — cùng danh sách với `SECRET_OWNER_TYPES` bên API, và đủ dùng cho
- * cả kho thanh lý (chỉ có ba loại đầu). Trước 12/09 union này gõ tay lần thứ hai ngay tại đây.
+ * Khóa là `SecretOwnerType` — cùng danh sách với `SECRET_OWNER_TYPES` bên API, và trùng khít
+ * bốn loại của kho thanh lý. Trước 12/09 union này gõ tay lần thứ hai ngay tại đây.
  *
  * Có mặt vì ba màn TỔNG — kho thanh lý, khối "vừa thanh lý" và khối "két lâu không đổi" trên
  * bảng điều khiển — đều nhận một cặp `(ownerType, id)` rồi phải tự dựng link. Ba bản chép tay

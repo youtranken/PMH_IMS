@@ -96,8 +96,8 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
     expect(created.status()).toBe(201);
 
     await page.goto(`/ip-addresses/${id}`);
-    // Nhãn nút mang luôn con số: "Đang cấp 1", "Trống 253" — đọc được bằng một cái liếc.
-    const assigned = page.getByRole('button', { name: 'Đang cấp 1' });
+    // Nhãn nút mang luôn con số: "Đang dùng 1", "Trống 253" — đọc được bằng một cái liếc.
+    const assigned = page.getByRole('button', { name: 'Đang dùng 1' });
     await expect(assigned).toBeVisible();
     await expect(page.getByRole('button', { name: 'Trống 253' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Tất cả 254' })).toBeVisible();

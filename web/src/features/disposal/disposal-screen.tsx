@@ -7,6 +7,7 @@ import { formatDate, orDash } from '@/lib/format';
 import { OWNER_PATH } from '@/lib/routes';
 import {
   DISPOSAL_KIND_KEY as KIND_KEY,
+  disposalStatusKey,
   type DisposalKind,
 } from '@/lib/disposal-kinds';
 import { FilterBar } from '@/ui/filter-bar';
@@ -28,15 +29,15 @@ interface DisposalItem {
  * Đường về hồ sơ gốc — kho thanh lý chỉ NHÌN, sửa thì về đúng module chủ.
  *
  * Dùng `OWNER_PATH` dùng chung chứ không giữ bản riêng: bảng điều khiển cũng dựng link từ một
- * cặp `(loại, id)` y hệt, và hai bản chép tay sẽ lệch nhau khi có loại thứ tư vào kho.
+ * cặp `(loại, id)` y hệt, và hai bản chép tay sẽ lệch nhau khi có loại mới vào kho.
  */
 const LINK = OWNER_PATH;
 
 /**
  * Kho thanh lý — MỘT chỗ nhìn thấy mọi thứ công ty đã ngừng dùng.
  *
- * Vì sao cần: ba loại hồ sơ có ba trạng thái "ngừng dùng" mang ba cái tên khác nhau (thiết bị
- * *đã thanh lý*, phần mềm *đã bỏ*, tài khoản *đã vô hiệu*), nằm ở ba màn khác nhau. Câu "công
+ * Vì sao cần: bốn loại hồ sơ có trạng thái "ngừng dùng" mang tên khác nhau (thiết bị *đã
+ * thanh lý*, tài khoản *đã vô hiệu*, đường truyền *thanh lý*…), nằm ở bốn màn khác nhau. Câu "công
  * ty đã bỏ những gì trong quý này" vì thế không ai trả lời được, dù dữ liệu đã có đủ từ lâu.
  *
  * Màn này KHÔNG ghi gì. Đưa một hồ sơ vào kho là việc của chính module chủ, dưới đúng cái tên
@@ -177,16 +178,8 @@ export function DisposalScreen() {
   );
 }
 
-/**
- * Trạng thái THEO TÊN CỦA MODULE CHỦ, không dịch về một tên chung.
- *
- * Cố ý không gom ba thứ này thành một chữ "đã bỏ": người dùng quay lại module chủ sẽ thấy đúng
- * chữ ấy trên hồ sơ, và một cái tên thứ tư chỉ tồn tại ở màn này là thêm một thứ phải học.
- * Trạng thái lạ (module thứ tư vào kho mà quên khai ở đây) thì in nguyên văn — thà thấy một
- * chuỗi kỹ thuật còn hơn thấy một ô trống.
- */
+/** Trạng thái lạ in nguyên văn — luật đặt tên nằm ở `disposalStatusKey`. */
 function statusLabel(status: string, t: (key: string) => string): string {
-  if (status === 'retired') return t('disposal.statusRetired');
-  if (status === 'disabled') return t('disposal.statusDisabled');
-  return status;
+  const key = disposalStatusKey(status);
+  return key ? t(key) : status;
 }

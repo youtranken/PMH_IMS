@@ -39,7 +39,7 @@ export const BUCKET_KEY: Record<SlotBucket, string> = {
 export const SLOT_PAGE_SIZE = 50;
 
 /**
- * Khi nào thì màn chi tiết tự mở sẵn bộ lọc "Đang cấp" thay vì đổ ra cả bãi ô trống.
+ * Khi nào thì màn chi tiết tự mở sẵn bộ lọc "Đang dùng" thay vì đổ ra cả bãi ô trống.
  *
  * Phải thỏa CẢ HAI, và mỗi vế chặn một kiểu chọn-hộ-sai:
  *

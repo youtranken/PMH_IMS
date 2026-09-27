@@ -143,6 +143,8 @@ describe('Nhãn ở panel Lịch sử không được lệch nhãn trên bảng'
     ['history.isp.stActive', 'isp.statusActive'],
     ['history.isp.stSuspended', 'isp.statusSuspended'],
     ['history.isp.stTerminated', 'isp.statusTerminated'],
+    ['history.ip.stFree', 'ipam.statusFree'],
+    ['history.ip.stAssigned', 'ipam.statusAssigned'],
   ];
 
   it.each(PAIRS)('%s đọc giống %s', (historyKey, screenKey) => {
@@ -154,6 +156,15 @@ describe('Nhãn ở panel Lịch sử không được lệch nhãn trên bảng'
     expect(lookup('isp.statusActive')).toBe('Đang dùng');
     expect(lookup('isp.statusSuspended')).toBe('Tạm ngưng');
     expect(lookup('isp.statusTerminated')).toBe('Thanh lý');
+  });
+
+  /**
+   * Q-10: IP có chủ đọc cùng chữ với phần mềm và đường truyền đang chạy. "Đang cấp" tả một
+   * động tác chứ không tả một tình trạng, và đứng cạnh nút "Cấp IP" thì đọc như chưa xong.
+   */
+  it('IP có chủ: cùng chữ "Đang dùng" với phần mềm và đường truyền', () => {
+    expect(lookup('ipam.statusAssigned')).toBe(lookup('isp.statusActive'));
+    expect(lookup('ipam.statusAssigned')).toBe(lookup('software.statusActive'));
   });
 });
 

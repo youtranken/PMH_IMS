@@ -32,7 +32,7 @@ import { createScratchDb, migrationsDir, type ScratchDb } from './db';
  *
  * Bật "Hiện hồ sơ đã ẩn" thì cả N+1 hàng cùng vào `records`, `new Map` giữ hàng CUỐI, và
  * "cuối" ở đây do Postgres quyết: `ORDER BY address` không định nghĩa thứ tự giữa hai hàng
- * CÙNG địa chỉ. Hậu quả: badge "Đã ẩn" cho một địa chỉ đang dùng, bộ đếm "Đang cấp" hụt 1, và
+ * CÙNG địa chỉ. Hậu quả: badge "Đã ẩn" cho một địa chỉ đang dùng, bộ đếm "Đang dùng" hụt 1, và
  * menu bày nút "Bật lại" cho hàng đang sống → API trả `IP_TAKEN`.
  *
  * Trông như "lúc đúng lúc sai" — kiểu lỗi không ai dựng lại được để báo.
