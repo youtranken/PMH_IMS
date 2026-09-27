@@ -222,6 +222,9 @@ export class SoftwareService {
       await this.requireSeatsFitWithin(tx, before, values);
       const updated = await this.updateWithin(tx, id, values);
       await this.recordWithin(tx, actor, id, 'updated', changes);
+      if (values.status === 'retired' && before.status !== 'retired') {
+        await this.releaseAllSeatsWithin(tx, actor, id);
+      }
       return updated;
     });
   }
@@ -498,6 +501,29 @@ export class SoftwareService {
     );
     if (errors.length > 0) {
       throw new ConflictException({ code: 'SOFTWARE_SEATS_IN_USE', message: errors.join(' ') });
+    }
+  }
+
+  /**
+   * Thanh lý giải phóng mọi ghế đang gán (QUYET-DINH Q-03), trong cùng transaction với lượt
+   * thanh lý; mỗi ghế một dòng lịch sử `license-released` để tab Lịch sử nói được ghế nào rời máy nào.
+   */
+  private async releaseAllSeatsWithin(tx: Tx, actor: string, softwareId: string): Promise<void> {
+    const released = await tx
+      .update(licenseAssignmentTable)
+      .set({ releasedAt: new Date(), releasedBy: actor })
+      .where(
+        and(
+          eq(licenseAssignmentTable.softwareId, softwareId),
+          isNull(licenseAssignmentTable.releasedAt),
+        ),
+      )
+      .returning({ deviceId: licenseAssignmentTable.deviceId });
+    for (const row of released) {
+      await this.recordWithin(tx, actor, softwareId, 'license-released', {
+        deviceId: { before: row.deviceId, after: null },
+        reason: { before: null, after: 'thanh lý phần mềm' },
+      });
     }
   }
 

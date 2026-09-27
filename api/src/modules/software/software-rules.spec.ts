@@ -251,7 +251,7 @@ describe('seatConflicts — sửa hồ sơ khi đang có ghế gán', () => {
     ['hạ seat xuống 3 khi dùng 4', { ...lic, seatTotal: 3 }, busy, 1],
     ['hạ seat xuống đúng 4', { ...lic, seatTotal: 4 }, busy, 0],
     ['bỏ trần seat', { ...lic, seatTotal: null }, busy, 0],
-    ['thanh lý khi còn ghế', { ...lic, status: 'retired' }, busy, 1],
+    ['thanh lý khi còn ghế — không chặn, service tự gỡ ghế (Q-03)', { ...lic, status: 'retired' }, busy, 0],
     ['thanh lý khi hết ghế', { ...lic, status: 'retired' }, { used: 0, withEndDate: 0 }, 0],
   ] as const)('%s → %i lỗi', (_name, next, seats, count) => {
     const errors = seatConflicts(next, seats);

@@ -100,7 +100,6 @@ describe('BE-09 · BE-13 · hồ sơ phần mềm và ghế đang gán', () => {
     it.each([
       ['đổi sang SSL', { kind: 'ssl', seatTotal: null }],
       ['hạ tổng seat dưới số đang dùng', { seatTotal: 1 }],
-      ['thanh lý khi còn ghế', { status: 'retired' }],
       ['chuyển vĩnh viễn khi ghế còn hạn', { licenseModel: 'perpetual', endDate: null }],
     ])('%s → 409 SOFTWARE_SEATS_IN_USE', async (_name, patch) => {
       const id = await license(`LIC-E2E-${Math.random().toString(36).slice(2, 8)}`, 2, 1);
@@ -116,6 +115,21 @@ describe('BE-09 · BE-13 · hồ sơ phần mềm và ghế đang gán', () => {
     ])('%s → được', async (_name, patch) => {
       const id = await license(`LIC-E2E-${Math.random().toString(36).slice(2, 8)}`, 2, 1);
       expect(await failure(software.update(ACTOR, id, patch as never))).toBeNull();
+    });
+
+    it('thanh lý khi còn ghế: tự gỡ mọi ghế, mỗi ghế một dòng lịch sử (Q-03)', async () => {
+      const id = await license('LIC-E2E-THANHLY', 2, 1);
+      expect(await failure(software.update(ACTOR, id, { status: 'retired' } as never))).toBeNull();
+      const open = await scratch.pool.query<{ n: number }>(
+        `SELECT count(*)::int AS n FROM license_assignment WHERE software_id = $1 AND released_at IS NULL`,
+        [id],
+      );
+      expect(open.rows[0].n).toBe(0);
+      const hist = await scratch.pool.query<{ n: number }>(
+        `SELECT count(*)::int AS n FROM software_history WHERE software_id = $1 AND action = 'license-released'`,
+        [id],
+      );
+      expect(hist.rows[0].n).toBe(2); // hai ghế đang gán → hai dòng
     });
 
     it('không còn ghế thì thanh lý được', async () => {

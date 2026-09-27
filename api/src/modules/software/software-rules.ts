@@ -178,11 +178,7 @@ export function seatConflicts(
       `Đang dùng ${seats.used} ghế, không hạ tổng xuống ${next.seatTotal} được. Gỡ bớt ghế trước.`,
     );
   }
-  if (next.status === 'retired') {
-    errors.push(
-      `Còn ${seats.used} ghế đang gán vào máy. Gỡ hết ghế trước khi thanh lý.`,
-    );
-  }
+  // Thanh lý khi còn ghế KHÔNG phải xung đột: service tự gỡ các ghế đó (QUYET-DINH Q-03).
   return errors;
 }
 

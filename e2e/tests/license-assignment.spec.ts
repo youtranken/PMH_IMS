@@ -175,7 +175,7 @@ test.describe('Gán license theo seat', () => {
   });
 
   /** BE-09: sửa hồ sơ không được bỏ rơi ghế đang gán; hồ sơ đã thanh lý không nhận ghế mới. */
-  test('sửa hồ sơ đang có ghế bị chặn, gán vào hồ sơ đã thanh lý bị chặn', async ({ page }) => {
+  test('sửa hồ sơ bỏ rơi ghế bị chặn; thanh lý tự gỡ ghế; hồ sơ đã thanh lý không nhận ghế', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
     const licenseId = await createLicense(page, `LIC-E2E-GUARD-${stamp}`, 5);
@@ -189,11 +189,15 @@ test.describe('Gán license theo seat', () => {
         headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
         data,
       });
-    for (const data of [{ seatTotal: 1 }, { status: 'retired' }]) {
-      const res = await patch(licenseId, data);
-      expect(res.status()).toBe(409);
-      expect(await res.json()).toMatchObject({ code: 'SOFTWARE_SEATS_IN_USE' });
-    }
+    const shrink = await patch(licenseId, { seatTotal: 1 });
+    expect(shrink.status()).toBe(409);
+    expect(await shrink.json()).toMatchObject({ code: 'SOFTWARE_SEATS_IN_USE' });
+
+    // Thanh lý khi còn ghế: hệ thống tự gỡ cả hai ghế (QUYET-DINH Q-03), không chặn.
+    expect((await patch(licenseId, { status: 'retired' })).status()).toBe(200);
+    const seatsLeft = await page.request.get(`/api/v1/software/${licenseId}/assignments`);
+    expect(seatsLeft.status()).toBe(200);
+    expect(await seatsLeft.json(), 'mọi ghế phải được gỡ khi thanh lý').toHaveLength(0);
 
     const retiredId = await createLicense(page, `LIC-E2E-RETIRED-${stamp}`, 5);
     expect((await patch(retiredId, { status: 'retired' })).status()).toBe(200);
