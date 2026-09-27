@@ -21,7 +21,9 @@ export class MailTransportService {
 
   private get transport(): Transporter {
     if (this.transporter) return this.transporter;
-    const host = process.env.SMTP_HOST ?? 'mailpit';
+    // Không rơi về mailpit (OPS-01): thiếu SMTP_HOST ở prod là mọi thư đi vào hư không.
+    const host = process.env.SMTP_HOST;
+    if (!host) throw new Error('Thiếu SMTP_HOST — prod là smtp.gmail.com, dev là mailpit.');
     const port = Number(process.env.SMTP_PORT ?? 1025);
     const user = process.env.SMTP_USER ?? '';
     const pass = user ? readSecretFile('SMTP_PASSWORD_FILE', false) : '';

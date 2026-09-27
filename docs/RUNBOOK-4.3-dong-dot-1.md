@@ -85,6 +85,7 @@ $ umask 077
 $ echo "1=$(openssl rand -hex 32)" > secrets/master_key
 $ openssl rand -hex 32 > secrets/password_pepper
 $ printf '%s' '<App Password của hộp thư SMTP>' > secrets/smtp_password
+$ chmod 600 secrets/master_key secrets/password_pepper secrets/smtp_password
 $ sudo chown 1000:1000 secrets/*        # container api/worker chạy uid 1000
 ```
 
@@ -290,7 +291,7 @@ Chỉ làm **sau khi E đỗ**. Dùng đúng luồng nhập Excel — không có
    $ docker compose up -d
    ```
 
-   api tự đặt mật khẩu cho `ims_app` theo `APP_DB_PASSWORD` lúc khởi động.
+   Service `migrate` (chạy một lần trước `api`) đặt mật khẩu cho `ims_app` theo `APP_DB_PASSWORD`.
 4. Kiểm như **B2**, rồi trỏ DNS sang máy mới. Chạy lại **D** trên máy mới.
 
 ---

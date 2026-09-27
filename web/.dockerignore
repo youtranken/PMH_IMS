@@ -6,3 +6,6 @@ coverage
 .env*
 test-results
 playwright-report
+*.spec.ts
+*.test.ts
+*.test.tsx
