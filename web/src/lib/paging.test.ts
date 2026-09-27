@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clampPage, lastPageOf } from './paging';
+import { clampPage, lastPageOf, pageWindow } from './paging';
 
 describe('lastPageOf — danh sách rỗng vẫn là trang 1', () => {
   it.each([
@@ -30,5 +30,21 @@ describe('clampPage — không bao giờ đứng trên một trang không tồn 
 
   it.each(cases)('$name', ({ page, total, limit, expected }) => {
     expect(clampPage(page, total, limit)).toBe(expected);
+  });
+});
+
+describe('pageWindow — dãy số trang có lược "…"', () => {
+  it.each<[string, number, number, (number | 'gap')[]]>([
+    ['chỉ một trang', 1, 1, [1]],
+    ['năm trang, đứng trang 3 — không cần lược', 3, 5, [1, 2, 3, 4, 5]],
+    ['giữa dãy dài', 5, 20, [1, 'gap', 4, 5, 6, 'gap', 20]],
+    ['đầu dãy dài', 1, 20, [1, 2, 'gap', 20]],
+    ['cuối dãy dài', 20, 20, [1, 'gap', 19, 20]],
+    // Khoảng lược chỉ một trang thì in luôn số đó: "1 … 3" tốn chỗ y như "1 2 3".
+    ['khoảng lược một trang ở đầu', 4, 20, [1, 2, 3, 4, 5, 'gap', 20]],
+    ['khoảng lược một trang ở cuối', 17, 20, [1, 'gap', 16, 17, 18, 19, 20]],
+    ['trang vượt khoảng thì kẹp về cuối', 99, 6, [1, 'gap', 5, 6]],
+  ])('%s', (_ten, page, last, expected) => {
+    expect(pageWindow(page, last)).toEqual(expected);
   });
 });

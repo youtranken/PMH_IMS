@@ -73,6 +73,36 @@
   color: var(--ink-2);
 }
 .pager-size select { font-size: var(--fs-sm); padding: 2px 1.6rem 2px var(--space-3); }
+/* Dãy số trang `1 … 4 5 6 … 20` — cùng ô bấm 32px với ‹ ›. */
+.pager-pages {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pager-num {
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 var(--space-3);
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
+}
+.pager-num.is-current {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  color: var(--primary-ink);
+  font-weight: var(--fw-semibold);
+}
+.pager-gap { color: var(--muted); padding: 0 var(--space-1); }
+.pager-jump {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--ink-2);
+}
+.pager-jump .inp { width: 4.5rem; padding: 2px var(--space-3); font-size: var(--fs-sm); }
 
 /* Ô nhập: gợi ý + lỗi */
 .field-hint { font-size: var(--fs-xs); }
@@ -867,6 +897,8 @@ table.access-grid thead .access-row-head {
   .toast-stack { right: var(--space-5); left: var(--space-5); bottom: var(--space-5); max-width: none; }
   .pager { flex-wrap: wrap; gap: var(--space-4); }
   .pager-info { width: 100%; }
+  /* 390px: "Trang x/y" đã nói đủ vị trí; dãy số nhường chỗ cho ‹ › và ô "Tới trang". */
+  .pager-pages { display: none; }
 }
 
 /* --- Loading / rỗng / 404 (load-state.tsx) -------------------------------------

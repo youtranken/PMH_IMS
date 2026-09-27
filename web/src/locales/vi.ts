@@ -57,6 +57,10 @@ export default {
     prev: 'Trang trước',
     next: 'Trang sau',
     perPage: 'Số dòng',
+    pageN: 'Trang {{page}}',
+    jumpTo: 'Tới trang',
+    jumpGo: 'Đi',
+    jumpGoLabel: 'Đi tới trang',
   },
   dataTable: {
     selectAll: 'Chọn tất cả',

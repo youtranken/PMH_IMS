@@ -2360,6 +2360,30 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       pager.getByRole('button', { name: 'Trang trước' }),
       'và nút "Trang trước" phải bật lên',
     ).toBeEnabled();
+
+    // Dãy số trang: trang đang xem mang aria-current, bấm số là nhảy thẳng tới đó.
+    await expect(
+      pager.getByRole('button', { name: 'Trang 2', exact: true }),
+      'trang đang xem phải được đánh dấu aria-current="page"',
+    ).toHaveAttribute('aria-current', 'page');
+    await pager.getByRole('button', { name: 'Trang 1', exact: true }).click();
+    await expect(page.getByRole('row'), 'bấm số 1 thì về trang đầu, 10 dòng').toHaveCount(11);
+
+    /*
+     * FE-03 — trang KHÔNG TỒN TẠI trên thanh địa chỉ (link cũ, gõ tay) phải được kéo về trang
+     * cuối, không phải "91–12 trên 12 dòng" kèm câu rỗng "chưa có thiết bị nào".
+     */
+    const xa = new URL(page.url());
+    xa.searchParams.set('page', '99');
+    await page.goto(xa.toString());
+    await expect(page.getByRole('row'), '?page=99 của 12 dòng phải rơi về trang 2').toHaveCount(3);
+    await expect(
+      page.getByRole('navigation', { name: 'Trang', exact: true }).getByRole('button', {
+        name: 'Trang 2',
+        exact: true,
+      }),
+    ).toHaveAttribute('aria-current', 'page');
+    await expect(page).toHaveURL(/[?&]page=2(&|$)/);
   });
 
   /*
