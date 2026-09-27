@@ -1,5 +1,6 @@
 import {
   daysBetween,
+  pickExpiring,
   pickLoadedSubnets,
   pickRecent,
   pickStaleOwners,
@@ -103,5 +104,38 @@ describe('pickRecent — vừa xảy ra trong bao nhiêu ngày', () => {
 
   it('mốc ở tương lai vẫn hiện, để có người nhìn thấy dữ liệu sai', () => {
     expect(pickRecent(rows, 7, NOW).map((row) => row.id)).toContain('tuong-lai');
+  });
+});
+
+describe('pickExpiring — mục quá hạn không được chen mất mục sắp tới', () => {
+  const up = (n: number) => Array.from({ length: n }, (_, i) => ({ id: `up${i + 2}`, daysLeft: i + 2 }));
+  const over = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ id: `qua${i + 1}`, daysLeft: -300 + i }));
+
+  const cases: { name: string; upcoming: number; overdue: number; expected: string[] }[] = [
+    {
+      name: '20 mục quá hạn cũ + mục còn 2 ngày → mục 2 ngày vẫn lên',
+      upcoming: 1,
+      overdue: 20,
+      expected: ['qua1', 'qua2', 'qua3', 'qua4', 'qua5', 'qua6', 'qua7', 'up2'],
+    },
+    {
+      name: 'nhiều mục sắp tới → quá hạn chỉ giữ phần dành riêng, còn lại cho sắp tới',
+      upcoming: 10,
+      overdue: 10,
+      expected: ['qua1', 'qua2', 'qua3', 'up2', 'up3', 'up4', 'up5', 'up6'],
+    },
+    {
+      name: 'không có quá hạn → toàn mục sắp tới, gấp nhất trước',
+      upcoming: 10,
+      overdue: 0,
+      expected: ['up2', 'up3', 'up4', 'up5', 'up6', 'up7', 'up8', 'up9'],
+    },
+    { name: 'ít hơn sức chứa → hiện hết', upcoming: 2, overdue: 1, expected: ['qua1', 'up2', 'up3'] },
+    { name: 'rỗng', upcoming: 0, overdue: 0, expected: [] },
+  ];
+
+  it.each(cases)('$name', ({ upcoming, overdue, expected }) => {
+    expect(pickExpiring(up(upcoming), over(overdue), 8, 3).map((row) => row.id)).toEqual(expected);
   });
 });

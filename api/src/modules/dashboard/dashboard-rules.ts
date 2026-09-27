@@ -96,3 +96,29 @@ export function pickRecent<T extends RecentInput>(
     .filter((row) => row.updatedAt !== null && daysBetween(row.updatedAt, now) <= withinDays)
     .sort((a, b) => (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0));
 }
+
+export interface ExpiringInput {
+  daysLeft: number;
+}
+
+/**
+ * Chọn mục cho khối "sắp hết hạn" của trang chủ.
+ *
+ * Mục quá hạn luôn có ngày nhỏ nhất, nên cắt `max` dòng đầu của một danh sách sắp theo ngày thì
+ * vài hồ sơ quá hạn lâu năm chiếm trọn khối, và chứng chỉ còn 2 ngày — thứ còn kịp cứu — không
+ * bao giờ lên. Nên quá hạn chỉ được giữ tối đa `overdueSlots` chỗ; chỗ còn lại dành cho mục sắp
+ * tới gấp nhất, và chỉ khi sắp tới không đủ lấp thì quá hạn mới lấp tiếp.
+ *
+ * `upcoming` phải đã sắp gấp nhất trước; `overdue` giữ nguyên thứ tự nơi gọi đưa.
+ */
+export function pickExpiring<T extends ExpiringInput>(
+  upcoming: T[],
+  overdue: T[],
+  max: number,
+  overdueSlots: number,
+): T[] {
+  const reserved = Math.min(overdueSlots, overdue.length, max);
+  const soon = upcoming.slice(0, max - reserved);
+  const late = overdue.slice(0, max - soon.length);
+  return [...late, ...soon].sort((a, b) => a.daysLeft - b.daysLeft);
+}

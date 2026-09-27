@@ -11,15 +11,31 @@ function row(id: string, daysLeft: number) {
   return { id, label: id, kind: 'ssl', start: null, end: `d${daysLeft}`, link: `/x/${id}`, daysLeft };
 }
 
-function buildService(failedKinds: string[]): DashboardService {
+type ListOptions = { includeExpired?: boolean; state?: string; limit?: number };
+
+/** Nguồn giả trả lời ĐÚNG câu được hỏi: sắp tới (không nhìn lùi) hoặc chỉ nhóm quá hạn. */
+function buildService(
+  failedKinds: string[],
+  data: { upcoming: ReturnType<typeof row>[]; overdue: ReturnType<typeof row>[] } = {
+    upcoming: [row('ssl-1', 2)],
+    overdue: [],
+  },
+): DashboardService {
   const expiry = {
-    list: () =>
-      Promise.resolve({
-        items: [row('ssl-1', 2)],
-        total: 1,
-        summary: { expired: 0, critical: 1, warning: 0 },
+    list: (options: ListOptions = {}) => {
+      const all =
+        options.state === 'expired'
+          ? data.overdue
+          : options.includeExpired === false
+            ? data.upcoming
+            : [...data.overdue, ...data.upcoming];
+      return Promise.resolve({
+        items: all.slice(0, options.limit ?? all.length),
+        total: all.length,
+        summary: { expired: 0, critical: 0, warning: 0 },
         failedKinds,
-      }),
+      });
+    },
   } as unknown as ExpiryApiService;
   const empty = () => Promise.resolve([]);
   return new DashboardService(
@@ -44,5 +60,22 @@ describe('Khối "sắp hết hạn" khi một nguồn hạn lỗi', () => {
   ])('nguồn lỗi %j → available = %s', async (failed, available) => {
     const board = await buildService(failed).build({ email: 'sep@pmh.com.vn', role: 'admin' });
     expect(board.expiring.available).toBe(available);
+  });
+});
+
+/**
+ * BE-05 — hai mươi hồ sơ quá hạn lâu năm không được đẩy chứng chỉ còn 2 ngày ra khỏi khối.
+ */
+describe('Khối "sắp hết hạn" khi có nhiều mục quá hạn', () => {
+  const overdue = Array.from({ length: 20 }, (_, i) => row(`qua-${i}`, -300 + i));
+
+  it('mục còn 2 ngày vẫn lên, và total đếm đủ cả hai nhóm', async () => {
+    const board = await buildService([], { upcoming: [row('ssl-2-ngay', 2)], overdue }).build({
+      email: 'sep@pmh.com.vn',
+      role: 'admin',
+    });
+    expect(board.expiring.items.map((item) => item.label)).toContain('ssl-2-ngay');
+    expect(board.expiring.items.length).toBeLessThanOrEqual(8);
+    expect(board.expiring.total).toBe(21);
   });
 });
