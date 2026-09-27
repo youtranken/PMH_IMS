@@ -726,10 +726,10 @@ function NatForm({
                 ariaLabel={t('nat.internalIp')}
                 placeholder={t('nat.pickIp')}
                 /*
-                 * Endpoint trả MỌI trạng thái vòng đời, chỉ lọc bản ghi đã hủy. Một IP
-                 * `suspect_dead` vẫn giữ `device_id` nên nó lọt vào đây trông y hệt một IP
-                 * khỏe — và người khai chĩa một rule NAT mới vào đúng địa chỉ mà IPAM đang
-                 * nghi là đã chết. Vẫn CHO chọn (có thể máy vừa sống lại), nhưng phải NÓI RA.
+                 * Endpoint trả MỌI trạng thái vòng đời, chỉ lọc bản ghi đã hủy. Một hồ sơ
+                 * đang TRỐNG mà còn mang `device_id` lọt vào đây trông y hệt một IP đang cấp —
+                 * và người khai chĩa một rule NAT mới vào một địa chỉ sổ IP nói là không có
+                 * chủ. Vẫn CHO chọn (sổ IP có thể chưa kịp cập nhật), nhưng phải NÓI RA.
                  */
                 options={(targetIps.data ?? []).map((ip) => ({
                   value: ip.address,

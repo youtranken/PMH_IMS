@@ -5,20 +5,14 @@ import { STATUS_KEY, type IpStatus, type SubnetSlot } from './ipam-types';
  *
  * `'voided'` KHÔNG phải một `IpStatus` — trong DB nó là cột `voided_at`, một tầng nằm cạnh
  * `status` chứ không nằm trong nó. Nhưng với người đọc bảng thì nó là một rổ ngang hàng với
- * bốn trạng thái kia, vì câu hỏi họ đang hỏi là "ô này dùng được không".
+ * các trạng thái kia, vì câu hỏi họ đang hỏi là "ô này dùng được không".
  */
 export type SlotBucket = IpStatus | 'voided';
 
 /** Bộ lọc trạng thái của màn dải — "tất cả" là một lựa chọn ngang hàng với các rổ. */
 export type SlotFilter = 'all' | SlotBucket;
 
-export const SLOT_FILTERS: SlotFilter[] = [
-  'all',
-  'assigned',
-  'free',
-  'suspect_dead',
-  'reclaimed',
-];
+export const SLOT_FILTERS: SlotFilter[] = ['all', 'assigned', 'free'];
 
 /**
  * Chip "Đã ẩn" chỉ xuất hiện khi người dùng đã bật ô tick "Hiện cả hồ sơ đã ẩn" (B-04).
@@ -111,8 +105,6 @@ export function countSlots(slots: SubnetSlot[]): Record<SlotFilter, number> {
     all: slots.length,
     assigned: 0,
     free: 0,
-    suspect_dead: 0,
-    reclaimed: 0,
     voided: 0,
   };
   for (const slot of slots) counts[slotStatus(slot)] += 1;
@@ -122,7 +114,7 @@ export function countSlots(slots: SubnetSlot[]): Record<SlotFilter, number> {
 /**
  * Kéo số trang về khoảng còn tồn tại.
  *
- * Đang ở trang 5 của "Tất cả" rồi bấm sang "Nghi chết" (chỉ có 3 dòng) mà giữ nguyên trang 5
+ * Đang ở trang 5 của "Tất cả" rồi bấm sang "Trống" (chỉ có 3 dòng) mà giữ nguyên trang 5
  * thì bảng rỗng trơn — người dùng kết luận là không có dòng nào, trong khi có ba dòng ở
  * trang 1. Danh sách rỗng thật thì vẫn là trang 1, không phải trang 0.
  */

@@ -6,6 +6,7 @@ import {
   shouldIsolateAssigned,
   pageSlots,
   slotStatus,
+  SLOT_FILTERS,
   SLOT_PAGE_SIZE,
 } from './slot-paging';
 import type { IpStatus, SubnetSlot } from './ipam-types';
@@ -47,8 +48,6 @@ describe('slotStatus — ô chưa có hồ sơ và hồ sơ trạng thái free �
   const cases: { name: string; slot: SubnetSlot; expected: IpStatus }[] = [
     { name: 'ô trống chưa có hồ sơ', slot: free('10.0.0.9'), expected: 'free' },
     { name: 'hồ sơ đang dùng', slot: record('10.0.0.1', 'assigned'), expected: 'assigned' },
-    { name: 'hồ sơ nghi chết', slot: record('10.0.0.2', 'suspect_dead'), expected: 'suspect_dead' },
-    { name: 'hồ sơ đã thu hồi', slot: record('10.0.0.3', 'reclaimed'), expected: 'reclaimed' },
     // Hồ sơ CÓ trong DB nhưng trạng thái free: với người đọc vẫn là "chỗ này trống".
     { name: 'hồ sơ trạng thái trống', slot: record('10.0.0.4', 'free'), expected: 'free' },
   ];
@@ -60,33 +59,35 @@ describe('slotStatus — ô chưa có hồ sơ và hồ sơ trạng thái free �
   }
 });
 
+describe('SLOT_FILTERS — chip lọc theo hai trạng thái (Q-02)', () => {
+  it('chỉ có Tất cả · Đang cấp · Trống', () => {
+    expect(SLOT_FILTERS).toEqual(['all', 'assigned', 'free']);
+  });
+});
+
 describe('countSlots + filterSlots — con số trên nút phải khớp số dòng bấm ra', () => {
   const slots: SubnetSlot[] = [
     record('10.0.0.1', 'assigned'),
     record('10.0.0.2', 'assigned'),
-    record('10.0.0.3', 'suspect_dead'),
-    record('10.0.0.4', 'reclaimed'),
     record('10.0.0.5', 'free'),
     free('10.0.0.6'),
     free('10.0.0.7'),
   ];
 
-  it('đếm đủ sáu nhóm, "tất cả" bằng tổng', () => {
+  it('đếm đủ bốn nhóm, "tất cả" bằng tổng', () => {
     expect(countSlots(slots)).toEqual({
-      all: 7,
+      all: 5,
       assigned: 2,
       free: 3,
-      suspect_dead: 1,
-      reclaimed: 1,
-      // Rổ thứ sáu từ 23/09 (B-04). `toEqual` trên cả vật thể là có chủ ý: thêm một rổ mà
-      // quên khai ở đây thì bài này đỏ, thay vì để một rổ mới lặng lẽ không ai kiểm.
+      // `toEqual` trên cả vật thể là có chủ ý: thêm một rổ mà quên khai ở đây thì bài này
+      // đỏ, thay vì để một rổ mới lặng lẽ không ai kiểm.
       voided: 0,
     });
   });
 
   it('mỗi con số đếm được phải bằng đúng số dòng lọc ra', () => {
     const counts = countSlots(slots);
-    for (const filter of ['all', 'assigned', 'free', 'suspect_dead', 'reclaimed', 'voided'] as const) {
+    for (const filter of ['all', 'assigned', 'free', 'voided'] as const) {
       expect(filterSlots(slots, filter)).toHaveLength(counts[filter]);
     }
   });
@@ -96,8 +97,6 @@ describe('countSlots + filterSlots — con số trên nút phải khớp số d�
       all: 0,
       assigned: 0,
       free: 0,
-      suspect_dead: 0,
-      reclaimed: 0,
       voided: 0,
     });
   });
@@ -175,22 +174,12 @@ describe('shouldIsolateAssigned', () => {
 /**
  * HỒ SƠ ĐÃ ẨN LÀ MỘT RỔ RIÊNG, KHÔNG PHẢI "TRỐNG" (B-04).
  *
- * ===== LỖ ĐANG VÁ =====
+ * Hồ sơ bị ẩn giữ nguyên `status` cũ, phần lớn là `'free'`. Đếm nó vào "Trống" thì thẻ dải nói
+ * "còn hồ sơ mang lịch sử" trong khi bảng bảo ô đó trống, cấp được — và ai đó sẽ cấp đè lên
+ * một địa chỉ đang mang lịch sử.
  *
- * Đo trên dải `172.16.15.0/24`: chip đếm `Tất cả 254 · Đang cấp 0 · Trống 254 · Nghi chết 0 ·
- * Đã thu hồi 0`, nhưng hàng `172.16.15.3` hiện chữ "Đã ẩn". Bấm lọc "Trống" thì dòng "Đã ẩn"
- * HIỆN LÊN trong kết quả. DB xác nhận: `status='free'` kèm `voided_at` khác null.
- *
- * Ngay phía trên, thẻ dải nói *"Giữ lại vì còn 1 hồ sơ IP mang lịch sử — không xóa hẳn được"*.
- * Hai câu trên cùng một màn nói ngược nhau, và bên nói sai là bên bảo ô đó **trống, cấp được**
- * — tức bên sẽ khiến ai đó cấp đè lên một địa chỉ đang mang lịch sử.
- *
- * ===== VÌ SAO SỬA Ở `slotStatus` =====
- *
- * Chú thích của chính hàm ấy đã nói ra chỗ đúng: *"Gộp ở đúng một chỗ này để bộ lọc, con số
- * đếm và bảng không bao giờ trả lời lệch nhau."* Nó gộp đúng một cặp (ô chưa có hồ sơ ↔ hồ sơ
- * trạng thái `free`) rồi dừng lại, không hỏi tiếp `voided_at`. Vá ở `countSlots` thôi thì con
- * số đúng mà bộ lọc vẫn sai; vá ở `filterSlots` thôi thì ngược lại. Một chỗ, ba nơi hưởng.
+ * Sửa ở `slotStatus` vì đó là chỗ duy nhất bộ lọc, con số đếm và bảng cùng hỏi: vá ở
+ * `countSlots` thôi thì con số đúng mà bộ lọc vẫn sai, và ngược lại.
  */
 describe('slotStatus — hồ sơ đã ẩn không đội lốt "trống"', () => {
   function daAn(address: string, status: IpStatus): SubnetSlot {
@@ -202,9 +191,9 @@ describe('slotStatus — hồ sơ đã ẩn không đội lốt "trống"', () =
   });
 
   it('ẩn thắng cả trạng thái vòng đời khác', () => {
-    // `voided_at` là một tầng khác `status`: một hồ sơ từng "đã thu hồi" rồi bị ẩn thì thứ
-    // người dùng cần biết trước hết là nó đã bị ẩn.
-    expect(slotStatus(daAn('10.0.0.6', 'reclaimed'))).toBe('voided');
+    // `voided_at` là một tầng khác `status`: một hồ sơ đang dùng rồi bị ẩn thì thứ người dùng
+    // cần biết trước hết là nó đã bị ẩn.
+    expect(slotStatus(daAn('10.0.0.6', 'assigned'))).toBe('voided');
   });
 
   it('countSlots tách hẳn rổ "đã ẩn" ra khỏi "trống"', () => {
@@ -232,12 +221,11 @@ describe('slotStatus — hồ sơ đã ẩn không đội lốt "trống"', () =
     const slots = [
       free('10.0.0.1'),
       record('10.0.0.2', 'assigned'),
-      record('10.0.0.3', 'suspect_dead'),
       daAn('10.0.0.4', 'free'),
-      daAn('10.0.0.5', 'reclaimed'),
+      daAn('10.0.0.5', 'assigned'),
     ];
     const counts = countSlots(slots);
-    const tong = counts.assigned + counts.free + counts.suspect_dead + counts.reclaimed + counts.voided;
+    const tong = counts.assigned + counts.free + counts.voided;
     expect(tong).toBe(counts.all);
   });
 });

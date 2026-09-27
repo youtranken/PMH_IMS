@@ -75,7 +75,7 @@ export class IpDeviceRetirement implements DeviceReleaser, OnModuleInit {
     for (const ip of ips) {
       // Đi qua `transitionWithin` chứ không tự UPDATE: máy trạng thái, CAS và hai dòng sổ
       // (`ip_history` + audit) phải là MỘT bản với đường bấm tay.
-      await this.addresses.transitionWithin(tx, actor, ip.id, 'reclaimed', {
+      await this.addresses.transitionWithin(tx, actor, ip.id, 'free', {
         reason: 'Thiết bị đã thanh lý',
       });
     }

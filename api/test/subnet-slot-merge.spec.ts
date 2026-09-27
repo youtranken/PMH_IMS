@@ -96,7 +96,7 @@ describe('Ô địa chỉ trong dải khi một địa chỉ có nhiều hồ s�
     await scratch.pool.query(
       `INSERT INTO ip_address (subnet_id, address, status, used_by, assigned_by,
                                voided_at, voided_by, void_reason)
-       VALUES ($1, $2, 'reclaimed', $3, $4, now(), $4, 'Go nham')`,
+       VALUES ($1, $2, 'free', $3, $4, now(), $4, 'Go nham')`,
       [subnetId, ADDRESS, usedBy, ACTOR],
     );
   }

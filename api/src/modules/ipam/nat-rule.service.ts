@@ -638,9 +638,7 @@ export class NatRuleService {
   private warnIfUnowned(ip: { status: IpStatus } | null, internalIp: string): string[] {
     if (!ip || isOccupying(ip.status)) return [];
     return [
-      ip.status === 'reclaimed'
-        ? `${internalIp} đang ở trạng thái "đã thu hồi" trong sổ IP — rule này sẽ mở port vào một địa chỉ không còn chủ. Kiểm tra lại sổ IP.`
-        : `${internalIp} đang ở trạng thái "trống" trong sổ IP — chưa cấp cho máy nào. Kiểm tra lại sổ IP.`,
+      `${internalIp} đang ở trạng thái "trống" trong sổ IP — chưa cấp cho máy nào. Kiểm tra lại sổ IP.`,
     ];
   }
 

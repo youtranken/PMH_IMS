@@ -4467,7 +4467,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     /*
      * Cả `main` có ĐÚNG ngần này nút. Dải đang chọn còn trống hoàn toàn (/29 = 6 host) nên
-     * phần bảng là con số biết trước: 5 nút lọc, 6 nút "Cấp IP này", 2 nút lật trang.
+     * phần bảng là con số biết trước: 3 nút lọc, 6 nút "Cấp IP này", 2 nút lật trang.
      */
     await expectHandleCounts(
       page.getByRole('main'),
@@ -4479,8 +4479,6 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
         ['Tất cả 6', 1],
         ['Đang cấp 0', 1],
         ['Trống 6', 1],
-        ['Nghi chết 0', 1],
-        ['Đã thu hồi 0', 1],
         ['Cấp IP này', 6],
         ['Trang trước', 1],
         ['Trang sau', 1],
@@ -4556,7 +4554,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
    * trống". Câu thứ hai sống trong nhóm nút lọc `role="group"` mang con số đếm của CẢ dải, và
    * trong những dòng "Trống" có nút "Cấp IP này" ngay tại chỗ.
    *
-   * `ipam.spec.ts` đã kiểm rằng lọc ra ĐÚNG dòng. Bài này hỏi câu khác: nhóm lọc có ĐÚNG NĂM
+   * `ipam.spec.ts` đã kiểm rằng lọc ra ĐÚNG dòng. Bài này hỏi câu khác: nhóm lọc có ĐÚNG BA
    * lựa chọn ấy không, bảng có ĐÚNG SÁU cột ấy không, và dòng trống có đúng một nút.
    *
    * ĐỎ KHI: một trạng thái rơi khỏi `SLOT_FILTERS` (từ đó không lọc ra được nữa và cũng không
@@ -4587,12 +4585,12 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       `${cidr} — ${name}`,
     ]);
 
-    /* ----- Nhóm nút lọc: đúng năm lựa chọn, kèm con số của CẢ dải ----- */
+    /* ----- Nhóm nút lọc: đúng ba lựa chọn (Q-02), kèm con số của CẢ dải ----- */
     const filters = page.getByRole('group', { name: 'Trạng thái' });
     await expect(
       filters.getByRole('button'),
       '/29 = 6 host; một đã cấp nên còn 5 trống. Con số phải nằm NGAY trên nút, đúng thứ tự SLOT_FILTERS',
-    ).toHaveText(['Tất cả 6', 'Đang cấp 1', 'Trống 5', 'Nghi chết 0', 'Đã thu hồi 0']);
+    ).toHaveText(['Tất cả 6', 'Đang cấp 1', 'Trống 5']);
 
     /* ----- Bảng: đúng sáu cột ----- */
     const table = page.getByRole('table');
@@ -4617,11 +4615,11 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'lọc "Trống" thì hàng đã cấp phải biến khỏi bảng',
     ).toHaveCount(0);
 
-    await filters.getByRole('button', { name: /^Nghi chết/ }).click();
+    await filters.getByRole('button', { name: /^Đang cấp/ }).click();
     await expect(
       table.getByRole('row'),
-      'không có dòng nào nghi chết → chỉ còn hàng tiêu đề, chứ không phải bảng cũ đứng im',
-    ).toHaveCount(1);
+      'lọc "Đang cấp" còn đúng một dòng + tiêu đề, chứ không phải bảng cũ đứng im',
+    ).toHaveCount(2);
 
     await filters.getByRole('button', { name: /^Tất cả/ }).click();
     await expect(table.getByRole('row')).toHaveCount(7);
@@ -4797,54 +4795,52 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(ipRow(page, address).getByText('Đang cấp')).toBeVisible();
     expect(
       await rowActionNames(page, address),
-      'từ "Đang cấp" đi được sang Nghi chết và Thu hồi; Lịch sử luôn có; Sửa/Xóa của SA. Hai việc nguy hiểm xếp CUỐI',
-    ).toEqual(['Nghi chết', 'Lịch sử', 'Sửa', 'Thu hồi', 'Ẩn hồ sơ']);
+      'từ "Đang cấp" chỉ đi được sang Thu hồi (Q-02); Lịch sử luôn có; Sửa/Ẩn của SA. Hai việc nguy hiểm xếp CUỐI',
+    ).toEqual(['Lịch sử', 'Sửa', 'Thu hồi', 'Ẩn hồ sơ']);
 
-    /* ----- Hộp chuyển trạng thái: bước KHÔNG cấp cho ai thì KHÔNG hỏi chủ mới ----- */
-    await rowAction(page, address, 'Nghi chết');
-    const suspect = page.getByRole('dialog', {
-      name: new RegExp(`Nghi chết\\s*—\\s*${esc(address)}`),
+    /* ----- Hộp "Thu hồi": KHÔNG hỏi chủ mới — chủ cũ đi khỏi, không ai dọn vào ----- */
+    await rowAction(page, address, 'Thu hồi');
+    const reclaim = page.getByRole('dialog', {
+      name: new RegExp(`Thu hồi\\s*—\\s*${esc(address)}`),
     });
-    await expect(suspect).toBeVisible();
-    await expectHandles(suspect, 'textbox', ['Lý do'], 'Hộp "Nghi chết"');
+    await expect(reclaim).toBeVisible();
+    await expectHandles(reclaim, 'textbox', ['Lý do'], 'Hộp "Thu hồi"');
     await expect(
-      suspect.getByRole('combobox'),
-      'đánh dấu nghi chết KHÔNG đổi chủ — hỏi "ai dùng" ở đây là một câu hỏi trá hình',
+      reclaim.getByRole('combobox'),
+      'thu hồi KHÔNG cấp cho ai — hỏi "ai dùng" ở đây là một câu hỏi trá hình',
     ).toHaveCount(0);
     await expectHandles(
-      suspect,
+      reclaim,
       'button',
       ['Đóng hộp thoại', 'Hủy', 'Xác nhận'],
-      'Hộp "Nghi chết"',
+      'Hộp "Thu hồi"',
     );
-    await suspect
-      .getByRole('textbox', { name: 'Lý do', exact: true })
-      .fill('ping không thấy 3 ngày');
+    await reclaim.getByRole('textbox', { name: 'Lý do', exact: true }).fill('máy đã thanh lý');
     await confirmAction(page, 'Xác nhận');
-    await expect(suspect).toHaveCount(0);
+    await expect(reclaim).toHaveCount(0);
 
-    /* ----- Trạng thái 2: NGHI CHẾT — menu phải ĐỔI ----- */
-    await expect(ipRow(page, address).getByText('Nghi chết')).toBeVisible();
+    /* ----- Trạng thái 2: TRỐNG — menu phải ĐỔI ----- */
+    await expect(ipRow(page, address).getByText('Trống', { exact: true })).toBeVisible();
     expect(
       await rowActionNames(page, address),
-      'từ "Nghi chết" bước quay lại là "Vẫn dùng", KHÔNG còn "Nghi chết" nữa — menu đứng im nghĩa là nó không đọc trạng thái của chính hàng nó',
-    ).toEqual(['Vẫn dùng', 'Lịch sử', 'Sửa', 'Thu hồi', 'Ẩn hồ sơ']);
+      'từ "Trống" bước đi tiếp là "Cấp IP", KHÔNG còn "Thu hồi" nữa — menu đứng im nghĩa là nó không đọc trạng thái của chính hàng nó',
+    ).toEqual(['Cấp IP', 'Lịch sử', 'Sửa', 'Ẩn hồ sơ']);
 
-    /* ----- Và hộp "Vẫn dùng" thì NGƯỢC LẠI: có hỏi chủ, kèm chủ cũ điền sẵn ----- */
-    await rowAction(page, address, 'Vẫn dùng');
-    const stillUsed = page.getByRole('dialog', {
-      name: new RegExp(`Vẫn dùng\\s*—\\s*${esc(address)}`),
+    /* ----- Và hộp "Cấp IP" thì NGƯỢC LẠI: có hỏi chủ MỚI, và ô mở ra trống ----- */
+    await rowAction(page, address, 'Cấp IP');
+    const assign = page.getByRole('dialog', {
+      name: new RegExp(`Cấp IP\\s*—\\s*${esc(address)}`),
     });
-    await expect(stillUsed).toBeVisible();
-    await expectHandles(stillUsed, 'combobox', ['Người / bộ phận dùng'], 'Hộp "Vẫn dùng"');
+    await expect(assign).toBeVisible();
+    await expectHandles(assign, 'combobox', ['Người / bộ phận dùng'], 'Hộp "Cấp IP"');
     await expect(
-      stillUsed.getByRole('combobox', { name: 'Người / bộ phận dùng', exact: true }),
-      'máy tưởng chết hóa ra còn sống thì nó vẫn là chính nó — ô trống ở đây từng xóa mất chủ cũ trong im lặng',
-    ).toHaveValue('Chị Lan — Kế toán');
-    await expectHandles(stillUsed, 'textbox', ['Lý do'], 'Hộp "Vẫn dùng"');
-    await stillUsed.getByRole('button', { name: 'Đóng hộp thoại' }).click();
-    await expect(stillUsed).toHaveCount(0);
-    await expect(ipRow(page, address).getByText('Nghi chết')).toBeVisible();
+      assign.getByRole('combobox', { name: 'Người / bộ phận dùng', exact: true }),
+      'chủ cũ đã đi khỏi lúc thu hồi — điền sẵn tên họ là hồi sinh một chủ không còn',
+    ).toHaveValue('');
+    await expectHandles(assign, 'textbox', ['Lý do'], 'Hộp "Cấp IP"');
+    await assign.getByRole('button', { name: 'Đóng hộp thoại' }).click();
+    await expect(assign).toHaveCount(0);
+    await expect(ipRow(page, address).getByText('Trống', { exact: true })).toBeVisible();
   });
 
   /**

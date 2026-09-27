@@ -22,6 +22,10 @@ export interface IpHistoryRow {
   createdAt: string;
 }
 
+/*
+ * `suspect_dead` và `reclaimed` không còn là trạng thái sống (Q-02), nhưng `ip_history` là
+ * chỉ-thêm và giữ vĩnh viễn: dòng cũ vẫn mang hai tên đó và vẫn phải đọc ra chữ. Đừng dọn.
+ */
 const STATUS_LABEL: Record<string, string> = {
   free: 'history.ip.stFree',
   assigned: 'history.ip.stAssigned',
@@ -45,7 +49,7 @@ export function statusLabel(status: string | null | undefined, t: TFunction): st
 /**
  * Tên việc bằng tiếng Việt cho những hành động KHÔNG phải bước chuyển trạng thái.
  *
- * Bước chuyển đã tự mang tên tiếng Việt từ `transitionLabel` phía API ("Thu hồi", "Cấp lại"),
+ * Bước chuyển đã tự mang tên tiếng Việt từ `transitionLabel` phía API ("Cấp IP", "Thu hồi"),
  * nhưng bốn cái còn lại thì API ghi thẳng khóa máy — nên bảng lịch sử đang xen kẽ "Thu hồi"
  * với "ip.voided". Ánh xạ ở web chứ không sửa dữ liệu đã ghi: `ip_history` là CHỈ-THÊM (AD-13),
  * mọi dòng cũ vẫn mang khóa máy và phải đọc được như dòng mới.
@@ -58,6 +62,7 @@ export const ACTION_LABEL: Record<string, string> = {
   'ip.assigned': 'history.ip.actAssigned',
   'ip.voided': 'history.ip.actVoided',
   'ip.restored': 'history.ip.actRestored',
+  'ip.status_merged': 'history.ip.actStatusMerged',
 };
 
 export function actionLabel(action: string, t: TFunction): string {

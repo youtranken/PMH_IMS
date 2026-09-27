@@ -3,6 +3,7 @@ import type { DevicePanel, DevicePanelProvider } from '../../common/device-panel
 import { DevicePanelRegistry } from '../../common/device-panels.registry';
 import { IpAddressService } from './ip-address.service';
 import { UI_PATHS } from '../../common/ui-paths';
+import type { IpStatus } from './ip-lifecycle';
 
 /**
  * Khu "Địa chỉ IP" trên trang chi tiết thiết bị (story 5.4, AC: một trang đủ thông tin khi
@@ -39,16 +40,12 @@ export class IpDevicePanel implements DevicePanelProvider, OnModuleInit {
   }
 }
 
-const STATUS_LABEL: Record<string, string> = {
+const STATUS_LABEL: Record<IpStatus, string> = {
   free: 'Trống',
   assigned: 'Đang cấp',
-  suspect_dead: 'Nghi chết',
-  reclaimed: 'Đã thu hồi',
 };
 
-const TONE: Record<string, 'ok' | 'warn' | 'muted'> = {
+const TONE: Record<IpStatus, 'ok' | 'warn' | 'muted'> = {
   free: 'muted',
   assigned: 'ok',
-  suspect_dead: 'warn',
-  reclaimed: 'muted',
 };

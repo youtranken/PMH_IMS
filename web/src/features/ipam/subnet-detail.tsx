@@ -180,7 +180,7 @@ export function SubnetPane({
    *
    * Đặt trước + nhả ghim thì thứ tự thành: reset → quyết, và dải mới được quyết lại tử tế.
    *
-   * BỘ LỌC phải theo trang (17/09/2026): đang soi "Nghi chết" ở dải A rồi bấm sang dải B là
+   * BỘ LỌC phải theo trang: đang soi "Đã ẩn" ở dải A rồi bấm sang dải B là
    * gặp một bảng TRỐNG TRƠN cho một dải đầy địa chỉ — nút lọc nằm tít trên, và không ai nghĩ
    * dải mới lại thừa hưởng bộ lọc của dải cũ.
    */
@@ -382,10 +382,9 @@ export function SubnetPane({
                       <td data-label={t("common.actions")}>
                         <div className="action-cell">
                           {/*
-                            Năm cái nút cạnh nhau trước đây ("Đánh dấu nghi chết" · "Thu hồi" ·
-                            "Lịch sử" · "Sửa" · "Xóa") làm cột cuối rộng hơn cả năm cột dữ liệu
-                            còn lại cộng lại, trên một bảng người ta mở ra để ĐỌC địa chỉ. Và số
-                            nút đổi theo từng dòng, nên mắt phải quét lại mỗi hàng.
+                            Gom vào một menu: bày từng nút cạnh nhau làm cột cuối rộng hơn cả các
+                            cột dữ liệu cộng lại, trên một bảng người ta mở ra để ĐỌC địa chỉ. Và
+                            số nút đổi theo từng dòng, nên mắt phải quét lại mỗi hàng.
                           */}
                           <RowActions
                             label={t("common.actionsOf", { subject: slot.address })}
@@ -411,7 +410,7 @@ export function SubnetPane({
                                     key: `to-${to}`,
                                     label: t(TRANSITION_LABEL[`${slot.status}->${to}`]),
                                     onSelect: () => setMoving({ record: slot, to }),
-                                    danger: to === "reclaimed",
+                                    danger: to === "free",
                                   }))
                                 : []),
                               {
@@ -466,9 +465,9 @@ export function SubnetPane({
 
           {/*
             BẢNG RỖNG PHẢI NÓI VÌ SAO RỖNG.
-            Trước 17/09/2026 pane này không có nhánh rỗng nào: lọc "Nghi chết" trên một dải
-            không có ô nào nghi chết cho ra một cái khung bảng trắng với đúng hàng tiêu đề, và
-            người dùng không có cách nào biết đó là "dải sạch" hay "màn hỏng". Câu trả lời nằm
+            Thiếu nhánh này thì lọc "Đang cấp" trên một dải chưa cấp ô nào cho ra một cái khung
+            bảng trắng với đúng hàng tiêu đề, và người dùng không có cách nào biết đó là "dải
+            sạch" hay "màn hỏng". Câu trả lời nằm
             ngay ở con số 0 trên chính nút họ vừa bấm — nhưng phải nói ra.
           */}
           {filtered.length === 0 ? (
@@ -745,18 +744,8 @@ function TransitionDialog({
 }) {
   const { t } = useTranslation();
   const [reason, setReason] = useState("");
-  /*
-   * "Xác nhận vẫn dùng" mở ra với chủ HIỆN TẠI đã điền sẵn, không phải ô trống.
-   *
-   * Ô trống ở đây từng là một câu hỏi trá hình: người trực thấy trống, để nguyên, bấm Xác
-   * nhận — và `used_by` bị xóa. Máy tưởng chết hóa ra còn sống thì nó vẫn là chính nó, chủ
-   * không đổi; điền sẵn nói đúng điều đó và vẫn cho sửa nếu quả thật đã đổi chủ.
-   *
-   * Lượt CẤP MỚI (`free`/`reclaimed` → `assigned`) vẫn mở ô trống — ở đó chưa có chủ nào.
-   */
-  const [usedBy, setUsedBy] = useState(
-    record.status === "suspect_dead" ? (record.usedBy ?? "") : "",
-  );
+  // Cấp IP là chủ MỚI dọn vào, nên ô người dùng mở ra trống — chưa có chủ nào để điền sẵn.
+  const [usedBy, setUsedBy] = useState("");
   const departments = useDepartments();
   const [error, setError] = useState<string | null>(null);
   const asksOwner = to === "assigned";
@@ -787,7 +776,7 @@ function TransitionDialog({
           <button
             type="submit"
             form="transition-form"
-            className={to === "reclaimed" ? "btn danger" : "btn primary"}
+            className={to === "free" ? "btn danger" : "btn primary"}
             disabled={move.isPending}
           >
             {move.isPending ? t("common.loading") : t("common.confirm")}
@@ -811,7 +800,7 @@ function TransitionDialog({
           );
         }}
       >
-        {to === "reclaimed" ? (
+        {to === "free" ? (
           <p className="muted">{t("ipam.reclaimHint")}</p>
         ) : null}
 

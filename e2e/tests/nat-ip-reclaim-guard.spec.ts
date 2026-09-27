@@ -114,7 +114,7 @@ test.describe('Thu hồi IP phải nhìn sổ NAT', () => {
 
     const blocked = await page.request.post(`/api/v1/ipam/addresses/${f.ipId}/transition`, {
       headers: f.headers,
-      data: { to: 'reclaimed', reason: 'Camera hong' },
+      data: { to: 'free', reason: 'Camera hong' },
     });
 
     expect(
@@ -152,10 +152,10 @@ test.describe('Thu hồi IP phải nhìn sổ NAT', () => {
 
     const ok = await page.request.post(`/api/v1/ipam/addresses/${f.ipId}/transition`, {
       headers: f.headers,
-      data: { to: 'reclaimed', reason: 'Camera hong' },
+      data: { to: 'free', reason: 'Camera hong' },
     });
     expect(ok.status(), "gỡ rule rồi thì thu hồi phải chạy").toBe(201);
-    expect(sql(`SELECT status FROM ip_address WHERE id = '${f.ipId}'`)).toBe('reclaimed');
+    expect(sql(`SELECT status FROM ip_address WHERE id = '${f.ipId}'`)).toBe('free');
   });
 
   /**
@@ -174,9 +174,9 @@ test.describe('Thu hồi IP phải nhìn sổ NAT', () => {
     const f = await setUp(page, stamp);
     await addNatRule(page, f, '8082');
 
-    // Đẩy thẳng về 'reclaimed' bằng SQL = giả lập dữ liệu có từ trước hàng rào.
+    // Đẩy thẳng về 'free' bằng SQL = giả lập dữ liệu có từ trước hàng rào.
     sql(
-      `UPDATE ip_address SET status = 'reclaimed', device_id = NULL, used_by = NULL ` +
+      `UPDATE ip_address SET status = 'free', device_id = NULL, used_by = NULL ` +
         `WHERE id = '${f.ipId}'`,
     );
 
@@ -193,7 +193,7 @@ test.describe('Thu hồi IP phải nhìn sổ NAT', () => {
 
   /**
    * Rule NAT trỏ tới một địa chỉ CHƯA có hồ sơ IPAM là hợp lệ (`linkIp` trả null, "không có
-   * cũng lưu được"). Nhưng trỏ vào một địa chỉ mà IPAM nói là ĐÃ THU HỒI thì đó là dấu hiệu
+   * cũng lưu được"). Nhưng trỏ vào một địa chỉ mà IPAM nói là TRỐNG (đã thu hồi) thì đó là dấu hiệu
    * hoặc sổ sai hoặc port mở nhầm chỗ — phải nói, dù không chặn.
    *
    * Không chặn ở chiều này là có chủ ý: người ta hay khai rule TRƯỚC khi dựng xong máy, và
@@ -207,7 +207,7 @@ test.describe('Thu hồi IP phải nhìn sổ NAT', () => {
     const f = await setUp(page, stamp);
 
     sql(
-      `UPDATE ip_address SET status = 'reclaimed', device_id = NULL, used_by = NULL ` +
+      `UPDATE ip_address SET status = 'free', device_id = NULL, used_by = NULL ` +
         `WHERE id = '${f.ipId}'`,
     );
 

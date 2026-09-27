@@ -490,7 +490,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     const ipId = ((await created.json()) as { id: string }).id;
     const released = await page.request.post(`/api/v1/ipam/addresses/${ipId}/transition`, {
       headers,
-      data: { to: 'reclaimed', reason: 'máy nghỉ' },
+      data: { to: 'free', reason: 'máy nghỉ' },
     });
     expect(released.status()).toBe(201);
 

@@ -972,8 +972,6 @@ export default {
     status: 'Trạng thái',
     statusFree: 'Trống',
     statusAssigned: 'Đang cấp',
-    statusSuspectDead: 'Nghi chết',
-    statusReclaimed: 'Đã thu hồi',
     device: 'Thiết bị',
     deviceHint: 'Máy nào đang giữ IP này. Bỏ trống nếu chỉ cấp cho một người.',
     deviceSearch: 'Gõ mã hoặc tên thiết bị…',
@@ -995,10 +993,7 @@ export default {
       'Thu hồi sẽ gỡ thiết bị và người dùng khỏi hồ sơ, trả địa chỉ về danh sách IP còn trống. ' +
       'Lịch sử vẫn giữ nguyên — sau này vẫn tra được IP này từng của ai.',
     trAssign: 'Cấp IP',
-    trSuspect: 'Nghi chết',
     trReclaim: 'Thu hồi',
-    trStillUsed: 'Vẫn dùng',
-    trReassign: 'Cấp lại',
   },
   nat: {
     title: 'Sổ NAT',
@@ -1484,6 +1479,7 @@ export default {
       reasonIs: 'lý do: {{reason}}',
       stFree: 'Trống',
       stAssigned: 'Đang cấp',
+      // Hai trạng thái đã bỏ (Q-02): chỉ còn để đọc các dòng lịch sử cũ.
       stSuspectDead: 'Nghi chết',
       stReclaimed: 'Đã thu hồi',
       actCreated: 'Tạo hồ sơ',
@@ -1491,6 +1487,7 @@ export default {
       actAssigned: 'Gán chủ',
       actVoided: 'Xóa hồ sơ',
       actRestored: 'Bật lại',
+      actStatusMerged: 'Gộp trạng thái',
     },
   },
   dashboard: {
