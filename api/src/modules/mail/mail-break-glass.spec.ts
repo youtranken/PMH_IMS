@@ -50,6 +50,8 @@ function consumer(
     payload: Record<string, unknown>;
     row?: ApprovalRecord | null;
     describe?: boolean;
+    /** Chỉ một người duyệt được trong hệ thống: `sa@pmh.com.vn`. */
+    onlySa?: boolean;
   },
 ) {
   const outbox = {
@@ -60,10 +62,14 @@ function consumer(
   const users = {
     getById: () => Promise.resolve(null),
     recipientsByRole: () =>
-      Promise.resolve([
-        { email: 'sa@pmh.com.vn', fullName: 'SA' },
-        { email: 'admin@pmh.com.vn', fullName: 'Admin' },
-      ]),
+      Promise.resolve(
+        options.onlySa
+          ? [{ email: 'sa@pmh.com.vn', fullName: 'SA' }]
+          : [
+              { email: 'sa@pmh.com.vn', fullName: 'SA' },
+              { email: 'admin@pmh.com.vn', fullName: 'Admin' },
+            ],
+      ),
     namesByEmails: (emails: string[]) =>
       Promise.resolve(new Map(emails.map((e) => [e, e === REQUESTER ? 'Trần Thị B' : e]))),
   } as unknown as UsersApiService;
@@ -118,6 +124,22 @@ describe('Thư xin duyệt break-glass', () => {
     expect(mail.text).toContain('/approvals/a1');
     // Nút to, bấm được bằng ngón tay trên điện thoại.
     expect(mail.html).toMatch(/display:block[^"]*text-align:center/);
+  });
+
+  it('Quản trị tự xin: thư xin duyệt không gửi cho chính người xin (bốn mắt)', async () => {
+    const [mail] = await send(
+      { payload: { approvalId: 'a1' }, row: record({ requester: 'Admin@pmh.com.vn' }) },
+      'approval.requested',
+    );
+    expect(mail.to).toEqual(['sa@pmh.com.vn']);
+  });
+
+  it('không còn ai khác duyệt được thì không gửi thư nào', async () => {
+    const sent = await send(
+      { payload: { approvalId: 'a1' }, row: record({ requester: 'sa@pmh.com.vn' }), onlySa: true },
+      'approval.requested',
+    );
+    expect(sent).toEqual([]);
   });
 
   it('không bao giờ chứa tên secret', async () => {

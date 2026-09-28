@@ -428,6 +428,7 @@ export default {
     serviceAccounts: 'Tài khoản dịch vụ',
     vaultAccess: 'Quyền két sắt',
     approvals: 'Duyệt yêu cầu',
+    approvalsMine: 'Yêu cầu xem két',
     vault: 'Két sắt',
     disposal: 'Kho thanh lý',
     documents: 'Tài liệu',
@@ -1243,25 +1244,47 @@ export default {
     // ("chỉ Quản trị xem được") giờ vừa sai vừa làm người đọc thôi không đi hỏi nữa.
     noPermission:
       'Bạn không có quyền trên đối tượng này. Nếu cần, đề nghị Quản trị gán quyền cho bạn.',
-    add: 'Cất secret',
+    /* Thuật ngữ két: "két" là nơi chứa của một hồ sơ, "ngăn" là một mật khẩu/khóa trong két.
+       Không dùng chữ "secret" trên giao diện; "Xoá vĩnh viễn" để không trùng "Thu hồi sớm" của
+       break-glass (cắt quyền tạm, không mất dữ liệu). */
+    add: 'Cất mật khẩu/khóa',
     edit: 'Sửa thông tin',
-    rotate: 'Xoay',
-    rotateTitle: 'Xoay giá trị: {{label}}',
+    rotate: 'Đổi giá trị',
+    rotateTitle: 'Đổi giá trị: {{label}}',
     rotateHint: 'Giá trị mới sẽ mã hóa lại từ đầu. Giá trị cũ không xem lại được nữa.',
-    revoke: 'Thu hồi',
-    revoked: 'Đã thu hồi secret.',
+    rotateOrder:
+      'Đổi trên thiết bị và đăng nhập thử bằng giá trị mới TRƯỚC, rồi mới lưu ở đây — lưu xong là giá trị cũ không xem lại được.',
+    revoke: 'Xoá vĩnh viễn',
+    revoked: 'Đã xoá vĩnh viễn ngăn.',
+    typeLabelToConfirm: 'Gõ lại tên ngăn để xác nhận: {{label}}',
+    noPermissionTitle: 'Bạn chưa có quyền xem két này',
+    needsApproval: 'Cần duyệt',
+    lastDenied: 'Lần xin lúc {{at}} bị từ chối:',
+    requestBlock:
+      'Két này cần được duyệt trước khi xem ({{count}} ngăn). Một lần xin là cho cả két, có hạn giờ.',
+    valueAge: 'Đổi giá trị {{count}} ngày trước · {{who}}',
+    valueStale: 'Lâu chưa đổi',
+    valueShow: 'Hiện',
+    valueHide: 'Ẩn',
+    generate: 'Tạo ngẫu nhiên',
+    stepUpPurpose: 'Nhập mã 6 số để xem "{{label}}".',
+    stepUpGrace: 'Xác nhận xong thì {{minutes}} phút tới mở ngăn khác không phải gõ lại.',
+    perCharOn: 'Hiện từng ký tự',
+    perCharOff: 'Hiện liền một dòng',
+    perCharLabel: 'Từng ký tự của giá trị',
+    graceLine: 'Mở ngăn khác không cần gõ mã trong',
     /* Câu cũ: "…nhưng vết cất vẫn còn trong nhật ký." Nhật ký giữ VẾT (ai cất, lúc nào),
        KHÔNG giữ GIÁ TRỊ — mà câu ấy đọc ra như mật khẩu còn nằm đâu đó lấy lại được. Đây là
        thao tác xoá vĩnh viễn một giá trị đã mã hóa; phải nói thẳng ra như vậy. */
     confirmRevoke:
-      'Thu hồi "{{label}}"? GIÁ TRỊ mật khẩu bị xoá vĩnh viễn — không có cách nào xem lại, ' +
-      'kể cả Super Admin. Nhật ký chỉ giữ vết ai đã cất và lúc nào. Chưa có bản khác thì đừng thu hồi.',
+      'Xoá vĩnh viễn "{{label}}"? GIÁ TRỊ mật khẩu bị xoá — không có cách nào xem lại, ' +
+      'kể cả Super Admin. Nhật ký chỉ giữ vết ai đã cất và lúc nào. Chưa có bản khác thì đừng xoá.',
     saved: 'Đã lưu vào két.',
-    rotated: 'Đã xoay giá trị.',
-    empty: 'Chưa cất secret nào',
+    rotated: 'Đã đổi giá trị.',
+    empty: 'Két chưa có ngăn nào',
     emptyHint: 'Mật khẩu admin, SSH, SNMP… cất vào đây thay vì ghi ra file Excel.',
     label: 'Tên gọi',
-    labelRequired: 'Đặt tên gọi cho secret này (vd "admin web", "SSH root").',
+    labelRequired: 'Đặt tên gọi cho ngăn này (vd "admin web", "SSH root").',
     kind: 'Loại',
     kind_password: 'Mật khẩu',
     kind_license_key: 'License key',
@@ -1288,16 +1311,17 @@ export default {
        cứng chỉ đẩy người dùng ghi mật khẩu thật vào ô Ghi chú, chỗ không mã hóa. */
     strengthWeak: 'Giá trị này chưa đủ mạnh — vẫn lưu được, nhưng nếu là mật khẩu do mình đặt thì nên đổi.',
     autoHideShort: 'còn lại trước khi tự ẩn',
-    /* Hai số nên phải nói rõ số nào là số nào — "60s / 600s" đứng trơ thì không ai đoán ra. */
-    countdownNote: 'tự ẩn / còn mở két được (chưa phải gõ lại mã)',
     revealLogged: 'Lượt xem này đã được ghi nhật ký.',
     hideNow: 'Ẩn ngay',
     request: 'Xin quyền xem',
-    requestTitle: 'Xin quyền xem tạm thời',
+    requestHoursQuick: 'Chọn nhanh số giờ',
+    requestTitleCount: 'Xin xem két ({{count}} ngăn)',
+    requestReasonCount: 'Đã gõ {{count}} ký tự · tối thiểu {{min}}.',
+    requestHoursHintMax: 'Chọn nhanh hoặc gõ số giờ — tối đa {{hours}} giờ. Xin vừa đủ việc.',
     requestHint:
       'Yêu cầu sẽ gửi cho Quản trị. Khi được duyệt, bạn xem được trong đúng thời hạn cấp — hết giờ là tự cắt, không cần ai đóng.',
     requestReason: 'Lý do',
-    requestReasonPlaceholder: 'vd: switch tầng 3 mất kết nối, cần vào cấu hình',
+    requestReasonPlaceholder: 'Việc gì · ở đâu · vì sao cần mật khẩu (vd switch tầng 3 mất kết nối)',
     requestReasonRequired: 'Ghi rõ lý do — người duyệt cần biết để quyết.',
     requestHours: 'Xin trong bao lâu (giờ)',
     requestHoursHint: 'Xin vừa đủ. Vượt trần hệ thống thì sẽ được kẹp xuống và báo lại.',
@@ -1731,18 +1755,22 @@ export default {
     open: 'Mở két',
     openOf: 'Mở két của {{code}}',
     openRecord: 'Mở hồ sơ đầy đủ',
-    orphan: '(hồ sơ đã bị xóa — còn secret treo lại)',
-    orphanNote: 'Hồ sơ chủ của mấy ngăn này đã bị xóa, nên không cất thêm hay sửa được nữa. Việc còn làm được là thu hồi từng ngăn treo trong menu ⋯.',
+    orphan: '(hồ sơ đã bị xóa — còn ngăn treo lại)',
+    orphanNote: 'Hồ sơ chủ của mấy ngăn này đã bị xóa, nên không cất thêm hay sửa được nữa. Việc còn làm được là xoá vĩnh viễn từng ngăn treo trong menu ⋯.',
+    site: 'Site',
+    secretChip: '{{count}} ngăn',
+    clearSearch: 'Xoá tìm kiếm',
     filterKind: 'Lọc theo loại hồ sơ',
     clearKinds: 'Bỏ lọc',
     summary: '{{owners}} hồ sơ đang giữ két · tổng {{secrets}} ngăn.',
     empty: 'Chưa có hồ sơ nào cất mật khẩu',
-    /* Đường NGẮN NHẤT nằm ngay trên màn này: bấm "Mở két" của một hồ sơ rồi "Cất secret"
+    /* Đường NGẮN NHẤT nằm ngay trên màn này: bấm "Mở két" của một hồ sơ rồi "Cất mật khẩu/khóa"
        trong popup. Câu cũ chỉ người dùng đi vòng qua trang thiết bị để làm đúng cái việc mà
        cái popup họ vừa đóng đã làm được. */
-    emptyHint: 'Bấm "Mở két" ở một hồ sơ rồi chọn "Cất secret" — hoặc vào tab "Két sắt" của chính hồ sơ đó.',
+    emptyHint: 'Bấm "Mở két" ở một hồ sơ rồi chọn "Cất mật khẩu/khóa" — hoặc vào tab "Két sắt" của chính hồ sơ đó.',
     noHit: 'Không có hồ sơ nào khớp bộ lọc',
-    noHitHint: 'Thử bỏ bớt bộ lọc loại, hoặc tìm bằng mã máy (vd SRV-01).',
+    noHitHint: 'Thử tìm bằng mã máy (vd SRV-01), tên hoặc site.',
+    noHitHintKinds: 'Thử bỏ bớt bộ lọc loại, hoặc tìm bằng mã máy (vd SRV-01).',
     rulesTitle: 'Luật của két',
     rule1: 'Cất bí mật: bấm "Mở két" ngay tại bảng trên, hoặc vào tab "Két sắt" của hồ sơ. Chỉ Quản trị và Super Admin ghi được.',
     /* KHÔNG nói "mỗi phiên": luật thật là một khoảng ÂN HẠN do `secret.stepup_grace_minutes`
@@ -2059,6 +2087,32 @@ export default {
   approvals: {
     title: 'Duyệt yêu cầu',
     subtitle: 'Yêu cầu xem tạm thời mật khẩu đang cất trong két.',
+    /* Member không duyệt gì — màn của họ là danh sách yêu cầu của chính mình. */
+    titleMine: 'Yêu cầu xem két',
+    subtitleMine: 'Yêu cầu xem tạm thời mật khẩu bạn đã gửi — được duyệt chưa, còn hiệu lực tới khi nào.',
+    refreshedAt: 'Cập nhật lúc {{at}} · tự làm mới mỗi {{seconds}} giây.',
+    goPending: 'Đi tới Chờ duyệt',
+    colState: 'Trạng thái',
+    byWho: 'bởi {{who}}',
+    cutLabel: 'Hiệu lực',
+    cutAt: 'Đã cắt lúc {{at}}',
+    validUntil: 'Còn hiệu lực tới {{at}}',
+    askedHours: 'Xin {{hours}} giờ',
+    endsAtAbout: 'Nếu duyệt bây giờ, hết hiệu lực khoảng {{at}}.',
+    revokeTitle: 'Thu hồi sớm',
+    revokeWarn:
+      'Quyền này ĐANG chạy — nếu người xin đang mở két giữa lúc xử sự cố thì lượt xem kế tiếp bị chặn. ' +
+      'Muốn cấp lại thì phải duyệt một yêu cầu mới.',
+    revokeEndsAt: 'Đang có hiệu lực tới {{at}}.',
+    revokeNoteLabel: 'Lý do thu hồi',
+    revokeNoteRequired: 'Ghi lý do thu hồi (từ {{min}} ký tự) — người xin đọc câu này trong thư.',
+    timelineTitle: 'Diễn biến',
+    timelineSent: 'Gửi yêu cầu',
+    timelineStep_approved: 'Duyệt',
+    timelineStep_denied: 'Từ chối',
+    timelineStep_revoked: 'Thu hồi sớm',
+    timelineStep_cancelled: 'Người xin rút',
+    timelineStep_expired: 'Hết hạn',
     tabPending: 'Chờ duyệt',
     tabLog: 'Nhật ký',
     tabMine: 'Yêu cầu của tôi',
@@ -2070,7 +2124,8 @@ export default {
     // Nhãn của từng loại đối tượng nằm ở `ownerKind.*` — trước 12/09 ở đây chỉ có hai trên
     // bốn loại, nên yêu cầu cho tài khoản dịch vụ và đường truyền in ra chính cái khóa.
     subject: 'Đối tượng',
-    asked: 'Xin',
+    /* "Xin" đứng một mình đọc như một động từ cụt. */
+    asked: 'Thời hạn xin',
     hours: '{{hours}} giờ',
     hoursUnknown: 'Không ghi số giờ',
     decidedBy: 'Người quyết',
@@ -2079,9 +2134,6 @@ export default {
     approve: 'Duyệt',
     deny: 'Từ chối',
     revoke: 'Thu hồi sớm',
-    confirmRevoke:
-      'Thu hồi quyền của {{member}} ngay bây giờ? Quyền này ĐANG chạy — nếu họ đang mở két ' +
-      'giữa lúc xử sự cố thì lượt xem kế tiếp bị chặn. Muốn cấp lại thì phải duyệt một yêu cầu mới.',
     revoked: 'Đã thu hồi quyền.',
     approved: 'Đã duyệt.',
     denied: 'Đã từ chối.',
@@ -2145,7 +2197,7 @@ export default {
     openVault: 'Mở két',
     /* Từ chối phải nói lý do: người xin nhận ghi chú này trong thư, không có nó thì họ gửi lại y nguyên. */
     denyNoteLabel: 'Lý do từ chối',
-    denyNoteRequired: 'Ghi lý do từ chối — người xin sẽ đọc câu này trong thư.',
+    denyNoteRequired: 'Ghi lý do từ chối (từ {{min}} ký tự) — người xin sẽ đọc câu này trong thư.',
     denyQuickVague: 'Lý do chưa đủ cụ thể',
     denyQuickHours: 'Xin quá nhiều giờ, gửi lại với thời hạn ngắn hơn',
     denyQuickNotNeeded: 'Việc này không cần mở két',

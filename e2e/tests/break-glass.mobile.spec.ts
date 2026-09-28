@@ -89,7 +89,7 @@ test.describe('Duyệt break-glass ở 390px', () => {
     await expect(dialog.getByRole('textbox', { name: 'Cấp trong bao lâu (giờ)' })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-    await dialog.getByRole('button', { name: 'Duyệt', exact: true }).click();
+    await dialog.getByRole('button', { name: /^Duyệt \d+ giờ$/ }).click();
     await expect(page.getByText('Đã duyệt')).toBeVisible();
   });
 });

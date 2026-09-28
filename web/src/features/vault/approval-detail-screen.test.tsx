@@ -202,4 +202,42 @@ describe('Ngữ cảnh để quyết nhanh (VLT-FLOW)', () => {
     await screen.findByRole('region', { name: 'Người xin' });
     expect(screen.queryByText(/Lần xin/)).toBeNull();
   });
+
+  it('phiếu đã thu hồi: diễn biến nói ai duyệt, AI THU HỒI, lúc nào', async () => {
+    mockApi({
+      ...ROW,
+      state: 'revoked',
+      decidedBy: 'sa@pmh.com.vn',
+      decidedAt: '2026-09-20T01:40:00.000Z',
+      timeline: [
+        { state: 'approved', actor: 'sa@pmh.com.vn', at: '2026-09-20T01:40:00.000Z', note: null },
+        {
+          state: 'revoked',
+          actor: 'admin@pmh.com.vn',
+          at: '2026-09-20T02:05:00.000Z',
+          note: 'Xong việc',
+        },
+      ],
+    });
+    renderDetail();
+    const block = await screen.findByRole('region', { name: 'Diễn biến' });
+    const steps = within(block).getAllByRole('listitem');
+    expect(steps).toHaveLength(3);
+    expect(steps[2]).toHaveTextContent('Thu hồi sớm · admin@pmh.com.vn · 20/09/2026 09:05');
+    expect(steps[2]).toHaveTextContent('Xong việc');
+  });
+
+  it('thu hồi sớm từ trang chi tiết: mở hộp bắt ghi lý do, không phải một câu "chắc chưa?"', async () => {
+    mockApi({
+      ...ROW,
+      state: 'approved',
+      active: true,
+      decidedBy: 'admin@pmh.com.vn',
+      expiresAt: '2026-09-20T05:30:00.000Z',
+    });
+    renderDetail();
+    await userEvent.click(await screen.findByRole('button', { name: 'Thu hồi sớm' }));
+    const dialog = screen.getByRole('dialog', { name: 'Thu hồi sớm' });
+    expect(within(dialog).getByLabelText(/Lý do thu hồi/)).toBeInTheDocument();
+  });
 });

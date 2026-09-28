@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { renderWithI18n, screen } from '@/test/test-utils';
+import { describe, expect, it, vi } from 'vitest';
+import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
 import { ConfirmDialog } from '@/ui/confirm-dialog';
 
 describe('ConfirmDialog — ô tick phụ', () => {
@@ -52,5 +52,31 @@ describe('ConfirmDialog — ô tick phụ', () => {
     expect(screen.getByRole('checkbox', { name: 'Nhớ lựa chọn' })).not.toHaveAttribute(
       'aria-describedby',
     );
+  });
+});
+
+describe('ConfirmDialog — gõ lại tên để xác nhận', () => {
+  it('nút xác nhận chỉ bật khi gõ ĐÚNG tên; bấm được thì mới gọi onConfirm', async () => {
+    const onConfirm = vi.fn();
+    renderWithI18n(
+      <ConfirmDialog
+        title="Xoá vĩnh viễn — enable"
+        message="Không có cách nào xem lại."
+        confirmLabel="Xoá vĩnh viễn"
+        danger
+        typeToConfirm={{ expected: 'enable', label: 'Gõ lại tên ngăn: enable' }}
+        onConfirm={onConfirm}
+        onCancel={() => {}}
+      />,
+    );
+    const confirm = screen.getByRole('button', { name: 'Xoá vĩnh viễn' });
+    expect(confirm).toBeDisabled();
+    const input = screen.getByRole('textbox', { name: 'Gõ lại tên ngăn: enable' });
+    await userEvent.type(input, 'enabl');
+    expect(confirm).toBeDisabled();
+    await userEvent.type(input, 'e ');
+    expect(confirm).toBeEnabled();
+    await userEvent.click(confirm);
+    expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 });

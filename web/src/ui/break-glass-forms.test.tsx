@@ -35,15 +35,37 @@ const ROW: BreakGlassRow = {
   active: false,
 };
 
-function renderDecision(approve: boolean) {
-  const fetchMock = vi.fn(() => new Promise<Response>(() => {}));
+function renderDecision(
+  approve: boolean,
+  options: { revoke?: boolean; row?: BreakGlassRow; respond?: () => Promise<Response> } = {},
+) {
+  const fetchMock = vi.fn(
+    (_url: string, _init?: RequestInit): Promise<Response> =>
+      options.respond ? options.respond() : new Promise<Response>(() => {}),
+  );
   vi.stubGlobal('fetch', fetchMock);
+  const onClose = vi.fn();
+  const onDone = vi.fn();
   renderWithI18n(
     <MemoryRouter>
-      <DecisionDialog row={ROW} approve={approve} csrfToken="t" onClose={vi.fn()} onDone={vi.fn()} />
+      <ToastProvider>
+        <DecisionDialog
+          row={options.row ?? ROW}
+          approve={approve}
+          revoke={options.revoke}
+          csrfToken="t"
+          onClose={onClose}
+          onDone={onDone}
+        />
+      </ToastProvider>
     </MemoryRouter>,
   );
-  return fetchMock;
+  return { fetchMock, onClose, onDone };
+}
+
+function sentBody(fetchMock: ReturnType<typeof vi.fn>): Record<string, unknown> {
+  const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+  return JSON.parse(String(init.body)) as Record<string, unknown>;
 }
 
 describe('DecisionDialog', () => {
@@ -54,10 +76,72 @@ describe('DecisionDialog', () => {
     expect(within(dialog).getByText(/e2e-member@pmh\.com\.vn/)).toBeInTheDocument();
     expect(within(dialog).getByRole('link', { name: ROW.subjectLabel! })).toBeInTheDocument();
     expect(within(dialog).getByText(ROW.reason)).toBeInTheDocument();
+    expect(within(dialog).getByText('Xin 4 giờ')).toBeInTheDocument();
+    // Tóm tắt là MÔ TẢ của hộp — trình đọc màn hình đọc nó ngay khi hộp mở.
+    expect(dialog).toHaveAccessibleDescription(/Sự cố mất kết nối tầng 3/);
+  });
+
+  it('Duyệt: chạm nấc "2 giờ" → nút ghi rõ "Duyệt 2 giờ" và gửi đúng 2 giờ', async () => {
+    const { fetchMock } = renderDecision(true);
+    expect(screen.getByRole('button', { name: 'Duyệt 4 giờ' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '2 giờ' }));
+    expect(screen.getByRole('button', { name: '2 giờ' })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(screen.getByRole('button', { name: 'Duyệt 2 giờ' }));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/vault/break-glass/r1/approve');
+    expect(sentBody(fetchMock)).toMatchObject({ hours: 2 });
+  });
+
+  it('Duyệt: không có nấc nào dài hơn số giờ đã xin', () => {
+    renderDecision(true);
+    const group = screen.getByRole('group', { name: 'Thời hạn cấp' });
+    expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual([
+      '1 giờ',
+      '2 giờ',
+      '4 giờ · theo xin',
+    ]);
+  });
+
+  it('người khác vừa quyết phiếu này → đóng hộp, không bắt bấm lại', async () => {
+    const { onClose, onDone } = renderDecision(false, {
+      respond: () =>
+        Promise.resolve(
+          jsonResponse(400, {
+            code: 'APPROVAL_ALREADY_DECIDED',
+            message: 'Yêu cầu này vừa được người khác xử lý. Tải lại để xem quyết định.',
+          }),
+        ),
+    });
+    await userEvent.type(screen.getByLabelText(/Lý do từ chối/), 'Lý do chưa đủ cụ thể');
+    await userEvent.click(screen.getByRole('button', { name: 'Từ chối' }));
+    expect(await screen.findByText(/vừa được người khác xử lý/)).toBeInTheDocument();
+    expect(onClose).toHaveBeenCalled();
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it('Thu hồi sớm: bắt ghi lý do, rồi gửi lý do đó lên API', async () => {
+    const approved: BreakGlassRow = {
+      ...ROW,
+      state: 'approved',
+      active: true,
+      decidedBy: 'sa@pmh.com.vn',
+      expiresAt: '2026-09-28T06:00:00.000Z',
+    };
+    const { fetchMock } = renderDecision(false, { revoke: true, row: approved });
+    const dialog = screen.getByRole('dialog', { name: 'Thu hồi sớm' });
+    expect(within(dialog).getByText(/Quyền này ĐANG chạy/)).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Thu hồi sớm' }));
+    expect(screen.getByText(/Ghi lý do thu hồi/)).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await userEvent.type(screen.getByLabelText(/Lý do thu hồi/), 'Xong việc, cắt sớm');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Thu hồi sớm' }));
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/vault/break-glass/r1/revoke');
+    expect(sentBody(fetchMock)).toEqual({ note: 'Xong việc, cắt sớm' });
   });
 
   it('Duyệt với số giờ "2 tiếng" → lỗi tiếng Việt dưới ô, không gửi', async () => {
-    const fetchMock = renderDecision(true);
+    const { fetchMock } = renderDecision(true);
     const hours = screen.getByLabelText(/Cấp trong bao lâu/);
     await userEvent.clear(hours);
     await userEvent.type(hours, '2 tiếng');
@@ -69,12 +153,17 @@ describe('DecisionDialog', () => {
   });
 
   it('Từ chối không ghi lý do → lỗi dưới ô lý do, không gửi', async () => {
-    const fetchMock = renderDecision(false);
+    const { fetchMock } = renderDecision(false);
     expect(screen.getByRole('dialog', { name: 'Từ chối yêu cầu' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Từ chối' }));
     expect(
-      screen.getByText('Ghi lý do từ chối — người xin sẽ đọc câu này trong thư.'),
+      screen.getByText('Ghi lý do từ chối (từ 5 ký tự) — người xin sẽ đọc câu này trong thư.'),
     ).toBeInTheDocument();
+    // Một chữ "không" không cho người xin biết phải sửa gì.
+    await userEvent.type(screen.getByLabelText(/Lý do từ chối/), 'không');
+    await userEvent.clear(screen.getByLabelText(/Lý do từ chối/));
+    await userEvent.type(screen.getByLabelText(/Lý do từ chối/), 'khg');
+    await userEvent.click(screen.getByRole('button', { name: 'Từ chối' }));
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });

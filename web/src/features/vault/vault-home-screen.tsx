@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ColumnDef } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { OWNER_PATH } from '@/lib/routes';
 import {
@@ -11,6 +12,7 @@ import {
   SECRET_OWNER_TYPES,
   type SecretOwnerType,
 } from '@/lib/secret-owner-kinds';
+import { DataTable } from '@/ui/data-table';
 import { Dialog } from '@/ui/dialog';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
@@ -42,6 +44,26 @@ interface VaultOwner {
  * `VaultPanel` đang dùng ở tab của trang chi tiết (AD-15), nên luật mở két — gõ TOTP, tự ẩn,
  * ghi nhật ký — y hệt, không có bản thứ hai để mà trôi lệch.
  */
+function OpenButton({ row, onOpen }: { row: VaultOwner; onOpen: (row: VaultOwner) => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="action-cell">
+      <button
+        type="button"
+        className="btn sm"
+        aria-label={t('vaultHome.openOf', { code: row.code })}
+        onClick={(event) => {
+          // Dòng cũng bấm được (onRowClick) — không để cú bấm nút mở hai lần.
+          event.stopPropagation();
+          onOpen(row);
+        }}
+      >
+        {t('vaultHome.open')}
+      </button>
+    </div>
+  );
+}
+
 export function VaultHomeScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
@@ -127,11 +149,68 @@ export function VaultHomeScreen({ me }: { me: Me }) {
   /* Con số của tập ĐANG XEM thì nằm ở dòng tổng kết ngay trên bảng — xem chú thích ở đó. */
   const shownSecrets = rows.reduce((sum, row) => sum + row.secretCount, 0);
 
+  /*
+   * Bảng dùng chung (sắp được theo số ngăn / lần đổi gần nhất — "két nào lâu chưa đổi" là câu
+   * của người đi xoay mật khẩu). ≤600px thành thẻ gọn: mã + tên, chip số ngăn, chạm cả thẻ
+   * là mở két — không phải năm hàng nhãn–giá trị với nút nhỏ ở hàng cuối.
+   */
+  const columns = useMemo<ColumnDef<VaultOwner, unknown>[]>(
+    () => [
+      {
+        id: 'owner',
+        accessorFn: (row) => row.code,
+        header: t('vaultHome.owner'),
+        cell: ({ row }) => (
+          <>
+            <span className="mono">{row.original.code}</span>
+            <span className="cell-sub">
+              {row.original.orphan ? t('vaultHome.orphan') : row.original.name}
+            </span>
+          </>
+        ),
+      },
+      {
+        id: 'kind',
+        accessorFn: (row) => row.ownerType,
+        header: t('vaultHome.ownerKind'),
+        cell: ({ row }) => (
+          <span className="badge plain">{t(SECRET_OWNER_KIND_KEY[row.original.ownerType])}</span>
+        ),
+      },
+      {
+        id: 'site',
+        accessorFn: (row) => row.siteCode ?? '',
+        header: t('vaultHome.site'),
+        cell: ({ row }) => orDash(row.original.siteCode),
+      },
+      {
+        id: 'count',
+        accessorFn: (row) => row.secretCount,
+        header: t('vaultHome.secretCount'),
+        meta: { className: 'num' },
+        cell: ({ row }) => row.original.secretCount,
+      },
+      {
+        id: 'lastChange',
+        accessorFn: (row) => row.lastChangeAt,
+        header: t('vaultHome.lastChange'),
+        cell: ({ row }) => formatDateTime(row.original.lastChangeAt),
+      },
+      {
+        id: 'actions',
+        header: t('common.actions'),
+        enableSorting: false,
+        cell: ({ row }) => <OpenButton row={row.original} onOpen={setOpened} />,
+      },
+    ],
+    [t],
+  );
+
   return (
     <>
+      {/* Một dòng phụ đề là đủ; lời giải thích "vì sao không có trang đọc được mọi bí mật"
+          về ở khối Luật cuối trang — ba nơi nói cùng một điều là đẩy danh sách xuống cả màn. */}
       <PageHeader title={t('vaultHome.title')} subtitle={t('vaultHome.subtitle')} />
-
-      <p className="alert">{t('vaultHome.whereItLives')}</p>
 
       <FilterBar
         search={url.searchInput}
@@ -146,12 +225,13 @@ export function VaultHomeScreen({ me }: { me: Me }) {
             lặng — người dùng đọc ra "đường truyền không có két", còn két thì vẫn ở đó. */}
         {/* `role="group"` + tên nhóm: bốn nút rời rạc thì trình đọc màn hình đọc ra bốn cái nút
             không biết thuộc về đâu — Kho thanh lý và Dải mạng đều đã khai nhóm. */}
-        <span role="group" aria-label={t('vaultHome.filterKind')} className="row">
+        {/* Dải nút lọc dùng chung (`.segmented` + `aria-pressed`) như Sổ NAT / Kho thanh lý —
+            không phải nút `primary`: chip đang bật mà mang màu nút chính thì lẫn với CTA. */}
+        <div role="group" aria-label={t('vaultHome.filterKind')} className="segmented">
           {SECRET_OWNER_TYPES.map((kind) => (
             <button
               key={kind}
               type="button"
-              className={`btn${kinds.includes(kind) ? ' primary' : ''}`}
               aria-pressed={kinds.includes(kind)}
               onClick={() => toggle(kind)}
             >
@@ -162,14 +242,13 @@ export function VaultHomeScreen({ me }: { me: Me }) {
               <span className="seg-count">{countOf(kind)}</span>
             </button>
           ))}
-          {kinds.length > 0 ? (
-            /* Đường GỠ lọc. Bốn nút bật/tắt độc lập thì muốn về ban đầu phải bấm đúng từng cái
-               đang bật — không ai nhớ mình đã bật những cái nào. */
-            <button type="button" className="btn" onClick={() => url.setFilter('kinds', '')}>
-              {t('vaultHome.clearKinds')}
-            </button>
-          ) : null}
-        </span>
+        </div>
+        {kinds.length > 0 ? (
+          /* Đường GỠ lọc — nút nhẹ, KHÔNG nằm trong dải chip để khỏi trông như một chip lọc nữa. */
+          <button type="button" className="btn sm ghost" onClick={() => url.setFilter('kinds', '')}>
+            {t('vaultHome.clearKinds')}
+          </button>
+        ) : null}
       </FilterBar>
 
       {owners.isLoading ? (
@@ -186,61 +265,57 @@ export function VaultHomeScreen({ me }: { me: Me }) {
             đọc "12 hồ sơ đang giữ két · tổng 47 ngăn" — hai con số mâu thuẫn trên cùng một màn
             hình, và con số duy nhất người dùng đang cần thì không có ở đâu cả.
           */}
-          <p className="muted">
-            {t('vaultHome.summary', { owners: rows.length, secrets: shownSecrets })}
-          </p>
-
           {rows.length === 0 ? (
-            <EmptyState title={t('vaultHome.noHit')} hint={t('vaultHome.noHitHint')} />
+            /* Gợi ý theo ĐÚNG tình huống: có từ khoá thì cho nút xoá tìm, có lọc thì nút bỏ lọc —
+               "bỏ bớt bộ lọc loại" khi không bật lọc nào là chỉ sai đường. */
+            <EmptyState
+              title={t('vaultHome.noHit')}
+              hint={t(kinds.length > 0 ? 'vaultHome.noHitHintKinds' : 'vaultHome.noHitHint')}
+              action={
+                <>
+                  {search.trim() ? (
+                    <button type="button" className="btn sm" onClick={() => url.setSearchInput('')}>
+                      {t('vaultHome.clearSearch')}
+                    </button>
+                  ) : null}
+                  {kinds.length > 0 ? (
+                    <button
+                      type="button"
+                      className="btn sm"
+                      onClick={() => url.setFilter('kinds', '')}
+                    >
+                      {t('vaultHome.clearKinds')}
+                    </button>
+                  ) : null}
+                </>
+              }
+            />
           ) : (
-            <div className="table-wrap">
-              <table className="table table-stack">
-                <thead>
-                  <tr>
-                    <th>{t('vaultHome.owner')}</th>
-                    <th>{t('vaultHome.ownerKind')}</th>
-                    <th className="num">{t('vaultHome.secretCount')}</th>
-                    <th>{t('vaultHome.lastChange')}</th>
-                    <th className="col-center">{t('common.actions')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={`${row.ownerType}-${row.ownerId}`}>
-                      <td data-label={t('vaultHome.owner')}>
-                        <span className="mono">{row.code}</span>
-                        <span className="cell-sub">
-                          {row.orphan ? t('vaultHome.orphan') : row.name}
-                          {row.siteCode ? ` · ${row.siteCode}` : ''}
-                        </span>
-                      </td>
-                      <td data-label={t('vaultHome.ownerKind')}>
-                        <span className="badge plain">{t(SECRET_OWNER_KIND_KEY[row.ownerType])}</span>
-                      </td>
-                      <td className="num" data-label={t('vaultHome.secretCount')}>
-                        {row.secretCount}
-                      </td>
-                      <td data-label={t('vaultHome.lastChange')}>
-                        {formatDateTime(row.lastChangeAt)}
-                      </td>
-                      {/* Ô Thao tác cũng phải tự xưng tên ở ≤960px như bốn ô kia. */}
-                      <td data-label={t('common.actions')}>
-                        <div className="action-cell">
-                          <button
-                            type="button"
-                            className="btn sm"
-                            aria-label={t('vaultHome.openOf', { code: row.code })}
-                            onClick={() => setOpened(row)}
-                          >
-                            {t('vaultHome.open')}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              <p className="muted">
+                {t('vaultHome.summary', { owners: rows.length, secrets: shownSecrets })}
+              </p>
+              <DataTable
+                data={rows}
+                columns={columns}
+                emptyText={t('vaultHome.noHit')}
+                mobileCard={{
+                  title: (row) => row.code,
+                  subtitle: (row) =>
+                    row.orphan
+                      ? t('vaultHome.orphan')
+                      : [row.name, row.siteCode].filter(Boolean).join(' · '),
+                  badge: (row) => (
+                    <span className="badge muted">
+                      {t('vaultHome.secretChip', { count: row.secretCount })}
+                    </span>
+                  ),
+                  meta: (row) =>
+                    `${t(SECRET_OWNER_KIND_KEY[row.ownerType])} · ${formatDateTime(row.lastChangeAt)}`,
+                }}
+                onRowClick={(row: VaultOwner) => setOpened(row)}
+              />
+            </>
           )}
         </>
       )}
@@ -305,6 +380,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
 
       <section className="form-section">
         <h2 className="form-section-title">{t('vaultHome.rulesTitle')}</h2>
+        <p className="muted">{t('vaultHome.whereItLives')}</p>
         <ul className="vault-rules">
           <li>{t('vaultHome.rule1')}</li>
           <li>{t('vaultHome.rule2')}</li>
