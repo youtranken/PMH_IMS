@@ -130,6 +130,14 @@ button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+/* Nút chính đang tắt phải trông TẮT: gradient + quầng sáng mà chỉ nhạt đi thì vẫn như mời bấm. */
+button.primary:disabled {
+  background: var(--surface-2);
+  color: var(--ink-3);
+  border-color: var(--border-2);
+  box-shadow: none;
+  opacity: 1;
+}
 button.primary {
   color: var(--on-brand);
   background: var(--grad);

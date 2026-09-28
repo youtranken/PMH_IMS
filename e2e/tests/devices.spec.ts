@@ -378,7 +378,8 @@ test.describe('Kho thiết bị', () => {
 
     // Chưa bung thì mã license CHƯA có mặt trên màn.
     await expect(page.getByRole('link', { name: licenseCode })).toHaveCount(0);
-    await row.getByRole('button', { name: 'Mở rộng dòng' }).click();
+    // Nút bung mang chữ nói bung ra thấy gì ("1 license"), không phải mũi tên trơn.
+    await row.getByRole('button', { name: '1 license' }).click();
     await expect(page.getByRole('link', { name: licenseCode })).toBeVisible();
     await expect(page.getByText('2.400.000 ₫')).toBeVisible();
     await expect(page.getByText(`HD-INST-${stamp}`)).toBeVisible();
@@ -387,7 +388,7 @@ test.describe('Kho thiết bị', () => {
     await timVaChoLoc(page, bareCode);
     const bareRow = page.getByRole('row', { name: new RegExp(bareCode) });
     await expect(bareRow).toBeVisible();
-    await expect(bareRow.getByRole('button', { name: 'Mở rộng dòng' })).toHaveCount(0);
+    await expect(bareRow.getByRole('button', { name: /license/ })).toHaveCount(0);
   });
 
   /**

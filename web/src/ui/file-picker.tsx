@@ -15,7 +15,13 @@ export function FilePicker({
   file,
   onPick,
   disabled,
+  onPickFiles,
 }: {
+  /**
+   * Nhận NHIỀU file một lượt (chọn hoặc thả). Có prop này thì ô cho chọn nhiều và gọi hàm này
+   * thay cho `onPick` — nơi gọi tự xử lý cả lô (vd tải lên ngay từng file).
+   */
+  onPickFiles?: (files: File[]) => void;
   /** Ví dụ: `.xlsx` — chỉ là gợi ý cho hộp thoại chọn file, KHÔNG phải kiểm tra bảo mật. */
   accept?: string;
   label: string;
@@ -30,6 +36,13 @@ export function FilePicker({
   const [dragging, setDragging] = useState(false);
 
   const pick = (list: FileList | null) => {
+    if (onPickFiles) {
+      const files = list ? Array.from(list) : [];
+      if (files.length > 0) onPickFiles(files);
+      // Xóa giá trị input: chọn lại đúng file vừa tải phải bắn onChange lần nữa.
+      if (inputRef.current) inputRef.current.value = '';
+      return;
+    }
     onPick(list && list.length > 0 ? list[0] : null);
   };
 
@@ -54,6 +67,7 @@ export function FilePicker({
         id={inputId}
         type="file"
         accept={accept}
+        multiple={!!onPickFiles}
         disabled={disabled}
         className="file-picker-input"
         onChange={(e) => pick(e.target.files)}

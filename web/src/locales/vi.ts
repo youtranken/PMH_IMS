@@ -620,9 +620,12 @@ export default {
     title: 'Giấy tờ đính kèm',
     hint: 'Hóa đơn, biên bản bàn giao, phiếu bảo hành… Nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
     pick: 'Chọn file để đính kèm',
-    upload: 'Tải lên',
-    uploading: 'Đang tải lên…',
+    // Chọn/thả là tải ngay, nhiều file một lượt — không còn nút "Tải lên" riêng.
+    uploadingOf: 'Đang tải lên {{done}}/{{total}}…',
+    uploadedCount: 'Đã đính kèm {{count}} giấy tờ.',
+    draftFailedLive: 'Không tải lên được "{{name}}": {{reason}}',
     empty: 'Chưa có giấy tờ nào.',
+    emptyHint: 'Kéo hóa đơn, biên bản bàn giao vào ô phía trên, hoặc bấm chọn file.',
     name: 'Tên file',
     size: 'Dung lượng',
     uploadedAt: 'Tải lên lúc',
@@ -630,7 +633,6 @@ export default {
     remove: 'Xóa',
     confirmRemove: 'Xóa "{{name}}" khỏi hồ sơ? Thao tác này được ghi nhật ký.',
     removed: 'Đã xóa giấy tờ.',
-    uploaded: 'Đã đính kèm giấy tờ.',
     noPreview: 'File luôn được TẢI VỀ, không mở trực tiếp trong trình duyệt (chống mã độc qua file).',
     // Khối chọn giấy tờ ngay trong form THÊM MỚI — file chỉ được đẩy lên sau khi hồ sơ đã lưu.
     draftHint:

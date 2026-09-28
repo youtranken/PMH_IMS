@@ -537,6 +537,26 @@ table.table tbody tr.exp:hover td {
   --seat-cols: minmax(150px, 2fr) minmax(90px, 0.9fr) 120px 108px 118px
     minmax(0, 1fr) minmax(0, 1.2fr);
 }
+/* Không máy nào khai ngày bắt đầu: bỏ hẳn cột đó, nhường chỗ cho tên phần mềm. */
+.seat-list.inst-list.no-start {
+  --seat-cols: minmax(180px, 2.4fr) minmax(90px, 0.9fr) 120px 118px minmax(0, 1fr)
+    minmax(0, 1.2fr);
+}
+/* Tên phần mềm là dòng chính, mã là dòng phụ mono nhỏ — không còn "mã | tên…" cắt ngang. */
+.seat-mc.seat-mc-stack {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+.seat-mc-stack .seat-code {
+  font-size: var(--fs-2xs);
+  font-weight: 500;
+}
+/* Khối bung nằm TRONG bề ngang bảng: lưới rộng hơn thì cuộn trong khung, không tràn mép phải. */
+.exp .exp-soft {
+  max-width: 100%;
+  overflow-x: auto;
+}
 .seat-head {
   display: flex;
   align-items: baseline;
@@ -688,6 +708,13 @@ table.table tbody tr.exp:hover td {
   .inst-list .seat-card > [data-label]:not(.seat-mc)::before {
     content: attr(data-label) ': ';
     color: var(--ink-3);
+  }
+  /* Thẻ gọn: MỘT cỡ chữ cho mọi dòng, bỏ dòng chỉ có "—". */
+  .inst-list .seat-card > [data-label]:not(.seat-mc) {
+    font-size: var(--fs-sm);
+  }
+  .inst-list .seat-card > [data-empty] {
+    display: none;
   }
   .inst-list .seat-cost {
     text-align: left;

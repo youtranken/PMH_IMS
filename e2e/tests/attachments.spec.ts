@@ -9,6 +9,7 @@ import {
   firstLogin,
   resetDevices,
   resetUsers,
+  rowAction,
   uniqueStamp,
 } from './helpers';
 
@@ -54,7 +55,6 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
 
     const pdf = writePdf(`hoa-don-${stamp}.pdf`);
     await page.getByLabel('Chọn file để đính kèm').setInputFiles(pdf);
-    await page.getByRole('button', { name: 'Tải lên' }).click();
 
     const row = page.getByRole('row', { name: new RegExp(`hoa-don-${stamp}`) });
     await expect(row).toBeVisible();
@@ -65,7 +65,8 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
     ]).then(([event]) => event);
     expect(download.suggestedFilename()).toBe(`hoa-don-${stamp}.pdf`);
 
-    await row.getByRole('button', { name: 'Xóa' }).click();
+    // "Xóa" nằm trong menu ⋯ (chữ đỏ), không còn là nút đỏ đặc sát "Tải về".
+    await rowAction(page, `hoa-don-${stamp}.pdf`, 'Xóa');
     await confirmAction(page);
     await expect(page.getByText('Chưa có giấy tờ nào.')).toBeVisible();
   });
@@ -82,7 +83,6 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Giấy tờ' }).click();
     await page.getByLabel('Chọn file để đính kèm').setInputFiles(fake);
-    await page.getByRole('button', { name: 'Tải lên' }).click();
 
     await expect(page.getByText(/Định dạng không được hỗ trợ/)).toBeVisible();
     await expect(page.getByText('Chưa có giấy tờ nào.')).toBeVisible();
@@ -98,7 +98,6 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Giấy tờ' }).click();
     await page.getByLabel('Chọn file để đính kèm').setInputFiles(writePdf(`bien-ban-${stamp}.pdf`));
-    await page.getByRole('button', { name: 'Tải lên' }).click();
     await expect(page.getByRole('row', { name: new RegExp(`bien-ban-${stamp}`) })).toBeVisible();
 
     const files = await page.evaluate(async (id: string) => {
@@ -126,7 +125,6 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Giấy tờ' }).click();
     await page.getByLabel('Chọn file để đính kèm').setInputFiles(writePdf(`xoa-${stamp}.pdf`));
-    await page.getByRole('button', { name: 'Tải lên' }).click();
     await expect(page.getByRole('row', { name: new RegExp(`xoa-${stamp}`) })).toBeVisible();
 
     const files = await page.evaluate(async (id: string) => {
@@ -137,10 +135,7 @@ test.describe('Giấy tờ đính kèm thiết bị', () => {
     }, deviceId);
     const fileId = files[0].id;
 
-    await page
-      .getByRole('row', { name: new RegExp(`xoa-${stamp}`) })
-      .getByRole('button', { name: 'Xóa' })
-      .click();
+    await rowAction(page, `xoa-${stamp}.pdf`, 'Xóa');
     await confirmAction(page);
     await expect(page.getByText('Chưa có giấy tờ nào.')).toBeVisible();
 

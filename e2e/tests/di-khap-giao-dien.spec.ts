@@ -2714,7 +2714,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => tenDieuKhien(hopSua.getByRole('button')), {
         message:
-          'Chế độ SỬA = chế độ THÊM cộng đúng hai thứ: ô "Trạng thái" và nút "Tải lên" của khu giấy tờ ghi thẳng',
+          'Chế độ SỬA = chế độ THÊM cộng ô "Trạng thái", bớt nút "Ghi rồi thêm máy khác"; khu giấy tờ ghi thẳng (chọn là tải, không có nút "Tải lên")',
       })
       .toEqual([
         'Đóng hộp thoại',
@@ -2726,8 +2726,10 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Ngày mua',
         'Bảo hành từ',
         'Bảo hành đến',
+        '+1 năm',
+        '+2 năm',
+        '+3 năm',
         'Chọn file để đính kèm',
-        'Tải lên',
         'Hủy',
         'Lưu',
       ]);
@@ -2904,8 +2906,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toBeVisible();
     await expect(
       panel.getByRole('button', { name: 'Tải lên' }),
-      'Chưa chọn file thì nút Tải lên phải TẮT',
-    ).toBeDisabled();
+      'Chọn file là tải ngay — không còn nút "Tải lên" riêng để người dùng quên bấm',
+    ).toHaveCount(0);
     await expect(panel.getByText('Chưa có giấy tờ nào.')).toBeVisible();
     await expect(
       panel.getByText(
@@ -5905,7 +5907,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
             'Đường truyền mới khai thì tab Giấy tờ phải nói rõ là trống',
           ).toBeVisible();
           await expect(
-            main.getByRole('button', { name: 'Tải lên' }),
+            main.getByRole('button', { name: 'Chọn file để đính kèm' }),
             'Tab Giấy tờ phải có đường đính kèm bản scan hợp đồng',
           ).toBeVisible();
         },

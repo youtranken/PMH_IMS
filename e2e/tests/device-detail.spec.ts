@@ -77,7 +77,6 @@ test.describe('Trang chi tiết thiết bị', () => {
     const pdf = join(tmpdir(), `giay-to-${stamp}.pdf`);
     writeFileSync(pdf, '%PDF-1.4\ntrailer<<>>\n');
     await page.getByLabel('Chọn file để đính kèm').setInputFiles(pdf);
-    await page.getByRole('button', { name: 'Tải lên' }).click();
     await expect(page.getByRole('row', { name: new RegExp(`giay-to-${stamp}`) })).toBeVisible();
 
     await page.getByRole('tab', { name: 'Lịch sử' }).click();

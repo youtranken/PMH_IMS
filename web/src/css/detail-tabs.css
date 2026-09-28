@@ -234,7 +234,8 @@
   font-weight: var(--fw-bold);
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  /* `--ink-2`, không phải `--ink-3`: chữ 10px in hoa màu ink-3 gần như mất hút ở chế độ tối. */
+  color: var(--ink-2);
   margin-bottom: var(--space-8);
 }
 .rail-row {
