@@ -338,8 +338,6 @@ export default {
     sessionsHint: 'Các máy và trình duyệt đang đăng nhập bằng tài khoản này.',
     sessionCurrent: 'Máy này',
     sessionLastSeen: 'Hoạt động lần cuối {{time}}',
-    sessionStarted: 'Đăng nhập lúc {{time}}',
-    sessionUnknownDevice: 'Trình duyệt không rõ',
     sessionRevoke: 'Đăng xuất máy này',
     sessionRevokeTitle: 'Đăng xuất phiên này?',
     sessionRevokeBody: 'Máy đó sẽ phải đăng nhập lại.',
@@ -865,8 +863,6 @@ export default {
   },
   accounts: {
     searchPlaceholder: 'Tìm kiếm theo tên hoặc email',
-    sessionBrowser: 'Trình duyệt',
-    sessionLastSeen: 'Hoạt động gần nhất',
     saveProfileFailed: 'Không lưu được hồ sơ.',
     createFailed: 'Không tạo được tài khoản.',
     title: 'Tài khoản',
@@ -887,7 +883,6 @@ export default {
     status: 'Trạng thái',
     lastLogin: 'Đăng nhập gần nhất',
     totpRequired: 'Bắt buộc 2 lớp',
-    totpEnrolled: 'Đã cài 2 lớp',
     sessions: 'Phiên đang mở',
     noSessions: 'Không còn phiên đăng nhập nào đang mở.',
     /* KHÔNG dùng chữ "Đăng xuất": sidebar đã có một nút tên đúng như vậy, và hai việc
@@ -944,6 +939,46 @@ export default {
        trên cùng một hàng của bảng Tài khoản, badge và nút đọc giống hệt nhau và không ai phân
        biệt được "đang bị vô hiệu" với "bấm để vô hiệu". Cùng chữ với `disposal.statusDisabled`. */
     statusDisabled: 'Đã vô hiệu hóa',
+    /* Mở khóa hỏi lại ngắn: nút nằm sát "Đặt lại mật khẩu" và "Vô hiệu hóa", bấm trượt trên
+       điện thoại là mở lại một tài khoản đang nghi bị chiếm. */
+    confirmUnlock:
+      'Mở khóa tài khoản {{name}}? Người dùng đăng nhập được ngay và bộ đếm gõ sai được xoá. ' +
+      'Nếu khóa vì nghi bị chiếm thì đặt lại mật khẩu trước.',
+    toastLocked: 'Đã khóa {{name}}.',
+    toastUnlocked: 'Đã mở khóa {{name}}.',
+    toastDisabled: 'Đã vô hiệu hóa {{name}}.',
+    toastReactivated: 'Đã kích hoạt lại {{name}}.',
+    totpColumn: '2 lớp',
+    totpStateEnrolled: 'Đã cài',
+    totpStateMissing: 'Bắt buộc – chưa cài',
+    totpStateOptional: 'Không bắt buộc',
+    totpRequireOn: 'Bắt buộc 2 lớp khi đăng nhập',
+    totpRequireOff: 'Bỏ bắt buộc 2 lớp khi đăng nhập',
+    confirmTotpRequireOn:
+      'Bắt {{name}} gõ mã 2 lớp mỗi lần đăng nhập? Chưa cài thì lần đăng nhập tới sẽ phải cài ngay.',
+    confirmTotpRequireOff:
+      'Bỏ bắt buộc 2 lớp khi đăng nhập cho {{name}}? Từ giờ chỉ cần mật khẩu là vào được — ' +
+      'mật khẩu lộ là tài khoản mất. Két sắt vẫn đòi mã 2 lớp như cũ.',
+    toastTotpRequireOn: 'Đã bắt buộc 2 lớp cho {{name}}.',
+    toastTotpRequireOff: 'Đã bỏ bắt buộc 2 lớp cho {{name}}.',
+    showPassword: 'Hiện',
+    hidePassword: 'Ẩn',
+    copyPassword: 'Chép mật khẩu tạm',
+    passwordMasked: 'Mật khẩu tạm đang ẩn',
+    nextSteps: 'Bước tiếp theo',
+    nextVaultAccess: 'Gán quyền két sắt',
+    nextDevices: 'Gán thiết bị',
+    nextDevicesHint: 'Mở hồ sơ máy của người này và ghi "{{name}}" vào ô Người sử dụng.',
+    nextStepsNeedDone: 'Ghi lại mật khẩu trước — đi sang màn khác là hộp này đóng và không mở lại được.',
+  },
+  /* Danh sách phiên đăng nhập dùng chung (`ui/session-list.tsx`) — Hồ sơ và màn Tài khoản. */
+  sessionList: {
+    device: '{{browser}} trên {{os}}',
+    unknownDevice: 'Trình duyệt không rõ',
+    browser: 'Trình duyệt',
+    lastSeenHeader: 'Hoạt động gần nhất',
+    lastSeen: 'Hoạt động {{time}}',
+    started: 'đăng nhập {{time}}',
   },
   vault: {
     tab: 'Két sắt',

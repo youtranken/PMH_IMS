@@ -10,19 +10,13 @@ import { useConfirm } from '@/ui/confirm-provider';
 import { Dialog } from '@/ui/dialog';
 import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
+import { SessionList, type SessionItem } from '@/ui/session-list';
 import { ThemeChoice } from '@/ui/theme-choice';
 import { useToast } from '@/ui/toast';
 import { ChangePasswordForm } from './change-password-form';
 import { TotpEnrollDialog } from './totp-enroll-dialog';
 
-interface MySession {
-  id: string;
-  ip: string | null;
-  userAgent: string | null;
-  createdAt: string;
-  lastSeenAt: string;
-  current: boolean;
-}
+type MySession = SessionItem & { current: boolean };
 
 const TOTP_SECTION_ID = 'xac-thuc-2-lop';
 const SESSIONS_KEY = ['auth', 'my-sessions'] as const;
@@ -187,59 +181,35 @@ function MySessionsCard({ csrfToken }: { csrfToken: string }) {
         <LoadError error={sessions.error} onRetry={() => void sessions.refetch()} />
       ) : (
         <>
-          <ul className="profile-sessions">
-            {(sessions.data ?? []).map((session) => (
-              <li key={session.id}>
-                <div className="profile-session-who">
-                  <b>
-                    {orDash(session.ip)}
-                    {session.current ? (
-                      <span className="badge ok">{t('profile.sessionCurrent')}</span>
-                    ) : null}
-                  </b>
-                  <span className="muted">
-                    {session.userAgent ? session.userAgent.slice(0, 80) : t('profile.sessionUnknownDevice')}
-                  </span>
-                  <span className="muted">
-                    {t('profile.sessionLastSeen', { time: formatDateTime(session.lastSeenAt) })} ·{' '}
-                    {t('profile.sessionStarted', { time: formatDateTime(session.createdAt) })}
-                  </span>
-                </div>
-                {session.current ? null : (
-                  <button
-                    type="button"
-                    className="btn sm danger"
-                    disabled={revoke.isPending}
-                    onClick={() => {
-                      void (async () => {
-                        const ok = await askConfirm({
-                          title: t('profile.sessionRevokeTitle'),
-                          message: `${orDash(session.ip)} — ${t('profile.sessionLastSeen', {
-                            time: formatDateTime(session.lastSeenAt),
-                          })}. ${t('profile.sessionRevokeBody')}`,
-                          danger: true,
-                          confirmLabel: t('profile.sessionRevoke'),
-                        });
-                        if (!ok) return;
-                        revoke.mutate(
-                          { id: session.id },
-                          {
-                            onSuccess: () => {
-                              toast({ message: t('profile.sessionRevoked') });
-                              void sessions.refetch();
-                            },
-                            onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
-                          },
-                        );
-                      })();
-                    }}
-                  >
-                    {t('profile.sessionRevoke')}
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
+          <SessionList
+            sessions={sessions.data ?? []}
+            currentLabel={t('profile.sessionCurrent')}
+            endLabel={t('profile.sessionRevoke')}
+            busy={revoke.isPending}
+            onEnd={(session) => {
+              void (async () => {
+                const ok = await askConfirm({
+                  title: t('profile.sessionRevokeTitle'),
+                  message: `${orDash(session.ip)} — ${t('profile.sessionLastSeen', {
+                    time: formatDateTime(session.lastSeenAt),
+                  })}. ${t('profile.sessionRevokeBody')}`,
+                  danger: true,
+                  confirmLabel: t('profile.sessionRevoke'),
+                });
+                if (!ok) return;
+                revoke.mutate(
+                  { id: session.id },
+                  {
+                    onSuccess: () => {
+                      toast({ message: t('profile.sessionRevoked') });
+                      void sessions.refetch();
+                    },
+                    onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
+                  },
+                );
+              })();
+            }}
+          />
           {others.length === 0 ? (
             <p className="muted">{t('profile.noOtherSessions')}</p>
           ) : (

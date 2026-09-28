@@ -1876,8 +1876,9 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
       ).toHaveCount(0);
 
       // ===== VÀ MỞ KHÓA LẠI =====
-      // Mở khóa KHÔNG hỏi lại (mở khóa không lấy đi gì của ai) — đừng chờ hộp xác nhận ở đây.
+      // Mở khóa hỏi lại ngắn: nút nằm sát "Vô hiệu hóa", bấm trượt là mở một tài khoản bị nghi.
       await rowAction(page, fullName, 'Mở khóa');
+      await confirmAction(page, 'Mở khóa');
       await expect(row.getByText('Đang hoạt động')).toBeVisible();
 
       await fillLogin(victimPage, email, temporaryPassword);
@@ -7322,7 +7323,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       'Họ tên',
       'Vai trò',
       'Trạng thái',
-      'Đã cài 2 lớp',
+      '2 lớp',
       'Đăng nhập gần nhất',
       'Thao tác',
     ]);
@@ -7371,6 +7372,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
         'Đặt lại 2 lớp',
         'Khóa',
         'Vô hiệu hóa',
+        // Hạt giống SA luôn bị bắt 2 lớp (`reset-e2e.mjs`), nên mục bật/tắt đang ở vế "Bỏ".
+        'Bỏ bắt buộc 2 lớp khi đăng nhập',
       ]),
     );
 

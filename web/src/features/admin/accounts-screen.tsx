@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDateTime, orDash } from '@/lib/format';
@@ -16,7 +17,11 @@ import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { RowActions } from '@/ui/row-actions';
 import { useConfirm } from '@/ui/confirm-provider';
+import { CopyButton } from '@/ui/copy-button';
+import { SessionList, type SessionItem } from '@/ui/session-list';
+import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
+import { PATHS } from '@/lib/routes';
 import { AccountForm } from './account-form';
 
 interface AccountRow {
@@ -63,29 +68,51 @@ interface StatusAction {
   /** Trạng thái sẽ ghi xuống. */
   to: AccountStatus;
   danger: boolean;
-  /** Khóa i18n của câu hỏi lại. `null` = không hỏi — việc TRẢ lại quyền thì không cần rào. */
-  confirm: string | null;
+  /**
+   * Khóa i18n của câu hỏi lại. Mọi việc đổi trạng thái đều hỏi: kể cả Mở khóa — nút nằm sát
+   * "Đặt lại mật khẩu" và "Vô hiệu hóa", bấm trượt trên điện thoại là mở lại một tài khoản
+   * đang nghi bị chiếm.
+   */
+  confirm: string;
+  /** Khóa i18n của toast sau khi xong — mọi lần đổi trạng thái đều phải có phản hồi. */
+  done: string;
 }
 
 const STATUS_ACTIONS: Record<AccountStatus, StatusAction[]> = {
   active: [
-    { key: 'lock', label: 'accounts.lock', to: 'locked', danger: true, confirm: 'accounts.confirmLock' },
+    {
+      key: 'lock',
+      label: 'accounts.lock',
+      to: 'locked',
+      danger: true,
+      confirm: 'accounts.confirmLock',
+      done: 'accounts.toastLocked',
+    },
     {
       key: 'disable',
       label: 'accounts.disable',
       to: 'disabled',
       danger: true,
       confirm: 'accounts.confirmDisable',
+      done: 'accounts.toastDisabled',
     },
   ],
   locked: [
-    { key: 'unlock', label: 'accounts.unlock', to: 'active', danger: false, confirm: null },
+    {
+      key: 'unlock',
+      label: 'accounts.unlock',
+      to: 'active',
+      danger: false,
+      confirm: 'accounts.confirmUnlock',
+      done: 'accounts.toastUnlocked',
+    },
     {
       key: 'disable',
       label: 'accounts.disable',
       to: 'disabled',
       danger: true,
       confirm: 'accounts.confirmDisable',
+      done: 'accounts.toastDisabled',
     },
   ],
   /* Bật lại một tài khoản đã cho nghỉ thì PHẢI hỏi: nó khác hẳn mở một cái khóa tạm. */
@@ -96,9 +123,24 @@ const STATUS_ACTIONS: Record<AccountStatus, StatusAction[]> = {
       to: 'active',
       danger: false,
       confirm: 'accounts.confirmReactivate',
+      done: 'accounts.toastReactivated',
     },
   ],
 };
+
+/**
+ * Cột "2 lớp" — BA trạng thái, vì trường hợp nguy hiểm là "bắt buộc mà chưa cài" (lần đăng
+ * nhập tới sẽ bị đòi cài ngay) chứ không phải "không bắt buộc". Hai cờ riêng rẽ tô cùng màu
+ * cam thì SA không phân biệt được hai cảnh đó.
+ */
+export function totpState(row: { totpEnrolledAt: string | null; totpLoginRequired: boolean }): {
+  label: string;
+  tone: 'ok' | 'warn' | 'muted';
+} {
+  if (row.totpEnrolledAt) return { label: 'accounts.totpStateEnrolled', tone: 'ok' };
+  if (row.totpLoginRequired) return { label: 'accounts.totpStateMissing', tone: 'warn' };
+  return { label: 'accounts.totpStateOptional', tone: 'muted' };
+}
 
 const STATUS_LABEL: Record<AccountStatus, string> = {
   active: 'accounts.statusActive',
@@ -112,14 +154,6 @@ const STATUS_TONE: Record<AccountStatus, string> = {
   locked: 'warn',
   disabled: 'danger',
 };
-
-interface SessionRow {
-  id: string;
-  ip: string | null;
-  userAgent: string | null;
-  createdAt: string;
-  lastSeenAt: string;
-}
 
 const DEFAULT_LIMIT = 20;
 
@@ -159,11 +193,19 @@ export function AccountsScreen({ me }: { me: Me }) {
   const sorting: SortingState = [{ id: url.sorting.key, desc: url.sorting.desc }];
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<AccountRow | null>(null);
-  /* Giữ kèm CHỦ của mật khẩu: mở từ dòng thứ sáu trong bảng thì không ai nhớ đang reset cho ai. */
-  const [temporaryPassword, setTemporaryPassword] = useState<{ password: string; who: string } | null>(
-    null,
-  );
+  /*
+   * Giữ kèm CHỦ của mật khẩu: mở từ dòng thứ sáu trong bảng thì không ai nhớ đang reset cho ai.
+   * `created` chỉ có khi vừa TẠO tài khoản — lúc đó hộp hiện thêm các bước tiếp theo.
+   */
+  const [temporaryPassword, setTemporaryPassword] = useState<{
+    password: string;
+    who: string;
+    created?: CreatedAccount;
+  } | null>(null);
   const [sessionsFor, setSessionsFor] = useState<AccountRow | null>(null);
+  /* Mọi lệnh ghi ở màn này đòi step-up (`@RequiresStepUp`): hết ân hạn thì hỏi mã rồi chạy lại. */
+  const stepUp = useStepUpRetry(me.csrfToken);
+  const runWithStepUp = stepUp.run;
 
   // Tìm kiếm chạy PHÍA SERVER: lọc phía client chỉ lọc đúng 20 dòng đang xem, nên tên nằm ở
   // trang 3 sẽ ra bảng rỗng trong khi phân trang vẫn báo tổng 137 dòng.
@@ -212,6 +254,50 @@ export function AccountsScreen({ me }: { me: Me }) {
     (input) => `/api/v1/accounts/${input.id}/reset-totp`,
     { csrfToken, refreshMe: false, body: () => undefined },
   );
+  const setTotpRequired = useApiMutation<{ id: string; required: boolean }, unknown>(
+    (input) => `/api/v1/accounts/${input.id}/totp-login-required`,
+    {
+      method: 'PATCH',
+      csrfToken,
+      refreshMe: false,
+      body: (input) => ({ required: input.required }),
+    },
+  );
+
+  /*
+   * Hỏi lại → (step-up nếu cần) → toast. Một cửa cho mọi việc trên menu dòng, để không việc nào
+   * lặng lẽ chạy mà không có phản hồi.
+   */
+  const confirmThenRun = useCallback(
+    async (options: {
+      title: string;
+      message: string;
+      danger: boolean;
+      confirmLabel: string;
+      run: () => Promise<unknown>;
+      done?: string;
+    }) => {
+      const ok = await askConfirm({
+        title: options.title,
+        message: options.message,
+        danger: options.danger,
+        confirmLabel: options.confirmLabel,
+      });
+      if (!ok) return undefined;
+      try {
+        const result = await runWithStepUp(options.run);
+        if (options.done) toast({ message: options.done });
+        void refresh();
+        return result;
+      } catch (err) {
+        // Người dùng tự đóng hộp hỏi mã = tự huỷ, không phải lỗi để báo.
+        if (err instanceof Error && err.message === 'STEPUP_CANCELLED') return undefined;
+        toast({ message: errorMessage(err), tone: 'error' });
+        return undefined;
+      }
+    },
+    [askConfirm, runWithStepUp, toast, refresh],
+  );
 
   const rows = accounts.data?.items ?? [];
 
@@ -258,13 +344,11 @@ export function AccountsScreen({ me }: { me: Me }) {
       },
       {
         accessorKey: 'totpEnrolledAt',
-        header: t('accounts.totpEnrolled'),
-        cell: ({ row }) =>
-          row.original.totpEnrolledAt ? (
-            <span className="badge ok">{t('common.yes')}</span>
-          ) : (
-            <span className="badge warn">{t('common.no')}</span>
-          ),
+        header: t('accounts.totpColumn'),
+        cell: ({ row }) => {
+          const state = totpState(row.original);
+          return <span className={`badge ${state.tone}`}>{t(state.label)}</span>;
+        },
       },
       {
         accessorKey: 'lastLoginAt',
@@ -315,32 +399,22 @@ export function AccountsScreen({ me }: { me: Me }) {
                     disabled: resetPassword.isPending,
                     onSelect: () => {
                       void (async () => {
-                        const ok = await askConfirm({
+                        const result = await confirmThenRun({
                           title: t('common.titleOf', {
                             action: t('accounts.resetPassword'),
                             subject: account.fullName,
                           }),
-                          message: t('accounts.confirmResetPassword', {
-                            name: account.fullName,
-                          }),
+                          message: t('accounts.confirmResetPassword', { name: account.fullName }),
                           danger: true,
                           confirmLabel: t('accounts.resetPassword'),
+                          run: () => resetPassword.mutateAsync({ id: account.id }),
                         });
-                        if (!ok) return;
-                        resetPassword.mutate(
-                          { id: account.id },
-                          {
-                            onSuccess: (result) => {
-                              setTemporaryPassword({
-                                password: result.temporaryPassword,
-                                who: account.email,
-                              });
-                              void refresh();
-                            },
-                            onError: (err) =>
-                              toast({ message: errorMessage(err), tone: 'error' }),
-                          },
-                        );
+                        if (result) {
+                          setTemporaryPassword({
+                            password: (result as { temporaryPassword: string }).temporaryPassword,
+                            who: account.email,
+                          });
+                        }
                       })();
                     },
                   },
@@ -349,30 +423,45 @@ export function AccountsScreen({ me }: { me: Me }) {
                     label: t('accounts.resetTotp'),
                     danger: true,
                     disabled: resetTotp.isPending,
+                    onSelect: () =>
+                      void confirmThenRun({
+                        title: t('common.titleOf', {
+                          action: t('accounts.resetTotp'),
+                          subject: account.fullName,
+                        }),
+                        message: t('accounts.confirmResetTotp', { name: account.fullName }),
+                        danger: true,
+                        confirmLabel: t('accounts.resetTotp'),
+                        run: () => resetTotp.mutateAsync({ id: account.id }),
+                        done: t('accounts.totpReset'),
+                      }),
+                  },
+                  /* Bật/tắt cưỡng chế 2 lớp lúc đăng nhập (NFR-01). TẮT là hạ rào nên tô đỏ;
+                     bật lại thì không lấy đi gì của ai. */
+                  {
+                    key: 'totp-required',
+                    label: t(
+                      account.totpLoginRequired ? 'accounts.totpRequireOff' : 'accounts.totpRequireOn',
+                    ),
+                    danger: account.totpLoginRequired,
+                    disabled: setTotpRequired.isPending,
                     onSelect: () => {
-                      void (async () => {
-                        const ok = await askConfirm({
-                          title: t('common.titleOf', {
-                            action: t('accounts.resetTotp'),
-                            subject: account.fullName,
-                          }),
-                          message: t('accounts.confirmResetTotp', { name: account.fullName }),
-                          danger: true,
-                          confirmLabel: t('accounts.resetTotp'),
-                        });
-                        if (!ok) return;
-                        resetTotp.mutate(
-                          { id: account.id },
-                          {
-                            onSuccess: () => {
-                              toast({ message: t('accounts.totpReset') });
-                              void refresh();
-                            },
-                            onError: (err) =>
-                              toast({ message: errorMessage(err), tone: 'error' }),
-                          },
-                        );
-                      })();
+                      const required = !account.totpLoginRequired;
+                      const label = t(required ? 'accounts.totpRequireOn' : 'accounts.totpRequireOff');
+                      void confirmThenRun({
+                        title: t('common.titleOf', { action: label, subject: account.fullName }),
+                        message: t(
+                          required ? 'accounts.confirmTotpRequireOn' : 'accounts.confirmTotpRequireOff',
+                          { name: account.fullName },
+                        ),
+                        danger: !required,
+                        confirmLabel: label,
+                        run: () => setTotpRequired.mutateAsync({ id: account.id, required }),
+                        done: t(
+                          required ? 'accounts.toastTotpRequireOn' : 'accounts.toastTotpRequireOff',
+                          { name: account.fullName },
+                        ),
+                      });
                     },
                   },
                   ...STATUS_ACTIONS[account.status].map((action) => ({
@@ -381,30 +470,18 @@ export function AccountsScreen({ me }: { me: Me }) {
                     /* Việc LẤY ĐI quyền (khóa, vô hiệu hóa) mới đỏ; trả lại thì không. */
                     danger: action.danger,
                     disabled: setStatus.isPending,
-                    onSelect: () => {
-                      void (async () => {
-                        if (action.confirm) {
-                          const ok = await askConfirm({
-                            title: t('common.titleOf', {
-                              action: t(action.label),
-                              subject: account.fullName,
-                            }),
-                            message: t(action.confirm, { name: account.fullName }),
-                            danger: action.danger,
-                            confirmLabel: t(action.label),
-                          });
-                          if (!ok) return;
-                        }
-                        setStatus.mutate(
-                          { id: account.id, status: action.to },
-                          {
-                            onSuccess: () => void refresh(),
-                            onError: (err) =>
-                              toast({ message: errorMessage(err), tone: 'error' }),
-                          },
-                        );
-                      })();
-                    },
+                    onSelect: () =>
+                      void confirmThenRun({
+                        title: t('common.titleOf', {
+                          action: t(action.label),
+                          subject: account.fullName,
+                        }),
+                        message: t(action.confirm, { name: account.fullName }),
+                        danger: action.danger,
+                        confirmLabel: t(action.label),
+                        run: () => setStatus.mutateAsync({ id: account.id, status: action.to }),
+                        done: t(action.done, { name: account.fullName }),
+                      }),
                   })),
                 ]}
               />
@@ -414,41 +491,23 @@ export function AccountsScreen({ me }: { me: Me }) {
       },
     ],
     /*
-     * DEP LÀ GIÁ TRỊ ĐƯỢC DÙNG, KHÔNG PHẢI CẢ ĐỐI TƯỢNG MUTATION (§18 #2, sửa 22/09).
-     *
-     * Chú thích cũ viết: *"`.mutate` của TanStack v5 ổn định, nên memo không vì thế mà tính
-     * lại thêm lần nào"*. Câu ấy đúng về `.mutate` và SAI về thứ thật sự nằm trong deps —
-     * đó là cả `setStatus` / `resetPassword` / `resetTotp`, tức ĐỐI TƯỢNG mutation, và
-     * TanStack dựng lại chúng sau mỗi lần render.
-     *
-     * Nên `columns` tính lại ở MỌI lượt render, và `useMemo` ở đây chỉ còn là trang trí —
-     * đúng cái bẫy mà cùng lượt sửa 20/09 đang vá cho `kindLabel` và `refresh`. Chú thích mô
-     * tả đúng ý định và sai về hệ quả, lần thứ tư trong đợt rà soát này.
-     *
-     * Nay khai đúng hai thứ đang dùng: `.mutate` (bền theo hợp đồng của v5) và `.isPending`
-     * (một boolean). Memo tính lại khi một cờ chờ lật — đúng lúc cần, và chỉ lúc đó.
-     */
-    /*
-     * `exhaustive-deps` muốn CẢ ĐỐI TƯỢNG mutation ở đây, và làm theo nó là dựng lại đúng lỗi
-     * vừa vá: đối tượng ấy được TanStack tạo mới sau mỗi render, nên memo tính lại mọi lượt.
-     *
-     * Luật không đọc được "hai thuộc tính này là tất cả những gì tôi dùng" — `.mutate` bền
-     * theo hợp đồng của v5, `.isPending` là boolean. Tắt đúng một dòng, và nói ra cái giá:
-     * thêm một thuộc tính mới của ba mutation này vào thân memo thì phải tự nhớ khai xuống
-     * dưới. Đó là lý do danh sách dưới đây liệt kê từng thuộc tính chứ không gộp.
+     * Deps là THUỘC TÍNH được dùng, không phải cả đối tượng mutation: TanStack dựng lại đối
+     * tượng ấy sau mỗi render, nên khai nó là memo tính lại mọi lượt. `.mutateAsync` bền theo
+     * hợp đồng của v5, `.isPending` là boolean. `exhaustive-deps` không đọc được điều đó nên
+     * tắt đúng một dòng — thêm thuộc tính mới vào thân memo thì phải tự khai xuống dưới.
      */
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       t,
-      setStatus.mutate,
+      setStatus.mutateAsync,
       setStatus.isPending,
-      resetPassword.mutate,
+      resetPassword.mutateAsync,
       resetPassword.isPending,
-      resetTotp.mutate,
+      resetTotp.mutateAsync,
       resetTotp.isPending,
-      askConfirm,
-      refresh,
-      toast,
+      setTotpRequired.mutateAsync,
+      setTotpRequired.isPending,
+      confirmThenRun,
     ],
   );
 
@@ -519,9 +578,9 @@ export function AccountsScreen({ me }: { me: Me }) {
           account={null}
           csrfToken={csrfToken}
           onClose={() => setCreating(false)}
-          onCreated={(password, email) => {
+          onCreated={(password, created) => {
             setCreating(false);
-            setTemporaryPassword({ password, who: email });
+            setTemporaryPassword({ password, who: created.email, created });
             void refresh();
           }}
           onSaved={() => setCreating(false)}
@@ -543,39 +602,12 @@ export function AccountsScreen({ me }: { me: Me }) {
       ) : null}
 
       {temporaryPassword ? (
-        <Dialog
-          open
-          onOpenChange={() => setTemporaryPassword(null)}
-          maxWidth={460}
-          /*
-           * KHÔNG cho đóng bằng Esc hay bấm ra nền (rà UI/UX 12/09).
-           *
-           * Chuỗi này chỉ tồn tại đúng một lần: API sinh ra, trả về, rồi quên. Mọi hộp khác
-           * trong màn đóng dễ là đúng — đóng nhầm thì mở lại. Riêng hộp này đóng nhầm là
-           * người dùng mới không đăng nhập được, SA phải đặt lại mật khẩu, và vòng đó lặp
-           * cho tới khi có người đọc kịp.
-           *
-           * Chính câu chú thích bên trong hộp đã nói "sẽ không hiển thị lại" — nay hộp cư xử
-           * đúng như lời nó nói.
-           */
-          requireExplicitClose
-          title={t('accounts.temporaryPasswordOf', { who: temporaryPassword.who })}
-          footer={
-            <button type="button" className="btn primary" onClick={() => setTemporaryPassword(null)}>
-              {t('accounts.temporaryPasswordDone')}
-            </button>
-          }
-        >
-          {/*
-            CỐ Ý KHÔNG CÓ NÚT CHÉP, dù bôi đen chuỗi `mono` là thao tác dễ trượt.
-            `ui/copy-button.tsx` đã chốt luật đó cho giá trị secret: clipboard sống qua cả
-            phiên đăng nhập, dán nhầm vào ô chat là mất luôn. Mật khẩu tạm cũng là secret.
-          */}
-          <p className="mono temp-password" data-testid="temp-password">
-            {temporaryPassword.password}
-          </p>
-          <p className="muted">{t('accounts.temporaryPasswordNote')}</p>
-        </Dialog>
+        <TemporaryPasswordDialog
+          password={temporaryPassword.password}
+          who={temporaryPassword.who}
+          created={temporaryPassword.created}
+          onClose={() => setTemporaryPassword(null)}
+        />
       ) : null}
 
       {sessionsFor ? (
@@ -585,7 +617,116 @@ export function AccountsScreen({ me }: { me: Me }) {
           onClose={() => setSessionsFor(null)}
         />
       ) : null}
+
+      {stepUp.dialog}
     </>
+  );
+}
+
+/** Tài khoản vừa tạo — đủ để hộp mật khẩu tạm dẫn sang bước tiếp theo. */
+export interface CreatedAccount {
+  id: string;
+  email: string;
+  fullName: string;
+  role: Me['role'];
+}
+
+/**
+ * Hộp mật khẩu tạm — hiện MỘT LẦN, sau khi tạo tài khoản hoặc đặt lại mật khẩu.
+ *
+ * KHÔNG cho đóng bằng Esc hay bấm ra nền: chuỗi này API sinh ra, trả về một lần rồi quên. Đóng
+ * nhầm là người dùng mới không đăng nhập được và SA phải đặt lại, lặp cho tới khi có người đọc
+ * kịp.
+ *
+ * NÚT CHÉP là ngoại lệ có chủ ý so với luật "secret không có nút chép" (`ui/copy-button.tsx`):
+ * mật khẩu tạm chỉ dùng được một lần, người dùng bị buộc đổi ngay ở lần đăng nhập đầu, và chuỗi
+ * đang hiện nguyên văn ngay cạnh nút — chép không lộ thêm gì, còn đọc 16 ký tự qua điện thoại
+ * thì dễ sai. "Ẩn" để SA che đi khi đang chia sẻ màn hình.
+ *
+ * Tạo tài khoản xong thì hiện thêm bước tiếp theo (Q-14: chưa có mail mời). Bấm bước tiếp
+ * theo cũng là đóng hộp, nên câu nhắc "ghi lại trước" đứng ngay trên các nút đó.
+ */
+function TemporaryPasswordDialog({
+  password,
+  who,
+  created,
+  onClose,
+}: {
+  password: string;
+  who: string;
+  created?: CreatedAccount;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const [shown, setShown] = useState(true);
+  return (
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={480}
+      requireExplicitClose
+      title={t('accounts.temporaryPasswordOf', { who })}
+      footer={
+        <button type="button" className="btn primary" onClick={onClose}>
+          {t('accounts.temporaryPasswordDone')}
+        </button>
+      }
+    >
+      <div className="temp-password-row">
+        {shown ? (
+          <p className="mono temp-password" data-testid="temp-password">
+            {password}
+          </p>
+        ) : (
+          <p className="mono temp-password" aria-label={t('accounts.passwordMasked')}>
+            {'•'.repeat(password.length)}
+          </p>
+        )}
+        <button
+          type="button"
+          className="btn sm"
+          aria-pressed={!shown}
+          onClick={() => setShown((value) => !value)}
+        >
+          {t(shown ? 'accounts.hidePassword' : 'accounts.showPassword')}
+        </button>
+        <CopyButton value={password} label={t('accounts.copyPassword')} />
+      </div>
+      <p className="muted">{t('accounts.temporaryPasswordNote')}</p>
+      {created ? (
+        <section aria-labelledby="temp-password-next">
+          <h3 id="temp-password-next">{t('accounts.nextSteps')}</h3>
+          <p className="muted">{t('accounts.nextStepsNeedDone')}</p>
+          <div className="detail-actions">
+            {/* SA/Quản trị xem được mọi secret theo vai — gán quyền két chỉ có nghĩa với Thành viên. */}
+            {created.role === 'member' ? (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  onClose();
+                  navigate(`${PATHS.adminVaultAccess}?user=${encodeURIComponent(created.id)}`);
+                }}
+              >
+                {t('accounts.nextVaultAccess')}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="btn"
+              onClick={() => {
+                onClose();
+                navigate(PATHS.devices);
+              }}
+            >
+              {t('accounts.nextDevices')}
+            </button>
+          </div>
+          <p className="muted">{t('accounts.nextDevicesHint', { name: created.fullName })}</p>
+        </section>
+      ) : null}
+    </Dialog>
   );
 }
 
@@ -604,7 +745,7 @@ function SessionsDialog({
   const sessions = useQuery({
     queryKey: ['accounts', account.id, 'sessions'],
     queryFn: () =>
-      apiFetch<SessionRow[]>(`/api/v1/accounts/${account.id}/sessions`, {
+      apiFetch<SessionItem[]>(`/api/v1/accounts/${account.id}/sessions`, {
         credentials: 'include',
       }),
   });
@@ -641,69 +782,41 @@ function SessionsDialog({
          */
         <p className="muted">{t('accounts.noSessions')}</p>
       ) : (
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>IP</th>
-                <th>{t('accounts.sessionBrowser')}</th>
-                <th>{t('accounts.sessionLastSeen')}</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {(sessions.data ?? []).map((session) => (
-                <tr key={session.id}>
-                  <td className="mono">{orDash(session.ip)}</td>
-                  <td>
-                    <span className="cell-sub">{orDash(session.userAgent?.slice(0, 60))}</span>
-                  </td>
-                  <td>{formatDateTime(session.lastSeenAt)}</td>
-                  <td>
-                    <button
-                      type="button"
-                      className="btn sm danger"
-                      onClick={() => {
-                        void (async () => {
-                          if (
-                            !(await askConfirm({
-                              /* Hộp che mất cái bảng, nên "phiên NÀY" không còn chỉ vào đâu
-                                 cả. Nêu IP + lần hoạt động gần nhất: đó là hai thứ phân biệt
-                                 phiên của chính mình với phiên của kẻ đang chiếm tài khoản. */
-                              title: t('common.titleOf', {
-                                action: t('accounts.killSession'),
-                                subject: orDash(session.ip),
-                              }),
-                              message: t('accounts.confirmKillSession', {
-                                ip: orDash(session.ip),
-                                seen: formatDateTime(session.lastSeenAt),
-                              }),
-                              danger: true,
-                              confirmLabel: t('accounts.killSession'),
-                            }))
-                          )
-                            return;
-                          kill.mutate(
-                            { id: session.id },
-                            {
-                              onSuccess: () => {
-                                toast({ message: t('accounts.sessionKilled') });
-                                void sessions.refetch();
-                              },
-                              onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
-                            },
-                          );
-                        })();
-                      }}
-                    >
-                      {t('accounts.killSession')}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <SessionList
+          sessions={sessions.data ?? []}
+          table
+          endLabel={t('accounts.killSession')}
+          busy={kill.isPending}
+          onEnd={(session) => {
+            void (async () => {
+              /* Hộp che mất danh sách, nên "phiên NÀY" không còn chỉ vào đâu cả. Nêu IP + lần
+                 hoạt động gần nhất: hai thứ phân biệt phiên của mình với phiên kẻ chiếm. */
+              const ok = await askConfirm({
+                title: t('common.titleOf', {
+                  action: t('accounts.killSession'),
+                  subject: orDash(session.ip),
+                }),
+                message: t('accounts.confirmKillSession', {
+                  ip: orDash(session.ip),
+                  seen: formatDateTime(session.lastSeenAt),
+                }),
+                danger: true,
+                confirmLabel: t('accounts.killSession'),
+              });
+              if (!ok) return;
+              kill.mutate(
+                { id: session.id },
+                {
+                  onSuccess: () => {
+                    toast({ message: t('accounts.sessionKilled') });
+                    void sessions.refetch();
+                  },
+                  onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
+                },
+              );
+            })();
+          }}
+        />
       )}
     </Dialog>
   );

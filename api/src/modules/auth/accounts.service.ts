@@ -16,6 +16,7 @@ import { AuditWriterService } from "../audit/audit-writer.service";
 import { OutboxService } from "../outbox/outbox.service";
 import { UsersService, type UserSortKey } from "../users/users.service";
 import type { UserRecord } from "../users/users.types";
+import { LoginFailureService } from "./login-failure.service";
 import { PasswordService } from "./password.service";
 import { SessionService, type SessionSummary } from "./session.service";
 import type { UserRole } from "./types";
@@ -39,6 +40,7 @@ export class AccountsService {
     private readonly passwords: PasswordService,
     private readonly audit: AuditWriterService,
     private readonly outbox: OutboxService,
+    private readonly loginFailures: LoginFailureService,
   ) {}
 
   list(
@@ -255,6 +257,15 @@ export class AccountsService {
         await this.assertNotLastSaWithin(tx, user.role, userId);
       }
       await this.users.setStatusWithin(tx, userId, status);
+      /*
+       * "Cho vào lại" phải vào được NGAY: bộ đếm sai của tài khoản và bậc giãn chậm theo IP
+       * còn nguyên thì người vừa được mở vẫn bị chặn thêm, trong khi màn báo "Đang hoạt động".
+       * Khoá thì KHÔNG xoá — bộ đếm là bằng chứng đang bị dò mật khẩu.
+       */
+      if (status === "active") {
+        await this.users.clearLoginFailures(userId, tx);
+        await this.loginFailures.clearAllForUserWithin(tx, userId);
+      }
       const killed =
         status === "active"
           ? 0

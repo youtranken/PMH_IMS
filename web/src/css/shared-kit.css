@@ -1174,3 +1174,57 @@ table.access-grid thead .access-row-head {
 /* Bản gọn cho dải chỉ số đầu trang: chỉ còn cái thanh. */
 .wt-mini .wt-track { height: 6px; }
 .wt-mini .wt-now { top: -2px; bottom: -2px; }
+
+/* Danh sách phiên đăng nhập (`ui/session-list.tsx`) — Hồ sơ của tôi + hộp "Phiên đang mở".
+   Nút kết thúc phiên trải hết chiều ngang ở màn hẹp: đó là nút người ta tìm lúc cần đá kẻ
+   chiếm tài khoản từ điện thoại, nó không được nằm lọt ngoài khung. */
+.session-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.session-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+.session-list-who {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.session-list-who b {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+@media (max-width: 600px) {
+  .session-list-end {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Hộp mật khẩu tạm: chuỗi + Hiện/Ẩn + Chép trên một hàng, gãy xuống dòng ở màn hẹp. */
+.temp-password-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.temp-password-row .temp-password {
+  flex: 1 1 14ch;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
