@@ -97,7 +97,10 @@ export function PortMapPanel({
     { method: 'DELETE', csrfToken, refreshMe: false, body: () => undefined },
   );
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey });
+  /* Cả cây `['devices', id]`, không chỉ bảng cổng: lượt thêm/sửa/xóa cổng ghi vào lịch sử máy,
+     mà trang chi tiết nạp lịch sử ngay khi mở hồ sơ — chỉ làm cũ bảng cổng thì tab Lịch sử
+     hiện bản chụp trước lượt sửa. */
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['devices', device.id] });
   // Thứ tự mặt trước switch: Gi1/0/2 trước Gi1/0/10.
   const allPorts = sortByPortLabel(map.data?.ports ?? []);
   const folded = foldSearch(filter.trim());
