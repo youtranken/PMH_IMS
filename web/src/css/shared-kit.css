@@ -33,8 +33,15 @@
   flex: none;
   margin-top: 2px;
 }
+/* Chữ giãn hết phần giữa để nút × luôn nằm ở MÉP PHẢI — trên điện thoại toast rộng gần trọn
+   màn, chữ ngắn thì × trôi ra giữa hộp như một ký tự lạc. */
+.toast > span:not(.toast-icon) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 .toast-close {
   flex: none;
+  margin-left: auto;
   border: none;
   background: transparent;
   color: inherit;
@@ -73,6 +80,15 @@
   color: var(--ink-2);
 }
 .pager-size select { font-size: var(--fs-sm); padding: 2px 1.6rem 2px var(--space-3); }
+/* Nhãn "Số dòng" thẳng tâm ô chọn: luật `label` chung (khối, có lề dưới) đẩy nó lên cao ~6px. */
+.pager-size > label { margin: 0; line-height: 1.2; }
+/* Màn cảm ứng: ‹ › và ô "Số dòng" đủ 44px, cách nhau ≥8px — đi hiện trường bấm bằng ngón cái. */
+@media (pointer: coarse) {
+  .pager-nav,
+  .pager-num { min-width: 44px; height: 44px; }
+  .pager { gap: var(--space-5); }
+  .pager-size .fsel-trigger { min-height: 44px; }
+}
 /* Dãy số trang `1 … 4 5 6 … 20` — cùng ô bấm 32px với ‹ ›. */
 .pager-pages {
   display: flex;
@@ -136,13 +152,11 @@
   height: 56px;
   border-radius: var(--r);
   border: 1px solid var(--border-2);
-  display: grid;
-  place-items: end center;
-  font-size: var(--fs-2xs);
-  padding: 4px;
-  color: var(--ink-2);
   background: var(--surface);
 }
+.kit-token { margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.kit-token figcaption { display: flex; flex-direction: column; font-size: var(--fs-2xs); }
+.kit-token code { font-family: var(--mono); color: var(--ink); }
 
 /* --- Tabs: số đếm nhỏ bên phải nhãn (ui/tabs.tsx) ------------------------- */
 .tab-count {
@@ -399,6 +413,40 @@
   max-height: 46vh;
   overflow: auto;
 }
+/* Tách dải tổng kết khỏi vùng chọn file phía trên — dính sát nhau thì đọc như một khối. */
+.import-preview {
+  margin-top: var(--space-5);
+}
+.import-summary .badge.is-zero {
+  /* Bỏ nền chứ không làm mờ chữ: mờ chữ là rớt ngưỡng tương phản AA. */
+  background: transparent;
+  font-weight: 500;
+}
+/* Chip tổng kết là NÚT LỌC — giữ hình viên huy hiệu, không lấy khung của `button`. */
+.import-summary button.badge {
+  border: 0;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.import-summary button.badge:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.import-summary button.badge[aria-pressed='true'] {
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+/* Danh sách "trường: trước → sau" của dòng Cập nhật. */
+.import-changes {
+  margin: 0;
+  padding-left: var(--space-7);
+}
+.import-toggle {
+  align-self: flex-start;
+}
+.import-template {
+  margin-top: var(--space-3);
+}
 /* `.row-danger` nằm ở `table.css`, ngay sau luật sọc dòng: nó phải thắng sọc dòng chẵn. */
 
 /*
@@ -476,9 +524,16 @@ table.table tbody tr.row-muted td {
   letter-spacing: -0.02em;
 }
 .kpi-l {
-  font-size: var(--fs-2xs);
-  color: var(--ink-3);
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
   overflow-wrap: anywhere;
+}
+.kpi-link { position: relative; padding-right: var(--space-8); }
+.kpi-go {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-3);
+  color: var(--ink-3);
 }
 /* Có việc phải làm thì ô đổi màu ở VIỀN TRÁI và ở con số — không tô nền cả ô, vì năm ô tô
    nền cạnh nhau thì mắt không còn thứ tự nào để đọc. */
@@ -494,6 +549,26 @@ table.table tbody tr.row-muted td {
 .kpi.zero .kpi-n { color: var(--ink-3); font-weight: var(--fw-semibold); }
 /* `KpiStrip dense`: trên điện thoại cả hàng nằm MỘT dòng — ô lẻ rơi xuống dòng riêng trông như
    một nhóm khác nghĩa. */
+/* Điện thoại: lưới 3 cột gọn thay cho 2+2+1 để lẻ một ô; hàng số không được ăn nửa màn đầu. */
+@media (max-width: 600px) {
+  .dash-kpis:not(.kpi-dense) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+  .dash-kpis:not(.kpi-dense) .kpi {
+    padding: var(--space-3);
+  }
+  .dash-kpis:not(.kpi-dense) .kpi-n {
+    font-size: var(--fs-xl);
+  }
+  .dash-kpis:not(.kpi-dense) .kpi-link {
+    padding-right: var(--space-6);
+  }
+  .dash-kpis:not(.kpi-dense) .kpi-go {
+    top: var(--space-3);
+    right: var(--space-2);
+  }
+}
 @media (max-width: 600px) {
   .dash-kpis.kpi-dense {
     grid-template-columns: none;
@@ -567,15 +642,63 @@ table.table tbody tr.row-muted td {
 }
 .dash-card.slim {
   flex-direction: row;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-4);
   padding: var(--space-3) var(--space-4);
   background: var(--surface-2);
   margin-bottom: 0;
 }
-.dash-card.slim .row { flex: 0 0 auto; }
-.dash-card.slim p { margin: 0; }
+.dash-card.slim p { margin: 0; flex: 1 1 16rem; }
+.dash-slim-title { margin: 0; font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+/* Ba tông cho dải yên: LỖI (cảnh báo + Thử lại) phải trông khác hẳn TIN TỐT (✓), và "chưa có
+   phần này" là thông tin trung tính. Cùng một màu xám cho cả ba là cách để sếp yên tâm nhầm. */
+.dash-tone-ic {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-grid;
+  place-items: center;
+  font-size: var(--fs-2xs);
+  font-weight: 800;
+}
+.dash-card.slim.tone-error { background: var(--warn-soft); border-color: var(--border-warn); }
+.dash-card.slim.tone-error .dash-tone-ic { background: var(--warn); color: var(--on-accent); }
+.dash-card.slim.tone-error p { color: var(--warn); }
+.dash-card.slim.tone-good .dash-tone-ic { background: var(--ok-soft); color: var(--ok); }
+.dash-card.slim.tone-good p { color: var(--ok); }
+.dash-card.slim.tone-info .dash-tone-ic { background: var(--muted-soft); color: var(--ink-2); }
+.dash-card.slim.tone-info p { color: var(--ink-2); }
+
+/* Đầu thẻ dùng chung: tiêu đề đọc (không in hoa toàn bộ) + số đếm dạng chữ bên phải. */
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.card-head h2 { margin: 0; font-size: var(--fs-sm); font-weight: var(--fw-bold); }
+.card-head-count { flex: none; font-size: var(--fs-xs); color: var(--ink-3); }
+/* Tiêu đề nhóm trong một khối ("Đã quá hạn (3)" / "Sắp tới (16)"). */
+.dash-sub {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-2);
+}
+.dash-sub.tone-danger { color: var(--danger-strong); }
+.dash-more { align-self: flex-start; }
+.dash-see-all { align-self: flex-start; }
+.dash-meta { font-size: var(--fs-xs); }
+.dash-subnet {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  font-size: var(--fs-sm);
+}
+.dash-subnet .mono { font-size: var(--fs-sm); }
 .dash-list {
   list-style: none;
   margin: 0;
@@ -591,12 +714,25 @@ table.table tbody tr.row-muted td {
   min-width: 0;
   overflow-wrap: anywhere;
 }
+/* Hai cột cố định: tên (tối đa 2 dòng) | chip căn phải, không co. Chip rớt dòng tuỳ độ dài
+   tên thì mắt không dò được cột chip, và mỗi mục cao gấp đôi. */
 .dash-line {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: var(--space-4);
 }
+.dash-line-name {
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+.dash-line-sub::before { content: ' · '; }
+.dash-line > .badge { justify-self: end; white-space: nowrap; }
 
 /* --- Màn duyệt yêu cầu (features/vault/approvals-screen.tsx) -------------- */
 .approval-list {
@@ -652,6 +788,54 @@ table.table tbody tr.row-muted td {
   gap: var(--space-2) var(--space-3);
   font-weight: var(--fw-semibold);
   overflow-wrap: anywhere;
+}
+/* Phiếu mở từ link trong thư: phải nổi lên giữa hàng chờ, không chỉ đeo một badge nhỏ. */
+.approval-list .card[aria-current='true'] {
+  border: 2px solid var(--warn);
+  background: var(--warn-soft);
+}
+/* Cặp quyết định trên thẻ: Từ chối trái, Duyệt phải. Trên điện thoại hai nút chia đôi hàng,
+   cao 48px, cách 12px — một tay bấm không trượt sang nút kia. */
+.approval-decide {
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+@media (max-width: 640px) {
+  .approval-decide > .btn {
+    flex: 1 1 0;
+    min-height: 48px;
+    justify-content: center;
+  }
+}
+.approval-fresh {
+  text-align: center;
+  font-size: var(--fs-xs);
+}
+.approval-export-end {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-5);
+}
+/* Khối tóm tắt đầu hộp Duyệt/Từ chối/Thu hồi: người · lúc gửi / đối tượng / lý do / số giờ. */
+.decision-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.decision-summary p {
+  margin: 0;
+}
+/* Dòng thời gian của một phiếu (trang chi tiết): Gửi → Duyệt bởi A → Thu hồi bởi B. */
+.approval-timeline {
+  margin: 0;
+  padding-left: var(--space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.approval-timeline li::marker {
+  color: var(--ink-3);
 }
 
 /* --- Trang chi tiết một phiếu (features/vault/approval-detail-screen.tsx) ---
@@ -842,6 +1026,59 @@ table.access-grid thead .access-row-head {
 }
 .access-person { display: block; font-weight: 600; }
 .access-person-mail { display: block; font-size: var(--fs-2xs); }
+/* Cột tên người: tên và email mỗi thứ MỘT dòng (cắt … + tooltip) — ép xuống dòng giữa chừng làm
+   mỗi hàng cao gấp ba chỉ vì tên. Nút gán là dấu + nhỏ bên phải, không lặp chữ ở mọi dòng. */
+.access-row-head-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.access-person-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 14rem;
+}
+.access-person-text .access-person,
+.access-person-text .access-person-mail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.access-person-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+.access-row-add {
+  flex: none;
+  min-width: 2rem;
+  font-weight: 700;
+}
+/* Dấu + ở tiêu đề cột: báo tiêu đề BẤM ĐƯỢC (gán nhóm cho nhiều người). */
+.access-col-plus {
+  display: inline-block;
+  margin-left: var(--space-1);
+  color: var(--primary-ink);
+  font-weight: 700;
+}
+.access-intro p {
+  margin: 0;
+}
+.access-intro p + p {
+  margin-top: var(--space-2);
+}
+/* Ô tick trong thanh lọc ("Hiện cả người đã nghỉ") và dòng công cụ của danh sách chọn người. */
+.filter-check {
+  gap: var(--space-3);
+  white-space: nowrap;
+}
+.pick-tools {
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
 .access-family {
   text-align: center;
   font-size: var(--fs-2xs);
@@ -1013,6 +1250,16 @@ table.access-grid thead .access-row-head {
 }
 .usage-track.tone-warn .usage-fill { background: var(--warn); }
 .usage-track.tone-danger .usage-fill { background: var(--danger); }
+.usage-track { position: relative; }
+.usage-marker {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink);
+  opacity: 0.55;
+}
 .usage-text {
   flex: 0 0 auto;
   color: var(--ink-2);
@@ -1113,6 +1360,94 @@ table.access-grid thead .access-row-head {
   overflow-wrap: anywhere;
   user-select: all;
 }
+/* Tô theo lớp ký tự để gõ tay không nhầm l/1, O/0: số và ký hiệu mang màu riêng, chữ HOA đậm. */
+.ch-digit { color: var(--primary-ink); }
+.ch-symbol { color: var(--warm-ink); }
+.ch-upper { font-weight: var(--fw-bold); }
+/* Chế độ "từng ký tự": ô đánh số, đọc từng ô khi gõ sang console. */
+.secret-chars {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.6rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.secret-chars li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-2) 0;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  font-size: 1.15rem;
+}
+.secret-char-no {
+  font-size: var(--fs-2xs);
+  color: var(--ink-3);
+}
+.reveal-username { margin: 0; }
+/* Thanh mỏng "còn hiện bao lâu" — màu theo cùng `countdownTone` với con số. */
+.reveal-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-2);
+  overflow: hidden;
+}
+.reveal-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+  transition: width 0.25s linear;
+}
+.reveal-progress > span.warn { background: var(--warn); }
+.reveal-progress > span.urgent { background: var(--danger); }
+/* Ô giá trị của két + nút Hiện/Ẩn + Tạo ngẫu nhiên trên một hàng. */
+.secret-input {
+  display: flex;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+.secret-input .inp {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/*
+ * Khung Két trên điện thoại: mỗi ngăn là một thẻ gọn hai dòng (tên gọi + loại / tên đăng nhập
+ * + tuổi giá trị) với nút Xem 44px bên phải — không phải sáu hàng nhãn–giá trị với nút nhỏ ở
+ * hàng cuối. Không sọc zebra: ngăn thứ hai nền xám trông như bị vô hiệu.
+ */
+@media (max-width: 600px) {
+  table.table-stack.vault-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: var(--space-4);
+    align-items: center;
+  }
+  table.table-stack.vault-table td {
+    display: block;
+    padding: var(--space-1) var(--space-5);
+  }
+  table.table-stack.vault-table td::before {
+    display: none;
+  }
+  table.table-stack.vault-table td .cell-sub {
+    text-align: left;
+  }
+  table.table-stack.vault-table td:last-child {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+  table.table-stack.vault-table tbody tr:nth-child(even) td {
+    background: transparent;
+  }
+  .vault-table .vault-reveal {
+    min-height: 44px;
+    min-width: 44px;
+    justify-content: center;
+  }
+}
 
 /* --- Port map (features/devices/port-map-panel.tsx) ----------------------- */
 .port-map {
@@ -1140,7 +1475,16 @@ table.access-grid thead .access-row-head {
 
 /* Màn nhỏ (UX-DR2 — mọi màn ĐỌC phải dùng được ở 390px) */
 @media (max-width: 480px) {
-  .toast-stack { right: var(--space-5); left: var(--space-5); bottom: var(--space-5); max-width: none; }
+  .toast-stack {
+    right: var(--space-5);
+    left: var(--space-5);
+    bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
+    max-width: none;
+  }
+  /* Màn có thanh quyết định dính đáy (phiếu duyệt): toast nổi LÊN TRÊN thanh, không đè nút. */
+  body:has(.sticky-action-bar) .toast-stack {
+    bottom: calc(var(--space-5) + 7rem + env(safe-area-inset-bottom));
+  }
   .pager { flex-wrap: wrap; gap: var(--space-4); }
   .pager-info { width: 100%; }
   /* 390px: "Trang x/y" đã nói đủ vị trí; dãy số nhường chỗ cho ‹ › và ô "Tới trang". */
@@ -1227,6 +1571,78 @@ table.access-grid thead .access-row-head {
 .error-state .primary {
   margin-top: var(--space-3);
 }
+/* Lối ra của 404/403: Quay lại (phụ) + Về trang chủ (chính), đứng cạnh nhau. */
+.error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+.error-search {
+  border: 0;
+  background: transparent;
+  color: var(--primary-ink);
+  font-weight: 500;
+  text-decoration: underline;
+}
+.error-search:hover:not(:disabled) {
+  background: transparent;
+}
+/*
+ * Khối "không tải được" dùng chung (`LoadError`): khung + icon cảnh báo, nút Thử lại cỡ thường
+ * (44px trên điện thoại), phần "Chi tiết kỹ thuật" gập sẵn. Trước đó là một dòng chữ đỏ và một
+ * nút gradient bé như nút chính thu nhỏ — trông như chữ lạc chứ không phải một trạng thái.
+ */
+.load-error {
+  display: flex;
+  gap: var(--space-5);
+  align-items: flex-start;
+  margin: var(--space-4) 0;
+  padding: var(--space-7) var(--space-8);
+  border: 1px solid var(--border-danger);
+  border-radius: var(--r-lg);
+  background: var(--danger-soft);
+}
+.load-error-ic {
+  flex: none;
+  color: var(--danger-strong);
+}
+.load-error-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.load-error-text {
+  margin: 0;
+  color: var(--danger-strong);
+  font-weight: 600;
+}
+.load-error-actions button {
+  min-height: 40px;
+}
+.load-error-tech summary {
+  cursor: pointer;
+  color: var(--ink-2);
+  font-size: var(--fs-xs);
+}
+.load-error-tech p {
+  margin: var(--space-3) 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+  .load-error-actions button {
+    min-height: 44px;
+  }
+}
 
 
 /* --- Thanh thời hạn (ui/warranty-timeline.tsx) -------------------------------
@@ -1251,6 +1667,9 @@ table.access-grid thead .access-row-head {
 }
 .wt-fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; }
 .wt-fill.ok { background: var(--ok); }
+/* Không tính hạn (hồ sơ đã thanh lý): xám trơn, không mốc hôm nay, không màu cảnh báo. */
+.wt-fill.none { background: var(--border-2); }
+.wt-legend .right.muted { color: var(--ink-3); font-weight: 600; }
 .wt-fill.warn { background: linear-gradient(90deg, var(--ok), var(--warn)); }
 .wt-fill.crit { background: linear-gradient(90deg, var(--ok), var(--warn) 70%, var(--danger)); }
 /* Quá hạn: gạch chéo chứ không chỉ đổi màu — dấu hiệu THỨ HAI ngoài màu, cho người khó phân

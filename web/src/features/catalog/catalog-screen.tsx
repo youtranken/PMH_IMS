@@ -3,22 +3,25 @@ import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-quer
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
-import { DataTable } from '@/ui/data-table';
+import { PATHS } from '@/lib/routes';
+import { DataTable, type MobileCard } from '@/ui/data-table';
 import { sortQuery } from '@/lib/sort-query';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Dialog } from '@/ui/dialog';
 import { HistoryPanel } from '@/ui/history-panel';
-import { useClampPage } from '@/ui/use-list-url-state';
+import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
-import { RowActions } from '@/ui/row-actions';
+import { RowActions, type RowAction } from '@/ui/row-actions';
+import { Select } from '@/ui/select';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
@@ -67,21 +70,29 @@ const ENTITY_DEFAULT_SORT: Record<CatalogEntity, SortingState> = {
   service_port: [{ id: 'name', desc: false }],
 };
 
-/**
- * Cột riêng từng loại (AD-15: giữ cách tổ chức "một hằng theo tab" như bản `<table>` cũ,
- * chỉ đổi sang `ColumnDef` của `DataTable`).
- *
- * `accessorKey` PHẢI trùng khóa whitelist `CATALOG_SORT_KEYS` phía API — đó là tên cột gửi
- * lên trong `?sort=`. Cột chỉ có `id` (không `accessorKey`) sẽ không có nút sắp: đúng ý với
- * `siteCode` của tủ mạng, giá trị đó lấy qua JOIN sang bảng site nên KHÔNG được sắp (AD-2).
+/*
+ * Tab, ô tìm, trạng thái, site, trang, số dòng và cột sắp sống trên THANH ĐỊA CHỈ
+ * (`useListUrlState`): F5, Back từ hồ sơ khác, hay gửi link "tab Tủ mạng, tìm HCM" cho đồng
+ * nghiệp đều mở lại đúng chỗ đang xem. `tab` rỗng = Site.
  */
+interface CatalogFilters extends Record<string, string> {
+  tab: string;
+  search: string;
+  status: string;
+  siteId: string;
+}
+
+const EMPTY_FILTERS: CatalogFilters = { tab: '', search: '', status: '', siteId: '' };
+
+function entityOf(tab: string): CatalogEntity {
+  return TAB_KEYS.some((item) => item.key === tab) ? (tab as CatalogEntity) : 'site';
+}
+
 /**
  * Ô chữ dài (địa chỉ · mô tả · cung cấp gì) — rút đúng MỘT dòng, đủ câu thì rê chuột.
  *
  * Bảy tab dùng chung một khung bảng, và cột chữ tự do là thứ duy nhất không có trần: một mô tả
- * ba dòng kéo cao cả hàng và bóp mọi cột còn lại, mà bảng thì đã có tab 6 cột. `.cell-note` có
- * sẵn trong `table.css` từ lâu với đúng ý đồ này nhưng chưa màn nào dùng; ở ≤960px bảng gập
- * thẻ dọc nên nó tự nhả ra, đọc đủ trên điện thoại.
+ * ba dòng kéo cao cả hàng và bóp mọi cột còn lại. Ở ≤960px bảng gập thẻ dọc nên nó tự nhả ra.
  */
 function note(value: string | null | undefined) {
   const text = orDash(value);
@@ -92,7 +103,47 @@ function note(value: string | null | undefined) {
   );
 }
 
-const ENTITY_COLUMNS: Record<CatalogEntity, (t: TFunction) => ColumnDef<CatalogRow, unknown>[]> = {
+/** Số điện thoại bấm gọi được — cùng cách với hotline nhà mạng, hai tab cùng một khái niệm. */
+function phoneLink(value: string | null | undefined) {
+  if (!value) return '—';
+  return (
+    <a className="mono" href={`tel:${value.replace(/[^\d+]/g, '')}`}>
+      {value}
+    </a>
+  );
+}
+
+const EMAIL_RE = /[^\s@<>()]+@[^\s@<>()]+\.[^\s@<>()]+/;
+
+/**
+ * Ô "Email / người liên hệ" là chữ tự do; có email trong đó thì biến đúng đoạn email thành
+ * `mailto:` để bấm là soạn thư, phần tên người vẫn là chữ.
+ */
+function contactText(value: string | null | undefined) {
+  if (!value) return '—';
+  const match = EMAIL_RE.exec(value);
+  if (!match) return value;
+  const before = value.slice(0, match.index);
+  const after = value.slice(match.index + match[0].length);
+  return (
+    <>
+      {before}
+      <a href={`mailto:${match[0]}`}>{match[0]}</a>
+      {after}
+    </>
+  );
+}
+
+/**
+ * Cột riêng từng loại. `accessorKey` PHẢI trùng khóa whitelist `CATALOG_SORT_KEYS` phía API —
+ * đó là tên cột gửi lên trong `?sort=`. Cột chỉ có `id` sẽ không có nút sắp: đúng ý với
+ * `siteCode` của tủ mạng, giá trị đó lấy qua JOIN sang bảng site nên KHÔNG được sắp (AD-2) —
+ * muốn xem theo site thì dùng bộ lọc Site.
+ */
+const ENTITY_COLUMNS: Record<
+  CatalogEntity,
+  (t: TFunction, siteName: (id: string) => string | undefined) => ColumnDef<CatalogRow, unknown>[]
+> = {
   site: (t) => [
     {
       accessorKey: 'code',
@@ -110,17 +161,25 @@ const ENTITY_COLUMNS: Record<CatalogEntity, (t: TFunction) => ColumnDef<CatalogR
       cell: ({ row }) => note((row.original as SiteRow).address),
     },
   ],
-  cabinet: (t) => [
+  cabinet: (t, siteName) => [
     {
       accessorKey: 'code',
       header: t('catalog.code'),
       cell: ({ row }) => <span className="mono">{(row.original as CabinetRow).code}</span>,
     },
     {
-      // Không có accessorKey: `siteCode` là JOIN sang bảng site (AD-2) — không sắp được.
       id: 'siteCode',
       header: t('catalog.site'),
-      cell: ({ row }) => <span className="mono">{(row.original as CabinetRow).siteCode}</span>,
+      cell: ({ row }) => {
+        const cabinet = row.original as CabinetRow;
+        const name = siteName(cabinet.siteId);
+        return (
+          <>
+            <span className="mono">{cabinet.siteCode}</span>
+            {name ? <span className="cell-sub">{name}</span> : null}
+          </>
+        );
+      },
     },
     {
       accessorKey: 'description',
@@ -130,8 +189,6 @@ const ENTITY_COLUMNS: Record<CatalogEntity, (t: TFunction) => ColumnDef<CatalogR
     {
       accessorKey: 'uHeight',
       header: t('catalog.uHeight'),
-      /* Cột SỐ căn phải (`.num` — có sẵn trong table.css, chưa màn nào dùng): số căn trái thì
-         "6" và "42" không thẳng hàng đơn vị, mắt phải đọc từng ô thay vì quét một cột. */
       meta: { className: 'num' },
       cell: ({ row }) => orDash((row.original as CabinetRow).uHeight),
     },
@@ -180,12 +237,12 @@ const ENTITY_COLUMNS: Record<CatalogEntity, (t: TFunction) => ColumnDef<CatalogR
     {
       accessorKey: 'phone',
       header: t('catalog.phone'),
-      cell: ({ row }) => orDash((row.original as VendorRow).phone),
+      cell: ({ row }) => phoneLink((row.original as VendorRow).phone),
     },
     {
       accessorKey: 'contact',
       header: t('catalog.contact'),
-      cell: ({ row }) => orDash((row.original as VendorRow).contact),
+      cell: ({ row }) => contactText((row.original as VendorRow).contact),
     },
   ],
   department: (t) => [
@@ -209,22 +266,13 @@ const ENTITY_COLUMNS: Record<CatalogEntity, (t: TFunction) => ColumnDef<CatalogR
     {
       accessorKey: 'hotline',
       header: t('catalog.hotline'),
-      cell: ({ row }) => {
-        const hotline = (row.original as IspProviderRow).hotline;
-        // Bấm gọi được: đứt cáp lúc 2 giờ sáng thì người ta cầm điện thoại, không cầm chuột.
-        return hotline ? (
-          <a className="mono" href={`tel:${hotline.replace(/\s+/g, '')}`}>
-            {hotline}
-          </a>
-        ) : (
-          '—'
-        );
-      },
+      // Bấm gọi được: đứt cáp lúc 2 giờ sáng thì người ta cầm điện thoại, không cầm chuột.
+      cell: ({ row }) => phoneLink((row.original as IspProviderRow).hotline),
     },
     {
       accessorKey: 'contact',
       header: t('catalog.contact'),
-      cell: ({ row }) => orDash((row.original as IspProviderRow).contact),
+      cell: ({ row }) => contactText((row.original as IspProviderRow).contact),
     },
   ],
   service_port: (t) => [
@@ -248,8 +296,10 @@ const ENTITY_COLUMNS: Record<CatalogEntity, (t: TFunction) => ColumnDef<CatalogR
     {
       accessorKey: 'portFrom',
       header: t('catalog.port'),
-      meta: { className: 'mono' },
-      cell: ({ row }) => portRangeLabel(row.original as ServicePortRow),
+      /* `num` (căn phải như mọi cột số) áp cho cả tiêu đề; `mono` CHỈ bọc giá trị — đặt `mono`
+         ở meta thì tiêu đề "PORT" cũng thành chữ mono nhỏ lệch hẳn các cột khác. */
+      meta: { className: 'num' },
+      cell: ({ row }) => <span className="mono">{portRangeLabel(row.original as ServicePortRow)}</span>,
     },
     {
       accessorKey: 'description',
@@ -260,46 +310,114 @@ const ENTITY_COLUMNS: Record<CatalogEntity, (t: TFunction) => ColumnDef<CatalogR
 };
 
 /**
+ * Dòng 2 của thẻ gọn trên điện thoại: thuộc tính phụ nối bằng " · ", không nhãn — mỗi mục
+ * một hàng nhãn–giá trị thì 19 loại thiết bị dài sáu màn hình.
+ */
+function mobileMeta(entity: CatalogEntity, row: CatalogRow, t: TFunction): string {
+  const parts: (string | null | undefined)[] = (() => {
+    switch (entity) {
+      case 'site':
+        return [(row as SiteRow).address];
+      case 'cabinet': {
+        const cabinet = row as CabinetRow;
+        return [
+          cabinet.uHeight != null ? `${cabinet.uHeight}U` : null,
+          cabinet.description,
+        ];
+      }
+      case 'device_type': {
+        const type = row as DeviceTypeRow;
+        return [
+          type.hasPortMap ? t('catalog.hasPortMap') : null,
+          type.isRouter ? t('catalog.isRouter') : null,
+          type.description,
+        ];
+      }
+      case 'vendor':
+        return [(row as VendorRow).supplies, (row as VendorRow).phone, (row as VendorRow).contact];
+      case 'department':
+        return [(row as DepartmentRow).description];
+      case 'isp_provider':
+        return [(row as IspProviderRow).hotline, (row as IspProviderRow).contact];
+      case 'service_port': {
+        const port = row as ServicePortRow;
+        return [
+          port.protocol === 'both' ? t('catalog.protocolBoth') : port.protocol.toUpperCase(),
+          portRangeLabel(port),
+          port.description,
+        ];
+      }
+    }
+  })();
+  return parts.filter(Boolean).join(' · ');
+}
+
+/** Tên dòng 1 của thẻ: mã với site/tủ (kèm tên site ở dòng dưới), tên với các loại còn lại. */
+function mobileTitle(entity: CatalogEntity, row: CatalogRow): string {
+  if (entity === 'site') return `${(row as SiteRow).code} — ${(row as SiteRow).name}`;
+  return catalogLabel(entity, row);
+}
+
+/** Bộ lọc thiết bị ứng với một mục danh mục — `null` khi màn Thiết bị không lọc theo loại này. */
+function devicesFilterOf(entity: CatalogEntity, row: CatalogRow): string | null {
+  if (entity === 'site') return `siteId=${row.id}`;
+  if (entity === 'cabinet') return `siteId=${(row as CabinetRow).siteId}&cabinetId=${row.id}`;
+  if (entity === 'device_type') return `deviceTypeId=${row.id}`;
+  return null;
+}
+
+/**
  * Quản trị danh mục (story 2.1, FR-004).
- * Member VÀO XEM được (form thiết bị cần biết danh mục có gì) nhưng không thấy nút sửa —
- * chốt quyền thật nằm ở `@Roles` phía API, đây chỉ là ẩn cho đỡ rối (AD-9).
+ * Q-12: mọi vai thêm và sửa được; vô hiệu hóa, xóa và nhập Excel chỉ SA/Admin. Chốt quyền thật
+ * nằm ở `@Roles` phía API, đây chỉ là ẩn cho đỡ rối (AD-9).
  */
 export function CatalogScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
   const askConfirm = useConfirm();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const [entity, setEntity] = useState<CatalogEntity>('site');
-  const [page, setPage] = useState(1);
-  /** Số dòng/trang do NGƯỜI DÙNG chọn (10/20/50/100), không còn là hằng số cứng. */
-  const [limit, setLimit] = useState(DEFAULT_LIMIT);
-  const [search, setSearch] = useState('');
-  // Sắp xếp chạy ở SERVER (`manualSorting`) — lý do giống màn Thiết bị: bảng phân trang
-  // 20 dòng/trang, sắp ở client chỉ đảo chỗ 20 dòng đang xem mà trông như đã sắp cả danh mục.
-  const [sorting, setSorting] = useState<SortingState>(ENTITY_DEFAULT_SORT.site);
+  const url = useListUrlState<CatalogFilters>({
+    emptyFilters: EMPTY_FILTERS,
+    defaultLimit: DEFAULT_LIMIT,
+    searchKey: 'search',
+  });
+  const { page, limit, filters } = url;
+  const entity = entityOf(filters.tab);
+  /* Không có `sort` trên URL = cột mặc định của TAB đang xem (mỗi tab một cột mặc định). */
+  const sorting: SortingState = url.sorting.key
+    ? [{ id: url.sorting.key, desc: url.sorting.desc }]
+    : ENTITY_DEFAULT_SORT[entity];
+  const siteId = entity === 'cabinet' ? filters.siteId : '';
+
   const [editing, setEditing] = useState<{ row: CatalogRow | null } | null>(null);
   const [importing, setImporting] = useState(false);
   const [historyOf, setHistoryOf] = useState<{ id: string; name: string } | null>(null);
 
-  // Q-12: mọi vai thêm và sửa được; vô hiệu hoá, xoá, nhập Excel chỉ SA/Admin.
   const canManage = me.role === 'sa' || me.role === 'admin';
   const csrfToken = me.csrfToken;
   const importable = (IMPORTABLE_ENTITIES as readonly string[]).includes(entity);
 
+  // Tên site cho cột "Thuộc site" và ô lọc Site của tab Tủ mạng.
+  const lists = useCatalogLists({ enabled: entity === 'cabinet' });
+  const siteNames = useMemo(
+    () => new Map((lists.data?.sites ?? []).map((site) => [site.id, site.name])),
+    [lists.data],
+  );
+
   const rows = useQuery({
-    queryKey: ['catalog', entity, page, limit, search, sorting],
-    // Đổi trang/từ khoá thì GIỮ bảng cũ tới khi có dữ liệu mới (không nháy trắng sau mỗi lần gõ
-    // tìm) — nhưng CHỈ trong cùng một loại danh mục: sang tab khác mà giữ dòng cũ là vẽ tủ
-    // mạng dưới cột của nhà cung cấp.
+    queryKey: ['catalog', entity, page, limit, filters.search, filters.status, siteId, sorting],
+    // Đổi trang/từ khoá thì GIỮ bảng cũ tới khi có dữ liệu mới — nhưng CHỈ trong cùng một loại
+    // danh mục: sang tab khác mà giữ dòng cũ là vẽ tủ mạng dưới cột của nhà cung cấp.
     placeholderData: (previous, previousQuery) =>
       previousQuery?.queryKey[1] === entity ? keepPreviousData(previous) : undefined,
     queryFn: () =>
       apiFetch<{ items: CatalogRow[]; total: number }>(
-        `/api/v1/catalog/${entity}?${buildQuery(page, limit, search, sorting)}`,
+        `/api/v1/catalog/${entity}?${buildQuery(page, limit, filters.search, filters.status, siteId, sorting)}`,
       ),
   });
-  useClampPage({ page, limit, setPage }, rows.data?.total);
+  useClampPage(url, rows.data?.total);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['catalog'] });
 
@@ -314,18 +432,62 @@ export function CatalogScreen({ me }: { me: Me }) {
 
   const items = rows.data?.items ?? [];
 
+  /* Bộ lọc "thật" của tab — `tab` không tính: đổi tab không phải là lọc. */
+  const activeCount = [filters.search, filters.status, siteId].filter(Boolean).length;
+  const clearFilters = () => {
+    url.clearFilters();
+    if (filters.tab) url.setFilter('tab', filters.tab);
+  };
+
   const switchTab = (key: string) => {
-    const nextEntity = key as CatalogEntity;
-    setEntity(nextEntity);
-    // Giữ nguyên trang 3 / từ khóa cũ / thứ tự sắp của tab trước khi sang tab khác thì bảng
-    // trông như rỗng hoặc sắp theo cột không tồn tại ở tab mới.
-    setPage(1);
-    setSearch('');
-    setSorting(ENTITY_DEFAULT_SORT[nextEntity]);
+    // Sang tab khác: bỏ từ khoá, site, trang và cột sắp của tab trước (cột đó có thể không tồn
+    // tại ở tab mới); GIỮ bộ lọc trạng thái — "chỉ xem đã vô hiệu" để dọn là việc xuyên tab.
+    const status = filters.status;
+    url.clearFilters();
+    url.setFilter('tab', key === 'site' ? '' : key);
+    if (status) url.setFilter('status', status);
+    url.setSorting({ key: '', desc: false });
+  };
+
+  const actionsFor = (catalogRow: CatalogRow): RowAction[] => {
+    const name = catalogLabel(entity, catalogRow);
+    const devices = devicesFilterOf(entity, catalogRow);
+    return [
+      {
+        key: 'edit',
+        label: t('catalog.edit'),
+        onSelect: () => setEditing({ row: catalogRow }),
+      },
+      {
+        key: 'history',
+        label: t('catalog.history'),
+        onSelect: () => setHistoryOf({ id: catalogRow.id, name }),
+      },
+      ...(devices
+        ? [
+            {
+              key: 'devices',
+              label: t('catalog.viewDevices'),
+              onSelect: () => navigate(`${PATHS.devices}?${devices}`),
+            },
+          ]
+        : []),
+      ...(canManage
+        ? [
+            {
+              key: 'audit',
+              label: t('catalog.auditLog'),
+              onSelect: () =>
+                navigate(`${PATHS.adminAuditLog}?objectId=${encodeURIComponent(catalogRow.id)}`),
+            },
+            ...manageItems(catalogRow, name),
+          ]
+        : []),
+    ];
   };
 
   const columns = useMemo<ColumnDef<CatalogRow, unknown>[]>(() => {
-    const entityColumns = ENTITY_COLUMNS[entity](t);
+    const entityColumns = ENTITY_COLUMNS[entity](t, (id) => siteNames.get(id));
     const statusColumn: ColumnDef<CatalogRow, unknown> = {
       accessorKey: 'active',
       header: t('catalog.status'),
@@ -339,71 +501,73 @@ export function CatalogScreen({ me }: { me: Me }) {
       id: 'actions',
       header: t('common.actions'),
       meta: { className: 'col-center' },
-      cell: ({ row }) => {
-        const catalogRow = row.original;
-        const name = catalogLabel(entity, catalogRow);
-        return (
-          <div className="action-cell">
-            <RowActions
-              label={t('common.actionsOf', { subject: name })}
-              items={[
-                {
-                  key: 'edit',
-                  label: t('catalog.edit'),
-                  onSelect: () => setEditing({ row: catalogRow }),
-                },
-                {
-                  key: 'history',
-                  label: t('catalog.history'),
-                  onSelect: () => setHistoryOf({ id: catalogRow.id, name }),
-                },
-                ...(canManage ? manageItems(catalogRow, name) : []),
-              ]}
-            />
-          </div>
-        );
-      },
+      cell: ({ row }) => (
+        <div className="action-cell">
+          <RowActions
+            label={t('common.actionsOf', { subject: catalogLabel(entity, row.original) })}
+            subject={catalogLabel(entity, row.original)}
+            items={actionsFor(row.original)}
+          />
+        </div>
+      ),
     };
     return [...entityColumns, statusColumn, actionsColumn];
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entity, t, canManage]);
+  }, [entity, t, canManage, siteNames]);
+
+  const mobileCard: MobileCard<CatalogRow> = {
+    title: (row) => mobileTitle(entity, row),
+    // Trạng thái chỉ hiện khi mục đã vô hiệu — "Đang dùng" gần như dòng nào cũng giống nhau.
+    badge: (row) =>
+      row.active ? null : <span className="badge muted">{t('catalog.inactive')}</span>,
+    subtitle: (row) =>
+      entity === 'cabinet' ? siteNames.get((row as CabinetRow).siteId) ?? null : null,
+    meta: (row) => mobileMeta(entity, row, t) || null,
+    actions: (row) => (
+      <RowActions
+        label={t('common.actionsOf', { subject: catalogLabel(entity, row) })}
+        subject={catalogLabel(entity, row)}
+        items={actionsFor(row)}
+      />
+    ),
+  };
 
   /** Vô hiệu hoá / Xoá — chỉ SA/Admin (Q-12). */
-  function manageItems(catalogRow: CatalogRow, name: string) {
+  function manageItems(catalogRow: CatalogRow, name: string): RowAction[] {
     return [
       {
         key: 'active',
         label: t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate'),
-        /* Ngừng dùng là lấy đi (mục biến khỏi mọi ô chọn); dùng lại thì không.
-           Cùng một nút, hai màu — vì đó là hai việc ngược nhau. */
-        danger: catalogRow.active,
+        /* Vô hiệu hóa là lấy đi nhưng ĐẢO LẠI ĐƯỢC (`warn`, nhóm riêng); Xóa thì không (`danger`).
+           Cùng màu đỏ đứng sát nhau thì hai việc khác hẳn hệ quả trông như một. */
+        warn: catalogRow.active,
         onSelect: () => {
           void (async () => {
             const ok = await askConfirm({
               title: t('common.titleOf', {
-                action: t(
-                  catalogRow.active ? 'catalog.deactivate' : 'catalog.activate',
-                ),
+                action: t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate'),
                 subject: name,
               }),
               message: t(
-                catalogRow.active
-                  ? 'catalog.confirmDeactivate'
-                  : 'catalog.confirmActivate',
+                catalogRow.active ? 'catalog.confirmDeactivate' : 'catalog.confirmActivate',
                 { name },
               ),
               danger: catalogRow.active,
-              confirmLabel: t(
-                catalogRow.active ? 'catalog.deactivate' : 'catalog.activate',
-              ),
+              confirmLabel: t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate'),
             });
             if (!ok) return;
             setActive.mutate(
               { id: catalogRow.id, active: !catalogRow.active },
               {
-                onSuccess: () => void refresh(),
-                onError: (err) =>
-                  toast({ message: errorMessage(err), tone: 'error' }),
+                onSuccess: () => {
+                  toast({
+                    message: t(catalogRow.active ? 'catalog.deactivated' : 'catalog.activated', {
+                      name,
+                    }),
+                  });
+                  void refresh();
+                },
+                onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
               },
             );
           })();
@@ -416,10 +580,7 @@ export function CatalogScreen({ me }: { me: Me }) {
         onSelect: () => {
           void (async () => {
             const ok = await askConfirm({
-              title: t('common.titleOf', {
-                action: t('catalog.delete'),
-                subject: name,
-              }),
+              title: t('common.titleOf', { action: t('catalog.delete'), subject: name }),
               message: t('catalog.confirmDelete', { name }),
               danger: true,
               confirmLabel: t('catalog.delete'),
@@ -432,10 +593,9 @@ export function CatalogScreen({ me }: { me: Me }) {
                   toast({ message: t('catalog.deleted') });
                   void refresh();
                 },
-                // Xóa mục đang được thiết bị dùng → API trả 409 kèm câu gợi ý
-                // "hãy vô hiệu hóa"; hiện nguyên văn cho người dùng.
-                onError: (err) =>
-                  toast({ message: errorMessage(err), tone: 'error' }),
+                // Xóa mục đang được thiết bị dùng → API trả 409 kèm câu gợi ý "hãy vô hiệu
+                // hóa"; hiện nguyên văn cho người dùng.
+                onError: (err) => toast({ message: errorMessage(err), tone: 'error' }),
               },
             );
           })();
@@ -444,6 +604,8 @@ export function CatalogScreen({ me }: { me: Me }) {
     ];
   }
 
+  const kind = t(`catalog.noun${TAB_SUFFIX[entity]}`);
+
   return (
     <>
       <PageHeader
@@ -451,21 +613,17 @@ export function CatalogScreen({ me }: { me: Me }) {
         subtitle={t('catalog.subtitle')}
         actions={
           <>
-            {/* File mẫu và đường nhập Excel chỉ có nghĩa với bốn danh mục gốc. Ba danh mục
-                của 0028 vài chục dòng, khai tay là xong — bày nút "Nhập Excel" ở đó là hứa
-                một đường đi mà file mẫu không hề có sheet cho nó. */}
-            {/* File mẫu chỉ để nhập, nên đi cùng quyền nhập (SA/Admin). */}
+            {/* Nhập Excel chỉ có nghĩa với bốn danh mục gốc, và chỉ SA/Admin (Q-12). File mẫu
+                nằm TRONG hộp nhập — nó là bước con của việc nhập, không phải nút đầu trang. */}
+            {/* Xuất đúng tab + bộ lọc đang xem — tờ in dán phòng máy (NCC, hotline nhà mạng). */}
+            <ExportXlsxButton
+              url={`/api/v1/catalog/${entity}/export?${exportQuery(filters.search, filters.status, siteId, sorting)}`}
+              fileName={`danh-muc-${entity}.xlsx`}
+            />
             {importable && canManage ? (
-              <>
-                <ExportXlsxButton
-                  url="/api/v1/catalog/template"
-                  fileName="mau-danh-muc.xlsx"
-                  label={t('catalog.downloadTemplate')}
-                />
-                <button type="button" className="btn" onClick={() => setImporting(true)}>
-                  {t('catalog.importExcel')}
-                </button>
-              </>
+              <button type="button" className="btn" onClick={() => setImporting(true)}>
+                {t('catalog.importExcel')}
+              </button>
             ) : null}
             <button
               type="button"
@@ -487,36 +645,63 @@ export function CatalogScreen({ me }: { me: Me }) {
 
       <TabPanel tabKey={entity}>
         <FilterBar
-          search={search}
-          onSearchChange={(value) => {
-            setSearch(value);
-            setPage(1);
-          }}
+          search={url.searchInput}
+          onSearchChange={url.setSearchInput}
           searchPlaceholder={t(TAB_KEYS.find((tab) => tab.key === entity)?.searchKey ?? 'common.search')}
-        />
+          activeCount={activeCount}
+          onClear={clearFilters}
+        >
+          {entity === 'cabinet' ? (
+            <Select
+              value={siteId}
+              ariaLabel={t('catalog.siteFilter')}
+              placeholder={t('catalog.siteAll')}
+              failed={lists.isError}
+              options={[
+                { value: '', label: t('catalog.siteAll') },
+                ...(lists.data?.sites ?? []).map((site) => ({
+                  value: site.id,
+                  label: `${site.code} — ${site.name}`,
+                })),
+              ]}
+              onChange={(value) => url.setFilter('siteId', value)}
+            />
+          ) : null}
+          <Select
+            value={filters.status}
+            ariaLabel={t('catalog.statusFilter')}
+            placeholder={t('catalog.statusAll')}
+            options={[
+              { value: '', label: t('catalog.statusAll') },
+              { value: 'active', label: t('catalog.active') },
+              { value: 'inactive', label: t('catalog.inactive') },
+            ]}
+            onChange={(value) => url.setFilter('status', value)}
+          />
+        </FilterBar>
+
+        {canManage ? null : <p className="muted catalog-member-hint">{t('catalog.memberHint')}</p>}
 
         {rows.isLoading ? (
           <Loading />
         ) : rows.isError ? (
           <LoadError error={rows.error} onRetry={() => void rows.refetch()} />
-        ) : items.length === 0 && search ? (
-          /* Có từ khoá mà không ra thì KHÔNG được nói "chưa khai mục nào": câu đó sai sự thật
+        ) : items.length === 0 && activeCount > 0 ? (
+          /* Có bộ lọc mà không ra thì KHÔNG được nói "chưa khai mục nào": câu đó sai sự thật
              và đẩy người dùng đi nhập lại dữ liệu đang có. */
           <EmptyState
-            title={t('catalog.emptyFiltered', {
-              kind: t(`catalog.noun${TAB_SUFFIX[entity]}`),
-              q: search,
-            })}
+            title={
+              filters.search
+                ? t('catalog.emptyFiltered', { kind, q: filters.search })
+                : t('catalog.emptyFilteredOnly', { kind })
+            }
             action={
-              <button
-                type="button"
-                className="btn"
-                onClick={() => {
-                  setSearch('');
-                  setPage(1);
-                }}
-              >
-                {t('catalog.clearSearch')}
+              <button type="button" className="btn" onClick={clearFilters}>
+                {t(
+                  filters.search && activeCount === 1
+                    ? 'catalog.clearSearch'
+                    : 'catalog.clearAllFilters',
+                )}
               </button>
             }
           />
@@ -525,29 +710,27 @@ export function CatalogScreen({ me }: { me: Me }) {
             <DataTable
               data={items}
               columns={columns}
-              /* Ghép hai CÂU HOÀN CHỈNH bằng gạch ngang ra một câu thứ ba không ai viết:
-                 "Chưa có dữ liệu — Dùng file tải từ nút…". Một câu nói đủ cả hai việc. */
               emptyText={t(importable && canManage ? 'catalog.emptyHint' : 'catalog.emptyHintManual')}
               stackOnMobile
+              mobileCard={mobileCard}
               rowClassName={(row) => (row.active ? '' : 'row-muted')}
               manualSorting
               sorting={sorting}
               onSortingChange={(updater) => {
-                setSorting((current) =>
-                  typeof updater === 'function' ? updater(current) : updater,
-                );
-                // Đổi cột sắp xếp thì về trang 1: giữ nguyên trang 5 của thứ tự CŨ là nhìn vào
-                // một lát cắt chẳng liên quan gì tới thứ tự vừa chọn.
-                setPage(1);
+                const next = typeof updater === 'function' ? updater(sorting) : updater;
+                const first = next[0];
+                // Hook tự bỏ `page` khi đổi cột sắp: giữ trang 5 của thứ tự CŨ là nhìn vào một
+                // lát cắt chẳng liên quan gì tới thứ tự vừa chọn.
+                url.setSorting(first ? { key: String(first.id), desc: !!first.desc } : { key: '', desc: false });
               }}
             />
 
             <Pagination
               page={page}
               limit={limit}
-            onLimitChange={setLimit}
+              onLimitChange={url.setLimit}
               total={rows.data?.total ?? 0}
-              onPageChange={setPage}
+              onPageChange={url.setPage}
             />
           </>
         )}
@@ -640,8 +823,25 @@ const TAB_SUFFIX: Record<CatalogEntity, string> = {
   service_port: 'ServicePort',
 };
 
-function buildQuery(page: number, limit: number, search: string, sorting: SortingState): string {
+/** Tham số của file xuất — cùng bộ lọc với bảng, không phân trang. */
+function exportQuery(search: string, status: string, siteId: string, sorting: SortingState): string {
+  return buildQuery(1, DEFAULT_LIMIT, search, status, siteId, sorting)
+    .split('&')
+    .filter((part) => !part.startsWith('page=') && !part.startsWith('limit='))
+    .join('&');
+}
+
+function buildQuery(
+  page: number,
+  limit: number,
+  search: string,
+  status: string,
+  siteId: string,
+  sorting: SortingState,
+): string {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (search) params.set('search', search);
+  if (status) params.set('active', status === 'active' ? 'true' : 'false');
+  if (siteId) params.set('siteId', siteId);
   return [params.toString(), sortQuery(sorting)].filter(Boolean).join('&');
 }

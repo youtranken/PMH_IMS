@@ -27,6 +27,9 @@ export class ApiError extends Error {
 const USER_INPUT_401_CODES = new Set([
   'LOGIN_FAILED',
   'ACCOUNT_LOCKED',
+  // Tài khoản bị vô hiệu hoá ở cửa đăng nhập: chưa có phiên nào để "chết". Thiếu dòng này thì
+  // màn đăng nhập tự tải lại mà không nói một lời nào.
+  'ACCOUNT_DISABLED',
   'TOTP_INVALID',
   'TOTP_REPLAYED',
   'CURRENT_PASSWORD_WRONG',

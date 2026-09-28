@@ -101,7 +101,7 @@ test.describe('Hàng rào an ninh', () => {
     await expect(page.getByRole('link', { name: 'Bộ giao diện' })).toHaveCount(0);
 
     await page.goto('/dev/components');
-    await expect(page.getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Bạn không có quyền xem trang này' })).toBeVisible();
   });
 
   test('thao tác ghi thiếu CSRF token bị từ chối', async ({ page }) => {

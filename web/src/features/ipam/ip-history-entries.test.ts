@@ -122,6 +122,43 @@ describe('toIpHistoryEntries — lịch sử IP đọc được (story 5.2)', ()
     expect(entry.detail).toBe('Đang dùng');
   });
 
+  /** AC 5.2 hỏi "IP này từng của MÁY NÀO" — API tra sẵn mã máy, dòng lịch sử phải nói ra. */
+  it('thu hồi từ một MÁY: nói mã máy cũ, kèm người dùng cũ', () => {
+    const [entry] = toIpHistoryEntries([
+      row({
+        previousDeviceCode: 'LT-E2E-01',
+        changes: {
+          previousDeviceId: 'dev-1',
+          previousUsedBy: 'Nguyễn A',
+          deviceId: null,
+          usedBy: null,
+        },
+      }),
+    ], t);
+    expect(entry.detail).toContain('trước đó: LT-E2E-01 (Nguyễn A)');
+  });
+
+  it('cấp cho một máy: nói mã máy, kể cả khi không có người dùng', () => {
+    const [entry] = toIpHistoryEntries([
+      row({
+        action: 'ip.created',
+        fromStatus: null,
+        toStatus: 'assigned',
+        deviceCode: 'PRN-E2E-02',
+        changes: { deviceId: 'dev-2', usedBy: null },
+      }),
+    ], t);
+    expect(entry.detail).toContain('cấp cho: PRN-E2E-02');
+  });
+
+  it('người làm hiện bằng họ tên khi API tra được, email vẫn đi kèm', () => {
+    const [named] = toIpHistoryEntries([row({ actorName: 'Lê Minh' })], t);
+    expect(named.actorName).toBe('Lê Minh');
+    expect(named.actor).toBe('it01@pmh.com.vn');
+    const [unnamed] = toIpHistoryEntries([row()], t);
+    expect(unnamed.actorName).toBeUndefined();
+  });
+
   it('chuỗi rỗng trong changes không đẻ ra "lý do: " cụt lủn', () => {
     const [entry] = toIpHistoryEntries([row({ changes: { reason: '   ', usedBy: '' } })], t);
     expect(entry.detail).not.toContain('lý do');

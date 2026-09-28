@@ -5,11 +5,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
-import { HISTORY_PAGE_LIMIT } from '../../common/history';
+import { HISTORY_PAGE_LIMIT, latestStatusEvents, type StatusEvent } from '../../common/history';
 import { requireUnchangedSince } from '../../common/cas';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
@@ -173,6 +173,22 @@ export class SoftwareService {
     return { at: row.createdAt, by: row.actor, auto: row.action === 'auto-retired' };
   }
 
+  /** Lần chuyển sang Thanh lý gần nhất của từng hồ sơ — bản theo mẻ của `retirementOf`. */
+  retirementEvents(ids: string[]): Promise<Map<string, StatusEvent>> {
+    return latestStatusEvents(
+      this.db,
+      {
+        table: softwareHistoryTable,
+        ownerId: softwareHistoryTable.softwareId,
+        actor: softwareHistoryTable.actor,
+        changes: softwareHistoryTable.changes,
+        createdAt: softwareHistoryTable.createdAt,
+      },
+      ids,
+      'retired',
+    );
+  }
+
   async history(softwareId: string): Promise<SoftwareHistoryRecord[]> {
     const rows = await this.db
       .select()
@@ -324,7 +340,16 @@ export class SoftwareService {
    * Gia hạn (story 3.4): đẩy `end_date` sang mốc mới. Tách riêng khỏi `update` để tab Lịch sử
    * đọc ra "đã gia hạn tới ngày X" chứ không lẫn với mọi lần sửa hồ sơ khác.
    */
-  async renew(actor: string, id: string, newEnd: string): Promise<SoftwareRecord> {
+  /**
+   * `withinSeats` (SW-049): việc kéo ghế theo, chạy TRONG transaction gia hạn và trả số ghế đã
+   * kéo — ghế thuộc `LicenseAssignmentService`, nên hàm này không tự đụng bảng ghế.
+   */
+  async renew(
+    actor: string,
+    id: string,
+    newEnd: string,
+    withinSeats?: (tx: Tx) => Promise<number>,
+  ): Promise<SoftwareRecord & { seatsRenewed: number }> {
     const before = await this.requireRow(id);
     // Gia hạn đặt lại `status = active`; cho qua ở đây là hồi sinh một hồ sơ người đã chủ ý
     // thanh lý. `requireUnchangedWithin` bên dưới giữ cho ảnh chụp này còn đúng lúc ghi.
@@ -377,7 +402,8 @@ export class SoftwareService {
         newEnd,
         actor,
       });
-      return updated;
+      const seatsRenewed = withinSeats ? await withinSeats(tx) : 0;
+      return { ...updated, seatsRenewed };
     });
   }
 
@@ -686,10 +712,20 @@ function buildWhere(filter: SoftwareFilter): SQL | undefined {
   if (term) {
     // Mã · tên · ghi chú, cả ba trong cột sinh `software.search_norm` (0052) và đã gấp dấu.
     // Ba vế `ILIKE` trước đây không gấp dấu — B-01.
-    parts.push(searchNormLike(softwareTable, term));
+    const byText = searchNormLike(softwareTable, term);
+    parts.push(
+      filter.alsoIds && filter.alsoIds.length > 0
+        ? or(byText, inArray(softwareTable.id, filter.alsoIds))
+        : byText,
+    );
   }
   if (filter.kind) parts.push(eq(softwareTable.kind, filter.kind));
-  if (filter.status) parts.push(eq(softwareTable.status, filter.status));
+  if (filter.licenseModel) parts.push(eq(softwareTable.licenseModel, filter.licenseModel));
+  if (filter.status === 'live') {
+    parts.push(inArray(softwareTable.status, ['active', 'expired_ok']));
+  } else if (filter.status) {
+    parts.push(eq(softwareTable.status, filter.status));
+  }
   if (filter.vendorId) parts.push(eq(softwareTable.vendorId, filter.vendorId));
   const defined = parts.filter((part): part is SQL => part !== undefined);
   return defined.length > 0 ? and(...defined) : undefined;

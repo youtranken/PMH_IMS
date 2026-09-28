@@ -19,6 +19,7 @@ import {
   imsNormLike,
   pgConstraint,
   pgErrorCode,
+  viOrder,
 } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import {
@@ -105,38 +106,38 @@ export class CatalogService {
         .select()
         .from(siteTable)
         .where(onlyActive ? eq(siteTable.active, true) : undefined)
-        .orderBy(asc(siteTable.code)),
+        .orderBy(asc(viOrder(siteTable.code))),
       this.db
         .select({ cabinet: cabinetTable, siteCode: siteTable.code })
         .from(cabinetTable)
         .innerJoin(siteTable, eq(cabinetTable.siteId, siteTable.id))
         .where(onlyActive ? eq(cabinetTable.active, true) : undefined)
-        .orderBy(asc(siteTable.code), asc(cabinetTable.code)),
+        .orderBy(asc(viOrder(siteTable.code)), asc(viOrder(cabinetTable.code))),
       this.db
         .select()
         .from(deviceTypeTable)
         .where(onlyActive ? eq(deviceTypeTable.active, true) : undefined)
-        .orderBy(asc(deviceTypeTable.name)),
+        .orderBy(asc(viOrder(deviceTypeTable.name))),
       this.db
         .select()
         .from(vendorTable)
         .where(onlyActive ? eq(vendorTable.active, true) : undefined)
-        .orderBy(asc(vendorTable.name)),
+        .orderBy(asc(viOrder(vendorTable.name))),
       this.db
         .select()
         .from(departmentTable)
         .where(onlyActive ? eq(departmentTable.active, true) : undefined)
-        .orderBy(asc(departmentTable.name)),
+        .orderBy(asc(viOrder(departmentTable.name))),
       this.db
         .select()
         .from(ispProviderTable)
         .where(onlyActive ? eq(ispProviderTable.active, true) : undefined)
-        .orderBy(asc(ispProviderTable.name)),
+        .orderBy(asc(viOrder(ispProviderTable.name))),
       this.db
         .select()
         .from(servicePortTable)
         .where(onlyActive ? eq(servicePortTable.active, true) : undefined)
-        .orderBy(asc(servicePortTable.name)),
+        .orderBy(asc(viOrder(servicePortTable.name))),
     ]);
     return {
       sites,
@@ -151,12 +152,16 @@ export class CatalogService {
     };
   }
 
-  /** Danh sách phân trang cho màn quản trị — hiện CẢ mục đã vô hiệu (có cột trạng thái). */
+  /**
+   * Danh sách phân trang cho màn quản trị — mặc định hiện CẢ mục đã vô hiệu (có cột trạng
+   * thái); `filters.active` lọc riêng một phía, `filters.siteId` lọc tủ theo site.
+   */
   async list(
     entity: CatalogEntity,
     query: PageQuery,
     search?: string,
     sort?: SortQuery<string>,
+    filters: CatalogListFilters = {},
   ): Promise<Page<CatalogRecord>> {
     const term = search?.trim() || null;
     const effectiveSort = sort ?? CATALOG_SORT_DEFAULT[entity];
@@ -174,13 +179,17 @@ export class CatalogService {
      * báo lại nó như một thiếu sót.
      */
     if (entity === 'cabinet') {
-      const where = term
-        ? or(
-            imsNormLike(cabinetTable.code, term),
-            imsNormLike(cabinetTable.description, term),
-            imsNormLike(siteTable.code, term),
-          )
-        : undefined;
+      const where = and(
+        term
+          ? or(
+              imsNormLike(cabinetTable.code, term),
+              imsNormLike(cabinetTable.description, term),
+              imsNormLike(siteTable.code, term),
+            )
+          : undefined,
+        filters.active === undefined ? undefined : eq(cabinetTable.active, filters.active),
+        filters.siteId ? eq(cabinetTable.siteId, filters.siteId) : undefined,
+      );
       const [rows, totalRows] = await Promise.all([
         this.db
           .select({ cabinet: cabinetTable, siteCode: siteTable.code })
@@ -204,11 +213,14 @@ export class CatalogService {
 
     const table = tableOf(entity);
     const labelColumn = entity === 'site' ? siteTable.code : nameColumn(entity);
-    const where = term
-      ? entity === 'site'
-        ? or(imsNormLike(siteTable.code, term), imsNormLike(siteTable.name, term))
-        : imsNormLike(labelColumn, term)
-      : undefined;
+    const where = and(
+      term
+        ? entity === 'site'
+          ? or(imsNormLike(siteTable.code, term), imsNormLike(siteTable.name, term))
+          : imsNormLike(labelColumn, term)
+        : undefined,
+      filters.active === undefined ? undefined : eq(table.active, filters.active),
+    );
     const [rows, totalRows] = await Promise.all([
       this.db
         .select()
@@ -628,6 +640,13 @@ export class CatalogService {
   }
 }
 
+export interface CatalogListFilters {
+  /** `true` = chỉ mục đang dùng, `false` = chỉ mục đã vô hiệu; vắng = cả hai. */
+  active?: boolean;
+  /** Chỉ có nghĩa với tủ mạng: tủ của một site. */
+  siteId?: string;
+}
+
 /**
  * Cột được phép sắp xếp — WHITELIST theo TỪNG loại (AD-2): tên cột đi thẳng vào `ORDER BY`,
  * và mỗi loại có bộ cột hiển thị riêng trên bảng nên whitelist cũng phải khai riêng.
@@ -668,27 +687,32 @@ function entityOrderBy(entity: SimpleEntity, sort: SortQuery<string>): SQL[] {
     case 'vendor':
       return vendorOrderBy(sort);
     case 'department':
-      return nameFirstOrderBy(sort, departmentTable.name, {
-        description: departmentTable.description,
+      return nameFirstOrderBy(sort, viOrder(departmentTable.name), {
+        description: viOrder(departmentTable.description),
         active: departmentTable.active,
       });
     case 'isp_provider':
-      return nameFirstOrderBy(sort, ispProviderTable.name, {
+      return nameFirstOrderBy(sort, viOrder(ispProviderTable.name), {
         hotline: ispProviderTable.hotline,
-        contact: ispProviderTable.contact,
+        contact: viOrder(ispProviderTable.contact),
         active: ispProviderTable.active,
       });
     case 'service_port':
-      return nameFirstOrderBy(sort, servicePortTable.name, {
+      return nameFirstOrderBy(sort, viOrder(servicePortTable.name), {
         protocol: servicePortTable.protocol,
         portFrom: servicePortTable.portFrom,
-        description: servicePortTable.description,
+        description: viOrder(servicePortTable.description),
         active: servicePortTable.active,
       });
   }
 }
 
 type OrderColumn = Parameters<typeof asc>[0];
+
+/*
+ * Cột CHỮ sắp theo thứ tự tiếng Việt (`viOrder`); cột số/cờ và cột mã thuần ASCII như hotline
+ * giữ nguyên — ép collation lên chúng không đổi gì mà tốn công.
+ */
 
 /**
  * Sắp theo một cột rồi CHỐT HẠ bằng `name`.
@@ -709,21 +733,21 @@ function nameFirstOrderBy(
 
 function siteOrderBy(sort: SortQuery<string>): SQL[] {
   const column = {
-    code: siteTable.code,
-    name: siteTable.name,
-    address: siteTable.address,
+    code: viOrder(siteTable.code),
+    name: viOrder(siteTable.name),
+    address: viOrder(siteTable.address),
     active: siteTable.active,
   }[sort.key as (typeof CATALOG_SORT_KEYS)['site'][number]];
   const primary = sort.dir === 'desc' ? desc(column) : asc(column);
   // Chốt hạ bằng `code`: đây là khóa duy nhất của site, thiếu nó hai site cùng giá trị cột
   // đang sắp có thể đổi chỗ nhau giữa hai lần tải trang.
-  return sort.key === 'code' ? [primary] : [primary, asc(siteTable.code)];
+  return sort.key === 'code' ? [primary] : [primary, asc(viOrder(siteTable.code))];
 }
 
 function cabinetOrderBy(sort: SortQuery<string>): SQL[] {
   const column = {
-    code: cabinetTable.code,
-    description: cabinetTable.description,
+    code: viOrder(cabinetTable.code),
+    description: viOrder(cabinetTable.description),
     uHeight: cabinetTable.uHeight,
     active: cabinetTable.active,
   }[sort.key as (typeof CATALOG_SORT_KEYS)['cabinet'][number]];
@@ -736,26 +760,26 @@ function cabinetOrderBy(sort: SortQuery<string>): SQL[] {
 
 function deviceTypeOrderBy(sort: SortQuery<string>): SQL[] {
   const column = {
-    name: deviceTypeTable.name,
+    name: viOrder(deviceTypeTable.name),
     hasPortMap: deviceTypeTable.hasPortMap,
     isRouter: deviceTypeTable.isRouter,
-    description: deviceTypeTable.description,
+    description: viOrder(deviceTypeTable.description),
     active: deviceTypeTable.active,
   }[sort.key as (typeof CATALOG_SORT_KEYS)['device_type'][number]];
   const primary = sort.dir === 'desc' ? desc(column) : asc(column);
-  return sort.key === 'name' ? [primary] : [primary, asc(deviceTypeTable.name)];
+  return sort.key === 'name' ? [primary] : [primary, asc(viOrder(deviceTypeTable.name))];
 }
 
 function vendorOrderBy(sort: SortQuery<string>): SQL[] {
   const column = {
-    name: vendorTable.name,
-    supplies: vendorTable.supplies,
+    name: viOrder(vendorTable.name),
+    supplies: viOrder(vendorTable.supplies),
     phone: vendorTable.phone,
-    contact: vendorTable.contact,
+    contact: viOrder(vendorTable.contact),
     active: vendorTable.active,
   }[sort.key as (typeof CATALOG_SORT_KEYS)['vendor'][number]];
   const primary = sort.dir === 'desc' ? desc(column) : asc(column);
-  return sort.key === 'name' ? [primary] : [primary, asc(vendorTable.name)];
+  return sort.key === 'name' ? [primary] : [primary, asc(viOrder(vendorTable.name))];
 }
 
 function tableOf(entity: CatalogEntity) {

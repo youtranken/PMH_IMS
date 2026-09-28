@@ -53,7 +53,7 @@ describe('DataTable', () => {
   it('th mang aria-sort phản ánh trạng thái sắp xếp', async () => {
     renderWithI18n(<DataTable data={DATA} columns={COLUMNS} emptyText="Trống" />);
     const slHeaderCell = screen.getByText('SL').closest('th')!;
-    expect(slHeaderCell).not.toHaveAttribute('aria-sort');
+    expect(slHeaderCell).toHaveAttribute('aria-sort', 'none');
     await userEvent.click(screen.getByRole('button', { name: /SL/ }));
     expect(slHeaderCell).toHaveAttribute('aria-sort', 'ascending');
   });
@@ -151,5 +151,37 @@ describe('DataTable', () => {
       />,
     );
     expect(container.querySelector('table')).toHaveClass('table', 'board-table');
+  });
+});
+
+describe('DataTable — bấm dòng', () => {
+  it('bấm ô chữ thì mở dòng; bấm nút trong dòng thì KHÔNG (nút tự lo việc của nó)', async () => {
+    const onRowClick = vi.fn();
+    renderWithI18n(
+      <DataTable data={DATA} columns={COLUMNS} emptyText="—" onRowClick={onRowClick} />,
+    );
+    await userEvent.click(screen.getByText('Banana'));
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+    await userEvent.click(screen.getAllByRole('button', { name: 'x' })[0]);
+    expect(onRowClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('cột sắp được mà chưa sắp mang aria-sort="none"; cột không sắp được thì không', () => {
+    renderWithI18n(<DataTable data={DATA} columns={COLUMNS} emptyText="—" />);
+    expect(screen.getByRole('columnheader', { name: /Tên/ })).toHaveAttribute('aria-sort', 'none');
+    expect(screen.getByRole('columnheader', { name: 'Hành động' })).not.toHaveAttribute('aria-sort');
+  });
+
+  it('expandText: nút bung mang chữ nói rõ bung ra thấy gì', () => {
+    renderWithI18n(
+      <DataTable
+        data={DATA}
+        columns={COLUMNS}
+        emptyText="—"
+        renderExpanded={() => <p>chi tiết</p>}
+        expandText={(r) => `${r.qty} license`}
+      />,
+    );
+    expect(screen.getByRole('button', { name: '3 license' })).toHaveAttribute('aria-expanded', 'false');
   });
 });

@@ -8,7 +8,7 @@ import { and, count, desc, eq, ilike, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
-import { HISTORY_PAGE_LIMIT } from '../../common/history';
+import { HISTORY_PAGE_LIMIT, latestStatusEvents, type StatusEvent } from '../../common/history';
 import { requireUnchangedSince } from '../../common/cas';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import { orderByStable, type SortQuery } from '../../common/sorting';
@@ -84,6 +84,19 @@ export class ServiceAccountService {
     return { items: rows.map(toRecord), total: Number(totalRows[0]?.value ?? 0) };
   }
 
+  /** Toàn bộ kết quả theo bộ lọc, KHÔNG phân trang — chỉ dùng cho export xlsx (FR-028). */
+  async listAll(
+    filter: ServiceAccountFilter = {},
+    sort: SortQuery<ServiceAccountSortKey> = SERVICE_ACCOUNT_SORT_DEFAULT,
+  ): Promise<ServiceAccountRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(serviceAccountTable)
+      .where(buildWhere(filter))
+      .orderBy(...serviceAccountOrderBy(sort));
+    return rows.map(toRecord);
+  }
+
   async findOne(id: string): Promise<ServiceAccountRecord> {
     return toRecord(await this.requireRow(id));
   }
@@ -94,6 +107,22 @@ export class ServiceAccountService {
       .from(serviceAccountTable)
       .where(eq(serviceAccountTable.id, id));
     return rows.length > 0;
+  }
+
+  /** Lần vô hiệu hoá gần nhất của từng tài khoản, kèm lý do bắt buộc đã ghi. */
+  disableEvents(ids: string[]): Promise<Map<string, StatusEvent>> {
+    return latestStatusEvents(
+      this.db,
+      {
+        table: serviceAccountHistoryTable,
+        ownerId: serviceAccountHistoryTable.serviceAccountId,
+        actor: serviceAccountHistoryTable.actor,
+        changes: serviceAccountHistoryTable.changes,
+        createdAt: serviceAccountHistoryTable.createdAt,
+      },
+      ids,
+      'disabled',
+    );
   }
 
   async history(id: string): Promise<ServiceAccountHistoryRecord[]> {

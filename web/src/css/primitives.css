@@ -422,11 +422,43 @@ table.table tbody tr.exp:hover td {
   font-style: italic;
 }
 
+/* Nút ⋯ ở góc trên phải, ngang hàng CIDR nó thao tác — hàng riêng cũ làm mỗi thẻ cao thêm
+   ~40px chỉ cho một nút. Vẫn nằm NGOÀI `<Link>` (không lồng nút trong link). */
+.subnet-card {
+  position: relative;
+}
 .subnet-card-actions {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+}
+.subnet-card.has-actions .subnet-link > .row {
+  padding-right: var(--space-10);
+}
+/* Gateway là con số người ta mở màn này để tra: cỡ và màu đọc được ở cả hai theme. */
+.subnet-link .sub.subnet-gw {
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.subnet-usage {
   display: flex;
-  justify-content: flex-end;
-  gap: var(--space-3);
-  padding: 0 var(--space-7) var(--space-6);
+  flex-direction: column;
+  gap: 1px;
+  font-size: var(--fs-sm);
+}
+/* Điện thoại: ô chọn dải + thẻ của dải đang chọn thay cho dãy thẻ cuộn ngang. */
+.subnet-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+/* Cột trái cuộn riêng: mép dưới mờ dần báo "còn thẻ bên dưới". Đệm đáy đúng bằng dải mờ nên
+   cuộn tới cuối thì thẻ cuối vẫn rõ nét. Chỉ ở khổ rộng — khổ hẹp cột trái nằm ngang. */
+@media (min-width: 1101px) {
+  .subnet-rail {
+    mask-image: linear-gradient(to bottom, black calc(100% - 24px), transparent);
+    padding-bottom: 24px;
+  }
 }
 
 /* Đầu cột phải: đang xem dải nào, và đầy tới đâu. */
@@ -441,6 +473,206 @@ table.table tbody tr.exp:hover td {
   margin: 0;
   font-size: var(--fs-lg);
   font-weight: var(--fw-semibold);
+}
+.pane-head-main {
+  flex: 1 1 22rem;
+  min-width: 0;
+}
+/* Dòng phụ dưới tên dải: gateway · mask · VLAN · site · người khai — thứ gõ vào card mạng. */
+.pane-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-6);
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.pane-desc {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-sm);
+}
+.pane-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+/* Chip trạng thái + nút chọn kiểu xem trên một hàng, xuống dòng khi hẹp. */
+.pane-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-7);
+}
+.subnet-pane .pane-tools .segmented {
+  margin-bottom: 0;
+}
+.net-config .form-section-title {
+  margin: 0 0 var(--space-3);
+}
+
+/* Bản đồ dải: mỗi địa chỉ một ô. Màu nói trạng thái, chữ (octet cuối + nhãn) nói địa chỉ. */
+.ip-map {
+  display: grid;
+  gap: 3px;
+  margin-top: var(--space-4);
+}
+.ip-cell {
+  min-width: 0;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--ink-3);
+  font-size: var(--fs-2xs);
+  font-variant-numeric: tabular-nums;
+}
+.ip-cell.is-assigned {
+  background: var(--ok-soft);
+  border-color: var(--ok);
+  color: var(--ink);
+  font-weight: 600;
+}
+.ip-cell.is-voided {
+  background: var(--surface-2);
+  border-style: dashed;
+}
+/* Gateway: vòng riêng, không đổi màu nền — nó có thể đang dùng hoặc chưa khai hồ sơ. */
+.ip-cell.is-gw {
+  box-shadow: inset 0 0 0 2px var(--primary);
+}
+.ip-cell:disabled {
+  cursor: default;
+}
+
+/* Sổ NAT: "TCP 8080 → 10.0.0.5:80" đọc ngang như một câu, mũi tên cố định giữa hai nửa. */
+.nat-flow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.nat-arrow {
+  color: var(--ink-3);
+}
+.nat-count {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-sm);
+}
+/* Điện thoại: mỗi rule là thẻ ba dòng — "ngoài → trong" + trạng thái + ⋯, rồi router · người
+   dùng, rồi lý do. Vẫn là <table> nên hàng/ô và nhãn `data-label` của ô Thao tác còn nguyên. */
+@media (max-width: 600px) {
+  .nat-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+  .nat-table.table-stack td {
+    display: block;
+    padding: 0;
+    text-align: left;
+  }
+  .nat-table.table-stack td::before {
+    font-weight: 400;
+    color: var(--ink-3);
+    margin-right: var(--space-3);
+  }
+  .nat-table.table-stack td.col-flow::before,
+  .nat-table.table-stack td.col-status::before {
+    content: none;
+  }
+  /* Ô Thao tác giữ `data-label` trong DOM (trình đọc màn hình, bài kiểm 390px) nhưng không vẽ
+     chữ — nó nằm góc phải dòng đầu, cạnh đúng rule nó thao tác. */
+  .nat-table.table-stack td.col-actions::before {
+    content: none;
+  }
+  .nat-table td.col-flow {
+    grid-area: 1 / 1;
+    font-weight: 600;
+  }
+  .nat-table td.col-status {
+    grid-area: 1 / 2;
+  }
+  .nat-table td.col-actions {
+    grid-area: 1 / 3;
+  }
+  .nat-table td:not(.col-flow):not(.col-status):not(.col-actions) {
+    grid-column: 1 / -1;
+    font-size: var(--fs-sm);
+  }
+  .nat-table.table-stack td .cell-sub {
+    text-align: left;
+  }
+  .nat-table .cell-clamp-2 {
+    max-width: none;
+  }
+}
+
+/* Ô trống của bảng IP: dấu gạch chữ thường (không mono), nhạt. */
+.cell-empty {
+  color: var(--ink-3);
+  font-family: var(--font);
+}
+/*
+ * Điện thoại: mỗi IP là một thẻ 2 dòng thay vì 6 cặp nhãn–giá trị. Dòng 1 là IP (đậm) +
+ * huy hiệu + thao tác; dòng 2 là máy · người dùng. Ô trống ("—") ẩn hẳn — trên một /24 chúng
+ * chiếm quá nửa chiều cao mà không nói gì. Vẫn là <table> nên trình đọc màn hình và bài kiểm
+ * vẫn thấy hàng/ô như cũ.
+ */
+@media (max-width: 600px) {
+  .ip-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    align-items: center;
+    gap: var(--space-1) var(--space-3);
+    padding: var(--space-3) var(--space-4);
+  }
+  .ip-table.table-stack td {
+    display: block;
+    padding: 0;
+    text-align: left;
+  }
+  /* Dòng 1 (IP · huy hiệu · ⋯) tự nói nó là gì; các dòng sau giữ nhãn nhỏ, nhạt ở đầu dòng —
+     thiếu nhãn thì "Phòng Kế toán" và "LT-01" không biết cái nào là máy, cái nào là người. */
+  .ip-table.table-stack td.col-ip::before,
+  .ip-table.table-stack td.col-status::before,
+  .ip-table.table-stack td.col-actions::before {
+    content: none;
+  }
+  .ip-table.table-stack td::before {
+    font-weight: 400;
+    color: var(--ink-3);
+    margin-right: var(--space-3);
+  }
+  .ip-table td.col-ip .mono {
+    font-weight: 600;
+    font-size: var(--fs-md);
+  }
+  .ip-table td.col-ip {
+    grid-area: 1 / 1;
+  }
+  .ip-table td.col-status {
+    grid-area: 1 / 2;
+  }
+  .ip-table td.col-actions {
+    grid-area: 1 / 3;
+  }
+  .ip-table td:not(.col-ip):not(.col-status):not(.col-actions) {
+    grid-column: 1 / -1;
+    font-size: var(--fs-sm);
+    color: var(--ink-2);
+  }
+  .ip-table td:has(> .cell-empty) {
+    display: none;
+  }
+  .ip-table.table-stack td .cell-sub {
+    text-align: left;
+  }
 }
 .subnet-pane {
   min-width: 0;
@@ -491,6 +723,10 @@ table.table tbody tr.exp:hover td {
   font-variant-numeric: tabular-nums;
   color: inherit;
 }
+/* Số của chip ĐANG CHỌN đậm hơn — ở chế độ tối nó từng chìm ngang số của chip chưa chọn. */
+.segmented button[aria-pressed='true'] .seg-count {
+  font-weight: 700;
+}
 
 /* Dưới 1100px hai cột thành một: cột trái 300px + bảng 6 cột không còn đủ chỗ, và cột trái
    là thứ CHỌN xong rồi mới đọc — nên nó lên trên, cuộn ngang được, không chiếm chiều cao. */
@@ -537,19 +773,69 @@ table.table tbody tr.exp:hover td {
   --seat-cols: minmax(150px, 2fr) minmax(90px, 0.9fr) 120px 108px 118px
     minmax(0, 1fr) minmax(0, 1.2fr);
 }
+/* Không máy nào khai ngày bắt đầu: bỏ hẳn cột đó, nhường chỗ cho tên phần mềm. */
+.seat-list.inst-list.no-start {
+  --seat-cols: minmax(180px, 2.4fr) minmax(90px, 0.9fr) 120px 118px minmax(0, 1fr)
+    minmax(0, 1.2fr);
+}
+/* Tên phần mềm là dòng chính, mã là dòng phụ mono nhỏ — không còn "mã | tên…" cắt ngang. */
+.seat-mc.seat-mc-stack {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+.seat-mc-stack .seat-code {
+  font-size: var(--fs-2xs);
+  font-weight: 500;
+}
+/* Khối bung nằm TRONG bề ngang bảng: lưới rộng hơn thì cuộn trong khung, không tràn mép phải. */
+.exp .exp-soft {
+  max-width: 100%;
+  overflow-x: auto;
+}
+/* Tiêu đề khu bung: chữ thường cỡ nhỏ — "Đã gán 3/10 ghế" là một câu, in hoa thì đọc ngược.
+   Nút "Gán vào máy" đứng NGAY cạnh câu đó, không trôi ra mép phải của một hàng rất rộng. */
 .seat-head {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-5);
-  font-size: var(--fs-2xs);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--ink-3);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--ink-2);
   margin-bottom: var(--space-5);
 }
 .seat-head .spacer {
   flex: 1;
+}
+.seat-head .is-warn {
+  color: var(--warn);
+}
+/* Thanh trên tab Máy đang dùng: thanh ghế · lọc Đang dùng/Đã gỡ · nút gán. */
+.seat-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-6);
+  margin-bottom: var(--space-5);
+}
+.seat-toolbar .spacer {
+  flex: 1;
+}
+.seat-toolbar .usage {
+  min-width: 140px;
+}
+/* Ghế của license Hết hạn: thanh xám thay cho xanh "ổn" (`SeatUsage`). */
+.usage-expired {
+  display: block;
+}
+.usage-expired .usage-fill {
+  background: var(--muted);
+}
+.seat-total {
+  margin: var(--space-4) 0 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 .seat-hd {
   display: grid;
@@ -688,6 +974,13 @@ table.table tbody tr.exp:hover td {
   .inst-list .seat-card > [data-label]:not(.seat-mc)::before {
     content: attr(data-label) ': ';
     color: var(--ink-3);
+  }
+  /* Thẻ gọn: MỘT cỡ chữ cho mọi dòng, bỏ dòng chỉ có "—". */
+  .inst-list .seat-card > [data-label]:not(.seat-mc) {
+    font-size: var(--fs-sm);
+  }
+  .inst-list .seat-card > [data-empty] {
+    display: none;
   }
   .inst-list .seat-cost {
     text-align: left;

@@ -282,8 +282,8 @@ test.describe('Nhật ký kiểm toán — màn hình', () => {
     await firstLogin(page, E2E_SA);
 
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
-    await nav.getByRole('link', { name: 'Nhật ký', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Nhật ký' })).toBeVisible();
+    await nav.getByRole('link', { name: 'Nhật ký hệ thống', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Nhật ký hệ thống' })).toBeVisible();
     expect(new URL(page.url()).pathname).toBe('/admin/audit-log');
 
     const filtered = page.waitForResponse(
@@ -305,15 +305,16 @@ test.describe('Nhật ký kiểm toán — màn hình', () => {
     await expect(page.getByText(E2E_SA.email).first()).toBeVisible();
   });
 
-  test('đường hỏng: Thành viên không thấy mục Nhật ký, gõ thẳng URL nhận 404', async ({ page }) => {
+  test('đường hỏng: Thành viên không thấy mục Nhật ký, gõ thẳng URL nhận trang 403', async ({ page }) => {
     await firstLogin(page, E2E_MEMBER);
 
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
     // Menu đã dựng xong thì vế "không có" bên dưới mới có nghĩa.
     await expect(nav.getByRole('link', { name: 'Thiết bị', exact: true })).toBeVisible();
-    await expect(nav.getByText('Nhật ký', { exact: true })).toHaveCount(0);
+    await expect(nav.getByText('Nhật ký hệ thống', { exact: true })).toHaveCount(0);
 
     await page.goto('/admin/audit-log');
-    await expect(page.getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible();
+    // Trang có thật, chỉ là không dành cho vai này — nói đúng là THIẾU QUYỀN (MISC-001).
+    await expect(page.getByRole('heading', { name: 'Bạn không có quyền xem trang này' })).toBeVisible();
   });
 });

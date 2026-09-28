@@ -1,4 +1,4 @@
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, type Ref } from 'react';
 
 /** Lượt gõ này vừa làm ô ĐỦ 6 số (trước đó chưa đủ) — mốc duy nhất được tự gửi. */
 export function otpJustCompleted(prev: string, next: string): boolean {
@@ -39,6 +39,10 @@ export function OtpInput({
   autoFocus = true,
   id = 'otp',
   onComplete,
+  error,
+  hint,
+  inputRef,
+  readOnly,
 }: {
   value: string;
   onChange: (value: string) => void;
@@ -46,7 +50,19 @@ export function OtpInput({
   autoFocus?: boolean;
   id?: string;
   onComplete?: (code: string) => void;
+  /**
+   * Lỗi của CHÍNH ô này (sai mã, thiếu số) — hiện ngay dưới ô. Để lỗi ở đầu card thì trên điện
+   * thoại, lúc bàn phím mở, nó nằm ngoài màn hình và người dùng chỉ thấy ô bị xoá trắng.
+   */
+  error?: string | null;
+  hint?: string;
+  /** Để nơi gọi đưa con trỏ về ô sau một lượt sai — giữ bàn phím số trên điện thoại mở. */
+  inputRef?: Ref<HTMLInputElement>;
+  /** Đang gửi mã: khoá ô để lượt gõ thêm không đè lên mã đang được kiểm. */
+  readOnly?: boolean;
 }) {
+  const errorId = error ? `${id}-error` : undefined;
+  const hintId = hint ? `${id}-hint` : undefined;
   return (
     <div className="field">
       <label className="lbl-t" htmlFor={id}>
@@ -54,7 +70,11 @@ export function OtpInput({
       </label>
       <input
         id={id}
+        ref={inputRef}
         className="inp auth-otp"
+        aria-invalid={error ? true : undefined}
+        aria-describedby={[errorId, hintId].filter(Boolean).join(' ') || undefined}
+        readOnly={readOnly}
         // inputMode numeric: điện thoại bật bàn phím số; autocomplete để iOS/Android
         // gợi ý mã từ tin nhắn/keychain.
         inputMode="numeric"
@@ -71,6 +91,16 @@ export function OtpInput({
           if (onComplete && otpJustCompleted(value, next)) onComplete(next);
         }}
       />
+      {error ? (
+        <span className="field-error" role="alert" id={errorId}>
+          {error}
+        </span>
+      ) : null}
+      {hint ? (
+        <span className="field-hint muted" id={hintId}>
+          {hint}
+        </span>
+      ) : null}
     </div>
   );
 }

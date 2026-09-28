@@ -10,7 +10,23 @@ export interface RowAction {
   onSelect: () => void;
   /** Việc lấy đi cái gì đó (xóa · thanh lý · vô hiệu hóa) — chữ đỏ, và luôn xếp xuống cuối. */
   danger?: boolean;
+  /**
+   * Việc cần nghĩ trước khi bấm nhưng ĐẢO LẠI ĐƯỢC (khóa tạm, vô hiệu một mục danh mục): chữ
+   * màu cảnh báo, đứng thành nhóm riêng giữa việc thường và việc `danger`. Tô đỏ cả việc đảo
+   * được lẫn việc không đảo được thì màu đỏ hết nghĩa là "không quay lại được".
+   */
+  warn?: boolean;
   disabled?: boolean;
+  /**
+   * Việc ÍT KHI làm và dễ nhầm với một việc khác trong cùng menu (vd "Ẩn hồ sơ" nhập nhầm cạnh
+   * "Thu hồi"): chữ xám, xếp SAU cả việc nguy hiểm, có đường kẻ ngăn phía trên.
+   */
+  muted?: boolean;
+  /**
+   * Dòng mô tả nhỏ dưới nhãn — nói việc này để lại gì ("trả IP về pool, giữ lịch sử"). Chỉ để
+   * đọc (`aria-hidden`): tên của mục vẫn đúng là `label`, bài kiểm và trình đọc màn hình không đổi.
+   */
+  hint?: string;
 }
 
 /**
@@ -64,9 +80,8 @@ export function RowActions({
    * rơi vào khi bấm nhanh hai lần. Thứ tự ổn định giữa mọi bảng cũng có nghĩa là trí nhớ cơ
    * bắp dùng lại được — mục cuối cùng luôn là mục phải nghĩ trước khi bấm.
    */
-  const ordered = [...items].sort(
-    (a, b) => Number(a.danger ?? false) - Number(b.danger ?? false),
-  );
+  const rank = (item: RowAction) => (item.muted ? 3 : item.danger ? 2 : item.warn ? 1 : 0);
+  const ordered = [...items].sort((a, b) => rank(a) - rank(b));
 
   const close = (refocus: boolean) => {
     setOpen(false);
@@ -190,7 +205,13 @@ export function RowActions({
                 {subject}
               </div>
             ) : null}
-            {ordered.map((item, index) => (
+            {ordered.map((item, index) => [
+              /* Vạch ngăn giữa hai NHÓM mức độ (thường · cảnh báo · nguy hiểm · hiếm): hai việc
+                 khác hẳn hệ quả đứng sát nhau là chỗ ngón tay trượt nhầm trên điện thoại. Là
+                 `role="separator"` để trình đọc màn hình cũng nghe ra ranh giới nhóm. */
+              index > 0 && rank(ordered[index - 1]) !== rank(item) ? (
+                <div key={`sep-${item.key}`} role="separator" className="ra-sep" />
+              ) : null,
               <button
                 key={item.key}
                 ref={(el) => {
@@ -199,16 +220,33 @@ export function RowActions({
                 type="button"
                 role="menuitem"
                 disabled={item.disabled}
-                className={item.danger ? 'ghost danger' : 'ghost'}
+                className={
+                  item.muted
+                    ? 'ghost is-muted'
+                    : item.danger
+                      ? 'ghost danger'
+                      : item.warn
+                        ? 'ghost warn'
+                        : 'ghost'
+                }
                 onClick={(event) => {
                   event.stopPropagation();
                   close(true);
                   item.onSelect();
                 }}
               >
-                {item.label}
-              </button>
-            ))}
+                {item.hint ? (
+                  <span className="ra-text">
+                    {item.label}
+                    <small className="ra-hint" aria-hidden="true">
+                      {item.hint}
+                    </small>
+                  </span>
+                ) : (
+                  item.label
+                )}
+              </button>,
+            ])}
           </div>,
           portal ?? document.body,
         )}

@@ -1,28 +1,20 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
-import { errorMessage, useApiMutation } from '@/lib/api';
-import { formatDate, formatMoney, orDash } from '@/lib/format';
-import { useConfirm } from '@/ui/confirm-provider';
-import { RowActions } from '@/ui/row-actions';
 import { useToast } from '@/ui/toast';
-import { AssignDialog } from './license-assignments-panel';
-import { SeatEndCell } from './seat-cells';
-import { seatLabel, supportsSeats, type LicenseSeat, type SoftwareRow } from './software-types';
-import { PATHS } from '@/lib/routes';
+import { AssignDialog } from './assign-dialog';
+import { SeatTable, type SeatRow } from './seat-table';
+import { seatFlag } from './software-standing';
+import { seatLabel, supportsSeats, type SoftwareRow } from './software-types';
 
 /**
- * Khu bung ra dưới một dòng license: MỖI CHỖ NGỒI một thẻ, kèm chi phí, hợp đồng và kỳ hạn
- * riêng của chính ghế đó (AC 3.2 + nếp `seat-list` của code nền QLTS, AD-12).
+ * Khu bung ra dưới một dòng license: bảng ghế gọn (`SeatTable compact`) — CÙNG bảng với tab
+ * Máy đang dùng, để hai chỗ trả lời "máy nào dùng license này" giống hệt nhau (AD-15).
  *
- * Vì sao là lưới thẻ chứ không phải bảng lồng: hàng bung nằm TRONG một ô của bảng cha; bảng
- * lồng bảng thì bề rộng cột trong ngoài giằng nhau, và ở dải tablet bảng cha đã gập thành
- * thẻ dọc còn bảng con thì chưa.
- *
- * Chỉ lấy bản ghi CÒN HIỆU LỰC: "key này từng nhập máy nào" là câu hỏi khác, đã có ở trang
- * chi tiết với ô "xem cả đã gỡ" — không kéo lịch sử vào chỗ tra nhanh.
+ * Chỉ lấy ghế CÒN HIỆU LỰC: "key này từng nhập máy nào" là câu hỏi khác, đã có ở trang chi
+ * tiết với nút "Đã gỡ" — không kéo lịch sử vào chỗ tra nhanh. License chưa có ghế nào vẫn bung
+ * được: đó chính là lúc cần nút "Gán vào máy" ngay tại đây.
  */
 export function LicenseSeatsExpand({
   software,
@@ -33,37 +25,26 @@ export function LicenseSeatsExpand({
 }) {
   const { t } = useTranslation();
   const toast = useToast();
-  const askConfirm = useConfirm();
   const queryClient = useQueryClient();
   const [assigning, setAssigning] = useState(false);
-  const [editing, setEditing] = useState<LicenseSeat | null>(null);
 
   const seats = useQuery({
     queryKey: ['software', software.id, 'assignments', false],
     queryFn: () =>
-      apiFetch<LicenseSeat[]>(
-        `/api/v1/software/${software.id}/assignments?includeReleased=false`,
-      ),
+      apiFetch<SeatRow[]>(`/api/v1/software/${software.id}/assignments?includeReleased=false`),
   });
 
-  const release = useApiMutation<{ id: string }, unknown>(
-    (input) => `/api/v1/software/${software.id}/assignments/${input.id}`,
-    { method: 'DELETE', csrfToken, refreshMe: false, body: () => undefined },
-  );
-
   const rows = seats.data ?? [];
-  // Hết seat vẫn cho gán (có cảnh báo + ghi lý do, AC 3.2) — nút không tự khoá.
-  const canAssign = supportsSeats(software.kind);
-  // Làm mới cả danh sách (cột seat) lẫn khu bung dòng.
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['software'] });
+  // Hết ghế vẫn cho gán (có cảnh báo + ghi lý do, AC 3.2) — nút không tự khoá.
+  const canAssign = supportsSeats(software.kind) && software.status !== 'retired';
+  const flag = seatFlag(software.seatUsed, software.seatTotal);
 
   return (
     <div className="exp-soft">
       <div className="seat-head">
-        {/* "3/10 ghế đã gán" — cùng con số với cột Seat của bảng trên, lấy từ cùng một chỗ
-            (`seatLabel`) nên không thể lệch nhau. */}
+        {/* Cùng con số với cột Ghế của bảng trên, lấy từ cùng một chỗ (`seatLabel`). */}
         <span>{t('license.seatsHeader', { seats: seatLabel(software) })}</span>
-        <span className="spacer" />
+        {flag ? <span className="is-warn">· {t('license.seatsFullTag')}</span> : null}
         {canAssign ? (
           <button type="button" className="btn sm" onClick={() => setAssigning(true)}>
             {t('license.assign')}
@@ -78,130 +59,19 @@ export function LicenseSeatsExpand({
       ) : rows.length === 0 ? (
         <p className="seat-empty">{t('license.emptySeats')}</p>
       ) : (
-        <div className="seat-list">
-          <div className="seat-hd">
-            <span>{t('license.device')}</span>
-            <span>{t('license.user')}</span>
-            <span>{t('license.cost')}</span>
-            <span>{t('license.startDate')}</span>
-            <span>{t('license.endDate')}</span>
-            <span>{t('license.contract')}</span>
-            <span>{t('license.note')}</span>
-            <span aria-hidden="true" />
-          </div>
-          {rows.map((seat) => (
-            <div key={seat.id} className="seat-card">
-              <div className="seat-mc" data-label={t('license.device')}>
-                {/* Link thật (không phải onClick trên thẻ): mở tab mới, copy link được. */}
-                <Link className="mono" to={PATHS.device(seat.deviceId)}>
-                  {seat.deviceCode}
-                </Link>
-              </div>
-              <div className="seat-who" data-label={t('license.user')} title={seat.deviceName}>
-                {orDash(seat.deviceAssignedTo)}
-              </div>
-              <div className="seat-cost" data-label={t('license.cost')}>
-                {formatMoney(seat.cost)}
-              </div>
-              <div className="seat-date" data-label={t('license.startDate')}>
-                {seat.startDate ? formatDate(seat.startDate) : '—'}
-              </div>
-              <div className="seat-date" data-label={t('license.endDate')}>
-                <SeatEndCell
-                  seat={seat}
-                  licenseModel={software.licenseModel}
-                  fallbackEnd={software.endDate}
-                />
-              </div>
-              <div className="seat-note" data-label={t('license.contract')} title={seat.contract ?? undefined}>
-                {orDash(seat.contract)}
-              </div>
-              <div className="seat-note" data-label={t('license.note')} title={seat.note ?? undefined}>
-                {orDash(seat.note)}
-              </div>
-              <div className="seat-menu">
-                {/*
-                  "Gỡ ghế" vào MENU, không đứng cạnh "Sửa" (rà UI/UX #21).
-
-                  Chú thích cũ ở đây đã tự nhận ra một nửa vấn đề — "chính cái nút thì vẫn xám
-                  y như nút Sửa bên cạnh" — rồi vá bằng cách tô đỏ. Tô đỏ không giải quyết
-                  chuyện HAI NÚT SÁT NHAU: trượt tay một ô là thu license khỏi một máy đang
-                  dùng. `RowActions` tự đẩy mục `danger` xuống cuối menu.
-                */}
-                <RowActions
-                  label={t('common.actionsOf', { subject: seat.deviceCode })}
-                  items={[
-                    {
-                      key: 'edit',
-                      label: t('common.edit'),
-                      onSelect: () => setEditing(seat),
-                    },
-                    {
-                      key: 'release',
-                      label: t('license.release'),
-                      danger: true,
-                      disabled: release.isPending,
-                      onSelect: () => {
-                        void (async () => {
-                          const ok = await askConfirm({
-                            title: t('common.titleOf', {
-                              action: t('license.release'),
-                              subject: seat.deviceCode,
-                            }),
-                            message: t('license.confirmRelease', { device: seat.deviceCode }),
-                            danger: true,
-                            confirmLabel: t('license.release'),
-                          });
-                          if (!ok) return;
-                          release.mutate(
-                            { id: seat.id },
-                            {
-                              onSuccess: () => {
-                                toast({ message: t('license.releasedDone') });
-                                void refresh();
-                              },
-                              onError: (error) =>
-                                toast({ message: errorMessage(error), tone: 'error' }),
-                            },
-                          );
-                        })();
-                      },
-                    },
-                  ]}
-                />
-              </div>
-            </div>
-          ))}
-        </div>
+        <SeatTable software={software} rows={rows} csrfToken={csrfToken} compact />
       )}
 
       {assigning ? (
-        // Dùng LẠI đúng hộp của trang chi tiết (AD-15) — luật vượt seat, chặn gán trùng máy,
-        // ô tìm máy, các ô chi phí/hợp đồng/kỳ hạn đều nằm trong đó, không chép bản thứ hai.
         <AssignDialog
           software={software}
           csrfToken={csrfToken}
           onClose={() => setAssigning(false)}
-          onDone={(warnings) => {
+          onDone={(warnings, count) => {
             setAssigning(false);
-            toast({ message: t('license.assigned') });
+            toast({ message: t('license.assignedCount', { count }) });
             warnings.forEach((message) => toast({ message, tone: 'warn' }));
-            void refresh();
-          }}
-        />
-      ) : null}
-
-      {editing ? (
-        <AssignDialog
-          software={software}
-          seat={editing}
-          csrfToken={csrfToken}
-          onClose={() => setEditing(null)}
-          onDone={() => {
-            setEditing(null);
-            // Toast phải GỌI TÊN thứ vừa đổi: "Đã lưu" trên màn có 10 ghế thì không biết ghế nào.
-            toast({ message: t('license.seatSaved', { device: editing.deviceCode }) });
-            void refresh();
+            void queryClient.invalidateQueries({ queryKey: ['software'] });
           }}
         />
       ) : null}

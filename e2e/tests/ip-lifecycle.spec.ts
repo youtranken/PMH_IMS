@@ -70,10 +70,10 @@ test.describe('Vòng đời IP', () => {
     await rowAction(page, address, 'Thu hồi');
     const reclaim = page.getByRole('dialog');
     await reclaim.getByRole('textbox', { name: 'Lý do' }).fill('máy đã thanh lý');
-    await reclaim.getByRole('button', { name: 'Xác nhận' }).click();
+    await reclaim.getByRole('button', { name: 'Thu hồi' }).click();
 
     // Thu hồi TRẢ CHỖ về pool: mức sử dụng phải giảm, và hàng về đúng trạng thái Trống.
-    await expect(page.getByText('0% · 0/6 · còn 6')).toBeVisible();
+    await expect(page.getByText('Còn 6 IP trống')).toBeVisible();
     await expect(row.getByText('Trống', { exact: true })).toBeVisible();
     await expect(row.getByText('Đã thu hồi')).toHaveCount(0);
     // Chủ cũ đã biến khỏi hồ sơ — chỉ lịch sử còn giữ.
@@ -88,7 +88,7 @@ test.describe('Vòng đời IP', () => {
     await assign.getByRole('combobox', { name: 'Người / bộ phận dùng' }).fill('Anh Hùng — Kho');
     await assign.getByRole('button', { name: 'Cấp IP', exact: true }).click();
     await expect(row.getByText('Anh Hùng — Kho')).toBeVisible();
-    await expect(page.getByText('17% · 1/6 · còn 5')).toBeVisible();
+    await expect(page.getByText('Còn 5 IP trống')).toBeVisible();
 
     // AC: lịch sử giữ VĨNH VIỄN — mở ra vẫn đọc được IP này từng là máy in kế toán.
     await rowAction(page, address, 'Lịch sử');

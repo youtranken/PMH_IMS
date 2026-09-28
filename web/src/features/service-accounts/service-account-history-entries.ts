@@ -53,14 +53,34 @@ export function toServiceAccountHistory(
     id: row.id,
     at: row.createdAt,
     actor: row.actor,
+    actorName: row.actorName ?? undefined,
     action: ACTION_LABEL[row.action] ? t(ACTION_LABEL[row.action]) : row.action,
-    detail: describe(row.changes, t),
+    detail: describe(row.changes, t, row.action === 'created'),
   }));
 }
 
+/**
+ * Lượt vô hiệu hóa đang có hiệu lực — ai, lúc nào, vì sao — cho băng rôn đầu trang hồ sơ, hoặc
+ * `null`. `rows` theo thứ tự API trả (mới nhất trước); chỉ lượt đổi trạng thái MỚI NHẤT quyết
+ * định: đóng rồi mở lại thì lý do đóng cũ không còn đúng với hồ sơ đang xem.
+ */
+export function lastDisable(
+  rows: ServiceAccountHistoryRow[],
+): { at: string; actor: string; reason: string | null } | null {
+  const latest = rows.find((row) => row.action === 'disabled' || row.action === 'enabled');
+  if (!latest || latest.action !== 'disabled') return null;
+  const reason = latest.changes?.reason?.after;
+  return {
+    at: latest.createdAt,
+    actor: latest.actorName ?? latest.actor,
+    reason: typeof reason === 'string' && reason.trim() ? reason : null,
+  };
+}
+
 /** Nhãn + cách đọc riêng của tài khoản dịch vụ; phần chung ở `ui/history-changes.ts`. */
-function describe(changes: FieldChanges, t: TFunction): string | null {
+function describe(changes: FieldChanges, t: TFunction, initial: boolean): string | null {
   return describeFieldChanges(changes, t, {
+    initial,
     label: (field) => (FIELD_LABEL[field] ? t(FIELD_LABEL[field]) : field),
     display: (field, value) => {
       if (value === null || value === undefined || value === '') return undefined;

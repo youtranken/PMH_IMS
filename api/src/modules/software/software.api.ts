@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { StatusEvent } from '../../common/history';
 import type { Page } from '../../common/pagination';
 import { IspLineService, type IspLineListItem } from './isp-line.service';
 import { SoftwareService } from './software.service';
@@ -67,5 +68,15 @@ export class SoftwareApiService {
 
   terminatedIspPage(): Promise<Page<IspLineListItem>> {
     return this.isp.list({ page: 1, limit: 500 }, { status: 'terminated' });
+  }
+
+  /** Ai thanh lý hồ sơ phần mềm, khi nào, tự động (Q-13) hay bằng tay. */
+  retirementEvents(ids: string[]): Promise<Map<string, StatusEvent>> {
+    return this.software.retirementEvents(ids);
+  }
+
+  /** Như `retirementEvents`, cho đường truyền đã thanh lý. */
+  ispTerminationEvents(ids: string[]): Promise<Map<string, StatusEvent>> {
+    return this.isp.terminationEvents(ids);
   }
 }

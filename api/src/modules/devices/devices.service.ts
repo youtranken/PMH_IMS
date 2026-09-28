@@ -9,7 +9,7 @@ import { and, asc, count, desc, eq, inArray, ne, or, sql, type SQL } from 'drizz
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
-import { HISTORY_PAGE_LIMIT } from '../../common/history';
+import { HISTORY_PAGE_LIMIT, latestStatusEvents, type StatusEvent } from '../../common/history';
 import { DeviceRetirementRegistry } from '../../common/device-retirement.registry';
 import { DeviceSearchRegistry } from '../../common/device-search.registry';
 import { requireCas, requireUnchangedSince } from '../../common/cas';
@@ -177,6 +177,22 @@ export class DevicesService {
       )
       .orderBy(asc(deviceTable.warrantyEnd));
     return this.decorate(rows);
+  }
+
+  /** Lần chuyển sang `status` gần nhất của từng máy (ai, khi nào) — một câu cho cả mẻ. */
+  statusEvents(ids: string[], status: DeviceStatus): Promise<Map<string, StatusEvent>> {
+    return latestStatusEvents(
+      this.db,
+      {
+        table: deviceHistoryTable,
+        ownerId: deviceHistoryTable.deviceId,
+        actor: deviceHistoryTable.actor,
+        changes: deviceHistoryTable.changes,
+        createdAt: deviceHistoryTable.createdAt,
+      },
+      ids,
+      status,
+    );
   }
 
   async history(deviceId: string): Promise<DeviceHistoryRecord[]> {
@@ -707,6 +723,17 @@ export function deviceOrderBy(sort: SortQuery<DeviceSortKey>): SQL[] {
     status: deviceTable.status,
     warrantyEnd: deviceTable.warrantyEnd,
   }[sort.key];
+  /*
+   * Bảo hành: máy đã thanh lý ("Không tính hạn") và máy chưa khai hạn luôn xuống CUỐI, bất kể
+   * chiều sắp — người sắp cột này là đang tìm máy sắp hết hạn, gặp rác ở đầu là phải lật trang.
+   * Khớp từng cột với chỉ mục 0100/0101 để không sinh node Sort (sort-index.spec).
+   */
+  if (sort.key === 'warrantyEnd') {
+    const retiredLast = sql`(${deviceTable.status} = 'retired')`;
+    return sort.dir === 'desc'
+      ? [asc(retiredLast), sql`${deviceTable.warrantyEnd} DESC NULLS LAST`, desc(deviceTable.code)]
+      : [asc(retiredLast), sql`${deviceTable.warrantyEnd} ASC NULLS LAST`, asc(deviceTable.code)];
+  }
   // Chốt hạ bằng `code`, CÙNG HƯỚNG với cột đang sắp — `orderByStable` giữ luật đó một chỗ,
   // và chú thích ở đó nói vì sao hướng phải đi theo nhau (không thì mất chỉ mục, 0058).
   return orderByStable(sort.dir, column, deviceTable.code);

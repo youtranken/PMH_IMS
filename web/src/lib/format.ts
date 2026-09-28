@@ -23,7 +23,16 @@ const dateFmt = new Intl.DateTimeFormat('vi-VN', {
 export function formatDateTime(value: string | Date | null | undefined): string {
   if (!value) return '—';
   const date = typeof value === 'string' ? new Date(value) : value;
-  return Number.isNaN(date.getTime()) ? '—' : dateTimeFmt.format(date);
+  if (Number.isNaN(date.getTime())) return '—';
+  // Ghép từ từng phần: `vi-VN` in GIỜ trước ngày ("23:16 27/09/2026"), ngược thói quen đọc
+  // và ngược mọi ô ngày khác của app.
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    dateTimeParts(date).find((entry) => entry.type === type)?.value ?? '';
+  return `${part('day')}/${part('month')}/${part('year')} ${part('hour')}:${part('minute')}`;
+}
+
+function dateTimeParts(date: Date): Intl.DateTimeFormatPart[] {
+  return dateTimeFmt.formatToParts(date);
 }
 
 export function formatDate(value: string | Date | null | undefined): string {

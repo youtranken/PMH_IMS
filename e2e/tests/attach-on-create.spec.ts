@@ -5,6 +5,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   APP_ORIGIN,
   E2E_SA,
+  devicesPageButton,
   firstLogin,
   ispProviderId,
   resetDevices,
@@ -61,8 +62,7 @@ async function fillSoftwareBasics(page: Page, code: string, name: string) {
   const form = page.getByRole('dialog');
   await form.getByRole('textbox', { name: 'Mã hồ sơ' }).fill(code);
   await form.getByRole('textbox', { name: 'Tên hồ sơ' }).fill(name);
-  await form.getByRole('button', { name: 'Kỳ hạn' }).click();
-  await page.getByRole('option', { name: 'Vĩnh viễn', exact: true }).click();
+  await form.getByRole('radio', { name: 'Vĩnh viễn', exact: true }).check();
   return form;
 }
 
@@ -75,7 +75,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     const code = `SW-E2E-ATT-${stamp}`;
 
     await page.goto('/devices');
-    await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+    await devicesPageButton(page, 'Thêm thiết bị').click();
 
     const form = page.getByRole('dialog');
     await form.getByLabel('Mã thiết bị').fill(code);
@@ -223,7 +223,6 @@ test.describe('Giấy tờ của hồ sơ phần mềm', () => {
     await expect(page.getByText('Chưa có giấy tờ nào.')).toBeVisible();
 
     await picker(page).setInputFiles(writePdf(`chung-thu-${stamp}.pdf`));
-    await page.getByRole('button', { name: 'Tải lên' }).click();
     await expect(page.getByRole('row', { name: new RegExp(`chung-thu-${stamp}`) })).toBeVisible();
   });
 });

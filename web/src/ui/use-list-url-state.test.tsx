@@ -323,3 +323,41 @@ describe('useClampPage — trang theo kịp tổng số dòng mới nhất', () 
     expect(result.current.search).toBe('');
   });
 });
+
+describe('useListUrlState — Xóa lọc', () => {
+  it('đếm bộ lọc đang bật (ô tìm tính là một) và gỡ hết trong một lượt, giữ sắp xếp', () => {
+    const { result } = dung('/devices?status=broken&siteId=s1&q=may&sort=name&page=3', {
+      emptyFilters: { status: '', siteId: '', search: '' },
+      searchKey: 'search',
+    });
+    expect(result.current.url.activeCount).toBe(3);
+    act(() => result.current.url.clearFilters());
+    expect(result.current.thanhDiaChi).toBe('?sort=name');
+    expect(result.current.url.activeCount).toBe(0);
+    expect(result.current.url.searchInput).toBe('');
+  });
+});
+
+describe('useListUrlState — sắp xếp khi cột mặc định sắp GIẢM dần', () => {
+  const tuyChon = {
+    emptyFilters: { kind: '' },
+    defaultSort: { key: 'disposedAt', desc: true },
+  };
+
+  it.each([
+    { ten: 'mặc định: URL sạch', sort: { key: 'disposedAt', desc: true }, url: '', desc: true },
+    // Không ghi `dir=asc` thì lúc đọc lại rơi về chiều mặc định (giảm) — chọn "cũ trước" vô tác dụng.
+    {
+      ten: 'cùng cột, chiều tăng',
+      sort: { key: 'disposedAt', desc: false },
+      url: '?sort=disposedAt&dir=asc',
+      desc: false,
+    },
+    { ten: 'cột khác, chiều tăng', sort: { key: 'code', desc: false }, url: '?sort=code', desc: false },
+  ])('$ten', ({ sort, url, desc }) => {
+    const { result } = dung('/disposal', tuyChon);
+    act(() => result.current.url.setSorting(sort));
+    expect(result.current.thanhDiaChi).toBe(url);
+    expect(result.current.url.sorting).toEqual({ key: sort.key, desc });
+  });
+});

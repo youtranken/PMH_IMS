@@ -1,0 +1,117 @@
+import { mkdtempSync, readdirSync, copyFileSync, readFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { randomUUID } from 'node:crypto';
+import { runMigrations } from '../src/database/migration-runner';
+import type { AuditWriterService } from '../src/modules/audit/audit-writer.service';
+import type { EnvelopeCryptoService } from '../src/common/crypto/envelope.service';
+import type { OwnerExistsRegistry } from '../src/common/owner-exists.registry';
+import { VaultService } from '../src/modules/vault/vault.service';
+import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+
+/**
+ * "Giá trị đổi lần cuối lúc nào, ai đổi" tách khỏi `updated_at`.
+ *
+ * `updated_at` nhảy cả khi chỉ sửa ghi chú, nên một mật khẩu ba năm chưa đổi vẫn hiện "vừa cập
+ * nhật". Hai cột mới chỉ đi theo lúc CẤT và lúc ĐỔI GIÁ TRỊ — sửa tên gọi/ghi chú không chạm.
+ */
+
+const TEST_TIMEOUT = 120_000;
+const MIGRATION = '0150_secret_value_changed.sql';
+
+describe('Két: mốc đổi giá trị (value_changed_at/by)', () => {
+  let scratch: ScratchDb;
+  let vault: VaultService;
+
+  beforeAll(async () => {
+    scratch = await createScratchDb('ims_secret_value_changed');
+    await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
+    const crypto = {
+      seal: () => ({
+        ciphertext: Buffer.from('ct'),
+        iv: Buffer.alloc(12, 1),
+        tag: Buffer.alloc(16, 1),
+        wrappedDek: Buffer.alloc(60, 1),
+        keyVersion: 1,
+      }),
+    } as unknown as EnvelopeCryptoService;
+    const audit = { appendWithin: () => Promise.resolve() } as unknown as AuditWriterService;
+    const owners = {
+      assertExists: () => Promise.resolve(),
+      assertUsableWithin: () => Promise.resolve(),
+    } as unknown as OwnerExistsRegistry;
+    vault = new VaultService(scratch.db, crypto, audit, owners);
+  }, TEST_TIMEOUT);
+
+  afterAll(async () => {
+    await scratch?.drop();
+  }, TEST_TIMEOUT);
+
+  function create(actor: string) {
+    return vault.create(actor, {
+      ownerType: 'device',
+      ownerId: randomUUID(),
+      kind: 'password',
+      label: `E2E admin ${randomUUID().slice(0, 6)}`,
+      value: 'Cisco#Core2026!',
+    });
+  }
+
+  async function backdate(id: string) {
+    await scratch.pool.query(
+      `UPDATE secret SET value_changed_at = now() - interval '400 days',
+                         updated_at = now() - interval '400 days' WHERE id = $1`,
+      [id],
+    );
+  }
+
+  it('cất mới: mốc đổi giá trị = lúc cất, người đổi = người cất', async () => {
+    const meta = await create('a@qa.test');
+    expect(meta.valueChangedBy).toBe('a@qa.test');
+    expect(meta.valueChangedAt).toBeInstanceOf(Date);
+  });
+
+  it('sửa ghi chú KHÔNG làm giá trị trông như vừa đổi', async () => {
+    const meta = await create('a@qa.test');
+    await backdate(meta.id);
+    const edited = await vault.updateMeta('b@qa.test', meta.id, { note: 'ghi chú mới' });
+    expect(Date.now() - edited.updatedAt.getTime()).toBeLessThan(60_000);
+    expect(Date.now() - edited.valueChangedAt.getTime()).toBeGreaterThan(399 * 86_400_000);
+    expect(edited.valueChangedBy).toBe('a@qa.test');
+  });
+
+  it('đổi giá trị: mốc về hiện tại, người đổi là người vừa đổi', async () => {
+    const meta = await create('a@qa.test');
+    await backdate(meta.id);
+    await vault.rotate('c@qa.test', meta.id, 'MoiHon#2026');
+    const after = await vault.findMeta(meta.id);
+    expect(Date.now() - after.valueChangedAt.getTime()).toBeLessThan(60_000);
+    expect(after.valueChangedBy).toBe('c@qa.test');
+  });
+
+  it('migration điền mốc cho ngăn cũ từ updated_at + created_by', async () => {
+    const legacy = await createScratchDb('ims_secret_value_changed_legacy');
+    try {
+      const dir = migrationsDir();
+      const out = mkdtempSync(join(tmpdir(), 'ims-mig-'));
+      for (const name of readdirSync(dir).filter((f) => f.endsWith('.sql') && f < MIGRATION)) {
+        copyFileSync(join(dir, name), join(out, name));
+      }
+      await runMigrations(legacy.pool, out, { log: () => undefined });
+      await legacy.pool.query(
+        `INSERT INTO secret (owner_type, owner_id, kind, label, value_ct, value_iv, value_tag,
+                             dek_wrapped, key_version, created_by, updated_at)
+         VALUES ('device', gen_random_uuid(), 'password', 'E2E cũ', '\\x00', '\\x00', '\\x00',
+                 '\\x00', 1, 'cu@qa.test', '2025-01-02T03:04:05Z')`,
+      );
+      await legacy.pool.query(readFileSync(join(dir, MIGRATION), 'utf8'));
+      const { rows } = await legacy.pool.query<{ at: Date; by: string }>(
+        `SELECT value_changed_at AS at, value_changed_by AS by FROM secret WHERE label = 'E2E cũ'`,
+      );
+      expect(rows[0].at.toISOString()).toBe('2025-01-02T03:04:05.000Z');
+      expect(rows[0].by).toBe('cu@qa.test');
+    } finally {
+      await legacy.drop();
+    }
+  }, TEST_TIMEOUT);
+});

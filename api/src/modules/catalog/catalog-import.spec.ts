@@ -56,6 +56,38 @@ describe('planCatalogImport — bảng đối chiếu trước khi ghi (story 2.
     expect(plan.rows[0]).toMatchObject({ action: 'update', existingId: SITE_HO.id });
   });
 
+  /*
+   * Người duyệt phải thấy dòng "Cập nhật" sẽ GHI ĐÈ trường nào, từ gì sang gì — đó đúng là thứ
+   * cần soát trước khi bấm "Xác nhận ghi". Chỉ liệt kê trường ĐỔI THẬT (mã khác hoa/thường
+   * không tính, cột vắng trong file không tính).
+   */
+  it('dòng Cập nhật kèm danh sách trường đổi: nhãn cột · trước · sau', () => {
+    const plan = planCatalogImport(
+      sheet('Site', [
+        {
+          'Mã site *': 'pmh-ho',
+          'Tên site *': 'Văn phòng Quận 7',
+          'Địa chỉ / ghi chú': 'Phòng máy chủ tầng 1',
+        },
+      ]),
+      snapshotWith({ sites: new Map([[normalizeKey('PMH-HO'), SITE_HO]]) }),
+    );
+    expect(plan.rows[0].changes).toEqual([
+      { field: 'Tên site', from: 'Văn phòng chính', to: 'Văn phòng Quận 7' },
+    ]);
+  });
+
+  it('dòng thêm mới và dòng không đổi thì không có danh sách thay đổi', () => {
+    const plan = planCatalogImport(
+      sheet('Site', [
+        { 'Mã site *': 'PMH-HO', 'Tên site *': 'Văn phòng chính', 'Địa chỉ / ghi chú': 'Phòng máy chủ tầng 1' },
+        { 'Mã site *': 'PMH-NEW', 'Tên site *': 'Site mới' },
+      ]),
+      snapshotWith({ sites: new Map([[normalizeKey('PMH-HO'), SITE_HO]]) }),
+    );
+    expect(plan.rows.map((row) => row.changes)).toEqual([undefined, undefined]);
+  });
+
   it('trùng mã nhưng nội dung y hệt = không đổi gì', () => {
     const plan = planCatalogImport(
       sheet('Site', [

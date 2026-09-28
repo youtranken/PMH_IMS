@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import {
+  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -45,6 +46,8 @@ import {
   SOFTWARE_SORT_KEYS,
   SoftwareService,
 } from './software.service';
+import type { SoftwareFilter } from './software.types';
+import { deviceIdsInHistory, withDeviceCodes } from './history-device-codes';
 import { NoStepUp } from '../auth/step-up.decorator';
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
@@ -87,6 +90,9 @@ export class SoftwareBodyDto {
 class RenewDto {
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Hạn mới phải dạng YYYY-MM-DD.' })
   endDate!: string;
+
+  /** SW-049: kéo luôn các ghế có kỳ hạn riêng kết thúc trước hạn mới. */
+  @IsOptional() @IsBoolean() seats?: boolean;
 }
 
 /**
@@ -158,6 +164,33 @@ export class SoftwareController {
     private readonly excel: ExcelExportService,
   ) {}
 
+  /**
+   * Bộ lọc CHUNG của danh sách và file xuất (FR-028) — hai chỗ dựng riêng thì file tải về lệch
+   * cái đang nhìn. Giá trị lạ trên URL bị bỏ qua thay vì lọt xuống câu truy vấn.
+   */
+  private async filterOf(query: {
+    search?: string;
+    kind?: SoftwareKind;
+    licenseModel?: LicenseModel;
+    status?: SoftwareStatus | 'live';
+    vendorId?: string;
+  }): Promise<SoftwareFilter> {
+    const search = query.search?.trim();
+    return {
+      search,
+      alsoIds: search ? await this.assignments.softwareIdsOnDevices(search) : undefined,
+      kind: query.kind,
+      licenseModel: LICENSE_MODELS.includes(query.licenseModel as LicenseModel)
+        ? query.licenseModel
+        : undefined,
+      status:
+        query.status === 'live' || SOFTWARE_STATUSES.includes(query.status as SoftwareStatus)
+          ? query.status
+          : undefined,
+      vendorId: query.vendorId,
+    };
+  }
+
   @Roles('sa', 'admin', 'member')
   @Get()
   async list(
@@ -167,7 +200,8 @@ export class SoftwareController {
       limit?: string;
       search?: string;
       kind?: SoftwareKind;
-      status?: SoftwareStatus;
+      licenseModel?: LicenseModel;
+      status?: SoftwareStatus | 'live';
       vendorId?: string;
       sort?: string;
       dir?: string;
@@ -175,12 +209,7 @@ export class SoftwareController {
   ) {
     const page = await this.software.list(
       parsePageQuery(query),
-      {
-        search: query.search,
-        kind: query.kind,
-        status: query.status,
-        vendorId: query.vendorId,
-      },
+      await this.filterOf(query),
       parseSortQuery(query, SOFTWARE_SORT_KEYS, SOFTWARE_SORT_DEFAULT),
     );
     return { ...page, items: await this.software.present(page.items) };
@@ -203,7 +232,8 @@ export class SoftwareController {
     query: {
       search?: string;
       kind?: SoftwareKind;
-      status?: SoftwareStatus;
+      licenseModel?: LicenseModel;
+      status?: SoftwareStatus | 'live';
       vendorId?: string;
       sort?: string;
       dir?: string;
@@ -218,12 +248,7 @@ export class SoftwareController {
      * cho export xlsx (FR-028)" — tôi đã không đọc trước khi viết (code review Epic 7).
      */
     const rows = await this.software.listAll(
-      {
-        search: query.search,
-        kind: query.kind,
-        status: query.status,
-        vendorId: query.vendorId,
-      },
+      await this.filterOf(query),
       parseSortQuery(query, SOFTWARE_SORT_KEYS, SOFTWARE_SORT_DEFAULT),
     );
     const buffer = await this.excel.build({
@@ -278,8 +303,9 @@ export class SoftwareController {
 
   @Roles('sa', 'admin', 'member')
   @Get(':id/history')
-  history(@Param() params: IdParamDto) {
-    return this.software.history(params.id);
+  async history(@Param() params: IdParamDto) {
+    const rows = await this.software.history(params.id);
+    return withDeviceCodes(rows, await this.assignments.deviceCodes(deviceIdsInHistory(rows)));
   }
 
   @Roles('sa', 'admin', 'member')
@@ -305,7 +331,15 @@ export class SoftwareController {
   @Post(':id/renew')
   @Audited('software.renewed', 'software', { writtenByService: true })
   renew(@Param() params: IdParamDto, @Body() body: RenewDto, @Req() req: AuthedRequest) {
-    return this.software.renew(actor(req), params.id, body.endDate);
+    const who = actor(req);
+    return this.software.renew(
+      who,
+      params.id,
+      body.endDate,
+      body.seats
+        ? (tx) => this.assignments.renewSeatsWithin(tx, who, params.id, body.endDate)
+        : undefined,
+    );
   }
 
   // ───────────── Gán license vào máy (story 3.2, FR-011) ─────────────

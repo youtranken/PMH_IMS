@@ -20,7 +20,10 @@ import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { useToast } from '@/ui/toast';
-import { AssignDialog } from './license-assignments-panel';
+import { RenewDialog } from '@/ui/renew-dialog';
+import { useCatalogLists } from '@/ui/use-catalog-lists';
+import { RestoreDialog } from './software-restore-dialog';
+import { AssignDialog } from './assign-dialog';
 import { SoftwareForm } from './software-form';
 import { activeSeatCodes, softwareDisposeMessage } from './software-dispose-message';
 import { standingOf } from './software-standing';
@@ -32,6 +35,7 @@ import {
   STATUS_KEY,
   seatLabel,
   supportsSeats,
+  type LicenseModel,
   type SoftwareKind,
   type SoftwareRow,
   type SoftwareStatus,
@@ -46,10 +50,19 @@ const DEFAULT_LIMIT = 20;
 interface Filters extends Record<string, string> {
   search: string;
   kind: '' | SoftwareKind;
-  status: '' | SoftwareStatus;
+  /** '' = còn dùng (Đang dùng + Hết hạn), mặc định; 'all' = mọi trạng thái kể cả Thanh lý. */
+  status: '' | 'all' | SoftwareStatus;
+  vendorId: string;
+  licenseModel: '' | LicenseModel;
 }
 
-const EMPTY_FILTERS: Filters = { search: '', kind: '', status: '' };
+const EMPTY_FILTERS: Filters = {
+  search: '',
+  kind: '',
+  status: '',
+  vendorId: '',
+  licenseModel: '',
+};
 
 /** Danh sách phần mềm (story 3.1, FR-008/FR-009) — lọc theo loại, cột tình trạng hạn. */
 export function SoftwareScreen({ me }: { me: Me }) {
@@ -79,6 +92,9 @@ export function SoftwareScreen({ me }: { me: Me }) {
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<SoftwareRow | null>(null);
   const [assigning, setAssigning] = useState<SoftwareRow | null>(null);
+  const [renewing, setRenewing] = useState<SoftwareRow | null>(null);
+  const [restoring, setRestoring] = useState<SoftwareRow | null>(null);
+  const lists = useCatalogLists();
 
   /* `useCallback`: `refresh` đi vào mảng phụ thuộc của `useMemo` dựng cột. Hàm mới mỗi lần
      render thì `useMemo` mất tác dụng và cả mảng cột được dựng lại sau mỗi phím gõ vào ô tìm. */
@@ -163,6 +179,8 @@ export function SoftwareScreen({ me }: { me: Me }) {
             csrfToken={me.csrfToken}
             onEdit={setEditing}
             onAssign={setAssigning}
+            onRenew={setRenewing}
+            onRestore={setRestoring}
             onDone={refresh}
           />
         ),
@@ -207,18 +225,46 @@ export function SoftwareScreen({ me }: { me: Me }) {
           ]}
           onChange={(value) => setFilter('kind', value as Filters['kind'])}
         />
+        {/* Mặc định KHÔNG gồm Thanh lý: hồ sơ đã bỏ có Kho thanh lý riêng, và theo Q-13 số hồ
+            sơ tự thanh lý tăng dần — trộn vào là danh sách việc hằng ngày loãng dần. */}
         <Select
           value={filters.status}
           ariaLabel={t('software.status')}
-          placeholder={t('software.allStatuses')}
+          placeholder={t('software.liveStatuses')}
           options={[
-            { value: '', label: t('software.allStatuses') },
+            { value: '', label: t('software.liveStatuses') },
             ...SOFTWARE_STATUSES.map((status) => ({
               value: status,
               label: t(STATUS_KEY[status]),
             })),
+            { value: 'all', label: t('software.allStatuses') },
           ]}
           onChange={(value) => setFilter('status', value as Filters['status'])}
+        />
+        <Select
+          value={filters.vendorId}
+          ariaLabel={t('software.vendor')}
+          placeholder={t('software.allVendors')}
+          failed={lists.isError}
+          options={[
+            { value: '', label: t('software.allVendors') },
+            ...(lists.data?.vendors ?? []).map((vendor) => ({
+              value: vendor.id,
+              label: vendor.name,
+            })),
+          ]}
+          onChange={(value) => setFilter('vendorId', value)}
+        />
+        <Select
+          value={filters.licenseModel}
+          ariaLabel={t('software.licenseModel')}
+          placeholder={t('software.allModels')}
+          options={[
+            { value: '', label: t('software.allModels') },
+            { value: 'subscription', label: t('software.subscription') },
+            { value: 'perpetual', label: t('software.perpetual') },
+          ]}
+          onChange={(value) => setFilter('licenseModel', value as Filters['licenseModel'])}
         />
       </FilterBar>
 
@@ -254,16 +300,23 @@ export function SoftwareScreen({ me }: { me: Me }) {
                   csrfToken={me.csrfToken}
                   onEdit={setEditing}
                   onAssign={setAssigning}
+                  onRenew={setRenewing}
+                  onRestore={setRestoring}
                   onDone={refresh}
                 />
               ),
               subtitle: (item) => item.name,
               meta: (item) => cardMeta(item, t),
             }}
-            /* Bung dòng ra là thấy MÁY NÀO đang dùng key (AC 3.2 + nếp QLTS, AD-12). Chỉ
-               license mới có seat, và chỉ hiện mũi tên khi thật sự có máy đang dùng — mũi
-               tên bấm ra rỗng là một kiểu hứa hão khác. */
-            canExpand={(item) => supportsSeats(item.kind) && item.seatUsed > 0}
+            /* Bung dòng ra là thấy MÁY NÀO đang dùng key (AC 3.2 + nếp QLTS, AD-12). Mọi
+               license còn dùng đều bung được, kể cả chưa có ghế nào: khu bung rỗng là chỗ đặt
+               nút "Gán vào máy" gần nhất. */
+            canExpand={(item) => supportsSeats(item.kind) && item.status !== 'retired'}
+            expandLabel={(item, open) =>
+              t(open ? 'license.collapseLabel' : 'license.expandLabel', { code: item.code })
+            }
+            // Hồ sơ Thanh lý chỉ hiện khi người dùng chọn "Mọi trạng thái" — làm mờ cho khỏi lẫn.
+            rowClassName={(item) => (item.status === 'retired' ? 'row-muted' : '')}
             renderExpanded={(item) => (
               <LicenseSeatsExpand software={item} csrfToken={me.csrfToken} />
             )}
@@ -314,14 +367,51 @@ export function SoftwareScreen({ me }: { me: Me }) {
         />
       ) : null}
 
+      {renewing && renewing.endDate ? (
+        <RenewDialog
+          row={{
+            kind: renewing.kind,
+            id: renewing.id,
+            code: renewing.code,
+            label: renewing.name,
+            end: renewing.endDate,
+          }}
+          kindLabel={t(KIND_KEY[renewing.kind])}
+          url={`/api/v1/software/${renewing.id}/renew`}
+          csrfToken={me.csrfToken}
+          onClose={() => setRenewing(null)}
+          onDone={() => {
+            setRenewing(null);
+            void refresh();
+          }}
+        />
+      ) : null}
+
+      {restoring ? (
+        <RestoreDialog
+          software={restoring}
+          csrfToken={me.csrfToken}
+          onClose={() => setRestoring(null)}
+          onDone={({ assigned, failures }) => {
+            setRestoring(null);
+            toast({ message: t('software.restored') });
+            if (assigned > 0) {
+              toast({ message: t('software.restoredAssigned', { count: assigned }) });
+            }
+            for (const failure of failures) toast({ message: failure, tone: 'warn' });
+            void refresh();
+          }}
+        />
+      ) : null}
+
       {assigning ? (
         <AssignDialog
           software={assigning}
           csrfToken={me.csrfToken}
           onClose={() => setAssigning(null)}
-          onDone={(warnings) => {
+          onDone={(warnings, count) => {
             setAssigning(null);
-            toast({ message: t('license.assigned') });
+            toast({ message: t('license.assignedCount', { count }) });
             for (const warning of warnings) toast({ message: warning, tone: 'warn' });
             void refresh();
           }}
@@ -332,7 +422,7 @@ export function SoftwareScreen({ me }: { me: Me }) {
 }
 
 /**
- * Cột "Thao tác" của một dòng phần mềm — Sửa · Gán vào máy · Đưa vào kho thanh lý.
+ * Cột "Thao tác" của một dòng phần mềm — Sửa · Gán vào máy · Gia hạn · Khôi phục… · Thanh lý.
  *
  * Là component RIÊNG chứ không phải một biểu thức trong `cell`, vì `useDispose` là hook: hàm
  * `cell` của TanStack Table chạy giữa lượt render của bảng, gọi hook trong đó là lệch số hook
@@ -348,12 +438,16 @@ function SoftwareRowActions({
   csrfToken,
   onEdit,
   onAssign,
+  onRenew,
+  onRestore,
   onDone,
 }: {
   item: SoftwareRow;
   csrfToken: string;
   onEdit: (row: SoftwareRow) => void;
   onAssign: (row: SoftwareRow) => void;
+  onRenew: (row: SoftwareRow) => void;
+  onRestore: (row: SoftwareRow) => void;
   onDone: () => void;
 }) {
   const { t } = useTranslation();
@@ -378,9 +472,9 @@ function SoftwareRowActions({
         label={t('common.actionsOf', { subject: item.code })}
         items={[
           { key: 'edit', label: t('common.edit'), onSelect: () => onEdit(item) },
-          /* Chỉ license mới có ghế để gán. SSL hay tên miền thì mục này vô nghĩa — bày ra để
-             bấm vào rồi báo lỗi là một kiểu hứa hão. */
-          ...(supportsSeats(item.kind)
+          /* Chỉ license CÒN DÙNG mới có ghế để gán. SSL hay tên miền, hoặc hồ sơ đã Thanh lý,
+             thì mục này vô nghĩa — bày ra để bấm vào rồi báo lỗi là một kiểu hứa hão. */
+          ...(supportsSeats(item.kind) && item.status !== 'retired'
             ? [
                 {
                   key: 'assign',
@@ -388,6 +482,14 @@ function SoftwareRowActions({
                   onSelect: () => onAssign(item),
                 },
               ]
+            : []),
+          /* Gia hạn: hồ sơ thuê bao còn sống có hạn. Hồ sơ Thanh lý thì là "Khôi phục…" (Q-13:
+             hồi sinh là một thao tác Sửa có chủ ý, Gia hạn không dùng cho nó). */
+          ...(item.status !== 'retired' && item.licenseModel !== 'perpetual' && item.endDate
+            ? [{ key: 'renew', label: t('software.renew'), onSelect: () => onRenew(item) }]
+            : []),
+          ...(item.status === 'retired'
+            ? [{ key: 'restore', label: t('software.restore'), onSelect: () => onRestore(item) }]
             : []),
           /* Hồ sơ đã bỏ thì không bày mục bỏ nữa — bấm lần hai chỉ ghi thêm một dòng lịch sử
              rỗng nghĩa. */
@@ -440,6 +542,9 @@ function buildFilterQuery(filters: Filters): string {
   const params = new URLSearchParams();
   if (filters.search.trim()) params.set('search', filters.search.trim());
   if (filters.kind) params.set('kind', filters.kind);
-  if (filters.status) params.set('status', filters.status);
+  // '' = mặc định "còn dùng" (API: `live`); 'all' = không lọc trạng thái.
+  if (filters.status !== 'all') params.set('status', filters.status || 'live');
+  if (filters.vendorId) params.set('vendorId', filters.vendorId);
+  if (filters.licenseModel) params.set('licenseModel', filters.licenseModel);
   return params.toString();
 }

@@ -90,15 +90,16 @@ describe('B-01 — lọc văn bản trên trình duyệt phải gấp dấu', ()
     ).toEqual([]);
   });
 
-  it('sáu chỗ lọc tại chỗ đều đã gọi foldSearch', () => {
+  it('các chỗ lọc tại chỗ đều đã gọi foldSearch', () => {
     /*
      * Cổng trên chỉ nói "không còn câu SAI". Ô này nói "câu ĐÚNG đã có mặt" — hai điều khác
      * nhau: xóa hẳn phép lọc đi cũng làm cổng trên xanh.
      */
+    /* Kho thanh lý lọc ở MÁY CHỦ (`api/src/modules/disposal/disposal-query.ts`, cũng gấp dấu)
+       nên không còn nằm trong danh sách lọc tại chỗ. */
     const expected = [
       'ui/command-palette.tsx',
       'ui/suggest-input.tsx',
-      'features/disposal/disposal-screen.tsx',
       'features/ipam/service-port-picker.tsx',
       'features/vault/access-matrix-screen.tsx',
       'features/vault/vault-home-screen.tsx',

@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
-import { formatDateTime } from '@/lib/format';
+import { formatDate, formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
@@ -14,6 +14,12 @@ import { SchedulePicker, describeSchedule, type ScheduleValue } from '@/ui/sched
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import { useFormErrors } from '@/ui/use-form-errors';
+
+/** Khoảng hợp lệ của "Trong vòng (ngày)" — cùng mốc xa nhất của bộ lọc màn Sắp hết hạn. */
+const WITHIN_MIN = 1;
+const WITHIN_MAX = 365;
+/** Kiểm dạng email thô cho người gõ — server vẫn là chốt chặn cuối. */
+const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 
 interface DigestRule {
   id: string;
@@ -27,6 +33,16 @@ interface DigestRule {
   dayOfMonth: number | null;
   active: boolean;
   lastSentAt: string | null;
+  /** Kỳ gửi tới do API tính theo đúng luật của lượt quét; luật tạm ngưng thì null. */
+  nextSendAt: string | null;
+}
+
+interface DigestPreview {
+  total: number;
+  expired: number;
+  upcoming: number;
+  recipients: string[];
+  items: { label: string; kind: string; end: string; link: string; daysLeft: number }[];
 }
 
 
@@ -36,12 +52,29 @@ interface DigestRule {
  * MỘT luật = MỘT email tổng hợp theo kỳ. Nút "Gửi thử" là thứ quan trọng nhất màn này:
  * không có nó thì cấu hình xong phải chờ tới thứ Hai mới biết có chạy đúng không.
  */
-export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] }) {
+export function DigestRulesPanel({
+  me,
+  kinds,
+  adding,
+  onAddingChange,
+}: {
+  me: Me;
+  kinds: ExpiryKind[];
+  /** Nút "Thêm luật" nằm ở đầu trang (PageHeader) — màn cha giữ cờ mở hộp thêm. */
+  adding: boolean;
+  onAddingChange: (open: boolean) => void;
+}) {
   const { t } = useTranslation();
   const toast = useToast();
   const askConfirm = useConfirm();
   const queryClient = useQueryClient();
-  const [editing, setEditing] = useState<{ rule: DigestRule | null } | null>(null);
+  const [editingRule, setEditingRule] = useState<DigestRule | null>(null);
+  const [previewing, setPreviewing] = useState<DigestRule | null>(null);
+  const editing = editingRule ? { rule: editingRule } : adding ? { rule: null } : null;
+  const setEditing = (next: { rule: DigestRule | null } | null) => {
+    setEditingRule(next?.rule ?? null);
+    onAddingChange(!!next && next.rule === null);
+  };
 
   const canEdit = me.role === 'sa' || me.role === 'admin';
 
@@ -54,10 +87,22 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
     (input) => `/api/v1/expiry/rules/${input.id}`,
     { method: 'DELETE', csrfToken: me.csrfToken, refreshMe: false, body: () => undefined },
   );
-  const sendTest = useApiMutation<{ id: string }, { recipients: string[]; items: number }>(
-    (input) => `/api/v1/expiry/rules/${input.id}/test`,
-    { csrfToken: me.csrfToken, refreshMe: false, body: () => undefined },
+  const toggle = useApiMutation<{ id: string; active: boolean }, unknown>(
+    (input) => `/api/v1/expiry/rules/${input.id}`,
+    { method: 'PATCH', csrfToken: me.csrfToken, refreshMe: false, body: ({ active }) => ({ active }) },
   );
+  const sendTest = useApiMutation<
+    { id: string; onlyMe?: boolean },
+    { recipients: string[]; items: number }
+  >((input) => `/api/v1/expiry/rules/${input.id}/test`, {
+    csrfToken: me.csrfToken,
+    refreshMe: false,
+    body: (input) => (input.onlyMe ? { onlyMe: true } : undefined),
+  });
+  const testSentToast = (result: { recipients: string[]; items: number }) =>
+    toast({
+      message: t('digest.testSent', { count: result.items, to: result.recipients.join(', ') }),
+    });
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['expiry', 'rules'] });
   const kindLabel = (value: string) =>
@@ -67,15 +112,7 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
 
   return (
     <div className="attachment-panel">
-      {canEdit ? (
-        <div className="row" style={{ justifyContent: 'flex-end' }}>
-          <button type="button" className="btn primary" onClick={() => setEditing({ rule: null })}>
-            {t('digest.add')}
-          </button>
-        </div>
-      ) : (
-        <p className="muted">{t('digest.readOnly')}</p>
-      )}
+      {canEdit ? null : <p className="muted">{t('digest.readOnly')}</p>}
 
       {rules.isLoading ? (
         <Loading />
@@ -91,6 +128,7 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
                 <th>{t('digest.name')}</th>
                 <th>{t('digest.scope')}</th>
                 <th>{t('digest.schedule')}</th>
+                <th>{t('digest.nextSend')}</th>
                 <th>{t('digest.recipients')}</th>
                 <th>{t('digest.lastSent')}</th>
                 {canEdit ? <th className="col-center">{t('common.actions')}</th> : null}
@@ -102,7 +140,9 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
                   <td data-label={t('digest.name')}>
                     {rule.name}
                     {!rule.active ? (
-                      <span className="cell-sub">{t('digest.paused')}</span>
+                      <span className="cell-sub">
+                        <span className="badge muted">{t('digest.paused')}</span>
+                      </span>
                     ) : null}
                   </td>
                   <td data-label={t('digest.scope')}>
@@ -121,6 +161,9 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
                       dayOfMonth: rule.dayOfMonth ?? undefined,
                     })}
                   </td>
+                  <td data-label={t('digest.nextSend')}>
+                    {rule.nextSendAt ? formatDateTime(rule.nextSendAt) : t('digest.paused')}
+                  </td>
                   <td data-label={t('digest.recipients')}>{rule.recipients.join(', ')}</td>
                   <td data-label={t('digest.lastSent')}>
                     {rule.lastSentAt ? formatDateTime(rule.lastSentAt) : t('digest.never')}
@@ -135,6 +178,46 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
                               key: 'edit',
                               label: t('digest.edit'),
                               onSelect: () => setEditing({ rule }),
+                            },
+                            {
+                              key: 'toggle',
+                              label: t(rule.active ? 'digest.pause' : 'digest.resume'),
+                              disabled: toggle.isPending,
+                              onSelect: () =>
+                                toggle.mutate(
+                                  { id: rule.id, active: !rule.active },
+                                  {
+                                    onSuccess: () => {
+                                      toast({
+                                        message: t(rule.active ? 'digest.pausedDone' : 'digest.resumed'),
+                                      });
+                                      void refresh();
+                                    },
+                                    onError: (error) =>
+                                      toast({ message: errorMessage(error), tone: 'error' }),
+                                  },
+                                ),
+                            },
+                            {
+                              key: 'preview',
+                              label: t('digest.preview'),
+                              onSelect: () => setPreviewing(rule),
+                            },
+                            /* Gửi cho CHÍNH người bấm: xem thư thật trong hộp thư mình mà không
+                               làm phiền danh sách của luật — nên không cần hỏi lại. */
+                            {
+                              key: 'test-me',
+                              label: t('digest.testMe'),
+                              disabled: sendTest.isPending,
+                              onSelect: () =>
+                                sendTest.mutate(
+                                  { id: rule.id, onlyMe: true },
+                                  {
+                                    onSuccess: testSentToast,
+                                    onError: (error) =>
+                                      toast({ message: errorMessage(error), tone: 'error' }),
+                                  },
+                                ),
                             },
                             {
                               key: 'test',
@@ -166,13 +249,7 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
                                   sendTest.mutate(
                                     { id: rule.id },
                                     {
-                                      onSuccess: (result) =>
-                                        toast({
-                                          message: t('digest.testSent', {
-                                            count: result.items,
-                                            to: result.recipients.join(', '),
-                                          }),
-                                        }),
+                                      onSuccess: testSentToast,
                                       onError: (error) =>
                                         toast({ message: errorMessage(error), tone: 'error' }),
                                     },
@@ -221,6 +298,14 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
           </table>
         </div>
       )}
+
+      {previewing ? (
+        <PreviewDialog
+          rule={previewing}
+          kindLabel={kindLabel}
+          onClose={() => setPreviewing(null)}
+        />
+      ) : null}
 
       {editing ? (
         <RuleForm
@@ -275,9 +360,18 @@ function RuleForm({
     .split(/[,;\n]/)
     .map((email) => email.trim())
     .filter(Boolean);
+  // Báo email sai ngay tại ô, đừng để server từ chối (hoặc tệ hơn: thư không tới ai).
+  const badEmails = emails.filter((email) => !EMAIL.test(email));
+  const within = /^\d+$/.test(withinDays.trim()) ? Number(withinDays.trim()) : NaN;
   const check = useFormErrors({
     name: !name.trim() && t('digest.nameRequired'),
-    recipients: emails.length === 0 && t('digest.recipientsRequired'),
+    withinDays:
+      !(within >= WITHIN_MIN && within <= WITHIN_MAX) &&
+      t('digest.withinInvalid', { min: WITHIN_MIN, max: WITHIN_MAX }),
+    recipients:
+      emails.length === 0
+        ? t('digest.recipientsRequired')
+        : badEmails.length > 0 && t('digest.recipientsInvalid', { emails: badEmails.join(', ') }),
   });
 
   const toggleKind = (kind: string) =>
@@ -325,7 +419,7 @@ function RuleForm({
               name: name.trim(),
               // Mảng rỗng = mọi loại — cố ý, để khỏi phải tick lại khi có loại mới.
               kinds: selected,
-              withinDays: Number(withinDays) || 30,
+              withinDays: within,
               recipients: emails,
               frequency: schedule.frequency,
               hour: schedule.hour,
@@ -349,7 +443,13 @@ function RuleForm({
         </Field>
 
         <Field label={t('digest.scope')} hint={t('digest.scopeHint')}>
-          <div className="row" style={{ flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+          {/* `role="group"` + tên: trình đọc màn hình đọc được "Theo dõi loại" khi vào từng ô. */}
+          <div
+            className="row"
+            role="group"
+            aria-label={t('digest.scope')}
+            style={{ flexWrap: 'wrap', gap: 'var(--space-3)' }}
+          >
             {kinds.map((item) => (
               <label key={item.kind} className="row" style={{ gap: 'var(--space-2)' }}>
                 <input
@@ -363,7 +463,12 @@ function RuleForm({
           </div>
         </Field>
 
-        <Field label={t('digest.withinDays')} htmlFor="rule-within">
+        <Field
+          label={t('digest.withinDays')}
+          hint={t('digest.withinHint', { min: WITHIN_MIN, max: WITHIN_MAX })}
+          htmlFor="rule-within"
+          error={check.error('withinDays')}
+        >
           <input
             id="rule-within"
             className="inp"
@@ -411,6 +516,87 @@ function RuleForm({
           </p>
         ) : null}
       </form>
+    </Dialog>
+  );
+}
+
+/**
+ * Thư của luật sẽ chứa gì, xem NGAY trong app — không phải "Gửi thử" (email thật tới cả danh
+ * sách người nhận) chỉ để biết nội dung. Đọc thuần, không gửi, không ghi gì.
+ */
+function PreviewDialog({
+  rule,
+  kindLabel,
+  onClose,
+}: {
+  rule: DigestRule;
+  kindLabel: (value: string) => string;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const preview = useQuery({
+    queryKey: ['expiry', 'rules', rule.id, 'preview'],
+    queryFn: () => apiFetch<DigestPreview>(`/api/v1/expiry/rules/${rule.id}/preview`),
+  });
+  const data = preview.data;
+  return (
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={640}
+      initialFocus="title"
+      title={t('common.titleOf', { action: t('digest.preview'), subject: rule.name })}
+    >
+      {preview.isLoading ? (
+        <Loading />
+      ) : preview.isError ? (
+        <LoadError error={preview.error} onRetry={() => void preview.refetch()} />
+      ) : data ? (
+        <>
+          <p>
+            {t('digest.previewSummary', {
+              total: data.total,
+              expired: data.expired,
+              upcoming: data.upcoming,
+            })}
+          </p>
+          <p className="muted small">
+            {t('digest.previewTo', { to: data.recipients.join(', ') })}
+          </p>
+          {data.total === 0 ? (
+            /* Kỳ không có mục nào thì lượt quét KHÔNG gửi thư — nói đúng điều đó. */
+            <EmptyState title={t('digest.previewEmpty')} hint={t('digest.previewEmptyHint')} />
+          ) : (
+            <div className="table-wrap">
+              <table className="table table-stack">
+                <thead>
+                  <tr>
+                    <th>{t('digest.previewItem')}</th>
+                    <th>{t('digest.previewKind')}</th>
+                    <th>{t('digest.previewEnd')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.items.map((item) => (
+                    <tr key={`${item.kind}-${item.link}`}>
+                      <td data-label={t('digest.previewItem')}>{item.label}</td>
+                      <td data-label={t('digest.previewKind')}>{kindLabel(item.kind)}</td>
+                      <td data-label={t('digest.previewEnd')}>
+                        {formatDate(item.end)}
+                        <span className={item.daysLeft < 0 ? 'cell-sub is-danger' : 'cell-sub'}>
+                          {item.daysLeft < 0
+                            ? t('digest.previewOverdue', { days: -item.daysLeft })
+                            : t('digest.previewLeft', { days: item.daysLeft })}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      ) : null}
     </Dialog>
   );
 }

@@ -60,6 +60,65 @@ describe('ImportPreview — bảng đối chiếu trước khi ghi', () => {
     renderWithI18n(
       <ImportPreview rows={[]} summary={{ create: 0, update: 0, unchanged: 0, skip: 0, error: 0 }} />,
     );
-    expect(screen.getByText('Không có dòng nào cần ghi.')).toBeInTheDocument();
+    expect(
+      screen.getByText('File khớp với dữ liệu hiện có — không có gì để ghi.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  it('toàn dòng không đổi → MỘT khối báo, không bảng rỗng; bấm xem thì hiện các dòng', async () => {
+    const user = userEvent.setup();
+    renderWithI18n(
+      <ImportPreview
+        rows={[{ group: 'Site', rowNumber: 2, action: 'unchanged', label: 'PMH-HO' }]}
+        summary={{ create: 0, update: 0, unchanged: 1, skip: 0, error: 0 }}
+      />,
+    );
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.queryByText('Không có dòng nào cần ghi.')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Hiện cả 1 dòng/ }));
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  /* Dòng "Cập nhật" phải cho thấy sẽ GHI ĐÈ gì — đó đúng là thứ cần soát trước khi ghi. */
+  it('dòng Cập nhật liệt kê từng trường đổi: nhãn · trước → sau', () => {
+    renderWithI18n(
+      <ImportPreview
+        rows={[
+          {
+            group: 'Site',
+            rowNumber: 2,
+            action: 'update',
+            label: 'PMH-HO',
+            changes: [
+              { field: 'Địa chỉ', from: '12 Nguyễn Văn Bảo', to: '14 Nguyễn Văn Bảo' },
+              { field: 'Có port map?', from: true, to: false },
+              { field: 'Mô tả', from: null, to: 'Tủ tầng 2' },
+            ],
+          },
+        ]}
+        summary={{ create: 0, update: 1, unchanged: 0, skip: 0, error: 0 }}
+      />,
+    );
+    expect(screen.getByText('Địa chỉ: 12 Nguyễn Văn Bảo → 14 Nguyễn Văn Bảo')).toBeInTheDocument();
+    expect(screen.getByText('Có port map?: Có → Không')).toBeInTheDocument();
+    expect(screen.getByText('Mô tả: — → Tủ tầng 2')).toBeInTheDocument();
+  });
+
+  it('bấm chip kết quả thì chỉ còn dòng loại đó; bấm lại thì bỏ lọc', async () => {
+    const user = userEvent.setup();
+    renderWithI18n(<ImportPreview rows={ROWS} summary={SUMMARY} />);
+    const errorChip = screen.getByRole('button', { name: 'Lỗi: 1' });
+    await user.click(errorChip);
+    expect(errorChip).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText('KHONG-CO · R01')).toBeInTheDocument();
+    expect(screen.queryByText('PMH-HO')).not.toBeInTheDocument();
+    await user.click(errorChip);
+    expect(screen.getByText('PMH-HO')).toBeInTheDocument();
+  });
+
+  it('chip số 0 không bấm được — lọc ra bảng rỗng là hứa hão', () => {
+    renderWithI18n(<ImportPreview rows={ROWS} summary={SUMMARY} />);
+    expect(screen.getByRole('button', { name: 'Cập nhật: 0' })).toBeDisabled();
   });
 });

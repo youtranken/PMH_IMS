@@ -112,4 +112,35 @@ describe('BE-01 · digest không chốt kỳ khi một nguồn hạn lỗi', () 
       response: { code: 'EXPIRY_SOURCE_FAILED' },
     });
   });
+
+  it('EX-021: bảng luật có lần gửi tới — đã gửi kỳ hôm nay thì là 08:00 ngày mai', async () => {
+    broken = false;
+    const [rule] = await build().list(NOW);
+    // Bài "gửi bù" phía trên đã chốt kỳ 28/09 → kỳ tới 29/09 08:00 giờ VN = 01:00Z.
+    expect(rule.nextSendAt).toEqual(new Date('2026-09-29T01:00:00Z'));
+    await scratch.pool.query(`UPDATE expiry_rule SET active = false`);
+    expect((await build().list(NOW))[0].nextSendAt).toBeNull();
+    await scratch.pool.query(`UPDATE expiry_rule SET active = true`);
+  });
+
+  it('EX-021: xem trước nội dung thư không xếp hàng thư nào', async () => {
+    broken = false;
+    const before = enqueued.length;
+    const { rows } = await scratch.pool.query<{ id: string }>(`SELECT id FROM expiry_rule`);
+    const preview = await build().preview(rows[0].id);
+    expect(preview).toMatchObject({ total: 1, recipients: ['it@pmh.com.vn'] });
+    expect(preview.items.map((row) => row.label)).toEqual(['License E2E']);
+    expect(enqueued).toHaveLength(before);
+  });
+
+  it('EX-021: gửi thử chỉ cho tôi — outbox mang id người bấm, không mang email', async () => {
+    broken = false;
+    const { rows } = await scratch.pool.query<{ id: string }>(`SELECT id FROM expiry_rule`);
+    const result = await build().sendTest('sa@pmh.com.vn', rows[0].id, {
+      userId: 'u-sa',
+      email: 'sa@pmh.com.vn',
+    });
+    expect(result.recipients).toEqual(['sa@pmh.com.vn']);
+    expect(enqueued.at(-1)).toEqual({ ruleId: rows[0].id, isTest: true, toUserId: 'u-sa' });
+  });
 });

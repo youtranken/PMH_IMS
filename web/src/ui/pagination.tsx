@@ -18,6 +18,7 @@ export function Pagination({
   total,
   onPageChange,
   onLimitChange,
+  compact = false,
 }: {
   page: number;
   limit: number;
@@ -30,6 +31,11 @@ export function Pagination({
    * ghế license), đổi `limit` ở đó không có ý nghĩa gì.
    */
   onLimitChange?: (limit: number) => void;
+  /**
+   * Chỉ ‹ › và dòng đếm — cho danh sách người ta đọc theo THỜI GIAN (nhật ký), nơi dãy số
+   * trang và ô "Tới trang" với vài trăm trang chỉ làm chật chân bảng.
+   */
+  compact?: boolean;
 }) {
   const { t } = useTranslation();
   const lastPage = lastPageOf(total, limit);
@@ -45,7 +51,7 @@ export function Pagination({
    * thêm nút không làm gì — và các bài E2E "đúng bộ nút" của từng màn (thu hẹp còn một dòng)
    * dựa vào việc thanh phân trang khi đó chỉ còn ‹ ›.
    */
-  const pages = lastPage > 1 ? pageWindow(page, lastPage) : [];
+  const pages = lastPage > 1 && !compact ? pageWindow(page, lastPage) : [];
   // Ô nhập chỉ cần khi dãy số có chỗ bị lược: không lược thì mọi trang đã bấm được thẳng.
   const needsJump = pages.includes('gap');
 

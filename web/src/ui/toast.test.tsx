@@ -92,3 +92,30 @@ describe('Toast — lỗi phải được đọc NGAY', () => {
     ).not.toBeInTheDocument();
   });
 });
+
+function NutCoHanhDong({ onOpen }: { onOpen: () => void }) {
+  const toast = useToast();
+  return (
+    <button
+      type="button"
+      onClick={() => toast({ message: 'Đã thêm LT-09.', action: { label: 'Mở hồ sơ', onClick: onOpen } })}
+    >
+      thêm
+    </button>
+  );
+}
+
+describe('Toast — nút bước kế tiếp', () => {
+  it('bấm nút trong toast chạy việc đó và đóng toast', async () => {
+    let opened = 0;
+    renderWithI18n(
+      <ToastProvider>
+        <NutCoHanhDong onOpen={() => (opened += 1)} />
+      </ToastProvider>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'thêm' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Mở hồ sơ' }));
+    expect(opened).toBe(1);
+    expect(screen.queryByText('Đã thêm LT-09.')).not.toBeInTheDocument();
+  });
+});

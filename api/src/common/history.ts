@@ -1,3 +1,7 @@
+import { and, desc, inArray, sql } from 'drizzle-orm';
+import type { PgColumn, PgTable } from 'drizzle-orm/pg-core';
+import type { Database } from '../database/database.module';
+
 /**
  * TRẦN CHUNG cho mọi panel "Lịch sử" của một hồ sơ (AD-13, AD-15).
  *
@@ -30,3 +34,88 @@
  * test đỏ.
  */
 export const HISTORY_PAGE_LIMIT = 200;
+
+/**
+ * Gắn HỌ TÊN người làm vào từng dòng lịch sử (`actorName`), giữ nguyên `actor` là email.
+ *
+ * Bảng lịch sử chỉ lưu email — đúng, vì email là khoá bền còn họ tên đổi được. Nhưng panel
+ * đọc "e2e-sa@pmh.com.vn · 23:15" thì người dùng phải tự dịch email ra người. `lookup` là
+ * `UsersApiService.namesByEmails` (AD-2): hỏi MỘT lượt cho cả trang, không lượt nào mỗi dòng.
+ * Tài khoản đã xoá thì `actorName` là `null` và màn hình rơi về email.
+ */
+export async function withActorNames<T extends { actor: string }>(
+  rows: T[],
+  lookup: (emails: string[]) => Promise<Map<string, string>>,
+): Promise<(T & { actorName: string | null })[]> {
+  if (rows.length === 0) return [];
+  const emails = [...new Set(rows.map((row) => row.actor.toLowerCase()))];
+  const names = await lookup(emails);
+  return rows.map((row) => ({ ...row, actorName: names.get(row.actor.toLowerCase()) ?? null }));
+}
+
+/** Người thực hiện của các lượt quét tự động (Q-13) — khác mọi email người dùng. */
+export const SYSTEM_ACTOR = 'system';
+
+/** Lần gần nhất một hồ sơ được chuyển SANG một trạng thái, đọc từ bảng lịch sử của nó. */
+export interface StatusEvent {
+  at: Date;
+  /** Email người làm, hoặc `system` khi lượt quét tự chuyển. */
+  by: string;
+  auto: boolean;
+  /** Lý do người làm đã ghi (tài khoản dịch vụ bắt ghi), nếu có. */
+  reason: string | null;
+}
+
+/** Các cột của một bảng lịch sử theo khuôn chung `(<fk>, action, actor, changes, created_at)`. */
+export interface HistorySource {
+  table: PgTable;
+  ownerId: PgColumn;
+  actor: PgColumn;
+  changes: PgColumn;
+  createdAt: PgColumn;
+}
+
+/**
+ * Lần chuyển sang `status` GẦN NHẤT của từng hồ sơ trong `ids` — MỘT câu cho cả mẻ.
+ *
+ * Mọi bộ ghi lịch sử đổi trạng thái đều ghi `changes.status = { before, after }` (sửa tay, nút
+ * thanh lý, lượt quét tự động), nên "chuyển sang X" đọc được như nhau ở mọi bảng mà không phải
+ * biết tên `action` riêng của từng module. Hồ sơ nhập thẳng ở trạng thái đó thì không có dòng
+ * nào và vắng khỏi Map — bên gọi tự quyết lùi về đâu.
+ *
+ * Mỗi module gọi hàm này trên BẢNG CỦA CHÍNH NÓ (AD-3); module khác hỏi qua `*.api.ts`.
+ */
+export async function latestStatusEvents(
+  db: Database,
+  source: HistorySource,
+  ids: string[],
+  status: string,
+): Promise<Map<string, StatusEvent>> {
+  const out = new Map<string, StatusEvent>();
+  if (ids.length === 0) return out;
+  const rows = await db
+    .selectDistinctOn([source.ownerId], {
+      ownerId: source.ownerId,
+      actor: source.actor,
+      createdAt: source.createdAt,
+      reason: sql<string | null>`${source.changes} -> 'reason' ->> 'after'`,
+    })
+    .from(source.table)
+    .where(
+      and(
+        inArray(source.ownerId, ids),
+        sql`${source.changes} -> 'status' ->> 'after' = ${status}`,
+      ),
+    )
+    .orderBy(source.ownerId, desc(source.createdAt));
+  for (const row of rows) {
+    const by = String(row.actor);
+    out.set(String(row.ownerId), {
+      at: row.createdAt as Date,
+      by,
+      auto: by === SYSTEM_ACTOR,
+      reason: row.reason ?? null,
+    });
+  }
+  return out;
+}

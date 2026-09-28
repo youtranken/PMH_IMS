@@ -116,7 +116,8 @@ test.describe('Mở két với TOTP step-up', () => {
      */
     const countdown = page.getByTestId('reveal-countdown');
     await expect(countdown).toContainText(/^\d+s/);
-    await expect(page.getByTestId('stepup-countdown')).toContainText(/\d+s/);
+    // Ân hạn dạng phút:giây — "600s" không ai đọc ra là mười phút.
+    await expect(page.getByTestId('stepup-countdown')).toContainText(/^\d+:\d{2}$/);
     await page.getByRole('button', { name: 'Ẩn ngay' }).click();
     await expect(page.getByTestId('secret-value')).toHaveCount(0);
 
@@ -359,7 +360,7 @@ test.describe('Mở két với TOTP step-up', () => {
 
     // Tài khoản KHÔNG bị khóa — đăng nhập lại là dùng được ngay.
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, totpSecret);
-    await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
   });
 
   /**

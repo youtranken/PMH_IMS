@@ -79,7 +79,8 @@ describe('⌘K khi một nguồn hỏng', () => {
     gaLapFetch([{ id: 'd1', code: 'SW-CORE-01', name: 'Switch lõi', siteCode: 'HN' }]);
     await moVaGo('sw');
 
-    await screen.findByText('SW-CORE-01');
+    // Tên dòng đi qua vai `option`: phần khớp từ khoá được bọc `<mark>`, chữ bị tách thành nhiều nút.
+    await screen.findByRole('option', { name: /SW-CORE-01/ });
     await screen.findByText(/Danh sách dưới đây còn thiếu/);
   });
 });

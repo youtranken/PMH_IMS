@@ -1,5 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { agoParts, formatMoney, orDash, remainingParts, todayIso } from './format';
+import {
+  agoParts,
+  formatDateTime,
+  formatMoney,
+  orDash,
+  remainingParts,
+  todayIso,
+} from './format';
+
+/* Ngày TRƯỚC giờ, như cách người Việt đọc và như mọi ô "ngày" khác của app; `vi-VN` của Intl
+   in giờ trước ("23:16 27/09/2026"). Giờ Việt Nam, không phải UTC. */
+describe('formatDateTime', () => {
+  it.each([
+    ['2026-09-27T16:16:00Z', '27/09/2026 23:16'],
+    ['2026-01-01T00:05:00Z', '01/01/2026 07:05'],
+  ])('%s → %s', (iso, expected) => {
+    expect(formatDateTime(iso)).toBe(expected);
+  });
+  it('rỗng hoặc hỏng → dấu gạch', () => {
+    expect(formatDateTime(null)).toBe('—');
+    expect(formatDateTime('xyz')).toBe('—');
+  });
+});
 
 describe('formatMoney — tiền đồng dùng chung (AD-15)', () => {
   it.each([

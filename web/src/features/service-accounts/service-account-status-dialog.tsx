@@ -33,6 +33,13 @@ export function ServiceAccountStatusDialog({
   const { t } = useTranslation();
   const off = next === 'disabled';
   const [reason, setReason] = useState('');
+  /*
+   * Hai việc THẬT khi đóng một tài khoản (nhân viên nghỉ): khoá nó trên hệ thống gốc, và huỷ/xoay
+   * mật khẩu trong két. IMS không tự làm được việc nào — nên nhắc, và việc nào đã làm thì ghi
+   * luôn vào lý do để dòng lịch sử nói ra. Không bắt buộc: có khi đóng hồ sơ trước, khoá sau.
+   */
+  const [lockedAtSource, setLockedAtSource] = useState(false);
+  const [secretHandled, setSecretHandled] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const check = useFormErrors({ reason: textRule(t, reason, 3) });
   const change = useApiMutation<{ reason: string }, unknown>(
@@ -78,8 +85,16 @@ export function ServiceAccountStatusDialog({
           e.preventDefault();
           setError(null);
           if (!check.check()) return;
+          const done = [
+            off && lockedAtSource ? t('serviceAccounts.checkLockedAtSource') : null,
+            off && secretHandled ? t('serviceAccounts.checkSecretHandled') : null,
+          ].filter(Boolean);
           change.mutate(
-            { reason: reason.trim() },
+            {
+              reason: done.length
+                ? `${reason.trim()} (${t('serviceAccounts.checkDone')}: ${done.join('; ')})`
+                : reason.trim(),
+            },
             { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
           );
         }}
@@ -107,6 +122,28 @@ export function ServiceAccountStatusDialog({
             onChange={(e) => setReason(e.target.value)}
           />
         </Field>
+
+        {off ? (
+          <fieldset className="check-list">
+            <legend className="muted">{t('serviceAccounts.checkLegend')}</legend>
+            <label className="row confirm-check">
+              <input
+                type="checkbox"
+                checked={lockedAtSource}
+                onChange={(e) => setLockedAtSource(e.target.checked)}
+              />
+              <span>{t('serviceAccounts.checkLockedAtSource')}</span>
+            </label>
+            <label className="row confirm-check">
+              <input
+                type="checkbox"
+                checked={secretHandled}
+                onChange={(e) => setSecretHandled(e.target.checked)}
+              />
+              <span>{t('serviceAccounts.checkSecretHandled')}</span>
+            </label>
+          </fieldset>
+        ) : null}
 
         {error ? (
           <p className="alert error" role="alert">

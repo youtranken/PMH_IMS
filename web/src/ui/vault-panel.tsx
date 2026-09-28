@@ -15,7 +15,9 @@ import { TableWrap } from '@/ui/data-table';
 import { Select } from '@/ui/select';
 import { RevealDialog } from '@/ui/reveal-dialog';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
+import { SecretValueInput } from '@/ui/secret-value-input';
 import { StepUpDialog } from '@/ui/step-up-dialog';
+import { hourSteps } from '@/ui/grant-hours';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useFormErrors } from '@/ui/use-form-errors';
 import { useBreakGlassActions, type BreakGlassRow } from '@/ui/break-glass';
@@ -44,6 +46,10 @@ export interface AccessVerdict {
   notifiedApprovers?: number | null;
   /** Giây còn lại của quyền đang chạy, server tính (AD-6). */
   grantSecondsLeft?: number | null;
+  /** Trần giờ cấp (`breakglass.max_grant_hours`) — hộp Xin chọn nấc trong trần này. */
+  maxGrantHours?: number | null;
+  /** Phiếu mới nhất của chính người xem trên hồ sơ này bị từ chối — lúc nào, ghi chú gì. */
+  lastDenied?: { at: string | null; note: string | null } | null;
 }
 
 /**
@@ -63,6 +69,12 @@ export interface SecretMeta {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  /** Lúc giá trị đổi lần cuối + ai đổi — sửa ghi chú không chạm (khác `updatedAt`). */
+  valueChangedAt?: string;
+  valueChangedBy?: string;
+  /** Tuổi giá trị và đã quá ngưỡng `dashboard.secret_stale_days` chưa — server tính. */
+  valueAgeDays?: number;
+  valueStale?: boolean;
 }
 
 export function secretsKey(ownerType: SecretOwnerType, ownerId: string) {
@@ -151,7 +163,13 @@ export function VaultPanel({
   const busyReason = useDisabledReason(opening !== null ? t('vault.revealBusy') : null);
   const [requesting, setRequesting] = useState(false);
   const [revealed, setRevealed] = useState<
-    { label: string; value: string; seconds: number; stepUpSecondsLeft: number } | null
+    {
+      label: string;
+      username: string | null;
+      value: string;
+      seconds: number;
+      stepUpSecondsLeft: number;
+    } | null
   >(null);
   const openingRef = useRef<string | null>(null);
 
@@ -212,6 +230,7 @@ export function VaultPanel({
         );
         setRevealed({
           label: secret.label,
+          username: secret.username,
           value: opened.value,
           seconds: opened.revealSeconds,
           stepUpSecondsLeft: opened.stepUpSecondsLeft,
@@ -251,14 +270,18 @@ export function VaultPanel({
      */
     if (verdict.isError)
       return <LoadError error={verdict.error} onRetry={() => void verdict.refetch()} />;
-    if (!allowed) return <p className="alert">{t('vault.noPermission')}</p>;
+    if (!allowed) {
+      return <EmptyState title={t('vault.noPermissionTitle')} hint={t('vault.noPermission')} />;
+    }
   }
 
   const rows = secrets.data ?? [];
 
   return (
     <div className="attachment-panel">
-      <p className="muted">{t('vault.intro')}</p>
+      {/* Đoạn giới thiệu két chỉ cần lúc két còn trống — hồ sơ nào cũng lặp lại hai dòng này
+          là đẩy bảng xuống cho một câu người dùng đã thuộc. */}
+      {secrets.isSuccess && rows.length === 0 ? <p className="muted">{t('vault.intro')}</p> : null}
 
       {/* Member phải THẤY mình đang ở tầng nào — không thì họ bấm Xem, bị từ chối, và
           không hiểu vì sao. */}
@@ -314,8 +337,28 @@ export function VaultPanel({
             </button>
           </div>
         </div>
+      ) : !isAdmin && verdict.data?.canRequest ? (
+        /* MỘT lối xin cho cả két: quyền cấp theo HỒ SƠ, không theo ngăn — nút ở từng dòng làm
+           người ta tưởng phải xin từng ngăn, hoặc xin ngăn A thì chỉ xem được A. */
+        <div className="alert warn" role="status">
+          {verdict.data.lastDenied ? (
+            <p>
+              {t('vault.lastDenied', { at: formatDateTime(verdict.data.lastDenied.at) })}
+              {verdict.data.lastDenied.note ? (
+                <>
+                  {' '}
+                  <strong>{verdict.data.lastDenied.note}</strong>
+                </>
+              ) : null}
+            </p>
+          ) : null}
+          <p>{t('vault.requestBlock', { count: rows.length })}</p>
+          <button type="button" className="btn primary" onClick={() => setRequesting(true)}>
+            {t('vault.request')}
+          </button>
+        </div>
       ) : !isAdmin && verdict.data ? (
-        <p className={verdict.data.canReveal ? 'alert' : 'alert warn'}>
+        <p className={verdict.data.canReveal ? 'alert ok' : 'alert warn'}>
           {/* `expiresAt` rỗng thì `formatDateTime` trả dấu gạch, và câu thành "Bạn được xem
               tới —. Hết giờ là tự cắt." — một câu tự mâu thuẫn. Quyền không hạn thì nói là
               không hạn. */}
@@ -362,7 +405,7 @@ export function VaultPanel({
             phải để so theo cột.
           */}
           <TableWrap>
-          <table className="table table-stack">
+          <table className="table table-stack vault-table">
             <thead>
               <tr>
                 <th>{t('vault.label')}</th>
@@ -382,8 +425,21 @@ export function VaultPanel({
                   </td>
                   <td data-label={t('vault.username')}>
                     <span className="mono">{orDash(secret.username)}</span>
+                    {/* Tuổi GIÁ TRỊ, không phải lần sửa ghi chú gần nhất: "đổi 400 ngày trước"
+                        là câu người đi xoay mật khẩu cần. Server tính cả ngưỡng cũ. */}
                     <span className="cell-sub">
-                      {t('vault.updatedAtShort', { date: formatDateTime(secret.updatedAt) })}
+                      {secret.valueAgeDays === undefined
+                        ? t('vault.updatedAtShort', { date: formatDateTime(secret.updatedAt) })
+                        : t('vault.valueAge', {
+                            count: secret.valueAgeDays,
+                            who: secret.valueChangedBy ?? secret.createdBy,
+                          })}
+                      {secret.valueStale ? (
+                        <>
+                          {' '}
+                          <span className="badge warn">{t('vault.valueStale')}</span>
+                        </>
+                      ) : null}
                     </span>
                   </td>
                   <td data-label={t('common.actions')} className="col-sticky-end">
@@ -393,7 +449,7 @@ export function VaultPanel({
                       {isAdmin || verdict.data?.canReveal ? (
                         <button
                           type="button"
-                          className="btn sm"
+                          className="btn sm vault-reveal"
                           disabled={opening !== null}
                           {...(opening !== secret.id ? busyReason.buttonProps : {})}
                           onClick={() => void openSecret(secret)}
@@ -401,13 +457,8 @@ export function VaultPanel({
                           {opening === secret.id ? t('common.loading') : t('vault.reveal')}
                         </button>
                       ) : verdict.data?.canRequest ? (
-                        <button
-                          type="button"
-                          className="btn sm"
-                          onClick={() => setRequesting(true)}
-                        >
-                          {t('vault.request')}
-                        </button>
+                        // Nút xin nằm MỘT chỗ ở đầu khung — dòng chỉ nói trạng thái.
+                        <span className="badge warn">{t('vault.needsApproval')}</span>
                       ) : verdict.data?.pending ? (
                         /*
                          * ĐỌC `pending`, KHÔNG SUY BẰNG PHÉP LOẠI TRỪ (F-07, vá 21/09).
@@ -454,6 +505,8 @@ export function VaultPanel({
                               disabled: revoke.isPending,
                               onSelect: () => {
                                 void (async () => {
+                                  /* Không hoàn tác được — một cú bấm trên menu ⋯ không được
+                                     đủ để mất một mật khẩu: gõ lại đúng tên ngăn. */
                                   const ok = await askConfirm({
                                     title: t('common.titleOf', {
                                       action: t('vault.revoke'),
@@ -462,6 +515,10 @@ export function VaultPanel({
                                     message: t('vault.confirmRevoke', { label: secret.label }),
                                     danger: true,
                                     confirmLabel: t('vault.revoke'),
+                                    typeToConfirm: {
+                                      expected: secret.label,
+                                      label: t('vault.typeLabelToConfirm', { label: secret.label }),
+                                    },
                                   });
                                   if (!ok) return;
                                   try {
@@ -513,6 +570,8 @@ export function VaultPanel({
       {pendingStepUp ? (
         <StepUpDialog
           csrfToken={me.csrfToken}
+          purpose={t('vault.stepUpPurpose', { label: pendingStepUp.label })}
+          graceMinutes={me.config?.stepUpGraceMinutes}
           onClose={() => setPendingStepUp(null)}
           onDone={() => {
             const secret = pendingStepUp;
@@ -527,6 +586,7 @@ export function VaultPanel({
       {revealed ? (
         <RevealDialog
           label={revealed.label}
+          username={revealed.username}
           value={revealed.value}
           seconds={revealed.seconds}
           stepUpSecondsLeft={revealed.stepUpSecondsLeft}
@@ -541,6 +601,8 @@ export function VaultPanel({
         <BreakGlassDialog
           ownerType={ownerType}
           ownerId={ownerId}
+          secretCount={rows.length}
+          maxGrantHours={verdict.data?.maxGrantHours ?? null}
           csrfToken={me.csrfToken}
           onClose={() => setRequesting(false)}
           onSent={({ askedHours, grantedHours }) => {
@@ -713,21 +775,21 @@ function SecretForm({
             htmlFor="secret-value"
             error={check.error('value')}
           >
-            {/* Hai con (ô + thanh đo) nên `Field` không tự gắn được — nối tay theo đúng id nó sinh. */}
-            <input
+            {/* Nhiều con (ô + nút + thanh đo) nên `Field` không tự gắn được — nối tay theo đúng
+                id nó sinh. License key thì hiện sẵn: 25 ký tự gõ mù gần như chắc sai. */}
+            <SecretValueInput
+              key={kind}
               id="secret-value"
-              className="inp mono"
-              type="password"
-              autoComplete="new-password"
-              required
-              aria-invalid={check.error('value') ? true : undefined}
-              aria-describedby={
+              value={value}
+              onChange={setValue}
+              invalid={Boolean(check.error('value'))}
+              describedBy={
                 check.error('value') ? 'secret-value-error secret-value-hint' : 'secret-value-hint'
               }
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
+              initiallyShown={kind === 'license_key'}
+              allowGenerate={kind === 'password'}
             />
-            <SecretStrengthMeter value={value} />
+            {kind === 'password' ? <SecretStrengthMeter value={value} /> : null}
           </Field>
         ) : null}
 
@@ -821,27 +883,28 @@ function RotateForm({
         }}
       >
         <p className="muted">{t('vault.rotateHint')}</p>
+        {/* Thứ tự an toàn: đổi trên thiết bị và đăng nhập thử TRƯỚC, rồi mới lưu ở đây — lưu
+            trước mà đổi trên máy hỏng là mất cả giá trị cũ lẫn đường vào thiết bị. */}
+        {secret.kind === 'password' ? <p className="alert warn">{t('vault.rotateOrder')}</p> : null}
         <Field
           label={t('vault.newValue')}
           required
           htmlFor="secret-new-value"
           error={check.error('value')}
         >
-          {/* Hai con (ô + thanh đo) nên `Field` không tự gắn được — nối tay theo đúng id nó sinh. */}
-          <input
+          {/* Nhiều con (ô + nút + thanh đo) nên `Field` không tự gắn được — nối tay theo đúng id. */}
+          <SecretValueInput
             id="secret-new-value"
-            className="inp mono"
-            type="password"
-            autoComplete="new-password"
-            required
-            aria-invalid={check.error('value') ? true : undefined}
-            aria-describedby={check.error('value') ? 'secret-new-value-error' : undefined}
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={setValue}
+            invalid={Boolean(check.error('value'))}
+            describedBy={check.error('value') ? 'secret-new-value-error' : undefined}
+            initiallyShown={secret.kind === 'license_key'}
+            allowGenerate={secret.kind === 'password'}
           />
-          {/* Xoay mật khẩu là lúc người ta ĐẶT một giá trị mới, không phải chép lại cái đang
+          {/* Đổi mật khẩu là lúc người ta ĐẶT một giá trị mới, không phải chép lại cái đang
               có — nên thanh đo ở đây còn đáng nói hơn ở ô cất lần đầu. */}
-          <SecretStrengthMeter value={value} />
+          {secret.kind === 'password' ? <SecretStrengthMeter value={value} /> : null}
         </Field>
 
         {error ? (
@@ -878,12 +941,18 @@ const REQUEST_REASON_MIN_LEN = 5;
 function BreakGlassDialog({
   ownerType,
   ownerId,
+  secretCount,
+  maxGrantHours,
   csrfToken,
   onClose,
   onSent,
 }: {
   ownerType: SecretOwnerType;
   ownerId: string;
+  /** Số ngăn của két — quyền cấp cho CẢ két, nên tiêu đề nói rõ đang xin bao nhiêu ngăn. */
+  secretCount: number;
+  /** Trần giờ server đưa; `null` = chưa biết, chỉ đưa các nấc ngắn. */
+  maxGrantHours: number | null;
   csrfToken: string;
   onClose: () => void;
   onSent: (info: { askedHours: number; grantedHours: number }) => void;
@@ -913,7 +982,7 @@ function BreakGlassDialog({
          người xin không thấy toast nào — họ gửi lại lần nữa, và người duyệt nhận hai phiếu. */
       dismissible={!send.isPending}
       maxWidth={480}
-      title={t('vault.requestTitle')}
+      title={t('vault.requestTitleCount', { count: secretCount })}
       footer={
         <>
           <button type="button" className="btn" disabled={send.isPending} onClick={onClose}>
@@ -962,11 +1031,35 @@ function BreakGlassDialog({
             onChange={(e) => setReason(e.target.value)}
           />
         </Field>
+        {/* Bộ đếm để người xin biết còn thiếu bao nhiêu trước khi bấm Gửi, không phải sau. */}
+        <p className="field-hint" aria-live="polite">
+          {t('vault.requestReasonCount', {
+            count: reason.trim().length,
+            min: REQUEST_REASON_MIN_LEN,
+          })}
+        </p>
+
+        <div className="segmented" role="group" aria-label={t('vault.requestHoursQuick')}>
+          {hourSteps(maxGrantHours).map((h) => (
+            <button
+              key={h}
+              type="button"
+              aria-pressed={askedHours === h}
+              onClick={() => setHours(String(h))}
+            >
+              {t('approvals.hours', { hours: h })}
+            </button>
+          ))}
+        </div>
 
         <Field
           label={t('vault.requestHours')}
           required
-          hint={t('vault.requestHoursHint')}
+          hint={
+            maxGrantHours
+              ? t('vault.requestHoursHintMax', { hours: maxGrantHours })
+              : t('vault.requestHoursHint')
+          }
           htmlFor="bg-hours"
           error={check.error('hours')}
         >

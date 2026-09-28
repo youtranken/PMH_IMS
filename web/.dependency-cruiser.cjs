@@ -48,11 +48,12 @@ module.exports = {
           // Cùng một feature thì tự do.
           '^src/features/$1/',
           /*
-           * Ba ngoại lệ TƯỜNG MINH, giống hệt danh sách trong `eslint.config.mjs`. Hai chỗ
+           * Các ngoại lệ TƯỜNG MINH, giống hệt danh sách trong `eslint.config.mjs`. Hai chỗ
            * phải khớp nhau; lệch là một trong hai cổng nói dối. Thêm một dòng ở đây là phải
            * thêm cả bên kia, tức phải giải thích trong PR.
            */
           '^src/features/software/device-licenses-expand',
+          '^src/features/ipam/device-ip-assign',
           '^src/features/catalog/catalog-form',
           '^src/features/devices/device-form',
         ],

@@ -51,6 +51,7 @@ export class UsersService {
     query: PageQuery,
     search?: string,
     sort: SortQuery<UserSortKey> = USER_SORT_DEFAULT,
+    filters: UserListFilters = {},
   ): Promise<Page<UserRecord>> {
     const term = search?.trim();
     /*
@@ -65,16 +66,22 @@ export class UsersService {
      *
      * Giá phải trả: một lượt quét tuần tự có gọi hàm. Ở vài trăm dòng thì đó không phải giá.
      */
-    const where = term
-      ? or(
-          imsNormLike(usersTable.fullName, term),
-          imsNormLike(usersTable.email, term),
-          // Tra theo SĐT và mã nhân viên: Nhân sự đưa sang một danh sách mã, người trực gõ
-          // một số điện thoại — cả hai đều là cách tìm THẬT, không phải chỉ tìm theo tên.
-          imsNormLike(usersTable.phone, term),
-          imsNormLike(usersTable.employeeCode, term),
-        )
-      : undefined;
+    const where = and(
+      term
+        ? or(
+            imsNormLike(usersTable.fullName, term),
+            imsNormLike(usersTable.email, term),
+            // Tra theo SĐT và mã nhân viên: Nhân sự đưa sang một danh sách mã, người trực gõ
+            // một số điện thoại — cả hai đều là cách tìm THẬT, không phải chỉ tìm theo tên.
+            imsNormLike(usersTable.phone, term),
+            imsNormLike(usersTable.employeeCode, term),
+          )
+        : undefined,
+      filters.role ? eq(usersTable.role, filters.role) : undefined,
+      filters.status ? eq(usersTable.status, filters.status) : undefined,
+      filters.totp === 'none' ? isNull(usersTable.totpEnrolledAt) : undefined,
+      filters.totp === 'enrolled' ? isNotNull(usersTable.totpEnrolledAt) : undefined,
+    );
     const [rows, totalRows] = await Promise.all([
       this.db
         .select()
@@ -187,6 +194,13 @@ export class UsersService {
     await tx
       .update(usersTable)
       .set({ status, updatedAt: new Date() })
+      .where(eq(usersTable.id, userId));
+  }
+
+  async setRoleWithin(tx: Tx, userId: string, role: UserRole): Promise<void> {
+    await tx
+      .update(usersTable)
+      .set({ role, updatedAt: new Date() })
       .where(eq(usersTable.id, userId));
   }
 
@@ -506,6 +520,14 @@ export class UsersService {
  * Chỉ mở những cột nằm SẴN trong bảng `users` (AD-2). `email` không có mặt: nó chỉ hiện
  * dưới dạng dòng phụ trong ô Họ tên, không phải cột riêng — không có nút bấm nào gửi nó lên.
  */
+/** Bộ lọc màn Tài khoản: "ai đang khóa", "admin nào chưa cài 2 lớp", "danh sách SA". */
+export interface UserListFilters {
+  role?: UserRole;
+  status?: UserRecord['status'];
+  /** `none` = chưa cài 2 lớp, `enrolled` = đã cài. */
+  totp?: 'none' | 'enrolled';
+}
+
 export const USER_SORT_KEYS = [
   'fullName',
   'role',

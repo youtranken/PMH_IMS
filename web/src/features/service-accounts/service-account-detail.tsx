@@ -2,12 +2,12 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useParams, useSearchParams } from "react-router-dom";
-import { ApiError, apiFetch } from "@/lib/api-client";
+import { apiFetch } from "@/lib/api-client";
 import type { Me } from "@/lib/me";
 import { PATHS } from "@/lib/routes";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { HistoryPanel } from "@/ui/history-panel";
-import { LoadError, Loading, NotFound } from "@/ui/load-state";
+import { DetailLoadFailed, LoadError, Loading } from "@/ui/load-state";
 import { CopyButton } from "@/ui/copy-button";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
 import {
@@ -22,11 +22,15 @@ import { useTabCounts } from "@/ui/tab-counts";
 import { VaultPanel } from "@/ui/vault-panel";
 import { RowActions } from "@/ui/row-actions";
 import { useToast } from "@/ui/toast";
-import { toServiceAccountHistory } from "./service-account-history-entries";
+import { lastDisable, toServiceAccountHistory } from "./service-account-history-entries";
+import { formatDate } from "@/lib/format";
 import { ServiceAccountForm } from "./service-account-form";
 import { ServiceAccountStatusDialog } from "./service-account-status-dialog";
 import {
   KIND_KEY,
+  KIND_SHORT_KEY,
+  KIND_TONE,
+  allowsAnyIp,
   STATUS_KEY,
   STATUS_TONE,
   supportsVpnFields,
@@ -74,17 +78,23 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
       apiFetch<ServiceAccountHistoryRow[]>(
         `/api/v1/service-accounts/${id}/history`,
       ),
-    enabled: tab === "history",
+    // Tài khoản đã vô hiệu hóa thì băng rôn đầu trang phải nói ai, lúc nào, vì sao — câu đó
+    // chỉ nằm trong sổ lịch sử, nên hỏi sổ ngay cả khi chưa mở tab.
+    enabled: tab === "history" || account.data?.status === "disabled",
   });
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["service-accounts"] });
 
   if (account.isLoading) return <Loading />;
   if (account.isError) {
-    return account.error instanceof ApiError && account.error.status === 404 ? (
-      <NotFound />
-    ) : (
-      <LoadError error={account.error} onRetry={() => void account.refetch()} />
+    // Giữ đường lùi về danh sách, và tách "hồ sơ không còn" (404) khỏi "máy chủ lỗi".
+    return (
+      <DetailLoadFailed
+        error={account.error}
+        onRetry={() => void account.refetch()}
+        backTo={PATHS.serviceAccounts}
+        backLabel={t("nav.serviceAccounts")}
+      />
     );
   }
 
@@ -97,6 +107,7 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
   const canVaultWrite = me.role === "sa" || me.role === "admin";
   const canEdit = canVaultWrite;
   const nextStatus = item.status === "active" ? "disabled" : "active";
+  const disabledInfo = item.status === "disabled" ? lastDisable(history.data ?? []) : null;
 
   return (
     <>
@@ -109,15 +120,7 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
         code={item.code}
         name={item.name}
         subline={
-          <>
-            <span className="badge plain brand">{t(KIND_KEY[item.kind])}</span>
-            {item.login ? (
-              <span>
-                {t("serviceAccounts.login")}: <span className="mono">{item.login}</span>
-                <CopyButton value={item.login} label={t("serviceAccounts.copyLogin")} />
-              </span>
-            ) : null}
-          </>
+          <span className={`badge ${KIND_TONE[item.kind]}`}>{t(KIND_SHORT_KEY[item.kind])}</span>
         }
         actions={
           canEdit ? (
@@ -149,9 +152,38 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
         }
       />
 
+      {/* Đã vô hiệu hóa: nói NGAY đầu trang ai đóng, lúc nào, vì sao — không bắt mở tab Lịch
+          sử — kèm đường mở lại cho người có quyền. */}
+      {disabledInfo || item.status === "disabled" ? (
+        <div className="alert warn" role="note">
+          <p>
+            {disabledInfo
+              ? t("serviceAccounts.disabledBy", {
+                  date: formatDate(disabledInfo.at),
+                  by: disabledInfo.actor,
+                  reason: disabledInfo.reason ?? "—",
+                })
+              : t("serviceAccounts.statusDisabled")}
+          </p>
+          {canEdit ? (
+            <button type="button" className="btn sm" onClick={() => setSwitching(true)}>
+              {t("serviceAccounts.enableMenu")}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       <DetailLayout
         rail={
           <RailCard title={t("detail.identityCard")}>
+            {/* TÊN ĐĂNG NHẬP đứng dòng đầu, cỡ đọc được, có nút chép — nó là thứ người ta mở
+                trang này để lấy, và là thứ dán thẳng vào ô đăng nhập. */}
+            {item.login ? (
+              <RailRow label={t("serviceAccounts.login")}>
+                <span className="mono sa-login">{item.login}</span>{" "}
+                <CopyButton value={item.login} label={t("serviceAccounts.copyLogin")} inline />
+              </RailRow>
+            ) : null}
             <RailRow label={t("serviceAccounts.status")}>
               <span className={`badge ${STATUS_TONE[item.status]}`}>
                 {t(STATUS_KEY[item.status])}
@@ -173,8 +205,27 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
             {vpn ? (
               <RailRowIfSet label={t("serviceAccounts.groupName")} value={item.groupName} />
             ) : null}
+            {/* Dải IP được phép: mono, và "mọi IP" (trống hoặc 0.0.0.0/0) mang huy hiệu cảnh báo
+                — VPN mở cho mọi IP nguồn là điều người kiểm toán phải thấy ngay. */}
             {vpn ? (
-              <RailRowIfSet label={t("serviceAccounts.allowedIps")} value={item.allowedIps} />
+              <RailRow label={t("serviceAccounts.allowedIps")}>
+                {item.allowedIps ? <span className="mono">{item.allowedIps}</span> : null}
+                {allowsAnyIp(item.kind, item.allowedIps) ? (
+                  <>
+                    {" "}
+                    <span className="badge warn" title={t("serviceAccounts.anyIpTitle")}>
+                      {t("serviceAccounts.anyIp")}
+                    </span>
+                  </>
+                ) : null}
+              </RailRow>
+            ) : null}
+            {item.createdBy ? (
+              <RailRow label={t("serviceAccounts.createdBy")}>
+                <span title={item.createdBy}>{item.createdBy.split("@")[0]}</span>
+                {" · "}
+                {formatDate(item.createdAt)}
+              </RailRow>
             ) : null}
           </RailCard>
         }

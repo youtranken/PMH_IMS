@@ -75,7 +75,7 @@ async function seedVoided(page: Page): Promise<{ subnetId: string; address: stri
 }
 
 test.describe('Hồ sơ IP đã ẩn ở 390px', () => {
-  test('ô tick "Hiện cả hồ sơ đã ẩn" bấm được, và hàng đã ẩn hiện ra', async ({ page }) => {
+  test('chip "Đã ẩn" bấm được, và hàng đã ẩn hiện ra', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const { subnetId, address } = await seedVoided(page);
 
@@ -92,9 +92,10 @@ test.describe('Hồ sơ IP đã ẩn ở 390px', () => {
     await expect(row).toContainText('Trống');
     await expect(row).not.toContainText(OWNER);
 
-    const toggle = page.getByRole('checkbox', { name: 'Hiện cả hồ sơ đã ẩn' });
-    await expect(toggle).toBeVisible();
-    await toggle.check();
+    const chip = page.getByRole('button', { name: /^Đã ẩn/ });
+    await expect(chip).toBeVisible();
+    await chip.click();
+    await expect(chip).toHaveAttribute('aria-pressed', 'true');
 
     await expect(row).toContainText('Đã ẩn');
     await expect(row).toContainText(OWNER);
@@ -108,7 +109,7 @@ test.describe('Hồ sơ IP đã ẩn ở 390px', () => {
     const { subnetId, address } = await seedVoided(page);
 
     await page.goto(`/ip-addresses/${subnetId}`);
-    await page.getByRole('checkbox', { name: 'Hiện cả hồ sơ đã ẩn' }).check();
+    await page.getByRole('button', { name: /^Đã ẩn/ }).click();
 
     const row = page.getByRole('row').filter({ hasText: address });
     await expect(row).toContainText('Đã ẩn');
@@ -133,15 +134,16 @@ test.describe('Hồ sơ IP đã ẩn ở 390px', () => {
         cells.map((cell) => getComputedStyle(cell, '::before').content.replace(/^"|"$/g, '')),
       );
 
-    expect(labels, 'năm cột dữ liệu phải tự xưng tên khi tiêu đề bảng biến mất').toEqual(
-      expect.arrayContaining([
-        'Địa chỉ',
-        'Trạng thái',
-        'Thiết bị',
-        'Người / bộ phận dùng',
-        'Ngày cấp',
-      ]),
+    /*
+     * Ở ≤600px mỗi IP là thẻ hai dòng: dòng đầu (địa chỉ · huy hiệu · ⋯) tự nói nó là gì nên
+     * không mang nhãn; các dòng sau (máy, người dùng, ngày) VẪN tự xưng tên — thiếu nhãn thì
+     * "Phòng Kế toán" và mã máy không phân biệt được cái nào là cái nào. Ô trống ("—") ẩn
+     * hẳn ở khổ này nên không có trong danh sách ô.
+     */
+    expect(labels, 'các dòng dữ liệu phụ phải tự xưng tên khi tiêu đề bảng biến mất').toEqual(
+      expect.arrayContaining(['Người / bộ phận dùng']),
     );
+    expect(labels[0], 'dòng địa chỉ không lặp nhãn "Địa chỉ" trước chính địa chỉ').toBe('none');
 
     // Và giá trị vẫn phải đọc được, không bị nhãn đẩy ra ngoài mép máy.
     await expect(row.getByRole('cell').filter({ hasText: address })).toBeVisible();
@@ -154,7 +156,7 @@ test.describe('Hồ sơ IP đã ẩn ở 390px', () => {
     const { subnetId, address } = await seedVoided(page);
 
     await page.goto(`/ip-addresses/${subnetId}`);
-    await page.getByRole('checkbox', { name: 'Hiện cả hồ sơ đã ẩn' }).check();
+    await page.getByRole('button', { name: /^Đã ẩn/ }).click();
 
     const row = page.getByRole('row').filter({ hasText: address });
     await expect(row).toContainText('Đã ẩn');

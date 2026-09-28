@@ -15,14 +15,14 @@ describe('describeSchedule — câu mô tả lịch đọc từ vi.ts', () => {
 });
 
 describe('SchedulePicker — nhãn ô chọn qua i18n', () => {
-  it('lịch hằng tuần có đủ nhãn và bảy thứ', () => {
+  it('lịch hằng tuần có đủ nhãn, ô chọn là Select chung (không phải <select> gốc)', () => {
     renderWithI18n(
       <SchedulePicker value={{ frequency: 'weekly', hour: 8, weekday: 3 }} onChange={() => {}} />,
     );
-    expect(screen.getByLabelText('Tần suất')).toBeInTheDocument();
-    expect(screen.getByLabelText('Lúc')).toBeInTheDocument();
-    const weekday = screen.getByLabelText('Vào thứ');
-    expect(weekday).toHaveDisplayValue('Thứ Tư');
-    expect(weekday.querySelectorAll('option')).toHaveLength(7);
+    expect(screen.getByLabelText('Tần suất')).toHaveTextContent('Hằng tuần');
+    expect(screen.getByLabelText('Lúc')).toHaveTextContent('08:00');
+    expect(screen.getByLabelText('Vào thứ')).toHaveTextContent('Thứ Tư');
+    expect(document.querySelector('select')).toBeNull();
+    expect(screen.getByRole('group', { name: 'Lịch gửi' })).toBeInTheDocument();
   });
 });

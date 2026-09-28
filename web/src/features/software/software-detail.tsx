@@ -3,17 +3,13 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { useParams, useSearchParams } from "react-router-dom";
-import { ApiError, apiFetch } from "@/lib/api-client";
-import { errorMessage, useApiMutation } from "@/lib/api";
+import { apiFetch } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
-import { DatePicker } from "@/ui/date-picker";
-import { Dialog } from "@/ui/dialog";
 import { ExpiryBadge } from "@/ui/expiry-badge";
-import { Field } from "@/ui/page-header";
 import { HistoryPanel } from "@/ui/history-panel";
-import { LoadError, Loading, NotFound } from "@/ui/load-state";
+import { DetailLoadFailed, LoadError, Loading } from "@/ui/load-state";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
 import {
   DetailLayout,
@@ -22,29 +18,33 @@ import {
   RailRow,
   RailRowIfSet,
 } from "@/ui/detail-layout";
-import { DisposeButton } from "@/ui/dispose-button";
+import { useDispose } from "@/ui/dispose-button";
+import { RenewDialog } from "@/ui/renew-dialog";
+import { RowActions } from "@/ui/row-actions";
+import { useCatalogLists } from "@/ui/use-catalog-lists";
 import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
 import { useTabCounts } from "@/ui/tab-counts";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useToast } from "@/ui/toast";
-import { useFormErrors } from "@/ui/use-form-errors";
 import { LicenseAssignmentsPanel } from "./license-assignments-panel";
+import type { SeatRow } from "./seat-table";
 import { SoftwareForm } from "./software-form";
-import { toSoftwareHistory } from "./software-history-entries";
+import { softwareHistoryGroup, toSoftwareHistory } from "./software-history-entries";
 import {
   KIND_KEY,
   STATUS_KEY,
   STATUS_TONE,
-  seatLabel,
   supportsSeats,
   type SoftwareDetailRow,
   type SoftwareHistoryRow,
+  type SoftwareKind,
   type SoftwareRow,
 } from "./software-types";
 import { activeSeatCodes, softwareDisposeMessage } from "./software-dispose-message";
 import { RestoreDialog } from "./software-restore-dialog";
-import { retiredAfterDays } from "./software-standing";
+import { retiredAfterDays, standingOf } from "./software-standing";
+import { SeatUsage } from "./software-standing-cell";
 import { PATHS } from "@/lib/routes";
 
 /**
@@ -60,24 +60,33 @@ export function SoftwareDetail({ me }: { me: Me }) {
   const queryClient = useQueryClient();
   const { id = "" } = useParams();
   const [params] = useSearchParams();
-  const [tab, setTab] = useState(() =>
-    initialTab(params.get("tab"), [
-      "profile",
-      "devices",
-      "vault",
-      "attachments",
-      "history",
-    ]),
+  /* `null` = người dùng chưa chọn tab nào: tab mặc định đi theo LOẠI hồ sơ (xem `defaultTab`),
+     mà loại chỉ biết khi hồ sơ đã về. `?tab=` trên URL thì luôn thắng. */
+  const [chosenTab, setTab] = useState<string | null>(() =>
+    params.get("tab")
+      ? initialTab(params.get("tab"), [
+          "profile",
+          "devices",
+          "vault",
+          "attachments",
+          "history",
+        ])
+      : null,
   );
   const [editing, setEditing] = useState(false);
   const [renewing, setRenewing] = useState(false);
-  const [restoring, setRestoring] = useState(false);
+  // `?restore=1` (lối tắt "Khôi phục…" từ Kho thanh lý) mở thẳng hộp Khôi phục.
+  const [restoring, setRestoring] = useState(() => params.get("restore") === "1");
+  const [historyGroup, setHistoryGroup] = useState<"" | "renew" | "seat" | "profile">("");
+  const lists = useCatalogLists();
 
   const software = useQuery({
     queryKey: ["software", id],
     queryFn: () => apiFetch<SoftwareDetailRow>(`/api/v1/software/${id}`),
     retry: false,
   });
+
+  const tab = chosenTab ?? defaultTab(software.data?.kind);
 
   const history = useQuery({
     queryKey: ["software", id, "history"],
@@ -86,8 +95,22 @@ export function SoftwareDetail({ me }: { me: Me }) {
     enabled: tab === "history",
   });
 
+  /* Cùng khoá cache với tab Máy đang dùng (`LicenseAssignmentsPanel`): mở hộp Gia hạn sau khi
+     đã xem tab đó thì không tải lại. Chỉ hỏi khi hộp mở — ghế là việc của license. */
+  const seatRows = useQuery({
+    queryKey: ["software", id, "assignments", true],
+    queryFn: () =>
+      apiFetch<SeatRow[]>(`/api/v1/software/${id}/assignments?includeReleased=true`),
+    enabled: renewing && software.data?.kind === "license",
+  });
+  const seatEnds = (seatRows.data ?? [])
+    .filter((seat) => !seat.releasedAt && seat.endDate)
+    .map((seat) => seat.endDate as string);
+
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: ["software"] });
+  const vendorName = (vendorId: string) =>
+    lists.data?.vendors.find((vendor) => vendor.id === vendorId)?.name;
 
   /**
    * Tab Két sắt hiện cho MỌI vai kể từ story 6.3.
@@ -144,11 +167,14 @@ export function SoftwareDetail({ me }: { me: Me }) {
 
   if (software.isLoading) return <Loading />;
   if (software.isError) {
-    return software.error instanceof ApiError &&
-      software.error.status === 404 ? (
-      <NotFound />
-    ) : (
-      <LoadError error={software.error} onRetry={() => void software.refetch()} />
+    // Giữ đường lùi về danh sách, và tách "hồ sơ không còn" (404) khỏi "máy chủ lỗi".
+    return (
+      <DetailLoadFailed
+        error={software.error}
+        onRetry={() => void software.refetch()}
+        backTo={PATHS.software}
+        backLabel={t("nav.software")}
+      />
     );
   }
 
@@ -157,6 +183,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
   if (!software.data) return <Loading />;
   const item = software.data;
   const retired = item.status === "retired";
+  const standing = standingOf(item);
   /** Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày ra nút để bấm rồi 403. */
   const canVaultWrite = me.role === "sa" || me.role === "admin";
 
@@ -165,7 +192,8 @@ export function SoftwareDetail({ me }: { me: Me }) {
       <DetailHeader
         crumbs={[
           { label: t("nav.software"), to: PATHS.software },
-          { label: t(KIND_KEY[item.kind]) },
+          // Mắt xích loại dẫn về danh sách đã lọc đúng loại này.
+          { label: t(KIND_KEY[item.kind]), to: `${PATHS.software}?kind=${item.kind}` },
           { label: item.code },
         ]}
         code={item.code}
@@ -208,30 +236,35 @@ export function SoftwareDetail({ me }: { me: Me }) {
                 {t("software.renew")}
               </button>
             ) : null}
+            {/* Thanh lý vào menu "⋯", không đứng lẻ một nút đỏ ở mép phải: header chỉ giữ hai
+                nút cùng cỡ, và mục nguy hiểm nằm cuối menu như mọi chỗ khác (RowActions). */}
             {!retired ? (
-              <DisposeButton
-                url={`/api/v1/software/${item.id}`}
-                body={{ status: "retired" }}
-                label={t("disposal.dispose")}
-                confirmMessage={softwareDisposeMessage(t, item.code, item.seatUsed, null)}
-                resolveMessage={
-                  item.seatUsed > 0
-                    ? async () =>
-                        softwareDisposeMessage(
-                          t,
-                          item.code,
-                          item.seatUsed,
-                          await activeSeatCodes(item.id),
-                        )
-                    : undefined
-                }
-                csrfToken={me.csrfToken}
-                onDone={() => void refresh()}
-              />
+              <DetailMoreActions item={item} csrfToken={me.csrfToken} onDone={() => void refresh()} />
             ) : null}
           </>
         }
       />
+
+      {standing.kind === "expired" && standing.retireInDays !== null && item.autoRetireOn ? (
+        /* Q-13: hồ sơ Hết hạn sẽ tự Thanh lý và gỡ mọi ghế — nói trước NGÀY và SỐ MÁY, kèm nút
+           cứu ngay tại đây, đừng để người dùng phát hiện khi hồ sơ đã vào kho. */
+        <div className="alert warn" role="status">
+          <strong>
+            {t("software.autoRetireWarn", {
+              count: standing.retireInDays,
+              date: formatDate(item.autoRetireOn),
+            })}
+          </strong>{" "}
+          {item.seatUsed > 0 ? (
+            <span>{t("software.autoRetireSeats", { count: item.seatUsed })}</span>
+          ) : null}{" "}
+          {item.licenseModel !== "perpetual" && item.endDate ? (
+            <button type="button" className="btn sm" onClick={() => setRenewing(true)}>
+              {t("software.renew")}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       {retired ? (
         <div className="alert" role="status">
@@ -246,14 +279,9 @@ export function SoftwareDetail({ me }: { me: Me }) {
       <DetailLayout
         rail={
           <RailCard title={t("detail.identityCard")}>
-            <RailRow
-              label={t("software.status")}
-              note={
-                item.startDate
-                  ? `${t("expiry.from")} ${formatDate(item.startDate)}`
-                  : undefined
-              }
-            >
+            {/* Không kèm ngày dưới trạng thái: ngày bắt đầu đọc thành "Hết hạn từ ngày…" —
+                sai nghĩa. Ngày bắt đầu đã là mốc đầu của thanh thời hạn ngay dưới. */}
+            <RailRow label={t("software.status")}>
               <span className={`badge ${STATUS_TONE[item.status]}`}>
                 {t(STATUS_KEY[item.status])}
               </span>
@@ -268,7 +296,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
              */}
             <RailRow label={t("software.endDate")}>
               {item.licenseModel === "perpetual" ? (
-                <span className="badge ok plain">{t("software.perpetual")}</span>
+                <span className="badge outline plain">∞ {t("software.perpetual")}</span>
               ) : item.endDate ? (
                 <WarrantyTimeline
                   start={item.startDate}
@@ -284,8 +312,8 @@ export function SoftwareDetail({ me }: { me: Me }) {
             {/* Ghế đã dùng là con số quyết định "có phải mua thêm không" — nó thuộc về thẻ
                 định danh, không phải nằm sâu trong một tab. */}
             {supportsSeats(item.kind) ? (
-              <RailRow label={t("software.seats")} note={t("software.seatsNote")}>
-                <span className="mono">{seatLabel(item)}</span>
+              <RailRow label={t("software.seats")}>
+                <SeatUsage item={item} />
               </RailRow>
             ) : null}
 
@@ -356,7 +384,34 @@ export function SoftwareDetail({ me }: { me: Me }) {
         ) : history.isError ? (
           <LoadError error={history.error} onRetry={() => void history.refetch()} />
         ) : (
-          <HistoryPanel entries={toSoftwareHistory(history.data ?? [], t)} />
+          <>
+            {/* Chip lọc: license nhiều ghế có hàng chục dòng gán/gỡ, dòng gia hạn chìm giữa. */}
+            <div
+              className="segmented history-filter"
+              role="group"
+              aria-label={t("software.historyFilter")}
+            >
+              {(["", "renew", "seat", "profile"] as const).map((group) => (
+                <button
+                  key={group || "all"}
+                  type="button"
+                  aria-pressed={historyGroup === group}
+                  onClick={() => setHistoryGroup(group)}
+                >
+                  {t(HISTORY_GROUP_KEY[group])}
+                </button>
+              ))}
+            </div>
+            <HistoryPanel
+              entries={toSoftwareHistory(
+                (history.data ?? []).filter(
+                  (row) => !historyGroup || softwareHistoryGroup(row.action) === historyGroup,
+                ),
+                t,
+                vendorName,
+              )}
+            />
+          </>
         )}
         </TabPanel>
       </DetailLayout>
@@ -373,7 +428,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
         />
       ) : null}
 
-      {restoring ? (
+      {restoring && retired ? (
         <RestoreDialog
           software={item}
           csrfToken={me.csrfToken}
@@ -390,14 +445,17 @@ export function SoftwareDetail({ me }: { me: Me }) {
         />
       ) : null}
 
-      {renewing ? (
+      {renewing && item.endDate ? (
         <RenewDialog
-          software={item}
+          row={{ kind: item.kind, id: item.id, code: item.code, label: item.name, end: item.endDate }}
+          kindLabel={t(KIND_KEY[item.kind])}
+          url={`/api/v1/software/${item.id}/renew`}
+          seatEnds={seatEnds}
+          attachTo={{ ownerType: "software", ownerId: item.id }}
           csrfToken={me.csrfToken}
           onClose={() => setRenewing(false)}
           onDone={() => {
             setRenewing(false);
-            toast({ message: t("software.renewed") });
             void refresh();
           }}
         />
@@ -406,101 +464,63 @@ export function SoftwareDetail({ me }: { me: Me }) {
   );
 }
 
-function RenewDialog({
-  software,
+const HISTORY_GROUP_KEY = {
+  "": "software.historyAll",
+  renew: "software.historyRenew",
+  seat: "software.historySeat",
+  profile: "software.historyProfile",
+} as const;
+
+/**
+ * Tab mở sẵn theo loại: license thì "Máy đang dùng" (thứ người ta mở hồ sơ để xem), SSL và tên
+ * miền thì "Giấy tờ" — tab Hồ sơ của chúng gần như trống vì mọi thứ đã nằm ở thẻ bên phải.
+ */
+function defaultTab(kind: SoftwareKind | undefined): string {
+  if (kind && supportsSeats(kind)) return "devices";
+  if (kind === "ssl" || kind === "domain") return "attachments";
+  return "profile";
+}
+
+/**
+ * Menu "⋯" ở đầu trang chi tiết — hiện chỉ có Thanh lý. Component riêng vì `useDispose` là
+ * hook, mà trang có mấy nhánh `return` sớm trước chỗ vẽ header.
+ */
+function DetailMoreActions({
+  item,
   csrfToken,
-  onClose,
   onDone,
 }: {
-  software: SoftwareRow;
+  item: SoftwareRow;
   csrfToken: string;
-  onClose: () => void;
   onDone: () => void;
 }) {
   const { t } = useTranslation();
-  const [endDate, setEndDate] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  /* Không dùng câu HINT đang hiện xám ngay trên ô làm câu lỗi: dòng đỏ và dòng xám nói y hệt
-     nhau thì người dùng đọc xong vẫn không biết phải sửa gì. */
-  const check = useFormErrors({ endDate: !endDate && t("expiry.pickDate") });
-  const renew = useApiMutation<{ endDate: string }, unknown>(
-    `/api/v1/software/${software.id}/renew`,
-    { csrfToken, refreshMe: false },
-  );
-
+  const dispose = useDispose({
+    url: `/api/v1/software/${item.id}`,
+    body: { status: "retired" },
+    label: t("disposal.dispose"),
+    confirmMessage: softwareDisposeMessage(t, item.code, item.seatUsed, null),
+    resolveMessage:
+      item.seatUsed > 0
+        ? async () =>
+            softwareDisposeMessage(t, item.code, item.seatUsed, await activeSeatCodes(item.id))
+        : undefined,
+    csrfToken,
+    onDone,
+  });
   return (
-    <Dialog
-      open
-      onOpenChange={onClose}
-      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
-         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ.
-         `guardUnsaved`: chưa bấm Lưu mà lỡ Esc thì hỏi lại, đừng xoá trắng. */
-      dismissible={!renew.isPending}
-      guardUnsaved
-      maxWidth={480}
-      title={`${t("software.renewTitle")} — ${software.code}`}
-      footer={
-        <>
-          <button type="button" className="btn" onClick={onClose}>
-            {t("common.cancel")}
-          </button>
-          <button
-            type="submit"
-            form="renew-form"
-            className="btn primary"
-            disabled={renew.isPending}
-          >
-            {renew.isPending ? t("common.loading") : t("software.renew")}
-          </button>
-        </>
-      }
-    >
-      <form
-        id="renew-form"
-        className="form-grid"
-        data-columns={1}
-        ref={check.formRef}
-        noValidate
-        onSubmit={(e) => {
-          e.preventDefault();
-          setError(null);
-          if (!check.check()) return;
-          renew.mutate(
-            { endDate },
-            {
-              onSuccess: onDone,
-              onError: (err) => setError(errorMessage(err)),
-            },
-          );
-        }}
-      >
-        <p className="muted">
-          {t("software.endDate")}:{" "}
-          {software.endDate ? formatDate(software.endDate) : "—"}
-        </p>
-        <Field
-          label={t("software.endDate")}
-          required
-          hint={t("software.renewHint")}
-          error={check.error("endDate")}
-        >
-          <DatePicker
-            value={endDate}
-            ariaLabel={t("software.renewTitle")}
-            /* Hạn mới phải sau hạn cũ — chặn ngay trên lịch cho khỏi bấm nhầm;
-               API vẫn kiểm lại vì chốt chặn thật phải nằm ở server. */
-            min={software.endDate ?? undefined}
-            onChange={setEndDate}
-          />
-        </Field>
-
-        {error ? (
-          <p className="alert error" role="alert">
-            {error}
-          </p>
-        ) : null}
-      </form>
-    </Dialog>
+    <RowActions
+      label={t("common.actionsOf", { subject: item.code })}
+      items={[
+        {
+          key: "dispose",
+          label: t("disposal.dispose"),
+          onSelect: dispose.run,
+          danger: true,
+          disabled: dispose.isPending,
+        },
+      ]}
+    />
   );
 }
 

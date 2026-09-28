@@ -5,6 +5,7 @@ import { ME_KEY, errorCode, errorMessage } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
 import { Dialog } from '@/ui/dialog';
 import { OtpInput } from '@/ui/otp-input';
+import { PasswordInput } from '@/ui/password-input';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { TotpSetup, type TotpSetupData } from './totp-setup';
 
@@ -133,10 +134,8 @@ export function TotpEnrollDialog({
             <label className="lbl-t" htmlFor="profile-totp-password">
               {t('auth.currentPassword')}
             </label>
-            <input
+            <PasswordInput
               id="profile-totp-password"
-              className="inp"
-              type="password"
               autoComplete="current-password"
               required
               value={password}

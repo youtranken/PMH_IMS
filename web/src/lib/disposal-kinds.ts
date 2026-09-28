@@ -36,3 +36,45 @@ const STATUS_KEY = new Map<string, string>([
 export function disposalStatusKey(status: string): string | null {
   return STATUS_KEY.get(status) ?? null;
 }
+
+/**
+ * Cột "chi tiết" của một hồ sơ thanh lý ra chữ đọc được. Thiết bị (loại thiết bị) và đường
+ * truyền (băng thông) API đã gửi chữ; phần mềm và tài khoản dịch vụ thì API gửi MÃ LOẠI — ở
+ * đây dịch ra, và mã lạ thì bỏ trống chứ không in mã thô ('vpn', 'license') lên màn.
+ *
+ * Bảng khoá khớp `KIND_KEY` của hai màn chủ (`features/software`, `features/service-accounts`);
+ * tầng `lib` không được import `features`, nên khai lại khoá (chỉ khoá, chữ vẫn một chỗ ở vi.ts).
+ */
+const DETAIL_KEY: Partial<Record<DisposalKind, Record<string, string>>> = {
+  software: {
+    license: 'software.kindLicense',
+    ssl: 'software.kindSsl',
+    domain: 'software.kindDomain',
+    maintenance: 'software.kindMaintenance',
+    other: 'software.kindOther',
+  },
+  service_account: {
+    shared: 'serviceAccounts.kindShared',
+    vpn: 'serviceAccounts.kindVpn',
+  },
+};
+
+export function disposalDetailText(
+  kind: DisposalKind,
+  detail: string | null,
+  t: (key: string) => string,
+): string | null {
+  if (!detail) return null;
+  const keys = DETAIL_KEY[kind];
+  if (!keys) return detail;
+  return keys[detail] ? t(keys[detail]) : null;
+}
+
+/** Như `disposalDetailText` nhưng cho ô bảng: không có chữ thì in "—". */
+export function disposalDetail(
+  kind: DisposalKind,
+  detail: string | null,
+  t: (key: string) => string,
+): string {
+  return disposalDetailText(kind, detail, t) ?? '—';
+}

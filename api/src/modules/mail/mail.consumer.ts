@@ -66,7 +66,12 @@ export class MailConsumer {
     const row = await this.outbox.loadForConsumer(outboxId);
     if (!row || row.processedAt) return;
 
-    const payload = row.payload as { userId?: string; ruleId?: string; isTest?: boolean };
+    const payload = row.payload as {
+      userId?: string;
+      ruleId?: string;
+      isTest?: boolean;
+      toUserId?: string;
+    };
     /*
      * Giờ in trong thư là giờ SỰ KIỆN — lúc hàng outbox được ghi, cùng transaction với việc
      * nghiệp vụ — chứ không phải lúc worker gửi: hàng đợi dồn thì thư đi trễ hàng giờ. Và
@@ -132,7 +137,12 @@ export class MailConsumer {
     const request = await this.findApproval(approvalId);
     if (!request || request.state !== 'pending') return null;
 
-    const approvers = await this.users.recipientsByRole(['sa', 'admin']);
+    /* Bốn mắt (FR-023): Quản trị tự xin thì chính họ không duyệt được — thư "cần bạn duyệt"
+       gửi cho họ là mời bấm một nút sẽ bị từ chối. Cùng luật với `approverCountExcept`. */
+    const requester = request.requester.toLowerCase();
+    const approvers = (await this.users.recipientsByRole(['sa', 'admin'])).filter(
+      (a) => a.email.toLowerCase() !== requester,
+    );
     if (approvers.length === 0) return null;
 
     const [who, subject] = await Promise.all([
@@ -268,6 +278,8 @@ export class MailConsumer {
       userId?: string;
       ruleId?: string;
       isTest?: boolean;
+      /** Gửi thử "chỉ cho tôi": thư đi tới đúng người này thay vì danh sách của luật. */
+      toUserId?: string;
       approvalId?: string;
       /** `approval.decided`: quyết định ĐÃ xảy ra — chọn mẫu thư theo nó, không theo state lúc gửi. */
       state?: string;
@@ -305,7 +317,12 @@ export class MailConsumer {
         throw error;
       });
       if (!digest) return null;
-      return buildDigestMail(digest, payload.isTest === true);
+      const mail = buildDigestMail(digest, payload.isTest === true);
+      if (!mail || !payload.toUserId) return mail;
+      // Người bấm đã bị xoá khi thư còn trong hàng đợi thì thôi — KHÔNG rơi về danh sách của
+      // luật: họ đã chọn đúng việc không làm phiền danh sách ấy.
+      const me = await this.users.getById(payload.toUserId);
+      return me ? { ...mail, to: [me.email] } : null;
     }
 
     /**

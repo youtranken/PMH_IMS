@@ -9,6 +9,7 @@ import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
 import { sortQuery } from '@/lib/sort-query';
 import { DataTable } from '@/ui/data-table';
+import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
@@ -21,6 +22,8 @@ import { ServiceAccountForm } from './service-account-form';
 import { ServiceAccountStatusDialog } from './service-account-status-dialog';
 import {
   KIND_KEY,
+  KIND_SHORT_KEY,
+  KIND_TONE,
   SERVICE_ACCOUNT_KINDS,
   SERVICE_ACCOUNT_STATUSES,
   STATUS_KEY,
@@ -123,7 +126,9 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         accessorKey: 'kind',
         header: t('serviceAccounts.kind'),
         cell: ({ row }) => (
-          <span className="badge plain">{t(KIND_KEY[row.original.kind])}</span>
+          <span className={`badge ${KIND_TONE[row.original.kind]}`}>
+            {t(KIND_SHORT_KEY[row.original.kind])}
+          </span>
         ),
       },
       {
@@ -203,11 +208,19 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
         title={t('serviceAccounts.title')}
         subtitle={t('serviceAccounts.subtitle')}
         actions={
-          canEdit ? (
-            <button type="button" className="btn primary" onClick={() => setCreating(true)}>
-              {t('serviceAccounts.add')}
-            </button>
-          ) : null
+          <>
+            {/* FR-028: xuất đúng bộ lọc và thứ tự đang xem. File KHÔNG có mật khẩu (FR-026) —
+                nó trả lời "công ty có những tài khoản dùng chung nào, ai giữ". */}
+            <ExportXlsxButton
+              url={`/api/v1/service-accounts/export.xlsx?${buildFilterQuery(filters, sorting)}`}
+              fileName="tai-khoan-dich-vu.xlsx"
+            />
+            {canEdit ? (
+              <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                {t('serviceAccounts.add')}
+              </button>
+            ) : null}
+          </>
         }
       />
 
@@ -239,6 +252,17 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
           ]}
           onChange={(value) => setFilter('status', value as Filters['status'])}
         />
+        {/* Tên chỉ là dòng phụ dưới mã nên không có tiêu đề cột để bấm — sắp theo tên đi ô này.
+            API đã nhận `sort=name`. */}
+        <Select
+          value={url.sorting.key === 'name' ? 'name' : 'code'}
+          ariaLabel={t('serviceAccounts.sortBy')}
+          options={[
+            { value: 'code', label: t('serviceAccounts.sortByCode') },
+            { value: 'name', label: t('serviceAccounts.sortByName') },
+          ]}
+          onChange={(value) => url.setSorting({ key: value, desc: false })}
+        />
       </FilterBar>
 
       {accounts.isLoading ? (
@@ -260,6 +284,18 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
             columns={columns}
             emptyText={url.isFiltered ? t('serviceAccounts.emptyFiltered') : t('serviceAccounts.empty')}
             stackOnMobile
+            /* Điện thoại: thẻ 2 dòng (mã + trạng thái; tên đăng nhập · loại · bộ phận) thay cho
+               5 hàng nhãn–giá trị ~270px một tài khoản. */
+            mobileCard={{
+              title: (row) => row.code,
+              href: (row) => PATHS.serviceAccount(row.id),
+              badge: (row) => (
+                <span className={`badge ${STATUS_TONE[row.status]}`}>{t(STATUS_KEY[row.status])}</span>
+              ),
+              subtitle: (row) => row.name,
+              meta: (row) =>
+                [row.login, t(KIND_SHORT_KEY[row.kind]), row.department].filter(Boolean).join(' · '),
+            }}
             manualSorting
             sorting={sorting}
             onSortingChange={(updater) => {
@@ -328,6 +364,12 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
 
 function buildQuery(page: number, limit: number, filters: Filters, sorting: SortingState): string {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  return [params.toString(), buildFilterQuery(filters, sorting)].filter(Boolean).join('&');
+}
+
+/** Bộ lọc + thứ tự — CHUNG cho bảng và nút Xuất Excel, nên file luôn khớp cái đang xem. */
+function buildFilterQuery(filters: Filters, sorting: SortingState): string {
+  const params = new URLSearchParams();
   if (filters.search.trim()) params.set('search', filters.search.trim());
   if (filters.kind) params.set('kind', filters.kind);
   if (filters.status) params.set('status', filters.status);

@@ -11,6 +11,7 @@ import { uploadFile } from '@/lib/upload';
 import { FilePicker } from '@/ui/file-picker';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { useConfirm } from '@/ui/confirm-provider';
+import { RowActions } from '@/ui/row-actions';
 import { useToast } from '@/ui/toast';
 
 /**
@@ -73,6 +74,17 @@ export function attachmentsKey(ownerType: AttachmentOwnerType, ownerId: string) 
  * (Epic 8), sự cố (Epic 9). Ba màn đó mà mỗi màn tự viết một panel upload thì ba lần
  * phải nhớ "tải về chứ không mở inline", và sẽ có màn quên.
  */
+/**
+ * Câu gợi ý "giấy tờ gì" theo LOẠI hồ sơ — "hóa đơn, phiếu bảo hành" là của thiết bị, đặt dưới
+ * một hợp đồng nhà mạng thì người ta không biết nên đính gì. Loại không có câu riêng dùng câu chung.
+ */
+const HINT_BY_OWNER: Partial<Record<AttachmentOwnerType, string>> = {
+  isp: 'attachments.hint_isp',
+  service_account: 'attachments.hint_service_account',
+  subnet: 'attachments.hint_subnet',
+  nat_rule: 'attachments.hint_nat_rule',
+};
+
 export function AttachmentPanel({
   ownerType,
   ownerId,
@@ -102,8 +114,9 @@ export function AttachmentPanel({
    */
   const me = queryClient.getQueryData<Me>(ME_KEY);
   const canDelete = canEdit && (me?.role === 'sa' || me?.role === 'admin');
-  const [file, setFile] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
+  /** Tiến độ lô đang tải: `done`/`total`. `null` = không tải gì. */
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  const busy = progress !== null;
 
   const queryKey = attachmentsKey(ownerType, ownerId);
   const files = useOwnerAttachments(ownerType, ownerId);
@@ -115,19 +128,29 @@ export function AttachmentPanel({
 
   const refresh = () => queryClient.invalidateQueries({ queryKey });
 
-  const submit = async () => {
-    if (!file) return;
-    setBusy(true);
-    try {
-      await uploadFile('/api/v1/files', file, csrfToken, { ownerType, ownerId });
-      toast({ message: t('attachments.uploaded') });
-      setFile(null);
-      await refresh();
-    } catch (error) {
-      toast({ message: errorMessage(error), tone: 'error' });
-    } finally {
-      setBusy(false);
+  /*
+   * Chọn hoặc thả là TẢI NGAY, nhiều file một lượt. Bước "Chọn file → bấm Tải lên" riêng hay bị
+   * quên: người dùng chọn xong rời tab, file chưa bao giờ lên. Từng file một, tuần tự — một file
+   * hỏng không kéo cả lô, và câu báo nói đúng file nào.
+   */
+  const uploadAll = async (picked: File[]) => {
+    setProgress({ done: 0, total: picked.length });
+    let ok = 0;
+    for (const [index, file] of picked.entries()) {
+      try {
+        await uploadFile('/api/v1/files', file, csrfToken, { ownerType, ownerId });
+        ok += 1;
+      } catch (error) {
+        toast({
+          message: t('attachments.draftFailedLive', { name: file.name, reason: errorMessage(error) }),
+          tone: 'error',
+        });
+      }
+      setProgress({ done: index + 1, total: picked.length });
     }
+    if (ok > 0) toast({ message: t('attachments.uploadedCount', { count: ok }) });
+    setProgress(null);
+    await refresh();
   };
 
   const rows = files.data ?? [];
@@ -139,21 +162,21 @@ export function AttachmentPanel({
           <FilePicker
             accept={ATTACHMENT_ACCEPT}
             label={t('attachments.pick')}
-            hint={t('attachments.hint')}
-            file={file}
+            hint={t(HINT_BY_OWNER[ownerType] ?? 'attachments.hint')}
+            file={null}
             disabled={busy}
-            onPick={setFile}
+            onPick={(one) => {
+              if (one) void uploadAll([one]);
+            }}
+            onPickFiles={(many) => void uploadAll(many)}
           />
-          <div className="row" style={{ justifyContent: 'flex-end' }}>
-            <button
-              type="button"
-              className="btn primary"
-              disabled={!file || busy}
-              onClick={() => void submit()}
-            >
-              {busy ? t('attachments.uploading') : t('attachments.upload')}
-            </button>
-          </div>
+          {progress ? (
+            <p className="muted" role="status">
+              {t('attachments.uploadingOf', { done: progress.done, total: progress.total })}
+            </p>
+          ) : null}
+          {/* Luật "chỉ tải về, không mở inline" nói ngay chỗ đính kèm — không phải câu rỗng. */}
+          <p className="muted small">{t('attachments.noPreview')}</p>
         </>
       ) : null}
 
@@ -162,7 +185,10 @@ export function AttachmentPanel({
       ) : files.isError ? (
         <LoadError error={files.error} onRetry={() => void files.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState title={t('attachments.empty')} hint={t('attachments.noPreview')} />
+        <EmptyState
+          title={t('attachments.empty')}
+          hint={canEdit ? t('attachments.emptyHint') : undefined}
+        />
       ) : (
         <div className="table-wrap">
           <table className="table table-stack">
@@ -181,13 +207,13 @@ export function AttachmentPanel({
                   <td data-label={t('attachments.size')}>{formatSize(row.sizeBytes)}</td>
                   <td data-label={t('attachments.uploadedAt')}>{formatDateTime(row.createdAt)}</td>
                   <td data-label={t('common.actions')}>
+                    {/* "Tải về" là việc dùng nhiều nhất: nút ghost luôn hiện. "Xóa" (việc phá) nằm
+                        trong menu ⋯ chữ đỏ — nút đỏ đặc sát "Tải về" là mời bấm nhầm. */}
                     <div className="action-cell">
                       <button
                         type="button"
-                        className="btn sm"
+                        className="btn sm ghost"
                         onClick={() => {
-                          // Tải qua fetch→blob để giữ ĐÚNG TÊN gốc; server luôn trả
-                          // attachment + octet-stream nên không có chuyện mở inline.
                           void downloadFile(
                             `/api/v1/files/${row.id}/download`,
                             row.originalName,
@@ -199,39 +225,45 @@ export function AttachmentPanel({
                         {t('attachments.download')}
                       </button>
                       {canDelete ? (
-                        <button
-                          type="button"
-                          className="btn sm danger"
-                          onClick={() => {
-                            void (async () => {
-                              const ok = await askConfirm({
-                                title: t('common.titleOf', {
-                                  action: t('attachments.remove'),
-                                  subject: row.originalName,
-                                }),
-                                message: t('attachments.confirmRemove', {
-                                  name: row.originalName,
-                                }),
-                                danger: true,
-                                confirmLabel: t('attachments.remove'),
-                              });
-                              if (!ok) return;
-                              remove.mutate(
-                                { id: row.id },
-                                {
-                                  onSuccess: () => {
-                                    toast({ message: t('attachments.removed') });
-                                    void refresh();
-                                  },
-                                  onError: (error) =>
-                                    toast({ message: errorMessage(error), tone: 'error' }),
-                                },
-                              );
-                            })();
-                          }}
-                        >
-                          {t('attachments.remove')}
-                        </button>
+                        <RowActions
+                          label={t('common.actionsOf', { subject: row.originalName })}
+                          subject={row.originalName}
+                          items={[
+                            {
+                              key: 'remove',
+                              label: t('attachments.remove'),
+                              danger: true,
+                              disabled: remove.isPending,
+                              onSelect: () => {
+                                void (async () => {
+                                  const ok = await askConfirm({
+                                    title: t('common.titleOf', {
+                                      action: t('attachments.remove'),
+                                      subject: row.originalName,
+                                    }),
+                                    message: t('attachments.confirmRemove', {
+                                      name: row.originalName,
+                                    }),
+                                    danger: true,
+                                    confirmLabel: t('attachments.remove'),
+                                  });
+                                  if (!ok) return;
+                                  remove.mutate(
+                                    { id: row.id },
+                                    {
+                                      onSuccess: () => {
+                                        toast({ message: t('attachments.removed') });
+                                        void refresh();
+                                      },
+                                      onError: (error) =>
+                                        toast({ message: errorMessage(error), tone: 'error' }),
+                                    },
+                                  );
+                                })();
+                              },
+                            },
+                          ]}
+                        />
                       ) : null}
                     </div>
                   </td>

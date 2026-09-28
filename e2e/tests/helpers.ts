@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { expect, request, type Page } from '@playwright/test';
+import { expect, request, type Locator, type Page } from '@playwright/test';
 import { NobleCryptoPlugin, ScureBase32Plugin, TOTP } from 'otplib';
 import { APP_TIMEZONE } from '../app-timezone';
 
@@ -558,16 +558,17 @@ export async function firstLogin(
   const secret = (await page.getByTestId('totp-secret').innerText()).trim();
   expect(secret.length).toBeGreaterThan(15);
 
-  await page.getByLabel('Nhập mã 6 số đầu tiên để xác nhận').fill(await freshTotpCode(secret));
-  await page.getByRole('button', { name: 'Xác nhận' }).click();
+  // Đủ 6 số là màn tự gửi — KHÔNG bấm Xác nhận nữa: lúc nút kịp hiện lại thì trang đã sang
+  // bước đổi mật khẩu, và cú bấm chờ một nút không còn tồn tại.
+  await page.getByLabel('Mã 6 số đang hiện trong ứng dụng').fill(await freshTotpCode(secret));
 
   await expect(page.getByRole('heading', { name: 'Đổi mật khẩu' })).toBeVisible();
   await page.getByLabel('Mật khẩu hiện tại').fill(user.password);
   await page.getByLabel('Mật khẩu mới', { exact: true }).fill(newPassword);
   await page.getByLabel('Nhập lại mật khẩu mới').fill(newPassword);
-  await page.getByRole('button', { name: 'Lưu' }).click();
+  await page.getByRole('button', { name: 'Đổi mật khẩu và tiếp tục' }).click();
 
-  await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
   return secret;
 }
 
@@ -581,7 +582,7 @@ export async function loginWithTotp(
   await fillLogin(page, email, password);
   await expect(page.getByRole('heading', { name: 'Xác thực 2 lớp' })).toBeVisible();
   await page.getByLabel('Mã xác thực').fill(await freshTotpCode(secret));
-  await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
 }
 
 /**
@@ -1012,7 +1013,17 @@ export async function rowActionNames(page: Page, subject: string): Promise<strin
     }
     await expect(items.first()).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 15_000 });
-  const names = await items.allTextContents();
+  /*
+   * TÊN của mục, không phải toàn bộ chữ: mục có thể mang dòng mô tả nhỏ (`RowAction.hint`,
+   * `aria-hidden`) — nó không thuộc tên khả truy cập, nên cũng không thuộc câu trả lời ở đây.
+   */
+  const names = await items.evaluateAll((els) =>
+    els.map((el) => {
+      const copy = el.cloneNode(true) as HTMLElement;
+      copy.querySelectorAll('[aria-hidden="true"]').forEach((node) => node.remove());
+      return copy.textContent ?? '';
+    }),
+  );
   await page.keyboard.press('Escape');
   await expect(items).toHaveCount(0);
   return names;
@@ -1057,6 +1068,14 @@ export function isoInDays(days: number): string {
 /** Hôm nay theo lịch của múi giờ ứng dụng — xem chú thích `isoInDays`. */
 export function isoToday(): string {
   return isoInDays(0);
+}
+
+/**
+ * Nút ở đầu trang Thiết bị. Kho trống thì khối "chưa có thiết bị" bày thêm một bản cùng tên
+ * (DEV-009), nên tên nút một mình không còn duy nhất; nút đầu trang luôn đứng trước trong DOM.
+ */
+export function devicesPageButton(page: Page, name: 'Thêm thiết bị' | 'Nhập từ Excel'): Locator {
+  return page.getByRole('main').getByRole('button', { name, exact: true }).first();
 }
 
 /**

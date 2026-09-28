@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
   E2E_SA,
+  devicesPageButton,
   firstLogin,
   resetCatalog,
   resetDevices,
@@ -55,7 +56,8 @@ test.beforeEach(() => {
  * Bài này giả lập 500, nên câu đúng của nó là câu dành cho 500 — xem `lib/load-error-text.ts`.
  * Từ 12/09 `LoadError` không còn một câu cho mọi nguyên nhân nữa.
  */
-const LOAD_ERROR = 'Máy chủ đang gặp sự cố. Thử lại sau ít phút; vẫn vậy thì báo bộ phận IT.';
+const LOAD_ERROR =
+  'Máy chủ IMS đang gặp sự cố. Thử lại sau ít phút; nếu vẫn lỗi, gửi phần "Chi tiết kỹ thuật" bên dưới cho Super Admin.';
 const PICKER_ERROR = 'Không tải được danh sách. Thử lại sau.';
 
 /** Bắt một đường API trả 500. Trả về hàm gỡ, để phần sau của bài chạy trên API thật. */
@@ -151,7 +153,7 @@ test.describe('API hỏng phải nói ra, không được hóa thành rỗng', (
     await breakRoute(page, /\/api\/v1\/catalog\?/);
     await page.reload();
 
-    await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+    await devicesPageButton(page, 'Thêm thiết bị').click();
     /*
      * Bám vào hộp thoại, không bám vào cả trang: thanh lọc phía sau có một ô chọn TRÙNG TÊN
      * trợ năng ("Loại"), và `getByRole` khớp theo chuỗi con — không thu hẹp thì bài kiểm bấm
@@ -180,7 +182,7 @@ test.describe('API hỏng phải nói ra, không được hóa thành rỗng', (
     await expect(page.getByText(LOAD_ERROR)).toHaveCount(0);
 
     await page.goto('/devices');
-    await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+    await devicesPageButton(page, 'Thêm thiết bị').click();
     const form = page.getByRole('dialog');
     await form.getByRole('button', { name: 'Loại' }).click();
     await expect(page.getByRole('option').first()).toBeVisible();

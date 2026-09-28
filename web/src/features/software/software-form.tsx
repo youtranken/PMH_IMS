@@ -11,7 +11,10 @@ import { useToast } from '@/ui/toast';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { useFormErrors } from '@/ui/use-form-errors';
 import {
+  codePrefix,
   KIND_KEY,
+  LICENSE_MODELS,
+  requiresEndDate,
   seatCheck,
   SOFTWARE_KINDS,
   SOFTWARE_STATUSES,
@@ -111,10 +114,13 @@ export function SoftwareForm({
   const hasSeats = supportsSeats(form.kind);
   const isPerpetual = form.licenseModel === 'perpetual';
   const seats = seatCheck(form.seatTotal, hasSeats, row?.seatUsed ?? 0, row?.seatTotal ?? null);
+  const endRequired = requiresEndDate(form.kind, form.licenseModel);
 
   const check = useFormErrors({
     code: !form.code.trim() && t('formErrors.required'),
     name: !form.name.trim() && t('formErrors.required'),
+    // Thuê bao/SSL/tên miền mà không có hạn thì rơi khỏi mọi lời nhắc — API cũng từ chối.
+    endDate: endRequired && !form.endDate && t('software.endRequired'),
     seatTotal:
       seats.reason === 'invalid'
         ? t('software.seatInvalid')
@@ -206,11 +212,30 @@ export function SoftwareForm({
         ) : null}
         {check.summary}
         <FormSection title={t('software.tabProfile')} columns={3}>
+          {/* Loại đứng ĐẦU: nó quyết định form có Kỳ hạn, Số ghế, Hết hạn hay không — chọn sau
+              khi đã gõ mã và tên thì form nhảy bố cục ngay dưới tay người gõ. */}
+          <Field label={t('software.kind')} required span={3}>
+            <div className="segmented" role="radiogroup" aria-label={t('software.kind')}>
+              {SOFTWARE_KINDS.map((kind) => (
+                <label key={kind}>
+                  <input
+                    type="radio"
+                    name="sw-kind"
+                    value={kind}
+                    checked={form.kind === kind}
+                    onChange={() => set('kind', kind)}
+                  />
+                  {t(KIND_KEY[kind])}
+                </label>
+              ))}
+            </div>
+          </Field>
           <Field label={t('software.code')} required htmlFor="sw-code" error={check.error('code')}>
             <input
               id="sw-code"
               className="inp mono"
               required
+              placeholder={codePrefix(form.kind) ? `${codePrefix(form.kind)}…` : undefined}
               value={form.code}
               onChange={(e) => set('code', e.target.value)}
             />
@@ -230,33 +255,6 @@ export function SoftwareForm({
               onChange={(e) => set('name', e.target.value)}
             />
           </Field>
-
-          <Field label={t('software.kind')} required>
-            <Select
-              required
-              value={form.kind}
-              ariaLabel={t('software.kind')}
-              options={SOFTWARE_KINDS.map((kind) => ({
-                value: kind,
-                label: t(KIND_KEY[kind]),
-              }))}
-              onChange={(value) => set('kind', value as SoftwareKind)}
-            />
-          </Field>
-          {/* Chỉ license mới có bản mua đứt — loại khác không hiện ô này cho đỡ rối. */}
-          {hasSeats ? (
-            <Field label={t('software.licenseModel')} hint={t('software.licenseModelHint')}>
-              <Select
-                value={form.licenseModel}
-                ariaLabel={t('software.licenseModel')}
-                options={[
-                  { value: 'subscription', label: t('software.subscription') },
-                  { value: 'perpetual', label: t('software.perpetual') },
-                ]}
-                onChange={(value) => set('licenseModel', value as LicenseModel)}
-              />
-            </Field>
-          ) : null}
           <Field label={t('software.vendor')}>
             <Select
               value={form.vendorId}
@@ -293,7 +291,29 @@ export function SoftwareForm({
           ) : null}
         </FormSection>
 
-        <FormSection title={t('software.expiry')} columns={3}>
+        <FormSection title={t('software.sectionTerm')} columns={3}>
+          {/* Chỉ license mới có bản mua đứt — loại khác không hiện ô này cho đỡ rối. */}
+          {hasSeats ? (
+            <Field
+              label={t('software.licenseModel')}
+              hint={t(isPerpetual ? 'software.perpetualHint' : 'software.subscriptionHint')}
+            >
+              <div className="segmented" role="radiogroup" aria-label={t('software.licenseModel')}>
+                {LICENSE_MODELS.map((model) => (
+                  <label key={model}>
+                    <input
+                      type="radio"
+                      name="sw-model"
+                      value={model}
+                      checked={form.licenseModel === model}
+                      onChange={() => set('licenseModel', model)}
+                    />
+                    {t(model === 'perpetual' ? 'software.perpetual' : 'software.subscription')}
+                  </label>
+                ))}
+              </div>
+            </Field>
+          ) : null}
           <Field label={t('software.startDate')}>
             <DatePicker
               value={form.startDate}
@@ -301,17 +321,29 @@ export function SoftwareForm({
               onChange={(value) => set('startDate', value)}
             />
           </Field>
-          {isPerpetual ? null : (
-          <Field label={t('software.endDate')}>
-            <DatePicker
-              value={form.endDate}
-              ariaLabel={t('software.endDate')}
-              onChange={(value) => set('endDate', value)}
-            />
-          </Field>
+          {/* Vĩnh viễn: ô Hết hạn thành chữ tĩnh thay vì biến mất — bố cục không nhảy. */}
+          {isPerpetual ? (
+            <Field label={t('software.endDate')}>
+              <p className="static-value">{t('software.noEnd')}</p>
+            </Field>
+          ) : (
+            <Field
+              label={t('software.endDate')}
+              required={endRequired}
+              error={check.error('endDate')}
+            >
+              <DatePicker
+                value={form.endDate}
+                ariaLabel={t('software.endDate')}
+                onChange={(value) => set('endDate', value)}
+              />
+            </Field>
           )}
-          {/* Ô seat chỉ hiện với license — loại khác thấy ô này là hiểu sai ý nghĩa cột. */}
-          {hasSeats ? (
+        </FormSection>
+
+        {/* Ô ghế chỉ hiện với license — loại khác thấy ô này là hiểu sai ý nghĩa cột. */}
+        {hasSeats ? (
+          <FormSection title={t('software.seats')} columns={3}>
             <Field
               label={t('software.seatTotal')}
               hint={t('software.seatHint')}
@@ -329,8 +361,11 @@ export function SoftwareForm({
                 onChange={(e) => set('seatTotal', e.target.value)}
               />
             </Field>
-          ) : null}
-          <Field label={t('software.note')} hint={t('software.noteHint')} htmlFor="sw-note" span={3}>
+          </FormSection>
+        ) : null}
+
+        <FormSection title={t('software.note')} columns={1}>
+          <Field label={t('software.note')} hint={t('software.noteHint')} htmlFor="sw-note">
             <textarea
               id="sw-note"
               className="inp"

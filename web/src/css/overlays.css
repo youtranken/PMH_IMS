@@ -26,6 +26,13 @@
   background: var(--warn-soft);
   border-color: var(--border-warn);
 }
+/* Ghi chú trung tính (không phải lỗi hay cảnh báo): có nền và viền để không lơ lửng như một
+   đoạn chữ thụt lề giữa bộ lọc và bảng. */
+.alert.info {
+  color: var(--ink-2);
+  background: var(--surface-2);
+  border-color: var(--border);
+}
 
 /* --- Field (label trên input) -------------------------------------------- */
 .field {

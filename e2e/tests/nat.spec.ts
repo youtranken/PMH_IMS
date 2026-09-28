@@ -216,7 +216,7 @@ test.describe('Sổ NAT', () => {
     // `getByRole` chứ không `getByLabel`: nhãn có kèm dấu * (aria-hidden), nên TEXT của thẻ
     // label là "Port *" còn TÊN TRỢ NĂNG mới đúng là "Port".
     await serviceForm.getByRole('textbox', { name: 'Tên', exact: true }).fill(serviceName);
-    await serviceForm.getByRole('textbox', { name: 'Port', exact: true }).fill('8443');
+    await serviceForm.getByRole('textbox', { name: 'Từ port' }).fill('8443');
     await serviceForm.getByRole('button', { name: 'Lưu' }).click();
 
     // Lưu xong là ÁP THẲNG vào ô đang khai — không bắt người dùng đi tìm lại trong danh sách.

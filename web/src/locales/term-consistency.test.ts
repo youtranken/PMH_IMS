@@ -106,6 +106,16 @@ describe('Một khái niệm — một tên', () => {
   it('trạng thái đã ngừng dùng: ba màn đổ về Kho thanh lý dùng cùng một chữ', () => {
     expect(lookup('software.statusRetired')).toBe(lookup('devices.statusRetired'));
     expect(lookup('disposal.statusRetired')).toBe(lookup('devices.statusRetired'));
+    expect(lookup('disposal.statusTerminated')).toBe(lookup('devices.statusRetired'));
+  });
+
+  /**
+   * Q-14: "Đã thanh lý" là TRẠNG THÁI, "Thanh lý" là HÀNH ĐỘNG. Hai chữ đứng cạnh nhau trên cùng
+   * màn (nút đầu trang và badge trạng thái), nên đảo vai là đọc nhầm hồ sơ đã bỏ hay chưa.
+   */
+  it('nhãn trạng thái là "Đã thanh lý", nhãn nút là "Thanh lý"', () => {
+    expect(lookup('devices.statusRetired')).toBe('Đã thanh lý');
+    expect(lookup('devices.retire')).toBe('Thanh lý');
   });
 
   /**
@@ -151,11 +161,14 @@ describe('Nhãn ở panel Lịch sử không được lệch nhãn trên bảng'
     expect(lookup(historyKey)).toBe(lookup(screenKey));
   });
 
-  /** Q-04 chốt đúng ba chữ này cho đường truyền; file Excel phía API dùng cùng ba chữ. */
-  it('đường truyền: Đang dùng / Tạm ngưng / Thanh lý', () => {
+  /**
+   * Q-04 + Q-14: trạng thái cuối là "Đã thanh lý" (kết quả), "Thanh lý" chỉ là nhãn nút. File
+   * Excel phía API dùng cùng ba chữ.
+   */
+  it('đường truyền: Đang dùng / Tạm ngưng / Đã thanh lý', () => {
     expect(lookup('isp.statusActive')).toBe('Đang dùng');
     expect(lookup('isp.statusSuspended')).toBe('Tạm ngưng');
-    expect(lookup('isp.statusTerminated')).toBe('Thanh lý');
+    expect(lookup('isp.statusTerminated')).toBe(lookup('devices.statusRetired'));
   });
 
   /**

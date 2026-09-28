@@ -1,7 +1,8 @@
 import { DashboardService } from './dashboard.service';
 import type { ExpiryApiService } from '../expiry/expiry.api';
 import type { ApprovalsApiService } from '../approvals/approvals.api';
-import type { DevicesApiService } from '../devices/devices.api';
+import type { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
+import type { UsersApiService } from '../users/users.api';
 import type { IpamApiService } from '../ipam/ipam.api';
 import type { VaultApiService } from '../vault/vault.api';
 import type { DisposalApiService } from '../disposal/disposal.api';
@@ -41,11 +42,12 @@ function buildService(
   return new DashboardService(
     expiry,
     { list: empty } as unknown as ApprovalsApiService,
-    { getById: () => Promise.resolve(null) } as unknown as DevicesApiService,
+    { describe: () => Promise.resolve(null) } as unknown as ApprovalKindRegistry,
     { listSubnets: empty } as unknown as IpamApiService,
     { listOwners: empty } as unknown as VaultApiService,
     { list: empty } as unknown as DisposalApiService,
     { getNumber: () => Promise.resolve(80) } as unknown as SystemConfigService,
+    { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService,
   );
 }
 

@@ -71,6 +71,11 @@ class RuleBodyDto {
   @IsOptional() @IsBoolean() active?: boolean;
 }
 
+class TestRuleDto {
+  /** Chỉ gửi thư thử cho chính người bấm (EX-021). */
+  @IsOptional() @IsBoolean() onlyMe?: boolean;
+}
+
 class RuleParamDto {
   @IsUUID(undefined, { message: 'Mã luật không hợp lệ.' })
   id!: string;
@@ -157,13 +162,17 @@ export class ExpiryController {
   @Audited('expiry.exported', 'expiry')
   @Get('export.xlsx')
   async export(
-    @Query() query: { withinDays?: string; kinds?: string; includeExpired?: string },
+    @Query()
+    query: { withinDays?: string; kinds?: string; includeExpired?: string; state?: string },
     @Res() res: Response,
   ) {
+    // Ô số đang bật ("Gấp") cũng là bộ lọc đang xem — file xuất phải theo nó (FR-028).
+    const state = isExpiryLevel(query.state) ? query.state : undefined;
     const { items, failedKinds } = await this.expiry.list({
       withinDays: query.withinDays ? Number(query.withinDays) : undefined,
       kinds: query.kinds ? query.kinds.split(',').filter(Boolean) : undefined,
       includeExpired: query.includeExpired !== 'false',
+      state,
     });
     // File thiếu dòng trông y hệt file đủ dòng — thà không xuất còn hơn xuất thiếu.
     if (failedKinds.length > 0) {
@@ -193,7 +202,7 @@ export class ExpiryController {
       ],
       rows: items,
     });
-    sendXlsx(res, buffer, 'sap-het-han.xlsx');
+    sendXlsx(res, buffer, state ? `sap-het-han-${EXPORT_SUFFIX[state]}.xlsx` : 'sap-het-han.xlsx');
   }
 
   /**
@@ -254,8 +263,24 @@ export class ExpiryController {
   @Roles('sa', 'admin')
   @Post('rules/:id/test')
   @Audited('expiry.digest.test', 'expiry_rule', { writtenByService: true })
-  testRule(@Param() params: RuleParamDto, @Req() req: AuthedRequest) {
-    return this.digest.sendTest(req.user!.email, params.id);
+  testRule(
+    @Param() params: RuleParamDto,
+    @Body() body: TestRuleDto,
+    @Req() req: AuthedRequest,
+  ) {
+    const user = req.user!;
+    return this.digest.sendTest(
+      user.email,
+      params.id,
+      body?.onlyMe ? { userId: user.id, email: user.email } : undefined,
+    );
+  }
+
+  /** Nội dung thư của luật, xem ngay trong app — không gửi gì (EX-021). */
+  @Roles('sa', 'admin', 'member')
+  @Get('rules/:id/preview')
+  previewRule(@Param() params: RuleParamDto) {
+    return this.digest.preview(params.id);
   }
 
   @Roles('sa', 'admin', 'member')
@@ -268,6 +293,13 @@ export class ExpiryController {
 }
 
 /** `?state=` chỉ nhận đúng ba nhóm của màn — xem `levelOf` trong `expiry.service.ts`. */
+/** Hậu tố tên file xuất theo ô số đang bật — người nhận biết ngay file là nhóm nào. */
+const EXPORT_SUFFIX: Record<ExpiryLevel, string> = {
+  expired: 'qua-han',
+  critical: 'gap',
+  warning: 'sap-toi',
+};
+
 function isExpiryLevel(value: string | undefined): value is ExpiryLevel {
   return value === 'expired' || value === 'critical' || value === 'warning';
 }

@@ -83,8 +83,10 @@ test.describe('DEV-005 · danh sách thiết bị là thẻ gọn trên điện 
   test('đường hỏng: lọc không ra thì nói không khớp, không vẽ thẻ rỗng', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     await page.goto('/devices');
-    await timVaChoLoc(page, `KHONG-CO-E2E-${uniqueStamp()}`);
-    await expect(page.getByText('Không có thiết bị nào khớp bộ lọc.')).toBeVisible();
+    const tuKhoa = `KHONG-CO-E2E-${uniqueStamp()}`;
+    await timVaChoLoc(page, tuKhoa);
+    // Câu rỗng nêu lại đúng từ khoá vừa gõ (DEV-009).
+    await expect(page.getByText(`Không có thiết bị nào khớp “${tuKhoa}”.`)).toBeVisible();
     await expect(page.getByRole('listitem').filter({ hasText: 'E2E' })).toHaveCount(0);
   });
 });
@@ -104,15 +106,16 @@ test.describe('DEV-063 · DEV-043 · trang chi tiết trên điện thoại', ()
     });
 
     await page.goto(`/devices/${id}?tab=history`);
-    // Dải tóm tắt thay cho thẻ ~600px: người dùng vẫn thấy ngay, tab không còn nằm dưới y≈590.
+    // Tab bảng: thẻ Tóm tắt thu thành dải một dòng — người dùng vẫn thấy ngay, tab không nằm dưới y≈590.
     await expect(page.getByText('Chị Lan').first()).toBeVisible();
     const tab = page.getByRole('tab', { name: 'Lịch sử' });
     await expect(tab).toHaveAttribute('aria-selected', 'true');
     expect((await tab.boundingBox())!.y).toBeLessThan(560);
 
-    // Thẻ đầy đủ vẫn ở sau nút "Chi tiết".
+    // Ở tab Tổng quan, thẻ đầy đủ nằm sau nút "Chi tiết".
+    await page.getByRole('tab', { name: 'Tổng quan' }).click();
     await page.getByText('Chi tiết', { exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Thẻ định danh' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Tóm tắt' })).toBeVisible();
 
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     const tablist = page.getByRole('tablist');

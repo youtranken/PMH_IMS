@@ -11,7 +11,7 @@ import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/
  *
  * ===== CẢNH THẬT =====
  *
- * Gõ mật khẩu mới → bấm Xoay → gõ mã 6 số → trong lúc `rotate.mutateAsync` còn đang bay, bấm
+ * Gõ mật khẩu mới → bấm Đổi giá trị → gõ mã 6 số → trong lúc `rotate.mutateAsync` còn đang bay, bấm
  * Esc / click nền / bấm Hủy. Hộp biến mất; POST vẫn hoàn tất; secret ĐÃ bị xoay thật. Nhưng
  * `onSaved()` không bao giờ chạy: không toast, không refresh danh sách. Người vận hành tin là
  * mình vừa hủy, và giá trị cũ — thứ họ đang dán vào cấu hình thiết bị — đã không còn đúng nữa.
@@ -108,12 +108,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('VaultPanel — hộp Cất secret khóa lại khi đang ghi', () => {
+describe('VaultPanel — hộp Cất mật khẩu/khóa khóa lại khi đang ghi', () => {
   it('đang cất: nút Hủy mờ đi VÀ không đóng được hộp', async () => {
     mockApi(WHITELIST, []);
     renderPanel();
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Cất secret' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Cất mật khẩu/khóa' }));
     await userEvent.type(screen.getByLabelText(/Tên gọi/), 'admin web');
     await userEvent.type(screen.getByLabelText(/Giá trị/), 'Sup3r#Secret');
     await userEvent.click(screen.getByRole('button', { name: 'Lưu' }));
@@ -127,7 +127,7 @@ describe('VaultPanel — hộp Cất secret khóa lại khi đang ghi', () => {
   });
 });
 
-describe('VaultPanel — hộp Xoay khóa lại khi đang ghi', () => {
+describe('VaultPanel — hộp Đổi giá trị khóa lại khi đang ghi', () => {
   it('đang xoay: nút Hủy mờ đi VÀ không đóng được hộp', async () => {
     mockApi(WHITELIST, [SECRET]);
     renderPanel();
@@ -135,9 +135,9 @@ describe('VaultPanel — hộp Xoay khóa lại khi đang ghi', () => {
     await userEvent.click(
       await screen.findByRole('button', { name: 'Thao tác với admin web' }),
     );
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Xoay' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Đổi giá trị' }));
     await userEvent.type(screen.getByLabelText(/Giá trị mới/), 'N3w#Secret');
-    await userEvent.click(screen.getByRole('button', { name: 'Xoay' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Đổi giá trị' }));
 
     await screen.findByRole('button', { name: 'Đang tải…' });
 
@@ -336,5 +336,89 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
     expect(calls.some((c) => c.method === 'POST' && c.url.includes('/break-glass/p1/cancel'))).toBe(
       true,
     );
+  });
+
+  it('MỘT nút xin cho cả két (quyền cấp theo hồ sơ), từng dòng chỉ nói "Cần duyệt"', async () => {
+    mockApi(NEEDS_APPROVAL, [SECRET, { ...SECRET, id: 's2', label: 'SSH root' }]);
+    renderPanel({ ...ME, role: 'member' });
+    expect(await screen.findAllByText('Cần duyệt')).toHaveLength(2);
+    expect(screen.getAllByRole('button', { name: 'Xin quyền xem' })).toHaveLength(1);
+    expect(screen.getByText(/cần được duyệt trước khi xem \(2 ngăn\)/)).toBeInTheDocument();
+  });
+
+  it('lần xin gần nhất bị từ chối → nói ra cùng ghi chú của người duyệt, ngay trên nút xin', async () => {
+    mockApi(
+      {
+        ...NEEDS_APPROVAL,
+        lastDenied: { at: '2026-09-20T01:30:00.000Z', note: 'Lý do chưa đủ cụ thể' },
+      },
+      [SECRET],
+    );
+    renderPanel({ ...ME, role: 'member' });
+    expect(await screen.findByText(/Lần xin lúc 20\/09\/2026 08:30 bị từ chối/)).toBeInTheDocument();
+    expect(screen.getByText('Lý do chưa đủ cụ thể')).toBeInTheDocument();
+  });
+
+  it('nấc giờ trong trần server đưa; chạm "2 giờ" là gửi 2', async () => {
+    const calls = mockFlow({ ...NEEDS_APPROVAL, maxGrantHours: 6 }, 2);
+    renderPanel({ ...ME, role: 'member' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Xin quyền xem' }));
+    const dialog = screen.getByRole('dialog', { name: 'Xin xem két (1 ngăn)' });
+    const group = within(dialog).getByRole('group', { name: 'Chọn nhanh số giờ' });
+    expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual([
+      '1 giờ',
+      '2 giờ',
+      '4 giờ',
+      '6 giờ',
+    ]);
+    expect(within(dialog).getByText(/tối đa 6 giờ/)).toBeInTheDocument();
+    await userEvent.type(within(dialog).getByLabelText(/Lý do/), 'switch tầng 3 mất kết nối');
+    expect(within(dialog).getByText('Đã gõ 25 ký tự · tối thiểu 5.')).toBeInTheDocument();
+    await userEvent.click(within(group).getByRole('button', { name: '2 giờ' }));
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Gửi yêu cầu' }));
+    const sent = calls.find((c) => c.method === 'POST' && c.url.endsWith('/vault/break-glass'));
+    expect(JSON.parse(sent!.body!)).toMatchObject({ hours: 2 });
+  });
+});
+
+describe('VaultPanel — ô giá trị, tuổi giá trị, xoá vĩnh viễn', () => {
+  it('ô Giá trị che mặc định; "Hiện" để xem lại; "Tạo ngẫu nhiên" điền giá trị mạnh và hiện ra', async () => {
+    mockApi(WHITELIST, [SECRET]);
+    renderPanel();
+    await userEvent.click(await screen.findByRole('button', { name: 'Cất mật khẩu/khóa' }));
+    const dialog = screen.getByRole('dialog', { name: 'Cất mật khẩu/khóa' });
+    const value = within(dialog).getByLabelText(/^Giá trị/);
+    expect(value).toHaveAttribute('type', 'password');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Hiện' }));
+    expect(value).toHaveAttribute('type', 'text');
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Ẩn' }));
+    expect(value).toHaveAttribute('type', 'password');
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Tạo ngẫu nhiên' }));
+    expect((value as HTMLInputElement).value).toHaveLength(20);
+    expect(value).toHaveAttribute('type', 'text');
+    expect(within(dialog).queryByTestId('secret-strength-warning')).not.toBeInTheDocument();
+  });
+
+  it('dòng phụ nói giá trị đổi bao lâu rồi, ai đổi; quá ngưỡng thì gắn "Lâu chưa đổi"', async () => {
+    mockApi(WHITELIST, [
+      { ...SECRET, valueAgeDays: 400, valueChangedBy: 'it01@pmh.com.vn', valueStale: true },
+    ]);
+    renderPanel();
+    expect(await screen.findByText(/Đổi giá trị 400 ngày trước · it01@pmh\.com\.vn/)).toBeInTheDocument();
+    expect(screen.getByText('Lâu chưa đổi')).toBeInTheDocument();
+  });
+
+  it('Xoá vĩnh viễn: nút xác nhận chỉ bật khi gõ lại ĐÚNG tên ngăn; chưa gõ thì không gọi API', async () => {
+    const fetchMock = mockApi(WHITELIST, [SECRET]);
+    renderPanel();
+    await userEvent.click(await screen.findByRole('button', { name: 'Thao tác với admin web' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Xoá vĩnh viễn' }));
+    const confirm = await screen.findByRole('dialog');
+    const button = within(confirm).getByRole('button', { name: 'Xoá vĩnh viễn' });
+    expect(button).toBeDisabled();
+    await userEvent.type(within(confirm).getByRole('textbox'), 'admin web');
+    expect(button).toBeEnabled();
+    expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(false);
   });
 });

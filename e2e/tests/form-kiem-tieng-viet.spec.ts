@@ -2,6 +2,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   APP_ORIGIN,
   E2E_SA,
+  devicesPageButton,
   firstLogin,
   resetCatalog,
   resetDevices,
@@ -110,7 +111,7 @@ test.describe('Q-14 · mục danh mục đã vô hiệu không chọn mới đư
     }
 
     await page.goto('/devices');
-    await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+    await devicesPageButton(page, 'Thêm thiết bị').click();
     const form = page.getByRole('dialog', { name: 'Thêm thiết bị' });
 
     await form.getByRole('button', { name: 'Loại', exact: true }).click();

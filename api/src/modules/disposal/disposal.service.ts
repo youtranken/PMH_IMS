@@ -1,7 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import type { StatusEvent } from '../../common/history';
+import { SystemConfigService } from '../config-sys/system-config.service';
 import { DevicesApiService } from '../devices/devices.api';
 import { ServiceAccountsApiService } from '../service-accounts/service-accounts.api';
 import { SoftwareApiService } from '../software/software.api';
+import { UsersApiService } from '../users/users.api';
+import { queryInventory, type DisposalQuery, type DisposalQueryResult } from './disposal-query';
+import type { DisposalItem, DisposalKind } from './disposal.types';
 
 /**
  * KHO THANH LÝ — một MÀN TỔNG, không phải một bảng mới.
@@ -25,26 +30,9 @@ import { SoftwareApiService } from '../software/software.api';
  *
  * Đọc qua `*.api.ts` của module chủ (AD-2), không SELECT bảng của họ.
  */
-export const DISPOSAL_KINDS = ['device', 'software', 'service_account', 'isp'] as const;
-export type DisposalKind = (typeof DISPOSAL_KINDS)[number];
+export { DISPOSAL_KINDS, type DisposalItem, type DisposalKind } from './disposal.types';
 
-export interface DisposalItem {
-  kind: DisposalKind;
-  id: string;
-  code: string;
-  name: string;
-  /**
-   * Nhãn phụ: loại thiết bị, loại phần mềm, loại tài khoản, băng thông đường truyền — thứ giúp
-   * nhận ra nó là cái gì.
-   */
-  detail: string | null;
-  /** Trạng thái THẬT trong module chủ, giữ nguyên tên gốc để tra ngược không nhầm. */
-  status: string;
-  updatedAt: Date | null;
-}
-
-export interface DisposalInventory {
-  items: DisposalItem[];
+export interface DisposalInventory extends DisposalQueryResult {
   /** Loại có nhiều hồ sơ hơn trần dòng của nguồn — `items` đang thiếu phần của chúng. */
   truncated: DisposalKind[];
 }
@@ -55,6 +43,8 @@ export class DisposalService {
     private readonly devices: DevicesApiService,
     private readonly software: SoftwareApiService,
     private readonly accounts: ServiceAccountsApiService,
+    private readonly users: UsersApiService,
+    private readonly config: SystemConfigService,
   ) {}
 
   async list(): Promise<DisposalItem[]> {
@@ -72,12 +62,36 @@ export class DisposalService {
   }
 
   /**
-   * Như `list`, kèm danh sách loại bị cắt ở trần dòng của nguồn — cho màn Kho thanh lý.
+   * Một trang kho cho màn Kho thanh lý: lọc loại/từ khoá/khoảng ngày vào kho, sắp, cắt trang.
    *
    * Mỗi nguồn chỉ trả tối đa một trần dòng; vượt trần mà im lặng thì người đọc tưởng công ty
    * chỉ bỏ chừng đó thứ. `truncated` để màn hình nói thẳng loại nào đang hiện thiếu.
    */
-  async inventory(): Promise<DisposalInventory> {
+  async inventory(query: DisposalQuery): Promise<DisposalInventory> {
+    const [{ items, truncated }, timeZone] = await Promise.all([
+      this.everything(),
+      this.config.getString('appTimezone'),
+    ]);
+    return { ...queryInventory(items, query, timeZone), truncated };
+  }
+
+  /** Mọi dòng khớp bộ lọc, không cắt trang — cho file Excel (FR-028: xuất đúng thứ đang xem). */
+  async exportRows(
+    query: Omit<DisposalQuery, 'page' | 'limit'>,
+  ): Promise<{ items: DisposalItem[]; timeZone: string }> {
+    const [{ items }, timeZone] = await Promise.all([
+      this.everything(),
+      this.config.getString('appTimezone'),
+    ]);
+    const page = { page: 1, limit: Math.max(1, items.length) };
+    return { items: queryInventory(items, { ...query, ...page }, timeZone).items, timeZone };
+  }
+
+  /**
+   * Toàn bộ kho kèm AI đưa vào, KHI NÀO, VÌ SAO — đọc từ lịch sử của từng module chủ qua
+   * `*.api.ts` (AD-2), một câu mỗi loại cho cả mẻ id, và một lượt tra họ tên cho cả kho.
+   */
+  private async everything(): Promise<{ items: DisposalItem[]; truncated: DisposalKind[] }> {
     const [devicePage, softwarePage, accountPage, ispPage] = await Promise.all([
       this.devices.retiredPage(),
       this.software.retiredPage(),
@@ -95,12 +109,55 @@ export class DisposalService {
     )
       .filter(([, page]) => cut(page))
       .map(([kind]) => kind);
+
+    const idsOf = (page: { items: { id: string }[] }) => page.items.map((row) => row.id);
+    const [deviceEvents, softwareEvents, accountEvents, ispEvents] = await Promise.all([
+      this.devices.retirementEvents(idsOf(devicePage)),
+      this.software.retirementEvents(idsOf(softwarePage)),
+      this.accounts.disableEvents(idsOf(accountPage)),
+      this.software.ispTerminationEvents(idsOf(ispPage)),
+    ]);
+    const events: Record<DisposalKind, Map<string, StatusEvent>> = {
+      device: deviceEvents,
+      software: softwareEvents,
+      service_account: accountEvents,
+      isp: ispEvents,
+    };
+    const items = merge(devicePage.items, softwarePage.items, accountPage.items, ispPage.items).map(
+      (item) => {
+        const event = events[item.kind].get(item.id);
+        return event
+          ? { ...item, disposedAt: event.at, disposedBy: event.by, auto: event.auto, reason: event.reason }
+          : item;
+      },
+    );
+
+    const emails = [
+      ...new Set(
+        items
+          .filter((item) => item.disposedBy && !item.auto)
+          .map((item) => (item.disposedBy as string).toLowerCase()),
+      ),
+    ];
+    const names = emails.length > 0 ? await this.users.namesByEmails(emails) : new Map<string, string>();
     return {
-      items: merge(devicePage.items, softwarePage.items, accountPage.items, ispPage.items),
+      items: items.map((item) => ({
+        ...item,
+        disposedByName: item.disposedBy ? (names.get(item.disposedBy.toLowerCase()) ?? null) : null,
+      })),
       truncated,
     };
   }
 }
+
+/** Chưa đọc lịch sử (hoặc lịch sử không có dòng nào): ngày vào kho lùi về `updatedAt`. */
+const UNKNOWN_EVENT = (updatedAt: Date | null | undefined) => ({
+  disposedAt: updatedAt ?? null,
+  disposedBy: null,
+  disposedByName: null,
+  auto: false,
+  reason: null,
+});
 
 function merge(
   devices: Awaited<ReturnType<DevicesApiService['listRetired']>>,
@@ -117,6 +174,7 @@ function merge(
       detail: row.deviceTypeName ?? null,
       status: row.status,
       updatedAt: row.updatedAt ?? null,
+      ...UNKNOWN_EVENT(row.updatedAt),
     })),
     ...software.map((row) => ({
       kind: 'software' as const,
@@ -126,6 +184,7 @@ function merge(
       detail: row.kind,
       status: row.status,
       updatedAt: row.updatedAt ?? null,
+      ...UNKNOWN_EVENT(row.updatedAt),
     })),
     ...accounts.map((row) => ({
       kind: 'service_account' as const,
@@ -135,6 +194,7 @@ function merge(
       detail: row.kind,
       status: row.status,
       updatedAt: row.updatedAt ?? null,
+      ...UNKNOWN_EVENT(row.updatedAt),
     })),
     // Đường truyền không có "tên": nhà mạng là thứ người ta gọi nó bằng miệng ("line VNPT").
     ...ispLines.map((row) => ({
@@ -145,6 +205,7 @@ function merge(
       detail: row.bandwidth ?? null,
       status: row.status,
       updatedAt: row.updatedAt ?? null,
+      ...UNKNOWN_EVENT(row.updatedAt),
     })),
   ];
 

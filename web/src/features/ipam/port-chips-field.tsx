@@ -152,9 +152,11 @@ export function PortChipsField({
             }}
             onBlur={commit}
           />
+          {/* Nút cỡ thường, cao bằng ô nhập — bản `sm` xám nhạt cạnh ô cao hơn trông như
+              đang bị vô hiệu, và người ta gõ xong bấm Lưu luôn. (Rời ô cũng tự chốt chip.) */}
           <button
             type="button"
-            className="btn sm"
+            className="btn"
             disabled={disabled || !draft.trim()}
             onClick={commit}
           >

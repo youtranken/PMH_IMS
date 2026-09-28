@@ -29,12 +29,24 @@ export interface IspHistoryRow {
   actor: string;
   changes: Record<string, { before: unknown; after: unknown }> | null;
   createdAt: string;
+  /** Họ tên người làm — API tra theo email (`withActorNames`); vắng thì hiện email. */
+  actorName?: string | null;
 }
 
 export const STATUS_KEY: Record<IspStatus, string> = {
   active: 'isp.statusActive',
   suspended: 'isp.statusSuspended',
   terminated: 'isp.statusTerminated',
+};
+
+/**
+ * Nhãn NÚT đưa đường sang từng trạng thái. Khác nhãn trạng thái: trạng thái là "Đã thanh lý",
+ * nút là "Thanh lý" (Q-14) — dùng `STATUS_KEY` làm nhãn nút là in "Đã thanh lý" lên nút.
+ */
+export const ACTION_KEY: Record<IspStatus, string> = {
+  active: 'isp.actionActive',
+  suspended: 'isp.actionSuspended',
+  terminated: 'isp.actionTerminated',
 };
 
 export const STATUS_TONE: Record<IspStatus, string> = {

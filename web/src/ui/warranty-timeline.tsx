@@ -20,7 +20,14 @@ export function WarrantyTimeline({
   compact = false,
   startLabel,
   endLabel,
+  notCounted = false,
 }: {
+  /**
+   * Hồ sơ đã ở trạng thái cuối (thanh lý): hạn thôi có nghĩa. Thanh xám trơn thay cho sọc đỏ
+   * "Quá hạn 800 ngày" — cùng luật với `ExpiryBadge notCounted`, để trang chi tiết và danh sách
+   * không nói ngược nhau về cùng một máy.
+   */
+  notCounted?: boolean;
   /** Mốc bắt đầu; thiếu thì vẽ thanh "chỉ có đích" chứ không bịa ra một điểm đầu. */
   start?: string | null;
   end?: string | null;
@@ -40,6 +47,22 @@ export function WarrantyTimeline({
   // `strictNullChecks` đang TẮT nên TS không tự suy ra được — kiểm tường minh thay vì
   // khẳng định bằng `!`. Ba dấu `!` cũ ở đây là lời khẳng định không ai kiểm.
   if (!progress || !end) return null;
+
+  if (notCounted) {
+    return (
+      <div className={`wt${compact ? ' wt-mini' : ''}`}>
+        <div className="wt-track" aria-hidden="true">
+          <div className="wt-fill none" style={{ right: 0 }} />
+        </div>
+        <div className="wt-legend">
+          <span className="left">
+            {endLabel ?? t('expiry.to')} {formatDate(end)}
+          </span>
+          <span className="right muted">{t('expiry.notCountedRetired')}</span>
+        </div>
+      </div>
+    );
+  }
 
   const tone = TONE[progress.level];
   const percent = progress.percent ?? 100;

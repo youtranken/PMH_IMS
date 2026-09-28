@@ -50,6 +50,18 @@ export function imsNormLike(column: SQLWrapper, term: string): SQL {
 }
 
 /**
+ * Khoá SẮP theo thứ tự chữ tiếng Việt (a ă â b c d đ e ê …) cho cột chữ.
+ *
+ * Collation mặc định của DB là theo mã byte: "Điện thoại IP" rơi xuống sau "UPS" và "Kinh doanh"
+ * đứng trước "Kế toán", tức danh sách dài không ở chỗ mắt người Việt tìm. `vi-x-icu` có sẵn
+ * trong Postgres dựng với ICU (image `postgres:*-alpine` của compose). `::text` vì cột mã/tên
+ * danh mục là `citext`. Chỉ dùng để SẮP, không dùng để so bằng.
+ */
+export function viOrder(column: SQLWrapper): SQL {
+  return sql`${column}::text COLLATE "vi-x-icu"`;
+}
+
+/**
  * Mã lỗi SQLSTATE của Postgres (vd `23503` khóa ngoại, `23505` trùng khóa) — đào qua chuỗi
  * `cause` chứ không đọc thẳng `error.code`.
  *

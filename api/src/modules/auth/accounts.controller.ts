@@ -1,4 +1,16 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
+import type { Response } from 'express';
 import {
   IsBoolean,
   IsEmail,
@@ -11,10 +23,14 @@ import {
   ValidatorConstraint,
   type ValidatorConstraintInterface,
 } from 'class-validator';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
+import { sendXlsx } from '../../common/excel/xlsx-http';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
+import { dateTimeInTz } from '../../common/today';
 import { Audited } from '../audit/audited.decorator';
-import { USER_SORT_DEFAULT, USER_SORT_KEYS } from '../users/users.api';
+import { SystemConfigService } from '../config-sys/system-config.service';
+import { USER_SORT_DEFAULT, USER_SORT_KEYS, type UserListFilters } from '../users/users.api';
 import { AccountsService } from './accounts.service';
 import { Roles } from './roles.decorator';
 import type { AuthedRequest, UserRole } from './types';
@@ -104,7 +120,58 @@ class ProfileDto extends ContactDto {
 class StatusDto {
   @IsIn(['active', 'locked', 'disabled'], { message: 'Trạng thái không hợp lệ.' })
   status!: 'active' | 'locked' | 'disabled';
+
+  /** Lý do khóa / vô hiệu hóa — ghi vào nhật ký, không bắt buộc với "Mở khóa"/"Bật lại". */
+  @IsOptional()
+  @IsString()
+  @Length(0, 500, { message: 'Lý do tối đa 500 ký tự.' })
+  reason?: string;
 }
+
+class RoleDto {
+  @IsIn(['sa', 'admin', 'member'], { message: 'Vai trò phải là sa, admin hoặc member.' })
+  role!: UserRole;
+}
+
+type ListQuery = {
+  page?: string;
+  limit?: string;
+  search?: string;
+  sort?: string;
+  dir?: string;
+  role?: string;
+  status?: string;
+  totp?: string;
+};
+
+/**
+ * Bộ lọc màn Tài khoản. Giá trị lạ thì 400 chứ không lặng lẽ bỏ: "lọc theo vai `superadmin`"
+ * mà ra cả bảng là đọc nhầm thành "ai cũng là SA".
+ */
+function listFilters(query: ListQuery): UserListFilters {
+  const pick = <T extends string>(value: string | undefined, allowed: readonly T[], field: string) => {
+    if (!value) return undefined;
+    if (!(allowed as readonly string[]).includes(value)) {
+      throw new BadRequestException({ code: 'BAD_FILTER', message: `Bộ lọc ${field} không hợp lệ.` });
+    }
+    return value as T;
+  };
+  return {
+    role: pick(query.role, ['sa', 'admin', 'member'] as const, 'vai trò'),
+    status: pick(query.status, ['active', 'locked', 'disabled'] as const, 'trạng thái'),
+    totp: pick(query.totp, ['none', 'enrolled'] as const, '2 lớp'),
+  };
+}
+
+const ROLE_LABEL: Record<UserRole, string> = { sa: 'Super Admin', admin: 'Quản trị', member: 'Thành viên' };
+const STATUS_LABEL: Record<'active' | 'locked' | 'disabled', string> = {
+  active: 'Đang hoạt động',
+  locked: 'Đang khóa',
+  disabled: 'Đã vô hiệu hóa',
+};
+
+/** Trần số dòng một file xuất — danh sách nhân sự IT, vài trăm người là cùng. */
+const EXPORT_LIMIT = 5000;
 
 class TotpRequiredDto {
   @IsBoolean()
@@ -118,19 +185,59 @@ class TotpRequiredDto {
 @NoStepUp()
 @Controller('api/v1/accounts')
 export class AccountsController {
-  constructor(private readonly accounts: AccountsService) {}
+  constructor(
+    private readonly accounts: AccountsService,
+    private readonly excel: ExcelExportService,
+    private readonly config: SystemConfigService,
+  ) {}
 
   @Roles('sa')
   @Get()
-  list(
-    @Query()
-    query: { page?: string; limit?: string; search?: string; sort?: string; dir?: string },
-  ) {
+  list(@Query() query: ListQuery) {
     return this.accounts.list(
       parsePageQuery(query),
       query.search,
       parseSortQuery(query, USER_SORT_KEYS, USER_SORT_DEFAULT),
+      listFilters(query),
     );
+  }
+
+  /**
+   * Danh sách tài khoản ra Excel THEO BỘ LỌC đang xem (kiểm toán định kỳ: ai, vai gì, cài 2
+   * lớp chưa, đăng nhập lần cuối khi nào). `@Audited` như mọi đường xuất (FR-028): "ai kéo danh
+   * sách nhân sự ra file" là câu phải trả lời được. Chỉ SA — cùng quyền với màn.
+   */
+  @Roles('sa')
+  @Audited('accounts.exported', 'user')
+  @Get('export')
+  async export(@Query() query: ListQuery, @Res() res: Response) {
+    const page = await this.accounts.list(
+      { page: 1, limit: EXPORT_LIMIT },
+      query.search,
+      parseSortQuery(query, USER_SORT_KEYS, USER_SORT_DEFAULT),
+      listFilters(query),
+    );
+    const tz = await this.config.getString('appTimezone');
+    const buffer = await this.excel.build({
+      sheetName: 'Tai khoan',
+      columns: [
+        { header: 'Họ tên', width: 28, value: (r) => r.fullName },
+        { header: 'Email', width: 32, value: (r) => r.email },
+        { header: 'Số điện thoại', width: 16, value: (r) => r.phone ?? '' },
+        { header: 'Mã nhân viên', width: 14, value: (r) => r.employeeCode ?? '' },
+        { header: 'Vai trò', width: 14, value: (r) => ROLE_LABEL[r.role] },
+        { header: 'Trạng thái', width: 16, value: (r) => STATUS_LABEL[r.status] },
+        {
+          header: 'Xác thực 2 lớp',
+          width: 16,
+          value: (r) => (r.totpEnrolledAt ? 'Đã cài' : r.totpLoginRequired ? 'Chưa cài (bắt buộc)' : 'Chưa cài'),
+        },
+        { header: 'Đăng nhập gần nhất', width: 20, value: (r) => dateTimeInTz(r.lastLoginAt, tz) },
+        { header: 'Ngày tạo', width: 20, value: (r) => dateTimeInTz(r.createdAt, tz) },
+      ],
+      rows: page.items,
+    });
+    sendXlsx(res, buffer, 'tai-khoan.xlsx');
   }
 
   @Roles('sa')
@@ -170,8 +277,18 @@ export class AccountsController {
     @Body() dto: StatusDto,
     @Req() req: AuthedRequest,
   ) {
-    await this.accounts.setStatus(actor(req), id, dto.status);
+    await this.accounts.setStatus(actor(req), id, dto.status, dto.reason);
     return { status: dto.status };
+  }
+
+  @Roles('sa')
+  // Nâng một người lên SA/Quản trị là cấp quyền đọc mọi két — nặng ngang tạo tài khoản mới.
+  @RequiresStepUp()
+  @Patch(':id/role')
+  @Audited('account.role.changed', 'user', { writtenByService: true })
+  async setRole(@Param('id') id: string, @Body() dto: RoleDto, @Req() req: AuthedRequest) {
+    await this.accounts.setRole(actor(req), id, dto.role);
+    return { role: dto.role };
   }
 
   @Roles('sa')
@@ -210,8 +327,13 @@ export class AccountsController {
 
   @Roles('sa')
   @Get(':id/sessions')
-  listSessions(@Param('id') id: string) {
-    return this.accounts.listSessions(id);
+  async listSessions(@Param('id') id: string, @Req() req: AuthedRequest) {
+    // Đánh dấu phiên của CHÍNH SA đang xem — mở hộp phiên của mình thì biết dòng nào là máy này.
+    const sessions = await this.accounts.listSessions(id);
+    return sessions.map((session) => ({
+      ...session,
+      current: session.id === req.user?.sessionId,
+    }));
   }
 
   @Roles('sa')

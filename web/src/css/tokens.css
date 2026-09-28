@@ -45,6 +45,9 @@
   --danger-soft: #fdeceb;
   --muted: #5f665f; /* đậm để chữ muted đạt AA trên tint (axe 2026-08-06) */
   --muted-soft: #efeee7;
+  /* Trạng thái trung tính-tích cực (máy Dự phòng): không phải ok, không phải cảnh báo. */
+  --info: #1d5f9e;
+  --info-soft: #e6f0fa;
 
   --ring: 0 0 0 3px rgba(14, 159, 110, 0.22);
 
@@ -155,6 +158,16 @@
        ~2:1 trên nền kính tối. Chữ đỏ nhạt đạt ~6:1 trên card; cặp dark ở dưới giữ nguyên giá trị. */
     --auth-danger-bg:rgba(239,111,99,.18); --auth-danger-border:rgba(239,111,99,.45);
     --auth-danger-ink:#ffb4ab; --auth-hint:#9fb0a5;
+    /* "Đang tạm khoá, chờ chút" trên card tối: tông hổ phách, KHÔNG đỏ — đây là trạng thái chờ,
+       không phải lỗi người dùng vừa gây ra. Nhãn ô nhập sáng hơn --auth-ink-2 một nấc để đọc
+       được ngoài trời trên điện thoại. */
+    --auth-warn-bg:rgba(251,191,36,.14); --auth-warn-border:rgba(251,191,36,.42);
+    --auth-warn-ink:#ffd68a; --auth-label:#c9d6cd; --auth-ok-ink:#8fe3bf;
+    /* Nền quanh mã QR: app xác thực cần viền trắng để đọc được, ở CẢ hai theme. */
+    --qr-bg:#ffffff;
+    /* Nền hover/chip trên sidebar tối (sidebar tối ở cả hai theme). */
+    --sidebar-hover:rgba(255,255,255,.06); --sidebar-chip:rgba(255,255,255,.1);
+    --sidebar-chip-strong:rgba(255,255,255,.14);
 }
 
 /* Dark mode — chỉ override token, các component dùng var() tự đổi theo. */
@@ -166,8 +179,10 @@ html[data-theme='dark'] {
   --ink-2: #a7b0a5;
   /* Sáng để chữ phụ nhỏ đạt AA (≥4.5:1) trên nền tối/tint — verify axe live 2026-08-06. */
   --ink-3: #9aa39a;
-  --border: #26312a;
-  --border-2: #37453a;
+  /* Viền thẻ phải thấy được trên laptop độ sáng thấp: nền trang và mặt thẻ tối chỉ lệch nhau
+     rất ít, viền mờ quá thì các khối trông như trôi nổi, không tách lớp. */
+  --border: #313e35;
+  --border-2: #425145;
   --primary: #34d399;
   --primary-ink: #6ee7b7;
   --primary-soft: #123024;
@@ -183,6 +198,8 @@ html[data-theme='dark'] {
   --danger-soft: #3a1f1d;
   --muted: #9aa59a;
   --muted-soft: #232d23;
+  --info: #7fb6ea;
+  --info-soft: #16273a;
   /* Sidebar tối hơn canvas để tách khối */
   --sidebar-bg: #0e140f;
   --sidebar-border: #1e2a22;
@@ -212,6 +229,11 @@ html[data-theme='dark'] {
     --auth-card:rgba(255,255,255,.05); --auth-card-border:rgba(255,255,255,.1);
     --auth-danger-bg:rgba(239,111,99,.18); --auth-danger-border:rgba(239,111,99,.45);
     --auth-danger-ink:#ffb4ab; --auth-hint:#9fb0a5;
+    --auth-warn-bg:rgba(251,191,36,.14); --auth-warn-border:rgba(251,191,36,.42);
+    --auth-warn-ink:#ffd68a; --auth-label:#c9d6cd; --auth-ok-ink:#8fe3bf;
+    --qr-bg:#ffffff;
+    --sidebar-hover:rgba(255,255,255,.06); --sidebar-chip:rgba(255,255,255,.1);
+    --sidebar-chip-strong:rgba(255,255,255,.14);
 }
 
 * {

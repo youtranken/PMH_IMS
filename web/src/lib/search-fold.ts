@@ -43,3 +43,18 @@ export function stripDiacritics(value: string): string {
 export function foldSearch(value: string): string {
   return stripDiacritics(value).toLowerCase();
 }
+
+/**
+ * Đoạn `[đầu, cuối)` trong `text` GỐC khớp với `q` theo phép gấp dấu — để tô đậm đúng chữ
+ * người dùng đang nhìn. `null` khi không khớp, hoặc khi một ký tự gấp ra độ dài khác 1 (chỉ
+ * số lệch thì tô sai chỗ — thà không tô).
+ */
+export function foldedMatchRange(text: string, q: string): [number, number] | null {
+  const needle = foldSearch(q.trim());
+  if (!needle) return null;
+  const chars = Array.from(text);
+  const folded = chars.map((c) => foldSearch(c));
+  if (folded.some((c) => c.length !== 1) || chars.length !== text.length) return null;
+  const at = folded.join('').indexOf(needle);
+  return at < 0 ? null : [at, at + needle.length];
+}

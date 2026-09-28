@@ -19,7 +19,7 @@ import { OWNER_PATH } from './routes';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const DISPOSAL_SERVICE = join(
-  HERE, '..', '..', '..', 'api', 'src', 'modules', 'disposal', 'disposal.service.ts',
+  HERE, '..', '..', '..', 'api', 'src', 'modules', 'disposal', 'disposal.types.ts',
 );
 
 function apiKinds(): string[] {

@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
   E2E_SA,
+  devicesPageButton,
   firstLogin,
   resetCatalog,
   resetDevices,
@@ -42,7 +43,7 @@ test.beforeEach(() => {
 async function taoThietBiCoDau(page: Page, stamp: string): Promise<string> {
   const code = `PC-E2E-VN-${stamp}`;
   await page.goto('/devices');
-  await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+  await devicesPageButton(page, 'Thêm thiết bị').click();
   const form = page.getByRole('dialog');
   await form.getByLabel('Mã thiết bị').fill(code);
   // Bốn chữ có dấu, bốn kiểu dấu khác nhau: thanh sắc, dấu mũ, dấu móc, dấu nặng.
@@ -95,7 +96,8 @@ test.describe('Tìm kiếm tiếng Việt không dấu', () => {
      * luận chưa ai khai thiết bị nào, còn "không khớp bộ lọc" dẫn tới việc nới ô tìm. Ở đây
      * kho KHÔNG trống, nên câu đúng là câu thứ hai.
      */
-    await expect(page.getByText('Không có thiết bị nào khớp bộ lọc.')).toBeVisible();
+    // Câu rỗng nêu lại đúng từ khoá vừa gõ (DEV-009).
+    await expect(page.getByText('Không có thiết bị nào khớp “may chu ao hoa”.')).toBeVisible();
   });
 
   test('danh mục: gõ không dấu ra đúng site — đường ims_norm tính tại chỗ', async ({ page }) => {

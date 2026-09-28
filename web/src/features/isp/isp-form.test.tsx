@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { jsonResponse, renderWithI18n, screen, userEvent, waitFor } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, waitFor, within } from '@/test/test-utils';
 import { IspForm } from './isp-form';
 import type { IspRow } from './isp-types';
 
@@ -119,5 +119,17 @@ describe('Form đường truyền — nhà mạng chọn từ danh mục', () =>
     renderForm(ROW_ON_INACTIVE);
     const picker = screen.getByRole('button', { name: 'Nhà mạng' });
     await waitFor(() => expect(picker).toHaveTextContent(/Nhà mạng cũ \(ngừng dùng\)/));
+  });
+
+  it('đổi sang Đã thanh lý thì hỏi lại, nút xác nhận là HÀNH ĐỘNG "Thanh lý" (Q-14)', async () => {
+    mockFetch();
+    renderForm(ROW_ON_INACTIVE);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Trạng thái' }));
+    await user.click(await screen.findByRole('option', { name: 'Đã thanh lý' }));
+    await user.click(screen.getByRole('button', { name: 'Lưu' }));
+    const ask = await screen.findByRole('dialog', { name: /^Thanh lý đường truyền ISP-CU/ });
+    expect(within(ask).getByRole('button', { name: 'Thanh lý' })).toBeInTheDocument();
+    expect(within(ask).queryByRole('button', { name: 'Đã thanh lý' })).toBeNull();
   });
 });

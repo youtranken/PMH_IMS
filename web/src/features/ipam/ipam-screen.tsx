@@ -1,7 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { foldSearch } from '@/lib/search-fold';
+import { Select } from '@/ui/select';
+import { useIsNarrow } from '@/ui/use-narrow';
 import { apiFetch } from '@/lib/api-client';
 import { formatDate } from '@/lib/format';
 import type { Me } from '@/lib/me';
@@ -18,6 +21,10 @@ import { SubnetPane } from './subnet-detail';
 import { IpLookup } from './ip-lookup';
 import type { SubnetRow } from './ipam-types';
 import { PATHS } from '@/lib/routes';
+import { useIpamSettings } from './ipam-settings';
+
+/** Từ bao nhiêu dải thì cột trái cần ô lọc — ít hơn thế thì liếc là thấy. */
+const RAIL_FILTER_FROM = 6;
 
 /**
  * Địa chỉ IP (story 5.1, FR-018/FR-020) — MỘT trang hai cột, đúng mockup `body-Ipam.html`:
@@ -56,8 +63,10 @@ export function IpamScreen({ me }: { me: Me }) {
     queryKey: ['ipam', 'subnets', 'withVoided'],
     queryFn: () => apiFetch<SubnetRow[]>('/api/v1/ipam/subnets?includeVoided=true'),
   });
+  const fullPercent = useIpamSettings().subnetFullPercent;
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['ipam'] });
+  // Chỉ dải và IP của dải: sổ NAT không đổi khi khai/sửa dải, tải lại nó là tốn công vô ích.
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['ipam', 'subnets'] });
 
   /**
    * Bật lại một dải đã vô hiệu hóa.
@@ -130,7 +139,29 @@ export function IpamScreen({ me }: { me: Me }) {
   // tự bấm một cái nữa là bắt vô cớ. KHÔNG điều hướng: đổi URL sau lưng người dùng làm nút
   // Back của trình duyệt hết đoán được.
   const selected = rows.find((row) => row.id === id) ?? rows[0] ?? null;
+  const navigate = useNavigate();
+  const narrow = useIsNarrow();
+  const [railFilter, setRailFilter] = useState('');
+  const shownRows = useMemo(() => {
+    const needle = foldSearch(railFilter.trim());
+    if (!needle) return rows;
+    return rows.filter((row) =>
+      [row.cidr, row.name, row.siteCode, row.vlan === null ? null : String(row.vlan), row.gateway]
+        .some((field) => field && foldSearch(field).includes(needle)),
+    );
+  }, [rows, railFilter]);
 
+  /*
+   * Thẻ đang mở phải NẰM TRONG tầm nhìn của cột trái: cột cuộn riêng, và mở thẳng link của dải
+   * thứ sáu là thẻ đang chọn nằm dưới mép mà không có gì báo. `nearest` không giật cột khi
+   * thẻ đã thấy sẵn.
+   */
+  const railRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    railRef.current
+      ?.querySelector<HTMLElement>('.subnet-card.is-active')
+      ?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+  }, [selected?.id, narrow]);
   return (
     <>
       <PageHeader
@@ -167,14 +198,61 @@ export function IpamScreen({ me }: { me: Me }) {
         <>
         <IpLookup subnets={rows} />
         <div className="ipam-split">
-          <nav className="subnet-rail" aria-label={t('ipam.railLabel')}>
+          {/*
+            Điện thoại: MỘT ô chọn dải dính đầu trang thay cho dãy thẻ cuộn ngang — dãy thẻ
+            260px không cho biết có bao nhiêu dải, đang ở dải nào, và phải vuốt mới tìm được.
+            Thẻ của dải đang chọn vẫn hiện ngay dưới (gateway, mức dùng, menu ⋯).
+          */}
+          {narrow && selected ? (
+            <div className="subnet-picker">
+              <Select
+                value={selected.id}
+                ariaLabel={t('ipam.pickSubnet')}
+                options={rows.map((row) => ({
+                  value: row.id,
+                  label: t('ipam.subnetOption', {
+                    cidr: row.cidr,
+                    vlan: row.vlan === null ? '' : ` · ${t('ipam.vlanBadge', { vlan: row.vlan })}`,
+                    free: row.free,
+                  }),
+                }))}
+                onChange={(value) => navigate(PATHS.subnet(value))}
+              />
+              <SubnetCard
+                subnet={selected}
+                active
+                canEdit={canEdit}
+                fullPercent={fullPercent}
+                onEdit={() => setEditing({ subnet: selected })}
+                onHide={() => setHiding(selected)}
+                onRestore={() => void restoreSubnet(selected)}
+                onDelete={() => void removeSubnet(selected)}
+              />
+            </div>
+          ) : (
+          <nav className="subnet-rail" aria-label={t('ipam.railLabel')} ref={railRef}>
             <h2 className="form-section-title">{t('ipam.railTitle')}</h2>
-            {rows.map((subnet) => (
+            {/* Ô lọc chỉ mọc ra khi dải đủ nhiều để phải tìm — bốn năm thẻ thì liếc là thấy. */}
+            {rows.length > RAIL_FILTER_FROM ? (
+              <input
+                className="inp"
+                type="search"
+                aria-label={t('ipam.railFilter')}
+                placeholder={t('ipam.railFilter')}
+                value={railFilter}
+                onChange={(e) => setRailFilter(e.target.value)}
+              />
+            ) : null}
+            {shownRows.length === 0 ? (
+              <p className="muted">{t('ipam.railFilterEmpty')}</p>
+            ) : null}
+            {shownRows.map((subnet) => (
               <SubnetCard
                 key={subnet.id}
                 subnet={subnet}
                 active={subnet.id === selected?.id}
                 canEdit={canEdit}
+                fullPercent={fullPercent}
                 onEdit={() => setEditing({ subnet })}
                 onHide={() => setHiding(subnet)}
                 onRestore={() => void restoreSubnet(subnet)}
@@ -182,6 +260,7 @@ export function IpamScreen({ me }: { me: Me }) {
               />
             ))}
           </nav>
+          )}
 
           <div className="subnet-pane">
             {selected ? <SubnetPane subnet={selected} me={me} /> : null}
@@ -193,6 +272,7 @@ export function IpamScreen({ me }: { me: Me }) {
       {editing ? (
         <SubnetForm
           subnet={editing.subnet}
+          existing={rows}
           csrfToken={me.csrfToken}
           onClose={() => setEditing(null)}
           onSaved={() => {
@@ -230,6 +310,7 @@ function SubnetCard({
   subnet,
   active,
   canEdit,
+  fullPercent,
   onEdit,
   onHide,
   onRestore,
@@ -238,6 +319,7 @@ function SubnetCard({
   subnet: SubnetRow;
   active: boolean;
   canEdit: boolean;
+  fullPercent: number;
   onEdit: () => void;
   onHide: () => void;
   onRestore: () => void;
@@ -287,7 +369,9 @@ function SubnetCard({
 
   return (
     <div
-      className={`subnet-card${active ? ' is-active' : ''}${disabled ? ' is-disabled' : ''}`}
+      className={`subnet-card${active ? ' is-active' : ''}${disabled ? ' is-disabled' : ''}${
+        canEdit ? ' has-actions' : ''
+      }`}
     >
       <Link
         className="subnet-link"
@@ -314,19 +398,26 @@ function SubnetCard({
         {/* Gateway đứng ngay trên thanh mức dùng: đây là con số người ta mở màn này để tra,
             không phải thứ phải bấm vào Sửa mới thấy. */}
         {subnet.gateway ? (
-          <span className="sub">
+          <span className="sub subnet-gw">
             {t('ipam.gateway')}: <span className="mono">{subnet.gateway}</span>
           </span>
         ) : null}
+        {/* Ngưỡng tô màu = ngưỡng "sắp đầy" của bảng điều khiển (vàng), đỏ từ 90% như mọi
+            thanh đo khác — không để hai màn nói hai câu về cùng một dải. */}
         <UsageBar
           percent={subnet.percent}
           ariaLabel={t('ipam.usageOf', { cidr: subnet.cidr })}
-          label={t('ipam.usageLabel', {
-            used: subnet.used,
-            total: subnet.total,
-            free: subnet.free,
-          })}
+          warnAt={fullPercent}
+          dangerAt={Math.max(fullPercent, 90)}
         />
+        {/* "Còn bao nhiêu chỗ" là câu hỏi thật khi cắm máy — nó đứng dòng chính, con số
+            đã dùng lùi xuống dòng phụ; ba con số liền nhau không đơn vị thì không ai đọc ra. */}
+        <span className="subnet-usage">
+          <b>{t('ipam.usageFree', { free: subnet.free })}</b>
+          <span className="sub">
+            {t('ipam.usageUsed', { used: subnet.used, total: subnet.total })}
+          </span>
+        </span>
         {/* Vì sao dải này đang tắt, và từ bao giờ — câu đầu tiên người mở màn sẽ hỏi khi thấy
             một dòng gạch ngang. Nói ngay trên thẻ, không bắt đi tra nhật ký. */}
         {disabled ? (

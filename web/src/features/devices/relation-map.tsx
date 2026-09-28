@@ -109,7 +109,10 @@ export function RelationMap({
   missing,
   isUnknown = false,
   isLoading = false,
+  retired = false,
 }: {
+  /** Hồ sơ đã thanh lý: không còn gì "sẽ bị gỡ khi thanh lý" — bỏ chú giải và dấu gỡ. */
+  retired?: boolean;
   hubCode: string;
   nodes: RelationNode[];
   /** Tên những khu máy này KHÔNG có — gom về một dòng, không vẽ ô rỗng. */
@@ -142,7 +145,7 @@ export function RelationMap({
     <button
       key={node.key}
       type="button"
-      className={`rmap-node ${node.cut ? 'cut' : 'keep'}`}
+      className={`rmap-node ${node.cut && !retired ? 'cut' : 'keep'}`}
       onClick={node.onOpen}
       // Dòng xem trước có thể bị rút gọn; `title` cho đọc trọn khi rê chuột.
       title={node.lines.map((line) => line.text).join('\n') || undefined}
@@ -176,9 +179,11 @@ export function RelationMap({
           <span>
             <i className="rmap-dot warn" /> {t('relationMap.legendWarn')}
           </span>
-          <span>
-            <i className="rmap-dot cut" /> {t('relationMap.legendCut')}
-          </span>
+          {retired ? null : (
+            <span>
+              <i className="rmap-dot cut" /> {t('relationMap.legendCut')}
+            </span>
+          )}
         </div>
       </div>
 

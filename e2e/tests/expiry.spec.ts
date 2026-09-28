@@ -119,9 +119,15 @@ test.describe('Cỗ máy Expiry', () => {
       kind: 'license',
       endDate: inDays(15),
     });
+    await post(page, '/api/v1/software', {
+      code: `DOM-E2E-F-${stamp}`,
+      name: 'Tên miền pmh.com.vn',
+      kind: 'domain',
+      endDate: inDays(15),
+    });
 
-    // API phải khai đủ 5 nguồn: 4 loại phần mềm + bảo hành thiết bị. Đường truyền không có
-    // hạn nên không phải một nguồn (Q-04).
+    // API phải khai đủ 6 nguồn: 5 loại phần mềm (cả "Khác" — Q-14) + bảo hành thiết bị. Đường
+    // truyền không có hạn nên không phải một nguồn (Q-04).
     const kinds = await page.evaluate(async () => {
       const res = await fetch('/api/v1/expiry/kinds', { credentials: 'include' });
       return (await res.json()) as { kind: string; canRenew: boolean }[];
@@ -130,6 +136,7 @@ test.describe('Cỗ máy Expiry', () => {
       'domain',
       'license',
       'maintenance',
+      'other',
       'ssl',
       'warranty',
     ]);
@@ -137,11 +144,23 @@ test.describe('Cỗ máy Expiry', () => {
     expect(kinds.find((item) => item.kind === 'warranty')?.canRenew).toBe(false);
 
     await page.goto('/expiry');
-    await page.getByRole('button', { name: 'Loại', exact: true }).click();
-    await page.getByRole('option', { name: 'Chứng chỉ SSL', exact: true }).click();
+    const kindGroup = page.getByRole('group', { name: 'Loại', exact: true });
+    await kindGroup.getByRole('button', { name: 'Chứng chỉ SSL', exact: true }).click();
 
     await expect(page.getByRole('link', { name: new RegExp(`SSL-E2E-F-${stamp}`) })).toBeVisible();
     await expect(page.getByRole('link', { name: new RegExp(`LIC-E2E-F-${stamp}`) })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: new RegExp(`DOM-E2E-F-${stamp}`) })).toHaveCount(0);
+
+    // Chọn thêm loại thứ hai: SSL + Tên miền cùng lúc, license vẫn bị lọc ra.
+    await kindGroup.getByRole('button', { name: 'Tên miền', exact: true }).click();
+    await expect(page).toHaveURL(/kinds=ssl%2Cdomain|kinds=ssl,domain/);
+    await expect(page.getByRole('link', { name: new RegExp(`DOM-E2E-F-${stamp}`) })).toBeVisible();
+    await expect(page.getByRole('link', { name: new RegExp(`SSL-E2E-F-${stamp}`) })).toBeVisible();
+    await expect(page.getByRole('link', { name: new RegExp(`LIC-E2E-F-${stamp}`) })).toHaveCount(0);
+
+    // "Tất cả loại" gỡ mọi lựa chọn.
+    await kindGroup.getByRole('button', { name: 'Tất cả loại', exact: true }).click();
+    await expect(page.getByRole('link', { name: new RegExp(`LIC-E2E-F-${stamp}`) })).toBeVisible();
   });
 
   test('gia hạn từ màn Expiry gọi về module chủ và ghi lịch sử gia hạn', async ({ page }) => {
@@ -214,7 +233,7 @@ test.describe('Cỗ máy Expiry', () => {
 
     await page.goto('/expiry');
     const row = page.getByRole('row', { name: new RegExp(`PC-E2E-NOREN-${stamp}`) });
-    await expect(row.getByText('Không gia hạn tại đây')).toBeVisible();
+    await expect(row.getByRole('link', { name: 'Mở hồ sơ →' })).toBeVisible();
     await expect(row.getByRole('button', { name: 'Gia hạn' })).toHaveCount(0);
   });
 

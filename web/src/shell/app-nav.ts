@@ -4,6 +4,8 @@ import { PATHS } from '@/lib/routes';
 export interface NavItem {
   /** Khóa i18n (`nav.*`) — nhãn không bao giờ viết cứng. */
   key: string;
+  /** Nhãn riêng cho Member khi cùng một màn làm việc khác hẳn theo vai. */
+  memberKey?: string;
   to: string;
   /** Vai được nhìn thấy mục này. UI ẩn cho gọn; quyền THẬT do RolesGuard ở API (AD-9). */
   roles?: Me['role'][];
@@ -21,36 +23,53 @@ export interface NavGroup {
 /**
  * Sidebar của IMS. Mục của epic sau đã có chỗ sẵn (`planned: true`) để bản đồ điều hướng
  * không phải vẽ lại mỗi epic — thêm màn chỉ là bỏ cờ `planned`.
+ *
+ * Nhóm theo VIỆC người trực đang làm, không theo thứ tự làm ra màn: một danh sách phẳng mười
+ * mấy mục thì khó quét, nhất là trong drawer điện thoại. Tài khoản dịch vụ đứng trong "Tài sản"
+ * cạnh thiết bị/phần mềm; két sắt và duyệt mở két đứng chung "Bảo mật".
  */
 export const navGroups: NavGroup[] = [
   {
-    labelKey: 'nav.groupWork',
+    labelKey: 'nav.groupOverview',
     items: [
       { key: 'nav.dashboard', to: PATHS.dashboard },
+      { key: 'nav.expiry', to: PATHS.expiry, badge: 'overdue' },
+    ],
+  },
+  {
+    labelKey: 'nav.groupAssets',
+    items: [
       { key: 'nav.devices', to: PATHS.devices },
       { key: 'nav.software', to: PATHS.software },
       { key: 'nav.isp', to: PATHS.ispLines },
-      { key: 'nav.expiry', to: PATHS.expiry, badge: 'overdue' },
-      { key: 'nav.ipam', to: PATHS.ipAddresses },
-      { key: 'nav.nat', to: PATHS.nat },
       // Tài khoản dùng chung + VPN (0032) — mật khẩu của chúng nằm ở két sắt.
       { key: 'nav.serviceAccounts', to: PATHS.serviceAccounts },
-      // MỌI vai thấy: Member vào xem yêu cầu của mình đã được duyệt chưa.
-      { key: 'nav.approvals', to: PATHS.approvals, badge: 'approvals' },
-      /*
-       * Không còn `planned`: két sắt đã chạy từ Epic 4, chỉ thiếu cửa vào từ menu.
-       *
-       * Nhưng CHỈ SA/Admin: trang tổng là bản đồ "công ty giữ bí mật ở đâu" và
-       * `GET /vault/owners` chặn theo vai. Bỏ `roles` thì Member bấm vào và nhận một màn
-       * lỗi "thử lại" — bày ra một cánh cửa khóa còn tệ hơn không bày.
-       * (Két sắt của TỪNG hồ sơ thì Member vẫn thấy — đó là tab trong trang chi tiết,
-       * quyền nằm ở ma trận 6.2.)
-       */
-      { key: 'nav.vault', to: PATHS.vault, roles: ['sa', 'admin'] },
       /* Kho thanh lý cho MỌI vai: "cái máy này đâu rồi" là câu ai trong team IT cũng hỏi, và
          "đã thanh lý tháng trước" không phải bí mật gì. */
       { key: 'nav.disposal', to: PATHS.disposal },
       { key: 'nav.documents', to: PATHS.documents, planned: true },
+    ],
+  },
+  {
+    labelKey: 'nav.groupNetwork',
+    items: [
+      { key: 'nav.ipam', to: PATHS.ipAddresses },
+      { key: 'nav.nat', to: PATHS.nat },
+    ],
+  },
+  {
+    labelKey: 'nav.groupSecurity',
+    items: [
+      // MỌI vai thấy: Member vào xem yêu cầu của mình đã được duyệt chưa — với họ đây là
+      // "yêu cầu xem két của tôi", không phải màn duyệt.
+      { key: 'nav.approvals', memberKey: 'nav.approvalsMine', to: PATHS.approvals, badge: 'approvals' },
+      /*
+       * CHỈ SA/Admin: trang tổng là bản đồ "công ty giữ bí mật ở đâu" và `GET /vault/owners`
+       * chặn theo vai. Bỏ `roles` thì Member bấm vào và nhận một màn lỗi "thử lại" — bày ra
+       * một cánh cửa khóa còn tệ hơn không bày. (Két sắt của TỪNG hồ sơ thì Member vẫn thấy —
+       * đó là tab trong trang chi tiết, quyền nằm ở ma trận 6.2.)
+       */
+      { key: 'nav.vault', to: PATHS.vault, roles: ['sa', 'admin'] },
     ],
   },
   {
@@ -64,9 +83,13 @@ export const navGroups: NavGroup[] = [
       { key: 'nav.auditLog', to: PATHS.adminAuditLog, roles: ['sa', 'admin'] },
       // Nới/siết mọi hàng rào đăng nhập và két — chỉ SA (Q-14), khớp gác ở App.tsx và API.
       { key: 'nav.settings', to: PATHS.adminSettings, roles: ['sa'] },
-      // Trang nội bộ của đội phát triển — chỉ SA thấy (khớp gác quyền ở App.tsx).
-      { key: 'nav.components', to: PATHS.devComponents, roles: ['sa'] },
     ],
+  },
+  {
+    /* Trang nội bộ của đội phát triển (dữ liệu giả) — nhóm riêng ở cuối, nhãn nói rõ, để SA
+       không tưởng đây là một chức năng thật. Chỉ SA thấy, khớp gác quyền ở App.tsx. */
+    labelKey: 'nav.groupDev',
+    items: [{ key: 'nav.components', to: PATHS.devComponents, roles: ['sa'] }],
   },
 ];
 

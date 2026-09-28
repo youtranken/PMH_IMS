@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { EnvelopeCryptoService } from '../../common/crypto/envelope.service';
 import { MasterKeyRing } from '../../common/crypto/master-key-ring';
 import { AuditModule } from '../audit/audit.module';
@@ -24,6 +25,7 @@ import { TotpService } from './totp.service';
   imports: [UsersModule, AuditModule, OutboxModule],
   controllers: [AuthController, AccountsController],
   providers: [
+    ExcelExportService,
     LoginRateGuard,
     LoginFailureService,
     AuthService,

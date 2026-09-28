@@ -73,7 +73,44 @@
   font-size: var(--fs-xs);
   color: var(--ink-3);
 }
-.detail-actions { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.detail-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  /* Căn theo khối tiêu đề, không dính đỉnh: nút nằm thấp hơn dòng mã trông như rơi xuống. */
+  align-self: center;
+}
+/* Dòng định danh: mỗi mục (nút chép mã · S/N + nút chép) là một cụm căn giữa theo dòng chữ —
+   nút chép lơ lửng thấp hơn chữ là lệch mắt. Serial ở cỡ đọc được, không phải 10px. */
+.detail-subline .subline-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.detail-subline .mono { font-size: var(--fs-sm); color: var(--ink-2); }
+@media (pointer: coarse) {
+  .detail-subline .copy-btn { width: 2.75rem; height: 2.75rem; }
+}
+/* Băng "đã thanh lý": khi nào, ai, đã gỡ gì — hai dòng trong một khối có nền. */
+.retired-banner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-7);
+}
+/* Dòng chú cuối thẻ Tóm tắt: tạo lúc nào, ai sửa lần cuối. */
+.rail-foot {
+  margin: var(--space-5) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--ink-3);
+}
+/* Ô nhãn của khu mở rộng (IP, NAT, ISP) cần đệm như ô bảng — không thì chữ dính mép thẻ. */
+.device-panel .table tbody th.panel-key {
+  padding: var(--space-6) var(--space-7);
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
 /* Việc PHÁ phải cách việc thường một quãng, để tay không trượt vào. Trên màn hẹp thì nó
    xuống dòng và nép phải — KHÔNG kéo hết bề ngang: to bằng nút chính là mời bấm nhầm. */
 .detail-actions .danger-ghost { margin-left: var(--space-10); }
@@ -100,6 +137,36 @@
   cursor: pointer;
 }
 .copy-btn:hover { color: var(--primary-ink); border-color: var(--primary); }
+/* Thẻ "Khi mất mạng" của đường truyền: nút gọi to, cả bề ngang thẻ — bấm được bằng ngón cái. */
+.isp-call {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: var(--space-4);
+  font-size: var(--fs-md);
+}
+/* Tên đăng nhập của tài khoản dịch vụ: thứ người ta mở trang để lấy — cỡ chữ thường, không
+   thu nhỏ như mã phụ. */
+.sa-login {
+  font-size: var(--fs-md);
+  overflow-wrap: anywhere;
+}
+/* Link phụ ngay dưới giá trị trong thẻ định danh ("Rule NAT trên thiết bị này"). */
+.rail-sublink {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--fs-xs);
+}
+/* Biến thể theo dòng chữ (`inline`): vẫn đủ 24px vùng bấm, nhưng không viền, canh giữa dòng
+   và lề âm để KHÔNG đẩy dòng cao lên hay nhô xuống dưới chân chữ. */
+.copy-btn.inline {
+  width: 24px;
+  height: 24px;
+  margin: -4px 0;
+  border-color: transparent;
+  background: transparent;
+  vertical-align: middle;
+}
 
 /* --- Dải chỉ số đầu trang (StatGrid) -----------------------------------------
  * Bốn thứ cần biết trong hai giây. Thứ đã nằm ở đây thì BỎ khỏi lưới bên dưới — bản trước
@@ -197,7 +264,8 @@
   font-weight: var(--fw-bold);
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  color: var(--ink-3);
+  /* `--ink-2`, không phải `--ink-3`: chữ 10px in hoa màu ink-3 gần như mất hút ở chế độ tối. */
+  color: var(--ink-2);
   margin-bottom: var(--space-8);
 }
 .rail-row {
@@ -235,8 +303,44 @@
   .rail-h { grid-column: 1 / -1; margin-bottom: 0; }
   .rail-row { border-top: none; padding: 0; }
 }
+/* Thanh công cụ của một tab: tiêu đề khu + số đếm bên trái, nút thêm bên phải, cùng hàng. */
+.section-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-5);
+}
+.section-bar > .form-section-title { margin: 0; }
+.section-bar > .section-count {
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  color: var(--ink-3);
+}
+.section-bar > .btn:last-child { margin-left: auto; }
+.port-filter { width: 100%; max-width: 22rem; margin-bottom: var(--space-5); }
+/* Bảng cổng: một cỡ chữ cho mọi ô, mã/cổng mono nhỏ hơn một chút chứ không nhỏ hẳn. */
+.port-map .table td { font-size: var(--fs-sm); }
+.port-map .table td.mono,
+.port-map .table td .mono { font-size: var(--fs-sm); }
+/* Tab bảng: không có cột phải, thẻ định danh thu thành dải một dòng ở đầu cột chính. */
+.detail-2col.detail-1col { grid-template-columns: minmax(0, 1fr); }
+.rail-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-5);
+  margin-bottom: var(--space-7);
+  padding: var(--space-4) var(--space-7);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
 @media (max-width: 680px) {
   .rail-card { grid-template-columns: 1fr 1fr; }
+  .rail-card .rail-row-wide { grid-column: 1 / -1; }
   /* Thanh tab dính ngay dưới topbar (56px ở `.topbar`, base.css): trang chi tiết dài, cuộn
      xuống đọc lịch sử rồi muốn sang tab khác thì không phải cuộn ngược lên đầu. */
   .detail-main > .tabs {
@@ -438,11 +542,38 @@
   box-shadow: var(--shadow-sm);
   margin-bottom: var(--space-8);
 }
+/* Chỉ một ô tìm: ô nằm thẳng trên nền, không khung thẻ (FilterBar tự gắn `is-bare`). */
+.filter-bar.is-bare {
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  margin-bottom: var(--space-7);
+}
 /* Nhóm nút lọc bên trong thanh lọc phải TỰ XUỐNG DÒNG. `.row` dùng chung không có `wrap`
    (cố ý — phần lớn chỗ dùng nó là hai ba thứ nằm ngang), nên bốn nút lọc kèm số đếm cộng nút
    "Bỏ lọc" đẩy cả trang tràn ngang ở 390px. Bài kiểm 390px của màn Két sắt bắt đúng chuyện đó. */
 .filter-bar [role='group'] {
   flex-wrap: wrap;
+}
+/* Ô ngày trong thanh lọc: bề ngang vừa một ngày, không chiếm cả hàng. Hai ô "từ – đến" đi
+   thành MỘT cụm (`.filter-range`) để không rơi mỗi ô xuống một hàng riêng. */
+.filter-bar .dp {
+  width: auto;
+  flex: 0 1 11rem;
+  min-width: 9.5rem;
+}
+.filter-range {
+  display: flex;
+  gap: var(--space-3);
+  flex: 0 1 23rem;
+}
+.filter-range .dp {
+  flex: 1 1 0;
+}
+.filter-bar .filter-object-id {
+  flex: 0 1 14rem;
+  min-width: 10rem;
 }
 .filter-bar .grow {
   flex: 1;
@@ -510,34 +641,65 @@ input.search {
     padding: var(--space-3) 0;
     border-bottom: 1px solid var(--border);
   }
+  /*
+   * Ô là lưới 2 cột: nhãn cột trái (trải mọi hàng), mỗi mảnh giá trị (chữ, dòng phụ, huy
+   * hiệu) một hàng ở cột phải, bám phải và tự xuống dòng TRONG cột đó. Flex `wrap` thì một
+   * giá trị dài hơn chỗ còn lại bị đẩy nguyên khối xuống dưới nhãn, nên hai thẻ cạnh nhau ra
+   * hai kiểu: "Tên luật" ngắn nằm cùng hàng, tên dài rơi xuống dòng dưới, bám trái.
+   */
   .table-stack td {
-    display: flex;
-    justify-content: space-between;
-    /* `wrap` để dòng phụ (`.cell-sub`) rơi xuống hàng riêng — xem luật ngay dưới. */
-    flex-wrap: wrap;
-    gap: var(--space-1) var(--space-7);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-items: end;
+    align-items: baseline;
+    column-gap: var(--space-7);
+    text-align: right;
+    overflow-wrap: anywhere;
     border: none;
     padding: var(--space-1) var(--space-5);
   }
+  /*
+   * Vạch ngăn giữa các hàng của MỌI thẻ. Luật bảng `table.table tbody tr:last-child td`
+   * tắt viền ở dòng cuối, nên thẻ cuối mất vạch trong khi các thẻ trên còn — `:not()` nâng
+   * độ ưu tiên vừa đủ thắng nó. Ô cuối của thẻ không kẻ: viền dưới của `tr` đã ngăn thẻ.
+   */
+  table.table-stack tbody tr td:not(:last-child) {
+    border-bottom: 1px solid var(--border);
+  }
+  table.table-stack tbody tr td:last-child {
+    border-bottom: none;
+  }
   .table-stack td::before {
+    grid-column: 1;
+    /* Nhãn trải qua mọi hàng giá trị, để mảnh thứ hai trở đi vẫn nằm ở cột phải. */
+    grid-row: 1 / span 6;
+    justify-self: start;
+    text-align: left;
     content: attr(data-label);
     font-weight: 600;
     color: var(--ink-2);
+    /* Nhãn là chữ thường của giao diện, KHÔNG thừa hưởng font của ô: ô mã/cổng/VLAN mang
+       `.mono` 12px nên nhãn của chúng thành mono nhỏ, lệch hẳn các nhãn khác. */
+    font-family: var(--font);
+    font-size: var(--fs-md);
+    letter-spacing: normal;
     /* Nhãn không co lại nhường chỗ cho giá trị dài — nếu không, "Ngày đưa vào kho" bị bóp
        thành ba dòng một chữ trong khi giá trị bên phải nằm thênh thang. */
-    flex: 0 0 auto;
+    white-space: nowrap;
   }
   /*
-   * Dòng phụ trong ô (tên hồ sơ dưới mã, site dưới mã máy) PHẢI xuống dòng riêng.
-   *
-   * `.cell-sub` khai `display: block`, nhưng ở đây ô là `display: flex` nên nó thành một
-   * flex-item ngang hàng, và `justify-content: space-between` đẩy ba mảnh (nhãn · giá trị ·
-   * dòng phụ) ra ba phía. Nhìn ra thành "MÃ   E2E-DEV-001   Máy trạm Kế toán" trên một hàng
-   * thay vì tên nằm nhỏ bên dưới mã như ở desktop.
+   * Mọi mảnh giá trị ở cột phải, mỗi mảnh một hàng: dòng phụ (tên hồ sơ dưới mã, site dưới
+   * mã máy) nằm nhỏ bên dưới giá trị như ở desktop, không chen ngang hàng với nhãn.
    */
+  .table-stack td > * {
+    grid-column: 2;
+  }
   .table-stack td .cell-sub {
-    flex-basis: 100%;
     text-align: right;
+  }
+  /* Ô trống ("—") không đáng một dòng trên thẻ: thẻ cổng 7 dòng toàn gạch thành 2–3 dòng. */
+  .table-stack td[data-empty] {
+    display: none;
   }
   /*
    * Ghi chú dài: ở BẢNG thì rút một dòng cho khỏi bóp các cột khác, ở THẺ DỌC thì trả lại đủ.
@@ -549,6 +711,11 @@ input.search {
     white-space: normal;
     overflow: visible;
     text-align: right;
+  }
+  /* Ô mũi tên bung dòng của dòng KHÔNG bung được: ở thẻ dọc nó thành một hàng trống không nhãn
+     ở đầu thẻ. */
+  .table-stack td.lead:empty {
+    display: none;
   }
 }
 

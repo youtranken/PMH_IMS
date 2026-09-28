@@ -19,18 +19,19 @@ export function ThemeSwitch() {
   return (
     <button
       type="button"
-      className="btn ghost sm"
+      // Cùng lớp `.icon-btn` với nút menu và nút tìm: ba nút cạnh nhau một cỡ, một nét.
+      className="icon-btn"
       onClick={() => setThemeState(toggleTheme())}
       title={toDark ? t('theme.dark') : t('theme.light')}
       aria-label={toDark ? t('theme.switchToDark') : t('theme.switchToLight')}
     >
       <svg
-        width="16"
-        height="16"
+        width="20"
+        height="20"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.9"
+        strokeWidth="2"
         strokeLinecap="round"
         strokeLinejoin="round"
         aria-hidden="true"

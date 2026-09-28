@@ -67,10 +67,44 @@ export function toHistoryEntries(rows: DeviceHistoryRow[], t: TFunction): Histor
     id: row.id,
     at: row.createdAt,
     actor: row.actor,
-    /* Mã lạ (migration sau, dữ liệu cũ) GIỮ NGUYÊN — hiện mã còn hơn hiện ô trống. */
-    action: ACTION_LABEL[row.action] ? t(ACTION_LABEL[row.action]) : row.action,
-    detail: describeChanges(row.changes, t),
+    action: actionText(row, t),
+    detail: detailText(row, t),
   }));
+}
+
+/** Việc với một cổng cụ thể: tên cổng nằm NGAY trong câu ("Thêm cổng Gi1/0/10"). */
+const PORT_ACTION: Record<string, string> = {
+  'port-added': 'history.devices.actPortAddedOf',
+  'port-updated': 'history.devices.actPortUpdatedOf',
+  'port-removed': 'history.devices.actPortRemovedOf',
+};
+
+function actionText(row: DeviceHistoryRow, t: TFunction): string {
+  const portKey = PORT_ACTION[row.action];
+  const port = row.changes?.portLabel;
+  const label = port ? (port.after ?? port.before) : null;
+  if (portKey && label) return t(portKey, { port: String(label) });
+  /* Mã lạ (migration sau, dữ liệu cũ) GIỮ NGUYÊN — hiện mã còn hơn hiện ô trống. */
+  return ACTION_LABEL[row.action] ? t(ACTION_LABEL[row.action]) : row.action;
+}
+
+function detailText(row: DeviceHistoryRow, t: TFunction): string | null {
+  /* Tạo hồ sơ: liệt kê "(trống) → …" cho từng ô chỉ là đọc lại hồ sơ dưới dạng khó đọc hơn. */
+  if (row.action === 'created' || row.action === 'imported') return null;
+  const changes = row.changes ? { ...row.changes } : null;
+  if (changes && PORT_ACTION[row.action]) {
+    // Tên cổng đã nằm trong câu hành động; chỉ còn in nó nếu chính nó bị đổi.
+    const port = changes.portLabel;
+    if (port && (port.before === null || port.after === null || port.before === port.after)) {
+      delete changes.portLabel;
+    }
+  }
+  /* Cờ kỹ thuật "cleanup" của lượt thanh lý: nói ra bằng câu, không phải "true". */
+  const cleaned = changes?.cleanup?.after === true;
+  if (changes) delete changes.cleanup;
+  const described = describeChanges(changes && Object.keys(changes).length > 0 ? changes : null, t);
+  const extra = cleaned ? t('devices.retiredCleaned') : null;
+  return [described, extra].filter(Boolean).join('; ') || null;
 }
 
 /** Nhãn + cách đọc riêng của màn thiết bị; phần chung ở `ui/history-changes.ts` (AD-15). */

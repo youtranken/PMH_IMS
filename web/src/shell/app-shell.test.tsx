@@ -132,3 +132,23 @@ describe('AppShell — mục "sắp có" trong menu', () => {
     expect(item).toHaveAttribute('title', 'Phần này chưa mở trong bản hiện tại');
   });
 });
+
+describe('AppShell — topbar', () => {
+  it('đầu topbar là TÊN MÀN, không phải tên người dùng; có ô tìm kèm phím tắt', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
+    renderShell();
+    const banner = screen.getByRole('banner');
+    expect(within(banner).getByTestId('topbar-title')).toHaveTextContent('Bảng điều khiển');
+    expect(within(banner).queryByText(/Nguyễn Văn A/)).toBeNull();
+    const search = within(banner).getByRole('button', { name: /^Tìm nhanh \((Ctrl K|⌘K)\)$/ });
+    expect(search).toHaveTextContent('Tìm mã, tên, serial, IP…');
+  });
+
+  it('mục "sắp có" mang chip chữ thấy được, không chỉ mờ đi', () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { count: 0 })));
+    renderShell();
+    const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
+    expect(within(nav).getByText('Tài liệu', { exact: true }).parentElement).toHaveTextContent('Sắp có');
+  });
+});
+

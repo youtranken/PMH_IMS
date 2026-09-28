@@ -13,7 +13,7 @@ import {
   type RowData,
   type SortingState,
 } from '@tanstack/react-table';
-import { Loading } from '@/ui/load-state';
+import { SkeletonCards, SkeletonRows } from '@/ui/skeleton-rows';
 import { useScrollEdges } from '@/ui/scroll-x';
 import { useMediaQuery } from '@/ui/use-media-query';
 
@@ -93,6 +93,16 @@ interface DataTableProps<T> {
   renderExpanded?: (row: T) => ReactNode;
   /** Chỉ hiện mũi tên ▸ khi hàm này trả true (vd máy có phần mềm). Mặc định: mọi dòng. */
   canExpand?: (row: T) => boolean;
+  /**
+   * Tên của nút ▸ cho trình đọc màn hình ("Mở rộng LIC-01 — xem máy đang dùng"). Không truyền
+   * thì mọi dòng cùng một câu "Mở rộng dòng", nghe mười lần không biết dòng nào.
+   */
+  expandLabel?: (row: T, expanded: boolean) => string;
+  /**
+   * Chữ đứng cạnh mũi tên bung ("3 license"). Mũi tên trơn không nói bung ra thấy gì, và
+   * mọc ở dòng này không mọc ở dòng kia thì trông như lỗi căn lề.
+   */
+  expandText?: (row: T) => string;
   /** ≤680px gập bảng thành thẻ dọc (mỗi ô 1 dòng có nhãn cột). */
   stackOnMobile?: boolean;
   /** Có giá trị → cột đầu (cùng ô ▸) hiện số thứ tự "#" = offset + vị trí + 1. Cần renderExpanded. */
@@ -167,6 +177,8 @@ export function DataTable<T>({
   onRowClick,
   renderExpanded,
   canExpand,
+  expandLabel,
+  expandText,
   stackOnMobile,
   selection,
   rowNumberOffset,
@@ -228,7 +240,7 @@ export function DataTable<T>({
         )}
         {rows.length === 0 ? (
           <div className="list-cards-empty">
-            {loading ? <Loading /> : <div className="empty">{emptyText}</div>}
+            {loading ? <SkeletonCards /> : <div className="empty">{emptyText}</div>}
           </div>
         ) : (
           <ul className="list-cards">
@@ -287,7 +299,7 @@ export function DataTable<T>({
                   <th
                     className="lead-col"
                     aria-hidden={rowNumberOffset == null || undefined}
-                    style={{ width: rowNumberOffset != null ? 56 : 34 }}
+                    style={{ width: expandText ? undefined : rowNumberOffset != null ? 56 : 34 }}
                   >
                     {rowNumberOffset != null ? '#' : null}
                   </th>
@@ -304,7 +316,9 @@ export function DataTable<T>({
                           ? 'ascending'
                           : sorted === 'desc'
                             ? 'descending'
-                            : undefined
+                            : h.column.getCanSort()
+                              ? 'none'
+                              : undefined
                       }
                     >
                       {h.isPlaceholder ? null : h.column.getCanSort() ? (
@@ -325,11 +339,17 @@ export function DataTable<T>({
                           {flexRender(h.column.columnDef.header, h.getContext())}
                           {/* Cùng nét chevron với dropdown, không phải ▲▼ của bộ ký tự —
                               hai loại mũi tên trên cùng một bảng đọc như hai hệ thống. */}
+                          {/* Cột CHƯA sắp vẫn có mũi tên, ẩn tới khi rê chuột/focus: không có nó
+                              thì cột sắp được trông y hệt cột không sắp được. */}
                           {sorted ? (
                             <span className="sort-arrow">
                               <Chevron direction={sorted === 'asc' ? 'up' : 'down'} />
                             </span>
-                          ) : null}
+                          ) : (
+                            <span className="sort-arrow idle" aria-hidden="true">
+                              <Chevron direction="down" />
+                            </span>
+                          )}
                         </button>
                       ) : (
                         flexRender(h.column.columnDef.header, h.getContext())
@@ -341,7 +361,13 @@ export function DataTable<T>({
             ))}
           </thead>
           <tbody>
-            {rows.length === 0 ? (
+            {rows.length === 0 && loading ? (
+              <SkeletonRows
+                columns={
+                  table.getAllLeafColumns().length + (renderExpanded ? 1 : 0) + (selection ? 1 : 0)
+                }
+              />
+            ) : rows.length === 0 ? (
               <tr>
                 <td
                   colSpan={
@@ -350,11 +376,7 @@ export function DataTable<T>({
                     (selection ? 1 : 0)
                   }
                 >
-                  {loading ? (
-                    <Loading />
-                  ) : (
-                    <div className="empty">{emptyText}</div>
-                  )}
+                  <div className="empty">{emptyText}</div>
                 </td>
               </tr>
             ) : (
@@ -377,7 +399,12 @@ export function DataTable<T>({
                       // hàng chứa control tương tác (checkbox/kebab/nút) → nested-interactive
                       // (axe serious). Keyboard/SR mở dòng qua nút thật ở ô Mã (cell-code-open).
                       onClick={
-                        onRowClick ? () => onRowClick(row.original) : undefined
+                        onRowClick
+                          ? (event) => {
+                              if (isInnerControlClick(event)) return;
+                              onRowClick(row.original);
+                            }
+                          : undefined
                       }
                       style={onRowClick ? { cursor: 'pointer' } : undefined}
                     >
@@ -408,9 +435,14 @@ export function DataTable<T>({
                           {rowCanExpand ? (
                             <button
                               type="button"
-                              className="caret-btn"
+                              className={expandText ? 'caret-btn caret-chip' : 'caret-btn'}
                               aria-expanded={expanded}
-                              aria-label={t(expanded ? 'common.collapseRow' : 'common.expandRow')}
+                              aria-label={
+                                expandLabel?.(row.original, expanded) ??
+                                (expandText
+                                  ? undefined
+                                  : t(expanded ? 'common.collapseRow' : 'common.expandRow'))
+                              }
                               onClick={(event) => {
                                 // Không để lan lên `onRowClick` (mở trang chi tiết).
                                 event.stopPropagation();
@@ -419,6 +451,7 @@ export function DataTable<T>({
                             >
                               {/* Cùng nét mũi tên với dropdown/lịch — chỉ SANG PHẢI khi đóng,
                                   xoay xuống khi bung, đúng nếp cây thư mục. */}
+                              {expandText ? <span>{expandText(row.original)}</span> : null}
                               <Chevron direction={expanded ? 'down' : 'right'} />
                             </button>
                           ) : null}
@@ -525,6 +558,20 @@ function MobileCardItem<T>({
       ) : null}
     </li>
   );
+}
+
+/**
+ * Lượt bấm dòng có phải rơi vào một điều khiển riêng trong dòng không.
+ *
+ * Link ở ô Mã: nếu dòng cũng điều hướng thì Ctrl+bấm vừa mở tab mới vừa nhảy trang ở tab này.
+ * Menu ⋯ render qua PORTAL nhưng sự kiện React vẫn nổi qua cây component về `<tr>` — nên
+ * đích bấm nằm ngoài DOM của dòng cũng phải bỏ qua. Người đang bôi đen chữ để chép cũng vậy.
+ */
+function isInnerControlClick(event: React.MouseEvent<HTMLElement>): boolean {
+  const target = event.target as HTMLElement;
+  if (!event.currentTarget.contains(target)) return true;
+  if (target.closest('a, button, input, select, textarea, label, [role="menu"]')) return true;
+  return !!window.getSelection?.()?.toString();
 }
 
 /** Ô search debounce 200ms — không lọc lại mỗi phím, giữ gõ mượt trên bảng lớn. */

@@ -5,6 +5,9 @@ import type { TFunction } from 'i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { todayIso } from '@/lib/format';
+import { maskOfCidr } from '@/lib/ipv4';
+import { CopyButton } from '@/ui/copy-button';
+import { DataItemIfSet } from '@/ui/detail-header';
 import { Combobox } from '@/ui/combobox';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
@@ -52,8 +55,12 @@ export function DeviceCombobox({
       apiFetch<{ items: DeviceOption[] }>(
         `/api/v1/devices?limit=20&usable=true&search=${encodeURIComponent(term)}`,
       ),
-    // Đã chọn xong thì ô đang hiện đúng mã máy — hỏi lại API cho chính cái mã đó là thừa.
-    enabled: term.length > 0 && !deviceId,
+    /*
+     * Chưa gõ gì vẫn hỏi (20 máy đầu): mở ô ra mà trắng trơn thì người dùng không biết đây là
+     * ô tìm hay ô chọn — cùng cách ô Router của form NAT. Đã chọn xong thì ô đang hiện đúng
+     * mã máy, hỏi lại API cho chính cái mã đó là thừa.
+     */
+    enabled: !deviceId,
   });
   return (
     <Combobox
@@ -78,6 +85,34 @@ export function DeviceCombobox({
   );
 }
 
+/** Mask · Gateway · VLAN của dải, mỗi dòng một nút chép — thứ cần gõ vào card mạng. */
+function NetworkConfig({
+  network,
+}: {
+  network: { cidr: string; gateway: string | null; vlan: number | null };
+}) {
+  const { t } = useTranslation();
+  const mask = maskOfCidr(network.cidr);
+  const rows: [string, string | null][] = [
+    [t('ipam.mask'), mask],
+    [t('ipam.gateway'), network.gateway],
+    [t('ipam.vlan'), network.vlan === null ? null : String(network.vlan)],
+  ];
+  return (
+    <div className="span-2 net-config">
+      <p className="form-section-title">{t('ipam.netConfig')}</p>
+      <dl className="data-grid">
+        {rows.map(([label, value]) => (
+          <DataItemIfSet key={label} label={label} value={value}>
+            <span className="mono">{value}</span>{' '}
+            <CopyButton value={value ?? ''} label={t('ipam.copyOf', { label })} />
+          </DataItemIfSet>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
 /**
  * MỘT hộp "Cấp IP" cho cả ô trống (chưa có hồ sơ) lẫn hồ sơ đang Trống (đã thu hồi).
  *
@@ -90,6 +125,8 @@ export function AssignIpDialog({
   subnetId,
   address,
   record,
+  network,
+  initialDevice,
   csrfToken,
   onClose,
   onDone,
@@ -98,12 +135,19 @@ export function AssignIpDialog({
   address: string;
   /** Hồ sơ đang Trống cần cấp lại; `null` = ô chưa từng có hồ sơ. */
   record: IpRow | null;
+  /**
+   * Cấu hình mạng của dải — người cắm máy phải gõ mask/gateway/VLAN vào card mạng ngay sau khi
+   * cấp, nên hộp bày sẵn kèm nút chép thay vì bắt quay ra thẻ dải tra.
+   */
+  network?: { cidr: string; gateway: string | null; vlan: number | null };
+  /** Máy điền sẵn — mở từ trang thiết bị thì máy đã biết, không bắt gõ lại mã. */
+  initialDevice?: { deviceId: string; term: string };
   csrfToken: string;
   onClose: () => void;
   onDone: () => void;
 }) {
   const { t } = useTranslation();
-  const [device, setDevice] = useState({ deviceId: '', term: '' });
+  const [device, setDevice] = useState(initialDevice ?? { deviceId: '', term: '' });
   // Hồ sơ Trống đã bị gỡ chủ lúc thu hồi, nên ô người dùng mở ra trống — điền lại tên chủ cũ
   // là hồi sinh một chủ không còn.
   const [usedBy, setUsedBy] = useState('');
@@ -126,6 +170,7 @@ export function AssignIpDialog({
       /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!save.isPending}
+      initialFocus="first-field"
       maxWidth={560}
       title={t('ipam.assignIp', { address })}
       footer={
@@ -178,6 +223,8 @@ export function AssignIpDialog({
             onChange={setDevice}
           />
         </Field>
+
+        {network ? <NetworkConfig network={network} /> : null}
 
         <Field label={t('ipam.usedBy')} hint={t('ipam.usedByHint')}>
           <SuggestInput

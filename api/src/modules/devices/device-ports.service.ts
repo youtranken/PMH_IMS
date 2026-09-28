@@ -51,6 +51,8 @@ export interface IncomingPortRow {
   portLabel: string;
   connectedPort: string | null;
   usedBy: string | null;
+  /** VLAN của cổng switch đang cắm vào máy này — nhìn từ máy trạm/server cũng phải biết. */
+  vlan: string | null;
   note: string | null;
 }
 
@@ -111,6 +113,7 @@ export class DevicePortsService {
         portLabel: row.port.portLabel,
         connectedPort: row.port.connectedPort,
         usedBy: row.port.usedBy,
+        vlan: row.port.vlan,
         note: row.port.note,
       })),
     };

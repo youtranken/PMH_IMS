@@ -62,20 +62,27 @@ test.describe('Bảng điều khiển ở 390px', () => {
     }
 
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Sắp hết hạn (30 ngày)' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Hạn cần xử lý' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Sự cố tuần qua' })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Break-glass tuần qua' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Yêu cầu mở két tuần qua' })).toBeVisible();
     // Ba khối thêm 28/08/2026 — màn ĐỌC nên phải chạy ở 390px như mọi khối khác (UX-DR2).
-    await expect(page.getByRole('heading', { name: 'Dải mạng sắp đầy' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /^Dải mạng ≥ \d+%$/ })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Két lâu chưa đổi' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Vừa vào kho thanh lý' })).toBeVisible();
+    /* DASH-010: ở 390px mỗi khối chỉ bày 3 mục đầu + "Xem thêm N" bung tại chỗ. Dữ liệu bài
+       khác để lại có thể đẩy mục của bài này xuống dưới mốc 3 — bung ra rồi mới tìm. */
+    const subnets = page.locator('section').filter({ hasText: /Dải mạng ≥ \d+%/ });
+    const moreSubnets = subnets.getByRole('button', { name: /^Xem thêm \d+$/ });
+    if (await moreSubnets.count()) await moreSubnets.click();
     await expect(page.getByText('100% · đã cấp 2/2 · còn 0')).toBeVisible();
+    /* DASH-002: ở 390px khối hạn thành thẻ gọn, không phải bảng cuộn ngang — và nút Gia hạn
+       vẫn còn trên thẻ. */
+    const expiring = page.locator('section').filter({ hasText: 'Hạn cần xử lý' });
+    const moreExpiring = expiring.getByRole('button', { name: /^Xem thêm \d+$/ });
+    if (await moreExpiring.count()) await moreExpiring.click();
     await expect(
       page.getByText('License có tên rất dài để thử tràn ngang trên điện thoại'),
     ).toBeVisible();
-    /* DASH-002: ở 390px bảng "Sắp hết hạn" thành thẻ gọn, không phải bảng cuộn ngang — và
-       nút Gia hạn vẫn còn trên thẻ. */
-    const expiring = page.locator('section').filter({ hasText: 'Sắp hết hạn (30 ngày)' });
     await expect(expiring.getByRole('columnheader')).toHaveCount(0);
     const card = expiring
       .getByRole('listitem')

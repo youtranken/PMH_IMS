@@ -102,13 +102,13 @@ test('bảng port map, cả chiều ngược, đọc được ở 390px', async 
   ).toBe(201);
 
   await page.goto(`/devices/${switchId}`);
-  await page.getByRole('tab', { name: 'Port map' }).click();
+  await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();
   await expect(page.getByText('uplink phòng máy chủ')).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
   // AD-14: khai một đầu, đầu kia tự hiện — chiều ngược cũng phải đọc được trên điện thoại.
   await page.goto(`/devices/${serverId}`);
-  await page.getByRole('tab', { name: 'Port map' }).click();
+  await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();
   await expect(page.getByText(switchCode).first()).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 });

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { jsonResponse, renderWithI18n, screen, userEvent, waitFor } from '@/test/test-utils';
+import { ToastProvider } from '@/ui/toast';
 import { AuditLogScreen, detailLines } from './audit-log-screen';
 
 const ROW = {
@@ -40,8 +41,10 @@ function Address() {
 function renderAt(entry: string) {
   return renderWithI18n(
     <MemoryRouter initialEntries={[entry]}>
-      <AuditLogScreen />
-      <Address />
+      <ToastProvider>
+        <AuditLogScreen />
+        <Address />
+      </ToastProvider>
     </MemoryRouter>,
   );
 }
@@ -125,6 +128,80 @@ describe('Màn Nhật ký', () => {
       expect(last?.searchParams.get('objectId')).toBe('DM-0001');
       expect(last?.searchParams.get('page')).toBe('1');
     });
+  });
+});
+
+describe('Màn Nhật ký — chi tiết, lọc loại đối tượng, gọn', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('bấm dòng mở hộp chi tiết: bảng Trường · Trước · Sau và JSON gốc', async () => {
+    const edited = {
+      ...ROW,
+      action: 'account.profile.updated',
+      objectType: 'user',
+      detail: { phone: { before: null, after: '0912 345 678' } },
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) =>
+        Promise.resolve(
+          String(input).includes('/admin/audit/actions')
+            ? jsonResponse(200, [])
+            : jsonResponse(200, { items: [edited], total: 1, totalCapped: false }),
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderAt('/admin/audit-log');
+    await user.click(await screen.findByRole('button', { name: /Xem chi tiết dòng nhật ký lúc/ }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Số điện thoại');
+    expect(dialog).toHaveTextContent('0912 345 678');
+    expect(screen.getByRole('columnheader', { name: 'Trước' })).toBeInTheDocument();
+    expect(screen.getByText('JSON gốc')).toBeInTheDocument();
+  });
+
+  it('?objectType= gửi lên API; nút Xuất Excel mang cùng bộ lọc', async () => {
+    const fetchMock = stubFetch();
+    renderAt('/admin/audit-log?objectType=user&q=le.minh');
+    await screen.findByText('Lê Minh');
+    expect(listCalls(fetchMock).at(-1)?.searchParams.get('objectType')).toBe('user');
+    expect(screen.getByRole('button', { name: 'Xuất Excel' })).toBeInTheDocument();
+  });
+
+  it('lọc không ra thì câu rỗng có nút gỡ lọc', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) =>
+        Promise.resolve(
+          String(input).includes('/admin/audit/actions')
+            ? jsonResponse(200, [])
+            : jsonResponse(200, { items: [], total: 0, totalCapped: false }),
+        ),
+      ),
+    );
+    renderAt('/admin/audit-log?q=khong-ai');
+    expect(await screen.findByRole('button', { name: 'Xóa bộ lọc' })).toBeInTheDocument();
+  });
+
+  it('sự kiện an ninh thất bại có vạch cảnh báo ở dòng', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) =>
+        Promise.resolve(
+          String(input).includes('/admin/audit/actions')
+            ? jsonResponse(200, [])
+            : jsonResponse(200, {
+                items: [{ ...ROW, action: 'auth.login.failed' }],
+                total: 1,
+                totalCapped: false,
+              }),
+        ),
+      ),
+    );
+    renderAt('/admin/audit-log');
+    await screen.findByText('Lê Minh');
+    expect(screen.getByText('Lê Minh').closest('tr')).toHaveClass('row-alert');
   });
 });
 

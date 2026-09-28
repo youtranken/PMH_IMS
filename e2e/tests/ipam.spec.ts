@@ -54,7 +54,9 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     const card = page.getByRole('link', { name: new RegExp(`LAN thử E2E ${stamp}`) });
     await expect(card).toBeVisible();
     // /29 = 8 địa chỉ, trừ địa chỉ mạng và quảng bá còn 6.
-    await expect(card.getByText('0% · 0/6 · còn 6')).toBeVisible();
+    // "Còn bao nhiêu chỗ trống" là dòng chính, có đơn vị; số đã dùng lùi xuống dòng phụ.
+    await expect(card.getByText('Còn 6 IP trống')).toBeVisible();
+    await expect(card.getByText('0/6 đang dùng')).toBeVisible();
 
     await card.click();
     await expect(page.getByRole('heading', { name: new RegExp(cidr) })).toBeVisible();
@@ -68,8 +70,48 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await ipForm.getByRole('button', { name: 'Cấp IP', exact: true }).click();
 
     await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();
-    await expect(page.getByText('17% · 1/6 · còn 5')).toBeVisible();
+    await expect(card.getByText('Còn 5 IP trống')).toBeVisible();
+    await expect(card.getByText('1/6 đang dùng')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(5);
+  });
+
+  test('Cấp IP trống kế tiếp: bỏ qua gateway, hộp cấp bày mask/gateway để chép', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-4);
+    // 172.18.x: dải riêng của bài này, không chồng các dải 172.16.x của bài khác.
+    const octet = Number(stamp) % 200;
+    const created = await page.request.post('/api/v1/ipam/subnets', {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+      data: {
+        cidr: `172.18.${octet}.0/29`,
+        name: `LAN kế tiếp E2E ${stamp}`,
+        gateway: `172.18.${octet}.1`,
+        vlan: 30,
+      },
+    });
+    expect(created.status()).toBe(201);
+    const subnetId = ((await created.json()) as { id: string }).id;
+    await page.goto(`/ip-addresses/${subnetId}`);
+
+    // Đầu cột phải nói luôn gateway và mask — thứ người cắm máy gõ vào card mạng.
+    await expect(page.getByText('255.255.255.248').first()).toBeVisible();
+
+    await page.getByRole('button', { name: 'Cấp IP trống kế tiếp' }).click();
+    // .1 là gateway nên địa chỉ trống kế tiếp là .2.
+    const dialog = page.getByRole('dialog', { name: `Cấp IP — 172.18.${octet}.2` });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText('Cấu hình cho máy')).toBeVisible();
+    await expect(dialog.getByText('255.255.255.248')).toBeVisible();
+
+    // Đường hỏng: bấm Cấp khi chưa có chủ → lỗi dưới ô, hộp vẫn mở, không tạo hồ sơ.
+    await dialog.getByRole('button', { name: 'Cấp IP', exact: true }).click();
+    await expect(dialog.getByText('Chọn thiết bị hoặc nhập người/bộ phận dùng IP này.')).toBeVisible();
+    await dialog.getByRole('combobox', { name: 'Người / bộ phận dùng' }).fill('Phòng IT E2E');
+    await dialog.getByRole('button', { name: 'Cấp IP', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByText(`Đã cấp 172.18.${octet}.2.`)).toBeVisible();
   });
 
   /**
@@ -103,9 +145,11 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     });
 
     await page.goto(`/ip-addresses/${firstId}`);
-    // Badge VLAN trên thẻ: ở PMH người ta gọi dải theo VLAN chứ không theo CIDR.
-    await expect(page.getByText('VLAN 20')).toBeVisible();
-    await expect(page.getByText('VLAN 30')).toBeVisible();
+    // Badge VLAN trên thẻ: ở PMH người ta gọi dải theo VLAN chứ không theo CIDR. Đầu cột phải
+    // cũng nêu VLAN của dải đang mở (NET-016), nên bám vào rail thẻ dải.
+    const rail = page.getByRole('navigation', { name: 'Danh sách dải mạng' });
+    await expect(rail.getByText('VLAN 20')).toBeVisible();
+    await expect(rail.getByText('VLAN 30')).toBeVisible();
     await expect(page.getByText('Máy A của dải A')).toBeVisible();
 
     // Bấm thẻ dải B → cột phải đổi, KHÔNG rời trang.

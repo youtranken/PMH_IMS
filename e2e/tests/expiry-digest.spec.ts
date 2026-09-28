@@ -10,6 +10,7 @@ import {
   resetDigestRules,
   resetSoftware,
   resetUsers,
+  rowAction,
   waitForMail,
   uniqueStamp,
 } from './helpers';
@@ -287,5 +288,57 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
     await expect(row).toBeVisible();
     await expect(row.getByText('Chưa gửi lần nào')).toBeVisible();
     await expect(row.getByText(/Hằng tuần/)).toBeVisible();
+  });
+
+  /*
+   * EX-021: biết thư chứa gì và lần gửi tới là khi nào MÀ KHÔNG phải bắn email thật tới cả
+   * danh sách người nhận. "Gửi thử cho tôi" chỉ tới hộp thư người bấm.
+   */
+  test('lần gửi tới, xem trước thư trong app, gửi thử chỉ cho tôi', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    await post(page, '/api/v1/software', {
+      code: `SSL-E2E-XT-${stamp}`,
+      name: 'SSL xem trước',
+      kind: 'ssl',
+      endDate: inDays(9),
+    });
+    const name = `Luật E2E xem trước ${stamp}`;
+    const rule = await post(page, '/api/v1/expiry/rules', {
+      name,
+      kinds: ['ssl'],
+      withinDays: 30,
+      recipients: ['sep@pmh.com.vn'],
+      ...lichKhongToiHanHomNay(),
+    });
+    expect(rule.status).toBe(201);
+
+    await page.goto('/expiry');
+    await page.getByRole('tab', { name: 'Luật gửi báo cáo' }).click();
+    const row = page.getByRole('row', { name: new RegExp(name) });
+    await expect(row.getByRole('cell', { name: /\d{2}\/\d{2}\/\d{4}/ }).first()).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Lần gửi tới' })).toBeVisible();
+
+    await rowAction(page, name, 'Xem trước thư');
+    const dialog = page.getByRole('dialog', { name: new RegExp(`Xem trước thư — ${name}`) });
+    await expect(dialog.getByText(/thư có 1 mục/)).toBeVisible();
+    await expect(dialog.getByText(`SSL-E2E-XT-${stamp}`, { exact: false })).toBeVisible();
+    await dialog.getByRole('button', { name: 'Đóng' }).first().click();
+
+    await rowAction(page, name, 'Gửi thử cho tôi');
+    const messages = await waitForMail('sắp hết hạn');
+    expect(messages).toHaveLength(1);
+    expect(messages[0].To.map((to) => to.Address)).toEqual([E2E_SA.email]);
+  });
+
+  test('xem trước luật không tồn tại → 404, không phải 500', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const status = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/expiry/rules/00000000-0000-4000-8000-000000000000/preview', {
+        credentials: 'include',
+      });
+      return res.status;
+    });
+    expect(status).toBe(404);
   });
 });

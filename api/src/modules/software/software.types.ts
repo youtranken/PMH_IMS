@@ -56,8 +56,14 @@ export interface SoftwareHistoryRecord {
 
 export interface SoftwareFilter {
   search?: string;
+  /**
+   * Hồ sơ có ghế trên máy khớp ô tìm (`LicenseAssignmentService.softwareIdsOnDevices`). Ghép
+   * bằng OR với phép khớp mã/tên: "máy X đang dùng license nào" hỏi bằng chính ô tìm.
+   */
+  alsoIds?: string[];
   kind?: SoftwareKind;
   licenseModel?: LicenseModel;
-  status?: SoftwareStatus;
+  /** `live` = Đang dùng + Hết hạn — hai trạng thái còn trên máy, mặc định của màn danh sách. */
+  status?: SoftwareStatus | 'live';
   vendorId?: string;
 }

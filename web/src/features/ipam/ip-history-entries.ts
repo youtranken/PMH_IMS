@@ -20,6 +20,11 @@ export interface IpHistoryRow {
   toStatus: string | null;
   changes: Record<string, unknown> | null;
   createdAt: string;
+  /** Họ tên người làm — API tra theo email; `null`/vắng thì màn hình rơi về email. */
+  actorName?: string | null;
+  /** Mã máy của `changes.deviceId` / `changes.previousDeviceId`, API tra sẵn. */
+  deviceCode?: string | null;
+  previousDeviceCode?: string | null;
 }
 
 /*
@@ -76,8 +81,15 @@ export function toIpHistoryEntries(rows: IpHistoryRow[], t: TFunction): HistoryE
     action: actionLabel(row.action, t),
     detail: describe(row, t),
     actor: row.actor,
+    actorName: row.actorName ?? undefined,
     at: row.createdAt,
   }));
+}
+
+/** "LT-E2E-01 (Nguyễn A)", "LT-E2E-01", hoặc "Nguyễn A" — mã máy đi trước, vì mắt dò theo mã. */
+function ownerText(device: string | null, user: string | null): string | null {
+  if (device && user) return `${device} (${user})`;
+  return device ?? user;
 }
 
 function describe(row: IpHistoryRow, t: TFunction): string | undefined {
@@ -98,13 +110,15 @@ function describe(row: IpHistoryRow, t: TFunction): string | undefined {
   const previousDevice = text(changes.previousDeviceId);
   const stillHasOwner = text(changes.usedBy) || text(changes.deviceId);
   if (!stillHasOwner && (previousUser || previousDevice)) {
-    parts.push(
-      t('history.ip.previous', { who: previousUser ?? t('history.ip.previousDevice') }),
-    );
+    const who =
+      ownerText(text(row.previousDeviceCode), previousUser) ?? t('history.ip.previousDevice');
+    parts.push(t('history.ip.previous', { who }));
   }
 
-  const newUser = text(changes.usedBy);
-  if (newUser && row.toStatus === 'assigned') parts.push(t('history.ip.assignedTo', { who: newUser }));
+  const newOwner = ownerText(text(row.deviceCode), text(changes.usedBy));
+  if (newOwner && row.toStatus === 'assigned') {
+    parts.push(t('history.ip.assignedTo', { who: newOwner }));
+  }
 
   const address = text(changes.address);
   if (address) parts.push(address);

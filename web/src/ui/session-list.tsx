@@ -64,6 +64,7 @@ export function SessionList({
   busy = false,
   currentLabel,
   table = false,
+  canEndCurrent = false,
 }: {
   sessions: SessionItem[];
   endLabel: string;
@@ -71,6 +72,13 @@ export function SessionList({
   busy?: boolean;
   currentLabel?: string;
   table?: boolean;
+  /**
+   * Phiên hiện tại vẫn có nút kết thúc — hộp "Phiên đang mở" của màn Tài khoản: SA mở phiên
+   * của chính mình thì vẫn đóng được (câu hỏi lại đã nói "bạn sẽ phải đăng nhập lại"), nhãn
+   * `currentLabel` chỉ để biết dòng nào là máy đang ngồi. Hồ Sơ của tôi thì không: ở đó đăng
+   * xuất máy này là nút Đăng xuất.
+   */
+  canEndCurrent?: boolean;
 }) {
   const { t } = useTranslation();
   const narrow = useMediaQuery(MOBILE_CARD_QUERY);
@@ -81,7 +89,7 @@ export function SessionList({
   };
 
   const endButton = (session: SessionItem, className: string) =>
-    session.current ? null : (
+    session.current && !canEndCurrent ? null : (
       <button
         type="button"
         className={className}
@@ -100,6 +108,7 @@ export function SessionList({
             <tr>
               <th>IP</th>
               <th>{t('sessionList.browser')}</th>
+              <th>{t('sessionList.startedHeader')}</th>
               <th>{t('sessionList.lastSeenHeader')}</th>
               <th />
             </tr>
@@ -108,14 +117,16 @@ export function SessionList({
             {sessions.map((session) => (
               <tr key={session.id}>
                 <td className="mono">{orDash(session.ip)}</td>
-                <td>
+                <td title={session.userAgent ?? undefined}>
                   {device(session)}
                   {session.current && currentLabel ? (
                     <span className="badge ok">{currentLabel}</span>
                   ) : null}
                 </td>
+                <td>{formatDateTime(session.createdAt)}</td>
                 <td>{formatDateTime(session.lastSeenAt)}</td>
-                <td>{endButton(session, 'btn sm danger')}</td>
+                {/* Viền đỏ chứ không đỏ đặc: mỗi dòng một nút đỏ đặc làm cả bảng nặng như báo động. */}
+                <td>{endButton(session, 'btn sm danger-ghost')}</td>
               </tr>
             ))}
           </tbody>
@@ -140,7 +151,7 @@ export function SessionList({
               {t('sessionList.started', { time: formatDateTime(session.createdAt) })}
             </span>
           </div>
-          {endButton(session, 'btn sm danger session-list-end')}
+          {endButton(session, 'btn sm danger-ghost session-list-end')}
         </li>
       ))}
     </ul>

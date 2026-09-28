@@ -155,6 +155,15 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
 - Tìm thiết bị theo cả IP, người sử dụng và bộ phận; tìm nhanh (Ctrl+K) tìm được IP và dải mạng.
 - **Không có khái niệm "mức nhạy cảm"** cho thiết bị/két (chip trên phiếu duyệt break-glass): chủ
   dự án chốt bỏ ngày 28/09/2026. Người duyệt đánh giá rủi ro qua mã · tên · site · loại của đối tượng.
+- **Chữ "Thanh lý" (28/09/2026, chủ dự án chốt):** nhãn TRẠNG THÁI luôn là **"Đã thanh lý"** (kết
+  quả, kể cả khi hệ thống tự chuyển); **"Thanh lý"** chỉ là nhãn HÀNH ĐỘNG (nút bấm) đưa hồ sơ
+  sang trạng thái đó. Áp cho thiết bị, phần mềm, đường truyền và Kho thanh lý — chỗ nào lấy
+  "Thanh lý" làm nhãn trạng thái (kể cả file Excel xuất ra) hay "Đã thanh lý" làm nhãn nút thì sửa
+  theo luật này. Làm rõ chữ trong Q-03/Q-04, không đổi vòng đời.
+- **Phần mềm loại "Khác" có ngày hết hạn (28/09/2026, chủ dự án chốt):** "Khác" chỉ là một loại
+  như mọi loại khác — hồ sơ có ngày hết hạn thì là **nguồn hạn**: hiện ở màn Sắp hết hạn, vào mail
+  nhắc, và đi cùng vòng đời Q-03/Q-13 (Hết hạn → tự Đã thanh lý sau ân hạn). Lý do: trước đây nó
+  bị lượt quét "xử" mà không hề được nhắc.
 
 ### Q-09 · Tài liệu
 

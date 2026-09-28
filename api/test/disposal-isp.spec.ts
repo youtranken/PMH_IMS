@@ -8,6 +8,8 @@ import { CatalogService } from '../src/modules/catalog/catalog.service';
 import type { DevicesApiService } from '../src/modules/devices/devices.api';
 import type { ServiceAccountsApiService } from '../src/modules/service-accounts/service-accounts.api';
 import type { SoftwareService } from '../src/modules/software/software.service';
+import type { SystemConfigService } from '../src/modules/config-sys/system-config.service';
+import type { UsersApiService } from '../src/modules/users/users.api';
 import { createScratchDb, migrationsDir, seedIspProviders, type ScratchDb } from './db';
 
 /**
@@ -64,7 +66,13 @@ describe('Q-10 · đường truyền thanh lý vào kho — tầng DB', () => {
       listRetired: () => Promise.resolve([]),
       listTerminatedIsp: () => api.listTerminatedIsp(),
     } as unknown as SoftwareApiService;
-    const disposal = new DisposalService(devices, software, accounts);
+    const disposal = new DisposalService(
+      devices,
+      software,
+      accounts,
+      {} as UsersApiService,
+      {} as SystemConfigService,
+    );
 
     const items = await disposal.list();
     expect(items).toHaveLength(1);
@@ -76,5 +84,12 @@ describe('Q-10 · đường truyền thanh lý vào kho — tầng DB', () => {
       status: 'terminated',
     });
     expect(items[0].updatedAt).toBeInstanceOf(Date);
+  });
+
+  it('DP-002: ai thanh lý đường truyền đọc từ `isp_line_history` qua cửa software.api', async () => {
+    const [line] = await api.listTerminatedIsp();
+    const events = await api.ispTerminationEvents([line.id]);
+    expect(events.get(line.id)).toMatchObject({ by: actor, auto: false });
+    expect(events.get(line.id)?.at).toBeInstanceOf(Date);
   });
 });

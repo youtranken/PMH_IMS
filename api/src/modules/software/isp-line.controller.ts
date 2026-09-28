@@ -26,6 +26,8 @@ import {
   type IspStatus,
 } from './isp-line.service';
 import { NoStepUp } from '../auth/step-up.decorator';
+import { UsersApiService } from '../users/users.api';
+import { withActorNames } from '../../common/history';
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
 const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
@@ -73,6 +75,7 @@ export class IspLineController {
   constructor(
     private readonly isp: IspLineService,
     private readonly excel: ExcelExportService,
+    private readonly users: UsersApiService,
   ) {}
 
   @Roles('sa', 'admin', 'member')
@@ -85,7 +88,7 @@ export class IspLineController {
       search?: string;
       siteId?: string;
       providerId?: string;
-      status?: IspStatus;
+      status?: string;
       sort?: string;
       dir?: string;
     },
@@ -116,7 +119,7 @@ export class IspLineController {
       search?: string;
       siteId?: string;
       providerId?: string;
-      status?: IspStatus;
+      status?: string;
       sort?: string;
       dir?: string;
     },
@@ -140,10 +143,13 @@ export class IspLineController {
         { header: 'Nhà mạng', width: 22, value: (r) => r.provider },
         { header: 'Băng thông', width: 14, value: (r) => r.bandwidth ?? '' },
         { header: 'IP WAN', width: 18, value: (r) => r.wanIp ?? '' },
+        { header: 'Site', width: 12, value: (r) => r.siteCode ?? '' },
+        { header: 'Thiết bị biên', width: 18, value: (r) => r.deviceCode ?? '' },
         { header: 'Hotline', width: 16, value: (r) => r.hotline ?? '' },
         { header: 'Số hợp đồng', width: 20, value: (r) => r.contractNo ?? '' },
         { header: 'Bắt đầu', width: 14, value: (r) => r.startDate ?? '' },
         { header: 'Trạng thái', width: 16, value: (r) => ISP_STATUS_LABEL[r.status] ?? r.status },
+        { header: 'Ghi chú', width: 30, value: (r) => r.note ?? '' },
       ],
       rows,
     });
@@ -158,8 +164,10 @@ export class IspLineController {
 
   @Roles('sa', 'admin', 'member')
   @Get(':id/history')
-  history(@Param() params: IdParamDto) {
-    return this.isp.history(params.id);
+  async history(@Param() params: IdParamDto) {
+    return withActorNames(await this.isp.history(params.id), (emails) =>
+      this.users.namesByEmails(emails),
+    );
   }
 
   @Roles('sa', 'admin', 'member')
@@ -185,5 +193,5 @@ function actor(req: AuthedRequest): string {
 const ISP_STATUS_LABEL: Record<string, string> = {
   active: 'Đang dùng',
   suspended: 'Tạm ngưng',
-  terminated: 'Thanh lý',
+  terminated: 'Đã thanh lý',
 };

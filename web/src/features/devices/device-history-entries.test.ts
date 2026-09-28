@@ -87,3 +87,36 @@ describe('toHistoryEntries — tab Lịch sử phải ĐỌC ĐƯỢC (FR-007)',
     expect(entry.action).toBe('thao-tac-moi');
   });
 });
+
+describe('toHistoryEntries — câu tự nhiên, không phải khoá thô', () => {
+  it('tạo hồ sơ: không liệt kê "(trống) → …" cho từng ô', () => {
+    const [entry] = toHistoryEntries([
+      row({ action: 'created', changes: { code: { before: null, after: 'SW-01' } } }),
+    ], t);
+    expect(entry.action).toBe('Tạo hồ sơ');
+    expect(entry.detail).toBeNull();
+  });
+
+  it('thêm / xóa cổng nói tên cổng ngay trong câu', () => {
+    const [added, removed] = toHistoryEntries([
+      row({ action: 'port-added', changes: { portLabel: { before: null, after: 'Gi1/0/10' } } }),
+      row({ id: '2', action: 'port-removed', changes: { portLabel: { before: 'WAN1', after: null } } }),
+    ], t);
+    expect(added.action).toBe('Thêm cổng Gi1/0/10');
+    expect(added.detail).toBeNull();
+    expect(removed.action).toBe('Xóa cổng WAN1');
+  });
+
+  it('thanh lý kèm dọn: nói "đã gỡ IP, NAT, license", không phải "cleanup: (trống) → true"', () => {
+    const [entry] = toHistoryEntries([
+      row({
+        action: 'status-changed',
+        changes: {
+          status: { before: 'in_use', after: 'retired' },
+          cleanup: { before: null, after: true },
+        },
+      }),
+    ], t);
+    expect(entry.detail).toBe('trạng thái: Đang dùng → Đã thanh lý; đã gỡ IP, NAT và license của máy');
+  });
+});

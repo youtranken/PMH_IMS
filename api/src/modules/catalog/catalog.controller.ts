@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -20,6 +21,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  isUUID,
   Length,
   Max,
   Min,
@@ -35,7 +37,9 @@ import {
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { CatalogImportService } from './catalog-import.service';
+import { CATALOG_EXPORT_NAME, catalogExportColumns } from './catalog-export';
 import { CATALOG_SORT_DEFAULT, CATALOG_SORT_KEYS, CatalogService } from './catalog.service';
 import { CATALOG_ENTITIES, type CatalogEntity } from './catalog.types';
 import { NoStepUp } from '../auth/step-up.decorator';
@@ -105,6 +109,7 @@ export class CatalogController {
   constructor(
     private readonly catalog: CatalogService,
     private readonly imports: CatalogImportService,
+    private readonly excel: ExcelExportService,
   ) {}
 
   /** Bốn danh sách gọn để đổ ô chọn — dùng ở form thiết bị, không phân trang. */
@@ -126,14 +131,63 @@ export class CatalogController {
   list(
     @Param() params: EntityParamDto,
     @Query()
-    query: { page?: string; limit?: string; search?: string; sort?: string; dir?: string },
+    query: {
+      page?: string;
+      limit?: string;
+      search?: string;
+      sort?: string;
+      dir?: string;
+      active?: string;
+      siteId?: string;
+    },
   ) {
     const sort = parseSortQuery(
       query,
       CATALOG_SORT_KEYS[params.entity],
       CATALOG_SORT_DEFAULT[params.entity],
     );
-    return this.catalog.list(params.entity, parsePageQuery(query), query.search, sort);
+    // `siteId` sai dạng mà đi thẳng vào WHERE là lỗi ép kiểu 22P02 của Postgres → 500 trắng.
+    if (query.siteId && !isUUID(query.siteId)) {
+      throw new BadRequestException({ code: 'BAD_SITE_ID', message: 'Mã site không hợp lệ.' });
+    }
+    return this.catalog.list(params.entity, parsePageQuery(query), query.search, sort, {
+      active: query.active === 'true' ? true : query.active === 'false' ? false : undefined,
+      siteId: params.entity === 'cabinet' ? query.siteId || undefined : undefined,
+    });
+  }
+
+  /**
+   * Danh mục đang xem ra Excel — theo đúng tab, ô tìm, bộ lọc và thứ tự sắp của màn (tờ in dán
+   * phòng máy: nhà cung cấp + điện thoại, hotline nhà mạng). Ai đọc được danh mục thì xuất được;
+   * vẫn ghi nhật ký như mọi đường xuất (FR-028).
+   */
+  @Roles('sa', 'admin', 'member')
+  @Audited('catalog.exported', 'catalog')
+  @Get(':entity/export')
+  async export(
+    @Param() params: EntityParamDto,
+    @Query()
+    query: { search?: string; sort?: string; dir?: string; active?: string; siteId?: string },
+    @Res() res: Response,
+  ) {
+    if (query.siteId && !isUUID(query.siteId)) {
+      throw new BadRequestException({ code: 'BAD_SITE_ID', message: 'Mã site không hợp lệ.' });
+    }
+    const sort = parseSortQuery(
+      query,
+      CATALOG_SORT_KEYS[params.entity],
+      CATALOG_SORT_DEFAULT[params.entity],
+    );
+    const page = await this.catalog.list(params.entity, { page: 1, limit: EXPORT_LIMIT }, query.search, sort, {
+      active: query.active === 'true' ? true : query.active === 'false' ? false : undefined,
+      siteId: params.entity === 'cabinet' ? query.siteId || undefined : undefined,
+    });
+    const buffer = await this.excel.build({
+      sheetName: CATALOG_EXPORT_NAME[params.entity],
+      columns: catalogExportColumns(params.entity),
+      rows: page.items as never[],
+    });
+    sendXlsx(res, buffer, `danh-muc-${CATALOG_EXPORT_NAME[params.entity]}.xlsx`);
   }
 
   @Roles('sa', 'admin', 'member')
@@ -205,6 +259,9 @@ export class CatalogController {
     return this.imports.commit(actor(req), requireXlsx(file));
   }
 }
+
+/** Trần một file xuất danh mục — danh mục là bảng tra cứu vài trăm dòng là cùng. */
+const EXPORT_LIMIT = 5000;
 
 function actor(req: AuthedRequest): string {
   return req.user!.email;

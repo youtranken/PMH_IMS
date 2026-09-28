@@ -1,8 +1,14 @@
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Query, Res } from '@nestjs/common';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
+import type { Response } from 'express';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
+import { sendXlsx } from '../../common/excel/xlsx-http';
+import { dateTimeInTz } from '../../common/today';
 import { Roles } from '../auth/roles.decorator';
-import { AuditQueryService, COUNT_CAP } from './audit-query.service';
+import { SystemConfigService } from '../config-sys/system-config.service';
+import { Audited } from './audited.decorator';
+import { AuditQueryService, COUNT_CAP, type AuditRow } from './audit-query.service';
 import { NoStepUp } from '../auth/step-up.decorator';
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -77,15 +83,15 @@ export class AuditQueryDto {
 @Controller('api/v1/admin/audit')
 @Roles('sa', 'admin')
 export class AuditController {
-  constructor(private readonly audit: AuditQueryService) {}
+  constructor(
+    private readonly audit: AuditQueryService,
+    private readonly excel: ExcelExportService,
+    private readonly config: SystemConfigService,
+  ) {}
 
   @Get()
   list(@Query() q: AuditQueryDto) {
-    if (q.from) assertValidDate(q.from);
-    if (q.to) assertValidDate(q.to);
-    if (q.from && q.to && q.to < q.from) {
-      throw new BadRequestException('to phải ≥ from');
-    }
+    assertRange(q);
     return this.audit.listAudit({
       actor: q.actor,
       action: q.action,
@@ -101,5 +107,72 @@ export class AuditController {
   @Get('actions')
   actions() {
     return this.audit.distinctActions();
+  }
+
+  /**
+   * Nhật ký ra Excel THEO BỘ LỌC đang xem — kiểm toán viên xin "mọi lần xem két trong quý".
+   * Trần `EXPORT_CAP` dòng (mới nhất trước): quá trần thì dòng cuối file nói rõ đã cắt, lọc hẹp
+   * lại mà xuất tiếp. Bản thân việc xuất cũng vào nhật ký (FR-028).
+   */
+  @Audited('audit.exported', 'audit')
+  @Get('export')
+  async export(@Query() q: AuditQueryDto, @Res() res: Response) {
+    assertRange(q);
+    const result = await this.audit.listAudit({
+      actor: q.actor,
+      action: q.action,
+      objectType: q.objectType,
+      objectId: q.objectId,
+      from: q.from,
+      to: q.to,
+      page: 1,
+      pageSize: EXPORT_CAP,
+    });
+    const tz = await this.config.getString('appTimezone');
+    const rows: (AuditRow | { note: string })[] = [...result.items];
+    if (result.total > result.items.length || result.totalCapped) {
+      rows.push({
+        note: `Đã cắt ở ${result.items.length} dòng mới nhất — lọc hẹp khoảng ngày rồi xuất tiếp.`,
+      });
+    }
+    const buffer = await this.excel.build({
+      sheetName: 'Nhat ky',
+      columns: [
+        {
+          header: 'Thời điểm',
+          width: 18,
+          value: (r) => ('note' in r ? r.note : dateTimeInTz(new Date(r.createdAt), tz)),
+        },
+        { header: 'Người thao tác', width: 26, value: (r) => ('note' in r ? '' : (r.actorName ?? r.actor)) },
+        { header: 'Email', width: 30, value: (r) => ('note' in r ? '' : r.actor) },
+        { header: 'Hành động (mã)', width: 30, value: (r) => ('note' in r ? '' : r.action) },
+        { header: 'Loại đối tượng', width: 16, value: (r) => ('note' in r ? '' : (r.objectType ?? '')) },
+        {
+          header: 'Đối tượng',
+          width: 32,
+          value: (r) => ('note' in r ? '' : (r.objectLabel ?? r.objectId ?? '')),
+        },
+        { header: 'Mã đối tượng', width: 38, value: (r) => ('note' in r ? '' : (r.objectId ?? '')) },
+        { header: 'IP', width: 16, value: (r) => ('note' in r ? '' : (r.ip ?? '')) },
+        {
+          header: 'Chi tiết',
+          width: 60,
+          value: (r) => ('note' in r || r.detail == null ? '' : JSON.stringify(r.detail)),
+        },
+      ],
+      rows,
+    });
+    sendXlsx(res, buffer, 'nhat-ky.xlsx');
+  }
+}
+
+/** Trần một file xuất nhật ký — đủ cho một quý của đội IT nhỏ, không kéo sập API. */
+const EXPORT_CAP = 5000;
+
+function assertRange(q: AuditQueryDto): void {
+  if (q.from) assertValidDate(q.from);
+  if (q.to) assertValidDate(q.to);
+  if (q.from && q.to && q.to < q.from) {
+    throw new BadRequestException('to phải ≥ from');
   }
 }

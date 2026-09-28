@@ -6,15 +6,23 @@ import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { formatDateTime, orDash } from '@/lib/format';
 import { CopyButton } from '@/ui/copy-button';
-import { DataTable } from '@/ui/data-table';
+import { DataTable, type MobileCard } from '@/ui/data-table';
 import { DatePicker } from '@/ui/date-picker';
+import { Dialog } from '@/ui/dialog';
+import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
-import { auditActionLabel, auditActionTone, objectTypeLabel } from './audit-actions';
+import {
+  OBJECT_TYPE_KEY,
+  auditActionLabel,
+  auditActionTone,
+  objectTypeLabel,
+} from './audit-actions';
+import { detailChanges } from './audit-detail';
 
 export interface AuditRow {
   id: string;
@@ -44,23 +52,39 @@ interface AuditPage {
 interface Filters extends Record<string, string> {
   actor: string;
   action: string;
+  objectType: string;
   objectId: string;
   from: string;
   to: string;
 }
 
-const EMPTY_FILTERS: Filters = { actor: '', action: '', objectId: '', from: '', to: '' };
+const EMPTY_FILTERS: Filters = {
+  actor: '',
+  action: '',
+  objectType: '',
+  objectId: '',
+  from: '',
+  to: '',
+};
 
 const DEFAULT_LIMIT = 20;
 
-/** Tham số gửi API — tên khoá theo `AuditQueryDto` (`pageSize`, không phải `limit`). */
-export function auditQuery(page: number, limit: number, filters: Filters): string {
-  const params = new URLSearchParams({ page: String(page), pageSize: String(limit) });
+/** Tham số bộ lọc gửi API — tên khoá theo `AuditQueryDto`. Dùng chung cho danh sách và file xuất. */
+function filterParams(filters: Filters): URLSearchParams {
+  const params = new URLSearchParams();
   if (filters.actor.trim()) params.set('actor', filters.actor.trim());
   if (filters.action) params.set('action', filters.action);
+  if (filters.objectType) params.set('objectType', filters.objectType);
   if (filters.objectId.trim()) params.set('objectId', filters.objectId.trim());
   if (filters.from) params.set('from', filters.from);
   if (filters.to) params.set('to', filters.to);
+  return params;
+}
+
+/** Tham số gửi API — `pageSize`, không phải `limit`. */
+export function auditQuery(page: number, limit: number, filters: Filters): string {
+  const params = new URLSearchParams({ page: String(page), pageSize: String(limit) });
+  filterParams(filters).forEach((value, key) => params.set(key, value));
   return params.toString();
 }
 
@@ -85,6 +109,7 @@ export function AuditLogScreen() {
     searchKey: 'actor',
   });
   const { page, limit, filters } = url;
+  const [open, setOpen] = useState<AuditRow | null>(null);
 
   /*
    * Ô mã đối tượng ghi lên URL khi rời ô hoặc Enter, không theo từng phím: ô tìm có debounce
@@ -98,8 +123,6 @@ export function AuditLogScreen() {
 
   const list = useQuery({
     queryKey: ['audit', page, limit, filters],
-    // Đổi trang/từ khoá thì GIỮ bảng cũ tới khi có dữ liệu mới: vẽ lại Loading là gỡ cả bảng,
-    // mất dòng đang bung/menu đang mở và bảng nháy trắng sau mỗi lần gõ tìm.
     placeholderData: keepPreviousData,
     queryFn: () =>
       apiFetch<AuditPage>(`/api/v1/admin/audit?${auditQuery(page, limit, filters)}`),
@@ -118,7 +141,18 @@ export function AuditLogScreen() {
         id: 'createdAt',
         header: t('audit.time'),
         enableSorting: false,
-        cell: ({ row }) => <span className="mono">{formatDateTime(row.original.createdAt)}</span>,
+        /* Nút thật ở ô đầu: bấm cả dòng là tiện ích chuột, bàn phím / trình đọc màn hình mở
+           chi tiết qua nút này (hàng có control bên trong nên `<tr>` không mang role=button). */
+        cell: ({ row }) => (
+          <button
+            type="button"
+            className="ghost sm mono audit-open"
+            aria-label={t('audit.openDetail', { time: formatDateTime(row.original.createdAt) })}
+            onClick={() => setOpen(row.original)}
+          >
+            {formatDateTime(row.original.createdAt)}
+          </button>
+        ),
       },
       {
         id: 'actor',
@@ -166,19 +200,41 @@ export function AuditLogScreen() {
     [t],
   );
 
+  /* Điện thoại: mỗi sự kiện hai dòng — "giờ · việc", rồi "ai → cái gì"; chạm là mở chi tiết. */
+  const mobileCard: MobileCard<AuditRow> = {
+    title: (row) => `${formatDateTime(row.createdAt)} · ${auditActionLabel(row.action, t)}`,
+    badge: (row) => {
+      const tone = auditActionTone(row.action);
+      return tone === 'danger' ? <span className="badge danger">{t('audit.securityEvent')}</span> : null;
+    },
+    subtitle: (row) =>
+      `${row.actorName ?? row.actor} → ${[objectTypeLabel(row.objectType, t), row.objectLabel]
+        .filter(Boolean)
+        .join(' · ') || '—'}`,
+  };
+
+  const exportUrl = `/api/v1/admin/audit/export?${filterParams(filters).toString()}`;
+
   return (
     <>
-      <PageHeader title={t('audit.title')} subtitle={t('audit.subtitle')} />
+      <PageHeader
+        title={t('audit.title')}
+        subtitle={t('audit.subtitle')}
+        actions={<ExportXlsxButton url={exportUrl} fileName="nhat-ky.xlsx" />}
+      />
 
       <FilterBar
         search={url.searchInput}
         onSearchChange={url.setSearchInput}
         searchPlaceholder={t('audit.searchActor')}
+        activeCount={url.activeCount}
+        onClear={url.clearFilters}
       >
         <Select
           value={filters.action}
           ariaLabel={t('audit.action')}
           placeholder={t('audit.allActions')}
+          searchable
           options={[
             { value: '', label: t('audit.allActions') },
             ...(actions.data ?? [])
@@ -188,8 +244,37 @@ export function AuditLogScreen() {
           failed={actions.isError}
           onChange={(value) => url.setFilter('action', value)}
         />
+        <Select
+          value={filters.objectType}
+          ariaLabel={t('audit.objectTypeFilter')}
+          placeholder={t('audit.allObjectTypes')}
+          options={[
+            { value: '', label: t('audit.allObjectTypes') },
+            ...Object.keys(OBJECT_TYPE_KEY)
+              .map((type) => ({ value: type, label: objectTypeLabel(type, t) ?? type }))
+              .sort((a, b) => a.label.localeCompare(b.label, 'vi')),
+          ]}
+          onChange={(value) => url.setFilter('objectType', value)}
+        />
+        {/* Khoảng ngày là MỘT cụm hai ô cạnh nhau — mỗi ô một hàng rộng cả thanh là phí chỗ. */}
+        <div className="filter-range" role="group" aria-label={t('audit.dateRange')}>
+          <DatePicker
+            value={filters.from}
+            ariaLabel={t('audit.from')}
+            placeholder={t('audit.from')}
+            max={filters.to || undefined}
+            onChange={(value) => url.setFilter('from', value)}
+          />
+          <DatePicker
+            value={filters.to}
+            ariaLabel={t('audit.to')}
+            placeholder={t('audit.to')}
+            min={filters.from || undefined}
+            onChange={(value) => url.setFilter('to', value)}
+          />
+        </div>
         <input
-          className="inp"
+          className="inp filter-object-id"
           type="search"
           value={objectDraft}
           aria-label={t('audit.objectId')}
@@ -199,20 +284,6 @@ export function AuditLogScreen() {
           onKeyDown={(event) => {
             if (event.key === 'Enter') commitObject();
           }}
-        />
-        <DatePicker
-          value={filters.from}
-          ariaLabel={t('audit.from')}
-          placeholder={t('audit.from')}
-          max={filters.to || undefined}
-          onChange={(value) => url.setFilter('from', value)}
-        />
-        <DatePicker
-          value={filters.to}
-          ariaLabel={t('audit.to')}
-          placeholder={t('audit.to')}
-          min={filters.from || undefined}
-          onChange={(value) => url.setFilter('to', value)}
         />
       </FilterBar>
 
@@ -224,6 +295,13 @@ export function AuditLogScreen() {
         <EmptyState
           title={url.isFiltered ? t('audit.emptyFiltered') : t('audit.empty')}
           hint={url.isFiltered ? t('audit.emptyFilteredHint') : t('audit.emptyHint')}
+          action={
+            url.isFiltered ? (
+              <button type="button" className="btn" onClick={url.clearFilters}>
+                {t('audit.clearFilters')}
+              </button>
+            ) : undefined
+          }
         />
       ) : (
         <>
@@ -232,14 +310,12 @@ export function AuditLogScreen() {
             columns={columns}
             emptyText={url.isFiltered ? t('audit.emptyFiltered') : t('audit.empty')}
             stackOnMobile
-            canExpand={(row) => detailLines(row.detail).length > 0}
-            renderExpanded={(row) => (
-              <div className="mono">
-                {detailLines(row.detail).map((line) => (
-                  <div key={line}>{line}</div>
-                ))}
-              </div>
-            )}
+            mobileCard={mobileCard}
+            /* Cả dòng bấm được (Enter/Space) để mở chi tiết — mũi tên 20px ở cột đầu là vùng bấm
+               quá nhỏ, và dòng không có detail vẫn có thông tin để xem. */
+            onRowClick={(row) => setOpen(row)}
+            /* Sự kiện an ninh thất bại (gõ sai, bị từ chối, bị khóa) có vạch đỏ ở mép trái. */
+            rowClassName={(row) => (auditActionTone(row.action) === 'danger' ? 'row-alert' : '')}
           />
           <Pagination
             page={page}
@@ -247,11 +323,111 @@ export function AuditLogScreen() {
             onLimitChange={url.setLimit}
             total={list.data?.total ?? 0}
             onPageChange={url.setPage}
+            compact
           />
           {list.data?.totalCapped ? <p className="muted">{t('audit.capped')}</p> : null}
         </>
       )}
+
+      {open ? <AuditDetailDialog row={open} onClose={() => setOpen(null)} /> : null}
     </>
+  );
+}
+
+/**
+ * Chi tiết một dòng nhật ký: câu người đọc hiểu được, mốc đầy đủ, IP, bảng Trường · Trước · Sau
+ * (khi `detail` có dạng đổi-từ-gì-sang-gì), và JSON gốc gập lại kèm nút chép — thứ để dán cho
+ * đội phát triển.
+ */
+function AuditDetailDialog({ row, onClose }: { row: AuditRow; onClose: () => void }) {
+  const { t } = useTranslation();
+  const { changes, rest } = detailChanges(row.detail);
+  const shown = (value: unknown) =>
+    value === null || value === undefined || value === ''
+      ? t('history.blank')
+      : typeof value === 'string'
+        ? value
+        : JSON.stringify(value);
+  const fieldLabel = (field: string) => t(`audit.field_${field}`, { defaultValue: field });
+  const raw = row.detail === null || row.detail === undefined ? null : JSON.stringify(row.detail, null, 2);
+
+  return (
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={640}
+      initialFocus="title"
+      title={`${row.actorName ?? row.actor} · ${auditActionLabel(row.action, t)}`}
+      footer={
+        <button type="button" className="btn" onClick={onClose}>
+          {t('common.close')}
+        </button>
+      }
+    >
+      <dl className="audit-detail">
+        <dt>{t('audit.time')}</dt>
+        <dd>
+          {formatDateTime(row.createdAt)} <span className="muted">{t('audit.timezoneNote')}</span>
+        </dd>
+        <dt>{t('audit.actor')}</dt>
+        <dd>
+          {row.actorName ?? row.actor}
+          {row.actorName ? <span className="cell-sub">{row.actor}</span> : null}
+        </dd>
+        <dt>{t('audit.action')}</dt>
+        <dd>
+          {auditActionLabel(row.action, t)} <span className="cell-sub mono">{row.action}</span>
+        </dd>
+        <dt>{t('audit.object')}</dt>
+        <dd>
+          <ObjectCell row={row} />
+        </dd>
+        <dt>{t('audit.ip')}</dt>
+        <dd className="mono">{orDash(row.ip)}</dd>
+      </dl>
+
+      {changes.length > 0 ? (
+        <div className="table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>{t('audit.field')}</th>
+                <th>{t('audit.before')}</th>
+                <th>{t('audit.after')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {changes.map((change) => (
+                <tr key={change.field}>
+                  <td>{fieldLabel(change.field)}</td>
+                  <td>{shown(change.before)}</td>
+                  <td>{shown(change.after)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
+
+      {rest.length > 0 ? (
+        <dl className="audit-detail">
+          {rest.map(([key, value]) => (
+            <div key={key || 'value'} className="audit-detail-row">
+              <dt>{key ? fieldLabel(key) : t('audit.detail')}</dt>
+              <dd>{shown(value)}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+
+      {raw ? (
+        <details className="audit-raw">
+          <summary>{t('audit.rawJson')}</summary>
+          <pre className="mono">{raw}</pre>
+          <CopyButton value={raw} label={t('audit.copyJson')} />
+        </details>
+      ) : null}
+    </Dialog>
   );
 }
 
@@ -271,11 +447,7 @@ function ObjectCell({ row }: { row: AuditRow }) {
         <>
           {' · '}
           {row.objectPath ? (
-            <Link
-              to={row.objectPath}
-              title={row.objectId}
-              aria-label={t('audit.openObject', { name })}
-            >
+            <Link to={row.objectPath} title={row.objectId} aria-label={t('audit.openObject', { name })}>
               {name}
             </Link>
           ) : (
