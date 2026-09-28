@@ -3131,17 +3131,10 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(page.getByRole('row')).toHaveCount(4);
     expect(
       await columnTexts(page),
-      'Bảng phần mềm phải có đúng 8 cột này, đúng thứ tự này',
-    ).toEqual([
-      'Mã hồ sơ',
-      'Tên hồ sơ',
-      'Loại',
-      'Nhà cung cấp',
-      'Ghế',
-      'Tình trạng hạn',
-      'Trạng thái',
-      'Thao tác',
-    ]);
+      /* Loại là dòng phụ dưới tên; "Tình trạng" gộp hạn + trạng thái Q-03 — để bảng vừa
+         1280px với cột Thao tác trong khung. */
+      'Bảng phần mềm phải có đúng 6 cột này, đúng thứ tự này',
+    ).toEqual(['Mã hồ sơ', 'Tên hồ sơ', 'Nhà cung cấp', 'Ghế', 'Tình trạng', 'Thao tác']);
 
     // ===== SẮP XẾP: aria-sort phải lật, VÀ thứ tự dòng phải đảo theo =====
     const sortByCode = page.getByRole('button', { name: 'Sắp xếp theo Mã hồ sơ' });

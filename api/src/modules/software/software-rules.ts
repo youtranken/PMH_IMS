@@ -42,6 +42,24 @@ export function effectiveSoftwareStatus(
   return endDate !== null && endDate < today ? 'expired_ok' : 'active';
 }
 
+/**
+ * Ngày lượt quét sẽ tự Thanh lý hồ sơ Hết hạn (Q-13), hoặc `null` khi không có chuyện đó.
+ *
+ * Lượt quét thanh lý khi `end_date < today - grace`, tức từ ngày `end + grace + 1`. Hàm này
+ * phải khớp đúng điều kiện ấy: màn hình đếm ngược tới đây, lệch một ngày là màn hứa sai.
+ * `graceDays <= 0` nghĩa là tắt tự thanh lý (migration 0076).
+ */
+export function autoRetireOn(
+  status: SoftwareStatus,
+  endDate: string | null,
+  graceDays: number,
+): string | null {
+  if (status !== 'expired_ok' || endDate === null || graceDays <= 0) return null;
+  const date = new Date(`${endDate}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + graceDays + 1);
+  return date.toISOString().slice(0, 10);
+}
+
 export interface SoftwareInputShape {
   code?: string;
   name?: string;

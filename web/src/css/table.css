@@ -462,6 +462,12 @@ button.link.session-toggle {
   color: var(--ink-3);
   font-weight: 400;
 }
+/* Dòng phụ báo việc cần làm ("Hết ghế", "+1 vượt"). `--danger-strong` vì chữ nhỏ trên nền
+   sáng dùng `--danger` thường thì tương phản hụt. */
+.cell-sub.is-danger {
+  color: var(--danger-strong);
+  font-weight: 600;
+}
 
 /* --- Cột dính khi bảng cuộn ngang (DataTable `stickyActions` / meta.sticky) ----------
  * Bảng rộng hơn khung thì cột thao tác nằm ngoài tầm nhìn: nút chính ("Xem") trông như không

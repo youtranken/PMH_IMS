@@ -28,6 +28,13 @@ export interface SoftwareRow {
   status: SoftwareStatus;
   createdAt: string;
   updatedAt: string;
+  /** Ngày hệ thống sẽ tự Thanh lý hồ sơ Hết hạn (Q-13); server tính từ số ngày ân hạn. */
+  autoRetireOn: string | null;
+}
+
+/** Trang chi tiết: thêm hồ sơ Thanh lý lúc nào, do ai (`by = 'system'` khi tự động). */
+export interface SoftwareDetailRow extends SoftwareRow {
+  retirement: { at: string; by: string; auto: boolean } | null;
 }
 
 /**
@@ -92,9 +99,13 @@ export const STATUS_KEY: Record<SoftwareStatus, string> = {
   retired: 'software.statusRetired',
 };
 
+/**
+ * Luật màu: xanh = ổn, đỏ = cần làm gì đó, xám = đã ra khỏi vòng đời. Hết hạn vẫn đang cài
+ * trên máy và đang trong ân hạn trước khi tự thanh lý (Q-13), nên nó đỏ, không xám như Thanh lý.
+ */
 export const STATUS_TONE: Record<SoftwareStatus, string> = {
   active: 'ok',
-  expired_ok: 'muted',
+  expired_ok: 'danger',
   retired: 'muted',
 };
 

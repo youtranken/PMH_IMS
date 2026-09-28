@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
+import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
@@ -9,10 +10,8 @@ import type { Me } from '@/lib/me';
 import { DataTable } from '@/ui/data-table';
 import { useDispose } from '@/ui/dispose-button';
 import { RowActions } from '@/ui/row-actions';
-import { UsageBar } from '@/ui/usage-bar';
 import { LicenseSeatsExpand } from './license-seats-expand';
 import { sortQuery } from '@/lib/sort-query';
-import { ExpiryBadge } from '@/ui/expiry-badge';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
@@ -23,12 +22,14 @@ import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { useToast } from '@/ui/toast';
 import { AssignDialog } from './license-assignments-panel';
 import { SoftwareForm } from './software-form';
+import { activeSeatCodes, softwareDisposeMessage } from './software-dispose-message';
+import { standingOf } from './software-standing';
+import { SeatUsage, SoftwareStanding } from './software-standing-cell';
 import {
   KIND_KEY,
   SOFTWARE_KINDS,
   SOFTWARE_STATUSES,
   STATUS_KEY,
-  STATUS_TONE,
   seatLabel,
   supportsSeats,
   type SoftwareKind,
@@ -121,14 +122,16 @@ export function SoftwareScreen({ me }: { me: Me }) {
         ),
       },
       {
+        /* Loại là dòng phụ dưới tên, không phải một cột riêng: bảng phải vừa 1280px với cột
+           Thao tác còn trong khung. Lọc theo loại vẫn có ở thanh lọc. */
         accessorKey: 'name',
         header: t('software.name'),
-        cell: ({ row }) => row.original.name,
-      },
-      {
-        accessorKey: 'kind',
-        header: t('software.kind'),
-        cell: ({ row }) => t(KIND_KEY[row.original.kind]),
+        cell: ({ row }) => (
+          <>
+            {row.original.name}
+            <span className="cell-sub">{t(KIND_KEY[row.original.kind])}</span>
+          </>
+        ),
       },
       {
         id: 'vendorName',
@@ -138,49 +141,14 @@ export function SoftwareScreen({ me }: { me: Me }) {
       {
         id: 'seats',
         header: t('software.seats'),
-        cell: ({ row }) => {
-          const item = row.original;
-          // Thanh đo dùng chung (AD-15) — `SHARED-REGISTRY` ghi nó dành cho "dải IP, seat
-          // license" ngay từ đầu, nhưng phần seat chưa bao giờ được nối. Con số trần "3/10"
-          // bắt người đọc tự chia; thanh đo cho biết "gần đầy chưa" trong một cái liếc.
-          if (!supportsSeats(item.kind) || item.seatTotal === null) {
-            return <span className="mono">{seatLabel(item)}</span>;
-          }
-          return (
-            <UsageBar
-              percent={item.seatTotal === 0 ? 100 : (item.seatUsed / item.seatTotal) * 100}
-              label={seatLabel(item)}
-              ariaLabel={t('software.seats')}
-            />
-          );
-        },
+        cell: ({ row }) => <SeatUsage item={row.original} />,
       },
       {
+        /* MỘT cột "Tình trạng" thay cho "Tình trạng hạn" + "Trạng thái" — xem
+           `software-standing.ts`. Id `endDate` để bấm tiêu đề là sắp theo hạn. */
         accessorKey: 'endDate',
-        header: t('software.expiry'),
-        cell: ({ row }) =>
-          row.original.licenseModel === 'perpetual' ? (
-            // Mua đứt: nói thẳng "Vĩnh viễn". Để badge hạn ở đây thì hoặc hiện "Không có
-            // hạn" (nghe như thiếu dữ liệu), hoặc trống trơn — cả hai đều làm người đọc
-            // dừng lại tự hỏi, trong khi đây là trạng thái hoàn toàn bình thường.
-            <span className="badge ok plain">{t('software.perpetual')}</span>
-          ) : (
-            // AD-15: luật "sắp hết hạn" chỉ có một, ở lib/expiry.ts. `notCounted` để hồ sơ đã
-            // thanh lý thôi kêu "Quá hạn N ngày" trong khi `findExpiringBetween` đã loại nó ra.
-            <ExpiryBadge
-              end={row.original.endDate}
-              notCounted={row.original.status === 'retired'}
-            />
-          ),
-      },
-      {
-        accessorKey: 'status',
-        header: t('software.status'),
-        cell: ({ row }) => (
-          <span className={`badge ${STATUS_TONE[row.original.status]}`}>
-            {t(STATUS_KEY[row.original.status])}
-          </span>
-        ),
+        header: t('software.standing'),
+        cell: ({ row }) => <SoftwareStanding item={row.original} />,
       },
       {
         id: 'actions',
@@ -270,6 +238,25 @@ export function SoftwareScreen({ me }: { me: Me }) {
             columns={columns}
             emptyText={url.isFiltered ? t('software.emptyFiltered') : t('software.empty')}
             stackOnMobile
+            stickyActions
+            /* ≤600px: thẻ 3 dòng để quét "cái gì sắp hết hạn" trên điện thoại. Thẻ không bung
+               ghế — chạm thẻ mở chi tiết, ghế nằm ở tab Máy đang dùng. */
+            mobileCard={{
+              title: (item) => item.code,
+              href: (item) => PATHS.softwareItem(item.id),
+              badge: (item) => <SoftwareStanding item={item} compact />,
+              actions: (item) => (
+                <SoftwareRowActions
+                  item={item}
+                  csrfToken={me.csrfToken}
+                  onEdit={setEditing}
+                  onAssign={setAssigning}
+                  onDone={refresh}
+                />
+              ),
+              subtitle: (item) => item.name,
+              meta: (item) => cardMeta(item, t),
+            }}
             /* Bung dòng ra là thấy MÁY NÀO đang dùng key (AC 3.2 + nếp QLTS, AD-12). Chỉ
                license mới có seat, và chỉ hiện mũi tên khi thật sự có máy đang dùng — mũi
                tên bấm ra rỗng là một kiểu hứa hão khác. */
@@ -371,7 +358,13 @@ function SoftwareRowActions({
     url: `/api/v1/software/${item.id}`,
     body: { status: 'retired' },
     label: t('disposal.dispose'),
-    confirmMessage: t('disposal.confirmSoftware', { code: item.code }),
+    confirmMessage: softwareDisposeMessage(t, item.code, item.seatUsed, null),
+    // Mã máy chỉ đọc khi người dùng thật sự bấm thanh lý — không đọc sẵn cho cả trang.
+    resolveMessage:
+      item.seatUsed > 0
+        ? async () =>
+            softwareDisposeMessage(t, item.code, item.seatUsed, await activeSeatCodes(item.id))
+        : undefined,
     csrfToken,
     onDone,
   });
@@ -410,6 +403,23 @@ function SoftwareRowActions({
       />
     </div>
   );
+}
+
+/** Dòng 3 của thẻ điện thoại: "License phần mềm · 6/10 ghế · Microsoft VN · quá 3 ngày". */
+function cardMeta(item: SoftwareRow, t: TFunction): string {
+  const standing = standingOf(item);
+  return [
+    t(KIND_KEY[item.kind]),
+    supportsSeats(item.kind) && item.seatTotal !== null
+      ? `${seatLabel(item)} ${t('software.seats').toLowerCase()}`
+      : null,
+    item.vendorName,
+    standing.kind === 'expired' && standing.retireInDays !== null
+      ? t('software.autoRetireIn', { count: standing.retireInDays })
+      : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 function buildQuery(page: number, limit: number, filters: Filters, sorting: SortingState): string {

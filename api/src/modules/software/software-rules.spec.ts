@@ -1,4 +1,6 @@
+import { addDays } from '../../common/today';
 import {
+  autoRetireOn,
   effectiveSoftwareStatus,
   requiresEndDate,
   seatConflicts,
@@ -257,5 +259,30 @@ describe('seatConflicts — sửa hồ sơ khi đang có ghế gán', () => {
     const errors = seatConflicts(next, seats);
     expect(errors).toHaveLength(count);
     for (const error of errors) expect(error).toMatch(/ghế/);
+  });
+});
+
+/**
+ * Q-13 — ngày lượt quét sẽ tự Thanh lý. Phải khớp đúng điều kiện SQL của `syncExpiryStatuses`
+ * (`end_date < today - grace`): màn hình đếm ngược tới ngày này, lệch một ngày là màn hứa sai.
+ */
+describe('autoRetireOn — ngày hệ thống sẽ tự thanh lý', () => {
+  it.each([
+    ['Hết hạn, ân hạn 30', 'expired_ok', '2026-09-01', 30, '2026-10-02'],
+    ['Hết hạn, ân hạn 1', 'expired_ok', '2026-09-01', 1, '2026-09-03'],
+    ['ân hạn 0 = tắt tự thanh lý', 'expired_ok', '2026-09-01', 0, null],
+    ['Đang dùng thì chưa có ngày', 'active', '2026-09-01', 30, null],
+    ['Đã thanh lý thì thôi', 'retired', '2026-09-01', 30, null],
+    ['không có hạn', 'expired_ok', null, 30, null],
+  ] as const)('%s', (_name, status, endDate, grace, expected) => {
+    expect(autoRetireOn(status, endDate, grace)).toBe(expected);
+  });
+
+  it('khớp điều kiện của lượt quét: ngày trước đó chưa thanh lý, đúng ngày đó thì thanh lý', () => {
+    const end = '2026-09-01';
+    const on = autoRetireOn('expired_ok', end, 30)!;
+    const sweepRetires = (today: string) => end < addDays(today, -30);
+    expect(sweepRetires(addDays(on, -1))).toBe(false);
+    expect(sweepRetires(on)).toBe(true);
   });
 });

@@ -56,6 +56,11 @@ interface ExpiryResponse {
    * cùng một màn hình, và không bài kiểm nào bắt được vì mỗi bên tự nhất quán với chính nó.
    */
   thresholds: { criticalDays: number; warningDays: number };
+  /**
+   * Nguồn hạn đã LỖI trong lượt này — `items`, `total` và `summary` thiếu phần của chúng.
+   * Màn phải nói ra (EX-002), không thì con số thiếu đọc y như con số đủ.
+   */
+  failedKinds?: string[];
 }
 
 /** Cửa sổ nhìn tới — mấy mốc người ta thật sự dùng, không cho gõ số tùy ý cho rối. */
@@ -154,6 +159,10 @@ export function ExpiryScreen({ me }: { me: Me }) {
   );
 
   const summary = expiry.data?.summary;
+  const failedLabels = (expiry.data?.failedKinds ?? []).map(kindLabel).join(', ');
+  const incomplete = failedLabels
+    ? t('expiry.kpiIncomplete', { kinds: failedLabels })
+    : undefined;
 
   /*
    * Ba nhóm KHÔNG phủ kín bảng, và đó là đúng: dòng còn xa hơn ngưỡng "sắp tới" không thuộc
@@ -271,13 +280,28 @@ export function ExpiryScreen({ me }: { me: Me }) {
         không làm gì được với nó — vẫn phải tự dò trong bảng 30 dòng xem cái nào quá hạn.
         Giờ bấm một ô là bảng thu về đúng nhóm ấy; bấm lại là bỏ lọc.
       */}
+      {failedLabels ? (
+        <div className="alert warn" role="status">
+          {t('expiry.failedKinds', { kinds: failedLabels })}{' '}
+          <button
+            type="button"
+            className="btn sm"
+            disabled={expiry.isFetching}
+            onClick={() => void expiry.refetch()}
+          >
+            {t('app.retry')}
+          </button>
+        </div>
+      ) : null}
+
       {summary ? (
-        <KpiStrip>
+        <KpiStrip dense>
           <KpiTile
             value={summary.expired}
             label={t('expiry.expired')}
             tone="danger"
             active={state === 'expired'}
+            incomplete={incomplete}
             onClick={() => setState(state === 'expired' ? '' : 'expired')}
           />
           <KpiTile
@@ -285,6 +309,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
             label={t('expiry.critical', { days: nguong.criticalDays })}
             tone="danger"
             active={state === 'critical'}
+            incomplete={incomplete}
             onClick={() => setState(state === 'critical' ? '' : 'critical')}
           />
           <KpiTile
@@ -292,6 +317,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
             label={t('expiry.warning')}
             tone="warn"
             active={state === 'warning'}
+            incomplete={incomplete}
             onClick={() => setState(state === 'warning' ? '' : 'warning')}
           />
         </KpiStrip>
@@ -363,6 +389,20 @@ export function ExpiryScreen({ me }: { me: Me }) {
           columns={columns}
           emptyText={t('expiry.empty')}
           stackOnMobile
+          /* ≤600px: thẻ 2 dòng — mục + badge ngày, rồi "loại · ngày hết hạn" và nút Gia hạn
+             nhỏ nếu gia hạn được tại đây. */
+          mobileCard={{
+            title: (row) => row.label,
+            href: (row) => row.link,
+            badge: (row) => <ExpiryBadge end={row.end} thresholds={nguong} />,
+            meta: (row) => `${kindLabel(row.kind)} · ${formatDate(row.end)}`,
+            aside: (row) =>
+              row.canRenew ? (
+                <button type="button" className="btn sm" onClick={() => setRenewing(row)}>
+                  {t('expiry.renew')}
+                </button>
+              ) : null,
+          }}
           /*
            * KHÔNG `initialSort` nữa, và các cột KHÔNG cho bấm sắp (N-01, vá 21/09).
            *
