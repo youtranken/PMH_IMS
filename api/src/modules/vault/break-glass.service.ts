@@ -81,7 +81,7 @@ export interface BreakGlassView extends ApprovalRecord {
 }
 
 /** Đường tới két của từng loại hồ sơ — đích của nút "Mở két" trong thư báo được duyệt. */
-const VAULT_TAB_PATH: Record<SecretOwnerType, (id: string) => string> = {
+export const VAULT_TAB_PATH: Record<SecretOwnerType, (id: string) => string> = {
   device: (id) => `${UI_PATHS.device(id)}?tab=vault`,
   software: (id) => `${UI_PATHS.software(id)}?tab=vault`,
   isp: (id) => `${UI_PATHS.ispLine(id)}?tab=vault`,

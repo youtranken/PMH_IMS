@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { formatDateTime, orDash } from '@/lib/format';
+import { CopyButton } from '@/ui/copy-button';
 import { DataTable } from '@/ui/data-table';
 import { DatePicker } from '@/ui/date-picker';
 import { FilterBar } from '@/ui/filter-bar';
@@ -12,6 +14,7 @@ import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
+import { auditActionLabel, auditActionTone, objectTypeLabel } from './audit-actions';
 
 export interface AuditRow {
   id: string;
@@ -20,6 +23,9 @@ export interface AuditRow {
   action: string;
   objectType: string | null;
   objectId: string | null;
+  /** Nhãn do module chủ sở hữu gọi tên (email, mã thiết bị…); `null` = chỉ còn UUID. */
+  objectLabel?: string | null;
+  objectPath?: string | null;
   ip: string | null;
   detail: unknown;
   createdAt: string;
@@ -128,20 +134,24 @@ export function AuditLogScreen() {
         id: 'action',
         header: t('audit.action'),
         enableSorting: false,
-        cell: ({ row }) => <span className="mono">{row.original.action}</span>,
+        /* Nhãn tiếng Việt trước, mã ở dòng phụ: mã vẫn là thứ bộ lọc gửi đi và thứ người
+           ta dán vào câu hỏi cho đội phát triển, nên không được giấu hẳn. */
+        cell: ({ row }) => {
+          const tone = auditActionTone(row.original.action);
+          const label = auditActionLabel(row.original.action, t);
+          return (
+            <>
+              {tone ? <span className={`badge ${tone}`}>{label}</span> : label}
+              <span className="cell-sub mono">{row.original.action}</span>
+            </>
+          );
+        },
       },
       {
         id: 'object',
         header: t('audit.object'),
         enableSorting: false,
-        cell: ({ row }) => (
-          <>
-            {orDash(row.original.objectType)}
-            {row.original.objectId ? (
-              <span className="cell-sub mono">{row.original.objectId}</span>
-            ) : null}
-          </>
-        ),
+        cell: ({ row }) => <ObjectCell row={row.original} />,
       },
       {
         id: 'ip',
@@ -168,7 +178,9 @@ export function AuditLogScreen() {
           placeholder={t('audit.allActions')}
           options={[
             { value: '', label: t('audit.allActions') },
-            ...(actions.data ?? []).map((action) => ({ value: action, label: action })),
+            ...(actions.data ?? [])
+              .map((action) => ({ value: action, label: auditActionLabel(action, t) }))
+              .sort((a, b) => a.label.localeCompare(b.label, 'vi')),
           ]}
           failed={actions.isError}
           onChange={(value) => url.setFilter('action', value)}
@@ -236,6 +248,42 @@ export function AuditLogScreen() {
           {list.data?.totalCapped ? <p className="muted">{t('audit.capped')}</p> : null}
         </>
       )}
+    </>
+  );
+}
+
+/**
+ * "Tài khoản · nguyen.a@pmh.com.vn" kèm link tới hồ sơ, thay cho "user c91a9a41-…". UUID vẫn
+ * còn — trong tooltip và nút chép — vì đó là thứ lọc "Mã đối tượng" nhận và thứ đối chiếu với DB.
+ */
+function ObjectCell({ row }: { row: AuditRow }) {
+  const { t } = useTranslation();
+  const type = objectTypeLabel(row.objectType, t);
+  if (!row.objectId) return <>{orDash(type)}</>;
+  const name = row.objectLabel ?? null;
+  return (
+    <>
+      {type}
+      {name ? (
+        <>
+          {' · '}
+          {row.objectPath ? (
+            <Link
+              to={row.objectPath}
+              title={row.objectId}
+              aria-label={t('audit.openObject', { name })}
+            >
+              {name}
+            </Link>
+          ) : (
+            <span title={row.objectId}>{name}</span>
+          )}
+        </>
+      ) : null}
+      <span className="cell-sub mono" title={row.objectId}>
+        {name ? `${row.objectId.slice(0, 8)}…` : row.objectId}
+        <CopyButton value={row.objectId} label={t('audit.copyObjectId')} />
+      </span>
     </>
   );
 }

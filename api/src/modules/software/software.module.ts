@@ -9,6 +9,7 @@ import { SoftwareExpiryRegistrar } from './software-expiry-sources';
 import { LicenseDeviceRetirement } from './license-device-retirement';
 import { IspDeviceRetirement } from './isp-device-retirement';
 import { SoftwareOwnerResolver } from './software-owner-resolver';
+import { SoftwareAuditLabeler } from './software-audit-labeler';
 import { IspLineController } from './isp-line.controller';
 import { IspLineService } from './isp-line.service';
 import { LicenseAssignmentService } from './license-assignment.service';
@@ -35,6 +36,7 @@ import { SoftwareStatusSweep } from './software-status-sweep';
     LicenseDeviceRetirement,
     IspDeviceRetirement,
     SoftwareOwnerResolver,
+    SoftwareAuditLabeler,
     SoftwareDevicePanel,
     SoftwareApiService,
     SoftwareStatusSweep,

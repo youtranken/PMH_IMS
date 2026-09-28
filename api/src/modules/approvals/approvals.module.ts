@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ApprovalAuditLabeler } from './approval-audit-labeler';
 import { AuditModule } from '../audit/audit.module';
 import { OutboxModule } from '../outbox/outbox.module';
 import { QueueModule } from '../queue/queue.module';
@@ -14,7 +15,7 @@ import { ApprovalsService } from './approvals.service';
  */
 @Module({
   imports: [AuditModule, OutboxModule, QueueModule],
-  providers: [ApprovalsService, ApprovalsApiService, ApprovalSweepService],
+  providers: [ApprovalsService, ApprovalsApiService, ApprovalSweepService, ApprovalAuditLabeler],
   exports: [ApprovalsApiService],
 })
 export class ApprovalsModule {}
