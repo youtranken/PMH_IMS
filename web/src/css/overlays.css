@@ -77,6 +77,103 @@
   z-index: var(--z-modal);
 }
 
+/* Chân hộp được xuống dòng thay vì tràn: câu lý do nút xám (`.disabled-reason`) dài thì rơi
+   xuống hàng riêng, các nút không bị đẩy ra ngoài mép hộp. */
+.dialog-viewport .sheet-footer {
+  flex-wrap: wrap;
+}
+
+/*
+ * Điện thoại: hộp là BOTTOM SHEET cao theo nội dung.
+ *
+ * Hộp ba ô mà ép cao gần hết màn thì 70% là khoảng trống, và nút chính nằm sát mép dưới —
+ * đúng chỗ thanh công cụ Safari và vạch home của iOS che mất. Cao theo nội dung, trần 90dvh
+ * (`dvh` trừ thanh công cụ trình duyệt, `vh` thì không); chân hộp dính đáy và chừa vùng an
+ * toàn; nút chính rộng hết, cao 48px, nằm dưới cùng — chỗ ngón cái với tới.
+ *
+ * Selector có `.dialog-viewport` để thắng khối ≤680px của `detail-tabs.css` (nạp sau, ép
+ * `.sheet` cao 100dvh) mà không phụ thuộc thứ tự nạp.
+ */
+@media (max-width: 640px) {
+  .dialog-viewport {
+    place-items: end stretch;
+    padding: 0;
+  }
+  .dialog-viewport > .sheet {
+    height: auto;
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-radius: var(--r-lg) var(--r-lg) 0 0;
+  }
+  .dialog-viewport .sheet-title {
+    min-width: 0;
+    font-size: var(--fs-md);
+    text-wrap: balance;
+    overflow-wrap: break-word;
+  }
+  .dialog-viewport .sheet-footer {
+    position: sticky;
+    bottom: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+    padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
+  }
+  .dialog-viewport .sheet-footer > .spacer {
+    display: none;
+  }
+  .dialog-viewport .sheet-footer > button {
+    width: 100%;
+    min-height: 44px;
+  }
+  .dialog-viewport .sheet-footer > button.primary,
+  .dialog-viewport .sheet-footer > button.danger {
+    order: 1;
+    min-height: 48px;
+  }
+  /* Câu lý do nút xám: hàng riêng, TRÊN các nút, đọc trước khi bấm. */
+  .dialog-viewport .sheet-footer > .disabled-reason {
+    order: -1;
+    margin-right: 0;
+  }
+}
+
+/* --- Thanh hành động dính đáy (ui/sticky-action-bar.tsx) ---------------------------------
+ * Desktop: một hàng nút căn phải như mọi chân form. Điện thoại: dính đáy màn, chừa vùng an toàn
+ * iOS, nút chính rộng hết và cao 48px — trang chi tiết dài thì nút chính luôn trong tầm ngón cái.
+ * ------------------------------------------------------------------------------------------ */
+.sticky-action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-9);
+}
+@media (max-width: 640px) {
+  .sticky-action-bar {
+    position: sticky;
+    bottom: 0;
+    z-index: var(--z-sticky);
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+    padding: var(--space-5) var(--space-7) calc(var(--space-5) + env(safe-area-inset-bottom));
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    box-shadow: var(--shadow-pop);
+  }
+  .sticky-action-bar > button {
+    width: 100%;
+    min-height: 44px;
+  }
+  .sticky-action-bar > button.primary,
+  .sticky-action-bar > button.danger {
+    order: 1;
+    min-height: 48px;
+  }
+}
+
 /* Command palette (⌘K): style ở css/command-palette.css (nạp sau, phủ đủ). */
 
 /* --- Utilities ------------------------------------------------------------ */
