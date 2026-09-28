@@ -842,6 +842,9 @@ export default {
        khuyên. Nói nhầm thì người dùng đi nới cửa sổ, vẫn rỗng, và không hiểu vì sao. */
     emptyFiltered: 'Không có mục nào ở nhóm đang chọn.',
     emptyFilteredHint: 'Bấm lại ô số đang bật để xem toàn bộ danh sách.',
+    /* Một nguồn hạn lỗi (EX-002): phần còn lại vẫn hiện, nhưng phải nói là có thể thiếu. */
+    failedKinds: 'Không đọc được: {{kinds}} — danh sách và số đếm có thể thiếu.',
+    kpiIncomplete: 'Có thể còn nhiều hơn — không đọc được: {{kinds}}',
   },
   digest: {
     tab: 'Luật gửi báo cáo',

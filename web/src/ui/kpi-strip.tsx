@@ -19,8 +19,12 @@ import { Link } from 'react-router-dom';
  */
 export type KpiTone = 'warn' | 'danger';
 
-export function KpiStrip({ children }: { children: ReactNode }) {
-  return <div className="dash-kpis">{children}</div>;
+/**
+ * `dense`: trên điện thoại giữ cả hàng trên MỘT dòng (ô nhỏ, số nhỏ hơn). Dùng khi hàng chỉ có
+ * vài ô lọc ngang hàng — ô lẻ rơi xuống dòng riêng trông như một khối khác nghĩa.
+ */
+export function KpiStrip({ children, dense = false }: { children: ReactNode; dense?: boolean }) {
+  return <div className={dense ? 'dash-kpis kpi-dense' : 'dash-kpis'}>{children}</div>;
 }
 
 export function KpiTile({
@@ -30,6 +34,7 @@ export function KpiTile({
   to,
   onClick,
   active,
+  incomplete,
 }: {
   value: number;
   label: string;
@@ -38,6 +43,11 @@ export function KpiTile({
   to?: string;
   onClick?: () => void;
   active?: boolean;
+  /**
+   * Con số có thể THIẾU (một nguồn dữ liệu lỗi): hiện "7+" và câu này làm tooltip. Không được
+   * để con số thiếu trông y hệt con số đủ.
+   */
+  incomplete?: string;
 }) {
   /*
    * TÊN LỚP CÓ TIỀN TỐ `kpi-`, không dùng trần `warn`/`danger`.
@@ -58,21 +68,30 @@ export function KpiTile({
 
   const inner = (
     <>
-      <span className="kpi-n">{value}</span>
+      <span className="kpi-n">
+        {value}
+        {incomplete ? '+' : null}
+      </span>
       <span className="kpi-l">{label}</span>
     </>
   );
 
   if (to) {
     return (
-      <Link className={className} to={to}>
+      <Link className={className} to={to} title={incomplete}>
         {inner}
       </Link>
     );
   }
 
   return (
-    <button type="button" className={className} onClick={onClick} aria-pressed={active}>
+    <button
+      type="button"
+      className={className}
+      onClick={onClick}
+      aria-pressed={active}
+      title={incomplete}
+    >
       {inner}
     </button>
   );
