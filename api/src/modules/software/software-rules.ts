@@ -178,6 +178,9 @@ export function seatConflicts(
     status: SoftwareStatus;
   },
   seats: { used: number; withEndDate: number },
+  /** Tổng ghế TRƯỚC khi sửa. Vượt ghế là trạng thái hợp lệ (gán vượt phải ghi lý do), nên chỉ
+   *  chặn khi lượt sửa ĐỔI tổng xuống dưới số đang dùng — không chặn sửa ghi chú. */
+  beforeSeatTotal?: number | null,
 ): string[] {
   if (seats.used === 0) return [];
   // Thanh lý KHÔNG phải xung đột, kể cả khi đang vượt trần hay đổi luôn loại/mô hình: service gỡ
@@ -194,7 +197,11 @@ export function seatConflicts(
       `Có ${seats.withEndDate} ghế đang ghi ngày hết hạn — bản vĩnh viễn thì ghế không có hạn. Bỏ ngày hết hạn của các ghế đó trước.`,
     );
   }
-  if (next.seatTotal !== null && next.seatTotal < seats.used) {
+  if (
+    next.seatTotal !== null &&
+    next.seatTotal < seats.used &&
+    next.seatTotal !== beforeSeatTotal
+  ) {
     errors.push(
       `Đang dùng ${seats.used} ghế, không hạ tổng xuống ${next.seatTotal} được. Gỡ bớt ghế trước.`,
     );

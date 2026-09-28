@@ -587,6 +587,7 @@ export class SoftwareService {
         status: effective<SoftwareStatus>('status', before.status as SoftwareStatus),
       },
       { used: Number(rows[0]?.used ?? 0), withEndDate: Number(rows[0]?.withEndDate ?? 0) },
+      before.seatTotal,
     );
     if (errors.length > 0) {
       throw new ConflictException({ code: 'SOFTWARE_SEATS_IN_USE', message: errors.join(' ') });

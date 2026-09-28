@@ -266,6 +266,23 @@ describe('seatConflicts — sửa hồ sơ khi đang có ghế gán', () => {
 });
 
 /**
+ * Vượt ghế là trạng thái HỢP LỆ (gán vượt phải ghi lý do). Luật "không hạ tổng dưới số đang dùng"
+ * chỉ chặn khi lượt sửa ĐỔI tổng ghế — sửa ghi chú của một license 2/1 không được bị 409.
+ */
+describe('seatConflicts — license đang vượt ghế', () => {
+  const over = { kind: 'license', licenseModel: 'subscription', seatTotal: 1, status: 'active' } as const;
+  const seats = { used: 2, withEndDate: 0 };
+  it.each([
+    ['tổng không đổi (chỉ sửa ghi chú)', over, 1, 0],
+    ['đặt trần 1 cho license đang không giới hạn', { ...over, seatTotal: 1 }, null, 1],
+    ['hạ tổng thêm nữa', { ...over, seatTotal: 0 }, 1, 1],
+    ['nâng tổng đủ số đang dùng', { ...over, seatTotal: 2 }, 1, 0],
+  ] as const)('%s → %i lỗi', (_name, next, beforeSeatTotal, count) => {
+    expect(seatConflicts(next, seats, beforeSeatTotal)).toHaveLength(count);
+  });
+});
+
+/**
  * Q-13 — ngày lượt quét sẽ tự Thanh lý. Phải khớp đúng điều kiện SQL của `syncExpiryStatuses`
  * (`end_date < today - grace`): màn hình đếm ngược tới ngày này, lệch một ngày là màn hứa sai.
  */
