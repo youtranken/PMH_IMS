@@ -22,9 +22,7 @@ import { Field, PageHeader } from '@/ui/page-header';
 import { StickyActionBar } from '@/ui/sticky-action-bar';
 import { useToast } from '@/ui/toast';
 import { useNow } from '@/ui/use-now';
-
-/** Nấc giờ gợi ý — người duyệt chỉ RÚT NGẮN được so với số xin, không cấp thêm. */
-const HOUR_STEPS = [1, 2, 4, 8, 24];
+import { hourSteps } from '@/ui/grant-hours';
 
 /** Nút "Duyệt" phải chạm lần hai trong khoảng này mới cấp — sau đó tự trở về. */
 const CONFIRM_WINDOW_MS = 3_000;
@@ -34,12 +32,6 @@ const ROLE_LABEL: Record<string, string> = {
   admin: 'accounts.roleAdmin',
   member: 'accounts.roleMember',
 };
-
-/** Các nấc ≤ số xin, luôn có đúng số xin ở cuối. Không rõ số xin thì chỉ đưa các nấc ngắn. */
-function hourChoices(asked: number | undefined): number[] {
-  if (!asked || asked <= 0) return [1, 2, 4];
-  return [...new Set([...HOUR_STEPS.filter((h) => h < asked), asked])];
-}
 
 /**
  * Trang chi tiết MỘT phiếu break-glass — đích của nút "Xem và duyệt" trong thư.
@@ -60,7 +52,8 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
   const [note, setNote] = useState('');
   const [armed, setArmed] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [denying, setDenying] = useState(false);
+  /** Hộp Từ chối / Thu hồi sớm — cả hai bắt ghi lý do vì người xin đọc nó trong thư. */
+  const [dialogMode, setDialogMode] = useState<'deny' | 'revoke' | null>(null);
   // "Gửi 4 phút trước" phải tự trôi khi người duyệt để màn mở — một phút một lần là đủ.
   const now = useNow(60_000);
 
@@ -87,7 +80,7 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
   const pending = row.state === 'pending';
   const decidable = pending && canDecide && !own;
   const asked = row.payload?.hours;
-  const choices = hourChoices(asked);
+  const choices = hourSteps(asked);
   const granted = hours ?? choices[choices.length - 1];
 
   const run = async (work: () => Promise<unknown>, done: string) => {
@@ -126,16 +119,6 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
       confirmLabel: t('approvals.cancel'),
     });
     if (ok) await run(() => actions.cancel(row.id), 'approvals.cancelled');
-  };
-
-  const onRevoke = async () => {
-    const ok = await askConfirm({
-      title: t('common.titleOf', { action: t('approvals.revoke'), subject: row.requester }),
-      message: t('approvals.confirmRevoke', { member: row.requester }),
-      danger: true,
-      confirmLabel: t('approvals.revoke'),
-    });
-    if (ok) await run(() => actions.revoke(row.id), 'approvals.revoked');
   };
 
   const sentAgo = agoParts(row.createdAt, now);
@@ -227,6 +210,27 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
         </section>
       ) : null}
 
+      {row.timeline && row.timeline.length > 0 ? (
+        /* `decidedBy` chỉ giữ người duyệt đầu tiên — không có dòng này thì phiếu đã thu hồi
+           không nói được ai cắt quyền, lúc nào. */
+        <section className="card" aria-label={t('approvals.timelineTitle')}>
+          <p className="approval-detail-label">{t('approvals.timelineTitle')}</p>
+          <ol className="approval-timeline">
+            <li>
+              {t('approvals.timelineSent')} · {row.requesterName} ·{' '}
+              <span className="muted">{formatDateTime(row.createdAt)}</span>
+            </li>
+            {row.timeline.map((step) => (
+              <li key={`${step.state}-${step.at}`}>
+                {t(`approvals.timelineStep_${step.state}`, step.state)} · {step.actor} ·{' '}
+                <span className="muted">{formatDateTime(step.at)}</span>
+                {step.note ? <span className="cell-sub">{step.note}</span> : null}
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
+
       {finalText ? (
         <p className={row.state === 'approved' && row.active ? 'alert ok' : 'alert'} role="status">
           {finalText}
@@ -251,7 +255,7 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
             type="button"
             className="btn danger-ghost"
             disabled={busy}
-            onClick={() => setDenying(true)}
+            onClick={() => setDialogMode('deny')}
           >
             {t('approvals.deny')}
           </button>
@@ -288,7 +292,7 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
               type="button"
               className="btn danger-ghost"
               disabled={busy}
-              onClick={() => void onRevoke()}
+              onClick={() => setDialogMode('revoke')}
             >
               {t('approvals.revoke')}
             </button>
@@ -308,15 +312,16 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
 
       {actions.dialog}
 
-      {denying ? (
+      {dialogMode ? (
         <DecisionDialog
           row={row}
           approve={false}
+          revoke={dialogMode === 'revoke'}
           csrfToken={me.csrfToken}
-          onClose={() => setDenying(false)}
+          onClose={() => setDialogMode(null)}
           onDone={() => {
-            setDenying(false);
-            toast({ message: t('approvals.denied') });
+            setDialogMode(null);
+            toast({ message: t(dialogMode === 'revoke' ? 'approvals.revoked' : 'approvals.denied') });
           }}
         />
       ) : null}

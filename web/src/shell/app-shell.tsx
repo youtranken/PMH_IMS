@@ -184,7 +184,9 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                     onClick={() => setDrawerOpen(false)}
                   >
                     <NavIcon navKey={item.key} />
-                    <span className="lbl">{t(item.key)}</span>
+                    <span className="lbl">
+                      {t(me.role === 'member' && item.memberKey ? item.memberKey : item.key)}
+                    </span>
                     {item.badge === 'approvals' && pendingApprovals > 0 ? (
                       /* Số chỉ là hình; câu đầy đủ đi qua `aria-describedby` để TÊN link vẫn
                          là "Duyệt yêu cầu" — trình đọc màn hình đọc thêm số việc sau đó. */

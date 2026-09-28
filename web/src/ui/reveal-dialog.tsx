@@ -4,6 +4,23 @@ import { Dialog } from '@/ui/dialog';
 import { countdownTone } from '@/ui/countdown-tone';
 
 /**
+ * Lớp của một ký tự để TÔ MÀU khi hiện giá trị: gõ tay "Cisco#Core2026!" sang console switch,
+ * mắt cần tách được "l" với "1", "O" với "0" — chữ số và ký hiệu mang màu riêng, chữ HOA đậm.
+ */
+export function secretCharClass(ch: string): 'digit' | 'upper' | 'lower' | 'symbol' {
+  if (/[0-9]/.test(ch)) return 'digit';
+  if (/[A-Z]/.test(ch)) return 'upper';
+  if (/[a-z]/.test(ch)) return 'lower';
+  return 'symbol';
+}
+
+/** "9:05" — giây lớn (600) đọc không ra là mười phút. */
+export function formatMinSec(seconds: number): string {
+  const total = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/**
  * Hiện giá trị đúng `seconds` giây rồi tự đóng (FR-022).
  *
  * Đồng hồ đếm ngược tính từ MỘT mốc thời gian chụp lúc mở, không phải trừ dần mỗi giây:
@@ -11,16 +28,18 @@ import { countdownTone } from '@/ui/countdown-tone';
  * khẩu nằm mở hàng phút trên màn hình đã khóa. Tính từ mốc thì tab quay lại là đóng ngay.
  *
  * Giá trị KHÔNG vào clipboard tự động và không có nút "sao chép": clipboard sống qua cả
- * phiên đăng nhập, dán nhầm vào ô chat là mất luôn. Ai cần thì tự bôi đen.
+ * phiên đăng nhập, dán nhầm vào ô chat là mất luôn. Thay vào đó giá trị tô màu theo lớp ký tự,
+ * và có chế độ "từng ký tự" (ô đánh số) để gõ tay không nhầm.
  *
- * HAI đồng hồ, không phải một — chúng trả lời hai câu khác nhau:
- *   trái  `60s`  — giá trị này còn hiện bao lâu nữa
- *   phải `600s` — còn mở được két bao lâu nữa mà không phải gõ lại mã 6 số
- * Thiếu số phải thì người dùng mở secret thứ hai lúc 9:09 và bị hỏi mã giữa chừng mà không
+ * HAI đồng hồ, trả lời hai câu khác nhau, nên nằm ở hai dòng riêng:
+ *   `42s` + thanh tiến trình — giá trị này còn hiện bao lâu nữa
+ *   `9:12` — còn mở ngăn khác được bao lâu mà không phải gõ lại mã 6 số
+ * Thiếu số thứ hai thì người dùng mở ngăn thứ hai lúc 9:09 và bị hỏi mã giữa chừng mà không
  * hiểu vì sao, dù cái mốc đó vốn đoán trước được.
  */
 export function RevealDialog({
   label,
+  username,
   value,
   seconds,
   stepUpSecondsLeft,
@@ -28,18 +47,16 @@ export function RevealDialog({
   onExpire,
 }: {
   label: string;
+  /** Tên đăng nhập đi kèm — người ta cần CẶP user + mật khẩu, bảng phía sau đã bị hộp che. */
+  username?: string | null;
   value: string;
   seconds: number;
   /** Grace step-up còn lại lúc MỞ, do server tính. Không có thì chỉ hiện một đồng hồ. */
   stepUpSecondsLeft?: number;
   onClose: () => void;
   /**
-   * Gọi khi hộp tự đóng VÌ HẾT GIỜ — khác với người dùng bấm Ẩn ngay hay Esc.
-   *
-   * Trước 17/09/2026 hai lối ra gọi chung một `onClose`, nên không nơi nào phân biệt được và
-   * hộp cứ thế biến mất không một lời. Người vừa quay sang gõ mật khẩu vào cái switch trước
-   * mặt, nhìn lại màn hình thì hộp không còn — không biết là hết giờ, là mình lỡ bấm, hay là
-   * trình duyệt vừa lỗi.
+   * Gọi khi hộp tự đóng VÌ HẾT GIỜ — khác với người dùng bấm Ẩn ngay hay Esc: người vừa quay
+   * sang gõ vào thiết bị, nhìn lại thấy hộp mất, phải biết là do hết giờ.
    */
   onExpire?: () => void;
 }) {
@@ -49,14 +66,14 @@ export function RevealDialog({
   const [left, setLeft] = useState(seconds);
   const graceTotal = stepUpSecondsLeft ?? 0;
   const [graceLeft, setGraceLeft] = useState(graceTotal);
+  const [perChar, setPerChar] = useState(false);
 
   useEffect(() => {
     const tick = () => {
       const remaining = Math.ceil((deadline.current - Date.now()) / 1000);
       /*
-       * Grace đếm từ CÙNG một mốc với đồng hồ trái, nên hai số luôn khớp nhau: mở secret thứ
-       * hai ngay sau đó là `60s/590s`, đúng như đọc trên đồng hồ treo tường. Trừ dần mỗi nhịp
-       * thì tab nền bị hãm sẽ làm hai số trôi lệch nhau.
+       * Grace đếm từ CÙNG một mốc với đồng hồ tự ẩn, nên hai số luôn khớp nhau. Trừ dần mỗi
+       * nhịp thì tab nền bị hãm sẽ làm hai số trôi lệch nhau.
        */
       setGraceLeft(Math.max(0, graceTotal - Math.floor((Date.now() - openedAt.current) / 1000)));
       if (remaining <= 0) {
@@ -77,6 +94,7 @@ export function RevealDialog({
 
   const tone = countdownTone(left, seconds);
   const graceTone = countdownTone(graceLeft, graceTotal);
+  const chars = Array.from(value);
 
   return (
     <Dialog
@@ -85,35 +103,63 @@ export function RevealDialog({
       maxWidth={480}
       title={label}
       footer={
-        <button type="button" className="btn primary" onClick={onClose}>
+        /* Nút thường, không `primary`: lối ra không được là thứ sáng nhất hộp — nội dung mới là. */
+        <button type="button" className="btn" onClick={onClose}>
           {t('vault.hideNow')}
         </button>
       }
     >
       <div className="form-grid" data-columns={1}>
-        <p className="secret-value mono" data-testid="secret-value">
-          {value}
-        </p>
+        {username ? (
+          <p className="reveal-username">
+            {t('vault.username')}: <span className="mono">{username}</span>
+          </p>
+        ) : null}
+        {perChar ? (
+          <ol className="secret-chars" aria-label={t('vault.perCharLabel')}>
+            {chars.map((ch, index) => (
+              <li key={index} className={`ch-${secretCharClass(ch)}`}>
+                <span className="secret-char-no">{index + 1}</span>
+                <span className="mono">{ch}</span>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="secret-value mono" data-testid="secret-value">
+            {chars.map((ch, index) => (
+              <span key={index} className={`ch-${secretCharClass(ch)}`}>
+                {ch}
+              </span>
+            ))}
+          </p>
+        )}
+        <div>
+          <button
+            type="button"
+            className="btn sm"
+            aria-pressed={perChar}
+            onClick={() => setPerChar((current) => !current)}
+          >
+            {t(perChar ? 'vault.perCharOff' : 'vault.perCharOn')}
+          </button>
+        </div>
         {/* `role="status"` để trình đọc màn hình đọc được mốc còn lại; `aria-live` mặc định
             của status là polite nên nó không cắt ngang mỗi giây. */}
         <p className="countdown" role="status" data-testid="reveal-countdown">
           <span className={`countdown-num ${tone}`}>{left}s</span>
-          {stepUpSecondsLeft === undefined ? null : (
-            <>
-              <span className="countdown-sep" aria-hidden="true">
-                /
-              </span>
-              <span className={`countdown-num ${graceTone}`} data-testid="stepup-countdown">
-                {graceLeft}s
-              </span>
-            </>
-          )}
-          <span className="countdown-note muted">
-            {stepUpSecondsLeft === undefined
-              ? t('vault.autoHideShort')
-              : t('vault.countdownNote')}
-          </span>
+          <span className="countdown-note muted">{t('vault.autoHideShort')}</span>
         </p>
+        <div className="reveal-progress" aria-hidden="true">
+          <span className={tone} style={{ width: `${(left / Math.max(1, seconds)) * 100}%` }} />
+        </div>
+        {stepUpSecondsLeft === undefined ? null : (
+          <p className="countdown">
+            <span className="countdown-note muted">{t('vault.graceLine')}</span>
+            <span className={`countdown-num ${graceTone}`} data-testid="stepup-countdown">
+              {formatMinSec(graceLeft)}
+            </span>
+          </p>
+        )}
         <p className="muted">
           <small>{t('vault.revealLogged')}</small>
         </p>

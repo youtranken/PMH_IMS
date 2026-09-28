@@ -264,7 +264,7 @@ test.describe('Hộp Duyệt từ danh sách, 390px (VLT-008, B1)', () => {
     await expect(dialog.getByText(new RegExp(`E2E ${stamp}: switch tầng 3`))).toBeVisible();
 
     // Hộp cao theo nội dung, nút chính trong khung nhìn — không bị thanh công cụ đáy che.
-    const approve = dialog.getByRole('button', { name: 'Duyệt', exact: true });
+    const approve = dialog.getByRole('button', { name: /^Duyệt \d+ giờ$/ });
     await expect(approve).toBeInViewport({ ratio: 1 });
     const box = await dialog.boundingBox();
     expect(box!.height, 'hộp ba ô không được chiếm gần hết màn 844px').toBeLessThan(844 * 0.9);

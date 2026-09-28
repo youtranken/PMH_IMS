@@ -79,9 +79,9 @@ test.describe('Két sắt', () => {
 
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
-    await expect(page.getByText('Chưa cất secret nào')).toBeVisible();
+    await expect(page.getByText('Két chưa có ngăn nào')).toBeVisible();
 
-    await page.getByRole('button', { name: 'Cất secret' }).click();
+    await page.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Tên gọi' }).fill(label);
     await form.getByRole('textbox', { name: 'Tên đăng nhập' }).fill('admin');
@@ -99,16 +99,21 @@ test.describe('Két sắt', () => {
     await expect(page.locator('body')).not.toContainText(secretValue);
 
     // Xoay: đổi giá trị, metadata giữ nguyên.
-    await rowAction(page, label, 'Xoay');
+    await rowAction(page, label, 'Đổi giá trị');
     const rotate = page.getByRole('dialog');
     await rotate.getByRole('textbox', { name: 'Giá trị mới' }).fill(`${secretValue}-v2`);
-    await rotate.getByRole('button', { name: 'Xoay' }).click();
+    await rotate.getByRole('button', { name: 'Đổi giá trị' }).click();
     await expect(page.getByRole('row', { name: new RegExp(label) })).toBeVisible();
     await expect(page.locator('body')).not.toContainText(secretValue);
 
     // Thu hồi = xóa mềm: biến khỏi danh sách.
-    await rowAction(page, label, 'Thu hồi');
-    await confirmAction(page);
+    // Không hoàn tác được nên phải gõ lại đúng tên ngăn thì nút xác nhận mới bật.
+    await rowAction(page, label, 'Xoá vĩnh viễn');
+    await expect(
+      page.getByTestId('dialog-footer').last().getByRole('button', { name: 'Xoá vĩnh viễn' }),
+    ).toBeDisabled();
+    await page.getByRole('dialog').last().getByRole('textbox').fill(label);
+    await confirmAction(page, 'Xoá vĩnh viễn');
     await expect(page.getByRole('row', { name: new RegExp(label) })).toHaveCount(0);
   });
 

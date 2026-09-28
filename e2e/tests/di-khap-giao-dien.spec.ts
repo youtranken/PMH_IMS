@@ -211,8 +211,8 @@ import {
  *     → Phòng Duyệt yêu cầu: đủ ba ngăn, phiếu treo nói đủ và có đúng hai nút
  * [x] Bảng điều khiển: SA đủ sáu khối, Member THIẾU đúng hai khối an ninh
  *     → Bảng điều khiển: SA thấy đủ sáu khối, Member thiếu đúng hai khối an ninh
- * [x] Hộp Cất secret · Xác nhận danh tính · Hiện secret
- *     → Bên trong hộp Cất secret, hộp Xác nhận danh tính và hộp Hiện secret
+ * [x] Hộp Cất mật khẩu/khóa · Xác nhận danh tính · Hiện secret
+ *     → Bên trong hộp Cất mật khẩu/khóa, hộp Xác nhận danh tính và hộp Hiện secret
  * [x] Hộp Duyệt · Từ chối · gán quyền hàng loạt
  *     → Bên trong hộp Duyệt, hộp Từ chối và hộp gán quyền hàng loạt
  * [x] Esc lúc menu ô chọn đang mở chỉ đóng MENU (canh bản vá `ui/dialog.tsx`)
@@ -1086,7 +1086,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
    * `isAdmin = role === 'sa' || role === 'admin'`, nhưng cho tới nay chỉ nhánh `sa` từng chạy
    * trong E2E — nhánh `admin` là code chưa ai bấm thử.
    *
-   * ĐỎ KHI: admin không thấy nút "Cất secret" hoặc menu Sửa/Xoay/Thu hồi; API chặn nhầm vai
+   * ĐỎ KHI: admin không thấy nút "Cất mật khẩu/khóa" hoặc menu Sửa/Xoay/Thu hồi; API chặn nhầm vai
    * admin ở đường ghi két; bước xác thực (step-up) không bật lên khi grace đã hết; hoặc — tệ
    * nhất — giá trị xoay xong mà lượt Xem vẫn trả giá trị cũ.
    *
@@ -1114,14 +1114,14 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
 
     await page.goto(`/devices/${deviceId}`);
     await page.getByRole('tab', { name: 'Két sắt' }).click();
-    await expect(page.getByText('Chưa cất secret nào')).toBeVisible();
+    await expect(page.getByText('Két chưa có ngăn nào')).toBeVisible();
 
     // --- CẤT.
     await expect(
-      page.getByRole('button', { name: 'Cất secret' }),
+      page.getByRole('button', { name: 'Cất mật khẩu/khóa' }),
       'admin phải thấy nút cất secret — vault-panel dựng nút này theo isAdmin',
     ).toBeVisible();
-    await page.getByRole('button', { name: 'Cất secret' }).click();
+    await page.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Tên gọi' }).fill(label);
     await form.getByRole('textbox', { name: 'Tên đăng nhập' }).fill('admin');
@@ -1154,11 +1154,11 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await page.getByRole('button', { name: 'Ẩn ngay' }).click();
 
     // --- XOAY.
-    await rowAction(page, label, 'Xoay');
+    await rowAction(page, label, 'Đổi giá trị');
     const hopXoay = page.getByRole('dialog');
     await hopXoay.getByRole('textbox', { name: 'Giá trị mới' }).fill(giaTriMoi);
-    await hopXoay.getByRole('button', { name: 'Xoay' }).click();
-    await expect(page.getByText('Đã xoay giá trị.')).toBeVisible();
+    await hopXoay.getByRole('button', { name: 'Đổi giá trị' }).click();
+    await expect(page.getByText('Đã đổi giá trị.')).toBeVisible();
 
     // --- XEM LẠI: grace còn hiệu lực nên không bị hỏi mã nữa, và giá trị phải là bản MỚI.
     await page.getByRole('button', { name: 'Xem' }).click();
@@ -1264,7 +1264,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await page.getByRole('button', { name: 'Duyệt', exact: true }).click();
     const hopDuyet = page.getByRole('dialog');
     await hopDuyet.getByRole('textbox', { name: 'Cấp trong bao lâu (giờ)' }).fill('1');
-    await hopDuyet.getByRole('button', { name: 'Duyệt', exact: true }).click();
+    await hopDuyet.getByRole('button', { name: 'Duyệt 1 giờ', exact: true }).click();
     await expect(page.getByText('Đã duyệt.')).toBeVisible();
 
     // Hàng chờ phải sạch — cả hai phiếu đã có người quyết.
@@ -1297,6 +1297,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
       'mới mở hộp hỏi lại thì TUYỆT ĐỐI chưa được đụng vào sổ',
     ).toBe('approved');
 
+    await hopThuHoi.getByRole('textbox', { name: 'Lý do thu hồi' }).fill('E2E: xong việc, cắt sớm');
     await confirmAction(page, 'Thu hồi sớm');
     await expect(page.getByText('Đã thu hồi quyền.')).toBeVisible();
     await expect(
@@ -1539,7 +1540,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
    *
    * Bài này đi trọn cung đường của một Thành viên đứng trước két: nhìn, đọc, xin, và thấy
    * trạng thái đổi sang "Đang chờ duyệt". Nó đỏ khi `canEdit` của `VaultPanel` bị nới lỏng
-   * (nút "Cất secret" hoặc menu ba chấm hiện ra), khi panel im lặng thay vì nói tầng, hoặc
+   * (nút "Cất mật khẩu/khóa" hoặc menu ba chấm hiện ra), khi panel im lặng thay vì nói tầng, hoặc
    * khi hộp xin quyền gửi xong mà giao diện không đổi trạng thái — cái cuối là kiểu hỏng
    * khiến người dùng bấm gửi ba lần rồi đi hỏi tay.
    */
@@ -1612,7 +1613,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
     ).toBeVisible();
 
     await expect(
-      page.getByRole('button', { name: 'Cất secret' }),
+      page.getByRole('button', { name: 'Cất mật khẩu/khóa' }),
       'Member không ghi được vào két — bày nút ra là hứa một việc mà API sẽ từ chối bằng 403',
     ).toHaveCount(0);
     /*
@@ -1643,13 +1644,11 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
      * chỉ để bấm vào rồi nhận màn lỗi.
      */
     await page.goto('/approvals');
-    await expect(page.getByRole('tab', { name: 'Yêu cầu của tôi' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Yêu cầu xem két' })).toBeVisible();
     await expect(
       page.getByRole('tab'),
-      'Thành viên chỉ có đúng một tab trên màn duyệt',
-    ).toHaveCount(1);
-    await expect(page.getByRole('tab', { name: 'Chờ duyệt' })).toHaveCount(0);
-    await expect(page.getByRole('tab', { name: 'Nhật ký' })).toHaveCount(0);
+      'Thành viên chỉ có một ngăn — thanh tab một-tab là vạch trang trí, không vẽ',
+    ).toHaveCount(0);
 
     // Và mở ra là thấy NGAY yêu cầu vừa gửi, không phải đi tìm tab.
     await expect(page.getByText(`switch tour E2E ${stamp} mất kết nối`)).toBeVisible();
@@ -2933,10 +2932,10 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       'Két sắt phải tự nói ra luật chơi của nó trước khi ai bấm gì',
     ).toBeVisible();
     await expect(
-      panel.getByRole('button', { name: 'Cất secret' }),
+      panel.getByRole('button', { name: 'Cất mật khẩu/khóa' }),
       'SA phải có cửa ghi vào két ngay tại hồ sơ máy',
     ).toBeVisible();
-    await expect(panel.getByText('Chưa cất secret nào')).toBeVisible();
+    await expect(panel.getByText('Két chưa có ngăn nào')).toBeVisible();
 
     /* ===== TAB LỊCH SỬ ===== */
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
@@ -3784,11 +3783,11 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Tab Két sắt phải nói ngay nó là gì — key KHÔNG nằm trong hồ sơ phần mềm',
     ).toBeVisible();
     await expect(
-      page.getByRole('button', { name: 'Cất secret', exact: true }),
+      page.getByRole('button', { name: 'Cất mật khẩu/khóa', exact: true }),
       'SA phải cất được secret ngay tại hồ sơ',
     ).toHaveCount(1);
     await expect(
-      page.getByText('Chưa cất secret nào'),
+      page.getByText('Két chưa có ngăn nào'),
       'Két rỗng phải nói là rỗng, không phải bảng trắng',
     ).toBeVisible();
 
@@ -5970,7 +5969,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
             'Tab Két sắt phải mở ra panel két, không phải khoảng trắng',
           ).toBeVisible();
           await expect(
-            main.getByRole('button', { name: 'Cất secret' }),
+            main.getByRole('button', { name: 'Cất mật khẩu/khóa' }),
             'SA cất được mật khẩu PPPoE của đường truyền — nút phải có mặt',
           ).toBeVisible();
         },
@@ -8255,7 +8254,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       panel.getByText(/[0-9a-f]{8}-[0-9a-f]{4}/),
       'không còn in UUID ra thẻ phiếu',
     ).toHaveCount(0);
-    await expect(panel.getByText('Xin', { exact: true }), 'phiếu phải nói xin BAO LÂU').toBeVisible();
+    await expect(panel.getByText('Thời hạn xin', { exact: true }), 'phiếu phải nói xin BAO LÂU').toBeVisible();
     await expect(panel.getByText('4 giờ', { exact: true })).toBeVisible();
 
     /*
@@ -8274,9 +8273,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     expect(
       await panel.getByRole('button').allTextContents(),
-      'phiếu treo phải có ĐÚNG hai nút: Duyệt và Từ chối. Một nút thứ ba ở đây ("duyệt tất cả") ' +
-        'là một quyết định an ninh, không phải một cải tiến giao diện',
-    ).toEqual(['Duyệt', 'Từ chối']);
+      'phiếu treo phải có ĐÚNG hai nút: Từ chối (trái) và Duyệt (phải, vùng ngón cái). Một nút ' +
+        'thứ ba ở đây ("duyệt tất cả") là một quyết định an ninh, không phải một cải tiến giao diện',
+    ).toEqual(['Từ chối', 'Duyệt']);
 
     /* ---- Nút Xuất Excel CHỈ ở ngăn Nhật ký ---- */
 
@@ -8423,11 +8422,11 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
   /*
    * VÌ SAO BÀI NÀY TỒN TẠI
    *
-   * Ba hộp thoại đứng ngay cửa két — Cất secret, Xác nhận danh tính, Hiện secret — và cả ba
+   * Ba hộp thoại đứng ngay cửa két — Cất mật khẩu/khóa, Xác nhận danh tính, Hiện secret — và cả ba
    * đều đã có bài kiểm ĐƯỜNG ĐI (`vault.spec.ts`, `vault-reveal.spec.ts`,
    * `vault-write-stepup-ui.spec.ts`). Không bài nào trong đó mở hộp ra rồi ĐẾM xem bên trong
    * có ô nào. Nghĩa là:
-   *   - Một ô thứ năm mọc thêm vào hộp "Cất secret" (một ô "dán từ file", một ô "gửi mail
+   *   - Một ô thứ năm mọc thêm vào hộp "Cất mật khẩu/khóa" (một ô "dán từ file", một ô "gửi mail
    *     cho") sẽ đi qua sạch sẽ.
    *   - Ô "Giá trị" đổi từ `type=password` sang `type=text` — mật khẩu hiện nguyên trên màn
    *     lúc gõ — không làm đỏ gì cả, vì mọi bài đều `fill()` được như nhau.
@@ -8440,7 +8439,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
    * Đi vào bằng popup của `/vault` chứ không bằng tab của trang chi tiết: đó là cửa của phòng
    * này, và `VaultPanel` nhúng trong popup phải cư xử y hệt bản nhúng ở trang chi tiết (AD-15).
    */
-  test('Bên trong hộp Cất secret, hộp Xác nhận danh tính và hộp Hiện secret', async ({ page }) => {
+  test('Bên trong hộp Cất mật khẩu/khóa, hộp Xác nhận danh tính và hộp Hiện secret', async ({ page }) => {
     test.setTimeout(150_000);
     const totpSecret = await firstLogin(page, E2E_SA);
 
@@ -8461,19 +8460,19 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     /* ---------- HỘP "CẤT SECRET": có ô nào, ô nào bắt buộc ---------- */
 
-    await popup.getByRole('button', { name: 'Cất secret' }).click();
-    const form = page.getByRole('dialog', { name: 'Cất secret' });
+    await popup.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
+    const form = page.getByRole('dialog', { name: 'Cất mật khẩu/khóa' });
     await expect(form).toBeVisible();
 
     expect(
       await textboxLabels(form),
-      'hộp "Cất secret" phải có ĐÚNG bốn ô chữ. Một ô thứ năm ở đây là một quyết định về nơi ' +
+      'hộp "Cất mật khẩu/khóa" phải có ĐÚNG bốn ô chữ. Một ô thứ năm ở đây là một quyết định về nơi ' +
         'chứa bí mật, không phải một cải tiến giao diện',
     ).toEqual(['Tên gọi', 'Tên đăng nhập', 'Giá trị', 'Ghi chú']);
 
     expect(
       await selectLabels(form),
-      'hộp "Cất secret" phải có ĐÚNG một ô chọn: Loại',
+      'hộp "Cất mật khẩu/khóa" phải có ĐÚNG một ô chọn: Loại',
     ).toEqual(['Loại']);
 
     /*
@@ -8515,7 +8514,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await expect(
       form.getByRole('textbox', { name: 'Tên gọi' }),
       'câu lỗi nằm dưới và nối vào đúng ô Tên gọi',
-    ).toHaveAccessibleDescription('Đặt tên gọi cho secret này (vd "admin web", "SSH root").');
+    ).toHaveAccessibleDescription('Đặt tên gọi cho ngăn này (vd "admin web", "SSH root").');
     await expect(form.getByRole('textbox', { name: 'Tên gọi' }), 'tiêu điểm về ô lỗi đầu tiên').toBeFocused();
 
     /* ---- Đường hỏng 1: tên gọi chỉ có khoảng trắng ---- */
@@ -8527,7 +8526,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await expect(
       form.getByRole('textbox', { name: 'Tên gọi' }),
       'bỏ trống tên gọi thì phải nói ra ĐÚNG câu tiếng Việt, ngay dưới ô',
-    ).toHaveAccessibleDescription('Đặt tên gọi cho secret này (vd "admin web", "SSH root").');
+    ).toHaveAccessibleDescription('Đặt tên gọi cho ngăn này (vd "admin web", "SSH root").');
     await expect(form, 'báo lỗi mà hộp vẫn phải mở — đóng đi là mất sạch thứ vừa gõ').toBeVisible();
 
     /* ---- Đường hỏng 2: có tên gọi nhưng chưa có giá trị ---- */
@@ -8577,8 +8576,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     /* ---------- HỘP "XOAY": một ô, và Esc đóng được ---------- */
 
-    await rowAction(page, label, 'Xoay');
-    const rotate = page.getByRole('dialog', { name: `Xoay giá trị: ${label}` });
+    await rowAction(page, label, 'Đổi giá trị');
+    const rotate = page.getByRole('dialog', { name: `Đổi giá trị: ${label}` });
     await expect(rotate).toBeVisible();
     expect(
       await textboxLabels(rotate),
@@ -8589,7 +8588,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     /*
      * Xoay RỖNG: cùng hàng rào với hộp Cất — form `noValidate`, câu tiếng Việt dưới ô.
      */
-    await rotate.getByRole('button', { name: 'Xoay' }).click();
+    await rotate.getByRole('button', { name: 'Đổi giá trị' }).click();
     await expect(
       rotate.getByLabel('Giá trị mới'),
       'xoay rỗng phải bị chặn bằng câu tiếng Việt ngay dưới ô',
@@ -8794,8 +8793,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     ).toBeVisible();
     expect(
       await approve.getByTestId('dialog-footer').getByRole('button').allTextContents(),
-      'chân hộp Duyệt: Hủy rồi mới tới Duyệt — thứ tự này giống nhau ở mọi hộp trong app',
-    ).toEqual(['Hủy', 'Duyệt']);
+      'chân hộp Duyệt: Hủy rồi mới tới Duyệt — thứ tự này giống nhau ở mọi hộp trong app. Nút ' +
+        'Duyệt ghi rõ số giờ sẽ cấp, để không ai cấp nhầm 6 giờ khi định cấp 1',
+    ).toEqual(['Hủy', 'Duyệt 6 giờ']);
 
     await approve.getByRole('button', { name: 'Đóng hộp thoại' }).click();
     await expect(approve, 'nút ✕ phải đóng được hộp Duyệt mà không quyết gì cả').toBeHidden();
@@ -8957,9 +8957,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
         .getByRole('button', { name: `Mở két của ${deviceCode}` })
         .click();
       const popup = page.getByRole('dialog', { name: new RegExp(`^Két sắt — ${deviceCode}`) });
-      await popup.getByRole('button', { name: 'Cất secret' }).click();
+      await popup.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
 
-      const form = page.getByRole('dialog', { name: 'Cất secret' });
+      const form = page.getByRole('dialog', { name: 'Cất mật khẩu/khóa' });
       await expect(form).toBeVisible();
       // Gõ sẵn một thứ vào form: đó chính là thứ người dùng mất khi hộp bị đóng oan.
       await form.getByLabel('Tên gọi').fill(`admin web E2E ${stamp}`);

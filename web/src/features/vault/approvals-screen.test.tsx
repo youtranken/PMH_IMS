@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { jsonResponse, renderWithI18n, screen } from '@/test/test-utils';
+import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 import { ToastProvider } from '@/ui/toast';
 import type { Me } from '@/lib/me';
 import { ApprovalsScreen } from './approvals-screen';
@@ -87,5 +87,88 @@ describe('Thẻ phiếu chờ duyệt', () => {
     expect(await screen.findByText('Cần người khác duyệt')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Duyệt' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Từ chối' })).not.toBeInTheDocument();
+  });
+});
+
+function renderRouted(me: Me, routes: Record<string, unknown>) {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((url: string) => {
+      const key = Object.keys(routes).find((prefix) => url.startsWith(prefix));
+      return Promise.resolve(jsonResponse(200, key ? routes[key] : []));
+    }),
+  );
+  return renderWithI18n(
+    <MemoryRouter initialEntries={['/approvals']}>
+      <ToastProvider>
+        <ApprovalsScreen me={me} />
+      </ToastProvider>
+    </MemoryRouter>,
+  );
+}
+
+describe('Thẻ và sổ của màn Duyệt yêu cầu', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('thẻ chờ duyệt: Từ chối đứng TRƯỚC Duyệt (Duyệt ở vùng ngón cái), Từ chối không đỏ đặc', async () => {
+    renderAt('/approvals', [row('a1', 'an@pmh.com.vn')]);
+    const card = await screen.findByRole('region', { name: /an@pmh\.com\.vn/ });
+    const buttons = within(card).getAllByRole('button');
+    expect(buttons.map((b) => b.textContent)).toEqual(['Từ chối', 'Duyệt']);
+    expect(buttons[0]).toHaveClass('danger-ghost');
+    expect(within(card).getByText('Thời hạn xin')).toBeInTheDocument();
+  });
+
+  it('phiếu của chính mình ở hàng chờ: rút được ngay tại đó', async () => {
+    renderAt('/approvals', [row('a1', 'sa@pmh.com.vn')]);
+    expect(await screen.findByRole('button', { name: 'Rút yêu cầu' })).toBeInTheDocument();
+  });
+
+  it('Nhật ký chỉ đọc: phiếu đang chờ không có nút Duyệt, chỉ có đường sang tab Chờ duyệt', async () => {
+    renderRouted(ME, {
+      '/api/v1/vault/break-glass/pending': [],
+      '/api/v1/vault/break-glass/log': { items: [row('a1', 'an@pmh.com.vn')], total: 1 },
+    });
+    await userEvent.click(await screen.findByRole('tab', { name: 'Nhật ký' }));
+    expect(await screen.findByRole('button', { name: 'Đi tới Chờ duyệt' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Duyệt' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Từ chối' })).not.toBeInTheDocument();
+  });
+
+  it('Nhật ký: phiếu đã thu hồi nói lúc bị cắt, không in hạn gốc như thể quyền còn chạy', async () => {
+    const revoked = {
+      ...row('a1', 'an@pmh.com.vn'),
+      state: 'revoked',
+      decidedBy: 'sa@pmh.com.vn',
+      decidedAt: '2026-09-20T02:00:00.000Z',
+      expiresAt: '2026-09-20T06:00:00.000Z',
+      updatedAt: '2026-09-20T02:30:00.000Z',
+    };
+    renderRouted(ME, {
+      '/api/v1/vault/break-glass/pending': [],
+      '/api/v1/vault/break-glass/log': { items: [revoked], total: 1 },
+    });
+    await userEvent.click(await screen.findByRole('tab', { name: 'Nhật ký' }));
+    expect(await screen.findByText(/^Đã cắt lúc 20\/09\/2026 09:30$/)).toBeInTheDocument();
+    expect(screen.queryByText('20/09/2026 13:00')).not.toBeInTheDocument();
+  });
+
+  it('Member: tiêu đề "Yêu cầu xem két", không có thanh tab một-tab, thẻ đã duyệt có nút Mở két', async () => {
+    const member = { role: 'member', csrfToken: 't', email: 'an@pmh.com.vn' } as unknown as Me;
+    const approved = {
+      ...row('a1', 'an@pmh.com.vn'),
+      state: 'approved',
+      active: true,
+      expiresAt: '2026-09-20T06:00:00.000Z',
+    };
+    renderRouted(member, { '/api/v1/vault/break-glass/mine': { items: [approved], total: 1 } });
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Yêu cầu xem két' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
+    expect(await screen.findByRole('link', { name: 'Mở két' })).toHaveAttribute(
+      'href',
+      '/devices/a1-0000-4000-8000-000000000001?tab=vault',
+    );
   });
 });
