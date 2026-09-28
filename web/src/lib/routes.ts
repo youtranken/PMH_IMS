@@ -35,6 +35,8 @@ export const PATHS = {
   serviceAccount: (id: string) => `/service-accounts/${id}`,
 
   approvals: '/approvals',
+  /** Một yêu cầu — đích của nút trong thư duyệt, quyết được trên điện thoại. */
+  approval: (id: string) => `/approvals/${id}`,
   vault: '/vault',
   /** Kho thanh lý — màn TỔNG hợp mọi hồ sơ đã ngừng dùng, không phải một bảng riêng. */
   disposal: '/disposal',

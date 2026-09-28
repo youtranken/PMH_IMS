@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import type { Me } from "@/lib/me";
@@ -17,7 +17,7 @@ import {
   RailRow,
   RailRowIfSet,
 } from "@/ui/detail-layout";
-import { TabPanel, Tabs } from "@/ui/tabs";
+import { TabPanel, Tabs, initialTab } from "@/ui/tabs";
 import { useTabCounts } from "@/ui/tab-counts";
 import { VaultPanel } from "@/ui/vault-panel";
 import { IspForm } from "./isp-form";
@@ -38,7 +38,11 @@ export function IspDetail({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const { id = "" } = useParams();
-  const [tab, setTab] = useState("profile");
+  const [params] = useSearchParams();
+  // `?tab=vault` từ thư "đã được duyệt": người xin mở thẳng két, không phải tìm tab.
+  const [tab, setTab] = useState(() =>
+    initialTab(params.get("tab"), ["profile", "vault", "attachments", "history"]),
+  );
   const [editing, setEditing] = useState(false);
 
   /* Trước mọi nhánh `return` sớm bên dưới: đây là hook, đặt sau `if (isLoading) return` thì

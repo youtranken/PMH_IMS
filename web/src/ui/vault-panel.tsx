@@ -17,6 +17,9 @@ import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { StepUpDialog } from '@/ui/step-up-dialog';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useFormErrors } from '@/ui/use-form-errors';
+import { useBreakGlassActions, type BreakGlassRow } from '@/ui/break-glass';
+import { PATHS } from '@/lib/routes';
+import { Link } from 'react-router-dom';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 
@@ -34,8 +37,14 @@ export interface AccessVerdict {
   canReveal: boolean;
   canRequest: boolean;
   grant: { id: string; expiresAt: string | null } | null;
-  pending: { id: string } | null;
+  pending: { id: string; createdAt?: string } | null;
 }
+
+/**
+ * Đang có phiếu treo thì hỏi lại verdict định kỳ: người xin đang ngồi chờ, và quyết định đến
+ * từ máy người khác — không làm mới thì họ phải F5 mới biết đã được duyệt.
+ */
+const PENDING_REFETCH_MS = 15_000;
 
 export interface SecretMeta {
   id: string;
@@ -82,6 +91,7 @@ export function useOwnerSecrets(ownerType: SecretOwnerType, ownerId: string, me:
       apiFetch<AccessVerdict>(
         `/api/v1/vault/secrets/verdict?ownerType=${ownerType}&ownerId=${encodeURIComponent(ownerId)}`,
       ),
+    refetchInterval: (query) => (query.state.data?.pending ? PENDING_REFETCH_MS : false),
   });
 
   const tier = verdict.data?.tier;
@@ -149,6 +159,8 @@ export function VaultPanel({
 
   /** Ghi vào két nay đòi step-up (C2) — hook lo phần hỏi mã rồi làm lại. */
   const writeStepUp = useStepUpRetry(me.csrfToken);
+  const breakGlass = useBreakGlassActions(me.csrfToken);
+  const [cancelling, setCancelling] = useState(false);
 
   const refresh = () => queryClient.invalidateQueries({ queryKey });
 
@@ -226,7 +238,51 @@ export function VaultPanel({
 
       {/* Member phải THẤY mình đang ở tầng nào — không thì họ bấm Xem, bị từ chối, và
           không hiểu vì sao. */}
-      {!isAdmin && verdict.data ? (
+      {verdict.data?.pending ? (
+        /* Phiếu đang treo: nói gửi lúc nào, cho rút lại — việc xong trước khi ai kịp duyệt thì
+           phiếu treo vẫn nhắc người duyệt và chặn người xin gửi phiếu mới cho cùng đối tượng. */
+        <div className="alert warn" role="status">
+          <p>
+            {t('vault.pendingSince', { at: formatDateTime(verdict.data.pending.createdAt) })}
+          </p>
+          <div className="row" style={{ gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+            <Link to={PATHS.approval(verdict.data.pending.id)}>{t('vault.pendingDetail')}</Link>
+            <button
+              type="button"
+              className="btn sm danger-ghost"
+              disabled={cancelling}
+              onClick={() => {
+                const pendingId = verdict.data?.pending?.id;
+                if (!pendingId) return;
+                void (async () => {
+                  const ok = await askConfirm({
+                    title: t('common.titleOf', {
+                      action: t('approvals.cancel'),
+                      subject: t('vault.tab'),
+                    }),
+                    message: t('approvals.confirmCancel'),
+                    danger: true,
+                    confirmLabel: t('approvals.cancel'),
+                  });
+                  if (!ok) return;
+                  setCancelling(true);
+                  try {
+                    await breakGlass.cancel(pendingId);
+                    toast({ message: t('approvals.cancelled') });
+                    void breakGlass.refresh();
+                  } catch (error) {
+                    toast({ message: errorMessage(error), tone: 'error' });
+                  } finally {
+                    setCancelling(false);
+                  }
+                })();
+              }}
+            >
+              {t('approvals.cancel')}
+            </button>
+          </div>
+        </div>
+      ) : !isAdmin && verdict.data ? (
         <p className={verdict.data.canReveal ? 'alert' : 'alert warn'}>
           {/* `expiresAt` rỗng thì `formatDateTime` trả dấu gạch, và câu thành "Bạn được xem
               tới —. Hết giờ là tự cắt." — một câu tự mâu thuẫn. Quyền không hạn thì nói là
@@ -780,7 +836,8 @@ function BreakGlassDialog({
   const [hours, setHours] = useState('4');
   const [error, setError] = useState<string | null>(null);
 
-  const send = useApiMutation<Record<string, unknown>, { hours: number }>(
+  /* Server trả về PHIẾU vừa tạo — số giờ (đã kẹp theo trần) nằm ở `payload.hours`. */
+  const send = useApiMutation<Record<string, unknown>, Pick<BreakGlassRow, 'id' | 'payload'>>(
     '/api/v1/vault/break-glass',
     { csrfToken, refreshMe: false },
   );
@@ -823,7 +880,8 @@ function BreakGlassDialog({
           send.mutate(
             { ownerType, ownerId, reason: trimmedReason, hours: askedHours },
             {
-              onSuccess: (result) => onSent({ askedHours, grantedHours: result.hours }),
+              onSuccess: (result) =>
+                onSent({ askedHours, grantedHours: result.payload?.hours ?? askedHours }),
               onError: (err) => setError(errorMessage(err)),
             },
           );

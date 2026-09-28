@@ -1,8 +1,15 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
+import {
+  BREAK_GLASS_KEY,
+  BreakGlassSubject,
+  DecisionDialog,
+  type BreakGlassRow,
+} from '@/ui/break-glass';
+import { useToast } from '@/ui/toast';
 import { formatDate, formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { ExpiryBadge } from '@/ui/expiry-badge';
@@ -123,10 +130,22 @@ export function DashboardScreen({ me }: { me: Me }) {
    * cao màn hình. Tin tốt vẫn phải nói ra — im lặng thì không phân biệt được với "chưa đo bao
    * giờ" — nhưng nó không đáng một ô, vì con số 0 trên hàng KPI đã là chỗ đọc nhanh của nó.
    */
-  const loud: ReactNode[] = [];
+  /*
+   * HAI LÀN CỐ ĐỊNH, không phải lưới theo hàng.
+   *
+   * Lưới căn theo hàng thì khối thứ tư rơi xuống dưới đáy khối cao nhất của hàng trên, và cột
+   * bên cạnh bỏ trống cả trăm pixel. Nên: làn chính (2 phần) cho khối "Sắp hết hạn" — danh sách
+   * dài nhất; làn phụ (1 phần) xếp chồng các khối nhỏ theo độ ưu tiên (số nhỏ đứng trên). Lịch
+   * sử break-glass đứng cuối làn phụ: việc CẦN LÀM đã lên khối "Cần bạn duyệt" ở đầu trang.
+   */
+  const main: ReactNode[] = [];
+  const side: { rank: number; node: ReactNode }[] = [];
   const quiet: ReactNode[] = [];
-  const place = (block: Block<unknown>, node: ReactNode) =>
-    (isQuiet(block) ? quiet : loud).push(node);
+  const place = (block: Block<unknown>, node: ReactNode, lane: 'main' | number) => {
+    if (isQuiet(block)) quiet.push(node);
+    else if (lane === 'main') main.push(node);
+    else side.push({ rank: lane, node });
+  };
 
   place(
     board.expiring,
@@ -154,6 +173,7 @@ export function DashboardScreen({ me }: { me: Me }) {
         ))}
       </ul>
     </BlockCard>,
+    'main',
   );
 
   /*
@@ -196,6 +216,7 @@ export function DashboardScreen({ me }: { me: Me }) {
         ))}
       </ul>
     </BlockCard>,
+    1,
   );
 
   /* Member không nhận khối này từ server (rút gọn theo vai) — nên không render gì cả. */
@@ -229,6 +250,7 @@ export function DashboardScreen({ me }: { me: Me }) {
           ))}
         </ul>
       </BlockCard>,
+      4,
     );
   }
 
@@ -269,6 +291,7 @@ export function DashboardScreen({ me }: { me: Me }) {
           ))}
         </ul>
       </BlockCard>,
+      2,
     );
   }
 
@@ -302,6 +325,7 @@ export function DashboardScreen({ me }: { me: Me }) {
         ))}
       </ul>
     </BlockCard>,
+    3,
   );
 
   /*
@@ -321,6 +345,7 @@ export function DashboardScreen({ me }: { me: Me }) {
     >
       <></>
     </BlockCard>,
+    5,
   );
 
   return (
@@ -330,11 +355,106 @@ export function DashboardScreen({ me }: { me: Me }) {
         subtitle={t('dashboard.subtitle')}
       />
 
+      {/* Việc gấp nhất của người duyệt trên điện thoại đứng ĐẦU trang, trên cả hàng số. */}
+      <NeedsYouBlock me={me} />
+
       <BoardKpis board={board} />
 
-      {loud.length > 0 ? <div className="dashboard">{loud}</div> : null}
+      {main.length + side.length > 0 ? (
+        <div className={main.length > 0 && side.length > 0 ? 'dash-lanes' : 'dash-lanes single'}>
+          {main.length > 0 ? <div className="dash-lane">{main}</div> : null}
+          {side.length > 0 ? (
+            <div className="dash-lane">
+              {side.sort((a, b) => a.rank - b.rank).map((entry) => entry.node)}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {quiet.length > 0 ? <div className="dash-quiet">{quiet}</div> : null}
     </>
+  );
+}
+
+/**
+ * "Cần bạn duyệt (N)" — yêu cầu mở két đang chờ CHÍNH người này quyết.
+ *
+ * Khối lịch sử break-glass trộn phiếu đang chờ với phiếu đã xong và không có nút nào; trên điện
+ * thoại nó nằm sau ba màn cuộn. Đây là việc gấp nhất của người duyệt, nên nó đứng đầu trang và
+ * có nút ngay tại chỗ (cùng hộp quyết định, cùng luồng step-up với màn Duyệt yêu cầu). Không có
+ * gì chờ thì khối biến mất — tin tốt đã nằm ở hàng số bên dưới.
+ *
+ * Phiếu của chính mình không đếm: bốn mắt (FR-023) cấm tự duyệt.
+ */
+function NeedsYouBlock({ me }: { me: Me }) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const canDecide = me.role === 'sa' || me.role === 'admin';
+  const [deciding, setDeciding] = useState<{ row: BreakGlassRow; approve: boolean } | null>(null);
+
+  const pending = useQuery({
+    queryKey: [...BREAK_GLASS_KEY, 'pending'],
+    queryFn: () => apiFetch<BreakGlassRow[]>('/api/v1/vault/break-glass/pending'),
+    enabled: canDecide,
+  });
+
+  const mine = me.email.toLowerCase();
+  const rows = (pending.data ?? []).filter((row) => row.requester.toLowerCase() !== mine);
+  if (!canDecide || rows.length === 0) return null;
+
+  return (
+    <section className="card dash-card dash-needs-you" aria-label={t('dashboard.needsYou', { count: rows.length })}>
+      <h2 className="form-section-title">{t('dashboard.needsYou', { count: rows.length })}</h2>
+      <ul className="dash-list">
+        {rows.map((row) => (
+          <li key={row.id}>
+            <div className="dash-line">
+              <strong>{row.requesterName}</strong>
+              <span className="muted">
+                {t('dashboard.askedAt', {
+                  at: formatDateTime(row.createdAt),
+                  hours:
+                    row.payload?.hours === undefined
+                      ? t('approvals.hoursUnknown')
+                      : t('approvals.hours', { hours: row.payload.hours }),
+                })}
+              </span>
+            </div>
+            <BreakGlassSubject row={row} />
+            <p className="approval-reason">{row.reason}</p>
+            <div className="action-cell">
+              <button
+                type="button"
+                className="btn sm primary"
+                onClick={() => setDeciding({ row, approve: true })}
+              >
+                {t('approvals.approve')}
+              </button>
+              <button
+                type="button"
+                className="btn sm danger-ghost"
+                onClick={() => setDeciding({ row, approve: false })}
+              >
+                {t('approvals.deny')}
+              </button>
+              <Link to={PATHS.approval(row.id)}>{t('approvals.openDetail')}</Link>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {deciding ? (
+        <DecisionDialog
+          row={deciding.row}
+          approve={deciding.approve}
+          csrfToken={me.csrfToken}
+          onClose={() => setDeciding(null)}
+          onDone={() => {
+            setDeciding(null);
+            toast({ message: t(deciding.approve ? 'approvals.approved' : 'approvals.denied') });
+          }}
+        />
+      ) : null}
+    </section>
   );
 }
 

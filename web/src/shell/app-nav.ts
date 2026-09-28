@@ -9,6 +9,8 @@ export interface NavItem {
   roles?: Me['role'][];
   /** Màn chưa làm (epic sau) — hiện mờ, không điều hướng được. */
   planned?: boolean;
+  /** Mục mang số việc đang chờ — shell tự hỏi số và vẽ `.nav-badge`. */
+  badge?: 'approvals';
 }
 
 export interface NavGroup {
@@ -34,7 +36,7 @@ export const navGroups: NavGroup[] = [
       // Tài khoản dùng chung + VPN (0032) — mật khẩu của chúng nằm ở két sắt.
       { key: 'nav.serviceAccounts', to: PATHS.serviceAccounts },
       // MỌI vai thấy: Member vào xem yêu cầu của mình đã được duyệt chưa.
-      { key: 'nav.approvals', to: PATHS.approvals },
+      { key: 'nav.approvals', to: PATHS.approvals, badge: 'approvals' },
       /*
        * Không còn `planned`: két sắt đã chạy từ Epic 4, chỉ thiếu cửa vào từ menu.
        *

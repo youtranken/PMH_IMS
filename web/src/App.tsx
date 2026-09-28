@@ -32,6 +32,7 @@ import { ExpiryScreen } from '@/features/expiry/expiry-screen';
 import { DashboardScreen } from '@/features/dashboard/dashboard-screen';
 import { AccessMatrixScreen } from '@/features/vault/access-matrix-screen';
 import { ApprovalsScreen } from '@/features/vault/approvals-screen';
+import { ApprovalDetailScreen } from '@/features/vault/approval-detail-screen';
 import { DisposalScreen } from '@/features/disposal/disposal-screen';
 import { VaultHomeScreen } from '@/features/vault/vault-home-screen';
 import { NatScreen } from '@/features/ipam/nat-screen';
@@ -199,6 +200,8 @@ function AppRoutes() {
         <Route path={PATHS.approvals} element={<ApprovalsScreen me={me} />} />
         {/* Mọi vai: đường vào tự đổi mật khẩu / cài lại 2 lớp / đóng phiên của chính mình. */}
         <Route path={PATHS.profile} element={<ProfileScreen me={me} />} />
+        {/* Đích của nút trong thư duyệt: mở MỘT phiếu và quyết ngay. Quyền đọc do API gác. */}
+        <Route path={`${PATHS.approvals}/:id`} element={<ApprovalDetailScreen me={me} />} />
         {/* Gác ở CẢ route, không chỉ ẩn mục menu: gõ thẳng URL cũng chỉ nhận 404. */}
         {canSeeRoute(PATHS.vault, me.role) ? (
           <Route path={PATHS.vault} element={<VaultHomeScreen me={me} />} />

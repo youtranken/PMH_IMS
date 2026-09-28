@@ -3,7 +3,8 @@ import type { Me } from '@/lib/me';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
 import { VaultPanel, type AccessVerdict, type SecretMeta } from '@/ui/vault-panel';
-import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-utils';
+import { MemoryRouter } from 'react-router-dom';
+import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 
 /**
  * BA HỘP CỦA KÉT SẮT PHẢI KHÓA LẠI KHI LƯỢT GHI ĐANG BAY.
@@ -86,11 +87,13 @@ function mockApi(verdict: AccessVerdict, rows: SecretMeta[]) {
 
 function renderPanel(me: Me = ME) {
   return renderWithI18n(
-    <ToastProvider>
-      <ConfirmProvider>
-        <VaultPanel ownerType="device" ownerId="d1" me={me} />
-      </ConfirmProvider>
-    </ToastProvider>,
+    <MemoryRouter>
+      <ToastProvider>
+        <ConfirmProvider>
+          <VaultPanel ownerType="device" ownerId="d1" me={me} />
+        </ConfirmProvider>
+      </ToastProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -250,5 +253,88 @@ describe('VaultPanel — F-07', () => {
 
     await screen.findByText('admin web');
     expect(screen.queryByText('Đang chờ duyệt')).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Người xin sau khi bấm Gửi (VLT-006, VLT-007).
+ *
+ * POST /vault/break-glass trả về PHIẾU (số giờ nằm ở `payload.hours`), không có `hours` ở gốc.
+ * Đọc nhầm chỗ thì mọi lần gửi đều hiện cảnh báo "vượt trần… chỉ còn  giờ" với chỗ trống — người
+ * xin tin mình bị cắt giờ.
+ */
+describe('VaultPanel — gửi và rút yêu cầu xem', () => {
+  function mockFlow(verdict: AccessVerdict, grantedHours: number) {
+    const calls: { url: string; method: string; body?: string }[] = [];
+    const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+      calls.push({ url, method, body: init?.body as string | undefined });
+      if (method === 'GET' && url.includes('/vault/secrets/verdict')) {
+        return Promise.resolve(jsonResponse(200, verdict));
+      }
+      if (method === 'GET' && url.includes('/vault/secrets')) {
+        return Promise.resolve(jsonResponse(200, [SECRET]));
+      }
+      if (method === 'POST' && url.endsWith('/vault/break-glass')) {
+        return Promise.resolve(
+          jsonResponse(201, { id: 'p1', state: 'pending', payload: { hours: grantedHours } }),
+        );
+      }
+      if (method === 'POST' && url.includes('/cancel')) {
+        return Promise.resolve(jsonResponse(201, { id: 'p1', state: 'cancelled' }));
+      }
+      return new Promise<Response>(() => {});
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    return calls;
+  }
+
+  async function send(hours: string) {
+    await userEvent.click(await screen.findByRole('button', { name: 'Xin quyền xem' }));
+    const dialog = screen.getByRole('dialog');
+    await userEvent.type(within(dialog).getByLabelText(/Lý do/), 'switch tầng 3 mất kết nối');
+    const hoursBox = within(dialog).getByLabelText(/Xin trong bao lâu/);
+    await userEvent.clear(hoursBox);
+    await userEvent.type(hoursBox, hours);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Gửi yêu cầu' }));
+  }
+
+  it('gửi 4 giờ, được 4 giờ → báo "Đã gửi", không cảnh báo vượt trần', async () => {
+    mockFlow(NEEDS_APPROVAL, 4);
+    renderPanel({ ...ME, role: 'member' });
+    await send('4');
+    expect(await screen.findByText(/Đã gửi yêu cầu. Quản trị/)).toBeInTheDocument();
+    expect(screen.queryByText(/vượt trần/)).not.toBeInTheDocument();
+  });
+
+  it('gửi 72 giờ, trần 24 → cảnh báo có ĐÚNG con số 24', async () => {
+    mockFlow(NEEDS_APPROVAL, 24);
+    renderPanel({ ...ME, role: 'member' });
+    await send('72');
+    expect(await screen.findByText(/chỉ còn 24 giờ khi được duyệt/)).toBeInTheDocument();
+  });
+
+  it('đang có phiếu treo → rút được, qua hộp xác nhận', async () => {
+    const calls = mockFlow(
+      {
+        ...NEEDS_APPROVAL,
+        canRequest: false,
+        pending: { id: 'p1', createdAt: '2026-09-20T01:30:00.000Z' },
+      },
+      4,
+    );
+    renderPanel({ ...ME, role: 'member' });
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Rút yêu cầu' }));
+    // Chưa xác nhận thì CHƯA gọi API.
+    expect(calls.some((c) => c.url.includes('/cancel'))).toBe(false);
+    const confirm = await screen.findByRole('dialog');
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Rút yêu cầu' }));
+
+    expect(await screen.findByText('Đã rút yêu cầu.')).toBeInTheDocument();
+    expect(calls.some((c) => c.method === 'POST' && c.url.includes('/break-glass/p1/cancel'))).toBe(
+      true,
+    );
   });
 });

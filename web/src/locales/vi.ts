@@ -1014,6 +1014,9 @@ export default {
     tierNote_needs_approval: 'Đối tượng này cần được duyệt trước khi xem. Bấm "Xin quyền xem".',
     tierNote_whitelist: 'Bạn xem thẳng được — vẫn phải gõ mã 6 số mỗi lần.',
     tierNote_denied: 'Bạn không có quyền trên đối tượng này.',
+    /* Khối trạng thái khi đang có phiếu treo — người xin rút được, và khung tự làm mới. */
+    pendingSince: 'Yêu cầu gửi lúc {{at}} đang chờ Quản trị quyết. Khung này tự làm mới khi có quyết định.',
+    pendingDetail: 'Xem yêu cầu',
   },
   ipam: {
     title: 'Địa chỉ IP',
@@ -1487,6 +1490,44 @@ export default {
     fromMail: 'Yêu cầu trong thư',
     focusGone:
       'Yêu cầu trong thư không còn chờ duyệt — có thể người khác đã xử lý. Xem tab Nhật ký.',
+    /* Đối tượng đọc được thay cho uuid: người duyệt lúc 2 giờ sáng phải biết "máy nào". */
+    subjectGone: 'Hồ sơ đã bị xoá',
+    secretCount: '{{count}} ngăn két',
+    openDetail: 'Xem chi tiết',
+    detailTitle: 'Yêu cầu mở két',
+    backToList: 'Về danh sách duyệt',
+    sentAt: 'Gửi lúc {{at}}',
+    requesterBlock: 'Người xin',
+    reasonBlock: 'Lý do',
+    durationBlock: 'Thời hạn cấp',
+    durationAsked: '{{hours}} giờ · theo xin',
+    endsAt: 'Hết hiệu lực lúc {{at}}',
+    decisionBar: 'Quyết định',
+    approveHours: 'Duyệt {{hours}} giờ',
+    /* Chạm lần hai mới cấp: nút chính nằm đúng chỗ ngón cái chạm nhầm khi cuộn. */
+    approveConfirm: 'Chạm lần nữa để cấp {{hours}} giờ',
+    approveNoteLabel: 'Ghi chú cho người xin (tuỳ chọn)',
+    grantedTo: 'Đã cấp cho {{member}} tới {{until}}.',
+    finalApproved: 'Đã duyệt bởi {{who}} lúc {{at}}.',
+    finalDenied: 'Đã từ chối bởi {{who}} lúc {{at}}.',
+    finalRevoked: 'Đã thu hồi sớm. Người duyệt: {{who}}.',
+    finalExpired: 'Đã hết hạn — quyền đã tự cắt.',
+    finalCancelled: 'Người xin đã rút yêu cầu.',
+    ownRequest: 'Cần người khác duyệt',
+    ownRequestHint: 'Không tự duyệt yêu cầu của chính mình được — cần người thứ hai (bốn mắt).',
+    cancel: 'Rút yêu cầu',
+    confirmCancel:
+      'Rút yêu cầu này? Người duyệt sẽ không phải quyết nữa. Cần thì gửi yêu cầu mới sau.',
+    cancelled: 'Đã rút yêu cầu.',
+    openVault: 'Mở két',
+    /* Từ chối phải nói lý do: người xin nhận ghi chú này trong thư, không có nó thì họ gửi lại y nguyên. */
+    denyNoteLabel: 'Lý do từ chối',
+    denyNoteRequired: 'Ghi lý do từ chối — người xin sẽ đọc câu này trong thư.',
+    denyQuickVague: 'Lý do chưa đủ cụ thể',
+    denyQuickHours: 'Xin quá nhiều giờ, gửi lại với thời hạn ngắn hơn',
+    denyQuickNotNeeded: 'Việc này không cần mở két',
+    denyQuickPick: 'Chọn nhanh lý do',
+    navBadge: '{{count}} yêu cầu chờ duyệt',
   },
   /**
    * SỔ LỊCH SỬ — mọi nhãn của tab "Lịch sử" trên sáu trang chi tiết.
@@ -1699,5 +1740,8 @@ export default {
     disposed: 'Vừa vào kho thanh lý (7 ngày)',
     disposedEmpty: 'Tuần qua không bỏ thứ gì.',
     seeAllDisposed: 'Xem toàn bộ kho thanh lý',
+    /* Việc gấp nhất của SA trên điện thoại đứng ĐẦU trang, trên cả hàng số. */
+    needsYou: 'Cần bạn duyệt ({{count}})',
+    askedAt: 'xin lúc {{at}} · {{hours}}',
   },
 } as const;
