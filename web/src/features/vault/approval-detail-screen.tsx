@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage } from '@/lib/api';
-import { formatDateTime } from '@/lib/format';
+import { agoParts, formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { OWNER_PATH, PATHS } from '@/lib/routes';
 import {
@@ -21,12 +21,19 @@ import { LoadError, Loading } from '@/ui/load-state';
 import { Field, PageHeader } from '@/ui/page-header';
 import { StickyActionBar } from '@/ui/sticky-action-bar';
 import { useToast } from '@/ui/toast';
+import { useNow } from '@/ui/use-now';
 
 /** Nấc giờ gợi ý — người duyệt chỉ RÚT NGẮN được so với số xin, không cấp thêm. */
 const HOUR_STEPS = [1, 2, 4, 8, 24];
 
 /** Nút "Duyệt" phải chạm lần hai trong khoảng này mới cấp — sau đó tự trở về. */
 const CONFIRM_WINDOW_MS = 3_000;
+
+const ROLE_LABEL: Record<string, string> = {
+  sa: 'accounts.roleSa',
+  admin: 'accounts.roleAdmin',
+  member: 'accounts.roleMember',
+};
 
 /** Các nấc ≤ số xin, luôn có đúng số xin ở cuối. Không rõ số xin thì chỉ đưa các nấc ngắn. */
 function hourChoices(asked: number | undefined): number[] {
@@ -54,6 +61,8 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
   const [armed, setArmed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [denying, setDenying] = useState(false);
+  // "Gửi 4 phút trước" phải tự trôi khi người duyệt để màn mở — một phút một lần là đủ.
+  const now = useNow(60_000);
 
   const detail = useQuery({
     queryKey: [...BREAK_GLASS_KEY, 'detail', id],
@@ -129,6 +138,7 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
     if (ok) await run(() => actions.revoke(row.id), 'approvals.revoked');
   };
 
+  const sentAgo = agoParts(row.createdAt, now);
   const who = row.decidedBy ?? '—';
   const at = formatDateTime(row.decidedAt);
   const finalText =
@@ -149,7 +159,12 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
       <Link to={PATHS.approvals}>{t('approvals.backToList')}</Link>
       <PageHeader
         title={t('approvals.detailTitle')}
-        subtitle={t('approvals.sentAt', { at: formatDateTime(row.createdAt) })}
+        subtitle={
+          /* Người trực cần biết phiếu đã chờ BAO LÂU; giờ tuyệt đối vẫn ở `title` và `dateTime`. */
+          <time dateTime={row.createdAt} title={formatDateTime(row.createdAt)}>
+            {sentAgo ? t(`approvals.sentAgo_${sentAgo.unit}`, { count: sentAgo.count }) : null}
+          </time>
+        }
         actions={<BreakGlassStateBadge row={row} />}
       />
 
@@ -158,6 +173,17 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
         <strong>{row.requesterName}</strong>
         {row.requesterName !== row.requester ? (
           <span className="muted"> · {row.requester}</span>
+        ) : null}
+        {row.requesterRole ? (
+          <span className="badge plain">{t(ROLE_LABEL[row.requesterRole] ?? row.requesterRole)}</span>
+        ) : null}
+        {/* Chỉ con số: người duyệt nhận ra người xin quá thường mà không phải mở nhật ký. */}
+        {typeof row.recentCount === 'number' && row.recentWindowDays ? (
+          <p className="muted">
+            {row.recentCount <= 1
+              ? t('approvals.recentFirst', { days: row.recentWindowDays })
+              : t('approvals.recentNth', { count: row.recentCount, days: row.recentWindowDays })}
+          </p>
         ) : null}
       </section>
 

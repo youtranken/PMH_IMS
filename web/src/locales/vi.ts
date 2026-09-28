@@ -296,7 +296,9 @@ export default {
     notYou: 'Không phải {{email}}?',
     signOut: 'Đăng xuất',
     signingOut: 'Đang đăng xuất…',
-    resumeTo: 'Đăng nhập để mở: {{path}}',
+    resumeTo: 'Đăng nhập để mở: {{screen}}',
+    rememberedAs: 'Email đã nhớ trên máy này: {{email}}.',
+    notMe: 'Không phải tôi',
     openInAuthenticator: 'Mở trong ứng dụng xác thực',
     copySecret: 'Sao chép khoá',
     secretLabel: 'Khoá cài đặt',
@@ -817,6 +819,8 @@ export default {
      * thôi có nghĩa. Hai câu nghe giống nhau nhưng nói hai chuyện khác hẳn.
      */
     notCounted: 'Không tính hạn',
+    /* Mô tả trợ năng của badge trên mục menu "Sắp hết hạn". */
+    navBadge: '{{count}} mục đã quá hạn',
     /* Nhãn ngắn của huy hiệu hạn (`lib/expiry.ts` → `expiryLabel`). */
     labelNone: 'Không có hạn',
     labelOverdue: 'Quá hạn {{count}} ngày',
@@ -1088,6 +1092,7 @@ export default {
     requestReasonRequired: 'Ghi rõ lý do — người duyệt cần biết để quyết.',
     requestHours: 'Xin trong bao lâu (giờ)',
     requestHoursHint: 'Xin vừa đủ. Vượt trần hệ thống thì sẽ được kẹp xuống và báo lại.',
+    requestHoursInvalid: 'Số giờ phải là một số nguyên lớn hơn 0. Ví dụ: 4',
     requestSend: 'Gửi yêu cầu',
     requestSent: 'Đã gửi yêu cầu. Quản trị sẽ nhận được email.',
     requestHoursClamped:
@@ -1097,6 +1102,12 @@ export default {
     // treo. Phải là một câu THẬT chứ không mượn câu "Đang chờ duyệt" — xem F-07.
     cannotReveal: 'Chưa có quyền xem',
     grantUntil: 'Bạn được xem tới {{until}}. Hết giờ là tự cắt.',
+    grantUntilLeft: 'Bạn được xem tới {{until}} (còn {{left}}). Hết giờ là tự cắt.',
+    leftHm: '{{hours}} giờ {{minutes}} phút',
+    leftM: '{{minutes}} phút',
+    leftS: '{{seconds}} giây',
+    pendingNotified: 'Đã báo {{count}} người duyệt qua email.',
+    pendingNoApprover: 'Hiện không có người duyệt nào đang hoạt động — liên hệ Super Admin.',
     grantNoLimit: 'Bạn đang được xem ngăn này, không đặt hạn giờ.',
     tierNote_needs_approval: 'Đối tượng này cần được duyệt trước khi xem. Bấm "Xin quyền xem".',
     tierNote_whitelist: 'Bạn xem thẳng được — vẫn phải gõ mã 6 số mỗi lần.',
@@ -1776,8 +1787,9 @@ export default {
     revoked: 'Đã thu hồi quyền.',
     approved: 'Đã duyệt.',
     denied: 'Đã từ chối.',
-    approveTitle: 'Duyệt yêu cầu của {{member}}',
-    denyTitle: 'Từ chối yêu cầu của {{member}}',
+    /* Tiêu đề ngắn để không gãy dòng ở 390px — người xin nằm ngay dòng đầu thân hộp. */
+    approveTitle: 'Duyệt yêu cầu',
+    denyTitle: 'Từ chối yêu cầu',
     grantHours: 'Cấp trong bao lâu (giờ)',
     grantHoursHint: 'Sửa được — cấp vừa đủ việc, đừng cấp thừa. Vượt trần hệ thống sẽ bị kẹp xuống.',
     /* Nói RÕ ô nào sai và nhận cái gì. Trước đây ô này nuốt mọi thứ rồi tự cấp 4 giờ. */
@@ -1804,8 +1816,13 @@ export default {
     openDetail: 'Xem chi tiết',
     detailTitle: 'Yêu cầu mở két',
     backToList: 'Về danh sách duyệt',
-    sentAt: 'Gửi lúc {{at}}',
+    sentAgo_now: 'Gửi vừa xong',
+    sentAgo_minutes: 'Gửi {{count}} phút trước',
+    sentAgo_hours: 'Gửi {{count}} giờ trước',
+    sentAgo_days: 'Gửi {{count}} ngày trước',
     requesterBlock: 'Người xin',
+    recentFirst: 'Lần xin đầu tiên trong {{days}} ngày qua',
+    recentNth: 'Lần xin thứ {{count}} trong {{days}} ngày qua',
     reasonBlock: 'Lý do',
     durationBlock: 'Thời hạn cấp',
     durationAsked: '{{hours}} giờ · theo xin',

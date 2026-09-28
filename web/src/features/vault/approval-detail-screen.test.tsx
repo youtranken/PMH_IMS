@@ -171,3 +171,35 @@ describe('Trang chi tiết phiếu break-glass', () => {
     expect(calls.some((c) => c.url.endsWith('/deny'))).toBe(false);
   });
 });
+
+describe('Ngữ cảnh để quyết nhanh (VLT-FLOW)', () => {
+  it('đầu trang nói phiếu đã chờ bao lâu, giờ tuyệt đối nằm trong title', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-09-20T01:34:30.000Z'));
+    mockApi(ROW);
+    renderDetail();
+    const ago = await screen.findByText('Gửi 4 phút trước');
+    expect(ago.tagName).toBe('TIME');
+    expect(ago).toHaveAttribute('dateTime', ROW.createdAt);
+    expect(ago.getAttribute('title')).toMatch(/20\/09\/2026/);
+  });
+
+  it('người duyệt thấy vai người xin và "lần thứ N trong X ngày" — chỉ con số', async () => {
+    mockApi({ ...ROW, requesterRole: 'member', recentCount: 3, recentWindowDays: 30 });
+    renderDetail();
+    const block = await screen.findByRole('region', { name: 'Người xin' });
+    expect(within(block).getByText('Thành viên')).toBeInTheDocument();
+    expect(within(block).getByText('Lần xin thứ 3 trong 30 ngày qua')).toBeInTheDocument();
+  });
+
+  it('lần đầu thì nói lần đầu; server không gửi (người xin tự xem) thì không bịa', async () => {
+    mockApi({ ...ROW, requesterRole: 'member', recentCount: 1, recentWindowDays: 30 });
+    const view = renderDetail();
+    expect(await screen.findByText('Lần xin đầu tiên trong 30 ngày qua')).toBeInTheDocument();
+    view.unmount();
+
+    mockApi({ ...ROW, requesterRole: null, recentCount: null, recentWindowDays: null });
+    renderDetail();
+    await screen.findByRole('region', { name: 'Người xin' });
+    expect(screen.queryByText(/Lần xin/)).toBeNull();
+  });
+});

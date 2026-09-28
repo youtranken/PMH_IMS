@@ -1,9 +1,9 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { errorCode, errorMessage, useApiMutation } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
-import { formatDateTime, orDash } from '@/lib/format';
+import { formatDateTime, orDash, remainingParts } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import type { SecretOwnerType } from '@/lib/secret-owner-kinds';
 import { Dialog } from '@/ui/dialog';
@@ -23,6 +23,7 @@ import { PATHS } from '@/lib/routes';
 import { Link } from 'react-router-dom';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
+import { useNow } from '@/ui/use-now';
 
 /*
  * Danh sách loại chủ thể đã dọn về `lib/secret-owner-kinds.ts` (12/09) — ở đó nó đứng cạnh
@@ -39,6 +40,10 @@ export interface AccessVerdict {
   canRequest: boolean;
   grant: { id: string; expiresAt: string | null } | null;
   pending: { id: string; createdAt?: string } | null;
+  /** Số người duyệt được đã nhận thư báo phiếu đang treo — chỉ con số. */
+  notifiedApprovers?: number | null;
+  /** Giây còn lại của quyền đang chạy, server tính (AD-6). */
+  grantSecondsLeft?: number | null;
 }
 
 /**
@@ -153,6 +158,24 @@ export function VaultPanel({
   const queryKey = secretsKey(ownerType, ownerId);
   const { verdict, secrets, allowed, isAdmin } = useOwnerSecrets(ownerType, ownerId, me);
 
+  /*
+   * Đếm lùi quyền đang chạy TỪ con số server đưa (mốc = lúc nhận phản hồi), không tự trừ theo
+   * đồng hồ máy so với `expiresAt` — máy người dùng lệch giờ thì chữ đếm lùi cũng không nói sai.
+   * Về 0 thì hỏi lại server: nó mới là nơi nói quyền đã cắt.
+   */
+  const grantSecondsLeft = verdict.data?.grantSecondsLeft ?? null;
+  const grantDeadline =
+    grantSecondsLeft === null ? null : verdict.dataUpdatedAt + grantSecondsLeft * 1000;
+  const now = useNow(1000, grantDeadline !== null);
+  const grantLeft =
+    grantDeadline === null ? null : Math.max(0, Math.round((grantDeadline - now) / 1000));
+  const { refetch: refetchVerdict } = verdict;
+  useEffect(() => {
+    if (grantLeft !== 0) return;
+    const timer = window.setTimeout(() => void refetchVerdict(), 1000);
+    return () => window.clearTimeout(timer);
+  }, [grantLeft, refetchVerdict]);
+
   const revoke = useApiMutation<{ id: string }, unknown>(
     (input) => `/api/v1/vault/secrets/${input.id}`,
     { method: 'DELETE', csrfToken: me.csrfToken, refreshMe: false, body: () => undefined },
@@ -246,6 +269,14 @@ export function VaultPanel({
           <p>
             {t('vault.pendingSince', { at: formatDateTime(verdict.data.pending.createdAt) })}
           </p>
+          {/* Người xin ngồi chờ lúc 2 giờ sáng cần biết có ai được báo không — chỉ con số. */}
+          {typeof verdict.data.notifiedApprovers === 'number' ? (
+            <p>
+              {verdict.data.notifiedApprovers > 0
+                ? t('vault.pendingNotified', { count: verdict.data.notifiedApprovers })
+                : t('vault.pendingNoApprover')}
+            </p>
+          ) : null}
           <div className="row" style={{ gap: 'var(--space-4)', flexWrap: 'wrap' }}>
             <Link to={PATHS.approval(verdict.data.pending.id)}>{t('vault.pendingDetail')}</Link>
             <button
@@ -290,9 +321,14 @@ export function VaultPanel({
               không hạn. */}
           {verdict.data.grant
             ? verdict.data.grant.expiresAt
-              ? t('vault.grantUntil', {
-                  until: formatDateTime(verdict.data.grant.expiresAt),
-                })
+              ? grantLeft !== null
+                ? t('vault.grantUntilLeft', {
+                    until: formatDateTime(verdict.data.grant.expiresAt),
+                    left: leftText(grantLeft, t),
+                  })
+                : t('vault.grantUntil', {
+                    until: formatDateTime(verdict.data.grant.expiresAt),
+                  })
               : t('vault.grantNoLimit')
             : t(`vault.tierNote_${verdict.data.tier}`)}
         </p>
@@ -820,6 +856,14 @@ function RotateForm({
   );
 }
 
+/** "3 giờ 52 phút" / "12 phút" / "45 giây" — đơn vị lớn nhất còn khác 0 quyết định cách nói. */
+function leftText(seconds: number, t: (key: string, options?: Record<string, unknown>) => string) {
+  const parts = remainingParts(seconds);
+  if (parts.hours > 0) return t('vault.leftHm', parts);
+  if (parts.minutes > 0) return t('vault.leftM', parts);
+  return t('vault.leftS', parts);
+}
+
 /**
  * Xin quyền xem tạm thời (story 6.3, FR-023).
  *
@@ -848,6 +892,12 @@ function BreakGlassDialog({
   const [reason, setReason] = useState('');
   const [hours, setHours] = useState('4');
   const [error, setError] = useState<string | null>(null);
+  /* Không âm thầm đổi "2 tiếng" thành 4 giờ: người xin phải biết con số mình gửi đi. */
+  const askedHours = Number(hours.trim());
+  const check = useFormErrors({
+    reason: reason.trim().length < REQUEST_REASON_MIN_LEN && t('vault.requestReasonRequired'),
+    hours: (!Number.isInteger(askedHours) || askedHours <= 0) && t('vault.requestHoursInvalid'),
+  });
 
   /* Server trả về PHIẾU vừa tạo — số giờ (đã kẹp theo trần) nằm ở `payload.hours`. */
   const send = useApiMutation<Record<string, unknown>, Pick<BreakGlassRow, 'id' | 'payload'>>(
@@ -879,19 +929,14 @@ function BreakGlassDialog({
         id="break-glass-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          const trimmedReason = reason.trim();
-          // `minLength` của trình duyệt báo lỗi bằng tiếng Anh — validate tay để dùng câu
-          // tiếng Việt đã có sẵn trong vi.ts (vault.requestReasonRequired).
-          if (trimmedReason.length < REQUEST_REASON_MIN_LEN) {
-            setError(t('vault.requestReasonRequired'));
-            return;
-          }
-          const askedHours = Number(hours) || 4;
+          if (!check.check()) return;
           send.mutate(
-            { ownerType, ownerId, reason: trimmedReason, hours: askedHours },
+            { ownerType, ownerId, reason: reason.trim(), hours: askedHours },
             {
               onSuccess: (result) =>
                 onSent({ askedHours, grantedHours: result.payload?.hours ?? askedHours }),
@@ -902,7 +947,12 @@ function BreakGlassDialog({
       >
         <p className="muted">{t('vault.requestHint')}</p>
 
-        <Field label={t('vault.requestReason')} required htmlFor="bg-reason">
+        <Field
+          label={t('vault.requestReason')}
+          required
+          htmlFor="bg-reason"
+          error={check.error('reason')}
+        >
           <textarea
             id="bg-reason"
             className="inp"
@@ -913,7 +963,13 @@ function BreakGlassDialog({
           />
         </Field>
 
-        <Field label={t('vault.requestHours')} required hint={t('vault.requestHoursHint')} htmlFor="bg-hours">
+        <Field
+          label={t('vault.requestHours')}
+          required
+          hint={t('vault.requestHoursHint')}
+          htmlFor="bg-hours"
+          error={check.error('hours')}
+        >
           <input
             id="bg-hours"
             className="inp"

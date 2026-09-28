@@ -27,6 +27,12 @@ export interface Me {
   };
 }
 
+/**
+ * Khoá cache của `/auth/me`. Nằm ở đây (không phụ thuộc gì) để `api-client` đọc được email
+ * chủ phiên mà không vòng import qua `lib/api`.
+ */
+export const ME_KEY = ['auth', 'me'] as const;
+
 export const LOGIN_PATH = '/login';
 export const TOTP_CHALLENGE_PATH = '/login/2fa';
 export const TOTP_ENROLL_PATH = '/login/2fa-setup';

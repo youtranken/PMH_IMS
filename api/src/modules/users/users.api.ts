@@ -42,6 +42,14 @@ export class UsersApiService {
   }
 
   /**
+   * Vai hiện tại của người xin break-glass — người duyệt cần biết "Member hay Admin" để đánh giá
+   * rủi ro. Chỉ trả vai, không trả gì khác của tài khoản.
+   */
+  roleByEmail(email: string): Promise<UserRole | null> {
+    return this.users.roleByEmail(email);
+  }
+
+  /**
    * `email → họ tên` cho một mẻ email. Khóa của map đã hạ chữ thường — tra bằng
    * `map.get(email.toLowerCase())`.
    *

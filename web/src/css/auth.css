@@ -98,6 +98,8 @@
   color: var(--auth-hint);
   font-size: var(--fs-xs);
 }
+/* Lỗi dưới ô trên card tối: `--danger` của theme sáng không đủ tương phản trên nền này. */
+.auth-form .field-error { color: var(--auth-danger-ink); }
 /* Nút dạng chữ trên card tối (Quên mật khẩu?, Đăng xuất…) — không nền, gạch chân để nhận ra là bấm được. */
 .auth-link {
   background: none;

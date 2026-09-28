@@ -111,7 +111,6 @@ test.describe('Két sắt ở 390px', () => {
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
     await page.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
-    await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận' }).click();
 
     await expect(page.getByTestId('secret-value')).toBeVisible();
     // Chuỗi phải ngắt dòng trong khung, không đẩy cả trang rộng ra.

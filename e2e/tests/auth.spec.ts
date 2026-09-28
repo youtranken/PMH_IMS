@@ -38,19 +38,16 @@ test.describe('Đăng nhập', () => {
 
     await fillLogin(page, E2E_MEMBER.email, NEW_PASSWORD);
     await page.getByLabel('Mã xác thực').fill('000000');
-    await page.getByRole('button', { name: 'Xác nhận' }).click();
     await expect(page.getByRole('alert')).toContainText('không đúng');
 
     const code = await freshTotpCode(secret);
     await page.getByLabel('Mã xác thực').fill(code);
-    await page.getByRole('button', { name: 'Xác nhận' }).click();
     await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
 
     // Dùng LẠI đúng mã đó cho lần đăng nhập kế tiếp → phải bị chặn.
     await logout(page);
     await fillLogin(page, E2E_MEMBER.email, NEW_PASSWORD);
     await page.getByLabel('Mã xác thực').fill(code);
-    await page.getByRole('button', { name: 'Xác nhận' }).click();
     await expect(page.getByRole('alert')).toContainText('đã được dùng');
   });
 

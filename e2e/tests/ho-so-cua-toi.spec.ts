@@ -109,7 +109,6 @@ test('cài lại 2 lớp trên điện thoại mới ĐÒI mã của điện tho
   const stepUp = own.getByRole('dialog', { name: 'Xác nhận danh tính' });
   await expect(stepUp).toBeVisible();
   await stepUp.getByLabel('Mã xác thực').fill(await freshTotpCode(person.secret));
-  await stepUp.getByRole('button', { name: 'Xác nhận' }).click();
 
   const newSecret = (await dialog.getByTestId('totp-secret').innerText()).trim();
   expect(newSecret).not.toBe(person.secret);

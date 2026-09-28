@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import { apiFetch, ApiError } from '@/lib/api-client';
+import { apiFetch, ApiError, queryClient } from '@/lib/api-client';
+import { ME_KEY } from '@/lib/me';
+import { clearNextPath, noteTabOwner, peekNextPath } from '@/lib/next-path';
 import { jsonResponse } from '@/test/test-utils';
 
 describe('apiFetch', () => {
@@ -30,6 +32,44 @@ describe('apiFetch', () => {
     );
     await expect(apiFetch('/api/v1/auth/login')).rejects.toMatchObject({ status: 401 });
     expect(window.location.href).toBe('');
+  });
+
+  it('phiên chết giữa chừng → nhớ trang đang làm KÈM email chủ phiên, người khác không lấy được', async () => {
+    queryClient.setQueryData(ME_KEY, { email: 'a@pmh.com.vn' });
+    vi.stubGlobal('location', {
+      href: '',
+      pathname: '/approvals/7',
+      search: '',
+      hash: '',
+    } as unknown as Location);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse(401, { code: 'SESSION_EXPIRED', message: 'Hết hạn' })),
+    );
+    await expect(apiFetch('/api/v1/accounts')).rejects.toMatchObject({ status: 401 });
+    expect(peekNextPath('b@pmh.com.vn')).toBeNull();
+    expect(peekNextPath('a@pmh.com.vn')).toBe('/approvals/7');
+    clearNextPath();
+    queryClient.clear();
+  });
+
+  it('cache `me` đã rỗng (F5 sau khi phiên chết) → chủ lấy từ tab, vẫn không trao cho người khác', async () => {
+    noteTabOwner('a@pmh.com.vn');
+    vi.stubGlobal('location', {
+      href: '',
+      pathname: '/devices/9',
+      search: '?tab=vault',
+      hash: '',
+    } as unknown as Location);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(jsonResponse(401, { code: 'SESSION_EXPIRED', message: 'Hết hạn' })),
+    );
+    await expect(apiFetch('/api/v1/devices/9')).rejects.toMatchObject({ status: 401 });
+    expect(peekNextPath('b@pmh.com.vn')).toBeNull();
+    expect(peekNextPath('a@pmh.com.vn')).toBe('/devices/9?tab=vault');
+    clearNextPath();
+    noteTabOwner(null);
   });
 
   it('401 vì PHIÊN CHẾT → đá về màn đăng nhập', async () => {

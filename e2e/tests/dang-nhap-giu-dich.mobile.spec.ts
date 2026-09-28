@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
   APP_ORIGIN,
+  E2E_MEMBER,
   E2E_SA,
   NEW_PASSWORD,
   fillLogin,
@@ -10,6 +11,7 @@ import {
   logout,
   resetUsers,
   signOutMidFlow,
+  sql,
 } from './helpers';
 
 /**
@@ -22,12 +24,22 @@ test.beforeEach(() => {
   resetUsers();
 });
 
-/** Mật khẩu + mã 2 lớp của một tài khoản đã cài xong — KHÔNG `goto('/')` để giữ đích đã nhớ. */
-async function loginKeepingTarget(page: Page, secret: string): Promise<void> {
-  await fillLogin(page, E2E_SA.email, NEW_PASSWORD);
+/**
+ * Mật khẩu + mã 2 lớp của một tài khoản đã cài xong — KHÔNG `goto('/')` để giữ đích đã nhớ.
+ * Ô mã tự gửi khi đủ 6 số nên không bấm "Xác nhận".
+ */
+async function loginKeepingTarget(page: Page, secret: string, email = E2E_SA.email): Promise<void> {
+  await fillLogin(page, email, NEW_PASSWORD);
   await expect(page.getByRole('heading', { name: 'Xác thực 2 lớp' })).toBeVisible();
   await page.getByLabel('Mã xác thực').fill(await freshTotpCode(secret));
-  await page.getByRole('button', { name: 'Xác nhận' }).click();
+}
+
+/** Phiên của một người chết ở máy chủ (hết idle, bị đá…) trong khi tab vẫn đang mở. */
+function killSessions(email: string): void {
+  sql(
+    `UPDATE sessions SET revoked_at = now(), revoked_reason = 'e2e-phien-chet' ` +
+      `WHERE revoked_at IS NULL AND user_id = (SELECT id FROM users WHERE email = '${email}')`,
+  );
 }
 
 test('link sâu /approvals?id=… khi chưa đăng nhập → đăng nhập + 2 lớp → về đúng /approvals?id=…', async ({
@@ -40,7 +52,9 @@ test('link sâu /approvals?id=… khi chưa đăng nhập → đăng nhập + 2 
   await page.goto(`/approvals?id=${id}`);
   await expect(page).toHaveURL(/\/login$/);
   // Màn đăng nhập nói trước sẽ tới đâu.
-  await expect(page.getByText(`Đăng nhập để mở: /approvals?id=${id}`)).toBeVisible();
+  // Màn đăng nhập nói TÊN MÀN sẽ mở, không in đường dẫn thô (B5).
+  await expect(page.getByText('Đăng nhập để mở: Duyệt yêu cầu')).toBeVisible();
+  await expect(page.getByText(/\/approvals/)).toHaveCount(0);
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
   await loginKeepingTarget(page, secret);
@@ -110,4 +124,63 @@ test('màn đăng nhập: "Quên mật khẩu?" chỉ đường, không có lu�
   const res = await page.request.get('/api/v1/auth/support-contact');
   expect(res.status()).toBe(200);
   expect(Object.keys((await res.json()) as object)).toEqual(['contact']);
+});
+
+test('máy dùng chung: phiên của A chết giữa chừng → B đăng nhập thì về trang chủ, không bị kéo tới trang dở của A', async ({
+  page,
+}) => {
+  const memberSecret = await firstLogin(page, E2E_MEMBER);
+  await logout(page);
+  const saSecret = await firstLogin(page, E2E_SA);
+
+  // A (SA) đang làm dở ở màn Phần mềm thì phiên chết; ai đó F5.
+  await page.goto('/software');
+  await expect(page.getByRole('heading', { name: 'Phần mềm' })).toBeVisible();
+  killSessions(E2E_SA.email);
+  await page.reload();
+  await expect(page).toHaveURL(/\/login$/);
+
+  // B (Member) ngồi vào đăng nhập: về trang chủ của B.
+  await loginKeepingTarget(page, memberSecret, E2E_MEMBER.email);
+  await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+  expect(new URL(page.url()).pathname).toBe('/');
+  await logout(page);
+
+  // Đường hạnh phúc: chính người có phiên chết đăng nhập lại thì về đúng trang dở.
+  await loginKeepingTarget(page, saSecret);
+  await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+  await page.goto('/software');
+  await expect(page.getByRole('heading', { name: 'Phần mềm' })).toBeVisible();
+  killSessions(E2E_SA.email);
+  await page.reload();
+  await expect(page).toHaveURL(/\/login$/);
+  await loginKeepingTarget(page, saSecret);
+  await expect(page).toHaveURL((url) => url.pathname === '/software');
+});
+
+test('email đăng nhập được nhớ trên máy; "Không phải tôi" xoá nó', async ({ page }) => {
+  await firstLogin(page, E2E_SA);
+  await logout(page);
+
+  await page.goto('/login');
+  await expect(page.getByLabel('Email')).toHaveValue(E2E_SA.email);
+  await expect(page.getByText(`Email đã nhớ trên máy này: ${E2E_SA.email}.`)).toBeVisible();
+  // Email đã có thì con trỏ ở ô mật khẩu — trên điện thoại bàn phím bật đúng ô cần gõ.
+  await expect(page.getByLabel('Mật khẩu', { exact: true })).toBeFocused();
+  expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+
+  await page.getByRole('button', { name: 'Không phải tôi' }).click();
+  await expect(page.getByLabel('Email')).toHaveValue('');
+  await page.reload();
+  await expect(page.getByLabel('Email')).toHaveValue('');
+  await expect(page.getByRole('button', { name: 'Không phải tôi' })).toHaveCount(0);
+});
+
+test('bấm Đăng nhập khi trống: lỗi tiếng Việt dưới từng ô, không phải bong bóng của trình duyệt', async ({
+  page,
+}) => {
+  await page.goto('/login');
+  await page.getByRole('button', { name: 'Đăng nhập' }).click();
+  await expect(page.getByText('Bắt buộc — chưa nhập ô này.')).toHaveCount(2);
+  await expect(page.getByLabel('Email')).toBeFocused();
 });

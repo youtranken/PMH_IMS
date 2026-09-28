@@ -48,6 +48,8 @@ export const CONFIG_KEYS = {
   secretProbeWindowMinutes: { key: 'secret.probe_window_minutes', fallback: 15 },
   secretProbeCooldownMinutes: { key: 'secret.probe_cooldown_minutes', fallback: 60 },
   breakGlassMaxGrantHours: { key: 'breakglass.max_grant_hours', fallback: 24 },
+  // Cửa sổ đếm "người này đã xin N lần" trên phiếu người duyệt đọc (0098).
+  breakGlassRecentWindowDays: { key: 'breakglass.recent_window_days', fallback: 30 },
   approvalReminderHours: { key: 'approval.reminder_hours', fallback: 4 },
   mailFromAddress: { key: 'mail.from_address', fallback: 'ims@pmh.com.vn' },
   appTimezone: { key: 'app.timezone', fallback: 'Asia/Ho_Chi_Minh' },
