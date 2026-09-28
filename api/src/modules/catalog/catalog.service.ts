@@ -32,6 +32,7 @@ import {
   vendorTable,
 } from './catalog.schema';
 import { normalizeKey } from '../../common/import-plan';
+import { CATALOG_REF_INACTIVE, inactiveRefMessage } from './catalog-refs';
 import {
   type CabinetRecord,
   type CatalogEntity,
@@ -262,6 +263,7 @@ export class CatalogService {
     input: CatalogInput,
   ): Promise<CatalogRecord> {
     const values = await this.toRow(entity, input);
+    if (entity === 'cabinet') await this.assertSiteSelectable(input.siteId, null);
     return this.db.transaction(async (tx) => {
       const created = await this.insertWithin(tx, entity, values);
       await this.recordWithin(tx, actor, entity, created.id, 'created', values);
@@ -277,6 +279,9 @@ export class CatalogService {
   ): Promise<CatalogRecord> {
     const before = await this.requireOne(entity, id);
     const values = await this.toRow(entity, input);
+    if (entity === 'cabinet') {
+      await this.assertSiteSelectable(input.siteId, before.siteId as string);
+    }
     return this.db.transaction(async (tx) => {
       const updated = await this.updateWithin(tx, entity, id, values);
       await this.recordWithin(tx, actor, entity, id, 'updated', {
@@ -582,6 +587,27 @@ export class CatalogService {
         }
         return values;
       }
+    }
+  }
+
+  /**
+   * Ô "Thuộc site" của tủ: site đã vô hiệu không chọn MỚI được (Q-14), nhưng tủ VỐN ở site đó
+   * vẫn sửa được mã/mô tả — form gửi lại cả `siteId` không đổi.
+   */
+  private async assertSiteSelectable(
+    siteId: string | undefined,
+    currentSiteId: string | null,
+  ): Promise<void> {
+    if (!siteId || siteId === currentSiteId) return;
+    const rows = await this.db
+      .select({ code: siteTable.code, active: siteTable.active })
+      .from(siteTable)
+      .where(eq(siteTable.id, siteId));
+    if (rows[0] && !rows[0].active) {
+      throw new BadRequestException({
+        code: CATALOG_REF_INACTIVE,
+        message: inactiveRefMessage('Site', rows[0].code),
+      });
     }
   }
 

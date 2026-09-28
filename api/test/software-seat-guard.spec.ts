@@ -80,6 +80,7 @@ describe('BE-09 · BE-13 · hồ sơ phần mềm và ghế đang gán', () => {
     const catalog = {
       lists: () => Promise.resolve({ vendors: [] }),
       validateRefs: () => Promise.resolve([]),
+      assertRefs: () => Promise.resolve(),
     } as unknown as CatalogApiService;
     const expiry = {
       recordRenewalWithin: () => Promise.resolve(),

@@ -22,7 +22,7 @@ import {
 } from '../../common/sql';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
 import { AuditWriterService } from '../audit/audit-writer.service';
-import { CatalogApiService } from '../catalog/catalog.api';
+import { CATALOG_REF_INACTIVE, CatalogApiService, inactiveRefMessage } from '../catalog/catalog.api';
 import { DevicesApiService } from '../devices/devices.api';
 import { ispLineHistoryTable, ispLineTable } from './software.schema';
 
@@ -340,13 +340,7 @@ export class IspLineService {
     const effective = effectiveOf(values);
     const siteId = effective<string | null>('siteId', current?.siteId ?? null);
     if (siteId) {
-      const errors = await this.catalog.validateRefs({ siteId });
-      if (errors.length > 0) {
-        throw new BadRequestException({
-          code: 'CATALOG_REF_INVALID',
-          message: errors.join(' '),
-        });
-      }
+      await this.catalog.assertRefs({ siteId }, current ? { siteId: current.siteId } : null);
     }
     return values;
   }
@@ -371,8 +365,8 @@ export class IspLineService {
     }
     if (!provider.active && provider.id !== currentId) {
       throw new BadRequestException({
-        code: 'CATALOG_REF_INVALID',
-        message: `Nhà mạng "${provider.name}" đã ngừng dùng — chọn nhà mạng khác, hoặc bật lại trong Danh mục.`,
+        code: CATALOG_REF_INACTIVE,
+        message: inactiveRefMessage('Nhà mạng', provider.name),
       });
     }
     return { providerId: provider.id, provider: provider.name };
