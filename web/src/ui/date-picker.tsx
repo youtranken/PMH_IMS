@@ -33,6 +33,7 @@ export function DatePicker({
   blockSunday = false,
   bookableDays,
   busyDate,
+  openTo,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -58,6 +59,11 @@ export function DatePicker({
   bookableDays?: number[];
   /** Khóa các ngày máy đã BẬN (chuỗi 'YYYY-MM-DD' → true = khóa) — tránh chọn trùng đặt máy. */
   busyDate?: (iso: string) => boolean;
+  /**
+   * Tháng mở sẵn khi ô còn TRỐNG ('YYYY-MM-DD'). Ngày sinh mở ở tháng hiện tại là bắt người
+   * dùng bấm lùi vài trăm lần; có giá trị rồi thì lịch luôn mở ở ngày đã chọn.
+   */
+  openTo?: string;
 }) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -65,7 +71,7 @@ export function DatePicker({
   const triggerRef = useRef<HTMLButtonElement>(null);
   // Popover portal ra body (thoát overflow sheet/table + ancestor transform); Floating UI lo
   // flip/shift/collision + autoUpdate. z-index/hình từ CSS .dp-pop.
-  const { refs, floatingStyles } = useAnchoredMenu(open, { maxHeight: 360 });
+  const { refs, floatingStyles } = useAnchoredMenu(open, { maxHeight: 420 });
   const portal = useDialogPortal();
 
   // Ngày đang chọn (parse value) + tháng đang xem.
@@ -79,17 +85,30 @@ export function DatePicker({
   const [focusDate, setFocusDate] = useState(() => stripTime(selected ?? new Date()));
   const wantFocus = useRef(false);
   const dayRefs = useRef(new Map<string, HTMLButtonElement>());
+  /*
+   * Ô GÕ NGÀY ở đầu lịch. Người nhập từ hóa đơn gõ "09/10/2026" nhanh hơn bấm ‹ › ba chục lần.
+   * Gõ một chữ số ngay trên nút mở lịch là mở lịch với tiêu điểm nằm sẵn trong ô này.
+   */
+  const [typed, setTyped] = useState('');
+  const [typedError, setTypedError] = useState<string | null>(null);
+  const typeFirst = useRef(false);
+  const typeRef = useRef<HTMLInputElement>(null);
+  const openTarget = useMemo(() => parseISO(openTo ?? ''), [openTo]);
 
   // Mở lại thì đưa con trỏ về tháng của ngày đã chọn (nếu có), và dời tiêu điểm vào lưới.
   useEffect(() => {
     if (open) {
-      const start = stripTime(selected ?? new Date());
+      const start = stripTime(selected ?? openTarget ?? new Date());
       setCursor(start);
       setFocusDate(start);
       setView('day');
-      wantFocus.current = true;
+      wantFocus.current = !typeFirst.current;
+      if (typeFirst.current) {
+        typeFirst.current = false;
+        typeRef.current?.focus();
+      }
     }
-  }, [open, selected]);
+  }, [open, selected, openTarget]);
 
   useEffect(() => {
     if (!open || view !== 'day' || !wantFocus.current) return;
@@ -172,6 +191,29 @@ export function DatePicker({
     [minD, maxD, blockWeekend, blockSunday, bookableDays, busyDate],
   );
 
+  const commitTyped = () => {
+    const parsed = parseTypedDate(typed);
+    if (parsed.reason === 'empty') return;
+    if (!parsed.value) {
+      setTypedError(t('datePicker.typeInvalid'));
+      return;
+    }
+    const date = parseISO(parsed.value);
+    if (!date || outOfRange(date)) {
+      setTypedError(t('datePicker.typeOutOfRange'));
+      return;
+    }
+    onChange(parsed.value);
+    closeAndReturnFocus();
+  };
+
+  const openPicker = (initialTyped: string) => {
+    setTyped(initialTyped);
+    setTypedError(null);
+    typeFirst.current = initialTyped !== '';
+    setOpen(true);
+  };
+
   const pick = useCallback(
     (d: Date) => {
       if (outOfRange(d)) return;
@@ -253,7 +295,14 @@ export function DatePicker({
         aria-haspopup="dialog"
         aria-expanded={open}
         disabled={disabled}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => (open ? setOpen(false) : openPicker(''))}
+        onKeyDown={(event) => {
+          // Gõ chữ số trên nút = bắt đầu gõ ngày. Không chặn phím nào khác (Tab, Space, Enter).
+          if (!open && /^[0-9]$/.test(event.key) && !event.ctrlKey && !event.metaKey) {
+            event.preventDefault();
+            openPicker(event.key);
+          }
+        }}
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <rect x="3" y="4" width="18" height="17" rx="3" />
@@ -295,6 +344,35 @@ export function DatePicker({
             style={floatingStyles}
             ref={refs.setFloating}
           >
+          <div className="dp-type">
+            <input
+              ref={typeRef}
+              className="inp"
+              inputMode="numeric"
+              autoComplete="off"
+              aria-label={t('datePicker.typeLabel')}
+              aria-invalid={typedError ? true : undefined}
+              aria-describedby={typedError ? `${id ?? 'dp'}-type-error` : undefined}
+              placeholder="dd/mm/yyyy"
+              value={typed}
+              onChange={(event) => {
+                setTyped(event.target.value);
+                setTypedError(null);
+              }}
+              onKeyDown={(event) => {
+                // Enter trong ô này KHÔNG được nổi lên form chứa lịch (sẽ gửi cả form).
+                if (event.key === 'Enter') {
+                  event.preventDefault();
+                  commitTyped();
+                }
+              }}
+            />
+            {typedError ? (
+              <p id={`${id ?? 'dp'}-type-error`} className="field-error" role="alert">
+                {typedError}
+              </p>
+            ) : null}
+          </div>
           <div className="dp-head">
             <button type="button" className="dp-nav" onClick={() => step(-1)} aria-label={t('datePicker.prev')}>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -416,6 +494,31 @@ export function DatePicker({
         )}
     </div>
   );
+}
+
+/**
+ * Chuỗi người dùng GÕ → 'YYYY-MM-DD'. Nhận `/`, `-`, `.` hoặc không dấu ngăn (`09102026`), năm
+ * hai số (`90` → 1990, `25` → 2025: mốc 50). Ngày không có thật (31/02) là lỗi, KHÔNG lăn sang
+ * tháng sau như `new Date()` vẫn làm. Một hình dạng trả về (web không bật `strict`).
+ */
+export function parseTypedDate(text: string): {
+  value: string | null;
+  reason: 'empty' | 'invalid' | null;
+} {
+  const raw = text.trim();
+  if (raw === '') return { value: null, reason: 'empty' };
+  const m =
+    /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2}|\d{4})$/.exec(raw) ?? /^(\d{2})(\d{2})(\d{4})$/.exec(raw);
+  if (!m) return { value: null, reason: 'invalid' };
+  const day = Number(m[1]);
+  const month = Number(m[2]);
+  let year = Number(m[3]);
+  if (m[3].length === 2) year += year < 50 ? 2000 : 1900;
+  const date = new Date(year, month - 1, day);
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+    return { value: null, reason: 'invalid' };
+  }
+  return { value: toISO(date), reason: null };
 }
 
 function parseISO(v: string): Date | null {

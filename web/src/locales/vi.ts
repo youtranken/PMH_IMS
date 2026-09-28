@@ -81,6 +81,9 @@ export default {
     clear: 'Xóa ngày',
     prev: 'Tháng trước',
     next: 'Tháng sau',
+    typeLabel: 'Gõ ngày (dd/mm/yyyy)',
+    typeInvalid: 'Ngày không có thật — gõ theo dạng dd/mm/yyyy.',
+    typeOutOfRange: 'Ngày này nằm ngoài khoảng được chọn.',
   },
   pagination: {
     prev: 'Trang trước',

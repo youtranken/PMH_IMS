@@ -219,6 +219,7 @@ export function AccountForm({
           <DatePicker
             value={birthDate}
             ariaLabel={t('accounts.birthDate')}
+            openTo="1990-01-01"
             onChange={setBirthDate}
           />
         </Field>
