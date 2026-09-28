@@ -16,6 +16,7 @@ import type { TFunction } from 'i18next';
  */
 export const ACTION_KEY: Record<string, string> = {
   'account.created': 'audit.actions.accountCreated',
+  'account.seeded': 'audit.actions.accountSeeded',
   'account.profile.updated': 'audit.actions.accountProfileUpdated',
   'account.status.changed': 'audit.actions.accountStatusChanged',
   'account.locked': 'audit.actions.accountLocked',
@@ -29,7 +30,10 @@ export const ACTION_KEY: Record<string, string> = {
   'auth.logout': 'audit.actions.authLogout',
   'auth.account.locked': 'audit.actions.authAccountLocked',
   'auth.device.new': 'audit.actions.authDeviceNew',
+  'auth.password.ok': 'audit.actions.authPasswordOk',
   'auth.password.changed': 'audit.actions.authPasswordChanged',
+  'auth.password.change_failed': 'audit.actions.authPasswordChangeFailed',
+  'auth.password.session_revoked': 'audit.actions.authPasswordSessionRevoked',
   'auth.session.revoked_self': 'audit.actions.authSessionRevokedSelf',
   'auth.session.revoked_others': 'audit.actions.authSessionRevokedOthers',
   'auth.stepup.ok': 'audit.actions.authStepupOk',
@@ -40,9 +44,13 @@ export const ACTION_KEY: Record<string, string> = {
   'auth.totp.enroll.start': 'audit.actions.authTotpEnrollStart',
   'auth.totp.enroll.done': 'audit.actions.authTotpEnrollDone',
   'auth.totp.enroll.failed': 'audit.actions.authTotpEnrollFailed',
+  'auth.totp.enroll.reauth_failed': 'audit.actions.authTotpEnrollReauthFailed',
+  'auth.totp.enroll.session_revoked': 'audit.actions.authTotpEnrollSessionRevoked',
   'auth.totp.reenroll.start': 'audit.actions.authTotpReenrollStart',
   'auth.totp.reenroll.done': 'audit.actions.authTotpReenrollDone',
   'auth.totp.reenroll.failed': 'audit.actions.authTotpReenrollFailed',
+  'auth.totp.reenroll.reauth_failed': 'audit.actions.authTotpReenrollReauthFailed',
+  'auth.totp.reenroll.session_revoked': 'audit.actions.authTotpReenrollSessionRevoked',
   'session.killed': 'audit.actions.sessionKilled',
   'security.probe.alerted': 'audit.actions.securityProbeAlerted',
   'vault.secret.created': 'audit.actions.vaultSecretCreated',
@@ -95,6 +103,7 @@ export const ACTION_KEY: Record<string, string> = {
   'nat.updated': 'audit.actions.natUpdated',
   'nat.voided': 'audit.actions.natVoided',
   'system_config.updated': 'audit.actions.systemConfigUpdated',
+  'crypto.rewrapped': 'audit.actions.cryptoRewrapped',
 };
 
 /** Họ của mã ghép lúc chạy — phần trước động từ cuối. */
@@ -190,6 +199,12 @@ const DANGER = new Set([
   'auth.totp.session_revoked',
   'auth.totp.enroll.failed',
   'auth.totp.reenroll.failed',
+  'auth.password.change_failed',
+  'auth.password.session_revoked',
+  'auth.totp.enroll.reauth_failed',
+  'auth.totp.enroll.session_revoked',
+  'auth.totp.reenroll.reauth_failed',
+  'auth.totp.reenroll.session_revoked',
   'vault.secret.reveal_denied',
   'security.probe.alerted',
 ]);

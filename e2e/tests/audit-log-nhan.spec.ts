@@ -11,7 +11,8 @@ test.describe('Nhật ký — nhãn hành động và đối tượng người �
     await firstLogin(page, E2E_SA);
     await page.goto(`/admin/audit-log?q=${encodeURIComponent(E2E_SA.email)}`);
     // Dòng đăng nhập: nhãn tiếng Việt ở trên, mã ở dòng phụ.
-    await expect(page.getByText('Đăng nhập', { exact: true }).first()).toBeVisible();
+    // Nhãn là nút chữ trần đứng cạnh `<span>` mã, nên phải khớp cả ô: nhãn rồi ngay sau là mã.
+    await expect(page.getByText(/^Đăng nhập\s*auth\.login\.ok$/).first()).toBeVisible();
     await expect(page.getByText(/^auth\.(login|password)\.ok$/).first()).toBeVisible();
 
     await page.getByRole('button', { name: 'Hành động' }).click();
