@@ -24,7 +24,8 @@ export const KIND_LABEL: Record<SoftwareKind, string> = {
 export const STATUS_LABEL: Record<SoftwareStatus, string> = {
   active: 'Đang dùng',
   expired_ok: 'Hết hạn',
-  retired: 'Thanh lý',
+  // Q-14: nhãn TRẠNG THÁI là "Đã thanh lý"; "Thanh lý" là nhãn nút.
+  retired: 'Đã thanh lý',
 };
 
 /**

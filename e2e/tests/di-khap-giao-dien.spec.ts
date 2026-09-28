@@ -3925,7 +3925,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     const kindOptions = (await page.getByRole('option').allInnerTexts()).map((text) => text.trim());
     expect(
       [...kindOptions].sort(),
-      'Bộ lọc loại phải bày đủ 5 nguồn hạn đang đăng ký, cộng mục "tất cả" — đường truyền không có hạn (Q-04)',
+      'Bộ lọc loại phải bày đủ 6 nguồn hạn đang đăng ký (cả "Khác" — Q-14), cộng mục "tất cả" — đường truyền không có hạn (Q-04)',
     ).toEqual(
       [
         'Tất cả loại',
@@ -3933,6 +3933,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
         'Chứng chỉ SSL',
         'Tên miền',
         'Hợp đồng bảo trì',
+        'Khác',
         'Bảo hành thiết bị',
       ].sort(),
     );
@@ -4126,13 +4127,14 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      */
     await expect(
       add.getByRole('checkbox'),
-      'Năm ô tick loại (đúng bằng số nguồn hạn) cộng một ô tick "đang chạy"',
-    ).toHaveCount(6);
+      'Sáu ô tick loại (đúng bằng số nguồn hạn) cộng một ô tick "đang chạy"',
+    ).toHaveCount(7);
     for (const label of [
       'License phần mềm',
       'Chứng chỉ SSL',
       'Tên miền',
       'Hợp đồng bảo trì',
+      'Khác',
       'Bảo hành thiết bị',
       'Bỏ tick để tạm ngưng mà không mất cấu hình.',
     ]) {
@@ -6005,7 +6007,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     expect(
       (await page.getByRole('option').allTextContents()).map(gonNhan),
       'Trạng thái đường truyền có đúng ba giá trị của `ISP_STATUSES`',
-    ).toEqual(['Đang dùng', 'Tạm ngưng', 'Thanh lý']);
+    ).toEqual(['Đang dùng', 'Tạm ngưng', 'Đã thanh lý']);
 
     /*
      * ĐÓNG DANH SÁCH bằng cách bấm lại chính ô chọn, rồi đóng hộp bằng nút ✕.

@@ -173,16 +173,16 @@ test.describe('Đường truyền ISP', () => {
     expect(terminate.status()).toBe(200);
 
     await page.reload();
-    await expect(page.getByText('Thanh lý', { exact: true })).toBeVisible();
+    await expect(page.getByText('Đã thanh lý', { exact: true })).toBeVisible();
     await expect(
-      page.getByText(new RegExp(`Thanh lý ngày .+ bởi ${E2E_SA.email.replace(/\./g, '\\.')}`)),
+      page.getByText(new RegExp(`Đã thanh lý ngày .+ bởi ${E2E_SA.email.replace(/\./g, '\\.')}`)),
     ).toBeVisible();
 
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
     await expect(
       page.getByRole('listitem').filter({ hasText: 'Thanh lý đường truyền' }),
     ).toBeVisible();
-    await expect(page.getByText('trạng thái: Đang dùng → Thanh lý')).toBeVisible();
+    await expect(page.getByText('trạng thái: Đang dùng → Đã thanh lý')).toBeVisible();
   });
 
   test('file scan hợp đồng đính kèm được vào đường truyền', async ({ page }) => {

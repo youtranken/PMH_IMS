@@ -738,7 +738,7 @@ export default {
        phần mềm từng hiện "Đã thanh lý license" trong khi màn `/software` gọi nó là "Đã bỏ". */
     statusRetired: 'Đã thanh lý',
     allKinds: 'Tất cả loại',
-    allStatuses: 'Mọi trạng thái (cả Thanh lý)',
+    allStatuses: 'Mọi trạng thái (cả Đã thanh lý)',
     /* Mặc định của bộ lọc trạng thái: hai trạng thái còn trên máy. */
     liveStatuses: 'Đang dùng + Hết hạn',
     allVendors: 'Mọi nhà cung cấp',
@@ -870,11 +870,11 @@ export default {
     startDate: 'Bắt đầu',
     note: 'Ghi chú',
     status: 'Trạng thái',
-    /* Ba chữ do Q-04 chốt; `isp-line.controller.ts` ghi cùng ba chữ vào file Excel. */
+    /* Ba chữ của Q-04 (trạng thái cuối viết "Đã thanh lý" — Q-14); `isp-line.controller.ts` ghi cùng ba chữ vào file Excel. */
     statusActive: 'Đang dùng',
     statusSuspended: 'Tạm ngưng',
-    statusTerminated: 'Thanh lý',
-    liquidated: 'Thanh lý ngày {{date}} bởi {{actor}}',
+    statusTerminated: 'Đã thanh lý',
+    liquidated: 'Đã thanh lý ngày {{date}} bởi {{actor}}',
     allSites: 'Tất cả site',
     allStatuses: 'Mọi trạng thái',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
@@ -1598,8 +1598,8 @@ export default {
        khoản dịch vụ gọi là "đã vô hiệu hóa". Đúng cái khác biệt mà màn này sinh ra để bày. */
     statusRetired: 'Đã thanh lý',
     statusDisabled: 'Đã vô hiệu hóa',
-    // Đường truyền gọi trạng thái này là "Thanh lý" (Q-04) — kho giữ nguyên chữ của module chủ.
-    statusTerminated: 'Thanh lý',
+    // Q-14: trạng thái là "Đã thanh lý" ở mọi module; "Thanh lý" chỉ là nhãn nút.
+    statusTerminated: 'Đã thanh lý',
     dispose: 'Đưa vào kho thanh lý',
     confirmTitle: 'Đưa vào kho thanh lý',
     /* Q-11/Q-13: thanh lý thì hệ thống TỰ GỠ mọi ghế. Câu hỏi lại phải nói đúng điều đó —
@@ -1982,8 +1982,7 @@ export default {
    *
    * Mười khóa ĐẦU là phần dùng chung: cùng mã, cùng chữ, ở từ hai sổ trở lên. Phần còn
    * lại nằm trong namespace của từng sổ, vì cùng một mã KHÔNG phải lúc nào cũng cùng chữ —
-   * `created` là "Tạo hồ sơ" ở năm sổ nhưng là "Mở rule" ở sổ NAT, `retired` là "Đã thanh
-   * lý" ở phần mềm mà `terminated` là "Thanh lý" ở đường truyền. Gộp bừa là làm sai nghĩa để
+   * `created` là "Tạo hồ sơ" ở năm sổ nhưng là "Mở rule" ở sổ NAT. Gộp bừa là làm sai nghĩa để
    * đỡ một dòng.
    *
    * Tên trường (`f*`) viết CHỮ THƯỜNG: chúng ghép vào giữa câu — "mã: A → B".
@@ -2107,7 +2106,7 @@ export default {
       actDeviceDetached: 'Rời khỏi thiết bị (máy đã thanh lý) — hợp đồng giữ nguyên',
       stActive: 'Đang dùng',
       stSuspended: 'Tạm ngưng',
-      stTerminated: 'Thanh lý',
+      stTerminated: 'Đã thanh lý',
     },
 
     /* Sổ NAT */
