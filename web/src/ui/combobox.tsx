@@ -75,6 +75,8 @@ interface ComboboxProps<T> {
   id?: string;
   /** Nối `hint`/`error` của `Field` vào ô — `Field` tự truyền, nơi gọi không phải biết. */
   'aria-describedby'?: string;
+  /** Ô đang báo lỗi — `Field error` tự truyền; viền đỏ và tiêu điểm của `useFormErrors` bám vào đây. */
+  'aria-invalid'?: boolean;
 }
 
 /**
@@ -101,6 +103,7 @@ export function Combobox<T>({
   required,
   id,
   'aria-describedby': describedBy,
+  'aria-invalid': invalid,
 }: ComboboxProps<T>) {
   const { t } = useTranslation();
   const [active, setActive] = useState(0);
@@ -228,6 +231,7 @@ export function Combobox<T>({
         ref={inputRef}
         id={id}
         aria-describedby={describedBy}
+        aria-invalid={invalid || undefined}
         placeholder={placeholder}
         value={query}
         disabled={disabled}

@@ -29,6 +29,7 @@ import { chipsFromValue, parsePortChip, type PortChip } from './port-chips';
 import { PortChipsField } from './port-chips-field';
 import { PATHS } from '@/lib/routes';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
+import { textRule, useFormErrors } from '@/ui/use-form-errors';
 
 type NatProtocol = 'tcp' | 'udp' | 'both';
 
@@ -441,6 +442,24 @@ function NatForm({
     }
   };
 
+  /*
+   * Hai luật của ô "IP trong" nằm ở `checkInternalIp` (hàm thuần, có test bảng dữ liệu):
+   * phải có địa chỉ, và địa chỉ phải thuộc chính máy đích đang chọn.
+   */
+  const ipCheck = checkInternalIp({
+    internalIp,
+    targetId,
+    targetIps: (targetIps.data ?? []).map((ip) => ip.address),
+  });
+  const check = useFormErrors({
+    deviceId: !deviceId && t('formErrors.requiredPick'),
+    ports: ports.length === 0 && t('nat.portRequired'),
+    internalPort: !internalPort.trim() && t('formErrors.required'),
+    internalIp: ipCheck.reason && t(`nat.${ipCheck.reason}`),
+    usedBy: !usedBy.trim() && t('formErrors.required'),
+    reason: !reason.trim() && t('formErrors.required'),
+  });
+
   const save = useApiMutation<Record<string, unknown>, { warnings?: string[] }>(
     rule ? `/api/v1/ipam/nat/${rule.id}` : '/api/v1/ipam/nat',
     { method: rule ? 'PATCH' : 'POST', csrfToken, refreshMe: false },
@@ -483,26 +502,12 @@ function NatForm({
       */}
       <form
         id="nat-form"
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          if (ports.length === 0) {
-            setError(t('nat.portRequired'));
-            return;
-          }
-          /*
-           * Hai luật của ô "IP trong" nằm ở `checkInternalIp` (hàm thuần, có test bảng dữ
-           * liệu): phải có địa chỉ, và địa chỉ phải thuộc chính máy đích đang chọn.
-           */
-          const ipCheck = checkInternalIp({
-            internalIp,
-            targetId,
-            targetIps: (targetIps.data ?? []).map((ip) => ip.address),
-          });
-          if (ipCheck.reason) {
-            setError(t(`nat.${ipCheck.reason}`));
-            return;
-          }
+          if (!check.check()) return;
           void (async () => {
             setSaving(true);
             const shared = {
@@ -561,11 +566,18 @@ function NatForm({
           })();
         }}
       >
+        {check.summary}
         <FormSection title={t('nat.sectionExternal')} columns={2}>
           {/* MỘT ô chọn router, không hai. Ô "Loại thiết bị" cũ chỉ là bộ lọc cho chính ô
               này, nhưng đứng thành trường riêng nên chọn một con router phải thao tác hai
               dropdown — và chọn nhầm loại là danh sách rỗng trơn. */}
-          <Field label={t('nat.router')} required hint={t('nat.routerHint')} span={2}>
+          <Field
+            label={t('nat.router')}
+            required
+            hint={t('nat.routerHint')}
+            span={2}
+            error={check.error('deviceId')}
+          >
             <Combobox
               placeholder={t('nat.routerSearch')}
               ariaLabel={t('nat.router')}
@@ -600,6 +612,7 @@ function NatForm({
             required
             hint={rule ? t('nat.externalHintEdit') : t('nat.externalHint')}
             htmlFor="nat-external"
+            error={check.error('ports')}
           >
             <PortChipsField
               chips={ports}
@@ -645,7 +658,12 @@ function NatForm({
             )}
           </Field>
 
-          <Field label={t('nat.internalPort')} required htmlFor="nat-internal-port">
+          <Field
+            label={t('nat.internalPort')}
+            required
+            htmlFor="nat-internal-port"
+            error={check.error('internalPort')}
+          >
             <input
               id="nat-internal-port"
               className="inp mono"
@@ -699,7 +717,12 @@ function NatForm({
             />
           </Field>
 
-          <Field label={t('nat.internalIp')} required htmlFor="nat-internal-ip">
+          <Field
+            label={t('nat.internalIp')}
+            required
+            htmlFor="nat-internal-ip"
+            error={check.error('internalIp')}
+          >
             {targetId && (targetIps.isLoading || targetIps.isError) ? (
               /*
                * ĐANG TẢI danh sách IP của máy vừa chọn — chưa biết máy đó có IP hay không.
@@ -763,7 +786,12 @@ function NatForm({
 
         {/* Khối này là LÝ DO cuốn sổ tồn tại — nên hai ô đầu bắt buộc, không phải tùy chọn. */}
         <FormSection title={t('nat.sectionWhy')} columns={2}>
-          <Field label={t('nat.usedBy')} required hint={t('nat.usedByHint')}>
+          <Field
+            label={t('nat.usedBy')}
+            required
+            hint={t('nat.usedByHint')}
+            error={check.error('usedBy')}
+          >
             {/* Cùng danh mục Bộ phận với ô "ai đang dùng" của hồ sơ IP — hai chỗ trả lời cùng
                 một câu, viết lệch nhau thì tra chéo không ra. */}
             <SuggestInput
@@ -792,6 +820,7 @@ function NatForm({
             hint={t('nat.reasonHint')}
             htmlFor="nat-reason"
             span={2}
+            error={check.error('reason')}
           >
             <textarea
               id="nat-reason"
@@ -898,6 +927,7 @@ function RemoveDialog({
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const check = useFormErrors({ reason: textRule(t, reason, 3) });
 
   const remove = useApiMutation<{ reason: string }, unknown>(`/api/v1/ipam/nat/${rule.id}`, {
     method: 'DELETE',
@@ -934,9 +964,12 @@ function RemoveDialog({
         id="nat-remove-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!check.check()) return;
           remove.mutate(
             { reason: reason.trim() },
             { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
@@ -944,7 +977,12 @@ function RemoveDialog({
         }}
       >
         <p className="muted">{t('nat.removeHint')}</p>
-        <Field label={t('nat.removeReason')} required htmlFor="nat-remove-reason">
+        <Field
+          label={t('nat.removeReason')}
+          required
+          htmlFor="nat-remove-reason"
+          error={check.error('reason')}
+        >
           <input
             id="nat-remove-reason"
             className="inp"

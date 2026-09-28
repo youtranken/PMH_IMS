@@ -19,6 +19,7 @@ import { RowActions } from '@/ui/row-actions';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
+import { textRule, useFormErrors } from '@/ui/use-form-errors';
 import { ServiceAccountForm } from './service-account-form';
 import {
   KIND_KEY,
@@ -351,6 +352,7 @@ function StatusDialog({
   const off = next === 'disabled';
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const check = useFormErrors({ reason: textRule(t, reason, 3) });
   const change = useApiMutation<{ reason: string }, unknown>(
     `/api/v1/service-accounts/${row.id}/${off ? 'disable' : 'enable'}`,
     { method: 'PATCH', csrfToken, refreshMe: false },
@@ -388,9 +390,12 @@ function StatusDialog({
         id="sa-status-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!check.check()) return;
           change.mutate(
             { reason: reason.trim() },
             { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
@@ -404,6 +409,7 @@ function StatusDialog({
           label={off ? t('serviceAccounts.disableReason') : t('serviceAccounts.enableReason')}
           required
           htmlFor="sa-status-reason"
+          error={check.error('reason')}
         >
           <input
             id="sa-status-reason"

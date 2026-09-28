@@ -257,7 +257,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     await expect(form.getByText(/1–65535/)).toBeVisible();
 
     // Chưa có chip nào thì bấm Lưu phải nói thiếu port, không phải im lặng. Các ô bắt buộc
-    // khác phải điền trước, không thì trình duyệt chặn ở `required` và lỗi của form không tới.
+    // khác điền trước để câu lỗi duy nhất còn lại là câu về port.
     await form.getByRole('combobox', { name: 'Router' }).fill(routerCode);
     await page.getByRole('option', { name: new RegExp(routerCode) }).click();
     await form.getByRole('textbox', { name: 'IP trong' }).fill('172.16.10.4');

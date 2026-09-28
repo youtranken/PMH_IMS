@@ -27,6 +27,7 @@ import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
 import { useTabCounts } from "@/ui/tab-counts";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useToast } from "@/ui/toast";
+import { useFormErrors } from "@/ui/use-form-errors";
 import { LicenseAssignmentsPanel } from "./license-assignments-panel";
 import { SoftwareForm } from "./software-form";
 import { toSoftwareHistory } from "./software-history-entries";
@@ -365,6 +366,9 @@ function RenewDialog({
   const { t } = useTranslation();
   const [endDate, setEndDate] = useState("");
   const [error, setError] = useState<string | null>(null);
+  /* Không dùng câu HINT đang hiện xám ngay trên ô làm câu lỗi: dòng đỏ và dòng xám nói y hệt
+     nhau thì người dùng đọc xong vẫn không biết phải sửa gì. */
+  const check = useFormErrors({ endDate: !endDate && t("expiry.pickDate") });
   const renew = useApiMutation<{ endDate: string }, unknown>(
     `/api/v1/software/${software.id}/renew`,
     { csrfToken, refreshMe: false },
@@ -401,15 +405,12 @@ function RenewDialog({
         id="renew-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          if (!endDate) {
-            /* Bản cũ đặt chính câu HINT đang hiện xám ngay trên ô làm câu lỗi: khối đỏ và
-               dòng xám nói y hệt nhau, nên người dùng đọc xong vẫn không biết phải sửa gì. */
-            setError(t("expiry.pickDate"));
-            return;
-          }
+          if (!check.check()) return;
           renew.mutate(
             { endDate },
             {
@@ -427,6 +428,7 @@ function RenewDialog({
           label={t("software.endDate")}
           required
           hint={t("software.renewHint")}
+          error={check.error("endDate")}
         >
           <DatePicker
             value={endDate}

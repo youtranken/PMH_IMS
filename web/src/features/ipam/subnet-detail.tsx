@@ -15,6 +15,7 @@ import { Pagination } from "@/ui/pagination";
 import { RowActions } from "@/ui/row-actions";
 import { SuggestInput } from "@/ui/suggest-input";
 import { useDepartments } from "@/ui/use-departments";
+import { textRule, useFormErrors } from "@/ui/use-form-errors";
 import { useToast } from "@/ui/toast";
 import { HistoryPanel } from "@/ui/history-panel";
 import {
@@ -979,6 +980,7 @@ function VoidAddressDialog({
   const { t } = useTranslation();
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const check = useFormErrors({ reason: textRule(t, reason, 3) });
   const remove = useApiMutation<{ reason: string }, unknown>(
     `/api/v1/ipam/addresses/${record.id}`,
     { method: "DELETE", csrfToken, refreshMe: false },
@@ -1013,9 +1015,12 @@ function VoidAddressDialog({
         id="ip-void-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!check.check()) return;
           remove.mutate(
             { reason: reason.trim() },
             { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
@@ -1023,7 +1028,12 @@ function VoidAddressDialog({
         }}
       >
         <p className="muted">{t("ipam.voidAddressHint")}</p>
-        <Field label={t("ipam.reason")} required htmlFor="ip-void-reason">
+        <Field
+          label={t("ipam.reason")}
+          required
+          htmlFor="ip-void-reason"
+          error={check.error("reason")}
+        >
           <input
             id="ip-void-reason"
             className="inp"

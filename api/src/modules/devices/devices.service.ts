@@ -471,15 +471,15 @@ export class DevicesService {
       });
     }
 
-    const errors = await this.catalog.validateRefs({
-      siteId: effective<string | null>('siteId', current?.siteId ?? null),
-      cabinetId: effective<string | null>('cabinetId', current?.cabinetId ?? null),
-      deviceTypeId: effective<string | null>('deviceTypeId', current?.deviceTypeId ?? null),
-      vendorId: effective<string | null>('vendorId', current?.vendorId ?? null),
-    });
-    if (errors.length > 0) {
-      throw new BadRequestException({ code: 'CATALOG_REF_INVALID', message: errors.join(' ') });
-    }
+    await this.catalog.assertRefs(
+      {
+        siteId: effective<string | null>('siteId', current?.siteId ?? null),
+        cabinetId: effective<string | null>('cabinetId', current?.cabinetId ?? null),
+        deviceTypeId: effective<string | null>('deviceTypeId', current?.deviceTypeId ?? null),
+        vendorId: effective<string | null>('vendorId', current?.vendorId ?? null),
+      },
+      current,
+    );
     return values;
   }
 

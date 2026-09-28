@@ -66,6 +66,7 @@ describe('Hai lượt ghi cùng lúc không được đè nhau (BE-02, BE-03)', 
   } as unknown as SystemConfigService;
   const catalog = {
     validateRefs: () => Promise.resolve([]),
+    assertRefs: () => Promise.resolve(),
     lists: () =>
       Promise.resolve({ deviceTypes: [], sites: [], cabinets: [], vendors: [] }),
     snapshot: () =>

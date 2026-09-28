@@ -23,6 +23,7 @@ import { Select } from '@/ui/select';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useToast } from '@/ui/toast';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
+import { useFormErrors } from '@/ui/use-form-errors';
 import { DigestRulesPanel } from './digest-rules-panel';
 
 interface ExpiryRow {
@@ -422,6 +423,7 @@ function RenewDialog({
   const { t } = useTranslation();
   const [endDate, setEndDate] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const check = useFormErrors({ endDate: !endDate && t('expiry.pickDate') });
   const renew = useApiMutation<Record<string, unknown>, unknown>('/api/v1/expiry/renew', {
     csrfToken,
     refreshMe: false,
@@ -453,13 +455,12 @@ function RenewDialog({
         id="renew-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          if (!endDate) {
-            setError(t('expiry.pickDate'));
-            return;
-          }
+          if (!check.check()) return;
           renew.mutate(
             { kind: row.kind, id: row.id, endDate },
             { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
@@ -469,7 +470,12 @@ function RenewDialog({
         <p className="muted">
           {kindLabel} · {t('expiry.end')}: {formatDate(row.end)}
         </p>
-        <Field label={t('expiry.newEnd')} required hint={t('expiry.renewHint')}>
+        <Field
+          label={t('expiry.newEnd')}
+          required
+          hint={t('expiry.renewHint')}
+          error={check.error('endDate')}
+        >
           <DatePicker
             value={endDate}
             ariaLabel={t('expiry.newEnd')}

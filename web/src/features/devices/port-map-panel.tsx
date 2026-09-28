@@ -12,6 +12,7 @@ import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
+import { useFormErrors } from '@/ui/use-form-errors';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import type { DeviceRow } from '@/lib/device-types';
@@ -289,6 +290,7 @@ function PortForm({
   const departments = useDepartments();
   const [note, setNote] = useState(port?.note ?? '');
   const [error, setError] = useState<string | null>(null);
+  const check = useFormErrors({ portLabel: !portLabel.trim() && t('ports.portRequired') });
 
   // Gõ tới đâu tìm tới đó nhưng chờ 250ms — không bắn một request mỗi phím.
   useEffect(() => {
@@ -341,13 +343,12 @@ function PortForm({
         id="port-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          if (!portLabel.trim()) {
-            setError(t('ports.portRequired'));
-            return;
-          }
+          if (!check.check()) return;
           save.mutate(
             {
               portLabel: portLabel.trim(),
@@ -367,7 +368,7 @@ function PortForm({
           );
         }}
       >
-        <Field label={t('ports.port')} required htmlFor="port-label">
+        <Field label={t('ports.port')} required htmlFor="port-label" error={check.error('portLabel')}>
           <input
             id="port-label"
             className="inp mono"

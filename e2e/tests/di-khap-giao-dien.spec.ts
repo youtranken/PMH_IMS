@@ -2549,29 +2549,34 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toEqual([...LOAI_THIET_BI_GOC].sort());
 
     /*
-     * ĐƯỜNG HỎNG — BẤM LƯU KHI CÒN THIẾU.
+     * ĐƯỜNG HỎNG — BẤM LƯU KHI CÒN THIẾU (DEV-025).
      *
-     * Hai hàng rào khác nhau, phải kiểm cả hai:
-     *   1. Mã và Tên mang `required` của HTML → trình duyệt chặn TRƯỚC khi React thấy gì. Hộp
-     *      phải còn nguyên. (Một form bấm Lưu lúc trống mà đóng im lặng là nuốt mất mọi thứ
-     *      người dùng vừa gõ.)
-     *   2. Loại thiết bị KHÔNG phải `<input>` nên `required` không với tới — hàng rào duy nhất
-     *      là câu kiểm trong `submit()`. Đây chính là chỗ dễ rơi nhất khi ai đó refactor form.
+     * Form đặt `noValidate`: bong bóng "Please fill out this field." của trình duyệt không còn
+     * chặn trước. Hàng rào là `useFormErrors` — câu tiếng Việt DƯỚI TỪNG Ô, nối vào ô bằng
+     * `aria-describedby`, tiêu điểm về ô lỗi đầu tiên, và hộp phải còn nguyên (đóng im lặng là
+     * nuốt mất mọi thứ người dùng vừa gõ). Loại thiết bị là `Select` (nút bấm) — ô dễ rơi nhất.
      */
     await hop.getByRole('button', { name: 'Lưu' }).click();
+    await expect(hop, 'Bấm Lưu khi form trống: hộp PHẢI còn đó').toBeVisible();
     await expect(
-      hop,
-      'Bấm Lưu khi form trống: hộp PHẢI còn đó (hàng rào `required` của trình duyệt)',
+      hop.getByText('Còn 3 ô cần sửa trước khi lưu.'),
+      'Ba ô bắt buộc cùng thiếu thì đầu form tóm tắt số ô phải sửa',
     ).toBeVisible();
+    const oMa = hop.getByRole('textbox', { name: 'Mã thiết bị' });
+    await expect(oMa, 'Câu lỗi tiếng Việt nằm dưới và nối vào đúng ô Mã').toHaveAccessibleDescription(
+      'Bắt buộc — chưa nhập ô này.',
+    );
+    await expect(oMa, 'Tiêu điểm về ô lỗi đầu tiên').toBeFocused();
 
-    await hop.getByLabel('Mã thiết bị').fill(`TB-E2E-HOP-${stamp}`);
+    await oMa.fill(`TB-E2E-HOP-${stamp}`);
     await hop.getByLabel('Tên thiết bị').fill('Máy chỉ để xem hộp thoại');
     await hop.getByRole('button', { name: 'Lưu' }).click();
 
     await expect(
-      hop.getByRole('alert'),
-      'Thiếu LOẠI thiết bị thì form phải nói ra bằng một câu đọc được, ở đúng vai `alert`',
-    ).toHaveText('Cần ít nhất: mã thiết bị, tên và loại thiết bị.');
+      hop.getByRole('button', { name: 'Loại', exact: true }),
+      'Thiếu LOẠI thiết bị thì chính ô Loại phải nói ra, bằng tiếng Việt',
+    ).toHaveAccessibleDescription('Bắt buộc — chưa chọn ô này.');
+    await expect(hop.getByText(/ô cần sửa trước khi lưu/), 'Còn một lỗi thì không cần tóm tắt').toHaveCount(0);
     await expect(hop, 'và hộp vẫn phải mở để người dùng sửa nốt').toBeVisible();
 
     /* HAI ĐƯỜNG ĐÓNG, KHÔNG LƯU GÌ. */
@@ -3345,20 +3350,24 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(page.getByRole('option'), 'Danh sách hãng phải đóng lại').toHaveCount(0);
 
     /*
-     * ===== ĐƯỜNG HỎNG =====
+     * ===== ĐƯỜNG HỎNG (SW-024) =====
      *
-     * Điền hai ô bắt buộc bằng KHOẢNG TRẮNG: trình duyệt thấy ô "có nội dung" nên cho gửi,
-     * và luật `trim()` của form mới là thứ phải bắt. Bỏ trống hẳn thì trình duyệt chặn trước
-     * và câu tiếng Việt này không bao giờ chạy tới.
+     * Điền hai ô bắt buộc bằng KHOẢNG TRẮNG: luật `trim()` của form phải bắt, và câu lỗi là
+     * tiếng Việt dưới từng ô — không còn bong bóng tiếng Anh của trình duyệt (form `noValidate`).
      */
     await add.getByRole('textbox', { name: 'Mã hồ sơ', exact: true }).fill('   ');
     await add.getByRole('textbox', { name: 'Tên hồ sơ', exact: true }).fill('   ');
     await add.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
 
     await expect(
-      add.getByRole('alert'),
-      'Lưu hồ sơ trống phải nói rõ thiếu gì, đúng câu trong vi.ts',
-    ).toHaveText('Cần ít nhất: mã hồ sơ và tên hồ sơ.');
+      add.getByRole('textbox', { name: 'Mã hồ sơ', exact: true }),
+      'Lưu hồ sơ trống phải nói rõ thiếu gì, ngay dưới ô Mã',
+    ).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
+    await expect(
+      add.getByRole('textbox', { name: 'Tên hồ sơ', exact: true }),
+      'và dưới ô Tên',
+    ).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
+    await expect(add.getByText('Còn 2 ô cần sửa trước khi lưu.')).toBeVisible();
     await expect(
       add,
       'Lưu hỏng thì hộp phải Ở LẠI — đóng mất là người dùng tưởng đã lưu xong',
@@ -4134,12 +4143,13 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     // ===== HAI ĐƯỜNG HỎNG =====
     const save = add.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' });
 
+    // Mỗi câu lỗi nằm DƯỚI đúng ô của nó (SW-024) — form `noValidate`, không còn bong bóng.
     await add.getByRole('textbox', { name: 'Tên luật', exact: true }).fill('   ');
     await save.click();
     await expect(
-      add.getByRole('alert'),
+      add.getByRole('textbox', { name: 'Tên luật', exact: true }),
       'Luật không tên thì sau này không ai biết nó là luật gì — báo đúng câu trong vi.ts',
-    ).toHaveText('Đặt tên cho luật này (vd "SSL sắp hết hạn → sếp").');
+    ).toHaveAccessibleDescription('Đặt tên cho luật này (vd "SSL sắp hết hạn → sếp").');
 
     await add.getByRole('textbox', { name: 'Tên luật', exact: true }).fill(`E2E luật hỏng ${stamp}`);
     await add.getByRole('textbox', { name: 'Người nhận', exact: true }).fill('   ');
@@ -5220,6 +5230,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await form.getByRole('option', { name: new RegExp(esc(fixture.routerCode)) }).click();
     await form.getByRole('textbox', { name: 'IP trong', exact: true }).fill(fixture.internalIp);
     await form.getByRole('textbox', { name: 'Port trong', exact: true }).fill('80');
+    // "Mở cho ai" cũng bắt buộc (API từ chối rule không có người dùng) — điền để chỉ còn đúng lỗi port.
+    await form.getByRole('combobox', { name: 'Mở cho ai', exact: true }).fill('P. Kỹ thuật');
     await form.getByRole('textbox', { name: 'Lý do mở', exact: true }).fill(`thử E2E ${stamp}`);
     await form.getByRole('button', { name: 'Lưu' }).click();
     await expect(
@@ -5704,20 +5716,18 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toHaveCount(0);
 
     /*
-     * ĐƯỜNG HỎNG: có mã, thiếu nhà mạng.
+     * ĐƯỜNG HỎNG: có mã, thiếu nhà mạng (NET-023).
      *
-     * Không thử "bỏ trống tất cả": ô Mã đường mang thuộc tính `required` của HTML nên trình
-     * duyệt chặn ngay tại chỗ, `onSubmit` không chạy, và không có `role="alert"` nào để đọc.
-     * Ô Nhà mạng là nút chọn, không có `required` của trình duyệt — đó mới là đường đi tới lời
-     * báo lỗi do chính form viết.
+     * Ô Nhà mạng là nút chọn — ô dễ rơi nhất. Câu lỗi tiếng Việt phải nằm dưới và nối vào
+     * chính nút đó; form đặt `noValidate` nên không còn bong bóng tiếng Anh của trình duyệt.
      */
     await hop.getByRole('textbox', { name: 'Mã đường' }).fill(ma);
     await hop.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
 
     await expect(
-      hop.getByRole('alert'),
-      'Thiếu nhà mạng phải hiện đúng câu của `isp-form.tsx`, không phải im lặng',
-    ).toHaveText('Cần ít nhất: mã đường truyền và nhà mạng.');
+      hop.getByRole('button', { name: 'Nhà mạng', exact: true }),
+      'Thiếu nhà mạng phải nói ra ngay dưới ô Nhà mạng, không phải im lặng',
+    ).toHaveAccessibleDescription(/Bắt buộc — chưa chọn ô này\./);
     await expect(hop, 'Báo lỗi thì hộp phải Ở LẠI để người dùng sửa, không được đóng').toBeVisible();
 
     // ĐƯỜNG ĐÓNG THỨ NHẤT: phím Esc.
@@ -6397,9 +6407,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     /*
      * Ô BẮT BUỘC: bỏ trống hết rồi bấm Lưu.
-     * Thứ chặn ở đây là `required` của HTML (ô Tên đăng nhập bắt buộc khi ô Mã còn trống), nên
-     * KHÔNG có `role="alert"` nào để đọc — trình duyệt tự dựng bong bóng. Điều kiểm được, và
-     * điều đáng kiểm, là: hộp KHÔNG đóng, và chính ô đó bị đánh dấu là còn thiếu.
+     * Ô Tên đăng nhập bắt buộc khi ô Mã còn trống. Form đặt `noValidate` nên không còn bong bóng
+     * tiếng Anh: câu tiếng Việt nằm dưới và nối vào chính ô đó, hộp KHÔNG đóng.
      */
     await hop.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
     await expect(hop, 'Form trống mà bấm Lưu thì hộp phải ở lại').toBeVisible();
@@ -6409,6 +6418,10 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         .evaluate((el) => (el as HTMLInputElement).validity.valueMissing),
       'Chưa khai mã thì Tên đăng nhập là ô BẮT BUỘC — không có nó thì hồ sơ không có gì để gọi tên',
     ).toBe(true);
+    await expect(
+      hop.getByRole('textbox', { name: 'Tên đăng nhập' }),
+      'và nói ra bằng tiếng Việt, ngay dưới ô',
+    ).toHaveAccessibleDescription(/Nhập tên đăng nhập, hoặc tự đặt Mã bên dưới\./);
 
     await hop.getByRole('button', { name: 'Đóng hộp thoại' }).click();
     await expect(hop, 'Nút ✕ phải đóng được hộp thêm tài khoản').toHaveCount(0);
@@ -6456,6 +6469,15 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         .evaluate((el) => (el as HTMLInputElement).validity.valueMissing),
       'Ô lý do phải là ô BẮT BUỘC — đó là toàn bộ lý do hộp này tồn tại',
     ).toBe(true);
+    await expect(
+      hopDong.getByRole('textbox', { name: 'Lý do vô hiệu hóa' }),
+      'Câu lỗi tiếng Việt dưới ô lý do, không phải bong bóng trình duyệt',
+    ).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
+    // Gõ quá ngắn: `minLength` của trình duyệt không còn chặn (form `noValidate`) — hook phải nói.
+    await hopDong.getByRole('textbox', { name: 'Lý do vô hiệu hóa' }).fill('ab');
+    await expect(
+      hopDong.getByRole('textbox', { name: 'Lý do vô hiệu hóa' }),
+    ).toHaveAccessibleDescription('Cần ít nhất 3 ký tự.');
 
     await page.keyboard.press('Escape');
     await expect(hopDong, 'Esc phải đóng được hộp vô hiệu hóa').toHaveCount(0);
@@ -7030,9 +7052,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await expect(hop).toBeVisible();
 
     /*
-     * Mã phải có thật: ô này mang `required` của HTML, trình duyệt chặn ngay ở đó và form
-     * chưa từng chạy. Không điền thì bài này kiểm nhầm sang cơ chế của trình duyệt.
-     * KHÔNG bao giờ bấm Lưu thành công nên bản ghi này không rơi vào DB — không cần dọn.
+     * Mã phải có thật: không điền thì form báo thiếu Mã cùng lúc, và bài này thành ra kiểm hai
+     * lỗi thay vì một. KHÔNG bao giờ bấm Lưu thành công nên bản ghi này không rơi vào DB.
      */
     await hop.getByLabel(nhan('Mã')).fill('E2E-KHONG-LUU');
     await hop.getByRole('button', { name: 'Lưu' }).click();
@@ -8355,69 +8376,48 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'Esc phải đóng menu ô chọn — còn mở thì cú bấm kế tiếp rơi trúng một option',
     ).toHaveCount(0);
 
-    /* ---- Đường hỏng 1: gửi khi tên gọi chỉ có khoảng trắng ---- */
+    /* ---- Đường hỏng 0: bấm Lưu khi trống hẳn (DEV-025) ---- */
 
     /*
-     * PHẢI GÕ KHOẢNG TRẮNG, KHÔNG ĐƯỢC BỎ TRỐNG HẲN (10/09).
-     *
-     * Ô "Tên gọi" mang `required` (`ui/vault-panel.tsx`, `Field` của `vault.label`), nên bỏ trống hẳn thì TRÌNH DUYỆT
-     * chặn `submit` trước — `setError(t('vault.labelRequired'))` ở tầng React không bao giờ
-     * chạy, và không có `role="alert"` nào ra đời. Bài kiểm đứng chờ một câu tiếng Việt mà
-     * chính nó vừa ngăn không cho xuất hiện.
-     *
-     * Khoảng trắng qua được `required` (ô "có giá trị") nhưng thua phép `.trim()` của màn —
-     * đó mới là đường tới hàng rào tiếng Việt, tức thứ bài này sinh ra để kiểm. Hàng rào của
-     * trình duyệt đã có bài riêng ở khối khác canh.
-     *
-     * Và phải điền LUÔN ô "Giá trị": nó cũng mang `required` (`vault-panel.tsx`, `Field` của `vault.secretValue`), bỏ trống
-     * thì trình duyệt chặn ở ĐÓ và ta lại không tới được câu cần kiểm. Muốn chạm vào hàng rào
-     * thứ nhất của React thì mọi hàng rào của trình duyệt phải được thoả trước — đó là thứ tự
-     * thật, không phải thứ tự ta mong.
+     * Form đặt `noValidate`: bong bóng "Please fill out this field." của trình duyệt không còn
+     * chặn trước. Hai ô bắt buộc cùng thiếu → hai câu tiếng Việt dưới hai ô + dòng tóm tắt.
      */
+    await form.getByRole('button', { name: 'Lưu' }).click();
+    await expect(form.getByText('Còn 2 ô cần sửa trước khi lưu.')).toBeVisible();
+    await expect(
+      form.getByRole('textbox', { name: 'Tên gọi' }),
+      'câu lỗi nằm dưới và nối vào đúng ô Tên gọi',
+    ).toHaveAccessibleDescription('Đặt tên gọi cho secret này (vd "admin web", "SSH root").');
+    await expect(form.getByRole('textbox', { name: 'Tên gọi' }), 'tiêu điểm về ô lỗi đầu tiên').toBeFocused();
+
+    /* ---- Đường hỏng 1: tên gọi chỉ có khoảng trắng ---- */
+
+    // Khoảng trắng là "có nội dung" với trình duyệt nhưng thua phép `.trim()` của form.
     await form.getByRole('textbox', { name: 'Tên gọi' }).fill('   ');
     await form.getByLabel(/^\s*Giá trị\s*\*?\s*$/).fill(`Tam#Thoi#${stamp}`);
     await form.getByRole('button', { name: 'Lưu' }).click();
     await expect(
-      form.getByRole('alert'),
-      'bỏ trống tên gọi thì phải nói ra ĐÚNG câu tiếng Việt, không phải im lặng hay 400 trần',
-    ).toHaveText('Đặt tên gọi cho secret này (vd "admin web", "SSH root").');
+      form.getByRole('textbox', { name: 'Tên gọi' }),
+      'bỏ trống tên gọi thì phải nói ra ĐÚNG câu tiếng Việt, ngay dưới ô',
+    ).toHaveAccessibleDescription('Đặt tên gọi cho secret này (vd "admin web", "SSH root").');
     await expect(form, 'báo lỗi mà hộp vẫn phải mở — đóng đi là mất sạch thứ vừa gõ').toBeVisible();
 
     /* ---- Đường hỏng 2: có tên gọi nhưng chưa có giá trị ---- */
 
-    /*
-     * HÀNG RÀO Ở ĐÂY LÀ CỦA TRÌNH DUYỆT, KHÔNG PHẢI CỦA REACT — và bài kiểm phải nói đúng
-     * cái đang canh cửa (10/09).
-     *
-     * `vault-panel.tsx` có nhánh `if (!isEdit && !value) setError(t('vault.valueRequired'))`,
-     * nhưng ô "Giá trị" mang `required`, nên từ GIAO DIỆN không có cách nào gửi form với ô đó
-     * rỗng: trình duyệt chặn `submit` trước. Nhánh React ấy là mã không tới được, và câu
-     * `'Chưa nhập giá trị cần cất.'` chưa từng có người dùng nào nhìn thấy.
-     *
-     * Bài kiểm ban đầu đòi câu đó và đỏ. Sửa bằng cách hạ khẳng định xuống cho vừa là sai —
-     * đúng là khẳng định THỨ THẬT SỰ XẢY RA: ô báo `valueMissing`, hộp ở lại, và câu lỗi trên
-     * màn vẫn là câu CŨ của lượt trước. Vế cuối chính là bằng chứng React không hề chạy:
-     * `setError(null)` là dòng đầu tiên của `onSubmit`, nên nếu handler có chạy thì câu cũ đã
-     * phải biến mất. (Ở đây cũng lộ một vết xước nhỏ: câu lỗi cũ nằm lại trong khi người dùng
-     * đã sửa xong đúng cái ô nó nói tới. Không nguy hiểm, nhưng ghi ra để ai đọc còn biết.)
-     *
-     * Nếu một ngày `required` bị gỡ thì bài này đỏ — và người gỡ phải tự quyết định xem hàng
-     * rào React kia có còn được nữa không. Đó là lúc cần một người đọc, không phải một bài
-     * kiểm dễ tính.
-     */
     const label = `admin web E2E ${stamp}`;
     await form.getByLabel('Tên gọi').fill(label);
     const oGiaTri = form.getByLabel(/^\s*Giá trị\s*\*?\s*$/);
     await oGiaTri.fill('');
     await form.getByRole('button', { name: 'Lưu' }).click();
-    expect(
-      await oGiaTri.evaluate((el) => (el as HTMLInputElement).validity.valueMissing),
-      'ô Giá trị mang `required` — chính trình duyệt phải chặn lượt gửi này',
-    ).toBe(true);
     await expect(
-      form.getByRole('alert'),
-      'trình duyệt đã chặn thì `onSubmit` chưa chạy, nên `setError(null)` chưa xoá câu cũ',
-    ).toHaveText('Đặt tên gọi cho secret này (vd "admin web", "SSH root").');
+      oGiaTri,
+      'ô Giá trị trống: câu tiếng Việt dưới ô (trước đây là bong bóng tiếng Anh, câu này chưa từng hiện)',
+    ).toHaveAccessibleDescription(/Chưa nhập giá trị cần cất\./);
+    await expect(oGiaTri).toHaveAttribute('aria-invalid', 'true');
+    await expect(
+      form.getByRole('textbox', { name: 'Tên gọi' }),
+      'ô Tên gọi đã sửa xong thì lỗi của nó phải tự tắt',
+    ).not.toHaveAttribute('aria-invalid', 'true');
     await expect(form, 'bị chặn thì hộp vẫn phải mở, không mất thứ vừa gõ').toBeVisible();
 
     /* ---- Giá trị YẾU: cảnh báo hiện, nhưng VẪN LƯU ĐƯỢC ---- */
@@ -8459,19 +8459,13 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await expect(rotate.getByLabel('Giá trị mới')).toHaveAttribute('type', 'password');
 
     /*
-     * Cùng chuyện với ô "Giá trị" của hộp Cất: ô này cũng mang `required`
-     * (`vault-panel.tsx`, `Field` của `vault.newValue`), nên hàng rào chặn một lượt xoay RỖNG
-     * là của TRÌNH DUYỆT, và
-     * nhánh `setError` tương ứng ở React không tới được từ giao diện. Khẳng định đúng thứ
-     * thật sự canh cửa, chứ không đòi một câu chưa ai từng nhìn thấy.
+     * Xoay RỖNG: cùng hàng rào với hộp Cất — form `noValidate`, câu tiếng Việt dưới ô.
      */
     await rotate.getByRole('button', { name: 'Xoay' }).click();
-    expect(
-      await rotate
-        .getByLabel('Giá trị mới')
-        .evaluate((el) => (el as HTMLInputElement).validity.valueMissing),
-      'ô Giá trị mới mang `required` — trình duyệt phải chặn lượt xoay rỗng này',
-    ).toBe(true);
+    await expect(
+      rotate.getByLabel('Giá trị mới'),
+      'xoay rỗng phải bị chặn bằng câu tiếng Việt ngay dưới ô',
+    ).toHaveAccessibleDescription('Chưa nhập giá trị cần cất.');
     await expect(rotate, 'bị chặn thì hộp Xoay vẫn phải mở').toBeVisible();
 
     await rotate.getByLabel('Giá trị mới').fill('yeu');

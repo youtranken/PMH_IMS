@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { CatalogService, type CatalogLists } from './catalog.service';
+import { CATALOG_REF_INACTIVE, inactiveRefMessage } from './catalog-refs';
+export { CATALOG_REF_INACTIVE, inactiveRefMessage } from './catalog-refs';
 import { normalizeKey } from '../../common/import-plan';
 import type { CatalogSnapshot, IspProviderRecord } from './catalog.types';
 
@@ -16,6 +18,14 @@ import type { CatalogSnapshot, IspProviderRecord } from './catalog.types';
  */
 export function cabinetWithoutSiteMessage(cabinetCode: string): string {
   return `Thiết bị đang gắn tủ "${cabinetCode}" mà không có site. Khai Site, hoặc bỏ trống ô Tủ mạng.`;
+}
+
+/** Bộ tham chiếu danh mục của một hồ sơ — rỗng/`null` = không gắn. */
+export interface CatalogRefs {
+  siteId?: string | null;
+  cabinetId?: string | null;
+  deviceTypeId?: string | null;
+  vendorId?: string | null;
 }
 
 /**
@@ -42,49 +52,46 @@ export class CatalogApiService {
    * (rỗng = hợp lệ) thay vì ném: nơi gọi thường đang duyệt nhiều dòng import và cần
    * gom hết lỗi của một dòng, không phải dừng ở lỗi đầu tiên.
    */
-  async validateRefs(refs: {
-    siteId?: string | null;
-    cabinetId?: string | null;
-    deviceTypeId?: string | null;
-    vendorId?: string | null;
-  }): Promise<string[]> {
+  async validateRefs(refs: CatalogRefs): Promise<string[]> {
+    return refErrors(await this.catalog.lists({ includeInactive: true }), refs);
+  }
+
+  /**
+   * Cửa ghi dùng cái này, không dùng `validateRefs`: ngoài tham chiếu sai, nó còn từ chối lựa
+   * chọn MỚI trỏ vào mục đã vô hiệu (Q-14).
+   *
+   * "Mới" = khác giá trị hồ sơ đang có (`current`; `null` khi tạo). Form gửi lại ĐỦ mọi ô kể
+   * cả ô không đổi, nên chặn theo giá trị gửi lên sẽ khoá chết mọi hồ sơ cũ đang trỏ vào một
+   * mục đã vô hiệu — sửa hotline thôi cũng bị từ chối. `current` là tham số bắt buộc để nơi gọi
+   * phải nghĩ tới chuyện đó, không để mặc định âm thầm chọn hộ.
+   *
+   * Tham chiếu sai (`CATALOG_REF_INVALID`) báo trước; mục ngừng dùng là `CATALOG_REF_INACTIVE`.
+   */
+  async assertRefs(next: CatalogRefs, current: CatalogRefs | null): Promise<void> {
     const lists = await this.catalog.lists({ includeInactive: true });
-    const errors: string[] = [];
-
-    const site = refs.siteId ? lists.sites.find((s) => s.id === refs.siteId) : null;
-    if (refs.siteId && !site) errors.push('Site không tồn tại.');
-
-    if (refs.cabinetId) {
-      const cabinet = lists.cabinets.find((c) => c.id === refs.cabinetId);
-      if (!cabinet) {
-        errors.push('Tủ mạng không tồn tại.');
-      } else if (!refs.siteId) {
-        /*
-         * TỦ MÀ KHÔNG CÓ SITE — A-11, vá 21/09.
-         *
-         * Bản trước viết `else if (refs.siteId && cabinet.siteId !== refs.siteId)`. Vế
-         * `refs.siteId &&` ở đầu làm cả phép kiểm BIẾN MẤT khi site trống, nên
-         * `{"siteId": ""}` trên một thiết bị đang gắn tủ đi qua cửa trọn vẹn — và hàng ra có
-         * `cabinet_id` mà không có `site_id`: không lọc được bằng site nào, và trang chi tiết
-         * hiện một cái tủ không biết nằm ở đâu.
-         *
-         * Cái điều kiện ấy sinh ra để tránh báo oan khi người dùng KHÔNG chọn site. Nhưng
-         * "không chọn site" chỉ vô hại khi cũng không có tủ; có tủ rồi thì nó là một câu hỏi
-         * chưa trả lời, không phải một ô để trống.
-         */
-        errors.push(cabinetWithoutSiteMessage(cabinet.code));
-      } else if (cabinet.siteId !== refs.siteId) {
-        // Bẫy hay gặp khi import: chọn site A nhưng gõ mã tủ của site B.
-        errors.push(`Tủ "${cabinet.code}" không thuộc site đã chọn.`);
-      }
+    const errors = refErrors(lists, next);
+    if (errors.length > 0) {
+      throw new BadRequestException({ code: 'CATALOG_REF_INVALID', message: errors.join(' ') });
     }
-    if (refs.deviceTypeId && !lists.deviceTypes.some((t) => t.id === refs.deviceTypeId)) {
-      errors.push('Loại thiết bị không tồn tại.');
+    const retired: string[] = [];
+    const check = <T extends { id: string; active: boolean }>(
+      key: keyof CatalogRefs,
+      rows: readonly T[],
+      kind: string,
+      label: (row: T) => string,
+    ) => {
+      const chosen = next[key];
+      if (!chosen || chosen === (current?.[key] ?? null)) return;
+      const row = rows.find((item) => item.id === chosen);
+      if (row && !row.active) retired.push(inactiveRefMessage(kind, label(row)));
+    };
+    check('deviceTypeId', lists.deviceTypes, 'Loại thiết bị', (row) => row.name);
+    check('siteId', lists.sites, 'Site', (row) => row.code);
+    check('cabinetId', lists.cabinets, 'Tủ mạng', (row) => row.code);
+    check('vendorId', lists.vendors, 'Nhà cung cấp', (row) => row.name);
+    if (retired.length > 0) {
+      throw new BadRequestException({ code: CATALOG_REF_INACTIVE, message: retired.join(' ') });
     }
-    if (refs.vendorId && !lists.vendors.some((v) => v.id === refs.vendorId)) {
-      errors.push('Nhà cung cấp không tồn tại.');
-    }
-    return errors;
   }
 
   /**
@@ -122,4 +129,43 @@ export interface CatalogResolver {
   cabinet(siteCode: string, code: string): string | null;
   deviceType(name: string): string | null;
   vendor(name: string): string | null;
+}
+
+/** Tham chiếu sai của một bộ ref (rỗng = hợp lệ). Tách khỏi class để `assertRefs` dùng lại MỘT lượt đọc danh mục. */
+function refErrors(lists: CatalogLists, refs: CatalogRefs): string[] {
+  const errors: string[] = [];
+  const site = refs.siteId ? lists.sites.find((s) => s.id === refs.siteId) : null;
+  if (refs.siteId && !site) errors.push('Site không tồn tại.');
+
+  if (refs.cabinetId) {
+    const cabinet = lists.cabinets.find((c) => c.id === refs.cabinetId);
+    if (!cabinet) {
+      errors.push('Tủ mạng không tồn tại.');
+    } else if (!refs.siteId) {
+      /*
+       * TỦ MÀ KHÔNG CÓ SITE — A-11, vá 21/09.
+       *
+       * Bản trước viết `else if (refs.siteId && cabinet.siteId !== refs.siteId)`. Vế
+       * `refs.siteId &&` ở đầu làm cả phép kiểm BIẾN MẤT khi site trống, nên
+       * `{"siteId": ""}` trên một thiết bị đang gắn tủ đi qua cửa trọn vẹn — và hàng ra có
+       * `cabinet_id` mà không có `site_id`: không lọc được bằng site nào, và trang chi tiết
+       * hiện một cái tủ không biết nằm ở đâu.
+       *
+       * Cái điều kiện ấy sinh ra để tránh báo oan khi người dùng KHÔNG chọn site. Nhưng
+       * "không chọn site" chỉ vô hại khi cũng không có tủ; có tủ rồi thì nó là một câu hỏi
+       * chưa trả lời, không phải một ô để trống.
+       */
+      errors.push(cabinetWithoutSiteMessage(cabinet.code));
+    } else if (cabinet.siteId !== refs.siteId) {
+      // Bẫy hay gặp khi import: chọn site A nhưng gõ mã tủ của site B.
+      errors.push(`Tủ "${cabinet.code}" không thuộc site đã chọn.`);
+    }
+  }
+  if (refs.deviceTypeId && !lists.deviceTypes.some((t) => t.id === refs.deviceTypeId)) {
+    errors.push('Loại thiết bị không tồn tại.');
+  }
+  if (refs.vendorId && !lists.vendors.some((v) => v.id === refs.vendorId)) {
+    errors.push('Nhà cung cấp không tồn tại.');
+  }
+  return errors;
 }

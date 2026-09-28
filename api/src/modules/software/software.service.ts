@@ -475,13 +475,10 @@ export class SoftwareService {
     }
 
     if (values.vendorId) {
-      const refErrors = await this.catalog.validateRefs({ vendorId: values.vendorId as string });
-      if (refErrors.length > 0) {
-        throw new BadRequestException({
-          code: 'CATALOG_REF_INVALID',
-          message: refErrors.join(' '),
-        });
-      }
+      await this.catalog.assertRefs(
+        { vendorId: values.vendorId as string },
+        current ? { vendorId: current.vendorId } : null,
+      );
     }
     return values;
   }

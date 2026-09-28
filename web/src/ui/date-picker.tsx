@@ -23,6 +23,8 @@ export function DatePicker({
   placeholder,
   id,
   ariaLabel,
+  'aria-describedby': describedBy,
+  'aria-invalid': invalid,
   clearable = true,
   min,
   max,
@@ -37,6 +39,10 @@ export function DatePicker({
   placeholder?: string;
   id?: string;
   ariaLabel?: string;
+  /** `Field` tự truyền để câu gợi ý/lỗi của ô được đọc cùng nút mở lịch. */
+  'aria-describedby'?: string;
+  /** Ô đang báo lỗi — `Field error` tự truyền. */
+  'aria-invalid'?: boolean;
   clearable?: boolean;
   /** Chặn chọn ngày < min / > max (chuỗi 'YYYY-MM-DD') — như thuộc tính min/max của input date. */
   min?: string;
@@ -240,6 +246,8 @@ export function DatePicker({
         id={id}
         className="dp-trigger"
         aria-label={ariaLabel}
+        aria-describedby={describedBy}
+        aria-invalid={invalid || undefined}
         aria-haspopup="dialog"
         aria-expanded={open}
         disabled={disabled}

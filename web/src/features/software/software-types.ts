@@ -108,3 +108,22 @@ export function seatLabel(row: SoftwareRow): string {
   if (!supportsSeats(row.kind) || row.seatTotal === null) return '—';
   return `${row.seatUsed}/${row.seatTotal}`;
 }
+
+/**
+ * Ô Số ghế → giá trị gửi lên API (SW-025).
+ *
+ * Trả MỘT hình dạng `{ value, reason }` (tsconfig web không bật `strict`, union `ok` không thu
+ * hẹp được). `Number("10 ghế")` là NaN và `JSON.stringify(NaN)` là `null` — tức "không giới
+ * hạn" — nên chuỗi không thuần chữ số phải bị báo, không được đổi thành số.
+ */
+export function seatCheck(
+  raw: string,
+  hasSeats: boolean,
+  used: number,
+): { value: number | null; reason: 'invalid' | 'belowUsed' | null } {
+  const text = raw.trim();
+  if (!hasSeats || text === '') return { value: null, reason: null };
+  if (!/^\d+$/.test(text) || Number(text) < 1) return { value: null, reason: 'invalid' };
+  const value = Number(text);
+  return { value, reason: value < used ? 'belowUsed' : null };
+}

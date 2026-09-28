@@ -12,6 +12,7 @@ import { ScrollX } from '@/ui/scroll-x';
 import { Select } from '@/ui/select';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
+import { useFormErrors } from '@/ui/use-form-errors';
 import { foldSearch } from '@/lib/search-fold';
 
 /** Phải khớp `SCOPE_TYPES` bên API (`access-tier.ts`) và CHECK ở tầng DB. */
@@ -746,6 +747,8 @@ function GrantDialog({
   const [tier, setTier] = useState<Tier>('needs_approval');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [scopeType, scopeRef] = scopeKey.split('|');
+  const check = useFormErrors({ scope: (!scopeType || !scopeRef) && t('access.scopeRequired') });
 
   const scopes = useQuery({
     queryKey: ['vault', 'access', 'scopes'],
@@ -783,21 +786,24 @@ function GrantDialog({
         id="grant-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          const [scopeType, scopeRef] = scopeKey.split('|');
-          if (!scopeType || !scopeRef) {
-            setError(t('access.scopeRequired'));
-            return;
-          }
+          if (!check.check()) return;
           save.mutate(
             { memberEmail, scopeType, scopeRef, tier, note: note.trim() },
             { onSuccess: onSaved, onError: (err) => setError(errorMessage(err)) },
           );
         }}
       >
-        <Field label={t('access.scope')} required hint={t('access.scopeHint')}>
+        <Field
+          label={t('access.scope')}
+          required
+          hint={t('access.scopeHint')}
+          error={check.error('scope')}
+        >
           <Select
             required
             value={scopeKey}

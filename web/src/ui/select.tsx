@@ -29,7 +29,10 @@ export function Select({
   failed,
   required,
   'aria-describedby': describedBy,
+  'aria-invalid': invalid,
 }: {
+  /** Ô đang báo lỗi — `Field error` tự truyền; viền đỏ và tiêu điểm của `useFormErrors` bám vào đây. */
+  'aria-invalid'?: boolean;
   /**
    * Gắn lên chính nút mở menu, để `<Field htmlFor>` còn trỏ vào một điều khiển CÓ THẬT.
    *
@@ -162,6 +165,7 @@ export function Select({
         ref={triggerRef}
         id={id}
         aria-describedby={describedBy}
+        aria-invalid={invalid || undefined}
         type="button"
         className="fsel-trigger"
         aria-label={ariaLabel}
