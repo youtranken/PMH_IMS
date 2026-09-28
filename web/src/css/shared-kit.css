@@ -1310,3 +1310,64 @@ table.access-grid thead .access-row-head {
   margin: 0;
   overflow-wrap: anywhere;
 }
+
+/* --- Tham số hệ thống (features/admin/settings-screen.tsx) -----------------
+ * Nav nhóm bên trái ở màn rộng; màn hẹp thì nav thành một hàng cuộn ngang TRONG chính nó
+ * (không đẩy trang), bảng tham số một cột.
+ * -------------------------------------------------------------------------- */
+.settings-layout {
+  display: grid;
+  grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+.settings-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.settings-nav button {
+  all: unset;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--r);
+  color: var(--ink-2);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.settings-nav button:hover { background: var(--surface-2); }
+.settings-nav button:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.settings-nav button[aria-current='page'] { background: var(--primary-soft); color: var(--primary-ink); }
+.settings-panel { display: flex; flex-direction: column; gap: var(--space-6); min-width: 0; }
+.settings-panel h2 { margin: 0; }
+.settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+.settings-row .btn { align-self: flex-start; }
+.settings-input { display: flex; align-items: center; gap: var(--space-3); }
+.settings-input .inp { max-width: 14rem; }
+.settings-meta { margin: 0; font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.settings-diff {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.settings-diff li { display: flex; flex-direction: column; gap: var(--space-1); overflow-wrap: anywhere; }
+@media (max-width: 900px) {
+  .settings-layout { grid-template-columns: minmax(0, 1fr); }
+  .settings-nav ul { flex-direction: row; overflow-x: auto; }
+  .settings-nav button { width: auto; }
+}

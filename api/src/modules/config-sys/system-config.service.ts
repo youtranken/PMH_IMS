@@ -73,6 +73,14 @@ export class SystemConfigService {
     this.cache.delete(spec.key);
   }
 
+  /**
+   * Bỏ giá trị đã nhớ của một khoá — gọi SAU khi transaction ghi đã commit. Chỉ tác dụng trong
+   * tiến trình này; tiến trình khác (worker) tự nạp lại sau tối đa `CACHE_TTL_MS`.
+   */
+  forget(key: string): void {
+    this.cache.delete(key);
+  }
+
   private async read(key: string): Promise<unknown> {
     const hit = this.cache.get(key);
     if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.value;

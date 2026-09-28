@@ -1,6 +1,7 @@
 /**
  * AD-11: danh sách khóa cấu hình + kiểu + mặc định — MỘT nơi khai báo duy nhất (AD-15).
- * Thêm tham số mới: thêm ở đây VÀ seed bằng migration, không rải hằng số trong code.
+ * Thêm tham số mới: thêm ở đây VÀ seed bằng migration, không rải hằng số trong code. Muốn SA
+ * sửa được trên màn Tham số hệ thống thì khai thêm ở `system-config.editable.ts` (kèm khoảng).
  */
 export const CONFIG_KEYS = {
   sessionIdleMinutes: { key: 'session.idle_minutes', fallback: 30 },

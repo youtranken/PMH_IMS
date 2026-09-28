@@ -31,6 +31,7 @@ import { DevicesScreen } from '@/features/devices/devices-screen';
 import { ExpiryScreen } from '@/features/expiry/expiry-screen';
 import { DashboardScreen } from '@/features/dashboard/dashboard-screen';
 import { AccessMatrixScreen } from '@/features/vault/access-matrix-screen';
+import { SettingsScreen } from '@/features/admin/settings-screen';
 import { ApprovalsScreen } from '@/features/vault/approvals-screen';
 import { ApprovalDetailScreen } from '@/features/vault/approval-detail-screen';
 import { DisposalScreen } from '@/features/disposal/disposal-screen';
@@ -196,6 +197,9 @@ function AppRoutes() {
         ) : null}
         {canSeeRoute(PATHS.adminAuditLog, me.role) ? (
           <Route path={PATHS.adminAuditLog} element={<AuditLogScreen />} />
+        ) : null}
+        {canSeeRoute(PATHS.adminSettings, me.role) ? (
+          <Route path={PATHS.adminSettings} element={<SettingsScreen me={me} />} />
         ) : null}
         <Route path={PATHS.approvals} element={<ApprovalsScreen me={me} />} />
         {/* Mọi vai: đường vào tự đổi mật khẩu / cài lại 2 lớp / đóng phiên của chính mình. */}

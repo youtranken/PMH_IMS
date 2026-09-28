@@ -44,6 +44,9 @@ describe('canSeeRoute', () => {
     [PATHS.vault, 'member', false],
     [PATHS.devComponents, 'sa', true],
     [PATHS.devComponents, 'admin', false],
+    [PATHS.adminSettings, 'sa', true],
+    [PATHS.adminSettings, 'admin', false],
+    [PATHS.adminSettings, 'member', false],
   ] as const)('%s + %s → %s', (path, role, allowed) => {
     expect(canSeeRoute(path, role)).toBe(allowed);
   });
@@ -128,6 +131,7 @@ describe('titleKeyOf — tên tab theo màn', () => {
     [PATHS.expiry, 'nav.expiry'],
     [PATHS.adminAccounts, 'nav.accounts'],
     [PATHS.adminVaultAccess, 'nav.vaultAccess'],
+    [PATHS.adminSettings, 'nav.settings'],
     // Trang CHI TIẾT đội tên của danh sách nó thuộc về — người dùng nhận ra khu vực trước,
     // còn tên riêng của hồ sơ thì đã nằm trên `h1` của chính trang.
     [PATHS.device('abc-123'), 'nav.devices'],

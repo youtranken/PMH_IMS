@@ -377,6 +377,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     { link: 'Danh mục', path: '/admin/catalog', heading: /^Danh mục$/ },
     { link: 'Quyền két sắt', path: '/admin/vault-access', heading: /^Quyền xem két sắt$/ },
     { link: 'Nhật ký', path: '/admin/audit-log', heading: /^Nhật ký$/ },
+    { link: 'Tham số hệ thống', path: '/admin/settings', heading: /^Tham số hệ thống$/ },
     { link: 'Bộ giao diện', path: '/dev/components', heading: /^Bộ giao diện$/ },
   ];
 
@@ -958,6 +959,10 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
       menu.getByRole('link', { name: 'Bộ giao diện', exact: true }),
       'Bộ giao diện là trang nội bộ của đội phát triển, chỉ SA',
     ).toHaveCount(0);
+    await expect(
+      menu.getByRole('link', { name: 'Tham số hệ thống', exact: true }),
+      'nới/siết hàng rào đăng nhập và két là việc của SA (Q-14)',
+    ).toHaveCount(0);
 
     /*
      * Mục "chưa mở" (Tài liệu) là chữ thường `<span>`, KHÔNG phải link. Kiểm bằng
@@ -1463,6 +1468,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
     for (const [path, why] of [
       ['/vault', 'trang tổng Két sắt gác vai ngay ở route'],
       ['/dev/components', 'Bộ giao diện là trang nội bộ, chỉ SA'],
+      ['/admin/settings', 'Tham số hệ thống chỉ SA (Q-14)'],
       ['/documents', 'màn Tài liệu thuộc epic sau — chưa có route nào'],
     ] as const) {
       await page.goto(path);
