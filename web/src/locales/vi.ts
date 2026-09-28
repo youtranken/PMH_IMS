@@ -320,7 +320,7 @@ export default {
     totpReEnroll: 'Cài lại trên điện thoại mới',
     totpReEnrollHint:
       'Cần mã 6 số trên điện thoại hiện tại và mật khẩu. Mã trên điện thoại cũ hết dùng được sau khi xong, và các máy khác bị đăng xuất.',
-    totpReEnrollPasswordSub: 'Nhập mật khẩu hiện tại để bắt đầu cài lại.',
+    totpReEnrollPasswordSub: 'Nhập mật khẩu hiện tại để bắt đầu cài xác thực 2 lớp.',
     totpReEnrollContinue: 'Tiếp tục',
     totpEnrolled: 'Đã bật xác thực 2 lớp.',
     totpReEnrolled: 'Đã chuyển xác thực 2 lớp sang điện thoại mới.',

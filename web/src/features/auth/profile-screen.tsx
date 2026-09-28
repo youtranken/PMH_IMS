@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { errorMessage, useApiMutation } from '@/lib/api';
@@ -37,6 +37,9 @@ const SESSIONS_KEY = ['auth', 'my-sessions'] as const;
 export function ProfileScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
+  const queryClient = useQueryClient();
+  // Đổi mật khẩu / cài lại 2 lớp đều đá các phiên khác — danh sách phiên phải hỏi lại.
+  const refreshSessions = () => void queryClient.invalidateQueries({ queryKey: SESSIONS_KEY });
   const [params, setParams] = useSearchParams();
   const { hash } = useLocation();
   const [enrollMode, setEnrollMode] = useState<'enable' | 'reenroll' | null>(null);
@@ -129,6 +132,7 @@ export function ProfileScreen({ me }: { me: Me }) {
             submitLabel={t('profile.changePassword')}
             onChanged={() => {
               setPasswordOpen(false);
+              refreshSessions();
               toast({ message: t('profile.passwordChanged') });
             }}
           />
@@ -145,6 +149,7 @@ export function ProfileScreen({ me }: { me: Me }) {
               message: t(enrollMode === 'reenroll' ? 'profile.totpReEnrolled' : 'profile.totpEnrolled'),
             });
             setEnrollMode(null);
+            refreshSessions();
           }}
         />
       ) : null}
