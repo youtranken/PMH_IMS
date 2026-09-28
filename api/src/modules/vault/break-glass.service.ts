@@ -9,15 +9,25 @@ import {
 } from '@nestjs/common';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
-import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
-import { ApprovalsApiService, type ApprovalRecord } from '../approvals/approvals.api';
+import {
+  ApprovalKindRegistry,
+  type ApprovalSubject,
+} from '../../common/approvals/approvals-registry';
+import { UI_PATHS } from '../../common/ui-paths';
+import { UsersApiService } from '../users/users.api';
+import {
+  ApprovalsApiService,
+  type ApprovalRecord,
+  type TransitionInput,
+} from '../approvals/approvals.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import { conflictOnUnique } from '../../common/sql';
 import { OutboxService } from '../outbox/outbox.service';
 import { AccessListService } from './access-list.service';
 import { tierLabel, type AccessTier } from './access-tier';
-import type { SecretOwnerType } from './vault.service';
+import { VaultOwnersService } from './vault-owners.service';
+import { VaultService, type SecretOwnerType } from './vault.service';
 
 export const BREAK_GLASS_KIND = 'break_glass';
 
@@ -56,6 +66,28 @@ export interface BreakGlassRequestInput {
   hours: number;
 }
 
+/**
+ * Một phiếu break-glass như người đọc cần thấy — không phải một uuid.
+ *
+ * Người duyệt lúc 2 giờ sáng phải biết "switch truy cập tầng 1 hay firewall biên" để đánh giá
+ * rủi ro. Chỉ có mã, tên, site và SỐ ngăn két — không bao giờ có tên ngăn (FR-026).
+ */
+export interface BreakGlassView extends ApprovalRecord {
+  /** `mã · tên · site`; `null` khi hồ sơ chủ đã bị xoá. */
+  subjectLabel: string | null;
+  requesterName: string;
+  /** Số ngăn két của đối tượng — chỉ người duyệt nhận; người xin nhận `null`. */
+  secretCount: number | null;
+}
+
+/** Đường tới két của từng loại hồ sơ — đích của nút "Mở két" trong thư báo được duyệt. */
+const VAULT_TAB_PATH: Record<SecretOwnerType, (id: string) => string> = {
+  device: (id) => `${UI_PATHS.device(id)}?tab=vault`,
+  software: (id) => `${UI_PATHS.software(id)}?tab=vault`,
+  isp: (id) => `${UI_PATHS.ispLine(id)}?tab=vault`,
+  service_account: (id) => `${UI_PATHS.serviceAccount(id)}?tab=vault`,
+};
+
 /** Kết quả kiểm quyền của một người trên một chủ thể — UI dựng nút theo cái này. */
 export interface AccessVerdict {
   tier: AccessTier;
@@ -83,10 +115,93 @@ export class BreakGlassService implements OnModuleInit {
     private readonly access: AccessListService,
     private readonly config: SystemConfigService,
     private readonly outbox: OutboxService,
+    private readonly owners: VaultOwnersService,
+    private readonly vault: VaultService,
+    private readonly users: UsersApiService,
   ) {}
 
   onModuleInit(): void {
     this.kinds.register(BREAK_GLASS_FLOW);
+    // `mail` là tầng nền, không import được `vault` (AD-2) — nên dạy sổ cách gọi tên đối tượng.
+    this.kinds.registerDescriber(BREAK_GLASS_KIND, (type, id) =>
+      this.describeSubject(type as SecretOwnerType, id),
+    );
+  }
+
+  /** Mã + tên + site của đối tượng, hoặc `null` khi hồ sơ đã bị xoá. */
+  async describeSubject(ownerType: SecretOwnerType, ownerId: string): Promise<ApprovalSubject | null> {
+    const pathOf = VAULT_TAB_PATH[ownerType];
+    if (!pathOf) return null;
+    const owner = await this.owners.describe(ownerType, ownerId);
+    if (owner.orphan) return null;
+    return {
+      code: owner.code,
+      label: [owner.code, owner.name, owner.siteCode].filter(Boolean).join(' · '),
+      path: pathOf(ownerId),
+    };
+  }
+
+  /**
+   * Gắn tên đối tượng + tên người xin vào từng phiếu.
+   *
+   * Một lượt tra cho mỗi đối tượng KHÁC NHAU, không phải mỗi phiếu: một máy hay bị xin nhiều
+   * lần trong nhật ký. `withCount` chỉ bật cho người duyệt — số ngăn là thông tin của bản đồ két.
+   */
+  async views(rows: ApprovalRecord[], withCount: boolean): Promise<BreakGlassView[]> {
+    const subjects = new Map<string, Promise<[ApprovalSubject | null, number | null]>>();
+    for (const row of rows) {
+      const key = `${row.subjectType}:${row.subjectId}`;
+      if (subjects.has(key)) continue;
+      const type = row.subjectType as SecretOwnerType;
+      subjects.set(
+        key,
+        Promise.all([
+          this.describeSubject(type, row.subjectId),
+          withCount ? this.vault.countFor(type, row.subjectId) : Promise.resolve(null),
+        ]),
+      );
+    }
+    const names = await this.users.namesByEmails([...new Set(rows.map((r) => r.requester))]);
+    return Promise.all(
+      rows.map(async (row) => {
+        const [subject, secretCount] = await subjects.get(`${row.subjectType}:${row.subjectId}`)!;
+        return {
+          ...row,
+          subjectLabel: subject?.label ?? null,
+          requesterName: names.get(row.requester) ?? row.requester,
+          secretCount,
+        };
+      }),
+    );
+  }
+
+  /**
+   * Một phiếu — trang chi tiết mở từ nút trong thư.
+   *
+   * Người duyệt đọc được mọi phiếu; Member chỉ đọc phiếu CỦA CHÍNH MÌNH. Phiếu của người khác
+   * trả CÙNG lỗi với phiếu không tồn tại: đoán id mà phân biệt được "có nhưng cấm" với "không có"
+   * là lộ ra ai đang xin mở két gì.
+   */
+  async detail(viewer: string, canDecide: boolean, id: string): Promise<BreakGlassView> {
+    const row = await this.requireBreakGlass(id);
+    if (!canDecide && row.requester.toLowerCase() !== viewer.toLowerCase()) {
+      // Đúng từng chữ của `approvals.findOne` khi id không tồn tại.
+      throw new NotFoundException({
+        code: 'APPROVAL_NOT_FOUND',
+        message: 'Không tìm thấy yêu cầu này.',
+      });
+    }
+    const [view] = await this.views([row], canDecide);
+    return view;
+  }
+
+  /**
+   * Số phiếu NGƯỜI NÀY duyệt được — badge menu. Không đếm phiếu của chính họ: bốn mắt
+   * (FR-023) cấm tự duyệt, nên đếm vào là báo một việc họ không làm được.
+   */
+  async pendingCountFor(approver: string): Promise<number> {
+    const rows = await this.approvals.pending(BREAK_GLASS_KIND);
+    return rows.filter((r) => r.requester.toLowerCase() !== approver.toLowerCase()).length;
   }
 
   /** UI hỏi "tôi làm được gì với chủ thể này" — một lần gọi, đủ để dựng đúng nút. */
@@ -309,7 +424,7 @@ export class BreakGlassService implements OnModuleInit {
     const asked = Number((request.payload as { hours?: number } | null)?.hours ?? 0);
     const hours = await this.clampHours(options.hours ?? asked);
 
-    return this.approvals.transition(id, {
+    return this.decide(id, {
       to: 'approved',
       actor: approver,
       note: options.note,
@@ -320,13 +435,32 @@ export class BreakGlassService implements OnModuleInit {
 
   async deny(approver: string, id: string, note?: string | null): Promise<ApprovalRecord> {
     await this.requireBreakGlass(id);
-    return this.approvals.transition(id, { to: 'denied', actor: approver, note });
+    return this.decide(id, { to: 'denied', actor: approver, note });
   }
 
   /** Thu hồi sớm — người xin không còn trực nữa thì không phải chờ hết giờ. */
   async revoke(approver: string, id: string, note?: string | null): Promise<ApprovalRecord> {
     await this.requireBreakGlass(id);
-    return this.approvals.transition(id, { to: 'revoked', actor: approver, note });
+    return this.decide(id, { to: 'revoked', actor: approver, note });
+  }
+
+  /**
+   * Quyết định + thư báo người xin TRONG CÙNG transaction (AD-5, Q-14).
+   *
+   * Tách ra thì hoặc người xin nhận thư "đã duyệt" cho một quyết định đã rollback (hai người
+   * cùng bấm, người sau thua), hoặc quyết định đã vào sổ mà thư không bao giờ đi — người xin
+   * lại ngồi F5 lúc 2 giờ sáng. Payload mang `state` vì thư phải nói quyết định ĐÃ xảy ra, không
+   * phải state lúc worker kịp gửi.
+   */
+  private decide(id: string, input: TransitionInput): Promise<ApprovalRecord> {
+    return this.db.transaction(async (tx) => {
+      const decided = await this.approvals.transitionWithin(tx, id, input);
+      await this.outbox.enqueueWithin(tx, 'approval.decided', {
+        approvalId: id,
+        state: input.to,
+      });
+      return decided;
+    });
   }
 
   /**
@@ -367,23 +501,25 @@ export class BreakGlassService implements OnModuleInit {
     return request;
   }
 
-  pendingForApprovers(): Promise<ApprovalRecord[]> {
-    return this.approvals.pending(BREAK_GLASS_KIND);
+  async pendingForApprovers(): Promise<BreakGlassView[]> {
+    return this.views(await this.approvals.pending(BREAK_GLASS_KIND), true);
   }
 
-  mine(memberEmail: string, paging: PageQuery): Promise<Page<ApprovalRecord>> {
-    return this.approvals.page(
+  async mine(memberEmail: string, paging: PageQuery): Promise<Page<BreakGlassView>> {
+    const page = await this.approvals.page(
       { kind: BREAK_GLASS_KIND, requester: memberEmail },
       { limit: paging.limit, offset: pageOffset(paging) },
     );
+    return { ...page, items: await this.views(page.items, false) };
   }
 
   /** FR-025: nhật ký break-glass, từng trang cho màn hình. */
-  log(paging: PageQuery): Promise<Page<ApprovalRecord>> {
-    return this.approvals.page(
+  async log(paging: PageQuery): Promise<Page<BreakGlassView>> {
+    const page = await this.approvals.page(
       { kind: BREAK_GLASS_KIND },
       { limit: paging.limit, offset: pageOffset(paging) },
     );
+    return { ...page, items: await this.views(page.items, true) };
   }
 
   /** Trọn nhật ký — chỉ cho file xuất nộp auditor, nơi thiếu dòng là sai. */

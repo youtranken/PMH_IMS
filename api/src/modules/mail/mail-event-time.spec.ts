@@ -1,3 +1,4 @@
+import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
 import { MailConsumer } from './mail.consumer';
 import type { OutboxService } from '../outbox/outbox.service';
 import type { UsersApiService } from '../users/users.api';
@@ -44,6 +45,7 @@ function consumer(sent: { text: string }[]) {
         lockedUntil: new Date('2026-01-02T03:09:05Z'),
       }),
     recipientsByRole: () => Promise.resolve([{ email: 'sa@pmh.com.vn', fullName: 'SA' }]),
+    namesByEmails: () => Promise.resolve(new Map<string, string>()),
   } as unknown as UsersApiService;
   const transport = {
     send: (_from: string, message: { text: string }) => {
@@ -65,7 +67,15 @@ function consumer(sent: { text: string }[]) {
         createdAt: EVENT_AT,
       }),
   } as unknown as ApprovalsApiService;
-  return new MailConsumer(outbox, users, transport, config, {} as ExpiryApiService, approvals);
+  return new MailConsumer(
+    outbox,
+    users,
+    transport,
+    config,
+    {} as ExpiryApiService,
+    approvals,
+    new ApprovalKindRegistry(),
+  );
 }
 
 describe('Giờ in trong thư là giờ sự kiện, theo múi giờ ứng dụng', () => {
@@ -84,11 +94,11 @@ describe('Giờ in trong thư là giờ sự kiện, theo múi giờ ứng dụn
   });
 });
 
-/** DOM-06 — nút trong thư duyệt dẫn thẳng tới yêu cầu đó, không phải cả màn duyệt. */
+/** Nút trong thư duyệt dẫn thẳng tới trang chi tiết của yêu cầu đó, không phải cả màn duyệt. */
 describe('Thư duyệt break-glass', () => {
-  it.each(['approval.requested', 'approval.reminder'])('%s trỏ tới /approvals?id=<yêu cầu>', async (topic) => {
+  it.each(['approval.requested', 'approval.reminder'])('%s trỏ tới /approvals/<yêu cầu>', async (topic) => {
     const sent: { text: string; html?: string }[] = [];
     await consumer(sent).handle(topic, 'o1');
-    expect(sent[0].text).toContain('/approvals?id=a1');
+    expect(sent[0].text).toContain('/approvals/a1');
   });
 });

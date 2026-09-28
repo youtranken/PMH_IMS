@@ -52,10 +52,10 @@ describe('UI_PATHS bên api khớp `routes.ts` bên web', () => {
     expect(UI_PATHS.approvals).toBe(webPathTemplate('approvals'));
   });
 
-  it('`approval` — màn Duyệt yêu cầu, id của yêu cầu đi trong `?id=`', () => {
-    const url = new URL(UI_PATHS.approval('a/b c'), 'http://x');
-    expect(url.pathname).toBe(webPathTemplate('approvals'));
-    expect(url.searchParams.get('id')).toBe('a/b c');
+  it('`approval` — trang chi tiết một yêu cầu, đúng khuôn `approval` của web', () => {
+    expect(UI_PATHS.approval('ID')).toBe(webPathTemplate('approval')?.replace('${id}', 'ID'));
+    // id luôn là uuid, nhưng một ký tự lạ lọt vào cũng không được bẻ đường dẫn.
+    expect(UI_PATHS.approval('a/b c')).toBe('/approvals/a%2Fb%20c');
   });
 
   it('`auditLog` — đúng đường `adminAuditLog`, người thao tác đi trong `q` đã mã hoá', () => {

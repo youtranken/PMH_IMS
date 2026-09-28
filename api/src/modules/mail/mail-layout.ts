@@ -8,6 +8,11 @@ export interface MailBlock {
   rows?: { label: string; value: string }[];
   ctaLabel?: string;
   ctaUrl?: string;
+  /**
+   * Nút tràn bề ngang, cao hơn — cho thư mà việc chính là BẤM NÚT trên điện thoại (duyệt
+   * break-glass lúc 2 giờ sáng). Nút nhỏ giữa đoạn chữ là thứ ngón cái bấm trượt.
+   */
+  ctaWide?: boolean;
   footnote?: string;
 }
 
@@ -28,7 +33,11 @@ export function renderMail(block: MailBlock): { html: string; text: string } {
 
   const cta =
     block.ctaUrl && block.ctaLabel
-      ? `<p style="margin:20px 0 0"><a href="${block.ctaUrl}" style="display:inline-block;padding:10px 18px;` +
+      ? `<p style="margin:20px 0 0"><a href="${block.ctaUrl}" style="${
+          block.ctaWide
+            ? 'display:block;text-align:center;padding:14px 18px;'
+            : 'display:inline-block;padding:10px 18px;'
+        }` +
         `background:${PRIMARY};color:#ffffff;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px">` +
         `${escapeHtml(block.ctaLabel)}</a></p>`
       : '';

@@ -7,6 +7,7 @@ import { UsersApiService } from '../users/users.api';
 import { renderMail } from './mail-layout';
 import { MailTransportService } from './mail-transport.service';
 import { UI_PATHS } from '../../common/ui-paths';
+import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
 
 const APP_URL = () => process.env.APP_BASE_URL ?? 'https://ims.pmh.com.vn';
 
@@ -35,6 +36,7 @@ export const HANDLED_MAIL_TOPICS: ReadonlySet<string> = new Set([
   'expiry.digest',
   'approval.requested',
   'approval.reminder',
+  'approval.decided',
   'auth.account.locked',
   'security.probe.alert',
   'auth.device.new',
@@ -56,6 +58,7 @@ export class MailConsumer {
     private readonly config: SystemConfigService,
     private readonly expiry: ExpiryApiService,
     private readonly approvals: ApprovalsApiService,
+    private readonly approvalKinds: ApprovalKindRegistry,
   ) {}
 
   async handle(topic: string, outboxId: string): Promise<void> {
@@ -104,13 +107,14 @@ export class MailConsumer {
   }
 
   /**
-   * Thư báo có yêu cầu duyệt (story 6.1).
+   * Thư báo có yêu cầu duyệt.
    *
    * Gửi cho SA + Admin: người duyệt được xác định theo VAI chứ không theo một danh sách email
    * cấu hình tay — đổi người thì đổi vai, không phải nhớ đi sửa một ô cấu hình nào đó.
    *
-   * Thư KHÔNG chứa bất kỳ bí mật nào, kể cả tên secret: nó chỉ nói "có người xin quyền trên
-   * đối tượng X, lý do Y" và đưa một đường dẫn. Ai muốn quyết thì phải đăng nhập.
+   * Tiêu đề phải nói "ai, máy nào, bao lâu" (Q-14): trên màn khoá điện thoại chỉ có dòng đó, và
+   * người duyệt cần phân biệt việc gấp mà không phải mở thư. Thư KHÔNG chứa bất kỳ bí mật nào,
+   * kể cả tên secret — chỉ đối tượng, lý do, số giờ và một đường dẫn. Quyết thì phải đăng nhập.
    */
   private async buildApprovalMail(
     approvalId: string,
@@ -120,44 +124,141 @@ export class MailConsumer {
     /*
      * Yêu cầu đã bị xử lý xong / xóa trước khi thư kịp đi → thôi, đừng làm phiền người duyệt.
      *
-     * Bắt ĐÍCH DANH `NotFoundException`. Bản trước là `.catch(() => null)` bao trọn: một lượt
-     * DB chớp cũng thành "không tìm thấy yêu cầu", `handle()` đánh dấu processed, và thư báo
-     * duyệt đó mất vĩnh viễn — không ai biết vì đó đúng là đường xử lý bình thường.
+     * Bắt ĐÍCH DANH `NotFoundException`: `.catch(() => null)` bao trọn thì một lượt DB chớp
+     * cũng thành "không tìm thấy yêu cầu", `handle()` đánh dấu processed, và thư báo duyệt đó
+     * mất vĩnh viễn — không ai biết vì đó đúng là đường xử lý bình thường.
      */
-    const request = await this.approvals.findOne(approvalId).catch((error: unknown) => {
-      if (error instanceof NotFoundException) return null;
-      throw error;
-    });
+    const request = await this.findApproval(approvalId);
     if (!request || request.state !== 'pending') return null;
 
     const approvers = await this.users.recipientsByRole(['sa', 'admin']);
     if (approvers.length === 0) return null;
 
+    const [who, subject] = await Promise.all([
+      this.personName(request.requester),
+      this.approvalKinds.describe(request.kind, request.subjectType, request.subjectId),
+    ]);
+    const hours = askedHours(request.payload);
+    const ask = `${who} xin mở két${subject ? ` ${subject.code}` : ''}${hours ? ` (${hours} giờ)` : ''}`;
     const waited = Math.round((Date.now() - request.createdAt.getTime()) / 60_000);
     const { html, text } = renderMail({
       title: isReminder ? 'Yêu cầu duyệt còn đang chờ' : 'Có yêu cầu cần duyệt',
       intro: isReminder
         ? `Yêu cầu dưới đây đã chờ ${waited} phút mà chưa ai xử lý.`
-        : `${request.requester} vừa gửi một yêu cầu cần người duyệt.`,
+        : `${who} vừa gửi một yêu cầu mở két cần người duyệt.`,
       rows: [
-        { label: 'Người xin', value: request.requester },
+        { label: 'Người xin', value: `${who} (${request.requester})` },
+        { label: 'Đối tượng', value: subject?.label ?? 'Không còn gọi tên được — mở yêu cầu để xem' },
+        { label: 'Xin', value: hours ? `${hours} giờ` : 'Không ghi số giờ' },
         { label: 'Lý do', value: request.reason },
         { label: 'Lúc', value: at(request.createdAt) },
       ],
-      ctaLabel: 'Mở yêu cầu này',
+      ctaLabel: 'Xem và duyệt',
       ctaUrl: `${APP_URL()}${UI_PATHS.approval(request.id)}`,
+      ctaWide: true,
       footnote:
         'Duyệt được trên điện thoại. Quyền cấp ra luôn có thời hạn và tự cắt khi hết giờ.',
     });
 
     return {
       to: approvers.map((r) => r.email),
-      subject: isReminder
-        ? `[IMS] Nhắc: yêu cầu của ${request.requester} chờ ${waited} phút`
-        : `[IMS] Yêu cầu cần duyệt từ ${request.requester}`,
+      subject: isReminder ? `[IMS] Nhắc: ${ask} — chờ ${waited} phút` : `[IMS] Duyệt: ${ask}`,
       html,
       text,
     };
+  }
+
+  /**
+   * Thư báo KẾT QUẢ cho người xin (Q-14): được duyệt / bị từ chối / bị thu hồi sớm.
+   *
+   * Mẫu thư chọn theo `state` GHI TRONG PAYLOAD lúc quyết, không theo state lúc gửi: duyệt rồi
+   * thu hồi ngay thì hàng "đã duyệt" đi sau vẫn phải nói "đã duyệt" — thư thu hồi đi bằng hàng
+   * outbox của chính nó. Đọc state lúc gửi thì người xin nhận hai thư "đã thu hồi" và không
+   * bao giờ biết mình từng được duyệt.
+   */
+  private async buildDecidedMail(
+    approvalId: string,
+    state: string | undefined,
+    at: (date: Date) => string,
+  ) {
+    if (state !== 'approved' && state !== 'denied' && state !== 'revoked') return null;
+    const request = await this.findApproval(approvalId);
+    if (!request) return null;
+
+    const subject = await this.approvalKinds.describe(
+      request.kind,
+      request.subjectType,
+      request.subjectId,
+    );
+    const code = subject ? ` ${subject.code}` : '';
+    const subjectRow = {
+      label: 'Đối tượng',
+      value: subject?.label ?? 'Không còn gọi tên được',
+    };
+    const noteRow = request.decisionNote
+      ? [{ label: 'Ghi chú của người duyệt', value: request.decisionNote }]
+      : [];
+
+    if (state === 'approved') {
+      const granted =
+        request.expiresAt && request.decidedAt
+          ? Math.round((request.expiresAt.getTime() - request.decidedAt.getTime()) / 3_600_000)
+          : null;
+      const { html, text } = renderMail({
+        title: 'Yêu cầu mở két đã được duyệt',
+        intro: `Bạn được xem két${code}${request.expiresAt ? ` tới ${at(request.expiresAt)}` : ''}. Hết giờ là quyền tự cắt.`,
+        rows: [
+          subjectRow,
+          { label: 'Được cấp', value: granted ? `${granted} giờ` : '—' },
+          { label: 'Hết hạn', value: request.expiresAt ? at(request.expiresAt) : '—' },
+          { label: 'Người duyệt', value: request.decidedBy ?? '—' },
+          ...noteRow,
+        ],
+        ctaLabel: `Mở két${code}`,
+        ctaUrl: `${APP_URL()}${subject?.path ?? UI_PATHS.approval(request.id)}`,
+        ctaWide: true,
+        footnote: 'Mỗi lần xem vẫn phải gõ mã 6 số. Xong việc sớm thì báo người duyệt thu hồi.',
+      });
+      return {
+        to: [request.requester],
+        subject: `[IMS] Đã duyệt: mở két${code}${granted ? ` (${granted} giờ)` : ''}`,
+        html,
+        text,
+      };
+    }
+
+    const denied = state === 'denied';
+    const { html, text } = renderMail({
+      title: denied ? 'Yêu cầu mở két bị từ chối' : 'Quyền mở két đã bị thu hồi sớm',
+      intro: denied
+        ? 'Người duyệt đã từ chối yêu cầu của bạn. Cần thì gửi yêu cầu mới, ghi rõ lý do hơn.'
+        : 'Quyền xem két của bạn đã bị cắt trước hạn. Lượt xem kế tiếp sẽ bị chặn.',
+      rows: [subjectRow, { label: 'Người quyết', value: request.decidedBy ?? '—' }, ...noteRow],
+      ctaLabel: 'Xem yêu cầu',
+      ctaUrl: `${APP_URL()}${UI_PATHS.approval(request.id)}`,
+      ctaWide: true,
+    });
+    return {
+      to: [request.requester],
+      subject: denied
+        ? `[IMS] Bị từ chối: mở két${code}`
+        : `[IMS] Đã thu hồi sớm: quyền mở két${code}`,
+      html,
+      text,
+    };
+  }
+
+  private findApproval(approvalId: string) {
+    return this.approvals.findOne(approvalId).catch((error: unknown) => {
+      if (error instanceof NotFoundException) return null;
+      throw error;
+    });
+  }
+
+  /** Họ tên thay cho email — tiêu đề thư đọc trên màn khoá, email dài thì bị cắt mất phần tên máy. */
+  private async personName(email: string): Promise<string> {
+    const names = await this.users.namesByEmails([email]);
+    return names.get(email) ?? email;
   }
 
   private async build(
@@ -167,6 +268,8 @@ export class MailConsumer {
       ruleId?: string;
       isTest?: boolean;
       approvalId?: string;
+      /** `approval.decided`: quyết định ĐÃ xảy ra — chọn mẫu thư theo nó, không theo state lúc gửi. */
+      state?: string;
       who?: string;
       count?: number;
       windowMinutes?: number;
@@ -211,6 +314,10 @@ export class MailConsumer {
     if (topic === 'approval.requested' || topic === 'approval.reminder') {
       if (!payload.approvalId) return null;
       return this.buildApprovalMail(payload.approvalId, topic === 'approval.reminder', time.at);
+    }
+    if (topic === 'approval.decided') {
+      if (!payload.approvalId) return null;
+      return this.buildDecidedMail(payload.approvalId, payload.state, time.at);
     }
 
     const user = payload.userId ? await this.users.getById(payload.userId) : null;
@@ -364,6 +471,12 @@ export class MailConsumer {
         return null;
     }
   }
+}
+
+/** Số giờ người xin đề nghị — `null` khi phiếu không ghi (đừng in "undefined giờ"). */
+function askedHours(payload: Record<string, unknown> | null): number | null {
+  const hours = Number(payload?.hours);
+  return Number.isFinite(hours) && hours > 0 ? hours : null;
 }
 
 /** Nội dung digest do `ExpiryApiService.buildDigest` dựng — outbox không giữ thứ này. */
