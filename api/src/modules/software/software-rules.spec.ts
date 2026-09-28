@@ -255,6 +255,9 @@ describe('seatConflicts — sửa hồ sơ khi đang có ghế gán', () => {
     ['bỏ trần seat', { ...lic, seatTotal: null }, busy, 0],
     ['thanh lý khi còn ghế — không chặn, service tự gỡ ghế (Q-03)', { ...lic, status: 'retired' }, busy, 0],
     ['thanh lý khi hết ghế', { ...lic, status: 'retired' }, { used: 0, withEndDate: 0 }, 0],
+    // Vượt trần có lý do (gán kèm overSeatReason) rồi thanh lý: mọi ghế sắp bị gỡ, không còn gì để "hạ trần".
+    ['thanh lý license đang vượt ghế 2/1', { ...lic, seatTotal: 1, status: 'retired' }, { used: 2, withEndDate: 0 }, 0],
+    ['thanh lý kèm đổi sang vĩnh viễn khi ghế còn hạn', { ...lic, licenseModel: 'perpetual', status: 'retired' }, busy, 0],
   ] as const)('%s → %i lỗi', (_name, next, seats, count) => {
     const errors = seatConflicts(next, seats);
     expect(errors).toHaveLength(count);

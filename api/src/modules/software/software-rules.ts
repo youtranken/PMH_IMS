@@ -180,6 +180,9 @@ export function seatConflicts(
   seats: { used: number; withEndDate: number },
 ): string[] {
   if (seats.used === 0) return [];
+  // Thanh lý KHÔNG phải xung đột, kể cả khi đang vượt trần hay đổi luôn loại/mô hình: service gỡ
+  // mọi ghế trong cùng transaction (QUYET-DINH Q-03), nên không còn ghế nào để luật của hồ sơ soi.
+  if (next.status === 'retired') return [];
   const errors: string[] = [];
   if (!supportsSeats(next.kind)) {
     errors.push(
@@ -196,7 +199,6 @@ export function seatConflicts(
       `Đang dùng ${seats.used} ghế, không hạ tổng xuống ${next.seatTotal} được. Gỡ bớt ghế trước.`,
     );
   }
-  // Thanh lý khi còn ghế KHÔNG phải xung đột: service tự gỡ các ghế đó (QUYET-DINH Q-03).
   return errors;
 }
 
