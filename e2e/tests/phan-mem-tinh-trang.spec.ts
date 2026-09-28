@@ -163,7 +163,8 @@ test('Hết hạn đỏ, Đã thanh lý xám — ở cả sáng lẫn tối', as
     }),
   );
 
-  await page.goto('/software');
+  // Mặc định danh sách giấu hồ sơ Thanh lý (SW-006) — chọn "Mọi trạng thái" qua URL.
+  await page.goto('/software?status=all');
   await timVaChoLoc(page, prefix);
   await expect(page.getByRole('row')).toHaveCount(3);
 

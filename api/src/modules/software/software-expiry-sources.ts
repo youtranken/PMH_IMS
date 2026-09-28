@@ -36,19 +36,22 @@ export class SoftwareExpiryRegistrar implements OnModuleInit {
       sourceKind: kind,
       sourceLabel: KIND_LABEL[kind],
       findExpiring: async (from, to): Promise<ExpiryItem[]> => {
-        const rows = await this.software.findExpiringBetween(from, to);
-        return rows
-          .filter((row) => row.kind === kind)
-          .map((row) => ({
-            id: row.id,
-            label: `${row.code} — ${row.name}`,
-            sublabel: row.vendorName,
-            kind,
-            start: row.startDate,
-            end: row.endDate!,
-            link: UI_PATHS.software(row.id),
-            quietInDigest: row.status === 'expired_ok',
-          }));
+        const rows = await this.software.present(
+          (await this.software.findExpiringBetween(from, to)).filter((row) => row.kind === kind),
+        );
+        return rows.map((row) => ({
+          id: row.id,
+          label: `${row.code} — ${row.name}`,
+          code: row.code,
+          name: row.name,
+          autoRetireOn: row.autoRetireOn,
+          sublabel: row.vendorName,
+          kind,
+          start: row.startDate,
+          end: row.endDate!,
+          link: UI_PATHS.software(row.id),
+          quietInDigest: row.status === 'expired_ok',
+        }));
       },
       renew: async (actor, id, newEnd) => {
         await this.software.renew(actor, id, newEnd);

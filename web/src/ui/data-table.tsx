@@ -93,6 +93,11 @@ interface DataTableProps<T> {
   renderExpanded?: (row: T) => ReactNode;
   /** Chỉ hiện mũi tên ▸ khi hàm này trả true (vd máy có phần mềm). Mặc định: mọi dòng. */
   canExpand?: (row: T) => boolean;
+  /**
+   * Tên của nút ▸ cho trình đọc màn hình ("Mở rộng LIC-01 — xem máy đang dùng"). Không truyền
+   * thì mọi dòng cùng một câu "Mở rộng dòng", nghe mười lần không biết dòng nào.
+   */
+  expandLabel?: (row: T, expanded: boolean) => string;
   /** ≤680px gập bảng thành thẻ dọc (mỗi ô 1 dòng có nhãn cột). */
   stackOnMobile?: boolean;
   /** Có giá trị → cột đầu (cùng ô ▸) hiện số thứ tự "#" = offset + vị trí + 1. Cần renderExpanded. */
@@ -167,6 +172,7 @@ export function DataTable<T>({
   onRowClick,
   renderExpanded,
   canExpand,
+  expandLabel,
   stackOnMobile,
   selection,
   rowNumberOffset,
@@ -410,7 +416,10 @@ export function DataTable<T>({
                               type="button"
                               className="caret-btn"
                               aria-expanded={expanded}
-                              aria-label={t(expanded ? 'common.collapseRow' : 'common.expandRow')}
+                              aria-label={
+                                expandLabel?.(row.original, expanded) ??
+                                t(expanded ? 'common.collapseRow' : 'common.expandRow')
+                              }
                               onClick={(event) => {
                                 // Không để lan lên `onRowClick` (mở trang chi tiết).
                                 event.stopPropagation();

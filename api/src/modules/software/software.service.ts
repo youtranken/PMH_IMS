@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, isNull, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -686,10 +686,20 @@ function buildWhere(filter: SoftwareFilter): SQL | undefined {
   if (term) {
     // Mã · tên · ghi chú, cả ba trong cột sinh `software.search_norm` (0052) và đã gấp dấu.
     // Ba vế `ILIKE` trước đây không gấp dấu — B-01.
-    parts.push(searchNormLike(softwareTable, term));
+    const byText = searchNormLike(softwareTable, term);
+    parts.push(
+      filter.alsoIds && filter.alsoIds.length > 0
+        ? or(byText, inArray(softwareTable.id, filter.alsoIds))
+        : byText,
+    );
   }
   if (filter.kind) parts.push(eq(softwareTable.kind, filter.kind));
-  if (filter.status) parts.push(eq(softwareTable.status, filter.status));
+  if (filter.licenseModel) parts.push(eq(softwareTable.licenseModel, filter.licenseModel));
+  if (filter.status === 'live') {
+    parts.push(inArray(softwareTable.status, ['active', 'expired_ok']));
+  } else if (filter.status) {
+    parts.push(eq(softwareTable.status, filter.status));
+  }
   if (filter.vendorId) parts.push(eq(softwareTable.vendorId, filter.vendorId));
   const defined = parts.filter((part): part is SQL => part !== undefined);
   return defined.length > 0 ? and(...defined) : undefined;

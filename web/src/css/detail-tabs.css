@@ -550,6 +550,11 @@ input.search {
     overflow: visible;
     text-align: right;
   }
+  /* Ô mũi tên bung dòng của dòng KHÔNG bung được: ở thẻ dọc nó thành một hàng trống không nhãn
+     ở đầu thẻ. */
+  .table-stack td.lead:empty {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

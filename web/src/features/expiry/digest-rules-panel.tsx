@@ -15,6 +15,12 @@ import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import { useFormErrors } from '@/ui/use-form-errors';
 
+/** Khoảng hợp lệ của "Trong vòng (ngày)" — cùng mốc xa nhất của bộ lọc màn Sắp hết hạn. */
+const WITHIN_MIN = 1;
+const WITHIN_MAX = 365;
+/** Kiểm dạng email thô cho người gõ — server vẫn là chốt chặn cuối. */
+const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
+
 interface DigestRule {
   id: string;
   name: string;
@@ -36,12 +42,28 @@ interface DigestRule {
  * MỘT luật = MỘT email tổng hợp theo kỳ. Nút "Gửi thử" là thứ quan trọng nhất màn này:
  * không có nó thì cấu hình xong phải chờ tới thứ Hai mới biết có chạy đúng không.
  */
-export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] }) {
+export function DigestRulesPanel({
+  me,
+  kinds,
+  adding,
+  onAddingChange,
+}: {
+  me: Me;
+  kinds: ExpiryKind[];
+  /** Nút "Thêm luật" nằm ở đầu trang (PageHeader) — màn cha giữ cờ mở hộp thêm. */
+  adding: boolean;
+  onAddingChange: (open: boolean) => void;
+}) {
   const { t } = useTranslation();
   const toast = useToast();
   const askConfirm = useConfirm();
   const queryClient = useQueryClient();
-  const [editing, setEditing] = useState<{ rule: DigestRule | null } | null>(null);
+  const [editingRule, setEditingRule] = useState<DigestRule | null>(null);
+  const editing = editingRule ? { rule: editingRule } : adding ? { rule: null } : null;
+  const setEditing = (next: { rule: DigestRule | null } | null) => {
+    setEditingRule(next?.rule ?? null);
+    onAddingChange(!!next && next.rule === null);
+  };
 
   const canEdit = me.role === 'sa' || me.role === 'admin';
 
@@ -53,6 +75,10 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
   const remove = useApiMutation<{ id: string }, unknown>(
     (input) => `/api/v1/expiry/rules/${input.id}`,
     { method: 'DELETE', csrfToken: me.csrfToken, refreshMe: false, body: () => undefined },
+  );
+  const toggle = useApiMutation<{ id: string; active: boolean }, unknown>(
+    (input) => `/api/v1/expiry/rules/${input.id}`,
+    { method: 'PATCH', csrfToken: me.csrfToken, refreshMe: false, body: ({ active }) => ({ active }) },
   );
   const sendTest = useApiMutation<{ id: string }, { recipients: string[]; items: number }>(
     (input) => `/api/v1/expiry/rules/${input.id}/test`,
@@ -67,15 +93,7 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
 
   return (
     <div className="attachment-panel">
-      {canEdit ? (
-        <div className="row" style={{ justifyContent: 'flex-end' }}>
-          <button type="button" className="btn primary" onClick={() => setEditing({ rule: null })}>
-            {t('digest.add')}
-          </button>
-        </div>
-      ) : (
-        <p className="muted">{t('digest.readOnly')}</p>
-      )}
+      {canEdit ? null : <p className="muted">{t('digest.readOnly')}</p>}
 
       {rules.isLoading ? (
         <Loading />
@@ -102,7 +120,9 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
                   <td data-label={t('digest.name')}>
                     {rule.name}
                     {!rule.active ? (
-                      <span className="cell-sub">{t('digest.paused')}</span>
+                      <span className="cell-sub">
+                        <span className="badge muted">{t('digest.paused')}</span>
+                      </span>
                     ) : null}
                   </td>
                   <td data-label={t('digest.scope')}>
@@ -135,6 +155,25 @@ export function DigestRulesPanel({ me, kinds }: { me: Me; kinds: ExpiryKind[] })
                               key: 'edit',
                               label: t('digest.edit'),
                               onSelect: () => setEditing({ rule }),
+                            },
+                            {
+                              key: 'toggle',
+                              label: t(rule.active ? 'digest.pause' : 'digest.resume'),
+                              disabled: toggle.isPending,
+                              onSelect: () =>
+                                toggle.mutate(
+                                  { id: rule.id, active: !rule.active },
+                                  {
+                                    onSuccess: () => {
+                                      toast({
+                                        message: t(rule.active ? 'digest.pausedDone' : 'digest.resumed'),
+                                      });
+                                      void refresh();
+                                    },
+                                    onError: (error) =>
+                                      toast({ message: errorMessage(error), tone: 'error' }),
+                                  },
+                                ),
                             },
                             {
                               key: 'test',
@@ -275,9 +314,18 @@ function RuleForm({
     .split(/[,;\n]/)
     .map((email) => email.trim())
     .filter(Boolean);
+  // Báo email sai ngay tại ô, đừng để server từ chối (hoặc tệ hơn: thư không tới ai).
+  const badEmails = emails.filter((email) => !EMAIL.test(email));
+  const within = /^\d+$/.test(withinDays.trim()) ? Number(withinDays.trim()) : NaN;
   const check = useFormErrors({
     name: !name.trim() && t('digest.nameRequired'),
-    recipients: emails.length === 0 && t('digest.recipientsRequired'),
+    withinDays:
+      !(within >= WITHIN_MIN && within <= WITHIN_MAX) &&
+      t('digest.withinInvalid', { min: WITHIN_MIN, max: WITHIN_MAX }),
+    recipients:
+      emails.length === 0
+        ? t('digest.recipientsRequired')
+        : badEmails.length > 0 && t('digest.recipientsInvalid', { emails: badEmails.join(', ') }),
   });
 
   const toggleKind = (kind: string) =>
@@ -325,7 +373,7 @@ function RuleForm({
               name: name.trim(),
               // Mảng rỗng = mọi loại — cố ý, để khỏi phải tick lại khi có loại mới.
               kinds: selected,
-              withinDays: Number(withinDays) || 30,
+              withinDays: within,
               recipients: emails,
               frequency: schedule.frequency,
               hour: schedule.hour,
@@ -349,7 +397,13 @@ function RuleForm({
         </Field>
 
         <Field label={t('digest.scope')} hint={t('digest.scopeHint')}>
-          <div className="row" style={{ flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+          {/* `role="group"` + tên: trình đọc màn hình đọc được "Theo dõi loại" khi vào từng ô. */}
+          <div
+            className="row"
+            role="group"
+            aria-label={t('digest.scope')}
+            style={{ flexWrap: 'wrap', gap: 'var(--space-3)' }}
+          >
             {kinds.map((item) => (
               <label key={item.kind} className="row" style={{ gap: 'var(--space-2)' }}>
                 <input
@@ -363,7 +417,12 @@ function RuleForm({
           </div>
         </Field>
 
-        <Field label={t('digest.withinDays')} htmlFor="rule-within">
+        <Field
+          label={t('digest.withinDays')}
+          hint={t('digest.withinHint', { min: WITHIN_MIN, max: WITHIN_MAX })}
+          htmlFor="rule-within"
+          error={check.error('withinDays')}
+        >
           <input
             id="rule-within"
             className="inp"

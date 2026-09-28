@@ -16,10 +16,7 @@ import {
   restoreEndReason,
   type FormerDevice,
 } from './software-standing';
-import { supportsSeats, type SoftwareRow } from './software-types';
-
-/** Loại luôn phải có hạn — khớp `requiresEndDate` phía API. */
-const NEEDS_END = new Set(['license', 'ssl', 'domain']);
+import { requiresEndDate, supportsSeats, type SoftwareRow } from './software-types';
 
 /**
  * Khôi phục hồ sơ đã Thanh lý (Q-13).
@@ -44,7 +41,9 @@ export function RestoreDialog({
   const { t } = useTranslation();
   const today = isoDay(new Date());
   const perpetual = software.licenseModel === 'perpetual';
-  const needsEnd = !perpetual && (NEEDS_END.has(software.kind) || software.endDate !== null);
+  const needsEnd =
+    requiresEndDate(software.kind, software.licenseModel) ||
+    (!perpetual && software.endDate !== null);
   const [endDate, setEndDate] = useState(needsEnd ? plusOneYear(today) : '');
   const [note, setNote] = useState(software.note ?? '');
   const [picked, setPicked] = useState<Set<string>>(new Set());

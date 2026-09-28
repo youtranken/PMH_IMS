@@ -123,7 +123,10 @@ test.describe('Gán license theo seat', () => {
     await page.getByRole('tab', { name: 'Máy đang dùng' }).click();
     const row = page.getByRole('row', { name: new RegExp(`PC-E2E-L1-${stamp}`) });
     await expect(row).toBeVisible();
-    await expect(row.getByText('Đang dùng')).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Đang dùng 1$/ })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
 
     /* "Gỡ" nay nằm trong menu ba chấm, không còn đứng cạnh "Sửa" (rà UI/UX #21). */
     await row.getByRole('button', { name: /^Thao tác với / }).click();
@@ -131,8 +134,8 @@ test.describe('Gán license theo seat', () => {
     await confirmAction(page);
     await expect(page.getByText('Chưa gán license này vào máy nào.')).toBeVisible();
 
-    // Gỡ KHÔNG xóa dòng: bật "xem cả đã gỡ" là thấy lại, kèm mốc thời gian.
-    await page.getByRole('button', { name: 'Xem cả bản ghi đã gỡ' }).click();
+    // Gỡ KHÔNG xóa dòng: chọn "Đã gỡ" là thấy lại, kèm mốc thời gian.
+    await page.getByRole('button', { name: /^Đã gỡ \d+$/ }).click();
     const released = page.getByRole('row', { name: new RegExp(`PC-E2E-L1-${stamp}`) });
     await expect(released).toBeVisible();
     await expect(released.getByText(/Đã gỡ/)).toBeVisible();
@@ -347,7 +350,7 @@ test.describe('Gán license theo seat', () => {
     // Ghế không khai kỳ hạn riêng thì đi theo hồ sơ — và phải NÓI RA như vậy, không hiện
     // con số của hồ sơ như thể người dùng đã khai riêng cho ghế đó.
     await expect(page.getByText('Theo hồ sơ')).toBeVisible();
-    await expect(page.getByText(`2/5 ghế đã gán`)).toBeVisible();
+    await expect(page.getByText(`Đã gán 2/5 ghế`)).toBeVisible();
   });
 
   /** Sửa ghế NGAY TẠI khu bung dòng, bằng đúng hộp đã dùng để gán (AD-15). */
@@ -443,19 +446,29 @@ test.describe('Gán license theo seat', () => {
     await expect(page.getByText('Vĩnh viễn').first()).toBeVisible();
   });
 
-  /** Hồ sơ không có máy nào gắn thì KHÔNG được mọc mũi tên bấm ra rỗng. */
-  test('license chưa gán máy nào thì không có mũi tên bung dòng', async ({ page }) => {
+  /**
+   * License chưa gán máy nào VẪN bung được (SW-013): khu bung rỗng là chỗ gần nhất đặt nút
+   * "Gán vào máy". Nút bung nói rõ dòng nào cho trình đọc màn hình (SW-014).
+   */
+  test('license chưa gán máy nào vẫn bung được, khu bung có nút gán', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
-    await createLicense(page, `LIC-E2E-NOEXP-${stamp}`, 5);
+    const code = `LIC-E2E-NOEXP-${stamp}`;
+    await createLicense(page, code, 5);
 
     await page.goto('/software');
-    await page.getByRole('searchbox', { name: /Tìm/ }).fill(`LIC-E2E-NOEXP-${stamp}`);
-    const row = page.getByRole('row', { name: new RegExp(`LIC-E2E-NOEXP-${stamp}`) });
+    await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
+    const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toBeVisible();
-    // Bám ĐÚNG cái mũi tên, không đếm tổng số nút: dòng nào cũng có sẵn nút ba chấm ở cột
-    // Thao tác, đếm tổng thì bài kiểm đỏ vì lý do chẳng liên quan gì tới mũi tên.
-    await expect(row.getByRole('button', { name: 'Mở rộng dòng' })).toHaveCount(0);
+    const caret = row.getByRole('button', { name: `Mở rộng ${code} — xem máy đang dùng` });
+    await expect(caret).toHaveCount(1);
+    await caret.click();
+    await expect(page.getByText('Chưa gán license này vào máy nào.')).toBeVisible();
+    await expect(page.getByText('Đã gán 0/5 ghế')).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Gán vào máy', exact: true }),
+      'Khu bung rỗng phải có nút gán ngay tại chỗ',
+    ).toBeVisible();
   });
 
   /**

@@ -114,6 +114,20 @@ export function supportsSeats(kind: SoftwareKind): boolean {
   return kind === 'license';
 }
 
+/**
+ * Loại + kỳ hạn nào BẮT BUỘC có ngày hết hạn — bản đọc của `requiresEndDate` phía API
+ * (`software-rules.ts`). Form báo ngay tại ô thay vì gửi lên cho server từ chối.
+ */
+export function requiresEndDate(kind: SoftwareKind, licenseModel: LicenseModel): boolean {
+  if (kind === 'license') return licenseModel !== 'perpetual';
+  return kind === 'ssl' || kind === 'domain';
+}
+
+/** Tiền tố mã theo nếp dữ liệu đang có (LIC-, SSL-…) — chỉ để gợi ý trong ô Mã. */
+export function codePrefix(kind: SoftwareKind): string {
+  return { license: 'LIC-', ssl: 'SSL-', domain: 'DOM-', maintenance: 'MNT-', other: '' }[kind];
+}
+
 /** "3/10" hoặc gạch nếu loại không có seat. */
 export function seatLabel(row: SoftwareRow): string {
   if (!supportsSeats(row.kind) || row.seatTotal === null) return '—';

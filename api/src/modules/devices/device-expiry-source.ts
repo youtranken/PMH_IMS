@@ -29,6 +29,8 @@ export class DeviceExpirySource implements ExpirySource, OnModuleInit {
     return rows.map((row) => ({
       id: row.id,
       label: `${row.code} — ${row.name}`,
+      code: row.code,
+      name: row.name,
       sublabel: [row.deviceTypeName, row.siteCode].filter(Boolean).join(' · ') || null,
       kind: this.sourceKind,
       start: row.warrantyStart,

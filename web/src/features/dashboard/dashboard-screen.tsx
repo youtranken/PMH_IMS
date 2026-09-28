@@ -616,7 +616,6 @@ function ExpiringTable({
   me: Me;
 }) {
   const { t } = useTranslation();
-  const toast = useToast();
   const queryClient = useQueryClient();
   const [renewing, setRenewing] = useState<ExpiringItem | null>(null);
 
@@ -686,7 +685,6 @@ function ExpiringTable({
           onClose={() => setRenewing(null)}
           onDone={() => {
             setRenewing(null);
-            toast({ message: t('expiry.renewed') });
             // Trang chủ và màn `/expiry` cùng đọc một nguồn hạn — làm mới cả hai.
             void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
             void queryClient.invalidateQueries({ queryKey: ['expiry'] });

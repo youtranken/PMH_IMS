@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import i18n from '@/lib/i18n';
+import { Select } from '@/ui/select';
 
 export type ScheduleFrequency = 'daily' | 'weekly' | 'monthly';
 
@@ -40,24 +41,24 @@ export function SchedulePicker({
 }) {
   const { t } = useTranslation();
 
+  /* Ô chọn dùng `Select` chung chứ không phải `<select>` gốc: menu của hệ điều hành tô xanh
+     dương, lệch hẳn mọi ô chọn khác của app (AD-15, UX-DR1). */
   return (
-    <div className="row" role="group" aria-label={t('common.filter')}>
+    <div className="row" role="group" aria-label={t('schedule.group')}>
       <div className="field">
         <label className="lbl-t" htmlFor={`${idPrefix}-freq`}>
           {t('schedule.frequency')}
         </label>
-        <select
+        <Select
           id={`${idPrefix}-freq`}
-          className="inp pick"
           value={value.frequency}
-          onChange={(e) =>
-            onChange({ ...value, frequency: e.target.value as ScheduleFrequency })
-          }
-        >
-          <option value="daily">{t('schedule.daily')}</option>
-          <option value="weekly">{t('schedule.weekly')}</option>
-          <option value="monthly">{t('schedule.monthly')}</option>
-        </select>
+          options={[
+            { value: 'daily', label: t('schedule.daily') },
+            { value: 'weekly', label: t('schedule.weekly') },
+            { value: 'monthly', label: t('schedule.monthly') },
+          ]}
+          onChange={(next) => onChange({ ...value, frequency: next as ScheduleFrequency })}
+        />
       </div>
 
       {value.frequency === 'weekly' ? (
@@ -65,18 +66,12 @@ export function SchedulePicker({
           <label className="lbl-t" htmlFor={`${idPrefix}-weekday`}>
             {t('schedule.weekdayLabel')}
           </label>
-          <select
+          <Select
             id={`${idPrefix}-weekday`}
-            className="inp pick"
-            value={value.weekday ?? 1}
-            onChange={(e) => onChange({ ...value, weekday: Number(e.target.value) })}
-          >
-            {WEEKDAYS.map((d) => (
-              <option key={d.value} value={d.value}>
-                {t(d.labelKey)}
-              </option>
-            ))}
-          </select>
+            value={String(value.weekday ?? 1)}
+            options={WEEKDAYS.map((d) => ({ value: String(d.value), label: t(d.labelKey) }))}
+            onChange={(next) => onChange({ ...value, weekday: Number(next) })}
+          />
         </div>
       ) : null}
 
@@ -85,18 +80,15 @@ export function SchedulePicker({
           <label className="lbl-t" htmlFor={`${idPrefix}-dom`}>
             {t('schedule.dayOfMonthLabel')}
           </label>
-          <select
+          <Select
             id={`${idPrefix}-dom`}
-            className="inp pick"
-            value={value.dayOfMonth ?? 1}
-            onChange={(e) => onChange({ ...value, dayOfMonth: Number(e.target.value) })}
-          >
-            {Array.from({ length: 28 }, (_, i) => i + 1).map((d) => (
-              <option key={d} value={d}>
-                {t('schedule.dayOfMonth', { day: d })}
-              </option>
-            ))}
-          </select>
+            value={String(value.dayOfMonth ?? 1)}
+            options={Array.from({ length: 28 }, (_, i) => i + 1).map((d) => ({
+              value: String(d),
+              label: t('schedule.dayOfMonth', { day: d }),
+            }))}
+            onChange={(next) => onChange({ ...value, dayOfMonth: Number(next) })}
+          />
         </div>
       ) : null}
 
@@ -104,18 +96,15 @@ export function SchedulePicker({
         <label className="lbl-t" htmlFor={`${idPrefix}-hour`}>
           {t('schedule.hourLabel')}
         </label>
-        <select
+        <Select
           id={`${idPrefix}-hour`}
-          className="inp pick"
-          value={value.hour}
-          onChange={(e) => onChange({ ...value, hour: Number(e.target.value) })}
-        >
-          {Array.from({ length: 24 }, (_, h) => h).map((h) => (
-            <option key={h} value={h}>
-              {String(h).padStart(2, '0')}:00
-            </option>
-          ))}
-        </select>
+          value={String(value.hour)}
+          options={Array.from({ length: 24 }, (_, h) => ({
+            value: String(h),
+            label: `${String(h).padStart(2, '0')}:00`,
+          }))}
+          onChange={(next) => onChange({ ...value, hour: Number(next) })}
+        />
       </div>
     </div>
   );

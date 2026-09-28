@@ -72,6 +72,28 @@
 .segmented button:focus-visible {
   box-shadow: var(--ring);
 }
+/* Tối: `--surface` TỐI HƠN `--surface-2` của rãnh, nên nút đang bật chìm xuống thay vì nổi
+   lên và gần như không khác nút thường. Tô nền nhấn + viền để trạng thái bật đọc được. */
+html[data-theme='dark'] .segmented button[aria-pressed='true'],
+html[data-theme='dark'] .segmented label:has(input:checked) {
+  background: var(--primary-soft);
+  box-shadow: inset 0 0 0 1px var(--border-2);
+}
+
+/* Nút chọn nhanh "+1 năm…" của hộp Gia hạn (`ui/renew-dialog.tsx`). */
+.renew-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.renew-presets .btn[aria-pressed='true'] {
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+  border-color: var(--primary-ink);
+}
+.renew-overdue {
+  color: var(--danger);
+}
 
 /* --- Form layout: nhóm trường theo mục ------------------------------------ */
 .form-section {

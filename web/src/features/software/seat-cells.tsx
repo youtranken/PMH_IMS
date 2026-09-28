@@ -26,7 +26,7 @@ export function SeatEndCell({
   // Mua đứt: nói thẳng "Vĩnh viễn". Để trống thì người đọc tưởng thiếu dữ liệu, mà đây là
   // trạng thái hoàn toàn bình thường.
   if (licenseModel === 'perpetual') {
-    return <span className="badge ok plain">{t('software.perpetual')}</span>;
+    return <span className="badge outline plain">∞ {t('software.perpetual')}</span>;
   }
   // AD-15: luật "sắp hết hạn" chỉ có một, ở lib/expiry.ts.
   if (seat.endDate) return <ExpiryBadge end={seat.endDate} />;
@@ -36,32 +36,11 @@ export function SeatEndCell({
     return (
       <span className="seat-inherit">
         <ExpiryBadge end={fallbackEnd} />
-        <small className="muted">{t('license.termFromProfile')}</small>
+        <small className="muted">
+          {t('license.termFromProfileOn', { date: formatDate(fallbackEnd) })}
+        </small>
       </span>
     );
   }
   return <span className="muted">—</span>;
-}
-
-/** Kỳ hạn gọn một dòng "01/01/2026 → 31/12/2026" cho bảng ở tab Máy đang dùng. */
-export function SeatTerm({
-  seat,
-  licenseModel,
-}: {
-  seat: SeatTerms;
-  licenseModel: LicenseModel;
-}) {
-  const { t } = useTranslation();
-  if (licenseModel === 'perpetual') {
-    return <span className="badge ok plain">{t('software.perpetual')}</span>;
-  }
-  if (!seat.startDate && !seat.endDate) {
-    return <span className="muted">{t('license.termFromProfile')}</span>;
-  }
-  return (
-    <span className="seat-date">
-      {seat.startDate ? formatDate(seat.startDate) : '—'} →{' '}
-      {seat.endDate ? formatDate(seat.endDate) : '—'}
-    </span>
-  );
 }

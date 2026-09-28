@@ -537,19 +537,49 @@ table.table tbody tr.exp:hover td {
   --seat-cols: minmax(150px, 2fr) minmax(90px, 0.9fr) 120px 108px 118px
     minmax(0, 1fr) minmax(0, 1.2fr);
 }
+/* Tiêu đề khu bung: chữ thường cỡ nhỏ — "Đã gán 3/10 ghế" là một câu, in hoa thì đọc ngược.
+   Nút "Gán vào máy" đứng NGAY cạnh câu đó, không trôi ra mép phải của một hàng rất rộng. */
 .seat-head {
   display: flex;
-  align-items: baseline;
-  gap: var(--space-5);
-  font-size: var(--fs-2xs);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: var(--ink-3);
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--ink-2);
   margin-bottom: var(--space-5);
 }
 .seat-head .spacer {
   flex: 1;
+}
+.seat-head .is-warn {
+  color: var(--warn);
+}
+/* Thanh trên tab Máy đang dùng: thanh ghế · lọc Đang dùng/Đã gỡ · nút gán. */
+.seat-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4) var(--space-6);
+  margin-bottom: var(--space-5);
+}
+.seat-toolbar .spacer {
+  flex: 1;
+}
+.seat-toolbar .usage {
+  min-width: 140px;
+}
+/* Ghế của license Hết hạn: thanh xám thay cho xanh "ổn" (`SeatUsage`). */
+.usage-expired {
+  display: block;
+}
+.usage-expired .usage-fill {
+  background: var(--muted);
+}
+.seat-total {
+  margin: var(--space-4) 0 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 .seat-hd {
   display: grid;

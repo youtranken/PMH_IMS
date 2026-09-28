@@ -28,7 +28,7 @@ export function SoftwareStanding({ item, compact = false }: { item: SoftwareRow;
 
   const sub =
     standing.kind === 'perpetual'
-      ? t('software.perpetual')
+      ? `∞ ${t('software.perpetual')}`
       : standing.kind === 'noEnd'
         ? t('expiry.labelNone')
         : standing.kind === 'expired'
@@ -60,22 +60,33 @@ export function SoftwareStanding({ item, compact = false }: { item: SoftwareRow;
  */
 export function SeatUsage({ item }: { item: SoftwareRow }) {
   const { t } = useTranslation();
-  if (!supportsSeats(item.kind) || item.seatTotal === null) {
-    return <span className="mono">{seatLabel(item)}</span>;
+  /* Không có ghế (SSL, tên miền, không giới hạn) hoặc đã Thanh lý (ghế đã gỡ hết): một dấu
+     gạch chữ thường như cột Nhà cung cấp — không mono, không vẽ thanh 0% trống rỗng. */
+  if (!supportsSeats(item.kind) || item.seatTotal === null || item.status === 'retired') {
+    return <span className="muted">—</span>;
   }
   const flag = seatFlag(item.seatUsed, item.seatTotal);
+  // Hết hạn mà vẫn cài trên máy là rủi ro, không phải "còn ghế": thanh xám, kèm câu nói rõ.
+  const expired = item.status === 'expired_ok' && item.seatUsed > 0;
   return (
     <>
-      <UsageBar
-        percent={item.seatTotal === 0 ? 100 : (item.seatUsed / item.seatTotal) * 100}
-        label={seatLabel(item)}
-        showPercent={false}
-        ariaLabel={t('software.seats')}
-      />
+      <span
+        className={expired ? 'usage-expired' : undefined}
+        title={expired ? t('software.seatsExpired') : undefined}
+      >
+        <UsageBar
+          percent={item.seatTotal === 0 ? 100 : (item.seatUsed / item.seatTotal) * 100}
+          label={seatLabel(item)}
+          showPercent={false}
+          ariaLabel={t('software.seats')}
+        />
+      </span>
       {flag ? (
         <span className="cell-sub is-danger">
           {flag.over > 0 ? t('software.seatsOver', { count: flag.over }) : t('software.seatsFull')}
         </span>
+      ) : expired ? (
+        <span className="cell-sub is-danger">{t('software.seatsExpired')}</span>
       ) : null}
     </>
   );

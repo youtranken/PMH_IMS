@@ -36,3 +36,33 @@ const STATUS_KEY = new Map<string, string>([
 export function disposalStatusKey(status: string): string | null {
   return STATUS_KEY.get(status) ?? null;
 }
+
+/**
+ * Nhãn của cột "Chi tiết" (DP-001). API trả `detail` là MÃ loại của module chủ với phần mềm
+ * (`license`, `ssl`…) và tài khoản dịch vụ (`vpn`, `shared`) — in thẳng ra là chữ kỹ thuật tiếng
+ * Anh. Dịch qua đúng khoá nhãn mà module chủ dùng; mã lạ hoặc chữ tự do (loại thiết bị, băng
+ * thông) thì in nguyên văn.
+ */
+const DETAIL_KEY: Partial<Record<DisposalKind, Record<string, string>>> = {
+  software: {
+    license: 'software.kindLicense',
+    ssl: 'software.kindSsl',
+    domain: 'software.kindDomain',
+    maintenance: 'software.kindMaintenance',
+    other: 'software.kindOther',
+  },
+  service_account: {
+    shared: 'serviceAccounts.kindShared',
+    vpn: 'serviceAccounts.kindVpn',
+  },
+};
+
+export function disposalDetail(
+  kind: DisposalKind,
+  detail: string | null,
+  t: (key: string) => string,
+): string {
+  if (!detail) return '—';
+  const key = DETAIL_KEY[kind]?.[detail];
+  return key ? t(key) : detail;
+}
