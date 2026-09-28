@@ -125,9 +125,11 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
     queryFn: () => apiFetch<ScopeOption[]>('/api/v1/vault/access/scopes'),
   });
 
+  // Danh bạ hẹp của module két, KHÔNG phải `/accounts`: màn này mở cho cả Admin, còn
+  // `/accounts` chỉ SA và trả đủ hồ sơ nhân sự.
   const accounts = useQuery({
-    queryKey: ['accounts', 'all'],
-    queryFn: () => apiFetch<{ items: AccountRow[] }>('/api/v1/accounts?limit=200'),
+    queryKey: ['vault', 'access', 'people'],
+    queryFn: () => apiFetch<AccountRow[]>('/api/v1/vault/access/people'),
   });
 
   const remove = useApiMutation<{ id: string }, unknown>(
@@ -193,7 +195,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
 
   const columns = columnGroups.flatMap((group) => group.scopes);
 
-  const allAccounts = accounts.data?.items ?? [];
+  const allAccounts = accounts.data ?? [];
   const members = allAccounts.filter((account) => account.role === 'member');
   const roleHolders = allAccounts.filter((account) => account.role !== 'member');
   // Gấp dấu cả hai vế (B-01): gõ `nguyen thi` phải ra `Nguyễn Thị`.

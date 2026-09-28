@@ -15,7 +15,7 @@ import {
 } from '../../common/lockout';
 import type { UserRole } from '../auth/types';
 import { usersTable } from './users.schema';
-import type { UserCredentials, UserRecord } from './users.types';
+import type { UserCredentials, UserDirectoryEntry, UserRecord } from './users.types';
 
 /**
  * Chủ sở hữu bảng `users` (AD-3). Module khác KHÔNG query bảng này — đi qua UsersApiService.
@@ -459,6 +459,24 @@ export class UsersService {
       .from(usersTable)
       .where(inArray(usersTable.id, ids));
     return new Map(rows.map((row) => [row.id, row.email]));
+  }
+
+  /**
+   * Danh bạ tối thiểu: chỉ năm cột, không phân trang (bảng nhân sự IT, vài trăm dòng). Chọn cột
+   * ngay trong SELECT để hash mật khẩu, TOTP, SĐT… không bao giờ rời DB theo đường này.
+   */
+  async directory(): Promise<UserDirectoryEntry[]> {
+    const rows = await this.db
+      .select({
+        id: usersTable.id,
+        email: usersTable.email,
+        fullName: usersTable.fullName,
+        role: usersTable.role,
+        status: usersTable.status,
+      })
+      .from(usersTable)
+      .orderBy(asc(usersTable.fullName), asc(usersTable.email));
+    return rows as UserDirectoryEntry[];
   }
 
   async listRecipients(roles: UserRole[]): Promise<{ email: string; fullName: string }[]> {
