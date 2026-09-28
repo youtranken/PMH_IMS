@@ -5,25 +5,22 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { useExpiryKinds } from '@/lib/expiry-kinds';
-import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { DataTable } from '@/ui/data-table';
 import { Pagination } from '@/ui/pagination';
-import { DatePicker } from '@/ui/date-picker';
-import { Dialog } from '@/ui/dialog';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
 import { KpiStrip, KpiTile } from '@/ui/kpi-strip';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
-import { Field, PageHeader } from '@/ui/page-header';
+import { PageHeader } from '@/ui/page-header';
 import { useExpiryThresholds } from '@/ui/use-expiry-thresholds';
 import { Select } from '@/ui/select';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useToast } from '@/ui/toast';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
-import { useFormErrors } from '@/ui/use-form-errors';
+import { RenewDialog } from '@/ui/renew-dialog';
 import { DigestRulesPanel } from './digest-rules-panel';
 
 interface ExpiryRow {
@@ -450,91 +447,3 @@ export function ExpiryScreen({ me }: { me: Me }) {
   );
 }
 
-function RenewDialog({
-  row,
-  kindLabel,
-  csrfToken,
-  onClose,
-  onDone,
-}: {
-  row: ExpiryRow;
-  kindLabel: string;
-  csrfToken: string;
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const { t } = useTranslation();
-  const [endDate, setEndDate] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const check = useFormErrors({ endDate: !endDate && t('expiry.pickDate') });
-  const renew = useApiMutation<Record<string, unknown>, unknown>('/api/v1/expiry/renew', {
-    csrfToken,
-    refreshMe: false,
-  });
-
-  return (
-    <Dialog
-      open
-      onOpenChange={onClose}
-      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
-         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ.
-         `guardUnsaved`: chưa bấm Lưu mà lỡ Esc thì hỏi lại, đừng xoá trắng. */
-      dismissible={!renew.isPending}
-      guardUnsaved
-      maxWidth={520}
-      title={`${t('expiry.renew')} — ${row.label}`}
-      footer={
-        <>
-          <button type="button" className="btn" onClick={onClose}>
-            {t('common.cancel')}
-          </button>
-          <button type="submit" form="renew-form" className="btn primary" disabled={renew.isPending}>
-            {renew.isPending ? t('common.loading') : t('expiry.renew')}
-          </button>
-        </>
-      }
-    >
-      <form
-        id="renew-form"
-        className="form-grid"
-        data-columns={1}
-        ref={check.formRef}
-        noValidate
-        onSubmit={(e) => {
-          e.preventDefault();
-          setError(null);
-          if (!check.check()) return;
-          renew.mutate(
-            { kind: row.kind, id: row.id, endDate },
-            { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
-          );
-        }}
-      >
-        <p className="muted">
-          {kindLabel} · {t('expiry.end')}: {formatDate(row.end)}
-        </p>
-        <Field
-          label={t('expiry.newEnd')}
-          required
-          hint={t('expiry.renewHint')}
-          error={check.error('endDate')}
-        >
-          <DatePicker
-            value={endDate}
-            ariaLabel={t('expiry.newEnd')}
-            /* Hạn mới phải sau hạn cũ — chặn trên lịch; API vẫn kiểm lại vì chốt chặn
-               thật phải nằm ở server. */
-            min={row.end}
-            onChange={setEndDate}
-          />
-        </Field>
-
-        {error ? (
-          <p className="alert error" role="alert">
-            {error}
-          </p>
-        ) : null}
-      </form>
-    </Dialog>
-  );
-}

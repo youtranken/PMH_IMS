@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMemo, useState, type ReactNode } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import type { ColumnDef } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
@@ -12,14 +13,16 @@ import {
 import { useToast } from '@/ui/toast';
 import { formatDate, formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
+import { DataTable } from '@/ui/data-table';
 import { ExpiryBadge } from '@/ui/expiry-badge';
+import { RenewDialog } from '@/ui/renew-dialog';
 import { KpiStrip, KpiTile } from '@/ui/kpi-strip';
 import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { OWNER_PATH, PATHS } from '@/lib/routes';
 import { UsageBar } from '@/ui/usage-bar';
 import { DISPOSAL_KIND_KEY, type DisposalKind } from '@/lib/disposal-kinds';
-import { expiryKindLabel, useExpiryKinds } from '@/lib/expiry-kinds';
+import { expiryKindLabel, useExpiryKinds, type ExpiryKind } from '@/lib/expiry-kinds';
 
 interface Block<T> {
   available: boolean;
@@ -29,10 +32,12 @@ interface Block<T> {
 
 interface ExpiringItem {
   kind: string;
+  id: string;
   label: string;
   endDate: string;
   daysLeft: number;
   link: string | null;
+  canRenew: boolean;
 }
 
 interface BreakGlassItem {
@@ -159,19 +164,7 @@ export function DashboardScreen({ me }: { me: Me }) {
       emptyText={t('dashboard.expiringEmpty')}
       unavailableText={t('dashboard.blockError')}
     >
-      <ul className="dash-list">
-        {board.expiring.items.map((item) => (
-          <li key={`${item.kind}-${item.label}-${item.endDate}`}>
-            <div className="dash-line">
-              {item.link ? <Link to={item.link}>{item.label}</Link> : <span>{item.label}</span>}
-              <ExpiryBadge end={item.endDate} />
-            </div>
-            <span className="muted">
-              {expiryKindLabel(kinds.data, item.kind)} · {formatDate(item.endDate)}
-            </span>
-          </li>
-        ))}
-      </ul>
+      <ExpiringTable items={board.expiring.items} kinds={kinds.data} me={me} />
     </BlockCard>,
     'main',
   );
@@ -362,9 +355,13 @@ export function DashboardScreen({ me }: { me: Me }) {
 
       {main.length + side.length > 0 ? (
         <div className={main.length > 0 && side.length > 0 ? 'dash-lanes' : 'dash-lanes single'}>
-          {main.length > 0 ? <div className="dash-lane">{main}</div> : null}
+          {main.length > 0 ? (
+            <div className="dash-lane" data-testid="dash-lane-main">
+              {main}
+            </div>
+          ) : null}
           {side.length > 0 ? (
-            <div className="dash-lane">
+            <div className="dash-lane" data-testid="dash-lane-side">
               {side.sort((a, b) => a.rank - b.rank).map((entry) => entry.node)}
             </div>
           ) : null}
@@ -598,6 +595,122 @@ function BlockCard({
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * Khối "Sắp hết hạn" dạng bảng gọn: Đối tượng · Loại · Hết hạn · Còn lại · [Gia hạn].
+ *
+ * Bảng chứ không phải danh sách hai dòng: đây là khối ở làn chính, câu hỏi của nó là "cái gì,
+ * loại gì, còn bao lâu" — đọc theo cột nhanh hơn đọc từng cụm. Gia hạn ngay trên dòng dùng
+ * CÙNG hộp với màn `/expiry` (`ui/renew-dialog.tsx`); nút chỉ hiện khi module expiry nói dòng
+ * đó gia hạn được. ≤600px bảng thành thẻ gọn (`mobileCard`), vẫn có nút Gia hạn.
+ */
+function ExpiringTable({
+  items,
+  kinds,
+  me,
+}: {
+  items: ExpiringItem[];
+  kinds: ExpiryKind[] | undefined;
+  me: Me;
+}) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const [renewing, setRenewing] = useState<ExpiringItem | null>(null);
+
+  const columns = useMemo<ColumnDef<ExpiringItem, unknown>[]>(
+    () => [
+      {
+        id: 'label',
+        header: t('dashboard.expiringSubject'),
+        enableSorting: false,
+        cell: ({ row }) =>
+          row.original.link ? (
+            <Link to={row.original.link}>{row.original.label}</Link>
+          ) : (
+            row.original.label
+          ),
+      },
+      {
+        id: 'kind',
+        header: t('expiry.kind'),
+        enableSorting: false,
+        cell: ({ row }) => expiryKindLabel(kinds, row.original.kind),
+      },
+      {
+        id: 'end',
+        header: t('expiry.end'),
+        enableSorting: false,
+        cell: ({ row }) => formatDate(row.original.endDate),
+      },
+      {
+        id: 'left',
+        header: t('dashboard.expiringLeft'),
+        enableSorting: false,
+        cell: ({ row }) => <ExpiryBadge end={row.original.endDate} />,
+      },
+      {
+        id: 'actions',
+        header: t('common.actions'),
+        enableSorting: false,
+        meta: { className: 'col-center' },
+        cell: ({ row }) => <RenewButton item={row.original} onRenew={setRenewing} />,
+      },
+    ],
+    [t, kinds],
+  );
+
+  return (
+    <>
+      <DataTable
+        data={items}
+        columns={columns}
+        emptyText={t('dashboard.expiringEmpty')}
+        rowClassName={(item) => (item.daysLeft < 0 ? 'row-danger' : '')}
+        mobileCard={{
+          title: (item) => item.label,
+          href: (item) => item.link ?? undefined,
+          badge: (item) => <ExpiryBadge end={item.endDate} />,
+          meta: (item) => `${expiryKindLabel(kinds, item.kind)} · ${formatDate(item.endDate)}`,
+          aside: (item) =>
+            item.canRenew ? <RenewButton item={item} onRenew={setRenewing} /> : null,
+        }}
+      />
+      {renewing ? (
+        <RenewDialog
+          row={{ ...renewing, end: renewing.endDate }}
+          kindLabel={expiryKindLabel(kinds, renewing.kind)}
+          csrfToken={me.csrfToken}
+          onClose={() => setRenewing(null)}
+          onDone={() => {
+            setRenewing(null);
+            toast({ message: t('expiry.renewed') });
+            // Trang chủ và màn `/expiry` cùng đọc một nguồn hạn — làm mới cả hai.
+            void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+            void queryClient.invalidateQueries({ queryKey: ['expiry'] });
+          }}
+        />
+      ) : null}
+    </>
+  );
+}
+
+/** Nút Gia hạn của một dòng — không có gì khi module expiry nói dòng đó không gia hạn được. */
+function RenewButton({
+  item,
+  onRenew,
+}: {
+  item: ExpiringItem;
+  onRenew: (item: ExpiringItem) => void;
+}) {
+  const { t } = useTranslation();
+  if (!item.canRenew) return null;
+  return (
+    <button type="button" className="btn sm" onClick={() => onRenew(item)}>
+      {t('expiry.renew')}
+    </button>
   );
 }
 

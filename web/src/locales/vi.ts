@@ -2023,6 +2023,8 @@ export default {
     expiring: 'Sắp hết hạn (30 ngày)',
     expiringEmpty: 'Không có gì hết hạn trong 30 ngày tới.',
     seeAllExpiring: 'Xem toàn bộ danh sách hạn',
+    expiringSubject: 'Đối tượng',
+    expiringLeft: 'Còn lại',
     incidents: 'Sự cố tuần qua',
     incidentsEmpty: 'Tuần qua không có sự cố nào.',
     // "Chưa có phần này" KHÁC HẲN "tuần qua không có sự cố" — đọc nhầm là tưởng mọi thứ yên.

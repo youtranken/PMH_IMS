@@ -73,6 +73,14 @@ test.describe('Bảng điều khiển ở 390px', () => {
     await expect(
       page.getByText('License có tên rất dài để thử tràn ngang trên điện thoại'),
     ).toBeVisible();
+    /* DASH-002: ở 390px bảng "Sắp hết hạn" thành thẻ gọn, không phải bảng cuộn ngang — và
+       nút Gia hạn vẫn còn trên thẻ. */
+    const expiring = page.locator('section').filter({ hasText: 'Sắp hết hạn (30 ngày)' });
+    await expect(expiring.getByRole('columnheader')).toHaveCount(0);
+    const card = expiring
+      .getByRole('listitem')
+      .filter({ hasText: 'License có tên rất dài để thử tràn ngang trên điện thoại' });
+    await expect(card.getByRole('button', { name: 'Gia hạn', exact: true })).toBeVisible();
 
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
