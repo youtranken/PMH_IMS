@@ -721,6 +721,10 @@ table.table tbody tr.exp:hover td {
   font-variant-numeric: tabular-nums;
   color: inherit;
 }
+/* Số của chip ĐANG CHỌN đậm hơn — ở chế độ tối nó từng chìm ngang số của chip chưa chọn. */
+.segmented button[aria-pressed='true'] .seg-count {
+  font-weight: 700;
+}
 
 /* Dưới 1100px hai cột thành một: cột trái 300px + bảng 6 cột không còn đủ chỗ, và cột trái
    là thứ CHỌN xong rồi mới đọc — nên nó lên trên, cuộn ngang được, không chiếm chiều cao. */
