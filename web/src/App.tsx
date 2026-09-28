@@ -57,6 +57,7 @@ import { ProfileScreen } from '@/features/auth/profile-screen';
 import { TotpChallenge } from '@/features/auth/totp-challenge';
 import { TotpEnroll } from '@/features/auth/totp-enroll';
 import { ComponentsGallery } from '@/features/dev/components-gallery';
+import { DEV_KIT_ENABLED } from '@/lib/dev-kit';
 import { usePageTitle } from '@/ui/use-page-title';
 import { LiveRegion } from '@/ui/live-region';
 
@@ -255,12 +256,16 @@ function AppRoutes() {
           path={`${PATHS.serviceAccounts}/:id`}
           element={<ServiceAccountDetail me={me} />}
         />
-        {/* Bộ giao diện là trang nội bộ: member/admin vào thẳng URL nhận trang 403. */}
-        {canSeeRoute(PATHS.devComponents, me.role) ? (
-          <Route path={PATHS.devComponents} element={<ComponentsGallery />} />
-        ) : (
-          <Route path={PATHS.devComponents} element={<Forbidden roles={ROUTE_ROLES[PATHS.devComponents]} />} />
-        )}
+        {/* Bộ giao diện là trang nội bộ: member/admin vào thẳng URL nhận trang 403. Bản
+            production không đăng ký route nào (FE-09): cờ là hằng lúc build, nên cả nhánh lẫn
+            mã trang dev bị bỏ khỏi bundle và gõ URL rơi vào 404. */}
+        {DEV_KIT_ENABLED ? (
+          canSeeRoute(PATHS.devComponents, me.role) ? (
+            <Route path={PATHS.devComponents} element={<ComponentsGallery />} />
+          ) : (
+            <Route path={PATHS.devComponents} element={<Forbidden roles={ROUTE_ROLES[PATHS.devComponents]} />} />
+          )
+        ) : null}
         {/* Link tiếng Việt đã ghim/đã gửi cho nhau vẫn mở được, và thanh địa chỉ đổi luôn
             sang đường mới (`replace` để nút Back không kẹt giữa hai đường). */}
         {LEGACY_ROUTES.map(({ from, to, withId }) => (

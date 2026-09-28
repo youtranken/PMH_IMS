@@ -37,3 +37,12 @@ services:
       # DSN chủ sở hữu cho RIÊNG script dọn E2E (cần tháo trigger append-only). Chỉ có trong file
       # override này, không bao giờ đi cùng production — api ở prod không cầm DSN chủ sở hữu (OPS-07).
       E2E_RESET_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ims}
+  web:
+    # Stack dev/E2E có "Bộ giao diện" (/dev/components) — nhiều bài E2E đi qua trang đó; bản
+    # production thì không (FE-09). Tag RIÊNG: image dựng kèm cờ không bao giờ trùng tên với
+    # `ims-web:latest` của production, nên `up` ở prod không thể vô tình chạy nhầm bản có trang dev.
+    image: ims-web:dev-kit
+    build:
+      context: ./web
+      args:
+        VITE_DEV_KIT: '1'
