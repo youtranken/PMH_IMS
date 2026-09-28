@@ -399,9 +399,7 @@
   max-height: 46vh;
   overflow: auto;
 }
-.table tr.row-danger td {
-  background: var(--danger-soft);
-}
+/* `.row-danger` nằm ở `table.css`, ngay sau luật sọc dòng: nó phải thắng sọc dòng chẵn. */
 
 /*
  * Dòng đã vô hiệu / đã tắt / đã gỡ — LÙI XUỐNG NHƯNG VẪN ĐỌC ĐƯỢC (sửa 17/09/2026).
@@ -412,7 +410,7 @@
  * ghế license vừa bị gỡ. "Mờ" ở đây phải là một TÔNG khác, không phải một lớp sương phủ lên
  * chữ; nền nhạt gánh phần tín hiệu, chữ giữ nguyên độ đọc.
  */
-.table tr.row-muted td {
+table.table tbody tr.row-muted td {
   color: var(--ink-3);
 }
 /*
