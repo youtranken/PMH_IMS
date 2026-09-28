@@ -3,7 +3,8 @@ import type { CatalogEntity, CatalogRecord } from './catalog.types';
 
 type Row = CatalogRecord & Record<string, unknown>;
 
-const text = (value: unknown): string => (value === null || value === undefined ? '' : String(value));
+const text = (value: unknown): string =>
+  typeof value === 'string' ? value : typeof value === 'number' ? String(value) : '';
 const yesNo = (value: unknown): string => (value ? 'Có' : 'Không');
 const status = (row: Row): string => (row.active ? 'Đang dùng' : 'Đã vô hiệu hóa');
 
