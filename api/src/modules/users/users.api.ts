@@ -23,6 +23,11 @@ export class UsersApiService {
     return this.users.findById(id);
   }
 
+  /** `id → email` theo mẻ — gọi tên tài khoản trên màn Nhật ký. */
+  emailsByIds(ids: string[]): Promise<Map<string, string>> {
+    return this.users.emailsByIds(ids);
+  }
+
   /** Người nhận email theo vai — dùng cho outbox/digest (Epic 3) và cảnh báo bảo mật. */
   recipientsByRole(roles: UserRole[]): Promise<{ email: string; fullName: string }[]> {
     return this.users.listRecipients(roles);

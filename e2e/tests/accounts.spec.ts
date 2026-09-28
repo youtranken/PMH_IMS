@@ -103,7 +103,9 @@ test.describe('Quản trị tài khoản', () => {
     await expect(page.getByText(/should not exist/i)).toHaveCount(0);
 
     await rowAction(page, 'E2E Thành viên', 'Mở khóa');
+    await confirmAction(page, 'Mở khóa');
     await expect(row.getByText('Đang hoạt động')).toBeVisible();
+    await expect(page.getByText('Đã mở khóa E2E Thành viên.')).toBeVisible();
   });
 
   /*

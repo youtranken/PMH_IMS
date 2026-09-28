@@ -451,6 +451,16 @@ export class UsersService {
     return new Map(rows.map((row) => [row.email.toLowerCase(), row.fullName]));
   }
 
+  /** `id → email` cho một mẻ id — nhãn đối tượng `user`/`session` trên màn Nhật ký. */
+  async emailsByIds(ids: string[]): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.db
+      .select({ id: usersTable.id, email: usersTable.email })
+      .from(usersTable)
+      .where(inArray(usersTable.id, ids));
+    return new Map(rows.map((row) => [row.id, row.email]));
+  }
+
   async listRecipients(roles: UserRole[]): Promise<{ email: string; fullName: string }[]> {
     const rows = await this.db
       .select({ email: usersTable.email, fullName: usersTable.fullName, role: usersTable.role })

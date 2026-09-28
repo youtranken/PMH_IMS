@@ -8,6 +8,7 @@ import { SoftwareModule } from '../software/software.module';
 import { UsersModule } from '../users/users.module';
 import { ApprovalsModule } from '../approvals/approvals.module';
 import { OutboxModule } from '../outbox/outbox.module';
+import { SecretAuditLabeler } from './secret-audit-labeler';
 import { AccessListService } from './access-list.service';
 import { BreakGlassController } from './break-glass.controller';
 import { BreakGlassService } from './break-glass.service';
@@ -36,7 +37,7 @@ import { VaultService } from './vault.service';
   controllers: [VaultController, VaultOwnersController, VaultAccessController, BreakGlassController],
   providers: [
     ExcelExportService,
-    VaultService, VaultApiService, VaultOwnersService, VaultDevicePanel, AccessListService, BreakGlassService, StepUpGuard],
+    VaultService, VaultApiService, VaultOwnersService, SecretAuditLabeler, VaultDevicePanel, AccessListService, BreakGlassService, StepUpGuard],
   exports: [VaultApiService],
 })
 export class VaultModule {}

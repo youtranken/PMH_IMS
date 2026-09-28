@@ -15,13 +15,14 @@ import { ACTION_LABEL as SERVICE_ACCOUNT_ACTIONS } from './service-accounts/serv
 import { ACTION_LABEL as ISP_ACTIONS } from './isp/isp-history-entries';
 import { ACTION_LABEL as NAT_ACTIONS } from './ipam/nat-history-entries';
 import { ACTION_LABEL as IP_ACTIONS } from './ipam/ip-history-entries';
+import { ACTION_LABEL as CATALOG_ACTIONS } from './catalog/catalog-history-entries';
 
 /**
  * ĐIỂM DANH: mọi mã thao tác API ghi vào sổ lịch sử đều phải có nhãn tiếng Việt.
  *
  * ===== VÌ SAO CẦN MỘT CỬA, KHÔNG PHẢI HAI DÒNG NHÃN =====
  *
- * Sáu file nhãn đều kết bằng `ACTION_LABEL[row.action] ?? row.action`. Cái `??` đó là một cửa
+ * Bảy file nhãn đều kết bằng `ACTION_LABEL[row.action] ?? row.action`. Cái `??` đó là một cửa
  * MỞ MẶC ĐỊNH: thêm một mã thao tác mới ở API mà quên khai nhãn thì không có gì đỏ, không có
  * gì cảnh báo — tab Lịch sử chỉ lặng lẽ in ra mã máy, và nó trông đủ giống một nhãn để không
  * ai thấy lạ.
@@ -45,7 +46,7 @@ import { ACTION_LABEL as IP_ACTIONS } from './ipam/ip-history-entries';
  * (`this.devices.recordWithin` ở một file nằm trong thư mục `software/`…). Suy luận đó mong
  * manh, và mong manh theo hướng nguy hiểm: regex hụt một nhánh thì bài vẫn xanh.
  *
- * Nên bài chốt điều đơn giản mà chắc: mã ấy phải có nhãn ở ÍT NHẤT MỘT trong sáu bảng. Nó bắt
+ * Nên bài chốt điều đơn giản mà chắc: mã ấy phải có nhãn ở ÍT NHẤT MỘT trong bảy bảng. Nó bắt
  * đúng kiểu hỏng đã xảy ra (mã mới, không nhãn ở đâu cả), và không bao giờ báo động giả. Việc
  * nhãn nằm đúng sổ vẫn là việc của người viết — nhưng người viết sẽ được nhắc, thay vì không.
  */
@@ -54,7 +55,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const API_SRC = join(HERE, '..', '..', '..', 'api', 'src');
 
 /*
- * HAI NGẢ GHI VÀO SÁU SỔ MÀ `HistoryPanel` HIỆN RA:
+ * HAI NGẢ GHI VÀO BẢY SỔ MÀ `HistoryPanel` HIỆN RA:
  *
  *   1. Lời gọi `recordWithin(tx, …)` — hàm ghi sổ của từng module. Mã thao tác có thể là chữ
  *      viết thẳng, một phép chọn giữa hai chữ (`active ? 'activated' : 'deactivated'`), hoặc
@@ -71,7 +72,7 @@ const API_SRC = join(HERE, '..', '..', '..', 'api', 'src');
  */
 const RECORD_CALL = /(?<!async |function )recordWithin\(/g;
 const PANEL_INSERT =
-  /\.insert\((deviceHistoryTable|softwareHistoryTable|serviceAccountHistoryTable|ispLineHistoryTable|natRuleHistoryTable|ipHistoryTable)\)\s*\.values\(/g;
+  /\.insert\((deviceHistoryTable|softwareHistoryTable|serviceAccountHistoryTable|ispLineHistoryTable|natRuleHistoryTable|ipHistoryTable|catalogHistoryTable)\)\s*\.values\(/g;
 const CODE = "'([a-z0-9._-]+)'";
 const ACTION_ARG = new RegExp(`^(?:${CODE}|[\\w.!]+\\s*\\?\\s*${CODE}\\s*:\\s*${CODE})$`);
 
@@ -169,15 +170,9 @@ function actionsWrittenByApi(): { found: Map<string, string>; khongDocDuoc: stri
  * NGOẠI LỆ PHẢI GIẢI THÍCH ĐƯỢC — không phải chỗ dập tắt cảnh báo.
  *
  * Cùng lối với `MAY_GROW` trong `e2e/leak-guard.ts`: kể tên thứ được phép đứng ngoài, KÈM LÝ DO,
- * thay vì nới vị từ cho tới khi bài hết đỏ.
- *
- * `catalog_history` có bảng, có `GET /catalog/history`, và lượt dọn E2E phải xử lý riêng nó —
- * nhưng KHÔNG màn nào trong `web/src` render lịch sử danh mục (`HistoryPanel` xuất hiện ở 6 màn,
- * không có `catalog`). Không có giao diện thì không có nhãn để thiếu.
- *
- * Ngày nào mở màn đó ra, xoá dòng này đi — bài sẽ đỏ và nói luôn cần khai những nhãn nào.
+ * thay vì nới vị từ cho tới khi bài hết đỏ. Hiện chưa có sổ nào được miễn.
  */
-const KHONG_HIEN_TREN_GIAO_DIEN = ['modules/catalog/'];
+const KHONG_HIEN_TREN_GIAO_DIEN: string[] = [];
 
 const MOI_BANG = [
   DEVICE_ACTIONS,
@@ -186,6 +181,7 @@ const MOI_BANG = [
   ISP_ACTIONS,
   NAT_ACTIONS,
   IP_ACTIONS,
+  CATALOG_ACTIONS,
 ];
 
 const LABELLED = new Set(MOI_BANG.flatMap((bang) => Object.keys(bang)));
@@ -242,7 +238,7 @@ describe('Nhãn thao tác trong sổ lịch sử', () => {
    * Đó đúng là lớp lỗi của mục #1 (bảng điều khiển in `warranty`, `license`), chỉ khác chỗ
    * xảy ra. Nên nó phải có cửa canh của riêng nó, không phải một lời hứa.
    */
-  it('mọi khóa trong sáu bảng nhãn đều có thật trong vi.ts', () => {
+  it('mọi khóa trong bảy bảng nhãn đều có thật trong vi.ts', () => {
     const hong: string[] = [];
     for (const bang of MOI_BANG) {
       for (const [ma, khoa] of Object.entries(bang)) {

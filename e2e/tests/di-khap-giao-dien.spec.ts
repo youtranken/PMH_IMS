@@ -377,6 +377,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     { link: 'Danh mục', path: '/admin/catalog', heading: /^Danh mục$/ },
     { link: 'Quyền két sắt', path: '/admin/vault-access', heading: /^Quyền xem két sắt$/ },
     { link: 'Nhật ký', path: '/admin/audit-log', heading: /^Nhật ký$/ },
+    { link: 'Tham số hệ thống', path: '/admin/settings', heading: /^Tham số hệ thống$/ },
     { link: 'Bộ giao diện', path: '/dev/components', heading: /^Bộ giao diện$/ },
   ];
 
@@ -958,6 +959,10 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
       menu.getByRole('link', { name: 'Bộ giao diện', exact: true }),
       'Bộ giao diện là trang nội bộ của đội phát triển, chỉ SA',
     ).toHaveCount(0);
+    await expect(
+      menu.getByRole('link', { name: 'Tham số hệ thống', exact: true }),
+      'nới/siết hàng rào đăng nhập và két là việc của SA (Q-14)',
+    ).toHaveCount(0);
 
     /*
      * Mục "chưa mở" (Tài liệu) là chữ thường `<span>`, KHÔNG phải link. Kiểm bằng
@@ -1463,6 +1468,7 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
     for (const [path, why] of [
       ['/vault', 'trang tổng Két sắt gác vai ngay ở route'],
       ['/dev/components', 'Bộ giao diện là trang nội bộ, chỉ SA'],
+      ['/admin/settings', 'Tham số hệ thống chỉ SA (Q-14)'],
       ['/documents', 'màn Tài liệu thuộc epic sau — chưa có route nào'],
     ] as const) {
       await page.goto(path);
@@ -1876,8 +1882,9 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
       ).toHaveCount(0);
 
       // ===== VÀ MỞ KHÓA LẠI =====
-      // Mở khóa KHÔNG hỏi lại (mở khóa không lấy đi gì của ai) — đừng chờ hộp xác nhận ở đây.
+      // Mở khóa hỏi lại ngắn: nút nằm sát "Vô hiệu hóa", bấm trượt là mở một tài khoản bị nghi.
       await rowAction(page, fullName, 'Mở khóa');
+      await confirmAction(page, 'Mở khóa');
       await expect(row.getByText('Đang hoạt động')).toBeVisible();
 
       await fillLogin(victimPage, email, temporaryPassword);
@@ -7317,7 +7324,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       'Họ tên',
       'Vai trò',
       'Trạng thái',
-      'Đã cài 2 lớp',
+      '2 lớp',
       'Đăng nhập gần nhất',
       'Thao tác',
     ]);
@@ -7366,6 +7373,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
         'Đặt lại 2 lớp',
         'Khóa',
         'Vô hiệu hóa',
+        // Hạt giống SA luôn bị bắt 2 lớp (`reset-e2e.mjs`), nên mục bật/tắt đang ở vế "Bỏ".
+        'Bỏ bắt buộc 2 lớp khi đăng nhập',
       ]),
     );
 
@@ -7948,13 +7957,14 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
    * "Gán quyền"; dòng của SA/Admin BỖNG có ô để bấm (mời người ta gán một quyền không có tác
    * dụng, rồi tưởng là đã siết); hoặc chú giải ba tầng rụng mất một tầng.
    */
-  test('Ma trận Quyền xem két sắt: lưới đủ cột, Member có nút gán, SA/Admin chỉ có lời giải thích', async ({
+  test('Ma trận Quyền xem két sắt: lưới đủ cột, Member có nút gán, SA/Admin ở khối "toàn quyền theo vai"', async ({
     page,
   }) => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    await page.goto('/admin/vault-access');
+    // Lưới là tab "Ma trận" (màn rộng); tab mặc định là "Theo người".
+    await page.goto('/admin/vault-access?view=matrix');
     await expect(page.getByRole('heading', { level: 1, name: 'Quyền xem két sắt' })).toBeVisible();
 
     /*
@@ -7993,18 +8003,20 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'dòng của Member phải có nút "Gán quyền" — đây là chiều gán theo NGƯỜI',
     ).toBeVisible();
 
-    /* ---- Dòng của SA: KHÔNG có nút, thay bằng một câu giải thích ---- */
+    /* ---- SA/Admin: KHÔNG thành dòng trống trong lưới, mà nằm trong khối gập riêng ---- */
 
-    const saRow = grid.getByRole('row', { name: new RegExp(E2E_SA.email) });
-    await expect(saRow, 'ma trận phải liệt kê cả tài khoản SA — nó liệt kê MỌI tài khoản').toBeVisible();
     await expect(
-      saRow.getByRole('button', { name: 'Gán quyền' }),
-      'SA/Admin xem được mọi secret theo VAI — bày nút gán ở đây là mời gán một quyền vô tác dụng',
+      grid.getByRole('row', { name: new RegExp(E2E_SA.email) }),
+      'SA/Admin xem được mọi secret theo VAI — một dòng trống trong lưới đọc như "không có quyền gì"',
     ).toHaveCount(0);
+    const roleBlock = page.getByText(/^Có toàn quyền theo vai \(\d+\)$/);
+    await expect(roleBlock, 'ai có toàn quyền theo vai vẫn phải thấy được khi rà soát').toBeVisible();
+    await roleBlock.click();
     await expect(
-      saRow.getByText('Quản trị và Super Admin đã xem được mọi secret theo vai, không cần gán ở đây.'),
-      'thay cho ô bấm, dòng SA/Admin phải NÓI RA vì sao không có gì để gán',
+      page.getByText('Quản trị và Super Admin đã xem được mọi secret theo vai, không cần gán ở đây.'),
+      'khối đó phải NÓI RA vì sao không có gì để gán',
     ).toBeVisible();
+    await expect(page.getByText(E2E_SA.email).first()).toBeVisible();
 
     /* ---- Bấm tiêu đề cột = chiều gán theo NHÓM ---- */
 
@@ -8703,7 +8715,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     expect(memberEmails.length, 'phải có ít nhất một Member để hộp gán có gì mà liệt kê')
       .toBeGreaterThan(0);
 
-    await page.goto('/admin/vault-access');
+    await page.goto('/admin/vault-access?view=matrix');
     const grid = page.getByTestId('access-grid');
     await expect(grid).toBeVisible();
     await page.getByRole('button', { name: 'Nhóm đối tượng' }).click();

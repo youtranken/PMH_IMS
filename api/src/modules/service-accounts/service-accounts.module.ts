@@ -3,6 +3,7 @@ import { AuditModule } from '../audit/audit.module';
 import { ServiceAccountController } from './service-account.controller';
 import { ServiceAccountService } from './service-account.service';
 import { ServiceAccountOwnerResolver } from './service-account-owner-resolver';
+import { ServiceAccountAuditLabeler } from './service-account-audit-labeler';
 import { ServiceAccountsApiService } from './service-accounts.api';
 
 /**
@@ -12,7 +13,12 @@ import { ServiceAccountsApiService } from './service-accounts.api';
 @Module({
   imports: [AuditModule],
   controllers: [ServiceAccountController],
-  providers: [ServiceAccountService, ServiceAccountsApiService, ServiceAccountOwnerResolver],
+  providers: [
+    ServiceAccountService,
+    ServiceAccountsApiService,
+    ServiceAccountOwnerResolver,
+    ServiceAccountAuditLabeler,
+  ],
   exports: [ServiceAccountsApiService],
 })
 export class ServiceAccountsModule {}

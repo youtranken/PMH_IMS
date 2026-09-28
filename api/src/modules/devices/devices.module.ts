@@ -10,6 +10,7 @@ import { DevicesApiService } from './devices.api';
 import { DevicesController } from './devices.controller';
 import { DevicesService } from './devices.service';
 import { DeviceOwnerResolver } from './device-owner-resolver';
+import { DeviceAuditLabeler } from './device-audit-labeler';
 import { PortDeviceRetirement } from './port-device-retirement';
 
 /**
@@ -22,6 +23,7 @@ import { PortDeviceRetirement } from './port-device-retirement';
   providers: [
     DevicesService,
     DeviceOwnerResolver,
+    DeviceAuditLabeler,
     DevicePortsService,
     PortDeviceRetirement,
     DeviceImportService,

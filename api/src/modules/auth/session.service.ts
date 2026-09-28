@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
-import { and, desc, eq, isNull, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -98,6 +98,16 @@ export class SessionService implements OnModuleInit {
   async find(id: string): Promise<SessionRecord | null> {
     const rows = await this.db.select().from(sessionsTable).where(eq(sessionsTable.id, id));
     return rows[0] ?? null;
+  }
+
+  /** `sessionId → userId` theo mẻ — gọi tên đối tượng `session` trên màn Nhật ký. */
+  async ownersOf(ids: string[]): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.db
+      .select({ id: sessionsTable.id, userId: sessionsTable.userId })
+      .from(sessionsTable)
+      .where(inArray(sessionsTable.id, ids));
+    return new Map(rows.map((r) => [r.id, r.userId]));
   }
 
   /** Tra theo token trong cookie. */

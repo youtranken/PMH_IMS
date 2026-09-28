@@ -3,6 +3,7 @@ import { runMigrations } from '../src/database/migration-runner';
 import { UsersApiService } from '../src/modules/users/users.api';
 import { UsersService } from '../src/modules/users/users.service';
 import { AuditQueryService } from '../src/modules/audit/audit-query.service';
+import { AuditObjectLabelRegistry } from '../src/common/audit-object-labels.registry';
 import { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
@@ -50,6 +51,7 @@ describe('Đếm nhật ký an ninh có trần', () => {
       scratch.db,
       new UsersApiService(new UsersService(scratch.db)),
       new SystemConfigService(scratch.db),
+      new AuditObjectLabelRegistry(),
     );
   }, TEST_TIMEOUT);
 

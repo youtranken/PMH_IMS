@@ -115,6 +115,17 @@ export class LoginFailureService implements OnModuleInit {
   }
 
   /**
+   * SA mở khoá / kích hoạt lại → xoá MỌI nơi của người này.
+   *
+   * Khác `clearFor`: đây là quyết định có chủ ý của người quản trị ("cho vào lại"), không phải
+   * bằng chứng từ một lượt đăng nhập. Giữ bậc giãn chậm của IP khác là để người vừa được mở
+   * vẫn bị chặn thêm, trong khi màn quản trị đã báo "Đang hoạt động".
+   */
+  async clearAllForUserWithin(tx: Tx, userId: string): Promise<void> {
+    await tx.delete(loginFailureTable).where(eq(loginFailureTable.userId, userId));
+  }
+
+  /**
    * Đăng nhập ĐÚNG từ nơi này → xoá dấu vết của CHÍNH nơi này.
    *
    * Cố ý không xoá hàng của IP khác: nếu có ai đang dò tài khoản này từ chỗ khác, khoá bên đó

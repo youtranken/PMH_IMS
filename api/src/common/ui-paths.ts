@@ -48,4 +48,6 @@ export const UI_PATHS = {
    * rằng `?q=` thật sự thành `actor=` khi gọi API.
    */
   auditLog: (actor: string) => `/admin/audit-log?q=${encodeURIComponent(actor)}`,
+  /* Màn Tài khoản lọc theo `q` — email là thứ duy nhất vừa tìm được vừa không đổi. */
+  account: (email: string) => `/admin/accounts?q=${encodeURIComponent(email)}`,
 } as const;
