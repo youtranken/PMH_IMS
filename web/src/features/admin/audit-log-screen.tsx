@@ -84,7 +84,7 @@ function filterParams(filters: Filters): URLSearchParams {
 /** Tham số gửi API — `pageSize`, không phải `limit`. */
 export function auditQuery(page: number, limit: number, filters: Filters): string {
   const params = new URLSearchParams({ page: String(page), pageSize: String(limit) });
-  for (const [key, value] of filterParams(filters)) params.set(key, value);
+  filterParams(filters).forEach((value, key) => params.set(key, value));
   return params.toString();
 }
 
