@@ -304,6 +304,6 @@ test.describe('Gắn yếu tố thứ hai phải chứng minh lại mình là ai
      */
     const secret = await firstLogin(page, E2E_SA);
     expect(secret.length).toBeGreaterThan(15);
-    await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
   });
 });

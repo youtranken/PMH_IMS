@@ -1,7 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ApprovalsApiService, type ApprovalRecord } from '../approvals/approvals.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
-import { DevicesApiService } from '../devices/devices.api';
+import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
+import { UsersApiService } from '../users/users.api';
 import { DisposalApiService } from '../disposal/disposal.api';
 import { ExpiryApiService } from '../expiry/expiry.api';
 import { IpamApiService } from '../ipam/ipam.api';
@@ -49,13 +50,19 @@ export interface DashboardBlock<T> {
 
 export interface BreakGlassEntry {
   id: string;
+  /** Email — để web đặt vào `title`; dòng hiện TÊN (`requesterName`). */
   requester: string;
+  requesterName: string;
   subjectType: string;
   subjectId: string;
-  subjectLabel: string;
+  /** `mã · tên · site`; `null` khi hồ sơ đã bị xoá — web nói ra điều đó, không in mảnh uuid. */
+  subjectLabel: string | null;
   reason: string;
   state: string;
+  /** Còn hiệu lực lúc đọc (AD-6) — web tô "đang có người cầm quyền mở két" khác "đã xong". */
+  active: boolean;
   decidedBy: string | null;
+  decidedByName: string | null;
   createdAt: Date;
   expiresAt: Date | null;
 }
@@ -98,6 +105,10 @@ export interface DisposedEntry {
 }
 
 export interface Dashboard {
+  /**
+   * `overdueTotal` tách riêng phần ĐÃ QUÁ HẠN trong `total`: việc đã trễ (xử lý ngay) và việc
+   * sắp tới (lên kế hoạch) cộng chung một con số thì không ai biết sáng nay phải làm gì trước.
+   */
   expiring: DashboardBlock<{
     kind: string;
     /** Cùng `kind` là đủ cho `POST /expiry/renew` — nút Gia hạn ngay trên dòng. */
@@ -108,10 +119,11 @@ export interface Dashboard {
     link: string | null;
     /** Module expiry quyết loại nào gia hạn được (bảo hành thì không) — trang chủ không đoán. */
     canRenew: boolean;
-  }>;
+  }> & { overdueTotal: number };
   incidents: DashboardBlock<never>;
   breakGlass: DashboardBlock<BreakGlassEntry>;
-  subnetLoad: DashboardBlock<SubnetLoadEntry>;
+  /** `thresholdPercent`: ngưỡng "sắp đầy" đang áp — web vẽ vạch mốc và nói "≥ 90%". */
+  subnetLoad: DashboardBlock<SubnetLoadEntry> & { thresholdPercent: number | null };
   staleSecrets: DashboardBlock<StaleSecretEntry>;
   disposed: DashboardBlock<DisposedEntry>;
 }
@@ -134,11 +146,12 @@ export class DashboardService {
   constructor(
     private readonly expiry: ExpiryApiService,
     private readonly approvals: ApprovalsApiService,
-    private readonly devices: DevicesApiService,
+    private readonly kinds: ApprovalKindRegistry,
     private readonly ipam: IpamApiService,
     private readonly vault: VaultApiService,
     private readonly disposal: DisposalApiService,
     private readonly config: SystemConfigService,
+    private readonly users: UsersApiService,
   ) {}
 
   async build(viewer: { email: string; role: UserRole }): Promise<Dashboard> {
@@ -198,11 +211,12 @@ export class DashboardService {
       // Thiếu phần của một nguồn mà vẫn hiện như đủ thì người đọc hiểu là "không còn gì khác".
       if (failedKinds.length > 0) {
         this.logger.warn(`khối sắp-hết-hạn thiếu nguồn: ${failedKinds.join(', ')}`);
-        return emptyBlock();
+        return { ...emptyBlock(), overdueTotal: 0 };
       }
       return {
         available: true,
         total: upcoming.total + overdue.total,
+        overdueTotal: overdue.total,
         items: pickExpiring(upcoming.items, overdue.items, MAX_ITEMS, OVERDUE_SLOTS).map(
           (row) => ({
             kind: row.kind,
@@ -224,7 +238,7 @@ export class DashboardService {
        * học finding 2 của code review Epic 3, ở một hình dạng khác.
        */
       this.logger.warn(`khối sắp-hết-hạn lỗi: ${message(error)}`);
-      return emptyBlock();
+      return { ...emptyBlock(), overdueTotal: 0 };
     }
   }
 
@@ -245,6 +259,7 @@ export class DashboardService {
 
       return {
         available: true,
+        thresholdPercent: minPercent,
         // `total` đếm TẤT CẢ dải đạt ngưỡng, không phải số dòng đã cắt — badge "12" trên một
         // khối 8 dòng chính là thứ nói cho người đọc biết còn phải bấm xem tiếp.
         total: loaded.length,
@@ -261,7 +276,7 @@ export class DashboardService {
       };
     } catch (error) {
       this.logger.warn(`khối dải-sắp-đầy lỗi: ${message(error)}`);
-      return emptyBlock<SubnetLoadEntry>();
+      return { ...emptyBlock<SubnetLoadEntry>(), thresholdPercent: null };
     }
   }
 
@@ -336,10 +351,15 @@ export class DashboardService {
         { limit: MAX_ITEMS, offset: 0 },
       );
 
+      const names = await this.users.namesByEmails([
+        ...new Set(
+          recent.items.flatMap((row) => [row.requester, row.decidedBy]).filter((e): e is string => !!e),
+        ),
+      ]);
       return {
         available: true,
         total: recent.total,
-        items: await Promise.all(recent.items.map((row) => this.toEntry(row))),
+        items: await Promise.all(recent.items.map((row) => this.toEntry(row, names))),
       };
     } catch (error) {
       this.logger.warn(`khối break-glass lỗi: ${message(error)}`);
@@ -350,24 +370,27 @@ export class DashboardService {
   /**
    * Đổi `subject_id` thành thứ người đọc được.
    *
-   * AC đòi khối này nói rõ "ai, THIẾT BỊ GÌ, lý do". Một dòng chỉ có uuid thì sếp phải đi tra,
-   * và trang này sinh ra để KHỎI phải đi tra. Tra qua `devices.api`, không join bảng `device`.
+   * AC đòi khối này nói rõ "ai, ĐỐI TƯỢNG GÌ, lý do". Một dòng chỉ có uuid thì sếp phải đi tra,
+   * và trang này sinh ra để KHỎI phải đi tra. Nhãn hỏi qua sổ `ApprovalKindRegistry` — cùng chỗ
+   * thư duyệt đọc — nên mọi loại chủ thể (thiết bị, phần mềm, tài khoản dịch vụ, đường truyền)
+   * đều có tên, không chỉ thiết bị; và dashboard không phải biết vault gọi tên chủ thể ra sao.
    */
-  private async toEntry(row: ApprovalRecord): Promise<BreakGlassEntry> {
-    let subjectLabel = row.subjectId.slice(0, 8);
-    if (row.subjectType === 'device') {
-      const device = await this.devices.getById(row.subjectId).catch(() => null);
-      if (device) subjectLabel = `${device.code} — ${device.name}`;
-    }
+  private async toEntry(row: ApprovalRecord, names: Map<string, string>): Promise<BreakGlassEntry> {
+    const subject = await this.kinds
+      .describe(row.kind, row.subjectType, row.subjectId)
+      .catch(() => null);
     return {
       id: row.id,
       requester: row.requester,
+      requesterName: names.get(row.requester) ?? row.requester,
       subjectType: row.subjectType,
       subjectId: row.subjectId,
-      subjectLabel,
+      subjectLabel: subject?.label ?? null,
       reason: row.reason,
       state: row.state,
+      active: row.active,
       decidedBy: row.decidedBy,
+      decidedByName: row.decidedBy ? (names.get(row.decidedBy) ?? row.decidedBy) : null,
       createdAt: row.createdAt,
       expiresAt: row.expiresAt,
     };

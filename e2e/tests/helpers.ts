@@ -568,7 +568,7 @@ export async function firstLogin(
   await page.getByLabel('Nhập lại mật khẩu mới').fill(newPassword);
   await page.getByRole('button', { name: 'Đổi mật khẩu và tiếp tục' }).click();
 
-  await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
   return secret;
 }
 
@@ -582,7 +582,7 @@ export async function loginWithTotp(
   await fillLogin(page, email, password);
   await expect(page.getByRole('heading', { name: 'Xác thực 2 lớp' })).toBeVisible();
   await page.getByLabel('Mã xác thực').fill(await freshTotpCode(secret));
-  await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
 }
 
 /**

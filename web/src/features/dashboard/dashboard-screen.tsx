@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import {
   BREAK_GLASS_KEY,
+  BreakGlassStateBadge,
   BreakGlassSubject,
   DecisionDialog,
   type BreakGlassRow,
@@ -13,6 +14,7 @@ import {
 import { useToast } from '@/ui/toast';
 import { formatDate, formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
+import type { SecretOwnerType } from '@/lib/secret-owner-kinds';
 import { DataTable } from '@/ui/data-table';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { RenewDialog } from '@/ui/renew-dialog';
@@ -21,7 +23,8 @@ import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { OWNER_PATH, PATHS } from '@/lib/routes';
 import { UsageBar } from '@/ui/usage-bar';
-import { DISPOSAL_KIND_KEY, type DisposalKind } from '@/lib/disposal-kinds';
+import { useMediaQuery } from '@/ui/use-media-query';
+import { DISPOSAL_KIND_KEY, disposalDetailText, type DisposalKind } from '@/lib/disposal-kinds';
 import { expiryKindLabel, useExpiryKinds, type ExpiryKind } from '@/lib/expiry-kinds';
 
 interface Block<T> {
@@ -43,10 +46,15 @@ interface ExpiringItem {
 interface BreakGlassItem {
   id: string;
   requester: string;
-  subjectLabel: string;
+  requesterName?: string;
+  subjectType: SecretOwnerType;
+  subjectId: string;
+  subjectLabel: string | null;
   reason: string;
   state: string;
+  active?: boolean;
   decidedBy: string | null;
+  decidedByName?: string | null;
   createdAt: string;
   expiresAt: string | null;
 }
@@ -82,13 +90,17 @@ interface DisposedItem {
 }
 
 interface Dashboard {
-  expiring: Block<ExpiringItem>;
+  expiring: Block<ExpiringItem> & { overdueTotal?: number };
   incidents: Block<never>;
   breakGlass: Block<BreakGlassItem>;
-  subnetLoad: Block<SubnetLoadItem>;
+  subnetLoad: Block<SubnetLoadItem> & { thresholdPercent?: number | null };
   staleSecrets: Block<StaleSecretItem>;
   disposed: Block<DisposedItem>;
 }
+
+/** Trên điện thoại mỗi khối chỉ bày chừng này mục, phần còn lại bung tại chỗ. */
+const MOBILE_ITEMS = 3;
+const MOBILE_QUERY = '(max-width: 600px)';
 
 /**
  * Bảng điều khiển (story 7.1, FR-025).
@@ -96,6 +108,9 @@ interface Dashboard {
  * Mục tiêu của epic viết rất cụ thể: "sếp 3 phút sáng thứ Hai tự trả lời mọi câu hỏi". Nên
  * trang này KHÔNG có bộ lọc, không có phân trang, không có gì để bấm trước khi đọc được —
  * mở ra là thấy. Muốn đào sâu thì có đường dẫn sang màn đầy đủ ở cuối mỗi khối.
+ *
+ * Đầu trang LUÔN có mặt, kể cả lúc đang tải hay lỗi: mất cả tiêu đề thì trên điện thoại người
+ * dùng không biết mình đang ở trang nào.
  */
 export function DashboardScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
@@ -103,51 +118,76 @@ export function DashboardScreen({ me }: { me: Me }) {
   const data = useQuery({
     queryKey: ['dashboard'],
     queryFn: () => apiFetch<Dashboard>('/api/v1/dashboard'),
+    // Tab để mở từ sáng: quay lại tab là số liệu tự làm mới, khỏi đọc số cũ.
+    refetchOnWindowFocus: true,
   });
 
   /*
-   * PHẢI gọi TRƯỚC hai lệnh `return` sớm bên dưới — hook không được nằm sau một nhánh thoát,
-   * nếu không thứ tự hook đổi giữa các lượt render và React đổ.
-   *
    * Dùng chung `queryKey` với màn `/expiry` nên đây không phải một lượt gọi mới: react-query
    * gộp và chia cache. Và cố ý KHÔNG chặn màn khi nó hỏng — nhãn loại hạn là thứ trang trí
    * cho một dòng, mất nó không đáng làm cả bảng điều khiển trắng xóa.
    */
   const kinds = useExpiryKinds();
 
-  if (data.isLoading) return <Loading />;
-  if (data.isError) return <LoadError error={data.error} onRetry={() => void data.refetch()} />;
+  const header = (
+    <PageHeader
+      title={t('dashboard.title')}
+      subtitle={
+        data.dataUpdatedAt
+          ? t('dashboard.greetingAt', {
+              name: me.fullName,
+              time: formatDateTime(new Date(data.dataUpdatedAt).toISOString()),
+            })
+          : t('dashboard.greeting', { name: me.fullName })
+      }
+      actions={
+        <button
+          type="button"
+          className="ghost"
+          onClick={() => void data.refetch()}
+          disabled={data.isFetching}
+        >
+          {data.isFetching ? t('app.loading') : t('dashboard.refresh')}
+        </button>
+      }
+    />
+  );
 
   // Mất mạng ⇒ `fetchStatus:'paused'` ⇒ `isLoading` false, `isError` false, `data` undefined:
-  // hai nhánh trên đều trượt. Xem chú thích đầy đủ ở `devices/device-detail.tsx` (lỗi F-02).
-  if (!data.data) return <Loading />;
+  // chỉ đọc `isLoading` là trượt. Xem chú thích đầy đủ ở `devices/device-detail.tsx` (lỗi F-02).
+  if (data.isError) {
+    return (
+      <>
+        {header}
+        <LoadError error={data.error} onRetry={() => void data.refetch()} />
+      </>
+    );
+  }
+  if (!data.data) {
+    return (
+      <>
+        {header}
+        <Loading />
+      </>
+    );
+  }
   const board = data.data;
+  const retry = () => void data.refetch();
 
-  /*
-   * HAI NHÓM, không còn sáu ô ngang hàng.
-   *
-   * Khối đang có việc (`total > 0`) mới được chiếm một ô trong lưới. Khối đang YÊN — "chưa dải
-   * nào chạm ngưỡng", "tuần qua không ai xin quyền xem tạm thời" — và khối chưa mở thì gom
-   * xuống một dải mỏng ở chân trang, mỗi khối một dòng.
-   *
-   * VÌ SAO. Lượt chụp đầu của bản này cho thấy ba câu TIN TỐT chiếm ba ô to ngang với ô "Sắp
-   * hết hạn" đang có 8 dòng; lưới căn theo hàng nên hai cột bên phải bỏ trống gần hết chiều
-   * cao màn hình. Tin tốt vẫn phải nói ra — im lặng thì không phân biệt được với "chưa đo bao
-   * giờ" — nhưng nó không đáng một ô, vì con số 0 trên hàng KPI đã là chỗ đọc nhanh của nó.
-   */
   /*
    * HAI LÀN CỐ ĐỊNH, không phải lưới theo hàng.
    *
-   * Lưới căn theo hàng thì khối thứ tư rơi xuống dưới đáy khối cao nhất của hàng trên, và cột
-   * bên cạnh bỏ trống cả trăm pixel. Nên: làn chính (2 phần) cho khối "Sắp hết hạn" — danh sách
-   * dài nhất; làn phụ (1 phần) xếp chồng các khối nhỏ theo độ ưu tiên (số nhỏ đứng trên). Lịch
-   * sử break-glass đứng cuối làn phụ: việc CẦN LÀM đã lên khối "Cần bạn duyệt" ở đầu trang.
+   * Khối đang có việc (`total > 0`) mới được chiếm chỗ: làn chính (2 phần) cho khối hạn — danh
+   * sách dài nhất; làn phụ (1 phần) xếp chồng các khối nhỏ theo độ ưu tiên (số nhỏ đứng trên).
+   * Khối đang YÊN, khối lỗi và khối chưa có thì gom xuống dải mỏng ở chân trang, mỗi khối một
+   * dòng — lỗi đứng ĐẦU dải để không lẫn vào tin tốt.
    */
   const main: ReactNode[] = [];
   const side: { rank: number; node: ReactNode }[] = [];
-  const quiet: ReactNode[] = [];
+  const quiet: { rank: number; node: ReactNode }[] = [];
   const place = (block: Block<unknown>, node: ReactNode, lane: 'main' | number) => {
-    if (isQuiet(block)) quiet.push(node);
+    if (!block.available) quiet.push({ rank: 0, node });
+    else if (block.total === 0) quiet.push({ rank: 1, node });
     else if (lane === 'main') main.push(node);
     else side.push({ rank: lane, node });
   };
@@ -163,34 +203,42 @@ export function DashboardScreen({ me }: { me: Me }) {
       moreLabel={t('dashboard.seeAllExpiring')}
       emptyText={t('dashboard.expiringEmpty')}
       unavailableText={t('dashboard.blockError')}
+      onRetry={retry}
     >
-      <ExpiringTable items={board.expiring.items} kinds={kinds.data} me={me} />
+      <ExpiringBlock board={board.expiring} kinds={kinds.data} me={me} />
     </BlockCard>,
     'main',
   );
 
-  /*
-    Dải nào sắp hết chỗ (FR-020). Câu này trước đây chỉ trả lời được bằng cách mở màn IP
-    rồi đọc từng thanh — mà không ai mở màn IP khi chưa có việc.
-  */
+  /* Dải nào sắp hết chỗ (FR-020) — không ai mở màn IP khi chưa có việc. */
+  const threshold = board.subnetLoad.thresholdPercent ?? null;
   place(
     board.subnetLoad,
     <BlockCard
       key="subnetLoad"
-      title={t('dashboard.subnetLoad')}
+      title={
+        threshold !== null
+          ? t('dashboard.subnetLoadAt', { percent: threshold })
+          : t('dashboard.subnetLoad')
+      }
       total={board.subnetLoad.total}
       available={board.subnetLoad.available}
       moreTo={PATHS.ipAddresses}
       moreLabel={t('dashboard.seeAllSubnets')}
       emptyText={t('dashboard.subnetLoadEmpty')}
       unavailableText={t('dashboard.blockError')}
+      onRetry={retry}
     >
-      <ul className="dash-list">
-        {board.subnetLoad.items.map((item) => (
+      <MobileLimited
+        items={board.subnetLoad.items}
+        render={(item) => (
           <li key={item.id}>
-            <div className="dash-line">
+            <div className="dash-subnet">
               <Link to={PATHS.subnet(item.id)}>{item.name}</Link>
-              <span className="mono muted">{item.cidr}</span>
+              {item.vlan !== null ? (
+                <span className="muted">{t('ipam.vlanBadge', { vlan: item.vlan })}</span>
+              ) : null}
+              <span className="mono">{item.cidr}</span>
             </div>
             {/*
               Kèm `used/total · còn free` chứ không chỉ phần trăm: 95% của một /26 là còn 3
@@ -204,10 +252,15 @@ export function DashboardScreen({ me }: { me: Me }) {
                 free: item.free,
               })}
               ariaLabel={t('dashboard.subnetUsageAria', { name: item.name })}
+              marker={
+                threshold !== null
+                  ? { percent: threshold, label: t('dashboard.subnetThreshold', { percent: threshold }) }
+                  : undefined
+              }
             />
           </li>
-        ))}
-      </ul>
+        )}
+      />
     </BlockCard>,
     1,
   );
@@ -225,23 +278,12 @@ export function DashboardScreen({ me }: { me: Me }) {
         moreLabel={t('dashboard.seeAllBreakGlass')}
         emptyText={t('dashboard.breakGlassEmpty')}
         unavailableText={t('dashboard.blockError')}
+        onRetry={retry}
       >
-        <ul className="dash-list">
-          {board.breakGlass.items.map((item) => (
-            <li key={item.id}>
-              <div className="dash-line">
-                <strong>{item.requester}</strong>
-                <span className="badge muted">{t(`approvals.state${cap(item.state)}`, item.state)}</span>
-              </div>
-              <span>{item.subjectLabel}</span>
-              <span className="muted">{item.reason}</span>
-              <span className="muted">
-                {formatDateTime(item.createdAt)}
-                {item.decidedBy ? ` · ${t('dashboard.by', { who: item.decidedBy })}` : ''}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <MobileLimited
+          items={board.breakGlass.items}
+          render={(item) => <BreakGlassLine key={item.id} item={item} />}
+        />
       </BlockCard>,
       4,
     );
@@ -263,17 +305,21 @@ export function DashboardScreen({ me }: { me: Me }) {
         moreLabel={t('dashboard.seeAllVault')}
         emptyText={t('dashboard.staleSecretsEmpty')}
         unavailableText={t('dashboard.blockError')}
+        onRetry={retry}
       >
-        <ul className="dash-list">
-          {board.staleSecrets.items.map((item) => (
+        <MobileLimited
+          items={board.staleSecrets.items}
+          render={(item) => (
             <li key={`${item.ownerType}-${item.ownerId}`}>
               <div className="dash-line">
-                <Link to={OWNER_PATH[item.ownerType](item.ownerId)}>{item.code}</Link>
+                <span className="dash-line-name">
+                  <Link to={OWNER_PATH[item.ownerType](item.ownerId)}>{item.code}</Link>
+                  <span className="dash-line-sub">{item.name}</span>
+                </span>
                 <span className="badge muted">
                   {t('dashboard.secretCount', { count: item.secretCount })}
                 </span>
               </div>
-              <span>{item.name}</span>
               <span className="muted">
                 {t('dashboard.staleSince', {
                   date: formatDate(item.lastChangeAt),
@@ -281,8 +327,8 @@ export function DashboardScreen({ me }: { me: Me }) {
                 })}
               </span>
             </li>
-          ))}
-        </ul>
+          )}
+        />
       </BlockCard>,
       2,
     );
@@ -300,56 +346,65 @@ export function DashboardScreen({ me }: { me: Me }) {
       moreLabel={t('dashboard.seeAllDisposed')}
       emptyText={t('dashboard.disposedEmpty')}
       unavailableText={t('dashboard.blockError')}
+      onRetry={retry}
     >
-      <ul className="dash-list">
-        {board.disposed.items.map((item) => (
-          <li key={`${item.kind}-${item.id}`}>
-            <div className="dash-line">
-              {/* Vẫn mở được hồ sơ gốc: "đã thanh lý" không phải "đã xóa". */}
-              <Link to={OWNER_PATH[item.kind](item.id)}>{item.code}</Link>
-              <span className="badge plain">{t(DISPOSAL_KIND_KEY[item.kind])}</span>
-            </div>
-            <span>{item.name}</span>
-            <span className="muted">
-              {item.detail ? `${item.detail} · ` : ''}
-              {item.updatedAt ? formatDate(item.updatedAt) : ''}
-            </span>
-          </li>
-        ))}
-      </ul>
+      <MobileLimited
+        items={board.disposed.items}
+        render={(item) => {
+          const detail = disposalDetailText(item.kind, item.detail, t);
+          return (
+            <li key={`${item.kind}-${item.id}`}>
+              <div className="dash-line">
+                <span className="dash-line-name">
+                  {/* Vẫn mở được hồ sơ gốc: "đã thanh lý" không phải "đã xóa". */}
+                  <Link to={OWNER_PATH[item.kind](item.id)}>{item.code}</Link>
+                  <span className="dash-line-sub">{item.name}</span>
+                </span>
+                <span className="badge muted">{t(DISPOSAL_KIND_KEY[item.kind])}</span>
+              </div>
+              <span className="muted">
+                {[detail, item.updatedAt ? formatDate(item.updatedAt) : null]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </span>
+            </li>
+          );
+        }}
+      />
     </BlockCard>,
     3,
   );
 
   /*
-    Epic 9 chưa deploy. Khối vẫn HIỆN và vẫn nói thẳng "phần này chưa có" — giấu đi thì sếp
-    tưởng hệ thống đã theo dõi sự cố rồi và tuần qua không có cái nào. Nó rơi vào nhóm YÊN
-    theo đúng luật chung (`available: false`), nên không phải khai riêng một ngoại lệ.
+    Module sự cố chưa có. Khối vẫn HIỆN và nói thẳng "chưa theo dõi" — giấu đi thì sếp tưởng
+    hệ thống đã theo dõi sự cố rồi và tuần qua không có cái nào. Tông THÔNG TIN, không phải
+    tông lỗi: nó không hỏng, chỉ là chưa có.
   */
-  place(
-    board.incidents,
-    <BlockCard
-      key="incidents"
-      title={t('dashboard.incidents')}
-      total={board.incidents.total}
-      available={board.incidents.available}
-      emptyText={t('dashboard.incidentsEmpty')}
-      unavailableText={t('dashboard.incidentsNotYet')}
-    >
-      <></>
-    </BlockCard>,
-    5,
-  );
+  quiet.push({
+    rank: 2,
+    node: (
+      <BlockCard
+        key="incidents"
+        title={t('dashboard.incidents')}
+        total={board.incidents.total}
+        available={board.incidents.available}
+        notYet
+        emptyText={t('dashboard.incidentsEmpty')}
+        unavailableText={t('dashboard.incidentsNotYet')}
+      >
+        <></>
+      </BlockCard>
+    ),
+  });
 
   return (
     <>
-      <PageHeader
-        title={t('dashboard.title', { name: me.fullName })}
-        subtitle={t('dashboard.subtitle')}
-      />
+      {header}
 
       {/* Việc gấp nhất của người duyệt trên điện thoại đứng ĐẦU trang, trên cả hàng số. */}
       <NeedsYouBlock me={me} />
+      {/* Người XIN mở két: "đã được duyệt chưa, còn hiệu lực bao lâu" — đứng đầu khi có việc. */}
+      <MyRequestsBlock />
 
       <BoardKpis board={board} />
 
@@ -367,7 +422,68 @@ export function DashboardScreen({ me }: { me: Me }) {
           ) : null}
         </div>
       ) : null}
-      {quiet.length > 0 ? <div className="dash-quiet">{quiet}</div> : null}
+      {quiet.length > 0 ? (
+        <div className="dash-quiet">
+          {quiet.sort((a, b) => a.rank - b.rank).map((entry) => entry.node)}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+/** Một dòng break-glass: TÊN người xin, đối tượng dạng link, trạng thái có màu, hiệu lực. */
+function BreakGlassLine({ item }: { item: BreakGlassItem }) {
+  const { t } = useTranslation();
+  const decider = item.decidedByName ?? item.decidedBy;
+  return (
+    <li>
+      <div className="dash-line">
+        <strong className="dash-line-name" title={item.requester}>
+          {item.requesterName ?? item.requester}
+        </strong>
+        <BreakGlassStateBadge row={{ state: item.state, active: item.active ?? false }} />
+      </div>
+      <BreakGlassSubject
+        row={{
+          subjectType: item.subjectType,
+          subjectId: item.subjectId,
+          subjectLabel: item.subjectLabel,
+          secretCount: null,
+        }}
+      />
+      <span className="muted">{item.reason}</span>
+      <span className="muted dash-meta">
+        {[
+          formatDateTime(item.createdAt),
+          decider ? t('dashboard.by', { who: decider }) : null,
+          item.active && item.expiresAt
+            ? t('dashboard.validUntil', { time: formatDateTime(item.expiresAt) })
+            : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+      </span>
+    </li>
+  );
+}
+
+/**
+ * Danh sách của một khối: trên điện thoại chỉ bày vài mục đầu + "Xem thêm N" bung tại chỗ —
+ * trang chủ trên điện thoại dài 2700px thì không ai cuộn tới khối cuối.
+ */
+function MobileLimited<T>({ items, render }: { items: T[]; render: (item: T) => ReactNode }) {
+  const { t } = useTranslation();
+  const narrow = useMediaQuery(MOBILE_QUERY);
+  const [all, setAll] = useState(false);
+  const cut = narrow && !all && items.length > MOBILE_ITEMS;
+  return (
+    <>
+      <ul className="dash-list">{(cut ? items.slice(0, MOBILE_ITEMS) : items).map(render)}</ul>
+      {cut ? (
+        <button type="button" className="ghost sm dash-more" onClick={() => setAll(true)}>
+          {t('dashboard.showMore', { count: items.length - MOBILE_ITEMS })}
+        </button>
+      ) : null}
     </>
   );
 }
@@ -395,17 +511,21 @@ function NeedsYouBlock({ me }: { me: Me }) {
   });
 
   const mine = me.email.toLowerCase();
-  const rows = (pending.data ?? []).filter((row) => row.requester.toLowerCase() !== mine);
+  const rows = (Array.isArray(pending.data) ? pending.data : []).filter(
+    (row) => row.requester.toLowerCase() !== mine,
+  );
   if (!canDecide || rows.length === 0) return null;
 
   return (
     <section className="card dash-card dash-needs-you" aria-label={t('dashboard.needsYou', { count: rows.length })}>
-      <h2 className="form-section-title">{t('dashboard.needsYou', { count: rows.length })}</h2>
+      <div className="card-head">
+        <h2>{t('dashboard.needsYou', { count: rows.length })}</h2>
+      </div>
       <ul className="dash-list">
         {rows.map((row) => (
           <li key={row.id}>
             <div className="dash-line">
-              <strong>{row.requesterName}</strong>
+              <strong className="dash-line-name">{row.requesterName}</strong>
               <span className="muted">
                 {t('dashboard.askedAt', {
                   at: formatDateTime(row.createdAt),
@@ -456,69 +576,139 @@ function NeedsYouBlock({ me }: { me: Me }) {
 }
 
 /**
- * Hàng số ở đầu trang — cùng những con số đã có, đặt ở chỗ đọc được.
+ * "Yêu cầu mở két của tôi" — cho MỌI vai, chỉ khi có yêu cầu đang chờ hoặc đang còn hiệu lực.
  *
- * VÌ SAO. Mỗi khối vốn đã mang `total` của nó, nhưng nó nằm trong một cái pill 11px cạnh tiêu
- * đề: muốn biết "sáng nay có gì gấp" thì phải quét mắt qua sáu cái thẻ cao thấp khác nhau rồi
- * tự cộng. Mục tiêu của epic là ba phút; ba phút đó phải bắt đầu bằng MỘT hàng số.
+ * Việc người xin quan tâm nhất ngay sau khi gửi là "đã được duyệt chưa, còn bao lâu". Trước đó
+ * muốn biết thì phải vào màn Duyệt yêu cầu. Đọc từ `GET /break-glass/mine` sẵn có — không cửa mới.
+ */
+function MyRequestsBlock() {
+  const { t } = useTranslation();
+  const mine = useQuery({
+    queryKey: [...BREAK_GLASS_KEY, 'mine', 'dashboard'],
+    queryFn: () =>
+      apiFetch<{ items: BreakGlassRow[] }>('/api/v1/vault/break-glass/mine?page=1&limit=10'),
+  });
+  const items = Array.isArray(mine.data?.items) ? mine.data.items : [];
+  const live = items.filter((row) => row.state === 'pending' || row.active);
+  if (live.length === 0) return null;
+  return (
+    <section className="card dash-card" aria-label={t('dashboard.myRequests')}>
+      <div className="card-head">
+        <h2>{t('dashboard.myRequests')}</h2>
+        <span className="card-head-count">{t('dashboard.itemsCount', { count: live.length })}</span>
+      </div>
+      <ul className="dash-list">
+        {live.map((row) => (
+          <li key={row.id}>
+            <div className="dash-line">
+              <span className="dash-line-name">
+                <BreakGlassSubject row={row} />
+              </span>
+              <BreakGlassStateBadge row={row} />
+            </div>
+            <span className="muted dash-meta">
+              {[
+                t('dashboard.sentAt', { time: formatDateTime(row.createdAt) }),
+                row.active && row.expiresAt
+                  ? t('dashboard.validUntil', { time: formatDateTime(row.expiresAt) })
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+            <Link to={PATHS.approval(row.id)}>{t('approvals.openDetail')}</Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/**
+ * Hàng số ở đầu trang — việc PHÂN LOẠI, không lặp lại số đếm của khối bên dưới.
  *
- * KHÔNG có số liệu mới ở đây: mỗi ô đúng bằng `total` của khối ngay bên dưới, và ô nào thuộc
- * khối server đã cắt theo vai (`available: false`) thì cũng biến mất theo — Member thấy ba ô,
- * SA thấy năm. Cắt ở cùng một chỗ với khối thì không thể lệch nhau.
+ * Hạn tách hai ô: "Đã quá hạn" (tông đỏ — xử lý ngay) và "Sắp hết hạn" (tông cam — lên kế
+ * hoạch). Cộng chung một con số thì không ai biết sáng nay phải làm gì trước. Ô nào thuộc khối
+ * server đã cắt theo vai (`available: false`) thì cũng biến mất theo — cắt ở cùng một chỗ với
+ * khối thì không thể lệch nhau.
  *
- * Chỉ HAI ô được tô màu: "sắp hết hạn" và "dải mạng sắp đầy" — hai thứ đến hạn mà không ai
- * làm gì thì hỏng việc thật. Tô cả năm ô thì không ô nào còn nghĩa.
+ * Chỉ ô có VIỆC PHẢI LÀM mới được tô màu. Tô cả hàng thì không ô nào còn nghĩa.
  */
 function BoardKpis({ board }: { board: Dashboard }) {
   const { t } = useTranslation();
+  const overdue = board.expiring.overdueTotal ?? 0;
+  const threshold = board.subnetLoad.thresholdPercent ?? null;
 
-  const tiles: { key: string; label: string; total: number; to: string; warn: boolean }[] = [
-    board.expiring.available
-      ? {
-          key: 'expiring',
-          label: t('dashboard.kpiExpiring'),
-          total: board.expiring.total,
-          to: PATHS.expiry,
-          warn: true,
-        }
-      : null,
-    board.subnetLoad.available
-      ? {
-          key: 'subnets',
-          label: t('dashboard.kpiSubnets'),
-          total: board.subnetLoad.total,
-          to: PATHS.ipAddresses,
-          warn: true,
-        }
-      : null,
-    board.breakGlass.available
-      ? {
-          key: 'breakGlass',
-          label: t('dashboard.kpiBreakGlass'),
-          total: board.breakGlass.total,
-          to: PATHS.approvals,
-          warn: false,
-        }
-      : null,
-    board.staleSecrets.available
-      ? {
-          key: 'stale',
-          label: t('dashboard.kpiStale'),
-          total: board.staleSecrets.total,
-          to: PATHS.vault,
-          warn: false,
-        }
-      : null,
-    board.disposed.available
-      ? {
-          key: 'disposed',
-          label: t('dashboard.kpiDisposed'),
-          total: board.disposed.total,
-          to: PATHS.disposal,
-          warn: false,
-        }
-      : null,
-  ].filter((tile): tile is NonNullable<typeof tile> => tile !== null);
+  const tiles: {
+    key: string;
+    label: string;
+    total: number;
+    to: string;
+    tone?: 'warn' | 'danger';
+  }[] = [
+    ...(board.expiring.available
+      ? [
+          {
+            key: 'overdue',
+            label: t('dashboard.kpiOverdue'),
+            total: overdue,
+            to: `${PATHS.expiry}?state=expired`,
+            tone: 'danger' as const,
+          },
+          {
+            key: 'expiring',
+            label: t('dashboard.kpiExpiring'),
+            total: Math.max(0, board.expiring.total - overdue),
+            to: PATHS.expiry,
+            tone: 'warn' as const,
+          },
+        ]
+      : []),
+    ...(board.subnetLoad.available
+      ? [
+          {
+            key: 'subnets',
+            label:
+              threshold !== null
+                ? t('dashboard.kpiSubnetsAt', { percent: threshold })
+                : t('dashboard.kpiSubnets'),
+            total: board.subnetLoad.total,
+            to: PATHS.ipAddresses,
+            tone: 'warn' as const,
+          },
+        ]
+      : []),
+    ...(board.breakGlass.available
+      ? [
+          {
+            key: 'breakGlass',
+            label: t('dashboard.kpiBreakGlass'),
+            total: board.breakGlass.total,
+            to: PATHS.approvals,
+          },
+        ]
+      : []),
+    ...(board.staleSecrets.available
+      ? [
+          {
+            key: 'stale',
+            label: t('dashboard.kpiStale'),
+            total: board.staleSecrets.total,
+            to: PATHS.vault,
+          },
+        ]
+      : []),
+    ...(board.disposed.available
+      ? [
+          {
+            key: 'disposed',
+            label: t('dashboard.kpiDisposed'),
+            total: board.disposed.total,
+            to: PATHS.disposal,
+          },
+        ]
+      : []),
+  ];
 
   if (tiles.length === 0) return null;
 
@@ -526,13 +716,7 @@ function BoardKpis({ board }: { board: Dashboard }) {
     <>
       <KpiStrip>
         {tiles.map((tile) => (
-          <KpiTile
-            key={tile.key}
-            value={tile.total}
-            label={tile.label}
-            tone={tile.warn ? 'warn' : undefined}
-            to={tile.to}
-          />
+          <KpiTile key={tile.key} value={tile.total} label={tile.label} tone={tile.tone} to={tile.to} />
         ))}
       </KpiStrip>
       {tiles.every((tile) => tile.total === 0) ? (
@@ -543,75 +727,85 @@ function BoardKpis({ board }: { board: Dashboard }) {
 }
 
 /**
- * Một khối có BA trạng thái, và cả ba phải nói ba câu khác nhau:
- *  - chưa có phần này (module chưa deploy / khối lỗi)
- *  - có phần này, tuần qua không có gì
- *  - có dữ liệu
+ * Một khối có BỐN trạng thái, và mỗi cái nói một câu khác, mang một tông khác:
+ *  - không tải được → tông cảnh báo, có Thử lại (đứng đầu dải yên);
+ *  - chưa có phần này (`notYet`) → tông thông tin;
+ *  - có phần này, không có gì → tin tốt, dấu ✓;
+ *  - có dữ liệu.
  *
- * Gộp hai cái đầu thành một ô trống là cách nhanh nhất để sếp yên tâm nhầm.
+ * Gộp lỗi với tin tốt thành cùng một dải xám là cách nhanh nhất để sếp yên tâm nhầm.
  */
 function BlockCard({
   title,
   total,
   available,
+  notYet = false,
   moreTo,
   moreLabel,
   emptyText,
   unavailableText,
+  onRetry,
   children,
 }: {
   title: string;
   total: number;
   available: boolean;
+  notYet?: boolean;
   moreTo?: string;
   moreLabel?: string;
   emptyText: string;
   unavailableText: string;
-  children: React.ReactNode;
+  onRetry?: () => void;
+  children: ReactNode;
 }) {
-  /* Không có gì để liệt kê thì không có gì để xếp hàng: thu về một dòng. Cùng MỘT vị từ với
-     chỗ chia hai nhóm ở trên, nên hình dạng thẻ và chỗ nó đứng không bao giờ lệch nhau. */
-  const slim = isQuiet({ available, total });
+  const { t } = useTranslation();
+  const tone = !available ? (notYet ? 'info' : 'error') : total === 0 ? 'good' : null;
+
+  if (tone) {
+    return (
+      <section className={`card dash-card slim tone-${tone}`}>
+        <span className="dash-tone-ic" aria-hidden="true">
+          {tone === 'error' ? '!' : tone === 'info' ? 'i' : '✓'}
+        </span>
+        <h2 className="dash-slim-title">{title}</h2>
+        <p>{tone === 'good' ? emptyText : unavailableText}</p>
+        {tone === 'error' && onRetry ? (
+          <button type="button" className="sm" onClick={onRetry}>
+            {t('app.retry')}
+          </button>
+        ) : null}
+      </section>
+    );
+  }
 
   return (
-    <section className={`card dash-card${slim ? ' slim' : ''}`}>
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h2 className="form-section-title">{title}</h2>
-        {available && total > 0 ? <span className="badge">{total}</span> : null}
+    <section className="card dash-card">
+      <div className="card-head">
+        <h2>{title}</h2>
+        <span className="card-head-count">{t('dashboard.itemsCount', { count: total })}</span>
       </div>
-
-      {!available ? (
-        <p className="muted">{unavailableText}</p>
-      ) : total === 0 ? (
-        <p className="muted">{emptyText}</p>
-      ) : (
-        <>
-          {children}
-          {moreTo ? (
-            <Link className="btn sm" to={moreTo}>
-              {moreLabel}
-            </Link>
-          ) : null}
-        </>
-      )}
+      {children}
+      {moreTo ? (
+        <Link className="linkbtn sm dash-see-all" to={moreTo}>
+          {moreLabel}
+        </Link>
+      ) : null}
     </section>
   );
 }
 
 /**
- * Khối "Sắp hết hạn" dạng bảng gọn: Đối tượng · Loại · Hết hạn · Còn lại · [Gia hạn].
- *
- * Bảng chứ không phải danh sách hai dòng: đây là khối ở làn chính, câu hỏi của nó là "cái gì,
- * loại gì, còn bao lâu" — đọc theo cột nhanh hơn đọc từng cụm. Gia hạn ngay trên dòng dùng
- * CÙNG hộp với màn `/expiry` (`ui/renew-dialog.tsx`); nút chỉ hiện khi module expiry nói dòng
- * đó gia hạn được. ≤600px bảng thành thẻ gọn (`mobileCard`), vẫn có nút Gia hạn.
+ * Khối hạn: HAI nhóm có tiêu đề phụ — "Đã quá hạn (N)" trước, "Sắp tới (M)" sau — mỗi nhóm một
+ * bảng gọn Đối tượng · Loại · Hết hạn · Còn lại · [Gia hạn]. Gia hạn ngay trên dòng dùng CÙNG
+ * hộp với màn `/expiry` (`ui/renew-dialog.tsx`); nút chỉ hiện khi module expiry nói dòng đó gia
+ * hạn được. ≤600px bảng thành thẻ gọn (`mobileCard`), vẫn có nút Gia hạn.
  */
-function ExpiringTable({
-  items,
+function ExpiringBlock({
+  board,
   kinds,
   me,
 }: {
-  items: ExpiringItem[];
+  board: Dashboard['expiring'];
   kinds: ExpiryKind[] | undefined;
   me: Me;
 }) {
@@ -619,6 +813,16 @@ function ExpiringTable({
   const toast = useToast();
   const queryClient = useQueryClient();
   const [renewing, setRenewing] = useState<ExpiringItem | null>(null);
+  const narrow = useMediaQuery(MOBILE_QUERY);
+  const [all, setAll] = useState(false);
+  // Điện thoại: 3 mục đầu (quá hạn đứng trước) + "Xem thêm N" bung tại chỗ.
+  const cut = narrow && !all && board.items.length > MOBILE_ITEMS;
+  const visible = cut ? board.items.slice(0, MOBILE_ITEMS) : board.items;
+
+  const overdueItems = visible.filter((item) => item.daysLeft < 0);
+  const upcomingItems = visible.filter((item) => item.daysLeft >= 0);
+  const overdueTotal = board.overdueTotal ?? board.items.filter((item) => item.daysLeft < 0).length;
+  const upcomingTotal = Math.max(0, board.total - overdueTotal);
 
   const columns = useMemo<ColumnDef<ExpiringItem, unknown>[]>(
     () => [
@@ -662,22 +866,41 @@ function ExpiringTable({
     [t, kinds],
   );
 
+  const table = (items: ExpiringItem[]) => (
+    <DataTable
+      data={items}
+      columns={columns}
+      emptyText={t('dashboard.expiringEmpty')}
+      rowClassName={(item) => (item.daysLeft < 0 ? 'row-danger' : '')}
+      mobileCard={{
+        title: (item) => item.label,
+        href: (item) => item.link ?? undefined,
+        badge: (item) => <ExpiryBadge end={item.endDate} />,
+        meta: (item) => `${expiryKindLabel(kinds, item.kind)} · ${formatDate(item.endDate)}`,
+        aside: (item) => (item.canRenew ? <RenewButton item={item} onRenew={setRenewing} /> : null),
+      }}
+    />
+  );
+
   return (
     <>
-      <DataTable
-        data={items}
-        columns={columns}
-        emptyText={t('dashboard.expiringEmpty')}
-        rowClassName={(item) => (item.daysLeft < 0 ? 'row-danger' : '')}
-        mobileCard={{
-          title: (item) => item.label,
-          href: (item) => item.link ?? undefined,
-          badge: (item) => <ExpiryBadge end={item.endDate} />,
-          meta: (item) => `${expiryKindLabel(kinds, item.kind)} · ${formatDate(item.endDate)}`,
-          aside: (item) =>
-            item.canRenew ? <RenewButton item={item} onRenew={setRenewing} /> : null,
-        }}
-      />
+      {overdueItems.length > 0 ? (
+        <>
+          <h3 className="dash-sub tone-danger">{t('dashboard.expiringOverdue', { count: overdueTotal })}</h3>
+          {table(overdueItems)}
+        </>
+      ) : null}
+      {upcomingItems.length > 0 ? (
+        <>
+          <h3 className="dash-sub">{t('dashboard.expiringUpcoming', { count: upcomingTotal })}</h3>
+          {table(upcomingItems)}
+        </>
+      ) : null}
+      {cut ? (
+        <button type="button" className="ghost sm dash-more" onClick={() => setAll(true)}>
+          {t('dashboard.showMore', { count: board.items.length - MOBILE_ITEMS })}
+        </button>
+      ) : null}
       {renewing ? (
         <RenewDialog
           row={{ ...renewing, end: renewing.endDate }}
@@ -712,18 +935,4 @@ function RenewButton({
       {t('expiry.renew')}
     </button>
   );
-}
-
-/**
- * Khối "đang yên": không tải được, hoặc tải được mà không có dòng nào.
- *
- * Hai cảnh đó nói hai câu KHÁC nhau (và `BlockCard` vẫn nói đúng hai câu), nhưng về mặt bố cục
- * chúng giống nhau: một dòng chữ, không có gì để xếp thành cột.
- */
-function isQuiet(block: { available: boolean; total: number }): boolean {
-  return !block.available || block.total === 0;
-}
-
-function cap(value: string): string {
-  return value.charAt(0).toUpperCase() + value.slice(1);
 }

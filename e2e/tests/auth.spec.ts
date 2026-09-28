@@ -42,7 +42,7 @@ test.describe('Đăng nhập', () => {
 
     const code = await freshTotpCode(secret);
     await page.getByLabel('Mã xác thực').fill(code);
-    await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
 
     // Dùng LẠI đúng mã đó cho lần đăng nhập kế tiếp → phải bị chặn.
     await logout(page);

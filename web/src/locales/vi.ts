@@ -2109,40 +2109,53 @@ export default {
     },
   },
   dashboard: {
-    title: 'Xin chào {{name}}',
-    subtitle: 'Số liệu tính lúc mở trang. Bấm một ô để xem danh sách đầy đủ.',
+    /* Tên TRANG (tab trình duyệt, topbar, h1 cùng một chữ); lời chào xuống dòng phụ. */
+    title: 'Bảng điều khiển',
+    greeting: 'Xin chào, {{name}}',
+    greetingAt: 'Xin chào, {{name}} · cập nhật lúc {{time}}',
+    refresh: 'Làm mới',
 
-    /* Hàng số ở đầu trang. KHÔNG phải số liệu mới: đúng bằng `total` của từng khối bên dưới —
-       thứ trước đây nằm trong một cái pill 11px cạnh tiêu đề, đọc được thì phải đi tìm. */
-    kpiExpiring: 'Sắp hết hạn · 30 ngày',
+    /* Hàng số ở đầu trang làm việc PHÂN LOẠI: quá hạn (xử lý ngay) tách khỏi sắp hết hạn
+       (lên kế hoạch). Không lặp lại số đếm của khối bên dưới. */
+    kpiOverdue: 'Đã quá hạn',
+    kpiExpiring: 'Sắp hết hạn',
     kpiSubnets: 'Dải mạng sắp đầy',
+    kpiSubnetsAt: 'Dải mạng ≥ {{percent}}%',
     kpiStale: 'Két lâu chưa đổi',
-    kpiBreakGlass: 'Break-glass · 7 ngày',
+    kpiBreakGlass: 'Yêu cầu mở két · 7 ngày',
     kpiDisposed: 'Vừa thanh lý · 7 ngày',
     kpiCalm: 'Không có gì gấp sáng nay.',
-    expiring: 'Sắp hết hạn (30 ngày)',
+    itemsCount: '{{count}} mục',
+    showMore: 'Xem thêm {{count}}',
+    expiring: 'Hạn cần xử lý',
+    expiringOverdue: 'Đã quá hạn ({{count}})',
+    expiringUpcoming: 'Sắp tới ({{count}})',
     expiringEmpty: 'Không có gì hết hạn trong 30 ngày tới.',
     seeAllExpiring: 'Xem toàn bộ danh sách hạn',
     expiringSubject: 'Đối tượng',
     expiringLeft: 'Còn lại',
     incidents: 'Sự cố tuần qua',
     incidentsEmpty: 'Tuần qua không có sự cố nào.',
-    // "Chưa có phần này" KHÁC HẲN "tuần qua không có sự cố" — đọc nhầm là tưởng mọi thứ yên.
-    /* "Epic 9" là cách ĐỘI LÀM đánh số công việc, không phải thứ người dùng biết. Câu này
-       vẫn phải giữ nguyên sức nặng: nói THẲNG là hệ thống chưa theo dõi, đừng để khối
-       rỗng làm sếp yên tâm nhầm. */
-    incidentsNotYet: 'Phần quản lý sự cố chưa mở trong bản này. Hệ thống CHƯA theo dõi mục này.',
-    breakGlass: 'Break-glass tuần qua',
+    /* "Chưa có phần này" KHÁC HẲN "tuần qua không có sự cố": nói thẳng là chưa theo dõi, nhưng
+       bằng giọng thông tin — dải này hiện mỗi ngày cho mọi người. */
+    incidentsNotYet: 'IMS chưa theo dõi sự cố. Sự cố hiện vẫn ghi ở nơi cũ.',
+    /* Cùng tên với trang chi tiết phiếu ("Yêu cầu mở két"), không dùng chữ kỹ thuật "break-glass". */
+    breakGlass: 'Yêu cầu mở két tuần qua',
     breakGlassEmpty: 'Tuần qua không ai xin quyền xem tạm thời.',
     seeAllBreakGlass: 'Xem nhật ký đầy đủ',
     by: 'quyết bởi {{who}}',
+    validUntil: 'hiệu lực đến {{time}}',
+    sentAt: 'gửi lúc {{time}}',
+    myRequests: 'Yêu cầu mở két của tôi',
     blockError: 'Không tải được khối này. Các khối còn lại vẫn đúng.',
 
     subnetLoad: 'Dải mạng sắp đầy',
+    subnetLoadAt: 'Dải mạng ≥ {{percent}}%',
     subnetLoadEmpty: 'Chưa dải nào chạm ngưỡng. Còn chỗ để cấp IP.',
     seeAllSubnets: 'Xem toàn bộ dải mạng',
     subnetUsage: 'đã cấp {{used}}/{{total}} · còn {{free}}',
     subnetUsageAria: 'Mức sử dụng dải {{name}}',
+    subnetThreshold: 'Ngưỡng cảnh báo {{percent}}%',
 
     staleSecrets: 'Két lâu chưa đổi',
     // Nói rõ đây KHÔNG phải hạn chót: IMS không ép xoay mật khẩu theo lịch, đây là câu rà soát.

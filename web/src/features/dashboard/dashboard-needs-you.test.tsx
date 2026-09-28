@@ -98,7 +98,7 @@ describe('Khối "Cần bạn duyệt"', () => {
   it('không có gì chờ → không có khối', async () => {
     mockApi([]);
     renderBoard();
-    await screen.findByRole('heading', { name: /Xin chào/ });
+    await screen.findByRole('heading', { level: 1, name: 'Bảng điều khiển' });
     expect(screen.queryByRole('region', { name: /Cần bạn duyệt/ })).not.toBeInTheDocument();
   });
 });

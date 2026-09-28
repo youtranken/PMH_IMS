@@ -1,7 +1,8 @@
 import { DashboardService } from './dashboard.service';
 import type { ExpiryApiService } from '../expiry/expiry.api';
 import type { ApprovalsApiService } from '../approvals/approvals.api';
-import type { DevicesApiService } from '../devices/devices.api';
+import type { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
+import type { UsersApiService } from '../users/users.api';
 import type { IpamApiService } from '../ipam/ipam.api';
 import type { VaultApiService } from '../vault/vault.api';
 import type { DisposalApiService } from '../disposal/disposal.api';
@@ -53,13 +54,14 @@ function buildService(): DashboardService {
 
   const empty = () => Promise.resolve([]);
   const approvals = { list: empty } as unknown as ApprovalsApiService;
-  const devices = { getById: () => Promise.resolve(null) } as unknown as DevicesApiService;
+  const kinds = { describe: () => Promise.resolve(null) } as unknown as ApprovalKindRegistry;
+  const users = { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService;
   const ipam = { listSubnets: empty } as unknown as IpamApiService;
   const vault = { listOwners: empty } as unknown as VaultApiService;
   const disposal = { list: empty } as unknown as DisposalApiService;
   const config = { getNumber: () => Promise.resolve(80) } as unknown as SystemConfigService;
 
-  return new DashboardService(expiry, approvals, devices, ipam, vault, disposal, config);
+  return new DashboardService(expiry, approvals, kinds, ipam, vault, disposal, config, users);
 }
 
 describe('Khối "sắp hết hạn" của trang chủ', () => {

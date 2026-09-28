@@ -1,7 +1,8 @@
 import { DashboardService } from './dashboard.service';
 import type { ExpiryApiService } from '../expiry/expiry.api';
 import type { ApprovalsApiService } from '../approvals/approvals.api';
-import type { DevicesApiService } from '../devices/devices.api';
+import type { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
+import type { UsersApiService } from '../users/users.api';
 import type { IpamApiService } from '../ipam/ipam.api';
 import type { VaultApiService } from '../vault/vault.api';
 import type { DisposalApiService } from '../disposal/disposal.api';
@@ -28,11 +29,12 @@ describe('Khối break-glass của trang chủ', () => {
           Promise.resolve({ items: [], total: 0, summary: {}, failedKinds: [] }),
       } as unknown as ExpiryApiService,
       approvals,
-      { getById: () => Promise.resolve(null) } as unknown as DevicesApiService,
+      { describe: () => Promise.resolve(null) } as unknown as ApprovalKindRegistry,
       { listSubnets: empty } as unknown as IpamApiService,
       { listOwners: empty } as unknown as VaultApiService,
       { list: empty } as unknown as DisposalApiService,
       { getNumber: () => Promise.resolve(80) } as unknown as SystemConfigService,
+      { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService,
     );
 
     const before = Date.now();
@@ -46,3 +48,94 @@ describe('Khối break-glass của trang chủ', () => {
     expect(Math.abs(before - 7 * 86_400_000 - sinceMs)).toBeLessThan(60_000);
   });
 });
+
+/**
+ * DASH-006/007 — một dòng break-glass phải đọc được mà không phải đi tra: TÊN người xin (không
+ * phải email), đối tượng gọi bằng mã · tên cho MỌI loại chủ thể (không phải 8 ký tự uuid), tên
+ * người quyết, và cờ còn hiệu lực do server tính (AD-6) để web tô đúng màu.
+ */
+describe('Dòng break-glass của trang chủ', () => {
+  const now = Date.now();
+  const record = (patch: Record<string, unknown>) => ({
+    id: 'a1',
+    kind: 'break_glass',
+    state: 'approved',
+    requester: 'lan@pmh.com.vn',
+    subjectType: 'service_account',
+    subjectId: '77a9ea7f-0000-4000-8000-000000000001',
+    reason: 'sự cố VPN',
+    payload: { hours: 2 },
+    decidedBy: 'sep@pmh.com.vn',
+    decidedAt: new Date(now - 60_000),
+    decisionNote: null,
+    expiresAt: new Date(now + 3_600_000),
+    createdAt: new Date(now - 120_000),
+    updatedAt: new Date(now - 60_000),
+    active: true,
+    ...patch,
+  });
+
+  async function boardWith(rows: ReturnType<typeof record>[], described: Record<string, string | null>) {
+    const service = new DashboardService(
+      { list: () => Promise.resolve({ items: [], total: 0, summary: {}, failedKinds: [] }) } as unknown as ExpiryApiService,
+      { page: () => Promise.resolve({ items: rows, total: rows.length }) } as unknown as ApprovalsApiService,
+      {
+        describe: (_kind: string, _type: string, id: string) =>
+          Promise.resolve(described[id] ? { code: 'x', label: described[id], path: '/x' } : null),
+      } as unknown as ApprovalKindRegistry,
+      { listSubnets: () => Promise.resolve([]) } as unknown as IpamApiService,
+      { listOwners: () => Promise.resolve([]) } as unknown as VaultApiService,
+      { list: () => Promise.resolve([]) } as unknown as DisposalApiService,
+      { getNumber: () => Promise.resolve(80) } as unknown as SystemConfigService,
+      {
+        namesByEmails: () =>
+          Promise.resolve(new Map([['lan@pmh.com.vn', 'Nguyễn Thị Lan'], ['sep@pmh.com.vn', 'Trần Sếp']])),
+      } as unknown as UsersApiService,
+    );
+    return service.build({ email: 'sep@pmh.com.vn', role: 'sa' });
+  }
+
+  it('tên người xin/người quyết, nhãn đối tượng cho cả loại KHÔNG phải thiết bị, cờ hiệu lực', async () => {
+    const board = await boardWith([record({})], {
+      '77a9ea7f-0000-4000-8000-000000000001': 'VPN-E2E · VPN chi nhánh',
+    });
+    expect(board.breakGlass.items[0]).toMatchObject({
+      requesterName: 'Nguyễn Thị Lan',
+      decidedByName: 'Trần Sếp',
+      subjectLabel: 'VPN-E2E · VPN chi nhánh',
+      active: true,
+    });
+  });
+
+  it('hồ sơ đã xoá → nhãn null (web nói "hồ sơ đã bị xoá"), KHÔNG lùi về mảnh uuid', async () => {
+    const board = await boardWith([record({})], {});
+    expect(board.breakGlass.items[0].subjectLabel).toBeNull();
+  });
+});
+
+describe('Khối hạn và khối dải mạng mang thêm số để web phân loại', () => {
+  it('khối hạn tách riêng số QUÁ HẠN; khối dải mạng nói ngưỡng đang áp', async () => {
+    const service = new DashboardService(
+      {
+        list: (o: { state?: string } = {}) =>
+          Promise.resolve({
+            items: [],
+            total: o.state === 'expired' ? 3 : 16,
+            summary: {},
+            failedKinds: [],
+          }),
+      } as unknown as ExpiryApiService,
+      { page: () => Promise.resolve({ items: [], total: 0 }) } as unknown as ApprovalsApiService,
+      { describe: () => Promise.resolve(null) } as unknown as ApprovalKindRegistry,
+      { listSubnets: () => Promise.resolve([]) } as unknown as IpamApiService,
+      { listOwners: () => Promise.resolve([]) } as unknown as VaultApiService,
+      { list: () => Promise.resolve([]) } as unknown as DisposalApiService,
+      { getNumber: () => Promise.resolve(90) } as unknown as SystemConfigService,
+      { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService,
+    );
+    const board = await service.build({ email: 'sep@pmh.com.vn', role: 'admin' });
+    expect(board.expiring).toMatchObject({ total: 19, overdueTotal: 3 });
+    expect(board.subnetLoad.thresholdPercent).toBe(90);
+  });
+});
+

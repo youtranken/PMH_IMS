@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 import { ApprovalsModule } from '../approvals/approvals.module';
-import { DevicesModule } from '../devices/devices.module';
 import { DisposalModule } from '../disposal/disposal.module';
 import { ExpiryModule } from '../expiry/expiry.module';
 import { IpamModule } from '../ipam/ipam.module';
+import { UsersModule } from '../users/users.module';
 import { VaultModule } from '../vault/vault.module';
 import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
@@ -16,7 +16,7 @@ import { DashboardService } from './dashboard.service';
  * module gặp nhau, và từ đó không module nào đổi được lược đồ của mình nữa.
  */
 @Module({
-  imports: [ExpiryModule, ApprovalsModule, DevicesModule, IpamModule, VaultModule, DisposalModule],
+  imports: [ExpiryModule, ApprovalsModule, IpamModule, VaultModule, DisposalModule, UsersModule],
   controllers: [DashboardController],
   providers: [DashboardService],
 })

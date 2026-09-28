@@ -32,7 +32,7 @@ test.describe('Khung ứng dụng', () => {
     expect(main.y).toBeLessThan(sidebar.y + sidebar.height);
 
     await expect(page.getByRole('banner')).toBeInViewport();
-    await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeInViewport();
+    await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeInViewport();
     expect(main.width).toBeGreaterThan(viewport.width / 2);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   });

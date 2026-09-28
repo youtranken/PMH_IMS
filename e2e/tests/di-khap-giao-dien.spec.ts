@@ -362,7 +362,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
    * link.
    */
   const NAV_STOPS: NavStop[] = [
-    { link: 'Bảng điều khiển', path: '/', heading: /^Xin chào/ },
+    { link: 'Bảng điều khiển', path: '/', heading: /^Bảng điều khiển$/ },
     { link: 'Thiết bị', path: '/devices', heading: /^Thiết bị$/ },
     { link: 'Phần mềm', path: '/software', heading: /^Phần mềm$/ },
     { link: 'Đường truyền', path: '/isp-lines', heading: /^Đường truyền$/ },
@@ -605,7 +605,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
 
     for (const stop of stops) {
       await page.goto('/');
-      await expect(page.getByRole('heading', { level: 1, name: /^Xin chào/ })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
       /*
        * Chờ ĐÚNG cái link chắc chắn có trước khi đếm mấy cái kia: cả bảng dựng từ MỘT lượt
        * gọi `/dashboard`, nên khi link này hiện là dữ liệu đã về hết. Đếm sớm hơn thì khối
@@ -8246,14 +8246,19 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     await firstLogin(page, E2E_SA);
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1, name: /^Xin chào/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
 
     /*
      * Mỗi khối là một `<section class="card">` mở đầu bằng `<h2>`, và trên màn này KHÔNG có
      * `<h2>` nào khác — nên gom hết `heading level 2` là gom đúng danh sách khối.
      */
-    const blockTitles = () =>
-      page.getByRole('main').getByRole('heading', { level: 2 }).allTextContents();
+    // Ngưỡng dải mạng nằm TRONG tiêu đề ("Dải mạng ≥ 80%", DASH-016) — quy về một tên để so.
+    // Hai khối "việc của tôi" (Cần bạn duyệt / Yêu cầu mở két của tôi) chỉ hiện khi có việc,
+    // tuỳ dữ liệu bài trước để lại — không thuộc danh sáu khối cố định.
+    const blockTitles = async () =>
+      (await page.getByRole('main').getByRole('heading', { level: 2 }).allTextContents())
+        .map((title) => title.replace(/^Dải mạng ≥ \d+%$/, 'Dải mạng ≥ N%'))
+        .filter((title) => !/^(Cần bạn duyệt|Yêu cầu mở két của tôi)/.test(title));
 
     const saBlocks = await blockTitles();
     expect(
@@ -8261,11 +8266,11 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'SA phải thấy đủ sáu khối — mục tiêu của epic là "sếp 3 phút sáng thứ Hai tự trả lời mọi câu hỏi"',
     ).toEqual(
       asSet([
-        'Sắp hết hạn (30 ngày)',
-        'Dải mạng sắp đầy',
+        'Hạn cần xử lý',
+        'Dải mạng ≥ N%',
         'Két lâu chưa đổi',
         'Sự cố tuần qua',
-        'Break-glass tuần qua',
+        'Yêu cầu mở két tuần qua',
         'Vừa vào kho thanh lý (7 ngày)',
       ]),
     );
@@ -8277,7 +8282,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
      * hiện một ô trống — là cách nhanh nhất để sếp yên tâm nhầm.
      */
     await expect(
-      page.getByText('Phần quản lý sự cố chưa mở trong bản này. Hệ thống CHƯA theo dõi mục này.'),
+      page.getByText('IMS chưa theo dõi sự cố. Sự cố hiện vẫn ghi ở nơi cũ.'),
       'khối "Sự cố tuần qua" phải nói thẳng là epic chưa mở, không được im lặng như một khối rỗng',
     ).toBeVisible();
 
@@ -8286,10 +8291,10 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await logout(page);
     await firstLogin(page, E2E_MEMBER);
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1, name: /^Xin chào/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
     // Chờ một khối chắc chắn có, để không đếm lúc trang mới dựng được nửa.
     await expect(
-      page.getByRole('heading', { level: 2, name: 'Sắp hết hạn (30 ngày)' }),
+      page.getByRole('heading', { level: 2, name: 'Hạn cần xử lý' }),
       'Member vẫn phải thấy khối "Sắp hết hạn" — cắt theo vai không phải là cắt sạch',
     ).toBeVisible();
 
@@ -8299,8 +8304,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'Member phải thấy đúng bốn khối không dính bí mật',
     ).toEqual(
       asSet([
-        'Sắp hết hạn (30 ngày)',
-        'Dải mạng sắp đầy',
+        'Hạn cần xử lý',
+        'Dải mạng ≥ N%',
         'Sự cố tuần qua',
         'Vừa vào kho thanh lý (7 ngày)',
       ]),
@@ -8318,7 +8323,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       asSet(missing),
       'Member KHÔNG được thấy hai khối an ninh — và cũng không được thiếu khối nào khác: ' +
         `SA thấy [${saBlocks.join(' | ')}], Member thấy [${memberBlocks.join(' | ')}]`,
-    ).toEqual(asSet(['Két lâu chưa đổi', 'Break-glass tuần qua']));
+    ).toEqual(asSet(['Két lâu chưa đổi', 'Yêu cầu mở két tuần qua']));
   });
 
   /* ================================================================== *

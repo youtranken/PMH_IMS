@@ -176,8 +176,10 @@ html[data-theme='dark'] {
   --ink-2: #a7b0a5;
   /* Sáng để chữ phụ nhỏ đạt AA (≥4.5:1) trên nền tối/tint — verify axe live 2026-08-06. */
   --ink-3: #9aa39a;
-  --border: #26312a;
-  --border-2: #37453a;
+  /* Viền thẻ phải thấy được trên laptop độ sáng thấp: nền trang và mặt thẻ tối chỉ lệch nhau
+     rất ít, viền mờ quá thì các khối trông như trôi nổi, không tách lớp. */
+  --border: #313e35;
+  --border-2: #425145;
   --primary: #34d399;
   --primary-ink: #6ee7b7;
   --primary-soft: #123024;
