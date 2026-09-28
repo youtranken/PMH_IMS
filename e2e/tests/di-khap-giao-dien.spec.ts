@@ -8659,12 +8659,11 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await page.goto('/approvals');
     await page.getByRole('tabpanel').getByRole('button', { name: 'Duyệt', exact: true }).click();
 
-    const approve = page.getByRole('dialog', {
-      name: `Duyệt yêu cầu của ${E2E_MEMBER.email}`,
-    });
+    const approve = page.getByRole('dialog', { name: 'Duyệt yêu cầu', exact: true });
+    await expect(approve).toBeVisible();
     await expect(
-      approve,
-      'tiêu đề hộp phải nêu đích danh người xin — người trực đêm mở ba phiếu liền là quyết nhầm phiếu',
+      approve.getByText(E2E_MEMBER.email),
+      'thân hộp phải nêu đích danh người xin — người trực đêm mở ba phiếu liền là quyết nhầm phiếu',
     ).toBeVisible();
 
     expect(
@@ -8695,8 +8694,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     /* ---------- HỘP "TỪ CHỐI" — phải KHÁC hộp Duyệt ---------- */
 
     await page.getByRole('tabpanel').getByRole('button', { name: 'Từ chối', exact: true }).click();
-    const deny = page.getByRole('dialog', { name: `Từ chối yêu cầu của ${E2E_MEMBER.email}` });
+    const deny = page.getByRole('dialog', { name: 'Từ chối yêu cầu', exact: true });
     await expect(deny).toBeVisible();
+    await expect(deny.getByText(E2E_MEMBER.email)).toBeVisible();
 
     expect(
       await textboxLabels(deny),

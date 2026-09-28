@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMoney, orDash, todayIso } from './format';
+import { agoParts, formatMoney, orDash, remainingParts, todayIso } from './format';
 
 describe('formatMoney — tiền đồng dùng chung (AD-15)', () => {
   it.each([
@@ -48,5 +48,46 @@ describe('todayIso — "hôm nay" theo giờ Việt Nam', () => {
     ['2026-09-28T17:00:00Z', '2026-09-29'],
   ])('%s → %s', (now, expected) => {
     expect(todayIso(new Date(now))).toBe(expected);
+  });
+});
+
+/**
+ * "Gửi 4 phút trước" trên phiếu duyệt — người trực đọc được ngay phiếu đã chờ bao lâu. Làm tròn
+ * XUỐNG: "1 giờ trước" cho phiếu 59 phút là nói quá. Đồng hồ máy lệch về tương lai thì không
+ * được ra số âm.
+ */
+describe('agoParts', () => {
+  const now = Date.parse('2026-09-28T10:00:00.000Z');
+  it.each([
+    ['2026-09-28T10:00:00.000Z', { unit: 'now', count: 0 }],
+    ['2026-09-28T09:59:31.000Z', { unit: 'now', count: 0 }],
+    ['2026-09-28T09:59:00.000Z', { unit: 'minutes', count: 1 }],
+    ['2026-09-28T09:56:00.000Z', { unit: 'minutes', count: 4 }],
+    ['2026-09-28T09:00:01.000Z', { unit: 'minutes', count: 59 }],
+    ['2026-09-28T09:00:00.000Z', { unit: 'hours', count: 1 }],
+    ['2026-09-27T10:00:01.000Z', { unit: 'hours', count: 23 }],
+    ['2026-09-27T10:00:00.000Z', { unit: 'days', count: 1 }],
+    ['2026-09-28T10:05:00.000Z', { unit: 'now', count: 0 }],
+  ])('%s → %j', (from, expected) => {
+    expect(agoParts(from, now)).toEqual(expected);
+  });
+
+  it('giá trị hỏng → null, không bịa "vừa xong"', () => {
+    expect(agoParts('không phải ngày', now)).toBeNull();
+  });
+});
+
+/** "còn 3 giờ 52 phút" của quyền đang chạy — không bao giờ âm. */
+describe('remainingParts', () => {
+  it.each([
+    [13_920, { hours: 3, minutes: 52, seconds: 0 }],
+    [3_600, { hours: 1, minutes: 0, seconds: 0 }],
+    [3_599, { hours: 0, minutes: 59, seconds: 59 }],
+    [45, { hours: 0, minutes: 0, seconds: 45 }],
+    [0, { hours: 0, minutes: 0, seconds: 0 }],
+    [-10, { hours: 0, minutes: 0, seconds: 0 }],
+    [12.7, { hours: 0, minutes: 0, seconds: 12 }],
+  ])('%d giây → %j', (seconds, expected) => {
+    expect(remainingParts(seconds)).toEqual(expected);
   });
 });
