@@ -8,6 +8,12 @@
 export interface ExpiryItem {
   id: string;
   label: string;
+  /**
+   * Mã và tên tách riêng (nhãn `label` là "mã — tên"): màn hình in mã mono cạnh tên thường,
+   * hộp Gia hạn đặt tiêu đề ngắn bằng mã. Nguồn nào không có mã thì bỏ trống.
+   */
+  code?: string;
+  name?: string;
   /** Mô tả phụ hiện dưới nhãn (nhà cung cấp, site, model…). */
   sublabel?: string | null;
   /** Loại để luật digest lọc: 'license' | 'ssl' | 'domain' | 'warranty' | 'maintenance'… */
@@ -22,6 +28,11 @@ export interface ExpiryItem {
    * phần mềm đã chuyển sang Hết hạn (DOM-03): mail "sắp hết hạn" đã nhắc trước đó rồi.
    */
   quietInDigest?: boolean;
+  /**
+   * Ngày hệ thống sẽ tự Thanh lý mục đã Hết hạn (Q-13) — chỉ nguồn phần mềm có. Màn Sắp hết hạn
+   * là nơi cuối cùng còn kịp cứu, nên nó phải nói ra ngày này.
+   */
+  autoRetireOn?: string | null;
 }
 
 export interface ExpirySource {

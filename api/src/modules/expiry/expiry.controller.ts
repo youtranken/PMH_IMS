@@ -157,13 +157,17 @@ export class ExpiryController {
   @Audited('expiry.exported', 'expiry')
   @Get('export.xlsx')
   async export(
-    @Query() query: { withinDays?: string; kinds?: string; includeExpired?: string },
+    @Query()
+    query: { withinDays?: string; kinds?: string; includeExpired?: string; state?: string },
     @Res() res: Response,
   ) {
+    // Ô số đang bật ("Gấp") cũng là bộ lọc đang xem — file xuất phải theo nó (FR-028).
+    const state = isExpiryLevel(query.state) ? query.state : undefined;
     const { items, failedKinds } = await this.expiry.list({
       withinDays: query.withinDays ? Number(query.withinDays) : undefined,
       kinds: query.kinds ? query.kinds.split(',').filter(Boolean) : undefined,
       includeExpired: query.includeExpired !== 'false',
+      state,
     });
     // File thiếu dòng trông y hệt file đủ dòng — thà không xuất còn hơn xuất thiếu.
     if (failedKinds.length > 0) {
@@ -193,7 +197,7 @@ export class ExpiryController {
       ],
       rows: items,
     });
-    sendXlsx(res, buffer, 'sap-het-han.xlsx');
+    sendXlsx(res, buffer, state ? `sap-het-han-${EXPORT_SUFFIX[state]}.xlsx` : 'sap-het-han.xlsx');
   }
 
   /**
@@ -268,6 +272,13 @@ export class ExpiryController {
 }
 
 /** `?state=` chỉ nhận đúng ba nhóm của màn — xem `levelOf` trong `expiry.service.ts`. */
+/** Hậu tố tên file xuất theo ô số đang bật — người nhận biết ngay file là nhóm nào. */
+const EXPORT_SUFFIX: Record<ExpiryLevel, string> = {
+  expired: 'qua-han',
+  critical: 'gap',
+  warning: 'sap-toi',
+};
+
 function isExpiryLevel(value: string | undefined): value is ExpiryLevel {
   return value === 'expired' || value === 'critical' || value === 'warning';
 }

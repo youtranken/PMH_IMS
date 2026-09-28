@@ -71,6 +71,40 @@ export class LicenseAssignmentService {
     private readonly devices: DevicesApiService,
   ) {}
 
+  /**
+   * Hồ sơ đang có ghế (chưa gỡ) trên máy khớp ô tìm — cho ô tìm của danh sách phần mềm.
+   *
+   * Máy tra qua `DevicesApiService.search` (AD-2) nên khớp đúng luật tìm của màn thiết bị: mã,
+   * tên, IP, người dùng. Trần 50 máy: ô tìm là để hỏi "máy này dùng gì", không phải liệt kê
+   * cả kho theo một chữ chung chung.
+   */
+  async softwareIdsOnDevices(term: string): Promise<string[]> {
+    const text = term.trim();
+    if (!text) return [];
+    const devices = await this.devices.search(text, 50);
+    if (devices.length === 0) return [];
+    const rows = await this.db
+      .selectDistinct({ softwareId: licenseAssignmentTable.softwareId })
+      .from(licenseAssignmentTable)
+      .where(
+        and(
+          inArray(
+            licenseAssignmentTable.deviceId,
+            devices.map((device) => device.id),
+          ),
+          isNull(licenseAssignmentTable.releasedAt),
+        ),
+      );
+    return rows.map((row) => row.softwareId);
+  }
+
+  /** Mã máy cho các id — tab Lịch sử đổi `deviceId` thô thành mã (`history-device-codes.ts`). */
+  async deviceCodes(ids: string[]): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map();
+    const devices = await this.devices.getByIds(ids);
+    return new Map([...devices].map(([id, device]) => [id, device.code]));
+  }
+
   /** Số seat đang dùng của nhiều license một lượt — màn danh sách gọi, không N+1. */
   async usageFor(softwareIds: string[]): Promise<Map<string, number>> {
     if (softwareIds.length === 0) return new Map();
