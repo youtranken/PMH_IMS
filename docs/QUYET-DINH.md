@@ -130,10 +130,11 @@ dashboard và màn Sắp hết hạn chỉ làm nhiễu danh sách cần xử l�
 Chủ dự án giao Claude tự quyết các mục mức cao trong báo cáo soát UI/UX (ims.pmh.com.vn:8443).
 Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
 
-- **Quên mật khẩu / mất điện thoại 2 lớp: chưa có tự đặt lại qua email.** Màn đăng nhập và màn
-  mã 2 lớp chỉ hướng dẫn liên hệ người quản trị; nội dung liên hệ nằm trong `system_config`
-  (`auth.support_contact`). Lý do: luồng đặt lại qua mail là một mặt tấn công mới, đội IT nhỏ,
-  SA luôn ở gần. Muốn mở thì sửa mục này trước.
+- **Quên mật khẩu / mất điện thoại 2 lớp: KHÔNG làm tự đặt lại qua email** (chủ dự án chốt bỏ
+  hẳn ngày 28/09/2026, không còn là việc hoãn). Màn đăng nhập và màn mã 2 lớp chỉ hướng dẫn liên
+  hệ người quản trị; nội dung liên hệ nằm trong `system_config` (`auth.support_contact`, sửa ở màn
+  Tham số hệ thống). Lý do: luồng đặt lại qua mail là một mặt tấn công mới, đội IT nhỏ, SA luôn ở
+  gần. Mã dự phòng (backup codes) cũng không làm.
 - **Hồ sơ của tôi**: người dùng tự đổi mật khẩu (phải nhập mật khẩu hiện tại), tự cài lại 2 lớp
   trên điện thoại mới (đang có 2 lớp thì phải nhập mã 2 lớp hiện tại trước), xem và đóng các
   phiên khác của chính mình.
@@ -152,6 +153,8 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
 - **Mục danh mục đã vô hiệu không chọn MỚI được** ở mọi form (UI ẩn, API từ chối). Hồ sơ đang trỏ
   tới mục đó giữ nguyên và hiện nhãn "(ngừng dùng)".
 - Tìm thiết bị theo cả IP, người sử dụng và bộ phận; tìm nhanh (Ctrl+K) tìm được IP và dải mạng.
+- **Không có khái niệm "mức nhạy cảm"** cho thiết bị/két (chip trên phiếu duyệt break-glass): chủ
+  dự án chốt bỏ ngày 28/09/2026. Người duyệt đánh giá rủi ro qua mã · tên · site · loại của đối tượng.
 
 ### Q-09 · Tài liệu
 
