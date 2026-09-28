@@ -109,6 +109,11 @@ table.table tbody tr.row-highlight td {
 table.table tbody tr.row-highlight td:first-child {
   box-shadow: inset 3px 0 0 var(--primary);
 }
+/* Dòng "nửa sống" (đường truyền tạm ngưng): chỉ vạch cam ở mép trái, không tô nền — huy hiệu
+   trong dòng đã nói bằng chữ, vạch là để thấy từ xa khi lướt danh sách. */
+table.table tbody tr.row-suspended td:first-child {
+  box-shadow: inset 3px 0 0 var(--warn);
+}
 /* Dữ liệu của một dòng đã gỡ (rule NAT…): còn đọc được nhưng gạch ngang. Huy hiệu ngay cạnh
    nói bằng chữ "Đã gỡ …", nên gạch ngang chỉ là tín hiệu phụ, không phải tín hiệu duy nhất. */
 .table .strike {
@@ -132,6 +137,19 @@ table.table tbody tr.row-highlight td:first-child {
 
 /* Ô tick phụ trong hộp xác nhận (ui/confirm-dialog.tsx). KHÔNG dùng `.field-inline`: nó
    `nowrap`, và câu hệ quả dài bị cắt ra ngoài mép hộp. Ô tick bám dòng đầu của nhãn. */
+/* Nhóm ô tick "việc đã làm" trong hộp đổi trạng thái — không khung, xếp dọc. */
+.check-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.check-list legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+}
 .confirm-check {
   display: flex;
   align-items: flex-start;
@@ -383,12 +401,66 @@ table.table tbody tr.row-highlight td:first-child {
   background: var(--danger-soft);
   color: var(--danger);
 }
+/* Việc ít khi làm, dễ nhầm với việc bên trên (RowAction `muted`): chữ xám, kẻ ngăn phía trên. */
+.row-actions-menu button.is-muted {
+  color: var(--ink-3);
+  margin-top: var(--space-1);
+  border-top: 1px solid var(--border);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.row-actions-menu button.is-muted ~ button.is-muted {
+  margin-top: 0;
+  border-top-color: transparent;
+}
+/* Dòng mô tả dưới nhãn (RowAction `hint`) — xuống dòng được, menu không phình ngang. */
+.row-actions-menu .ra-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.row-actions-menu .ra-hint {
+  max-width: 16rem;
+  white-space: normal;
+  font-size: var(--fs-2xs);
+  font-weight: 400;
+  color: var(--ink-3);
+}
+/*
+ * Mã / IP / serial là DỮ LIỆU CHÍNH của các bảng mạng — không thu nhỏ nó xuống dưới chữ
+ * thường. Font mono hệ thống có x-height thấp hơn font chữ nên 0.94em đã ngang mắt với chữ
+ * bên cạnh; 0.85em cũ làm IP trong bảng (~12px) nhỏ hơn cả "Gateway LAN" đứng cạnh nó.
+ */
 .mono {
   font-family: var(--mono);
-  font-size: 0.85em;
+  font-size: 0.94em;
   letter-spacing: -0.01em;
   /* Chữ số đều bề rộng → mã/tiền canh cột dọc thẳng hàng (mọi bảng dùng .mono). */
   font-variant-numeric: tabular-nums;
+}
+/* Ô nhập mono (CIDR, VLAN, tên đăng nhập…) giữ ĐÚNG cỡ chữ của ô thường: thu nhỏ chữ là thấp
+   ô, và một hàng form có ô mono cạnh ô thường sẽ lệch chiều cao. */
+input.mono,
+textarea.mono {
+  font-size: inherit;
+}
+/* Placeholder của ô mono là LỜI GỢI Ý, không phải giá trị: chữ thường, nghiêng, nhạt — in mono
+   thì "172.16.10.0/24" trông y như một giá trị đã điền sẵn và người dùng bỏ qua ô. */
+input.mono::placeholder,
+textarea.mono::placeholder {
+  font-family: var(--font);
+  font-style: italic;
+  color: var(--ink-3);
+}
+/* Văn xuôi trong ô bảng (lý do mở cổng…): tối đa HAI dòng — một dòng thì màn cảm ứng không
+   đọc được câu (không có hover), cả đoạn thì kéo cao cả dòng. Đủ câu ở `title`. */
+.cell-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  max-width: 28rem;
 }
 /* Ghi chú trong ô bảng: rút gọn 1 dòng + ellipsis (đầy đủ ở title hover). */
 .cell-note {
@@ -514,6 +586,16 @@ button.link.session-toggle {
   font-size: var(--fs-2xs);
   color: var(--ink-3);
   font-weight: 400;
+}
+/* Mã trong dòng phụ (mã máy đích dưới IP của rule NAT…) là thứ người ta BẤM và ĐỌC: không để
+   nó tụt xuống ~10px (2xs × mono), và link cao đủ 24px cho ngón tay. */
+.cell-sub .mono {
+  font-size: var(--fs-xs);
+}
+.cell-sub a.mono {
+  display: inline-block;
+  min-height: 24px;
+  line-height: 24px;
 }
 /* Dòng phụ báo việc cần làm ("Hết ghế", "+1 vượt"). `--danger-strong` vì chữ nhỏ trên nền
    sáng dùng `--danger` thường thì tương phản hụt. */

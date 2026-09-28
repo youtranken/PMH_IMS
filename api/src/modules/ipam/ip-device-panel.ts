@@ -33,7 +33,8 @@ export class IpDevicePanel implements DevicePanelProvider, OnModuleInit {
       items: rows.map((ip) => ({
         label: ip.address,
         value: ip.usedBy ?? STATUS_LABEL[ip.status],
-        link: UI_PATHS.subnet(ip.subnetId),
+        // Mở dải ở ĐÚNG địa chỉ này (tô sáng dòng) — một /24 thì khỏi lật sáu trang tìm lại.
+        link: UI_PATHS.subnetAt(ip.subnetId, ip.address),
         tone: TONE[ip.status],
       })),
     };

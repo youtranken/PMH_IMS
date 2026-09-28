@@ -48,6 +48,22 @@ describe('UI_PATHS bên api khớp `routes.ts` bên web', () => {
     expect(built).toBe(expected);
   });
 
+  it('`subnetAt` và `natOf` — cùng khuôn với web, tham số đi trong query đã mã hoá', () => {
+    const source = stripComments(readFileSync(WEB_ROUTES, 'utf8'));
+    expect(source).toContain(
+      'subnetAt: (id: string, ip: string) => `/ip-addresses/${id}?ip=${encodeURIComponent(ip)}`',
+    );
+    expect(source).toContain(
+      'natOf: (deviceId: string) => `/nat?deviceId=${encodeURIComponent(deviceId)}`',
+    );
+    const at = new URL(UI_PATHS.subnetAt('ID', '10.0.0.5'), 'http://x');
+    expect(at.pathname).toBe('/ip-addresses/ID');
+    expect(at.searchParams.get('ip')).toBe('10.0.0.5');
+    const nat = new URL(UI_PATHS.natOf('a b'), 'http://x');
+    expect(nat.pathname).toBe(webPathTemplate('nat'));
+    expect(nat.searchParams.get('deviceId')).toBe('a b');
+  });
+
   it('`approvals` — đường không tham số', () => {
     expect(UI_PATHS.approvals).toBe(webPathTemplate('approvals'));
   });

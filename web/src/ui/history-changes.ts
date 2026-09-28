@@ -50,6 +50,12 @@ export function describeFieldChanges(
      * port nào. Các màn khác không gửi trường không đổi, nên bật mặc định là vẽ thừa.
      */
     unchangedAsContext?: boolean;
+    /**
+     * Dòng TẠO hồ sơ: không có "trước", nên đọc là danh sách giá trị ban đầu ("mã: X; hotline:
+     * Y") và bỏ ô trống. In theo khuôn sửa thì mỗi trường thành "(trống) → X" — đúng nhưng
+     * đọc như thể có ai vừa xoá rồi điền lại.
+     */
+    initial?: boolean;
   },
 ): string | null {
   if (!changes) return null;
@@ -60,6 +66,21 @@ export function describeFieldChanges(
     if (value === null || value === undefined || value === '') return t('history.blank');
     return String(value);
   };
+
+  if (options.initial) {
+    const initial = Object.entries(changes)
+      .filter(([, change]) => !(change.after === null || change.after === undefined || change.after === ''))
+      .map(([field, change]) => {
+        const label = options.label(field);
+        // Id chỉ in khi màn tra được tên; không thì chỉ nói trường ấy có giá trị (không lộ uuid).
+        if (field.endsWith('Id')) {
+          const shown = options.display?.(field, change.after);
+          return shown === undefined ? label : `${label}: ${shown}`;
+        }
+        return `${label}: ${read(field, change.after)}`;
+      });
+    return initial.length > 0 ? initial.join('; ') : null;
+  }
 
   const parts = Object.entries(changes).map(([field, change]) => {
     const label = options.label(field);

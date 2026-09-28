@@ -137,6 +137,36 @@
   cursor: pointer;
 }
 .copy-btn:hover { color: var(--primary-ink); border-color: var(--primary); }
+/* Thẻ "Khi mất mạng" của đường truyền: nút gọi to, cả bề ngang thẻ — bấm được bằng ngón cái. */
+.isp-call {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: var(--space-4);
+  font-size: var(--fs-md);
+}
+/* Tên đăng nhập của tài khoản dịch vụ: thứ người ta mở trang để lấy — cỡ chữ thường, không
+   thu nhỏ như mã phụ. */
+.sa-login {
+  font-size: var(--fs-md);
+  overflow-wrap: anywhere;
+}
+/* Link phụ ngay dưới giá trị trong thẻ định danh ("Rule NAT trên thiết bị này"). */
+.rail-sublink {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--fs-xs);
+}
+/* Biến thể theo dòng chữ (`inline`): vẫn đủ 24px vùng bấm, nhưng không viền, canh giữa dòng
+   và lề âm để KHÔNG đẩy dòng cao lên hay nhô xuống dưới chân chữ. */
+.copy-btn.inline {
+  width: 24px;
+  height: 24px;
+  margin: -4px 0;
+  border-color: transparent;
+  background: transparent;
+  vertical-align: middle;
+}
 
 /* --- Dải chỉ số đầu trang (StatGrid) -----------------------------------------
  * Bốn thứ cần biết trong hai giây. Thứ đã nằm ở đây thì BỎ khỏi lưới bên dưới — bản trước

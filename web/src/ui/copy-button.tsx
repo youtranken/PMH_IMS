@@ -15,7 +15,19 @@ import { useTranslation } from 'react-i18next';
  * dán vào ứng dụng xác thực là CÁCH cài đặt (không quét được QR trên chính màn hình mình), và
  * khoá đó đang hiện nguyên văn ngay cạnh nút — chép không lộ thêm gì.
  */
-export function CopyButton({ value, label }: { value: string; label?: string }) {
+export function CopyButton({
+  value,
+  label,
+  inline = false,
+}: {
+  value: string;
+  label?: string;
+  /**
+   * Nút nhỏ canh theo dòng chữ (dòng phụ trong ô bảng, dòng định danh dưới tiêu đề): nút vuông
+   * 24px mặc định nhô xuống dưới đường chân chữ và làm dòng cao lên.
+   */
+  inline?: boolean;
+}) {
   const { t } = useTranslation();
   const [done, setDone] = useState(false);
 
@@ -30,7 +42,7 @@ export function CopyButton({ value, label }: { value: string; label?: string }) 
   return (
     <button
       type="button"
-      className="copy-btn"
+      className={inline ? 'copy-btn inline' : 'copy-btn'}
       aria-label={label ?? t('common.copy')}
       title={done ? t('common.copied') : (label ?? t('common.copy'))}
       onClick={() => {

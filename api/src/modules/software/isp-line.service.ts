@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -28,6 +28,24 @@ import { ispLineHistoryTable, ispLineTable } from './software.schema';
 
 export const ISP_STATUSES = ['active', 'suspended', 'terminated'] as const;
 export type IspStatus = (typeof ISP_STATUSES)[number];
+
+/**
+ * `?status=active,suspended` — màn danh sách mặc định chỉ bày đường CÒN CHẠY; lúc sự cố người
+ * đọc không phải lọc bằng mắt mấy đường đã thanh lý. Chữ lạ thì ném: lọc sai trông y hệt lọc
+ * đúng mà ít dòng hơn.
+ */
+export function ispStatusesOf(text: string | undefined): IspStatus[] {
+  const parts = [...new Set((text ?? '').split(',').map((part) => part.trim()).filter(Boolean))];
+  for (const part of parts) {
+    if (!(ISP_STATUSES as readonly string[]).includes(part)) {
+      throw new BadRequestException({
+        code: 'ISP_STATUS_INVALID',
+        message: 'Trạng thái đường truyền không hợp lệ.',
+      });
+    }
+  }
+  return parts as IspStatus[];
+}
 
 /** Trường được theo dõi trong lịch sử (AD-13). */
 const TRACKED = [
@@ -97,7 +115,8 @@ export interface IspFilter {
   search?: string;
   siteId?: string;
   providerId?: string;
-  status?: IspStatus;
+  /** Một trạng thái, hoặc nhiều trạng thái ngăn bằng dấu phẩy — xem `ispStatusesOf`. */
+  status?: string;
 }
 
 /**
@@ -471,7 +490,8 @@ function buildWhere(filter: IspFilter): SQL | undefined {
   }
   if (filter.siteId) parts.push(eq(ispLineTable.siteId, filter.siteId));
   if (filter.providerId) parts.push(eq(ispLineTable.providerId, filter.providerId));
-  if (filter.status) parts.push(eq(ispLineTable.status, filter.status));
+  const statuses = ispStatusesOf(filter.status);
+  if (statuses.length > 0) parts.push(inArray(ispLineTable.status, statuses));
   const defined = parts.filter((part): part is SQL => part !== undefined);
   return defined.length > 0 ? and(...defined) : undefined;
 }

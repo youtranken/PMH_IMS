@@ -84,6 +84,19 @@ export class ServiceAccountService {
     return { items: rows.map(toRecord), total: Number(totalRows[0]?.value ?? 0) };
   }
 
+  /** Toàn bộ kết quả theo bộ lọc, KHÔNG phân trang — chỉ dùng cho export xlsx (FR-028). */
+  async listAll(
+    filter: ServiceAccountFilter = {},
+    sort: SortQuery<ServiceAccountSortKey> = SERVICE_ACCOUNT_SORT_DEFAULT,
+  ): Promise<ServiceAccountRecord[]> {
+    const rows = await this.db
+      .select()
+      .from(serviceAccountTable)
+      .where(buildWhere(filter))
+      .orderBy(...serviceAccountOrderBy(sort));
+    return rows.map(toRecord);
+  }
+
   async findOne(id: string): Promise<ServiceAccountRecord> {
     return toRecord(await this.requireRow(id));
   }

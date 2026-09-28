@@ -30,3 +30,21 @@
  * test đỏ.
  */
 export const HISTORY_PAGE_LIMIT = 200;
+
+/**
+ * Gắn HỌ TÊN người làm vào từng dòng lịch sử (`actorName`), giữ nguyên `actor` là email.
+ *
+ * Bảng lịch sử chỉ lưu email — đúng, vì email là khoá bền còn họ tên đổi được. Nhưng panel
+ * đọc "e2e-sa@pmh.com.vn · 23:15" thì người dùng phải tự dịch email ra người. `lookup` là
+ * `UsersApiService.namesByEmails` (AD-2): hỏi MỘT lượt cho cả trang, không lượt nào mỗi dòng.
+ * Tài khoản đã xoá thì `actorName` là `null` và màn hình rơi về email.
+ */
+export async function withActorNames<T extends { actor: string }>(
+  rows: T[],
+  lookup: (emails: string[]) => Promise<Map<string, string>>,
+): Promise<(T & { actorName: string | null })[]> {
+  if (rows.length === 0) return [];
+  const emails = [...new Set(rows.map((row) => row.actor.toLowerCase()))];
+  const names = await lookup(emails);
+  return rows.map((row) => ({ ...row, actorName: names.get(row.actor.toLowerCase()) ?? null }));
+}

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   countSlots,
   filterSlots,
+  nextFreeSlot,
   shouldIsolateAssigned,
   pageSlots,
   pageOfAddress,
@@ -248,5 +249,25 @@ describe('pageOfAddress — nhảy đúng trang chứa IP cần tra', () => {
     ['10.9.9.9', null],
   ])('%s → trang %s', (address, page) => {
     expect(pageOfAddress(many, address)).toBe(page);
+  });
+});
+
+describe('nextFreeSlot — "Cấp IP trống kế tiếp"', () => {
+  const voided = { ...record('10.0.0.3', 'free'), voidedAt: '2026-01-02T00:00:00Z' } as SubnetSlot;
+  it.each<[string, SubnetSlot[], string | null, string | null]>([
+    ['ô trống đầu tiên', [record('10.0.0.1', 'assigned'), free('10.0.0.2')], null, '10.0.0.2'],
+    ['bỏ qua gateway', [free('10.0.0.1'), free('10.0.0.2')], '10.0.0.1', '10.0.0.2'],
+    ['hồ sơ đã thu hồi cũng là chỗ trống', [record('10.0.0.1', 'free'), free('10.0.0.2')], null, '10.0.0.1'],
+    ['hồ sơ đã ẩn KHÔNG phải chỗ trống', [voided, free('10.0.0.4')], null, '10.0.0.4'],
+    ['đầy', [record('10.0.0.1', 'assigned')], null, null],
+    ['chỉ còn gateway', [free('10.0.0.1')], '10.0.0.1', null],
+  ])('%s', (_name, slots, gateway, expected) => {
+    expect(nextFreeSlot(slots, gateway)?.address ?? null).toBe(expected);
+  });
+
+  it('trả kèm hồ sơ đang Trống để cấp lại đúng hồ sơ đó', () => {
+    const hit = nextFreeSlot([record('10.0.0.1', 'free')], null);
+    expect(hit?.record?.id).toBe('id-10.0.0.1');
+    expect(nextFreeSlot([free('10.0.0.9')], null)?.record).toBeNull();
   });
 });

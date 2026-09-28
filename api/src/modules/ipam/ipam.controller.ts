@@ -38,6 +38,11 @@ import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
 import { SubnetService } from './subnet.service';
 import { NoStepUp } from '../auth/step-up.decorator';
+import { DevicesApiService } from '../devices/devices.api';
+import { UsersApiService } from '../users/users.api';
+import { SystemConfigService } from '../config-sys/system-config.service';
+import { withActorNames } from '../../common/history';
+import { sensitivePortsOf } from './nat-sensitive';
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
 const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
@@ -217,7 +222,26 @@ export class IpamController {
     private readonly addresses: IpAddressService,
     private readonly nat: NatRuleService,
     private readonly excel: ExcelExportService,
+    private readonly devices: DevicesApiService,
+    private readonly users: UsersApiService,
+    private readonly config: SystemConfigService,
   ) {}
+
+  /**
+   * Ngưỡng hiển thị của màn IP, đọc từ `system_config` (AD-11).
+   *
+   * Thẻ dải tô "sắp đầy" theo CÙNG con số bảng điều khiển dùng để nhắc dải sắp đầy — hai chỗ
+   * nói khác nhau về một dải là người đọc không biết tin chỗ nào.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('settings')
+  async settings() {
+    const [subnetFullPercent, sensitive] = await Promise.all([
+      this.config.getNumber('dashboardSubnetFullPercent'),
+      this.config.getString('natSensitivePorts'),
+    ]);
+    return { subnetFullPercent, natSensitivePorts: sensitivePortsOf(sensitive) };
+  }
 
   // --- Dải mạng ---------------------------------------------------------------
 
@@ -406,8 +430,30 @@ export class IpamController {
 
   @Roles('sa', 'admin', 'member')
   @Get('addresses/:id/history')
-  addressHistory(@Param() params: IdParamDto) {
-    return this.addresses.history(params.id);
+  async addressHistory(@Param() params: IdParamDto) {
+    const rows = await this.addresses.history(params.id);
+    /*
+     * "IP này từng của MÁY NÀO" (AC 5.2) — dòng lịch sử chỉ giữ `deviceId`, nên tra ra mã máy
+     * một lượt cho cả trang. Máy đã thanh lý vẫn tra được mã (`getByIds` không lọc).
+     */
+    const ids = rows.flatMap((row) => {
+      const changes = (row.changes ?? {}) as Record<string, unknown>;
+      return [changes.deviceId, changes.previousDeviceId].filter(
+        (value): value is string => typeof value === 'string' && value !== '',
+      );
+    });
+    const devices = await this.devices.getByIds(ids);
+    const codeOf = (value: unknown) =>
+      typeof value === 'string' ? (devices.get(value)?.code ?? null) : null;
+    const withCodes = rows.map((row) => {
+      const changes = (row.changes ?? {}) as Record<string, unknown>;
+      return {
+        ...row,
+        deviceCode: codeOf(changes.deviceId),
+        previousDeviceCode: codeOf(changes.previousDeviceId),
+      };
+    });
+    return withActorNames(withCodes, (emails) => this.users.namesByEmails(emails));
   }
 
   @Roles('sa', 'admin', 'member')

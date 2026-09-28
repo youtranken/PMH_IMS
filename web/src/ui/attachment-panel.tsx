@@ -74,6 +74,17 @@ export function attachmentsKey(ownerType: AttachmentOwnerType, ownerId: string) 
  * (Epic 8), sự cố (Epic 9). Ba màn đó mà mỗi màn tự viết một panel upload thì ba lần
  * phải nhớ "tải về chứ không mở inline", và sẽ có màn quên.
  */
+/**
+ * Câu gợi ý "giấy tờ gì" theo LOẠI hồ sơ — "hóa đơn, phiếu bảo hành" là của thiết bị, đặt dưới
+ * một hợp đồng nhà mạng thì người ta không biết nên đính gì. Loại không có câu riêng dùng câu chung.
+ */
+const HINT_BY_OWNER: Partial<Record<AttachmentOwnerType, string>> = {
+  isp: 'attachments.hint_isp',
+  service_account: 'attachments.hint_service_account',
+  subnet: 'attachments.hint_subnet',
+  nat_rule: 'attachments.hint_nat_rule',
+};
+
 export function AttachmentPanel({
   ownerType,
   ownerId,
@@ -151,7 +162,7 @@ export function AttachmentPanel({
           <FilePicker
             accept={ATTACHMENT_ACCEPT}
             label={t('attachments.pick')}
-            hint={t('attachments.hint')}
+            hint={t(HINT_BY_OWNER[ownerType] ?? 'attachments.hint')}
             file={null}
             disabled={busy}
             onPick={(one) => {

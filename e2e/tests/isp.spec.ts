@@ -174,9 +174,11 @@ test.describe('Đường truyền ISP', () => {
 
     await page.reload();
     await expect(page.getByText('Đã thanh lý', { exact: true })).toBeVisible();
-    await expect(
-      page.getByText(new RegExp(`Đã thanh lý ngày .+ bởi ${E2E_SA.email.replace(/\./g, '\\.')}`)),
-    ).toBeVisible();
+    // Băng rôn đầu trang: ngày và NGƯỜI thanh lý (họ tên khi tra được, không thì email).
+    await expect(page.getByText(/Đã thanh lý ngày \d{2}\/\d{2}\/\d{4} bởi .+/)).toBeVisible();
+    // Đường đã chết thì thôi nhắc "Chưa khai" và thôi thẻ "Khi mất mạng".
+    await expect(page.getByText(/^Chưa khai/)).toHaveCount(0);
+    await expect(page.getByText('Khi mất mạng')).toHaveCount(0);
 
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
     await expect(
@@ -297,5 +299,88 @@ test.describe('Đường truyền ISP', () => {
     expect(ghost.status).toBe(400);
     const byName = await createLine(page, { code: `ISP-E2E-TX-${stamp}`, provider: name });
     expect(byName.status).toBe(400);
+  });
+});
+
+test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý có hỏi lại', () => {
+  test('danh sách mặc định bỏ đường đã thanh lý; "Mọi trạng thái" thì hiện lại; IP WAN ngay dưới mã', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const provider = await ispProviderId(page, `Nha mang loc E2E ${stamp}`);
+    const live = `ISP-E2E-LIVE-${stamp}`;
+    const dead = `ISP-E2E-DEAD-${stamp}`;
+    await createLine(page, { code: live, providerId: provider, wanIp: '113.161.20.16/29' });
+    const created = await createLine(page, { code: dead, providerId: provider });
+    await page.request.patch(`/api/v1/isp-lines/${String(created.body.id)}`, {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+      data: { status: 'terminated' },
+    });
+
+    await page.goto('/isp-lines');
+    await page.getByRole('searchbox').fill(`E2E-`);
+    await page.getByRole('button', { name: 'Nhà mạng', exact: true }).first().click();
+    await page.getByRole('option', { name: `Nha mang loc E2E ${stamp}` }).click();
+    const liveRow = page.getByRole('row', { name: new RegExp(live) });
+    await expect(liveRow).toBeVisible();
+    await expect(liveRow.getByText('113.161.20.16/29')).toBeVisible();
+    await expect(page.getByRole('row', { name: new RegExp(dead) })).toHaveCount(0);
+
+    // `.first()`: ô lọc đứng trước tiêu đề cột "Trạng thái" (cũng là nút sắp xếp).
+    await page.getByRole('button', { name: 'Trạng thái', exact: true }).first().click();
+    await page.getByRole('option', { name: 'Mọi trạng thái' }).click();
+    await expect(page.getByRole('row', { name: new RegExp(dead) })).toBeVisible();
+  });
+
+  test('thẻ "Khi mất mạng" có nút gọi; Thanh lý đi menu ⋯ và hỏi lại (Hủy thì không đổi)', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const created = await createLine(page, {
+      code: `ISP-E2E-SC-${stamp}`,
+      providerId: await ispProviderId(page, 'VNPT E2E'),
+      hotline: '1800 1166',
+      contractNo: `HD-SC-${stamp}`,
+    });
+    await page.goto(`/isp-lines/${String(created.body.id)}`);
+
+    const call = page.getByRole('link', { name: 'Gọi 1800 1166' });
+    await expect(call).toHaveAttribute('href', 'tel:18001166');
+    await expect(page.getByText(`HD-SC-${stamp}`).first()).toBeVisible();
+
+    await page.getByRole('button', { name: `Thao tác với ISP-E2E-SC-${stamp}` }).click();
+    await page.getByRole('menuitem', { name: 'Thanh lý…' }).click();
+    const ask = page.getByRole('dialog');
+    await expect(ask).toContainText('hủy mật khẩu');
+    await ask.getByRole('button', { name: 'Hủy' }).click();
+    await expect(page.getByText('Đang dùng', { exact: true })).toBeVisible();
+
+    await page.getByRole('button', { name: `Thao tác với ISP-E2E-SC-${stamp}` }).click();
+    await page.getByRole('menuitem', { name: 'Thanh lý…' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Thanh lý', exact: true }).click();
+    await expect(page.getByText(/Thanh lý ngày \d{2}\/\d{2}\/\d{4} bởi .+/)).toBeVisible();
+  });
+
+  test('form: IP WAN sai định dạng thì báo ngay dưới ô, không gửi', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const provider = `Nha mang form E2E ${stamp}`;
+    await ispProviderId(page, provider);
+    await page.goto('/isp-lines');
+    await page.getByRole('button', { name: 'Thêm đường truyền' }).click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Mã đường').fill(`ISP-E2E-WAN-${stamp}`);
+    await dialog.getByRole('button', { name: 'Nhà mạng' }).click();
+    await page.getByRole('option', { name: provider }).click();
+    await dialog.getByLabel('IP WAN').fill('113.161.10');
+    await dialog.getByRole('button', { name: 'Lưu' }).click();
+    await expect(dialog.getByText(/IP WAN phải là một IPv4/)).toBeVisible();
+    await expect(dialog).toBeVisible();
+
+    await dialog.getByLabel('IP WAN').fill('113.161.10.20');
+    await dialog.getByRole('button', { name: 'Lưu' }).click();
+    await expect(dialog).toHaveCount(0);
   });
 });

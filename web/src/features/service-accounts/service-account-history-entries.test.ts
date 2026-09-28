@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import i18n from '@/lib/i18n';
-import { toServiceAccountHistory } from './service-account-history-entries';
+import { lastDisable, toServiceAccountHistory } from './service-account-history-entries';
 import type { ServiceAccountHistoryRow } from './service-account-types';
 
 /*
@@ -108,5 +108,54 @@ describe('toServiceAccountHistory — dịch lịch sử thô thành câu ngư�
     const entry = toServiceAccountHistory([row()], t)[0];
     expect(entry.at).toBe('2026-08-26T10:00:00Z');
     expect(entry.actor).toBe('sa@pmh.com.vn');
+  });
+
+  it('dòng "Tạo hồ sơ" liệt kê giá trị ban đầu, không "(trống) →"', () => {
+    const [entry] = toServiceAccountHistory(
+      [
+        row({
+          action: 'created',
+          changes: {
+            code: { before: null, after: 'TK-KETOAN' },
+            kind: { before: null, after: 'vpn' },
+            note: { before: null, after: '' },
+          },
+        }),
+      ],
+      t,
+    );
+    expect(entry.detail).not.toContain('→');
+    expect(entry.detail).toContain('TK-KETOAN');
+  });
+
+  it('người làm hiện bằng họ tên khi API tra được', () => {
+    expect(toServiceAccountHistory([row({ actorName: 'Lê Minh' })], t)[0].actorName).toBe('Lê Minh');
+  });
+});
+
+describe('lastDisable — ai vô hiệu hóa, lúc nào, vì sao', () => {
+  const off = row({
+    id: 'off',
+    action: 'disabled',
+    actor: 'sa@pmh.com.vn',
+    actorName: 'Lê Minh',
+    createdAt: '2026-09-20T02:00:00Z',
+    changes: {
+      status: { before: 'active', after: 'disabled' },
+      reason: { before: null, after: 'Nhân viên đã nghỉ' },
+    },
+  });
+  it('lấy lượt vô hiệu hóa MỚI NHẤT (API trả mới nhất trước)', () => {
+    expect(lastDisable([off, row({ id: 'old', action: 'disabled' })])).toEqual({
+      at: '2026-09-20T02:00:00Z',
+      actor: 'Lê Minh',
+      reason: 'Nhân viên đã nghỉ',
+    });
+  });
+  it('bật lại sau đó thì lượt vô hiệu hóa cũ không còn là câu trả lời', () => {
+    expect(lastDisable([row({ action: 'enabled' }), off])).toBeNull();
+  });
+  it('sổ rỗng', () => {
+    expect(lastDisable([])).toBeNull();
   });
 });

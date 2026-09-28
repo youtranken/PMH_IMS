@@ -40,8 +40,11 @@ test.describe('Địa chỉ IP ở 390px', () => {
       },
     });
 
-    await page.goto('/ip-addresses');
-    // Cột dải là thẻ (mockup), không phải ô bảng — ở 390px nó xếp ngang cuộn được.
+    await page.goto(`/ip-addresses/${subnetId}`);
+    // Điện thoại: MỘT ô chọn dải thay cho dãy thẻ cuộn ngang, và thẻ của dải đang chọn ngay dưới.
+    await expect(page.getByRole('button', { name: 'Chọn dải mạng' })).toContainText(
+      `172.16.${octet}.0/29`,
+    );
     await expect(
       page.getByRole('link', { name: new RegExp(`LAN 390 E2E ${stamp}`) }),
     ).toBeVisible();

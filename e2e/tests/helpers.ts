@@ -1012,7 +1012,17 @@ export async function rowActionNames(page: Page, subject: string): Promise<strin
     }
     await expect(items.first()).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 15_000 });
-  const names = await items.allTextContents();
+  /*
+   * TÊN của mục, không phải toàn bộ chữ: mục có thể mang dòng mô tả nhỏ (`RowAction.hint`,
+   * `aria-hidden`) — nó không thuộc tên khả truy cập, nên cũng không thuộc câu trả lời ở đây.
+   */
+  const names = await items.evaluateAll((els) =>
+    els.map((el) => {
+      const copy = el.cloneNode(true) as HTMLElement;
+      copy.querySelectorAll('[aria-hidden="true"]').forEach((node) => node.remove());
+      return copy.textContent ?? '';
+    }),
+  );
   await page.keyboard.press('Escape');
   await expect(items).toHaveCount(0);
   return names;

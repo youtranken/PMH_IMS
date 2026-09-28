@@ -29,6 +29,8 @@ export interface IspHistoryRow {
   actor: string;
   changes: Record<string, { before: unknown; after: unknown }> | null;
   createdAt: string;
+  /** Họ tên người làm — API tra theo email (`withActorNames`); vắng thì hiện email. */
+  actorName?: string | null;
 }
 
 export const STATUS_KEY: Record<IspStatus, string> = {
