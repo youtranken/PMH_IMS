@@ -11,6 +11,7 @@ import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
 import { DataTable, type MobileCard } from '@/ui/data-table';
 import { sortQuery } from '@/lib/sort-query';
+import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Dialog } from '@/ui/dialog';
@@ -614,6 +615,11 @@ export function CatalogScreen({ me }: { me: Me }) {
           <>
             {/* Nhập Excel chỉ có nghĩa với bốn danh mục gốc, và chỉ SA/Admin (Q-12). File mẫu
                 nằm TRONG hộp nhập — nó là bước con của việc nhập, không phải nút đầu trang. */}
+            {/* Xuất đúng tab + bộ lọc đang xem — tờ in dán phòng máy (NCC, hotline nhà mạng). */}
+            <ExportXlsxButton
+              url={`/api/v1/catalog/${entity}/export?${exportQuery(filters.search, filters.status, siteId, sorting)}`}
+              fileName={`danh-muc-${entity}.xlsx`}
+            />
             {importable && canManage ? (
               <button type="button" className="btn" onClick={() => setImporting(true)}>
                 {t('catalog.importExcel')}
@@ -816,6 +822,14 @@ const TAB_SUFFIX: Record<CatalogEntity, string> = {
   isp_provider: 'IspProvider',
   service_port: 'ServicePort',
 };
+
+/** Tham số của file xuất — cùng bộ lọc với bảng, không phân trang. */
+function exportQuery(search: string, status: string, siteId: string, sorting: SortingState): string {
+  return buildQuery(1, DEFAULT_LIMIT, search, status, siteId, sorting)
+    .split('&')
+    .filter((part) => !part.startsWith('page=') && !part.startsWith('limit='))
+    .join('&');
+}
 
 function buildQuery(
   page: number,

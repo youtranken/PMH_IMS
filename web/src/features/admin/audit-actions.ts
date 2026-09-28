@@ -76,6 +76,7 @@ export const ACTION_KEY: Record<string, string> = {
   'catalog.deleted': 'audit.actions.catalogDeleted',
   'catalog.active.changed': 'audit.actions.catalogActiveChanged',
   'catalog.imported': 'audit.actions.catalogImported',
+  'catalog.exported': 'audit.actions.catalogExported',
   'devices.exported': 'audit.actions.devicesExported',
   'software.exported': 'audit.actions.softwareExported',
   'isp.exported': 'audit.actions.ispExported',

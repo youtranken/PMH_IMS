@@ -2020,6 +2020,7 @@ export default {
       catalogDeleted: 'Xóa mục danh mục',
       catalogActiveChanged: 'Bật/tắt mục danh mục',
       catalogImported: 'Nhập danh mục từ Excel',
+      catalogExported: 'Xuất danh mục',
       devicesExported: 'Xuất danh sách thiết bị',
       softwareExported: 'Xuất danh sách phần mềm',
       ispExported: 'Xuất danh sách đường truyền',

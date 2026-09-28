@@ -7044,7 +7044,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       {
         tab: 'Tủ mạng',
         tieuDe: 'Thêm tủ mạng',
-        oGo: ['Mã', 'Mô tả', 'Số U'],
+        // "Số U" là ô SỐ (1–60) — vai `spinbutton`, không nằm trong bộ ô gõ chữ.
+        oGo: ['Mã', 'Mô tả'],
         oChon: ['Thuộc site'],
         congTac: [],
       },
@@ -7079,8 +7080,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       {
         tab: 'Dịch vụ / Port',
         tieuDe: 'Thêm dịch vụ',
-        // `catalog.portFrom` = "Port", `catalog.portTo` = "Đến port" — hai ô, một dải.
-        oGo: ['Tên', 'Port', 'Đến port', 'Mô tả'],
+        // `catalog.portFrom` = "Từ port", `catalog.portTo` = "Đến port (tuỳ chọn)" — hai ô, một dải.
+        oGo: ['Tên', 'Từ port', 'Đến port (tuỳ chọn)', 'Mô tả'],
         oChon: ['Giao thức'],
         congTac: [],
       },
