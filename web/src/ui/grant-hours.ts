@@ -17,6 +17,18 @@ export function grantHoursCheck(
   return { value, reason: null };
 }
 
+const HOUR_STEPS = [1, 2, 4, 8, 24];
+
+/**
+ * Nấc giờ chọn nhanh, không vượt `limit` và luôn kết thúc ĐÚNG bằng `limit` — người duyệt thì
+ * `limit` là số xin (chỉ rút ngắn được), người xin thì là trần `breakglass.max_grant_hours`.
+ * Không rõ giới hạn thì chỉ đưa các nấc ngắn: đoán to là mở két lâu hơn cần.
+ */
+export function hourSteps(limit: number | null | undefined): number[] {
+  if (!limit || limit <= 0) return [1, 2, 4];
+  return [...HOUR_STEPS.filter((h) => h < limit), limit];
+}
+
 /** Số giờ đã xin trên phiếu, `null` khi phiếu không mang số nguyên dương. */
 export function requestedHours(payload: { hours?: unknown } | null | undefined): number | null {
   const hours = Number(payload?.hours);

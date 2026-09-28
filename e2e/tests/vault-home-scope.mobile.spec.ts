@@ -56,9 +56,10 @@ test('trang tổng Két sắt đọc được ở 390px, popup mở xem cũng v�
 
   await page.goto('/vault');
   await expect(page.getByRole('heading', { name: 'Két sắt' })).toBeVisible();
-  const row = page.getByRole('row', { name: new RegExp(code) });
+  // ≤600px mỗi hồ sơ là một thẻ gọn (mã + tên, chip số ngăn) — chạm cả thẻ là mở két.
+  const row = page.getByRole('listitem').filter({ hasText: code });
   await expect(row).toBeVisible();
-  await expect(row.getByText('Thiết bị')).toBeVisible();
+  await expect(row.getByText(/^Thiết bị · /)).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
   /*
@@ -66,7 +67,7 @@ test('trang tổng Két sắt đọc được ở 390px, popup mở xem cũng v�
    * Nó lồng một bảng nữa vào trong hộp thoại đã hẹp sẵn — không kiểm thì nó tràn ngang một
    * mình mà cả trang phía sau vẫn đo ra "không tràn".
    */
-  await row.getByRole('button', { name: `Mở két của ${code}` }).click();
+  await row.getByRole('button', { name: code }).click();
   const dialog = page.getByRole('dialog');
   await expect(dialog.getByText(`admin-E2E-${stamp}`)).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);

@@ -176,7 +176,7 @@ test.describe('Hồ sơ phần mềm', () => {
     await page.goto(`/software/${String(created.body.id)}`);
     await expect(page.getByRole('tab', { name: 'Két sắt' })).toBeVisible();
     await page.getByRole('tab', { name: 'Két sắt' }).click();
-    await expect(page.getByText('Chưa cất secret nào')).toBeVisible();
+    await expect(page.getByText('Két chưa có ngăn nào')).toBeVisible();
   });
 
   /**

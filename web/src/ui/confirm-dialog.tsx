@@ -1,4 +1,4 @@
-import { useId } from 'react';
+import { useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogTitle, DialogDescription, DialogClose } from '@/ui/dialog';
 
@@ -18,6 +18,7 @@ export function ConfirmDialog({
   checkbox,
   checked = false,
   onCheckedChange,
+  typeToConfirm,
   onConfirm,
   onCancel,
 }: {
@@ -38,11 +39,16 @@ export function ConfirmDialog({
   checkbox?: { label: string; hint?: string };
   checked?: boolean;
   onCheckedChange?: (next: boolean) => void;
+  /** Ô gõ lại tên — nút xác nhận chỉ bật khi gõ ĐÚNG `expected` (bỏ khoảng trắng hai đầu). */
+  typeToConfirm?: { expected: string; label: string };
   onConfirm: () => void;
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
   const hintId = useId();
+  const typedId = useId();
+  const [typed, setTyped] = useState('');
+  const typedOk = !typeToConfirm || typed.trim() === typeToConfirm.expected.trim();
   return (
     <Dialog
       open
@@ -93,6 +99,22 @@ export function ConfirmDialog({
             )}
           </>
         )}
+        {typeToConfirm && (
+          <div className="field">
+            <label className="lbl-t" htmlFor={typedId}>
+              {typeToConfirm.label}
+            </label>
+            <input
+              id={typedId}
+              className="inp"
+              autoComplete="off"
+              spellCheck={false}
+              value={typed}
+              disabled={busy}
+              onChange={(e) => setTyped(e.target.value)}
+            />
+          </div>
+        )}
       </div>
       {/*
         `data-testid` PHẢI có ở đây nữa, không chỉ ở `dialog.tsx`.
@@ -111,7 +133,7 @@ export function ConfirmDialog({
         <button
           type="button"
           className={danger ? 'danger' : 'primary'}
-          disabled={busy}
+          disabled={busy || !typedOk}
           onClick={onConfirm}
         >
           {confirmLabel}

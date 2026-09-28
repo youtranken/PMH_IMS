@@ -44,6 +44,9 @@ export interface SecretMeta {
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
+  /** Lúc giá trị đổi lần cuối và ai đổi — sửa tên gọi/ghi chú không chạm hai trường này. */
+  valueChangedAt: Date;
+  valueChangedBy: string;
 }
 
 export interface SecretInput {
@@ -201,6 +204,7 @@ export class VaultService {
             dekWrapped: sealed.wrappedDek,
             keyVersion: sealed.keyVersion,
             createdBy: actor,
+            valueChangedBy: actor,
           })
           .returning();
         // Audit KHÔNG chứa giá trị, kể cả độ dài — chỉ đủ để trả lời "ai cất cái gì, lúc nào".
@@ -246,6 +250,8 @@ export class VaultService {
             dekWrapped: sealed.wrappedDek,
             keyVersion: sealed.keyVersion,
             updatedAt: new Date(),
+            valueChangedAt: new Date(),
+            valueChangedBy: actor,
           })
           .where(aliveSecret(id))
           .returning({ id: secretTable.id }),
@@ -423,5 +429,7 @@ function toMeta(row: typeof secretTable.$inferSelect): SecretMeta {
     createdBy: row.createdBy,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
+    valueChangedAt: row.valueChangedAt,
+    valueChangedBy: row.valueChangedBy ?? row.createdBy,
   };
 }

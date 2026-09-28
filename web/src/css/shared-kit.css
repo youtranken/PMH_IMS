@@ -33,8 +33,15 @@
   flex: none;
   margin-top: 2px;
 }
+/* Chữ giãn hết phần giữa để nút × luôn nằm ở MÉP PHẢI — trên điện thoại toast rộng gần trọn
+   màn, chữ ngắn thì × trôi ra giữa hộp như một ký tự lạc. */
+.toast > span:not(.toast-icon) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
 .toast-close {
   flex: none;
+  margin-left: auto;
   border: none;
   background: transparent;
   color: inherit;
@@ -782,6 +789,54 @@ table.table tbody tr.row-muted td {
   font-weight: var(--fw-semibold);
   overflow-wrap: anywhere;
 }
+/* Phiếu mở từ link trong thư: phải nổi lên giữa hàng chờ, không chỉ đeo một badge nhỏ. */
+.approval-list .card[aria-current='true'] {
+  border: 2px solid var(--warn);
+  background: var(--warn-soft);
+}
+/* Cặp quyết định trên thẻ: Từ chối trái, Duyệt phải. Trên điện thoại hai nút chia đôi hàng,
+   cao 48px, cách 12px — một tay bấm không trượt sang nút kia. */
+.approval-decide {
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}
+@media (max-width: 640px) {
+  .approval-decide > .btn {
+    flex: 1 1 0;
+    min-height: 48px;
+    justify-content: center;
+  }
+}
+.approval-fresh {
+  text-align: center;
+  font-size: var(--fs-xs);
+}
+.approval-export-end {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: var(--space-5);
+}
+/* Khối tóm tắt đầu hộp Duyệt/Từ chối/Thu hồi: người · lúc gửi / đối tượng / lý do / số giờ. */
+.decision-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.decision-summary p {
+  margin: 0;
+}
+/* Dòng thời gian của một phiếu (trang chi tiết): Gửi → Duyệt bởi A → Thu hồi bởi B. */
+.approval-timeline {
+  margin: 0;
+  padding-left: var(--space-7);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.approval-timeline li::marker {
+  color: var(--ink-3);
+}
 
 /* --- Trang chi tiết một phiếu (features/vault/approval-detail-screen.tsx) ---
  * Mục tiêu: 390×844 đọc hết và quyết mà không cuộn. Khối gọn, chữ lý do 16px (thứ phải đọc
@@ -1252,6 +1307,94 @@ table.access-grid thead .access-row-head {
   overflow-wrap: anywhere;
   user-select: all;
 }
+/* Tô theo lớp ký tự để gõ tay không nhầm l/1, O/0: số và ký hiệu mang màu riêng, chữ HOA đậm. */
+.ch-digit { color: var(--primary-ink); }
+.ch-symbol { color: var(--warm-ink); }
+.ch-upper { font-weight: var(--fw-bold); }
+/* Chế độ "từng ký tự": ô đánh số, đọc từng ô khi gõ sang console. */
+.secret-chars {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(2.6rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.secret-chars li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--space-2) 0;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  font-size: 1.15rem;
+}
+.secret-char-no {
+  font-size: var(--fs-2xs);
+  color: var(--ink-3);
+}
+.reveal-username { margin: 0; }
+/* Thanh mỏng "còn hiện bao lâu" — màu theo cùng `countdownTone` với con số. */
+.reveal-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-2);
+  overflow: hidden;
+}
+.reveal-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--ok);
+  transition: width 0.25s linear;
+}
+.reveal-progress > span.warn { background: var(--warn); }
+.reveal-progress > span.urgent { background: var(--danger); }
+/* Ô giá trị của két + nút Hiện/Ẩn + Tạo ngẫu nhiên trên một hàng. */
+.secret-input {
+  display: flex;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+.secret-input .inp {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+/*
+ * Khung Két trên điện thoại: mỗi ngăn là một thẻ gọn hai dòng (tên gọi + loại / tên đăng nhập
+ * + tuổi giá trị) với nút Xem 44px bên phải — không phải sáu hàng nhãn–giá trị với nút nhỏ ở
+ * hàng cuối. Không sọc zebra: ngăn thứ hai nền xám trông như bị vô hiệu.
+ */
+@media (max-width: 600px) {
+  table.table-stack.vault-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: var(--space-4);
+    align-items: center;
+  }
+  table.table-stack.vault-table td {
+    display: block;
+    padding: var(--space-1) var(--space-5);
+  }
+  table.table-stack.vault-table td::before {
+    display: none;
+  }
+  table.table-stack.vault-table td .cell-sub {
+    text-align: left;
+  }
+  table.table-stack.vault-table td:last-child {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+  table.table-stack.vault-table tbody tr:nth-child(even) td {
+    background: transparent;
+  }
+  .vault-table .vault-reveal {
+    min-height: 44px;
+    min-width: 44px;
+    justify-content: center;
+  }
+}
 
 /* --- Port map (features/devices/port-map-panel.tsx) ----------------------- */
 .port-map {
@@ -1279,7 +1422,16 @@ table.access-grid thead .access-row-head {
 
 /* Màn nhỏ (UX-DR2 — mọi màn ĐỌC phải dùng được ở 390px) */
 @media (max-width: 480px) {
-  .toast-stack { right: var(--space-5); left: var(--space-5); bottom: var(--space-5); max-width: none; }
+  .toast-stack {
+    right: var(--space-5);
+    left: var(--space-5);
+    bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
+    max-width: none;
+  }
+  /* Màn có thanh quyết định dính đáy (phiếu duyệt): toast nổi LÊN TRÊN thanh, không đè nút. */
+  body:has(.sticky-action-bar) .toast-stack {
+    bottom: calc(var(--space-5) + 7rem + env(safe-area-inset-bottom));
+  }
   .pager { flex-wrap: wrap; gap: var(--space-4); }
   .pager-info { width: 100%; }
   /* 390px: "Trang x/y" đã nói đủ vị trí; dãy số nhường chỗ cho ‹ › và ô "Tới trang". */
