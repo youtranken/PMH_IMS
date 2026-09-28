@@ -125,6 +125,31 @@ table.table tbody tr.row-highlight td:first-child {
   font-size: var(--fs-xs);
 }
 
+/* Ô tick phụ trong hộp xác nhận (ui/confirm-dialog.tsx). KHÔNG dùng `.field-inline`: nó
+   `nowrap`, và câu hệ quả dài bị cắt ra ngoài mép hộp. Ô tick bám dòng đầu của nhãn. */
+.confirm-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  font-weight: 600;
+  white-space: normal;
+  cursor: pointer;
+}
+.confirm-check input[type='checkbox'] {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+}
+/* Câu hệ quả: dòng riêng, thụt thẳng hàng với chữ của nhãn (20px ô tick + khoảng cách). */
+.confirm-check-hint {
+  margin: var(--space-1) 0 0 calc(20px + var(--space-3));
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  white-space: normal;
+}
+
 /* Bảng gom nhóm license (/phan-mem): cột số căn phải + hàng click sang chi tiết. */
 /*
  * Bảng nhiều cột KHÔNG được bóp cho vừa khung hẹp (16/09/2026).

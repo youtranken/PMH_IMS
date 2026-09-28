@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Dialog, DialogTitle, DialogDescription, DialogClose } from '@/ui/dialog';
 
@@ -41,6 +42,7 @@ export function ConfirmDialog({
   onCancel: () => void;
 }) {
   const { t } = useTranslation();
+  const hintId = useId();
   return (
     <Dialog
       open
@@ -68,27 +70,28 @@ export function ConfirmDialog({
       <div className="sheet-body">
         {error && <p role="alert" className="alert error">{error}</p>}
         <DialogDescription style={{ margin: 0 }}>{message}</DialogDescription>
-        {/* `--space-3`, KHÔNG phải `--sp-3`: tiền tố `--sp-` không tồn tại ở `tokens.css`, nên
-            khoảng cách này trước đây rơi về 0 mà CSS vẫn hợp lệ — không lỗi, không cảnh báo,
-            chỉ là ô tick dính vào câu hỏi ngay trên. */}
         {checkbox && (
-          <label className="field-inline" style={{ marginTop: 'var(--space-3)' }}>
-            <input
-              type="checkbox"
-              checked={checked}
-              disabled={busy}
-              onChange={(e) => onCheckedChange?.(e.target.checked)}
-            />
-            <span>
-              {checkbox.label}
-              {checkbox.hint && (
-                <>
-                  {' '}
-                  <small>{checkbox.hint}</small>
-                </>
-              )}
-            </span>
-          </label>
+          <>
+            {/* Nhãn và câu hệ quả ĐƯỢC xuống dòng: câu hệ quả ("không hoàn tác được") là
+                câu quan trọng nhất hộp này, cắt nó ra ngoài mép hộp là mất đúng thứ phải đọc.
+                Câu hệ quả nằm NGOÀI `<label>` để tên ô tick vẫn gọn; trình đọc màn hình đọc
+                nó qua `aria-describedby`. */}
+            <label className="confirm-check">
+              <input
+                type="checkbox"
+                checked={checked}
+                disabled={busy}
+                aria-describedby={checkbox.hint ? hintId : undefined}
+                onChange={(e) => onCheckedChange?.(e.target.checked)}
+              />
+              <span>{checkbox.label}</span>
+            </label>
+            {checkbox.hint && (
+              <p id={hintId} className="confirm-check-hint">
+                {checkbox.hint}
+              </p>
+            )}
+          </>
         )}
       </div>
       {/*
