@@ -109,6 +109,11 @@ table.table tbody tr.row-highlight td {
 table.table tbody tr.row-highlight td:first-child {
   box-shadow: inset 3px 0 0 var(--primary);
 }
+/* Dữ liệu của một dòng đã gỡ (rule NAT…): còn đọc được nhưng gạch ngang. Huy hiệu ngay cạnh
+   nói bằng chữ "Đã gỡ …", nên gạch ngang chỉ là tín hiệu phụ, không phải tín hiệu duy nhất. */
+.table .strike {
+  text-decoration: line-through;
+}
 .table-actions {
   white-space: nowrap;
   text-align: right;

@@ -213,12 +213,18 @@ test.describe('M2 — ghi song song trên cùng bản ghi', () => {
     expect(subnet.status()).toBe(201);
     const subnetId = ((await subnet.json()) as { id: string }).id;
 
+    // Hồ sơ phải có chủ (Q-14): dựng hồ sơ Trống bằng cấp rồi thu hồi.
     const address = await page.request.post('/api/v1/ipam/addresses', {
       headers: await writeHeaders(page),
-      data: { subnetId, address: `172.31.${octet}.1` },
+      data: { subnetId, address: `172.31.${octet}.1`, usedBy: 'Chu cu' },
     });
     expect(address.status()).toBe(201);
     const ipId = ((await address.json()) as { id: string }).id;
+    const freed = await page.request.post(`/api/v1/ipam/addresses/${ipId}/transition`, {
+      headers: await writeHeaders(page),
+      data: { to: 'free' },
+    });
+    expect(freed.status()).toBeLessThan(300);
 
     const headers = await writeHeaders(page);
     const responses = await Promise.all(

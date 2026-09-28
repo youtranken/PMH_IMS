@@ -65,6 +65,7 @@ export interface CatalogInput {
   description?: string | null;
   uHeight?: number | null;
   hasPortMap?: boolean;
+  isRouter?: boolean;
   supplies?: string | null;
   phone?: string | null;
   contact?: string | null;
@@ -537,6 +538,7 @@ export class CatalogService {
         return {
           ...(input.name !== undefined ? { name: requireText(input.name, 'Tên loại') } : {}),
           ...(input.hasPortMap !== undefined ? { hasPortMap: input.hasPortMap } : {}),
+          ...(input.isRouter !== undefined ? { isRouter: input.isRouter } : {}),
           ...(input.description !== undefined ? { description: text(input.description) } : {}),
         };
       case 'vendor':
@@ -637,7 +639,7 @@ export class CatalogService {
 export const CATALOG_SORT_KEYS = {
   site: ['code', 'name', 'address', 'active'],
   cabinet: ['code', 'description', 'uHeight', 'active'],
-  device_type: ['name', 'hasPortMap', 'description', 'active'],
+  device_type: ['name', 'hasPortMap', 'isRouter', 'description', 'active'],
   vendor: ['name', 'supplies', 'phone', 'contact', 'active'],
   department: ['name', 'description', 'active'],
   isp_provider: ['name', 'hotline', 'contact', 'active'],
@@ -736,6 +738,7 @@ function deviceTypeOrderBy(sort: SortQuery<string>): SQL[] {
   const column = {
     name: deviceTypeTable.name,
     hasPortMap: deviceTypeTable.hasPortMap,
+    isRouter: deviceTypeTable.isRouter,
     description: deviceTypeTable.description,
     active: deviceTypeTable.active,
   }[sort.key as (typeof CATALOG_SORT_KEYS)['device_type'][number]];

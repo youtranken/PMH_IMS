@@ -48,6 +48,7 @@ class CatalogBodyDto {
   @IsOptional() @IsString() @Length(0, 400) description?: string;
   @IsOptional() @Min(1) @Max(60) @IsInt() uHeight?: number;
   @IsOptional() @IsBoolean() hasPortMap?: boolean;
+  @IsOptional() @IsBoolean() isRouter?: boolean;
   @IsOptional() @IsString() @Length(0, 200) supplies?: string;
   @IsOptional() @IsString() @Length(0, 40) phone?: string;
   @IsOptional() @IsString() @Length(0, 200) contact?: string;

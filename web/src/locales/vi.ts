@@ -128,8 +128,12 @@ export default {
   palette: {
     title: 'Tìm nhanh',
     openHint: 'Tìm nhanh (Ctrl+K)',
-    placeholder: 'Tìm thiết bị, phần mềm, đường truyền, tài khoản…',
-    hint: 'Gõ ít nhất 2 ký tự: mã, tên hoặc serial. Tìm xuyên thiết bị · phần mềm · đường truyền · tài khoản dịch vụ, và cả tên màn hình.',
+    placeholder: 'Tìm mã, tên, serial, IP…',
+    hint: 'Gõ ít nhất 2 ký tự: mã, tên, serial, địa chỉ IP, tên dải hoặc VLAN. Tìm xuyên thiết bị · phần mềm · đường truyền · tài khoản dịch vụ · địa chỉ IP · dải mạng, và cả tên màn hình.',
+    groupIp: 'Địa chỉ IP',
+    groupSubnet: 'Dải mạng',
+    ipTitle: 'IP {{address}}',
+    ipSub: '→ {{owner}} · {{subnet}}',
     empty: 'Không có hồ sơ nào khớp "{{q}}".',
     /* Một trong bốn nhóm hỏng thì KHÔNG được nói "không có gì khớp" — người trực sẽ đi khai
        trùng một hồ sơ đã tồn tại. Nói rõ là danh sách đang thiếu, và thiếu nhóm nào. */
@@ -405,6 +409,8 @@ export default {
     uHeight: 'Số U',
     hasPortMap: 'Có port map',
     hasPortMapHint: 'Loại này sẽ hiện bảng port map ở trang chi tiết thiết bị.',
+    isRouter: 'Router/Firewall',
+    isRouterHint: 'Thiết bị loại này được liệt kê trong ô Router của sổ NAT.',
     cabinetSiteRequired: 'Chọn site cho tủ này.',
     uHeightInvalid: 'Số U phải là số nguyên từ 1 đến 60.',
     portInvalid: 'Port phải là số nguyên từ 1 đến 65535.',
@@ -1145,8 +1151,21 @@ export default {
     usedByHint: 'vd "Chị Lan — Kế toán" hoặc "Phòng IT".',
     assignedAt: 'Ngày cấp',
     note: 'Ghi chú',
-    assign: 'Cấp IP này',
-    assignIp: 'Cấp {{address}}',
+    /* Nút trên dòng, tiêu đề hộp và nút gửi cùng một chữ: ô trống và hồ sơ đã thu hồi mở CÙNG
+       một hộp, nên hai chữ khác nhau là nói với người dùng rằng đó là hai việc khác nhau. */
+    assign: 'Cấp IP',
+    assignIp: 'Cấp IP — {{address}}',
+    ownerRequired: 'Chọn thiết bị hoặc nhập người/bộ phận dùng IP này.',
+    paneSearch: 'Lọc trong dải: IP, máy, người dùng, ghi chú…',
+    lookup: 'Tra IP hoặc máy…',
+    lookupButton: 'Tra',
+    lookupHint: 'Gõ một IP để mở đúng dải và dòng của nó; gõ mã/tên máy hoặc người dùng để xem mọi IP liên quan.',
+    lookupNoSubnet: 'Không dải nào đang dùng chứa {{ip}}.',
+    lookupResults: 'IP khớp "{{q}}"',
+    lookupEmpty: 'Không có hồ sơ IP nào khớp "{{q}}".',
+    lookupTooShort: 'Gõ ít nhất 2 ký tự.',
+    lookupFree: 'Trống',
+    assigned: 'Đã cấp {{address}}.',
     editIp: 'Sửa hồ sơ {{address}}',
     ipSaved: 'Đã lưu hồ sơ IP.',
     history: 'Lịch sử',
@@ -1182,6 +1201,9 @@ export default {
     serviceEmpty: 'Chưa có dịch vụ nào khớp. Bấm "+ Thêm dịch vụ" để khai một lần rồi dùng lại mãi.',
     routerHint: 'Router/firewall mang rule này — lấy từ kho thiết bị, chưa có thì thêm ngay trong danh sách.',
     routerSearch: 'Chọn hoặc gõ để lọc…',
+    routerShowAll: 'Hiện mọi thiết bị (không chỉ loại Router/Firewall)',
+    routerNoType:
+      'Chưa loại thiết bị nào được đánh dấu Router/Firewall nên đang hiện mọi thiết bị. Bật cờ ở Danh mục → Loại thiết bị.',
     protocol: 'Giao thức',
     /*
      * `nat.protocolBoth` ĐÃ GỠ (23/09) — nó là bản thứ hai của `catalog.protocolBoth`, và hai
@@ -1242,7 +1264,15 @@ export default {
     remove: 'Gỡ',
     removeTitle: 'Gỡ rule {{ports}}',
     removeHint:
-      'Rule không bị xóa khỏi hệ thống — chỉ gỡ khỏi sổ đang dùng và vẫn tra cứu được. "Port này đóng ngày nào, ai đóng" sẽ có người hỏi.',
+      'Rule không bị xóa khỏi hệ thống — chỉ gỡ khỏi sổ đang dùng. Bật chip "Đã gỡ" trên sổ NAT là xem lại được, kèm ngày gỡ, người gỡ và lý do: "port này đóng ngày nào, ai đóng" sẽ có người hỏi.',
+    bucketGroup: 'Lọc theo trạng thái rule',
+    bucketOpen: 'Đang mở',
+    bucketVoided: 'Đã gỡ',
+    voidedBadge: 'Đã gỡ {{date}} · bởi {{by}} · {{reason}}',
+    history: 'Lịch sử',
+    historyOf: 'Lịch sử rule {{ports}}',
+    emptyFiltered: 'Không có rule nào ở trạng thái đang chọn.',
+    emptyFilteredHint: 'Bật thêm chip "Đang mở", "Đã tắt" hoặc "Đã gỡ" để xem.',
     removeReason: 'Lý do gỡ',
     removeReasonPlaceholder: 'vd: dịch vụ đã ngừng',
   },
@@ -1279,7 +1309,10 @@ export default {
     statusActive: 'Đang dùng',
     /* Cùng chữ với `accounts.statusDisabled` và `disposal.statusDisabled` — ba màn, một trạng thái. */
     statusDisabled: 'Đã vô hiệu hóa',
-    statusHint: 'Đổi bằng nút Vô hiệu hóa / Bật lại ngoài danh sách — hai đường đó bắt ghi lý do.',
+    statusHint:
+      'Đổi bằng "Vô hiệu hóa…" / "Bật lại…" trong menu ⋯ ở đầu trang hồ sơ (hoặc ngoài danh sách) — đường đó bắt ghi lý do.',
+    disableMenu: 'Vô hiệu hóa…',
+    enableMenu: 'Bật lại…',
     copyLogin: 'Chép tên đăng nhập',
     codeAutoHint: 'Để trống thì hệ thống tự đặt theo tên đăng nhập.',
     codeAutoPlaceholder: 'tự đặt theo tên đăng nhập',

@@ -8,6 +8,7 @@ import { PATHS } from '@/lib/routes';
 import { visibleGroups } from '@/shell/app-nav';
 import { isAnyDialogOpen, useAnyDialogOpen } from '@/ui/dialog';
 import { foldSearch } from '@/lib/search-fold';
+import { looksLikeIp, parseIpv4, subnetOf } from '@/lib/ipv4';
 
 /**
  * Tìm nhanh ⌘K — đường ngắn nhất từ "tôi nhớ mang máng cái mã" tới đúng hồ sơ.
@@ -35,7 +36,7 @@ interface Hit {
   icon: IconKey;
 }
 
-type IconKey = 'device' | 'software' | 'isp' | 'account' | 'nav';
+type IconKey = 'device' | 'software' | 'isp' | 'account' | 'ip' | 'subnet' | 'nav';
 
 const ICON: Record<IconKey, ReactNode> = {
   device: (
@@ -62,8 +63,52 @@ const ICON: Record<IconKey, ReactNode> = {
       <path d="M12 12h9M18 12v4" />
     </>
   ),
+  ip: (
+    <>
+      <rect x="3" y="7" width="18" height="10" rx="2" />
+      <path d="M7 11v2M10 11v2M14 11h3" />
+    </>
+  ),
+  subnet: (
+    <>
+      <rect x="9" y="3" width="6" height="5" rx="1" />
+      <rect x="3" y="16" width="6" height="5" rx="1" />
+      <rect x="15" y="16" width="6" height="5" rx="1" />
+      <path d="M12 8v4M6 16v-4h12v4" />
+    </>
+  ),
   nav: <path d="M4 7h16M4 12h16M4 17h10" />,
 };
+
+/** Một hồ sơ IP khớp — `GET ipam/addresses?search=` trả kèm dải chứa nó. */
+interface IpHit {
+  id: string;
+  subnetId: string;
+  address: string;
+  deviceCode: string | null;
+  usedBy: string | null;
+  subnetName: string;
+  subnetCidr: string;
+}
+
+interface SubnetHit {
+  id: string;
+  name: string;
+  cidr: string;
+  vlan: number | null;
+  voidedAt: string | null;
+}
+
+/** Nhận "vlan 20", "VLAN20" hay chỉ "20" — ở PMH người ta gọi dải theo VLAN. */
+function vlanOf(q: string): number | null {
+  const match = /^(?:vlan\s*)?(\d{1,4})$/i.exec(q.trim());
+  return match ? Number(match[1]) : null;
+}
+
+/** Hai endpoint IPAM trả thẳng mảng; bảo hiểm cho một phản hồi lạ để hộp không vỡ cả khối. */
+function asArray<T>(value: unknown): T[] {
+  return Array.isArray(value) ? (value as T[]) : [];
+}
 
 /** Bảng phân trang chung của API: `{ items, total }`. Dải IP thì trả thẳng mảng. */
 interface Page<T> {
@@ -211,6 +256,85 @@ export function CommandPalette({ me }: { me: Me }) {
     enabled,
   });
 
+  /*
+   * Địa chỉ IP: "10.77.30.5 là máy nào" — hỏi xuyên mọi dải. Dải mạng: danh sách nhỏ (vài chục
+   * dải), tải một lần rồi lọc tại chỗ theo tên / VLAN / CIDR, và để tra dải chứa một IP còn
+   * trống (chưa có hồ sơ nên endpoint IP không trả gì).
+   */
+  const ipAddresses = useQuery({
+    queryKey: ['palette', 'ip', q],
+    queryFn: () =>
+      apiFetch<IpHit[]>(`/api/v1/ipam/addresses?limit=5&search=${encodeURIComponent(q)}`),
+    enabled,
+  });
+  const subnets = useQuery({
+    queryKey: ['palette', 'subnets'],
+    queryFn: () => apiFetch<SubnetHit[]>('/api/v1/ipam/subnets'),
+    enabled,
+    staleTime: 60_000,
+  });
+  const ipFirst = looksLikeIp(q);
+
+  const ipHits = useMemo<Hit[]>(() => {
+    if (!enabled) return [];
+    const group = t('palette.groupIp');
+    const found = asArray<IpHit>(ipAddresses.data).map((row) => ({
+      group,
+      title: t('palette.ipTitle', { address: row.address }),
+      sub: t('palette.ipSub', {
+        owner: row.deviceCode ?? row.usedBy ?? t('ipam.statusFree'),
+        subnet: `${row.subnetName} (${row.subnetCidr})`,
+      }),
+      to: PATHS.subnetAt(row.subnetId, row.address),
+      icon: 'ip' as const,
+    }));
+    // IP đủ bốn khúc mà chưa có hồ sơ: vẫn chỉ ra dải chứa nó — đó là chỗ để cấp.
+    if (found.length === 0 && parseIpv4(q) !== null) {
+      const live = asArray<SubnetHit>(subnets.data).filter((s) => s.voidedAt === null);
+      const home = subnetOf(q, live);
+      if (home) {
+        found.push({
+          group,
+          title: t('palette.ipTitle', { address: q }),
+          sub: t('palette.ipSub', {
+            owner: t('ipam.statusFree'),
+            subnet: `${home.name} (${home.cidr})`,
+          }),
+          to: PATHS.subnetAt(home.id, q),
+          icon: 'ip' as const,
+        });
+      }
+    }
+    return found;
+  }, [enabled, ipAddresses.data, subnets.data, q, t]);
+
+  const subnetHits = useMemo<Hit[]>(() => {
+    if (!enabled) return [];
+    const needle = foldSearch(q);
+    const vlan = vlanOf(q);
+    const ip = parseIpv4(q) !== null ? q : null;
+    const cidrPrefix = q.replace(/\/.*$/, '');
+    return asArray<SubnetHit>(subnets.data)
+      .filter((s) => s.voidedAt === null)
+      .filter(
+        (s) =>
+          foldSearch(s.name).includes(needle) ||
+          (vlan !== null && s.vlan === vlan) ||
+          (ipFirst && s.cidr.startsWith(cidrPrefix)) ||
+          (ip !== null && subnetOf(ip, [s]) !== null),
+      )
+      .slice(0, 4)
+      .map((s) => ({
+        group: t('palette.groupSubnet'),
+        title: s.cidr,
+        sub: [s.name, s.vlan !== null ? t('ipam.vlanBadge', { vlan: s.vlan }) : null]
+          .filter(Boolean)
+          .join(' · '),
+        to: PATHS.subnet(s.id),
+        icon: 'subnet' as const,
+      }));
+  }, [enabled, subnets.data, q, ipFirst, t]);
+
   /** Màn hình cũng tìm được — gõ "nat" là nhảy thẳng sang Sổ NAT, khỏi rê chuột xuống sidebar. */
   const navHits = useMemo<Hit[]>(() => {
     if (q.length < 2) return [];
@@ -232,7 +356,10 @@ export function CommandPalette({ me }: { me: Me }) {
 
   const hits = useMemo<Hit[]>(() => {
     if (!enabled) return [];
+    // Câu gõ có dáng IP/CIDR thì người hỏi đang tra mạng: IP và dải lên đầu.
+    const network = [...ipHits, ...subnetHits];
     return [
+      ...(ipFirst ? network : []),
       ...(devices.data?.items ?? []).map((row) => ({
         group: t('nav.devices'),
         title: row.code,
@@ -261,9 +388,21 @@ export function CommandPalette({ me }: { me: Me }) {
         to: PATHS.serviceAccount(row.id),
         icon: 'account' as const,
       })),
+      ...(ipFirst ? [] : network),
       ...navHits,
     ];
-  }, [enabled, devices.data, software.data, isp.data, accounts.data, navHits, t]);
+  }, [
+    enabled,
+    devices.data,
+    software.data,
+    isp.data,
+    accounts.data,
+    ipHits,
+    subnetHits,
+    ipFirst,
+    navHits,
+    t,
+  ]);
 
   /* Đổi từ khoá = bỏ neo. Giữ neo lại thì effect khôi phục bên dưới sẽ kéo con trỏ về dòng của
      từ khoá CŨ ngay khi kết quả mới về — người dùng gõ từ mới mà con trỏ đứng ở dòng 8. */
@@ -364,10 +503,17 @@ export function CommandPalette({ me }: { me: Me }) {
     devices.isError ? t('nav.devices') : null,
     software.isError ? t('nav.software') : null,
     accounts.isError ? t('nav.serviceAccounts') : null,
+    ipAddresses.isError ? t('palette.groupIp') : null,
+    subnets.isError ? t('palette.groupSubnet') : null,
   ].filter((name): name is string => name !== null);
   const loading =
     enabled &&
-    (devices.isFetching || software.isFetching || isp.isFetching || accounts.isFetching);
+    (devices.isFetching ||
+      software.isFetching ||
+      isp.isFetching ||
+      accounts.isFetching ||
+      ipAddresses.isFetching ||
+      subnets.isFetching);
   /*
    * Gom `hits` thành từng nhóm LIỀN NHAU để mỗi nhóm thành một `role="group"` thật.
    *

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
-import { orDash } from '@/lib/format';
+import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { Combobox } from '@/ui/combobox';
 import { Dialog } from '@/ui/dialog';
@@ -27,6 +27,15 @@ import { checkInternalIp } from './nat-internal-ip';
 import { STATUS_KEY, type IpStatus } from './ipam-types';
 import { chipsFromValue, parsePortChip, type PortChip } from './port-chips';
 import { PortChipsField } from './port-chips-field';
+import {
+  countNat,
+  filterNat,
+  NAT_BUCKET_KEY,
+  NAT_BUCKETS,
+  NAT_DEFAULT_SHOWN,
+  natBucket,
+  type NatBucket,
+} from './nat-buckets';
 import { PATHS } from '@/lib/routes';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
 import { textRule, useFormErrors } from '@/ui/use-form-errors';
@@ -52,12 +61,17 @@ interface NatRow {
   reason: string;
   enabled: boolean;
   note: string | null;
+  /** Rule đã gỡ — màn luôn xin `includeVoided=true` để chip "Đã gỡ" có số thật. */
+  voidedAt: string | null;
+  voidedBy: string | null;
+  voidReason: string | null;
 }
 
 interface DeviceOption {
   id: string;
   code: string;
   name: string;
+  siteCode?: string | null;
 }
 
 /**
@@ -75,6 +89,8 @@ export function NatScreen({ me }: { me: Me }) {
   const [siteId, setSiteId] = useState('');
   const [editing, setEditing] = useState<{ rule: NatRow | null } | null>(null);
   const [hiding, setHiding] = useState<NatRow | null>(null);
+  const [historyOf, setHistoryOf] = useState<NatRow | null>(null);
+  const [shown, setShown] = useState<Record<NatBucket, boolean>>(NAT_DEFAULT_SHOWN);
 
   const canHide = me.role === 'sa' || me.role === 'admin';
 
@@ -84,13 +100,22 @@ export function NatScreen({ me }: { me: Me }) {
   if (search.trim()) query.set('search', search.trim());
   if (siteId) query.set('siteId', siteId);
 
+  // Xin luôn cả rule đã gỡ: chip "Đã gỡ" phải mang con số thật ngay cả khi đang tắt.
+  const listQuery = new URLSearchParams(query);
+  listQuery.set('includeVoided', 'true');
+  // Bản xuất đi theo đúng thứ đang bày trên màn: chỉ kèm rule đã gỡ khi chip đó đang bật.
+  const exportQuery = new URLSearchParams(query);
+  if (shown.voided) exportQuery.set('includeVoided', 'true');
+
   const rules = useQuery({
-    queryKey: ['ipam', 'nat', search, siteId],
-    queryFn: () => apiFetch<NatRow[]>(`/api/v1/ipam/nat?${query.toString()}`),
+    queryKey: ['ipam', 'nat', search, siteId, 'withVoided'],
+    queryFn: () => apiFetch<NatRow[]>(`/api/v1/ipam/nat?${listQuery.toString()}`),
   });
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['ipam'] });
-  const rows = rules.data ?? [];
+  const all = rules.data ?? [];
+  const counts = countNat(all);
+  const rows = filterNat(all, shown);
 
   return (
     <>
@@ -100,7 +125,7 @@ export function NatScreen({ me }: { me: Me }) {
         actions={
           <>
             <ExportXlsxButton
-              url={`/api/v1/ipam/nat/export.xlsx?${query.toString()}`}
+              url={`/api/v1/ipam/nat/export.xlsx?${exportQuery.toString()}`}
               fileName="so-nat.xlsx"
             />
             <button type="button" className="btn primary" onClick={() => setEditing({ rule: null })}>
@@ -126,14 +151,31 @@ export function NatScreen({ me }: { me: Me }) {
           ]}
           failed={lists.isError}
         />
+        {/* Ba chip bật/tắt độc lập, không phải chọn-một: "đang mở + đã tắt" là mặc định
+            (mọi thứ còn trong sổ), và auditor hay cần thêm "đã gỡ" chứ không thay cái kia. */}
+        <div className="segmented" role="group" aria-label={t('nat.bucketGroup')}>
+          {NAT_BUCKETS.map((bucket) => (
+            <button
+              key={bucket}
+              type="button"
+              className={shown[bucket] ? 'on' : undefined}
+              aria-pressed={shown[bucket]}
+              onClick={() => setShown((current) => ({ ...current, [bucket]: !current[bucket] }))}
+            >
+              {t(NAT_BUCKET_KEY[bucket])} <span className="seg-count">{counts[bucket]}</span>
+            </button>
+          ))}
+        </div>
       </FilterBar>
 
       {rules.isLoading ? (
         <Loading />
       ) : rules.isError ? (
         <LoadError error={rules.error} onRetry={() => void rules.refetch()} />
-      ) : rows.length === 0 ? (
+      ) : all.length === 0 ? (
         <EmptyState title={t('nat.empty')} hint={t('nat.emptyHint')} />
+      ) : rows.length === 0 ? (
+        <EmptyState title={t('nat.emptyFiltered')} hint={t('nat.emptyFilteredHint')} />
       ) : (
         <div className="table-wrap">
           {/*
@@ -156,16 +198,29 @@ export function NatScreen({ me }: { me: Me }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((rule) => (
-                <tr key={rule.id} className={rule.enabled ? undefined : 'row-muted'}>
+              {rows.map((rule) => {
+                const voided = natBucket(rule) === 'voided';
+                return (
+                <tr key={rule.id} className={rule.enabled && !voided ? undefined : 'row-muted'}>
                   <td data-label={t('nat.router')}>
                     <Link to={PATHS.device(rule.deviceId)}>{orDash(rule.deviceCode)}</Link>
                     <span className="cell-sub">{orDash(rule.siteCode)}</span>
                   </td>
                   <td data-label={t('nat.external')}>
-                    <span className="mono">
+                    <span className={voided ? 'mono strike' : 'mono'}>
                       {rule.protocol.toUpperCase()} {rule.externalPorts}
                     </span>
+                    {/* Rule đã gỡ nói ngay trên dòng: lúc nào, ai, vì sao — đúng câu hộp Gỡ
+                        hứa là "vẫn tra cứu được". */}
+                    {voided ? (
+                      <span className="badge muted" title={rule.voidReason ?? undefined}>
+                        {t('nat.voidedBadge', {
+                          date: formatDate(rule.voidedAt),
+                          by: rule.voidedBy ?? '—',
+                          reason: rule.voidReason ?? '—',
+                        })}
+                      </span>
+                    ) : null}
                     {/*
                       "Đã tắt" là một HUY HIỆU, không phải dòng chữ phụ (17/09/2026).
                       Nó là trạng thái của CẢ rule, và là thứ auditor soi kỹ nhất: một cổng còn
@@ -173,12 +228,12 @@ export function NatScreen({ me }: { me: Me }) {
                       của dòng-phụ-mã-site ở cột bên cạnh, tức trông như một mẩu dữ liệu của
                       cột port, lại còn bị cả dòng phủ một lớp mờ lên.
                     */}
-                    {!rule.enabled ? (
+                    {!rule.enabled && !voided ? (
                       <span className="badge muted">{t('nat.disabled')}</span>
                     ) : null}
                   </td>
                   <td data-label={t('nat.internal')}>
-                    <span className="mono">
+                    <span className={voided ? 'mono strike' : 'mono'}>
                       {rule.internalIp}:{rule.internalPort}
                     </span>
                     {/* MÁY ĐÍCH ngay trên bảng: "dẫn tới 172.16.10.5" mà không nói đó là máy
@@ -214,12 +269,22 @@ export function NatScreen({ me }: { me: Me }) {
                           subject: `${rule.protocol.toUpperCase()} ${rule.externalPorts}`,
                         })}
                         items={[
+                          // Rule đã gỡ chỉ còn để TRA: sửa hay gỡ tiếp đều bị API từ chối.
+                          ...(voided
+                            ? []
+                            : [
+                                {
+                                  key: 'edit',
+                                  label: t('common.edit'),
+                                  onSelect: () => setEditing({ rule }),
+                                },
+                              ]),
                           {
-                            key: 'edit',
-                            label: t('common.edit'),
-                            onSelect: () => setEditing({ rule }),
+                            key: 'history',
+                            label: t('nat.history'),
+                            onSelect: () => setHistoryOf(rule),
                           },
-                          ...(canHide
+                          ...(canHide && !voided
                             ? [
                                 {
                                   key: 'remove',
@@ -234,7 +299,8 @@ export function NatScreen({ me }: { me: Me }) {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -268,6 +334,24 @@ export function NatScreen({ me }: { me: Me }) {
             void refresh();
           }}
         />
+      ) : null}
+
+      {historyOf ? (
+        <Dialog
+          open
+          onOpenChange={() => setHistoryOf(null)}
+          maxWidth={620}
+          title={t('nat.historyOf', {
+            ports: `${historyOf.protocol.toUpperCase()} ${historyOf.externalPorts}`,
+          })}
+          footer={
+            <button type="button" className="btn" onClick={() => setHistoryOf(null)}>
+              {t('common.close')}
+            </button>
+          }
+        >
+          <NatHistory ruleId={historyOf.id} />
+        </Dialog>
       ) : null}
 
       {hiding ? (
@@ -351,6 +435,21 @@ function NatForm({
   const lists = useCatalogLists();
 
   /**
+   * NET-041 (Q-14): ô Router chỉ liệt kê thiết bị thuộc loại mang cờ "Router/Firewall" — bản
+   * cũ bày mọi thiết bị, mục đầu là camera, và chọn nhầm camera làm router là dữ liệu sai mà
+   * không ai phát hiện. Tính cả loại đã ngừng dùng: một con router cũ vẫn là router.
+   *
+   * Chưa loại nào mang cờ (danh mục chưa khai) thì bày mọi thiết bị như trước, kèm lời nhắc —
+   * một ô Router rỗng trơn là người dùng kết luận kho không có router nào.
+   */
+  const routerTypeIds = useMemo(
+    () => (lists.data?.deviceTypes ?? []).filter((type) => type.isRouter).map((type) => type.id),
+    [lists.data],
+  );
+  const [allDevices, setAllDevices] = useState(false);
+  const routersOnly = !allDevices && routerTypeIds.length > 0;
+
+  /**
    * KHÔNG còn `enabled: deviceTerm.length > 0`.
    *
    * Bản cũ chỉ hỏi khi đã gõ, nên ô Router mở ra là một ô trắng với dòng nhắc "Gõ mã hoặc
@@ -359,12 +458,30 @@ function NatForm({
    * và bấm "Thêm router mới" ở đầu menu.
    */
   const devices = useQuery({
-    queryKey: ['devices', 'picker', deviceTerm],
-    queryFn: () => {
+    queryKey: ['devices', 'picker', deviceTerm, routersOnly ? routerTypeIds.join(',') : 'all'],
+    // Chờ danh mục: bắn trước khi biết loại nào là router thì ô mở ra với mọi thiết bị rồi
+    // mới co lại — đúng cảnh camera đứng đầu danh sách mà mục này dọn.
+    enabled: !lists.isPending,
+    queryFn: async () => {
       // `usable=true`: máy đã thanh lý không dựng được rule NAT (API chặn), nên không bày ra.
       const params = new URLSearchParams({ limit: '20', usable: 'true' });
       if (deviceTerm.trim()) params.set('search', deviceTerm.trim());
-      return apiFetch<{ items: DeviceOption[] }>(`/api/v1/devices?${params.toString()}`);
+      if (!routersOnly) {
+        return apiFetch<{ items: DeviceOption[] }>(`/api/v1/devices?${params.toString()}`);
+      }
+      // API lọc theo MỘT loại mỗi lượt; loại router chỉ một hai cái nên hỏi song song rồi gộp.
+      const pages = await Promise.all(
+        routerTypeIds.map((typeId) => {
+          const byType = new URLSearchParams(params);
+          byType.set('deviceTypeId', typeId);
+          return apiFetch<{ items: DeviceOption[] }>(`/api/v1/devices?${byType.toString()}`);
+        }),
+      );
+      const items = pages
+        .flatMap((page) => page.items)
+        .sort((a, b) => a.code.localeCompare(b.code))
+        .slice(0, 20);
+      return { items };
     },
   });
 
@@ -576,9 +693,17 @@ function NatForm({
             required
             hint={t('nat.routerHint')}
             span={2}
+            htmlFor="nat-router"
             error={check.error('deviceId')}
           >
+            {/* Field chỉ tự nối id/mô tả/lỗi khi nó có ĐÚNG MỘT đứa con — ở đây có thêm ô tick
+                "Hiện mọi thiết bị", nên nối tay theo đúng quy ước id của Field. */}
             <Combobox
+              id="nat-router"
+              aria-describedby={
+                check.error('deviceId') ? 'nat-router-error nat-router-hint' : 'nat-router-hint'
+              }
+              aria-invalid={check.error('deviceId') ? true : undefined}
               placeholder={t('nat.routerSearch')}
               ariaLabel={t('nat.router')}
               query={deviceTerm}
@@ -591,7 +716,8 @@ function NatForm({
               getKey={(item) => item.id}
               renderOption={(item) => (
                 <>
-                  <span className="mono">{item.code}</span> <small>{item.name}</small>
+                  <span className="mono">{item.code}</span>{' '}
+                  <small>{[item.name, item.siteCode].filter(Boolean).join(' · ')}</small>
                 </>
               )}
               onSelect={(item) => {
@@ -603,6 +729,18 @@ function NatForm({
                  chuyển màn cho một việc — và form đang dở thì mất trắng. */
               action={{ label: t('nat.addRouter'), onClick: () => setAddingRouter(true) }}
             />
+            {routerTypeIds.length > 0 ? (
+              <label className="row" style={{ gap: 'var(--space-3)' }}>
+                <input
+                  type="checkbox"
+                  checked={allDevices}
+                  onChange={(e) => setAllDevices(e.target.checked)}
+                />
+                <span className="muted">{t('nat.routerShowAll')}</span>
+              </label>
+            ) : lists.data ? (
+              <span className="field-hint muted">{t('nat.routerNoType')}</span>
+            ) : null}
           </Field>
 
           {/* Hai ô port đứng CẠNH nhau: "ngoài 8080 dẫn vào trong 80" là một câu đọc ngang,

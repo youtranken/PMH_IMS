@@ -80,13 +80,13 @@ test.describe('Vòng đời IP', () => {
     await expect(row.getByText('Máy in kế toán')).toHaveCount(0);
 
     const whenFree = await rowActionNames(page, address);
-    expect(whenFree).toContain('Cấp IP');
     expect(whenFree).not.toContain('Thu hồi');
 
-    await rowAction(page, address, 'Cấp IP');
+    // Hồ sơ Trống cấp lại bằng CÙNG nút/hộp "Cấp IP" như một ô trống (NET-002).
+    await row.getByRole('button', { name: 'Cấp IP', exact: true }).click();
     const assign = page.getByRole('dialog');
     await assign.getByRole('combobox', { name: 'Người / bộ phận dùng' }).fill('Anh Hùng — Kho');
-    await assign.getByRole('button', { name: 'Xác nhận' }).click();
+    await assign.getByRole('button', { name: 'Cấp IP', exact: true }).click();
     await expect(row.getByText('Anh Hùng — Kho')).toBeVisible();
     await expect(page.getByText('17% · 1/6 · còn 5')).toBeVisible();
 

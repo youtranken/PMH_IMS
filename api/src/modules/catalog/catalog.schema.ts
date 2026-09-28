@@ -41,6 +41,7 @@ export const deviceTypeTable = pgTable('device_type', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: citext('name').notNull(),
   hasPortMap: boolean('has_port_map').notNull().default(false),
+  isRouter: boolean('is_router').notNull().default(false),
   description: text('description'),
   active: boolean('active').notNull().default(true),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

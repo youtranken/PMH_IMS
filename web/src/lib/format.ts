@@ -32,6 +32,23 @@ export function formatDate(value: string | Date | null | undefined): string {
   return Number.isNaN(date.getTime()) ? '—' : dateFmt.format(date);
 }
 
+// `en-CA` in ra đúng dạng YYYY-MM-DD mà ô ngày và API cùng nhận.
+const isoDayFmt = new Intl.DateTimeFormat('en-CA', {
+  timeZone: TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+/**
+ * "Hôm nay" dạng YYYY-MM-DD theo giờ Việt Nam — giá trị mặc định cho ô ngày.
+ *
+ * Không dùng `toISOString().slice(0, 10)`: từ 00:00 tới 07:00 giờ VN thì UTC còn là hôm qua.
+ */
+export function todayIso(now: Date = new Date()): string {
+  return isoDayFmt.format(now);
+}
+
 const moneyFmt = new Intl.NumberFormat('vi-VN');
 
 /**
