@@ -5,6 +5,7 @@ import {
   E2E_SA,
   firstLogin,
   logout,
+  resetAccessList,
   resetUsers,
   rowAction,
   sql,
@@ -122,5 +123,107 @@ test.describe('Tài khoản — phản hồi, 2 lớp, bước tiếp theo', () 
     await dialog.getByRole('button', { name: 'Gán quyền két sắt' }).click();
     await expect(page).toHaveURL(/\/admin\/vault-access\?user=/);
     await expect(page.getByRole('heading', { name: fullName })).toBeVisible();
+  });
+});
+
+/**
+ * ADM-040 — onboarding: "Sao chép quyền từ…" một đồng nghiệp (chỉ qua API gán sẵn có) và
+ * "Gán thiết bị" mở danh sách thiết bị tìm sẵn theo tên người mới.
+ */
+test.describe('ADM-040 · sao chép quyền két, gán thiết bị theo tên', () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+  test.beforeEach(() => resetAccessList());
+
+  async function firstScope(page: Page): Promise<{ scopeType: string; scopeRef: string; label: string }> {
+    const res = await page.request.get('/api/v1/vault/access/scopes');
+    expect(res.status()).toBe(200);
+    const scopes = (await res.json()) as { scopeType: string; scopeRef: string; label: string }[];
+    expect(scopes.length, 'cần ít nhất một nhóm đối tượng để gán').toBeGreaterThan(0);
+    return scopes[0];
+  }
+
+  async function grant(
+    page: Page,
+    memberEmail: string,
+    scope: { scopeType: string; scopeRef: string },
+    tier: 'whitelist' | 'needs_approval',
+  ): Promise<void> {
+    const res = await page.request.post('/api/v1/vault/access', {
+      headers: await writeHeaders(page),
+      data: { memberEmail, scopeType: scope.scopeType, scopeRef: scope.scopeRef, tier, note: 'E2E' },
+    });
+    expect(res.status(), await res.text()).toBe(201);
+  }
+
+  const tierOf = (email: string, scope: { scopeType: string; scopeRef: string }) =>
+    sql(
+      `SELECT tier FROM access_list WHERE member_email = '${email}' AND scope_type = '${scope.scopeType}' AND scope_ref = '${scope.scopeRef}'`,
+    );
+
+  test('người mới nhận đúng nhóm + tầng của đồng nghiệp', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const scope = await firstScope(page);
+    const source = await taoTaiKhoan(page, false);
+    const target = await taoTaiKhoan(page, false);
+    await grant(page, source.email, scope, 'whitelist');
+
+    await page.goto(`/admin/vault-access?user=${target.id}`);
+    await expect(page.getByRole('heading', { name: target.fullName })).toBeVisible();
+    await page.getByRole('button', { name: 'Sao chép quyền từ…' }).click();
+    const dialog = page.getByRole('dialog', { name: `Sao chép quyền két cho ${target.fullName}` });
+    await dialog.getByRole('button', { name: 'Đồng nghiệp' }).click();
+    await page.getByRole('option', { name: new RegExp(source.fullName) }).click();
+    await expect(dialog.getByText('Sẽ gán 1 nhóm:')).toBeVisible();
+    await expect(dialog.getByText(`${scope.label} · Xem thẳng`)).toBeVisible();
+
+    await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gán quyền' }).click();
+    await confirmAction(page, 'Gán quyền');
+    await expect(page.getByText(`Đã sao chép 1 nhóm từ ${source.fullName}.`)).toBeVisible();
+    await expect(dialog).toHaveCount(0);
+    expect(tierOf(target.email, scope)).toBe('whitelist');
+  });
+
+  test('đường hỏng: nhóm người nhận đã có thì KHÔNG bị ghi đè tầng; hết nhóm thì báo, không ghi', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const scope = await firstScope(page);
+    const source = await taoTaiKhoan(page, false);
+    const target = await taoTaiKhoan(page, false);
+    await grant(page, source.email, scope, 'whitelist');
+    await grant(page, target.email, scope, 'needs_approval');
+
+    await page.goto(`/admin/vault-access?user=${target.id}`);
+    await page.getByRole('button', { name: 'Sao chép quyền từ…' }).click();
+    const dialog = page.getByRole('dialog', { name: `Sao chép quyền két cho ${target.fullName}` });
+    await dialog.getByRole('button', { name: 'Đồng nghiệp' }).click();
+    await page.getByRole('option', { name: new RegExp(source.fullName) }).click();
+    await expect(dialog.getByText('Bỏ qua 1 nhóm người này đã có:')).toBeVisible();
+
+    await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gán quyền' }).click();
+    await expect(dialog.getByRole('alert')).toHaveText(
+      'Không còn nhóm nào để sao chép — người này đã có mọi nhóm của đồng nghiệp.',
+    );
+    expect(tierOf(target.email, scope), 'tầng riêng của người nhận phải giữ nguyên').toBe(
+      'needs_approval',
+    );
+  });
+
+  test('"Gán thiết bị" mở danh sách thiết bị tìm sẵn theo tên người mới', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    await page.goto('/admin/accounts');
+    const stamp = uniqueStamp();
+    const email = `e2e-tao-moi-${stamp}@pmh.com.vn`;
+    const fullName = `E2E Gán máy ${stamp}`;
+    await page.getByRole('button', { name: 'Thêm tài khoản' }).click();
+    await page.getByRole('textbox', { name: 'Họ tên' }).fill(fullName);
+    await page.getByRole('textbox', { name: 'Email' }).fill(email);
+    await page.getByRole('button', { name: 'Lưu' }).click();
+
+    const dialog = page.getByRole('dialog', { name: new RegExp(`Mật khẩu tạm — ${email}`) });
+    await expect(dialog.getByText(new RegExp(`tìm theo "${fullName}"`))).toBeVisible();
+    await dialog.getByRole('button', { name: 'Gán thiết bị' }).click();
+    await expect(page).toHaveURL(/\/devices\?q=/);
+    await expect(page.getByRole('searchbox').first()).toHaveValue(fullName);
   });
 });
