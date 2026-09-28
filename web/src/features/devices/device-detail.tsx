@@ -75,6 +75,8 @@ export function DeviceDetail({ me }: { me: Me }) {
   const [retiring, setRetiring] = useState(false);
   /** Danh sách API trả kèm 409 `DEVICE_HAS_HOLDINGS` — mở lại hộp với đúng những thứ vướng. */
   const [retireBlocked, setRetireBlocked] = useState<string[] | null>(null);
+  /** Đếm lượt bị chặn: mỗi lần 409 là một `key` mới, kể cả lần thứ hai liên tiếp. */
+  const [retireRound, setRetireRound] = useState(0);
   const [retireError, setRetireError] = useState<string | null>(null);
 
   const device = useQuery({
@@ -743,8 +745,10 @@ export function DeviceDetail({ me }: { me: Me }) {
       {retiring ? (
         <RetireDialog
           /* Đổi `key` khi API trả danh sách vướng: hộp dựng lại từ đầu, lựa chọn cũ không
-             còn đứng sẵn — người dùng đọc danh sách mới rồi chọn lại. */
-          key={retireBlocked ? "blocked" : "fresh"}
+             còn đứng sẵn — người dùng đọc danh sách mới rồi chọn lại. Khoá theo LƯỢT chứ
+             không theo "có bị chặn không": lần 409 thứ hai mà `key` vẫn là "blocked" thì React
+             giữ nguyên hộp, lựa chọn cũ đứng sẵn trên danh sách mới. */
+          key={`retire-${retireRound}`}
           code={item.code}
           cut={retireCut}
           keep={retireKeep}
@@ -767,6 +771,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                   if (holdings) {
                     setRetireError(null);
                     setRetireBlocked(holdings);
+                    setRetireRound((round) => round + 1);
                     // Danh sách thứ đang giữ vừa đổi so với lúc mở trang — đọc lại.
                     void queryClient.invalidateQueries({ queryKey: ["devices", id] });
                     return;
