@@ -24,21 +24,32 @@ export function TotpSetup({ data }: { data: TotpSetupData }) {
   const narrow = useIsNarrow();
 
   const qr = (
-    <img
-      className="totp-qr"
-      src={data.qrDataUrl}
-      alt={t('auth.enrollQrAlt')}
-      width={200}
-      height={200}
-    />
+    <div className="totp-qr-frame">
+      <img
+        className="totp-qr"
+        src={data.qrDataUrl}
+        alt={t('auth.enrollQrAlt')}
+        width={200}
+        height={200}
+      />
+    </div>
   );
+  /* 32 ký tự liền một khối thì gõ tay rất dễ lẫn 5/S, 0/O, 2/Z — chia nhóm 4 để dò từng cụm.
+     Nhóm tách bằng khoảng cách CSS, không bằng dấu cách: chuỗi chép ra vẫn nguyên văn. */
+  const groups = data.secret.match(/.{1,4}/g) ?? [data.secret];
   const secretRow = (
-    <div className="totp-secret-row">
-      <span className="totp-note">{narrow ? `${t('auth.secretLabel')}:` : t('auth.enrollManual')}</span>
-      <code className="mono" data-testid="totp-secret">
-        {data.secret}
-      </code>
-      <CopyButton value={data.secret} label={t('auth.copySecret')} />
+    <div>
+      <span className="totp-note totp-secret-label">
+        {narrow ? t('auth.secretLabel') : t('auth.enrollManual')}
+      </span>
+      <div className="totp-secret-box">
+        <code data-testid="totp-secret">
+          {groups.map((group, i) => (
+            <span key={i}>{group}</span>
+          ))}
+        </code>
+        <CopyButton value={data.secret} label={t('auth.copySecret')} />
+      </div>
     </div>
   );
 

@@ -6,6 +6,7 @@ import i18n from '@/lib/i18n';
 import { ME_KEY } from '@/lib/api';
 import { jsonResponse, render, screen, userEvent, waitFor } from '@/test/test-utils';
 import type { Me } from '@/lib/me';
+import { ToastProvider } from '@/ui/toast';
 import { TotpEnroll } from './totp-enroll';
 
 /**
@@ -93,7 +94,9 @@ function renderEnroll() {
       <I18nextProvider i18n={i18n}>
         {/* Card giữa luồng có nút Đăng xuất, và nút đó điều hướng — cần một router. */}
         <MemoryRouter>
-          <TotpEnroll />
+          <ToastProvider>
+            <TotpEnroll />
+          </ToastProvider>
         </MemoryRouter>
       </I18nextProvider>
     </QueryClientProvider>,

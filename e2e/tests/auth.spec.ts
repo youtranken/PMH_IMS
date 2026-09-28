@@ -54,14 +54,13 @@ test.describe('Đăng nhập', () => {
   test('mật khẩu mới yếu bị từ chối, hai ô nhập lệch nhau cũng bị chặn', async ({ page }) => {
     await fillLogin(page, E2E_MEMBER.email, E2E_MEMBER.password);
     const secret = (await page.getByTestId('totp-secret').innerText()).trim();
-    await page.getByLabel('Nhập mã 6 số đầu tiên để xác nhận').fill(await freshTotpCode(secret));
-    await page.getByRole('button', { name: 'Xác nhận' }).click();
+    await page.getByLabel('Mã 6 số đang hiện trong ứng dụng').fill(await freshTotpCode(secret));
 
     await expect(page.getByRole('heading', { name: 'Đổi mật khẩu' })).toBeVisible();
     await page.getByLabel('Mật khẩu hiện tại').fill(E2E_MEMBER.password);
     await page.getByLabel('Mật khẩu mới', { exact: true }).fill('Matkhau12345');
     await page.getByLabel('Nhập lại mật khẩu mới').fill('Matkhau12346');
-    await page.getByRole('button', { name: 'Lưu' }).click();
+    await page.getByRole('button', { name: 'Đổi mật khẩu và tiếp tục' }).click();
     await expect(page.getByRole('alert')).toContainText('không khớp');
   });
 });
@@ -77,6 +76,8 @@ test.describe('Khóa tài khoản', () => {
 
     // Lần thứ 6 (kể cả nhập ĐÚNG mật khẩu) phải báo đang khóa.
     await fillLogin(page, E2E_MEMBER.email, E2E_MEMBER.password);
-    await expect(page.getByRole('alert')).toContainText('đang bị khóa');
+    // Tạm khoá tự động: câu đếm ngược và nút khoá lại tới khi hết giờ (AUTH-007).
+    await expect(page.getByRole('alert')).toContainText('Tạm khóa do đăng nhập sai nhiều lần');
+    await expect(page.getByRole('button', { name: /^Chờ \d+:\d\d$/ })).toBeDisabled();
   });
 });

@@ -133,6 +133,9 @@ button:disabled {
 button.primary {
   color: var(--on-brand);
   background: var(--grad);
+  /* Gradient phải phủ cả dải viền trong suốt: mặc định nó bắt đầu từ mép padding rồi LẶP vào
+     viền, để lại một vệt màu cuối gradient 1px dọc mép trái nút. */
+  background-origin: border-box;
   border-color: transparent;
   box-shadow: 0 8px 18px -8px var(--warm-ink);
 }
@@ -141,6 +144,7 @@ button.primary:hover:not(:disabled) {
      specificity cao hơn base `button.primary` → nếu không, hover đè nền sáng + chữ trắng
      = nút "biến mất" ở theme sáng. */
   background: var(--grad);
+  background-origin: border-box;
   filter: brightness(1.04);
   box-shadow: 0 10px 22px -8px var(--warm-ink);
 }

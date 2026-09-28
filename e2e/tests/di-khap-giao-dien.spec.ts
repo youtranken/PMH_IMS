@@ -1874,7 +1874,7 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
       await expect(
         victimPage.getByRole('alert'),
         'SA đã bấm Khóa thì người đó phải bị chặn NGAY ở cửa đăng nhập, và được nói rõ vì sao',
-      ).toHaveText('Tài khoản đang bị khóa. Liên hệ SA để mở lại.');
+      ).toContainText('Tài khoản đã bị quản trị viên tạm ngưng. Liên hệ Super Admin để mở lại.');
       await expect(
         victimPage.getByRole('heading', { name: 'Cài xác thực 2 lớp' }),
         'không được đi tiếp một bước nào trong luồng đăng nhập',

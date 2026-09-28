@@ -558,14 +558,15 @@ export async function firstLogin(
   const secret = (await page.getByTestId('totp-secret').innerText()).trim();
   expect(secret.length).toBeGreaterThan(15);
 
-  await page.getByLabel('Nhập mã 6 số đầu tiên để xác nhận').fill(await freshTotpCode(secret));
-  await page.getByRole('button', { name: 'Xác nhận' }).click();
+  // Đủ 6 số là màn tự gửi — KHÔNG bấm Xác nhận nữa: lúc nút kịp hiện lại thì trang đã sang
+  // bước đổi mật khẩu, và cú bấm chờ một nút không còn tồn tại.
+  await page.getByLabel('Mã 6 số đang hiện trong ứng dụng').fill(await freshTotpCode(secret));
 
   await expect(page.getByRole('heading', { name: 'Đổi mật khẩu' })).toBeVisible();
   await page.getByLabel('Mật khẩu hiện tại').fill(user.password);
   await page.getByLabel('Mật khẩu mới', { exact: true }).fill(newPassword);
   await page.getByLabel('Nhập lại mật khẩu mới').fill(newPassword);
-  await page.getByRole('button', { name: 'Lưu' }).click();
+  await page.getByRole('button', { name: 'Đổi mật khẩu và tiếp tục' }).click();
 
   await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
   return secret;

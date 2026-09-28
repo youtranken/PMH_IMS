@@ -50,7 +50,7 @@ describe('afterLogout — FE-02: đăng xuất xoá dữ liệu đã tải khỏ
       expect(client.getQueryCache().getAll()).toHaveLength(0);
     });
     afterLogout(client, navigate);
-    expect(navigate).toHaveBeenCalledWith('/login');
+    expect(navigate).toHaveBeenCalledWith('/login', { state: { signedOut: true } });
     expect(client.getQueryCache().getAll()).toHaveLength(0);
   });
 });

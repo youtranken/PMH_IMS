@@ -61,6 +61,29 @@ export function nextStepPath(me: Me | null): string {
   return HOME_PATH;
 }
 
+export type SetupStep = 'totpEnroll' | 'changePassword';
+
+/**
+ * Các bước CÀI ĐẶT còn nợ, theo đúng thứ tự `nextStepPath` dẫn đi. Nhập mã 2 lớp hằng ngày không
+ * tính: đó là một bước đăng nhập, không phải việc làm một lần.
+ */
+export function pendingSetupSteps(me: Me | null): SetupStep[] {
+  if (!me) return [];
+  const steps: SetupStep[] = [];
+  if (me.totpPending && !me.totpEnrolled) steps.push('totpEnroll');
+  if (me.mustChangePassword) steps.push('changePassword');
+  return steps;
+}
+
+/**
+ * "Bước mấy trên mấy". `seenTotal` là số bước lớn nhất đã thấy trong lượt này: xong một bước thì
+ * `me` không còn nhắc tới nó, nên thiếu con số nhớ lại thì màn thứ hai sẽ tự xưng "Bước 1/1".
+ */
+export function setupProgress(remaining: number, seenTotal: number): { current: number; total: number } {
+  const total = Math.max(remaining, seenTotal);
+  return { current: total - remaining + 1, total };
+}
+
 export function isAdminOrAbove(me: Me | null | undefined): boolean {
   return me?.role === 'sa' || me?.role === 'admin';
 }

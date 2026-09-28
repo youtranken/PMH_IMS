@@ -1,8 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorCode, errorMessage, useApiMutation, useMe } from '@/lib/api';
+import { Field } from '@/ui/page-header';
+import { PasswordInput } from '@/ui/password-input';
+import { useToast } from '@/ui/toast';
+import { useFormErrors } from '@/ui/use-form-errors';
+import { useIsNarrow } from '@/ui/use-narrow';
 import { AuthCard } from './auth-card';
-import { OtpInput } from '@/ui/otp-input';
+import { OtpInput, useOtpSubmit } from '@/ui/otp-input';
 import { TotpSetup, type TotpSetupData } from './totp-setup';
 
 type EnrollStart = TotpSetupData;
@@ -30,6 +35,14 @@ export function TotpEnroll() {
   const [password, setPassword] = useState('');
   const [token, setToken] = useState('');
   const [error, setError] = useState<string | null>(null);
+  /* Lỗi của ô mã nằm DƯỚI ô mã: giữa đầu card và ô mã là cả QR lẫn khoá, trên điện thoại lúc bàn
+     phím mở thì hộp lỗi đầu card nằm ngoài màn hình. Đầu card chỉ còn lỗi cấp màn (không tạo
+     được QR, sai mật khẩu ở bước hỏi lại). */
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [missing, setMissing] = useState<number | null>(null);
+  const codeRef = useRef<HTMLInputElement>(null);
+  const toast = useToast();
+  const narrow = useIsNarrow();
 
   const start = useApiMutation<{ currentPassword?: string }, EnrollStart>(
     '/api/v1/auth/totp/enroll',
@@ -59,6 +72,21 @@ export function TotpEnroll() {
     );
   }, [me?.csrfToken, enroll, needPassword, startMutate, t]);
 
+  const reauthCheck = useFormErrors({ password: !password && t('formErrors.required') });
+
+  const submitCode = useOtpSubmit(async (code) => {
+    setCodeError(null);
+    try {
+      await confirm.mutateAsync({ token: code });
+      // Toast sống ngoài router: vẫn hiện sau khi `me` nạp lại và router chuyển sang bước kế.
+      toast({ message: t('auth.enrollDone'), tone: 'ok', durationMs: 8000 });
+    } catch (err) {
+      setToken('');
+      setCodeError(errorMessage(err, t('auth.totpInvalid')));
+      codeRef.current?.focus();
+    }
+  });
+
   if (needPassword && !enroll) {
     return (
       <AuthCard
@@ -66,18 +94,24 @@ export function TotpEnroll() {
         subtitle={t('auth.enrollReauthSub')}
         error={error}
         signedInAs={me}
+        setupFor={me}
       >
         <form
           className="auth-form"
+          ref={reauthCheck.formRef}
+          noValidate
           onSubmit={(e) => {
             e.preventDefault();
             setError(null);
+            if (!reauthCheck.check()) return;
             start.mutate(
               { currentPassword: password },
               {
                 onSuccess: setEnroll,
                 onError: (err) => {
                   setPassword('');
+                  // Ô vừa bị xoá có chủ đích — đừng để luật "bắt buộc" mắng thêm một câu đỏ.
+                  reauthCheck.reset();
                   setError(
                     errorMessage(err, t('auth.currentPasswordWrong'), (left) =>
                       t('auth.attemptsLeft', { count: left }),
@@ -88,25 +122,20 @@ export function TotpEnroll() {
             );
           }}
         >
-          <div className="field">
-            <label className="lbl-t" htmlFor="enroll-current">
-              {t('auth.currentPassword')}
-            </label>
-            <input
-              id="enroll-current"
-              className="inp"
-              type="password"
+          <Field
+            label={t('auth.currentPassword')}
+            htmlFor="enroll-current"
+            error={reauthCheck.error('password')}
+          >
+            <PasswordInput
               autoComplete="current-password"
               required
+              autoFocus
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-          </div>
-          <button
-            type="submit"
-            className="btn primary"
-            disabled={start.isPending || password.length === 0}
-          >
+          </Field>
+          <button type="submit" className="btn primary" disabled={start.isPending}>
             {t('auth.enrollReauthSubmit')}
           </button>
         </form>
@@ -120,33 +149,49 @@ export function TotpEnroll() {
       subtitle={t('auth.enrollSub')}
       error={error}
       signedInAs={me}
+      setupFor={me}
+      footer={<p>{t('auth.enrollLostPhone')}</p>}
     >
       {enroll ? (
         <>
+          {/* Ba bước đánh số: người chưa từng dùng ứng dụng xác thực không biết phải cài app
+              trước, và không biết mã đổi mỗi 30 giây. */}
+          <ol className="totp-steps">
+            <li>{t('auth.enrollStep1')}</li>
+            <li>{t(narrow ? 'auth.enrollStep2Phone' : 'auth.enrollStep2')}</li>
+            <li>{t('auth.enrollStep3')}</li>
+          </ol>
           <TotpSetup data={enroll} />
           <form
             className="auth-form"
+            noValidate
             onSubmit={(e) => {
               e.preventDefault();
-              setError(null);
-              confirm.mutate(
-                { token },
-                {
-                  onError: (err) => {
-                    setToken('');
-                    setError(errorMessage(err, t('auth.totpInvalid')));
-                  },
-                },
-              );
+              if (token.length !== 6) {
+                setMissing(6 - token.length);
+                codeRef.current?.focus();
+                return;
+              }
+              void submitCode(token);
             }}
           >
-            <OtpInput value={token} onChange={setToken} label={t('auth.enrollConfirm')} />
-            <button
-              type="submit"
-              className="btn primary"
-              disabled={confirm.isPending || token.length !== 6}
-            >
-              {t('auth.totpVerify')}
+            <OtpInput
+              value={token}
+              onChange={(next) => {
+                setToken(next);
+                setMissing(null);
+              }}
+              onComplete={(code) => void submitCode(code)}
+              // Điện thoại: không tự bật bàn phím — nó che mất nút mở ứng dụng và khoá cần chép.
+              autoFocus={!narrow}
+              label={t('auth.enrollConfirm')}
+              hint={t('auth.totpHint')}
+              error={missing ? t('auth.totpMissing', { count: missing }) : codeError}
+              inputRef={codeRef}
+              readOnly={confirm.isPending}
+            />
+            <button type="submit" className="btn primary" disabled={confirm.isPending}>
+              {confirm.isPending ? t('auth.totpChecking') : t('auth.totpVerify')}
             </button>
           </form>
         </>

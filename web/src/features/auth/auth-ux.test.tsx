@@ -6,6 +6,7 @@ import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/
 import { AuthCard } from './auth-card';
 import { SupportHelp } from './support-help';
 import { TotpSetup } from './totp-setup';
+import type { Me } from '@/lib/me';
 
 function withProviders(ui: ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -109,5 +110,45 @@ describe('AUTH-017: màn giữa luồng cho thấy tài khoản và có lối th
     );
     expect(screen.queryByTestId('auth-signed-in-as')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Đăng xuất' })).toBeNull();
+  });
+});
+
+describe('AUTH-026 / AUTH-031: luồng lần đầu nói "bước mấy", card nói tên hệ thống', () => {
+  const base = { id: 'u', email: 'moi@pmh.com.vn', csrfToken: 't', totpEnrolled: false } as unknown as Me;
+
+  afterEach(() => sessionStorage.clear());
+
+  it('cài 2 lớp rồi đổi mật khẩu → "Bước 1/2" rồi "Bước 2/2", dù `me` thôi nhắc bước đã xong', () => {
+    const first = withProviders(
+      <AuthCard title="Cài xác thực 2 lớp" setupFor={{ ...base, totpPending: true, mustChangePassword: true }}>
+        <p>thân</p>
+      </AuthCard>,
+    );
+    expect(screen.getByTestId('auth-steps')).toHaveTextContent('Bước 1/2 · Cài xác thực 2 lớp');
+    first.unmount();
+    withProviders(
+      <AuthCard title="Đổi mật khẩu" setupFor={{ ...base, totpEnrolled: true, mustChangePassword: true }}>
+        <p>thân</p>
+      </AuthCard>,
+    );
+    expect(screen.getByTestId('auth-steps')).toHaveTextContent('Bước 2/2 · Đổi mật khẩu tạm');
+  });
+
+  it('chỉ một bước (SA vừa đặt lại mật khẩu) → không đánh số', () => {
+    withProviders(
+      <AuthCard title="Đổi mật khẩu" setupFor={{ ...base, totpEnrolled: true, mustChangePassword: true }}>
+        <p>thân</p>
+      </AuthCard>,
+    );
+    expect(screen.queryByTestId('auth-steps')).toBeNull();
+  });
+
+  it('dưới logo có tên đầy đủ và công ty', () => {
+    withProviders(
+      <AuthCard title="Đăng nhập">
+        <p>thân</p>
+      </AuthCard>,
+    );
+    expect(screen.getByText('Quản lý hệ thống IT · PMH')).toBeInTheDocument();
   });
 });

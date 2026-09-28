@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
+import { PASSWORD_MIN_LENGTH, checkPasswordRules } from '@/lib/password-rules';
 import { Field } from '@/ui/page-header';
+import { PasswordInput } from '@/ui/password-input';
 import { useFormErrors } from '@/ui/use-form-errors';
-
-/** Khớp luật tối thiểu của API (password-policy) — báo sớm bằng tiếng Việt, API vẫn là nơi phán. */
-const MIN_PASSWORD_LENGTH = 12;
+import { PasswordChecklist } from './password-checklist';
 
 /**
  * Phần form đổi mật khẩu — MỘT bản cho cả màn đổi bắt buộc (card đăng nhập) lẫn hộp thoại ở Hồ
@@ -30,7 +30,10 @@ export function ChangePasswordForm({
   const [newPassword, setNew] = useState('');
   const [repeat, setRepeat] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // Chỉ nói "khớp/chưa khớp" sau khi rời ô Nhập lại — nói ngay từ ký tự đầu là mắng người đang gõ.
+  const [repeatTouched, setRepeatTouched] = useState(false);
   const prefix = variant === 'auth' ? 'cp' : 'cpd';
+  const rules = checkPasswordRules(newPassword);
 
   const change = useApiMutation<
     { currentPassword: string; newPassword: string },
@@ -41,10 +44,12 @@ export function ChangePasswordForm({
      được gì — nhưng lỗi vẫn phải nói bằng tiếng Việt, dưới đúng ô. */
   const check = useFormErrors({
     current: !currentPassword && t('formErrors.required'),
-    next: !newPassword
-      ? t('formErrors.required')
-      : newPassword.length < MIN_PASSWORD_LENGTH &&
-        t('formErrors.minLength', { min: MIN_PASSWORD_LENGTH }),
+    next:
+      rules.reason === 'empty'
+        ? t('formErrors.required')
+        : rules.reason === 'short'
+          ? t('formErrors.minLength', { min: PASSWORD_MIN_LENGTH })
+          : rules.reason === 'groups' && t('auth.passwordGroupsError'),
     repeat: !repeat
       ? t('formErrors.required')
       : repeat !== newPassword && t('auth.passwordMismatch'),
@@ -85,9 +90,7 @@ export function ChangePasswordForm({
         htmlFor={`${prefix}-current`}
         error={check.error('current')}
       >
-        <input
-          className="inp"
-          type="password"
+        <PasswordInput
           autoComplete="current-password"
           required
           value={currentPassword}
@@ -95,39 +98,48 @@ export function ChangePasswordForm({
         />
       </Field>
 
-      <Field
-        label={t('auth.newPassword')}
-        htmlFor={`${prefix}-new`}
-        hint={t('auth.passwordHint')}
-        error={check.error('next')}
-      >
-        <input
-          className="inp"
-          type="password"
-          autoComplete="new-password"
-          required
-          value={newPassword}
-          onChange={(e) => setNew(e.target.value)}
-        />
-      </Field>
+      <div className="field-group">
+        <Field
+          label={t('auth.newPassword')}
+          htmlFor={`${prefix}-new`}
+          error={check.error('next')}
+        >
+          <PasswordInput
+            autoComplete="new-password"
+            required
+            aria-describedby={
+              [check.error('next') ? `${prefix}-new-error` : null, `${prefix}-rules`]
+                .filter(Boolean)
+                .join(' ')
+            }
+            value={newPassword}
+            onChange={(e) => setNew(e.target.value)}
+          />
+        </Field>
+        <PasswordChecklist password={newPassword} id={`${prefix}-rules`} />
+      </div>
 
       <Field
         label={t('auth.confirmPassword')}
         htmlFor={`${prefix}-repeat`}
         error={check.error('repeat')}
+        hint={
+          repeatTouched && repeat && !check.error('repeat')
+            ? t(repeat === newPassword ? 'auth.passwordMatch' : 'auth.passwordNoMatch')
+            : undefined
+        }
       >
-        <input
-          className="inp"
-          type="password"
+        <PasswordInput
           autoComplete="new-password"
           required
           value={repeat}
           onChange={(e) => setRepeat(e.target.value)}
+          onBlur={() => setRepeatTouched(true)}
         />
       </Field>
 
       <button type="submit" className="btn primary" disabled={change.isPending}>
-        {submitLabel}
+        {change.isPending ? t('auth.changingPassword') : submitLabel}
       </button>
     </form>
   );
