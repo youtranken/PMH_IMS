@@ -284,7 +284,7 @@ test.describe('Thanh lý trên giao diện — hộp nói rõ sẽ gỡ gì (DEV
     const dialog = page.getByRole('dialog');
     // Hộp nói TRƯỚC khi bấm: IP này sẽ bị gỡ — đọc từ dữ liệu thật của máy.
     await expect(dialog.getByText(ipText).first()).toBeVisible();
-    await expect(dialog.getByText('Giữ nguyên')).toBeVisible();
+    await expect(dialog.getByRole('heading', { name: 'Giữ nguyên' })).toBeVisible();
     // Mặc định là "Chỉ thanh lý": gỡ hàng loạt không được là mặc định êm ái.
     await expect(dialog.getByRole('radio', { name: /Chỉ thanh lý/ })).toBeChecked();
 

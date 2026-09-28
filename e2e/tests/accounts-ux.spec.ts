@@ -47,7 +47,7 @@ test.describe('Tài khoản — phản hồi, 2 lớp, bước tiếp theo', () 
     await timVaChoLoc(page, acc.email);
     await rowAction(page, acc.fullName, 'Mở khóa');
     // Đường hỏng: bấm Hủy thì KHÔNG có gì xảy ra.
-    await page.getByRole('dialog').getByRole('button', { name: 'Hủy' }).click();
+    await page.getByTestId('dialog-footer').getByRole('button', { name: 'Hủy' }).click();
     const row = page.getByRole('row', { name: new RegExp(acc.email) });
     await expect(row.getByText('Đang khóa')).toBeVisible();
     expect(sql(`SELECT status FROM users WHERE id = '${acc.id}'`)).toBe('locked');

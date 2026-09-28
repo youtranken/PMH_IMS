@@ -62,7 +62,7 @@ test.describe('Danh mục — tìm không khớp và lịch sử mục', () => {
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText('Tạo mục')).toBeVisible();
     await expect(dialog.getByText('Vô hiệu hóa')).toBeVisible();
-    await expect(dialog.getByText(/địa chỉ: trống → Tầng 3/)).toBeVisible();
+    await expect(dialog.getByText('địa chỉ: (trống) → Tầng 3', { exact: true })).toBeVisible();
     await expect(dialog.getByText(new RegExp(E2E_SA.email)).first()).toBeVisible();
   });
 

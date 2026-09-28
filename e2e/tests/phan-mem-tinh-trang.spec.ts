@@ -117,7 +117,10 @@ test('1280px: 6 cột vừa khung, Ghế chỉ in phân số + "Hết ghế", T�
   await timVaChoLoc(page, prefix);
   await expect(page.getByRole('row')).toHaveCount(3);
 
-  await expect(page.getByRole('columnheader', { name: 'Tình trạng', exact: true })).toBeVisible();
+  // Cột sắp được thì tên ô tiêu đề là tên nút sắp xếp bên trong nó.
+  await expect(
+    page.getByRole('columnheader', { name: /^(Sắp xếp theo )?Tình trạng$/ }),
+  ).toBeVisible();
   await expect(page.getByRole('columnheader', { name: 'Tình trạng hạn' })).toHaveCount(0);
   await expect(page.getByRole('columnheader', { name: 'Trạng thái', exact: true })).toHaveCount(0);
 
@@ -223,7 +226,7 @@ test('thanh lý từ danh sách: câu hỏi lại nói ghế sẽ BỊ GỠ và 
   await expect(dialog).not.toContainText('giữ nguyên');
 
   // Đường hỏng: Hủy thì không gì đổi.
-  await dialog.getByRole('button', { name: 'Hủy' }).click();
+  await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Hủy' }).click();
   expect(await seatUsed(page, id)).toBe(2);
 
   await rowAction(page, code, 'Đưa vào kho thanh lý');

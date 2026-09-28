@@ -78,6 +78,6 @@ test.describe('Quyền két sắt — theo người', () => {
     await page.getByRole('tab', { name: 'Ma trận' }).click();
     await expect(page).toHaveURL(/view=matrix/);
     await expect(page.getByTestId('access-grid')).toBeVisible();
-    await expect(page.getByRole('columnheader', { name: 'Người' })).toBeVisible();
+    await expect(page.getByRole('columnheader', { name: 'Người', exact: true })).toBeVisible();
   });
 });

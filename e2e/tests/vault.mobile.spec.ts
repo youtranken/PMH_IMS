@@ -74,9 +74,10 @@ test.describe('Két sắt ở 390px', () => {
      * cũng không cứu được: ở 390px bảng gập dọc và `td::before { content: attr(data-label) }`
      * nhét thêm chữ "Tên gọi" vào tên khả truy cập, nên không ô nào mang đúng nhãn cả.
      *
-     * `getByText` đọc node văn bản thật, không đọc `aria-label` — nên nó trỏ đúng một ô.
+     * `getByText` đọc node văn bản thật, không đọc `aria-label` — nên nó trỏ đúng một ô. Tên
+     * gọi là chữ trần đứng ngay trước dòng phụ "Mật khẩu" trong cùng ô, nên khớp cả cụm ấy.
      */
-    await expect(page.getByText(label, { exact: true })).toBeVisible();
+    await expect(page.getByText(new RegExp(`^${label}\\s*Mật khẩu$`))).toBeVisible();
     await expect(page.getByText('Mật khẩu', { exact: true })).toBeVisible();
 
     // Trang không được cuộn ngang ở 390px.

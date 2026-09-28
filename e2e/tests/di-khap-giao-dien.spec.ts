@@ -178,7 +178,7 @@ import {
  * [x] Esc khi ô chọn đang mở chỉ đóng ô chọn, không đóng hộp Sửa
  *     → Esc khi đang mở ô chọn chỉ đóng ô chọn, KHÔNG đóng cả hộp Sửa
  * [x] Tài khoản dịch vụ: menu dòng đúng ở CẢ HAI trạng thái; Thành viên không thấy
- *     → Tài khoản dịch vụ: menu dòng đúng ở cả hai trạng thái, hồ sơ chỉ có nút chép, Thành viên không thấy ba chấm
+ *     → Tài khoản dịch vụ: menu dòng đúng ở cả hai trạng thái, hồ sơ có Chép · Sửa hồ sơ · ba chấm, Thành viên không thấy ba chấm
  * [x] Hộp Thêm tài khoản ĐỔI HÌNH theo loại; hộp Vô hiệu hóa bắt nhập lý do
  *     → Hộp "Thêm tài khoản" đổi hình theo loại, và hộp "Vô hiệu hóa" không cho bỏ trống lý do
  * [x] Kho thanh lý: năm nút lọc kèm số đếm · bốn cột · KHÔNG một nút ghi nào
@@ -205,8 +205,8 @@ import {
  * ── PHÒNG KÉT SẮT, QUYỀN XEM, DUYỆT YÊU CẦU và BẢNG ĐIỀU KHIỂN ──────────────
  * [x] Trang tổng Két sắt: bốn nút lọc đổi bảng THẬT · popup · luật của két
  *     → Trang tổng Két sắt: bốn nút lọc đổi bảng thật, popup mở đúng két, luật đủ bốn gạch
- * [x] Ma trận Quyền: đủ cột · Member có nút gán · SA/Admin chỉ có lời giải thích
- *     → Ma trận Quyền xem két sắt: lưới đủ cột, Member có nút gán, SA/Admin chỉ có lời giải thích
+ * [x] Ma trận Quyền: đủ cột · Member có nút gán · SA/Admin ở khối "toàn quyền theo vai"
+ *     → Ma trận Quyền xem két sắt: lưới đủ cột, Member có nút gán, SA/Admin ở khối "toàn quyền theo vai"
  * [x] Duyệt yêu cầu: đủ ba ngăn, phiếu treo nói đủ và có đúng hai nút
  *     → Phòng Duyệt yêu cầu: đủ ba ngăn, phiếu treo nói đủ và có đúng hai nút
  * [x] Bảng điều khiển: SA đủ sáu khối, Member THIẾU đúng hai khối an ninh
@@ -4757,11 +4757,12 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       ['Thiết bị', 'Người / bộ phận dùng'],
       'Hộp "Cấp IP"',
     );
-    // "Ngày cấp" là NÚT mở lịch, không phải ô gõ ngày. Nút chính mang đúng tên việc: "Cấp IP".
+    // "Ngày cấp" là NÚT mở lịch, không phải ô gõ ngày; nó điền sẵn hôm nay nên có nút "Xóa ngày".
+    // Nút chính mang đúng tên việc: "Cấp IP".
     await expectHandles(
       assign,
       'button',
-      [/^Ngày cấp/, 'Đóng hộp thoại', 'Hủy', 'Cấp IP'],
+      [/^Ngày cấp/, 'Xóa ngày', 'Đóng hộp thoại', 'Hủy', 'Cấp IP'],
       'Hộp "Cấp IP"',
     );
 
@@ -4793,7 +4794,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expectHandles(
       edit,
       'button',
-      ['Đóng hộp thoại', 'Ngày cấp', 'Hủy', 'Lưu'],
+      // Hồ sơ đã cấp luôn có ngày cấp (hộp Cấp điền sẵn hôm nay), nên có nút "Xóa ngày".
+      ['Đóng hộp thoại', /^Ngày cấp/, 'Xóa ngày', 'Hủy', 'Lưu'],
       'Hộp "Sửa hồ sơ IP"',
     );
     await expect(
@@ -5021,8 +5023,12 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(page.getByText('Chưa có rule NAT nào')).toBeVisible();
     await expect(
       page.getByRole('main').getByRole('button'),
-      'đầu trang hai nút + một ô chọn site; nút thứ tư mọc ra ở đây là thứ không ai khai',
-    ).toHaveText(['Xuất Excel', 'Thêm rule', 'Mọi site']);
+      'đầu trang hai nút + một ô chọn site + ba chip trạng thái; nút nào khác mọc ra ở đây là thứ không ai khai',
+    ).toHaveText(['Xuất Excel', 'Thêm rule', 'Mọi site', /^Đang mở \d+$/, /^Đã tắt \d+$/, /^Đã gỡ \d+$/]);
+    // Sổ mặc định chỉ bày rule còn hiệu lực: rule đã gỡ phải bật chip mới thấy.
+    const chips = page.getByRole('group', { name: 'Lọc theo trạng thái rule' });
+    await expect(chips.getByRole('button', { name: /^Đang mở/ })).toHaveAttribute('aria-pressed', 'true');
+    await expect(chips.getByRole('button', { name: /^Đã gỡ/ })).toHaveAttribute('aria-pressed', 'false');
     await expect(
       page.getByRole('searchbox', { name: 'Tìm theo port, IP, người dùng hoặc lý do…' }),
       'ô tìm phải mang tên trợ năng = chính dòng gợi ý của nó',
@@ -5162,7 +5168,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       [/^Hiện mọi thiết bị/, /^Bỏ tick nếu rule đã tắt/],
       'Hộp "Thêm rule"',
     );
-    await expect(form.getByRole('checkbox'), 'rule khai mới thì mặc định là ĐANG BẬT').toBeChecked();
+    await expect(form.getByRole('checkbox', { name: /^Bỏ tick nếu rule đã tắt/ }), 'rule khai mới thì mặc định là ĐANG BẬT').toBeChecked();
 
     /* ----- Nhóm giao thức: đúng ba lựa chọn, TCP là mặc định ----- */
     const protocols = form.getByRole('group', { name: 'Giao thức' });
@@ -5325,7 +5331,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'Phòng Nhân sự',
     );
     await expect(form.getByRole('textbox', { name: 'Lý do mở', exact: true })).toHaveValue(reason);
-    await expect(form.getByRole('checkbox')).toBeChecked();
+    await expect(form.getByRole('checkbox', { name: /^Bỏ tick nếu rule đã tắt/ })).toBeChecked();
     await expect(
       form
         .getByRole('group', { name: 'Giao thức' })
@@ -6109,10 +6115,10 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
    * mặt — ở đây kiểm cả bộ nút, tức là kiểm luôn rằng không còn ba chấm nào sót lại.
    *
    * ĐỎ KHI: menu dòng thiếu/thừa mục ở một trong hai trạng thái; cột Thao tác lọt vào màn của
-   * Thành viên; trang hồ sơ mọc thêm nút ghi (nó CỐ Ý không có nút nào ngoài nút chép); hoặc
+   * Thành viên; trang hồ sơ thiếu/thừa nút (chép, "Sửa hồ sơ", ba chấm đổi theo trạng thái); hoặc
    * nút "Chép tên đăng nhập" rơi mất.
    */
-  test('Tài khoản dịch vụ: menu dòng đúng ở cả hai trạng thái, hồ sơ chỉ có nút chép, Thành viên không thấy ba chấm', async ({
+  test('Tài khoản dịch vụ: menu dòng đúng ở cả hai trạng thái, hồ sơ có Chép · Sửa hồ sơ · ba chấm, Thành viên không thấy ba chấm', async ({
     page,
   }) => {
     test.setTimeout(150_000);
@@ -6195,9 +6201,9 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     /*
      * ===== TRANG HỒ SƠ =====
-     * Vào bằng cách BẤM mã, và bấm xong thì trang này CỐ Ý không có nút ghi nào: sửa và đóng
-     * đều nằm ở menu dòng ngoài danh sách. Nút duy nhất là nút chép tên đăng nhập — thứ người
-     * ta dán thẳng vào ô đăng nhập và gõ tay thì sai.
+     * Vào bằng cách BẤM mã. SA/Admin sửa và đóng được NGAY tại đây ("Sửa hồ sơ" + ba chấm),
+     * không phải quay ra danh sách tìm lại dòng. Nút chép tên đăng nhập vẫn phải có — thứ
+     * người ta dán thẳng vào ô đăng nhập và gõ tay thì sai.
      */
     await main.getByRole('link', { name: maDangDung, exact: true }).click();
     await expect(
@@ -6207,8 +6213,15 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     expect(
       await tenTheoVaiTro(page.getByRole('main'), 'button'),
-      'Hồ sơ tài khoản dịch vụ chỉ có ĐÚNG một nút: Chép tên đăng nhập',
-    ).toEqual(['Chép tên đăng nhập']);
+      'Hồ sơ tài khoản dịch vụ của SA: Chép tên đăng nhập, Sửa hồ sơ và ba chấm',
+    ).toEqual(sap(['Chép tên đăng nhập', 'Sửa hồ sơ', `Thao tác với ${maDangDung}`]));
+    await page.getByRole('button', { name: `Thao tác với ${maDangDung}` }).click();
+    await expect(
+      page.getByRole('menuitem'),
+      'ba chấm của hồ sơ đang dùng chỉ có việc đóng nó',
+    ).toHaveText(['Vô hiệu hóa…']);
+    await page.keyboard.press('Escape');
+    await expect(page.getByRole('menu')).toHaveCount(0);
 
     const tenTab = (await page.getByRole('tab').allTextContents()).map((raw) =>
       gonNhan(raw).replace(/\s+\d+$/, ''),
@@ -7152,8 +7165,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
      */
     expect(
       await rowActionNames(page, maSite),
-      'menu của một hồ sơ ĐANG DÙNG phải là Sửa · Vô hiệu · Xóa, việc lấy đi xếp cuối',
-    ).toEqual(['Sửa', 'Vô hiệu hóa', 'Xóa']);
+      'menu của một hồ sơ ĐANG DÙNG phải là Sửa · Lịch sử · Vô hiệu · Xóa, việc lấy đi xếp cuối',
+    ).toEqual(['Sửa', 'Lịch sử', 'Vô hiệu hóa', 'Xóa']);
 
     // --- Hộp SỬA phải mang theo cả ba giá trị cũ.
     await rowAction(page, maSite, 'Sửa');
@@ -7196,7 +7209,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     expect(
       await rowActionNames(page, maSite),
       'hồ sơ ĐÃ VÔ HIỆU mà menu vẫn ghi "Vô hiệu" thì không còn đường nào bật nó lại',
-    ).toEqual(['Sửa', 'Bật lại', 'Xóa']);
+    ).toEqual(['Sửa', 'Lịch sử', 'Bật lại', 'Xóa']);
 
     // Dọn ngay trong bài, không đợi `resetCatalog()` của lần chạy sau.
     await rowAction(page, maSite, 'Xóa');
