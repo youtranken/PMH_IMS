@@ -165,6 +165,31 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
   nhắc, và đi cùng vòng đời Q-03/Q-13 (Hết hạn → tự Đã thanh lý sau ân hạn). Lý do: trước đây nó
   bị lượt quét "xử" mà không hề được nhắc.
 
+### Q-15 · Chốt sau đợt giao diện vừa + nhẹ (29/09/2026, chủ dự án chốt)
+
+- **Tên gọi break-glass:** trên giao diện và email gọi là **"Xin mở két"** (người xin) và
+  **"Duyệt mở két"** (người duyệt). Bỏ các tên "Break-glass", "Duyệt yêu cầu", "Xin quyền xem tạm
+  thời", "Đập tủ kính" khỏi chữ người dùng đọc (mã, bảng, route giữ nguyên). Chữ "secret" trên giao
+  diện, nhật ký và Excel đổi theo tên đang dùng ở màn két cho đồng bộ.
+- **Quyền mở két gắn với PHIÊN đăng nhập đã xin:** đăng xuất, hết phiên (idle/tuyệt đối) hay bị
+  đóng phiên thì quyền đang có cũng hết — đăng nhập lại phải xin lại. Người xin có thể tự "Trả
+  quyền" sớm. Lý do: quyền xem mật khẩu không được sống lâu hơn người đang ngồi trước máy.
+- **Lưu giá trị mới vào két:** không bắt tick "Tôi đã đổi trên thiết bị" — chỉ cảnh báo.
+- **Thuật ngữ:** **"Ngừng dùng / Dùng lại"** cho dải IP, tài khoản dịch vụ, luật NAT; NAT dùng
+  **"luật NAT"**, **"cổng ngoài"**, **"cổng trong"** thay cho rule/port. Mục menu Hệ thống
+  "Tài khoản" đổi thành **"Người dùng IMS"**. Chữ tiếng Việt viết thống nhất kiểu **"khóa",
+  "hóa"** (dấu trên chữ cái chính, đang chiếm đa số trong giao diện).
+- **Mở lại thiết bị đã thanh lý:** về **"Đang dùng"** (như cũ). Đổi trạng thái thiết bị **không**
+  bắt ghi lý do.
+- **Gia hạn phần mềm:** số hợp đồng và chi phí của MỖI lần gia hạn ghi vào sổ lịch sử gia hạn
+  (`renewal_history`), không thêm cột vào hồ sơ phần mềm.
+- **Gán license:** có lối chọn nhanh máy theo phòng ban / người sử dụng.
+- **Danh mục:** hiện số "đang dùng ở N thiết bị/hồ sơ" cho từng mục. KHÔNG tách ô "Email / người
+  liên hệ" của nhà cung cấp.
+- **Bảng điều khiển:** không tự làm mới định kỳ (mỗi lần đăng nhập đã tải mới).
+- **"Bộ giao diện" (`/dev/components`) không có ở bản production** — chỉ bật trong stack dev/E2E.
+- Chưa làm: lưới mặt trước switch (cần trường "số cổng" theo model), trường riêng cho SSL/tên miền.
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã
