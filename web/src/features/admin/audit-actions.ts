@@ -79,6 +79,7 @@ export const ACTION_KEY: Record<string, string> = {
   'ip.exported': 'audit.actions.ipExported',
   'nat.exported': 'audit.actions.natExported',
   'expiry.exported': 'audit.actions.expiryExported',
+  'disposal.exported': 'audit.actions.disposalExported',
   'expiry.renewed': 'audit.actions.expiryRenewed',
   'expiry.digest.sent': 'audit.actions.expiryDigestSent',
   'expiry.digest.test': 'audit.actions.expiryDigestTest',
@@ -233,6 +234,7 @@ export const OBJECT_TYPE_KEY: Record<string, string> = {
   catalog: 'audit.objectType.catalog',
   expiry_rule: 'audit.objectType.expiryRule',
   expiry: 'audit.objectType.expiry',
+  disposal: 'audit.objectType.disposal',
   file: 'audit.objectType.file',
   system_config: 'audit.objectType.systemConfig',
 };

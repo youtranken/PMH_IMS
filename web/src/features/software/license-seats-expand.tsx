@@ -67,9 +67,9 @@ export function LicenseSeatsExpand({
           software={software}
           csrfToken={csrfToken}
           onClose={() => setAssigning(false)}
-          onDone={(warnings) => {
+          onDone={(warnings, count) => {
             setAssigning(false);
-            toast({ message: t('license.assigned') });
+            toast({ message: t('license.assignedCount', { count }) });
             warnings.forEach((message) => toast({ message, tone: 'warn' }));
             void queryClient.invalidateQueries({ queryKey: ['software'] });
           }}

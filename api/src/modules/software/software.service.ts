@@ -9,7 +9,7 @@ import { and, asc, count, desc, eq, inArray, isNull, or, sql, type SQL } from 'd
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
-import { HISTORY_PAGE_LIMIT } from '../../common/history';
+import { HISTORY_PAGE_LIMIT, latestStatusEvents, type StatusEvent } from '../../common/history';
 import { requireUnchangedSince } from '../../common/cas';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
@@ -173,6 +173,22 @@ export class SoftwareService {
     return { at: row.createdAt, by: row.actor, auto: row.action === 'auto-retired' };
   }
 
+  /** Lần chuyển sang Thanh lý gần nhất của từng hồ sơ — bản theo mẻ của `retirementOf`. */
+  retirementEvents(ids: string[]): Promise<Map<string, StatusEvent>> {
+    return latestStatusEvents(
+      this.db,
+      {
+        table: softwareHistoryTable,
+        ownerId: softwareHistoryTable.softwareId,
+        actor: softwareHistoryTable.actor,
+        changes: softwareHistoryTable.changes,
+        createdAt: softwareHistoryTable.createdAt,
+      },
+      ids,
+      'retired',
+    );
+  }
+
   async history(softwareId: string): Promise<SoftwareHistoryRecord[]> {
     const rows = await this.db
       .select()
@@ -324,7 +340,16 @@ export class SoftwareService {
    * Gia hạn (story 3.4): đẩy `end_date` sang mốc mới. Tách riêng khỏi `update` để tab Lịch sử
    * đọc ra "đã gia hạn tới ngày X" chứ không lẫn với mọi lần sửa hồ sơ khác.
    */
-  async renew(actor: string, id: string, newEnd: string): Promise<SoftwareRecord> {
+  /**
+   * `withinSeats` (SW-049): việc kéo ghế theo, chạy TRONG transaction gia hạn và trả số ghế đã
+   * kéo — ghế thuộc `LicenseAssignmentService`, nên hàm này không tự đụng bảng ghế.
+   */
+  async renew(
+    actor: string,
+    id: string,
+    newEnd: string,
+    withinSeats?: (tx: Tx) => Promise<number>,
+  ): Promise<SoftwareRecord & { seatsRenewed: number }> {
     const before = await this.requireRow(id);
     // Gia hạn đặt lại `status = active`; cho qua ở đây là hồi sinh một hồ sơ người đã chủ ý
     // thanh lý. `requireUnchangedWithin` bên dưới giữ cho ảnh chụp này còn đúng lúc ghi.
@@ -377,7 +402,8 @@ export class SoftwareService {
         newEnd,
         actor,
       });
-      return updated;
+      const seatsRenewed = withinSeats ? await withinSeats(tx) : 0;
+      return { ...updated, seatsRenewed };
     });
   }
 

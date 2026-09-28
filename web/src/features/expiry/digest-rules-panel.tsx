@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
-import { formatDateTime } from '@/lib/format';
+import { formatDate, formatDateTime } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
@@ -33,6 +33,16 @@ interface DigestRule {
   dayOfMonth: number | null;
   active: boolean;
   lastSentAt: string | null;
+  /** Kỳ gửi tới do API tính theo đúng luật của lượt quét; luật tạm ngưng thì null. */
+  nextSendAt: string | null;
+}
+
+interface DigestPreview {
+  total: number;
+  expired: number;
+  upcoming: number;
+  recipients: string[];
+  items: { label: string; kind: string; end: string; link: string; daysLeft: number }[];
 }
 
 
@@ -59,6 +69,7 @@ export function DigestRulesPanel({
   const askConfirm = useConfirm();
   const queryClient = useQueryClient();
   const [editingRule, setEditingRule] = useState<DigestRule | null>(null);
+  const [previewing, setPreviewing] = useState<DigestRule | null>(null);
   const editing = editingRule ? { rule: editingRule } : adding ? { rule: null } : null;
   const setEditing = (next: { rule: DigestRule | null } | null) => {
     setEditingRule(next?.rule ?? null);
@@ -80,10 +91,18 @@ export function DigestRulesPanel({
     (input) => `/api/v1/expiry/rules/${input.id}`,
     { method: 'PATCH', csrfToken: me.csrfToken, refreshMe: false, body: ({ active }) => ({ active }) },
   );
-  const sendTest = useApiMutation<{ id: string }, { recipients: string[]; items: number }>(
-    (input) => `/api/v1/expiry/rules/${input.id}/test`,
-    { csrfToken: me.csrfToken, refreshMe: false, body: () => undefined },
-  );
+  const sendTest = useApiMutation<
+    { id: string; onlyMe?: boolean },
+    { recipients: string[]; items: number }
+  >((input) => `/api/v1/expiry/rules/${input.id}/test`, {
+    csrfToken: me.csrfToken,
+    refreshMe: false,
+    body: (input) => (input.onlyMe ? { onlyMe: true } : undefined),
+  });
+  const testSentToast = (result: { recipients: string[]; items: number }) =>
+    toast({
+      message: t('digest.testSent', { count: result.items, to: result.recipients.join(', ') }),
+    });
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['expiry', 'rules'] });
   const kindLabel = (value: string) =>
@@ -109,6 +128,7 @@ export function DigestRulesPanel({
                 <th>{t('digest.name')}</th>
                 <th>{t('digest.scope')}</th>
                 <th>{t('digest.schedule')}</th>
+                <th>{t('digest.nextSend')}</th>
                 <th>{t('digest.recipients')}</th>
                 <th>{t('digest.lastSent')}</th>
                 {canEdit ? <th className="col-center">{t('common.actions')}</th> : null}
@@ -140,6 +160,9 @@ export function DigestRulesPanel({
                       weekday: rule.weekday ?? undefined,
                       dayOfMonth: rule.dayOfMonth ?? undefined,
                     })}
+                  </td>
+                  <td data-label={t('digest.nextSend')}>
+                    {rule.nextSendAt ? formatDateTime(rule.nextSendAt) : t('digest.paused')}
                   </td>
                   <td data-label={t('digest.recipients')}>{rule.recipients.join(', ')}</td>
                   <td data-label={t('digest.lastSent')}>
@@ -176,6 +199,27 @@ export function DigestRulesPanel({
                                 ),
                             },
                             {
+                              key: 'preview',
+                              label: t('digest.preview'),
+                              onSelect: () => setPreviewing(rule),
+                            },
+                            /* Gửi cho CHÍNH người bấm: xem thư thật trong hộp thư mình mà không
+                               làm phiền danh sách của luật — nên không cần hỏi lại. */
+                            {
+                              key: 'test-me',
+                              label: t('digest.testMe'),
+                              disabled: sendTest.isPending,
+                              onSelect: () =>
+                                sendTest.mutate(
+                                  { id: rule.id, onlyMe: true },
+                                  {
+                                    onSuccess: testSentToast,
+                                    onError: (error) =>
+                                      toast({ message: errorMessage(error), tone: 'error' }),
+                                  },
+                                ),
+                            },
+                            {
                               key: 'test',
                               label: t('digest.test'),
                               disabled: sendTest.isPending,
@@ -205,13 +249,7 @@ export function DigestRulesPanel({
                                   sendTest.mutate(
                                     { id: rule.id },
                                     {
-                                      onSuccess: (result) =>
-                                        toast({
-                                          message: t('digest.testSent', {
-                                            count: result.items,
-                                            to: result.recipients.join(', '),
-                                          }),
-                                        }),
+                                      onSuccess: testSentToast,
                                       onError: (error) =>
                                         toast({ message: errorMessage(error), tone: 'error' }),
                                     },
@@ -260,6 +298,14 @@ export function DigestRulesPanel({
           </table>
         </div>
       )}
+
+      {previewing ? (
+        <PreviewDialog
+          rule={previewing}
+          kindLabel={kindLabel}
+          onClose={() => setPreviewing(null)}
+        />
+      ) : null}
 
       {editing ? (
         <RuleForm
@@ -470,6 +516,87 @@ function RuleForm({
           </p>
         ) : null}
       </form>
+    </Dialog>
+  );
+}
+
+/**
+ * Thư của luật sẽ chứa gì, xem NGAY trong app — không phải "Gửi thử" (email thật tới cả danh
+ * sách người nhận) chỉ để biết nội dung. Đọc thuần, không gửi, không ghi gì.
+ */
+function PreviewDialog({
+  rule,
+  kindLabel,
+  onClose,
+}: {
+  rule: DigestRule;
+  kindLabel: (value: string) => string;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const preview = useQuery({
+    queryKey: ['expiry', 'rules', rule.id, 'preview'],
+    queryFn: () => apiFetch<DigestPreview>(`/api/v1/expiry/rules/${rule.id}/preview`),
+  });
+  const data = preview.data;
+  return (
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={640}
+      initialFocus="title"
+      title={t('common.titleOf', { action: t('digest.preview'), subject: rule.name })}
+    >
+      {preview.isLoading ? (
+        <Loading />
+      ) : preview.isError ? (
+        <LoadError error={preview.error} onRetry={() => void preview.refetch()} />
+      ) : data ? (
+        <>
+          <p>
+            {t('digest.previewSummary', {
+              total: data.total,
+              expired: data.expired,
+              upcoming: data.upcoming,
+            })}
+          </p>
+          <p className="muted small">
+            {t('digest.previewTo', { to: data.recipients.join(', ') })}
+          </p>
+          {data.total === 0 ? (
+            /* Kỳ không có mục nào thì lượt quét KHÔNG gửi thư — nói đúng điều đó. */
+            <EmptyState title={t('digest.previewEmpty')} hint={t('digest.previewEmptyHint')} />
+          ) : (
+            <div className="table-wrap">
+              <table className="table table-stack">
+                <thead>
+                  <tr>
+                    <th>{t('digest.previewItem')}</th>
+                    <th>{t('digest.previewKind')}</th>
+                    <th>{t('digest.previewEnd')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.items.map((item) => (
+                    <tr key={`${item.kind}-${item.link}`}>
+                      <td data-label={t('digest.previewItem')}>{item.label}</td>
+                      <td data-label={t('digest.previewKind')}>{kindLabel(item.kind)}</td>
+                      <td data-label={t('digest.previewEnd')}>
+                        {formatDate(item.end)}
+                        <span className={item.daysLeft < 0 ? 'cell-sub is-danger' : 'cell-sub'}>
+                          {item.daysLeft < 0
+                            ? t('digest.previewOverdue', { days: -item.daysLeft })
+                            : t('digest.previewLeft', { days: item.daysLeft })}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      ) : null}
     </Dialog>
   );
 }

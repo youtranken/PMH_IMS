@@ -13,6 +13,7 @@ import { DatabaseModule } from './database/database.module';
 import { ApprovalsRegistryModule } from './common/approvals/approvals-registry';
 import { OwnerAccessModule } from './common/owner-access.registry';
 import { DevicePanelsModule } from './common/device-panels.registry';
+import { DeviceTimelineModule } from './common/device-timeline.registry';
 import { DeviceRetirementModule } from './common/device-retirement.registry';
 import { DeviceSearchModule } from './common/device-search.registry';
 import { OwnerExistsModule } from './common/owner-exists.registry';
@@ -69,6 +70,7 @@ import { VaultModule } from './modules/vault/vault.module';
     ThrottlerModule.forRoot([{ ttl: 60_000, limit: 300 }]),
     DatabaseModule,
     DevicePanelsModule,
+    DeviceTimelineModule,
     DeviceRetirementModule,
     DeviceSearchModule,
     OwnerExistsModule,

@@ -35,6 +35,8 @@ import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { DevicePanelRegistry } from '../../common/device-panels.registry';
+import { DeviceTimelineRegistry } from '../../common/device-timeline.registry';
+import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { DeviceImportService } from './device-import.service';
 import { DevicePortsService } from './device-ports.service';
 import {
@@ -134,6 +136,7 @@ export class DevicesController {
     private readonly ports: DevicePortsService,
     private readonly panels: DevicePanelRegistry,
     private readonly imports: DeviceImportService,
+    private readonly timelines: DeviceTimelineRegistry,
   ) {}
 
   @Roles('sa', 'admin', 'member')
@@ -259,6 +262,16 @@ export class DevicesController {
   @Get(':id/history')
   history(@Param() params: IdParamDto) {
     return this.devices.history(params.id);
+  }
+
+  /**
+   * Sự kiện của module KHÁC về máy này (IP, license) — tab Lịch sử gộp với lịch sử hồ sơ để
+   * trả lời "máy này từng dùng key nào, IP nào" ở một chỗ (DEV-086). Cùng trần với panel.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get(':id/timeline')
+  timeline(@Param() params: IdParamDto) {
+    return this.timelines.timelineFor(params.id, HISTORY_PAGE_LIMIT);
   }
 
   @Roles('sa', 'admin', 'member')

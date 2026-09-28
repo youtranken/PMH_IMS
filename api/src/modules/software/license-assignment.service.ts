@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { requireCas } from '../../common/cas';
@@ -493,6 +493,52 @@ export class LicenseAssignmentService {
       .from(licenseAssignmentTable)
       .where(eq(licenseAssignmentTable.id, assignmentId));
     return (await this.decorate(rows))[0];
+  }
+
+  /**
+   * Gia hạn hồ sơ kéo theo ghế (SW-049): ghế CÒN HIỆU LỰC có kỳ hạn riêng kết thúc TRƯỚC hạn
+   * mới được đặt tới hạn mới — không thì license đã gia hạn mà ghế vẫn hiện "Quá hạn". Ghế đã
+   * gỡ là dấu vết kiểm toán, không sửa; ghế dài hạn hơn thì không bị rút ngắn.
+   *
+   * Chạy trong transaction gia hạn của hồ sơ (`SoftwareService.renew`): một bên hỏng thì cả
+   * hai cùng lùi. Mỗi ghế một dòng lịch sử kèm mã máy, như khi sửa kỳ hạn từng ghế.
+   */
+  async renewSeatsWithin(
+    tx: Tx,
+    actor: string,
+    softwareId: string,
+    newEnd: string,
+  ): Promise<number> {
+    const due = await tx
+      .select({
+        id: licenseAssignmentTable.id,
+        deviceId: licenseAssignmentTable.deviceId,
+        endDate: licenseAssignmentTable.endDate,
+      })
+      .from(licenseAssignmentTable)
+      .where(
+        and(
+          eq(licenseAssignmentTable.softwareId, softwareId),
+          isNull(licenseAssignmentTable.releasedAt),
+          isNotNull(licenseAssignmentTable.endDate),
+          lt(licenseAssignmentTable.endDate, newEnd),
+        ),
+      )
+      .for('update');
+    if (due.length === 0) return 0;
+    const devices = await this.devices.getByIds([...new Set(due.map((row) => row.deviceId))]);
+    for (const seat of due) {
+      await tx
+        .update(licenseAssignmentTable)
+        .set({ endDate: newEnd })
+        .where(eq(licenseAssignmentTable.id, seat.id));
+      const code = devices.get(seat.deviceId)?.code ?? seat.deviceId;
+      await this.software.recordWithin(tx, actor, softwareId, 'license-terms-updated', {
+        device: { before: code, after: code },
+        endDate: { before: seat.endDate, after: newEnd },
+      });
+    }
+    return due.length;
   }
 
   /** Gỡ gán = đánh dấu released, KHÔNG xóa dòng (AC 3.2). */

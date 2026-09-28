@@ -498,7 +498,7 @@ test.describe('Gán license theo seat', () => {
     await page.getByRole('option', { name: new RegExp(deviceCode) }).click();
     await form.getByRole('button', { name: 'Gán vào máy' }).click();
 
-    await expect(page.getByText('Đã gán license vào máy.')).toBeVisible();
+    await expect(page.getByText('Đã gán license vào 1 máy.')).toBeVisible();
     // Cột Seat của chính dòng đó phải nhích lên ngay, không phải tải lại trang mới thấy.
     await expect(row.getByText('1/5')).toBeVisible();
   });
@@ -523,4 +523,40 @@ test.describe('Gán license theo seat', () => {
     expect(names).toContain('Sửa');
     expect(names).not.toContain('Gán vào máy');
   });
+
+  /*
+   * SW-053: mua 10 ghế cho cả phòng thì gán một lượt — chọn nhiều máy thành chip, điều khoản ghế
+   * dùng chung cho cả lô. Đường hỏng: chưa chọn máy nào thì báo dưới ô, không gửi.
+   */
+  test('gán một lượt cho nhiều máy từ cột Thao tác', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const code = `LIC-E2E-LO-${stamp}`;
+    await createLicense(page, code, 5);
+    const first = `PC-E2E-LO1-${stamp}`;
+    const second = `PC-E2E-LO2-${stamp}`;
+    await createDevice(page, first);
+    await createDevice(page, second);
+
+    await page.goto('/software');
+    await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
+    const row = page.getByRole('row', { name: new RegExp(code) });
+    await expect(row).toBeVisible();
+
+    await rowAction(page, code, 'Gán vào máy');
+    const form = page.getByRole('dialog');
+    await form.getByRole('button', { name: 'Gán vào máy' }).click();
+    await expect(form.getByText('Chọn máy để gán.')).toBeVisible();
+
+    for (const deviceCode of [first, second]) {
+      await form.getByPlaceholder('Tìm máy trong kho…').fill(deviceCode);
+      await page.getByRole('option', { name: new RegExp(deviceCode) }).click();
+    }
+    await expect(form.getByRole('list', { name: 'Máy sẽ gán' }).getByRole('listitem')).toHaveCount(2);
+    await form.getByRole('button', { name: 'Gán 2 máy' }).click();
+
+    await expect(page.getByText('Đã gán license vào 2 máy.')).toBeVisible();
+    await expect(row.getByText('2/5')).toBeVisible();
+  });
 });
+

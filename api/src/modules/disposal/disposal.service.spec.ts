@@ -1,6 +1,8 @@
 import type { DevicesApiService } from '../devices/devices.api';
 import type { ServiceAccountsApiService } from '../service-accounts/service-accounts.api';
 import type { SoftwareApiService } from '../software/software.api';
+import type { SystemConfigService } from '../config-sys/system-config.service';
+import type { UsersApiService } from '../users/users.api';
 import { DISPOSAL_KINDS, DisposalService } from './disposal.service';
 
 /**
@@ -25,21 +27,30 @@ function makeService(
   };
   const rows = (key: 'devices' | 'software' | 'accounts' | 'isp') => () =>
     Promise.resolve(overrides[key] ?? []);
+  const noEvents = () => Promise.resolve(new Map());
   const devices = {
     listRetired: rows('devices'),
     retiredPage: page('devices'),
+    retirementEvents: noEvents,
   } as unknown as DevicesApiService;
   const software = {
     listRetired: rows('software'),
     retiredPage: page('software'),
     listTerminatedIsp: rows('isp'),
     terminatedIspPage: page('isp'),
+    retirementEvents: noEvents,
+    ispTerminationEvents: noEvents,
   } as unknown as SoftwareApiService;
   const accounts = {
     listDisabled: rows('accounts'),
     disabledPage: page('accounts'),
+    disableEvents: noEvents,
   } as unknown as ServiceAccountsApiService;
-  return new DisposalService(devices, software, accounts);
+  const users = { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService;
+  const config = {
+    getString: () => Promise.resolve('Asia/Ho_Chi_Minh'),
+  } as unknown as SystemConfigService;
+  return new DisposalService(devices, software, accounts, users, config);
 }
 
 describe('DisposalService', () => {
@@ -71,6 +82,12 @@ describe('DisposalService', () => {
         detail: '300 Mbps',
         status: 'terminated',
         updatedAt: at,
+        // Chưa có lịch sử: ngày vào kho lùi về ngày cập nhật, người làm để trống.
+        disposedAt: at,
+        disposedBy: null,
+        disposedByName: null,
+        auto: false,
+        reason: null,
       },
     ]);
   });
@@ -107,7 +124,7 @@ describe('DisposalService.inventory — báo loại bị cắt', () => {
     [{ devices: 900 }, ['device']],
     [{ devices: 900, isp: 2 }, ['device', 'isp']],
   ])('tổng %j → truncated %j', async (totals, truncated) => {
-    const result = await makeService({ devices: one, isp: [] }, totals).inventory();
+    const result = await makeService({ devices: one, isp: [] }, totals).inventory({ sort: 'disposedAt', dir: 'desc', page: 1, limit: 50 });
     expect(result.truncated).toEqual(truncated);
     expect(result.items).toHaveLength(1);
   });

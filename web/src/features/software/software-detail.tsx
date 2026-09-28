@@ -28,6 +28,7 @@ import { useTabCounts } from "@/ui/tab-counts";
 import { VaultPanel } from "@/ui/vault-panel";
 import { useToast } from "@/ui/toast";
 import { LicenseAssignmentsPanel } from "./license-assignments-panel";
+import type { SeatRow } from "./seat-table";
 import { SoftwareForm } from "./software-form";
 import { softwareHistoryGroup, toSoftwareHistory } from "./software-history-entries";
 import {
@@ -93,6 +94,18 @@ export function SoftwareDetail({ me }: { me: Me }) {
       apiFetch<SoftwareHistoryRow[]>(`/api/v1/software/${id}/history`),
     enabled: tab === "history",
   });
+
+  /* Cùng khoá cache với tab Máy đang dùng (`LicenseAssignmentsPanel`): mở hộp Gia hạn sau khi
+     đã xem tab đó thì không tải lại. Chỉ hỏi khi hộp mở — ghế là việc của license. */
+  const seatRows = useQuery({
+    queryKey: ["software", id, "assignments", true],
+    queryFn: () =>
+      apiFetch<SeatRow[]>(`/api/v1/software/${id}/assignments?includeReleased=true`),
+    enabled: renewing && software.data?.kind === "license",
+  });
+  const seatEnds = (seatRows.data ?? [])
+    .filter((seat) => !seat.releasedAt && seat.endDate)
+    .map((seat) => seat.endDate as string);
 
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: ["software"] });
@@ -437,6 +450,8 @@ export function SoftwareDetail({ me }: { me: Me }) {
           row={{ kind: item.kind, id: item.id, code: item.code, label: item.name, end: item.endDate }}
           kindLabel={t(KIND_KEY[item.kind])}
           url={`/api/v1/software/${item.id}/renew`}
+          seatEnds={seatEnds}
+          attachTo={{ ownerType: "software", ownerId: item.id }}
           csrfToken={me.csrfToken}
           onClose={() => setRenewing(false)}
           onDone={() => {

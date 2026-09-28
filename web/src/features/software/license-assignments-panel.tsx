@@ -90,9 +90,9 @@ export function LicenseAssignmentsPanel({
           software={software}
           csrfToken={csrfToken}
           onClose={() => setAssigning(false)}
-          onDone={(warnings) => {
+          onDone={(warnings, count) => {
             setAssigning(false);
-            toast({ message: t('license.assigned') });
+            toast({ message: t('license.assignedCount', { count }) });
             for (const warning of warnings) toast({ message: warning, tone: 'warn' });
             void queryClient.invalidateQueries({ queryKey: ['software'] });
           }}

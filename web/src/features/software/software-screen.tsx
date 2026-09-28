@@ -409,9 +409,9 @@ export function SoftwareScreen({ me }: { me: Me }) {
           software={assigning}
           csrfToken={me.csrfToken}
           onClose={() => setAssigning(null)}
-          onDone={(warnings) => {
+          onDone={(warnings, count) => {
             setAssigning(null);
-            toast({ message: t('license.assigned') });
+            toast({ message: t('license.assignedCount', { count }) });
             for (const warning of warnings) toast({ message: warning, tone: 'warn' });
             void refresh();
           }}
