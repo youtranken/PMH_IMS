@@ -819,6 +819,8 @@ export default {
      * thôi có nghĩa. Hai câu nghe giống nhau nhưng nói hai chuyện khác hẳn.
      */
     notCounted: 'Không tính hạn',
+    /* Mô tả trợ năng của badge trên mục menu "Sắp hết hạn". */
+    navBadge: '{{count}} mục đã quá hạn',
     /* Nhãn ngắn của huy hiệu hạn (`lib/expiry.ts` → `expiryLabel`). */
     labelNone: 'Không có hạn',
     labelOverdue: 'Quá hạn {{count}} ngày',
