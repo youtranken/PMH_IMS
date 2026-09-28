@@ -23,6 +23,7 @@ import { VaultPanel } from "@/ui/vault-panel";
 import { IspForm } from "./isp-form";
 import { liquidationOf, toIspHistory } from "./isp-history-entries";
 import {
+  ACTION_KEY,
   STATUS_KEY,
   STATUS_TONE,
   type IspHistoryRow,
@@ -105,7 +106,7 @@ export function IspDetail({ me }: { me: Me }) {
     const ok = await askConfirm({
       title: t(`isp.statusTitle_${next}`, { code: item.code }),
       message: [t(`isp.statusMessage_${next}`), vaultNote, deviceNote].filter(Boolean).join(" "),
-      confirmLabel: t(STATUS_KEY[next]),
+      confirmLabel: t(ACTION_KEY[next]),
       danger: next === "terminated",
     });
     if (!ok) return;

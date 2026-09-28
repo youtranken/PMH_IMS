@@ -353,14 +353,35 @@ test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý c
     await page.getByRole('button', { name: `Thao tác với ISP-E2E-SC-${stamp}` }).click();
     await page.getByRole('menuitem', { name: 'Thanh lý…' }).click();
     const ask = page.getByRole('dialog');
-    await expect(ask).toContainText('hủy mật khẩu');
-    await ask.getByRole('button', { name: 'Hủy' }).click();
+    await expect(ask).toContainText('hợp đồng coi như đã cắt');
+    // Két của đường còn trống thì không nhắc hủy mật khẩu vu vơ (NET-065 chỉ nhắc khi có).
+    await expect(ask).not.toContainText('Két còn');
+    // Nút ✕ của hộp hỏi lại cũng mang tên "Hủy" — bấm nút ở chân hộp.
+    await ask.getByTestId('dialog-footer').getByRole('button', { name: 'Hủy' }).click();
     await expect(page.getByText('Đang dùng', { exact: true })).toBeVisible();
+
+    // Cất mật khẩu PPPoE vào két của đường: lúc thanh lý phải nhắc hủy/xoay nó.
+    const stashed = await page.request.post('/api/v1/vault/secrets', {
+      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+      data: {
+        ownerType: 'isp',
+        ownerId: String(created.body.id),
+        kind: 'password',
+        label: `pppoe-E2E-${stamp}`,
+        value: 'MatKhau#2026',
+      },
+    });
+    expect(stashed.status()).toBe(201);
+    await page.reload();
 
     await page.getByRole('button', { name: `Thao tác với ISP-E2E-SC-${stamp}` }).click();
     await page.getByRole('menuitem', { name: 'Thanh lý…' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: 'Thanh lý', exact: true }).click();
-    await expect(page.getByText(/Thanh lý ngày \d{2}\/\d{2}\/\d{4} bởi .+/)).toBeVisible();
+    await expect(ask).toContainText('Két còn 1 secret của đường này — hủy hoặc xoay nếu không còn dùng.');
+    // Nút là HÀNH ĐỘNG "Thanh lý", không phải nhãn trạng thái "Đã thanh lý" (Q-14).
+    await expect(ask.getByRole('button', { name: 'Đã thanh lý' })).toHaveCount(0);
+    await ask.getByRole('button', { name: 'Thanh lý', exact: true }).click();
+    // Băng rôn mang nhãn TRẠNG THÁI "Đã thanh lý" (Q-14), kèm ngày và người làm (NET-066).
+    await expect(page.getByText(/^Đã thanh lý ngày \d{2}\/\d{2}\/\d{4} bởi .+/)).toBeVisible();
   });
 
   test('form: IP WAN sai định dạng thì báo ngay dưới ô, không gửi', async ({ page }) => {

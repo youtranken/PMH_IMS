@@ -16,7 +16,7 @@ import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import type { DeviceRow } from '@/lib/device-types';
-import { ISP_STATUSES, STATUS_KEY, type IspRow, type IspStatus } from './isp-types';
+import { ACTION_KEY, ISP_STATUSES, STATUS_KEY, type IspRow, type IspStatus } from './isp-types';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { useFormErrors } from '@/ui/use-form-errors';
 
@@ -160,7 +160,7 @@ export function IspForm({
             const ok = await askConfirm({
               title: t('isp.terminateTitle', { code: row.code }),
               message: t('isp.terminateMessage'),
-              confirmLabel: t('isp.statusTerminated'),
+              confirmLabel: t(ACTION_KEY.terminated),
               danger: true,
             });
             if (!ok) return;
