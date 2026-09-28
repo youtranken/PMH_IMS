@@ -30,7 +30,7 @@ import { BadRequestException } from '@nestjs/common';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
-import { IpAddressService } from './ip-address.service';
+import { IP_SEARCH_MAX, IpAddressService } from './ip-address.service';
 import { IP_LIFECYCLE_STATUSES, type IpStatus } from './ip-lifecycle';
 import { NAT_PROTOCOLS, NatRuleService, type NatProtocol } from './nat-rule.service';
 import { parsePortRange } from './nat-rules';
@@ -80,6 +80,9 @@ class IpBodyDto {
   assignedAt?: string;
 
   @IsOptional() @IsString() @Length(0, 2000) note?: string;
+
+  /** Chỉ khi tạo: lý do cấp, ghi vào dòng lịch sử đầu tiên. */
+  @IsOptional() @IsString() @Length(0, 500) reason?: string;
 }
 
 class TransitionDto {
@@ -91,6 +94,11 @@ class TransitionDto {
   // Cấp / cấp lại thường đi kèm chủ mới — nhận luôn để lịch sử ghi thành MỘT dòng.
   @IsOptional() @ValidateIf((_o, value) => value !== '') @IsUUID() deviceId?: string;
   @IsOptional() @IsString() @Length(0, 160) usedBy?: string;
+
+  // Hộp "Cấp IP" dùng chung cho ô trống và hồ sơ Trống gửi cùng một bộ trường.
+  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày cấp phải dạng YYYY-MM-DD.' })
+  assignedAt?: string;
+  @IsOptional() @IsString() @Length(0, 2000) note?: string;
 }
 
 /** Ẩn bản ghi nhập nhầm — LUÔN phải có lý do (quyết định 2026-08-23). */
@@ -163,6 +171,17 @@ class NatQueryDto {
   siteId?: string;
 
   @IsOptional() @IsString() @Length(0, 120) search?: string;
+}
+
+class IpSearchQueryDto {
+  @IsOptional() @IsString() @Length(0, 120) search?: string;
+
+  @IsOptional()
+  @Transform(({ value }: TransformFnParams) => (value === undefined ? undefined : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(IP_SEARCH_MAX)
+  limit?: number;
 }
 
 class IdParamDto {
@@ -356,6 +375,16 @@ export class IpamController {
 
   // --- Hồ sơ IP ---------------------------------------------------------------
 
+  /**
+   * Tra hồ sơ IP xuyên mọi dải — theo địa chỉ, mã/tên máy, hoặc người/bộ phận.
+   * Cả team IT đọc được, cùng mức với bảng IP của từng dải.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('addresses')
+  searchAddresses(@Query() query: IpSearchQueryDto) {
+    return this.addresses.search(query.search ?? '', query.limit ?? 20);
+  }
+
   @Roles('sa', 'admin', 'member')
   @Get('addresses/:id')
   findAddress(@Param() params: IdParamDto) {
@@ -379,6 +408,7 @@ export class IpamController {
       usedBy: body.usedBy,
       assignedAt: body.assignedAt,
       note: body.note,
+      reason: body.reason,
     });
   }
 
@@ -411,6 +441,8 @@ export class IpamController {
       reason: body.reason,
       deviceId: body.deviceId,
       usedBy: body.usedBy,
+      assignedAt: body.assignedAt,
+      note: body.note,
     });
   }
 

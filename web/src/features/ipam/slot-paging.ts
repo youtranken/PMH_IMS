@@ -1,4 +1,5 @@
 import { clampPage } from '@/lib/paging';
+import { foldSearch } from '@/lib/search-fold';
 import { STATUS_KEY, type IpStatus, type SubnetSlot } from './ipam-types';
 
 /**
@@ -120,4 +121,32 @@ export function pageSlots(
 ): SubnetSlot[] {
   const safe = clampPage(page, slots.length, limit);
   return slots.slice((safe - 1) * limit, safe * limit);
+}
+
+/**
+ * Ô tìm ngay trên bảng IP — lọc tại chỗ vì cả dải (≤254 ô) đã nằm trong bộ nhớ.
+ *
+ * Ô trống chỉ có địa chỉ nên chỉ khớp theo địa chỉ; hồ sơ thì khớp thêm máy, người dùng và
+ * ghi chú — đúng những câu người ta hỏi: "10.77.1.53 là của ai", "máy chủ file ở IP nào".
+ */
+export function searchSlots(slots: SubnetSlot[], query: string): SubnetSlot[] {
+  const needle = foldSearch(query.trim());
+  if (!needle) return slots;
+  return slots.filter((slot) => {
+    const fields =
+      slot.kind === 'free'
+        ? [slot.address]
+        : [slot.address, slot.deviceCode, slot.deviceName, slot.usedBy, slot.note];
+    return fields.some((field) => field && foldSearch(field).includes(needle));
+  });
+}
+
+/** Trang (tính từ 1) chứa địa chỉ này trong danh sách đang hiện; không có thì `null`. */
+export function pageOfAddress(
+  slots: SubnetSlot[],
+  address: string,
+  limit = SLOT_PAGE_SIZE,
+): number | null {
+  const index = slots.findIndex((slot) => slot.address === address);
+  return index < 0 ? null : Math.floor(index / limit) + 1;
 }

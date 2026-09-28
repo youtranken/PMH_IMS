@@ -60,16 +60,16 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await expect(page.getByRole('heading', { name: new RegExp(cidr) })).toBeVisible();
 
     // Ô trống hiện sẵn trong bảng, không giấu sau nút "thêm".
-    await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(6);
+    await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(6);
 
-    await page.getByRole('button', { name: 'Cấp IP này' }).first().click();
+    await page.getByRole('button', { name: 'Cấp IP', exact: true }).first().click();
     const ipForm = page.getByRole('dialog');
     await ipForm.getByRole('combobox', { name: 'Người / bộ phận dùng' }).fill('Chị Lan — Kế toán');
-    await ipForm.getByRole('button', { name: 'Lưu' }).click();
+    await ipForm.getByRole('button', { name: 'Cấp IP', exact: true }).click();
 
     await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();
     await expect(page.getByText('17% · 1/6 · còn 5')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(5);
+    await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(5);
   });
 
   /**
@@ -115,7 +115,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     ).toBeVisible();
     await expect(page.getByText('Máy A của dải A')).toHaveCount(0);
     // Dải B chưa cấp IP nào → 6 ô trống, mỗi ô một nút cấp.
-    await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(6);
+    await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(6);
   });
 
   /**
@@ -137,16 +137,16 @@ test.describe('Dải mạng và hồ sơ IP', () => {
 
     await page.goto(`/ip-addresses/${subnetId}`);
     // Mặc định "Tất cả": 1 IP đã cấp + 5 ô trống.
-    await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(5);
+    await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(5);
     await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();
 
     // Nhãn nút lọc mang luôn con số của CẢ dải ("Đang dùng 1"), nên bám theo tiền tố.
     await page.getByRole('button', { name: /^Đang dùng/ }).click();
-    await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(0);
     await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();
 
     await page.getByRole('button', { name: /^Trống/ }).click();
-    await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(5);
+    await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(5);
     await expect(page.getByText('Chị Lan — Kế toán')).toHaveCount(0);
   });
 
@@ -424,7 +424,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     // Bảng IP vẫn hiện hồ sơ cũ — địa chỉ KHÔNG được vẽ thành ô trống sẵn sàng cấp lại.
     await expect(page.getByText('Máy chủ file')).toBeVisible();
     // Không một ô nào của dải đã tắt được mời cấp — kể cả những địa chỉ chưa ai dùng.
-    await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(0);
     await expect(page.getByText(/Dải này đã vô hiệu hóa/)).toBeVisible();
 
     // Bật lại: dải sống lại, và ĐÚNG hồ sơ đã tắt cùng nó cũng vậy.
@@ -586,14 +586,19 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
     const subnetId = await createSubnet(page, `172.16.${octet}.0/29`, `LAN gán E2E ${stamp}`);
 
-    // Hồ sơ tạo KHÔNG có chủ → 'free', đúng.
+    // Hồ sơ không chủ không tạo được nữa (Q-14), nên dựng hồ sơ Trống bằng đường thật: cấp
+    // rồi thu hồi.
     const created = await page.request.post('/api/v1/ipam/addresses', {
       headers,
-      data: { subnetId, address: `172.16.${octet}.1`, note: 'để dành' },
+      data: { subnetId, address: `172.16.${octet}.1`, usedBy: 'chủ cũ', note: 'để dành' },
     });
     expect(created.status()).toBe(201);
     const ipId = ((await created.json()) as { id: string }).id;
-    expect(((await created.json()) as { status?: string }).status ?? 'free').toBe('free');
+    const freed = await page.request.post(`/api/v1/ipam/addresses/${ipId}/transition`, {
+      headers,
+      data: { to: 'free', reason: 'thu hồi' },
+    });
+    expect(((await freed.json()) as { status: string }).status).toBe('free');
 
     /*
      * Rồi SỬA để gán người dùng. Bản trước giữ nguyên `status='free'`: bảng hiện một hàng vừa
@@ -641,7 +646,7 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
     // Địa chỉ trở lại thành chỗ TRỐNG, có nút cấp — chứ không nằm lại trong sổ vĩnh viễn.
     await expect(
       page.getByRole('row', { name: new RegExp(`172\\.16\\.${octet}\\.2`) })
-        .getByRole('button', { name: 'Cấp IP này' }),
+        .getByRole('button', { name: 'Cấp IP', exact: true }),
     ).toBeVisible();
 
     // Lịch sử của hồ sơ đã ẩn VẪN đọc được — đó mới là lúc người ta cần đọc nó.

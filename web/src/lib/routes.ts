@@ -28,6 +28,8 @@ export const PATHS = {
 
   ipAddresses: '/ip-addresses',
   subnet: (id: string) => `/ip-addresses/${id}`,
+  /** Mở dải ở ĐÚNG một địa chỉ: màn tự nhảy tới trang chứa nó và tô sáng dòng. */
+  subnetAt: (id: string, ip: string) => `/ip-addresses/${id}?ip=${encodeURIComponent(ip)}`,
 
   nat: '/nat',
 

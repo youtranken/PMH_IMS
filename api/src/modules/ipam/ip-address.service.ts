@@ -5,13 +5,19 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { requireCas, requireUnchangedSince } from '../../common/cas';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import type { Tx } from '../../common/tx';
-import { PG_CHECK_VIOLATION, conflictOnUnique, pgErrorCode } from '../../common/sql';
+import {
+  PG_CHECK_VIOLATION,
+  conflictOnUnique,
+  escapeLike,
+  imsNormLike,
+  pgErrorCode,
+} from '../../common/sql';
 import { diffRecord, hasChanges } from '../../common/record-diff';
 import { isoDateInTz } from '../../common/today';
 import { AuditWriterService } from '../audit/audit-writer.service';
@@ -28,7 +34,7 @@ import {
   type IpStatus,
 } from './ip-lifecycle';
 import { describePortRange } from './nat-rules';
-import { ipAddressTable, ipHistoryTable, natRuleTable } from './ipam.schema';
+import { ipAddressTable, ipHistoryTable, natRuleTable, subnetTable } from './ipam.schema';
 import { SubnetService } from './subnet.service';
 
 /** MỘT nguồn sự thật cho danh sách trạng thái — `ip-lifecycle.ts` (AD-15). */
@@ -81,6 +87,26 @@ export interface IpAddressInput {
   usedBy?: string | null;
   assignedAt?: string | null;
   status?: IpStatus;
+  note?: string | null;
+  reason?: string | null;
+}
+
+/** Một kết quả tra IP xuyên dải — kèm dải chứa nó để mở thẳng đúng dải. */
+export type IpSearchHit = IpAddressRecord & {
+  subnetCidr: string;
+  subnetName: string;
+  subnetVlan: number | null;
+};
+
+/** Trần số dòng của ô tra — đây là ô gợi ý, không phải một bảng. */
+export const IP_SEARCH_MAX = 50;
+
+export interface TransitionOptions {
+  reason?: string | null;
+  deviceId?: string | null;
+  usedBy?: string | null;
+  /** Chỉ dùng khi cấp: ngày cấp thật (YYYY-MM-DD); bỏ trống là hôm nay. */
+  assignedAt?: string | null;
   note?: string | null;
 }
 
@@ -217,6 +243,57 @@ export class IpAddressService {
     return this.decorate(rows);
   }
 
+  /**
+   * Tra hồ sơ IP xuyên MỌI dải đang dùng: "10.77.1.53 là máy nào" và "máy CAM-01 giữ IP nào".
+   *
+   * Câu gõ có dáng IP thì so theo địa chỉ: đủ bốn khúc là khớp ĐÚNG (gõ .5 mà ra .53 là trả lời
+   * sai câu hỏi), gõ dở thì khớp phần đầu. Còn lại thì tìm theo máy — qua `devices.api` chứ
+   * không join bảng `device` (AD-2) — và theo người/bộ phận, gấp dấu.
+   *
+   * Bỏ dải đã vô hiệu hoá và hồ sơ đã ẩn: kết quả dẫn người ta tới chỗ CẤP/SỬA, mà hai chỗ đó
+   * đều chỉ đọc.
+   */
+  async search(term: string, limit = 20): Promise<IpSearchHit[]> {
+    const q = term.trim();
+    if (q.length < 2) return [];
+    const cap = Math.min(Math.max(1, Math.trunc(limit) || 1), IP_SEARCH_MAX);
+
+    let match: SQL | undefined;
+    const ipLike = /^\d{1,3}(\.\d{1,3}){0,3}\.?(\/\d{1,2})?$/.test(q) && q.includes('.');
+    if (ipLike) {
+      const host = q.replace(/\/\d{1,2}$/, '');
+      match = /^\d{1,3}(\.\d{1,3}){3}$/.test(host)
+        ? sql`host(${ipAddressTable.address}) = ${host}`
+        : sql`host(${ipAddressTable.address}) LIKE ${`${escapeLike(host)}%`}`;
+    } else {
+      const deviceIds = (await this.devices.search(q, IP_SEARCH_MAX)).map((d) => d.id);
+      match = or(
+        deviceIds.length > 0 ? inArray(ipAddressTable.deviceId, deviceIds) : undefined,
+        imsNormLike(ipAddressTable.usedBy, q),
+      );
+    }
+
+    const rows = await this.db
+      .select({
+        ip: ipAddressTable,
+        subnetCidr: sql<string>`${subnetTable.cidr}::text`,
+        subnetName: subnetTable.name,
+        subnetVlan: subnetTable.vlan,
+      })
+      .from(ipAddressTable)
+      .innerJoin(subnetTable, eq(subnetTable.id, ipAddressTable.subnetId))
+      .where(and(match, isNull(ipAddressTable.voidedAt), isNull(subnetTable.voidedAt)))
+      .orderBy(asc(ipAddressTable.address))
+      .limit(cap);
+    const records = await this.decorate(rows.map((row) => row.ip));
+    return records.map((record, index) => ({
+      ...record,
+      subnetCidr: rows[index].subnetCidr,
+      subnetName: rows[index].subnetName,
+      subnetVlan: rows[index].subnetVlan,
+    }));
+  }
+
   async findOne(id: string): Promise<IpAddressRecord> {
     return (await this.decorate([await this.requireAlive(id)]))[0];
   }
@@ -270,7 +347,8 @@ export class IpAddressService {
   async create(actor: string, input: IpAddressInput): Promise<IpAddressRecord> {
     const cidr = await this.subnets.cidrOf(input.subnetId);
     const address = this.requireHost(input.address, cidr);
-    const status = input.status ?? (input.deviceId || input.usedBy ? 'assigned' : 'free');
+    requireOwner(input.deviceId, input.usedBy);
+    const status = input.status ?? 'assigned';
 
     try {
       const row = await this.db.transaction(async (tx) => {
@@ -300,7 +378,12 @@ export class IpAddressService {
           action: 'ip.created',
           actor,
           toStatus: status,
-          changes: { address, deviceId: input.deviceId ?? null, usedBy: input.usedBy ?? null },
+          changes: {
+            address,
+            deviceId: input.deviceId || null,
+            usedBy: input.usedBy?.trim() || null,
+            reason: input.reason?.trim() || null,
+          },
         });
         return rows[0];
       });
@@ -371,6 +454,9 @@ export class IpAddressService {
     const becomesAssigned =
       !isOccupying(before.status as IpStatus) &&
       Boolean(nextOwner.deviceId || nextOwner.usedBy);
+    // Hồ sơ Đang dùng mà bị gỡ hết chủ là quay lại đúng dòng mồ côi Q-14 cấm. Hồ sơ Trống thì
+    // không có chủ là chuyện bình thường — sửa ghi chú của nó không được chặn.
+    if (isOccupying(before.status as IpStatus)) requireOwner(nextOwner.deviceId, nextOwner.usedBy);
 
     /*
      * ĐỔI CHỦ hoặc DỜI ĐỊA CHỈ qua đường sửa hồ sơ cũng phải hỏi sổ NAT (rà soát 10/09).
@@ -471,7 +557,7 @@ export class IpAddressService {
     actor: string,
     id: string,
     to: IpStatus,
-    options: { reason?: string | null; deviceId?: string | null; usedBy?: string | null } = {},
+    options: TransitionOptions = {},
   ): Promise<IpAddressRecord> {
     const row = await this.db.transaction((tx) =>
       this.transitionWithin(tx, actor, id, to, options),
@@ -492,7 +578,7 @@ export class IpAddressService {
     actor: string,
     id: string,
     to: IpStatus,
-    options: { reason?: string | null; deviceId?: string | null; usedBy?: string | null } = {},
+    options: TransitionOptions = {},
   ): Promise<typeof ipAddressTable.$inferSelect> {
     const before = await this.requireAliveWithin(tx, id);
     const from = before.status as IpStatus;
@@ -513,6 +599,7 @@ export class IpAddressService {
       deviceId?: string | null;
       usedBy?: string | null;
       assignedAt?: string | null;
+      note?: string | null;
     } = { status: to };
 
     if (to === 'free') {
@@ -527,7 +614,14 @@ export class IpAddressService {
         values.deviceId = options.deviceId || null;
       }
       if (options.usedBy !== undefined) values.usedBy = options.usedBy?.trim() || null;
-      values.assignedAt = isoDateInTz(await this.timezone());
+      requireOwner(
+        values.deviceId !== undefined ? values.deviceId : before.deviceId,
+        values.usedBy !== undefined ? values.usedBy : before.usedBy,
+      );
+      // Ngày cấp người dùng chọn thắng "hôm nay": cấp bù một IP đã cắm từ tuần trước là
+      // chuyện thường, và sổ phải ghi ngày thật.
+      values.assignedAt = options.assignedAt || isoDateInTz(await this.timezone());
+      if (options.note !== undefined) values.note = options.note?.trim() || null;
     }
 
     {
@@ -943,6 +1037,21 @@ export class IpAddressService {
         '(tạo mới là mất lịch sử cũ).',
     });
   }
+}
+
+/**
+ * Q-14: hồ sơ IP phải gắn thiết bị hoặc người/bộ phận — có hồ sơ là Đang dùng (Q-02), và một
+ * hồ sơ không chủ chỉ là dòng "Trống" mồ côi đứng cạnh ô trống thật.
+ */
+function requireOwner(
+  deviceId: string | null | undefined,
+  usedBy: string | null | undefined,
+): void {
+  if (deviceId || usedBy?.trim()) return;
+  throw new BadRequestException({
+    code: 'IP_OWNER_REQUIRED',
+    message: 'Chọn thiết bị hoặc nhập người/bộ phận dùng IP này.',
+  });
 }
 
 /** Nhãn tiếng Việt cho thông điệp lỗi — khớp `STATUS_KEY` phía web. */

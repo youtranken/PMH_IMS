@@ -62,7 +62,7 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
     await expect(page.getByRole('heading', { name: new RegExp(cidr) })).toBeVisible();
 
     // 254 host / 50 = 6 trang. Trước đây đổ hết 254 dòng ra một lượt.
-    await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(50);
+    await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(50);
     await expect(page.getByText('1–50 trên 254 dòng')).toBeVisible();
     await expect(page.getByText('Trang 1/6')).toBeVisible();
 
@@ -79,7 +79,7 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
       await page.getByRole('button', { name: 'Trang sau' }).click();
     }
     await expect(page.getByText('Trang 6/6')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(4);
+    await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(4);
     await expect(page.getByRole('button', { name: 'Trang sau' })).toBeDisabled();
   });
 

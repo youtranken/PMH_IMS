@@ -4523,7 +4523,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     /*
      * Cả `main` có ĐÚNG ngần này nút. Dải đang chọn còn trống hoàn toàn (/29 = 6 host) nên
-     * phần bảng là con số biết trước: 3 nút lọc, 6 nút "Cấp IP này", 2 nút lật trang.
+     * phần bảng là con số biết trước: 3 nút lọc, 6 nút "Cấp IP", 2 nút lật trang — cộng nút
+     * "Tra" của ô tra IP/máy cấp trang.
      */
     await expectHandleCounts(
       page.getByRole('main'),
@@ -4531,11 +4532,12 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       [
         ['Xuất Excel', 1],
         ['Khai dải mới', 1],
+        ['Tra', 1],
         [/^Thao tác với /, cards],
         ['Tất cả 6', 1],
         ['Đang dùng 0', 1],
         ['Trống 6', 1],
-        ['Cấp IP này', 6],
+        ['Cấp IP', 6],
         ['Trang trước', 1],
         ['Trang sau', 1],
       ],
@@ -4682,14 +4684,14 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     /* ----- Ô trống có nút cấp ngay tại chỗ; ô đã cấp thì KHÔNG ----- */
     await expect(
-      ipRow(page, free).getByRole('button', { name: 'Cấp IP này' }),
+      ipRow(page, free).getByRole('button', { name: 'Cấp IP', exact: true }),
       'ô trống phải cấp được ngay tại dòng — đó là đường ngắn nhất khi đang cắm máy',
     ).toHaveCount(1);
     await expect(
-      ipRow(page, taken).getByRole('button', { name: 'Cấp IP này' }),
+      ipRow(page, taken).getByRole('button', { name: 'Cấp IP', exact: true }),
       'hàng đã có chủ mà vẫn bày nút cấp là mời người ta ghi đè',
     ).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Cấp IP này' })).toHaveCount(5);
+    await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(5);
 
     /* ----- Ô tick hồ sơ đã ẩn: phải HỎI LẠI API, không chỉ lọc trong bộ nhớ ----- */
     const showVoided = page.getByRole('checkbox', { name: 'Hiện cả hồ sơ đã ẩn' });
@@ -4741,35 +4743,27 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await page.goto(`/ip-addresses/${subnetId}`);
 
     /* ----- Hộp CẤP ----- */
-    await ipRow(page, first).getByRole('button', { name: 'Cấp IP này' }).click();
-    const assign = page.getByRole('dialog', { name: `Cấp ${first}` });
+    await ipRow(page, first).getByRole('button', { name: 'Cấp IP', exact: true }).click();
+    const assign = page.getByRole('dialog', { name: `Cấp IP — ${first}` });
     await expect(assign).toBeVisible();
     await expect(
       assign.getByText(first, { exact: true }),
       'địa chỉ là giá trị CỐ ĐỊNH trong hộp này — sửa được nó thì nút "Cấp IP này" của dòng mất hết ý nghĩa',
     ).toBeVisible();
 
-    await expectHandles(assign, 'textbox', ['Ghi chú'], 'Hộp "Cấp IP"');
-    /*
-     * HAI ô gõ-để-lọc: "Thiết bị" và "Người / bộ phận dùng".
-     *
-     * Chỉ ô thứ hai gọi được TÊN — `IpForm` không truyền `ariaLabel` cho `Combobox` thiết bị
-     * (khác hẳn form NAT, nơi cả hai ô đều có). Với trình đọc màn hình, ô ấy chỉ còn cái
-     * placeholder để bấu víu. Đếm số ô ở đây vẫn khoá được việc nó biến mất; còn cái tên thì
-     * là món nợ đã ghi vào báo cáo.
-     */
-    await expect(
-      assign.getByRole('combobox'),
-      'hai ô gõ-để-lọc: thiết bị và người dùng',
-    ).toHaveCount(2);
-    await expect(
-      assign.getByRole('combobox', { name: 'Người / bộ phận dùng', exact: true }),
-    ).toHaveCount(1);
-    // "Ngày cấp" là NÚT mở lịch, không phải ô gõ ngày.
+    await expectHandles(assign, 'textbox', ['Ghi chú', 'Lý do'], 'Hộp "Cấp IP"');
+    // HAI ô gõ-để-lọc, cả hai gọi được tên: "Thiết bị" và "Người / bộ phận dùng".
+    await expectHandles(
+      assign,
+      'combobox',
+      ['Thiết bị', 'Người / bộ phận dùng'],
+      'Hộp "Cấp IP"',
+    );
+    // "Ngày cấp" là NÚT mở lịch, không phải ô gõ ngày. Nút chính mang đúng tên việc: "Cấp IP".
     await expectHandles(
       assign,
       'button',
-      ['Đóng hộp thoại', 'Ngày cấp', 'Hủy', 'Lưu'],
+      [/^Ngày cấp/, 'Đóng hộp thoại', 'Hủy', 'Cấp IP'],
       'Hộp "Cấp IP"',
     );
 
@@ -4780,15 +4774,15 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     );
 
     // Mở lại và cấp thật — để có một hồ sơ mà soi hộp SỬA.
-    await ipRow(page, first).getByRole('button', { name: 'Cấp IP này' }).click();
-    const again = page.getByRole('dialog', { name: `Cấp ${first}` });
+    await ipRow(page, first).getByRole('button', { name: 'Cấp IP', exact: true }).click();
+    const again = page.getByRole('dialog', { name: `Cấp IP — ${first}` });
     await again
       .getByRole('combobox', { name: 'Người / bộ phận dùng', exact: true })
       .fill('Chị Lan — Kế toán');
     await again
       .getByRole('textbox', { name: 'Ghi chú', exact: true })
       .fill(`máy bàn tầng 2 E2E ${stamp}`);
-    await again.getByRole('button', { name: 'Lưu' }).click();
+    await again.getByRole('button', { name: 'Cấp IP', exact: true }).click();
     await expect(again).toHaveCount(0);
     await expect(ipRow(page, first).getByText('Chị Lan — Kế toán')).toBeVisible();
 
@@ -4879,21 +4873,26 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(ipRow(page, address).getByText('Trống', { exact: true })).toBeVisible();
     expect(
       await rowActionNames(page, address),
-      'từ "Trống" bước đi tiếp là "Cấp IP", KHÔNG còn "Thu hồi" nữa — menu đứng im nghĩa là nó không đọc trạng thái của chính hàng nó',
-    ).toEqual(['Cấp IP', 'Lịch sử', 'Sửa', 'Ẩn hồ sơ']);
+      'từ "Trống" KHÔNG còn "Thu hồi"; bước cấp là nút "Cấp IP" ngay trên dòng, và "Sửa" một hồ sơ trống chính là cấp nên không bày riêng',
+    ).toEqual(['Lịch sử', 'Ẩn hồ sơ']);
 
-    /* ----- Và hộp "Cấp IP" thì NGƯỢC LẠI: có hỏi chủ MỚI, và ô mở ra trống ----- */
-    await rowAction(page, address, 'Cấp IP');
+    /* ----- Hồ sơ Trống mở CÙNG hộp "Cấp IP" với ô trống: có ô Thiết bị, ô người dùng mở ra trống ----- */
+    await ipRow(page, address).getByRole('button', { name: 'Cấp IP', exact: true }).click();
     const assign = page.getByRole('dialog', {
       name: new RegExp(`Cấp IP\\s*—\\s*${esc(address)}`),
     });
     await expect(assign).toBeVisible();
-    await expectHandles(assign, 'combobox', ['Người / bộ phận dùng'], 'Hộp "Cấp IP"');
+    await expectHandles(
+      assign,
+      'combobox',
+      ['Thiết bị', 'Người / bộ phận dùng'],
+      'Hộp "Cấp IP"',
+    );
     await expect(
       assign.getByRole('combobox', { name: 'Người / bộ phận dùng', exact: true }),
       'chủ cũ đã đi khỏi lúc thu hồi — điền sẵn tên họ là hồi sinh một chủ không còn',
     ).toHaveValue('');
-    await expectHandles(assign, 'textbox', ['Lý do'], 'Hộp "Cấp IP"');
+    await expectHandles(assign, 'textbox', ['Ghi chú', 'Lý do'], 'Hộp "Cấp IP"');
     await assign.getByRole('button', { name: 'Đóng hộp thoại' }).click();
     await expect(assign).toHaveCount(0);
     await expect(ipRow(page, address).getByText('Trống', { exact: true })).toBeVisible();

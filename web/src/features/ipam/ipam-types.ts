@@ -59,6 +59,13 @@ export interface IpRow {
   voidReason: string | null;
 }
 
+/** Một kết quả tra IP xuyên dải (`GET ipam/addresses?search=`) — kèm dải chứa nó. */
+export interface IpSearchHit extends IpRow {
+  subnetCidr: string;
+  subnetName: string;
+  subnetVlan: number | null;
+}
+
 /** Một dòng trên màn dải: hoặc hồ sơ thật, hoặc một ô còn trống (không có hàng trong DB). */
 export type SubnetSlot = ({ kind: 'record' } & IpRow) | { kind: 'free'; address: string };
 

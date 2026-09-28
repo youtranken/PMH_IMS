@@ -448,6 +448,17 @@ table.table tbody tr.exp:hover td {
 .subnet-pane .segmented {
   margin-bottom: var(--space-7);
 }
+/* Cột Thiết bị là cột người ta dò bằng mắt khi hỏi "IP này của máy nào": đủ chỗ cho một mã
+   máy trên một dòng. Ngày cấp chỉ cần đúng bề rộng của nó, nhường chỗ còn lại cho cột máy. */
+.subnet-pane th.col-device,
+.subnet-pane td.col-device {
+  min-width: 14ch;
+}
+.subnet-pane th.col-date,
+.subnet-pane td.col-date {
+  width: 1%;
+  white-space: nowrap;
+}
 /* Nhãn nút lọc không được gãy dòng — nâng lên cho MỌI dải nút: dải đã cuộn ngang được trong
    chính nó (`form-layout.css`), nên nút gãy đôi chỉ làm dải cao lên chứ không cứu được gì. */
 .segmented button {
