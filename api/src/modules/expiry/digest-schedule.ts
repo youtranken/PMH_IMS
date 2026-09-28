@@ -1,3 +1,5 @@
+import { addDays } from '../../common/today';
+
 /**
  * Đến kỳ gửi báo cáo chưa? — hàm THUẦN, không chạm DB, không đọc đồng hồ.
  *
@@ -46,6 +48,47 @@ export function shouldSendNow(
   if (!isDueToday(schedule, now)) return false;
   // Kỳ này đã gửi rồi (so theo NGÀY, không theo giờ) → thôi.
   return lastSentDate !== now.date;
+}
+
+/**
+ * Kỳ gửi TỚI (ngày + giờ địa phương) — suy ngược từ đúng luật của `shouldSendNow`, không tự
+ * đặt luật thứ hai: hôm nay đến kỳ mà chưa gửi thì kỳ tới là HÔM NAY (kể cả khi đã qua giờ —
+ * sweep sẽ gửi bù trong vòng một phút), còn không thì ngày đến kỳ kế tiếp.
+ */
+export function nextSendSlot(
+  schedule: DigestSchedule,
+  now: LocalNow,
+  lastSentDate: string | null,
+): { date: string; hour: number } {
+  if (isDueToday(schedule, now) && lastSentDate !== now.date) {
+    return { date: now.date, hour: schedule.hour };
+  }
+  // Kỳ thưa nhất là hằng tháng (ngày 1–28) nên 31 ngày luôn đủ gặp một ngày đến kỳ.
+  for (let step = 1; step <= 31; step += 1) {
+    const date = addDays(now.date, step);
+    const day: LocalNow = {
+      date,
+      hour: 0,
+      weekday: weekdayOf(date),
+      dayOfMonth: Number(date.slice(8, 10)),
+    };
+    if (isDueToday(schedule, day)) return { date, hour: schedule.hour };
+  }
+  return { date: addDays(now.date, 1), hour: schedule.hour };
+}
+
+/** Như `nextSendSlot`, quy ra mốc UTC — màn hình tự in theo giờ địa phương. */
+export function nextSendAt(
+  schedule: DigestSchedule,
+  timeZone: string,
+  lastSentAt: Date | null,
+  now: Date = new Date(),
+): Date {
+  const local = localNowIn(timeZone, now);
+  const lastSentDate = lastSentAt ? safeIsoDate(timeZone, lastSentAt) : null;
+  const slot = nextSendSlot(schedule, local, lastSentDate);
+  // Cộng giờ lên nửa đêm địa phương: múi giờ ứng dụng không có giờ mùa hè (Asia/Ho_Chi_Minh).
+  return new Date(startOfLocalDayUtc(timeZone, slot.date).getTime() + slot.hour * 3_600_000);
 }
 
 function isDueToday(schedule: DigestSchedule, now: LocalNow): boolean {

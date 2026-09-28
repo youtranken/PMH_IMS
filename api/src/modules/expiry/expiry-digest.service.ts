@@ -19,6 +19,7 @@ import {
   describeSchedule,
   localNowIn,
   shouldSendNow,
+  nextSendAt,
   startOfLocalDayUtc,
   type DigestFrequency,
 } from './digest-schedule';
@@ -67,8 +68,34 @@ export class ExpiryDigestService {
 
   // ─────────────────────────── Quản trị luật ───────────────────────────
 
-  list() {
-    return this.db.select().from(expiryRuleTable).orderBy(asc(expiryRuleTable.name));
+  /** Kèm `nextSendAt` (EX-021): bảng luật nói lần gửi TỚI, không chỉ lần gửi gần nhất. */
+  async list(now: Date = new Date()) {
+    const [rules, timeZone] = await Promise.all([
+      this.db.select().from(expiryRuleTable).orderBy(asc(expiryRuleTable.name)),
+      this.config.getString('appTimezone'),
+    ]);
+    return rules.map((rule) => ({
+      ...rule,
+      // Luật tạm dừng không có kỳ tới — in một ngày ra là hứa hão.
+      nextSendAt: rule.active
+        ? nextSendAt(scheduleOf(rule), timeZone, rule.lastSentAt, now)
+        : null,
+    }));
+  }
+
+  /**
+   * Xem trước nội dung thư NGAY TRONG APP (EX-021) — trước đây muốn biết thư chứa gì thì phải
+   * "Gửi thử", tức bắn một email thật tới cả danh sách người nhận. Đọc thuần, không ghi gì.
+   */
+  async preview(id: string) {
+    const payload = await this.buildPayload(await this.requireRule(id));
+    return {
+      total: payload.total,
+      expired: payload.expired,
+      upcoming: payload.upcoming,
+      recipients: payload.recipients,
+      items: payload.items,
+    };
   }
 
   async create(actor: string, input: DigestRuleInput) {
@@ -108,9 +135,14 @@ export class ExpiryDigestService {
    * Gửi thử NGAY, không đụng `last_sent_at` (AC 3.5: "gửi email test được ngay từ màn
    * cấu hình"). Không có nút này thì người ta phải chờ tới thứ Hai mới biết luật có chạy không.
    */
-  async sendTest(actor: string, id: string): Promise<{ recipients: string[]; items: number }> {
+  async sendTest(
+    actor: string,
+    id: string,
+    /** "Chỉ gửi cho tôi" (EX-021): người bấm tự xem thư, không làm phiền danh sách thật. */
+    onlyMe?: { userId: string; email: string },
+  ): Promise<{ recipients: string[]; items: number }> {
     const rule = await this.requireRule(id);
-    const recipients = rule.recipients as string[];
+    const recipients = onlyMe ? [onlyMe.email] : (rule.recipients as string[]);
     if (recipients.length === 0) {
       throw new BadRequestException({
         code: 'NO_RECIPIENTS',
@@ -119,13 +151,18 @@ export class ExpiryDigestService {
     }
     const payload = await this.buildPayload(rule);
     await this.db.transaction(async (tx) => {
-      await this.outbox.enqueueWithin(tx, 'expiry.digest', { ruleId: id, isTest: true });
+      // Outbox chỉ giữ ID (AD-11/NFR-04): consumer tự tra email của `toUserId`.
+      await this.outbox.enqueueWithin(tx, 'expiry.digest', {
+        ruleId: id,
+        isTest: true,
+        ...(onlyMe ? { toUserId: onlyMe.userId } : {}),
+      });
       await this.audit.appendWithin(tx, {
         actor,
         action: 'expiry.digest.test',
         objectType: 'expiry_rule',
         objectId: id,
-        detail: { recipients: recipients.length, items: payload.total },
+        detail: { recipients: recipients.length, items: payload.total, onlyMe: !!onlyMe },
       });
     });
     return { recipients, items: payload.total };
@@ -300,12 +337,7 @@ export class ExpiryDigestService {
     return {
       ruleId: rule.id,
       ruleName: rule.name,
-      schedule: describeSchedule({
-        frequency: rule.frequency as DigestFrequency,
-        hour: rule.hour,
-        weekday: rule.weekday,
-        dayOfMonth: rule.dayOfMonth,
-      }),
+      schedule: describeSchedule(scheduleOf(rule)),
       withinDays: rule.withinDays,
       recipients: rule.recipients as string[],
       items: rows,
@@ -422,4 +454,13 @@ export function prepareDigestRule(
   }
 
   return values;
+}
+
+function scheduleOf(rule: typeof expiryRuleTable.$inferSelect) {
+  return {
+    frequency: rule.frequency as DigestFrequency,
+    hour: rule.hour,
+    weekday: rule.weekday,
+    dayOfMonth: rule.dayOfMonth,
+  };
 }

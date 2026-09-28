@@ -2,6 +2,8 @@ import { lookBackDays } from './expiry.service';
 import {
   describeSchedule,
   localNowIn,
+  nextSendAt,
+  nextSendSlot,
   shouldSendNow,
   startOfLocalDayUtc,
   weekdayOf,
@@ -219,5 +221,33 @@ describe('lookBackDays — nhìn lùi bao xa để bắt mục đã quá hạn',
     ['NaN rơi về mặc định', { expiredWithinDays: Number.NaN }, 365],
   ])('%s', (_name, query, expected) => {
     expect(lookBackDays(query)).toBe(expected);
+  });
+});
+
+describe('nextSendSlot — lần gửi tới (EX-021), khớp đúng luật của shouldSendNow', () => {
+  const at = (date: string, hour: number): LocalNow => ({
+    date,
+    hour,
+    weekday: weekdayOf(date),
+    dayOfMonth: Number(date.slice(8, 10)),
+  });
+
+  it.each<[string, DigestSchedule, LocalNow, string | null, { date: string; hour: number }]>([
+    ['hằng ngày, chưa tới giờ → hôm nay', { frequency: 'daily', hour: 8 }, at('2026-08-24', 7), null, { date: '2026-08-24', hour: 8 }],
+    ['hằng ngày, đã gửi hôm nay → mai', { frequency: 'daily', hour: 8 }, at('2026-08-24', 9), '2026-08-24', { date: '2026-08-25', hour: 8 }],
+    // Qua giờ mà kỳ hôm nay chưa gửi (sweep lỡ nhịp) → vẫn là hôm nay: shouldSendNow sẽ gửi bù.
+    ['hằng ngày, quá giờ chưa gửi → hôm nay', { frequency: 'daily', hour: 8 }, at('2026-08-24', 10), null, { date: '2026-08-24', hour: 8 }],
+    ['hằng tuần thứ Hai, hôm nay thứ Tư → thứ Hai tới', { frequency: 'weekly', hour: 8, weekday: 1 }, at('2026-08-26', 9), null, { date: '2026-08-31', hour: 8 }],
+    ['hằng tuần thứ Hai, đã gửi sáng nay → tuần sau', { frequency: 'weekly', hour: 8, weekday: 1 }, at('2026-08-24', 9), '2026-08-24', { date: '2026-08-31', hour: 8 }],
+    ['hằng tháng ngày 1, hôm nay 24/08 → 01/09', { frequency: 'monthly', hour: 9, dayOfMonth: 1 }, at('2026-08-24', 9), null, { date: '2026-09-01', hour: 9 }],
+    ['hằng tháng ngày 28, cuối tháng 2 → 28/02', { frequency: 'monthly', hour: 9, dayOfMonth: 28 }, at('2027-02-10', 9), null, { date: '2027-02-28', hour: 9 }],
+  ])('%s', (_name, rule, now, lastSent, expected) => {
+    expect(nextSendSlot(rule, now, lastSent)).toEqual(expected);
+  });
+
+  it('đổi ra mốc UTC theo múi giờ ứng dụng: 08:00 giờ VN = 01:00Z', () => {
+    expect(
+      nextSendAt({ frequency: 'daily', hour: 8 }, 'Asia/Ho_Chi_Minh', null, new Date('2026-08-24T00:00:00Z')),
+    ).toEqual(new Date('2026-08-24T01:00:00Z'));
   });
 });

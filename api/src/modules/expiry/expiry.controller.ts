@@ -71,6 +71,11 @@ class RuleBodyDto {
   @IsOptional() @IsBoolean() active?: boolean;
 }
 
+class TestRuleDto {
+  /** Chỉ gửi thư thử cho chính người bấm (EX-021). */
+  @IsOptional() @IsBoolean() onlyMe?: boolean;
+}
+
 class RuleParamDto {
   @IsUUID(undefined, { message: 'Mã luật không hợp lệ.' })
   id!: string;
@@ -258,8 +263,24 @@ export class ExpiryController {
   @Roles('sa', 'admin')
   @Post('rules/:id/test')
   @Audited('expiry.digest.test', 'expiry_rule', { writtenByService: true })
-  testRule(@Param() params: RuleParamDto, @Req() req: AuthedRequest) {
-    return this.digest.sendTest(req.user!.email, params.id);
+  testRule(
+    @Param() params: RuleParamDto,
+    @Body() body: TestRuleDto,
+    @Req() req: AuthedRequest,
+  ) {
+    const user = req.user!;
+    return this.digest.sendTest(
+      user.email,
+      params.id,
+      body?.onlyMe ? { userId: user.id, email: user.email } : undefined,
+    );
+  }
+
+  /** Nội dung thư của luật, xem ngay trong app — không gửi gì (EX-021). */
+  @Roles('sa', 'admin', 'member')
+  @Get('rules/:id/preview')
+  previewRule(@Param() params: RuleParamDto) {
+    return this.digest.preview(params.id);
   }
 
   @Roles('sa', 'admin', 'member')
