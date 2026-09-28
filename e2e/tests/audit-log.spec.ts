@@ -282,8 +282,8 @@ test.describe('Nhật ký kiểm toán — màn hình', () => {
     await firstLogin(page, E2E_SA);
 
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
-    await nav.getByRole('link', { name: 'Nhật ký', exact: true }).click();
-    await expect(page.getByRole('heading', { level: 1, name: 'Nhật ký' })).toBeVisible();
+    await nav.getByRole('link', { name: 'Nhật ký hệ thống', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Nhật ký hệ thống' })).toBeVisible();
     expect(new URL(page.url()).pathname).toBe('/admin/audit-log');
 
     const filtered = page.waitForResponse(
@@ -311,7 +311,7 @@ test.describe('Nhật ký kiểm toán — màn hình', () => {
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
     // Menu đã dựng xong thì vế "không có" bên dưới mới có nghĩa.
     await expect(nav.getByRole('link', { name: 'Thiết bị', exact: true })).toBeVisible();
-    await expect(nav.getByText('Nhật ký', { exact: true })).toHaveCount(0);
+    await expect(nav.getByText('Nhật ký hệ thống', { exact: true })).toHaveCount(0);
 
     await page.goto('/admin/audit-log');
     // Trang có thật, chỉ là không dành cho vai này — nói đúng là THIẾU QUYỀN (MISC-001).

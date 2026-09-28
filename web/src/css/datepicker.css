@@ -121,6 +121,18 @@
   /* Radix modal set body{pointer-events:none}; popover portal ra body thừa hưởng -> phải bật lại. */
   pointer-events: auto;
 }
+/* Ô gõ ngày ở đầu lịch — cùng bề ngang lịch, lỗi nằm ngay dưới ô. */
+.dp-type {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+.dp-type .inp {
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+.dp-type .field-error {
+  margin-top: var(--space-1);
+}
 .dp-head {
   display: flex;
   align-items: center;

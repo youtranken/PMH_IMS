@@ -87,6 +87,54 @@ describe('Quyền xem két sắt — theo người', () => {
     expect(list).toHaveTextContent('Nguyễn An');
   });
 
+  it('người đã nghỉ (vô hiệu hóa) mặc định ẩn; tick "Hiện cả người đã nghỉ" thì hiện kèm nhãn', async () => {
+    const withLeaver = [
+      ...ACCOUNTS,
+      { id: 'u-cu', email: 'cu@pmh.com.vn', fullName: 'Lý Đã Nghỉ', role: 'member', status: 'disabled' },
+    ];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('/vault/access/scopes')) return Promise.resolve(jsonResponse(200, SCOPES));
+        if (url.includes('/vault/access/people')) return Promise.resolve(jsonResponse(200, withLeaver));
+        return Promise.resolve(jsonResponse(200, RULES));
+      }),
+    );
+    renderWithI18n(
+      <MemoryRouter initialEntries={['/admin/vault-access']}>
+        <ToastProvider>
+          <AccessMatrixScreen me={ME} />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+    const list = await screen.findByRole('navigation', { name: 'Danh sách thành viên' });
+    expect(list).not.toHaveTextContent('Lý Đã Nghỉ');
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Hiện cả người đã nghỉ (1)' }));
+    expect(list).toHaveTextContent('Lý Đã Nghỉ');
+    expect(list).toHaveTextContent('Đã vô hiệu hóa');
+  });
+
+  it('gán một nhóm cho nhiều người: người đã có quyền hiện tầng hiện tại, tóm tắt tách thêm / đổi', async () => {
+    renderAt('/admin/vault-access?view=matrix');
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Gán "Phần mềm: Chứng chỉ SSL" cho nhiều người' }),
+    );
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('Đang: Xem thẳng');
+    await userEvent.click(screen.getByRole('button', { name: 'Chọn tất cả' }));
+    expect(dialog).toHaveTextContent('thêm quyền cho 1 người · đổi tầng của 1 người');
+  });
+
+  it('ô trên lưới dùng biểu tượng SVG, không emoji', async () => {
+    renderAt('/admin/vault-access?view=matrix');
+    const cell = await screen.findByRole('button', {
+      name: 'Trần Bình — Phần mềm: Chứng chỉ SSL: Xem thẳng',
+    });
+    expect(cell.querySelector('svg')).not.toBeNull();
+    expect(cell.textContent).not.toContain('✓');
+  });
+
   it('"+ Thêm quyền" chỉ liệt kê nhóm người đó CHƯA có', async () => {
     renderAt('/admin/vault-access?user=u-binh');
     await userEvent.click(await screen.findByRole('button', { name: '+ Thêm quyền' }));

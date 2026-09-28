@@ -102,6 +102,17 @@ table.table tbody tr.due-today td:first-child {
 table.table tbody tr.row-danger td {
   background: var(--danger-soft);
 }
+/*
+ * Huy hiệu ĐỎ trên dòng ĐỎ: nền huy hiệu trùng nền dòng nên nó tan vào dòng, nhất là ở chế độ
+ * tối (đỏ trên đỏ sẫm). Trả huy hiệu về nền mặt bảng + viền đỏ để nó vẫn là một "viên" đọc được.
+ */
+table.table tbody tr.row-danger .badge.danger,
+table.table tbody tr.overdue .badge.danger,
+.list-card.row-danger .badge.danger,
+.list-card.overdue .badge.danger {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border-danger);
+}
 /* Dòng seat được điều hướng từ bảng con /phan-mem (?seat=) — nhấn nhẹ + viền trái. */
 table.table tbody tr.row-highlight td {
   background: var(--primary-soft);
@@ -401,17 +412,23 @@ table.table tbody tr.row-suspended td:first-child {
   background: var(--danger-soft);
   color: var(--danger);
 }
-/* Việc ít khi làm, dễ nhầm với việc bên trên (RowAction `muted`): chữ xám, kẻ ngăn phía trên. */
+/* Việc đảo lại được nhưng cần nghĩ (RowAction `warn`): màu cảnh báo, không đỏ. */
+.row-actions-menu button.warn {
+  color: var(--warn);
+}
+.row-actions-menu button.warn:hover:not(:disabled) {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+/* Việc ít khi làm, dễ nhầm với việc bên trên (RowAction `muted`): chữ xám. */
 .row-actions-menu button.is-muted {
   color: var(--ink-3);
-  margin-top: var(--space-1);
-  border-top: 1px solid var(--border);
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
 }
-.row-actions-menu button.is-muted ~ button.is-muted {
-  margin-top: 0;
-  border-top-color: transparent;
+/* Vạch ngăn giữa hai nhóm mức độ — RowActions tự chèn, nơi gọi không khai. */
+.row-actions-menu .ra-sep {
+  height: 1px;
+  margin: var(--space-1) 0;
+  background: var(--border);
 }
 /* Dòng mô tả dưới nhãn (RowAction `hint`) — xuống dòng được, menu không phình ngang. */
 .row-actions-menu .ra-text {
@@ -885,4 +902,42 @@ table.table thead th .th-sort:focus-visible .sort-arrow.idle {
 }
 .sk-narrow {
   width: 35%;
+}
+
+/* Dòng nhật ký là sự kiện an ninh THẤT BẠI (gõ sai, bị từ chối, bị khóa): vạch đỏ ở mép trái,
+   không tô cả dòng — người rà quét được cột dấu hiệu mà bảng không thành một mảng đỏ. */
+table.table tbody tr.row-alert td:first-child {
+  box-shadow: inset 3px 0 0 var(--danger);
+}
+.list-card.row-alert {
+  box-shadow: inset 3px 0 0 var(--danger);
+}
+/* Nút mở chi tiết ở ô đầu dòng nhật ký — trông như chữ, bấm được bằng bàn phím. */
+button.audit-open {
+  padding: 0;
+  font-size: inherit;
+  color: var(--primary-ink);
+}
+/* Khung chi tiết một dòng nhật ký: nhãn trái – giá trị phải, xuống dòng được ở 390px. */
+.audit-detail {
+  display: grid;
+  grid-template-columns: minmax(7rem, max-content) 1fr;
+  gap: var(--space-2) var(--space-5);
+  margin: 0 0 var(--space-7);
+}
+.audit-detail dt {
+  color: var(--ink-2);
+}
+.audit-detail dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.audit-detail-row {
+  display: contents;
+}
+.audit-raw pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: var(--fs-xs);
+  margin: var(--space-3) 0;
 }

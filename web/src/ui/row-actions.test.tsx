@@ -164,4 +164,48 @@ describe('RowActions — menu ba chấm dùng chung', () => {
       'Xóa',
     ]);
   });
+
+  /*
+   * Việc thường · việc cảnh báo (đảo được) · việc nguy hiểm · việc hiếm: mỗi nhóm cách nhau một
+   * vạch ngăn. Hai việc khác hẳn mức độ đứng sát nhau cùng màu là chỗ ngón tay trượt nhầm.
+   */
+  it('mỗi nhóm mức độ cách nhau một vạch ngăn, việc `warn` đứng giữa thường và nguy hiểm', async () => {
+    const user = userEvent.setup();
+    renderWithI18n(
+      <RowActions
+        label="Thao tác với E2E-DN"
+        items={[
+          { key: 'delete', label: 'Xóa', onSelect: vi.fn(), danger: true },
+          { key: 'deactivate', label: 'Vô hiệu hóa', onSelect: vi.fn(), warn: true },
+          { key: 'edit', label: 'Sửa', onSelect: vi.fn() },
+          { key: 'history', label: 'Lịch sử', onSelect: vi.fn() },
+        ]}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Thao tác với E2E-DN' }));
+    expect(screen.getAllByRole('menuitem').map((el) => el.textContent)).toEqual([
+      'Sửa',
+      'Lịch sử',
+      'Vô hiệu hóa',
+      'Xóa',
+    ]);
+    // Hai vạch: trước "Vô hiệu hóa" và trước "Xóa" — không có vạch nào giữa hai việc thường.
+    expect(screen.getAllByRole('separator')).toHaveLength(2);
+    expect(screen.getByRole('menuitem', { name: 'Vô hiệu hóa' })).toHaveClass('warn');
+  });
+
+  it('menu chỉ một nhóm thì không có vạch ngăn nào', async () => {
+    const user = userEvent.setup();
+    renderWithI18n(
+      <RowActions
+        label="Thao tác với LIC-02"
+        items={[
+          { key: 'edit', label: 'Sửa', onSelect: vi.fn() },
+          { key: 'history', label: 'Lịch sử', onSelect: vi.fn() },
+        ]}
+      />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Thao tác với LIC-02' }));
+    expect(screen.queryByRole('separator')).not.toBeInTheDocument();
+  });
 });

@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
+import { ApiError } from '@/lib/api-client';
+import { foldSearch } from '@/lib/search-fold';
+import { useConfirm } from '@/ui/confirm-provider';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
@@ -13,8 +16,11 @@ import {
   type CabinetRow,
   type CatalogEntity,
   type CatalogRow,
+  type DeviceTypeRow,
+  type ServicePortRow,
   type ServiceProtocol,
 } from '@/lib/catalog-types';
+import { suggestCabinetCode } from './cabinet-code';
 
 type FormState = {
   code: string;
@@ -99,6 +105,7 @@ export function CatalogForm({
 }) {
   const { t } = useTranslation();
   const toast = useToast();
+  const askConfirm = useConfirm();
   /*
    * Form TỰ hỏi danh mục thay vì nhận qua props: `useCatalogLists` dùng chung `queryKey` nên
    * đây không phải lượt gọi thêm, nhưng form THẤY được `isError`. Props `CatalogLists |
@@ -107,6 +114,17 @@ export function CatalogForm({
   const lists = useCatalogLists();
   const [form, setForm] = useState<FormState>(() => initialState(entity, row));
   const [error, setError] = useState<string | null>(null);
+  /* Lỗi server gắn được vào MỘT ô (409 trùng mã/tên) — hiện ngay dưới ô đó, không ở cuối form. */
+  const [serverField, setServerField] = useState<{ field: 'code' | 'name'; message: string } | null>(
+    null,
+  );
+  /*
+   * Mã site/tủ là khoá người ta dùng để TRA và để nhập Excel. Ở chế độ Sửa nó khoá sẵn; đổi phải
+   * bấm "Đổi mã…" rồi đọc câu hệ quả — ô Mã trông y hệt ô Tên thì người ta đổi mà không nghĩ.
+   */
+  const [codeUnlocked, setCodeUnlocked] = useState(row === null);
+  /* Mã tủ đang là GỢI Ý tự điền (chưa ai gõ tay) — đổi site thì gợi ý theo site mới. */
+  const [codeSuggested, setCodeSuggested] = useState(false);
 
   const save = useApiMutation<Record<string, unknown>, CatalogRow>(
     row ? `/api/v1/catalog/${entity}/${row.id}` : `/api/v1/catalog/${entity}`,
@@ -116,27 +134,86 @@ export function CatalogForm({
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 
+  const hasCode = entity === 'site' || entity === 'cabinet';
+  const codeField: 'code' | 'name' = hasCode ? 'code' : 'name';
+
   const built = buildBody(entity, form);
   const builtError = (field: BodyField) => built.field === field && t(built.key ?? '');
   const check = useFormErrors({
-    code: (entity === 'site' || entity === 'cabinet') && !form.code.trim() && t('formErrors.required'),
+    code: hasCode && !form.code.trim() && t('formErrors.required'),
     name: entity !== 'cabinet' && !form.name.trim() && t('formErrors.required'),
     siteId: builtError('siteId'),
     uHeight: builtError('uHeight'),
     portFrom: builtError('portFrom'),
     portTo: builtError('portTo'),
   });
+  const fieldError = (field: 'code' | 'name') =>
+    check.error(field) ?? (serverField?.field === field ? serverField.message : null);
 
-  const submit = () => {
+  /* Bộ phận gần trùng tên (bỏ dấu, hoa thường): nhắc trước khi sinh ra "Phòng IT" thứ hai. */
+  const similarDepartment =
+    entity === 'department' && form.name.trim()
+      ? (lists.data?.departments ?? []).find(
+          (item) =>
+            item.id !== row?.id &&
+            foldSearch(item.name).replace(/\s+/g, ' ') ===
+              foldSearch(form.name.trim()).replace(/\s+/g, ' '),
+        )
+      : undefined;
+
+  /* Dịch vụ trùng port + giao thức với một dịch vụ khác — nhắc nhẹ, không chặn. */
+  const overlappingPort =
+    entity === 'service_port' ? findPortOverlap(form, row, lists.data?.servicePorts) : undefined;
+
+  const submit = async () => {
     setError(null);
+    setServerField(null);
     if (!check.check() || !built.body) return;
+    const typeRow = row as DeviceTypeRow | null;
+    /* Tắt "Có port map" của một loại đang bật là ẩn khu port map ở MỌI thiết bị loại đó. */
+    if (entity === 'device_type' && row && typeRow?.hasPortMap && !form.hasPortMap) {
+      const ok = await askConfirm({
+        title: t('common.titleOf', { action: t('catalog.edit'), subject: catalogLabel(entity, row) }),
+        message: t('catalog.confirmHidePortMap', { name: catalogLabel(entity, row) }),
+        confirmLabel: t('common.save'),
+      });
+      if (!ok) return;
+    }
     save.mutate(built.body, {
       onSuccess: (saved) => {
         toast({ message: t('catalog.saved') });
         onSaved(saved);
       },
-      onError: (err) => setError(errorMessage(err)),
+      onError: (err) => {
+        const code =
+          err instanceof ApiError ? (err.body as { code?: string } | null)?.code : undefined;
+        if (code === 'CATALOG_DUPLICATE') {
+          setServerField({ field: codeField, message: errorMessage(err) });
+          setCodeUnlocked(true);
+          return;
+        }
+        setError(errorMessage(err));
+      },
     });
+  };
+
+  const pickSite = (siteId: string) => {
+    const site = lists.data?.sites.find((item) => item.id === siteId);
+    const suggest = Boolean(site) && row === null && (form.code.trim() === '' || codeSuggested);
+    setForm((current) => ({
+      ...current,
+      siteId,
+      code:
+        suggest && site
+          ? suggestCabinetCode(
+              site.code,
+              (lists.data?.cabinets ?? [])
+                .filter((item) => item.siteId === siteId)
+                .map((item) => item.code),
+            )
+          : current.code,
+    }));
+    if (suggest) setCodeSuggested(true);
   };
 
   return (
@@ -148,11 +225,14 @@ export function CatalogForm({
       dismissible={!save.isPending}
       guardUnsaved
       maxWidth={560}
-      /* Hộp này dùng chung cho CẢ BẢY tab danh mục, nên một chữ "Sửa" không nói được
-         đang sửa cái gì của nhóm nào. */
+      /* Hộp này dùng chung cho CẢ BẢY tab danh mục, nên một chữ "Sửa" không nói được đang sửa
+         cái gì của nhóm nào. Tủ mạng chỉ nêu MÃ TỦ — site đã có ô riêng ngay trong form. */
       title={
         row
-          ? t('common.titleOf', { action: t('catalog.edit'), subject: catalogLabel(entity, row) })
+          ? t('common.titleOf', {
+              action: t('catalog.edit'),
+              subject: entity === 'cabinet' ? (row as CabinetRow).code : catalogLabel(entity, row),
+            })
           : t(ADD_KEY[entity])
       }
       footer={
@@ -174,20 +254,63 @@ export function CatalogForm({
         noValidate
         onSubmit={(e) => {
           e.preventDefault();
-          submit();
+          void submit();
         }}
       >
         {check.summary}
-        {entity === 'site' || entity === 'cabinet' ? (
-          <Field label={t('catalog.code')} required htmlFor="catalog-code" error={check.error('code')}>
-            <input
-              id="catalog-code"
-              className="inp"
+        {entity === 'cabinet' ? (
+          /* Site TRƯỚC mã: mã tủ gợi ý theo site (TU-<SITE>-NN), và tủ không đứng ngoài site nào. */
+          <Field label={t('catalog.site')} required error={check.error('siteId')}>
+            <Select
               required
-              value={form.code}
-              onChange={(e) => set('code', e.target.value)}
+              value={form.siteId}
+              ariaLabel={t('catalog.site')}
+              placeholder={t('catalog.pickSite')}
+              failed={lists.isError}
+              options={activeOptions(
+                lists.data?.sites,
+                (row as CabinetRow | null)?.siteId,
+                (site) => `${site.code} — ${site.name}`,
+              )}
+              onChange={pickSite}
             />
           </Field>
+        ) : null}
+
+        {hasCode ? (
+          <Field
+            label={t('catalog.code')}
+            required
+            htmlFor="catalog-code"
+            hint={entity === 'cabinet' && row === null ? t('catalog.cabinetCodeHint') : undefined}
+            error={fieldError('code')}
+          >
+            {codeUnlocked ? (
+              <input
+                id="catalog-code"
+                className="inp mono"
+                required
+                value={form.code}
+                onChange={(e) => {
+                  set('code', e.target.value);
+                  setCodeSuggested(false);
+                  if (serverField?.field === 'code') setServerField(null);
+                }}
+              />
+            ) : (
+              <div className="row catalog-code-locked">
+                <span className="static-value mono">{form.code}</span>
+                <button type="button" className="btn sm" onClick={() => setCodeUnlocked(true)}>
+                  {t('catalog.changeCode')}
+                </button>
+              </div>
+            )}
+          </Field>
+        ) : null}
+        {hasCode && row !== null && codeUnlocked ? (
+          <p className="alert warn" role="note">
+            {t('catalog.changeCodeWarn')}
+          </p>
         ) : null}
 
         {entity === 'site' ||
@@ -196,13 +319,28 @@ export function CatalogForm({
         entity === 'department' ||
         entity === 'isp_provider' ||
         entity === 'service_port' ? (
-          <Field label={t('catalog.name')} required htmlFor="catalog-name" error={check.error('name')}>
+          <Field
+            label={t('catalog.name')}
+            required
+            htmlFor="catalog-name"
+            hint={
+              similarDepartment
+                ? t('catalog.similarDepartment', { name: similarDepartment.name })
+                : entity === 'department'
+                  ? t('catalog.departmentHint')
+                  : undefined
+            }
+            error={fieldError('name')}
+          >
             <input
               id="catalog-name"
               className="inp"
               required
               value={form.name}
-              onChange={(e) => set('name', e.target.value)}
+              onChange={(e) => {
+                set('name', e.target.value);
+                if (serverField?.field === 'name') setServerField(null);
+              }}
             />
           </Field>
         ) : null}
@@ -220,33 +358,27 @@ export function CatalogForm({
 
         {entity === 'cabinet' ? (
           <>
-            <Field label={t('catalog.site')} required error={check.error('siteId')}>
-              <Select
-                required
-                value={form.siteId}
-                ariaLabel={t('catalog.site')}
-                placeholder={t('catalog.pickSite')}
-                failed={lists.isError}
-                options={activeOptions(
-                  lists.data?.sites,
-                  (row as CabinetRow | null)?.siteId,
-                  (site) => `${site.code} — ${site.name}`,
-                )}
-                onChange={(value) => set('siteId', value)}
-              />
-            </Field>
             <Field label={t('catalog.description')} htmlFor="catalog-description">
-              <input
+              <textarea
                 id="catalog-description"
                 className="inp"
+                rows={2}
                 value={form.description}
                 onChange={(e) => set('description', e.target.value)}
               />
             </Field>
-            <Field label={t('catalog.uHeight')} htmlFor="catalog-uheight" error={check.error('uHeight')}>
+            <Field
+              label={t('catalog.uHeight')}
+              htmlFor="catalog-uheight"
+              hint={t('catalog.uHeightHint')}
+              error={check.error('uHeight')}
+            >
               <input
                 id="catalog-uheight"
                 className="inp"
+                type="number"
+                min={1}
+                max={60}
                 inputMode="numeric"
                 value={form.uHeight}
                 onChange={(e) => set('uHeight', e.target.value)}
@@ -304,11 +436,13 @@ export function CatalogForm({
               <input
                 id="catalog-phone"
                 className="inp"
+                type="tel"
+                inputMode="tel"
                 value={form.phone}
                 onChange={(e) => set('phone', e.target.value)}
               />
             </Field>
-            <Field label={t('catalog.contact')} htmlFor="catalog-contact">
+            <Field label={t('catalog.contact')} hint={t('catalog.contactHint')} htmlFor="catalog-contact">
               <input
                 id="catalog-contact"
                 className="inp"
@@ -320,11 +454,7 @@ export function CatalogForm({
         ) : null}
 
         {entity === 'department' ? (
-          <Field
-            label={t('catalog.description')}
-            hint={t('catalog.departmentHint')}
-            htmlFor="catalog-description"
-          >
+          <Field label={t('catalog.description')} htmlFor="catalog-description">
             <input
               id="catalog-description"
               className="inp"
@@ -344,11 +474,13 @@ export function CatalogForm({
               <input
                 id="catalog-hotline"
                 className="inp mono"
+                type="tel"
+                inputMode="tel"
                 value={form.hotline}
                 onChange={(e) => set('hotline', e.target.value)}
               />
             </Field>
-            <Field label={t('catalog.contact')} htmlFor="catalog-contact">
+            <Field label={t('catalog.contact')} hint={t('catalog.contactHint')} htmlFor="catalog-contact">
               <input
                 id="catalog-contact"
                 className="inp"
@@ -372,32 +504,39 @@ export function CatalogForm({
                 onChange={(value) => set('protocol', value as ServiceProtocol)}
               />
             </Field>
-            <Field
-              label={t('catalog.portFrom')}
-              required
-              hint={t('catalog.portHint')}
-              htmlFor="catalog-port-from"
-              error={check.error('portFrom')}
-            >
-              <input
-                id="catalog-port-from"
-                className="inp mono"
+            {/* Hai ô port trên MỘT hàng — "từ … đến …" đọc như một khoảng, không như hai trường rời. */}
+            <div className="form-grid catalog-port-pair" data-columns={2}>
+              <Field
+                label={t('catalog.portFrom')}
                 required
-                inputMode="numeric"
-                value={form.portFrom}
-                onChange={(e) => set('portFrom', e.target.value)}
-              />
-            </Field>
-            <Field label={t('catalog.portTo')} htmlFor="catalog-port-to" error={check.error('portTo')}>
-              <input
-                id="catalog-port-to"
-                className="inp mono"
-                inputMode="numeric"
-                placeholder={t('catalog.portToPlaceholder')}
-                value={form.portTo}
-                onChange={(e) => set('portTo', e.target.value)}
-              />
-            </Field>
+                htmlFor="catalog-port-from"
+                hint={t('catalog.portHint')}
+                error={check.error('portFrom')}
+              >
+                <input
+                  id="catalog-port-from"
+                  className="inp mono"
+                  required
+                  inputMode="numeric"
+                  value={form.portFrom}
+                  onChange={(e) => set('portFrom', e.target.value)}
+                />
+              </Field>
+              <Field label={t('catalog.portTo')} htmlFor="catalog-port-to" error={check.error('portTo')}>
+                <input
+                  id="catalog-port-to"
+                  className="inp mono"
+                  inputMode="numeric"
+                  value={form.portTo}
+                  onChange={(e) => set('portTo', e.target.value)}
+                />
+              </Field>
+            </div>
+            {overlappingPort ? (
+              <p className="alert warn" role="note">
+                {t('catalog.portOverlap', { name: overlappingPort.name })}
+              </p>
+            ) : null}
             <Field label={t('catalog.description')} htmlFor="catalog-description">
               <input
                 id="catalog-description"
@@ -416,6 +555,29 @@ export function CatalogForm({
         ) : null}
       </form>
     </Dialog>
+  );
+}
+
+/**
+ * Dịch vụ khác cùng giao thức (hoặc TCP+UDP) có khoảng port chồng lên khoảng đang gõ — để nhắc
+ * "HTTPS E2E 443" trùng "HTTPS 443". Chỉ nhắc: hai tên cho một port đôi khi là cố ý.
+ */
+function findPortOverlap(
+  form: FormState,
+  row: CatalogRow | null,
+  ports: ServicePortRow[] | undefined,
+): ServicePortRow | undefined {
+  const from = Number(form.portFrom.trim());
+  if (!form.portFrom.trim() || !isPort(from)) return undefined;
+  const rawTo = form.portTo.trim();
+  const to = rawTo === '' ? from : Number(rawTo);
+  if (!isPort(to) || to < from) return undefined;
+  return (ports ?? []).find(
+    (item) =>
+      item.id !== row?.id &&
+      (item.protocol === form.protocol || item.protocol === 'both' || form.protocol === 'both') &&
+      item.portFrom <= to &&
+      item.portTo >= from,
   );
 }
 

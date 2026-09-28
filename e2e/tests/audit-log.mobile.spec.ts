@@ -11,7 +11,7 @@ test('Nhật ký đọc được ở 390px từ link lọc sẵn, không tràn n
   await firstLogin(page, E2E_SA);
   await page.goto(`/admin/audit-log?q=${encodeURIComponent(E2E_SA.email)}`);
 
-  await expect(page.getByRole('heading', { level: 1, name: 'Nhật ký' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Nhật ký hệ thống' })).toBeVisible();
   await expect(page.getByText(/^auth\.(login|password)\.ok$/).first()).toBeVisible();
 
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);

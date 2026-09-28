@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
-import { DatePicker } from '@/ui/date-picker';
+import { DatePicker, parseTypedDate } from '@/ui/date-picker';
 
 function Harness({ initial, onChange }: { initial: string; onChange?: (v: string) => void }) {
   const [value, setValue] = useState(initial);
@@ -76,5 +76,68 @@ describe('DatePicker — bàn phím và trình đọc màn hình', () => {
     expect(today?.textContent).toBe(String(new Date().getDate()));
     // Chưa chọn gì thì tiêu điểm vào ngày hôm nay.
     expect(document.activeElement).toBe(today);
+  });
+});
+
+describe('parseTypedDate — gõ tay dd/mm/yyyy', () => {
+  it.each([
+    ['09/10/2026', '2026-10-09'],
+    ['9/10/2026', '2026-10-09'],
+    ['09-10-2026', '2026-10-09'],
+    ['09.10.2026', '2026-10-09'],
+    ['09102026', '2026-10-09'],
+    [' 29/02/2028 ', '2028-02-29'],
+    ['1/1/90', '1990-01-01'],
+    ['1/1/25', '2025-01-01'],
+  ])('"%s" → %s', (text, iso) => {
+    expect(parseTypedDate(text)).toEqual({ value: iso, reason: null });
+  });
+
+  it.each([['31/02/2026'], ['29/02/2027'], ['32/01/2026'], ['12/13/2026'], ['abc'], ['2026-10-09x']])(
+    '"%s" là ngày không có thật',
+    (text) => {
+      expect(parseTypedDate(text)).toEqual({ value: null, reason: 'invalid' });
+    },
+  );
+
+  it('ô trống là "chưa gõ", không phải lỗi', () => {
+    expect(parseTypedDate('   ')).toEqual({ value: null, reason: 'empty' });
+  });
+});
+
+describe('DatePicker — gõ tay và tháng mở sẵn', () => {
+  it('gõ một chữ số trên nút mở lịch là mở ô gõ ngày; Enter ghi ngày đã gõ', async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    renderWithI18n(<Harness initial="" onChange={onChange} />);
+    screen.getByRole('button', { name: 'Ngày mua' }).focus();
+    await user.keyboard('0');
+    const typed = screen.getByRole('textbox', { name: 'Gõ ngày (dd/mm/yyyy)' });
+    expect(typed).toHaveFocus();
+    await user.keyboard('9/10/2026{Enter}');
+    expect(onChange).toHaveBeenLastCalledWith('2026-10-09');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('gõ ngày không có thật thì báo ngay dưới ô, không ghi gì', async () => {
+    const onChange = vi.fn();
+    const user = userEvent.setup();
+    renderWithI18n(<Harness initial="" onChange={onChange} />);
+    await user.click(screen.getByRole('button', { name: 'Ngày mua' }));
+    await user.type(
+      screen.getByRole('textbox', { name: 'Gõ ngày (dd/mm/yyyy)' }),
+      '31/02/2026{Enter}',
+    );
+    expect(onChange).not.toHaveBeenCalled();
+    expect(screen.getByText('Ngày không có thật — gõ theo dạng dd/mm/yyyy.')).toBeInTheDocument();
+  });
+
+  it('`openTo` mở lịch ở đúng tháng khi ô còn trống (ngày sinh không mở ở tháng hiện tại)', async () => {
+    const user = userEvent.setup();
+    renderWithI18n(
+      <DatePicker value="" ariaLabel="Ngày sinh" openTo="1990-01-01" onChange={() => undefined} />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Ngày sinh' }));
+    expect(screen.getByRole('group', { name: /1990/ })).toBeInTheDocument();
   });
 });

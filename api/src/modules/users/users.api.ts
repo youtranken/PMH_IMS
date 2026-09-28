@@ -9,7 +9,7 @@ import type { UserDirectoryEntry, UserRecord } from './users.types';
  * cột của bảng `users`, chỉ chủ bảng mới được nói cột nào an toàn cho `ORDER BY`.
  */
 export { USER_SORT_DEFAULT, USER_SORT_KEYS } from './users.service';
-export type { UserSortKey } from './users.service';
+export type { UserListFilters, UserSortKey } from './users.service';
 
 /**
  * AD-2: public api DUY NHẤT của module users. Module khác inject class này,

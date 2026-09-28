@@ -16,7 +16,7 @@ test('Phiên đang mở ở 390px: thẻ thiết bị · IP, nút Đóng phiên 
   await timVaChoLoc(page, E2E_SA.email);
   await rowAction(page, hoTen, 'Phiên đang mở');
 
-  const hop = page.getByRole('dialog', { name: `Phiên đang mở — ${hoTen}` });
+  const hop = page.getByRole('dialog', { name: `Phiên đang mở: ${hoTen}` });
   await expect(hop).toBeVisible();
   // Thẻ, không phải bảng.
   await expect(hop.getByRole('table')).toHaveCount(0);

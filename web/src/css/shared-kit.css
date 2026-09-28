@@ -422,6 +422,25 @@
   background: transparent;
   font-weight: 500;
 }
+/* Chip tổng kết là NÚT LỌC — giữ hình viên huy hiệu, không lấy khung của `button`. */
+.import-summary button.badge {
+  border: 0;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.import-summary button.badge:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.import-summary button.badge[aria-pressed='true'] {
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+/* Danh sách "trường: trước → sau" của dòng Cập nhật. */
+.import-changes {
+  margin: 0;
+  padding-left: var(--space-7);
+}
 .import-toggle {
   align-self: flex-start;
 }
@@ -1007,6 +1026,59 @@ table.access-grid thead .access-row-head {
 }
 .access-person { display: block; font-weight: 600; }
 .access-person-mail { display: block; font-size: var(--fs-2xs); }
+/* Cột tên người: tên và email mỗi thứ MỘT dòng (cắt … + tooltip) — ép xuống dòng giữa chừng làm
+   mỗi hàng cao gấp ba chỉ vì tên. Nút gán là dấu + nhỏ bên phải, không lặp chữ ở mọi dòng. */
+.access-row-head-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.access-person-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 14rem;
+}
+.access-person-text .access-person,
+.access-person-text .access-person-mail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.access-person-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+.access-row-add {
+  flex: none;
+  min-width: 2rem;
+  font-weight: 700;
+}
+/* Dấu + ở tiêu đề cột: báo tiêu đề BẤM ĐƯỢC (gán nhóm cho nhiều người). */
+.access-col-plus {
+  display: inline-block;
+  margin-left: var(--space-1);
+  color: var(--primary-ink);
+  font-weight: 700;
+}
+.access-intro p {
+  margin: 0;
+}
+.access-intro p + p {
+  margin-top: var(--space-2);
+}
+/* Ô tick trong thanh lọc ("Hiện cả người đã nghỉ") và dòng công cụ của danh sách chọn người. */
+.filter-check {
+  gap: var(--space-3);
+  white-space: nowrap;
+}
+.pick-tools {
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
 .access-family {
   text-align: center;
   font-size: var(--fs-2xs);

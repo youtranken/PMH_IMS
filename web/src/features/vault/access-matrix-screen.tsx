@@ -1,9 +1,12 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
+import { formatDate } from '@/lib/format';
+import { PATHS } from '@/lib/routes';
+import { SECRET_OWNER_KIND_KEY, SECRET_OWNER_TYPES, type SecretOwnerType } from '@/lib/secret-owner-kinds';
 import type { Me } from '@/lib/me';
 import { Dialog } from '@/ui/dialog';
 import { FilterBar } from '@/ui/filter-bar';
@@ -47,6 +50,8 @@ interface AccessRule {
   tier: Tier;
   grantedBy: string;
   note: string | null;
+  /** Mốc gán — "ai cấp và khi nào" là câu auditor hỏi. */
+  createdAt?: string;
 }
 
 interface ScopeOption {
@@ -60,6 +65,42 @@ interface AccountRow {
   email: string;
   fullName: string;
   role: 'sa' | 'admin' | 'member';
+  status?: 'active' | 'locked' | 'disabled';
+}
+
+/** Huy hiệu trạng thái cạnh tên người — người đã nghỉ / đang khóa không được trông như người thường. */
+function StatusTag({ account }: { account: AccountRow }) {
+  const { t } = useTranslation();
+  if (account.status === 'locked') {
+    return <span className="badge warn plain">{t('accounts.statusLocked')}</span>;
+  }
+  if (account.status === 'disabled') {
+    return <span className="badge muted plain">{t('accounts.statusDisabled')}</span>;
+  }
+  return null;
+}
+
+/**
+ * Biểu tượng tầng quyền — SVG tô bằng `currentColor` chứ không emoji: emoji ⏳ vẽ khác nhau theo
+ * hệ điều hành và không nhận màu token, nên ở chế độ tối gần như chìm.
+ */
+function TierIcon({ tier }: { tier: Tier | null }) {
+  if (tier === 'whitelist') {
+    return (
+      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="m3 8.5 3.2 3L13 4.5" />
+      </svg>
+    );
+  }
+  if (tier === 'needs_approval') {
+    return (
+      <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+        <circle cx="8" cy="8" r="6" />
+        <path d="M8 4.8V8l2.2 1.6" />
+      </svg>
+    );
+  }
+  return <span aria-hidden="true">–</span>;
 }
 
 type View = 'people' | 'matrix';
@@ -91,6 +132,9 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
   const narrow = useMediaQuery(NARROW_QUERY);
   const [params, setParams] = useSearchParams();
   const [search, setSearch] = useState('');
+  /** Người đã vô hiệu hóa (nghỉ việc) mặc định ẨN — gán quyền cho họ là việc không ai cần làm. */
+  const [showDisabled, setShowDisabled] = useState(false);
+  const [checking, setChecking] = useState(false);
   /** Lọc CỘT của lưới theo họ nhóm đối tượng — '' là xem hết. */
   const [family, setFamily] = useState<'' | ScopeType>('');
   const [grantingScope, setGrantingScope] = useState<ScopeOption | null>(null);
@@ -200,7 +244,12 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
   const columns = columnGroups.flatMap((group) => group.scopes);
 
   const allAccounts = accounts.data ?? [];
-  const members = allAccounts.filter((account) => account.role === 'member');
+  const members = allAccounts.filter(
+    (account) => account.role === 'member' && (showDisabled || account.status !== 'disabled'),
+  );
+  const hiddenDisabled = allAccounts.filter(
+    (account) => account.role === 'member' && account.status === 'disabled',
+  ).length;
   const roleHolders = allAccounts.filter((account) => account.role !== 'member');
   // Gấp dấu cả hai vế (B-01): gõ `nguyen thi` phải ra `Nguyễn Thị`.
   const term = foldSearch(search.trim());
@@ -226,6 +275,12 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
   const loading = rules.isLoading || accounts.isLoading || scopes.isLoading;
   const failed = rules.isError || accounts.isError || scopes.isError;
 
+  const clearSearch = search ? (
+    <button type="button" className="btn" onClick={() => setSearch('')}>
+      {t('access.clearSearch')}
+    </button>
+  ) : undefined;
+
   const tabs = [
     { key: 'people', label: t('access.viewPeople') },
     ...(narrow ? [] : [{ key: 'matrix', label: t('access.viewMatrix') }]),
@@ -250,6 +305,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
       onSelect={(account) => setParam('user', account ? account.id : null)}
       onAdd={setAddingFor}
       onCopy={setCopyingFor}
+      clearSearch={clearSearch}
       onOpenRule={(account, rule) =>
         setCell({
           account,
@@ -259,7 +315,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
       }
     />
   ) : people.length === 0 ? (
-    <EmptyState title={t('access.noPeople')} />
+    <EmptyState title={t('access.noPeople')} action={clearSearch} />
   ) : columns.length === 0 ? (
     <EmptyState title={t('access.noScopes')} />
   ) : (
@@ -292,6 +348,10 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
                     onClick={() => setGrantingScope(scope)}
                   >
                     {shortLabel(scope.label)}
+                    {/* Dấu + cho thấy tiêu đề cột BẤM ĐƯỢC — chỉ có tooltip thì không ai biết. */}
+                    <span className="access-col-plus" aria-hidden="true">
+                      +
+                    </span>
                   </button>
                 </th>
               ))}
@@ -301,11 +361,33 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
             {people.map((account) => (
               <tr key={account.id}>
                 <th scope="row" className="access-row-head">
-                  <span className="access-person">{account.fullName}</span>
-                  <span className="muted mono access-person-mail">{account.email}</span>
-                  <button type="button" className="btn sm" onClick={() => setAddingFor(account)}>
-                    {t('access.add')}
-                  </button>
+                  <div className="access-row-head-inner">
+                    <span className="access-person-text">
+                      <span className="access-person" title={account.fullName}>
+                        {account.fullName}
+                      </span>
+                      <span className="muted mono access-person-mail" title={account.email}>
+                        {account.email}
+                      </span>
+                      <span className="access-person-tags">
+                        <StatusTag account={account} />
+                        <span className="badge muted plain">
+                          {t('access.ruleCount', {
+                            count: rulesOf.get(account.email.toLowerCase())?.length ?? 0,
+                          })}
+                        </span>
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      className="btn sm access-row-add"
+                      aria-label={t('access.addFor', { member: account.fullName })}
+                      title={t('access.addFor', { member: account.fullName })}
+                      onClick={() => setAddingFor(account)}
+                    >
+                      +
+                    </button>
+                  </div>
                 </th>
                 {columns.map((scope) => {
                   const key = scopeKey(scope);
@@ -322,7 +404,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
                         })}
                         onClick={() => setCell({ account, scope, rule })}
                       >
-                        {rule ? (rule.tier === 'whitelist' ? '✓' : '⏳') : '–'}
+                        <TierIcon tier={rule ? rule.tier : null} />
                       </button>
                     </td>
                   );
@@ -334,17 +416,17 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
       </ScrollX>
       <p className="muted access-legend">
         <span className="access-chip whitelist" aria-hidden="true">
-          ✓
+          <TierIcon tier="whitelist" />
         </span>{' '}
         {t('access.tier_whitelist')}
         {' · '}
         <span className="access-chip needs_approval" aria-hidden="true">
-          ⏳
+          <TierIcon tier="needs_approval" />
         </span>{' '}
         {t('access.tier_needs_approval')}
         {' · '}
         <span className="access-chip none" aria-hidden="true">
-          –
+          <TierIcon tier={null} />
         </span>{' '}
         {t('access.tier_denied')}
       </p>
@@ -353,7 +435,15 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
 
   return (
     <>
-      <PageHeader title={t('access.title')} subtitle={t('access.subtitle')} />
+      <PageHeader
+        title={t('access.title')}
+        subtitle={t('access.subtitle')}
+        actions={
+          <button type="button" className="btn" onClick={() => setChecking(true)}>
+            {t('access.check')}
+          </button>
+        }
+      />
 
       <Tabs
         items={tabs}
@@ -377,22 +467,32 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
               ]}
             />
           ) : null}
+          <label className="row filter-check">
+            <input
+              type="checkbox"
+              checked={showDisabled}
+              onChange={(event) => setShowDisabled(event.target.checked)}
+            />
+            <span>{t('access.showDisabled', { count: hiddenDisabled })}</span>
+          </label>
         </FilterBar>
 
-        <p className="alert">{t('access.defaultDenied')}</p>
-
-        {/* Chỉ hiện khi CẢ BA truy vấn xong và không lỗi — thiếu một cái là mọi con số ở đây
-            thành số bịa, đọc như giấy chứng nhận sạch sẽ trên chính màn soi chỗ hổng. */}
-        {!loading && !failed ? (
-          <p className="muted">
-            {t('access.summary', {
-              people: members.length,
-              rules: totalRules,
-              scopes: allScopes.length,
-              empty: emptyScopes,
-            })}
-          </p>
-        ) : null}
+        {/* Mặc định-không-có-quyền và dòng tổng là MỘT khối thông tin: tách hai thì câu chú thích
+            trông như chữ lạc, và cỡ chữ lộn thứ bậc. Dòng tổng chỉ hiện khi CẢ BA truy vấn xong
+            và không lỗi — thiếu một cái là mọi con số ở đây thành số bịa. */}
+        <div className="alert info access-intro">
+          <p>{t('access.defaultDenied')}</p>
+          {!loading && !failed ? (
+            <p>
+              {t('access.summary', {
+                people: members.length,
+                rules: totalRules,
+                scopes: allScopes.length,
+                empty: emptyScopes,
+              })}
+            </p>
+          ) : null}
+        </div>
 
         {content}
 
@@ -451,10 +551,19 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
         />
       ) : null}
 
+      {checking ? (
+        <CheckAccessDialog
+          members={members}
+          rulesOf={rulesOf}
+          onClose={() => setChecking(false)}
+        />
+      ) : null}
+
       {grantingScope ? (
         <GrantToScopeDialog
           scope={grantingScope}
           members={members}
+          existing={ruleAt}
           csrfToken={me.csrfToken}
           onClose={() => setGrantingScope(null)}
           onSaved={({ granted, failures }) => {
@@ -483,6 +592,7 @@ function PeopleView({
   onAdd,
   onCopy,
   onOpenRule,
+  clearSearch,
 }: {
   people: AccountRow[];
   selected: AccountRow | null;
@@ -492,6 +602,8 @@ function PeopleView({
   onAdd: (account: AccountRow) => void;
   onCopy: (account: AccountRow) => void;
   onOpenRule: (account: AccountRow, rule: AccessRule) => void;
+  /** Nút "Xoá tìm kiếm" cho câu rỗng — chỉ có khi ô tìm đang có chữ. */
+  clearSearch?: ReactNode;
 }) {
   const { t } = useTranslation();
   const showList = !narrow || !selected;
@@ -501,7 +613,7 @@ function PeopleView({
     <div className="access-people">
       {showList ? (
         people.length === 0 ? (
-          <EmptyState title={t('access.noPeople')} />
+          <EmptyState title={t('access.noPeople')} action={clearSearch} />
         ) : (
           <nav aria-label={t('access.memberList')}>
             <ul className="access-member-list">
@@ -519,6 +631,7 @@ function PeopleView({
                       <span className="access-member-name">
                         <b>{account.fullName}</b>
                         <span className="muted mono access-person-mail">{account.email}</span>
+                        <StatusTag account={account} />
                       </span>
                       <span className={`badge ${count > 0 ? 'brand' : 'muted'}`}>
                         {t('access.ruleCount', { count })}
@@ -709,12 +822,15 @@ function CellDialog({
       title={`${account.fullName} — ${scope.label}`}
       footer={
         <>
-          {/* Gỡ đứng TÁCH khỏi cặp Hủy/Lưu: nó là hành động phá, không phải một lựa chọn
-              ngang hàng với "lưu". Vẫn đi qua câu hỏi lại chung của `removeRule`. */}
+          {/* Gỡ đứng TÁCH ở mép trái, viền đỏ chứ không đỏ đặc: nó là hành động phá, không phải
+              một lựa chọn ngang hàng với "Lưu" ngay bên cạnh. Vẫn đi qua câu hỏi lại của `removeRule`. */}
           {rule ? (
-            <button type="button" className="btn danger" onClick={onRemove}>
-              {t('access.remove')}
-            </button>
+            <>
+              <button type="button" className="btn danger-ghost" onClick={onRemove}>
+                {t('access.remove')}
+              </button>
+              <span className="spacer" />
+            </>
           ) : null}
           <button type="button" className="btn" onClick={onClose}>
             {t('common.cancel')}
@@ -739,23 +855,23 @@ function CellDialog({
           setError(null);
           void (async () => {
             /*
-             * HỎI LẠI trước khi ghi — cấp quyền xem mật khẩu là việc mở cửa, không phải sửa
-             * một ô dữ liệu. Gỡ quyền đã hỏi lại từ đầu, mà chiều CẤP lại ghi thẳng: chiều
-             * nguy hiểm hơn thì lại nhẹ tay hơn, ngược hẳn.
-             *
-             * Câu hỏi nêu đích danh AI, NHÓM NÀO và TẦNG gì — ba thứ mà bấm nhầm một ô trên
-             * lưới là sai hết cả ba.
+             * Chỉ HỎI LẠI khi nâng lên "Xem thẳng" — tầng mở cửa rộng nhất (xem không cần ai
+             * duyệt). Người dùng đã mở đúng ô, đã chọn tầng và đọc câu hệ quả ngay trong hộp;
+             * bắt xác nhận lần hai cả khi chỉ sửa ghi chú là thừa. Câu hỏi nêu đích danh AI,
+             * NHÓM NÀO và TẦNG gì — ba thứ bấm nhầm một ô trên lưới là sai hết cả ba.
              */
-            const ok = await askConfirm({
-              title: t('access.confirmGrantTitle'),
-              message: t('access.confirmGrant', {
-                member: account.fullName,
-                scope: scope.label,
-                tier: t(`access.tier_${tier}`),
-              }),
-              confirmLabel: t('access.add'),
-            });
-            if (!ok) return;
+            if (tier === 'whitelist' && rule?.tier !== 'whitelist') {
+              const ok = await askConfirm({
+                title: t('access.confirmGrantTitle'),
+                message: t('access.confirmGrant', {
+                  member: account.fullName,
+                  scope: scope.label,
+                  tier: t(`access.tier_${tier}`),
+                }),
+                confirmLabel: t(rule ? 'common.save' : 'access.add'),
+              });
+              if (!ok) return;
+            }
             save.mutate(
               {
                 memberEmail: account.email,
@@ -789,7 +905,17 @@ function CellDialog({
             onChange={(e) => setNote(e.target.value)}
           />
         </Field>
-        {rule ? <p className="muted">{t('access.grantedByLine', { actor: rule.grantedBy })}</p> : null}
+        <p className="muted">{t(`access.consequence_${tier}`)}</p>
+        {rule ? (
+          <p className="muted">
+            {rule.createdAt
+              ? t('access.grantedByAt', { actor: rule.grantedBy, date: formatDate(rule.createdAt) })
+              : t('access.grantedByLine', { actor: rule.grantedBy })}{' '}
+            <Link to={`${PATHS.adminAuditLog}?objectId=${encodeURIComponent(rule.id)}`}>
+              {t('access.ruleHistory')}
+            </Link>
+          </p>
+        ) : null}
         {error ? (
           <p className="alert error" role="alert">
             {error}
@@ -810,18 +936,22 @@ function CellDialog({
 function GrantToScopeDialog({
   scope,
   members,
+  existing,
   csrfToken,
   onClose,
   onSaved,
 }: {
   scope: ScopeOption;
   members: AccountRow[];
+  /** `email|scopeType|scopeRef` → luật đang có. POST là UPSERT: chọn người đã có quyền là ĐỔI tầng của họ. */
+  existing: Map<string, AccessRule>;
   csrfToken: string;
   onClose: () => void;
   onSaved: (result: { granted: number; failures: string[] }) => void;
 }) {
   const { t } = useTranslation();
   const [picked, setPicked] = useState<string[]>([]);
+  const [query, setQuery] = useState('');
   const [tier, setTier] = useState<Tier>('needs_approval');
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -836,6 +966,20 @@ function GrantToScopeDialog({
     setPicked((current) =>
       current.includes(email) ? current.filter((item) => item !== email) : [...current, email],
     );
+  const ruleOf = (member: AccountRow) =>
+    existing.get(`${member.email.toLowerCase()}|${scopeKey(scope)}`) ?? null;
+  const term = foldSearch(query.trim());
+  const shown = members.filter(
+    (member) =>
+      !term || foldSearch(member.fullName).includes(term) || foldSearch(member.email).includes(term),
+  );
+  /* Tóm tắt trước khi lưu: bao nhiêu người mới, bao nhiêu người ĐỔI tầng (và đổi từ gì). */
+  const pickedMembers = members.filter((member) => picked.includes(member.email));
+  const adds = pickedMembers.filter((member) => !ruleOf(member)).length;
+  const changes = pickedMembers.filter((member) => {
+    const rule = ruleOf(member);
+    return rule !== null && rule.tier !== tier;
+  }).length;
 
   return (
     <Dialog
@@ -909,21 +1053,55 @@ function GrantToScopeDialog({
         ) : (
           <fieldset className="ff-contents">
             <legend className="lbl-t">{t('access.people')}</legend>
+            <div className="row pick-tools">
+              <input
+                className="inp search grow"
+                type="search"
+                value={query}
+                aria-label={t('access.search')}
+                placeholder={t('access.search')}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+              <button
+                type="button"
+                className="btn sm"
+                onClick={() =>
+                  setPicked((current) => [
+                    ...current,
+                    ...shown.map((member) => member.email).filter((email) => !current.includes(email)),
+                  ])
+                }
+              >
+                {t('access.pickAll')}
+              </button>
+              <button type="button" className="btn sm" onClick={() => setPicked([])}>
+                {t('access.pickNone')}
+              </button>
+            </div>
             <ul className="pick-list">
-              {members.map((member) => (
-                <li key={member.id}>
-                  <label className="row" style={{ gap: 'var(--space-3)' }}>
-                    <input
-                      type="checkbox"
-                      checked={picked.includes(member.email)}
-                      onChange={() => toggle(member.email)}
-                    />
-                    <span>
-                      {member.fullName} <span className="muted mono">{member.email}</span>
-                    </span>
-                  </label>
-                </li>
-              ))}
+              {shown.map((member) => {
+                const rule = ruleOf(member);
+                return (
+                  <li key={member.id}>
+                    <label className="row" style={{ gap: 'var(--space-3)' }}>
+                      <input
+                        type="checkbox"
+                        checked={picked.includes(member.email)}
+                        onChange={() => toggle(member.email)}
+                      />
+                      <span>
+                        {member.fullName} <span className="muted mono">{member.email}</span>{' '}
+                        <StatusTag account={member} />
+                        {rule ? (
+                          <span className={`badge plain ${rule.tier === 'whitelist' ? 'ok' : 'warn'}`}>
+                            {t('access.currentTier', { tier: t(`access.tier_${rule.tier}`) })}
+                          </span>
+                        ) : null}
+                      </span>
+                    </label>
+                  </li>
+                );
+              })}
             </ul>
           </fieldset>
         )}
@@ -949,9 +1127,10 @@ function GrantToScopeDialog({
           />
         </Field>
 
-        {/* Nói TRƯỚC sẽ ghi mấy dòng — gán một lượt cho năm người là chuyện dễ đếm nhầm. */}
-        {picked.length > 1 ? (
-          <p className="alert">{t('access.willGrant', { count: picked.length })}</p>
+        {/* Nói TRƯỚC sẽ ghi gì — gán một lượt cho năm người là chuyện dễ đếm nhầm, và chọn một
+            người đã có quyền là lặng lẽ ĐỔI tầng của họ. */}
+        {picked.length > 0 ? (
+          <p className="alert">{t('access.willGrantSummary', { adds, changes })}</p>
         ) : null}
 
         {error ? (
@@ -1328,6 +1507,166 @@ function CopyFromDialog({
         ) : null}
       </form>
       {stepUp.dialog}
+    </Dialog>
+  );
+}
+
+const OWNER_LIST_PATH: Record<SecretOwnerType, string> = {
+  device: '/api/v1/devices',
+  software: '/api/v1/software',
+  service_account: '/api/v1/service-accounts',
+  isp: '/api/v1/isp-lines',
+};
+
+/** Họ nhóm quyền liên quan tới một loại hồ sơ — để kể ra "vì sao" bên cạnh kết quả. */
+const OWNER_SCOPES: Record<SecretOwnerType, ScopeType[]> = {
+  device: ['device_site', 'device_type'],
+  software: ['software_kind'],
+  service_account: ['service_account_kind'],
+  isp: ['isp_provider'],
+};
+
+/**
+ * "Người X có xem được két của hồ sơ Y không?" — trả lời bằng CHÍNH hàm quyết định của API
+ * (`GET /vault/access/tier`), không tự suy ở web: web đoán sai một lần là SA tin nhầm một lỗ hổng
+ * đã được bịt. Kèm các dòng quyền của người đó thuộc họ nhóm liên quan để người đọc tự đối chiếu.
+ */
+function CheckAccessDialog({
+  members,
+  rulesOf,
+  onClose,
+}: {
+  members: AccountRow[];
+  rulesOf: Map<string, AccessRule[]>;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const [memberId, setMemberId] = useState('');
+  const [ownerType, setOwnerType] = useState<SecretOwnerType>('device');
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [result, setResult] = useState<{ tier: Tier | 'denied'; label: string } | null>(null);
+  const member = members.find((item) => item.id === memberId) ?? null;
+  const related = member
+    ? (rulesOf.get(member.email.toLowerCase()) ?? []).filter((rule) =>
+        OWNER_SCOPES[ownerType].includes(rule.scopeType),
+      )
+    : [];
+
+  const run = async () => {
+    setError(null);
+    setResult(null);
+    if (!member || !code.trim()) {
+      setError(t('access.checkNeedInput'));
+      return;
+    }
+    setBusy(true);
+    try {
+      const list = await apiFetch<{ items: { id: string; code: string; name?: string | null }[] }>(
+        `${OWNER_LIST_PATH[ownerType]}?search=${encodeURIComponent(code.trim())}&limit=10`,
+      );
+      const wanted = code.trim().toLowerCase();
+      const found = list.items.find((item) => item.code.toLowerCase() === wanted) ?? null;
+      if (!found) {
+        setError(t('access.checkNotFound', { code: code.trim() }));
+        return;
+      }
+      const answer = await apiFetch<{ tier: Tier | 'denied' }>(
+        `/api/v1/vault/access/tier?ownerType=${ownerType}&ownerId=${found.id}&memberEmail=${encodeURIComponent(member.email)}`,
+      );
+      setResult({ tier: answer.tier, label: [found.code, found.name].filter(Boolean).join(' — ') });
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open
+      onOpenChange={onClose}
+      maxWidth={560}
+      title={t('access.checkTitle')}
+      footer={
+        <>
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.close')}
+          </button>
+          <button type="submit" form="access-check-form" className="btn primary" disabled={busy}>
+            {busy ? t('common.loading') : t('access.checkRun')}
+          </button>
+        </>
+      }
+    >
+      <form
+        id="access-check-form"
+        className="form-grid"
+        data-columns={1}
+        noValidate
+        onSubmit={(event) => {
+          event.preventDefault();
+          void run();
+        }}
+      >
+        <Field label={t('access.person')}>
+          <Select
+            value={memberId}
+            ariaLabel={t('access.person')}
+            placeholder={t('access.checkPickPerson')}
+            options={members.map((item) => ({ value: item.id, label: `${item.fullName} — ${item.email}` }))}
+            onChange={setMemberId}
+          />
+        </Field>
+        <Field label={t('access.checkOwnerType')}>
+          <Select
+            value={ownerType}
+            ariaLabel={t('access.checkOwnerType')}
+            options={SECRET_OWNER_TYPES.map((type) => ({ value: type, label: t(SECRET_OWNER_KIND_KEY[type]) }))}
+            onChange={(value) => setOwnerType(value as SecretOwnerType)}
+          />
+        </Field>
+        <Field label={t('access.checkCode')} htmlFor="access-check-code">
+          <input
+            id="access-check-code"
+            className="inp mono"
+            value={code}
+            placeholder={t('access.checkCodePlaceholder')}
+            onChange={(event) => setCode(event.target.value)}
+          />
+        </Field>
+        {error ? (
+          <p className="alert error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        {result && member ? (
+          <div className="alert info" role="status">
+            <p>
+              {t('access.checkResult', {
+                member: member.fullName,
+                record: result.label,
+                tier: t(`access.tier_${result.tier === 'denied' ? 'denied' : result.tier}`),
+              })}
+            </p>
+            {related.length > 0 ? (
+              <>
+                <p>{t('access.checkRelated')}</p>
+                <ul>
+                  {related.map((rule) => (
+                    <li key={rule.id}>
+                      {rule.scopeLabel} · {t(`access.tier_${rule.tier}`)}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : (
+              <p>{t('access.checkNoRelated')}</p>
+            )}
+          </div>
+        ) : null}
+      </form>
     </Dialog>
   );
 }

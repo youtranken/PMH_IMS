@@ -47,7 +47,7 @@ test.describe('Ma trận quyền két sắt', () => {
     await firstLogin(page, E2E_SA);
 
     await page.goto('/admin/vault-access?view=matrix');
-    await expect(page.getByRole('heading', { name: 'Quyền xem két sắt' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Quyền két sắt' })).toBeVisible();
 
     /*
      * Ma trận dựng lại thành LƯỚI (28/08/2026): hàng = người, cột = nhóm đối tượng.

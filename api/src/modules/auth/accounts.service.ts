@@ -14,7 +14,11 @@ import type { SortQuery } from "../../common/sorting";
 import type { Tx } from "../../common/tx";
 import { AuditWriterService } from "../audit/audit-writer.service";
 import { OutboxService } from "../outbox/outbox.service";
-import { UsersService, type UserSortKey } from "../users/users.service";
+import {
+  UsersService,
+  type UserListFilters,
+  type UserSortKey,
+} from "../users/users.service";
 import type { UserRecord } from "../users/users.types";
 import { LoginFailureService } from "./login-failure.service";
 import { PasswordService } from "./password.service";
@@ -47,8 +51,9 @@ export class AccountsService {
     query: PageQuery,
     search?: string,
     sort?: SortQuery<UserSortKey>,
+    filters?: UserListFilters,
   ): Promise<Page<UserRecord>> {
-    return this.users.list(query, search, sort);
+    return this.users.list(query, search, sort, filters);
   }
 
   /** Tạo user + mật khẩu tạm; buộc đổi mật khẩu và enroll TOTP ở lần đăng nhập đầu. */
@@ -239,6 +244,8 @@ export class AccountsService {
     actor: ActorRef,
     userId: string,
     status: "active" | "locked" | "disabled",
+    /** Lý do khóa / vô hiệu hóa — vết an ninh: "nghi lộ mật khẩu" khác "nghỉ việc". */
+    reason?: string,
   ): Promise<void> {
     const user = await this.requireUser(userId);
     await this.db.transaction(async (tx) => {
@@ -279,7 +286,42 @@ export class AccountsService {
         action: `account.${status === "active" ? "unlocked" : status}`,
         objectType: "user",
         objectId: userId,
-        detail: { revokedSessions: killed },
+        detail: {
+          revokedSessions: killed,
+          ...(reason?.trim() ? { reason: reason.trim() } : {}),
+        },
+      });
+    });
+  }
+
+  /**
+   * Đổi vai trò sau khi tạo — thăng/hạ mà không phải tạo tài khoản thứ hai (lịch sử bị cắt đôi).
+   *
+   * Vai đọc lại từ `users` ở MỖI request (`session.guard.ts`), nên đổi xong có tác dụng ngay,
+   * không cần đá phiên. Hai hàng rào: không hạ SA khi hệ thống chỉ còn 2 SA hoạt động (NFR-01,
+   * đếm + khóa hàng TRONG cùng transaction như `setStatus`), và không tự đổi vai của chính mình
+   * (tự hạ mình là mất quyền ngay giữa thao tác, tự nâng thì không có ai duyệt).
+   */
+  async setRole(actor: ActorRef, userId: string, role: UserRole): Promise<void> {
+    if (actor.id === userId) {
+      throw new BadRequestException({
+        code: "SELF_ROLE_CHANGE",
+        message: "Không tự đổi vai trò của chính mình — nhờ một SA khác.",
+      });
+    }
+    const user = await this.requireUser(userId);
+    if (user.role === role) return;
+    await this.db.transaction(async (tx) => {
+      if (user.status === "active") {
+        await this.assertNotLastSaWithin(tx, user.role, userId);
+      }
+      await this.users.setRoleWithin(tx, userId, role);
+      await this.audit.appendWithin(tx, {
+        actor: actor.email,
+        action: "account.role.changed",
+        objectType: "user",
+        objectId: userId,
+        detail: { before: user.role, after: role },
       });
     });
   }
@@ -413,7 +455,7 @@ export class AccountsService {
       throw new BadRequestException({
         code: "LAST_SA",
         message:
-          "Hệ thống phải luôn còn ít nhất 2 SA hoạt động. Bổ nhiệm SA khác trước khi khóa tài khoản này.",
+          "Hệ thống phải luôn còn ít nhất 2 SA hoạt động. Bổ nhiệm SA khác trước khi khóa hoặc hạ vai tài khoản này.",
       });
     }
   }
