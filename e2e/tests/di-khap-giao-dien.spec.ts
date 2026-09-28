@@ -4645,7 +4645,9 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(
       filters.getByRole('button'),
       '/29 = 6 host; một đã cấp nên còn 5 trống. Con số phải nằm NGAY trên nút, đúng thứ tự SLOT_FILTERS',
-    ).toHaveText(['Tất cả 6', 'Đang dùng 1', 'Trống 5']);
+      /* "Đã ẩn" đứng thường trực nhưng KHÔNG mang số khi chưa mở: API chỉ trả hồ sơ đã ẩn khi
+         được hỏi, nên một con số 0 ở đó là nói sai. */
+    ).toHaveText(['Tất cả 6', 'Đang dùng 1', 'Trống 5', 'Đã ẩn']);
 
     /* ----- Bảng: đúng sáu cột ----- */
     const table = page.getByRole('table');
@@ -4690,18 +4692,21 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(5);
 
-    /* ----- Ô tick hồ sơ đã ẩn: phải HỎI LẠI API, không chỉ lọc trong bộ nhớ ----- */
-    const showVoided = page.getByRole('checkbox', { name: 'Hiện cả hồ sơ đã ẩn' });
+    /* ----- Chip hồ sơ đã ẩn: phải HỎI LẠI API, không chỉ lọc trong bộ nhớ ----- */
+    const showVoided = filters.getByRole('button', { name: /^Đã ẩn/ });
     await expect(
       showVoided,
       'tắt mặc định — bật sẵn là bày ra thứ người ta vừa cố tình ẩn đi',
-    ).not.toBeChecked();
+    ).toHaveAttribute('aria-pressed', 'false');
     const refetched = page.waitForResponse(
       (res) => res.url().includes('/addresses') && res.url().includes('includeVoided=true'),
     );
-    await showVoided.check();
+    await showVoided.click();
     await refetched;
-    await expect(showVoided).toBeChecked();
+    await expect(showVoided).toHaveAttribute('aria-pressed', 'true');
+    // Không hồ sơ nào đã ẩn: bảng rỗng phải NÓI vì sao rỗng. Về lại "Tất cả" cho phần dưới.
+    await expect(page.getByText('Không có dòng nào để hiện.')).toBeVisible();
+    await filters.getByRole('button', { name: /^Tất cả/ }).click();
 
     /* ----- Phân trang: 50 dòng/trang, và nó nói rõ đang xem tới đâu ----- */
     const pager = page.getByRole('navigation', { name: 'Trang' });
@@ -4758,10 +4763,11 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     );
     // "Ngày cấp" là NÚT mở lịch, không phải ô gõ ngày; nó điền sẵn hôm nay nên có nút "Xóa ngày".
     // Nút chính mang đúng tên việc: "Cấp IP".
+    // "Chép Mask": khối "Cấu hình cho máy" — thứ người cắm máy gõ vào card mạng.
     await expectHandles(
       assign,
       'button',
-      [/^Ngày cấp/, 'Xóa ngày', 'Đóng hộp thoại', 'Hủy', 'Cấp IP'],
+      [/^Ngày cấp/, 'Xóa ngày', 'Đóng hộp thoại', 'Hủy', 'Cấp IP', 'Chép Mask'],
       'Hộp "Cấp IP"',
     );
 
@@ -4844,8 +4850,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(ipRow(page, address).getByText('Đang dùng')).toBeVisible();
     expect(
       await rowActionNames(page, address),
-      'từ "Đang dùng" chỉ đi được sang Thu hồi (Q-02); Lịch sử luôn có; Sửa/Ẩn của SA. Hai việc nguy hiểm xếp CUỐI',
-    ).toEqual(['Lịch sử', 'Sửa', 'Thu hồi', 'Ẩn hồ sơ']);
+      'từ "Đang dùng" chỉ đi được sang Thu hồi (Q-02); Lịch sử luôn có; Sửa/Ẩn của SA. Thu hồi (đỏ) xếp sau việc thường, Ẩn hồ sơ nhập nhầm (xám) xếp CUỐI',
+    ).toEqual(['Sửa', 'Lịch sử', 'Thu hồi', 'Ẩn hồ sơ']);
 
     /* ----- Hộp "Thu hồi": KHÔNG hỏi chủ mới — chủ cũ đi khỏi, không ai dọn vào ----- */
     await rowAction(page, address, 'Thu hồi');
@@ -4861,11 +4867,13 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expectHandles(
       reclaim,
       'button',
-      ['Đóng hộp thoại', 'Hủy', 'Xác nhận'],
+      ['Đóng hộp thoại', 'Hủy', 'Thu hồi'],
       'Hộp "Thu hồi"',
     );
+    // Hộp nói IP đang của ai trước khi lấy lại.
+    await expect(reclaim.getByText('Đang cấp cho Chị Lan — Kế toán')).toBeVisible();
     await reclaim.getByRole('textbox', { name: 'Lý do', exact: true }).fill('máy đã thanh lý');
-    await confirmAction(page, 'Xác nhận');
+    await confirmAction(page, 'Thu hồi');
     await expect(reclaim).toHaveCount(0);
 
     /* ----- Trạng thái 2: TRỐNG — menu phải ĐỔI ----- */
@@ -4949,13 +4957,19 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toHaveValue('42');
     await expect(form.getByRole('textbox', { name: 'Gateway', exact: true })).toHaveValue(gateway);
     await expect(form.getByRole('textbox', { name: 'Mô tả', exact: true })).toHaveValue(description);
+    // Dải đã có hồ sơ IP: CIDR chỉ đọc (API cũng từ chối đổi) — nói trước, không để ăn lỗi.
+    await expect(form.getByRole('textbox', { name: 'Dải', exact: true })).toHaveAttribute(
+      'readonly',
+      '',
+    );
     await expect(
       form.getByText('Thêm và xóa giấy tờ ở đây có hiệu lực NGAY', { exact: false }),
-      'sửa một dải ĐANG CÓ thì khu giấy tờ mở ra, và nó ghi thẳng nên phải nói trước',
-    ).toBeVisible();
+      'giấy tờ của dải ghi thẳng nên KHÔNG nằm trong hộp có nút Hủy — nó ở đầu cột phải',
+    ).toHaveCount(0);
 
     await page.keyboard.press('Escape');
     await expect(form).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Giấy tờ (0)' })).toBeVisible();
 
     /* ----- Hộp VÔ HIỆU HÓA DẢI ----- */
     await rowAction(page, cidr, 'Vô hiệu hóa');

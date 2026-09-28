@@ -104,8 +104,16 @@ export function Dialog({
   title,
   footer,
   closeLabel,
+  initialFocus,
   children,
 }: {
+  /**
+   * Chỗ đặt tiêu điểm khi hộp mở. Bỏ trống = Radix tự chọn (thường là nút ✕ — vòng focus to
+   * nằm ở góc, và người gõ phải Tab thêm mới tới ô đầu).
+   *   · `'first-field'`: hộp có form — tiêu điểm vào ô nhập đầu tiên để gõ được ngay.
+   *   · `'title'`: hộp chỉ đọc — trình đọc màn hình đọc tiêu đề trước, không đọc "Đóng, nút".
+   */
+  initialFocus?: 'first-field' | 'title';
   /**
    * Tiêu đề hộp. Truyền vào là `Dialog` TỰ DỰNG khung ba phần (header có nền riêng + thân
    * cuộn được + chân dính đáy) — đúng thứ CSS `.sheet-*` đã có sẵn từ đầu nhưng gần như
@@ -395,6 +403,20 @@ export function Dialog({
             onEscapeKeyDown={onEscapeKeyDown}
             onPointerDownOutside={onPointerDownOutside}
             onInteractOutside={onInteractOutside}
+            onOpenAutoFocus={(event) => {
+              if (!initialFocus) return;
+              const root = event.currentTarget as HTMLElement | null;
+              const target =
+                initialFocus === 'title'
+                  ? root?.querySelector<HTMLElement>('.sheet-title')
+                  : root?.querySelector<HTMLElement>(
+                      '.sheet-body input:not([type=hidden]):not([disabled]), .sheet-body textarea:not([disabled]), .sheet-body select:not([disabled]), .sheet-body [role=combobox]',
+                    );
+              if (!target) return;
+              event.preventDefault();
+              if (initialFocus === 'title') target.tabIndex = -1;
+              target.focus();
+            }}
           >
             <DialogPortalContext.Provider value={portalEl}>
               {title === undefined ? (

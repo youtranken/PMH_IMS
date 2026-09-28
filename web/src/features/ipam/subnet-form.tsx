@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
-import { AttachmentPanel } from '@/ui/attachment-panel';
+import { cidrContains, cidrOverlaps, parseIpv4, previewCidr } from '@/lib/ipv4';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
@@ -9,13 +9,26 @@ import type { SubnetRow } from './ipam-types';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { textRule, useFormErrors } from '@/ui/use-form-errors';
 
+/**
+ * Khai / sửa một dải.
+ *
+ * Ô Dải được kiểm NGAY KHI GÕ (dạng chuẩn, số host, mask, chồng dải khác, gateway ngoài dải):
+ * đợi tới lúc bấm Lưu mới biết 10.77.1.5/24 bị quy về 10.77.1.0/24, hay biết dải vừa gõ chồng
+ * lên một dải đã có, là bắt người khai đoán. API vẫn là hàng rào thật — ở đây chỉ nói sớm.
+ *
+ * Giấy tờ của dải KHÔNG nằm trong hộp này: panel giấy tờ ghi thẳng, đặt nó trong một form có
+ * nút Hủy là mời người dùng tin rằng Hủy hoàn tác được. Nó ở đầu cột phải của màn IP.
+ */
 export function SubnetForm({
   subnet,
+  existing,
   csrfToken,
   onClose,
   onSaved,
 }: {
   subnet: SubnetRow | null;
+  /** Các dải đã khai — để báo chồng dải ngay khi gõ. */
+  existing: SubnetRow[];
   csrfToken: string;
   onClose: () => void;
   onSaved: () => void;
@@ -31,15 +44,54 @@ export function SubnetForm({
 
   const lists = useCatalogLists();
 
+  /*
+   * Dải đã có hồ sơ IP thì KHÔNG đổi CIDR được — API từ chối (`SubnetService.update`), vì mọi
+   * hồ sơ bên trong sẽ thành địa chỉ ngoài dải. Nói trước bằng một ô chỉ đọc, thay vì để người
+   * dùng sửa rồi ăn lỗi.
+   */
+  const cidrLocked = subnet !== null && subnet.addressCount > 0;
+
+  const preview = previewCidr(cidr);
+  const typed = preview.value;
+  const overlap = typed
+    ? existing.find(
+        (other) =>
+          other.id !== subnet?.id &&
+          other.voidedAt === null &&
+          cidrOverlaps(other.cidr, typed.cidr),
+      )
+    : undefined;
+  const gatewayText = gateway.trim();
+  const gatewayOutside =
+    preview.value !== null &&
+    gatewayText !== '' &&
+    parseIpv4(gatewayText) !== null &&
+    !cidrContains(preview.value.cidr, gatewayText);
+
   // Ô VLAN để trống = XÓA số đang có, không phải "đừng đụng tới": form luôn hiện đủ ô.
   const vlanRaw = vlan.trim();
   const vlanValue = vlanRaw === '' ? null : Number(vlanRaw);
   const vlanBad =
     vlanValue !== null && (!/^\d+$/.test(vlanRaw) || vlanValue < 1 || vlanValue > 4094);
+  const cidrError =
+    !cidr.trim()
+      ? t('formErrors.required')
+      : cidrLocked
+        ? false
+        : preview.reason === 'format'
+          ? t('ipam.cidrFormat')
+          : preview.reason === 'tooWide'
+            ? t('ipam.cidrTooWide')
+            : overlap
+              ? t('ipam.cidrOverlap', { cidr: overlap.cidr, name: overlap.name })
+              : false;
   const check = useFormErrors({
-    cidr: !cidr.trim() && t('formErrors.required'),
+    cidr: cidrError,
     name: !name.trim() && t('formErrors.required'),
     vlan: vlanBad && t('ipam.vlanInvalid'),
+    gateway:
+      gatewayOutside &&
+      t('ipam.gatewayOutside', { gateway: gatewayText, cidr: preview.value?.cidr ?? '' }),
   });
 
   const save = useApiMutation<Record<string, unknown>, unknown>(
@@ -55,7 +107,8 @@ export function SubnetForm({
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!save.isPending}
       guardUnsaved
-      maxWidth={560}
+      initialFocus="first-field"
+      maxWidth={640}
       title={
         subnet
           ? t('common.titleOf', { action: t('ipam.editSubnet'), subject: subnet.cidr })
@@ -75,7 +128,7 @@ export function SubnetForm({
       <form
         id="subnet-form"
         className="form-grid"
-        data-columns={1}
+        data-columns={2}
         ref={check.formRef}
         noValidate
         onSubmit={(e) => {
@@ -85,11 +138,12 @@ export function SubnetForm({
           save.mutate(
             {
               name: name.trim(),
-              cidr: cidr.trim(),
+              // Dải đã khoá thì không gửi CIDR: gửi lại đúng giá trị cũ cũng là "đụng" vào nó.
+              ...(cidrLocked ? {} : { cidr: cidr.trim() }),
               siteId,
               vlan: vlanValue,
               // Ô để trống = XÓA gateway đang có, cùng luật với VLAN — form luôn hiện đủ ô.
-              gateway: gateway.trim(),
+              gateway: gatewayText,
               description: description.trim(),
             },
             { onSuccess: onSaved, onError: (err) => setError(errorMessage(err)) },
@@ -100,7 +154,7 @@ export function SubnetForm({
         <Field
           label={t('ipam.cidr')}
           required
-          hint={t('ipam.cidrHint')}
+          hint={cidrLocked ? t('ipam.cidrLocked') : t('ipam.cidrHint')}
           htmlFor="subnet-cidr"
           error={check.error('cidr')}
         >
@@ -108,6 +162,7 @@ export function SubnetForm({
             id="subnet-cidr"
             className="inp mono"
             required
+            readOnly={cidrLocked}
             placeholder={t('ipam.phCidr')}
             value={cidr}
             onChange={(e) => setCidr(e.target.value)}
@@ -123,6 +178,13 @@ export function SubnetForm({
             onChange={(e) => setName(e.target.value)}
           />
         </Field>
+
+        {/* Xem trước NGAY dưới ô: dạng chuẩn API sẽ lưu, số host, host đầu–cuối, mask. */}
+        {preview.value && !cidrLocked ? (
+          <p className="muted span-2 mono" aria-live="polite">
+            {t('ipam.cidrPreview', { ...preview.value })}
+          </p>
+        ) : null}
 
         <Field
           label={t('ipam.vlan')}
@@ -142,7 +204,12 @@ export function SubnetForm({
 
         {/* Gateway (0035): câu hỏi ĐẦU TIÊN khi khai IP tĩnh cho một cái máy. Trước đây phải
             nhét vào ô mô tả, mỗi người một kiểu, nên không tra được. */}
-        <Field label={t('ipam.gateway')} hint={t('ipam.gatewayHint')} htmlFor="subnet-gateway">
+        <Field
+          label={t('ipam.gateway')}
+          hint={t('ipam.gatewayHint')}
+          htmlFor="subnet-gateway"
+          error={check.error('gateway')}
+        >
           <input
             id="subnet-gateway"
             className="inp mono"
@@ -151,6 +218,19 @@ export function SubnetForm({
             onChange={(e) => setGateway(e.target.value)}
           />
         </Field>
+        {/* Gateway gần như luôn là host đầu của dải — gợi ý một cú bấm, không tự điền: dải
+            không có gateway là chuyện có thật và ô trống phải là lựa chọn người khai tự làm. */}
+        {typed && !gatewayText && typed.hosts > 1 ? (
+          <p className="span-2">
+            <button
+              type="button"
+              className="btn sm ghost"
+              onClick={() => setGateway(typed.first)}
+            >
+              {t('ipam.gatewayUse', { gateway: typed.first })}
+            </button>
+          </p>
+        ) : null}
 
         <Field label={t('ipam.site')}>
           <Select
@@ -166,7 +246,7 @@ export function SubnetForm({
           />
         </Field>
 
-        <Field label={t('ipam.description')} htmlFor="subnet-description">
+        <Field label={t('ipam.description')} htmlFor="subnet-description" span={2}>
           <textarea
             id="subnet-description"
             className="inp"
@@ -176,27 +256,8 @@ export function SubnetForm({
           />
         </Field>
 
-        {/*
-          SỬA một dải đang có thì mở khu giấy tờ: sơ đồ mạng, biên bản bàn giao dải IP tĩnh từ
-          nhà mạng — trước đây không có chỗ đính nên nằm trong thư mục chia sẻ của phòng IT.
-
-          KHAI MỚI thì chưa có id để gắn, nên chưa hiện.
-        */}
-        {subnet ? (
-          <>
-            {/* Panel GHI THẲNG, không nằm trong lượt Lưu — hộp có nút Hủy nên phải nói ra. */}
-            <p className="alert">{t('attachments.liveWarning')}</p>
-            <AttachmentPanel
-              ownerType="subnet"
-              ownerId={subnet.id}
-              csrfToken={csrfToken}
-              canEdit={!save.isPending}
-            />
-          </>
-        ) : null}
-
         {error ? (
-          <p className="alert error" role="alert">
+          <p className="alert error span-2" role="alert">
             {error}
           </p>
         ) : null}
@@ -247,6 +308,7 @@ export function HideDialog({
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!hide.isPending}
       guardUnsaved
+      initialFocus="first-field"
       maxWidth={480}
       title={t('ipam.hideSubnetTitle', { cidr: subnet.cidr })}
       footer={
@@ -282,6 +344,13 @@ export function HideDialog({
         }}
       >
         <p className="muted">{t('ipam.hideHint')}</p>
+        {/* Con số ảnh hưởng, không phải văn xuôi: người bấm phải biết bao nhiêu máy đang cắm
+            IP tĩnh của dải này trước khi cất nó đi. */}
+        <ul className="muted">
+          <li>{t('ipam.hideImpactUsed', { count: subnet.used })}</li>
+          <li>{t('ipam.hideImpactHistory')}</li>
+          <li>{t('ipam.hideImpactRestore')}</li>
+        </ul>
         <Field label={t('ipam.reason')} required htmlFor="hide-reason" error={check.error('reason')}>
           <input
             id="hide-reason"

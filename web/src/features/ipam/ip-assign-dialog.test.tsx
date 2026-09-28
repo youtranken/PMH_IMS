@@ -78,7 +78,7 @@ describe('Hộp "Cấp IP" dùng chung', () => {
     expect(screen.getByRole('textbox', { name: 'Lý do' })).toBeVisible();
     const [y, m, d] = todayIso().split('-');
     expect(screen.getByRole('button', { name: /Ngày cấp/ })).toHaveTextContent(
-      `${Number(d)} thg ${Number(m)}, ${y}`,
+      `${d}/${m}/${y}`,
     );
   });
 

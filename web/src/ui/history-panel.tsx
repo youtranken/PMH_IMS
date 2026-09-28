@@ -5,6 +5,11 @@ export interface HistoryEntry {
   id: string;
   at: string;
   actor: string;
+  /**
+   * Họ tên người làm, khi API tra được (`withActorNames`). Có thì hiện tên, email lùi vào
+   * tooltip; không có (tài khoản đã xoá, màn chưa tra) thì hiện email như trước.
+   */
+  actorName?: string;
   action: string;
   detail?: string | null;
 }
@@ -34,7 +39,12 @@ export function HistoryPanel({
             <p className="history-action">{entry.action}</p>
             {entry.detail ? <p className="history-detail muted">{entry.detail}</p> : null}
             <p className="history-meta muted">
-              {entry.actor} · {formatDateTime(entry.at)}
+              {entry.actorName ? (
+                <span title={entry.actor}>{entry.actorName}</span>
+              ) : (
+                entry.actor
+              )}{' '}
+              · {formatDateTime(entry.at)}
             </p>
           </div>
         </li>

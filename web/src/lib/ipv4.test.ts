@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { cidrContains, looksLikeIp, parseIpv4, subnetOf } from './ipv4';
+import {
+  cidrContains,
+  cidrOverlaps,
+  isIpv4OrCidr,
+  looksLikeIp,
+  maskOfCidr,
+  parseIpv4,
+  previewCidr,
+  subnetOf,
+} from './ipv4';
 
 describe('parseIpv4', () => {
   it.each([
@@ -55,5 +64,63 @@ describe('subnetOf — dải chứa địa chỉ, dải hẹp nhất thắng', (
   });
   it('không dải nào chứa → null', () => {
     expect(subnetOf('192.168.1.1', subnets)).toBeNull();
+  });
+});
+
+describe('previewCidr — xem trước dải ngay khi gõ', () => {
+  it.each([
+    ['10.77.1.5/24', '10.77.1.0/24', 254, '10.77.1.1', '10.77.1.254', '255.255.255.0'],
+    ['172.16.10.0/27', '172.16.10.0/27', 30, '172.16.10.1', '172.16.10.30', '255.255.255.224'],
+    ['192.168.5.9/30', '192.168.5.8/30', 2, '192.168.5.9', '192.168.5.10', '255.255.255.252'],
+    ['10.0.0.7/32', '10.0.0.7/32', 1, '10.0.0.7', '10.0.0.7', '255.255.255.255'],
+  ])('%s → %s', (text, cidr, hosts, first, last, mask) => {
+    const { value, reason } = previewCidr(text);
+    expect(reason).toBeNull();
+    expect(value).toEqual({ cidr, hosts, first, last, mask });
+  });
+
+  it.each([
+    ['', null],
+    ['10.77.1', 'format'],
+    ['10.77.1.0', 'format'],
+    ['10.77.1.0/33', 'format'],
+    ['10.77.1.0/x', 'format'],
+    ['10.77.0.0/16', 'tooWide'],
+    ['10.77.1.0/23', 'tooWide'],
+  ])('%s → lỗi %s', (text, reason) => {
+    const result = previewCidr(text);
+    expect(result.value).toBeNull();
+    expect(result.reason).toBe(reason);
+  });
+});
+
+describe('cidrOverlaps — hai dải có chung địa chỉ nào không', () => {
+  it.each([
+    ['10.77.1.0/24', '10.77.1.128/25', true],
+    ['10.77.1.0/25', '10.77.1.128/25', false],
+    ['10.77.1.0/24', '10.77.2.0/24', false],
+    ['10.77.1.0/24', '10.77.1.0/24', true],
+    ['rác', '10.77.1.0/24', false],
+  ])('%s ∩ %s → %s', (a, b, expected) => {
+    expect(cidrOverlaps(a, b)).toBe(expected);
+  });
+});
+
+describe('maskOfCidr', () => {
+  it.each([
+    ['10.77.1.0/24', '255.255.255.0'],
+    ['10.77.1.0/28', '255.255.255.240'],
+    ['rác', null],
+  ])('%s → %s', (cidr, mask) => {
+    expect(maskOfCidr(cidr)).toBe(mask);
+  });
+});
+
+describe('isIpv4OrCidr — IP tĩnh hoặc khối IP', () => {
+  it.each(['113.161.10.20', '113.161.10.16/29', '0.0.0.0/0'])('%s → nhận', (text) => {
+    expect(isIpv4OrCidr(text)).toBe(true);
+  });
+  it.each(['113.161.10', '113.161.10.20/33', 'abc', '10.0.0.1/', ''])('%s → không', (text) => {
+    expect(isIpv4OrCidr(text)).toBe(false);
   });
 });

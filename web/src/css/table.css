@@ -383,12 +383,56 @@ table.table tbody tr.row-highlight td:first-child {
   background: var(--danger-soft);
   color: var(--danger);
 }
+/* Việc ít khi làm, dễ nhầm với việc bên trên (RowAction `muted`): chữ xám, kẻ ngăn phía trên. */
+.row-actions-menu button.is-muted {
+  color: var(--ink-3);
+  margin-top: var(--space-1);
+  border-top: 1px solid var(--border);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.row-actions-menu button.is-muted ~ button.is-muted {
+  margin-top: 0;
+  border-top-color: transparent;
+}
+/* Dòng mô tả dưới nhãn (RowAction `hint`) — xuống dòng được, menu không phình ngang. */
+.row-actions-menu .ra-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.row-actions-menu .ra-hint {
+  max-width: 16rem;
+  white-space: normal;
+  font-size: var(--fs-2xs);
+  font-weight: 400;
+  color: var(--ink-3);
+}
+/*
+ * Mã / IP / serial là DỮ LIỆU CHÍNH của các bảng mạng — không thu nhỏ nó xuống dưới chữ
+ * thường. Font mono hệ thống có x-height thấp hơn font chữ nên 0.94em đã ngang mắt với chữ
+ * bên cạnh; 0.85em cũ làm IP trong bảng (~12px) nhỏ hơn cả "Gateway LAN" đứng cạnh nó.
+ */
 .mono {
   font-family: var(--mono);
-  font-size: 0.85em;
+  font-size: 0.94em;
   letter-spacing: -0.01em;
   /* Chữ số đều bề rộng → mã/tiền canh cột dọc thẳng hàng (mọi bảng dùng .mono). */
   font-variant-numeric: tabular-nums;
+}
+/* Ô nhập mono (CIDR, VLAN, tên đăng nhập…) giữ ĐÚNG cỡ chữ của ô thường: thu nhỏ chữ là thấp
+   ô, và một hàng form có ô mono cạnh ô thường sẽ lệch chiều cao. */
+input.mono,
+textarea.mono {
+  font-size: inherit;
+}
+/* Placeholder của ô mono là LỜI GỢI Ý, không phải giá trị: chữ thường, nghiêng, nhạt — in mono
+   thì "172.16.10.0/24" trông y như một giá trị đã điền sẵn và người dùng bỏ qua ô. */
+input.mono::placeholder,
+textarea.mono::placeholder {
+  font-family: var(--font);
+  font-style: italic;
+  color: var(--ink-3);
 }
 /* Ghi chú trong ô bảng: rút gọn 1 dòng + ellipsis (đầy đủ ở title hover). */
 .cell-note {
@@ -507,6 +551,16 @@ button.link.session-toggle {
   font-size: var(--fs-2xs);
   color: var(--ink-3);
   font-weight: 400;
+}
+/* Mã trong dòng phụ (mã máy đích dưới IP của rule NAT…) là thứ người ta BẤM và ĐỌC: không để
+   nó tụt xuống ~10px (2xs × mono), và link cao đủ 24px cho ngón tay. */
+.cell-sub .mono {
+  font-size: var(--fs-xs);
+}
+.cell-sub a.mono {
+  display: inline-block;
+  min-height: 24px;
+  line-height: 24px;
 }
 /* Dòng phụ báo việc cần làm ("Hết ghế", "+1 vượt"). `--danger-strong` vì chữ nhỏ trên nền
    sáng dùng `--danger` thường thì tương phản hụt. */

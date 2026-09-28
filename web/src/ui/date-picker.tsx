@@ -147,9 +147,11 @@ export function DatePicker({
 
   const label = useMemo(() => {
     if (!selected) return placeholder ?? t('datePicker.choose');
+    // dd/mm/yyyy — CÙNG cách viết với `formatDate` trên mọi bảng. "19 thg 6, 2026" trong ô
+    // cạnh "19/06/2026" trong bảng là hai cách đọc một ngày trên cùng một màn.
     return selected.toLocaleDateString(i18n.language, {
       day: '2-digit',
-      month: 'short',
+      month: '2-digit',
       year: 'numeric',
     });
   }, [selected, placeholder, t, i18n.language]);

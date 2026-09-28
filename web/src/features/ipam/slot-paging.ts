@@ -1,6 +1,6 @@
 import { clampPage } from '@/lib/paging';
 import { foldSearch } from '@/lib/search-fold';
-import { STATUS_KEY, type IpStatus, type SubnetSlot } from './ipam-types';
+import { STATUS_KEY, type IpRow, type IpStatus, type SubnetSlot } from './ipam-types';
 
 /**
  * Rổ của một ô trên màn dải.
@@ -139,6 +139,23 @@ export function searchSlots(slots: SubnetSlot[], query: string): SubnetSlot[] {
         : [slot.address, slot.deviceCode, slot.deviceName, slot.usedBy, slot.note];
     return fields.some((field) => field && foldSearch(field).includes(needle));
   });
+}
+
+/**
+ * Chỗ trống có địa chỉ nhỏ nhất, bỏ qua gateway — nút "Cấp IP trống kế tiếp".
+ *
+ * Trả kèm hồ sơ khi chỗ trống là một hồ sơ đã thu hồi: cấp lại đúng hồ sơ đó để lịch sử "IP
+ * này từng của ai" nối tiếp, cùng đường với nút Cấp IP trên dòng. `slots` đã xếp theo địa chỉ.
+ */
+export function nextFreeSlot(
+  slots: SubnetSlot[],
+  gateway: string | null,
+): { address: string; record: IpRow | null } | null {
+  for (const slot of slots) {
+    if (slotStatus(slot) !== 'free' || slot.address === gateway) continue;
+    return { address: slot.address, record: slot.kind === 'record' ? slot : null };
+  }
+  return null;
 }
 
 /** Trang (tính từ 1) chứa địa chỉ này trong danh sách đang hiện; không có thì `null`. */

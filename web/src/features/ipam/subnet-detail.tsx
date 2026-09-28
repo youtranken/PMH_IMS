@@ -5,13 +5,16 @@ import { Link, useSearchParams } from "react-router-dom";
 import { apiFetch } from "@/lib/api-client";
 import { errorMessage, useApiMutation } from "@/lib/api";
 import { formatDate, orDash } from "@/lib/format";
+import { maskOfCidr } from "@/lib/ipv4";
 import type { Me } from "@/lib/me";
+import { AttachmentPanel, useOwnerAttachments } from "@/ui/attachment-panel";
+import { CopyButton } from "@/ui/copy-button";
 import { Dialog } from "@/ui/dialog";
 import { DatePicker } from "@/ui/date-picker";
 import { EmptyState, LoadError, Loading } from "@/ui/load-state";
 import { Field } from "@/ui/page-header";
 import { Pagination } from "@/ui/pagination";
-import { RowActions } from "@/ui/row-actions";
+import { RowActions, type RowAction } from "@/ui/row-actions";
 import { SuggestInput } from "@/ui/suggest-input";
 import { useDepartments } from "@/ui/use-departments";
 import { textRule, useFormErrors } from "@/ui/use-form-errors";
@@ -32,6 +35,7 @@ import {
   BUCKET_KEY,
   countSlots,
   filterSlots,
+  nextFreeSlot,
   shouldIsolateAssigned,
   pageOfAddress,
   pageSlots,
@@ -43,8 +47,20 @@ import {
 } from "./slot-paging";
 import { toIpHistoryEntries, type IpHistoryRow } from "./ip-history-entries";
 import { AssignIpDialog, DeviceCombobox, ownerRule } from "./ip-assign-dialog";
+import { SubnetMap } from "./subnet-map";
 import { PATHS } from "@/lib/routes";
 import { clampPage } from "@/lib/paging";
+
+/** Rule NAT đọc ở hộp Thu hồi — chỉ những trường cần để nói "rule nào đang trỏ vào IP này". */
+interface NatRef {
+  id: string;
+  protocol: string;
+  externalPorts: string;
+  internalIp: string;
+  internalPort: number;
+  deviceCode: string | null;
+  voidedAt: string | null;
+}
 
 /**
  * Cột PHẢI của màn Địa chỉ IP: toàn bộ một dải — IP đã có hồ sơ và ô còn trống, xếp theo thứ
@@ -73,6 +89,8 @@ export function SubnetPane({
    */
   const [status, setStatus] = useState<SlotFilter | null>(null);
   const [page, setPage] = useState(1);
+  /** Danh sách hay bản đồ — hai cách xem cùng một dải. */
+  const [view, setView] = useState<"list" | "map">("list");
   /** Hồ sơ đang mở hộp SỬA. Cấp mới đi hộp riêng (`assigning`) — hai việc, hai hộp. */
   const [editing, setEditing] = useState<IpRow | null>(null);
   /** Hộp "Cấp IP" — `record` null là ô chưa từng có hồ sơ, có là hồ sơ đang Trống. */
@@ -87,8 +105,8 @@ export function SubnetPane({
   /** Ô tìm ngay trên bảng — lọc tại chỗ trên cả dải. */
   const [needle, setNeedle] = useState("");
   /**
-   * `?ip=` — đến từ ô tra cứu cấp trang hoặc hộp Tìm nhanh: nhảy tới đúng trang chứa địa chỉ
-   * và tô sáng dòng. Đọc từ URL để link gửi cho nhau mở ra đúng chỗ.
+   * `?ip=` — đến từ ô tra cứu cấp trang, hộp Tìm nhanh hoặc panel IP của trang thiết bị: nhảy
+   * tới đúng trang chứa địa chỉ và tô sáng dòng. Đọc từ URL để link gửi cho nhau mở ra đúng chỗ.
    */
   const [params] = useSearchParams();
   const focusIp = params.get("ip");
@@ -97,11 +115,12 @@ export function SubnetPane({
   const highlightRow = useRef<HTMLTableRowElement | null>(null);
   const scrolledTo = useRef<string | null>(null);
   const [historyOf, setHistoryOf] = useState<IpRow | null>(null);
-  /** Hồ sơ IP đang chờ XÓA (ẩn kèm lý do) — khác `moving` vốn là bước vòng đời. */
+  /** Hồ sơ IP đang chờ ẨN (kèm lý do) — khác `moving` vốn là bước vòng đời. */
   const [voiding, setVoiding] = useState<IpRow | null>(null);
   const [restoring, setRestoring] = useState<IpRow | null>(null);
+  const [filesOpen, setFilesOpen] = useState(false);
   /**
-   * Dải ĐÃ VÔ HIỆU HÓA thì cả bảng này chỉ còn ĐỌC (28/08/2026).
+   * Dải ĐÃ VÔ HIỆU HÓA thì cả bảng này chỉ còn ĐỌC.
    *
    * Hồ sơ IP vẫn hiện nguyên — đó chính là điểm: mấy cái máy ngoài kia không tự nhả IP tĩnh
    * ra chỉ vì cuốn sổ cất dải đi, nên giấu chúng đi là nói dối. Nhưng cấp mới, chuyển trạng
@@ -115,21 +134,25 @@ export function SubnetPane({
    * quay về file Excel trên máy ai đó.
    */
   const canWrite = !subnetDisabled;
-  /** XÓA hồ sơ thì chỉ SA/Admin — API chặn, UI đừng bày nút ra để bấm rồi 403. */
-  const canEdit = (me.role === "sa" || me.role === "admin") && !subnetDisabled;
+  /**
+   * ẨN / BẬT LẠI hồ sơ và ghi giấy tờ của dải thì chỉ SA/Admin — API chặn, UI đừng bày nút ra
+   * để bấm rồi 403. Trong dải đã tắt thì bật lại hồ sơ cũng bị từ chối (`SUBNET_VOIDED`).
+   */
+  const isManager = me.role === "sa" || me.role === "admin";
+  const canEdit = isManager && !subnetDisabled;
 
   /*
-   * "Hiện hồ sơ đã ẩn" — TẮT mặc định, và phải tắt mặc định.
+   * Hồ sơ ĐÃ ẨN chỉ về khi đứng ở chip "Đã ẩn" (`?includeVoided=true`).
    *
-   * Ẩn một hồ sơ nhập nhầm phải trả ô đó về "trống"; đó là toàn bộ ý nghĩa của việc ẩn. Nhưng
-   * cho tới 09/09 ẩn là đường MỘT CHIỀU: bật lại được cả một DẢI, còn một hồ sơ lẻ bấm nhầm
-   * thì không có đường nào quay lại — nó biến khỏi mọi màn, `findOne` trả 404, nên không mở
-   * ra xem được cả lý do vừa ghi. Ô tick này là đường tới nút "Bật lại".
+   * Ẩn một hồ sơ nhập nhầm phải trả ô đó về "trống" — đó là toàn bộ ý nghĩa của việc ẩn, nên
+   * các chip khác không bày chúng. Nhưng chip "Đã ẩn" đứng thường trực với MỌI vai: đó là
+   * đường tới nút "Bật lại", và là chỗ duy nhất trả lời "IP này từng của máy nào" cho một hồ
+   * sơ đã ẩn (lịch sử của nó vẫn mở được, kể cả với member).
    */
-  const [showVoided, setShowVoided] = useState(false);
+  const showVoided = status === VOIDED_FILTER;
 
   const slots = useQuery({
-    // `showVoided` PHẢI nằm trong khóa: thiếu nó thì bật ô tick xong màn hình đứng im vì
+    // `showVoided` PHẢI nằm trong khóa: thiếu nó thì đổi chip xong màn hình đứng im vì
     // react-query trả lại đúng ảnh chụp cũ.
     queryKey: ["ipam", "subnets", id, "addresses", showVoided],
     queryFn: () =>
@@ -138,86 +161,63 @@ export function SubnetPane({
       ),
   });
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ["ipam"] });
+  const attachments = useOwnerAttachments("subnet", id);
 
-  /**
-   * Lọc theo trạng thái, gồm cả "Trống" — đúng bộ lọc của mockup.
-   *
-   * Thay ô tick "chỉ hiện IP đã cấp" cũ: ô tick chỉ mở/đóng được MỘT trạng thái, nên câu hỏi
-   * hay gặp thứ hai — "còn chỗ nào trống" — vẫn phải tự dò bằng mắt giữa 254 dòng.
-   */
+  // Chỉ dải và IP của dải — sổ NAT và các màn khác không đổi khi cấp/thu hồi một địa chỉ.
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["ipam", "subnets"] });
+
   /*
-   * `useMemo` cho `all` (20/09/2026): `slots.data ?? []` sinh một MẢNG MỚI mỗi lượt render
-   * khi dữ liệu chưa về, và mảng ấy là dep của hai memo bên dưới. Tác động thực tế gần 0
-   * — có dữ liệu rồi thì `all === slots.data` nhờ structural sharing của TanStack — nhưng
-   * để nguyên là một cảnh báo `exhaustive-deps` đứng mãi trong cổng, và một cảnh báo đứng
-   * mãi là chỗ những cảnh báo THẬT về sau nấp vào.
+   * Dải đã tắt: bỏ các ô CHƯA TỪNG CÓ HỒ SƠ. Không cấp được gì trong dải này, nên 254 dòng
+   * "Trống" không bấm được chỉ chôn mất mấy hồ sơ còn lại — thứ duy nhất đáng tra ở đây.
    */
-  const all = useMemo(() => slots.data ?? [], [slots.data]);
+  const all = useMemo(() => {
+    const raw = slots.data ?? [];
+    return subnetDisabled ? raw.filter((slot) => slot.kind === "record") : raw;
+  }, [slots.data, subnetDisabled]);
   const counts = useMemo(() => countSlots(all), [all]);
 
   /*
    * MẶC ĐỊNH CHỌN HỘ — nhưng chỉ MỘT LẦN, lúc dải vừa mở ra.
    *
-   * Vấn đề thật: một /24 đã dùng 12 địa chỉ thì mở ra là 242 ô trống xếp trước mặt, 12 dòng có
-   * dữ liệu nằm rải trong sáu trang. Câu hỏi hay gặp nhất — "dải này đang cấp cho những ai" —
-   * phải tự đi tìm. Nhưng cũng KHÔNG được mặc định "Đang dùng" cho mọi dải: một /29 mới khai có
-   * 6 ô trống thì "Đang dùng" mở ra một bảng rỗng, mà chính 6 ô trống ấy mới là thứ người ta
-   * vào để bấm "Cấp IP này".
+   * Một /24 đã dùng 12 địa chỉ thì mở ra là 242 ô trống xếp trước mặt, 12 dòng có dữ liệu nằm
+   * rải trong sáu trang. Nhưng cũng KHÔNG được mặc định "Đang dùng" cho mọi dải: một /29 mới
+   * khai có 6 ô trống thì "Đang dùng" mở ra một bảng rỗng, mà chính 6 ô trống ấy mới là thứ
+   * người ta vào để bấm "Cấp IP". Luật nằm ở `shouldIsolateAssigned`.
    *
-   * Ngưỡng: chỉ chọn hộ khi ô trống ĐỦ NHIỀU để chôn mất dữ liệu, và khi thật sự có dữ liệu
-   * để xem.
-   *
-   * VÌ SAO PHẢI GHIM BẰNG `ref` THAY VÌ TÍNH LẠI MỖI LƯỢT RENDER: tính lại thì ngay sau khi
-   * người dùng bấm "Cấp IP này" trên một dải rộng, `assigned` nhảy từ 0 lên 1 và bộ lọc tự
-   * đổi dưới tay họ — danh sách ô trống họ đang làm việc biến mất giữa chừng.
+   * Ghim bằng `ref` thay vì tính lại mỗi lượt render: tính lại thì ngay sau khi người dùng
+   * cấp một IP trên dải rộng, `assigned` nhảy từ 0 lên 1 và bộ lọc tự đổi dưới tay họ.
    */
   const decidedFor = useRef<string | null>(null);
 
   /*
    * Đổi DẢI thì về trang 1, bỏ bộ lọc cũ, VÀ cho phép quyết lại.
    *
-   * ===== VÌ SAO KHỐI NÀY PHẢI KHAI TRƯỚC KHỐI QUYẾT (18/09/2026) =====
-   *
-   * React chạy effect theo THỨ TỰ KHAI. Bản trước đặt khối này ở cuối file, sau khối quyết,
-   * nên khi `id` đổi trong cùng một commit thì:
-   *
-   *     khối quyết:  decidedFor.current = 'B'; setStatus('assigned')
-   *     khối reset:  setStatus(null)            → bộ lọc rơi về "Tất cả"
-   *
-   * và vì `decidedFor.current` đã bị ghim là 'B', khối quyết KHÔNG BAO GIỜ chạy lại cho dải
-   * B — tính năng tự huỷ. Cảnh dựng lại được: mở dải A → sang B → quay lại A. Lần này
-   * `slots.data` của A có sẵn trong cache react-query nên có ngay ở lượt render đầu, hai
-   * effect cùng bắn, và một /24 có 12 địa chỉ lại đổ ra 242 ô trống — đúng thứ đoạn mã này
-   * viết ra để chặn. Chỉ lần mở ĐẦU TIÊN (chưa cache, `slots.data` còn `undefined`) là chạy
-   * đúng, nên lỗi trông như "lúc được lúc không".
-   *
-   * Đặt trước + nhả ghim thì thứ tự thành: reset → quyết, và dải mới được quyết lại tử tế.
-   *
-   * BỘ LỌC phải theo trang: đang soi "Đã ẩn" ở dải A rồi bấm sang dải B là
-   * gặp một bảng TRỐNG TRƠN cho một dải đầy địa chỉ — nút lọc nằm tít trên, và không ai nghĩ
-   * dải mới lại thừa hưởng bộ lọc của dải cũ.
+   * Khối này PHẢI khai trước khối quyết: React chạy effect theo THỨ TỰ KHAI, và khi `id` đổi
+   * cùng một commit mà dữ liệu dải mới đã có sẵn trong cache, đặt ngược thứ tự thì khối reset
+   * chạy SAU khối quyết và xoá mất lựa chọn vừa quyết — còn `decidedFor` đã ghim nên không
+   * bao giờ quyết lại cho dải đó.
    */
   useEffect(() => {
     setPage(1);
     setStatus(null);
     setNeedle("");
     setHighlight(null);
+    setView("list");
     decidedFor.current = null;
   }, [id]);
 
   useEffect(() => {
     if (!slots.data || decidedFor.current === id) return;
     decidedFor.current = id;
-    const fresh = countSlots(slots.data);
+    const fresh = countSlots(all);
     setStatus(shouldIsolateAssigned(fresh.assigned, fresh.free) ? "assigned" : "all");
-  }, [slots.data, id]);
+  }, [slots.data, all, id]);
 
   /*
-   * Nhảy tới địa chỉ được hỏi — khai SAU khối quyết để thắng nó trong cùng một commit (React
-   * chạy effect theo thứ tự khai): địa chỉ cần tra có thể đang Trống, và bộ lọc "Đang dùng"
-   * mà khối quyết chọn hộ sẽ giấu mất đúng dòng đó. Mỗi cặp dải + địa chỉ chỉ áp MỘT lần —
-   * áp lại sau mỗi lượt tải (vd vừa cấp IP xong) là giật trang dưới tay người dùng.
+   * Nhảy tới địa chỉ được hỏi — khai SAU khối quyết để thắng nó trong cùng một commit: địa
+   * chỉ cần tra có thể đang Trống, và bộ lọc "Đang dùng" mà khối quyết chọn hộ sẽ giấu mất
+   * đúng dòng đó. Mỗi cặp dải + địa chỉ chỉ áp MỘT lần — áp lại sau mỗi lượt tải là giật
+   * trang dưới tay người dùng.
    */
   useEffect(() => {
     if (!slots.data || !focusIp) return;
@@ -227,9 +227,9 @@ export function SubnetPane({
     decidedFor.current = id;
     setStatus("all");
     setNeedle("");
-    setPage(pageOfAddress(slots.data, focusIp) ?? 1);
+    setPage(pageOfAddress(all, focusIp) ?? 1);
     setHighlight(focusIp);
-  }, [slots.data, focusIp, id]);
+  }, [slots.data, all, focusIp, id]);
 
   const shown: SlotFilter = status ?? "all";
   const filtered = useMemo(
@@ -238,13 +238,9 @@ export function SubnetPane({
   );
 
   /**
-   * Phân trang Ở CLIENT, cố ý.
-   *
-   * `MIN_PREFIX = 24` phía API chặn dải rộng nhất ở /24 = 254 host, nên cả dải về trong MỘT
-   * lượt gọi và nằm gọn trong bộ nhớ. Cắt trang ở đây thì đổi trang là tức thì, còn bộ lọc
-   * và con số đếm trên từng nút vẫn tính trên TOÀN dải chứ không phải trên 50 dòng đang xem —
-   * đó mới là câu trả lời đúng cho "còn mấy chỗ trống". Đẩy phân trang xuống server sẽ đổi
-   * một lượt gọi thành sáu, mà chẳng bớt được byte nào đáng kể.
+   * Phân trang Ở CLIENT, cố ý: `MIN_PREFIX = 24` phía API chặn dải rộng nhất ở /24 = 254 host,
+   * nên cả dải về trong MỘT lượt gọi. Cắt trang ở đây thì bộ lọc và con số đếm trên từng nút
+   * vẫn tính trên TOÀN dải — đó mới là câu trả lời đúng cho "còn mấy chỗ trống".
    */
   const rows = pageSlots(filtered, page);
 
@@ -262,111 +258,185 @@ export function SubnetPane({
     highlightRow.current.scrollIntoView?.({ block: "center" });
   });
 
+  /** Chỗ trống nhỏ nhất (bỏ qua gateway) cho nút "Cấp IP trống kế tiếp". */
+  const next = useMemo(
+    () => nextFreeSlot(slots.data ?? [], item.gateway),
+    [slots.data, item.gateway],
+  );
+
+  /** Bấm một ô ĐANG DÙNG trên bản đồ: về danh sách, đúng trang, tô sáng dòng đó. */
+  const openInList = (address: string) => {
+    setView("list");
+    setStatus("all");
+    setNeedle("");
+    setPage(pageOfAddress(all, address) ?? 1);
+    scrolledTo.current = null;
+    setHighlight(address);
+  };
+
   /** Nút "Cấp IP" trên dòng — ô trống và hồ sơ Trống mở cùng một hộp. */
   const assignButton = (address: string, record: IpRow | null) =>
     canWrite ? (
       <button
         type="button"
-        className="btn sm"
+        className="btn sm ghost"
         onClick={() => setAssigning({ address, record })}
       >
         {t("ipam.assign")}
       </button>
     ) : null;
 
+  const mask = maskOfCidr(item.cidr);
+
   return (
     <>
       {/*
-        CHỈ tiêu đề, KHÔNG lặp lại thanh mức sử dụng.
-        Thẻ dải đang chọn nằm ngay bên trái và đã hiện đúng con số đó rồi; vẽ lại lần hai
-        cách nhau 300px không thêm thông tin nào, chỉ làm người đọc phải đối chiếu xem hai
-        chỗ có khớp nhau không.
+        Đầu cột phải: tên dải + mọi thứ người cắm máy cần gõ vào card mạng (gateway, mask,
+        VLAN), kèm mô tả và giấy tờ của dải. Không lặp thanh mức sử dụng — thẻ dải bên trái
+        đã hiện đúng con số đó.
       */}
       <div className="pane-head">
-        <h2 className="pane-title">
-          <span className="mono">{item.cidr}</span> — {item.name}
-        </h2>
-      </div>
-
-      {/* Nói NGAY vì sao mọi nút biến mất. Không có dòng này thì bảng chỉ-đọc trông như hỏng. */}
-      {subnetDisabled ? (
-        <p className="alert">{t("ipam.voidedSlotHint")}</p>
-      ) : null}
-
-      {/* Bộ lọc trạng thái — "Trống" là một lựa chọn ngang hàng, không phải một ô tick phụ.
-          Con số đi kèm ngay trên nút: "còn mấy chỗ trống" là câu hỏi màn này sinh ra để trả
-          lời, bắt bấm vào rồi mới đếm là bắt làm hai lần một việc. */}
-      <div className="segmented" role="group" aria-label={t("ipam.status")}>
-        {/*
-          Chip "Đã ẩn" chỉ mọc ra khi ô tick bên dưới đang bật (B-04, 23/09).
-
-          Trước đó hồ sơ đã ẩn KHÔNG có rổ nào: nó mang `status='free'` trong DB nên rơi vào
-          chip "Trống", và bấm "Trống" là nó hiện lên như một ô cấp được — trong khi thẻ dải
-          ngay phía trên nói "Giữ lại vì còn 1 hồ sơ IP mang lịch sử".
-
-          Không bày chip thường trực vì API chỉ trả hồ sơ đã ẩn khi `?includeVoided=true`: một
-          chip "Đã ẩn 0" đứng mãi ở đó là mời người dùng bấm vào một rổ luôn rỗng rồi kết luận
-          dải này không có hồ sơ nào bị ẩn — đúng cái kết luận sai đang phải sửa.
-        */}
-        {[...SLOT_FILTERS, ...(showVoided ? [VOIDED_FILTER] : [])].map((key) => (
-          <button
-            key={key}
-            type="button"
-            className={shown === key ? "on" : undefined}
-            aria-pressed={shown === key}
-            onClick={() => {
-              setStatus(key);
-              setPage(1);
-            }}
-          >
-            {t(key === "all" ? "ipam.filterAll" : BUCKET_KEY[key])}{" "}
-            <span className="seg-count">{counts[key]}</span>
+        <div className="pane-head-main">
+          <h2 className="pane-title">
+            <span className="mono">{item.cidr}</span> — {item.name}
+          </h2>
+          <p className="pane-sub">
+            {item.gateway ? (
+              <span>
+                {t("ipam.gateway")}: <span className="mono">{item.gateway}</span>{" "}
+                <CopyButton
+                  value={item.gateway}
+                  label={t("ipam.copyOf", { label: t("ipam.gateway") })}
+                />
+              </span>
+            ) : null}
+            {mask ? (
+              <span>
+                {t("ipam.mask")}: <span className="mono">{mask}</span>
+              </span>
+            ) : null}
+            {item.vlan !== null ? (
+              <span>{t("ipam.vlanBadge", { vlan: item.vlan })}</span>
+            ) : null}
+            {item.siteCode ? <span>{item.siteCode}</span> : null}
+            <span className="muted">
+              {t("ipam.createdBy", { by: item.createdBy, date: formatDate(item.createdAt) })}
+            </span>
+          </p>
+          {item.description ? <p className="muted pane-desc">{item.description}</p> : null}
+        </div>
+        <div className="pane-actions">
+          <button type="button" className="btn" onClick={() => setFilesOpen(true)}>
+            {t("ipam.filesButton", { count: attachments.data?.length ?? 0 })}
           </button>
-        ))}
+          {canWrite ? (
+            <button
+              type="button"
+              className="btn primary"
+              disabled={!next}
+              title={next ? undefined : t("ipam.nextFreeNone")}
+              onClick={() => (next ? setAssigning(next) : undefined)}
+            >
+              {t("ipam.nextFree")}
+            </button>
+          ) : null}
+        </div>
       </div>
 
-      {/*
-        Đường tới nút "Bật lại". Chỉ SA/Admin thấy: họ là người duy nhất ẩn được, nên cũng là
-        người duy nhất cần bật lại. Dải đã ẩn thì mọi hồ sơ trong đó vốn đã hiện — ô tick ở đó
-        không đổi gì, nên không bày ra.
-      */}
-      {canEdit ? (
-        <label className="row" style={{ gap: "var(--space-3)" }}>
-          <input
-            type="checkbox"
-            checked={showVoided}
-            onChange={(e) => {
-              setShowVoided(e.target.checked);
-              /*
-               * Tắt ô tick trong khi đang đứng ở chip "Đã ẩn" thì chip ấy biến mất cùng dữ
-               * liệu của nó: không chip nào sáng, bảng rỗng trơn, và người dùng kết luận dải
-               * này không còn gì. Trả bộ lọc về "Tất cả" là đưa họ về chỗ nhìn thấy được.
-               */
-              if (!e.target.checked && shown === VOIDED_FILTER) setStatus("all");
-              setPage(1);
-            }}
-          />
-          {t("ipam.showVoided")}
-        </label>
+      {/* Nói NGAY vì sao mọi nút biến mất, ai tắt và lúc nào. Không có dòng này thì bảng
+          chỉ-đọc trông như hỏng. */}
+      {subnetDisabled ? (
+        <div className="alert warn" role="note">
+          <p>
+            {t("ipam.voidedBy", {
+              date: formatDate(item.voidedAt),
+              by: item.voidedBy ?? "—",
+              reason: item.voidReason ?? "—",
+            })}
+          </p>
+          <p>{t("ipam.voidedSlotHint")}</p>
+        </div>
       ) : null}
 
-      <FilterBar
-        search={needle}
-        onSearchChange={(value) => {
-          setNeedle(value);
-          setPage(1);
-        }}
-        searchPlaceholder={t("ipam.paneSearch")}
-      />
+      <div className="pane-tools">
+        {/* Bộ lọc trạng thái — "Trống" là một lựa chọn ngang hàng, không phải một ô tick phụ.
+            Con số đi kèm ngay trên nút: "còn mấy chỗ trống" là câu hỏi màn này sinh ra để trả
+            lời. Chip "Đã ẩn" không mang số khi chưa mở: API chỉ trả hồ sơ đã ẩn khi được hỏi,
+            nên một con số 0 đứng đó là nói sai. */}
+        <div className="segmented" role="group" aria-label={t("ipam.status")}>
+          {[...SLOT_FILTERS, VOIDED_FILTER].map((key) => (
+            <button
+              key={key}
+              type="button"
+              className={shown === key ? "on" : undefined}
+              aria-pressed={shown === key}
+              onClick={() => {
+                setStatus(key);
+                setPage(1);
+                setView("list");
+              }}
+            >
+              {t(key === "all" ? "ipam.filterAll" : BUCKET_KEY[key])}
+              {key !== VOIDED_FILTER || showVoided || subnetDisabled ? (
+                <>
+                  {" "}
+                  <span className="seg-count">{counts[key]}</span>
+                </>
+              ) : null}
+            </button>
+          ))}
+        </div>
+        {!subnetDisabled ? (
+          <div className="segmented" role="group" aria-label={t("ipam.viewGroup")}>
+            {(["list", "map"] as const).map((key) => (
+              <button
+                key={key}
+                type="button"
+                className={view === key ? "on" : undefined}
+                aria-pressed={view === key}
+                onClick={() => {
+                  setView(key);
+                  // Bản đồ là cả dải: đứng ở chip "Đã ẩn" thì hồ sơ thường không về.
+                  if (key === "map" && shown === VOIDED_FILTER) setStatus("all");
+                }}
+              >
+                {t(key === "list" ? "ipam.viewList" : "ipam.viewMap")}
+              </button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      {view === "list" ? (
+        <FilterBar
+          search={needle}
+          onSearchChange={(value) => {
+            setNeedle(value);
+            setPage(1);
+          }}
+          searchPlaceholder={t("ipam.paneSearch")}
+        />
+      ) : null}
 
       {slots.isLoading ? (
         <Loading />
       ) : slots.isError ? (
         <LoadError error={slots.error} onRetry={() => void slots.refetch()} />
+      ) : subnetDisabled && item.addressCount === 0 ? (
+        <EmptyState title={t("ipam.slotEmpty")} hint={t("ipam.voidedNeverUsed")} />
+      ) : view === "map" ? (
+        <SubnetMap
+          cidr={item.cidr}
+          slots={all}
+          gateway={item.gateway}
+          canAssign={canWrite}
+          onAssign={(address, record) => setAssigning({ address, record })}
+          onOpen={openInList}
+        />
       ) : (
         <>
           <div className="table-wrap">
-            <table className="table table-stack">
+            <table className="table table-stack ip-table">
               <thead>
                 <tr>
                   <th>{t("ipam.address")}</th>
@@ -387,31 +457,37 @@ export function SubnetPane({
                       }
                       ref={slot.address === highlight ? highlightRow : undefined}
                     >
-                      <td data-label={t("ipam.address")}>
+                      <td data-label={t("ipam.address")} className="col-ip">
                         <span className="mono">{slot.address}</span>
                       </td>
-                      <td data-label={t("ipam.status")}>
+                      <td data-label={t("ipam.status")} className="col-status">
                         <span className="badge muted">
                           {t("ipam.statusFree")}
                         </span>
                       </td>
-                      <td data-label={t("ipam.device")}>—</td>
-                      <td data-label={t("ipam.usedBy")}>—</td>
-                      <td data-label={t("ipam.assignedAt")}>—</td>
+                      <td data-label={t("ipam.device")}>
+                        <Empty />
+                      </td>
+                      <td data-label={t("ipam.usedBy")}>
+                        <Empty />
+                      </td>
+                      <td data-label={t("ipam.assignedAt")}>
+                        <Empty />
+                      </td>
                       {/* Ô Thao tác cũng phải có `data-label`: ở ≤960px bảng gập thẻ dọc và
                           năm ô kia đều tự xưng tên, riêng ô này thì không — thành ra một cái
                           nút lửng lơ không biết thuộc cột nào. */}
-                      <td data-label={t("common.actions")}>
-                        {assignButton(slot.address, null)}
+                      <td data-label={t("common.actions")} className="col-actions">
+                        <div className="action-cell">{assignButton(slot.address, null)}</div>
                       </td>
                     </tr>
                   ) : (
                     <tr
                       key={slot.id}
                       /*
-                        Hồ sơ đang Trống (đã thu hồi, hoặc hồ sơ không chủ có từ trước Q-14) nhìn
-                        như ô trống: mờ, và nút "Cấp IP" ngay tại dòng. Để đậm như hồ sơ đang
-                        dùng thì người đọc thấy một dòng "có gì đó" mà không biết là gì.
+                        Hồ sơ đang Trống (đã thu hồi) nhìn như ô trống: mờ, và nút "Cấp IP"
+                        ngay tại dòng. Để đậm như hồ sơ đang dùng thì người đọc thấy một dòng
+                        "có gì đó" mà không biết là gì.
                       */
                       className={
                         slot.address === highlight
@@ -422,14 +498,14 @@ export function SubnetPane({
                       }
                       ref={slot.address === highlight ? highlightRow : undefined}
                     >
-                      <td data-label={t("ipam.address")}>
+                      <td data-label={t("ipam.address")} className="col-ip">
                         <span className="mono">{slot.address}</span>
                       </td>
-                      <td data-label={t("ipam.status")}>
+                      <td data-label={t("ipam.status")} className="col-status">
                         {/*
                           Hồ sơ ĐÃ ẨN phải đọc ra là đã ẩn, không phải "Đang dùng" mờ mờ: nó
-                          giữ nguyên `status` cũ, nên vẽ theo `status` là nói dối trắng trợn về
-                          một hàng mà người khác đang được phép cấp lại địa chỉ đó.
+                          giữ nguyên `status` cũ, nên vẽ theo `status` là nói dối về một hàng
+                          mà người khác đang được phép cấp lại địa chỉ đó.
                         */}
                         {slot.voidedAt ? (
                           <span className="badge muted" title={slot.voidReason ?? undefined}>
@@ -440,6 +516,12 @@ export function SubnetPane({
                             {t(STATUS_KEY[slot.status])}
                           </span>
                         )}
+                        {/* Hồ sơ đã thu hồi: nói lúc nào — chủ cũ nằm trong Lịch sử. */}
+                        {isFreeRecord(slot) ? (
+                          <span className="cell-sub">
+                            {t("ipam.freedOn", { date: formatDate(slot.updatedAt) })}
+                          </span>
+                        ) : null}
                       </td>
                       <td data-label={t("ipam.device")} className="col-device">
                         {/* Mã máy một dòng (`.mono` trong ô bảng không ngắt), tên máy là dòng
@@ -454,90 +536,41 @@ export function SubnetPane({
                             ) : null}
                           </>
                         ) : (
-                          "—"
+                          <Empty />
                         )}
                       </td>
                       <td data-label={t("ipam.usedBy")}>
-                        {orDash(slot.usedBy)}
+                        {slot.usedBy ? slot.usedBy : <Empty />}
+                        {/* Ghi chú đọc được ngay trên bảng — cả với dải đã tắt, nơi hộp Sửa
+                            không còn mở được. Một dòng, đủ câu ở `title`. */}
+                        {slot.note ? (
+                          <span className="cell-sub cell-note" title={slot.note}>
+                            {slot.note}
+                          </span>
+                        ) : null}
                       </td>
                       <td data-label={t("ipam.assignedAt")} className="col-date">
-                        {isFreeRecord(slot) ? "—" : orDash(formatDate(slot.assignedAt))}
+                        {isFreeRecord(slot) || !slot.assignedAt ? (
+                          <Empty />
+                        ) : (
+                          <>
+                            {formatDate(slot.assignedAt)}
+                            <span className="cell-sub" title={slot.assignedBy}>
+                              {t("ipam.assignedByLine", { by: slot.assignedBy.split("@")[0] })}
+                            </span>
+                          </>
+                        )}
                       </td>
-                      <td data-label={t("common.actions")}>
+                      <td data-label={t("common.actions")} className="col-actions">
                         <div className="action-cell">
                           {isFreeRecord(slot) ? assignButton(slot.address, slot) : null}
                           {/*
                             Gom vào một menu: bày từng nút cạnh nhau làm cột cuối rộng hơn cả các
-                            cột dữ liệu cộng lại, trên một bảng người ta mở ra để ĐỌC địa chỉ. Và
-                            số nút đổi theo từng dòng, nên mắt phải quét lại mỗi hàng.
+                            cột dữ liệu cộng lại, trên một bảng người ta mở ra để ĐỌC địa chỉ.
                           */}
                           <RowActions
                             label={t("common.actionsOf", { subject: slot.address })}
-                            items={[
-                              /*
-                                Hồ sơ ĐÃ ẨN chỉ có hai việc: xem lịch sử, và BẬT LẠI. Mọi việc
-                                khác (chuyển trạng thái, sửa, ẩn tiếp) API đều từ chối vì chúng
-                                đi qua `requireAlive` — bày ra là bày nút để bấm rồi ăn lỗi.
-                              */
-                              ...(slot.voidedAt
-                                ? [
-                                    {
-                                      key: "restore",
-                                      label: t("ipam.restoreAddress"),
-                                      onSelect: () => setRestoring(slot),
-                                    },
-                                  ]
-                                : []),
-                              /* Chỉ hiện những bước chuyển ĐI ĐƯỢC từ trạng thái hiện tại — một
-                                 cái nút bấm vào rồi bị từ chối là cái nút không nên có. Bước
-                                 CẤP đã là nút ngay trên dòng, nên menu chỉ còn bước Thu hồi. */
-                              ...(canWrite && !slot.voidedAt
-                                ? NEXT_STATUSES[slot.status]
-                                    .filter((to) => to !== "assigned")
-                                    .map((to) => ({
-                                      key: `to-${to}`,
-                                      label: t(TRANSITION_LABEL[`${slot.status}->${to}`]),
-                                      onSelect: () => setMoving({ record: slot, to }),
-                                      danger: to === "free",
-                                    }))
-                                : []),
-                              {
-                                key: "history",
-                                label: t("ipam.history"),
-                                onSelect: () => setHistoryOf(slot),
-                              },
-                              // Hồ sơ Trống thì "sửa" chính là cấp — đã có nút Cấp IP trên dòng.
-                              ...(canWrite && !slot.voidedAt && !isFreeRecord(slot)
-                                ? [
-                                    {
-                                      key: "edit",
-                                      label: t("common.edit"),
-                                      onSelect: () => setEditing(slot),
-                                    },
-                                  ]
-                                : []),
-                              /*
-                                XÓA hồ sơ IP — khác "Thu hồi".
-
-                                Thu hồi là bước vòng đời: địa chỉ trả về pool nhưng hàng ở lại
-                                kèm lịch sử "IP này từng của máy nào" (AC 5.2). Xóa là cho bản
-                                ghi KHAI NHẦM: nó biến khỏi bảng, chỗ trống hiện lại như chưa
-                                từng có ai cấp. Thiếu nút này thì một địa chỉ gõ nhầm nằm lại
-                                trong sổ vĩnh viễn — người dùng báo đúng chuyện đó.
-
-                                Vẫn là ẩn ở tầng DB, không DELETE: `ip_history` trỏ vào hàng này.
-                              */
-                              ...(canEdit && !slot.voidedAt
-                                ? [
-                                    {
-                                      key: "void",
-                                      label: t("ipam.voidAddress"),
-                                      onSelect: () => setVoiding(slot),
-                                      danger: true,
-                                    },
-                                  ]
-                                : []),
-                            ]}
+                            items={rowActions(slot)}
                           />
                         </div>
                       </td>
@@ -549,11 +582,8 @@ export function SubnetPane({
           </div>
 
           {/*
-            BẢNG RỖNG PHẢI NÓI VÌ SAO RỖNG.
-            Thiếu nhánh này thì lọc "Đang dùng" trên một dải chưa cấp ô nào cho ra một cái khung
-            bảng trắng với đúng hàng tiêu đề, và người dùng không có cách nào biết đó là "dải
-            sạch" hay "màn hỏng". Câu trả lời nằm
-            ngay ở con số 0 trên chính nút họ vừa bấm — nhưng phải nói ra.
+            BẢNG RỖNG PHẢI NÓI VÌ SAO RỖNG: lọc "Đang dùng" trên một dải chưa cấp ô nào mà chỉ ra
+            khung bảng trắng thì người dùng không biết đó là "dải sạch" hay "màn hỏng".
           */}
           {filtered.length === 0 ? (
             <EmptyState
@@ -604,7 +634,13 @@ export function SubnetPane({
           csrfToken={me.csrfToken}
           onClose={() => setRestoring(null)}
           onDone={() => {
+            /* Bật lại xong thì hồ sơ rời rổ "Đã ẩn" — đứng yên ở chip đó là nhìn nó biến mất
+               và tưởng chưa bật được. Về "Tất cả" và tô sáng đúng dòng vừa bật. */
+            const address = restoring.address;
             setRestoring(null);
+            setStatus("all");
+            scrolledTo.current = null;
+            setHighlight(address);
             toast({ message: t("ipam.addressRestored") });
             void refresh();
           }}
@@ -636,6 +672,7 @@ export function SubnetPane({
           subnetId={id}
           address={assigning.address}
           record={assigning.record}
+          network={{ cidr: item.cidr, gateway: item.gateway, vlan: item.vlan }}
           csrfToken={me.csrfToken}
           onClose={() => setAssigning(null)}
           onDone={() => {
@@ -646,8 +683,83 @@ export function SubnetPane({
           }}
         />
       ) : null}
+
+      {/* Giấy tờ của dải (sơ đồ mạng, biên bản bàn giao IP tĩnh) — đọc được với MỌI vai, ghi
+          thì SA/Admin. Ở đây chứ không trong hộp Sửa dải: panel ghi thẳng, không hợp với một
+          form có nút Hủy. */}
+      {filesOpen ? (
+        <Dialog
+          open
+          onOpenChange={() => setFilesOpen(false)}
+          initialFocus="title"
+          maxWidth={720}
+          title={`${t("attachments.title")} — ${item.cidr}`}
+          footer={
+            <button type="button" className="btn" onClick={() => setFilesOpen(false)}>
+              {t("common.close")}
+            </button>
+          }
+        >
+          <AttachmentPanel
+            ownerType="subnet"
+            ownerId={id}
+            csrfToken={me.csrfToken}
+            canEdit={isManager}
+          />
+        </Dialog>
+      ) : null}
     </>
   );
+
+  /** Menu ⋯ của một hồ sơ: việc hay làm trước, Thu hồi (đỏ), rồi Ẩn nhập nhầm (xám) cuối. */
+  function rowActions(slot: IpRow): RowAction[] {
+    const items: RowAction[] = [];
+    // Hồ sơ Trống thì "sửa" chính là cấp — đã có nút Cấp IP trên dòng.
+    if (canWrite && !slot.voidedAt && !isFreeRecord(slot)) {
+      items.push({ key: "edit", label: t("common.edit"), onSelect: () => setEditing(slot) });
+    }
+    items.push({ key: "history", label: t("ipam.history"), onSelect: () => setHistoryOf(slot) });
+    /* Chỉ những bước chuyển ĐI ĐƯỢC từ trạng thái hiện tại. Bước CẤP đã là nút trên dòng. */
+    if (canWrite && !slot.voidedAt) {
+      for (const to of NEXT_STATUSES[slot.status].filter((next) => next !== "assigned")) {
+        items.push({
+          key: `to-${to}`,
+          label: t(TRANSITION_LABEL[`${slot.status}->${to}`]),
+          hint: to === "free" ? t("ipam.reclaimMenuHint") : undefined,
+          onSelect: () => setMoving({ record: slot, to }),
+          danger: to === "free",
+        });
+      }
+    }
+    /*
+     * ẨN hồ sơ — cho bản ghi KHAI NHẦM, khác "Thu hồi": thu hồi trả địa chỉ về pool nhưng
+     * giữ hàng và lịch sử "IP này từng của máy nào" (AC 5.2). Xếp cuối, chữ xám, có vạch
+     * ngăn — nó hiếm khi đúng, và chọn nhầm nó thay vì Thu hồi là mất dòng khỏi màn.
+     */
+    if (canEdit && !slot.voidedAt) {
+      items.push({
+        key: "void",
+        label: t("ipam.voidAddress"),
+        hint: t("ipam.voidMenuHint"),
+        onSelect: () => setVoiding(slot),
+        muted: true,
+      });
+    }
+    /* Hồ sơ ĐÃ ẨN chỉ còn Lịch sử và BẬT LẠI — mọi việc khác API từ chối (`requireAlive`). */
+    if (canEdit && slot.voidedAt) {
+      items.push({
+        key: "restore",
+        label: t("ipam.restoreAddress"),
+        onSelect: () => setRestoring(slot),
+      });
+    }
+    return items;
+  }
+}
+
+/** Ô trống: dấu gạch không mono, và điện thoại ẩn hẳn ô đó thay vì một hàng "— —". */
+function Empty() {
+  return <span className="cell-empty">{orDash(null)}</span>;
 }
 
 /**
@@ -693,6 +805,7 @@ function IpForm({
       /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!save.isPending}
+      initialFocus="first-field"
       maxWidth={560}
       title={t("ipam.editIp", { address: record.address })}
       footer={
@@ -797,8 +910,11 @@ function IpForm({
 /**
  * Xác nhận bước THU HỒI.
  *
+ * Nói rõ IP đang của AI trước khi lấy lại, và nói TRƯỚC nếu còn rule NAT trỏ vào nó — API
+ * từ chối thu hồi địa chỉ còn là đích của rule NAT đang sống (thu hồi xong rule sẽ trỏ vào
+ * một địa chỉ vô chủ), nên bày danh sách ra ở đây thay vì để người dùng bấm rồi ăn lỗi.
+ *
  * Hỏi LÝ DO: sáu tháng sau, câu "vì sao IP này bị thu hồi" chỉ còn dòng lịch sử trả lời được.
- * Bước cấp không đi đây — nó cần đủ máy/người/ngày, nên dùng chung hộp `AssignIpDialog`.
  */
 function TransitionDialog({
   record,
@@ -822,6 +938,19 @@ function TransitionDialog({
     { csrfToken, refreshMe: false },
   );
 
+  const nat = useQuery({
+    queryKey: ["ipam", "nat", "pointing-at", record.address],
+    enabled: to === "free",
+    queryFn: () =>
+      apiFetch<NatRef[]>(`/api/v1/ipam/nat?search=${encodeURIComponent(record.address)}`),
+  });
+  const pointing = (nat.data ?? []).filter(
+    (rule) => rule.internalIp === record.address && rule.voidedAt === null,
+  );
+
+  const owner = [record.deviceCode, record.usedBy].filter(Boolean).join(" · ");
+  const label = t(TRANSITION_LABEL[`${record.status}->${to}`]);
+
   return (
     <Dialog
       open
@@ -829,10 +958,11 @@ function TransitionDialog({
       /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!move.isPending}
-      maxWidth={480}
+      initialFocus="first-field"
+      maxWidth={520}
       title={
         <>
-          {t(TRANSITION_LABEL[`${record.status}->${to}`])} — {record.address}
+          {label} — {record.address}
         </>
       }
       footer={
@@ -846,7 +976,7 @@ function TransitionDialog({
             className={to === "free" ? "btn danger" : "btn primary"}
             disabled={move.isPending}
           >
-            {move.isPending ? t("common.loading") : t("common.confirm")}
+            {move.isPending ? t("common.loading") : label}
           </button>
         </>
       }
@@ -867,8 +997,40 @@ function TransitionDialog({
           );
         }}
       >
+        {owner ? (
+          <p>
+            <b>{t("ipam.reclaimOwner", { who: owner })}</b>
+            {record.assignedAt ? (
+              <span className="muted">
+                {" · "}
+                {t("ipam.reclaimSince", { date: formatDate(record.assignedAt) })}
+              </span>
+            ) : null}
+          </p>
+        ) : null}
+
         {to === "free" ? (
           <p className="muted">{t("ipam.reclaimHint")}</p>
+        ) : null}
+
+        {pointing.length > 0 ? (
+          <div className="alert warn" role="note">
+            <p>
+              {t("ipam.reclaimNatWarn", { count: pointing.length, address: record.address })}
+            </p>
+            <ul>
+              {pointing.map((rule) => (
+                <li key={rule.id} className="mono">
+                  {rule.deviceCode ? `${rule.deviceCode} · ` : ""}
+                  {rule.protocol.toUpperCase()} {rule.externalPorts} → {rule.internalIp}:
+                  {rule.internalPort}
+                </li>
+              ))}
+            </ul>
+            <Link to={`${PATHS.nat}?search=${encodeURIComponent(record.address)}`}>
+              {t("ipam.reclaimNatLink")}
+            </Link>
+          </div>
         ) : null}
 
         <Field
@@ -913,6 +1075,7 @@ function IpHistoryDialog({
     <Dialog
       open
       onOpenChange={onClose}
+      initialFocus="title"
       maxWidth={620}
       title={t("ipam.historyOf", { address: record.address })}
       footer={
@@ -941,8 +1104,7 @@ function IpHistoryDialog({
  *
  * Là hộp thoại chứ không phải một cú bấm thẳng: API có thể từ chối vì địa chỉ đã bị hồ sơ khác
  * chiếm trong lúc này (`IP_TAKEN`) hoặc vì dải cha đang bị ẩn (`SUBNET_VOIDED`). Cả hai câu
- * đều cần chỗ để hiện ra và cần người đọc — nuốt chúng vào một cái toast đỏ nửa giây là đúng
- * lỗi mà đợt B vừa dọn ở màn duyệt.
+ * đều cần chỗ để hiện ra và cần người đọc — nuốt chúng vào một cái toast đỏ nửa giây là mất.
  */
 function RestoreAddressDialog({
   record,
@@ -1009,15 +1171,11 @@ function RestoreAddressDialog({
 }
 
 /**
- * Xóa (ẩn) MỘT hồ sơ IP, kèm lý do.
+ * Ẩn MỘT hồ sơ IP khai nhầm, kèm lý do.
  *
  * Cùng khuôn với hộp ẩn dải và hộp gỡ rule NAT: "địa chỉ này biến đi đâu" là câu sáu tháng
  * sau sẽ có người hỏi, và chỉ dòng lịch sử trả lời được. Dùng hộp riêng chứ không dùng
  * `useConfirm` chung vì lý do ở đây là DỮ LIỆU bắt buộc, không phải một câu có/không.
- *
- * Khối này trước 26/09 nằm lạc chỗ: nó đứng NGAY TRÊN docblock của `RestoreAddressDialog` —
- * hộp BẬT LẠI — nên người đọc gán nó cho hộp đó và tin rằng hộp bật lại đòi lý do bắt buộc.
- * Hộp nó thật sự tả, chính hộp này, thì không có docstring nào.
  */
 function VoidAddressDialog({
   record,
@@ -1046,6 +1204,7 @@ function VoidAddressDialog({
       /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!remove.isPending}
+      initialFocus="first-field"
       maxWidth={480}
       title={`${t("ipam.voidAddress")} — ${record.address}`}
       footer={

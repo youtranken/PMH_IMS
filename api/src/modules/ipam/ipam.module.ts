@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { DevicesModule } from '../devices/devices.module';
+import { UsersModule } from '../users/users.module';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { IpAddressService } from './ip-address.service';
 import { IpDevicePanel } from './ip-device-panel';
@@ -17,7 +18,7 @@ import { SubnetService } from './subnet.service';
 
 /** Quản lý IP & NAT (Epic 5) — chủ sở hữu bảng `subnet`, `ip_address`, `ip_history` (AD-3). */
 @Module({
-  imports: [AuditModule, CatalogModule, DevicesModule],
+  imports: [AuditModule, CatalogModule, DevicesModule, UsersModule],
   controllers: [IpamController],
   providers: [
     SubnetService,
