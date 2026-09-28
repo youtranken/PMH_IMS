@@ -918,6 +918,13 @@ table.access-grid thead .access-row-head {
   flex: 0 0 auto;
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
+  /* Phân số "10/20" gãy dòng giữa chừng là mất đúng con số quan trọng nhất. */
+  white-space: nowrap;
+}
+/* Trong ô bảng, thanh đo + phân số cần chỗ tối thiểu: không có thì bảng co cột này lại và
+   chữ tràn đè sang cột bên. */
+.table td .usage {
+  min-width: 7rem;
 }
 
 /* --- Giá trị secret khi mở két (ui/vault-panel.tsx) ----------------------- */

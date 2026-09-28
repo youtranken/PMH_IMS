@@ -10,11 +10,17 @@ export function UsageBar({
   percent,
   label,
   ariaLabel,
+  showPercent = true,
 }: {
   percent: number;
   /** Chữ hiện cạnh thanh, vd "127/254 · còn 127". Bỏ trống thì chỉ hiện %. */
   label?: string;
   ariaLabel?: string;
+  /**
+   * `false`: chỉ in `label`. Dùng khi nhãn đã là phân số ("3/3") — thanh đo nói tỉ lệ rồi, in
+   * thêm "100% · " chỉ làm chữ dài ra và tràn sang cột bên (cột Ghế ở danh sách phần mềm).
+   */
+  showPercent?: boolean;
 }) {
   // Kẹp lại phòng dữ liệu lệch: thanh tràn ra ngoài khung làm hỏng cả bảng.
   const value = Math.max(0, Math.min(100, Math.round(percent)));
@@ -32,7 +38,9 @@ export function UsageBar({
       >
         <div className="usage-fill" style={{ width: `${value}%` }} />
       </div>
-      <span className="usage-text">{label ? `${value}% · ${label}` : `${value}%`}</span>
+      <span className="usage-text">
+        {label && !showPercent ? label : label ? `${value}% · ${label}` : `${value}%`}
+      </span>
     </div>
   );
 }

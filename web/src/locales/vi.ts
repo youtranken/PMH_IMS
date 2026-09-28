@@ -680,6 +680,35 @@ export default {
     renewHint: 'Nhập hạn MỚI. Hạn cũ được giữ lại trong lịch sử để đối chiếu.',
     renewed: 'Đã gia hạn.',
     noteHint: 'KHÔNG ghi key hay mật khẩu ở đây — chúng thuộc về Két sắt.',
+    /* Cột gộp trạng thái Q-03 + số ngày (`software-standing.ts`). */
+    standing: 'Tình trạng',
+    overdueDays: 'quá {{count}} ngày',
+    autoRetireIn: 'tự thanh lý sau {{count}} ngày',
+    autoRetireNext: 'tự thanh lý ở lượt quét tới',
+    seatsFull: 'Hết ghế',
+    seatsOver: '+{{count}} vượt',
+    /* Băng đầu trang hồ sơ Thanh lý + hộp Khôi phục (Q-13: bên trong là Sửa hồ sơ). */
+    retiredAuto: 'Đã thanh lý ngày {{date}} · tự động sau {{days}} ngày hết hạn',
+    retiredAutoNoDays: 'Đã thanh lý ngày {{date}} · tự động khi hết ân hạn',
+    retiredBy: 'Đã thanh lý ngày {{date}} · bởi {{by}}',
+    retiredUnknown: 'Hồ sơ đã thanh lý.',
+    retiredNote: 'Không còn tính hạn, không vào email nhắc; ghế đã gỡ khỏi các máy. Khôi phục để dùng lại.',
+    restore: 'Khôi phục…',
+    restoreTitle: 'Khôi phục hồ sơ',
+    restoreIntro: 'Hồ sơ về Đang dùng. Ghế đã gỡ KHÔNG tự gán lại — tick máy bên dưới để gán lại ngay.',
+    restoreEnd: 'Hạn mới',
+    restoreEndHint: 'Từ hôm nay trở đi — để hạn cũ thì lượt quét kế tiếp lại tự thanh lý.',
+    restorePlusYear: '+1 năm',
+    restoreNeedEnd: 'Chọn hạn mới.',
+    restorePastEnd: 'Hạn mới phải từ hôm nay trở đi.',
+    restoreNote: 'Ghi chú hồ sơ',
+    restoreDevices: 'Các máy từng dùng',
+    restoreDevicesNone: 'Chưa có máy nào từng dùng hồ sơ này.',
+    restoreTooMany: 'Hồ sơ có {{total}} ghế — bỏ bớt máy, hoặc tăng số ghế trong Sửa hồ sơ trước.',
+    restoreSubmit: 'Khôi phục',
+    restored: 'Đã khôi phục hồ sơ.',
+    restoredAssigned: 'Đã gán lại {{count}} máy.',
+    restoreAssignFailed: 'Không gán lại được {{code}}: {{reason}}',
   },
   license: {
     assign: 'Gán vào máy',
@@ -1358,8 +1387,14 @@ export default {
     statusTerminated: 'Thanh lý',
     dispose: 'Đưa vào kho thanh lý',
     confirmTitle: 'Đưa vào kho thanh lý',
-    confirmSoftware:
-      'Đưa hồ sơ {{code}} vào kho thanh lý? Nó sẽ không còn được tính hạn và không vào email nhắc gia hạn. Ghế đã gán vẫn giữ nguyên để tra cứu.',
+    /* Q-11/Q-13: thanh lý thì hệ thống TỰ GỠ mọi ghế. Câu hỏi lại phải nói đúng điều đó —
+       ghép từ ba câu dưới ở `software-dispose-message.ts`. */
+    confirmSoftware: 'Đưa hồ sơ {{code}} vào kho thanh lý?',
+    confirmSoftwareSeats:
+      '{{count}} máy đang dùng sẽ bị gỡ license (vẫn xem được trong lịch sử): {{codes}}.',
+    confirmSoftwareSeatsMany:
+      '{{count}} máy đang dùng sẽ bị gỡ license (vẫn xem được trong lịch sử).',
+    confirmSoftwareTail: 'Hồ sơ không còn được tính hạn và không vào email nhắc gia hạn.',
     done: 'Đã đưa vào kho thanh lý.',
     empty: 'Kho thanh lý đang trống',
     emptyHint: 'Chưa có hồ sơ nào bị thanh lý hay vô hiệu hóa.',

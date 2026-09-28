@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { useParams, useSearchParams } from "react-router-dom";
 import { ApiError, apiFetch } from "@/lib/api-client";
@@ -37,9 +38,13 @@ import {
   STATUS_TONE,
   seatLabel,
   supportsSeats,
+  type SoftwareDetailRow,
   type SoftwareHistoryRow,
   type SoftwareRow,
 } from "./software-types";
+import { activeSeatCodes, softwareDisposeMessage } from "./software-dispose-message";
+import { RestoreDialog } from "./software-restore-dialog";
+import { retiredAfterDays } from "./software-standing";
 import { PATHS } from "@/lib/routes";
 
 /**
@@ -66,10 +71,11 @@ export function SoftwareDetail({ me }: { me: Me }) {
   );
   const [editing, setEditing] = useState(false);
   const [renewing, setRenewing] = useState(false);
+  const [restoring, setRestoring] = useState(false);
 
   const software = useQuery({
     queryKey: ["software", id],
-    queryFn: () => apiFetch<SoftwareRow>(`/api/v1/software/${id}`),
+    queryFn: () => apiFetch<SoftwareDetailRow>(`/api/v1/software/${id}`),
     retry: false,
   });
 
@@ -150,6 +156,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
   // hai nhánh trên đều trượt. Xem chú thích đầy đủ ở `devices/device-detail.tsx` (lỗi F-02).
   if (!software.data) return <Loading />;
   const item = software.data;
+  const retired = item.status === "retired";
   /** Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày ra nút để bấm rồi 403. */
   const canVaultWrite = me.role === "sa" || me.role === "admin";
 
@@ -185,19 +192,39 @@ export function SoftwareDetail({ me }: { me: Me }) {
             >
               {t("software.edit")}
             </button>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => setRenewing(true)}
-            >
-              {t("software.renew")}
-            </button>
-            {item.status !== "retired" ? (
+            {/* Gia hạn không dùng cho hồ sơ Thanh lý (Q-13: hồi sinh phải là một thao tác Sửa
+                có chủ ý) và vô nghĩa với license vĩnh viễn — API từ chối cả hai. Hồ sơ Thanh lý
+                thì chỗ này là "Khôi phục…". */}
+            {retired ? (
+              <button type="button" className="btn" onClick={() => setRestoring(true)}>
+                {t("software.restore")}
+              </button>
+            ) : item.licenseModel !== "perpetual" ? (
+              <button
+                type="button"
+                className="btn"
+                onClick={() => setRenewing(true)}
+              >
+                {t("software.renew")}
+              </button>
+            ) : null}
+            {!retired ? (
               <DisposeButton
                 url={`/api/v1/software/${item.id}`}
                 body={{ status: "retired" }}
                 label={t("disposal.dispose")}
-                confirmMessage={t("disposal.confirmSoftware", { code: item.code })}
+                confirmMessage={softwareDisposeMessage(t, item.code, item.seatUsed, null)}
+                resolveMessage={
+                  item.seatUsed > 0
+                    ? async () =>
+                        softwareDisposeMessage(
+                          t,
+                          item.code,
+                          item.seatUsed,
+                          await activeSeatCodes(item.id),
+                        )
+                    : undefined
+                }
                 csrfToken={me.csrfToken}
                 onDone={() => void refresh()}
               />
@@ -205,6 +232,16 @@ export function SoftwareDetail({ me }: { me: Me }) {
           </>
         }
       />
+
+      {retired ? (
+        <div className="alert" role="status">
+          <strong>{retiredLine(item, t)}</strong>{" "}
+          <span>{t("software.retiredNote")}</span>{" "}
+          <button type="button" className="btn sm" onClick={() => setRestoring(true)}>
+            {t("software.restore")}
+          </button>
+        </div>
+      ) : null}
 
       <DetailLayout
         rail={
@@ -336,6 +373,23 @@ export function SoftwareDetail({ me }: { me: Me }) {
         />
       ) : null}
 
+      {restoring ? (
+        <RestoreDialog
+          software={item}
+          csrfToken={me.csrfToken}
+          onClose={() => setRestoring(false)}
+          onDone={({ assigned, failures }) => {
+            setRestoring(false);
+            toast({ message: t("software.restored") });
+            if (assigned > 0) {
+              toast({ message: t("software.restoredAssigned", { count: assigned }) });
+            }
+            for (const failure of failures) toast({ message: failure, tone: "warn" });
+            void refresh();
+          }}
+        />
+      ) : null}
+
       {renewing ? (
         <RenewDialog
           software={item}
@@ -448,6 +502,18 @@ function RenewDialog({
       </form>
     </Dialog>
   );
+}
+
+/** Dòng đậm của băng Thanh lý: ngày nào, tự động hay do ai. */
+function retiredLine(item: SoftwareDetailRow, t: TFunction): string {
+  const info = item.retirement;
+  if (!info) return t("software.retiredUnknown");
+  const date = formatDate(info.at);
+  if (!info.auto) return t("software.retiredBy", { date, by: info.by });
+  const days = retiredAfterDays(item.endDate, new Date(info.at));
+  return days === null
+    ? t("software.retiredAutoNoDays", { date })
+    : t("software.retiredAuto", { date, days });
 }
 
 function Item({ label, children }: { label: string; children: ReactNode }) {

@@ -6,6 +6,7 @@ import {
   resetDevices,
   resetSoftware,
   resetUsers,
+  timVaChoLoc,
   writeHeaders,
   uniqueStamp,
 } from './helpers';
@@ -74,11 +75,13 @@ test('danh sách phần mềm và tab Máy đang dùng đọc được ở 390px
 });
 
 /**
- * Khu bung dòng ghế (0027) là lưới 8 cột trên desktop — thứ tràn ngang dễ nhất trong cả hệ
- * thống. Ở 390px nó phải gập thành thẻ dọc CÓ NHÃN: một cột số tiền không nhãn thì đọc ra
- * cũng không biết là chi phí hay số hợp đồng.
+ * Bảng ghế (0027) nhiều cột — thứ tràn ngang dễ nhất trong cả hệ thống. Ở 390px nó phải gập
+ * thành thẻ dọc CÓ NHÃN: một cột số tiền không nhãn thì đọc ra cũng không biết là chi phí hay
+ * số hợp đồng.
  */
-test('khu bung dòng ghế license gập thành thẻ dọc có nhãn ở 390px', async ({ page }) => {
+test('ghế license ở 390px: thẻ danh sách mở hồ sơ, bảng ghế gập thành thẻ dọc có nhãn', async ({
+  page,
+}) => {
   await firstLogin(page, E2E_SA);
   const stamp = uniqueStamp();
   const headers = await writeHeaders(page);
@@ -117,15 +120,13 @@ test('khu bung dòng ghế license gập thành thẻ dọc có nhãn ở 390px'
   ).toBe(201);
 
   await page.goto('/software');
-  // Lọc còn đúng một dòng rồi mới bấm: ở 390px bảng đã gập thành thẻ dọc, bám vào từng
-  // dòng cụ thể là bám vào thứ đang biến dạng.
-  await page.getByRole('searchbox', { name: /Tìm/ }).fill(code);
+  await timVaChoLoc(page, code);
   await expect(page.getByRole('link', { name: code })).toBeVisible();
-  /* Ô tìm có debounce 250ms (trạng thái danh sách nằm trên thanh địa chỉ từ 17/09/2026), mà
-     dòng cần tìm vốn đã có sẵn trong bảng nên `toBeVisible()` xanh TRƯỚC khi lọc kịp chạy.
-     Chờ đúng một mũi tên bung dòng — đó mới là điều câu chú thích trên hứa. */
-  await expect(page.getByRole('button', { name: 'Mở rộng dòng' })).toHaveCount(1);
-  await page.getByRole('button', { name: 'Mở rộng dòng' }).click();
+  /* ≤600px danh sách là thẻ gọn (SW-022), không bung ghế trong thẻ: chạm thẻ mở hồ sơ, ghế
+     nằm ở tab Máy đang dùng. */
+  await expect(page.getByRole('button', { name: 'Mở rộng dòng' })).toHaveCount(0);
+  await page.getByRole('link', { name: code }).click();
+  await page.getByRole('tab', { name: /Máy đang dùng/ }).click();
 
   const cost = page.getByText('3.500.000 ₫');
   await expect(cost).toBeVisible();
