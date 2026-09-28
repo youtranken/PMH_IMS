@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { ImportDialog } from '@/ui/import-dialog';
 import type { ImportPreviewRow } from '@/ui/import-preview';
 
@@ -39,6 +40,13 @@ export function DeviceImportDialog({
       })}
       onClose={onClose}
       onImported={onImported}
+      template={
+        <ExportXlsxButton
+          url="/api/v1/devices/template"
+          fileName="mau-thiet-bi.xlsx"
+          label={t('devices.downloadTemplate')}
+        />
+      }
     />
   );
 }

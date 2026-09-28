@@ -18,6 +18,9 @@ export const XLSX_MIME =
  */
 export const XLSX_UPLOAD_LIMIT = { fileSize: 10 * 1024 * 1024 };
 
+export const EXCEL_UNREADABLE_MESSAGE =
+  'Không đọc được file — file có thể hỏng hoặc không phải Excel. Thử mở lại bằng Excel rồi lưu, hoặc tải file mẫu.';
+
 /**
  * Chỉ nhận .xlsx. Kiểm bằng MAGIC BYTE (`PK\x03\x04`) chứ không tin Content-Type client gửi
  * (NFR-9); đuôi file là lớp thứ hai vì zip nào cũng mang magic đó.
@@ -38,10 +41,18 @@ export function requireXlsx(file: Express.Multer.File | undefined): Buffer {
   // multer/busboy đọc filename multipart theo latin1 — tên tiếng Việt thành mojibake
   // nếu không decode lại UTF-8.
   const name = Buffer.from(file.originalname, 'latin1').toString('utf8').toLowerCase();
-  if (!isZip || !name.endsWith('.xlsx')) {
+  if (!name.endsWith('.xlsx')) {
     throw new BadRequestException({
       code: 'UNSUPPORTED_FILE',
       message: 'Chỉ nhận file .xlsx. File .xls đời cũ hãy mở bằng Excel rồi "Lưu thành" .xlsx.',
+    });
+  }
+  /* Đúng đuôi mà không phải zip: file hỏng hoặc bị đổi đuôi. Cùng mã với lỗi đọc workbook
+     (`excel-import.service`) — với người dùng đó là MỘT chuyện: file này không mở được. */
+  if (!isZip) {
+    throw new BadRequestException({
+      code: 'EXCEL_UNREADABLE',
+      message: EXCEL_UNREADABLE_MESSAGE,
     });
   }
   return file.buffer;

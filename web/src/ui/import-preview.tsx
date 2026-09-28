@@ -56,6 +56,10 @@ export function ImportPreview({
   const visible = showAll
     ? rows
     : rows.filter((row) => row.action !== 'unchanged' && row.action !== 'skip');
+  /* File khớp hết với dữ liệu đang có: một khối báo xanh thay cho bảng rỗng — bảng trống kèm
+     "không có dòng nào" trông như lỗi, không như tin tốt. */
+  const nothing = summary.create + summary.update + summary.error === 0;
+  const collapsed = nothing && (!showAll || rows.length === 0);
 
   return (
     <div className="import-preview">
@@ -67,14 +71,26 @@ export function ImportPreview({
         <SummaryChip tone="danger" label={t(ACTION_LABEL_KEY.error)} value={summary.error} />
       </div>
 
+      {collapsed ? (
+        <p className="alert ok" role="status">
+          {t('importPreview.allUnchanged')}
+        </p>
+      ) : null}
+
       {noisy > 0 ? (
-        <button type="button" className="btn sm" onClick={() => setShowAll((v) => !v)}>
+        <button
+          type="button"
+          className="btn sm ghost import-toggle"
+          aria-expanded={showAll}
+          onClick={() => setShowAll((v) => !v)}
+        >
           {showAll
             ? t('importPreview.hideNoisy', { count: noisy })
             : t('importPreview.showNoisy', { count: noisy })}
         </button>
       ) : null}
 
+      {collapsed ? null : (
       <div className="table-wrap import-preview-table">
         <table className="table">
           <thead>
@@ -113,13 +129,16 @@ export function ImportPreview({
           </tbody>
         </table>
       </div>
+      )}
     </div>
   );
 }
 
 function SummaryChip({ tone, label, value }: { tone: string; label: string; value: number }) {
   return (
-    <span className={`badge ${value > 0 ? tone : 'muted'}`}>
+    /* Chip số 0 lùi hẳn xuống (`is-zero`) để mắt rơi vào chip có số — cùng độ đậm thì "Lỗi: 3"
+       chìm giữa bốn chip "0". */
+    <span className={`badge ${value > 0 ? tone : 'muted is-zero'}`}>
       {label}: {value}
     </span>
   );

@@ -399,6 +399,21 @@
   max-height: 46vh;
   overflow: auto;
 }
+/* Tách dải tổng kết khỏi vùng chọn file phía trên — dính sát nhau thì đọc như một khối. */
+.import-preview {
+  margin-top: var(--space-5);
+}
+.import-summary .badge.is-zero {
+  /* Bỏ nền chứ không làm mờ chữ: mờ chữ là rớt ngưỡng tương phản AA. */
+  background: transparent;
+  font-weight: 500;
+}
+.import-toggle {
+  align-self: flex-start;
+}
+.import-template {
+  margin-top: var(--space-3);
+}
 /* `.row-danger` nằm ở `table.css`, ngay sau luật sọc dòng: nó phải thắng sọc dòng chẵn. */
 
 /*

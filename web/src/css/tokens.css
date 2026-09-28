@@ -45,6 +45,9 @@
   --danger-soft: #fdeceb;
   --muted: #5f665f; /* đậm để chữ muted đạt AA trên tint (axe 2026-08-06) */
   --muted-soft: #efeee7;
+  /* Trạng thái trung tính-tích cực (máy Dự phòng): không phải ok, không phải cảnh báo. */
+  --info: #1d5f9e;
+  --info-soft: #e6f0fa;
 
   --ring: 0 0 0 3px rgba(14, 159, 110, 0.22);
 
@@ -183,6 +186,8 @@ html[data-theme='dark'] {
   --danger-soft: #3a1f1d;
   --muted: #9aa59a;
   --muted-soft: #232d23;
+  --info: #7fb6ea;
+  --info-soft: #16273a;
   /* Sidebar tối hơn canvas để tách khối */
   --sidebar-bg: #0e140f;
   --sidebar-border: #1e2a22;

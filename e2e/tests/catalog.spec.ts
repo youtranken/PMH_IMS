@@ -153,10 +153,12 @@ test.describe('Danh mục', () => {
 
     const bogus = join(tmpdir(), `ims-bogus-${Date.now()}.xlsx`);
     writeFileSync(bogus, 'đây không phải file excel');
+    // Chọn file là tự đối chiếu. Đúng đuôi .xlsx mà nội dung hỏng thì câu báo nói "không
+    // đọc được", không phải "chỉ nhận .xlsx" — người dùng đã gửi đúng .xlsx rồi.
     await page.getByLabel('Chọn file .xlsx').setInputFiles(bogus);
-    await page.getByRole('button', { name: 'Đối chiếu' }).click();
 
-    await expect(page.getByText(/Chỉ nhận file \.xlsx/)).toBeVisible();
+    await expect(page.getByText(/Không đọc được file/)).toBeVisible();
+    await expect(page.getByText(/Chỉ nhận file \.xlsx/)).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Xác nhận ghi' })).toBeDisabled();
   });
 

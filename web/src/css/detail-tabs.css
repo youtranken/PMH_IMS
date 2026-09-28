@@ -523,6 +523,11 @@ input.search {
     content: attr(data-label);
     font-weight: 600;
     color: var(--ink-2);
+    /* Nhãn là chữ thường của giao diện, KHÔNG thừa hưởng font của ô: ô mã/cổng/VLAN mang
+       `.mono` 12px nên nhãn của chúng thành mono nhỏ, lệch hẳn các nhãn khác. */
+    font-family: var(--font);
+    font-size: var(--fs-md);
+    letter-spacing: normal;
     /* Nhãn không co lại nhường chỗ cho giá trị dài — nếu không, "Ngày đưa vào kho" bị bóp
        thành ba dòng một chữ trong khi giá trị bên phải nằm thênh thang. */
     flex: 0 0 auto;

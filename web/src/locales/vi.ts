@@ -46,6 +46,10 @@ export default {
   },
   select: {
     noOptions: '— Không có lựa chọn —',
+    filterOf: 'Lọc: {{label}}',
+    filterPlaceholder: 'Gõ để lọc…',
+    // Nút cuối thanh lọc (`FilterBar`) — một chạm về danh sách đầy đủ.
+    clearFilters: 'Xóa lọc ({{count}})',
   },
   /* Câu kiểm form dùng chung (`useFormErrors`) — thay bong bóng tiếng Anh của trình duyệt. */
   formErrors: {
@@ -97,6 +101,7 @@ export default {
     hideNoisy: 'Ẩn {{count}} dòng không đổi / bỏ qua',
     showNoisy: 'Hiện cả {{count}} dòng không đổi / bỏ qua',
     nothingToWrite: 'Không có dòng nào cần ghi.',
+    allUnchanged: 'File khớp với dữ liệu hiện có — không có gì để ghi.',
   },
   schedule: {
     daily: 'Hằng ngày',
@@ -576,6 +581,12 @@ export default {
       'Dùng file tải từ nút "Tải file mẫu" (hoặc file vừa Xuất Excel). Danh mục phải khai trước — ' +
       'hệ thống không tự tạo site, tủ mạng, loại thiết bị hay nhà cung cấp.',
     noteHint: 'KHÔNG ghi mật khẩu ở đây. Mật khẩu thiết bị cất trong Két sắt.',
+    // Cột bảng và rail chỉ chứa vị trí; người giữ là cột/dòng riêng ngay bên cạnh.
+    locationCol: 'Vị trí',
+    retiredLockedShort: 'Đã thanh lý — mở lại hồ sơ mới sửa được.',
+    emptySearch: 'Không có thiết bị nào khớp “{{q}}”.',
+    clearFilters: 'Xóa bộ lọc',
+    licenseCount: '{{count}} license',
   },
   attachments: {
     title: 'Giấy tờ đính kèm',
@@ -819,6 +830,8 @@ export default {
      * thôi có nghĩa. Hai câu nghe giống nhau nhưng nói hai chuyện khác hẳn.
      */
     notCounted: 'Không tính hạn',
+    notCountedTitle: 'Hồ sơ đã ở trạng thái cuối (thanh lý) — ngày hết hạn thôi có nghĩa',
+    labelNoneTitle: 'Chưa khai ngày hết hạn',
     /* Mô tả trợ năng của badge trên mục menu "Sắp hết hạn". */
     navBadge: '{{count}} mục đã quá hạn',
     /* Nhãn ngắn của huy hiệu hạn (`lib/expiry.ts` → `expiryLabel`). */

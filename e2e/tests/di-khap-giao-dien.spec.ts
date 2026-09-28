@@ -2119,21 +2119,21 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      *
      * Còn dòng nào là mỗi dòng đẻ thêm một nút "Sửa máy …" và một nút phân trang — tập hợp
      * cần chốt bị chôn giữa hai chục nút của dữ liệu. Lọc về rỗng thì trong `<main>` chỉ còn
-     * đúng thứ LUÔN có mặt: bốn nút đầu trang, bốn ô lọc. Đó chính là bộ khung của căn phòng.
+     * đúng thứ LUÔN có mặt: ba nút đầu trang (file mẫu nằm TRONG hộp nhập), bốn ô lọc, nút
+     * "Xóa lọc" của thanh lọc và nút "Xóa bộ lọc" của khối rỗng.
      */
     await timKiem.fill(`KHONG-CO-MAY-NAO-E2E-${stamp}`);
     await expect(
-      main.getByText('Không có thiết bị nào khớp bộ lọc.'),
+      main.getByText(`Không có thiết bị nào khớp “KHONG-CO-MAY-NAO-E2E-${stamp}”.`),
       'lọc về rỗng phải ra empty-state, không phải bảng trắng',
     ).toBeVisible();
 
     await expect
       .poll(() => tenDieuKhien(main.getByRole('button')), {
         message:
-          'Bộ khung đầu phòng Thiết bị: bốn nút hành động rồi bốn ô lọc — không thừa, không thiếu',
+          'Bộ khung đầu phòng Thiết bị: ba nút hành động, bốn ô lọc, hai nút gỡ lọc — không thừa, không thiếu',
       })
       .toEqual([
-        'Tải file mẫu',
         'Xuất Excel',
         'Nhập từ Excel',
         'Thêm thiết bị',
@@ -2141,6 +2141,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Tủ mạng',
         'Loại',
         'Trạng thái',
+        'Xóa lọc (1)',
+        'Xóa bộ lọc',
       ]);
 
     /*
@@ -2263,7 +2265,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       .toEqual([
         'Mã thiết bị',
         'Tên thiết bị',
-        'Vị trí và người giữ',
+        'Vị trí',
         'Người sử dụng',
         'Bảo hành',
         'Trạng thái',
@@ -2309,8 +2311,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toHaveAttribute('aria-sort', 'ascending');
     await expect(
       cotMa,
-      'và cột Mã phải nhả aria-sort ra — hai cột cùng khai đang-sắp là nói dối trình đọc màn hình',
-    ).not.toHaveAttribute('aria-sort', /.*/);
+      'và cột Mã phải về "none" (sắp được, đang không sắp) — hai cột cùng khai đang-sắp là nói dối trình đọc màn hình',
+    ).toHaveAttribute('aria-sort', 'none');
     await expect(
       dongDauTien,
       'sắp theo tên tăng thì "Máy A" lên đầu — tức máy mang mã -12, khác hẳn thứ tự theo mã',
@@ -5580,8 +5582,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toHaveAttribute('aria-sort', 'ascending');
     await expect(
       cotMa,
-      'Sắp theo cột khác thì cột Mã đường phải BỎ `aria-sort` — hai cột cùng khai đang sắp là nói dối',
-    ).not.toHaveAttribute('aria-sort', /.*/);
+      'Sắp theo cột khác thì cột Mã đường phải về `aria-sort="none"` — hai cột cùng khai đang sắp là nói dối',
+    ).toHaveAttribute('aria-sort', 'none');
 
     await main.getByRole('button', { name: 'Sắp xếp theo Nhà mạng' }).click();
     await expect(cotNhaMang, 'Bấm lần hai phải lật xuống giảm dần').toHaveAttribute(

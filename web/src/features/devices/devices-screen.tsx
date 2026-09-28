@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
@@ -14,6 +14,7 @@ import { FilterBar } from '@/ui/filter-bar';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
+import { useDisabledReason } from '@/ui/disabled-reason';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
@@ -55,6 +56,7 @@ const EMPTY_FILTERS: Filters = {
 export function DevicesScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   /*
    * Bộ lọc · trang · số dòng · cột sắp nằm trên THANH ĐỊA CHỈ, không trong `useState` nữa
    * (17/09/2026). Nhờ vậy: F5 giữ nguyên bộ lọc, gửi được link "máy hỏng ở tủ T-1" cho đồng
@@ -145,24 +147,36 @@ export function DevicesScreen({ me }: { me: Me }) {
            một cột là cột Tên bị ép còn ~90px và nút Sửa bị đẩy khỏi khung. `col-name` giữ
            cho Tên luôn đủ rộng để đọc. */
         meta: { className: 'col-name' },
-        cell: ({ row }) => (
-          <>
-            {row.original.name}
-            <span className="cell-sub">
-              {row.original.deviceTypeName}
-              {row.original.serial ? (
-                <>
-                  {' · '}
-                  <span className="mono">{row.original.serial}</span>
-                </>
-              ) : null}
-            </span>
-          </>
-        ),
+        /* Cả hai dòng đều MỘT dòng, cắt bằng "…" và đủ chữ ở `title`: tên dài gãy 3–4 dòng làm
+           các hàng cao thấp lệch nhau, mắt không dò theo hàng được. Model đứng ngay sau loại vì
+           đó là thứ người ta hỏi kế tiếp ("Switch gì?"). */
+        cell: ({ row }) => {
+          const d = row.original;
+          const sub = [d.deviceTypeName, d.model].filter(Boolean).join(' · ');
+          return (
+            <>
+              <span className="cell-clip" title={d.name}>
+                {d.name}
+              </span>
+              <span
+                className="cell-sub cell-clip"
+                title={[sub, d.serial ? `S/N ${d.serial}` : null].filter(Boolean).join(' · ')}
+              >
+                {sub}
+                {d.serial ? (
+                  <>
+                    {' · '}
+                    <span className="mono">{d.serial}</span>
+                  </>
+                ) : null}
+              </span>
+            </>
+          );
+        },
       },
       {
         id: 'location',
-        header: t('devices.location'),
+        header: t('devices.locationCol'),
         cell: ({ row }) => <LocationText device={row.original} />,
       },
       {
@@ -202,22 +216,10 @@ export function DevicesScreen({ me }: { me: Me }) {
       {
         id: 'actions',
         header: t('common.actions'),
-        cell: ({ row }) => (
-          // Sửa NGAY TRÊN DANH SÁCH: đổi người giữ máy hay hạn bảo hành là việc lặt vặt
-          // hằng ngày, bắt vào trang chi tiết rồi quay ra là ba lần chuyển trang cho một ô.
-          // Mở đúng hộp "Thêm thiết bị" (AD-15) — cùng bộ trường, chỉ khác đã điền sẵn.
-          <button
-            type="button"
-            className="btn sm"
-            aria-label={t('devices.editOf', { device: row.original.code })}
-            onClick={(event) => {
-              event.stopPropagation();
-              setEditing(row.original);
-            }}
-          >
-            {t('common.edit')}
-          </button>
-        ),
+        // Sửa NGAY TRÊN DANH SÁCH: đổi người giữ máy hay hạn bảo hành là việc lặt vặt
+        // hằng ngày, bắt vào trang chi tiết rồi quay ra là ba lần chuyển trang cho một ô.
+        // Mở đúng hộp "Thêm thiết bị" (AD-15) — cùng bộ trường, chỉ khác đã điền sẵn.
+        cell: ({ row }) => <EditCell device={row.original} onEdit={setEditing} />,
       },
     ],
     [t],
@@ -249,11 +251,8 @@ export function DevicesScreen({ me }: { me: Me }) {
         subtitle={t('devices.subtitle')}
         actions={
           <>
-            <ExportXlsxButton
-              url="/api/v1/devices/template"
-              fileName="mau-thiet-bi.xlsx"
-              label={t('devices.downloadTemplate')}
-            />
+            {/* File mẫu là bước con của Nhập nên nằm TRONG hộp nhập, không đứng ngang hàng ở
+                đây. Nhập Excel là màn desktop: trên điện thoại nút nhập ẩn đi (`hide-narrow`). */}
             {/* FR-028: xuất đúng bộ lọc VÀ đúng thứ tự đang xem — cùng query với bảng dưới. */}
             <ExportXlsxButton
               url={`/api/v1/devices/export?${[buildFilterQuery(filters), sortQuery(sorting)]
@@ -261,7 +260,11 @@ export function DevicesScreen({ me }: { me: Me }) {
                 .join('&')}`}
               fileName="thiet-bi.xlsx"
             />
-            <button type="button" className="btn" onClick={() => setImporting(true)}>
+            <button
+              type="button"
+              className="btn hide-narrow"
+              onClick={() => setImporting(true)}
+            >
               {t('devices.importExcel')}
             </button>
             <button type="button" className="btn primary" onClick={() => setCreating(true)}>
@@ -275,14 +278,21 @@ export function DevicesScreen({ me }: { me: Me }) {
         search={url.searchInput}
         onSearchChange={url.setSearchInput}
         searchPlaceholder={t('devices.search')}
+        activeCount={url.activeCount}
+        onClear={url.clearFilters}
       >
         <Select
           value={filters.siteId}
           ariaLabel={t('devices.site')}
           placeholder={t('devices.allSites')}
+          /* Menu "mã — tên" như form (người mới chưa thuộc mã site), nút đã chọn chỉ mã. */
           options={[
             { value: '', label: t('devices.allSites') },
-            ...(lists.data?.sites ?? []).map((site) => ({ value: site.id, label: site.code })),
+            ...(lists.data?.sites ?? []).map((site) => ({
+              value: site.id,
+              label: `${site.code} — ${site.name}`,
+              short: site.code,
+            })),
           ]}
           failed={lists.isError}
           onChange={(value) => setFilter('siteId', value)}
@@ -338,12 +348,42 @@ export function DevicesScreen({ me }: { me: Me }) {
         <EmptyState
           /* HAI cảnh, HAI câu: "chưa khai gì" mời người dùng thêm bản ghi đầu tiên, "lọc không
              ra" mời họ nới bộ lọc. Một câu cho cả hai thì hệ thống vừa cài xong báo "không khớp
-             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. */
-          title={url.isFiltered ? t('devices.emptyFiltered') : t('devices.empty')}
+             bộ lọc" và người dùng đi tìm cái bộ lọc không tồn tại. Kèm NÚT làm đúng việc câu
+             gợi ý nói, thay vì bắt người dùng đi tìm nút đó ở chỗ khác. */
+          title={
+            url.isFiltered
+              ? url.search
+                ? t('devices.emptySearch', { q: url.search })
+                : t('devices.emptyFiltered')
+              : t('devices.empty')
+          }
           hint={url.isFiltered ? t('devices.emptyFilteredHint') : t('devices.emptyHint')}
+          action={
+            url.isFiltered ? (
+              <button type="button" className="btn" onClick={url.clearFilters}>
+                {t('devices.clearFilters')}
+              </button>
+            ) : (
+              <>
+                <button type="button" className="btn primary" onClick={() => setCreating(true)}>
+                  {t('devices.add')}
+                </button>
+                <button
+                  type="button"
+                  className="btn hide-narrow"
+                  onClick={() => setImporting(true)}
+                >
+                  {t('devices.importExcel')}
+                </button>
+              </>
+            )
+          }
         />
       ) : (
-        <>
+        <div
+          className={devices.isPlaceholderData ? 'list-refreshing' : undefined}
+          aria-busy={devices.isPlaceholderData || undefined}
+        >
           <DataTable
             data={rows}
             columns={columns}
@@ -367,6 +407,14 @@ export function DevicesScreen({ me }: { me: Me }) {
             renderExpanded={(item) => <DeviceLicensesExpand deviceId={item.id} />}
             manualSorting
             sorting={sorting}
+            /* Bấm vào dòng là mở hồ sơ — nhắm trúng mã 12px là quá khó. Ô Mã vẫn là `<Link>`
+               thật cho Ctrl+bấm / mở tab mới; `DataTable` bỏ qua lượt bấm rơi vào link/nút. */
+            onRowClick={(item) => navigate(PATHS.device(item.id))}
+            expandLabel={(item) =>
+              installedCounts.data?.[item.id]
+                ? t('devices.licenseCount', { count: installedCounts.data[item.id] })
+                : t('devices.software')
+            }
             onSortingChange={(updater) => {
               const next = typeof updater === 'function' ? updater(sorting) : updater;
               const first = next[0];
@@ -383,7 +431,7 @@ export function DevicesScreen({ me }: { me: Me }) {
             total={devices.data?.total ?? 0}
             onPageChange={setPage}
           />
-        </>
+        </div>
       )}
 
       {importing ? (
@@ -422,6 +470,35 @@ export function DevicesScreen({ me }: { me: Me }) {
           }}
         />
       ) : null}
+    </>
+  );
+}
+
+/**
+ * Nút Sửa của một dòng. Máy đã thanh lý thì API từ chối mọi lượt sửa (DEVICE_RETIRED): để nút
+ * bấm được là cho người dùng gõ xong cả form rồi mới nhận lỗi. Nút vẫn ĐỨNG ĐÓ (tắt) kèm lý do
+ * đọc được bằng trình đọc màn hình, để hàng không lệch cột và người ta biết vì sao.
+ */
+function EditCell({ device, onEdit }: { device: DeviceRow; onEdit: (d: DeviceRow) => void }) {
+  const { t } = useTranslation();
+  const retired = device.status === 'retired';
+  const reason = useDisabledReason(retired ? t('devices.retiredLockedShort') : null);
+  return (
+    <>
+      <button
+        type="button"
+        className="btn sm ghost"
+        aria-label={t('devices.editOf', { device: device.code })}
+        disabled={retired}
+        {...reason.buttonProps}
+        onClick={(event) => {
+          event.stopPropagation();
+          onEdit(device);
+        }}
+      >
+        {t('common.edit')}
+      </button>
+      {reason.hint}
     </>
   );
 }

@@ -15,7 +15,12 @@ import type { Placement } from '@floating-ui/react';
  */
 export function useAnchoredMenu(
   open: boolean,
-  opts?: { matchWidth?: boolean; maxHeight?: number; placement?: Placement },
+  opts?: {
+    /** `true`: rộng đúng bằng nút. `'min'`: ít nhất bằng nút, nới theo nội dung tới 360px. */
+    matchWidth?: boolean | 'min';
+    maxHeight?: number;
+    placement?: Placement;
+  },
 ) {
   const { matchWidth = false, maxHeight = 320, placement = 'bottom-start' } =
     opts ?? {};
@@ -31,9 +36,12 @@ export function useAnchoredMenu(
       shift({ padding: 8 }),
       size({
         padding: 8,
-        apply({ rects, elements, availableHeight }) {
+        apply({ rects, elements, availableHeight, availableWidth }) {
           elements.floating.style.maxHeight = `${Math.min(availableHeight, maxHeight)}px`;
-          if (matchWidth) {
+          if (matchWidth === 'min') {
+            elements.floating.style.minWidth = `${rects.reference.width}px`;
+            elements.floating.style.maxWidth = `${Math.max(rects.reference.width, Math.min(availableWidth, 360))}px`;
+          } else if (matchWidth) {
             elements.floating.style.width = `${rects.reference.width}px`;
           }
         },

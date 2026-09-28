@@ -323,3 +323,17 @@ describe('useClampPage — trang theo kịp tổng số dòng mới nhất', () 
     expect(result.current.search).toBe('');
   });
 });
+
+describe('useListUrlState — Xóa lọc', () => {
+  it('đếm bộ lọc đang bật (ô tìm tính là một) và gỡ hết trong một lượt, giữ sắp xếp', () => {
+    const { result } = dung('/devices?status=broken&siteId=s1&q=may&sort=name&page=3', {
+      emptyFilters: { status: '', siteId: '', search: '' },
+      searchKey: 'search',
+    });
+    expect(result.current.url.activeCount).toBe(3);
+    act(() => result.current.url.clearFilters());
+    expect(result.current.thanhDiaChi).toBe('?sort=name');
+    expect(result.current.url.activeCount).toBe(0);
+    expect(result.current.url.searchInput).toBe('');
+  });
+});
