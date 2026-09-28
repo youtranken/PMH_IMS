@@ -93,7 +93,7 @@ test('quyền két ở 390px: danh sách thành viên → thẻ quyền của m�
   expect(granted.status()).toBe(201);
 
   await page.goto('/admin/vault-access');
-  await expect(page.getByRole('heading', { name: 'Quyền xem két sắt' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Quyền két sắt' })).toBeVisible();
   // Dòng tổng là câu ghép bốn con số — ở 390px nó phải xuống dòng chứ không đẩy trang rộng ra.
   await expect(page.getByText(/tài khoản · .* dòng quyền/)).toBeVisible();
   /*

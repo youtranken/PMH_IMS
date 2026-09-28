@@ -375,8 +375,8 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     { link: 'Kho thanh lý', path: '/disposal', heading: /^Kho thanh lý$/ },
     { link: 'Tài khoản', path: '/admin/accounts', heading: /^Tài khoản$/ },
     { link: 'Danh mục', path: '/admin/catalog', heading: /^Danh mục$/ },
-    { link: 'Quyền két sắt', path: '/admin/vault-access', heading: /^Quyền xem két sắt$/ },
-    { link: 'Nhật ký', path: '/admin/audit-log', heading: /^Nhật ký$/ },
+    { link: 'Quyền két sắt', path: '/admin/vault-access', heading: /^Quyền két sắt$/ },
+    { link: 'Nhật ký hệ thống', path: '/admin/audit-log', heading: /^Nhật ký hệ thống$/ },
     { link: 'Tham số hệ thống', path: '/admin/settings', heading: /^Tham số hệ thống$/ },
     { link: 'Bộ giao diện', path: '/dev/components', heading: /^Bộ giao diện$/ },
   ];
@@ -975,8 +975,8 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     ).toHaveCount(0);
     // `audit.controller.ts` mở cho sa + admin — menu phải khớp cửa sau nó.
     await expect(
-      menu.getByRole('link', { name: 'Nhật ký', exact: true }),
-      'Quản trị viên phải thấy Nhật ký',
+      menu.getByRole('link', { name: 'Nhật ký hệ thống', exact: true }),
+      'Quản trị viên phải thấy Nhật ký hệ thống',
     ).toBeVisible();
 
     // Và cửa Két sắt phải MỞ THẬT, không chỉ hiện trên menu.
@@ -8096,7 +8096,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     // Lưới là tab "Ma trận" (màn rộng); tab mặc định là "Theo người".
     await page.goto('/admin/vault-access?view=matrix');
-    await expect(page.getByRole('heading', { level: 1, name: 'Quyền xem két sắt' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Quyền két sắt' })).toBeVisible();
 
     /*
      * Khung cuộn NGANG bọc lưới. Nó tồn tại vì vài chục cột là chuyện bình thường: cho cả
