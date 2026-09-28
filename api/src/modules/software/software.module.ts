@@ -15,6 +15,7 @@ import { IspLineController } from './isp-line.controller';
 import { IspLineService } from './isp-line.service';
 import { LicenseAssignmentService } from './license-assignment.service';
 import { SoftwareDevicePanel } from './software-device-panel';
+import { LicenseDeviceTimeline } from './license-device-timeline';
 import { SoftwareApiService } from './software.api';
 import { SoftwareController } from './software.controller';
 import { SoftwareService } from './software.service';
@@ -39,6 +40,7 @@ import { SoftwareStatusSweep } from './software-status-sweep';
     SoftwareOwnerResolver,
     SoftwareAuditLabeler,
     SoftwareDevicePanel,
+    LicenseDeviceTimeline,
     SoftwareApiService,
     SoftwareStatusSweep,
   ],

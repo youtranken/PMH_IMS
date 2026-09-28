@@ -30,6 +30,16 @@ import { DeviceLicensesExpand } from "@/features/software/device-licenses-expand
 import { DeviceIpAssign } from "@/features/ipam/device-ip-assign";
 import { DeviceForm } from "./device-form";
 import { toHistoryEntries } from "./device-history-entries";
+import {
+  mergeDeviceTimeline,
+  TIMELINE_FILTER_KEY,
+  TIMELINE_FILTERS,
+  type DeviceTimeline,
+  type TimelineFilter,
+} from "./device-timeline";
+
+/** Trần dòng mỗi nguồn — khớp `HISTORY_PAGE_LIMIT` phía API (trần kỹ thuật, không phải AD-11). */
+const HISTORY_CAP = 200;
 import { PortMapPanel, type PortMap } from "./port-map-panel";
 import { RelationMap, type RelationNode } from "./relation-map";
 import { RetireDialog, type RetireGroup } from "./retire-dialog";
@@ -98,6 +108,14 @@ export function DeviceDetail({ me }: { me: Me }) {
     queryKey: ["devices", id, "panels"],
     queryFn: () => apiFetch<DevicePanel[]>(`/api/v1/devices/${id}/panels`),
     enabled: device.isSuccess,
+  });
+
+  const [timelineFilter, setTimelineFilter] = useState<TimelineFilter>("");
+  /* Sự kiện của module khác (IP, license) — chỉ cần khi mở tab Lịch sử. */
+  const timeline = useQuery({
+    queryKey: ["devices", id, "timeline"],
+    queryFn: () => apiFetch<DeviceTimeline>(`/api/v1/devices/${id}/timeline`),
+    enabled: device.isSuccess && tab === "history",
   });
 
   const history = useQuery({
@@ -823,12 +841,52 @@ export function DeviceDetail({ me }: { me: Me }) {
             /* Thiết bị đã thanh lý: hồ sơ khóa lại thì giấy tờ cũng chỉ còn đọc/tải. */
             canEdit={!retired}
           />
-        ) : history.isLoading ? (
+        ) : history.isLoading || timeline.isLoading ? (
           <Loading />
         ) : history.isError ? (
           <LoadError error={history.error} onRetry={() => void history.refetch()} />
         ) : (
-          <HistoryPanel entries={toHistoryEntries(history.data ?? [], t)} />
+          <>
+            <div className="segmented" role="group" aria-label={t("devices.timelineFilter")}>
+              {TIMELINE_FILTERS.map((key) => (
+                <button
+                  key={key || "all"}
+                  type="button"
+                  aria-pressed={timelineFilter === key}
+                  onClick={() => setTimelineFilter(key)}
+                >
+                  {t(TIMELINE_FILTER_KEY[key])}
+                </button>
+              ))}
+            </div>
+            {/* Nguồn hỏng phải NÓI RA: im lặng thì đọc thành "máy chưa từng dùng IP/key nào". */}
+            {timeline.isError || (timeline.data?.failedSources.length ?? 0) > 0 ? (
+              <p className="alert" role="status">
+                {t("devices.timelineFailed", {
+                  sources: timeline.isError
+                    ? `${t("devices.timelineIp")}, ${t("devices.timelineLicense")}`
+                    : (timeline.data?.failedSources ?? [])
+                        .map((source) =>
+                          t(TIMELINE_FILTER_KEY[source as "ipam" | "software"] ?? source),
+                        )
+                        .join(", "),
+                })}
+              </p>
+            ) : null}
+            <HistoryPanel
+              entries={mergeDeviceTimeline(
+                toHistoryEntries(history.data ?? [], t),
+                timeline.data?.items ?? [],
+                timelineFilter,
+                t,
+              )}
+            />
+            {/* API cắt mỗi nguồn ở trần chung của panel lịch sử — chạm trần thì nói ra. */}
+            {(history.data?.length ?? 0) >= HISTORY_CAP ||
+            (timeline.data?.items.length ?? 0) >= HISTORY_CAP ? (
+              <p className="muted small">{t("devices.timelineCapped", { count: HISTORY_CAP })}</p>
+            ) : null}
+          </>
         )}
         </TabPanel>
       </DetailLayout>

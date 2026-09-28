@@ -347,3 +347,47 @@ test.describe('Cấp IP từ trang thiết bị', () => {
     await expect(pick.getByText('Chọn dải mạng để lấy IP.')).toBeVisible();
   });
 });
+
+/*
+ * DEV-086: tab Lịch sử của máy gộp sự kiện license/IP của module khác, có chip lọc theo nguồn.
+ * "Máy này từng dùng key nào" đọc ở một chỗ, kể cả ghế ĐÃ GỠ.
+ */
+test.describe('Lịch sử hợp nhất của thiết bị', () => {
+  test('ghế license gán rồi gỡ hiện trong Lịch sử; chip lọc tách nguồn', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const code = `SW-E2E-TL-${stamp}`;
+    const deviceId = await createSwitch(page, code);
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
+    const license = await page.request.post('/api/v1/software', {
+      headers,
+      data: { code: `LIC-E2E-TL-${stamp}`, name: 'License lịch sử', kind: 'license', seatTotal: 2, endDate: '2030-01-01' },
+    });
+    expect(license.status()).toBe(201);
+    const softwareId = ((await license.json()) as { id: string }).id;
+    const seat = await page.request.post(`/api/v1/software/${softwareId}/assignments`, {
+      headers,
+      data: { deviceId },
+    });
+    expect(seat.status()).toBe(201);
+    const seatId = ((await seat.json()) as { assignment: { id: string } }).assignment.id;
+    const released = await page.request.delete(`/api/v1/software/${softwareId}/assignments/${seatId}`, {
+      headers,
+    });
+    expect(released.ok()).toBe(true);
+
+    await page.goto(`/devices/${deviceId}`);
+    await page.getByRole('tab', { name: /Lịch sử/ }).click();
+    const panel = page.getByRole('tabpanel');
+    await expect(panel.getByText(`Gán license LIC-E2E-TL-${stamp} vào máy`)).toBeVisible();
+    await expect(panel.getByText(`Gỡ license LIC-E2E-TL-${stamp} khỏi máy`)).toBeVisible();
+
+    const chips = page.getByRole('group', { name: 'Lọc lịch sử theo nguồn' });
+    await chips.getByRole('button', { name: 'IP', exact: true }).click();
+    await expect(panel.getByText(`Gán license LIC-E2E-TL-${stamp} vào máy`)).toHaveCount(0);
+    await chips.getByRole('button', { name: 'Hồ sơ · Cổng' }).click();
+    await expect(panel.getByText(`Gán license LIC-E2E-TL-${stamp} vào máy`)).toHaveCount(0);
+    await chips.getByRole('button', { name: 'License', exact: true }).click();
+    await expect(panel.getByText(`Gỡ license LIC-E2E-TL-${stamp} khỏi máy`)).toBeVisible();
+  });
+});

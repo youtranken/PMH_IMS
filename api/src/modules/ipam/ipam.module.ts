@@ -8,6 +8,7 @@ import { IpAddressService } from './ip-address.service';
 import { IpDevicePanel } from './ip-device-panel';
 import { IpDeviceRetirement } from './ip-device-retirement';
 import { IpDeviceSearch } from './ip-device-search';
+import { IpDeviceTimeline } from './ip-device-timeline';
 import { IpamOwnerResolver } from './ipam-owner-resolver';
 import { IpamAuditLabeler } from './ipam-audit-labeler';
 import { NatDevicePanel, NatTargetDevicePanel } from './nat-device-panel';
@@ -28,6 +29,7 @@ import { SubnetService } from './subnet.service';
     IpDevicePanel,
     IpDeviceRetirement,
     IpDeviceSearch,
+    IpDeviceTimeline,
     IpamOwnerResolver,
     IpamAuditLabeler,
     NatDevicePanel,
