@@ -7,6 +7,7 @@ import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { textRule, useFormErrors } from '@/ui/use-form-errors';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
+import { RoleChoice } from './role-choice';
 
 interface CreateResult {
   user: { id: string; email: string; fullName: string; role: Me['role'] };
@@ -96,7 +97,9 @@ export function AccountForm({
       dismissible={!busy}
       guardUnsaved
       maxWidth={620}
-      title={editing ? `${t('accounts.edit')} — ${account.email}` : t('accounts.create')}
+      /* Tiêu đề nêu TÊN người; email dài ngắt giữa chừng trên điện thoại, và nó đã hiện ngay
+         trong form. */
+      title={editing ? t('accounts.editTitle', { name: account.fullName }) : t('accounts.create')}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
@@ -186,6 +189,14 @@ export function AccountForm({
           )}
         </Field>
 
+        {/* Vai trò ngay sau Email: lựa chọn hệ trọng nhất của form (nó quyết ai xem được mọi
+            két) không nằm cuối cùng sau ngày sinh. Đổi vai sau khi tạo: menu "Đổi vai trò…". */}
+        {editing ? null : (
+          <div className="span-2">
+            <RoleChoice value={role} onChange={setRole} name="create-role" />
+          </div>
+        )}
+
         {/* Hai ô mới: gọi được người giữ máy lúc 2h sáng, và đối chiếu được sang bảng lương. */}
         <Field label={t('accounts.phone')} htmlFor="acc-phone">
           <input
@@ -226,19 +237,6 @@ export function AccountForm({
 
         {editing ? null : (
           <>
-            <Field label={t('accounts.role')} required htmlFor="acc-role">
-              <select
-                id="acc-role"
-                className="inp pick"
-                value={role}
-                onChange={(e) => setRole(e.target.value as Me['role'])}
-              >
-                <option value="member">{t('accounts.roleMember')}</option>
-                <option value="admin">{t('accounts.roleAdmin')}</option>
-                <option value="sa">{t('accounts.roleSa')}</option>
-              </select>
-            </Field>
-
             <Field label={t('accounts.totpRequired')}>
               <label className="row" htmlFor="acc-totp" style={{ gap: 'var(--space-3)' }}>
                 <input

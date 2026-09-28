@@ -94,6 +94,8 @@ test.describe('Quản trị tài khoản', () => {
 
     const row = page.getByRole('row', { name: /E2E Thành viên/ });
     await rowAction(page, 'E2E Thành viên', 'Khóa');
+    // Khóa / Vô hiệu hóa bắt ghi lý do (vết an ninh) trước khi nút xác nhận chạy.
+    await page.getByRole('dialog').getByRole('textbox', { name: /Lý do/ }).fill('E2E khóa thử');
     // Chốt luôn CHỮ trên nút: hộp hỏi "Khóa tài khoản X?" thì nút phải ghi "Khóa", không
     // phải "Đồng ý" chung chung. Đây là chỗ duy nhất canh chữ — 15 chỗ còn lại bám vị trí.
     await confirmAction(page, 'Khóa');
@@ -134,6 +136,8 @@ test.describe('Quản trị tài khoản', () => {
     ).toEqual(expect.arrayContaining(['Khóa', 'Vô hiệu hóa']));
 
     await rowAction(page, 'E2E Thành viên', 'Vô hiệu hóa');
+    // Khóa / Vô hiệu hóa bắt ghi lý do (vết an ninh) trước khi nút xác nhận chạy.
+    await page.getByRole('dialog').getByRole('textbox', { name: /Lý do/ }).fill('E2E nghỉ việc');
     await confirmAction(page, 'Vô hiệu hóa');
     await expect(
       row.getByText('Đã vô hiệu hóa', { exact: true }),
@@ -145,12 +149,12 @@ test.describe('Quản trị tài khoản', () => {
       menu,
       'ĐÂY LÀ LỖI ĐÃ VÁ: tài khoản vô hiệu hóa không bị khóa, nên không có gì để "Mở khóa"',
     ).not.toContain('Mở khóa');
-    expect(menu, 'thay vào đó là "Kích hoạt lại" — đúng tên việc sẽ xảy ra').toContain(
-      'Kích hoạt lại',
+    expect(menu, 'thay vào đó là "Bật lại" — cùng động từ với danh mục và tài khoản dịch vụ').toContain(
+      'Bật lại',
     );
 
-    await rowAction(page, 'E2E Thành viên', 'Kích hoạt lại');
-    await confirmAction(page, 'Kích hoạt lại');
+    await rowAction(page, 'E2E Thành viên', 'Bật lại');
+    await confirmAction(page, 'Bật lại');
     await expect(
       row.getByText('Đang hoạt động'),
       'kích hoạt lại phải mở THẬT, không chỉ đổi chữ',
@@ -199,6 +203,7 @@ test.describe('Quản trị tài khoản', () => {
       await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
       const row = page.getByRole('row', { name: /E2E Thành viên/ });
       await rowAction(page, 'E2E Thành viên', 'Khóa');
+      await page.getByRole('dialog').getByRole('textbox', { name: /Lý do/ }).fill('E2E khóa thử');
       await confirmAction(page);
       await expect(row.getByText('Đang khóa')).toBeVisible();
 
