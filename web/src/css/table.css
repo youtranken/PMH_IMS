@@ -301,6 +301,17 @@ table.table tbody tr.row-highlight td:first-child {
   white-space: nowrap;
   border-color: transparent;
 }
+/* Tên dòng ở đầu menu (prop `subject`) — nhỏ, xám, tách khỏi các mục bằng một đường kẻ. */
+.row-actions-subject {
+  max-width: 16rem;
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  margin-bottom: var(--space-1);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
 /* Bàn phím đi bằng focus — không có vòng focus thấy được thì ↑↓ chạy mà không ai biết đang ở đâu. */
 .row-actions-menu button:focus-visible {
   outline: none;
