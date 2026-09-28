@@ -575,6 +575,7 @@ table.table tbody tr.exp:hover td {
   .nat-table.table-stack td {
     display: block;
     padding: 0;
+    text-align: left;
   }
   .nat-table.table-stack td::before {
     font-weight: 400;
@@ -634,6 +635,7 @@ table.table tbody tr.exp:hover td {
   .ip-table.table-stack td {
     display: block;
     padding: 0;
+    text-align: left;
   }
   /* Dòng 1 (IP · huy hiệu · ⋯) tự nói nó là gì; các dòng sau giữ nhãn nhỏ, nhạt ở đầu dòng —
      thiếu nhãn thì "Phòng Kế toán" và "LT-01" không biết cái nào là máy, cái nào là người. */

@@ -13,6 +13,7 @@ import { PATHS } from '@/lib/routes';
 import { useApiMutation } from '@/lib/api';
 import { DataTable } from '@/ui/data-table';
 import { Pagination } from '@/ui/pagination';
+import { ChipToggleGroup } from '@/ui/chip-toggle-group';
 import { ExpiryBadge } from '@/ui/expiry-badge';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
@@ -428,15 +429,14 @@ export function ExpiryScreen({ me }: { me: Me }) {
           }))}
           onChange={(value) => setWithinDays(Number(value))}
         />
-        <Select
-          value={kind}
-          ariaLabel={t('expiry.kind')}
-          placeholder={t('expiry.allKinds')}
-          options={[
-            { value: '', label: t('expiry.allKinds') },
-            ...(kinds.data ?? []).map((item) => ({ value: item.kind, label: item.label })),
-          ]}
-          onChange={setKind}
+        {/* Chọn NHIỀU loại một lượt (người lo web xem SSL + tên miền cùng lúc) — API vốn nhận
+            `?kinds=a,b`, trước đây chỉ ô chọn một mới là giới hạn. */}
+        <ChipToggleGroup
+          label={t('expiry.kind')}
+          allLabel={t('expiry.allKinds')}
+          options={(kinds.data ?? []).map((item) => ({ value: item.kind, label: item.label }))}
+          value={kind ? kind.split(',') : []}
+          onChange={(next) => setKind(next.join(','))}
         />
       </FilterBar>
 

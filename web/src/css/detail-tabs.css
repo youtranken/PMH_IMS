@@ -614,16 +614,40 @@ input.search {
     padding: var(--space-3) 0;
     border-bottom: 1px solid var(--border);
   }
+  /*
+   * Ô là lưới 2 cột: nhãn cột trái (trải mọi hàng), mỗi mảnh giá trị (chữ, dòng phụ, huy
+   * hiệu) một hàng ở cột phải, bám phải và tự xuống dòng TRONG cột đó. Flex `wrap` thì một
+   * giá trị dài hơn chỗ còn lại bị đẩy nguyên khối xuống dưới nhãn, nên hai thẻ cạnh nhau ra
+   * hai kiểu: "Tên luật" ngắn nằm cùng hàng, tên dài rơi xuống dòng dưới, bám trái.
+   */
   .table-stack td {
-    display: flex;
-    justify-content: space-between;
-    /* `wrap` để dòng phụ (`.cell-sub`) rơi xuống hàng riêng — xem luật ngay dưới. */
-    flex-wrap: wrap;
-    gap: var(--space-1) var(--space-7);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-items: end;
+    align-items: baseline;
+    column-gap: var(--space-7);
+    text-align: right;
+    overflow-wrap: anywhere;
     border: none;
     padding: var(--space-1) var(--space-5);
   }
+  /*
+   * Vạch ngăn giữa các hàng của MỌI thẻ. Luật bảng `table.table tbody tr:last-child td`
+   * tắt viền ở dòng cuối, nên thẻ cuối mất vạch trong khi các thẻ trên còn — `:not()` nâng
+   * độ ưu tiên vừa đủ thắng nó. Ô cuối của thẻ không kẻ: viền dưới của `tr` đã ngăn thẻ.
+   */
+  table.table-stack tbody tr td:not(:last-child) {
+    border-bottom: 1px solid var(--border);
+  }
+  table.table-stack tbody tr td:last-child {
+    border-bottom: none;
+  }
   .table-stack td::before {
+    grid-column: 1;
+    /* Nhãn trải qua mọi hàng giá trị, để mảnh thứ hai trở đi vẫn nằm ở cột phải. */
+    grid-row: 1 / span 6;
+    justify-self: start;
+    text-align: left;
     content: attr(data-label);
     font-weight: 600;
     color: var(--ink-2);
@@ -634,18 +658,16 @@ input.search {
     letter-spacing: normal;
     /* Nhãn không co lại nhường chỗ cho giá trị dài — nếu không, "Ngày đưa vào kho" bị bóp
        thành ba dòng một chữ trong khi giá trị bên phải nằm thênh thang. */
-    flex: 0 0 auto;
+    white-space: nowrap;
   }
   /*
-   * Dòng phụ trong ô (tên hồ sơ dưới mã, site dưới mã máy) PHẢI xuống dòng riêng.
-   *
-   * `.cell-sub` khai `display: block`, nhưng ở đây ô là `display: flex` nên nó thành một
-   * flex-item ngang hàng, và `justify-content: space-between` đẩy ba mảnh (nhãn · giá trị ·
-   * dòng phụ) ra ba phía. Nhìn ra thành "MÃ   E2E-DEV-001   Máy trạm Kế toán" trên một hàng
-   * thay vì tên nằm nhỏ bên dưới mã như ở desktop.
+   * Mọi mảnh giá trị ở cột phải, mỗi mảnh một hàng: dòng phụ (tên hồ sơ dưới mã, site dưới
+   * mã máy) nằm nhỏ bên dưới giá trị như ở desktop, không chen ngang hàng với nhãn.
    */
+  .table-stack td > * {
+    grid-column: 2;
+  }
   .table-stack td .cell-sub {
-    flex-basis: 100%;
     text-align: right;
   }
   /* Ô trống ("—") không đáng một dòng trên thẻ: thẻ cổng 7 dòng toàn gạch thành 2–3 dòng. */
