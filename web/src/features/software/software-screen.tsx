@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -89,6 +89,9 @@ export function SoftwareScreen({ me }: { me: Me }) {
 
   const software = useQuery({
     queryKey: ['software', page, limit, filters, sorting],
+    // Đổi trang/từ khoá thì GIỮ bảng cũ tới khi có dữ liệu mới: vẽ lại Loading là gỡ cả bảng,
+    // mất dòng đang bung và bảng nháy trắng sau mỗi lần gõ tìm.
+    placeholderData: keepPreviousData,
     queryFn: () =>
       apiFetch<{ items: SoftwareRow[]; total: number }>(
         `/api/v1/software?${buildQuery(page, limit, filters, sorting)}`,

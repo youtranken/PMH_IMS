@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -141,6 +141,9 @@ export function ExpiryScreen({ me }: { me: Me }) {
    */
   const expiry = useQuery({
     queryKey: ['expiry', withinDays, kind, state, url.page, url.limit],
+    // Đổi trang/từ khoá thì GIỮ bảng cũ tới khi có dữ liệu mới: vẽ lại Loading là gỡ cả bảng,
+    // mất dòng đang bung và bảng nháy trắng sau mỗi lần gõ tìm.
+    placeholderData: keepPreviousData,
     queryFn: () =>
       apiFetch<ExpiryResponse>(
         `/api/v1/expiry?withinDays=${withinDays}&page=${url.page}&limit=${url.limit}` +

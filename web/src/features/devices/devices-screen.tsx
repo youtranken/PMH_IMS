@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -82,6 +82,9 @@ export function DevicesScreen({ me }: { me: Me }) {
 
   const devices = useQuery({
     queryKey: ['devices', page, limit, filters, sorting],
+    // Đổi trang/từ khoá thì GIỮ bảng cũ tới khi có dữ liệu mới: vẽ lại Loading là gỡ cả bảng,
+    // mất dòng đang bung và bảng nháy trắng sau mỗi lần gõ tìm.
+    placeholderData: keepPreviousData,
     queryFn: () =>
       apiFetch<{ items: DeviceRow[]; total: number }>(
         `/api/v1/devices?${buildQuery(page, limit, filters, sorting)}`,
