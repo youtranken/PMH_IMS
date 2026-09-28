@@ -148,6 +148,7 @@ export default {
        ấy là "Tổng quan" (tên cả cái TAB), còn đây là tên một khu BÊN TRONG tab đó. */
     profileSection: 'Hồ sơ',
     blankFields: 'Chưa khai: {{list}}.',
+    railMore: 'Chi tiết',
   },
   // Bản đồ quan hệ ở tab Tổng quan của trang thiết bị.
   relationMap: {
@@ -155,8 +156,6 @@ export default {
     legendOk: 'bình thường',
     legendWarn: 'cần để mắt',
     legendCut: 'sẽ bị gỡ khi thanh lý',
-    cutOn: 'Xem lượt thanh lý cắt gì',
-    cutOff: 'Về bản đồ thường',
     missing: 'Chưa gắn: {{list}}.',
     alone:
       'Máy này chưa giữ gì của ai — không IP, không rule NAT, không cổng, không license, ' +
@@ -165,14 +164,6 @@ export default {
     ownPorts: 'Cổng của máy này',
     incomingPorts: 'Đang cắm vào máy này',
     attachments: 'Giấy tờ',
-    /* Câu tóm tắt lượt thanh lý. Danh sách "cắt" dựng từ chính các khu đang có, nên nó không
-       bao giờ hứa cắt một thứ máy không giữ. */
-    cutLead: 'Tick "Dọn hết thứ liên quan" sẽ CẮT: {{list}}.',
-    cutKeep:
-      'GIỮ nguyên: cổng của chính máy này (sơ đồ đấu nối là hồ sơ của nó), két sắt, giấy tờ ' +
-      'và toàn bộ lịch sử. Không tick thì hệ thống CHẶN và đọc tên từng thứ đang giữ, chứ ' +
-      'không lẳng lặng thanh lý.',
-    cutNothing: 'Máy này không giữ gì phải gỡ — thanh lý không kéo theo thứ nào.',
     /* Ba câu cho cảnh CHƯA BIẾT. Im lặng ở đây không được phép đọc thành "sạch rồi": đó đúng
        là câu người ta mở trang này ra để hỏi trước khi thanh lý. */
     unknown:
@@ -192,7 +183,6 @@ export default {
     /* Bản NGẮN của `unknown`, cho danh sách dạng dòng ở màn hẹp — bản đầy đủ kèm chỉ dẫn chỉ
        được nói MỘT chỗ, nếu không ở 390px nó hiện hai lần và bản trong nút thì bị mờ 50%. */
     unknownShort: 'Chưa đọc được',
-    cutLoading: 'Đang đọc danh sách thứ máy đang giữ…',
   },
   common: {
     save: 'Lưu',
@@ -523,18 +513,26 @@ export default {
     tabPortMap: 'Port map',
     saved: 'Đã lưu hồ sơ thiết bị.',
     statusChanged: 'Đã đổi trạng thái thiết bị.',
-    /* Câu cũ kết bằng "Hồ sơ vẫn còn trong sổ, chỉ khóa lại." — đúng, nhưng nó trấn an về
-       phần KHÔNG mất, ngay bên cạnh một ô tick thả ra BA thao tác phá không hoàn tác được.
-       Người đọc lướt lấy đúng vế trấn an rồi tick cho nhanh. */
-    confirmRetire:
-      'Chuyển "{{name}}" sang ĐÃ THANH LÝ? Hồ sơ vẫn còn trong sổ, chỉ khóa lại — ' +
-      'nhưng ô bên dưới thì KHÔNG hoàn tác được, đọc kỹ trước khi tick.',
-    retireCleanup: 'Dọn hết thứ liên quan (không hoàn tác được)',
     // Nói RÕ "gỡ khỏi máy" chứ không phải "xóa": license là tài sản công ty, thanh lý máy
-    // không đụng tới hồ sơ phần mềm. Không tick thì hệ thống chặn và liệt kê để tự đi gỡ.
+    // không đụng tới hồ sơ phần mềm.
     retireCleanupHint:
       'Thu hồi IP, gỡ rule NAT và trả ghế license của máy này. Hồ sơ phần mềm giữ nguyên — chỉ gỡ máy khỏi license.',
     retire: 'Thanh lý',
+    retireIntro: 'Hồ sơ vẫn còn trong sổ, chỉ khoá lại. Đọc kỹ phần sẽ gỡ — gỡ rồi không hoàn tác được.',
+    retireWillCut: 'Sẽ gỡ khỏi máy này nếu chọn "Gỡ hết rồi thanh lý"',
+    retireWillKeep: 'Giữ nguyên',
+    retireNothingToCut: 'Máy này không giữ gì phải gỡ.',
+    retireKeepPorts: 'Cổng của máy này ({{count}}) — sơ đồ đấu nối là hồ sơ của nó',
+    retireKeepVault: 'Két sắt ({{count}})',
+    retireKeepFiles: 'Giấy tờ ({{count}})',
+    retireKeepHistory: 'Hồ sơ máy và toàn bộ lịch sử',
+    retireModeLabel: 'Cách thanh lý',
+    retireModeOnly: 'Chỉ thanh lý (bị chặn nếu máy còn giữ gì)',
+    retireModeCleanup: 'Gỡ hết rồi thanh lý',
+    retireTypeCode: 'Gõ lại mã máy {{code}} để xác nhận',
+    retireTypeCodeMismatch: 'Mã chưa khớp với máy đang thanh lý.',
+    retireBlocked:
+      'Máy vẫn còn giữ những thứ dưới đây nên chưa thanh lý được. Chọn "Gỡ hết rồi thanh lý", hoặc tự gỡ từng thứ trước.',
     reopen: 'Đưa lại vào dùng',
     confirmReopen:
       'Đưa "{{name}}" lại vào dùng? Hồ sơ mở lại để sửa, và máy tính lại hạn bảo hành — ' +
@@ -973,7 +971,7 @@ export default {
     newValue: 'Giá trị mới',
     note: 'Ghi chú',
     noteHint: 'Đừng viết mật khẩu vào đây — ghi chú không được mã hóa.',
-    updatedAt: 'Cập nhật',
+    updatedAtShort: 'Cập nhật {{date}}',
     reveal: 'Xem',
     revealBusy: 'Đang mở một ngăn khác — xong sẽ bấm được.',
     strengthLabel: 'Độ khó của giá trị',
