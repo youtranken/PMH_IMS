@@ -15,6 +15,7 @@ import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Dialog } from '@/ui/dialog';
 import { HistoryPanel } from '@/ui/history-panel';
 import { useClampPage } from '@/ui/use-list-url-state';
+import { useCatalogLists } from '@/ui/use-catalog-lists';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
 import { RowActions } from '@/ui/row-actions';
@@ -605,6 +606,8 @@ function CatalogHistoryDialog({
     queryKey: ['catalog', entity, id, 'history'],
     queryFn: () => apiFetch<CatalogHistoryRow[]>(`/api/v1/catalog/${entity}/${id}/history`),
   });
+  // Chỉ tủ mạng có "Thuộc site"; mục khác không cần tải danh mục để đọc sổ của nó.
+  const lists = useCatalogLists({ enabled: entity === 'cabinet' });
   return (
     <Dialog
       open
@@ -619,7 +622,7 @@ function CatalogHistoryDialog({
         <LoadError error={history.error} onRetry={() => void history.refetch()} />
       ) : (
         <HistoryPanel
-          entries={toCatalogHistory(history.data ?? [], t)}
+          entries={toCatalogHistory(history.data ?? [], t, lists.data?.sites)}
           emptyText={t('catalog.historyEmpty')}
         />
       )}

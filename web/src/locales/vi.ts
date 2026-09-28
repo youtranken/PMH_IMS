@@ -1005,7 +1005,8 @@ export default {
     nextSteps: 'Bước tiếp theo',
     nextVaultAccess: 'Gán quyền két sắt',
     nextDevices: 'Gán thiết bị',
-    nextDevicesHint: 'Mở hồ sơ máy của người này và ghi "{{name}}" vào ô Người sử dụng.',
+    nextDevicesSearchHint:
+      'Danh sách thiết bị mở sẵn tìm theo "{{name}}" — máy đã ghi tên người này hiện ngay. Máy chưa ghi thì mở hồ sơ máy và điền "{{name}}" vào ô Người sử dụng.',
     nextStepsNeedDone: 'Ghi lại mật khẩu trước — đi sang màn khác là hộp này đóng và không mở lại được.',
   },
   /* Danh sách phiên đăng nhập dùng chung (`ui/session-list.tsx`) — Hồ sơ và màn Tài khoản. */
@@ -1721,6 +1722,22 @@ export default {
     ruleCount: '{{count}} quyền',
     backToList: '← Danh sách thành viên',
     addRules: '+ Thêm quyền',
+    /* Sao chép quyền từ đồng nghiệp cùng tổ — bước onboarding nhân viên mới (ADM-040). */
+    copyFrom: 'Sao chép quyền từ…',
+    copyTitle: 'Sao chép quyền két cho {{member}}',
+    copySource: 'Đồng nghiệp',
+    copyPickSource: 'Chọn đồng nghiệp',
+    copySourceOption: '{{name}} ({{count}} quyền)',
+    copyHint: 'Người nhận được đúng các nhóm và đúng tầng của đồng nghiệp. Nhóm người nhận đã có thì giữ nguyên.',
+    copyNeedSource: 'Chọn một đồng nghiệp để sao chép.',
+    copyWillGrant: 'Sẽ gán {{count}} nhóm:',
+    copyAlreadyHas: 'Bỏ qua {{count}} nhóm người này đã có:',
+    copyNothing: 'Không còn nhóm nào để sao chép — người này đã có mọi nhóm của đồng nghiệp.',
+    copyNoColleague: 'Chưa có thành viên nào khác được gán quyền để sao chép.',
+    confirmCopy:
+      'Cấp cho {{member}} {{count}} nhóm quyền két giống {{source}}, giữ nguyên tầng từng nhóm? Họ sẽ xem được (hoặc xin được) mật khẩu của mọi hồ sơ thuộc các nhóm này.',
+    copyNote: 'Sao chép từ {{source}}',
+    copyDone: 'Đã sao chép {{count}} nhóm từ {{source}}.',
     noRulesYet: 'Chưa có quyền nào — người này không xem và không xin được mật khẩu nào. Bấm "+ Thêm quyền" để mở.',
     roleHolders: 'Có toàn quyền theo vai ({{count}})',
     pickScopes: 'Chọn ít nhất một nhóm.',
@@ -2025,6 +2042,8 @@ export default {
     expiring: 'Sắp hết hạn (30 ngày)',
     expiringEmpty: 'Không có gì hết hạn trong 30 ngày tới.',
     seeAllExpiring: 'Xem toàn bộ danh sách hạn',
+    expiringSubject: 'Đối tượng',
+    expiringLeft: 'Còn lại',
     incidents: 'Sự cố tuần qua',
     incidentsEmpty: 'Tuần qua không có sự cố nào.',
     // "Chưa có phần này" KHÁC HẲN "tuần qua không có sự cố" — đọc nhầm là tưởng mọi thứ yên.

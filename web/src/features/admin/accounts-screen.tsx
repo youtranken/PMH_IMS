@@ -720,13 +720,14 @@ function TemporaryPasswordDialog({
               className="btn"
               onClick={() => {
                 onClose();
-                navigate(PATHS.devices);
+                // Mở sẵn tìm theo tên người: ô tìm thiết bị khớp cả "Người sử dụng" (DEV-013).
+                navigate(`${PATHS.devices}?q=${encodeURIComponent(created.fullName)}`);
               }}
             >
               {t('accounts.nextDevices')}
             </button>
           </div>
-          <p className="muted">{t('accounts.nextDevicesHint', { name: created.fullName })}</p>
+          <p className="muted">{t('accounts.nextDevicesSearchHint', { name: created.fullName })}</p>
         </section>
       ) : null}
     </Dialog>

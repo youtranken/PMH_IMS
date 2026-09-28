@@ -149,7 +149,9 @@ export function RelationMap({
     >
       <span className="rn-h">
         <Glyph name={node.icon} />
-        <span className="rn-t">{node.title}</span>
+        <span className="rn-t" title={node.title}>
+          {node.title}
+        </span>
         <b className="rn-n">{node.count}</b>
       </span>
       {node.lines.map((line, i) => (
