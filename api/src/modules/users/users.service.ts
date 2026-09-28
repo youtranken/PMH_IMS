@@ -451,6 +451,16 @@ export class UsersService {
     return new Map(rows.map((row) => [row.email.toLowerCase(), row.fullName]));
   }
 
+  /** Vai hiện tại theo email (cột citext nên không phân biệt hoa thường); `null` nếu không có. */
+  async roleByEmail(email: string): Promise<UserRole | null> {
+    const rows = await this.db
+      .select({ role: usersTable.role })
+      .from(usersTable)
+      .where(eq(usersTable.email, email))
+      .limit(1);
+    return (rows[0]?.role as UserRole | undefined) ?? null;
+  }
+
   /** `id → email` cho một mẻ id — nhãn đối tượng `user`/`session` trên màn Nhật ký. */
   async emailsByIds(ids: string[]): Promise<Map<string, string>> {
     if (ids.length === 0) return new Map();
