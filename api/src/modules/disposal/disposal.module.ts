@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { DevicesModule } from '../devices/devices.module';
 import { ServiceAccountsModule } from '../service-accounts/service-accounts.module';
 import { SoftwareModule } from '../software/software.module';
+import { UsersModule } from '../users/users.module';
 import { DisposalApiService } from './disposal.api';
 import { DisposalController } from './disposal.controller';
 import { DisposalService } from './disposal.service';
@@ -14,9 +16,9 @@ import { DisposalService } from './disposal.service';
  * bảng của mình được nữa.
  */
 @Module({
-  imports: [DevicesModule, SoftwareModule, ServiceAccountsModule],
+  imports: [DevicesModule, SoftwareModule, ServiceAccountsModule, UsersModule],
   controllers: [DisposalController],
-  providers: [DisposalService, DisposalApiService],
+  providers: [DisposalService, DisposalApiService, ExcelExportService],
   exports: [DisposalApiService],
 })
 export class DisposalModule {}

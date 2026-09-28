@@ -1770,9 +1770,22 @@ export default {
     kindIsp: 'Đường truyền',
     code: 'Mã',
     detail: 'Chi tiết',
-    /* Lấy từ `updatedAt` của hồ sơ — sửa ghi chú một hồ sơ đã thanh lý là ngày này đổi, nên
-       không gọi nó là "ngày đưa vào kho". */
-    at: 'Cập nhật lần cuối',
+    /* Lần chuyển sang trạng thái ngừng dùng gần nhất trong lịch sử của module chủ (hồ sơ nhập
+       thẳng thì lùi về ngày cập nhật). */
+    at: 'Ngày thanh lý',
+    by: 'Người thanh lý',
+    /* Q-13: hồ sơ phần mềm hết hạn quá ân hạn thì lượt quét tự thanh lý — phải khác hẳn người bấm. */
+    bySystem: 'Hệ thống · tự thanh lý khi quá hạn',
+    period: 'Khoảng thanh lý',
+    periodMonth: 'Tháng này',
+    periodQuarter: 'Quý này',
+    periodYear: 'Năm nay',
+    from: 'Thanh lý từ ngày',
+    to: 'Thanh lý đến ngày',
+    sort: 'Sắp xếp',
+    sort_newest: 'Mới thanh lý trước',
+    sort_oldest: 'Cũ trước',
+    sort_code: 'Theo mã',
     /* Tên trạng thái GIỮ NGUYÊN theo module chủ: thiết bị/phần mềm gọi là "đã thanh lý", tài
        khoản dịch vụ gọi là "đã vô hiệu hóa". Đúng cái khác biệt mà màn này sinh ra để bày. */
     statusRetired: 'Đã thanh lý',
@@ -1797,7 +1810,7 @@ export default {
     /* Hai câu này KHÁC HẲN câu trên: kho có hàng, chỉ là bộ lọc đang che đi. Gộp làm một là
        tuyên bố sai về dữ liệu của công ty (rà UI/UX 12/09, mục #17). */
     noHit: 'Không có hồ sơ nào khớp bộ lọc',
-    noHitHint: 'Kho vẫn có hồ sơ — thử bỏ bớt lọc loại, hoặc tìm bằng mã hồ sơ.',
+    noHitHint: 'Kho vẫn có hồ sơ — thử bỏ bớt lọc loại hoặc khoảng ngày, hoặc tìm bằng mã hồ sơ.',
   },
   audit: {
     title: 'Nhật ký',
@@ -1887,6 +1900,7 @@ export default {
       ipExported: 'Xuất danh sách IP',
       natExported: 'Xuất sổ NAT',
       expiryExported: 'Xuất danh sách sắp hết hạn',
+      disposalExported: 'Xuất kho thanh lý',
       expiryRenewed: 'Gia hạn',
       expiryDigestSent: 'Gửi email tổng hợp hạn',
       expiryDigestTest: 'Gửi thử email tổng hợp',
@@ -1976,6 +1990,7 @@ export default {
       catalog: 'Danh mục',
       expiryRule: 'Luật báo cáo',
       expiry: 'Hạn',
+      disposal: 'Kho thanh lý',
       file: 'Tệp',
       systemConfig: 'Tham số hệ thống',
     },

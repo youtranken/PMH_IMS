@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import type { StatusEvent } from '../../common/history';
 import type { Page } from '../../common/pagination';
 import type { Tx } from '../../common/tx';
 import { DevicesService } from './devices.service';
@@ -110,6 +111,11 @@ export class DevicesApiService {
   /** Như `listRetired`, kèm `total` thật để kho biết mình có bị cắt ở trần 500 dòng không. */
   retiredPage(): Promise<Page<DeviceListItem>> {
     return this.devices.list({ page: 1, limit: 500 }, { status: 'retired' });
+  }
+
+  /** Ai thanh lý, khi nào — kho thanh lý hỏi theo mẻ id (đọc `device_history`). */
+  retirementEvents(ids: string[]): Promise<Map<string, StatusEvent>> {
+    return this.devices.statusEvents(ids, 'retired');
   }
 
   /** Gợi ý cho ô chọn thiết bị ở màn khác (port map, IP, secret). */

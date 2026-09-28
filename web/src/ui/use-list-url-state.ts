@@ -252,11 +252,16 @@ export function useListUrlState<F extends Record<string, string>>(options: {
     limit,
     setLimit: (value) => write({ limit: value === defaultLimit ? '' : value }),
     sorting,
-    setSorting: (value) =>
+    setSorting: (value) => {
+      const isDefault = value.key === defaultSort.key && value.desc === defaultSort.desc;
+      /* Cột mặc định sắp GIẢM (vd "mới nhất trước") thì chiều tăng phải ghi rõ `dir=asc`:
+         vắng `dir` là lúc đọc lại rơi về chiều mặc định của cột ấy, và lựa chọn mất tác dụng. */
+      const ascOnDescDefault = value.key === defaultSort.key && defaultSort.desc;
       write({
-        sort: value.key === defaultSort.key && value.desc === defaultSort.desc ? '' : value.key,
-        dir: value.desc ? 'desc' : '',
-      }),
+        sort: isDefault ? '' : value.key,
+        dir: isDefault ? '' : value.desc ? 'desc' : ascOnDescDefault ? 'asc' : '',
+      });
+    },
     activeCount: Object.values(filters).filter((value) => value !== '').length,
     /* Một lượt ghi cho mọi khoá (kể cả ô tìm) — gỡ từng khoá một là N lượt `setParams`, mỗi
        lượt một lần gọi API với bộ lọc dở dang. */

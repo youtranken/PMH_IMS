@@ -9,7 +9,7 @@ import { and, asc, count, desc, eq, inArray, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
-import { HISTORY_PAGE_LIMIT } from '../../common/history';
+import { HISTORY_PAGE_LIMIT, latestStatusEvents, type StatusEvent } from '../../common/history';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import { orderByStable, type SortQuery } from '../../common/sorting';
@@ -194,6 +194,22 @@ export class IspLineService {
       .where(eq(ispLineTable.deviceId, deviceId))
       .orderBy(asc(ispLineTable.code));
     return this.decorate(rows);
+  }
+
+  /** Lần chuyển sang Đã thanh lý (`terminated`) gần nhất của từng đường truyền. */
+  terminationEvents(ids: string[]): Promise<Map<string, StatusEvent>> {
+    return latestStatusEvents(
+      this.db,
+      {
+        table: ispLineHistoryTable,
+        ownerId: ispLineHistoryTable.ispLineId,
+        actor: ispLineHistoryTable.actor,
+        changes: ispLineHistoryTable.changes,
+        createdAt: ispLineHistoryTable.createdAt,
+      },
+      ids,
+      'terminated',
+    );
   }
 
   async history(ispLineId: string): Promise<IspLineHistoryRecord[]> {

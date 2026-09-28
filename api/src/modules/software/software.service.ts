@@ -9,7 +9,7 @@ import { and, asc, count, desc, eq, inArray, isNull, or, sql, type SQL } from 'd
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
-import { HISTORY_PAGE_LIMIT } from '../../common/history';
+import { HISTORY_PAGE_LIMIT, latestStatusEvents, type StatusEvent } from '../../common/history';
 import { requireUnchangedSince } from '../../common/cas';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
@@ -171,6 +171,22 @@ export class SoftwareService {
     const row = rows[0];
     if (!row) return null;
     return { at: row.createdAt, by: row.actor, auto: row.action === 'auto-retired' };
+  }
+
+  /** Lần chuyển sang Thanh lý gần nhất của từng hồ sơ — bản theo mẻ của `retirementOf`. */
+  retirementEvents(ids: string[]): Promise<Map<string, StatusEvent>> {
+    return latestStatusEvents(
+      this.db,
+      {
+        table: softwareHistoryTable,
+        ownerId: softwareHistoryTable.softwareId,
+        actor: softwareHistoryTable.actor,
+        changes: softwareHistoryTable.changes,
+        createdAt: softwareHistoryTable.createdAt,
+      },
+      ids,
+      'retired',
+    );
   }
 
   async history(softwareId: string): Promise<SoftwareHistoryRecord[]> {

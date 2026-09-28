@@ -337,3 +337,27 @@ describe('useListUrlState — Xóa lọc', () => {
     expect(result.current.url.searchInput).toBe('');
   });
 });
+
+describe('useListUrlState — sắp xếp khi cột mặc định sắp GIẢM dần', () => {
+  const tuyChon = {
+    emptyFilters: { kind: '' },
+    defaultSort: { key: 'disposedAt', desc: true },
+  };
+
+  it.each([
+    { ten: 'mặc định: URL sạch', sort: { key: 'disposedAt', desc: true }, url: '', desc: true },
+    // Không ghi `dir=asc` thì lúc đọc lại rơi về chiều mặc định (giảm) — chọn "cũ trước" vô tác dụng.
+    {
+      ten: 'cùng cột, chiều tăng',
+      sort: { key: 'disposedAt', desc: false },
+      url: '?sort=disposedAt&dir=asc',
+      desc: false,
+    },
+    { ten: 'cột khác, chiều tăng', sort: { key: 'code', desc: false }, url: '?sort=code', desc: false },
+  ])('$ten', ({ sort, url, desc }) => {
+    const { result } = dung('/disposal', tuyChon);
+    act(() => result.current.url.setSorting(sort));
+    expect(result.current.thanhDiaChi).toBe(url);
+    expect(result.current.url.sorting).toEqual({ key: sort.key, desc });
+  });
+});
