@@ -4,6 +4,7 @@ import {
   firstLogin,
   horizontalOverflow,
   resetDevices,
+  resetIpam,
   resetUsers,
   uniqueStamp,
   writeHeaders,
@@ -21,6 +22,7 @@ const VIEWPORT_HEIGHT = 844;
 test.beforeEach(() => {
   resetUsers();
   resetDevices();
+  resetIpam();
 });
 
 async function createDevice(page: Page, code: string): Promise<string> {
@@ -121,9 +123,25 @@ test.describe('Hộp thoại trên điện thoại', () => {
     expect((await primary.boundingBox())!.height).toBeGreaterThanOrEqual(47);
   });
 
-  test('ô tick "Dọn hết": câu hệ quả hiện ĐỦ trong hộp, không bị cắt', async ({ page }) => {
+  test('lựa chọn "Gỡ hết": câu hệ quả hiện ĐỦ trong hộp, không bị cắt', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const id = await createDevice(page, `PC-E2E-TICK-${uniqueStamp()}`);
+    const stamp = uniqueStamp();
+    const id = await createDevice(page, `PC-E2E-TICK-${stamp}`);
+    // Máy phải GIỮ một thứ thì hộp Thanh lý mới có lựa chọn gỡ — cấp cho nó một IP.
+    const headers = await writeHeaders(page);
+    const octet = Number(stamp) % 200;
+    const subnet = await page.request.post('/api/v1/ipam/subnets', {
+      headers,
+      data: { cidr: `172.24.${octet}.0/29`, name: `LAN E2E tick ${stamp}` },
+    });
+    expect(subnet.status()).toBe(201);
+    const subnetId = ((await subnet.json()) as { id: string }).id;
+    const ip = await page.request.post('/api/v1/ipam/addresses', {
+      headers,
+      data: { subnetId, address: `172.24.${octet}.5`, deviceId: id },
+    });
+    expect(ip.status()).toBe(201);
+
     await page.goto(`/devices/${id}`);
     await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
 
@@ -135,9 +153,9 @@ test.describe('Hộp thoại trên điện thoại', () => {
     // Không bị cắt: phần tử không rộng hơn phần nhìn thấy của nó.
     const clipped = await hint.evaluate((el) => el.scrollWidth > el.clientWidth + 1);
     expect(clipped, 'câu hệ quả bị cắt ngang').toBe(false);
-    // Câu hệ quả là MÔ TẢ của ô tick — trình đọc màn hình đọc nó kèm ô tick.
+    // Câu hệ quả là MÔ TẢ của lựa chọn — trình đọc màn hình đọc nó kèm lựa chọn.
     await expect(
-      dialog.getByRole('checkbox', { name: /Dọn hết thứ liên quan/ }),
+      dialog.getByRole('radio', { name: 'Gỡ hết rồi thanh lý' }),
     ).toHaveAccessibleDescription(/Thu hồi IP/);
   });
 });

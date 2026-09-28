@@ -17,6 +17,7 @@ import {
   RailRowIfSet,
 } from "@/ui/detail-layout";
 import { ExpiryBadge } from "@/ui/expiry-badge";
+import { LocationText } from "@/ui/location-text";
 import { HistoryPanel } from "@/ui/history-panel";
 import { LoadError, Loading, NotFound } from "@/ui/load-state";
 import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
@@ -30,10 +31,10 @@ import { DeviceForm } from "./device-form";
 import { toHistoryEntries } from "./device-history-entries";
 import { PortMapPanel, type PortMap } from "./port-map-panel";
 import { RelationMap, type RelationNode } from "./relation-map";
+import { RetireDialog, type RetireGroup } from "./retire-dialog";
 import {
   STATUS_KEY,
   STATUS_TONE,
-  locationLabel,
   type DeviceHistoryRow,
   type DeviceRow,
 } from "@/lib/device-types";
@@ -71,6 +72,10 @@ export function DeviceDetail({ me }: { me: Me }) {
     ]),
   );
   const [editing, setEditing] = useState(false);
+  const [retiring, setRetiring] = useState(false);
+  /** Danh sách API trả kèm 409 `DEVICE_HAS_HOLDINGS` — mở lại hộp với đúng những thứ vướng. */
+  const [retireBlocked, setRetireBlocked] = useState<string[] | null>(null);
+  const [retireError, setRetireError] = useState<string | null>(null);
 
   const device = useQuery({
     queryKey: ["devices", id],
@@ -388,12 +393,27 @@ export function DeviceDetail({ me }: { me: Me }) {
     counts.files === undefined ? null : counts.files === 0 ? t("devices.tabAttachments") : null,
   ].filter((label): label is string => label !== null);
 
-  /* Câu tóm tắt lượt thanh lý — dựng từ CHÍNH những khu đang có, nên nó không bao giờ hứa cắt
-     một thứ mà máy không giữ. Đây là câu mà `DEVICE_HAS_HOLDINGS` đang phải trả lời bằng một
-     thông báo lỗi dài, chỉ khác là ở đây nhìn thấy TRƯỚC KHI bấm. */
-  const cutList = relationNodes
-    .filter((node) => node.cut)
-    .map((node) => `${node.title} (${node.count})`);
+  /* Hộp Thanh lý đọc CÙNG nguồn với bản đồ, liệt kê từng dòng thật — không hứa gỡ một thứ
+     máy không giữ. Nhóm "sẽ gỡ" bám theo các file `*-device-retirement.ts` bên API: cổng của
+     máy KHÁC đang cắm vào, IP, rule NAT, đường truyền, ghế license. */
+  const panelLines = (key: string) =>
+    (panelOf(key)?.items ?? []).map((entry) => `${entry.label} · ${entry.value}`);
+  const retireCut: RetireGroup[] = [
+    {
+      title: t("relationMap.incomingPorts"),
+      items: incomingPorts.map((row) => `${row.deviceCode} · ${row.portLabel}`),
+    },
+    ...["ipam", "nat", "isp", "software"].map((key) => ({
+      title: panelOf(key)?.title ?? key,
+      items: panelLines(key),
+    })),
+  ];
+  const retireKeep = [
+    ownPorts.length > 0 ? t("devices.retireKeepPorts", { count: ownPorts.length }) : null,
+    counts.secrets ? t("devices.retireKeepVault", { count: counts.secrets }) : null,
+    counts.files ? t("devices.retireKeepFiles", { count: counts.files }) : null,
+    t("devices.retireKeepHistory"),
+  ].filter((entry): entry is string => entry !== null);
 
   return (
     <>
@@ -447,57 +467,30 @@ export function DeviceDetail({ me }: { me: Me }) {
                  nút xác nhận TRONG hộp thoại — chỗ người ta đã đọc câu hỏi rồi. */
               className={retired ? "btn" : "btn danger-ghost"}
               onClick={() => {
+                if (!retired) {
+                  setRetireBlocked(null);
+                  setRetireError(null);
+                  setRetiring(true);
+                  return;
+                }
                 void (async () => {
-                  let cleanup = false;
-                  if (!retired) {
-                    /*
-                     * Ô tick "dọn hết thứ liên quan": không tick thì API CHẶN và liệt kê đích
-                     * danh thứ máy còn giữ (IP, rule NAT, ghế license). Mặc định KHÔNG tick là
-                     * có chủ ý — dọn tự động thu hồi IP và gỡ rule NAT trong một cú bấm, nên
-                     * nó phải là điều người dùng nói ra.
-                     */
-                    const answer = await askConfirm({
-                      title: t("common.titleOf", {
-                        action: t("devices.retire"),
-                        subject: item.code,
-                      }),
-                      message: t("devices.confirmRetire", { name: item.code }),
-                      danger: true,
-                      confirmLabel: t("devices.retire"),
-                      checkbox: {
-                        label: t("devices.retireCleanup"),
-                        hint: t("devices.retireCleanupHint"),
-                      },
-                    });
-                    if (!answer.ok) return;
-                    cleanup = answer.checked;
-                  } else {
-                    /*
-                     * ===== NHÁNH "ĐƯA LẠI VÀO DÙNG" CŨNG PHẢI HỎI (12/09, rà UI/UX #21) =====
-                     *
-                     * Mục #21 nói đúng một nửa: nút này CÙNG TỌA ĐỘ với "Thanh lý" hôm trước,
-                     * nên trí nhớ cơ bắp dẫn tay tới đây. Bản trước nhánh `retired` đi thẳng
-                     * vào `mutate` — tức một cú bấm theo quán tính đổi luôn trạng thái hồ sơ.
-                     *
-                     * VÌ SAO KHÔNG DỒN VÀO `RowActions` NHƯ HAI CHỖ BẢNG: đầu trang này chỉ có
-                     * HAI nút, và một trong hai ("Sửa hồ sơ") là hành động chính của màn. Đẩy
-                     * nút còn lại vào menu là dựng một menu MỘT MỤC — đúng thứ
-                     * `docs/SHARED-REGISTRY.md` viết rõ là KHÔNG dùng ("thêm một cú bấm mà
-                     * không giấu được gì"). Nên chỗ này vá cái hở thật: không tọa độ nào trên
-                     * đầu trang đổi được trạng thái hồ sơ mà không hỏi một câu.
-                     */
-                    const ok = await askConfirm({
-                      title: t("common.titleOf", {
-                        action: t("devices.reopen"),
-                        subject: item.code,
-                      }),
-                      message: t("devices.confirmReopen", { name: item.code }),
-                      confirmLabel: t("devices.reopen"),
-                    });
-                    if (!ok) return;
-                  }
+                  /*
+                   * "Đưa lại vào dùng" nằm CÙNG TỌA ĐỘ với "Thanh lý" hôm trước, nên trí nhớ cơ
+                   * bắp dẫn tay tới đây — đổi trạng thái hồ sơ phải hỏi một câu. Không dồn vào
+                   * `RowActions`: đầu trang chỉ có hai nút, menu một mục là thêm một cú bấm mà
+                   * không giấu được gì.
+                   */
+                  const ok = await askConfirm({
+                    title: t("common.titleOf", {
+                      action: t("devices.reopen"),
+                      subject: item.code,
+                    }),
+                    message: t("devices.confirmReopen", { name: item.code }),
+                    confirmLabel: t("devices.reopen"),
+                  });
+                  if (!ok) return;
                   setStatus.mutate(
-                    { status: retired ? "in_use" : "retired", cleanup },
+                    { status: "in_use" },
                     {
                       onSuccess: () => {
                         toast({ message: t("devices.statusChanged") });
@@ -519,6 +512,16 @@ export function DeviceDetail({ me }: { me: Me }) {
       {retired ? <p className="alert">{t("devices.retiredLocked")}</p> : null}
 
       <DetailLayout
+        railSummary={
+          <>
+            <span className={`badge ${STATUS_TONE[item.status]}`}>
+              {t(STATUS_KEY[item.status])}
+            </span>
+            {item.siteCode ? <LocationText device={item} /> : null}
+            {item.assignedTo ? <span>{item.assignedTo}</span> : null}
+            <ExpiryBadge end={item.warrantyEnd} notCounted={retired} />
+          </>
+        }
         rail={
           <RailCard title={t("detail.identityCard")}>
             <RailRow
@@ -533,10 +536,10 @@ export function DeviceDetail({ me }: { me: Me }) {
                 {t(STATUS_KEY[item.status])}
               </span>
             </RailRow>
-            {/* KHÔNG kèm `note={cabinetCode}`: `locationLabel` đã ghép sẵn "LST · T-1", nên
+            {/* KHÔNG kèm `note={cabinetCode}`: `LocationText` đã ghép sẵn "LST · T-1", nên
                 dòng chú bên dưới in lại đúng mã tủ ấy lần thứ hai trong cùng một ô. */}
             <RailRow label={t("devices.location")}>
-              <span className="mono">{locationLabel(item)}</span>
+              <LocationText device={item} />
             </RailRow>
             {/*
               BỘ PHẬN KHÔNG ĐƯỢC BIẾN MẤT CÙNG NGƯỜI DÙNG (18/09/2026).
@@ -616,22 +619,6 @@ export function DeviceDetail({ me }: { me: Me }) {
               isLoading={
                 !panels.isError && !ports.isError && (panels.isPending || ports.isPending)
               }
-              cutSummary={
-                panels.isPending || ports.isPending
-                  ? t("relationMap.cutLoading")
-                  : panels.isError || ports.isError
-                  ? t("relationMap.cutUnknown")
-                  : cutList.length > 0 ? (
-                  <>
-                    <b>{t("relationMap.cutLead", { list: cutList.join(" · ") })}</b>
-                    <br />
-                    <br />
-                    {t("relationMap.cutKeep")}
-                  </>
-                ) : (
-                  t("relationMap.cutNothing")
-                )
-              }
             />
 
             {/*
@@ -689,9 +676,9 @@ export function DeviceDetail({ me }: { me: Me }) {
                 aria-labelledby="sec-software-title"
               >
                 <h2 className="form-section-title" id="sec-software-title">
-                  {softwarePanel.title}
+                  {softwarePanel.title} ({softwarePanel.items.length})
                 </h2>
-                <DeviceLicensesExpand deviceId={item.id} />
+                <DeviceLicensesExpand deviceId={item.id} showHeader={false} />
               </section>
             ) : null}
 
@@ -752,6 +739,45 @@ export function DeviceDetail({ me }: { me: Me }) {
         )}
         </TabPanel>
       </DetailLayout>
+
+      {retiring ? (
+        <RetireDialog
+          /* Đổi `key` khi API trả danh sách vướng: hộp dựng lại từ đầu, lựa chọn cũ không
+             còn đứng sẵn — người dùng đọc danh sách mới rồi chọn lại. */
+          key={retireBlocked ? "blocked" : "fresh"}
+          code={item.code}
+          cut={retireCut}
+          keep={retireKeep}
+          unknown={panels.isError || panels.isPending || ports.isError || ports.isPending}
+          blockedBy={retireBlocked}
+          busy={setStatus.isPending}
+          error={retireError}
+          onCancel={() => setRetiring(false)}
+          onConfirm={(cleanup) =>
+            setStatus.mutate(
+              { status: "retired", cleanup },
+              {
+                onSuccess: () => {
+                  setRetiring(false);
+                  toast({ message: t("devices.statusChanged") });
+                  void refresh();
+                },
+                onError: (err) => {
+                  const holdings = holdingsOf(err);
+                  if (holdings) {
+                    setRetireError(null);
+                    setRetireBlocked(holdings);
+                    // Danh sách thứ đang giữ vừa đổi so với lúc mở trang — đọc lại.
+                    void queryClient.invalidateQueries({ queryKey: ["devices", id] });
+                    return;
+                  }
+                  setRetireError(errorMessage(err));
+                },
+              },
+            )
+          }
+        />
+      ) : null}
 
       {editing ? (
         <DeviceForm
@@ -840,3 +866,11 @@ function ExtensionPanels({ panels }: { panels: DevicePanel[] }) {
 }
 
 
+
+/** Danh sách thứ máy còn giữ trong 409 `DEVICE_HAS_HOLDINGS`; lỗi khác thì `null`. */
+function holdingsOf(err: unknown): string[] | null {
+  if (!(err instanceof ApiError) || err.status !== 409) return null;
+  const body = err.body as { code?: string; holdings?: unknown } | null;
+  if (body?.code !== "DEVICE_HAS_HOLDINGS" || !Array.isArray(body.holdings)) return null;
+  return body.holdings.filter((entry): entry is string => typeof entry === "string");
+}

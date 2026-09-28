@@ -9,8 +9,8 @@
  * trình đọc màn hình đi qua. Dưới 900px bản đồ ẩn hẳn — một sơ đồ 1200px trên điện thoại là
  * một bức ảnh không đọc được — và thay bằng đúng danh sách ấy ở dạng dòng.
  *
- * Không dùng thư viện vẽ nào: SVG thuần + thẻ định vị theo phần trăm. Toạ độ tính từ chỉ số
- * nên hai lần mở cùng một máy luôn ra cùng một hình (không mô phỏng vật lý, không rung).
+ * Không dùng thư viện vẽ nào: lưới CSS ba cột (nút trái · hạch · nút phải), dây nối là đường
+ * kẻ CSS. Hai lần mở cùng một máy luôn ra cùng một hình, và không có toạ độ nào để chồng nhau.
  * ========================================================================== */
 
 .rmap-card {
@@ -55,25 +55,36 @@
 .rmap-dot.warn { background: var(--warn); }
 .rmap-dot.cut { background: var(--danger); }
 
-.rmap { position: relative; width: 100%; }
-.rmap-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-.rmap-svg path {
-  fill: none;
-  stroke: var(--border-2);
-  stroke-width: 1.5;
-  /* Hộp co giãn theo bề ngang cột nên nét vẽ phải giữ nguyên độ dày. */
-  vector-effect: non-scaling-stroke;
-  transition: stroke 0.2s var(--ease);
+/* Lưới cố định: nút không thể đè hạch hay đè nhau — mỗi nút có ô riêng, cách hạch đúng một
+   khe cột. `--rmap-gap` cũng là chiều dài dây nối, nên dây luôn chạm mép hạch. */
+.rmap {
+  --rmap-gap: var(--space-11);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  column-gap: var(--rmap-gap);
+  align-items: stretch;
 }
+.rmap-col {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-6);
+  min-width: 0;
+}
+.rmap-col.left { align-items: flex-end; }
+.rmap-col.right { align-items: flex-start; }
 
+/* Hạch cao bằng cả cụm nút: dây nối nằm ngang ở bất kỳ độ cao nào cũng chạm được mép nó. */
+.rmap-hub-col {
+  display: flex;
+  min-height: 6.25rem;
+}
 .rmap-hub {
-  position: absolute;
-  /* Neo theo TÂM: toạ độ truyền vào là tâm của hạch, không phải góc trên trái. */
-  transform: translate(-50%, -50%);
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-7);
+  padding: var(--space-7) var(--space-9);
   border-radius: var(--r-lg);
   background: var(--grad);
   color: var(--on-brand);
@@ -83,23 +94,19 @@
   font-size: var(--fs-xl);
   font-weight: var(--fw-bold);
   letter-spacing: -0.01em;
-  overflow-wrap: anywhere;
+  /* Mã đọc theo khối — ngắt "SW-E2E-" / "CORE-01" là đọc ra một mã khác. Mã dài thì thu cỡ
+     chữ (lớp `sm`/`xs` do `hubSize()` gắn), không bao giờ ngắt. */
+  white-space: nowrap;
 }
+.rmap-hub.sm { font-size: var(--fs-md); }
+.rmap-hub.xs { font-size: var(--fs-xs); }
 
-/*
- * KHÔNG khoá chiều cao (sửa 17/09/2026).
- *
- * Bản đầu đặt cả `height` theo phần trăm của khung. Khung thì co theo bề ngang cột, còn CHỮ
- * thì giữ nguyên cỡ — nên cột hẹp lại là nút thấp xuống mà nội dung vẫn thế, và dòng cuối bị
- * CẮT NGANG. Chủ dự án chụp đúng cảnh đó ở nút "License đang cài".
- *
- * Giờ nút cao theo nội dung, neo theo TÂM, và có sàn bề ngang để ở cột hẹp chữ không bị ép
- * thành một cột dọc.
- */
+/* Nút cao theo nội dung, KHÔNG khoá chiều cao: khoá theo khung thì cột hẹp lại là dòng cuối bị
+   cắt ngang, vì khung co còn chữ thì không. */
 .rmap-node {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  min-width: 168px;
+  position: relative;
+  width: 100%;
+  max-width: 18rem;
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
@@ -109,26 +116,50 @@
   background: var(--surface);
   color: var(--ink);
   box-shadow: var(--shadow-sm);
-  overflow: hidden;
   text-align: left;
   font: inherit;
   cursor: pointer;
-  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease),
-    background 0.2s var(--ease);
+  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
 }
 .rmap-node:hover { border-color: var(--primary); box-shadow: var(--shadow); }
 .rmap-node:focus-visible { outline: none; box-shadow: var(--ring); }
+/* Dây nối: đi ngang từ mép nút tới mép hạch, dài đúng một khe cột. */
+.rmap-col.left .rmap-node::after,
+.rmap-col.right .rmap-node::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: var(--rmap-gap);
+  border-top: 1.5px solid var(--border-2);
+  pointer-events: none;
+}
+.rmap-col.left .rmap-node::after { left: 100%; }
+.rmap-col.right .rmap-node::before { right: 100%; }
+/* Sợi sẽ bị gỡ khi thanh lý: nét đứt đỏ, khớp chấm "sẽ bị gỡ khi thanh lý" ở chú giải. */
+.rmap-col .rmap-node.cut::after,
+.rmap-col .rmap-node.cut::before {
+  border-top-style: dashed;
+  border-top-color: var(--danger);
+}
 .rmap-node .rn-h {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  min-width: 0;
   font-size: var(--fs-xs);
   font-weight: var(--fw-bold);
-  white-space: nowrap;
 }
 .rmap-node .rn-h svg { width: 14px; height: 14px; flex: 0 0 14px; color: var(--ink-3); }
+/* Tiêu đề nhường chỗ, số đếm KHÔNG: số là thứ người ta nhìn đầu tiên. */
+.rmap-node .rn-t {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .rmap-node .rn-n {
-  margin-left: auto;
+  flex: none;
   min-width: 20px;
   padding: 0 5px;
   border-radius: var(--radius-pill);
@@ -139,25 +170,24 @@
   font-weight: var(--fw-bold);
   text-align: center;
 }
+/* Dòng xem trước được xuống hai dòng trước khi rút gọn: một dòng thì "Quản trị switc…" cụt
+   ngay chỗ đáng đọc. */
 .rmap-node .rn-i {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
   font-size: var(--fs-2xs);
   color: var(--ink-3);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 .rmap-node .rn-i.warn { color: var(--warn); font-weight: var(--fw-semibold); }
 .rmap-node .rn-i.danger { color: var(--danger-strong); font-weight: var(--fw-semibold); }
 
-/* Máy chưa giữ gì: hạch đứng một mình, và nói thẳng ra là đứng một mình. */
+/* Máy chưa giữ gì: không có hạch đứng một mình, chỉ có câu nói thẳng ra như vậy. */
 .rmap-alone {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: var(--space-5);
-  max-width: 34rem;
-  text-align: center;
-  font-size: var(--fs-xs);
+  margin: 0;
+  font-size: var(--fs-sm);
   color: var(--ink-3);
 }
 /* Thứ CHƯA gắn gom về một dòng — cùng lối với `BlankFields`, không vẽ ô rỗng. */
@@ -167,54 +197,6 @@
   border-top: 1px dashed var(--border-2);
   font-size: var(--fs-xs);
   color: var(--ink-3);
-}
-
-/* === Chế độ "thanh lý sẽ cắt gì" ===
- * Ngữ nghĩa lấy từ các file *-device-retirement.ts: thu hồi IP, gỡ rule NAT, trả ghế license,
- * gỡ đường truyền, gỡ liên kết cổng của MÁY KHÁC đang đấu sang. Cổng của chính máy này, két
- * sắt, giấy tờ và lịch sử thì GIỮ. Đây là câu mà `DEVICE_HAS_HOLDINGS` đang phải trả lời bằng
- * một thông báo lỗi dài — ở đây nhìn thấy được TRƯỚC KHI bấm. */
-.rmap.show-cut .rmap-node.cut {
-  border-color: var(--border-danger);
-  background: var(--danger-soft);
-}
-.rmap.show-cut .rmap-node.cut .rn-h { color: var(--danger-strong); }
-.rmap.show-cut .rmap-node.cut .rn-h svg { color: var(--danger-strong); }
-.rmap.show-cut .rmap-node.cut .rn-n { background: var(--surface); color: var(--danger-strong); }
-/*
- * NÚT "GIỮ" LÙI VỀ SAU BẰNG TÔNG, KHÔNG BẰNG ĐỘ MỜ (18/09/2026).
- *
- * `opacity: 0.42` hoà `--ink` với nền trắng thành `#a1a3a0` — 2,54:1 — và dòng phụ
- * (`--ink-3`) xuống tới 1,89:1. Ở chế độ tối cũng trượt: 3,60:1 và 2,23:1. Đây là ngưỡng
- * AA 4,5:1 cho chữ nhỏ, mà mấy nút này là `<button>` THẬT, nằm trong luồng Tab và bấm được —
- * không phải hoạ tiết nền.
- *
- * Trớ trêu là cùng đợt này `.table tr.row-muted` (shared-kit.css) vừa gỡ `opacity: 0.55` với
- * đúng lý do đó rồi đổi sang `color: var(--ink-3)`. Đây là cùng một bài học, áp cho cùng một
- * loại phần tử: làm nhạt thì đổi MÀU CHỮ và viền, đừng phủ sương lên cả cụm.
- *
- * Tương phản sau khi đổi: `--ink-3` trên `--surface` = 6,19:1 (sáng) và 6,61:1 (tối).
- */
-.rmap.show-cut .rmap-node.keep {
-  border-color: var(--border);
-  background: var(--surface);
-}
-.rmap.show-cut .rmap-node.keep .rn-h,
-.rmap.show-cut .rmap-node.keep .rn-i {
-  color: var(--ink-3);
-}
-.rmap.show-cut .rmap-node.keep .rn-h svg { color: var(--ink-3); }
-.rmap.show-cut .e-cut { stroke: var(--danger); stroke-dasharray: 6 5; }
-
-.rmap-cut-sum {
-  margin-top: var(--space-9);
-  padding: var(--space-8) var(--space-9);
-  border-left: 3px solid var(--danger);
-  background: var(--danger-soft);
-  border-radius: 0 var(--r) var(--r) 0;
-  font-size: var(--fs-xs);
-  color: var(--ink-2);
-  max-width: 68ch;
 }
 
 /* Bản thay thế ở màn hẹp — cùng danh sách ấy, dạng dòng, bấm ra cùng chỗ. */
@@ -255,7 +237,8 @@
 }
 
 @media (max-width: 900px) {
-  .rmap { display: none; }
+  .rmap,
+  .rmap-alone { display: none; }
   .rmap-list { display: flex; }
   .rmap-card { padding: var(--space-8); }
 }
