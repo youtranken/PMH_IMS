@@ -120,8 +120,8 @@ test.describe('Cỗ máy Expiry', () => {
       endDate: inDays(15),
     });
 
-    // API phải khai đủ 5 nguồn: 4 loại phần mềm + bảo hành thiết bị. Đường truyền không có
-    // hạn nên không phải một nguồn (Q-04).
+    // API phải khai đủ 6 nguồn: 5 loại phần mềm (cả "Khác" — Q-14) + bảo hành thiết bị. Đường
+    // truyền không có hạn nên không phải một nguồn (Q-04).
     const kinds = await page.evaluate(async () => {
       const res = await fetch('/api/v1/expiry/kinds', { credentials: 'include' });
       return (await res.json()) as { kind: string; canRenew: boolean }[];
@@ -130,6 +130,7 @@ test.describe('Cỗ máy Expiry', () => {
       'domain',
       'license',
       'maintenance',
+      'other',
       'ssl',
       'warranty',
     ]);
