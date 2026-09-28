@@ -85,6 +85,7 @@ describe('Break-glass: quyết định → outbox → thư cho người xin', ()
     const vault = { countFor: () => Promise.resolve(2) } as unknown as VaultService;
     const users = {
       namesByEmails: (emails: string[]) => Promise.resolve(new Map(emails.map((e) => [e, e]))),
+      roleByEmail: () => Promise.resolve('member'),
     } as unknown as UsersApiService;
     breakGlass = new BreakGlassService(
       scratch.db,
