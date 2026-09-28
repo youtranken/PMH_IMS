@@ -8,6 +8,7 @@ import { OWNER_PATH } from '@/lib/routes';
 import { SECRET_OWNER_KIND_KEY, type SecretOwnerType } from '@/lib/secret-owner-kinds';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
+import { grantHoursCheck, requestedHours } from '@/ui/grant-hours';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 
 /**
@@ -164,7 +165,8 @@ export function DecisionDialog({
 }) {
   const { t } = useTranslation();
   const actions = useBreakGlassActions(csrfToken);
-  const [hours, setHours] = useState(String(row.payload?.hours ?? 4));
+  const requested = requestedHours(row.payload);
+  const [hours, setHours] = useState(String(requested ?? 4));
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -174,13 +176,14 @@ export function DecisionDialog({
     const trimmed = note.trim();
     let asked = 0;
     if (approve) {
-      /* Không âm thầm rơi về một con số mặc định: "2 tiếng" hay "0" phải bị báo, không được
-         thành một quyền mở két dài hơn người duyệt định cấp. */
-      asked = Number(hours.trim());
-      if (!Number.isInteger(asked) || asked <= 0) {
-        setError(t('approvals.grantHoursInvalid'));
+      const check = grantHoursCheck(hours, requested);
+      if (check.reason) {
+        const key =
+          check.reason === 'aboveAsked' ? 'approvals.grantHoursAboveAsked' : 'approvals.grantHoursInvalid';
+        setError(t(key, { hours: requested }));
         return;
       }
+      asked = check.value;
     } else if (!trimmed) {
       setError(t('approvals.denyNoteRequired'));
       return;
@@ -239,7 +242,15 @@ export function DecisionDialog({
         <p className="approval-reason">{row.reason}</p>
 
         {approve ? (
-          <Field label={t('approvals.grantHours')} required hint={t('approvals.grantHoursHint')}>
+          <Field
+            label={t('approvals.grantHours')}
+            required
+            hint={
+              requested !== null
+                ? t('approvals.grantHoursHintMax', { hours: requested })
+                : t('approvals.grantHoursHint')
+            }
+          >
             <input
               className="inp"
               required

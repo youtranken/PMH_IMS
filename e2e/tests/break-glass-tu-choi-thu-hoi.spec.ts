@@ -235,4 +235,52 @@ test.describe('Break-glass — cửa TỪ CHỐI và cửa THU HỒI', () => {
 
     await memberContext.close();
   });
+
+  /**
+   * Duyệt được RÚT NGẮN, không được KÉO DÀI: cấp nhiều giờ hơn số xin là mở két lâu hơn chính
+   * người cần nó nghĩ là cần. Hộp Duyệt báo ngay; gọi thẳng API với số lớn hơn thì server kẹp.
+   */
+  test('duyệt không cấp quá số giờ đã xin — hộp báo lỗi, API gọi thẳng thì bị kẹp', async ({
+    page,
+    browser,
+  }) => {
+    test.setTimeout(150_000);
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-5);
+    const kit = await setUp(page, stamp);
+
+    const memberContext = await browser.newContext({ ignoreHTTPSErrors: true });
+    const memberPage = await memberContext.newPage();
+    await firstLogin(memberPage, E2E_MEMBER);
+    // `request` xin 2 giờ.
+    const id = await request(memberPage, kit.deviceId, 'doi mat khau admin switch E2E');
+    await memberContext.close();
+
+    await page.goto(`/approvals?id=${id}`);
+    const card = page.getByRole('region', { name: /^Yêu cầu của / }).first();
+    await card.getByRole('button', { name: 'Duyệt', exact: true }).click();
+    const decide = page.getByRole('dialog');
+    await expect(
+      decide.getByText('Rút ngắn được, tối đa 2 giờ như người xin. Vượt trần hệ thống sẽ bị kẹp xuống.'),
+    ).toBeVisible();
+    await decide.getByRole('textbox', { name: 'Cấp trong bao lâu (giờ)' }).fill('5');
+    await decide.getByRole('button', { name: 'Duyệt', exact: true }).click();
+    await expect(
+      decide.getByText('Không cấp quá số giờ đã xin (2 giờ). Cần lâu hơn thì người xin gửi yêu cầu mới.'),
+    ).toBeVisible();
+    expect(stateOf(id), 'hộp đã chặn thì phiếu vẫn chờ').toBe('pending');
+
+    // Dựng lại đòn: bỏ qua hộp, gọi thẳng API với 20 giờ.
+    const approved = await page.request.post(`/api/v1/vault/break-glass/${id}/approve`, {
+      headers: await writeHeaders(page),
+      data: { hours: 20, note: 'E2E thu keo dai' },
+    });
+    expect(approved.status()).toBeLessThan(300);
+    expect(
+      sql(
+        `SELECT round(extract(epoch FROM expires_at - decided_at) / 3600) FROM approval WHERE id = '${id}'`,
+      ),
+      'server phải kẹp về đúng số giờ đã xin',
+    ).toBe('2');
+  });
 });

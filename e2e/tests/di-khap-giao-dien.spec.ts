@@ -8684,8 +8684,10 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
         'người xin tự đặt',
     ).toBeEditable();
     await expect(
-      approve.getByText('Sửa được — cấp vừa đủ việc, đừng cấp thừa. Vượt trần hệ thống sẽ bị kẹp xuống.'),
-      'và phải nói ra là sửa được, không để người duyệt tự đoán',
+      approve.getByText(
+        'Rút ngắn được, tối đa 6 giờ như người xin. Vượt trần hệ thống sẽ bị kẹp xuống.',
+      ),
+      'và phải nói ra là sửa được (chỉ rút ngắn, không cấp quá số xin), không để người duyệt tự đoán',
     ).toBeVisible();
     expect(
       await approve.getByTestId('dialog-footer').getByRole('button').allTextContents(),

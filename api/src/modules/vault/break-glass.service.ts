@@ -391,8 +391,8 @@ export class BreakGlassService implements OnModuleInit {
   }
 
   /**
-   * Người duyệt chốt. `hours` cho phép RÚT NGẮN so với yêu cầu — người duyệt nhìn lý do rồi
-   * quyết, chứ không phải bấm đồng ý với con số người xin tự đặt.
+   * Người duyệt chốt. `hours` cho phép RÚT NGẮN so với yêu cầu (không kéo dài) — người duyệt
+   * nhìn lý do rồi quyết, chứ không phải bấm đồng ý với con số người xin tự đặt.
    */
   async approve(
     approver: string,
@@ -422,7 +422,13 @@ export class BreakGlassService implements OnModuleInit {
       });
     }
     const asked = Number((request.payload as { hours?: number } | null)?.hours ?? 0);
-    const hours = await this.clampHours(options.hours ?? asked);
+    /*
+     * Rút ngắn được, KÉO DÀI thì không: cấp nhiều giờ hơn số xin là mở két lâu hơn chính người
+     * cần nó nghĩ là cần, và nhật ký FR-025 in ra một grant người xin chưa từng xin. Phiếu không
+     * mang số giờ hợp lệ thì chỉ còn trần cấu hình (`clampHours`) chặn.
+     */
+    const typed = options.hours ?? asked;
+    const hours = await this.clampHours(asked > 0 ? Math.min(typed, asked) : typed);
 
     return this.decide(id, {
       to: 'approved',
