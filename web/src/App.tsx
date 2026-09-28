@@ -6,8 +6,10 @@ import {
   useLocation,
   useParams,
 } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMe } from '@/lib/api';
+import { clearNextPath, peekNextPath, rememberNextPath } from '@/lib/next-path';
 import {
   CHANGE_PASSWORD_PATH,
   LEGACY_AUTH_ROUTES,
@@ -43,6 +45,7 @@ import { SoftwareScreen } from '@/features/software/software-screen';
 import { ChangePassword } from '@/features/auth/change-password';
 import { AuthCard } from '@/features/auth/auth-card';
 import { LoginScreen } from '@/features/auth/login-screen';
+import { ProfileScreen } from '@/features/auth/profile-screen';
 import { TotpChallenge } from '@/features/auth/totp-challenge';
 import { TotpEnroll } from '@/features/auth/totp-enroll';
 import { ComponentsGallery } from '@/features/dev/components-gallery';
@@ -80,6 +83,16 @@ function LegacyRedirect({ to, withId }: { to: string; withId?: boolean }) {
   const location = useLocation();
   const path = withId ? `${to}/${id}` : to;
   return <Navigate to={`${path}${location.search}${location.hash}`} replace />;
+}
+
+/**
+ * Xong luồng đăng nhập: đi tới đích đã nhớ (đã kiểm là đường nội bộ) rồi xoá nó, để lần đăng
+ * nhập sau không bị kéo về một trang cũ.
+ */
+function ResumeAfterLogin() {
+  const [target] = useState(() => peekNextPath() ?? '/');
+  useEffect(() => clearNextPath(), []);
+  return <Navigate to={target} replace />;
 }
 
 function AppRoutes() {
@@ -129,11 +142,14 @@ function AppRoutes() {
   // Người dùng chưa đi hết luồng đăng nhập: luôn đưa về ĐÚNG bước còn thiếu.
   // Đây là nơi DUY NHẤT quyết định điều hướng đăng nhập — màn không tự navigate (AD-15).
   if (step !== '/' && location.pathname !== step) {
-    return <Navigate to={step} replace state={{ from: location.pathname }} />;
+    // Nhớ nơi người dùng định mở (link trong mail duyệt break-glass…) để đưa về đúng đó sau
+    // khi xong MỌI bước. Ghi lúc render là an toàn: cùng một giá trị, ghi lại bao nhiêu lần cũng vậy.
+    if (!isAuthRoute) rememberNextPath(`${location.pathname}${location.search}${location.hash}`);
+    return <Navigate to={step} replace />;
   }
-  // Đã đủ điều kiện mà còn nằm ở màn đăng nhập → vào app.
+  // Đã đủ điều kiện mà còn nằm ở màn đăng nhập → vào app, về đúng đích đã nhớ nếu có.
   if (step === '/' && isAuthRoute) {
-    return <Navigate to="/" replace />;
+    return <ResumeAfterLogin />;
   }
 
   if (!me) {
@@ -181,6 +197,8 @@ function AppRoutes() {
           <Route path={PATHS.adminAuditLog} element={<AuditLogScreen />} />
         ) : null}
         <Route path={PATHS.approvals} element={<ApprovalsScreen me={me} />} />
+        {/* Mọi vai: đường vào tự đổi mật khẩu / cài lại 2 lớp / đóng phiên của chính mình. */}
+        <Route path={PATHS.profile} element={<ProfileScreen me={me} />} />
         {/* Gác ở CẢ route, không chỉ ẩn mục menu: gõ thẳng URL cũng chỉ nhận 404. */}
         {canSeeRoute(PATHS.vault, me.role) ? (
           <Route path={PATHS.vault} element={<VaultHomeScreen me={me} />} />
