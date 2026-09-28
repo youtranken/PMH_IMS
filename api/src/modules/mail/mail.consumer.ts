@@ -42,6 +42,7 @@ export const HANDLED_MAIL_TOPICS: ReadonlySet<string> = new Set([
   'auth.password.changed',
   'account.password.reset',
   'account.mfa.reset',
+  'auth.totp.reenrolled',
 ]);
 
 @Injectable()
@@ -359,6 +360,17 @@ export class MailConsumer {
           footnote: 'Nếu không phải bạn yêu cầu, báo SA ngay lập tức.',
         });
         return { to: [user.email], subject: '[IMS] Đặt lại xác thực 2 lớp', html, text };
+      }
+      case 'auth.totp.reenrolled': {
+        if (!user) return null;
+        const { html, text } = renderMail({
+          title: 'Xác thực 2 lớp đã chuyển sang điện thoại mới',
+          intro:
+            'Tài khoản của bạn vừa cài lại xác thực 2 lớp trên một điện thoại mới. Mã trên điện thoại cũ không còn dùng được, và mọi phiên khác đã bị đăng xuất.',
+          rows: [{ label: 'Thời điểm', value: time.eventAt }],
+          footnote: 'Nếu không phải bạn thực hiện, báo SA ngay lập tức.',
+        });
+        return { to: [user.email], subject: '[IMS] Cài lại xác thực 2 lớp', html, text };
       }
       default:
         return null;

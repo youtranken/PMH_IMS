@@ -3,6 +3,8 @@ import {
   Controller,
   Get,
   HttpCode,
+  Param,
+  ParseUUIDPipe,
   Post,
   Req,
   Res,
@@ -15,7 +17,14 @@ import { clientIp } from '../../common/client-ip';
 import { Audited } from '../audit/audited.decorator';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { AuthService } from './auth.service';
-import { ChangePasswordDto, LoginDto, TotpEnrollStartDto, TotpTokenDto } from './auth.dto';
+import {
+  ChangePasswordDto,
+  LoginDto,
+  TotpEnrollStartDto,
+  TotpReEnrollConfirmDto,
+  TotpReEnrollStartDto,
+  TotpTokenDto,
+} from './auth.dto';
 import { clearSessionCookie, setSessionCookie } from './cookie';
 import { LoginRateGuard } from './login-rate.guard';
 import { Public } from './public.decorator';
@@ -24,7 +33,7 @@ import { SessionService } from './session.service';
 import { AllowPasswordPending } from './password-pending.decorator';
 import { AllowTotpPending } from './totp-pending.decorator';
 import type { AuthedRequest } from './types';
-import { NoStepUp } from './step-up.decorator';
+import { NoStepUp, RequiresStepUp } from './step-up.decorator';
 
 const ALL_ROLES = ['sa', 'admin', 'member'] as const;
 
@@ -119,12 +128,12 @@ export class AuthController {
   @Audited('auth.totp.enroll.start', 'user', { writtenByService: true })
   async startEnroll(@Body() dto: TotpEnrollStartDto, @Req() req: AuthedRequest) {
     const session = await this.requireSession(req);
-    const { secret, qrDataUrl } = await this.auth.startTotpEnrollment(
+    const { secret, qrDataUrl, otpauthUrl } = await this.auth.startTotpEnrollment(
       session,
       dto.currentPassword,
     );
     // Secret hiện một lần lúc cài đặt; response không được cache (app.setup đặt no-store).
-    return { secret, qrDataUrl };
+    return { secret, qrDataUrl, otpauthUrl };
   }
 
   @AllowTotpPending()
@@ -146,6 +155,77 @@ export class AuthController {
     // Chỉ khi phiên được cấp lại (regenerate sau khi qua 2 lớp) mới có token mới cho cookie.
     if (result.newToken) setSessionCookie(res, result.newToken);
     return { status: 'enrolled', csrfToken: result.session.csrfToken };
+  }
+
+  /**
+   * Cài lại 2 lớp trên điện thoại mới khi ĐANG có 2 lớp (Q-14). `@RequiresStepUp()` ở route VÀ
+   * kiểm lại trong service: route là lớp chặn chung, service là lớp không thể quên — thay yếu tố
+   * thứ hai là thao tác chiếm tài khoản nếu lọt, nên không để nó phụ thuộc vào một dòng decorator.
+   */
+  @RequiresStepUp()
+  @Roles(...ALL_ROLES)
+  @Post('totp/re-enroll')
+  @HttpCode(200)
+  @Audited('auth.totp.reenroll.start', 'user', { writtenByService: true })
+  async startReEnroll(@Body() dto: TotpReEnrollStartDto, @Req() req: AuthedRequest) {
+    const session = await this.requireSession(req);
+    return this.auth.startTotpReEnrollment(session, dto.currentPassword);
+  }
+
+  /**
+   * Không đòi step-up lần nữa: vé chỉ sinh ra sau step-up + mật khẩu và gắn chặt với phiên này.
+   * Đòi lại thì người đang mất vài phút cài ứng dụng trên máy mới bị hỏi mã của máy CŨ giữa chừng.
+   */
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @Roles(...ALL_ROLES)
+  @Post('totp/re-enroll/confirm')
+  @HttpCode(200)
+  @Audited('auth.totp.reenroll.done', 'user', { writtenByService: true })
+  async confirmReEnroll(@Body() dto: TotpReEnrollConfirmDto, @Req() req: AuthedRequest) {
+    const session = await this.requireSession(req);
+    const result = await this.auth.confirmTotpReEnrollment(session, dto.ticket, dto.token);
+    return { status: 're-enrolled', revokedSessions: result.revokedSessions };
+  }
+
+  /** Phiên đang mở của CHÍNH MÌNH — không nhận tham số người dùng nào, nên không hỏi được của ai khác. */
+  @Roles(...ALL_ROLES)
+  @Get('sessions')
+  async mySessions(@Req() req: AuthedRequest) {
+    const session = await this.requireSession(req);
+    return this.auth.listOwnSessions(session);
+  }
+
+  @Roles(...ALL_ROLES)
+  @Post('sessions/revoke-others')
+  @HttpCode(200)
+  @Audited('auth.session.revoked_others', 'user', { writtenByService: true })
+  async revokeOtherSessions(@Req() req: AuthedRequest) {
+    const session = await this.requireSession(req);
+    const revokedSessions = await this.auth.revokeOwnOtherSessions(session);
+    return { status: 'revoked', revokedSessions };
+  }
+
+  @Roles(...ALL_ROLES)
+  @Post('sessions/:id/revoke')
+  @HttpCode(200)
+  @Audited('auth.session.revoked_self', 'session', { writtenByService: true })
+  async revokeSession(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Req() req: AuthedRequest,
+  ) {
+    const session = await this.requireSession(req);
+    await this.auth.revokeOwnSession(session, id);
+    return { status: 'revoked' };
+  }
+
+  /**
+   * Câu chỉ đường cho người quên mật khẩu / mất mã 2 lớp (Q-14) — đọc được khi CHƯA đăng nhập.
+   * Chỉ trả đúng một khoá: mở cả `system_config` cho người lạ là lộ ngưỡng khoá, ân hạn két…
+   */
+  @Public()
+  @Get('support-contact')
+  async supportContact() {
+    return { contact: await this.config.getString('authSupportContact') };
   }
 
   /**
@@ -198,7 +278,7 @@ export class AuthController {
     const user = req.user!;
     const session = await this.requireSession(req);
     // UI cần biết đã cài 2 lớp chưa để đưa về ĐÚNG bước còn thiếu (enroll hay nhập mã).
-    const enrolled = await this.auth.isTotpEnrolled(user.id);
+    const enrolledAt = await this.auth.totpEnrolledAt(user.id);
     const [graceMinutes, revealSeconds] = await Promise.all([
       this.config.getNumber('secretStepUpGraceMinutes'),
       this.config.getNumber('secretRevealSeconds'),
@@ -210,7 +290,9 @@ export class AuthController {
       role: user.role,
       mustChangePassword: user.mustChangePassword,
       totpPending: session.totpPending,
-      totpEnrolled: enrolled,
+      totpEnrolled: enrolledAt !== null,
+      // Màn Hồ sơ hiện "Đã bật từ …" — cùng lượt đọc với cờ trên, không thêm query.
+      totpEnrolledAt: enrolledAt,
       steppedUpAt: session.steppedUpAt,
       csrfToken: session.csrfToken,
       config: { stepUpGraceMinutes: graceMinutes, secretRevealSeconds: revealSeconds },

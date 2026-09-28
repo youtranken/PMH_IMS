@@ -55,6 +55,20 @@ export class TotpEnrollStartDto {
   currentPassword?: string;
 }
 
+/** Cài lại 2 lớp khi đang có 2 lớp: mật khẩu hiện tại là BẮT BUỘC (không có ngoại lệ luồng đăng nhập). */
+export class TotpReEnrollStartDto {
+  @IsString()
+  @MinLength(1, { message: 'Chưa nhập mật khẩu hiện tại.' })
+  @MaxLength(200, { message: 'Mật khẩu hiện tại quá dài (tối đa 200 ký tự).' })
+  currentPassword!: string;
+}
+
+export class TotpReEnrollConfirmDto extends TotpTokenDto {
+  @IsString()
+  @Length(1, 2000, { message: 'Thiếu vé cài lại — bấm Cài lại để bắt đầu lại.' })
+  ticket!: string;
+}
+
 export class ChangePasswordDto {
   @IsString()
   @MinLength(1, { message: 'Chưa nhập mật khẩu hiện tại.' })

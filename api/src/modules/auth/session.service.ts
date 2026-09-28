@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import { Inject, Injectable, type OnModuleInit } from '@nestjs/common';
-import { and, eq, isNull, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, isNull, lt, sql } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -252,6 +252,56 @@ export class SessionService implements OnModuleInit {
       })
       .from(sessionsTable)
       .where(and(eq(sessionsTable.userId, userId), isNull(sessionsTable.revokedAt)));
+  }
+
+  /**
+   * Phiên CÒN SỐNG của một người — màn "Hồ sơ của tôi".
+   *
+   * Khác `listActive` (màn SA) ở chỗ lọc cả hạn idle/tuyệt đối: người dùng đọc danh sách này để
+   * quyết định "có máy lạ nào đang vào tài khoản mình không", và một phiên đã hết hạn nhưng chưa
+   * bị thu hồi thì không vào được nữa — hiện nó ra là báo động giả.
+   */
+  async listAliveForUser(userId: string, idleMinutes: number): Promise<SessionSummary[]> {
+    return this.db
+      .select({
+        id: sessionsTable.id,
+        ip: sessionsTable.ip,
+        userAgent: sessionsTable.userAgent,
+        createdAt: sessionsTable.createdAt,
+        lastSeenAt: sessionsTable.lastSeenAt,
+      })
+      .from(sessionsTable)
+      .where(
+        and(
+          eq(sessionsTable.userId, userId),
+          isNull(sessionsTable.revokedAt),
+          sql`${sessionsTable.absoluteExpiresAt} > now()`,
+          sql`${sessionsTable.lastSeenAt} > now() - make_interval(mins => ${idleMinutes})`,
+        ),
+      )
+      .orderBy(desc(sessionsTable.lastSeenAt));
+  }
+
+  /**
+   * Thu hồi MỘT phiên, chỉ khi nó thuộc `userId` — vị từ chủ sở hữu nằm TRONG câu UPDATE.
+   *
+   * Kiểm "phiên này của ai" bằng một lượt đọc rồi mới ghi thì cửa nằm ở code gọi, và chỉ cần một
+   * chỗ gọi quên là người này đóng được phiên của người khác. Đặt trong WHERE thì không có cách
+   * gọi nào vượt qua được. Trả về `false` khi không khớp (không tồn tại, của người khác, đã chết).
+   */
+  async revokeOwnWithin(tx: Tx, userId: string, id: string, reason: string): Promise<boolean> {
+    const rows = await tx
+      .update(sessionsTable)
+      .set({ revokedAt: new Date(), revokedReason: reason })
+      .where(
+        and(
+          eq(sessionsTable.id, id),
+          eq(sessionsTable.userId, userId),
+          isNull(sessionsTable.revokedAt),
+        ),
+      )
+      .returning({ id: sessionsTable.id });
+    return rows.length === 1;
   }
 
   /**
