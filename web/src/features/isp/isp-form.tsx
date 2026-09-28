@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { CatalogForm } from '@/features/catalog/catalog-form';
+import { useMe } from '@/lib/api';
+import { isIpv4OrCidr } from '@/lib/ipv4';
+import { useConfirm } from '@/ui/confirm-provider';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
@@ -81,9 +85,13 @@ export function IspForm({
     return () => clearTimeout(id);
   }, [query]);
 
+  /*
+   * Chưa gõ gì vẫn hỏi (10 máy đầu): ô mở ra trắng trơn thì người khai không biết đây là ô
+   * tìm hay ô chọn. Đã chọn xong thì thôi hỏi — ô đang hiện đúng mã máy.
+   */
   const candidates = useQuery({
     queryKey: ['devices', 'picker', debounced],
-    enabled: debounced.trim().length >= 2,
+    enabled: device === null,
     queryFn: () =>
       apiFetch<{ items: DeviceRow[] }>(
         `/api/v1/devices?limit=10&usable=true&search=${encodeURIComponent(debounced.trim())}`,
@@ -104,9 +112,17 @@ export function IspForm({
   const check = useFormErrors({
     code: !form.code.trim() && t('formErrors.required'),
     providerId: !form.providerId && t('formErrors.requiredPick'),
+    // IP tĩnh hoặc một khối IP tĩnh — gõ sai thì nói ngay, không để lưu một chuỗi không tra được.
+    wanIp: form.wanIp.trim() !== '' && !isIpv4OrCidr(form.wanIp) && t('isp.wanIpInvalid'),
   });
+  const askConfirm = useConfirm();
+  const me = useMe().data;
+  const canAddProvider = me?.role === 'sa' || me?.role === 'admin';
+  const [addingProvider, setAddingProvider] = useState(false);
+  const queryClient = useQueryClient();
 
   return (
+    <>
     <Dialog
       open
       onOpenChange={onClose}
@@ -131,10 +147,24 @@ export function IspForm({
         id="isp-form"
         ref={check.formRef}
         noValidate
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
           setError(null);
           if (!check.check()) return;
+          /*
+           * Thanh lý là việc KHÔNG nên lỡ tay: nó đổi cả danh sách, và việc thật đi kèm (huỷ
+           * mật khẩu PPPoE trong két, gỡ khỏi Draytek) không tự làm. Hỏi lại và nhắc hai việc
+           * đó — đổi trạng thái khác thì không cần.
+           */
+          if (row && row.status !== 'terminated' && form.status === 'terminated') {
+            const ok = await askConfirm({
+              title: t('isp.terminateTitle', { code: row.code }),
+              message: t('isp.terminateMessage'),
+              confirmLabel: t('isp.statusTerminated'),
+              danger: true,
+            });
+            if (!ok) return;
+          }
           save.mutate(
             {
               code: form.code.trim(),
@@ -207,12 +237,22 @@ export function IspForm({
             label={t('isp.provider')}
             required
             hint={t('isp.providerHint')}
+            htmlFor="isp-provider"
             error={check.error('providerId')}
           >
             {/* Chọn từ danh mục, không gõ tự do (Q-11): chữ gõ tay sinh ra "FPT" / "fpt " là
                 hai nhà mạng khác nhau, và đổi tên trong danh mục không tới được hồ sơ nào.
-                Mục ngừng dùng chỉ còn trong danh sách khi hồ sơ đang trỏ vào nó. */}
+                Mục ngừng dùng chỉ còn trong danh sách khi hồ sơ đang trỏ vào nó.
+                Field chỉ tự nối id/mô tả/lỗi khi có ĐÚNG MỘT đứa con — ở đây có thêm nút
+                "+ Thêm nhà mạng", nên nối tay theo đúng quy ước id của Field. */}
             <Select
+              id="isp-provider"
+              aria-describedby={
+                check.error('providerId')
+                  ? 'isp-provider-error isp-provider-hint'
+                  : 'isp-provider-hint'
+              }
+              aria-invalid={check.error('providerId') ? true : undefined}
               value={form.providerId}
               ariaLabel={t('isp.provider')}
               placeholder={t('isp.providerPlaceholder')}
@@ -221,8 +261,20 @@ export function IspForm({
               options={activeOptions(lists.data?.ispProviders, row?.providerId, (item) => item.name)}
               onChange={(value) => set('providerId', value)}
             />
+            {/* Nhà mạng mới thì khai NGAY tại đây bằng đúng hộp của màn Danh mục (AD-15) —
+                bắt huỷ form sang Danh mục rồi quay lại gõ lại là mất trắng thứ đang khai. */}
+            {canAddProvider ? (
+              <button
+                type="button"
+                className="btn sm ghost"
+                disabled={busy}
+                onClick={() => setAddingProvider(true)}
+              >
+                {t('isp.addProvider')}
+              </button>
+            ) : null}
           </Field>
-          <Field label={t('isp.bandwidth')} htmlFor="isp-bandwidth">
+          <Field label={t('isp.bandwidth')} hint={t('isp.bandwidthHint')} htmlFor="isp-bandwidth">
             <input
               id="isp-bandwidth"
               className="inp"
@@ -231,19 +283,27 @@ export function IspForm({
             />
           </Field>
 
-          <Field label={t('isp.wanIp')} htmlFor="isp-wanip">
+          <Field
+            label={t('isp.wanIp')}
+            hint={t('isp.wanIpHint')}
+            htmlFor="isp-wanip"
+            error={check.error('wanIp')}
+          >
             <input
               id="isp-wanip"
               className="inp mono"
+              inputMode="decimal"
               value={form.wanIp}
               onChange={(e) => set('wanIp', e.target.value)}
             />
           </Field>
           <Field label={t('isp.site')}>
+            {/* Chữ của Ô GHI, không phải của bộ lọc: "Tất cả site" ở đây đọc thành "line này
+                thuộc mọi site". Cùng chữ với form thiết bị. */}
             <Select
               value={form.siteId}
               ariaLabel={t('isp.site')}
-              placeholder={`— ${t('isp.allSites')} —`}
+              placeholder={t('devices.noSitePick')}
               failed={lists.isError}
               options={activeOptions(
                 lists.data?.sites,
@@ -308,6 +368,9 @@ export function IspForm({
             <input
               id="isp-hotline"
               className="inp mono"
+              type="tel"
+              inputMode="tel"
+              placeholder={t('isp.phHotline')}
               value={form.hotline}
               onChange={(e) => set('hotline', e.target.value)}
             />
@@ -358,5 +421,20 @@ export function IspForm({
 
       </form>
     </Dialog>
+
+    {addingProvider ? (
+      <CatalogForm
+        entity="isp_provider"
+        row={null}
+        csrfToken={csrfToken}
+        onClose={() => setAddingProvider(false)}
+        onSaved={(saved) => {
+          setAddingProvider(false);
+          set('providerId', (saved as { id: string }).id);
+          void queryClient.invalidateQueries({ queryKey: ['catalog'] });
+        }}
+      />
+    ) : null}
+    </>
   );
 }

@@ -4,6 +4,7 @@ import { AuditModule } from '../audit/audit.module';
 import { ExpiryModule } from '../expiry/expiry.module';
 import { CatalogModule } from '../catalog/catalog.module';
 import { DevicesModule } from '../devices/devices.module';
+import { UsersModule } from '../users/users.module';
 import { IspDevicePanel } from './isp-device-panel';
 import { SoftwareExpiryRegistrar } from './software-expiry-sources';
 import { LicenseDeviceRetirement } from './license-device-retirement';
@@ -24,7 +25,7 @@ import { SoftwareStatusSweep } from './software-status-sweep';
  * Ra ngoài chỉ xuất `SoftwareApiService` (AD-2).
  */
 @Module({
-  imports: [AuditModule, CatalogModule, DevicesModule, ExpiryModule],
+  imports: [AuditModule, CatalogModule, DevicesModule, ExpiryModule, UsersModule],
   controllers: [SoftwareController, IspLineController],
   providers: [
     ExcelExportService,

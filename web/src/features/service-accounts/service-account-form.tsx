@@ -16,7 +16,8 @@ import { useFormErrors } from '@/ui/use-form-errors';
 import {
   KIND_KEY,
   SERVICE_ACCOUNT_KINDS,
-  STATUS_KEY,
+  allowsAnyIp,
+  invalidAllowedIps,
   supportsVpnFields,
   type ServiceAccountKind,
   type ServiceAccountRow,
@@ -109,8 +110,11 @@ export function ServiceAccountForm({
 
   const vpn = supportsVpnFields(form.kind);
   // Mã suy từ tên đăng nhập — thiếu cả hai thì hồ sơ không có gì để gọi tên.
+  const badIps = vpn ? invalidAllowedIps(form.allowedIps) : [];
   const check = useFormErrors({
     login: !form.code.trim() && !form.login.trim() && t('serviceAccounts.loginOrCodeRequired'),
+    allowedIps:
+      badIps.length > 0 && t('serviceAccounts.allowedIpsInvalid', { list: badIps.join(', ') }),
   });
 
   return (
@@ -272,22 +276,41 @@ export function ServiceAccountForm({
               onChange={(e) => set('login', e.target.value)}
             />
           </Field>
-          <Field label={t('serviceAccounts.kind')} required hint={t('serviceAccounts.kindHint')}>
-            <Select
-              required
-              value={form.kind}
-              ariaLabel={t('serviceAccounts.kind')}
-              options={SERVICE_ACCOUNT_KINDS.map((kind) => ({
-                value: kind,
-                label: t(KIND_KEY[kind]),
-              }))}
-              onChange={(value) => set('kind', value as ServiceAccountKind)}
-            />
-          </Field>
+          {/*
+            Loại CHỈ chọn lúc tạo. Đổi VPN ↔ dùng chung trên một hồ sơ đang có là lặng lẽ xoá
+            nhóm VPN và dải IP (hai trường chỉ thuộc VPN) — và "tài khoản này là VPN hay email
+            chung" là thứ người khác đang tra theo. Khai nhầm loại thì vô hiệu hóa và khai lại.
+          */}
+          {row ? (
+            <Field label={t('serviceAccounts.kind')} hint={t('serviceAccounts.kindLocked')}>
+              <p className="static-value">{t(KIND_KEY[form.kind])}</p>
+            </Field>
+          ) : (
+            <Field label={t('serviceAccounts.kind')} required hint={t('serviceAccounts.kindHint')}>
+              <Select
+                required
+                value={form.kind}
+                ariaLabel={t('serviceAccounts.kind')}
+                options={SERVICE_ACCOUNT_KINDS.map((kind) => ({
+                  value: kind,
+                  label: t(KIND_KEY[kind]),
+                }))}
+                onChange={(value) => set('kind', value as ServiceAccountKind)}
+              />
+            </Field>
+          )}
 
+          {/* Mã là thứ người khác tra theo (phiếu, email, két): vẫn sửa được khi khai nhầm, nhưng
+              nói trước hậu quả ngay khi nó bị đổi. */}
           <Field
             label={t('serviceAccounts.code')}
-            hint={row ? undefined : t('serviceAccounts.codeAutoHint')}
+            hint={
+              row
+                ? form.code.trim() !== row.code
+                  ? t('serviceAccounts.codeChangeWarn', { code: row.code })
+                  : undefined
+                : t('serviceAccounts.codeAutoHint')
+            }
             htmlFor="sa-code"
           >
             <input
@@ -312,16 +335,11 @@ export function ServiceAccountForm({
             />
           </Field>
           {/*
-            Trạng thái là thứ CHỈ ĐỌC ở đây.
-            Đổi nó phải đi qua `PATCH :id/disable` hoặc `:id/enable` — hai đường DUY NHẤT bắt
-            ghi lý do và ghi một dòng lịch sử nói đúng việc vừa làm. Để nó thành một ô chọn
-            bình thường thì người dùng đóng/mở qua `PATCH` thường: không lý do, lịch sử chỉ ghi
-            "Sửa hồ sơ", và cái luật "sáu tháng sau sẽ có người hỏi vì sao" thành ra không ai
-            thi hành được. API cũng đã bỏ hẳn `status` khỏi DTO sửa, không chỉ ẩn ở giao diện.
+            KHÔNG có ô Trạng thái trong form — kể cả ô chỉ đọc. Đổi trạng thái đi `PATCH
+            :id/disable` / `:id/enable` (menu ⋯ ở trang hồ sơ và danh sách), hai đường DUY NHẤT
+            bắt ghi lý do; API đã bỏ `status` khỏi DTO sửa. Một ô chữ chết chiếm cả một ô lưới
+            chỉ để nói "không sửa ở đây" là tốn chỗ cho một câu trạng thái đã có ở đầu trang.
           */}
-          <Field label={t('serviceAccounts.status')} hint={row ? t('serviceAccounts.statusHint') : undefined}>
-            <p className="static-value">{t(STATUS_KEY[form.status])}</p>
-          </Field>
         </FormSection>
 
         <FormSection title={t('serviceAccounts.sectionOwner')} columns={3}>
@@ -361,18 +379,26 @@ export function ServiceAccountForm({
               hint={t('serviceAccounts.groupNameHint')}
               htmlFor="sa-group"
             >
+              {/* Không mono: tên nhóm do người đặt ("VPN kinh doanh"), không phải mã hay IP. */}
               <input
                 id="sa-group"
-                className="inp mono"
+                className="inp"
                 value={form.groupName}
                 onChange={(e) => set('groupName', e.target.value)}
               />
             </Field>
+            {/* Kiểm TỪNG mục ngay khi gõ (lỗi chặn lưu), và "mọi IP" (trống / 0.0.0.0/0) nói
+                ra ngay ở dòng gợi ý — VPN mở cho mọi IP nguồn phải là quyết định có chủ ý. */}
             <Field
               label={t('serviceAccounts.allowedIps')}
-              hint={t('serviceAccounts.allowedIpsHint')}
+              hint={
+                allowsAnyIp(form.kind, form.allowedIps)
+                  ? t('serviceAccounts.allowedIpsAnyWarn')
+                  : t('serviceAccounts.allowedIpsHint')
+              }
               htmlFor="sa-ips"
               span={2}
+              error={check.error('allowedIps')}
             >
               <textarea
                 id="sa-ips"

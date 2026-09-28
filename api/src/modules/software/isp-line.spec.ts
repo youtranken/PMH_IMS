@@ -8,6 +8,7 @@ import { IspBodyDto, IspLineController } from './isp-line.controller';
 import { ISP_SORT_KEYS, IspLineService } from './isp-line.service';
 import { SoftwareExpiryRegistrar } from './software-expiry-sources';
 import type { SoftwareService } from './software.service';
+import type { UsersApiService } from '../users/users.api';
 
 /**
  * Q-04 (`docs/QUYET-DINH.md`): đường truyền KHÔNG có hạn. Một line sống tới khi thanh lý, nên
@@ -98,10 +99,15 @@ describe('Q-04 · đường truyền không có ngày kết thúc', () => {
     const isp = { listAll: () => Promise.resolve([]) } as unknown as IspLineService;
     const res = { setHeader: () => undefined, end: () => undefined } as unknown as Response;
 
-    await new IspLineController(isp, excel).export({}, res);
+    await new IspLineController(isp, excel, {} as UsersApiService).export({}, res);
 
     const headers = captured.map((column) => column.header);
     expect(headers).not.toContain('Hết hạn');
+    // File xuất khớp bảng trên màn: có Site, thiết bị biên và ghi chú.
+    expect(headers).toEqual(expect.arrayContaining(['Site', 'Thiết bị biên', 'Ghi chú']));
+    const site = captured.find((column) => column.header === 'Site')!;
+    expect(site.value({ siteCode: 'E2E-HCM' })).toBe('E2E-HCM');
+    expect(site.value({ siteCode: null })).toBe('');
     const status = captured.find((column) => column.header === 'Trạng thái')!;
     expect(status.value({ status: 'terminated' })).toBe('Thanh lý');
     expect(status.value({ status: 'active' })).toBe('Đang dùng');

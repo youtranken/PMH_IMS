@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { AuditModule } from '../audit/audit.module';
+import { UsersModule } from '../users/users.module';
 import { ServiceAccountController } from './service-account.controller';
 import { ServiceAccountService } from './service-account.service';
 import { ServiceAccountOwnerResolver } from './service-account-owner-resolver';
@@ -11,13 +13,14 @@ import { ServiceAccountsApiService } from './service-accounts.api';
  * Ra ngoài chỉ xuất `ServiceAccountsApiService` (AD-2).
  */
 @Module({
-  imports: [AuditModule],
+  imports: [AuditModule, UsersModule],
   controllers: [ServiceAccountController],
   providers: [
     ServiceAccountService,
     ServiceAccountsApiService,
     ServiceAccountOwnerResolver,
     ServiceAccountAuditLabeler,
+    ExcelExportService,
   ],
   exports: [ServiceAccountsApiService],
 })

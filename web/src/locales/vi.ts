@@ -580,6 +580,12 @@ export default {
   attachments: {
     title: 'Giấy tờ đính kèm',
     hint: 'Hóa đơn, biên bản bàn giao, phiếu bảo hành… Nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
+    hint_isp: 'Hợp đồng, phụ lục, biên bản bàn giao IP tĩnh… Nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
+    hint_service_account:
+      'File cấu hình VPN, phiếu yêu cầu cấp tài khoản… KHÔNG đính mật khẩu. Nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
+    hint_subnet: 'Sơ đồ mạng, biên bản bàn giao dải IP… Nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
+    hint_nat_rule:
+      'Ảnh chụp cấu hình router, email xác nhận mở port… Nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
     pick: 'Chọn file để đính kèm',
     upload: 'Tải lên',
     uploading: 'Đang tải lên…',
@@ -778,7 +784,7 @@ export default {
     code: 'Mã đường',
     provider: 'Nhà mạng',
     providerPlaceholder: '— Chọn nhà mạng —',
-    providerHint: 'Chọn từ danh mục Nhà mạng. Nhà mạng mới thì khai vào Danh mục trước.',
+    providerHint: 'Chọn từ danh mục Nhà mạng. Chưa có thì bấm "+ Thêm vào danh mục" ngay dưới.',
     bandwidth: 'Băng thông',
     wanIp: 'IP WAN',
     site: 'Site',
@@ -808,6 +814,34 @@ export default {
     tabProfile: 'Hồ sơ',
     tabAttachments: 'Giấy tờ',
     tabHistory: 'Lịch sử',
+    allProviders: 'Mọi nhà mạng',
+    liveStatuses: 'Còn hiệu lực (đang dùng + tạm ngưng)',
+    wanIpInvalid: 'IP WAN phải là một IPv4 (113.161.10.20) hoặc một khối IP (113.161.10.16/29).',
+    wanIpHint: 'IP tĩnh, hoặc cả khối IP tĩnh nhà mạng cấp (vd 113.161.10.16/29).',
+    bandwidthHint: 'vd 300 Mbps, 1 Gbps.',
+    phHotline: 'vd 1800 1166',
+    addProvider: '+ Thêm vào danh mục',
+    terminateTitle: 'Thanh lý đường truyền {{code}}?',
+    terminateMessage:
+      'Đường này rời khỏi danh sách mặc định. Nhớ hủy mật khẩu PPPoE/modem trong két và gỡ đường khỏi thiết bị biên — hai việc đó không tự làm.',
+    liquidatedUnknown: 'Đường truyền này đã thanh lý (chưa rõ ngày — hồ sơ cũ không ghi mốc).',
+    incidentCard: 'Khi mất mạng',
+    callHotline: 'Gọi {{hotline}}',
+    copyContractNo: 'Chép số hợp đồng',
+    natOnDevice: 'Rule NAT trên thiết bị này',
+    suspendMenu: 'Tạm ngưng…',
+    reactivateMenu: 'Dùng lại…',
+    terminateMenu: 'Thanh lý…',
+    statusTitle_active: 'Dùng lại đường truyền {{code}}?',
+    statusTitle_suspended: 'Tạm ngưng đường truyền {{code}}?',
+    statusTitle_terminated: 'Thanh lý đường truyền {{code}}?',
+    statusMessage_active: 'Đường này trở lại "Đang dùng". Lịch sử ghi lại ai đổi, lúc nào.',
+    statusMessage_suspended:
+      'Đường vẫn nằm trong danh sách, mang nhãn "Tạm ngưng" (vd nhà mạng tạm cắt, đang chờ thanh toán). Lịch sử ghi lại ai đổi, lúc nào.',
+    statusMessage_terminated:
+      'Đường này rời khỏi danh sách mặc định, và hợp đồng coi như đã cắt.',
+    terminateVault: 'Két còn {{count}} secret của đường này — hủy hoặc xoay nếu không còn dùng.',
+    terminateDevice: 'Đường đang gắn với {{device}} — gỡ nó khỏi thiết bị biên nếu đã rút cáp.',
   },
   expiry: {
     /*
@@ -1438,8 +1472,6 @@ export default {
     statusActive: 'Đang dùng',
     /* Cùng chữ với `accounts.statusDisabled` và `disposal.statusDisabled` — ba màn, một trạng thái. */
     statusDisabled: 'Đã vô hiệu hóa',
-    statusHint:
-      'Đổi bằng "Vô hiệu hóa…" / "Bật lại…" trong menu ⋯ ở đầu trang hồ sơ (hoặc ngoài danh sách) — đường đó bắt ghi lý do.',
     disableMenu: 'Vô hiệu hóa…',
     enableMenu: 'Bật lại…',
     copyLogin: 'Chép tên đăng nhập',
@@ -1480,6 +1512,25 @@ export default {
     tabProfile: 'Hồ sơ',
     tabAttachments: 'Giấy tờ',
     tabHistory: 'Lịch sử',
+    kindSharedShort: 'Dùng chung',
+    kindVpnShort: 'VPN',
+    sortBy: 'Sắp theo',
+    sortByCode: 'Sắp theo mã',
+    sortByName: 'Sắp theo tên',
+    disabledBy: 'Vô hiệu hóa ngày {{date}} bởi {{by}} — lý do: {{reason}}',
+    anyIp: 'Mọi IP',
+    anyIpTitle:
+      'VPN này nhận kết nối từ MỌI địa chỉ IP nguồn (dải trống hoặc 0.0.0.0/0). Giới hạn về IP văn phòng / nhà mạng nếu có thể.',
+    createdBy: 'Khai bởi',
+    kindLocked: 'Loại chỉ chọn lúc tạo — đổi loại là mất nhóm VPN và dải IP. Khai nhầm thì vô hiệu hóa và khai lại.',
+    codeChangeWarn: 'Đang đổi mã "{{code}}" — phiếu, email hay két đang ghi mã cũ sẽ không tra ra nữa.',
+    allowedIpsInvalid: 'Không phải IP hay dải CIDR: {{list}}',
+    allowedIpsAnyWarn:
+      'Đang để MỌI IP được vào (trống hoặc 0.0.0.0/0). Ghi IP văn phòng / nhà mạng nếu có thể, vd 203.113.1.5, 118.70.2.0/24.',
+    checkLegend: 'Việc cần làm ngoài IMS (tick việc đã làm — sẽ ghi vào lịch sử):',
+    checkLockedAtSource: 'đã khóa tài khoản trên hệ thống gốc (VPN / Mail)',
+    checkSecretHandled: 'đã hủy hoặc xoay mật khẩu trong két',
+    checkDone: 'đã làm',
   },
   /**
    * Nhãn LOẠI CHỦ THỂ cất secret — dùng chung cho trang tổng két và màn Duyệt yêu cầu.

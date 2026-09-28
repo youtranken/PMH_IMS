@@ -44,6 +44,30 @@ describe('toIspHistory — Q-04: ba trạng thái Đang dùng / Tạm ngưng / T
     expect(entry.action).toBe('Gia hạn hợp đồng');
     expect(entry.detail).toBe('ngày hết hạn: 2026-08-30 → 2027-08-30');
   });
+
+  it('dòng "Tạo hồ sơ" liệt kê giá trị ban đầu — không có "(trống) →" và bỏ ô trống', () => {
+    const [entry] = toIspHistory(
+      [
+        row({
+          action: 'created',
+          changes: {
+            code: { before: null, after: 'ISP-E2E-01' },
+            hotline: { before: null, after: '1800 1166' },
+            note: { before: null, after: null },
+          },
+        }),
+      ],
+      t,
+    );
+    expect(entry.action).toBe('Tạo hồ sơ');
+    expect(entry.detail).toBe('mã đường: ISP-E2E-01; hotline: 1800 1166');
+  });
+
+  it('người làm hiện bằng họ tên khi API tra được', () => {
+    const [entry] = toIspHistory([row({ actorName: 'Lê Minh' })], t);
+    expect(entry.actorName).toBe('Lê Minh');
+    expect(entry.actor).toBe('it01@pmh.com.vn');
+  });
 });
 
 describe('liquidationOf — ai thanh lý, lúc nào', () => {

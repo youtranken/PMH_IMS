@@ -19,6 +19,7 @@ import { IspForm } from './isp-form';
 import { ISP_STATUSES, STATUS_KEY, STATUS_TONE, type IspRow, type IspStatus } from './isp-types';
 import { PATHS } from '@/lib/routes';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
+import { CopyButton } from '@/ui/copy-button';
 
 const DEFAULT_LIMIT = 20;
 
@@ -27,12 +28,18 @@ const DEFAULT_LIMIT = 20;
 interface Filters extends Record<string, string> {
   search: string;
   siteId: string;
-  status: '' | IspStatus;
+  providerId: string;
+  /**
+   * `''` (mặc định) = đường CÒN HIỆU LỰC (đang dùng + tạm ngưng): lúc sự cố người đọc không
+   * phải lọc bằng mắt mấy đường đã thanh lý. `'all'` = mọi trạng thái.
+   */
+  status: '' | 'all' | IspStatus;
 }
 
 const EMPTY_FILTERS: Filters = {
   search: '',
   siteId: '',
+  providerId: '',
   status: '',
 };
 
@@ -99,9 +106,19 @@ export function IspScreen({ me }: { me: Me }) {
         accessorKey: 'code',
         header: t('isp.code'),
         cell: ({ row }) => (
-          <Link className="mono" to={PATHS.ispLine(row.original.id)}>
-            {row.original.code}
-          </Link>
+          <>
+            <Link className="mono" to={PATHS.ispLine(row.original.id)}>
+              {row.original.code}
+            </Link>
+            {/* IP WAN là câu thứ hai lúc mất mạng ("IP tĩnh của line này là gì") — dòng phụ
+                ngay dưới mã, chép được, không phải mở trang chi tiết. */}
+            {row.original.wanIp ? (
+              <span className="cell-sub">
+                <span className="mono">{row.original.wanIp}</span>{' '}
+                <CopyButton value={row.original.wanIp} label={t('isp.copyWanIp')} inline />
+              </span>
+            ) : null}
+          </>
         ),
       },
       {
@@ -116,11 +133,27 @@ export function IspScreen({ me }: { me: Me }) {
           </>
         ),
       },
+      /* `mono` đặt lên CHÍNH giá trị, không lên `<td>`: đặt lên ô thì dấu "—" của ô rỗng và cả
+         nhãn `data-label` ở thẻ dọc điện thoại cũng thành mono, lệch hẳn các cột khác. */
       {
         id: 'siteCode',
         header: t('isp.site'),
-        meta: { className: 'mono' },
-        cell: ({ row }) => orDash(row.original.siteCode),
+        cell: ({ row }) =>
+          row.original.siteCode ? <span className="mono">{row.original.siteCode}</span> : orDash(null),
+      },
+      {
+        // Không sắp được — mã thiết bị tra qua DevicesApiService, sắp theo nó đòi join sang
+        // bảng của module khác (AD-2), cùng lý do cột Site.
+        id: 'deviceCode',
+        header: t('isp.device'),
+        cell: ({ row }) =>
+          row.original.deviceId ? (
+            <Link className="mono" to={PATHS.device(row.original.deviceId)}>
+              {row.original.deviceCode}
+            </Link>
+          ) : (
+            orDash(null)
+          ),
       },
       {
         accessorKey: 'hotline',
@@ -138,8 +171,12 @@ export function IspScreen({ me }: { me: Me }) {
       {
         accessorKey: 'contractNo',
         header: t('isp.contractNo'),
-        meta: { className: 'mono' },
-        cell: ({ row }) => orDash(row.original.contractNo),
+        cell: ({ row }) =>
+          row.original.contractNo ? (
+            <span className="mono">{row.original.contractNo}</span>
+          ) : (
+            orDash(null)
+          ),
       },
       {
         accessorKey: 'status',
@@ -192,11 +229,26 @@ export function IspScreen({ me }: { me: Me }) {
           onChange={(value) => setFilter('siteId', value)}
         />
         <Select
+          value={filters.providerId}
+          ariaLabel={t('isp.provider')}
+          placeholder={t('isp.allProviders')}
+          options={[
+            { value: '', label: t('isp.allProviders') },
+            ...(lists.data?.ispProviders ?? []).map((provider) => ({
+              value: provider.id,
+              label: provider.name,
+            })),
+          ]}
+          failed={lists.isError}
+          onChange={(value) => setFilter('providerId', value)}
+        />
+        <Select
           value={filters.status}
           ariaLabel={t('isp.status')}
-          placeholder={t('isp.allStatuses')}
+          placeholder={t('isp.liveStatuses')}
           options={[
-            { value: '', label: t('isp.allStatuses') },
+            { value: '', label: t('isp.liveStatuses') },
+            { value: 'all', label: t('isp.allStatuses') },
             ...ISP_STATUSES.map((status) => ({ value: status, label: t(STATUS_KEY[status]) })),
           ]}
           onChange={(value) => setFilter('status', value as Filters['status'])}
@@ -222,6 +274,8 @@ export function IspScreen({ me }: { me: Me }) {
             columns={columns}
             emptyText={url.isFiltered ? t('isp.emptyFiltered') : t('isp.empty')}
             stackOnMobile
+            // Tạm ngưng: vạch cam ở mép trái — đường đang "nửa sống" là thứ phải thấy từ xa.
+            rowClassName={(row) => (row.status === 'suspended' ? 'row-suspended' : '')}
             manualSorting
             sorting={sorting}
             onSortingChange={(updater) => {
@@ -275,6 +329,9 @@ function buildFilterQuery(filters: Filters): string {
   const params = new URLSearchParams();
   if (filters.search.trim()) params.set('search', filters.search.trim());
   if (filters.siteId) params.set('siteId', filters.siteId);
-  if (filters.status) params.set('status', filters.status);
+  if (filters.providerId) params.set('providerId', filters.providerId);
+  // Mặc định: chỉ đường còn hiệu lực. `all` thì không gửi gì — API trả mọi trạng thái.
+  if (filters.status === '') params.set('status', 'active,suspended');
+  else if (filters.status !== 'all') params.set('status', filters.status);
   return params.toString();
 }

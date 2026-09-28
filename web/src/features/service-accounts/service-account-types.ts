@@ -1,3 +1,5 @@
+import { isIpv4OrCidr } from '@/lib/ipv4';
+
 export const SERVICE_ACCOUNT_KINDS = ['shared', 'vpn'] as const;
 export type ServiceAccountKind = (typeof SERVICE_ACCOUNT_KINDS)[number];
 
@@ -29,12 +31,55 @@ export interface ServiceAccountHistoryRow {
   actor: string;
   changes: Record<string, { before: unknown; after: unknown }> | null;
   createdAt: string;
+  /** Họ tên người làm — API tra theo email (`withActorNames`); vắng thì hiện email. */
+  actorName?: string | null;
 }
 
 export const KIND_KEY: Record<ServiceAccountKind, string> = {
   shared: 'serviceAccounts.kindShared',
   vpn: 'serviceAccounts.kindVpn',
 };
+
+/**
+ * Nhãn NGẮN cho chip loại trên bảng — cả màn đã tên "Tài khoản dịch vụ", lặp chữ "Tài khoản"
+ * ở mọi dòng chỉ làm cột Loại rộng ra. Ô chọn trong form/bộ lọc vẫn dùng tên đầy đủ.
+ */
+export const KIND_SHORT_KEY: Record<ServiceAccountKind, string> = {
+  shared: 'serviceAccounts.kindSharedShort',
+  vpn: 'serviceAccounts.kindVpnShort',
+};
+
+/** Hai loại hai màu, lấy từ token qua lớp `.badge` — liếc là tách được VPN khỏi dùng chung. */
+export const KIND_TONE: Record<ServiceAccountKind, string> = {
+  shared: 'muted',
+  vpn: 'brand',
+};
+
+/**
+ * Dải IP được phép "mọi nơi": trống, hoặc có 0.0.0.0/0. Với tài khoản VPN đó là điều người
+ * kiểm toán phải thấy ngay — VPN mở cho mọi IP nguồn.
+ */
+export function allowsAnyIp(kind: ServiceAccountKind, allowedIps: string | null): boolean {
+  if (kind !== 'vpn') return false;
+  const entries = splitAllowedIps(allowedIps ?? '');
+  return entries.length === 0 || entries.includes('0.0.0.0/0');
+}
+
+/** Các mục của ô "Dải IP được phép" — ngăn bằng phẩy, chấm phẩy hoặc xuống dòng (cùng `checkAllowedIps` của API). */
+function splitAllowedIps(text: string): string[] {
+  return text
+    .split(/[,\n;]+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Những mục KHÔNG phải IPv4 hay CIDR — báo ngay dưới ô khi gõ, thay vì đợi API từ chối lúc
+ * bấm Lưu. API (`service-account-rules.ts`) vẫn là hàng rào thật.
+ */
+export function invalidAllowedIps(text: string): string[] {
+  return splitAllowedIps(text).filter((entry) => !isIpv4OrCidr(entry));
+}
 
 export const STATUS_KEY: Record<ServiceAccountStatus, string> = {
   active: 'serviceAccounts.statusActive',

@@ -48,8 +48,9 @@ export function toIspHistory(rows: IspHistoryRow[], t: TFunction): HistoryEntry[
     id: row.id,
     at: row.createdAt,
     actor: row.actor,
+    actorName: row.actorName ?? undefined,
     action: actionLabel(row, t),
-    detail: describe(row.changes, t),
+    detail: describe(row.changes, t, row.action === 'created'),
   }));
 }
 
@@ -76,12 +77,14 @@ function statusAfter(row: IspHistoryRow): unknown {
 export function liquidationOf(rows: IspHistoryRow[]): { at: string; actor: string } | null {
   const latest = rows.find((row) => statusAfter(row) !== undefined);
   if (!latest || statusAfter(latest) !== 'terminated') return null;
-  return { at: latest.createdAt, actor: latest.actor };
+  // Họ tên khi API tra được — "bởi Lê Minh" đọc được, email thì phải tự dịch ra người.
+  return { at: latest.createdAt, actor: latest.actorName ?? latest.actor };
 }
 
 /** Nhãn + cách đọc riêng của màn này; phần chung ở `ui/history-changes.ts` (AD-15). */
-function describe(changes: FieldChanges, t: TFunction): string | null {
+function describe(changes: FieldChanges, t: TFunction, initial: boolean): string | null {
   return describeFieldChanges(changes, t, {
+    initial,
     label: (field) => (FIELD_LABEL[field] ? t(FIELD_LABEL[field]) : field),
     display: (field, value) => {
       if (field !== 'status' || value === null || value === undefined || value === '') return undefined;

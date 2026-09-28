@@ -5578,11 +5578,12 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     // ĐỦ CỘT, ĐÚNG THỨ TỰ. Cột rơi mất là một thông tin không ai còn đọc được trên danh sách.
     expect(
       await tenCotBang(main),
-      'Bảng đường truyền phải có đúng 6 cột, đúng thứ tự của `isp-screen.tsx` — không có cột hạn (Q-04)',
+      'Bảng đường truyền phải có đúng 7 cột, đúng thứ tự của `isp-screen.tsx` — không có cột hạn (Q-04)',
     ).toEqual([
       'Mã đường',
       'Nhà mạng',
       'Site',
+      'Thiết bị biên',
       'Hotline',
       'Số hợp đồng',
       'Trạng thái',
@@ -5636,6 +5637,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Xuất Excel',
         'Thêm đường truyền',
         'Site',
+        'Nhà mạng',
         'Trạng thái',
         'Sắp xếp theo Mã đường',
         'Sắp xếp theo Nhà mạng',
@@ -5733,6 +5735,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       sap([
         'Đóng hộp thoại',
         'Nhà mạng',
+        // Nhà mạng mới khai ngay tại chỗ (SA/Admin) — không bắt huỷ form sang Danh mục.
+        '+ Thêm vào danh mục',
         'Site',
         'Bắt đầu',
         'Chọn file để đính kèm',
@@ -5870,8 +5874,13 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      */
     expect(
       await tenTheoVaiTro(main, 'button'),
-      'Đầu trang hồ sơ đường truyền có đúng hai nút: Chép IP WAN · Sửa hồ sơ',
-    ).toEqual(sap(['Chép IP WAN', 'Sửa hồ sơ']));
+      'Đầu trang hồ sơ đường truyền: Chép IP WAN · Sửa hồ sơ · menu ⋯ (đổi trạng thái) · Chép số hợp đồng (thẻ "Khi mất mạng")',
+    ).toEqual(sap(['Chép IP WAN', 'Sửa hồ sơ', `Thao tác với ${ma}`, 'Chép số hợp đồng']));
+    // Thẻ "Khi mất mạng": gọi hotline là MỘT cú chạm.
+    await expect(main.getByRole('link', { name: 'Gọi 18001166' })).toHaveAttribute(
+      'href',
+      'tel:18001166',
+    );
 
     /*
      * BỐN TAB, ĐÚNG THỨ TỰ. Nhãn hai tab giữa có số đếm nối sau ("Két sắt 0"), nên cắt phần số
@@ -6214,9 +6223,11 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       'Bộ nút của màn Tài khoản dịch vụ khi đăng nhập bằng SA',
     ).toEqual(
       sap([
+        'Xuất Excel',
         'Thêm tài khoản',
         'Loại',
         'Trạng thái',
+        'Sắp theo',
         'Sắp xếp theo Mã tài khoản',
         'Sắp xếp theo Loại',
         'Sắp xếp theo Trạng thái',
@@ -6294,11 +6305,13 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toEqual(['Mã tài khoản', 'Loại', 'Tên đăng nhập', 'Thuộc về', 'Trạng thái']);
     expect(
       await tenTheoVaiTro(mainMember, 'button'),
-      'Bộ nút của Thành viên: không có "Thêm tài khoản", không có một nút ba chấm nào',
+      'Bộ nút của Thành viên: không có "Thêm tài khoản", không có một nút ba chấm nào (Xuất Excel thì có — file không chứa mật khẩu)',
     ).toEqual(
       sap([
+        'Xuất Excel',
         'Loại',
         'Trạng thái',
+        'Sắp theo',
         'Sắp xếp theo Mã tài khoản',
         'Sắp xếp theo Loại',
         'Sắp xếp theo Trạng thái',
@@ -6400,14 +6413,14 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await expect(oMatKhau, 'Ô mật khẩu phải là ô che ký tự').toHaveAttribute('type', 'password');
 
     /*
-     * Ô TRẠNG THÁI LÀ CHỮ CHẾT, không phải ô chọn — đổi trạng thái bắt buộc đi qua hộp riêng
-     * có ghi lý do. (Tập hợp nút ở trên đã nói điều này; câu dưới nói ra thành lời.)
+     * KHÔNG có ô Trạng thái trong form — đổi trạng thái bắt buộc đi qua hộp riêng có ghi lý do.
+     * (Tập hợp nút ở trên đã nói điều này; câu dưới nói ra thành lời.)
      */
     await expect(
       hop.getByRole('button', { name: 'Trạng thái', exact: true }),
-      'Trạng thái trong form là CHỈ ĐỌC — có ô chọn ở đây là mở cửa sau cho lượt đóng không lý do',
+      'Có ô chọn trạng thái ở đây là mở cửa sau cho lượt đóng không lý do',
     ).toHaveCount(0);
-    await expect(hop.getByText('Đang dùng', { exact: true })).toBeVisible();
+    await expect(hop.getByText('Trạng thái', { exact: true })).toHaveCount(0);
 
     /*
      * ===== ĐỔI LOẠI: HÌNH DẠNG PHẢI ĐỔI THEO =====

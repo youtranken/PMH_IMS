@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { IsIn, IsOptional, IsString, IsUUID, Length, ValidateIf } from 'class-validator';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
@@ -16,6 +17,14 @@ import {
   ServiceAccountService,
 } from './service-account.service';
 import { NoStepUp } from '../auth/step-up.decorator';
+import { UsersApiService } from '../users/users.api';
+import { withActorNames } from '../../common/history';
+import { ExcelExportService } from '../../common/excel/excel-export.service';
+import { sendXlsx } from '../../common/excel/xlsx-http';
+
+/** Chữ trong file xuất — cùng chữ với màn danh sách (`serviceAccounts.kind*Short`). */
+const KIND_LABEL: Record<string, string> = { shared: 'Dùng chung', vpn: 'VPN' };
+const STATUS_LABEL: Record<string, string> = { active: 'Đang dùng', disabled: 'Đã vô hiệu hóa' };
 
 class IdParamDto {
   @IsUUID(undefined, { message: 'Mã tài khoản dịch vụ không hợp lệ.' })
@@ -89,7 +98,11 @@ class EnableDto {
 @NoStepUp()
 @Controller('api/v1/service-accounts')
 export class ServiceAccountController {
-  constructor(private readonly accounts: ServiceAccountService) {}
+  constructor(
+    private readonly accounts: ServiceAccountService,
+    private readonly excel: ExcelExportService,
+    private readonly users: UsersApiService,
+  ) {}
 
   @Roles('sa', 'admin', 'member')
   @Get()
@@ -112,6 +125,50 @@ export class ServiceAccountController {
     );
   }
 
+  /**
+   * FR-028: xuất đúng bộ lọc và thứ tự đang xem. KHÔNG có cột mật khẩu nào — mật khẩu ở két
+   * và không có đường xuất két (FR-026); file này chỉ trả lời "công ty có những tài khoản dùng
+   * chung nào, ai giữ".
+   *
+   * Khai TRƯỚC `@Get(':id')` — Nest khớp route theo thứ tự khai báo, để sau thì `:id` nuốt mất.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Audited('service_account.exported', 'service_account')
+  @Get('export.xlsx')
+  async export(
+    @Query()
+    query: {
+      search?: string;
+      kind?: ServiceAccountKind;
+      status?: ServiceAccountStatus;
+      sort?: string;
+      dir?: string;
+    },
+    @Res() res: Response,
+  ) {
+    const rows = await this.accounts.listAll(
+      { search: query.search, kind: query.kind, status: query.status },
+      parseSortQuery(query, SERVICE_ACCOUNT_SORT_KEYS, SERVICE_ACCOUNT_SORT_DEFAULT),
+    );
+    const buffer = await this.excel.build({
+      sheetName: 'Tai khoan dich vu',
+      columns: [
+        { header: 'Mã', width: 18, value: (r) => r.code },
+        { header: 'Tên', width: 28, value: (r) => r.name },
+        { header: 'Loại', width: 12, value: (r) => KIND_LABEL[r.kind] ?? r.kind },
+        { header: 'Tên đăng nhập', width: 28, value: (r) => r.login ?? '' },
+        { header: 'Bộ phận', width: 20, value: (r) => r.department ?? '' },
+        { header: 'Người phụ trách', width: 22, value: (r) => r.ownerName ?? '' },
+        { header: 'Nhóm VPN', width: 18, value: (r) => r.groupName ?? '' },
+        { header: 'Dải IP được phép', width: 28, value: (r) => r.allowedIps ?? '' },
+        { header: 'Trạng thái', width: 16, value: (r) => STATUS_LABEL[r.status] ?? r.status },
+        { header: 'Ghi chú', width: 30, value: (r) => r.note ?? '' },
+      ],
+      rows,
+    });
+    sendXlsx(res, buffer, 'tai-khoan-dich-vu.xlsx');
+  }
+
   @Roles('sa', 'admin', 'member')
   @Get(':id')
   findOne(@Param() params: IdParamDto) {
@@ -120,8 +177,10 @@ export class ServiceAccountController {
 
   @Roles('sa', 'admin', 'member')
   @Get(':id/history')
-  history(@Param() params: IdParamDto) {
-    return this.accounts.history(params.id);
+  async history(@Param() params: IdParamDto) {
+    return withActorNames(await this.accounts.history(params.id), (emails) =>
+      this.users.namesByEmails(emails),
+    );
   }
 
   @Roles('sa', 'admin')

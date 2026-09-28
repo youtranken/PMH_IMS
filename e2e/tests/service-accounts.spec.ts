@@ -349,11 +349,13 @@ test.describe('Tài khoản dịch vụ', () => {
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row.getByText('Đang dùng')).toBeVisible();
 
-    // Cửa sau đã khóa: form Sửa chỉ HIỆN trạng thái, không cho chọn.
+    // Cửa sau đã khóa: form Sửa KHÔNG có ô Trạng thái nào; Loại cũng chỉ đọc (chọn lúc tạo).
     await rowAction(page, code, 'Sửa');
     const editForm = page.getByRole('dialog');
-    await expect(editForm.getByText('Đang dùng')).toBeVisible();
+    await expect(editForm.getByText('Đang dùng')).toHaveCount(0);
     await expect(editForm.getByRole('button', { name: 'Trạng thái', exact: true })).toHaveCount(0);
+    await expect(editForm.getByRole('button', { name: 'Loại', exact: true })).toHaveCount(0);
+    await expect(editForm.getByText('Tài khoản dùng chung', { exact: true })).toBeVisible();
     await editForm.getByRole('button', { name: 'Hủy' }).click();
 
     // Cửa trước: nút riêng ngoài danh sách, và nó BẮT lý do.
@@ -375,6 +377,49 @@ test.describe('Tài khoản dịch vụ', () => {
     await expect(entry).toBeVisible();
     await expect(entry).toContainText('nhân sự phụ trách đã nghỉ');
     await expect(entry).toContainText('Đang dùng → Đã vô hiệu hóa');
+
+    // Và nói NGAY đầu trang hồ sơ — không bắt mở tab Lịch sử mới biết ai đóng, vì sao.
+    await page.goto(`/service-accounts/${id}`);
+    await expect(
+      page.getByText(/Vô hiệu hóa ngày \d{2}\/\d{2}\/\d{4} bởi .+ — lý do: nhân sự phụ trách đã nghỉ/),
+    ).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Bật lại…' })).toBeVisible();
+  });
+
+  test('VPN mở mọi IP mang huy hiệu; dải IP gõ sai báo ngay; danh sách xuất được Excel', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const code = `VPN-E2E-ANY-${stamp}`;
+    const created = await createViaApi(page, {
+      code,
+      kind: 'vpn',
+      name: 'VPN mở mọi IP',
+      login: `vpn-any-${stamp}`,
+      allowedIps: '0.0.0.0/0',
+    });
+    expect(created.status).toBe(201);
+
+    await page.goto(`/service-accounts/${String(created.body.id)}`);
+    await expect(page.getByText('Mọi IP', { exact: true })).toBeVisible();
+
+    // Đường hỏng: sửa dải IP thành một chuỗi không phải IP → lỗi dưới ô, hộp ở lại.
+    await page.getByRole('button', { name: 'Sửa hồ sơ' }).click();
+    const form = page.getByRole('dialog');
+    await form.getByRole('textbox', { name: 'Dải IP được phép' }).fill('203.113.1, 10.0.0.0/8');
+    await form.getByRole('button', { name: 'Lưu' }).click();
+    await expect(form.getByText(/Không phải IP hay dải CIDR: 203\.113\.1/)).toBeVisible();
+    await form.getByRole('textbox', { name: 'Dải IP được phép' }).fill('203.113.1.5');
+    await form.getByRole('button', { name: 'Lưu' }).click();
+    await expect(form).toHaveCount(0);
+    await expect(page.getByText('Mọi IP', { exact: true })).toHaveCount(0);
+
+    // Xuất Excel: có nút, file về đúng loại (không chứa mật khẩu — API chốt ở bài đơn vị).
+    await page.goto('/service-accounts');
+    const download = page.waitForResponse((r) => r.url().includes('/service-accounts/export.xlsx'));
+    await page.getByRole('button', { name: 'Xuất Excel' }).click();
+    expect((await download).status()).toBe(200);
   });
 
   /*
