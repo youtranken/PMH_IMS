@@ -72,6 +72,17 @@ export interface ImportRow {
   values?: CatalogValues;
   /** Có khi action = 'update' | 'unchanged'. */
   existingId?: string;
+  /**
+   * Chỉ có khi action = 'update': trường nào sẽ bị GHI ĐÈ, từ gì sang gì — người duyệt cần thấy
+   * đúng điều này trước khi bấm "Xác nhận ghi". `field` là nhãn cột như trong file mẫu.
+   */
+  changes?: ImportChange[];
+}
+
+export interface ImportChange {
+  field: string;
+  from: string | number | boolean | null;
+  to: string | number | boolean | null;
 }
 
 export interface ImportPlan {
@@ -362,25 +373,33 @@ function decide(
   }
   // Trải ra bản sao để so từng trường: kiểu union của `values` không có index signature.
   const provided: Record<string, unknown> = { ...values };
-  const changed = Object.entries(provided).some(([key, value]) => {
+  const changes: ImportChange[] = [];
+  for (const [key, value] of Object.entries(provided)) {
     // Khóa định danh và trường phụ trợ không tính là "thay đổi nội dung".
-    if (key === 'siteKey' || key === 'siteCode') return false;
+    if (key === 'siteKey' || key === 'siteCode') continue;
     const current = existing[key];
-    const before = current === undefined || current === null ? null : current;
-    const after = value === undefined || value === null ? null : value;
+    const before = (current === undefined || current === null ? null : current) as ImportChange['from'];
+    const after = (value === undefined || value === null ? null : value) as ImportChange['to'];
     // citext: "pmh-ho" trong file và "PMH-HO" trong DB là CÙNG một mã, không phải sửa đổi.
-    if (typeof before === 'string' && typeof after === 'string') {
-      return normalizeKey(before) !== normalizeKey(after);
-    }
-    return before !== after;
-  });
+    const differs =
+      typeof before === 'string' && typeof after === 'string'
+        ? normalizeKey(before) !== normalizeKey(after)
+        : before !== after;
+    if (differs) changes.push({ field: fieldLabel(base.sheet, key), from: before, to: after });
+  }
   return {
     ...base,
-    action: changed ? 'update' : 'unchanged',
+    action: changes.length > 0 ? 'update' : 'unchanged',
     label,
     values,
     existingId: existing.id,
+    ...(changes.length > 0 ? { changes } : {}),
   };
+}
+
+/** Nhãn cột của một trường — cùng chữ với câu lỗi "thiếu cột", người dùng đọc thấy khớp file. */
+function fieldLabel(entity: ImportableEntity, key: string): string {
+  return FIELDS[entity].find((field) => field.key === key)?.label ?? key;
 }
 
 function existingOf(

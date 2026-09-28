@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -20,6 +21,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  isUUID,
   Length,
   Max,
   Min,
@@ -126,14 +128,29 @@ export class CatalogController {
   list(
     @Param() params: EntityParamDto,
     @Query()
-    query: { page?: string; limit?: string; search?: string; sort?: string; dir?: string },
+    query: {
+      page?: string;
+      limit?: string;
+      search?: string;
+      sort?: string;
+      dir?: string;
+      active?: string;
+      siteId?: string;
+    },
   ) {
     const sort = parseSortQuery(
       query,
       CATALOG_SORT_KEYS[params.entity],
       CATALOG_SORT_DEFAULT[params.entity],
     );
-    return this.catalog.list(params.entity, parsePageQuery(query), query.search, sort);
+    // `siteId` sai dạng mà đi thẳng vào WHERE là lỗi ép kiểu 22P02 của Postgres → 500 trắng.
+    if (query.siteId && !isUUID(query.siteId)) {
+      throw new BadRequestException({ code: 'BAD_SITE_ID', message: 'Mã site không hợp lệ.' });
+    }
+    return this.catalog.list(params.entity, parsePageQuery(query), query.search, sort, {
+      active: query.active === 'true' ? true : query.active === 'false' ? false : undefined,
+      siteId: params.entity === 'cabinet' ? query.siteId || undefined : undefined,
+    });
   }
 
   @Roles('sa', 'admin', 'member')
