@@ -119,11 +119,45 @@ test.describe('Sổ NAT — rule đã gỡ (NET-037)', () => {
     await firstLogin(page, E2E_SA);
     const f = await setUp(page);
     await page.goto('/nat');
-    expect(await rowActionNames(page, f.ports)).toEqual(['Sửa', 'Lịch sử', 'Gỡ']);
+    expect(await rowActionNames(page, f.ports)).toEqual(['Sửa', 'Lịch sử', 'Tắt rule', 'Gỡ']);
 
     const chips = page.getByRole('group', { name: 'Lọc theo trạng thái rule' });
     await chips.getByRole('button', { name: /^Đang mở/ }).click();
     await expect(page.getByRole('row', { name: new RegExp(f.ports) })).toHaveCount(0);
+  });
+
+  test('tắt / bật rule ngay từ menu dòng, không phải mở form Sửa', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const f = await setUp(page);
+    await page.goto('/nat');
+    const row = page.getByRole('row', { name: new RegExp(f.ports) });
+    await expect(row.getByText('Đang mở', { exact: true })).toBeVisible();
+
+    // Đường hỏng: hỏi lại rồi bấm Hủy thì KHÔNG đổi gì.
+    await rowAction(page, f.ports, 'Tắt rule');
+    await page.getByRole('dialog').getByRole('button', { name: 'Hủy' }).click();
+    await expect(row.getByText('Đang mở', { exact: true })).toBeVisible();
+
+    await rowAction(page, f.ports, 'Tắt rule');
+    await page.getByRole('dialog').getByRole('button', { name: 'Tắt rule' }).click();
+    await expect(page.getByText('Đã đổi trạng thái rule.')).toBeVisible();
+    // "Đã tắt" là huy hiệu ở cột Trạng thái riêng, dòng KHÔNG bị làm mờ cả.
+    await expect(row.getByText('Đã tắt', { exact: true })).toBeVisible();
+
+    await rowAction(page, f.ports, 'Bật rule');
+    await page.getByRole('dialog').getByRole('button', { name: 'Bật rule' }).click();
+    await expect(row.getByText('Đang mở', { exact: true })).toBeVisible();
+  });
+
+  test('tìm không ra thì nói "không khớp bộ lọc", không nói sổ trống; bộ lọc nằm trên URL', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    await setUp(page);
+    await page.goto('/nat?q=khong-co-rule-nao-E2E');
+    await expect(page.getByText('Không có rule nào khớp bộ lọc.')).toBeVisible();
+    await expect(page.getByText('Chưa có rule NAT nào')).toHaveCount(0);
+    await expect(page.getByRole('searchbox')).toHaveValue('khong-co-rule-nao-E2E');
   });
 });
 

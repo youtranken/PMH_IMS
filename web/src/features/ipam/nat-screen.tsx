@@ -24,7 +24,8 @@ import { HistoryPanel } from '@/ui/history-panel';
 import { ServicePortPicker } from './service-port-picker';
 import { toNatHistory, type NatHistoryRow } from './nat-history-entries';
 import { checkInternalIp } from './nat-internal-ip';
-import { STATUS_KEY, type IpStatus } from './ipam-types';
+import { STATUS_KEY, type IpSearchHit, type IpStatus } from './ipam-types';
+import { parseIpv4 } from '@/lib/ipv4';
 import { chipsFromValue, parsePortChip, type PortChip } from './port-chips';
 import { PortChipsField } from './port-chips-field';
 import {
@@ -33,12 +34,21 @@ import {
   NAT_BUCKET_KEY,
   NAT_BUCKETS,
   NAT_DEFAULT_SHOWN,
+  NAT_SORT_KEYS,
   natBucket,
+  sortNat,
   type NatBucket,
+  type NatSortKey,
 } from './nat-buckets';
+import { sensitivePortOf } from './nat-sensitive';
+import { useIpamSettings } from './ipam-settings';
 import { PATHS } from '@/lib/routes';
+import { clampPage } from '@/lib/paging';
 import { useCatalogLists } from '@/ui/use-catalog-lists';
 import { textRule, useFormErrors } from '@/ui/use-form-errors';
+import { useConfirm } from '@/ui/confirm-provider';
+import { Pagination } from '@/ui/pagination';
+import { useListUrlState } from '@/ui/use-list-url-state';
 
 type NatProtocol = 'tcp' | 'udp' | 'both';
 
@@ -61,6 +71,9 @@ interface NatRow {
   reason: string;
   enabled: boolean;
   note: string | null;
+  /** Ai mở, lúc nào — câu kiểm toán "port này mở từ bao giờ". */
+  createdBy: string;
+  createdAt: string;
   /** Rule đã gỡ — màn luôn xin `includeVoided=true` để chip "Đã gỡ" có số thật. */
   voidedAt: string | null;
   voidedBy: string | null;
@@ -74,6 +87,32 @@ interface DeviceOption {
   siteCode?: string | null;
 }
 
+/** Bộ lọc của sổ NAT — nằm trên URL: Back giữ bộ lọc, và gửi được link "sổ NAT của FW-01". */
+interface NatFilters extends Record<string, string> {
+  search: string;
+  siteId: string;
+  /** Router mang rule — lọc ở client vì danh sách router lấy từ chính các rule đang có. */
+  deviceId: string;
+  protocol: '' | NatProtocol;
+  /** '1' = chỉ rule mở cổng nhạy cảm. */
+  sensitive: '' | '1';
+}
+
+const EMPTY_NAT_FILTERS: NatFilters = {
+  search: '',
+  siteId: '',
+  deviceId: '',
+  protocol: '',
+  sensitive: '',
+};
+
+const NAT_PAGE_SIZE = 50;
+
+/** Chữ của giao thức — "both" là mã kỹ thuật, người đọc thấy "TCP + UDP" như ô chọn trong form. */
+function protocolLabel(protocol: NatProtocol, t: (key: string) => string): string {
+  return protocol === 'both' ? t('catalog.protocolBoth') : protocol.toUpperCase();
+}
+
 /**
  * Sổ NAT (story 5.3, FR-017).
  *
@@ -84,41 +123,95 @@ interface DeviceOption {
 export function NatScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
+  const askConfirm = useConfirm();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState('');
-  const [siteId, setSiteId] = useState('');
+  const url = useListUrlState<NatFilters>({
+    emptyFilters: EMPTY_NAT_FILTERS,
+    defaultLimit: NAT_PAGE_SIZE,
+    defaultSort: { key: 'external', desc: false },
+    searchKey: 'search',
+  });
+  const filters = url.filters;
+  const sortKey: NatSortKey = NAT_SORT_KEYS.includes(url.sorting.key as NatSortKey)
+    ? (url.sorting.key as NatSortKey)
+    : 'external';
   const [editing, setEditing] = useState<{ rule: NatRow | null } | null>(null);
   const [hiding, setHiding] = useState<NatRow | null>(null);
   const [historyOf, setHistoryOf] = useState<NatRow | null>(null);
   const [shown, setShown] = useState<Record<NatBucket, boolean>>(NAT_DEFAULT_SHOWN);
+  const settings = useIpamSettings();
 
   const canHide = me.role === 'sa' || me.role === 'admin';
 
   const lists = useCatalogLists();
 
+  // Ô tìm và site đi xuống API (tìm theo port nằm trong dải chỉ API làm đúng được); router,
+  // giao thức và cổng nhạy cảm lọc tại chỗ trên cả sổ đã về.
   const query = new URLSearchParams();
-  if (search.trim()) query.set('search', search.trim());
-  if (siteId) query.set('siteId', siteId);
+  if (filters.search.trim()) query.set('search', filters.search.trim());
+  if (filters.siteId) query.set('siteId', filters.siteId);
 
   // Xin luôn cả rule đã gỡ: chip "Đã gỡ" phải mang con số thật ngay cả khi đang tắt.
   const listQuery = new URLSearchParams(query);
   listQuery.set('includeVoided', 'true');
   // Bản xuất đi theo đúng thứ đang bày trên màn: chỉ kèm rule đã gỡ khi chip đó đang bật.
   const exportQuery = new URLSearchParams(query);
+  if (filters.deviceId) exportQuery.set('deviceId', filters.deviceId);
   if (shown.voided) exportQuery.set('includeVoided', 'true');
 
   const rules = useQuery({
-    queryKey: ['ipam', 'nat', search, siteId, 'withVoided'],
-    // Đổi trang/từ khoá thì GIỮ bảng cũ tới khi có dữ liệu mới: vẽ lại Loading là gỡ cả bảng,
+    queryKey: ['ipam', 'nat', filters.search, filters.siteId, 'withVoided'],
+    // Đổi từ khoá thì GIỮ bảng cũ tới khi có dữ liệu mới: vẽ lại Loading là gỡ cả bảng,
     // mất dòng đang bung/menu đang mở và bảng nháy trắng sau mỗi lần gõ tìm.
     placeholderData: keepPreviousData,
     queryFn: () => apiFetch<NatRow[]>(`/api/v1/ipam/nat?${listQuery.toString()}`),
   });
 
-  const refresh = () => queryClient.invalidateQueries({ queryKey: ['ipam'] });
-  const all = rules.data ?? [];
-  const counts = countNat(all);
-  const rows = filterNat(all, shown);
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ['ipam', 'nat'] });
+  const all = useMemo(() => rules.data ?? [], [rules.data]);
+  const sensitiveOf = (rule: NatRow) =>
+    sensitivePortOf(rule.externalPorts, rule.internalPort, settings.natSensitivePorts);
+
+  /** Router có mặt trong sổ — ô lọc chỉ bày thứ lọc ra được. */
+  const routers = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const rule of all) seen.set(rule.deviceId, rule.deviceCode ?? rule.deviceId);
+    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [all]);
+
+  const narrowed = all.filter(
+    (rule) =>
+      (!filters.deviceId || rule.deviceId === filters.deviceId) &&
+      (!filters.protocol || rule.protocol === filters.protocol) &&
+      (!filters.sensitive || sensitiveOf(rule) !== null),
+  );
+  const counts = countNat(narrowed);
+  const rows = sortNat(filterNat(narrowed, shown), sortKey);
+  const page = clampPage(url.page, rows.length, url.limit);
+  const pageRows = rows.slice((page - 1) * url.limit, page * url.limit);
+  const filtered = url.isFiltered;
+
+  /** Tắt/bật tạm một rule ngay từ menu — việc hay gặp nhất, không phải mở cả form Sửa. */
+  const toggleRule = async (rule: NatRow) => {
+    const ports = `${protocolLabel(rule.protocol, t)} ${rule.externalPorts}`;
+    const ok = await askConfirm({
+      title: t(rule.enabled ? 'nat.disableTitle' : 'nat.enableTitle', { ports }),
+      message: t(rule.enabled ? 'nat.disableMessage' : 'nat.enableMessage'),
+      confirmLabel: t(rule.enabled ? 'nat.disableRule' : 'nat.enableRule'),
+    });
+    if (!ok) return;
+    try {
+      await apiFetch(`/api/v1/ipam/nat/${rule.id}`, {
+        method: 'PATCH',
+        csrfToken: me.csrfToken,
+        body: JSON.stringify({ enabled: !rule.enabled }),
+      });
+      toast({ message: t('nat.toggled') });
+      void refresh();
+    } catch (error) {
+      toast({ message: errorMessage(error), tone: 'error' });
+    }
+  };
 
   return (
     <>
@@ -139,13 +232,13 @@ export function NatScreen({ me }: { me: Me }) {
       />
 
       <FilterBar
-        search={search}
-        onSearchChange={setSearch}
+        search={url.searchInput}
+        onSearchChange={url.setSearchInput}
         searchPlaceholder={t('nat.search')}
       >
         <Select
-          value={siteId}
-          onChange={setSiteId}
+          value={filters.siteId}
+          onChange={(value) => url.setFilter('siteId', value)}
           ariaLabel={t('nat.site')}
           placeholder={t('nat.allSites')}
           options={[
@@ -153,6 +246,26 @@ export function NatScreen({ me }: { me: Me }) {
             ...(lists.data?.sites ?? []).map((site) => ({ value: site.id, label: site.code })),
           ]}
           failed={lists.isError}
+        />
+        <Select
+          value={filters.deviceId}
+          onChange={(value) => url.setFilter('deviceId', value)}
+          ariaLabel={t('nat.router')}
+          placeholder={t('nat.allRouters')}
+          options={[
+            { value: '', label: t('nat.allRouters') },
+            ...routers.map(([id, code]) => ({ value: id, label: code })),
+          ]}
+        />
+        <Select
+          value={filters.protocol}
+          onChange={(value) => url.setFilter('protocol', value)}
+          ariaLabel={t('nat.protocol')}
+          placeholder={t('nat.allProtocols')}
+          options={[
+            { value: '', label: t('nat.allProtocols') },
+            ...PROTOCOLS.map((protocol) => ({ value: protocol, label: protocolLabel(protocol, t) })),
+          ]}
         />
         {/* Ba chip bật/tắt độc lập, không phải chọn-một: "đang mở + đã tắt" là mặc định
             (mọi thứ còn trong sổ), và auditor hay cần thêm "đã gỡ" chứ không thay cái kia. */}
@@ -169,52 +282,127 @@ export function NatScreen({ me }: { me: Me }) {
             </button>
           ))}
         </div>
+        <div className="segmented" role="group" aria-label={t('nat.sensitive')}>
+          <button
+            type="button"
+            className={filters.sensitive ? 'on' : undefined}
+            aria-pressed={filters.sensitive === '1'}
+            onClick={() => url.setFilter('sensitive', filters.sensitive ? '' : '1')}
+          >
+            {t('nat.sensitiveOnly')}
+          </button>
+        </div>
+        <Select
+          value={sortKey}
+          onChange={(value) => url.setSorting({ key: value, desc: false })}
+          ariaLabel={t('nat.sortBy')}
+          options={NAT_SORT_KEYS.map((key) => ({ value: key, label: t(SORT_LABEL[key]) }))}
+        />
       </FilterBar>
 
       {rules.isLoading ? (
         <Loading />
       ) : rules.isError ? (
         <LoadError error={rules.error} onRetry={() => void rules.refetch()} />
-      ) : all.length === 0 ? (
+      ) : all.length === 0 && !filtered ? (
         <EmptyState title={t('nat.empty')} hint={t('nat.emptyHint')} />
+      ) : narrowed.length === 0 ? (
+        /* Tìm/lọc không ra thì NÓI là lọc không ra — câu "Chưa có rule NAT nào" ở đây làm
+           người ta tưởng cả sổ trống. */
+        <EmptyState title={t('nat.emptySearch')} hint={t('nat.emptySearchHint')} />
       ) : rows.length === 0 ? (
         <EmptyState title={t('nat.emptyFiltered')} hint={t('nat.emptyFilteredHint')} />
       ) : (
+        <>
+        <p className="muted nat-count">{t('nat.countLine', { count: rows.length })}</p>
         <div className="table-wrap">
           {/*
-            `wide` — sàn bề ngang 66rem (table.css), bật 17/09/2026.
-            Sáu cột mà không có sàn thì ở cột chính ~800px trình duyệt bóp đều tay: cột "Lý do
-            mở" (văn xuôi) và cột "Đích bên trong" (IP + port + mã máy + tên chủ) cùng bị ép
-            xuống gãy ba bốn dòng. Có sàn thì bảng cuộn ngang TRONG khung của nó — cuộn là
-            chuyện nhỏ, đọc không ra mới là chuyện lớn. Dưới 961px `.table-stack` đã gập thẻ
-            dọc nên sàn không áp, không sinh cuộn ngang cho cả trang.
+            `wide` — sàn bề ngang 66rem (table.css). Sáu cột mà không có sàn thì ở cột chính
+            ~800px trình duyệt bóp đều tay: cột "Lý do mở" (văn xuôi) và cột "Chuyển tiếp" cùng
+            bị ép xuống gãy ba bốn dòng. Dưới 961px `.table-stack` đã gập thẻ dọc nên sàn không
+            áp; ≤600px mỗi rule là thẻ ba dòng (`.nat-table`).
           */}
-          <table className="table table-stack wide">
+          <table className="table table-stack wide nat-table">
             <thead>
               <tr>
                 <th>{t('nat.router')}</th>
-                <th>{t('nat.external')}</th>
-                <th>{t('nat.internal')}</th>
+                <th>{t('nat.colForward')}</th>
                 <th>{t('nat.usedBy')}</th>
                 <th>{t('nat.reason')}</th>
+                <th>{t('nat.status')}</th>
                 <th className="col-center">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((rule) => {
+              {pageRows.map((rule) => {
                 const voided = natBucket(rule) === 'voided';
+                const sensitive = sensitiveOf(rule);
+                const ports = `${protocolLabel(rule.protocol, t)} ${rule.externalPorts}`;
                 return (
-                <tr key={rule.id} className={rule.enabled && !voided ? undefined : 'row-muted'}>
-                  <td data-label={t('nat.router')}>
+                <tr key={rule.id} className={voided ? 'row-muted' : undefined}>
+                  <td data-label={t('nat.router')} className="col-router">
                     <Link to={PATHS.device(rule.deviceId)}>{orDash(rule.deviceCode)}</Link>
                     <span className="cell-sub">{orDash(rule.siteCode)}</span>
                   </td>
-                  <td data-label={t('nat.external')}>
-                    <span className={voided ? 'mono strike' : 'mono'}>
-                      {rule.protocol.toUpperCase()} {rule.externalPorts}
+                  {/* Một câu đọc ngang: ngoài → trong. Hai nửa là hai phần tử riêng để tìm
+                      và bám được từng nửa ("TCP 8080", "10.0.0.5:80"). */}
+                  <td data-label={t('nat.colForward')} className="col-flow">
+                    <span className="nat-flow">
+                      <span className={voided ? 'mono strike' : 'mono'}>{ports}</span>
+                      <span className="nat-arrow" aria-hidden="true">→</span>
+                      <span className={voided ? 'mono strike' : 'mono'}>
+                        {rule.internalIp}:{rule.internalPort}
+                      </span>
+                      {sensitive !== null ? (
+                        <span
+                          className="badge warn"
+                          title={t('nat.sensitiveTitle', { port: sensitive })}
+                        >
+                          {t('nat.sensitive')}
+                        </span>
+                      ) : null}
                     </span>
-                    {/* Rule đã gỡ nói ngay trên dòng: lúc nào, ai, vì sao — đúng câu hộp Gỡ
-                        hứa là "vẫn tra cứu được". */}
+                    {/* MÁY ĐÍCH ngay trên bảng: "dẫn tới 172.16.10.5" mà không nói đó là máy
+                        nào thì người đọc sổ vẫn phải sang màn IP tra tiếp. Chủ IP trùng
+                        "Mở cho ai" thì không lặp lại. */}
+                    {rule.internalDeviceId ? (
+                      <span className="cell-sub">
+                        <Link className="mono" to={PATHS.device(rule.internalDeviceId)}>
+                          {rule.internalDeviceCode}
+                        </Link>
+                        {rule.internalOwner && rule.internalOwner !== rule.usedBy
+                          ? ` · ${rule.internalOwner}`
+                          : ''}
+                      </span>
+                    ) : rule.internalOwner && rule.internalOwner !== rule.usedBy ? (
+                      <span className="cell-sub">{rule.internalOwner}</span>
+                    ) : null}
+                  </td>
+                  <td data-label={t('nat.usedBy')}>{rule.usedBy}</td>
+                  {/* Lý do là văn xuôi gõ tự do: hai dòng, đủ câu ở `title`; ≤960px bảng gập
+                      thẻ dọc thì đọc đủ. Dưới là "mở bao giờ, ai mở" — câu kiểm toán hỏi. */}
+                  <td data-label={t('nat.reason')} className="col-reason">
+                    <span className="cell-clamp-2" title={rule.reason}>
+                      {rule.reason}
+                    </span>
+                    {rule.note ? (
+                      <span className="cell-sub cell-note" title={rule.note}>
+                        {rule.note}
+                      </span>
+                    ) : null}
+                    <span className="cell-sub" title={rule.createdBy}>
+                      {t('nat.openedBy', {
+                        date: formatDate(rule.createdAt),
+                        by: rule.createdBy.split('@')[0],
+                      })}
+                    </span>
+                  </td>
+                  {/*
+                    Trạng thái là CỘT riêng, không dính vào số port: "Đã tắt" là trạng thái của
+                    CẢ rule và là thứ auditor soi kỹ nhất — nó phải đọc rõ ở cả hai theme, nên
+                    không làm mờ cả dòng mà dùng huy hiệu cảnh báo.
+                  */}
+                  <td data-label={t('nat.status')} className="col-status">
                     {voided ? (
                       <span className="badge muted" title={rule.voidReason ?? undefined}>
                         {t('nat.voidedBadge', {
@@ -223,56 +411,18 @@ export function NatScreen({ me }: { me: Me }) {
                           reason: rule.voidReason ?? '—',
                         })}
                       </span>
-                    ) : null}
-                    {/*
-                      "Đã tắt" là một HUY HIỆU, không phải dòng chữ phụ (17/09/2026).
-                      Nó là trạng thái của CẢ rule, và là thứ auditor soi kỹ nhất: một cổng còn
-                      nằm trong sổ nhưng đã tắt trên router. Trước đây nó mang đúng hình dạng
-                      của dòng-phụ-mã-site ở cột bên cạnh, tức trông như một mẩu dữ liệu của
-                      cột port, lại còn bị cả dòng phủ một lớp mờ lên.
-                    */}
-                    {!rule.enabled && !voided ? (
-                      <span className="badge muted">{t('nat.disabled')}</span>
-                    ) : null}
+                    ) : rule.enabled ? (
+                      <span className="badge ok">{t('nat.bucketOpen')}</span>
+                    ) : (
+                      <span className="badge warn">{t('nat.disabled')}</span>
+                    )}
                   </td>
-                  <td data-label={t('nat.internal')}>
-                    <span className={voided ? 'mono strike' : 'mono'}>
-                      {rule.internalIp}:{rule.internalPort}
-                    </span>
-                    {/* MÁY ĐÍCH ngay trên bảng: "dẫn tới 172.16.10.5" mà không nói đó là máy
-                        nào thì người đọc sổ vẫn phải sang màn IP tra tiếp. */}
-                    {rule.internalDeviceId ? (
-                      <span className="cell-sub">
-                        <Link className="mono" to={PATHS.device(rule.internalDeviceId)}>
-                          {rule.internalDeviceCode}
-                        </Link>
-                        {rule.internalOwner ? ` · ${rule.internalOwner}` : ''}
-                      </span>
-                    ) : rule.internalOwner ? (
-                      <span className="cell-sub">{rule.internalOwner}</span>
-                    ) : null}
-                  </td>
-                  <td data-label={t('nat.usedBy')}>{rule.usedBy}</td>
-                  {/*
-                    Lý do mở là văn xuôi người ta gõ tự do — một câu dài kéo cao cả dòng và bóp
-                    năm cột còn lại. `.cell-note` (có sẵn trong `table.css` từ lâu mà chưa màn
-                    nào dùng) giữ nó đúng một dòng; `title` để rê chuột đọc trọn câu, và ở
-                    ≤960px bảng gập thẻ dọc thì `.cell-note` không áp nên vẫn đọc đủ trên
-                    điện thoại — đúng chỗ bài kiểm 390px đang canh.
-                  */}
-                  <td data-label={t('nat.reason')}>
-                    <span className="cell-note" title={rule.reason}>
-                      {rule.reason}
-                    </span>
-                  </td>
-                  <td data-label={t('common.actions')}>
+                  <td data-label={t('common.actions')} className="col-actions">
                     <div className="action-cell">
                       <RowActions
-                        label={t('common.actionsOf', {
-                          subject: `${rule.protocol.toUpperCase()} ${rule.externalPorts}`,
-                        })}
+                        label={t('common.actionsOf', { subject: ports })}
                         items={[
-                          // Rule đã gỡ chỉ còn để TRA: sửa hay gỡ tiếp đều bị API từ chối.
+                          // Rule đã gỡ chỉ còn để TRA: sửa, bật/tắt hay gỡ tiếp đều bị API từ chối.
                           ...(voided
                             ? []
                             : [
@@ -287,6 +437,15 @@ export function NatScreen({ me }: { me: Me }) {
                             label: t('nat.history'),
                             onSelect: () => setHistoryOf(rule),
                           },
+                          ...(voided
+                            ? []
+                            : [
+                                {
+                                  key: 'toggle',
+                                  label: t(rule.enabled ? 'nat.disableRule' : 'nat.enableRule'),
+                                  onSelect: () => void toggleRule(rule),
+                                },
+                              ]),
                           ...(canHide && !voided
                             ? [
                                 {
@@ -307,6 +466,14 @@ export function NatScreen({ me }: { me: Me }) {
             </tbody>
           </table>
         </div>
+        <Pagination
+          page={page}
+          limit={url.limit}
+          total={rows.length}
+          onPageChange={url.setPage}
+          onLimitChange={url.setLimit}
+        />
+        </>
       )}
 
       {editing ? (
@@ -343,9 +510,10 @@ export function NatScreen({ me }: { me: Me }) {
         <Dialog
           open
           onOpenChange={() => setHistoryOf(null)}
+          initialFocus="title"
           maxWidth={620}
           title={t('nat.historyOf', {
-            ports: `${historyOf.protocol.toUpperCase()} ${historyOf.externalPorts}`,
+            ports: `${protocolLabel(historyOf.protocol, t)} ${historyOf.externalPorts}`,
           })}
           footer={
             <button type="button" className="btn" onClick={() => setHistoryOf(null)}>
@@ -372,6 +540,13 @@ export function NatScreen({ me }: { me: Me }) {
     </>
   );
 }
+
+const SORT_LABEL: Record<NatSortKey, string> = {
+  external: 'nat.sortExternal',
+  router: 'nat.sortRouter',
+  internal: 'nat.sortInternal',
+  newest: 'nat.sortNewest',
+};
 
 const PROTOCOLS: NatProtocol[] = ['tcp', 'udp', 'both'];
 
@@ -427,6 +602,7 @@ function NatForm({
   const [usedBy, setUsedBy] = useState(rule?.usedBy ?? '');
   const [reason, setReason] = useState(rule?.reason ?? '');
   const [enabled, setEnabled] = useState(rule?.enabled ?? true);
+  const [note, setNote] = useState(rule?.note ?? '');
   const [error, setError] = useState<string | null>(null);
   /** Sửa = một khoảng; thêm mới = bao nhiêu khoảng cũng được (mỗi khoảng ra một dòng). */
   const maxPorts = rule ? 1 : Number.POSITIVE_INFINITY;
@@ -599,7 +775,7 @@ function NatForm({
         rule
           ? t('common.titleOf', {
               action: t('nat.edit'),
-              subject: `${rule.protocol.toUpperCase()} ${rule.externalPorts}`,
+              subject: `${protocolLabel(rule.protocol, t)} ${rule.externalPorts}`,
             })
           : t('nat.add')
       }
@@ -638,6 +814,7 @@ function NatForm({
               usedBy: usedBy.trim(),
               reason: reason.trim(),
               enabled,
+              note: note.trim(),
             };
             const warnings: string[] = [];
             const failures: string[] = [];
@@ -695,7 +872,6 @@ function NatForm({
             label={t('nat.router')}
             required
             hint={t('nat.routerHint')}
-            span={2}
             htmlFor="nat-router"
             error={check.error('deviceId')}
           >
@@ -746,12 +922,38 @@ function NatForm({
             ) : null}
           </Field>
 
+          {/*
+            Giao thức đứng CẠNH router, không lọt giữa ô Port ngoài: nó áp cho CẢ rule (cả port
+            ngoài lẫn port trong), đặt dưới port ngoài là trông như chỉ thuộc riêng port ngoài.
+            Chọn dịch vụ trong danh mục thì nó tự theo; gõ port tay thì chọn ở đây — bỏ hẳn thì
+            port gõ tay luôn mặc định TCP, sai âm thầm với mấy dịch vụ UDP như VPN.
+          */}
+          <Field label={t('nat.protocol')}>
+            <div className="segmented" role="group" aria-label={t('nat.protocol')}>
+              {PROTOCOLS.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className={protocol === item ? 'on' : undefined}
+                  aria-pressed={protocol === item}
+                  onClick={() => setProtocol(item)}
+                >
+                  {/* `catalog.protocolBoth`, KHÔNG phải một khoá riêng của `nat`: ô chọn cổng
+                      dịch vụ trong form đọc đúng khoá ấy, và hai nhãn khác chữ cho cùng một
+                      giao thức là thứ người dùng đọc ra thành hai lựa chọn khác nhau. */}
+                  {protocolLabel(item, t)}
+                </button>
+              ))}
+            </div>
+          </Field>
+
           {/* Hai ô port đứng CẠNH nhau: "ngoài 8080 dẫn vào trong 80" là một câu đọc ngang,
-              tách hai hàng thì phải nhớ số bên trên trong lúc đọc số bên dưới. */}
+              tách hai hàng thì phải nhớ số bên trên trong lúc đọc số bên dưới. Chế độ sửa chỉ
+              còn MỘT lời nhắc (ngay dưới chip), không lặp thêm một câu gần giống ở hint. */}
           <Field
             label={t('nat.external')}
             required
-            hint={rule ? t('nat.externalHintEdit') : t('nat.externalHint')}
+            hint={rule ? undefined : t('nat.externalHint')}
             htmlFor="nat-external"
             error={check.error('ports')}
           >
@@ -762,30 +964,6 @@ function NatForm({
               disabled={busy}
               inputId="nat-external"
             />
-            {/* Giao thức KHÔNG còn là một ô nhập riêng: chọn dịch vụ trong danh mục là nó tự
-                theo (danh mục đã ghi TCP/UDP của từng dịch vụ). Chỉ hiện ra để đọc, và chỉ
-                mở cho sửa khi người dùng tự gõ port thay vì chọn dịch vụ — bỏ hẳn thì port
-                gõ tay luôn mặc định TCP, sai âm thầm với mấy dịch vụ UDP như VPN. */}
-            <div className="proto-row">
-              <span className="muted">{t('nat.protocol')}:</span>
-              <div className="segmented" role="group" aria-label={t('nat.protocol')}>
-                {PROTOCOLS.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    className={protocol === item ? 'on' : undefined}
-                    aria-pressed={protocol === item}
-                    onClick={() => setProtocol(item)}
-                  >
-                    {/* `catalog.protocolBoth`, KHÔNG phải một khoá riêng của `nat`: ô chọn cổng
-                        dịch vụ ngay dưới form này đọc đúng khoá ấy, và hai nhãn khác chữ cho
-                        cùng một giao thức nằm cách nhau 3cm là thứ người dùng đọc ra thành hai
-                        lựa chọn khác nhau. */}
-                    {item === 'both' ? t('catalog.protocolBoth') : item.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-            </div>
             {/* Đủ khoảng rồi (chế độ sửa) thì ẩn hẳn ô chọn dịch vụ: một điều khiển bấm vào
                 mà không xảy ra gì là thứ người dùng sẽ bấm vài lần rồi nghĩ máy hỏng. */}
             {ports.length >= maxPorts ? null : (
@@ -919,7 +1097,9 @@ function NatForm({
                 />
                 {targetId ? (
                   <span className="field-hint muted">{t('nat.targetNoIp')}</span>
-                ) : null}
+                ) : (
+                  <IpBookHint ip={internalIp} />
+                )}
               </>
             )}
           </Field>
@@ -970,6 +1150,18 @@ function NatForm({
               required
               value={reason}
               onChange={(e) => setReason(e.target.value)}
+            />
+          </Field>
+
+          {/* Ghi chú kỹ thuật (số phiếu yêu cầu, giới hạn IP nguồn trên router…) — API đã nhận
+              và dữ liệu import đã có, form không có ô thì không ai sửa được nó. */}
+          <Field label={t('nat.note')} hint={t('nat.noteHint')} htmlFor="nat-note" span={2}>
+            <textarea
+              id="nat-note"
+              className="inp"
+              rows={2}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
             />
           </Field>
         </FormSection>
@@ -1084,7 +1276,7 @@ function RemoveDialog({
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!remove.isPending}
       maxWidth={480}
-      title={t('nat.removeTitle', { ports: `${rule.protocol.toUpperCase()} ${rule.externalPorts}` })}
+      title={t('nat.removeTitle', { ports: `${protocolLabel(rule.protocol, t)} ${rule.externalPorts}` })}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
@@ -1161,4 +1353,36 @@ function NatHistory({ ruleId }: { ruleId: string }) {
   if (history.isLoading) return <Loading />;
   if (history.isError) return <LoadError error={history.error} onRetry={() => void history.refetch()} />;
   return <HistoryPanel entries={toNatHistory(history.data ?? [], t)} />;
+}
+
+/**
+ * Gõ tay IP trong (chưa chọn máy đích): tra sổ IP ngay để nói IP đó của máy nào, hoặc cảnh báo
+ * nó CHƯA có trong sổ — rule trỏ vào một IP ngoài sổ thì sổ NAT mất liên kết với máy. Vẫn cho
+ * lưu: sổ IP có thể chưa kịp khai, và chặn ở đây là đẩy người ta về ghi chép tay.
+ */
+function IpBookHint({ ip }: { ip: string }) {
+  const { t } = useTranslation();
+  const address = ip.trim();
+  const valid = parseIpv4(address) !== null;
+  const hits = useQuery({
+    queryKey: ['ipam', 'addresses', 'search', address],
+    enabled: valid,
+    queryFn: () =>
+      apiFetch<IpSearchHit[]>(`/api/v1/ipam/addresses?limit=5&search=${encodeURIComponent(address)}`),
+  });
+  if (!valid || !hits.data) return null;
+  const hit = hits.data.find((row) => row.address === address && row.status === 'assigned');
+  if (!hit) {
+    return (
+      <span className="field-hint warn-text" role="note">
+        {t('nat.ipNotInBook', { ip: address })}
+      </span>
+    );
+  }
+  const owner = [hit.deviceCode, hit.usedBy].filter(Boolean).join(' · ');
+  return (
+    <span className="field-hint muted">
+      {t('nat.ipInBook', { owner: owner || hit.subnetCidr })}
+    </span>
+  );
 }

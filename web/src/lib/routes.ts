@@ -32,6 +32,8 @@ export const PATHS = {
   subnetAt: (id: string, ip: string) => `/ip-addresses/${id}?ip=${encodeURIComponent(ip)}`,
 
   nat: '/nat',
+  /** Sổ NAT lọc sẵn theo một router (bộ lọc nằm trên URL — gửi được link cho nhau). */
+  natOf: (deviceId: string) => `/nat?deviceId=${encodeURIComponent(deviceId)}`,
 
   serviceAccounts: '/service-accounts',
   serviceAccount: (id: string) => `/service-accounts/${id}`,

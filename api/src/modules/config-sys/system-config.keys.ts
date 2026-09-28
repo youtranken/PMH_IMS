@@ -64,6 +64,8 @@ export const CONFIG_KEYS = {
    */
   dashboardSubnetFullPercent: { key: 'dashboard.subnet_full_percent', fallback: 80 },
   dashboardSecretStaleDays: { key: 'dashboard.secret_stale_days', fallback: 180 },
+  // Cổng mở ra Internet bị gắn "Nhạy cảm" trên sổ NAT (0140) — xem `ipam/nat-sensitive.ts`.
+  natSensitivePorts: { key: 'nat.sensitive_ports', fallback: '21,22,23,445,1433,3306,3389,5432,5900' },
   // Q-13 (0076): Hết hạn quá số ngày này thì tự Thanh lý + gỡ ghế. 0 = tắt.
   softwareAutoRetireGraceDays: { key: 'software.auto_retire_grace_days', fallback: 30 },
   /*

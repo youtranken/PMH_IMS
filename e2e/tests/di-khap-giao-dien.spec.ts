@@ -5036,8 +5036,19 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(page.getByText('Chưa có rule NAT nào')).toBeVisible();
     await expect(
       page.getByRole('main').getByRole('button'),
-      'đầu trang hai nút + một ô chọn site + ba chip trạng thái; nút nào khác mọc ra ở đây là thứ không ai khai',
-    ).toHaveText(['Xuất Excel', 'Thêm rule', 'Mọi site', /^Đang mở \d+$/, /^Đã tắt \d+$/, /^Đã gỡ \d+$/]);
+      'đầu trang hai nút + ba ô lọc (site · router · giao thức) + ba chip trạng thái + chip port nhạy cảm + ô sắp xếp; nút nào khác mọc ra ở đây là thứ không ai khai',
+    ).toHaveText([
+      'Xuất Excel',
+      'Thêm rule',
+      'Mọi site',
+      'Mọi router',
+      'Mọi giao thức',
+      /^Đang mở \d+$/,
+      /^Đã tắt \d+$/,
+      /^Đã gỡ \d+$/,
+      'Chỉ port nhạy cảm',
+      'Sắp theo port ngoài',
+    ]);
     // Sổ mặc định chỉ bày rule còn hiệu lực: rule đã gỡ phải bật chip mới thấy.
     const chips = page.getByRole('group', { name: 'Lọc theo trạng thái rule' });
     await expect(chips.getByRole('button', { name: /^Đang mở/ })).toHaveAttribute('aria-pressed', 'true');
@@ -5070,21 +5081,23 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(
       table.getByRole('columnheader'),
       'mất cột "Mở cho ai" hoặc "Lý do mở" là cuốn sổ mất đúng thứ nó sinh ra để giữ',
-    ).toHaveText(['Router', 'Port ngoài', 'Đích bên trong', 'Mở cho ai', 'Lý do mở', 'Thao tác']);
+      /* "Chuyển tiếp" đọc ngang ngoài → trong; trạng thái là cột riêng, không dính vào số port. */
+    ).toHaveText(['Router', 'Chuyển tiếp', 'Mở cho ai', 'Lý do mở', 'Trạng thái', 'Thao tác']);
     const row = page.getByRole('row', { name: new RegExp(esc(fixture.routerCode)) });
     await expect(row.getByText('TCP 8080')).toBeVisible();
     await expect(row.getByText(`${fixture.internalIp}:80`)).toBeVisible();
+    await expect(row.getByText('Đang mở', { exact: true })).toBeVisible();
 
     await expect(
       page.getByRole('navigation', { name: 'Trang' }),
-      'màn NAT KHÔNG phân trang — danh sách về trong một lượt và vẽ hết',
-    ).toHaveCount(0);
+      'sổ NAT có phân trang như mọi danh sách khác — sổ vài trăm rule không đổ một lèo',
+    ).toHaveCount(1);
 
     /* ----- Menu của một dòng ----- */
     expect(
       await rowActionNames(page, 'TCP 8080'),
-      'SA gỡ được rule; "Gỡ" là việc lấy đi nên phải xếp CUỐI; Lịch sử xem được ngay từ bảng',
-    ).toEqual(['Sửa', 'Lịch sử', 'Gỡ']);
+      'SA gỡ được rule; "Gỡ" là việc lấy đi nên phải xếp CUỐI; Lịch sử và Tắt rule ngay từ bảng',
+    ).toEqual(['Sửa', 'Lịch sử', 'Tắt rule', 'Gỡ']);
 
     /* ----- Bộ lọc site: bấm là bảng đổi THẬT ----- */
     await page.getByRole('button', { name: 'Site', exact: true }).click();
@@ -5097,11 +5110,13 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'site vừa khai phải có trong danh sách — không thì bộ lọc chỉ bày ra thứ không dùng được',
     ).toHaveCount(1);
     await page.getByRole('option', { name: fixture.siteCode, exact: true }).click();
-    // Router của bài này KHÔNG gắn site, nên lọc theo site vừa khai phải ra RỖNG.
+    // Router của bài này KHÔNG gắn site, nên lọc theo site vừa khai phải ra RỖNG — và câu rỗng
+    // nói là LỌC không ra, không phải sổ trống.
     await expect(
-      page.getByText('Chưa có rule NAT nào'),
+      page.getByText('Không có rule nào khớp bộ lọc.'),
       'lọc site mà bảng đứng im nghĩa là tham số không đi tới API',
     ).toBeVisible();
+    await expect(page.getByText('Chưa có rule NAT nào')).toHaveCount(0);
   });
 
   /**
@@ -5161,7 +5176,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expectHandles(
       form,
       'textbox',
-      ['Port ngoài', 'Port trong', 'IP trong', 'Lý do mở'],
+      ['Port ngoài', 'Port trong', 'IP trong', 'Lý do mở', 'Ghi chú'],
       'Hộp "Thêm rule"',
     );
     await expectHandles(

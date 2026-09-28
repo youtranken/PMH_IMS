@@ -434,6 +434,16 @@ textarea.mono::placeholder {
   font-style: italic;
   color: var(--ink-3);
 }
+/* Văn xuôi trong ô bảng (lý do mở cổng…): tối đa HAI dòng — một dòng thì màn cảm ứng không
+   đọc được câu (không có hover), cả đoạn thì kéo cao cả dòng. Đủ câu ở `title`. */
+.cell-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  max-width: 28rem;
+}
 /* Ghi chú trong ô bảng: rút gọn 1 dòng + ellipsis (đầy đủ ở title hover). */
 .cell-note {
   display: inline-block;

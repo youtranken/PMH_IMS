@@ -34,6 +34,10 @@ export const UI_PATHS = {
   ispLine: (id: string) => `/isp-lines/${id}`,
   /** Màn dải IP nhận id của DẢI, không phải của địa chỉ — giữ đúng như `routes.ts.subnet`. */
   subnet: (id: string) => `/ip-addresses/${id}`,
+  /** Mở dải ở ĐÚNG một địa chỉ (tô sáng dòng) — khớp `routes.ts.subnetAt`. */
+  subnetAt: (id: string, ip: string) => `/ip-addresses/${id}?ip=${encodeURIComponent(ip)}`,
+  /** Sổ NAT lọc sẵn theo router — khớp `routes.ts.natOf`. */
+  natOf: (deviceId: string) => `/nat?deviceId=${encodeURIComponent(deviceId)}`,
   serviceAccount: (id: string) => `/service-accounts/${id}`,
   approvals: '/approvals',
   /**

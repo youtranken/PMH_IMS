@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countNat, filterNat, natBucket, NAT_DEFAULT_SHOWN } from './nat-buckets';
+import { countNat, filterNat, natBucket, NAT_DEFAULT_SHOWN, sortNat } from './nat-buckets';
 
 const rule = (enabled: boolean, voidedAt: string | null) => ({ enabled, voidedAt });
 
@@ -28,5 +28,36 @@ describe('lọc và đếm', () => {
 
   it('chỉ bật "Đã gỡ" → chỉ còn rule đã gỡ', () => {
     expect(filterNat(rows, { open: false, off: false, voided: true })).toEqual([rows[3]]);
+  });
+});
+
+describe('sortNat — sắp sổ NAT theo cột người đọc chọn', () => {
+  const r = (id: string, deviceCode: string, externalPorts: string, internalIp: string, createdAt: string) => ({
+    id,
+    deviceCode,
+    externalPorts,
+    internalIp,
+    createdAt,
+  });
+  const list = [
+    r('a', 'FW-02', '8080', '10.0.0.20', '2026-01-02T00:00:00Z'),
+    r('b', 'FW-01', '443', '10.0.0.3', '2026-03-01T00:00:00Z'),
+    r('c', 'FW-01', '5060-5070', '10.0.0.100', '2026-02-01T00:00:00Z'),
+  ];
+  it.each<[Parameters<typeof sortNat>[1], string[]]>([
+    // Port so theo SỐ, không theo chữ: "443" < "5060" < "8080".
+    ['external', ['b', 'c', 'a']],
+    ['router', ['b', 'c', 'a']],
+    // IP so theo số: .3 < .20 < .100.
+    ['internal', ['b', 'a', 'c']],
+    ['newest', ['b', 'c', 'a']],
+  ])('%s', (key, ids) => {
+    expect(sortNat(list, key).map((row) => row.id)).toEqual(ids);
+  });
+
+  it('không sửa mảng gốc (dữ liệu cache của react-query)', () => {
+    const copy = [...list];
+    sortNat(list, 'newest');
+    expect(list).toEqual(copy);
   });
 });

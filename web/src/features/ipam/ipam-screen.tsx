@@ -21,24 +21,10 @@ import { SubnetPane } from './subnet-detail';
 import { IpLookup } from './ip-lookup';
 import type { SubnetRow } from './ipam-types';
 import { PATHS } from '@/lib/routes';
+import { useIpamSettings } from './ipam-settings';
 
 /** Từ bao nhiêu dải thì cột trái cần ô lọc — ít hơn thế thì liếc là thấy. */
 const RAIL_FILTER_FROM = 6;
-
-/**
- * Ngưỡng "dải sắp đầy" của `system_config` (AD-11) — CÙNG con số bảng điều khiển dùng, để thẻ
- * dải và ô "Dải mạng sắp đầy" không tô hai màu khác nhau cho một dải. Hỏng thì lùi về 80 (giá
- * trị seed) và im lặng: đây là màu của một thanh đo, không đáng một khối lỗi.
- */
-function useSubnetFullPercent(): number {
-  const query = useQuery({
-    queryKey: ['ipam', 'settings'],
-    queryFn: () => apiFetch<{ subnetFullPercent: number }>('/api/v1/ipam/settings'),
-    staleTime: 10 * 60_000,
-    retry: false,
-  });
-  return query.data?.subnetFullPercent ?? 80;
-}
 
 /**
  * Địa chỉ IP (story 5.1, FR-018/FR-020) — MỘT trang hai cột, đúng mockup `body-Ipam.html`:
@@ -77,7 +63,7 @@ export function IpamScreen({ me }: { me: Me }) {
     queryKey: ['ipam', 'subnets', 'withVoided'],
     queryFn: () => apiFetch<SubnetRow[]>('/api/v1/ipam/subnets?includeVoided=true'),
   });
-  const fullPercent = useSubnetFullPercent();
+  const fullPercent = useIpamSettings().subnetFullPercent;
 
   // Chỉ dải và IP của dải: sổ NAT không đổi khi khai/sửa dải, tải lại nó là tốn công vô ích.
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['ipam', 'subnets'] });

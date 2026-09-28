@@ -42,6 +42,7 @@ import { DevicesApiService } from '../devices/devices.api';
 import { UsersApiService } from '../users/users.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { withActorNames } from '../../common/history';
+import { sensitivePortsOf } from './nat-sensitive';
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
 const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
@@ -235,7 +236,11 @@ export class IpamController {
   @Roles('sa', 'admin', 'member')
   @Get('settings')
   async settings() {
-    return { subnetFullPercent: await this.config.getNumber('dashboardSubnetFullPercent') };
+    const [subnetFullPercent, sensitive] = await Promise.all([
+      this.config.getNumber('dashboardSubnetFullPercent'),
+      this.config.getString('natSensitivePorts'),
+    ]);
+    return { subnetFullPercent, natSensitivePorts: sensitivePortsOf(sensitive) };
   }
 
   // --- Dải mạng ---------------------------------------------------------------

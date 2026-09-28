@@ -10,7 +10,7 @@ import { IpDeviceRetirement } from './ip-device-retirement';
 import { IpDeviceSearch } from './ip-device-search';
 import { IpamOwnerResolver } from './ipam-owner-resolver';
 import { IpamAuditLabeler } from './ipam-audit-labeler';
-import { NatDevicePanel } from './nat-device-panel';
+import { NatDevicePanel, NatTargetDevicePanel } from './nat-device-panel';
 import { NatRuleService } from './nat-rule.service';
 import { IpamApiService } from './ipam.api';
 import { IpamController } from './ipam.controller';
@@ -31,6 +31,7 @@ import { SubnetService } from './subnet.service';
     IpamOwnerResolver,
     IpamAuditLabeler,
     NatDevicePanel,
+    NatTargetDevicePanel,
     ExcelExportService,
   ],
   exports: [IpamApiService],
