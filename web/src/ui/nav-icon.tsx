@@ -131,6 +131,14 @@ const ICONS: Record<string, React.ReactNode> = {
       <circle cx="18" cy="18" r="2" />
     </>
   ),
+  'nav.disposal': (
+    <>
+      {/* Hộp lưu trữ — hồ sơ đã ngừng dùng được cất vào kho, không bị xoá. */}
+      <rect x="2" y="4" width="20" height="5" rx="1" />
+      <path d="M4 9v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9" />
+      <path d="M10 13h4" />
+    </>
+  ),
   'nav.components': (
     <>
       {/* Khối lắp ghép — bộ giao diện dùng chung. */}
@@ -139,6 +147,11 @@ const ICONS: Record<string, React.ReactNode> = {
     </>
   ),
 };
+
+/** Có icon riêng cho khoá này không — bài kiểm canh mục menu mới không rơi về chấm tròn. */
+export function hasNavIcon(navKey: string): boolean {
+  return navKey in ICONS;
+}
 
 export function NavIcon({ navKey }: { navKey: string }) {
   return (

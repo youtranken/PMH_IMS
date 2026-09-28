@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -7,7 +7,10 @@ import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
 import { visibleGroups } from '@/shell/app-nav';
 import { isAnyDialogOpen, useAnyDialogOpen } from '@/ui/dialog';
-import { foldSearch } from '@/lib/search-fold';
+import { NavIcon } from '@/ui/nav-icon';
+import { useMediaQuery } from '@/ui/use-media-query';
+import { NARROW_QUERY } from '@/ui/use-narrow';
+import { foldSearch, foldedMatchRange } from '@/lib/search-fold';
 import { looksLikeIp, parseIpv4, subnetOf } from '@/lib/ipv4';
 
 /**
@@ -33,52 +36,71 @@ interface Hit {
   title: string;
   sub: string;
   to: string;
-  icon: IconKey;
+  /**
+   * Icon lấy từ `NavIcon` theo khoá menu của NHÓM (AD-15): một thực thể chỉ có một icon, cùng
+   * cái người dùng thấy ở sidebar — bộ icon thứ hai riêng của palette từng vẽ phần mềm thành
+   * mặt trời còn sidebar vẽ chìa khoá.
+   */
+  navKey: string;
+  /** `more` = "Xem tất cả N…", `action` = "Tìm trong …"/"Đi tới" — chữ thường, không phải mã mono. */
+  kind?: 'more' | 'action';
 }
 
-type IconKey = 'device' | 'software' | 'isp' | 'account' | 'ip' | 'subnet' | 'nav';
+/** Hồ sơ vừa mở gần đây — chỉ đường dẫn, mã và tên; không bao giờ có bí mật. */
+const RECENT_LIMIT = 5;
+function recentKey(email: string): string {
+  return `ims_palette_recent:${email.toLowerCase()}`;
+}
+function readRecent(email: string): Hit[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(recentKey(email)) ?? '[]') as unknown;
+    return Array.isArray(raw)
+      ? (raw as Hit[])
+          .filter(
+            (h) =>
+              typeof h?.to === 'string' &&
+              h.to.startsWith('/') &&
+              !h.to.startsWith('//') &&
+              typeof h.title === 'string' &&
+              typeof h.navKey === 'string',
+          )
+          .slice(0, RECENT_LIMIT)
+      : [];
+  } catch {
+    return [];
+  }
+}
+function rememberRecent(email: string, hit: Hit): void {
+  try {
+    const next = [
+      { to: hit.to, title: hit.title, sub: hit.sub, navKey: hit.navKey, group: '' },
+      ...readRecent(email).filter((h) => h.to !== hit.to),
+    ].slice(0, RECENT_LIMIT);
+    localStorage.setItem(recentKey(email), JSON.stringify(next));
+  } catch {
+    // Kho bị chặn: chỉ mất danh sách "mở gần đây", tìm vẫn chạy.
+  }
+}
 
-const ICON: Record<IconKey, ReactNode> = {
-  device: (
+/** Phím tắt đúng nền tảng: người dùng Mac bấm ⌘K, không phải Ctrl K. */
+export function paletteShortcut(): string {
+  const nav = navigator as Navigator & { userAgentData?: { platform?: string } };
+  const platform = nav.userAgentData?.platform ?? nav.platform ?? '';
+  return /mac|iphone|ipad/i.test(platform) ? '⌘K' : 'Ctrl K';
+}
+
+/** Tô đậm phần khớp (gấp dấu) trong một dòng kết quả. */
+function Highlight({ text, q }: { text: string; q: string }) {
+  const range = q.length >= 2 ? foldedMatchRange(text, q) : null;
+  if (!range) return <>{text}</>;
+  return (
     <>
-      <rect x="2" y="4" width="20" height="13" rx="2" />
-      <path d="M8 21h8M12 17v4" />
+      {text.slice(0, range[0])}
+      <mark>{text.slice(range[0], range[1])}</mark>
+      {text.slice(range[1])}
     </>
-  ),
-  software: (
-    <>
-      <circle cx="12" cy="12" r="3" />
-      <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-    </>
-  ),
-  isp: (
-    <>
-      <circle cx="12" cy="12" r="9" />
-      <path d="M3 12h18M12 3c2.5 2.7 2.5 15.3 0 18M12 3c-2.5 2.7-2.5 15.3 0 18" />
-    </>
-  ),
-  account: (
-    <>
-      <circle cx="8" cy="12" r="4" />
-      <path d="M12 12h9M18 12v4" />
-    </>
-  ),
-  ip: (
-    <>
-      <rect x="3" y="7" width="18" height="10" rx="2" />
-      <path d="M7 11v2M10 11v2M14 11h3" />
-    </>
-  ),
-  subnet: (
-    <>
-      <rect x="9" y="3" width="6" height="5" rx="1" />
-      <rect x="3" y="16" width="6" height="5" rx="1" />
-      <rect x="15" y="16" width="6" height="5" rx="1" />
-      <path d="M12 8v4M6 16v-4h12v4" />
-    </>
-  ),
-  nav: <path d="M4 7h16M4 12h16M4 17h10" />,
-};
+  );
+}
 
 /** Một hồ sơ IP khớp — `GET ipam/addresses?search=` trả kèm dải chứa nó. */
 interface IpHit {
@@ -113,6 +135,7 @@ function asArray<T>(value: unknown): T[] {
 /** Bảng phân trang chung của API: `{ items, total }`. Dải IP thì trả thẳng mảng. */
 interface Page<T> {
   items: T[];
+  total?: number;
 }
 
 /**
@@ -146,6 +169,9 @@ export function CommandPalette({ me }: { me: Me }) {
   const anchoredTo = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const openedBy = useRef<Element | null>(null);
+  // `useMediaQuery` chứ không `useIsNarrow`: hộp này dựng cả ở nơi không có `matchMedia`.
+  const narrow = useMediaQuery(NARROW_QUERY);
+  const [recent, setRecent] = useState<Hit[]>([]);
 
   /*
    * Gõ xong 200ms mới hỏi API. Không có bước này thì mỗi phím là BỐN request (thiết bị ·
@@ -210,6 +236,7 @@ export function CommandPalette({ me }: { me: Me }) {
     if (open) {
       setRaw('');
       setQ('');
+      setRecent(readRecent(me.email));
       anchoredTo.current = null;
       setAt(0);
       // Ô tìm phải nhận tiêu điểm ngay, nếu không người dùng gõ vào khoảng không.
@@ -219,7 +246,7 @@ export function CommandPalette({ me }: { me: Me }) {
       openedBy.current.focus();
       openedBy.current = null;
     }
-  }, [open]);
+  }, [open, me.email]);
 
   const enabled = open && q.length >= 2;
 
@@ -286,7 +313,7 @@ export function CommandPalette({ me }: { me: Me }) {
         subnet: `${row.subnetName} (${row.subnetCidr})`,
       }),
       to: PATHS.subnetAt(row.subnetId, row.address),
-      icon: 'ip' as const,
+      navKey: 'nav.ipam',
     }));
     // IP đủ bốn khúc mà chưa có hồ sơ: vẫn chỉ ra dải chứa nó — đó là chỗ để cấp.
     if (found.length === 0 && parseIpv4(q) !== null) {
@@ -301,7 +328,7 @@ export function CommandPalette({ me }: { me: Me }) {
             subnet: `${home.name} (${home.cidr})`,
           }),
           to: PATHS.subnetAt(home.id, q),
-          icon: 'ip' as const,
+          navKey: 'nav.ipam',
         });
       }
     }
@@ -331,7 +358,7 @@ export function CommandPalette({ me }: { me: Me }) {
           .filter(Boolean)
           .join(' · '),
         to: PATHS.subnet(s.id),
-        icon: 'subnet' as const,
+        navKey: 'nav.ipam',
       }));
   }, [enabled, subnets.data, q, ipFirst, t]);
 
@@ -350,44 +377,75 @@ export function CommandPalette({ me }: { me: Me }) {
         title: t(item.key),
         sub: item.to,
         to: item.to,
-        icon: 'nav' as const,
+        navKey: item.key,
       }));
   }, [q, me, t]);
 
-  const hits = useMemo<Hit[]>(() => {
+  const found = useMemo<Hit[]>(() => {
     if (!enabled) return [];
+    /*
+     * Dòng "Xem tất cả N kết quả trong …" cuối mỗi nhóm bị cắt: gõ "E2E" thấy 5 thiết bị mà
+     * không biết còn 20 cái nữa là tưởng hết. Mở đúng màn danh sách với ô tìm đã điền.
+     */
+    const more = (group: string, total: number | undefined, shown: number, list: string, navKey: string): Hit[] =>
+      total !== undefined && total > shown
+        ? [
+            {
+              group,
+              title: t('palette.seeAll', { count: total, group }),
+              sub: '',
+              to: `${list}?q=${encodeURIComponent(q)}`,
+              navKey,
+              kind: 'more',
+            },
+          ]
+        : [];
     // Câu gõ có dáng IP/CIDR thì người hỏi đang tra mạng: IP và dải lên đầu.
     const network = [...ipHits, ...subnetHits];
+    const deviceRows = devices.data?.items ?? [];
+    const softwareRows = software.data?.items ?? [];
+    const ispRows = isp.data?.items ?? [];
+    const accountRows = accounts.data?.items ?? [];
     return [
       ...(ipFirst ? network : []),
-      ...(devices.data?.items ?? []).map((row) => ({
+      ...deviceRows.map((row) => ({
         group: t('nav.devices'),
         title: row.code,
         sub: [row.name, row.siteCode].filter(Boolean).join(' · '),
         to: PATHS.device(row.id),
-        icon: 'device' as const,
+        navKey: 'nav.devices',
       })),
-      ...(software.data?.items ?? []).map((row) => ({
+      ...more(t('nav.devices'), devices.data?.total, deviceRows.length, PATHS.devices, 'nav.devices'),
+      ...softwareRows.map((row) => ({
         group: t('nav.software'),
         title: row.code,
         sub: row.name,
         to: PATHS.softwareItem(row.id),
-        icon: 'software' as const,
+        navKey: 'nav.software',
       })),
-      ...(isp.data?.items ?? []).map((row) => ({
+      ...more(t('nav.software'), software.data?.total, softwareRows.length, PATHS.software, 'nav.software'),
+      ...ispRows.map((row) => ({
         group: t('nav.isp'),
         title: row.code,
         sub: row.provider,
         to: PATHS.ispLine(row.id),
-        icon: 'isp' as const,
+        navKey: 'nav.isp',
       })),
-      ...(accounts.data?.items ?? []).map((row) => ({
+      ...more(t('nav.isp'), isp.data?.total, ispRows.length, PATHS.ispLines, 'nav.isp'),
+      ...accountRows.map((row) => ({
         group: t('nav.serviceAccounts'),
         title: row.code,
         sub: [row.name, row.login].filter(Boolean).join(' · '),
         to: PATHS.serviceAccount(row.id),
-        icon: 'account' as const,
+        navKey: 'nav.serviceAccounts',
       })),
+      ...more(
+        t('nav.serviceAccounts'),
+        accounts.data?.total,
+        accountRows.length,
+        PATHS.serviceAccounts,
+        'nav.serviceAccounts',
+      ),
       ...(ipFirst ? [] : network),
       ...navHits,
     ];
@@ -401,8 +459,68 @@ export function CommandPalette({ me }: { me: Me }) {
     subnetHits,
     ipFirst,
     navHits,
+    q,
     t,
   ]);
+
+  const searching =
+    enabled &&
+    (devices.isFetching ||
+      software.isFetching ||
+      isp.isFetching ||
+      accounts.isFetching ||
+      ipAddresses.isFetching ||
+      subnets.isFetching);
+  const anyFailed =
+    devices.isError ||
+    software.isError ||
+    isp.isError ||
+    accounts.isError ||
+    ipAddresses.isError ||
+    subnets.isError;
+
+  /*
+   * Ba cảnh của danh sách, và cả ba đều CHỌN ĐƯỢC bằng mũi tên:
+   *  - chưa gõ đủ 2 ký tự: "Mở gần đây" + "Đi tới" (các màn trong menu) — lúc mở hộp là lúc tốt
+   *    nhất để đưa lại đúng hồ sơ người trực đang xử lý dở;
+   *  - không có gì khớp (và không nhóm nào hỏng): lối đi tiếp "Tìm "x" trong …" thay cho ngõ cụt;
+   *  - còn lại: kết quả tìm.
+   */
+  const hits = useMemo<Hit[]>(() => {
+    if (q.length < 2) {
+      const recentGroup = t('palette.groupRecent');
+      const gotoGroup = t('palette.groupGoto');
+      return [
+        ...recent.map((hit) => ({ ...hit, group: recentGroup })),
+        ...visibleGroups(me)
+          .flatMap((group) => group.items)
+          .filter((item) => !item.planned)
+          .map((item) => ({
+            group: gotoGroup,
+            title: t(item.key),
+            sub: '',
+            to: item.to,
+            navKey: item.key,
+            kind: 'action' as const,
+          })),
+      ];
+    }
+    if (found.length > 0 || searching || anyFailed) return found;
+    const group = t('palette.groupSearchIn');
+    return [
+      { list: PATHS.devices, key: 'nav.devices' },
+      { list: PATHS.software, key: 'nav.software' },
+      { list: PATHS.ispLines, key: 'nav.isp' },
+      { list: PATHS.serviceAccounts, key: 'nav.serviceAccounts' },
+    ].map(({ list, key }) => ({
+      group,
+      title: t('palette.searchIn', { q, where: t(key) }),
+      sub: '',
+      to: `${list}?q=${encodeURIComponent(q)}`,
+      navKey: key,
+      kind: 'action' as const,
+    }));
+  }, [q, recent, me, found, searching, anyFailed, t]);
 
   /* Đổi từ khoá = bỏ neo. Giữ neo lại thì effect khôi phục bên dưới sẽ kéo con trỏ về dòng của
      từ khoá CŨ ngay khi kết quả mới về — người dùng gõ từ mới mà con trỏ đứng ở dòng 8. */
@@ -466,6 +584,7 @@ export function CommandPalette({ me }: { me: Me }) {
 
   const go = (hit: Hit | undefined) => {
     if (!hit) return;
+    if (!hit.kind && q.length >= 2) rememberRecent(me.email, hit);
     setOpen(false);
     navigate(hit.to);
   };
@@ -506,14 +625,12 @@ export function CommandPalette({ me }: { me: Me }) {
     ipAddresses.isError ? t('palette.groupIp') : null,
     subnets.isError ? t('palette.groupSubnet') : null,
   ].filter((name): name is string => name !== null);
-  const loading =
-    enabled &&
-    (devices.isFetching ||
-      software.isFetching ||
-      isp.isFetching ||
-      accounts.isFetching ||
-      ipAddresses.isFetching ||
-      subnets.isFetching);
+  const loading = searching;
+  const retryFailed = () => {
+    for (const query of [devices, software, isp, accounts, ipAddresses, subnets]) {
+      if (query.isError) void query.refetch();
+    }
+  };
   /*
    * Gom `hits` thành từng nhóm LIỀN NHAU để mỗi nhóm thành một `role="group"` thật.
    *
@@ -597,7 +714,8 @@ export function CommandPalette({ me }: { me: Me }) {
             value={raw}
             onChange={(event) => setRaw(event.target.value)}
             onKeyDown={onKeyDown}
-            placeholder={t('palette.placeholder')}
+            // Điện thoại: câu ngắn, câu dài bị cắt ngang giữa chữ.
+            placeholder={t(narrow ? 'palette.placeholderShort' : 'palette.placeholder')}
             aria-label={t('palette.title')}
             role="combobox"
             aria-expanded={hits.length > 0}
@@ -605,7 +723,14 @@ export function CommandPalette({ me }: { me: Me }) {
             aria-autocomplete="list"
             aria-activedescendant={hits.length > 0 ? `cp-hit-${at}` : undefined}
           />
-          <kbd>Esc</kbd>
+          {narrow ? (
+            // Màn cảm ứng không có phím Esc: nút chữ đủ lớn để chạm.
+            <button type="button" className="cp-cancel" onClick={() => setOpen(false)}>
+              {t('common.cancel')}
+            </button>
+          ) : (
+            <kbd>Esc</kbd>
+          )}
         </div>
 
         {/*
@@ -635,22 +760,19 @@ export function CommandPalette({ me }: { me: Me }) {
           Nay `<p>` thường trực, `hidden` khi rỗng: DOM không vẽ gì, nhưng vùng sống đã được
           đăng ký từ lượt mở hộp nên lời cảnh báo tới sau sẽ được đọc.
         */}
-        <p className="cp-warn" role="status" hidden={!(failedGroups.length > 0 && hits.length > 0)}>
-          {failedGroups.length > 0 && hits.length > 0
-            ? t('palette.partial', { list: failedGroups.join(', ') })
-            : null}
+        <p className="cp-warn" role="status" hidden={!(failedGroups.length > 0 && found.length > 0)}>
+          {failedGroups.length > 0 && found.length > 0 ? (
+            <>
+              {t('palette.partial', { list: failedGroups.join(', ') })}{' '}
+              <button type="button" className="cp-retry" onClick={retryFailed} disabled={loading}>
+                {t('app.retry')}
+              </button>
+            </>
+          ) : null}
         </p>
 
         <div className="cp-list">
-          {q.length < 2 ? (
-            <div className="cp-empty">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
-                <circle cx="11" cy="11" r="7" />
-                <path d="m20 20-3.5-3.5" />
-              </svg>
-              <p>{t('palette.hint')}</p>
-            </div>
-          ) : hits.length === 0 ? (
+          {q.length >= 2 && found.length === 0 ? (
             <div className="cp-empty">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
                 <circle cx="11" cy="11" r="7" />
@@ -663,6 +785,14 @@ export function CommandPalette({ me }: { me: Me }) {
                     ? t('palette.emptyPartial', { list: failedGroups.join(', '), q })
                     : t('palette.empty', { q })}
               </p>
+              {!loading && failedGroups.length === 0 ? (
+                <p className="cp-empty-hint">{t('palette.emptyHint')}</p>
+              ) : null}
+              {!loading && failedGroups.length > 0 ? (
+                <button type="button" className="btn sm" onClick={retryFailed}>
+                  {t('app.retry')}
+                </button>
+              ) : null}
             </div>
           ) : null}
 
@@ -697,18 +827,20 @@ export function CommandPalette({ me }: { me: Me }) {
                     id={`cp-hit-${index}`}
                     role="option"
                     aria-selected={index === at}
-                    className={`cp-item${index === at ? ' active' : ''}`}
+                    className={`cp-item${index === at ? ' active' : ''}${hit.kind ? ` is-${hit.kind}` : ''}`}
                     onMouseEnter={() => select(index)}
                     onClick={() => go(hit)}
                   >
                     <span className="it-ic">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                        {ICON[hit.icon]}
-                      </svg>
+                      <NavIcon navKey={hit.navKey} />
                     </span>
                     <span className="it-name">
-                      <b>{hit.title}</b>
-                      <span>{hit.sub}</span>
+                      <b>{hit.kind ? hit.title : <Highlight text={hit.title} q={q} />}</b>
+                      {hit.sub ? (
+                        <span>
+                          <Highlight text={hit.sub} q={q} />
+                        </span>
+                      ) : null}
                     </span>
                     <span className="it-arrow">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
@@ -723,16 +855,22 @@ export function CommandPalette({ me }: { me: Me }) {
         </div>
 
         <div className="cp-foot">
-          <span className="fh">
-            <kbd>↑</kbd>
-            <kbd>↓</kbd> {t('palette.footMove')}
-          </span>
-          <span className="fh">
-            <kbd>↵</kbd> {t('palette.footOpen')}
-          </span>
-          <span className="fh">
-            <kbd>Esc</kbd> {t('palette.footClose')}
-          </span>
+          {/* Luật "gõ ít nhất 2 ký tự" thu về một dòng nhỏ: chỗ chính của hộp để cho gợi ý. */}
+          <span className="fh cp-foot-hint">{t('palette.hintShort')}</span>
+          {narrow ? null : (
+            <>
+              <span className="fh">
+                <kbd>↑</kbd>
+                <kbd>↓</kbd> {t('palette.footMove')}
+              </span>
+              <span className="fh">
+                <kbd>↵</kbd> {t('palette.footOpen')}
+              </span>
+              <span className="fh">
+                <kbd>Esc</kbd> {t('palette.footClose')}
+              </span>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-/* --- Shell theo app-shell.html: icon/badge/footer sidebar + rail + topbar mới --------- */
+/* --- Shell theo app-shell.html: icon/badge/footer sidebar + topbar ------------------------- */
 
 .sidebar {
   transition: width 0.2s var(--ease);
@@ -8,8 +8,7 @@
   height: 20px;
   flex: none;
 }
-.nav-item .lbl,
-.nav-parent .lbl {
+.nav-item .lbl {
   flex: 1;
   min-width: 0;
   overflow: hidden;
@@ -27,74 +26,59 @@
   display: inline-grid;
   place-items: center;
   line-height: 1;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--sidebar-chip);
   color: var(--sidebar-ink-2);
 }
 .nav-badge.warn {
   background: var(--warm);
   color: var(--ink);
 }
-.nav-parent .nav-caret {
-  flex: none;
-}
-/* Nút <button> mặc định text-align:center → nhãn bị dồn giữa ô, lệch phải. Ép trái như <a>. */
-.nav-parent {
-  text-align: left;
-}
-/* Mũi tên dropdown DÙNG CHUNG 1 kiểu: chevron › xoay 90° khi mở (như caret expand bảng). */
+/* Mũi tên của khối tài khoản: chevron ›. */
 .nav-caret {
   font-size: var(--fs-lg);
   line-height: 1;
   opacity: 0.75;
   transition: transform 0.18s var(--ease);
 }
-.nav-caret.open {
-  transform: rotate(90deg);
+
+/* Vùng cuộn riêng của danh sách mục: brand ở trên và khối tài khoản ở đáy đứng yên. Mép dưới
+   có một dải mờ DÍNH đáy — còn mục khuất phía dưới thì chúng mờ dần vào đó; không còn gì thì
+   dải ấy chỉ phủ lên nền sidebar trống, không thấy gì. */
+.sb-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+.sb-scroll::after {
+  content: '';
+  position: sticky;
+  bottom: 0;
+  flex: none;
+  height: 28px;
+  margin-top: -12px;
+  background: linear-gradient(to bottom, transparent, var(--sidebar-bg));
+  pointer-events: none;
 }
 
-/* Footer sidebar (thay header): khối user (nút thu gọn + tên) + Hồ sơ/ngôn ngữ/theme/Đăng xuất. */
+/* Footer sidebar: khối người dùng = nút mở menu tài khoản. */
 .sb-foot {
   position: relative;
-  margin-top: auto;
+  margin-top: var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   padding: var(--space-5);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--sidebar-hover);
 }
 .sb-user {
   display: flex;
   align-items: center;
   gap: var(--space-4);
 }
-.sb-collapse {
-  width: 34px;
-  height: 34px;
-  flex: none;
-  /* padding:0 đè padding mặc định của button (0.48rem 0.9rem) — nếu không, padding ngang
-     lấn ô 34px (border-box) làm icon 3 gạch lệch tâm. */
-  padding: 0;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--sidebar-ink);
-  display: grid;
-  place-items: center;
-  cursor: pointer;
-  transition: background 0.15s var(--ease);
-}
-/* Đè `button:hover{background:surface-2}` (specificity cao hơn) — nếu không nút 3 gạch hover
-   ra nền sáng (trắng). */
-.sb-foot .sb-collapse:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--sidebar-ink-2);
-}
-.sb-collapse svg {
-  width: 18px;
-  height: 18px;
-}
-/* Nút tên = trigger menu tài khoản. Chiếm phần còn lại cạnh nút thu gọn. */
 .sb-userbtn {
   flex: 1;
   min-width: 0;
@@ -111,7 +95,7 @@
 }
 .sb-foot .sb-userbtn:hover:not(:disabled),
 .sb-foot .sb-userbtn[aria-expanded='true'] {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--sidebar-chip);
 }
 /* Menu tài khoản: ẩn mặc định; bấm tên → bung LÊN TRÊN dạng popup. */
 .sb-actions {
@@ -133,20 +117,11 @@
   box-shadow: var(--shadow-lg);
   z-index: 20;
 }
-.sb-act-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-.sb-act-row .sb-act {
-  flex: 1;
-}
 .sb-act {
   display: flex;
   align-items: center;
   justify-content: flex-start;
   gap: var(--space-2);
-  /* Gọn hơn (khớp QLHS ~9×10px): icon + chữ trái, badge đẩy phải bằng margin-auto. */
   padding: var(--space-2) var(--space-3);
   border-radius: var(--r-sm);
   border: 1px solid transparent;
@@ -160,9 +135,9 @@
   cursor: pointer;
 }
 /* Đè rule chung `button:hover{background:surface-2}` + `button.danger:hover` (specificity cao
-   hơn) — nếu không, hover ra nền sáng/đỏ-đậm làm chữ (Hồ sơ/Ngôn ngữ/Đăng xuất) mất/khó đọc. */
+   hơn) — nếu không, hover ra nền sáng/đỏ-đậm làm chữ mất/khó đọc. */
 .sb-foot .sb-act:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--sidebar-chip);
   color: var(--sidebar-ink-2);
   text-decoration: none;
 }
@@ -193,22 +168,6 @@
   margin: var(--space-2) 0;
   background: var(--sidebar-border);
 }
-.sb-badge {
-  font-size: var(--fs-2xs);
-  font-weight: 800;
-  padding: 1px var(--space-2);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--sidebar-ink-2);
-}
-/* Icon menu tài khoản: không co, hơi mờ để chữ nổi hơn. Badge đẩy sát phải trong nút. */
-.sb-ico {
-  flex: none;
-  opacity: 0.8;
-}
-.sb-act .sb-badge {
-  margin-left: auto;
-}
 .sb-who {
   display: flex;
   flex-direction: column;
@@ -225,7 +184,7 @@
   color: var(--sidebar-label);
   font-size: var(--fs-2xs);
 }
-/* Avatar 2 chữ — hiện ở cả rail thu gọn (bấm để bung sidebar) lẫn khi mở rộng. */
+/* Avatar 2 chữ. */
 .sb-av {
   flex: none;
   width: 30px;
@@ -235,60 +194,33 @@
   place-items: center;
   font-size: var(--fs-2xs);
   font-weight: 800;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--sidebar-chip-strong);
   color: var(--sidebar-ink-2);
 }
 
-/* Rail thu gọn (desktop): ẩn nhãn/badge/label, canh giữa icon. */
-.app-shell.collapsed .sidebar {
-  width: 72px;
-}
-.app-shell.collapsed .lbl,
-.app-shell.collapsed .nav-label,
-.app-shell.collapsed .nav-badge,
-.app-shell.collapsed .nav-children {
-  display: none;
-}
-/* Rail: nav-item/nav-parent/brand là flex-ROW → center icon theo trục ngang (justify-content).
-   sb-foot là flex-COLUMN → center theo align-items. Trộn lẫn làm icon lệch trái khỏi highlight. */
-.app-shell.collapsed .nav-item,
-.app-shell.collapsed .nav-parent,
-.app-shell.collapsed .brand {
-  justify-content: center;
-  padding-left: 0;
-  padding-right: 0;
-}
-.app-shell.collapsed .sb-foot {
-  align-items: center;
-  padding-left: 0;
-  padding-right: 0;
-}
-/* Rail: footer chỉ còn AVATAR user (tên/hành động ẩn theo .lbl); bấm avatar → bung sidebar. */
-.app-shell.collapsed .sb-user {
-  justify-content: center;
-}
-.app-shell.collapsed .sb-userbtn {
+/*
+ * Nút icon dùng chung của topbar (menu, tìm, đổi giao diện) — MỘT cỡ, một viền, một nét.
+ * 40×40 ở desktop, 44×44 ở màn cảm ứng (vùng chạm tối thiểu).
+ */
+.icon-btn {
   flex: none;
-  justify-content: center;
-  padding: var(--space-2);
-}
-
-/* Nút mở/đóng drawer ở màn hẹp. KHÁC bản QLTS (nút nổi `.nav-fab` vì QLTS bỏ hẳn header):
-   IMS có topbar dính đỉnh, nên nút nằm TRONG topbar — vừa luôn với tầm tay, vừa không đè
-   lên dòng chào như nút nổi position:fixed. */
-.nav-toggle {
-  flex: none;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   padding: 0;
   display: grid;
   place-items: center;
+  border: 1px solid var(--border);
   border-radius: var(--r-sm);
+  background: transparent;
   color: var(--ink-2);
 }
-.nav-toggle svg {
-  width: 22px;
-  height: 22px;
+.icon-btn:hover:not(:disabled) {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.icon-btn svg {
+  width: 20px;
+  height: 20px;
 }
 /* Chấm "có việc chờ duyệt" trên nút mở menu — cùng màu với `.nav-badge.warn` bên trong menu. */
 .nav-toggle {
@@ -304,32 +236,126 @@
   background: var(--warm);
   box-shadow: 0 0 0 2px var(--surface);
 }
+
+/* Tên màn đang mở ở đầu topbar. */
+.topbar-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+  font-size: var(--fs-md);
+  font-weight: 600;
+}
+
+/* Nút giả ô tìm (desktop): người dùng chuột thấy có ô tìm và học phím tắt từ nó. */
+.topbar-search {
+  flex: none;
+  width: clamp(240px, 26vw, 360px);
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-3) 0 var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface-2);
+  color: var(--ink-3);
+  font-weight: 400;
+  text-align: left;
+}
+.topbar-search:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--border-2);
+}
+.topbar-search svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+.topbar-search-ph {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.topbar-search kbd {
+  flex: none;
+  padding: 1px var(--space-3);
+  font: inherit;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  color: var(--ink-2);
+  background: var(--surface);
+  border: 1px solid var(--border-2);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+}
+
+/* Drawer: nút đóng ở hàng logo, lối vào Tìm nhanh ngay dưới. */
+.brand .drawer-close {
+  margin-left: auto;
+  color: var(--sidebar-ink);
+  border-color: var(--sidebar-border);
+}
+.brand .drawer-close:hover:not(:disabled) {
+  background: var(--sidebar-chip);
+  color: var(--sidebar-ink-2);
+}
+.sb-search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 44px;
+  margin-bottom: var(--space-4);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--sidebar-border);
+  border-radius: var(--r-sm);
+  background: var(--sidebar-hover);
+  color: var(--sidebar-ink);
+  font-weight: 500;
+  text-align: left;
+}
+.sb-search:hover:not(:disabled) {
+  background: var(--sidebar-chip);
+  color: var(--sidebar-ink-2);
+}
+.sb-search svg {
+  width: 18px;
+  height: 18px;
+}
+
 @media (max-width: 900px) {
-  /* Điện thoại: topbar hẹp lại và dòng chào cắt bằng "…" thay vì đẩy trang tràn ngang. */
+  /* Điện thoại: topbar hẹp lại, tên màn cắt bằng "…" thay vì đẩy trang tràn ngang. */
   .topbar {
     padding: 0 var(--space-5);
     gap: var(--space-4);
   }
-  .topbar .hello {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+  /* Mục menu trong drawer là thứ ngón tay chạm nhiều nhất — tối thiểu 44px. */
+  .sidebar.is-drawer .nav-item {
+    min-height: 44px;
   }
 }
-.app-shell.collapsed .nav-item:hover {
-  transform: none;
-}
 
-/* Mục của epic sau (`planned` trong app-nav.ts): render ra <span>, KHÔNG phải link.
-   Thiếu luật này thì nó đậm y hệt mục thật và vẫn sáng lên + nhích khi rê chuột — người dùng
-   bấm mãi không được và tưởng ứng dụng hỏng. Mờ + con trỏ cấm = nói thẳng "chưa mở". */
+/* Mục của epic sau (`planned` trong app-nav.ts): render ra <span>, KHÔNG phải link. Chip "Sắp
+   có" nói điều đó bằng chữ — độ mờ + con trỏ cấm chỉ nói được với người rê chuột. */
 .nav-item.is-planned {
-  opacity: 0.45;
-  cursor: not-allowed;
+  cursor: default;
+  color: var(--sidebar-label);
 }
 .nav-item.is-planned:hover {
   background: none;
-  color: var(--sidebar-ink);
+  color: var(--sidebar-label);
   transform: none;
+}
+.nav-badge.planned {
+  min-width: 0;
+  padding: 0 var(--space-3);
+  font-weight: 700;
+  background: var(--sidebar-chip);
+  color: var(--sidebar-label);
 }

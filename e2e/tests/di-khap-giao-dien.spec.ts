@@ -1375,7 +1375,8 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
       .map((text) => text.trim())
       .sort();
     const expected = [
-      // Nhóm "Nghiệp vụ" — 10 link + mục "Tài liệu" không phải link (xem dưới).
+      // 10 link nghiệp vụ (chia nhóm Tổng quan · Tài sản · Mạng · Bảo mật) + mục "Tài liệu"
+      // không phải link (xem dưới).
       'Bảng điều khiển',
       'Thiết bị',
       'Phần mềm',
@@ -1394,9 +1395,12 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
       'Thành viên phải thấy đúng 11 cửa bấm được — thừa một mục là quên gắn `roles`, thiếu một mục là gắn nhầm',
     ).toEqual(expected);
 
-    // Hai nhãn nhóm vẫn phải còn: "Hệ thống" biến mất nghĩa là Danh mục cũng đã rơi mất.
-    await expect(nav.getByText('Nghiệp vụ', { exact: true })).toBeVisible();
-    await expect(nav.getByText('Hệ thống', { exact: true })).toBeVisible();
+    // Nhãn nhóm vẫn phải còn: "Hệ thống" biến mất nghĩa là Danh mục cũng đã rơi mất; nhóm
+    // "Dành cho nhà phát triển" chỉ SA thấy (SHELL-008, SHELL-012).
+    for (const nhom of ['Tổng quan', 'Tài sản', 'Mạng', 'Bảo mật', 'Hệ thống']) {
+      await expect(nav.getByText(nhom, { exact: true })).toBeVisible();
+    }
+    await expect(nav.getByText('Dành cho nhà phát triển', { exact: true })).toHaveCount(0);
 
     /*
      * Bốn cửa PHẢI KHÔNG có. Viết rời từng cái thay vì tin vào phép so danh sách ở trên, vì

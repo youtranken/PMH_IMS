@@ -2,12 +2,13 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { NavLink, useLocation } from 'react-router-dom';
 import { type Me } from '@/lib/me';
+import { titleKeyOf } from '@/lib/routes';
 import { ErrorBoundary } from '@/ui/error-boundary';
 import { visibleGroups } from '@/shell/app-nav';
 import { usePendingApprovalCount } from '@/shell/use-pending-approvals';
 import { useOverdueExpiryCount } from '@/shell/use-overdue-count';
 import { NavIcon } from '@/ui/nav-icon';
-import { CommandPalette, openCommandPalette } from '@/ui/command-palette';
+import { CommandPalette, openCommandPalette, paletteShortcut } from '@/ui/command-palette';
 import { ThemeSwitch } from '@/ui/switches';
 import { useFocusTrap } from '@/ui/focus-trap';
 import { useIsNarrow } from '@/ui/use-narrow';
@@ -43,6 +44,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   const drawerRef = useFocusTrap<HTMLDivElement>(narrow && drawerOpen);
   const pendingApprovals = usePendingApprovalCount(me);
   const overdue = useOverdueExpiryCount();
+  const [shortcut] = useState(paletteShortcut);
 
   // Chọn xong một mục thì drawer phải tự khép, không che mất trang vừa mở.
   useEffect(() => {
@@ -102,8 +104,44 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
               IMS
             </span>
             <span>{t('app.brand')}</span>
+            {narrow ? (
+              /* Nút đóng NGAY TRONG drawer: trước đây phải đoán là chạm vào dải mờ bên phải.
+                 Tên "Đóng", không trùng "Đóng menu" của nút ở topbar. */
+              <button
+                type="button"
+                className="icon-btn drawer-close"
+                aria-label={t('common.close')}
+                onClick={() => setDrawerOpen(false)}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                  <path d="M6 6l12 12M18 6 6 18" />
+                </svg>
+              </button>
+            ) : null}
           </div>
 
+          {narrow ? (
+            /* Khi drawer mở, nút tìm trên topbar nằm dưới lớp mờ — đưa lối vào Tìm nhanh vào đây.
+               Đóng drawer TRƯỚC rồi mới mở hộp: hai lớp phủ cùng giữ tiêu điểm thì giằng nhau. */
+            <button
+              type="button"
+              className="sb-search"
+              onClick={() => {
+                setDrawerOpen(false);
+                window.setTimeout(openCommandPalette, 0);
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+              </svg>
+              <span>{t('palette.title')}</span>
+            </button>
+          ) : null}
+
+          {/* Vùng cuộn RIÊNG cho danh sách mục: menu dài hơn màn laptop thì chỉ phần này cuộn,
+              khối tài khoản ở đáy luôn đứng yên và có mép mờ báo còn mục bên dưới. */}
+          <div className="sb-scroll">
           {groups.map((group) => (
             <div key={group.labelKey}>
               <p className="nav-label">{t(group.labelKey)}</p>
@@ -123,6 +161,10 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                   >
                     <NavIcon navKey={item.key} />
                     <span className="lbl">{t(item.key)}</span>
+                    {/* Chip thấy được thay cho độ mờ + tooltip: điện thoại không có hover. */}
+                    <span className="nav-badge planned" aria-hidden="true">
+                      {t('nav.plannedChip')}
+                    </span>
                     <span className="sr-only">{t('nav.plannedHint')}</span>
                   </span>
                 ) : (
@@ -161,6 +203,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
               )}
             </div>
           ))}
+          </div>
 
           <div className="sb-foot">
             <AccountMenu
@@ -180,7 +223,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
             {narrow ? (
               <button
                 type="button"
-                className="nav-toggle"
+                className="icon-btn nav-toggle"
                 aria-label={t(drawerOpen ? 'app.closeNav' : 'app.openNav')}
                 aria-expanded={drawerOpen}
                 aria-describedby={pendingApprovals > 0 ? PENDING_APPROVALS_ID : undefined}
@@ -201,34 +244,42 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                 </svg>
               </button>
             ) : null}
-            <span className="hello">
-              {t('app.brandFull')} — <strong>{me.fullName}</strong>
-            </span>
+            {/*
+              Tên MÀN đang mở, không phải "Quản lý hệ thống IT · PMH — Tên": tên người dùng đã
+              nằm ở menu tài khoản, còn chỗ đầu topbar là phần đất quý nhất trên điện thoại.
+              Chữ thường, không phải link: trang chi tiết đã có breadcrumb đầy đủ ngay đầu nội
+              dung (`DetailHeader`), dựng thêm một đường quay ra thứ hai là lặp.
+            */}
+            <PageTitle pathname={pathname} />
             <span className="spacer" />
             {/*
-              ĐƯỜNG VÀO THẤY ĐƯỢC CHO ⌘K (18/09/2026).
-              Trước đó hộp tìm nhanh chỉ mở bằng phím tắt: trên điện thoại (UX-DR2) nó KHÔNG
-              tồn tại, còn với người dùng chuột thì không có gì trên màn hình nói là nó có.
-              Gợi ý phím tắt nằm trong nhãn trợ năng để người đi bàn phím học được đường tắt.
+              ĐƯỜNG VÀO THẤY ĐƯỢC CHO TÌM NHANH. Desktop: trông như một ô nhập kèm phím tắt đúng
+              nền tảng (⌘K trên Mac) — người dùng chuột học được phím tắt từ chính nó. Điện thoại:
+              nút icon 44×44.
             */}
-            <button
-              type="button"
-              className="nav-toggle"
-              aria-label={t('palette.openHint')}
-              onClick={openCommandPalette}
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.2"
-                strokeLinecap="round"
-                aria-hidden="true"
+            {narrow ? (
+              <button
+                type="button"
+                className="icon-btn"
+                aria-label={t('palette.openHint', { keys: shortcut })}
+                onClick={openCommandPalette}
               >
-                <circle cx="11" cy="11" r="7" />
-                <path d="m20 20-3.5-3.5" />
-              </svg>
-            </button>
+                <SearchIcon />
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="topbar-search"
+                aria-label={t('palette.openHint', { keys: shortcut })}
+                onClick={openCommandPalette}
+              >
+                <SearchIcon />
+                <span className="topbar-search-ph" aria-hidden="true">
+                  {t('palette.placeholder')}
+                </span>
+                <kbd aria-hidden="true">{shortcut}</kbd>
+              </button>
+            )}
             <ThemeSwitch />
           </header>
           {/* ⌘K — nằm ở shell nên bấm được từ BẤT KỲ màn nào, không phải chỉ màn danh sách. */}
@@ -328,6 +379,33 @@ function DrawerShell({
     >
       {children}
     </div>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+
+/** Tên màn đang mở — cùng bảng với tên tab trình duyệt (`titleKeyOf`), nên hai chỗ không lệch. */
+function PageTitle({ pathname }: { pathname: string }) {
+  const { t } = useTranslation();
+  const key = titleKeyOf(pathname);
+  return (
+    <span className="topbar-title" data-testid="topbar-title">
+      {key ? t(key) : null}
+    </span>
   );
 }
 
