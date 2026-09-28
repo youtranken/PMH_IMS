@@ -124,9 +124,11 @@ test.describe('Danh mục', () => {
     await firstLogin(page, E2E_SA);
     await page.getByRole('link', { name: 'Danh mục' }).click();
 
+    // File mẫu nằm TRONG hộp nhập (không còn ở đầu trang): mở hộp rồi mới tải.
+    await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
     const download = await Promise.all([
       page.waitForEvent('download'),
-      page.getByRole('button', { name: 'Tải file mẫu' }).click(),
+      page.getByRole('dialog').getByRole('button', { name: /Tải file mẫu/ }).click(),
     ]).then(([event]) => event);
     expect(download.suggestedFilename()).toBe('mau-danh-muc.xlsx');
 
@@ -134,7 +136,6 @@ test.describe('Danh mục', () => {
     await download.saveAs(saved);
     expect(readFileSync(saved).subarray(0, 2).toString()).toBe('PK');
 
-    await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
     await page.getByLabel('Chọn file .xlsx').setInputFiles(saved);
     await page.getByRole('button', { name: 'Đối chiếu' }).click();
 
@@ -180,7 +181,14 @@ test.describe('Danh mục', () => {
     await expect(page.getByRole('row', { name: new RegExp(siteCode) })).toBeVisible();
 
     // "Lịch sử" chỉ đọc nên Member cũng có; việc lấy đi (Vô hiệu hóa, Xóa) thì không.
-    expect(await rowActionNames(page, siteCode)).toEqual(['Sửa', 'Lịch sử']);
+    expect(await rowActionNames(page, siteCode)).toEqual([
+      'Sửa',
+      'Lịch sử',
+      'Xem thiết bị dùng mục này',
+    ]);
+    await expect(
+      page.getByText('Vô hiệu hóa, xóa và nhập Excel do Quản trị thực hiện.'),
+    ).toBeVisible();
     await rowAction(page, siteCode, 'Sửa');
     await page.getByRole('dialog').getByLabel('Tên').fill('Site member đã sửa');
     await page.getByRole('dialog').getByRole('button', { name: 'Lưu' }).click();
@@ -319,7 +327,7 @@ test.describe('Danh mục', () => {
     await page.getByRole('button', { name: 'Thêm dịch vụ' }).click();
     form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Tên', exact: true }).fill(`Camera E2E ${stamp}`);
-    await form.getByRole('textbox', { name: 'Port', exact: true }).fill('50000');
+    await form.getByRole('textbox', { name: 'Từ port' }).fill('50000');
     await form.getByRole('textbox', { name: 'Đến port' }).fill('52000');
     await form.getByRole('button', { name: 'Lưu' }).click();
     await expect(

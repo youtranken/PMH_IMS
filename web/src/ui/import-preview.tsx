@@ -9,6 +9,14 @@ export interface ImportPreviewRow {
   action: 'create' | 'update' | 'unchanged' | 'skip' | 'error';
   label: string;
   message?: string;
+  /** Dòng 'update': trường nào sẽ bị ghi đè, từ gì sang gì (API tính, nhãn cột như file mẫu). */
+  changes?: ImportPreviewChange[];
+}
+
+export interface ImportPreviewChange {
+  field: string;
+  from: string | number | boolean | null;
+  to: string | number | boolean | null;
 }
 
 export interface ImportPreviewSummary {
@@ -53,9 +61,28 @@ export function ImportPreview({
   const { t } = useTranslation();
   const noisy = summary.unchanged + summary.skip;
   const [showAll, setShowAll] = useState(noisy === 0);
-  const visible = showAll
-    ? rows
-    : rows.filter((row) => row.action !== 'unchanged' && row.action !== 'skip');
+  /* Bấm một chip kết quả = chỉ xem dòng loại đó (file 300 dòng, cần soát riêng 12 dòng cập nhật). */
+  const [only, setOnly] = useState<ImportPreviewRow['action'] | null>(null);
+  const visible = only
+    ? rows.filter((row) => row.action === only)
+    : showAll
+      ? rows
+      : rows.filter((row) => row.action !== 'unchanged' && row.action !== 'skip');
+  const chip = (action: ImportPreviewRow['action'], tone: string, value: number) => (
+    <SummaryChip
+      tone={tone}
+      label={t(ACTION_LABEL_KEY[action])}
+      value={value}
+      pressed={only === action}
+      onToggle={() => setOnly((current) => (current === action ? null : action))}
+    />
+  );
+  const shown = (value: ImportPreviewChange['from']) =>
+    value === null || value === ''
+      ? '—'
+      : typeof value === 'boolean'
+        ? t(value ? 'common.yes' : 'common.no')
+        : String(value);
   /* File khớp hết với dữ liệu đang có: một khối báo xanh thay cho bảng rỗng — bảng trống kèm
      "không có dòng nào" trông như lỗi, không như tin tốt. */
   const nothing = summary.create + summary.update + summary.error === 0;
@@ -64,20 +91,20 @@ export function ImportPreview({
   return (
     <div className="import-preview">
       <div className="import-summary">
-        <SummaryChip tone="ok" label={t(ACTION_LABEL_KEY.create)} value={summary.create} />
-        <SummaryChip tone="warn" label={t(ACTION_LABEL_KEY.update)} value={summary.update} />
-        <SummaryChip tone="muted" label={t(ACTION_LABEL_KEY.unchanged)} value={summary.unchanged} />
-        <SummaryChip tone="muted" label={t(ACTION_LABEL_KEY.skip)} value={summary.skip} />
-        <SummaryChip tone="danger" label={t(ACTION_LABEL_KEY.error)} value={summary.error} />
+        {chip('create', 'ok', summary.create)}
+        {chip('update', 'warn', summary.update)}
+        {chip('unchanged', 'muted', summary.unchanged)}
+        {chip('skip', 'muted', summary.skip)}
+        {chip('error', 'danger', summary.error)}
       </div>
 
-      {collapsed ? (
+      {collapsed && !only ? (
         <p className="alert ok" role="status">
           {t('importPreview.allUnchanged')}
         </p>
       ) : null}
 
-      {noisy > 0 ? (
+      {noisy > 0 && !only ? (
         <button
           type="button"
           className="btn sm ghost import-toggle"
@@ -90,7 +117,7 @@ export function ImportPreview({
         </button>
       ) : null}
 
-      {collapsed ? null : (
+      {collapsed && !only ? null : (
       <div className="table-wrap import-preview-table">
         <table className="table">
           <thead>
@@ -123,7 +150,19 @@ export function ImportPreview({
                     {t(ACTION_LABEL_KEY[row.action])}
                   </span>
                 </td>
-                <td className="muted">{row.message ?? '—'}</td>
+                <td className="muted">
+                  {row.changes && row.changes.length > 0 ? (
+                    <ul className="import-changes">
+                      {row.changes.map((change) => (
+                        <li key={change.field}>
+                          {`${change.field}: ${shown(change.from)} → ${shown(change.to)}`}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    (row.message ?? '—')
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -134,12 +173,30 @@ export function ImportPreview({
   );
 }
 
-function SummaryChip({ tone, label, value }: { tone: string; label: string; value: number }) {
+function SummaryChip({
+  tone,
+  label,
+  value,
+  pressed,
+  onToggle,
+}: {
+  tone: string;
+  label: string;
+  value: number;
+  pressed: boolean;
+  onToggle: () => void;
+}) {
   return (
     /* Chip số 0 lùi hẳn xuống (`is-zero`) để mắt rơi vào chip có số — cùng độ đậm thì "Lỗi: 3"
-       chìm giữa bốn chip "0". */
-    <span className={`badge ${value > 0 ? tone : 'muted is-zero'}`}>
+       chìm giữa bốn chip "0". Chip là NÚT LỌC; chip số 0 khoá vì lọc ra bảng rỗng là hứa hão. */
+    <button
+      type="button"
+      className={`badge chip-filter ${value > 0 ? tone : 'muted is-zero'}`}
+      aria-pressed={pressed}
+      disabled={value === 0}
+      onClick={onToggle}
+    >
       {label}: {value}
-    </span>
+    </button>
   );
 }

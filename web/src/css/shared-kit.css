@@ -415,6 +415,25 @@
   background: transparent;
   font-weight: 500;
 }
+/* Chip tổng kết là NÚT LỌC — giữ hình viên huy hiệu, không lấy khung của `button`. */
+.import-summary button.badge {
+  border: 0;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+.import-summary button.badge:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.import-summary button.badge[aria-pressed='true'] {
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+/* Danh sách "trường: trước → sau" của dòng Cập nhật. */
+.import-changes {
+  margin: 0;
+  padding-left: var(--space-7);
+}
 .import-toggle {
   align-self: flex-start;
 }

@@ -7262,13 +7262,16 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
      */
     expect(
       await rowActionNames(page, maSite),
-      'menu của một hồ sơ ĐANG DÙNG phải là Sửa · Lịch sử · Vô hiệu · Xóa, việc lấy đi xếp cuối',
-    ).toEqual(['Sửa', 'Lịch sử', 'Vô hiệu hóa', 'Xóa']);
+      'menu của một hồ sơ ĐANG DÙNG: việc thường trước, Vô hiệu (cảnh báo) rồi Xóa xếp cuối',
+    ).toEqual(['Sửa', 'Lịch sử', 'Xem thiết bị dùng mục này', 'Nhật ký thao tác', 'Vô hiệu hóa', 'Xóa']);
 
     // --- Hộp SỬA phải mang theo cả ba giá trị cũ.
     await rowAction(page, maSite, 'Sửa');
     const hopSua = page.getByRole('dialog', { name: /^Sửa — / });
     await expect(hopSua).toBeVisible();
+    // Mã là khoá tra cứu: ở hộp Sửa nó khoá sẵn, phải bấm "Đổi mã…" mới gõ được.
+    await expect(hopSua.getByText(maSite, { exact: true })).toBeVisible();
+    await hopSua.getByRole('button', { name: 'Đổi mã…' }).click();
     await expect(
       hopSua.getByLabel(nhan('Mã')),
       'ô Mã trong hộp Sửa mở ra trống là ghi đè sạch dữ liệu ngay khi bấm Lưu',
@@ -7306,7 +7309,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     expect(
       await rowActionNames(page, maSite),
       'hồ sơ ĐÃ VÔ HIỆU mà menu vẫn ghi "Vô hiệu" thì không còn đường nào bật nó lại',
-    ).toEqual(['Sửa', 'Lịch sử', 'Bật lại', 'Xóa']);
+    ).toEqual(['Sửa', 'Lịch sử', 'Xem thiết bị dùng mục này', 'Nhật ký thao tác', 'Bật lại', 'Xóa']);
 
     // Dọn ngay trong bài, không đợi `resetCatalog()` của lần chạy sau.
     await rowAction(page, maSite, 'Xóa');
@@ -7344,10 +7347,11 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     for (const ngan of BAY_NGAN) {
       await page.getByRole('tab', { name: ngan.tab, exact: true }).click();
       const soNut = ngan.nhapDuocExcel ? 1 : 0;
+      // File mẫu nằm TRONG hộp nhập, không bao giờ ở đầu trang.
       await expect(
-        page.getByRole('button', { name: 'Tải file mẫu' }),
-        `ngăn ${ngan.tab} ${ngan.nhapDuocExcel ? 'phải có' : 'KHÔNG được có'} nút tải file mẫu — file mẫu chỉ có sheet cho bốn danh mục gốc`,
-      ).toHaveCount(soNut);
+        page.getByRole('button', { name: /Tải file mẫu/ }),
+        `ngăn ${ngan.tab}: đầu trang KHÔNG có nút tải file mẫu — nó nằm trong hộp nhập`,
+      ).toHaveCount(0);
       await expect(
         page.getByRole('button', { name: 'Nhập từ Excel' }),
         `ngăn ${ngan.tab} ${ngan.nhapDuocExcel ? 'phải có' : 'KHÔNG được có'} nút nhập từ Excel`,
@@ -7358,14 +7362,21 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await page.getByRole('tab', { name: 'Site', exact: true }).click();
     await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
 
-    const hop = page.getByRole('dialog', { name: 'Nhập danh mục từ Excel', exact: true });
+    const hop = page.getByRole('dialog', {
+      name: 'Nhập Site, Tủ mạng, Loại thiết bị, Nhà cung cấp từ Excel',
+      exact: true,
+    });
     await expect(hop).toBeVisible();
+    await expect(
+      hop.getByRole('button', { name: /Tải file mẫu/ }),
+      'file mẫu phải nằm ngay trong hộp nhập — bước con của việc nhập',
+    ).toBeVisible();
     await expect(
       hop.getByText('Chọn file .xlsx', { exact: true }),
       'hộp nhập phải có chỗ chọn file — không thì ba cái nút ở chân chẳng để làm gì',
     ).toBeVisible();
     await expect(
-      hop.getByText('Dùng đúng file tải từ nút "Tải file mẫu". Dòng đánh dấu VÍ DỤ sẽ được bỏ qua.'),
+      hop.getByText(/Hệ thống đọc cả 4 sheet: Site, Tủ mạng, Loại thiết bị, Nhà cung cấp/),
       'lời dặn dùng đúng file mẫu phải đứng ngay cạnh ô chọn file, chỗ người ta đang nhìn',
     ).toBeVisible();
 

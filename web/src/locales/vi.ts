@@ -450,7 +450,7 @@ export default {
   },
   catalog: {
     title: 'Danh mục',
-    subtitle: 'Nguồn dùng chung cho mọi hồ sơ — khai một lần ở đây, các màn khác chỉ chọn lại',
+    subtitle: 'Khai một lần ở đây, mọi màn chỉ chọn lại.',
     tabSite: 'Site',
     tabCabinet: 'Tủ mạng',
     tabDeviceType: 'Loại thiết bị',
@@ -497,10 +497,9 @@ export default {
     protocol: 'Giao thức',
     protocolBoth: 'TCP + UDP',
     port: 'Port',
-    portFrom: 'Port',
-    portTo: 'Đến port',
-    portToPlaceholder: 'để trống nếu chỉ một port',
-    portHint: 'Một port (443) hoặc đầu của một dải (50000, rồi điền 52000 ở ô bên).',
+    portFrom: 'Từ port',
+    portTo: 'Đến port (tuỳ chọn)',
+    portHint: 'Một port: chỉ điền ô này. Một dải: điền cả hai ô (50000 – 52000).',
     status: 'Trạng thái',
     active: 'Đang dùng',
     /* Cùng chữ với `accounts.statusDisabled` · `serviceAccounts.statusDisabled` ·
@@ -521,12 +520,16 @@ export default {
       'Vô hiệu "{{name}}"? Từ giờ KHÔNG form nào chọn được mục này nữa — hồ sơ đang dùng nó ' +
       'thì giữ nguyên và vẫn đọc được. Bật lại bất cứ lúc nào.',
     confirmActivate: 'Bật lại "{{name}}"?',
-    confirmDelete: 'Xóa hẳn "{{name}}"? Không xóa được nếu đang có dữ liệu tham chiếu.',
+    confirmDelete:
+      'Xóa hẳn "{{name}}"? Mục đang được hồ sơ nào dùng thì hệ thống sẽ không xóa — khi đó hãy ' +
+      'Vô hiệu hóa (dùng "Xem thiết bị dùng mục này" để kiểm trước).',
     deleted: 'Đã xóa.',
     saved: 'Đã lưu.',
-    importTitle: 'Nhập danh mục từ Excel',
-    importHint: 'Dùng đúng file tải từ nút "Tải file mẫu". Dòng đánh dấu VÍ DỤ sẽ được bỏ qua.',
-    emptyHint: 'Chưa khai mục nào. Thêm tay, hoặc dùng "Nhập Excel" với file tải từ nút "Tải file mẫu".',
+    importTitle: 'Nhập Site, Tủ mạng, Loại thiết bị, Nhà cung cấp từ Excel',
+    importHint:
+      'Hệ thống đọc cả 4 sheet: Site, Tủ mạng, Loại thiết bị, Nhà cung cấp. Dùng file mẫu bên dưới ' +
+      '(đã kèm danh mục đang có); dòng đánh dấu VÍ DỤ được bỏ qua.',
+    emptyHint: 'Chưa khai mục nào. Thêm tay, hoặc bấm "Nhập từ Excel" (file mẫu nằm trong hộp nhập).',
     /* Tab không nhập Excel được thì câu rỗng không được mời đi nhập Excel. */
     emptyHintManual: 'Chưa khai mục nào. Bấm nút thêm ở trên để khai mục đầu tiên.',
     emptyFiltered: 'Không có {{kind}} nào khớp "{{q}}".',
@@ -541,6 +544,29 @@ export default {
     history: 'Lịch sử',
     historyOf: 'Lịch sử của {{name}}',
     historyEmpty: 'Chưa có thay đổi nào được ghi cho mục này.',
+    statusFilter: 'Lọc theo trạng thái',
+    statusAll: 'Mọi trạng thái',
+    siteFilter: 'Lọc theo site',
+    siteAll: 'Mọi site',
+    memberHint: 'Vô hiệu hóa, xóa và nhập Excel do Quản trị thực hiện.',
+    viewDevices: 'Xem thiết bị dùng mục này',
+    auditLog: 'Nhật ký thao tác',
+    deactivated: 'Đã vô hiệu hóa "{{name}}".',
+    activated: 'Đã bật lại "{{name}}".',
+    emptyFilteredOnly: 'Không có {{kind}} nào khớp bộ lọc.',
+    clearAllFilters: 'Xóa bộ lọc',
+    cabinetCodeHint: 'Quy ước TU-<mã site>-NN — chọn site là điền sẵn số kế tiếp, sửa được.',
+    uHeightHint: 'Số nguyên 1–60 (tủ thường 42U).',
+    changeCode: 'Đổi mã…',
+    changeCodeWarn:
+      'Mã dùng để tra cứu và nhập Excel — file Excel cũ, link và thói quen gõ tìm sẽ lệch theo. ' +
+      'Hồ sơ đang trỏ theo ID nên không mất liên kết; lần đổi được ghi vào lịch sử.',
+    similarDepartment: 'Đã có "{{name}}" — có phải cùng bộ phận?',
+    contactHint: 'Ghi email thì bảng tự thành link gửi thư.',
+    confirmHidePortMap:
+      'Tắt "Có port map" cho "{{name}}": mọi thiết bị loại này sẽ ẩn bảng port ở trang chi tiết ' +
+      '(dữ liệu port vẫn giữ, bật lại là hiện lại).',
+    portOverlap: 'Trùng port với "{{name}}" — kiểm lại có phải cùng một dịch vụ không.',
   },
   devices: {
     title: 'Thiết bị',
