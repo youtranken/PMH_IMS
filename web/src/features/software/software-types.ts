@@ -126,15 +126,21 @@ export function seatLabel(row: SoftwareRow): string {
  * Trả MỘT hình dạng `{ value, reason }` (tsconfig web không bật `strict`, union `ok` không thu
  * hẹp được). `Number("10 ghế")` là NaN và `JSON.stringify(NaN)` là `null` — tức "không giới
  * hạn" — nên chuỗi không thuần chữ số phải bị báo, không được đổi thành số.
+ *
+ * `before` là tổng ghế đang lưu (null khi tạo mới hoặc đang "không giới hạn"). Vượt ghế là
+ * trạng thái hợp lệ, nên chỉ báo `belowUsed` khi lượt sửa ĐỔI tổng — cùng luật
+ * `seatConflicts(beforeSeatTotal)` của API; chặn cả khi tổng giữ nguyên thì license đang vượt
+ * không sửa được gì trên form.
  */
 export function seatCheck(
   raw: string,
   hasSeats: boolean,
   used: number,
+  before: number | null = null,
 ): { value: number | null; reason: 'invalid' | 'belowUsed' | null } {
   const text = raw.trim();
   if (!hasSeats || text === '') return { value: null, reason: null };
   if (!/^\d+$/.test(text) || Number(text) < 1) return { value: null, reason: 'invalid' };
   const value = Number(text);
-  return { value, reason: value < used ? 'belowUsed' : null };
+  return { value, reason: value < used && value !== before ? 'belowUsed' : null };
 }
