@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { useLocation } from 'react-router-dom';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { apiFetch } from '@/lib/api-client';
+import { clearSignedOut, justSignedOut } from '@/lib/after-logout';
 import { classifyLoginError, formatWait, type LoginErrorKind } from '@/lib/login-error';
 import { nextPathLabelKey, peekNextPath } from '@/lib/next-path';
 import {
@@ -40,7 +40,6 @@ const WARN_FROM_WRONG = 2;
  */
 export function LoginScreen() {
   const { t } = useTranslation();
-  const location = useLocation();
   const [remembered, setRemembered] = useState(() => readRememberedEmail());
   const [email, setEmail] = useState(remembered);
   const [password, setPassword] = useState('');
@@ -48,9 +47,7 @@ export function LoginScreen() {
   const [wrongCount, setWrongCount] = useState(0);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
   // Vừa bấm Đăng xuất: nói ra là phiên đã đóng — trên máy dùng chung người ta cần chắc điều đó.
-  const [signedOut, setSignedOut] = useState(
-    () => (location.state as { signedOut?: boolean } | null)?.signedOut === true,
-  );
+  const [signedOut, setSignedOut] = useState(justSignedOut);
   const emailRef = useRef<HTMLInputElement>(null);
   const passwordRef = useRef<HTMLInputElement>(null);
 
@@ -122,7 +119,10 @@ export function LoginScreen() {
     );
   }
 
-  const typed = () => setSignedOut(false);
+  const typed = () => {
+    setSignedOut(false);
+    clearSignedOut();
+  };
 
   return (
     <AuthCard
@@ -141,7 +141,7 @@ export function LoginScreen() {
           e.preventDefault();
           if (waiting) return;
           setFailure(null);
-          setSignedOut(false);
+          typed();
           if (!check.check()) return;
           const typedEmail = email.trim();
           // Không tự navigate: sau khi `me` được nạp lại, router đưa tới đúng bước còn thiếu

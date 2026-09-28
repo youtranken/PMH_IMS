@@ -9,9 +9,9 @@ import { LoginScreen } from './login-screen';
  * và báo lỗi bằng tiếng Việt dưới từng ô thay cho bong bóng tiếng Anh của trình duyệt.
  */
 
-function renderLogin(state?: unknown) {
+function renderLogin() {
   return renderWithI18n(
-    <MemoryRouter initialEntries={[{ pathname: '/login', state }]}>
+    <MemoryRouter initialEntries={['/login']}>
       <LoginScreen />
     </MemoryRouter>,
   );
@@ -167,10 +167,12 @@ describe('LoginScreen — phản hồi theo từng kiểu hỏng', () => {
     expect(screen.getByRole('button', { name: 'Đăng nhập' })).toBeEnabled();
   });
 
-  it('vừa đăng xuất → dải "Bạn đã đăng xuất.", gõ vào là tắt', async () => {
-    renderLogin({ signedOut: true });
+  it('vừa đăng xuất (kể cả sau lượt nạp lại trang) → dải "Bạn đã đăng xuất.", gõ vào là tắt', async () => {
+    sessionStorage.setItem('ims_signed_out', '1');
+    renderLogin();
     expect(screen.getByRole('status')).toHaveTextContent('Bạn đã đăng xuất.');
     await userEvent.type(screen.getByLabelText('Email'), 'a');
     expect(screen.queryByText('Bạn đã đăng xuất.')).toBeNull();
+    expect(sessionStorage.getItem('ims_signed_out')).toBeNull();
   });
 });
