@@ -46,7 +46,7 @@ test.describe('Ma trận quyền két sắt', () => {
   }) => {
     await firstLogin(page, E2E_SA);
 
-    await page.goto('/admin/vault-access');
+    await page.goto('/admin/vault-access?view=matrix');
     await expect(page.getByRole('heading', { name: 'Quyền xem két sắt' })).toBeVisible();
 
     /*
@@ -60,12 +60,12 @@ test.describe('Ma trận quyền két sắt', () => {
     const cell = row.getByRole('button', { name: /Thiết bị loại Switch: Không có quyền/ });
     await expect(cell).toBeVisible();
 
-    // Gán qua nút của HÀNG (nhiều nhóm cho một người) — vẫn là hộp cũ, chỉ khác chỗ đứng.
+    // Gán qua nút của HÀNG: hộp chọn NHIỀU nhóm một lượt cho người đó, hỏi lại trước khi ghi.
     await row.getByRole('button', { name: 'Gán quyền' }).click();
     const form = page.getByRole('dialog');
-    await form.getByRole('button', { name: 'Nhóm đối tượng' }).click();
-    await page.getByRole('option').filter({ hasText: 'Thiết bị loại Switch' }).click();
+    await form.getByRole('checkbox', { name: 'Thiết bị loại Switch' }).check();
     await form.getByRole('button', { name: 'Lưu' }).click();
+    await confirmAction(page);
 
     // Ô đổi ngay tại chỗ — không phải đi tìm trong một thẻ khác.
     const granted = row.getByRole('button', { name: /Thiết bị loại Switch: Cần duyệt/ });

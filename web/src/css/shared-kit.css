@@ -771,9 +771,12 @@ table.table tbody tr.row-muted td {
  * -------------------------------------------------------------------------- */
 .access-grid-wrap {
   /* Cuộn ngang TRONG khung, không phải cả trang: vài chục cột là bình thường, mà trang cuộn
-     ngang thì cột tên người trôi mất và lưới hết đọc được (UX-DR2 ở 390px cũng nhờ luật này). */
+     ngang thì cột tên người trôi mất và lưới hết đọc được.
+     Chiều cao theo KHUNG NHÌN (trừ phần đầu trang) chứ không phải một hộp 70vh lọt thỏm: khung
+     cuộn ngang buộc cũng là khung cuộn dọc, nên tiêu đề chỉ dính được trong khung này — cho nó
+     cao gần hết màn là cách gần nhất với "cuộn theo trang". */
   overflow-x: auto;
-  max-height: 70vh;
+  max-height: calc(100dvh - 9rem);
   overflow-y: auto;
 }
 table.access-grid {
@@ -876,9 +879,88 @@ table.access-grid thead .access-row-head {
 .access-chip.none { color: var(--ink-3); }
 .access-chip.none:hover { background: var(--surface-2); border-color: var(--border-2); }
 .access-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
-.access-by-role { text-align: center; font-size: var(--fs-xs); }
 .access-legend { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .access-legend .access-chip { cursor: default; }
+
+/* Tab "Theo người": trái danh sách Thành viên, phải thẻ quyền. Màn hẹp một cột (màn chỉ vẽ
+   một nửa mỗi lúc, xem `PeopleView`). */
+.access-people {
+  display: grid;
+  grid-template-columns: minmax(14rem, 20rem) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .access-people { grid-template-columns: minmax(0, 1fr); }
+}
+.access-member-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.access-member {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+.access-member:hover { border-color: var(--border-2); background: var(--surface-2); }
+.access-member:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.access-member[aria-current='true'] { border-color: var(--primary); background: var(--primary-soft); }
+.access-member-name { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.access-person-card { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
+.access-person-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.access-person-head h2 { margin: 0; overflow-wrap: anywhere; }
+.access-rule-group h3 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.access-rule-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.access-rule-chip {
+  all: unset;
+  cursor: pointer;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  border: 1px solid transparent;
+  overflow-wrap: anywhere;
+}
+.access-rule-chip.whitelist { background: var(--ok-soft); color: var(--ok); }
+.access-rule-chip.needs_approval { background: var(--warn-soft); color: var(--warn); }
+.access-rule-chip:hover { border-color: var(--border-2); }
+.access-rule-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.access-role-holders { margin-top: var(--space-6); }
+.access-role-holders summary { cursor: pointer; font-weight: 600; }
+.access-role-holders ul { margin: var(--space-3) 0 0; padding-left: var(--space-6); }
+.access-role-holders li { overflow-wrap: anywhere; }
 
 .access-rules {
   list-style: none;

@@ -7956,13 +7956,14 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
    * "Gán quyền"; dòng của SA/Admin BỖNG có ô để bấm (mời người ta gán một quyền không có tác
    * dụng, rồi tưởng là đã siết); hoặc chú giải ba tầng rụng mất một tầng.
    */
-  test('Ma trận Quyền xem két sắt: lưới đủ cột, Member có nút gán, SA/Admin chỉ có lời giải thích', async ({
+  test('Ma trận Quyền xem két sắt: lưới đủ cột, Member có nút gán, SA/Admin ở khối "toàn quyền theo vai"', async ({
     page,
   }) => {
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
 
-    await page.goto('/admin/vault-access');
+    // Lưới là tab "Ma trận" (màn rộng); tab mặc định là "Theo người".
+    await page.goto('/admin/vault-access?view=matrix');
     await expect(page.getByRole('heading', { level: 1, name: 'Quyền xem két sắt' })).toBeVisible();
 
     /*
@@ -8001,18 +8002,20 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'dòng của Member phải có nút "Gán quyền" — đây là chiều gán theo NGƯỜI',
     ).toBeVisible();
 
-    /* ---- Dòng của SA: KHÔNG có nút, thay bằng một câu giải thích ---- */
+    /* ---- SA/Admin: KHÔNG thành dòng trống trong lưới, mà nằm trong khối gập riêng ---- */
 
-    const saRow = grid.getByRole('row', { name: new RegExp(E2E_SA.email) });
-    await expect(saRow, 'ma trận phải liệt kê cả tài khoản SA — nó liệt kê MỌI tài khoản').toBeVisible();
     await expect(
-      saRow.getByRole('button', { name: 'Gán quyền' }),
-      'SA/Admin xem được mọi secret theo VAI — bày nút gán ở đây là mời gán một quyền vô tác dụng',
+      grid.getByRole('row', { name: new RegExp(E2E_SA.email) }),
+      'SA/Admin xem được mọi secret theo VAI — một dòng trống trong lưới đọc như "không có quyền gì"',
     ).toHaveCount(0);
+    const roleBlock = page.getByText(/^Có toàn quyền theo vai \(\d+\)$/);
+    await expect(roleBlock, 'ai có toàn quyền theo vai vẫn phải thấy được khi rà soát').toBeVisible();
+    await roleBlock.click();
     await expect(
-      saRow.getByText('Quản trị và Super Admin đã xem được mọi secret theo vai, không cần gán ở đây.'),
-      'thay cho ô bấm, dòng SA/Admin phải NÓI RA vì sao không có gì để gán',
+      page.getByText('Quản trị và Super Admin đã xem được mọi secret theo vai, không cần gán ở đây.'),
+      'khối đó phải NÓI RA vì sao không có gì để gán',
     ).toBeVisible();
+    await expect(page.getByText(E2E_SA.email).first()).toBeVisible();
 
     /* ---- Bấm tiêu đề cột = chiều gán theo NHÓM ---- */
 
@@ -8711,7 +8714,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     expect(memberEmails.length, 'phải có ít nhất một Member để hộp gán có gì mà liệt kê')
       .toBeGreaterThan(0);
 
-    await page.goto('/admin/vault-access');
+    await page.goto('/admin/vault-access?view=matrix');
     const grid = page.getByTestId('access-grid');
     await expect(grid).toBeVisible();
     await page.getByRole('button', { name: 'Nhóm đối tượng' }).click();
