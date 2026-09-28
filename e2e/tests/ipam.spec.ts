@@ -145,9 +145,11 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     });
 
     await page.goto(`/ip-addresses/${firstId}`);
-    // Badge VLAN trên thẻ: ở PMH người ta gọi dải theo VLAN chứ không theo CIDR.
-    await expect(page.getByText('VLAN 20')).toBeVisible();
-    await expect(page.getByText('VLAN 30')).toBeVisible();
+    // Badge VLAN trên thẻ: ở PMH người ta gọi dải theo VLAN chứ không theo CIDR. Đầu cột phải
+    // cũng nêu VLAN của dải đang mở (NET-016), nên bám vào rail thẻ dải.
+    const rail = page.getByRole('navigation', { name: 'Danh sách dải mạng' });
+    await expect(rail.getByText('VLAN 20')).toBeVisible();
+    await expect(rail.getByText('VLAN 30')).toBeVisible();
     await expect(page.getByText('Máy A của dải A')).toBeVisible();
 
     // Bấm thẻ dải B → cột phải đổi, KHÔNG rời trang.

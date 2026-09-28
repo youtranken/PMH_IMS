@@ -6,6 +6,7 @@ import ExcelJS from 'exceljs';
 import {
   APP_ORIGIN,
   E2E_SA,
+  devicesPageButton,
   firstLogin,
   resetCatalog,
   resetDevices,
@@ -53,7 +54,7 @@ test.describe('Import / export thiết bị', () => {
 
     await page.goto('/devices');
     // File mẫu nằm TRONG hộp nhập, ngay dưới ô chọn file — không còn đứng ở đầu trang.
-    await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
+    await devicesPageButton(page, 'Nhập từ Excel').click();
     await expect(page.getByRole('button', { name: 'Tải file mẫu' })).toHaveCount(1);
     const template = await downloadTo(page, 'Tải file mẫu', `mau-tb-${stamp}.xlsx`);
     expect(readFileSync(template).subarray(0, 2).toString()).toBe('PK');
@@ -73,7 +74,7 @@ test.describe('Import / export thiết bị', () => {
       [`SW-E2E-IMP2-${stamp}`, 'Switch tầng 2', 'Switch', `E2E-${stamp}`, ''],
     ]);
 
-    await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
+    await devicesPageButton(page, 'Nhập từ Excel').click();
     await page.getByLabel('Chọn file .xlsx').setInputFiles(real);
     await expect(page.getByText(/Thêm mới: 2/)).toBeVisible();
     await expect(page.getByText(/Lỗi: 0/)).toBeVisible();
@@ -83,7 +84,7 @@ test.describe('Import / export thiết bị', () => {
     await expect(page.getByRole('link', { name: `SW-E2E-IMP2-${stamp}` })).toBeVisible();
 
     // Nhập lại chính file đó = KHÔNG ĐỔI GÌ, không tạo bản sao (AC 2.6).
-    await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
+    await devicesPageButton(page, 'Nhập từ Excel').click();
     await page.getByLabel('Chọn file .xlsx').setInputFiles(real);
     await expect(page.getByText(/Thêm mới: 0/)).toBeVisible();
     await expect(page.getByText(/Không đổi: 2/)).toBeVisible();
@@ -99,7 +100,7 @@ test.describe('Import / export thiết bị', () => {
     ]);
 
     await page.goto('/devices');
-    await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
+    await devicesPageButton(page, 'Nhập từ Excel').click();
     await page.getByLabel('Chọn file .xlsx').setInputFiles(bad);
 
     await expect(page.getByText(/Lỗi: 1/)).toBeVisible();
@@ -172,7 +173,7 @@ test.describe('Import / export thiết bị', () => {
     const exported = await downloadTo(page, 'Xuất Excel', `xuat-${stamp}.xlsx`);
 
     // File xuất ra nhập lại được ngay và không đổi gì — vòng xuất-sửa-nhập khép kín.
-    await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
+    await devicesPageButton(page, 'Nhập từ Excel').click();
     await page.getByLabel('Chọn file .xlsx').setInputFiles(exported);
     await page.getByRole('button', { name: 'Đối chiếu' }).click();
     await expect(page.getByText(/Lỗi: 0/)).toBeVisible();
@@ -205,7 +206,7 @@ test.describe('Import / export thiết bị', () => {
       [oldCode, 'Switch cũ', 'Switch', siteCode, ''],
     ]);
     await page.goto('/devices');
-    await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
+    await devicesPageButton(page, 'Nhập từ Excel').click();
     await page.getByLabel('Chọn file .xlsx').setInputFiles(seed);
     await page.getByRole('button', { name: 'Đối chiếu' }).click();
     await expect(page.getByText(/Thêm mới: 1/)).toBeVisible();
@@ -222,7 +223,7 @@ test.describe('Import / export thiết bị', () => {
     const bad = await buildDeviceFile(join(tmpdir(), `tb-off-${stamp}.xlsx`), [
       [newCode, 'Switch mới', 'Switch', siteCode, ''],
     ]);
-    await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
+    await devicesPageButton(page, 'Nhập từ Excel').click();
     await page.getByLabel('Chọn file .xlsx').setInputFiles(bad);
     await expect(page.getByText(/Lỗi: 1/)).toBeVisible();
     await expect(page.getByText(`Site "${siteCode}" đã ngừng dùng`, { exact: false })).toBeVisible();
@@ -234,7 +235,7 @@ test.describe('Import / export thiết bị', () => {
     const again = await buildDeviceFile(join(tmpdir(), `tb-off-again-${stamp}.xlsx`), [
       [oldCode, 'Switch cũ — đổi tên', 'Switch', siteCode, ''],
     ]);
-    await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
+    await devicesPageButton(page, 'Nhập từ Excel').click();
     await page.getByLabel('Chọn file .xlsx').setInputFiles(again);
     await page.getByRole('button', { name: 'Đối chiếu' }).click();
     await expect(page.getByText(/Lỗi: 0/)).toBeVisible();

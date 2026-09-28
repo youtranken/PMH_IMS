@@ -128,7 +128,9 @@ test('ghế license ở 390px: thẻ danh sách mở hồ sơ, bảng ghế gậ
   await page.getByRole('link', { name: code }).click();
   await page.getByRole('tab', { name: /Máy đang dùng/ }).click();
 
-  const cost = page.getByText('3.500.000 ₫');
+  // Ô chi phí của dòng ghế — dòng tổng "1 máy đang dùng · tổng chi phí …" (SW-057) cũng mang
+  // cùng con số nên phải bám vào ô bảng.
+  const cost = page.getByRole('cell', { name: /3\.500\.000\s₫/ });
   await expect(cost).toBeVisible();
   await expect(page.getByText(`HD-M-${stamp}`)).toBeVisible();
 

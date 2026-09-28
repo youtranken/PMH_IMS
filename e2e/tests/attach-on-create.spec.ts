@@ -5,6 +5,7 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   APP_ORIGIN,
   E2E_SA,
+  devicesPageButton,
   firstLogin,
   ispProviderId,
   resetDevices,
@@ -74,7 +75,7 @@ test.describe('Đính kèm giấy tờ ngay lúc thêm mới', () => {
     const code = `SW-E2E-ATT-${stamp}`;
 
     await page.goto('/devices');
-    await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+    await devicesPageButton(page, 'Thêm thiết bị').click();
 
     const form = page.getByRole('dialog');
     await form.getByLabel('Mã thiết bị').fill(code);

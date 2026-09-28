@@ -105,7 +105,8 @@ test.describe('DEV-013 · tìm thiết bị theo IP, người sử dụng, bộ 
     await page.goto('/devices');
     await timVaChoLoc(page, other);
     await expect(page.getByRole('row', { name: new RegExp(code) })).toHaveCount(0);
-    await expect(page.getByText('Không có thiết bị nào khớp bộ lọc.')).toBeVisible();
+    // Câu rỗng nêu lại đúng từ khoá vừa gõ (DEV-009): "không khớp", không phải "kho trống".
+    await expect(page.getByText(`Không có thiết bị nào khớp “${other}”.`)).toBeVisible();
   });
 });
 
@@ -375,8 +376,8 @@ test.describe('DEV-047 · VLT-040 · két trong trang thiết bị', () => {
     const row = page.getByRole('row', { name: new RegExp(label) });
     await expect(row).toBeVisible();
     await expectInsideWidth(page, row.getByRole('button', { name: 'Xem' }), 'nút Xem');
-    // Loại, ghi chú, ngày cập nhật là dòng phụ — vẫn đọc được.
-    await expect(row).toContainText('Cập nhật');
+    // Loại, ghi chú, mốc đổi giá trị gần nhất (VLT-054) là dòng phụ — vẫn đọc được.
+    await expect(row).toContainText(/Đổi giá trị \d+ ngày trước/);
 
     // Neo đầu: ô Thao tác cũng mang tên ngăn ("Thao tác với …") nên khớp giữa chuỗi là ra hai ô.
     const labelCell = row.getByRole('cell', { name: new RegExp(`^${label}`) });

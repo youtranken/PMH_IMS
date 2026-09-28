@@ -1,6 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import {
   E2E_SA,
+  devicesPageButton,
   firstLogin,
   resetCatalog,
   resetDevices,
@@ -152,7 +153,7 @@ test.describe('API hỏng phải nói ra, không được hóa thành rỗng', (
     await breakRoute(page, /\/api\/v1\/catalog\?/);
     await page.reload();
 
-    await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+    await devicesPageButton(page, 'Thêm thiết bị').click();
     /*
      * Bám vào hộp thoại, không bám vào cả trang: thanh lọc phía sau có một ô chọn TRÙNG TÊN
      * trợ năng ("Loại"), và `getByRole` khớp theo chuỗi con — không thu hẹp thì bài kiểm bấm
@@ -181,7 +182,7 @@ test.describe('API hỏng phải nói ra, không được hóa thành rỗng', (
     await expect(page.getByText(LOAD_ERROR)).toHaveCount(0);
 
     await page.goto('/devices');
-    await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+    await devicesPageButton(page, 'Thêm thiết bị').click();
     const form = page.getByRole('dialog');
     await form.getByRole('button', { name: 'Loại' }).click();
     await expect(page.getByRole('option').first()).toBeVisible();

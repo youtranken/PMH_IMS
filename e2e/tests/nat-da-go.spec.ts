@@ -135,7 +135,8 @@ test.describe('Sổ NAT — rule đã gỡ (NET-037)', () => {
 
     // Đường hỏng: hỏi lại rồi bấm Hủy thì KHÔNG đổi gì.
     await rowAction(page, f.ports, 'Tắt rule');
-    await page.getByRole('dialog').getByRole('button', { name: 'Hủy' }).click();
+    // Nút ✕ của hộp hỏi lại cũng mang tên "Hủy" — bấm nút ở chân hộp.
+    await page.getByRole('dialog').getByTestId('dialog-footer').getByRole('button', { name: 'Hủy' }).click();
     await expect(row.getByText('Đang mở', { exact: true })).toBeVisible();
 
     await rowAction(page, f.ports, 'Tắt rule');

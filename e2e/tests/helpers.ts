@@ -1,5 +1,5 @@
 import { execSync } from 'node:child_process';
-import { expect, request, type Page } from '@playwright/test';
+import { expect, request, type Locator, type Page } from '@playwright/test';
 import { NobleCryptoPlugin, ScureBase32Plugin, TOTP } from 'otplib';
 import { APP_TIMEZONE } from '../app-timezone';
 
@@ -1068,6 +1068,14 @@ export function isoInDays(days: number): string {
 /** Hôm nay theo lịch của múi giờ ứng dụng — xem chú thích `isoInDays`. */
 export function isoToday(): string {
   return isoInDays(0);
+}
+
+/**
+ * Nút ở đầu trang Thiết bị. Kho trống thì khối "chưa có thiết bị" bày thêm một bản cùng tên
+ * (DEV-009), nên tên nút một mình không còn duy nhất; nút đầu trang luôn đứng trước trong DOM.
+ */
+export function devicesPageButton(page: Page, name: 'Thêm thiết bị' | 'Nhập từ Excel'): Locator {
+  return page.getByRole('main').getByRole('button', { name, exact: true }).first();
 }
 
 /**

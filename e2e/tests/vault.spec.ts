@@ -607,6 +607,9 @@ test.describe('Két sắt', () => {
         'ownerType',
         'updatedAt',
         'username',
+        // Mốc đổi giá trị gần nhất (VLT-054) — chỉ là ngày giờ + người, không mang giá trị.
+        'valueChangedAt',
+        'valueChangedBy',
       ].sort(),
     );
 

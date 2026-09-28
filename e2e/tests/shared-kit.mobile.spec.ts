@@ -32,11 +32,10 @@ test.describe('390px', () => {
     await openNavDrawer(page);
     await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Tài khoản', exact: true })).toBeVisible();
-    // Tên xuất hiện cả ở chân sidebar và trong bảng — chỉ kiểm dòng trong BẢNG.
-    // Bám đúng ô HỌ TÊN: nút ba chấm mang nhãn trợ năng "Thao tác với {tên}" nên ô Thao tác
-    // cũng chứa tên người, và khớp lỏng là trúng hai ô.
+    // Ở khổ này mỗi tài khoản là một THẺ (tên · vai, dòng phụ email) chứ không phải dòng bảng.
+    // Tên xuất hiện cả ở chân sidebar — bám thẻ mang CẢ tên lẫn email.
     await expect(
-      page.getByRole('cell', { name: /E2E Super Admin/ }).filter({ hasText: 'e2e-sa@' }),
+      page.getByRole('listitem').filter({ hasText: 'E2E Super Admin' }).filter({ hasText: 'e2e-sa@' }),
     ).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   });

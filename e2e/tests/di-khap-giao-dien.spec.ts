@@ -10,6 +10,7 @@ import {
   confirmAction,
   expireStepUp,
   fillLogin,
+  devicesPageButton,
   firstLogin,
   freshTotpCode,
   ispProviderId,
@@ -486,7 +487,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
     await expect(page.getByRole('heading', { level: 1, name: /^Thiết bị$/ })).toBeVisible();
 
     // Tạo qua GIAO DIỆN (không phải API): cửa vào phải là đúng cái người dùng thật bấm.
-    await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+    await devicesPageButton(page, 'Thêm thiết bị').click();
     const form = page.getByRole('dialog');
     await form.getByLabel('Mã thiết bị').fill(code);
     await form.getByLabel('Tên thiết bị').fill('Switch của bài đi một vòng');
@@ -747,7 +748,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
       .click();
     await expect(page.getByRole('heading', { level: 1, name: /^Thiết bị$/ })).toBeVisible();
 
-    const addButton = page.getByRole('button', { name: 'Thêm thiết bị' });
+    const addButton = devicesPageButton(page, 'Thêm thiết bị');
     await expect(addButton).toBeVisible();
 
     /*
@@ -1390,7 +1391,9 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
       'Địa chỉ IP',
       'Sổ NAT',
       'Tài khoản dịch vụ',
-      'Duyệt yêu cầu',
+      // Member chỉ xin, không duyệt — nên cửa này mang tên việc của họ (VLT-026), cùng
+      // đường `/approvals` mà SA/Admin thấy là "Duyệt yêu cầu".
+      'Yêu cầu xem két',
       'Kho thanh lý',
       // Nhóm "Hệ thống" — đúng MỘT mục.
       'Danh mục',
@@ -2451,7 +2454,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
 
     const stamp = uniqueStamp();
     await page.goto('/devices');
-    await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+    await devicesPageButton(page, 'Thêm thiết bị').click();
 
     const hop = page.getByRole('dialog', { name: 'Thêm thiết bị' });
     await expect(hop, 'bấm "Thêm thiết bị" phải mở đúng hộp mang tên đó').toBeVisible();
@@ -2609,7 +2612,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await confirmAction(page, 'Bỏ và đóng');
     await expect(hop, 'trả lời xong thì Esc phải đóng được hộp thêm thiết bị').toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+    await devicesPageButton(page, 'Thêm thiết bị').click();
     await expect(hop).toBeVisible();
     await hop.getByRole('button', { name: 'Đóng hộp thoại' }).click();
     await expect(hop, 'nút ✕ cũng phải đóng được hộp').toHaveCount(0);
@@ -2757,9 +2760,17 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => tenDieuKhien(hopNhap.getByRole('button')), {
         message:
-          'Hộp nhập có đúng: ✕ · ô chọn file · Hủy · Đối chiếu · Xác nhận ghi — ba bước, đúng thứ tự đối chiếu-trước-ghi-sau',
+          'Hộp nhập có đúng: ✕ · ô chọn file · Tải file mẫu · Hủy · Đối chiếu · Xác nhận ghi — ba bước, đúng thứ tự đối chiếu-trước-ghi-sau',
       })
-      .toEqual(['Đóng hộp thoại', 'Chọn file .xlsx', 'Hủy', 'Đối chiếu', 'Xác nhận ghi']);
+      // File mẫu là bước con của Nhập nên nằm TRONG hộp (DEV-007), không đứng ở đầu trang.
+      .toEqual([
+        'Đóng hộp thoại',
+        'Chọn file .xlsx',
+        'Tải file mẫu',
+        'Hủy',
+        'Đối chiếu',
+        'Xác nhận ghi',
+      ]);
 
     await expect(
       hopNhap.getByRole('button', { name: 'Đối chiếu' }),
@@ -2810,7 +2821,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
 
     // Tạo qua GIAO DIỆN: lượt tạo này còn phải để lại một dòng trong tab Lịch sử ở cuối bài.
     await page.goto('/devices');
-    await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+    await devicesPageButton(page, 'Thêm thiết bị').click();
     const form = page.getByRole('dialog', { name: 'Thêm thiết bị' });
     await form.getByLabel('Mã thiết bị').fill(code);
     await form.getByLabel('Tên thiết bị').fill('Switch của bài kiểm kê phòng');
@@ -2852,10 +2863,20 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => tenDieuKhien(main.getByRole('button')), {
         message:
-          'Đầu hồ sơ thiết bị có đúng hai việc làm được: sửa hồ sơ, và thanh lý (nút đỏ vì nó LẤY ĐI thứ gì đó)',
+          'Đầu hồ sơ thiết bị: chép mã, sửa, đổi trạng thái, nhân bản, thanh lý; tab Tổng quan thêm "Bổ sung n ô" và "Cấp IP" — không nút nào khác',
       })
       // "Thanh lý sẽ gỡ gì" nằm TRONG hộp Thanh lý (DEV-050), không còn là nút rời trên bản đồ.
-      .toEqual(['Sửa hồ sơ', 'Thanh lý']);
+      // Chép mã (DEV-059), Đổi trạng thái (DEV-053), Nhân bản (DEV-034) ở đầu trang; "Bổ sung n ô
+      // còn thiếu" (DEV-066) và "Cấp IP" (DEV-089) ở tab Tổng quan.
+      .toEqual([
+        'Chép mã thiết bị',
+        'Sửa hồ sơ',
+        'Đổi trạng thái',
+        'Nhân bản',
+        'Thanh lý',
+        'Bổ sung 6 ô còn thiếu',
+        'Cấp IP',
+      ]);
 
     /*
      * MỖI Ô KỂ MỘT LẦN — hoặc là một ô có giá trị, hoặc là một cái tên trong dòng "Chưa khai".
@@ -3387,7 +3408,11 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       add.getByRole('textbox', { name: 'Tên hồ sơ', exact: true }),
       'và dưới ô Tên',
     ).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
-    await expect(add.getByText('Còn 2 ô cần sửa trước khi lưu.')).toBeVisible();
+    // Kỳ hạn đang là Thuê bao mà chưa có ngày hết hạn: báo ngay tại ô (SW-028), nên là BA ô.
+    await expect(
+      add.getByText('Nhập ngày hết hạn — thiếu hạn thì hệ thống không nhắc gia hạn được.'),
+    ).toBeVisible();
+    await expect(add.getByText('Còn 3 ô cần sửa trước khi lưu.')).toBeVisible();
     await expect(
       add,
       'Lưu hỏng thì hộp phải Ở LẠI — đóng mất là người dùng tưởng đã lưu xong',
@@ -3929,8 +3954,11 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      * Thứ tự do thứ tự đăng ký nguồn quyết định (AD-7) nên so TẬP chứ không so thứ tự — sắp
      * cả hai vế bằng cùng một phép sắp rồi mới so.
      */
-    await page.getByRole('button', { name: 'Loại', exact: true }).click();
-    const kindOptions = (await page.getByRole('option').allInnerTexts()).map((text) => text.trim());
+    // Loại là nhóm nút bật/tắt chọn NHIỀU loại cùng lúc (EX-010), không còn là ô chọn một.
+    const kindGroup = page.getByRole('group', { name: 'Loại', exact: true });
+    const kindOptions = (await kindGroup.getByRole('button').allInnerTexts()).map((text) =>
+      text.trim(),
+    );
     expect(
       [...kindOptions].sort(),
       'Bộ lọc loại phải bày đủ 6 nguồn hạn đang đăng ký (cả "Khác" — Q-14), cộng mục "tất cả" — đường truyền không có hạn (Q-04)',
@@ -3945,7 +3973,10 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
         'Bảo hành thiết bị',
       ].sort(),
     );
-    await page.getByRole('option', { name: 'Tất cả loại', exact: true }).click();
+    await expect(
+      kindGroup.getByRole('button', { name: 'Tất cả loại', exact: true }),
+      'Chưa chọn loại nào thì nút "Tất cả loại" đang bật',
+    ).toHaveAttribute('aria-pressed', 'true');
 
     // ===== BẢNG (chờ dòng có thật rồi mới đọc cột — đọc cột không biết chờ lại) =====
     const licenseRow = page.getByRole('row', { name: new RegExp(licenseCode) });
@@ -4074,11 +4105,13 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toBeVisible();
     expect(
       await columnTexts(page),
-      'Bảng luật gửi báo cáo có đúng 6 cột này',
+      'Bảng luật gửi báo cáo có đúng 7 cột này',
     ).toEqual([
       'Tên luật',
       'Theo dõi loại',
       'Kỳ gửi',
+      // Lần gửi kế tiếp tính sẵn (EX-021): người đọc không phải tự cộng lịch trong đầu.
+      'Lần gửi tới',
       'Người nhận',
       'Gửi gần nhất',
       'Thao tác',
@@ -4086,8 +4119,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
     expect(
       await rowActionNames(page, ruleName),
-      'Menu của một dòng luật: Sửa luật · Gửi thử · Xóa (việc nguy hiểm xếp cuối)',
-    ).toEqual(['Sửa luật', 'Tạm ngưng', 'Gửi thử', 'Xóa']);
+      'Menu của một dòng luật: Sửa luật · Tạm ngưng · Xem trước thư · Gửi thử cho tôi · Gửi thử · Xóa (việc nguy hiểm xếp cuối)',
+    ).toEqual(['Sửa luật', 'Tạm ngưng', 'Xem trước thư', 'Gửi thử cho tôi', 'Gửi thử', 'Xóa']);
 
     /*
      * "GỬI THỬ" PHẢI HỎI LẠI, VÀ CÂU HỎI PHẢI NÊU ĐÍCH DANH NGƯỜI NHẬN (rà UI/UX #19).
@@ -4100,7 +4133,8 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      * trang trí — hộp hiện lên trong khi lượt gửi đã chạy ở phía sau.
      */
     const thuTruoc = (await mailpitMessages()).length;
-    await rowAction(page, ruleName, 'Gửi thử');
+    // Khớp nguyên văn: menu còn có "Gửi thử cho tôi" (EX-021), đây là bản gửi cả danh sách.
+    await rowAction(page, ruleName, /^Gửi thử$/);
     await expect(
       page.getByRole('dialog').getByText(/sep@pmh\.com\.vn/),
       'câu hỏi phải nói THẲNG thư sẽ tới hộp nào — đó mới là thứ giúp người ta dừng đúng lúc',
@@ -4178,10 +4212,14 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Hằng tháng thì phải hỏi ngày nào trong tháng',
     ).toHaveCount(1);
 
+    // Ba ô chọn lịch giờ là `Select` chung — cũng là nút (EX-019).
     await expect(
       add.getByRole('button'),
-      'Hộp thêm luật có đúng 3 nút: ✕ · Hủy · Lưu (mọi ô còn lại là ô gõ, ô tick hoặc ô chọn)',
-    ).toHaveCount(3);
+      'Hộp thêm luật (hằng tháng) có đúng 6 nút: ✕ · Tần suất · Ngày trong tháng · Lúc · Hủy · Lưu',
+    ).toHaveCount(6);
+    for (const name of ['Đóng hộp thoại', 'Tần suất', 'Ngày trong tháng', 'Lúc', 'Hủy', 'Lưu']) {
+      await expect(add.getByRole('button', { name, exact: true })).toHaveCount(1);
+    }
 
     // ===== HAI ĐƯỜNG HỎNG =====
     const save = add.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' });
@@ -4566,8 +4604,9 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
 
     /*
      * Cả `main` có ĐÚNG ngần này nút. Dải đang chọn còn trống hoàn toàn (/29 = 6 host) nên
-     * phần bảng là con số biết trước: 3 nút lọc, 6 nút "Cấp IP", 2 nút lật trang — cộng nút
-     * "Tra" của ô tra IP/máy cấp trang.
+     * phần bảng là con số biết trước: 3 nút lọc + chip "Đã ẩn" (NET-020), 6 nút "Cấp IP", 2 nút
+     * lật trang, cặp "Danh sách | Bản đồ" (NET-006) — cộng nút "Tra" của ô tra IP/máy cấp trang,
+     * và ở đầu cột phải "Giấy tờ (n)" (NET-016) + "Cấp IP trống kế tiếp" (NET-007).
      */
     await expectHandleCounts(
       page.getByRole('main'),
@@ -4577,9 +4616,14 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
         ['Khai dải mới', 1],
         ['Tra', 1],
         [/^Thao tác với /, cards],
+        ['Giấy tờ (0)', 1],
+        ['Cấp IP trống kế tiếp', 1],
         ['Tất cả 6', 1],
         ['Đang dùng 0', 1],
         ['Trống 6', 1],
+        ['Đã ẩn', 1],
+        ['Danh sách', 1],
+        ['Bản đồ', 1],
         ['Cấp IP', 6],
         ['Trang trước', 1],
         ['Trang sau', 1],
@@ -6682,17 +6726,46 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     /*
      * ===== KHẲNG ĐỊNH QUAN TRỌNG NHẤT =====
-     * Toàn bộ nút trong vùng nội dung = đúng năm nút lọc theo loại. Con số đếm cắt ra so riêng,
-     * vì nó thay đổi theo dữ liệu; phần CHỮ thì cố định.
+     * Toàn bộ nút trong vùng nội dung = năm nút lọc theo loại + bộ nút CHỈ ĐỌC (khoảng ngày,
+     * sắp xếp, lật trang, Xuất Excel — DP-004). Không một nút nào ghi. Con số đếm cắt ra so
+     * riêng, vì nó thay đổi theo dữ liệu; phần CHỮ thì cố định.
      */
-    // Nút ⋯ của từng dòng (chỉ dẫn đường, không ghi gì) không tính vào bộ nút lọc.
-    const tenNut = (await tenTheoVaiTro(main, 'button')).filter(
+    // Nút ⋯ của từng dòng (chỉ dẫn đường, không ghi gì) không tính vào bộ nút.
+    const nhomLoai = main.getByRole('group', { name: 'Lọc theo loại hồ sơ' });
+    const tenNut = (await tenTheoVaiTro(nhomLoai, 'button')).filter(
       (ten) => !ten.startsWith('Thao tác với'),
     );
     expect(
       tenNut.map((ten) => ten.replace(/\s+\d+$/, '')),
-      'Kho thanh lý CHỈ được có năm nút lọc theo loại — một nút ghi ở đây là một hồ sơ đã thanh lý bị sửa',
+      'Nhóm lọc theo loại có đúng năm nút',
     ).toEqual(sap(['Tất cả', 'Thiết bị', 'Phần mềm', 'Tài khoản dịch vụ', 'Đường truyền']));
+    expect(
+      sap(
+        (await tenTheoVaiTro(main, 'button'))
+          .filter((ten) => !ten.startsWith('Thao tác với'))
+          .map((ten) => ten.replace(/\s+\d+$/, '')),
+      ),
+      'Kho thanh lý CHỈ được có nút lọc/đọc — một nút ghi ở đây là một hồ sơ đã thanh lý bị sửa',
+    ).toEqual(
+      sap([
+        'Tất cả',
+        'Thiết bị',
+        'Phần mềm',
+        'Tài khoản dịch vụ',
+        'Đường truyền',
+        // DP-004: khoảng thanh lý, từ–đến ngày, sắp xếp, lật trang, xuất đúng cái đang xem.
+        'Tháng này',
+        'Quý này',
+        'Năm nay',
+        'Thanh lý từ ngày',
+        'Thanh lý đến ngày',
+        'Sắp xếp',
+        'Số dòng',
+        'Trang trước',
+        'Trang sau',
+        'Xuất Excel',
+      ]),
+    );
     for (const ten of tenNut) {
       expect(ten, `Nút lọc "${ten}" phải mang số đếm — nút lọc không có số thì hết là bộ đếm`).toMatch(
         /\s\d+$/,
@@ -6708,7 +6781,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       await rowActionNames(page, maMay),
       'Thiết bị trong kho: chỉ có lối mở hồ sơ gốc',
     ).toEqual(['Mở hồ sơ']);
-    for (const cam of [/Thêm/, /^Sửa/, /^Xóa/, /Xuất Excel/]) {
+    // "Xuất Excel" ĐƯỢC có (DP-004): nó chỉ đọc, và lượt xuất vẫn ghi sổ `disposal.exported`.
+    for (const cam of [/Thêm/, /^Sửa/, /^Xóa/, /Khôi phục/]) {
       await expect(
         main.getByRole('button', { name: cam }),
         `Kho thanh lý không được có nút khớp ${cam} — sửa thì về đúng module chủ`,
@@ -6736,11 +6810,11 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       'Năm nút lọc phải nằm trong một nhóm có tên — rời rạc thì trình đọc màn hình không biết chúng là một bộ',
     ).toBeVisible();
 
-    // ĐỦ CỘT: bốn, không hơn. Cột thứ năm ở đây gần như chắc chắn là cột thao tác.
+    // ĐỦ CỘT, không hơn: ai thanh lý và khi nào lấy từ lịch sử module chủ (DP-002).
     expect(
       await tenCotBang(main),
-      'Bảng kho thanh lý: Mã · Loại · Chi tiết · Cập nhật lần cuối · Thao tác (chỉ dẫn đường)',
-    ).toEqual(['Mã', 'Loại', 'Chi tiết', 'Cập nhật lần cuối', 'Thao tác']);
+      'Bảng kho thanh lý: Mã · Loại · Chi tiết · Ngày thanh lý · Người thanh lý · Thao tác (chỉ dẫn đường)',
+    ).toEqual(['Mã', 'Loại', 'Chi tiết', 'Ngày thanh lý', 'Người thanh lý', 'Thao tác']);
 
     await expect(
       main.getByText(/KHÔNG còn được tính hạn và không vào email nhắc gia hạn/),
@@ -8110,8 +8184,17 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await page.getByRole('button', { name: 'Nhóm đối tượng' }).click();
     await page.getByRole('option', { name: 'Phần mềm', exact: true }).click();
 
+    /*
+     * Tiêu đề cột loại là NÚT "Gán … cho nhiều người", kèm dấu `+` trang trí
+     * (`aria-hidden`) cho thấy nó bấm được. `allTextContents` đọc cả phần trang trí nên cắt nó
+     * đi trước khi so chữ; việc mỗi cột loại phải có nút đó thì kiểm riêng ngay dưới.
+     */
     expect(
-      asSet(await grid.getByRole('columnheader').allTextContents()),
+      asSet(
+        (await grid.getByRole('columnheader').allTextContents()).map((text) =>
+          text.replace(/\+$/, ''),
+        ),
+      ),
       'lọc về họ "Phần mềm" thì lưới phải còn đúng: cột tên người + tiêu đề họ + năm loại phần mềm',
     ).toEqual(
       asSet([
@@ -8124,6 +8207,10 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
         'Khác',
       ]),
     );
+    await expect(
+      grid.getByRole('columnheader').getByRole('button', { name: /^Gán ".+" cho nhiều người$/ }),
+      'mỗi cột loại (năm cột) là một nút gán cả cột cho nhiều người',
+    ).toHaveCount(5);
 
     /* ---- Dòng của Member: có nút gán, và có ô để bấm ---- */
 
@@ -8657,7 +8744,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       stepUp,
       'hết grace mà bấm Xem thì phải được HỎI MÃ, không phải một toast lỗi rồi bỏ mặc',
     ).toBeVisible();
-    await expect(stepUp.getByText('Nhập mã xác thực để xem thông tin bí mật')).toBeVisible();
+    // Hộp nêu ĐÚNG ngăn đang mở (VLT-047) — người ta biết mình gõ mã để xem cái gì.
+    await expect(stepUp.getByText(`Nhập mã 6 số để xem "${label}".`)).toBeVisible();
 
     expect(
       await textboxLabels(stepUp),

@@ -154,7 +154,8 @@ test.describe('Danh sách phần mềm', () => {
     await rowAction(page, code, 'Gia hạn');
     const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });
     await expect(dialog).toBeVisible();
-    await expect(dialog.getByText('Hạn hiện tại')).toBeVisible();
+    // Dòng "Hạn hiện tại: dd/mm/yyyy" — câu gợi ý của ô Hạn mới (SW-048) cũng nhắc chữ này.
+    await expect(dialog.getByText(/^Hạn hiện tại: \d{2}\/\d{2}\/\d{4}/)).toBeVisible();
 
     // Đường hỏng: bấm Gia hạn khi chưa chọn ngày → hộp ở lại, nói đúng câu.
     await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gia hạn' }).click();
@@ -207,7 +208,8 @@ test.describe('Hộp gán license', () => {
     await expect(page.getByText('Đã gán license vào 1 máy.')).toBeVisible();
 
     await page.goto(`/software/${id}?tab=devices`);
-    await expect(page.getByText('5.600.000 ₫')).toBeVisible();
+    // Ô chi phí của dòng ghế; dòng tổng ngay dưới (SW-057) mang cùng con số.
+    await expect(page.getByRole('cell', { name: /5\.600\.000\s₫/ })).toBeVisible();
     await expect(page.getByText(/2 máy đang dùng · tổng chi phí 5\.600\.000 ₫/)).toBeVisible();
   });
 });

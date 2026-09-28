@@ -3,6 +3,7 @@ import {
   APP_ORIGIN,
   confirmAction,
   E2E_SA,
+  devicesPageButton,
   firstLogin,
   resetCatalog,
   resetDevices,
@@ -74,7 +75,7 @@ test.describe('Kho thiết bị', () => {
     const code = `SW-E2E-${stamp}`;
 
     await page.getByRole('link', { name: 'Thiết bị' }).click();
-    await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+    await devicesPageButton(page, 'Thêm thiết bị').click();
     await fillDevice(page, {
       code,
       name: 'Switch tầng 3 kiểm thử',
@@ -117,11 +118,11 @@ test.describe('Kho thiết bị', () => {
     const serial = `DUP-${stamp}`;
 
     await page.getByRole('link', { name: 'Thiết bị' }).click();
-    await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+    await devicesPageButton(page, 'Thêm thiết bị').click();
     await fillDevice(page, { code: `PC-E2E-A-${stamp}`, name: 'Máy A', type: 'PC', serial });
     await expect(page.getByRole('row', { name: new RegExp(`PC-E2E-A-${stamp}`) })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+    await devicesPageButton(page, 'Thêm thiết bị').click();
     await fillDevice(page, { code: `PC-E2E-B-${stamp}`, name: 'Máy B', type: 'PC', serial });
 
     await expect(page.getByText(/đang trùng với PC-E2E-A-/)).toBeVisible();
@@ -135,11 +136,11 @@ test.describe('Kho thiết bị', () => {
     const code = `PC-E2E-DUP-${stamp}`;
 
     await page.getByRole('link', { name: 'Thiết bị' }).click();
-    await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+    await devicesPageButton(page, 'Thêm thiết bị').click();
     await fillDevice(page, { code, name: 'Máy đầu tiên', type: 'PC' });
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+    await devicesPageButton(page, 'Thêm thiết bị').click();
     // Gõ chữ thường: mã là citext nên "pc-dup-…" vẫn là trùng.
     await fillDevice(page, { code: code.toLowerCase(), name: 'Máy thứ hai', type: 'PC' });
 
@@ -153,7 +154,7 @@ test.describe('Kho thiết bị', () => {
     const code = `UPS-E2E-${stamp}`;
 
     await page.getByRole('link', { name: 'Thiết bị' }).click();
-    await page.getByRole('button', { name: 'Thêm thiết bị' }).click();
+    await devicesPageButton(page, 'Thêm thiết bị').click();
     await fillDevice(page, { code, name: 'UPS phòng máy', type: 'UPS' });
     await page.getByRole('link', { name: code }).click();
 
