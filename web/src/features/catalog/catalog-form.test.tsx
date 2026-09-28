@@ -66,6 +66,29 @@ describe('CatalogForm — gợi ý và cảnh báo', () => {
     expect(screen.getByText(/dùng để tra cứu và nhập Excel/)).toBeInTheDocument();
   });
 
+  it('sửa site: chỉ bấm "Đổi mã…" mà chưa gõ gì thì Esc đóng thẳng, không hỏi "bỏ dữ liệu"', async () => {
+    stubFetch();
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <CatalogForm
+            entity="site"
+            row={{ id: 's-hcm', code: 'E2E-HCM', name: 'HCM', address: null, active: true } as CatalogRow}
+            csrfToken="t"
+            onClose={onClose}
+            onSaved={vi.fn()}
+          />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Đổi mã…' }));
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog', { name: 'Bỏ những gì vừa nhập?' })).not.toBeInTheDocument();
+    expect(onClose).toHaveBeenCalledWith(false);
+  });
+
   it('bộ phận: gõ tên gần trùng (bỏ dấu, hoa thường) thì nhắc tên đã có', async () => {
     stubFetch();
     const user = userEvent.setup();

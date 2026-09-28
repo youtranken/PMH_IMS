@@ -288,6 +288,7 @@ export function CatalogForm({
             {codeUnlocked ? (
               <input
                 id="catalog-code"
+                name="catalog-code"
                 className="inp mono"
                 required
                 value={form.code}
@@ -299,6 +300,10 @@ export function CatalogForm({
               />
             ) : (
               <div className="row catalog-code-locked">
+                {/* `guardUnsaved` của Dialog so chữ ký các ô NATIVE trong hộp. Không có ô ẩn
+                    cùng tên này thì bấm "Đổi mã…" làm mọc thêm một ô, chữ ký lệch, và Esc hỏi
+                    "bỏ dữ liệu" dù người dùng chưa gõ gì. */}
+                <input type="hidden" name="catalog-code" value={form.code} />
                 <span className="static-value mono">{form.code}</span>
                 <button type="button" className="btn sm" onClick={() => setCodeUnlocked(true)}>
                   {t('catalog.changeCode')}
