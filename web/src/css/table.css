@@ -102,6 +102,17 @@ table.table tbody tr.due-today td:first-child {
 table.table tbody tr.row-danger td {
   background: var(--danger-soft);
 }
+/*
+ * Huy hiệu ĐỎ trên dòng ĐỎ: nền huy hiệu trùng nền dòng nên nó tan vào dòng, nhất là ở chế độ
+ * tối (đỏ trên đỏ sẫm). Trả huy hiệu về nền mặt bảng + viền đỏ để nó vẫn là một "viên" đọc được.
+ */
+table.table tbody tr.row-danger .badge.danger,
+table.table tbody tr.overdue .badge.danger,
+.list-card.row-danger .badge.danger,
+.list-card.overdue .badge.danger {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--border-danger);
+}
 /* Dòng seat được điều hướng từ bảng con /phan-mem (?seat=) — nhấn nhẹ + viền trái. */
 table.table tbody tr.row-highlight td {
   background: var(--primary-soft);

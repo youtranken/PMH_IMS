@@ -148,23 +148,24 @@ button.primary:disabled {
   box-shadow: none;
   opacity: 1;
 }
+/*
+ * Nút chính là nền ĐẶC một màu, không phải gradient lục→cam: nửa cam của gradient kéo tương
+ * phản chữ xuống dưới 4,5:1 ở đầu này và nửa lục ở đầu kia, còn quầng cam dưới nút loang xuống
+ * nội dung. Chữ tối trên `--primary` đạt 5:1 (sáng) và hơn 9:1 (tối). Gradient để dành cho
+ * logo và điểm nhấn trang trí.
+ */
 button.primary {
   color: var(--on-brand);
-  background: var(--grad);
-  /* Gradient phải phủ cả dải viền trong suốt: mặc định nó bắt đầu từ mép padding rồi LẶP vào
-     viền, để lại một vệt màu cuối gradient 1px dọc mép trái nút. */
-  background-origin: border-box;
+  background: var(--primary);
   border-color: transparent;
-  box-shadow: 0 8px 18px -8px var(--warm-ink);
+  box-shadow: var(--shadow-sm);
 }
 button.primary:hover:not(:disabled) {
   /* PHẢI khai báo lại background: rule chung `button:hover{background:surface-2}` có
-     specificity cao hơn base `button.primary` → nếu không, hover đè nền sáng + chữ trắng
-     = nút "biến mất" ở theme sáng. */
-  background: var(--grad);
-  background-origin: border-box;
-  filter: brightness(1.04);
-  box-shadow: 0 10px 22px -8px var(--warm-ink);
+     specificity cao hơn base `button.primary` → nếu không, hover đè nền sáng lên nút chính. */
+  background: var(--primary);
+  filter: brightness(1.06);
+  box-shadow: var(--shadow);
 }
 button.warm {
   color: var(--on-brand);
@@ -232,15 +233,13 @@ a.linkbtn:hover {
 /* Link mang dáng nút CHÍNH / nút nhỏ — `<Link>` đi thẳng tới trang, không lồng `<button>` trong `<a>`. */
 a.linkbtn.primary {
   color: var(--on-brand);
-  background: var(--grad);
-  background-origin: border-box;
+  background: var(--primary);
   border-color: transparent;
-  box-shadow: 0 8px 18px -8px var(--warm-ink);
+  box-shadow: var(--shadow-sm);
 }
 a.linkbtn.primary:hover {
-  background: var(--grad);
-  background-origin: border-box;
-  filter: brightness(1.04);
+  background: var(--primary);
+  filter: brightness(1.06);
 }
 a.linkbtn.sm {
   padding: 0.28rem var(--space-4);
