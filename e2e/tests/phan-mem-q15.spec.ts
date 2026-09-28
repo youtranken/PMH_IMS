@@ -129,3 +129,114 @@ test.describe('SW-049 · Gia hạn ghi hợp đồng + chi phí vào sổ gia h�
     expect(overflow, 'không cuộn ngang ở 390px').toBeLessThanOrEqual(0);
   });
 });
+
+async function pcTypeId(page: Page): Promise<string> {
+  const catalog = await page.evaluate(async () => {
+    const res = await fetch('/api/v1/catalog', { credentials: 'include' });
+    return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
+  });
+  return catalog.deviceTypes.find((type) => type.name === 'PC')!.id;
+}
+
+async function createDevice(
+  page: Page,
+  code: string,
+  extra: { department?: string; assignedTo?: string; status?: string } = {},
+): Promise<string> {
+  const res = await page.request.post('/api/v1/devices', {
+    headers: await writeHeaders(page),
+    data: { code, name: 'Máy trạm E2E', deviceTypeId: await pcTypeId(page), ...extra },
+  });
+  expect(res.status()).toBe(201);
+  return ((await res.json()) as { device: { id: string } }).device.id;
+}
+
+test.describe('SW-053 · Gán license chọn nhanh theo phòng ban / người sử dụng', () => {
+  test.use({ viewport: { width: 1280, height: 800 } });
+
+  test('chọn một phòng ban → thêm sẵn máy đang dùng của phòng, bỏ máy đã có license; vượt ghế thì hỏi lý do', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const dept = `Phòng E2E ${stamp}`;
+    const code = `LIC-E2E-CHONPB-${stamp}`;
+    const id = await createSoftware(page, {
+      code,
+      name: 'License chọn theo phòng',
+      kind: 'license',
+      seatTotal: 2,
+      endDate: isoInDays(200),
+    });
+    const held = await createDevice(page, `PC-E2E-PB-A-${stamp}`, { department: dept, status: 'in_use' });
+    const b = `PC-E2E-PB-B-${stamp}`;
+    const c = `PC-E2E-PB-C-${stamp}`;
+    await createDevice(page, b, { department: dept, status: 'in_use' });
+    await createDevice(page, c, { department: dept, status: 'in_use' });
+    // Máy dự phòng của phòng và máy phòng khác có tên gần giống: không được kéo theo.
+    await createDevice(page, `PC-E2E-PB-D-${stamp}`, { department: dept, status: 'spare' });
+    await createDevice(page, `PC-E2E-PB-E-${stamp}`, {
+      department: `${dept} tổng hợp`,
+      status: 'in_use',
+    });
+    const seat = await page.request.post(`/api/v1/software/${id}/assignments`, {
+      headers: await writeHeaders(page),
+      data: { deviceId: held },
+    });
+    expect(seat.status()).toBe(201);
+
+    await page.goto(`/software/${id}?tab=devices`);
+    await page.getByRole('button', { name: 'Gán vào máy' }).first().click();
+    const dialog = page.getByRole('dialog', { name: `Gán license vào máy — ${code}` });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Chọn cả lô theo phòng ban / người sử dụng' }).click();
+    await dialog.getByRole('combobox', { name: 'Tên phòng ban' }).fill(dept);
+    await dialog.getByRole('button', { name: 'Thêm các máy' }).click();
+
+    await expect(dialog.getByRole('status').filter({ hasText: 'Đã thêm 2 máy' })).toContainText(
+      '1 máy đã có license này, bỏ qua.',
+    );
+    const chips = dialog.getByRole('list', { name: 'Máy sẽ gán' });
+    await expect(chips.getByRole('listitem')).toHaveCount(2);
+    await expect(chips).toContainText(b);
+    await expect(chips).toContainText(c);
+
+    // 1 ghế đã dùng + 2 máy mới > 2 ghế → hỏi lý do ngay, như gán tay.
+    const reason = dialog.getByRole('textbox', { name: 'Lý do vượt số ghế', exact: true });
+    await expect(reason).toBeVisible();
+    // Bỏ một máy → hết vượt ghế, gán bình thường.
+    await dialog.getByRole('button', { name: `Bỏ ${c} khỏi lô` }).click();
+    await expect(reason).toHaveCount(0);
+    await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gán vào máy' }).click();
+    await expect(page.getByText('Đã gán license vào 1 máy.')).toBeVisible();
+    expect(
+      sql(
+        `SELECT count(*) FROM license_assignment WHERE software_id = '${id}' AND released_at IS NULL`,
+      ),
+    ).toBe('2');
+  });
+
+  test('người sử dụng không có máy đang dùng nào → nói rõ, không thêm máy nào', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const code = `LIC-E2E-CHONNG-${stamp}`;
+    const id = await createSoftware(page, {
+      code,
+      name: 'License chọn theo người',
+      kind: 'license',
+      seatTotal: 5,
+      endDate: isoInDays(200),
+    });
+
+    await page.goto(`/software/${id}?tab=devices`);
+    await page.getByRole('button', { name: 'Gán vào máy' }).first().click();
+    const dialog = page.getByRole('dialog', { name: `Gán license vào máy — ${code}` });
+    await dialog.getByRole('button', { name: 'Chọn cả lô theo phòng ban / người sử dụng' }).click();
+    await dialog.getByRole('button', { name: 'Người sử dụng', exact: true }).click();
+    const who = `Người E2E ${stamp}`;
+    await dialog.getByRole('combobox', { name: 'Tên người sử dụng' }).fill(who);
+    await dialog.getByRole('button', { name: 'Thêm các máy' }).click();
+    await expect(dialog.getByRole('status')).toHaveText(`Không có máy đang dùng nào của ${who}.`);
+    await expect(dialog.getByRole('list', { name: 'Máy sẽ gán' })).toHaveCount(0);
+  });
+});

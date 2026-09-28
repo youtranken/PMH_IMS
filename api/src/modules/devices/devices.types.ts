@@ -50,6 +50,9 @@ export interface DeviceFilter {
   cabinetId?: string;
   deviceTypeId?: string;
   status?: DeviceStatus;
+  /** Khớp ĐÚNG phòng ban / người sử dụng (gấp dấu, hoa thường) — chọn nhanh cả lô máy. */
+  department?: string;
+  assignedTo?: string;
   /**
    * Chỉ máy CÒN NHẬN THÊM ĐƯỢC — dùng cho các ô chọn thiết bị, không dùng cho màn danh sách.
    *
