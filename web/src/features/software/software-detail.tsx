@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { useParams, useSearchParams } from "react-router-dom";
-import { ApiError, apiFetch } from "@/lib/api-client";
+import { apiFetch } from "@/lib/api-client";
 import { errorMessage, useApiMutation } from "@/lib/api";
 import { formatDate } from "@/lib/format";
 import type { Me } from "@/lib/me";
@@ -13,7 +13,7 @@ import { Dialog } from "@/ui/dialog";
 import { ExpiryBadge } from "@/ui/expiry-badge";
 import { Field } from "@/ui/page-header";
 import { HistoryPanel } from "@/ui/history-panel";
-import { LoadError, Loading, NotFound } from "@/ui/load-state";
+import { DetailLoadFailed, LoadError, Loading } from "@/ui/load-state";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
 import {
   DetailLayout,
@@ -144,11 +144,14 @@ export function SoftwareDetail({ me }: { me: Me }) {
 
   if (software.isLoading) return <Loading />;
   if (software.isError) {
-    return software.error instanceof ApiError &&
-      software.error.status === 404 ? (
-      <NotFound />
-    ) : (
-      <LoadError error={software.error} onRetry={() => void software.refetch()} />
+    // Giữ đường lùi về danh sách, và tách "hồ sơ không còn" (404) khỏi "máy chủ lỗi".
+    return (
+      <DetailLoadFailed
+        error={software.error}
+        onRetry={() => void software.refetch()}
+        backTo={PATHS.software}
+        backLabel={t("nav.software")}
+      />
     );
   }
 

@@ -67,7 +67,7 @@ export function TotpSetup({ data }: { data: TotpSetupData }) {
       <p className="totp-note">{t('auth.enrollPhoneSub')}</p>
       <div className="totp-actions">
         {data.otpauthUrl ? (
-          <a className="btn primary" href={data.otpauthUrl}>
+          <a className="linkbtn primary" href={data.otpauthUrl}>
             {t('auth.openInAuthenticator')}
           </a>
         ) : null}

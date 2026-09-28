@@ -211,6 +211,23 @@ a.linkbtn:hover {
   background: var(--surface-2);
   text-decoration: none;
 }
+/* Link mang dáng nút CHÍNH / nút nhỏ — `<Link>` đi thẳng tới trang, không lồng `<button>` trong `<a>`. */
+a.linkbtn.primary {
+  color: var(--on-brand);
+  background: var(--grad);
+  background-origin: border-box;
+  border-color: transparent;
+  box-shadow: 0 8px 18px -8px var(--warm-ink);
+}
+a.linkbtn.primary:hover {
+  background: var(--grad);
+  background-origin: border-box;
+  filter: brightness(1.04);
+}
+a.linkbtn.sm {
+  padding: 0.28rem var(--space-4);
+  font-size: var(--fs-xs);
+}
 
 /* --- Shell: sidebar tối + topbar ----------------------------------------- */
 .app-shell {

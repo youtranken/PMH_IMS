@@ -2,12 +2,12 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { ApiError, apiFetch } from "@/lib/api-client";
+import { apiFetch } from "@/lib/api-client";
 import { formatDate } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { HistoryPanel } from "@/ui/history-panel";
-import { LoadError, Loading, NotFound } from "@/ui/load-state";
+import { DetailLoadFailed, LoadError, Loading } from "@/ui/load-state";
 import { CopyButton } from "@/ui/copy-button";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
 import {
@@ -67,10 +67,14 @@ export function IspDetail({ me }: { me: Me }) {
 
   if (line.isLoading) return <Loading />;
   if (line.isError) {
-    return line.error instanceof ApiError && line.error.status === 404 ? (
-      <NotFound />
-    ) : (
-      <LoadError error={line.error} onRetry={() => void line.refetch()} />
+    // Giữ đường lùi về danh sách, và tách "hồ sơ không còn" (404) khỏi "máy chủ lỗi".
+    return (
+      <DetailLoadFailed
+        error={line.error}
+        onRetry={() => void line.refetch()}
+        backTo={PATHS.ispLines}
+        backLabel={t("nav.isp")}
+      />
     );
   }
 

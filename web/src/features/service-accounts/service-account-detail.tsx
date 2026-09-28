@@ -2,12 +2,12 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { useParams, useSearchParams } from "react-router-dom";
-import { ApiError, apiFetch } from "@/lib/api-client";
+import { apiFetch } from "@/lib/api-client";
 import type { Me } from "@/lib/me";
 import { PATHS } from "@/lib/routes";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { HistoryPanel } from "@/ui/history-panel";
-import { LoadError, Loading, NotFound } from "@/ui/load-state";
+import { DetailLoadFailed, LoadError, Loading } from "@/ui/load-state";
 import { CopyButton } from "@/ui/copy-button";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
 import {
@@ -81,10 +81,14 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
 
   if (account.isLoading) return <Loading />;
   if (account.isError) {
-    return account.error instanceof ApiError && account.error.status === 404 ? (
-      <NotFound />
-    ) : (
-      <LoadError error={account.error} onRetry={() => void account.refetch()} />
+    // Giữ đường lùi về danh sách, và tách "hồ sơ không còn" (404) khỏi "máy chủ lỗi".
+    return (
+      <DetailLoadFailed
+        error={account.error}
+        onRetry={() => void account.refetch()}
+        backTo={PATHS.serviceAccounts}
+        backLabel={t("nav.serviceAccounts")}
+      />
     );
   }
 

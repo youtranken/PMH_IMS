@@ -160,7 +160,7 @@
 .auth-account { color: var(--auth-ink); font-weight: 600; word-break: break-all; }
 /* Cài 2 lớp: hàng nút mở ứng dụng + chép khoá; QR phụ nằm trong <details>. */
 .totp-actions { display: flex; flex-direction: column; gap: var(--space-5); }
-.totp-actions .btn { justify-content: center; }
+.totp-actions .linkbtn { justify-content: center; }
 .totp-secret-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 .totp-secret-row code { word-break: break-all; }
 /* Khối cài 2 lớp dùng ở CẢ card đăng nhập (luôn tối) lẫn hộp thoại Hồ sơ (theo theme): màu mặc

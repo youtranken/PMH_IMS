@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatMoney, orDash } from '@/lib/format';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
@@ -15,6 +15,7 @@ import { SchedulePicker, describeSchedule, type ScheduleValue } from '@/ui/sched
 import { Tabs } from '@/ui/tabs';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
+import { THEME_EVENT } from '@/lib/theme';
 
 const TOKENS = [
   '--primary',
@@ -27,6 +28,30 @@ const TOKENS = [
   '--canvas',
   '--border',
 ];
+
+/**
+ * Ô màu + tên token + giá trị ĐANG áp. Nhãn nằm DƯỚI ô chứ không in lên ô: chữ tối trên ô
+ * --primary/--danger đậm thì không đọc được, mà đây là trang tra cứu token. Giá trị đọc lại
+ * mỗi lần đổi giao diện, để chuyển sáng/tối là thấy ngay token đổi thành gì.
+ */
+function TokenSwatch({ token }: { token: string }) {
+  const read = () => getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+  const [value, setValue] = useState(read);
+  useEffect(() => {
+    const sync = () => setValue(getComputedStyle(document.documentElement).getPropertyValue(token).trim());
+    window.addEventListener(THEME_EVENT, sync);
+    return () => window.removeEventListener(THEME_EVENT, sync);
+  }, [token]);
+  return (
+    <figure className="kit-token">
+      <div className="kit-swatch" style={{ background: `var(${token})` }} aria-hidden="true" />
+      <figcaption>
+        <code>{token}</code>
+        <span className="muted">{value}</span>
+      </figcaption>
+    </figure>
+  );
+}
 
 /**
  * `/dev/components` — bộ dùng chung sống (Story 1.5, AD-15).
@@ -56,9 +81,7 @@ export function ComponentsGallery() {
         <h2>Màu nền tảng — nguồn duy nhất là tokens.css</h2>
         <div className="kit-row">
           {TOKENS.map((token) => (
-            <div key={token} className="kit-swatch" style={{ background: `var(${token})` }}>
-              {token}
-            </div>
+            <TokenSwatch key={token} token={token} />
           ))}
         </div>
       </section>

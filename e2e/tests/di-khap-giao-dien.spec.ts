@@ -1027,14 +1027,18 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
 
     await firstLogin(page, { email: ADMIN_EMAIL, password: matKhauTam });
 
-    // --- Hai đường trả 404 thật.
-    for (const url of ['/dev/components', '/documents']) {
-      await page.goto(url);
-      await expect(
-        page.getByRole('heading', { name: 'Không tìm thấy trang' }),
-        `admin gõ ${url} phải nhận trang 404 tử tế, không phải màn trắng hay redirect câm`,
-      ).toBeVisible();
-    }
+    // --- Trang có thật nhưng không dành cho vai này → 403 nói rõ thiếu quyền (MISC-001);
+    //     trang chưa có route → 404.
+    await page.goto('/dev/components');
+    await expect(
+      page.getByRole('heading', { name: 'Bạn không có quyền xem trang này' }),
+      'admin gõ /dev/components phải nhận trang 403 nói rõ thiếu quyền, không phải "không tồn tại"',
+    ).toBeVisible();
+    await page.goto('/documents');
+    await expect(
+      page.getByRole('heading', { name: 'Không tìm thấy trang' }),
+      'admin gõ /documents phải nhận trang 404 tử tế, không phải màn trắng hay redirect câm',
+    ).toBeVisible();
 
     // --- `/admin/accounts`: màn MỞ (web không gác), API mới là nơi chặn.
     const truoc = await page.request.get('/api/v1/accounts');
@@ -1056,8 +1060,8 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
      * kêu lên rằng cửa sau đang mở.
      */
     await expect(
-      page.getByRole('heading', { name: 'Không tìm thấy trang' }),
-      'từ 22/09 router cũng gác: admin gõ thẳng URL của SA chỉ nhận 404',
+      page.getByRole('heading', { name: 'Bạn không có quyền xem trang này' }),
+      'router cũng gác: admin gõ thẳng URL của SA nhận trang 403',
     ).toBeVisible();
 
     /*
@@ -1468,16 +1472,16 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
   test('Gõ thẳng URL không mở được cửa mà menu đã đóng', async ({ page }) => {
     await firstLogin(page, E2E_MEMBER);
 
-    for (const [path, why] of [
-      ['/vault', 'trang tổng Két sắt gác vai ngay ở route'],
-      ['/dev/components', 'Bộ giao diện là trang nội bộ, chỉ SA'],
-      ['/admin/settings', 'Tham số hệ thống chỉ SA (Q-14)'],
-      ['/documents', 'màn Tài liệu thuộc epic sau — chưa có route nào'],
+    for (const [path, why, heading] of [
+      ['/vault', 'trang tổng Két sắt gác vai ngay ở route', 'Bạn không có quyền xem trang này'],
+      ['/dev/components', 'Bộ giao diện là trang nội bộ, chỉ SA', 'Bạn không có quyền xem trang này'],
+      ['/admin/settings', 'Tham số hệ thống chỉ SA (Q-14)', 'Bạn không có quyền xem trang này'],
+      ['/documents', 'màn Tài liệu thuộc epic sau — chưa có route nào', 'Không tìm thấy trang'],
     ] as const) {
       await page.goto(path);
       await expect(
-        page.getByRole('heading', { name: 'Không tìm thấy trang' }),
-        `${path}: ${why} — gõ thẳng URL cũng chỉ được nhận 404`,
+        page.getByRole('heading', { name: heading }),
+        `${path}: ${why} — gõ thẳng URL nhận "${heading}"`,
       ).toBeVisible();
     }
 
@@ -1506,8 +1510,8 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
     for (const path of ['/admin/accounts', '/admin/vault-access'] as const) {
       await page.goto(path);
       await expect(
-        page.getByRole('heading', { name: 'Không tìm thấy trang' }),
-        `${path}: từ 22/09 router gác vai — Member gõ thẳng URL chỉ nhận 404`,
+        page.getByRole('heading', { name: 'Bạn không có quyền xem trang này' }),
+        `${path}: router gác vai — Member gõ thẳng URL nhận trang 403`,
       ).toBeVisible();
     }
 

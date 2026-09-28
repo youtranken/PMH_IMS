@@ -141,11 +141,14 @@ test.describe('Trang chi tiết thiết bị', () => {
     await expect(page.getByRole('tab', { name: 'Tổng quan', selected: true })).toBeVisible();
   });
 
-  test('mở thiết bị không tồn tại → trang 404 tử tế, không phải khối lỗi đỏ', async ({ page }) => {
+  test('mở thiết bị không tồn tại → khối "không tìm thấy hồ sơ" có đường về danh sách', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     await page.goto('/devices/00000000-0000-4000-8000-000000000000');
-    await expect(page.getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Về trang chủ' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Không tìm thấy hồ sơ' })).toBeVisible();
+    // MISC-007: không có nút Thử lại (thử lại cũng vẫn 404), có lối về đúng danh sách.
+    await expect(page.getByRole('button', { name: 'Thử lại' })).toHaveCount(0);
+    await page.getByRole('link', { name: 'Về danh sách Thiết bị' }).click();
+    await expect(page).toHaveURL(/\/devices$/);
   });
 });
 

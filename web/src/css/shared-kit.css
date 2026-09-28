@@ -136,13 +136,11 @@
   height: 56px;
   border-radius: var(--r);
   border: 1px solid var(--border-2);
-  display: grid;
-  place-items: end center;
-  font-size: var(--fs-2xs);
-  padding: 4px;
-  color: var(--ink-2);
   background: var(--surface);
 }
+.kit-token { margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.kit-token figcaption { display: flex; flex-direction: column; font-size: var(--fs-2xs); }
+.kit-token code { font-family: var(--mono); color: var(--ink); }
 
 /* --- Tabs: số đếm nhỏ bên phải nhãn (ui/tabs.tsx) ------------------------- */
 .tab-count {
@@ -1226,6 +1224,78 @@ table.access-grid thead .access-row-head {
 }
 .error-state .primary {
   margin-top: var(--space-3);
+}
+/* Lối ra của 404/403: Quay lại (phụ) + Về trang chủ (chính), đứng cạnh nhau. */
+.error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-3);
+}
+.error-search {
+  border: 0;
+  background: transparent;
+  color: var(--primary-ink);
+  font-weight: 500;
+  text-decoration: underline;
+}
+.error-search:hover:not(:disabled) {
+  background: transparent;
+}
+/*
+ * Khối "không tải được" dùng chung (`LoadError`): khung + icon cảnh báo, nút Thử lại cỡ thường
+ * (44px trên điện thoại), phần "Chi tiết kỹ thuật" gập sẵn. Trước đó là một dòng chữ đỏ và một
+ * nút gradient bé như nút chính thu nhỏ — trông như chữ lạc chứ không phải một trạng thái.
+ */
+.load-error {
+  display: flex;
+  gap: var(--space-5);
+  align-items: flex-start;
+  margin: var(--space-4) 0;
+  padding: var(--space-7) var(--space-8);
+  border: 1px solid var(--border-danger);
+  border-radius: var(--r-lg);
+  background: var(--danger-soft);
+}
+.load-error-ic {
+  flex: none;
+  color: var(--danger-strong);
+}
+.load-error-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.load-error-text {
+  margin: 0;
+  color: var(--danger-strong);
+  font-weight: 600;
+}
+.load-error-actions button {
+  min-height: 40px;
+}
+.load-error-tech summary {
+  cursor: pointer;
+  color: var(--ink-2);
+  font-size: var(--fs-xs);
+}
+.load-error-tech p {
+  margin: var(--space-3) 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+  .load-error-actions button {
+    min-height: 44px;
+  }
 }
 
 

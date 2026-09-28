@@ -14,19 +14,34 @@ export default {
     serverUnreachable: 'Không kết nối được máy chủ. Kiểm tra mạng nội bộ rồi thử lại.',
     forbidden: 'Bạn không có quyền xem phần này. Cần thì nhờ Quản trị cấp quyền.',
     notFoundData: 'Không tìm thấy dữ liệu. Hồ sơ có thể đã bị xóa, hoặc đường dẫn đã cũ.',
-    serverError: 'Máy chủ đang gặp sự cố. Thử lại sau ít phút; vẫn vậy thì báo bộ phận IT.',
+    /* Người dùng IMS CHÍNH LÀ team IT — "báo bộ phận IT" là bảo họ đi báo chính mình. Chỉ đúng
+       người vận hành IMS và thứ cần gửi kèm. */
+    serverError:
+      'Máy chủ IMS đang gặp sự cố. Thử lại sau ít phút; nếu vẫn lỗi, gửi phần "Chi tiết kỹ thuật" bên dưới cho Super Admin.',
     retry: 'Thử lại',
+    techDetails: 'Chi tiết kỹ thuật',
+    techStatus: 'HTTP {{status}}',
+    techNoResponse: 'không có phản hồi',
+    techTime: 'lúc {{time}}',
+    techPath: 'trang {{path}}',
+    techCopy: 'Sao chép chi tiết kỹ thuật',
+    forbiddenTitle: 'Bạn không có quyền xem trang này',
+    forbiddenHint: 'Trang này dành cho {{roles}}. Cần truy cập thì liên hệ Super Admin.',
+    recordNotFoundTitle: 'Không tìm thấy hồ sơ',
+    backToList: 'Về danh sách {{list}}',
+    goBack: 'Quay lại',
+    orSearch: 'Hoặc tìm nhanh ({{keys}})',
     /* Tiêu đề khi `/auth/me` hỏng vì lý do KHÁC 401 (API khởi động lại, mất mạng): chưa biết
        phiên còn hay không, nên không được nói "bạn chưa đăng nhập". */
     sessionCheckFailed: 'Chưa kiểm tra được phiên đăng nhập',
     notFoundTitle: 'Không tìm thấy trang',
-    notFoundHint: 'Trang bạn tìm không tồn tại, hoặc thuộc phần chưa mở trong bản này.',
+    notFoundHint: 'Đường dẫn {{path}} không tồn tại hoặc đã đổi.',
     backHome: 'Về trang chủ',
     /* Khối thay cho một màn vừa hỏng lúc hiển thị (ErrorBoundary). Nói rõ phần còn lại vẫn
        dùng được, và việc người dùng làm được ngay. */
     screenErrorTitle: 'Màn này gặp lỗi khi hiển thị',
     screenErrorHint:
-      'Các phần khác của hệ thống vẫn dùng bình thường. Tải lại trang để thử lại; nếu vẫn lỗi, báo bộ phận IT kèm đường dẫn đang mở.',
+      'Các phần khác của hệ thống vẫn dùng bình thường. Tải lại trang để thử lại; nếu vẫn lỗi, báo Super Admin kèm đường dẫn đang mở.',
     reload: 'Tải lại trang',
     confirmTitle: 'Xác nhận',
     confirmOk: 'Đồng ý',

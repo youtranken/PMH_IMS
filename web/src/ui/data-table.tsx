@@ -13,7 +13,7 @@ import {
   type RowData,
   type SortingState,
 } from '@tanstack/react-table';
-import { Loading } from '@/ui/load-state';
+import { SkeletonCards, SkeletonRows } from '@/ui/skeleton-rows';
 import { useScrollEdges } from '@/ui/scroll-x';
 import { useMediaQuery } from '@/ui/use-media-query';
 
@@ -228,7 +228,7 @@ export function DataTable<T>({
         )}
         {rows.length === 0 ? (
           <div className="list-cards-empty">
-            {loading ? <Loading /> : <div className="empty">{emptyText}</div>}
+            {loading ? <SkeletonCards /> : <div className="empty">{emptyText}</div>}
           </div>
         ) : (
           <ul className="list-cards">
@@ -341,7 +341,13 @@ export function DataTable<T>({
             ))}
           </thead>
           <tbody>
-            {rows.length === 0 ? (
+            {rows.length === 0 && loading ? (
+              <SkeletonRows
+                columns={
+                  table.getAllLeafColumns().length + (renderExpanded ? 1 : 0) + (selection ? 1 : 0)
+                }
+              />
+            ) : rows.length === 0 ? (
               <tr>
                 <td
                   colSpan={
@@ -350,11 +356,7 @@ export function DataTable<T>({
                     (selection ? 1 : 0)
                   }
                 >
-                  {loading ? (
-                    <Loading />
-                  ) : (
-                    <div className="empty">{emptyText}</div>
-                  )}
+                  <div className="empty">{emptyText}</div>
                 </td>
               </tr>
             ) : (

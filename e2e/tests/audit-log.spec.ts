@@ -305,7 +305,7 @@ test.describe('Nhật ký kiểm toán — màn hình', () => {
     await expect(page.getByText(E2E_SA.email).first()).toBeVisible();
   });
 
-  test('đường hỏng: Thành viên không thấy mục Nhật ký, gõ thẳng URL nhận 404', async ({ page }) => {
+  test('đường hỏng: Thành viên không thấy mục Nhật ký, gõ thẳng URL nhận trang 403', async ({ page }) => {
     await firstLogin(page, E2E_MEMBER);
 
     const nav = page.getByRole('navigation', { name: 'Điều hướng chính' });
@@ -314,6 +314,7 @@ test.describe('Nhật ký kiểm toán — màn hình', () => {
     await expect(nav.getByText('Nhật ký', { exact: true })).toHaveCount(0);
 
     await page.goto('/admin/audit-log');
-    await expect(page.getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible();
+    // Trang có thật, chỉ là không dành cho vai này — nói đúng là THIẾU QUYỀN (MISC-001).
+    await expect(page.getByRole('heading', { name: 'Bạn không có quyền xem trang này' })).toBeVisible();
   });
 });
