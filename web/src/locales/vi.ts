@@ -1031,6 +1031,10 @@ export default {
     /* Hộp Gia hạn dùng chung (`ui/renew-dialog.tsx`) — một tiêu đề, một câu toast cho mọi cửa. */
     renewTitleOf: 'Gia hạn {{subject}}',
     renewedTo: 'Đã gia hạn {{subject}} tới {{date}}.',
+    renewedToSeats: 'Đã gia hạn {{subject}} tới {{date}} · cập nhật {{count}} ghế.',
+    /* Ghế có kỳ hạn riêng không tự theo hồ sơ — không kéo theo thì license đã gia hạn mà
+       ghế vẫn hiện Quá hạn. */
+    renewSeats: 'Cập nhật luôn {{count}} ghế có kỳ hạn riêng tới hạn mới',
     currentEnd: 'Hạn hiện tại',
     renewMinHint: 'Hạn mới phải từ {{date}} trở đi — sau hạn hiện tại và sau hôm nay.',
     renewTooEarly: 'Hạn mới phải từ {{date}} trở đi.',

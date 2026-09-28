@@ -12,6 +12,7 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import {
+  IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
@@ -89,6 +90,9 @@ export class SoftwareBodyDto {
 class RenewDto {
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Hạn mới phải dạng YYYY-MM-DD.' })
   endDate!: string;
+
+  /** SW-049: kéo luôn các ghế có kỳ hạn riêng kết thúc trước hạn mới. */
+  @IsOptional() @IsBoolean() seats?: boolean;
 }
 
 /**
@@ -327,7 +331,15 @@ export class SoftwareController {
   @Post(':id/renew')
   @Audited('software.renewed', 'software', { writtenByService: true })
   renew(@Param() params: IdParamDto, @Body() body: RenewDto, @Req() req: AuthedRequest) {
-    return this.software.renew(actor(req), params.id, body.endDate);
+    const who = actor(req);
+    return this.software.renew(
+      who,
+      params.id,
+      body.endDate,
+      body.seats
+        ? (tx) => this.assignments.renewSeatsWithin(tx, who, params.id, body.endDate)
+        : undefined,
+    );
   }
 
   // ───────────── Gán license vào máy (story 3.2, FR-011) ─────────────

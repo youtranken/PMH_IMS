@@ -3,6 +3,7 @@ import {
   APP_ORIGIN,
   E2E_SA,
   firstLogin,
+  resetDevices,
   resetSoftware,
   resetUsers,
   rowAction,
@@ -395,5 +396,77 @@ test.describe('Hồ sơ phần mềm', () => {
     const form = await restoreInForm(page, id);
 
     await expect(form.getByText(/cần ngày hết hạn mới từ hôm nay trở đi/)).toBeVisible();
+  });
+});
+
+/*
+ * SW-049: gia hạn license kéo luôn ghế có kỳ hạn riêng — không thì license đã gia hạn mà ghế
+ * vẫn hiện "Quá hạn". Hộp nói rõ số ghế, bật sẵn; bỏ tick thì ghế giữ nguyên.
+ */
+test.describe('Gia hạn kèm ghế có kỳ hạn riêng', () => {
+  async function licenseWithSeat(page: Page, stamp: string): Promise<{ id: string; deviceCode: string }> {
+    const headers = await writeHeaders(page);
+    const created = await page.request.post('/api/v1/software', {
+      headers,
+      data: { code: `LIC-E2E-GH-${stamp}`, name: 'License kèm ghế', kind: 'license', seatTotal: 2, endDate: '2027-06-30' },
+    });
+    expect(created.status()).toBe(201);
+    const id = ((await created.json()) as { id: string }).id;
+    const catalog = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/catalog', { credentials: 'include' });
+      return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
+    });
+    const pc = catalog.deviceTypes.find((type) => type.name === 'PC')!;
+    const deviceCode = `PC-E2E-GH-${stamp}`;
+    const device = await page.request.post('/api/v1/devices', {
+      headers,
+      data: { code: deviceCode, name: 'Máy ghế', deviceTypeId: pc.id },
+    });
+    const deviceId = ((await device.json()) as { device: { id: string } }).device.id;
+    const seat = await page.request.post(`/api/v1/software/${id}/assignments`, {
+      headers,
+      data: { deviceId, endDate: '2027-06-30' },
+    });
+    expect(seat.status()).toBe(201);
+    return { id, deviceCode };
+  }
+
+  async function seatEnd(page: Page, id: string): Promise<string | null> {
+    return page.evaluate(async (softwareId: string) => {
+      const res = await fetch(`/api/v1/software/${softwareId}/assignments`, { credentials: 'include' });
+      return ((await res.json()) as { endDate: string | null }[])[0].endDate;
+    }, id);
+  }
+
+  test('đường hạnh phúc: tick sẵn → ghế theo hạn mới, toast nói số ghế', async ({ page }) => {
+    resetDevices();
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const { id } = await licenseWithSeat(page, stamp);
+
+    await page.goto(`/software/${id}`);
+    await page.getByRole('button', { name: 'Gia hạn' }).first().click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: '+1 năm' }).click();
+    await expect(dialog.getByRole('checkbox', { name: /Cập nhật luôn 1 ghế/ })).toBeChecked();
+    await dialog.getByRole('button', { name: 'Gia hạn' }).click();
+    await expect(page.getByText(/cập nhật 1 ghế/)).toBeVisible();
+    expect(await seatEnd(page, id)).toBe('2028-06-30');
+  });
+
+  test('đường hỏng: bỏ tick thì ghế giữ hạn cũ', async ({ page }) => {
+    resetDevices();
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const { id } = await licenseWithSeat(page, stamp);
+
+    await page.goto(`/software/${id}`);
+    await page.getByRole('button', { name: 'Gia hạn' }).first().click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('button', { name: '+1 năm' }).click();
+    await dialog.getByRole('checkbox', { name: /Cập nhật luôn 1 ghế/ }).uncheck();
+    await dialog.getByRole('button', { name: 'Gia hạn' }).click();
+    await expect(page.getByText(/Đã gia hạn LIC-E2E-GH-/)).toBeVisible();
+    expect(await seatEnd(page, id)).toBe('2027-06-30');
   });
 });

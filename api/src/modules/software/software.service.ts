@@ -340,7 +340,16 @@ export class SoftwareService {
    * Gia hạn (story 3.4): đẩy `end_date` sang mốc mới. Tách riêng khỏi `update` để tab Lịch sử
    * đọc ra "đã gia hạn tới ngày X" chứ không lẫn với mọi lần sửa hồ sơ khác.
    */
-  async renew(actor: string, id: string, newEnd: string): Promise<SoftwareRecord> {
+  /**
+   * `withinSeats` (SW-049): việc kéo ghế theo, chạy TRONG transaction gia hạn và trả số ghế đã
+   * kéo — ghế thuộc `LicenseAssignmentService`, nên hàm này không tự đụng bảng ghế.
+   */
+  async renew(
+    actor: string,
+    id: string,
+    newEnd: string,
+    withinSeats?: (tx: Tx) => Promise<number>,
+  ): Promise<SoftwareRecord & { seatsRenewed: number }> {
     const before = await this.requireRow(id);
     // Gia hạn đặt lại `status = active`; cho qua ở đây là hồi sinh một hồ sơ người đã chủ ý
     // thanh lý. `requireUnchangedWithin` bên dưới giữ cho ảnh chụp này còn đúng lúc ghi.
@@ -393,7 +402,8 @@ export class SoftwareService {
         newEnd,
         actor,
       });
-      return updated;
+      const seatsRenewed = withinSeats ? await withinSeats(tx) : 0;
+      return { ...updated, seatsRenewed };
     });
   }
 

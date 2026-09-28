@@ -4,6 +4,8 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { daysUntil } from '@/lib/expiry';
 import { formatDate, todayIso } from '@/lib/format';
 import { renewMinDate, renewPreset } from '@/lib/renew-dates';
+import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
+import type { AttachmentOwnerType } from '@/ui/attachment-panel';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
@@ -38,6 +40,8 @@ export function RenewDialog({
   kindLabel,
   csrfToken,
   url,
+  seatEnds,
+  attachTo,
   onClose,
   onDone,
 }: {
@@ -45,6 +49,14 @@ export function RenewDialog({
   kindLabel: string;
   csrfToken: string;
   url?: string;
+  /**
+   * Hạn riêng (YYYY-MM-DD) của các ghế CÒN HIỆU LỰC có kỳ hạn riêng — chỉ license truyền. Có
+   * ghế sẽ bị bỏ lại phía sau hạn mới thì hộp hiện ô "Cập nhật luôn N ghế" (bật sẵn) và gửi
+   * `seats: true` lên endpoint của module chủ (`url`).
+   */
+  seatEnds?: string[];
+  /** Hồ sơ nhận hoá đơn/hợp đồng gia hạn đính kèm — tải lên sau khi gia hạn xong. */
+  attachTo?: { ownerType: AttachmentOwnerType; ownerId: string };
   onClose: () => void;
   onDone: (newEnd: string) => void;
 }) {
@@ -54,12 +66,20 @@ export function RenewDialog({
   const min = renewMinDate(row.end, today);
   const [endDate, setEndDate] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [withSeats, setWithSeats] = useState(true);
+  const draft = useAttachmentDraft();
+  const [uploading, setUploading] = useState(false);
+  /* Ghế nào sẽ bị bỏ lại: hạn riêng TRƯỚC hạn mới (chưa chọn hạn mới thì trước hạn hiện tại
+     cũng tính — đó là ghế sẽ hiện "Quá hạn" cùng lúc với hồ sơ). Cùng luật với API. */
+  const staleSeats = url
+    ? (seatEnds ?? []).filter((end) => (endDate ? end < endDate : end <= row.end)).length
+    : 0;
   const check = useFormErrors({
     endDate: !endDate
       ? t('expiry.pickDate')
       : endDate < min && t('expiry.renewTooEarly', { date: formatDate(min) }),
   });
-  const renew = useApiMutation<Record<string, unknown>, unknown>(
+  const renew = useApiMutation<Record<string, unknown>, { seatsRenewed?: number } | undefined>(
     url ?? '/api/v1/expiry/renew',
     { csrfToken, refreshMe: false },
   );
@@ -73,7 +93,7 @@ export function RenewDialog({
       /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ.
          `guardUnsaved`: chưa bấm Lưu mà lỡ Esc thì hỏi lại, đừng xoá trắng. */
-      dismissible={!renew.isPending}
+      dismissible={!renew.isPending && !uploading}
       guardUnsaved
       maxWidth={520}
       title={t('expiry.renewTitleOf', { subject })}
@@ -82,8 +102,13 @@ export function RenewDialog({
           <button type="button" className="btn" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button type="submit" form="renew-form" className="btn primary" disabled={renew.isPending}>
-            {renew.isPending ? t('common.loading') : t('expiry.renew')}
+          <button
+            type="submit"
+            form="renew-form"
+            className="btn primary"
+            disabled={renew.isPending || uploading}
+          >
+            {renew.isPending || uploading ? t('common.loading') : t('expiry.renew')}
           </button>
         </>
       }
@@ -98,11 +123,31 @@ export function RenewDialog({
           e.preventDefault();
           setError(null);
           if (!check.check()) return;
-          renew.mutate(url ? { endDate } : { kind: row.kind, id: row.id, endDate }, {
-            onSuccess: () => {
+          const seats = staleSeats > 0 && withSeats;
+          const body = url
+            ? { endDate, ...(seats ? { seats: true } : {}) }
+            : { kind: row.kind, id: row.id, endDate };
+          renew.mutate(body, {
+            onSuccess: async (result) => {
+              const renewedSeats = result?.seatsRenewed ?? 0;
               toast({
-                message: t('expiry.renewedTo', { subject, date: formatDate(endDate) }),
+                message:
+                  renewedSeats > 0
+                    ? t('expiry.renewedToSeats', {
+                        subject,
+                        date: formatDate(endDate),
+                        count: renewedSeats,
+                      })
+                    : t('expiry.renewedTo', { subject, date: formatDate(endDate) }),
               });
+              /* Gia hạn đã ghi xuống DB: file hỏng thì báo riêng từng file, không biến lượt
+                 gia hạn thành "thất bại". */
+              if (attachTo && draft.files.length > 0) {
+                setUploading(true);
+                const failures = await draft.upload(attachTo.ownerType, attachTo.ownerId, csrfToken);
+                setUploading(false);
+                for (const failure of failures) toast({ message: failure, tone: 'warn' });
+              }
               onDone(endDate);
             },
             onError: (err) => setError(errorMessage(err)),
@@ -158,6 +203,19 @@ export function RenewDialog({
             onChange={setEndDate}
           />
         </Field>
+
+        {staleSeats > 0 ? (
+          <label className="row" style={{ gap: 'var(--space-3)' }}>
+            <input
+              type="checkbox"
+              checked={withSeats}
+              onChange={(e) => setWithSeats(e.target.checked)}
+            />
+            <span>{t('expiry.renewSeats', { count: staleSeats })}</span>
+          </label>
+        ) : null}
+
+        {attachTo ? <AttachmentDraftSection draft={draft} disabled={renew.isPending || uploading} /> : null}
 
         {error ? (
           <p className="alert error" role="alert">
