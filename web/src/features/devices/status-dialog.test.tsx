@@ -3,7 +3,7 @@ import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
 import { StatusDialog } from './status-dialog';
 
 describe('Hộp đổi trạng thái thiết bị', () => {
-  it('mở lại hồ sơ đã thanh lý: mặc định về "Dự phòng" — máy vừa mở lại thường về kho', async () => {
+  it('mở lại hồ sơ đã thanh lý: mặc định về "Đang dùng" (Q-15), vẫn chọn được trạng thái khác', async () => {
     const onConfirm = vi.fn();
     renderWithI18n(
       <StatusDialog
@@ -16,9 +16,9 @@ describe('Hộp đổi trạng thái thiết bị', () => {
         onConfirm={onConfirm}
       />,
     );
-    expect(screen.getByRole('button', { name: 'Trạng thái mới' })).toHaveTextContent('Dự phòng');
+    expect(screen.getByRole('button', { name: 'Trạng thái mới' })).toHaveTextContent('Đang dùng');
     await userEvent.click(screen.getByRole('button', { name: 'Đưa lại vào dùng' }));
-    expect(onConfirm).toHaveBeenCalledWith('spare');
+    expect(onConfirm).toHaveBeenCalledWith('in_use');
   });
 
   it('không mời "Đã thanh lý" (có hộp riêng); chọn đúng trạng thái đang có thì không cho xác nhận', async () => {
