@@ -72,12 +72,25 @@ export function ExpiryBadge({
    * với nhánh "Vĩnh viễn" của `software-screen.tsx`.
    */
   if (notCounted) {
-    return <span className="badge muted plain">{t('expiry.notCounted')}</span>;
+    return (
+      <span className="badge muted plain" title={t('expiry.notCountedTitle')}>
+        {t('expiry.notCounted')}
+      </span>
+    );
   }
 
   const thresholds = thresholdsProp ?? nguongHook;
   const level = expiryLevel(end, now, thresholds);
   const label = expiryLabel(end, now);
+  /* "Chưa khai hạn" viền đứt, khác hẳn "Không tính hạn" xám đặc: hai nhãn xám nói hai chuyện
+     khác nhau (thiếu dữ liệu ≠ hồ sơ đã thanh lý) thì không được trông như một. */
+  if (level === 'none') {
+    return (
+      <span className="badge muted dashed" title={t('expiry.labelNoneTitle')}>
+        {label}
+      </span>
+    );
+  }
   return (
     <span className={`badge ${TONE[level]}`} title={showDate && end ? String(end) : undefined}>
       {label}

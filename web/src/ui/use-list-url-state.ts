@@ -52,6 +52,10 @@ export interface ListUrlState<F extends Record<string, string>> {
    * không làm bảng có thêm gì.
    */
   isFiltered: boolean;
+  /** Số bộ lọc đang bật (ô tìm có chữ tính là một) — cho nút "Xóa lọc (n)". */
+  activeCount: number;
+  /** Gỡ mọi bộ lọc và ô tìm trong một lượt ghi URL. */
+  clearFilters: () => void;
 }
 
 /**
@@ -253,21 +257,16 @@ export function useListUrlState<F extends Record<string, string>>(options: {
         sort: value.key === defaultSort.key && value.desc === defaultSort.desc ? '' : value.key,
         dir: value.desc ? 'desc' : '',
       }),
-    /*
-     * ===== ĐÃ GỠ `dirty` VÀ `clearAll` (18/09/2026) =====
-     *
-     * Hai thứ đó được xuất ra từ đầu nhưng KHÔNG một màn nào gọi — grep toàn `web/src` chỉ ra
-     * đúng file này. Nhìn tên thì đoán được ý định: một nút "Xóa lọc" hiện khi đang có bộ lọc.
-     * Nút ấy chưa bao giờ được làm, và `ui/filter-bar.tsx` cũng không có prop nào nhận nó.
-     *
-     * Nên đây là mã CHƯA TỪNG CHẠY — không ai biết nó đúng hay sai, nó chỉ trông như đã sẵn
-     * sàng. `dirty` còn tính lại `Object.values(filters).some(...)` ở mỗi lượt render cho một
-     * câu hỏi không ai đặt. Đó đúng là thứ mà đợt rà soát 18/09 gặp lặp đi lặp lại: token màu
-     * khai xong không dùng, luật CSS nằm chờ cả tháng, `.skip-link` có đủ kiểu dáng mà không
-     * ai đặt lên trang — mỗi cái đều làm người đọc sau tưởng việc đã xong.
-     *
-     * Thêm nút vào năm màn danh sách là QUYẾT ĐỊNH THIẾT KẾ, không phải dọn dẹp. Ngày nào cần
-     * thật thì lấy lại hai hàm này trong lịch sử git — chúng ở commit trước commit này.
-     */
+    activeCount: Object.values(filters).filter((value) => value !== '').length,
+    /* Một lượt ghi cho mọi khoá (kể cả ô tìm) — gỡ từng khoá một là N lượt `setParams`, mỗi
+       lượt một lần gọi API với bộ lọc dở dang. */
+    clearFilters: () => {
+      const patch: Record<string, string> = { q: '' };
+      for (const key of Object.keys(emptyFilters)) {
+        if (key !== searchKey) patch[key] = '';
+      }
+      setSearchInput('');
+      write(patch);
+    },
   };
 }

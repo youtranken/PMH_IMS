@@ -293,7 +293,6 @@ test.describe('Tài khoản dịch vụ', () => {
     await page.goto(`/service-accounts/${id}`);
     await page.getByRole('tab', { name: 'Giấy tờ' }).click();
     await page.getByLabel('Chọn file để đính kèm').setInputFiles(pdf);
-    await page.getByRole('button', { name: 'Tải lên' }).click();
     await expect(page.getByRole('row', { name: new RegExp(`cau-hinh-${stamp}`) })).toBeVisible();
   });
 

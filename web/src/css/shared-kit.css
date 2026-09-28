@@ -73,6 +73,15 @@
   color: var(--ink-2);
 }
 .pager-size select { font-size: var(--fs-sm); padding: 2px 1.6rem 2px var(--space-3); }
+/* Nhãn "Số dòng" thẳng tâm ô chọn: luật `label` chung (khối, có lề dưới) đẩy nó lên cao ~6px. */
+.pager-size > label { margin: 0; line-height: 1.2; }
+/* Màn cảm ứng: ‹ › và ô "Số dòng" đủ 44px, cách nhau ≥8px — đi hiện trường bấm bằng ngón cái. */
+@media (pointer: coarse) {
+  .pager-nav,
+  .pager-num { min-width: 44px; height: 44px; }
+  .pager { gap: var(--space-5); }
+  .pager-size .fsel-trigger { min-height: 44px; }
+}
 /* Dãy số trang `1 … 4 5 6 … 20` — cùng ô bấm 32px với ‹ ›. */
 .pager-pages {
   display: flex;
@@ -398,6 +407,21 @@
 .import-preview-table {
   max-height: 46vh;
   overflow: auto;
+}
+/* Tách dải tổng kết khỏi vùng chọn file phía trên — dính sát nhau thì đọc như một khối. */
+.import-preview {
+  margin-top: var(--space-5);
+}
+.import-summary .badge.is-zero {
+  /* Bỏ nền chứ không làm mờ chữ: mờ chữ là rớt ngưỡng tương phản AA. */
+  background: transparent;
+  font-weight: 500;
+}
+.import-toggle {
+  align-self: flex-start;
+}
+.import-template {
+  margin-top: var(--space-3);
 }
 /* `.row-danger` nằm ở `table.css`, ngay sau luật sọc dòng: nó phải thắng sọc dòng chẵn. */
 
@@ -1251,6 +1275,9 @@ table.access-grid thead .access-row-head {
 }
 .wt-fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; }
 .wt-fill.ok { background: var(--ok); }
+/* Không tính hạn (hồ sơ đã thanh lý): xám trơn, không mốc hôm nay, không màu cảnh báo. */
+.wt-fill.none { background: var(--border-2); }
+.wt-legend .right.muted { color: var(--ink-3); font-weight: 600; }
 .wt-fill.warn { background: linear-gradient(90deg, var(--ok), var(--warn)); }
 .wt-fill.crit { background: linear-gradient(90deg, var(--ok), var(--warn) 70%, var(--danger)); }
 /* Quá hạn: gạch chéo chứ không chỉ đổi màu — dấu hiệu THỨ HAI ngoài màu, cho người khó phân

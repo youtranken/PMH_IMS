@@ -379,6 +379,60 @@ input[list]::-webkit-calendar-picker-indicator {
 .fsel-option.sel {
   font-weight: 600;
 }
+/* Menu có ô lọc: khung ngoài giữ hình của `.fsel-menu`, chỉ danh sách bên trong cuộn — ô lọc
+   đứng yên ở đầu khi cuộn. */
+.fsel-pop {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.fsel-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  min-height: 0;
+}
+.fsel-search {
+  flex: 0 0 auto;
+  margin: 0 0 var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+.fsel-search:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: var(--ring);
+}
+.fsel-option {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Ô lọc đang mang giá trị: chữ trên nút đổi mà khung y nguyên thì không ai nhận ra danh sách
+   đang bị lọc. Chỉ trong thanh lọc — ô trong form luôn có giá trị, tô thì cả form thành màu. */
+/* Ô nhập mã/serial/cổng (`.inp.mono`): `.mono` thu chữ còn 0.85em nên ô thấp hơn ô bên cạnh
+   ~4px và cả hàng lưới lệch đáy. Trong Ô NHẬP giữ cỡ chữ của form — chỉ đổi kiểu chữ. */
+input.mono,
+textarea.mono {
+  font-size: inherit;
+}
+/* Hàng nút gợi nhanh ngay dưới một ô (vd "+1 năm · +2 năm · +3 năm" dưới Bảo hành đến). */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+.filter-bar .fsel-trigger[data-filled] {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+}
 
 /* Ô đã-chọn (User): hiện giá trị NGAY trong khung như input đã điền + ✕ để đổi. */
 .picked-input {

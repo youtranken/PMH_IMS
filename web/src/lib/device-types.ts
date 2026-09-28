@@ -53,7 +53,7 @@ export const STATUS_KEY: Record<DeviceStatus, string> = {
 /** Tông màu badge trạng thái — dùng token qua class `.badge`, không hex (AD-15). */
 export const STATUS_TONE: Record<DeviceStatus, string> = {
   in_use: 'ok',
-  spare: 'plain',
+  spare: 'info',
   broken: 'danger',
   retired: 'muted',
 };

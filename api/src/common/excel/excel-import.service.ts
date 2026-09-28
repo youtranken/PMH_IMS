@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import * as ExcelJS from 'exceljs';
+import { EXCEL_UNREADABLE_MESSAGE } from './xlsx-http';
 
 /** Một dòng dữ liệu đã đọc: số dòng THẬT trong sheet + ô theo tên cột ở dòng tiêu đề. */
 export interface SheetRow {
@@ -29,7 +30,7 @@ export class ExcelImportService {
     } catch {
       throw new BadRequestException({
         code: 'EXCEL_UNREADABLE',
-        message: 'Không đọc được file. Hãy lưu lại dạng .xlsx rồi tải lên lần nữa.',
+        message: EXCEL_UNREADABLE_MESSAGE,
       });
     }
 

@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { orDash } from '@/lib/format';
+import { foldSearch } from '@/lib/search-fold';
 import { Combobox } from '@/ui/combobox';
 import { TableWrap } from '@/ui/data-table';
 import { Dialog } from '@/ui/dialog';
@@ -18,6 +19,7 @@ import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import type { DeviceRow } from '@/lib/device-types';
 import { PATHS } from '@/lib/routes';
+import { nextPortLabel, sortByPortLabel } from './port-label';
 
 export interface PortRow {
   id: string;
@@ -41,12 +43,24 @@ export interface IncomingPortRow {
   portLabel: string;
   connectedPort: string | null;
   usedBy: string | null;
+  vlan: string | null;
   note: string | null;
 }
 
 export interface PortMap {
   ports: PortRow[];
   incoming: IncomingPortRow[];
+}
+
+/** Có hơn ngần này cổng thì hiện ô lọc: switch 48 cổng mà phải cuộn dò bằng mắt là chậm. */
+const FILTER_FROM = 8;
+
+/**
+ * Ô trống (`—`) trên điện thoại: thẻ xếp chồng ẩn hẳn dòng đó (`td[data-empty]`), để mỗi cổng
+ * còn 2–3 dòng thay vì 7 dòng toàn gạch ngang.
+ */
+function emptyAttr(value: string | null | undefined): { 'data-empty'?: true } {
+  return value ? {} : { 'data-empty': true };
 }
 
 /**
@@ -70,6 +84,7 @@ export function PortMapPanel({
   const askConfirm = useConfirm();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<{ port: PortRow | null } | null>(null);
+  const [filter, setFilter] = useState('');
 
   const queryKey = ['devices', device.id, 'ports'];
   const map = useQuery({
@@ -83,18 +98,41 @@ export function PortMapPanel({
   );
 
   const refresh = () => queryClient.invalidateQueries({ queryKey });
-  const ports = map.data?.ports ?? [];
-  const incoming = map.data?.incoming ?? [];
+  // Thứ tự mặt trước switch: Gi1/0/2 trước Gi1/0/10.
+  const allPorts = sortByPortLabel(map.data?.ports ?? []);
+  const folded = foldSearch(filter.trim());
+  const ports = folded
+    ? allPorts.filter((port) =>
+        foldSearch(
+          [
+            port.portLabel,
+            port.connectedDeviceCode,
+            port.connectedDeviceName,
+            port.connectedLabel,
+            port.usedBy,
+            port.vlan,
+            port.note,
+          ]
+            .filter(Boolean)
+            .join(' '),
+        ).includes(folded),
+      )
+    : allPorts;
+  const incoming = sortByPortLabel(map.data?.incoming ?? []);
 
   return (
     <div className="port-map">
-      {canEdit ? (
-        <div className="row" style={{ justifyContent: 'flex-end' }}>
+      {/* Thanh công cụ của tab: tiêu đề khu + số đếm bên trái, nút thêm bên phải, CÙNG hàng
+          ngay dưới thanh tab — tab nào cũng một chỗ cho nút thêm. */}
+      <div className="section-bar">
+        <h3 className="form-section-title">{t('ports.own')}</h3>
+        {map.data ? <span className="section-count">{allPorts.length}</span> : null}
+        {canEdit ? (
           <button type="button" className="btn primary" onClick={() => setEditing({ port: null })}>
             {t('ports.add')}
           </button>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       {map.isLoading ? (
         <Loading />
@@ -102,9 +140,25 @@ export function PortMapPanel({
         <LoadError error={map.error} onRetry={() => void map.refetch()} />
       ) : (
         <>
-          <h3 className="form-section-title">{t('ports.own')}</h3>
-          {ports.length === 0 ? (
-            <EmptyState title={t('ports.empty')} hint={t('ports.emptyHint')} />
+          {allPorts.length > FILTER_FROM ? (
+            <input
+              type="search"
+              className="inp search port-filter"
+              value={filter}
+              placeholder={t('ports.filter')}
+              aria-label={t('ports.filter')}
+              onChange={(event) => setFilter(event.target.value)}
+            />
+          ) : null}
+          {allPorts.length === 0 ? (
+            /* Hồ sơ đã khoá (máy thanh lý) thì không mời "khai cổng" — không có nút nào để khai. */
+            canEdit ? (
+              <EmptyState title={t('ports.empty')} hint={t('ports.emptyHint')} />
+            ) : (
+              <EmptyState title={t('ports.lockedEmpty')} />
+            )
+          ) : ports.length === 0 ? (
+            <EmptyState title={t('ports.filterEmpty', { q: filter.trim() })} />
           ) : (
             /* Bảng rộng hơn cột chính ở router (7 cột): cuộn ngang trong khung, cột Cổng dính
                trái và cột thao tác dính phải — cuộn tới VLAN/Ghi chú vẫn biết đang ở cổng nào, và
@@ -130,7 +184,10 @@ export function PortMapPanel({
                       <td data-label={t('ports.port')} className="mono col-sticky-start">
                         {port.portLabel}
                       </td>
-                      <td data-label={t('ports.connectedTo')}>
+                      <td
+                        data-label={t('ports.connectedTo')}
+                        {...emptyAttr(port.connectedDeviceId ?? port.connectedLabel)}
+                      >
                         {port.connectedDeviceId ? (
                           <Link className="mono" to={PATHS.device(port.connectedDeviceId)}>
                             {port.connectedDeviceCode}
@@ -142,14 +199,22 @@ export function PortMapPanel({
                           <span className="cell-sub">{port.connectedDeviceName}</span>
                         ) : null}
                       </td>
-                      <td data-label={t('ports.peerPort')} className="mono">
+                      <td
+                        data-label={t('ports.peerPort')}
+                        className="mono"
+                        {...emptyAttr(port.connectedPort)}
+                      >
                         {orDash(port.connectedPort)}
                       </td>
-                      <td data-label={t('ports.usedBy')}>{orDash(port.usedBy)}</td>
-                      <td data-label={t('ports.vlan')} className="mono">
+                      <td data-label={t('ports.usedBy')} {...emptyAttr(port.usedBy)}>
+                        {orDash(port.usedBy)}
+                      </td>
+                      <td data-label={t('ports.vlan')} className="mono" {...emptyAttr(port.vlan)}>
                         {orDash(port.vlan)}
                       </td>
-                      <td data-label={t('ports.note')}>{orDash(port.note)}</td>
+                      <td data-label={t('ports.note')} {...emptyAttr(port.note)}>
+                        {orDash(port.note)}
+                      </td>
                       {canEdit ? (
                         <td data-label={t('common.actions')} className="col-sticky-end">
                           <div className="action-cell">
@@ -171,8 +236,8 @@ export function PortMapPanel({
                                     void (async () => {
                                       const ok = await askConfirm({
                                         title: t('common.titleOf', {
-                                          action: t('ports.remove'),
-                                          subject: port.portLabel,
+                                          action: t('ports.removeOf', { port: port.portLabel }),
+                                          subject: device.code,
                                         }),
                                         message: t('ports.confirmRemove', {
                                           port: port.portLabel,
@@ -185,7 +250,9 @@ export function PortMapPanel({
                                         { id: port.id },
                                         {
                                           onSuccess: () => {
-                                            toast({ message: t('ports.removed') });
+                                            toast({
+                                              message: t('ports.removed', { port: port.portLabel }),
+                                            });
                                             void refresh();
                                           },
                                           onError: (error) =>
@@ -211,43 +278,58 @@ export function PortMapPanel({
           )}
 
           <h3 className="form-section-title">{t('ports.incoming')}</h3>
-          <p className="muted">{t('ports.incomingHint')}</p>
           {incoming.length === 0 ? (
+            /* Rỗng thì MỘT dòng — tiêu đề + đoạn giải thích + câu rỗng là ba khối cho một chữ "không". */
             <p className="muted">{t('ports.incomingEmpty')}</p>
           ) : (
-            <div className="table-wrap">
-              <table className="table table-stack wide">
-                <thead>
-                  <tr>
-                    <th>{t('ports.fromDevice')}</th>
-                    <th>{t('ports.port')}</th>
-                    <th>{t('ports.peerPort')}</th>
-                    <th>{t('ports.usedBy')}</th>
-                    <th>{t('ports.note')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {incoming.map((row) => (
-                    <tr key={row.id}>
-                      <td data-label={t('ports.fromDevice')}>
-                        <Link className="mono" to={PATHS.device(row.deviceId)}>
-                          {row.deviceCode}
-                        </Link>
-                        <span className="cell-sub">{row.deviceName}</span>
-                      </td>
-                      <td data-label={t('ports.port')} className="mono">
-                        {row.portLabel}
-                      </td>
-                      <td data-label={t('ports.peerPort')} className="mono">
-                        {orDash(row.connectedPort)}
-                      </td>
-                      <td data-label={t('ports.usedBy')}>{orDash(row.usedBy)}</td>
-                      <td data-label={t('ports.note')}>{orDash(row.note)}</td>
+            <>
+              <p className="muted small">{t('ports.incomingHint')}</p>
+              <div className="table-wrap">
+                <table className="table table-stack wide">
+                  <thead>
+                    <tr>
+                      <th>{t('ports.fromDevice')}</th>
+                      <th>{t('ports.port')}</th>
+                      <th>{t('ports.peerPort')}</th>
+                      <th>{t('ports.vlan')}</th>
+                      <th>{t('ports.usedBy')}</th>
+                      <th>{t('ports.note')}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {incoming.map((row) => (
+                      <tr key={row.id}>
+                        <td data-label={t('ports.fromDevice')}>
+                          <Link className="mono" to={PATHS.device(row.deviceId)}>
+                            {row.deviceCode}
+                          </Link>
+                          <span className="cell-sub">{row.deviceName}</span>
+                        </td>
+                        <td data-label={t('ports.port')} className="mono">
+                          {row.portLabel}
+                        </td>
+                        <td
+                          data-label={t('ports.peerPort')}
+                          className="mono"
+                          {...emptyAttr(row.connectedPort)}
+                        >
+                          {orDash(row.connectedPort)}
+                        </td>
+                        <td data-label={t('ports.vlan')} className="mono" {...emptyAttr(row.vlan)}>
+                          {orDash(row.vlan)}
+                        </td>
+                        <td data-label={t('ports.usedBy')} {...emptyAttr(row.usedBy)}>
+                          {orDash(row.usedBy)}
+                        </td>
+                        <td data-label={t('ports.note')} {...emptyAttr(row.note)}>
+                          {orDash(row.note)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </>
       )}
@@ -255,11 +337,12 @@ export function PortMapPanel({
       {editing ? (
         <PortForm
           deviceId={device.id}
+          deviceCode={device.code}
           port={editing.port}
           csrfToken={csrfToken}
           onClose={() => setEditing(null)}
-          onSaved={() => {
-            setEditing(null);
+          onSaved={(keepOpen) => {
+            if (!keepOpen) setEditing(null);
             void refresh();
           }}
         />
@@ -268,21 +351,32 @@ export function PortMapPanel({
   );
 }
 
+type PeerMode = 'device' | 'free';
+
 function PortForm({
   deviceId,
+  deviceCode,
   port,
   csrfToken,
   onClose,
   onSaved,
 }: {
   deviceId: string;
+  deviceCode: string;
   port: PortRow | null;
   csrfToken: string;
   onClose: () => void;
-  onSaved: () => void;
+  /** `keepOpen`: người dùng chọn "Ghi rồi thêm cổng khác" — form đã tự chuẩn bị cổng kế tiếp. */
+  onSaved: (keepOpen: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const toast = useToast();
   const [portLabel, setPortLabel] = useState(port?.portLabel ?? '');
+  /* Đầu kia là MỘT trong hai: một máy trong kho, hoặc một mô tả tự do (uplink nhà mạng, ổ cắm
+     tường). Hai ô cùng hiện thì không rõ phải điền cái nào hay cả hai. */
+  const [mode, setMode] = useState<PeerMode>(
+    port?.connectedLabel && !port.connectedDeviceId ? 'free' : 'device',
+  );
   const [peer, setPeer] = useState<{ id: string; code: string } | null>(
     port?.connectedDeviceId
       ? { id: port.connectedDeviceId, code: port.connectedDeviceCode ?? '' }
@@ -297,6 +391,8 @@ function PortForm({
   const departments = useDepartments();
   const [note, setNote] = useState(port?.note ?? '');
   const [error, setError] = useState<string | null>(null);
+  const keepOpen = useRef(false);
+  const labelRef = useRef<HTMLInputElement>(null);
   const check = useFormErrors({ portLabel: !portLabel.trim() && t('ports.portRequired') });
 
   // Gõ tới đâu tìm tới đó nhưng chờ 250ms — không bắn một request mỗi phím.
@@ -307,7 +403,7 @@ function PortForm({
 
   const candidates = useQuery({
     queryKey: ['devices', 'picker', debounced],
-    enabled: debounced.trim().length >= 2,
+    enabled: mode === 'device' && debounced.trim().length >= 2,
     queryFn: () =>
       apiFetch<{ items: DeviceRow[] }>(
         `/api/v1/devices?limit=10&usable=true&search=${encodeURIComponent(debounced.trim())}`,
@@ -321,6 +417,17 @@ function PortForm({
     { method: port ? 'PATCH' : 'POST', csrfToken, refreshMe: false },
   );
 
+  /** Sau "Ghi rồi thêm cổng khác": giữ VLAN và người dùng (cả dãy cổng thường chung), tăng nhãn. */
+  const prepareNext = () => {
+    setPortLabel(nextPortLabel(portLabel));
+    setPeer(null);
+    setQuery('');
+    setConnectedLabel('');
+    setConnectedPort('');
+    setNote('');
+    labelRef.current?.focus();
+  };
+
   return (
     <Dialog
       open
@@ -330,17 +437,39 @@ function PortForm({
       dismissible={!save.isPending}
       guardUnsaved
       maxWidth={620}
-      title={
-        port
-          ? t('common.titleOf', { action: t('ports.edit'), subject: port.portLabel })
-          : t('ports.add')
-      }
+      /* "{Việc} — {máy nào}": hộp "Sửa — Gi1/0/1" không nói cổng của máy nào. */
+      title={t('common.titleOf', {
+        action: port ? t('ports.editOf', { port: port.portLabel }) : t('ports.add'),
+        subject: deviceCode,
+      })}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button type="submit" form="port-form" className="btn primary" disabled={save.isPending}>
+          {/* Khai cả dãy cổng: tên nút cố ý không chứa chữ "Lưu" — nút chính vẫn là "Lưu". */}
+          {port ? null : (
+            <button
+              type="submit"
+              form="port-form"
+              className="btn"
+              disabled={save.isPending}
+              onClick={() => {
+                keepOpen.current = true;
+              }}
+            >
+              {t('ports.saveAndNext')}
+            </button>
+          )}
+          <button
+            type="submit"
+            form="port-form"
+            className="btn primary"
+            disabled={save.isPending}
+            onClick={() => {
+              keepOpen.current = false;
+            }}
+          >
             {save.isPending ? t('common.loading') : t('common.save')}
           </button>
         </>
@@ -356,64 +485,93 @@ function PortForm({
           e.preventDefault();
           setError(null);
           if (!check.check()) return;
+          const label = portLabel.trim();
+          const next = keepOpen.current;
           save.mutate(
             {
-              portLabel: portLabel.trim(),
-              connectedDeviceId: peer?.id ?? '',
-              // Đã chọn thiết bị trong kho thì mô tả tự do là thừa — xóa để một sợi dây
-              // chỉ có MỘT nguồn sự thật về đầu kia.
-              connectedLabel: peer ? '' : connectedLabel.trim(),
+              portLabel: label,
+              // Mỗi sợi dây chỉ có MỘT nguồn sự thật về đầu kia: chế độ nào thì gửi ô đó.
+              connectedDeviceId: mode === 'device' ? (peer?.id ?? '') : '',
+              connectedLabel: mode === 'free' ? connectedLabel.trim() : '',
               connectedPort: connectedPort.trim(),
               usedBy: usedBy.trim(),
               vlan: vlan.trim(),
               note: note.trim(),
             },
             {
-              onSuccess: onSaved,
+              onSuccess: () => {
+                toast({ message: t('ports.saved', { port: label }) });
+                if (next) prepareNext();
+                onSaved(next);
+              },
               onError: (err) => setError(errorMessage(err)),
             },
           );
         }}
       >
+        {/* Lỗi ở ĐẦU form: hộp dài thì lỗi ở cuối nằm ngoài tầm nhìn, người dùng bấm Lưu mãi. */}
+        {error ? (
+          <p className="alert error" role="alert">
+            {error}
+          </p>
+        ) : null}
+        {check.summary}
+
         <Field label={t('ports.port')} required htmlFor="port-label" error={check.error('portLabel')}>
           <input
+            ref={labelRef}
             id="port-label"
             className="inp mono"
             required
+            placeholder={t('ports.phPort')}
             value={portLabel}
             onChange={(e) => setPortLabel(e.target.value)}
           />
         </Field>
 
-        <Field label={t('ports.peerDevice')} hint={t('ports.peerDeviceHint')}>
-          <Combobox
-            placeholder={t('ports.peerSearch')}
-            /* Tên trợ năng tường minh: form này giờ có HAI combobox (thiết bị đầu kia và ô
-               "ai dùng" gợi ý theo danh mục Bộ phận). Không đặt tên thì cả người dùng trình
-               đọc màn hình lẫn bài kiểm đều không phân biệt được hai ô. */
-            ariaLabel={t('ports.peerDevice')}
-            query={query}
-            onQuery={(value) => {
-              setQuery(value);
-              // Gõ lại là bỏ lựa chọn cũ — nếu không, ô hiện tên A mà id vẫn là B.
-              setPeer(null);
-            }}
-            options={candidates.data?.items.filter((item) => item.id !== deviceId) ?? []}
-            failed={candidates.isError}
-            getKey={(item) => item.id}
-            renderOption={(item) => (
-              <>
-                <span className="mono">{item.code}</span> <small>{item.name}</small>
-              </>
-            )}
-            onSelect={(item) => {
-              setPeer({ id: item.id, code: item.code });
-              setQuery(item.code);
-            }}
-          />
-        </Field>
+        <div className="segmented" role="radiogroup" aria-label={t('ports.peerKind')}>
+          {(['device', 'free'] as const).map((value) => (
+            <label key={value}>
+              <input
+                type="radio"
+                name="peer-kind"
+                value={value}
+                checked={mode === value}
+                onChange={() => setMode(value)}
+              />
+              {t(value === 'device' ? 'ports.peerKindDevice' : 'ports.peerKindFree')}
+            </label>
+          ))}
+        </div>
 
-        {!peer ? (
+        {mode === 'device' ? (
+          <Field label={t('ports.peerDevice')} hint={t('ports.peerDeviceHint')}>
+            <Combobox
+              placeholder={t('ports.peerSearch')}
+              /* Tên trợ năng tường minh: form này có HAI combobox (thiết bị đầu kia và ô "ai
+                 dùng" gợi ý theo danh mục Bộ phận). */
+              ariaLabel={t('ports.peerDevice')}
+              query={query}
+              onQuery={(value) => {
+                setQuery(value);
+                // Gõ lại là bỏ lựa chọn cũ — nếu không, ô hiện tên A mà id vẫn là B.
+                setPeer(null);
+              }}
+              options={candidates.data?.items.filter((item) => item.id !== deviceId) ?? []}
+              failed={candidates.isError}
+              getKey={(item) => item.id}
+              renderOption={(item) => (
+                <>
+                  <span className="mono">{item.code}</span> <small>{item.name}</small>
+                </>
+              )}
+              onSelect={(item) => {
+                setPeer({ id: item.id, code: item.code });
+                setQuery(item.code);
+              }}
+            />
+          </Field>
+        ) : (
           <Field label={t('ports.freeText')} hint={t('ports.freeTextHint')} htmlFor="port-free">
             <input
               id="port-free"
@@ -422,7 +580,7 @@ function PortForm({
               onChange={(e) => setConnectedLabel(e.target.value)}
             />
           </Field>
-        ) : null}
+        )}
 
         <Field label={t('ports.peerPort')} htmlFor="port-peer-port">
           <input
@@ -436,7 +594,7 @@ function PortForm({
           <input
             id="port-vlan"
             className="inp mono"
-            placeholder={t('ports.phPort')}
+            placeholder={t('ports.phVlan')}
             value={vlan}
             onChange={(e) => setVlan(e.target.value)}
           />
@@ -462,12 +620,6 @@ function PortForm({
             onChange={(e) => setNote(e.target.value)}
           />
         </Field>
-
-        {error ? (
-          <p className="alert error" role="alert">
-            {error}
-          </p>
-        ) : null}
       </form>
     </Dialog>
   );

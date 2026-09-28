@@ -707,6 +707,17 @@ export function deviceOrderBy(sort: SortQuery<DeviceSortKey>): SQL[] {
     status: deviceTable.status,
     warrantyEnd: deviceTable.warrantyEnd,
   }[sort.key];
+  /*
+   * Bảo hành: máy đã thanh lý ("Không tính hạn") và máy chưa khai hạn luôn xuống CUỐI, bất kể
+   * chiều sắp — người sắp cột này là đang tìm máy sắp hết hạn, gặp rác ở đầu là phải lật trang.
+   * Khớp từng cột với chỉ mục 0100/0101 để không sinh node Sort (sort-index.spec).
+   */
+  if (sort.key === 'warrantyEnd') {
+    const retiredLast = sql`(${deviceTable.status} = 'retired')`;
+    return sort.dir === 'desc'
+      ? [asc(retiredLast), sql`${deviceTable.warrantyEnd} DESC NULLS LAST`, desc(deviceTable.code)]
+      : [asc(retiredLast), sql`${deviceTable.warrantyEnd} ASC NULLS LAST`, asc(deviceTable.code)];
+  }
   // Chốt hạ bằng `code`, CÙNG HƯỚNG với cột đang sắp — `orderByStable` giữ luật đó một chỗ,
   // và chú thích ở đó nói vì sao hướng phải đi theo nhau (không thì mất chỉ mục, 0058).
   return orderByStable(sort.dir, column, deviceTable.code);

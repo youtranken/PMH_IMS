@@ -53,21 +53,34 @@ export function ScreenError() {
   );
 }
 
-/** Màn 404 khi vào route không tồn tại (thay cho redirect câm về "/"). */
-export function NotFound() {
+/**
+ * Màn 404 khi vào route không tồn tại (thay cho redirect câm về "/").
+ *
+ * Trang chi tiết truyền `title`/`hint`/`action` riêng: link cũ của một thiết bị đã xoá mà nhận
+ * câu về "phần chưa mở trong bản này" là sai ngữ cảnh, và lối ra đúng là về danh sách của nó.
+ */
+export function NotFound({
+  title,
+  hint,
+  action,
+}: {
+  title?: string;
+  hint?: string;
+  action?: React.ReactNode;
+} = {}) {
   const { t } = useTranslation();
   return (
     <div className="error-state">
       <div className="error-code">404</div>
-      <h1>{t('app.notFoundTitle')}</h1>
-      <p className="muted">
-        {t('app.notFoundHint')}
-      </p>
-      <Link to="/">
-        <button type="button" className="primary">
-          {t('app.backHome')}
-        </button>
-      </Link>
+      <h1>{title ?? t('app.notFoundTitle')}</h1>
+      <p className="muted">{hint ?? t('app.notFoundHint')}</p>
+      {action ?? (
+        <Link to="/">
+          <button type="button" className="primary">
+            {t('app.backHome')}
+          </button>
+        </Link>
+      )}
     </div>
   );
 }

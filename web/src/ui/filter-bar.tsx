@@ -11,7 +11,12 @@ export function FilterBar({
   searchPlaceholder,
   children,
   actions,
+  activeCount = 0,
+  onClear,
 }: {
+  /** Số bộ lọc đang bật — có `onClear` và số > 0 thì hiện nút "Xóa lọc (n)" cuối thanh. */
+  activeCount?: number;
+  onClear?: () => void;
   search?: string;
   onSearchChange?: (value: string) => void;
   searchPlaceholder?: string;
@@ -32,6 +37,11 @@ export function FilterBar({
         />
       ) : null}
       {children}
+      {onClear && activeCount > 0 ? (
+        <button type="button" className="btn ghost" onClick={onClear}>
+          {t('select.clearFilters', { count: activeCount })}
+        </button>
+      ) : null}
       {actions ? <div className="row">{actions}</div> : null}
     </div>
   );

@@ -2119,21 +2119,21 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      *
      * Còn dòng nào là mỗi dòng đẻ thêm một nút "Sửa máy …" và một nút phân trang — tập hợp
      * cần chốt bị chôn giữa hai chục nút của dữ liệu. Lọc về rỗng thì trong `<main>` chỉ còn
-     * đúng thứ LUÔN có mặt: bốn nút đầu trang, bốn ô lọc. Đó chính là bộ khung của căn phòng.
+     * đúng thứ LUÔN có mặt: ba nút đầu trang (file mẫu nằm TRONG hộp nhập), bốn ô lọc, nút
+     * "Xóa lọc" của thanh lọc và nút "Xóa bộ lọc" của khối rỗng.
      */
     await timKiem.fill(`KHONG-CO-MAY-NAO-E2E-${stamp}`);
     await expect(
-      main.getByText('Không có thiết bị nào khớp bộ lọc.'),
+      main.getByText(`Không có thiết bị nào khớp “KHONG-CO-MAY-NAO-E2E-${stamp}”.`),
       'lọc về rỗng phải ra empty-state, không phải bảng trắng',
     ).toBeVisible();
 
     await expect
       .poll(() => tenDieuKhien(main.getByRole('button')), {
         message:
-          'Bộ khung đầu phòng Thiết bị: bốn nút hành động rồi bốn ô lọc — không thừa, không thiếu',
+          'Bộ khung đầu phòng Thiết bị: ba nút hành động, bốn ô lọc, hai nút gỡ lọc — không thừa, không thiếu',
       })
       .toEqual([
-        'Tải file mẫu',
         'Xuất Excel',
         'Nhập từ Excel',
         'Thêm thiết bị',
@@ -2141,6 +2141,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Tủ mạng',
         'Loại',
         'Trạng thái',
+        'Xóa lọc (1)',
+        'Xóa bộ lọc',
       ]);
 
     /*
@@ -2263,7 +2265,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       .toEqual([
         'Mã thiết bị',
         'Tên thiết bị',
-        'Vị trí và người giữ',
+        'Vị trí',
         'Người sử dụng',
         'Bảo hành',
         'Trạng thái',
@@ -2309,8 +2311,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toHaveAttribute('aria-sort', 'ascending');
     await expect(
       cotMa,
-      'và cột Mã phải nhả aria-sort ra — hai cột cùng khai đang-sắp là nói dối trình đọc màn hình',
-    ).not.toHaveAttribute('aria-sort', /.*/);
+      'và cột Mã phải về "none" (sắp được, đang không sắp) — hai cột cùng khai đang-sắp là nói dối trình đọc màn hình',
+    ).toHaveAttribute('aria-sort', 'none');
     await expect(
       dongDauTien,
       'sắp theo tên tăng thì "Máy A" lên đầu — tức máy mang mã -12, khác hẳn thứ tự theo mã',
@@ -2507,7 +2509,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => tenDieuKhien(hop.getByRole('button')), {
         message:
-          'Bộ nút của hộp THÊM MỚI: bốn ô chọn, ba ô ngày, một ô chọn file, hai nút chân hộp — và TUYỆT NHIÊN không có ô "Trạng thái"',
+          'Bộ nút của hộp THÊM MỚI: bốn ô chọn, ba ô ngày + ba nút đặt nhanh hạn bảo hành, một ô chọn file, ba nút chân hộp — và TUYỆT NHIÊN không có ô "Trạng thái"',
       })
       .toEqual([
         'Đóng hộp thoại',
@@ -2518,16 +2520,20 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Ngày mua',
         'Bảo hành từ',
         'Bảo hành đến',
+        '+1 năm',
+        '+2 năm',
+        '+3 năm',
         'Chọn file để đính kèm',
         'Hủy',
+        'Ghi rồi thêm máy khác',
         'Lưu',
       ]);
 
     await expect
       .poll(() => tenDieuKhien(page.getByTestId('dialog-footer').getByRole('button')), {
-        message: 'Chân hộp đi theo đúng nếp toàn app: Hủy trước, nút ghi sau cùng',
+        message: 'Chân hộp đi theo đúng nếp toàn app: Hủy trước, nút ghi chính sau cùng',
       })
-      .toEqual(['Hủy', 'Lưu']);
+      .toEqual(['Hủy', 'Ghi rồi thêm máy khác', 'Lưu']);
 
     /* Ô NGÀY mở ra một lịch thật, không phải một ô gõ chữ trá hình. */
     const oNgayMua = hop.getByRole('button', { name: 'Ngày mua' });
@@ -2708,7 +2714,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => tenDieuKhien(hopSua.getByRole('button')), {
         message:
-          'Chế độ SỬA = chế độ THÊM cộng đúng hai thứ: ô "Trạng thái" và nút "Tải lên" của khu giấy tờ ghi thẳng',
+          'Chế độ SỬA = chế độ THÊM cộng ô "Trạng thái", bớt nút "Ghi rồi thêm máy khác"; khu giấy tờ ghi thẳng (chọn là tải, không có nút "Tải lên")',
       })
       .toEqual([
         'Đóng hộp thoại',
@@ -2720,8 +2726,10 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Ngày mua',
         'Bảo hành từ',
         'Bảo hành đến',
+        '+1 năm',
+        '+2 năm',
+        '+3 năm',
         'Chọn file để đính kèm',
-        'Tải lên',
         'Hủy',
         'Lưu',
       ]);
@@ -2827,7 +2835,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
             'Hồ sơ một con Switch phải có ĐỦ NĂM tab — Port map chỉ có mặt vì loại này bật has_port_map (FR-006)',
         },
       )
-      .toEqual(['Tổng quan', 'Port map', 'Giấy tờ', 'Két sắt', 'Lịch sử']);
+      .toEqual(['Tổng quan', 'Sơ đồ cổng', 'Giấy tờ', 'Két sắt', 'Lịch sử']);
 
     const main = page.getByRole('main');
     const panel = page.getByRole('tabpanel');
@@ -2863,7 +2871,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toBeVisible();
 
     /* ===== TAB PORT MAP ===== */
-    await page.getByRole('tab', { name: 'Port map' }).click();
+    await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();
     /*
      * `expect.poll`, KHÔNG phải `expect(await …)`.
      *
@@ -2898,8 +2906,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toBeVisible();
     await expect(
       panel.getByRole('button', { name: 'Tải lên' }),
-      'Chưa chọn file thì nút Tải lên phải TẮT',
-    ).toBeDisabled();
+      'Chọn file là tải ngay — không còn nút "Tải lên" riêng để người dùng quên bấm',
+    ).toHaveCount(0);
     await expect(panel.getByText('Chưa có giấy tờ nào.')).toBeVisible();
     await expect(
       panel.getByText(
@@ -5608,8 +5616,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toHaveAttribute('aria-sort', 'ascending');
     await expect(
       cotMa,
-      'Sắp theo cột khác thì cột Mã đường phải BỎ `aria-sort` — hai cột cùng khai đang sắp là nói dối',
-    ).not.toHaveAttribute('aria-sort', /.*/);
+      'Sắp theo cột khác thì cột Mã đường phải về `aria-sort="none"` — hai cột cùng khai đang sắp là nói dối',
+    ).toHaveAttribute('aria-sort', 'none');
 
     await main.getByRole('button', { name: 'Sắp xếp theo Nhà mạng' }).click();
     await expect(cotNhaMang, 'Bấm lần hai phải lật xuống giảm dần').toHaveAttribute(
@@ -5927,7 +5935,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
             'Đường truyền mới khai thì tab Giấy tờ phải nói rõ là trống',
           ).toBeVisible();
           await expect(
-            main.getByRole('button', { name: 'Tải lên' }),
+            main.getByRole('button', { name: 'Chọn file để đính kèm' }),
             'Tab Giấy tờ phải có đường đính kèm bản scan hợp đồng',
           ).toBeVisible();
         },

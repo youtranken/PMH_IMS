@@ -161,15 +161,19 @@ test.describe('Kho thiết bị', () => {
     await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
     await confirmAction(page);
     await expect(page.getByText('Thiết bị đã thanh lý — mở lại mới sửa được hồ sơ.')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Sửa hồ sơ' })).toBeDisabled();
+    // Băng thanh lý nói AI và KHI NÀO, lấy từ lịch sử.
+    await expect(page.getByText(/Thanh lý lúc .* bởi /)).toBeVisible();
+    // Hồ sơ khoá: không bày nút Sửa xám ở chỗ nút chính — nút chính là "Đưa lại vào dùng".
+    await expect(page.getByRole('button', { name: 'Sửa hồ sơ' })).toHaveCount(0);
     // Sổ tài sản không có nút xóa, ở đâu cũng vậy.
     await expect(page.getByRole('button', { name: 'Xóa' })).toHaveCount(0);
 
-    /* Nút này CÙNG TỌA ĐỘ với "Thanh lý" hôm trước, nên trí nhớ cơ bắp dẫn tay tới đây —
-       từ 12/09 nó hỏi lại trước khi đổi trạng thái (rà UI/UX #21). */
+    // Mở lại hỏi trạng thái đích, mặc định "Dự phòng" (máy vừa mở lại thường về kho).
     await page.getByRole('button', { name: 'Đưa lại vào dùng' }).click();
+    await expect(page.getByRole('button', { name: 'Trạng thái mới' })).toHaveText(/Dự phòng/);
     await confirmAction(page, 'Đưa lại vào dùng');
     await expect(page.getByRole('button', { name: 'Sửa hồ sơ' })).toBeEnabled();
+    await expect(page.getByText('Dự phòng').first()).toBeVisible();
   });
 
   test('ngày hết bảo hành trước ngày bắt đầu bị từ chối (hàng rào ở SERVER)', async ({ page }) => {
@@ -374,7 +378,8 @@ test.describe('Kho thiết bị', () => {
 
     // Chưa bung thì mã license CHƯA có mặt trên màn.
     await expect(page.getByRole('link', { name: licenseCode })).toHaveCount(0);
-    await row.getByRole('button', { name: 'Mở rộng dòng' }).click();
+    // Nút bung mang chữ nói bung ra thấy gì ("1 license"), không phải mũi tên trơn.
+    await row.getByRole('button', { name: '1 license' }).click();
     await expect(page.getByRole('link', { name: licenseCode })).toBeVisible();
     await expect(page.getByText('2.400.000 ₫')).toBeVisible();
     await expect(page.getByText(`HD-INST-${stamp}`)).toBeVisible();
@@ -383,7 +388,7 @@ test.describe('Kho thiết bị', () => {
     await timVaChoLoc(page, bareCode);
     const bareRow = page.getByRole('row', { name: new RegExp(bareCode) });
     await expect(bareRow).toBeVisible();
-    await expect(bareRow.getByRole('button', { name: 'Mở rộng dòng' })).toHaveCount(0);
+    await expect(bareRow.getByRole('button', { name: /license/ })).toHaveCount(0);
   });
 
   /**

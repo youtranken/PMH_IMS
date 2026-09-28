@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { addYearsIso } from '@/lib/add-years';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { DatePicker } from '@/ui/date-picker';
@@ -37,6 +38,31 @@ interface FormState {
   note: string;
 }
 
+/**
+ * Nhân bản: đợt mua 20 laptop cùng model, NCC, ngày mua, bảo hành thì chỉ khác mã, serial,
+ * người dùng và ghi chú — bốn ô đó để trống, còn lại lấy từ máy gốc. Trạng thái về "Đang dùng"
+ * như mọi hồ sơ mới.
+ */
+function cloneState(source: DeviceRow): FormState {
+  return {
+    ...initialState(source),
+    code: '',
+    serial: '',
+    assignedTo: '',
+    note: '',
+    status: 'in_use',
+  };
+}
+
+/** Sau "Ghi rồi thêm máy khác": giữ những gì một lô máy dùng chung, bỏ những gì riêng từng máy. */
+function nextState(saved: FormState): FormState {
+  return { ...saved, code: '', serial: '', assignedTo: '', note: '' };
+}
+
+/** Các ô chọn trạng thái trong form SỬA. "Đã thanh lý" không có ở đây: API luôn từ chối đi
+ *  đường này (RETIRE_VIA_UPDATE) — thanh lý có hộp riêng, cho biết sẽ gỡ những gì. */
+const EDITABLE_STATUSES = DEVICE_STATUSES.filter((status) => status !== 'retired');
+
 function initialState(device: DeviceRow | null): FormState {
   return {
     code: device?.code ?? '',
@@ -63,19 +89,29 @@ function initialState(device: DeviceRow | null): FormState {
  */
 export function DeviceForm({
   device,
+  cloneFrom,
   csrfToken,
   onClose,
   onSaved,
+  onOpenCreated,
 }: {
   /** null = thêm mới. */
   device: DeviceRow | null;
+  /** Thêm mới điền sẵn từ máy này (trừ mã/serial/người dùng/ghi chú). Bỏ qua khi `device` có. */
+  cloneFrom?: DeviceRow | null;
   csrfToken: string;
   onClose: () => void;
-  onSaved: (result: DeviceWriteResult) => void;
+  /** `keepOpen`: người dùng chọn "Ghi rồi thêm máy khác" — form đã tự làm trống, đừng đóng. */
+  onSaved: (result: DeviceWriteResult, options?: { keepOpen: boolean }) => void;
+  /** Có thì toast "Đã thêm …" kèm nút "Mở hồ sơ" — máy mới thường nằm ở trang khác của bảng. */
+  onOpenCreated?: (created: DeviceRow) => void;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
-  const [form, setForm] = useState<FormState>(() => initialState(device));
+  const codeRef = useRef<HTMLInputElement>(null);
+  const [form, setForm] = useState<FormState>(() =>
+    !device && cloneFrom ? cloneState(cloneFrom) : initialState(device),
+  );
   const [error, setError] = useState<string | null>(null);
   // Hóa đơn, biên bản bàn giao, ảnh máy — chọn ngay lúc khai máy mới (AD-15, dùng chung với
   // form phần mềm và đường truyền). Sửa máy thì tab "Giấy tờ" ở trang chi tiết lo việc đó.
@@ -105,6 +141,10 @@ export function DeviceForm({
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => {
+      // Bảo hành gần như luôn bắt đầu từ ngày mua: ô "Bảo hành từ" còn trống thì lấy theo.
+      if (key === 'purchaseDate' && !current.warrantyStart) {
+        return { ...current, purchaseDate: value as string, warrantyStart: value as string };
+      }
       // Đổi site thì tủ đang chọn có thể thuộc site khác → bỏ chọn, đỡ lưu ra dữ liệu
       // "tủ R01 của nhà máy nằm ở văn phòng".
       if (key === 'siteId' && value !== current.siteId) {
@@ -124,13 +164,26 @@ export function DeviceForm({
     deviceTypeId: !form.deviceTypeId && t('formErrors.requiredPick'),
   });
 
-  const submit = () => {
+  // Mốc tính "+n năm": bảo hành từ, không có thì ngày mua.
+  const warrantyBase = form.warrantyStart || form.purchaseDate;
+
+  const submit = (keepOpen = false) => {
     setError(null);
     if (!check.check()) return;
+    const sent = form;
     save.mutate(buildBody(form), {
       onSuccess: (result) => {
         void (async () => {
-          toast({ message: t('devices.saved') });
+          if (device) {
+            toast({ message: t('devices.saved') });
+          } else {
+            toast({
+              message: t('devices.created', { code: result.device.code }),
+              action: onOpenCreated
+                ? { label: t('devices.openProfile'), onClick: () => onOpenCreated(result.device) }
+                : undefined,
+            });
+          }
           // Cảnh báo (serial trùng) hiện RIÊNG và ở lại lâu hơn — lưu vẫn thành công.
           for (const warning of result.warnings) toast({ message: warning, tone: 'warn' });
           // Giấy tờ đi SAU khi máy đã có id — file không thể treo vào cái chưa tồn tại.
@@ -146,12 +199,27 @@ export function DeviceForm({
             }
             for (const message of failures) toast({ message, tone: 'warn' });
           }
-          onSaved(result);
+          if (keepOpen) {
+            setForm(nextState(sent));
+            codeRef.current?.focus();
+          }
+          onSaved(result, { keepOpen });
         })();
       },
       onError: (err) => setError(errorMessage(err)),
     });
   };
+
+  const serialField = (
+    <Field label={t('devices.serial')} htmlFor="device-serial">
+      <input
+        id="device-serial"
+        className="inp mono"
+        value={form.serial}
+        onChange={(e) => set('serial', e.target.value)}
+      />
+    </Field>
+  );
 
   return (
     <Dialog
@@ -162,12 +230,30 @@ export function DeviceForm({
       dismissible={!busy}
       guardUnsaved
       maxWidth={860}
-      title={device ? `${t('devices.edit')} — ${device.code}` : t('devices.add')}
+      title={
+        device
+          ? `${t('devices.edit')} — ${device.code}`
+          : cloneFrom
+            ? t('devices.cloneOf', { code: cloneFrom.code })
+            : t('devices.add')
+      }
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
             {t('common.cancel')}
           </button>
+          {/* Khai cả lô máy: lưu xong form làm trống bốn ô riêng từng máy, giữ phần còn lại.
+              Tên nút cố ý không chứa chữ "Lưu" — nút chính vẫn là "Lưu". */}
+          {device ? null : (
+            <button
+              type="button"
+              className="btn"
+              disabled={busy}
+              onClick={() => submit(true)}
+            >
+              {t('devices.saveAndNext')}
+            </button>
+          )}
           <button type="submit" form="device-form" className="btn primary" disabled={busy}>
             {busy ? t('common.loading') : t('common.save')}
           </button>
@@ -196,9 +282,12 @@ export function DeviceForm({
           </p>
         ) : null}
         {check.summary}
+        {/* Lưới 3 cột, không để ô nào đứng lẻ một hàng: [Mã | Loại | Trạng thái (sửa) hoặc
+            Serial (thêm)] rồi [Tên (2 cột) | Model]. */}
         <FormSection title={t('devices.formSectionProfile')} columns={3}>
           <Field label={t('devices.code')} required htmlFor="device-code" error={check.error('code')}>
             <input
+              ref={codeRef}
               id="device-code"
               className="inp mono"
               required
@@ -206,6 +295,37 @@ export function DeviceForm({
               onChange={(e) => set('code', e.target.value)}
             />
           </Field>
+          <Field label={t('devices.type')} required error={check.error('deviceTypeId')}>
+            <Select
+              required
+              value={form.deviceTypeId}
+              ariaLabel={t('devices.type')}
+              placeholder={t('devices.pickType')}
+              options={activeOptions(lists.data?.deviceTypes, device?.deviceTypeId, (type) => type.name)}
+              failed={lists.isError}
+              onChange={(value) => set('deviceTypeId', value)}
+            />
+          </Field>
+          {/*
+            Ô Trạng thái CHỈ hiện khi SỬA: thêm mới thì luôn là "đang dùng", bày một ô có đúng
+            một câu trả lời hợp lý là bắt người khai đọc rồi bỏ qua. Không có "Đã thanh lý" —
+            thanh lý đi qua hộp riêng ở trang hồ sơ (API từ chối đường này).
+          */}
+          {device ? (
+            <Field label={t('devices.status')} hint={t('devices.retireViaButton')}>
+              <Select
+                value={form.status}
+                ariaLabel={t('devices.status')}
+                options={EDITABLE_STATUSES.map((status) => ({
+                  value: status,
+                  label: t(STATUS_KEY[status]),
+                }))}
+                onChange={(value) => set('status', value as DeviceStatus)}
+              />
+            </Field>
+          ) : (
+            serialField
+          )}
           <Field
             label={t('devices.name')}
             required
@@ -221,18 +341,6 @@ export function DeviceForm({
               onChange={(e) => set('name', e.target.value)}
             />
           </Field>
-
-          <Field label={t('devices.type')} required error={check.error('deviceTypeId')}>
-            <Select
-              required
-              value={form.deviceTypeId}
-              ariaLabel={t('devices.type')}
-              placeholder={t('devices.pickType')}
-              options={activeOptions(lists.data?.deviceTypes, device?.deviceTypeId, (type) => type.name)}
-              failed={lists.isError}
-              onChange={(value) => set('deviceTypeId', value)}
-            />
-          </Field>
           <Field label={t('devices.model')} htmlFor="device-model">
             <input
               id="device-model"
@@ -241,39 +349,10 @@ export function DeviceForm({
               onChange={(e) => set('model', e.target.value)}
             />
           </Field>
-          <Field label={t('devices.serial')} htmlFor="device-serial">
-            <input
-              id="device-serial"
-              className="inp mono"
-              value={form.serial}
-              onChange={(e) => set('serial', e.target.value)}
-            />
-          </Field>
-          {/*
-            Ô Trạng thái CHỈ hiện khi SỬA.
-
-            Thêm mới thì trạng thái luôn là "đang dùng" — bày một ô chọn có đúng một câu trả
-            lời hợp lý là bắt người khai đọc và bỏ qua một thứ không có quyết định nào ở đó,
-            và mở đường cho một hồ sơ vừa tạo đã ở trạng thái "đã thanh lý".
-          */}
-          {/* Trạng thái là thuộc tính của chính cái máy (đang dùng / trong kho / đã thanh lý),
-              không phải của chỗ nó đứng — nó từng nằm trong khối "Vị trí". */}
-          {device ? (
-            <Field label={t('devices.status')}>
-              <Select
-                value={form.status}
-                ariaLabel={t('devices.status')}
-                options={DEVICE_STATUSES.map((status) => ({
-                  value: status,
-                  label: t(STATUS_KEY[status]),
-                }))}
-                onChange={(value) => set('status', value as DeviceStatus)}
-              />
-            </Field>
-          ) : null}
+          {device ? serialField : null}
         </FormSection>
 
-        <FormSection title={t('devices.location')} columns={3}>
+        <FormSection title={t('devices.location')} columns={2}>
           <Field label={t('devices.site')}>
             <Select
               value={form.siteId}
@@ -325,8 +404,8 @@ export function DeviceForm({
         </FormSection>
 
         {/* Nhà cung cấp đi cùng ngày mua và hạn bảo hành — "mua của ai, khi nào, bảo hành tới
-            bao giờ" là MỘT câu chuyện. Trước đây nó nằm trong khối Vị trí. */}
-        <FormSection title={t('devices.purchase')} columns={3}>
+            bao giờ" là MỘT câu chuyện. Hai cột để "Bảo hành đến" không rơi xuống hàng lẻ. */}
+        <FormSection title={t('devices.purchase')} columns={2}>
           <Field label={t('devices.vendor')}>
             <Select
               value={form.vendorId}
@@ -357,8 +436,24 @@ export function DeviceForm({
               ariaLabel={t('devices.warrantyEnd')}
               onChange={(value) => set('warrantyEnd', value)}
             />
+            {/* Hạn bảo hành gần như luôn là "mốc + 1/2/3 năm": ba chạm thay cho ba chục lần lật
+                tháng trong lịch. Chưa có mốc thì tắt, kèm lý do ở title. */}
+            <span className="chip-row" role="group" aria-label={t('devices.warrantyQuick')}>
+              {[1, 2, 3].map((years) => (
+                <button
+                  key={years}
+                  type="button"
+                  className="btn sm ghost"
+                  disabled={!warrantyBase}
+                  title={warrantyBase ? undefined : t('devices.warrantyQuickNeedBase')}
+                  onClick={() => set('warrantyEnd', addYearsIso(warrantyBase, years))}
+                >
+                  {t('devices.plusYears', { count: years })}
+                </button>
+              ))}
+            </span>
           </Field>
-          <Field label={t('devices.note')} hint={t('devices.noteHint')} htmlFor="device-note" span={3}>
+          <Field label={t('devices.note')} hint={t('devices.noteHint')} htmlFor="device-note" span={2}>
             <textarea
               id="device-note"
               className="inp"

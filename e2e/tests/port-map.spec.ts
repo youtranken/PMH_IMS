@@ -43,7 +43,7 @@ test.describe('Port map', () => {
     const serverId = await createDevice(page, serverCode, 'Server');
 
     await page.goto(`/devices/${switchId}`);
-    await page.getByRole('tab', { name: 'Port map' }).click();
+    await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();
     await expect(page.getByText('Chưa khai cổng nào.')).toBeVisible();
 
     await page.getByRole('button', { name: 'Thêm cổng' }).click();
@@ -62,7 +62,7 @@ test.describe('Port map', () => {
 
     // Trang thiết bị ĐẦU KIA: dòng hiện ở bảng chiều ngược, KHÔNG có bản ghi đối xứng.
     await page.goto(`/devices/${serverId}`);
-    await page.getByRole('tab', { name: 'Port map' }).click();
+    await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();
     await expect(page.getByText('Chưa khai cổng nào.')).toBeVisible();
 
     const reverse = page.getByRole('row', { name: new RegExp(switchCode) });
@@ -90,13 +90,15 @@ test.describe('Port map', () => {
     const switchId = await createDevice(page, `SW-E2E-DUP-${stamp}`, 'Switch');
 
     await page.goto(`/devices/${switchId}`);
-    await page.getByRole('tab', { name: 'Port map' }).click();
+    await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();
 
     for (let i = 0; i < 2; i += 1) {
       await page.getByRole('button', { name: 'Thêm cổng' }).click();
       const form = page.getByRole('dialog');
       await form.getByRole('textbox', { name: 'Cổng', exact: true }).fill('24');
-      await form.getByRole('textbox', { name: 'Hoặc mô tả tự do' }).fill(`lần ${i + 1}`);
+      // Đầu kia là MỘT trong hai: chọn chế độ mô tả tự do trước rồi mới có ô để gõ.
+      await form.getByText('Mô tả tự do', { exact: true }).click();
+      await form.getByRole('textbox', { name: 'Mô tả đầu kia' }).fill(`lần ${i + 1}`);
       await form.getByRole('button', { name: 'Lưu' }).click();
       if (i === 0) await expect(page.getByRole('row', { name: /24/ })).toBeVisible();
     }
@@ -128,7 +130,7 @@ test.describe('Port map', () => {
 
     await page.goto(`/devices/${printerId}`);
     await expect(page.getByRole('tab', { name: 'Tổng quan' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Port map' })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Sơ đồ cổng' })).toHaveCount(0);
   });
 
   test('xóa dòng port map để lại vết trong lịch sử thiết bị', async ({ page }) => {
@@ -137,11 +139,12 @@ test.describe('Port map', () => {
     const switchId = await createDevice(page, `SW-E2E-HIST-${stamp}`, 'Switch');
 
     await page.goto(`/devices/${switchId}`);
-    await page.getByRole('tab', { name: 'Port map' }).click();
+    await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();
     await page.getByRole('button', { name: 'Thêm cổng' }).click();
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Cổng', exact: true }).fill('WAN1');
-    await form.getByRole('textbox', { name: 'Hoặc mô tả tự do' }).fill('uplink nhà mạng');
+    await form.getByText('Mô tả tự do', { exact: true }).click();
+    await form.getByRole('textbox', { name: 'Mô tả đầu kia' }).fill('uplink nhà mạng');
     await form.getByRole('button', { name: 'Lưu' }).click();
     await expect(page.getByRole('row', { name: /WAN1/ })).toBeVisible();
 
@@ -150,7 +153,8 @@ test.describe('Port map', () => {
     await expect(page.getByText('Chưa khai cổng nào.')).toBeVisible();
 
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
-    await expect(page.getByText('Thêm cổng port map')).toBeVisible();
-    await expect(page.getByText('Xóa cổng port map')).toBeVisible();
+    // Câu tự nhiên, tên cổng nằm ngay trong câu — không phải "cổng: (trống) → WAN1".
+    await expect(page.getByText('Thêm cổng WAN1', { exact: true })).toBeVisible();
+    await expect(page.getByText('Xóa cổng WAN1', { exact: true })).toBeVisible();
   });
 });

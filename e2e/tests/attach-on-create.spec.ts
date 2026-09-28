@@ -222,7 +222,6 @@ test.describe('Giấy tờ của hồ sơ phần mềm', () => {
     await expect(page.getByText('Chưa có giấy tờ nào.')).toBeVisible();
 
     await picker(page).setInputFiles(writePdf(`chung-thu-${stamp}.pdf`));
-    await page.getByRole('button', { name: 'Tải lên' }).click();
     await expect(page.getByRole('row', { name: new RegExp(`chung-thu-${stamp}`) })).toBeVisible();
   });
 });

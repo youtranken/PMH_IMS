@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ApiError, apiFetch } from "@/lib/api-client";
 import { errorMessage, useApiMutation } from "@/lib/api";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { CopyButton } from "@/ui/copy-button";
@@ -24,19 +24,21 @@ import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
 import { useTabCounts } from "@/ui/tab-counts";
 import { WarrantyTimeline } from "@/ui/warranty-timeline";
 import { VaultPanel } from "@/ui/vault-panel";
-import { useConfirm } from "@/ui/confirm-provider";
 import { useToast } from "@/ui/toast";
+import { useCatalogLists } from "@/ui/use-catalog-lists";
 import { DeviceLicensesExpand } from "@/features/software/device-licenses-expand";
 import { DeviceForm } from "./device-form";
 import { toHistoryEntries } from "./device-history-entries";
 import { PortMapPanel, type PortMap } from "./port-map-panel";
 import { RelationMap, type RelationNode } from "./relation-map";
 import { RetireDialog, type RetireGroup } from "./retire-dialog";
+import { StatusDialog } from "./status-dialog";
 import {
   STATUS_KEY,
   STATUS_TONE,
   type DeviceHistoryRow,
   type DeviceRow,
+  type DeviceStatus,
 } from "@/lib/device-types";
 import { PATHS } from "@/lib/routes";
 
@@ -58,7 +60,8 @@ interface DevicePanel {
 export function DeviceDetail({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
-  const askConfirm = useConfirm();
+  const navigate = useNavigate();
+  const lists = useCatalogLists();
   const queryClient = useQueryClient();
   const { id = "" } = useParams();
   const [params] = useSearchParams();
@@ -72,6 +75,10 @@ export function DeviceDetail({ me }: { me: Me }) {
     ]),
   );
   const [editing, setEditing] = useState(false);
+  const [cloning, setCloning] = useState(false);
+  /** Hộp đổi trạng thái nhanh — cũng là hộp mở lại hồ sơ đã thanh lý. */
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
   const [retiring, setRetiring] = useState(false);
   /** Danh sách API trả kèm 409 `DEVICE_HAS_HOLDINGS` — mở lại hộp với đúng những thứ vướng. */
   const [retireBlocked, setRetireBlocked] = useState<string[] | null>(null);
@@ -95,7 +102,9 @@ export function DeviceDetail({ me }: { me: Me }) {
     queryKey: ["devices", id, "history"],
     queryFn: () =>
       apiFetch<DeviceHistoryRow[]>(`/api/v1/devices/${id}/history`),
-    enabled: tab === "history",
+    /* Hỏi luôn, không chờ mở tab: "đang ở trạng thái này TỪ KHI NÀO", "thanh lý ngày nào, ai
+       làm" và "ai sửa lần cuối" đều đọc từ đây — lấy ngày mua thay vào là nói sai. */
+    enabled: device.isSuccess,
   });
 
   /*
@@ -214,7 +223,15 @@ export function DeviceDetail({ me }: { me: Me }) {
   if (device.isError) {
     // 404 = thiết bị không tồn tại → trang 404 tử tế, không phải khối lỗi đỏ "thử lại".
     return device.error instanceof ApiError && device.error.status === 404 ? (
-      <NotFound />
+      <NotFound
+        title={t("devices.notFoundTitle")}
+        hint={t("devices.notFoundHint")}
+        action={
+          <Link className="linkbtn primary" to={PATHS.devices}>
+            {t("devices.backToList")}
+          </Link>
+        }
+      />
     ) : (
       <LoadError error={device.error} onRetry={() => void device.refetch()} />
     );
@@ -246,14 +263,23 @@ export function DeviceDetail({ me }: { me: Me }) {
    * ngay dưới bản đồ thì bấm là nhảy tới thẻ đó rồi nháy một cái. Một mô hình điều hướng,
    * không phải hai.
    * ===================================================================== */
+  /* Chuyển xong thì dời TIÊU ĐIỂM tới đích: chỉ cuộn thì người dùng bàn phím / trình đọc màn
+     hình vẫn đứng ở nút cũ và không biết nội dung đã đổi. */
   const goTab = (key: string) => {
     setTab(key);
     window.scrollTo({ top: 0, behavior: "smooth" });
+    window.requestAnimationFrame(() => {
+      const panel = document.querySelector<HTMLElement>('[role="tabpanel"]');
+      panel?.setAttribute("tabindex", "-1");
+      panel?.focus({ preventScroll: true });
+    });
   };
   const goSection = (key: string) => {
     const el = document.getElementById(`sec-${key}`);
     if (!el) return;
     el.scrollIntoView({ behavior: "smooth", block: "start" });
+    el.setAttribute("tabindex", "-1");
+    el.focus({ preventScroll: true });
     el.classList.remove("sec-flash");
     // Ép trình duyệt tính lại layout để animation chạy lại cho lần bấm thứ hai.
     void el.offsetWidth;
@@ -417,6 +443,42 @@ export function DeviceDetail({ me }: { me: Me }) {
     t("devices.retireKeepHistory"),
   ].filter((entry): entry is string => entry !== null);
 
+  /* Lịch sử API trả MỚI NHẤT trước. "Từ ngày …" của trạng thái là lượt đổi trạng thái gần nhất
+     — không phải ngày mua: "Hỏng từ <ngày mua>" là sai nghĩa. Chưa đổi lần nào thì không nói. */
+  const historyRows = history.data ?? [];
+  const lastStatusChange = historyRows.find((row) => row.action === "status-changed");
+  const lastRetire = retired ? lastStatusChange : undefined;
+  const lastEdit = historyRows[0];
+  const retireCleaned = lastRetire?.changes?.cleanup?.after === true;
+
+  /* IP quản trị = IP đầu tiên do module `ipam` khai cho máy này (nhãn của dòng là địa chỉ). */
+  const firstIp = panelOf("ipam")?.items[0]?.label ?? null;
+  const vendor = (lists.data?.vendors ?? []).find((entry) => entry.id === item.vendorId);
+
+  const blankLabels = [
+    item.model ? null : t("devices.model"),
+    item.serial ? null : t("devices.serial"),
+    item.vendorName ? null : t("devices.vendor"),
+    item.department ? null : t("devices.department"),
+    item.purchaseDate ? null : t("devices.purchaseDate"),
+    item.note ? null : t("devices.note"),
+  ].filter((label): label is string => label !== null);
+
+  const changeStatus = (status: DeviceStatus) => {
+    setStatusError(null);
+    setStatus.mutate(
+      { status },
+      {
+        onSuccess: () => {
+          setStatusOpen(false);
+          toast({ message: t("devices.statusChanged") });
+          void refresh();
+        },
+        onError: (err) => setStatusError(errorMessage(err)),
+      },
+    );
+  };
+
   return (
     <>
       <DetailHeader
@@ -427,93 +489,99 @@ export function DeviceDetail({ me }: { me: Me }) {
         ]}
         code={item.code}
         name={item.name}
-        /*
-         * Dòng định danh CHỈ còn serial (16/09/2026).
-         *
-         * Loại thiết bị đã nằm ở breadcrumb ngay phía trên, model là một ô của lưới Hồ sơ ngay
-         * phía dưới — in lại ở đây là nói ba lần cùng một chuyện trong vòng 200px, và chủ dự án
-         * chỉ ra đúng chỗ đó. Serial thì ở lại: nó là thứ người ta chép đi dán vào terminal,
-         * nên nút chép phải nằm chỗ dễ với nhất.
-         */
+        /* Dòng định danh: không in lại loại (đã ở breadcrumb) hay model (ở Thông tin nhanh).
+           Mã (dán vào ticket) và serial (dán vào terminal) là hai thứ hay chép nhất — mỗi thứ
+           một nút chép ngay cạnh. */
         subline={
-          item.serial ? (
-            <span>
-              S/N <span className="mono">{item.serial}</span>
-              <CopyButton value={item.serial} label={t("devices.copySerial")} />
+          <>
+            <span className="subline-item">
+              <CopyButton value={item.code} label={t("devices.copyCode")} />
             </span>
-          ) : null
+            {item.serial ? (
+              <span className="subline-item">
+                S/N <span className="mono">{item.serial}</span>
+                <CopyButton value={item.serial} label={t("devices.copySerial")} />
+              </span>
+            ) : null}
+          </>
         }
         actions={
-          <>
-            {/* NÚT CHÍNH của màn phải NẶNG HƠN nút phá (16/09/2026).
-                Trước đây "Sửa hồ sơ" là nút viền xám còn "Thanh lý" là nút nền đỏ đặc: việc
-                làm mỗi ngày thì thì thầm, còn việc một năm một lần và không lấy lại được thì
-                hét lên — ngay tại góc phải, đúng chỗ mắt và chuột tìm nút chính. */}
-            <button
-              type="button"
-              className="btn primary"
-              disabled={retired}
-              title={retired ? t("devices.retiredLocked") : undefined}
-              onClick={() => setEditing(true)}
-            >
-              {t("devices.edit")}
-            </button>
-            {/* ĐỎ khi là "Thanh lý", KHÔNG đỏ khi là "Mở lại".
-                Màu đỏ nói "việc này lấy đi cái gì đó" — thanh lý khóa hồ sơ, dừng tính hạn,
-                cắt máy khỏi email nhắc gia hạn. Mở lại là việc ngược lại, tô đỏ nó thì màu đỏ
-                thành trang trí và lần sau người dùng không còn đọc nó như một cảnh báo nữa. */}
-            <button
-              type="button"
-              /* `danger-ghost` chứ không phải `danger` nền đặc: đỏ vẫn nói "việc này lấy đi
-                 cái gì đó", nhưng không còn là thứ nặng nhất trên màn. Nền đỏ đặc để dành cho
-                 nút xác nhận TRONG hộp thoại — chỗ người ta đã đọc câu hỏi rồi. */
-              className={retired ? "btn" : "btn danger-ghost"}
-              onClick={() => {
-                if (!retired) {
+          retired ? (
+            /* Hồ sơ đã khoá: việc làm được DUY NHẤT là mở lại, nên nó là nút chính. Nút "Sửa hồ
+               sơ" xám ở chỗ mắt tìm nút chính chỉ là một lời hứa không bấm được. */
+            <>
+              <button
+                type="button"
+                className="btn primary"
+                onClick={() => {
+                  setStatusError(null);
+                  setStatusOpen(true);
+                }}
+              >
+                {t("devices.reopen")}
+              </button>
+              <button type="button" className="btn ghost" onClick={() => setCloning(true)}>
+                {t("devices.clone")}
+              </button>
+            </>
+          ) : (
+            <>
+              {/* NÚT CHÍNH của màn phải NẶNG HƠN nút phá: việc làm mỗi ngày không được thì
+                  thầm trong khi việc một năm một lần và không lấy lại được thì hét lên. */}
+              <button type="button" className="btn primary" onClick={() => setEditing(true)}>
+                {t("devices.edit")}
+              </button>
+              {/* Máy hỏng, đem về kho: việc hay gặp nhất không phải mở form 15 ô. */}
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setStatusError(null);
+                  setStatusOpen(true);
+                }}
+              >
+                {t("devices.changeStatus")}
+              </button>
+              <button type="button" className="btn ghost" onClick={() => setCloning(true)}>
+                {t("devices.clone")}
+              </button>
+              {/* `danger-ghost`, không phải nền đỏ đặc: nền đỏ đặc để dành cho nút xác nhận
+                  TRONG hộp thoại — chỗ người ta đã đọc câu hỏi rồi. */}
+              <button
+                type="button"
+                className="btn danger-ghost"
+                onClick={() => {
                   setRetireBlocked(null);
                   setRetireError(null);
                   setRetiring(true);
-                  return;
-                }
-                void (async () => {
-                  /*
-                   * "Đưa lại vào dùng" nằm CÙNG TỌA ĐỘ với "Thanh lý" hôm trước, nên trí nhớ cơ
-                   * bắp dẫn tay tới đây — đổi trạng thái hồ sơ phải hỏi một câu. Không dồn vào
-                   * `RowActions`: đầu trang chỉ có hai nút, menu một mục là thêm một cú bấm mà
-                   * không giấu được gì.
-                   */
-                  const ok = await askConfirm({
-                    title: t("common.titleOf", {
-                      action: t("devices.reopen"),
-                      subject: item.code,
-                    }),
-                    message: t("devices.confirmReopen", { name: item.code }),
-                    confirmLabel: t("devices.reopen"),
-                  });
-                  if (!ok) return;
-                  setStatus.mutate(
-                    { status: "in_use" },
-                    {
-                      onSuccess: () => {
-                        toast({ message: t("devices.statusChanged") });
-                        void refresh();
-                      },
-                      onError: (err) =>
-                        toast({ message: errorMessage(err), tone: "error" }),
-                    },
-                  );
-                })();
-              }}
-            >
-              {t(retired ? "devices.reopen" : "devices.retire")}
-            </button>
-          </>
+                }}
+              >
+                {t("devices.retire")}
+              </button>
+            </>
+          )
         }
       />
 
-      {retired ? <p className="alert">{t("devices.retiredLocked")}</p> : null}
+      {/* Băng đã thanh lý: nói KHI NÀO, AI, và đã gỡ gì — thứ trước đây chỉ nằm trong tab
+          Lịch sử. Có nền, có viền: chữ xám trơn thụt lề thì người ta đọc lướt qua. */}
+      {retired ? (
+        <div className="alert warn retired-banner" role="status">
+          <strong>{t("devices.retiredLocked")}</strong>
+          {lastRetire ? (
+            <span>
+              {t("devices.retiredBy", {
+                date: formatDateTime(lastRetire.createdAt),
+                actor: lastRetire.actor,
+              })}
+              {retireCleaned ? ` · ${t("devices.retiredCleaned")}` : null}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
 
       <DetailLayout
+        railStrip={safeTab !== "profile"}
         railSummary={
           <>
             <span className={`badge ${STATUS_TONE[item.status]}`}>
@@ -525,12 +593,12 @@ export function DeviceDetail({ me }: { me: Me }) {
           </>
         }
         rail={
-          <RailCard title={t("detail.identityCard")}>
+          <RailCard title={t("devices.summaryCard")}>
             <RailRow
               label={t("devices.status")}
               note={
-                item.purchaseDate
-                  ? t("devices.since", { date: formatDate(item.purchaseDate) })
+                lastStatusChange
+                  ? t("devices.since", { date: formatDate(lastStatusChange.createdAt) })
                   : undefined
               }
             >
@@ -540,7 +608,7 @@ export function DeviceDetail({ me }: { me: Me }) {
             </RailRow>
             {/* KHÔNG kèm `note={cabinetCode}`: `LocationText` đã ghép sẵn "LST · T-1", nên
                 dòng chú bên dưới in lại đúng mã tủ ấy lần thứ hai trong cùng một ô. */}
-            <RailRow label={t("devices.location")}>
+            <RailRow label={t("devices.locationCol")}>
               <LocationText device={item} />
             </RailRow>
             {/*
@@ -571,9 +639,10 @@ export function DeviceDetail({ me }: { me: Me }) {
              * Vẫn là `WarrantyTimeline` ĐẦY ĐỦ chứ không phải bản `compact`: bản gọn giấu hai
              * mốc ngày và dòng "Đã đi N%", mà đó là những thứ thanh này sinh ra để nói.
              */}
-            <RailRow label={t("devices.warranty")}>
+            <RailRow label={t("devices.warranty")} wide>
               {item.warrantyEnd ? (
                 <WarrantyTimeline
+                  notCounted={retired}
                   start={item.warrantyStart ?? item.purchaseDate}
                   end={item.warrantyEnd}
                   startLabel={
@@ -587,11 +656,40 @@ export function DeviceDetail({ me }: { me: Me }) {
                 <ExpiryBadge end={null} />
               )}
             </RailRow>
-            <RailRowIfSet label={t("devices.vendor")} value={item.vendorName} />
+            {/* NCC kèm số điện thoại và người liên hệ từ danh mục: máy hỏng mà còn bảo hành thì
+                việc kế tiếp là gọi NCC — đừng bắt người dùng sang màn Danh mục tra số. */}
+            {item.vendorName ? (
+              <RailRow
+                label={t("devices.vendor")}
+                note={
+                  vendor?.phone || vendor?.contact ? (
+                    <>
+                      {vendor.contact ? <span>{vendor.contact}</span> : null}
+                      {vendor.contact && vendor.phone ? " · " : null}
+                      {vendor.phone ? (
+                        <a href={`tel:${vendor.phone.replace(/[^\d+]/g, "")}`}>{vendor.phone}</a>
+                      ) : null}
+                    </>
+                  ) : undefined
+                }
+              >
+                {item.vendorName}
+              </RailRow>
+            ) : null}
             <RailRowIfSet
               label={t("devices.purchaseDate")}
               value={formatDate(item.purchaseDate)}
             />
+            {/* Hồ sơ cũ hay mới — người đọc cần biết trước khi tin số liệu. */}
+            <p className="rail-foot">
+              {t("devices.createdAt", { date: formatDate(item.createdAt) })}
+              {lastEdit
+                ? ` · ${t("devices.lastEditBy", {
+                    date: formatDate(lastEdit.createdAt),
+                    actor: lastEdit.actor,
+                  })}`
+                : null}
+            </p>
           </RailCard>
         }
       >
@@ -605,7 +703,33 @@ export function DeviceDetail({ me }: { me: Me }) {
         <TabPanel tabKey={safeTab}>
         {safeTab === "profile" ? (
           <>
+            {/*
+              THÔNG TIN NHANH đứng ĐẦU tab: mở máy ra, câu hỏi đầu tiên là IP quản trị và
+              model — trước đây IP nằm tận cuối trang và model nằm sau bản đồ quan hệ. Trạng
+              thái, vị trí, người dùng, bảo hành đã ở cột Tóm tắt, serial ở dòng dưới tiêu đề (có
+              nút chép) — nên không in lại ở đây.
+            */}
+            <DetailSection title={t("devices.quickInfo")} compact>
+              <dl className="data-grid">
+                <DataItemIfSet label={t("devices.managementIp")} value={firstIp}>
+                  <span className="mono">{firstIp}</span>
+                  {firstIp ? <CopyButton value={firstIp} label={t("devices.copyIp")} /> : null}
+                </DataItemIfSet>
+                <DataItemIfSet label={t("devices.model")} value={item.model} />
+                <DataItemIfSet label={t("devices.note")} value={item.note} />
+              </dl>
+              {/* Ô chưa khai gom về MỘT dòng, kèm lối đi bổ sung ngay — một dòng chữ xám không
+                  dẫn tới đâu thì chẳng ai bổ sung. */}
+              <BlankFields labels={blankLabels} />
+              {blankLabels.length > 0 && !retired ? (
+                <button type="button" className="btn sm ghost" onClick={() => setEditing(true)}>
+                  {t("devices.fillBlanks", { count: blankLabels.length })}
+                </button>
+              ) : null}
+            </DetailSection>
+
             <RelationMap
+              retired={retired}
               hubCode={item.code}
               nodes={relationNodes}
               missing={relationMissing}
@@ -622,46 +746,6 @@ export function DeviceDetail({ me }: { me: Me }) {
                 !panels.isError && !ports.isError && (panels.isPending || ports.isPending)
               }
             />
-
-            {/*
-             * Lưới này chỉ còn thứ CHƯA nói ở đâu khác. Thanh bảo hành, trạng thái, vị trí,
-             * người dùng, nhà cung cấp, ngày mua đều đã ở thẻ định danh bên phải; serial thì ở
-             * dòng định danh dưới tiêu đề, chỗ có nút chép. In lại ở đây là đúng lỗi bản trước.
-             */}
-            {/*
-              KHU "HỒ SƠ" CÓ THẺ VÀ TIÊU ĐỀ NHƯ MỌI KHU KHÁC (19/09/2026).
-
-              Trước đó lưới này render trần — không nền, không viền, không landmark có tên —
-              trong khi MỌI khu bên dưới đều là `<section class="card" aria-labelledby>`. Khu
-              ĐẦU TIÊN của cột chính lại là khu duy nhất lơ lửng, nên mắt đọc ra như phần thừa
-              của thanh tab chứ không phải một khu riêng.
-
-              `compact` vì ở ĐÂY các khu anh em đều là `device-panel`; ba màn chi tiết còn lại
-              không truyền, xem chú thích của `DetailSection`. Vỏ khu nằm trong bản dùng chung
-              chứ không chép ra đây (AD-15) — bản chép tay đã tồn tại đúng một ngày.
-
-              Dòng "Chưa khai" nằm TRONG thẻ, không ngoài: nó nói về chính những ô của khu này,
-              và `.blank-fields` đã có đường kẻ đứt riêng để tách khỏi lưới.
-            */}
-            <DetailSection title={t("detail.profileSection")} compact>
-              <dl className="data-grid">
-                <DataItemIfSet label={t("devices.model")} value={item.model} />
-                <DataItemIfSet label={t("devices.note")} value={item.note} />
-              </dl>
-
-              {/* Ô chưa khai gom về MỘT dòng, thay cho một dãy hộp chỉ chứa dấu gạch ngang —
-                  hồ sơ khai sơ sài trông như dữ liệu hỏng chứ không phải việc còn thiếu. */}
-              <BlankFields
-                labels={[
-                  item.model ? null : t("devices.model"),
-                  item.serial ? null : t("devices.serial"),
-                  item.vendorName ? null : t("devices.vendor"),
-                  item.department ? null : t("devices.department"),
-                  item.purchaseDate ? null : t("devices.purchaseDate"),
-                  item.note ? null : t("devices.note"),
-                ].filter((label): label is string => label !== null)}
-              />
-            </DetailSection>
 
             {/* Phần mềm đang cài dùng BẢNG GHẾ đầy đủ (kỳ hạn · chi phí · hợp đồng), không
                 phải khu `nhãn: giá trị` chung — cùng một bảng với khu bung dòng ở danh sách
@@ -784,6 +868,32 @@ export function DeviceDetail({ me }: { me: Me }) {
         />
       ) : null}
 
+      {statusOpen ? (
+        <StatusDialog
+          code={item.code}
+          current={item.status}
+          reopen={retired}
+          busy={setStatus.isPending}
+          error={statusError}
+          onCancel={() => setStatusOpen(false)}
+          onConfirm={changeStatus}
+        />
+      ) : null}
+
+      {cloning ? (
+        <DeviceForm
+          device={null}
+          cloneFrom={item}
+          csrfToken={me.csrfToken}
+          onClose={() => setCloning(false)}
+          onSaved={(_result, options) => {
+            if (!options?.keepOpen) setCloning(false);
+            void queryClient.invalidateQueries({ queryKey: ["devices"] });
+          }}
+          onOpenCreated={(created) => navigate(PATHS.device(created.id))}
+        />
+      ) : null}
+
       {editing ? (
         <DeviceForm
           device={item}
@@ -844,13 +954,13 @@ function ExtensionPanels({ panels }: { panels: DevicePanel[] }) {
                       {/* `scope="row"` chứ không phải `<td>`: ô đầu là TÊN của dòng, và trình
                           đọc màn hình cần biết điều đó để đọc "Admin web — ••••" chứ không
                           đọc hai ô rời nhau. */}
+                      {/* Link đặt trên ĐỊNH DANH (IP, mã đường truyền), không trên câu mô tả:
+                          người ta bấm vào cái họ đang tìm. */}
                       <th scope="row" className="panel-key">
-                        {entry.label}
+                        {entry.link ? <Link to={entry.link}>{entry.label}</Link> : entry.label}
                       </th>
                       <td>
-                        {entry.link ? (
-                          <Link to={entry.link}>{entry.value}</Link>
-                        ) : entry.tone ? (
+                        {entry.tone ? (
                           <span className={`badge ${entry.tone}`}>
                             {entry.value}
                           </span>

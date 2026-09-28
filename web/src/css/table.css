@@ -690,3 +690,79 @@ table.table .col-sticky-end::after {
   color: var(--ink-3);
   overflow-wrap: anywhere;
 }
+
+/* --- Danh sách thiết bị và các bảng dùng chung ------------------------------------------ */
+/* Chữ trong ô cắt MỘT dòng + "…", đủ chữ ở `title`. Tên dài gãy 3–4 dòng làm các hàng cao thấp
+   lệch nhau, mắt không dò theo hàng được. Trên thẻ dọc (≤960px) thì trả lại đủ chữ. */
+.cell-clip {
+  display: block;
+  max-width: 26rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 960px) {
+  .table-stack .cell-clip {
+    max-width: none;
+    white-space: normal;
+  }
+}
+/* Mũi tên của cột sắp được nhưng CHƯA sắp: ẩn, hiện mờ khi rê chuột/focus — để cột sắp được
+   không trông y hệt cột không sắp được. */
+table.table thead th .sort-arrow.idle {
+  opacity: 0;
+  color: var(--ink-3);
+  transition: opacity 0.12s var(--ease);
+}
+table.table thead th .th-sort:hover .sort-arrow.idle,
+table.table thead th .th-sort:focus-visible .sort-arrow.idle {
+  opacity: 1;
+}
+/* Nút bung dòng có chữ ("3 license ›"): chip nhỏ thay cho mũi tên trơn không nói gì. */
+.caret-btn.caret-chip {
+  width: auto;
+  height: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--primary-soft);
+  color: var(--primary-ink);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+/* Bảng đang tải trang/bộ lọc mới: giữ bảng cũ (không nháy trắng) nhưng làm mờ để người dùng
+   biết số liệu đang đổi. */
+.list-refreshing .table-wrap,
+.list-refreshing .list-cards {
+  opacity: 0.55;
+  transition: opacity 0.15s var(--ease);
+}
+/* Thứ chỉ dùng trên máy tính (nhập Excel) — trên điện thoại ẩn hẳn thay vì mở ra một hộp vỡ. */
+@media (max-width: 600px) {
+  .hide-narrow {
+    display: none !important;
+  }
+}
+.badge.info {
+  color: var(--info);
+  background: var(--info-soft);
+}
+/* "Chưa khai hạn": viền đứt, nền trong — khác hẳn "Không tính hạn" (xám đặc). */
+.badge.dashed {
+  background: transparent;
+  border: 1px dashed var(--border-2);
+}
+.badge.dashed::before {
+  display: none;
+}
+/* Màn cảm ứng: nút nhỏ trong bảng/thẻ đủ 44px chiều cao để ngón tay chạm trúng. */
+@media (pointer: coarse) {
+  .table .btn.sm,
+  .list-card .btn.sm {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

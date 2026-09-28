@@ -25,6 +25,7 @@ import { useMediaQuery } from '@/ui/use-media-query';
 export function DetailLayout({
   rail,
   railSummary,
+  railStrip = false,
   children,
 }: {
   rail: ReactNode;
@@ -34,11 +35,27 @@ export function DetailLayout({
    * dải tóm tắt (trạng thái · vị trí · người dùng) vẫn luôn thấy. Không truyền → như cũ.
    */
   railSummary?: ReactNode;
+  /**
+   * Thu thẻ định danh thành DẢI NGANG một dòng (`railSummary`) ở đầu cột chính, và cột chính
+   * chiếm trọn bề ngang. Dùng cho các tab là BẢNG (cổng, két, giấy tờ, lịch sử): cột phải 320px
+   * ăn mất chỗ và bảng bị cắt cột Thao tác. Thẻ đầy đủ chỉ cần ở tab tổng quan.
+   */
+  railStrip?: boolean;
   children: ReactNode;
 }) {
   const { t } = useTranslation();
   const narrow = useMediaQuery(RAIL_COLLAPSE_QUERY);
   const [open, setOpen] = useState(false);
+  if (railStrip && railSummary) {
+    return (
+      <div className="detail-2col detail-1col">
+        <div className="detail-main">
+          <div className="rail-strip">{railSummary}</div>
+          {children}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="detail-2col">
       <div className="detail-main">{children}</div>
@@ -141,13 +158,17 @@ export function RailRow({
   label,
   children,
   note,
+  wide = false,
 }: {
   label: string;
   children: ReactNode;
   note?: ReactNode;
+  /** Chiếm trọn hàng khi thẻ chia hai cột (màn hẹp) — cho thanh hạn: 150px thì hai mốc ngày
+   *  và nhãn chồng lên nhau. */
+  wide?: boolean;
 }) {
   return (
-    <div className="rail-row">
+    <div className={wide ? 'rail-row rail-row-wide' : 'rail-row'}>
       <span className="rail-k">{label}</span>
       <span className="rail-v">{children}</span>
       {note ? <span className="rail-note">{note}</span> : null}

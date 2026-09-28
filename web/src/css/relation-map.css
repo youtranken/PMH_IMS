@@ -111,7 +111,8 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-6) var(--space-7);
-  border: 1px solid var(--border);
+  /* `--border-2`: viền `--border` gần như không thấy trên nền tối — nút trông như chữ trơn. */
+  border: 1px solid var(--border-2);
   border-radius: var(--r);
   background: var(--surface);
   color: var(--ink);

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage } from '@/lib/api';
 import { uploadFile } from '@/lib/upload';
@@ -43,7 +43,13 @@ export function ImportDialog<TRow>({
   mapRow,
   onClose,
   onImported,
+  template,
 }: {
+  /**
+   * Nút tải file mẫu, đặt NGAY dưới ô chọn file: file mẫu là bước con của việc nhập, bắt người
+   * dùng đóng hộp ra đầu trang lấy mẫu rồi mở lại là đi vòng.
+   */
+  template?: ReactNode;
   title: string;
   hint: string;
   previewUrl: string;
@@ -61,15 +67,15 @@ export function ImportDialog<TRow>({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const run = async (step: 'preview' | 'commit') => {
-    if (!file) return;
+  const run = async (step: 'preview' | 'commit', picked: File | null = file) => {
+    if (!picked) return;
     setBusy(true);
     setError(null);
     try {
       if (step === 'preview') {
-        setPlan(await uploadFile<ImportPlan<TRow>>(previewUrl, file, csrfToken));
+        setPlan(await uploadFile<ImportPlan<TRow>>(previewUrl, picked, csrfToken));
       } else {
-        const result = await uploadFile<ImportResult<TRow>>(commitUrl, file, csrfToken);
+        const result = await uploadFile<ImportResult<TRow>>(commitUrl, picked, csrfToken);
         toast({
           message: t('importDialog.done', {
             created: result.created,
@@ -101,8 +107,9 @@ export function ImportDialog<TRow>({
           : writable === 0
             ? t('importDialog.nothing')
             : null,
-    // Hiện bằng chữ: đây là câu hỏi "vì sao chưa ghi được" mà ai nhìn hộp này cũng hỏi.
-    { visible: true },
+    // Hiện bằng chữ: đây là câu hỏi "vì sao chưa ghi được" mà ai nhìn hộp này cũng hỏi. Trừ
+    // khi bảng đối chiếu đã nói to điều đó rồi ("không có gì để ghi") — nói ba lần là nhiễu.
+    { visible: !(plan && !hasErrors && writable === 0) },
   );
 
   return (
@@ -152,8 +159,12 @@ export function ImportDialog<TRow>({
           // bấm "Xác nhận ghi" trong khi đang nhìn kết quả của file trước.
           setPlan(null);
           setError(null);
+          // Chọn/thả file xong là tự đối chiếu: bước bấm "Đối chiếu" riêng người dùng hay quên,
+          // rồi đứng nhìn nút "Xác nhận ghi" xám mà không hiểu vì sao.
+          if (picked) void run('preview', picked);
         }}
       />
+      {template ? <div className="import-template">{template}</div> : null}
 
       {error ? (
         <p className="alert error" role="alert">
@@ -168,8 +179,6 @@ export function ImportDialog<TRow>({
             <p className="alert error" role="alert">
               {t('importDialog.hasErrors')}
             </p>
-          ) : writable === 0 ? (
-            <p className="muted">{t('importDialog.nothing')}</p>
           ) : null}
         </>
       ) : null}

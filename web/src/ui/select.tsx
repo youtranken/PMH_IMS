@@ -4,10 +4,28 @@ import { useTranslation } from 'react-i18next';
 import { Chevron } from '@/ui/chevron';
 import { useAnchoredMenu } from '@/ui/use-anchored-menu';
 import { useDialogPortal } from '@/ui/dialog';
+import { foldSearch } from '@/lib/search-fold';
 
 export interface SelectOption {
   value: string;
   label: ReactNode;
+  /**
+   * Nhãn gọn hiện trên NÚT khi mục này đang chọn (vd chỉ mã site), trong khi menu vẫn hiện
+   * `label` đầy đủ ("mã — tên"). Người chưa thuộc mã cần tên để chọn; chọn xong thì mã là đủ.
+   */
+  short?: ReactNode;
+  /** Chữ để ô lọc so khớp khi `label` không phải chuỗi thuần. */
+  searchText?: string;
+}
+
+/** Quá ngần này lựa chọn thì menu tự có ô gõ để lọc — dò bằng mắt bắt đầu chậm từ đây. */
+const SEARCH_THRESHOLD = 8;
+
+function optionText(option: SelectOption): string {
+  if (option.searchText !== undefined) return option.searchText;
+  return typeof option.label === 'string' || typeof option.label === 'number'
+    ? String(option.label)
+    : '';
 }
 
 /**
@@ -30,6 +48,7 @@ export function Select({
   required,
   'aria-describedby': describedBy,
   'aria-invalid': invalid,
+  searchable,
 }: {
   /** Ô đang báo lỗi — `Field error` tự truyền; viền đỏ và tiêu điểm của `useFormErrors` bám vào đây. */
   'aria-invalid'?: boolean;
@@ -82,6 +101,8 @@ export function Select({
    * và hai hàng rào cho một luật thì sớm muộn nói khác nhau.
    */
   required?: boolean;
+  /** Ô gõ để lọc trong menu. Mặc định tự bật khi có hơn 8 lựa chọn. */
+  searchable?: boolean;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -89,8 +110,18 @@ export function Select({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const portal = useDialogPortal();
 
+  const [query, setQuery] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
+
   const selected = options.find((o) => o.value === value);
-  const label = selected ? selected.label : (placeholder ?? '—');
+  const label = selected ? (selected.short ?? selected.label) : (placeholder ?? '—');
+
+  const canSearch = searchable ?? options.length > SEARCH_THRESHOLD;
+  const folded = foldSearch(query.trim());
+  const shown =
+    canSearch && folded
+      ? options.filter((o) => foldSearch(optionText(o)).includes(folded))
+      : options;
 
   /**
    * NỐI NÚT VỚI DANH SÁCH — `aria-controls` + `aria-activedescendant`.
@@ -105,35 +136,41 @@ export function Select({
   const listId = useId();
   const optionId = (index: number) => `${listId}-o${index}`;
 
+  /* `min`: menu ít nhất bằng nút, được nới theo nội dung (có trần). Rộng đúng bằng nút thì
+     "E2E-HCM · TU-E2E-…" cắt ngay giữa mã, hai tủ đọc ra như một. */
   const { refs, floatingStyles } = useAnchoredMenu(open, {
-    matchWidth: true,
+    matchWidth: 'min',
     maxHeight: 288,
   });
 
   /*
-   * Mở → active = option đang chọn. PHỤ THUỘC VÀO MỘT SỐ, KHÔNG VÀO MẢNG (F-05, vá 21/09).
+   * Mở → active = option đang chọn. PHỤ THUỘC VÀO MỘT SỐ, KHÔNG VÀO MẢNG.
    *
-   * Bản trước nghe `[open, options, value]`. `options` gần như KHÔNG BAO GIỜ ổn định về
-   * identity ở nơi gọi thật — các màn viết `options={lists.data?.x ?? []}`, `.filter().map()`,
-   * hoặc `useMemo` phụ thuộc một ô đang gõ — nên mỗi lượt CHA render là một mảng mới, và
-   * effect chạy lại KÉO DÒNG SÁNG VỀ option đang chọn trong khi menu vẫn đang mở.
-   *
-   * Người dùng bấm ↓ ba lần, một query anh em trả về, dòng sáng nhảy ngược. Bấm Enter thì
-   * chọn nhầm — một thao tác bàn phím bình thường cho ra kết quả sai, im lặng.
-   *
-   * `Combobox` gặp đúng cơ chế này và vá 10/09 (`combobox.tsx:129`); `Select` bị sót — mẫu
-   * N1, vá một cửa quên cửa song song.
-   *
-   * Ở đây không cần băm cả danh sách như Combobox: thứ effect cần chỉ là CHỈ MỤC của option
-   * đang chọn. Đó là một số, ổn định theo giá trị — cha render lại mà nội dung không đổi thì
-   * nó không đổi. Danh sách đổi thật (option đang chọn dời chỗ) thì nó đổi, và dòng sáng đi
-   * theo, đúng như phải thế.
+   * `options` gần như KHÔNG BAO GIỜ ổn định về identity ở nơi gọi thật (`lists.data?.x ?? []`,
+   * `.filter().map()`), nên nghe cả mảng thì mỗi lượt cha render lại KÉO DÒNG SÁNG VỀ option
+   * đang chọn trong khi menu vẫn đang mở: bấm ↓ ba lần, một query anh em trả về, Enter chọn
+   * nhầm. Chỉ mục của option đang chọn là một số, ổn định theo giá trị. Cùng luật với
+   * `Combobox`.
    */
-  const selectedIndex = options.findIndex((o) => o.value === value);
+  const selectedIndex = shown.findIndex((o) => o.value === value);
   useEffect(() => {
     if (!open) return;
     setActive(selectedIndex < 0 ? 0 : selectedIndex);
-  }, [open, selectedIndex]);
+  }, [open, selectedIndex, folded]);
+
+  // Đóng menu thì bỏ chữ lọc: mở lại mà vẫn thấy danh sách bị lọc dở là tưởng mất lựa chọn.
+  useEffect(() => {
+    if (!open) setQuery('');
+  }, [open]);
+
+  /* Có ô lọc thì đưa tiêu điểm vào đó — nhưng chỉ với chuột/bàn phím. Trên điện thoại, focus
+     tự động bật bàn phím ảo che nửa danh sách trong khi người dùng chỉ định chạm chọn. */
+  useEffect(() => {
+    if (!open || !canSearch) return;
+    if (typeof window.matchMedia === 'function' && !window.matchMedia('(pointer: fine)').matches)
+      return;
+    searchRef.current?.focus();
+  }, [open, canSearch]);
 
   useEffect(() => {
     if (!open) return;
@@ -156,6 +193,78 @@ export function Select({
     triggerRef.current?.focus();
   };
 
+  /* Một bộ phím cho cả nút mở lẫn ô lọc: tiêu điểm ở đâu thì ↑/↓/Enter/Esc vẫn làm cùng một
+     việc, không có chuyện gõ lọc xong phải Tab ngược về nút mới chọn được. */
+  const onKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!open) {
+        setOpen(true);
+        return;
+      }
+      setActive((i) =>
+        e.key === 'ArrowDown' ? Math.min(i + 1, shown.length - 1) : Math.max(i - 1, 0),
+      );
+    } else if (e.key === 'Enter' && open) {
+      e.preventDefault();
+      const o = shown[active];
+      if (o) choose(o.value);
+    } else if (e.key === 'Escape' && open) {
+      e.stopPropagation();
+      setOpen(false);
+      triggerRef.current?.focus();
+    }
+  };
+
+  const activeId = open && shown[active] ? optionId(active) : undefined;
+
+  const list = (
+    <ul
+      className={canSearch ? 'fsel-list' : 'fsel-menu'}
+      id={listId}
+      role="listbox"
+      style={canSearch ? undefined : floatingStyles}
+      ref={canSearch ? undefined : refs.setFloating}
+    >
+      {/* HỎNG được ưu tiên hơn RỖNG: khi không hỏi được thì "không có lựa chọn" là một câu
+          khẳng định mà ta không có quyền nói. `role="alert"`, không `role="option"` — trình
+          đọc màn hình phải đọc nó như cảnh báo, và ↓/Enter không chạm tới được. */}
+      {failed ? (
+        <li className="fsel-error" role="presentation">
+          <span role="alert">{t('common.optionsLoadError')}</span>
+        </li>
+      ) : shown.length === 0 ? (
+        <li className="fsel-none" role="presentation">
+          {t('select.noOptions')}
+        </li>
+      ) : null}
+      {/*
+          `<li role="presentation">`: `<ul role="listbox">` chỉ được chứa `option`; `<li>` trần
+          chen một tầng `listitem` vào giữa.
+
+          `tabIndex={-1}`: mẫu `aria-activedescendant` đòi tiêu điểm DOM ở NGUYÊN trên nút mở
+          (hoặc ô lọc). Menu portal vào điểm neo của `dialog.tsx` — con CUỐI của `RD.Content`,
+          sau cả `.sheet-footer` — nên option nhận Tab thì tiêu điểm rơi xuống SAU nút Lưu.
+      */}
+      {shown.map((o, i) => (
+        <li key={o.value} role="presentation">
+          <button
+            type="button"
+            id={optionId(i)}
+            role="option"
+            aria-selected={o.value === value}
+            tabIndex={-1}
+            className={`fsel-option${i === active ? ' active' : ''}${o.value === value ? ' sel' : ''}`}
+            onMouseEnter={() => setActive(i)}
+            onClick={() => choose(o.value)}
+          >
+            {o.label}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+
   return (
     <div
       className={`fsel${className ? ` ${className}` : ''}`}
@@ -173,86 +282,41 @@ export function Select({
         aria-required={required ? true : undefined}
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
-        aria-activedescendant={open && options[active] ? optionId(active) : undefined}
+        aria-activedescendant={activeId}
+        /* Thanh lọc tô ô đang mang giá trị (`.filter-bar .fsel-trigger[data-filled]`): chữ
+           trên nút đổi mà khung y nguyên thì không ai nhận ra danh sách đang bị lọc. */
+        data-filled={value !== '' ? 'true' : undefined}
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
-        onKeyDown={(e) => {
-          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-            e.preventDefault();
-            if (!open) {
-              setOpen(true);
-              return;
-            }
-            setActive((i) =>
-              e.key === 'ArrowDown'
-                ? Math.min(i + 1, options.length - 1)
-                : Math.max(i - 1, 0),
-            );
-          } else if (e.key === 'Enter' && open) {
-            e.preventDefault();
-            const o = options[active];
-            if (o) choose(o.value);
-          } else if (e.key === 'Escape' && open) {
-            e.stopPropagation();
-            setOpen(false);
-          }
-        }}
+        onKeyDown={onKey}
       >
         <span className={selected ? 'fsel-val' : 'fsel-val ph'}>{label}</span>
         <Chevron className="fsel-caret" />
       </button>
       {open &&
         createPortal(
-          <ul
-            className="fsel-menu"
-            id={listId}
-            role="listbox"
-            style={floatingStyles}
-            ref={refs.setFloating}
-          >
-            {/* HỎNG được ưu tiên hơn RỖNG: khi không hỏi được thì "không có lựa chọn" là một
-                câu khẳng định mà ta không có quyền nói. `role="alert"`, không `role="option"` —
-                trình đọc màn hình phải đọc nó như cảnh báo, và ↓/Enter không chạm tới được. */}
-            {failed ? (
-              <li className="fsel-error" role="presentation">
-                <span role="alert">{t('common.optionsLoadError')}</span>
-              </li>
-            ) : options.length === 0 ? (
-              /* Không có lựa chọn nào → báo rõ thay vì ô nổi trống trơ (review D3). */
-              <li className="fsel-none" role="presentation">
-                {t('select.noOptions')}
-              </li>
-            ) : null}
-            {/*
-                `<li role="presentation">`: `<ul role="listbox">` chỉ được chứa `option`, mà
-                `<li>` trần cho ra `listbox > listitem > option` — một tầng `listitem` chen vào
-                giữa. Giữ `<li>` (CSS `.fsel-menu` dựa vào nó), bỏ vai của nó đi. Hai hàng báo
-                RỖNG/HỎNG ở trên cũng vậy: chúng không phải lựa chọn, và `aria-disabled` trên
-                một hàng không có vai gì thì cũng không nói được với ai.
-
-                `tabIndex={-1}`: mẫu `aria-activedescendant` đòi tiêu điểm DOM ở NGUYÊN trên nút
-                mở. `<button>` mặc định `tabindex=0`, mà menu lại portal vào điểm neo của
-                `dialog.tsx` — con CUỐI của `RD.Content`, sau cả `.sheet-footer`. Nên trong một
-                form đang mở menu, gõ Tab đưa tiêu điểm xuống giữa danh sách, ĐỨNG SAU cả nút
-                Lưu và Hủy.
-            */}
-            {options.map((o, i) => (
-              <li key={o.value} role="presentation">
-                <button
-                  type="button"
-                  id={optionId(i)}
-                  role="option"
-                  aria-selected={o.value === value}
-                  tabIndex={-1}
-                  className={`fsel-option${i === active ? ' active' : ''}${o.value === value ? ' sel' : ''}`}
-                  onMouseEnter={() => setActive(i)}
-                  onClick={() => choose(o.value)}
-                >
-                  {o.label}
-                </button>
-              </li>
-            ))}
-          </ul>,
+          canSearch ? (
+            /* Ô lọc nằm NGOÀI `listbox`: listbox chỉ được chứa option, nhét ô nhập vào trong
+               là cây trợ năng sai. */
+            <div className="fsel-menu fsel-pop" style={floatingStyles} ref={refs.setFloating}>
+              <input
+                ref={searchRef}
+                type="search"
+                className="fsel-search"
+                value={query}
+                placeholder={t('select.filterPlaceholder')}
+                aria-label={t('select.filterOf', { label: ariaLabel ?? '' })}
+                aria-controls={listId}
+                aria-activedescendant={activeId}
+                autoComplete="off"
+                onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={onKey}
+              />
+              {list}
+            </div>
+          ) : (
+            list
+          ),
           portal ?? document.body,
         )}
     </div>

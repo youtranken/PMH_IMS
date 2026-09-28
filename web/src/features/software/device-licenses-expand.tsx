@@ -37,6 +37,8 @@ export function DeviceLicensesExpand({
   });
 
   const rows = installed.data ?? [];
+  /* Cột "Bắt đầu" toàn "—" thì bỏ hẳn: một cột rỗng chiếm 108px trong khi tên phần mềm bị cắt. */
+  const hasStart = rows.some((item) => item.startDate);
 
   return (
     <div className="exp-soft">
@@ -53,23 +55,27 @@ export function DeviceLicensesExpand({
       ) : rows.length === 0 ? (
         <p className="seat-empty">{t('devices.noInstalled')}</p>
       ) : (
-        <div className="seat-list inst-list">
+        <div className={hasStart ? 'seat-list inst-list' : 'seat-list inst-list no-start'}>
           <div className="seat-hd">
             <span>{t('devices.software')}</span>
             <span>{t('software.licenseModel')}</span>
             <span>{t('license.cost')}</span>
-            <span>{t('license.startDate')}</span>
+            {hasStart ? <span>{t('license.startDate')}</span> : null}
             <span>{t('license.endDate')}</span>
             <span>{t('license.contract')}</span>
             <span>{t('license.note')}</span>
           </div>
           {rows.map((item) => (
             <div key={item.id} className="seat-card">
-              <div className="seat-mc" data-label={t('devices.software')}>
-                <Link className="mono" to={PATHS.softwareItem(item.softwareId)}>
+              {/* TÊN là dòng chính (người ta tìm "Windows 11", không tìm "LIC-…"), mã là dòng
+                  phụ mono — vẫn là link sang hồ sơ phần mềm. */}
+              <div className="seat-mc seat-mc-stack" data-label={t('devices.software')}>
+                <span className="seat-who" title={item.softwareName}>
+                  {item.softwareName}
+                </span>
+                <Link className="mono seat-code" to={PATHS.softwareItem(item.softwareId)}>
                   {item.softwareCode}
                 </Link>
-                <span className="seat-who">{item.softwareName}</span>
               </div>
               <div data-label={t('software.licenseModel')}>
                 {item.licenseModel === 'perpetual' ? (
@@ -81,24 +87,45 @@ export function DeviceLicensesExpand({
               <div className="seat-cost" data-label={t('license.cost')}>
                 {formatMoney(item.cost)}
               </div>
-              <div className="seat-date" data-label={t('license.startDate')}>
-                {item.startDate ? formatDate(item.startDate) : '—'}
-              </div>
-              <div className="seat-date" data-label={t('license.endDate')}>
-                <SeatEndCell
-                  seat={item}
-                  licenseModel={item.licenseModel}
-                  fallbackEnd={item.softwareEndDate}
-                />
+              {hasStart ? (
+                <div
+                  className="seat-date"
+                  data-label={t('license.startDate')}
+                  data-empty={item.startDate ? undefined : true}
+                >
+                  {item.startDate ? formatDate(item.startDate) : '—'}
+                </div>
+              ) : null}
+              {/* Mua đứt: cột Kỳ hạn đã nói "Vĩnh viễn" — nói lần hai ở cột Kết thúc là nhiễu. */}
+              <div
+                className="seat-date"
+                data-label={t('license.endDate')}
+                data-empty={item.licenseModel === 'perpetual' ? true : undefined}
+              >
+                {item.licenseModel === 'perpetual' ? (
+                  <span className="muted">—</span>
+                ) : (
+                  <SeatEndCell
+                    seat={item}
+                    licenseModel={item.licenseModel}
+                    fallbackEnd={item.softwareEndDate}
+                  />
+                )}
               </div>
               <div
                 className="seat-note"
                 data-label={t('license.contract')}
+                data-empty={item.contract ? undefined : true}
                 title={item.contract ?? undefined}
               >
                 {orDash(item.contract)}
               </div>
-              <div className="seat-note" data-label={t('license.note')} title={item.note ?? undefined}>
+              <div
+                className="seat-note"
+                data-label={t('license.note')}
+                data-empty={item.note ? undefined : true}
+                title={item.note ?? undefined}
+              >
                 {orDash(item.note)}
               </div>
             </div>

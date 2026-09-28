@@ -60,6 +60,23 @@ describe('ImportPreview — bảng đối chiếu trước khi ghi', () => {
     renderWithI18n(
       <ImportPreview rows={[]} summary={{ create: 0, update: 0, unchanged: 0, skip: 0, error: 0 }} />,
     );
-    expect(screen.getByText('Không có dòng nào cần ghi.')).toBeInTheDocument();
+    expect(
+      screen.getByText('File khớp với dữ liệu hiện có — không có gì để ghi.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  it('toàn dòng không đổi → MỘT khối báo, không bảng rỗng; bấm xem thì hiện các dòng', async () => {
+    const user = userEvent.setup();
+    renderWithI18n(
+      <ImportPreview
+        rows={[{ group: 'Site', rowNumber: 2, action: 'unchanged', label: 'PMH-HO' }]}
+        summary={{ create: 0, update: 0, unchanged: 1, skip: 0, error: 0 }}
+      />,
+    );
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.queryByText('Không có dòng nào cần ghi.')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Hiện cả 1 dòng/ }));
+    expect(screen.getByRole('table')).toBeInTheDocument();
   });
 });
