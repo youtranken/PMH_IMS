@@ -3,7 +3,7 @@ import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-quer
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { orDash } from '@/lib/format';
@@ -28,6 +28,7 @@ import { useToast } from '@/ui/toast';
 import { CatalogForm } from './catalog-form';
 import { CatalogImportDialog } from './catalog-import-dialog';
 import { toCatalogHistory, type CatalogHistoryRow } from './catalog-history-entries';
+import { devicesFilterOf, usageLinks, usageTotal } from './catalog-usage';
 import {
   catalogLabel,
   portRangeLabel,
@@ -358,12 +359,36 @@ function mobileTitle(entity: CatalogEntity, row: CatalogRow): string {
   return catalogLabel(entity, row);
 }
 
-/** Bộ lọc thiết bị ứng với một mục danh mục — `null` khi màn Thiết bị không lọc theo loại này. */
-function devicesFilterOf(entity: CatalogEntity, row: CatalogRow): string | null {
-  if (entity === 'site') return `siteId=${row.id}`;
-  if (entity === 'cabinet') return `siteId=${(row as CabinetRow).siteId}&cabinetId=${row.id}`;
-  if (entity === 'device_type') return `deviceTypeId=${row.id}`;
-  return null;
+/** Chữ "12 thiết bị" cho một con số dùng — dùng chung cho ô bảng, thẻ gọn và câu hỏi lại. */
+function usageText(kind: string, count: number, t: TFunction): string {
+  return t(`catalog.usage_${kind}`, { count, defaultValue: t('catalog.usage_other', { count }) });
+}
+
+/** "Đang dùng ở 12 thiết bị · 1 dải IP" — số nào màn đích lọc được thì bấm sang danh sách lọc sẵn. */
+function UsageCell({ entity, row }: { entity: CatalogEntity; row: CatalogRow }) {
+  const { t } = useTranslation();
+  const links = usageLinks(entity, row);
+  if (links.length === 0) return <span className="muted">{t('catalog.usageNone')}</span>;
+  return (
+    <span>
+      {links.map((item, index) => (
+        <span key={item.kind}>
+          {index > 0 ? ' · ' : null}
+          {item.href ? (
+            <Link to={item.href}>{usageText(item.kind, item.count, t)}</Link>
+          ) : (
+            <span>{usageText(item.kind, item.count, t)}</span>
+          )}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function usageSummary(entity: CatalogEntity, row: CatalogRow, t: TFunction): string {
+  return usageLinks(entity, row)
+    .map((item) => usageText(item.kind, item.count, t))
+    .join(' · ');
 }
 
 /**
@@ -511,7 +536,15 @@ export function CatalogScreen({ me }: { me: Me }) {
         </div>
       ),
     };
-    return [...entityColumns, statusColumn, actionsColumn];
+    const usageColumn: ColumnDef<CatalogRow, unknown> = {
+      id: 'usage',
+      header: t('catalog.usageColumn'),
+      enableSorting: false,
+      cell: ({ row }) => <UsageCell entity={entity} row={row.original} />,
+    };
+    return entity === 'service_port'
+      ? [...entityColumns, statusColumn, actionsColumn]
+      : [...entityColumns, usageColumn, statusColumn, actionsColumn];
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entity, t, canManage, siteNames]);
 
@@ -522,7 +555,8 @@ export function CatalogScreen({ me }: { me: Me }) {
       row.active ? null : <span className="badge muted">{t('catalog.inactive')}</span>,
     subtitle: (row) =>
       entity === 'cabinet' ? siteNames.get((row as CabinetRow).siteId) ?? null : null,
-    meta: (row) => mobileMeta(entity, row, t) || null,
+    meta: (row) =>
+      [mobileMeta(entity, row, t), usageSummary(entity, row, t)].filter(Boolean).join(' · ') || null,
     actions: (row) => (
       <RowActions
         label={t('common.actionsOf', { subject: catalogLabel(entity, row) })}
@@ -548,10 +582,14 @@ export function CatalogScreen({ me }: { me: Me }) {
                 action: t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate'),
                 subject: name,
               }),
-              message: t(
-                catalogRow.active ? 'catalog.confirmDeactivate' : 'catalog.confirmActivate',
-                { name },
-              ),
+              message:
+                t(catalogRow.active ? 'catalog.confirmDeactivate' : 'catalog.confirmActivate', {
+                  name,
+                }) +
+                (catalogRow.active && usageTotal(catalogRow) > 0
+                  ? ' ' +
+                    t('catalog.deactivateInUse', { usage: usageSummary(entity, catalogRow, t) })
+                  : ''),
               danger: catalogRow.active,
               confirmLabel: t(catalogRow.active ? 'catalog.deactivate' : 'catalog.activate'),
             });
@@ -577,6 +615,13 @@ export function CatalogScreen({ me }: { me: Me }) {
         key: 'delete',
         label: t('catalog.delete'),
         danger: true,
+        /* Khóa ngoại chắc chắn chặn — nói trước thay vì để người dùng xác nhận rồi mới nhận 409.
+           Sổ đếm hỏng thì `usage` rỗng và nút vẫn bấm được; khóa ngoại vẫn là hàng rào thật. */
+        disabled: usageTotal(catalogRow) > 0,
+        hint:
+          usageTotal(catalogRow) > 0
+            ? t('catalog.deleteInUse', { usage: usageSummary(entity, catalogRow, t) })
+            : undefined,
         onSelect: () => {
           void (async () => {
             const ok = await askConfirm({
