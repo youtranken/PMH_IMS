@@ -47,6 +47,14 @@ export default {
   select: {
     noOptions: '— Không có lựa chọn —',
   },
+  /* Câu kiểm form dùng chung (`useFormErrors`) — thay bong bóng tiếng Anh của trình duyệt. */
+  formErrors: {
+    required: 'Bắt buộc — chưa nhập ô này.',
+    requiredPick: 'Bắt buộc — chưa chọn ô này.',
+    summary: 'Còn {{count}} ô cần sửa trước khi lưu.',
+    /* Mục danh mục đã vô hiệu mà hồ sơ đang trỏ tới: vẫn hiện để không mất tên, nhưng không chọn mới được (Q-14). */
+    retiredOption: '(ngừng dùng)',
+  },
   datePicker: {
     choose: 'Chọn ngày',
     clear: 'Xóa ngày',
@@ -570,6 +578,8 @@ export default {
     subscription: 'Thuê bao',
     perpetual: 'Vĩnh viễn',
     seatHint: 'Số máy được phép cài. Chỉ áp dụng cho license.',
+    seatInvalid: 'Số ghế phải là số nguyên từ 1 trở lên, chỉ gồm chữ số. Bỏ trống = không giới hạn.',
+    seatBelowUsed: 'Đang có {{used}} máy dùng, giảm xuống {{total}} sẽ vượt ghế — gỡ bớt ghế trước.',
     startDate: 'Bắt đầu',
     endDate: 'Hết hạn',
     expiry: 'Tình trạng hạn',

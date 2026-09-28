@@ -53,7 +53,7 @@ const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
 /** Lọc mã máy rác khỏi danh sách `?deviceIds=` trước khi đưa xuống truy vấn. */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-class SoftwareBodyDto {
+export class SoftwareBodyDto {
   @IsOptional() @IsString() @Length(1, 60) code?: string;
   @IsOptional() @IsString() @Length(1, 200) name?: string;
 
