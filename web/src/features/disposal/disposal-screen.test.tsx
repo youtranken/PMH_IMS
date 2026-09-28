@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import { ToastProvider } from '@/ui/toast';
 import { jsonResponse, renderWithI18n, screen } from '@/test/test-utils';
 import { DisposalScreen } from './disposal-screen';
 
@@ -11,16 +12,27 @@ const DEVICE = {
   detail: 'PC',
   status: 'retired',
   updatedAt: '2026-09-20T01:30:00.000Z',
+  disposedAt: '2026-09-20T01:30:00.000Z',
+  disposedBy: 'system',
+  disposedByName: null,
+  auto: true,
+  reason: null,
 };
+
+const COUNTS = { device: 1, software: 0, service_account: 0, isp: 0 };
 
 function renderWith(truncated: string[]) {
   vi.stubGlobal(
     'fetch',
-    vi.fn(() => Promise.resolve(jsonResponse(200, { items: [DEVICE], truncated }))),
+    vi.fn(() =>
+      Promise.resolve(jsonResponse(200, { items: [DEVICE], total: 1, counts: COUNTS, truncated })),
+    ),
   );
   return renderWithI18n(
     <MemoryRouter>
-      <DisposalScreen />
+      <ToastProvider>
+        <DisposalScreen />
+      </ToastProvider>
     </MemoryRouter>,
   );
 }
@@ -42,5 +54,11 @@ describe('Kho thanh lý', () => {
     renderWith([]);
     await screen.findByText('PC-E2E-01');
     expect(screen.queryByText(/chưa hiện hết/)).toBeNull();
+  });
+
+  /* DP-002: hồ sơ tự thanh lý khi quá hạn (Q-13) phải khác hẳn hồ sơ có người bấm. */
+  it('tự thanh lý → cột Người thanh lý ghi "Hệ thống"', async () => {
+    renderWith([]);
+    expect(await screen.findByText('Hệ thống · tự thanh lý khi quá hạn')).toBeInTheDocument();
   });
 });
