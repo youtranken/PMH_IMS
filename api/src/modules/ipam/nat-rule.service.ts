@@ -79,6 +79,10 @@ export interface NatRuleRecord {
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
+  /** Rule đã gỡ hay chưa — `null` là đang trong sổ. Chỉ khác `null` khi xin `includeVoided`. */
+  voidedAt: Date | null;
+  voidedBy: string | null;
+  voidReason: string | null;
   /** Chỉ có ở kết quả ghi: điều đáng nói nhưng không đủ để chặn (vd mở dải >1000 cổng). */
   warnings?: string[];
 }
@@ -113,10 +117,15 @@ export class NatRuleService {
     private readonly catalog: CatalogApiService,
   ) {}
 
-  async list(filters: { deviceId?: string; siteId?: string; search?: string } = {}): Promise<
-    NatRuleRecord[]
-  > {
-    const where: SQL[] = [isNull(natRuleTable.voidedAt)];
+  /**
+   * `includeVoided` — rule đã gỡ vẫn phải tra được ("port này đóng ngày nào, ai đóng"). Mặc
+   * định TẮT: panel NAT trên trang thiết bị, lượt thanh lý và mọi chỗ hỏi "port nào đang mở"
+   * đều đi qua đây và không được thấy rule đã gỡ.
+   */
+  async list(
+    filters: { deviceId?: string; siteId?: string; search?: string; includeVoided?: boolean } = {},
+  ): Promise<NatRuleRecord[]> {
+    const where: SQL[] = filters.includeVoided ? [] : [isNull(natRuleTable.voidedAt)];
     if (filters.deviceId) where.push(eq(natRuleTable.deviceId, filters.deviceId));
     if (filters.search?.trim()) {
       const text = filters.search.trim();
@@ -783,6 +792,9 @@ export class NatRuleService {
         createdBy: row.createdBy,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
+        voidedAt: row.voidedAt,
+        voidedBy: row.voidedBy,
+        voidReason: row.voidReason,
       };
     });
   }

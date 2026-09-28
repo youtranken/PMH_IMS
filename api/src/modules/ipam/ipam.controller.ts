@@ -171,6 +171,19 @@ class NatQueryDto {
   siteId?: string;
 
   @IsOptional() @IsString() @Length(0, 120) search?: string;
+
+  /** `'true'` = có cả rule đã gỡ (để tra lại "port này đóng ngày nào, ai đóng, vì sao"). */
+  @IsOptional() @IsIn(['true', 'false']) includeVoided?: string;
+}
+
+/** Bộ lọc của sổ NAT gửi xuống service — cờ chuỗi của query đổi thành boolean ở đúng một chỗ. */
+function natFilters(query: NatQueryDto) {
+  return {
+    deviceId: query.deviceId,
+    siteId: query.siteId,
+    search: query.search,
+    includeVoided: query.includeVoided === 'true',
+  };
 }
 
 class IpSearchQueryDto {
@@ -483,7 +496,7 @@ export class IpamController {
   @Roles('sa', 'admin', 'member')
   @Get('nat')
   listNat(@Query() query: NatQueryDto) {
-    return this.nat.list(query);
+    return this.nat.list(natFilters(query));
   }
 
   /**
@@ -494,7 +507,7 @@ export class IpamController {
   @Audited('nat.exported', 'nat_rule')
   @Get('nat/export.xlsx')
   async exportNat(@Query() query: NatQueryDto, @Res() res: Response) {
-    const rows = await this.nat.list(query);
+    const rows = await this.nat.list(natFilters(query));
     const buffer = await this.excel.build({
       sheetName: 'So NAT',
       columns: [
@@ -508,6 +521,10 @@ export class IpamController {
         { header: 'Mở cho ai', width: 24, value: (r) => r.usedBy },
         { header: 'Lý do', width: 40, value: (r) => r.reason },
         { header: 'Đang bật', width: 10, value: (r) => (r.enabled ? 'Có' : 'Không') },
+        // Ba cột chỉ có giá trị khi xuất kèm rule đã gỡ; để trống là rule còn trong sổ.
+        { header: 'Gỡ lúc', width: 18, value: (r) => r.voidedAt },
+        { header: 'Người gỡ', width: 24, value: (r) => r.voidedBy ?? '' },
+        { header: 'Lý do gỡ', width: 36, value: (r) => r.voidReason ?? '' },
       ],
       rows,
     });
