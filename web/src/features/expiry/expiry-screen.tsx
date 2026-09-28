@@ -5,8 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { useExpiryKinds } from '@/lib/expiry-kinds';
-import { formatDate, orDash } from '@/lib/format';
+import { daysUntil } from '@/lib/expiry';
+import { formatDate, formatDateTime, orDash, todayIso } from '@/lib/format';
 import type { Me } from '@/lib/me';
+import { renewPreset } from '@/lib/renew-dates';
+import { PATHS } from '@/lib/routes';
+import { useApiMutation } from '@/lib/api';
 import { DataTable } from '@/ui/data-table';
 import { Pagination } from '@/ui/pagination';
 import { ExpiryBadge } from '@/ui/expiry-badge';
@@ -21,11 +25,18 @@ import { TabPanel, Tabs } from '@/ui/tabs';
 import { useToast } from '@/ui/toast';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { RenewDialog } from '@/ui/renew-dialog';
+import { useConfirm } from '@/ui/confirm-provider';
+import { StickyActionBar } from '@/ui/sticky-action-bar';
 import { DigestRulesPanel } from './digest-rules-panel';
 
 interface ExpiryRow {
   id: string;
   label: string;
+  /** Mã và tên tách riêng (nguồn nào có) — mã in mono cạnh tên thường như mọi bảng khác. */
+  code?: string;
+  name?: string;
+  /** Q-13: ngày hệ thống sẽ tự Thanh lý mục phần mềm đã Hết hạn. */
+  autoRetireOn?: string | null;
   sublabel: string | null;
   kind: string;
   start: string | null;
@@ -35,6 +46,17 @@ interface ExpiryRow {
   canRenew: boolean;
 }
 
+/** Một lượt gia hạn đã ghi (`renewal_history`) — tab "Đã gia hạn". */
+interface RenewalRow {
+  id: string;
+  objectKind: string;
+  objectId: string;
+  label: string;
+  oldEnd: string | null;
+  newEnd: string;
+  actor: string;
+  createdAt: string;
+}
 
 interface ExpiryResponse {
   /** MỘT TRANG kể từ 21/09 (N-01) — không còn là trọn bộ cửa sổ. */
@@ -72,10 +94,13 @@ const WINDOWS = [7, 30, 60, 90, 180, 365];
  */
 export function ExpiryScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
-  const toast = useToast();
   const queryClient = useQueryClient();
+  const askConfirm = useConfirm();
   const [renewing, setRenewing] = useState<ExpiryRow | null>(null);
   const [tab, setTab] = useState('list');
+  const [addingRule, setAddingRule] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const canEditRules = me.role === 'sa' || me.role === 'admin';
 
   /*
    * BA BỘ LỌC SỐNG TRÊN THANH ĐỊA CHỈ, KHÔNG TRONG `useState` (18/09/2026).
@@ -186,10 +211,20 @@ export function ExpiryScreen({ me }: { me: Me }) {
         header: t('expiry.item'),
         cell: ({ row }) => (
           <>
-            <Link to={row.original.link}>{row.original.label}</Link>
+            {row.original.code ? (
+              <>
+                <Link className="mono" to={row.original.link}>
+                  {row.original.code}
+                </Link>{' '}
+                {row.original.name}
+              </>
+            ) : (
+              <Link to={row.original.link}>{row.original.label}</Link>
+            )}
             {row.original.sublabel ? (
               <span className="cell-sub">{row.original.sublabel}</span>
             ) : null}
+            <AutoRetireNote row={row.original} />
           </>
         ),
       },
@@ -205,7 +240,16 @@ export function ExpiryScreen({ me }: { me: Me }) {
         // Sắp ở client chỉ đảo chỗ trang đang xem — xem chú thích ở <DataTable>.
         enableSorting: false,
         header: t('expiry.end'),
-        cell: ({ row }) => orDash(formatDate(row.original.end)),
+        cell: ({ row }) => (
+          <>
+            {orDash(formatDate(row.original.end))}
+            {row.original.start ? (
+              <span className="cell-sub">
+                {t('expiry.startedOn', { date: formatDate(row.original.start) })}
+              </span>
+            ) : null}
+          </>
+        ),
       },
       {
         // Sắp theo "còn bao nhiêu ngày" chứ không theo chữ trên badge: xếp theo chữ thì
@@ -238,8 +282,11 @@ export function ExpiryScreen({ me }: { me: Me }) {
               {t('expiry.renew')}
             </button>
           ) : (
-            // Bảo hành thiết bị không "gia hạn" được — nói rõ thay vì để nút chết.
-            <span className="muted">{t('expiry.notRenewable')}</span>
+            /* Bảo hành không gia hạn ở đây: cho lối sang hồ sơ (sửa ngày ở đó) thay vì một câu
+               xám lặp lại trên mọi dòng, đọc như chữ của một nút bị vô hiệu. */
+            <Link to={row.original.link}>
+              {t('expiry.openRecord')}
+            </Link>
           ),
       },
     ],
@@ -264,11 +311,22 @@ export function ExpiryScreen({ me }: { me: Me }) {
         title={t('expiry.title')}
         subtitle={t('expiry.subtitle')}
         actions={
-          /* Xuất ĐÚNG cửa sổ ngày và loại đang xem — không phải cả bảng (FR-028). */
-          <ExportXlsxButton
-            url={`/api/v1/expiry/export.xlsx?withinDays=${withinDays}${kind ? `&kinds=${kind}` : ''}`}
-            fileName="sap-het-han.xlsx"
-          />
+          tab === 'rules' ? (
+            canEditRules ? (
+              <button type="button" className="btn primary" onClick={() => setAddingRule(true)}>
+                {t('digest.add')}
+              </button>
+            ) : null
+          ) : tab === 'list' ? (
+            /* Xuất ĐÚNG cửa sổ ngày, loại VÀ ô số đang bật — không phải cả bảng (FR-028). */
+            <ExportXlsxButton
+              url={
+                `/api/v1/expiry/export.xlsx?withinDays=${withinDays}` +
+                `${kind ? `&kinds=${kind}` : ''}${state ? `&state=${state}` : ''}`
+              }
+              fileName={state ? `sap-het-han-${EXPORT_SUFFIX[state]}.xlsx` : 'sap-het-han.xlsx'}
+            />
+          ) : null
         }
       />
 
@@ -280,7 +338,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
         không làm gì được với nó — vẫn phải tự dò trong bảng 30 dòng xem cái nào quá hạn.
         Giờ bấm một ô là bảng thu về đúng nhóm ấy; bấm lại là bỏ lọc.
       */}
-      {failedLabels ? (
+      {failedLabels && tab === 'list' ? (
         <div className="alert warn" role="status">
           {t('expiry.failedKinds', { kinds: failedLabels })}{' '}
           <button
@@ -294,8 +352,9 @@ export function ExpiryScreen({ me }: { me: Me }) {
         </div>
       ) : null}
 
-      {summary ? (
-        <KpiStrip dense>
+      {/* Ô số và dải cảnh báo chỉ nói về DANH SÁCH — ở tab Luật hay Đã gia hạn thì chúng lạc chỗ. */}
+      {summary && tab === 'list' ? (
+        <KpiStrip>
           <KpiTile
             value={summary.expired}
             label={t('expiry.expired')}
@@ -314,7 +373,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
           />
           <KpiTile
             value={summary.warning}
-            label={t('expiry.warning')}
+            label={t('expiry.warningUpTo', { days: nguong.warningDays })}
             tone="warn"
             active={state === 'warning'}
             incomplete={incomplete}
@@ -326,6 +385,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
       <Tabs
         items={[
           { key: 'list', label: t('expiry.tabList') },
+          { key: 'renewals', label: t('expiry.tabRenewals') },
           { key: 'rules', label: t('digest.tab') },
         ]}
         value={tab}
@@ -344,8 +404,17 @@ export function ExpiryScreen({ me }: { me: Me }) {
           {kinds.isError ? (
             <LoadError error={kinds.error} onRetry={() => void kinds.refetch()} />
           ) : (
-            <DigestRulesPanel me={me} kinds={kinds.data ?? []} />
+            <DigestRulesPanel
+              me={me}
+              kinds={kinds.data ?? []}
+              adding={addingRule}
+              onAddingChange={setAddingRule}
+            />
           )}
+        </TabPanel>
+      ) : tab === 'renewals' ? (
+        <TabPanel tabKey="renewals">
+          <RenewalsPanel kindLabel={kindLabel} />
         </TabPanel>
       ) : (
         <TabPanel tabKey="list">
@@ -392,7 +461,8 @@ export function ExpiryScreen({ me }: { me: Me }) {
           /* ≤600px: thẻ 2 dòng — mục + badge ngày, rồi "loại · ngày hết hạn" và nút Gia hạn
              nhỏ nếu gia hạn được tại đây. */
           mobileCard={{
-            title: (row) => row.label,
+            title: (row) => row.code ?? row.label,
+            subtitle: (row) => (row.code ? row.name : undefined),
             href: (row) => row.link,
             badge: (row) => <ExpiryBadge end={row.end} thresholds={nguong} />,
             meta: (row) => `${kindLabel(row.kind)} · ${formatDate(row.end)}`,
@@ -416,8 +486,42 @@ export function ExpiryScreen({ me }: { me: Me }) {
            * chế. Muốn sắp theo cột khác thì phải có `?sort=` ở server; ghi vào mục 8.9.
            */
           rowClassName={(row) => (row.daysLeft < 0 ? 'row-danger' : '')}
+          /* Chọn nhiều dòng để gia hạn một lượt (cuối năm cả chục license/SSL cùng một hợp
+             đồng). Dòng không gia hạn được ở đây thì bỏ qua lúc chạy, và nói ra con số đó. */
+          selection={{
+            selected,
+            onToggle: (id) =>
+              setSelected((current) => {
+                const next = new Set(current);
+                if (next.has(id)) next.delete(id);
+                else next.add(id);
+                return next;
+              }),
+            onToggleAll: (ids, checked) =>
+              setSelected((current) => {
+                const next = new Set(current);
+                for (const id of ids) {
+                  if (checked) next.add(id);
+                  else next.delete(id);
+                }
+                return next;
+              }),
+          }}
         />
       )}
+
+      {selected.size > 0 ? (
+        <BulkRenewBar
+          rows={rows.filter((row) => selected.has(row.id))}
+          csrfToken={me.csrfToken}
+          askConfirm={askConfirm}
+          onClear={() => setSelected(new Set())}
+          onDone={() => {
+            setSelected(new Set());
+            void queryClient.invalidateQueries({ queryKey: ['expiry'] });
+          }}
+        />
+      ) : null}
 
       <Pagination
         page={url.page}
@@ -432,13 +536,12 @@ export function ExpiryScreen({ me }: { me: Me }) {
 
       {renewing ? (
         <RenewDialog
-          row={renewing}
+          row={{ ...renewing, code: renewing.code }}
           kindLabel={kindLabel(renewing.kind)}
           csrfToken={me.csrfToken}
           onClose={() => setRenewing(null)}
           onDone={() => {
             setRenewing(null);
-            toast({ message: t('expiry.renewed') });
             void queryClient.invalidateQueries({ queryKey: ['expiry'] });
           }}
         />
@@ -447,3 +550,178 @@ export function ExpiryScreen({ me }: { me: Me }) {
   );
 }
 
+/** Hậu tố tên file xuất theo ô số đang bật — khớp `EXPORT_SUFFIX` phía API. */
+const EXPORT_SUFFIX = { expired: 'qua-han', critical: 'gap', warning: 'sap-toi' } as const;
+
+/** Số mục gia hạn một lượt theo lô: đủ cho "cuối năm", không đủ để lỡ tay gia hạn cả kho. */
+const BULK_MONTHS = 12;
+
+/**
+ * Dòng phụ đỏ "tự thanh lý sau N ngày" của mục phần mềm đã Hết hạn (Q-13) — màn này là nơi cuối
+ * cùng còn kịp gia hạn trước khi hồ sơ vào Kho thanh lý và mọi ghế bị gỡ.
+ */
+function AutoRetireNote({ row }: { row: ExpiryRow }) {
+  const { t } = useTranslation();
+  if (!row.autoRetireOn || row.daysLeft >= 0) return null;
+  const days = Math.max(0, daysUntil(row.autoRetireOn));
+  return (
+    <span className="cell-sub is-danger">
+      {t('expiry.autoRetireOn', { count: days, date: formatDate(row.autoRetireOn) })}
+    </span>
+  );
+}
+
+/**
+ * Thanh dính đáy khi đã chọn dòng: gia hạn +1 năm cho cả lô (mỗi mục tính từ hạn của chính nó,
+ * hoặc từ hôm nay nếu đã quá hạn — `renewPreset`). Chạy từng mục qua cùng `POST /expiry/renew`
+ * của hộp Gia hạn, nên luật của module chủ vẫn áp cho từng dòng.
+ */
+function BulkRenewBar({
+  rows,
+  csrfToken,
+  askConfirm,
+  onClear,
+  onDone,
+}: {
+  rows: ExpiryRow[];
+  csrfToken: string;
+  askConfirm: ReturnType<typeof useConfirm>;
+  onClear: () => void;
+  onDone: () => void;
+}) {
+  const { t } = useTranslation();
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  const renew = useApiMutation<Record<string, unknown>, unknown>('/api/v1/expiry/renew', {
+    csrfToken,
+    refreshMe: false,
+  });
+  const renewable = rows.filter((row) => row.canRenew);
+
+  const run = async () => {
+    const ok = await askConfirm({
+      title: t('expiry.bulkTitle', { count: renewable.length }),
+      message: t('expiry.bulkConfirm', {
+        count: renewable.length,
+        items: renewable.map((row) => row.code ?? row.label).join(', '),
+      }),
+      confirmLabel: t('expiry.bulkRenew', { count: renewable.length }),
+    });
+    if (!ok) return;
+    setBusy(true);
+    const today = todayIso();
+    let done = 0;
+    for (const row of renewable) {
+      try {
+        await renew.mutateAsync({
+          kind: row.kind,
+          id: row.id,
+          endDate: renewPreset(row.end, today, BULK_MONTHS),
+        });
+        done += 1;
+      } catch {
+        toast({
+          message: t('expiry.bulkFailed', { item: row.code ?? row.label }),
+          tone: 'warn',
+        });
+      }
+    }
+    setBusy(false);
+    toast({ message: t('expiry.bulkDone', { count: done }) });
+    onDone();
+  };
+
+  return (
+    <StickyActionBar
+      label={t('expiry.bulkLabel')}
+      note={
+        rows.length > renewable.length
+          ? t('expiry.bulkSkipped', { count: rows.length - renewable.length })
+          : t('expiry.bulkSelected', { count: rows.length })
+      }
+    >
+      <button type="button" className="btn" disabled={busy} onClick={onClear}>
+        {t('expiry.bulkClear')}
+      </button>
+      <button
+        type="button"
+        className="btn primary"
+        disabled={busy || renewable.length === 0}
+        onClick={() => void run()}
+      >
+        {busy ? t('common.loading') : t('expiry.bulkRenew', { count: renewable.length })}
+      </button>
+    </StickyActionBar>
+  );
+}
+
+/** Tab "Đã gia hạn": các lượt gia hạn gần nhất (`GET /expiry/renewals`) — ai, lúc nào, cũ → mới. */
+function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
+  const { t } = useTranslation();
+  const renewals = useQuery({
+    queryKey: ['expiry', 'renewals'],
+    queryFn: () => apiFetch<RenewalRow[]>('/api/v1/expiry/renewals'),
+  });
+  const columns = useMemo<ColumnDef<RenewalRow, unknown>[]>(
+    () => [
+      {
+        accessorKey: 'createdAt',
+        enableSorting: false,
+        header: t('expiry.renewedAt'),
+        cell: ({ row }) => formatDateTime(row.original.createdAt),
+      },
+      {
+        accessorKey: 'label',
+        enableSorting: false,
+        header: t('expiry.item'),
+        // Chỉ hồ sơ phần mềm ghi lượt gia hạn — link về đúng trang chi tiết của nó.
+        cell: ({ row }) => (
+          <Link to={PATHS.softwareItem(row.original.objectId)}>{row.original.label}</Link>
+        ),
+      },
+      {
+        accessorKey: 'objectKind',
+        enableSorting: false,
+        header: t('expiry.kind'),
+        cell: ({ row }) => kindLabel(row.original.objectKind),
+      },
+      {
+        id: 'ends',
+        enableSorting: false,
+        header: t('expiry.oldToNew'),
+        cell: ({ row }) =>
+          `${orDash(formatDate(row.original.oldEnd))} → ${formatDate(row.original.newEnd)}`,
+      },
+      {
+        accessorKey: 'actor',
+        enableSorting: false,
+        header: t('expiry.renewedBy'),
+      },
+    ],
+    [t, kindLabel],
+  );
+
+  if (renewals.isLoading) return <Loading />;
+  if (renewals.isError) {
+    return <LoadError error={renewals.error} onRetry={() => void renewals.refetch()} />;
+  }
+  const rows = renewals.data ?? [];
+  if (rows.length === 0) {
+    return <EmptyState title={t('expiry.renewalsEmpty')} hint={t('expiry.renewalsEmptyHint')} />;
+  }
+  return (
+    <DataTable
+      data={rows}
+      columns={columns}
+      emptyText={t('expiry.renewalsEmpty')}
+      stackOnMobile
+      mobileCard={{
+        title: (row) => row.label,
+        href: (row) => PATHS.softwareItem(row.objectId),
+        meta: (row) =>
+          `${orDash(formatDate(row.oldEnd))} → ${formatDate(row.newEnd)} · ${row.actor}`,
+        aside: (row) => formatDate(row.createdAt),
+      }}
+    />
+  );
+}

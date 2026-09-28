@@ -81,6 +81,6 @@ describe('SoftwareStanding — SW-004/SW-005', () => {
   it('vĩnh viễn: "Đang dùng" + dòng phụ "Vĩnh viễn"', () => {
     renderWithI18n(<SoftwareStanding item={{ ...ROW, licenseModel: 'perpetual', endDate: null }} />);
     expect(screen.getByText('Đang dùng')).toHaveClass('badge', 'ok');
-    expect(screen.getByText('Vĩnh viễn')).toBeInTheDocument();
+    expect(screen.getByText('∞ Vĩnh viễn')).toBeInTheDocument();
   });
 });

@@ -214,7 +214,7 @@ test.describe('Cỗ máy Expiry', () => {
 
     await page.goto('/expiry');
     const row = page.getByRole('row', { name: new RegExp(`PC-E2E-NOREN-${stamp}`) });
-    await expect(row.getByText('Không gia hạn tại đây')).toBeVisible();
+    await expect(row.getByRole('link', { name: 'Mở hồ sơ →' })).toBeVisible();
     await expect(row.getByRole('button', { name: 'Gia hạn' })).toHaveCount(0);
   });
 

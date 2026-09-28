@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import i18n from '@/lib/i18n';
-import { toSoftwareHistory } from './software-history-entries';
+import { softwareHistoryGroup, toSoftwareHistory } from './software-history-entries';
 import type { SoftwareHistoryRow } from './software-types';
 
 /*
@@ -55,7 +55,7 @@ describe('toSoftwareHistory — tab Lịch sử hồ sơ phần mềm phải đ�
     const [entry] = toSoftwareHistory([
       row({ changes: { seatTotal: { before: null, after: 10 } } }),
     ], t);
-    expect(entry.detail).toBe('số seat: (trống) → 10');
+    expect(entry.detail).toBe('số ghế: (trống) → 10');
   });
 
   /**
@@ -97,5 +97,68 @@ describe('toSoftwareHistory — tab Lịch sử hồ sơ phần mềm phải đ�
     const [entry] = toSoftwareHistory([row({ action: 'created', changes: null })], t);
     expect(entry.action).toBe('Tạo hồ sơ');
     expect(entry.detail).toBeNull();
+  });
+});
+
+describe('toSoftwareHistory — nói máy nào, nhà cung cấp nào (SW-044)', () => {
+  it('gán/gỡ ghế in mã máy, không in "đổi deviceId"', () => {
+    const [assigned] = toSoftwareHistory(
+      [row({ action: 'license-assigned', changes: { device: { before: null, after: 'LT-E2E-05' } } })],
+      t,
+    );
+    const [released] = toSoftwareHistory(
+      [row({ action: 'license-released', changes: { device: { before: 'LT-E2E-05', after: null } } })],
+      t,
+    );
+    expect(assigned.detail).toBe('máy LT-E2E-05');
+    expect(released.detail).toBe('máy LT-E2E-05');
+  });
+
+  it('tạo hồ sơ tóm tắt giá trị ban đầu, không in "(trống) →"', () => {
+    const [entry] = toSoftwareHistory(
+      [
+        row({
+          action: 'created',
+          changes: {
+            code: { before: null, after: 'LIC-E2E-M365' },
+            note: { before: null, after: null },
+            kind: { before: null, after: 'license' },
+          },
+        }),
+      ],
+      t,
+    );
+    expect(entry.detail).toBe('mã LIC-E2E-M365; loại License phần mềm');
+  });
+
+  it('nhà cung cấp tra ra tên khi biết', () => {
+    const names: Record<string, string> = { v1: 'Microsoft VN', v2: 'Mắt Bão' };
+    const [entry] = toSoftwareHistory(
+      [row({ changes: { vendorId: { before: 'v1', after: 'v2' } } })],
+      t,
+      (id) => names[id],
+    );
+    expect(entry.detail).toBe('nhà cung cấp: Microsoft VN → Mắt Bão');
+    const [cleared] = toSoftwareHistory(
+      [row({ changes: { vendorId: { before: 'v1', after: null } } })],
+      t,
+      (id) => names[id],
+    );
+    expect(cleared.detail).toBe('nhà cung cấp: Microsoft VN → (trống)');
+  });
+});
+
+describe('softwareHistoryGroup — chip lọc tab Lịch sử (SW-045)', () => {
+  it.each([
+    ['renewed', 'renew'],
+    ['expired', 'renew'],
+    ['auto-retired', 'renew'],
+    ['license-assigned', 'seat'],
+    ['license-released', 'seat'],
+    ['license-terms-updated', 'seat'],
+    ['created', 'profile'],
+    ['updated', 'profile'],
+  ])('%s → %s', (action, group) => {
+    expect(softwareHistoryGroup(action)).toBe(group);
   });
 });

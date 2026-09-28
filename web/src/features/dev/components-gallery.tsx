@@ -144,7 +144,7 @@ export function ComponentsGallery() {
           hiện ra khi lưới gập trên điện thoại.
         </p>
         <div className="seat-head">
-          <span>2/5 ghế đã gán</span>
+          <span>Đã gán 2/5 ghế</span>
         </div>
         <div className="seat-list">
           <div className="seat-hd">

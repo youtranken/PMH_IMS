@@ -1,15 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { formatDate, orDash } from '@/lib/format';
 import { OWNER_PATH } from '@/lib/routes';
 import {
   DISPOSAL_KIND_KEY as KIND_KEY,
+  DISPOSAL_KINDS,
+  disposalDetail,
   disposalStatusKey,
   type DisposalKind,
 } from '@/lib/disposal-kinds';
+import { RowActions } from '@/ui/row-actions';
+import { useListUrlState } from '@/ui/use-list-url-state';
 import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
@@ -55,8 +59,21 @@ const LINK = OWNER_PATH;
  */
 export function DisposalScreen() {
   const { t } = useTranslation();
-  const [search, setSearch] = useState('');
-  const [kind, setKind] = useState<'' | DisposalKind>('');
+  /* Bộ lọc nằm trên THANH ĐỊA CHỈ: mở một hồ sơ rồi Back phải về đúng kết quả đang lọc. */
+  const url = useListUrlState<{ search: string; kind: string }>({
+    emptyFilters: { search: '', kind: '' },
+    searchKey: 'search',
+  });
+  const search = url.filters.search;
+  const kind: '' | DisposalKind = DISPOSAL_KINDS.includes(url.filters.kind as DisposalKind)
+    ? (url.filters.kind as DisposalKind)
+    : '';
+  const setKind = (value: '' | DisposalKind) => url.setFilter('kind', value);
+  const navigate = useNavigate();
+  const clearFilters = () => {
+    url.setSearchInput('');
+    url.setFilter('kind', '');
+  };
 
   const inventory = useQuery({
     queryKey: ['disposal'],
@@ -74,8 +91,7 @@ export function DisposalScreen() {
       if (!term) return true;
       return (
         foldSearch(item.code).includes(term) ||
-        foldSearch(item.name).includes(term) ||
-        foldSearch(item.detail ?? '').includes(term)
+        foldSearch(item.name).includes(term)
       );
     });
   }, [all, search, kind]);
@@ -90,8 +106,8 @@ export function DisposalScreen() {
       <PageHeader title={t('disposal.title')} subtitle={t('disposal.subtitle')} />
 
       <FilterBar
-        search={search}
-        onSearchChange={setSearch}
+        search={url.searchInput}
+        onSearchChange={url.setSearchInput}
         searchPlaceholder={t('disposal.search')}
       >
         <div className="segmented" role="group" aria-label={t('disposal.filterKind')}>
@@ -120,7 +136,7 @@ export function DisposalScreen() {
         </div>
       </FilterBar>
 
-      <p className="alert">{t('disposal.note')}</p>
+      <p className="alert info">{t('disposal.note')}</p>
       {truncated.length > 0 ? (
         <p className="alert">
           {t('disposal.truncated', {
@@ -146,7 +162,15 @@ export function DisposalScreen() {
         all.length === 0 ? (
           <EmptyState title={t('disposal.empty')} hint={t('disposal.emptyHint')} />
         ) : (
-          <EmptyState title={t('disposal.noHit')} hint={t('disposal.noHitHint')} />
+          <EmptyState
+            title={t('disposal.noHit')}
+            hint={t('disposal.noHitHint')}
+            action={
+              <button type="button" className="btn sm" onClick={clearFilters}>
+                {t('disposal.clearFilters')}
+              </button>
+            }
+          />
         )
       ) : (
         <div className="table-wrap">
@@ -157,6 +181,7 @@ export function DisposalScreen() {
                 <th>{t('disposal.kind')}</th>
                 <th>{t('disposal.detail')}</th>
                 <th>{t('disposal.at')}</th>
+                <th className="col-center col-sticky-end">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
@@ -171,7 +196,8 @@ export function DisposalScreen() {
                     <span className="cell-sub">{item.name}</span>
                   </td>
                   <td data-label={t('disposal.kind')}>
-                    <span className="badge plain">{t(KIND_KEY[item.kind])}</span>
+                    {/* Chữ thường thẳng mép với dòng trạng thái bên dưới; trạng thái mới là badge. */}
+                    <span>{t(KIND_KEY[item.kind])}</span>
                     {/*
                       TÊN GỐC CỦA TRẠNG THÁI — thứ cả màn này sinh ra để nói (17/09/2026).
                       `status` được API trả về từ đầu và giữ nguyên tên của module chủ ("đã
@@ -179,10 +205,40 @@ export function DisposalScreen() {
                       Thành thử màn dựng lên vì "ba trạng thái mang ba cái tên khác nhau" lại
                       là màn duy nhất không cho biết hồ sơ này mang cái tên nào.
                     */}
-                    <span className="cell-sub">{statusLabel(item.status, t)}</span>
+                    <span className="cell-sub">
+                      <span className="badge muted">{statusLabel(item.status, t)}</span>
+                    </span>
                   </td>
-                  <td data-label={t('disposal.detail')}>{orDash(item.detail)}</td>
+                  <td data-label={t('disposal.detail')}>
+                    {disposalDetail(item.kind, item.detail, t)}
+                  </td>
                   <td data-label={t('disposal.at')}>{orDash(formatDate(item.updatedAt))}</td>
+                  <td className="col-center col-sticky-end" data-label={t('common.actions')}>
+                    <div className="action-cell">
+                      <RowActions
+                        label={t('common.actionsOf', { subject: item.code })}
+                        items={[
+                          {
+                            key: 'open',
+                            label: t('disposal.open'),
+                            onSelect: () => navigate(LINK[item.kind](item.id)),
+                          },
+                          /* Khôi phục đi thẳng tới hộp Khôi phục của module chủ — chỉ phần
+                             mềm có hộp đó (Q-13); loại khác đổi trạng thái trong Sửa hồ sơ. */
+                          ...(item.kind === 'software'
+                            ? [
+                                {
+                                  key: 'restore',
+                                  label: t('software.restore'),
+                                  onSelect: () =>
+                                    navigate(`${LINK.software(item.id)}?restore=1`),
+                                },
+                              ]
+                            : []),
+                        ]}
+                      />
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -73,7 +73,7 @@ export function DeviceLicensesExpand({
               </div>
               <div data-label={t('software.licenseModel')}>
                 {item.licenseModel === 'perpetual' ? (
-                  <span className="badge ok plain">{t('software.perpetual')}</span>
+                  <span className="badge outline plain">∞ {t('software.perpetual')}</span>
                 ) : (
                   <span className="muted">{t('software.subscription')}</span>
                 )}

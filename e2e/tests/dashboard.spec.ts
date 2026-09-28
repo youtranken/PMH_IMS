@@ -470,7 +470,7 @@ test.describe('DASH-002 · khối Sắp hết hạn dạng bảng, hai làn khô
 
     // Gia hạn ngay trên dòng — cùng hộp với màn /expiry.
     await row.getByRole('button', { name: 'Gia hạn', exact: true }).click();
-    const dialog = page.getByRole('dialog', { name: /^Gia hạn — / });
+    const dialog = page.getByRole('dialog', { name: /^Gia hạn / });
     await expect(dialog).toBeVisible();
     await dialog.getByRole('button', { name: 'Hạn mới', exact: true }).click();
     await page.getByRole('button', { name: 'Tháng sau' }).click();
@@ -479,7 +479,7 @@ test.describe('DASH-002 · khối Sắp hết hạn dạng bảng, hai làn khô
     const renewed = page.waitForResponse((r) => r.url().endsWith('/api/v1/expiry/renew'));
     await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gia hạn' }).click();
     expect((await renewed).status()).toBe(201);
-    await expect(page.getByText('Đã gia hạn.')).toBeVisible();
+    await expect(page.getByText(/^Đã gia hạn .+ tới \d{2}\/\d{2}\/\d{4}\.$/)).toBeVisible();
     // Hạn mới xa hơn 30 ngày → mục rời khối, trang chủ tự đọc lại.
     await expect(row).toHaveCount(0);
   });
@@ -509,7 +509,7 @@ test.describe('DASH-002 · khối Sắp hết hạn dạng bảng, hai làn khô
 
     const row = expiring.getByRole('row', { name: new RegExp(`License E2E bảng ${stamp}`) });
     await row.getByRole('button', { name: 'Gia hạn', exact: true }).click();
-    const dialog = page.getByRole('dialog', { name: /^Gia hạn — / });
+    const dialog = page.getByRole('dialog', { name: /^Gia hạn / });
     await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gia hạn' }).click();
     await expect(dialog.getByRole('alert')).toHaveText('Chọn hạn mới.');
     await dialog.getByRole('button', { name: 'Hủy' }).click();

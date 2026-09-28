@@ -61,8 +61,7 @@ async function fillSoftwareBasics(page: Page, code: string, name: string) {
   const form = page.getByRole('dialog');
   await form.getByRole('textbox', { name: 'Mã hồ sơ' }).fill(code);
   await form.getByRole('textbox', { name: 'Tên hồ sơ' }).fill(name);
-  await form.getByRole('button', { name: 'Kỳ hạn' }).click();
-  await page.getByRole('option', { name: 'Vĩnh viễn', exact: true }).click();
+  await form.getByRole('radio', { name: 'Vĩnh viễn', exact: true }).check();
   return form;
 }
 

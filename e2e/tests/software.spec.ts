@@ -23,8 +23,7 @@ async function fillSoftware(
   const form = page.getByRole('dialog');
   await form.getByRole('textbox', { name: 'Mã hồ sơ' }).fill(values.code);
   await form.getByRole('textbox', { name: 'Tên hồ sơ' }).fill(values.name);
-  await form.getByRole('button', { name: 'Loại', exact: true }).click();
-  await page.getByRole('option', { name: values.kind, exact: true }).click();
+  await form.getByRole('radio', { name: values.kind, exact: true }).check();
   if (values.seats) {
     await form.getByRole('textbox', { name: 'Số ghế' }).fill(values.seats);
   }
@@ -205,7 +204,7 @@ test.describe('Hồ sơ phần mềm', () => {
 
     await page.goto('/software');
     await page
-      .getByRole('searchbox', { name: 'Tìm theo mã, tên hoặc ghi chú' })
+      .getByRole('searchbox', { name: 'Tìm theo mã, tên, ghi chú hoặc mã máy' })
       .fill(`SORT-E2E-${stamp}`);
     await expect(page.getByRole('row')).toHaveCount(4); // 1 dòng tiêu đề + 3 hồ sơ
 

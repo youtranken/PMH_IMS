@@ -30,6 +30,16 @@ input:disabled {
   background: var(--surface-2);
   color: var(--ink-2);
 }
+/* Ô nhập mã (`inp mono`): chỉ đổi PHÔNG. `.mono` thu chữ còn 0,85em cho mã trong bảng — áp vào
+   ô nhập thì ô thấp hơn ô bên cạnh và đáy hai ô lệch nhau. */
+.inp.mono {
+  font-size: inherit;
+}
+/* Ô tick / nút chọn theo màu thương hiệu thay cho xanh dương mặc định của trình duyệt. */
+input[type='checkbox'],
+input[type='radio'] {
+  accent-color: var(--primary);
+}
 select {
   cursor: pointer;
   appearance: none;
