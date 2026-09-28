@@ -91,7 +91,12 @@ export function Tabs({
       tabOffset: tabRect.left - barRect.left + bar.scrollLeft,
       tabWidth: tabRect.width,
     });
-    const behavior: ScrollBehavior = mounted.current ? 'smooth' : 'auto';
+    // Lần đầu nhảy thẳng (trang vừa mở, không có gì để "đi theo"); người dùng tắt chuyển
+    // động thì cũng nhảy thẳng.
+    const reduced =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const behavior: ScrollBehavior = mounted.current && !reduced ? 'smooth' : 'auto';
     mounted.current = true;
     if (left === bar.scrollLeft) return;
     if (typeof bar.scrollTo === 'function') bar.scrollTo({ left, behavior });
