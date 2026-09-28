@@ -1260,6 +1260,7 @@ export default {
     offboardVault: 'Quyền két sắt của người này',
     offboardDevices: 'Thiết bị đang ghi tên người này',
     changeRole: 'Đổi vai trò…',
+    changeRoleSubmit: 'Đổi vai trò',
     changeRoleOf: 'Đổi vai trò: {{name}}',
     changeRoleFromMember: 'Lên Quản trị / Super Admin là xem được MỌI két theo vai — quyền két đã gán riêng không còn tác dụng.',
     changeRoleToMember: 'Hạ xuống Thành viên: người này mất quyền xem két theo vai — gán lại quyền két cần thiết ở màn Quyền két sắt.',

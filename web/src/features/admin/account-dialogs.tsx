@@ -198,7 +198,7 @@ export function RoleDialog({
               );
             }}
           >
-            {busy ? t('common.loading') : t('accounts.changeRole')}
+            {busy ? t('common.loading') : t('accounts.changeRoleSubmit')}
           </button>
         </>
       }
