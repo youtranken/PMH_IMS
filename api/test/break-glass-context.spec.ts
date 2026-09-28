@@ -149,4 +149,74 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
     expect(after.grantSecondsLeft).toBeGreaterThan(2 * 3600 - 60);
     expect(after.grantSecondsLeft).toBeLessThanOrEqual(2 * 3600);
   });
+
+  it('người xin thấy trần giờ cấp (để chọn nấc giờ); tầng khác không nhận', async () => {
+    const member = `xin-${randomUUID().slice(0, 8)}@qa.test`;
+    const verdict = await breakGlass.verdictFor(member, 'device', randomUUID());
+    expect(verdict.maxGrantHours).toBe(24);
+  });
+
+  describe('lần xin gần nhất bị từ chối', () => {
+    it('phiếu MỚI NHẤT của chính người xin trên đối tượng này bị từ chối: nhận giờ + ghi chú', async () => {
+      const member = `xin-${randomUUID().slice(0, 8)}@qa.test`;
+      const subject = randomUUID();
+      const row = await request(member, subject);
+      await breakGlass.deny('sa@qa.test', row.id, 'Lý do chưa đủ cụ thể');
+
+      const verdict = await breakGlass.verdictFor(member, 'device', subject);
+      expect(verdict.canRequest).toBe(true);
+      expect(verdict.lastDenied?.note).toBe('Lý do chưa đủ cụ thể');
+      expect(verdict.lastDenied?.at).toBeInstanceOf(Date);
+    });
+
+    it('đã gửi phiếu mới sau lần bị từ chối thì thôi nhắc', async () => {
+      const member = `xin-${randomUUID().slice(0, 8)}@qa.test`;
+      const subject = randomUUID();
+      const denied = await request(member, subject);
+      await breakGlass.deny('sa@qa.test', denied.id, 'Chưa rõ');
+      const again = await request(member, subject);
+      await breakGlass.cancel(member, again.id);
+
+      const verdict = await breakGlass.verdictFor(member, 'device', subject);
+      expect(verdict.lastDenied).toBeNull();
+    });
+
+    it('KHÔNG lộ lời từ chối phiếu của người khác trên cùng đối tượng', async () => {
+      const other = `khac-${randomUUID().slice(0, 8)}@qa.test`;
+      const member = `xin-${randomUUID().slice(0, 8)}@qa.test`;
+      const subject = randomUUID();
+      const theirs = await request(other, subject);
+      await breakGlass.deny('sa@qa.test', theirs.id, 'Ghi chú riêng của người khác');
+
+      const verdict = await breakGlass.verdictFor(member, 'device', subject);
+      expect(verdict.lastDenied).toBeNull();
+    });
+  });
+
+  describe('dòng thời gian của phiếu (trang chi tiết)', () => {
+    it('người duyệt thấy từng bước: ai duyệt, ai thu hồi, lúc nào', async () => {
+      const member = `xin-${randomUUID().slice(0, 8)}@qa.test`;
+      const row = await request(member);
+      await breakGlass.approve('sa@qa.test', row.id, { hours: 2 });
+      await breakGlass.revoke('admin1@qa.test', row.id, 'Xong việc');
+
+      const view = await breakGlass.detail('admin2@qa.test', true, row.id);
+      expect(view.timeline?.map((step) => [step.state, step.actor])).toEqual([
+        ['approved', 'sa@qa.test'],
+        ['revoked', 'admin1@qa.test'],
+      ]);
+      expect(view.timeline?.[1].note).toBe('Xong việc');
+      expect(view.timeline?.[0].at).toBeInstanceOf(Date);
+    });
+
+    it('người xin tự đọc phiếu của mình: không nhận dòng thời gian (tên người quyết khác)', async () => {
+      const member = `xin-${randomUUID().slice(0, 8)}@qa.test`;
+      const row = await request(member);
+      await breakGlass.approve('sa@qa.test', row.id, { hours: 2 });
+      await breakGlass.revoke('admin1@qa.test', row.id);
+
+      const view = await breakGlass.detail(member, false, row.id);
+      expect(view.timeline).toBeNull();
+    });
+  });
 });

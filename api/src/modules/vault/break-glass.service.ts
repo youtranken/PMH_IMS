@@ -90,6 +90,18 @@ export interface BreakGlassDetail extends BreakGlassView {
   /** Số phiếu người này đã gửi trong `recentWindowDays` ngày qua, tính cả phiếu đang xem. */
   recentCount: number | null;
   recentWindowDays: number | null;
+  /**
+   * Từng bước quyết của phiếu, cũ trước — chỉ người duyệt nhận. `decidedBy` chỉ giữ người
+   * duyệt ĐẦU TIÊN, nên không có dòng này thì phiếu đã thu hồi không nói được ai cắt, lúc nào.
+   */
+  timeline: BreakGlassStep[] | null;
+}
+
+export interface BreakGlassStep {
+  state: string;
+  actor: string;
+  at: Date;
+  note: string | null;
 }
 
 /** Đường tới két của từng loại hồ sơ — đích của nút "Mở két" trong thư báo được duyệt. */
@@ -120,6 +132,13 @@ export interface AccessVerdict {
    * đếm lùi từ con số này chứ không tự trừ theo đồng hồ máy. `null` khi không có hạn/không có quyền.
    */
   grantSecondsLeft: number | null;
+  /** Trần giờ cấp (`breakglass.max_grant_hours`) — người xin chọn nấc giờ trong trần. */
+  maxGrantHours: number | null;
+  /**
+   * Phiếu MỚI NHẤT của chính người này trên đối tượng này đã bị từ chối: lúc nào + ghi chú của
+   * người duyệt, để họ không gửi lại y nguyên lý do vừa bị chê. Chỉ phiếu của chính họ.
+   */
+  lastDenied: { at: Date | null; note: string | null } | null;
 }
 
 /**
@@ -215,10 +234,16 @@ export class BreakGlassService implements OnModuleInit {
     }
     const [view] = await this.views([row], canDecide);
     if (!canDecide) {
-      return { ...view, requesterRole: null, recentCount: null, recentWindowDays: null };
+      return {
+        ...view,
+        requesterRole: null,
+        recentCount: null,
+        recentWindowDays: null,
+        timeline: null,
+      };
     }
     const windowDays = Math.max(1, await this.config.getNumber('breakGlassRecentWindowDays'));
-    const [requesterRole, recent] = await Promise.all([
+    const [requesterRole, recent, history] = await Promise.all([
       this.users.roleByEmail(row.requester),
       this.approvals.page(
         {
@@ -228,8 +253,24 @@ export class BreakGlassService implements OnModuleInit {
         },
         { limit: 1, offset: 0 },
       ),
+      this.approvals.history(id),
     ]);
-    return { ...view, requesterRole, recentCount: recent.total, recentWindowDays: windowDays };
+    const timeline = history
+      .filter((step) => step.toState !== null && step.toState !== 'pending')
+      .map((step) => ({
+        state: step.toState as string,
+        actor: step.actor,
+        at: step.createdAt,
+        note: ((step.detail as { note?: string | null } | null)?.note ?? null) || null,
+      }))
+      .reverse();
+    return {
+      ...view,
+      requesterRole,
+      recentCount: recent.total,
+      recentWindowDays: windowDays,
+      timeline,
+    };
   }
 
   /** Số người duyệt được một phiếu của `requester` — mọi SA/Admin đang hoạt động trừ chính họ. */
@@ -265,6 +306,8 @@ export class BreakGlassService implements OnModuleInit {
         pending: null,
         notifiedApprovers: null,
         grantSecondsLeft: null,
+        maxGrantHours: null,
+        lastDenied: null,
       };
     }
     if (tier === 'whitelist') {
@@ -277,10 +320,12 @@ export class BreakGlassService implements OnModuleInit {
         pending: null,
         notifiedApprovers: null,
         grantSecondsLeft: null,
+        maxGrantHours: null,
+        lastDenied: null,
       };
     }
 
-    const [grant, pending] = await Promise.all([
+    const [grant, pending, latest, maxGrantHours] = await Promise.all([
       this.approvals.activeGrantFor({
         kind: BREAK_GLASS_KIND,
         requester: memberEmail,
@@ -288,7 +333,18 @@ export class BreakGlassService implements OnModuleInit {
         subjectId: ownerId,
       }),
       this.pendingOf(memberEmail, ownerType, ownerId),
+      this.approvals.page(
+        {
+          kind: BREAK_GLASS_KIND,
+          requester: memberEmail,
+          subjectType: ownerType,
+          subjectId: ownerId,
+        },
+        { limit: 1, offset: 0 },
+      ),
+      this.maxGrantHours(),
     ]);
+    const last = latest.items[0];
 
     return {
       tier,
@@ -303,6 +359,9 @@ export class BreakGlassService implements OnModuleInit {
       grantSecondsLeft: grant?.expiresAt
         ? Math.max(0, Math.floor((grant.expiresAt.getTime() - Date.now()) / 1000))
         : null,
+      maxGrantHours,
+      lastDenied:
+        last?.state === 'denied' ? { at: last.decidedAt, note: last.decisionNote } : null,
     };
   }
 
@@ -607,6 +666,12 @@ export class BreakGlassService implements OnModuleInit {
    * một grant hết hạn ngay lúc sinh ra trông y như hệ thống hỏng.
    */
   private async clampHours(requested: number): Promise<number> {
+    const max = await this.maxGrantHours();
+    const asked = !Number.isFinite(requested) || requested <= 0 ? 1 : Math.round(requested);
+    return Math.max(1, Math.min(asked, max));
+  }
+
+  private async maxGrantHours(): Promise<number> {
     const configured = await this.config.getNumber('breakGlassMaxGrantHours');
     /**
      * Trần cấu hình cũng có SÀN 1 giờ.
@@ -616,8 +681,6 @@ export class BreakGlassService implements OnModuleInit {
      * hỏng và không có dòng lỗi nào. Muốn tắt break-glass thì gỡ quyền ở ma trận 6.2, không
      * phải hạ trần xuống 0 (code review Epic 6, finding 5).
      */
-    const max = Math.max(1, configured);
-    const asked = !Number.isFinite(requested) || requested <= 0 ? 1 : Math.round(requested);
-    return Math.max(1, Math.min(asked, max));
+    return Math.max(1, configured);
   }
 }
