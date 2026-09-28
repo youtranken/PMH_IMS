@@ -2105,7 +2105,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
 
     const main = page.getByRole('main');
     const timKiem = page.getByRole('searchbox', {
-      name: 'Tìm theo mã, tên, serial hoặc model',
+      name: 'Tìm mã, tên, serial, IP hoặc người dùng',
     });
 
     /*
@@ -2245,19 +2245,18 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
 
     await page.goto('/devices');
     await page
-      .getByRole('searchbox', { name: 'Tìm theo mã, tên, serial hoặc model' })
+      .getByRole('searchbox', { name: 'Tìm mã, tên, serial, IP hoặc người dùng' })
       .fill(`TB-E2E-BANG-${stamp}`);
     await expect(page.getByRole('row'), 'lọc xong phải còn đúng 12 máy vừa dựng').toHaveCount(13);
 
     await expect
       .poll(() => nhanCua(page.getByRole('columnheader')), {
         message:
-          'Bảng thiết bị phải có đúng 8 cột, đúng thứ tự này — bớt một cột là bớt một thứ người dùng không còn tra được trên danh sách',
+          'Bảng thiết bị có đúng 7 cột, đúng thứ tự này. Loại máy là dòng phụ dưới Tên (không bớt thông tin): thêm cột là cột Tên bị ép và nút Sửa bị đẩy khỏi khung ở 1280px',
       })
       .toEqual([
         'Mã thiết bị',
         'Tên thiết bị',
-        'Loại',
         'Vị trí và người giữ',
         'Người sử dụng',
         'Bảo hành',
@@ -2650,7 +2649,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
 
     await page.goto('/devices');
     await page
-      .getByRole('searchbox', { name: 'Tìm theo mã, tên, serial hoặc model' })
+      .getByRole('searchbox', { name: 'Tìm mã, tên, serial, IP hoặc người dùng' })
       .fill(code);
     // `exact: true`: ô "Thao tác" cùng dòng mang nút "Sửa máy <mã>", nên khớp theo chuỗi con
     // là trúng hai ô một lúc — Playwright dừng ở strict-mode violation, không phải ở điều đang kiểm.
@@ -2833,9 +2832,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         message:
           'Đầu hồ sơ thiết bị có đúng hai việc làm được: sửa hồ sơ, và thanh lý (nút đỏ vì nó LẤY ĐI thứ gì đó)',
       })
-      // Cái thứ ba không phải một VIỆC mà là một CÁCH NHÌN: bản đồ quan hệ lật sang lượt xem
-      // "thanh lý sẽ cắt gì" — chỉ tô lại những nút sẽ bị gỡ, không ghi gì xuống DB.
-      .toEqual(['Sửa hồ sơ', 'Thanh lý', 'Xem lượt thanh lý cắt gì']);
+      // "Thanh lý sẽ gỡ gì" nằm TRONG hộp Thanh lý (DEV-050), không còn là nút rời trên bản đồ.
+      .toEqual(['Sửa hồ sơ', 'Thanh lý']);
 
     /*
      * MỖI Ô KỂ MỘT LẦN — hoặc là một ô có giá trị, hoặc là một cái tên trong dòng "Chưa khai".

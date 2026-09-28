@@ -1198,3 +1198,7 @@ table.access-grid thead .access-row-head {
 /* Bản gọn cho dải chỉ số đầu trang: chỉ còn cái thanh. */
 .wt-mini .wt-track { height: 6px; }
 .wt-mini .wt-now { top: -2px; bottom: -2px; }
+
+/* `LocationText`: mỗi mã (site, tủ) là một khối không ngắt; chỗ ngắt duy nhất là sau dấu "·".
+   Thắng `overflow-wrap: anywhere` của ô cha (`.rail-v`), thứ cắt "TU-E2E-" / "HCM-01". */
+.location-text .mono { white-space: nowrap; }

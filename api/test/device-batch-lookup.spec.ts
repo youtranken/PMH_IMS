@@ -8,6 +8,7 @@ import { DevicesService } from '../src/modules/devices/devices.service';
 import type { AuditWriterService } from '../src/modules/audit/audit-writer.service';
 import type { DeviceRetirementRegistry } from '../src/common/device-retirement.registry';
 import { createScratchDb, migrationsDir, testDbUrl, type ScratchDb } from './db';
+import { DeviceSearchRegistry } from '../src/common/device-search.registry';
 
 /**
  * TRA THIẾT BỊ CHO MỘT DANH SÁCH PHẢI LÀ MỘT LƯỢT, KHÔNG PHẢI MỖI DÒNG MỘT LƯỢT.
@@ -75,7 +76,7 @@ describe('Tra nhiều thiết bị: một lượt, không phải mỗi dòng m�
       releaseAllWithin: () => Promise.resolve(),
     } as unknown as DeviceRetirementRegistry;
     const catalog = new CatalogApiService(new CatalogService(db, noAudit));
-    devices = new DevicesService(db, catalog, noAudit, noRetirement);
+    devices = new DevicesService(db, catalog, noAudit, noRetirement, new DeviceSearchRegistry());
 
     const type = await scratch.pool.query<{ id: string }>(
       `INSERT INTO device_type (name) VALUES ('PC kiểm N+1') RETURNING id`,

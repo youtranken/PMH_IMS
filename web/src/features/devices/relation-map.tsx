@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 /**
@@ -16,10 +16,8 @@ import { useTranslation } from 'react-i18next';
  * secret, giấy tờ). Thuộc tính của chính máy (trạng thái, vị trí, người dùng, bảo hành) nằm ở
  * thẻ định danh bên phải; vẽ lại ở đây là in hai lần một giá trị.
  *
- * KHÔNG dùng thư viện vẽ: SVG thuần + thẻ định vị theo phần trăm, khoảng 90 dòng tính toán.
- * Lý do không phải tiết kiệm — mà vì mấy thư viện đồ thị chạy mô phỏng vật lý: mở hai lần ra
- * hai hình khác nhau, nút còn rung. Đây là hồ sơ tài sản, không phải đồ chơi. Toạ độ tính từ
- * chỉ số nên hình luôn y hệt, và bài kiểm chụp lại được.
+ * KHÔNG dùng thư viện vẽ: mấy thư viện đồ thị chạy mô phỏng vật lý, mở hai lần ra hai hình
+ * khác nhau, nút còn rung. Đây là hồ sơ tài sản, không phải đồ chơi — lưới CSS cố định.
  */
 
 /** Một thứ máy đang giữ. `count` là số dòng thật, không phải ước lượng. */
@@ -31,7 +29,7 @@ export interface RelationNode {
   /** Một hai dòng xem trước lấy từ chính dữ liệu — để nhìn là biết, khỏi bấm vào. */
   lines: { text: string; tone?: 'warn' | 'danger'; mono?: boolean }[];
   /**
-   * Sợi này BỊ CẮT khi thanh lý có tick "Dọn hết thứ liên quan".
+   * Sợi này BỊ GỠ khi thanh lý chọn "Gỡ hết rồi thanh lý" — dây nối vẽ nét đứt đỏ.
    * Lấy theo các file `*-device-retirement.ts` bên API, không phải đoán.
    */
   cut: boolean;
@@ -88,38 +86,27 @@ function Glyph({ name }: { name: IconKey }) {
   );
 }
 
-/* --- Bố cục do MÃ TÍNH, không đóng đinh toạ độ ------------------------------
- * Nút xếp đều trên một hình bầu dục quanh hạch, bắt đầu từ bên trái đi theo chiều kim đồng hồ.
- * Máy có tám thứ thì tám nút, có ba thì ba nút và vòng tự co lại — KHÔNG bao giờ có ô trống,
- * vì không có ô nào được đóng đinh sẵn. Đây là câu trả lời cho "máy chỉ có 3 thứ thì sao".
+/* --- Bố cục: LƯỚI BA CỘT CỐ ĐỊNH ---------------------------------------------
+ * Nút chia đều hai cột trái/phải, hạch ở cột giữa. Toạ độ phần trăm trên một hình bầu dục
+ * (bản trước) đè nút lên hạch và lên nhau khi cột chính hẹp lại, vì khung co còn chữ thì
+ * không. Lưới thì không chồng được: mỗi nút có ô riêng, cách hạch bằng đúng một khe cột, và
+ * nút cao theo nội dung nên số đếm không bao giờ bị cắt ở mép.
+ *
+ * Dây nối là đường kẻ CSS (xem `.rmap-col` trong css/relation-map.css), không phải SVG tính
+ * toạ độ — nên hình vẫn y hệt giữa hai lần mở, và không có phép tính nào để lệch.
  * -------------------------------------------------------------------------- */
-const W = 1200;
-const HUB_W = 240;
-const HUB_H = 100;
-const ND_W = 214;
-const ND_H = 96;
 
-function heightFor(n: number): number {
-  if (n === 0) return 300;
-  if (n <= 2) return 420;
-  if (n <= 4) return 520;
-  if (n <= 6) return 640;
-  return 780;
-}
-
-/** Điểm cắt của tia (dx,dy) với mép hình chữ nhật — để sợi dây chạm đúng mép, không đâm vào giữa. */
-function edgePoint(cx: number, cy: number, w: number, h: number, dx: number, dy: number) {
-  const tx = dx === 0 ? Infinity : w / 2 / Math.abs(dx);
-  const ty = dy === 0 ? Infinity : h / 2 / Math.abs(dy);
-  const t = Math.min(tx, ty);
-  return [cx + dx * t, cy + dy * t] as const;
+/** Mã dài thì thu cỡ chữ của hạch: mã KHÔNG được ngắt giữa chừng (DEV-043). */
+function hubSize(code: string): string {
+  if (code.length > 18) return ' xs';
+  if (code.length > 13) return ' sm';
+  return '';
 }
 
 export function RelationMap({
   hubCode,
   nodes,
   missing,
-  cutSummary,
   isUnknown = false,
   isLoading = false,
 }: {
@@ -127,71 +114,54 @@ export function RelationMap({
   nodes: RelationNode[];
   /** Tên những khu máy này KHÔNG có — gom về một dòng, không vẽ ô rỗng. */
   missing: string[];
-  /** Câu nói rõ lượt thanh lý cắt gì, giữ gì. Không có thì không hiện nút chế độ. */
-  cutSummary?: ReactNode;
   /**
    * CHƯA ĐỌC ĐƯỢC nguồn nuôi bản đồ (lượt gọi đang bay, hoặc vừa hỏng).
    *
    * Không có cờ này thì mọi nguồn lỗi đều đi qua `?? []` và hoá thành danh sách rỗng — bản
    * đồ in ra "Máy này chưa giữ gì của ai… Thanh lý nó không kéo theo gì cả" cho một cái máy
-   * đang giữ IP, rule NAT và ghế license. Đo ngày 18/09/2026 bằng cách ép `/panels` trả 500:
-   * đúng câu đó hiện lên, kèm "Chưa gắn:" liệt kê trọn sáu khu.
-   *
-   * Trang vẫn có khối `LoadError` ở dưới, nhưng nó nằm SAU bản đồ và nói ngược lại — người
-   * đọc tin câu khẳng định ở trên, đó là câu họ vào đây để tìm.
+   * đang giữ IP, rule NAT và ghế license.
    */
   isUnknown?: boolean;
   /**
-   * CHƯA BIẾT VÌ ĐANG TẢI — khác hẳn chưa biết vì HỎNG (19/09/2026).
+   * CHƯA BIẾT VÌ ĐANG TẢI — khác hẳn chưa biết vì HỎNG.
    *
-   * Cả hai đều phải chặn câu "máy này chưa giữ gì" và dòng "Chưa gắn:", nên cả hai đều bật
-   * `isUnknown`. Nhưng câu NÓI RA thì không được giống nhau: `relationMap.unknown` là một lời
-   * cảnh báo kèm chỉ dẫn ("Đừng dựa vào nó để quyết định thanh lý cho tới khi tải lại được"),
-   * đúng cho lúc hỏng và sai cho một nhịp chờ vài trăm mili giây.
-   *
-   * Đo ngày 19/09: `device` về trước, `/panels` còn đang bay, nên MỌI lượt mở trang chi tiết
-   * đều nháy câu cảnh báo ấy — và vì nó nằm trong `role="status"`, trình đọc màn hình đọc
-   * trọn hai câu lên rồi nó biến mất. Người dùng nhận một cảnh báo sai ở mỗi lượt mở trang.
-   *
-   * Bật cờ này thì khu nói "Đang đọc…" và KHÔNG dùng vùng sống.
+   * Cả hai đều phải chặn câu "máy này chưa giữ gì" và dòng "Chưa gắn:", nhưng câu nói ra
+   * không được giống nhau: `relationMap.unknown` là lời cảnh báo kèm chỉ dẫn, đúng cho lúc
+   * hỏng và sai cho một nhịp chờ vài trăm mili giây. Bật cờ này thì khu nói "Đang đọc…".
    */
   isLoading?: boolean;
 }) {
   const { t } = useTranslation();
-  const [showCut, setShowCut] = useState(false);
-  /* `useId` chứ không phải chuỗi cứng `"rmap-cut-sum"` — cùng lý lẽ đã viết cho `DetailSection`
-     ở `ui/detail-layout.tsx`: id gõ tay chỉ an toàn chừng nào không trang nào vẽ hai bản đồ cùng
-     lúc, và đó là điều kiện không ai cưỡng chế được. Ngày nó vỡ thì `aria-controls` trỏ nhầm khu
-     TRONG IM LẶNG. Lượt rà soát 19/09 chỉ ra rằng chính commit dựng `DetailSection` lại gõ tay id
-     ở đây, tức luật vừa viết ra đã có ngoại lệ trong cùng một lượt. */
-  const idKhuCat = useId();
 
   const n = nodes.length;
-  const H = heightFor(n);
-  const cx = W / 2;
-  const cy = H / 2;
-  const rx = n <= 3 ? 330 : n <= 5 ? 390 : 430;
-  const ry = Math.max(80, H / 2 - 120);
-  const pct = (value: number, total: number) => `${((value / total) * 100).toFixed(2)}%`;
+  // Bên trái nhận nửa lớn hơn: đọc từ trái sang, nút đầu tiên luôn ở góc trên bên trái.
+  const left = nodes.slice(0, Math.ceil(n / 2));
+  const right = nodes.slice(Math.ceil(n / 2));
 
-  const placed = nodes.map((node, i) => {
-    const angle = ((180 - i * (360 / n)) * Math.PI) / 180;
-    const nx = cx + rx * Math.cos(angle);
-    const ny = cy - ry * Math.sin(angle);
-    const dx = nx - cx;
-    const dy = ny - cy;
-    const p1 = edgePoint(cx, cy, HUB_W, HUB_H, dx, dy);
-    const p2 = edgePoint(nx, ny, ND_W, ND_H, -dx, -dy);
-    const len = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]) || 1;
-    // Đẩy điểm điều khiển vuông góc một chút cho sợi dây cong nhẹ, đỡ khô như nan hoa.
-    const ox = (-(p2[1] - p1[1]) / len) * len * 0.07;
-    const oy = ((p2[0] - p1[0]) / len) * len * 0.07;
-    const d = `M${p1[0].toFixed(1)},${p1[1].toFixed(1)} Q${((p1[0] + p2[0]) / 2 + ox).toFixed(1)},${(
-      (p1[1] + p2[1]) / 2 +
-      oy
-    ).toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
-    return { node, nx, ny, d };
-  });
+  const renderNode = (node: RelationNode) => (
+    <button
+      key={node.key}
+      type="button"
+      className={`rmap-node ${node.cut ? 'cut' : 'keep'}`}
+      onClick={node.onOpen}
+      // Dòng xem trước có thể bị rút gọn; `title` cho đọc trọn khi rê chuột.
+      title={node.lines.map((line) => line.text).join('\n') || undefined}
+    >
+      <span className="rn-h">
+        <Glyph name={node.icon} />
+        <span className="rn-t">{node.title}</span>
+        <b className="rn-n">{node.count}</b>
+      </span>
+      {node.lines.map((line, i) => (
+        <span
+          key={i}
+          className={`rn-i${line.tone ? ` ${line.tone}` : ''}${line.mono ? ' mono' : ''}`}
+        >
+          {line.text}
+        </span>
+      ))}
+    </button>
+  );
 
   return (
     <section className="rmap-card">
@@ -208,107 +178,35 @@ export function RelationMap({
             <i className="rmap-dot cut" /> {t('relationMap.legendCut')}
           </span>
         </div>
-        {cutSummary ? (
-          /*
-            CÔNG TẮC HAI TRẠNG THÁI, PHẢI KHAI RA (18/09/2026).
-
-            Nhãn đổi giữa "Xem lượt thanh lý cắt gì" / "Về bản đồ thường" nên mắt thấy được
-            trạng thái, nhưng trình đọc màn hình thì không: không `aria-pressed` thì nó đọc ra
-            hai cái nút khác nhau chứ không phải một công tắc đang bật.
-
-            `aria-controls` trỏ tới khu tóm tắt vì khu ấy nằm ở CUỐI `<section>`, cách nút cả
-            danh sách nút và dòng "Chưa gắn" — không có dây nối thì người dùng bấm xong không
-            biết có gì vừa hiện ra, và ở đâu.
-          */
-          <button
-            type="button"
-            className="btn sm"
-            /* `aria-expanded`, KHÔNG phải `aria-pressed`: nút này bung một khu ra chứ không
-               bật/tắt một trạng thái của chính nó. Xem khối chú thích ở `#rmap-cut-sum`. */
-            aria-expanded={showCut}
-            aria-controls={idKhuCat}
-            onClick={() => setShowCut((on) => !on)}
-          >
-            {showCut ? t('relationMap.cutOff') : t('relationMap.cutOn')}
-          </button>
-        ) : null}
       </div>
 
-      <div className={`rmap${showCut ? ' show-cut' : ''}`} style={{ aspectRatio: `${W} / ${H}` }}>
-        {/* `preserveAspectRatio="none"` an toàn ở đây vì hộp giữ đúng tỉ lệ của viewBox, nên
-            tỉ lệ co giãn hai chiều bằng nhau — không méo. */}
-        <svg className="rmap-svg" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-hidden="true">
-          {/* Chỉ đặt class khi sợi dây THẬT SỰ có luật riêng. `e-keep` trước đây được gán cho
-              mọi sợi "giữ" nhưng `relation-map.css` chưa từng khai luật nào cho nó — markup
-              gọi tên một lớp không tồn tại, đúng họ lỗi mà `table.css` đã gọi tên. Sợi "giữ"
-              dùng luật chung `.rmap-svg path`, thế là đủ. */}
-          {placed.map(({ node, d }) => (
-            <path key={node.key} className={node.cut ? 'e-cut' : undefined} d={d} />
-          ))}
-        </svg>
-
-        {/* Đặt theo TÂM rồi dịch về một nửa, và KHÔNG khoá chiều cao — xem chú thích ở
-            `.rmap-node` trong css/relation-map.css. */}
-        <div className="rmap-hub" style={{ left: pct(cx, W), top: pct(cy, H), width: pct(HUB_W, W) }}>
-          {hubCode}
+      {/* Máy chưa giữ gì: KHÔNG vẽ hạch đứng một mình với câu đè lên nó — chỉ còn câu. Chưa
+          biết thì không vẽ gì cả, dòng trạng thái bên dưới nói thay. */}
+      {n > 0 ? (
+        <div className="rmap">
+          <div className="rmap-col left" data-testid="rmap-left">
+            {left.map(renderNode)}
+          </div>
+          <div className="rmap-hub-col">
+            <div className={`rmap-hub${hubSize(hubCode)}`} data-testid="rmap-hub">
+              {hubCode}
+            </div>
+          </div>
+          <div className="rmap-col right" data-testid="rmap-right">
+            {right.map(renderNode)}
+          </div>
         </div>
-
-        {placed.map(({ node, nx, ny }) => (
-          <button
-            key={node.key}
-            type="button"
-            className={`rmap-node ${node.cut ? 'cut' : 'keep'}`}
-            onClick={node.onOpen}
-            /*
-             * CHỈ khoá bề ngang, KHÔNG khoá chiều cao (17/09/2026).
-             *
-             * Trước đây chiều cao cũng tính theo phần trăm của khung, mà khung thì co theo bề
-             * ngang cột — còn CHỮ thì không co. Khung hẹp lại là nút thấp xuống trong khi chữ
-             * vẫn nguyên cỡ, nên dòng cuối bị cắt ngang. Đúng cái chủ dự án chụp được ở nút
-             * "License đang cài".
-             *
-             * Giờ nút cao theo nội dung và neo theo TÂM (`translate(-50%, -50%)` trong CSS),
-             * nên tâm vẫn nằm đúng chỗ vòng tròn tính ra.
-             */
-            style={{ left: pct(nx, W), top: pct(ny, H), width: pct(ND_W, W) }}
-          >
-            <span className="rn-h">
-              <Glyph name={node.icon} />
-              {node.title}
-              <b className="rn-n">{node.count}</b>
-            </span>
-            {node.lines.map((line, i) => (
-              <span
-                key={i}
-                className={`rn-i${line.tone ? ` ${line.tone}` : ''}${line.mono ? ' mono' : ''}`}
-              >
-                {line.text}
-              </span>
-            ))}
-          </button>
-        ))}
-
-        {/* Chưa biết thì KHÔNG được nói "chưa giữ gì" — hai câu đó khác hẳn nhau. */}
-        {n === 0 && !isUnknown ? (
-          <p className="rmap-alone">{t('relationMap.alone')}</p>
-        ) : null}
-      </div>
+      ) : !isUnknown ? (
+        <p className="rmap-alone">{t('relationMap.alone')}</p>
+      ) : null}
 
       {/* Màn hẹp: cùng danh sách ấy ở dạng dòng, bấm ra cùng chỗ. Đây cũng là bản mà trình
           đọc màn hình đi qua khi bản đồ bị ẩn. */}
       <div className="rmap-list">
         {n === 0 ? (
           <button type="button" disabled>
-            {/*
-              BẢN NGẮN, KHÔNG PHẢI BẢN ĐẦY ĐỦ (19/09/2026).
-
-              Ở ≤900px `.rmap` bị ẩn và `.rmap-list` hiện, nên đặt `relationMap.unknown` vào đây
-              là in trọn hai câu cảnh báo HAI LẦN trên cùng một màn: một lần trong nút này, một
-              lần ở `.rmap-blank` ngay dưới. Tệ hơn: nút mang `disabled`, mà `base.css` hạ opacity
-              nút vô hiệu xuống 50% — nên lời cảnh báo an toàn nhất của màn lại là chữ có tương
-              phản THẤP nhất (~3:1, dưới AA cho chữ nhỏ). Bản ngắn nói đủ để người ta biết chưa
-              đọc được, còn câu đầy đủ kèm chỉ dẫn thì để một chỗ duy nhất nói.
-            */}
+            {/* Bản NGẮN: câu đầy đủ kèm chỉ dẫn chỉ được nói một chỗ (`.rmap-blank` bên dưới),
+                và nút `disabled` bị mờ 50% nên không được là chỗ mang lời cảnh báo. */}
             <span>
               {isLoading
                 ? t('relationMap.loadingShort')
@@ -328,19 +226,10 @@ export function RelationMap({
         )}
       </div>
 
-      {/* Dòng "Chưa gắn:" là một KHẲNG ĐỊNH về thứ máy không có. Chưa đọc được nguồn thì nó
-          sai ở đúng chiều nguy hiểm, nên nhường chỗ cho câu nói thật về việc chưa biết. */}
       {/*
-        MỘT `<p>` THƯỜNG TRỰC, CHỈ ĐỔI CHỮ BÊN TRONG (19/09/2026).
-
-        Bản trước dùng ba nhánh ternary, mỗi nhánh một `<p>` riêng, và chỉ nhánh `isUnknown` mang
-        `role="status"`. React tái dùng node `<p>` khi chuyển nhánh (cùng type, cùng vị trí con),
-        nên thuộc tính `role="status"` và chữ mới đến CÙNG một lượt — đúng kiểu vùng sống câm mà
-        cùng đợt này vừa gỡ ở `#rmap-cut-sum`, và tôi dựng lại nó ở đây trong chính lượt sửa ấy.
-
-        Vùng sống đăng ký từ lượt render đầu và ở lại; chữ đổi sau đó mới được đọc lên. Nhánh
-        "đang tải" và "Chưa gắn:" cũng đi qua nó — cả hai đều là thông tin đáng nghe, và giữ một
-        node duy nhất là cách duy nhất để lời cảnh báo `unknown` được đọc khi nó tới.
+        MỘT `<p>` THƯỜNG TRỰC, CHỈ ĐỔI CHỮ BÊN TRONG: vùng sống phải có mặt từ lượt render đầu
+        thì chữ đổi sau đó mới được đọc lên. Dòng "Chưa gắn:" là một KHẲNG ĐỊNH về thứ máy
+        không có, nên chưa đọc được nguồn thì nó nhường chỗ cho câu nói thật về việc chưa biết.
       */}
       <p className="rmap-blank" role="status" hidden={!isLoading && !isUnknown && missing.length === 0}>
         {isLoading
@@ -351,28 +240,6 @@ export function RelationMap({
               ? t('relationMap.missing', { list: missing.join(', ') })
               : null}
       </p>
-
-      {/*
-        KHU NÀY LUÔN Ở TRONG DOM, CHỈ ẨN/HIỆN (19/09/2026).
-
-        Hai lỗi của bản trước, cùng một gốc là "tháo hẳn khỏi cây":
-
-        1. `aria-controls="rmap-cut-sum"` trên nút trỏ vào một id CHỈ tồn tại khi đã bấm — tức
-           trỏ vào hư vô ở đúng trạng thái mặc định. axe báo `aria-valid-attr-value`, và người
-           dùng JAWS đứng ở nút rồi ra lệnh "nhảy tới khu được điều khiển" thì không có gì.
-
-        2. `role="status"` trên một node được TẠO RA cùng lúc với nội dung của nó thì gần như
-           chắc chắn câm: trình đọc màn hình chỉ theo dõi những vùng sống đã có mặt TRƯỚC khi
-           nội dung đổi. Người dùng nghe "nút, đã nhấn" rồi hết — đúng thứ chú thích cũ hứa là
-           sẽ đọc lên.
-
-        Đây vốn là mẫu DISCLOSURE (người dùng tự bấm để bung), không phải THÔNG BÁO (tin tự
-        đến). Nên đúng vai là `aria-expanded` trên nút + khu thường trực có `hidden`, và bỏ hẳn
-        `role="status"`: trình đọc màn hình tự đi tới khu vừa bung qua `aria-controls`.
-      */}
-      <div className="rmap-cut-sum" id={idKhuCat} hidden={!showCut || !cutSummary}>
-        {cutSummary}
-      </div>
     </section>
   );
 }

@@ -645,6 +645,43 @@ table.table tbody tr.exp:hover td {
   }
 }
 
+/* Khu "License đang cài" nằm trong cột chính của trang chi tiết (~650px ở 1280 có sidebar):
+   bảy cột không vừa, tiêu đề cột chồng nhau và mã license gãy ba dòng. Đo theo bề ngang của
+   CHÍNH KHU (container query), không theo cửa sổ: cùng thành phần ấy ở hàng bung của danh sách
+   thì rộng đủ và giữ nguyên dạng bảng. Hẹp thì thành thẻ: mã + tên một dòng, phần còn lại
+   xếp nối tiếp bên dưới. */
+.exp-soft {
+  container-type: inline-size;
+}
+@container (max-width: 800px) {
+  .inst-list .seat-hd {
+    display: none;
+  }
+  .inst-list .seat-card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-1) var(--space-7);
+  }
+  .inst-list .seat-card > .seat-mc {
+    flex: 1 0 100%;
+  }
+  .inst-list .seat-mc .mono {
+    flex: none;
+    white-space: nowrap;
+  }
+  .inst-list .seat-card > [data-label]:not(.seat-mc)::before {
+    content: attr(data-label) ': ';
+    color: var(--ink-3);
+  }
+  .inst-list .seat-cost {
+    text-align: left;
+  }
+  .inst-list .seat-note {
+    max-width: 100%;
+  }
+}
+
 /* Part 2: chip giờ trống hôm nay trên card máy (catalog Mượn máy) */
 .slot-row {
   display: flex;

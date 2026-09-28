@@ -25,7 +25,7 @@ import {
  * vượt seat sai sự thật pháp lý với nhà cung cấp, chỉ để đi tiếp được việc hằng ngày. Hàng
  * rào chống vượt seat của AC 3.2 tự biến thành cái máy sinh ra lời khai sai.
  *
- * Luật đã chốt: mặc định CHẶN kèm danh sách đích danh; tick "Dọn hết thứ liên quan" thì dọn
+ * Luật đã chốt: mặc định CHẶN kèm danh sách đích danh; chọn "Gỡ hết rồi thanh lý" thì dọn
  * trong CÙNG transaction. Và thanh lý MÁY chỉ gỡ máy khỏi license — hồ sơ phần mềm giữ nguyên.
  */
 
@@ -263,79 +263,65 @@ test.describe('Thanh lý máy còn đang giữ đồ', () => {
 });
 
 /**
- * LUỒNG NGƯỜI DÙNG THẬT — bấm Thanh lý trên giao diện, tick ô, và xem việc xảy ra.
+ * LUỒNG NGƯỜI DÙNG THẬT — bấm Thanh lý trên giao diện, chọn cách thanh lý, và xem việc xảy ra.
  *
- * ===== VÌ SAO BÀI NÀY PHẢI TỒN TẠI RIÊNG =====
- *
- * Mọi bài phía trên gọi thẳng `PATCH /devices/:id/status` với `{cleanup: true|false}`. Chúng
- * chứng minh SERVER làm đúng, nhưng KHÔNG chạm một dòng nào của phần web: ô tick trong
- * `ConfirmDialog`, kiểu trả `{ok, checked}` của `askConfirm`, và chỗ đọc `answer.checked` ở
- * `device-detail.tsx`. Trước bài này, cả ba CHƯA TỪNG chạy một lần.
- *
- * Đây đúng chế độ hỏng đã dính ở đợt A: siết API xong, tưởng đã xong, trong khi đường người
- * dùng thật chưa ai đi qua (xem `vault-write-stepup-ui.spec.ts`, cùng lý do).
+ * Mọi bài phía trên gọi thẳng `PATCH /devices/:id/status`. Chúng chứng minh SERVER làm đúng,
+ * nhưng không chạm một dòng nào của phần web: hộp Thanh lý, lựa chọn "Gỡ hết rồi thanh lý",
+ * ô gõ lại mã máy, và chỗ đọc 409 `DEVICE_HAS_HOLDINGS` để mở lại hộp kèm danh sách.
  */
-test.describe('Thanh lý trên giao diện — ô tick "Dọn hết thứ liên quan"', () => {
-  test('không tick: lỗi hiện ra trên màn, và máy KHÔNG bị thanh lý', async ({ page }) => {
+test.describe('Thanh lý trên giao diện — hộp nói rõ sẽ gỡ gì (DEV-050)', () => {
+  test('"Chỉ thanh lý" khi máy còn giữ đồ: hộp ở lại, kèm đúng danh sách vướng; máy KHÔNG bị thanh lý', async ({
+    page,
+  }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const kit = await deviceHoldingEverything(page, stamp);
+    const ipText = new RegExp(kit.ip.replace(/\./g, '\\.'));
 
     await page.goto(`/devices/${kit.deviceId}`);
     await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
 
     const dialog = page.getByRole('dialog');
-    // Ô tick phải CÓ MẶT và mặc định KHÔNG tick — dọn hàng loạt không được là mặc định êm ái.
-    const box = dialog.getByRole('checkbox', { name: /Dọn hết thứ liên quan/ });
-    await expect(box, 'hộp thanh lý phải có ô tick dọn').toBeVisible();
-    await expect(box, 'mặc định phải là KHÔNG dọn').not.toBeChecked();
+    // Hộp nói TRƯỚC khi bấm: IP này sẽ bị gỡ — đọc từ dữ liệu thật của máy.
+    await expect(dialog.getByText(ipText).first()).toBeVisible();
+    await expect(dialog.getByText('Giữ nguyên')).toBeVisible();
+    // Mặc định là "Chỉ thanh lý": gỡ hàng loạt không được là mặc định êm ái.
+    await expect(dialog.getByRole('radio', { name: /Chỉ thanh lý/ })).toBeChecked();
 
-    await dialog.getByRole('button', { name: 'Thanh lý' }).click();
+    await dialog.getByRole('button', { name: 'Thanh lý', exact: true }).click();
 
-    /*
-     * Người dùng phải ĐỌC ĐƯỢC vì sao bị chặn, ngay trên màn, kèm tên thứ đang vướng.
-     *
-     * Bám vào KHUNG THÔNG BÁO (`role="status"`), không quét cả trang. Bản trước dùng
-     * `page.getByText(new RegExp(kit.ip))` và nó khớp HAI chỗ: dòng IP trong khu mở rộng của
-     * chính trang thiết bị, và câu lỗi trong toast. Playwright ở chế độ strict thì hai kết quả
-     * là đỏ — nhưng đỏ vì bài kiểm hỏi mơ hồ, KHÔNG phải vì sản phẩm sai (máy vẫn `in_use`,
-     * toast vẫn hiện đúng). Lượt E2E đầy đủ 09/09 bắt được; trước đó nó xanh chỉ vì khu mở
-     * rộng tải chậm hơn toast một nhịp — tức là bài này vốn đã là một bài may rủi.
-     *
-     * Dấu chấm trong IP cũng phải escape: `new RegExp('172.21.126.5')` cho dấu chấm khớp MỌI
-     * ký tự — cùng lớp lỗi mà cổng lint e2e vừa bắt ở ba chỗ khác.
-     */
-    const toast = page.getByRole('status');
-    await expect(
-      toast.getByText(new RegExp(kit.ip.replace(/\./g, '\\.'))),
-      'lỗi phải hiện trên giao diện, không chỉ nằm trong response',
-    ).toBeVisible();
-
+    // 409 không chỉ là một toast: hộp ở lại và đọc tên từng thứ máy còn giữ.
+    await expect(dialog.getByText(/chưa thanh lý được/)).toBeVisible();
+    await expect(dialog.getByText(ipText).first()).toBeVisible();
     expect(sql(`SELECT status FROM device WHERE id = '${kit.deviceId}'`)).toBe('in_use');
   });
 
-  test('tick rồi bấm: máy thanh lý xong và mọi thứ nó giữ được trả lại', async ({ page }) => {
+  test('"Gỡ hết rồi thanh lý": phải gõ lại đúng mã máy, rồi mọi thứ máy giữ được trả lại', async ({
+    page,
+  }) => {
     await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-4);
     const kit = await deviceHoldingEverything(page, stamp);
+    const code = `PC-E2E-RC-${stamp}`;
 
     await page.goto(`/devices/${kit.deviceId}`);
     await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
 
     const dialog = page.getByRole('dialog');
-    await dialog.getByRole('checkbox', { name: /Dọn hết thứ liên quan/ }).check();
-    await dialog.getByRole('button', { name: 'Thanh lý' }).click();
+    await dialog.getByRole('radio', { name: 'Gỡ hết rồi thanh lý' }).check();
+    const submit = dialog.getByRole('button', { name: 'Thanh lý', exact: true });
+    // Chưa gõ mã thì chưa bấm được — một cú bấm theo quán tính không xoá được IP của máy.
+    await expect(submit).toBeDisabled();
+    await dialog.getByLabel(new RegExp(`Gõ lại mã máy ${code}`)).fill('PC-E2E-KHAC');
+    await expect(submit).toBeDisabled();
+    await dialog.getByLabel(new RegExp(`Gõ lại mã máy ${code}`)).fill(code);
+    await submit.click();
 
-    /*
-     * Nút đổi thành "Đưa lại vào dùng" là dấu hiệu lượt thanh lý ĐÃ xong và màn đã làm mới — bám vào
-     * nó thay vì `waitForTimeout`, và nó cũng khẳng định luôn giao diện phản ánh trạng thái mới.
-     */
     await expect(page.getByRole('button', { name: 'Đưa lại vào dùng' })).toBeVisible();
-
     expect(sql(`SELECT status FROM device WHERE id = '${kit.deviceId}'`)).toBe('retired');
     expect(
       sql(`SELECT status FROM ip_address WHERE id = '${kit.ipId}'`),
-      'tick trên giao diện phải dẫn tới ĐÚNG hành vi mà API đã chứng minh',
+      'chọn trên giao diện phải dẫn tới ĐÚNG hành vi mà API đã chứng minh',
     ).toBe('free');
     expect(
       Number(

@@ -6,9 +6,10 @@ import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
-import { DataTable } from '@/ui/data-table';
+import { DataTable, type MobileCard } from '@/ui/data-table';
 import { sortQuery } from '@/lib/sort-query';
 import { ExpiryBadge } from '@/ui/expiry-badge';
+import { LocationText } from '@/ui/location-text';
 import { FilterBar } from '@/ui/filter-bar';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
@@ -137,25 +138,29 @@ export function DevicesScreen({ me }: { me: Me }) {
       {
         accessorKey: 'name',
         header: t('devices.name'),
+        /* Loại và serial là dòng phụ dưới tên, không phải cột riêng: ở 1280px có sidebar, thêm
+           một cột là cột Tên bị ép còn ~90px và nút Sửa bị đẩy khỏi khung. `col-name` giữ
+           cho Tên luôn đủ rộng để đọc. */
+        meta: { className: 'col-name' },
         cell: ({ row }) => (
           <>
             {row.original.name}
-            {row.original.serial ? (
-              <span className="cell-sub mono">{row.original.serial}</span>
-            ) : null}
+            <span className="cell-sub">
+              {row.original.deviceTypeName}
+              {row.original.serial ? (
+                <>
+                  {' · '}
+                  <span className="mono">{row.original.serial}</span>
+                </>
+              ) : null}
+            </span>
           </>
         ),
       },
       {
-        id: 'deviceTypeName',
-        header: t('devices.type'),
-        cell: ({ row }) => row.original.deviceTypeName,
-      },
-      {
         id: 'location',
         header: t('devices.location'),
-        meta: { className: 'mono' },
-        cell: ({ row }) => locationLabel(row.original),
+        cell: ({ row }) => <LocationText device={row.original} />,
       },
       {
         accessorKey: 'assignedTo',
@@ -212,6 +217,25 @@ export function DevicesScreen({ me }: { me: Me }) {
         ),
       },
     ],
+    [t],
+  );
+
+  /* Điện thoại: thẻ gọn ~96px thay cho bảng xếp chồng 8 dòng/máy. Không có nút Sửa — form
+     thiết bị là màn nhập desktop; chạm thẻ là mở chi tiết. */
+  const mobileCard = useMemo<MobileCard<DeviceRow>>(
+    () => ({
+      title: (item) => <span className="mono">{item.code}</span>,
+      href: (item) => PATHS.device(item.id),
+      badge: (item) => (
+        <span className={`badge ${STATUS_TONE[item.status]}`}>{t(STATUS_KEY[item.status])}</span>
+      ),
+      subtitle: (item) => item.name,
+      meta: (item) =>
+        [item.siteCode ? locationLabel(item) : null, item.assignedTo].filter(Boolean).join(' · ') || null,
+      aside: (item) => (
+        <ExpiryBadge end={item.warrantyEnd} notCounted={item.status === 'retired'} />
+      ),
+    }),
     [t],
   );
 
@@ -322,6 +346,8 @@ export function DevicesScreen({ me }: { me: Me }) {
             columns={columns}
             emptyText={url.isFiltered ? t('devices.emptyFiltered') : t('devices.empty')}
             stackOnMobile
+            stickyActions
+            mobileCard={mobileCard}
             /* Bung dòng ra là thấy máy này đang cài license nào — cùng nếp với danh sách
                phần mềm. Chỉ hiện mũi tên khi thật sự có phần mềm đang cài. */
             /*

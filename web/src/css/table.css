@@ -142,12 +142,53 @@ table.table tbody tr.row-highlight td:first-child {
   height: 20px;
   margin: 1px 0 0;
 }
+.confirm-check input[type='radio'] {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+}
 /* Câu hệ quả: dòng riêng, thụt thẳng hàng với chữ của nhãn (20px ô tick + khoảng cách). */
 .confirm-check-hint {
   margin: var(--space-1) 0 0 calc(20px + var(--space-3));
   font-size: var(--fs-sm);
   color: var(--ink-2);
   white-space: normal;
+}
+
+/* Hộp Thanh lý thiết bị: hai danh sách "sẽ gỡ" / "giữ nguyên" đọc được trước khi chọn. */
+.retire-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+}
+.retire-dialog p { margin: 0; }
+.retire-block h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+}
+.retire-block ul {
+  margin: 0;
+  padding-left: var(--space-9);
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+.retire-block.retire-cut {
+  padding: var(--space-5) var(--space-7);
+  border-left: 3px solid var(--danger);
+  background: var(--danger-soft);
+  border-radius: 0 var(--r) var(--r) 0;
+}
+.retire-warn { color: var(--danger-strong); font-weight: var(--fw-semibold); }
+.retire-mode {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.retire-mode legend {
+  padding: 0;
+  font-weight: var(--fw-semibold);
 }
 
 /* Bảng gom nhóm license (/phan-mem): cột số căn phải + hàng click sang chi tiết. */
@@ -467,6 +508,18 @@ button.link.session-toggle {
 .cell-sub.is-danger {
   color: var(--danger-strong);
   font-weight: 600;
+}
+
+/* Cột Tên của bảng danh sách: khi thiếu chỗ, trình duyệt ép cột chữ thường trước cột mã/mono
+   (vốn không ngắt dòng) — tên còn ~90px, gãy 4 dòng. Giữ sàn cho cột người ta thật sự đọc. */
+table.table th.col-name,
+table.table td.col-name {
+  min-width: 13.75rem;
+}
+@media (max-width: 960px) {
+  table.table-stack td.col-name {
+    min-width: 0;
+  }
 }
 
 /* --- Cột dính khi bảng cuộn ngang (DataTable `stickyActions` / meta.sticky) ----------

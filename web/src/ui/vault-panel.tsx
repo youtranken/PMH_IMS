@@ -11,6 +11,7 @@ import { useDisabledReason } from '@/ui/disabled-reason';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
+import { TableWrap } from '@/ui/data-table';
 import { Select } from '@/ui/select';
 import { RevealDialog } from '@/ui/reveal-dialog';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
@@ -316,30 +317,40 @@ export function VaultPanel({
       ) : rows.length === 0 ? (
         <EmptyState title={t('vault.empty')} hint={t('vault.emptyHint')} />
       ) : (
-        <div className="table-wrap">
+        <>
           {busyReason.hint}
-          <table className="table table-stack wide">
+          {/*
+            BA CỘT, cột thao tác DÍNH PHẢI. Sáu cột ở cột nội dung ~640px đẩy nút "Xem" — lý do
+            duy nhất người ta mở tab này — ra ngoài khung; Member vừa được duyệt mở ra không
+            thấy nút. Loại, ghi chú và ngày cập nhật là dòng phụ: đọc để nhận ra ngăn nào, không
+            phải để so theo cột.
+          */}
+          <TableWrap>
+          <table className="table table-stack">
             <thead>
               <tr>
                 <th>{t('vault.label')}</th>
-                <th>{t('vault.kind')}</th>
                 <th>{t('vault.username')}</th>
-                <th>{t('vault.note')}</th>
-                <th>{t('vault.updatedAt')}</th>
-                <th className="col-center">{t('common.actions')}</th>
+                <th className="col-center col-sticky-end">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((secret) => (
                 <tr key={secret.id}>
-                  <td data-label={t('vault.label')}>{secret.label}</td>
-                  <td data-label={t('vault.kind')}>{t(`vault.kind_${secret.kind}`)}</td>
+                  <td data-label={t('vault.label')} className="col-name">
+                    {secret.label}
+                    <span className="cell-sub">
+                      {t(`vault.kind_${secret.kind}`)}
+                      {secret.note ? ` · ${secret.note}` : ''}
+                    </span>
+                  </td>
                   <td data-label={t('vault.username')}>
                     <span className="mono">{orDash(secret.username)}</span>
+                    <span className="cell-sub">
+                      {t('vault.updatedAtShort', { date: formatDateTime(secret.updatedAt) })}
+                    </span>
                   </td>
-                  <td data-label={t('vault.note')}>{orDash(secret.note)}</td>
-                  <td data-label={t('vault.updatedAt')}>{formatDateTime(secret.updatedAt)}</td>
-                  <td data-label={t('common.actions')}>
+                  <td data-label={t('common.actions')} className="col-sticky-end">
                     <div className="action-cell">
                       {/* Xem được kể cả khi hồ sơ đã khóa: thiết bị thanh lý rồi vẫn có lúc
                           phải tra mật khẩu cũ để gỡ cấu hình. Khóa là khóa GHI. */}
@@ -388,6 +399,7 @@ export function VaultPanel({
                       {canEdit ? (
                         <RowActions
                           label={t('common.actionsOf', { subject: secret.label })}
+                          subject={secret.label}
                           items={[
                             {
                               key: 'edit',
@@ -441,7 +453,8 @@ export function VaultPanel({
               ))}
             </tbody>
           </table>
-        </div>
+          </TableWrap>
+        </>
       )}
 
       {editing ? (

@@ -207,6 +207,32 @@ export class IpAddressService {
     return rows.map((row) => ({ id: row.id, address: hostOf(row.address) }));
   }
 
+  /**
+   * Thiết bị đang GIỮ địa chỉ khớp từ khoá — ô tìm thiết bị hỏi cái này (Q-14). Chỉ hồ sơ còn
+   * sống và đang chiếm địa chỉ: hồ sơ đã ẩn hay đã trả về pool mà vẫn chỉ về máy cũ là trả lời
+   * sai câu "IP này là máy nào".
+   */
+  async deviceIdsByAddress(pattern: {
+    exact: string | null;
+    prefix: string | null;
+  }): Promise<string[]> {
+    const match = pattern.exact
+      ? sql`host(${ipAddressTable.address}) = ${pattern.exact}`
+      : sql`host(${ipAddressTable.address}) LIKE ${`${pattern.prefix ?? ''}%`}`;
+    const rows = await this.db
+      .selectDistinct({ deviceId: ipAddressTable.deviceId })
+      .from(ipAddressTable)
+      .where(
+        and(
+          match,
+          isNotNull(ipAddressTable.deviceId),
+          isNull(ipAddressTable.voidedAt),
+          inArray(ipAddressTable.status, OCCUPYING_STATUSES),
+        ),
+      );
+    return rows.map((row) => row.deviceId).filter((value): value is string => value !== null);
+  }
+
   /** IP của một thiết bị — panel IP trên trang thiết bị (story 5.4) hỏi cái này. */
   async listForDevice(deviceId: string): Promise<IpAddressRecord[]> {
     const rows = await this.db
