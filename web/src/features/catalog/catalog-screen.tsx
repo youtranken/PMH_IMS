@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -288,6 +288,11 @@ export function CatalogScreen({ me }: { me: Me }) {
 
   const rows = useQuery({
     queryKey: ['catalog', entity, page, limit, search, sorting],
+    // Đổi trang/từ khoá thì GIỮ bảng cũ tới khi có dữ liệu mới (không nháy trắng sau mỗi lần gõ
+    // tìm) — nhưng CHỈ trong cùng một loại danh mục: sang tab khác mà giữ dòng cũ là vẽ tủ
+    // mạng dưới cột của nhà cung cấp.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[1] === entity ? keepPreviousData(previous) : undefined,
     queryFn: () =>
       apiFetch<{ items: CatalogRow[]; total: number }>(
         `/api/v1/catalog/${entity}?${buildQuery(page, limit, search, sorting)}`,

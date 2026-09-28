@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
@@ -109,6 +109,9 @@ export function NatScreen({ me }: { me: Me }) {
 
   const rules = useQuery({
     queryKey: ['ipam', 'nat', search, siteId, 'withVoided'],
+    // Đổi trang/từ khoá thì GIỮ bảng cũ tới khi có dữ liệu mới: vẽ lại Loading là gỡ cả bảng,
+    // mất dòng đang bung/menu đang mở và bảng nháy trắng sau mỗi lần gõ tìm.
+    placeholderData: keepPreviousData,
     queryFn: () => apiFetch<NatRow[]>(`/api/v1/ipam/nat?${listQuery.toString()}`),
   });
 

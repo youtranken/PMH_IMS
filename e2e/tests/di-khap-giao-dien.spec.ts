@@ -6481,8 +6481,10 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       hopDong.getByRole('textbox', { name: 'Lý do vô hiệu hóa' }),
     ).toHaveAccessibleDescription('Cần ít nhất 3 ký tự.');
 
+    // Ô lý do đã có chữ ('ab') nên Esc hỏi lại trước khi bỏ — đúng luật hộp có dữ liệu chưa lưu.
     await page.keyboard.press('Escape');
-    await expect(hopDong, 'Esc phải đóng được hộp vô hiệu hóa').toHaveCount(0);
+    await page.getByRole('dialog', { name: 'Bỏ những gì vừa nhập?' }).getByRole('button', { name: 'Bỏ và đóng' }).click();
+    await expect(hopDong, 'Esc (rồi xác nhận bỏ) phải đóng được hộp vô hiệu hóa').toHaveCount(0);
     await expect(
       page.getByRole('row', { name: new RegExp(ma) }).getByText('Đang dùng'),
       'Hủy giữa chừng thì tài khoản phải còn nguyên trạng thái đang dùng',
@@ -7877,15 +7879,15 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
      * `expect.poll`, KHÔNG phải `expect(await …)` — cùng cái bẫy đã ghi ở bài Port map trong
      * chính file này. Popup hiện ra TRƯỚC khi bảng bên trong có dữ liệu: nó còn phải hỏi
      * `/vault/:ownerType/:ownerId` rồi mới vẽ. Đọc một phát bằng `await` là đọc trúng khoảnh
-     * khắc đó và KHÔNG có lần đọc thứ hai — mảng rỗng, bài đỏ, ảnh chụp thì thấy đủ sáu cột
+     * khắc đó và KHÔNG có lần đọc thứ hai — mảng rỗng, bài đỏ, ảnh chụp thì thấy đủ cột
      * nằm sờ sờ. Lượt chạy 17/09/2026 đỏ đúng kiểu ấy.
      */
     await expect
       .poll(() => popup.getByRole('columnheader').allTextContents(), {
         message:
-          'bảng secret trong popup phải đủ sáu cột metadata (và KHÔNG có cột giá trị — FR-026)',
+          'bảng secret trong popup: ba cột, loại/ghi chú/ngày cập nhật là dòng phụ — KHÔNG có cột giá trị (FR-026)',
       })
-      .toEqual(['Tên gọi', 'Loại', 'Tên đăng nhập', 'Ghi chú', 'Cập nhật', 'Thao tác']);
+      .toEqual(['Tên gọi', 'Tên đăng nhập', 'Thao tác']);
     await expect(
       popup.getByRole('cell', { name: secretLabel }).first(),
       'popup phải liệt kê đúng ngăn vừa cất',
