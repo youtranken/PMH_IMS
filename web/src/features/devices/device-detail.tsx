@@ -27,6 +27,7 @@ import { VaultPanel } from "@/ui/vault-panel";
 import { useToast } from "@/ui/toast";
 import { useCatalogLists } from "@/ui/use-catalog-lists";
 import { DeviceLicensesExpand } from "@/features/software/device-licenses-expand";
+import { DeviceIpAssign } from "@/features/ipam/device-ip-assign";
 import { DeviceForm } from "./device-form";
 import { toHistoryEntries } from "./device-history-entries";
 import { PortMapPanel, type PortMap } from "./port-map-panel";
@@ -75,6 +76,7 @@ export function DeviceDetail({ me }: { me: Me }) {
     ]),
   );
   const [editing, setEditing] = useState(false);
+  const [assigningIp, setAssigningIp] = useState(false);
   const [cloning, setCloning] = useState(false);
   /** Hộp đổi trạng thái nhanh — cũng là hộp mở lại hồ sơ đã thanh lý. */
   const [statusOpen, setStatusOpen] = useState(false);
@@ -717,10 +719,19 @@ export function DeviceDetail({ me }: { me: Me }) {
               {/* Ô chưa khai gom về MỘT dòng, kèm lối đi bổ sung ngay — một dòng chữ xám không
                   dẫn tới đâu thì chẳng ai bổ sung. */}
               <BlankFields labels={blankLabels} />
-              {blankLabels.length > 0 && !retired ? (
-                <button type="button" className="btn sm ghost" onClick={() => setEditing(true)}>
-                  {t("devices.fillBlanks", { count: blankLabels.length })}
-                </button>
+              {!retired ? (
+                <div className="row" style={{ flexWrap: "wrap", gap: "var(--space-3)" }}>
+                  {blankLabels.length > 0 ? (
+                    <button type="button" className="btn sm ghost" onClick={() => setEditing(true)}>
+                      {t("devices.fillBlanks", { count: blankLabels.length })}
+                    </button>
+                  ) : null}
+                  {/* Cấp IP ngay tại đây: trước đây phải sang màn Địa chỉ IP, chọn dải, lật
+                      trang tìm ô trống rồi gõ lại mã máy này. */}
+                  <button type="button" className="btn sm ghost" onClick={() => setAssigningIp(true)}>
+                    {t("devices.assignIp")}
+                  </button>
+                </div>
               ) : null}
             </DetailSection>
 
@@ -873,6 +884,20 @@ export function DeviceDetail({ me }: { me: Me }) {
           error={statusError}
           onCancel={() => setStatusOpen(false)}
           onConfirm={changeStatus}
+        />
+      ) : null}
+
+      {assigningIp ? (
+        <DeviceIpAssign
+          device={{ id: item.id, code: item.code }}
+          csrfToken={me.csrfToken}
+          onClose={() => setAssigningIp(false)}
+          onDone={() => {
+            setAssigningIp(false);
+            toast({ message: t("devices.ipAssigned") });
+            void queryClient.invalidateQueries({ queryKey: ["devices", id] });
+            void queryClient.invalidateQueries({ queryKey: ["ipam", "subnets"] });
+          }}
         />
       ) : null}
 

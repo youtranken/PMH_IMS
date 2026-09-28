@@ -126,6 +126,7 @@ export function AssignIpDialog({
   address,
   record,
   network,
+  initialDevice,
   csrfToken,
   onClose,
   onDone,
@@ -139,12 +140,14 @@ export function AssignIpDialog({
    * cấp, nên hộp bày sẵn kèm nút chép thay vì bắt quay ra thẻ dải tra.
    */
   network?: { cidr: string; gateway: string | null; vlan: number | null };
+  /** Máy điền sẵn — mở từ trang thiết bị thì máy đã biết, không bắt gõ lại mã. */
+  initialDevice?: { deviceId: string; term: string };
   csrfToken: string;
   onClose: () => void;
   onDone: () => void;
 }) {
   const { t } = useTranslation();
-  const [device, setDevice] = useState({ deviceId: '', term: '' });
+  const [device, setDevice] = useState(initialDevice ?? { deviceId: '', term: '' });
   // Hồ sơ Trống đã bị gỡ chủ lúc thu hồi, nên ô người dùng mở ra trống — điền lại tên chủ cũ
   // là hồi sinh một chủ không còn.
   const [usedBy, setUsedBy] = useState('');

@@ -29,9 +29,12 @@ import tseslint from 'typescript-eslint';
  * luật đã chết.
  */
 
-/** Ba mục ngoại lệ dưới đây là ngoại lệ VIẾT RA GIẤY — thêm một cái là phải giải thích trong PR. */
+/** Các mục ngoại lệ dưới đây là ngoại lệ VIẾT RA GIẤY — thêm một cái là phải giải thích trong PR. */
 const CROSS_FEATURE_EXCEPTIONS = [
   '!@/features/software/device-licenses-expand',
+  /* Hộp "Cấp IP" mở từ trang thiết bị: luật cấp IP là của ipam, trang thiết bị chỉ nhúng vào
+     (cùng lý do với khu license ở trên). */
+  '!@/features/ipam/device-ip-assign',
   '!@/features/catalog/catalog-form',
   '!@/features/devices/device-form',
 ];
