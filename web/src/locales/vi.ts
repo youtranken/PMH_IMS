@@ -1279,7 +1279,10 @@ export default {
     statusActive: 'Đang dùng',
     /* Cùng chữ với `accounts.statusDisabled` và `disposal.statusDisabled` — ba màn, một trạng thái. */
     statusDisabled: 'Đã vô hiệu hóa',
-    statusHint: 'Đổi bằng nút Vô hiệu hóa / Bật lại ngoài danh sách — hai đường đó bắt ghi lý do.',
+    statusHint:
+      'Đổi bằng "Vô hiệu hóa…" / "Bật lại…" trong menu ⋯ ở đầu trang hồ sơ (hoặc ngoài danh sách) — đường đó bắt ghi lý do.',
+    disableMenu: 'Vô hiệu hóa…',
+    enableMenu: 'Bật lại…',
     copyLogin: 'Chép tên đăng nhập',
     codeAutoHint: 'Để trống thì hệ thống tự đặt theo tên đăng nhập.',
     codeAutoPlaceholder: 'tự đặt theo tên đăng nhập',
