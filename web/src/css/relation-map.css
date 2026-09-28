@@ -162,6 +162,9 @@
   overflow: hidden;
   overflow-wrap: anywhere;
   line-height: 1.3;
+  /* `button` ở base.css đặt `nowrap` và nút này thừa hưởng — thiếu dòng này thì không bao giờ
+     xuống được dòng thứ hai, luật hai dòng ở trên thành chữ chết. */
+  white-space: normal;
 }
 .rmap-node .rn-n {
   flex: none;

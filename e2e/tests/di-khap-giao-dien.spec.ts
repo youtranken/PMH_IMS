@@ -8531,10 +8531,14 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'hộp xác nhận danh tính phải có ĐÚNG một ô: mã 6 số. Thêm ô nào ở đây cũng là thêm một ' +
         'đường đi vòng qua hàng rào cuối',
     ).toEqual(['Mã xác thực']);
+    // Không dùng `maxlength`: mã dán kèm khoảng trắng ("123 456") sẽ bị trình duyệt cắt trước khi
+    // lọc. Ô tự bỏ ký tự không phải số và cắt còn 6 — gõ 5 số để không kích hoạt tự gửi.
+    await stepUp.getByLabel('Mã xác thực').fill('12 34 5x');
     await expect(
       stepUp.getByLabel('Mã xác thực'),
-      'ô mã phải chặn ở 6 ký tự ngay tại chỗ gõ',
-    ).toHaveAttribute('maxlength', '6');
+      'ô mã chỉ giữ chữ số ngay tại chỗ gõ',
+    ).toHaveValue('12345');
+    await stepUp.getByLabel('Mã xác thực').fill('');
     expect(
       await stepUp.getByTestId('dialog-footer').getByRole('button').allTextContents(),
       'chân hộp phải có đúng cặp Hủy / Xác nhận',

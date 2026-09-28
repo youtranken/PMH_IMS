@@ -302,7 +302,7 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
     await expect(ago).toHaveAttribute('title', /\d{2}\/\d{2}\/\d{4}/);
 
     const person = page.getByRole('region', { name: 'Người xin' });
-    await expect(person.getByText('Thành viên')).toBeVisible();
+    await expect(person.getByText('Thành viên', { exact: true })).toBeVisible();
     await expect(person.getByText(/^Lần xin (đầu tiên|thứ \d+) trong \d+ ngày qua$/)).toBeVisible();
     // Chỉ con số — khối này không dẫn tới các lần xin khác.
     await expect(person.getByRole('link')).toHaveCount(0);
