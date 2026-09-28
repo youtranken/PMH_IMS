@@ -160,7 +160,7 @@ export class SoftwareController {
 
   @Roles('sa', 'admin', 'member')
   @Get()
-  list(
+  async list(
     @Query()
     query: {
       page?: string;
@@ -173,7 +173,7 @@ export class SoftwareController {
       dir?: string;
     },
   ) {
-    return this.software.list(
+    const page = await this.software.list(
       parsePageQuery(query),
       {
         search: query.search,
@@ -183,6 +183,7 @@ export class SoftwareController {
       },
       parseSortQuery(query, SOFTWARE_SORT_KEYS, SOFTWARE_SORT_DEFAULT),
     );
+    return { ...page, items: await this.software.present(page.items) };
   }
 
   /**
@@ -272,7 +273,7 @@ export class SoftwareController {
   @Roles('sa', 'admin', 'member')
   @Get(':id')
   findOne(@Param() params: IdParamDto) {
-    return this.software.findOne(params.id);
+    return this.software.detail(params.id);
   }
 
   @Roles('sa', 'admin', 'member')

@@ -22,6 +22,7 @@ import { SystemConfigService } from '../config-sys/system-config.service';
 import { isoDateInTz } from '../../common/today';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
 import {
+  autoRetireOn,
   effectiveSoftwareStatus,
   seatConflicts,
   validateSoftware,
@@ -36,10 +37,13 @@ import {
   softwareTable,
 } from './software.schema';
 import type {
+  SoftwareDetailItem,
   SoftwareFilter,
   SoftwareHistoryRecord,
   SoftwareListItem,
   SoftwareRecord,
+  SoftwareRetirement,
+  SoftwareScreenItem,
 } from './software.types';
 
 /** Trường được theo dõi trong lịch sử (AD-13). */
@@ -116,6 +120,51 @@ export class SoftwareService {
       });
     }
     return (await this.decorate(rows))[0];
+  }
+
+  /**
+   * Gắn mốc tự thanh lý (Q-13) cho các dòng trả ra MÀN HÌNH. Tách khỏi `decorate` vì
+   * `findOne`/`list` còn phục vụ luồng ghi và file xuất, những chỗ không cần đọc cấu hình.
+   */
+  async present(items: SoftwareListItem[]): Promise<SoftwareScreenItem[]> {
+    if (items.length === 0) return [];
+    const graceDays = await this.config.getNumber('softwareAutoRetireGraceDays');
+    return items.map((item) => ({
+      ...item,
+      autoRetireOn: autoRetireOn(item.status, item.endDate, graceDays),
+    }));
+  }
+
+  /** Trang chi tiết: dòng màn hình + hồ sơ Thanh lý lúc nào, do ai. */
+  async detail(id: string): Promise<SoftwareDetailItem> {
+    const [item] = await this.present([await this.findOne(id)]);
+    return { ...item, retirement: item.status === 'retired' ? await this.retirementOf(id) : null };
+  }
+
+  /**
+   * Lần chuyển sang Thanh lý GẦN NHẤT trong lịch sử: dòng `auto-retired` của lượt quét, hoặc
+   * dòng sửa có `status.after = retired`. Hồ sơ nhập thẳng ở trạng thái Thanh lý thì không có.
+   */
+  private async retirementOf(id: string): Promise<SoftwareRetirement | null> {
+    const rows = await this.db
+      .select({
+        action: softwareHistoryTable.action,
+        actor: softwareHistoryTable.actor,
+        createdAt: softwareHistoryTable.createdAt,
+      })
+      .from(softwareHistoryTable)
+      .where(
+        and(
+          eq(softwareHistoryTable.softwareId, id),
+          sql`(${softwareHistoryTable.action} = 'auto-retired'
+               OR ${softwareHistoryTable.changes} -> 'status' ->> 'after' = 'retired')`,
+        ),
+      )
+      .orderBy(desc(softwareHistoryTable.createdAt))
+      .limit(1);
+    const row = rows[0];
+    if (!row) return null;
+    return { at: row.createdAt, by: row.actor, auto: row.action === 'auto-retired' };
   }
 
   async history(softwareId: string): Promise<SoftwareHistoryRecord[]> {
