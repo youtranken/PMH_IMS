@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
 import { errorCode, errorMessage, useApiMutation } from '@/lib/api';
@@ -34,7 +34,8 @@ export function AssignDialog({
   seat?: LicenseSeat;
   csrfToken: string;
   onClose: () => void;
-  onDone: (warnings: string[]) => void;
+  /** `count` = số máy vừa gán (gán nhiều máy một lượt — SW-053); sửa ghế thì 1. */
+  onDone: (warnings: string[], count: number) => void;
 }) {
   const { t } = useTranslation();
   const editing = seat !== undefined;
@@ -44,7 +45,11 @@ export function AssignDialog({
     !editing && software.seatTotal !== null && software.seatUsed >= software.seatTotal;
   const [query, setQuery] = useState('');
   const [debounced, setDebounced] = useState('');
-  const [device, setDevice] = useState<{ id: string; code: string } | null>(null);
+  /* NHIỀU máy một lượt (SW-053): mua 10 ghế cho phòng Kế toán không phải mở hộp 10 lần và gõ
+     lại 10 lần cùng chi phí/hợp đồng/kỳ hạn. Điều khoản ghế dùng chung cho cả lô. */
+  const [devices, setDevices] = useState<{ id: string; code: string }[]>([]);
+  const queryClient = useQueryClient();
+  const [running, setRunning] = useState(false);
   const [note, setNote] = useState(seat?.note ?? '');
   // Chi phí giữ dạng CHUỖI trong lúc gõ: ô rỗng phải khác được với số 0.
   const [cost, setCost] = useState(formatMoneyInput(seat?.cost ?? null));
@@ -52,7 +57,13 @@ export function AssignDialog({
   const [startDate, setStartDate] = useState(seat?.startDate ?? '');
   const [endDate, setEndDate] = useState(seat?.endDate ?? '');
   const [overSeatReason, setOverSeatReason] = useState('');
-  const [needReason, setNeedReason] = useState(full);
+  const [reasonAsked, setNeedReason] = useState(full);
+  /* Lô vượt số ghế còn lại thì hỏi lý do NGAY, đừng để lượt thứ k bị server từ chối giữa chừng. */
+  const needReason =
+    reasonAsked ||
+    (!editing &&
+      software.seatTotal !== null &&
+      software.seatUsed + devices.length > software.seatTotal);
   const [error, setError] = useState<string | null>(null);
 
   // License mua đứt thì chỗ ngồi của nó cũng không có ngày kết thúc — ô đó không được hiện
@@ -60,7 +71,7 @@ export function AssignDialog({
   const hasEndDate = software.licenseModel !== 'perpetual';
   const money = parseMoneyInput(cost);
   const check = useFormErrors({
-    device: !editing && !device && t('license.pickDevice'),
+    device: !editing && devices.length === 0 && t('license.pickDevice'),
     cost: money.reason === 'invalid' && t('license.costInvalid'),
     overSeatReason: needReason && !overSeatReason.trim() && t('license.overSeatRequired'),
   });
@@ -92,7 +103,7 @@ export function AssignDialog({
       onOpenChange={onClose}
       /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
-      dismissible={!save.isPending}
+      dismissible={!save.isPending && !running}
       maxWidth={640}
       title={
         editing
@@ -104,14 +115,21 @@ export function AssignDialog({
           <button type="button" className="btn" onClick={onClose}>
             {t('common.cancel')}
           </button>
-          <button type="submit" form="assign-form" className="btn primary" disabled={save.isPending}>
-            {save.isPending
+          <button
+            type="submit"
+            form="assign-form"
+            className="btn primary"
+            disabled={save.isPending || running}
+          >
+            {save.isPending || running
               ? t('common.loading')
               : editing
                 ? t('common.save')
                 : needReason
                   ? t('license.assignOver')
-                  : t('license.assign')}
+                  : devices.length > 1
+                    ? t('license.assignMany', { count: devices.length })
+                    : t('license.assign')}
           </button>
         </>
       }
@@ -133,20 +151,55 @@ export function AssignDialog({
             endDate: hasEndDate ? endDate : '',
             note: note.trim(),
           };
-          save.mutate(
-            editing
-              ? terms
-              : // `device` chắc chắn có: nhánh này là `!editing`, và cửa canh ở trên đã `return`.
-                { deviceId: device.id, overSeatReason: overSeatReason.trim(), ...terms },
-            {
-              onSuccess: (result) => onDone(result.warnings ?? []),
-              onError: (err) => {
+          if (editing) {
+            save.mutate(terms, {
+              onSuccess: (result) => onDone(result.warnings ?? [], 1),
+              onError: (err) => setError(errorMessage(err)),
+            });
+            return;
+          }
+          /*
+           * Từng máy một, TUẦN TỰ: mỗi lượt gán là một transaction + một dòng audit của chính
+           * nó ở API, và luật vượt ghế xét trên hàng đã khoá — gửi song song thì N lượt cùng
+           * đọc "còn ghế" một lúc. Hỏng giữa chừng thì DỪNG, bỏ khỏi danh sách những máy đã
+           * gán xong, nói rõ máy nào hỏng: bấm lại là gán tiếp phần còn lại, không gán trùng.
+           */
+          void (async () => {
+            setRunning(true);
+            const warnings: string[] = [];
+            const doneIds: string[] = [];
+            for (const target of devices) {
+              try {
+                const result = await save.mutateAsync({
+                  deviceId: target.id,
+                  overSeatReason: overSeatReason.trim(),
+                  ...terms,
+                });
+                warnings.push(...(result.warnings ?? []));
+                doneIds.push(target.id);
+              } catch (err) {
                 // Hết ghế mà client chưa biết (người khác vừa gán): mở ô lý do rồi cho gửi lại.
                 if (errorCode(err) === 'SEAT_LIMIT_REACHED') setNeedReason(true);
-                setError(errorMessage(err));
-              },
-            },
-          );
+                setDevices((current) => current.filter((item) => !doneIds.includes(item.id)));
+                setError(
+                  doneIds.length > 0
+                    ? t('license.assignPartial', {
+                        done: doneIds.length,
+                        code: target.code,
+                        reason: errorMessage(err),
+                      })
+                    : errorMessage(err),
+                );
+                if (doneIds.length > 0) {
+                  void queryClient.invalidateQueries({ queryKey: ['software'] });
+                }
+                setRunning(false);
+                return;
+              }
+            }
+            setRunning(false);
+            onDone(warnings, doneIds.length);
+          })();
         }}
       >
         {full ? (
@@ -183,12 +236,11 @@ export function AssignDialog({
             <Combobox
               placeholder={t('license.deviceSearch')}
               query={query}
-              onQuery={(value) => {
-                setQuery(value);
-                // Gõ lại là bỏ lựa chọn cũ — nếu không, ô hiện tên A mà id vẫn là B.
-                setDevice(null);
-              }}
-              options={candidates.data?.items ?? []}
+              onQuery={setQuery}
+              // Máy đã nằm trong lô thì không mời chọn lần nữa.
+              options={(candidates.data?.items ?? []).filter(
+                (item) => !devices.some((picked) => picked.id === item.id),
+              )}
               failed={candidates.isError}
               getKey={(item) => item.id}
               renderOption={(item) => (
@@ -197,12 +249,32 @@ export function AssignDialog({
                 </>
               )}
               onSelect={(item) => {
-                setDevice({ id: item.id, code: item.code });
-                setQuery(item.code);
+                setDevices((current) => [...current, { id: item.id, code: item.code }]);
+                // Xoá ô để gõ tìm máy kế tiếp — chọn xong một máy là chip nằm bên dưới.
+                setQuery('');
               }}
             />
           </Field>
         )}
+        {!editing && devices.length > 0 ? (
+          <div className="chip-row span-2" role="list" aria-label={t('license.pickedDevices')}>
+            {devices.map((item) => (
+              <span key={item.id} className="chip" role="listitem">
+                <span className="mono">{item.code}</span>
+                <button
+                  type="button"
+                  aria-label={t('license.unpickDevice', { code: item.code })}
+                  disabled={running}
+                  onClick={() =>
+                    setDevices((current) => current.filter((picked) => picked.id !== item.id))
+                  }
+                >
+                  ✕
+                </button>
+              </span>
+            ))}
+          </div>
+        ) : null}
 
         {needReason ? (
           <Field

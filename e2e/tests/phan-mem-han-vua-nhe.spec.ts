@@ -204,7 +204,7 @@ test.describe('Hộp gán license', () => {
 
     await reason.fill('E2E sếp duyệt mua thêm');
     await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gán vượt ghế' }).click();
-    await expect(page.getByText('Đã gán license vào máy.')).toBeVisible();
+    await expect(page.getByText('Đã gán license vào 1 máy.')).toBeVisible();
 
     await page.goto(`/software/${id}?tab=devices`);
     await expect(page.getByText('5.600.000 ₫')).toBeVisible();

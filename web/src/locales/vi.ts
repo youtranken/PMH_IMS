@@ -879,11 +879,16 @@ export default {
   license: {
     assign: 'Gán vào máy',
     assignTitle: 'Gán license vào máy',
-    assigned: 'Đã gán license vào máy.',
+    assignedCount: 'Đã gán license vào {{count}} máy.',
+    assignMany: 'Gán {{count}} máy',
+    pickedDevices: 'Máy sẽ gán',
+    unpickDevice: 'Bỏ {{code}} khỏi lô',
+    /* Lô dừng ở máy hỏng; máy đã gán xong được bỏ khỏi danh sách nên bấm lại là gán tiếp. */
+    assignPartial: 'Đã gán {{done}} máy, dừng ở {{code}}: {{reason}} Các máy còn lại vẫn trong danh sách — sửa rồi bấm gán tiếp.',
     release: 'Gỡ',
     releasedDone: 'Đã gỡ gán. Bản ghi vẫn còn trong lịch sử.',
     device: 'Máy',
-    deviceHint: 'Gõ ít nhất 2 ký tự để tìm theo mã, tên hoặc serial.',
+    deviceHint: 'Gõ ít nhất 2 ký tự để tìm theo mã, tên hoặc serial. Chọn được nhiều máy — chi phí, hợp đồng, kỳ hạn bên dưới áp cho cả lô.',
     deviceSearch: 'Tìm máy trong kho…',
     pickDevice: 'Chọn máy để gán.',
     assignedAt: 'Gán lúc',
