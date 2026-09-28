@@ -8294,6 +8294,17 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       page.getByRole('tabpanel').getByText(reason),
       'nhật ký phải chứa cả phiếu đang treo, không chỉ phiếu đã quyết',
     ).toBeVisible();
+    /*
+     * Nhật ký là sổ để TRA: phiếu đang treo ở đây không có nút Duyệt/Từ chối (hai nơi quyết
+     * cùng một việc), chỉ có đường sang tab Chờ duyệt.
+     */
+    await expect(
+      page.getByRole('tabpanel').getByRole('button', { name: 'Duyệt', exact: true }),
+      'nhật ký không được là nơi thứ hai cấp quyền mở két',
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole('tabpanel').getByRole('button', { name: 'Đi tới Chờ duyệt' }).first(),
+    ).toBeVisible();
 
     await page.getByRole('tab', { name: 'Yêu cầu của tôi', exact: true }).click();
     await expect(exportBtn, 'ngăn "Yêu cầu của tôi" không phải sổ trình auditor').toHaveCount(0);
