@@ -2105,7 +2105,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
 
     const main = page.getByRole('main');
     const timKiem = page.getByRole('searchbox', {
-      name: 'Tìm theo mã, tên, serial hoặc model',
+      name: 'Tìm mã, tên, serial, IP hoặc người dùng',
     });
 
     /*
@@ -2245,7 +2245,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
 
     await page.goto('/devices');
     await page
-      .getByRole('searchbox', { name: 'Tìm theo mã, tên, serial hoặc model' })
+      .getByRole('searchbox', { name: 'Tìm mã, tên, serial, IP hoặc người dùng' })
       .fill(`TB-E2E-BANG-${stamp}`);
     await expect(page.getByRole('row'), 'lọc xong phải còn đúng 12 máy vừa dựng').toHaveCount(13);
 
@@ -2650,7 +2650,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
 
     await page.goto('/devices');
     await page
-      .getByRole('searchbox', { name: 'Tìm theo mã, tên, serial hoặc model' })
+      .getByRole('searchbox', { name: 'Tìm mã, tên, serial, IP hoặc người dùng' })
       .fill(code);
     // `exact: true`: ô "Thao tác" cùng dòng mang nút "Sửa máy <mã>", nên khớp theo chuỗi con
     // là trúng hai ô một lúc — Playwright dừng ở strict-mode violation, không phải ở điều đang kiểm.

@@ -6,6 +6,7 @@ import { CatalogService } from '../src/modules/catalog/catalog.service';
 import type { AuditWriterService } from '../src/modules/audit/audit-writer.service';
 import type { DeviceRetirementRegistry } from '../src/common/device-retirement.registry';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { DeviceSearchRegistry } from '../src/common/device-search.registry';
 
 /**
  * BE-08 (vế còn lại) — khoá ngoại (site, tủ) của thiết bị là lưới cuối khi một lượt dời tủ đua với
@@ -30,6 +31,7 @@ describe('BE-08 · lỗi khoá ngoại tủ–site của thiết bị được d
       new CatalogApiService(new CatalogService(scratch.db, noAudit)),
       noAudit,
       noRetirement,
+      new DeviceSearchRegistry(),
     );
   }, TEST_TIMEOUT);
 

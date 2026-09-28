@@ -5,12 +5,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, ne, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, ne, or, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import { DeviceRetirementRegistry } from '../../common/device-retirement.registry';
+import { DeviceSearchRegistry } from '../../common/device-search.registry';
 import { requireCas, requireUnchangedSince } from '../../common/cas';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
@@ -64,7 +65,19 @@ export class DevicesService {
     private readonly catalog: CatalogApiService,
     private readonly audit: AuditWriterService,
     private readonly retirement: DeviceRetirementRegistry,
+    private readonly search: DeviceSearchRegistry,
   ) {}
+
+  /**
+   * Vế WHERE của danh sách. Bất đồng bộ vì từ khoá có thể chỉ tới thiết bị qua dữ liệu của
+   * module khác (IP nằm ở `ipam`) — hỏi sổ `DeviceSearchRegistry`, không join sang bảng lạ
+   * (AD-2). Màn hình và file xuất cùng đi qua đây để luôn ra một tập kết quả.
+   */
+  private async whereOf(filter: DeviceFilter): Promise<SQL | undefined> {
+    const term = filter.search?.trim();
+    const extraIds = term ? await this.search.deviceIdsMatching(term) : [];
+    return buildWhere(filter, extraIds);
+  }
 
   // ─────────────────────────── Đọc ───────────────────────────
 
@@ -73,7 +86,7 @@ export class DevicesService {
     filter: DeviceFilter,
     sort: SortQuery<DeviceSortKey> = DEVICE_SORT_DEFAULT,
   ): Promise<Page<DeviceListItem>> {
-    const where = buildWhere(filter);
+    const where = await this.whereOf(filter);
     const [rows, totalRows] = await Promise.all([
       this.db
         .select()
@@ -98,7 +111,7 @@ export class DevicesService {
     const rows = await this.db
       .select()
       .from(deviceTable)
-      .where(buildWhere(filter))
+      .where(await this.whereOf(filter))
       // Cùng thứ tự với màn hình: file tải về phải khớp thứ tự người dùng đang nhìn, không
       // thì họ mở file ra và tưởng đây là dữ liệu khác.
       .orderBy(...deviceOrderBy(sort));
@@ -699,18 +712,18 @@ export function deviceOrderBy(sort: SortQuery<DeviceSortKey>): SQL[] {
   return orderByStable(sort.dir, column, deviceTable.code);
 }
 
-function buildWhere(filter: DeviceFilter): SQL | undefined {
+function buildWhere(filter: DeviceFilter, extraIds: string[] = []): SQL | undefined {
   const parts: (SQL | undefined)[] = [];
   const term = filter.search?.trim();
   if (term) {
     /*
-     * Tra cứu thực tế: người ta gõ mã, tên, serial hoặc model — tìm cả bốn trong một ô. Cả
-     * bốn nằm trong cột sinh `device.search_norm` (migration 0052), đã gấp dấu.
-     *
-     * Bốn vế `ILIKE` trước đây KHÔNG gấp dấu, nên gõ `may tram` ra 0 dòng trong khi
-     * `Máy trạm` ra 2.500 (B-01, §13.3 sổ rà soát).
+     * Người ta gõ mã, tên, serial, model, người sử dụng hoặc bộ phận — tất cả nằm trong cột
+     * sinh `device.search_norm` (0052, 0085), đã gấp dấu. `extraIds` là máy mà module khác
+     * nhận ra từ khoá (IP) — HỢP chứ không giao, vì cùng một chuỗi số có thể vừa là serial
+     * vừa là IP.
      */
-    parts.push(searchNormLike(deviceTable, term));
+    const byText = searchNormLike(deviceTable, term);
+    parts.push(extraIds.length > 0 ? or(byText, inArray(deviceTable.id, extraIds)) : byText);
   }
   if (filter.siteId) parts.push(eq(deviceTable.siteId, filter.siteId));
   if (filter.cabinetId) parts.push(eq(deviceTable.cabinetId, filter.cabinetId));

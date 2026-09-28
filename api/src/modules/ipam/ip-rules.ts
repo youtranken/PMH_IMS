@@ -53,6 +53,28 @@ export function parseAddress(value: string): ParseResult<string> {
   return { ok: true, value: text };
 }
 
+/**
+ * Từ khoá ở ô tìm thiết bị có phải một IP (đủ hoặc thiếu nhóm cuối) không.
+ *
+ * Đủ 4 nhóm thì so KHỚP ĐÚNG: gõ `10.0.0.5` mà ra cả `.50`–`.59` là trả lời sai câu "máy nào
+ * đang giữ IP này". Thiếu nhóm thì hiểu là cả nhóm (`10.77.1` → `10.77.1.*`), không phải "bắt
+ * đầu bằng chữ số" — nếu không `10.77.1` sẽ kéo theo cả `10.77.10`–`10.77.199`.
+ *
+ * Cần ít nhất một dấu chấm: một số trần như `10` là mã hoặc serial, không phải IP.
+ */
+export function ipSearchPattern(
+  term: string,
+): { exact: string | null; prefix: string | null } | null {
+  const text = term.trim().replace(/\.$/, '');
+  const parts = text.split('.');
+  if (parts.length < 2 || parts.length > 4) return null;
+  for (const part of parts) {
+    if (!/^\d{1,3}$/.test(part) || Number(part) > 255) return null;
+  }
+  if (parts.length === 4) return { exact: text, prefix: null };
+  return { exact: null, prefix: `${text}.` };
+}
+
 export function addressToLong(address: string): number {
   const [a, b, c, d] = address.split('.').map(Number);
   // `>>> 0`: dịch bit trong JS làm việc trên số CÓ DẤU 32 bit, nên 255.x.x.x ra số âm.

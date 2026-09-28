@@ -14,6 +14,7 @@ import type { AuditWriterService } from '../src/modules/audit/audit-writer.servi
 import type { ExpiryApiService } from '../src/modules/expiry/expiry.api';
 import type { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { createScratchDb, migrationsDir, seedIspProviders, type ScratchDb } from './db';
+import { DeviceSearchRegistry } from '../src/common/device-search.registry';
 
 /**
  * Kho thanh lý qua đủ bốn cửa THẬT của module chủ (AD-2), trên DB thật.
@@ -35,7 +36,13 @@ describe('Kho thanh lý — bốn nguồn, tầng DB', () => {
     const db = scratch.db;
     const audit = { appendWithin: () => Promise.resolve() } as unknown as AuditWriterService;
     const catalog = new CatalogApiService(new CatalogService(db, audit));
-    const devices = new DevicesService(db, catalog, audit, {} as DeviceRetirementRegistry);
+    const devices = new DevicesService(
+      db,
+      catalog,
+      audit,
+      {} as DeviceRetirementRegistry,
+      new DeviceSearchRegistry(),
+    );
     const software = new SoftwareService(
       db,
       catalog,

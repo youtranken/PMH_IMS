@@ -4,6 +4,7 @@ import {
   hostRole,
   hostRoleIn,
   keepPreferredByAddress,
+  ipSearchPattern,
   isHostInSubnet,
   longToAddress,
   normalizeSubnet,
@@ -276,5 +277,30 @@ describe('keepPreferredByAddress — một địa chỉ, nhiều hồ sơ', () =
 
   it('danh sách rỗng ra map rỗng, không ném', () => {
     expect(keepPreferredByAddress([]).size).toBe(0);
+  });
+});
+
+describe('ipSearchPattern — ô tìm thiết bị nhận ra từ khoá dạng IP (Q-14)', () => {
+  it.each([
+    ['10.77.1.50', { exact: '10.77.1.50', prefix: null }],
+    ['  10.77.1.50 ', { exact: '10.77.1.50', prefix: null }],
+    // Thiếu nhóm cuối: hiểu là "mọi địa chỉ trong nhóm này", không phải "bắt đầu bằng chữ số".
+    ['10.77.1', { exact: null, prefix: '10.77.1.' }],
+    ['10.77.1.', { exact: null, prefix: '10.77.1.' }],
+    ['10.77', { exact: null, prefix: '10.77.' }],
+  ])('%s → %j', (term, expected) => {
+    expect(ipSearchPattern(term)).toEqual(expected);
+  });
+
+  it.each([
+    ['10'], // một số trần là mã/serial, không phải IP
+    ['PC-10.77'],
+    ['10.77.1.50.3'],
+    ['10.77.1.256'],
+    ['10.77.1.50/24'],
+    ['10..1'],
+    [''],
+  ])('%j không phải IP → null', (term) => {
+    expect(ipSearchPattern(term)).toBeNull();
   });
 });

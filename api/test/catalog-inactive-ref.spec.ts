@@ -11,6 +11,7 @@ import type { DevicesApiService } from '../src/modules/devices/devices.api';
 import type { ExpiryApiService } from '../src/modules/expiry/expiry.api';
 import type { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { DeviceSearchRegistry } from '../src/common/device-search.registry';
 
 /**
  * Q-14 (ADM-015, DEV-027) — mục danh mục đã vô hiệu KHÔNG chọn MỚI được ở mọi cửa ghi.
@@ -59,7 +60,7 @@ describe('Q-14 · mục danh mục đã vô hiệu không chọn mới được'
     await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
     catalog = new CatalogService(scratch.db, audit);
     const api = new CatalogApiService(catalog);
-    devices = new DevicesService(scratch.db, api, audit, noRetirement);
+    devices = new DevicesService(scratch.db, api, audit, noRetirement, new DeviceSearchRegistry());
     software = new SoftwareService(scratch.db, api, audit, {} as ExpiryApiService, config);
     isp = new IspLineService(scratch.db, api, noDevices, audit);
     subnets = new SubnetService(scratch.db, audit, api);

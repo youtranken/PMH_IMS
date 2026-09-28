@@ -197,6 +197,24 @@ describe('B-01 — gấp dấu tiếng Việt ở tầng CSDL', () => {
     );
 
     it(
+      'tìm được qua người sử dụng và bộ phận — "máy của chị Bình đâu?" (Q-14)',
+      async () => {
+        await scratch.pool.query(
+          `UPDATE device SET assigned_to = 'Chị Bình', department = 'Phòng Kế hoạch'
+            WHERE code = 'DM-KT-001'`,
+        );
+        expect(await findDevices('chi binh')).toBe(1);
+        expect(await findDevices('ke hoach')).toBe(1);
+        // Cột sinh: đổi người dùng thì khóa tìm kiếm đi theo, người cũ không còn khớp.
+        await scratch.pool.query(
+          `UPDATE device SET assigned_to = NULL, department = NULL WHERE code = 'DM-KT-001'`,
+        );
+        expect(await findDevices('chi binh')).toBe(0);
+      },
+      TEST_TIMEOUT,
+    );
+
+    it(
       'không khớp bừa',
       async () => {
         expect(await findDevices('may chu')).toBe(0);

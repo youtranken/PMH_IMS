@@ -472,7 +472,7 @@ export default {
     software: 'Phần mềm',
     installedHeader: 'Phần mềm đang cài ({{count}})',
     noInstalled: 'Máy này chưa cài license nào của hệ thống.',
-    search: 'Tìm theo mã, tên, serial hoặc model',
+    search: 'Tìm mã, tên, serial, IP hoặc người dùng',
     code: 'Mã thiết bị',
     name: 'Tên thiết bị',
     type: 'Loại',
