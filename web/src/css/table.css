@@ -93,6 +93,15 @@ table.table tbody tr.due-today td {
 table.table tbody tr.due-today td:first-child {
   box-shadow: inset 3px 0 0 var(--warn);
 }
+/*
+ * Nền trạng thái của dòng PHẢI thắng sọc dòng chẵn. Viết `.table tr.row-danger td` (0,2,2)
+ * thì thua `table.table tbody tr:nth-child(even) td` (0,2,4): dòng quá hạn ở vị trí chẵn mất
+ * nền đỏ, người dùng tưởng hai nhóm khác nhau. Cùng độ ưu tiên với luật sọc và đặt SAU nó,
+ * như `.overdue`/`.due-today` ngay trên.
+ */
+table.table tbody tr.row-danger td {
+  background: var(--danger-soft);
+}
 /* Dòng seat được điều hướng từ bảng con /phan-mem (?seat=) — nhấn nhẹ + viền trái. */
 table.table tbody tr.row-highlight td {
   background: var(--primary-soft);
@@ -130,19 +139,17 @@ table.table tbody tr.row-highlight td:first-child {
  */
 @media (min-width: 961px) {
   table.table.wide { min-width: 66rem; }
-  /*
-   * Số tiền, IP, serial, mã cổng, mốc thời gian — không xuống dòng giữa chừng.
-   *
-   * `.table td .mono` (có dấu cách) thêm 17/09/2026. Luật cũ chỉ nhắm `td.mono`, tức chỉ ăn
-   * khi cả Ô mang class. Nhưng gần như mọi màn lại bọc giá trị trong `<span className="mono">`
-   * BÊN TRONG ô — mã site, mã tủ, mã nhân viên, mã hồ sơ — nên luật này chưa từng chạm tới
-   * chúng, và một cái mã 12 ký tự vẫn gãy làm hai dòng khi cột bị bóp. Giữ cả hai dạng để
-   * không phải đi sửa hàng chục chỗ gọi.
-   */
-  .table td.mono,
-  .table td .mono,
+  /* Số tiền căn phải không xuống dòng giữa chừng ("3.150.000 đ" gãy chữ "đ"). */
   .table td.col-right { white-space: nowrap; }
 }
+/*
+ * Mã trong ô bảng (`.mono`: mã máy, IP, serial) KHÔNG BAO GIỜ ngắt dòng, ở mọi bề ngang.
+ * Trình duyệt coi dấu gạch nối là chỗ được ngắt, nên cột hẹp biến "SV-E2E-FILE-01" thành bốn
+ * dòng — đọc ra một mã khác hẳn. Ở thẻ dọc (`.table-stack`) ô là flex có `wrap`, nên mã dài
+ * tự rơi xuống hàng riêng thay vì gãy.
+ */
+.table td.mono,
+.table td .mono { white-space: nowrap; }
 
 .table th.num,
 .table td.num {
