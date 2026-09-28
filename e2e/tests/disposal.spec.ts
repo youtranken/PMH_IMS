@@ -155,7 +155,7 @@ test('đường truyền đã thanh lý vào kho, link về đúng trang đườ
   const row = page.getByRole('row', { name: new RegExp(cut) });
   await expect(row).toBeVisible();
   await expect(row.getByText('Đường truyền', { exact: true })).toBeVisible();
-  await expect(row.getByText('Thanh lý', { exact: true })).toBeVisible();
+  await expect(row.getByText('Đã thanh lý', { exact: true })).toBeVisible();
   await expect(row.getByText('300 Mbps')).toBeVisible();
   await expect(page.getByRole('row', { name: new RegExp(running) })).toHaveCount(0);
 

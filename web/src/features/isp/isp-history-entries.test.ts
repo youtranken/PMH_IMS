@@ -24,7 +24,7 @@ describe('toIspHistory — Q-04: ba trạng thái Đang dùng / Tạm ngưng / T
       t,
     );
     expect(entry.action).toBe('Thanh lý đường truyền');
-    expect(entry.detail).toBe('trạng thái: Đang dùng → Thanh lý');
+    expect(entry.detail).toBe('trạng thái: Đang dùng → Đã thanh lý');
   });
 
   it('tạm ngưng vẫn là một lượt sửa hồ sơ bình thường', () => {

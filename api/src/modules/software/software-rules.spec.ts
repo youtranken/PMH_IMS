@@ -4,6 +4,7 @@ import {
   effectiveSoftwareStatus,
   requiresEndDate,
   seatConflicts,
+  STATUS_LABEL,
   supportsSeats,
   validateAssignmentTerms,
   validateSoftware,
@@ -304,5 +305,11 @@ describe('autoRetireOn — ngày hệ thống sẽ tự thanh lý', () => {
     const sweepRetires = (today: string) => end < addDays(today, -30);
     expect(sweepRetires(addDays(on, -1))).toBe(false);
     expect(sweepRetires(on)).toBe(true);
+  });
+});
+
+describe('STATUS_LABEL — nhãn trạng thái trong file Excel (Q-14)', () => {
+  it('trạng thái cuối là "Đã thanh lý", không phải nhãn nút "Thanh lý"', () => {
+    expect(STATUS_LABEL.retired).toBe('Đã thanh lý');
   });
 });

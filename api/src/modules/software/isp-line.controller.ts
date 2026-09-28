@@ -185,5 +185,5 @@ function actor(req: AuthedRequest): string {
 const ISP_STATUS_LABEL: Record<string, string> = {
   active: 'Đang dùng',
   suspended: 'Tạm ngưng',
-  terminated: 'Thanh lý',
+  terminated: 'Đã thanh lý',
 };

@@ -108,7 +108,7 @@ test.describe('Danh sách phần mềm', () => {
     ).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Trạng thái', exact: true }).click();
-    await page.getByRole('option', { name: 'Mọi trạng thái (cả Thanh lý)' }).click();
+    await page.getByRole('option', { name: 'Mọi trạng thái (cả Đã thanh lý)' }).click();
     await expect(page.getByRole('row', { name: new RegExp(`${prefix}-BO`) })).toBeVisible();
 
     // Đường hỏng: giá trị kỳ hạn lạ trên URL không được lọc ra rỗng — server bỏ qua nó.
