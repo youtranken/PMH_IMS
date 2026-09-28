@@ -19,7 +19,7 @@ import {
 import { ExpiryBadge } from "@/ui/expiry-badge";
 import { LocationText } from "@/ui/location-text";
 import { HistoryPanel } from "@/ui/history-panel";
-import { LoadError, Loading, NotFound } from "@/ui/load-state";
+import { DetailLoadFailed, LoadError, Loading } from "@/ui/load-state";
 import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
 import { useTabCounts } from "@/ui/tab-counts";
 import { WarrantyTimeline } from "@/ui/warranty-timeline";
@@ -221,19 +221,15 @@ export function DeviceDetail({ me }: { me: Me }) {
 
   if (device.isLoading) return <Loading />;
   if (device.isError) {
-    // 404 = thiết bị không tồn tại → trang 404 tử tế, không phải khối lỗi đỏ "thử lại".
-    return device.error instanceof ApiError && device.error.status === 404 ? (
-      <NotFound
-        title={t("devices.notFoundTitle")}
-        hint={t("devices.notFoundHint")}
-        action={
-          <Link className="linkbtn primary" to={PATHS.devices}>
-            {t("devices.backToList")}
-          </Link>
-        }
+    // 404 = thiết bị không tồn tại → khối "không tìm thấy hồ sơ" có nút về danh sách, không phải
+    // khối lỗi đỏ "thử lại"; lỗi khác thì Thử lại. Cả hai giữ đường lùi về danh sách.
+    return (
+      <DetailLoadFailed
+        error={device.error}
+        onRetry={() => void device.refetch()}
+        backTo={PATHS.devices}
+        backLabel={t("nav.devices")}
       />
-    ) : (
-      <LoadError error={device.error} onRetry={() => void device.refetch()} />
     );
   }
 

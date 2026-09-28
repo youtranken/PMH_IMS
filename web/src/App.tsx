@@ -24,10 +24,10 @@ import {
   TOTP_ENROLL_PATH,
   nextStepPath,
 } from '@/lib/me';
-import { LEGACY_ROUTES, PATHS, canSeeRoute } from '@/lib/routes';
+import { LEGACY_ROUTES, PATHS, ROUTE_ROLES, canSeeRoute } from '@/lib/routes';
 import { AppShell } from '@/shell/app-shell';
 import { ConfirmProvider } from '@/ui/confirm-provider';
-import { LoadError, Loading, NotFound } from '@/ui/load-state';
+import { Forbidden, LoadError, Loading, NotFound } from '@/ui/load-state';
 import { ToastProvider } from '@/ui/toast';
 import { AccountsScreen } from '@/features/admin/accounts-screen';
 import { AuditLogScreen } from '@/features/admin/audit-log-screen';
@@ -201,28 +201,40 @@ function AppRoutes() {
             đường /admin nào chưa khai vai không", câu mà JSX không trả lời được. */}
         {canSeeRoute(PATHS.adminAccounts, me.role) ? (
           <Route path={PATHS.adminAccounts} element={<AccountsScreen me={me} />} />
-        ) : null}
+        ) : (
+          <Route path={PATHS.adminAccounts} element={<Forbidden roles={ROUTE_ROLES[PATHS.adminAccounts]} />} />
+        )}
         {canSeeRoute(PATHS.adminCatalog, me.role) ? (
           <Route path={PATHS.adminCatalog} element={<CatalogScreen me={me} />} />
-        ) : null}
+        ) : (
+          <Route path={PATHS.adminCatalog} element={<Forbidden roles={ROUTE_ROLES[PATHS.adminCatalog]} />} />
+        )}
         {canSeeRoute(PATHS.adminVaultAccess, me.role) ? (
           <Route path={PATHS.adminVaultAccess} element={<AccessMatrixScreen me={me} />} />
-        ) : null}
+        ) : (
+          <Route path={PATHS.adminVaultAccess} element={<Forbidden roles={ROUTE_ROLES[PATHS.adminVaultAccess]} />} />
+        )}
         {canSeeRoute(PATHS.adminAuditLog, me.role) ? (
           <Route path={PATHS.adminAuditLog} element={<AuditLogScreen />} />
-        ) : null}
+        ) : (
+          <Route path={PATHS.adminAuditLog} element={<Forbidden roles={ROUTE_ROLES[PATHS.adminAuditLog]} />} />
+        )}
         {canSeeRoute(PATHS.adminSettings, me.role) ? (
           <Route path={PATHS.adminSettings} element={<SettingsScreen me={me} />} />
-        ) : null}
+        ) : (
+          <Route path={PATHS.adminSettings} element={<Forbidden roles={ROUTE_ROLES[PATHS.adminSettings]} />} />
+        )}
         <Route path={PATHS.approvals} element={<ApprovalsScreen me={me} />} />
         {/* Mọi vai: đường vào tự đổi mật khẩu / cài lại 2 lớp / đóng phiên của chính mình. */}
         <Route path={PATHS.profile} element={<ProfileScreen me={me} />} />
         {/* Đích của nút trong thư duyệt: mở MỘT phiếu và quyết ngay. Quyền đọc do API gác. */}
         <Route path={`${PATHS.approvals}/:id`} element={<ApprovalDetailScreen me={me} />} />
-        {/* Gác ở CẢ route, không chỉ ẩn mục menu: gõ thẳng URL cũng chỉ nhận 404. */}
+        {/* Gác ở CẢ route, không chỉ ẩn mục menu: gõ thẳng URL nhận trang 403 nói rõ thiếu quyền. */}
         {canSeeRoute(PATHS.vault, me.role) ? (
           <Route path={PATHS.vault} element={<VaultHomeScreen me={me} />} />
-        ) : null}
+        ) : (
+          <Route path={PATHS.vault} element={<Forbidden roles={ROUTE_ROLES[PATHS.vault]} />} />
+        )}
         {/* Kho thanh lý mở cho MỌI vai — khác trang tổng Két sắt ngay trên: kho chỉ nói
             "hồ sơ nào đã ngừng dùng", không nói công ty giữ bí mật ở đâu. */}
         <Route path={PATHS.disposal} element={<DisposalScreen />} />
@@ -243,10 +255,12 @@ function AppRoutes() {
           path={`${PATHS.serviceAccounts}/:id`}
           element={<ServiceAccountDetail me={me} />}
         />
-        {/* Bộ giao diện là trang nội bộ: member/admin vào thẳng URL cũng chỉ nhận 404. */}
+        {/* Bộ giao diện là trang nội bộ: member/admin vào thẳng URL nhận trang 403. */}
         {canSeeRoute(PATHS.devComponents, me.role) ? (
           <Route path={PATHS.devComponents} element={<ComponentsGallery />} />
-        ) : null}
+        ) : (
+          <Route path={PATHS.devComponents} element={<Forbidden roles={ROUTE_ROLES[PATHS.devComponents]} />} />
+        )}
         {/* Link tiếng Việt đã ghim/đã gửi cho nhau vẫn mở được, và thanh địa chỉ đổi luôn
             sang đường mới (`replace` để nút Back không kẹt giữa hai đường). */}
         {LEGACY_ROUTES.map(({ from, to, withId }) => (

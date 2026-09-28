@@ -69,9 +69,9 @@ test.describe('Bảng điều khiển', () => {
     });
 
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
 
-    const expiring = page.locator('section').filter({ hasText: 'Sắp hết hạn (30 ngày)' });
+    const expiring = page.locator('section').filter({ hasText: 'Hạn cần xử lý' });
     await expect(expiring.getByText('License gấp')).toBeVisible();
     await expect(expiring.getByText('License thong tha')).toBeVisible();
 
@@ -110,9 +110,9 @@ test.describe('Bảng điều khiển', () => {
 
     // Khối sự cố PHẢI hiện và nói rõ là chưa có phần này (Epic 9 chưa mở).
     const incidents = page.locator('section').filter({ hasText: 'Sự cố tuần qua' });
-    await expect(incidents.getByText(/chưa mở/i)).toBeVisible();
+    await expect(incidents.getByText(/chưa theo dõi/i)).toBeVisible();
 
-    await expect(page.getByRole('heading', { name: 'Break-glass tuần qua' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Yêu cầu mở két tuần qua' })).toBeVisible();
   });
 
   /**
@@ -168,7 +168,11 @@ test.describe('Bảng điều khiển', () => {
 
     // Member: dashboard RÚT GỌN — không có khối break-glass toàn cục.
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Break-glass tuần qua' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Yêu cầu mở két tuần qua' })).toHaveCount(0);
+    // DASH-014: người xin thấy ngay yêu cầu của chính mình đang chờ, ở đầu trang.
+    const mine = page.locator('section').filter({ hasText: 'Yêu cầu mở két của tôi' });
+    await expect(mine.getByText('Chờ duyệt')).toBeVisible();
+    await expect(mine.getByRole('link', { name: new RegExp(code) })).toBeVisible();
     const asMember = (await (await page.request.get('/api/v1/dashboard')).json()) as {
       breakGlass: { available: boolean; items: unknown[] };
     };
@@ -180,8 +184,10 @@ test.describe('Bảng điều khiển', () => {
     // `loginWithTotp` chứ không phải `firstLogin`: tài khoản này đã cài 2 lớp ở đầu bài.
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
     await page.goto('/');
-    const block = page.locator('section').filter({ hasText: 'Break-glass tuần qua' });
-    await expect(block.getByText(E2E_MEMBER.email)).toBeVisible();
+    const block = page.locator('section').filter({ hasText: 'Yêu cầu mở két tuần qua' });
+    // DASH-006: TÊN người xin (email nằm trong `title`), không phải email trần.
+    await expect(block.getByText('E2E Thành viên')).toBeVisible();
+    await expect(block.getByText('Chờ duyệt')).toBeVisible();
     await expect(block.getByText(new RegExp(code))).toBeVisible();
     await expect(block.getByText('switch tầng 3 mất kết nối lúc 2 giờ sáng')).toBeVisible();
   });
@@ -194,7 +200,7 @@ test.describe('Bảng điều khiển', () => {
   test('dashboard trống vẫn dựng được, không lỗi', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
 
     /**
      * Khối "Sắp hết hạn" chỉ kiểm là DỰNG ĐƯỢC, không kiểm là rỗng.
@@ -204,7 +210,7 @@ test.describe('Bảng điều khiển', () => {
      * diện, nếu hạn rơi vào 30 ngày tới, sẽ làm khối này có dữ liệu. Bắt nó phải rỗng là bắt
      * cả cái DB dev phải sạch — điều kiện không đời nào giữ được, và khi vỡ thì báo sai chỗ.
      */
-    await expect(page.getByRole('heading', { name: 'Sắp hết hạn' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Hạn cần xử lý' })).toBeVisible();
     await expect(
       page.getByText('Không tải được khối này. Các khối còn lại vẫn đúng.'),
     ).toHaveCount(0);
@@ -249,7 +255,8 @@ test.describe('Bảng điều khiển', () => {
     }
 
     await page.goto('/');
-    const block = page.locator('section').filter({ hasText: 'Dải mạng sắp đầy' });
+    // Tiêu đề nói luôn ngưỡng đang áp: "Dải mạng ≥ 80%" (DASH-016).
+    const block = page.locator('section').filter({ hasText: /Dải mạng ≥ \d+%/ });
     await expect(block.getByRole('link', { name: `LAN chat cho E2E ${stamp}` })).toBeVisible();
 
     /*
@@ -438,9 +445,10 @@ test.describe('DASH-002 · khối Sắp hết hạn dạng bảng, hai làn khô
     await seedLoudBoard(page, stamp);
 
     await page.goto('/');
-    const expiring = page.locator('section').filter({ hasText: 'Sắp hết hạn (30 ngày)' });
+    const expiring = page.locator('section').filter({ hasText: 'Hạn cần xử lý' });
     for (const name of ['Đối tượng', 'Loại', 'Hết hạn', 'Còn lại']) {
-      await expect(expiring.getByRole('columnheader', { name, exact: true })).toBeVisible();
+      // Hai nhóm (quá hạn / sắp tới) là hai bảng cùng cột — đọc cột ở bảng đầu.
+      await expect(expiring.getByRole('columnheader', { name, exact: true }).first()).toBeVisible();
     }
     const row = expiring.getByRole('row', { name: new RegExp(`License E2E bảng ${stamp}`) });
     await expect(row.getByRole('cell', { name: 'License phần mềm', exact: true })).toBeVisible();
@@ -502,7 +510,7 @@ test.describe('DASH-002 · khối Sắp hết hạn dạng bảng, hai làn khô
     expect(warranty.status(), await warranty.text()).toBe(201);
 
     await page.goto('/');
-    const expiring = page.locator('section').filter({ hasText: 'Sắp hết hạn (30 ngày)' });
+    const expiring = page.locator('section').filter({ hasText: 'Hạn cần xử lý' });
     const warrantyRow = expiring.getByRole('row', { name: new RegExp(`PC-E2E-D2BH-${stamp}`) });
     await expect(warrantyRow).toBeVisible();
     await expect(warrantyRow.getByRole('button', { name: 'Gia hạn' })).toHaveCount(0);

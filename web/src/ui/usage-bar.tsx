@@ -18,6 +18,7 @@ export function UsageBar({
   showPercent = true,
   warnAt,
   dangerAt,
+  marker,
 }: {
   percent: number;
   /** Chữ hiện cạnh thanh, vd "127/254 · còn 127". Bỏ trống thì chỉ hiện %. */
@@ -30,6 +31,11 @@ export function UsageBar({
   showPercent?: boolean;
   warnAt?: number;
   dangerAt?: number;
+  /**
+   * Vạch mốc (phần trăm) trên thanh + chữ giải thích khi rê chuột — vd ngưỡng "sắp đầy" của bảng
+   * điều khiển: thanh đỏ 93% mà không thấy ngưỡng là 80 hay 90 thì không biết nó vượt bao xa.
+   */
+  marker?: { percent: number; label: string };
 }) {
   // Kẹp lại phòng dữ liệu lệch: thanh tràn ra ngoài khung làm hỏng cả bảng.
   const value = Math.max(0, Math.min(100, Math.round(percent)));
@@ -50,6 +56,13 @@ export function UsageBar({
           className={`usage-fill${percent > 0 ? ' has-some' : ''}`}
           style={{ width: `${value}%` }}
         />
+        {marker ? (
+          <span
+            className="usage-marker"
+            style={{ left: `${Math.max(0, Math.min(100, marker.percent))}%` }}
+            title={marker.label}
+          />
+        ) : null}
       </div>
       <span className="usage-text">
         {label && !showPercent ? label : label ? `${value}% · ${label}` : `${value}%`}

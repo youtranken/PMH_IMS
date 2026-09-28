@@ -149,8 +149,8 @@
 }
 .cp-item .it-name span {
   display: block;
-  font-size: var(--fs-2xs);
-  color: var(--ink-3);
+  font-size: var(--fs-xs);
+  color: var(--ink-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -263,13 +263,84 @@
   border-radius: 6px;
 }
 
+/* Dòng "Xem tất cả…", "Tìm trong…", "Đi tới": chữ thường, không phải mã mono. */
+.cp-item.is-more .it-name b,
+.cp-item.is-action .it-name b {
+  font-family: inherit;
+  font-weight: var(--fw-semibold);
+}
+.cp-item.is-more .it-name b {
+  color: var(--primary-ink);
+}
+.cp-item .it-ic .nav-ic {
+  width: 18px;
+  height: 18px;
+}
+/* Phần khớp từ khoá — nền vàng nhạt của hệ màu, không phải vàng mặc định trình duyệt. */
+.cp-item mark {
+  background: var(--warn-soft);
+  color: inherit;
+  border-radius: 2px;
+}
+.cp-empty-hint {
+  font-size: var(--fs-xs);
+}
+.cp-retry {
+  margin-left: var(--space-2);
+  padding: 0 var(--space-2);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+}
+.cp-retry:hover:not(:disabled) {
+  background: transparent;
+}
+.cp-cancel {
+  flex: none;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--primary-ink);
+  font-weight: var(--fw-semibold);
+}
+.cp-cancel:hover:not(:disabled) {
+  background: transparent;
+}
+.cp-foot-hint {
+  flex: 1 1 100%;
+}
+
 /* --- responsive --- */
-@media (max-width: 680px) {
+/*
+ * Điện thoại: sheet phủ kín màn. Hộp lơ lửng để lộ trang mờ phía dưới thì chạm trượt ra ngoài
+ * là mất hết thứ đang gõ; ô tìm cao 48px cho ngón tay; chân hộp chừa vùng an toàn của máy có
+ * tai thỏ / thanh home.
+ */
+@media (max-width: 900px) {
   .cp-wrap {
-    padding: var(--space-8) var(--space-6);
+    padding: 0;
   }
   .cp {
     max-width: 100%;
-    max-height: 88vh;
+    max-height: none;
+    height: 100%;
+    border-radius: 0;
+    border: 0;
+  }
+  .cp-search {
+    padding: var(--space-3) var(--space-3) var(--space-3) var(--space-6);
+  }
+  .cp-search input {
+    height: 48px;
+  }
+  .cp-item {
+    min-height: 48px;
+  }
+  .cp-foot {
+    padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom));
   }
 }

@@ -359,7 +359,7 @@ test.describe('Mở két với TOTP step-up', () => {
 
     // Tài khoản KHÔNG bị khóa — đăng nhập lại là dùng được ngay.
     await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, totpSecret);
-    await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
   });
 
   /**

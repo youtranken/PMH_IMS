@@ -1,13 +1,17 @@
 /* --- Đăng nhập IMS -----------------------------------------------------------
    Nền grove tối (cố định, không theo theme app vì là màn ngoài shell) + card kính.
    Mọi màu lấy từ tokens.css (AD-15) — không hex ở đây. */
+/* Card neo MÉP TRÊN, không căn giữa dọc: căn giữa thì hộp lỗi (hay QR) hiện ra làm cả card
+   dịch lên nửa khoảng đó, đúng lúc người dùng định gõ lại vào ô vừa đổi chỗ. Trên điện thoại
+   mép trên thấp còn giữ nút chính ở trên vùng bàn phím ảo. */
 .auth {
   position: relative;
   min-height: 100vh;
   min-height: 100dvh;
   display: grid;
-  place-items: center;
-  padding: var(--space-7);
+  justify-items: center;
+  align-items: start;
+  padding: clamp(24px, 12vh, 120px) var(--space-7) var(--space-7);
   background: var(--auth-bg);
   overflow: hidden;
 }
@@ -60,10 +64,19 @@
   letter-spacing: -0.01em;
 }
 .auth-logo .brand-mark { width: 34px; height: 34px; font-size: var(--fs-xs); }
+.auth-brand { display: flex; flex-direction: column; line-height: 1.2; }
+.auth-brand-sub { color: var(--auth-ink-2); font-size: var(--fs-xs); font-weight: 500; letter-spacing: 0; }
+/* "Bước 1/2 · …" của luồng cài đặt lần đầu: thanh mảnh + một dòng chữ. */
+.auth-steps { display: flex; flex-direction: column; gap: var(--space-3); }
+.auth-steps-bar { display: flex; gap: var(--space-2); }
+.auth-steps-bar span { flex: 1; height: 3px; border-radius: 2px; background: var(--auth-card-border); }
+.auth-steps-bar span.on { background: var(--warm); }
+.auth-steps-text { color: var(--auth-ink-2); font-size: var(--fs-xs); font-weight: 600; }
 .auth-title { font-size: var(--fs-lg); font-weight: 600; }
 .auth-sub { color: var(--auth-ink-2); font-size: var(--fs-sm); }
 .auth-form { display: flex; flex-direction: column; gap: var(--space-7); }
-.auth-form .lbl-t { color: var(--auth-ink-2); }
+.auth-form .lbl-t { color: var(--auth-label); font-size: var(--fs-sm); font-weight: 600; }
+.auth-form .field { gap: 6px; }
 /* Ô nhập trên nền kính: viền sáng mờ thay vì viền content */
 .auth-form .inp {
   color: var(--auth-ink);
@@ -84,6 +97,26 @@
   color: var(--auth-danger-ink);
   background: var(--auth-danger-bg);
   border: 1px solid var(--auth-danger-border);
+  border-radius: var(--r);
+  padding: var(--space-4) var(--space-6);
+  font-size: var(--fs-sm);
+}
+/* Tạm khoá (chờ là hết) và bị quản trị khoá (phải gặp người mở) không phải lỗi vừa gõ sai. */
+.auth-error.warn {
+  color: var(--auth-warn-ink);
+  background: var(--auth-warn-bg);
+  border-color: var(--auth-warn-border);
+}
+.auth-error.neutral {
+  color: var(--auth-ink);
+  background: var(--auth-card);
+  border-color: var(--auth-card-border);
+}
+.auth-error p + p { margin-top: var(--space-2); }
+.auth-notice {
+  color: var(--auth-ink);
+  background: var(--auth-card);
+  border: 1px solid var(--auth-card-border);
   border-radius: var(--r);
   padding: var(--space-4) var(--space-6);
   font-size: var(--fs-sm);
@@ -127,7 +160,7 @@
 .auth-account { color: var(--auth-ink); font-weight: 600; word-break: break-all; }
 /* Cài 2 lớp: hàng nút mở ứng dụng + chép khoá; QR phụ nằm trong <details>. */
 .totp-actions { display: flex; flex-direction: column; gap: var(--space-5); }
-.totp-actions .btn { justify-content: center; }
+.totp-actions .linkbtn { justify-content: center; }
 .totp-secret-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
 .totp-secret-row code { word-break: break-all; }
 /* Khối cài 2 lớp dùng ở CẢ card đăng nhập (luôn tối) lẫn hộp thoại Hồ sơ (theo theme): màu mặc
@@ -138,6 +171,82 @@
 .auth-card .totp-note,
 .auth-card .totp-other summary { color: var(--auth-hint); }
 
+/* Khung QR: căn giữa, nền trắng ở cả hai theme để app xác thực đọc được. */
+.totp-qr-frame {
+  align-self: center;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+  background: var(--qr-bg);
+  border: 1px solid var(--auth-card-border);
+  border-radius: var(--r);
+}
+/* Khoá nhập tay: mono cỡ đọc được, chia nhóm 4 ký tự bằng KHOẢNG CÁCH CSS chứ không bằng dấu
+   cách — bôi đen chép tay vẫn ra đúng chuỗi, và E2E đọc nguyên văn từ `data-testid`. */
+.totp-secret-box {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 8px 12px;
+  border: 1px solid var(--border-2);
+  border-radius: var(--r);
+  background: var(--surface-2);
+}
+.auth-card .totp-secret-box { background: var(--auth-card); border-color: var(--auth-card-border); }
+.totp-secret-box code {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: var(--fs-md);
+  line-height: 1.6;
+}
+/* inline-block, KHÔNG flex/grid: phần tử con của flex bị "khối hoá" và `innerText` chèn xuống
+   dòng giữa các nhóm — E2E đọc khoá bằng `innerText` sẽ nhận chuỗi hỏng. */
+.totp-secret-box code > span { display: inline-block; margin-right: 0.6em; }
+.totp-secret-label { display: block; font-size: var(--fs-sm); margin-bottom: var(--space-2); }
+/* Ba bước cài 2 lớp. */
+.totp-steps { margin: 0; padding-left: 1.4em; display: flex; flex-direction: column; gap: var(--space-3); }
+.totp-steps li { font-size: var(--fs-sm); color: var(--ink-2); }
+.auth-card .totp-steps li { color: var(--auth-ink); }
+
+/* Checklist luật mật khẩu (`features/auth/password-checklist.tsx`). */
+.field-group { display: flex; flex-direction: column; gap: var(--space-3); }
+.pw-rules { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-xs); }
+.pw-rule { display: flex; gap: 6px; color: var(--ink-3); }
+.pw-rule.ok { color: var(--ok); }
+.pw-rule-icon { flex: none; width: 1em; text-align: center; font-weight: 700; }
+.pw-group.on { font-weight: 700; }
+.auth-card .pw-rule { color: var(--auth-hint); }
+.auth-card .pw-rule.ok { color: var(--auth-ok-ink); }
+
+/* Ô mật khẩu có nút hiện/ẩn (`ui/password-input.tsx`) — dùng ở card đăng nhập lẫn hộp thoại. */
+.pw-input { position: relative; display: block; }
+.pw-input > .inp { width: 100%; padding-right: 44px; }
+.pw-toggle {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--ink-2);
+}
+.pw-toggle:hover:not(:disabled) { background: transparent; color: var(--ink); }
+.pw-toggle:active:not(:disabled) { transform: translateY(-50%); }
+.auth-card .pw-toggle { color: var(--auth-ink-2); }
+.auth-card .pw-toggle:hover:not(:disabled) { color: var(--auth-ink); }
+
+@media (max-width: 900px) {
+  .pw-toggle { width: 44px; height: 44px; right: 0; }
+  .pw-input > .inp { padding-right: 48px; }
+}
+
 @media (max-width: 480px) {
+  .auth { padding-top: var(--space-7); }
   .auth-card { padding: var(--space-9) var(--space-7); gap: var(--space-7); }
 }

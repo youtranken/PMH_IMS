@@ -266,7 +266,7 @@ test.describe('Trang tổng Két sắt — sửa từ code review', () => {
     await expect(page.getByRole('link', { name: 'Két sắt', exact: true })).toHaveCount(0);
 
     await page.goto('/vault');
-    await expect(page.getByRole('heading', { name: 'Không tìm thấy trang' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Bạn không có quyền xem trang này' })).toBeVisible();
   });
 });
 

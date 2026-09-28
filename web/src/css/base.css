@@ -151,6 +151,9 @@ button.primary:disabled {
 button.primary {
   color: var(--on-brand);
   background: var(--grad);
+  /* Gradient phải phủ cả dải viền trong suốt: mặc định nó bắt đầu từ mép padding rồi LẶP vào
+     viền, để lại một vệt màu cuối gradient 1px dọc mép trái nút. */
+  background-origin: border-box;
   border-color: transparent;
   box-shadow: 0 8px 18px -8px var(--warm-ink);
 }
@@ -159,6 +162,7 @@ button.primary:hover:not(:disabled) {
      specificity cao hơn base `button.primary` → nếu không, hover đè nền sáng + chữ trắng
      = nút "biến mất" ở theme sáng. */
   background: var(--grad);
+  background-origin: border-box;
   filter: brightness(1.04);
   box-shadow: 0 10px 22px -8px var(--warm-ink);
 }
@@ -224,6 +228,23 @@ a.linkbtn {
 a.linkbtn:hover {
   background: var(--surface-2);
   text-decoration: none;
+}
+/* Link mang dáng nút CHÍNH / nút nhỏ — `<Link>` đi thẳng tới trang, không lồng `<button>` trong `<a>`. */
+a.linkbtn.primary {
+  color: var(--on-brand);
+  background: var(--grad);
+  background-origin: border-box;
+  border-color: transparent;
+  box-shadow: 0 8px 18px -8px var(--warm-ink);
+}
+a.linkbtn.primary:hover {
+  background: var(--grad);
+  background-origin: border-box;
+  filter: brightness(1.04);
+}
+a.linkbtn.sm {
+  padding: 0.28rem var(--space-4);
+  font-size: var(--fs-xs);
 }
 
 /* --- Shell: sidebar tối + topbar ----------------------------------------- */
@@ -291,7 +312,7 @@ a.linkbtn:hover {
     transform 0.12s var(--ease);
 }
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--sidebar-hover);
   color: var(--sidebar-ink-2);
   text-decoration: none;
   transform: translateX(2px);
@@ -300,39 +321,6 @@ a.linkbtn:hover {
   background: var(--sidebar-active-bg);
   color: var(--sidebar-active-ink);
   box-shadow: inset 3px 0 0 var(--warm);
-}
-/* Mục cha dạng dropdown (vd "Kho thanh lý"): button trông như nav-item, caret đẩy phải. */
-.nav-parent {
-  width: 100%;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font: inherit;
-  font-weight: var(--fw-semibold);
-  font-size: var(--fs-sm);
-}
-/* Đè `button:hover{background:surface-2}` (specificity cao hơn .nav-item:hover) — nếu không,
-   nút dropdown bị nền sáng + chữ sáng của sidebar = "trắng không thấy gì". */
-.nav-parent:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--sidebar-ink-2);
-}
-.nav-parent .nav-caret {
-  margin-left: auto;
-  font-size: var(--fs-2xs);
-  opacity: 0.7;
-}
-.nav-children {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  margin: 2px 0 2px var(--space-6);
-  padding-left: var(--space-3);
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-}
-.nav-children .nav-item {
-  font-size: var(--fs-sm);
-  font-weight: 500;
 }
 /* Drawer mobile (≤900px): sidebar cố định trượt vào, có backdrop mờ ấm. */
 /*
@@ -398,14 +386,6 @@ a.linkbtn:hover {
 }
 .topbar .spacer {
   flex: 1;
-}
-.topbar .hello {
-  color: var(--ink-2);
-  font-size: var(--fs-sm);
-}
-.topbar .hello strong {
-  color: var(--ink);
-  font-weight: 600;
 }
 .page {
   /* Đệm ĐÁY dày hơn ba phía kia (`--space-13`, xem thang trong `tokens.css`): nội dung cuối

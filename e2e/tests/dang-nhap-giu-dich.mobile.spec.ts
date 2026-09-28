@@ -63,7 +63,7 @@ test('link sâu /approvals?id=… khi chưa đăng nhập → đăng nhập + 2 
   // Đích chỉ dùng MỘT lần: đăng xuất rồi đăng nhập lại thì về trang chủ.
   await logout(page);
   await loginKeepingTarget(page, secret);
-  await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
 });
 
 test('đích độc //evil.com bị bỏ — đăng nhập xong vẫn ở lại miền của IMS', async ({ page }) => {
@@ -78,7 +78,7 @@ test('đích độc //evil.com bị bỏ — đăng nhập xong vẫn ở lại 
   // Kho bị sửa tay (XSS ở chỗ khác, extension…) cũng không đưa được ra ngoài.
   await page.evaluate(() => sessionStorage.setItem('ims_next_path', '//evil.com/approvals'));
   await loginKeepingTarget(page, secret);
-  await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
   expect(new URL(page.url()).origin).toBe(new URL(APP_ORIGIN).origin);
   expect(new URL(page.url()).pathname).toBe('/');
 });
@@ -142,13 +142,13 @@ test('máy dùng chung: phiên của A chết giữa chừng → B đăng nhập
 
   // B (Member) ngồi vào đăng nhập: về trang chủ của B.
   await loginKeepingTarget(page, memberSecret, E2E_MEMBER.email);
-  await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
   expect(new URL(page.url()).pathname).toBe('/');
   await logout(page);
 
   // Đường hạnh phúc: chính người có phiên chết đăng nhập lại thì về đúng trang dở.
   await loginKeepingTarget(page, saSecret);
-  await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
   await page.goto('/software');
   await expect(page.getByRole('heading', { name: 'Phần mềm' })).toBeVisible();
   killSessions(E2E_SA.email);

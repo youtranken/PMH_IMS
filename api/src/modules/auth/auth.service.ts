@@ -45,6 +45,13 @@ const TOTP_TABLE = 'users';
  */
 const REENROLL_TICKET_TABLE = 'users.totp_reenroll';
 
+/**
+ * MỘT câu cho "sai mã" ở cả màn nhập mã lúc đăng nhập lẫn màn cài 2 lớp: nguyên nhân hay gặp
+ * nhất là mã đã sang chu kỳ 30 giây mới, nên câu nói luôn cách sửa.
+ */
+const TOTP_INVALID_MESSAGE =
+  'Mã không đúng hoặc đã hết hạn (mã đổi mỗi 30 giây). Hãy nhập mã mới nhất.';
+
 const ALREADY_ENROLLED_MESSAGE =
   'Tài khoản đã bật xác thực 2 lớp. Đổi điện thoại thì vào Hồ sơ của tôi → Xác thực 2 lớp → Cài lại.';
 
@@ -336,7 +343,7 @@ export class AuthService {
         message:
           result.reason === 'replayed'
             ? 'Mã này đã được dùng. Chờ mã mới trên ứng dụng rồi nhập lại.'
-            : 'Mã xác thực không đúng.',
+            : TOTP_INVALID_MESSAGE,
         attemptsLeft: maxFailures - failures,
       });
     }
@@ -546,7 +553,7 @@ export class AuthService {
         message:
           result.reason === 'replayed'
             ? 'Mã này đã được dùng. Chờ mã mới trên ứng dụng rồi nhập lại.'
-            : 'Mã xác thực không đúng. Kiểm tra đồng hồ điện thoại rồi thử lại.',
+            : `${TOTP_INVALID_MESSAGE} Vẫn sai thì kiểm tra giờ trên điện thoại.`,
       });
     }
 

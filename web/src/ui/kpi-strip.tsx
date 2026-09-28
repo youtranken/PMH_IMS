@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
+import { Chevron } from '@/ui/chevron';
 
 /**
  * Hàng số ở đầu màn — MỘT CON SỐ TO, ĐỌC ĐƯỢC TỪ XA, VÀ BẤM ĐƯỢC.
@@ -77,9 +78,11 @@ export function KpiTile({
   );
 
   if (to) {
+    // Mũi tên ở góc: ô là một LINK sang màn đầy đủ — trên điện thoại không có hover để đoán.
     return (
-      <Link className={className} to={to} title={incomplete}>
+      <Link className={`${className} kpi-link`} to={to} title={incomplete}>
         {inner}
+        <Chevron direction="right" className="kpi-go" />
       </Link>
     );
   }

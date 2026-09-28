@@ -16,7 +16,7 @@ describe('disposalDetail — cột Chi tiết đọc được', () => {
     ['service_account', 'shared', 'Tài khoản dùng chung'],
     ['device', 'Switch', 'Switch'],
     ['isp', '100 Mbps', '100 Mbps'],
-    ['software', 'la-lam', 'la-lam'],
+    ['software', 'la-lam', '—'],
     ['device', null, '—'],
   ] as const)('%s · %s → %s', (kind, detail, expected) => {
     expect(disposalDetail(kind, detail, t)).toBe(expected);

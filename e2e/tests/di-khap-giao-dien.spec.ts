@@ -362,7 +362,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
    * link.
    */
   const NAV_STOPS: NavStop[] = [
-    { link: 'Bảng điều khiển', path: '/', heading: /^Xin chào/ },
+    { link: 'Bảng điều khiển', path: '/', heading: /^Bảng điều khiển$/ },
     { link: 'Thiết bị', path: '/devices', heading: /^Thiết bị$/ },
     { link: 'Phần mềm', path: '/software', heading: /^Phần mềm$/ },
     { link: 'Đường truyền', path: '/isp-lines', heading: /^Đường truyền$/ },
@@ -605,7 +605,7 @@ test.describe('SA đi một vòng cả hệ thống', () => {
 
     for (const stop of stops) {
       await page.goto('/');
-      await expect(page.getByRole('heading', { level: 1, name: /^Xin chào/ })).toBeVisible();
+      await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
       /*
        * Chờ ĐÚNG cái link chắc chắn có trước khi đếm mấy cái kia: cả bảng dựng từ MỘT lượt
        * gọi `/dashboard`, nên khi link này hiện là dữ liệu đã về hết. Đếm sớm hơn thì khối
@@ -1027,14 +1027,18 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
 
     await firstLogin(page, { email: ADMIN_EMAIL, password: matKhauTam });
 
-    // --- Hai đường trả 404 thật.
-    for (const url of ['/dev/components', '/documents']) {
-      await page.goto(url);
-      await expect(
-        page.getByRole('heading', { name: 'Không tìm thấy trang' }),
-        `admin gõ ${url} phải nhận trang 404 tử tế, không phải màn trắng hay redirect câm`,
-      ).toBeVisible();
-    }
+    // --- Trang có thật nhưng không dành cho vai này → 403 nói rõ thiếu quyền (MISC-001);
+    //     trang chưa có route → 404.
+    await page.goto('/dev/components');
+    await expect(
+      page.getByRole('heading', { name: 'Bạn không có quyền xem trang này' }),
+      'admin gõ /dev/components phải nhận trang 403 nói rõ thiếu quyền, không phải "không tồn tại"',
+    ).toBeVisible();
+    await page.goto('/documents');
+    await expect(
+      page.getByRole('heading', { name: 'Không tìm thấy trang' }),
+      'admin gõ /documents phải nhận trang 404 tử tế, không phải màn trắng hay redirect câm',
+    ).toBeVisible();
 
     // --- `/admin/accounts`: màn MỞ (web không gác), API mới là nơi chặn.
     const truoc = await page.request.get('/api/v1/accounts');
@@ -1056,8 +1060,8 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
      * kêu lên rằng cửa sau đang mở.
      */
     await expect(
-      page.getByRole('heading', { name: 'Không tìm thấy trang' }),
-      'từ 22/09 router cũng gác: admin gõ thẳng URL của SA chỉ nhận 404',
+      page.getByRole('heading', { name: 'Bạn không có quyền xem trang này' }),
+      'router cũng gác: admin gõ thẳng URL của SA nhận trang 403',
     ).toBeVisible();
 
     /*
@@ -1375,7 +1379,8 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
       .map((text) => text.trim())
       .sort();
     const expected = [
-      // Nhóm "Nghiệp vụ" — 10 link + mục "Tài liệu" không phải link (xem dưới).
+      // 10 link nghiệp vụ (chia nhóm Tổng quan · Tài sản · Mạng · Bảo mật) + mục "Tài liệu"
+      // không phải link (xem dưới).
       'Bảng điều khiển',
       'Thiết bị',
       'Phần mềm',
@@ -1394,9 +1399,12 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
       'Thành viên phải thấy đúng 11 cửa bấm được — thừa một mục là quên gắn `roles`, thiếu một mục là gắn nhầm',
     ).toEqual(expected);
 
-    // Hai nhãn nhóm vẫn phải còn: "Hệ thống" biến mất nghĩa là Danh mục cũng đã rơi mất.
-    await expect(nav.getByText('Nghiệp vụ', { exact: true })).toBeVisible();
-    await expect(nav.getByText('Hệ thống', { exact: true })).toBeVisible();
+    // Nhãn nhóm vẫn phải còn: "Hệ thống" biến mất nghĩa là Danh mục cũng đã rơi mất; nhóm
+    // "Dành cho nhà phát triển" chỉ SA thấy (SHELL-008, SHELL-012).
+    for (const nhom of ['Tổng quan', 'Tài sản', 'Mạng', 'Bảo mật', 'Hệ thống']) {
+      await expect(nav.getByText(nhom, { exact: true })).toBeVisible();
+    }
+    await expect(nav.getByText('Dành cho nhà phát triển', { exact: true })).toHaveCount(0);
 
     /*
      * Bốn cửa PHẢI KHÔNG có. Viết rời từng cái thay vì tin vào phép so danh sách ở trên, vì
@@ -1464,16 +1472,16 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
   test('Gõ thẳng URL không mở được cửa mà menu đã đóng', async ({ page }) => {
     await firstLogin(page, E2E_MEMBER);
 
-    for (const [path, why] of [
-      ['/vault', 'trang tổng Két sắt gác vai ngay ở route'],
-      ['/dev/components', 'Bộ giao diện là trang nội bộ, chỉ SA'],
-      ['/admin/settings', 'Tham số hệ thống chỉ SA (Q-14)'],
-      ['/documents', 'màn Tài liệu thuộc epic sau — chưa có route nào'],
+    for (const [path, why, heading] of [
+      ['/vault', 'trang tổng Két sắt gác vai ngay ở route', 'Bạn không có quyền xem trang này'],
+      ['/dev/components', 'Bộ giao diện là trang nội bộ, chỉ SA', 'Bạn không có quyền xem trang này'],
+      ['/admin/settings', 'Tham số hệ thống chỉ SA (Q-14)', 'Bạn không có quyền xem trang này'],
+      ['/documents', 'màn Tài liệu thuộc epic sau — chưa có route nào', 'Không tìm thấy trang'],
     ] as const) {
       await page.goto(path);
       await expect(
-        page.getByRole('heading', { name: 'Không tìm thấy trang' }),
-        `${path}: ${why} — gõ thẳng URL cũng chỉ được nhận 404`,
+        page.getByRole('heading', { name: heading }),
+        `${path}: ${why} — gõ thẳng URL nhận "${heading}"`,
       ).toBeVisible();
     }
 
@@ -1502,8 +1510,8 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
     for (const path of ['/admin/accounts', '/admin/vault-access'] as const) {
       await page.goto(path);
       await expect(
-        page.getByRole('heading', { name: 'Không tìm thấy trang' }),
-        `${path}: từ 22/09 router gác vai — Member gõ thẳng URL chỉ nhận 404`,
+        page.getByRole('heading', { name: 'Bạn không có quyền xem trang này' }),
+        `${path}: router gác vai — Member gõ thẳng URL nhận trang 403`,
       ).toBeVisible();
     }
 
@@ -1874,7 +1882,7 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
       await expect(
         victimPage.getByRole('alert'),
         'SA đã bấm Khóa thì người đó phải bị chặn NGAY ở cửa đăng nhập, và được nói rõ vì sao',
-      ).toHaveText('Tài khoản đang bị khóa. Liên hệ SA để mở lại.');
+      ).toContainText('Tài khoản đã bị quản trị viên tạm ngưng. Liên hệ Super Admin để mở lại.');
       await expect(
         victimPage.getByRole('heading', { name: 'Cài xác thực 2 lớp' }),
         'không được đi tiếp một bước nào trong luồng đăng nhập',
@@ -8328,14 +8336,19 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     await firstLogin(page, E2E_SA);
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1, name: /^Xin chào/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
 
     /*
      * Mỗi khối là một `<section class="card">` mở đầu bằng `<h2>`, và trên màn này KHÔNG có
      * `<h2>` nào khác — nên gom hết `heading level 2` là gom đúng danh sách khối.
      */
-    const blockTitles = () =>
-      page.getByRole('main').getByRole('heading', { level: 2 }).allTextContents();
+    // Ngưỡng dải mạng nằm TRONG tiêu đề ("Dải mạng ≥ 80%", DASH-016) — quy về một tên để so.
+    // Hai khối "việc của tôi" (Cần bạn duyệt / Yêu cầu mở két của tôi) chỉ hiện khi có việc,
+    // tuỳ dữ liệu bài trước để lại — không thuộc danh sáu khối cố định.
+    const blockTitles = async () =>
+      (await page.getByRole('main').getByRole('heading', { level: 2 }).allTextContents())
+        .map((title) => title.replace(/^Dải mạng ≥ \d+%$/, 'Dải mạng ≥ N%'))
+        .filter((title) => !/^(Cần bạn duyệt|Yêu cầu mở két của tôi)/.test(title));
 
     const saBlocks = await blockTitles();
     expect(
@@ -8343,11 +8356,11 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'SA phải thấy đủ sáu khối — mục tiêu của epic là "sếp 3 phút sáng thứ Hai tự trả lời mọi câu hỏi"',
     ).toEqual(
       asSet([
-        'Sắp hết hạn (30 ngày)',
-        'Dải mạng sắp đầy',
+        'Hạn cần xử lý',
+        'Dải mạng ≥ N%',
         'Két lâu chưa đổi',
         'Sự cố tuần qua',
-        'Break-glass tuần qua',
+        'Yêu cầu mở két tuần qua',
         'Vừa vào kho thanh lý (7 ngày)',
       ]),
     );
@@ -8359,7 +8372,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
      * hiện một ô trống — là cách nhanh nhất để sếp yên tâm nhầm.
      */
     await expect(
-      page.getByText('Phần quản lý sự cố chưa mở trong bản này. Hệ thống CHƯA theo dõi mục này.'),
+      page.getByText('IMS chưa theo dõi sự cố. Sự cố hiện vẫn ghi ở nơi cũ.'),
       'khối "Sự cố tuần qua" phải nói thẳng là epic chưa mở, không được im lặng như một khối rỗng',
     ).toBeVisible();
 
@@ -8368,10 +8381,10 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await logout(page);
     await firstLogin(page, E2E_MEMBER);
     await page.goto('/');
-    await expect(page.getByRole('heading', { level: 1, name: /^Xin chào/ })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Bảng điều khiển' })).toBeVisible();
     // Chờ một khối chắc chắn có, để không đếm lúc trang mới dựng được nửa.
     await expect(
-      page.getByRole('heading', { level: 2, name: 'Sắp hết hạn (30 ngày)' }),
+      page.getByRole('heading', { level: 2, name: 'Hạn cần xử lý' }),
       'Member vẫn phải thấy khối "Sắp hết hạn" — cắt theo vai không phải là cắt sạch',
     ).toBeVisible();
 
@@ -8381,8 +8394,8 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'Member phải thấy đúng bốn khối không dính bí mật',
     ).toEqual(
       asSet([
-        'Sắp hết hạn (30 ngày)',
-        'Dải mạng sắp đầy',
+        'Hạn cần xử lý',
+        'Dải mạng ≥ N%',
         'Sự cố tuần qua',
         'Vừa vào kho thanh lý (7 ngày)',
       ]),
@@ -8400,7 +8413,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       asSet(missing),
       'Member KHÔNG được thấy hai khối an ninh — và cũng không được thiếu khối nào khác: ' +
         `SA thấy [${saBlocks.join(' | ')}], Member thấy [${memberBlocks.join(' | ')}]`,
-    ).toEqual(asSet(['Két lâu chưa đổi', 'Break-glass tuần qua']));
+    ).toEqual(asSet(['Két lâu chưa đổi', 'Yêu cầu mở két tuần qua']));
   });
 
   /* ================================================================== *
