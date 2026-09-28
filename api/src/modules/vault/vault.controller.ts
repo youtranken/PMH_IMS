@@ -23,6 +23,7 @@ import { AuditApiService } from '../audit/audit.api';
 import { Roles } from '../auth/roles.decorator';
 import { stepUpSecondsLeft } from '../auth/session-policy';
 import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
+import { NoIdleTouch } from '../auth/no-idle-touch.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { BreakGlassService } from './break-glass.service';
@@ -129,8 +130,12 @@ export class VaultController {
     return this.vault.listFor(query.ownerType, query.ownerId);
   }
 
-  /** "Tôi làm được gì với chủ thể này" — UI dựng đúng nút bằng MỘT lần gọi (story 6.3). */
+  /**
+   * "Tôi làm được gì với chủ thể này" — UI dựng đúng nút bằng MỘT lần gọi (story 6.3).
+   * Panel két hỏi lại route này theo đồng hồ khi có phiếu treo, nên không gia hạn idle.
+   */
   @Roles('sa', 'admin', 'member')
+  @NoIdleTouch()
   @Get('verdict')
   verdict(@Query() query: OwnerQueryDto, @Req() req: AuthedRequest) {
     return this.breakGlass.verdictFor(actor(req), query.ownerType, query.ownerId);

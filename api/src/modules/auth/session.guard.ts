@@ -11,6 +11,7 @@ import { UsersService } from '../users/users.service';
 import { IS_PUBLIC_KEY } from './public.decorator';
 import { ALLOW_PASSWORD_PENDING_KEY } from './password-pending.decorator';
 import { ALLOW_TOTP_PENDING_KEY } from './totp-pending.decorator';
+import { NO_IDLE_TOUCH_KEY } from './no-idle-touch.decorator';
 import { evaluateSession } from './session-policy';
 import { SessionService } from './session.service';
 import { SESSION_COOKIE } from './cookie';
@@ -107,7 +108,13 @@ export class SessionGuard implements CanActivate {
     };
 
     // Gia hạn idle. Bỏ qua lỗi để một lần ghi hỏng không chặn cả request đọc.
-    void this.sessions.touch(session.id).catch(() => undefined);
+    // Vòng hỏi định kỳ (`@NoIdleTouch()`) không phải thao tác của người: gia hạn ở đó thì tab bỏ
+    // mở không bao giờ hết idle (NFR-01).
+    const noTouch = this.reflector.getAllAndOverride<boolean>(NO_IDLE_TOUCH_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (!noTouch) void this.sessions.touch(session.id).catch(() => undefined);
     return true;
   }
 }

@@ -1765,6 +1765,8 @@ export default {
     grantHoursHint: 'Sửa được — cấp vừa đủ việc, đừng cấp thừa. Vượt trần hệ thống sẽ bị kẹp xuống.',
     /* Nói RÕ ô nào sai và nhận cái gì. Trước đây ô này nuốt mọi thứ rồi tự cấp 4 giờ. */
     grantHoursInvalid: 'Số giờ phải là một số nguyên lớn hơn 0. Ví dụ: 4',
+    grantHoursHintMax: 'Rút ngắn được, tối đa {{hours}} giờ như người xin. Vượt trần hệ thống sẽ bị kẹp xuống.',
+    grantHoursAboveAsked: 'Không cấp quá số giờ đã xin ({{hours}} giờ). Cần lâu hơn thì người xin gửi yêu cầu mới.',
     note: 'Ghi chú cho người xin',
     statePending: 'Chờ duyệt',
     stateApproved: 'Đã duyệt',

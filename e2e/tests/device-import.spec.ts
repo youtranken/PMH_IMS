@@ -181,6 +181,67 @@ test.describe('Import / export thiết bị', () => {
     // Chỉ có dòng của bộ lọc (Switch), KHÔNG có PC → tổng số dòng đối chiếu là 1.
     await expect(page.getByText(/Không đổi: 1/)).toBeVisible();
   });
+
+  /**
+   * Q-14 (DEV-027) ở cửa Excel: file không được là cửa sau để chọn MỚI một site đã ngừng dùng.
+   * Máy VỐN nằm ở site đó thì nhập lại nguyên dòng vẫn qua — chặn cả nó là khoá chết hồ sơ cũ.
+   */
+  test('site đã ngừng dùng: dòng mới báo lỗi theo dòng, máy cũ ở site đó vẫn nhập lại được', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
+    const siteCode = `E2E-OFF-${stamp}`;
+    const site = await page.request.post('/api/v1/catalog/site', {
+      headers,
+      data: { code: siteCode, name: 'Site sắp ngừng dùng' },
+    });
+    expect(site.status()).toBe(201);
+    const siteId = ((await site.json()) as { id: string }).id;
+
+    // Máy cũ dựng khi site còn dùng, rồi mới ngừng dùng site — đúng như đời thực.
+    const oldCode = `SW-E2E-OFFOLD-${stamp}`;
+    const seed = await buildDeviceFile(join(tmpdir(), `tb-off-seed-${stamp}.xlsx`), [
+      [oldCode, 'Switch cũ', 'Switch', siteCode, ''],
+    ]);
+    await page.goto('/devices');
+    await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
+    await page.getByLabel('Chọn file .xlsx').setInputFiles(seed);
+    await page.getByRole('button', { name: 'Đối chiếu' }).click();
+    await expect(page.getByText(/Thêm mới: 1/)).toBeVisible();
+    await page.getByRole('button', { name: 'Xác nhận ghi' }).click();
+    await expect(page.getByRole('link', { name: oldCode })).toBeVisible();
+
+    const off = await page.request.patch(`/api/v1/catalog/site/${siteId}/active`, {
+      headers,
+      data: { active: false },
+    });
+    expect(off.ok()).toBeTruthy();
+
+    const newCode = `SW-E2E-OFFNEW-${stamp}`;
+    const bad = await buildDeviceFile(join(tmpdir(), `tb-off-${stamp}.xlsx`), [
+      [newCode, 'Switch mới', 'Switch', siteCode, ''],
+    ]);
+    await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
+    await page.getByLabel('Chọn file .xlsx').setInputFiles(bad);
+    await page.getByRole('button', { name: 'Đối chiếu' }).click();
+    await expect(page.getByText(/Lỗi: 1/)).toBeVisible();
+    await expect(page.getByText(`Site "${siteCode}" đã ngừng dùng`, { exact: false })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Xác nhận ghi' })).toBeDisabled();
+    await page.getByRole('button', { name: 'Hủy' }).click();
+    expect(sql(`SELECT count(*) FROM device WHERE code = '${newCode}'`)).toBe('0');
+
+    // Máy cũ: đổi tên, giữ nguyên site đã ngừng dùng → vẫn là một dòng cập nhật hợp lệ.
+    const again = await buildDeviceFile(join(tmpdir(), `tb-off-again-${stamp}.xlsx`), [
+      [oldCode, 'Switch cũ — đổi tên', 'Switch', siteCode, ''],
+    ]);
+    await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
+    await page.getByLabel('Chọn file .xlsx').setInputFiles(again);
+    await page.getByRole('button', { name: 'Đối chiếu' }).click();
+    await expect(page.getByText(/Lỗi: 0/)).toBeVisible();
+    await expect(page.getByText(/Cập nhật: 1/)).toBeVisible();
+  });
 });
 
 /**

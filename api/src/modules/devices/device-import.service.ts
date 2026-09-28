@@ -4,13 +4,14 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { ExcelImportService } from '../../common/excel/excel-import.service';
-import { normalizeKey } from '../../common/import-plan';
+import { normalizeKey, summarize } from '../../common/import-plan';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
 import {
   planDeviceImport,
   type DeviceImportContext,
   type DeviceImportPlan,
+  type DeviceImportRow,
 } from './device-import';
 import { diffDevice } from './device-changes';
 import { deviceExportSheets, deviceTemplateSheets } from './device-template';
@@ -79,7 +80,33 @@ export class DeviceImportService {
           'File không có sheet nào tên "Thiết bị". Hãy bấm "Tải file mẫu" và điền vào đó.',
       });
     }
-    return plan;
+    return this.rejectInactiveRefs(plan, context);
+  }
+
+  /**
+   * Q-14 ở cửa Excel: dòng tạo/sửa chọn MỚI một mục danh mục đã vô hiệu thành dòng lỗi.
+   *
+   * Ghi đi qua `insertWithin`/`updateWithin`, không qua `assertRefs` của cửa HTTP, và ảnh chụp
+   * đối chiếu gồm cả mục đã vô hiệu — nên không chặn ở đây thì file là cửa sau của luật đó.
+   * Chặn ở bước Đối chiếu (cùng hàm cho cả xem trước lẫn ghi) để lỗi hiện theo dòng; `commit`
+   * gặp dòng lỗi thì từ chối cả file.
+   *
+   * `current` là hồ sơ đang có: máy VỐN trỏ vào mục đã vô hiệu nhập lại nguyên cột vẫn qua.
+   */
+  private async rejectInactiveRefs(
+    plan: DeviceImportPlan,
+    context: DeviceImportContext,
+  ): Promise<DeviceImportPlan> {
+    const check = await this.catalog.inactiveRefCheck();
+    const byId = new Map([...context.devices.values()].map((device) => [device.id, device]));
+    const rows = plan.rows.map((row): DeviceImportRow => {
+      if (row.action !== 'create' && row.action !== 'update') return row;
+      const current = row.existingId ? (byId.get(row.existingId) ?? null) : null;
+      const errors = check(row.values ?? {}, current);
+      if (errors.length === 0) return row;
+      return { rowNumber: row.rowNumber, label: row.label, action: 'error', message: errors.join(' ') };
+    });
+    return { ...plan, rows, summary: summarize(rows) };
   }
 
   /**

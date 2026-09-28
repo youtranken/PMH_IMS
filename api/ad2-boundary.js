@@ -63,7 +63,7 @@ const MODULE_DOORS = String.raw`(?![^/]+/[^/]*\.(?:api|module|types)$)`;
  * cho cả sáu cách gõ ở `MODULE_ENTRIES`, không chỉ cách gõ ngắn.
  */
 const INFRA_PRIMITIVES = [
-  String.raw`(?!auth/(?:roles\.decorator|step-up\.decorator|types)$)`,
+  String.raw`(?!auth/(?:roles\.decorator|step-up\.decorator|no-idle-touch\.decorator|types)$)`,
   String.raw`(?!audit/(?:audited\.decorator|audit-writer\.service)$)`,
   String.raw`(?!config-sys/system-config\.service$)`,
   String.raw`(?!outbox/outbox\.service$)`,
@@ -97,6 +97,10 @@ const INFRA_PRIMITIVES = [
  *
  * `auth/step-up.guard` thì VẪN NGOÀI danh sách, và đó là điểm mấu chốt: chỉ `app.module` cần
  * tới guard. Module nào import guard chứ không phải decorator là lint đỏ, y như cũ.
+ *
+ * `auth/no-idle-touch.decorator` cùng hình dạng: metadata thuần mà `SessionGuard` (toàn cục)
+ * đọc. Module nào có route bị màn hình hỏi theo đồng hồ (badge, phiếu treo, số quá hạn) đều
+ * phải khai nó, nếu không vòng hỏi sẽ giữ phiên sống mãi (NFR-01).
  */
 
 /** `<module>/<file>`. `[^./]` ở ký tự đầu tên module chặn `../../common/...` lọt vào lối 1. */
