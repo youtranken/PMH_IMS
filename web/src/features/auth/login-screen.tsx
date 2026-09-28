@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
+import { peekNextPath } from '@/lib/next-path';
 import { AuthCard } from './auth-card';
+import { SupportHelp } from './support-help';
 
 interface LoginResult {
   status: 'authenticated' | 'totp-required' | 'totp-enroll-required';
@@ -20,8 +22,16 @@ export function LoginScreen() {
     '/api/v1/auth/login',
   );
 
+  // Đích đã nhớ (link trong mail…): nói ra để người dùng biết đăng nhập xong sẽ tới đâu.
+  const [next] = useState(() => peekNextPath());
+
   return (
-    <AuthCard title={t('auth.signInTitle')} subtitle={t('auth.signInSub')} error={error}>
+    <AuthCard
+      title={t('auth.signInTitle')}
+      subtitle={next ? t('auth.resumeTo', { path: next }) : t('auth.signInSub')}
+      error={error}
+      footer={<SupportHelp kind="password" />}
+    >
       <form
         className="auth-form"
         onSubmit={(e) => {

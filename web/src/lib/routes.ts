@@ -46,6 +46,9 @@ export const PATHS = {
   adminAuditLog: '/admin/audit-log',
 
   devComponents: '/dev/components',
+
+  /** Hồ sơ của tôi — mở cho mọi vai; vào từ menu tài khoản ở chân sidebar. */
+  profile: '/profile',
 } as const;
 
 /**
@@ -174,6 +177,7 @@ export const ROUTE_TITLE_KEY: Record<string, string> = {
   [PATHS.adminVaultAccess]: 'nav.vaultAccess',
   [PATHS.adminAuditLog]: 'nav.auditLog',
   [PATHS.devComponents]: 'nav.components',
+  [PATHS.profile]: 'profile.title',
 };
 
 /**

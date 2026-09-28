@@ -53,11 +53,57 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** Đăng xuất nằm trong menu tài khoản ở chân sidebar. */
+async function logoutViaMenu() {
+  const user = userEvent.setup();
+  await user.click(screen.getByRole('button', { name: /Menu tài khoản của Nguyễn Văn A/ }));
+  await user.click(screen.getByRole('menuitem', { name: 'Đăng xuất' }));
+}
+
+describe('AppShell — menu tài khoản (SHELL-001)', () => {
+  it('bấm tên → menu mở, tiêu điểm vào mục đầu, có đủ lối vào Hồ sơ / Đổi mật khẩu / 2 lớp / Giao diện / Đăng xuất', async () => {
+    renderShell();
+    const trigger = screen.getByRole('button', { name: /Menu tài khoản của Nguyễn Văn A/ });
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    await userEvent.setup().click(trigger);
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    const menu = screen.getByRole('menu');
+    expect(within(menu).getByRole('menuitem', { name: 'Hồ sơ của tôi' })).toHaveFocus();
+    for (const name of ['Đổi mật khẩu', 'Xác thực 2 lớp', 'Đăng xuất']) {
+      expect(within(menu).getByRole('menuitem', { name })).toBeInTheDocument();
+    }
+    expect(within(menu).getAllByRole('menuitemradio')).toHaveLength(3);
+  });
+
+  it('phím mũi tên đi vòng trong menu; Esc đóng và trả tiêu điểm về nút', async () => {
+    renderShell();
+    const user = userEvent.setup();
+    const trigger = screen.getByRole('button', { name: /Menu tài khoản của Nguyễn Văn A/ });
+    await user.click(trigger);
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('menuitem', { name: 'Đổi mật khẩu' })).toHaveFocus();
+    await user.keyboard('{ArrowUp}{ArrowUp}');
+    expect(screen.getByRole('menuitem', { name: 'Đăng xuất' })).toHaveFocus();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it('chọn "Tối" trong menu thì áp theme ngay và đánh dấu mục đó', async () => {
+    renderShell();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /Menu tài khoản của Nguyễn Văn A/ }));
+    await user.click(screen.getByRole('menuitemradio', { name: /Tối/ }));
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(screen.getByRole('menuitemradio', { name: /Tối/ })).toHaveAttribute('aria-checked', 'true');
+  });
+});
+
 describe('AppShell — đăng xuất', () => {
   it('đăng xuất lỗi (mất mạng) → vẫn về màn đăng nhập VÀ báo lỗi cho người dùng', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
     renderShell();
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Đăng xuất' }));
+    await logoutViaMenu();
     expect(await screen.findByText('Màn đăng nhập')).toBeInTheDocument();
     expect(await screen.findByText(/Đăng xuất chưa thành công/)).toBeInTheDocument();
   });
@@ -65,7 +111,7 @@ describe('AppShell — đăng xuất', () => {
   it('đăng xuất thành công → về màn đăng nhập, không có toast lỗi', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { status: 'ok' })));
     renderShell();
-    await userEvent.setup().click(screen.getByRole('button', { name: 'Đăng xuất' }));
+    await logoutViaMenu();
     expect(await screen.findByText('Màn đăng nhập')).toBeInTheDocument();
     expect(screen.queryByText(/Đăng xuất chưa thành công/)).not.toBeInTheDocument();
   });

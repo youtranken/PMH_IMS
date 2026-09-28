@@ -176,6 +176,23 @@
   background: color-mix(in srgb, var(--danger) 22%, transparent);
   color: var(--danger);
 }
+/* Menu tài khoản: nhãn nhóm "Giao diện", ô dấu chọn cố định bề rộng để ba lựa chọn thẳng hàng. */
+.sb-act-label {
+  margin: var(--space-2) var(--space-3) 0;
+  color: var(--sidebar-label);
+  font-size: var(--fs-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sb-check {
+  width: 1em;
+  flex: none;
+}
+.sb-sep {
+  height: 1px;
+  margin: var(--space-2) 0;
+  background: var(--sidebar-border);
+}
 .sb-badge {
   font-size: var(--fs-2xs);
   font-weight: 800;

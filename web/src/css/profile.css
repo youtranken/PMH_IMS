@@ -183,3 +183,72 @@
   }
 }
 
+
+/* --- Hồ sơ của tôi (/profile) — một cột thẻ, đọc được ở 390px ----------------------------- */
+.profile-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  max-width: 760px;
+}
+.profile-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.profile-card h2 {
+  margin: 0;
+  font-size: var(--fs-lg);
+}
+.profile-dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-3) var(--space-7);
+  margin: 0;
+}
+.profile-dl dt {
+  color: var(--ink-3);
+}
+.profile-dl dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.profile-sessions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.profile-sessions li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+.profile-session-who {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.profile-session-who b {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+@media (max-width: 480px) {
+  .profile-dl {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+  .profile-dl dd {
+    margin-bottom: var(--space-3);
+  }
+}
