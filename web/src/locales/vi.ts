@@ -128,8 +128,12 @@ export default {
   palette: {
     title: 'Tìm nhanh',
     openHint: 'Tìm nhanh (Ctrl+K)',
-    placeholder: 'Tìm thiết bị, phần mềm, đường truyền, tài khoản…',
-    hint: 'Gõ ít nhất 2 ký tự: mã, tên hoặc serial. Tìm xuyên thiết bị · phần mềm · đường truyền · tài khoản dịch vụ, và cả tên màn hình.',
+    placeholder: 'Tìm mã, tên, serial, IP…',
+    hint: 'Gõ ít nhất 2 ký tự: mã, tên, serial, địa chỉ IP, tên dải hoặc VLAN. Tìm xuyên thiết bị · phần mềm · đường truyền · tài khoản dịch vụ · địa chỉ IP · dải mạng, và cả tên màn hình.',
+    groupIp: 'Địa chỉ IP',
+    groupSubnet: 'Dải mạng',
+    ipTitle: 'IP {{address}}',
+    ipSub: '→ {{owner}} · {{subnet}}',
     empty: 'Không có hồ sơ nào khớp "{{q}}".',
     /* Một trong bốn nhóm hỏng thì KHÔNG được nói "không có gì khớp" — người trực sẽ đi khai
        trùng một hồ sơ đã tồn tại. Nói rõ là danh sách đang thiếu, và thiếu nhóm nào. */

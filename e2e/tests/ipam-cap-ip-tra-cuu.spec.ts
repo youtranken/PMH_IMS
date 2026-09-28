@@ -231,6 +231,51 @@ test.describe('Tra IP và máy (NET-005)', () => {
   });
 });
 
+test.describe('Tìm nhanh (Ctrl+K) tra IP và dải mạng (SHELL-015)', () => {
+  test('gõ IP → nhóm "Địa chỉ IP" đứng đầu, Enter mở đúng dải ở đúng dòng', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const f = await setUp(page);
+    await page.request.post('/api/v1/ipam/addresses', {
+      headers: f.headers,
+      data: { subnetId: f.subnetId, address: `${f.net}.77`, deviceId: f.deviceId },
+    });
+    await page.goto('/');
+    await page.keyboard.press('Control+k');
+    const palette = page.getByRole('dialog', { name: 'Tìm nhanh' });
+    await expect(palette.getByRole('combobox')).toHaveAttribute(
+      'placeholder',
+      'Tìm mã, tên, serial, IP…',
+    );
+    await palette.getByRole('combobox').fill(`${f.net}.77`);
+    const ipGroup = palette.getByRole('group', { name: 'Địa chỉ IP' });
+    await expect(ipGroup.getByRole('option', { name: new RegExp(f.deviceCode) })).toBeVisible();
+    await expect(palette.getByRole('group').first()).toHaveAttribute('aria-label', 'Địa chỉ IP');
+
+    await palette.getByRole('combobox').press('Enter');
+    await expect(page).toHaveURL(new RegExp(`/ip-addresses/${f.subnetId}\\?ip=`));
+    await expect(ipRow(page, `${f.net}.77`)).toHaveClass(/row-highlight/);
+  });
+
+  test('gõ tên dải → nhóm "Dải mạng"; IP trống vẫn chỉ ra dải chứa nó', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const f = await setUp(page);
+    await page.goto('/');
+    await page.keyboard.press('Control+k');
+    const palette = page.getByRole('dialog', { name: 'Tìm nhanh' });
+    await palette.getByRole('combobox').fill(`tra cuu E2E ${f.stamp}`);
+    await expect(
+      palette.getByRole('group', { name: 'Dải mạng' }).getByRole('option', { name: /10\./ }),
+    ).toBeVisible();
+
+    await palette.getByRole('combobox').fill(`${f.net}.250`);
+    await expect(
+      palette
+        .getByRole('group', { name: 'Địa chỉ IP' })
+        .getByRole('option', { name: new RegExp(`Trống.*LAN tra cứu E2E ${f.stamp}`) }),
+    ).toBeVisible();
+  });
+});
+
 test.describe('390px — màn đọc trên điện thoại', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
