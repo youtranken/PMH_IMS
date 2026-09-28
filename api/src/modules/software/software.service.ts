@@ -46,6 +46,12 @@ import type {
   SoftwareScreenItem,
 } from './software.types';
 
+/**
+ * Đọc đúng MỘT dòng lịch sử mới nhất (lần chuyển sang Thanh lý) — không phải panel Lịch sử,
+ * nên không dùng trần `HISTORY_PAGE_LIMIT` (xem `history-readers.spec.ts`).
+ */
+const LATEST_ONLY = 1;
+
 /** Trường được theo dõi trong lịch sử (AD-13). */
 const TRACKED = [
   'code',
@@ -161,7 +167,7 @@ export class SoftwareService {
         ),
       )
       .orderBy(desc(softwareHistoryTable.createdAt))
-      .limit(1);
+      .limit(LATEST_ONLY);
     const row = rows[0];
     if (!row) return null;
     return { at: row.createdAt, by: row.actor, auto: row.action === 'auto-retired' };
