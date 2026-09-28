@@ -19,6 +19,7 @@ import type { ExpiryApiService } from '../src/modules/expiry/expiry.api';
 import { ServiceAccountService } from '../src/modules/service-accounts/service-account.service';
 import { VaultService } from '../src/modules/vault/vault.service';
 import { createScratchDb, migrationsDir, testDbUrl, waitForLock, type ScratchDb } from './db';
+import { DeviceSearchRegistry } from '../src/common/device-search.registry';
 
 /**
  * LOST UPDATE (BE-02) và KÉT GHI VÀO SECRET ĐÃ THU HỒI (BE-03).
@@ -66,6 +67,7 @@ describe('Hai lượt ghi cùng lúc không được đè nhau (BE-02, BE-03)', 
   } as unknown as SystemConfigService;
   const catalog = {
     validateRefs: () => Promise.resolve([]),
+    assertRefs: () => Promise.resolve(),
     lists: () =>
       Promise.resolve({ deviceTypes: [], sites: [], cabinets: [], vendors: [] }),
     snapshot: () =>
@@ -145,7 +147,7 @@ describe('Hai lượt ghi cùng lúc không được đè nhau (BE-02, BE-03)', 
         holdingsWithin: () => Promise.resolve([]),
         releaseAllWithin: () => Promise.resolve(),
       } as unknown as DeviceRetirementRegistry;
-      devices = new DevicesService(db, catalog, audit, noRetirement);
+      devices = new DevicesService(db, catalog, audit, noRetirement, new DeviceSearchRegistry());
       const excelIn = { read: () => Promise.resolve(importSheet) } as unknown as ExcelImportService;
       deviceImport = new DeviceImportService(
         db,

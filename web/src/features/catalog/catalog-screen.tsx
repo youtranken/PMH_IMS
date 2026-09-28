@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import type { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
@@ -11,7 +11,9 @@ import { DataTable } from '@/ui/data-table';
 import { sortQuery } from '@/lib/sort-query';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
-import { LoadError, Loading } from '@/ui/load-state';
+import { EmptyState, LoadError, Loading } from '@/ui/load-state';
+import { Dialog } from '@/ui/dialog';
+import { HistoryPanel } from '@/ui/history-panel';
 import { useClampPage } from '@/ui/use-list-url-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
@@ -21,6 +23,7 @@ import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import { CatalogForm } from './catalog-form';
 import { CatalogImportDialog } from './catalog-import-dialog';
+import { toCatalogHistory, type CatalogHistoryRow } from './catalog-history-entries';
 import {
   catalogLabel,
   portRangeLabel,
@@ -148,6 +151,15 @@ const ENTITY_COLUMNS: Record<CatalogEntity, (t: TFunction) => ColumnDef<CatalogR
       ),
     },
     {
+      accessorKey: 'isRouter',
+      header: t('catalog.isRouter'),
+      cell: ({ row }) => (
+        <span className={`badge ${(row.original as DeviceTypeRow).isRouter ? 'ok' : 'muted'}`}>
+          {t((row.original as DeviceTypeRow).isRouter ? 'common.yes' : 'common.no')}
+        </span>
+      ),
+    },
+    {
       accessorKey: 'description',
       header: t('catalog.description'),
       cell: ({ row }) => note((row.original as DeviceTypeRow).description),
@@ -267,6 +279,7 @@ export function CatalogScreen({ me }: { me: Me }) {
   const [sorting, setSorting] = useState<SortingState>(ENTITY_DEFAULT_SORT.site);
   const [editing, setEditing] = useState<{ row: CatalogRow | null } | null>(null);
   const [importing, setImporting] = useState(false);
+  const [historyOf, setHistoryOf] = useState<{ id: string; name: string } | null>(null);
 
   // Q-12: mọi vai thêm và sửa được; vô hiệu hoá, xoá, nhập Excel chỉ SA/Admin.
   const canManage = me.role === 'sa' || me.role === 'admin';
@@ -275,6 +288,11 @@ export function CatalogScreen({ me }: { me: Me }) {
 
   const rows = useQuery({
     queryKey: ['catalog', entity, page, limit, search, sorting],
+    // Đổi trang/từ khoá thì GIỮ bảng cũ tới khi có dữ liệu mới (không nháy trắng sau mỗi lần gõ
+    // tìm) — nhưng CHỈ trong cùng một loại danh mục: sang tab khác mà giữ dòng cũ là vẽ tủ
+    // mạng dưới cột của nhà cung cấp.
+    placeholderData: (previous, previousQuery) =>
+      previousQuery?.queryKey[1] === entity ? keepPreviousData(previous) : undefined,
     queryFn: () =>
       apiFetch<{ items: CatalogRow[]; total: number }>(
         `/api/v1/catalog/${entity}?${buildQuery(page, limit, search, sorting)}`,
@@ -332,6 +350,11 @@ export function CatalogScreen({ me }: { me: Me }) {
                   key: 'edit',
                   label: t('catalog.edit'),
                   onSelect: () => setEditing({ row: catalogRow }),
+                },
+                {
+                  key: 'history',
+                  label: t('catalog.history'),
+                  onSelect: () => setHistoryOf({ id: catalogRow.id, name }),
                 },
                 ...(canManage ? manageItems(catalogRow, name) : []),
               ]}
@@ -475,6 +498,27 @@ export function CatalogScreen({ me }: { me: Me }) {
           <Loading />
         ) : rows.isError ? (
           <LoadError error={rows.error} onRetry={() => void rows.refetch()} />
+        ) : items.length === 0 && search ? (
+          /* Có từ khoá mà không ra thì KHÔNG được nói "chưa khai mục nào": câu đó sai sự thật
+             và đẩy người dùng đi nhập lại dữ liệu đang có. */
+          <EmptyState
+            title={t('catalog.emptyFiltered', {
+              kind: t(`catalog.noun${TAB_SUFFIX[entity]}`),
+              q: search,
+            })}
+            action={
+              <button
+                type="button"
+                className="btn"
+                onClick={() => {
+                  setSearch('');
+                  setPage(1);
+                }}
+              >
+                {t('catalog.clearSearch')}
+              </button>
+            }
+          />
         ) : (
           <>
             <DataTable
@@ -482,7 +526,7 @@ export function CatalogScreen({ me }: { me: Me }) {
               columns={columns}
               /* Ghép hai CÂU HOÀN CHỈNH bằng gạch ngang ra một câu thứ ba không ai viết:
                  "Chưa có dữ liệu — Dùng file tải từ nút…". Một câu nói đủ cả hai việc. */
-              emptyText={t('catalog.emptyHint')}
+              emptyText={t(importable && canManage ? 'catalog.emptyHint' : 'catalog.emptyHintManual')}
               stackOnMobile
               rowClassName={(row) => (row.active ? '' : 'row-muted')}
               manualSorting
@@ -521,6 +565,15 @@ export function CatalogScreen({ me }: { me: Me }) {
         />
       ) : null}
 
+      {historyOf ? (
+        <CatalogHistoryDialog
+          entity={entity}
+          id={historyOf.id}
+          name={historyOf.name}
+          onClose={() => setHistoryOf(null)}
+        />
+      ) : null}
+
       {importing ? (
         <CatalogImportDialog
           csrfToken={csrfToken}
@@ -532,6 +585,45 @@ export function CatalogScreen({ me }: { me: Me }) {
         />
       ) : null}
     </>
+  );
+}
+
+/** Sổ thay đổi của một mục — ai đổi địa chỉ site, ai tắt "Có port map" (AD-13, `HistoryPanel`). */
+function CatalogHistoryDialog({
+  entity,
+  id,
+  name,
+  onClose,
+}: {
+  entity: CatalogEntity;
+  id: string;
+  name: string;
+  onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const history = useQuery({
+    queryKey: ['catalog', entity, id, 'history'],
+    queryFn: () => apiFetch<CatalogHistoryRow[]>(`/api/v1/catalog/${entity}/${id}/history`),
+  });
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title={t('catalog.historyOf', { name })}
+    >
+      {history.isLoading ? (
+        <Loading />
+      ) : history.isError ? (
+        <LoadError error={history.error} onRetry={() => void history.refetch()} />
+      ) : (
+        <HistoryPanel
+          entries={toCatalogHistory(history.data ?? [], t)}
+          emptyText={t('catalog.historyEmpty')}
+        />
+      )}
+    </Dialog>
   );
 }
 

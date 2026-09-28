@@ -37,10 +37,16 @@ export interface RowAction {
 export function RowActions({
   label,
   items,
+  subject,
 }: {
   /** Tên khả truy cập của nút ba chấm — PHẢI nói rõ nó thuộc dòng nào ("Thao tác với LIC-01"). */
   label: string;
   items: RowAction[];
+  /**
+   * Tên dòng hiện ở ĐẦU menu ("admin · SW-01"). Nên truyền khi menu có việc phá hủy, hoặc khi
+   * bảng rộng có thể đang cuộn mất cột định danh: nhìn menu là biết mình sắp Thu hồi cái gì.
+   */
+  subject?: string;
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -64,7 +70,7 @@ export function RowActions({
 
   const close = (refocus: boolean) => {
     setOpen(false);
-    if (refocus) triggerRef.current?.focus();
+    if (refocus) triggerRef.current?.focus({ preventScroll: true });
   };
 
   /*
@@ -80,7 +86,12 @@ export function RowActions({
     if (!open) return;
     const list = orderedRef.current;
     const first = list.findIndex((item) => !item.disabled);
-    itemRefs.current[first < 0 ? 0 : first]?.focus();
+    /*
+     * `preventScroll`: lúc này Floating UI chưa đặt vị trí, và focus kèm cuộn sẽ kéo các khung
+     * cuộn tổ tiên (bảng rộng, thân hộp thoại) — bảng trượt ngang, cột định danh biến mất
+     * đúng lúc người dùng sắp chọn việc phá hủy.
+     */
+    itemRefs.current[first < 0 ? 0 : first]?.focus({ preventScroll: true });
   }, [open]);
 
   useEffect(() => {
@@ -106,7 +117,7 @@ export function RowActions({
     for (let step = 1; step <= total; step += 1) {
       const next = (from + delta * step + total * total) % total;
       if (!ordered[next].disabled) {
-        itemRefs.current[next]?.focus();
+        itemRefs.current[next]?.focus({ preventScroll: true });
         return;
       }
     }
@@ -173,6 +184,12 @@ export function RowActions({
               }
             }}
           >
+            {subject ? (
+              // Chữ để đọc, không phải mục bấm: tên của menu đã nằm ở `aria-label`.
+              <div className="row-actions-subject" aria-hidden="true">
+                {subject}
+              </div>
+            ) : null}
             {ordered.map((item, index) => (
               <button
                 key={item.key}

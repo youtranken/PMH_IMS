@@ -237,6 +237,49 @@
 }
 @media (max-width: 680px) {
   .rail-card { grid-template-columns: 1fr 1fr; }
+  /* Thanh tab dính ngay dưới topbar (56px ở `.topbar`, base.css): trang chi tiết dài, cuộn
+     xuống đọc lịch sử rồi muốn sang tab khác thì không phải cuộn ngược lên đầu. */
+  .detail-main > .tabs {
+    position: sticky;
+    top: 56px;
+    z-index: 4;
+    background: var(--canvas);
+  }
+}
+
+/* Thẻ định danh thu gọn trên điện thoại (`DetailLayout` prop `railSummary`). */
+.rail-collapse > summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-7);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  cursor: pointer;
+  list-style: none;
+}
+.rail-collapse > summary::-webkit-details-marker { display: none; }
+.rail-collapse > summary:focus-visible { outline: none; box-shadow: var(--ring); }
+.rail-collapse[open] > summary { margin-bottom: var(--space-5); }
+.rail-summary {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.rail-more {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--primary-ink);
 }
 
 /* --- Data grid (chi tiết tài sản: cặp nhãn/giá trị) ----------------------- */
@@ -288,6 +331,36 @@
 }
 .tabs::-webkit-scrollbar {
   display: none;
+}
+/*
+ * Mép còn tab khuất thì mờ dần (`data-more-*` do `ui/tabs.tsx` đặt). Thanh cuộn đã bị giấu,
+ * nên thiếu dấu này thì tab cuối nhìn thấy trông như tab cuối cùng. Dùng `mask` chứ không phủ
+ * màu: mặt nạ đứng yên theo khung trong khi tab trượt bên dưới, và không cần màu nền nào để
+ * khớp cả hai theme. `black` ở đây chỉ là độ đục của mặt nạ, không phải màu hiển thị.
+ */
+.tabs[data-more-end='true'] {
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - var(--space-11)), transparent);
+  mask-image: linear-gradient(to right, black calc(100% - var(--space-11)), transparent);
+}
+.tabs[data-more-start='true'] {
+  -webkit-mask-image: linear-gradient(to left, black calc(100% - var(--space-11)), transparent);
+  mask-image: linear-gradient(to left, black calc(100% - var(--space-11)), transparent);
+}
+.tabs[data-more-start='true'][data-more-end='true'] {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black var(--space-11),
+    black calc(100% - var(--space-11)),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black var(--space-11),
+    black calc(100% - var(--space-11)),
+    transparent
+  );
 }
 .tab {
   flex-shrink: 0;

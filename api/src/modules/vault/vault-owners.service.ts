@@ -23,6 +23,9 @@ export interface VaultOwnerSummary {
   orphan: boolean;
 }
 
+/** Chủ thể gọi bằng tên — `orphan` khi hồ sơ chủ đã bị xoá. */
+export type OwnerIdentity = Pick<VaultOwnerSummary, 'code' | 'name' | 'siteCode' | 'orphan'>;
+
 /**
  * Trang tổng của Két sắt (`/vault`).
  *
@@ -48,55 +51,62 @@ export class VaultOwnersService {
     const summaries = await this.vault.listOwnerSummaries();
 
     const rows = await Promise.all(
-      summaries.map(async (item): Promise<VaultOwnerSummary> => {
-        const base = { ...item, orphan: false };
-        try {
-          /*
-           * MỘT nhánh cho MỖI loại — không để loại mới rơi vào nhánh cuối.
-           *
-           * Bản trước kết thúc bằng `software.getById(...)` không có điều kiện, nên thêm một
-           * `owner_type` mới là nó lặng lẽ đi tra id đó trong bảng `software`, không tìm thấy,
-           * rồi hiện ra "hồ sơ đã bị xóa" cho một chủ thể vẫn đang sống. `never` ở nhánh cuối
-           * biến chuyện đó thành lỗi biên dịch.
-           */
-          switch (item.ownerType) {
-            case 'device': {
-              const device = await this.devices.getById(item.ownerId);
-              return { ...base, code: device.code, name: device.name, siteCode: device.siteCode };
-            }
-            case 'service_account': {
-              const account = await this.serviceAccounts.getById(item.ownerId);
-              return { ...base, code: account.code, name: account.name, siteCode: null };
-            }
-            case 'isp': {
-              const line = await this.software.getIspById(item.ownerId);
-              return { ...base, code: line.code, name: line.provider, siteCode: line.siteCode };
-            }
-            case 'software': {
-              const software = await this.software.getById(item.ownerId);
-              return { ...base, code: software.code, name: software.name, siteCode: null };
-            }
-            default: {
-              const missed: never = item.ownerType;
-              return missed;
-            }
-          }
-        } catch (error) {
-          /*
-           * CHỈ "không tìm thấy" mới là mồ côi. Bắt trần mọi lỗi thì một trục trặc DB thoáng
-           * qua cũng biến một cái máy đang sống thành "hồ sơ đã bị xóa" — và quản trị viên
-           * đọc dòng đó rất có thể đi thu hồi những secret vẫn đang dùng. Lỗi khác phải nổi
-           * lên để màn hình báo đúng là đang hỏng, không phải báo sai là đang rác.
-           */
-          if (!(error instanceof NotFoundException)) throw error;
-          return { ...base, code: '—', name: '', siteCode: null, orphan: true };
-        }
-      }),
+      summaries.map(async (item): Promise<VaultOwnerSummary> => ({
+        ...item,
+        ...(await this.describe(item.ownerType, item.ownerId)),
+      })),
     );
 
     // Nhiều ngăn nhất lên đầu — chỗ tập trung nhiều bí mật nhất là chỗ đáng soi trước.
     return rows.sort(
       (a, b) => b.secretCount - a.secretCount || a.code.localeCompare(b.code, 'vi'),
     );
+  }
+
+  /**
+   * Mã + tên + site của MỘT chủ thể — dùng chung cho trang tổng và cho phiếu break-glass (người
+   * duyệt phải biết "máy nào"). Một bản duy nhất để hai nơi không gọi cùng một máy bằng hai tên.
+   */
+  async describe(ownerType: SecretOwnerType, ownerId: string): Promise<OwnerIdentity> {
+    try {
+      /*
+       * MỘT nhánh cho MỖI loại — không để loại mới rơi vào nhánh cuối.
+       *
+       * Nhánh cuối không điều kiện (`software.getById(...)`) sẽ lặng lẽ tra một `owner_type`
+       * mới trong bảng `software`, không thấy, rồi hiện "hồ sơ đã bị xóa" cho một chủ thể vẫn
+       * đang sống. `never` ở nhánh cuối biến chuyện đó thành lỗi biên dịch.
+       */
+      switch (ownerType) {
+        case 'device': {
+          const device = await this.devices.getById(ownerId);
+          return { code: device.code, name: device.name, siteCode: device.siteCode, orphan: false };
+        }
+        case 'service_account': {
+          const account = await this.serviceAccounts.getById(ownerId);
+          return { code: account.code, name: account.name, siteCode: null, orphan: false };
+        }
+        case 'isp': {
+          const line = await this.software.getIspById(ownerId);
+          return { code: line.code, name: line.provider, siteCode: line.siteCode, orphan: false };
+        }
+        case 'software': {
+          const software = await this.software.getById(ownerId);
+          return { code: software.code, name: software.name, siteCode: null, orphan: false };
+        }
+        default: {
+          const missed: never = ownerType;
+          return missed;
+        }
+      }
+    } catch (error) {
+      /*
+       * CHỈ "không tìm thấy" mới là mồ côi. Bắt trần mọi lỗi thì một trục trặc DB thoáng qua
+       * cũng biến một cái máy đang sống thành "hồ sơ đã bị xóa" — và quản trị viên đọc dòng đó
+       * rất có thể đi thu hồi những secret vẫn đang dùng. Lỗi khác phải nổi lên để màn hình báo
+       * đúng là đang hỏng, không phải báo sai là đang rác.
+       */
+      if (!(error instanceof NotFoundException)) throw error;
+      return { code: '—', name: '', siteCode: null, orphan: true };
+    }
   }
 }

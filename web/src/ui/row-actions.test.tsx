@@ -123,4 +123,45 @@ describe('RowActions — menu ba chấm dùng chung', () => {
     const { container } = renderWithI18n(<RowActions label="Thao tác với LIC-01" items={[]} />);
     expect(container.querySelector('.row-actions')).toBeNull();
   });
+
+  /*
+   * Menu mở ra KHÔNG được kéo vùng cuộn ngang của bảng: bảng rộng cuộn sang phải để "đưa
+   * menu vào khung" thì cột Tên gọi trôi mất, và người dùng không biết mình sắp Thu hồi cái gì.
+   * Nên menu nằm ngoài bảng (portal, `position: fixed`) và focus không kèm cuộn.
+   */
+  it('menu nằm ngoài bảng (portal, fixed) và focus không kéo vùng cuộn', async () => {
+    const user = userEvent.setup();
+    const focus = vi.spyOn(HTMLElement.prototype, 'focus');
+    const { container } = renderWithI18n(
+      <div className="table-wrap" data-testid="wrap">
+        <RowActions label="Thao tác với LIC-01" items={items()} />
+      </div>,
+    );
+    await user.click(screen.getByRole('button', { name: 'Thao tác với LIC-01' }));
+
+    const menu = screen.getByRole('menu');
+    expect(container.querySelector('[data-testid="wrap"]')!.contains(menu)).toBe(false);
+    expect(menu.style.position).toBe('fixed');
+
+    const first = screen.getByRole('menuitem', { name: 'Sửa' });
+    const call = focus.mock.calls.find((_, i) => focus.mock.contexts[i] === first);
+    expect(call?.[0]).toEqual({ preventScroll: true });
+    focus.mockRestore();
+  });
+
+  it('có `subject` thì đầu menu nêu tên dòng đang thao tác', async () => {
+    const user = userEvent.setup();
+    renderWithI18n(
+      <RowActions label="Thao tác với admin" subject="admin · SW-E2E-CORE-01" items={items()} />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Thao tác với admin' }));
+    const menu = screen.getByRole('menu', { name: 'Thao tác với admin' });
+    expect(menu).toHaveTextContent(/^admin · SW-E2E-CORE-01/);
+    // Tiêu đề là chữ để ĐỌC, không phải một mục bấm được.
+    expect(screen.getAllByRole('menuitem').map((el) => el.textContent)).toEqual([
+      'Sửa',
+      'Gán vào máy',
+      'Xóa',
+    ]);
+  });
 });

@@ -15,6 +15,7 @@ import { useToast } from '@/ui/toast';
 import { errorMessage } from '@/lib/api';
 import { HideDialog, SubnetForm } from './subnet-form';
 import { SubnetPane } from './subnet-detail';
+import { IpLookup } from './ip-lookup';
 import type { SubnetRow } from './ipam-types';
 import { PATHS } from '@/lib/routes';
 
@@ -163,6 +164,8 @@ export function IpamScreen({ me }: { me: Me }) {
       ) : rows.length === 0 ? (
         <EmptyState title={t('ipam.empty')} hint={t('ipam.emptyHint')} />
       ) : (
+        <>
+        <IpLookup subnets={rows} />
         <div className="ipam-split">
           <nav className="subnet-rail" aria-label={t('ipam.railLabel')}>
             <h2 className="form-section-title">{t('ipam.railTitle')}</h2>
@@ -184,6 +187,7 @@ export function IpamScreen({ me }: { me: Me }) {
             {selected ? <SubnetPane subnet={selected} me={me} /> : null}
           </div>
         </div>
+        </>
       )}
 
       {editing ? (

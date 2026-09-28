@@ -5,9 +5,11 @@ import type { Me } from '@/lib/me';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
+import { textRule, useFormErrors } from '@/ui/use-form-errors';
+import { useStepUpRetry } from '@/ui/use-step-up-retry';
 
 interface CreateResult {
-  user: { id: string; email: string };
+  user: { id: string; email: string; fullName: string; role: Me['role'] };
   temporaryPassword: string;
 }
 
@@ -42,8 +44,11 @@ export function AccountForm({
   account: AccountProfile | null;
   csrfToken: string;
   onClose: () => void;
-  /* Kèm email để hộp mật khẩu tạm nói được nó thuộc về AI — xem `accounts-screen.tsx`. */
-  onCreated: (temporaryPassword: string, email: string) => void;
+  /* Kèm người vừa tạo để hộp mật khẩu tạm nói được nó thuộc về AI và dẫn sang bước tiếp theo. */
+  onCreated: (
+    temporaryPassword: string,
+    created: { id: string; email: string; fullName: string; role: Me['role'] },
+  ) => void;
   onSaved: () => void;
 }) {
   const { t } = useTranslation();
@@ -67,7 +72,20 @@ export function AccountForm({
     { method: 'PATCH', csrfToken, refreshMe: false },
   );
 
+  // Tạo tài khoản đòi step-up (`@RequiresStepUp`): hết ân hạn thì hỏi mã rồi tạo lại đúng bộ ô này.
+  const stepUp = useStepUpRetry(csrfToken);
+
   const busy = create.isPending || update.isPending;
+
+  const check = useFormErrors({
+    fullName: textRule(t, fullName, 2),
+    // Chỉ bắt lỗi gõ nhầm hiển nhiên (thiếu @, thiếu tên miền); API mới là nơi quyết email hợp lệ.
+    email:
+      !editing &&
+      (!email.trim()
+        ? t('formErrors.required')
+        : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && t('formErrors.email')),
+  });
 
   return (
     <Dialog
@@ -94,9 +112,12 @@ export function AccountForm({
         id="account-form"
         className="form-grid"
         data-columns={2}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!check.check()) return;
           const contact = {
             fullName: fullName.trim(),
             phone: phone.trim(),
@@ -110,16 +131,29 @@ export function AccountForm({
             });
             return;
           }
-          create.mutate(
-            { ...contact, email: email.trim(), role, totpLoginRequired },
-            {
-              onSuccess: (result) => onCreated(result.temporaryPassword, email.trim()),
-              onError: (err) => setError(errorMessage(err, t('accounts.createFailed'))),
+          const input = { ...contact, email: email.trim(), role, totpLoginRequired };
+          stepUp.run(() => create.mutateAsync(input)).then(
+            (result) =>
+              onCreated(result.temporaryPassword, {
+                id: result.user.id,
+                email: result.user.email,
+                fullName: result.user.fullName,
+                role: result.user.role,
+              }),
+            (err: unknown) => {
+              if (err instanceof Error && err.message === 'STEPUP_CANCELLED') return;
+              setError(errorMessage(err, t('accounts.createFailed')));
             },
           );
         }}
       >
-        <Field label={t('accounts.fullName')} required htmlFor="acc-name">
+        {check.summary}
+        <Field
+          label={t('accounts.fullName')}
+          required
+          htmlFor="acc-name"
+          error={check.error('fullName')}
+        >
           <input
             id="acc-name"
             className="inp"
@@ -130,7 +164,12 @@ export function AccountForm({
           />
         </Field>
 
-        <Field label={t('accounts.email')} required htmlFor="acc-email">
+        <Field
+          label={t('accounts.email')}
+          required
+          htmlFor="acc-email"
+          error={check.error('email')}
+        >
           {editing ? (
             // Hiện thẳng chữ chứ không phải ô nhập bị khoá: ô khoá thì người dùng còn ngồi
             // thử bấm và tự hỏi vì sao không gõ được.
@@ -219,6 +258,7 @@ export function AccountForm({
           </p>
         ) : null}
       </form>
+      {stepUp.dialog}
     </Dialog>
   );
 }

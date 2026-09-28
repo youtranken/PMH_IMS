@@ -5,6 +5,10 @@ import type { Database } from '../../database/database.module';
 import { escapeLike } from '../../common/sql';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { UsersApiService } from '../users/users.api';
+import {
+  AuditObjectLabelRegistry,
+  auditObjectKey,
+} from '../../common/audit-object-labels.registry';
 
 export interface AuditQuery {
   actor?: string;
@@ -26,6 +30,13 @@ export interface AuditRow {
   action: string;
   objectType: string | null;
   objectId: string | null;
+  /**
+   * Nhãn người đọc được của đối tượng (email, mã thiết bị, tên secret · chủ thể…) và đường tới
+   * hồ sơ — do module CHỦ SỞ HỮU gọi tên qua `AuditObjectLabelRegistry` (AD-2). `null` khi
+   * loại chưa ai gọi tên hoặc hồ sơ đã bị xoá: màn hiện loại + UUID như cũ.
+   */
+  objectLabel: string | null;
+  objectPath: string | null;
   /**
    * "Từ đâu" của NFR-03. `null` cho các dòng do job nền sinh ra (outbox relay, cron hết hạn)
    * — đó là câu trả lời đúng, không phải thiếu dữ liệu — và cho MỌI dòng ghi trước 08/09,
@@ -52,6 +63,7 @@ export class AuditQueryService {
     @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly users: UsersApiService,
     private readonly config: SystemConfigService,
+    private readonly objectLabels: AuditObjectLabelRegistry,
   ) {}
 
   async listAudit(q: AuditQuery): Promise<{
@@ -165,7 +177,14 @@ export class AuditQueryService {
      * sẽ hụt những hàng chỉ khác nhau cái chữ hoa, và hiện ra như "không có tên".
      */
     const actors = [...new Set(items.rows.map((r) => r.actor))];
-    const names = await this.users.namesByEmails(actors);
+    const [names, labels] = await Promise.all([
+      this.users.namesByEmails(actors),
+      this.objectLabels.labelsFor(
+        items.rows.map((r) => ({ objectType: r.object_type, objectId: r.object_id })),
+      ),
+    ]);
+    const labelOf = (type: string | null, id: string | null) =>
+      type && id ? labels.get(auditObjectKey(type, id.toLowerCase())) ?? null : null;
 
     return {
       items: items.rows.map((r) => ({
@@ -179,6 +198,8 @@ export class AuditQueryService {
         action: r.action,
         objectType: r.object_type,
         objectId: r.object_id,
+        objectLabel: labelOf(r.object_type, r.object_id)?.label ?? null,
+        objectPath: labelOf(r.object_type, r.object_id)?.path ?? null,
         ip: r.ip,
         detail: r.detail,
         createdAt: new Date(r.created_at).toISOString(),

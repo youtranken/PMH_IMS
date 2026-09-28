@@ -157,8 +157,7 @@ test.describe('Kho thiết bị', () => {
     await fillDevice(page, { code, name: 'UPS phòng máy', type: 'UPS' });
     await page.getByRole('link', { name: code }).click();
 
-    // `exact`: trang chi tiết còn một nút nữa mang chữ "thanh lý" — nút bật lượt xem
-    // "thanh lý sẽ cắt gì" của bản đồ quan hệ. Khớp lỏng là bài kiểm bấm nhầm nút.
+    // `exact`: hộp Thanh lý mở ra cũng có nút "Thanh lý" và lựa chọn "Chỉ thanh lý…".
     await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
     await confirmAction(page);
     await expect(page.getByText('Thiết bị đã thanh lý — mở lại mới sửa được hồ sơ.')).toBeVisible();

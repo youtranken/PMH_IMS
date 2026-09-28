@@ -28,6 +28,8 @@ export const PATHS = {
 
   ipAddresses: '/ip-addresses',
   subnet: (id: string) => `/ip-addresses/${id}`,
+  /** Mở dải ở ĐÚNG một địa chỉ: màn tự nhảy tới trang chứa nó và tô sáng dòng. */
+  subnetAt: (id: string, ip: string) => `/ip-addresses/${id}?ip=${encodeURIComponent(ip)}`,
 
   nat: '/nat',
 
@@ -35,6 +37,8 @@ export const PATHS = {
   serviceAccount: (id: string) => `/service-accounts/${id}`,
 
   approvals: '/approvals',
+  /** Một yêu cầu — đích của nút trong thư duyệt, quyết được trên điện thoại. */
+  approval: (id: string) => `/approvals/${id}`,
   vault: '/vault',
   /** Kho thanh lý — màn TỔNG hợp mọi hồ sơ đã ngừng dùng, không phải một bảng riêng. */
   disposal: '/disposal',
@@ -44,8 +48,12 @@ export const PATHS = {
   adminCatalog: '/admin/catalog',
   adminVaultAccess: '/admin/vault-access',
   adminAuditLog: '/admin/audit-log',
+  adminSettings: '/admin/settings',
 
   devComponents: '/dev/components',
+
+  /** Hồ sơ của tôi — mở cho mọi vai; vào từ menu tài khoản ở chân sidebar. */
+  profile: '/profile',
 } as const;
 
 /**
@@ -133,6 +141,8 @@ export const ROUTE_ROLES: Record<string, readonly UserRole[]> = {
   [PATHS.adminVaultAccess]: ['sa', 'admin'],
   // `audit.controller.ts` — `@Roles('sa', 'admin')` ở cấp lớp.
   [PATHS.adminAuditLog]: ['sa', 'admin'],
+  // `system-settings.controller.ts` — `@Roles('sa')` cho cả đọc lẫn sửa.
+  [PATHS.adminSettings]: ['sa'],
   // `catalog.controller.ts` — đường ĐỌC mở cho cả `member`, nên màn này không gác theo vai.
   [PATHS.adminCatalog]: ['sa', 'admin', 'member'],
   [PATHS.vault]: ['sa', 'admin'],
@@ -173,7 +183,9 @@ export const ROUTE_TITLE_KEY: Record<string, string> = {
   [PATHS.adminCatalog]: 'nav.catalog',
   [PATHS.adminVaultAccess]: 'nav.vaultAccess',
   [PATHS.adminAuditLog]: 'nav.auditLog',
+  [PATHS.adminSettings]: 'nav.settings',
   [PATHS.devComponents]: 'nav.components',
+  [PATHS.profile]: 'profile.title',
 };
 
 /**

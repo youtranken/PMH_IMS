@@ -155,6 +155,11 @@ export function Field({
         id: (children.props as { id?: string }).id ?? id,
         'aria-describedby':
           (children.props as { 'aria-describedby'?: string })['aria-describedby'] ?? describedBy,
+        // Viền đỏ (`shared-kit.css`) và tiêu điểm của `useFormErrors` đều bám vào thuộc tính
+        // này, và trình đọc màn hình đọc "không hợp lệ" nhờ nó.
+        'aria-invalid':
+          (children.props as { 'aria-invalid'?: boolean })['aria-invalid'] ??
+          (error ? true : undefined),
       })
     : children;
 
@@ -163,8 +168,8 @@ export function Field({
       <label className="lbl-t" htmlFor={id}>
         {label}{' '}
         {/* Dấu * chỉ là chỉ dấu thị giác: aria-hidden để tên gọi trợ năng của ô nhập là
-            đúng nhãn ("Email"), không thành "Email *". Bắt buộc thật nằm ở thuộc tính
-            `required` của input. */}
+            đúng nhãn ("Email"), không thành "Email *". Chặn thật nằm ở `useFormErrors` của
+            form (form đặt `noValidate`); `required` trên ô để trình đọc màn hình đọc "bắt buộc". */}
         {/*
           `field-req`, KHÔNG phải `req` (sửa 12/09).
 

@@ -49,12 +49,14 @@ function renderAt(entry: string) {
 describe('Màn Nhật ký', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('hiện dòng nhật ký: giờ VN, tên + email, mã hành động, đối tượng, IP', async () => {
+  it('hiện dòng nhật ký: giờ VN, tên + email, nhãn + mã hành động, đối tượng, IP', async () => {
     stubFetch();
     renderAt('/admin/audit-log');
 
     expect(await screen.findByText('Lê Minh')).toBeInTheDocument();
     expect(screen.getByText('le.minh@pmh.com.vn')).toBeInTheDocument();
+    // Nhãn tiếng Việt trước, mã kỹ thuật ở dòng phụ.
+    expect(screen.getByText('Đăng nhập')).toBeInTheDocument();
     expect(screen.getByText('auth.login.ok', { selector: 'span' })).toBeInTheDocument();
     expect(screen.getByText(ROW.objectId)).toBeInTheDocument();
     expect(screen.getByText('10.0.0.8')).toBeInTheDocument();
@@ -62,6 +64,34 @@ describe('Màn Nhật ký', () => {
     expect(
       screen.getByText((text) => text.includes('20/09/2026') && text.includes('08:30')),
     ).toBeInTheDocument();
+  });
+
+  it('đối tượng có nhãn: "Loại · nhãn" là link tới hồ sơ, UUID còn trong tooltip + nút chép', async () => {
+    const withLabel = {
+      ...ROW,
+      action: 'vault.secret.revealed',
+      objectType: 'device',
+      objectLabel: 'PC-KT-01 — Máy kế toán',
+      objectPath: '/devices/abc',
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) =>
+        Promise.resolve(
+          String(input).includes('/admin/audit/actions')
+            ? jsonResponse(200, ['vault.secret.revealed', 'auth.login.ok'])
+            : jsonResponse(200, { items: [withLabel], total: 1, totalCapped: false }),
+        ),
+      ),
+    );
+    renderAt('/admin/audit-log');
+
+    const link = await screen.findByRole('link', { name: /PC-KT-01/ });
+    expect(link).toHaveAttribute('href', '/devices/abc');
+    expect(link).toHaveAttribute('title', ROW.objectId);
+    expect(screen.getByRole('button', { name: 'Chép mã đối tượng' })).toBeInTheDocument();
+    // Xem két tô màu cảnh báo — nhãn nằm trong huy hiệu `warn`.
+    expect(screen.getByText('Xem mật khẩu trong két')).toHaveClass('badge', 'warn');
   });
 
   /*

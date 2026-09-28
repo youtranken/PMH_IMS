@@ -18,7 +18,17 @@ import { PATHS } from '@/lib/routes';
  * Trước đây câu "máy này đang cài gì" chỉ trả lời được ở TRANG CHI TIẾT của từng máy — nhìn
  * danh sách 20 dòng thì phải bấm vào 20 lần.
  */
-export function DeviceLicensesExpand({ deviceId }: { deviceId: string }) {
+export function DeviceLicensesExpand({
+  deviceId,
+  showHeader = true,
+}: {
+  deviceId: string;
+  /**
+   * `false` khi khu đã có tiêu đề riêng (trang chi tiết thiết bị): hai tiêu đề chồng nhau
+   * "License đang cài" / "Phần mềm đang cài (3)" đọc như hai khu khác nhau.
+   */
+  showHeader?: boolean;
+}) {
   const { t } = useTranslation();
 
   const installed = useQuery({
@@ -30,9 +40,11 @@ export function DeviceLicensesExpand({ deviceId }: { deviceId: string }) {
 
   return (
     <div className="exp-soft">
-      <div className="seat-head">
-        <span>{t('devices.installedHeader', { count: rows.length })}</span>
-      </div>
+      {showHeader ? (
+        <div className="seat-head">
+          <span>{t('devices.installedHeader', { count: rows.length })}</span>
+        </div>
+      ) : null}
 
       {installed.isLoading ? (
         <p className="muted">{t('app.loading')}</p>

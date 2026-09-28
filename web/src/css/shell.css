@@ -176,6 +176,23 @@
   background: color-mix(in srgb, var(--danger) 22%, transparent);
   color: var(--danger);
 }
+/* Menu tài khoản: nhãn nhóm "Giao diện", ô dấu chọn cố định bề rộng để ba lựa chọn thẳng hàng. */
+.sb-act-label {
+  margin: var(--space-2) var(--space-3) 0;
+  color: var(--sidebar-label);
+  font-size: var(--fs-2xs);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.sb-check {
+  width: 1em;
+  flex: none;
+}
+.sb-sep {
+  height: 1px;
+  margin: var(--space-2) 0;
+  background: var(--sidebar-border);
+}
 .sb-badge {
   font-size: var(--fs-2xs);
   font-weight: 800;
@@ -272,6 +289,20 @@
 .nav-toggle svg {
   width: 22px;
   height: 22px;
+}
+/* Chấm "có việc chờ duyệt" trên nút mở menu — cùng màu với `.nav-badge.warn` bên trong menu. */
+.nav-toggle {
+  position: relative;
+}
+.nav-toggle-dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--warm);
+  box-shadow: 0 0 0 2px var(--surface);
 }
 @media (max-width: 900px) {
   /* Điện thoại: topbar hẹp lại và dòng chào cắt bằng "…" thay vì đẩy trang tràn ngang. */

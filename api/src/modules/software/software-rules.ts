@@ -42,6 +42,24 @@ export function effectiveSoftwareStatus(
   return endDate !== null && endDate < today ? 'expired_ok' : 'active';
 }
 
+/**
+ * Ngày lượt quét sẽ tự Thanh lý hồ sơ Hết hạn (Q-13), hoặc `null` khi không có chuyện đó.
+ *
+ * Lượt quét thanh lý khi `end_date < today - grace`, tức từ ngày `end + grace + 1`. Hàm này
+ * phải khớp đúng điều kiện ấy: màn hình đếm ngược tới đây, lệch một ngày là màn hứa sai.
+ * `graceDays <= 0` nghĩa là tắt tự thanh lý (migration 0076).
+ */
+export function autoRetireOn(
+  status: SoftwareStatus,
+  endDate: string | null,
+  graceDays: number,
+): string | null {
+  if (status !== 'expired_ok' || endDate === null || graceDays <= 0) return null;
+  const date = new Date(`${endDate}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + graceDays + 1);
+  return date.toISOString().slice(0, 10);
+}
+
 export interface SoftwareInputShape {
   code?: string;
   name?: string;
@@ -160,8 +178,14 @@ export function seatConflicts(
     status: SoftwareStatus;
   },
   seats: { used: number; withEndDate: number },
+  /** Tổng ghế TRƯỚC khi sửa. Vượt ghế là trạng thái hợp lệ (gán vượt phải ghi lý do), nên chỉ
+   *  chặn khi lượt sửa ĐỔI tổng xuống dưới số đang dùng — không chặn sửa ghi chú. */
+  beforeSeatTotal?: number | null,
 ): string[] {
   if (seats.used === 0) return [];
+  // Thanh lý KHÔNG phải xung đột, kể cả khi đang vượt trần hay đổi luôn loại/mô hình: service gỡ
+  // mọi ghế trong cùng transaction (QUYET-DINH Q-03), nên không còn ghế nào để luật của hồ sơ soi.
+  if (next.status === 'retired') return [];
   const errors: string[] = [];
   if (!supportsSeats(next.kind)) {
     errors.push(
@@ -173,12 +197,15 @@ export function seatConflicts(
       `Có ${seats.withEndDate} ghế đang ghi ngày hết hạn — bản vĩnh viễn thì ghế không có hạn. Bỏ ngày hết hạn của các ghế đó trước.`,
     );
   }
-  if (next.seatTotal !== null && next.seatTotal < seats.used) {
+  if (
+    next.seatTotal !== null &&
+    next.seatTotal < seats.used &&
+    next.seatTotal !== beforeSeatTotal
+  ) {
     errors.push(
       `Đang dùng ${seats.used} ghế, không hạ tổng xuống ${next.seatTotal} được. Gỡ bớt ghế trước.`,
     );
   }
-  // Thanh lý khi còn ghế KHÔNG phải xung đột: service tự gỡ các ghế đó (QUYET-DINH Q-03).
   return errors;
 }
 

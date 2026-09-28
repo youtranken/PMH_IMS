@@ -816,7 +816,9 @@ export async function logout(page: Page): Promise<void> {
   const done = page.waitForResponse(
     (res) => res.url().includes('/api/v1/auth/logout') && res.request().method() === 'POST',
   );
-  await page.getByRole('button', { name: 'Đăng xuất' }).click();
+  // "Đăng xuất" nằm trong menu tài khoản ở chân sidebar (SHELL-001): mở menu rồi mới bấm mục.
+  await page.getByRole('button', { name: /^Menu tài khoản của / }).click();
+  await page.getByRole('menuitem', { name: 'Đăng xuất' }).click();
   const res = await done;
   expect(
     res.status(),
@@ -842,6 +844,20 @@ export async function logout(page: Page): Promise<void> {
    * Chỗ đúng để chịu đựng cuộc đua này là `fillLogin` — bên dưới — vì nó mới là nơi gọi
    * `goto`. Ở đây chỉ cần chờ trang thật sự rời khỏi màn đã đăng nhập.
    */
+  await page.waitForURL(/\/login(\?|$)/);
+}
+
+/**
+ * Đăng xuất từ GIỮA luồng đăng nhập (màn mã 2 lớp / cài 2 lớp / đổi mật khẩu bắt buộc) — nút
+ * "Không phải …? Đăng xuất" ở chân card. Cùng luật chờ phản hồi với `logout()` ở trên, và cùng
+ * lý do: bấm rồi đi tiếp ngay là hủy request đang bay, phiên dở sống sót.
+ */
+export async function signOutMidFlow(page: Page): Promise<void> {
+  const done = page.waitForResponse(
+    (res) => res.url().includes('/api/v1/auth/logout') && res.request().method() === 'POST',
+  );
+  await page.getByRole('button', { name: 'Đăng xuất' }).click();
+  expect((await done).status(), 'đăng xuất giữa luồng phải thành công').toBeLessThan(300);
   await page.waitForURL(/\/login(\?|$)/);
 }
 

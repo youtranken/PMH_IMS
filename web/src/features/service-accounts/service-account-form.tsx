@@ -12,6 +12,7 @@ import { SuggestInput } from '@/ui/suggest-input';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
 import { useDepartments } from '@/ui/use-departments';
+import { useFormErrors } from '@/ui/use-form-errors';
 import {
   KIND_KEY,
   SERVICE_ACCOUNT_KINDS,
@@ -107,6 +108,10 @@ export function ServiceAccountForm({
     });
 
   const vpn = supportsVpnFields(form.kind);
+  // Mã suy từ tên đăng nhập — thiếu cả hai thì hồ sơ không có gì để gọi tên.
+  const check = useFormErrors({
+    login: !form.code.trim() && !form.login.trim() && t('serviceAccounts.loginOrCodeRequired'),
+  });
 
   return (
     <Dialog
@@ -131,9 +136,12 @@ export function ServiceAccountForm({
     >
       <form
         id="sa-form"
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!check.check()) return;
           save.mutate(
             {
               code: form.code.trim(),
@@ -253,6 +261,7 @@ export function ServiceAccountForm({
             hint={t('serviceAccounts.loginHint')}
             htmlFor="sa-login"
             span={2}
+            error={check.error('login')}
           >
             <input
               id="sa-login"

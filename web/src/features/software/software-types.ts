@@ -28,6 +28,13 @@ export interface SoftwareRow {
   status: SoftwareStatus;
   createdAt: string;
   updatedAt: string;
+  /** Ngày hệ thống sẽ tự Thanh lý hồ sơ Hết hạn (Q-13); server tính từ số ngày ân hạn. */
+  autoRetireOn: string | null;
+}
+
+/** Trang chi tiết: thêm hồ sơ Thanh lý lúc nào, do ai (`by = 'system'` khi tự động). */
+export interface SoftwareDetailRow extends SoftwareRow {
+  retirement: { at: string; by: string; auto: boolean } | null;
 }
 
 /**
@@ -92,9 +99,13 @@ export const STATUS_KEY: Record<SoftwareStatus, string> = {
   retired: 'software.statusRetired',
 };
 
+/**
+ * Luật màu: xanh = ổn, đỏ = cần làm gì đó, xám = đã ra khỏi vòng đời. Hết hạn vẫn đang cài
+ * trên máy và đang trong ân hạn trước khi tự thanh lý (Q-13), nên nó đỏ, không xám như Thanh lý.
+ */
 export const STATUS_TONE: Record<SoftwareStatus, string> = {
   active: 'ok',
-  expired_ok: 'muted',
+  expired_ok: 'danger',
   retired: 'muted',
 };
 
@@ -107,4 +118,23 @@ export function supportsSeats(kind: SoftwareKind): boolean {
 export function seatLabel(row: SoftwareRow): string {
   if (!supportsSeats(row.kind) || row.seatTotal === null) return '—';
   return `${row.seatUsed}/${row.seatTotal}`;
+}
+
+/**
+ * Ô Số ghế → giá trị gửi lên API (SW-025).
+ *
+ * Trả MỘT hình dạng `{ value, reason }` (tsconfig web không bật `strict`, union `ok` không thu
+ * hẹp được). `Number("10 ghế")` là NaN và `JSON.stringify(NaN)` là `null` — tức "không giới
+ * hạn" — nên chuỗi không thuần chữ số phải bị báo, không được đổi thành số.
+ */
+export function seatCheck(
+  raw: string,
+  hasSeats: boolean,
+  used: number,
+): { value: number | null; reason: 'invalid' | 'belowUsed' | null } {
+  const text = raw.trim();
+  if (!hasSeats || text === '') return { value: null, reason: null };
+  if (!/^\d+$/.test(text) || Number(text) < 1) return { value: null, reason: 'invalid' };
+  const value = Number(text);
+  return { value, reason: value < used ? 'belowUsed' : null };
 }

@@ -1,4 +1,5 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
+import { useScrollEdges } from '@/ui/scroll-x';
 
 export interface TabItem {
   key: string;
@@ -26,6 +27,27 @@ export interface TabItem {
 }
 
 /**
+ * Vị trí cuộn ngang đưa tab vào GIỮA khung tab, kẹp trong [0, phần nội dung còn cuộn được].
+ * `tabOffset` là mép trái của tab tính trong nội dung (không phải trong khung nhìn).
+ */
+export function tabScrollLeft({
+  barWidth,
+  scrollWidth,
+  tabOffset,
+  tabWidth,
+}: {
+  scrollLeft: number;
+  barWidth: number;
+  scrollWidth: number;
+  tabOffset: number;
+  tabWidth: number;
+}): number {
+  const max = Math.max(0, scrollWidth - barWidth);
+  const centered = tabOffset + tabWidth / 2 - barWidth / 2;
+  return Math.round(Math.min(max, Math.max(0, centered)));
+}
+
+/**
  * Thanh tab dùng chung (AD-15) — màn Danh mục (2.1), trang chi tiết thiết bị (2.5),
  * hồ sơ phần mềm (Epic 3) đều dùng bản này. Dùng lại CSS `.tabs/.tab` sẵn có.
  *
@@ -44,6 +66,42 @@ export function Tabs({
   ariaLabel: string;
 }) {
   const refs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const barRef = useRef<HTMLDivElement>(null);
+  const edges = useScrollEdges(barRef);
+  const mounted = useRef(false);
+
+  /*
+   * Tab đang chọn phải NẰM TRONG khung. Trên điện thoại thanh tab cuộn ngang và giấu thanh
+   * cuộn, nên mở `?tab=vault` mà không cuộn thì không thấy tab nào sáng cả.
+   *
+   * Tự tính `scrollLeft` trên chính khung tab, KHÔNG dùng `scrollIntoView`: hàm đó cuộn mọi
+   * tổ tiên, kể cả trang — trên điện thoại thanh tab nằm dưới rail ở y≈590, vừa mở trang đã
+   * bị kéo xuống giữa chừng.
+   */
+  useLayoutEffect(() => {
+    const bar = barRef.current;
+    const tab = refs.current[value];
+    if (!bar || !tab) return;
+    const barRect = bar.getBoundingClientRect();
+    const tabRect = tab.getBoundingClientRect();
+    const left = tabScrollLeft({
+      scrollLeft: bar.scrollLeft,
+      barWidth: bar.clientWidth,
+      scrollWidth: bar.scrollWidth,
+      tabOffset: tabRect.left - barRect.left + bar.scrollLeft,
+      tabWidth: tabRect.width,
+    });
+    // Lần đầu nhảy thẳng (trang vừa mở, không có gì để "đi theo"); người dùng tắt chuyển
+    // động thì cũng nhảy thẳng.
+    const reduced =
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const behavior: ScrollBehavior = mounted.current && !reduced ? 'smooth' : 'auto';
+    mounted.current = true;
+    if (left === bar.scrollLeft) return;
+    if (typeof bar.scrollTo === 'function') bar.scrollTo({ left, behavior });
+    else bar.scrollLeft = left;
+  }, [value]);
 
   const move = (delta: number) => {
     const index = items.findIndex((item) => item.key === value);
@@ -53,7 +111,15 @@ export function Tabs({
   };
 
   return (
-    <div className="tabs" role="tablist" aria-label={ariaLabel}>
+    <div
+      ref={barRef}
+      className="tabs"
+      role="tablist"
+      aria-label={ariaLabel}
+      // Mép còn tab khuất — CSS làm mờ mép đó để báo "còn nữa" (thanh cuộn đã bị giấu).
+      data-more-start={edges.start ? 'true' : undefined}
+      data-more-end={edges.end ? 'true' : undefined}
+    >
       {items.map((item) => (
         <button
           key={item.key}

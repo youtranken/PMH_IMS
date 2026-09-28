@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatMoney, orDash } from './format';
+import { formatMoney, orDash, todayIso } from './format';
 
 describe('formatMoney — tiền đồng dùng chung (AD-15)', () => {
   it.each([
@@ -37,5 +37,16 @@ describe('orDash', () => {
 
   it('số 0 KHÔNG bị coi là rỗng', () => {
     expect(orDash(0)).toBe('0');
+  });
+});
+
+describe('todayIso — "hôm nay" theo giờ Việt Nam', () => {
+  it.each([
+    // 23:30 UTC ngày 27 đã là 06:30 sáng ngày 28 ở VN — đây là chỗ `toISOString()` lùi một ngày.
+    ['2026-09-27T23:30:00Z', '2026-09-28'],
+    ['2026-09-28T16:59:59Z', '2026-09-28'],
+    ['2026-09-28T17:00:00Z', '2026-09-29'],
+  ])('%s → %s', (now, expected) => {
+    expect(todayIso(new Date(now))).toBe(expected);
   });
 });

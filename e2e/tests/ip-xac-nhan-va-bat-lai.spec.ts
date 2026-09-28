@@ -71,14 +71,21 @@ test.describe('Hồ sơ IP — cấp lại sau thu hồi, và bật lại sau kh
     expect(freed.usedBy).toBeNull();
     expect(freed.status).toBe('free');
 
-    // free → assigned với ô rỗng: chủ MỚI dọn vào, chưa biết ai. Không được hồi sinh
-    // chủ cũ — đó mới đúng là nói dối.
-    const relet = await page.request.post(`/api/v1/ipam/addresses/${ipId}/transition`, {
+    // free → assigned mà ô rỗng: bị từ chối (Q-14) — và KHÔNG được hồi sinh chủ cũ để lấp.
+    const empty = await page.request.post(`/api/v1/ipam/addresses/${ipId}/transition`, {
       headers,
       data: { to: 'assigned', reason: 'cap lai', usedBy: '' },
     });
+    expect(empty.status()).toBe(400);
+    expect(((await empty.json()) as { code: string }).code).toBe('IP_OWNER_REQUIRED');
+
+    // Có chủ MỚI thì được, và hồ sơ mang chủ mới chứ không phải chủ cũ.
+    const relet = await page.request.post(`/api/v1/ipam/addresses/${ipId}/transition`, {
+      headers,
+      data: { to: 'assigned', reason: 'cap lai', usedBy: 'Chủ mới E2E' },
+    });
     expect(relet.status()).toBeLessThan(300);
-    expect(((await relet.json()) as { usedBy: string | null }).usedBy).toBeNull();
+    expect(((await relet.json()) as { usedBy: string | null }).usedBy).toBe('Chủ mới E2E');
   });
 
   test('ẩn hồ sơ rồi BẬT LẠI được — lịch sử nối tiếp, không mồ côi', async ({ page }) => {

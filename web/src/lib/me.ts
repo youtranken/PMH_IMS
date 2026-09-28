@@ -17,6 +17,8 @@ export interface Me {
   totpPending: boolean;
   /** Đã cài xác thực 2 lớp chưa (quyết định enroll hay nhập mã). */
   totpEnrolled: boolean;
+  /** Mốc cài 2 lớp (ISO) — màn Hồ sơ hiện "Đã bật từ …". */
+  totpEnrolledAt?: string | null;
   steppedUpAt: string | null;
   csrfToken: string;
   config: {

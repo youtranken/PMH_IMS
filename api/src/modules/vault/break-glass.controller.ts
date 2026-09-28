@@ -68,6 +68,16 @@ export class BreakGlassController {
     return this.breakGlass.pendingForApprovers();
   }
 
+  /**
+   * Số phiếu người đang hỏi duyệt được — badge trên menu, hỏi định kỳ. Chỉ một con số, không
+   * tra tên hồ sơ: shell gọi nó ở mọi màn nên phải nhẹ.
+   */
+  @Roles('sa', 'admin')
+  @Get('pending/count')
+  async pendingCount(@Req() req: AuthedRequest) {
+    return { count: await this.breakGlass.pendingCountFor(actor(req)) };
+  }
+
   /** FR-025: nhật ký đầy đủ — ai xin, lý do, ai duyệt, hết hạn lúc nào. Dashboard Epic 7 đọc. */
   @Roles('sa', 'admin')
   @Get('log')
@@ -166,6 +176,17 @@ export class BreakGlassController {
   @Audited('break_glass.cancelled', 'approval', { writtenByService: true })
   cancel(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
     return this.breakGlass.cancel(actor(req), params.id);
+  }
+
+  /**
+   * Một phiếu — đích của nút trong thư. Người duyệt đọc mọi phiếu, Member chỉ phiếu của mình
+   * (service gác). Khai SAU cùng: `:id` đứng trước thì nuốt mất `mine`/`pending`/`log`.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get(':id')
+  detail(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    const role = req.user!.role;
+    return this.breakGlass.detail(actor(req), role === 'sa' || role === 'admin', params.id);
   }
 }
 

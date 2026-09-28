@@ -53,7 +53,7 @@ const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
 /** Lọc mã máy rác khỏi danh sách `?deviceIds=` trước khi đưa xuống truy vấn. */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-class SoftwareBodyDto {
+export class SoftwareBodyDto {
   @IsOptional() @IsString() @Length(1, 60) code?: string;
   @IsOptional() @IsString() @Length(1, 200) name?: string;
 
@@ -160,7 +160,7 @@ export class SoftwareController {
 
   @Roles('sa', 'admin', 'member')
   @Get()
-  list(
+  async list(
     @Query()
     query: {
       page?: string;
@@ -173,7 +173,7 @@ export class SoftwareController {
       dir?: string;
     },
   ) {
-    return this.software.list(
+    const page = await this.software.list(
       parsePageQuery(query),
       {
         search: query.search,
@@ -183,6 +183,7 @@ export class SoftwareController {
       },
       parseSortQuery(query, SOFTWARE_SORT_KEYS, SOFTWARE_SORT_DEFAULT),
     );
+    return { ...page, items: await this.software.present(page.items) };
   }
 
   /**
@@ -272,7 +273,7 @@ export class SoftwareController {
   @Roles('sa', 'admin', 'member')
   @Get(':id')
   findOne(@Param() params: IdParamDto) {
-    return this.software.findOne(params.id);
+    return this.software.detail(params.id);
   }
 
   @Roles('sa', 'admin', 'member')

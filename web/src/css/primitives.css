@@ -448,6 +448,21 @@ table.table tbody tr.exp:hover td {
 .subnet-pane .segmented {
   margin-bottom: var(--space-7);
 }
+/* Cột Thiết bị là cột người ta dò bằng mắt khi hỏi "IP này của máy nào": đủ chỗ cho một mã
+   máy trên một dòng. Ngày cấp chỉ cần đúng bề rộng của nó, nhường chỗ còn lại cho cột máy. */
+.subnet-pane th.col-device,
+.subnet-pane td.col-device {
+  min-width: 14ch;
+}
+/* Chỉ ở ≥961px: dưới mốc đó `.table-stack` gập dòng thành thẻ dọc, ô là một hàng flex của
+   thẻ — `width: 1%` ở đó bóp ô "Ngày cấp" còn một mẩu, nhãn và giá trị chồng lên nhau. */
+@media (min-width: 961px) {
+  .subnet-pane th.col-date,
+  .subnet-pane td.col-date {
+    width: 1%;
+    white-space: nowrap;
+  }
+}
 /* Nhãn nút lọc không được gãy dòng — nâng lên cho MỌI dải nút: dải đã cuộn ngang được trong
    chính nó (`form-layout.css`), nên nút gãy đôi chỉ làm dải cao lên chứ không cứu được gì. */
 .segmented button {
@@ -642,6 +657,43 @@ table.table tbody tr.exp:hover td {
   .seat-menu {
     justify-self: start;
     margin-top: var(--space-4);
+  }
+}
+
+/* Khu "License đang cài" nằm trong cột chính của trang chi tiết (~650px ở 1280 có sidebar):
+   bảy cột không vừa, tiêu đề cột chồng nhau và mã license gãy ba dòng. Đo theo bề ngang của
+   CHÍNH KHU (container query), không theo cửa sổ: cùng thành phần ấy ở hàng bung của danh sách
+   thì rộng đủ và giữ nguyên dạng bảng. Hẹp thì thành thẻ: mã + tên một dòng, phần còn lại
+   xếp nối tiếp bên dưới. */
+.exp-soft {
+  container-type: inline-size;
+}
+@container (max-width: 800px) {
+  .inst-list .seat-hd {
+    display: none;
+  }
+  .inst-list .seat-card {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--space-1) var(--space-7);
+  }
+  .inst-list .seat-card > .seat-mc {
+    flex: 1 0 100%;
+  }
+  .inst-list .seat-mc .mono {
+    flex: none;
+    white-space: nowrap;
+  }
+  .inst-list .seat-card > [data-label]:not(.seat-mc)::before {
+    content: attr(data-label) ': ';
+    color: var(--ink-3);
+  }
+  .inst-list .seat-cost {
+    text-align: left;
+  }
+  .inst-list .seat-note {
+    max-width: 100%;
   }
 }
 

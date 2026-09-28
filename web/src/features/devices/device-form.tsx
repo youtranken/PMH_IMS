@@ -9,7 +9,8 @@ import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
-import { useCatalogLists } from '@/ui/use-catalog-lists';
+import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
+import { useFormErrors } from '@/ui/use-form-errors';
 import {
   DEVICE_STATUSES,
   STATUS_KEY,
@@ -117,12 +118,15 @@ export function DeviceForm({
     (cabinet) => !form.siteId || cabinet.siteId === form.siteId,
   );
 
+  const check = useFormErrors({
+    code: !form.code.trim() && t('formErrors.required'),
+    name: !form.name.trim() && t('formErrors.required'),
+    deviceTypeId: !form.deviceTypeId && t('formErrors.requiredPick'),
+  });
+
   const submit = () => {
     setError(null);
-    if (!form.code.trim() || !form.name.trim() || !form.deviceTypeId) {
-      setError(t('devices.needMinimum'));
-      return;
-    }
+    if (!check.check()) return;
     save.mutate(buildBody(form), {
       onSuccess: (result) => {
         void (async () => {
@@ -172,6 +176,8 @@ export function DeviceForm({
     >
       <form
         id="device-form"
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           submit();
@@ -189,8 +195,9 @@ export function DeviceForm({
             {error}
           </p>
         ) : null}
+        {check.summary}
         <FormSection title={t('devices.formSectionProfile')} columns={3}>
-          <Field label={t('devices.code')} required htmlFor="device-code">
+          <Field label={t('devices.code')} required htmlFor="device-code" error={check.error('code')}>
             <input
               id="device-code"
               className="inp mono"
@@ -199,7 +206,13 @@ export function DeviceForm({
               onChange={(e) => set('code', e.target.value)}
             />
           </Field>
-          <Field label={t('devices.name')} required htmlFor="device-name" span={2}>
+          <Field
+            label={t('devices.name')}
+            required
+            htmlFor="device-name"
+            span={2}
+            error={check.error('name')}
+          >
             <input
               id="device-name"
               className="inp"
@@ -209,16 +222,13 @@ export function DeviceForm({
             />
           </Field>
 
-          <Field label={t('devices.type')} required>
+          <Field label={t('devices.type')} required error={check.error('deviceTypeId')}>
             <Select
               required
               value={form.deviceTypeId}
               ariaLabel={t('devices.type')}
               placeholder={t('devices.pickType')}
-              options={(lists.data?.deviceTypes ?? []).map((type) => ({
-                value: type.id,
-                label: type.name,
-              }))}
+              options={activeOptions(lists.data?.deviceTypes, device?.deviceTypeId, (type) => type.name)}
               failed={lists.isError}
               onChange={(value) => set('deviceTypeId', value)}
             />
@@ -269,10 +279,11 @@ export function DeviceForm({
               value={form.siteId}
               ariaLabel={t('devices.site')}
               placeholder={t('devices.noSitePick')}
-              options={(lists.data?.sites ?? []).map((site) => ({
-                value: site.id,
-                label: `${site.code} — ${site.name}`,
-              }))}
+              options={activeOptions(
+                lists.data?.sites,
+                device?.siteId,
+                (site) => `${site.code} — ${site.name}`,
+              )}
               failed={lists.isError}
               onChange={(value) => set('siteId', value)}
             />
@@ -282,10 +293,11 @@ export function DeviceForm({
               value={form.cabinetId}
               ariaLabel={t('devices.cabinet')}
               placeholder={t('devices.noCabinet')}
-              options={cabinets.map((cabinet) => ({
-                value: cabinet.id,
-                label: `${cabinet.siteCode} · ${cabinet.code}`,
-              }))}
+              options={activeOptions(
+                cabinets,
+                device?.cabinetId,
+                (cabinet) => `${cabinet.siteCode} · ${cabinet.code}`,
+              )}
               failed={lists.isError}
               onChange={(value) => set('cabinetId', value)}
             />
@@ -320,10 +332,7 @@ export function DeviceForm({
               value={form.vendorId}
               ariaLabel={t('devices.vendor')}
               placeholder={t('devices.noVendor')}
-              options={(lists.data?.vendors ?? []).map((vendor) => ({
-                value: vendor.id,
-                label: vendor.name,
-              }))}
+              options={activeOptions(lists.data?.vendors, device?.vendorId, (vendor) => vendor.name)}
               failed={lists.isError}
               onChange={(value) => set('vendorId', value)}
             />

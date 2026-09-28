@@ -1,6 +1,7 @@
 /**
  * AD-11: danh sách khóa cấu hình + kiểu + mặc định — MỘT nơi khai báo duy nhất (AD-15).
- * Thêm tham số mới: thêm ở đây VÀ seed bằng migration, không rải hằng số trong code.
+ * Thêm tham số mới: thêm ở đây VÀ seed bằng migration, không rải hằng số trong code. Muốn SA
+ * sửa được trên màn Tham số hệ thống thì khai thêm ở `system-config.editable.ts` (kèm khoảng).
  */
 export const CONFIG_KEYS = {
   sessionIdleMinutes: { key: 'session.idle_minutes', fallback: 30 },
@@ -35,6 +36,14 @@ export const CONFIG_KEYS = {
    * `session.idle_minutes` (30) nên nó luôn là cái hết trước.
    */
   totpEnrollReauthMinutes: { key: 'totp.enroll_reauth_minutes', fallback: 15 },
+  /*
+   * Câu chỉ đường cho người quên mật khẩu / mất điện thoại 2 lớp (0077, Q-14). Đọc được khi CHƯA
+   * đăng nhập qua `GET /auth/support-contact` — route đó chỉ trả đúng khoá này, không mở bảng.
+   */
+  authSupportContact: {
+    key: 'auth.support_contact',
+    fallback: 'Liên hệ Super Admin phòng IT (gặp trực tiếp hoặc gọi số nội bộ của phòng IT).',
+  },
   secretProbeAlertThreshold: { key: 'secret.probe_alert_threshold', fallback: 3 },
   secretProbeWindowMinutes: { key: 'secret.probe_window_minutes', fallback: 15 },
   secretProbeCooldownMinutes: { key: 'secret.probe_cooldown_minutes', fallback: 60 },

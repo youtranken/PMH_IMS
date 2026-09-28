@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
@@ -23,6 +23,7 @@ import { Select } from '@/ui/select';
 import { TabPanel, Tabs } from '@/ui/tabs';
 import { useToast } from '@/ui/toast';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
+import { useFormErrors } from '@/ui/use-form-errors';
 import { DigestRulesPanel } from './digest-rules-panel';
 
 interface ExpiryRow {
@@ -55,6 +56,11 @@ interface ExpiryResponse {
    * cùng một màn hình, và không bài kiểm nào bắt được vì mỗi bên tự nhất quán với chính nó.
    */
   thresholds: { criticalDays: number; warningDays: number };
+  /**
+   * Nguồn hạn đã LỖI trong lượt này — `items`, `total` và `summary` thiếu phần của chúng.
+   * Màn phải nói ra (EX-002), không thì con số thiếu đọc y như con số đủ.
+   */
+  failedKinds?: string[];
 }
 
 /** Cửa sổ nhìn tới — mấy mốc người ta thật sự dùng, không cho gõ số tùy ý cho rối. */
@@ -135,6 +141,9 @@ export function ExpiryScreen({ me }: { me: Me }) {
    */
   const expiry = useQuery({
     queryKey: ['expiry', withinDays, kind, state, url.page, url.limit],
+    // Đổi trang/từ khoá thì GIỮ bảng cũ tới khi có dữ liệu mới: vẽ lại Loading là gỡ cả bảng,
+    // mất dòng đang bung và bảng nháy trắng sau mỗi lần gõ tìm.
+    placeholderData: keepPreviousData,
     queryFn: () =>
       apiFetch<ExpiryResponse>(
         `/api/v1/expiry?withinDays=${withinDays}&page=${url.page}&limit=${url.limit}` +
@@ -153,6 +162,10 @@ export function ExpiryScreen({ me }: { me: Me }) {
   );
 
   const summary = expiry.data?.summary;
+  const failedLabels = (expiry.data?.failedKinds ?? []).map(kindLabel).join(', ');
+  const incomplete = failedLabels
+    ? t('expiry.kpiIncomplete', { kinds: failedLabels })
+    : undefined;
 
   /*
    * Ba nhóm KHÔNG phủ kín bảng, và đó là đúng: dòng còn xa hơn ngưỡng "sắp tới" không thuộc
@@ -270,13 +283,28 @@ export function ExpiryScreen({ me }: { me: Me }) {
         không làm gì được với nó — vẫn phải tự dò trong bảng 30 dòng xem cái nào quá hạn.
         Giờ bấm một ô là bảng thu về đúng nhóm ấy; bấm lại là bỏ lọc.
       */}
+      {failedLabels ? (
+        <div className="alert warn" role="status">
+          {t('expiry.failedKinds', { kinds: failedLabels })}{' '}
+          <button
+            type="button"
+            className="btn sm"
+            disabled={expiry.isFetching}
+            onClick={() => void expiry.refetch()}
+          >
+            {t('app.retry')}
+          </button>
+        </div>
+      ) : null}
+
       {summary ? (
-        <KpiStrip>
+        <KpiStrip dense>
           <KpiTile
             value={summary.expired}
             label={t('expiry.expired')}
             tone="danger"
             active={state === 'expired'}
+            incomplete={incomplete}
             onClick={() => setState(state === 'expired' ? '' : 'expired')}
           />
           <KpiTile
@@ -284,6 +312,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
             label={t('expiry.critical', { days: nguong.criticalDays })}
             tone="danger"
             active={state === 'critical'}
+            incomplete={incomplete}
             onClick={() => setState(state === 'critical' ? '' : 'critical')}
           />
           <KpiTile
@@ -291,6 +320,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
             label={t('expiry.warning')}
             tone="warn"
             active={state === 'warning'}
+            incomplete={incomplete}
             onClick={() => setState(state === 'warning' ? '' : 'warning')}
           />
         </KpiStrip>
@@ -362,6 +392,20 @@ export function ExpiryScreen({ me }: { me: Me }) {
           columns={columns}
           emptyText={t('expiry.empty')}
           stackOnMobile
+          /* ≤600px: thẻ 2 dòng — mục + badge ngày, rồi "loại · ngày hết hạn" và nút Gia hạn
+             nhỏ nếu gia hạn được tại đây. */
+          mobileCard={{
+            title: (row) => row.label,
+            href: (row) => row.link,
+            badge: (row) => <ExpiryBadge end={row.end} thresholds={nguong} />,
+            meta: (row) => `${kindLabel(row.kind)} · ${formatDate(row.end)}`,
+            aside: (row) =>
+              row.canRenew ? (
+                <button type="button" className="btn sm" onClick={() => setRenewing(row)}>
+                  {t('expiry.renew')}
+                </button>
+              ) : null,
+          }}
           /*
            * KHÔNG `initialSort` nữa, và các cột KHÔNG cho bấm sắp (N-01, vá 21/09).
            *
@@ -422,6 +466,7 @@ function RenewDialog({
   const { t } = useTranslation();
   const [endDate, setEndDate] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const check = useFormErrors({ endDate: !endDate && t('expiry.pickDate') });
   const renew = useApiMutation<Record<string, unknown>, unknown>('/api/v1/expiry/renew', {
     csrfToken,
     refreshMe: false,
@@ -453,13 +498,12 @@ function RenewDialog({
         id="renew-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          if (!endDate) {
-            setError(t('expiry.pickDate'));
-            return;
-          }
+          if (!check.check()) return;
           renew.mutate(
             { kind: row.kind, id: row.id, endDate },
             { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
@@ -469,7 +513,12 @@ function RenewDialog({
         <p className="muted">
           {kindLabel} · {t('expiry.end')}: {formatDate(row.end)}
         </p>
-        <Field label={t('expiry.newEnd')} required hint={t('expiry.renewHint')}>
+        <Field
+          label={t('expiry.newEnd')}
+          required
+          hint={t('expiry.renewHint')}
+          error={check.error('endDate')}
+        >
           <DatePicker
             value={endDate}
             ariaLabel={t('expiry.newEnd')}

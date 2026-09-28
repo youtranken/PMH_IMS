@@ -74,11 +74,13 @@ test('trang tổng Két sắt đọc được ở 390px, popup mở xem cũng v�
   expect(dialogOverflow).toBeLessThanOrEqual(1);
 });
 
-test('lưới ma trận quyền đọc được ở 390px, cuộn ngang trong khung của nó', async ({ page }) => {
+test('quyền két ở 390px: danh sách thành viên → thẻ quyền của một người, không tràn ngang', async ({
+  page,
+}) => {
   await firstLogin(page, E2E_SA);
   const headers = await writeHeaders(page);
   const scopeList = await page.request.get('/api/v1/vault/access/scopes');
-  const scope = ((await scopeList.json()) as { scopeType: string; scopeRef: string }[])[0];
+  const scope = ((await scopeList.json()) as { scopeType: string; scopeRef: string; label: string }[])[0];
   const granted = await page.request.post('/api/v1/vault/access', {
     headers,
     data: {
@@ -94,26 +96,22 @@ test('lưới ma trận quyền đọc được ở 390px, cuộn ngang trong kh
   await expect(page.getByRole('heading', { name: 'Quyền xem két sắt' })).toBeVisible();
   // Dòng tổng là câu ghép bốn con số — ở 390px nó phải xuống dòng chứ không đẩy trang rộng ra.
   await expect(page.getByText(/tài khoản · .* dòng quyền/)).toBeVisible();
-  await expect(page.getByText(E2E_MEMBER.email)).toBeVisible();
+  /*
+   * Lưới vài chục cột KHÔNG có ở màn hẹp — tab "Ma trận" chỉ dành cho màn rộng. Ở điện thoại
+   * là danh sách người (kèm số quyền) rồi tới thẻ quyền của một người.
+   */
+  await expect(page.getByRole('tab', { name: 'Ma trận' })).toHaveCount(0);
+  await expect(page.getByTestId('access-grid')).toHaveCount(0);
+  const member = page.getByRole('button', { name: new RegExp(`${E2E_MEMBER.email}.*1 quyền`) });
+  await expect(member).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-  /*
-   * Lưới (28/08/2026) cuộn ngang TRONG khung của nó, không đẩy cả trang — đó chính là điều
-   * bài này khóa lại. Vài chục cột ở 390px mà trang cuộn ngang thì cột tên người trôi mất và
-   * lưới hết đọc được.
-   */
-  const grid = page.getByTestId('access-grid');
-  await expect(grid).toBeVisible();
-  const gridScrolls = await grid.evaluate((el) => el.scrollWidth > el.clientWidth);
-  expect(gridScrolls).toBe(true);
+  await member.click();
+  await expect(page.getByRole('button', { name: '← Danh sách thành viên' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /: Cần duyệt$/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: '+ Thêm quyền' })).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
-  /*
-   * OLD-FE-01 — lưới cuộn được thì phải NÓI RA là còn cột khuất: thanh cuộn ngang chỉ hiện khi
-   * rê chuột, nên không có dòng này thì mép phải màn hình trông như cột cuối cùng.
-   */
-  const region = page.getByRole('region', { name: 'Quyền xem két sắt' });
-  await expect(region).toBeVisible();
-  await expect(page.getByText(/kéo ngang/)).toBeVisible();
-  await expect(region).toHaveAccessibleDescription(/kéo ngang/);
+  // SA/Admin không là thẻ trống: khối gập "Có toàn quyền theo vai".
+  await expect(page.getByText(/^Có toàn quyền theo vai \(\d+\)$/)).toBeVisible();
 });

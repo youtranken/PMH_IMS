@@ -102,7 +102,9 @@ describe('mọi màn danh sách vẽ ExpiryBadge đều khai notCounted', () => 
     'features/dashboard/dashboard-screen.tsx': 'đọc ExpiryApiService.list(), đã lọc ở API',
   };
 
-  const MAN_HINH = quetNguon(join(SRC, 'features'), /-screen\.tsx$/).filter((duong) =>
+  /* `-cell.tsx`: ô bảng mà màn danh sách giao hẳn việc vẽ hạn cho nó (vd cột "Tình trạng" của
+     phần mềm) — màn không còn chữ `<ExpiryBadge`, nhưng luật vẫn phải canh tới ô đó. */
+  const MAN_HINH = quetNguon(join(SRC, 'features'), /-(screen|cell)\.tsx$/).filter((duong) =>
     readFileSync(duong, 'utf8').includes('<ExpiryBadge'),
   );
 

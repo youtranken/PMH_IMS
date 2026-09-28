@@ -107,7 +107,10 @@
 /* Ô nhập: gợi ý + lỗi */
 .field-hint { font-size: var(--fs-xs); }
 .field-error { font-size: var(--fs-xs); color: var(--danger); font-weight: 600; }
-.inp[aria-invalid='true'] { border-color: var(--danger); }
+.inp[aria-invalid='true'],
+.combo input[aria-invalid='true'],
+.fsel-trigger[aria-invalid='true'],
+.dp-trigger[aria-invalid='true'] { border-color: var(--danger); }
 
 /* Lịch sử (AD-13) */
 .history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
@@ -396,9 +399,7 @@
   max-height: 46vh;
   overflow: auto;
 }
-.table tr.row-danger td {
-  background: var(--danger-soft);
-}
+/* `.row-danger` nằm ở `table.css`, ngay sau luật sọc dòng: nó phải thắng sọc dòng chẵn. */
 
 /*
  * Dòng đã vô hiệu / đã tắt / đã gỡ — LÙI XUỐNG NHƯNG VẪN ĐỌC ĐƯỢC (sửa 17/09/2026).
@@ -409,7 +410,7 @@
  * ghế license vừa bị gỡ. "Mờ" ở đây phải là một TÔNG khác, không phải một lớp sương phủ lên
  * chữ; nền nhạt gánh phần tín hiệu, chữ giữ nguyên độ đọc.
  */
-.table tr.row-muted td {
+table.table tbody tr.row-muted td {
   color: var(--ink-3);
 }
 /*
@@ -491,6 +492,23 @@
 .kpi.kpi-danger .kpi-n { color: var(--danger-strong); }
 /* Số 0 thì nhạt đi: "không có gì" vẫn phải đọc được, nhưng không được tranh chỗ với số khác. */
 .kpi.zero .kpi-n { color: var(--ink-3); font-weight: var(--fw-semibold); }
+/* `KpiStrip dense`: trên điện thoại cả hàng nằm MỘT dòng — ô lẻ rơi xuống dòng riêng trông như
+   một nhóm khác nghĩa. */
+@media (max-width: 600px) {
+  .dash-kpis.kpi-dense {
+    grid-template-columns: none;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+  .kpi-dense .kpi {
+    padding: var(--space-2) var(--space-3);
+  }
+  .kpi-dense .kpi-n {
+    font-size: var(--fs-xl);
+  }
+}
 .dash-calm {
   margin: calc(var(--space-6) * -1) 0 var(--space-6);
   padding-top: var(--space-2);
@@ -499,32 +517,33 @@
 }
 
 /*
- * Lưới khối ĐANG CÓ VIỆC — xếp theo CỘT, không theo hàng (sửa 17/09/2026).
+ * Khối ĐANG CÓ VIỆC — HAI LÀN CỐ ĐỊNH, không phải lưới theo hàng.
  *
- * Bản cũ để `grid` với `auto-fit, minmax(280px, 1fr)`. Hai chuyện cùng lúc: trên màn 24in nó
- * chia ra SÁU cột nên cả sáu khối nằm một hàng ngang; và vì là grid nên mọi ô trên một hàng
- * phải bắt đầu ở cùng một mốc — khối "Sắp hết hạn" 8 dòng cao vống lên, khối bên cạnh một
- * dòng, và phần chênh nhau là khoảng trắng chết. Đó là chỗ 65% chiều cao màn hình đi mất.
- *
- * Bản này giữ `grid` nhưng chặn cả hai đầu:
- *   · sàn bề rộng cột = MỘT PHẦN BA khung → không bao giờ quá ba cột, dù màn rộng bao nhiêu;
- *   · `auto-fit` → cột nào KHÔNG có thẻ thì co về 0 và nhường chỗ, nên hai khối trên màn 24in
- *     dàn ra nửa-nửa chứ không nằm nép sang trái chừa một cột chết.
- * Đã thử `columns` (multi-column): hết hàng, hết lệch chiều cao, nhưng cột rỗng vẫn chiếm chỗ
- * vì multi-column chia đều bề ngang trước rồi mới rót nội dung vào.
- *
- * `align-items: start` để thẻ thấp KHÔNG bị kéo cao bằng thẻ cạnh nó.
+ * Lưới căn theo hàng thì với từ bốn khối trở lên, khối thứ tư rơi xuống dưới đáy khối cao nhất
+ * của hàng trên và cột bên cạnh bỏ trống hàng trăm pixel. Hai làn thì không phụ thuộc hàng:
+ * làn chính 2 phần cho danh sách dài ("Sắp hết hạn"), làn phụ 1 phần xếp chồng các khối nhỏ.
+ * `single` khi chỉ còn một làn có khối — không chừa một cột chết. ≤900px: một cột, làn chính
+ * trước (khớp mốc drawer của shell).
  */
-.dashboard {
+.dash-lanes {
   display: grid;
-  /* `min(100%, …)` là cái chốt cho điện thoại: sàn 22rem mà không chặn thì ở màn hẹp hơn 22rem
-     cột rộng hơn khung và cả trang trôi ngang (UX-DR2 đo đúng chỗ này ở 390px). */
-  grid-template-columns: repeat(
-    auto-fit,
-    minmax(min(100%, max(22rem, (100% - var(--space-4) * 2) / 3)), 1fr)
-  );
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: var(--space-4);
   align-items: start;
+}
+.dash-lanes.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+.dash-lane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+@media (max-width: 900px) {
+  .dash-lanes {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .dash-card {
   display: flex;
@@ -624,6 +643,102 @@
   text-transform: uppercase;
   color: var(--ink-3);
 }
+/* Dòng đối tượng NGAY dưới tên người xin: thứ người duyệt cần để đánh giá rủi ro, nên nó to
+   hơn và đứng trước lý do. */
+.approval-subject {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  font-weight: var(--fw-semibold);
+  overflow-wrap: anywhere;
+}
+
+/* --- Trang chi tiết một phiếu (features/vault/approval-detail-screen.tsx) ---
+ * Mục tiêu: 390×844 đọc hết và quyết mà không cuộn. Khối gọn, chữ lý do 16px (thứ phải đọc
+ * kỹ nhất), thanh quyết định dính đáy.
+ * -------------------------------------------------------------------------- */
+.approval-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 44rem;
+}
+.approval-detail .card {
+  padding: var(--space-6) var(--space-7);
+}
+.approval-detail-label {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.approval-detail .approval-reason {
+  margin: 0;
+  font-size: var(--fs-md);
+}
+
+/* --- Thanh quyết định dính đáy (ui/sticky-action-bar.tsx) ------------------
+ * Dính đáy khung cuộn, đệm vùng an toàn của iPhone. Nút cao 48px; nút chính rộng hơn (~60%).
+ * -------------------------------------------------------------------------- */
+.sticky-action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding: var(--space-5) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+.sticky-action-note {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.sticky-action-buttons {
+  display: flex;
+  gap: var(--space-4);
+}
+.sticky-action-buttons > .btn {
+  flex: 2 1 0;
+  min-height: 48px;
+  justify-content: center;
+}
+.sticky-action-buttons > .btn.primary {
+  flex: 3 1 0;
+}
+@media (max-width: 680px) {
+  /* Điện thoại: tràn sát hai mép như thanh công cụ, không phải một thẻ lơ lửng. */
+  .sticky-action-bar {
+    margin-inline: calc(-1 * var(--space-7));
+    border-radius: 0;
+    border-width: 1px 0 0;
+  }
+}
+
+/* --- "Cần bạn duyệt" ở đầu bảng điều khiển -------------------------------- */
+.dash-needs-you {
+  background: var(--warn-soft);
+  border-left: 4px solid var(--warn);
+  margin-bottom: var(--space-7);
+}
+.dash-needs-you .dash-list > li {
+  gap: var(--space-2);
+}
+.dash-needs-you .approval-reason {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 
 /* Lý do nút đang xám, bản hiện bằng chữ (ui/disabled-reason.tsx). Trong chân hộp thoại nó
    đứng đầu hàng và đẩy các nút sang phải. */
@@ -673,9 +788,12 @@
  * -------------------------------------------------------------------------- */
 .access-grid-wrap {
   /* Cuộn ngang TRONG khung, không phải cả trang: vài chục cột là bình thường, mà trang cuộn
-     ngang thì cột tên người trôi mất và lưới hết đọc được (UX-DR2 ở 390px cũng nhờ luật này). */
+     ngang thì cột tên người trôi mất và lưới hết đọc được.
+     Chiều cao theo KHUNG NHÌN (trừ phần đầu trang) chứ không phải một hộp 70vh lọt thỏm: khung
+     cuộn ngang buộc cũng là khung cuộn dọc, nên tiêu đề chỉ dính được trong khung này — cho nó
+     cao gần hết màn là cách gần nhất với "cuộn theo trang". */
   overflow-x: auto;
-  max-height: 70vh;
+  max-height: calc(100dvh - 9rem);
   overflow-y: auto;
 }
 table.access-grid {
@@ -778,9 +896,88 @@ table.access-grid thead .access-row-head {
 .access-chip.none { color: var(--ink-3); }
 .access-chip.none:hover { background: var(--surface-2); border-color: var(--border-2); }
 .access-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
-.access-by-role { text-align: center; font-size: var(--fs-xs); }
 .access-legend { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
 .access-legend .access-chip { cursor: default; }
+
+/* Tab "Theo người": trái danh sách Thành viên, phải thẻ quyền. Màn hẹp một cột (màn chỉ vẽ
+   một nửa mỗi lúc, xem `PeopleView`). */
+.access-people {
+  display: grid;
+  grid-template-columns: minmax(14rem, 20rem) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .access-people { grid-template-columns: minmax(0, 1fr); }
+}
+.access-member-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.access-member {
+  all: unset;
+  box-sizing: border-box;
+  width: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+.access-member:hover { border-color: var(--border-2); background: var(--surface-2); }
+.access-member:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.access-member[aria-current='true'] { border-color: var(--primary); background: var(--primary-soft); }
+.access-member-name { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+.access-person-card { display: flex; flex-direction: column; gap: var(--space-5); min-width: 0; }
+.access-person-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.access-person-head h2 { margin: 0; overflow-wrap: anywhere; }
+.access-rule-group h3 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.access-rule-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.access-rule-chip {
+  all: unset;
+  cursor: pointer;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  border: 1px solid transparent;
+  overflow-wrap: anywhere;
+}
+.access-rule-chip.whitelist { background: var(--ok-soft); color: var(--ok); }
+.access-rule-chip.needs_approval { background: var(--warn-soft); color: var(--warn); }
+.access-rule-chip:hover { border-color: var(--border-2); }
+.access-rule-chip:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.access-role-holders { margin-top: var(--space-6); }
+.access-role-holders summary { cursor: pointer; font-weight: 600; }
+.access-role-holders ul { margin: var(--space-3) 0 0; padding-left: var(--space-6); }
+.access-role-holders li { overflow-wrap: anywhere; }
 
 .access-rules {
   list-style: none;
@@ -820,6 +1017,13 @@ table.access-grid thead .access-row-head {
   flex: 0 0 auto;
   color: var(--ink-2);
   font-variant-numeric: tabular-nums;
+  /* Phân số "10/20" gãy dòng giữa chừng là mất đúng con số quan trọng nhất. */
+  white-space: nowrap;
+}
+/* Trong ô bảng, thanh đo + phân số cần chỗ tối thiểu: không có thì bảng co cột này lại và
+   chữ tràn đè sang cột bên. */
+.table td .usage {
+  min-width: 7rem;
 }
 
 /* --- Giá trị secret khi mở két (ui/vault-panel.tsx) ----------------------- */
@@ -1076,3 +1280,122 @@ table.access-grid thead .access-row-head {
 /* Bản gọn cho dải chỉ số đầu trang: chỉ còn cái thanh. */
 .wt-mini .wt-track { height: 6px; }
 .wt-mini .wt-now { top: -2px; bottom: -2px; }
+
+/* `LocationText`: mỗi mã (site, tủ) là một khối không ngắt; chỗ ngắt duy nhất là sau dấu "·".
+   Thắng `overflow-wrap: anywhere` của ô cha (`.rail-v`), thứ cắt "TU-E2E-" / "HCM-01". */
+.location-text .mono { white-space: nowrap; }
+
+/* Danh sách phiên đăng nhập (`ui/session-list.tsx`) — Hồ sơ của tôi + hộp "Phiên đang mở".
+   Nút kết thúc phiên trải hết chiều ngang ở màn hẹp: đó là nút người ta tìm lúc cần đá kẻ
+   chiếm tài khoản từ điện thoại, nó không được nằm lọt ngoài khung. */
+.session-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.session-list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-6);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+}
+.session-list-who {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.session-list-who b {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+@media (max-width: 600px) {
+  .session-list-end {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* Hộp mật khẩu tạm: chuỗi + Hiện/Ẩn + Chép trên một hàng, gãy xuống dòng ở màn hẹp. */
+.temp-password-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.temp-password-row .temp-password {
+  flex: 1 1 14ch;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* --- Tham số hệ thống (features/admin/settings-screen.tsx) -----------------
+ * Nav nhóm bên trái ở màn rộng; màn hẹp thì nav thành một hàng cuộn ngang TRONG chính nó
+ * (không đẩy trang), bảng tham số một cột.
+ * -------------------------------------------------------------------------- */
+.settings-layout {
+  display: grid;
+  grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: start;
+}
+.settings-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.settings-nav button {
+  all: unset;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--r);
+  color: var(--ink-2);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.settings-nav button:hover { background: var(--surface-2); }
+.settings-nav button:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.settings-nav button[aria-current='page'] { background: var(--primary-soft); color: var(--primary-ink); }
+.settings-panel { display: flex; flex-direction: column; gap: var(--space-6); min-width: 0; }
+.settings-panel h2 { margin: 0; }
+.settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-5);
+  border-bottom: 1px solid var(--border);
+}
+.settings-row .btn { align-self: flex-start; }
+.settings-input { display: flex; align-items: center; gap: var(--space-3); }
+.settings-input .inp { max-width: 14rem; }
+.settings-meta { margin: 0; font-size: var(--fs-xs); overflow-wrap: anywhere; }
+.settings-diff {
+  list-style: none;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+.settings-diff li { display: flex; flex-direction: column; gap: var(--space-1); overflow-wrap: anywhere; }
+@media (max-width: 900px) {
+  .settings-layout { grid-template-columns: minmax(0, 1fr); }
+  .settings-nav ul { flex-direction: row; overflow-x: auto; }
+  .settings-nav button { width: auto; }
+}

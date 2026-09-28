@@ -80,6 +80,7 @@ describe('BE-09 · BE-13 · hồ sơ phần mềm và ghế đang gán', () => {
     const catalog = {
       lists: () => Promise.resolve({ vendors: [] }),
       validateRefs: () => Promise.resolve([]),
+      assertRefs: () => Promise.resolve(),
     } as unknown as CatalogApiService;
     const expiry = {
       recordRenewalWithin: () => Promise.resolve(),
@@ -130,6 +131,16 @@ describe('BE-09 · BE-13 · hồ sơ phần mềm và ghế đang gán', () => {
         [id],
       );
       expect(hist.rows[0].n).toBe(2); // hai ghế đang gán → hai dòng
+    });
+
+    it('license đang VƯỢT trần (4/3, gán có lý do) vẫn thanh lý được và gỡ hết ghế', async () => {
+      const id = await license('LIC-E2E-VUOT-TL', 4);
+      expect(await failure(software.update(ACTOR, id, { status: 'retired' } as never))).toBeNull();
+      const open = await scratch.pool.query<{ n: number }>(
+        `SELECT count(*)::int AS n FROM license_assignment WHERE software_id = $1 AND released_at IS NULL`,
+        [id],
+      );
+      expect(open.rows[0].n).toBe(0);
     });
 
     it('không còn ghế thì thanh lý được', async () => {

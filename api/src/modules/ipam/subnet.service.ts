@@ -157,7 +157,7 @@ export class SubnetService {
 
   async create(actor: string, input: SubnetInput): Promise<SubnetRecord> {
     const cidr = this.requireCidr(input.cidr);
-    await this.requireSite(input.siteId);
+    await this.requireSite(input.siteId, null);
     const name = this.requireName(input.name);
     const gateway = this.requireGateway(input.gateway, cidr);
 
@@ -218,7 +218,7 @@ export class SubnetService {
       );
     }
     if (input.siteId !== undefined) {
-      await this.requireSite(input.siteId);
+      await this.requireSite(input.siteId, before.siteId);
       values.siteId = input.siteId || null;
     }
     /**
@@ -534,15 +534,19 @@ export class SubnetService {
     return text;
   }
 
-  private async requireSite(siteId: string | null | undefined): Promise<void> {
+  /**
+   * Site phải có trong danh mục; site đã vô hiệu chỉ qua được khi dải VỐN ở site đó (Q-14) —
+   * form gửi lại đủ mọi ô, nên chặn theo giá trị gửi lên sẽ khoá chết mọi dải cũ của site ấy.
+   */
+  private async requireSite(
+    siteId: string | null | undefined,
+    currentSiteId: string | null,
+  ): Promise<void> {
     if (!siteId) return;
-    const lists = await this.catalog.lists();
-    if (!lists.sites.some((site) => site.id === siteId)) {
-      throw new BadRequestException({
-        code: 'SITE_NOT_FOUND',
-        message: 'Site không tồn tại hoặc đã ngừng dùng.',
-      });
-    }
+    await this.catalog.assertRefs(
+      { siteId },
+      currentSiteId === null ? null : { siteId: currentSiteId },
+    );
   }
 
   private async siteCodes(): Promise<Map<string, string>> {

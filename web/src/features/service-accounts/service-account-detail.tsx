@@ -20,7 +20,11 @@ import {
 import { TabPanel, Tabs, initialTab } from "@/ui/tabs";
 import { useTabCounts } from "@/ui/tab-counts";
 import { VaultPanel } from "@/ui/vault-panel";
+import { RowActions } from "@/ui/row-actions";
+import { useToast } from "@/ui/toast";
 import { toServiceAccountHistory } from "./service-account-history-entries";
+import { ServiceAccountForm } from "./service-account-form";
+import { ServiceAccountStatusDialog } from "./service-account-status-dialog";
 import {
   KIND_KEY,
   STATUS_KEY,
@@ -38,8 +42,11 @@ import {
  */
 export function ServiceAccountDetail({ me }: { me: Me }) {
   const { t } = useTranslation();
+  const toast = useToast();
   const queryClient = useQueryClient();
   const { id = "" } = useParams();
+  const [editing, setEditing] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const [params] = useSearchParams();
   const [tab, setTab] = useState(() =>
     initialTab(params.get("tab"), [
@@ -70,7 +77,7 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
     enabled: tab === "history",
   });
 
-  void queryClient;
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["service-accounts"] });
 
   if (account.isLoading) return <Loading />;
   if (account.isError) {
@@ -86,8 +93,10 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
   if (!account.data) return <Loading />;
   const item = account.data;
   const vpn = supportsVpnFields(item.kind);
-  /** Ghi vào két chỉ SA/Admin — API chặn, UI đừng bày nút ra để bấm rồi 403. */
+  /** Ghi (két, hồ sơ, trạng thái) chỉ SA/Admin — API chặn, UI đừng bày nút ra để bấm rồi 403. */
   const canVaultWrite = me.role === "sa" || me.role === "admin";
+  const canEdit = canVaultWrite;
+  const nextStatus = item.status === "active" ? "disabled" : "active";
 
   return (
     <>
@@ -109,6 +118,34 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
               </span>
             ) : null}
           </>
+        }
+        actions={
+          canEdit ? (
+            <>
+              <button type="button" className="btn primary" onClick={() => setEditing(true)}>
+                {t("serviceAccounts.edit")}
+              </button>
+              {/* Đổi trạng thái đi hộp RIÊNG vì nó bắt ghi lý do — cùng hộp với danh sách, để
+                  không phải quay ra danh sách, tìm dòng rồi mở ⋯ mới đóng được một tài khoản. */}
+              <RowActions
+                label={t("common.actionsOf", { subject: item.code })}
+                items={[
+                  item.status === "active"
+                    ? {
+                        key: "disable",
+                        label: t("serviceAccounts.disableMenu"),
+                        onSelect: () => setSwitching(true),
+                        danger: true,
+                      }
+                    : {
+                        key: "enable",
+                        label: t("serviceAccounts.enableMenu"),
+                        onSelect: () => setSwitching(true),
+                      },
+                ]}
+              />
+            </>
+          ) : null
         }
       />
 
@@ -204,6 +241,36 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
         )}
       </TabPanel>
       </DetailLayout>
+
+      {editing ? (
+        <ServiceAccountForm
+          row={item}
+          csrfToken={me.csrfToken}
+          onClose={() => setEditing(false)}
+          onSaved={(warnings) => {
+            setEditing(false);
+            // Câu "Đã lưu" do chính form nói; ở đây chỉ còn các cảnh báo không chặn lưu.
+            for (const warning of warnings) toast({ message: warning, tone: "warn" });
+            void refresh();
+          }}
+        />
+      ) : null}
+
+      {switching ? (
+        <ServiceAccountStatusDialog
+          row={item}
+          next={nextStatus}
+          csrfToken={me.csrfToken}
+          onClose={() => setSwitching(false)}
+          onDone={() => {
+            setSwitching(false);
+            toast({
+              message: t(nextStatus === "disabled" ? "serviceAccounts.disabled" : "serviceAccounts.enabled"),
+            });
+            void refresh();
+          }}
+        />
+      ) : null}
     </>
   );
 }

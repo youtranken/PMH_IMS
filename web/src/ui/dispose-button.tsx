@@ -25,6 +25,12 @@ export interface DisposeOptions {
   /** Nhãn hiện trên nút xác nhận — mỗi màn giữ chữ quen thuộc của mình. */
   label: string;
   confirmMessage: string;
+  /**
+   * Dựng câu hỏi lại NGAY LÚC BẤM, thay cho `confirmMessage` — cho màn cần dữ liệu chỉ nên đọc
+   * khi người dùng thật sự định thanh lý (vd mã các máy sắp bị gỡ license). `confirmMessage`
+   * vẫn bắt buộc: nó là câu dự phòng khi hàm này lỗi.
+   */
+  resolveMessage?: () => Promise<string>;
   csrfToken: string;
   onDone: () => void;
 }
@@ -42,6 +48,7 @@ export function useDispose({
   body,
   label,
   confirmMessage,
+  resolveMessage,
   csrfToken,
   onDone,
 }: DisposeOptions): { run: () => void; isPending: boolean } {
@@ -56,9 +63,12 @@ export function useDispose({
 
   const run = () => {
     void (async () => {
+      const message = resolveMessage
+        ? await resolveMessage().catch(() => confirmMessage)
+        : confirmMessage;
       const ok = await askConfirm({
         title: t('disposal.confirmTitle'),
-        message: confirmMessage,
+        message,
         confirmLabel: label,
         danger: true,
       });

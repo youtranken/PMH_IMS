@@ -8,9 +8,11 @@ import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draf
 import { AttachmentPanel } from '@/ui/attachment-panel';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
-import { useCatalogLists } from '@/ui/use-catalog-lists';
+import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
+import { useFormErrors } from '@/ui/use-form-errors';
 import {
   KIND_KEY,
+  seatCheck,
   SOFTWARE_KINDS,
   SOFTWARE_STATUSES,
   STATUS_KEY,
@@ -108,6 +110,18 @@ export function SoftwareForm({
 
   const hasSeats = supportsSeats(form.kind);
   const isPerpetual = form.licenseModel === 'perpetual';
+  const seats = seatCheck(form.seatTotal, hasSeats, row?.seatUsed ?? 0);
+
+  const check = useFormErrors({
+    code: !form.code.trim() && t('formErrors.required'),
+    name: !form.name.trim() && t('formErrors.required'),
+    seatTotal:
+      seats.reason === 'invalid'
+        ? t('software.seatInvalid')
+        : seats.reason === 'belowUsed'
+          ? t('software.seatBelowUsed', { used: row?.seatUsed ?? 0, total: seats.value })
+          : null,
+  });
 
   return (
     <Dialog
@@ -132,13 +146,12 @@ export function SoftwareForm({
     >
       <form
         id="software-form"
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          if (!form.code.trim() || !form.name.trim()) {
-            setError(t('software.needMinimum'));
-            return;
-          }
+          if (!check.check()) return;
           save.mutate(
             {
               code: form.code.trim(),
@@ -146,7 +159,7 @@ export function SoftwareForm({
               kind: form.kind,
               licenseModel: form.licenseModel,
               vendorId: form.vendorId,
-              seatTotal: hasSeats && form.seatTotal.trim() ? Number(form.seatTotal) : null,
+              seatTotal: seats.value,
               startDate: form.startDate,
               endDate: form.endDate,
               note: form.note.trim(),
@@ -191,8 +204,9 @@ export function SoftwareForm({
             {error}
           </p>
         ) : null}
+        {check.summary}
         <FormSection title={t('software.tabProfile')} columns={3}>
-          <Field label={t('software.code')} required htmlFor="sw-code">
+          <Field label={t('software.code')} required htmlFor="sw-code" error={check.error('code')}>
             <input
               id="sw-code"
               className="inp mono"
@@ -201,7 +215,13 @@ export function SoftwareForm({
               onChange={(e) => set('code', e.target.value)}
             />
           </Field>
-          <Field label={t('software.name')} required htmlFor="sw-name" span={2}>
+          <Field
+            label={t('software.name')}
+            required
+            htmlFor="sw-name"
+            span={2}
+            error={check.error('name')}
+          >
             <input
               id="sw-name"
               className="inp"
@@ -243,10 +263,7 @@ export function SoftwareForm({
               ariaLabel={t('software.vendor')}
               placeholder={`— ${t('software.noVendor')} —`}
               failed={lists.isError}
-              options={(lists.data?.vendors ?? []).map((vendor) => ({
-                value: vendor.id,
-                label: vendor.name,
-              }))}
+              options={activeOptions(lists.data?.vendors, row?.vendorId, (vendor) => vendor.name)}
               onChange={(value) => set('vendorId', value)}
             />
           </Field>
@@ -295,7 +312,15 @@ export function SoftwareForm({
           )}
           {/* Ô seat chỉ hiện với license — loại khác thấy ô này là hiểu sai ý nghĩa cột. */}
           {hasSeats ? (
-            <Field label={t('software.seatTotal')} hint={t('software.seatHint')} htmlFor="sw-seat">
+            <Field
+              label={t('software.seatTotal')}
+              hint={t('software.seatHint')}
+              htmlFor="sw-seat"
+              error={check.error('seatTotal')}
+            >
+              {/* Ô chữ + `inputMode="numeric"`, KHÔNG `type="number"`: với ô số, trình duyệt
+                  trả `value` rỗng khi gõ "10 ghế" — tức lặng lẽ thành "không giới hạn", đúng cái
+                  lỗi cần chặn. Ô chữ giữ nguyên thứ người dùng gõ để `seatCheck` báo sai. */}
               <input
                 id="sw-seat"
                 className="inp"

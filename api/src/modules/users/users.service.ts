@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, isNull, lt, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, or, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -287,6 +287,37 @@ export class UsersService {
     return rows.length === 1;
   }
 
+  /**
+   * Thay yếu tố thứ hai của tài khoản ĐANG có 2 lớp bằng secret mới, đồng thời đốt mã vừa dùng
+   * để xác nhận nó.
+   *
+   * Một câu duy nhất để không có khoảnh khắc nào tài khoản mang secret mới mà mốc chống replay
+   * vẫn là của secret cũ. Vị từ `totp_enrolled_at IS NOT NULL`: SA vừa đặt lại 2 lớp thì người
+   * dùng phải đi đường cài lần đầu, không được đường "cài lại" ghi đè lên trạng thái SA vừa đặt.
+   */
+  async replaceTotpSecretWithin(
+    tx: Tx,
+    userId: string,
+    sealed: SealedValue,
+    timeStep: number,
+  ): Promise<boolean> {
+    const rows = await tx
+      .update(usersTable)
+      .set({
+        totpSecretCt: sealed.ciphertext,
+        totpSecretIv: sealed.iv,
+        totpSecretTag: sealed.tag,
+        totpDekWrapped: sealed.wrappedDek,
+        totpKeyVersion: sealed.keyVersion,
+        totpEnrolledAt: new Date(),
+        totpLastTimestep: timeStep,
+        updatedAt: new Date(),
+      })
+      .where(and(eq(usersTable.id, userId), isNotNull(usersTable.totpEnrolledAt)))
+      .returning({ id: usersTable.id });
+    return rows.length === 1;
+  }
+
   async clearTotpWithin(tx: Tx, userId: string): Promise<void> {
     await tx
       .update(usersTable)
@@ -418,6 +449,16 @@ export class UsersService {
       .from(usersTable)
       .where(inArray(usersTable.email, emails));
     return new Map(rows.map((row) => [row.email.toLowerCase(), row.fullName]));
+  }
+
+  /** `id → email` cho một mẻ id — nhãn đối tượng `user`/`session` trên màn Nhật ký. */
+  async emailsByIds(ids: string[]): Promise<Map<string, string>> {
+    if (ids.length === 0) return new Map();
+    const rows = await this.db
+      .select({ id: usersTable.id, email: usersTable.email })
+      .from(usersTable)
+      .where(inArray(usersTable.id, ids));
+    return new Map(rows.map((row) => [row.id, row.email]));
   }
 
   async listRecipients(roles: UserRole[]): Promise<{ email: string; fullName: string }[]> {

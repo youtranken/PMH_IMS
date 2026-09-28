@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { apiFetch } from "@/lib/api-client";
 import { errorMessage, useApiMutation } from "@/lib/api";
 import { formatDate, orDash } from "@/lib/format";
 import type { Me } from "@/lib/me";
-import { Combobox } from "@/ui/combobox";
 import { Dialog } from "@/ui/dialog";
 import { DatePicker } from "@/ui/date-picker";
 import { EmptyState, LoadError, Loading } from "@/ui/load-state";
@@ -15,6 +14,8 @@ import { Pagination } from "@/ui/pagination";
 import { RowActions } from "@/ui/row-actions";
 import { SuggestInput } from "@/ui/suggest-input";
 import { useDepartments } from "@/ui/use-departments";
+import { textRule, useFormErrors } from "@/ui/use-form-errors";
+import { FilterBar } from "@/ui/filter-bar";
 import { useToast } from "@/ui/toast";
 import { HistoryPanel } from "@/ui/history-panel";
 import {
@@ -32,21 +33,18 @@ import {
   countSlots,
   filterSlots,
   shouldIsolateAssigned,
+  pageOfAddress,
   pageSlots,
+  searchSlots,
   SLOT_FILTERS,
   SLOT_PAGE_SIZE,
   VOIDED_FILTER,
   type SlotFilter,
 } from "./slot-paging";
 import { toIpHistoryEntries, type IpHistoryRow } from "./ip-history-entries";
+import { AssignIpDialog, DeviceCombobox, ownerRule } from "./ip-assign-dialog";
 import { PATHS } from "@/lib/routes";
 import { clampPage } from "@/lib/paging";
-
-interface DeviceOption {
-  id: string;
-  code: string;
-  name: string;
-}
 
 /**
  * Cột PHẢI của màn Địa chỉ IP: toàn bộ một dải — IP đã có hồ sơ và ô còn trống, xếp theo thứ
@@ -75,13 +73,29 @@ export function SubnetPane({
    */
   const [status, setStatus] = useState<SlotFilter | null>(null);
   const [page, setPage] = useState(1);
-  const [editing, setEditing] = useState<{
-    record: IpRow | null;
+  /** Hồ sơ đang mở hộp SỬA. Cấp mới đi hộp riêng (`assigning`) — hai việc, hai hộp. */
+  const [editing, setEditing] = useState<IpRow | null>(null);
+  /** Hộp "Cấp IP" — `record` null là ô chưa từng có hồ sơ, có là hồ sơ đang Trống. */
+  const [assigning, setAssigning] = useState<{
     address: string;
+    record: IpRow | null;
   } | null>(null);
+  /** Chỉ còn bước THU HỒI đi hộp này; bước cấp đã gộp vào `assigning`. */
   const [moving, setMoving] = useState<{ record: IpRow; to: IpStatus } | null>(
     null,
   );
+  /** Ô tìm ngay trên bảng — lọc tại chỗ trên cả dải. */
+  const [needle, setNeedle] = useState("");
+  /**
+   * `?ip=` — đến từ ô tra cứu cấp trang hoặc hộp Tìm nhanh: nhảy tới đúng trang chứa địa chỉ
+   * và tô sáng dòng. Đọc từ URL để link gửi cho nhau mở ra đúng chỗ.
+   */
+  const [params] = useSearchParams();
+  const focusIp = params.get("ip");
+  const [highlight, setHighlight] = useState<string | null>(null);
+  const appliedFocus = useRef<string | null>(null);
+  const highlightRow = useRef<HTMLTableRowElement | null>(null);
+  const scrolledTo = useRef<string | null>(null);
   const [historyOf, setHistoryOf] = useState<IpRow | null>(null);
   /** Hồ sơ IP đang chờ XÓA (ẩn kèm lý do) — khác `moving` vốn là bước vòng đời. */
   const [voiding, setVoiding] = useState<IpRow | null>(null);
@@ -187,6 +201,8 @@ export function SubnetPane({
   useEffect(() => {
     setPage(1);
     setStatus(null);
+    setNeedle("");
+    setHighlight(null);
     decidedFor.current = null;
   }, [id]);
 
@@ -197,8 +213,29 @@ export function SubnetPane({
     setStatus(shouldIsolateAssigned(fresh.assigned, fresh.free) ? "assigned" : "all");
   }, [slots.data, id]);
 
+  /*
+   * Nhảy tới địa chỉ được hỏi — khai SAU khối quyết để thắng nó trong cùng một commit (React
+   * chạy effect theo thứ tự khai): địa chỉ cần tra có thể đang Trống, và bộ lọc "Đang dùng"
+   * mà khối quyết chọn hộ sẽ giấu mất đúng dòng đó. Mỗi cặp dải + địa chỉ chỉ áp MỘT lần —
+   * áp lại sau mỗi lượt tải (vd vừa cấp IP xong) là giật trang dưới tay người dùng.
+   */
+  useEffect(() => {
+    if (!slots.data || !focusIp) return;
+    const key = `${id}|${focusIp}`;
+    if (appliedFocus.current === key) return;
+    appliedFocus.current = key;
+    decidedFor.current = id;
+    setStatus("all");
+    setNeedle("");
+    setPage(pageOfAddress(slots.data, focusIp) ?? 1);
+    setHighlight(focusIp);
+  }, [slots.data, focusIp, id]);
+
   const shown: SlotFilter = status ?? "all";
-  const filtered = useMemo(() => filterSlots(all, shown), [all, shown]);
+  const filtered = useMemo(
+    () => searchSlots(filterSlots(all, shown), needle),
+    [all, shown, needle],
+  );
 
   /**
    * Phân trang Ở CLIENT, cố ý.
@@ -216,6 +253,26 @@ export function SubnetPane({
   useEffect(() => {
     setPage((current) => clampPage(current, filtered.length, SLOT_PAGE_SIZE));
   }, [filtered.length]);
+
+  // Cuộn tới dòng được tô sáng một lần — trên điện thoại nó thường nằm dưới mép màn hình.
+  useEffect(() => {
+    if (!highlight || scrolledTo.current === highlight) return;
+    if (!highlightRow.current) return;
+    scrolledTo.current = highlight;
+    highlightRow.current.scrollIntoView?.({ block: "center" });
+  });
+
+  /** Nút "Cấp IP" trên dòng — ô trống và hồ sơ Trống mở cùng một hộp. */
+  const assignButton = (address: string, record: IpRow | null) =>
+    canWrite ? (
+      <button
+        type="button"
+        className="btn sm"
+        onClick={() => setAssigning({ address, record })}
+      >
+        {t("ipam.assign")}
+      </button>
+    ) : null;
 
   return (
     <>
@@ -293,6 +350,15 @@ export function SubnetPane({
         </label>
       ) : null}
 
+      <FilterBar
+        search={needle}
+        onSearchChange={(value) => {
+          setNeedle(value);
+          setPage(1);
+        }}
+        searchPlaceholder={t("ipam.paneSearch")}
+      />
+
       {slots.isLoading ? (
         <Loading />
       ) : slots.isError ? (
@@ -305,16 +371,22 @@ export function SubnetPane({
                 <tr>
                   <th>{t("ipam.address")}</th>
                   <th>{t("ipam.status")}</th>
-                  <th>{t("ipam.device")}</th>
+                  <th className="col-device">{t("ipam.device")}</th>
                   <th>{t("ipam.usedBy")}</th>
-                  <th>{t("ipam.assignedAt")}</th>
+                  <th className="col-date">{t("ipam.assignedAt")}</th>
                   <th className="col-center">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((slot) =>
                   slot.kind === "free" ? (
-                    <tr key={slot.address} className="row-muted">
+                    <tr
+                      key={slot.address}
+                      className={
+                        slot.address === highlight ? "row-highlight" : "row-muted"
+                      }
+                      ref={slot.address === highlight ? highlightRow : undefined}
+                    >
                       <td data-label={t("ipam.address")}>
                         <span className="mono">{slot.address}</span>
                       </td>
@@ -330,21 +402,26 @@ export function SubnetPane({
                           năm ô kia đều tự xưng tên, riêng ô này thì không — thành ra một cái
                           nút lửng lơ không biết thuộc cột nào. */}
                       <td data-label={t("common.actions")}>
-                        {canWrite ? (
-                          <button
-                            type="button"
-                            className="btn sm"
-                            onClick={() =>
-                              setEditing({ record: null, address: slot.address })
-                            }
-                          >
-                            {t("ipam.assign")}
-                          </button>
-                        ) : null}
+                        {assignButton(slot.address, null)}
                       </td>
                     </tr>
                   ) : (
-                    <tr key={slot.id}>
+                    <tr
+                      key={slot.id}
+                      /*
+                        Hồ sơ đang Trống (đã thu hồi, hoặc hồ sơ không chủ có từ trước Q-14) nhìn
+                        như ô trống: mờ, và nút "Cấp IP" ngay tại dòng. Để đậm như hồ sơ đang
+                        dùng thì người đọc thấy một dòng "có gì đó" mà không biết là gì.
+                      */
+                      className={
+                        slot.address === highlight
+                          ? "row-highlight"
+                          : isFreeRecord(slot)
+                            ? "row-muted"
+                            : undefined
+                      }
+                      ref={slot.address === highlight ? highlightRow : undefined}
+                    >
                       <td data-label={t("ipam.address")}>
                         <span className="mono">{slot.address}</span>
                       </td>
@@ -364,11 +441,18 @@ export function SubnetPane({
                           </span>
                         )}
                       </td>
-                      <td data-label={t("ipam.device")}>
+                      <td data-label={t("ipam.device")} className="col-device">
+                        {/* Mã máy một dòng (`.mono` trong ô bảng không ngắt), tên máy là dòng
+                            phụ: mắt dò theo mã, tên để chắc là đúng cái máy mình nghĩ. */}
                         {slot.deviceId ? (
-                          <Link to={PATHS.device(slot.deviceId)}>
-                            {slot.deviceCode}
-                          </Link>
+                          <>
+                            <Link className="mono" to={PATHS.device(slot.deviceId)}>
+                              {slot.deviceCode}
+                            </Link>
+                            {slot.deviceName ? (
+                              <span className="cell-sub">{slot.deviceName}</span>
+                            ) : null}
+                          </>
                         ) : (
                           "—"
                         )}
@@ -376,11 +460,12 @@ export function SubnetPane({
                       <td data-label={t("ipam.usedBy")}>
                         {orDash(slot.usedBy)}
                       </td>
-                      <td data-label={t("ipam.assignedAt")}>
-                        {orDash(formatDate(slot.assignedAt))}
+                      <td data-label={t("ipam.assignedAt")} className="col-date">
+                        {isFreeRecord(slot) ? "—" : orDash(formatDate(slot.assignedAt))}
                       </td>
                       <td data-label={t("common.actions")}>
                         <div className="action-cell">
+                          {isFreeRecord(slot) ? assignButton(slot.address, slot) : null}
                           {/*
                             Gom vào một menu: bày từng nút cạnh nhau làm cột cuối rộng hơn cả các
                             cột dữ liệu cộng lại, trên một bảng người ta mở ra để ĐỌC địa chỉ. Và
@@ -404,30 +489,30 @@ export function SubnetPane({
                                   ]
                                 : []),
                               /* Chỉ hiện những bước chuyển ĐI ĐƯỢC từ trạng thái hiện tại — một
-                                 cái nút bấm vào rồi bị từ chối là cái nút không nên có. */
+                                 cái nút bấm vào rồi bị từ chối là cái nút không nên có. Bước
+                                 CẤP đã là nút ngay trên dòng, nên menu chỉ còn bước Thu hồi. */
                               ...(canWrite && !slot.voidedAt
-                                ? NEXT_STATUSES[slot.status].map((to) => ({
-                                    key: `to-${to}`,
-                                    label: t(TRANSITION_LABEL[`${slot.status}->${to}`]),
-                                    onSelect: () => setMoving({ record: slot, to }),
-                                    danger: to === "free",
-                                  }))
+                                ? NEXT_STATUSES[slot.status]
+                                    .filter((to) => to !== "assigned")
+                                    .map((to) => ({
+                                      key: `to-${to}`,
+                                      label: t(TRANSITION_LABEL[`${slot.status}->${to}`]),
+                                      onSelect: () => setMoving({ record: slot, to }),
+                                      danger: to === "free",
+                                    }))
                                 : []),
                               {
                                 key: "history",
                                 label: t("ipam.history"),
                                 onSelect: () => setHistoryOf(slot),
                               },
-                              ...(canWrite && !slot.voidedAt
+                              // Hồ sơ Trống thì "sửa" chính là cấp — đã có nút Cấp IP trên dòng.
+                              ...(canWrite && !slot.voidedAt && !isFreeRecord(slot)
                                 ? [
                                     {
                                       key: "edit",
                                       label: t("common.edit"),
-                                      onSelect: () =>
-                                        setEditing({
-                                          record: slot,
-                                          address: slot.address,
-                                        }),
+                                      onSelect: () => setEditing(slot),
                                     },
                                   ]
                                 : []),
@@ -535,9 +620,7 @@ export function SubnetPane({
 
       {editing ? (
         <IpForm
-          subnetId={id}
-          record={editing.record}
-          address={editing.address}
+          record={editing}
           csrfToken={me.csrfToken}
           onClose={() => setEditing(null)}
           onSaved={() => {
@@ -547,46 +630,60 @@ export function SubnetPane({
           }}
         />
       ) : null}
+
+      {assigning ? (
+        <AssignIpDialog
+          subnetId={id}
+          address={assigning.address}
+          record={assigning.record}
+          csrfToken={me.csrfToken}
+          onClose={() => setAssigning(null)}
+          onDone={() => {
+            const address = assigning.address;
+            setAssigning(null);
+            toast({ message: t("ipam.assigned", { address }) });
+            void refresh();
+          }}
+        />
+      ) : null}
     </>
   );
 }
 
+/**
+ * Sửa một hồ sơ IP đang dùng. Cấp mới (ô trống hoặc hồ sơ Trống) đi `AssignIpDialog`.
+ *
+ * Gỡ hết máy lẫn người dùng của hồ sơ đang dùng là quay lại dòng mồ côi Q-14 cấm — muốn trả
+ * địa chỉ về pool thì đi "Thu hồi", nơi lịch sử ghi lại chủ cũ.
+ */
 function IpForm({
-  subnetId,
   record,
-  address,
   csrfToken,
   onClose,
   onSaved,
 }: {
-  subnetId: string;
-  record: IpRow | null;
-  address: string;
+  record: IpRow;
   csrfToken: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const { t } = useTranslation();
-  const [deviceId, setDeviceId] = useState(record?.deviceId ?? "");
-  const [deviceTerm, setDeviceTerm] = useState(record?.deviceCode ?? "");
-  const [usedBy, setUsedBy] = useState(record?.usedBy ?? "");
+  const [device, setDevice] = useState({
+    deviceId: record.deviceId ?? "",
+    term: record.deviceCode ?? "",
+  });
+  const [usedBy, setUsedBy] = useState(record.usedBy ?? "");
   const departments = useDepartments();
-  const [assignedAt, setAssignedAt] = useState(record?.assignedAt ?? "");
-  const [note, setNote] = useState(record?.note ?? "");
+  const [assignedAt, setAssignedAt] = useState(record.assignedAt ?? "");
+  const [note, setNote] = useState(record.note ?? "");
   const [error, setError] = useState<string | null>(null);
-
-  const devices = useQuery({
-    queryKey: ["devices", "search", deviceTerm],
-    queryFn: () =>
-      apiFetch<{ items: DeviceOption[] }>(
-        `/api/v1/devices?limit=20&usable=true&search=${encodeURIComponent(deviceTerm)}`,
-      ),
-    enabled: deviceTerm.length > 0,
+  const check = useFormErrors({
+    owner: record.status === "assigned" ? ownerRule(t, device.deviceId, usedBy) : null,
   });
 
   const save = useApiMutation<Record<string, unknown>, unknown>(
-    record ? `/api/v1/ipam/addresses/${record.id}` : "/api/v1/ipam/addresses",
-    { method: record ? "PATCH" : "POST", csrfToken, refreshMe: false },
+    `/api/v1/ipam/addresses/${record.id}`,
+    { method: "PATCH", csrfToken, refreshMe: false },
   );
 
   return (
@@ -597,9 +694,7 @@ function IpForm({
          vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
       dismissible={!save.isPending}
       maxWidth={560}
-      title={
-        record ? t("ipam.editIp", { address }) : t("ipam.assignIp", { address })
-      }
+      title={t("ipam.editIp", { address: record.address })}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>
@@ -622,25 +717,19 @@ function IpForm({
         /* Hai cột: năm ô ngắn (địa chỉ · máy · người dùng · ngày cấp) xếp một cột dọc làm
            hộp cao gấp đôi cần thiết, phải cuộn mới thấy nút Lưu. Ghi chú `span={2}`. */
         data-columns={2}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!check.check()) return;
           save.mutate(
-            record
-              ? {
-                  deviceId,
-                  usedBy: usedBy.trim(),
-                  assignedAt,
-                  note: note.trim(),
-                }
-              : {
-                  subnetId,
-                  address,
-                  deviceId,
-                  usedBy: usedBy.trim(),
-                  assignedAt,
-                  note: note.trim(),
-                },
+            {
+              deviceId: device.deviceId,
+              usedBy: usedBy.trim(),
+              assignedAt,
+              note: note.trim(),
+            },
             {
               onSuccess: onSaved,
               onError: (err) => setError(errorMessage(err)),
@@ -652,31 +741,14 @@ function IpForm({
             sửa được trong form"; để `<p class="mono">` trần thì nó cao khác mọi ô còn lại và
             hàng đầu tiên trông lệch. */}
         <Field label={t("ipam.address")}>
-          <p className="static-value mono">{address}</p>
+          <p className="static-value mono">{record.address}</p>
         </Field>
 
-        <Field label={t("ipam.device")} hint={t("ipam.deviceHint")}>
-          <Combobox
-            placeholder={t("ipam.deviceSearch")}
-            query={deviceTerm}
-            onQuery={(value) => {
-              setDeviceTerm(value);
-              // Gõ lại là bỏ lựa chọn cũ — nếu không, ô hiện mã A mà id gửi đi là B.
-              setDeviceId("");
-            }}
-            options={devices.data?.items ?? []}
-            failed={devices.isError}
-            getKey={(item) => item.id}
-            renderOption={(item) => (
-              <>
-                <span className="mono">{item.code}</span>{" "}
-                <small>{item.name}</small>
-              </>
-            )}
-            onSelect={(item) => {
-              setDeviceId(item.id);
-              setDeviceTerm(item.code);
-            }}
+        <Field label={t("ipam.device")} hint={t("ipam.deviceHint")} error={check.error("owner")}>
+          <DeviceCombobox
+            deviceId={device.deviceId}
+            term={device.term}
+            onChange={setDevice}
           />
         </Field>
 
@@ -723,11 +795,10 @@ function IpForm({
 }
 
 /**
- * Xác nhận một bước chuyển vòng đời.
+ * Xác nhận bước THU HỒI.
  *
- * Thu hồi hỏi LÝ DO: sáu tháng sau, câu "vì sao IP này bị thu hồi" chỉ còn dòng lịch sử trả
- * lời được. Cấp / cấp lại thì hỏi CHỦ MỚI ngay tại đây để cả việc đi thành MỘT dòng lịch sử,
- * đúng như việc thật, thay vì hai dòng rời "đổi trạng thái" rồi "sửa hồ sơ".
+ * Hỏi LÝ DO: sáu tháng sau, câu "vì sao IP này bị thu hồi" chỉ còn dòng lịch sử trả lời được.
+ * Bước cấp không đi đây — nó cần đủ máy/người/ngày, nên dùng chung hộp `AssignIpDialog`.
  */
 function TransitionDialog({
   record,
@@ -744,11 +815,7 @@ function TransitionDialog({
 }) {
   const { t } = useTranslation();
   const [reason, setReason] = useState("");
-  // Cấp IP là chủ MỚI dọn vào, nên ô người dùng mở ra trống — chưa có chủ nào để điền sẵn.
-  const [usedBy, setUsedBy] = useState("");
-  const departments = useDepartments();
   const [error, setError] = useState<string | null>(null);
-  const asksOwner = to === "assigned";
 
   const move = useApiMutation<Record<string, unknown>, unknown>(
     `/api/v1/ipam/addresses/${record.id}/transition`,
@@ -792,7 +859,7 @@ function TransitionDialog({
           e.preventDefault();
           setError(null);
           move.mutate(
-            { to, reason: reason.trim(), usedBy: usedBy.trim() },
+            { to, reason: reason.trim() },
             {
               onSuccess: onDone,
               onError: (err) => setError(errorMessage(err)),
@@ -802,19 +869,6 @@ function TransitionDialog({
       >
         {to === "free" ? (
           <p className="muted">{t("ipam.reclaimHint")}</p>
-        ) : null}
-
-        {asksOwner ? (
-          <Field label={t("ipam.usedBy")} hint={t("ipam.usedByHint")}>
-            <SuggestInput
-              value={usedBy}
-              onChange={setUsedBy}
-              options={departments.names}
-              failed={departments.failed}
-              placeholder={t("ipam.usedByPlaceholder")}
-              ariaLabel={t("ipam.usedBy")}
-            />
-          </Field>
         ) : null}
 
         <Field
@@ -979,6 +1033,7 @@ function VoidAddressDialog({
   const { t } = useTranslation();
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const check = useFormErrors({ reason: textRule(t, reason, 3) });
   const remove = useApiMutation<{ reason: string }, unknown>(
     `/api/v1/ipam/addresses/${record.id}`,
     { method: "DELETE", csrfToken, refreshMe: false },
@@ -1013,9 +1068,12 @@ function VoidAddressDialog({
         id="ip-void-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!check.check()) return;
           remove.mutate(
             { reason: reason.trim() },
             { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
@@ -1023,7 +1081,12 @@ function VoidAddressDialog({
         }}
       >
         <p className="muted">{t("ipam.voidAddressHint")}</p>
-        <Field label={t("ipam.reason")} required htmlFor="ip-void-reason">
+        <Field
+          label={t("ipam.reason")}
+          required
+          htmlFor="ip-void-reason"
+          error={check.error("reason")}
+        >
           <input
             id="ip-void-reason"
             className="inp"
@@ -1042,4 +1105,9 @@ function VoidAddressDialog({
       </form>
     </Dialog>
   );
+}
+
+/** Hồ sơ còn sống mà đang Trống — với người đọc bảng, nó là một chỗ trống cấp được. */
+function isFreeRecord(slot: IpRow): boolean {
+  return slot.status === "free" && !slot.voidedAt;
 }

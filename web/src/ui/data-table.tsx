@@ -1,5 +1,6 @@
-import { Fragment, useEffect, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Chevron } from './chevron';
 import {
   flexRender,
@@ -13,13 +14,50 @@ import {
   type SortingState,
 } from '@tanstack/react-table';
 import { Loading } from '@/ui/load-state';
+import { useScrollEdges } from '@/ui/scroll-x';
+import { useMediaQuery } from '@/ui/use-media-query';
 
 // Cho phép cột khai báo className (vd 'num' căn phải cột số) qua columnDef.meta.
 declare module '@tanstack/react-table' {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   interface ColumnMeta<TData extends RowData, TValue> {
     className?: string;
+    /**
+     * Cột DÍNH khi bảng cuộn ngang: `start` bám mép trái (cột định danh, vd "Cổng"), `end` bám
+     * mép phải (cột thao tác). Bảng gập thẻ dọc (`.table-stack`) thì bỏ dính.
+     */
+    sticky?: 'start' | 'end';
   }
+}
+
+/**
+ * Mốc chuyển bảng → thẻ gọn. PHẢI khớp `@media (max-width: 600px)` của `.list-card*` trong
+ * `css/table.css`.
+ */
+export const MOBILE_CARD_QUERY = '(max-width: 600px)';
+
+/**
+ * Thẻ gọn thay cho bảng trên điện thoại. Mọi khe là hàm của dòng; bỏ khe nào thì thẻ không có
+ * phần đó.
+ *
+ * `title` nên là CHỮ THUẦN (mã hồ sơ): bảng tự bọc nó thành link (`href`) hoặc nút
+ * (`onRowClick`) phủ cả thẻ — tự bọc thêm link bên trong là thành tương tác lồng nhau.
+ */
+export interface MobileCard<T> {
+  /** Dòng 1 bên trái — định danh (mã). */
+  title: (row: T) => ReactNode;
+  /** Góc phải trên — badge trạng thái. */
+  badge?: (row: T) => ReactNode;
+  /** Góc phải trên, sau badge — menu ⋯ (`RowActions`). Bấm vào đây không mở dòng. */
+  actions?: (row: T) => ReactNode;
+  /** Dòng 2 — tên hồ sơ. */
+  subtitle?: (row: T) => ReactNode;
+  /** Dòng 3 — thông tin phụ nhỏ, xám ("site · tủ · người dùng"). */
+  meta?: (row: T) => ReactNode;
+  /** Góc phải dưới — chip hạn, nút nhỏ. Bấm vào đây không mở dòng. */
+  aside?: (row: T) => ReactNode;
+  /** Có giá trị → cả thẻ là link sang đường này (ưu tiên hơn `onRowClick`). */
+  href?: (row: T) => string;
 }
 
 /** Trạng thái expand đưa xuống cột (qua table.meta) để ô đầu tự vẽ caret › như /software. */
@@ -65,6 +103,48 @@ interface DataTableProps<T> {
     onToggle: (id: string) => void;
     onToggleAll: (ids: string[], checked: boolean) => void;
   };
+  /**
+   * Cột CUỐI (thao tác) dính mép phải khi bảng cuộn ngang, kèm bóng mép khi còn cột khuất.
+   * Tương đương khai `meta: { sticky: 'end' }` trên cột cuối.
+   */
+  stickyActions?: boolean;
+  /**
+   * ≤600px vẽ danh sách thẻ gọn thay cho bảng (thay luôn `stackOnMobile` ở bề ngang đó).
+   * Thẻ không có ô chọn nhiều dòng và không bung dòng; màn cần hai thứ đó trên điện thoại thì
+   * đừng truyền prop này. Không truyền → giữ nguyên hành vi cũ.
+   */
+  mobileCard?: MobileCard<T>;
+}
+
+/** Gộp class của cột với class cột dính. */
+function cellClass(
+  meta: { className?: string; sticky?: 'start' | 'end' } | undefined,
+  stickyEnd: boolean,
+): string | undefined {
+  const sticky = meta?.sticky ?? (stickyEnd ? 'end' : undefined);
+  return (
+    [meta?.className, sticky ? `col-sticky-${sticky}` : ''].filter(Boolean).join(' ') ||
+    undefined
+  );
+}
+
+/**
+ * Khung cuộn ngang của bảng, đánh dấu mép còn cột khuất (`data-more-start/end`) để cột dính
+ * vẽ bóng mép. Dùng được cho `<table className="table">` viết tay có cột `col-sticky-*`.
+ */
+export function TableWrap({ children }: { children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const edges = useScrollEdges(ref);
+  return (
+    <div
+      ref={ref}
+      className="table-wrap"
+      data-more-start={edges.start ? 'true' : undefined}
+      data-more-end={edges.end ? 'true' : undefined}
+    >
+      {children}
+    </div>
+  );
 }
 
 /**
@@ -90,8 +170,11 @@ export function DataTable<T>({
   stackOnMobile,
   selection,
   rowNumberOffset,
+  stickyActions,
+  mobileCard,
 }: DataTableProps<T>) {
   const { t } = useTranslation();
+  const narrow = useMediaQuery(MOBILE_CARD_QUERY);
   const [internalSort, setInternalSort] = useState<SortingState>(initialSort);
   const [globalFilter, setGlobalFilter] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -135,12 +218,41 @@ export function DataTable<T>({
     }
   }, [rows, expandedId]);
 
+  const lastColumnId = table.getAllLeafColumns().at(-1)?.id;
+
+  if (mobileCard && narrow) {
+    return (
+      <>
+        {searchPlaceholder !== undefined && (
+          <SearchBox onChange={setGlobalFilter} placeholder={searchPlaceholder} />
+        )}
+        {rows.length === 0 ? (
+          <div className="list-cards-empty">
+            {loading ? <Loading /> : <div className="empty">{emptyText}</div>}
+          </div>
+        ) : (
+          <ul className="list-cards">
+            {rows.map((row) => (
+              <MobileCardItem
+                key={row.id}
+                row={row.original}
+                card={mobileCard}
+                className={rowClassName?.(row.original)}
+                onRowClick={onRowClick}
+              />
+            ))}
+          </ul>
+        )}
+      </>
+    );
+  }
+
   return (
     <>
       {searchPlaceholder !== undefined && (
         <SearchBox onChange={setGlobalFilter} placeholder={searchPlaceholder} />
       )}
-      <div className="table-wrap">
+      <TableWrap>
         <table
           className={[
             'table',
@@ -182,13 +294,11 @@ export function DataTable<T>({
                 )}
                 {hg.headers.map((h) => {
                   const sorted = h.column.getIsSorted();
-                  const hm = h.column.columnDef.meta as
-                    | { className?: string }
-                    | undefined;
+                  const hm = h.column.columnDef.meta;
                   return (
                     <th
                       key={h.id}
-                      className={hm?.className}
+                      className={cellClass(hm, !!stickyActions && h.column.id === lastColumnId)}
                       aria-sort={
                         sorted === 'asc'
                           ? 'ascending'
@@ -316,13 +426,14 @@ export function DataTable<T>({
                       )}
                       {row.getVisibleCells().map((cell) => {
                         const h = cell.column.columnDef.header;
-                        const cm = cell.column.columnDef.meta as
-                          | { className?: string }
-                          | undefined;
+                        const cm = cell.column.columnDef.meta;
                         return (
                           <td
                             key={cell.id}
-                            className={cm?.className}
+                            className={cellClass(
+                              cm,
+                              !!stickyActions && cell.column.id === lastColumnId,
+                            )}
                             data-label={
                               typeof h === 'string' ? h : cell.column.id
                             }
@@ -354,8 +465,65 @@ export function DataTable<T>({
             )}
           </tbody>
         </table>
-      </div>
+      </TableWrap>
     </>
+  );
+}
+
+/**
+ * Một thẻ gọn. Định danh là link/nút DUY NHẤT của thẻ và phủ cả thẻ bằng lớp `::after`
+ * (`.list-card-link`), nên chạm đâu cũng mở — mà thẻ vẫn chỉ có một điểm dừng Tab và không
+ * lồng tương tác. Badge, menu ⋯ và khe `aside` nằm TRÊN lớp phủ nên vẫn bấm riêng được.
+ */
+function MobileCardItem<T>({
+  row,
+  card,
+  className,
+  onRowClick,
+}: {
+  row: T;
+  card: MobileCard<T>;
+  className?: string;
+  onRowClick?: (row: T) => void;
+}) {
+  const title = card.title(row);
+  const href = card.href?.(row);
+  const badge = card.badge?.(row);
+  const actions = card.actions?.(row);
+  const subtitle = card.subtitle?.(row);
+  const meta = card.meta?.(row);
+  const aside = card.aside?.(row);
+  return (
+    <li className={['list-card', className].filter(Boolean).join(' ')}>
+      <div className="list-card-top">
+        <span className="list-card-title">
+          {href ? (
+            <Link to={href} className="list-card-link">
+              {title}
+            </Link>
+          ) : onRowClick ? (
+            <button type="button" className="list-card-link" onClick={() => onRowClick(row)}>
+              {title}
+            </button>
+          ) : (
+            title
+          )}
+        </span>
+        {badge || actions ? (
+          <span className="list-card-end">
+            {badge}
+            {actions}
+          </span>
+        ) : null}
+      </div>
+      {subtitle ? <div className="list-card-sub">{subtitle}</div> : null}
+      {meta || aside ? (
+        <div className="list-card-bottom">
+          <span className="list-card-meta">{meta}</span>
+          {aside ? <span className="list-card-aside">{aside}</span> : null}
+        </div>
+      ) : null}
+    </li>
   );
 }
 

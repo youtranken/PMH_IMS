@@ -125,6 +125,34 @@ dashboard và màn Sắp hết hạn chỉ làm nhiễu danh sách cần xử l�
   Thanh lý (BE-13), để việc "hồi sinh" luôn là một thao tác Sửa có chủ ý.
 - Bản ghi vĩnh viễn (không có ngày hết hạn) không bị ảnh hưởng.
 
+### Q-14 · Đợt sửa giao diện mức cao (28/09/2026)
+
+Chủ dự án giao Claude tự quyết các mục mức cao trong báo cáo soát UI/UX (ims.pmh.com.vn:8443).
+Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
+
+- **Quên mật khẩu / mất điện thoại 2 lớp: chưa có tự đặt lại qua email.** Màn đăng nhập và màn
+  mã 2 lớp chỉ hướng dẫn liên hệ người quản trị; nội dung liên hệ nằm trong `system_config`
+  (`auth.support_contact`). Lý do: luồng đặt lại qua mail là một mặt tấn công mới, đội IT nhỏ,
+  SA luôn ở gần. Muốn mở thì sửa mục này trước.
+- **Hồ sơ của tôi**: người dùng tự đổi mật khẩu (phải nhập mật khẩu hiện tại), tự cài lại 2 lớp
+  trên điện thoại mới (đang có 2 lớp thì phải nhập mã 2 lớp hiện tại trước), xem và đóng các
+  phiên khác của chính mình.
+- **Màn Tham số hệ thống** (`system_config`): chỉ SA, phải xác thực lại (step-up), mọi lần sửa ghi
+  nhật ký. Chỉ các khoá có trong danh sách khai báo trong code mới sửa được (kiểu + khoảng hợp
+  lệ); khoá kỹ thuật/bí mật không hiện.
+- **Break-glass**: người xin nhận email khi được duyệt / bị từ chối / bị thu hồi sớm. Email xin
+  duyệt ghi đối tượng (mã + tên) và số giờ xin, **không** ghi tên secret. Người xin tự rút được
+  yêu cầu đang chờ. Đăng nhập xong thì quay về đúng trang đã mở (chỉ đường nội bộ).
+- **Tạo tài khoản**: vẫn dùng mật khẩu tạm (chưa gửi mail mời); hộp kết quả có nút chép và các
+  bước tiếp theo.
+- **Hồ sơ IP phải gắn thiết bị hoặc người/bộ phận** (làm rõ Q-02: có hồ sơ là Đang dùng) — API
+  từ chối hồ sơ trống.
+- **Loại thiết bị có cờ "Router/Firewall"**; ô Router của NAT chỉ liệt kê loại có cờ này (có lựa
+  chọn hiện mọi thiết bị).
+- **Mục danh mục đã vô hiệu không chọn MỚI được** ở mọi form (UI ẩn, API từ chối). Hồ sơ đang trỏ
+  tới mục đó giữ nguyên và hiện nhãn "(ngừng dùng)".
+- Tìm thiết bị theo cả IP, người sử dụng và bộ phận; tìm nhanh (Ctrl+K) tìm được IP và dải mạng.
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã

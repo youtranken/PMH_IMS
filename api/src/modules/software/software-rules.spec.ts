@@ -1,4 +1,6 @@
+import { addDays } from '../../common/today';
 import {
+  autoRetireOn,
   effectiveSoftwareStatus,
   requiresEndDate,
   seatConflicts,
@@ -253,9 +255,54 @@ describe('seatConflicts — sửa hồ sơ khi đang có ghế gán', () => {
     ['bỏ trần seat', { ...lic, seatTotal: null }, busy, 0],
     ['thanh lý khi còn ghế — không chặn, service tự gỡ ghế (Q-03)', { ...lic, status: 'retired' }, busy, 0],
     ['thanh lý khi hết ghế', { ...lic, status: 'retired' }, { used: 0, withEndDate: 0 }, 0],
+    // Vượt trần có lý do (gán kèm overSeatReason) rồi thanh lý: mọi ghế sắp bị gỡ, không còn gì để "hạ trần".
+    ['thanh lý license đang vượt ghế 2/1', { ...lic, seatTotal: 1, status: 'retired' }, { used: 2, withEndDate: 0 }, 0],
+    ['thanh lý kèm đổi sang vĩnh viễn khi ghế còn hạn', { ...lic, licenseModel: 'perpetual', status: 'retired' }, busy, 0],
   ] as const)('%s → %i lỗi', (_name, next, seats, count) => {
     const errors = seatConflicts(next, seats);
     expect(errors).toHaveLength(count);
     for (const error of errors) expect(error).toMatch(/ghế/);
+  });
+});
+
+/**
+ * Vượt ghế là trạng thái HỢP LỆ (gán vượt phải ghi lý do). Luật "không hạ tổng dưới số đang dùng"
+ * chỉ chặn khi lượt sửa ĐỔI tổng ghế — sửa ghi chú của một license 2/1 không được bị 409.
+ */
+describe('seatConflicts — license đang vượt ghế', () => {
+  const over = { kind: 'license', licenseModel: 'subscription', seatTotal: 1, status: 'active' } as const;
+  const seats = { used: 2, withEndDate: 0 };
+  it.each([
+    ['tổng không đổi (chỉ sửa ghi chú)', over, 1, 0],
+    ['đặt trần 1 cho license đang không giới hạn', { ...over, seatTotal: 1 }, null, 1],
+    ['hạ tổng thêm nữa', { ...over, seatTotal: 0 }, 1, 1],
+    ['nâng tổng đủ số đang dùng', { ...over, seatTotal: 2 }, 1, 0],
+  ] as const)('%s → %i lỗi', (_name, next, beforeSeatTotal, count) => {
+    expect(seatConflicts(next, seats, beforeSeatTotal)).toHaveLength(count);
+  });
+});
+
+/**
+ * Q-13 — ngày lượt quét sẽ tự Thanh lý. Phải khớp đúng điều kiện SQL của `syncExpiryStatuses`
+ * (`end_date < today - grace`): màn hình đếm ngược tới ngày này, lệch một ngày là màn hứa sai.
+ */
+describe('autoRetireOn — ngày hệ thống sẽ tự thanh lý', () => {
+  it.each([
+    ['Hết hạn, ân hạn 30', 'expired_ok', '2026-09-01', 30, '2026-10-02'],
+    ['Hết hạn, ân hạn 1', 'expired_ok', '2026-09-01', 1, '2026-09-03'],
+    ['ân hạn 0 = tắt tự thanh lý', 'expired_ok', '2026-09-01', 0, null],
+    ['Đang dùng thì chưa có ngày', 'active', '2026-09-01', 30, null],
+    ['Đã thanh lý thì thôi', 'retired', '2026-09-01', 30, null],
+    ['không có hạn', 'expired_ok', null, 30, null],
+  ] as const)('%s', (_name, status, endDate, grace, expected) => {
+    expect(autoRetireOn(status, endDate, grace)).toBe(expected);
+  });
+
+  it('khớp điều kiện của lượt quét: ngày trước đó chưa thanh lý, đúng ngày đó thì thanh lý', () => {
+    const end = '2026-09-01';
+    const on = autoRetireOn('expired_ok', end, 30)!;
+    const sweepRetires = (today: string) => end < addDays(today, -30);
+    expect(sweepRetires(addDays(on, -1))).toBe(false);
+    expect(sweepRetires(on)).toBe(true);
   });
 });

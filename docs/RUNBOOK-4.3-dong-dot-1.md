@@ -266,11 +266,16 @@ Chỉ làm **sau khi E đỗ**. Dùng đúng luồng nhập Excel — không có
    Đọc kỹ phần **lỗi** trước khi xác nhận; sửa trong Excel rồi nhập lại.
 3. **Phần mềm / license (Q-13):** hồ sơ có ngày hết hạn quá 30 ngày sẽ bị **tự Thanh lý và gỡ
    ghế** ở lượt quét đầu tiên, vài phút sau khi nhập. Trước khi nhập: cập nhật ngày hết hạn
-   thật trong file, hoặc tạm tắt tự thanh lý rồi bật lại khi đã rà xong:
-   ```bash
-   $ docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "UPDATE system_config SET value = '"'"'0'"'"' WHERE key = '"'"'software.auto_retire_grace_days'"'"'"'
-   ```
-   Rà xong thì đặt lại `'30'` bằng cùng lệnh.
+   thật trong file, hoặc tạm tắt tự thanh lý rồi bật lại khi đã rà xong: đăng nhập bằng tài
+   khoản SA → **Hệ thống → Tham số hệ thống** → nhóm **Phần mềm** → "Ân hạn trước khi tự Thanh lý
+   phần mềm hết hạn" = `0` → **Lưu nhóm này** (hộp "Trước → Sau" + gõ mã 6 số). Rà xong thì bấm
+   **Về mặc định** (30) rồi lưu lại. Mỗi lần đổi ghi một dòng nhật ký (`system_config.updated`),
+   có hiệu lực trong vòng 30 giây.
+
+   Mọi ngưỡng vận hành khác (khoá đăng nhập, rate limit, thời gian hiện mật khẩu, nhắc duyệt,
+   ngưỡng dashboard, câu liên hệ hỗ trợ) cũng sửa ở màn này — **không** `UPDATE system_config`
+   bằng psql trên prod: psql bỏ qua kiểm khoảng hợp lệ và không để lại nhật ký. Khoá không có
+   trên màn (`app.timezone`, `mail.from_address`…) là khoá kỹ thuật, cố ý không mở.
 
 | Kiểm | Cách |
 | --- | --- |

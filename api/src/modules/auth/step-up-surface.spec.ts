@@ -89,6 +89,11 @@ describe('Step-up mặc định đóng (FR-022)', () => {
       why: 'khoá/vô hiệu hoá tài khoản khác, kể cả SA',
     },
     {
+      file: 'modules/auth/auth.controller.ts',
+      route: "@Post('totp/re-enroll')",
+      why: 'thay yếu tố thứ hai của chính tài khoản — lọt là chiếm tài khoản vĩnh viễn',
+    },
+    {
       file: 'modules/vault/vault-access.controller.ts',
       route: '@Post()',
       why: 'cấp tầng quyền đọc két — cửa hậu BỀN, sống sau khi phiên chết',

@@ -38,8 +38,8 @@ async function setUp(page: Page, stamp: string): Promise<Fixture> {
     const res = await fetch('/api/v1/catalog', { credentials: 'include' });
     return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
   });
-  const type = catalog.deviceTypes.find((t) => t.name === 'Router')
-    ?? catalog.deviceTypes.find((t) => t.name === 'Switch')!;
+  // 'Firewall' mang cờ Router/Firewall (0088) — ô Router của form NAT chỉ liệt kê loại có cờ.
+  const type = catalog.deviceTypes.find((t) => t.name === 'Firewall')!;
 
   const routerCode = `RT-E2E-NAT-${stamp}`;
   const device = await page.request.post('/api/v1/devices', {

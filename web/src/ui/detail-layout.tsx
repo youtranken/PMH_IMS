@@ -1,4 +1,7 @@
-import { useId, type ReactNode } from 'react';
+import { useId, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
+import { Chevron } from '@/ui/chevron';
+import { useMediaQuery } from '@/ui/use-media-query';
 
 /**
  * Bố cục hai cột của MỌI trang chi tiết (AD-15): nội dung bên trái, thẻ định danh bên phải.
@@ -19,14 +22,52 @@ import { useId, type ReactNode } from 'react';
  *
  * Dưới 1199px: một cột, và cột phải nhảy LÊN TRƯỚC (`order: -1` trong `css/detail-tabs.css`).
  */
-export function DetailLayout({ rail, children }: { rail: ReactNode; children: ReactNode }) {
+export function DetailLayout({
+  rail,
+  railSummary,
+  children,
+}: {
+  rail: ReactNode;
+  /**
+   * Dải một dòng thay cho thẻ định danh trên điện thoại (≤680px): thẻ đầy đủ đứng TRƯỚC thanh
+   * tab và dài ~600px, nên tab nằm tận dưới màn. Có prop này thì thẻ thu vào nút "Chi tiết",
+   * dải tóm tắt (trạng thái · vị trí · người dùng) vẫn luôn thấy. Không truyền → như cũ.
+   */
+  railSummary?: ReactNode;
+  children: ReactNode;
+}) {
+  const { t } = useTranslation();
+  const narrow = useMediaQuery(RAIL_COLLAPSE_QUERY);
+  const [open, setOpen] = useState(false);
   return (
     <div className="detail-2col">
       <div className="detail-main">{children}</div>
-      <aside className="detail-rail">{rail}</aside>
+      <aside className="detail-rail">
+        {railSummary && narrow ? (
+          <details
+            className="rail-collapse"
+            open={open}
+            onToggle={(event) => setOpen(event.currentTarget.open)}
+          >
+            <summary>
+              <span className="rail-summary">{railSummary}</span>
+              <span className="rail-more">
+                {t('detail.railMore')}
+                <Chevron direction={open ? 'up' : 'down'} />
+              </span>
+            </summary>
+            {rail}
+          </details>
+        ) : (
+          rail
+        )}
+      </aside>
     </div>
   );
 }
+
+/** Mốc thu thẻ định danh — PHẢI khớp `@media (max-width: 680px)` của `.rail-card` ở detail-tabs.css. */
+export const RAIL_COLLAPSE_QUERY = '(max-width: 680px)';
 
 /**
  * Thẻ định danh. `title` mặc định để mọi trang gọi cùng một tên, khỏi mỗi nơi một kiểu.

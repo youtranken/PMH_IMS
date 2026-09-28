@@ -4,6 +4,8 @@ import {
   filterSlots,
   shouldIsolateAssigned,
   pageSlots,
+  pageOfAddress,
+  searchSlots,
   slotStatus,
   SLOT_FILTERS,
   SLOT_PAGE_SIZE,
@@ -206,5 +208,45 @@ describe('slotStatus — hồ sơ đã ẩn không đội lốt "trống"', () =
     const counts = countSlots(slots);
     const tong = counts.assigned + counts.free + counts.voided;
     expect(tong).toBe(counts.all);
+  });
+});
+
+describe('searchSlots — ô tìm ngay trên bảng IP (lọc tại chỗ, cả dải đã trong bộ nhớ)', () => {
+  const owned = (address: string, extra: Partial<Extract<SubnetSlot, { kind: 'record' }>>) =>
+    ({ ...record(address, 'assigned'), ...extra }) as SubnetSlot;
+  const slots: SubnetSlot[] = [
+    owned('10.77.1.5', { deviceCode: 'SV-E2E-FILE-01', deviceName: 'Máy chủ file' }),
+    owned('10.77.1.53', { usedBy: 'Chị Bình — Kế toán' }),
+    free('10.77.1.54'),
+    owned('10.77.1.60', { note: 'camera cổng sau' }),
+  ];
+  const addresses = (q: string) => searchSlots(slots, q).map((s) => s.address);
+
+  it('rỗng → không lọc', () => {
+    expect(addresses('  ')).toHaveLength(4);
+  });
+  it('theo địa chỉ, kể cả ô trống', () => {
+    expect(addresses('1.5')).toEqual(['10.77.1.5', '10.77.1.53', '10.77.1.54']);
+  });
+  it('theo mã máy và tên máy, không phân biệt hoa thường', () => {
+    expect(addresses('file-01')).toEqual(['10.77.1.5']);
+    expect(addresses('may chu')).toEqual(['10.77.1.5']);
+  });
+  it('theo người dùng và ghi chú, gõ không dấu', () => {
+    expect(addresses('chi binh')).toEqual(['10.77.1.53']);
+    expect(addresses('cong sau')).toEqual(['10.77.1.60']);
+  });
+});
+
+describe('pageOfAddress — nhảy đúng trang chứa IP cần tra', () => {
+  const many = Array.from({ length: 120 }, (_, i) => free(`10.0.0.${i + 1}`));
+  it.each([
+    ['10.0.0.1', 1],
+    ['10.0.0.50', 1],
+    ['10.0.0.51', 2],
+    ['10.0.0.120', 3],
+    ['10.9.9.9', null],
+  ])('%s → trang %s', (address, page) => {
+    expect(pageOfAddress(many, address)).toBe(page);
   });
 });

@@ -177,7 +177,8 @@ test.describe('Danh mục', () => {
     await form.getByRole('button', { name: 'Lưu' }).click();
     await expect(page.getByRole('row', { name: new RegExp(siteCode) })).toBeVisible();
 
-    expect(await rowActionNames(page, siteCode)).toEqual(['Sửa']);
+    // "Lịch sử" chỉ đọc nên Member cũng có; việc lấy đi (Vô hiệu hóa, Xóa) thì không.
+    expect(await rowActionNames(page, siteCode)).toEqual(['Sửa', 'Lịch sử']);
     await rowAction(page, siteCode, 'Sửa');
     await page.getByRole('dialog').getByLabel('Tên').fill('Site member đã sửa');
     await page.getByRole('dialog').getByRole('button', { name: 'Lưu' }).click();

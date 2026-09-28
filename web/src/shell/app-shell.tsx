@@ -1,34 +1,19 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { useApiMutation } from '@/lib/api';
+import { NavLink, useLocation } from 'react-router-dom';
 import { type Me } from '@/lib/me';
-import { afterLogout } from '@/lib/after-logout';
 import { ErrorBoundary } from '@/ui/error-boundary';
 import { visibleGroups } from '@/shell/app-nav';
+import { usePendingApprovalCount } from '@/shell/use-pending-approvals';
 import { NavIcon } from '@/ui/nav-icon';
 import { CommandPalette, openCommandPalette } from '@/ui/command-palette';
 import { ThemeSwitch } from '@/ui/switches';
 import { useFocusTrap } from '@/ui/focus-trap';
-import { useToast } from '@/ui/toast';
+import { useIsNarrow } from '@/ui/use-narrow';
+import { AccountMenu } from '@/shell/account-menu';
 
-/**
- * Ngưỡng "màn hẹp" — PHẢI khớp `@media (max-width: 900px)` trong css/shell.css. Lệch một
- * pixel là có vùng viewport mà JS nghĩ rộng còn CSS nghĩ hẹp (hoặc ngược lại).
- */
-const NARROW_QUERY = '(max-width: 900px)';
-
-function useIsNarrow(): boolean {
-  const [narrow, setNarrow] = useState(() => window.matchMedia(NARROW_QUERY).matches);
-  useEffect(() => {
-    const mq = window.matchMedia(NARROW_QUERY);
-    const onChange = () => setNarrow(mq.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-  return narrow;
-}
+/** Câu "N yêu cầu chờ duyệt" dùng chung cho mục menu và nút mở menu (aria-describedby). */
+const PENDING_APPROVALS_ID = 'nav-pending-approvals';
 
 /**
  * Khung ứng dụng dùng chung (AD-15/UX-DR1): sidebar + topbar. Mọi màn nghiệp vụ
@@ -41,7 +26,6 @@ function useIsNarrow(): boolean {
  */
 export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const groups = visibleGroups(me);
   const narrow = useIsNarrow();
   const { pathname } = useLocation();
@@ -54,6 +38,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
    * dựng một cái bẫy cho người không hề yêu cầu mở gì.
    */
   const drawerRef = useFocusTrap<HTMLDivElement>(narrow && drawerOpen);
+  const pendingApprovals = usePendingApprovalCount(me);
 
   // Chọn xong một mục thì drawer phải tự khép, không che mất trang vừa mở.
   useEffect(() => {
@@ -69,12 +54,6 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [drawerOpen]);
-
-  const queryClient = useQueryClient();
-  const toast = useToast();
-  const logout = useApiMutation<undefined, { status: string }>('/api/v1/auth/logout', {
-    csrfToken: me.csrfToken,
-  });
 
   return (
     <div className="ims shell-root">
@@ -148,11 +127,23 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                     to={item.to}
                     className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
                     end={item.to === '/'}
+                    aria-describedby={
+                      item.badge === 'approvals' && pendingApprovals > 0
+                        ? PENDING_APPROVALS_ID
+                        : undefined
+                    }
                     // Bấm lại đúng mục đang mở thì `pathname` không đổi → phải tự đóng ở đây.
                     onClick={() => setDrawerOpen(false)}
                   >
                     <NavIcon navKey={item.key} />
                     <span className="lbl">{t(item.key)}</span>
+                    {item.badge === 'approvals' && pendingApprovals > 0 ? (
+                      /* Số chỉ là hình; câu đầy đủ đi qua `aria-describedby` để TÊN link vẫn
+                         là "Duyệt yêu cầu" — trình đọc màn hình đọc thêm số việc sau đó. */
+                      <span className="nav-badge warn" aria-hidden="true">
+                        {pendingApprovals}
+                      </span>
+                    ) : null}
                   </NavLink>
                 ),
               )}
@@ -160,34 +151,11 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
           ))}
 
           <div className="sb-foot">
-            <div className="sb-user">
-              <span className="sb-av" aria-hidden="true">
-                {initials(me.fullName)}
-              </span>
-              <span className="sb-who">
-                <b>{me.fullName}</b>
-                <span>{roleLabel(me.role, t)}</span>
-              </span>
-            </div>
-            <button
-              type="button"
-              className="btn sm"
-              disabled={logout.isPending}
-              onClick={() => {
-                // onSettled chứ không onSuccess: đăng xuất lỗi (mất mạng, lệch CSRF) cũng không được
-                // để lại dữ liệu người trước trên máy dùng chung (FE-02).
-                logout.mutate(undefined, {
-                  // Lỗi thì PHẢI nói ra: phiên phía máy chủ có thể vẫn sống, và người dùng
-                  // tưởng đã thoát trên một máy dùng chung. Toast sống ngoài router nên vẫn
-                  // hiện sau khi đã chuyển trang.
-                  onError: () =>
-                    toast({ message: t('auth.logoutFailed'), tone: 'error', durationMs: 10_000 }),
-                  onSettled: () => afterLogout(queryClient, navigate),
-                });
-              }}
-            >
-              {t('common.logout')}
-            </button>
+            <AccountMenu
+              me={me}
+              initials={initials(me.fullName)}
+              roleLabel={roleLabel(me.role, t)}
+            />
           </div>
         </nav>
         </DrawerShell>
@@ -203,8 +171,12 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                 className="nav-toggle"
                 aria-label={t(drawerOpen ? 'app.closeNav' : 'app.openNav')}
                 aria-expanded={drawerOpen}
+                aria-describedby={pendingApprovals > 0 ? PENDING_APPROVALS_ID : undefined}
                 onClick={() => setDrawerOpen((open) => !open)}
               >
+                {/* Menu đóng trên điện thoại thì badge nằm khuất — chấm cam trên nút mở là tín
+                    hiệu duy nhất người duyệt thấy khi mở app. */}
+                {pendingApprovals > 0 ? <span className="nav-toggle-dot" aria-hidden="true" /> : null}
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -249,6 +221,11 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
           </header>
           {/* ⌘K — nằm ở shell nên bấm được từ BẤT KỲ màn nào, không phải chỉ màn danh sách. */}
           <CommandPalette me={me} />
+          {pendingApprovals > 0 ? (
+            <span id={PENDING_APPROVALS_ID} className="sr-only">
+              {t('approvals.navBadge', { count: pendingApprovals })}
+            </span>
+          ) : null}
           {/*
             `inert` khi drawer đang mở ở màn hẹp (F-06, vế 4) — nội dung trang thôi nhận chuột,
             tiêu điểm và trình đọc màn hình.

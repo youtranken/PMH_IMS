@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { IpAddressService, type IpAddressRecord } from './ip-address.service';
 import { SubnetService, type SubnetWithUsage } from './subnet.service';
+import { ipSearchPattern } from './ip-rules';
 
 /**
  * AD-2: public api DUY NHẤT của module `ipam`.
@@ -33,6 +34,15 @@ export class IpamApiService {
   /** IP đang gắn với một thiết bị. Rỗng = thiết bị chưa có IP nào. */
   listForDevice(deviceId: string): Promise<IpAddressRecord[]> {
     return this.addresses.listForDevice(deviceId);
+  }
+
+  /**
+   * Id thiết bị đang giữ IP khớp từ khoá (đủ 4 nhóm = khớp đúng, thiếu nhóm = cả nhóm). Từ
+   * khoá không phải dạng IP thì trả rỗng — bên gọi không phải tự đoán thế nào là một IP.
+   */
+  deviceIdsByAddress(term: string): Promise<string[]> {
+    const pattern = ipSearchPattern(term);
+    return pattern ? this.addresses.deviceIdsByAddress(pattern) : Promise.resolve([]);
   }
 
   /** Hồ sơ IP theo id — sổ NAT (5.3) cần để hiện IP trong kèm chủ. */

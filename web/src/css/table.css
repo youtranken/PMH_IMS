@@ -93,12 +93,26 @@ table.table tbody tr.due-today td {
 table.table tbody tr.due-today td:first-child {
   box-shadow: inset 3px 0 0 var(--warn);
 }
+/*
+ * Nền trạng thái của dòng PHẢI thắng sọc dòng chẵn. Viết `.table tr.row-danger td` (0,2,2)
+ * thì thua `table.table tbody tr:nth-child(even) td` (0,2,4): dòng quá hạn ở vị trí chẵn mất
+ * nền đỏ, người dùng tưởng hai nhóm khác nhau. Cùng độ ưu tiên với luật sọc và đặt SAU nó,
+ * như `.overdue`/`.due-today` ngay trên.
+ */
+table.table tbody tr.row-danger td {
+  background: var(--danger-soft);
+}
 /* Dòng seat được điều hướng từ bảng con /phan-mem (?seat=) — nhấn nhẹ + viền trái. */
 table.table tbody tr.row-highlight td {
   background: var(--primary-soft);
 }
 table.table tbody tr.row-highlight td:first-child {
   box-shadow: inset 3px 0 0 var(--primary);
+}
+/* Dữ liệu của một dòng đã gỡ (rule NAT…): còn đọc được nhưng gạch ngang. Huy hiệu ngay cạnh
+   nói bằng chữ "Đã gỡ …", nên gạch ngang chỉ là tín hiệu phụ, không phải tín hiệu duy nhất. */
+.table .strike {
+  text-decoration: line-through;
 }
 .table-actions {
   white-space: nowrap;
@@ -116,6 +130,72 @@ table.table tbody tr.row-highlight td:first-child {
   font-size: var(--fs-xs);
 }
 
+/* Ô tick phụ trong hộp xác nhận (ui/confirm-dialog.tsx). KHÔNG dùng `.field-inline`: nó
+   `nowrap`, và câu hệ quả dài bị cắt ra ngoài mép hộp. Ô tick bám dòng đầu của nhãn. */
+.confirm-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  font-weight: 600;
+  white-space: normal;
+  cursor: pointer;
+}
+.confirm-check input[type='checkbox'] {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+}
+.confirm-check input[type='radio'] {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin: 1px 0 0;
+}
+/* Câu hệ quả: dòng riêng, thụt thẳng hàng với chữ của nhãn (20px ô tick + khoảng cách). */
+.confirm-check-hint {
+  margin: var(--space-1) 0 0 calc(20px + var(--space-3));
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+  white-space: normal;
+}
+
+/* Hộp Thanh lý thiết bị: hai danh sách "sẽ gỡ" / "giữ nguyên" đọc được trước khi chọn. */
+.retire-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+}
+.retire-dialog p { margin: 0; }
+.retire-block h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+}
+.retire-block ul {
+  margin: 0;
+  padding-left: var(--space-9);
+  font-size: var(--fs-sm);
+  overflow-wrap: anywhere;
+}
+.retire-block.retire-cut {
+  padding: var(--space-5) var(--space-7);
+  border-left: 3px solid var(--danger);
+  background: var(--danger-soft);
+  border-radius: 0 var(--r) var(--r) 0;
+}
+.retire-warn { color: var(--danger-strong); font-weight: var(--fw-semibold); }
+.retire-mode {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.retire-mode legend {
+  padding: 0;
+  font-weight: var(--fw-semibold);
+}
+
 /* Bảng gom nhóm license (/phan-mem): cột số căn phải + hàng click sang chi tiết. */
 /*
  * Bảng nhiều cột KHÔNG được bóp cho vừa khung hẹp (16/09/2026).
@@ -130,19 +210,17 @@ table.table tbody tr.row-highlight td:first-child {
  */
 @media (min-width: 961px) {
   table.table.wide { min-width: 66rem; }
-  /*
-   * Số tiền, IP, serial, mã cổng, mốc thời gian — không xuống dòng giữa chừng.
-   *
-   * `.table td .mono` (có dấu cách) thêm 17/09/2026. Luật cũ chỉ nhắm `td.mono`, tức chỉ ăn
-   * khi cả Ô mang class. Nhưng gần như mọi màn lại bọc giá trị trong `<span className="mono">`
-   * BÊN TRONG ô — mã site, mã tủ, mã nhân viên, mã hồ sơ — nên luật này chưa từng chạm tới
-   * chúng, và một cái mã 12 ký tự vẫn gãy làm hai dòng khi cột bị bóp. Giữ cả hai dạng để
-   * không phải đi sửa hàng chục chỗ gọi.
-   */
-  .table td.mono,
-  .table td .mono,
+  /* Số tiền căn phải không xuống dòng giữa chừng ("3.150.000 đ" gãy chữ "đ"). */
   .table td.col-right { white-space: nowrap; }
 }
+/*
+ * Mã trong ô bảng (`.mono`: mã máy, IP, serial) KHÔNG BAO GIỜ ngắt dòng, ở mọi bề ngang.
+ * Trình duyệt coi dấu gạch nối là chỗ được ngắt, nên cột hẹp biến "SV-E2E-FILE-01" thành bốn
+ * dòng — đọc ra một mã khác hẳn. Ở thẻ dọc (`.table-stack`) ô là flex có `wrap`, nên mã dài
+ * tự rơi xuống hàng riêng thay vì gãy.
+ */
+.table td.mono,
+.table td .mono { white-space: nowrap; }
 
 .table th.num,
 .table td.num {
@@ -268,6 +346,17 @@ table.table tbody tr.row-highlight td:first-child {
   width: 100%;
   white-space: nowrap;
   border-color: transparent;
+}
+/* Tên dòng ở đầu menu (prop `subject`) — nhỏ, xám, tách khỏi các mục bằng một đường kẻ. */
+.row-actions-subject {
+  max-width: 16rem;
+  padding: var(--space-2) var(--space-4) var(--space-3);
+  margin-bottom: var(--space-1);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink-2);
+  overflow-wrap: anywhere;
 }
 /* Bàn phím đi bằng focus — không có vòng focus thấy được thì ↑↓ chạy mà không ai biết đang ở đâu. */
 .row-actions-menu button:focus-visible {
@@ -418,4 +507,179 @@ button.link.session-toggle {
   font-size: var(--fs-2xs);
   color: var(--ink-3);
   font-weight: 400;
+}
+/* Dòng phụ báo việc cần làm ("Hết ghế", "+1 vượt"). `--danger-strong` vì chữ nhỏ trên nền
+   sáng dùng `--danger` thường thì tương phản hụt. */
+.cell-sub.is-danger {
+  color: var(--danger-strong);
+  font-weight: 600;
+}
+
+/* Cột Tên của bảng danh sách: khi thiếu chỗ, trình duyệt ép cột chữ thường trước cột mã/mono
+   (vốn không ngắt dòng) — tên còn ~90px, gãy 4 dòng. Giữ sàn ~220px cho cột người ta thật sự
+   đọc. Gốc `:root` là 14px (tokens.css), nên 1rem = 14px chứ không phải 16px. */
+table.table th.col-name,
+table.table td.col-name {
+  min-width: 15.75rem;
+}
+@media (max-width: 960px) {
+  table.table-stack td.col-name {
+    min-width: 0;
+  }
+}
+
+/* --- Cột dính khi bảng cuộn ngang (DataTable `stickyActions` / meta.sticky) ----------
+ * Bảng rộng hơn khung thì cột thao tác nằm ngoài tầm nhìn: nút chính ("Xem") trông như không
+ * tồn tại, và cuộn sang để bấm ⋯ thì cột định danh trôi mất. Dính cột thao tác bên phải (và
+ * nếu cần, cột định danh bên trái) giữ cả hai trong khung.
+ * -------------------------------------------------------------------------------------- */
+table.table .col-sticky-start,
+table.table .col-sticky-end {
+  position: sticky;
+  z-index: 1;
+}
+table.table .col-sticky-start {
+  left: 0;
+}
+table.table .col-sticky-end {
+  right: 0;
+}
+/* Ô dính cần nền đặc, không thì chữ cột khác trượt qua bên dưới. Độ ưu tiên THẤP hơn sọc dòng
+   và nền trạng thái (`table.table tbody tr… td`), nên dòng chẵn / quá hạn vẫn giữ nền của nó. */
+table.table tbody td.col-sticky-start,
+table.table tbody td.col-sticky-end {
+  background: var(--surface);
+}
+/* Bóng mép: chỉ khi CÒN cột khuất phía sau cột dính (cờ do `TableWrap`/`ScrollX` đặt). */
+table.table .col-sticky-start::after,
+table.table .col-sticky-end::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--space-5);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s var(--ease);
+}
+table.table .col-sticky-start::after {
+  right: calc(-1 * var(--space-5));
+  background: linear-gradient(to right, var(--edge-fade), transparent);
+}
+table.table .col-sticky-end::after {
+  left: calc(-1 * var(--space-5));
+  background: linear-gradient(to left, var(--edge-fade), transparent);
+}
+[data-more-start='true'] table.table .col-sticky-start::after,
+[data-more-end='true'] table.table .col-sticky-end::after {
+  opacity: 1;
+}
+/* Bảng đã gập thành thẻ dọc thì không còn gì để dính. */
+@media (max-width: 960px) {
+  table.table-stack .col-sticky-start,
+  table.table-stack .col-sticky-end {
+    position: static;
+  }
+  table.table-stack .col-sticky-start::after,
+  table.table-stack .col-sticky-end::after {
+    display: none;
+  }
+}
+
+/* --- Thẻ gọn thay bảng trên điện thoại (DataTable `mobileCard`) ------------------------
+ * Bảng gập dọc cho ra thẻ 8 dòng nhãn–giá trị, một trang 20 máy dài ~9.400px. Thẻ gọn chỉ giữ
+ * thứ người ta quét bằng mắt: mã + trạng thái, tên, một dòng phụ.
+ * JS chọn vẽ thẻ hay bảng theo `MOBILE_CARD_QUERY` (600px) ở `ui/data-table.tsx`.
+ * -------------------------------------------------------------------------------------- */
+.list-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.list-cards-empty {
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.list-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--border);
+}
+.list-card:last-child {
+  border-bottom: none;
+}
+.list-card:has(.list-card-link:active) {
+  background: var(--primary-soft);
+}
+.list-card.row-danger,
+.list-card.overdue {
+  background: var(--danger-soft);
+}
+.list-card.due-today {
+  background: var(--warn-soft);
+}
+.list-card.row-muted {
+  color: var(--ink-3);
+}
+.list-card-top,
+.list-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.list-card-title {
+  min-width: 0;
+  font-family: var(--mono);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Link/nút định danh phủ cả thẻ: chạm đâu cũng mở, mà thẻ vẫn chỉ có MỘT điểm dừng Tab. */
+.list-card-link {
+  all: unset;
+  color: var(--primary-ink);
+  cursor: pointer;
+}
+.list-card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.list-card-link:focus-visible {
+  outline: none;
+}
+.list-card:has(.list-card-link:focus-visible) {
+  box-shadow: inset var(--ring);
+}
+/* Badge, menu ⋯, khe phụ nằm TRÊN lớp phủ để bấm riêng được. */
+.list-card-end,
+.list-card-aside {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+}
+.list-card-sub {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.list-card-meta {
+  min-width: 0;
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
 }

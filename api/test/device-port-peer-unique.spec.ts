@@ -9,6 +9,7 @@ import { PortDeviceRetirement } from '../src/modules/devices/port-device-retirem
 import type { AuditWriterService } from '../src/modules/audit/audit-writer.service';
 import type { CatalogApiService } from '../src/modules/catalog/catalog.api';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { DeviceSearchRegistry } from '../src/common/device-search.registry';
 
 /**
  * OLD-DB-02 (AD-14) — một cổng đầu kia chỉ được một dòng port map ghi đấu vào.
@@ -32,7 +33,13 @@ describe('OLD-DB-02 · device_port không cho hai dòng cùng đấu vào một 
     await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
     const audit = { appendWithin: () => Promise.resolve() } as unknown as AuditWriterService;
     const registry = new DeviceRetirementRegistry();
-    devices = new DevicesService(scratch.db, {} as CatalogApiService, audit, registry);
+    devices = new DevicesService(
+      scratch.db,
+      {} as CatalogApiService,
+      audit,
+      registry,
+      new DeviceSearchRegistry(),
+    );
     new PortDeviceRetirement(registry, devices).onModuleInit();
     ports = new DevicePortsService(scratch.db, devices);
     const type = await scratch.pool.query<{ id: string }>(

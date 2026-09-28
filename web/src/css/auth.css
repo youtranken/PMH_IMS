@@ -81,9 +81,9 @@
   text-align: center;
 }
 .auth-error {
-  color: var(--danger);
-  background: var(--danger-soft);
-  border: 1px solid var(--border-danger);
+  color: var(--auth-danger-ink);
+  background: var(--auth-danger-bg);
+  border: 1px solid var(--auth-danger-border);
   border-radius: var(--r);
   padding: var(--space-4) var(--space-6);
   font-size: var(--fs-sm);
@@ -93,6 +93,49 @@
   font-size: var(--fs-xs);
   text-align: center;
 }
+/* Gợi ý dưới ô nhập (luật mật khẩu…) — người dùng PHẢI đọc được, nên dùng token của card tối. */
+.auth-form .field-hint {
+  color: var(--auth-hint);
+  font-size: var(--fs-xs);
+}
+/* Nút dạng chữ trên card tối (Quên mật khẩu?, Đăng xuất…) — không nền, gạch chân để nhận ra là bấm được. */
+.auth-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--auth-ink);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.auth-link:focus-visible { outline: none; box-shadow: var(--ring); border-radius: var(--r-sm); }
+.auth-foot { display: flex; flex-direction: column; gap: var(--space-4); align-items: center; }
+.auth-help {
+  text-align: left;
+  color: var(--auth-ink);
+  background: var(--auth-card);
+  border: 1px solid var(--auth-card-border);
+  border-radius: var(--r);
+  padding: var(--space-5) var(--space-6);
+  font-size: var(--fs-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.auth-account { color: var(--auth-ink); font-weight: 600; word-break: break-all; }
+/* Cài 2 lớp: hàng nút mở ứng dụng + chép khoá; QR phụ nằm trong <details>. */
+.totp-actions { display: flex; flex-direction: column; gap: var(--space-5); }
+.totp-actions .btn { justify-content: center; }
+.totp-secret-row { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.totp-secret-row code { word-break: break-all; }
+/* Khối cài 2 lớp dùng ở CẢ card đăng nhập (luôn tối) lẫn hộp thoại Hồ sơ (theo theme): màu mặc
+   định theo theme app, và card đăng nhập đè bằng token riêng của nó. */
+.totp-note { color: var(--ink-2); font-size: var(--fs-sm); }
+.totp-other summary { cursor: pointer; color: var(--ink-2); font-size: var(--fs-sm); }
+.totp-other[open] summary { margin-bottom: var(--space-5); }
+.auth-card .totp-note,
+.auth-card .totp-other summary { color: var(--auth-hint); }
+
 @media (max-width: 480px) {
   .auth-card { padding: var(--space-9) var(--space-7); gap: var(--space-7); }
 }

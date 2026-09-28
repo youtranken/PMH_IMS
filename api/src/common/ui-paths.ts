@@ -36,8 +36,11 @@ export const UI_PATHS = {
   subnet: (id: string) => `/ip-addresses/${id}`,
   serviceAccount: (id: string) => `/service-accounts/${id}`,
   approvals: '/approvals',
-  /** Màn Duyệt yêu cầu, đưa đúng yêu cầu này lên đầu. Vẫn phải đăng nhập + TOTP (Q-05). */
-  approval: (id: string) => `/approvals?id=${encodeURIComponent(id)}`,
+  /**
+   * Trang chi tiết MỘT yêu cầu — người duyệt quyết ngay tại đó trên điện thoại, không phải tìm
+   * thẻ trong danh sách. Vẫn phải đăng nhập + TOTP (Q-05).
+   */
+  approval: (id: string) => `/approvals/${encodeURIComponent(id)}`,
   expiry: '/expiry',
   /**
    * Màn Nhật ký, lọc sẵn theo người thao tác. `q` là khoá ô tìm của `useListUrlState` bên web
@@ -45,4 +48,6 @@ export const UI_PATHS = {
    * rằng `?q=` thật sự thành `actor=` khi gọi API.
    */
   auditLog: (actor: string) => `/admin/audit-log?q=${encodeURIComponent(actor)}`,
+  /* Màn Tài khoản lọc theo `q` — email là thứ duy nhất vừa tìm được vừa không đổi. */
+  account: (email: string) => `/admin/accounts?q=${encodeURIComponent(email)}`,
 } as const;

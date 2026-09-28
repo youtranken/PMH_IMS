@@ -6,12 +6,14 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { orDash } from '@/lib/format';
 import { Combobox } from '@/ui/combobox';
+import { TableWrap } from '@/ui/data-table';
 import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
+import { useFormErrors } from '@/ui/use-form-errors';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 import type { DeviceRow } from '@/lib/device-types';
@@ -104,23 +106,28 @@ export function PortMapPanel({
           {ports.length === 0 ? (
             <EmptyState title={t('ports.empty')} hint={t('ports.emptyHint')} />
           ) : (
-            <div className="table-wrap">
+            /* Bảng rộng hơn cột chính ở router (7 cột): cuộn ngang trong khung, cột Cổng dính
+               trái và cột thao tác dính phải — cuộn tới VLAN/Ghi chú vẫn biết đang ở cổng nào, và
+               mở ⋯ không làm trôi mất cột định danh. */
+            <TableWrap>
               <table className="table table-stack wide">
                 <thead>
                   <tr>
-                    <th>{t('ports.port')}</th>
+                    <th className="col-sticky-start">{t('ports.port')}</th>
                     <th>{t('ports.connectedTo')}</th>
                     <th>{t('ports.peerPort')}</th>
                     <th>{t('ports.usedBy')}</th>
                     <th>{t('ports.vlan')}</th>
                     <th>{t('ports.note')}</th>
-                    {canEdit ? <th className="col-center">{t('common.actions')}</th> : null}
+                    {canEdit ? (
+                      <th className="col-center col-sticky-end">{t('common.actions')}</th>
+                    ) : null}
                   </tr>
                 </thead>
                 <tbody>
                   {ports.map((port) => (
                     <tr key={port.id}>
-                      <td data-label={t('ports.port')} className="mono">
+                      <td data-label={t('ports.port')} className="mono col-sticky-start">
                         {port.portLabel}
                       </td>
                       <td data-label={t('ports.connectedTo')}>
@@ -144,10 +151,11 @@ export function PortMapPanel({
                       </td>
                       <td data-label={t('ports.note')}>{orDash(port.note)}</td>
                       {canEdit ? (
-                        <td data-label={t('common.actions')}>
+                        <td data-label={t('common.actions')} className="col-sticky-end">
                           <div className="action-cell">
                             <RowActions
                               label={t('common.actionsOf', { subject: port.portLabel })}
+                              subject={port.portLabel}
                               items={[
                                 {
                                   key: 'edit',
@@ -199,7 +207,7 @@ export function PortMapPanel({
                   ))}
                 </tbody>
               </table>
-            </div>
+            </TableWrap>
           )}
 
           <h3 className="form-section-title">{t('ports.incoming')}</h3>
@@ -289,6 +297,7 @@ function PortForm({
   const departments = useDepartments();
   const [note, setNote] = useState(port?.note ?? '');
   const [error, setError] = useState<string | null>(null);
+  const check = useFormErrors({ portLabel: !portLabel.trim() && t('ports.portRequired') });
 
   // Gõ tới đâu tìm tới đó nhưng chờ 250ms — không bắn một request mỗi phím.
   useEffect(() => {
@@ -341,13 +350,12 @@ function PortForm({
         id="port-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          if (!portLabel.trim()) {
-            setError(t('ports.portRequired'));
-            return;
-          }
+          if (!check.check()) return;
           save.mutate(
             {
               portLabel: portLabel.trim(),
@@ -367,7 +375,7 @@ function PortForm({
           );
         }}
       >
-        <Field label={t('ports.port')} required htmlFor="port-label">
+        <Field label={t('ports.port')} required htmlFor="port-label" error={check.error('portLabel')}>
           <input
             id="port-label"
             className="inp mono"

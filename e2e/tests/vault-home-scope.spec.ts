@@ -299,7 +299,7 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
      * Lưới (28/08/2026): không còn hai chiều nhìn để bấm qua lại. Gán hàng loạt mở từ chính
      * TIÊU ĐỀ CỘT của nhóm đó — nhãn trợ năng là câu đầy đủ, còn chữ hiện ra đã cắt tiền tố.
      */
-    await page.goto('/admin/vault-access');
+    await page.goto('/admin/vault-access?view=matrix');
     await page
       .getByRole('button', { name: `Gán "${first.label}" cho nhiều người` })
       .click();
@@ -331,7 +331,7 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
     page,
   }) => {
     await firstLogin(page, E2E_SA);
-    await page.goto('/admin/vault-access');
+    await page.goto('/admin/vault-access?view=matrix');
 
     const scopes = await page.request.get('/api/v1/vault/access/scopes');
     const list = (await scopes.json()) as { label: string }[];
@@ -362,7 +362,7 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
 
   test('dòng tổng nói rõ còn bao nhiêu nhóm chưa gán cho ai', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    await page.goto('/admin/vault-access');
+    await page.goto('/admin/vault-access?view=matrix');
     // Chỗ hổng của ma trận là những nhóm chưa ai được gán — rà từng thẻ thì không thấy ra.
     await expect(page.getByText(/nhóm chưa gán cho ai/)).toBeVisible();
   });
@@ -395,7 +395,7 @@ test.describe('Ma trận quyền — chiều nhìn theo nhóm đối tượng', 
      * Cố ý KHÔNG cho bấm-để-đổi-vòng ngay trên ô: đây là quyền xem mật khẩu, một cú bấm nhầm
      * khi đang cuộn ngang là mở quyền cho người không nên có.
      */
-    await page.goto('/admin/vault-access');
+    await page.goto('/admin/vault-access?view=matrix');
     await page
       .getByRole('button', { name: new RegExp(`${escapeRe(first.label)}: Cần duyệt`) })
       .first()

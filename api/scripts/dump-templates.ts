@@ -48,6 +48,8 @@ async function main(): Promise<void> {
       id: String(index),
       name,
       hasPortMap,
+      // Mẫu Excel không có cột này — cờ router bật ở màn Danh mục.
+      isRouter: false,
       description,
       active: true,
       createdAt: NOW,

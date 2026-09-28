@@ -3,11 +3,9 @@ import { useTranslation } from 'react-i18next';
 import { errorCode, errorMessage, useApiMutation, useMe } from '@/lib/api';
 import { AuthCard } from './auth-card';
 import { OtpInput } from '@/ui/otp-input';
+import { TotpSetup, type TotpSetupData } from './totp-setup';
 
-interface EnrollStart {
-  secret: string;
-  qrDataUrl: string;
-}
+type EnrollStart = TotpSetupData;
 
 /**
  * Cài xác thực 2 lớp lần đầu (NFR-01: enroll bắt buộc).
@@ -63,7 +61,12 @@ export function TotpEnroll() {
 
   if (needPassword && !enroll) {
     return (
-      <AuthCard title={t('auth.enrollTitle')} subtitle={t('auth.enrollReauthSub')} error={error}>
+      <AuthCard
+        title={t('auth.enrollTitle')}
+        subtitle={t('auth.enrollReauthSub')}
+        error={error}
+        signedInAs={me}
+      >
         <form
           className="auth-form"
           onSubmit={(e) => {
@@ -112,19 +115,15 @@ export function TotpEnroll() {
   }
 
   return (
-    <AuthCard title={t('auth.enrollTitle')} subtitle={t('auth.enrollSub')} error={error}>
+    <AuthCard
+      title={t('auth.enrollTitle')}
+      subtitle={t('auth.enrollSub')}
+      error={error}
+      signedInAs={me}
+    >
       {enroll ? (
         <>
-          <img
-            className="totp-qr"
-            src={enroll.qrDataUrl}
-            alt={t('auth.enrollQrAlt')}
-            width={200}
-            height={200}
-          />
-          <p className="auth-sub">
-            {t('auth.enrollManual')} <code className="mono" data-testid="totp-secret">{enroll.secret}</code>
-          </p>
+          <TotpSetup data={enroll} />
           <form
             className="auth-form"
             onSubmit={(e) => {

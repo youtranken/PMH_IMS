@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { currentTheme, toggleTheme } from '@/lib/theme';
+import { THEME_EVENT, currentTheme, toggleTheme } from '@/lib/theme';
 
 /**
  * Nút đổi giao diện sáng/tối. Toàn bộ màu đổi theo token (AD-15) — component khác
@@ -9,6 +9,12 @@ import { currentTheme, toggleTheme } from '@/lib/theme';
 export function ThemeSwitch() {
   const { t } = useTranslation();
   const [theme, setThemeState] = useState(currentTheme());
+  // Đổi ở Hồ sơ / menu tài khoản thì biểu tượng ở đây phải đổi theo.
+  useEffect(() => {
+    const sync = () => setThemeState(currentTheme());
+    window.addEventListener(THEME_EVENT, sync);
+    return () => window.removeEventListener(THEME_EVENT, sync);
+  }, []);
   const toDark = theme !== 'dark';
   return (
     <button

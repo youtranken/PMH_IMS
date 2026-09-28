@@ -183,3 +183,42 @@
   }
 }
 
+
+/* --- Hồ sơ của tôi (/profile) — một cột thẻ, đọc được ở 390px ----------------------------- */
+.profile-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-7);
+  max-width: 760px;
+}
+.profile-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+.profile-card h2 {
+  margin: 0;
+  font-size: var(--fs-lg);
+}
+.profile-dl {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-3) var(--space-7);
+  margin: 0;
+}
+.profile-dl dt {
+  color: var(--ink-3);
+}
+.profile-dl dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 480px) {
+  .profile-dl {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1);
+  }
+  .profile-dl dd {
+    margin-bottom: var(--space-3);
+  }
+}

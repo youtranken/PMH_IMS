@@ -6,7 +6,9 @@ import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { IpAddressService } from './ip-address.service';
 import { IpDevicePanel } from './ip-device-panel';
 import { IpDeviceRetirement } from './ip-device-retirement';
+import { IpDeviceSearch } from './ip-device-search';
 import { IpamOwnerResolver } from './ipam-owner-resolver';
+import { IpamAuditLabeler } from './ipam-audit-labeler';
 import { NatDevicePanel } from './nat-device-panel';
 import { NatRuleService } from './nat-rule.service';
 import { IpamApiService } from './ipam.api';
@@ -24,7 +26,9 @@ import { SubnetService } from './subnet.service';
     IpamApiService,
     IpDevicePanel,
     IpDeviceRetirement,
+    IpDeviceSearch,
     IpamOwnerResolver,
+    IpamAuditLabeler,
     NatDevicePanel,
     ExcelExportService,
   ],
