@@ -450,10 +450,11 @@ export function DevicesScreen({ me }: { me: Me }) {
           device={null}
           csrfToken={me.csrfToken}
           onClose={() => setCreating(false)}
-          onSaved={() => {
-            setCreating(false);
+          onSaved={(_result, options) => {
+            if (!options?.keepOpen) setCreating(false);
             void queryClient.invalidateQueries({ queryKey: ['devices'] });
           }}
+          onOpenCreated={(created) => navigate(PATHS.device(created.id))}
         />
       ) : null}
 

@@ -1266,6 +1266,9 @@ table.access-grid thead .access-row-head {
 }
 .wt-fill { position: absolute; inset: 0 auto 0 0; border-radius: 999px; }
 .wt-fill.ok { background: var(--ok); }
+/* Không tính hạn (hồ sơ đã thanh lý): xám trơn, không mốc hôm nay, không màu cảnh báo. */
+.wt-fill.none { background: var(--border-2); }
+.wt-legend .right.muted { color: var(--ink-3); font-weight: 600; }
 .wt-fill.warn { background: linear-gradient(90deg, var(--ok), var(--warn)); }
 .wt-fill.crit { background: linear-gradient(90deg, var(--ok), var(--warn) 70%, var(--danger)); }
 /* Quá hạn: gạch chéo chứ không chỉ đổi màu — dấu hiệu THỨ HAI ngoài màu, cho người khó phân

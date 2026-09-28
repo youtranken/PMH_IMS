@@ -9,11 +9,17 @@ export interface ToastOptions {
   tone?: ToastTone;
   /** Mặc định 4 giây; lỗi để lâu hơn cho người đọc kịp. */
   durationMs?: number;
+  /**
+   * Một nút làm bước kế tiếp hiển nhiên ("Mở hồ sơ" sau khi thêm máy). Bấm xong toast tự đóng.
+   * Chỉ là lối tắt: việc đó phải làm được bằng đường khác, vì toast tự biến mất.
+   */
+  action?: { label: string; onClick: () => void };
 }
 
-interface ToastItem extends Required<Omit<ToastOptions, 'durationMs'>> {
+interface ToastItem extends Required<Omit<ToastOptions, 'durationMs' | 'action'>> {
   id: number;
   durationMs: number;
+  action?: ToastOptions['action'];
 }
 
 /** Đồng hồ tự đóng của một toast — dừng được khi rê chuột vào, đặt lại khi rê ra. */
@@ -93,6 +99,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       message: options.message,
       tone,
       durationMs: options.durationMs ?? (tone === 'error' ? 7000 : 4000),
+      action: options.action,
     };
     setItems((prev) => [...prev, item]);
     timers.current.set(item.id, {
@@ -175,6 +182,18 @@ function ToastRow({
     >
       <ToastIcon tone={item.tone} />
       <span>{item.message}</span>
+      {item.action ? (
+        <button
+          type="button"
+          className="btn sm toast-action"
+          onClick={() => {
+            item.action?.onClick();
+            onClose(item.id);
+          }}
+        >
+          {item.action.label}
+        </button>
+      ) : null}
       <button
         type="button"
         className="toast-close"

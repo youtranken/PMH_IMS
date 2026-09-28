@@ -102,6 +102,14 @@ describe('OLD-DB-02 · device_port không cho hai dòng cùng đấu vào một 
     ).rejects.toMatchObject({ code: '23505', constraint: 'device_port_label_key' });
   });
 
+  it('chiều ngược mang VLAN của cổng switch đang cắm vào máy này', async () => {
+    const sw = await device('SW-VLAN');
+    const pc = await device('PC-VLAN');
+    await ports.create(actor, sw, { portLabel: 'Gi1/0/7', connectedDeviceId: pc, vlan: '20' });
+    const map = await ports.listFor(pc);
+    expect(map.incoming).toEqual([expect.objectContaining({ portLabel: 'Gi1/0/7', vlan: '20' })]);
+  });
+
   it('không biết cổng đầu kia, hoặc đầu kia chỉ là chữ, thì không bị ràng buộc', async () => {
     const sw = await device('SW-C');
     const a = await device('PC-C1');

@@ -393,6 +393,19 @@ input[list]::-webkit-calendar-picker-indicator {
 }
 /* Ô lọc đang mang giá trị: chữ trên nút đổi mà khung y nguyên thì không ai nhận ra danh sách
    đang bị lọc. Chỉ trong thanh lọc — ô trong form luôn có giá trị, tô thì cả form thành màu. */
+/* Ô nhập mã/serial/cổng (`.inp.mono`): `.mono` thu chữ còn 0.85em nên ô thấp hơn ô bên cạnh
+   ~4px và cả hàng lưới lệch đáy. Trong Ô NHẬP giữ cỡ chữ của form — chỉ đổi kiểu chữ. */
+input.mono,
+textarea.mono {
+  font-size: inherit;
+}
+/* Hàng nút gợi nhanh ngay dưới một ô (vd "+1 năm · +2 năm · +3 năm" dưới Bảo hành đến). */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
 .filter-bar .fsel-trigger[data-filled] {
   border-color: var(--primary);
   background: var(--primary-soft);

@@ -62,7 +62,7 @@ test.describe('Trang chi tiết thiết bị', () => {
     await expect(page.getByText(/Còn \d+ ngày/).first()).toBeVisible();
 
     // Đủ 4 tab (switch có port map).
-    for (const name of ['Tổng quan', 'Port map', 'Giấy tờ', 'Lịch sử']) {
+    for (const name of ['Tổng quan', 'Sơ đồ cổng', 'Giấy tờ', 'Lịch sử']) {
       await expect(page.getByRole('tab', { name })).toBeVisible();
     }
 
@@ -70,7 +70,7 @@ test.describe('Trang chi tiết thiết bị', () => {
        (thứ người ta đọc qua điện thoại cho nhà cung cấp) và ô Serial trong lưới hồ sơ. */
     await expect(page.getByText(`FOC-${code}`).first()).toBeVisible();
 
-    await page.getByRole('tab', { name: 'Port map' }).click();
+    await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();
     await expect(page.getByRole('row', { name: /Gi1\/0\/1/ })).toBeVisible();
 
     await page.getByRole('tab', { name: 'Giấy tờ' }).click();
@@ -82,7 +82,7 @@ test.describe('Trang chi tiết thiết bị', () => {
 
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
     await expect(page.getByText('Tạo hồ sơ')).toBeVisible();
-    await expect(page.getByText('Thêm cổng port map')).toBeVisible();
+    await expect(page.getByText('Thêm cổng Gi1/0/1', { exact: true })).toBeVisible();
   });
 
   test('khu mở rộng chưa có module nào đăng ký → API trả rỗng, trang không hiện khối trống', async ({
@@ -137,7 +137,7 @@ test.describe('Trang chi tiết thiết bị', () => {
      */
     await page.goto(`/devices/${id}?tab=ports`);
     await expect(page.getByRole('heading', { name: new RegExp(`PR-E2E-TAB-${stamp}`) })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Port map' })).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Sơ đồ cổng' })).toHaveCount(0);
     await expect(page.getByRole('tab', { name: 'Tổng quan', selected: true })).toBeVisible();
   });
 

@@ -2509,7 +2509,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(() => tenDieuKhien(hop.getByRole('button')), {
         message:
-          'Bộ nút của hộp THÊM MỚI: bốn ô chọn, ba ô ngày, một ô chọn file, hai nút chân hộp — và TUYỆT NHIÊN không có ô "Trạng thái"',
+          'Bộ nút của hộp THÊM MỚI: bốn ô chọn, ba ô ngày + ba nút đặt nhanh hạn bảo hành, một ô chọn file, ba nút chân hộp — và TUYỆT NHIÊN không có ô "Trạng thái"',
       })
       .toEqual([
         'Đóng hộp thoại',
@@ -2520,16 +2520,20 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Ngày mua',
         'Bảo hành từ',
         'Bảo hành đến',
+        '+1 năm',
+        '+2 năm',
+        '+3 năm',
         'Chọn file để đính kèm',
         'Hủy',
+        'Ghi rồi thêm máy khác',
         'Lưu',
       ]);
 
     await expect
       .poll(() => tenDieuKhien(page.getByTestId('dialog-footer').getByRole('button')), {
-        message: 'Chân hộp đi theo đúng nếp toàn app: Hủy trước, nút ghi sau cùng',
+        message: 'Chân hộp đi theo đúng nếp toàn app: Hủy trước, nút ghi chính sau cùng',
       })
-      .toEqual(['Hủy', 'Lưu']);
+      .toEqual(['Hủy', 'Ghi rồi thêm máy khác', 'Lưu']);
 
     /* Ô NGÀY mở ra một lịch thật, không phải một ô gõ chữ trá hình. */
     const oNgayMua = hop.getByRole('button', { name: 'Ngày mua' });
@@ -2829,7 +2833,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
             'Hồ sơ một con Switch phải có ĐỦ NĂM tab — Port map chỉ có mặt vì loại này bật has_port_map (FR-006)',
         },
       )
-      .toEqual(['Tổng quan', 'Port map', 'Giấy tờ', 'Két sắt', 'Lịch sử']);
+      .toEqual(['Tổng quan', 'Sơ đồ cổng', 'Giấy tờ', 'Két sắt', 'Lịch sử']);
 
     const main = page.getByRole('main');
     const panel = page.getByRole('tabpanel');
@@ -2865,7 +2869,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toBeVisible();
 
     /* ===== TAB PORT MAP ===== */
-    await page.getByRole('tab', { name: 'Port map' }).click();
+    await page.getByRole('tab', { name: 'Sơ đồ cổng' }).click();
     /*
      * `expect.poll`, KHÔNG phải `expect(await …)`.
      *
