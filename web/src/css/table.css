@@ -401,17 +401,23 @@ table.table tbody tr.row-suspended td:first-child {
   background: var(--danger-soft);
   color: var(--danger);
 }
-/* Việc ít khi làm, dễ nhầm với việc bên trên (RowAction `muted`): chữ xám, kẻ ngăn phía trên. */
+/* Việc đảo lại được nhưng cần nghĩ (RowAction `warn`): màu cảnh báo, không đỏ. */
+.row-actions-menu button.warn {
+  color: var(--warn);
+}
+.row-actions-menu button.warn:hover:not(:disabled) {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+/* Việc ít khi làm, dễ nhầm với việc bên trên (RowAction `muted`): chữ xám. */
 .row-actions-menu button.is-muted {
   color: var(--ink-3);
-  margin-top: var(--space-1);
-  border-top: 1px solid var(--border);
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
 }
-.row-actions-menu button.is-muted ~ button.is-muted {
-  margin-top: 0;
-  border-top-color: transparent;
+/* Vạch ngăn giữa hai nhóm mức độ — RowActions tự chèn, nơi gọi không khai. */
+.row-actions-menu .ra-sep {
+  height: 1px;
+  margin: var(--space-1) 0;
+  background: var(--border);
 }
 /* Dòng mô tả dưới nhãn (RowAction `hint`) — xuống dòng được, menu không phình ngang. */
 .row-actions-menu .ra-text {
