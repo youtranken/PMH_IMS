@@ -6,7 +6,8 @@ import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import type { SubnetRow } from './ipam-types';
-import { useCatalogLists } from '@/ui/use-catalog-lists';
+import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
+import { textRule, useFormErrors } from '@/ui/use-form-errors';
 
 export function SubnetForm({
   subnet,
@@ -29,6 +30,17 @@ export function SubnetForm({
   const [error, setError] = useState<string | null>(null);
 
   const lists = useCatalogLists();
+
+  // Ô VLAN để trống = XÓA số đang có, không phải "đừng đụng tới": form luôn hiện đủ ô.
+  const vlanRaw = vlan.trim();
+  const vlanValue = vlanRaw === '' ? null : Number(vlanRaw);
+  const vlanBad =
+    vlanValue !== null && (!/^\d+$/.test(vlanRaw) || vlanValue < 1 || vlanValue > 4094);
+  const check = useFormErrors({
+    cidr: !cidr.trim() && t('formErrors.required'),
+    name: !name.trim() && t('formErrors.required'),
+    vlan: vlanBad && t('ipam.vlanInvalid'),
+  });
 
   const save = useApiMutation<Record<string, unknown>, unknown>(
     subnet ? `/api/v1/ipam/subnets/${subnet.id}` : '/api/v1/ipam/subnets',
@@ -64,20 +76,12 @@ export function SubnetForm({
         id="subnet-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          // Ô VLAN để trống = XÓA số đang có, không phải "đừng đụng tới": form luôn hiện đủ ô.
-          const raw = vlan.trim();
-          let vlanValue: number | null = null;
-          if (raw !== '') {
-            const parsed = Number(raw);
-            if (!Number.isInteger(parsed) || parsed < 1 || parsed > 4094) {
-              setError(t('ipam.vlanInvalid'));
-              return;
-            }
-            vlanValue = parsed;
-          }
+          if (!check.check()) return;
           save.mutate(
             {
               name: name.trim(),
@@ -92,7 +96,14 @@ export function SubnetForm({
           );
         }}
       >
-        <Field label={t('ipam.cidr')} required hint={t('ipam.cidrHint')} htmlFor="subnet-cidr">
+        {check.summary}
+        <Field
+          label={t('ipam.cidr')}
+          required
+          hint={t('ipam.cidrHint')}
+          htmlFor="subnet-cidr"
+          error={check.error('cidr')}
+        >
           <input
             id="subnet-cidr"
             className="inp mono"
@@ -103,7 +114,7 @@ export function SubnetForm({
           />
         </Field>
 
-        <Field label={t('ipam.name')} required htmlFor="subnet-name">
+        <Field label={t('ipam.name')} required htmlFor="subnet-name" error={check.error('name')}>
           <input
             id="subnet-name"
             className="inp"
@@ -113,7 +124,12 @@ export function SubnetForm({
           />
         </Field>
 
-        <Field label={t('ipam.vlan')} hint={t('ipam.vlanHint')} htmlFor="subnet-vlan">
+        <Field
+          label={t('ipam.vlan')}
+          hint={t('ipam.vlanHint')}
+          htmlFor="subnet-vlan"
+          error={check.error('vlan')}
+        >
           <input
             id="subnet-vlan"
             className="inp mono"
@@ -144,7 +160,7 @@ export function SubnetForm({
             placeholder={t('ipam.noSite')}
             options={[
               { value: '', label: t('ipam.noSite') },
-              ...(lists.data?.sites ?? []).map((site) => ({ value: site.id, label: site.code })),
+              ...activeOptions(lists.data?.sites, subnet?.siteId, (site) => site.code),
             ]}
             failed={lists.isError}
           />
@@ -210,6 +226,7 @@ export function HideDialog({
   const { t } = useTranslation();
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const check = useFormErrors({ reason: textRule(t, reason, 3) });
 
   /*
    * `PATCH :id/void`, KHÔNG phải `DELETE` (2026-08-27).
@@ -252,9 +269,12 @@ export function HideDialog({
         id="hide-subnet-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!check.check()) return;
           hide.mutate(
             { reason: reason.trim() },
             { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
@@ -262,7 +282,7 @@ export function HideDialog({
         }}
       >
         <p className="muted">{t('ipam.hideHint')}</p>
-        <Field label={t('ipam.reason')} required htmlFor="hide-reason">
+        <Field label={t('ipam.reason')} required htmlFor="hide-reason" error={check.error('reason')}>
           <input
             id="hide-reason"
             className="inp"

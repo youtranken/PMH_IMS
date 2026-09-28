@@ -13,6 +13,7 @@ import { RowActions } from '@/ui/row-actions';
 import { SchedulePicker, describeSchedule, type ScheduleValue } from '@/ui/schedule-picker';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
+import { useFormErrors } from '@/ui/use-form-errors';
 
 interface DigestRule {
   id: string;
@@ -270,6 +271,15 @@ function RuleForm({
     { method: rule ? 'PATCH' : 'POST', csrfToken, refreshMe: false },
   );
 
+  const emails = recipients
+    .split(/[,;\n]/)
+    .map((email) => email.trim())
+    .filter(Boolean);
+  const check = useFormErrors({
+    name: !name.trim() && t('digest.nameRequired'),
+    recipients: emails.length === 0 && t('digest.recipientsRequired'),
+  });
+
   const toggleKind = (kind: string) =>
     setSelected((current) =>
       current.includes(kind) ? current.filter((item) => item !== kind) : [...current, kind],
@@ -304,21 +314,12 @@ function RuleForm({
         id="rule-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          const emails = recipients
-            .split(/[,;\n]/)
-            .map((email) => email.trim())
-            .filter(Boolean);
-          if (!name.trim()) {
-            setError(t('digest.nameRequired'));
-            return;
-          }
-          if (emails.length === 0) {
-            setError(t('digest.recipientsRequired'));
-            return;
-          }
+          if (!check.check()) return;
           save.mutate(
             {
               name: name.trim(),
@@ -336,7 +337,8 @@ function RuleForm({
           );
         }}
       >
-        <Field label={t('digest.name')} required htmlFor="rule-name">
+        {check.summary}
+        <Field label={t('digest.name')} required htmlFor="rule-name" error={check.error('name')}>
           <input
             id="rule-name"
             className="inp"
@@ -376,6 +378,7 @@ function RuleForm({
           required
           hint={t('digest.recipientsHint')}
           htmlFor="rule-recipients"
+          error={check.error('recipients')}
         >
           <textarea
             id="rule-recipients"

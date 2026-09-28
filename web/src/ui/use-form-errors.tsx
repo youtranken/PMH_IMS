@@ -1,11 +1,23 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 /**
  * Luật của một form: mỗi khoá là một ô, giá trị là câu lỗi tiếng Việt khi ô đó SAI, còn
  * `false`/`null`/`undefined`/`''` nghĩa là ô đó đang hợp lệ.
  */
 export type FormRules<K extends string> = Record<K, string | false | null | undefined>;
+
+/**
+ * Luật cho ô chữ bắt buộc có độ dài tối thiểu (lý do ẩn/vô hiệu/gỡ… đều ≥3 ký tự) — thay cho
+ * `minLength` của trình duyệt, thứ báo bằng tiếng Anh. Tính trên chữ đã cắt khoảng trắng, đúng
+ * như API kiểm.
+ */
+export function textRule(t: TFunction, value: string, min = 1): string | null {
+  const length = value.trim().length;
+  if (length === 0) return t('formErrors.required');
+  return length < min ? t('formErrors.minLength', { min }) : null;
+}
 
 export interface FormErrors<K extends string> {
   /** Gắn lên `<form>` — hook cần nó để tìm ô lỗi đầu tiên theo đúng thứ tự trên màn. */

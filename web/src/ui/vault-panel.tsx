@@ -16,6 +16,7 @@ import { RevealDialog } from '@/ui/reveal-dialog';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { StepUpDialog } from '@/ui/step-up-dialog';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
+import { useFormErrors } from '@/ui/use-form-errors';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
 
@@ -499,6 +500,10 @@ function SecretForm({
   const [error, setError] = useState<string | null>(null);
 
   const isEdit = secret !== null;
+  const check = useFormErrors({
+    label: !label.trim() && t('vault.labelRequired'),
+    value: !isEdit && !value && t('vault.valueRequired'),
+  });
 
   const save = useApiMutation<Record<string, unknown>, unknown>(
     isEdit ? `/api/v1/vault/secrets/${secret.id}` : '/api/v1/vault/secrets',
@@ -532,17 +537,12 @@ function SecretForm({
         id="secret-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          if (!label.trim()) {
-            setError(t('vault.labelRequired'));
-            return;
-          }
-          if (!isEdit && !value) {
-            setError(t('vault.valueRequired'));
-            return;
-          }
+          if (!check.check()) return;
           void (async () => {
             try {
               await stepUp.run(() =>
@@ -569,7 +569,8 @@ function SecretForm({
           })();
         }}
       >
-        <Field label={t('vault.label')} required htmlFor="secret-label">
+        {check.summary}
+        <Field label={t('vault.label')} required htmlFor="secret-label" error={check.error('label')}>
           <input
             id="secret-label"
             className="inp"
@@ -605,13 +606,19 @@ function SecretForm({
             required
             hint={t('vault.valueHint')}
             htmlFor="secret-value"
+            error={check.error('value')}
           >
+            {/* Hai con (ô + thanh đo) nên `Field` không tự gắn được — nối tay theo đúng id nó sinh. */}
             <input
               id="secret-value"
               className="inp mono"
               type="password"
               autoComplete="new-password"
               required
+              aria-invalid={check.error('value') ? true : undefined}
+              aria-describedby={
+                check.error('value') ? 'secret-value-error secret-value-hint' : 'secret-value-hint'
+              }
               value={value}
               onChange={(e) => setValue(e.target.value)}
             />
@@ -656,6 +663,7 @@ function RotateForm({
   const { t } = useTranslation();
   const [value, setValue] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const check = useFormErrors({ value: !value && t('vault.valueRequired') });
 
   const rotate = useApiMutation<{ value: string }, unknown>(
     `/api/v1/vault/secrets/${secret.id}/rotate`,
@@ -689,13 +697,12 @@ function RotateForm({
         id="rotate-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          if (!value) {
-            setError(t('vault.valueRequired'));
-            return;
-          }
+          if (!check.check()) return;
           void (async () => {
             try {
               await stepUp.run(() => rotate.mutateAsync({ value }));
@@ -709,13 +716,21 @@ function RotateForm({
         }}
       >
         <p className="muted">{t('vault.rotateHint')}</p>
-        <Field label={t('vault.newValue')} required htmlFor="secret-new-value">
+        <Field
+          label={t('vault.newValue')}
+          required
+          htmlFor="secret-new-value"
+          error={check.error('value')}
+        >
+          {/* Hai con (ô + thanh đo) nên `Field` không tự gắn được — nối tay theo đúng id nó sinh. */}
           <input
             id="secret-new-value"
             className="inp mono"
             type="password"
             autoComplete="new-password"
             required
+            aria-invalid={check.error('value') ? true : undefined}
+            aria-describedby={check.error('value') ? 'secret-new-value-error' : undefined}
             value={value}
             onChange={(e) => setValue(e.target.value)}
           />

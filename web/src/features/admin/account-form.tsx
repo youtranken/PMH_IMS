@@ -5,6 +5,7 @@ import type { Me } from '@/lib/me';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
+import { textRule, useFormErrors } from '@/ui/use-form-errors';
 
 interface CreateResult {
   user: { id: string; email: string };
@@ -69,6 +70,16 @@ export function AccountForm({
 
   const busy = create.isPending || update.isPending;
 
+  const check = useFormErrors({
+    fullName: textRule(t, fullName, 2),
+    // Chỉ bắt lỗi gõ nhầm hiển nhiên (thiếu @, thiếu tên miền); API mới là nơi quyết email hợp lệ.
+    email:
+      !editing &&
+      (!email.trim()
+        ? t('formErrors.required')
+        : !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()) && t('formErrors.email')),
+  });
+
   return (
     <Dialog
       open
@@ -94,9 +105,12 @@ export function AccountForm({
         id="account-form"
         className="form-grid"
         data-columns={2}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
+          if (!check.check()) return;
           const contact = {
             fullName: fullName.trim(),
             phone: phone.trim(),
@@ -119,7 +133,13 @@ export function AccountForm({
           );
         }}
       >
-        <Field label={t('accounts.fullName')} required htmlFor="acc-name">
+        {check.summary}
+        <Field
+          label={t('accounts.fullName')}
+          required
+          htmlFor="acc-name"
+          error={check.error('fullName')}
+        >
           <input
             id="acc-name"
             className="inp"
@@ -130,7 +150,12 @@ export function AccountForm({
           />
         </Field>
 
-        <Field label={t('accounts.email')} required htmlFor="acc-email">
+        <Field
+          label={t('accounts.email')}
+          required
+          htmlFor="acc-email"
+          error={check.error('email')}
+        >
           {editing ? (
             // Hiện thẳng chữ chứ không phải ô nhập bị khoá: ô khoá thì người dùng còn ngồi
             // thử bấm và tự hỏi vì sao không gõ được.

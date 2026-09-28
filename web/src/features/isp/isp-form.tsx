@@ -13,7 +13,8 @@ import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
 import type { DeviceRow } from '@/lib/device-types';
 import { ISP_STATUSES, STATUS_KEY, type IspRow, type IspStatus } from './isp-types';
-import { useCatalogLists } from '@/ui/use-catalog-lists';
+import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
+import { useFormErrors } from '@/ui/use-form-errors';
 
 interface FormState {
   code: string;
@@ -100,6 +101,11 @@ export function IspForm({
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 
+  const check = useFormErrors({
+    code: !form.code.trim() && t('formErrors.required'),
+    providerId: !form.providerId && t('formErrors.requiredPick'),
+  });
+
   return (
     <Dialog
       open
@@ -123,13 +129,12 @@ export function IspForm({
     >
       <form
         id="isp-form"
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          if (!form.code.trim() || !form.providerId) {
-            setError(t('isp.needMinimum'));
-            return;
-          }
+          if (!check.check()) return;
           save.mutate(
             {
               code: form.code.trim(),
@@ -187,8 +192,9 @@ export function IspForm({
             {error}
           </p>
         ) : null}
+        {check.summary}
         <FormSection title={t('isp.tabProfile')} columns={3}>
-          <Field label={t('isp.code')} required htmlFor="isp-code">
+          <Field label={t('isp.code')} required htmlFor="isp-code" error={check.error('code')}>
             <input
               id="isp-code"
               className="inp mono"
@@ -197,7 +203,12 @@ export function IspForm({
               onChange={(e) => set('code', e.target.value)}
             />
           </Field>
-          <Field label={t('isp.provider')} required hint={t('isp.providerHint')}>
+          <Field
+            label={t('isp.provider')}
+            required
+            hint={t('isp.providerHint')}
+            error={check.error('providerId')}
+          >
             {/* Chọn từ danh mục, không gõ tự do (Q-11): chữ gõ tay sinh ra "FPT" / "fpt " là
                 hai nhà mạng khác nhau, và đổi tên trong danh mục không tới được hồ sơ nào.
                 Mục ngừng dùng chỉ còn trong danh sách khi hồ sơ đang trỏ vào nó. */}
@@ -207,12 +218,7 @@ export function IspForm({
               placeholder={t('isp.providerPlaceholder')}
               failed={lists.isError}
               required
-              options={(lists.data?.ispProviders ?? [])
-                .filter((item) => item.active || item.id === row?.providerId)
-                .map((item) => ({
-                  value: item.id,
-                  label: item.active ? item.name : `${item.name} (${t('isp.providerInactive')})`,
-                }))}
+              options={activeOptions(lists.data?.ispProviders, row?.providerId, (item) => item.name)}
               onChange={(value) => set('providerId', value)}
             />
           </Field>
@@ -239,10 +245,11 @@ export function IspForm({
               ariaLabel={t('isp.site')}
               placeholder={`— ${t('isp.allSites')} —`}
               failed={lists.isError}
-              options={(lists.data?.sites ?? []).map((site) => ({
-                value: site.id,
-                label: `${site.code} — ${site.name}`,
-              }))}
+              options={activeOptions(
+                lists.data?.sites,
+                row?.siteId,
+                (site) => `${site.code} — ${site.name}`,
+              )}
               onChange={(value) => set('siteId', value)}
             />
           </Field>

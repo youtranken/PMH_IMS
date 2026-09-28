@@ -13,6 +13,7 @@ import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
 import { useConfirm } from '@/ui/confirm-provider';
 import { useToast } from '@/ui/toast';
+import { useFormErrors } from '@/ui/use-form-errors';
 import type { DeviceRow } from '@/lib/device-types';
 import { SeatTerm } from './seat-cells';
 import {
@@ -286,6 +287,12 @@ export function AssignDialog({
   // License mua đứt thì chỗ ngồi của nó cũng không có ngày kết thúc — ô đó không được hiện
   // ra để rồi API trả về lỗi. Luật nằm ở API (`validateAssignmentTerms`), đây chỉ là hệ quả.
   const hasEndDate = software.licenseModel !== 'perpetual';
+  // Chuỗi rỗng = XÓA chi phí đang có, không phải 0đ. Hai chuyện khác nhau.
+  const costValue = cost.trim() === '' ? null : Number(cost.trim());
+  const check = useFormErrors({
+    device: !editing && !device && t('license.pickDevice'),
+    cost: costValue !== null && !Number.isFinite(costValue) && t('license.costInvalid'),
+  });
 
   useEffect(() => {
     const id = setTimeout(() => setDebounced(query), 250);
@@ -342,25 +349,19 @@ export function AssignDialog({
       <form
         id="assign-form"
         className="form-grid"
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           setError(null);
-          if (!editing && !device) {
-            setError(t('license.pickDevice'));
-            return;
-          }
+          if (!check.check()) return;
           const terms = {
-            // Chuỗi rỗng = XÓA chi phí đang có, không phải 0đ. Hai chuyện khác nhau.
-            cost: cost.trim() === '' ? null : Number(cost.trim()),
+            cost: costValue,
             contract: contract.trim(),
             startDate,
             endDate: hasEndDate ? endDate : '',
             note: note.trim(),
           };
-          if (terms.cost !== null && !Number.isFinite(terms.cost)) {
-            setError(t('license.costInvalid'));
-            return;
-          }
           save.mutate(
             editing
               ? terms
@@ -390,7 +391,13 @@ export function AssignDialog({
             </p>
           </Field>
         ) : (
-          <Field label={t('license.device')} required hint={t('license.deviceHint')} span={2}>
+          <Field
+            label={t('license.device')}
+            required
+            hint={t('license.deviceHint')}
+            span={2}
+            error={check.error('device')}
+          >
             <Combobox
               placeholder={t('license.deviceSearch')}
               query={query}
@@ -415,7 +422,12 @@ export function AssignDialog({
           </Field>
         )}
 
-        <Field label={t('license.cost')} hint={t('license.costHint')} htmlFor="assign-cost">
+        <Field
+          label={t('license.cost')}
+          hint={t('license.costHint')}
+          htmlFor="assign-cost"
+          error={check.error('cost')}
+        >
           <input
             id="assign-cost"
             className="inp mono"

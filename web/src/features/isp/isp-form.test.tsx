@@ -107,7 +107,10 @@ describe('Form đường truyền — nhà mạng chọn từ danh mục', () =>
     const user = userEvent.setup();
     await user.type(screen.getByLabelText(/Mã đường/), 'ISP-E2E-02');
     await user.click(screen.getByRole('button', { name: 'Lưu' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent(/nhà mạng/);
+    // Câu lỗi nằm DƯỚI ô Nhà mạng và nối vào chính ô đó, không phải một khối chung đầu form.
+    const picker = screen.getByRole('button', { name: 'Nhà mạng' });
+    await waitFor(() => expect(picker).toHaveAttribute('aria-invalid', 'true'));
+    expect(picker).toHaveAccessibleDescription(/chưa chọn ô này/);
     expect(calls.some((c) => c.url === '/api/v1/isp-lines')).toBe(false);
   });
 

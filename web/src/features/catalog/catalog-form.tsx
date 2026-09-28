@@ -5,7 +5,8 @@ import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import { useToast } from '@/ui/toast';
-import { useCatalogLists } from '@/ui/use-catalog-lists';
+import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
+import { useFormErrors } from '@/ui/use-form-errors';
 import {
   catalogLabel,
   SERVICE_PROTOCOLS,
@@ -112,14 +113,21 @@ export function CatalogForm({
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((current) => ({ ...current, [key]: value }));
 
+  const built = buildBody(entity, form);
+  const builtError = (field: BodyField) => built.field === field && t(built.key ?? '');
+  const check = useFormErrors({
+    code: (entity === 'site' || entity === 'cabinet') && !form.code.trim() && t('formErrors.required'),
+    name: entity !== 'cabinet' && !form.name.trim() && t('formErrors.required'),
+    siteId: builtError('siteId'),
+    uHeight: builtError('uHeight'),
+    portFrom: builtError('portFrom'),
+    portTo: builtError('portTo'),
+  });
+
   const submit = () => {
     setError(null);
-    const body = buildBody(entity, form);
-    if (typeof body === 'string') {
-      setError(t(body));
-      return;
-    }
-    save.mutate(body, {
+    if (!check.check() || !built.body) return;
+    save.mutate(built.body, {
       onSuccess: (saved) => {
         toast({ message: t('catalog.saved') });
         onSaved(saved);
@@ -159,13 +167,16 @@ export function CatalogForm({
         id="catalog-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           submit();
         }}
       >
+        {check.summary}
         {entity === 'site' || entity === 'cabinet' ? (
-          <Field label={t('catalog.code')} required htmlFor="catalog-code">
+          <Field label={t('catalog.code')} required htmlFor="catalog-code" error={check.error('code')}>
             <input
               id="catalog-code"
               className="inp"
@@ -182,7 +193,7 @@ export function CatalogForm({
         entity === 'department' ||
         entity === 'isp_provider' ||
         entity === 'service_port' ? (
-          <Field label={t('catalog.name')} required htmlFor="catalog-name">
+          <Field label={t('catalog.name')} required htmlFor="catalog-name" error={check.error('name')}>
             <input
               id="catalog-name"
               className="inp"
@@ -206,17 +217,18 @@ export function CatalogForm({
 
         {entity === 'cabinet' ? (
           <>
-            <Field label={t('catalog.site')} required>
+            <Field label={t('catalog.site')} required error={check.error('siteId')}>
               <Select
                 required
                 value={form.siteId}
                 ariaLabel={t('catalog.site')}
                 placeholder={t('catalog.pickSite')}
                 failed={lists.isError}
-                options={(lists.data?.sites ?? []).map((site) => ({
-                  value: site.id,
-                  label: `${site.code} — ${site.name}`,
-                }))}
+                options={activeOptions(
+                  lists.data?.sites,
+                  (row as CabinetRow | null)?.siteId,
+                  (site) => `${site.code} — ${site.name}`,
+                )}
                 onChange={(value) => set('siteId', value)}
               />
             </Field>
@@ -228,7 +240,7 @@ export function CatalogForm({
                 onChange={(e) => set('description', e.target.value)}
               />
             </Field>
-            <Field label={t('catalog.uHeight')} htmlFor="catalog-uheight">
+            <Field label={t('catalog.uHeight')} htmlFor="catalog-uheight" error={check.error('uHeight')}>
               <input
                 id="catalog-uheight"
                 className="inp"
@@ -351,6 +363,7 @@ export function CatalogForm({
               required
               hint={t('catalog.portHint')}
               htmlFor="catalog-port-from"
+              error={check.error('portFrom')}
             >
               <input
                 id="catalog-port-from"
@@ -361,7 +374,7 @@ export function CatalogForm({
                 onChange={(e) => set('portFrom', e.target.value)}
               />
             </Field>
-            <Field label={t('catalog.portTo')} htmlFor="catalog-port-to">
+            <Field label={t('catalog.portTo')} htmlFor="catalog-port-to" error={check.error('portTo')}>
               <input
                 id="catalog-port-to"
                 className="inp mono"
@@ -402,18 +415,31 @@ const ADD_KEY: Record<CatalogEntity, string> = {
   service_port: 'catalog.addServicePort',
 };
 
+type BodyField = 'siteId' | 'uHeight' | 'portFrom' | 'portTo';
+
+/** Kết quả gom body: MỘT hình dạng (web không bật `strict`, union `ok` không thu hẹp được). */
+interface Built {
+  body: Record<string, unknown> | null;
+  /** Ô đang sai — `useFormErrors` hiện câu lỗi ngay dưới đúng ô đó. */
+  field: BodyField | null;
+  /** KHÓA i18n của câu lỗi — hàm này không có `t`, câu tiếng Việt chỉ sống ở `vi.ts`. */
+  key: string | null;
+}
+
+const ok = (body: Record<string, unknown>): Built => ({ body, field: null, key: null });
+const bad = (field: BodyField, key: string): Built => ({ body: null, field, key });
+
 /**
- * Gom body gửi lên API. Trả về CHUỖI = KHÓA i18n của thông báo lỗi hiện tại chỗ (không gọi API).
- * Trả khóa chứ không trả câu: hàm này không có `t`, và câu tiếng Việt chỉ sống ở `vi.ts`.
+ * Gom body gửi lên API, hoặc chỉ ra ô sai (không gọi API).
  * Chỉ gửi đúng trường của loại đang sửa: API bật `forbidNonWhitelisted`, thừa field là 400
  * (bài học story 1.4 — nút Khóa/Mở khóa từng luôn 400 vì lọt `id` vào body).
  */
-function buildBody(entity: CatalogEntity, form: FormState): Record<string, unknown> | string {
+function buildBody(entity: CatalogEntity, form: FormState): Built {
   switch (entity) {
     case 'site':
-      return { code: form.code.trim(), name: form.name.trim(), address: form.address.trim() };
+      return ok({ code: form.code.trim(), name: form.name.trim(), address: form.address.trim() });
     case 'cabinet': {
-      if (!form.siteId) return 'catalog.cabinetSiteRequired';
+      if (!form.siteId) return bad('siteId', 'catalog.cabinetSiteRequired');
       const body: Record<string, unknown> = {
         code: form.code.trim(),
         siteId: form.siteId,
@@ -427,48 +453,51 @@ function buildBody(entity: CatalogEntity, form: FormState): Record<string, unkno
       } else {
         const value = Number(raw);
         if (!Number.isInteger(value) || value < 1 || value > 60) {
-          return 'catalog.uHeightInvalid';
+          return bad('uHeight', 'catalog.uHeightInvalid');
         }
         body.uHeight = value;
       }
-      return body;
+      return ok(body);
     }
     case 'device_type':
-      return {
+      return ok({
         name: form.name.trim(),
         hasPortMap: form.hasPortMap,
         description: form.description.trim(),
-      };
+      });
     case 'vendor':
-      return {
+      return ok({
         name: form.name.trim(),
         supplies: form.supplies.trim(),
         phone: form.phone.trim(),
         contact: form.contact.trim(),
-      };
+      });
     case 'department':
-      return { name: form.name.trim(), description: form.description.trim() };
+      return ok({ name: form.name.trim(), description: form.description.trim() });
     case 'isp_provider':
-      return {
+      return ok({
         name: form.name.trim(),
         hotline: form.hotline.trim(),
         contact: form.contact.trim(),
-      };
+      });
     case 'service_port': {
+      // Ô trống là thiếu, không phải port 0: `Number('')` ra 0 và câu "port không hợp lệ"
+      // cho một ô chưa gõ gì là câu sai.
+      if (form.portFrom.trim() === '') return bad('portFrom', 'formErrors.required');
       const from = Number(form.portFrom.trim());
-      if (!isPort(from)) return 'catalog.portInvalid';
+      if (!isPort(from)) return bad('portFrom', 'catalog.portInvalid');
       // Bỏ trống ô "đến" = một port duy nhất, không phải dải hở đầu kia.
       const rawTo = form.portTo.trim();
       const to = rawTo === '' ? from : Number(rawTo);
-      if (!isPort(to)) return 'catalog.portInvalid';
-      if (to < from) return 'catalog.portRangeReversed';
-      return {
+      if (!isPort(to)) return bad('portTo', 'catalog.portInvalid');
+      if (to < from) return bad('portTo', 'catalog.portRangeReversed');
+      return ok({
         name: form.name.trim(),
         protocol: form.protocol,
         portFrom: from,
         portTo: to,
         description: form.description.trim(),
-      };
+      });
     }
   }
 }

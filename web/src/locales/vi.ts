@@ -52,6 +52,8 @@ export default {
     required: 'Bắt buộc — chưa nhập ô này.',
     requiredPick: 'Bắt buộc — chưa chọn ô này.',
     summary: 'Còn {{count}} ô cần sửa trước khi lưu.',
+    minLength: 'Cần ít nhất {{min}} ký tự.',
+    email: 'Email chưa đúng dạng (vd ten@pmh.com.vn).',
     /* Mục danh mục đã vô hiệu mà hồ sơ đang trỏ tới: vẫn hiện để không mất tên, nhưng không chọn mới được (Q-14). */
     retiredOption: '(ngừng dùng)',
   },
@@ -452,9 +454,6 @@ export default {
     tabAttachments: 'Giấy tờ',
     tabPortMap: 'Port map',
     saved: 'Đã lưu hồ sơ thiết bị.',
-    /* Ba câu "cần ít nhất…" của ba form gốc trước 12/09 viết CỨNG trong component, mỗi
-       form một kiểu, và lọt qua vì chúng nằm trong `setError('…')` chứ không phải trên JSX. */
-    needMinimum: 'Cần ít nhất: mã thiết bị, tên và loại thiết bị.',
     statusChanged: 'Đã đổi trạng thái thiết bị.',
     /* Câu cũ kết bằng "Hồ sơ vẫn còn trong sổ, chỉ khóa lại." — đúng, nhưng nó trấn an về
        phần KHÔNG mất, ngay bên cạnh một ô tick thả ra BA thao tác phá không hoàn tác được.
@@ -604,7 +603,6 @@ export default {
     emptyFiltered: 'Không có hồ sơ nào khớp bộ lọc.',
     emptyFilteredHint: 'Nới bộ lọc, hoặc xóa ô tìm để xem lại toàn bộ danh sách.',
     saved: 'Đã lưu hồ sơ.',
-    needMinimum: 'Cần ít nhất: mã hồ sơ và tên hồ sơ.',
     tabProfile: 'Hồ sơ',
     tabDevices: 'Máy đang dùng',
     tabAttachments: 'Giấy tờ',
@@ -665,7 +663,6 @@ export default {
     provider: 'Nhà mạng',
     providerPlaceholder: '— Chọn nhà mạng —',
     providerHint: 'Chọn từ danh mục Nhà mạng. Nhà mạng mới thì khai vào Danh mục trước.',
-    providerInactive: 'ngừng dùng',
     bandwidth: 'Băng thông',
     wanIp: 'IP WAN',
     site: 'Site',
@@ -692,7 +689,6 @@ export default {
     emptyFiltered: 'Không có đường truyền nào khớp bộ lọc.',
     emptyFilteredHint: 'Nới bộ lọc, hoặc xóa ô tìm để xem lại toàn bộ danh sách.',
     saved: 'Đã lưu hồ sơ đường truyền.',
-    needMinimum: 'Cần ít nhất: mã đường truyền và nhà mạng.',
     tabProfile: 'Hồ sơ',
     tabAttachments: 'Giấy tờ',
     tabHistory: 'Lịch sử',
@@ -1166,6 +1162,7 @@ export default {
     kindVpn: 'Tài khoản VPN',
     login: 'Tên đăng nhập',
     loginHint: 'Email với tài khoản dùng chung, username với VPN.',
+    loginOrCodeRequired: 'Nhập tên đăng nhập, hoặc tự đặt Mã bên dưới.',
     department: 'Bộ phận',
     departmentPlaceholder: 'Chọn bộ phận hoặc gõ tên…',
     owner: 'Thuộc về',
