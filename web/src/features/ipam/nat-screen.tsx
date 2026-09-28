@@ -71,6 +71,7 @@ interface DeviceOption {
   id: string;
   code: string;
   name: string;
+  siteCode?: string | null;
 }
 
 /**
@@ -434,6 +435,21 @@ function NatForm({
   const lists = useCatalogLists();
 
   /**
+   * NET-041 (Q-14): ô Router chỉ liệt kê thiết bị thuộc loại mang cờ "Router/Firewall" — bản
+   * cũ bày mọi thiết bị, mục đầu là camera, và chọn nhầm camera làm router là dữ liệu sai mà
+   * không ai phát hiện. Tính cả loại đã ngừng dùng: một con router cũ vẫn là router.
+   *
+   * Chưa loại nào mang cờ (danh mục chưa khai) thì bày mọi thiết bị như trước, kèm lời nhắc —
+   * một ô Router rỗng trơn là người dùng kết luận kho không có router nào.
+   */
+  const routerTypeIds = useMemo(
+    () => (lists.data?.deviceTypes ?? []).filter((type) => type.isRouter).map((type) => type.id),
+    [lists.data],
+  );
+  const [allDevices, setAllDevices] = useState(false);
+  const routersOnly = !allDevices && routerTypeIds.length > 0;
+
+  /**
    * KHÔNG còn `enabled: deviceTerm.length > 0`.
    *
    * Bản cũ chỉ hỏi khi đã gõ, nên ô Router mở ra là một ô trắng với dòng nhắc "Gõ mã hoặc
@@ -442,12 +458,30 @@ function NatForm({
    * và bấm "Thêm router mới" ở đầu menu.
    */
   const devices = useQuery({
-    queryKey: ['devices', 'picker', deviceTerm],
-    queryFn: () => {
+    queryKey: ['devices', 'picker', deviceTerm, routersOnly ? routerTypeIds.join(',') : 'all'],
+    // Chờ danh mục: bắn trước khi biết loại nào là router thì ô mở ra với mọi thiết bị rồi
+    // mới co lại — đúng cảnh camera đứng đầu danh sách mà mục này dọn.
+    enabled: !lists.isPending,
+    queryFn: async () => {
       // `usable=true`: máy đã thanh lý không dựng được rule NAT (API chặn), nên không bày ra.
       const params = new URLSearchParams({ limit: '20', usable: 'true' });
       if (deviceTerm.trim()) params.set('search', deviceTerm.trim());
-      return apiFetch<{ items: DeviceOption[] }>(`/api/v1/devices?${params.toString()}`);
+      if (!routersOnly) {
+        return apiFetch<{ items: DeviceOption[] }>(`/api/v1/devices?${params.toString()}`);
+      }
+      // API lọc theo MỘT loại mỗi lượt; loại router chỉ một hai cái nên hỏi song song rồi gộp.
+      const pages = await Promise.all(
+        routerTypeIds.map((typeId) => {
+          const byType = new URLSearchParams(params);
+          byType.set('deviceTypeId', typeId);
+          return apiFetch<{ items: DeviceOption[] }>(`/api/v1/devices?${byType.toString()}`);
+        }),
+      );
+      const items = pages
+        .flatMap((page) => page.items)
+        .sort((a, b) => a.code.localeCompare(b.code))
+        .slice(0, 20);
+      return { items };
     },
   });
 
@@ -659,9 +693,17 @@ function NatForm({
             required
             hint={t('nat.routerHint')}
             span={2}
+            htmlFor="nat-router"
             error={check.error('deviceId')}
           >
+            {/* Field chỉ tự nối id/mô tả/lỗi khi nó có ĐÚNG MỘT đứa con — ở đây có thêm ô tick
+                "Hiện mọi thiết bị", nên nối tay theo đúng quy ước id của Field. */}
             <Combobox
+              id="nat-router"
+              aria-describedby={
+                check.error('deviceId') ? 'nat-router-error nat-router-hint' : 'nat-router-hint'
+              }
+              aria-invalid={check.error('deviceId') ? true : undefined}
               placeholder={t('nat.routerSearch')}
               ariaLabel={t('nat.router')}
               query={deviceTerm}
@@ -674,7 +716,8 @@ function NatForm({
               getKey={(item) => item.id}
               renderOption={(item) => (
                 <>
-                  <span className="mono">{item.code}</span> <small>{item.name}</small>
+                  <span className="mono">{item.code}</span>{' '}
+                  <small>{[item.name, item.siteCode].filter(Boolean).join(' · ')}</small>
                 </>
               )}
               onSelect={(item) => {
@@ -686,6 +729,18 @@ function NatForm({
                  chuyển màn cho một việc — và form đang dở thì mất trắng. */
               action={{ label: t('nat.addRouter'), onClick: () => setAddingRouter(true) }}
             />
+            {routerTypeIds.length > 0 ? (
+              <label className="row" style={{ gap: 'var(--space-3)' }}>
+                <input
+                  type="checkbox"
+                  checked={allDevices}
+                  onChange={(e) => setAllDevices(e.target.checked)}
+                />
+                <span className="muted">{t('nat.routerShowAll')}</span>
+              </label>
+            ) : lists.data ? (
+              <span className="field-hint muted">{t('nat.routerNoType')}</span>
+            ) : null}
           </Field>
 
           {/* Hai ô port đứng CẠNH nhau: "ngoài 8080 dẫn vào trong 80" là một câu đọc ngang,

@@ -419,6 +419,8 @@ export default {
     uHeight: 'Số U',
     hasPortMap: 'Có port map',
     hasPortMapHint: 'Loại này sẽ hiện bảng port map ở trang chi tiết thiết bị.',
+    isRouter: 'Router/Firewall',
+    isRouterHint: 'Thiết bị loại này được liệt kê trong ô Router của sổ NAT.',
     cabinetSiteRequired: 'Chọn site cho tủ này.',
     uHeightInvalid: 'Số U phải là số nguyên từ 1 đến 60.',
     portInvalid: 'Port phải là số nguyên từ 1 đến 65535.',
@@ -1169,6 +1171,9 @@ export default {
     serviceEmpty: 'Chưa có dịch vụ nào khớp. Bấm "+ Thêm dịch vụ" để khai một lần rồi dùng lại mãi.',
     routerHint: 'Router/firewall mang rule này — lấy từ kho thiết bị, chưa có thì thêm ngay trong danh sách.',
     routerSearch: 'Chọn hoặc gõ để lọc…',
+    routerShowAll: 'Hiện mọi thiết bị (không chỉ loại Router/Firewall)',
+    routerNoType:
+      'Chưa loại thiết bị nào được đánh dấu Router/Firewall nên đang hiện mọi thiết bị. Bật cờ ở Danh mục → Loại thiết bị.',
     protocol: 'Giao thức',
     /*
      * `nat.protocolBoth` ĐÃ GỠ (23/09) — nó là bản thứ hai của `catalog.protocolBoth`, và hai

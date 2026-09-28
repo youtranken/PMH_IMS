@@ -30,7 +30,7 @@ async function setUp(page: Page) {
   const catalog = (await (await page.request.get('/api/v1/catalog')).json()) as {
     deviceTypes: { id: string; name: string }[];
   };
-  const type = catalog.deviceTypes.find((t) => t.name === 'Router') ?? catalog.deviceTypes[0];
+  const type = catalog.deviceTypes.find((t) => t.name === 'Firewall') ?? catalog.deviceTypes[0];
   const device = await page.request.post('/api/v1/devices', {
     headers,
     data: { code: `RT-E2E-GO-${stamp}`, name: 'Draytek E2E', deviceTypeId: type.id },

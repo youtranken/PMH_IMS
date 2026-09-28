@@ -5158,7 +5158,12 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
      * `Field` không có `htmlFor`, còn `<label>` bọc ngoài thì bọc cả dòng gợi ý. Khoá lại
      * đúng hiện trạng — đổi câu chữ ấy là đổi tên một điều khiển.
      */
-    await expectHandles(form, 'checkbox', [/^Bỏ tick nếu rule đã tắt/], 'Hộp "Thêm rule"');
+    await expectHandles(
+      form,
+      'checkbox',
+      [/^Hiện mọi thiết bị/, /^Bỏ tick nếu rule đã tắt/],
+      'Hộp "Thêm rule"',
+    );
     await expect(form.getByRole('checkbox'), 'rule khai mới thì mặc định là ĐANG BẬT').toBeChecked();
 
     /* ----- Nhóm giao thức: đúng ba lựa chọn, TCP là mặc định ----- */
@@ -6776,7 +6781,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     {
       tab: 'Loại thiết bị',
       nutThem: 'Thêm loại thiết bị',
-      cot: ['Tên', 'Có port map', 'Mô tả', 'Trạng thái', 'Thao tác'],
+      cot: ['Tên', 'Có port map', 'Router/Firewall', 'Mô tả', 'Trạng thái', 'Thao tác'],
       nhapDuocExcel: true,
     },
     {
@@ -6938,7 +6943,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
         tieuDe: 'Thêm loại thiết bị',
         oGo: ['Tên', 'Mô tả'],
         oChon: [],
-        congTac: ['Có port map'],
+        congTac: ['Có port map', 'Router/Firewall'],
       },
       {
         tab: 'Nhà cung cấp',

@@ -24,6 +24,7 @@ type FormState = {
   description: string;
   uHeight: string;
   hasPortMap: boolean;
+  isRouter: boolean;
   supplies: string;
   phone: string;
   contact: string;
@@ -42,6 +43,7 @@ function initialState(entity: CatalogEntity, row: CatalogRow | null): FormState 
       phone: string | null;
       contact: string | null;
       hasPortMap: boolean;
+      isRouter: boolean;
       hotline: string | null;
       protocol: ServiceProtocol;
       portFrom: number;
@@ -56,6 +58,7 @@ function initialState(entity: CatalogEntity, row: CatalogRow | null): FormState 
     description: any.description ?? '',
     uHeight: any.uHeight != null ? String(any.uHeight) : '',
     hasPortMap: any.hasPortMap ?? (entity === 'device_type' ? false : false),
+    isRouter: any.isRouter ?? false,
     supplies: any.supplies ?? '',
     phone: any.phone ?? '',
     contact: any.contact ?? '',
@@ -265,6 +268,17 @@ export function CatalogForm({
                 <span className="muted">{t('catalog.hasPortMapHint')}</span>
               </label>
             </Field>
+            <Field label={t('catalog.isRouter')} htmlFor="catalog-router">
+              <label className="row" style={{ gap: 'var(--space-3)' }}>
+                <input
+                  id="catalog-router"
+                  type="checkbox"
+                  checked={form.isRouter}
+                  onChange={(e) => set('isRouter', e.target.checked)}
+                />
+                <span className="muted">{t('catalog.isRouterHint')}</span>
+              </label>
+            </Field>
             <Field label={t('catalog.description')} htmlFor="catalog-description">
               <input
                 id="catalog-description"
@@ -463,6 +477,7 @@ function buildBody(entity: CatalogEntity, form: FormState): Built {
       return ok({
         name: form.name.trim(),
         hasPortMap: form.hasPortMap,
+        isRouter: form.isRouter,
         description: form.description.trim(),
       });
     case 'vendor':

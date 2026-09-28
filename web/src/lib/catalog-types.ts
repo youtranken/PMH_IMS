@@ -40,6 +40,8 @@ export interface DeviceTypeRow {
   id: string;
   name: string;
   hasPortMap: boolean;
+  /** Loại router/tường lửa — ô Router của sổ NAT chỉ liệt kê thiết bị thuộc loại mang cờ này. */
+  isRouter: boolean;
   description: string | null;
   active: boolean;
 }

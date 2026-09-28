@@ -148,6 +148,15 @@ const ENTITY_COLUMNS: Record<CatalogEntity, (t: TFunction) => ColumnDef<CatalogR
       ),
     },
     {
+      accessorKey: 'isRouter',
+      header: t('catalog.isRouter'),
+      cell: ({ row }) => (
+        <span className={`badge ${(row.original as DeviceTypeRow).isRouter ? 'ok' : 'muted'}`}>
+          {t((row.original as DeviceTypeRow).isRouter ? 'common.yes' : 'common.no')}
+        </span>
+      ),
+    },
+    {
       accessorKey: 'description',
       header: t('catalog.description'),
       cell: ({ row }) => note((row.original as DeviceTypeRow).description),
