@@ -1,4 +1,5 @@
 import {
+  bigint,
   boolean,
   date,
   integer,
@@ -24,6 +25,9 @@ export const renewalHistoryTable = pgTable('renewal_history', {
   newEnd: date('new_end').notNull(),
   actor: text('actor').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  /** Hợp đồng + chi phí của RIÊNG lượt gia hạn này (0180, Q-15). Null = chưa khai, khác 0 ₫. */
+  contract: text('contract'),
+  cost: bigint('cost', { mode: 'number' }),
 });
 
 /**

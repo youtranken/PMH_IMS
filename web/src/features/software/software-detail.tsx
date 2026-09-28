@@ -30,6 +30,7 @@ import { useToast } from "@/ui/toast";
 import { LicenseAssignmentsPanel } from "./license-assignments-panel";
 import type { SeatRow } from "./seat-table";
 import { SoftwareForm } from "./software-form";
+import { SoftwareRenewals } from "./software-renewals";
 import { softwareHistoryGroup, toSoftwareHistory } from "./software-history-entries";
 import {
   KIND_KEY,
@@ -402,6 +403,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
                 </button>
               ))}
             </div>
+            {historyGroup === "renew" ? <SoftwareRenewals softwareId={item.id} /> : null}
             <HistoryPanel
               entries={toSoftwareHistory(
                 (history.data ?? []).filter(
@@ -450,6 +452,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
           row={{ kind: item.kind, id: item.id, code: item.code, label: item.name, end: item.endDate }}
           kindLabel={t(KIND_KEY[item.kind])}
           url={`/api/v1/software/${item.id}/renew`}
+          withTerms
           seatEnds={seatEnds}
           attachTo={{ ownerType: "software", ownerId: item.id }}
           csrfToken={me.csrfToken}

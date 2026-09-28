@@ -378,6 +378,7 @@ export function SoftwareScreen({ me }: { me: Me }) {
           }}
           kindLabel={t(KIND_KEY[renewing.kind])}
           url={`/api/v1/software/${renewing.id}/renew`}
+          withTerms
           csrfToken={me.csrfToken}
           onClose={() => setRenewing(null)}
           onDone={() => {

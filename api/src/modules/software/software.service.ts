@@ -25,6 +25,7 @@ import {
   autoRetireOn,
   effectiveSoftwareStatus,
   seatConflicts,
+  validateAssignmentTerms,
   validateSoftware,
   type LicenseModel,
   type SoftwareInputShape,
@@ -199,6 +200,12 @@ export class SoftwareService {
     return rows as SoftwareHistoryRecord[];
   }
 
+  /** Sổ gia hạn của một hồ sơ (hạn cũ → mới, hợp đồng, chi phí) — `expiry` là chủ bảng (AD-3). */
+  async renewals(id: string) {
+    const row = await this.requireRow(id);
+    return this.expiry.historyFor(row.kind, id);
+  }
+
   /** Mọi hồ sơ có hạn nằm trong [from, to] — cỗ máy expiry (story 3.4) hỏi qua api. */
   async findExpiringBetween(from: string, to: string): Promise<SoftwareListItem[]> {
     const rows = await this.db
@@ -349,7 +356,16 @@ export class SoftwareService {
     id: string,
     newEnd: string,
     withinSeats?: (tx: Tx) => Promise<number>,
+    /** Hợp đồng + chi phí của RIÊNG lượt này — vào sổ gia hạn, không vào hồ sơ (Q-15). */
+    terms: { contract?: string | null; cost?: number | null } = {},
   ): Promise<SoftwareRecord & { seatsRenewed: number }> {
+    const contract = terms.contract?.trim() || null;
+    const cost = terms.cost ?? null;
+    // Cùng luật tiền với chi phí ghế: bigint quá 2^53 thì JS đọc ra số khác mà không báo lỗi.
+    const termErrors = validateAssignmentTerms({ cost, contract, startDate: null, endDate: null });
+    if (termErrors.length > 0) {
+      throw new BadRequestException({ code: 'SOFTWARE_INVALID', message: termErrors.join(' ') });
+    }
     const before = await this.requireRow(id);
     // Gia hạn đặt lại `status = active`; cho qua ở đây là hồi sinh một hồ sơ người đã chủ ý
     // thanh lý. `requireUnchangedWithin` bên dưới giữ cho ảnh chụp này còn đúng lúc ghi.
@@ -381,8 +397,12 @@ export class SoftwareService {
       // lượt gia hạn cùng lúc thì lượt sau kéo hạn LÙI về và ghi sai hạn cũ vào sổ.
       await this.requireUnchangedWithin(tx, before);
       const updated = await this.updateWithin(tx, id, { endDate: newEnd, status: 'active' });
+      // Hợp đồng/chi phí đi kèm dạng bối cảnh (before = after): tab Lịch sử đọc ra "gia hạn tới
+      // X · hợp đồng HD-… · chi phí …" mà không giả vờ là hồ sơ có hai trường đó.
       await this.recordWithin(tx, actor, id, 'renewed', {
         endDate: { before: before.endDate, after: newEnd },
+        ...(contract !== null ? { contract: { before: contract, after: contract } } : {}),
+        ...(cost !== null ? { cost: { before: cost, after: cost } } : {}),
       });
       /*
        * Sổ gia hạn dùng chung ghi Ở ĐÂY, trong chính transaction này (AC 3.4, rà soát 07/09 #7).
@@ -401,6 +421,8 @@ export class SoftwareService {
         oldEnd: before.endDate,
         newEnd,
         actor,
+        contract,
+        cost,
       });
       const seatsRenewed = withinSeats ? await withinSeats(tx) : 0;
       return { ...updated, seatsRenewed };

@@ -238,15 +238,20 @@ export class ExpiryService {
       oldEnd: string | null;
       newEnd: string;
       actor: string;
+      /** Hợp đồng + chi phí của riêng lượt này (Q-15). Bỏ trống = chưa khai. */
+      contract?: string | null;
+      cost?: number | null;
     },
   ): Promise<void> {
-    await tx.insert(renewalHistoryTable).values(entry);
+    const contract = entry.contract?.trim() || null;
+    const cost = entry.cost ?? null;
+    await tx.insert(renewalHistoryTable).values({ ...entry, contract, cost });
     await this.audit.appendWithin(tx, {
       actor: entry.actor,
       action: 'expiry.renewed',
       objectType: entry.objectKind,
       objectId: entry.objectId,
-      detail: { oldEnd: entry.oldEnd, newEnd: entry.newEnd },
+      detail: { oldEnd: entry.oldEnd, newEnd: entry.newEnd, contract, cost },
     });
   }
 

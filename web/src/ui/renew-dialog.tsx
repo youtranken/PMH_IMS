@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { daysUntil } from '@/lib/expiry';
 import { formatDate, todayIso } from '@/lib/format';
+import { formatMoneyInput, parseMoneyInput } from '@/lib/money-input';
 import { renewMinDate, renewPreset } from '@/lib/renew-dates';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import type { AttachmentOwnerType } from '@/ui/attachment-panel';
@@ -41,6 +42,7 @@ export function RenewDialog({
   csrfToken,
   url,
   seatEnds,
+  withTerms,
   attachTo,
   onClose,
   onDone,
@@ -55,6 +57,12 @@ export function RenewDialog({
    * `seats: true` lên endpoint của module chủ (`url`).
    */
   seatEnds?: string[];
+  /**
+   * Hiện hai ô tuỳ chọn "Số hợp đồng" + "Chi phí kỳ mới" và gửi `contract`/`cost` lên endpoint
+   * của module chủ (`url`) — nó ghi vào sổ gia hạn của RIÊNG lượt này (Q-15). Chỉ bật cho cửa
+   * có `url` nhận hai trường đó; `POST /expiry/renew` không nhận.
+   */
+  withTerms?: boolean;
   /** Hồ sơ nhận hoá đơn/hợp đồng gia hạn đính kèm — tải lên sau khi gia hạn xong. */
   attachTo?: { ownerType: AttachmentOwnerType; ownerId: string };
   onClose: () => void;
@@ -67,6 +75,11 @@ export function RenewDialog({
   const [endDate, setEndDate] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [withSeats, setWithSeats] = useState(true);
+  const showTerms = !!url && !!withTerms;
+  const [contract, setContract] = useState('');
+  // Chi phí giữ dạng CHUỖI lúc gõ: ô trống (chưa khai) phải khác được với 0 ₫.
+  const [cost, setCost] = useState('');
+  const money = parseMoneyInput(cost);
   const draft = useAttachmentDraft();
   const [uploading, setUploading] = useState(false);
   /* Ghế nào sẽ bị bỏ lại: hạn riêng TRƯỚC hạn mới (chưa chọn hạn mới thì trước hạn hiện tại
@@ -78,6 +91,7 @@ export function RenewDialog({
     endDate: !endDate
       ? t('expiry.pickDate')
       : endDate < min && t('expiry.renewTooEarly', { date: formatDate(min) }),
+    cost: showTerms && money.reason === 'invalid' && t('license.costInvalid'),
   });
   const renew = useApiMutation<Record<string, unknown>, { seatsRenewed?: number } | undefined>(
     url ?? '/api/v1/expiry/renew',
@@ -124,8 +138,14 @@ export function RenewDialog({
           setError(null);
           if (!check.check()) return;
           const seats = staleSeats > 0 && withSeats;
+          const terms = showTerms
+            ? {
+                ...(contract.trim() ? { contract: contract.trim() } : {}),
+                ...(money.value !== null ? { cost: money.value } : {}),
+              }
+            : {};
           const body = url
-            ? { endDate, ...(seats ? { seats: true } : {}) }
+            ? { endDate, ...(seats ? { seats: true } : {}), ...terms }
             : { kind: row.kind, id: row.id, endDate };
           renew.mutate(body, {
             onSuccess: async (result) => {
@@ -213,6 +233,45 @@ export function RenewDialog({
             />
             <span>{t('expiry.renewSeats', { count: staleSeats })}</span>
           </label>
+        ) : null}
+
+        {showTerms ? (
+          <>
+            <Field
+              label={t('expiry.renewContract')}
+              hint={t('expiry.renewContractHint')}
+              htmlFor="renew-contract"
+            >
+              <input
+                id="renew-contract"
+                className="inp"
+                maxLength={200}
+                value={contract}
+                onChange={(e) => setContract(e.target.value)}
+              />
+            </Field>
+            <Field
+              label={t('expiry.renewCost')}
+              hint={t('license.costHint')}
+              htmlFor="renew-cost"
+              error={check.error('cost')}
+            >
+              {/* Ô chữ, không `type="number"`: phải nhận "5.600.000" hay "5,6tr" như chép từ
+                  hoá đơn (`lib/money-input`). */}
+              <input
+                id="renew-cost"
+                className="inp"
+                inputMode="decimal"
+                value={cost}
+                onChange={(e) => setCost(e.target.value)}
+                onBlur={() => {
+                  if (money.reason === null && money.value !== null) {
+                    setCost(formatMoneyInput(money.value));
+                  }
+                }}
+              />
+            </Field>
+          </>
         ) : null}
 
         {attachTo ? <AttachmentDraftSection draft={draft} disabled={renew.isPending || uploading} /> : null}

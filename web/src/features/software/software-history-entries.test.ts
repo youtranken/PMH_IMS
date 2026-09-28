@@ -33,6 +33,22 @@ describe('toSoftwareHistory — tab Lịch sử hồ sơ phần mềm phải đ�
     expect(entry.detail).toBe('ngày hết hạn: 2026-08-30 → 2027-08-30');
   });
 
+  it('gia hạn kèm hợp đồng + chi phí đọc ra như bối cảnh, không như "đổi từ … sang …"', () => {
+    const [entry] = toSoftwareHistory([
+      row({
+        action: 'renewed',
+        changes: {
+          endDate: { before: '2026-08-30', after: '2027-08-30' },
+          contract: { before: 'HD-27', after: 'HD-27' },
+          cost: { before: 5_600_000, after: 5_600_000 },
+        },
+      }),
+    ], t);
+    expect(entry.detail).toContain('hợp đồng HD-27');
+    expect(entry.detail).toContain('chi phí 5.600.000 ₫');
+    expect(entry.detail).not.toContain('HD-27 →');
+  });
+
   it('loại và trạng thái hiện nhãn tiếng Việt, không phải mã máy', () => {
     const [entry] = toSoftwareHistory([
       row({ changes: { kind: { before: 'license', after: 'ssl' }, status: { before: 'active', after: 'retired' } } }),

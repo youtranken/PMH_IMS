@@ -93,6 +93,13 @@ class RenewDto {
 
   /** SW-049: kéo luôn các ghế có kỳ hạn riêng kết thúc trước hạn mới. */
   @IsOptional() @IsBoolean() seats?: boolean;
+
+  /** Hợp đồng của RIÊNG lượt gia hạn này — ghi vào sổ gia hạn, không vào hồ sơ (Q-15). */
+  @IsOptional() @IsString() @Length(0, 200) contract?: string;
+
+  /** Tiền đồng, số nguyên; `null`/bỏ trống = chưa khai. Service kiểm trần 2^53. */
+  @IsOptional() @ValidateIf((_o, value) => value !== null) @Min(0) @IsInt()
+  cost?: number | null;
 }
 
 /**
@@ -339,7 +346,15 @@ export class SoftwareController {
       body.seats
         ? (tx) => this.assignments.renewSeatsWithin(tx, who, params.id, body.endDate)
         : undefined,
+      { contract: body.contract, cost: body.cost },
     );
+  }
+
+  /** Sổ gia hạn của hồ sơ: từng lượt với hạn cũ → mới, hợp đồng, chi phí (Q-15). */
+  @Roles('sa', 'admin', 'member')
+  @Get(':id/renewals')
+  renewals(@Param() params: IdParamDto) {
+    return this.software.renewals(params.id);
   }
 
   // ───────────── Gán license vào máy (story 3.2, FR-011) ─────────────

@@ -12,7 +12,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 const ROW = { kind: 'license', id: 'sw1', code: 'LIC-01', label: 'Office', end: '2099-12-31' };
 
-function renderDialog(seatEnds: string[] | undefined) {
+function renderDialog(seatEnds: string[] | undefined, withTerms = false) {
   const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
     Promise.resolve(jsonResponse(201, { seatsRenewed: 1 })),
   );
@@ -26,6 +26,7 @@ function renderDialog(seatEnds: string[] | undefined) {
         csrfToken="t"
         url="/api/v1/software/sw1/renew"
         seatEnds={seatEnds}
+        withTerms={withTerms}
         onClose={vi.fn()}
         onDone={onDone}
       />
@@ -63,5 +64,44 @@ describe('RenewDialog — ghế có kỳ hạn riêng', () => {
   it('không truyền seatEnds → không có ô ghế', () => {
     renderDialog(undefined);
     expect(screen.queryByRole('checkbox', { name: /ghế/ })).toBeNull();
+  });
+});
+
+describe('RenewDialog — hợp đồng + chi phí của lượt gia hạn (Q-15)', () => {
+  it('gửi số hợp đồng + chi phí đã đọc thành số đồng', async () => {
+    const { fetchMock, onDone } = renderDialog(undefined, true);
+    await userEvent.click(screen.getByRole('button', { name: '+1 năm' }));
+    await userEvent.type(screen.getByLabelText('Số hợp đồng'), ' HD-2027-01 ');
+    await userEvent.type(screen.getByLabelText('Chi phí kỳ mới'), '12,5tr');
+    await userEvent.click(screen.getByRole('button', { name: 'Gia hạn' }));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(sentBody(fetchMock)).toEqual({
+      endDate: '2100-12-31',
+      contract: 'HD-2027-01',
+      cost: 12_500_000,
+    });
+  });
+
+  it('bỏ trống hai ô thì không gửi gì thêm', async () => {
+    const { fetchMock, onDone } = renderDialog(undefined, true);
+    await userEvent.click(screen.getByRole('button', { name: '+1 năm' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Gia hạn' }));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(sentBody(fetchMock)).toEqual({ endDate: '2100-12-31' });
+  });
+
+  it('chi phí không đọc được → báo lỗi dưới ô, không gửi', async () => {
+    const { fetchMock } = renderDialog(undefined, true);
+    await userEvent.click(screen.getByRole('button', { name: '+1 năm' }));
+    await userEvent.type(screen.getByLabelText('Chi phí kỳ mới'), 'năm triệu');
+    await userEvent.click(screen.getByRole('button', { name: 'Gia hạn' }));
+    expect(await screen.findByText(/Chi phí chưa đọc được/)).toBeInTheDocument();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('không bật withTerms (màn Sắp hết hạn) → không có hai ô', () => {
+    renderDialog(undefined);
+    expect(screen.queryByLabelText('Số hợp đồng')).toBeNull();
+    expect(screen.queryByLabelText('Chi phí kỳ mới')).toBeNull();
   });
 });

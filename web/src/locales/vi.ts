@@ -881,6 +881,15 @@ export default {
     historyRenew: 'Hạn',
     historySeat: 'Ghế',
     historyProfile: 'Hồ sơ',
+    /* Sổ gia hạn (chip Hạn của tab Lịch sử) — hợp đồng + chi phí từng lượt (Q-15). */
+    renewalsTitle: 'Sổ gia hạn',
+    renewalsEmpty: 'Hồ sơ này chưa gia hạn lần nào.',
+    renewalAt: 'Gia hạn lúc',
+    renewalPeriod: 'Hạn cũ → hạn mới',
+    renewalContract: 'Số hợp đồng',
+    renewalCost: 'Chi phí',
+    renewalActor: 'Người gia hạn',
+    renewalNoContract: 'Chưa ghi hợp đồng',
     seatsFull: 'Hết ghế',
     seatsOver: '+{{count}} vượt',
     /* Băng đầu trang hồ sơ Thanh lý + hộp Khôi phục (Q-13: bên trong là Sửa hồ sơ). */
@@ -1086,6 +1095,10 @@ export default {
     /* Ghế có kỳ hạn riêng không tự theo hồ sơ — không kéo theo thì license đã gia hạn mà
        ghế vẫn hiện Quá hạn. */
     renewSeats: 'Cập nhật luôn {{count}} ghế có kỳ hạn riêng tới hạn mới',
+    /* Hợp đồng + chi phí của RIÊNG lượt gia hạn — ghi vào sổ gia hạn (Q-15). */
+    renewContract: 'Số hợp đồng',
+    renewContractHint: 'Hợp đồng của lần gia hạn này — để trống nếu chưa có.',
+    renewCost: 'Chi phí kỳ mới',
     currentEnd: 'Hạn hiện tại',
     renewMinHint: 'Hạn mới phải từ {{date}} trở đi — sau hạn hiện tại và sau hôm nay.',
     renewTooEarly: 'Hạn mới phải từ {{date}} trở đi.',
