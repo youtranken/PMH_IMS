@@ -1764,7 +1764,7 @@ export default {
     clearKinds: 'Bỏ lọc',
     summary: '{{owners}} hồ sơ đang giữ két · tổng {{secrets}} ngăn.',
     empty: 'Chưa có hồ sơ nào cất mật khẩu',
-    /* Đường NGẮN NHẤT nằm ngay trên màn này: bấm "Mở két" của một hồ sơ rồi "Cất secret"
+    /* Đường NGẮN NHẤT nằm ngay trên màn này: bấm "Mở két" của một hồ sơ rồi "Cất mật khẩu/khóa"
        trong popup. Câu cũ chỉ người dùng đi vòng qua trang thiết bị để làm đúng cái việc mà
        cái popup họ vừa đóng đã làm được. */
     emptyHint: 'Bấm "Mở két" ở một hồ sơ rồi chọn "Cất mật khẩu/khóa" — hoặc vào tab "Két sắt" của chính hồ sơ đó.',
