@@ -150,6 +150,11 @@
     --auth-bg:linear-gradient(135deg,#16231b 0%,#0e3a2a 45%,#1f2a1c 100%);
     --auth-card:rgba(255,255,255,.06); --auth-card-border:rgba(255,255,255,.14);
     --auth-ink:#eaf3ee; --auth-ink-2:#9fb0a5;
+    /* Card đăng nhập LUÔN tối ở cả hai theme, nên lỗi/gợi ý trên nó không được dùng
+       --danger/--muted (đổi theo theme): ở theme sáng chúng thành mảng hồng chói và chữ xám
+       ~2:1 trên nền kính tối. Chữ đỏ nhạt đạt ~6:1 trên card; cặp dark ở dưới giữ nguyên giá trị. */
+    --auth-danger-bg:rgba(239,111,99,.18); --auth-danger-border:rgba(239,111,99,.45);
+    --auth-danger-ink:#ffb4ab; --auth-hint:#9fb0a5;
 }
 
 /* Dark mode — chỉ override token, các component dùng var() tự đổi theo. */
@@ -205,6 +210,8 @@ html[data-theme='dark'] {
     --border-ok:#1d4a3a; --border-warn:#4a3a1c; --border-danger:#4d2b27;
     --border-critical:#4d2b27; --warn-hi:#3a3418;
     --auth-card:rgba(255,255,255,.05); --auth-card-border:rgba(255,255,255,.1);
+    --auth-danger-bg:rgba(239,111,99,.18); --auth-danger-border:rgba(239,111,99,.45);
+    --auth-danger-ink:#ffb4ab; --auth-hint:#9fb0a5;
 }
 
 * {
