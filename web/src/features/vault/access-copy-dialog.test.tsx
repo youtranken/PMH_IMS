@@ -48,6 +48,7 @@ function renderAt(entry: string) {
         posts.push(JSON.parse(String(init.body)) as Record<string, unknown>);
         return Promise.resolve(jsonResponse(201, { id: 'new' }));
       }
+      if (url.includes('/vault/access/people')) return Promise.resolve(jsonResponse(200, ACCOUNTS));
       if (url.includes('/vault/access/scopes')) return Promise.resolve(jsonResponse(200, SCOPES));
       if (url.includes('/vault/access')) return Promise.resolve(jsonResponse(200, RULES));
       return Promise.resolve(jsonResponse(200, { items: ACCOUNTS, total: ACCOUNTS.length }));
