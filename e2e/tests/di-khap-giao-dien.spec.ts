@@ -1239,7 +1239,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
       await hopTuChoi.getByText(/E2E xin xem switch [AB] /).innerText()
     ).trim();
     const lyDoDuocDuyet = lyDoBiTuChoi === lyDoA ? lyDoB : lyDoA;
-    await hopTuChoi.getByRole('textbox', { name: 'Ghi chú cho người xin' }).fill('E2E: chưa cần');
+    await hopTuChoi.getByRole('textbox', { name: 'Lý do từ chối' }).fill('E2E: chưa cần');
     await hopTuChoi.getByRole('button', { name: 'Từ chối', exact: true }).click();
     await expect(page.getByText('Đã từ chối.')).toBeVisible();
     /*
@@ -8104,13 +8104,17 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     ).toBeVisible();
     await expect(panel.getByText(E2E_MEMBER.email), 'phiếu phải nói rõ AI xin').toBeVisible();
     await expect(
-      panel.getByText('Đối tượng', { exact: true }),
-      'phiếu phải nói xin quyền trên ĐỐI TƯỢNG nào',
+      panel.getByRole('link', { name: new RegExp(`^${deviceCode} · `) }),
+      'phiếu phải nói xin quyền trên ĐỐI TƯỢNG nào — bằng mã + tên, bấm sang được hồ sơ',
+    ).toHaveAttribute('href', `/devices/${deviceId}`);
+    await expect(
+      panel.getByText('Thiết bị', { exact: true }),
+      'kèm loại đối tượng',
     ).toBeVisible();
     await expect(
-      panel.getByText(/^Thiết bị · [0-9a-f]{8}$/),
-      'ô đối tượng phải nói loại + mã rút gọn, không phải một UUID trần',
-    ).toBeVisible();
+      panel.getByText(/[0-9a-f]{8}-[0-9a-f]{4}/),
+      'không còn in UUID ra thẻ phiếu',
+    ).toHaveCount(0);
     await expect(panel.getByText('Xin', { exact: true }), 'phiếu phải nói xin BAO LÂU').toBeVisible();
     await expect(panel.getByText('4 giờ', { exact: true })).toBeVisible();
 
@@ -8685,7 +8689,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       await textboxLabels(deny),
       'hộp Từ chối chỉ có ô ghi chú. Ô "cấp bao lâu" ở đây là vô nghĩa — và một ô thừa cạnh ' +
         'một nút màu đỏ là một cú bấm nhầm đang chờ sẵn',
-    ).toEqual(['Ghi chú cho người xin']);
+    ).toEqual(['Lý do từ chối']);
     expect(
       await deny.getByTestId('dialog-footer').getByRole('button').allTextContents(),
       'chân hộp Từ chối: Hủy rồi mới tới Từ chối',

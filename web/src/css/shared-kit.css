@@ -499,32 +499,33 @@
 }
 
 /*
- * Lưới khối ĐANG CÓ VIỆC — xếp theo CỘT, không theo hàng (sửa 17/09/2026).
+ * Khối ĐANG CÓ VIỆC — HAI LÀN CỐ ĐỊNH, không phải lưới theo hàng.
  *
- * Bản cũ để `grid` với `auto-fit, minmax(280px, 1fr)`. Hai chuyện cùng lúc: trên màn 24in nó
- * chia ra SÁU cột nên cả sáu khối nằm một hàng ngang; và vì là grid nên mọi ô trên một hàng
- * phải bắt đầu ở cùng một mốc — khối "Sắp hết hạn" 8 dòng cao vống lên, khối bên cạnh một
- * dòng, và phần chênh nhau là khoảng trắng chết. Đó là chỗ 65% chiều cao màn hình đi mất.
- *
- * Bản này giữ `grid` nhưng chặn cả hai đầu:
- *   · sàn bề rộng cột = MỘT PHẦN BA khung → không bao giờ quá ba cột, dù màn rộng bao nhiêu;
- *   · `auto-fit` → cột nào KHÔNG có thẻ thì co về 0 và nhường chỗ, nên hai khối trên màn 24in
- *     dàn ra nửa-nửa chứ không nằm nép sang trái chừa một cột chết.
- * Đã thử `columns` (multi-column): hết hàng, hết lệch chiều cao, nhưng cột rỗng vẫn chiếm chỗ
- * vì multi-column chia đều bề ngang trước rồi mới rót nội dung vào.
- *
- * `align-items: start` để thẻ thấp KHÔNG bị kéo cao bằng thẻ cạnh nó.
+ * Lưới căn theo hàng thì với từ bốn khối trở lên, khối thứ tư rơi xuống dưới đáy khối cao nhất
+ * của hàng trên và cột bên cạnh bỏ trống hàng trăm pixel. Hai làn thì không phụ thuộc hàng:
+ * làn chính 2 phần cho danh sách dài ("Sắp hết hạn"), làn phụ 1 phần xếp chồng các khối nhỏ.
+ * `single` khi chỉ còn một làn có khối — không chừa một cột chết. ≤900px: một cột, làn chính
+ * trước (khớp mốc drawer của shell).
  */
-.dashboard {
+.dash-lanes {
   display: grid;
-  /* `min(100%, …)` là cái chốt cho điện thoại: sàn 22rem mà không chặn thì ở màn hẹp hơn 22rem
-     cột rộng hơn khung và cả trang trôi ngang (UX-DR2 đo đúng chỗ này ở 390px). */
-  grid-template-columns: repeat(
-    auto-fit,
-    minmax(min(100%, max(22rem, (100% - var(--space-4) * 2) / 3)), 1fr)
-  );
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: var(--space-4);
   align-items: start;
+}
+.dash-lanes.single {
+  grid-template-columns: minmax(0, 1fr);
+}
+.dash-lane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+@media (max-width: 900px) {
+  .dash-lanes {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 .dash-card {
   display: flex;
@@ -623,6 +624,102 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--ink-3);
+}
+/* Dòng đối tượng NGAY dưới tên người xin: thứ người duyệt cần để đánh giá rủi ro, nên nó to
+   hơn và đứng trước lý do. */
+.approval-subject {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  font-weight: var(--fw-semibold);
+  overflow-wrap: anywhere;
+}
+
+/* --- Trang chi tiết một phiếu (features/vault/approval-detail-screen.tsx) ---
+ * Mục tiêu: 390×844 đọc hết và quyết mà không cuộn. Khối gọn, chữ lý do 16px (thứ phải đọc
+ * kỹ nhất), thanh quyết định dính đáy.
+ * -------------------------------------------------------------------------- */
+.approval-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  max-width: 44rem;
+}
+.approval-detail .card {
+  padding: var(--space-6) var(--space-7);
+}
+.approval-detail-label {
+  margin: 0 0 var(--space-2);
+  font-size: var(--fs-2xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.approval-detail .approval-reason {
+  margin: 0;
+  font-size: var(--fs-md);
+}
+
+/* --- Thanh quyết định dính đáy (ui/sticky-action-bar.tsx) ------------------
+ * Dính đáy khung cuộn, đệm vùng an toàn của iPhone. Nút cao 48px; nút chính rộng hơn (~60%).
+ * -------------------------------------------------------------------------- */
+.sticky-action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: var(--z-sticky);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding: var(--space-5) var(--space-5) calc(var(--space-5) + env(safe-area-inset-bottom));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+}
+.sticky-action-note {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--ink-2);
+}
+.sticky-action-buttons {
+  display: flex;
+  gap: var(--space-4);
+}
+.sticky-action-buttons > .btn {
+  flex: 2 1 0;
+  min-height: 48px;
+  justify-content: center;
+}
+.sticky-action-buttons > .btn.primary {
+  flex: 3 1 0;
+}
+@media (max-width: 680px) {
+  /* Điện thoại: tràn sát hai mép như thanh công cụ, không phải một thẻ lơ lửng. */
+  .sticky-action-bar {
+    margin-inline: calc(-1 * var(--space-7));
+    border-radius: 0;
+    border-width: 1px 0 0;
+  }
+}
+
+/* --- "Cần bạn duyệt" ở đầu bảng điều khiển -------------------------------- */
+.dash-needs-you {
+  background: var(--warn-soft);
+  border-left: 4px solid var(--warn);
+  margin-bottom: var(--space-7);
+}
+.dash-needs-you .dash-list > li {
+  gap: var(--space-2);
+}
+.dash-needs-you .approval-reason {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 /* Lý do nút đang xám, bản hiện bằng chữ (ui/disabled-reason.tsx). Trong chân hộp thoại nó

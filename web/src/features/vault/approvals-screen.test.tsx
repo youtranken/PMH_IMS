@@ -11,8 +11,11 @@ function row(id: string, requester: string) {
     kind: 'break_glass',
     state: 'pending',
     requester,
+    requesterName: requester,
     subjectType: 'device',
     subjectId: `${id}-0000-4000-8000-000000000001`,
+    subjectLabel: `SW-E2E-${id} · Switch · HCM`,
+    secretCount: 1,
     reason: `Lý do của ${requester}`,
     payload: { hours: 4 },
     decidedBy: null,
@@ -26,13 +29,8 @@ function row(id: string, requester: string) {
 
 const ME = { role: 'sa', csrfToken: 't', email: 'sa@pmh.com.vn' } as unknown as Me;
 
-function renderAt(entry: string) {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(() =>
-      Promise.resolve(jsonResponse(200, [row('a1', 'an@pmh.com.vn'), row('b2', 'binh@pmh.com.vn')])),
-    ),
-  );
+function renderAt(entry: string, rows = [row('a1', 'an@pmh.com.vn'), row('b2', 'binh@pmh.com.vn')]) {
+  vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(jsonResponse(200, rows))));
   return renderWithI18n(
     <MemoryRouter initialEntries={[entry]}>
       <ToastProvider>
@@ -67,5 +65,27 @@ describe('Màn Duyệt yêu cầu mở từ thư', () => {
     renderAt('/approvals');
     await screen.findByText('an@pmh.com.vn');
     expect(screen.queryByRole('region', { current: true })).toBeNull();
+  });
+});
+
+/** VLT-003 + bốn mắt: thẻ nói máy nào, và phiếu của chính mình không bày nút Duyệt. */
+describe('Thẻ phiếu chờ duyệt', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('đối tượng là link tới hồ sơ, thẻ có đường sang trang chi tiết', async () => {
+    renderAt('/approvals');
+    const link = await screen.findByRole('link', { name: 'SW-E2E-a1 · Switch · HCM' });
+    expect(link.getAttribute('href')).toMatch(/^\/devices\/a1-/);
+    expect(screen.getAllByRole('link', { name: 'Xem chi tiết' })[0]).toHaveAttribute(
+      'href',
+      '/approvals/a1',
+    );
+  });
+
+  it('phiếu của chính mình: "Cần người khác duyệt", không có Duyệt/Từ chối', async () => {
+    renderAt('/approvals', [row('a1', 'sa@pmh.com.vn')]);
+    expect(await screen.findByText('Cần người khác duyệt')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Duyệt' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Từ chối' })).not.toBeInTheDocument();
   });
 });
