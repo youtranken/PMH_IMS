@@ -10,6 +10,10 @@ import { useTranslation } from 'react-i18next';
  *
  * KHÔNG dùng cho giá trị secret: két sắt cố ý không có nút chép (clipboard sống qua cả phiên
  * đăng nhập, dán nhầm vào ô chat là mất luôn) — xem chú thích ở `reveal-dialog.tsx`.
+ *
+ * Ngoại lệ duy nhất: khoá cài 2 lớp ở `features/auth/totp-setup.tsx`. Trên điện thoại, chép rồi
+ * dán vào ứng dụng xác thực là CÁCH cài đặt (không quét được QR trên chính màn hình mình), và
+ * khoá đó đang hiện nguyên văn ngay cạnh nút — chép không lộ thêm gì.
  */
 export function CopyButton({ value, label }: { value: string; label?: string }) {
   const { t } = useTranslation();

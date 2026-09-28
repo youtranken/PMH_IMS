@@ -1,34 +1,15 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { useApiMutation } from '@/lib/api';
+import { NavLink, useLocation } from 'react-router-dom';
 import { type Me } from '@/lib/me';
-import { afterLogout } from '@/lib/after-logout';
 import { ErrorBoundary } from '@/ui/error-boundary';
 import { visibleGroups } from '@/shell/app-nav';
 import { NavIcon } from '@/ui/nav-icon';
 import { CommandPalette, openCommandPalette } from '@/ui/command-palette';
 import { ThemeSwitch } from '@/ui/switches';
 import { useFocusTrap } from '@/ui/focus-trap';
-import { useToast } from '@/ui/toast';
-
-/**
- * Ngưỡng "màn hẹp" — PHẢI khớp `@media (max-width: 900px)` trong css/shell.css. Lệch một
- * pixel là có vùng viewport mà JS nghĩ rộng còn CSS nghĩ hẹp (hoặc ngược lại).
- */
-const NARROW_QUERY = '(max-width: 900px)';
-
-function useIsNarrow(): boolean {
-  const [narrow, setNarrow] = useState(() => window.matchMedia(NARROW_QUERY).matches);
-  useEffect(() => {
-    const mq = window.matchMedia(NARROW_QUERY);
-    const onChange = () => setNarrow(mq.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
-  return narrow;
-}
+import { useIsNarrow } from '@/ui/use-narrow';
+import { AccountMenu } from '@/shell/account-menu';
 
 /**
  * Khung ứng dụng dùng chung (AD-15/UX-DR1): sidebar + topbar. Mọi màn nghiệp vụ
@@ -41,7 +22,6 @@ function useIsNarrow(): boolean {
  */
 export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
   const { t } = useTranslation();
-  const navigate = useNavigate();
   const groups = visibleGroups(me);
   const narrow = useIsNarrow();
   const { pathname } = useLocation();
@@ -69,12 +49,6 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [drawerOpen]);
-
-  const queryClient = useQueryClient();
-  const toast = useToast();
-  const logout = useApiMutation<undefined, { status: string }>('/api/v1/auth/logout', {
-    csrfToken: me.csrfToken,
-  });
 
   return (
     <div className="ims shell-root">
@@ -160,34 +134,11 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
           ))}
 
           <div className="sb-foot">
-            <div className="sb-user">
-              <span className="sb-av" aria-hidden="true">
-                {initials(me.fullName)}
-              </span>
-              <span className="sb-who">
-                <b>{me.fullName}</b>
-                <span>{roleLabel(me.role, t)}</span>
-              </span>
-            </div>
-            <button
-              type="button"
-              className="btn sm"
-              disabled={logout.isPending}
-              onClick={() => {
-                // onSettled chứ không onSuccess: đăng xuất lỗi (mất mạng, lệch CSRF) cũng không được
-                // để lại dữ liệu người trước trên máy dùng chung (FE-02).
-                logout.mutate(undefined, {
-                  // Lỗi thì PHẢI nói ra: phiên phía máy chủ có thể vẫn sống, và người dùng
-                  // tưởng đã thoát trên một máy dùng chung. Toast sống ngoài router nên vẫn
-                  // hiện sau khi đã chuyển trang.
-                  onError: () =>
-                    toast({ message: t('auth.logoutFailed'), tone: 'error', durationMs: 10_000 }),
-                  onSettled: () => afterLogout(queryClient, navigate),
-                });
-              }}
-            >
-              {t('common.logout')}
-            </button>
+            <AccountMenu
+              me={me}
+              initials={initials(me.fullName)}
+              roleLabel={roleLabel(me.role, t)}
+            />
           </div>
         </nav>
         </DrawerShell>

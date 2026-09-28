@@ -3,12 +3,14 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { EnvelopeCryptoService } from '../../common/crypto/envelope.service';
+import type { SealedValue } from '../../common/crypto/envelope.types';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { AuditApiService } from '../audit/audit.api';
 import { OutboxService } from '../outbox/outbox.service';
@@ -24,14 +26,27 @@ import {
 } from '../../common/lockout';
 import { PasswordService } from './password.service';
 import { checkPasswordStrength } from './password-policy';
-import { canEnrollWithoutPassword } from './session-policy';
-import { SessionService, type CreatedSession, type SessionRecord } from './session.service';
+import { canEnrollWithoutPassword, isStepUpValid } from './session-policy';
+import {
+  SessionService,
+  type CreatedSession,
+  type SessionRecord,
+  type SessionSummary,
+} from './session.service';
 import { TotpService } from './totp.service';
 import { KnownDeviceService } from './known-device.service';
 import { LoginFailureService } from './login-failure.service';
 
 /** AAD của TOTP secret: bảng users + id user (NFR-02). */
 const TOTP_TABLE = 'users';
+/**
+ * AAD của vé cài lại 2 lớp — KHÁC `TOTP_TABLE` để một vé không bao giờ mở được như một secret
+ * đang dùng (và ngược lại), và `recordId` gắn cả phiên để vé lọt ra ngoài cũng vô dụng.
+ */
+const REENROLL_TICKET_TABLE = 'users.totp_reenroll';
+
+const ALREADY_ENROLLED_MESSAGE =
+  'Tài khoản đã bật xác thực 2 lớp. Đổi điện thoại thì vào Hồ sơ của tôi → Xác thực 2 lớp → Cài lại.';
 
 export interface LoginContext {
   ip: string | null;
@@ -392,10 +407,10 @@ export class AuthService {
     return { session: fresh, mustChangePassword: user.mustChangePassword };
   }
 
-  /** Đã cài xác thực 2 lớp chưa — UI dùng để chọn màn enroll hay màn nhập mã. */
-  async isTotpEnrolled(userId: string): Promise<boolean> {
+  /** Mốc cài xác thực 2 lớp (null = chưa) — UI dùng để chọn màn enroll hay màn nhập mã. */
+  async totpEnrolledAt(userId: string): Promise<Date | null> {
     const user = await this.users.findById(userId);
-    return user?.totpEnrolledAt !== null && user !== null;
+    return user?.totpEnrolledAt ?? null;
   }
 
   /**
@@ -422,7 +437,7 @@ export class AuthService {
   async startTotpEnrollment(
     session: SessionRecord,
     currentPassword: string | undefined,
-  ): Promise<{ secret: string; qrDataUrl: string }> {
+  ): Promise<{ secret: string; qrDataUrl: string; otpauthUrl: string }> {
     const user = await this.requireUser(session.userId);
 
     /*
@@ -465,7 +480,7 @@ export class AuthService {
     if (user.totpEnrolledAt !== null) {
       throw new BadRequestException({
         code: 'TOTP_ALREADY_ENROLLED',
-        message: 'Tài khoản đã bật xác thực 2 lớp. Nhờ SA reset nếu đổi điện thoại.',
+        message: ALREADY_ENROLLED_MESSAGE,
       });
     }
     const secret = this.totp.generateSecret();
@@ -479,7 +494,12 @@ export class AuthService {
         objectId: user.id,
       });
     });
-    return { secret, qrDataUrl: await this.totp.qrDataUrl(user.email, secret) };
+    return {
+      secret,
+      qrDataUrl: await this.totp.qrDataUrl(user.email, secret),
+      // Điện thoại không quét được QR trên chính màn hình của nó — link này mở thẳng ứng dụng.
+      otpauthUrl: this.totp.keyUri(user.email, secret),
+    };
   }
 
   /**
@@ -504,7 +524,7 @@ export class AuthService {
     if (user.totpEnrolledAt !== null) {
       throw new BadRequestException({
         code: 'TOTP_ALREADY_ENROLLED',
-        message: 'Tài khoản đã bật xác thực 2 lớp. Nhờ SA reset nếu đổi điện thoại.',
+        message: ALREADY_ENROLLED_MESSAGE,
       });
     }
     const secret = this.openTotpSecret(user);
@@ -610,7 +630,7 @@ export class AuthService {
         code: 'TOTP_NOT_ENROLLED',
         message:
           'Chưa bật xác thực 2 lớp nên không mở được két (kể cả để ghi). ' +
-          'Vào Hồ sơ của bạn để bật xác thực 2 lớp, rồi thử lại.',
+          'Vào Hồ sơ của tôi (bấm tên bạn ở chân thanh bên) → Xác thực 2 lớp để bật, rồi thử lại.',
       });
     }
     const secret = this.openTotpSecret(user);
@@ -755,6 +775,201 @@ export class AuthService {
       });
       await this.outbox.enqueueWithin(tx, 'auth.password.changed', { userId: user.id });
     });
+  }
+
+  /**
+   * Cài lại 2 lớp trên điện thoại mới, khi tài khoản ĐANG có 2 lớp (Q-14).
+   *
+   * Hai điều kiện, cả hai đều ở đây chứ không chỉ ở guard của route:
+   *   1. phiên vừa step-up bằng mã HIỆN TẠI (trong ân hạn). Cookie trộm được mà thay được yếu tố
+   *      thứ hai là chiếm tài khoản vĩnh viễn — chủ thật mất luôn đường vào, không chỉ mất phiên.
+   *   2. mật khẩu hiện tại, như mọi cửa gắn authenticator mới (A-02), chung bộ đếm sai với cửa két.
+   *
+   * Bước này KHÔNG ghi gì vào `users`: secret mới đi ra dưới dạng một vé mã hoá, gắn chặt với
+   * phiên này, và chỉ thay secret thật khi người dùng gõ đúng mã của máy mới. Bỏ dở giữa chừng
+   * thì điện thoại cũ vẫn dùng được — ghi đè ngay ở đây là khoá người dùng ra ngoài.
+   */
+  async startTotpReEnrollment(
+    session: SessionRecord,
+    currentPassword: string,
+  ): Promise<{ secret: string; qrDataUrl: string; otpauthUrl: string; ticket: string }> {
+    const graceMinutes = await this.config.getNumber('secretStepUpGraceMinutes');
+    if (!isStepUpValid(session.steppedUpAt, graceMinutes, new Date())) {
+      throw new UnauthorizedException({
+        code: 'STEPUP_REQUIRED',
+        message: 'Nhập mã 6 số trên ứng dụng xác thực hiện tại trước khi cài lại.',
+        graceMinutes,
+      });
+    }
+    const user = await this.requireUser(session.userId);
+    if (user.totpEnrolledAt === null) {
+      throw new BadRequestException({
+        code: 'TOTP_NOT_ENROLLED',
+        message: 'Tài khoản chưa bật xác thực 2 lớp — dùng nút Bật ngay.',
+      });
+    }
+    if (!(await this.passwords.verify(user.passwordHash, currentPassword))) {
+      await this.failReauth(session, user, {
+        failedAction: 'auth.totp.reenroll.reauth_failed',
+        revokedAction: 'auth.totp.reenroll.session_revoked',
+        revokeReason: 'reenroll-reauth-brute-force',
+      });
+    }
+
+    const secret = this.totp.generateSecret();
+    const ticket = encodeTicket(
+      this.envelope.seal(secret, reenrollContext(user.id, session.id)),
+    );
+    await this.db.transaction(async (tx) => {
+      await this.sessions.clearStepUpFailuresWithin(tx, session.id);
+      await this.audit.appendWithin(tx, {
+        actor: user.email,
+        action: 'auth.totp.reenroll.start',
+        objectType: 'user',
+        objectId: user.id,
+      });
+    });
+    return {
+      secret,
+      qrDataUrl: await this.totp.qrDataUrl(user.email, secret),
+      otpauthUrl: this.totp.keyUri(user.email, secret),
+      ticket,
+    };
+  }
+
+  /**
+   * Gõ đúng mã của máy MỚI → thay secret, đốt mã vừa dùng, đóng mọi phiên khác (NFR-01: đổi yếu
+   * tố xác thực thì phiên cũ phải chết, như đổi mật khẩu). Phiên hiện tại được giữ để người dùng
+   * không bị đá ra ngay sau khi làm đúng.
+   */
+  async confirmTotpReEnrollment(
+    session: SessionRecord,
+    ticket: string,
+    token: string,
+  ): Promise<{ revokedSessions: number }> {
+    const user = await this.requireUser(session.userId);
+    const secret = this.openTicket(ticket, user.id, session.id);
+    const result = await this.totp.verify({ token, secret, lastUsedTimeStep: null });
+    if (!result.ok) {
+      await this.audit.append({
+        actor: user.email,
+        action: 'auth.totp.reenroll.failed',
+        objectType: 'user',
+        objectId: user.id,
+        detail: { reason: result.reason },
+      });
+      throw new UnauthorizedException({
+        code: 'TOTP_INVALID',
+        message: 'Mã chưa đúng. Nhập mã đang hiện trên điện thoại MỚI (kiểm tra đồng hồ máy).',
+      });
+    }
+
+    return this.db.transaction(async (tx) => {
+      const sealed = this.envelope.seal(secret, { table: TOTP_TABLE, recordId: user.id });
+      const replaced = await this.users.replaceTotpSecretWithin(
+        tx,
+        user.id,
+        sealed,
+        result.timeStep as number,
+      );
+      if (!replaced) {
+        throw new BadRequestException({
+          code: 'TOTP_NOT_ENROLLED',
+          message: 'Xác thực 2 lớp vừa được đặt lại — đăng nhập lại để cài từ đầu.',
+        });
+      }
+      const revokedSessions = await this.sessions.revokeAllForUserWithin(
+        tx,
+        user.id,
+        'totp-reenrolled',
+        session.id,
+      );
+      await this.audit.appendWithin(tx, {
+        actor: user.email,
+        action: 'auth.totp.reenroll.done',
+        objectType: 'user',
+        objectId: user.id,
+        detail: { revokedSessions },
+      });
+      await this.outbox.enqueueWithin(tx, 'auth.totp.reenrolled', { userId: user.id });
+      return { revokedSessions };
+    });
+  }
+
+  /** Phiên còn sống của chính người đang gọi, đánh dấu phiên hiện tại. */
+  async listOwnSessions(
+    session: SessionRecord,
+  ): Promise<(SessionSummary & { current: boolean })[]> {
+    const idleMinutes = await this.config.getNumber('sessionIdleMinutes');
+    const rows = await this.sessions.listAliveForUser(session.userId, idleMinutes);
+    return rows.map((row) => ({ ...row, current: row.id === session.id }));
+  }
+
+  /**
+   * Đóng một phiên KHÁC của chính mình. Phiên của người khác trả cùng mã với phiên không tồn
+   * tại — phân biệt hai trường hợp là cho người gọi một cách dò id phiên của người khác.
+   */
+  async revokeOwnSession(session: SessionRecord, targetId: string): Promise<void> {
+    if (targetId === session.id) {
+      throw new BadRequestException({
+        code: 'SESSION_IS_CURRENT',
+        message: 'Đây là phiên bạn đang dùng — bấm Đăng xuất để thoát.',
+      });
+    }
+    const user = await this.requireUser(session.userId);
+    await this.db.transaction(async (tx) => {
+      const revoked = await this.sessions.revokeOwnWithin(
+        tx,
+        user.id,
+        targetId,
+        'revoked-by-owner',
+      );
+      if (!revoked) {
+        throw new NotFoundException({
+          code: 'SESSION_NOT_FOUND',
+          message: 'Không tìm thấy phiên này (có thể đã đăng xuất).',
+        });
+      }
+      await this.audit.appendWithin(tx, {
+        actor: user.email,
+        action: 'auth.session.revoked_self',
+        objectType: 'session',
+        objectId: targetId,
+      });
+    });
+  }
+
+  /** "Đăng xuất các máy khác": mọi phiên của chính mình trừ phiên đang gọi. */
+  async revokeOwnOtherSessions(session: SessionRecord): Promise<number> {
+    const user = await this.requireUser(session.userId);
+    return this.db.transaction(async (tx) => {
+      const revokedSessions = await this.sessions.revokeAllForUserWithin(
+        tx,
+        user.id,
+        'revoked-by-owner',
+        session.id,
+      );
+      await this.audit.appendWithin(tx, {
+        actor: user.email,
+        action: 'auth.session.revoked_others',
+        objectType: 'user',
+        objectId: user.id,
+        detail: { revokedSessions },
+      });
+      return revokedSessions;
+    });
+  }
+
+  /** Vé hỏng, bị sửa, hay của phiên/người khác đều ra cùng một câu — không nói hỏng ở đâu. */
+  private openTicket(ticket: string, userId: string, sessionId: string): string {
+    try {
+      return this.envelope.openText(decodeTicket(ticket), reenrollContext(userId, sessionId));
+    } catch {
+      throw new BadRequestException({
+        code: 'REENROLL_TICKET_INVALID',
+        message: 'Phiên cài lại đã hết hiệu lực. Bấm Cài lại để bắt đầu lại.',
+      });
+    }
   }
 
   async logout(session: SessionRecord, actorEmail: string): Promise<void> {
@@ -949,6 +1164,41 @@ export class AuthService {
     });
     await this.outbox.enqueueWithin(tx, 'auth.device.new', { userId: user.id, deviceHash: hash });
   }
+}
+
+function reenrollContext(userId: string, sessionId: string) {
+  return { table: REENROLL_TICKET_TABLE, recordId: `${userId}:${sessionId}` };
+}
+
+function encodeTicket(sealed: SealedValue): string {
+  const json = JSON.stringify({
+    c: sealed.ciphertext.toString('base64'),
+    i: sealed.iv.toString('base64'),
+    t: sealed.tag.toString('base64'),
+    w: sealed.wrappedDek.toString('base64'),
+    k: sealed.keyVersion,
+  });
+  return Buffer.from(json, 'utf8').toString('base64url');
+}
+
+/** Ném khi vé không đúng hình dạng — nơi gọi gộp mọi lỗi thành một mã. */
+function decodeTicket(ticket: string): SealedValue {
+  const raw = JSON.parse(Buffer.from(ticket, 'base64url').toString('utf8')) as Record<
+    string,
+    unknown
+  >;
+  const buf = (v: unknown) => {
+    if (typeof v !== 'string') throw new Error('ticket');
+    return Buffer.from(v, 'base64');
+  };
+  if (typeof raw.k !== 'number') throw new Error('ticket');
+  return {
+    ciphertext: buf(raw.c),
+    iv: buf(raw.i),
+    tag: buf(raw.t),
+    wrappedDek: buf(raw.w),
+    keyVersion: raw.k,
+  };
 }
 
 /** Giữ /24 để đổi IP trong cùng dải LAN không bị coi là thiết bị mới. */
