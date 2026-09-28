@@ -68,6 +68,7 @@ describe('Hai lượt ghi cùng lúc không được đè nhau (BE-02, BE-03)', 
   const catalog = {
     validateRefs: () => Promise.resolve([]),
     assertRefs: () => Promise.resolve(),
+    inactiveRefCheck: () => Promise.resolve(() => []),
     lists: () =>
       Promise.resolve({ deviceTypes: [], sites: [], cabinets: [], vendors: [] }),
     snapshot: () =>

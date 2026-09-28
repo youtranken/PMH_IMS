@@ -73,25 +73,22 @@ export class CatalogApiService {
     if (errors.length > 0) {
       throw new BadRequestException({ code: 'CATALOG_REF_INVALID', message: errors.join(' ') });
     }
-    const retired: string[] = [];
-    const check = <T extends { id: string; active: boolean }>(
-      key: keyof CatalogRefs,
-      rows: readonly T[],
-      kind: string,
-      label: (row: T) => string,
-    ) => {
-      const chosen = next[key];
-      if (!chosen || chosen === (current?.[key] ?? null)) return;
-      const row = rows.find((item) => item.id === chosen);
-      if (row && !row.active) retired.push(inactiveRefMessage(kind, label(row)));
-    };
-    check('deviceTypeId', lists.deviceTypes, 'Loại thiết bị', (row) => row.name);
-    check('siteId', lists.sites, 'Site', (row) => row.code);
-    check('cabinetId', lists.cabinets, 'Tủ mạng', (row) => row.code);
-    check('vendorId', lists.vendors, 'Nhà cung cấp', (row) => row.name);
+    const retired = inactiveRefErrors(lists, next, current);
     if (retired.length > 0) {
       throw new BadRequestException({ code: CATALOG_REF_INACTIVE, message: retired.join(' ') });
     }
+  }
+
+  /**
+   * Vế "mục đã vô hiệu" của `assertRefs` cho đường HÀNG LOẠT (import Excel): đọc danh mục MỘT
+   * lần rồi trả hàm kiểm từng dòng, trả câu lỗi thay vì ném.
+   *
+   * Import phải báo lỗi THEO DÒNG ở bước Đối chiếu: cả file là một transaction, ném lúc ghi thì
+   * không ai biết dòng nào hỏng. Luật và câu chữ vẫn là MỘT bản với cửa HTTP (Q-14, AD-15).
+   */
+  async inactiveRefCheck(): Promise<(next: CatalogRefs, current: CatalogRefs | null) => string[]> {
+    const lists = await this.catalog.lists({ includeInactive: true });
+    return (next, current) => inactiveRefErrors(lists, next, current);
   }
 
   /**
@@ -129,6 +126,34 @@ export interface CatalogResolver {
   cabinet(siteCode: string, code: string): string | null;
   deviceType(name: string): string | null;
   vendor(name: string): string | null;
+}
+
+/**
+ * Lựa chọn MỚI trỏ vào mục đã vô hiệu (Q-14). "Mới" = khác giá trị hồ sơ đang có (`current`;
+ * `null` khi tạo) — xem `assertRefs` vì sao không chặn theo giá trị gửi lên.
+ */
+function inactiveRefErrors(
+  lists: CatalogLists,
+  next: CatalogRefs,
+  current: CatalogRefs | null,
+): string[] {
+  const retired: string[] = [];
+  const check = <T extends { id: string; active: boolean }>(
+    key: keyof CatalogRefs,
+    rows: readonly T[],
+    kind: string,
+    label: (row: T) => string,
+  ) => {
+    const chosen = next[key];
+    if (!chosen || chosen === (current?.[key] ?? null)) return;
+    const row = rows.find((item) => item.id === chosen);
+    if (row && !row.active) retired.push(inactiveRefMessage(kind, label(row)));
+  };
+  check('deviceTypeId', lists.deviceTypes, 'Loại thiết bị', (row) => row.name);
+  check('siteId', lists.sites, 'Site', (row) => row.code);
+  check('cabinetId', lists.cabinets, 'Tủ mạng', (row) => row.code);
+  check('vendorId', lists.vendors, 'Nhà cung cấp', (row) => row.name);
+  return retired;
 }
 
 /** Tham chiếu sai của một bộ ref (rỗng = hợp lệ). Tách khỏi class để `assertRefs` dùng lại MỘT lượt đọc danh mục. */

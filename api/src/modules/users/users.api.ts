@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { UserRole } from '../auth/types';
 import { UsersService } from './users.service';
-import type { UserRecord } from './users.types';
+import type { UserDirectoryEntry, UserRecord } from './users.types';
 
 /**
  * Whitelist cột sắp xếp — tái xuất qua cửa chính để `auth/accounts.controller.ts` không phải
@@ -28,9 +28,25 @@ export class UsersApiService {
     return this.users.emailsByIds(ids);
   }
 
+  /**
+   * Mọi tài khoản, chỉ id · email · họ tên · vai · trạng thái — màn gán quyền két của SA/Admin.
+   * Cửa hẹp này tồn tại để màn đó KHÔNG phải mượn `/accounts` (chỉ SA, trả đủ hồ sơ nhân sự).
+   */
+  directory(): Promise<UserDirectoryEntry[]> {
+    return this.users.directory();
+  }
+
   /** Người nhận email theo vai — dùng cho outbox/digest (Epic 3) và cảnh báo bảo mật. */
   recipientsByRole(roles: UserRole[]): Promise<{ email: string; fullName: string }[]> {
     return this.users.listRecipients(roles);
+  }
+
+  /**
+   * Vai hiện tại của người xin break-glass — người duyệt cần biết "Member hay Admin" để đánh giá
+   * rủi ro. Chỉ trả vai, không trả gì khác của tài khoản.
+   */
+  roleByEmail(email: string): Promise<UserRole | null> {
+    return this.users.roleByEmail(email);
   }
 
   /**

@@ -320,3 +320,61 @@ test('license vĩnh viễn: không có nút Gia hạn', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'Sửa hồ sơ' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Gia hạn', exact: true })).toHaveCount(0);
 });
+
+/**
+ * SW-025 — license đang vượt ghế (2/1) là trạng thái hợp lệ: sửa ghi chú mà giữ nguyên tổng
+ * ghế thì phải lưu được. Chỉ lượt sửa HẠ tổng xuống dưới số đang dùng mới bị chặn.
+ */
+test('license vượt ghế 2/1: sửa ghi chú giữ nguyên tổng thì lưu được', async ({ page }) => {
+  await firstLogin(page, E2E_SA);
+  const stamp = uniqueStamp();
+  const id = await createSoftware(page, {
+    code: `LIC-E2E-VG-${stamp}`,
+    name: 'License vượt ghế sửa ghi chú',
+    kind: 'license',
+    seatTotal: 1,
+    endDate: isoInDays(200),
+  });
+  await assign(page, id, await createDevice(page, `PC-E2E-VG-A-${stamp}`));
+  await assign(page, id, await createDevice(page, `PC-E2E-VG-B-${stamp}`));
+
+  await page.goto(`/software/${id}`);
+  await page.getByRole('button', { name: 'Sửa hồ sơ' }).first().click();
+  const form = page.getByRole('dialog');
+  await expect(form.getByRole('textbox', { name: 'Số ghế' })).toHaveValue('1');
+  await form.getByRole('textbox', { name: 'Ghi chú' }).fill('Ghi chú E2E sau khi sửa');
+  await form.getByRole('button', { name: 'Lưu' }).click();
+
+  await expect(page.getByText('Đã lưu hồ sơ.')).toBeVisible();
+  const after = (await (await page.request.get(`/api/v1/software/${id}`)).json()) as {
+    note: string;
+    seatTotal: number;
+  };
+  expect(after).toMatchObject({ note: 'Ghi chú E2E sau khi sửa', seatTotal: 1 });
+});
+
+test('license 2/3: HẠ tổng xuống dưới số đang dùng thì vẫn bị chặn', async ({ page }) => {
+  await firstLogin(page, E2E_SA);
+  const stamp = uniqueStamp();
+  const id = await createSoftware(page, {
+    code: `LIC-E2E-VGH-${stamp}`,
+    name: 'License hạ ghế',
+    kind: 'license',
+    seatTotal: 3,
+    endDate: isoInDays(200),
+  });
+  await assign(page, id, await createDevice(page, `PC-E2E-VGH-A-${stamp}`));
+  await assign(page, id, await createDevice(page, `PC-E2E-VGH-B-${stamp}`));
+
+  await page.goto(`/software/${id}`);
+  await page.getByRole('button', { name: 'Sửa hồ sơ' }).first().click();
+  const form = page.getByRole('dialog');
+  await form.getByRole('textbox', { name: 'Số ghế' }).fill('1');
+  await form.getByRole('button', { name: 'Lưu' }).click();
+
+  await expect(form.getByText(/Đang có 2 máy dùng, giảm xuống 1/)).toBeVisible();
+  const after = (await (await page.request.get(`/api/v1/software/${id}`)).json()) as {
+    seatTotal: number;
+  };
+  expect(after.seatTotal).toBe(3);
+});

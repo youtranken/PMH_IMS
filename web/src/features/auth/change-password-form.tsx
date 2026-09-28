@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
+import { Field } from '@/ui/page-header';
+import { useFormErrors } from '@/ui/use-form-errors';
+
+/** Khớp luật tối thiểu của API (password-policy) — báo sớm bằng tiếng Việt, API vẫn là nơi phán. */
+const MIN_PASSWORD_LENGTH = 12;
 
 /**
  * Phần form đổi mật khẩu — MỘT bản cho cả màn đổi bắt buộc (card đăng nhập) lẫn hộp thoại ở Hồ
@@ -32,17 +37,29 @@ export function ChangePasswordForm({
     { status: string }
   >('/api/v1/auth/change-password', { csrfToken });
 
+  /* Nhãn ô KHÔNG mang dấu `*` (xem `Field.required`): cả ba ô đều bắt buộc, dấu không phân biệt
+     được gì — nhưng lỗi vẫn phải nói bằng tiếng Việt, dưới đúng ô. */
+  const check = useFormErrors({
+    current: !currentPassword && t('formErrors.required'),
+    next: !newPassword
+      ? t('formErrors.required')
+      : newPassword.length < MIN_PASSWORD_LENGTH &&
+        t('formErrors.minLength', { min: MIN_PASSWORD_LENGTH }),
+    repeat: !repeat
+      ? t('formErrors.required')
+      : repeat !== newPassword && t('auth.passwordMismatch'),
+  });
+
   return (
     <form
       className={variant === 'auth' ? 'auth-form' : 'form-grid'}
       data-columns={variant === 'auth' ? undefined : 1}
+      ref={check.formRef}
+      noValidate
       onSubmit={(e) => {
         e.preventDefault();
         setError(null);
-        if (newPassword !== repeat) {
-          setError(t('auth.passwordMismatch'));
-          return;
-        }
+        if (!check.check()) return;
         change.mutate(
           { currentPassword, newPassword },
           {
@@ -63,12 +80,12 @@ export function ChangePasswordForm({
         </p>
       ) : null}
 
-      <div className="field">
-        <label className="lbl-t" htmlFor={`${prefix}-current`}>
-          {t('auth.currentPassword')}
-        </label>
+      <Field
+        label={t('auth.currentPassword')}
+        htmlFor={`${prefix}-current`}
+        error={check.error('current')}
+      >
         <input
-          id={`${prefix}-current`}
           className="inp"
           type="password"
           autoComplete="current-password"
@@ -76,34 +93,30 @@ export function ChangePasswordForm({
           value={currentPassword}
           onChange={(e) => setCurrent(e.target.value)}
         />
-      </div>
+      </Field>
 
-      <div className="field">
-        <label className="lbl-t" htmlFor={`${prefix}-new`}>
-          {t('auth.newPassword')}
-        </label>
+      <Field
+        label={t('auth.newPassword')}
+        htmlFor={`${prefix}-new`}
+        hint={t('auth.passwordHint')}
+        error={check.error('next')}
+      >
         <input
-          id={`${prefix}-new`}
           className="inp"
           type="password"
           autoComplete="new-password"
-          minLength={12}
           required
-          aria-describedby={`${prefix}-hint`}
           value={newPassword}
           onChange={(e) => setNew(e.target.value)}
         />
-        <span className="field-hint" id={`${prefix}-hint`}>
-          {t('auth.passwordHint')}
-        </span>
-      </div>
+      </Field>
 
-      <div className="field">
-        <label className="lbl-t" htmlFor={`${prefix}-repeat`}>
-          {t('auth.confirmPassword')}
-        </label>
+      <Field
+        label={t('auth.confirmPassword')}
+        htmlFor={`${prefix}-repeat`}
+        error={check.error('repeat')}
+      >
         <input
-          id={`${prefix}-repeat`}
           className="inp"
           type="password"
           autoComplete="new-password"
@@ -111,7 +124,7 @@ export function ChangePasswordForm({
           value={repeat}
           onChange={(e) => setRepeat(e.target.value)}
         />
-      </div>
+      </Field>
 
       <button type="submit" className="btn primary" disabled={change.isPending}>
         {submitLabel}

@@ -150,13 +150,21 @@
   font-weight: var(--fw-bold);
 }
 .rmap-node .rn-h svg { width: 14px; height: 14px; flex: 0 0 14px; color: var(--ink-3); }
-/* Tiêu đề nhường chỗ, số đếm KHÔNG: số là thứ người ta nhìn đầu tiên. */
+/* Tiêu đề nhường chỗ, số đếm KHÔNG: số là thứ người ta nhìn đầu tiên. Tiêu đề được xuống tối
+   đa hai dòng rồi mới rút gọn: ở 1280px cột chính chỉ còn ~640px, một dòng thì "Cổng của máy
+   này" đã cụt — mà tiêu đề là thứ cho biết nút này là gì. Chữ đầy đủ vẫn có ở `title`. */
 .rmap-node .rn-t {
   flex: 1;
   min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  line-height: 1.3;
+  /* `button` ở base.css đặt `nowrap` và nút này thừa hưởng — thiếu dòng này thì không bao giờ
+     xuống được dòng thứ hai, luật hai dòng ở trên thành chữ chết. */
+  white-space: normal;
 }
 .rmap-node .rn-n {
   flex: none;

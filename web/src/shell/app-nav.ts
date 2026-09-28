@@ -10,7 +10,7 @@ export interface NavItem {
   /** Màn chưa làm (epic sau) — hiện mờ, không điều hướng được. */
   planned?: boolean;
   /** Mục mang số việc đang chờ — shell tự hỏi số và vẽ `.nav-badge`. */
-  badge?: 'approvals';
+  badge?: 'approvals' | 'overdue';
 }
 
 export interface NavGroup {
@@ -30,7 +30,7 @@ export const navGroups: NavGroup[] = [
       { key: 'nav.devices', to: PATHS.devices },
       { key: 'nav.software', to: PATHS.software },
       { key: 'nav.isp', to: PATHS.ispLines },
-      { key: 'nav.expiry', to: PATHS.expiry },
+      { key: 'nav.expiry', to: PATHS.expiry, badge: 'overdue' },
       { key: 'nav.ipam', to: PATHS.ipAddresses },
       { key: 'nav.nat', to: PATHS.nat },
       // Tài khoản dùng chung + VPN (0032) — mật khẩu của chúng nằm ở két sắt.

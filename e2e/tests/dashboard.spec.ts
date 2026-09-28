@@ -83,7 +83,8 @@ test.describe('Bảng điều khiển', () => {
      * dòng của bài kiểm xuống hàng hai — bài đỏ vì dữ liệu hàng xóm chứ không phải vì thứ tự
      * sắp xếp sai, đúng loại đỏ giả làm người ta mất niềm tin vào cả bộ test.
      */
-    const labels = await expiring.getByRole('listitem').allInnerTexts();
+    // Khối là BẢNG gọn ở desktop (DASH-002): mỗi mục là một dòng, cột Loại là tiếng Việt.
+    const labels = await expiring.getByRole('row').allInnerTexts();
     const urgent = labels.findIndex((text) => text.includes('License gấp'));
     const relaxed = labels.findIndex((text) => text.includes('License thong tha'));
     expect(urgent).toBeGreaterThanOrEqual(0);
@@ -105,10 +106,7 @@ test.describe('Bảng điều khiển', () => {
      */
     const urgentLine = labels[urgent];
     expect(urgentLine, 'phải hiện nhãn tiếng Việt lấy từ API').toContain('License phần mềm');
-    expect(
-      urgentLine.split('·')[1] ?? urgentLine,
-      'không được để lọt mã máy ra dòng phụ',
-    ).not.toMatch(/\blicense\b/);
+    expect(urgentLine, 'không được để lọt mã máy ra cột Loại').not.toMatch(/\blicense\b/);
 
     // Khối sự cố PHẢI hiện và nói rõ là chưa có phần này (Epic 9 chưa mở).
     const incidents = page.locator('section').filter({ hasText: 'Sự cố tuần qua' });
@@ -378,3 +376,144 @@ test.describe('Bảng điều khiển', () => {
 });
 
 // `isoInDays` dã chuyển sang `helpers.ts` (24/09) — xem chú thích ở đó về bẫy múi giờ.
+
+/**
+ * DASH-002 — khối "Sắp hết hạn" ở làn chính là BẢNG gọn (Đối tượng · Loại · Hết hạn · Còn lại
+ * · [Gia hạn]); các khối nhỏ xếp chồng ở làn phụ, không còn khoảng trống chết khi có từ bốn
+ * khối trở lên.
+ */
+test.describe('DASH-002 · khối Sắp hết hạn dạng bảng, hai làn không hở', () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  async function seedLoudBoard(page: Page, stamp: string) {
+    const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
+    const license = await page.request.post('/api/v1/software', {
+      headers,
+      data: {
+        code: `LIC-E2E-D2-${stamp}`,
+        name: `License E2E bảng ${stamp}`,
+        kind: 'license',
+        endDate: isoInDays(4),
+      },
+    });
+    expect(license.status(), await license.text()).toBe(201);
+
+    // Một dải ĐẦY → khối "Dải mạng sắp đầy" có việc.
+    const octet = (Number(stamp) % 200) + 20;
+    const subnet = await page.request.post('/api/v1/ipam/subnets', {
+      headers,
+      data: { cidr: `172.18.${octet}.0/30`, name: `LAN E2E D2 ${stamp}` },
+    });
+    expect(subnet.status(), await subnet.text()).toBe(201);
+    const subnetId = ((await subnet.json()) as { id: string }).id;
+    for (const last of [1, 2]) {
+      await page.request.post('/api/v1/ipam/addresses', {
+        headers,
+        data: { subnetId, address: `172.18.${octet}.${last}`, usedBy: `Máy ${last}` },
+      });
+    }
+
+    // Một máy vừa thanh lý → khối kho thanh lý có việc.
+    const catalog = await page.evaluate(async () => {
+      const res = await fetch('/api/v1/catalog', { credentials: 'include' });
+      return (await res.json()) as { deviceTypes: { id: string; name: string }[] };
+    });
+    const typeId = catalog.deviceTypes.find((type) => type.name === 'PC')!.id;
+    const device = await page.request.post('/api/v1/devices', {
+      headers,
+      data: { code: `PC-E2E-D2-${stamp}`, name: 'Máy E2E thanh lý', deviceTypeId: typeId },
+    });
+    const deviceId = ((await device.json()) as { device: { id: string } }).device.id;
+    const retired = await page.request.patch(`/api/v1/devices/${deviceId}/status`, {
+      headers,
+      data: { status: 'retired' },
+    });
+    expect(retired.status()).toBe(200);
+    return { headers, typeId };
+  }
+
+  test('bảng có đủ cột; gia hạn ngay trên dòng; làn phụ xếp chồng sát nhau', async ({ page }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-5);
+    await seedLoudBoard(page, stamp);
+
+    await page.goto('/');
+    const expiring = page.locator('section').filter({ hasText: 'Sắp hết hạn (30 ngày)' });
+    for (const name of ['Đối tượng', 'Loại', 'Hết hạn', 'Còn lại']) {
+      await expect(expiring.getByRole('columnheader', { name, exact: true })).toBeVisible();
+    }
+    const row = expiring.getByRole('row', { name: new RegExp(`License E2E bảng ${stamp}`) });
+    await expect(row.getByRole('cell', { name: 'License phần mềm', exact: true })).toBeVisible();
+
+    /* Bố cục: hai làn cùng mép trên, làn phụ nằm HẲN bên phải, và các khối trong làn phụ
+       nối nhau sát (khe ≤ 32px) — không còn khoảng trống chết dưới một khối ngắn. */
+    const main = (await page.getByTestId('dash-lane-main').boundingBox())!;
+    const side = (await page.getByTestId('dash-lane-side').boundingBox())!;
+    expect(Math.abs(main.y - side.y), 'hai làn phải cùng mép trên').toBeLessThanOrEqual(2);
+    expect(side.x, 'làn phụ phải ở bên phải làn chính').toBeGreaterThanOrEqual(main.x + main.width);
+    const cards = page.getByTestId('dash-lane-side').locator('section');
+    const count = await cards.count();
+    expect(count, 'cần ≥2 khối ở làn phụ (tổng ≥4 khối) để kiểm khoảng trống').toBeGreaterThanOrEqual(
+      2,
+    );
+    expect((await cards.first().boundingBox())!.y - side.y).toBeLessThanOrEqual(2);
+    for (let i = 1; i < count; i += 1) {
+      const prev = (await cards.nth(i - 1).boundingBox())!;
+      const next = (await cards.nth(i).boundingBox())!;
+      expect(next.y - (prev.y + prev.height), `khe giữa khối ${i} và ${i + 1}`).toBeLessThanOrEqual(
+        32,
+      );
+      expect(Math.abs(next.x - side.x), 'khối làn phụ không được rơi sang cột khác').toBeLessThanOrEqual(
+        1,
+      );
+    }
+
+    // Gia hạn ngay trên dòng — cùng hộp với màn /expiry.
+    await row.getByRole('button', { name: 'Gia hạn', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: /^Gia hạn — / });
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Hạn mới', exact: true }).click();
+    await page.getByRole('button', { name: 'Tháng sau' }).click();
+    await page.getByRole('button', { name: 'Tháng sau' }).click();
+    await page.getByRole('button', { name: /^15 / }).click();
+    const renewed = page.waitForResponse((r) => r.url().endsWith('/api/v1/expiry/renew'));
+    await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gia hạn' }).click();
+    expect((await renewed).status()).toBe(201);
+    await expect(page.getByText('Đã gia hạn.')).toBeVisible();
+    // Hạn mới xa hơn 30 ngày → mục rời khối, trang chủ tự đọc lại.
+    await expect(row).toHaveCount(0);
+  });
+
+  test('đường hỏng: bảo hành thiết bị không có nút Gia hạn; chưa chọn ngày thì hộp ở lại', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-5);
+    const { headers, typeId } = await seedLoudBoard(page, stamp);
+    const warranty = await page.request.post('/api/v1/devices', {
+      headers,
+      data: {
+        code: `PC-E2E-D2BH-${stamp}`,
+        name: 'Máy E2E bảo hành',
+        deviceTypeId: typeId,
+        warrantyEnd: isoInDays(6),
+      },
+    });
+    expect(warranty.status(), await warranty.text()).toBe(201);
+
+    await page.goto('/');
+    const expiring = page.locator('section').filter({ hasText: 'Sắp hết hạn (30 ngày)' });
+    const warrantyRow = expiring.getByRole('row', { name: new RegExp(`PC-E2E-D2BH-${stamp}`) });
+    await expect(warrantyRow).toBeVisible();
+    await expect(warrantyRow.getByRole('button', { name: 'Gia hạn' })).toHaveCount(0);
+
+    const row = expiring.getByRole('row', { name: new RegExp(`License E2E bảng ${stamp}`) });
+    await row.getByRole('button', { name: 'Gia hạn', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: /^Gia hạn — / });
+    await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gia hạn' }).click();
+    await expect(dialog.getByRole('alert')).toHaveText('Chọn hạn mới.');
+    await dialog.getByRole('button', { name: 'Hủy' }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(row).toBeVisible();
+  });
+});

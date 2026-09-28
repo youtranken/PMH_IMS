@@ -11,6 +11,7 @@ import type { AuthedRequest } from '../auth/types';
 import { BreakGlassService } from './break-glass.service';
 import { SECRET_OWNER_TYPES, type SecretOwnerType } from './vault.service';
 import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
+import { NoIdleTouch } from '../auth/no-idle-touch.decorator';
 
 class RequestDto {
   @IsIn([...SECRET_OWNER_TYPES], { message: 'Loại chủ thể không hợp lệ.' })
@@ -73,6 +74,7 @@ export class BreakGlassController {
    * tra tên hồ sơ: shell gọi nó ở mọi màn nên phải nhẹ.
    */
   @Roles('sa', 'admin')
+  @NoIdleTouch()
   @Get('pending/count')
   async pendingCount(@Req() req: AuthedRequest) {
     return { count: await this.breakGlass.pendingCountFor(actor(req)) };

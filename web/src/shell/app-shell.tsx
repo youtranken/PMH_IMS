@@ -5,6 +5,7 @@ import { type Me } from '@/lib/me';
 import { ErrorBoundary } from '@/ui/error-boundary';
 import { visibleGroups } from '@/shell/app-nav';
 import { usePendingApprovalCount } from '@/shell/use-pending-approvals';
+import { useOverdueExpiryCount } from '@/shell/use-overdue-count';
 import { NavIcon } from '@/ui/nav-icon';
 import { CommandPalette, openCommandPalette } from '@/ui/command-palette';
 import { ThemeSwitch } from '@/ui/switches';
@@ -14,6 +15,8 @@ import { AccountMenu } from '@/shell/account-menu';
 
 /** Câu "N yêu cầu chờ duyệt" dùng chung cho mục menu và nút mở menu (aria-describedby). */
 const PENDING_APPROVALS_ID = 'nav-pending-approvals';
+/** Câu "N mục đã quá hạn" của mục Sắp hết hạn. */
+const OVERDUE_ID = 'nav-overdue';
 
 /**
  * Khung ứng dụng dùng chung (AD-15/UX-DR1): sidebar + topbar. Mọi màn nghiệp vụ
@@ -39,6 +42,7 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
    */
   const drawerRef = useFocusTrap<HTMLDivElement>(narrow && drawerOpen);
   const pendingApprovals = usePendingApprovalCount(me);
+  const overdue = useOverdueExpiryCount();
 
   // Chọn xong một mục thì drawer phải tự khép, không che mất trang vừa mở.
   useEffect(() => {
@@ -130,7 +134,9 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                     aria-describedby={
                       item.badge === 'approvals' && pendingApprovals > 0
                         ? PENDING_APPROVALS_ID
-                        : undefined
+                        : item.badge === 'overdue' && overdue > 0
+                          ? OVERDUE_ID
+                          : undefined
                     }
                     // Bấm lại đúng mục đang mở thì `pathname` không đổi → phải tự đóng ở đây.
                     onClick={() => setDrawerOpen(false)}
@@ -142,6 +148,12 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
                          là "Duyệt yêu cầu" — trình đọc màn hình đọc thêm số việc sau đó. */
                       <span className="nav-badge warn" aria-hidden="true">
                         {pendingApprovals}
+                      </span>
+                    ) : null}
+                    {item.badge === 'overdue' && overdue > 0 ? (
+                      /* Màu thường, không cam: cam dành cho việc đang chờ một người QUYẾT. */
+                      <span className="nav-badge" aria-hidden="true">
+                        {overdue}
                       </span>
                     ) : null}
                   </NavLink>
@@ -224,6 +236,11 @@ export function AppShell({ me, children }: { me: Me; children: ReactNode }) {
           {pendingApprovals > 0 ? (
             <span id={PENDING_APPROVALS_ID} className="sr-only">
               {t('approvals.navBadge', { count: pendingApprovals })}
+            </span>
+          ) : null}
+          {overdue > 0 ? (
+            <span id={OVERDUE_ID} className="sr-only">
+              {t('expiry.navBadge', { count: overdue })}
             </span>
           ) : null}
           {/*

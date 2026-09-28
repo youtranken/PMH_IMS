@@ -99,7 +99,6 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
     ).toBeVisible();
 
     await page.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
-    await page.getByRole('button', { name: 'Xác nhận' }).click();
 
     /*
      * Gõ mã xong thì việc vừa bấm TỰ CHẠY LẠI — người dùng không phải bấm Xoay lần nữa.

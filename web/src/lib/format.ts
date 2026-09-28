@@ -70,3 +70,37 @@ export function orDash(value: string | number | null | undefined): string {
   if (value === null || value === undefined || value === '') return '—';
   return String(value);
 }
+
+export interface AgoParts {
+  unit: 'now' | 'minutes' | 'hours' | 'days';
+  count: number;
+}
+
+/**
+ * "… trước" của một mốc — hàm thuần, màn hình ghép câu qua i18n. Làm tròn XUỐNG (59 phút chưa
+ * phải "1 giờ"); mốc nằm ở tương lai (đồng hồ máy lệch) coi là "vừa xong", không ra số âm.
+ */
+export function agoParts(value: string | Date, now: number): AgoParts | null {
+  const at = typeof value === 'string' ? Date.parse(value) : value.getTime();
+  if (Number.isNaN(at)) return null;
+  const minutes = Math.floor(Math.max(0, now - at) / 60_000);
+  if (minutes < 1) return { unit: 'now', count: 0 };
+  if (minutes < 60) return { unit: 'minutes', count: minutes };
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return { unit: 'hours', count: hours };
+  return { unit: 'days', count: Math.floor(hours / 24) };
+}
+
+/** Tách số giây còn lại thành giờ/phút/giây để ghép câu "còn 3 giờ 52 phút". Không bao giờ âm. */
+export function remainingParts(seconds: number): {
+  hours: number;
+  minutes: number;
+  seconds: number;
+} {
+  const total = Math.max(0, Math.floor(seconds));
+  return {
+    hours: Math.floor(total / 3600),
+    minutes: Math.floor((total % 3600) / 60),
+    seconds: total % 60,
+  };
+}

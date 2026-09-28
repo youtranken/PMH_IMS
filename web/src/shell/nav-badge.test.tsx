@@ -89,3 +89,56 @@ describe('Badge "yêu cầu chờ duyệt" trên menu', () => {
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes('pending/count'))).toBe(false);
   });
 });
+
+/**
+ * Badge "đã quá hạn" trên mục Sắp hết hạn — mọi vai (cả team IT lo hạn). Màu thường, không cam:
+ * cam dành cho việc cần một người QUYẾT ngay (duyệt yêu cầu).
+ */
+function mockOverdue(count: number | 'error') {
+  const fetchMock = vi.fn((input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes('/expiry/overdue/count')) {
+      return Promise.resolve(
+        count === 'error' ? jsonResponse(500, { message: 'hỏng' }) : jsonResponse(200, { count }),
+      );
+    }
+    if (url.includes('/break-glass/pending/count')) {
+      return Promise.resolve(jsonResponse(200, { count: 0 }));
+    }
+    return new Promise<Response>(() => {});
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
+
+describe('Badge "đã quá hạn" trên mục Sắp hết hạn', () => {
+  it('Member có 4 mục quá hạn → số 4 cạnh mục, tên link giữ nguyên, mô tả đủ câu', async () => {
+    mockOverdue(4);
+    renderShell({ ...ADMIN, role: 'member' });
+    const nav = screen.getByRole('navigation', { name: 'Điều hướng chính' });
+    const link = within(nav).getByRole('link', { name: 'Sắp hết hạn' });
+    const badge = await within(link).findByText('4');
+    expect(badge).toHaveClass('nav-badge');
+    expect(badge).not.toHaveClass('warn');
+    expect(link).toHaveAccessibleDescription('4 mục đã quá hạn');
+  });
+
+  it('không có gì quá hạn → không vẽ badge', async () => {
+    const fetchMock = mockOverdue(0);
+    renderShell(ADMIN);
+    await vi.waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes('overdue/count'))).toBe(true),
+    );
+    expect(screen.getByRole('link', { name: 'Sắp hết hạn' })).not.toHaveAccessibleDescription();
+  });
+
+  it('API hỏng → im lặng, shell không vỡ', async () => {
+    const fetchMock = mockOverdue('error');
+    renderShell(ADMIN);
+    await vi.waitFor(() =>
+      expect(fetchMock.mock.calls.some(([url]) => String(url).includes('overdue/count'))).toBe(true),
+    );
+    expect(screen.getByRole('link', { name: 'Sắp hết hạn' })).not.toHaveAccessibleDescription();
+    expect(screen.getByText('Trang chủ')).toBeInTheDocument();
+  });
+});

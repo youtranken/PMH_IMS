@@ -10,7 +10,8 @@ export function PageHeader({
   actions,
 }: {
   title: string;
-  subtitle?: string;
+  /** Thường là chữ; nhận phần tử khi cần `<time title>` (giờ tuyệt đối khi rê chuột). */
+  subtitle?: ReactNode;
   actions?: ReactNode;
 }) {
   return (

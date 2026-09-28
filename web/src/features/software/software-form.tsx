@@ -110,7 +110,7 @@ export function SoftwareForm({
 
   const hasSeats = supportsSeats(form.kind);
   const isPerpetual = form.licenseModel === 'perpetual';
-  const seats = seatCheck(form.seatTotal, hasSeats, row?.seatUsed ?? 0);
+  const seats = seatCheck(form.seatTotal, hasSeats, row?.seatUsed ?? 0, row?.seatTotal ?? null);
 
   const check = useFormErrors({
     code: !form.code.trim() && t('formErrors.required'),

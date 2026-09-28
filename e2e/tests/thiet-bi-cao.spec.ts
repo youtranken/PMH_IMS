@@ -256,6 +256,18 @@ test.describe('DEV-043/044 · bản đồ quan hệ không chồng, mã không n
     }
     // Số 7 của "Cổng của máy này" nằm TRONG nút.
     await expect(nodes[0]).toContainText('7');
+
+    /* Tiêu đề nút đọc trọn: không cụt chữ (ellipsis hay line-clamp đều làm nội dung cao/rộng
+       hơn khung nhìn thấy), và có `title` cho lúc tên dài hơn hai dòng. */
+    const titles = ['Cổng của máy này', 'Địa chỉ IP', 'Két sắt'];
+    for (const [i, node] of nodes.entries()) {
+      const title = node.getByTitle(titles[i], { exact: true });
+      await expect(title).toHaveText(titles[i]);
+      const cut = await title.evaluate(
+        (el) => el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1,
+      );
+      expect(cut, `tiêu đề "${titles[i]}" bị cắt`).toBe(false);
+    }
   });
 
   test('đường hỏng: máy đã thanh lý không giữ gì — chỉ có câu, không có hạch bị câu đè (sáng + tối)', async ({
@@ -302,6 +314,44 @@ test.describe('DEV-050 · hộp Thanh lý nói rõ sẽ gỡ gì', () => {
     await dialog.getByRole('button', { name: 'Hủy' }).click();
     await expect(dialog).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Thanh lý', exact: true })).toBeVisible();
+  });
+
+  test('đường hỏng: bị chặn 409 lần thứ hai thì hộp vẫn dựng lại, không giữ chữ đã gõ lượt trước', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const code = `PC-E2E-TL2-${stamp}`;
+    const deviceId = await createDevice(page, { code, name: 'Máy bị chặn hai lần' });
+    const address = await assignIp(page, deviceId, stamp);
+
+    await page.goto(`/devices/${deviceId}`);
+    await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    const typeCode = dialog.getByLabel(`Gõ lại mã máy ${code} để xác nhận`);
+    const only = dialog.getByRole('radio', { name: /Chỉ thanh lý/ });
+    const cleanup = dialog.getByRole('radio', { name: 'Gỡ hết rồi thanh lý' });
+    const submit = dialog.getByRole('button', { name: 'Thanh lý', exact: true });
+
+    // Lượt 1: "Chỉ thanh lý" trong khi máy còn giữ IP → 409, hộp mở lại với danh sách vướng.
+    const first = page.waitForResponse((r) => r.url().includes(`/devices/${deviceId}/status`));
+    await submit.click();
+    expect((await first).status()).toBe(409);
+    await expect(dialog.getByText(new RegExp(address.replace(/\./g, '\\.'))).first()).toBeVisible();
+
+    // Gõ dở mã ở nhánh "Gỡ hết", rồi đổi ý quay lại "Chỉ thanh lý" và bấm lần nữa → 409 lần 2.
+    await cleanup.check();
+    await typeCode.fill('PC-E2E');
+    await only.check();
+    const second = page.waitForResponse((r) => r.url().includes(`/devices/${deviceId}/status`));
+    await submit.click();
+    expect((await second).status()).toBe(409);
+
+    // Hộp dựng lại từ đầu: chọn "Gỡ hết" thì ô mã phải TRỐNG, không còn chữ của lượt trước.
+    await expect(only).toBeChecked();
+    await cleanup.check();
+    await expect(typeCode).toHaveValue('');
+    await expect(submit).toBeDisabled();
   });
 });
 

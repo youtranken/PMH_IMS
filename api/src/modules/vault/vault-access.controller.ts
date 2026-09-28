@@ -68,6 +68,16 @@ export class VaultAccessController {
     return this.access.list(query.memberEmail?.trim().toLowerCase() || undefined);
   }
 
+  /**
+   * Danh sách người của màn ma trận — đọc, SA/Admin. Màn này KHÔNG gọi `/accounts`: route đó
+   * chỉ SA và trả đủ hồ sơ nhân sự, còn ở đây chỉ cần biết ai là ai để gán quyền.
+   */
+  @Roles('sa', 'admin')
+  @Get('people')
+  people() {
+    return this.access.people();
+  }
+
   /** Các nhóm gán được — ô chọn của màn ma trận đổ từ đây, không viết cứng ở web. */
   @Roles('sa', 'admin')
   @Get('scopes')

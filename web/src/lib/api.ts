@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiError, apiFetch } from '@/lib/api-client';
-import type { Me } from '@/lib/me';
+import { ME_KEY, type Me } from '@/lib/me';
 import i18n from '@/lib/i18n';
 
-export const ME_KEY = ['auth', 'me'] as const;
+export { ME_KEY };
 
 /**
  * Ngưỡng bật lời cảnh báo "sắp mất phiên".

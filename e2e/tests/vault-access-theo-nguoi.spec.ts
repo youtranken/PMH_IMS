@@ -4,9 +4,12 @@ import {
   E2E_MEMBER,
   E2E_SA,
   firstLogin,
+  horizontalOverflow,
+  logout,
   resetAccessList,
   resetUsers,
   sql,
+  writeHeaders,
 } from './helpers';
 
 test.beforeEach(() => {
@@ -79,5 +82,64 @@ test.describe('Quyền két sắt — theo người', () => {
     await expect(page).toHaveURL(/view=matrix/);
     await expect(page.getByTestId('access-grid')).toBeVisible();
     await expect(page.getByRole('columnheader', { name: 'Người', exact: true })).toBeVisible();
+  });
+
+  /**
+   * Màn này mở cho SA VÀ Admin, nhưng danh sách người từng lấy từ `/accounts` (chỉ SA) nên
+   * Admin mở ra là "Không tải được dữ liệu". Sửa bằng đường đọc hẹp `/vault/access/people`;
+   * `/accounts` KHÔNG được mở rộng cho Admin, và Member không đọc được danh bạ két.
+   */
+  test('Admin mở được màn Quyền két (desktop + 390px); /accounts vẫn chỉ SA', async ({ page }) => {
+    // Hai lượt đăng nhập đầy đủ, mỗi lượt chờ một mã TOTP mới.
+    test.setTimeout(150_000);
+    const adminEmail = 'e2e-tao-moi-admin-quyen-ket@pmh.com.vn';
+
+    await firstLogin(page, E2E_SA);
+    const created = await page.request.post('/api/v1/accounts', {
+      headers: await writeHeaders(page),
+      data: {
+        email: adminEmail,
+        fullName: 'E2E Quản trị quyền két',
+        role: 'admin',
+        totpLoginRequired: true,
+        phone: '',
+        employeeCode: '',
+        birthDate: '',
+      },
+    });
+    expect(created.status()).toBe(201);
+    const { temporaryPassword } = (await created.json()) as { temporaryPassword: string };
+    await logout(page);
+
+    await firstLogin(page, { email: adminEmail, password: temporaryPassword });
+    const memberName = sql(`SELECT full_name FROM users WHERE email = '${E2E_MEMBER.email}'`);
+
+    await page.goto('/admin/vault-access');
+    const list = page.getByRole('navigation', { name: 'Danh sách thành viên' });
+    await expect(list).toContainText(memberName);
+    await expect(page.getByText('Không tải được dữ liệu.')).toHaveCount(0);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.reload();
+    await expect(page.getByRole('navigation', { name: 'Danh sách thành viên' })).toContainText(
+      memberName,
+    );
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+
+    // Đường đọc hẹp: chỉ năm cột, không có gì của hồ sơ nhân sự.
+    const people = await page.request.get('/api/v1/vault/access/people');
+    expect(people.status()).toBe(200);
+    const rows = (await people.json()) as Record<string, unknown>[];
+    expect(Object.keys(rows[0]).sort()).toEqual(['email', 'fullName', 'id', 'role', 'status']);
+
+    // Không mở rộng quyền: Admin vẫn bị chặn ở danh sách tài khoản.
+    expect((await page.request.get('/api/v1/accounts')).status()).toBe(403);
+  });
+
+  test('Member không đọc được danh bạ của màn Quyền két', async ({ page }) => {
+    await firstLogin(page, E2E_MEMBER);
+    const res = await page.request.get('/api/v1/vault/access/people');
+    expect(res.status()).toBe(403);
+    expect(await res.json()).toMatchObject({ code: 'FORBIDDEN_ROLE' });
   });
 });

@@ -13,6 +13,7 @@ import { DevicesApiService } from '../devices/devices.api';
 import { ServiceAccountsApiService } from '../service-accounts/service-accounts.api';
 import { SoftwareApiService } from '../software/software.api';
 import { UsersApiService } from '../users/users.api';
+import type { UserDirectoryEntry } from '../users/users.types';
 import {
   ACCESS_TIERS,
   SCOPE_TYPES,
@@ -73,6 +74,14 @@ export class AccessListService {
       .orderBy(asc(accessListTable.memberEmail), asc(accessListTable.scopeType));
     const labels = await this.scopeLabels();
     return rows.map((row) => this.toRecord(row, labels));
+  }
+
+  /**
+   * Người hiện trên màn ma trận: Member để gán, SA/Admin để liệt kê "người mặc định xem được".
+   * Đi qua danh bạ hẹp của `users` (AD-2), không qua `/accounts`.
+   */
+  people(): Promise<UserDirectoryEntry[]> {
+    return this.users.directory();
   }
 
   /** Các nhóm có thể gán — màn ma trận đổ vào ô chọn. */

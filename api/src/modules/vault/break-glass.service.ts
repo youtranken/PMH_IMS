@@ -80,6 +80,18 @@ export interface BreakGlassView extends ApprovalRecord {
   secretCount: number | null;
 }
 
+/**
+ * Trang chi tiết một phiếu. Người duyệt nhận thêm vai người xin và "đã xin N lần trong X ngày"
+ * để nhận ra người xin quá thường — chỉ con số và vai, không thêm danh tính nào. Người xin tự
+ * đọc phiếu mình thì các trường này là `null`.
+ */
+export interface BreakGlassDetail extends BreakGlassView {
+  requesterRole: string | null;
+  /** Số phiếu người này đã gửi trong `recentWindowDays` ngày qua, tính cả phiếu đang xem. */
+  recentCount: number | null;
+  recentWindowDays: number | null;
+}
+
 /** Đường tới két của từng loại hồ sơ — đích của nút "Mở két" trong thư báo được duyệt. */
 export const VAULT_TAB_PATH: Record<SecretOwnerType, (id: string) => string> = {
   device: (id) => `${UI_PATHS.device(id)}?tab=vault`,
@@ -98,6 +110,16 @@ export interface AccessVerdict {
   canRequest: boolean;
   grant: ApprovalRecord | null;
   pending: ApprovalRecord | null;
+  /**
+   * Phiếu đang treo: số người DUYỆT ĐƯỢC đã nhận thư báo (không kể chính người xin — bốn mắt).
+   * Chỉ con số, không danh sách ai. `null` khi không có phiếu treo.
+   */
+  notifiedApprovers: number | null;
+  /**
+   * Quyền đang chạy còn bao nhiêu giây — server tính bằng đồng hồ của nó (AD-6), client chỉ
+   * đếm lùi từ con số này chứ không tự trừ theo đồng hồ máy. `null` khi không có hạn/không có quyền.
+   */
+  grantSecondsLeft: number | null;
 }
 
 /**
@@ -182,7 +204,7 @@ export class BreakGlassService implements OnModuleInit {
    * trả CÙNG lỗi với phiếu không tồn tại: đoán id mà phân biệt được "có nhưng cấm" với "không có"
    * là lộ ra ai đang xin mở két gì.
    */
-  async detail(viewer: string, canDecide: boolean, id: string): Promise<BreakGlassView> {
+  async detail(viewer: string, canDecide: boolean, id: string): Promise<BreakGlassDetail> {
     const row = await this.requireBreakGlass(id);
     if (!canDecide && row.requester.toLowerCase() !== viewer.toLowerCase()) {
       // Đúng từng chữ của `approvals.findOne` khi id không tồn tại.
@@ -192,7 +214,28 @@ export class BreakGlassService implements OnModuleInit {
       });
     }
     const [view] = await this.views([row], canDecide);
-    return view;
+    if (!canDecide) {
+      return { ...view, requesterRole: null, recentCount: null, recentWindowDays: null };
+    }
+    const windowDays = Math.max(1, await this.config.getNumber('breakGlassRecentWindowDays'));
+    const [requesterRole, recent] = await Promise.all([
+      this.users.roleByEmail(row.requester),
+      this.approvals.page(
+        {
+          kind: BREAK_GLASS_KIND,
+          requester: row.requester,
+          since: new Date(Date.now() - windowDays * 86_400_000),
+        },
+        { limit: 1, offset: 0 },
+      ),
+    ]);
+    return { ...view, requesterRole, recentCount: recent.total, recentWindowDays: windowDays };
+  }
+
+  /** Số người duyệt được một phiếu của `requester` — mọi SA/Admin đang hoạt động trừ chính họ. */
+  private async approverCountExcept(requester: string): Promise<number> {
+    const approvers = await this.users.recipientsByRole(['sa', 'admin']);
+    return approvers.filter((a) => a.email.toLowerCase() !== requester.toLowerCase()).length;
   }
 
   /**
@@ -220,6 +263,8 @@ export class BreakGlassService implements OnModuleInit {
         canRequest: false,
         grant: null,
         pending: null,
+        notifiedApprovers: null,
+        grantSecondsLeft: null,
       };
     }
     if (tier === 'whitelist') {
@@ -230,6 +275,8 @@ export class BreakGlassService implements OnModuleInit {
         canRequest: false,
         grant: null,
         pending: null,
+        notifiedApprovers: null,
+        grantSecondsLeft: null,
       };
     }
 
@@ -252,6 +299,10 @@ export class BreakGlassService implements OnModuleInit {
       canRequest: grant === null && pending === null,
       grant,
       pending,
+      notifiedApprovers: pending ? await this.approverCountExcept(memberEmail) : null,
+      grantSecondsLeft: grant?.expiresAt
+        ? Math.max(0, Math.floor((grant.expiresAt.getTime() - Date.now()) / 1000))
+        : null,
     };
   }
 
@@ -391,8 +442,8 @@ export class BreakGlassService implements OnModuleInit {
   }
 
   /**
-   * Người duyệt chốt. `hours` cho phép RÚT NGẮN so với yêu cầu — người duyệt nhìn lý do rồi
-   * quyết, chứ không phải bấm đồng ý với con số người xin tự đặt.
+   * Người duyệt chốt. `hours` cho phép RÚT NGẮN so với yêu cầu (không kéo dài) — người duyệt
+   * nhìn lý do rồi quyết, chứ không phải bấm đồng ý với con số người xin tự đặt.
    */
   async approve(
     approver: string,
@@ -422,7 +473,13 @@ export class BreakGlassService implements OnModuleInit {
       });
     }
     const asked = Number((request.payload as { hours?: number } | null)?.hours ?? 0);
-    const hours = await this.clampHours(options.hours ?? asked);
+    /*
+     * Rút ngắn được, KÉO DÀI thì không: cấp nhiều giờ hơn số xin là mở két lâu hơn chính người
+     * cần nó nghĩ là cần, và nhật ký FR-025 in ra một grant người xin chưa từng xin. Phiếu không
+     * mang số giờ hợp lệ thì chỉ còn trần cấu hình (`clampHours`) chặn.
+     */
+    const typed = options.hours ?? asked;
+    const hours = await this.clampHours(asked > 0 ? Math.min(typed, asked) : typed);
 
     return this.decide(id, {
       to: 'approved',

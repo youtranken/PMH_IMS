@@ -16,7 +16,9 @@ import { useConfirm } from '@/ui/confirm-provider';
 import { useMediaQuery } from '@/ui/use-media-query';
 import { NARROW_QUERY } from '@/ui/use-narrow';
 import { useToast } from '@/ui/toast';
+import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { foldSearch } from '@/lib/search-fold';
+import { planCopy } from './access-copy';
 
 /** Phải khớp `SCOPE_TYPES` bên API (`access-tier.ts`) và CHECK ở tầng DB. */
 type ScopeType =
@@ -93,6 +95,8 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
   const [family, setFamily] = useState<'' | ScopeType>('');
   const [grantingScope, setGrantingScope] = useState<ScopeOption | null>(null);
   const [addingFor, setAddingFor] = useState<AccountRow | null>(null);
+  /** Người NHẬN của "Sao chép quyền từ…" — chọn đồng nghiệp nằm trong hộp. */
+  const [copyingFor, setCopyingFor] = useState<AccountRow | null>(null);
   /** Ô / chip đang mở để đặt/gỡ quyền. `rule` null = đang gán mới. */
   const [cell, setCell] = useState<{
     account: AccountRow;
@@ -125,9 +129,11 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
     queryFn: () => apiFetch<ScopeOption[]>('/api/v1/vault/access/scopes'),
   });
 
+  // Danh bạ hẹp của module két, KHÔNG phải `/accounts`: màn này mở cho cả Admin, còn
+  // `/accounts` chỉ SA và trả đủ hồ sơ nhân sự.
   const accounts = useQuery({
-    queryKey: ['accounts', 'all'],
-    queryFn: () => apiFetch<{ items: AccountRow[] }>('/api/v1/accounts?limit=200'),
+    queryKey: ['vault', 'access', 'people'],
+    queryFn: () => apiFetch<AccountRow[]>('/api/v1/vault/access/people'),
   });
 
   const remove = useApiMutation<{ id: string }, unknown>(
@@ -193,7 +199,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
 
   const columns = columnGroups.flatMap((group) => group.scopes);
 
-  const allAccounts = accounts.data?.items ?? [];
+  const allAccounts = accounts.data ?? [];
   const members = allAccounts.filter((account) => account.role === 'member');
   const roleHolders = allAccounts.filter((account) => account.role !== 'member');
   // Gấp dấu cả hai vế (B-01): gõ `nguyen thi` phải ra `Nguyễn Thị`.
@@ -243,6 +249,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
       rulesOf={rulesOf}
       onSelect={(account) => setParam('user', account ? account.id : null)}
       onAdd={setAddingFor}
+      onCopy={setCopyingFor}
       onOpenRule={(account, rule) =>
         setCell({
           account,
@@ -428,6 +435,22 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
         />
       ) : null}
 
+      {copyingFor ? (
+        <CopyFromDialog
+          account={copyingFor}
+          members={members}
+          rulesOf={rulesOf}
+          csrfToken={me.csrfToken}
+          onClose={() => setCopyingFor(null)}
+          onSaved={({ granted, failures, source }) => {
+            setCopyingFor(null);
+            toast({ message: t('access.copyDone', { count: granted, source: source.fullName }) });
+            for (const failure of failures) toast({ message: failure, tone: 'warn' });
+            void refresh();
+          }}
+        />
+      ) : null}
+
       {grantingScope ? (
         <GrantToScopeDialog
           scope={grantingScope}
@@ -458,6 +481,7 @@ function PeopleView({
   rulesOf,
   onSelect,
   onAdd,
+  onCopy,
   onOpenRule,
 }: {
   people: AccountRow[];
@@ -466,6 +490,7 @@ function PeopleView({
   rulesOf: Map<string, AccessRule[]>;
   onSelect: (account: AccountRow | null) => void;
   onAdd: (account: AccountRow) => void;
+  onCopy: (account: AccountRow) => void;
   onOpenRule: (account: AccountRow, rule: AccessRule) => void;
 }) {
   const { t } = useTranslation();
@@ -513,6 +538,7 @@ function PeopleView({
           rules={rulesOf.get(selected.email.toLowerCase()) ?? []}
           onBack={narrow ? () => onSelect(null) : undefined}
           onAdd={() => onAdd(selected)}
+          onCopy={() => onCopy(selected)}
           onOpenRule={(rule) => onOpenRule(selected, rule)}
         />
       ) : null}
@@ -526,12 +552,14 @@ function PersonRules({
   rules,
   onBack,
   onAdd,
+  onCopy,
   onOpenRule,
 }: {
   account: AccountRow;
   rules: AccessRule[];
   onBack?: () => void;
   onAdd: () => void;
+  onCopy: () => void;
   onOpenRule: (rule: AccessRule) => void;
 }) {
   const { t } = useTranslation();
@@ -554,9 +582,14 @@ function PersonRules({
           <h2 id="access-person-title">{account.fullName}</h2>
           <span className="muted mono">{account.email}</span>
         </div>
-        <button type="button" className="btn primary" onClick={onAdd}>
-          {t('access.addRules')}
-        </button>
+        <div className="detail-actions">
+          <button type="button" className="btn" onClick={onCopy}>
+            {t('access.copyFrom')}
+          </button>
+          <button type="button" className="btn primary" onClick={onAdd}>
+            {t('access.addRules')}
+          </button>
+        </div>
       </div>
       {groups.length === 0 ? (
         <p className="muted">{t('access.noRulesYet')}</p>
@@ -1110,6 +1143,191 @@ function MultiGrantDialog({
           </p>
         ) : null}
       </form>
+    </Dialog>
+  );
+}
+
+/**
+ * "Sao chép quyền từ…" — người mới vào tổ thường cần đúng bộ quyền của một đồng nghiệp cùng tổ.
+ * Gán tay từng nhóm là chỗ dễ sót một nhóm hoặc chọn nhầm tầng.
+ *
+ * Chỉ dùng API gán sẵn có (`POST /vault/access`, SA/Admin + step-up) — mỗi nhóm một dòng, một
+ * dòng nhật ký, như gán tay. Nhóm người nhận đã có thì BỎ QUA chứ không ghi đè: POST là upsert,
+ * gửi lại là lặng lẽ đổi tầng một quyết định đã đặt riêng cho người này (`planCopy`).
+ */
+function CopyFromDialog({
+  account,
+  members,
+  rulesOf,
+  csrfToken,
+  onClose,
+  onSaved,
+}: {
+  account: AccountRow;
+  members: AccountRow[];
+  rulesOf: Map<string, AccessRule[]>;
+  csrfToken: string;
+  onClose: () => void;
+  onSaved: (result: { granted: number; failures: string[]; source: AccountRow }) => void;
+}) {
+  const { t } = useTranslation();
+  const askConfirm = useConfirm();
+  const stepUp = useStepUpRetry(csrfToken);
+  const [sourceId, setSourceId] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const save = useApiMutation<Record<string, unknown>, unknown>('/api/v1/vault/access', {
+    csrfToken,
+    refreshMe: false,
+  });
+
+  const rulesFor = (member: AccountRow) => rulesOf.get(member.email.toLowerCase()) ?? [];
+  // Đồng nghiệp chưa có quyền nào thì không có gì để chép — không bày ra làm nhiễu ô chọn.
+  const colleagues = members.filter(
+    (member) => member.id !== account.id && rulesFor(member).length > 0,
+  );
+  const source = colleagues.find((member) => member.id === sourceId) ?? null;
+  const plan = source ? planCopy(rulesFor(source), rulesFor(account)) : null;
+  const byLabel = (a: AccessRule, b: AccessRule) =>
+    SCOPE_ORDER.indexOf(a.scopeType) - SCOPE_ORDER.indexOf(b.scopeType) ||
+    a.scopeLabel.localeCompare(b.scopeLabel, 'vi');
+  const line = (rule: AccessRule) => `${rule.scopeLabel} · ${t(`access.tier_${rule.tier}`)}`;
+
+  return (
+    <Dialog
+      open
+      onOpenChange={onClose}
+      /* Đang ghi thì không cho đóng: hộp biến mất mà lượt ghi vẫn chạy, người dùng tưởng đã hủy. */
+      dismissible={!saving}
+      maxWidth={560}
+      title={t('access.copyTitle', { member: account.fullName })}
+      footer={
+        <>
+          <button type="button" className="btn" disabled={saving} onClick={onClose}>
+            {t('common.cancel')}
+          </button>
+          <button type="submit" form="copy-access-form" className="btn primary" disabled={saving}>
+            {saving ? t('common.loading') : t('access.add')}
+          </button>
+        </>
+      }
+    >
+      <form
+        id="copy-access-form"
+        className="form-grid"
+        data-columns={1}
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          setError(null);
+          if (!source || !plan) {
+            setError(t('access.copyNeedSource'));
+            return;
+          }
+          if (plan.grant.length === 0) {
+            setError(t('access.copyNothing'));
+            return;
+          }
+          void (async () => {
+            // Cấp quyền xem mật khẩu là mở cửa: nêu đích danh AI, GIỐNG AI và BAO NHIÊU nhóm.
+            const ok = await askConfirm({
+              title: t('access.confirmGrantTitle'),
+              message: t('access.confirmCopy', {
+                member: account.fullName,
+                source: source.fullName,
+                count: plan.grant.length,
+              }),
+              confirmLabel: t('access.add'),
+            });
+            if (!ok) return;
+            setSaving(true);
+            let done = 0;
+            const failures: string[] = [];
+            for (const rule of plan.grant) {
+              try {
+                await stepUp.run(() =>
+                  save.mutateAsync({
+                    memberEmail: account.email,
+                    scopeType: rule.scopeType,
+                    scopeRef: rule.scopeRef,
+                    tier: rule.tier,
+                    note: t('access.copyNote', { source: source.email }),
+                  }),
+                );
+                done += 1;
+              } catch (err) {
+                failures.push(`${rule.scopeLabel}: ${errorMessage(err)}`);
+              }
+            }
+            setSaving(false);
+            if (done === 0) {
+              setError(failures.join(' '));
+              return;
+            }
+            // Nhóm chép hỏng phải được nói ra, kể cả khi có nhóm chép được.
+            onSaved({ granted: done, failures, source });
+          })();
+        }}
+      >
+        {colleagues.length === 0 ? (
+          <p className="muted">{t('access.copyNoColleague')}</p>
+        ) : (
+          <Field label={t('access.copySource')} hint={t('access.copyHint')}>
+            <Select
+              value={sourceId}
+              onChange={setSourceId}
+              ariaLabel={t('access.copySource')}
+              placeholder={t('access.copyPickSource')}
+              options={colleagues.map((member) => ({
+                value: member.id,
+                label: t('access.copySourceOption', {
+                  name: member.fullName,
+                  count: rulesFor(member).length,
+                }),
+              }))}
+            />
+          </Field>
+        )}
+
+        {plan ? (
+          <>
+            {plan.grant.length > 0 ? (
+              <section aria-labelledby="copy-access-grant">
+                <h3 id="copy-access-grant" className="lbl-t">
+                  {t('access.copyWillGrant', { count: plan.grant.length })}
+                </h3>
+                <ul>
+                  {[...plan.grant].sort(byLabel).map((rule) => (
+                    <li key={rule.id}>{line(rule)}</li>
+                  ))}
+                </ul>
+              </section>
+            ) : (
+              <p className="muted">{t('access.copyNothing')}</p>
+            )}
+            {plan.alreadyHas.length > 0 ? (
+              <section aria-labelledby="copy-access-kept">
+                <h3 id="copy-access-kept" className="lbl-t">
+                  {t('access.copyAlreadyHas', { count: plan.alreadyHas.length })}
+                </h3>
+                <ul className="muted">
+                  {[...plan.alreadyHas].sort(byLabel).map((rule) => (
+                    <li key={rule.id}>{line(rule)}</li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+          </>
+        ) : null}
+
+        {error ? (
+          <p className="alert error" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </form>
+      {stepUp.dialog}
     </Dialog>
   );
 }

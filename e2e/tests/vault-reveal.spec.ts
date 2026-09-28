@@ -104,7 +104,6 @@ test.describe('Mở két với TOTP step-up', () => {
     await expect(page).toHaveURL(new RegExp(`/devices/${deviceId}`));
 
     await page.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
-    await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận' }).click();
 
     await expect(page.getByTestId('secret-value')).toHaveText(`Web#Pass#${stamp}`);
     /*
@@ -145,7 +144,6 @@ test.describe('Mở két với TOTP step-up', () => {
     await page.getByRole('button', { name: 'Xem' }).click();
 
     await page.getByLabel('Mã xác thực').fill('000000');
-    await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận' }).click();
 
     await expect(page.getByRole('alert')).toContainText('Mã xác thực không đúng');
     await expect(page.getByTestId('secret-value')).toHaveCount(0);

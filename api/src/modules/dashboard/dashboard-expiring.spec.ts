@@ -79,3 +79,23 @@ describe('Khối "sắp hết hạn" khi có nhiều mục quá hạn', () => {
     expect(board.expiring.total).toBe(21);
   });
 });
+
+/**
+ * DASH-002 — khối "Sắp hết hạn" có nút Gia hạn ngay tại dòng, nên mỗi dòng phải mang đủ thứ
+ * mà `POST /expiry/renew` cần (`kind` + `id`) và cờ `canRenew` do chính module expiry quyết —
+ * trang chủ không tự đoán loại nào gia hạn được.
+ */
+describe('Khối "sắp hết hạn" mang đủ dữ liệu để gia hạn tại chỗ', () => {
+  it('mỗi dòng có id và canRenew lấy từ nguồn', async () => {
+    const renewable = { ...row('ssl-1', 2), canRenew: true };
+    const warranty = { ...row('bh-1', 5), kind: 'warranty', canRenew: false };
+    const board = await buildService([], { upcoming: [renewable, warranty], overdue: [] }).build({
+      email: 'sep@pmh.com.vn',
+      role: 'admin',
+    });
+    expect(board.expiring.items).toEqual([
+      expect.objectContaining({ id: 'ssl-1', kind: 'ssl', canRenew: true }),
+      expect.objectContaining({ id: 'bh-1', kind: 'warranty', canRenew: false }),
+    ]);
+  });
+});

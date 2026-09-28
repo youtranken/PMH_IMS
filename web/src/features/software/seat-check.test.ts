@@ -23,4 +23,25 @@ describe('seatCheck', () => {
   ])('%p (có ghế: %p, đang dùng %p) → %o', (raw, hasSeats, used, expected) => {
     expect(seatCheck(raw, hasSeats, used)).toEqual(expected);
   });
+
+  /*
+   * Vượt ghế là trạng thái HỢP LỆ (gán vượt phải ghi lý do). Form chỉ chặn khi lượt sửa ĐỔI
+   * tổng xuống dưới số đang dùng — cùng luật `seatConflicts(beforeSeatTotal)` của API. Chặn cả
+   * khi tổng giữ nguyên thì license 2/1 không sửa được ghi chú hay ngày hết hạn.
+   */
+  it.each([
+    // Tổng không đổi: license đang vượt vẫn lưu được.
+    ['1', 2, 1, { value: 1, reason: null }],
+    [' 1 ', 2, 1, { value: 1, reason: null }],
+    // Đổi tổng xuống dưới số đang dùng: chặn.
+    ['1', 2, 3, { value: 1, reason: 'belowUsed' }],
+    // Đổi tổng mà vẫn dưới số đang dùng: API chặn, form cũng chặn (không để server nói sau).
+    ['2', 3, 1, { value: 2, reason: 'belowUsed' }],
+    // Hồ sơ trước "không giới hạn" giờ đặt trần dưới số đang dùng: là đổi tổng, chặn.
+    ['1', 2, null, { value: 1, reason: 'belowUsed' }],
+    // Đổi lên đủ số đang dùng: hợp lệ.
+    ['3', 3, 1, { value: 3, reason: null }],
+  ])('%p, đang dùng %p, tổng cũ %p → %o', (raw, used, before, expected) => {
+    expect(seatCheck(raw, true, used, before)).toEqual(expected);
+  });
 });

@@ -63,8 +63,16 @@ export function describeFieldChanges(
 
   const parts = Object.entries(changes).map(([field, change]) => {
     const label = options.label(field);
-    // Id là uuid — hiện ra chỉ tổ rối, nói "đã đổi" là đủ dùng.
-    if (field.endsWith('Id')) return t('history.changedOnly', { field: label });
+    /* Id là uuid — hiện ra chỉ tổ rối. Màn nào tra được TÊN cho id (qua `display`) thì in
+       tên; tra không đủ cả hai phía thì nói "đã đổi", không bao giờ để lọt uuid thô. */
+    if (field.endsWith('Id')) {
+      const before = options.display?.(field, change.before);
+      const after = options.display?.(field, change.after);
+      if (before === undefined || after === undefined) {
+        return t('history.changedOnly', { field: label });
+      }
+      return `${label}: ${before} → ${after}`;
+    }
     if (options.unchangedAsContext && change.before === change.after) {
       return `${label} ${read(field, change.after)}`;
     }

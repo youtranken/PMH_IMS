@@ -1143,7 +1143,6 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await page.getByRole('button', { name: 'Xem' }).click();
     await expect(page.getByRole('dialog', { name: 'Xác nhận danh tính' })).toBeVisible();
     await page.getByLabel('Mã xác thực').fill(await freshTotpCode(adminTotp));
-    await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận' }).click();
     await expect(
       page.getByTestId('secret-value'),
       'sau khi xác thực, admin phải đọc được đúng giá trị đã cất',
@@ -8532,10 +8531,14 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'hộp xác nhận danh tính phải có ĐÚNG một ô: mã 6 số. Thêm ô nào ở đây cũng là thêm một ' +
         'đường đi vòng qua hàng rào cuối',
     ).toEqual(['Mã xác thực']);
+    // Không dùng `maxlength`: mã dán kèm khoảng trắng ("123 456") sẽ bị trình duyệt cắt trước khi
+    // lọc. Ô tự bỏ ký tự không phải số và cắt còn 6 — gõ 5 số để không kích hoạt tự gửi.
+    await stepUp.getByLabel('Mã xác thực').fill('12 34 5x');
     await expect(
       stepUp.getByLabel('Mã xác thực'),
-      'ô mã phải chặn ở 6 ký tự ngay tại chỗ gõ',
-    ).toHaveAttribute('maxlength', '6');
+      'ô mã chỉ giữ chữ số ngay tại chỗ gõ',
+    ).toHaveValue('12345');
+    await stepUp.getByLabel('Mã xác thực').fill('');
     expect(
       await stepUp.getByTestId('dialog-footer').getByRole('button').allTextContents(),
       'chân hộp phải có đúng cặp Hủy / Xác nhận',
@@ -8544,7 +8547,6 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     /* ---- Gõ SAI mã: hộp KHÔNG được đóng ---- */
 
     await stepUp.getByLabel('Mã xác thực').fill('000000');
-    await stepUp.getByRole('button', { name: 'Xác nhận' }).click();
     await expect(
       stepUp.getByRole('alert'),
       'gõ sai mã phải nói thẳng là sai mã, không phải một lỗi chung chung',
@@ -8565,7 +8567,6 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     /* ---- Gõ ĐÚNG mã: sang hộp hiện secret ---- */
 
     await stepUp.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
-    await stepUp.getByRole('button', { name: 'Xác nhận' }).click();
     await expect(stepUp).toBeHidden();
 
     /* ---------- HỘP "HIỆN SECRET": đủ bộ ba, và một nút ẩn ngay ---------- */
@@ -8662,12 +8663,11 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await page.goto('/approvals');
     await page.getByRole('tabpanel').getByRole('button', { name: 'Duyệt', exact: true }).click();
 
-    const approve = page.getByRole('dialog', {
-      name: `Duyệt yêu cầu của ${E2E_MEMBER.email}`,
-    });
+    const approve = page.getByRole('dialog', { name: 'Duyệt yêu cầu', exact: true });
+    await expect(approve).toBeVisible();
     await expect(
-      approve,
-      'tiêu đề hộp phải nêu đích danh người xin — người trực đêm mở ba phiếu liền là quyết nhầm phiếu',
+      approve.getByText(E2E_MEMBER.email),
+      'thân hộp phải nêu đích danh người xin — người trực đêm mở ba phiếu liền là quyết nhầm phiếu',
     ).toBeVisible();
 
     expect(
@@ -8684,8 +8684,10 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
         'người xin tự đặt',
     ).toBeEditable();
     await expect(
-      approve.getByText('Sửa được — cấp vừa đủ việc, đừng cấp thừa. Vượt trần hệ thống sẽ bị kẹp xuống.'),
-      'và phải nói ra là sửa được, không để người duyệt tự đoán',
+      approve.getByText(
+        'Rút ngắn được, tối đa 6 giờ như người xin. Vượt trần hệ thống sẽ bị kẹp xuống.',
+      ),
+      'và phải nói ra là sửa được (chỉ rút ngắn, không cấp quá số xin), không để người duyệt tự đoán',
     ).toBeVisible();
     expect(
       await approve.getByTestId('dialog-footer').getByRole('button').allTextContents(),
@@ -8698,8 +8700,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     /* ---------- HỘP "TỪ CHỐI" — phải KHÁC hộp Duyệt ---------- */
 
     await page.getByRole('tabpanel').getByRole('button', { name: 'Từ chối', exact: true }).click();
-    const deny = page.getByRole('dialog', { name: `Từ chối yêu cầu của ${E2E_MEMBER.email}` });
+    const deny = page.getByRole('dialog', { name: 'Từ chối yêu cầu', exact: true });
     await expect(deny).toBeVisible();
+    await expect(deny.getByText(E2E_MEMBER.email)).toBeVisible();
 
     expect(
       await textboxLabels(deny),

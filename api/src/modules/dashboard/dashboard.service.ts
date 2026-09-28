@@ -100,10 +100,14 @@ export interface DisposedEntry {
 export interface Dashboard {
   expiring: DashboardBlock<{
     kind: string;
+    /** Cùng `kind` là đủ cho `POST /expiry/renew` — nút Gia hạn ngay trên dòng. */
+    id: string;
     label: string;
     endDate: string;
     daysLeft: number;
     link: string | null;
+    /** Module expiry quyết loại nào gia hạn được (bảo hành thì không) — trang chủ không đoán. */
+    canRenew: boolean;
   }>;
   incidents: DashboardBlock<never>;
   breakGlass: DashboardBlock<BreakGlassEntry>;
@@ -202,10 +206,12 @@ export class DashboardService {
         items: pickExpiring(upcoming.items, overdue.items, MAX_ITEMS, OVERDUE_SLOTS).map(
           (row) => ({
             kind: row.kind,
+            id: row.id,
             label: row.label,
             endDate: row.end,
             daysLeft: row.daysLeft,
             link: row.link ?? null,
+            canRenew: row.canRenew,
           }),
         ),
       };

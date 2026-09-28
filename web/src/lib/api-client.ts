@@ -1,6 +1,6 @@
 import { QueryClient } from '@tanstack/react-query';
-import { LOGIN_PATH } from '@/lib/me';
-import { rememberNextPath } from '@/lib/next-path';
+import { LOGIN_PATH, ME_KEY, type Me } from '@/lib/me';
+import { rememberNextPath, tabOwner } from '@/lib/next-path';
 
 /** Lỗi HTTP mang theo status + body để nơi gọi đọc `code`/`message` tiếng Việt của API. */
 export class ApiError extends Error {
@@ -79,9 +79,12 @@ export async function readResponse<T>(res: Response): Promise<T> {
     const errBody: unknown = await res.json().catch(() => null);
     const code = (errBody as { code?: string } | null)?.code;
     if (res.status === 401 && !(code && USER_INPUT_401_CODES.has(code))) {
-      // Phiên chết giữa chừng: đăng nhập lại xong phải về đúng trang đang làm dở.
+      // Phiên chết giữa chừng: đăng nhập lại xong phải về đúng trang đang làm dở — nhưng chỉ
+      // khi người đăng nhập lại là CHỦ phiên đó (máy dùng chung), nên nhớ kèm email.
       const { pathname, search, hash } = window.location;
-      rememberNextPath(`${pathname}${search}${hash}`);
+      const owner =
+        queryClient.getQueryData<Pick<Me, 'email'> | null>(ME_KEY)?.email ?? tabOwner();
+      rememberNextPath(`${pathname}${search}${hash}`, owner);
       window.location.href = LOGIN_PATH;
     }
     throw new ApiError(res.status, errBody);

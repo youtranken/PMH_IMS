@@ -29,3 +29,12 @@ export interface UserCredentials extends UserRecord {
   totpKeyVersion: number | null;
   totpLastTimestep: number | null;
 }
+
+/** Một người trong danh bạ tối thiểu — màn gán quyền cần biết ai là ai, không cần hơn. */
+export interface UserDirectoryEntry {
+  id: string;
+  email: string;
+  fullName: string;
+  role: UserRole;
+  status: UserRecord['status'];
+}

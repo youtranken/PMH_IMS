@@ -30,23 +30,26 @@ const RULES = [
   },
 ];
 
-function renderAt(entry: string) {
-  vi.stubGlobal(
-    'fetch',
-    vi.fn((input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url.includes('/vault/access/scopes')) return Promise.resolve(jsonResponse(200, SCOPES));
-      if (url.includes('/vault/access')) return Promise.resolve(jsonResponse(200, RULES));
-      return Promise.resolve(jsonResponse(200, { items: ACCOUNTS, total: ACCOUNTS.length }));
-    }),
-  );
-  return renderWithI18n(
+function renderAt(entry: string, me: Me = ME) {
+  const fetchMock = vi.fn((input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes('/vault/access/scopes')) return Promise.resolve(jsonResponse(200, SCOPES));
+    if (url.includes('/vault/access/people')) return Promise.resolve(jsonResponse(200, ACCOUNTS));
+    if (url.includes('/vault/access')) return Promise.resolve(jsonResponse(200, RULES));
+    // `/accounts` chỉ SA: màn này mở cho cả Admin nên không được dựa vào nó.
+    return Promise.resolve(
+      jsonResponse(403, { code: 'FORBIDDEN_ROLE', message: 'Bạn không có quyền thực hiện thao tác này.' }),
+    );
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  const view = renderWithI18n(
     <MemoryRouter initialEntries={[entry]}>
       <ToastProvider>
-        <AccessMatrixScreen me={ME} />
+        <AccessMatrixScreen me={me} />
       </ToastProvider>
     </MemoryRouter>,
   );
+  return { ...view, fetchMock };
 }
 
 describe('Quyền xem két sắt — theo người', () => {
@@ -64,6 +67,15 @@ describe('Quyền xem két sắt — theo người', () => {
       'aria-current',
       'true',
     );
+  });
+
+  it('Admin mở được màn: danh sách người lấy từ két, không gọi /accounts (chỉ SA)', async () => {
+    const admin = { role: 'admin', csrfToken: 't', email: 'ad@pmh.com.vn' } as unknown as Me;
+    const { fetchMock } = renderAt('/admin/vault-access', admin);
+    const list = await screen.findByRole('navigation', { name: 'Danh sách thành viên' });
+    expect(list).toHaveTextContent('Nguyễn An');
+    const urls = fetchMock.mock.calls.map(([input]) => String(input));
+    expect(urls.some((url) => url.includes('/api/v1/accounts'))).toBe(false);
   });
 
   it('SA/Admin không thành dòng trống: họ nằm trong khối "Có toàn quyền theo vai (2)"', async () => {

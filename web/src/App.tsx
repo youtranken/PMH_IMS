@@ -9,7 +9,13 @@ import {
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useMe } from '@/lib/api';
-import { clearNextPath, peekNextPath, rememberNextPath } from '@/lib/next-path';
+import {
+  clearNextPath,
+  noteTabOwner,
+  peekNextPath,
+  rememberNextPath,
+  tabOwner,
+} from '@/lib/next-path';
 import {
   CHANGE_PASSWORD_PATH,
   LEGACY_AUTH_ROUTES,
@@ -88,11 +94,11 @@ function LegacyRedirect({ to, withId }: { to: string; withId?: boolean }) {
 }
 
 /**
- * Xong luồng đăng nhập: đi tới đích đã nhớ (đã kiểm là đường nội bộ) rồi xoá nó, để lần đăng
- * nhập sau không bị kéo về một trang cũ.
+ * Xong luồng đăng nhập: đi tới đích đã nhớ (đã kiểm là đường nội bộ, và thuộc đúng người vừa
+ * đăng nhập) rồi xoá nó, để lần đăng nhập sau không bị kéo về một trang cũ.
  */
-function ResumeAfterLogin() {
-  const [target] = useState(() => peekNextPath() ?? '/');
+function ResumeAfterLogin({ email }: { email: string }) {
+  const [target] = useState(() => peekNextPath(email) ?? '/');
   useEffect(() => clearNextPath(), []);
   return <Navigate to={target} replace />;
 }
@@ -101,6 +107,8 @@ function AppRoutes() {
   const { t } = useTranslation();
   const { data: me, isLoading, isError, error, refetch } = useMe();
   const location = useLocation();
+  /* Ghi chủ của tab lúc render là an toàn: cùng một giá trị, ghi lại bao nhiêu lần cũng vậy. */
+  if (me) noteTabOwner(me.email);
   /*
    * Gọi ở ĐÂY, trước mọi lượt `return` sớm, vì hai lý do:
    *
@@ -146,12 +154,17 @@ function AppRoutes() {
   if (step !== '/' && location.pathname !== step) {
     // Nhớ nơi người dùng định mở (link trong mail duyệt break-glass…) để đưa về đúng đó sau
     // khi xong MỌI bước. Ghi lúc render là an toàn: cùng một giá trị, ghi lại bao nhiêu lần cũng vậy.
-    if (!isAuthRoute) rememberNextPath(`${location.pathname}${location.search}${location.hash}`);
+    if (!isAuthRoute) {
+      rememberNextPath(
+        `${location.pathname}${location.search}${location.hash}`,
+        me?.email ?? tabOwner(),
+      );
+    }
     return <Navigate to={step} replace />;
   }
   // Đã đủ điều kiện mà còn nằm ở màn đăng nhập → vào app, về đúng đích đã nhớ nếu có.
   if (step === '/' && isAuthRoute) {
-    return <ResumeAfterLogin />;
+    return <ResumeAfterLogin email={me?.email ?? ''} />;
   }
 
   if (!me) {

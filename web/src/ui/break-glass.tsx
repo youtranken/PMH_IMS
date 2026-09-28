@@ -8,6 +8,8 @@ import { OWNER_PATH } from '@/lib/routes';
 import { SECRET_OWNER_KIND_KEY, type SecretOwnerType } from '@/lib/secret-owner-kinds';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
+import { grantHoursCheck, requestedHours } from '@/ui/grant-hours';
+import { useFormErrors } from '@/ui/use-form-errors';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 
 /**
@@ -40,6 +42,13 @@ export interface BreakGlassRow {
   createdAt: string;
   /** Server tính bằng đồng hồ (AD-6) — client không tự so giờ. */
   active: boolean;
+  /**
+   * Chỉ trang chi tiết, chỉ người duyệt: vai người xin và số lần họ đã xin trong
+   * `recentWindowDays` ngày (tính cả phiếu này). Người xin tự đọc thì `null`.
+   */
+  requesterRole?: string | null;
+  recentCount?: number | null;
+  recentWindowDays?: number | null;
 }
 
 export const BREAK_GLASS_KEY = ['break-glass'] as const;
@@ -148,6 +157,9 @@ const DENY_QUICK = ['approvals.denyQuickVague', 'approvals.denyQuickHours', 'app
  * Duyệt: ô giờ điền sẵn số người xin, sửa được — người duyệt cấp vừa đủ việc, không phải bấm
  * đồng ý với con số người xin tự đặt. Từ chối: ghi chú BẮT BUỘC, vì người xin đọc nó trong thư;
  * thiếu lý do thì họ gửi lại y nguyên. Xong việc thì hộp tự làm mới mọi nơi đang hiện phiếu.
+ *
+ * Tiêu đề ngắn (một dòng ở 390px); thân hộp nhắc lại người xin · đối tượng · lý do, để người
+ * trực mở ba phiếu liền không quyết nhầm phiếu.
  */
 export function DecisionDialog({
   row,
@@ -164,27 +176,31 @@ export function DecisionDialog({
 }) {
   const { t } = useTranslation();
   const actions = useBreakGlassActions(csrfToken);
-  const [hours, setHours] = useState(String(row.payload?.hours ?? 4));
+  const requested = requestedHours(row.payload);
+  const [hours, setHours] = useState(String(requested ?? 4));
   const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  /* Không âm thầm rơi về một con số mặc định: "2 tiếng" hay "0" phải bị báo, không được thành
+     một quyền mở két dài hơn người duyệt định cấp. */
+  // Số giờ: số nguyên dương và KHÔNG vượt số giờ người xin (kẹp lại ở API) — xem grant-hours.ts.
+  const hoursCheck = grantHoursCheck(hours, requested);
+  const check = useFormErrors({
+    hours:
+      approve &&
+      hoursCheck.reason !== null &&
+      t(hoursCheck.reason === 'aboveAsked' ? 'approvals.grantHoursAboveAsked' : 'approvals.grantHoursInvalid', {
+        hours: requested,
+      }),
+    note: !approve && !note.trim() && t('approvals.denyNoteRequired'),
+  });
+
   const submit = async () => {
     setError(null);
+    if (!check.check()) return;
     const trimmed = note.trim();
-    let asked = 0;
-    if (approve) {
-      /* Không âm thầm rơi về một con số mặc định: "2 tiếng" hay "0" phải bị báo, không được
-         thành một quyền mở két dài hơn người duyệt định cấp. */
-      asked = Number(hours.trim());
-      if (!Number.isInteger(asked) || asked <= 0) {
-        setError(t('approvals.grantHoursInvalid'));
-        return;
-      }
-    } else if (!trimmed) {
-      setError(t('approvals.denyNoteRequired'));
-      return;
-    }
+    const asked = approve ? (hoursCheck.value ?? 0) : 0;
     setBusy(true);
     try {
       if (approve) await actions.approve(row.id, { hours: asked, note: trimmed });
@@ -207,9 +223,7 @@ export function DecisionDialog({
       dismissible={!busy}
       guardUnsaved
       maxWidth={460}
-      title={t(approve ? 'approvals.approveTitle' : 'approvals.denyTitle', {
-        member: row.requester,
-      })}
+      title={t(approve ? 'approvals.approveTitle' : 'approvals.denyTitle')}
       footer={
         <>
           <button type="button" className="btn" disabled={busy} onClick={onClose}>
@@ -230,16 +244,36 @@ export function DecisionDialog({
         id="decision-form"
         className="form-grid"
         data-columns={1}
+        ref={check.formRef}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
           void submit();
         }}
       >
+        <p>
+          <strong>{row.requesterName}</strong>
+          {row.requesterName !== row.requester ? (
+            <>
+              {' · '}
+              <span className="muted">{row.requester}</span>
+            </>
+          ) : null}
+        </p>
         <BreakGlassSubject row={row} />
         <p className="approval-reason">{row.reason}</p>
 
         {approve ? (
-          <Field label={t('approvals.grantHours')} required hint={t('approvals.grantHoursHint')}>
+          <Field
+            label={t('approvals.grantHours')}
+            required
+            hint={
+              requested !== null
+                ? t('approvals.grantHoursHintMax', { hours: requested })
+                : t('approvals.grantHoursHint')
+            }
+            error={check.error('hours')}
+          >
             <input
               className="inp"
               required
@@ -261,6 +295,7 @@ export function DecisionDialog({
         <Field
           label={t(approve ? 'approvals.note' : 'approvals.denyNoteLabel')}
           required={!approve}
+          error={check.error('note')}
         >
           <input className="inp" value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
