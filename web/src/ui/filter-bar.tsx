@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Children, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 /**
@@ -24,8 +24,15 @@ export function FilterBar({
   actions?: ReactNode;
 }) {
   const { t } = useTranslation();
+  const showClear = Boolean(onClear) && activeCount > 0;
+  /*
+   * Chỉ có MỘT ô tìm thì bỏ khung thẻ: thẻ viền bọc đúng một ô nhập là hai lớp viền và ~60px
+   * chiều cao mất không trên điện thoại. `Children.toArray` bỏ `null`/`false` — bộ lọc ẩn theo
+   * tab vẫn tính là "không có".
+   */
+  const bare = Children.toArray(children).length === 0 && !actions && !showClear;
   return (
-    <div className="filter-bar">
+    <div className={bare ? 'filter-bar is-bare' : 'filter-bar'}>
       {onSearchChange ? (
         <input
           className="inp search grow"
@@ -37,7 +44,7 @@ export function FilterBar({
         />
       ) : null}
       {children}
-      {onClear && activeCount > 0 ? (
+      {showClear ? (
         <button type="button" className="btn ghost" onClick={onClear}>
           {t('select.clearFilters', { count: activeCount })}
         </button>

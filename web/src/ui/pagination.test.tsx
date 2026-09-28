@@ -62,3 +62,18 @@ describe('Pagination — nhảy thẳng tới trang', () => {
     expect(screen.queryByRole('spinbutton', { name: 'Tới trang' })).not.toBeInTheDocument();
   });
 });
+
+describe('Pagination — biến thể gọn', () => {
+  /*
+   * Nhật ký có hàng nghìn trang và người đọc đi theo THỜI GIAN chứ không theo số trang: dãy
+   * "1 2 … 499" và ô "Tới trang" chỉ làm chật chân bảng.
+   */
+  it('`compact`: chỉ còn ‹ › và dòng đếm, không dãy số, không ô "Tới trang"', () => {
+    renderWithI18n(<Pagination page={5} limit={20} total={9970} compact onPageChange={vi.fn()} />);
+    expect(screen.getByRole('button', { name: 'Trang trước' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Trang sau' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Trang 499' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('spinbutton', { name: 'Tới trang' })).not.toBeInTheDocument();
+    expect(screen.getByText(/81–100/)).toBeInTheDocument();
+  });
+});

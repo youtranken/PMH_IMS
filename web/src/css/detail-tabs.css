@@ -542,6 +542,14 @@
   box-shadow: var(--shadow-sm);
   margin-bottom: var(--space-8);
 }
+/* Chỉ một ô tìm: ô nằm thẳng trên nền, không khung thẻ (FilterBar tự gắn `is-bare`). */
+.filter-bar.is-bare {
+  padding: 0;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  margin-bottom: var(--space-7);
+}
 /* Nhóm nút lọc bên trong thanh lọc phải TỰ XUỐNG DÒNG. `.row` dùng chung không có `wrap`
    (cố ý — phần lớn chỗ dùng nó là hai ba thứ nằm ngang), nên bốn nút lọc kèm số đếm cộng nút
    "Bỏ lọc" đẩy cả trang tràn ngang ở 390px. Bài kiểm 390px của màn Két sắt bắt đúng chuyện đó. */
