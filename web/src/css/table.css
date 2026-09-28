@@ -462,3 +462,159 @@ button.link.session-toggle {
   color: var(--ink-3);
   font-weight: 400;
 }
+
+/* --- Cột dính khi bảng cuộn ngang (DataTable `stickyActions` / meta.sticky) ----------
+ * Bảng rộng hơn khung thì cột thao tác nằm ngoài tầm nhìn: nút chính ("Xem") trông như không
+ * tồn tại, và cuộn sang để bấm ⋯ thì cột định danh trôi mất. Dính cột thao tác bên phải (và
+ * nếu cần, cột định danh bên trái) giữ cả hai trong khung.
+ * -------------------------------------------------------------------------------------- */
+table.table .col-sticky-start,
+table.table .col-sticky-end {
+  position: sticky;
+  z-index: 1;
+}
+table.table .col-sticky-start {
+  left: 0;
+}
+table.table .col-sticky-end {
+  right: 0;
+}
+/* Ô dính cần nền đặc, không thì chữ cột khác trượt qua bên dưới. Độ ưu tiên THẤP hơn sọc dòng
+   và nền trạng thái (`table.table tbody tr… td`), nên dòng chẵn / quá hạn vẫn giữ nền của nó. */
+table.table tbody td.col-sticky-start,
+table.table tbody td.col-sticky-end {
+  background: var(--surface);
+}
+/* Bóng mép: chỉ khi CÒN cột khuất phía sau cột dính (cờ do `TableWrap`/`ScrollX` đặt). */
+table.table .col-sticky-start::after,
+table.table .col-sticky-end::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--space-5);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s var(--ease);
+}
+table.table .col-sticky-start::after {
+  right: calc(-1 * var(--space-5));
+  background: linear-gradient(to right, var(--edge-fade), transparent);
+}
+table.table .col-sticky-end::after {
+  left: calc(-1 * var(--space-5));
+  background: linear-gradient(to left, var(--edge-fade), transparent);
+}
+[data-more-start='true'] table.table .col-sticky-start::after,
+[data-more-end='true'] table.table .col-sticky-end::after {
+  opacity: 1;
+}
+/* Bảng đã gập thành thẻ dọc thì không còn gì để dính. */
+@media (max-width: 960px) {
+  table.table-stack .col-sticky-start,
+  table.table-stack .col-sticky-end {
+    position: static;
+  }
+  table.table-stack .col-sticky-start::after,
+  table.table-stack .col-sticky-end::after {
+    display: none;
+  }
+}
+
+/* --- Thẻ gọn thay bảng trên điện thoại (DataTable `mobileCard`) ------------------------
+ * Bảng gập dọc cho ra thẻ 8 dòng nhãn–giá trị, một trang 20 máy dài ~9.400px. Thẻ gọn chỉ giữ
+ * thứ người ta quét bằng mắt: mã + trạng thái, tên, một dòng phụ.
+ * JS chọn vẽ thẻ hay bảng theo `MOBILE_CARD_QUERY` (600px) ở `ui/data-table.tsx`.
+ * -------------------------------------------------------------------------------------- */
+.list-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+.list-cards-empty {
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+.list-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-5) var(--space-6);
+  border-bottom: 1px solid var(--border);
+}
+.list-card:last-child {
+  border-bottom: none;
+}
+.list-card:has(.list-card-link:active) {
+  background: var(--primary-soft);
+}
+.list-card.row-danger,
+.list-card.overdue {
+  background: var(--danger-soft);
+}
+.list-card.due-today {
+  background: var(--warn-soft);
+}
+.list-card.row-muted {
+  color: var(--ink-3);
+}
+.list-card-top,
+.list-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.list-card-title {
+  min-width: 0;
+  font-family: var(--mono);
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Link/nút định danh phủ cả thẻ: chạm đâu cũng mở, mà thẻ vẫn chỉ có MỘT điểm dừng Tab. */
+.list-card-link {
+  all: unset;
+  color: var(--primary-ink);
+  cursor: pointer;
+}
+.list-card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+.list-card-link:focus-visible {
+  outline: none;
+}
+.list-card:has(.list-card-link:focus-visible) {
+  box-shadow: inset var(--ring);
+}
+/* Badge, menu ⋯, khe phụ nằm TRÊN lớp phủ để bấm riêng được. */
+.list-card-end,
+.list-card-aside {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+}
+.list-card-sub {
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.list-card-meta {
+  min-width: 0;
+  font-size: var(--fs-sm);
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
