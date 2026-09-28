@@ -454,10 +454,14 @@ table.table tbody tr.exp:hover td {
 .subnet-pane td.col-device {
   min-width: 14ch;
 }
-.subnet-pane th.col-date,
-.subnet-pane td.col-date {
-  width: 1%;
-  white-space: nowrap;
+/* Chỉ ở ≥961px: dưới mốc đó `.table-stack` gập dòng thành thẻ dọc, ô là một hàng flex của
+   thẻ — `width: 1%` ở đó bóp ô "Ngày cấp" còn một mẩu, nhãn và giá trị chồng lên nhau. */
+@media (min-width: 961px) {
+  .subnet-pane th.col-date,
+  .subnet-pane td.col-date {
+    width: 1%;
+    white-space: nowrap;
+  }
 }
 /* Nhãn nút lọc không được gãy dòng — nâng lên cho MỌI dải nút: dải đã cuộn ngang được trong
    chính nó (`form-layout.css`), nên nút gãy đôi chỉ làm dải cao lên chứ không cứu được gì. */

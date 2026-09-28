@@ -246,8 +246,13 @@ test.describe('DEV-043/044 · bản đồ quan hệ không chồng, mã không n
       expect(overlaps(box, hubBox), 'nút đè lên hạch').toBe(false);
       for (const other of boxes) expect(overlaps(box, other), 'hai nút đè nhau').toBe(false);
       boxes.push(box);
-      const clipped = await node.evaluate((el) => el.scrollWidth > el.clientWidth + 1);
-      expect(clipped, 'nội dung nút (số đếm) bị cắt').toBe(false);
+      /* Đo bằng hộp của chính con số, không bằng `scrollWidth` của nút: dây nối là `::after`
+         nằm ngoài mép nút (tới mép hạch), nên nút cột trái luôn "tràn" đúng một khe cột. */
+      const countBox = (await node.getByText(/^\d+$/).boundingBox())!;
+      expect(
+        countBox.x >= box.x - 1 && countBox.x + countBox.width <= box.x + box.width + 1,
+        'số đếm bị đẩy ra ngoài mép nút',
+      ).toBe(true);
     }
     // Số 7 của "Cổng của máy này" nằm TRONG nút.
     await expect(nodes[0]).toContainText('7');
@@ -323,7 +328,8 @@ test.describe('DEV-047 · VLT-040 · két trong trang thiết bị', () => {
     // Loại, ghi chú, ngày cập nhật là dòng phụ — vẫn đọc được.
     await expect(row).toContainText('Cập nhật');
 
-    const labelCell = row.getByRole('cell', { name: new RegExp(label) });
+    // Neo đầu: ô Thao tác cũng mang tên ngăn ("Thao tác với …") nên khớp giữa chuỗi là ra hai ô.
+    const labelCell = row.getByRole('cell', { name: new RegExp(`^${label}`) });
     const before = (await labelCell.boundingBox())!.x;
     await row.getByRole('button', { name: `Thao tác với ${label}` }).click();
     await expect(page.getByRole('menu')).toContainText(label);

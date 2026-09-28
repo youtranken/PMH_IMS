@@ -240,6 +240,8 @@ test.describe('Tìm nhanh (Ctrl+K) tra IP và dải mạng (SHELL-015)', () => {
       data: { subnetId: f.subnetId, address: `${f.net}.77`, deviceId: f.deviceId },
     });
     await page.goto('/');
+    // Ctrl+K do listener gắn lên `document` sau khi app dựng xong — gõ sớm là phím rơi mất.
+    await expect(page.getByRole('navigation', { name: /Điều hướng/ })).toBeVisible();
     await page.keyboard.press('Control+k');
     const palette = page.getByRole('dialog', { name: 'Tìm nhanh' });
     await expect(palette.getByRole('combobox')).toHaveAttribute(
@@ -260,6 +262,8 @@ test.describe('Tìm nhanh (Ctrl+K) tra IP và dải mạng (SHELL-015)', () => {
     await firstLogin(page, E2E_SA);
     const f = await setUp(page);
     await page.goto('/');
+    // Ctrl+K do listener gắn lên `document` sau khi app dựng xong — gõ sớm là phím rơi mất.
+    await expect(page.getByRole('navigation', { name: /Điều hướng/ })).toBeVisible();
     await page.keyboard.press('Control+k');
     const palette = page.getByRole('dialog', { name: 'Tìm nhanh' });
     await palette.getByRole('combobox').fill(`tra cuu E2E ${f.stamp}`);
@@ -291,7 +295,10 @@ test.describe('390px — màn đọc trên điện thoại', () => {
     await expect(lookup).toBeVisible();
     await lookup.fill(`${f.net}.9`);
     await lookup.press('Enter');
-    const row = ipRow(page, `${f.net}.9`);
+    // Ở 390px bảng gập thành thẻ: tên dòng mở đầu bằng nhãn "Địa chỉ", nên không neo `^` được.
+    const row = page
+      .getByRole('row')
+      .filter({ has: page.getByText(`${f.net}.9`, { exact: true }) });
     await expect(row.getByRole('link', { name: f.deviceCode })).toBeInViewport();
     expect(await horizontalOverflow(page)).toBe(0);
   });

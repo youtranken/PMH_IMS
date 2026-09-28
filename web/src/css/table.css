@@ -516,10 +516,11 @@ button.link.session-toggle {
 }
 
 /* Cột Tên của bảng danh sách: khi thiếu chỗ, trình duyệt ép cột chữ thường trước cột mã/mono
-   (vốn không ngắt dòng) — tên còn ~90px, gãy 4 dòng. Giữ sàn cho cột người ta thật sự đọc. */
+   (vốn không ngắt dòng) — tên còn ~90px, gãy 4 dòng. Giữ sàn ~220px cho cột người ta thật sự
+   đọc. Gốc `:root` là 14px (tokens.css), nên 1rem = 14px chứ không phải 16px. */
 table.table th.col-name,
 table.table td.col-name {
-  min-width: 13.75rem;
+  min-width: 15.75rem;
 }
 @media (max-width: 960px) {
   table.table-stack td.col-name {
