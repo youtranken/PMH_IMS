@@ -581,7 +581,6 @@ export async function loginWithTotp(
   await fillLogin(page, email, password);
   await expect(page.getByRole('heading', { name: 'Xác thực 2 lớp' })).toBeVisible();
   await page.getByLabel('Mã xác thực').fill(await freshTotpCode(secret));
-  await page.getByRole('button', { name: 'Xác nhận' }).click();
   await expect(page.getByRole('heading', { name: /Xin chào/ })).toBeVisible();
 }
 

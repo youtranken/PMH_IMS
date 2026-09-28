@@ -173,7 +173,6 @@ test.describe('Duyệt break-glass từ trang chi tiết, 390px', () => {
     await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
     await page.getByLabel('Mã xác thực').fill(await freshTotpCode(saTotp));
-    await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận' }).click();
 
     await expect(page.getByText(/Đã cấp cho .* tới/)).toBeVisible();
   });

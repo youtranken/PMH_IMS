@@ -3,9 +3,12 @@ import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation, useMe } from '@/lib/api';
 import { AuthCard } from './auth-card';
 import { SupportHelp } from './support-help';
-import { OtpInput } from '@/ui/otp-input';
+import { OtpInput, useOtpSubmit } from '@/ui/otp-input';
 
-/** Bước 2 của đăng nhập: nhập mã 6 số từ ứng dụng Authenticator. */
+/**
+ * Bước 2 của đăng nhập: nhập mã 6 số từ ứng dụng Authenticator. Đủ 6 số là tự gửi — người mở
+ * thư duyệt trên điện thoại dán mã xong là vào, không phải tìm nút.
+ */
 export function TotpChallenge() {
   const { t } = useTranslation();
   const { data: me } = useMe();
@@ -17,6 +20,18 @@ export function TotpChallenge() {
     { csrfToken: me?.csrfToken ?? null },
   );
 
+  const submit = useOtpSubmit(async (code) => {
+    setError(null);
+    try {
+      await verify.mutateAsync({ token: code });
+    } catch (err) {
+      setToken('');
+      setError(
+        errorMessage(err, t('auth.totpInvalid'), (left) => t('auth.attemptsLeft', { count: left })),
+      );
+    }
+  });
+
   return (
     <AuthCard
       title={t('auth.totpTitle')}
@@ -27,25 +42,18 @@ export function TotpChallenge() {
     >
       <form
         className="auth-form"
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
-          setError(null);
-          verify.mutate(
-            { token },
-            {
-              onError: (err) => {
-                setToken('');
-                setError(
-                  errorMessage(err, t('auth.totpInvalid'), (left) =>
-                    t('auth.attemptsLeft', { count: left }),
-                  ),
-                );
-              },
-            },
-          );
+          void submit(token);
         }}
       >
-        <OtpInput value={token} onChange={setToken} label={t('auth.totpCode')} />
+        <OtpInput
+          value={token}
+          onChange={setToken}
+          onComplete={(code) => void submit(code)}
+          label={t('auth.totpCode')}
+        />
         <button
           type="submit"
           className="btn primary"

@@ -158,7 +158,6 @@ test.describe('Break-glass', () => {
     await page.getByRole('button', { name: 'Xem' }).click();
     await expect(page.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
     await page.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
-    await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận' }).click();
     await expect(page.getByTestId('secret-value')).toHaveText(secretValue);
 
     /*

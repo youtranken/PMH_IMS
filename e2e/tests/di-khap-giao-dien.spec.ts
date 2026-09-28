@@ -1143,7 +1143,6 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await page.getByRole('button', { name: 'Xem' }).click();
     await expect(page.getByRole('dialog', { name: 'Xác nhận danh tính' })).toBeVisible();
     await page.getByLabel('Mã xác thực').fill(await freshTotpCode(adminTotp));
-    await page.getByRole('dialog').getByRole('button', { name: 'Xác nhận' }).click();
     await expect(
       page.getByTestId('secret-value'),
       'sau khi xác thực, admin phải đọc được đúng giá trị đã cất',
@@ -8544,7 +8543,6 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     /* ---- Gõ SAI mã: hộp KHÔNG được đóng ---- */
 
     await stepUp.getByLabel('Mã xác thực').fill('000000');
-    await stepUp.getByRole('button', { name: 'Xác nhận' }).click();
     await expect(
       stepUp.getByRole('alert'),
       'gõ sai mã phải nói thẳng là sai mã, không phải một lỗi chung chung',
@@ -8565,7 +8563,6 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     /* ---- Gõ ĐÚNG mã: sang hộp hiện secret ---- */
 
     await stepUp.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
-    await stepUp.getByRole('button', { name: 'Xác nhận' }).click();
     await expect(stepUp).toBeHidden();
 
     /* ---------- HỘP "HIỆN SECRET": đủ bộ ba, và một nút ẩn ngay ---------- */

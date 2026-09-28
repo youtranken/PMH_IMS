@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { Dialog } from '@/ui/dialog';
-import { OtpInput } from '@/ui/otp-input';
+import { OtpInput, useOtpSubmit } from '@/ui/otp-input';
 
 /**
  * Gõ TOTP để mở quyền xem bí mật (FR-022, story 4.2) — dùng chung (AD-15).
@@ -33,6 +33,20 @@ export function StepUpDialog({
     { csrfToken },
   );
 
+  const submit = useOtpSubmit(async (code) => {
+    setError(null);
+    try {
+      const result = await stepUp.mutateAsync({ token: code });
+      setToken('');
+      onDone(result.graceMinutes);
+    } catch (err) {
+      // Mã sai thì XÓA ô nhập: mã TOTP chỉ sống 30 giây, giữ lại con số cũ chỉ dụ người ta
+      // bấm Gửi lần nữa với đúng cái mã vừa bị từ chối.
+      setToken('');
+      setError(errorMessage(err, undefined, (left) => t('auth.attemptsLeft', { count: left })));
+    }
+  });
+
   return (
     <Dialog
       open
@@ -59,32 +73,20 @@ export function StepUpDialog({
         id="stepup-form"
         className="form-grid"
         data-columns={1}
+        noValidate
         onSubmit={(e) => {
           e.preventDefault();
-          setError(null);
-          stepUp.mutate(
-            { token },
-            {
-              onSuccess: (result) => {
-                setToken('');
-                onDone(result.graceMinutes);
-              },
-              onError: (err) => {
-                // Mã sai thì XÓA ô nhập: mã TOTP chỉ sống 30 giây, giữ lại con số cũ chỉ
-                // dụ người ta bấm Gửi lần nữa với đúng cái mã vừa bị từ chối.
-                setToken('');
-                setError(
-                  errorMessage(err, undefined, (left) =>
-                    t('auth.attemptsLeft', { count: left }),
-                  ),
-                );
-              },
-            },
-          );
+          void submit(token);
         }}
       >
         <p className="muted">{t('auth.stepUpSub')}</p>
-        <OtpInput value={token} onChange={setToken} label={t('auth.totpCode')} id="stepup-otp" />
+        <OtpInput
+          value={token}
+          onChange={setToken}
+          onComplete={(code) => void submit(code)}
+          label={t('auth.totpCode')}
+          id="stepup-otp"
+        />
 
         {error ? (
           <p className="alert error" role="alert">
