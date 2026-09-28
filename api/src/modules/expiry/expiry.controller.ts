@@ -36,6 +36,7 @@ import { parsePageQuery } from '../../common/pagination';
 import type { ExpiryLevel } from './expiry.service';
 import { ExpiryService } from './expiry.service';
 import { NoStepUp } from '../auth/step-up.decorator';
+import { NoIdleTouch } from '../auth/no-idle-touch.decorator';
 
 class RenewDto {
   @IsString() @Length(1, 40) kind!: string;
@@ -193,6 +194,19 @@ export class ExpiryController {
       rows: items,
     });
     sendXlsx(res, buffer, 'sap-het-han.xlsx');
+  }
+
+  /**
+   * Số mục ĐÃ quá hạn — badge của mục menu Sắp hết hạn. Đọc `summary` của đúng lượt tính mà
+   * màn hình dùng, nên badge và màn không bao giờ nói hai con số. Shell hỏi định kỳ ở mọi màn,
+   * nên route này không được gia hạn idle của phiên (NFR-01).
+   */
+  @Roles('sa', 'admin', 'member')
+  @NoIdleTouch()
+  @Get('overdue/count')
+  async overdueCount() {
+    const { summary } = await this.expiry.list({ includeExpired: true, page: 1, limit: 1 });
+    return { count: summary.expired };
   }
 
   @Roles('sa', 'admin', 'member')
