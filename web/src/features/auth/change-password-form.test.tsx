@@ -52,6 +52,22 @@ describe('ChangePasswordForm', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it('"✓ Khớp" hiện ngay khi gõ xong ô nhập lại, KHÔNG đợi rời ô (rời ô mà nút trôi thì cú bấm trượt)', async () => {
+    renderForm();
+    await userEvent.type(screen.getByLabelText('Mật khẩu mới'), 'Matkhau12345!');
+    await userEvent.type(screen.getByLabelText('Nhập lại mật khẩu mới'), 'Matkhau12345!');
+    // Tiêu điểm vẫn ở ô nhập lại: dòng báo phải có mặt từ trước cú bấm nút.
+    expect(screen.getByLabelText('Nhập lại mật khẩu mới')).toHaveFocus();
+    expect(screen.getByText('✓ Khớp')).toBeInTheDocument();
+  });
+
+  it('đang gõ dở ô nhập lại (ngắn hơn mật khẩu mới) thì chưa nói "Chưa khớp"', async () => {
+    renderForm();
+    await userEvent.type(screen.getByLabelText('Mật khẩu mới'), 'Matkhau12345!');
+    await userEvent.type(screen.getByLabelText('Nhập lại mật khẩu mới'), 'Matkh');
+    expect(screen.queryByText('Chưa khớp')).not.toBeInTheDocument();
+  });
+
   it('checklist tick dần khi gõ', async () => {
     renderForm();
     const box = screen.getByLabelText('Mật khẩu mới');

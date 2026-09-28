@@ -30,8 +30,12 @@ export function ChangePasswordForm({
   const [newPassword, setNew] = useState('');
   const [repeat, setRepeat] = useState('');
   const [error, setError] = useState<string | null>(null);
-  // Chỉ nói "khớp/chưa khớp" sau khi rời ô Nhập lại — nói ngay từ ký tự đầu là mắng người đang gõ.
-  const [repeatTouched, setRepeatTouched] = useState(false);
+  /*
+   * Chỉ nói "khớp/chưa khớp" khi ô Nhập lại đã dài bằng ô mới — nói ngay từ ký tự đầu là mắng
+   * người đang gõ. KHÔNG canh theo lúc rời ô: dòng báo mọc ra đúng lúc bấm chuột xuống nút
+   * (rời ô) đẩy nút trôi xuống, nhả chuột rơi ra ngoài nút và cú bấm mất.
+   */
+  const repeatDone = repeat.length > 0 && repeat.length >= newPassword.length;
   const prefix = variant === 'auth' ? 'cp' : 'cpd';
   const rules = checkPasswordRules(newPassword);
 
@@ -124,7 +128,7 @@ export function ChangePasswordForm({
         htmlFor={`${prefix}-repeat`}
         error={check.error('repeat')}
         hint={
-          repeatTouched && repeat && !check.error('repeat')
+          repeatDone && !check.error('repeat')
             ? t(repeat === newPassword ? 'auth.passwordMatch' : 'auth.passwordNoMatch')
             : undefined
         }
@@ -134,7 +138,6 @@ export function ChangePasswordForm({
           required
           value={repeat}
           onChange={(e) => setRepeat(e.target.value)}
-          onBlur={() => setRepeatTouched(true)}
         />
       </Field>
 
