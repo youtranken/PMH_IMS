@@ -289,6 +289,36 @@
 .tabs::-webkit-scrollbar {
   display: none;
 }
+/*
+ * Mép còn tab khuất thì mờ dần (`data-more-*` do `ui/tabs.tsx` đặt). Thanh cuộn đã bị giấu,
+ * nên thiếu dấu này thì tab cuối nhìn thấy trông như tab cuối cùng. Dùng `mask` chứ không phủ
+ * màu: mặt nạ đứng yên theo khung trong khi tab trượt bên dưới, và không cần màu nền nào để
+ * khớp cả hai theme. `black` ở đây chỉ là độ đục của mặt nạ, không phải màu hiển thị.
+ */
+.tabs[data-more-end='true'] {
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - var(--space-11)), transparent);
+  mask-image: linear-gradient(to right, black calc(100% - var(--space-11)), transparent);
+}
+.tabs[data-more-start='true'] {
+  -webkit-mask-image: linear-gradient(to left, black calc(100% - var(--space-11)), transparent);
+  mask-image: linear-gradient(to left, black calc(100% - var(--space-11)), transparent);
+}
+.tabs[data-more-start='true'][data-more-end='true'] {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black var(--space-11),
+    black calc(100% - var(--space-11)),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black var(--space-11),
+    black calc(100% - var(--space-11)),
+    transparent
+  );
+}
 .tab {
   flex-shrink: 0;
   white-space: nowrap;

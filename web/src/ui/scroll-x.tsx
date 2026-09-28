@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 
 /** Còn nội dung bị khuất ở mép trái (`start`) / mép phải (`end`) hay không. */
@@ -10,6 +10,35 @@ export function scrollEdges(
   const max = scrollWidth - clientWidth;
   // Sai số 1px: trình duyệt phóng to cho ra `scrollLeft` lẻ, cuộn tới cuối vẫn thiếu 0.4px.
   return { start: scrollLeft > 1, end: scrollLeft < max - 1 };
+}
+
+/**
+ * Theo dõi khung cuộn ngang còn nội dung khuất ở mép nào — dùng chung cho `ScrollX`, thanh
+ * tab (`Tabs`) và cột dính của `DataTable`. Nghe cả cuộn lẫn đổi kích thước: cột mọc thêm khi
+ * dữ liệu về, hoặc cửa sổ co lại, thì kích thước đổi mà không có sự kiện cuộn nào.
+ */
+export function useScrollEdges(
+  ref: RefObject<HTMLElement | null>,
+): { start: boolean; end: boolean } {
+  const [edges, setEdges] = useState({ start: false, end: false });
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const update = () => {
+      const next = scrollEdges(el.scrollLeft, el.scrollWidth, el.clientWidth);
+      setEdges((prev) => (prev.start === next.start && prev.end === next.end ? prev : next));
+    };
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update);
+    observer?.observe(el);
+    if (el.firstElementChild) observer?.observe(el.firstElementChild);
+    return () => {
+      el.removeEventListener('scroll', update);
+      observer?.disconnect();
+    };
+  }, [ref]);
+  return edges;
 }
 
 /**
@@ -38,26 +67,7 @@ export function ScrollX({
   const { t } = useTranslation();
   const hintId = useId();
   const ref = useRef<HTMLDivElement>(null);
-  const [edges, setEdges] = useState({ start: false, end: false });
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return undefined;
-    const update = () => {
-      const next = scrollEdges(el.scrollLeft, el.scrollWidth, el.clientWidth);
-      setEdges((prev) => (prev.start === next.start && prev.end === next.end ? prev : next));
-    };
-    update();
-    el.addEventListener('scroll', update, { passive: true });
-    // Cột mọc thêm khi dữ liệu về, hoặc cửa sổ co lại: kích thước đổi mà không có sự kiện cuộn.
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(update);
-    observer?.observe(el);
-    if (el.firstElementChild) observer?.observe(el.firstElementChild);
-    return () => {
-      el.removeEventListener('scroll', update);
-      observer?.disconnect();
-    };
-  }, []);
+  const edges = useScrollEdges(ref);
 
   const overflowing = edges.start || edges.end;
   return (
