@@ -4,6 +4,8 @@ import { PATHS } from '@/lib/routes';
 export interface NavItem {
   /** Khóa i18n (`nav.*`) — nhãn không bao giờ viết cứng. */
   key: string;
+  /** Nhãn riêng cho Member khi cùng một màn làm việc khác hẳn theo vai. */
+  memberKey?: string;
   to: string;
   /** Vai được nhìn thấy mục này. UI ẩn cho gọn; quyền THẬT do RolesGuard ở API (AD-9). */
   roles?: Me['role'][];
@@ -58,8 +60,9 @@ export const navGroups: NavGroup[] = [
   {
     labelKey: 'nav.groupSecurity',
     items: [
-      // MỌI vai thấy: Member vào xem yêu cầu của mình đã được duyệt chưa.
-      { key: 'nav.approvals', to: PATHS.approvals, badge: 'approvals' },
+      // MỌI vai thấy: Member vào xem yêu cầu của mình đã được duyệt chưa — với họ đây là
+      // "yêu cầu xem két của tôi", không phải màn duyệt.
+      { key: 'nav.approvals', memberKey: 'nav.approvalsMine', to: PATHS.approvals, badge: 'approvals' },
       /*
        * CHỈ SA/Admin: trang tổng là bản đồ "công ty giữ bí mật ở đâu" và `GET /vault/owners`
        * chặn theo vai. Bỏ `roles` thì Member bấm vào và nhận một màn lỗi "thử lại" — bày ra

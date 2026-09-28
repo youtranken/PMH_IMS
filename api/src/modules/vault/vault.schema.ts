@@ -36,6 +36,9 @@ export const secretTable = pgTable('secret', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   revokedAt: timestamp('revoked_at', { withTimezone: true }),
   revokedBy: text('revoked_by'),
+  /** Lúc GIÁ TRỊ đổi lần cuối (cất/đổi giá trị) — `updated_at` nhảy cả khi sửa ghi chú (0150). */
+  valueChangedAt: timestamp('value_changed_at', { withTimezone: true }).notNull().defaultNow(),
+  valueChangedBy: text('value_changed_by'),
 });
 
 /** citext: email so không phân biệt hoa-thường — `IT01@` và `it01@` là một người. */

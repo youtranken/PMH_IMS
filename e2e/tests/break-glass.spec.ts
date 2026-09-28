@@ -143,7 +143,7 @@ test.describe('Break-glass', () => {
     await card.getByRole('button', { name: 'Duyệt', exact: true }).click();
     const decide = page.getByRole('dialog');
     await decide.getByRole('textbox', { name: 'Cấp trong bao lâu (giờ)' }).fill('2');
-    await decide.getByRole('button', { name: 'Duyệt', exact: true }).click();
+    await decide.getByRole('button', { name: 'Duyệt 2 giờ', exact: true }).click();
     await expect(page.getByText('Đã duyệt')).toBeVisible();
 
     // --- Member giờ xem được, và mỗi lần xem vẫn phải gõ TOTP (cơ chế 4.2 không đổi).
@@ -416,8 +416,8 @@ test.describe('Break-glass', () => {
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByRole('button', { name: 'Xem' })).toBeVisible();
 
-    // "Cất secret" vẫn là nút phẳng trên đầu panel.
-    await expect(page.getByRole('button', { name: 'Cất secret' })).toHaveCount(0);
+    // "Cất mật khẩu/khóa" vẫn là nút phẳng trên đầu panel.
+    await expect(page.getByRole('button', { name: 'Cất mật khẩu/khóa' })).toHaveCount(0);
     /*
      * Sửa · Xoay · Thu hồi nằm trong menu ba chấm từ 28/08/2026, nên bám theo chữ trên nút
      * đã thành một khẳng định luôn xanh: mục menu không có trong DOM khi menu đóng, kể cả

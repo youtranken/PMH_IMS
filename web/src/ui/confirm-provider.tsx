@@ -60,6 +60,7 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
           cancelLabel={opts.cancelLabel}
           danger={opts.danger}
           checkbox={opts.checkbox}
+          typeToConfirm={opts.typeToConfirm}
           checked={checked}
           onCheckedChange={(next) => {
             checkedRef.current = next;

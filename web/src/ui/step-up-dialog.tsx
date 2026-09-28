@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { Dialog } from '@/ui/dialog';
@@ -17,16 +17,26 @@ import { OtpInput, useOtpSubmit } from '@/ui/otp-input';
  */
 export function StepUpDialog({
   csrfToken,
+  purpose,
+  graceMinutes,
   onClose,
   onDone,
 }: {
   csrfToken: string;
+  /** Đang xác nhận để làm GÌ ("Xem enable của SW-CORE-01") — thiếu thì dùng câu chung. */
+  purpose?: string;
+  /**
+   * Khoảng ân hạn để NÓI TRƯỚC cho người gõ ("10 phút tới không phải gõ lại") — lấy từ
+   * `me.config`, tức số server đưa lúc đăng nhập. Chỉ để hiển thị; luật thật vẫn ở server.
+   */
+  graceMinutes?: number;
   onClose: () => void;
   onDone: (graceMinutes: number) => void;
 }) {
   const { t } = useTranslation();
   const [token, setToken] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const stepUp = useApiMutation<{ token: string }, { graceMinutes: number }>(
     '/api/v1/auth/step-up',
@@ -44,6 +54,8 @@ export function StepUpDialog({
       // bấm Gửi lần nữa với đúng cái mã vừa bị từ chối.
       setToken('');
       setError(errorMessage(err, undefined, (left) => t('auth.attemptsLeft', { count: left })));
+      // Trả tiêu điểm về ô mã: mã 30 giây, người gõ cần gõ lại ngay chứ không đi tìm ô.
+      inputRef.current?.focus();
     }
   });
 
@@ -79,20 +91,20 @@ export function StepUpDialog({
           void submit(token);
         }}
       >
-        <p className="muted">{t('auth.stepUpSub')}</p>
+        <p className="muted">{purpose ?? t('auth.stepUpSub')}</p>
+        {/* Đủ 6 số là tự gửi (`onComplete`) — trên điện thoại bàn phím số che mất nút Xác nhận. */}
         <OtpInput
           value={token}
           onChange={setToken}
           onComplete={(code) => void submit(code)}
           label={t('auth.totpCode')}
           id="stepup-otp"
+          inputRef={inputRef}
+          /* Lỗi NGAY DƯỚI ô (viền đỏ + aria-invalid) — ô bị xoá trắng mà lỗi nằm chỗ khác thì
+             người gõ không biết vì sao. */
+          error={error}
+          hint={graceMinutes ? t('vault.stepUpGrace', { minutes: graceMinutes }) : undefined}
         />
-
-        {error ? (
-          <p className="alert error" role="alert">
-            {error}
-          </p>
-        ) : null}
       </form>
     </Dialog>
   );

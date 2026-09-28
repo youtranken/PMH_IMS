@@ -32,6 +32,11 @@ export type ConfirmOptions = {
    * hơn 30 chỗ gọi sẵn có không phải sửa một dòng nào.
    */
   checkbox?: { label: string; hint?: string; defaultChecked?: boolean };
+  /**
+   * Gõ lại đúng `expected` thì nút xác nhận mới bật — cho việc KHÔNG hoàn tác được (xoá vĩnh
+   * viễn một ngăn két). Một cú bấm nhầm trên menu ⋯ không được đủ để mất một mật khẩu.
+   */
+  typeToConfirm?: { expected: string; label: string };
 };
 
 /** Kết quả khi có `checkbox`: bấm gì, và ô tick ở trạng thái nào lúc bấm. */

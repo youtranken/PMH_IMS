@@ -137,7 +137,12 @@ export class MailConsumer {
     const request = await this.findApproval(approvalId);
     if (!request || request.state !== 'pending') return null;
 
-    const approvers = await this.users.recipientsByRole(['sa', 'admin']);
+    /* Bốn mắt (FR-023): Quản trị tự xin thì chính họ không duyệt được — thư "cần bạn duyệt"
+       gửi cho họ là mời bấm một nút sẽ bị từ chối. Cùng luật với `approverCountExcept`. */
+    const requester = request.requester.toLowerCase();
+    const approvers = (await this.users.recipientsByRole(['sa', 'admin'])).filter(
+      (a) => a.email.toLowerCase() !== requester,
+    );
     if (approvers.length === 0) return null;
 
     const [who, subject] = await Promise.all([

@@ -27,6 +27,7 @@ import { NoIdleTouch } from '../auth/no-idle-touch.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { BreakGlassService } from './break-glass.service';
+import { valueAge } from './secret-age';
 import {
   SECRET_KINDS,
   SECRET_OWNER_TYPES,
@@ -127,7 +128,16 @@ export class VaultController {
     if (req.user!.role !== 'sa' && req.user!.role !== 'admin') {
       await this.breakGlass.assertCanSeeMetadata(actor(req), query.ownerType, query.ownerId);
     }
-    return this.vault.listFor(query.ownerType, query.ownerId);
+    const [rows, staleDays] = await Promise.all([
+      this.vault.listFor(query.ownerType, query.ownerId),
+      this.config.getNumber('dashboardSecretStaleDays'),
+    ]);
+    // Tuổi giá trị tính ở server (cùng ngưỡng với khối "két lâu chưa đổi") — client chỉ hiện.
+    const now = new Date();
+    return rows.map((row) => {
+      const age = valueAge(row.valueChangedAt, staleDays, now);
+      return { ...row, valueAgeDays: age.days, valueStale: age.stale };
+    });
   }
 
   /**

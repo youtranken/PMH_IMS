@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, renderWithI18n, screen } from '@/test/test-utils';
-import { RevealDialog } from '@/ui/reveal-dialog';
+import { act, fireEvent, renderWithI18n, screen, within } from '@/test/test-utils';
+import { formatMinSec, RevealDialog, secretCharClass } from '@/ui/reveal-dialog';
 
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
@@ -41,11 +41,12 @@ describe('RevealDialog — tự ẩn sau N giây (FR-022)', () => {
         onClose={() => {}}
       />,
     );
-    expect(screen.getByTestId('stepup-countdown')).toHaveTextContent('600s');
+    // Phút:giây — "600s" không ai đọc ra là mười phút.
+    expect(screen.getByTestId('stepup-countdown')).toHaveTextContent('10:00');
 
     advance(10);
     expect(screen.getByTestId('reveal-countdown')).toHaveTextContent('50s');
-    expect(screen.getByTestId('stepup-countdown')).toHaveTextContent('590s');
+    expect(screen.getByTestId('stepup-countdown')).toHaveTextContent('9:50');
   });
 
   /** Không truyền grace (nơi gọi cũ) thì chỉ một đồng hồ, không vẽ ra số 0 vô nghĩa. */
@@ -103,5 +104,48 @@ describe('RevealDialog — tự ẩn sau N giây (FR-022)', () => {
       vi.advanceTimersByTime(250);
     });
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+describe('RevealDialog — đọc để gõ tay', () => {
+  it('hiện kèm tên đăng nhập: người ta cần CẶP user + mật khẩu', () => {
+    renderWithI18n(
+      <RevealDialog label="enable" username="admin" value="Ab1#" seconds={60} onClose={() => {}} />,
+    );
+    expect(screen.getByText('admin')).toBeInTheDocument();
+  });
+
+  it('giá trị giữ nguyên chữ, mỗi ký tự mang lớp để tô màu', () => {
+    renderWithI18n(<RevealDialog label="x" value="aB3#" seconds={60} onClose={() => {}} />);
+    const value = screen.getByTestId('secret-value');
+    expect(value).toHaveTextContent(/^aB3#$/);
+    expect(value.querySelector('.ch-digit')).toHaveTextContent('3');
+    expect(value.querySelector('.ch-upper')).toHaveTextContent('B');
+    expect(value.querySelector('.ch-symbol')).toHaveTextContent('#');
+  });
+
+  it('"Hiện từng ký tự": mỗi ký tự một ô có số thứ tự', () => {
+    renderWithI18n(<RevealDialog label="x" value="l1O0" seconds={60} onClose={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Hiện từng ký tự' }));
+    const items = within(screen.getByRole('list')).getAllByRole('listitem');
+    expect(items.map((li) => li.textContent)).toEqual(['1l', '21', '3O', '40']);
+  });
+
+  it.each([
+    ['7', 'digit'],
+    ['Q', 'upper'],
+    ['q', 'lower'],
+    ['!', 'symbol'],
+  ])('secretCharClass(%p) = %p', (ch, expected) => {
+    expect(secretCharClass(ch)).toBe(expected);
+  });
+
+  it.each([
+    [600, '10:00'],
+    [552, '9:12'],
+    [5, '0:05'],
+    [-3, '0:00'],
+  ])('formatMinSec(%p) = %p', (seconds, expected) => {
+    expect(formatMinSec(seconds)).toBe(expected);
   });
 });
