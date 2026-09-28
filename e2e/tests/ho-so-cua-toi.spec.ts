@@ -92,6 +92,9 @@ test('cài lại 2 lớp trên điện thoại mới ĐÒI mã của điện tho
   page,
   browser,
 }) => {
+  // Ba mã của CÙNG điện thoại cũ (đăng nhập, step-up, thử mã cũ): chống dùng lại buộc mỗi lần
+  // chờ sang chu kỳ 30 giây mới — riêng phần chờ đã chạm trần 60 giây mặc định.
+  test.setTimeout(150_000);
   const { person, own } = await newPerson(page, browser);
   await openProfileFromMenu(own);
   // Hết ân hạn step-up của lần đăng nhập — để hàng rào phải hỏi mã thật.
