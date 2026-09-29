@@ -24,11 +24,18 @@ const EVENT_AT = new Date('2026-01-02T03:04:05Z');
 const APP_TZ = 'Asia/Tokyo';
 const EXPECTED = '12:04:05 2/1/2026';
 
-function consumer(sent: { text: string }[]) {
+function consumer(sent: { text: string }[], extra: Record<string, unknown> = {}) {
   const outbox = {
     loadForConsumer: () =>
       Promise.resolve({
-        payload: { userId: 'u1', approvalId: 'a1', who: 'nghi.van@pmh.com.vn', count: 5, windowMinutes: 10 },
+        payload: {
+          userId: 'u1',
+          approvalId: 'a1',
+          who: 'nghi.van@pmh.com.vn',
+          count: 5,
+          windowMinutes: 10,
+          ...extra,
+        },
         createdAt: EVENT_AT,
         processedAt: null,
       }),
@@ -100,5 +107,29 @@ describe('Thư duyệt break-glass', () => {
     const sent: { text: string; html?: string }[] = [];
     await consumer(sent).handle(topic, 'o1');
     expect(sent[0].text).toContain('/approvals/a1');
+  });
+});
+
+/**
+ * OLD-SEC-01: lá leo thang phải nói rõ là LÁ THỨ HAI trong thời gian nghỉ — cùng tiêu đề với lá
+ * đầu thì người đọc lướt qua như thư trùng, đúng lúc kẻ dò đã bắn gấp mấy lần ngưỡng.
+ */
+describe('Thư cảnh báo dò két leo thang', () => {
+  it('payload escalated đổi tiêu đề và câu mở đầu', async () => {
+    const sent: { text: string; subject?: string }[] = [];
+    await consumer(sent, { escalated: true, count: 27, cooldownMinutes: 60 }).handle(
+      'security.probe.alert',
+      'o1',
+    );
+    expect(sent[0].subject).toBe('[IMS] Vẫn tiếp tục: 27 lượt thất bại quanh két — nghi.van@pmh.com.vn');
+    expect(sent[0].text).toContain('vẫn tiếp tục thất bại quanh két sau lá cảnh báo trước');
+    expect(sent[0].text).toContain('Đây là lá leo thang duy nhất trong 60 phút nghỉ');
+  });
+
+  it('lá thường giữ nguyên tiêu đề cũ', async () => {
+    const sent: { text: string; subject?: string }[] = [];
+    await consumer(sent).handle('security.probe.alert', 'o1');
+    expect(sent[0].subject).toBe('[IMS] 5 lượt thất bại quanh két — nghi.van@pmh.com.vn');
+    expect(sent[0].text).not.toContain('leo thang');
   });
 });

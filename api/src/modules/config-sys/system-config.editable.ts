@@ -54,6 +54,8 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'secretProbeAlertThreshold', group: 'vault', type: 'int', unit: 'times', min: 0, max: 50, warnZero: true },
   { name: 'secretProbeWindowMinutes', group: 'vault', type: 'int', unit: 'minutes', min: 1, max: 1440 },
   { name: 'secretProbeCooldownMinutes', group: 'vault', type: 'int', unit: 'minutes', min: 1, max: 1440 },
+  // Dưới 2 thì lá leo thang đi ngay lượt sau lá đầu, tức là xoá thời gian nghỉ.
+  { name: 'secretProbeEscalationMultiplier', group: 'vault', type: 'int', unit: 'times', min: 2, max: 20 },
   // Duyệt & break-glass
   { name: 'breakGlassMaxGrantHours', group: 'approval', type: 'int', unit: 'hours', min: 1, max: 168, warnAbove: 72 },
   { name: 'approvalReminderHours', group: 'approval', type: 'int', unit: 'hours', min: 0, max: 72, warnZero: true },

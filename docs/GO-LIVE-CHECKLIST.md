@@ -130,16 +130,19 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
   - **Rà 29/09:** còn nguyên (`auth.service.ts:98-141`). Mã `ACCOUNT_LOCKED` được thêm có chủ ý để
     người dùng biết vì sao không vào được (32c3731), nên muốn đóng mục này phải chốt ở QUYET-DINH trước.
   - **Không sửa** — Q-16: giữ mã lỗi riêng, rủi ro dò email chấp nhận.
-- [ ] **SEC-11 · Kiểm Origin bị bỏ qua khi thiếu header** (`csrf.guard.ts:66`), mở khả năng login-CSRF.
-  - **Rà 29/09:** còn nguyên (`csrf.guard.ts:66` vẫn `if (!origin) return;`).
+- [x] **SEC-11 · Kiểm Origin bị bỏ qua khi thiếu header** (`csrf.guard.ts:66`), mở khả năng login-CSRF.
+  - **Đã sửa:** thiếu `Origin` thì xét `Sec-Fetch-Site` (chỉ nhận `same-origin`/`none`), rồi origin
+    của `Referer`. Route công khai (đăng nhập) không có tín hiệu nguồn nào thì 403 `ORIGIN_MISSING`;
+    route cần phiên vẫn còn lớp token. Bài kiểm dựng lại đòn: `api/src/modules/auth/csrf.guard.spec.ts`.
 - [x] **SEC-12 · Member đính file được vào mọi đối tượng chỉ có quyền đọc**
   (`files.controller.ts`, `assertCanRead`). Cần chủ dự án xác nhận đây là chủ ý.
   - **Rà 29/09:** không sửa, Q-11 chốt là đúng chủ ý. Xoá file vẫn chỉ SA/Admin.
 - [x] **SEC-13 · Quyền theo nhà mạng gắn theo tên** (`isp_provider` dùng `provider.name`). Đổi tên thì
   mất quyền, tên cũ dùng lại thì thừa kế sai người.
-- [ ] **SEC-14 · Mật khẩu tạm không tự ẩn** (`accounts-screen.tsx:544-576`).
-  - **Rà 29/09:** mới một phần. Đã có nút Ẩn/Hiện và nút chép (814ab86, ADM-048), nhưng chưa có hẹn
-    giờ tự che (`accounts-screen.tsx:~981`).
+- [x] **SEC-14 · Mật khẩu tạm không tự ẩn** (`accounts-screen.tsx:544-576`).
+  - **Đã sửa:** hộp mật khẩu tạm tự CHE (không đóng, đóng là mất chuỗi) sau `secret.reveal_seconds`,
+    cùng khoá với két, đọc qua `me.config.secretRevealSeconds`; bấm Hiện lại thì hẹn giờ tính lại.
+    Bài kiểm fake timers: `web/src/features/admin/accounts-screen.test.tsx`.
 
 
 ### Đã làm, bổ sung khi rà 29/09
@@ -789,8 +792,11 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - `isp_line.wan_ip` đang là `text`.
   - `device_port.vlan` là `text` trong khi `subnet.vlan` là `integer`.
   - **Rà 29/09:** còn nguyên cả ba ý.
-- [ ] **OLD-SEC-01 · Probe không gửi thư lần hai** khi kẻ dò vượt ≥3× ngưỡng trong thời gian nghỉ.
-  - **Rà 29/09:** còn nguyên.
+- [x] **OLD-SEC-01 · Probe không gửi thư lần hai** khi kẻ dò vượt ≥3× ngưỡng trong thời gian nghỉ.
+  - **Đã sửa:** trong thời gian nghỉ, số lượt vượt `secret.probe_escalation_multiplier` (mặc định 3,
+    migration 0250, sửa được ở màn Tham số, tối thiểu 2) × ngưỡng thì đi thêm đúng MỘT lá leo thang
+    (tiêu đề "Vẫn tiếp tục: …"), kể cả khi bị bắn song song. Bài kiểm DB:
+    `api/test/security-probe-escalation.spec.ts`; thư: `api/src/modules/mail/mail-event-time.spec.ts`.
 - [ ] **OLD-QA-04 · Thêm luật lint chặn chuỗi tiếng Việt cứng; đổi tên các định danh tiếng Việt
   còn lại** (9 tên tệp, khoảng 175 định danh test).
   - **Rà 29/09:** xong vế luật lint (`NO_VIETNAMESE_TEXT`, 25bf181; kiểm ở `web/src/lint-rules.test.ts`).

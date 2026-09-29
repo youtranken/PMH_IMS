@@ -32,7 +32,13 @@ import { redactMessage } from '../../common/log-redact';
  * lượt là hộp thư của mọi quản trị viên ngập, và thư thật chìm nghỉm trong đó. Một lần cảnh báo
  * cho mỗi đợt là đủ để người ta vào xem nhật ký — nơi có đầy đủ chi tiết.
  *
- * Ba tham số đều nằm ở `system_config` (AD-11), không hardcode.
+ * ===== VÌ SAO VẪN CÓ MỘT LÁ LEO THANG TRONG LÚC NGHỈ (OLD-SEC-01) =====
+ *
+ * Nghỉ tuyệt đối thì lá đầu nói "3 lượt" và kẻ dò bắn thêm hàng trăm lượt trong im lặng — người
+ * đọc thư tưởng là gõ nhầm. Vượt `hệ số × ngưỡng` trong lúc nghỉ thì đi thêm đúng MỘT lá, đánh
+ * dấu `escalated`. Mỗi thời gian nghỉ tối đa một lá leo thang, nên hộp thư vẫn không ngập.
+ *
+ * Bốn tham số đều nằm ở `system_config` (AD-11), không hardcode.
  */
 
 /** Những hành động tính là "dò dẫm". Thêm loại mới thì thêm vào đây, đừng đếm ở nơi gọi. */
@@ -199,8 +205,14 @@ export class SecurityProbeService {
         const attemptCount = counted?.n ?? recent?.n ?? 0;
 
         const quietSince = new Date(Date.now() - cooldownMinutes * 60_000);
+        /* Lá thường và lá leo thang cùng một mã hành động (bộ lọc "sự kiện an ninh" và màn Nhật
+           ký không phải biết thêm mã mới), phân biệt bằng `detail.escalated`. */
+        const escalatedFlag = sql`${auditLogTable.detail}->>'escalated'`;
         const [alerted] = await tx
-          .select({ n: count() })
+          .select({
+            normal: sql<number>`count(*) FILTER (WHERE ${escalatedFlag} IS DISTINCT FROM 'true')`.mapWith(Number),
+            escalated: sql<number>`count(*) FILTER (WHERE ${escalatedFlag} = 'true')`.mapWith(Number),
+          })
           .from(auditLogTable)
           .where(
             and(
@@ -209,7 +221,20 @@ export class SecurityProbeService {
               gt(auditLogTable.createdAt, quietSince),
             ),
           );
-        if ((alerted?.n ?? 0) > 0) return;
+        let escalated = false;
+        if ((alerted?.normal ?? 0) > 0) {
+          if ((alerted?.escalated ?? 0) > 0) return;
+          const multiplier = await this.config.getNumber('secretProbeEscalationMultiplier');
+          // Hệ số < 2 thì lá "leo thang" đi ngay lượt kế tiếp — tức là tắt thời gian nghỉ.
+          if (multiplier < 2) {
+            this.logger.error(
+              `secretProbeEscalationMultiplier = ${multiplier} (phải >= 2) — bỏ qua lá leo thang`,
+            );
+            return;
+          }
+          if (attemptCount < multiplier * threshold) return;
+          escalated = true;
+        }
 
         /*
          * Vết và thư đi CÙNG một transaction (AD-5). Rời ra thì hoặc thư đi mà không có vết
@@ -230,7 +255,7 @@ export class SecurityProbeService {
           /* `undefined`, không phải `null`: `AuditEntry.objectId` khai `string | undefined`.
              Dòng này nói về một PHIÊN dò dẫm, không về một ngăn cụ thể. */
           objectId: undefined,
-          detail: { count: attemptCount, windowMinutes },
+          detail: { count: attemptCount, windowMinutes, ...(escalated ? { escalated: true } : {}) },
         });
         /* `cooldownMinutes` đi kèm để lá thư nói đúng thời gian nghỉ THẬT thay vì viết cứng
            "một giờ" — xem chú thích ở `mail.consumer.ts`. `who` là email chứ không phải id:
@@ -240,6 +265,7 @@ export class SecurityProbeService {
           count: attemptCount,
           windowMinutes,
           cooldownMinutes,
+          ...(escalated ? { escalated: true } : {}),
         });
       });
     } catch (error) {

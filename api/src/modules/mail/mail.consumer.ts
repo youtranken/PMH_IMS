@@ -321,6 +321,8 @@ export class MailConsumer {
       /* Thời gian nghỉ THẬT của cảnh báo dò két, đọc từ `system_config` lúc đẩy outbox. Tùy
          chọn vì hàng outbox ghi trước 18/09/2026 không có trường này. */
       cooldownMinutes?: number;
+      /** Lá thứ hai trong thời gian nghỉ vì kẻ dò đã vượt hệ số × ngưỡng (OLD-SEC-01). */
+      escalated?: boolean;
     },
     time: { eventAt: string; at: (date: Date) => string },
   ) {
@@ -421,11 +423,19 @@ export class MailConsumer {
         if (!payload.who) return null;
         const admins = await this.users.recipientsByRole(['sa', 'admin']);
         if (admins.length === 0) return null;
+        const escalated = payload.escalated === true;
+        const hasCooldown = typeof payload.cooldownMinutes === 'number' && payload.cooldownMinutes > 0;
         const { html, text } = renderMail({
-          title: 'Nhiều lượt mở két thất bại',
+          title: escalated ? 'Vẫn tiếp tục dò két' : 'Nhiều lượt mở két thất bại',
           intro:
-            `${payload.who} vừa có ${payload.count ?? 0} lượt thất bại quanh két trong ` +
-            `${payload.windowMinutes ?? 0} phút (bị từ chối quyền mở ngăn hoặc gõ sai mã 6 số). ` +
+            (escalated
+              ? `${payload.who} vẫn tiếp tục thất bại quanh két sau lá cảnh báo trước: ` +
+                `${payload.count ?? 0} lượt trong ${payload.windowMinutes ?? 0} phút. ` +
+                (hasCooldown
+                  ? `Đây là lá leo thang duy nhất trong ${payload.cooldownMinutes} phút nghỉ. `
+                  : 'Đây là lá leo thang duy nhất trong thời gian nghỉ. ')
+              : `${payload.who} vừa có ${payload.count ?? 0} lượt thất bại quanh két trong ` +
+                `${payload.windowMinutes ?? 0} phút (bị từ chối quyền mở ngăn hoặc gõ sai mã 6 số). `) +
             'Mọi lượt đều đã bị chặn; thư này để có người xem lại.',
           rows: [
             { label: 'Tài khoản', value: payload.who },
@@ -458,13 +468,13 @@ export class MailConsumer {
              * Hàng cũ (ghi trước 18/09) không có trường này. Với chúng, BỎ HẲN mệnh đề thay vì
              * đoán: câu ngắn hơn mà đúng, hơn là câu đầy đủ mà sai.
              */
-            (typeof payload.cooldownMinutes === 'number' && payload.cooldownMinutes > 0
+            (hasCooldown
               ? `Sau mỗi thư, cảnh báo im trong ${payload.cooldownMinutes} phút nên số lượt thật có thể nhiều hơn.`
               : 'Sau mỗi thư, cảnh báo im một lúc nên số lượt thật có thể nhiều hơn.'),
         });
         return {
           to: admins.map((r) => r.email),
-          subject: `[IMS] ${payload.count ?? 0} lượt thất bại quanh két — ${payload.who}`,
+          subject: `[IMS] ${escalated ? 'Vẫn tiếp tục: ' : ''}${payload.count ?? 0} lượt thất bại quanh két — ${payload.who}`,
           html,
           text,
         };

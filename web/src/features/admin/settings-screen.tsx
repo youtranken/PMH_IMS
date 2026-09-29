@@ -63,6 +63,10 @@ const TEXT: Record<string, [string, string]> = {
     'settings.secretProbeCooldownMinutesLabel',
     'settings.secretProbeCooldownMinutesDesc',
   ],
+  secretProbeEscalationMultiplier: [
+    'settings.secretProbeEscalationMultiplierLabel',
+    'settings.secretProbeEscalationMultiplierDesc',
+  ],
   breakGlassMaxGrantHours: ['settings.breakGlassMaxGrantHoursLabel', 'settings.breakGlassMaxGrantHoursDesc'],
   approvalReminderHours: ['settings.approvalReminderHoursLabel', 'settings.approvalReminderHoursDesc'],
   breakGlassPendingExpireHours: [
