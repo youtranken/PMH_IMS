@@ -44,15 +44,22 @@ export interface AccessVerdict {
   canRequest: boolean;
   grant: { id: string; expiresAt: string | null } | null;
   pending: { id: string; createdAt?: string } | null;
+  /**
+   * Đã duyệt nhưng chưa xem lần nào (Q-15): lần bấm Xem đầu tiên (qua mã 6 số) gắn quyền vào
+   * phiên đang xem. `canReveal` đã là `true` trong trường hợp này.
+   */
+  claimable?: { id: string; expiresAt: string | null } | null;
   /** Số người duyệt được đã nhận thư báo phiếu đang treo — chỉ con số. */
   notifiedApprovers?: number | null;
-  /** Giây còn lại của quyền đang chạy, server tính (AD-6). */
+  /** Giây còn lại của quyền (đang chạy hoặc chờ xem lần đầu), tính từ lúc duyệt — server tính (AD-6). */
   grantSecondsLeft?: number | null;
+  /** `breakglass.pending_expire_hours` — phiếu treo quá chừng này thì tự hết hạn. */
+  pendingExpireHours?: number | null;
   /** Trần giờ cấp (`breakglass.max_grant_hours`) — hộp Xin chọn nấc trong trần này. */
   maxGrantHours?: number | null;
   /** Phiếu mới nhất của chính người xem trên hồ sơ này bị từ chối — lúc nào, ghi chú gì. */
   lastDenied?: { at: string | null; note: string | null } | null;
-  /** Quyền/phiếu treo của chính người xem nằm ở một phiên đăng nhập khác — phải xin lại (Q-15). */
+  /** Quyền của chính người xem đang gắn ở một phiên đăng nhập khác — phải xin lại (Q-15). */
   otherSessionHeld?: boolean;
 }
 
@@ -278,18 +285,26 @@ export function VaultPanel({
           seconds: opened.revealSeconds,
           stepUpSecondsLeft: opened.stepUpSecondsLeft,
         });
+        /* Lần xem đầu sau khi được duyệt vừa gắn quyền vào phiên này (Q-15): hỏi lại verdict để
+           khung "Đã được duyệt" chuyển sang khung quyền đang chạy. */
+        if (!isAdmin) void refetchVerdict();
       } catch (error) {
-        if (!afterStepUp && errorCode(error) === 'STEPUP_REQUIRED') {
+        const code = errorCode(error);
+        if (!afterStepUp && code === 'STEPUP_REQUIRED') {
           setPendingStepUp(secret);
           return;
         }
         toast({ message: errorMessage(error), tone: 'error' });
+        // Quyền vừa bị phiên khác giữ / vừa hết: khung phải nói đúng trạng thái mới.
+        if (code === 'BREAK_GLASS_OTHER_SESSION' || code === 'BREAK_GLASS_REQUIRED') {
+          void refetchVerdict();
+        }
       } finally {
         openingRef.current = null;
         setOpening(null);
       }
     },
-    [me.csrfToken, toast],
+    [me.csrfToken, toast, isAdmin, refetchVerdict],
   );
 
   // Ngoài danh sách: chỉ đường tới người gán quyền được (VLT-056). Gọi TRƯỚC các nhánh thoát
@@ -393,9 +408,14 @@ export function VaultPanel({
           <p>
             {t('vault.pendingSince', { at: formatDateTime(verdict.data.pending.createdAt) })}
           </p>
-          {/* Quyền gắn với phiên (Q-15): phiên chết thì lượt quét rút phiếu — nói trước để người
-              xin không đóng máy đi chờ rồi quay lại thấy phiếu đã mất. */}
-          <p className="muted">{t('vault.pendingKeepOpen')}</p>
+          {/* Yêu cầu chờ không gắn phiên (Q-15): người xin được đi làm việc khác, chờ thư. Phiếu
+              chờ có hạn — nói trước để họ không chờ một phiếu đã tự hết hạn. */}
+          <p className="muted">
+            {t('vault.pendingCanLeave')}
+            {typeof verdict.data.pendingExpireHours === 'number'
+              ? ` ${t('vault.pendingExpiresIn', { hours: verdict.data.pendingExpireHours })}`
+              : null}
+          </p>
           {/* Người xin ngồi chờ lúc 2 giờ sáng cần biết có ai được báo không — chỉ con số. */}
           {typeof verdict.data.notifiedApprovers === 'number' ? (
             <p>
@@ -438,6 +458,36 @@ export function VaultPanel({
               }}
             >
               {t('approvals.cancel')}
+            </button>
+          </div>
+        </div>
+      ) : !isAdmin && verdict.data?.claimable ? (
+        /* Đã duyệt, chưa xem lần nào (Q-15): không có nút riêng — bấm "Xem" ở ngăn như thường,
+           lần xem đầu (qua mã 6 số) gắn quyền vào phiên này. Giờ đếm từ lúc duyệt. */
+        <div className="alert ok" role="status">
+          <p>
+            <strong>{t('vault.approvedReady')}</strong>
+          </p>
+          {verdict.data.claimable.expiresAt && grantLeft !== null ? (
+            <p>
+              {t('vault.approvedReadyLeft', {
+                left: leftText(grantLeft, t),
+                until: formatDateTime(verdict.data.claimable.expiresAt),
+              })}
+            </p>
+          ) : null}
+          <p className="muted">{t('vault.approvedReadyNote')}</p>
+          <div className="row" style={{ gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn sm danger-ghost"
+              disabled={releasing}
+              onClick={() => {
+                const grantId = verdict.data?.claimable?.id;
+                if (grantId) void releaseGrant(grantId);
+              }}
+            >
+              {t('vault.release')}
             </button>
           </div>
         </div>
@@ -1143,7 +1193,7 @@ function BreakGlassDialog({
         }}
       >
         <p className="muted">{t('vault.requestHint')}</p>
-        <p className="muted">{t('vault.sessionBound')}</p>
+        <p className="muted">{t('vault.requestSessionNote')}</p>
 
         <Field
           label={t('vault.requestReason')}

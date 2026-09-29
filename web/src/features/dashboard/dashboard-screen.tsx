@@ -614,6 +614,8 @@ function MyRequestsBlock() {
                 row.active && row.expiresAt
                   ? t('dashboard.validUntil', { time: formatDateTime(row.expiresAt) })
                   : null,
+                // Đã duyệt mà chưa xem lần nào (Q-15): nói bước tiếp theo, không có nút riêng.
+                row.active && !row.claimedAt ? t('dashboard.readyToView') : null,
               ]
                 .filter(Boolean)
                 .join(' · ')}

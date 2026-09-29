@@ -192,7 +192,14 @@ export class MailConsumer {
     state: string | undefined,
     at: (date: Date) => string,
   ) {
-    if (state !== 'approved' && state !== 'denied' && state !== 'revoked') return null;
+    if (
+      state !== 'approved' &&
+      state !== 'denied' &&
+      state !== 'revoked' &&
+      state !== 'expired'
+    ) {
+      return null;
+    }
     const request = await this.findApproval(approvalId);
     if (!request) return null;
 
@@ -217,7 +224,9 @@ export class MailConsumer {
           : null;
       const { html, text } = renderMail({
         title: 'Yêu cầu mở két đã được duyệt',
-        intro: `Bạn được xem két${code}${request.expiresAt ? ` tới ${at(request.expiresAt)}` : ''}. Hết giờ, hoặc phiên đăng nhập đã xin kết thúc, là quyền tự cắt.`,
+        intro:
+          `Bạn được xem két${code}${request.expiresAt ? ` tới ${at(request.expiresAt)}` : ''}. ` +
+          'Đăng nhập IMS, mở lại két của đối tượng này và bấm "Xem", nhập mã 6 số.',
         rows: [
           subjectRow,
           { label: 'Được cấp', value: granted ? `${granted} giờ` : '—' },
@@ -229,12 +238,33 @@ export class MailConsumer {
         ctaUrl: `${APP_URL()}${subject?.path ?? UI_PATHS.approval(request.id)}`,
         ctaWide: true,
         footnote:
-          'Mỗi lần xem vẫn phải gõ mã 6 số. Quyền chỉ dùng được trong phiên đăng nhập đã gửi ' +
-          'yêu cầu. Xong việc sớm thì bấm "Trả quyền" trên màn két.',
+          'Giờ được cấp tính từ lúc duyệt. Quyền gắn với phiên đăng nhập bạn xem lần đầu: ' +
+          'đăng xuất hay hết phiên là quyền hết, muốn xem tiếp phải xin lại. Xong việc sớm thì ' +
+          'bấm "Trả quyền" trên màn két.',
       });
       return {
         to: [request.requester],
         subject: `[IMS] Đã duyệt: mở két${code}${granted ? ` (${granted} giờ)` : ''}`,
+        html,
+        text,
+      };
+    }
+
+    if (state === 'expired') {
+      // Chỉ lượt quét hết hạn CHỜ đẩy thư này; grant hết giờ thì người xin đã biết hạn từ trước.
+      const { html, text } = renderMail({
+        title: 'Yêu cầu mở két đã hết hạn chờ duyệt',
+        intro:
+          'Yêu cầu của bạn quá thời hạn chờ mà không ai duyệt nên đã tự hết hạn. ' +
+          'Nếu vẫn còn cần, hãy gửi yêu cầu mới.',
+        rows: [subjectRow, { label: 'Gửi lúc', value: at(request.createdAt) }],
+        ctaLabel: `Mở két${code}`,
+        ctaUrl: `${APP_URL()}${subject?.path ?? UI_PATHS.approval(request.id)}`,
+        ctaWide: true,
+      });
+      return {
+        to: [request.requester],
+        subject: `[IMS] Hết hạn chờ duyệt: mở két${code}`,
         html,
         text,
       };

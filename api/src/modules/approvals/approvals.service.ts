@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, desc, eq, gte, isNotNull, lt, sql, type SQL } from 'drizzle-orm';
+import { and, desc, eq, gte, isNotNull, isNull, lt, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -33,6 +33,8 @@ export interface ApprovalRecord {
   updatedAt: Date;
   /** Tính tại thời điểm đọc bằng đồng hồ, KHÔNG đọc từ DB (AD-6). */
   active: boolean;
+  /** Lúc grant được dùng lần đầu và gắn vào một phiên (Q-15); `null` = chưa. Không kèm id phiên. */
+  claimedAt: Date | null;
 }
 
 export interface ApprovalFilters {
@@ -43,8 +45,6 @@ export interface ApprovalFilters {
   subjectId?: string;
   /** Chỉ yêu cầu tạo từ mốc này trở đi — lọc trong SQL. */
   since?: Date;
-  /** Chỉ yêu cầu gửi từ đúng phiên đăng nhập này (Q-15). */
-  requesterSessionId?: string;
   /** Chỉ yêu cầu tạo TRƯỚC mốc này (loại trừ) — cặp với `since` thành khoảng ngày. */
   until?: Date;
   /** Người xin chứa chuỗi này (không phân biệt hoa thường) — ô lọc của màn nhật ký. */
@@ -65,9 +65,6 @@ function whereOf(filters: ApprovalFilters): SQL | undefined {
   if (filters.subjectType) where.push(eq(approvalTable.subjectType, filters.subjectType));
   if (filters.subjectId) where.push(eq(approvalTable.subjectId, filters.subjectId));
   if (filters.since) where.push(gte(approvalTable.createdAt, filters.since));
-  if (filters.requesterSessionId) {
-    where.push(eq(approvalTable.requesterSessionId, filters.requesterSessionId));
-  }
   if (filters.until) where.push(lt(approvalTable.createdAt, filters.until));
   if (filters.requesterContains) {
     where.push(sql`${approvalTable.requester} ILIKE ${`%${escapeLike(filters.requesterContains)}%`}`);
@@ -93,7 +90,7 @@ export interface CreateApprovalInput {
   subjectId: string;
   reason: string;
   payload?: Record<string, unknown> | null;
-  /** Phiên đăng nhập đang gửi — loại nào gắn quyền với phiên thì bắt buộc truyền (Q-15). */
+  /** Phiên đăng nhập đang gửi — chỉ để tra vết; quyền gắn phiên lúc dùng lần đầu (Q-15). */
   requesterSessionId?: string | null;
 }
 
@@ -321,10 +318,10 @@ export class ApprovalsService {
     subjectType: string;
     subjectId: string;
     /**
-     * Có thì chỉ grant gửi từ đúng phiên này mới tính (Q-15). Grant gửi từ phiên khác, hay
-     * không mang phiên, coi như không có.
+     * Phiên đang giữ grant (Q-15): chuỗi = chỉ grant đã gắn đúng phiên này; `null` = chỉ grant
+     * CHƯA gắn phiên nào; bỏ trống = mọi grant.
      */
-    requesterSessionId?: string;
+    holderSessionId?: string | null;
     now?: Date;
   }): Promise<ApprovalRecord | null> {
     const rows = await this.db
@@ -337,9 +334,11 @@ export class ApprovalsService {
           eq(approvalTable.subjectType, params.subjectType),
           eq(approvalTable.subjectId, params.subjectId),
           eq(approvalTable.state, 'approved'),
-          params.requesterSessionId
-            ? eq(approvalTable.requesterSessionId, params.requesterSessionId)
-            : undefined,
+          params.holderSessionId === undefined
+            ? undefined
+            : params.holderSessionId === null
+              ? isNull(approvalTable.claimedSessionId)
+              : eq(approvalTable.claimedSessionId, params.holderSessionId),
         ),
       )
       .orderBy(desc(approvalTable.expiresAt));
@@ -392,25 +391,97 @@ export class ApprovalsService {
   }
 
   /**
-   * Phiếu còn mở (đang chờ hoặc đã duyệt) của một loại, kèm phiên đã gửi — cho lượt quét đóng
-   * quyền của phiên đã kết thúc (Q-15). Chỉ trả id/state/phiên: phiên không đi ra màn hình.
+   * Gắn grant vào phiên đang dùng nó lần đầu (Q-15), TRONG transaction của nơi gọi. Trả `null`
+   * khi grant không gắn được nữa: đã gắn phiên khác, không còn `approved`, hay đã hết giờ.
+   *
+   * Điều kiện `claimed_session_id IS NULL` nằm ngay trong câu UPDATE: hai phiên cùng dùng lần
+   * đầu thì đúng một câu UPDATE thấy hàng còn trống, câu kia nhận 0 hàng — đọc-rồi-ghi thì cả hai
+   * cùng thấy "chưa ai giữ" và phiên ghi sau cướp quyền của phiên ghi trước.
    */
-  async openWithSession(
-    kind: string,
-  ): Promise<{ id: string; state: string; requesterSessionId: string | null }[]> {
-    return this.db
-      .select({
-        id: approvalTable.id,
-        state: approvalTable.state,
-        requesterSessionId: approvalTable.requesterSessionId,
-      })
+  async claimWithin(
+    tx: Tx,
+    id: string,
+    input: { actor: string; sessionId: string; now?: Date },
+  ): Promise<ApprovalRecord | null> {
+    const now = input.now ?? new Date();
+    const before = await this.requireOne(id, tx);
+    // Hạn đọc bằng đúng `isGrantActive` — một định nghĩa "còn hiệu lực" cho cả hệ thống.
+    if (!isGrantActive(before.state, before.expiresAt, now)) return null;
+    const rows = await tx
+      .update(approvalTable)
+      .set({ claimedSessionId: input.sessionId, claimedAt: now, updatedAt: now })
+      .where(
+        and(
+          eq(approvalTable.id, id),
+          eq(approvalTable.state, 'approved'),
+          isNull(approvalTable.claimedSessionId),
+        ),
+      )
+      .returning();
+    if (rows.length === 0) return null;
+
+    await this.audit.appendWithin(tx, {
+      actor: input.actor,
+      action: `${before.kind}.claimed`,
+      objectType: 'approval',
+      objectId: id,
+      detail: { expiresAt: before.expiresAt?.toISOString() ?? null },
+    });
+    // `to_state` để trống: state không đổi, dòng này chỉ ghi "đã bắt đầu dùng ở một phiên".
+    await tx.insert(approvalHistoryTable).values({
+      approvalId: id,
+      action: 'Xem lần đầu — quyền gắn vào phiên đăng nhập',
+      actor: input.actor,
+      fromState: before.state,
+      toState: null,
+      detail: { event: 'claimed' },
+    });
+    return toRecord(rows[0]);
+  }
+
+  /** Grant đã gắn phiên của một loại — cho lượt quét đóng quyền của phiên đã kết thúc (Q-15). */
+  async claimedGrants(kind: string): Promise<{ id: string; claimedSessionId: string }[]> {
+    const rows = await this.db
+      .select({ id: approvalTable.id, claimedSessionId: approvalTable.claimedSessionId })
       .from(approvalTable)
       .where(
         and(
           eq(approvalTable.kind, kind),
-          sql`${approvalTable.state} IN ('pending', 'approved')`,
+          eq(approvalTable.state, 'approved'),
+          isNotNull(approvalTable.claimedSessionId),
         ),
       );
+    return rows.map((r) => ({ id: r.id, claimedSessionId: r.claimedSessionId as string }));
+  }
+
+  /**
+   * Rút mọi phiếu đang chờ của một người, TRONG transaction của nơi gọi — khi tài khoản bị vô
+   * hiệu hóa (Q-15). Chỉ loại nào khai `withdrawOnRequesterDisabled`; mỗi phiếu đi qua
+   * `transitionWithin` nên có đủ lịch sử + audit như một lần rút bình thường.
+   */
+  async withdrawPendingOfWithin(
+    tx: Tx,
+    requester: string,
+    input: { actor: string; note: string },
+  ): Promise<number> {
+    const rows = await tx
+      .select()
+      .from(approvalTable)
+      .where(sql`lower(${approvalTable.requester}) = lower(${requester})`);
+    let withdrawn = 0;
+    for (const row of rows) {
+      const flow = this.kinds.find(row.kind);
+      const to = flow?.withdrawOnRequesterDisabled;
+      if (!flow || !to || row.state !== flow.initial) continue;
+      await this.transitionWithin(tx, row.id, {
+        to,
+        actor: input.actor,
+        note: input.note,
+        detail: { by: 'account-disabled' },
+      });
+      withdrawn += 1;
+    }
+    return withdrawn;
   }
 
   /** Yêu cầu đang treo — sweep nhắc và màn "cần duyệt" đều dùng. */
@@ -500,5 +571,6 @@ function toRecord(row: typeof approvalTable.$inferSelect): ApprovalRecord {
     updatedAt: row.updatedAt,
     // Tính bằng ĐỒNG HỒ tại thời điểm đọc (AD-6) — không phải một cột trong DB.
     active: isGrantActive(row.state, row.expiresAt),
+    claimedAt: row.claimedAt,
   };
 }

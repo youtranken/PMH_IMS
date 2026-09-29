@@ -174,12 +174,15 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
 - **Quyền mở két gắn với PHIÊN đang dùng nó** (sửa lại 29/09/2026, chủ dự án chốt): yêu cầu
   **đang chờ** KHÔNG gắn phiên — người xin đăng xuất/hết phiên thì yêu cầu vẫn chờ, người duyệt
   vẫn duyệt được (trước đây lượt quét tự rút nó sau 30 phút ngồi chờ, mâu thuẫn với thư nhắc người
-  duyệt sau `approval.reminder_hours` giờ). Khi được duyệt, người xin **nhận quyền** trong một
-  phiên đang sống (bấm "Nhận quyền" + mã 6 số) — từ lúc đó quyền gắn với phiên ấy: đăng xuất, hết
-  phiên hay bị đóng phiên thì quyền hết, không chuyển sang phiên khác, muốn xem tiếp phải xin
-  lại. Giờ được cấp tính từ lúc duyệt. Người xin tự "Trả quyền" sớm được. Lý do: quyền xem mật
-  khẩu không sống lâu hơn người đang ngồi trước máy, nhưng việc CHỜ duyệt không bắt người xin
-  ngồi canh trang.
+  duyệt sau `approval.reminder_hours` giờ). Khi được duyệt, người xin **không có bước nhận quyền
+  riêng**: mở lại đúng thứ đã xin, bấm "Xem" và nhập mã 6 số như bình thường — **lần xem đầu tiên**
+  gắn quyền với phiên đang xem. Từ lúc đó đăng xuất, hết phiên hay bị đóng phiên thì quyền hết,
+  không chuyển sang phiên khác, muốn xem tiếp phải xin lại. Giờ được cấp tính từ lúc duyệt.
+  Người xin tự "Trả quyền" sớm được. Yêu cầu chờ **quá 8 giờ** không ai quyết thì tự hết hạn
+  (`breakglass.pending_expire_hours`, mặc định 8; thư nhắc người duyệt phải đến trước mốc này).
+  Lý do: quyền xem mật khẩu không sống lâu hơn người đang ngồi trước máy, việc CHỜ duyệt không
+  bắt người xin ngồi canh trang, và một yêu cầu treo lâu không được thành vé mở két lúc nào cũng
+  dùng được.
 - **Vô hiệu hóa tài khoản** tự rút mọi yêu cầu mở két đang chờ của người đó (cùng transaction,
   ghi nhật ký). Quyền két theo nhóm giữ nguyên để bật lại là như cũ.
 - **Hồ sơ IP nhập nhầm:** nút là **"Xóa"** — xóa để nhập lại (không khôi phục trên giao diện; vết

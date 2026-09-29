@@ -130,18 +130,34 @@ describe('DecisionDialog', () => {
     ).toBeInTheDocument();
   });
 
-  it('Duyệt một phiếu vừa bị rút (phiên người xin đã kết thúc) → báo rõ, đóng hộp', async () => {
+  it('Duyệt một phiếu vừa bị rút (tài khoản người xin bị vô hiệu hóa) → báo rõ, đóng hộp', async () => {
     const { onClose, onDone } = renderDecision(true, {
       respond: () =>
         Promise.resolve(
           jsonResponse(409, {
             code: 'BREAK_GLASS_WITHDRAWN',
-            message: 'Yêu cầu này đã được rút: phiên đăng nhập của người xin đã kết thúc.',
+            message: 'Yêu cầu này đã được rút: tài khoản của người xin đã bị vô hiệu hóa.',
           }),
         ),
     });
     await userEvent.click(screen.getByRole('button', { name: /Duyệt/ }));
     expect(await screen.findByText(/đã được rút/)).toBeInTheDocument();
+    expect(onClose).toHaveBeenCalled();
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
+  it('Duyệt một phiếu vừa hết hạn chờ (Q-15) → báo rõ, đóng hộp', async () => {
+    const { onClose, onDone } = renderDecision(true, {
+      respond: () =>
+        Promise.resolve(
+          jsonResponse(409, {
+            code: 'BREAK_GLASS_PENDING_EXPIRED',
+            message: 'Yêu cầu này đã quá 8 giờ không ai duyệt nên tự hết hạn.',
+          }),
+        ),
+    });
+    await userEvent.click(screen.getByRole('button', { name: /Duyệt/ }));
+    expect(await screen.findByText(/không ai duyệt/)).toBeInTheDocument();
     expect(onClose).toHaveBeenCalled();
     expect(onDone).not.toHaveBeenCalled();
   });

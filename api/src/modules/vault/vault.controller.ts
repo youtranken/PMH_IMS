@@ -258,7 +258,8 @@ export class VaultController {
     /* Mặc định ĐÓNG (AD-9) — xem chú thích cùng luật ở `list()` bên trên. */
     if (req.user!.role !== 'sa' && req.user!.role !== 'admin') {
       ({ grantId } = await this.breakGlass.assertCanReveal(
-        // Grant chỉ dùng được từ đúng phiên đã xin, và phiên đó còn sống (Q-15).
+        // Grant chỉ dùng được từ phiên đã xem nó lần đầu, và phiên đó còn sống; lượt xem đầu
+        // (đã qua step-up ở route này) gắn grant vào phiên đang gọi (Q-15).
         { email: who, sessionId: req.user!.sessionId },
         meta.ownerType,
         meta.ownerId,

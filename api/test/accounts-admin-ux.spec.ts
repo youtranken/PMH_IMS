@@ -1,4 +1,7 @@
 import { runMigrations } from '../src/database/migration-runner';
+import { ApprovalKindRegistry } from '../src/common/approvals/approvals-registry';
+import { ApprovalsApiService } from '../src/modules/approvals/approvals.api';
+import { ApprovalsService } from '../src/modules/approvals/approvals.service';
 import { AuditWriterService } from '../src/modules/audit/audit-writer.service';
 import { AccountsService } from '../src/modules/auth/accounts.service';
 import { LoginFailureService } from '../src/modules/auth/login-failure.service';
@@ -65,6 +68,9 @@ describe('Tài khoản · bộ lọc, lý do, đổi vai', () => {
       new AuditWriterService(db),
       new OutboxService(db, config, noopSweep),
       new LoginFailureService(db, config, noopSweep),
+      new ApprovalsApiService(
+        new ApprovalsService(db, new AuditWriterService(db), new ApprovalKindRegistry()),
+      ),
     );
     // Migration seed có thể đã tạo sẵn SA — dọn để phép đếm trong bài kiểm là của bài kiểm.
     await scratch.pool.query(`DELETE FROM users`);

@@ -51,6 +51,12 @@ export const CONFIG_KEYS = {
   // Cửa sổ đếm "người này đã xin N lần" trên phiếu người duyệt đọc (0098).
   breakGlassRecentWindowDays: { key: 'breakglass.recent_window_days', fallback: 30 },
   approvalReminderHours: { key: 'approval.reminder_hours', fallback: 4 },
+  /*
+   * Yêu cầu mở két chờ quá số giờ này mà không ai quyết thì tự hết hạn (0241, Q-15). Phải lớn
+   * hơn `approval.reminder_hours` — màn Tham số chặn cặp ngược, vì khi đó thư nhắc không bao giờ
+   * kịp đi trước lúc yêu cầu hết hạn.
+   */
+  breakGlassPendingExpireHours: { key: 'breakglass.pending_expire_hours', fallback: 8 },
   mailFromAddress: { key: 'mail.from_address', fallback: 'ims@pmh.com.vn' },
   appTimezone: { key: 'app.timezone', fallback: 'Asia/Ho_Chi_Minh' },
   /*

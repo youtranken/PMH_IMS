@@ -182,7 +182,7 @@ export class BreakGlassController {
   @Post()
   @Audited('break_glass.requested', 'approval', { writtenByService: true })
   request(@Body() body: RequestDto, @Req() req: AuthedRequest) {
-    // Phiên lấy từ guard, không từ body: grant chỉ dùng được ở đúng phiên này (Q-15).
+    // Phiên lấy từ guard, không từ body. Yêu cầu không gắn phiên; quyền gắn lúc xem lần đầu (Q-15).
     return this.breakGlass.request(
       { email: actor(req), sessionId: req.user!.sessionId },
       body,

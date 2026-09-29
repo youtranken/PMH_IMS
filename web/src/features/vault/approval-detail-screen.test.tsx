@@ -241,3 +241,71 @@ describe('Ngữ cảnh để quyết nhanh (VLT-FLOW)', () => {
     expect(within(dialog).getByLabelText(/Lý do thu hồi/)).toBeInTheDocument();
   });
 });
+
+/**
+ * Q-15 — phía NGƯỜI XIN: yêu cầu chờ không gắn phiên, được duyệt thì mở lại đối tượng và bấm
+ * "Xem" (không có nút riêng); phiếu chờ quá hạn thì tự hết hạn.
+ */
+describe('Trang chi tiết phiếu — người xin (Q-15)', () => {
+  const MEMBER: Me = { ...SA, email: 'tran.b@pmh.com.vn', fullName: 'Trần Thị B', role: 'member' };
+
+  it('đang chờ: nói cứ đóng trang, được duyệt sẽ có thư', async () => {
+    mockApi(ROW);
+    renderDetail(MEMBER);
+    expect(await screen.findByText(/Bạn có thể đóng trang/)).toBeInTheDocument();
+  });
+
+  it('đã duyệt, chưa xem: chỉ đường "mở lại <đối tượng>, bấm Xem, nhập mã 6 số" + nút Mở két', async () => {
+    mockApi({
+      ...ROW,
+      state: 'approved',
+      active: true,
+      decidedBy: 'admin@pmh.com.vn',
+      expiresAt: '2026-09-20T05:30:00.000Z',
+      claimedAt: null,
+    });
+    renderDetail(MEMBER);
+    expect(
+      await screen.findByText(/Đã được duyệt — mở lại SW-CORE-01 · Switch lõi tầng 3 · HCM và bấm "Xem"/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Mở két' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Nhận quyền/ })).not.toBeInTheDocument();
+  });
+
+  it('đã xem lần đầu: nói quyền gắn với phiên đang dùng', async () => {
+    mockApi({
+      ...ROW,
+      state: 'approved',
+      active: true,
+      decidedBy: 'admin@pmh.com.vn',
+      expiresAt: '2026-09-20T05:30:00.000Z',
+      claimedAt: '2026-09-20T02:00:00.000Z',
+    });
+    renderDetail(MEMBER);
+    expect(await screen.findByText(/gắn với phiên đăng nhập đang dùng/)).toBeInTheDocument();
+    expect(screen.queryByText(/Đã được duyệt — mở lại/)).not.toBeInTheDocument();
+  });
+
+  it('hết hạn chờ (chưa từng được duyệt): nói không ai duyệt, không nói "quyền đã tự cắt"', async () => {
+    mockApi({ ...ROW, state: 'expired', decidedBy: 'system', decidedAt: '2026-09-20T09:31:00.000Z' });
+    renderDetail(MEMBER);
+    expect(await screen.findByText(/không ai duyệt/)).toBeInTheDocument();
+    expect(screen.queryByText(/quyền đã tự cắt/)).not.toBeInTheDocument();
+  });
+
+  it('diễn biến có mốc "xem lần đầu"', async () => {
+    mockApi({
+      ...ROW,
+      state: 'expired',
+      decidedBy: 'sa@pmh.com.vn',
+      expiresAt: '2026-09-20T05:30:00.000Z',
+      timeline: [
+        { state: 'approved', actor: 'sa@pmh.com.vn', at: '2026-09-20T01:40:00.000Z', note: null },
+        { state: 'claimed', actor: 'tran.b@pmh.com.vn', at: '2026-09-20T01:50:00.000Z', note: null },
+      ],
+    });
+    renderDetail();
+    const block = await screen.findByRole('region', { name: 'Diễn biến' });
+    expect(within(block).getByText(/Xem lần đầu — quyền gắn vào phiên đăng nhập/)).toBeInTheDocument();
+  });
+});
