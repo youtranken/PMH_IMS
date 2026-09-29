@@ -278,7 +278,7 @@ export class AuthService {
     if (!session.totpPending) {
       throw new UnauthorizedException({
         code: 'TOTP_NOT_PENDING',
-        message: 'Phiên này không ở bước chờ mã. Dùng đường mở két nếu cần xác thực lại.',
+        message: 'Bạn đã đăng nhập xong, không cần nhập mã ở đây. Tải lại trang.',
       });
     }
 
@@ -636,8 +636,8 @@ export class AuthService {
       throw new BadRequestException({
         code: 'TOTP_NOT_ENROLLED',
         message:
-          'Chưa bật xác thực 2 lớp nên không mở được két (kể cả để ghi). ' +
-          'Vào Hồ sơ của tôi (bấm tên bạn ở chân thanh bên) → Xác thực 2 lớp để bật, rồi thử lại.',
+          'Bạn chưa bật xác thực 2 lớp nên chưa dùng được két. ' +
+          'Bật ở Hồ sơ của tôi › Xác thực 2 lớp rồi thử lại.',
       });
     }
     const secret = this.openTotpSecret(user);
@@ -689,7 +689,7 @@ export class AuthService {
         code: result.reason === 'replayed' ? 'TOTP_REPLAYED' : 'TOTP_INVALID',
         message:
           result.reason === 'replayed'
-            ? 'Mã này đã được dùng. Chờ mã mới rồi nhập lại.'
+            ? 'Mã này đã được dùng. Chờ mã mới trên ứng dụng rồi nhập lại.'
             : 'Mã xác thực không đúng.',
         attemptsLeft: maxFailures - failures,
       });

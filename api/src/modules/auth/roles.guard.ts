@@ -35,7 +35,7 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException({
         code: 'ROLES_NOT_DECLARED',
         message:
-          'Route chưa khai @Roles(...) — bị chặn theo mặc định đóng (AD-9). Đây là lỗi lập trình.',
+          'Chức năng này chưa khai vai được dùng nên bị chặn. Đây là lỗi phần mềm, hãy báo SA.',
       });
     }
 
