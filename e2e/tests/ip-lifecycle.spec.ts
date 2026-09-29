@@ -76,8 +76,10 @@ test.describe('Vòng đời IP', () => {
     await expect(page.getByText('Còn 6 IP trống')).toBeVisible();
     await expect(row.getByText('Trống', { exact: true })).toBeVisible();
     await expect(row.getByText('Đã thu hồi')).toHaveCount(0);
-    // Chủ cũ đã biến khỏi hồ sơ — chỉ lịch sử còn giữ.
-    await expect(row.getByText('Máy in kế toán')).toHaveCount(0);
+    // Chủ cũ đã biến khỏi hồ sơ (không còn là người dùng của IP) — chỉ còn dòng gợi nhớ
+    // "trước: …" dưới trạng thái, và lịch sử.
+    await expect(row.getByText('Máy in kế toán', { exact: true })).toHaveCount(0);
+    await expect(row.getByText(/· trước: Máy in kế toán$/)).toBeVisible();
 
     const whenFree = await rowActionNames(page, address);
     expect(whenFree).not.toContain('Thu hồi IP');

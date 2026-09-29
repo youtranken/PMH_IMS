@@ -155,8 +155,8 @@ import {
  * ── PHÒNG ĐỊA CHỈ IP và PHÒNG SỔ NAT ────────────────────────────────────────
  * [x] Đầu trang · rail dải · menu thẻ dải ĐỔI theo dải trống hay đã dùng
  *     → Phòng Địa chỉ IP: nút đầu trang, rail dải, và menu mỗi thẻ đổi theo dải trống hay dải đã dùng
- * [x] Pane phải: nhóm nút lọc · bảng địa chỉ · ô trống · ô tick hồ sơ đã ẩn
- *     → Pane phải màn Địa chỉ IP: nhóm nút lọc, bảng địa chỉ, ô trống và ô tick hồ sơ đã ẩn
+ * [x] Pane phải: nhóm nút lọc · bảng địa chỉ · ô trống · không chip hồ sơ đã xóa (Q-15)
+ *     → Pane phải màn Địa chỉ IP: nhóm nút lọc, bảng địa chỉ, ô trống, không chip hồ sơ đã xóa
  * [x] Hộp Cấp IP và hộp Sửa hồ sơ IP: đủ ô · đúng vai · Sửa có giá trị cũ
  *     → Bên trong hộp "Cấp IP" và hộp "Sửa hồ sơ IP": đủ ô, đúng vai, và mở Sửa phải có giá trị cũ
  * [x] Menu hồ sơ IP ĐỔI theo trạng thái; hộp chuyển trạng thái hỏi đúng thứ
@@ -2976,8 +2976,9 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       panel.getByText('Tạo hồ sơ', { exact: true }),
       'và dòng đó phải đọc được ra tiếng Việt, không phải chuỗi thô "created"',
     ).toBeVisible();
+    // DEV-085: lịch sử nêu HỌ TÊN người làm (không phải email).
     await expect(
-      panel.getByText(E2E_SA.email),
+      panel.getByText(/^E2E Super Admin · /),
       'Lịch sử phải nói AI làm — "ai đổi gì, lúc nào" là cả lý do tab này tồn tại (FR-007)',
     ).toBeVisible();
   });
@@ -3561,9 +3562,16 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
     await expect(
       assign.getByRole('button'),
-      'Hộp gán có đúng 5 nút: ✕ · hai ô ngày · Hủy · Gán vào máy',
-    ).toHaveCount(5);
-    for (const name of ['Đóng hộp thoại', 'Bắt đầu', 'Kết thúc', 'Hủy', 'Gán vào máy']) {
+      'Hộp gán có đúng 6 nút: ✕ · chọn nhanh cả lô (Q-15) · hai ô ngày · Hủy · Gán vào máy',
+    ).toHaveCount(6);
+    for (const name of [
+      'Đóng hộp thoại',
+      'Chọn cả lô theo phòng ban / người sử dụng',
+      'Bắt đầu',
+      'Kết thúc',
+      'Hủy',
+      'Gán vào máy',
+    ]) {
       await expect(
         assign.getByRole('button', { name, exact: true }),
         `Hộp gán phải có đúng một nút "${name}"`,
@@ -4022,10 +4030,20 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     const renew = page.getByRole('dialog', { name: new RegExp(`^Gia hạn ${licenseCode}`) });
     await expect(renew, 'Hộp gia hạn phải nói rõ đang gia hạn mục nào').toBeVisible();
 
+    /*
+     * Hạn mới vẫn KHÔNG có ô gõ — chọn trên lịch để khỏi gõ sai định dạng. Hai ô gõ duy nhất
+     * là số hợp đồng và chi phí của lần gia hạn này (Q-15: ghi vào sổ gia hạn).
+     */
     await expect(
       renew.getByRole('textbox'),
-      'Hộp gia hạn KHÔNG có ô gõ chữ nào — hạn mới phải chọn trên lịch để khỏi gõ sai định dạng',
-    ).toHaveCount(0);
+      'Hộp gia hạn có đúng 2 ô gõ chữ: Số hợp đồng · Chi phí kỳ mới — không có ô gõ ngày',
+    ).toHaveCount(2);
+    for (const name of ['Số hợp đồng', 'Chi phí kỳ mới']) {
+      await expect(
+        renew.getByRole('textbox', { name, exact: true }),
+        `Hộp gia hạn phải có đúng một ô "${name}"`,
+      ).toHaveCount(1);
+    }
     await expect(
       renew.getByRole('button'),
       'Hộp gia hạn có đúng 9 nút: ✕ · năm nút chọn nhanh · ô ngày Hạn mới · Hủy · Gia hạn',
@@ -4225,11 +4243,23 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Hằng tháng thì phải hỏi ngày nào trong tháng',
     ).toHaveCount(1);
 
-    // Ba ô chọn lịch giờ là `Select` chung — cũng là nút (EX-019).
+    /*
+     * Ba ô chọn lịch giờ là `Select` chung — cũng là nút (EX-019). Ngoài ra là các nút gợi ý
+     * người nhận (EX-020): số lượng tùy hộp thư đã dùng ở luật khác, nhưng hộp thư của chính
+     * người đang đăng nhập thì luôn có — chờ nó hiện rồi mới đếm.
+     */
+    const goiY = add.getByRole('group', { name: 'Gợi ý người nhận' }).getByRole('button');
+    await expect(
+      goiY.filter({ hasText: E2E_SA.email }),
+      'Gợi ý người nhận luôn có hộp thư của chính mình',
+    ).toHaveCount(1);
+    await expect(goiY, 'mỗi gợi ý là một nút "Thêm <email>"').toHaveText(
+      Array(await goiY.count()).fill(/^\+ \S+@\S+$/),
+    );
     await expect(
       add.getByRole('button'),
-      'Hộp thêm luật (hằng tháng) có đúng 6 nút: ✕ · Tần suất · Ngày trong tháng · Lúc · Hủy · Lưu',
-    ).toHaveCount(6);
+      'Hộp thêm luật (hằng tháng) có đúng 6 nút ngoài gợi ý: ✕ · Tần suất · Ngày trong tháng · Lúc · Hủy · Lưu',
+    ).toHaveCount(6 + (await goiY.count()));
     for (const name of ['Đóng hộp thoại', 'Tần suất', 'Ngày trong tháng', 'Lúc', 'Hủy', 'Lưu']) {
       await expect(add.getByRole('button', { name, exact: true })).toHaveCount(1);
     }
@@ -6301,8 +6331,16 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     expect(
       await tenCotBang(main),
-      'Bảng tài khoản dịch vụ của SA có đúng 6 cột, cột cuối là Thao tác',
-    ).toEqual(['Mã tài khoản', 'Loại', 'Tên đăng nhập', 'Thuộc về', 'Trạng thái', 'Thao tác']);
+      'Bảng tài khoản dịch vụ của SA có đúng 7 cột (Q-15: thêm "Đổi lần cuối"), cột cuối là Thao tác',
+    ).toEqual([
+      'Mã tài khoản',
+      'Loại',
+      'Tên đăng nhập',
+      'Thuộc về',
+      'Trạng thái',
+      'Đổi lần cuối',
+      'Thao tác',
+    ]);
     expect(
       await tenTheoVaiTro(main, 'button'),
       'Bộ nút của màn Tài khoản dịch vụ khi đăng nhập bằng SA',
@@ -6312,6 +6350,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Thêm tài khoản',
         'Loại',
         'Trạng thái',
+        // NET-074: chip lọc tài khoản VPN không giới hạn IP nguồn.
+        'VPN mở mọi IP',
         'Sắp theo',
         'Sắp xếp theo Mã tài khoản',
         'Sắp xếp theo Loại',
@@ -6337,8 +6377,15 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
 
     expect(
       await tenTheoVaiTro(page.getByRole('main'), 'button'),
-      'Hồ sơ tài khoản dịch vụ của SA: Chép tên đăng nhập, Sửa hồ sơ và ba chấm',
-    ).toEqual(sap(['Chép tên đăng nhập', 'Sửa hồ sơ', `Thao tác với ${maDangDung}`]));
+      'Hồ sơ tài khoản dịch vụ của SA: Chép tên đăng nhập, Sửa hồ sơ, ba chấm — và nút cất của tab Két sắt đang mở sẵn (NET-075)',
+    ).toEqual(
+      sap([
+        'Chép tên đăng nhập',
+        'Sửa hồ sơ',
+        `Thao tác với ${maDangDung}`,
+        'Cất mật khẩu/khóa',
+      ]),
+    );
     await page.getByRole('button', { name: `Thao tác với ${maDangDung}` }).click();
     await expect(
       page.getByRole('menuitem'),
@@ -6402,6 +6449,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Xuất Excel',
         'Loại',
         'Trạng thái',
+        // NET-074: chip lọc tài khoản VPN không giới hạn IP nguồn.
+        'VPN mở mọi IP',
         'Sắp theo',
         'Sắp xếp theo Mã tài khoản',
         'Sắp xếp theo Loại',
@@ -6954,37 +7003,37 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     {
       tab: 'Site',
       nutThem: 'Thêm site',
-      cot: ['Mã', 'Tên', 'Địa chỉ / ghi chú', 'Trạng thái', 'Thao tác'],
+      cot: ['Mã', 'Tên', 'Địa chỉ / ghi chú', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
       nhapDuocExcel: true,
     },
     {
       tab: 'Tủ mạng',
       nutThem: 'Thêm tủ mạng',
-      cot: ['Mã', 'Thuộc site', 'Mô tả', 'Số U', 'Trạng thái', 'Thao tác'],
+      cot: ['Mã', 'Thuộc site', 'Mô tả', 'Số U', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
       nhapDuocExcel: true,
     },
     {
       tab: 'Loại thiết bị',
       nutThem: 'Thêm loại thiết bị',
-      cot: ['Tên', 'Có port map', 'Router/Firewall', 'Mô tả', 'Trạng thái', 'Thao tác'],
+      cot: ['Tên', 'Có port map', 'Router/Firewall', 'Mô tả', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
       nhapDuocExcel: true,
     },
     {
       tab: 'Nhà cung cấp',
       nutThem: 'Thêm nhà cung cấp',
-      cot: ['Tên', 'Cung cấp gì', 'Điện thoại', 'Email / người liên hệ', 'Trạng thái', 'Thao tác'],
+      cot: ['Tên', 'Cung cấp gì', 'Điện thoại', 'Email / người liên hệ', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
       nhapDuocExcel: true,
     },
     {
       tab: 'Bộ phận',
       nutThem: 'Thêm bộ phận',
-      cot: ['Tên', 'Mô tả', 'Trạng thái', 'Thao tác'],
+      cot: ['Tên', 'Mô tả', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
       nhapDuocExcel: false,
     },
     {
       tab: 'Nhà mạng',
       nutThem: 'Thêm nhà mạng',
-      cot: ['Tên', 'Hotline', 'Email / người liên hệ', 'Trạng thái', 'Thao tác'],
+      cot: ['Tên', 'Hotline', 'Email / người liên hệ', 'Đang dùng ở', 'Trạng thái', 'Thao tác'],
       nhapDuocExcel: false,
     },
     {
@@ -7564,6 +7613,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       'menu dòng CỦA CHÍNH SA đang đăng nhập: không có Khóa / Vô hiệu / Đặt lại 2 lớp / Đổi vai (API chặn tự làm với mình)',
     ).toEqual(
       sapXep([
+        // ADM-035: bấm dòng hay chọn mục này đều mở hộp Chi tiết tài khoản.
+        'Xem chi tiết',
         'Sửa',
         'Phiên đang mở',
         'Nhật ký thao tác',
@@ -8089,9 +8140,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     await expect
       .poll(() => popup.getByRole('columnheader').allTextContents(), {
         message:
-          'bảng secret trong popup: ba cột, loại/ghi chú/ngày cập nhật là dòng phụ — KHÔNG có cột giá trị (FR-026)',
+          'bảng secret trong popup: bốn cột (Q-15: "Đổi lần cuối" để thấy hạn đổi mật khẩu), loại/ghi chú là dòng phụ — KHÔNG có cột giá trị (FR-026)',
       })
-      .toEqual(['Tên gọi', 'Tên đăng nhập', 'Thao tác']);
+      .toEqual(['Tên gọi', 'Tên đăng nhập', 'Đổi lần cuối', 'Thao tác']);
     await expect(
       popup.getByRole('cell', { name: secretLabel }).first(),
       'popup phải liệt kê đúng ngăn vừa cất',

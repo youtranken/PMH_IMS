@@ -89,8 +89,19 @@ test.describe('Xóa hồ sơ IP nhập nhầm ở 390px', () => {
     const dialog = page.getByRole('dialog', { name: `Xóa hồ sơ IP nhập nhầm — ${address}` });
     await dialog.getByRole('button', { name: 'Xóa', exact: true }).click();
     await expect(dialog).toBeVisible();
+    await expect(
+      dialog.getByRole('alert'),
+      'bỏ trống lý do phải được nói ra ngay trong hộp',
+    ).toBeVisible();
+    /*
+     * Hộp đang mở là modal: phần còn lại của trang bị ẩn khỏi cây truy cập, nên dòng chỉ đọc
+     * được sau khi đóng hộp. Hủy rồi mới kiểm hồ sơ còn nguyên, sau đó mở lại để xóa thật.
+     */
+    await dialog.getByRole('button', { name: 'Hủy', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
     await expect(row).toContainText(OWNER);
 
+    await rowAction(page, address, 'Xóa');
     await dialog.getByRole('textbox', { name: 'Lý do' }).fill('gõ nhầm địa chỉ E2E');
     await dialog.getByRole('button', { name: 'Xóa', exact: true }).click();
     await expect(dialog).toHaveCount(0);

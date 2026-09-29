@@ -4,6 +4,8 @@ import {
   E2E_MEMBER,
   E2E_SA,
   firstLogin,
+  loginWithTotp,
+  NEW_PASSWORD,
   resetUsers,
   rowAction,
   rowActionNames,
@@ -265,8 +267,9 @@ test.describe('Quản trị tài khoản', () => {
     const saOther = await saCtx.newPage();
     try {
       await firstLogin(memberPage, E2E_MEMBER);
-      await firstLogin(saOther, E2E_SA);
-      await firstLogin(page, E2E_SA);
+      // Cùng một SA ở hai máy: máy thứ hai đăng nhập lại bằng mật khẩu mới + TOTP đã cài.
+      const saSecret = await firstLogin(saOther, E2E_SA);
+      await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saSecret);
       await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
 
       await rowAction(page, 'E2E Thành viên', 'Phiên đang mở');

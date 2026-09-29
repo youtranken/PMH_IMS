@@ -99,7 +99,8 @@ test.describe('Người dùng IMS — chi tiết tài khoản, tạm chặn theo
     await expect(page).toHaveURL(/totp=none/);
 
     await timVaChoLoc(page, nguoi.fullName);
-    await page.getByRole('row', { name: new RegExp(nguoi.fullName) }).getByText(nguoi.fullName, { exact: true }).click();
+    // Ô họ tên kèm email ở dòng phụ, nên bấm vào Ô (không phải đúng chữ họ tên).
+    await page.getByRole('cell', { name: new RegExp(`^${nguoi.fullName} `) }).click();
     const hop = page.getByRole('dialog', { name: nguoi.fullName });
     await expect(hop.getByRole('cell', { name: '203.0.113.77' })).toBeVisible();
     await expect(hop.getByRole('button', { name: 'Gỡ tạm chặn' })).toBeVisible();
