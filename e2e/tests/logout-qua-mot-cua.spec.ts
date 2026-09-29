@@ -45,7 +45,7 @@ test.describe('Đăng xuất đi qua một cửa duy nhất', () => {
       read(file)
         .split('\n')
         .forEach((line, i) => {
-          // Khớp ĐÚNG nhãn "Đăng xuất" ('…' hoặc /…/), không khớp chuỗi con: "Đăng xuất máy này"
+          // Khớp ĐÚNG nhãn "Đăng xuất" ('…' hoặc /…/), không khớp chuỗi con: "Đăng xuất phiên"
           // ở màn Hồ sơ là ĐÓNG MỘT PHIÊN, một việc khác hẳn rời khỏi ứng dụng.
           const exact = line.includes(`'${LABEL}'`) || line.includes(`/${LABEL}/`) || line.includes(`/^${LABEL}$/`);
           if (line.includes(BUTTON) && exact) {

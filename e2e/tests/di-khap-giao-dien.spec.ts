@@ -1892,7 +1892,7 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
       await expect(
         victimPage.getByRole('alert'),
         'SA đã bấm Khóa thì người đó phải bị chặn NGAY ở cửa đăng nhập, và được nói rõ vì sao',
-      ).toContainText('Tài khoản đã bị quản trị viên tạm ngưng. Liên hệ Super Admin để mở lại.');
+      ).toContainText('Tài khoản đang bị khóa. Liên hệ Super Admin để mở khóa.');
       await expect(
         victimPage.getByRole('heading', { name: 'Cài xác thực 2 lớp' }),
         'không được đi tiếp một bước nào trong luồng đăng nhập',
@@ -2789,8 +2789,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toBeDisabled();
     await expect(
       hopNhap.getByText(
-        'Dùng file tải từ nút "Tải file mẫu" (hoặc file vừa Xuất Excel). Danh mục phải khai trước — ' +
-        'hệ thống không tự tạo site, tủ mạng, loại thiết bị hay nhà cung cấp.',
+        'Dùng file mẫu hoặc file vừa xuất Excel. Site, tủ mạng, loại thiết bị, nhà cung cấp phải ' +
+        'khai trong Danh mục trước — hệ thống không tự tạo.',
       ),
       'Hộp nhập phải tự nói ra điều kiện tiên quyết, không để người dùng đoán',
     ).toBeVisible();
@@ -2947,7 +2947,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect(panel.getByText('Chưa có giấy tờ nào.')).toBeVisible();
     await expect(
       panel.getByText(
-        'File luôn được TẢI VỀ, không mở trực tiếp trong trình duyệt (chống mã độc qua file).',
+        'File chỉ tải về máy, không mở trong trình duyệt (chống mã độc).',
       ),
       'Luật "chỉ tải về, không mở inline" phải nói ra ngay chỗ người dùng đính kèm',
     ).toBeVisible();
@@ -4716,7 +4716,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     ).toHaveCount(0);
     // Khai MỚI thì chưa có id để gắn giấy tờ, nên khu đính kèm phải chưa hiện.
     await expect(
-      addForm.getByText('Thêm và xóa giấy tờ ở đây có hiệu lực NGAY', { exact: false }),
+      addForm.getByText('Thêm, xóa giấy tờ ở đây có hiệu lực ngay', { exact: false }),
     ).toHaveCount(0);
 
     // Lựa chọn của `Select` PORTAL ra ngoài phần thân hộp — bắt ở cấp trang.
@@ -5077,7 +5077,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       '',
     );
     await expect(
-      form.getByText('Thêm và xóa giấy tờ ở đây có hiệu lực NGAY', { exact: false }),
+      form.getByText('Thêm, xóa giấy tờ ở đây có hiệu lực ngay', { exact: false }),
       'giấy tờ của dải ghi thẳng nên KHÔNG nằm trong hộp có nút Hủy — nó ở đầu cột phải',
     ).toHaveCount(0);
 
@@ -7488,7 +7488,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
 
     const hop = page.getByRole('dialog', {
-      name: 'Nhập Site, Tủ mạng, Loại thiết bị, Nhà cung cấp từ Excel',
+      name: 'Nhập danh mục từ Excel',
       exact: true,
     });
     await expect(hop).toBeVisible();
@@ -7501,7 +7501,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       'hộp nhập phải có chỗ chọn file — không thì ba cái nút ở chân chẳng để làm gì',
     ).toBeVisible();
     await expect(
-      hop.getByText(/Hệ thống đọc cả 4 sheet: Site, Tủ mạng, Loại thiết bị, Nhà cung cấp/),
+      hop.getByText(/File có 4 sheet: Site, Tủ mạng, Loại thiết bị, Nhà cung cấp/),
       'lời dặn dùng đúng file mẫu phải đứng ngay cạnh ô chọn file, chỗ người ta đang nhìn',
     ).toBeVisible();
 

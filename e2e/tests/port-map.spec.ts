@@ -53,7 +53,7 @@ test.describe('Port map', () => {
     await form.getByRole('combobox', { name: 'Thiết bị đầu kia' }).fill(serverCode);
     await page.getByRole('option', { name: new RegExp(serverCode) }).click();
     await form.getByRole('textbox', { name: 'Cổng đầu kia' }).fill('eth0');
-    await form.getByRole('combobox', { name: 'Người dùng' }).fill('phòng Kế toán');
+    await form.getByRole('combobox', { name: 'Người sử dụng' }).fill('phòng Kế toán');
     await form.getByRole('button', { name: 'Lưu' }).click();
 
     const row = page.getByRole('row', { name: /Gi1\/0\/12/ });

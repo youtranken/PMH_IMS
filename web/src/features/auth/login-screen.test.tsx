@@ -162,7 +162,7 @@ describe('LoginScreen — phản hồi theo từng kiểu hỏng', () => {
     );
     renderLogin();
     await submitWith('a@pmh.com.vn', 'mat-khau');
-    expect(await screen.findByText(/đã bị quản trị viên tạm ngưng/)).toBeInTheDocument();
+    expect(await screen.findByText(/Tài khoản đang bị khóa\. Liên hệ Super Admin/)).toBeInTheDocument();
     expect(await screen.findByText(/Anh Tuấn — máy lẻ 123/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Đăng nhập' })).toBeEnabled();
   });

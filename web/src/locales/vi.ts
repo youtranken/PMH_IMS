@@ -17,7 +17,7 @@ export default {
     /* Người dùng IMS CHÍNH LÀ team IT — "báo bộ phận IT" là bảo họ đi báo chính mình. Chỉ đúng
        người vận hành IMS và thứ cần gửi kèm. */
     serverError:
-      'Máy chủ IMS đang gặp sự cố. Thử lại sau ít phút; nếu vẫn lỗi, gửi phần "Chi tiết kỹ thuật" bên dưới cho Super Admin.',
+      'Máy chủ IMS đang lỗi. Thử lại sau ít phút; nếu vẫn lỗi, gửi "Chi tiết kỹ thuật" bên dưới cho Super Admin.',
     retry: 'Thử lại',
     techDetails: 'Chi tiết kỹ thuật',
     techStatus: 'HTTP {{status}}',
@@ -41,16 +41,16 @@ export default {
        dùng được, và việc người dùng làm được ngay. */
     screenErrorTitle: 'Màn này gặp lỗi khi hiển thị',
     screenErrorHint:
-      'Các phần khác của hệ thống vẫn dùng bình thường. Tải lại trang để thử lại; nếu vẫn lỗi, báo Super Admin kèm đường dẫn đang mở.',
+      'Các phần khác vẫn dùng bình thường. Tải lại trang; nếu vẫn lỗi, báo Super Admin kèm đường dẫn đang mở.',
     reload: 'Tải lại trang',
     confirmTitle: 'Xác nhận',
-    confirmOk: 'Đồng ý',
+    confirmOk: 'Xác nhận',
     /* Câu hỏi khi Esc / bấm nền / ✕ trên một hộp đang có dữ liệu gõ dở (`Dialog guardUnsaved`).
        Nút xác nhận nói rõ việc SẼ xảy ra ("Bỏ và đóng"), nút hủy nói rõ việc KHÔNG xảy ra
        ("Ở lại nhập tiếp") — cặp "Đồng ý / Hủy" ở đây là hai chữ không ai đoán được nghĩa. */
     discardTitle: 'Bỏ những gì vừa nhập?',
     discardMessage:
-      'Hộp này đang có dữ liệu chưa lưu. Đóng lại là mất hết, không khôi phục được.',
+      'Dữ liệu chưa lưu trong hộp này sẽ mất, không khôi phục được.',
     discardConfirm: 'Bỏ và đóng',
     discardCancel: 'Ở lại nhập tiếp',
     openNav: 'Mở menu',
@@ -84,7 +84,7 @@ export default {
     prev: 'Tháng trước',
     next: 'Tháng sau',
     typeLabel: 'Gõ ngày (dd/mm/yyyy)',
-    typeInvalid: 'Ngày không có thật — gõ theo dạng dd/mm/yyyy.',
+    typeInvalid: 'Ngày không hợp lệ — gõ theo dạng dd/mm/yyyy.',
     typeOutOfRange: 'Ngày này nằm ngoài khoảng được chọn.',
   },
   pagination: {
@@ -99,7 +99,7 @@ export default {
   dataTable: {
     selectAll: 'Chọn tất cả',
     selectRow: 'Chọn dòng',
-    scrollHint: 'Bảng rộng hơn khung — kéo ngang (hoặc Shift + lăn chuột) để xem thêm cột.',
+    scrollHint: 'Kéo ngang (hoặc Shift + lăn chuột) để xem thêm cột.',
   },
   theme: {
     dark: 'Chế độ tối',
@@ -156,7 +156,7 @@ export default {
     openHint: 'Tìm nhanh ({{keys}})',
     placeholder: 'Tìm mã, tên, serial, IP…',
     placeholderShort: 'Mã, tên, serial, IP…',
-    hintShort: 'Gõ ít nhất 2 ký tự: mã, tên, serial, IP, tên dải hoặc VLAN.',
+    hintShort: 'Gõ từ 2 ký tự: mã, tên, serial, IP, dải hoặc VLAN.',
     groupRecent: 'Mở gần đây',
     groupGoto: 'Đi tới',
     groupSearchIn: 'Tìm trong danh sách',
@@ -172,7 +172,7 @@ export default {
        trùng một hồ sơ đã tồn tại. Nói rõ là danh sách đang thiếu, và thiếu nhóm nào. */
     partial: 'Chưa tìm được trong: {{list}}. Danh sách dưới đây còn thiếu.',
     emptyPartial:
-      'Chưa tìm được trong: {{list}}, nên chưa nói được là có hồ sơ nào khớp "{{q}}" hay không.',
+      'Chưa tìm được trong: {{list}}, nên chưa chắc có hồ sơ khớp "{{q}}" hay không.',
     groupNav: 'Màn hình',
     footMove: 'di chuyển',
     footOpen: 'mở',
@@ -195,8 +195,8 @@ export default {
     legendCut: 'sẽ bị gỡ khi thanh lý',
     missing: 'Chưa gắn: {{list}}.',
     alone:
-      'Máy này chưa giữ gì của ai — không IP, không luật NAT, không cổng, không license, ' +
-      'không giấy tờ. Thanh lý nó không kéo theo gì cả.',
+      'Máy này không giữ IP, luật NAT, cổng, license, đường truyền hay giấy tờ nào. ' +
+      'Thanh lý không phải gỡ gì.',
     aloneShort: 'Chưa gắn với gì cả',
     ownPorts: 'Cổng của máy này',
     incomingPorts: 'Đang cắm vào máy này',
@@ -204,11 +204,11 @@ export default {
     /* Ba câu cho cảnh CHƯA BIẾT. Im lặng ở đây không được phép đọc thành "sạch rồi": đó đúng
        là câu người ta mở trang này ra để hỏi trước khi thanh lý. */
     unknown:
-      'Chưa đọc được máy này đang giữ những gì — bản đồ bên dưới có thể thiếu. Đừng dựa vào ' +
-      'nó để quyết định thanh lý cho tới khi tải lại được.',
+      'Chưa đọc được máy này đang giữ những gì — bản đồ có thể thiếu. Đừng dựa vào nó để ' +
+      'thanh lý cho tới khi tải lại được.',
     cutUnknown:
-      'Chưa đọc được danh sách thứ máy đang giữ, nên chưa nói được lượt thanh lý sẽ cắt gì. ' +
-      'Tải lại khu bên dưới rồi xem lại.',
+      'Chưa đọc được máy đang giữ gì, nên chưa biết thanh lý sẽ gỡ những gì. ' +
+      'Đóng hộp, tải lại trang rồi thử lại.',
     /* Hai câu cho cảnh ĐANG TẢI — tách khỏi ba câu CHƯA ĐỌC ĐƯỢC ở trên (19/09/2026).
        Cùng là "chưa biết", nhưng "đang tải" là chuyện bình thường của mỗi lượt mở trang, còn
        "chưa đọc được" là một lời CẢNH BÁO kèm chỉ dẫn ("đừng dựa vào nó để quyết định thanh
@@ -281,7 +281,7 @@ export default {
     /* Đăng xuất gọi API hỏng: dữ liệu trên máy đã xoá, nhưng phiên phía máy chủ có thể còn
        sống — nói rõ để người dùng không rời máy dùng chung với một phiên mở. */
     logoutFailed:
-      'Đăng xuất chưa thành công trên máy chủ (mất kết nối?). Dữ liệu trên máy này đã được xóa; nếu vẫn vào được hệ thống, hãy bấm Đăng xuất lần nữa.',
+      'Máy chủ chưa nhận lệnh đăng xuất (mất kết nối?). Dữ liệu trên máy này đã xóa; nếu vẫn vào được, bấm Đăng xuất lần nữa.',
     signInSub: 'Hệ thống nội bộ — chỉ dành cho team IT',
     email: 'Email',
     password: 'Mật khẩu',
@@ -290,7 +290,7 @@ export default {
     /* Câu dự phòng khi API không gửi `message` (mất mạng, trang lỗi HTML của nginx). */
     loginFailed: 'Đăng nhập không thành công.',
     changePasswordFailed: 'Không đổi được mật khẩu.',
-    totpInvalid: 'Mã không đúng hoặc đã hết hạn (mã đổi mỗi 30 giây). Hãy nhập mã mới nhất.',
+    totpInvalid: 'Mã không đúng hoặc đã hết hạn. Nhập mã mới nhất trên ứng dụng.',
     qrFailed: 'Không tạo được mã QR.',
     currentPasswordWrong: 'Mật khẩu hiện tại không đúng.',
     totpTitle: 'Xác thực 2 lớp',
@@ -305,9 +305,9 @@ export default {
     enrollReauthSub:
       'Trang này đã mở khá lâu. Nhập lại mật khẩu để tiếp tục cài xác thực 2 lớp.',
     enrollReauthSubmit: 'Tiếp tục',
-    attemptsLeft: 'Còn {{count}} lần nữa là phiên bị thu hồi và phải đăng nhập lại.',
+    attemptsLeft: 'Còn {{count}} lần thử; sai hết thì phải đăng nhập lại.',
     changePasswordTitle: 'Đổi mật khẩu',
-    changePasswordSub: 'Lần đăng nhập đầu bắt buộc đổi mật khẩu tạm',
+    changePasswordSub: 'Bạn đang dùng mật khẩu tạm — đặt mật khẩu mới để tiếp tục',
     currentPassword: 'Mật khẩu hiện tại',
     newPassword: 'Mật khẩu mới',
     confirmPassword: 'Nhập lại mật khẩu mới',
@@ -316,10 +316,10 @@ export default {
     stepUpSub: 'Nhập mã xác thực để xem thông tin bí mật',
     forgotPassword: 'Quên mật khẩu?',
     forgotPasswordHelp:
-      'Hệ thống không tự đặt lại mật khẩu qua email. Super Admin sẽ cấp cho bạn một mật khẩu tạm; lần đăng nhập sau bạn đặt mật khẩu mới.',
+      'Hệ thống không gửi mật khẩu qua email. Nhờ Super Admin cấp mật khẩu tạm, rồi đặt mật khẩu mới khi đăng nhập.',
     lostTotp: 'Không lấy được mã?',
     lostTotpHelp:
-      'Đổi hoặc mất điện thoại, xóa nhầm ứng dụng: Super Admin có thể đặt lại xác thực 2 lớp cho bạn. Sau đó bạn đăng nhập lại và quét mã mới.',
+      'Đổi, mất điện thoại hoặc xóa nhầm ứng dụng: nhờ Super Admin đặt lại xác thực 2 lớp, rồi đăng nhập và quét mã mới.',
     supportContactLabel: 'Liên hệ',
     hideHelp: 'Ẩn hướng dẫn',
     signingInAs: 'Đang đăng nhập: {{email}}',
@@ -346,7 +346,7 @@ export default {
     lockedWaitButton: 'Chờ {{time}}',
     lockedUrgent: 'Cần vào gấp? Liên hệ Super Admin để mở khóa.',
     /* Quản trị khóa tay / vô hiệu hóa — không tự hết, phải gặp người mở. */
-    lockedByAdmin: 'Tài khoản đã bị quản trị viên tạm ngưng. Liên hệ Super Admin để mở lại.',
+    lockedByAdmin: 'Tài khoản đang bị khóa. Liên hệ Super Admin để mở khóa.',
     accountDisabled: 'Tài khoản đã bị vô hiệu hóa. Cần dùng lại thì liên hệ Super Admin.',
     /* Không kèm số lần còn lại: con số đó cho kẻ dò biết email nào có thật. */
     lockoutWarning: 'Sai nhiều lần liên tiếp sẽ bị tạm khóa, thời gian chờ tăng dần.',
@@ -394,7 +394,7 @@ export default {
     totpEnable: 'Bật ngay',
     totpReEnroll: 'Cài lại trên điện thoại mới',
     totpReEnrollHint:
-      'Cần mã 6 số trên điện thoại hiện tại và mật khẩu. Mã trên điện thoại cũ hết dùng được sau khi xong, và các máy khác bị đăng xuất.',
+      'Cần mật khẩu và mã 6 số trên điện thoại đang dùng. Xong thì điện thoại cũ hết dùng được, các máy khác bị đăng xuất.',
     totpReEnrollPasswordSub: 'Nhập mật khẩu hiện tại để bắt đầu cài xác thực 2 lớp.',
     totpReEnrollContinue: 'Tiếp tục',
     totpEnrolled: 'Đã bật xác thực 2 lớp.',
@@ -403,7 +403,7 @@ export default {
     sessionsHint: 'Các máy và trình duyệt đang đăng nhập bằng tài khoản này.',
     sessionCurrent: 'Máy này',
     sessionLastSeen: 'Hoạt động lần cuối {{time}}',
-    sessionRevoke: 'Đăng xuất máy này',
+    sessionRevoke: 'Đăng xuất phiên',
     sessionRevokeTitle: 'Đăng xuất phiên này?',
     sessionRevokeBody: 'Máy đó sẽ phải đăng nhập lại.',
     sessionRevoked: 'Đã đăng xuất phiên đó.',
@@ -484,9 +484,9 @@ export default {
     description: 'Mô tả',
     uHeight: 'Số U',
     hasPortMap: 'Có port map',
-    hasPortMapHint: 'Loại này sẽ hiện bảng port map ở trang chi tiết thiết bị.',
+    hasPortMapHint: 'Thiết bị loại này luôn có tab Sơ đồ cổng, kể cả khi chưa khai cổng.',
     isRouter: 'Router/Firewall',
-    isRouterHint: 'Thiết bị loại này được liệt kê trong ô Router của sổ NAT.',
+    isRouterHint: 'Thiết bị loại này hiện trong ô chọn Router của sổ NAT.',
     cabinetSiteRequired: 'Chọn site cho tủ này.',
     uHeightInvalid: 'Số U phải là số nguyên từ 1 đến 60.',
     portInvalid: 'Port phải là số nguyên từ 1 đến 65535.',
@@ -495,8 +495,8 @@ export default {
     phone: 'Điện thoại',
     contact: 'Email / người liên hệ',
     hotline: 'Hotline',
-    hotlineHint: 'Số gọi khi đứt cáp lúc 2 giờ sáng. Hiện ngay trên danh sách đường truyền, bấm là gọi.',
-    departmentHint: 'Tên viết đúng MỘT kiểu ở đây thì mọi ô "ai đang dùng" mới lọc chung được.',
+    hotlineHint: 'Số gọi khi đứt cáp. Bấm số trên bảng nhà mạng là gọi.',
+    departmentHint: 'Mỗi bộ phận chỉ một cách viết, để lọc theo bộ phận không sót.',
     protocol: 'Giao thức',
     protocolBoth: 'TCP + UDP',
     port: 'Port',
@@ -519,19 +519,19 @@ export default {
        xảy ra (chẳng ai sợ mất hồ sơ cũ), nên nó trấn an nhầm — còn chuyện THẬT SỰ xảy ra thì
        không ai nói: từ giờ mọi form thêm mới không chọn được mục này nữa. */
     confirmDeactivate:
-      'Ngừng dùng "{{name}}"? Từ giờ KHÔNG form nào chọn được mục này nữa — hồ sơ đang dùng nó ' +
-      'thì giữ nguyên và vẫn đọc được. Dùng lại bất cứ lúc nào.',
-    confirmActivate: 'Dùng lại "{{name}}"?',
+      'Từ giờ không form nào chọn được "{{name}}". Hồ sơ đang dùng nó giữ nguyên; ' +
+      'dùng lại được bất cứ lúc nào.',
+    confirmActivate: '"{{name}}" sẽ chọn lại được trong mọi form.',
     confirmDelete:
-      'Xóa hẳn "{{name}}"? Mục đang được hồ sơ nào dùng thì hệ thống sẽ không xóa — khi đó hãy ' +
-      'Ngừng dùng (dùng "Xem thiết bị dùng mục này" để kiểm trước).',
+      '"{{name}}" bị xóa hẳn khỏi danh mục, không khôi phục được. Muốn giữ lại thì chọn ' +
+      'Ngừng dùng.',
     deleted: 'Đã xóa.',
     saved: 'Đã lưu.',
-    importTitle: 'Nhập Site, Tủ mạng, Loại thiết bị, Nhà cung cấp từ Excel',
+    importTitle: 'Nhập danh mục từ Excel',
     importHint:
-      'Hệ thống đọc cả 4 sheet: Site, Tủ mạng, Loại thiết bị, Nhà cung cấp. Dùng file mẫu bên dưới ' +
-      '(đã kèm danh mục đang có); dòng đánh dấu VÍ DỤ được bỏ qua.',
-    emptyHint: 'Chưa khai mục nào. Thêm tay, hoặc bấm "Nhập từ Excel" (file mẫu nằm trong hộp nhập).',
+      'File có 4 sheet: Site, Tủ mạng, Loại thiết bị, Nhà cung cấp. Dùng file mẫu bên dưới ' +
+      '(đã kèm danh mục đang có); dòng VÍ DỤ được bỏ qua.',
+    emptyHint: 'Chưa khai mục nào. Thêm tay, hoặc bấm "Nhập từ Excel".',
     /* Tab không nhập Excel được thì câu rỗng không được mời đi nhập Excel. */
     emptyHintManual: 'Chưa khai mục nào. Bấm nút thêm ở trên để khai mục đầu tiên.',
     emptyFiltered: 'Không có {{kind}} nào khớp "{{q}}".',
@@ -562,10 +562,10 @@ export default {
     usage_service_account: '{{count}} tài khoản dịch vụ',
     usage_other: '{{count}} hồ sơ',
     deleteInUse: 'Đang dùng ở {{usage}} — hãy Ngừng dùng',
-    deactivateInUse: 'Hiện đang dùng ở {{usage}} — các hồ sơ này giữ nguyên.',
+    deactivateInUse: 'Hiện đang dùng ở {{usage}}.',
     confirmHidePortMapCount:
-      'Tắt "Có port map" cho "{{name}}": {{count}} thiết bị loại này sẽ ẩn bảng port ở trang ' +
-      'chi tiết (dữ liệu port vẫn giữ, tick lại là hiện lại).',
+      'Tắt "Có port map" cho "{{name}}": máy chưa khai cổng nào trong {{count}} thiết bị loại này ' +
+      'sẽ không còn tab Sơ đồ cổng. Máy đã khai cổng giữ nguyên.',
     auditLog: 'Nhật ký thao tác',
     deactivated: 'Đã ngừng dùng "{{name}}".',
     activated: 'Đã dùng lại "{{name}}".',
@@ -575,13 +575,13 @@ export default {
     uHeightHint: 'Số nguyên 1–60 (tủ thường 42U).',
     changeCode: 'Đổi mã…',
     changeCodeWarn:
-      'Mã dùng để tra cứu và nhập Excel — file Excel cũ, link và thói quen gõ tìm sẽ lệch theo. ' +
-      'Hồ sơ đang trỏ theo ID nên không mất liên kết; lần đổi được ghi vào lịch sử.',
+      'File Excel cũ và thói quen tìm theo mã cũ sẽ lệch. Hồ sơ đang dùng mục này không mất ' +
+      'liên kết; lần đổi được ghi vào lịch sử.',
     similarDepartment: 'Đã có "{{name}}" — có phải cùng bộ phận?',
     contactHint: 'Ghi email thì bảng tự thành link gửi thư.',
     confirmHidePortMap:
-      'Tắt "Có port map" cho "{{name}}": mọi thiết bị loại này sẽ ẩn bảng port ở trang chi tiết ' +
-      '(dữ liệu port vẫn giữ, tick lại là hiện lại).',
+      'Tắt "Có port map" cho "{{name}}": máy loại này chưa khai cổng sẽ không còn tab Sơ đồ ' +
+      'cổng. Máy đã khai cổng giữ nguyên.',
     portOverlap: 'Trùng port với "{{name}}" — kiểm lại có phải cùng một dịch vụ không.',
   },
   devices: {
@@ -596,7 +596,7 @@ export default {
     editOf: 'Sửa máy {{device}}',
     software: 'Phần mềm',
     installedHeader: 'Phần mềm đang cài ({{count}})',
-    noInstalled: 'Máy này chưa cài license nào của hệ thống.',
+    noInstalled: 'Máy này chưa được gán license nào.',
     search: 'Tìm mã, tên, serial, IP hoặc người dùng',
     code: 'Mã thiết bị',
     name: 'Tên thiết bị',
@@ -653,13 +653,13 @@ export default {
     // Nói RÕ "gỡ khỏi máy" chứ không phải "xóa": license là tài sản công ty, thanh lý máy
     // không đụng tới hồ sơ phần mềm.
     retireCleanupHint:
-      'Thu hồi IP, gỡ luật NAT và trả ghế license của máy này. Hồ sơ phần mềm giữ nguyên — chỉ gỡ máy khỏi license.',
+      'Thu hồi IP, gỡ luật NAT, trả ghế license và gỡ máy khỏi đường truyền. Hồ sơ phần mềm, đường truyền giữ nguyên.',
     retire: 'Thanh lý',
     retireIntro: 'Hồ sơ vẫn còn trong sổ, chỉ khóa lại. Đọc kỹ phần sẽ gỡ — gỡ rồi không hoàn tác được.',
     retireWillCut: 'Sẽ gỡ khỏi máy này nếu chọn "Gỡ hết rồi thanh lý"',
     retireWillKeep: 'Giữ nguyên',
     retireNothingToCut: 'Máy này không giữ gì phải gỡ.',
-    retireKeepPorts: 'Cổng của máy này ({{count}}) — sơ đồ đấu nối là hồ sơ của nó',
+    retireKeepPorts: 'Sơ đồ cổng ({{count}})',
     retireKeepVault: 'Két sắt ({{count}})',
     retireKeepFiles: 'Giấy tờ ({{count}})',
     retireKeepHistory: 'Hồ sơ máy và toàn bộ lịch sử',
@@ -669,12 +669,12 @@ export default {
     retireTypeCode: 'Gõ lại mã máy {{code}} để xác nhận',
     retireTypeCodeMismatch: 'Mã chưa khớp với máy đang thanh lý.',
     retireBlocked:
-      'Máy vẫn còn giữ những thứ dưới đây nên chưa thanh lý được. Chọn "Gỡ hết rồi thanh lý", hoặc tự gỡ từng thứ trước.',
+      'Máy còn giữ những thứ dưới đây nên chưa thanh lý được. Chọn "Gỡ hết rồi thanh lý", hoặc gỡ từng thứ trước.',
     reopen: 'Đưa lại vào dùng',
     confirmReopen:
-      'Đưa "{{name}}" lại vào dùng? Hồ sơ mở lại để sửa, và máy tính lại hạn bảo hành — ' +
-      'nó sẽ xuất hiện lại trong email nhắc gia hạn.',
-    retiredLocked: 'Thiết bị đã thanh lý — mở lại mới sửa được hồ sơ.',
+      'Hồ sơ "{{name}}" mở lại để sửa được, và hạn bảo hành của máy lại có trong ' +
+      'email nhắc hạn.',
+    retiredLocked: 'Thiết bị đã thanh lý — bấm "Đưa lại vào dùng" nếu cần sửa hồ sơ.',
     /*
      * HAI câu cho HAI cảnh, đừng gộp lại (23/09). Trước đó bốn màn danh sách dùng chung một
      * câu có chữ "khớp bộ lọc", nên một hệ thống vừa cài xong, chưa ai lọc gì, vẫn báo "Chưa
@@ -689,12 +689,12 @@ export default {
     importExcel: 'Nhập từ Excel',
     importTitle: 'Nhập thiết bị từ Excel',
     importHint:
-      'Dùng file tải từ nút "Tải file mẫu" (hoặc file vừa Xuất Excel). Danh mục phải khai trước — ' +
-      'hệ thống không tự tạo site, tủ mạng, loại thiết bị hay nhà cung cấp.',
+      'Dùng file mẫu hoặc file vừa xuất Excel. Site, tủ mạng, loại thiết bị, nhà cung cấp phải ' +
+      'khai trong Danh mục trước — hệ thống không tự tạo.',
     noteHint: 'KHÔNG ghi mật khẩu ở đây. Mật khẩu thiết bị cất trong Két sắt.',
     // Cột bảng và rail chỉ chứa vị trí; người giữ là cột/dòng riêng ngay bên cạnh.
     locationCol: 'Vị trí',
-    retiredLockedShort: 'Đã thanh lý — mở lại hồ sơ mới sửa được.',
+    retiredLockedShort: 'Đã thanh lý — đưa lại vào dùng mới sửa được.',
     emptySearch: 'Không có thiết bị nào khớp “{{q}}”.',
     clearFilters: 'Xóa bộ lọc',
     licenseCount: '{{count}} license',
@@ -723,12 +723,12 @@ export default {
     timelineLicenseAssigned: 'Gán license {{subject}} vào máy',
     timelineLicenseReleased: 'Gỡ license {{subject}} khỏi máy',
     timelineFailed: 'Không đọc được lịch sử từ: {{sources}}. Thử tải lại sau.',
-    timelineCapped: 'Mỗi nguồn chỉ hiện {{count}} dòng gần nhất — dòng cũ hơn xem ở màn gốc (Địa chỉ IP, Phần mềm) hoặc Nhật ký hệ thống.',
+    timelineCapped: 'Mỗi nguồn hiện {{count}} dòng gần nhất. Cũ hơn: xem ở màn Địa chỉ IP, Phần mềm hoặc Nhật ký hệ thống.',
     changeStatus: 'Đổi trạng thái',
     newStatus: 'Trạng thái mới',
     statusCurrent: '{{status}} (hiện tại)',
     retiredBy: 'Thanh lý lúc {{date}} bởi {{actor}}',
-    retiredCleaned: 'đã gỡ IP, NAT và license của máy',
+    retiredCleaned: 'đã gỡ IP, NAT, license và đường truyền của máy',
     summaryCard: 'Tóm tắt',
     createdAt: 'Tạo {{date}}',
     lastEditBy: 'sửa lần cuối {{date}} bởi {{actor}}',
@@ -750,13 +750,13 @@ export default {
   },
   attachments: {
     title: 'Giấy tờ đính kèm',
-    hint: 'Hóa đơn, biên bản bàn giao, phiếu bảo hành… Nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
-    hint_isp: 'Hợp đồng, phụ lục, biên bản bàn giao IP tĩnh… Nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
+    hint: 'Hóa đơn, biên bản bàn giao, phiếu bảo hành… Nhận jpg, png, webp, pdf, xlsx.',
+    hint_isp: 'Hợp đồng, phụ lục, biên bản bàn giao IP tĩnh… Nhận jpg, png, webp, pdf, xlsx.',
     hint_service_account:
-      'File cấu hình VPN, phiếu yêu cầu cấp tài khoản… KHÔNG đính mật khẩu. Nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
-    hint_subnet: 'Sơ đồ mạng, biên bản bàn giao dải IP… Nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
+      'File cấu hình VPN, phiếu yêu cầu cấp tài khoản… KHÔNG đính mật khẩu. Nhận jpg, png, webp, pdf, xlsx.',
+    hint_subnet: 'Sơ đồ mạng, biên bản bàn giao dải IP… Nhận jpg, png, webp, pdf, xlsx.',
     hint_nat_rule:
-      'Ảnh chụp cấu hình router, email xác nhận mở port… Nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
+      'Ảnh chụp cấu hình router, email xác nhận mở port… Nhận jpg, png, webp, pdf, xlsx.',
     pick: 'Chọn file để đính kèm',
     // Chọn/thả là tải ngay, nhiều file một lượt — không còn nút "Tải lên" riêng.
     uploadingOf: 'Đang tải lên {{done}}/{{total}}…',
@@ -776,14 +776,14 @@ export default {
     uploadedBy: 'bởi {{name}}',
     download: 'Tải về',
     remove: 'Xóa',
-    confirmRemove: 'Xóa "{{name}}" khỏi hồ sơ? Thao tác này được ghi nhật ký.',
+    confirmRemove: '"{{name}}" sẽ biến khỏi hồ sơ. Việc xóa được ghi vào nhật ký.',
     removed: 'Đã xóa giấy tờ.',
-    noPreview: 'File luôn được TẢI VỀ, không mở trực tiếp trong trình duyệt (chống mã độc qua file).',
+    noPreview: 'File chỉ tải về máy, không mở trong trình duyệt (chống mã độc).',
     // Khối chọn giấy tờ ngay trong form THÊM MỚI — file chỉ được đẩy lên sau khi hồ sơ đã lưu.
     draftHint:
-      'Không bắt buộc. Chọn từng file (ảnh jpg/png/webp, giấy tờ pdf/xlsx) — sẽ đính kèm ngay sau khi lưu hồ sơ.',
+      'Không bắt buộc. File (jpg, png, webp, pdf, xlsx) được đính kèm ngay sau khi lưu hồ sơ.',
     liveWarning:
-      'Thêm và xóa giấy tờ ở đây có hiệu lực NGAY, không chờ bấm Lưu — nút Hủy không hoàn tác được.',
+      'Thêm, xóa giấy tờ ở đây có hiệu lực ngay, không chờ Lưu — nút Hủy không hoàn tác được.',
     draftRemove: 'Bỏ ra',
     draftRemoveOf: 'Bỏ "{{name}}" khỏi danh sách sẽ đính kèm',
     draftUploaded: 'Đã đính kèm {{count}} giấy tờ.',
@@ -792,12 +792,12 @@ export default {
   },
   ports: {
     vlan: 'VLAN',
-    vlanHint: 'Số VLAN của cổng, hoặc "trunk" nếu cổng chở nhiều VLAN (uplink).',
+    vlanHint: 'Số VLAN, hoặc "trunk" nếu cổng chở nhiều VLAN.',
     usedByPlaceholder: 'Chọn bộ phận hoặc gõ tên người…',
     own: 'Cổng của thiết bị này',
     incoming: 'Đang cắm vào thiết bị này',
     incomingHint:
-      'Đây là chiều ngược của dòng do thiết bị kia giữ — sửa ở trang thiết bị đó, một sợi dây chỉ có một bản ghi.',
+      'Các dòng này do thiết bị đầu kia giữ — muốn sửa thì mở trang thiết bị đó.',
     incomingEmpty: 'Chưa có thiết bị nào khai là đang cắm vào đây.',
     add: 'Thêm cổng',
     edit: 'Sửa',
@@ -816,7 +816,7 @@ export default {
     peerKindFree: 'Mô tả tự do',
     freeTextHint: 'Dùng khi đầu kia không nằm trong kho (uplink nhà mạng, ổ cắm tường…).',
     fromDevice: 'Từ thiết bị',
-    usedBy: 'Người dùng',
+    usedBy: 'Người sử dụng',
     note: 'Ghi chú',
     empty: 'Chưa khai cổng nào.',
     emptyHint: 'Khai cổng để xuống site là biết ngay cổng nào đi đâu.',
@@ -830,7 +830,7 @@ export default {
     filter: 'Lọc cổng, thiết bị, VLAN…',
     filterEmpty: 'Không có cổng nào khớp “{{q}}”.',
     lockedEmpty: 'Hồ sơ đã khóa — không có cổng nào được khai.',
-    confirmRemove: 'Xóa dòng cổng "{{port}}"? Thao tác được ghi vào lịch sử thiết bị.',
+    confirmRemove: 'Dòng cổng "{{port}}" bị xóa khỏi sơ đồ. Việc xóa được ghi vào lịch sử thiết bị.',
   },
   importDialog: {
     pick: 'Chọn file .xlsx',
@@ -839,7 +839,7 @@ export default {
     needCheck: 'Bấm "Đối chiếu" trước để xem file sẽ ghi những gì.',
     needFile: 'Chọn file .xlsx trước đã.',
     confirm: 'Xác nhận ghi',
-    nothing: 'Không có dòng nào cần ghi — file trùng khớp với dữ liệu đang có.',
+    nothing: 'Không có dòng nào cần ghi — file khớp với dữ liệu đang có.',
     hasErrors: 'Còn dòng lỗi. Sửa trong file rồi đối chiếu lại — chưa ghi gì cả.',
     downloadErrors: 'Tải danh sách {{count}} dòng lỗi (.xlsx)',
     done: 'Đã nhập: thêm {{created}}, cập nhật {{updated}}.',

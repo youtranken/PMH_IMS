@@ -71,7 +71,7 @@ describe('AUTH-003 / AUTH-018: chỉ đường khi quên mật khẩu hoặc m�
     expect(fetchSpy).not.toHaveBeenCalled();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Quên mật khẩu?' }));
     expect(await screen.findByText(/Gọi anh Tuấn — máy lẻ 123/)).toBeInTheDocument();
-    expect(screen.getByText(/Super Admin sẽ cấp cho bạn một mật khẩu tạm/)).toBeInTheDocument();
+    expect(screen.getByText(/Nhờ Super Admin cấp mật khẩu tạm/)).toBeInTheDocument();
     expect(String(fetchSpy.mock.calls[0][0])).toBe('/api/v1/auth/support-contact');
   });
 
@@ -79,7 +79,7 @@ describe('AUTH-003 / AUTH-018: chỉ đường khi quên mật khẩu hoặc m�
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { contact: 'x' })));
     withProviders(<SupportHelp kind="totp" />);
     await userEvent.setup().click(screen.getByRole('button', { name: 'Không lấy được mã?' }));
-    expect(await screen.findByText(/đặt lại xác thực 2 lớp cho bạn/)).toBeInTheDocument();
+    expect(await screen.findByText(/nhờ Super Admin đặt lại xác thực 2 lớp/)).toBeInTheDocument();
   });
 });
 

@@ -129,7 +129,7 @@ describe('DatePicker — gõ tay và tháng mở sẵn', () => {
       '31/02/2026{Enter}',
     );
     expect(onChange).not.toHaveBeenCalled();
-    expect(screen.getByText('Ngày không có thật — gõ theo dạng dd/mm/yyyy.')).toBeInTheDocument();
+    expect(screen.getByText('Ngày không hợp lệ — gõ theo dạng dd/mm/yyyy.')).toBeInTheDocument();
   });
 
   it('`openTo` mở lịch ở đúng tháng khi ô còn trống (ngày sinh không mở ở tháng hiện tại)', async () => {
