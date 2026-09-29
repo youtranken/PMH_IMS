@@ -781,12 +781,19 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - `.cell-note` chỉ đọc được nội dung đầy đủ qua `title`.
   - **Rà 29/09:** xong font `td::before` (af00c3a). Ma trận quyền mới có `scope="row"`, header cột còn
     thiếu `scope`. Ba ý còn lại còn nguyên.
-- [ ] **OLD-BE-03 · Ghi nhật ký:**
+- [x] **OLD-BE-03 · Ghi nhật ký:**
   - `@Audited` khai sai tên (`accounts.controller.ts:167`, `catalog.controller.ts:146`).
   - `FIELD_LABEL` thiếu `token`/`currentPassword`/`newPassword` (`validation-messages.ts:37`).
   - `DevicePortsService` ghi lịch sử mà không kiểm hàng có bị sửa hay xoá thật không.
   - **Rà 29/09:** còn nguyên. Tên `@Audited` của catalog lệch có chủ ý (chú thích
     `catalog.controller.ts:102-106`) — cần chốt giữ hay đổi.
+  - **Đã sửa:** `@Audited` của đổi trạng thái tài khoản khai đúng ba mã service ghi
+    (`ACCOUNT_STATUS_ACTION`: `account.locked|disabled|unlocked`); `@Audited` nhận mảng mã, chỉ khi
+    `writtenByService`. Tên HỌ của catalog: giữ như cũ — Q-16. `FIELD_LABEL` thêm `token`,
+    `ticket`, `currentPassword`, `newPassword`; bài điểm danh nay đọc cả `*.dto.ts`. Port map:
+    sửa/gỡ khoá dòng trong tx, `returning()` rỗng → 404, lịch sử ghi SAU khi xoá, lưu y nguyên thì
+    không ghi. Kiểm: `accounts-audited.spec.ts`, `validation-messages.spec.ts`,
+    `web/src/features/audit-action-rollcall.test.ts`, `api/test/device-ports-write-check.spec.ts`.
 - [ ] **OLD-DB-04 · Dọn và chuẩn hoá DB:**
   - Bỏ index `audit_log_actor_trgm` (11 MB, 0 lượt quét).
   - `isp_line.wan_ip` đang là `text`.

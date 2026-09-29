@@ -31,7 +31,7 @@ import { dateTimeInTz } from '../../common/today';
 import { Audited } from '../audit/audited.decorator';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { USER_SORT_DEFAULT, USER_SORT_KEYS, type UserListFilters } from '../users/users.api';
-import { AccountsService } from './accounts.service';
+import { ACCOUNT_STATUS_ACTION, AccountsService } from './accounts.service';
 import { Roles } from './roles.decorator';
 import type { AuthedRequest, UserRole } from './types';
 import { NoStepUp, RequiresStepUp } from './step-up.decorator';
@@ -243,7 +243,7 @@ export class AccountsController {
   // là thứ duy nhất đứng giữa nó với việc khoá cả công ty ra ngoài.
   @RequiresStepUp()
   @Patch(':id/status')
-  @Audited('account.status.changed', 'user', { writtenByService: true })
+  @Audited(Object.values(ACCOUNT_STATUS_ACTION), 'user', { writtenByService: true })
   async setStatus(
     @Param('id') id: string,
     @Body() dto: StatusDto,

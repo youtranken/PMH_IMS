@@ -30,7 +30,8 @@ import { ACTION_LABEL as CATALOG_ACTIONS } from './catalog/catalog-history-entri
  * nguồn API (nơi sinh ra sự thật) thay vì chép danh sách mã vào đây.
  *
  * Ba ngả sinh mã:
- *   1. `@Audited('mã', …)` — interceptor ghi (hoặc service ghi cùng mã).
+ *   1. `@Audited('mã', …)` — interceptor ghi (hoặc service ghi cùng mã). Route khai nhiều mã
+ *      thì khai qua một bảng hằng `const …ACTION… = { … }` — mọi chuỗi mã trong bảng đó được quét.
  *   2. `action: 'mã'` viết thẳng trong lời gọi ghi nhật ký — kể cả dạng `action: x ? 'a' : 'b'`
  *      và các khoá đuôi `Action` (`failedAction: 'mã'`) truyền mã sang một hàm ghi hộ. Chỉ lấy
  *      chuỗi CÓ DẤU CHẤM: mọi mã nhật ký đều có, còn `action: 'create'` của kế hoạch nhập Excel
@@ -59,6 +60,7 @@ const KEYED = /\b\w*[aA]ction:\s*([^,\n]+)/g;
 const SQL_INSERT = /INSERT INTO audit_log[\s\S]*?VALUES\s*\(([^)]*)\)/g;
 const QUOTED = new RegExp(`['"](${CODE})['"]`, 'g');
 const CONST_ACTION = new RegExp(`const [A-Z_]*ACTION[A-Z_]*\\s*=\\s*['"](${CODE})['"]`, 'g');
+const CONST_ACTION_TABLE = /const [A-Z_]*ACTION[A-Z_]*\s*=\s*\{([^}]*)\}/g;
 const TEMPLATE = /\baction:\s*`([^`]+)`/g;
 
 function scan() {
@@ -68,7 +70,7 @@ function scan() {
     for (const re of [AUDITED, CONST_ACTION]) {
       for (const m of text.matchAll(re)) if (!literal.has(m[1])) literal.set(m[1], rel);
     }
-    for (const re of [KEYED, SQL_INSERT]) {
+    for (const re of [KEYED, SQL_INSERT, CONST_ACTION_TABLE]) {
       for (const m of text.matchAll(re)) {
         for (const q of m[1].matchAll(QUOTED)) if (!literal.has(q[1])) literal.set(q[1], rel);
       }
@@ -101,6 +103,7 @@ describe('Nhãn hành động trên màn Nhật ký', () => {
     expect(literal.get('auth.password.ok')).toBeDefined();
     expect(literal.get('auth.password.change_failed')).toBeDefined();
     expect(literal.get('account.seeded')).toBeDefined();
+    expect(literal.get('account.disabled')).toBeDefined();
     expect(templates.size).toBeGreaterThanOrEqual(5);
   });
 

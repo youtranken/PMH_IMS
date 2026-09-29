@@ -78,18 +78,6 @@ const TRACKED = [
 
 type PortSnapshot = { portLabel: string } & Record<(typeof TRACKED)[number], string | null>;
 
-function snapshotOf(row: PortRow): PortSnapshot {
-  return {
-    portLabel: row.portLabel,
-    connectedDevice: row.connectedDeviceCode,
-    connectedLabel: row.connectedLabel,
-    connectedPort: row.connectedPort,
-    vlan: row.vlan,
-    usedBy: row.usedBy,
-    note: row.note,
-  };
-}
-
 /**
  * Trước/sau của một lượt thêm (`before` null), sửa, gỡ (`after` null). `portLabel` luôn có mặt,
  * kể cả khi không đổi: câu lịch sử ("Sửa cổng Gi1/0/12") đọc tên cổng từ đó.
@@ -100,6 +88,20 @@ function portChanges(before: PortSnapshot | null, after: PortSnapshot | null): R
     portLabel: { before: before?.portLabel ?? null, after: after?.portLabel ?? null },
     ...diffRecord(TRACKED, before ?? empty, after ?? empty),
   };
+}
+
+/** Lưu lại y nguyên thì không có gì để kể — không đẻ dòng "đã sửa" rỗng trong tab Lịch sử. */
+function hasPortChange(changes: RecordChanges): boolean {
+  return (
+    Object.keys(changes).length > 1 || changes.portLabel.before !== changes.portLabel.after
+  );
+}
+
+function portNotFound(): NotFoundException {
+  return new NotFoundException({
+    code: 'PORT_NOT_FOUND',
+    message: 'Không tìm thấy dòng port map này.',
+  });
 }
 
 /**
@@ -198,34 +200,32 @@ export class DevicePortsService {
     portId: string,
     input: PortInput,
   ): Promise<PortRow> {
-    const before = await this.requireRow(deviceId, portId);
     const values = await this.prepare(deviceId, input, portId);
     await this.db.transaction(async (tx) => {
       await this.devices.assertUsableWithin(tx, deviceId);
+      const before = await this.lockWithin(tx, deviceId, portId);
       if (values.connectedDeviceId && values.connectedDeviceId !== before.connectedDeviceId) {
         await this.assertPeerUsableWithin(tx, values.connectedDeviceId as string);
       }
+      let updated;
       try {
-        await tx
+        updated = await tx
           .update(devicePortTable)
           .set({ ...values, updatedAt: new Date() })
-          .where(eq(devicePortTable.id, portId));
+          .where(eq(devicePortTable.id, portId))
+          .returning({ id: devicePortTable.id });
       } catch (error) {
         throw this.translate(
           error,
           values.connectedPort !== undefined
             ? (values.connectedPort as string | null)
-            : before.connectedPort,
+            : before.snapshot.connectedPort,
         );
       }
-      const after = await this.snapshotWithin(tx, portId);
-      await this.devices.recordWithin(
-        tx,
-        actor,
-        deviceId,
-        'port-updated',
-        portChanges(snapshotOf(before), after),
-      );
+      if (updated.length === 0) throw portNotFound();
+      const changes = portChanges(before.snapshot, await this.snapshotWithin(tx, portId));
+      if (!hasPortChange(changes)) return;
+      await this.devices.recordWithin(tx, actor, deviceId, 'port-updated', changes);
     });
     return this.requireRow(deviceId, portId);
   }
@@ -235,17 +235,21 @@ export class DevicePortsService {
      * GỠ cũng chặn, có chủ ý. Sơ đồ đấu nối của một máy đã thanh lý là bằng chứng "hồi đó nó
      * cắm vào đâu" — xóa sau khi máy đã đi là làm mất đúng thứ người ta cần lúc truy vết.
      */
-    const before = await this.requireRow(deviceId, portId);
     await this.db.transaction(async (tx) => {
       await this.devices.assertUsableWithin(tx, deviceId);
+      const before = await this.lockWithin(tx, deviceId, portId);
+      const deleted = await tx
+        .delete(devicePortTable)
+        .where(eq(devicePortTable.id, portId))
+        .returning({ id: devicePortTable.id });
+      if (deleted.length === 0) throw portNotFound();
       await this.devices.recordWithin(
         tx,
         actor,
         deviceId,
         'port-removed',
-        portChanges(snapshotOf(before), null),
+        portChanges(before.snapshot, null),
       );
-      await tx.delete(devicePortTable).where(eq(devicePortTable.id, portId));
     });
   }
 
@@ -331,6 +335,30 @@ export class DevicePortsService {
     }
   }
 
+  /**
+   * Khoá dòng cổng (của ĐÚNG thiết bị này) tới hết `tx` rồi mới chụp "trước khi sửa".
+   *
+   * Đọc trên pool rồi mới ghi thì một lượt gỡ của người khác commit vào giữa làm câu
+   * UPDATE/DELETE không chạm hàng nào, mà lịch sử vẫn ghi "đã sửa/đã gỡ". Có khoá thì lượt đến
+   * sau chờ, rồi thấy hàng đã mất → 404.
+   */
+  private async lockWithin(
+    tx: Tx,
+    deviceId: string,
+    portId: string,
+  ): Promise<{ connectedDeviceId: string | null; snapshot: PortSnapshot }> {
+    const locked = await tx
+      .select({ connectedDeviceId: devicePortTable.connectedDeviceId })
+      .from(devicePortTable)
+      .where(and(eq(devicePortTable.id, portId), eq(devicePortTable.deviceId, deviceId)))
+      .for('update');
+    if (locked.length === 0) throw portNotFound();
+    return {
+      connectedDeviceId: locked[0].connectedDeviceId,
+      snapshot: await this.snapshotWithin(tx, portId),
+    };
+  }
+
   /** Ảnh chụp một dòng port map trong `tx` (kèm mã máy đầu kia) để ghi lịch sử. */
   private async snapshotWithin(tx: Tx, portId: string): Promise<PortSnapshot> {
     const [row] = await tx
@@ -352,12 +380,7 @@ export class DevicePortsService {
   private async requireRow(deviceId: string, portId: string): Promise<PortRow> {
     const map = await this.listFor(deviceId);
     const found = map.ports.find((port) => port.id === portId);
-    if (!found) {
-      throw new NotFoundException({
-        code: 'PORT_NOT_FOUND',
-        message: 'Không tìm thấy dòng port map này.',
-      });
-    }
+    if (!found) throw portNotFound();
     return found;
   }
 

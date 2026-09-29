@@ -20,7 +20,10 @@ export interface AuditedOptions {
 }
 
 export interface AuditedMeta extends AuditedOptions {
+  /** Mã interceptor ghi (mã đầu tiên khi khai nhiều mã). */
   action: string;
+  /** Mọi mã route này có thể để lại trong `audit_log`. */
+  actions: readonly string[];
   objectType?: string;
 }
 
@@ -32,7 +35,24 @@ export interface AuditedMeta extends AuditedOptions {
  *   nghiệp vụ nên rollback là mất luôn vết — đúng ý AD-5). Interceptor đứng ngoài.
  */
 export const Audited = (
-  action: string,
+  /**
+   * Nhiều mã khi service chọn mã theo dữ liệu (vd khoá / vô hiệu hoá / mở khoá tài khoản): khai
+   * ĐỦ các mã thật thay vì một tên chung không bao giờ xuất hiện trong nhật ký.
+   */
+  action: string | readonly string[],
   objectType?: string,
   options: AuditedOptions = {},
-) => SetMetadata(AUDITED_KEY, { action, objectType, ...options } satisfies AuditedMeta);
+) => {
+  const actions = typeof action === 'string' ? [action] : [...action];
+  if (actions.length === 0 || (actions.length > 1 && !options.writtenByService)) {
+    throw new Error(
+      '@Audited nhiều mã chỉ dùng kèm { writtenByService: true } — interceptor chỉ ghi được một mã.',
+    );
+  }
+  return SetMetadata(AUDITED_KEY, {
+    action: actions[0],
+    actions,
+    objectType,
+    ...options,
+  } satisfies AuditedMeta);
+};
