@@ -447,11 +447,11 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     ).toBe(200);
 
     await page.goto(`/ip-addresses/${subnetId}`);
-    await rowAction(page, cidr, 'Vô hiệu hóa');
+    await rowAction(page, cidr, 'Ngừng dùng');
     const off = page.getByRole('dialog');
     await off.getByRole('textbox', { name: 'Lý do' }).fill('gộp sang VLAN mới');
-    await off.getByRole('button', { name: 'Vô hiệu hóa' }).click();
-    await expect(page.getByText('Đã vô hiệu hóa dải.')).toBeVisible();
+    await off.getByRole('button', { name: 'Ngừng dùng' }).click();
+    await expect(page.getByText('Đã ngừng dùng dải.')).toBeVisible();
 
     /*
      * Thẻ dải VẪN ĐỨNG ĐÓ, mang huy hiệu và nói rõ vì sao — không biến mất.
@@ -462,20 +462,20 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     // `'\\.'` chứ không phải `'\.'`: trong chuỗi JS thì `\.` rơi mất dấu chéo và phép thay thế
     // này thành RỖNG — regex đi ra vẫn còn dấu chấm khớp-mọi-ký-tự (cổng lint e2e bắt, 08/09).
     const card = page.getByRole('link', { name: new RegExp(cidr.replace(/\./g, '\\.')) });
-    await expect(card.getByText('Đã vô hiệu hóa', { exact: true })).toBeVisible();
+    await expect(card.getByText('Đã ngừng dùng', { exact: true })).toBeVisible();
     await expect(card.getByText(/gộp sang VLAN mới/)).toBeVisible();
 
     // Bảng IP vẫn hiện hồ sơ cũ — địa chỉ KHÔNG được vẽ thành ô trống sẵn sàng cấp lại.
     await expect(page.getByText('Máy chủ file')).toBeVisible();
     // Không một ô nào của dải đã tắt được mời cấp — kể cả những địa chỉ chưa ai dùng.
     await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(0);
-    await expect(page.getByText(/Dải này đã vô hiệu hóa/)).toBeVisible();
+    await expect(page.getByText(/Dải này đã ngừng dùng/)).toBeVisible();
 
     // Bật lại: dải sống lại, và ĐÚNG hồ sơ đã tắt cùng nó cũng vậy.
-    await rowAction(page, cidr, 'Bật lại');
-    await page.getByRole('dialog').getByRole('button', { name: 'Bật lại' }).click();
-    await expect(page.getByText('Đã bật lại dải.')).toBeVisible();
-    await expect(card.getByText('Đã vô hiệu hóa', { exact: true })).toHaveCount(0);
+    await rowAction(page, cidr, 'Dùng lại');
+    await page.getByRole('dialog').getByRole('button', { name: 'Dùng lại' }).click();
+    await expect(page.getByText('Đã dùng lại dải.')).toBeVisible();
+    await expect(card.getByText('Đã ngừng dùng', { exact: true })).toHaveCount(0);
     await expect(page.getByText('Máy chủ file')).toBeVisible();
 
     /*
@@ -543,7 +543,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     const body = (await blocked.json()) as Record<string, unknown>;
     expect(body).toMatchObject({ code: 'SUBNET_HAS_ADDRESSES', addresses: 1 });
     // Câu báo phải chỉ sang đường còn lại, không để người dùng đứng đó không biết làm gì.
-    expect(String(body.message)).toContain('Vô hiệu hóa');
+    expect(String(body.message)).toContain('Ngừng dùng');
   });
 
   /**
@@ -681,10 +681,10 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
     const ipId = ((await created.json()) as { id: string }).id;
 
     await page.goto(`/ip-addresses/${subnetId}`);
-    await rowAction(page, `172.16.${octet}.2`, 'Ẩn hồ sơ');
+    await rowAction(page, `172.16.${octet}.2`, 'Ẩn bản ghi nhập nhầm');
     const form = page.getByRole('dialog');
     await form.getByRole('textbox', { name: 'Lý do' }).fill('gõ nhầm địa chỉ');
-    await form.getByRole('button', { name: 'Ẩn hồ sơ' }).click();
+    await form.getByRole('button', { name: 'Ẩn bản ghi nhập nhầm' }).click();
 
     await expect(page.getByText('Đã ẩn hồ sơ IP.')).toBeVisible();
     // Địa chỉ trở lại thành chỗ TRỐNG, có nút cấp — chứ không nằm lại trong sổ vĩnh viễn.

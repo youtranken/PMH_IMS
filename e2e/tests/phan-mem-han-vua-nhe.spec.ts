@@ -343,7 +343,7 @@ test.describe('Kho thanh lý', () => {
     // Đường hỏng: tìm không ra thì có nút xoá bộ lọc, bấm là thấy lại.
     await page.goto('/disposal?kind=software');
     await timVaChoLoc(page, `KHONG-CO-E2E-${uniqueStamp()}`);
-    await page.getByRole('button', { name: 'Xoá bộ lọc' }).click();
+    await page.getByRole('button', { name: 'Xóa bộ lọc' }).click();
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
   });
 });
