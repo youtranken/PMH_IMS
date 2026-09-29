@@ -20,6 +20,20 @@ export interface AuditQuery {
   to?: string;
   page: number;
   pageSize: number;
+  /**
+   * Gom sự kiện GIỐNG HỆT lặp LIỀN NHAU — cùng người, cùng hành động, cùng đối tượng, trong
+   * cùng một phút — thành một dòng ×N (ADM-065). Gom ở đây chứ không ở trình duyệt: phân
+   * trang và tổng số phải đếm theo dòng đã gom, không thì trang 2 mở ra giữa một cụm.
+   */
+  group?: boolean;
+}
+
+/** Một sự kiện trong cụm đã gom — đủ để mở chi tiết từng lần. */
+export interface AuditEvent {
+  id: string;
+  ip: string | null;
+  detail: unknown;
+  createdAt: string;
 }
 
 export interface AuditRow {
@@ -45,7 +59,28 @@ export interface AuditRow {
   ip: string | null;
   detail: unknown;
   createdAt: string;
+  /** Chỉ có khi gom và cụm có từ 2 sự kiện: số lần, mốc sớm nhất, từng sự kiện (mới nhất trước). */
+  count?: number;
+  firstAt?: string;
+  events?: AuditEvent[];
 }
+
+/** Trần số sự kiện trả kèm một cụm — cụm dài hơn vẫn đếm đúng, chỉ không liệt kê hết. */
+export const GROUP_EVENTS_CAP = 100;
+
+type RawAuditRow = {
+  id: string;
+  actor: string;
+  action: string;
+  object_type: string | null;
+  object_id: string | null;
+  ip: string | null;
+  detail: unknown;
+  created_at: string;
+  n?: number;
+  first_at?: string;
+  events?: { id: string; ip: string | null; detail: unknown; created_at: string }[] | null;
+};
 
 /** Viewer audit log (6.2) — CHỈ đọc (AD-10 append-only); ranh giới ngày theo `app.timezone`. */
 /**
@@ -130,45 +165,38 @@ export class AuditQueryService {
      *
      * `ad2-raw-sql.spec.ts` nay canh chỗ này — cổng thứ ba, cho đúng cửa mà hai cổng kia mù.
      */
-    const [items, totalRows] = await Promise.all([
-      this.db.execute<{
-        id: string;
-        actor: string;
-        action: string;
-        object_type: string | null;
-        object_id: string | null;
-        ip: string | null;
-        detail: unknown;
-        created_at: string;
-      }>(sql`
-        SELECT a.id, a.actor, a.action,
-               a.object_type, a.object_id, a.ip, a.detail, a.created_at
-        FROM audit_log a
-        ${where}
-        ORDER BY a.created_at DESC, a.id DESC
-        LIMIT ${q.pageSize} OFFSET ${offset}
-      `),
-      /*
-       * ĐẾM CÓ TRẦN, KHÔNG ĐẾM TOÀN BẢNG.
-       *
-       * `audit_log` là bảng CHỈ-THÊM giữ VĨNH VIỄN (NFR-03) — nó chỉ có thể to lên, không bao
-       * giờ nhỏ lại. `count(*)` không có `WHERE` (mở màn lần đầu, không lọc gì) bắt Postgres
-       * quét trọn bảng cho MỖI lần bấm sang trang, và cái giá đó lớn lên mãi mãi. Đây là loại
-       * chậm không ai để ý lúc viết và không ai gỡ được sau hai năm chạy.
-       *
-       * `LIMIT` trong câu con là thứ chặn công việc lại: Postgres dừng ngay khi gom đủ
-       * `COUNT_CAP + 1` dòng khớp, bất kể bảng có bao nhiêu dòng. Không cần index, không cần
-       * `ORDER BY`.
-       *
-       * Đổi lại là con số có trần, và điều đó phải nói ra chứ không giấu: `totalCapped` để màn
-       * hình hiện "10.000+". Một con số sai mà trông như số thật thì tệ hơn hẳn một con số
-       * thành thật rằng nó bị cắt — nhật ký an ninh là chỗ người ta đếm để đối chiếu.
-       */
-      this.db.execute<{ n: number }>(sql`
-        SELECT count(*)::int AS n
-        FROM (SELECT 1 FROM audit_log a ${where} LIMIT ${COUNT_CAP + 1}) capped
-      `),
-    ]);
+    const [items, totalRows] = q.group
+      ? await this.grouped(where, q.pageSize, offset)
+      : await Promise.all([
+          this.db.execute<RawAuditRow>(sql`
+            SELECT a.id, a.actor, a.action,
+                   a.object_type, a.object_id, a.ip, a.detail, a.created_at
+            FROM audit_log a
+            ${where}
+            ORDER BY a.created_at DESC, a.id DESC
+            LIMIT ${q.pageSize} OFFSET ${offset}
+          `),
+          /*
+           * ĐẾM CÓ TRẦN, KHÔNG ĐẾM TOÀN BẢNG.
+           *
+           * `audit_log` là bảng CHỈ-THÊM giữ VĨNH VIỄN (NFR-03) — nó chỉ có thể to lên, không bao
+           * giờ nhỏ lại. `count(*)` không có `WHERE` (mở màn lần đầu, không lọc gì) bắt Postgres
+           * quét trọn bảng cho MỖI lần bấm sang trang, và cái giá đó lớn lên mãi mãi. Đây là loại
+           * chậm không ai để ý lúc viết và không ai gỡ được sau hai năm chạy.
+           *
+           * `LIMIT` trong câu con là thứ chặn công việc lại: Postgres dừng ngay khi gom đủ
+           * `COUNT_CAP + 1` dòng khớp, bất kể bảng có bao nhiêu dòng. Không cần index, không cần
+           * `ORDER BY`.
+           *
+           * Đổi lại là con số có trần, và điều đó phải nói ra chứ không giấu: `totalCapped` để màn
+           * hình hiện "10.000+". Một con số sai mà trông như số thật thì tệ hơn hẳn một con số
+           * thành thật rằng nó bị cắt — nhật ký an ninh là chỗ người ta đếm để đối chiếu.
+           */
+          this.db.execute<{ n: number }>(sql`
+            SELECT count(*)::int AS n
+            FROM (SELECT 1 FROM audit_log a ${where} LIMIT ${COUNT_CAP + 1}) capped
+          `),
+        ]);
     const counted = totalRows.rows[0]?.n ?? 0;
 
     /*
@@ -203,12 +231,92 @@ export class AuditQueryService {
         ip: r.ip,
         detail: r.detail,
         createdAt: new Date(r.created_at).toISOString(),
+        ...(r.n && r.n > 1
+          ? {
+              count: r.n,
+              firstAt: new Date(r.first_at!).toISOString(),
+              events: (r.events ?? []).map((event) => ({
+                id: event.id,
+                ip: event.ip,
+                detail: event.detail,
+                createdAt: new Date(event.created_at).toISOString(),
+              })),
+            }
+          : {}),
       })),
       total: Math.min(counted, COUNT_CAP),
       totalCapped: counted > COUNT_CAP,
       page: q.page,
       pageSize: q.pageSize,
     };
+  }
+
+  /**
+   * Trang đã gom + tổng số dòng đã gom, cùng hình dạng với nhánh không gom.
+   *
+   * Gom trên CỬA SỔ `COUNT_CAP + 1` dòng mới nhất khớp bộ lọc — cùng cái phanh với câu đếm:
+   * `audit_log` giữ vĩnh viễn, hàm cửa sổ trên cả bảng thì giá mỗi lượt mở màn lớn mãi. Quá
+   * cửa sổ thì `totalCapped` bật và màn bảo lọc hẹp lại (hoặc tắt gom để lật trang tiếp).
+   *
+   * "Liền nhau" là bài đảo-và-khoảng-trống: hiệu giữa số thứ tự toàn cục và số thứ tự trong
+   * cùng khóa (người, hành động, đối tượng, phút) không đổi chừng nào không có dòng khác chen
+   * vào giữa. Dòng khác chen vào → hiệu đổi → cụm mới.
+   */
+  private async grouped(where: ReturnType<typeof sql>, pageSize: number, offset: number) {
+    const groups = sql`
+      WITH win AS (
+        SELECT a.id, a.actor, a.action, a.object_type, a.object_id, a.ip, a.detail, a.created_at
+        FROM audit_log a
+        ${where}
+        ORDER BY a.created_at DESC, a.id DESC
+        LIMIT ${COUNT_CAP + 1}
+      ), marked AS (
+        SELECT w.*,
+               date_trunc('minute', w.created_at) AS minute,
+               row_number() OVER (ORDER BY w.created_at DESC, w.id DESC)
+                 - row_number() OVER (
+                     PARTITION BY w.actor, w.action, w.object_type, w.object_id,
+                                  date_trunc('minute', w.created_at)
+                     ORDER BY w.created_at DESC, w.id DESC
+                   ) AS island
+        FROM win w
+      ), grouped AS (
+        SELECT (array_agg(id ORDER BY created_at DESC, id DESC))[1] AS id,
+               actor, action, object_type, object_id,
+               (array_agg(ip ORDER BY created_at DESC, id DESC))[1] AS ip,
+               (array_agg(detail ORDER BY created_at DESC, id DESC))[1] AS detail,
+               max(created_at) AS created_at,
+               min(created_at) AS first_at,
+               count(*)::int AS n,
+               CASE WHEN count(*) > 1 THEN
+                 jsonb_path_query_array(
+                   jsonb_agg(
+                     jsonb_build_object('id', id, 'ip', ip, 'detail', detail, 'created_at', created_at)
+                     ORDER BY created_at DESC, id DESC
+                   ),
+                   ${`$[0 to ${GROUP_EVENTS_CAP - 1}]`}::jsonpath
+                 )
+               END AS events
+        FROM marked
+        GROUP BY actor, action, object_type, object_id, minute, island
+      )`;
+    return Promise.all([
+      this.db.execute<RawAuditRow>(sql`
+        ${groups}
+        SELECT * FROM grouped
+        ORDER BY created_at DESC, id DESC
+        LIMIT ${pageSize} OFFSET ${offset}
+      `),
+      /*
+       * `n` là số dòng ĐÃ GOM; nhưng cờ "quá trần" phải xét số dòng GỐC trong cửa sổ, nên khi
+       * cửa sổ đầy thì trả `COUNT_CAP + 1` để nơi gọi bật `totalCapped` như nhánh không gom.
+       */
+      this.db.execute<{ n: number }>(sql`
+        ${groups}
+        SELECT CASE WHEN (SELECT count(*) FROM win) > ${COUNT_CAP} THEN ${COUNT_CAP + 1}
+                    ELSE (SELECT count(*) FROM grouped) END::int AS n
+      `),
+    ]);
   }
 
   /**

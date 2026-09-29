@@ -127,4 +127,60 @@ describe('Màn Danh mục — trạng thái trên URL, bộ lọc, vai', () => {
     expect(screen.getByRole('menuitem', { name: 'Xóa' })).toHaveClass('danger');
     expect(screen.getAllByRole('separator').length).toBeGreaterThanOrEqual(2);
   });
+
+  it('cột "Đang dùng ở": số bấm được sang danh sách lọc sẵn; số màn đích không lọc được thì chữ thường', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = new URL(String(input), 'http://x');
+      if (url.pathname === '/api/v1/catalog/site') {
+        return Promise.resolve(
+          jsonResponse(200, {
+            items: [
+              {
+                ...SITE_HCM,
+                usage: [
+                  { kind: 'device', count: 12 },
+                  { kind: 'subnet', count: 1 },
+                ],
+              },
+              { ...SITE_HCM, id: 's-dn', code: 'E2E-DN', name: 'Đà Nẵng', usage: [] },
+            ],
+            total: 2,
+          }),
+        );
+      }
+      return Promise.resolve(jsonResponse(200, { items: [], total: 0 }));
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderAt('/admin/catalog');
+    const devices = await screen.findByRole('link', { name: '12 thiết bị' });
+    expect(devices).toHaveAttribute('href', '/devices?siteId=s-hcm');
+    expect(screen.getByText('1 dải IP')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '1 dải IP' })).not.toBeInTheDocument();
+    expect(screen.getByText('Chưa dùng')).toBeInTheDocument();
+  });
+
+  it('mục đang được dùng: "Xóa" bị khóa kèm lý do; mục chưa dùng thì Xóa được', async () => {
+    const fetchMock = vi.fn(() =>
+      Promise.resolve(
+        jsonResponse(200, {
+          items: [
+            { ...SITE_HCM, usage: [{ kind: 'device', count: 3 }] },
+            { ...SITE_HCM, id: 's-dn', code: 'E2E-DN', name: 'Đà Nẵng', usage: [] },
+          ],
+          total: 2,
+        }),
+      ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const user = userEvent.setup();
+    renderAt('/admin/catalog');
+    await screen.findByText('E2E-HCM');
+    await user.click(screen.getByRole('button', { name: /Thao tác với E2E-HCM/ }));
+    const blocked = screen.getByRole('menuitem', { name: 'Xóa' });
+    expect(blocked).toBeDisabled();
+    expect(screen.getByText('Đang dùng ở 3 thiết bị — hãy Vô hiệu hóa')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await user.click(screen.getByRole('button', { name: /Thao tác với E2E-DN/ }));
+    expect(screen.getByRole('menuitem', { name: 'Xóa' })).toBeEnabled();
+  });
 });

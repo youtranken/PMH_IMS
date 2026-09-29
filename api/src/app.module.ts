@@ -19,6 +19,7 @@ import { DeviceSearchModule } from './common/device-search.registry';
 import { OwnerExistsModule } from './common/owner-exists.registry';
 import { AuditObjectLabelsModule } from './common/audit-object-labels.registry';
 import { ExpiryRegistryModule } from './common/expiry/expiry-registry';
+import { CatalogUsageModule } from './common/catalog-usage.registry';
 import { HealthController } from './health/health.controller';
 import { AuditModule } from './modules/audit/audit.module';
 import { ApprovalsModule } from './modules/approvals/approvals.module';
@@ -77,6 +78,7 @@ import { VaultModule } from './modules/vault/vault.module';
     AuditObjectLabelsModule,
     OwnerAccessModule,
     ExpiryRegistryModule,
+    CatalogUsageModule,
     ApprovalsRegistryModule,
     SystemConfigModule,
     AuditModule,
