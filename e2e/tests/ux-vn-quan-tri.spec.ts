@@ -102,7 +102,7 @@ test.describe('Danh mục — trạng thái trên URL, lọc, file mẫu trong h
     await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
     await expect(
       page
-        .getByRole('dialog', { name: 'Nhập Site, Tủ mạng, Loại thiết bị, Nhà cung cấp từ Excel' })
+        .getByRole('dialog', { name: 'Nhập danh mục từ Excel' })
         .getByRole('button', { name: /Tải file mẫu/ }),
     ).toBeVisible();
     await page.keyboard.press('Escape');

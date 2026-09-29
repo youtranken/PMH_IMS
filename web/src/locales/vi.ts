@@ -484,9 +484,9 @@ export default {
     description: 'Mô tả',
     uHeight: 'Số U',
     hasPortMap: 'Có port map',
-    hasPortMapHint: 'Loại này sẽ hiện bảng port map ở trang chi tiết thiết bị.',
+    hasPortMapHint: 'Thiết bị loại này luôn có tab Sơ đồ cổng, kể cả khi chưa khai cổng.',
     isRouter: 'Router/Firewall',
-    isRouterHint: 'Thiết bị loại này được liệt kê trong ô Router của sổ NAT.',
+    isRouterHint: 'Thiết bị loại này hiện trong ô chọn Router của sổ NAT.',
     cabinetSiteRequired: 'Chọn site cho tủ này.',
     uHeightInvalid: 'Số U phải là số nguyên từ 1 đến 60.',
     portInvalid: 'Port phải là số nguyên từ 1 đến 65535.',
@@ -495,8 +495,8 @@ export default {
     phone: 'Điện thoại',
     contact: 'Email / người liên hệ',
     hotline: 'Hotline',
-    hotlineHint: 'Số gọi khi đứt cáp lúc 2 giờ sáng. Hiện ngay trên danh sách đường truyền, bấm là gọi.',
-    departmentHint: 'Tên viết đúng MỘT kiểu ở đây thì mọi ô "ai đang dùng" mới lọc chung được.',
+    hotlineHint: 'Số gọi khi đứt cáp. Bấm số trên bảng nhà mạng là gọi.',
+    departmentHint: 'Mỗi bộ phận chỉ một cách viết, để lọc theo bộ phận không sót.',
     protocol: 'Giao thức',
     protocolBoth: 'TCP + UDP',
     port: 'Port',
@@ -519,19 +519,19 @@ export default {
        xảy ra (chẳng ai sợ mất hồ sơ cũ), nên nó trấn an nhầm — còn chuyện THẬT SỰ xảy ra thì
        không ai nói: từ giờ mọi form thêm mới không chọn được mục này nữa. */
     confirmDeactivate:
-      'Ngừng dùng "{{name}}"? Từ giờ KHÔNG form nào chọn được mục này nữa — hồ sơ đang dùng nó ' +
-      'thì giữ nguyên và vẫn đọc được. Dùng lại bất cứ lúc nào.',
-    confirmActivate: 'Dùng lại "{{name}}"?',
+      'Từ giờ không form nào chọn được "{{name}}". Hồ sơ đang dùng nó giữ nguyên; ' +
+      'dùng lại được bất cứ lúc nào.',
+    confirmActivate: '"{{name}}" sẽ chọn lại được trong mọi form.',
     confirmDelete:
-      'Xóa hẳn "{{name}}"? Mục đang được hồ sơ nào dùng thì hệ thống sẽ không xóa — khi đó hãy ' +
-      'Ngừng dùng (dùng "Xem thiết bị dùng mục này" để kiểm trước).',
+      '"{{name}}" bị xóa hẳn khỏi danh mục, không khôi phục được. Muốn giữ lại thì chọn ' +
+      'Ngừng dùng.',
     deleted: 'Đã xóa.',
     saved: 'Đã lưu.',
-    importTitle: 'Nhập Site, Tủ mạng, Loại thiết bị, Nhà cung cấp từ Excel',
+    importTitle: 'Nhập danh mục từ Excel',
     importHint:
-      'Hệ thống đọc cả 4 sheet: Site, Tủ mạng, Loại thiết bị, Nhà cung cấp. Dùng file mẫu bên dưới ' +
-      '(đã kèm danh mục đang có); dòng đánh dấu VÍ DỤ được bỏ qua.',
-    emptyHint: 'Chưa khai mục nào. Thêm tay, hoặc bấm "Nhập từ Excel" (file mẫu nằm trong hộp nhập).',
+      'File có 4 sheet: Site, Tủ mạng, Loại thiết bị, Nhà cung cấp. Dùng file mẫu bên dưới ' +
+      '(đã kèm danh mục đang có); dòng VÍ DỤ được bỏ qua.',
+    emptyHint: 'Chưa khai mục nào. Thêm tay, hoặc bấm "Nhập từ Excel".',
     /* Tab không nhập Excel được thì câu rỗng không được mời đi nhập Excel. */
     emptyHintManual: 'Chưa khai mục nào. Bấm nút thêm ở trên để khai mục đầu tiên.',
     emptyFiltered: 'Không có {{kind}} nào khớp "{{q}}".',
@@ -562,10 +562,10 @@ export default {
     usage_service_account: '{{count}} tài khoản dịch vụ',
     usage_other: '{{count}} hồ sơ',
     deleteInUse: 'Đang dùng ở {{usage}} — hãy Ngừng dùng',
-    deactivateInUse: 'Hiện đang dùng ở {{usage}} — các hồ sơ này giữ nguyên.',
+    deactivateInUse: 'Hiện đang dùng ở {{usage}}.',
     confirmHidePortMapCount:
-      'Tắt "Có port map" cho "{{name}}": {{count}} thiết bị loại này sẽ ẩn bảng port ở trang ' +
-      'chi tiết (dữ liệu port vẫn giữ, tick lại là hiện lại).',
+      'Tắt "Có port map" cho "{{name}}": máy chưa khai cổng nào trong {{count}} thiết bị loại này ' +
+      'sẽ không còn tab Sơ đồ cổng. Máy đã khai cổng giữ nguyên.',
     auditLog: 'Nhật ký thao tác',
     deactivated: 'Đã ngừng dùng "{{name}}".',
     activated: 'Đã dùng lại "{{name}}".',
@@ -575,13 +575,13 @@ export default {
     uHeightHint: 'Số nguyên 1–60 (tủ thường 42U).',
     changeCode: 'Đổi mã…',
     changeCodeWarn:
-      'Mã dùng để tra cứu và nhập Excel — file Excel cũ, link và thói quen gõ tìm sẽ lệch theo. ' +
-      'Hồ sơ đang trỏ theo ID nên không mất liên kết; lần đổi được ghi vào lịch sử.',
+      'File Excel cũ và thói quen tìm theo mã cũ sẽ lệch. Hồ sơ đang dùng mục này không mất ' +
+      'liên kết; lần đổi được ghi vào lịch sử.',
     similarDepartment: 'Đã có "{{name}}" — có phải cùng bộ phận?',
     contactHint: 'Ghi email thì bảng tự thành link gửi thư.',
     confirmHidePortMap:
-      'Tắt "Có port map" cho "{{name}}": mọi thiết bị loại này sẽ ẩn bảng port ở trang chi tiết ' +
-      '(dữ liệu port vẫn giữ, tick lại là hiện lại).',
+      'Tắt "Có port map" cho "{{name}}": máy loại này chưa khai cổng sẽ không còn tab Sơ đồ ' +
+      'cổng. Máy đã khai cổng giữ nguyên.',
     portOverlap: 'Trùng port với "{{name}}" — kiểm lại có phải cùng một dịch vụ không.',
   },
   devices: {
