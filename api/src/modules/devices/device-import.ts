@@ -19,7 +19,7 @@ import { cabinetWithoutSiteMessage } from '../catalog/catalog.api';
 import type { DeviceStatus } from './devices.types';
 
 /**
- * Lõi ĐỐI CHIẾU file thiết bị (story 2.6) — hàm THUẦN, không chạm DB, không chạm exceljs.
+ * Lõi ĐỐI CHIẾU file thiết bị — hàm THUẦN, không chạm DB, không chạm exceljs.
  * Bước xem trước và bước ghi dùng CHUNG kết quả này: duyệt cái gì thì ghi đúng cái đó.
  */
 
@@ -253,7 +253,7 @@ function planRow(
         if (text === '') {
           // KHÔNG ép về 'in_use': cột có mà ô trống thì để nguyên trạng thái đang có.
           // Ép ở đây là file sửa tay bỏ trống một ô sẽ âm thầm "hồi sinh" thiết bị đã
-          // thanh lý và đẩy nó trở lại danh sách nhắc bảo hành (code review Epic 2).
+          // thanh lý và đẩy nó trở lại danh sách nhắc bảo hành.
           // Thiết bị mới thì DB tự dùng mặc định 'in_use'.
           break;
         }
@@ -380,11 +380,12 @@ function planRow(
    * có mặt trong file. File chỉ có cột Site (không có cột Tủ) mà đổi sang site khác thì
    * thiết bị sẽ mang tủ của site cũ — form nhập chặn chuyện này, import cũng phải chặn.
    * Cùng lẽ đó với cặp ngày bảo hành: file chỉ sửa một đầu vẫn có thể thành khoảng ngược.
-   * (Trước đây hai lỗi này lọt xuống DB: một cái sai lặng lẽ, một cái bung 500 không rõ dòng.)
+   * (Không chặn ở đây thì hai lỗi này lọt xuống DB: một cái sai lặng lẽ, một cái bung 500
+   * không rõ dòng.)
    *
-   * Phép ghép chuyển sang `common/merge-effective.ts` ngày 20/09: ba service HTTP viết sau
-   * file này đều dùng `??` và đều sai theo cùng một kiểu (A-03). Một bản đúng nằm riêng
-   * trong một module thì bản thứ hai sẽ được viết lại từ đầu — và viết sai.
+   * Phép ghép nằm ở `common/merge-effective.ts`, dùng chung với các service HTTP (A-03). Một
+   * bản đúng nằm riêng trong một module thì bản thứ hai sẽ được viết lại từ đầu — và viết
+   * sai, bằng `??`.
    */
   const effective = effectiveOf(values);
 
@@ -448,11 +449,11 @@ function planRow(
   /*
    * Dòng KHÔNG đổi gì thì cho qua, kể cả khi hồ sơ đã thanh lý.
    *
-   * Bản đầu của tôi chặn ngay khi thấy `existing.status === 'retired'`, trước cả khi biết
-   * dòng đó có đổi gì không. Hệ quả: tải lại nguyên file kiểm kê — việc bình thường nhất của
-   * import — biến MỌI máy đã thanh lý thành dòng lỗi, và vì `commit` từ chối cả file khi còn
-   * lỗi, cả lượt nhập 300 dòng đứng im. Đúng chế độ hỏng tôi đã gây ra ở đợt C: hàng rào chặn
-   * luôn việc hợp lệ. Bài kiểm đơn vị "ô Trạng thái để trống" bắt được, và nó đúng.
+   * Đừng chặn ngay khi thấy `existing.status === 'retired'`, trước cả khi biết dòng đó có đổi
+   * gì không. Làm vậy thì tải lại nguyên file kiểm kê — việc bình thường nhất của import —
+   * biến MỌI máy đã thanh lý thành dòng lỗi, và vì `commit` từ chối cả file khi còn lỗi, cả
+   * lượt nhập 300 dòng đứng im: hàng rào chặn luôn việc hợp lệ. Bài kiểm đơn vị "ô Trạng
+   * thái để trống" canh chuyện này.
    */
   if (!changed) {
     return { ...base, action: 'unchanged', label, values, existingId: existing.id };

@@ -41,12 +41,11 @@ export class DevicesApiService {
    *
    * ===== VÌ SAO THAY `exists()` =====
    *
-   * Bản cũ chỉ trả lời "có hàng này trong bảng không". Rà soát 07/09 đếm được TÁM điểm ghi hở
-   * vì đúng lý do đó: module khác muốn hỏi "máy này còn dùng được không" thì không có cửa nào,
-   * mà AD-2 cấm chúng tự query bảng `device`. Nên cả bốn nơi đều hỏi câu duy nhất hỏi được rồi
-   * đi tiếp — và máy đã thanh lý, đã ký biên bản, đã ra khỏi công ty vẫn nhận được license,
-   * vẫn được cấp IP, vẫn dựng được rule NAT trỏ vào nó. Hàng rào không thiếu vì ai đó lười;
-   * nó thiếu vì cái api không cho hỏi.
+   * `exists()` chỉ trả lời "có hàng này trong bảng không". Module khác muốn hỏi "máy này còn
+   * dùng được không" thì cần một cửa, vì AD-2 cấm chúng tự query bảng `device`. Không có cửa
+   * này thì mọi nơi chỉ hỏi được câu `exists()` rồi đi tiếp — và máy đã thanh lý, đã ký biên
+   * bản, đã ra khỏi công ty vẫn nhận được license, vẫn được cấp IP, vẫn dựng được rule NAT
+   * trỏ vào nó. Hàng rào thiếu không vì ai đó lười; nó thiếu khi cái api không cho hỏi.
    *
    * Nên hàm này NÉM thay vì trả boolean, và ném hai lỗi KHÁC NHAU: "không tồn tại" và "đã
    * thanh lý" là hai chuyện khác nhau với người đang đứng trước màn hình — gộp làm một thì họ
@@ -78,16 +77,16 @@ export class DevicesApiService {
     try {
       /*
        * Uỷ quyền cho `DevicesService`: câu "còn nhận thêm được không" và câu chữ của lỗi chỉ
-       * được có MỘT bản (AD-15). Trước 08/09 nó nằm nguyên ở đây, nên ba đường ghi nội bộ của
-       * chính module `devices` không với tới được và đã hở suốt.
+       * được có MỘT bản (AD-15). Đặt nó ở đây thì ba đường ghi nội bộ của chính module
+       * `devices` không với tới được.
        */
       await run();
     } catch (error) {
       /*
        * CHỈ nuốt đúng lỗi "không tìm thấy". `catch` trần ở đây biến một sự cố DB thành câu
        * "Thiết bị được chọn không tồn tại" — người dùng đi tìm một thiết bị đang nằm rành
-       * rành trong kho, còn nguyên nhân thật thì mất luôn (rà soát 08/09, #4). Đây đúng là
-       * lớp lỗi mà đợt B vừa dọn ở `AuditWriterService`.
+       * rành trong kho, còn nguyên nhân thật thì mất luôn. Cùng lớp lỗi với `catch` trần ở
+       * `AuditWriterService`.
        */
       if (!(error instanceof NotFoundException)) throw error;
       throw new BadRequestException({

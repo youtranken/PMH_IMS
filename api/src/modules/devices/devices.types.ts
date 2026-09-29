@@ -58,8 +58,7 @@ export interface DeviceFilter {
    *
    * Màn Thiết bị vẫn phải liệt kê máy đã thanh lý (đó là sổ). Nhưng ô chọn ở form NAT / cấp IP
    * / gán license / nối cổng / cắm đường truyền thì không: API đã chặn ghi vào máy `retired`
-   * (`assertUsable`), nên bày chúng ra chỉ để người dùng chọn xong rồi ăn lỗi. Rà soát 07/09,
-   * mục 6 "Miền nghiệp vụ" — bốn ô chọn vẫn liệt kê máy đã thanh lý.
+   * (`assertUsable`), nên bày chúng ra chỉ để người dùng chọn xong rồi ăn lỗi.
    */
   usableOnly?: boolean;
 }

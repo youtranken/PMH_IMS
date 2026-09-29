@@ -107,7 +107,7 @@ function portNotFound(): NotFoundException {
 }
 
 /**
- * Port map (story 2.4, AD-14). Thuộc module `devices` vì bảng `device_port` chỉ nói về
+ * Port map (AD-14). Thuộc module `devices` vì bảng `device_port` chỉ nói về
  * thiết bị — một bảng một chủ (AD-3).
  *
  * Mọi thay đổi cổng ghi vào `device_history` của THIẾT BỊ GIỮ BẢN GHI, để tab Lịch sử
