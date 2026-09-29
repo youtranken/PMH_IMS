@@ -379,7 +379,7 @@ export class SubnetService {
     if (row.voidedAt === null) {
       throw new ConflictException({
         code: 'SUBNET_NOT_VOIDED',
-        message: 'Dải này đang dùng, không có gì để bật lại.',
+        message: 'Dải này đang dùng, không có gì để dùng lại.',
       });
     }
     const stamp = row.voidedAt;
@@ -410,7 +410,7 @@ export class SubnetService {
             actor,
             fromStatus: child.status,
             toStatus: child.status,
-            changes: { reason: 'bật lại theo dải' },
+            changes: { reason: 'dùng lại theo dải' },
           })),
         );
       }
@@ -466,7 +466,7 @@ export class SubnetService {
         code: 'SUBNET_HAS_ADDRESSES',
         message:
           `Dải này đã có ${addresses} hồ sơ IP nên không xóa hẳn được — xóa là mất luôn lịch sử ` +
-          '"IP nào từng của máy nào". Dùng Vô hiệu hóa để cất dải đi mà vẫn tra cứu được.',
+          '"IP nào từng của máy nào". Dùng "Ngừng dùng" để cất dải đi mà vẫn tra cứu được.',
         addresses,
       });
     }
@@ -656,14 +656,14 @@ export class SubnetService {
           `${r.address} (${r.protocol.toUpperCase()} ${describePortRange(r.externalFrom, r.externalTo)})`,
       )
       .join(', ');
-    const rest = rules.length > 5 ? ` và ${rules.length - 5} rule nữa` : '';
+    const rest = rules.length > 5 ? ` và ${rules.length - 5} luật nữa` : '';
     throw new ConflictException({
       code: 'IP_HAS_LIVE_NAT',
       message:
-        `Trong dải này còn ${rules.length} rule NAT đang mở: ${shown}${rest}. ` +
-        'Ẩn dải thì những địa chỉ đó biến khỏi mọi màn, còn rule vẫn chuyển gói tới chúng — ' +
+        `Trong dải này còn ${rules.length} luật NAT đang mở: ${shown}${rest}. ` +
+        'Ngừng dùng dải thì những địa chỉ đó biến khỏi mọi màn, còn luật vẫn chuyển gói tới chúng — ' +
         'lỗ thủng còn nguyên mà không còn chỗ nào nhắc tới nó. ' +
-        'Vào sổ NAT gỡ hoặc trỏ lại rule trước, rồi ẩn dải.',
+        'Vào sổ NAT gỡ hoặc trỏ lại luật trước, rồi ngừng dùng dải.',
     });
   }
 

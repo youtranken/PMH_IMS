@@ -85,10 +85,10 @@ export function validateNatRule(
   const warnings: string[] = [];
 
   if (!draft.usedBy.trim()) {
-    errors.push('Ghi rõ rule này mở cho ai dùng — đó là câu auditor sẽ hỏi.');
+    errors.push('Ghi rõ luật NAT này mở cho ai dùng — đó là câu auditor sẽ hỏi.');
   }
   if (!draft.reason.trim()) {
-    errors.push('Ghi rõ vì sao phải mở port này. Không có lý do thì sau này không ai dám đóng.');
+    errors.push('Ghi rõ vì sao phải mở cổng này. Không có lý do thì sau này không ai dám đóng.');
   }
   /**
    * IP trong phải là một MÁY, không phải địa chỉ mạng hay địa chỉ quảng bá.
@@ -112,7 +112,7 @@ export function validateNatRule(
     );
   }
   if (!inPortRange(draft.internalPort)) {
-    errors.push(`Port trong phải từ ${MIN_PORT} đến ${MAX_PORT}.`);
+    errors.push(`Cổng trong phải từ ${MIN_PORT} đến ${MAX_PORT}.`);
   }
 
   /**
@@ -124,13 +124,13 @@ export function validateNatRule(
    * 500 thay vì một câu tiếng Việt.
    */
   if (!inPortRange(draft.externalFrom) || !inPortRange(draft.externalTo)) {
-    errors.push(`Port ngoài phải từ ${MIN_PORT} đến ${MAX_PORT}.`);
+    errors.push(`Cổng ngoài phải từ ${MIN_PORT} đến ${MAX_PORT}.`);
   } else if (draft.externalFrom > draft.externalTo) {
-    errors.push('Khoảng port ngoài viết ngược — số đầu phải nhỏ hơn số cuối (vd 8000-8010).');
+    errors.push('Khoảng cổng ngoài viết ngược — số đầu phải nhỏ hơn số cuối (vd 8000-8010).');
   } else if (draft.externalTo - draft.externalFrom + 1 > WIDE_RANGE) {
     // CẢNH BÁO, không phải lỗi: dải port camera là việc có thật và hợp lệ.
     warnings.push(
-      `Dải port ngoài này mở hơn ${WIDE_RANGE} cổng ra Internet. Nếu đúng ý thì cứ lưu, nhưng hãy chắc chắn.`,
+      `Dải cổng ngoài này mở hơn ${WIDE_RANGE} cổng ra Internet. Nếu đúng ý thì cứ lưu, nhưng hãy chắc chắn.`,
     );
   }
 

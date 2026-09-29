@@ -50,7 +50,7 @@ const KIND_LABEL: Record<DisposalKind, string> = {
 const STATUS_LABEL: Record<string, string> = {
   retired: 'Đã thanh lý',
   terminated: 'Đã thanh lý',
-  disabled: 'Đã vô hiệu hóa',
+  disabled: 'Đã ngừng dùng',
 };
 
 function byText(item: DisposalItem): string {
