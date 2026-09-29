@@ -162,3 +162,41 @@ describe('Dialog — guardUnsaved: không vứt dữ liệu đang gõ dở', () 
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });
+
+/**
+ * Hộp KHÔNG có `title` (nơi gọi tự dựng đầu/thân hộp) vẫn phải giữ hai lời hứa của hộp có
+ * title: `guardUnsaved` thật sự canh ô nhập, và hộp mở từ bên trong nó được biết mình là
+ * hộp lồng (nền trong suốt, không dim đôi).
+ */
+describe('Dialog không có title', () => {
+  it('guardUnsaved vẫn canh: đã gõ thì Esc hỏi lại, chưa đóng', async () => {
+    const onOpenChange = vi.fn();
+    renderWithI18n(
+      <ConfirmProvider>
+        <Dialog open onOpenChange={onOpenChange} guardUnsaved>
+          <input aria-label="Ghi chú" defaultValue="" />
+        </Dialog>
+      </ConfirmProvider>,
+    );
+    await userEvent.type(screen.getByRole('textbox', { name: 'Ghi chú' }), 'abc');
+    await userEvent.keyboard('{Escape}');
+    expect(await screen.findByText('Bỏ những gì vừa nhập?')).toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it('hộp con mở cùng lúc bên trong nó dùng nền trong suốt', () => {
+    renderWithI18n(
+      <ConfirmProvider>
+        <Dialog open onOpenChange={() => {}}>
+          <p>Thân hộp cha</p>
+          <Dialog open onOpenChange={() => {}} title="Hộp con">
+            <p>Thân hộp con</p>
+          </Dialog>
+        </Dialog>
+      </ConfirmProvider>,
+    );
+    const nen = Array.from(document.querySelectorAll('.modal-backdrop'));
+    expect(nen).toHaveLength(2);
+    expect(nen.filter((el) => !el.classList.contains('bare'))).toHaveLength(1);
+  });
+});

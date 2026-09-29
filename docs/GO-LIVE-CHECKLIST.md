@@ -752,9 +752,11 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - **Đã sửa:** icon khay rỗng dùng `mask` + `background-color: var(--ink-3)`; chevron `<select>` và
     kính lúp (không có `::before`) thành token `--icon-select-chevron`/`--icon-search` có bản dark.
     Cổng `gate-hex.sh` giờ chặn `%23hex` ngoài `tokens.css`.
-- [ ] **OLD-FE-05 · Lỗi nhỏ ở dialog:** thiếu Provider khi hộp không có title; `guardUnsaved` thành
+- [x] **OLD-FE-05 · Lỗi nhỏ ở dialog:** thiếu Provider khi hộp không có title; `guardUnsaved` thành
   no-op trong trường hợp đó (`dialog.tsx:~400-437`).
   - **Rà 29/09:** còn nguyên (`dialog.tsx:422`).
+  - **Đã sửa:** nhánh không title bọc `children` trong `<div ref={bodyRef} style="display:contents">`
+    + `DialogDepthContext.Provider`. Kiểm ở `ui/dialog.test.tsx` ("Dialog không có title").
 - [ ] **OLD-FE-06 · Còn thiếu:**
   - `/nat` và `/disposal` chưa phân trang.
   - `/expiry` chưa sắp theo cột ở server.

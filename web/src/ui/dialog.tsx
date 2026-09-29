@@ -420,7 +420,16 @@ export function Dialog({
           >
             <DialogPortalContext.Provider value={portalEl}>
               {title === undefined ? (
-                children
+                /*
+                 * Hộp không title vẫn cần `bodyRef` (thiếu nó `guardUnsaved` đọc chữ ký rỗng và
+                 * không bao giờ hỏi) và `DialogDepthContext` (hộp mở từ trong nó phải biết mình
+                 * là hộp lồng). `display: contents` để lớp bọc không đổi bố cục nơi gọi tự dựng.
+                 */
+                <div ref={bodyRef} style={{ display: 'contents' }}>
+                  <DialogDepthContext.Provider value={depth + 1}>
+                    {children}
+                  </DialogDepthContext.Provider>
+                </div>
               ) : (
                 <>
                   <div className="sheet-header">
