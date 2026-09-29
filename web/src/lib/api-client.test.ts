@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   apiFetch,
   ApiError,
-  makeQueryClient,
   queryClient,
   shouldRetryQuery,
 } from '@/lib/api-client';
@@ -121,6 +120,6 @@ describe('shouldRetryQuery — chỉ thử lại lỗi mạng và 5xx', () => {
   });
 
   it('queryClient mặc định dùng đúng hàm này', () => {
-    expect(makeQueryClient().getDefaultOptions().queries?.retry).toBe(shouldRetryQuery);
+    expect(queryClient.getDefaultOptions().queries?.retry).toBe(shouldRetryQuery);
   });
 });
