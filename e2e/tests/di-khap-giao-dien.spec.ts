@@ -4273,7 +4273,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(
       add.getByRole('textbox', { name: 'Tên luật', exact: true }),
       'Luật không tên thì sau này không ai biết nó là luật gì — báo đúng câu trong vi.ts',
-    ).toHaveAccessibleDescription('Đặt tên cho luật này (vd "SSL sắp hết hạn → sếp").');
+    ).toHaveAccessibleDescription('Đặt tên cho luật, vd "SSL sắp hết hạn → sếp".');
 
     await add.getByRole('textbox', { name: 'Tên luật', exact: true }).fill(`E2E luật hỏng ${stamp}`);
     await add.getByRole('textbox', { name: 'Người nhận', exact: true }).fill('   ');
