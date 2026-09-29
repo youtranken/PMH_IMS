@@ -3,6 +3,7 @@ import { runMigrations } from '../src/database/migration-runner';
 import { SubnetService } from '../src/modules/ipam/subnet.service';
 import type { AuditWriterService } from '../src/modules/audit/audit-writer.service';
 import type { CatalogApiService } from '../src/modules/catalog/catalog.api';
+import { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
 /**
@@ -21,7 +22,12 @@ describe('BE-11 · đổi CIDR phải kiểm gateway đang có', () => {
     scratch = await createScratchDb('ims_subnet_cidr_gateway');
     await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
     const audit = { appendWithin: () => Promise.resolve() } as unknown as AuditWriterService;
-    subnets = new SubnetService(scratch.db, audit, {} as CatalogApiService);
+    subnets = new SubnetService(
+      scratch.db,
+      audit,
+      {} as CatalogApiService,
+      new SystemConfigService(scratch.db),
+    );
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
