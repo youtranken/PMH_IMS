@@ -4168,13 +4168,17 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     }
 
     /*
-     * Ô tick loại + ô tick "đang chạy". Ô "đang chạy" mang tên gọi là chính CÂU GỢI Ý bên
-     * cạnh nó (`<label>` bọc cả hai), nên nó nằm cùng phép đếm này.
+     * Ô tick loại, và MỘT công tắc "Đang chạy" (EX-020: trạng thái cả luật là công tắc có chữ
+     * đổi theo, không phải một ô tick lẫn trong hàng ô tick loại).
      */
     await expect(
       add.getByRole('checkbox'),
-      'Sáu ô tick loại (đúng bằng số nguồn hạn) cộng một ô tick "đang chạy"',
-    ).toHaveCount(7);
+      'Sáu ô tick loại (đúng bằng số nguồn hạn)',
+    ).toHaveCount(6);
+    await expect(
+      add.getByRole('switch', { name: 'Đang chạy', exact: true }),
+      'Trạng thái chạy của luật là một công tắc, mặc định bật',
+    ).toBeChecked();
     for (const label of [
       'License phần mềm',
       'Chứng chỉ SSL',
@@ -4182,7 +4186,6 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Hợp đồng bảo trì',
       'Khác',
       'Bảo hành thiết bị',
-      'Bỏ tick để tạm ngưng mà không mất cấu hình.',
     ]) {
       await expect(
         add.getByRole('checkbox', { name: label, exact: true }),
