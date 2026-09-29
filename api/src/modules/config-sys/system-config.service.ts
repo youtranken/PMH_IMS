@@ -26,7 +26,7 @@ export class SystemConfigService {
     const raw = await this.read(spec.key);
     /*
      * Phép ép kiểu nằm ở `parseConfigNumber` — hàm thuần, có test bảng dữ liệu.
-     * Bản trước viết thẳng `Number(raw)` ở đây và để chuỗi RỖNG lọt thành 0: xem chú thích
+     * Đừng viết thẳng `Number(raw)` ở đây — chuỗi RỖNG sẽ lọt thành 0: xem chú thích
      * đầu `system-config.parse.ts` cho hậu quả (cả công ty không đăng nhập được).
      */
     const parsed = parseConfigNumber(raw, spec.fallback as number);

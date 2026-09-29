@@ -41,7 +41,7 @@ export class UsersApiService {
     return this.users.directory();
   }
 
-  /** Người nhận email theo vai — dùng cho outbox/digest (Epic 3) và cảnh báo bảo mật. */
+  /** Người nhận email theo vai — dùng cho outbox/digest và cảnh báo bảo mật. */
   recipientsByRole(roles: UserRole[]): Promise<{ email: string; fullName: string }[]> {
     return this.users.listRecipients(roles);
   }
@@ -58,10 +58,10 @@ export class UsersApiService {
    * `email → họ tên` cho một mẻ email. Khóa của map đã hạ chữ thường — tra bằng
    * `map.get(email.toLowerCase())`.
    *
-   * Cửa này mở ra để viewer audit (6.2) thôi tự viết `LEFT JOIN users u ON u.email = a.actor`
-   * (A-07, vá 21/09). Câu JOIN ấy sống chín epic vì không cổng nào nhìn thấy nó: eslint khớp
-   * chuỗi import, `dependency-cruiser` khớp đường dẫn đã resolve, còn SQL thô thì không phải
-   * cái nào trong hai thứ đó. Nay `ad2-raw-sql.spec.ts` canh chỗ ấy.
+   * Cửa này có để viewer audit không tự viết `LEFT JOIN users u ON u.email = a.actor`. Câu
+   * JOIN kiểu ấy không cổng nào nhìn thấy: eslint khớp chuỗi import, `dependency-cruiser` khớp
+   * đường dẫn đã resolve, còn SQL thô thì không phải cái nào trong hai thứ đó. Chỗ ấy do
+   * `ad2-raw-sql.spec.ts` canh.
    *
    * Nhận MỘT MẺ chứ không một email: nơi gọi đang dựng một trang danh sách, và một cửa nhận
    * lẻ sẽ được gọi trong vòng lặp — đổi một câu JOIN lấy 50 câu SELECT thì hết lỗ này sang lỗ

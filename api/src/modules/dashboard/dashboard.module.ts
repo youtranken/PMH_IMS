@@ -9,7 +9,7 @@ import { DashboardController } from './dashboard.controller';
 import { DashboardService } from './dashboard.service';
 
 /**
- * Bảng điều khiển (Epic 7) — module ĐỌC thuần: không sở hữu bảng nào (AD-3).
+ * Bảng điều khiển — module ĐỌC thuần: không sở hữu bảng nào (AD-3).
  *
  * Nó chỉ gom số liệu qua public api của các module khác. Đây là chỗ dễ phá AD-2 nhất trong cả
  * hệ thống: một cái JOIN ở đây nhanh hơn thật, nhưng dashboard sẽ thành nơi mọi bảng của mọi

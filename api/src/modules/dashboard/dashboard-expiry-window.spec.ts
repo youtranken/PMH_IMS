@@ -9,12 +9,12 @@ import type { DisposalApiService } from '../disposal/disposal.api';
 import type { SystemConfigService } from '../config-sys/system-config.service';
 
 /**
- * DASHBOARD KHÔNG ĐƯỢC TỰ ĐẶT CỬA SỔ "SẮP HẾT HẠN" (A-08, rà soát 19/09).
+ * DASHBOARD KHÔNG ĐƯỢC TỰ ĐẶT CỬA SỔ "SẮP HẾT HẠN".
  *
- * ===== LỖ ĐANG VÁ =====
+ * ===== LỖ MÀ BÀI NÀY CANH =====
  *
- * `dashboard.service.ts` khai `const EXPIRY_WINDOW_DAYS = 30` với chú thích "cùng con số với
- * màn Expiry để hai chỗ khớp nhau", rồi truyền thẳng con số ấy vào `expiry.list(...)`.
+ * Cám dỗ là khai trong `dashboard.service.ts` một `const EXPIRY_WINDOW_DAYS = 30` với chú thích
+ * "cùng con số với màn Expiry để hai chỗ khớp nhau", rồi truyền thẳng vào `expiry.list(...)`.
  *
  * Nhưng con số thật nằm ở `system_config` dưới khóa `expiry.warning_days` (AD-11, DoD gạch
  * 8), và `ExpiryService.clampWindow` đã lấy đúng nó làm mặc định. Truyền 30 vào là GHI ĐÈ cấu
@@ -37,9 +37,8 @@ import type { SystemConfigService } from '../config-sys/system-config.service';
 /**
  * Cửa sổ mà dashboard hỏi module `expiry` — `undefined` = "anh tự quyết theo cấu hình".
  *
- * Từ 21/09 `list()` nhận một object (thêm `limit` cho N-01), nên bài này đọc `options.withinDays`
- * thay vì tham số vị trí thứ nhất. HỢP ĐỒNG không đổi: dashboard không được áp cửa sổ của
- * riêng mình. Chỉ hình dạng lời gọi đổi.
+ * `list()` nhận một object (có cả `limit`), nên bài này đọc `options.withinDays`. HỢP ĐỒNG:
+ * dashboard không được áp cửa sổ của riêng mình.
  */
 let windowAsked: number | undefined | 'chưa hỏi' = 'chưa hỏi';
 

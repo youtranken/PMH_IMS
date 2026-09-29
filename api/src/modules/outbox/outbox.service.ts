@@ -43,8 +43,8 @@ export class OutboxService implements OnModuleInit {
    *
    * ===== VÌ SAO BẢNG NÀY CẦN RETENTION =====
    *
-   * Đo trên DB dev 21/09: 69.583 hàng, 100% đã xử lý, và không có đường dọn nào — nó chỉ có
-   * một chiều. Trong đó 109 hàng `security.probe.alert` mang `who: <email>`.
+   * Không có đường dọn thì bảng chỉ có một chiều: đo trên DB dev được 69.583 hàng, 100% đã
+   * xử lý, trong đó 109 hàng `security.probe.alert` mang `who: <email>`.
    *
    * Email trong payload là NGOẠI LỆ CÓ TÊN, khai sẵn cạnh luật "payload không PII"
    * (AD-11/NFR-04) — không phải vi phạm, và không đụng tới ở đây. Nhưng ngoại lệ ấy được cấp
@@ -74,13 +74,13 @@ export class OutboxService implements OnModuleInit {
    * Ghi sự kiện nghiệp vụ vào outbox TRONG transaction nghiệp vụ (AD-11) — enqueue
    * sang BullMQ tách rời (relay). Payload CHỈ id tham chiếu, KHÔNG PII.
    *
-   * Lý do luật: bảng `outbox` KHÔNG có retention. Mọi hàng nằm lại vĩnh viễn và đi vào mọi
-   * bản `pg_dump` đêm, nên thứ gì rơi vào đây là tự nhân bản ra nhiều nơi.
+   * Lý do luật: hàng outbox nằm lại tới hết hạn giữ (`purgeProcessed`) và đi vào mọi bản
+   * `pg_dump` đêm trong suốt thời gian đó, nên thứ gì rơi vào đây là tự nhân bản ra nhiều nơi.
    *
-   * ===== NGOẠI LỆ DUY NHẤT, CÓ TÊN: `security.probe.alert` (18/09/2026) =====
+   * ===== NGOẠI LỆ DUY NHẤT, CÓ TÊN: `security.probe.alert` =====
    *
    * Topic ấy mang `who: <email>` chứ không mang id, và đó là lựa chọn có cân nhắc chứ không
-   * phải sơ sót — rà soát 18/09 bắt đúng chỗ này rồi quyết giữ:
+   * phải sơ sót:
    *
    *   · Email KHÔNG phải PII lạc chỗ ở đây, nó LÀ nội dung của cảnh báo. Lá thư báo "có người
    *     đang dò quanh két" mà không nói được ai thì báo để làm gì.
@@ -161,7 +161,7 @@ export class OutboxService implements OnModuleInit {
   /**
    * Consumer đã xử xong event → check-and-set `processed_at` (idempotent, AD-11 dedup bền):
    * 0 dòng = đã xử trước đó → bỏ qua. Sau khi set, relay KHÔNG re-drive nữa. Trả true nếu
-   * lần này là lần mark thật (để consumer quyết gửi mail / skip khi đã xử — Epic 5).
+   * lần này là lần mark thật (để consumer quyết gửi mail / skip khi đã xử).
    */
   async markProcessed(eventId: string): Promise<boolean> {
     const r = await this.db.execute<{ id: string }>(sql`

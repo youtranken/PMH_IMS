@@ -5,7 +5,7 @@ import { parseConfigNumber } from './system-config.parse';
  *
  * ===== VÌ SAO MỘT Ô TRỐNG LÀ SỰ CỐ TOÀN CÔNG TY =====
  *
- * `Number('')` trong JavaScript là `0`, và `Number.isFinite(0)` là `true`. Nên bản trước:
+ * `Number('')` trong JavaScript là `0`, và `Number.isFinite(0)` là `true`. Nên phép kiểm quen thuộc:
  *
  *     const value = typeof raw === 'number' ? raw : Number(raw);
  *     if (!Number.isFinite(value)) return fallback;   // KHÔNG bao giờ chạy với ''
@@ -15,8 +15,7 @@ import { parseConfigNumber } from './system-config.parse';
  * hệ thống, và nhật ký không có gì bất thường để lần ra. Với `login.max_failed_attempts` thì
  * `0` nghĩa là khóa tài khoản ngay từ lần gõ sai đầu tiên.
  *
- * Admin xóa nội dung một ô trên màn Tham số rồi bấm Lưu là đủ để tạo ra chuyện đó. Rà soát
- * 07/09, mục 6 "Nghiệp vụ".
+ * Admin xóa nội dung một ô trên màn Tham số rồi bấm Lưu là đủ để tạo ra chuyện đó.
  *
  * Tách hàm thuần ra file riêng để kiểm bằng BẢNG DỮ LIỆU, không phải dựng Nest và DB
  * (CLAUDE.md: logic thuần phải có test bảng, không test qua HTTP).

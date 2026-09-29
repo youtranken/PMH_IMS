@@ -5,7 +5,7 @@ import { DashboardService } from './dashboard.service';
 import { NoStepUp } from '../auth/step-up.decorator';
 
 /**
- * Bảng điều khiển (story 7.1, FR-025).
+ * Bảng điều khiển (FR-025).
  *
  * MỘT lần gọi trả về cả trang. Mỗi khối một request thì trang nhấp nháy sáu nhịp và sếp nhìn
  * thấy nó dựng dần — trong khi cả mục tiêu của story là "ba phút, liếc một cái là nắm". Thêm

@@ -45,5 +45,5 @@ export const usersTable = pgTable('users', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });
 
-// `known_device` đã chuyển sang `auth/known-device.schema.ts` (28/08) — module `auth` là nơi
+// `known_device` khai ở `auth/known-device.schema.ts`, không ở đây — module `auth` là nơi
 // duy nhất đọc/ghi bảng đó, nên nó phải là nơi khai schema (AD-3).

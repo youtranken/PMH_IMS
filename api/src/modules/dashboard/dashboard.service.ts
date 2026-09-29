@@ -16,21 +16,20 @@ const WEEK_DAYS = 7;
 /*
  * KHÔNG CÓ HẰNG SỐ CỬA SỔ "SẮP HẾT HẠN" Ở ĐÂY — và chỗ trống này là cố ý.
  *
- * Từng có `const EXPIRY_WINDOW_DAYS = 30`, kèm chú thích "cùng con số với màn Expiry để hai
- * chỗ khớp nhau". Ý định đúng, hệ quả sai: con số thật nằm ở `expiry.warning_days` trong
- * `system_config` (AD-11, DoD gạch 8), nên truyền 30 vào là GHI ĐÈ cấu hình. Sếp nâng ngưỡng
- * lên 60 ngày thì màn "Sắp hết hạn" nghe lời còn trang chủ vẫn 30 — mà trang chủ mới là chỗ
- * người ta đọc (A-08, vá 21/09).
+ * Đừng khai `const EXPIRY_WINDOW_DAYS = 30` "cho khớp với màn Expiry". Con số thật nằm ở
+ * `expiry.warning_days` trong `system_config` (AD-11, DoD gạch 8), nên truyền 30 vào là GHI ĐÈ
+ * cấu hình. Sếp nâng ngưỡng lên 60 ngày thì màn "Sắp hết hạn" nghe lời còn trang chủ vẫn 30 —
+ * mà trang chủ mới là chỗ người ta đọc.
  *
  * Hai bản sao của một con số chỉ khớp nhau cho tới lần đầu ai đó đổi một bản. Nên dashboard
- * thôi biết gì về cửa sổ: `expiry.list()` không tham số nghĩa là "anh tự quyết theo cấu hình".
+ * không biết gì về cửa sổ: `expiry.list()` không tham số nghĩa là "anh tự quyết theo cấu hình".
  */
 /** Số chỗ tối đa mục quá hạn được giữ trong khối "sắp hết hạn" khi còn mục sắp tới cần hiện. */
 const OVERDUE_SLOTS = 3;
 
 interface DashboardBlock<T> {
   /**
-   * `available: false` = module chưa deploy (Epic 9 chưa có). UI hiện "chưa có dữ liệu" gọn
+   * `available: false` = module chưa deploy (vd `incidents`). UI hiện "chưa có dữ liệu" gọn
    * gàng chứ KHÔNG hiện khối rỗng trông như hỏng, và cũng không giấu khối đi — sếp cần biết
    * là phần đó chưa có, không phải tưởng là không có sự cố nào.
    */
@@ -122,7 +121,7 @@ export interface Dashboard {
 }
 
 /**
- * Bảng điều khiển (story 7.1, FR-025).
+ * Bảng điều khiển (FR-025).
  *
  * Mục tiêu viết trong epic rất cụ thể: "sếp 3 phút sáng thứ Hai tự trả lời mọi câu hỏi". Nên
  * mỗi khối phải trả lời ĐÚNG MỘT câu, và trả lời được mà không cần bấm đi đâu.
@@ -167,7 +166,7 @@ export class DashboardService {
       isBoss ? this.breakGlassBlock(now, maxItems) : emptyBlock<BreakGlassEntry>(),
       this.subnetLoadBlock(maxItems),
       /*
-       * Khối két CHỈ cho SA/Admin, đúng bằng quyền của `GET /vault/owners` (26/08).
+       * Khối két CHỈ cho SA/Admin, đúng bằng quyền của `GET /vault/owners`.
        *
        * Cắt ở TẦNG SERVICE chứ không để web ẩn khối đi: ẩn ở web thì bản đồ "công ty giữ bí
        * mật ở đâu" vẫn đi qua dây và Member mở tab mạng ra là đọc được.
@@ -182,7 +181,7 @@ export class DashboardService {
       staleSecrets,
       disposed,
       /**
-       * Epic 9 chưa deploy nên module `incidents` chưa tồn tại. Khai `available: false` thay
+       * Module `incidents` chưa tồn tại. Khai `available: false` thay
        * vì bịa một mảng rỗng: "chưa có phần này" và "tuần qua không có sự cố nào" là hai câu
        * KHÁC HẲN nhau, và sếp đọc nhầm câu thứ hai thì tưởng mọi thứ đang yên.
        */
@@ -230,8 +229,7 @@ export class DashboardService {
        * Một khối hỏng KHÔNG được làm chết cả trang.
        *
        * Dashboard gom số liệu từ nhiều module; nếu `expiry` lỗi mà cả trang trắng thì sếp mất
-       * luôn hai khối còn lại — và mất cả cái tín hiệu "có gì đó đang hỏng". Đây đúng là bài
-       * học finding 2 của code review Epic 3, ở một hình dạng khác.
+       * luôn hai khối còn lại — và mất cả cái tín hiệu "có gì đó đang hỏng".
        */
       this.logger.warn(`khối sắp-hết-hạn lỗi: ${message(error)}`);
       return { ...emptyBlock(), overdueTotal: 0 };

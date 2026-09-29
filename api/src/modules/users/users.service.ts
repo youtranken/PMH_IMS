@@ -55,14 +55,13 @@ export class UsersService {
   ): Promise<Page<UserRecord>> {
     const term = search?.trim();
     /*
-     * Gấp dấu TÍNH TẠI CHỖ (B-01, 25/09) — `imsNormLike`, không cột sinh.
+     * Gấp dấu TÍNH TẠI CHỖ (B-01) — `imsNormLike`, không cột sinh.
      *
-     * Bảng này là nhân sự IT nội bộ, luôn dưới vài trăm dòng, nên nó cố ý đứng ngoài đợt dựng
-     * cột sinh + chỉ mục GIN của migration 0052. Nhưng "không cần chỉ mục" và "không cần gấp
-     * dấu" là HAI chuyện khác nhau, và kế hoạch ban đầu của sổ rà soát gộp nhầm chúng làm một:
-     * `full_name` là họ tên tiếng Việt, tức đúng chỗ dấu làm hỏng việc tìm nhất. Để nguyên
-     * `ILIKE` thì gõ `nguyen thi` ở màn Tài khoản vẫn ra bảng rỗng — B-01 sửa xong ở sáu màn
-     * kia mà vẫn còn nguyên ở màn này.
+     * Bảng này là nhân sự IT nội bộ, luôn dưới vài trăm dòng, nên nó cố ý đứng ngoài bộ cột
+     * sinh + chỉ mục GIN của migration 0052. Nhưng "không cần chỉ mục" và "không cần gấp dấu"
+     * là HAI chuyện khác nhau: `full_name` là họ tên tiếng Việt, tức đúng chỗ dấu làm hỏng việc
+     * tìm nhất. Để nguyên `ILIKE` thì gõ `nguyen thi` ở màn Tài khoản ra bảng rỗng, trong khi
+     * sáu màn kia tìm được.
      *
      * Giá phải trả: một lượt quét tuần tự có gọi hàm. Ở vài trăm dòng thì đó không phải giá.
      */
@@ -248,11 +247,11 @@ export class UsersService {
   /**
    * Chống replay (NFR-01): ghi lại time step vừa dùng — LUÔN trong transaction đang chạy.
    *
-   * ===== VÌ SAO KHÔNG CÒN BẢN CHẠY-TRÊN-POOL =====
+   * ===== VÌ SAO KHÔNG CÓ BẢN CHẠY-TRÊN-POOL =====
    *
-   * Bản trước là `setTotpLastTimestep(userId, timeStep)` chạy thẳng trên `this.db`, và cả hai
-   * nơi gọi đều gọi nó SAU KHI transaction cấp phiên / đóng dấu step-up đã COMMIT. Giữa hai
-   * lượt ghi đó, mã 6 số vừa dùng vẫn còn hiệu lực:
+   * Một bản `setTotpLastTimestep(userId, timeStep)` chạy thẳng trên `this.db` thì nơi gọi sẽ
+   * gọi nó SAU KHI transaction cấp phiên / đóng dấu step-up đã COMMIT. Giữa hai lượt ghi đó,
+   * mã 6 số vừa dùng vẫn còn hiệu lực:
    *
    *   - Không cần lỗi gì cả, chỉ cần đồng thời. Hai request `/login/totp` mang CÙNG một mã,
    *     cả hai đọc `totp_last_timestep` cũ, cả hai qua cửa, cả hai được cấp phiên. Một mã đổi
@@ -262,9 +261,9 @@ export class UsersService {
    *
    * Gói chung transaction với lượt cấp phiên thì hỏng ở đâu cũng rollback cả hai — hoặc người
    * dùng vào được VÀ mã bị đốt, hoặc không có gì xảy ra. Không còn trạng thái ở giữa.
-   * `revokeWithin` đã bỏ bản chạy-trên-pool vì đúng lý do này (rà soát 07/09).
+   * `revokeWithin` cũng không có bản chạy-trên-pool vì đúng lý do này.
    *
-   * ===== VÀ VÌ SAO CHỪNG ĐÓ VẪN CHƯA ĐỦ (rà soát 10/09) =====
+   * ===== VÀ VÌ SAO CHỪNG ĐÓ VẪN CHƯA ĐỦ =====
    *
    * Câu "không còn trạng thái ở giữa" ở trên đúng với SỰ CỐ và sai với ĐỒNG THỜI. Lượt ĐỌC —
    * `requireUser()` rồi `totp.verify({ lastUsedTimeStep })` — vẫn chạy trên pool, NGOÀI
@@ -408,12 +407,11 @@ export class UsersService {
   /**
    * MẬT KHẨU đã đúng → xoá dấu vết đoán mật khẩu. KHÔNG đóng dấu `last_login_at`.
    *
-   * ===== VÌ SAO TÁCH LÀM HAI (11/09) =====
+   * ===== VÌ SAO TÁCH LÀM HAI =====
    *
-   * Bản trước là một hàm `markLoginSuccess` làm cả hai việc, và nó chạy ngay sau khi Argon2
-   * xác minh xong — tức TRƯỚC bước TOTP. Với tài khoản bật `totp_login_required` (mặc định
-   * là mọi tài khoản), người gõ đúng mật khẩu nhưng không có điện thoại vẫn khiến
-   * `last_login_at` nhảy sang thời điểm đó.
+   * Một hàm làm cả hai việc sẽ chạy ngay sau khi Argon2 xác minh xong — tức TRƯỚC bước TOTP.
+   * Với tài khoản bật `totp_login_required` (mặc định là mọi tài khoản), người gõ đúng mật
+   * khẩu nhưng không có điện thoại sẽ khiến `last_login_at` nhảy sang thời điểm đó.
    *
    * Hai bộ đếm thì xoá ở đây là ĐÚNG: chúng đếm việc đoán MẬT KHẨU, mà việc đó vừa kết thúc.
    *
@@ -444,8 +442,8 @@ export class UsersService {
   }
 
   /**
-   * `email → họ tên` cho một mẻ email — cửa thay cho `LEFT JOIN users` mà module khác từng tự
-   * viết (A-07, vá 21/09).
+   * `email → họ tên` cho một mẻ email — cửa để module khác khỏi tự viết `LEFT JOIN users`
+   * (AD-2).
    *
    * MỘT câu hỏi cho cả trang, không phải một câu mỗi dòng: viewer audit hiện 50 dòng/trang và
    * phần lớn do vài người thao tác, nên mẻ thật thường chỉ vài email.
