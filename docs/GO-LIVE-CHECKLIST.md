@@ -351,12 +351,16 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
 
 ### P2
 
-- [ ] **FE-08 · `rgba()` viết thẳng ngoài `tokens.css`** ở 9 chỗ (`base.css`, `datepicker.css`,
+- [x] **FE-08 · `rgba()` viết thẳng ngoài `tokens.css`** ở 9 chỗ (`base.css`, `datepicker.css`,
   `form-layout.css:131`, `lightbox.css`, `shell.css`). Tạo token, có cặp dark. Sửa `ops/gate-hex.sh`
   bắt cả `rgb(`/`rgba(`.
   - **Rà 29/09:** còn 7 chỗ trong code: `datepicker.css:155,164,189`, `table.css:313,376,572`,
     `form-layout.css:162`. `base.css`, `lightbox.css`, `shell.css` đã sạch. Cổng vẫn chỉ bắt hex, và
     chú thích "20 chỗ đang nợ" ở `ops/gate-hex.sh:21` đã sai.
+  - **Đã sửa:** 7 chỗ thành token (`--shadow-float`, `--on-brand-veil[-soft]`, `--on-brand-press`,
+    `--shadow`, `--surface-2`), có cặp dark. `ops/gate-hex.sh` bắt thêm `rgb()/rgba()/hsl()/hsla()`
+    và hex mã hoá URL `%23…` (vẫn bỏ qua chú thích). Bài `token-usage.test.ts` mới: mọi token mang
+    màu phải có cặp `html[data-theme='dark']`.
 - [x] **FE-09 · "Bộ giao diện" (`/dev/components`) tắt ở prod** (Q-15). Cờ build `VITE_DEV_KIT`
   (`web/src/lib/dev-kit.ts`): chỉ `docker-compose.override.e2e.yml` truyền `'1'` (image tag riêng
   `ims-web:dev-kit`) và `vite` dev tự bật. Tắt thì không route (gõ URL ra 404), không mục menu,
@@ -732,10 +736,13 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - `filters.css` và `profile.css` vẫn được `@import`.
   - **Rà 29/09:** còn nguyên. `filters.css` (50 dòng) và `profile.css` (224 dòng) chết toàn bộ, vẫn
     `@import` ở `web/src/index.css:15,17`; số dòng cũ ở trên đã lệch.
-- [ ] **OLD-FE-04 · Icon kính lúp giữ màu xám ở dark mode** (`base.css:38`, `detail-tabs.css:379`,
+- [x] **OLD-FE-04 · Icon kính lúp giữ màu xám ở dark mode** (`base.css:38`, `detail-tabs.css:379`,
   `shared-kit.css:916`).
   - **Rà 29/09:** còn nguyên, cả ba icon SVG vẫn `stroke='%238a908a'` (`base.css:48`,
     `detail-tabs.css:599`, `shared-kit.css:1592`), chưa có bản đè `html[data-theme='dark']`.
+  - **Đã sửa:** icon khay rỗng dùng `mask` + `background-color: var(--ink-3)`; chevron `<select>` và
+    kính lúp (không có `::before`) thành token `--icon-select-chevron`/`--icon-search` có bản dark.
+    Cổng `gate-hex.sh` giờ chặn `%23hex` ngoài `tokens.css`.
 - [ ] **OLD-FE-05 · Lỗi nhỏ ở dialog:** thiếu Provider khi hộp không có title; `guardUnsaved` thành
   no-op trong trường hợp đó (`dialog.tsx:~400-437`).
   - **Rà 29/09:** còn nguyên (`dialog.tsx:422`).

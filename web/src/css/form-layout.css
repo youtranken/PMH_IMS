@@ -159,7 +159,7 @@ html[data-theme='dark'] .segmented label:has(input:checked) {
 }
 .free-chip:hover {
   border-color: var(--primary);
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow);
 }
 .free-chip:active {
   transform: translateY(1px);

@@ -310,7 +310,7 @@ table.table tbody tr.row-suspended td:first-child {
   align-items: center;
   gap: var(--space-5);
   max-width: 90vw;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--shadow-float);
 }
 .lifecycle-toast button {
   background: none;
@@ -373,7 +373,7 @@ table.table tbody tr.row-suspended td:first-child {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  box-shadow: var(--shadow-float);
 }
 .row-actions-menu button {
   display: flex;
@@ -569,7 +569,7 @@ button.link.session-toggle {
   cursor: pointer;
 }
 .session-detail-row > td {
-  background: var(--surface-2, rgba(0, 0, 0, 0.03));
+  background: var(--surface-2);
 }
 .session-list {
   margin: 0;

@@ -130,6 +130,17 @@
   --scrim-strong: rgba(20, 26, 20, 0.62);
   /* Vệt mờ ở mép khung cuộn ngang còn nội dung khuất (`ui/scroll-x.tsx`). */
   --edge-fade: rgba(16, 24, 40, 0.16);
+  /* Bóng của khối nổi tách khỏi luồng trang (toast vòng đời, menu thao tác dòng). */
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.18);
+  /* Nút trên dải header gradient của lịch: mực tối --on-brand trên nền trắng mờ. Header giữ
+     gradient sáng ở cả hai theme nên cặp dark giữ nguyên giá trị. */
+  --on-brand-veil: rgba(255, 255, 255, 0.28);
+  --on-brand-veil-soft: rgba(255, 255, 255, 0.18);
+  --on-brand-press: rgba(0, 0, 0, 0.4);
+  /* Icon SVG nhúng làm nền cho <select> và ô tìm kiếm: hai phần tử này không có ::before để
+     dùng mask, nên màu nét nằm trong chính URL và mỗi theme cần một bản. */
+  --icon-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%238a908a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
+  --icon-search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16' fill='none' stroke='%238a908a' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='m15 15-3.5-3.5'/%3E%3C/svg%3E");
 
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
@@ -223,6 +234,13 @@ html[data-theme='dark'] {
   --scrim-strong: rgba(0, 0, 0, 0.78);
   /* Nền tối: vệt phải thuần đen và đậm hơn mới thấy được trên mặt bảng tối. */
   --edge-fade: rgba(0, 0, 0, 0.55);
+  /* Nền tối nuốt bóng nhạt: phải đậm hơn mới tách khối nổi khỏi trang. */
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.55);
+  --on-brand-veil: rgba(255, 255, 255, 0.28);
+  --on-brand-veil-soft: rgba(255, 255, 255, 0.18);
+  --on-brand-press: rgba(0, 0, 0, 0.4);
+  --icon-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%239aa39a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
+  --icon-search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16' fill='none' stroke='%239aa39a' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='m15 15-3.5-3.5'/%3E%3C/svg%3E");
   color-scheme: dark;
 
     --on-accent:#0f140f; --on-overlay:#ffffff;
@@ -239,6 +257,11 @@ html[data-theme='dark'] {
     --qr-bg:#ffffff;
     --sidebar-hover:rgba(255,255,255,.06); --sidebar-chip:rgba(255,255,255,.1);
     --sidebar-chip-strong:rgba(255,255,255,.14);
+    /* Sidebar và card đăng nhập tối ở cả hai theme: cặp dark giữ nguyên giá trị sáng, khai
+       tường minh để bài kiểm cặp token bắt được token mới quên cặp. */
+    --sidebar-ink:#8ea595; --sidebar-ink-2:#eaf3ee; --sidebar-label:#9fb0a5;
+    --auth-bg:linear-gradient(135deg,#16231b 0%,#0e3a2a 45%,#1f2a1c 100%);
+    --auth-ink:#eaf3ee; --auth-ink-2:#9fb0a5;
 }
 
 * {
