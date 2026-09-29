@@ -554,8 +554,10 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
   - **Không đụng file migration.**
   - **Rà 29/09:** mới dọn lẻ (1c00ba2, 2aefe44, b57775f, và chú thích "trước đây…" của đợt v1.4.2).
     Đếm thô còn khoảng 250 dòng (api 67, web 106, e2e 78).
-- [ ] **CLEAN-03 (P2) · Xoá `.pyc` trong `.claude/` khỏi git**, thêm `__pycache__/` vào `.gitignore`.
+- [x] **CLEAN-03 (P2) · Xoá `.pyc` trong `.claude/` khỏi git**, thêm `__pycache__/` vào `.gitignore`.
   - **Rà 29/09:** còn 5 file trong `.claude/skills/bmad-retrospective/scripts/**/__pycache__/`.
+  - **Đã sửa:** `git rm --cached` cả 5 file; `.gitignore` thêm `__pycache__/` và `*.pyc`
+    (`git check-ignore` xác nhận).
 - [ ] **CLEAN-04 (P2) · Bỏ `export` thừa:** 20 ở api, 18 ở web (theo knip).
   - **Rà 29/09:** chưa đếm lại — máy chưa cài knip.
 
