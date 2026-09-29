@@ -16,7 +16,7 @@ import type { Me } from '@/lib/me';
  * `/isp-lines` trả 500 rồi gõ "fpt" — ra đúng câu đó.
  *
  * Hậu quả không phải thẩm mỹ: người trực đọc "không có hồ sơ nào khớp" rồi đi khai TRÙNG một
- * đường truyền đã có trong hệ thống. Đây đúng họ lỗi mà `loi-api-khong-hoa-thanh-rong.spec.ts`
+ * đường truyền đã có trong hệ thống. Đây đúng họ lỗi mà `api-error-not-empty.spec.ts`
  * chặn ở các màn danh sách, chỉ là ở một cửa khác.
  *
  * Cờ `loading` cũng chỉ đọc hai trên bốn nguồn, nên một nhóm về chậm là hộp nháy câu "không

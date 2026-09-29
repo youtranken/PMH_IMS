@@ -94,7 +94,7 @@ test.describe('Break-glass', () => {
   }) => {
     /**
      * Người xin ở một ngữ cảnh trình duyệt riêng. Phiếu chờ không gắn phiên (Q-15); lần xem
-     * đầu sau khi được duyệt gắn quyền vào phiên đang xem — `break-glass-phien.spec.ts` dựng
+     * đầu sau khi được duyệt gắn quyền vào phiên đang xem — `break-glass-session.spec.ts` dựng
      * lại các đòn quanh việc gắn phiên.
      *
      * Trần 150 giây: hai lượt cài 2 lớp + một lượt chờ mã TOTP mới cho hộp xác nhận danh tính.

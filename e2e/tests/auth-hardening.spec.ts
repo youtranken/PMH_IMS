@@ -74,7 +74,7 @@ test.describe('Siết cửa xác thực', () => {
       /*
        * `users.locked_until` không chặn đăng nhập; nó là mốc CẢNH BÁO (chạm ngưỡng thì bắn
        * thư báo SA, và chính nó là cửa sổ chống spam thư). Bài này đọc cột đó vì thứ nó đang
-       * đo là BỘ ĐẾM CÓ CỘNG DỒN KHÔNG. Vế "ai bị chặn" do `khoa-dang-nhap-theo-noi.spec.ts` giữ.
+       * đo là BỘ ĐẾM CÓ CỘNG DỒN KHÔNG. Vế "ai bị chặn" do `login-lockout-per-ip.spec.ts` giữ.
        */
       const lockedUntil = sql(
         `SELECT coalesce(locked_until::text, '') FROM users WHERE email = '${E2E_SA.email}'`,

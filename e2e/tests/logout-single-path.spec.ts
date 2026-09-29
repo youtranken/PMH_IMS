@@ -25,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 test.describe('Đăng xuất đi qua một cửa duy nhất', () => {
   // `__dirname` KHÔNG tồn tại — gói này là ESM (`"type": "module"`). Xem đầu `tsconfig.json`.
   const TESTS_DIR = dirname(fileURLToPath(import.meta.url));
-  const SELF = 'logout-qua-mot-cua.spec.ts';
+  const SELF = 'logout-single-path.spec.ts';
   // Ghép từ mảnh để chính file này không tự khớp vào luật của mình.
   const BUTTON = ['getByRole(', "'button'"].join('');
   const LABEL = 'Đăng' + ' xuất';

@@ -28,7 +28,7 @@ import {
  *
  * `page.route` giữ câu trả lời lại vài giây để dựng đúng khoảnh khắc "đang ghi" — không có nó
  * thì lượt ghi xong trước cả khi kịp bấm phím, và bài kiểm xanh mà không hỏi được gì. Đây là
- * cách đã dùng ở `loi-api-khong-hoa-thanh-rong.spec.ts`.
+ * cách đã dùng ở `api-error-not-empty.spec.ts`.
  */
 
 test.beforeEach(() => {

@@ -12,7 +12,7 @@ import {
 /**
  * UX-DR2 × M3 — khối LỖI của các màn danh sách, đọc ở 390px.
  *
- * `loi-api-khong-hoa-thanh-rong.spec.ts` (nhánh này) đã chứng minh phần NGHIỆP VỤ: API hỏng
+ * `api-error-not-empty.spec.ts` (nhánh này) đã chứng minh phần NGHIỆP VỤ: API hỏng
  * phải nói ra chứ không hóa thành "chưa có dữ liệu". Nó chạy ở project desktop. Nhưng khối lỗi
  * cũng là một bề mặt ĐỌC, và UX-DR2 không miễn trừ cho nó:
  *

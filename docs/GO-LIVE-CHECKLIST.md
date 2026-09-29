@@ -229,7 +229,7 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
 - [x] **BE-14 · Gắn được thiết bị vào site/loại/NCC đã vô hiệu hoá** (`catalog.api.ts:51`).
   - **Rà 29/09:** xong (Q-14, ADM-015/DEV-027, 37c5180). `CatalogApiService.assertRefs` từ chối chọn
     MỚI mục đã ngừng dùng (`CATALOG_REF_INACTIVE`), cả ở thiết bị, phần mềm, dải, đường truyền, tủ mạng
-    và nhập Excel. Kiểm: `api/test/catalog-inactive-ref.spec.ts`, E2E `form-kiem-tieng-viet.spec.ts`.
+    và nhập Excel. Kiểm: `api/test/catalog-inactive-ref.spec.ts`, E2E `form-vietnamese-validation.spec.ts`.
 - [x] **BE-15 · Audit port map thiếu thông tin** (`device-ports.service.ts:167-171`); vẫn cắm được port
   sang máy đã thanh lý.
   - **Rà 29/09:** còn nguyên cả hai ý (`device-ports.service.ts:142-190`, `prepare()` không kiểm máy
@@ -719,7 +719,7 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
   đóng phiên khác của mình; đăng nhập xong về đúng trang đã mở. dd7249e, e673629, a115bec (v1.3.0).
 - [x] **DOM-15 · Màn Tham số hệ thống `/admin/settings`** (Q-14, ADM-088): chỉ SA, có step-up, mọi lần
   sửa ghi nhật ký, chỉ sửa khoá có trong danh sách khai báo. 9e4584e (v1.3.0), 7a7705e. Kiểm: E2E
-  `tham-so-he-thong.spec.ts`.
+  `system-config.spec.ts`.
 - [x] **DOM-16 · Hồ sơ IP phải có chủ; loại thiết bị có cờ Router/Firewall cho ô Router của NAT**
   (Q-14). 18a04c2 (NET-001..005), 3b9f9ee (NET-041), v1.3.0.
 - [x] **DOM-17 · "Đã thanh lý" (trạng thái) và "Thanh lý" (nút); phần mềm loại "Khác" có hạn là nguồn
@@ -872,9 +872,9 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
     ba chip trạng thái NAT, lọc Két) vẫn `aria-pressed` — đúng nghĩa. Ma trận quyền có
     `scope="col"`/`"colgroup"`; `port-map-panel` h3→h2; `ui/cell-note.tsx` biến ô bị cắt thành nút
     mở/thu (Danh mục, ghi chú IP, ghi chú NAT). Đã khai `SHARED-REGISTRY.md`. Vitest:
-    `segmented-radio`, `cell-note`, `access-matrix-screen`, `port-map-panel`, `audit-log-loc-nhanh`.
-    E2E sửa theo vai mới (chưa chạy): `di-khap-giao-dien`, `nat`, `ipam`, `ip-xoa-nhap-nham.mobile`,
-    `trau-chuot-a`, `trau-chuot-b`, `disposal`, `phan-mem-han-vua-nhe`.
+    `segmented-radio`, `cell-note`, `access-matrix-screen`, `port-map-panel`, `audit-log-quick-filter`.
+    E2E sửa theo vai mới (chưa chạy): `di-khap-giao-dien`, `nat`, `ipam`, `ip-delete-mistaken.mobile`,
+    `polish-a`, `polish-b`, `disposal`, `software-expiry-ux-medium-low`.
 - [x] **OLD-BE-03 · Ghi nhật ký:**
   - `@Audited` khai sai tên (`accounts.controller.ts:167`, `catalog.controller.ts:146`).
   - `FIELD_LABEL` thiếu `token`/`currentPassword`/`newPassword` (`validation-messages.ts:37`).

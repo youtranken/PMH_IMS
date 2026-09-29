@@ -1291,7 +1291,7 @@ export default {
     noSessions: 'Không còn phiên đăng nhập nào đang mở.',
     /* KHÔNG dùng chữ "Đăng xuất": sidebar đã có một nút tên đúng như vậy, và hai việc
        khác hẳn nhau (tự thoát ra / buộc người khác thoát). Cửa canh
-       `e2e/tests/logout-qua-mot-cua.spec.ts` cũng quét đúng chữ đó. */
+       `e2e/tests/logout-single-path.spec.ts` cũng quét đúng chữ đó. */
     killSession: 'Đóng phiên',
     resetPassword: 'Đặt lại mật khẩu',
     resetTotp: 'Đặt lại xác thực 2 lớp',
