@@ -1515,6 +1515,7 @@ export default {
     /* Khối trạng thái khi đang có phiếu treo — người xin rút được, và khung tự làm mới. */
     pendingSince: 'Yêu cầu gửi lúc {{at}} đang chờ Quản trị quyết. Khung này tự làm mới khi có quyết định.',
     pendingDetail: 'Xem yêu cầu',
+    pendingKeepOpen: 'Giữ trang này mở — đăng xuất hay hết phiên đăng nhập thì yêu cầu tự bị rút.',
     /* Q-15: quyền gắn với phiên đã xin. Người xin phải đọc được trước, không thì đăng nhập lại
        rồi tưởng hệ thống làm mất quyền. */
     sessionBound:

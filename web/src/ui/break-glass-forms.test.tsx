@@ -119,6 +119,22 @@ describe('DecisionDialog', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
+  it('Duyệt một phiếu vừa bị rút (phiên người xin đã kết thúc) → báo rõ, đóng hộp', async () => {
+    const { onClose, onDone } = renderDecision(true, {
+      respond: () =>
+        Promise.resolve(
+          jsonResponse(409, {
+            code: 'BREAK_GLASS_WITHDRAWN',
+            message: 'Yêu cầu này đã được rút: phiên đăng nhập của người xin đã kết thúc.',
+          }),
+        ),
+    });
+    await userEvent.click(screen.getByRole('button', { name: /Duyệt/ }));
+    expect(await screen.findByText(/đã được rút/)).toBeInTheDocument();
+    expect(onClose).toHaveBeenCalled();
+    expect(onDone).not.toHaveBeenCalled();
+  });
+
   it('Thu hồi sớm: bắt ghi lý do, rồi gửi lý do đó lên API', async () => {
     const approved: BreakGlassRow = {
       ...ROW,

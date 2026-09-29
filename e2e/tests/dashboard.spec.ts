@@ -128,7 +128,7 @@ test.describe('Bảng điều khiển', () => {
     await expect(incidents.getByText('Tuần qua không có sự cố nào.')).toHaveCount(0);
   });
 
-  test('break-glass tuần qua nói rõ AI, THIẾT BỊ GÌ, lý do', async ({ page }) => {
+  test('break-glass tuần qua nói rõ AI, THIẾT BỊ GÌ, lý do', async ({ page, browser }) => {
     const saTotp = await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-5);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
@@ -178,18 +178,22 @@ test.describe('Bảng điều khiển', () => {
     };
     expect(asMember.breakGlass.available).toBe(false);
     expect(asMember.breakGlass.items).toEqual([]);
-    await logout(page);
 
     // SA: thấy đủ ba thứ AC đòi — ai, thiết bị gì, lý do. Mã thiết bị chứ không phải uuid.
     // `loginWithTotp` chứ không phải `firstLogin`: tài khoản này đã cài 2 lớp ở đầu bài.
-    await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
-    await page.goto('/');
-    const block = page.locator('section').filter({ hasText: 'Yêu cầu mở két tuần qua' });
+    // Ngữ cảnh riêng, người xin KHÔNG đăng xuất: phiên chết thì lượt quét rút phiếu (Q-15) và
+    // "Chờ duyệt" dưới đây đỏ theo nhịp quét.
+    const saCtx = await browser.newContext({ ignoreHTTPSErrors: true });
+    const sa = await saCtx.newPage();
+    await loginWithTotp(sa, E2E_SA.email, NEW_PASSWORD, saTotp);
+    await sa.goto('/');
+    const block = sa.locator('section').filter({ hasText: 'Yêu cầu mở két tuần qua' });
     // DASH-006: TÊN người xin (email nằm trong `title`), không phải email trần.
     await expect(block.getByText('E2E Thành viên')).toBeVisible();
     await expect(block.getByText('Chờ duyệt')).toBeVisible();
     await expect(block.getByText(new RegExp(code))).toBeVisible();
     await expect(block.getByText('switch tầng 3 mất kết nối lúc 2 giờ sáng')).toBeVisible();
+    await saCtx.close();
   });
 
   /**

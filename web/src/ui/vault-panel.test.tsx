@@ -325,6 +325,8 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
       4,
     );
     renderPanel({ ...ME, role: 'member' });
+    // Q-15: phiên chết là phiếu bị rút — nói trước khi người xin bỏ đi chờ.
+    expect(await screen.findByText(/Giữ trang này mở/)).toBeInTheDocument();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Rút yêu cầu' }));
     // Chưa xác nhận thì CHƯA gọi API.

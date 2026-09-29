@@ -89,7 +89,10 @@ async function seedDevice(page: Page, stamp: string): Promise<{ deviceId: string
 
 /**
  * SA dựng máy → Member xin qua API → SA đăng nhập lại. Trả id phiếu + TOTP của cả hai.
- * Bốn lượt đổi người là cái giá của "xin ở phiên này, duyệt ở phiên khác".
+ *
+ * Người xin ở ngữ cảnh trình duyệt riêng và KHÔNG đăng xuất: phiên người xin chết thì lượt quét
+ * tự rút phiếu đang chờ (Q-15), và bài duyệt phía sau đỏ theo nhịp quét. Ngữ cảnh đó sống tới
+ * hết worker — đúng như người xin thật giữ trang mở trong lúc chờ.
  */
 async function pendingRequest(page: Page, hours = 4) {
   const stamp = Date.now().toString().slice(-6);
@@ -97,9 +100,11 @@ async function pendingRequest(page: Page, hours = 4) {
   const { deviceId, code } = await seedDevice(page, stamp);
   await logout(page);
 
-  const memberTotp = await firstLogin(page, E2E_MEMBER);
-  const asked = await page.request.post('/api/v1/vault/break-glass', {
-    headers: await headersOf(page),
+  const memberCtx = await page.context().browser()!.newContext({ ignoreHTTPSErrors: true });
+  const member = await memberCtx.newPage();
+  const memberTotp = await firstLogin(member, E2E_MEMBER);
+  const asked = await member.request.post('/api/v1/vault/break-glass', {
+    headers: await headersOf(member),
     data: {
       ownerType: 'device',
       ownerId: deviceId,
@@ -109,7 +114,6 @@ async function pendingRequest(page: Page, hours = 4) {
   });
   expect(asked.status()).toBe(201);
   const approvalId = ((await asked.json()) as { id: string }).id;
-  await logout(page);
   return { stamp, saTotp, memberTotp, deviceId, code, approvalId };
 }
 

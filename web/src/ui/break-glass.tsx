@@ -179,8 +179,15 @@ const DENY_QUICK = ['approvals.denyQuickVague', 'approvals.denyQuickHours', 'app
 /** Người xin đọc ghi chú này trong thư — một chữ "không" không cho họ biết phải sửa gì. */
 const NOTE_MIN_LEN = 5;
 
-/** Phiếu đã có người khác xử lý trong lúc hộp đang mở — không phải lỗi của người đang bấm. */
-const RACE_CODES = new Set(['APPROVAL_ALREADY_DECIDED', 'APPROVAL_TRANSITION_INVALID']);
+/**
+ * Phiếu đã có người khác xử lý, hoặc đã bị rút (người xin tự rút / phiên người xin kết thúc),
+ * trong lúc hộp đang mở — không phải lỗi của người đang bấm.
+ */
+const RACE_CODES = new Set([
+  'APPROVAL_ALREADY_DECIDED',
+  'APPROVAL_TRANSITION_INVALID',
+  'BREAK_GLASS_WITHDRAWN',
+]);
 
 /**
  * Hộp Duyệt / Từ chối / Thu hồi sớm.

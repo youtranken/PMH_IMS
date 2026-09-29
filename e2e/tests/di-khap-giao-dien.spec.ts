@@ -1184,7 +1184,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
    * Phần của Member dựng bằng `page.request` cho nhanh (đó không phải thứ bài này kiểm); phần
    * của admin thì BẤM THẬT từng nút.
    */
-  test('Quản trị viên xử được phiếu xin quyền — cả từ chối lẫn thu hồi', async ({ page }) => {
+  test('Quản trị viên xử được phiếu xin quyền — cả từ chối lẫn thu hồi', async ({ page, browser }) => {
     // Ba lượt đăng nhập đầy đủ (SA → Member → admin mới), mỗi lượt một lần chờ mã TOTP mới.
     test.setTimeout(150_000);
 
@@ -1214,19 +1214,23 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await logout(page);
 
     // ===== Member: gửi HAI phiếu (mỗi chủ thể chỉ được một phiếu treo — nên phải hai máy) =====
-    await firstLogin(page, E2E_MEMBER);
-    const memberHeaders = await writeHeaders(page);
+    // Ngữ cảnh riêng, KHÔNG đăng xuất: phiên người xin chết thì lượt quét rút phiếu đang chờ
+    // (Q-15) và admin không còn phiếu nào để xử. Đóng ngữ cảnh không đóng phiên.
+    const memberCtx = await browser.newContext(SECOND_BROWSER);
+    const memberPage = await memberCtx.newPage();
+    await firstLogin(memberPage, E2E_MEMBER);
+    const memberHeaders = await writeHeaders(memberPage);
     for (const [ownerId, reason] of [
       [deviceA, lyDoA],
       [deviceB, lyDoB],
     ] as const) {
-      const sent = await page.request.post('/api/v1/vault/break-glass', {
+      const sent = await memberPage.request.post('/api/v1/vault/break-glass', {
         headers: memberHeaders,
         data: { ownerType: 'device', ownerId, reason, hours: 4 },
       });
       expect(sent.status(), `Member phải gửi được phiếu: ${reason}`).toBe(201);
     }
-    await logout(page);
+    await memberCtx.close();
 
     // ===== Quản trị viên: xử phiếu bằng tay =====
     await firstLogin(page, { email: ADMIN_EMAIL, password: matKhauTam });

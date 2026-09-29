@@ -367,6 +367,9 @@ export function VaultPanel({
           <p>
             {t('vault.pendingSince', { at: formatDateTime(verdict.data.pending.createdAt) })}
           </p>
+          {/* Quyền gắn với phiên (Q-15): phiên chết thì lượt quét rút phiếu — nói trước để người
+              xin không đóng máy đi chờ rồi quay lại thấy phiếu đã mất. */}
+          <p className="muted">{t('vault.pendingKeepOpen')}</p>
           {/* Người xin ngồi chờ lúc 2 giờ sáng cần biết có ai được báo không — chỉ con số. */}
           {typeof verdict.data.notifiedApprovers === 'number' ? (
             <p>
