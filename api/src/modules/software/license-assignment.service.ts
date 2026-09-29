@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt } from 'drizzle-orm';
+import { and, asc, count, desc, eq, gte, inArray, isNotNull, isNull, lt } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { requireCas } from '../../common/cas';
@@ -512,9 +512,11 @@ export class LicenseAssignmentService {
   }
 
   /**
-   * Gia hạn hồ sơ kéo theo ghế (SW-049): ghế CÒN HIỆU LỰC có kỳ hạn riêng kết thúc TRƯỚC hạn
-   * mới được đặt tới hạn mới — không thì license đã gia hạn mà ghế vẫn hiện "Quá hạn". Ghế đã
-   * gỡ là dấu vết kiểm toán, không sửa; ghế dài hạn hơn thì không bị rút ngắn.
+   * Gia hạn hồ sơ kéo theo ghế (SW-049): ghế CÒN HIỆU LỰC có kỳ hạn riêng nằm trong [hạn cũ,
+   * hạn mới) được đặt tới hạn mới — không thì license đã gia hạn mà ghế vẫn hiện "Quá hạn". Ghế
+   * kết thúc TRƯỚC hạn cũ là kỳ hạn người ta chủ ý đặt ngắn (vd nhà thầu), kéo theo là xoá mất
+   * cảnh báo hết hạn của nó. Ghế đã gỡ là dấu vết kiểm toán, không sửa; ghế dài hạn hơn thì
+   * không bị rút ngắn. License chưa có hạn cũ thì không có mốc, mọi ghế trước hạn mới đều kéo.
    *
    * Chạy trong transaction gia hạn của hồ sơ (`SoftwareService.renew`): một bên hỏng thì cả
    * hai cùng lùi. Mỗi ghế một dòng lịch sử kèm mã máy, như khi sửa kỳ hạn từng ghế.
@@ -523,6 +525,7 @@ export class LicenseAssignmentService {
     tx: Tx,
     actor: string,
     softwareId: string,
+    oldEnd: string | null,
     newEnd: string,
   ): Promise<number> {
     const due = await tx
@@ -538,6 +541,7 @@ export class LicenseAssignmentService {
           isNull(licenseAssignmentTable.releasedAt),
           isNotNull(licenseAssignmentTable.endDate),
           lt(licenseAssignmentTable.endDate, newEnd),
+          oldEnd ? gte(licenseAssignmentTable.endDate, oldEnd) : undefined,
         ),
       )
       .for('update');

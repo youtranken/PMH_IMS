@@ -381,7 +381,8 @@ export class SoftwareController {
       params.id,
       body.endDate,
       body.seats
-        ? (tx) => this.assignments.renewSeatsWithin(tx, who, params.id, body.endDate)
+        ? (tx, oldEnd) =>
+            this.assignments.renewSeatsWithin(tx, who, params.id, oldEnd, body.endDate)
         : undefined,
       { contract: body.contract, cost: body.cost, websites: body.websites },
     );

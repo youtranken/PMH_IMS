@@ -360,7 +360,7 @@ export class SoftwareService {
     actor: string,
     id: string,
     newEnd: string,
-    withinSeats?: (tx: Tx) => Promise<number>,
+    withinSeats?: (tx: Tx, oldEnd: string | null) => Promise<number>,
     /**
      * Hợp đồng + chi phí của RIÊNG lượt này — vào sổ gia hạn, không vào hồ sơ (Q-15).
      * `websites` (SSL/tên miền): danh sách của kỳ mới; bỏ trống = giữ danh sách đang có.
@@ -445,7 +445,7 @@ export class SoftwareService {
         // "năm nay cert này phủ những website nào".
         websites,
       });
-      const seatsRenewed = withinSeats ? await withinSeats(tx) : 0;
+      const seatsRenewed = withinSeats ? await withinSeats(tx, before.endDate) : 0;
       return { ...updated, seatsRenewed };
     });
   }
