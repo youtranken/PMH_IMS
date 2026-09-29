@@ -596,7 +596,7 @@ export default {
     editOf: 'Sửa máy {{device}}',
     software: 'Phần mềm',
     installedHeader: 'Phần mềm đang cài ({{count}})',
-    noInstalled: 'Máy này chưa cài license nào của hệ thống.',
+    noInstalled: 'Máy này chưa được gán license nào.',
     search: 'Tìm mã, tên, serial, IP hoặc người dùng',
     code: 'Mã thiết bị',
     name: 'Tên thiết bị',
@@ -653,13 +653,13 @@ export default {
     // Nói RÕ "gỡ khỏi máy" chứ không phải "xóa": license là tài sản công ty, thanh lý máy
     // không đụng tới hồ sơ phần mềm.
     retireCleanupHint:
-      'Thu hồi IP, gỡ luật NAT và trả ghế license của máy này. Hồ sơ phần mềm giữ nguyên — chỉ gỡ máy khỏi license.',
+      'Thu hồi IP, gỡ luật NAT, trả ghế license và gỡ máy khỏi đường truyền. Hồ sơ phần mềm, đường truyền giữ nguyên.',
     retire: 'Thanh lý',
     retireIntro: 'Hồ sơ vẫn còn trong sổ, chỉ khóa lại. Đọc kỹ phần sẽ gỡ — gỡ rồi không hoàn tác được.',
     retireWillCut: 'Sẽ gỡ khỏi máy này nếu chọn "Gỡ hết rồi thanh lý"',
     retireWillKeep: 'Giữ nguyên',
     retireNothingToCut: 'Máy này không giữ gì phải gỡ.',
-    retireKeepPorts: 'Cổng của máy này ({{count}}) — sơ đồ đấu nối là hồ sơ của nó',
+    retireKeepPorts: 'Sơ đồ cổng ({{count}})',
     retireKeepVault: 'Két sắt ({{count}})',
     retireKeepFiles: 'Giấy tờ ({{count}})',
     retireKeepHistory: 'Hồ sơ máy và toàn bộ lịch sử',
@@ -669,12 +669,12 @@ export default {
     retireTypeCode: 'Gõ lại mã máy {{code}} để xác nhận',
     retireTypeCodeMismatch: 'Mã chưa khớp với máy đang thanh lý.',
     retireBlocked:
-      'Máy vẫn còn giữ những thứ dưới đây nên chưa thanh lý được. Chọn "Gỡ hết rồi thanh lý", hoặc tự gỡ từng thứ trước.',
+      'Máy còn giữ những thứ dưới đây nên chưa thanh lý được. Chọn "Gỡ hết rồi thanh lý", hoặc gỡ từng thứ trước.',
     reopen: 'Đưa lại vào dùng',
     confirmReopen:
-      'Đưa "{{name}}" lại vào dùng? Hồ sơ mở lại để sửa, và máy tính lại hạn bảo hành — ' +
-      'nó sẽ xuất hiện lại trong email nhắc gia hạn.',
-    retiredLocked: 'Thiết bị đã thanh lý — mở lại mới sửa được hồ sơ.',
+      'Hồ sơ "{{name}}" mở lại để sửa được, và hạn bảo hành của máy lại có trong ' +
+      'email nhắc hạn.',
+    retiredLocked: 'Thiết bị đã thanh lý — bấm "Đưa lại vào dùng" nếu cần sửa hồ sơ.',
     /*
      * HAI câu cho HAI cảnh, đừng gộp lại (23/09). Trước đó bốn màn danh sách dùng chung một
      * câu có chữ "khớp bộ lọc", nên một hệ thống vừa cài xong, chưa ai lọc gì, vẫn báo "Chưa
@@ -689,12 +689,12 @@ export default {
     importExcel: 'Nhập từ Excel',
     importTitle: 'Nhập thiết bị từ Excel',
     importHint:
-      'Dùng file tải từ nút "Tải file mẫu" (hoặc file vừa Xuất Excel). Danh mục phải khai trước — ' +
-      'hệ thống không tự tạo site, tủ mạng, loại thiết bị hay nhà cung cấp.',
+      'Dùng file mẫu hoặc file vừa xuất Excel. Site, tủ mạng, loại thiết bị, nhà cung cấp phải ' +
+      'khai trong Danh mục trước — hệ thống không tự tạo.',
     noteHint: 'KHÔNG ghi mật khẩu ở đây. Mật khẩu thiết bị cất trong Két sắt.',
     // Cột bảng và rail chỉ chứa vị trí; người giữ là cột/dòng riêng ngay bên cạnh.
     locationCol: 'Vị trí',
-    retiredLockedShort: 'Đã thanh lý — mở lại hồ sơ mới sửa được.',
+    retiredLockedShort: 'Đã thanh lý — đưa lại vào dùng mới sửa được.',
     emptySearch: 'Không có thiết bị nào khớp “{{q}}”.',
     clearFilters: 'Xóa bộ lọc',
     licenseCount: '{{count}} license',
@@ -723,12 +723,12 @@ export default {
     timelineLicenseAssigned: 'Gán license {{subject}} vào máy',
     timelineLicenseReleased: 'Gỡ license {{subject}} khỏi máy',
     timelineFailed: 'Không đọc được lịch sử từ: {{sources}}. Thử tải lại sau.',
-    timelineCapped: 'Mỗi nguồn chỉ hiện {{count}} dòng gần nhất — dòng cũ hơn xem ở màn gốc (Địa chỉ IP, Phần mềm) hoặc Nhật ký hệ thống.',
+    timelineCapped: 'Mỗi nguồn hiện {{count}} dòng gần nhất. Cũ hơn: xem ở màn Địa chỉ IP, Phần mềm hoặc Nhật ký hệ thống.',
     changeStatus: 'Đổi trạng thái',
     newStatus: 'Trạng thái mới',
     statusCurrent: '{{status}} (hiện tại)',
     retiredBy: 'Thanh lý lúc {{date}} bởi {{actor}}',
-    retiredCleaned: 'đã gỡ IP, NAT và license của máy',
+    retiredCleaned: 'đã gỡ IP, NAT, license và đường truyền của máy',
     summaryCard: 'Tóm tắt',
     createdAt: 'Tạo {{date}}',
     lastEditBy: 'sửa lần cuối {{date}} bởi {{actor}}',
@@ -750,13 +750,13 @@ export default {
   },
   attachments: {
     title: 'Giấy tờ đính kèm',
-    hint: 'Hóa đơn, biên bản bàn giao, phiếu bảo hành… Nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
-    hint_isp: 'Hợp đồng, phụ lục, biên bản bàn giao IP tĩnh… Nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
+    hint: 'Hóa đơn, biên bản bàn giao, phiếu bảo hành… Nhận jpg, png, webp, pdf, xlsx.',
+    hint_isp: 'Hợp đồng, phụ lục, biên bản bàn giao IP tĩnh… Nhận jpg, png, webp, pdf, xlsx.',
     hint_service_account:
-      'File cấu hình VPN, phiếu yêu cầu cấp tài khoản… KHÔNG đính mật khẩu. Nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
-    hint_subnet: 'Sơ đồ mạng, biên bản bàn giao dải IP… Nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
+      'File cấu hình VPN, phiếu yêu cầu cấp tài khoản… KHÔNG đính mật khẩu. Nhận jpg, png, webp, pdf, xlsx.',
+    hint_subnet: 'Sơ đồ mạng, biên bản bàn giao dải IP… Nhận jpg, png, webp, pdf, xlsx.',
     hint_nat_rule:
-      'Ảnh chụp cấu hình router, email xác nhận mở port… Nhận ảnh (jpg/png/webp) và giấy tờ (pdf/xlsx).',
+      'Ảnh chụp cấu hình router, email xác nhận mở port… Nhận jpg, png, webp, pdf, xlsx.',
     pick: 'Chọn file để đính kèm',
     // Chọn/thả là tải ngay, nhiều file một lượt — không còn nút "Tải lên" riêng.
     uploadingOf: 'Đang tải lên {{done}}/{{total}}…',
@@ -776,14 +776,14 @@ export default {
     uploadedBy: 'bởi {{name}}',
     download: 'Tải về',
     remove: 'Xóa',
-    confirmRemove: 'Xóa "{{name}}" khỏi hồ sơ? Thao tác này được ghi nhật ký.',
+    confirmRemove: '"{{name}}" sẽ biến khỏi hồ sơ. Việc xóa được ghi vào nhật ký.',
     removed: 'Đã xóa giấy tờ.',
-    noPreview: 'File luôn được TẢI VỀ, không mở trực tiếp trong trình duyệt (chống mã độc qua file).',
+    noPreview: 'File chỉ tải về máy, không mở trong trình duyệt (chống mã độc).',
     // Khối chọn giấy tờ ngay trong form THÊM MỚI — file chỉ được đẩy lên sau khi hồ sơ đã lưu.
     draftHint:
-      'Không bắt buộc. Chọn từng file (ảnh jpg/png/webp, giấy tờ pdf/xlsx) — sẽ đính kèm ngay sau khi lưu hồ sơ.',
+      'Không bắt buộc. File (jpg, png, webp, pdf, xlsx) được đính kèm ngay sau khi lưu hồ sơ.',
     liveWarning:
-      'Thêm và xóa giấy tờ ở đây có hiệu lực NGAY, không chờ bấm Lưu — nút Hủy không hoàn tác được.',
+      'Thêm, xóa giấy tờ ở đây có hiệu lực ngay, không chờ Lưu — nút Hủy không hoàn tác được.',
     draftRemove: 'Bỏ ra',
     draftRemoveOf: 'Bỏ "{{name}}" khỏi danh sách sẽ đính kèm',
     draftUploaded: 'Đã đính kèm {{count}} giấy tờ.',
@@ -792,12 +792,12 @@ export default {
   },
   ports: {
     vlan: 'VLAN',
-    vlanHint: 'Số VLAN của cổng, hoặc "trunk" nếu cổng chở nhiều VLAN (uplink).',
+    vlanHint: 'Số VLAN, hoặc "trunk" nếu cổng chở nhiều VLAN.',
     usedByPlaceholder: 'Chọn bộ phận hoặc gõ tên người…',
     own: 'Cổng của thiết bị này',
     incoming: 'Đang cắm vào thiết bị này',
     incomingHint:
-      'Đây là chiều ngược của dòng do thiết bị kia giữ — sửa ở trang thiết bị đó, một sợi dây chỉ có một bản ghi.',
+      'Các dòng này do thiết bị đầu kia giữ — muốn sửa thì mở trang thiết bị đó.',
     incomingEmpty: 'Chưa có thiết bị nào khai là đang cắm vào đây.',
     add: 'Thêm cổng',
     edit: 'Sửa',
@@ -816,7 +816,7 @@ export default {
     peerKindFree: 'Mô tả tự do',
     freeTextHint: 'Dùng khi đầu kia không nằm trong kho (uplink nhà mạng, ổ cắm tường…).',
     fromDevice: 'Từ thiết bị',
-    usedBy: 'Người dùng',
+    usedBy: 'Người sử dụng',
     note: 'Ghi chú',
     empty: 'Chưa khai cổng nào.',
     emptyHint: 'Khai cổng để xuống site là biết ngay cổng nào đi đâu.',
@@ -830,7 +830,7 @@ export default {
     filter: 'Lọc cổng, thiết bị, VLAN…',
     filterEmpty: 'Không có cổng nào khớp “{{q}}”.',
     lockedEmpty: 'Hồ sơ đã khóa — không có cổng nào được khai.',
-    confirmRemove: 'Xóa dòng cổng "{{port}}"? Thao tác được ghi vào lịch sử thiết bị.',
+    confirmRemove: 'Dòng cổng "{{port}}" bị xóa khỏi sơ đồ. Việc xóa được ghi vào lịch sử thiết bị.',
   },
   importDialog: {
     pick: 'Chọn file .xlsx',

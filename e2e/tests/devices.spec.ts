@@ -161,7 +161,7 @@ test.describe('Kho thiết bị', () => {
     // `exact`: hộp Thanh lý mở ra cũng có nút "Thanh lý" và lựa chọn "Chỉ thanh lý…".
     await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
     await confirmAction(page);
-    await expect(page.getByText('Thiết bị đã thanh lý — mở lại mới sửa được hồ sơ.')).toBeVisible();
+    await expect(page.getByText('Thiết bị đã thanh lý — bấm "Đưa lại vào dùng" nếu cần sửa hồ sơ.')).toBeVisible();
     // Băng thanh lý nói AI và KHI NÀO, lấy từ lịch sử.
     await expect(page.getByText(/Thanh lý lúc .* bởi /)).toBeVisible();
     // Hồ sơ khoá: không bày nút Sửa xám ở chỗ nút chính — nút chính là "Đưa lại vào dùng".
