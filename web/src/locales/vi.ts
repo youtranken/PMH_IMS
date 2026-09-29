@@ -909,6 +909,7 @@ export default {
   },
   license: {
     assign: 'Gán vào máy',
+    exportDevices: 'Xuất Excel danh sách máy',
     assignTitle: 'Gán license vào máy',
     assignedCount: 'Đã gán license vào {{count}} máy.',
     assignMany: 'Gán {{count}} máy',
@@ -2097,6 +2098,7 @@ export default {
       catalogExported: 'Xuất danh mục',
       devicesExported: 'Xuất danh sách thiết bị',
       softwareExported: 'Xuất danh sách phần mềm',
+      softwareAssignmentsExported: 'Xuất danh sách máy đang dùng license',
       ispExported: 'Xuất danh sách đường truyền',
       ipExported: 'Xuất danh sách IP',
       natExported: 'Xuất sổ NAT',

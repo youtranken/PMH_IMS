@@ -50,6 +50,8 @@ import type { SoftwareFilter } from './software.types';
 import { deviceIdsInHistory, withDeviceCodes } from './history-device-codes';
 import { withActorNames } from '../../common/history';
 import { UsersApiService } from '../users/users.api';
+import { SystemConfigService } from '../config-sys/system-config.service';
+import { assignmentExportSheet } from './license-assignments-export';
 import { NoStepUp } from '../auth/step-up.decorator';
 
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
@@ -165,6 +167,7 @@ export class SoftwareController {
     private readonly assignments: LicenseAssignmentService,
     private readonly excel: ExcelExportService,
     private readonly users: UsersApiService,
+    private readonly config: SystemConfigService,
   ) {}
 
   /**
@@ -349,6 +352,23 @@ export class SoftwareController {
   }
 
   // ───────────── Gán license vào máy (story 3.2, FR-011) ─────────────
+
+  /**
+   * Máy ĐANG dùng license này ra Excel, kèm dòng tổng chi phí — file nộp kiểm toán (SW-057).
+   * Khai trước `:id/assignments` cho dễ đọc; hai route khác số đoạn nên không nuốt nhau.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Audited('software.assignments.exported', 'software')
+  @Get(':id/assignments/export.xlsx')
+  async exportAssignments(@Param() params: IdParamDto, @Res() res: Response) {
+    const item = await this.software.detail(params.id);
+    const sheet = assignmentExportSheet(
+      await this.assignments.listFor(params.id, false),
+      await this.config.getString('appTimezone'),
+    );
+    const buffer = await this.excel.build({ sheetName: 'May dang dung', ...sheet });
+    sendXlsx(res, buffer, `may-dang-dung-${item.code}.xlsx`);
+  }
 
   /** `includeReleased=true` mở cả dòng đã gỡ — "key này từng nhập máy nào" là câu kiểm toán. */
   @Roles('sa', 'admin', 'member')

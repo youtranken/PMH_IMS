@@ -128,6 +128,15 @@ test.describe('Gán license theo seat', () => {
       'true',
     );
 
+    // SW-057: xuất Excel danh sách máy đang dùng — tải về đúng file xlsx.
+    const download = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Xuất Excel danh sách máy' }).click();
+    expect((await download).suggestedFilename()).toBe(`may-dang-dung-LIC-E2E-SEAT-${stamp}.xlsx`);
+    // Đường hỏng: id không phải uuid bị chặn 400, không trả file rỗng.
+    expect(
+      (await page.request.get('/api/v1/software/khong-phai-id/assignments/export.xlsx')).status(),
+    ).toBe(400);
+
     /* "Gỡ" nay nằm trong menu ba chấm, không còn đứng cạnh "Sửa" (rà UI/UX #21). */
     await row.getByRole('button', { name: /^Thao tác với / }).click();
     await page.getByRole('menuitem', { name: 'Gỡ' }).click();

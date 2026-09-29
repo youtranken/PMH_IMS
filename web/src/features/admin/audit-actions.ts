@@ -80,6 +80,7 @@ export const ACTION_KEY: Record<string, string> = {
   'catalog.exported': 'audit.actions.catalogExported',
   'devices.exported': 'audit.actions.devicesExported',
   'software.exported': 'audit.actions.softwareExported',
+  'software.assignments.exported': 'audit.actions.softwareAssignmentsExported',
   'isp.exported': 'audit.actions.ispExported',
   'ip.exported': 'audit.actions.ipExported',
   'nat.exported': 'audit.actions.natExported',
