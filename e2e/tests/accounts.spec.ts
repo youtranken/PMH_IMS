@@ -305,7 +305,7 @@ test.describe('Quản trị tài khoản', () => {
    * Email tạo tài khoản đặt tiền tố `e2e-tao-moi-` để `dropAccountsCreatedByE2e` trong
    * `resetUsers()` tự dọn — không cần script xóa riêng cho bài này.
    */
-  test('sắp xếp theo cột chạy ở server, cột không sắp được thì không có nút', async ({ page }) => {
+  test('sắp xếp theo cột chạy ở server, cột không sắp được thì không có nút (tài khoản)', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
     const headers = await writeHeaders(page);

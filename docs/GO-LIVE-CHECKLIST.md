@@ -525,10 +525,18 @@ Test **không** vào image production (api build loại `*.spec.ts`, image web c
   secret + 1 file đính kèm → backup → xoá sạch → restore → mở được secret và tải được file.
 - [ ] **QA-03 (P0) · UAT 3–5 ngày với 2–3 người dùng thật** trên staging, dữ liệu thật. Ghi lỗi vào
   một bảng; chỉ go-live khi không còn lỗi mức cao.
-- [ ] **QA-04 (P2) · Tách `e2e/tests/di-khap-giao-dien.spec.ts`** (458 KB, khoảng 8.000 dòng) theo
+- [x] **QA-04 (P2) · Tách `e2e/tests/di-khap-giao-dien.spec.ts`** (458 KB, khoảng 8.000 dòng) theo
   từng màn; đổi tên bài E2E bị trùng.
   - **Rà 29/09:** file đã lớn thêm, 487 KB, 9.184 dòng. Tên bài trùng: "sắp xếp theo cột chạy ở
     server…" ở `accounts.spec.ts`, `devices.spec.ts`, `software.spec.ts`.
+  - **Đã sửa:** tách thành 10 file `di-khap-giao-dien-NN-<phòng>.spec.ts` (mỗi khối
+    `test.describe` cấp đỉnh một file, thân giữ nguyên từng byte, chỉ dựng lại import; số thứ tự
+    giữ thứ tự chạy cũ vì `workers: 1`). `di-khap-giao-dien.spec.ts` còn bản kiểm kê + cổng tự
+    canh, nay đọc bài ở cả 10 file. Ba bài trùng tên thêm hậu tố "(tài khoản)", "(thiết bị)",
+    "(phần mềm)". Kiểm: `npx tsc --noEmit`, `npm run lint` xanh; `playwright test --list` 673 bài
+    trước và sau (117 → 127 file), describe + tên bài y hệt trừ ba bài đổi tên, không còn tên lá
+    trùng; logic cổng kiểm kê chạy lại ngoài Playwright: 60 mục ↔ 60 bài, không treo, không thiếu.
+    Chưa chạy E2E thật.
 - [x] **QA-05 (P2) · Gỡ devDependency không dùng:** `supertest`, `@types/supertest`, `@nestjs/testing`,
   `ts-loader`, `tsconfig-paths`.
   - **Rà 29/09:** cả 5 gói vẫn còn và không chỗ nào dùng, gỡ được.
