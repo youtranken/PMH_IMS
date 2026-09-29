@@ -935,6 +935,7 @@ export function AccountsScreen({ me }: { me: Me }) {
         <SessionsDialog
           account={sessionsFor}
           csrfToken={csrfToken}
+          runWithStepUp={runWithStepUp}
           onClose={() => setSessionsFor(null)}
         />
       ) : null}
@@ -1052,10 +1053,12 @@ function TemporaryPasswordDialog({
 function SessionsDialog({
   account,
   csrfToken,
+  runWithStepUp,
   onClose,
 }: {
   account: AccountRow;
   csrfToken: string;
+  runWithStepUp: <T>(action: () => Promise<T>) => Promise<T>;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
@@ -1072,6 +1075,46 @@ function SessionsDialog({
     (input) => `/api/v1/accounts/sessions/${input.id}/kill`,
     { csrfToken, refreshMe: false, body: () => undefined },
   );
+  const killAll = useApiMutation<{ includeCurrent: boolean }, { killed: number }>(
+    () => `/api/v1/accounts/${account.id}/sessions/kill-all`,
+    { csrfToken, refreshMe: false },
+  );
+  const list = sessions.data ?? [];
+  const hasCurrent = list.some((session) => session.current);
+
+  const endAll = async () => {
+    const question = {
+      title: t('common.titleOf', { action: t('accounts.killAllSessions'), subject: account.fullName }),
+      message: t('accounts.confirmKillAllSessions', { name: account.fullName }),
+      danger: true,
+      confirmLabel: t('accounts.killAllSessions'),
+    };
+    // Chỉ hỏi "đóng cả phiên của bạn" khi danh sách có phiên của chính SA — ô tick không liên
+    // quan thì chỉ làm người ta phân vân.
+    let includeCurrent = false;
+    if (hasCurrent) {
+      const answer = await askConfirm({
+        ...question,
+        title: question.title,
+        checkbox: {
+          label: t('accounts.killAllIncludeCurrent'),
+          hint: t('accounts.killAllIncludeCurrentHint'),
+        },
+      });
+      if (!answer.ok) return;
+      includeCurrent = answer.checked;
+    } else if (!(await askConfirm(question))) {
+      return;
+    }
+    try {
+      const result = await runWithStepUp(() => killAll.mutateAsync({ includeCurrent }));
+      toast({ message: t('accounts.allSessionsKilled', { count: result.killed }) });
+      void sessions.refetch();
+    } catch (err) {
+      if (err instanceof Error && err.message === 'STEPUP_CANCELLED') return;
+      toast({ message: errorMessage(err), tone: 'error' });
+    }
+  };
 
   return (
     <Dialog
@@ -1080,9 +1123,21 @@ function SessionsDialog({
       maxWidth={680}
       title={t('accounts.sessionsOf', { name: account.fullName })}
       footer={
-        <button type="button" className="btn" onClick={onClose}>
-          {t('common.close')}
-        </button>
+        <>
+          {list.length > 0 ? (
+            <button
+              type="button"
+              className="btn danger"
+              disabled={killAll.isPending}
+              onClick={() => void endAll()}
+            >
+              {t('accounts.killAllSessions')}
+            </button>
+          ) : null}
+          <button type="button" className="btn" onClick={onClose}>
+            {t('common.close')}
+          </button>
+        </>
       }
     >
       {sessions.isLoading ? (

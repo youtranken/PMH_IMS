@@ -38,4 +38,33 @@ describe('AttachmentPanel — chọn là tải', () => {
     ]);
     expect(await screen.findByText('Đã đính kèm 2 giấy tờ.')).toBeInTheDocument();
   });
+
+  it('mỗi giấy tờ nói ai tải lên (họ tên API trả)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() =>
+        Promise.resolve(
+          jsonResponse(200, [
+            {
+              id: 'f1',
+              originalName: 'hoa-don.pdf',
+              mimeType: 'application/pdf',
+              kind: 'document',
+              sizeBytes: 10,
+              createdAt: '2026-09-27T16:16:00.000Z',
+              uploadedByName: 'Nguyễn Văn An',
+            },
+          ]),
+        ),
+      ),
+    );
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <AttachmentPanel ownerType="device" ownerId="d1" csrfToken="x" />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    expect(await screen.findByText('bởi Nguyễn Văn An')).toBeInTheDocument();
+  });
 });

@@ -93,3 +93,9 @@ describe('toNatHistory — dịch lịch sử rule NAT thành câu người đ�
     });
   }
 });
+
+describe('toNatHistory — người làm', () => {
+  it('hiện họ tên khi API tra được', () => {
+    expect(toNatHistory([row({ actorName: 'Lê Minh' })], t)[0].actorName).toBe('Lê Minh');
+  });
+});

@@ -20,6 +20,11 @@ export const approvalTable = pgTable('approval', {
   decisionNote: text('decision_note'),
   /** NGUỒN SỰ THẬT về hiệu lực (AD-6) — `state` chỉ nói "đã có người duyệt". */
   expiresAt: timestamp('expires_at', { withTimezone: true }),
+  /**
+   * Phiên đăng nhập đã gửi yêu cầu (0170, Q-15). Loại nào gắn quyền với phiên thì tự lọc theo
+   * cột này; KHÔNG trả ra ngoài trong `ApprovalRecord`.
+   */
+  requesterSessionId: uuid('requester_session_id'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

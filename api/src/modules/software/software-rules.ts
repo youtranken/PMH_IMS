@@ -72,6 +72,7 @@ export interface SoftwareInputShape {
   endDate?: string | null;
   note?: string | null;
   status?: SoftwareStatus;
+  websites?: string[];
 }
 
 /** Giá trị sau khi ghép bản sửa với hồ sơ đang có — thứ luật cần soi. */
@@ -161,6 +162,48 @@ export function validateAssignmentTerms(
 /** Chỉ license mới nói tới seat; loại khác điền seat là hiểu nhầm ý nghĩa cột. */
 export function supportsSeats(kind: SoftwareKind): boolean {
   return kind === 'license';
+}
+
+/** Chỉ chứng chỉ SSL và tên miền mới "dùng cho website nào" (Q-15). */
+export function supportsWebsites(kind: SoftwareKind): boolean {
+  return kind === 'ssl' || kind === 'domain';
+}
+
+const WEBSITES_MAX = 200;
+const WEBSITE_MAX_LENGTH = 253;
+
+/**
+ * Chuẩn hóa danh sách website của một chứng chỉ / tên miền (Q-15, SW-043).
+ *
+ * Người ta dán URL từ trình duyệt ("https://Shop.pmh.vn/") — lưu nguyên thì ô tìm "shop.pmh.vn"
+ * vẫn ra, nhưng sổ gia hạn các năm sẽ có ba cách viết cho cùng một website và câu hỏi "năm
+ * 2025 cert này phủ những website nào" đếm sai. Nên bỏ giao thức, dấu / cuối, hạ chữ thường,
+ * bỏ trùng. Khoảng trắng giữa dòng là hai website dán chung một dòng: báo lỗi, không đoán.
+ */
+export function normalizeWebsites(list: readonly string[]): { value: string[]; errors: string[] } {
+  const value: string[] = [];
+  const errors: string[] = [];
+  for (const raw of list) {
+    const site = raw
+      .trim()
+      .replace(/^[a-z][a-z0-9+.-]*:\/\//i, '')
+      .replace(/\/+$/, '')
+      .toLowerCase();
+    if (!site) continue;
+    if (/\s/.test(site)) {
+      errors.push(`Website "${raw.trim()}" có khoảng trắng — mỗi dòng một website.`);
+      continue;
+    }
+    if (site.length > WEBSITE_MAX_LENGTH) {
+      errors.push(`Website "${site.slice(0, 40)}…" dài quá ${WEBSITE_MAX_LENGTH} ký tự.`);
+      continue;
+    }
+    if (!value.includes(site)) value.push(site);
+  }
+  if (value.length > WEBSITES_MAX) {
+    errors.push(`Tối đa ${WEBSITES_MAX} website cho một hồ sơ.`);
+  }
+  return { value, errors };
 }
 
 /**

@@ -27,6 +27,8 @@ const FIELD_LABEL: Record<string, string> = {
   cost: 'history.software.fCost',
   contract: 'history.software.fContract',
   overSeatReason: 'history.software.fOverSeatReason',
+  // API ghi danh sách website dạng chuỗi nối ", " (`websitesChange`).
+  websites: 'history.software.fWebsites',
 };
 
 export const ACTION_LABEL: Record<string, string> = {
@@ -78,6 +80,7 @@ export function toSoftwareHistory(
     id: row.id,
     at: row.createdAt,
     actor: row.actor,
+    actorName: row.actorName ?? undefined,
     action: ACTION_LABEL[row.action] ? t(ACTION_LABEL[row.action]) : row.action,
     detail: describe(prepare(row, vendorName), t, vendorName),
   }));

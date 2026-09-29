@@ -20,6 +20,8 @@ import {
   SOFTWARE_STATUSES,
   STATUS_KEY,
   supportsSeats,
+  supportsWebsites,
+  websiteLines,
   type LicenseModel,
   type SoftwareKind,
   type SoftwareRow,
@@ -37,6 +39,8 @@ interface FormState {
   endDate: string;
   note: string;
   status: SoftwareStatus;
+  /** Mỗi dòng một website — chỉ SSL / tên miền. */
+  websites: string;
 }
 
 function initialState(row: SoftwareRow | null): FormState {
@@ -51,6 +55,7 @@ function initialState(row: SoftwareRow | null): FormState {
     endDate: row?.endDate ?? '',
     note: row?.note ?? '',
     status: row?.status ?? 'active',
+    websites: (row?.websites ?? []).join('\n'),
   };
 }
 
@@ -170,6 +175,8 @@ export function SoftwareForm({
               endDate: form.endDate,
               note: form.note.trim(),
               status: form.status,
+              // Đổi loại sang license thì danh sách cũ phải đi theo, không nằm ẩn mà vẫn tìm ra.
+              websites: supportsWebsites(form.kind) ? websiteLines(form.websites) : [],
             },
             {
               onSuccess: (created) => {
@@ -359,6 +366,27 @@ export function SoftwareForm({
                 inputMode="numeric"
                 value={form.seatTotal}
                 onChange={(e) => set('seatTotal', e.target.value)}
+              />
+            </Field>
+          </FormSection>
+        ) : null}
+
+        {supportsWebsites(form.kind) ? (
+          <FormSection
+            title={t(form.kind === 'ssl' ? 'software.websitesSsl' : 'software.websitesDomain')}
+            columns={1}
+          >
+            <Field
+              label={t(form.kind === 'ssl' ? 'software.websitesSsl' : 'software.websitesDomain')}
+              hint={t('software.websitesHint')}
+              htmlFor="sw-websites"
+            >
+              <textarea
+                id="sw-websites"
+                className="inp"
+                rows={3}
+                value={form.websites}
+                onChange={(e) => set('websites', e.target.value)}
               />
             </Field>
           </FormSection>

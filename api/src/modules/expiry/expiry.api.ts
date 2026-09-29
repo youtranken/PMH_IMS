@@ -82,6 +82,11 @@ export class ExpiryApiService {
       oldEnd: string | null;
       newEnd: string;
       actor: string;
+      /** Hợp đồng + chi phí của riêng lượt này (Q-15). Bỏ trống = chưa khai. */
+      contract?: string | null;
+      cost?: number | null;
+      /** Website của kỳ này (SSL/tên miền). Null = loại hồ sơ không có khái niệm website. */
+      websites?: string[] | null;
     },
   ): Promise<void> {
     return this.expiry.recordRenewalWithin(tx, entry);

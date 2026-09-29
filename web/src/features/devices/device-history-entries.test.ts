@@ -120,3 +120,16 @@ describe('toHistoryEntries — câu tự nhiên, không phải khoá thô', () =
     expect(entry.detail).toBe('trạng thái: Đang dùng → Đã thanh lý; đã gỡ IP, NAT và license của máy');
   });
 });
+
+describe('toHistoryEntries — người làm (DEV-085)', () => {
+  it('hiện họ tên khi API tra được, email vẫn giữ cho tooltip', () => {
+    const [entry] = toHistoryEntries([row({ actorName: 'Lê Minh' })], i18n.t);
+    expect(entry.actorName).toBe('Lê Minh');
+    expect(entry.actor).toBe('it01@pmh.com.vn');
+  });
+
+  it('không tra được thì để trống tên — panel lùi về email', () => {
+    const [entry] = toHistoryEntries([row({ actorName: null })], i18n.t);
+    expect(entry.actorName).toBeUndefined();
+  });
+});

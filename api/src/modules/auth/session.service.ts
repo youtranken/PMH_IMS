@@ -100,6 +100,12 @@ export class SessionService implements OnModuleInit {
     return rows[0] ?? null;
   }
 
+  /** Nhiều phiên theo id nội bộ — cho `AuthApiService` hỏi sống/chết theo mẻ. */
+  async findMany(ids: string[]): Promise<SessionRecord[]> {
+    if (ids.length === 0) return [];
+    return this.db.select().from(sessionsTable).where(inArray(sessionsTable.id, ids));
+  }
+
   /** `sessionId → userId` theo mẻ — gọi tên đối tượng `session` trên màn Nhật ký. */
   async ownersOf(ids: string[]): Promise<Map<string, string>> {
     if (ids.length === 0) return new Map();

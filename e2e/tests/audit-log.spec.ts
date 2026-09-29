@@ -3,6 +3,7 @@ import {
   APP_ORIGIN,
   E2E_MEMBER,
   E2E_SA,
+  fillLogin,
   firstLogin,
   isoToday,
   resetUsers,
@@ -303,6 +304,39 @@ test.describe('Nhật ký kiểm toán — màn hình', () => {
     await expect(page.getByRole('searchbox', { name: /người thao tác/ })).toHaveValue(E2E_SA.email);
     await expect(page.getByText(/^auth\.(login|password)\.ok$/).first()).toBeVisible();
     await expect(page.getByText(E2E_SA.email).first()).toBeVisible();
+  });
+
+  test('ADM-071: chip "Chỉ sự kiện an ninh" chỉ còn dòng thất bại / bị chặn, và lọc chạy ở API', async ({
+    page,
+  }) => {
+    // Một lần gõ sai mật khẩu = một dòng `auth.login.failed` có thật để lọc ra.
+    await fillLogin(page, E2E_MEMBER.email, 'mat-khau-sai-E2E');
+    await expect(page.getByRole('alert')).toBeVisible();
+    await firstLogin(page, E2E_SA);
+
+    await page.goto('/admin/audit-log');
+    await expect(page.getByRole('heading', { level: 1, name: 'Nhật ký hệ thống' })).toBeVisible();
+    const filtered = page.waitForResponse(
+      (res) =>
+        res.url().includes('/api/v1/admin/audit?') &&
+        new URL(res.url()).searchParams.get('security') === '1',
+    );
+    await page.getByRole('button', { name: 'Chỉ sự kiện an ninh' }).click();
+    const res = await filtered;
+    expect(res.status()).toBe(200);
+    const body = (await res.json()) as { items: { action: string }[] };
+    // Dòng đăng nhập THÀNH CÔNG vừa ghi của SA không được lọt qua chip.
+    expect(body.items.some((row) => row.action.endsWith('.ok'))).toBe(false);
+    expect(body.items.some((row) => row.action === 'auth.login.failed')).toBe(true);
+    await expect(page.getByRole('button', { name: 'Chỉ sự kiện an ninh' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(new URL(page.url()).searchParams.get('security')).toBe('1');
+
+    // Đường hỏng: giá trị lạ trên tham số không được hiểu thành "tắt lọc" trong im lặng.
+    const bad = await page.request.get('/api/v1/admin/audit?security=yes');
+    expect(bad.status()).toBe(400);
   });
 
   test('đường hỏng: Thành viên không thấy mục Nhật ký, gõ thẳng URL nhận trang 403', async ({ page }) => {

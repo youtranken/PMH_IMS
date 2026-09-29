@@ -11,6 +11,8 @@ import type { SystemConfigService } from '../src/modules/config-sys/system-confi
 import type { VaultOwnersService } from '../src/modules/vault/vault-owners.service';
 import type { VaultService } from '../src/modules/vault/vault.service';
 import type { UsersApiService } from '../src/modules/users/users.api';
+import type { AuthApiService } from '../src/modules/auth/auth.api';
+import type { SweepService } from '../src/modules/queue/sweep.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
 /**
@@ -72,6 +74,11 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
       owners,
       vault,
       users,
+      {
+        isSessionAlive: () => Promise.resolve(true),
+        aliveSessionIds: (ids: string[]) => Promise.resolve(new Set(ids)),
+      } as unknown as AuthApiService,
+      { register: () => undefined } as unknown as SweepService,
     );
     breakGlass.onModuleInit();
   }, TEST_TIMEOUT);
@@ -79,6 +86,10 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
   afterAll(async () => {
     await scratch?.drop();
   }, TEST_TIMEOUT);
+
+  // Mọi phiếu ở đây gửi từ cùng một phiên; phần gắn phiên (Q-15) có bài riêng.
+  const SESSION = randomUUID();
+  const as = (email: string) => ({ email, sessionId: SESSION });
 
   function request(requester: string, subjectId = randomUUID(), hours = 4) {
     return scratch.db.transaction((tx) =>
@@ -89,6 +100,7 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
         subjectId,
         reason: 'Sự cố lúc 2 giờ sáng',
         payload: { hours },
+        requesterSessionId: SESSION,
       }),
     );
   }
@@ -125,14 +137,14 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
     const member = `xin-${randomUUID().slice(0, 8)}@qa.test`;
     const subject = randomUUID();
     await request(member, subject);
-    const verdict = await breakGlass.verdictFor(member, 'device', subject);
+    const verdict = await breakGlass.verdictFor(as(member), 'device', subject);
     expect(verdict.pending).not.toBeNull();
     expect(verdict.notifiedApprovers).toBe(3);
 
     // Admin tự xin: hai người còn lại mới là người duyệt được (bốn mắt).
     const own = randomUUID();
     await request('admin1@qa.test', own);
-    const adminVerdict = await breakGlass.verdictFor('admin1@qa.test', 'device', own);
+    const adminVerdict = await breakGlass.verdictFor(as('admin1@qa.test'), 'device', own);
     expect(adminVerdict.notifiedApprovers).toBe(2);
   });
 
@@ -140,11 +152,11 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
     const member = `xin-${randomUUID().slice(0, 8)}@qa.test`;
     const subject = randomUUID();
     const row = await request(member, subject, 2);
-    const before = await breakGlass.verdictFor(member, 'device', subject);
+    const before = await breakGlass.verdictFor(as(member), 'device', subject);
     expect(before.grantSecondsLeft).toBeNull();
 
     await breakGlass.approve('sa@qa.test', row.id, { hours: 2 });
-    const after = await breakGlass.verdictFor(member, 'device', subject);
+    const after = await breakGlass.verdictFor(as(member), 'device', subject);
     expect(after.notifiedApprovers).toBeNull();
     expect(after.grantSecondsLeft).toBeGreaterThan(2 * 3600 - 60);
     expect(after.grantSecondsLeft).toBeLessThanOrEqual(2 * 3600);
@@ -152,7 +164,7 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
 
   it('người xin thấy trần giờ cấp (để chọn nấc giờ); tầng khác không nhận', async () => {
     const member = `xin-${randomUUID().slice(0, 8)}@qa.test`;
-    const verdict = await breakGlass.verdictFor(member, 'device', randomUUID());
+    const verdict = await breakGlass.verdictFor(as(member), 'device', randomUUID());
     expect(verdict.maxGrantHours).toBe(24);
   });
 
@@ -163,7 +175,7 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
       const row = await request(member, subject);
       await breakGlass.deny('sa@qa.test', row.id, 'Lý do chưa đủ cụ thể');
 
-      const verdict = await breakGlass.verdictFor(member, 'device', subject);
+      const verdict = await breakGlass.verdictFor(as(member), 'device', subject);
       expect(verdict.canRequest).toBe(true);
       expect(verdict.lastDenied?.note).toBe('Lý do chưa đủ cụ thể');
       expect(verdict.lastDenied?.at).toBeInstanceOf(Date);
@@ -177,7 +189,7 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
       const again = await request(member, subject);
       await breakGlass.cancel(member, again.id);
 
-      const verdict = await breakGlass.verdictFor(member, 'device', subject);
+      const verdict = await breakGlass.verdictFor(as(member), 'device', subject);
       expect(verdict.lastDenied).toBeNull();
     });
 
@@ -188,7 +200,7 @@ describe('Break-glass: ngữ cảnh cho người duyệt và người xin', () =
       const theirs = await request(other, subject);
       await breakGlass.deny('sa@qa.test', theirs.id, 'Ghi chú riêng của người khác');
 
-      const verdict = await breakGlass.verdictFor(member, 'device', subject);
+      const verdict = await breakGlass.verdictFor(as(member), 'device', subject);
       expect(verdict.lastDenied).toBeNull();
     });
   });

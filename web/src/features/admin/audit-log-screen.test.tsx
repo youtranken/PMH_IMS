@@ -131,6 +131,19 @@ describe('Màn Nhật ký', () => {
       expect(last?.searchParams.get('page')).toBe('1');
     });
   });
+
+  it('chip "Chỉ sự kiện an ninh" bật/tắt `security=1` trên URL và lượt gọi API', async () => {
+    const fetchMock = stubFetch();
+    renderAt('/admin/audit-log');
+    await screen.findByText('Lê Minh');
+    const chip = screen.getByRole('button', { name: 'Chỉ sự kiện an ninh' });
+    expect(chip).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(chip);
+    await waitFor(() => expect(listCalls(fetchMock).at(-1)?.searchParams.get('security')).toBe('1'));
+    expect(chip).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(chip);
+    await waitFor(() => expect(listCalls(fetchMock).at(-1)?.searchParams.has('security')).toBe(false));
+  });
 });
 
 describe('Màn Nhật ký — chi tiết, lọc loại đối tượng, gọn', () => {

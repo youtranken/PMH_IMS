@@ -86,10 +86,24 @@ test.describe('Trang chi tiết thiết bị', () => {
     writeFileSync(pdf, '%PDF-1.4\ntrailer<<>>\n');
     await page.getByLabel('Chọn file để đính kèm').setInputFiles(pdf);
     await expect(page.getByRole('row', { name: new RegExp(`giay-to-${stamp}`) })).toBeVisible();
+    // DEV-082: dòng giấy tờ nói ai tải lên (họ tên, không phải id).
+    await expect(
+      page.getByRole('row', { name: new RegExp(`giay-to-${stamp}`) }).getByText(/^bởi .+/),
+    ).toBeVisible();
 
     await page.getByRole('tab', { name: 'Lịch sử' }).click();
     await expect(page.getByText('Tạo hồ sơ')).toBeVisible();
     await expect(page.getByText('Thêm cổng Gi1/0/1', { exact: true })).toBeVisible();
+    // DEV-085: người làm hiện HỌ TÊN, email lùi vào tooltip.
+    await expect(page.getByTitle('e2e-sa@pmh.com.vn').first()).toHaveText('E2E Super Admin');
+
+    // ADM-068: từ tab Lịch sử sang Nhật ký hệ thống đã lọc sẵn đúng máy này.
+    await page.getByRole('link', { name: 'Nhật ký thao tác' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Nhật ký hệ thống' })).toBeVisible();
+    const url = new URL(page.url());
+    expect(url.searchParams.get('objectType')).toBe('device');
+    expect(url.searchParams.get('objectId')).toBe(deviceId);
+    await expect(page.getByRole('searchbox', { name: 'Mã đối tượng' })).toHaveValue(deviceId);
   });
 
   test('khu mở rộng chưa có module nào đăng ký → API trả rỗng, trang không hiện khối trống', async ({

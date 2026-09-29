@@ -217,7 +217,7 @@ export class MailConsumer {
           : null;
       const { html, text } = renderMail({
         title: 'Yêu cầu mở két đã được duyệt',
-        intro: `Bạn được xem két${code}${request.expiresAt ? ` tới ${at(request.expiresAt)}` : ''}. Hết giờ là quyền tự cắt.`,
+        intro: `Bạn được xem két${code}${request.expiresAt ? ` tới ${at(request.expiresAt)}` : ''}. Hết giờ, hoặc phiên đăng nhập đã xin kết thúc, là quyền tự cắt.`,
         rows: [
           subjectRow,
           { label: 'Được cấp', value: granted ? `${granted} giờ` : '—' },
@@ -228,7 +228,9 @@ export class MailConsumer {
         ctaLabel: `Mở két${code}`,
         ctaUrl: `${APP_URL()}${subject?.path ?? UI_PATHS.approval(request.id)}`,
         ctaWide: true,
-        footnote: 'Mỗi lần xem vẫn phải gõ mã 6 số. Xong việc sớm thì báo người duyệt thu hồi.',
+        footnote:
+          'Mỗi lần xem vẫn phải gõ mã 6 số. Quyền chỉ dùng được trong phiên đăng nhập đã gửi ' +
+          'yêu cầu. Xong việc sớm thì bấm "Trả quyền" trên màn két.',
       });
       return {
         to: [request.requester],
