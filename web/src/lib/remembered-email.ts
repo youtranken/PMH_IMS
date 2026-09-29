@@ -8,7 +8,7 @@
 const KEY = 'ims_login_email';
 
 /** Giá trị trong kho có thể bị sửa tay — chỉ nhận thứ trông như một email. */
-export function normalizeRememberedEmail(raw: string | null): string {
+function normalizeRememberedEmail(raw: string | null): string {
   const value = (raw ?? '').trim();
   if (value.length > 254 || !/^[^\s@]+@[^\s@]+$/.test(value)) return '';
   return value;

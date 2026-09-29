@@ -54,7 +54,7 @@ export async function withActorNames<T extends { actor: string }>(
 }
 
 /** Người thực hiện của các lượt quét tự động (Q-13) — khác mọi email người dùng. */
-export const SYSTEM_ACTOR = 'system';
+const SYSTEM_ACTOR = 'system';
 
 /** Lần gần nhất một hồ sơ được chuyển SANG một trạng thái, đọc từ bảng lịch sử của nó. */
 export interface StatusEvent {

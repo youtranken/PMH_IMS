@@ -10,9 +10,9 @@ import { CONFIG_KEYS, type ConfigName } from './system-config.keys';
  * lần gõ nhầm biến thành "cả công ty không đăng nhập được".
  */
 
-export type SettingGroup = 'auth' | 'vault' | 'approval' | 'expiry' | 'dashboard' | 'software';
-export type SettingType = 'int' | 'text' | 'int_list';
-export type SettingUnit =
+type SettingGroup = 'auth' | 'vault' | 'approval' | 'expiry' | 'dashboard' | 'software';
+type SettingType = 'int' | 'text' | 'int_list';
+type SettingUnit =
   | 'seconds'
   | 'minutes'
   | 'hours'

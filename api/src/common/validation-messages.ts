@@ -137,7 +137,7 @@ export const FIELD_LABEL: Record<string, string> = {
   withinDays: 'Trong vòng (ngày)',
 };
 
-export function fieldLabel(property: string): string {
+function fieldLabel(property: string): string {
   /*
    * Rơi về CHÍNH tên trường khi chưa có nhãn — chứ không về một chữ chung chung như "Trường
    * này". Tên thô đọc xấu, nhưng nó nói cho người dùng biết phải sửa Ở ĐÂU; "Trường này sai"

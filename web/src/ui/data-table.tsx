@@ -61,7 +61,7 @@ export interface MobileCard<T> {
 }
 
 /** Trạng thái expand đưa xuống cột (qua table.meta) để ô đầu tự vẽ caret › như /software. */
-export interface ExpandMeta<T> {
+interface ExpandMeta<T> {
   expandedId: string | null;
   canExpandRow: (row: T) => boolean;
   toggleExpand: (id: string) => void;

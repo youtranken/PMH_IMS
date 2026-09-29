@@ -80,7 +80,7 @@ export interface BackoffPolicy {
   stepsMinutes: number[];
 }
 
-export const DEFAULT_BACKOFF_STEPS = [5, 15, 30, 60];
+const DEFAULT_BACKOFF_STEPS = [5, 15, 30, 60];
 
 export function registerAccountFailure(
   state: LockoutState,

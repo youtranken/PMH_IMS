@@ -248,7 +248,7 @@ export class FilesService {
 }
 
 /** Loại file suy từ mime — không lưu thêm cột, một nguồn sự thật là `mime_type`. */
-export function kindOfMime(mime: string): FileKind {
+function kindOfMime(mime: string): FileKind {
   return mime.startsWith('image/') ? 'image' : 'document';
 }
 

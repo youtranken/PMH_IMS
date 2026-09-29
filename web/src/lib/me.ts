@@ -83,7 +83,3 @@ export function setupProgress(remaining: number, seenTotal: number): { current: 
   const total = Math.max(remaining, seenTotal);
   return { current: total - remaining + 1, total };
 }
-
-export function isAdminOrAbove(me: Me | null | undefined): boolean {
-  return me?.role === 'sa' || me?.role === 'admin';
-}

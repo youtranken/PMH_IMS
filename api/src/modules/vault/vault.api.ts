@@ -6,17 +6,10 @@ import {
 import { BreakGlassService } from './break-glass.service';
 import { VaultOwnersService, type VaultOwnerSummary } from './vault-owners.service';
 import {
-  SECRET_OWNER_TYPES,
   VaultService,
   type SecretMeta,
   type SecretOwnerType,
 } from './vault.service';
-
-/**
- * Bốn loại chủ thể mà MA TRẬN QUYỀN của két phủ. Xuất ra ngoài để `files` biết đường nào cần
- * hỏi quyền và đường nào không — xem `assertMemberCanSee` bên dưới.
- */
-export { SECRET_OWNER_TYPES, type SecretOwnerType };
 
 /**
  * AD-2 + AD-4: public api DUY NHẤT của module `vault`.

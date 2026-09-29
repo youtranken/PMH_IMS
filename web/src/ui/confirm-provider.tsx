@@ -11,7 +11,7 @@ import { ConfirmDialog } from '@/ui/confirm-dialog';
  * Re-export để mọi chỗ gọi sẵn có vẫn viết `from '@/ui/confirm-provider'` như cũ.
  */
 export { useConfirm } from '@/ui/confirm-context';
-export type { ConfirmOptions, ConfirmResult, ConfirmFn } from '@/ui/confirm-context';
+export type { ConfirmOptions } from '@/ui/confirm-context';
 
 /**
  * Thay window.confirm bằng ConfirmDialog (Radix) qua một API async dùng chung:

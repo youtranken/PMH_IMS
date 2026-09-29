@@ -65,7 +65,7 @@ export function useOwnerAttachments(ownerType: AttachmentOwnerType, ownerId: str
   });
 }
 
-export function attachmentsKey(ownerType: AttachmentOwnerType, ownerId: string) {
+function attachmentsKey(ownerType: AttachmentOwnerType, ownerId: string) {
   return ['files', ownerType, ownerId];
 }
 

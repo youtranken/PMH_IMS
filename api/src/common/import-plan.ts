@@ -31,7 +31,7 @@ export type ParsedSheets = Record<string, ParsedRow[]>;
 export type DateCell = { ok: true; value: string | null } | { ok: false };
 
 /** Cột đánh dấu dòng minh họa trong file mẫu. */
-export const EXAMPLE_HEADERS = ['ghi chú nhập', 'ghi chu nhap'];
+const EXAMPLE_HEADERS = ['ghi chú nhập', 'ghi chu nhap'];
 
 /**
  * Gấp dấu tiếng Việt — bản cài đặt đã dọn về `search-fold.ts` (B-01, 25/09/2026).

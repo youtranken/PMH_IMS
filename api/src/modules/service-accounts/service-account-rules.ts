@@ -10,7 +10,7 @@ import { stripDiacritics } from '../../common/search-fold';
 export const SERVICE_ACCOUNT_KINDS = ['shared', 'vpn'] as const;
 export type ServiceAccountKind = (typeof SERVICE_ACCOUNT_KINDS)[number];
 
-export const SERVICE_ACCOUNT_STATUSES = ['active', 'disabled'] as const;
+export const SERVICE_ACCOUNT_STATUSES =['active', 'disabled'] as const;
 export type ServiceAccountStatus = (typeof SERVICE_ACCOUNT_STATUSES)[number];
 
 const KIND_LABEL: Record<ServiceAccountKind, string> = {
@@ -114,7 +114,7 @@ export function codeFromLogin(login: string): string {
 }
 
 /** Ô có thể để trống — đúng bộ ô mà "không gửi" khác hẳn "gửi chuỗi rỗng". */
-export const SERVICE_ACCOUNT_OPTIONAL_FIELDS = [
+export const SERVICE_ACCOUNT_OPTIONAL_FIELDS =[
   'login',
   'department',
   'ownerName',

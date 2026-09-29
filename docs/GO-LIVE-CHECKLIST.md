@@ -560,8 +560,17 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
   - **Rà 29/09:** còn 5 file trong `.claude/skills/bmad-retrospective/scripts/**/__pycache__/`.
   - **Đã sửa:** `git rm --cached` cả 5 file; `.gitignore` thêm `__pycache__/` và `*.pyc`
     (`git check-ignore` xác nhận).
-- [ ] **CLEAN-04 (P2) · Bỏ `export` thừa:** 20 ở api, 18 ở web (theo knip).
+- [x] **CLEAN-04 (P2) · Bỏ `export` thừa:** 20 ở api, 18 ở web (theo knip).
   - **Rà 29/09:** chưa đếm lại — máy chưa cài knip.
+  - **Đã sửa:** knip đếm lại trước khi sửa: api 24 export + 16 type, web 24 export + 12 type. Mỗi
+    tên được grep cả `api/test`, `e2e/` và tài liệu trước khi gỡ. Sau: api còn 3, web còn 1, đều có
+    lý do — `SERVICE_ACCOUNT_STATUSES`, `SERVICE_ACCOUNT_OPTIONAL_FIELDS`, `CATALOG_ENTITIES` chỉ
+    dùng làm kiểu (eslint cấm hằng chỉ dùng làm kiểu mà không export), `parseAdminArgs` dùng ở
+    `seed-sa.main.ts` (knip không biết đó là điểm vào). Code chết gỡ hẳn: `StatGrid`/`Stat`/
+    `StatIfSet` (đã được `DetailLayout` thay, sửa cả `SHARED-REGISTRY.md`), `useRowActionLabel`,
+    `isAdminOrAbove`, `IP_STATUSES`, `SCOPE_LABEL`, vài kiểu không ai dùng, và file thử
+    `api/src/modules/devices/probe-ad16.ts` lỡ bị commit (bài `ad16-gate.lint.spec.ts` tự sinh rồi
+    tự xoá nó). Kiểm: api build + lint + 1.404 bài unit; web build + lint + 1.664 bài vitest.
 
 ---
 

@@ -30,7 +30,7 @@ interface GroupRun {
 }
 
 /** Cắt mảng phẳng thành các đoạn liền nhau cùng `group`, giữ chỉ mục gốc cho ↑/↓. */
-export function groupRuns(options: SelectOption[]): GroupRun[] {
+function groupRuns(options: SelectOption[]): GroupRun[] {
   const runs: GroupRun[] = [];
   options.forEach((option, index) => {
     const last = runs[runs.length - 1];

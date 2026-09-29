@@ -91,7 +91,7 @@ const STATE_TONE: Record<string, string> = {
  * Phiếu ĐÃ DUYỆT nhưng quyền đã hết hiệu lực. `state` ghi một quyết định và không đổi nữa; còn
  * "có đang xem được không" là câu của ĐỒNG HỒ, server đưa xuống qua `active` (AD-6).
  */
-export function expiredGrant(row: { state: string; active: boolean }): boolean {
+function expiredGrant(row: { state: string; active: boolean }): boolean {
   return row.state === 'approved' && !row.active;
 }
 

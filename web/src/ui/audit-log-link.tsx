@@ -4,7 +4,7 @@ import type { UserRole } from '@/lib/me';
 import { PATHS, canSeeRoute } from '@/lib/routes';
 
 /** Đường tới màn Nhật ký hệ thống đã lọc sẵn một đối tượng. */
-export function auditLogHref(objectType: string, objectId: string): string {
+function auditLogHref(objectType: string, objectId: string): string {
   const params = new URLSearchParams({ objectType, objectId });
   return `${PATHS.adminAuditLog}?${params.toString()}`;
 }

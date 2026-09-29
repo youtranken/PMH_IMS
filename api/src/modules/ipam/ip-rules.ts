@@ -85,13 +85,6 @@ export function longToAddress(value: number): string {
   return [(value >>> 24) & 255, (value >>> 16) & 255, (value >>> 8) & 255, value & 255].join('.');
 }
 
-export interface Subnet {
-  /** Dạng chuẩn `<địa chỉ mạng>/<prefix>`. */
-  cidr: string;
-  network: number;
-  prefix: number;
-}
-
 /**
  * Chuẩn hóa dải người dùng gõ vào.
  *

@@ -36,7 +36,7 @@ export interface RelationNode {
   onOpen: () => void;
 }
 
-export type IconKey = 'port' | 'arrow' | 'ip' | 'globe' | 'lic' | 'lock' | 'doc';
+type IconKey = 'port' | 'arrow' | 'ip' | 'globe' | 'lic' | 'lock' | 'doc';
 
 const ICON: Record<IconKey, ReactNode> = {
   port: (

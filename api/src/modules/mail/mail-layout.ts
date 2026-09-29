@@ -81,7 +81,7 @@ export function renderMail(block: MailBlock): { html: string; text: string } {
   return { html, text };
 }
 
-export function escapeHtml(value: string): string {
+function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

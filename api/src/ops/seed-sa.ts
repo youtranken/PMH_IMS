@@ -24,7 +24,7 @@ export interface SeededAdmin {
 
 export class SeedRefusedError extends Error {}
 
-export const DEFAULT_ADMINS: SeedAdmin[] = [
+const DEFAULT_ADMINS: SeedAdmin[] = [
   { email: 'sa@pmh.com.vn', fullName: 'Super Admin' },
   { email: 'caothuan@pmh.com.vn', fullName: 'Cao Thuấn' },
 ];

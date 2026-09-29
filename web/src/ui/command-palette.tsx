@@ -158,7 +158,7 @@ interface Page<T> {
  * render lại theo. Một sự kiện trên `window` giữ nguyên ranh giới: nút chỉ biết "tôi xin mở",
  * hộp vẫn là chủ state của chính nó.
  */
-export const OPEN_PALETTE_EVENT = 'ims:open-command-palette';
+const OPEN_PALETTE_EVENT = 'ims:open-command-palette';
 
 /** Mở hộp tìm nhanh từ bất kỳ đâu. Dùng ở nút tìm trên topbar. */
 export function openCommandPalette(): void {

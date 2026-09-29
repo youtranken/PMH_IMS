@@ -25,7 +25,6 @@ import { SystemConfigService } from '../config-sys/system-config.service';
 import { DevicesApiService } from '../devices/devices.api';
 import { enumerateHosts, hostOf, keepPreferredByAddress, parseAddress } from './ip-rules';
 import {
-  IP_LIFECYCLE_STATUSES,
   OCCUPYING_STATUSES,
   canTransition,
   isOccupying,
@@ -37,8 +36,6 @@ import { describePortRange } from './nat-rules';
 import { ipAddressTable, ipHistoryTable, natRuleTable, subnetTable } from './ipam.schema';
 import { SubnetService } from './subnet.service';
 
-/** MỘT nguồn sự thật cho danh sách trạng thái — `ip-lifecycle.ts` (AD-15). */
-export const IP_STATUSES = IP_LIFECYCLE_STATUSES;
 export type { IpStatus };
 
 /** Câu cảnh báo theo đúng việc người dùng vừa bấm — xem `assertNoLiveNatWithin`. */

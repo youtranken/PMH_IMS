@@ -9,7 +9,7 @@ import type { Response } from 'express';
  * quên). Đúng thứ AD-15 sinh ra để chặn.
  */
 
-export const XLSX_MIME =
+const XLSX_MIME =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 /**

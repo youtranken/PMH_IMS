@@ -44,7 +44,7 @@ export interface PortRow {
 }
 
 /** Chiều ngược: cổng của thiết bị KHÁC đang cắm vào thiết bị đang xem. */
-export interface IncomingPortRow {
+interface IncomingPortRow {
   id: string;
   /** Thiết bị đang giữ bản ghi (đầu kia của sợi dây). */
   deviceId: string;

@@ -35,7 +35,7 @@ import { SecretDue } from '@/ui/secret-due';
  * `import type { SecretOwnerType } from '@/ui/vault-panel'` vẫn đúng, mà chỉ còn MỘT khai báo.
  */
 export type { SecretOwnerType };
-export type SecretKind = 'password' | 'license_key' | 'other';
+type SecretKind = 'password' | 'license_key' | 'other';
 
 export interface AccessVerdict {
   tier: 'whitelist' | 'needs_approval' | 'denied';
@@ -90,7 +90,7 @@ export interface SecretMeta {
   dueInDays?: number;
 }
 
-export function secretsKey(ownerType: SecretOwnerType, ownerId: string) {
+function secretsKey(ownerType: SecretOwnerType, ownerId: string) {
   return ['vault', ownerType, ownerId];
 }
 
