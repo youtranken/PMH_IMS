@@ -14,7 +14,7 @@ import { requireUnchangedSince } from '../../common/cas';
 import { effectiveOf } from '../../common/merge-effective';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import { orderByStable, type SortQuery } from '../../common/sorting';
-import { conflictOnUnique, searchNormLike } from '../../common/sql';
+import { conflictOnUnique, escapeLike, searchNormLike } from '../../common/sql';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { ExpiryApiService } from '../expiry/expiry.api';
 import { CatalogApiService } from '../catalog/catalog.api';
@@ -24,7 +24,10 @@ import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-
 import {
   autoRetireOn,
   effectiveSoftwareStatus,
+  normalizeWebsites,
   seatConflicts,
+  supportsWebsites,
+  validateAssignmentTerms,
   validateSoftware,
   type LicenseModel,
   type SoftwareInputShape,
@@ -199,6 +202,12 @@ export class SoftwareService {
     return rows as SoftwareHistoryRecord[];
   }
 
+  /** Sổ gia hạn của một hồ sơ (hạn cũ → mới, hợp đồng, chi phí) — `expiry` là chủ bảng (AD-3). */
+  async renewals(id: string) {
+    const row = await this.requireRow(id);
+    return this.expiry.historyFor(row.kind, id);
+  }
+
   /** Mọi hồ sơ có hạn nằm trong [from, to] — cỗ máy expiry (story 3.4) hỏi qua api. */
   async findExpiringBetween(from: string, to: string): Promise<SoftwareListItem[]> {
     const rows = await this.db
@@ -319,7 +328,10 @@ export class SoftwareService {
         message: 'Khôi phục hồ sơ đã thanh lý cần ngày hết hạn mới từ hôm nay trở đi.',
       });
     }
-    const changes = diffRecord(TRACKED, before, values);
+    const changes: RecordChanges = {
+      ...diffRecord(TRACKED, before, values),
+      ...websitesChange(before.websites, values.websites as string[] | undefined),
+    };
     if (!hasChanges(changes)) return toRecord(before);
 
     return this.db.transaction(async (tx) => {
@@ -349,7 +361,21 @@ export class SoftwareService {
     id: string,
     newEnd: string,
     withinSeats?: (tx: Tx) => Promise<number>,
+    /**
+     * Hợp đồng + chi phí của RIÊNG lượt này — vào sổ gia hạn, không vào hồ sơ (Q-15).
+     * `websites` (SSL/tên miền): danh sách của kỳ mới; bỏ trống = giữ danh sách đang có.
+     */
+    terms: { contract?: string | null; cost?: number | null; websites?: string[] } = {},
   ): Promise<SoftwareRecord & { seatsRenewed: number }> {
+    const contract = terms.contract?.trim() || null;
+    const cost = terms.cost ?? null;
+    const nextWebsites =
+      terms.websites === undefined ? undefined : requireWebsites(terms.websites);
+    // Cùng luật tiền với chi phí ghế: bigint quá 2^53 thì JS đọc ra số khác mà không báo lỗi.
+    const termErrors = validateAssignmentTerms({ cost, contract, startDate: null, endDate: null });
+    if (termErrors.length > 0) {
+      throw new BadRequestException({ code: 'SOFTWARE_INVALID', message: termErrors.join(' ') });
+    }
     const before = await this.requireRow(id);
     // Gia hạn đặt lại `status = active`; cho qua ở đây là hồi sinh một hồ sơ người đã chủ ý
     // thanh lý. `requireUnchangedWithin` bên dưới giữ cho ảnh chụp này còn đúng lúc ghi.
@@ -380,9 +406,21 @@ export class SoftwareService {
       // "Hạn mới phải sau hạn hiện tại" và `oldEnd` của sổ gia hạn đều đọc từ `before`. Hai
       // lượt gia hạn cùng lúc thì lượt sau kéo hạn LÙI về và ghi sai hạn cũ vào sổ.
       await this.requireUnchangedWithin(tx, before);
-      const updated = await this.updateWithin(tx, id, { endDate: newEnd, status: 'active' });
+      const hasWebsites = supportsWebsites(before.kind as SoftwareKind);
+      const websites = hasWebsites ? (nextWebsites ?? before.websites) : null;
+      const siteChange = hasWebsites ? websitesChange(before.websites, nextWebsites) : {};
+      const updated = await this.updateWithin(tx, id, {
+        endDate: newEnd,
+        status: 'active',
+        ...('websites' in siteChange ? { websites } : {}),
+      });
+      // Hợp đồng/chi phí đi kèm dạng bối cảnh (before = after): tab Lịch sử đọc ra "gia hạn tới
+      // X · hợp đồng HD-… · chi phí …" mà không giả vờ là hồ sơ có hai trường đó.
       await this.recordWithin(tx, actor, id, 'renewed', {
         endDate: { before: before.endDate, after: newEnd },
+        ...(contract !== null ? { contract: { before: contract, after: contract } } : {}),
+        ...(cost !== null ? { cost: { before: cost, after: cost } } : {}),
+        ...siteChange,
       });
       /*
        * Sổ gia hạn dùng chung ghi Ở ĐÂY, trong chính transaction này (AC 3.4, rà soát 07/09 #7).
@@ -401,6 +439,11 @@ export class SoftwareService {
         oldEnd: before.endDate,
         newEnd,
         actor,
+        contract,
+        cost,
+        // Ảnh chụp danh sách của RIÊNG kỳ này: sửa hồ sơ năm sau không đổi được câu trả lời
+        // "năm nay cert này phủ những website nào".
+        websites,
       });
       const seatsRenewed = withinSeats ? await withinSeats(tx) : 0;
       return { ...updated, seatsRenewed };
@@ -507,6 +550,7 @@ export class SoftwareService {
     put('endDate', dateOnly(input.endDate, 'Ngày hết hạn'));
     put('note', text(input.note));
     put('status', input.status);
+    if (input.websites !== undefined) put('websites', requireWebsites(input.websites));
 
     if (id === null) {
       for (const required of ['code', 'name', 'kind'] as const) {
@@ -712,7 +756,12 @@ function buildWhere(filter: SoftwareFilter): SQL | undefined {
   if (term) {
     // Mã · tên · ghi chú, cả ba trong cột sinh `software.search_norm` (0052) và đã gấp dấu.
     // Ba vế `ILIKE` trước đây không gấp dấu — B-01.
-    const byText = searchNormLike(softwareTable, term);
+    // Website của SSL/tên miền không nằm trong `search_norm`: cột sinh không gọi được hàm
+    // STABLE như `array_to_string`. Bảng hồ sơ phần mềm cỡ vài trăm dòng — quét tại chỗ được.
+    const byText = or(
+      searchNormLike(softwareTable, term),
+      sql`ims_norm(array_to_string(${softwareTable.websites}, ' ')) LIKE ims_norm(${`%${escapeLike(term)}%`})`,
+    ) as SQL;
     parts.push(
       filter.alsoIds && filter.alsoIds.length > 0
         ? or(byText, inArray(softwareTable.id, filter.alsoIds))
@@ -729,6 +778,26 @@ function buildWhere(filter: SoftwareFilter): SQL | undefined {
   if (filter.vendorId) parts.push(eq(softwareTable.vendorId, filter.vendorId));
   const defined = parts.filter((part): part is SQL => part !== undefined);
   return defined.length > 0 ? and(...defined) : undefined;
+}
+
+/** Chuẩn hóa danh sách website; sai thì từ chối cả lượt ghi, không lưu một nửa. */
+function requireWebsites(list: string[]): string[] {
+  const { value, errors } = normalizeWebsites(list);
+  if (errors.length > 0) {
+    throw new BadRequestException({ code: 'SOFTWARE_INVALID', message: errors.join(' ') });
+  }
+  return value;
+}
+
+/**
+ * `diffRecord` không so mảng, nên danh sách website so riêng và ghi vào lịch sử dạng chuỗi nối
+ * bằng ", " — tab Lịch sử đọc ra "website: a.vn → a.vn, b.vn" như mọi trường chữ khác.
+ */
+function websitesChange(before: string[], after: string[] | undefined): RecordChanges {
+  if (after === undefined) return {};
+  const from = before.join(', ');
+  const to = after.join(', ');
+  return from === to ? {} : { websites: { before: from || null, after: to || null } };
 }
 
 function toRecord(row: typeof softwareTable.$inferSelect): SoftwareRecord {

@@ -14,6 +14,8 @@ export interface SoftwareRecord {
   status: SoftwareStatus;
   createdAt: Date;
   updatedAt: Date;
+  /** Website dùng chứng chỉ SSL / tên miền này; rỗng với loại khác (Q-15). */
+  websites: string[];
 }
 
 /** Bản ghi kèm thứ màn hình cần mà không phải gọi thêm API. */
