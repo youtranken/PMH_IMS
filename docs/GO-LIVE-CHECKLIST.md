@@ -139,9 +139,10 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
   - **Rà 29/09:** không sửa, Q-11 chốt là đúng chủ ý. Xoá file vẫn chỉ SA/Admin.
 - [x] **SEC-13 · Quyền theo nhà mạng gắn theo tên** (`isp_provider` dùng `provider.name`). Đổi tên thì
   mất quyền, tên cũ dùng lại thì thừa kế sai người.
-- [ ] **SEC-14 · Mật khẩu tạm không tự ẩn** (`accounts-screen.tsx:544-576`).
-  - **Rà 29/09:** mới một phần. Đã có nút Ẩn/Hiện và nút chép (814ab86, ADM-048), nhưng chưa có hẹn
-    giờ tự che (`accounts-screen.tsx:~981`).
+- [x] **SEC-14 · Mật khẩu tạm không tự ẩn** (`accounts-screen.tsx:544-576`).
+  - **Đã sửa:** hộp mật khẩu tạm tự CHE (không đóng, đóng là mất chuỗi) sau `secret.reveal_seconds`,
+    cùng khoá với két, đọc qua `me.config.secretRevealSeconds`; bấm Hiện lại thì hẹn giờ tính lại.
+    Bài kiểm fake timers: `web/src/features/admin/accounts-screen.test.tsx`.
 
 
 ### Đã làm, bổ sung khi rà 29/09
