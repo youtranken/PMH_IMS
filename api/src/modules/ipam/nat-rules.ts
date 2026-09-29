@@ -85,10 +85,10 @@ export function validateNatRule(
   const warnings: string[] = [];
 
   if (!draft.usedBy.trim()) {
-    errors.push('Ghi rõ luật NAT này mở cho ai dùng — đó là câu auditor sẽ hỏi.');
+    errors.push('Ghi rõ luật NAT này mở cho ai dùng.');
   }
   if (!draft.reason.trim()) {
-    errors.push('Ghi rõ vì sao phải mở cổng này. Không có lý do thì sau này không ai dám đóng.');
+    errors.push('Ghi lý do mở cổng này.');
   }
   /**
    * IP trong phải là một MÁY, không phải địa chỉ mạng hay địa chỉ quảng bá.
@@ -107,7 +107,7 @@ export function validateNatRule(
   } else if (role !== 'host') {
     errors.push(
       role === 'network'
-        ? `${draft.internalIp} là ĐỊA CHỈ MẠNG của dải, không phải một máy — gói tin chuyển tới đó không tới đâu cả. Nhập IP thật của máy, vd 172.16.10.5.`
+        ? `${draft.internalIp} là ĐỊA CHỈ MẠNG của dải, không phải một máy. Nhập IP thật của máy, vd 172.16.10.5.`
         : `${draft.internalIp} là ĐỊA CHỈ QUẢNG BÁ của dải, không phải một máy. Nhập IP thật của máy, vd 172.16.10.5.`,
     );
   }

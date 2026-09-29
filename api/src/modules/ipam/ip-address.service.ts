@@ -43,11 +43,10 @@ export type { IpStatus };
 
 /** Câu cảnh báo theo đúng việc người dùng vừa bấm — xem `assertNoLiveNatWithin`. */
 const PURPOSE_WARNING = {
-  reclaim: 'Thu hồi mà để nguyên luật NAT thì cổng vẫn mở và sẽ trỏ vào máy được cấp tiếp theo.',
-  assign: 'Cấp cho máy khác mà để nguyên luật NAT là giao thẳng cổng đang mở cho máy mới.',
-  void: 'Xóa hồ sơ thì địa chỉ này biến khỏi mọi màn, còn luật NAT vẫn chuyển gói tới đó — lỗ thủng còn nguyên mà không còn chỗ nào nhắc tới nó.',
-  readdress:
-    'Dời hồ sơ sang địa chỉ khác mà để nguyên luật NAT thì luật vẫn trỏ vào địa chỉ CŨ — sổ NAT và sổ IP nói khác nhau về cùng một cái máy.',
+  reclaim: 'Để nguyên thì cổng vẫn mở và sẽ trỏ vào máy được cấp tiếp theo.',
+  assign: 'Để nguyên thì cổng đang mở sẽ trỏ thẳng vào máy mới.',
+  void: 'Xóa hồ sơ mà để nguyên luật thì cổng vẫn mở nhưng không màn nào còn nhắc tới.',
+  readdress: 'Để nguyên thì luật vẫn trỏ vào địa chỉ cũ.',
 } as const;
 
 /** Trường được theo dõi trong lịch sử (AD-13). */
@@ -775,7 +774,7 @@ export class IpAddressService {
       requireCas(rows, {
         code: 'IP_ALREADY_CHANGED',
         message:
-          'Địa chỉ IP này vừa được người khác đổi trạng thái (hoặc dải chứa nó vừa bị ẩn). Tải lại để xem trạng thái mới.',
+          'Địa chỉ IP này vừa được người khác đổi trạng thái (hoặc dải vừa ngừng dùng). Tải lại để xem.',
       });
       await this.audit.appendWithin(tx, {
         actor,
@@ -885,8 +884,7 @@ export class IpAddressService {
       throw new ConflictException({
         code: 'SUBNET_VOIDED',
         message:
-          `Dải ${frame.cidr} đang ngừng dùng nên khôi phục lẻ hồ sơ này cũng không hiện ra ở đâu. ` +
-          'Dùng lại cả dải trước.',
+          `Dải ${frame.cidr} đang ngừng dùng. Dùng lại cả dải trước.`,
       });
     }
 
@@ -943,7 +941,7 @@ export class IpAddressService {
         code: 'IP_TAKEN',
         message:
           `Địa chỉ ${before.address} đã có hồ sơ khác dùng sau khi hồ sơ này bị xóa. ` +
-          'Khôi phục sẽ có hai hồ sơ cho cùng một địa chỉ — xử lý hồ sơ kia trước.',
+          'Xử lý hồ sơ kia trước.',
       });
     }
   }
@@ -1025,7 +1023,7 @@ export class IpAddressService {
       message:
         `Địa chỉ ${hostOf(address)} còn ${rules.length} luật NAT đang mở (${list}). ` +
         PURPOSE_WARNING[purpose] +
-        ' Vào sổ NAT gỡ hoặc trỏ lại luật trước, rồi làm lại.',
+        ' Gỡ hoặc trỏ lại luật trong Sổ NAT trước, rồi làm lại.',
     });
   }
 
@@ -1074,7 +1072,7 @@ export class IpAddressService {
     if (rows.length === 0) {
       throw new NotFoundException({
         code: 'IP_NOT_FOUND',
-        message: 'Không tìm thấy hồ sơ IP này (có thể đã ẩn).',
+        message: 'Không tìm thấy hồ sơ IP này (có thể đã bị xóa).',
       });
     }
     return rows[0];
@@ -1130,9 +1128,8 @@ export class IpAddressService {
     return conflictOnUnique(error, {
       code: 'IP_TAKEN',
       message:
-        `Địa chỉ ${address} đã có hồ sơ trong dải này. Một IP chỉ có một chủ — ` +
-        'nếu hồ sơ cũ đang trống thì dùng "Cấp IP" trên chính dòng đó, đừng tạo hồ sơ mới ' +
-        '(tạo mới là mất lịch sử cũ).',
+        `Địa chỉ ${address} đã có hồ sơ trong dải này. ` +
+        'Hồ sơ đó đang trống thì bấm "Cấp IP" trên chính dòng đó.',
     });
   }
 }

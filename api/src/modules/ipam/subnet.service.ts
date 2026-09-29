@@ -263,7 +263,7 @@ export class SubnetService {
             throw new ConflictException({
               code: 'SUBNET_HAS_ADDRESSES',
               message:
-                'Dải này đã có hồ sơ IP nên không đổi được dải. Ẩn dải cũ rồi khai dải mới.',
+                'Dải này đã có hồ sơ IP nên không đổi CIDR được. Ngừng dùng dải cũ rồi khai dải mới.',
             });
           }
           values.cidr = nextCidr;
@@ -300,7 +300,7 @@ export class SubnetService {
     if (!text) {
       throw new BadRequestException({
         code: 'VOID_REASON_REQUIRED',
-        message: 'Nói rõ vì sao ẩn dải này (vd "khai nhầm dải").',
+        message: 'Ghi lý do ngừng dùng dải này (vd "khai nhầm dải").',
       });
     }
     /*
@@ -467,8 +467,8 @@ export class SubnetService {
       throw new ConflictException({
         code: 'SUBNET_HAS_ADDRESSES',
         message:
-          `Dải này đã có ${addresses} hồ sơ IP nên không xóa hẳn được — xóa là mất luôn lịch sử ` +
-          '"IP nào từng của máy nào". Dùng "Ngừng dùng" để cất dải đi mà vẫn tra cứu được.',
+          `Dải này có ${addresses} hồ sơ IP nên không xóa hẳn được. ` +
+          'Dùng "Ngừng dùng" để cất dải mà vẫn tra cứu được lịch sử.',
         addresses,
       });
     }
@@ -530,7 +530,7 @@ export class SubnetService {
     if (!isHostInSubnet(text, cidr)) {
       throw new BadRequestException({
         code: 'GATEWAY_OUT_OF_SUBNET',
-        message: `Gateway ${text} không nằm trong dải ${cidr}. Gateway phải là một địa chỉ của chính dải đó.`,
+        message: `Gateway ${text} không nằm trong dải ${cidr}.`,
       });
     }
     return text;
@@ -576,7 +576,7 @@ export class SubnetService {
     if (rows.length === 0) {
       throw new NotFoundException({
         code: 'SUBNET_NOT_FOUND',
-        message: 'Không tìm thấy dải này (có thể đã ẩn).',
+        message: 'Không tìm thấy dải này (có thể đã ngừng dùng).',
       });
     }
     return rows[0];
@@ -662,10 +662,8 @@ export class SubnetService {
     throw new ConflictException({
       code: 'IP_HAS_LIVE_NAT',
       message:
-        `Trong dải này còn ${rules.length} luật NAT đang mở: ${shown}${rest}. ` +
-        'Ngừng dùng dải thì những địa chỉ đó biến khỏi mọi màn, còn luật vẫn chuyển gói tới chúng — ' +
-        'lỗ thủng còn nguyên mà không còn chỗ nào nhắc tới nó. ' +
-        'Vào sổ NAT gỡ hoặc trỏ lại luật trước, rồi ngừng dùng dải.',
+        `Dải này còn ${rules.length} luật NAT đang mở: ${shown}${rest}. ` +
+        'Gỡ hoặc trỏ lại các luật đó trong Sổ NAT trước, rồi ngừng dùng dải.',
     });
   }
 
@@ -687,8 +685,8 @@ const CIDR_MESSAGE: Record<string, string> = {
   missing_prefix: 'Thiếu độ dài dải. Viết dạng 172.16.10.0/24.',
   bad_prefix: 'Độ dài dải phải từ /24 đến /32. Ví dụ: 172.16.10.0/24.',
   too_wide:
-    'Dải rộng nhất được khai là /24 (254 máy). Mạng lớn hơn thì chia thành nhiều dải /24 — ' +
-    'ví dụ 172.16.10.0/24 và 172.16.11.0/24.',
+    'Dải rộng nhất là /24 (254 máy). Mạng lớn hơn thì chia thành nhiều dải /24, ' +
+    'vd 172.16.10.0/24 và 172.16.11.0/24.',
   not_ipv4: 'Chỉ nhận địa chỉ IPv4. Ví dụ đúng: 172.16.10.0/24.',
   leading_zero: 'Không viết số 0 đứng đầu (172.16.010.5 dễ bị hiểu nhầm). Viết 172.16.10.5.',
   octet_range: 'Mỗi nhóm số phải từ 0 đến 255.',
