@@ -45,7 +45,7 @@ describe('AUTH-011: cài 2 lớp trên chính điện thoại', () => {
       'href',
       SETUP.otpauthUrl,
     );
-    expect(screen.getByRole('button', { name: 'Sao chép khoá' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sao chép khóa' })).toBeInTheDocument();
     expect(screen.getByTestId('totp-secret')).toHaveTextContent(SETUP.secret);
     const other = screen.getByText('Quét từ máy khác (mã QR)').closest('details')!;
     expect(other).not.toHaveAttribute('open');
@@ -58,7 +58,7 @@ describe('AUTH-011: cài 2 lớp trên chính điện thoại', () => {
     const qr = screen.getByAltText('Mã QR cài xác thực 2 lớp');
     expect(qr.closest('details')).toBeNull();
     expect(screen.queryByRole('link', { name: 'Mở trong ứng dụng xác thực' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Sao chép khoá' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sao chép khóa' })).toBeInTheDocument();
   });
 });
 

@@ -223,8 +223,8 @@ export class ServiceAccountService {
         code: 'REASON_REQUIRED',
         message:
           next === 'disabled'
-            ? 'Ghi lý do vô hiệu hóa — sáu tháng sau sẽ có người hỏi vì sao.'
-            : 'Ghi lý do bật lại — sáu tháng sau sẽ có người hỏi vì sao.',
+            ? 'Ghi lý do ngừng dùng — sáu tháng sau sẽ có người hỏi vì sao.'
+            : 'Ghi lý do dùng lại — sáu tháng sau sẽ có người hỏi vì sao.',
       });
     }
     const action = next === 'disabled' ? 'disabled' : 'enabled';
@@ -243,7 +243,7 @@ export class ServiceAccountService {
           code: 'STATUS_UNCHANGED',
           message:
             next === 'disabled'
-              ? 'Tài khoản này đã bị vô hiệu hóa từ trước.'
+              ? 'Tài khoản này đã ngừng dùng từ trước.'
               : 'Tài khoản này đang dùng bình thường.',
         });
       }

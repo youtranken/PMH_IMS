@@ -18,7 +18,7 @@ async function main(): Promise<void> {
   try {
     if (!process.argv.includes('--check')) {
       const done = await rewrapAll(pool, new EnvelopeCryptoService(keyring));
-      console.log(`Đã bọc lại sang chìa ${keyring.currentVersion}: ${done.secret} ngăn két, ${done.totp} khoá TOTP.`);
+      console.log(`Đã bọc lại sang chìa ${keyring.currentVersion}: ${done.secret} ngăn két, ${done.totp} khóa TOTP.`);
     }
     console.log(`Chìa trong file: ${keyring.versions.join(', ')} (hiện hành: ${keyring.currentVersion})`);
     const counts = await countByKeyVersion(pool);

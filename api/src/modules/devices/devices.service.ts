@@ -593,7 +593,7 @@ export class DevicesService {
       code: 'RETIRE_VIA_UPDATE',
       message:
         `Không thanh lý được bằng đường sửa hồ sơ: thanh lý ${before.code} phải đi qua nút ` +
-        '"Thanh lý" để hệ thống còn hỏi thiết bị có đang giữ IP, rule NAT hay ghế license nào không.',
+        '"Thanh lý" để hệ thống còn hỏi thiết bị có đang giữ IP, luật NAT hay ghế license nào không.',
     });
   }
 

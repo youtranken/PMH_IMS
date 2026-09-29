@@ -35,7 +35,7 @@ test.describe('Danh mục — tìm không khớp và lịch sử mục', () => {
     // Câu "chưa khai mục nào" là câu cho tab RỖNG — ở đây danh mục đâu có rỗng.
     await expect(page.getByText(/Chưa khai mục nào/)).toHaveCount(0);
 
-    await page.getByRole('button', { name: 'Xoá từ khoá' }).click();
+    await page.getByRole('button', { name: 'Xóa từ khóa' }).click();
     await expect(page.getByRole('searchbox', { name: /Tìm/ })).toHaveValue('');
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
   });

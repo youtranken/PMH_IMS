@@ -24,7 +24,7 @@ describe('usePageTitle', () => {
     ['/', 'Bảng điều khiển · IMS'],
     ['/devices', 'Thiết bị · IMS'],
     ['/software', 'Phần mềm · IMS'],
-    ['/admin/accounts', 'Tài khoản · IMS'],
+    ['/admin/accounts', 'Người dùng IMS · IMS'],
     // Trang chi tiết đội tên khu vực của nó.
     ['/devices/abc-123', 'Thiết bị · IMS'],
     ['/ip-addresses/sub-1', 'Địa chỉ IP · IMS'],

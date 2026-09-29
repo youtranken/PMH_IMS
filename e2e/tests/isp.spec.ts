@@ -376,7 +376,7 @@ test.describe('Đường truyền — lọc, thẻ khi mất mạng, thanh lý c
 
     await page.getByRole('button', { name: `Thao tác với ISP-E2E-SC-${stamp}` }).click();
     await page.getByRole('menuitem', { name: 'Thanh lý…' }).click();
-    await expect(ask).toContainText('Két còn 1 secret của đường này — hủy hoặc xoay nếu không còn dùng.');
+    await expect(ask).toContainText('Két còn 1 ngăn của đường này — xóa vĩnh viễn hoặc đổi giá trị nếu không còn dùng.');
     // Nút là HÀNH ĐỘNG "Thanh lý", không phải nhãn trạng thái "Đã thanh lý" (Q-14).
     await expect(ask.getByRole('button', { name: 'Đã thanh lý' })).toHaveCount(0);
     await ask.getByRole('button', { name: 'Thanh lý', exact: true }).click();

@@ -44,7 +44,7 @@ export class IpDeviceRetirement implements DeviceReleaser, OnModuleInit {
 
     const out: string[] = [];
     for (const ip of ips) out.push(`địa chỉ IP ${ip.address}`);
-    for (const rule of rules) out.push(`rule NAT ${rule.label}`);
+    for (const rule of rules) out.push(`luật NAT ${rule.label}`);
     return out;
   }
 

@@ -63,14 +63,14 @@ test.describe('Vòng đời IP', () => {
     // Chỉ còn hai trạng thái (Q-02): đang cấp thì đường đi tiếp duy nhất là Thu hồi.
     // Cột thao tác là menu ba chấm — mục chỉ có trong DOM khi menu đang mở.
     const whenAssigned = await rowActionNames(page, address);
-    expect(whenAssigned).toContain('Thu hồi');
+    expect(whenAssigned).toContain('Thu hồi IP');
     expect(whenAssigned).not.toContain('Nghi chết');
     expect(whenAssigned).not.toContain('Cấp IP');
 
-    await rowAction(page, address, 'Thu hồi');
+    await rowAction(page, address, 'Thu hồi IP');
     const reclaim = page.getByRole('dialog');
     await reclaim.getByRole('textbox', { name: 'Lý do' }).fill('máy đã thanh lý');
-    await reclaim.getByRole('button', { name: 'Thu hồi' }).click();
+    await reclaim.getByRole('button', { name: 'Thu hồi IP' }).click();
 
     // Thu hồi TRẢ CHỖ về pool: mức sử dụng phải giảm, và hàng về đúng trạng thái Trống.
     await expect(page.getByText('Còn 6 IP trống')).toBeVisible();
@@ -80,7 +80,7 @@ test.describe('Vòng đời IP', () => {
     await expect(row.getByText('Máy in kế toán')).toHaveCount(0);
 
     const whenFree = await rowActionNames(page, address);
-    expect(whenFree).not.toContain('Thu hồi');
+    expect(whenFree).not.toContain('Thu hồi IP');
 
     // Hồ sơ Trống cấp lại bằng CÙNG nút/hộp "Cấp IP" như một ô trống (NET-002).
     await row.getByRole('button', { name: 'Cấp IP', exact: true }).click();
