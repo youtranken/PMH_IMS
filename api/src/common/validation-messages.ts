@@ -67,6 +67,7 @@ export const FIELD_LABEL: Record<string, string> = {
   from: 'Từ',
   fullName: 'Họ tên',
   gateway: 'Gateway',
+  group: 'Gộp sự kiện lặp',
   hour: 'Giờ gửi',
   id: 'Mã định danh',
   includeExpired: 'Tùy chọn kèm hồ sơ hết hạn',

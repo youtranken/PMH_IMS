@@ -86,14 +86,25 @@ export interface ServicePortRow {
   active: boolean;
 }
 
-export type CatalogRow =
+/**
+ * "Đang dùng ở N …" — chỉ có ở danh sách phân trang của màn Danh mục (API đếm qua sổ đăng ký
+ * của từng module chủ dữ liệu). `kind`: 'device' | 'software' | 'cabinet' | 'isp_line' |
+ * 'subnet' | 'service_account'.
+ */
+export interface CatalogUsage {
+  kind: string;
+  count: number;
+}
+
+export type CatalogRow = (
   | SiteRow
   | CabinetRow
   | DeviceTypeRow
   | VendorRow
   | DepartmentRow
   | IspProviderRow
-  | ServicePortRow;
+  | ServicePortRow
+) & { usage?: CatalogUsage[] };
 
 export interface CatalogLists {
   sites: SiteRow[];

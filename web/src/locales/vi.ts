@@ -551,6 +551,20 @@ export default {
     siteAll: 'Mọi site',
     memberHint: 'Vô hiệu hóa, xóa và nhập Excel do Quản trị thực hiện.',
     viewDevices: 'Xem thiết bị dùng mục này',
+    usageColumn: 'Đang dùng ở',
+    usageNone: 'Chưa dùng',
+    usage_device: '{{count}} thiết bị',
+    usage_software: '{{count}} phần mềm',
+    usage_cabinet: '{{count}} tủ mạng',
+    usage_isp_line: '{{count}} đường truyền',
+    usage_subnet: '{{count}} dải IP',
+    usage_service_account: '{{count}} tài khoản dịch vụ',
+    usage_other: '{{count}} hồ sơ',
+    deleteInUse: 'Đang dùng ở {{usage}} — hãy Vô hiệu hóa',
+    deactivateInUse: 'Hiện đang dùng ở {{usage}} — các hồ sơ này giữ nguyên.',
+    confirmHidePortMapCount:
+      'Tắt "Có port map" cho "{{name}}": {{count}} thiết bị loại này sẽ ẩn bảng port ở trang ' +
+      'chi tiết (dữ liệu port vẫn giữ, bật lại là hiện lại).',
     auditLog: 'Nhật ký thao tác',
     deactivated: 'Đã vô hiệu hóa "{{name}}".',
     activated: 'Đã bật lại "{{name}}".',
@@ -2013,6 +2027,15 @@ export default {
     ip: 'IP',
     /* Đếm có trần ở API: con số trên thanh phân trang là trần, không phải tổng thật. */
     capped: 'Còn nhiều dòng khớp hơn con số trên — lọc hẹp lại (theo ngày, người thao tác) để xem đủ.',
+    groupRepeats: 'Gộp sự kiện lặp',
+    repeatBadge: '×{{count}}',
+    repeatLabel: '{{count}} lần liền nhau',
+    repeatSince: 'từ {{time}}',
+    repeatEvents:
+      '{{count}} lần liền nhau — cùng người, cùng hành động, cùng đối tượng, trong một phút. ' +
+      'Bấm một lần để xem chi tiết lần đó.',
+    repeatEventsMore: 'Chỉ liệt kê {{shown}} lần mới nhất.',
+    openEvent: 'Xem lần lúc {{time}}',
     empty: 'Nhật ký chưa có dòng nào',
     emptyHint: 'Mỗi lượt đăng nhập và mỗi thay đổi dữ liệu sẽ ghi một dòng ở đây.',
     emptyFiltered: 'Không có dòng nào khớp bộ lọc',

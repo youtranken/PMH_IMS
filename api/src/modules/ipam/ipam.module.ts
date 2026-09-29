@@ -16,6 +16,7 @@ import { NatRuleService } from './nat-rule.service';
 import { IpamApiService } from './ipam.api';
 import { IpamController } from './ipam.controller';
 import { SubnetService } from './subnet.service';
+import { IpamCatalogUsage } from './ipam-catalog-usage';
 
 /** Quản lý IP & NAT (Epic 5) — chủ sở hữu bảng `subnet`, `ip_address`, `ip_history` (AD-3). */
 @Module({
@@ -34,6 +35,7 @@ import { SubnetService } from './subnet.service';
     IpamAuditLabeler,
     NatDevicePanel,
     NatTargetDevicePanel,
+    IpamCatalogUsage,
     ExcelExportService,
   ],
   exports: [IpamApiService],
