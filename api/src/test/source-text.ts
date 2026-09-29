@@ -25,7 +25,7 @@ import { join } from 'node:path';
  * Chép tay cặp `.replace()` vào từng bài thì sẽ có bài quên hẳn — đó đúng là hình dạng mà
  * AD-15 cấm: một luật, nhiều bản, và bản quên là bản để lọt. Nên một nơi, nhiều nơi gọi.
  *
- * Đặt ở `src/test/` theo đúng tiền lệ `web/src/test/quet-nguon.ts`. Cả hai tầng Jest đều với
+ * Đặt ở `src/test/` theo đúng tiền lệ `web/src/test/scan-source.ts`. Cả hai tầng Jest đều với
  * tới được: `jest.config.js` (`rootDir: src`, `testRegex: .*\.spec\.ts$`) KHÔNG nhặt file này
  * vì tên không mang `.spec.`, còn `test/jest-db.cjs` (`rootDir: ..`) import bằng đường dẫn
  * tương đối.

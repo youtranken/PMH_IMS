@@ -36,7 +36,7 @@ const me = {
  * gõ xong là hỏi lúc `q` vẫn còn rỗng — và câu trả lời "không có nhóm nào" sẽ đúng vì lý do
  * hoàn toàn khác với thứ bài đang kiểm.
  */
-async function moBangLenh(tuKhoa: string): Promise<void> {
+async function openCommandPalette(keyword: string): Promise<void> {
   const user = userEvent.setup();
   renderWithI18n(
     <MemoryRouter>
@@ -46,25 +46,25 @@ async function moBangLenh(tuKhoa: string): Promise<void> {
     </MemoryRouter>,
   );
   await user.keyboard('{Control>}k{/Control}');
-  await user.type(screen.getByRole('combobox', { name: /tìm nhanh/i }), tuKhoa);
+  await user.type(screen.getByRole('combobox', { name: /tìm nhanh/i }), keyword);
 }
 
 describe('Bảng lệnh — tìm tên màn hình không dấu', () => {
   it('gõ KHÔNG DẤU ra đúng màn có dấu', async () => {
-    await moBangLenh('thiet bi');
+    await openCommandPalette('thiet bi');
     // `find*` chứ không `query*`: nó chờ qua nhịp lắng 200ms. Khoanh trong nhóm "Màn hình"
     // để ô này chỉ xanh được nhờ phép gấp dấu ở trình duyệt, không nhờ một nhóm khác.
-    const nhom = await screen.findByRole('group', { name: 'Màn hình' });
+    const group = await screen.findByRole('group', { name: 'Màn hình' });
     // Tên trợ năng của một dòng là `title` + `sub`, tức "Thiết bị/devices" — neo ĐẦU CHUỖI
     // bằng regex. (Playwright khớp chuỗi-con nên bài E2E anh em viết chuỗi trần vẫn đúng;
     // Testing Library khớp TOÀN PHẦN. Hai khung, hai luật, cùng một ý định.)
-    expect(within(nhom).getByRole('option', { name: /^Thiết bị/ })).toBeTruthy();
+    expect(within(group).getByRole('option', { name: /^Thiết bị/ })).toBeTruthy();
   });
 
   it('gõ CÓ DẤU vẫn ra — gấp dấu phải làm ở CẢ HAI VẾ', async () => {
-    await moBangLenh('Sổ NAT');
-    const nhom = await screen.findByRole('group', { name: 'Màn hình' });
-    expect(within(nhom).getByRole('option', { name: /^Sổ NAT/ })).toBeTruthy();
+    await openCommandPalette('Sổ NAT');
+    const group = await screen.findByRole('group', { name: 'Màn hình' });
+    expect(within(group).getByRole('option', { name: /^Sổ NAT/ })).toBeTruthy();
   });
 
   it('từ khoá không khớp màn nào thì KHÔNG bịa ra nhóm "Màn hình"', async () => {
@@ -75,7 +75,7 @@ describe('Bảng lệnh — tìm tên màn hình không dấu', () => {
      * ô nhập đã mang đủ chữ rồi mới hỏi: lúc ấy nhịp lắng đã chạy xong ít nhất một lượt cho
      * các ký tự trước đó, và `waitFor` bên dưới phủ nốt phần còn lại.
      */
-    await moBangLenh('zzzz khong co man nao');
+    await openCommandPalette('zzzz khong co man nao');
     await waitFor(() => {
       expect(screen.queryByRole('group', { name: 'Màn hình' })).toBeNull();
     });

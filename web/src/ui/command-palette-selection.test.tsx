@@ -30,21 +30,21 @@ import type { Me } from '@/lib/me';
 
 const me = { role: 'sa', csrfToken: 'x', email: 'sa@pmh.com.vn' } as unknown as Me;
 
-const trang = (items: unknown[]) => ({ items, total: items.length, page: 1, limit: 3 });
+const pageNo = (items: unknown[]) => ({ items, total: items.length, page: 1, limit: 3 });
 
-const PHAN_MEM = [
+const SOFTWARE = [
   { id: 'sw1', code: 'SW-E2E-01', name: 'Office' },
   { id: 'sw2', code: 'SW-E2E-02', name: 'Photoshop' },
   { id: 'sw3', code: 'SW-E2E-03', name: 'AutoCAD' },
 ];
-const THIET_BI = [
+const DEVICES = [
   { id: 'd1', code: 'TB-E2E-01', name: 'Switch', siteCode: 'HN' },
   { id: 'd2', code: 'TB-E2E-02', name: 'AP', siteCode: 'HN' },
   { id: 'd3', code: 'TB-E2E-03', name: 'Router', siteCode: 'HN' },
 ];
 
 /** Dòng đang sáng, đọc theo đúng thứ trình đọc màn hình đọc. */
-const dongDangSang = () =>
+const highlightedRow = () =>
   document.querySelector('[role="option"][aria-selected="true"]')?.textContent ?? null;
 
 describe('⌘K giữ dòng đang chọn khi một nhóm về muộn', () => {
@@ -52,18 +52,18 @@ describe('⌘K giữ dòng đang chọn khi một nhóm về muộn', () => {
 
   it('nhóm Thiết bị về sau và chèn lên đầu: con trỏ vẫn ở đúng hồ sơ đã chọn', async () => {
     /* Giữ lời hứa của `/devices` lại, nhả đúng lúc muốn — đó là toàn bộ cuộc đua cần dựng. */
-    let nhaThietBi: () => void = () => undefined;
-    const thietBiVe = new Promise<Response>((resolve) => {
-      nhaThietBi = () => resolve(jsonResponse(200, trang(THIET_BI)));
+    let releaseDevices: () => void = () => undefined;
+    const devicesArrived = new Promise<Response>((resolve) => {
+      releaseDevices = () => resolve(jsonResponse(200, pageNo(DEVICES)));
     });
 
     vi.stubGlobal(
       'fetch',
       vi.fn((input: RequestInfo | URL) => {
         const url = String(input);
-        if (url.includes('/devices')) return thietBiVe;
-        if (url.includes('/software')) return Promise.resolve(jsonResponse(200, trang(PHAN_MEM)));
-        return Promise.resolve(jsonResponse(200, trang([])));
+        if (url.includes('/devices')) return devicesArrived;
+        if (url.includes('/software')) return Promise.resolve(jsonResponse(200, pageNo(SOFTWARE)));
+        return Promise.resolve(jsonResponse(200, pageNo([])));
       }),
     );
 
@@ -84,12 +84,12 @@ describe('⌘K giữ dòng đang chọn khi một nhóm về muộn', () => {
     await screen.findByText('SW-E2E-03');
     await user.keyboard('{ArrowDown}{ArrowDown}');
 
-    const truoc = dongDangSang();
-    expect(truoc).toContain('SW-E2E-03');
+    const before = highlightedRow();
+    expect(before).toContain('SW-E2E-03');
 
-    nhaThietBi();
+    releaseDevices();
     await screen.findByText('TB-E2E-01');
 
-    expect(dongDangSang()).toBe(truoc);
+    expect(highlightedRow()).toBe(before);
   });
 });

@@ -31,17 +31,17 @@ import type { Me } from '@/lib/me';
 
 const me = { role: 'sa', csrfToken: 'x', email: 'sa@pmh.com.vn' } as unknown as Me;
 
-const trang = (items: unknown[]) => ({ items, total: items.length, page: 1, limit: 5 });
+const pageNo = (items: unknown[]) => ({ items, total: items.length, page: 1, limit: 5 });
 
 /** Giả lập tầng mạng: `isp-lines` hỏng, ba nguồn còn lại trả về `items`. */
-function gaLapFetch(itemsThietBi: unknown[]) {
+function gaLapFetch(deviceItems: unknown[]) {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes('/isp-lines')) return Promise.resolve(jsonResponse(500, { message: 'toang' }));
-      if (url.includes('/devices')) return Promise.resolve(jsonResponse(200, trang(itemsThietBi)));
-      return Promise.resolve(jsonResponse(200, trang([])));
+      if (url.includes('/devices')) return Promise.resolve(jsonResponse(200, pageNo(deviceItems)));
+      return Promise.resolve(jsonResponse(200, pageNo([])));
     }),
   );
 }
@@ -49,7 +49,7 @@ function gaLapFetch(itemsThietBi: unknown[]) {
 describe('⌘K khi một nguồn hỏng', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  const moVaGo = async (chu: string) => {
+  const openAndType = async (text: string) => {
     const user = userEvent.setup();
     renderWithI18n(
       <MemoryRouter>
@@ -61,12 +61,12 @@ describe('⌘K khi một nguồn hỏng', () => {
     await user.keyboard('{Control>}k{/Control}');
     /* `combobox`, không phải `textbox`: ô tìm khai `role="combobox"` +
        `aria-activedescendant` để mũi tên ↑/↓ nói được với trình đọc màn hình. */
-    await user.type(screen.getByRole('combobox', { name: /tìm nhanh/i }), chu);
+    await user.type(screen.getByRole('combobox', { name: /tìm nhanh/i }), text);
   };
 
   it('không kết quả nào: KHÔNG được khẳng định "không có hồ sơ nào khớp"', async () => {
     gaLapFetch([]);
-    await moVaGo('fpt');
+    await openAndType('fpt');
 
     // Câu phải nói ra là ĐANG THIẾU, và thiếu nhóm nào.
     // `findByText` đã NÉM khi không thấy, nên `toBeTruthy()` sau nó không thể đỏ — bỏ đi để
@@ -77,7 +77,7 @@ describe('⌘K khi một nguồn hỏng', () => {
 
   it('có kết quả: vẫn phải nói danh sách còn thiếu', async () => {
     gaLapFetch([{ id: 'd1', code: 'SW-CORE-01', name: 'Switch lõi', siteCode: 'HN' }]);
-    await moVaGo('sw');
+    await openAndType('sw');
 
     // Tên dòng đi qua vai `option`: phần khớp từ khoá được bọc `<mark>`, chữ bị tách thành nhiều nút.
     await screen.findByRole('option', { name: /SW-CORE-01/ });

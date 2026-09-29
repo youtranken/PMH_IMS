@@ -22,7 +22,7 @@ import { useFocusTrap } from '@/ui/focus-trap';
  * vào drawer — đặt nút trước lớp phủ là bài kiểm dựng một cảnh dễ hơn cảnh thật.
  */
 
-function Khung({ items = 2 }: { items?: number }) {
+function Frame({ items = 2 }: { items?: number }) {
   const [open, setOpen] = useState(false);
   const ref = useFocusTrap<HTMLDivElement>(open);
 
@@ -46,7 +46,7 @@ function Khung({ items = 2 }: { items?: number }) {
   );
 }
 
-function nutMo() {
+function openButton() {
   return screen.getByRole('button', { name: 'Mở menu' });
 }
 
@@ -56,24 +56,24 @@ describe('useFocusTrap', () => {
      * Ô nặng nhất của cả bài. Không có bước này thì nút mở nằm sau `<nav>` trong DOM, nên lượt
      * Tab kế tiếp đi vào nội dung trang — người đi bàn phím mở được menu ra rồi không vào nổi.
      */
-    render(<Khung />);
-    nutMo().focus();
-    fireEvent.click(nutMo());
+    render(<Frame />);
+    openButton().focus();
+    fireEvent.click(openButton());
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Mục 1' }));
   });
 
   it('Tab ở mục cuối vòng về mục đầu', () => {
-    render(<Khung />);
-    fireEvent.click(nutMo());
-    const cuoi = screen.getByRole('button', { name: 'Mục 2' });
-    cuoi.focus();
+    render(<Frame />);
+    fireEvent.click(openButton());
+    const last = screen.getByRole('button', { name: 'Mục 2' });
+    last.focus();
     fireEvent.keyDown(document, { key: 'Tab' });
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Mục 1' }));
   });
 
   it('Shift+Tab ở mục đầu vòng về mục cuối', () => {
-    render(<Khung />);
-    fireEvent.click(nutMo());
+    render(<Frame />);
+    fireEvent.click(openButton());
     fireEvent.keyDown(document, { key: 'Tab', shiftKey: true });
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Mục 2' }));
   });
@@ -81,26 +81,26 @@ describe('useFocusTrap', () => {
   it('tiêu điểm lọt ra ngoài thì bị kéo về', () => {
     // Bấm chuột vào một link phía sau drawer: backdrop chặn được chuột thật, nhưng bàn phím
     // và trình đọc màn hình vẫn có đường tới. Bẫy phải kéo về ở lượt Tab kế tiếp.
-    render(<Khung />);
-    fireEvent.click(nutMo());
+    render(<Frame />);
+    fireEvent.click(openButton());
     screen.getByRole('link', { name: 'Nội dung trang' }).focus();
     fireEvent.keyDown(document, { key: 'Tab' });
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Mục 1' }));
   });
 
   it('đóng lại thì tiêu điểm TRỞ VỀ nút đã mở, không rơi về body', () => {
-    render(<Khung />);
-    nutMo().focus();
-    fireEvent.click(nutMo());
-    fireEvent.click(nutMo()); // đóng
-    expect(document.activeElement).toBe(nutMo());
+    render(<Frame />);
+    openButton().focus();
+    fireEvent.click(openButton());
+    fireEvent.click(openButton()); // đóng
+    expect(document.activeElement).toBe(openButton());
   });
 
   it('lớp phủ không có gì bấm được thì tiêu điểm đặt lên chính nó', () => {
     // Vai `member` thấy ít mục hơn; một bản dựng nào đó có thể ra drawer rỗng. Không có vế
     // này thì `first` là `undefined` và cả bẫy im lặng không làm gì.
-    render(<Khung items={0} />);
-    fireEvent.click(nutMo());
+    render(<Frame items={0} />);
+    fireEvent.click(openButton());
     expect(document.activeElement).toBe(screen.getByTestId('drawer'));
   });
 
@@ -109,7 +109,7 @@ describe('useFocusTrap', () => {
      * Desktop dùng đúng component này với `active = false`. Thiếu ô này thì một bản hook bẫy
      * vô điều kiện cũng làm mọi ô trên xanh, rồi khoá tiêu điểm vào sidebar ở màn rộng.
      */
-    render(<Khung />);
+    render(<Frame />);
     const link = screen.getByRole('link', { name: 'Nội dung trang' });
     link.focus();
     fireEvent.keyDown(document, { key: 'Tab' });

@@ -36,7 +36,7 @@ const me = {
 } as unknown as Me;
 
 describe('⌘K và hộp thoại không giẫm lên nhau', () => {
-  const oTim = () => screen.queryByRole('dialog', { name: /tìm nhanh/i });
+  const searchBox = () => screen.queryByRole('dialog', { name: /tìm nhanh/i });
 
   /*
    * HỎI DOM, KHÔNG HỎI CÂY TRỢ NĂNG — CHỈ Ở BÀI THỨ HAI.
@@ -53,7 +53,7 @@ describe('⌘K và hộp thoại không giẫm lên nhau', () => {
    * `queryByRole`: ở đó không có hộp nào, cây trợ năng còn sạch, và "palette có được phơi ra
    * cho trình đọc màn hình không" là một câu hỏi đáng giữ.
    */
-  const oTimTrongDom = () =>
+  const searchBoxInDom = () =>
     // `Array.from`, không phải spread: `tsconfig.app.json` không bật `downlevelIteration`, nên
     // `[...NodeListOf]` là lỗi biên dịch TS2488 — và cổng kiểu của web là `npm run build`.
     Array.from(document.querySelectorAll('[role="dialog"]')).find((el) =>
@@ -70,9 +70,9 @@ describe('⌘K và hộp thoại không giẫm lên nhau', () => {
       </MemoryRouter>,
     );
 
-    expect(oTim()).toBeNull();
+    expect(searchBox()).toBeNull();
     await user.keyboard('{Control>}k{/Control}');
-    expect(oTim()).not.toBeNull();
+    expect(searchBox()).not.toBeNull();
   });
 
   it('đang có hộp thoại mở: ⌘K KHÔNG mở palette', async () => {
@@ -90,6 +90,6 @@ describe('⌘K và hộp thoại không giẫm lên nhau', () => {
 
     await screen.findByText('thân hộp');
     await user.keyboard('{Control>}k{/Control}');
-    expect(oTimTrongDom()).toBeNull();
+    expect(searchBoxInDom()).toBeNull();
   });
 });

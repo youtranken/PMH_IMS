@@ -28,12 +28,12 @@ import { join } from 'node:path';
  * hoặc một `askConfirm` thiếu tiêu đề lọt lưới. Bỏ qua đúng thư mục đã biết là rác thì phạm vi
  * hẹp và nói ra được lý do.
  */
-export function quetNguon(goc: string, duoi: RegExp): string[] {
-  return readdirSync(goc, { withFileTypes: true }).flatMap((muc) => {
-    const day = join(goc, muc.name);
-    if (muc.isDirectory()) {
-      return muc.name.startsWith('__lint-probe__') ? [] : quetNguon(day, duoi);
+export function scanSource(root: string, extension: RegExp): string[] {
+  return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
+    const day = join(root, entry.name);
+    if (entry.isDirectory()) {
+      return entry.name.startsWith('__lint-probe__') ? [] : scanSource(day, extension);
     }
-    return muc.isFile() && duoi.test(muc.name) ? [day] : [];
+    return entry.isFile() && extension.test(entry.name) ? [day] : [];
   });
 }

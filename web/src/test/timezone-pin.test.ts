@@ -44,12 +44,12 @@ describe('múi giờ của bộ kiểm', () => {
      * Tên múi giờ đúng mà dữ liệu múi giờ thiếu (ảnh Node cắt gọn `full-icu`) thì `Intl` vẫn
      * trả về cái tên ấy trong khi mọi phép tính rơi về UTC. Ô này hỏi phần HÀNH VI.
      */
-    const mocDong = new Date('2026-01-15T00:00:00Z');
-    expect(mocDong.getHours()).toBe(7);
+    const fixedInstant = new Date('2026-01-15T00:00:00Z');
+    expect(fixedInstant.getHours()).toBe(7);
 
     // Việt Nam không có giờ mùa hè — giữa năm phải vẫn +7, không phải +8.
-    const mocHe = new Date('2026-07-15T00:00:00Z');
-    expect(mocHe.getHours()).toBe(7);
+    const summerInstant = new Date('2026-07-15T00:00:00Z');
+    expect(summerInstant.getHours()).toBe(7);
   });
 
   it('ngày địa phương và ngày UTC LỆCH NHAU lúc 00:30 giờ VN — chính cái bẫy đang canh', () => {
@@ -58,8 +58,8 @@ describe('múi giờ của bộ kiểm', () => {
      * còn là hôm trước. Ô này khoá lại sự thật ấy để người đọc sau không phải tự dựng
      * lại bối cảnh mới hiểu vì sao có cái ghim ở `vite.config.ts`.
      */
-    const nuaDem = new Date('2026-09-23T17:30:00Z'); // = 00:30 ngày 24/09 giờ VN
-    expect(nuaDem.toISOString().slice(0, 10)).toBe('2026-09-23');
-    expect(nuaDem.toLocaleDateString('sv')).toBe('2026-09-24');
+    const midnight = new Date('2026-09-23T17:30:00Z'); // = 00:30 ngày 24/09 giờ VN
+    expect(midnight.toISOString().slice(0, 10)).toBe('2026-09-23');
+    expect(midnight.toLocaleDateString('sv')).toBe('2026-09-24');
   });
 });

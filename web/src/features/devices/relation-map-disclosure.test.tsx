@@ -73,7 +73,7 @@ describe('Bản đồ quan hệ — lưới cố định', () => {
  * Hai trạng thái chưa-biết nói hai câu khác nhau, và cả hai đều phải chặn lời khẳng định sai.
  */
 describe('Bản đồ quan hệ — chưa biết thì đừng khẳng định', () => {
-  const dungVoi = (props: Partial<Parameters<typeof RelationMap>[0]>) =>
+  const renderWith = (props: Partial<Parameters<typeof RelationMap>[0]>) =>
     renderWithI18n(
       <MemoryRouter>
         <RelationMap hubCode="TB-E2E-01" nodes={[]} missing={['Két sắt', 'Giấy tờ']} {...props} />
@@ -81,7 +81,7 @@ describe('Bản đồ quan hệ — chưa biết thì đừng khẳng định', 
     );
 
   it('HỎNG: nói "chưa đọc được", và KHÔNG nói "chưa gắn với gì cả"', () => {
-    dungVoi({ isUnknown: true });
+    renderWith({ isUnknown: true });
     expect(screen.getByText(/Chưa đọc được máy này đang giữ những gì/)).toBeTruthy();
     // Hai lời khẳng định sai ở đúng chiều nguy hiểm — cả hai phải im.
     expect(screen.queryByText(/không giữ IP, luật NAT/i)).toBeNull();
@@ -89,7 +89,7 @@ describe('Bản đồ quan hệ — chưa biết thì đừng khẳng định', 
   });
 
   it('ĐANG TẢI: nói "đang đọc", KHÔNG dùng câu cảnh báo thanh lý', () => {
-    dungVoi({ isUnknown: true, isLoading: true });
+    renderWith({ isUnknown: true, isLoading: true });
     expect(screen.getByText(/Đang đọc máy này đang giữ những gì/)).toBeTruthy();
     /* Câu cảnh báo kèm chỉ dẫn ("đừng dựa vào nó để quyết định thanh lý") là câu cho lúc HỎNG.
        Dùng nó cho một nhịp chờ vài trăm mili giây là mọi lượt mở trang đều nháy một cảnh báo
@@ -98,7 +98,7 @@ describe('Bản đồ quan hệ — chưa biết thì đừng khẳng định', 
   });
 
   it('BIẾT RỒI và rỗng thật: mới được nói "chưa gắn"', () => {
-    dungVoi({});
+    renderWith({});
     expect(screen.getByText(/Chưa gắn:/)).toBeTruthy();
     expect(screen.queryByText(/Chưa đọc được/)).toBeNull();
   });

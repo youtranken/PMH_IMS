@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { quetNguon } from '@/test/quet-nguon';
+import { scanSource } from '@/test/scan-source';
 
 /**
  * Ô THAO TÁC của bảng `.table-stack` phải mang `data-label` (UX-DR2).
@@ -17,7 +17,7 @@ const SRC = join(__dirname, '..');
 
 function actionCellsWithoutLabel(): string[] {
   const out: string[] = [];
-  for (const file of quetNguon(SRC, /\.tsx$/)) {
+  for (const file of scanSource(SRC, /\.tsx$/)) {
     if (/\.test\.tsx$/.test(file)) continue;
     const source = readFileSync(file, 'utf8');
     if (!source.includes('table-stack')) continue;

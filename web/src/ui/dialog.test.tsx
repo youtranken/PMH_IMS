@@ -119,8 +119,8 @@ describe('Dialog — guardUnsaved: không vứt dữ liệu đang gõ dở', () 
     await userEvent.keyboard('{Escape}');
     // `ConfirmDialog` dùng `cancelLabel` cho CẢ nút ✕ lẫn nút chân hộp, nên tên này trúng
     // hai nút. Lấy cái CUỐI — chân hộp nằm sau phần đầu hộp trong tài liệu.
-    const nut = await screen.findAllByRole('button', { name: 'Ở lại nhập tiếp' });
-    await userEvent.click(nut[nut.length - 1]);
+    const triggerButton = await screen.findAllByRole('button', { name: 'Ở lại nhập tiếp' });
+    await userEvent.click(triggerButton[triggerButton.length - 1]);
     expect(onOpenChange).not.toHaveBeenCalled();
     expect(o).toHaveValue('PC-01');
   });
@@ -195,8 +195,8 @@ describe('Dialog không có title', () => {
         </Dialog>
       </ConfirmProvider>,
     );
-    const nen = Array.from(document.querySelectorAll('.modal-backdrop'));
-    expect(nen).toHaveLength(2);
-    expect(nen.filter((el) => !el.classList.contains('bare'))).toHaveLength(1);
+    const backdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
+    expect(backdrops).toHaveLength(2);
+    expect(backdrops.filter((el) => !el.classList.contains('bare'))).toHaveLength(1);
   });
 });

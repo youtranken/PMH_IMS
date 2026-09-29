@@ -196,19 +196,19 @@ describe('Nhãn trạng thái không được trùng nút bấm', () => {
  * bắt ai phải viết câu nào, chỉ chặn đúng lỗi đã xảy ra — và chặn được cho cả màn thứ năm.
  */
 describe('Câu rỗng: "chưa có gì" không được nói về bộ lọc', () => {
-  const MAN_HINH = ['devices', 'software', 'isp', 'serviceAccounts'];
+  const SCREENS = ['devices', 'software', 'isp', 'serviceAccounts'];
 
-  it.each(MAN_HINH)('%s có đủ cặp câu, và chúng khác nhau', (ns) => {
+  it.each(SCREENS)('%s có đủ cặp câu, và chúng khác nhau', (ns) => {
     expect(lookup(`${ns}.empty`)).not.toBe(lookup(`${ns}.emptyFiltered`));
     expect(lookup(`${ns}.emptyHint`)).not.toBe(lookup(`${ns}.emptyFilteredHint`));
   });
 
-  it.each(MAN_HINH)('%s.empty không nhắc tới bộ lọc', (ns) => {
+  it.each(SCREENS)('%s.empty không nhắc tới bộ lọc', (ns) => {
     expect(lookup(`${ns}.empty`).toLowerCase()).not.toContain('bộ lọc');
     expect(lookup(`${ns}.emptyHint`).toLowerCase()).not.toContain('bộ lọc');
   });
 
-  it.each(MAN_HINH)('%s: màn thật sự chọn câu theo `isFiltered`', (ns) => {
+  it.each(SCREENS)('%s: màn thật sự chọn câu theo `isFiltered`', (ns) => {
     const FILE: Record<string, string> = {
       devices: 'features/devices/devices-screen.tsx',
       software: 'features/software/software-screen.tsx',

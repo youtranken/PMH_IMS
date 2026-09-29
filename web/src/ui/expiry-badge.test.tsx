@@ -9,7 +9,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactElement } from 'react';
 import '@/lib/i18n';
 import { ExpiryBadge } from '@/ui/expiry-badge';
-import { quetNguon } from '@/test/quet-nguon';
+import { scanSource } from '@/test/scan-source';
 
 /**
  * HỒ SƠ ĐÃ NGỪNG DÙNG THÌ THÔI ĐEO NHÃN HẠN.
@@ -39,26 +39,26 @@ import { quetNguon } from '@/test/quet-nguon';
 const HERE = dirname(fileURLToPath(import.meta.url));
 const SRC = join(HERE, '..');
 
-function dung(node: ReactElement) {
+function mount(node: ReactElement) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(<QueryClientProvider client={qc}>{node}</QueryClientProvider>);
 }
 
 describe('ExpiryBadge — notCounted', () => {
   // Một ngày chắc chắn đã qua, để nhánh "Quá hạn …" thật sự được chọn nếu prop bị bỏ qua.
-  const DA_QUA = '2020-01-01';
+  const PAST_DATE = '2020-01-01';
 
   it('không có prop thì vẫn kêu quá hạn như cũ (vế đối chứng)', () => {
     /*
      * Ô này giữ cho ô dưới có nghĩa. Thiếu nó thì một bản `ExpiryBadge` trả về chuỗi rỗng
      * trong MỌI trường hợp cũng làm ô dưới xanh.
      */
-    dung(<ExpiryBadge end={DA_QUA} />);
+    mount(<ExpiryBadge end={PAST_DATE} />);
     expect(screen.getByText(/Quá hạn/)).toBeTruthy();
   });
 
   it('notCounted thì thôi nói về hạn, và nói ra VÌ SAO', () => {
-    dung(<ExpiryBadge end={DA_QUA} notCounted />);
+    mount(<ExpiryBadge end={PAST_DATE} notCounted />);
     expect(screen.queryByText(/Quá hạn/)).toBeNull();
     expect(screen.getByText('Không tính hạn')).toBeTruthy();
   });
@@ -69,12 +69,12 @@ describe('ExpiryBadge — notCounted', () => {
      * liệu" — người dùng đi tìm xem ai quên nhập ngày hết hạn. Câu ngắn nói rõ "hồ sơ này
      * không còn được tính hạn" mới khớp với chính chữ mà `/disposal` đang nói.
      */
-    const { container } = dung(<ExpiryBadge end={DA_QUA} notCounted />);
+    const { container } = mount(<ExpiryBadge end={PAST_DATE} notCounted />);
     expect(container.textContent?.trim()).not.toBe('');
   });
 
   it('notCounted thắng cả khi không có ngày hết hạn', () => {
-    dung(<ExpiryBadge end={null} notCounted />);
+    mount(<ExpiryBadge end={null} notCounted />);
     expect(screen.queryByText('Không có hạn')).toBeNull();
     expect(screen.getByText('Không tính hạn')).toBeTruthy();
   });
@@ -95,7 +95,7 @@ describe('mọi màn danh sách vẽ ExpiryBadge đều khai notCounted', () => 
    * Khai tay, kèm lý do — cùng lối với `MAY_GROW` của `e2e/leak-guard.ts`: kể tên ngoại lệ ra
    * giấy, thay vì nới vị từ cho tới khi bài hết đỏ.
    */
-  const MIEN_TRU: Record<string, string> = {
+  const EXEMPT: Record<string, string> = {
     // Hàng của màn này do chính cỗ máy hạn trả về, và nó đã lọc trạng thái cuối đời ở SQL.
     'features/expiry/expiry-screen.tsx': 'dữ liệu đến từ ExpirySource, đã lọc ở API',
     // Khối "sắp hết hạn" của bảng điều khiển đọc `ExpiryApiService.list()` — cùng cỗ máy đó.
@@ -104,18 +104,18 @@ describe('mọi màn danh sách vẽ ExpiryBadge đều khai notCounted', () => 
 
   /* `-cell.tsx`: ô bảng mà màn danh sách giao hẳn việc vẽ hạn cho nó (vd cột "Tình trạng" của
      phần mềm) — màn không còn chữ `<ExpiryBadge`, nhưng luật vẫn phải canh tới ô đó. */
-  const MAN_HINH = quetNguon(join(SRC, 'features'), /-(screen|cell)\.tsx$/).filter((duong) =>
-    readFileSync(duong, 'utf8').includes('<ExpiryBadge'),
+  const SCREENS = scanSource(join(SRC, 'features'), /-(screen|cell)\.tsx$/).filter((route) =>
+    readFileSync(route, 'utf8').includes('<ExpiryBadge'),
   );
 
   it('tìm được các màn (vế đối chứng cho chính bài này)', () => {
     // Đổi quy ước đặt tên file mà bài này im lặng thì nó thôi canh gì cả.
-    expect(MAN_HINH.length).toBeGreaterThanOrEqual(4);
+    expect(SCREENS.length).toBeGreaterThanOrEqual(4);
   });
 
-  it.each(MAN_HINH)('%s', (duong) => {
-    const ten = duong.slice(SRC.length + 1).replace(/\\/g, '/');
-    if (MIEN_TRU[ten]) return;
-    expect(readFileSync(duong, 'utf8')).toContain('notCounted=');
+  it.each(SCREENS)('%s', (route) => {
+    const name = route.slice(SRC.length + 1).replace(/\\/g, '/');
+    if (EXEMPT[name]) return;
+    expect(readFileSync(route, 'utf8')).toContain('notCounted=');
   });
 });

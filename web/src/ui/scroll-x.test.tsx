@@ -10,7 +10,7 @@ describe('scrollEdges — còn nội dung khuất ở mép nào', () => {
     ['đã cuộn tới cuối', 1253, 2253, 1000, { start: true, end: false }],
     // Trình duyệt phóng to cho ra scrollLeft lẻ (1252.6): lệch dưới 1px vẫn là "đã tới cuối".
     ['lệch nửa pixel ở cuối', 1252.6, 2253, 1000, { start: true, end: false }],
-  ])('%s', (_ten, left, scrollWidth, clientWidth, expected) => {
+  ])('%s', (_name, left, scrollWidth, clientWidth, expected) => {
     expect(scrollEdges(left, scrollWidth, clientWidth)).toEqual(expected);
   });
 });

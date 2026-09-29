@@ -9,7 +9,7 @@ describe('describeSchedule — câu mô tả lịch đọc từ vi.ts', () => {
     ['hằng tuần, Chủ Nhật', { frequency: 'weekly', hour: 20, weekday: 7 }, 'Hằng tuần, Chủ Nhật lúc 20:00'],
     ['hằng tuần, thiếu thứ → thứ Hai', { frequency: 'weekly', hour: 9 }, 'Hằng tuần, Thứ Hai lúc 09:00'],
     ['hằng tháng', { frequency: 'monthly', hour: 6, dayOfMonth: 15 }, 'Hằng tháng, ngày 15 lúc 06:00'],
-  ])('%s', (_ten, value, expected) => {
+  ])('%s', (_name, value, expected) => {
     expect(describeSchedule(value)).toBe(expected);
   });
 });

@@ -10,12 +10,12 @@ import { useAnnounce, LiveRegion } from '@/ui/live-region';
  * báo trong khi người khác còn sống thì chữ không được biến mất.
  */
 
-function Noi({ text }: { text: string }) {
+function Speaker({ text }: { text: string }) {
   useAnnounce(text);
   return null;
 }
 
-function vung() {
+function region() {
   return screen.getByRole('status');
 }
 
@@ -26,21 +26,21 @@ describe('LiveRegion', () => {
      * node "đang tải" thì node ấy chỉ ra đời CÙNG nội dung, và trình đọc màn hình bỏ qua.
      */
     render(<LiveRegion />);
-    expect(vung()).toBeTruthy();
-    expect(vung().textContent).toBe('');
+    expect(region()).toBeTruthy();
+    expect(region().textContent).toBe('');
   });
 
   it('loan báo hiện ra, và rút đi khi component tháo', () => {
     const { rerender } = render(
       <>
         <LiveRegion />
-        <Noi text="Đang tải…" />
+        <Speaker text="Đang tải…" />
       </>,
     );
-    expect(vung().textContent).toBe('Đang tải…');
+    expect(region().textContent).toBe('Đang tải…');
 
     rerender(<LiveRegion />);
-    expect(vung().textContent).toBe('');
+    expect(region().textContent).toBe('');
   });
 
   it('sáu khối cùng tải: gỡ một khối KHÔNG làm câu loan báo biến mất', () => {
@@ -52,40 +52,40 @@ describe('LiveRegion', () => {
     const { rerender } = render(
       <>
         <LiveRegion />
-        <Noi text="Đang tải…" />
-        <Noi text="Đang tải…" />
+        <Speaker text="Đang tải…" />
+        <Speaker text="Đang tải…" />
       </>,
     );
-    expect(vung().textContent).toBe('Đang tải…');
+    expect(region().textContent).toBe('Đang tải…');
 
     rerender(
       <>
         <LiveRegion />
-        <Noi text="Đang tải…" />
+        <Speaker text="Đang tải…" />
       </>,
     );
-    expect(vung().textContent).toBe('Đang tải…');
+    expect(region().textContent).toBe('Đang tải…');
 
     rerender(<LiveRegion />);
-    expect(vung().textContent).toBe('');
+    expect(region().textContent).toBe('');
   });
 
   it('đổi chữ trong khi vẫn đang sống thì vùng đọc chữ mới', () => {
     const { rerender } = render(
       <>
         <LiveRegion />
-        <Noi text="Đang tải…" />
+        <Speaker text="Đang tải…" />
       </>,
     );
     act(() => {
       rerender(
         <>
           <LiveRegion />
-          <Noi text="Đang tải danh sách thiết bị…" />
+          <Speaker text="Đang tải danh sách thiết bị…" />
         </>,
       );
     });
-    expect(vung().textContent).toBe('Đang tải danh sách thiết bị…');
+    expect(region().textContent).toBe('Đang tải danh sách thiết bị…');
   });
 
   it('hai lượt render liên tiếp KHÔNG đăng ký hai lời', () => {
@@ -97,16 +97,16 @@ describe('LiveRegion', () => {
     const { rerender } = render(
       <>
         <LiveRegion />
-        <Noi text="Đang tải…" />
+        <Speaker text="Đang tải…" />
       </>,
     );
     rerender(
       <>
         <LiveRegion />
-        <Noi text="Đang tải…" />
+        <Speaker text="Đang tải…" />
       </>,
     );
     rerender(<LiveRegion />);
-    expect(vung().textContent).toBe('');
+    expect(region().textContent).toBe('');
   });
 });

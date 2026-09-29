@@ -102,7 +102,7 @@ describe('web/eslint.config.mjs — cổng AD-15 phải THẬT SỰ bắt đư�
     ['confirm trần', `export const f = () => confirm('xoá?');`],
     ['alert trần', `export const f = () => alert('xong');`],
     ['globalThis.confirm', `export const f = () => globalThis.confirm('xoá?');`],
-  ])('BẮT được %s', (_ten, code) => {
+  ])('BẮT được %s', (_name, code) => {
     const { output, failed } = lintSnippet(code);
     expect(failed, `eslint phải báo lỗi. Đầu ra:\n${output}`).toBe(true);
     expect(output).toMatch(/AD-15/);
@@ -152,7 +152,7 @@ describe('web/eslint.config.mjs — cổng AD-15 phải THẬT SỰ bắt đư�
     ['hàm có dấu', `export function xóaHết() {}`],
     ['tham số có dấu', `export const f = (giá: number) => giá;`],
     ['thuộc tính có dấu', `export const o = { hỏng: 1 };`],
-  ])('AD-16 BẮT được %s', (_ten, code) => {
+  ])('AD-16 BẮT được %s', (_name, code) => {
     const { output, failed } = lintSnippet(code);
     expect(failed, `eslint phải báo lỗi. Đầu ra:
 ${output}`).toBe(true);
@@ -196,7 +196,7 @@ describe('DoD-6 — chữ tiếng Việt viết cứng trong mã sản phẩm', 
     ['template trong JSX', 'export const A = ({ n }: { n: number }) => <p>{`Còn ${n} ngày`}</p>;'],
     ['chuỗi trong hàm thuần', `export const f = (x: string) => (x ? x : 'Có lỗi xảy ra.');`],
     ['tham số mặc định', `export function f(fallback = 'Đăng nhập không thành công.') { return fallback; }`],
-  ])('BẮT được %s', (_ten, code) => {
+  ])('BẮT được %s', (_name, code) => {
     const { output, failed } = lintSnippet(code);
     expect(failed, `eslint phải báo lỗi. Đầu ra:\n${output}`).toBe(true);
     expect(output).toMatch(/DoD-6/);
@@ -205,7 +205,7 @@ describe('DoD-6 — chữ tiếng Việt viết cứng trong mã sản phẩm', 
   it.each([
     ['ở file .ts ngoài features', 'src/lib', `export const x = 'Quá hạn';`],
     ['ở features', 'src/features', `export const A = () => <b>Lỗi</b>;`],
-  ])('BẮT được %s', (_ten, under, code) => {
+  ])('BẮT được %s', (_name, under, code) => {
     const { output, failed } = lintSnippet(code, under, 'probe.tsx');
     expect(failed, `Đầu ra:\n${output}`).toBe(true);
     expect(output).toMatch(/DoD-6/);

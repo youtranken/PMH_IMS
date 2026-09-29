@@ -135,7 +135,7 @@ describe('pageSlots — cắt đúng 50 dòng một trang', () => {
  * vế chặn một kiểu chọn-hộ-sai — xem chú thích ở `slot-paging.ts`.
  */
 describe('shouldIsolateAssigned', () => {
-  const ca: [string, number, number, boolean][] = [
+  const caseRows: [string, number, number, boolean][] = [
     ['dưới ngưỡng hồ sơ: /24 mới cấp 4 địa chỉ → đừng giấu ô trống đi', 4, 33, false],
     ['đúng sàn ô trống (32) thì vẫn KHÔNG lọc: cả dải còn lọt một trang', 5, 32, false],
     ['vừa đủ cả hai vế → lọc', 5, 33, true],
@@ -144,11 +144,11 @@ describe('shouldIsolateAssigned', () => {
     ['dải rỗng hoàn toàn → không có gì đang bị chôn', 0, 254, false],
   ];
 
-  // `oTrong` chứ không phải `free`: tên sau trùng hàm dựng ô trống ở đầu file, và che nó đi
+  // `freeCount` chứ không phải `free`: tên sau trùng hàm dựng ô trống ở đầu file, và che nó đi
   // trong cả vòng lặp — bài sau thêm vào đây sẽ gọi `free('10.0.0.1')` rồi nhận một con số.
-  for (const [ten, assigned, oTrong, mongDoi] of ca) {
-    it(ten, () => {
-      expect(shouldIsolateAssigned(assigned, oTrong)).toBe(mongDoi);
+  for (const [caseName, assigned, freeCount, want] of caseRows) {
+    it(caseName, () => {
+      expect(shouldIsolateAssigned(assigned, freeCount)).toBe(want);
     });
   }
 });
@@ -164,22 +164,22 @@ describe('shouldIsolateAssigned', () => {
  * `countSlots` thôi thì con số đúng mà bộ lọc vẫn sai, và ngược lại.
  */
 describe('slotStatus — hồ sơ đã ẩn không đội lốt "trống"', () => {
-  function daAn(address: string, status: IpStatus): SubnetSlot {
+  function voidedSlotOf(address: string, status: IpStatus): SubnetSlot {
     return { ...(record(address, status) as Extract<SubnetSlot, { kind: 'record' }>), voidedAt: '2026-09-01T00:00:00Z' };
   }
 
   it('hồ sơ đã ẩn mang trạng thái free vẫn KHÔNG phải "trống"', () => {
-    expect(slotStatus(daAn('10.0.0.5', 'free'))).toBe('voided');
+    expect(slotStatus(voidedSlotOf('10.0.0.5', 'free'))).toBe('voided');
   });
 
   it('ẩn thắng cả trạng thái vòng đời khác', () => {
     // `voided_at` là một tầng khác `status`: một hồ sơ đang dùng rồi bị ẩn thì thứ người dùng
     // cần biết trước hết là nó đã bị ẩn.
-    expect(slotStatus(daAn('10.0.0.6', 'assigned'))).toBe('voided');
+    expect(slotStatus(voidedSlotOf('10.0.0.6', 'assigned'))).toBe('voided');
   });
 
   it('countSlots tách hẳn rổ "đã ẩn" ra khỏi "trống"', () => {
-    const slots = [free('10.0.0.1'), record('10.0.0.2', 'free'), daAn('10.0.0.3', 'free')];
+    const slots = [free('10.0.0.1'), record('10.0.0.2', 'free'), voidedSlotOf('10.0.0.3', 'free')];
     const counts = countSlots(slots);
     expect(counts.free).toBe(2);
     expect(counts.voided).toBe(1);
@@ -188,10 +188,10 @@ describe('slotStatus — hồ sơ đã ẩn không đội lốt "trống"', () =
   });
 
   it('lọc "Trống" KHÔNG kéo theo hồ sơ đã ẩn', () => {
-    const anRoi = daAn('10.0.0.3', 'free');
-    const slots = [free('10.0.0.1'), record('10.0.0.2', 'free'), anRoi];
-    expect(filterSlots(slots, 'free')).not.toContain(anRoi);
-    expect(filterSlots(slots, 'voided')).toEqual([anRoi]);
+    const voidedSlot = voidedSlotOf('10.0.0.3', 'free');
+    const slots = [free('10.0.0.1'), record('10.0.0.2', 'free'), voidedSlot];
+    expect(filterSlots(slots, 'free')).not.toContain(voidedSlot);
+    expect(filterSlots(slots, 'voided')).toEqual([voidedSlot]);
   });
 
   it('tổng các rổ đúng bằng "Tất cả" (vế đối chứng)', () => {
@@ -203,12 +203,12 @@ describe('slotStatus — hồ sơ đã ẩn không đội lốt "trống"', () =
     const slots = [
       free('10.0.0.1'),
       record('10.0.0.2', 'assigned'),
-      daAn('10.0.0.4', 'free'),
-      daAn('10.0.0.5', 'assigned'),
+      voidedSlotOf('10.0.0.4', 'free'),
+      voidedSlotOf('10.0.0.5', 'assigned'),
     ];
     const counts = countSlots(slots);
-    const tong = counts.assigned + counts.free + counts.voided;
-    expect(tong).toBe(counts.all);
+    const total = counts.assigned + counts.free + counts.voided;
+    expect(total).toBe(counts.all);
   });
 });
 

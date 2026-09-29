@@ -3,7 +3,7 @@
 // Tham chiếu ở đây mở đúng cho MỘT file, thay vì kéo kiểu Node vào toàn bộ mã app.
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { quetNguon } from '@/test/quet-nguon';
+import { scanSource } from '@/test/scan-source';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
@@ -65,7 +65,7 @@ const API_SRC = join(HERE, '..', '..', '..', 'api', 'src');
  * hiện nguyên mã thao tác, không qua bảng nhãn nào. Quét chúng ở đây là đòi nhãn cho những mã
  * chỉ có trong nhật ký như `ip.transitioned` — bài đỏ vì thứ không ai nhìn thấy.
  *
- * Lời gọi nào đọc không ra mã (hình dạng lạ) thì vào `khongDocDuoc` và bài đỏ, thay vì lặng lẽ
+ * Lời gọi nào đọc không ra mã (hình dạng lạ) thì vào `unreadable` và bài đỏ, thay vì lặng lẽ
  * bỏ qua — bài điểm danh bỏ sót im lặng thì xanh cả khi đã mù.
  */
 const RECORD_CALL = /(?<!async |function )recordWithin\(/g;
@@ -74,8 +74,8 @@ const PANEL_INSERT =
 const CODE = "'([a-z0-9._-]+)'";
 const ACTION_ARG = new RegExp(`^(?:${CODE}|[\\w.!]+\\s*\\?\\s*${CODE}\\s*:\\s*${CODE})$`);
 
-/* Bản dùng chung — xem `test/quet-nguon.ts` (bỏ qua thư mục dò của `lint-rules.test.ts`). */
-const walk = (dir: string): string[] => quetNguon(dir, /\.ts$/);
+/* Bản dùng chung — xem `test/scan-source.ts` (bỏ qua thư mục dò của `lint-rules.test.ts`). */
+const walk = (dir: string): string[] => scanSource(dir, /\.ts$/);
 
 /** Văn bản đối số của lời gọi có dấu `(` ở vị trí `open`, tới dấu đóng khớp với nó. */
 function argumentText(source: string, open: number): string {
@@ -127,16 +127,16 @@ function recordCallActions(args: string[], source: string): string[] {
  * Sổ IP lưu thẳng NHÃN TIẾNG VIỆT cho bước chuyển trạng thái (`transitionLabel` → "Cấp IP",
  * "Thu hồi"), không phải mã, và web in nguyên chữ đó. Không có mã thì không có nhãn để thiếu.
  */
-const DA_LA_NHAN = /\baction:\s*transitionLabel\(/;
+const ALREADY_LABELLED = /\baction:\s*transitionLabel\(/;
 
-function actionsWrittenByApi(): { found: Map<string, string>; khongDocDuoc: string[] } {
+function actionsWrittenByApi(): { found: Map<string, string>; unreadable: string[] } {
   /* Mã thao tác → file đầu tiên ghi nó, để câu báo lỗi chỉ thẳng chỗ cần sửa. */
   const found = new Map<string, string>();
-  const khongDocDuoc: string[] = [];
+  const unreadable: string[] = [];
   for (const file of walk(API_SRC)) {
     if (file.endsWith('.spec.ts')) continue;
     const rel = file.slice(API_SRC.length + 1).replace(/\\/g, '/');
-    if (KHONG_HIEN_TREN_GIAO_DIEN.some((dir) => rel.startsWith(dir))) continue;
+    if (NOT_SHOWN_IN_UI.some((dir) => rel.startsWith(dir))) continue;
     const source = readFileSync(file, 'utf8');
     const add = (action: string) => {
       if (!found.has(action)) found.set(action, rel);
@@ -146,7 +146,7 @@ function actionsWrittenByApi(): { found: Map<string, string>; khongDocDuoc: stri
       const args = topLevelArgs(argumentText(source, match.index + match[0].length - 1));
       if (args[0] !== 'tx') continue;
       const actions = recordCallActions(args, source);
-      if (actions.length === 0) khongDocDuoc.push(`recordWithin(${args.slice(0, 4).join(', ')})  ở ${rel}`);
+      if (actions.length === 0) unreadable.push(`recordWithin(${args.slice(0, 4).join(', ')})  ở ${rel}`);
       actions.forEach(add);
     }
 
@@ -155,13 +155,13 @@ function actionsWrittenByApi(): { found: Map<string, string>; khongDocDuoc: stri
       const actions = [...body.matchAll(new RegExp(`\\baction:\\s*${CODE}`, 'g'))].map((m) => m[1]);
       // `action,` viết tắt = thân của chính hàm `recordWithin`; mã của nó đến từ ngả 1.
       const viaHelper = /\baction\s*[,}]/.test(body);
-      if (actions.length === 0 && !viaHelper && !DA_LA_NHAN.test(body)) {
-        khongDocDuoc.push(`insert(${match[1]})  ở ${rel}`);
+      if (actions.length === 0 && !viaHelper && !ALREADY_LABELLED.test(body)) {
+        unreadable.push(`insert(${match[1]})  ở ${rel}`);
       }
       actions.forEach(add);
     }
   }
-  return { found, khongDocDuoc };
+  return { found, unreadable };
 }
 
 /**
@@ -170,9 +170,9 @@ function actionsWrittenByApi(): { found: Map<string, string>; khongDocDuoc: stri
  * Cùng lối với `MAY_GROW` trong `e2e/leak-guard.ts`: kể tên thứ được phép đứng ngoài, KÈM LÝ DO,
  * thay vì nới vị từ cho tới khi bài hết đỏ. Hiện chưa có sổ nào được miễn.
  */
-const KHONG_HIEN_TREN_GIAO_DIEN: string[] = [];
+const NOT_SHOWN_IN_UI: string[] = [];
 
-const MOI_BANG = [
+const ALL_TABLES = [
   DEVICE_ACTIONS,
   SOFTWARE_ACTIONS,
   SERVICE_ACCOUNT_ACTIONS,
@@ -182,21 +182,21 @@ const MOI_BANG = [
   CATALOG_ACTIONS,
 ];
 
-const LABELLED = new Set(MOI_BANG.flatMap((bang) => Object.keys(bang)));
+const LABELLED = new Set(ALL_TABLES.flatMap((table) => Object.keys(table)));
 
 /** `history.devices.actCreated` → chuỗi thật trong `vi.ts`, hoặc `undefined` nếu chưa khai. */
-function traKhoa(khoa: string): unknown {
-  return khoa
+function lookupKey(key: string): unknown {
+  return key
     .split('.')
     .reduce<unknown>(
-      (nut, phan) =>
-        nut && typeof nut === 'object' ? (nut as Record<string, unknown>)[phan] : undefined,
+      (button, part) =>
+        button && typeof button === 'object' ? (button as Record<string, unknown>)[part] : undefined,
       vi,
     );
 }
 
 describe('Nhãn thao tác trong sổ lịch sử', () => {
-  const { found: written, khongDocDuoc } = actionsWrittenByApi();
+  const { found: written, unreadable } = actionsWrittenByApi();
 
   /*
    * SÀN CHỐNG REGEX HỤT — và đây là vế giữ cho cả bài có nghĩa.
@@ -223,7 +223,7 @@ describe('Nhãn thao tác trong sổ lịch sử', () => {
   });
 
   it('không có lời gọi ghi sổ nào mà bài không đọc ra mã', () => {
-    expect(khongDocDuoc).toEqual([]);
+    expect(unreadable).toEqual([]);
   });
 
   /*
@@ -235,21 +235,21 @@ describe('Nhãn thao tác trong sổ lịch sử', () => {
    * một lời hứa.
    */
   it('mọi khóa trong bảy bảng nhãn đều có thật trong vi.ts', () => {
-    const hong: string[] = [];
-    for (const bang of MOI_BANG) {
-      for (const [ma, khoa] of Object.entries(bang)) {
-        if (typeof traKhoa(khoa) !== 'string') hong.push(`${ma} → ${khoa}`);
+    const broken: string[] = [];
+    for (const table of ALL_TABLES) {
+      for (const [code, key] of Object.entries(table)) {
+        if (typeof lookupKey(key) !== 'string') broken.push(`${code} → ${key}`);
       }
     }
-    expect(hong).toEqual([]);
+    expect(broken).toEqual([]);
   });
 
   it('mọi mã thao tác API ghi ra đều có nhãn tiếng Việt', () => {
-    const thieu = [...written.entries()]
+    const missing = [...written.entries()]
       .filter(([action]) => !LABELLED.has(action))
       .map(([action, file]) => `${action}  (ghi ở ${file})`);
 
     // Jest/Vitest in ra nguyên mảng khi đỏ, nên người đọc thấy luôn mã nào thiếu và ghi ở đâu.
-    expect(thieu).toEqual([]);
+    expect(missing).toEqual([]);
   });
 });

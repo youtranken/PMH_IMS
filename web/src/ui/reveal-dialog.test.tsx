@@ -163,7 +163,7 @@ describe('RevealDialog — onExpire khi hết giờ', () => {
   it('cha vẽ lại với callback mới: interval chỉ dựng MỘT lần, và hết giờ gọi bản callback mới nhất', () => {
     const spy = vi.spyOn(globalThis, 'setInterval');
     const calls: number[] = [];
-    function Cha() {
+    function Host() {
       const [n, setN] = useState(0);
       return (
         <>
@@ -180,7 +180,7 @@ describe('RevealDialog — onExpire khi hết giờ', () => {
         </>
       );
     }
-    renderWithI18n(<Cha />);
+    renderWithI18n(<Host />);
     const before = spy.mock.calls.filter((c) => c[1] === 250).length;
     fireEvent.click(screen.getByRole('button', { name: 'vẽ lại', hidden: true }));
     fireEvent.click(screen.getByRole('button', { name: 'vẽ lại', hidden: true }));
