@@ -1,15 +1,12 @@
 /**
- * GẤP DẤU TIẾNG VIỆT — một bản, cho cả so nhãn, sinh mã lẫn tìm kiếm (B-01, 25/09/2026).
+ * GẤP DẤU TIẾNG VIỆT — một bản, cho cả so nhãn, sinh mã lẫn tìm kiếm (B-01).
  *
- * ===== VÌ SAO FILE NÀY RA ĐỜI =====
+ * ===== VÌ SAO CÓ FILE NÀY =====
  *
- * Trước 25/09 repo có HAI bản gấp dấu viết tay, không bản nào dùng chung (AD-15):
+ * Gấp dấu cần ở nhiều chỗ — khớp tên cột Excel (`import-plan.ts`), sinh mã từ tên đăng nhập
+ * (`service-account-rules.ts`) — và bản viết tay ở từng chỗ là thứ AD-15 cấm.
  *
- *   · `import-plan.ts` — `stripDiacritics`, để khớp tên cột trong file Excel;
- *   · `service-account-rules.ts` — bốn dòng y hệt nằm giữa `codeFromLogin`.
- *
- * Và chỗ CẦN nó nhất thì không có: ô tìm kiếm. Đo trên 30.000 thiết bị thật (§13.3 của sổ rà
- * soát): gõ `Máy trạm` ra 2.500 dòng, gõ `may tram` ra **0 dòng** — và màn hình trả lời
+ * Chỗ CẦN nó nhất là ô tìm kiếm. Đo trên 30.000 thiết bị thật khi chưa gấp dấu: gõ `Máy trạm` ra 2.500 dòng, gõ `may tram` ra **0 dòng** — và màn hình trả lời
  * "Chưa có thiết bị nào khớp bộ lọc", tức khẳng định một điều sai. 7.500/30.000 hồ sơ vô
  * hình với người gõ không dấu. Người Việt gõ không dấu là chuyện thường ngày.
  *
@@ -27,7 +24,7 @@
 /**
  * Dải dấu thanh/dấu phụ Unicode. Dựng bằng `new RegExp` từ CHUỖI ESCAPE, không viết ký tự tổ
  * hợp trần trong mã nguồn: editor hay formatter nào chuẩn hóa/nuốt mất mấy ký tự đó là toàn
- * bộ việc gấp dấu im lặng ngừng hoạt động (bài học code review Epic 2).
+ * bộ việc gấp dấu im lặng ngừng hoạt động.
  */
 const COMBINING_MARKS = new RegExp('[̀-ͯ]', 'g');
 

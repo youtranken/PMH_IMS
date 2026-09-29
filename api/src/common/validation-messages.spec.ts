@@ -41,8 +41,8 @@ class DtoMau {
    * quá to, nó không phải số. (`Number('abc')` ra `NaN`, và `NaN <= 65535` là `false`, nên
    * `max` hỏng trước.)
    *
-   * Bản tiếng Anh trước 12/09 cũng sai y như vậy — chỉ khác là không ai đọc nó. Dịch xong thì
-   * câu sai trở thành câu sai ĐỌC ĐƯỢC, và lượt lái tay 12/09 nhìn ra ngay.
+   * Câu tiếng Anh gốc của class-validator cũng sai y như vậy — chỉ khác là không ai đọc nó.
+   * Dịch ra thì câu sai trở thành câu sai ĐỌC ĐƯỢC, nên phải chỉnh thứ tự cho đúng.
    *
    * Thứ tự dưới đây khớp 12 trường `@IsInt()` trong `*.controller.ts`. Hai ca kiểm bên dưới
    * giữ nó — đảo lại là đỏ.
@@ -102,7 +102,7 @@ describe('Câu lỗi nhập liệu — tiếng Việt cho MỌI validator', () =
 
   it('validator KHÔNG khai message vẫn ra tiếng Việt, và giữ đúng con số', async () => {
     const cau = await cauLoiCho({ internalPort: 99999 });
-    // Đây chính là câu lọt ra màn hình ở ô "Port trong" của form NAT trước 12/09:
+    // Không dịch thì đây là câu lọt ra màn hình ở ô "Port trong" của form NAT:
     //   internalPort must not be greater than 65535
     expect(cau).toContain('Cổng trong không được lớn hơn 65535.');
   });
@@ -266,7 +266,7 @@ describe('Điểm danh trên mã nguồn controller', () => {
      * SÀN CHỐNG REGEX HỤT — vế giữ cho cả bài có nghĩa. Đổi cách viết DTO làm regex trả rỗng,
      * và một bài "mọi trường tìm được đều có nhãn" sẽ XANH RỰC trong khi nó chẳng kiểm gì.
      *
-     * 42 là SỐ ĐO ngày 12/09, không phải một con số tròn cho đẹp. Nó là số trường có decorator
+     * 42 là SỐ ĐO thật, không phải một con số tròn cho đẹp. Nó là số trường có decorator
      * đóng ngoặc NGAY TRÊN dòng khai — decorator viết nhiều dòng thì regex này không bắt, nên
      * 42 là mức sàn chứ không phải tổng số trường có validator. Sàn đặt thấp hơn một chút để
      * một lượt refactor đổi cách xuống dòng không làm đỏ vì lý do chẳng liên quan.

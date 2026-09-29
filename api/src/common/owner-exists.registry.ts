@@ -59,7 +59,7 @@ export interface OwnerResolver {
    * "Hồ sơ này còn NHẬN THÊM được không" — khác hẳn `labelFor` ("có thật không").
    *
    * KHÔNG BẮT BUỘC. Không khai = module chủ chưa có khái niệm ngừng dùng cho loại này, và mọi
-   * lượt ghi đi qua. Hôm nay (17/09/2026) chỉ `device` khai: thiết bị đã thanh lý thì đóng
+   * lượt ghi đi qua. Hiện chỉ `device` khai: thiết bị đã thanh lý thì đóng
    * băng, đúng như phần còn lại của hồ sơ ("mở lại mới sửa được"). Phần mềm đã bỏ và tài khoản
    * dịch vụ đã vô hiệu chưa có hàng rào tương đương ở module chủ, nên chưa khai ở đây — khai
    * một hàng rào rỗng còn tệ hơn không khai, vì nó trông như đã canh.

@@ -44,7 +44,7 @@ export function redactForLog(error: unknown): string {
  *
  * ===== VÌ SAO KHÔNG ĐỂ CHÚNG TỰ VIẾT `.message` =====
  *
- * Đó chính là trạng thái trước 11/09: 13 chỗ viết `(error as Error).message`, và với
+ * Viết `(error as Error).message` là hình dạng mặc định của việc ghi log, và với
  * `DrizzleQueryError` thì `.message` là `Failed query: <sql>\nparams: <THAM SỐ ĐÃ BIND>` —
  * hash Argon2, ciphertext TOTP secret, email, họ tên, số điện thoại rơi thẳng vào
  * `docker logs`, ngoài ranh giới PII mà NFR-04/AD-4 dựng quanh DB. Không ai phải cố ý làm
@@ -110,9 +110,8 @@ function describe(error: unknown): string {
  * Chỉ dùng ở đường MAIL/JOB. Không bọc nó quanh mọi dòng log: `audit_log.actor` là email và
  * nó có mặt trong log một cách CÓ CHỦ Ý — che hết thì mất luôn đường lần ra ai làm gì.
  *
- * Trước 11/09 hàm này nằm riêng trong `worker/worker.ts`, cạnh đúng một chỗ dùng. Chuyển về
- * đây để "những gì phải chà trước khi ghi log" có MỘT nhà (AD-15), và để chỗ dùng ghép được
- * hai lớp: `redactPii(redactMessage(err))`.
+ * Nằm ở đây chứ không riêng trong `worker/worker.ts` để "những gì phải chà trước khi ghi
+ * log" có MỘT nhà (AD-15), và để chỗ dùng ghép được hai lớp: `redactPii(redactMessage(err))`.
  */
 export function redactPii(message: string): string {
   return message.replace(/[\w.+-]+@[\w-]+(?:\.[\w-]+)*/g, '[email]');

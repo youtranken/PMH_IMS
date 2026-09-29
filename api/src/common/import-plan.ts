@@ -36,7 +36,7 @@ export type DateCell = { ok: true; value: string | null } | { ok: false };
 const EXAMPLE_HEADERS = ['ghi chú nhập', 'ghi chu nhap'];
 
 /**
- * Gấp dấu tiếng Việt — bản cài đặt đã dọn về `search-fold.ts` (B-01, 25/09/2026).
+ * Gấp dấu tiếng Việt — bản cài đặt nằm ở `search-fold.ts` (B-01).
  *
  * Re-export chứ không bắt mọi nơi gọi đổi import: `stripDiacritics` là một phần hợp đồng công
  * khai của bộ import (bài kiểm gọi, và bốn chỗ trong chính file này gọi). Thứ bỏ được là BẢN

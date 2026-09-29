@@ -29,7 +29,7 @@ export type ApprovalSubjectDescriber = (
  * và `DevicePanelRegistry`: cả bên GHI (module nghiệp vụ đăng ký loại của mình) lẫn bên ĐỌC
  * (`approvals` chạy máy trạng thái) đều cần chạm, nên nó không thuộc về bên nào. Để trong
  * `approvals` thì mọi module muốn đăng ký đều phải import nội bộ của `approvals` — depcruise
- * đã bắt đúng lỗi này một lần ở Epic 2 rồi.
+ * chặn đúng lỗi này.
  *
  * `@Global` để module chủ chỉ cần inject, không phải import chéo module của nhau.
  */
@@ -45,7 +45,7 @@ export class ApprovalKindRegistry {
   /**
    * `null` = loại chưa đăng ký. Trả null thay vì ném để nơi gọi tự chọn cách xử: service
    * ném 400 tiếng Việt, còn sweep thì bỏ qua và đi tiếp — một loại hỏng không được làm chết
-   * cả vòng quét (bài học finding 2 của Epic 3).
+   * cả vòng quét.
    */
   find(kind: string): ApprovalFlow | null {
     return this.flows.get(kind) ?? null;

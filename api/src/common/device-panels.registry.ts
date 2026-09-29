@@ -3,7 +3,7 @@ import type { DevicePanel, DevicePanelProvider, PanelViewer } from './device-pan
 import { redactMessage } from './log-redact';
 
 /**
- * Sổ đăng ký khu mở rộng của trang chi tiết thiết bị (story 2.5).
+ * Sổ đăng ký khu mở rộng của trang chi tiết thiết bị.
  *
  * Nằm ở `common` chứ KHÔNG nằm trong module `devices`, vì đây là hạ tầng dùng chung giữa
  * hai bên: `devices` đọc sổ, còn `software`/`vault`/`ipam` ghi vào sổ. Để trong `devices`

@@ -1,6 +1,6 @@
 /**
  * So sánh bản ghi TRƯỚC và SAU khi sửa — hàm THUẦN, dùng chung cho mọi bảng có lịch sử
- * (AD-13): thiết bị (2.2), phần mềm (3.1), ISP (3.3), IP (Epic 5)…
+ * (AD-13): thiết bị, phần mềm, ISP, IP…
  *
  * Vì sao không lưu nguyên cả bản ghi mỗi lần sửa: tab Lịch sử là để người ta đọc "ai đổi
  * gì", không phải để đọc hai bãi JSON rồi tự dò khác nhau chỗ nào.

@@ -3,11 +3,11 @@ import { lint, withProbe } from '../../test/lint-probe';
 /**
  * Bài kiểm cho CHÍNH CÁI CỔNG, không phải cho code.
  *
- * ===== VÌ SAO VÁ 13 CHỖ LÀ CHƯA XONG =====
+ * ===== VÌ SAO VÁ TỪNG CHỖ LÀ CHƯA ĐỦ =====
  *
- * `common/log-redact.ts` được dựng ngày 09/09 để một `DrizzleQueryError` không in nguyên
- * `params:` — hash Argon2, ciphertext TOTP, email, họ tên — ra `docker logs`. Tới 11/09 nó
- * được gọi ở ĐÚNG MỘT chỗ, còn 13 chỗ khác vẫn viết `(error as Error).message`.
+ * `common/log-redact.ts` có để một `DrizzleQueryError` không in nguyên `params:` — hash
+ * Argon2, ciphertext TOTP, email, họ tên — ra `docker logs`. Có hàm rồi mà vẫn từng chỉ ĐÚNG
+ * MỘT chỗ gọi nó, còn 13 chỗ khác viết `(error as Error).message`.
  *
  * Đó không phải vì ai lười. Nó là hình dạng mặc định của việc ghi log, nên chỗ thứ 14 sẽ lại
  * viết đúng như vậy — và không có gì đỏ. Vá 13 chỗ chỉ mua được thời gian; hàng rào phải nằm

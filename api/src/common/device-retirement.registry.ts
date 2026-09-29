@@ -30,7 +30,7 @@ import type { Tx } from './tx';
  * thu hồi nhưng máy vẫn đang dùng".
  *
  * Mỗi module tự lo thứ tự BÊN TRONG phần của mình. Ví dụ `ipam` phải gỡ rule NAT TRƯỚC rồi mới
- * thu hồi IP: làm ngược lại thì chính hàng rào `IP_HAS_LIVE_NAT` (rà soát 07/09 #6) chặn lượt
+ * thu hồi IP: làm ngược lại thì chính hàng rào `IP_HAS_LIVE_NAT` chặn lượt
  * thu hồi, và cả lượt thanh lý rollback.
  */
 
@@ -75,8 +75,8 @@ export interface DeviceReleaser {
  *
  * Mà việc đăng ký xảy ra trong `onModuleInit` của bốn lớp nằm ở ba module khác nhau: đổi thứ
  * tự `imports`, tách một module, đặt nhầm một `forwardRef` là đủ để một trong số đó ngừng
- * chạy. Đây đúng là lớp lỗi đã bắt `OwnerAccessRegistry` phải điểm danh lúc boot (08/09), và
- * lý do ở đây giống hệt.
+ * chạy. `OwnerAccessRegistry` điểm danh lúc boot vì đúng lớp lỗi này, và lý do ở đây giống
+ * hệt.
  *
  * ===== VÌ SAO LÀ TÊN CHỨ KHÔNG PHẢI SỐ LƯỢNG =====
  *
@@ -125,7 +125,7 @@ export class DeviceRetirementRegistry implements OnApplicationBootstrap {
    *
    * Tuần tự, KHÔNG `Promise.all`: cùng một transaction chạy nhiều câu song song trên một
    * connection là lỗi thời gian chạy của node-postgres — cùng lý do đã ghi ở
-   * `releaseAllWithin`. Bản trước chạy song song được vì nó đọc trên pool.
+   * `releaseAllWithin`. Chỉ lượt đọc trên pool mới chạy song song được.
    */
   async holdingsWithin(tx: Tx, deviceId: string): Promise<string[]> {
     const out: string[] = [];

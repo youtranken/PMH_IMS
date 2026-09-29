@@ -4,7 +4,7 @@
  * `new Date().toISOString()` luôn trả giờ UTC. Với múi giờ +07, từ 00:00 tới 07:00 sáng giờ
  * Việt Nam thì UTC vẫn là NGÀY HÔM QUA — nên mọi phép "còn bao nhiêu ngày" lệch một ngày
  * suốt 7 tiếng mỗi sáng: thứ hết hạn HÔM NAY bị báo là "còn 1 ngày", và người trực sáng sớm
- * nhìn màn cảnh báo thấy sai. (E2E story 3.4 bắt được lúc chạy lúc 6 giờ sáng.)
+ * nhìn màn cảnh báo thấy sai.
  *
  * `en-CA` cho ra đúng dạng YYYY-MM-DD, không phải mẹo mà là locale chuẩn của Canada.
  */

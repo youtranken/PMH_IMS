@@ -12,7 +12,7 @@ import type { Database } from '../database/database.module';
  * khóa ngoại, hai bảng ghép hai cột. Gói cả câu vào một hàm generic sẽ phải đánh vật với kiểu
  * của drizzle và đẻ ra một lớp trừu tượng khó đọc hơn chính câu nó thay thế.
  *
- * Thứ THẬT SỰ trôi khỏi nhau là con số. Đếm ngày 09/09:
+ * Thứ THẬT SỰ trôi khỏi nhau là con số. Khi chưa có hằng số chung, đếm được:
  *
  *     approvals · nat-rule · service-account   → KHÔNG CÓ TRẦN NÀO
  *     catalog · expiry                          → 100

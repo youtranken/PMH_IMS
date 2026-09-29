@@ -3,7 +3,7 @@ import { ConflictException } from '@nestjs/common';
 /**
  * Chốt của mẫu **compare-and-swap** (AD-5) — dùng chung cho mọi đường ghi có tranh chấp.
  *
- * VẤN ĐỀ NÓ GIẢI QUYẾT (mẫu "M2" của rà soát 28/08, tìm ra ở 6 chỗ độc lập):
+ * VẤN ĐỀ NÓ GIẢI QUYẾT (mẫu "M2", từng có ở 6 chỗ độc lập):
  *
  *     const before = await this.db.select(...)      // đọc NGOÀI transaction
  *     if (!hopLe(before.status)) throw ...          // quyết định trên ảnh chụp cũ
@@ -26,7 +26,7 @@ import { ConflictException } from '@nestjs/common';
  *       message: 'Địa chỉ này vừa được người khác đổi. Tải lại để xem trạng thái mới.',
  *     });
  *
- * Bản mẫu gốc: `approvals.service.ts` (Epic 5) — hàm này chỉ rút phần lặp lại ra một chỗ để
+ * Bản mẫu gốc: `approvals.service.ts` — hàm này chỉ rút phần lặp lại ra một chỗ để
  * năm đường ghi còn lại không phải nhớ tự viết `if (rows.length === 0)`.
  *
  * @param rows kết quả `.returning()` của câu UPDATE có điều kiện.

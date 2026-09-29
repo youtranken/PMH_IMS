@@ -5,7 +5,7 @@ import type { ValidationError } from '@nestjs/common';
  *
  * ===== LỖ =====
  *
- * Đo ngày 12/09: 434 validator trong `*.controller.ts`, chỉ 80 cái khai `message`. Tức ~354
+ * Đo được: 434 validator trong `*.controller.ts`, chỉ 80 cái khai `message`. Tức ~354
  * validator CÂM, và câu lọt ra màn hình là câu mặc định của class-validator:
  *
  *     internalPort must not be greater than 65535
