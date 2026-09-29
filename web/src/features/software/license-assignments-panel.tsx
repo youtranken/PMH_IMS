@@ -11,7 +11,7 @@ import { SeatUsage } from './software-standing-cell';
 import { supportsSeats, type SoftwareRow } from './software-types';
 
 /**
- * Máy đang dùng key (story 3.2, FR-011).
+ * Máy đang dùng key (FR-011).
  *
  * Mặc định chỉ hiện ghế CÒN HIỆU LỰC; nút "Đã gỡ" mới thấy lịch sử — "key này từng nhập máy
  * nào" là câu hỏi lúc rà license, không được mất, nhưng cũng không nên chen vào danh sách hằng

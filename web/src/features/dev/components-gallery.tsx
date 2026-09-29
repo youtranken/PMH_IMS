@@ -54,7 +54,7 @@ function TokenSwatch({ token }: { token: string }) {
 }
 
 /**
- * `/dev/components` — bộ dùng chung sống (Story 1.5, AD-15).
+ * `/dev/components` — bộ dùng chung sống (AD-15).
  * TRƯỚC khi viết component mới, mở trang này xem đã có sẵn chưa.
  * Trang này cũng là chỗ kiểm nhanh light/dark và 390px.
  */

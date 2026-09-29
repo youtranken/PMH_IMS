@@ -131,9 +131,8 @@ describe('pageSlots — cắt đúng 50 dòng một trang', () => {
 /**
  * Luật "có nên tự mở sẵn bộ lọc Đang dùng không" — bốn ca biên quanh hai ngưỡng.
  *
- * Trước 18/09 luật này là một biểu thức viết thẳng trong JSX của `subnet-detail.tsx`, nên
- * không có đường nào hỏi nó mà không dựng cả màn hình lên. Cả hai vế phải THỎA, và mỗi vế
- * chặn một kiểu chọn-hộ-sai — xem chú thích ở `slot-paging.ts`.
+ * Luật là hàm thuần nên hỏi được mà không dựng cả màn hình lên. Cả hai vế phải THỎA, và mỗi
+ * vế chặn một kiểu chọn-hộ-sai — xem chú thích ở `slot-paging.ts`.
  */
 describe('shouldIsolateAssigned', () => {
   const ca: [string, number, number, boolean][] = [
@@ -155,7 +154,7 @@ describe('shouldIsolateAssigned', () => {
 });
 
 /**
- * HỒ SƠ ĐÃ ẨN LÀ MỘT RỔ RIÊNG, KHÔNG PHẢI "TRỐNG" (B-04).
+ * HỒ SƠ ĐÃ ẨN LÀ MỘT RỔ RIÊNG, KHÔNG PHẢI "TRỐNG".
  *
  * Hồ sơ bị ẩn giữ nguyên `status` cũ, phần lớn là `'free'`. Đếm nó vào "Trống" thì thẻ dải nói
  * "còn hồ sơ mang lịch sử" trong khi bảng bảo ô đó trống, cấp được — và ai đó sẽ cấp đè lên

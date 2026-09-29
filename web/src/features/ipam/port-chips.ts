@@ -3,8 +3,9 @@
  * (`api/src/modules/ipam/nat-rules.ts`).
  *
  * Vì sao cần: một rule trong DB chỉ mang MỘT khoảng port. Nhưng việc thật hay gặp là "mở
- * 8080, 8443 và 5060-5070 cho cùng một máy, cùng một lý do" — trước đây phải mở form ba lần
- * và gõ lại router / IP trong / ai dùng / lý do ba lượt, sai một chỗ là ba dòng lệch nhau.
+ * 8080, 8443 và 5060-5070 cho cùng một máy, cùng một lý do" — một chip mỗi form thì phải mở
+ * form ba lần và gõ lại router / IP trong / ai dùng / lý do ba lượt, sai một chỗ là ba dòng
+ * lệch nhau.
  *
  * Nên form nhận NHIỀU chip, mỗi chip một khoảng, rồi lưu ra nhiều rule dùng chung phần còn
  * lại. Client kiểm trước cho người gõ sửa ngay tại chỗ; API vẫn là nơi phán cuối.

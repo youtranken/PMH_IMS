@@ -65,7 +65,7 @@ function emptyAttr(value: string | null | undefined): { 'data-empty'?: true } {
 }
 
 /**
- * Port map của một thiết bị (story 2.4, FR-006, AD-14).
+ * Port map của một thiết bị (FR-006, AD-14).
  *
  * Bảng dưới ("Đang cắm vào thiết bị này") KHÔNG phải dữ liệu riêng — nó là CHIỀU NGƯỢC
  * của những dòng do thiết bị khác giữ, dựng bằng query. Không sửa được ở đây là có chủ ý:

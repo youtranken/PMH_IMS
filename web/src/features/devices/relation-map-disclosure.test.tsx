@@ -63,11 +63,10 @@ describe('Bản đồ quan hệ — lưới cố định', () => {
  * Trang chi tiết thiết bị là nơi người ta ra quyết định THANH LÝ. Cả hai nguồn nuôi bản đồ
  * (`/panels`, `/ports`) đều đi qua `?? []`, nên một lượt 500 hoá thành danh sách rỗng và bản đồ
  * in ra "Máy này chưa giữ gì của ai… Thanh lý nó không kéo theo gì cả" — cho một cái máy đang
- * giữ IP, rule NAT và ghế license. Đo được ngày 18/09/2026 bằng cách ép `/panels` trả 500.
+ * giữ IP, rule NAT và ghế license. Tái hiện được bằng cách ép `/panels` trả 500.
  *
- * Bản vá thêm hai prop `isUnknown`/`isLoading`, kèm bốn khối chú thích dài. Lượt rà soát 19/09 chỉ
- * ra rằng KHÔNG bài nào truyền hai prop ấy — cả cơ chế chỉ có chú thích canh, đúng mẫu hỏng mà
- * chính đợt này gọi tên: "bản vá của đợt trước KHÔNG CHẠY".
+ * Hai prop `isUnknown`/`isLoading` là thứ chặn câu ấy. Không bài nào truyền chúng thì cả cơ
+ * chế chỉ có chú thích canh — nên bài ở đây truyền và khẳng định từng prop.
  *
  * ===== BA CÂU =====
  *

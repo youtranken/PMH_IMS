@@ -45,7 +45,7 @@ interface DigestPreview {
 }
 
 /**
- * Luật gửi báo cáo "sắp hết hạn" (story 3.5, FR-013).
+ * Luật gửi báo cáo "sắp hết hạn" (FR-013).
  *
  * MỘT luật = MỘT email tổng hợp theo kỳ. Nút "Gửi thử" là thứ quan trọng nhất màn này:
  * không có nó thì cấu hình xong phải chờ tới thứ Hai mới biết có chạy đúng không.

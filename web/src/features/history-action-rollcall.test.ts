@@ -27,12 +27,10 @@ import { ACTION_LABEL as CATALOG_ACTIONS } from './catalog/catalog-history-entri
  * gì cảnh báo — tab Lịch sử chỉ lặng lẽ in ra mã máy, và nó trông đủ giống một nhãn để không
  * ai thấy lạ.
  *
- * Chuyện đó đã xảy ra HAI LẦN trong cùng một bản vá (nhóm 3, 11/09), và không bài kiểm nào
- * bắt được:
- *   · `port-unlinked`   — `api/src/modules/devices/port-device-retirement.ts`
- *   · `device-detached` — `api/src/modules/software/isp-device-retirement.ts`
- * Cả hai chỉ lộ ra khi có người ngồi mở đúng tab Lịch sử của đúng cái máy còn lại, sau khi
- * thanh lý cái máy kia — tức gần như không bao giờ.
+ * Ví dụ `port-unlinked` (`api/src/modules/devices/port-device-retirement.ts`) và
+ * `device-detached` (`api/src/modules/software/isp-device-retirement.ts`): thiếu nhãn thì chỉ
+ * lộ ra khi có người ngồi mở đúng tab Lịch sử của đúng cái máy còn lại, sau khi thanh lý cái
+ * máy kia — tức gần như không bao giờ.
  *
  * ===== VÌ SAO ĐỌC THẲNG MÃ NGUỒN API =====
  *
@@ -205,7 +203,7 @@ describe('Nhãn thao tác trong sổ lịch sử', () => {
    *
    * Nếu cách gọi `recordWithin` đổi hình dạng (đổi tên hàm, thêm tham số, xuống dòng khác đi)
    * thì regex trên trả về rỗng, và một bài "mọi mã tìm được đều có nhãn" sẽ XANH RỰC trong khi
-   * nó chẳng kiểm gì cả. Con số 14 là số mã đếm được ngày 12/09; nó chỉ được phép TĂNG.
+   * nó chẳng kiểm gì cả. Con số 14 là một sàn đã đếm thật; nó chỉ được phép TĂNG.
    */
   it('đọc được mã nguồn API (nếu không thì cả bài này vô nghĩa)', () => {
     expect(written.size).toBeGreaterThanOrEqual(14);
@@ -229,14 +227,12 @@ describe('Nhãn thao tác trong sổ lịch sử', () => {
   });
 
   /*
-   * ===== CỬA THỨ HAI, MỞ RA TỪ 12/09 =====
+   * ===== CỬA THỨ HAI: KHÓA NHÃN PHẢI CÓ THẬT =====
    *
-   * Từ khi 117 nhãn sổ lịch sử dời vào `vi.ts` (mục #7), sáu bảng này không còn chứa CHỮ mà
-   * chứa KHÓA. Thế là có một lối hỏng mới: ô trong bảng trỏ tới một khóa không tồn tại, và
-   * i18next rơi về chính cái khóa — tab Lịch sử in ra `history.devices.actCreated`.
-   *
-   * Đó đúng là lớp lỗi của mục #1 (bảng điều khiển in `warranty`, `license`), chỉ khác chỗ
-   * xảy ra. Nên nó phải có cửa canh của riêng nó, không phải một lời hứa.
+   * Nhãn sổ lịch sử nằm ở `vi.ts`, nên các bảng này không chứa CHỮ mà chứa KHÓA. Lối hỏng:
+   * ô trong bảng trỏ tới một khóa không tồn tại, và i18next rơi về chính cái khóa — tab Lịch
+   * sử in ra `history.devices.actCreated`. Nên nó phải có cửa canh của riêng nó, không phải
+   * một lời hứa.
    */
   it('mọi khóa trong bảy bảng nhãn đều có thật trong vi.ts', () => {
     const hong: string[] = [];

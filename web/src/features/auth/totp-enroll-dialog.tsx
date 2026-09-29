@@ -15,7 +15,7 @@ type Started = TotpSetupData & { ticket?: string };
  * Bật 2 lớp (chưa có) hoặc cài lại trên điện thoại mới (đang có), từ Hồ sơ của tôi.
  *
  * Hai bước giống nhau: mật khẩu hiện tại → quét/nhập khoá → gõ mã đầu tiên. Khác ở cửa API:
- *   · `enable`   → `/auth/totp/enroll` — phiên đã đăng nhập đủ nên API luôn đòi mật khẩu (A-02);
+ *   · `enable`   → `/auth/totp/enroll` — phiên đã đăng nhập đủ nên API luôn đòi mật khẩu;
  *   · `reenroll` → `/auth/totp/re-enroll` — API đòi THÊM step-up bằng mã của điện thoại hiện tại,
  *     nên đi qua `useStepUpRetry`: gặp `STEPUP_REQUIRED` thì hỏi mã rồi chạy lại đúng lượt đó.
  * Điện thoại cũ vẫn dùng được tới khi gõ đúng mã của máy mới — bỏ dở giữa chừng không mất gì.

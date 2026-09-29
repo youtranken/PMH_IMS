@@ -6,9 +6,9 @@ import { toNatHistory, type NatHistoryRow } from './nat-history-entries';
  * `t` truyền vào đây là `t` THẬT của app (`@/lib/i18n`, đã nạp bản dịch tiếng Việt), KHÔNG
  * phải một stub trả lại chính cái khóa.
  *
- * Đó là chỗ bài kiểm này đáng giá hơn trước: mọi câu khẳng định bên dưới so với CHỮ THẬT trên
+ * Đó là chỗ bài kiểm này đáng giá: mọi câu khẳng định bên dưới so với CHỮ THẬT trên
  * màn hình, nên một khóa gõ sai hay một khóa quên khai trong `vi.ts` sẽ làm đỏ ngay tại đây —
- * đúng lớp lỗi của mục #1 bản rà soát (i18next rơi về chính cái khóa và không ai thấy).
+ * đúng lớp lỗi i18next rơi về chính cái khóa mà không ai thấy.
  */
 const t = i18n.t;
 

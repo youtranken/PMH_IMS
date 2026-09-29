@@ -257,7 +257,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
     (account) => account.role === 'member' && account.status === 'disabled',
   ).length;
   const roleHolders = allAccounts.filter((account) => account.role !== 'member');
-  // Gấp dấu cả hai vế (B-01): gõ `nguyen thi` phải ra `Nguyễn Thị`.
+  // Gấp dấu cả hai vế: gõ `nguyen thi` phải ra `Nguyễn Thị`.
   const term = foldSearch(search.trim());
   const matches = (account: AccountRow) =>
     !term || foldSearch(account.email).includes(term) || foldSearch(account.fullName).includes(term);
@@ -1079,8 +1079,8 @@ function GrantToScopeDialog({
             /*
              * Người GÁN HỎNG phải được nói ra, kể cả khi có người gán được.
              *
-             * Chọn 5 người mà 3 người đã có luật trên nhóm đó (POST từ chối trùng): bản cũ
-             * đóng hộp, báo "đã gán cho 2 người", và ba lỗi biến mất — SA tin là cả 5 đã có
+             * Chọn 5 người mà 3 người đã có luật trên nhóm đó (POST từ chối trùng): chỉ đóng
+             * hộp và báo "đã gán cho 2 người" thì ba lỗi biến mất — SA tin là cả 5 đã có
              * quyền. Cùng cách làm với form NAT: đẩy cả lỗi lên cho nơi gọi báo riêng.
              */
             onSaved({ granted: done, failures });

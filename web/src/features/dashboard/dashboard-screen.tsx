@@ -105,9 +105,9 @@ const MOBILE_ITEMS = 3;
 const MOBILE_QUERY = '(max-width: 600px)';
 
 /**
- * Bảng điều khiển (story 7.1, FR-025).
+ * Bảng điều khiển (FR-025).
  *
- * Mục tiêu của epic viết rất cụ thể: "sếp 3 phút sáng thứ Hai tự trả lời mọi câu hỏi". Nên
+ * Mục tiêu viết rất cụ thể: "sếp 3 phút sáng thứ Hai tự trả lời mọi câu hỏi". Nên
  * trang này KHÔNG có bộ lọc, không có phân trang, không có gì để bấm trước khi đọc được —
  * mở ra là thấy. Muốn đào sâu thì có đường dẫn sang màn đầy đủ ở cuối mỗi khối.
  *
@@ -156,7 +156,7 @@ export function DashboardScreen({ me }: { me: Me }) {
   );
 
   // Mất mạng ⇒ `fetchStatus:'paused'` ⇒ `isLoading` false, `isError` false, `data` undefined:
-  // chỉ đọc `isLoading` là trượt. Xem chú thích đầy đủ ở `devices/device-detail.tsx` (lỗi F-02).
+  // chỉ đọc `isLoading` là trượt. Xem chú thích đầy đủ ở `devices/device-detail.tsx`.
   if (data.isError) {
     return (
       <>
@@ -580,8 +580,9 @@ function NeedsYouBlock({ me }: { me: Me }) {
 /**
  * "Yêu cầu mở két của tôi" — cho MỌI vai, chỉ khi có yêu cầu đang chờ hoặc đang còn hiệu lực.
  *
- * Việc người xin quan tâm nhất ngay sau khi gửi là "đã được duyệt chưa, còn bao lâu". Trước đó
- * muốn biết thì phải vào màn Duyệt yêu cầu. Đọc từ `GET /break-glass/mine` sẵn có — không cửa mới.
+ * Việc người xin quan tâm nhất ngay sau khi gửi là "đã được duyệt chưa, còn bao lâu" — trả lời
+ * ngay ở đây, không bắt vào màn Duyệt yêu cầu. Đọc từ `GET /break-glass/mine` sẵn có — không
+ * cửa mới.
  */
 function MyRequestsBlock() {
   const { t } = useTranslation();

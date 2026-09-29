@@ -68,7 +68,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   /*
-   * Ô tìm và bộ lọc nằm trên THANH ĐỊA CHỈ (17/09/2026), như bốn màn danh sách kia.
+   * Ô tìm và bộ lọc nằm trên THANH ĐỊA CHỈ, như bốn màn danh sách kia.
    *
    * `docs/SHARED-REGISTRY.md` viết thẳng: "Cấm quay lại `useState` cho bốn thứ đó". Đường đi
    * CHÍNH của màn này làm lộ đúng lý do: lọc + gõ tìm → mở két → bấm "Mở hồ sơ đầy đủ" → xem
@@ -101,7 +101,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
   const canEdit = me.role === 'sa' || me.role === 'admin';
 
   const rows = useMemo(() => {
-    // Gấp dấu cả hai vế (B-01): tên chủ sở hữu là tên thiết bị / phần mềm / tài khoản, toàn
+    // Gấp dấu cả hai vế: tên chủ sở hữu là tên thiết bị / phần mềm / tài khoản, toàn
     // tiếng Việt có dấu.
     const term = foldSearch(search.trim());
     return (owners.data ?? []).filter((row) => {
@@ -339,9 +339,9 @@ export function VaultHomeScreen({ me }: { me: Me }) {
               {opened.orphan ? null : (
                 <Link
                   className="btn"
-                  /* `OWNER_PATH` (lib/routes) chứ không phải chuỗi `if` tại chỗ: bản cũ kết
-                     bằng `return PATHS.softwareItem(...)`, nên một đường truyền rơi vào
-                     nhánh vét và cái nút này mở trang PHẦN MỀM với id đường truyền. */
+                  /* `OWNER_PATH` (lib/routes) chứ không phải chuỗi `if` tại chỗ: chuỗi `if`
+                     kết bằng một nhánh vét như `return PATHS.softwareItem(...)` thì một đường
+                     truyền rơi vào đó và cái nút này mở trang PHẦN MỀM với id đường truyền. */
                   to={OWNER_PATH[opened.ownerType](opened.ownerId)}
                 >
                   {t('vaultHome.openRecord')}

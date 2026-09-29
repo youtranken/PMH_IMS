@@ -25,7 +25,7 @@ const SHEET_LABEL_KEY: Record<ImportableEntity, string> = {
 };
 
 /**
- * Nhập danh mục từ Excel (story 2.1) — chỉ là `ImportDialog` dùng chung (AD-15) cắm vào
+ * Nhập danh mục từ Excel — chỉ là `ImportDialog` dùng chung (AD-15) cắm vào
  * endpoint của danh mục. Phần "một dòng hiển thị thế nào" là thứ duy nhất riêng ở đây:
  * dòng danh mục cần cho biết nó thuộc sheet nào.
  */

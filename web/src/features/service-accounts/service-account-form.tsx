@@ -75,7 +75,7 @@ export function ServiceAccountForm({
 }) {
   const { t } = useTranslation();
   const toast = useToast();
-  /** Cất mật khẩu vào két nay đòi step-up (C2) — hook lo phần hỏi mã rồi cất lại. */
+  /** Cất mật khẩu vào két đòi step-up — hook lo phần hỏi mã rồi cất lại. */
   const stepUp = useStepUpRetry(csrfToken);
   const departments = useDepartments();
   const [form, setForm] = useState<FormState>(() => initialState(row));
@@ -85,7 +85,7 @@ export function ServiceAccountForm({
   /*
    * Mật khẩu cất kèm NGAY trong popup thêm mới.
    *
-   * Trước đây phải: lưu hồ sơ → đóng popup → bấm vào mã → sang tab Két sắt → bấm Cất secret.
+   * Không thì phải: lưu hồ sơ → đóng popup → bấm vào mã → sang tab Két sắt → bấm Cất secret.
    * Năm bước cho một việc người ta luôn làm liền sau khi khai tài khoản, nên phần lớn sẽ để
    * đó "làm sau" — và mật khẩu ở lại trong file Excel hay tin nhắn Zalo, đúng chỗ IMS sinh ra
    * để dọn đi.
@@ -182,7 +182,7 @@ export function ServiceAccountForm({
                    */
                   if (!row && secretValue) {
                     try {
-                      // Cất vào két nay đòi step-up (C2): `run` gặp `STEPUP_REQUIRED` thì hỏi
+                      // Cất vào két đòi step-up: `run` gặp `STEPUP_REQUIRED` thì hỏi
                       // mã 6 số rồi cất lại — hồ sơ đã tạo xong ở trên nên không mất gì.
                       await stepUp.run(() =>
                         apiFetch('/api/v1/vault/secrets', {
@@ -206,7 +206,7 @@ export function ServiceAccountForm({
                        * Đóng hộp hỏi mã = người dùng chủ động bỏ qua bước cất: `warn` đúng.
                        * Nhưng một lỗi THẬT (500, trùng nhãn 409, mất mạng) mà cũng `warn` thì
                        * nó chỉ hiện 4 giây thay vì 7 — trong đúng luồng mà mật khẩu vừa gõ sẽ
-                       * không lấy lại được sau khi hộp đóng (rà soát 08/09, #7).
+                       * không lấy lại được sau khi hộp đóng.
                        */
                       const cancelled = (err as Error).message === 'STEPUP_CANCELLED';
                       toast({

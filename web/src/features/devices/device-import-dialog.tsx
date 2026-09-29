@@ -11,7 +11,7 @@ interface ApiImportRow {
 }
 
 /**
- * Nhập thiết bị từ Excel (story 2.6) — dùng `ImportDialog` chung (AD-15), chỉ khác endpoint.
+ * Nhập thiết bị từ Excel — dùng `ImportDialog` chung (AD-15), chỉ khác endpoint.
  * Cột "Mục" của bảng đối chiếu để trống nhãn nhóm vì file thiết bị chỉ có một sheet.
  */
 export function DeviceImportDialog({

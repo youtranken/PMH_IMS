@@ -88,8 +88,8 @@ function Glyph({ name }: { name: IconKey }) {
 
 /* --- Bố cục: LƯỚI BA CỘT CỐ ĐỊNH ---------------------------------------------
  * Nút chia đều hai cột trái/phải, hạch ở cột giữa. Toạ độ phần trăm trên một hình bầu dục
- * (bản trước) đè nút lên hạch và lên nhau khi cột chính hẹp lại, vì khung co còn chữ thì
- * không. Lưới thì không chồng được: mỗi nút có ô riêng, cách hạch bằng đúng một khe cột, và
+ * thì đè nút lên hạch và lên nhau khi cột chính hẹp lại, vì khung co còn chữ thì không.
+ * Lưới thì không chồng được: mỗi nút có ô riêng, cách hạch bằng đúng một khe cột, và
  * nút cao theo nội dung nên số đếm không bao giờ bị cắt ở mép.
  *
  * Dây nối là đường kẻ CSS (xem `.rmap-col` trong css/relation-map.css), không phải SVG tính

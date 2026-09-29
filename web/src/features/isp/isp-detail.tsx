@@ -39,7 +39,7 @@ import { useIsNarrow } from "@/ui/use-narrow";
 import { PATHS } from "@/lib/routes";
 
 /**
- * Trang chi tiết đường truyền (story 3.3).
+ * Trang chi tiết đường truyền.
  * Tab Giấy tờ dùng lại `AttachmentPanel` chung — file scan hợp đồng gắn thẳng vào đường này.
  */
 export function IspDetail({ me }: { me: Me }) {
@@ -90,7 +90,7 @@ export function IspDetail({ me }: { me: Me }) {
   }
 
   // Mất mạng ⇒ `fetchStatus:'paused'` ⇒ `isLoading` false, `isError` false, `data` undefined:
-  // hai nhánh trên đều trượt. Xem chú thích đầy đủ ở `devices/device-detail.tsx` (lỗi F-02).
+  // hai nhánh trên đều trượt. Xem chú thích đầy đủ ở `devices/device-detail.tsx`.
   if (!line.data) return <Loading />;
   const item = line.data;
   const terminated = item.status === "terminated";

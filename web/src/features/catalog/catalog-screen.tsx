@@ -389,7 +389,7 @@ function usageSummary(entity: CatalogEntity, row: CatalogRow, t: TFunction): str
 }
 
 /**
- * Quản trị danh mục (story 2.1, FR-004).
+ * Quản trị danh mục (FR-004).
  * Q-12: mọi vai thêm và sửa được; ngừng dùng, xóa và nhập Excel chỉ SA/Admin. Chốt quyền thật
  * nằm ở `@Roles` phía API, đây chỉ là ẩn cho đỡ rối (AD-9).
  */

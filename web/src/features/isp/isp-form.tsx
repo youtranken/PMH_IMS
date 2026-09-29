@@ -48,7 +48,7 @@ function initialState(row: IspRow | null): FormState {
   };
 }
 
-/** Form đường truyền ISP (story 3.3, FR-010). Màn nhập — desktop-first. */
+/** Form đường truyền ISP (FR-010). Màn nhập — desktop-first. */
 export function IspForm({
   row,
   csrfToken,
