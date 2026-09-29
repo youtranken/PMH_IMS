@@ -480,7 +480,7 @@ function planRow(
       ...base,
       action: 'error',
       label,
-      message: `Không thanh lý được bằng Excel: thanh lý phải đi qua nút "Thanh lý" để hệ thống còn hỏi thiết bị ${existing.code} có đang giữ IP, rule NAT hay ghế license nào không.`,
+      message: `Không thanh lý được bằng Excel: thanh lý phải đi qua nút "Thanh lý" để hệ thống còn hỏi thiết bị ${existing.code} có đang giữ IP, luật NAT hay ghế license nào không.`,
     };
   }
 

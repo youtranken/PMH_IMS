@@ -53,7 +53,7 @@ test('link sâu /approvals?id=… khi chưa đăng nhập → đăng nhập + 2 
   await expect(page).toHaveURL(/\/login$/);
   // Màn đăng nhập nói trước sẽ tới đâu.
   // Màn đăng nhập nói TÊN MÀN sẽ mở, không in đường dẫn thô (B5).
-  await expect(page.getByText('Đăng nhập để mở: Duyệt yêu cầu')).toBeVisible();
+  await expect(page.getByText('Đăng nhập để mở: Duyệt mở két')).toBeVisible();
   await expect(page.getByText(/\/approvals/)).toHaveCount(0);
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 

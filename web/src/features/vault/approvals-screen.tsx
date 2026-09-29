@@ -233,7 +233,7 @@ export function ApprovalsScreen({ me }: { me: Me }) {
     canDecide && tab === "log" ? (
       <ExportXlsxButton
         url="/api/v1/vault/break-glass/export.xlsx"
-        fileName="nhat-ky-break-glass.xlsx"
+        fileName="nhat-ky-mo-ket.xlsx"
       />
     ) : null;
 

@@ -155,7 +155,7 @@ export class VaultService {
     if (!label) {
       throw new BadRequestException({
         code: 'FIELD_REQUIRED',
-        message: 'Đặt nhãn cho secret này (vd "admin web", "SSH root").',
+        message: 'Đặt tên gọi cho ngăn này (vd "admin web", "SSH root").',
       });
     }
 
@@ -384,7 +384,7 @@ export class VaultService {
   private translate(error: unknown, label: string): unknown {
     return conflictOnUnique(error, {
       code: 'SECRET_LABEL_TAKEN',
-      message: `Chủ thể này đã có secret nhãn "${label}". Đổi nhãn hoặc thu hồi cái cũ trước.`,
+      message: `Két này đã có ngăn tên "${label}". Đổi nhãn hoặc thu hồi cái cũ trước.`,
     });
   }
 }
@@ -406,7 +406,7 @@ function requireAliveRow<T>(rows: readonly T[]): T {
   if (rows.length === 0) {
     throw new NotFoundException({
       code: 'SECRET_NOT_FOUND',
-      message: 'Không tìm thấy secret này (có thể đã thu hồi).',
+      message: 'Không tìm thấy ngăn két này (có thể đã xóa vĩnh viễn).',
     });
   }
   return rows[0];

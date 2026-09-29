@@ -26,9 +26,9 @@ const MAN_HINH: [string, string][] = [
   ['/ip-addresses', 'Địa chỉ IP · IMS'],
   ['/nat', 'Sổ NAT · IMS'],
   ['/service-accounts', 'Tài khoản dịch vụ · IMS'],
-  ['/approvals', 'Duyệt yêu cầu · IMS'],
+  ['/approvals', 'Duyệt mở két · IMS'],
   ['/disposal', 'Kho thanh lý · IMS'],
-  ['/admin/accounts', 'Tài khoản · IMS'],
+  ['/admin/accounts', 'Người dùng IMS · IMS'],
   ['/admin/catalog', 'Danh mục · IMS'],
 ];
 

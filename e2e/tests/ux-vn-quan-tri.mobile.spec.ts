@@ -20,7 +20,7 @@ test('Danh mục 390px: thẻ gọn một dòng tên + dòng thuộc tính, khô
 test('Tài khoản 390px: thẻ tên + vai, dòng email; không tràn ngang', async ({ page }) => {
   await firstLogin(page, E2E_SA);
   await page.goto('/admin/accounts');
-  await expect(page.getByRole('heading', { name: 'Tài khoản', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
   await expect(page.getByRole('table')).toHaveCount(0);
   await expect(page.getByText(E2E_SA.email).first()).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);

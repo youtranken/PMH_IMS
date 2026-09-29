@@ -188,7 +188,14 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
   liên hệ" của nhà cung cấp.
 - **Bảng điều khiển:** không tự làm mới định kỳ (mỗi lần đăng nhập đã tải mới).
 - **"Bộ giao diện" (`/dev/components`) không có ở bản production** — chỉ bật trong stack dev/E2E.
-- Chưa làm: lưới mặt trước switch (cần trường "số cổng" theo model), trường riêng cho SSL/tên miền.
+- **Mật khẩu trong két quá 90 ngày chưa đổi thì cảnh báo "cần đổi"** (ngưỡng
+  `dashboard.secret_stale_days` = 90, trước là 180) — trên ngăn két, danh sách tài khoản dịch vụ và
+  bảng điều khiển. Không làm cột "tuổi mật khẩu". Khi đổi giá trị luôn nhắc: IMS KHÔNG nối tới máy
+  chủ/thiết bị — phải đổi trên hệ thống thật trước (ảnh hưởng prod), rồi mới lưu vào két.
+- **SSL / tên miền (SW-043):** không thêm bộ trường SSL riêng. Chỉ cần ghi lại **website nào dùng
+  chứng chỉ SSL nào, theo từng năm** — danh sách website trên hồ sơ SSL, và mỗi lần gia hạn lưu
+  lại danh sách website của kỳ đó trong sổ lịch sử gia hạn.
+- Chưa làm: lưới mặt trước switch (cần trường "số cổng" theo model).
 
 ### Q-09 · Tài liệu
 

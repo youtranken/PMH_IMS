@@ -38,8 +38,8 @@ async function makeDevice(page: Page, code: string, deviceTypeId: string): Promi
 
 async function openRouterPicker(page: Page) {
   await page.goto('/nat');
-  await page.getByRole('button', { name: 'Thêm rule' }).click();
-  const form = page.getByRole('dialog', { name: 'Thêm rule' });
+  await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
+  const form = page.getByRole('dialog', { name: 'Thêm luật NAT' });
   return { form, picker: form.getByRole('combobox', { name: 'Router', exact: true }) };
 }
 

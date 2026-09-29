@@ -358,31 +358,31 @@ test.describe('Tài khoản dịch vụ', () => {
     await editForm.getByRole('button', { name: 'Hủy' }).click();
 
     // Cửa trước: nút riêng ngoài danh sách, và nó BẮT lý do.
-    await rowAction(page, code, 'Vô hiệu hóa');
+    await rowAction(page, code, 'Ngừng dùng');
     const offForm = page.getByRole('dialog');
     await expect(offForm.getByText(/mật khẩu trong két .* vẫn còn/)).toBeVisible();
-    await offForm.getByRole('textbox', { name: 'Lý do vô hiệu hóa' }).fill('nhân sự phụ trách đã nghỉ');
-    await offForm.getByRole('button', { name: 'Vô hiệu hóa' }).click();
+    await offForm.getByRole('textbox', { name: 'Lý do ngừng dùng' }).fill('nhân sự phụ trách đã nghỉ');
+    await offForm.getByRole('button', { name: 'Ngừng dùng' }).click();
 
-    await expect(page.getByText('Đã vô hiệu hóa tài khoản.')).toBeVisible();
-    await expect(row.getByText('Đã vô hiệu hóa')).toBeVisible();
+    await expect(page.getByText('Đã ngừng dùng tài khoản.')).toBeVisible();
+    await expect(row.getByText('Đã ngừng dùng')).toBeVisible();
     // Đã đóng rồi thì không còn nút đóng nữa — bấm lần hai chỉ đẻ thêm một dòng lịch sử rỗng nghĩa.
     // Cột Thao tác là menu ba chấm từ 28/08/2026 — mở ra mới đọc được có mục nào.
-    expect(await rowActionNames(page, code)).not.toContain('Vô hiệu hóa');
+    expect(await rowActionNames(page, code)).not.toContain('Ngừng dùng');
 
     // Lý do đi thẳng vào lịch sử, kèm chuyển trạng thái — đó mới là chỗ trả lời câu hỏi sáu tháng sau.
     await page.goto(`/service-accounts/${id}?tab=history`);
-    const entry = page.getByRole('listitem').filter({ hasText: 'Vô hiệu hóa' });
+    const entry = page.getByRole('listitem').filter({ hasText: 'Ngừng dùng' });
     await expect(entry).toBeVisible();
     await expect(entry).toContainText('nhân sự phụ trách đã nghỉ');
-    await expect(entry).toContainText('Đang dùng → Đã vô hiệu hóa');
+    await expect(entry).toContainText('Đang dùng → Đã ngừng dùng');
 
     // Và nói NGAY đầu trang hồ sơ — không bắt mở tab Lịch sử mới biết ai đóng, vì sao.
     await page.goto(`/service-accounts/${id}`);
     await expect(
-      page.getByText(/Vô hiệu hóa ngày \d{2}\/\d{2}\/\d{4} bởi .+ — lý do: nhân sự phụ trách đã nghỉ/),
+      page.getByText(/Ngừng dùng ngày \d{2}\/\d{2}\/\d{4} bởi .+ — lý do: nhân sự phụ trách đã nghỉ/),
     ).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Bật lại…' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Dùng lại…' })).toBeVisible();
   });
 
   test('VPN mở mọi IP mang huy hiệu; dải IP gõ sai báo ngay; danh sách xuất được Excel', async ({
@@ -461,19 +461,19 @@ test.describe('Tài khoản dịch vụ', () => {
     // Cửa trước: nút Bật lại ngay trên dòng, kèm ô lý do.
     await page.goto('/service-accounts');
     const row = page.getByRole('row', { name: new RegExp(code) });
-    await expect(row.getByText('Đã vô hiệu hóa')).toBeVisible();
-    await rowAction(page, code, 'Bật lại');
+    await expect(row.getByText('Đã ngừng dùng')).toBeVisible();
+    await rowAction(page, code, 'Dùng lại');
     const onForm = page.getByRole('dialog');
-    await onForm.getByRole('textbox', { name: 'Lý do bật lại' }).fill('nhân sự mới nhận bàn giao');
-    await onForm.getByRole('button', { name: 'Bật lại' }).click();
+    await onForm.getByRole('textbox', { name: 'Lý do dùng lại' }).fill('nhân sự mới nhận bàn giao');
+    await onForm.getByRole('button', { name: 'Dùng lại' }).click();
 
-    await expect(page.getByText('Đã bật lại tài khoản.')).toBeVisible();
+    await expect(page.getByText('Đã dùng lại tài khoản.')).toBeVisible();
     await expect(row.getByText('Đang dùng')).toBeVisible();
 
     await page.goto(`/service-accounts/${id}?tab=history`);
-    const entry = page.getByRole('listitem').filter({ hasText: 'Bật lại' });
+    const entry = page.getByRole('listitem').filter({ hasText: 'Dùng lại' });
     await expect(entry).toContainText('nhân sự mới nhận bàn giao');
-    await expect(entry).toContainText('Đã vô hiệu hóa → Đang dùng');
+    await expect(entry).toContainText('Đã ngừng dùng → Đang dùng');
 
     // Mở một tài khoản đang mở không đẻ ra dòng lịch sử rỗng nghĩa.
     const again = await page.request.patch(`/api/v1/service-accounts/${id}/enable`, {

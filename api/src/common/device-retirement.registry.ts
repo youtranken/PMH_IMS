@@ -101,7 +101,7 @@ export class DeviceRetirementRegistry implements OnApplicationBootstrap {
       throw new Error(
         `DeviceRetirementRegistry: thiếu người dọn cho ${missing.join(', ')}. ` +
           'Thiếu thì lượt thanh lý đọc "máy không giữ gì" và đi tiếp trong im lặng, để lại ' +
-          'IP/rule NAT/ghế license/cổng đấu chéo/đường truyền treo trên một máy đã ra khỏi ' +
+          'IP/luật NAT/ghế license/cổng đấu chéo/đường truyền treo trên một máy đã ra khỏi ' +
           'công ty. Kiểm `onModuleInit` của lớp tương ứng còn chạy không.',
       );
     }
