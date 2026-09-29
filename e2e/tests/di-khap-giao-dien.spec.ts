@@ -3418,7 +3418,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
     // Kỳ hạn đang là Thuê bao mà chưa có ngày hết hạn: báo ngay tại ô (SW-028), nên là BA ô.
     await expect(
-      add.getByText('Nhập ngày hết hạn — thiếu hạn thì hệ thống không nhắc gia hạn được.'),
+      add.getByText('Nhập ngày hết hạn để hệ thống nhắc gia hạn.'),
     ).toBeVisible();
     await expect(add.getByText('Còn 3 ô cần sửa trước khi lưu.')).toBeVisible();
     await expect(
@@ -3566,7 +3566,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toHaveCount(6);
     for (const name of [
       'Đóng hộp thoại',
-      'Chọn cả lô theo phòng ban / người sử dụng',
+      'Chọn theo phòng ban / người sử dụng',
       'Bắt đầu',
       'Kết thúc',
       'Hủy',
