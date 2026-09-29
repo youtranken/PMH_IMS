@@ -32,8 +32,8 @@ import type { CatalogService } from './catalog.service';
  */
 
 /** Danh mục giả — `validateRefs` chỉ đọc bốn danh sách này, không đụng gì khác. */
-const SITE_HA_NOI = 'aaaaaaaa-0000-0000-0000-000000000001';
-const SITE_DA_NANG = 'aaaaaaaa-0000-0000-0000-000000000002';
+const SITE_HANOI = 'aaaaaaaa-0000-0000-0000-000000000001';
+const SITE_DANANG = 'aaaaaaaa-0000-0000-0000-000000000002';
 const CABINET_A1 = 'bbbbbbbb-0000-0000-0000-000000000001';
 
 function apiWithCatalog(): CatalogApiService {
@@ -41,10 +41,10 @@ function apiWithCatalog(): CatalogApiService {
     lists: () =>
       Promise.resolve({
         sites: [
-          { id: SITE_HA_NOI, code: 'HN', name: 'Hà Nội' },
-          { id: SITE_DA_NANG, code: 'DN', name: 'Đà Nẵng' },
+          { id: SITE_HANOI, code: 'HN', name: 'Hà Nội' },
+          { id: SITE_DANANG, code: 'DN', name: 'Đà Nẵng' },
         ],
-        cabinets: [{ id: CABINET_A1, code: 'A1', name: 'Tủ A1', siteId: SITE_HA_NOI }],
+        cabinets: [{ id: CABINET_A1, code: 'A1', name: 'Tủ A1', siteId: SITE_HANOI }],
         deviceTypes: [],
         vendors: [],
       }),
@@ -75,7 +75,7 @@ describe('validateRefs — cặp tủ mạng ↔ site', () => {
 
   it('tủ ĐÚNG site → cho qua (vế đối chứng)', async () => {
     const errors = await apiWithCatalog().validateRefs({
-      siteId: SITE_HA_NOI,
+      siteId: SITE_HANOI,
       cabinetId: CABINET_A1,
     });
     expect(errors).toEqual([]);
@@ -83,7 +83,7 @@ describe('validateRefs — cặp tủ mạng ↔ site', () => {
 
   it('tủ SAI site → vẫn chặn như cũ, và vẫn đúng một câu lỗi', async () => {
     const errors = await apiWithCatalog().validateRefs({
-      siteId: SITE_DA_NANG,
+      siteId: SITE_DANANG,
       cabinetId: CABINET_A1,
     });
     expect(errors).toHaveLength(1);
@@ -91,7 +91,7 @@ describe('validateRefs — cặp tủ mạng ↔ site', () => {
   });
 
   it('site KHÔNG có tủ → cho qua: một cái máy để trên bàn là chuyện bình thường', async () => {
-    expect(await apiWithCatalog().validateRefs({ siteId: SITE_HA_NOI })).toEqual([]);
+    expect(await apiWithCatalog().validateRefs({ siteId: SITE_HANOI })).toEqual([]);
   });
 
   it('không site không tủ → cho qua: cả hai đều là ô tuỳ chọn', async () => {

@@ -35,11 +35,11 @@ describe('PasswordService', () => {
   it('PEPPER SAI thì mật khẩu ĐÚNG cũng phải trượt — đây là lý do pepper tồn tại', async () => {
     const hashed = await svc.hash('Mat#Khau2026!ok');
 
-    const kePhamCoDump = new PasswordService(OTHER_PEPPER);
-    expect(await kePhamCoDump.verify(hashed, 'Mat#Khau2026!ok')).toBe(false);
+    const attackerWithDump = new PasswordService(OTHER_PEPPER);
+    expect(await attackerWithDump.verify(hashed, 'Mat#Khau2026!ok')).toBe(false);
 
-    const khongCoPepper = new PasswordService('');
-    expect(await khongCoPepper.verify(hashed, 'Mat#Khau2026!ok')).toBe(false);
+    const withoutPepper = new PasswordService('');
+    expect(await withoutPepper.verify(hashed, 'Mat#Khau2026!ok')).toBe(false);
   });
 
   it('hai lần băm cùng một mật khẩu ra hai hash khác nhau (salt ngẫu nhiên)', async () => {

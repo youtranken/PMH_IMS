@@ -188,7 +188,7 @@ describe('CsrfGuard — AD-8, hai lớp', () => {
     ['sai', 'token-sai'],
     ['đúng tiền tố nhưng ngắn hơn', CSRF.slice(0, 5)],
     ['đúng nội dung nhưng dài hơn', `${CSRF}x`],
-  ])('token %s ⇒ chặn', async (_ten, token) => {
+  ])('token %s ⇒ chặn', async (_name, token) => {
     const headers: Record<string, string | undefined> = { origin: ORIGIN };
     if (token !== undefined) headers['x-csrf-token'] = token;
     await expectForbidden(

@@ -51,7 +51,7 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
    * một chú thích ở file khác.
    */
   it('không có route xuất/tải hàng loạt — quét MỌI controller của module', () => {
-    const CHO_PHEP = new Map([['break-glass.controller.ts', ["@Get('export.xlsx')"]]]);
+    const ALLOWED = new Map([['break-glass.controller.ts', ["@Get('export.xlsx')"]]]);
     const controllers = readdirSync(__dirname).filter((file) => file.endsWith('.controller.ts'));
 
     // Chốt sàn: quét 0 file thì bài này xanh mà chẳng kiểm gì — đúng bẫy mà chốt sàn ở cuối
@@ -60,7 +60,7 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
 
     for (const file of controllers) {
       const src = readFileSync(join(__dirname, file), 'utf8');
-      const duocPhep = CHO_PHEP.get(file) ?? [];
+      const allowed = ALLOWED.get(file) ?? [];
       for (const forbidden of ['export', 'download', 'xlsx', 'csv', 'all']) {
         /*
          * TỪ KHÓA Ở BẤT KỲ ĐÂU TRONG ĐƯỜNG DẪN, KHÔNG CHỈ Ở ĐẦU.
@@ -84,13 +84,13 @@ describe('FR-026 — két sắt không có đường xuất hàng loạt', () =>
          * So BẰNG ĐÚNG chuỗi, không phải tiền tố: `startsWith` tha luôn cả
          * `@Get('export.xlsx-tat-ca')` chỉ vì nó bắt đầu giống hệt mục được phép.
          */
-        const laVietPhamThat = hits.some(
-          (hit) => !duocPhep.some((ok) => ok.toLowerCase() === hit.toLowerCase()),
+        const isRealViolation = hits.some(
+          (hit) => !allowed.some((ok) => ok.toLowerCase() === hit.toLowerCase()),
         );
         /* Gói cả `file` và `forbidden` vào giá trị được so: Jest không nhận tham số message
            (chỉ Playwright/Vitest có), nên muốn thông báo lỗi nói được "file nào, từ khóa nào"
            thì phải để chúng nằm trong chính cái object đem so. */
-        expect({ file, forbidden, viPham: laVietPhamThat }).toMatchObject({ viPham: false });
+        expect({ file, forbidden, violation: isRealViolation }).toMatchObject({ violation: false });
       }
     }
   });

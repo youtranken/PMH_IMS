@@ -77,26 +77,26 @@ describe('lockout — NFR-01: sai 5 lần khóa 15 phút, tự mở', () => {
    */
   it.each([
     {
-      ten: 'lượt CHẠM ngưỡng: phải báo',
+      name: 'lượt CHẠM ngưỡng: phải báo',
       state: { failedAttempts: 4, lockedUntil: null },
       justLocked: true,
     },
     {
-      ten: 'lượt sai TIẾP khi đang khóa: KHÔNG báo lần nữa',
+      name: 'lượt sai TIẾP khi đang khóa: KHÔNG báo lần nữa',
       state: { failedAttempts: 5, lockedUntil: new Date('2026-08-22T10:10:00Z') },
       justLocked: false,
     },
     {
-      ten: 'lượt sai thứ ba khi đang khóa: vẫn KHÔNG báo',
+      name: 'lượt sai thứ ba khi đang khóa: vẫn KHÔNG báo',
       state: { failedAttempts: 9, lockedUntil: new Date('2026-08-22T10:10:00Z') },
       justLocked: false,
     },
     {
-      ten: 'khóa cũ ĐÃ hết hạn: đếm lại từ 1, chưa chạm ngưỡng nên không báo',
+      name: 'khóa cũ ĐÃ hết hạn: đếm lại từ 1, chưa chạm ngưỡng nên không báo',
       state: { failedAttempts: 9, lockedUntil: new Date('2026-08-22T09:00:00Z') },
       justLocked: false,
     },
-  ])('$ten', ({ state, justLocked }) => {
+  ])('$name', ({ state, justLocked }) => {
     expect(registerFailure(state, POLICY, NOW).justLocked).toBe(justLocked);
   });
 
