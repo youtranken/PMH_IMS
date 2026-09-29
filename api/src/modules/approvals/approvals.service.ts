@@ -42,6 +42,8 @@ export interface ApprovalFilters {
   subjectId?: string;
   /** Chỉ yêu cầu tạo từ mốc này trở đi — lọc trong SQL. */
   since?: Date;
+  /** Chỉ yêu cầu gửi từ đúng phiên đăng nhập này (Q-15). */
+  requesterSessionId?: string;
 }
 
 function whereOf(filters: ApprovalFilters): SQL | undefined {
@@ -52,6 +54,9 @@ function whereOf(filters: ApprovalFilters): SQL | undefined {
   if (filters.subjectType) where.push(eq(approvalTable.subjectType, filters.subjectType));
   if (filters.subjectId) where.push(eq(approvalTable.subjectId, filters.subjectId));
   if (filters.since) where.push(gte(approvalTable.createdAt, filters.since));
+  if (filters.requesterSessionId) {
+    where.push(eq(approvalTable.requesterSessionId, filters.requesterSessionId));
+  }
   return where.length > 0 ? and(...where) : undefined;
 }
 
@@ -62,6 +67,8 @@ export interface CreateApprovalInput {
   subjectId: string;
   reason: string;
   payload?: Record<string, unknown> | null;
+  /** Phiên đăng nhập đang gửi — loại nào gắn quyền với phiên thì bắt buộc truyền (Q-15). */
+  requesterSessionId?: string | null;
 }
 
 export interface TransitionInput {
@@ -115,6 +122,7 @@ export class ApprovalsService {
         subjectId: input.subjectId,
         reason,
         payload: input.payload ?? null,
+        requesterSessionId: input.requesterSessionId ?? null,
       })
       .returning();
 
@@ -286,6 +294,11 @@ export class ApprovalsService {
     requester: string;
     subjectType: string;
     subjectId: string;
+    /**
+     * Có thì chỉ grant gửi từ đúng phiên này mới tính (Q-15). Grant gửi từ phiên khác, hay
+     * không mang phiên, coi như không có.
+     */
+    requesterSessionId?: string;
     now?: Date;
   }): Promise<ApprovalRecord | null> {
     const rows = await this.db
@@ -298,6 +311,9 @@ export class ApprovalsService {
           eq(approvalTable.subjectType, params.subjectType),
           eq(approvalTable.subjectId, params.subjectId),
           eq(approvalTable.state, 'approved'),
+          params.requesterSessionId
+            ? eq(approvalTable.requesterSessionId, params.requesterSessionId)
+            : undefined,
         ),
       )
       .orderBy(desc(approvalTable.expiresAt));
@@ -347,6 +363,28 @@ export class ApprovalsService {
       closed += 1;
     }
     return closed;
+  }
+
+  /**
+   * Phiếu còn mở (đang chờ hoặc đã duyệt) của một loại, kèm phiên đã gửi — cho lượt quét đóng
+   * quyền của phiên đã kết thúc (Q-15). Chỉ trả id/state/phiên: phiên không đi ra màn hình.
+   */
+  async openWithSession(
+    kind: string,
+  ): Promise<{ id: string; state: string; requesterSessionId: string | null }[]> {
+    return this.db
+      .select({
+        id: approvalTable.id,
+        state: approvalTable.state,
+        requesterSessionId: approvalTable.requesterSessionId,
+      })
+      .from(approvalTable)
+      .where(
+        and(
+          eq(approvalTable.kind, kind),
+          sql`${approvalTable.state} IN ('pending', 'approved')`,
+        ),
+      );
   }
 
   /** Yêu cầu đang treo — sweep nhắc và màn "cần duyệt" đều dùng. */

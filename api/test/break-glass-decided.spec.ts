@@ -16,6 +16,8 @@ import type { VaultOwnersService } from '../src/modules/vault/vault-owners.servi
 import type { VaultService } from '../src/modules/vault/vault.service';
 import type { UsersApiService } from '../src/modules/users/users.api';
 import type { ExpiryApiService } from '../src/modules/expiry/expiry.api';
+import type { AuthApiService } from '../src/modules/auth/auth.api';
+import type { SweepService } from '../src/modules/queue/sweep.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
 /**
@@ -97,6 +99,11 @@ describe('Break-glass: quyết định → outbox → thư cho người xin', ()
       owners,
       vault,
       users,
+      {
+        isSessionAlive: () => Promise.resolve(true),
+        aliveSessionIds: (ids: string[]) => Promise.resolve(new Set(ids)),
+      } as unknown as AuthApiService,
+      { register: () => undefined } as unknown as SweepService,
     );
     breakGlass.onModuleInit();
   }, TEST_TIMEOUT);

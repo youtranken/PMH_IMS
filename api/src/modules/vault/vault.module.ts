@@ -19,6 +19,7 @@ import { VaultAccessController } from './vault-access.controller';
 import { VaultController } from './vault.controller';
 import { VaultOwnersController } from './vault-owners.controller';
 import { VaultOwnersService } from './vault-owners.service';
+import { SecretDueService } from './secret-due.service';
 import { VaultDevicePanel } from './vault-device-panel';
 import { VaultService } from './vault.service';
 
@@ -37,7 +38,7 @@ import { VaultService } from './vault.service';
   controllers: [VaultController, VaultOwnersController, VaultAccessController, BreakGlassController],
   providers: [
     ExcelExportService,
-    VaultService, VaultApiService, VaultOwnersService, SecretAuditLabeler, VaultDevicePanel, AccessListService, BreakGlassService, StepUpGuard],
+    VaultService, VaultApiService, VaultOwnersService, SecretDueService, SecretAuditLabeler, VaultDevicePanel, AccessListService, BreakGlassService, StepUpGuard],
   exports: [VaultApiService],
 })
 export class VaultModule {}

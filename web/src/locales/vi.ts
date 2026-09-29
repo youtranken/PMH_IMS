@@ -1416,7 +1416,7 @@ export default {
     rotateTitle: 'Đổi giá trị: {{label}}',
     rotateHint: 'Giá trị mới sẽ mã hóa lại từ đầu. Giá trị cũ không xem lại được nữa.',
     rotateOrder:
-      'Đổi trên thiết bị và đăng nhập thử bằng giá trị mới TRƯỚC, rồi mới lưu ở đây — lưu xong là giá trị cũ không xem lại được.',
+      'IMS KHÔNG nối tới máy chủ hay thiết bị: lưu ở đây không đổi gì trên hệ thống thật. Đổi trên hệ thống thật TRƯỚC (việc này ảnh hưởng hệ thống đang chạy) và đăng nhập thử bằng giá trị mới, rồi mới lưu vào két — lưu xong là giá trị cũ không xem lại được.',
     revoke: 'Xóa vĩnh viễn',
     revoked: 'Đã xóa vĩnh viễn ngăn.',
     typeLabelToConfirm: 'Gõ lại tên ngăn để xác nhận: {{label}}',
@@ -1425,8 +1425,13 @@ export default {
     lastDenied: 'Lần xin lúc {{at}} bị từ chối:',
     requestBlock:
       'Két này cần được duyệt trước khi xem ({{count}} ngăn). Một lần xin là cho cả két, có hạn giờ.',
-    valueAge: 'Đổi giá trị {{count}} ngày trước · {{who}}',
-    valueStale: 'Lâu chưa đổi',
+    /* Q-15: hạn đổi mật khẩu = ngày đổi + `dashboard.secret_stale_days` (mặc định 180); số
+       ngày do server tính. Đổi giá trị xong là đếm lại từ đầu. */
+    changedCol: 'Đổi lần cuối',
+    changedBy: 'Người đổi: {{who}}',
+    dueLeft: 'còn {{count}} ngày',
+    dueToday: 'Đến hạn đổi hôm nay — cần đổi',
+    dueOver: 'Quá {{count}} ngày — cần đổi',
     valueShow: 'Hiện',
     valueHide: 'Ẩn',
     generate: 'Tạo ngẫu nhiên',
@@ -1459,7 +1464,6 @@ export default {
     newValue: 'Giá trị mới',
     note: 'Ghi chú',
     noteHint: 'Đừng viết mật khẩu vào đây — ghi chú không được mã hóa.',
-    updatedAtShort: 'Cập nhật {{date}}',
     reveal: 'Xem',
     revealBusy: 'Đang mở một ngăn khác — xong sẽ bấm được.',
     strengthLabel: 'Độ khó của giá trị',
@@ -1511,6 +1515,18 @@ export default {
     /* Khối trạng thái khi đang có phiếu treo — người xin rút được, và khung tự làm mới. */
     pendingSince: 'Yêu cầu gửi lúc {{at}} đang chờ Quản trị quyết. Khung này tự làm mới khi có quyết định.',
     pendingDetail: 'Xem yêu cầu',
+    /* Q-15: quyền gắn với phiên đã xin. Người xin phải đọc được trước, không thì đăng nhập lại
+       rồi tưởng hệ thống làm mất quyền. */
+    sessionBound:
+      'Quyền được duyệt chỉ dùng trong phiên đăng nhập này — đăng xuất hay hết phiên là hết, đăng nhập lại phải xin lại.',
+    otherSessionHeld:
+      'Quyền hoặc yêu cầu trước của bạn thuộc một phiên đăng nhập khác nên không dùng được ở đây. Gửi yêu cầu mới.',
+    release: 'Trả quyền',
+    releaseConfirm:
+      'Đóng két với bạn ngay bây giờ? Muốn xem lại thì phải gửi yêu cầu mới và chờ duyệt.',
+    released: 'Đã trả quyền — két đã đóng với bạn.',
+    /* Bước trong hộp (VLT-062): nút rời bước gõ mã, về lại danh sách ngăn của cùng hộp. */
+    stepBack: '‹ Quay lại danh sách ngăn',
   },
   ipam: {
     title: 'Địa chỉ IP',

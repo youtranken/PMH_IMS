@@ -7,6 +7,7 @@ import { OutboxModule } from '../outbox/outbox.module';
 import { UsersModule } from '../users/users.module';
 import { AccountsController } from './accounts.controller';
 import { AccountsService } from './accounts.service';
+import { AuthApiService } from './auth.api';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { KnownDeviceService } from './known-device.service';
@@ -29,6 +30,7 @@ import { TotpService } from './totp.service';
     LoginRateGuard,
     LoginFailureService,
     AuthService,
+    AuthApiService,
     AccountsService,
     SessionService,
     SessionAuditLabeler,
@@ -48,6 +50,6 @@ import { TotpService } from './totp.service';
       inject: [MasterKeyRing],
     },
   ],
-  exports: [SessionService, TotpService, EnvelopeCryptoService, PasswordService],
+  exports: [AuthApiService, SessionService, TotpService, EnvelopeCryptoService, PasswordService],
 })
 export class AuthModule {}
