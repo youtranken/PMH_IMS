@@ -26,6 +26,7 @@ describe('Tài khoản · bộ lọc, lý do, đổi vai', () => {
   let users: UsersService;
   const id: Record<string, string> = {};
   let actor: { id: string; email: string };
+  let sessions: SessionService;
 
   async function user(
     email: string,
@@ -55,10 +56,11 @@ describe('Tài khoản · bộ lọc, lý do, đổi vai', () => {
     const db = scratch.db;
     const config = new SystemConfigService(db);
     users = new UsersService(db);
+    sessions = new SessionService(db, config, noopSweep);
     accounts = new AccountsService(
       db,
       users,
-      new SessionService(db, config, noopSweep),
+      sessions,
       new PasswordService('p'.repeat(64)),
       new AuditWriterService(db),
       new OutboxService(db, config, noopSweep),
@@ -117,6 +119,63 @@ describe('Tài khoản · bộ lọc, lý do, đổi vai', () => {
   it('không tự đổi vai của chính mình', async () => {
     await expect(accounts.setRole(actor, id.sa1, 'member')).rejects.toMatchObject({
       response: { code: 'SELF_ROLE_CHANGE' },
+    });
+  });
+
+  describe('đóng tất cả phiên của một người', () => {
+    async function open(userId: string): Promise<string> {
+      const s = await scratch.db.transaction((tx) =>
+        sessions.createWithin(tx, {
+          userId,
+          ip: '198.51.100.7',
+          userAgent: 'jest',
+          absoluteHours: 12,
+          totpPending: false,
+        }),
+      );
+      return s.id;
+    }
+    const alive = async (userId: string) =>
+      (await sessions.listActive(userId)).map((row) => row.id).sort();
+
+    it('đóng mọi phiên của người khác, ghi MỘT dòng nhật ký có số phiên', async () => {
+      await open(id.member);
+      await open(id.member);
+      const mine = await open(id.sa1);
+      const killed = await accounts.killAllSessions(actor, id.member, {
+        currentSessionId: mine,
+        includeCurrent: false,
+      });
+      expect(killed).toBe(2);
+      expect(await alive(id.member)).toEqual([]);
+      expect(await alive(id.sa1)).toContain(mine);
+      const entry = await lastAudit(id.member);
+      expect(entry.action).toBe('session.killed_all');
+      expect(entry.detail).toMatchObject({ revokedSessions: 2 });
+    });
+
+    it('SA đóng phiên của CHÍNH MÌNH: giữ phiên đang dùng trừ khi chọn đóng cả nó', async () => {
+      const mine = await open(id.sa2);
+      const other = await open(id.sa2);
+      const self = { id: id.sa2, email: 'sa2-e2e@qa.test' };
+      expect(
+        await accounts.killAllSessions(self, id.sa2, { currentSessionId: mine, includeCurrent: false }),
+      ).toBe(1);
+      expect(await alive(id.sa2)).toEqual([mine]);
+      expect(await alive(id.sa2)).not.toContain(other);
+      expect(
+        await accounts.killAllSessions(self, id.sa2, { currentSessionId: mine, includeCurrent: true }),
+      ).toBe(1);
+      expect(await alive(id.sa2)).toEqual([]);
+    });
+
+    it('người không tồn tại → 404, không ghi nhật ký', async () => {
+      await expect(
+        accounts.killAllSessions(actor, '00000000-0000-0000-0000-000000000000', {
+          currentSessionId: undefined,
+          includeCurrent: false,
+        }),
+      ).rejects.toMatchObject({ response: { code: 'USER_NOT_FOUND' } });
     });
   });
 });

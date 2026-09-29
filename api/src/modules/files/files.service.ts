@@ -15,6 +15,7 @@ import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { OwnerExistsRegistry } from '../../common/owner-exists.registry';
+import { UsersApiService } from '../users/users.api';
 import { detectFileType, SIZE_LIMITS } from './file-validation';
 import type { FileKind } from './file-validation';
 import { filesTable } from './files.schema';
@@ -48,6 +49,8 @@ export interface FileRecord {
   ownerType: string;
   ownerId: string;
   uploadedBy: string;
+  /** Họ tên người tải — chỉ `listFor` tra (danh sách giấy tờ); `null` khi không tra ra. */
+  uploadedByName?: string | null;
   createdAt: Date;
 }
 
@@ -66,6 +69,7 @@ export class FilesService {
     @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly audit: AuditWriterService,
     private readonly owners: OwnerExistsRegistry,
+    private readonly users: UsersApiService,
   ) {}
 
   /**
@@ -167,7 +171,9 @@ export class FilesService {
         ),
       )
       .orderBy(asc(filesTable.createdAt));
-    return rows.map(toRecord);
+    // Một lượt hỏi tên cho cả danh sách, qua cửa công khai của `users` (AD-2).
+    const names = await this.users.namesByIds([...new Set(rows.map((row) => row.uploadedBy))]);
+    return rows.map((row) => ({ ...toRecord(row), uploadedByName: names.get(row.uploadedBy) ?? null }));
   }
 
   /** Metadata + stream để download — controller set header attachment. */

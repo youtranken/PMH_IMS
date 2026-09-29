@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { CatalogModule } from '../catalog/catalog.module';
+import { UsersModule } from '../users/users.module';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { ExcelImportService } from '../../common/excel/excel-import.service';
 import { DeviceCatalogUsage } from './device-catalog-usage';
@@ -19,7 +20,7 @@ import { PortDeviceRetirement } from './port-device-retirement';
  * Ra ngoài chỉ xuất `DevicesApiService` (AD-2) — ipam/vault/software ở epic sau dùng cái đó.
  */
 @Module({
-  imports: [AuditModule, CatalogModule],
+  imports: [AuditModule, CatalogModule, UsersModule],
   controllers: [DevicesController],
   providers: [
     DevicesService,

@@ -27,6 +27,7 @@ import {
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { pageOffset, type Page, type PageQuery } from '../../common/pagination';
 import { conflictOnUnique } from '../../common/sql';
+import { addDays, startOfDayInTz } from '../../common/today';
 import { OutboxService } from '../outbox/outbox.service';
 import { AccessListService } from './access-list.service';
 import { tierLabel, type AccessTier } from './access-tier';
@@ -92,6 +93,14 @@ export interface BreakGlassRequestInput {
  * Người duyệt lúc 2 giờ sáng phải biết "switch truy cập tầng 1 hay firewall biên" để đánh giá
  * rủi ro. Chỉ có mã, tên, site và SỐ ngăn két — không bao giờ có tên ngăn (FR-026).
  */
+/** Bộ lọc nhật ký mở két; `state` đọc theo đồng hồ, `from`/`to` là ngày YYYY-MM-DD. */
+export interface BreakGlassLogFilters {
+  state?: string;
+  requester?: string;
+  from?: string;
+  to?: string;
+}
+
 export interface BreakGlassView extends ApprovalRecord {
   /** `mã · tên · site`; `null` khi hồ sơ chủ đã bị xoá. */
   subjectLabel: string | null;
@@ -765,17 +774,32 @@ export class BreakGlassService implements OnModuleInit {
   }
 
   /** FR-025: nhật ký break-glass, từng trang cho màn hình. */
-  async log(paging: PageQuery): Promise<Page<BreakGlassView>> {
+  async log(paging: PageQuery, filters: BreakGlassLogFilters = {}): Promise<Page<BreakGlassView>> {
     const page = await this.approvals.page(
-      { kind: BREAK_GLASS_KIND },
+      { kind: BREAK_GLASS_KIND, ...(await this.logFilters(filters)) },
       { limit: paging.limit, offset: pageOffset(paging) },
     );
     return { ...page, items: await this.views(page.items, true) };
   }
 
-  /** Trọn nhật ký — chỉ cho file xuất nộp auditor, nơi thiếu dòng là sai. */
-  logAll(): Promise<ApprovalRecord[]> {
-    return this.approvals.list({ kind: BREAK_GLASS_KIND });
+  /** Trọn nhật ký theo bộ lọc — cho file xuất nộp auditor, nơi thiếu dòng là sai. */
+  async logAll(filters: BreakGlassLogFilters = {}): Promise<ApprovalRecord[]> {
+    return this.approvals.list({ kind: BREAK_GLASS_KIND, ...(await this.logFilters(filters)) });
+  }
+
+  /**
+   * Khoảng ngày cắt theo `app.timezone` (AD-11) — cùng múi với giờ in trên màn; `to` bao gồm
+   * cả ngày đó nên mốc trên là 00:00 của ngày HÔM SAU.
+   */
+  private async logFilters(filters: BreakGlassLogFilters) {
+    const timeZone =
+      filters.from || filters.to ? await this.config.getString('appTimezone') : 'UTC';
+    return {
+      effectiveState: filters.state || undefined,
+      requesterContains: filters.requester?.trim() || undefined,
+      since: filters.from ? startOfDayInTz(filters.from, timeZone) : undefined,
+      until: filters.to ? startOfDayInTz(addDays(filters.to, 1), timeZone) : undefined,
+    };
   }
 
   /** Phiếu treo của người này; có `sessionId` thì chỉ phiếu gửi từ đúng phiên đó. */

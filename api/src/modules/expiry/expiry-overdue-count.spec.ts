@@ -21,7 +21,7 @@ describe('GET /expiry/overdue/count', () => {
       failedKinds: [],
     });
     const expiry = { list } as unknown as ExpiryService;
-    return { controller: new ExpiryController(expiry, {} as never, {} as never), list };
+    return { controller: new ExpiryController(expiry, {} as never, {} as never, {} as never), list };
   }
 
   it('trả đúng số mục đã quá hạn của màn hình, không kéo cả trang dữ liệu', async () => {

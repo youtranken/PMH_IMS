@@ -41,3 +41,12 @@ describe('Lịch sử phần mềm: deviceId → mã máy (SW-044)', () => {
     expect(withDeviceCodes([input], codes)[0]).toEqual(input);
   });
 });
+
+describe('Lịch sử đường truyền: siteId → mã site (NET-067)', () => {
+  it('cùng khuôn với thiết bị: `siteId` thành `site` mang mã, id gom được', () => {
+    const rows = [row({ siteId: { before: 's1', after: 's2' } })];
+    expect(deviceIdsInHistory(rows, 'siteId')).toEqual(['s1', 's2']);
+    const [out] = withDeviceCodes(rows, new Map([['s1', 'HCM'], ['s2', 'HN']]), 'siteId', 'site');
+    expect(out.changes).toEqual({ site: { before: 'HCM', after: 'HN' } });
+  });
+});

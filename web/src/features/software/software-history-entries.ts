@@ -80,6 +80,7 @@ export function toSoftwareHistory(
     id: row.id,
     at: row.createdAt,
     actor: row.actor,
+    actorName: row.actorName ?? undefined,
     action: ACTION_LABEL[row.action] ? t(ACTION_LABEL[row.action]) : row.action,
     detail: describe(prepare(row, vendorName), t, vendorName),
   }));

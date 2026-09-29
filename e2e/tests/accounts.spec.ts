@@ -255,6 +255,45 @@ test.describe('Quản trị tài khoản', () => {
     }
   });
 
+  test('ADM-049: "Đóng tất cả phiên" đẩy người đó khỏi mọi máy; SA tự đóng thì giữ phiên đang dùng', async ({
+    page,
+    browser,
+  }) => {
+    const memberCtx = await browser.newContext(SECOND_BROWSER);
+    const memberPage = await memberCtx.newPage();
+    const saCtx = await browser.newContext(SECOND_BROWSER);
+    const saOther = await saCtx.newPage();
+    try {
+      await firstLogin(memberPage, E2E_MEMBER);
+      await firstLogin(saOther, E2E_SA);
+      await firstLogin(page, E2E_SA);
+      await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
+
+      await rowAction(page, 'E2E Thành viên', 'Phiên đang mở');
+      const dialog = page.getByRole('dialog').filter({ hasText: 'Phiên đang mở' });
+      await dialog.getByRole('button', { name: 'Đóng tất cả phiên' }).click();
+      await confirmAction(page);
+      await expect(page.getByText(/Đã đóng \d+ phiên\./)).toBeVisible();
+      await expect
+        .poll(async () => (await memberPage.request.get('/api/v1/auth/me')).status())
+        .toBe(401);
+      await dialog.getByRole('button', { name: 'Đóng', exact: true }).click();
+
+      // Đường hỏng cần tránh: SA đóng phiên của chính mình mà không tick thì KHÔNG được tự văng.
+      await rowAction(page, 'E2E Super Admin', 'Phiên đang mở');
+      await dialog.getByRole('button', { name: 'Đóng tất cả phiên' }).click();
+      await expect(page.getByRole('checkbox', { name: /Đóng cả phiên bạn đang dùng/ })).not.toBeChecked();
+      await confirmAction(page);
+      await expect
+        .poll(async () => (await saOther.request.get('/api/v1/auth/me')).status())
+        .toBe(401);
+      expect((await page.request.get('/api/v1/auth/me')).status()).toBe(200);
+    } finally {
+      await memberCtx.close();
+      await saCtx.close();
+    }
+  });
+
   /**
    * Sắp xếp PHẢI chạy ở server, không phải ở trang đang xem — cùng luật với danh sách thiết
    * bị (devices.spec.ts, AD-15). Cũng kiểm cột "Hành động" không có nút sắp: nó không phải

@@ -7,10 +7,17 @@
 type Changes = Record<string, unknown> | null;
 type Change = { before?: unknown; after?: unknown } | undefined;
 
-export function deviceIdsInHistory(rows: { changes: Changes }[]): string[] {
+/**
+ * `field`/`as` mở cùng khuôn cho khoá tham chiếu khác (`siteId` → `site` ở lịch sử đường
+ * truyền) — một hàm, không chép ra bản thứ hai.
+ */
+export function deviceIdsInHistory(
+  rows: { changes: Changes }[],
+  field = 'deviceId',
+): string[] {
   const ids = new Set<string>();
   for (const row of rows) {
-    const change = row.changes?.deviceId as Change;
+    const change = row.changes?.[field] as Change;
     if (!change) continue;
     for (const value of [change.before, change.after]) {
       if (typeof value === 'string' && value) ids.add(value);
@@ -22,17 +29,19 @@ export function deviceIdsInHistory(rows: { changes: Changes }[]): string[] {
 export function withDeviceCodes<T extends { changes: Changes }>(
   rows: T[],
   codes: Map<string, string>,
+  field = 'deviceId',
+  as = 'device',
 ): T[] {
   const code = (value: unknown) =>
     typeof value === 'string' && value ? (codes.get(value) ?? value) : null;
   return rows.map((row) => {
-    const change = row.changes?.deviceId as Change;
+    const change = row.changes?.[field] as Change;
     if (!row.changes || !change) return row;
     const rest = { ...row.changes };
-    delete rest.deviceId;
+    delete rest[field];
     return {
       ...row,
-      changes: { device: { before: code(change.before), after: code(change.after) }, ...rest },
+      changes: { [as]: { before: code(change.before), after: code(change.after) }, ...rest },
     };
   });
 }

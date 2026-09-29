@@ -1,6 +1,17 @@
 import { Body, Controller, Get, Param, Post, Query, Req, Res } from '@nestjs/common';
 import type { Response } from 'express';
-import { IsIn, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min } from 'class-validator';
+import {
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Length,
+  Matches,
+  Max,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Audited } from '../audit/audited.decorator';
 import { parsePageQuery } from '../../common/pagination';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
@@ -12,6 +23,27 @@ import { BreakGlassService } from './break-glass.service';
 import { SECRET_OWNER_TYPES, type SecretOwnerType } from './vault.service';
 import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
 import { NoIdleTouch } from '../auth/no-idle-touch.decorator';
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** Bộ lọc nhật ký mở két (VLT-019) — dùng chung cho màn và file xuất. */
+class LogQueryDto {
+  @IsOptional() @IsString() page?: string;
+  @IsOptional() @IsString() limit?: string;
+
+  @IsOptional()
+  @IsIn(['pending', 'approved', 'denied', 'cancelled', 'expired', 'revoked'])
+  state?: string;
+
+  @IsOptional() @IsString() @MaxLength(255) requester?: string;
+
+  @IsOptional() @Matches(DATE_RE, { message: 'from phải dạng YYYY-MM-DD' }) from?: string;
+  @IsOptional() @Matches(DATE_RE, { message: 'to phải dạng YYYY-MM-DD' }) to?: string;
+}
+
+function logFilters(query: LogQueryDto) {
+  return { state: query.state, requester: query.requester, from: query.from, to: query.to };
+}
 
 class RequestDto {
   @IsIn([...SECRET_OWNER_TYPES], { message: 'Loại chủ thể không hợp lệ.' })
@@ -83,8 +115,8 @@ export class BreakGlassController {
   /** FR-025: nhật ký đầy đủ — ai xin, lý do, ai duyệt, hết hạn lúc nào. Dashboard Epic 7 đọc. */
   @Roles('sa', 'admin')
   @Get('log')
-  log(@Query() query: { page?: string; limit?: string }) {
-    return this.breakGlass.log(parsePageQuery(query));
+  log(@Query() query: LogQueryDto) {
+    return this.breakGlass.log(parsePageQuery(query), logFilters(query));
   }
 
   /**
@@ -97,8 +129,8 @@ export class BreakGlassController {
   @Roles('sa', 'admin')
   @Audited('break_glass.exported', 'approval')
   @Get('export.xlsx')
-  async export(@Res() res: Response) {
-    const rows = await this.breakGlass.logAll();
+  async export(@Query() query: LogQueryDto, @Res() res: Response) {
+    const rows = await this.breakGlass.logAll(logFilters(query));
     const tz = await this.config.getString('appTimezone');
     const buffer = await this.excel.build({
       sheetName: 'Nhat ky mo ket',

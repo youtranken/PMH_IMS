@@ -38,6 +38,8 @@ export interface DeviceHistoryRow {
   id: string;
   action: string;
   actor: string;
+  /** Họ tên người làm — API tra (`withActorNames`); vắng thì panel hiện email. */
+  actorName?: string | null;
   changes: Record<string, { before: unknown; after: unknown }> | null;
   createdAt: string;
 }

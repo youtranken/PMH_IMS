@@ -9,6 +9,7 @@ import vi from '@/locales/vi';
 import { quetNguon } from '@/test/quet-nguon';
 import {
   ACTION_KEY,
+  DANGER_ACTIONS,
   auditActionLabel,
   FAMILY_KEY,
   OBJECT_TYPE_KEY,
@@ -136,6 +137,14 @@ describe('Nhãn hành động trên màn Nhật ký', () => {
       }
     }
     expect(thieu).toEqual([]);
+  });
+
+  it('tập tô đỏ trên màn Nhật ký trùng đúng tập lọc "Chỉ sự kiện an ninh" của API', () => {
+    const text = readFileSync(join(API_SRC, 'modules', 'audit', 'security-actions.ts'), 'utf8');
+    const body = /SECURITY_AUDIT_ACTIONS[^=]*=\s*\[([\s\S]*?)\]/.exec(text)?.[1] ?? '';
+    const api = [...body.matchAll(QUOTED)].map((m) => m[1]).sort();
+    expect(api.length).toBeGreaterThan(5);
+    expect([...DANGER_ACTIONS].sort()).toEqual(api);
   });
 
   it('mọi khoá trong bốn bảng tra đều có thật trong vi.ts', () => {

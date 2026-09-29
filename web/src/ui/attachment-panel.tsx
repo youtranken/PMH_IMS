@@ -41,6 +41,8 @@ export interface AttachmentRecord {
   kind: 'image' | 'document';
   sizeBytes: number;
   createdAt: string;
+  /** Họ tên người tải — API tra qua `users.api`; vắng thì dòng phụ không hiện. */
+  uploadedByName?: string | null;
 }
 
 /**
@@ -205,7 +207,14 @@ export function AttachmentPanel({
                 <tr key={row.id}>
                   <td data-label={t('attachments.name')}>{row.originalName}</td>
                   <td data-label={t('attachments.size')}>{formatSize(row.sizeBytes)}</td>
-                  <td data-label={t('attachments.uploadedAt')}>{formatDateTime(row.createdAt)}</td>
+                  <td data-label={t('attachments.uploadedAt')}>
+                    {formatDateTime(row.createdAt)}
+                    {row.uploadedByName ? (
+                      <span className="cell-sub">
+                        {t('attachments.uploadedBy', { name: row.uploadedByName })}
+                      </span>
+                    ) : null}
+                  </td>
                   <td data-label={t('common.actions')}>
                     {/* "Tải về" là việc dùng nhiều nhất: nút ghost luôn hiện. "Xóa" (việc phá) nằm
                         trong menu ⋯ chữ đỏ — nút đỏ đặc sát "Tải về" là mời bấm nhầm. */}

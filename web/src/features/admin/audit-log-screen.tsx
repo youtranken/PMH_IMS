@@ -65,6 +65,8 @@ interface Filters extends Record<string, string> {
   action: string;
   objectType: string;
   objectId: string;
+  /** `1` = chỉ sự kiện an ninh — API giữ tập mã, web chỉ bật/tắt. */
+  security: string;
   from: string;
   to: string;
   /** '1' = xem từng sự kiện, không gộp lần lặp. Mặc định gộp (ADM-065). */
@@ -76,6 +78,7 @@ const EMPTY_FILTERS: Filters = {
   action: '',
   objectType: '',
   objectId: '',
+  security: '',
   from: '',
   to: '',
   each: '',
@@ -90,6 +93,7 @@ function filterParams(filters: Filters): URLSearchParams {
   if (filters.action) params.set('action', filters.action);
   if (filters.objectType) params.set('objectType', filters.objectType);
   if (filters.objectId.trim()) params.set('objectId', filters.objectId.trim());
+  if (filters.security === '1') params.set('security', '1');
   if (filters.from) params.set('from', filters.from);
   if (filters.to) params.set('to', filters.to);
   return params;
@@ -263,6 +267,16 @@ export function AuditLogScreen() {
         activeCount={url.activeCount}
         onClear={url.clearFilters}
       >
+        <div className="segmented" role="group" aria-label={t('audit.securityEvent')}>
+          <button
+            type="button"
+            className={filters.security ? 'on' : undefined}
+            aria-pressed={filters.security === '1'}
+            onClick={() => url.setFilter('security', filters.security ? '' : '1')}
+          >
+            {t('audit.securityOnly')}
+          </button>
+        </div>
         <Select
           value={filters.action}
           ariaLabel={t('audit.action')}
