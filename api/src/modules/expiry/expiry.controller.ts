@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -37,6 +38,19 @@ import type { ExpiryLevel } from './expiry.service';
 import { ExpiryService } from './expiry.service';
 import { NoStepUp } from '../auth/step-up.decorator';
 import { NoIdleTouch } from '../auth/no-idle-touch.decorator';
+import { withActorNames } from '../../common/history';
+import { UsersApiService } from '../users/users.api';
+
+/** Khoảng ngày của tab "Đã gia hạn" — ngày lịch YYYY-MM-DD, cả hai bao gồm. */
+class RenewalsQueryDto {
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'from phải dạng YYYY-MM-DD' })
+  from?: string;
+
+  @IsOptional()
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'to phải dạng YYYY-MM-DD' })
+  to?: string;
+}
 
 class RenewDto {
   @IsString() @Length(1, 40) kind!: string;
@@ -92,6 +106,7 @@ export class ExpiryController {
     private readonly expiry: ExpiryService,
     private readonly digest: ExpiryDigestService,
     private readonly excel: ExcelExportService,
+    private readonly users: UsersApiService,
   ) {}
 
   /** Các loại nguồn đang đăng ký — UI dựng bộ lọc từ đây, không viết cứng danh sách. */
@@ -220,8 +235,17 @@ export class ExpiryController {
 
   @Roles('sa', 'admin', 'member')
   @Get('renewals')
-  renewals() {
-    return this.expiry.recentRenewals();
+  async renewals(@Query() query: RenewalsQueryDto) {
+    if (query.from && query.to && query.to < query.from) {
+      throw new BadRequestException({
+        code: 'RANGE_INVALID',
+        message: '"Đến ngày" phải sau "Từ ngày".',
+      });
+    }
+    // Cột "Người" đọc họ tên (email vào tooltip) — tra một lượt qua users.api (AD-2).
+    return withActorNames(await this.expiry.recentRenewals(query), (emails) =>
+      this.users.namesByEmails(emails),
+    );
   }
 
   // ───────────── Luật gửi báo cáo (story 3.5, FR-013) ─────────────

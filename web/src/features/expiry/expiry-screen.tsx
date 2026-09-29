@@ -12,6 +12,7 @@ import { renewPreset } from '@/lib/renew-dates';
 import { PATHS } from '@/lib/routes';
 import { useApiMutation } from '@/lib/api';
 import { DataTable } from '@/ui/data-table';
+import { DatePicker } from '@/ui/date-picker';
 import { Pagination } from '@/ui/pagination';
 import { ChipToggleGroup } from '@/ui/chip-toggle-group';
 import { ExpiryBadge } from '@/ui/expiry-badge';
@@ -56,7 +57,17 @@ interface RenewalRow {
   oldEnd: string | null;
   newEnd: string;
   actor: string;
+  /** Họ tên người gia hạn — API tra; vắng thì hiện email. */
+  actorName?: string | null;
   createdAt: string;
+}
+
+/** Tham số khoảng ngày của tab "Đã gia hạn" — tên khoá theo `RenewalsQueryDto` bên API. */
+export function renewalsQuery(range: { from: string; to: string }): string {
+  const params = new URLSearchParams();
+  if (range.from) params.set('from', range.from);
+  if (range.to) params.set('to', range.to);
+  return params.toString();
 }
 
 interface ExpiryResponse {
@@ -97,6 +108,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const askConfirm = useConfirm();
+  const toast = useToast();
   const [renewing, setRenewing] = useState<ExpiryRow | null>(null);
   const [tab, setTab] = useState('list');
   const [addingRule, setAddingRule] = useState(false);
@@ -543,6 +555,14 @@ export function ExpiryScreen({ me }: { me: Me }) {
           onDone={() => {
             setRenewing(null);
             void queryClient.invalidateQueries({ queryKey: ['expiry'] });
+            // Dòng vừa gia hạn rời danh sách — chỉ đường tới chỗ nó đã sang, để kiểm lại được.
+            toast({
+              message: t('expiry.renewedSeeTab'),
+              action: {
+                label: t('expiry.renewedSeeTabAction'),
+                onClick: () => setTab('renewals'),
+              },
+            });
           }}
         />
       ) : null}
@@ -658,9 +678,12 @@ function BulkRenewBar({
 /** Tab "Đã gia hạn": các lượt gia hạn gần nhất (`GET /expiry/renewals`) — ai, lúc nào, cũ → mới. */
 function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
   const { t } = useTranslation();
+  const [range, setRange] = useState({ from: '', to: '' });
+  const query = renewalsQuery(range);
   const renewals = useQuery({
-    queryKey: ['expiry', 'renewals'],
-    queryFn: () => apiFetch<RenewalRow[]>('/api/v1/expiry/renewals'),
+    queryKey: ['expiry', 'renewals', query],
+    queryFn: () => apiFetch<RenewalRow[]>(`/api/v1/expiry/renewals${query ? `?${query}` : ''}`),
+    placeholderData: keepPreviousData,
   });
   const columns = useMemo<ColumnDef<RenewalRow, unknown>[]>(
     () => [
@@ -696,9 +719,40 @@ function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
         accessorKey: 'actor',
         enableSorting: false,
         header: t('expiry.renewedBy'),
+        cell: ({ row }) =>
+          row.original.actorName ? (
+            <span title={row.original.actor}>{row.original.actorName}</span>
+          ) : (
+            row.original.actor
+          ),
       },
     ],
     [t, kindLabel],
+  );
+
+  const filtered = query !== '';
+  const filterBar = (
+    <FilterBar
+      activeCount={[range.from, range.to].filter(Boolean).length}
+      onClear={() => setRange({ from: '', to: '' })}
+    >
+      <div className="filter-range" role="group" aria-label={t('expiry.renewedRange')}>
+        <DatePicker
+          value={range.from}
+          ariaLabel={t('expiry.renewedFrom')}
+          placeholder={t('expiry.renewedFrom')}
+          max={range.to || undefined}
+          onChange={(from) => setRange((current) => ({ ...current, from }))}
+        />
+        <DatePicker
+          value={range.to}
+          ariaLabel={t('expiry.renewedTo')}
+          placeholder={t('expiry.renewedTo')}
+          min={range.from || undefined}
+          onChange={(to) => setRange((current) => ({ ...current, to }))}
+        />
+      </div>
+    </FilterBar>
   );
 
   if (renewals.isLoading) return <Loading />;
@@ -707,21 +761,32 @@ function RenewalsPanel({ kindLabel }: { kindLabel: (kind: string) => string }) {
   }
   const rows = renewals.data ?? [];
   if (rows.length === 0) {
-    return <EmptyState title={t('expiry.renewalsEmpty')} hint={t('expiry.renewalsEmptyHint')} />;
+    return (
+      <>
+        {filterBar}
+        <EmptyState
+          title={t(filtered ? 'expiry.renewalsEmptyFiltered' : 'expiry.renewalsEmpty')}
+          hint={filtered ? undefined : t('expiry.renewalsEmptyHint')}
+        />
+      </>
+    );
   }
   return (
-    <DataTable
-      data={rows}
-      columns={columns}
-      emptyText={t('expiry.renewalsEmpty')}
-      stackOnMobile
-      mobileCard={{
-        title: (row) => row.label,
-        href: (row) => PATHS.softwareItem(row.objectId),
-        meta: (row) =>
-          `${orDash(formatDate(row.oldEnd))} → ${formatDate(row.newEnd)} · ${row.actor}`,
-        aside: (row) => formatDate(row.createdAt),
-      }}
-    />
+    <>
+      {filterBar}
+      <DataTable
+        data={rows}
+        columns={columns}
+        emptyText={t('expiry.renewalsEmpty')}
+        stackOnMobile
+        mobileCard={{
+          title: (row) => row.label,
+          href: (row) => PATHS.softwareItem(row.objectId),
+          meta: (row) =>
+            `${orDash(formatDate(row.oldEnd))} → ${formatDate(row.newEnd)} · ${row.actorName ?? row.actor}`,
+          aside: (row) => formatDate(row.createdAt),
+        }}
+      />
+    </>
   );
 }
