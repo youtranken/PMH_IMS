@@ -2288,8 +2288,9 @@ export default {
     cellLabel: '{{member}} — {{scope}}: {{tier}}',
     addPeopleTo: 'Gán "{{scope}}" cho nhiều người',
     grantedByLine: 'Người gán: {{actor}}',
-    summary:
-      '{{people}} tài khoản · {{rules}} dòng quyền · {{scopes}} nhóm đối tượng, trong đó {{empty}} nhóm chưa gán cho ai.',
+    summaryMain: '{{people}} tài khoản · {{rules}} dòng quyền · {{scopes}} nhóm đối tượng, trong đó',
+    summaryEmpty: '{{count}} nhóm chưa gán cho ai',
+    onlyEmpty: 'Chỉ nhóm chưa ai được gán',
     noScopes: 'Không có nhóm đối tượng nào khớp',
     grantScopeTitle: 'Gán "{{scope}}" cho người dùng',
     people: 'Chọn người',
@@ -2349,6 +2350,9 @@ export default {
     checkResult: '{{member}} trên {{record}}: {{tier}}.',
     checkRelated: 'Các dòng quyền của người này thuộc nhóm liên quan:',
     checkNoRelated: 'Người này không có dòng quyền nào thuộc nhóm liên quan — mặc định là không có quyền.',
+    checkGroups: 'Hồ sơ này thuộc nhóm: {{groups}}.',
+    checkBecause: 'Vì dòng quyền: {{scope}} · {{tier}}.',
+    checkAlsoMatched: 'Còn {{count}} dòng khớp khác nhưng hẹp hơn.',
   },
   approvals: {
     title: 'Duyệt mở két',

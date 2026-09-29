@@ -17,6 +17,7 @@ import type { UserDirectoryEntry } from '../users/users.types';
 import {
   ACCESS_TIERS,
   SCOPE_TYPES,
+  explainTier,
   groupsOfDevice,
   groupsOfIsp,
   groupsOfServiceAccount,
@@ -223,6 +224,25 @@ export class AccessListService {
     if (groups.length === 0) return 'denied';
 
     return resolveTier(await this.rulesOf(memberEmail), memberEmail, groups);
+  }
+
+  /**
+   * Như `tierFor`, kèm nhóm của đối tượng và các dòng quyền đã khớp (dòng quyết định đứng đầu)
+   * — cho màn Kiểm tra quyền trả lời "vì sao". Không nằm trên đường mở két, nên tách hàm riêng
+   * thay vì bắt mọi lượt xem két gánh thêm phần giải thích.
+   */
+  async explainTierFor(memberEmail: string, ownerType: SecretOwnerType, ownerId: string) {
+    const groups = await this.groupsOf(ownerType, ownerId);
+    const { tier, matched } = explainTier(await this.rulesOf(memberEmail), memberEmail, groups);
+    return {
+      tier,
+      groups,
+      matched: matched.map((rule) => ({
+        scopeType: rule.scopeType,
+        scopeRef: rule.scopeRef,
+        tier: rule.tier,
+      })),
+    };
   }
 
   /**
