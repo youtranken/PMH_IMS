@@ -45,6 +45,8 @@ export function CatalogImportDialog({
       hint={t('catalog.importHint')}
       previewUrl="/api/v1/catalog/import/preview"
       commitUrl="/api/v1/catalog/import/commit"
+      errorsUrl="/api/v1/catalog/import/errors"
+      errorsFileName="dong-loi-danh-muc.xlsx"
       csrfToken={csrfToken}
       /* File mẫu nằm NGAY trong hộp: nó là bước con của việc nhập, và file đó đã kèm danh mục
          đang có — sửa rồi nhập lại là cách xuất/nhập danh mục. */

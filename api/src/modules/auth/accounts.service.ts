@@ -397,6 +397,11 @@ export class AccountsService {
     return this.sessions.listActive(userId);
   }
 
+  /** Nơi (IP) đang tạm chặn / đang đếm sai của người này — SA đọc khi người dùng báo không vào được. */
+  listLockouts(userId: string) {
+    return this.loginFailures.listForUser(userId);
+  }
+
   /** SA đá một phiên cụ thể (NFR-01). */
   async killSession(actor: ActorRef, sessionId: string): Promise<void> {
     const session = await this.sessions.find(sessionId);
@@ -427,6 +432,38 @@ export class AccountsService {
         objectId: sessionId,
         detail: { userId: session.userId },
       });
+    });
+  }
+
+  /**
+   * SA đóng mọi phiên của một người (nghi bị chiếm, người đó báo mất máy).
+   *
+   * Phiên SA đang dùng được giữ lại trừ khi chọn rõ `includeCurrent`: SA đóng phiên của chính
+   * mình để "đuổi" một máy lạ mà lại tự văng ra giữa lúc xử lý sự cố là phản tác dụng.
+   * Một transaction cho thu hồi + nhật ký (AD-5).
+   */
+  async killAllSessions(
+    actor: ActorRef,
+    userId: string,
+    opts: { currentSessionId: string | undefined; includeCurrent: boolean },
+  ): Promise<number> {
+    await this.requireUser(userId);
+    const keep = opts.includeCurrent ? undefined : opts.currentSessionId;
+    return this.db.transaction(async (tx) => {
+      const killed = await this.sessions.revokeAllForUserWithin(
+        tx,
+        userId,
+        `killed-by:${actor.email}`,
+        keep,
+      );
+      await this.audit.appendWithin(tx, {
+        actor: actor.email,
+        action: "session.killed_all",
+        objectType: "user",
+        objectId: userId,
+        detail: { revokedSessions: killed, includeCurrent: opts.includeCurrent },
+      });
+      return killed;
     });
   }
 

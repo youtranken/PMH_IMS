@@ -155,4 +155,19 @@ describe('Tầng quyền trên đường truyền đi theo id nhà mạng', () =
     const other = await isp.create('sa', { code: 'SEC13-02', providerId: providers.VNPT });
     expect(await access.tierFor(member, 'isp', other.id)).toBe('denied');
   });
+
+  it('Kiểm tra quyền giải thích được: nhóm của đường truyền + dòng quyền đã khớp (ADM-083)', async () => {
+    const line = await isp.create('sa', { code: 'SEC13-03', providerId: providers.FPT });
+    expect(await access.explainTierFor(member, 'isp', line.id)).toEqual({
+      tier: 'whitelist',
+      groups: [{ scopeType: 'isp_provider', scopeRef: providers.FPT }],
+      matched: [{ scopeType: 'isp_provider', scopeRef: providers.FPT, tier: 'whitelist' }],
+    });
+    const other = await isp.create('sa', { code: 'SEC13-04', providerId: providers.VNPT });
+    expect(await access.explainTierFor(member, 'isp', other.id)).toEqual({
+      tier: 'denied',
+      groups: [{ scopeType: 'isp_provider', scopeRef: providers.VNPT }],
+      matched: [],
+    });
+  });
 });

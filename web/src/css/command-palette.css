@@ -155,6 +155,11 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* Chip "Đã thanh lý" / "Đã ngừng dùng" bên phải dòng — hồ sơ đã bỏ vẫn tìm ra, nhưng nhìn là biết. */
+.cp-item .it-status {
+  flex: 0 0 auto;
+  font-size: var(--fs-xs);
+}
 .cp-item .it-arrow {
   display: grid;
   place-items: center;

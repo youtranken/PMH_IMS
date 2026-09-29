@@ -65,7 +65,9 @@ describe('Màn Nhật ký', () => {
     expect(screen.getByText('10.0.0.8')).toBeInTheDocument();
     // 01:30 UTC = 08:30 giờ Việt Nam.
     expect(
-      screen.getByText((text) => text.includes('20/09/2026') && text.includes('08:30')),
+      screen.getByText((text) => text.includes('20/09/2026') && text.includes('08:30'), {
+        selector: 'button',
+      }),
     ).toBeInTheDocument();
   });
 
@@ -128,6 +130,19 @@ describe('Màn Nhật ký', () => {
       expect(last?.searchParams.get('objectId')).toBe('DM-0001');
       expect(last?.searchParams.get('page')).toBe('1');
     });
+  });
+
+  it('chip "Chỉ sự kiện an ninh" bật/tắt `security=1` trên URL và lượt gọi API', async () => {
+    const fetchMock = stubFetch();
+    renderAt('/admin/audit-log');
+    await screen.findByText('Lê Minh');
+    const chip = screen.getByRole('button', { name: 'Chỉ sự kiện an ninh' });
+    expect(chip).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(chip);
+    await waitFor(() => expect(listCalls(fetchMock).at(-1)?.searchParams.get('security')).toBe('1'));
+    expect(chip).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(chip);
+    await waitFor(() => expect(listCalls(fetchMock).at(-1)?.searchParams.has('security')).toBe(false));
   });
 });
 

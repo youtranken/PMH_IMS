@@ -55,6 +55,7 @@ export const ACTION_KEY: Record<string, string> = {
   'auth.totp.reenroll.reauth_failed': 'audit.actions.authTotpReenrollReauthFailed',
   'auth.totp.reenroll.session_revoked': 'audit.actions.authTotpReenrollSessionRevoked',
   'session.killed': 'audit.actions.sessionKilled',
+  'session.killed_all': 'audit.actions.sessionKilledAll',
   'security.probe.alerted': 'audit.actions.securityProbeAlerted',
   'vault.secret.created': 'audit.actions.vaultSecretCreated',
   'vault.secret.updated': 'audit.actions.vaultSecretUpdated',
@@ -79,6 +80,7 @@ export const ACTION_KEY: Record<string, string> = {
   'catalog.exported': 'audit.actions.catalogExported',
   'devices.exported': 'audit.actions.devicesExported',
   'software.exported': 'audit.actions.softwareExported',
+  'software.assignments.exported': 'audit.actions.softwareAssignmentsExported',
   'isp.exported': 'audit.actions.ispExported',
   'ip.exported': 'audit.actions.ipExported',
   'nat.exported': 'audit.actions.natExported',
@@ -194,8 +196,11 @@ export function auditActionLabel(code: string, t: TFunction): string {
  * Màu theo NHÓM: an ninh thất bại (đoán mật khẩu, mã 2 lớp sai, bị chặn mở két, cảnh báo dò)
  * là thứ người rà nhật ký phải thấy trước tiên; xem giá trị két là việc hợp lệ nhưng nhạy cảm.
  * Còn lại (tạo/sửa) giữ màu chữ thường — tô màu mọi thứ là không tô gì.
+ *
+ * Tập đỏ là bản đọc của `SECURITY_AUDIT_ACTIONS` bên API (nguồn của chip "Chỉ sự kiện an ninh");
+ * `audit-action-rollcall.test.ts` đỏ khi hai bên lệch — thêm mã thì thêm ở API trước.
  */
-const DANGER = new Set([
+export const DANGER_ACTIONS = new Set([
   'auth.login.failed',
   'auth.account.locked',
   'auth.stepup.failed',
@@ -216,9 +221,77 @@ const DANGER = new Set([
 const WARN = new Set(['vault.secret.revealed', 'break_glass.approved', 'break_glass.exported']);
 
 export function auditActionTone(code: string): 'danger' | 'warn' | null {
-  if (DANGER.has(code)) return 'danger';
+  if (DANGER_ACTIONS.has(code)) return 'danger';
   if (WARN.has(code)) return 'warn';
   return null;
+}
+
+/**
+ * Module của một mã hành động — nhóm của ô chọn "Hành động" ở Nhật ký. Tính theo đoạn đầu của
+ * mã (`vault.secret.revealed` → két), nên mã mới của một module cũ tự vào đúng nhóm.
+ */
+export type AuditModule =
+  | 'auth'
+  | 'account'
+  | 'vault'
+  | 'breakGlass'
+  | 'catalog'
+  | 'device'
+  | 'software'
+  | 'isp'
+  | 'serviceAccount'
+  | 'network'
+  | 'expiry'
+  | 'disposal'
+  | 'file'
+  | 'system'
+  | 'other';
+
+const MODULE_OF_PREFIX: Record<string, AuditModule> = {
+  auth: 'auth',
+  session: 'auth',
+  security: 'auth',
+  account: 'account',
+  accounts: 'account',
+  vault: 'vault',
+  break_glass: 'breakGlass',
+  catalog: 'catalog',
+  device: 'device',
+  devices: 'device',
+  software: 'software',
+  isp: 'isp',
+  service_account: 'serviceAccount',
+  ip: 'network',
+  subnet: 'network',
+  nat: 'network',
+  expiry: 'expiry',
+  disposal: 'disposal',
+  file: 'file',
+  system_config: 'system',
+  crypto: 'system',
+  audit: 'system',
+};
+
+export const MODULE_KEY: Record<AuditModule, string> = {
+  auth: 'audit.module.auth',
+  account: 'audit.module.account',
+  vault: 'audit.module.vault',
+  breakGlass: 'audit.module.breakGlass',
+  catalog: 'audit.module.catalog',
+  device: 'audit.module.device',
+  software: 'audit.module.software',
+  isp: 'audit.module.isp',
+  serviceAccount: 'audit.module.serviceAccount',
+  network: 'audit.module.network',
+  expiry: 'audit.module.expiry',
+  disposal: 'audit.module.disposal',
+  file: 'audit.module.file',
+  system: 'audit.module.system',
+  other: 'audit.module.other',
+};
+
+export function auditActionModule(code: string): AuditModule {
+  return MODULE_OF_PREFIX[code.split('.')[0]] ?? 'other';
 }
 
 /** Loại đối tượng (`object_type`) → nhãn tiếng Việt. */

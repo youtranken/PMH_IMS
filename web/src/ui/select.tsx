@@ -16,6 +16,12 @@ export interface SelectOption {
   short?: ReactNode;
   /** Chữ để ô lọc so khớp khi `label` không phải chuỗi thuần. */
   searchText?: string;
+  /**
+   * Tên nhóm — menu kẻ một dòng tiêu đề mỗi khi nhóm đổi, nên nơi gọi phải XẾP option theo
+   * nhóm trước. Danh sách vài chục mã (Nhật ký hệ thống) mà không chia nhóm thì mắt phải dò
+   * từng dòng mới tìm ra "mọi việc về két".
+   */
+  group?: string;
 }
 
 /** Quá ngần này lựa chọn thì menu tự có ô gõ để lọc — dò bằng mắt bắt đầu chậm từ đây. */
@@ -248,6 +254,13 @@ export function Select({
       */}
       {shown.map((o, i) => (
         <li key={o.value} role="presentation">
+          {/* Tiêu đề nhóm nằm TRONG `<li>` của option đầu nhóm và ẩn với trình đọc màn hình:
+              `listbox` chỉ được chứa option, còn tên nhóm đã có trong nhãn từng mục. */}
+          {o.group && o.group !== shown[i - 1]?.group ? (
+            <span className="fsel-group" aria-hidden="true">
+              {o.group}
+            </span>
+          ) : null}
           <button
             type="button"
             id={optionId(i)}

@@ -9,6 +9,7 @@ import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { ExpiryBadge } from "@/ui/expiry-badge";
 import { HistoryPanel } from "@/ui/history-panel";
+import { AuditLogLink } from "@/ui/audit-log-link";
 import { DetailLoadFailed, LoadError, Loading } from "@/ui/load-state";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
 import {
@@ -425,6 +426,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
                 </button>
               ))}
             </div>
+            <AuditLogLink role={me.role} objectType="software" objectId={item.id} />
             {historyGroup === "renew" ? (
               <SoftwareRenewals softwareId={item.id} withWebsites={supportsWebsites(item.kind)} />
             ) : null}

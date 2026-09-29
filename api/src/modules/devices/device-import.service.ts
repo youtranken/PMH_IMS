@@ -4,6 +4,7 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { ExcelImportService } from '../../common/excel/excel-import.service';
+import { buildImportErrorsXlsx, importErrorRows } from '../../common/excel/import-errors';
 import { normalizeKey, summarize } from '../../common/import-plan';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
@@ -61,6 +62,15 @@ export class DeviceImportService {
   ): Promise<Buffer> {
     const devices = await this.devices.listAll(filter, sort);
     return this.excelOut.buildWorkbook(deviceExportSheets(devices));
+  }
+
+  /** File "dòng lỗi" của lượt đối chiếu (ADM-005) — sheet "Thiết bị" như file mẫu. Không ghi gì. */
+  async errorsFile(buffer: Buffer): Promise<Buffer> {
+    const plan = await this.preview(buffer);
+    return buildImportErrorsXlsx(
+      this.excelOut,
+      importErrorRows(plan.rows.map((row) => ({ ...row, sheet: 'Thiết bị' }))),
+    );
   }
 
   async preview(buffer: Buffer): Promise<DeviceImportPlan> {

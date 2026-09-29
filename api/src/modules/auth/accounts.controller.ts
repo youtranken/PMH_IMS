@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -178,6 +179,12 @@ class TotpRequiredDto {
   required!: boolean;
 }
 
+class KillAllSessionsDto {
+  @IsOptional()
+  @IsBoolean()
+  includeCurrent?: boolean;
+}
+
 /**
  * Quản trị tài khoản — CHỈ SA (story 1.4). Mọi route ghi có @Audited (AD-9).
  * Không có endpoint xóa user: nghiệp vụ chỉ khóa/vô hiệu hóa (convention "Xóa").
@@ -325,6 +332,16 @@ export class AccountsController {
     return { required: dto.required };
   }
 
+  /**
+   * Tạm chặn theo từng IP (giãn chậm khi gõ sai) — chỉ đọc. Gỡ vẫn là "Gỡ tạm chặn" qua
+   * `:id/status` (có step-up, có ghi vết): một nút xoá từng IP là thêm một cửa hạ rào thứ hai.
+   */
+  @Roles('sa')
+  @Get(':id/lockouts')
+  listLockouts(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.accounts.listLockouts(id);
+  }
+
   @Roles('sa')
   @Get(':id/sessions')
   async listSessions(@Param('id') id: string, @Req() req: AuthedRequest) {
@@ -334,6 +351,24 @@ export class AccountsController {
       ...session,
       current: session.id === req.user?.sessionId,
     }));
+  }
+
+  @Roles('sa')
+  // Khác `sessions/:sessionId/kill`: một lần bấm đá văng một người khỏi MỌI máy, kể cả chính SA
+  // nếu chọn — phạm vi rộng như khóa tài khoản nên cũng đòi step-up.
+  @RequiresStepUp()
+  @Post(':id/sessions/kill-all')
+  @Audited('session.killed_all', 'user', { writtenByService: true })
+  async killAllSessions(
+    @Param('id') id: string,
+    @Body() dto: KillAllSessionsDto,
+    @Req() req: AuthedRequest,
+  ) {
+    const killed = await this.accounts.killAllSessions(actor(req), id, {
+      currentSessionId: req.user?.sessionId,
+      includeCurrent: dto.includeCurrent === true,
+    });
+    return { killed };
   }
 
   @Roles('sa')

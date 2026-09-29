@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
+import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { useToast } from '@/ui/toast';
 import { AssignDialog } from './assign-dialog';
@@ -65,6 +66,14 @@ export function LicenseAssignmentsPanel({
           </button>
         </div>
         <span className="spacer" />
+        {/* File nộp kiểm toán: máy ĐANG dùng + dòng tổng chi phí (API dựng) — không có ghế thì thôi. */}
+        {active.length > 0 ? (
+          <ExportXlsxButton
+            url={`/api/v1/software/${software.id}/assignments/export.xlsx`}
+            fileName={`may-dang-dung-${software.code}.xlsx`}
+            label={t('license.exportDevices')}
+          />
+        ) : null}
         {/* Nút thường, không primary: màn chi tiết đã có "Sửa hồ sơ" là điểm nhấn duy nhất. */}
         <button type="button" className="btn" onClick={() => setAssigning(true)}>
           {t('license.assign')}

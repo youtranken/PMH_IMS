@@ -36,7 +36,8 @@ import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { DevicePanelRegistry } from '../../common/device-panels.registry';
 import { DeviceTimelineRegistry } from '../../common/device-timeline.registry';
-import { HISTORY_PAGE_LIMIT } from '../../common/history';
+import { HISTORY_PAGE_LIMIT, withActorNames } from '../../common/history';
+import { UsersApiService } from '../users/users.api';
 import { DeviceImportService } from './device-import.service';
 import { DevicePortsService } from './device-ports.service';
 import {
@@ -137,6 +138,7 @@ export class DevicesController {
     private readonly panels: DevicePanelRegistry,
     private readonly imports: DeviceImportService,
     private readonly timelines: DeviceTimelineRegistry,
+    private readonly users: UsersApiService,
   ) {}
 
   @Roles('sa', 'admin', 'member')
@@ -232,6 +234,14 @@ export class DevicesController {
     return this.imports.preview(requireXlsx(file));
   }
 
+  /** Dòng lỗi của lượt đối chiếu ra Excel (ADM-005) — chỉ đọc lại file vừa gửi, không ghi gì. */
+  @Roles('sa', 'admin', 'member')
+  @Post('import/errors')
+  @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
+  async importErrors(@UploadedFile() file: Express.Multer.File | undefined, @Res() res: Response) {
+    sendXlsx(res, await this.imports.errorsFile(requireXlsx(file)), 'dong-loi-thiet-bi.xlsx');
+  }
+
   @Roles('sa', 'admin', 'member')
   @Post('import/commit')
   @Audited('device.imported', 'device', { writtenByService: true })
@@ -266,8 +276,11 @@ export class DevicesController {
 
   @Roles('sa', 'admin', 'member')
   @Get(':id/history')
-  history(@Param() params: IdParamDto) {
-    return this.devices.history(params.id);
+  async history(@Param() params: IdParamDto) {
+    // Họ tên người làm (email vào tooltip) — một lượt hỏi cho cả trang, qua users.api (AD-2).
+    return withActorNames(await this.devices.history(params.id), (emails) =>
+      this.users.namesByEmails(emails),
+    );
   }
 
   /**
@@ -276,8 +289,12 @@ export class DevicesController {
    */
   @Roles('sa', 'admin', 'member')
   @Get(':id/timeline')
-  timeline(@Param() params: IdParamDto) {
-    return this.timelines.timelineFor(params.id, HISTORY_PAGE_LIMIT);
+  async timeline(@Param() params: IdParamDto) {
+    const timeline = await this.timelines.timelineFor(params.id, HISTORY_PAGE_LIMIT);
+    return {
+      ...timeline,
+      items: await withActorNames(timeline.items, (emails) => this.users.namesByEmails(emails)),
+    };
   }
 
   @Roles('sa', 'admin', 'member')

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { matchPeriod, periodRange } from '@/lib/period-range';
+import {
+  daysBetweenIso,
+  matchPeriod,
+  matchRecent,
+  periodRange,
+  recentRange,
+} from '@/lib/period-range';
 
 describe('periodRange — khoảng ngày của tháng/quý/năm chứa hôm nay', () => {
   it.each([
@@ -19,5 +25,35 @@ describe('periodRange — khoảng ngày của tháng/quý/năm chứa hôm nay'
     expect(matchPeriod('2026-09-01', '2026-09-30', '2026-09-28')).toBe('month');
     expect(matchPeriod('2026-09-02', '2026-09-30', '2026-09-28')).toBe('');
     expect(matchPeriod('', '', '2026-09-28')).toBe('');
+  });
+});
+
+describe('recentRange — "N ngày gần đây" tính cả hôm nay', () => {
+  it.each([
+    [1, '2026-09-29', '2026-09-29'],
+    [7, '2026-09-29', '2026-09-23'],
+    [30, '2026-03-05', '2026-02-04'],
+    [7, '2026-01-03', '2025-12-28'],
+  ] as const)('%i ngày tới %s bắt đầu từ %s', (days, today, from) => {
+    expect(recentRange(days, today)).toEqual({ from, to: today });
+  });
+
+  it('nhận ra khoảng đang lọc là preset nào; lệch một đầu là không khớp', () => {
+    expect(matchRecent('2026-09-23', '2026-09-29', '2026-09-29', [1, 7, 30])).toBe(7);
+    expect(matchRecent('2026-09-29', '2026-09-29', '2026-09-29', [1, 7, 30])).toBe(1);
+    expect(matchRecent('2026-09-23', '', '2026-09-29', [1, 7, 30])).toBe(0);
+    expect(matchRecent('2026-09-22', '2026-09-29', '2026-09-29', [1, 7, 30])).toBe(0);
+  });
+});
+
+describe('daysBetweenIso — số ngày lịch giữa hai ngày YYYY-MM-DD', () => {
+  it.each([
+    ['2026-09-29', '2026-09-29', 0],
+    ['2026-09-29', '2026-09-30', 1],
+    ['2026-09-29', '2026-12-31', 93],
+    ['2026-03-01', '2026-02-28', -1],
+    ['2028-02-28', '2028-03-01', 2],
+  ] as const)('%s → %s = %i', (from, to, days) => {
+    expect(daysBetweenIso(from, to)).toBe(days);
   });
 });

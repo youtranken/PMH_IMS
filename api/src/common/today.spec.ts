@@ -1,4 +1,4 @@
-import { addDays, daysBetween, isoDateInTz } from './today';
+import { addDays, daysBetween, isoDateInTz, startOfDayInTz } from './today';
 
 describe('isoDateInTz — "hôm nay" theo múi giờ ứng dụng, không theo UTC', () => {
   /**
@@ -43,5 +43,21 @@ describe('addDays / daysBetween', () => {
     ['2026-12-25', '2027-01-01', 7],
   ])('daysBetween(%s, %s) → %s', (from, end, expected) => {
     expect(daysBetween(from, end)).toBe(expected);
+  });
+});
+
+describe('startOfDayInTz — 00:00 của một ngày lịch theo múi giờ ứng dụng', () => {
+  it.each([
+    ['2026-09-29', 'Asia/Ho_Chi_Minh', '2026-09-28T17:00:00.000Z'],
+    ['2026-09-29', 'UTC', '2026-09-29T00:00:00.000Z'],
+    // Ngày đổi giờ mùa hè ở New York: 00:00 vẫn là -05:00 (đổi lúc 02:00).
+    ['2026-03-08', 'America/New_York', '2026-03-08T05:00:00.000Z'],
+    ['2026-03-09', 'America/New_York', '2026-03-09T04:00:00.000Z'],
+  ])('%s @ %s → %s', (iso, tz, expected) => {
+    expect(startOfDayInTz(iso, tz).toISOString()).toBe(expected);
+  });
+
+  it('múi giờ cấu hình sai lùi về UTC chứ không ném', () => {
+    expect(startOfDayInTz('2026-09-29', 'Khong/Co').toISOString()).toBe('2026-09-29T00:00:00.000Z');
   });
 });

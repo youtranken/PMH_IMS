@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
+import { UsersModule } from '../users/users.module';
 import { FilesApiService } from './files.api';
 import { FilesController } from './files.controller';
 import { FilesService } from './files.service';
@@ -9,7 +10,7 @@ import { FilesService } from './files.service';
  * Ra ngoài chỉ xuất `FilesApiService` (AD-2).
  */
 @Module({
-  imports: [AuditModule],
+  imports: [AuditModule, UsersModule],
   controllers: [FilesController],
   providers: [FilesService, FilesApiService],
   exports: [FilesApiService],

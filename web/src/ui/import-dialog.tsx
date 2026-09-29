@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { errorMessage } from '@/lib/api';
-import { uploadFile } from '@/lib/upload';
+import { uploadFile, uploadForDownload } from '@/lib/upload';
 import { Dialog } from '@/ui/dialog';
 import { useDisabledReason } from '@/ui/disabled-reason';
 import { FilePicker } from '@/ui/file-picker';
@@ -44,7 +44,15 @@ export function ImportDialog<TRow>({
   onClose,
   onImported,
   template,
+  errorsUrl,
+  errorsFileName = 'dong-loi.xlsx',
 }: {
+  /**
+   * Endpoint trả file "dòng lỗi" (Sheet · Dòng · Mục · Lý do) cho chính file đang chọn — có thì
+   * còn dòng lỗi là có nút tải về để mở file gốc ra sửa đúng chỗ.
+   */
+  errorsUrl?: string;
+  errorsFileName?: string;
   /**
    * Nút tải file mẫu, đặt NGAY dưới ô chọn file: file mẫu là bước con của việc nhập, bắt người
    * dùng đóng hộp ra đầu trang lấy mẫu rồi mở lại là đi vòng.
@@ -176,9 +184,24 @@ export function ImportDialog<TRow>({
         <>
           <ImportPreview rows={rows} summary={plan.summary} />
           {hasErrors ? (
-            <p className="alert error" role="alert">
-              {t('importDialog.hasErrors')}
-            </p>
+            <div className="alert error" role="alert">
+              <p>{t('importDialog.hasErrors')}</p>
+              {errorsUrl && file ? (
+                <button
+                  type="button"
+                  className="btn sm"
+                  disabled={busy}
+                  onClick={() => {
+                    setError(null);
+                    uploadForDownload(errorsUrl, file, csrfToken, errorsFileName).catch(
+                      (err: unknown) => setError(errorMessage(err)),
+                    );
+                  }}
+                >
+                  {t('importDialog.downloadErrors', { count: plan.summary.error })}
+                </button>
+              ) : null}
+            </div>
           ) : null}
         </>
       ) : null}

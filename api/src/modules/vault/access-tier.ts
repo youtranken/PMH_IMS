@@ -104,19 +104,31 @@ export function resolveTier(
   memberEmail: string,
   groups: AccessGroup[],
 ): AccessTier {
-  const me = memberEmail.toLowerCase();
-  let best: AccessTier = 'denied';
+  return explainTier(rules, memberEmail, groups).tier;
+}
 
-  for (const rule of rules) {
-    // Email so không phân biệt hoa-thường — `IT01@` và `it01@` là một người.
-    if (rule.memberEmail.toLowerCase() !== me) continue;
-    const matches = groups.some(
-      (group) => group.scopeType === rule.scopeType && group.scopeRef === rule.scopeRef,
-    );
-    if (!matches) continue;
-    if (TIER_RANK[rule.tier] > TIER_RANK[best]) best = rule.tier;
-  }
-  return best;
+/**
+ * Như `resolveTier`, kèm các dòng quyền đã khớp — dòng RỘNG nhất (dòng quyết định tầng) đứng
+ * đầu. Màn Kiểm tra quyền dùng để trả lời "vì sao", không chỉ "được hay không": SA thấy đúng
+ * dòng nào phải gỡ nếu muốn siết.
+ */
+export function explainTier<R extends AccessRule>(
+  rules: R[],
+  memberEmail: string,
+  groups: AccessGroup[],
+): { tier: AccessTier; matched: R[] } {
+  const me = memberEmail.toLowerCase();
+  const matched = rules
+    .filter(
+      (rule) =>
+        // Email so không phân biệt hoa-thường — `IT01@` và `it01@` là một người.
+        rule.memberEmail.toLowerCase() === me &&
+        groups.some(
+          (group) => group.scopeType === rule.scopeType && group.scopeRef === rule.scopeRef,
+        ),
+    )
+    .sort((a, b) => TIER_RANK[b.tier] - TIER_RANK[a.tier]);
+  return { tier: matched[0]?.tier ?? 'denied', matched };
 }
 
 export function tierLabel(tier: string): string {

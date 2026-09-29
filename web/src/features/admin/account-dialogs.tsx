@@ -1,12 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
 import { errorMessage } from '@/lib/api';
 import type { Me } from '@/lib/me';
-import { PATHS } from '@/lib/routes';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { textRule, useFormErrors } from '@/ui/use-form-errors';
+import { AccountFootprint } from './account-footprint';
 import { RoleChoice } from './role-choice';
 
 /** Người đang được thao tác — đủ để câu chữ nêu đích danh và dẫn sang màn khác. */
@@ -24,8 +23,8 @@ const QUICK_REASONS = ['accounts.reasonCompromised', 'accounts.reasonLeft', 'acc
  * Khóa / Vô hiệu hóa kèm LÝ DO — hành động an ninh cần vết: nhật ký "account.locked" trơ trọi
  * không trả lời được "vì sao". Lý do đi vào `detail` của dòng nhật ký.
  *
- * Vô hiệu hóa (người nghỉ việc) còn nhắc những thứ người đó đang giữ: quyền két, thiết bị —
- * vô hiệu tài khoản KHÔNG tự gỡ chúng, và đó là chỗ hay bị sót khi offboarding.
+ * Vô hiệu hóa (người nghỉ việc) còn đếm những thứ người đó đang giữ: quyền két, yêu cầu mở két
+ * đang chờ, thiết bị — vô hiệu tài khoản KHÔNG tự gỡ chúng, và đó là chỗ hay bị sót khi nghỉ việc.
  *
  * Dialog riêng thay vì `useConfirm`: hộp xác nhận cố ý chỉ nhận một ô tick, còn đây là một ô
  * nhập bắt buộc (xem chú thích ở `ui/confirm-dialog.tsx`).
@@ -124,20 +123,7 @@ export function AccountStatusDialog({
             <h3 id="offboard-title" className="lbl-t">
               {t('accounts.offboardTitle')}
             </h3>
-            <ul>
-              {account.role === 'member' ? (
-                <li>
-                  <Link to={`${PATHS.adminVaultAccess}?user=${encodeURIComponent(account.id)}`}>
-                    {t('accounts.offboardVault')}
-                  </Link>
-                </li>
-              ) : null}
-              <li>
-                <Link to={`${PATHS.devices}?q=${encodeURIComponent(account.fullName)}`}>
-                  {t('accounts.offboardDevices')}
-                </Link>
-              </li>
-            </ul>
+            <AccountFootprint account={account} />
           </section>
         ) : null}
         {error ? (

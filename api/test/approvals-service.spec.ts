@@ -136,4 +136,56 @@ describe('ApprovalsService', () => {
       expect(times).toEqual([...times].sort((a, b) => b - a));
     });
   });
+
+  describe('VLT-019 · lọc nhật ký theo trạng thái (đọc theo đồng hồ), người xin, khoảng ngày', () => {
+    const past = new Date(Date.now() - 3_600_000);
+    const future = new Date(Date.now() + 3_600_000);
+    let live: string;
+    let lapsed: string;
+    let old: string;
+
+    beforeAll(async () => {
+      const a = await create('loc.a@pmh.com.vn', '00000000-0000-4000-8000-0000000000a1');
+      await approvals.transition(a.id, { to: 'approved', actor: 'duyet@pmh.com.vn', expiresAt: future });
+      live = a.id;
+      const b = await create('loc.b@pmh.com.vn', '00000000-0000-4000-8000-0000000000b1');
+      await approvals.transition(b.id, { to: 'approved', actor: 'duyet@pmh.com.vn', expiresAt: future });
+      // Hết hạn theo đồng hồ nhưng sweep chưa kịp đổi `state` (AD-6).
+      await scratch.pool.query(`UPDATE approval SET expires_at = $2 WHERE id = $1`, [b.id, past]);
+      lapsed = b.id;
+      const c = await create('loc.a@pmh.com.vn', '00000000-0000-4000-8000-0000000000c1');
+      await scratch.pool.query(`UPDATE approval SET created_at = '2020-01-15T05:00:00Z' WHERE id = $1`, [
+        c.id,
+      ]);
+      old = c.id;
+    });
+
+    const ids = async (filters: Parameters<ApprovalsService['page']>[0]) =>
+      (await approvals.page({ kind: KIND, ...filters }, { limit: 100, offset: 0 })).items.map((r) => r.id);
+
+    it('"Đã duyệt" chỉ còn phiếu còn hiệu lực; "Hết hạn" gồm cả phiếu quá hạn chưa được dọn', async () => {
+      const approved = await ids({ effectiveState: 'approved' });
+      expect(approved).toContain(live);
+      expect(approved).not.toContain(lapsed);
+      const expired = await ids({ effectiveState: 'expired' });
+      expect(expired).toContain(lapsed);
+      expect(expired).not.toContain(live);
+    });
+
+    it('người xin: khớp một phần, không phân biệt hoa thường, `_` không là ký tự đại diện', async () => {
+      const mine = await ids({ requesterContains: 'LOC.A' });
+      expect(mine).toEqual(expect.arrayContaining([live, old]));
+      expect(mine).not.toContain(lapsed);
+      expect(await ids({ requesterContains: 'loc_a' })).toEqual([]);
+    });
+
+    it('khoảng ngày: since bao gồm, until loại trừ', async () => {
+      const in2020 = await ids({
+        since: new Date('2020-01-15T00:00:00Z'),
+        until: new Date('2020-01-16T00:00:00Z'),
+      });
+      expect(in2020).toEqual([old]);
+      expect(await ids({ until: new Date('2020-01-15T05:00:00Z') })).not.toContain(old);
+    });
+  });
 });

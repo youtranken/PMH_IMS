@@ -30,6 +30,7 @@ import {
   rowAction,
   mailpitMessages,
   rowActionNames,
+  catalogTab,
   sql,
   timVaChoLoc,
   writeHeaders,
@@ -3943,7 +3944,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await page.getByRole('button', { name: 'Khoảng thời gian', exact: true }).click();
     expect(
       (await page.getByRole('option').allInnerTexts()).map((text) => text.trim()),
-      'Sáu mốc cửa sổ ngày — không cho gõ số tùy ý, nhưng cũng không được thiếu mốc nào',
+      'Sáu mốc cửa sổ ngày + ba mốc theo lịch (EX-003) — không cho gõ số tùy ý, nhưng cũng không được thiếu mốc nào',
     ).toEqual([
       'Quá hạn + 7 ngày tới',
       'Quá hạn + 30 ngày tới',
@@ -3951,6 +3952,9 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Quá hạn + 90 ngày tới',
       'Quá hạn + 180 ngày tới',
       'Quá hạn + 365 ngày tới',
+      'Quá hạn + tới hết tháng này',
+      'Quá hạn + tới hết quý này',
+      'Quá hạn + tới ngày…',
     ]);
     await page.getByRole('option', { name: 'Quá hạn + 30 ngày tới', exact: true }).click();
 
@@ -4170,13 +4174,17 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     }
 
     /*
-     * Ô tick loại + ô tick "đang chạy". Ô "đang chạy" mang tên gọi là chính CÂU GỢI Ý bên
-     * cạnh nó (`<label>` bọc cả hai), nên nó nằm cùng phép đếm này.
+     * Ô tick loại, và MỘT công tắc "Đang chạy" (EX-020: trạng thái cả luật là công tắc có chữ
+     * đổi theo, không phải một ô tick lẫn trong hàng ô tick loại).
      */
     await expect(
       add.getByRole('checkbox'),
-      'Sáu ô tick loại (đúng bằng số nguồn hạn) cộng một ô tick "đang chạy"',
-    ).toHaveCount(7);
+      'Sáu ô tick loại (đúng bằng số nguồn hạn)',
+    ).toHaveCount(6);
+    await expect(
+      add.getByRole('switch', { name: 'Đang chạy', exact: true }),
+      'Trạng thái chạy của luật là một công tắc, mặc định bật',
+    ).toBeChecked();
     for (const label of [
       'License phần mềm',
       'Chứng chỉ SSL',
@@ -4184,7 +4192,6 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
       'Hợp đồng bảo trì',
       'Khác',
       'Bảo hành thiết bị',
-      'Bỏ tick để tạm ngưng mà không mất cấu hình.',
     ]) {
       await expect(
         add.getByRole('checkbox', { name: label, exact: true }),
@@ -7043,10 +7050,10 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await expect(
       thanhTab.getByRole('tab'),
       'phòng Danh mục phải có ĐÚNG bảy ngăn, đúng tên, đúng thứ tự — thừa hay thiếu một ngăn đều là một danh mục không ai quản',
-    ).toHaveText([...TEN_TAB]);
+    ).toHaveText(TEN_TAB.map(catalogTab));
 
     for (const ngan of BAY_NGAN) {
-      await thanhTab.getByRole('tab', { name: ngan.tab, exact: true }).click();
+      await thanhTab.getByRole('tab', { name: catalogTab(ngan.tab) }).click();
       await expect(
         page.getByRole('tabpanel'),
         `bấm ngăn ${ngan.tab} phải mở ra một vùng nội dung`,
@@ -7171,7 +7178,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await moPhongDanhMuc(page);
 
     for (const [index, hop] of HOP.entries()) {
-      await page.getByRole('tab', { name: hop.tab, exact: true }).click();
+      await page.getByRole('tab', { name: catalogTab(hop.tab) }).click();
       await page.getByRole('button', { name: hop.tieuDe, exact: true }).click();
 
       const hopThoai = page.getByRole('dialog', { name: hop.tieuDe, exact: true });
@@ -7240,7 +7247,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await catalogItem(page, 'site', { code: `S-E2E-TU-${uniqueStamp()}`, name: 'Site E2E hộp tủ' });
     await moPhongDanhMuc(page);
 
-    await page.getByRole('tab', { name: 'Tủ mạng', exact: true }).click();
+    await page.getByRole('tab', { name: catalogTab('Tủ mạng') }).click();
     await page.getByRole('button', { name: 'Thêm tủ mạng', exact: true }).click();
 
     const hop = page.getByRole('dialog', { name: 'Thêm tủ mạng', exact: true });
@@ -7363,7 +7370,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     // --- Site vừa khai phải có mặt trong ô chọn của hộp Tủ mạng, không cần tải lại trang.
-    await page.getByRole('tab', { name: 'Tủ mạng', exact: true }).click();
+    await page.getByRole('tab', { name: catalogTab('Tủ mạng') }).click();
     await page.getByRole('button', { name: 'Thêm tủ mạng', exact: true }).click();
     const hopTu = page.getByRole('dialog', { name: 'Thêm tủ mạng', exact: true });
     await hopTu.getByRole('button', { name: 'Thuộc site' }).click();
@@ -7376,7 +7383,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await expect(page.getByRole('dialog')).toHaveCount(0);
 
     // --- Vô hiệu rồi mở lại menu: mục giữa phải ĐỔI CHỮ.
-    await page.getByRole('tab', { name: 'Site', exact: true }).click();
+    await page.getByRole('tab', { name: catalogTab('Site') }).click();
     await page.getByRole('searchbox').fill(maSite);
     await expect(dongSite).toBeVisible();
 
@@ -7426,7 +7433,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     await moPhongDanhMuc(page);
 
     for (const ngan of BAY_NGAN) {
-      await page.getByRole('tab', { name: ngan.tab, exact: true }).click();
+      await page.getByRole('tab', { name: catalogTab(ngan.tab) }).click();
       const soNut = ngan.nhapDuocExcel ? 1 : 0;
       // File mẫu nằm TRONG hộp nhập, không bao giờ ở đầu trang.
       await expect(
@@ -7440,7 +7447,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     }
 
     // --- Bên trong hộp nhập, ở bước MỘT (chưa chọn file).
-    await page.getByRole('tab', { name: 'Site', exact: true }).click();
+    await page.getByRole('tab', { name: catalogTab('Site') }).click();
     await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
 
     const hop = page.getByRole('dialog', {

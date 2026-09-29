@@ -3,8 +3,9 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { ExcelImportService } from '../../common/excel/excel-import.service';
+import { buildImportErrorsXlsx, importErrorRows } from '../../common/excel/import-errors';
 import { AuditWriterService } from '../audit/audit-writer.service';
-import { planCatalogImport, type ImportPlan } from './catalog-import';
+import { IMPORT_SHEET_NAME, planCatalogImport, type ImportPlan } from './catalog-import';
 import { catalogTemplateSheets } from './catalog-template';
 import { CatalogService } from './catalog.service';
 
@@ -49,6 +50,15 @@ export class CatalogImportService {
       });
     }
     return plan;
+  }
+
+  /** File "dòng lỗi" của lượt đối chiếu — Sheet · Dòng · Mục · Lý do (ADM-005). Không ghi gì. */
+  async errorsFile(buffer: Buffer): Promise<Buffer> {
+    const plan = await this.preview(buffer);
+    return buildImportErrorsXlsx(
+      this.excelOut,
+      importErrorRows(plan.rows.map((row) => ({ ...row, sheet: IMPORT_SHEET_NAME[row.sheet] }))),
+    );
   }
 
   /**
