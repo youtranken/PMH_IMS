@@ -167,6 +167,19 @@ BEGIN
       || 'GRANT EXECUTE ON FUNCTIONS TO ims_app', owner_role);
   END IF;
 
+  -- Phép kiểm khoá ngoại chạy bằng quyền CHỦ bảng con và khoá hàng bảng con (cần UPDATE). Các
+  -- bảng lịch sử đã thu UPDATE của chính chủ bảng (0039), vô hại khi chủ là superuser; với chủ
+  -- không superuser thì mọi lệnh xoá bảng cha chết với "permission denied for table …_history".
+  -- Trả UPDATE cho chủ bảng là đủ: trigger chỉ-thêm vẫn chặn mọi lệnh UPDATE/DELETE.
+  FOR obj IN
+    SELECT DISTINCT c.conrelid::regclass AS tbl
+      FROM pg_constraint c JOIN pg_class k ON k.oid = c.conrelid
+     WHERE c.contype = 'f' AND k.relowner = owner_oid
+       AND NOT has_table_privilege(owner_oid, c.conrelid, 'UPDATE')
+  LOOP
+    EXECUTE format('GRANT UPDATE ON %s TO %I', obj.tbl, owner_role);
+  END LOOP;
+
   -- Lưới cuối: sót một đối tượng là migration sau chết giữa chừng với "must be owner", ở đúng
   -- lần nâng cấp. Dừng ngay ở đây rẻ hơn.
   SELECT string_agg(x, ', ') INTO leftover FROM (

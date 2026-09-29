@@ -261,4 +261,22 @@ describe('DB-03 — role chủ sở hữu không superuser chạy migration', ()
       /thiếu GUC ims.owner_password/,
     );
   });
+
+  /*
+   * Postgres chạy phép kiểm khoá ngoại (`SELECT … FOR KEY SHARE` trên bảng con) bằng quyền CHỦ
+   * bảng con, và khoá hàng cần quyền UPDATE. Bảng lịch sử đã thu UPDATE của chính chủ bảng
+   * (0039), nên khi chủ bảng không còn là superuser thì mọi lệnh xoá bảng cha — kể cả của
+   * superuser dọn E2E — chết với "permission denied for table …_history".
+   */
+  it.each([
+    ['DB TRẮNG', () => fresh],
+    ['DB CŨ', () => legacy],
+  ])('%s: xoá dòng bảng cha không vướng quyền của bảng lịch sử con', async (_label, db) => {
+    const { rows } = await db().pool.query<{ id: string }>(
+      `INSERT INTO approval (kind, state, requester, subject_type, subject_id, reason)
+       VALUES ('break_glass', 'pending', 'e2e-fk@qa.test', 'device', gen_random_uuid(), 'fk')
+       RETURNING id`,
+    );
+    await db().pool.query(`DELETE FROM approval WHERE id = $1`, [rows[0].id]);
+  });
 });
