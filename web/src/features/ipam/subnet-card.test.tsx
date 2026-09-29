@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { renderWithI18n, screen } from '@/test/test-utils';
-import { SubnetCard } from '@/features/ipam/ipam-screen';
-import type { SubnetRow } from '@/features/ipam/ipam-types';
+import { SubnetCard } from './ipam-screen';
+import type { SubnetRow } from './ipam-types';
 
 const base: SubnetRow = {
   id: 's1',
