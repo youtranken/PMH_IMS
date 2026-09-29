@@ -659,8 +659,8 @@ export function DeviceDetail({ me }: { me: Me }) {
         }
       />
 
-      {/* Băng đã thanh lý: nói KHI NÀO, AI, và đã gỡ gì — thứ trước đây chỉ nằm trong tab
-          Lịch sử. Có nền, có viền: chữ xám trơn thụt lề thì người ta đọc lướt qua. */}
+      {/* Băng đã thanh lý: nói KHI NÀO, AI, và đã gỡ gì ngay đầu trang — không bắt người đọc
+          lục tab Lịch sử. Có nền, có viền: chữ xám trơn thụt lề thì người ta đọc lướt qua. */}
       {retired ? (
         <div className="alert warn retired-banner" role="status">
           <strong>{t("devices.retiredLocked")}</strong>
@@ -820,7 +820,7 @@ export function DeviceDetail({ me }: { me: Me }) {
           <>
             {/*
               THÔNG TIN NHANH đứng ĐẦU tab: mở máy ra, câu hỏi đầu tiên là IP quản trị và
-              model — trước đây IP nằm tận cuối trang và model nằm sau bản đồ quan hệ. Trạng
+              model, nên chúng không được nằm cuối trang hay sau bản đồ quan hệ. Trạng
               thái, vị trí, người dùng, bảo hành đã ở cột Tóm tắt, serial ở dòng dưới tiêu đề (có
               nút chép) — nên không in lại ở đây.
             */}
@@ -858,7 +858,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                       {t("devices.fillBlanks", { count: blankLabels.length })}
                     </button>
                   ) : null}
-                  {/* Cấp IP ngay tại đây: trước đây phải sang màn Địa chỉ IP, chọn dải, lật
+                  {/* Cấp IP ngay tại đây: không thì phải sang màn Địa chỉ IP, chọn dải, lật
                       trang tìm ô trống rồi gõ lại mã máy này. */}
                   <button type="button" className="btn sm ghost" onClick={() => setAssigningIp(true)}>
                     {t("devices.assignIp")}

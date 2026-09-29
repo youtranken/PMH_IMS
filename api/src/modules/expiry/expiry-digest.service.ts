@@ -84,8 +84,8 @@ export class ExpiryDigestService {
   }
 
   /**
-   * Xem trước nội dung thư NGAY TRONG APP (EX-021) — trước đây muốn biết thư chứa gì thì phải
-   * "Gửi thử", tức bắn một email thật tới cả danh sách người nhận. Đọc thuần, không ghi gì.
+   * Xem trước nội dung thư NGAY TRONG APP (EX-021): cách còn lại để biết thư chứa gì là "Gửi
+   * thử", tức bắn một email thật tới cả danh sách người nhận. Đọc thuần, không ghi gì.
    */
   async preview(id: string) {
     const payload = await this.buildPayload(await this.requireRule(id));

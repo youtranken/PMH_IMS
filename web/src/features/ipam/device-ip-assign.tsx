@@ -15,8 +15,8 @@ import { nextFreeSlot, slotStatus } from './slot-paging';
  * "Cấp IP" từ TRANG THIẾT BỊ (DEV-089): chọn dải → chọn IP trống (điền sẵn ô trống đầu tiên,
  * bỏ gateway) → hộp Cấp IP dùng chung của dải, với máy đang xem đã điền sẵn.
  *
- * Trước đây phải sang màn Địa chỉ IP, chọn dải, lật trang tìm ô trống rồi gõ lại mã máy. Bước
- * hai là CHÍNH hộp `AssignIpDialog` của màn dải — một luật cấp IP, không phải hai.
+ * Không có lối này thì phải sang màn Địa chỉ IP, chọn dải, lật trang tìm ô trống rồi gõ lại mã
+ * máy. Bước hai là CHÍNH hộp `AssignIpDialog` của màn dải — một luật cấp IP, không phải hai.
  */
 export function DeviceIpAssign({
   device,
