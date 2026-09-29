@@ -58,6 +58,9 @@ echo "    Bảng secret có $rows dòng (ciphertext)."
 granted=$(pg "-t -A -c \"SELECT has_table_privilege('ims_app', 'secret', 'SELECT')\"")
 [ "$granted" = "t" ] || die "ims_app KHÔNG có quyền đọc bảng secret — dump thiếu GRANT (tạo bằng bản backup-nightly cũ?)."
 echo "    ims_app có quyền đọc bảng: đúng."
+# DB-03: dump nạp bằng superuser với --no-owner nên mọi bảng đang thuộc superuser; `migrate`
+# (đăng nhập bằng ims_owner) sẽ chết ở câu ALTER đầu tiên nếu không giao lại.
+docker compose exec -T postgres sh /ims-db/initdb-owner.sh
 
 step "3/6 Nạp file đính kèm"
 if [ -n "$FILES" ]; then

@@ -288,10 +288,15 @@ Kết quả: 0 lỗi, đủ 37 bảng, chạy lần 2 áp 0 file. **Không squas
 
 ### P1
 
-- [ ] **DB-03 · Migration chạy bằng superuser.** Tạo role chủ sở hữu riêng (không superuser, có
+- [x] **DB-03 · Migration chạy bằng superuser.** Tạo role chủ sở hữu riêng (không superuser, có
   `CREATEROLE`, là owner DB). Cả 5 extension là loại trusted nên vẫn cài được. Làm cùng OPS-07.
   - **Rà 29/09:** còn nguyên. OPS-07 chỉ tách service `migrate` khỏi api; `migrate` vẫn dùng
     `POSTGRES_USER` (superuser) ở `docker-compose.yml:~129`.
+  - **Đã sửa:** role `ims_owner` (NOSUPERUSER, CREATEROLE, ADMIN trên `ims_app`) dựng bằng
+    `ops/db/owner-bootstrap.sql`: initdb tự chạy trên cụm mới, `ops/db-owner-bootstrap.sh` cho cụm
+    đã có và sau khi nạp dump. `migrate` đăng nhập bằng `ims_owner` (`MIGRATION_DB_PASSWORD` trong
+    `.env`). Kiểm: `api/test/db-owner-role.spec.ts` (DB trắng migrate trọn bằng `ims_owner`, DB cũ
+    bootstrap rồi migrate lại, quyền `ims_app` trùng từng ô). Máy đang chạy phải làm RUNBOOK **H1**.
 - [x] **DB-04 · Gắn tag `v1.0-schema`** ngay trước go-live.
 - [x] **DB-05 · Postgres tuning:** `shm_size: 256m`, `shared_buffers`, `work_mem`,
   `log_min_duration_statement=500ms`.

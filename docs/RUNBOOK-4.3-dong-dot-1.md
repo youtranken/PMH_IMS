@@ -64,7 +64,7 @@ $ nano .env
 | Biến | Giá trị prod |
 | --- | --- |
 | `NODE_ENV` | `production` |
-| `POSTGRES_PASSWORD`, `APP_DB_PASSWORD`, `REDIS_PASSWORD` | ba mật khẩu **khác nhau**, sinh bằng `openssl rand -hex 24` (chỉ chữ + số, không `@` `:`) |
+| `POSTGRES_PASSWORD`, `MIGRATION_DB_PASSWORD`, `APP_DB_PASSWORD`, `REDIS_PASSWORD` | bốn mật khẩu **khác nhau**, sinh bằng `openssl rand -hex 24` (chỉ chữ + số, không `@` `:`) |
 | `APP_BASE_URL` | `https://ims.pmh.com.vn` |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_USER` | `smtp.gmail.com` / `587` / `ims@pmh.com.vn` |
 | `TLS_CERT_DIR` | `./ops/certs` |
@@ -115,6 +115,21 @@ $ docker compose logs migrate | grep -E "Migration applied|Đã áp|mới nhất
 ```
 
 Không dùng `docker-compose.override.e2e.yml` hay `docker-compose.override.drill.yml` ở máy prod.
+
+Ba role Postgres, mỗi role một việc (DB-03, D-01):
+
+| Role | Là gì | Ai dùng |
+| --- | --- | --- |
+| `POSTGRES_USER` (`ims`) | superuser của cụm | chỉ dựng `ims_owner` (lúc initdb, hoặc `ops/db-owner-bootstrap.sh`) và các script sao lưu/giám sát |
+| `ims_owner` | chủ database và mọi bảng, **không** superuser, có `CREATEROLE` | chỉ service `migrate` |
+| `ims_app` | role hẹp, không sở hữu gì | `api`, `worker` |
+
+Cụm mới: postgres tự tạo `ims_owner` lúc khởi tạo thư mục dữ liệu (`ops/db/initdb-owner.sh`).
+Kiểm (phải ra `ims_owner|f`):
+
+```bash
+$ docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "SELECT rolname, rolsuper FROM pg_roles WHERE rolname = '"'"'ims_owner'"'"'"'
+```
 
 ### B1. Tạo SA đầu tiên
 
@@ -290,7 +305,8 @@ Chỉ làm **sau khi E đỗ**. Dùng đúng luồng nhập Excel — không có
 
 ## G. Khôi phục production thật (khi máy chủ hỏng)
 
-1. Dựng máy mới theo **A1**. Lấy `.env` từ phong bì thứ ba; `master_key` và `password_pepper`
+1. Dựng máy mới theo **A1**. Lấy `.env` từ phong bì thứ ba (`.env` in trước DB-03 chưa có
+   `MIGRATION_DB_PASSWORD`: thêm `echo "MIGRATION_DB_PASSWORD=$(openssl rand -hex 24)" >> .env`); `master_key` và `password_pepper`
    gõ lại từ phong bì chìa (`chown 1000:1000`, `chmod 600`). Cert theo **A4**.
 2. Chép bản sao lưu mới nhất (`ims-*.sql.gz` + `files-*.tgz`) từ NAS sang.
 3. Nạp database và file, **trước** khi bật api:
@@ -299,6 +315,7 @@ Chỉ làm **sau khi E đỗ**. Dùng đúng luồng nhập Excel — không có
    $ docker compose up -d postgres
    $ docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "CREATE ROLE ims_app NOLOGIN"'
    $ gzip -dc ims-<ngày>.sql.gz | docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -q'
+   $ bash ops/db-owner-bootstrap.sh     # dump nạp bằng superuser: giao lại mọi bảng cho ims_owner
    $ docker compose run --rm --no-deps -T --entrypoint sh api -c 'tar xzf - -C /data/files' < files-<ngày>.tgz
    $ docker compose up -d
    ```
@@ -316,8 +333,37 @@ Chỉ làm **sau khi E đỗ**. Dùng đúng luồng nhập Excel — không có
 | Khởi động lại một service | `docker compose restart api` |
 | Nâng cấp lên bản mới | `git fetch --tags && git checkout <tag-mới> && docker compose up -d --build` (backup tay trước) |
 | Quay lại bản trước | `git checkout <tag-cũ> && docker compose up -d --build`. Migration chỉ tiến: nếu bản mới đã thêm migration thì bản cũ vẫn chạy trên schema mới — kiểm log api; hỏng thì khôi phục theo **G** từ bản sao lưu trước nâng cấp |
+| Nâng cấp từ bản **trước DB-03** (migrate còn chạy bằng superuser) | Làm **một lần**, xem mục **H1** bên dưới |
 | Thay cert | Chép đè hai file ở **A4** rồi `docker compose restart web` |
 | Xoay master key khi nghi lộ | Xem `secrets/README.md` mục "Xoay chìa". **Không xoá dòng chìa cũ** khi lệnh kiểm chưa báo 0 bản ghi |
+
+### H1. Nâng cấp một lần: migration chuyển sang role chủ sở hữu `ims_owner` (DB-03)
+
+Bản cài trước DB-03 có mọi bảng thuộc superuser `ims`, và `migrate` đăng nhập bằng superuser. Từ
+bản này `migrate` đăng nhập bằng `ims_owner`, nên phải tạo role đó và giao database cho nó
+**trước** khi `up` bản mới. Thứ tự:
+
+```bash
+$ bash ops/backup-nightly.sh /mnt/nas/ims-backup          # 1. sao lưu tay trước
+$ git fetch --tags && git checkout <tag-mới>                # 2. lấy mã có DB-03
+$ grep -q '^MIGRATION_DB_PASSWORD=' .env || echo "MIGRATION_DB_PASSWORD=$(openssl rand -hex 24)" >> .env
+$ bash ops/db-owner-bootstrap.sh                            # 3. tạo lại container postgres (vài giây) + giao DB cho ims_owner
+$ docker compose up -d --build --wait                       # 4. migrate chạy bằng ims_owner
+$ docker compose logs migrate | tail -3                     # "Schema đã mới nhất." hoặc "Đã áp N migration."
+```
+
+Kiểm `ims_owner` không phải superuser và sở hữu mọi bảng (hai dòng phải ra `ims_owner|f` và `0`):
+
+```bash
+$ docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "SELECT rolname, rolsuper FROM pg_roles WHERE rolname = '"'"'ims_owner'"'"'"'
+$ docker compose exec -T postgres sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "SELECT count(*) FROM pg_tables WHERE schemaname = '"'"'public'"'"' AND tableowner <> '"'"'ims_owner'"'"'"'
+```
+
+`ops/db-owner-bootstrap.sh` chạy lại được bao nhiêu lần cũng được. Chạy lại nó sau mỗi lần nạp
+dump (mục **G**; `ops/restore-drill.sh` tự làm), và sau khi lỡ quay về một bản cũ hơn DB-03 rồi
+nâng lên lại: bản cũ migrate bằng superuser nên bảng nó tạo ra sẽ thuộc superuser.
+
+Ghi `MIGRATION_DB_PASSWORD` mới vào bản in `.env` trong phong bì thứ ba (mục **C**).
 
 **Không bao giờ chạy trên máy prod:** `ops/ci-local.sh`, `ops/seed-demo.sql`,
 `ops/unseed-demo.sql`, `api/scripts/reset-e2e.mjs`, hay các file `docker-compose.override.*.yml`.
