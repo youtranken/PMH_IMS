@@ -19,6 +19,7 @@ import {
 import { ExpiryBadge } from "@/ui/expiry-badge";
 import { LocationText } from "@/ui/location-text";
 import { HistoryPanel } from "@/ui/history-panel";
+import { AuditLogLink } from "@/ui/audit-log-link";
 import { DetailLoadFailed, LoadError, Loading } from "@/ui/load-state";
 import { TabPanel, Tabs, initialTab, useVisibleTab } from "@/ui/tabs";
 import { useTabCounts } from "@/ui/tab-counts";
@@ -873,6 +874,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                 })}
               </p>
             ) : null}
+            <AuditLogLink role={me.role} objectType="device" objectId={item.id} />
             <HistoryPanel
               entries={mergeDeviceTimeline(
                 toHistoryEntries(history.data ?? [], t),

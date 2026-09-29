@@ -2423,6 +2423,7 @@ export default {
    */
   history: {
     emptyDefault: 'Chưa có thay đổi nào được ghi nhận.',
+    auditLog: 'Nhật ký thao tác',
     fDepartment: 'bộ phận',
     fEndDate: 'ngày hết hạn',
     fKind: 'loại',
