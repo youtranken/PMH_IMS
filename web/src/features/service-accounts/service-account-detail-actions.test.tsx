@@ -87,3 +87,14 @@ describe('Trang hồ sơ TKDV — nút Sửa và đổi trạng thái', () => {
     expect(screen.queryByRole('button', { name: 'Thao tác với VPN-E2E-01' })).toBeNull();
   });
 });
+
+describe('Trang hồ sơ TKDV — thanh tab (NET-075)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('không có ?tab= thì mở vào Két sắt — khu Hồ sơ đã ra khỏi thanh tab, không còn tab "profile"', async () => {
+    mockFetch('active');
+    renderAs('sa');
+    const vault = await screen.findByRole('tab', { name: /^Két sắt/ });
+    expect(vault).toHaveAttribute('aria-selected', 'true');
+  });
+});

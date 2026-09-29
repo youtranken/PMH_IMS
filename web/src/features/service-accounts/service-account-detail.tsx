@@ -53,12 +53,14 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
   const [editing, setEditing] = useState(false);
   const [switching, setSwitching] = useState(false);
   const [params] = useSearchParams();
+  /* Fallback PHẢI là "vault": khu Hồ sơ không còn là tab (NET-075), để mặc định 'profile'
+     thì thanh tab không sáng ô nào và thân tab rơi vào nhánh Lịch sử chưa tải. */
   const [tab, setTab] = useState(() =>
-    initialTab(params.get("tab"), [
+    initialTab(
+      params.get("tab"),
+      ["vault", "attachments", "history"],
       "vault",
-      "attachments",
-      "history",
-    ]),
+    ),
   );
 
   /* Trước mọi nhánh `return` sớm bên dưới: đây là hook, đặt sau `if (isLoading) return` thì
