@@ -3,6 +3,7 @@ import {
   countSlots,
   filterSlots,
   nextFreeSlot,
+  freeChoices,
   shouldIsolateAssigned,
   pageSlots,
   pageOfAddress,
@@ -269,5 +270,24 @@ describe('nextFreeSlot — "Cấp IP trống kế tiếp"', () => {
     const hit = nextFreeSlot([record('10.0.0.1', 'free')], null);
     expect(hit?.record?.id).toBe('id-10.0.0.1');
     expect(nextFreeSlot([free('10.0.0.9')], null)?.record).toBeNull();
+  });
+});
+
+describe('freeChoices — ô chọn địa chỉ trong hộp Cấp IP', () => {
+  it('mọi chỗ trống theo thứ tự, bỏ gateway và hồ sơ đã ẩn, giữ hồ sơ Trống kèm bản ghi', () => {
+    const voided = { ...record('10.0.0.3', 'free'), voidedAt: '2026-01-02T00:00:00Z' } as SubnetSlot;
+    const choices = freeChoices(
+      [
+        free('10.0.0.1'),
+        record('10.0.0.2', 'assigned'),
+        voided,
+        record('10.0.0.4', 'free'),
+        free('10.0.0.5'),
+      ],
+      '10.0.0.1',
+    );
+    expect(choices.map((c) => c.address)).toEqual(['10.0.0.4', '10.0.0.5']);
+    expect(choices[0].record?.id).toBe('id-10.0.0.4');
+    expect(choices[1].record).toBeNull();
   });
 });

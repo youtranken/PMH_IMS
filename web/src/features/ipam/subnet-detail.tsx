@@ -14,6 +14,7 @@ import { DatePicker } from "@/ui/date-picker";
 import { EmptyState, LoadError, Loading } from "@/ui/load-state";
 import { Field } from "@/ui/page-header";
 import { Pagination } from "@/ui/pagination";
+import { SkeletonRows } from "@/ui/skeleton-rows";
 import { RowActions, type RowAction } from "@/ui/row-actions";
 import { SuggestInput } from "@/ui/suggest-input";
 import { useDepartments } from "@/ui/use-departments";
@@ -36,6 +37,7 @@ import {
   countSlots,
   filterSlots,
   nextFreeSlot,
+  freeChoices,
   shouldIsolateAssigned,
   pageOfAddress,
   pageSlots,
@@ -97,6 +99,8 @@ export function SubnetPane({
   const [assigning, setAssigning] = useState<{
     address: string;
     record: IpRow | null;
+    /** Mở từ nút "Cấp IP trống kế tiếp" — chỉ lối này cho đổi địa chỉ trong hộp. */
+    fromNext?: boolean;
   } | null>(null);
   /** Chỉ còn bước THU HỒI đi hộp này; bước cấp đã gộp vào `assigning`. */
   const [moving, setMoving] = useState<{ record: IpRow; to: IpStatus } | null>(
@@ -175,6 +179,8 @@ export function SubnetPane({
     return subnetDisabled ? raw.filter((slot) => slot.kind === "record") : raw;
   }, [slots.data, subnetDisabled]);
   const counts = useMemo(() => countSlots(all), [all]);
+  const allRef = useRef(all);
+  allRef.current = all;
 
   /*
    * MẶC ĐỊNH CHỌN HỘ — nhưng chỉ MỘT LẦN, lúc dải vừa mở ra.
@@ -286,7 +292,27 @@ export function SubnetPane({
       </button>
     ) : null;
 
+  const ipHead = (
+    <thead>
+      <tr>
+        <th>{t("ipam.address")}</th>
+        <th>{t("ipam.status")}</th>
+        <th className="col-device">{t("ipam.device")}</th>
+        <th>{t("ipam.usedBy")}</th>
+        <th className="col-date">{t("ipam.assignedAt")}</th>
+        <th className="col-center">{t("common.actions")}</th>
+      </tr>
+    </thead>
+  );
+
   const mask = maskOfCidr(item.cidr);
+  const gatewaySlot = item.gateway
+    ? (slots.data ?? []).find((slot) => slot.address === item.gateway)
+    : undefined;
+  const gatewayDevice =
+    gatewaySlot?.kind === "record" && !gatewaySlot.voidedAt && gatewaySlot.deviceId
+      ? { id: gatewaySlot.deviceId, code: gatewaySlot.deviceCode ?? "" }
+      : null;
 
   return (
     <>
@@ -308,6 +334,16 @@ export function SubnetPane({
                   value={item.gateway}
                   label={t("ipam.copyOf", { label: t("ipam.gateway") })}
                 />
+                {/* Máy đang giữ địa chỉ gateway (router/firewall) — nối dải với thiết bị biên,
+                    đọc từ chính hồ sơ IP của dải, không hỏi thêm gì. */}
+                {gatewayDevice ? (
+                  <>
+                    {" → "}
+                    <Link className="mono" to={PATHS.device(gatewayDevice.id)}>
+                      {gatewayDevice.code}
+                    </Link>
+                  </>
+                ) : null}
               </span>
             ) : null}
             {mask ? (
@@ -335,7 +371,7 @@ export function SubnetPane({
               className="btn primary"
               disabled={!next}
               title={next ? undefined : t("ipam.nextFreeNone")}
-              onClick={() => (next ? setAssigning(next) : undefined)}
+              onClick={() => (next ? setAssigning({ ...next, fromNext: true }) : undefined)}
             >
               {t("ipam.nextFree")}
             </button>
@@ -419,7 +455,16 @@ export function SubnetPane({
       ) : null}
 
       {slots.isLoading ? (
-        <Loading />
+        /* Khung xương đúng hình bảng IP: dữ liệu về thì bảng "đầy lên" tại chỗ, cột trái và
+           đầu cột phải không nhảy. */
+        <div className="table-wrap">
+          <table className="table table-stack ip-table">
+            {ipHead}
+            <tbody>
+              <SkeletonRows columns={6} rows={10} />
+            </tbody>
+          </table>
+        </div>
       ) : slots.isError ? (
         <LoadError error={slots.error} onRetry={() => void slots.refetch()} />
       ) : subnetDisabled && item.addressCount === 0 ? (
@@ -437,16 +482,7 @@ export function SubnetPane({
         <>
           <div className="table-wrap">
             <table className="table table-stack ip-table">
-              <thead>
-                <tr>
-                  <th>{t("ipam.address")}</th>
-                  <th>{t("ipam.status")}</th>
-                  <th className="col-device">{t("ipam.device")}</th>
-                  <th>{t("ipam.usedBy")}</th>
-                  <th className="col-date">{t("ipam.assignedAt")}</th>
-                  <th className="col-center">{t("common.actions")}</th>
-                </tr>
-              </thead>
+              {ipHead}
               <tbody>
                 {rows.map((slot) =>
                   slot.kind === "free" ? (
@@ -516,10 +552,14 @@ export function SubnetPane({
                             {t(STATUS_KEY[slot.status])}
                           </span>
                         )}
-                        {/* Hồ sơ đã thu hồi: nói lúc nào — chủ cũ nằm trong Lịch sử. */}
+                        {/* Hồ sơ đã thu hồi: nói lúc nào và của ai trước đó — cấp lại cho
+                            đúng máy cũ là việc hay gặp nhất sau một lượt thay máy. */}
                         {isFreeRecord(slot) ? (
                           <span className="cell-sub">
                             {t("ipam.freedOn", { date: formatDate(slot.updatedAt) })}
+                            {slot.previousOwner
+                              ? ` · ${t("ipam.previousOwner", { owner: slot.previousOwner })}`
+                              : null}
                           </span>
                         ) : null}
                       </td>
@@ -608,8 +648,28 @@ export function SubnetPane({
           csrfToken={me.csrfToken}
           onClose={() => setMoving(null)}
           onDone={() => {
+            const address = moving.record.address;
             setMoving(null);
-            toast({ message: t("ipam.transitioned") });
+            /* Thu hồi xong, hồ sơ rời chip "Đang dùng" — đứng ở đó thì nó biến mất như bị xóa.
+               Toast mang lối đi thẳng tới nó trong "Trống". */
+            toast({
+              message: t("ipam.transitioned"),
+              action:
+                shown === "assigned"
+                  ? {
+                      label: t("ipam.seeInFree"),
+                      onClick: () => {
+                        setStatus("free");
+                        setNeedle("");
+                        scrolledTo.current = null;
+                        setHighlight(address);
+                        // `allRef`: toast bấm SAU lượt tải lại — `all` của lúc đóng hộp còn
+                        // xếp hồ sơ này ở "Đang dùng", tính trang theo nó là trang sai.
+                        setPage(pageOfAddress(filterSlots(allRef.current, "free"), address) ?? 1);
+                      },
+                    }
+                  : undefined,
+            });
             void refresh();
           }}
         />
@@ -673,10 +733,12 @@ export function SubnetPane({
           address={assigning.address}
           record={assigning.record}
           network={{ cidr: item.cidr, gateway: item.gateway, vlan: item.vlan }}
+          /* Chỉ lối "Cấp IP trống kế tiếp" cho đổi địa chỉ: máy chọn hộ chỗ nhỏ nhất, người cắm
+             máy có thể muốn chỗ khác. Nút "Cấp IP" trên một dòng thì địa chỉ là chính dòng đó. */
+          choices={assigning.fromNext ? freeChoices(slots.data ?? [], item.gateway) : undefined}
           csrfToken={me.csrfToken}
           onClose={() => setAssigning(null)}
-          onDone={() => {
-            const address = assigning.address;
+          onDone={(address) => {
             setAssigning(null);
             toast({ message: t("ipam.assigned", { address }) });
             void refresh();

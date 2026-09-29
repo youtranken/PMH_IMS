@@ -73,6 +73,11 @@ interface ComboboxProps<T> {
    * phải là bên đặt tên. Tự sinh ở đây thì hai bên sinh hai id và chẳng bên nào nối được với ai.
    */
   id?: string;
+  /**
+   * Dấu ở mép phải ô. `suggest` (ô gõ tự do có gợi ý — `SuggestInput`) vẽ biểu tượng danh
+   * sách thay cho mũi tên: mũi tên là hình của ô CHỌN, người dùng thấy nó thì không dám gõ.
+   */
+  caret?: 'chevron' | 'suggest';
   /** Nối `hint`/`error` của `Field` vào ô — `Field` tự truyền, nơi gọi không phải biết. */
   'aria-describedby'?: string;
   /** Ô đang báo lỗi — `Field error` tự truyền; viền đỏ và tiêu điểm của `useFormErrors` bám vào đây. */
@@ -102,6 +107,7 @@ export function Combobox<T>({
   empty,
   required,
   id,
+  caret = 'chevron',
   'aria-describedby': describedBy,
   'aria-invalid': invalid,
 }: ComboboxProps<T>) {
@@ -288,12 +294,26 @@ export function Combobox<T>({
       <button
         type="button"
         className="combo-caret"
+        data-caret={caret}
         tabIndex={-1}
         aria-hidden="true"
         disabled={disabled}
         onClick={toggle}
       >
-        <Chevron />
+        {caret === 'suggest' ? (
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.2"
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M5 7h14M5 12h14M5 17h9" />
+          </svg>
+        ) : (
+          <Chevron />
+        )}
       </button>
       {open &&
         createPortal(

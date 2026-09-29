@@ -7,11 +7,12 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { orDash } from '@/lib/format';
 import { foldSearch } from '@/lib/search-fold';
 import { Combobox } from '@/ui/combobox';
-import { TableWrap } from '@/ui/data-table';
+import { MOBILE_CARD_QUERY, TableWrap } from '@/ui/data-table';
+import { useMediaQuery } from '@/ui/use-media-query';
 import { Dialog } from '@/ui/dialog';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { Field } from '@/ui/page-header';
-import { RowActions } from '@/ui/row-actions';
+import { RowActions, type RowAction } from '@/ui/row-actions';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
 import { useFormErrors } from '@/ui/use-form-errors';
@@ -85,6 +86,7 @@ export function PortMapPanel({
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState<{ port: PortRow | null } | null>(null);
   const [filter, setFilter] = useState('');
+  const cards = useMediaQuery(MOBILE_CARD_QUERY);
 
   const queryKey = ['devices', device.id, 'ports'];
   const map = useQuery({
@@ -122,6 +124,40 @@ export function PortMapPanel({
       )
     : allPorts;
   const incoming = sortByPortLabel(map.data?.incoming ?? []);
+
+  const actionsFor = (port: PortRow): RowAction[] => [
+    { key: 'edit', label: t('ports.edit'), onSelect: () => setEditing({ port }) },
+    {
+      key: 'remove',
+      label: t('ports.remove'),
+      danger: true,
+      disabled: remove.isPending,
+      onSelect: () => {
+        void (async () => {
+          const ok = await askConfirm({
+            title: t('common.titleOf', {
+              action: t('ports.removeOf', { port: port.portLabel }),
+              subject: device.code,
+            }),
+            message: t('ports.confirmRemove', { port: port.portLabel }),
+            danger: true,
+            confirmLabel: t('ports.remove'),
+          });
+          if (!ok) return;
+          remove.mutate(
+            { id: port.id },
+            {
+              onSuccess: () => {
+                toast({ message: t('ports.removed', { port: port.portLabel }) });
+                void refresh();
+              },
+              onError: (error) => toast({ message: errorMessage(error), tone: 'error' }),
+            },
+          );
+        })();
+      },
+    },
+  ];
 
   return (
     <div className="port-map">
@@ -162,6 +198,60 @@ export function PortMapPanel({
             )
           ) : ports.length === 0 ? (
             <EmptyState title={t('ports.filterEmpty', { q: filter.trim() })} />
+          ) : cards ? (
+            /* Điện thoại: mỗi cổng HAI dòng — "cổng → đầu kia : cổng đầu kia", rồi "VLAN · người
+               dùng" — ⋯ ở góc. Người đứng trước tủ dò một cổng giữa 48 cái, thẻ 7 dòng là phải
+               cuộn mấy màn. Ghi chú (nếu có) là dòng nhỏ thứ ba. */
+            <ul className="list-cards" aria-label={t('ports.own')}>
+              {ports.map((port) => {
+                const peer = port.connectedDeviceId ? (
+                  <Link className="mono" to={PATHS.device(port.connectedDeviceId)}>
+                    {port.connectedDeviceCode}
+                  </Link>
+                ) : (
+                  port.connectedLabel
+                );
+                const second = [
+                  port.vlan ? `${t('ports.vlan')} ${port.vlan}` : null,
+                  port.usedBy,
+                ]
+                  .filter(Boolean)
+                  .join(' · ');
+                return (
+                  <li key={port.id} className="list-card">
+                    <div className="list-card-top">
+                      <span className="list-card-title">
+                        <span className="mono">{port.portLabel}</span>
+                        {peer ? (
+                          <>
+                            {' → '}
+                            {peer}
+                            {port.connectedPort ? (
+                              <span className="mono"> : {port.connectedPort}</span>
+                            ) : null}
+                          </>
+                        ) : null}
+                      </span>
+                      {canEdit ? (
+                        <span className="list-card-end">
+                          <RowActions
+                            label={t('common.actionsOf', { subject: port.portLabel })}
+                            subject={port.portLabel}
+                            items={actionsFor(port)}
+                          />
+                        </span>
+                      ) : null}
+                    </div>
+                    {second ? <div className="list-card-sub">{second}</div> : null}
+                    {port.note ? (
+                      <div className="list-card-bottom">
+                        <span className="list-card-meta">{port.note}</span>
+                      </div>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
           ) : (
             /* Bảng rộng hơn cột chính ở router (7 cột): cuộn ngang trong khung, cột Cổng dính
                trái và cột thao tác dính phải — cuộn tới VLAN/Ghi chú vẫn biết đang ở cổng nào, và
@@ -224,51 +314,7 @@ export function PortMapPanel({
                             <RowActions
                               label={t('common.actionsOf', { subject: port.portLabel })}
                               subject={port.portLabel}
-                              items={[
-                                {
-                                  key: 'edit',
-                                  label: t('ports.edit'),
-                                  onSelect: () => setEditing({ port }),
-                                },
-                                {
-                                  key: 'remove',
-                                  label: t('ports.remove'),
-                                  danger: true,
-                                  disabled: remove.isPending,
-                                  onSelect: () => {
-                                    void (async () => {
-                                      const ok = await askConfirm({
-                                        title: t('common.titleOf', {
-                                          action: t('ports.removeOf', { port: port.portLabel }),
-                                          subject: device.code,
-                                        }),
-                                        message: t('ports.confirmRemove', {
-                                          port: port.portLabel,
-                                        }),
-                                        danger: true,
-                                        confirmLabel: t('ports.remove'),
-                                      });
-                                      if (!ok) return;
-                                      remove.mutate(
-                                        { id: port.id },
-                                        {
-                                          onSuccess: () => {
-                                            toast({
-                                              message: t('ports.removed', { port: port.portLabel }),
-                                            });
-                                            void refresh();
-                                          },
-                                          onError: (error) =>
-                                            toast({
-                                              message: errorMessage(error),
-                                              tone: 'error',
-                                            }),
-                                        },
-                                      );
-                                    })();
-                                  },
-                                },
-                              ]}
+                              items={actionsFor(port)}
                             />
                           </div>
                         </td>

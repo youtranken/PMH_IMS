@@ -6,6 +6,7 @@ import {
   resetDevices,
   resetIpam,
   resetUsers,
+  rowAction,
   uniqueStamp,
   writeHeaders,
 } from './helpers';
@@ -108,9 +109,11 @@ test.describe('Hộp thoại trên điện thoại', () => {
 
   test('hộp ngắn là bottom sheet cao theo nội dung, không ép gần hết màn', async ({ page }) => {
     await firstLogin(page, E2E_SA);
-    const id = await createDevice(page, `PC-E2E-SHEET-${uniqueStamp()}`);
+    const code = `PC-E2E-SHEET-${uniqueStamp()}`;
+    const id = await createDevice(page, code);
     await page.goto(`/devices/${id}`);
-    await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
+    // Điện thoại: Thanh lý nằm trong menu ⋯ ở đầu trang (nút chính là Két sắt).
+    await rowAction(page, code, 'Thanh lý');
 
     const dialog = page.getByRole('dialog');
     await expect(dialog).toBeVisible();
@@ -143,7 +146,7 @@ test.describe('Hộp thoại trên điện thoại', () => {
     expect(ip.status()).toBe(201);
 
     await page.goto(`/devices/${id}`);
-    await page.getByRole('button', { name: 'Thanh lý', exact: true }).click();
+    await rowAction(page, `PC-E2E-TICK-${stamp}`, 'Thanh lý');
 
     const dialog = page.getByRole('dialog');
     const hint = dialog.getByText(/Thu hồi IP, gỡ luật NAT và trả ghế license/);

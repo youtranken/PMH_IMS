@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { formatDate } from '@/lib/format';
 import { useExpiryThresholds } from './use-expiry-thresholds';
+import { useMediaQuery } from './use-media-query';
 import { warrantyProgress } from './warranty-progress';
 
 /**
@@ -38,6 +39,11 @@ export function WarrantyTimeline({
   endLabel?: string;
 }) {
   const { t } = useTranslation();
+  /* Màn hẹp (khớp `@media (max-width: 480px)`): ô chỉ còn nửa thẻ, nhãn dài "Bảo hành từ" gãy
+     ba dòng đè lên ngày. Rút còn Từ/Đến — tên đầy đủ đã là nhãn của dòng chứa thanh này. */
+  const tight = useMediaQuery('(max-width: 480px)');
+  const fromLabel = tight ? t('expiry.from') : (startLabel ?? t('expiry.from'));
+  const toLabel = tight ? t('expiry.to') : (endLabel ?? t('expiry.to'));
   // Cùng nguồn ngưỡng với `ExpiryBadge` — nếu không thì thanh và huy hiệu lại nói khác nhau,
   // đúng thứ chú thích đầu file này hứa sẽ không bao giờ xảy ra (AD-11).
   const progress = warrantyProgress({ start, end, now, thresholds: useExpiryThresholds() });
@@ -56,7 +62,7 @@ export function WarrantyTimeline({
         </div>
         <div className="wt-legend">
           <span className="left">
-            {endLabel ?? t('expiry.to')} {formatDate(end)}
+            {toLabel} {formatDate(end)}
           </span>
           <span className="right muted">{t('expiry.notCountedRetired')}</span>
         </div>
@@ -72,10 +78,10 @@ export function WarrantyTimeline({
       {compact || !progress.hasStart ? null : (
         <div className="wt-ends">
           <span>
-            {startLabel ?? t('expiry.from')} <b>{formatDate(start)}</b>
+            {fromLabel} <b>{formatDate(start)}</b>
           </span>
           <span>
-            {endLabel ?? t('expiry.to')} <b>{formatDate(end)}</b>
+            {toLabel} <b>{formatDate(end)}</b>
           </span>
         </div>
       )}

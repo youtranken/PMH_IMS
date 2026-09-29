@@ -12,6 +12,7 @@ import { Combobox } from '@/ui/combobox';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
+import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
 import { useFormErrors } from '@/ui/use-form-errors';
@@ -62,6 +63,17 @@ export function DeviceCombobox({
      */
     enabled: !deviceId,
   });
+  /* Máy nào ĐÃ giữ IP — ghi ngay cạnh mã để khỏi cấp hai địa chỉ cho một máy. Hỏng thì chỉ
+     mất dòng ghi thêm, ô chọn vẫn dùng được. */
+  const optionIds = (devices.data?.items ?? []).map((item) => item.id);
+  const held = useQuery({
+    queryKey: ['ipam', 'devices', 'addresses', optionIds],
+    enabled: !deviceId && optionIds.length > 0,
+    queryFn: () =>
+      apiFetch<Record<string, string[]>>(
+        `/api/v1/ipam/devices/addresses?deviceIds=${optionIds.join(',')}`,
+      ),
+  });
   return (
     <Combobox
       id={id}
@@ -75,11 +87,20 @@ export function DeviceCombobox({
       options={devices.data?.items ?? []}
       failed={devices.isError}
       getKey={(item) => item.id}
-      renderOption={(item) => (
-        <>
-          <span className="mono">{item.code}</span> <small>{item.name}</small>
-        </>
-      )}
+      renderOption={(item) => {
+        const ips = held.data?.[item.id];
+        return (
+          <>
+            <span className="mono">{item.code}</span> <small>{item.name}</small>
+            {ips?.length ? (
+              <small>
+                {' · '}
+                {t('ipam.deviceHasIp', { ip: ips.join(', ') })}
+              </small>
+            ) : null}
+          </>
+        );
+      }}
       onSelect={(item) => onChange({ deviceId: item.id, term: item.code })}
     />
   );
@@ -123,10 +144,11 @@ function NetworkConfig({
  */
 export function AssignIpDialog({
   subnetId,
-  address,
-  record,
+  address: initialAddress,
+  record: initialRecord,
   network,
   initialDevice,
+  choices,
   csrfToken,
   onClose,
   onDone,
@@ -142,17 +164,25 @@ export function AssignIpDialog({
   network?: { cidr: string; gateway: string | null; vlan: number | null };
   /** Máy điền sẵn — mở từ trang thiết bị thì máy đã biết, không bắt gõ lại mã. */
   initialDevice?: { deviceId: string; term: string };
+  /**
+   * Các chỗ trống của dải để đổi địa chỉ ngay trong hộp ("Cấp IP trống kế tiếp" điền sẵn chỗ
+   * nhỏ nhất, người cắm máy có thể muốn chỗ khác). Không truyền thì địa chỉ cố định.
+   */
+  choices?: { address: string; record: IpRow | null }[];
   csrfToken: string;
   onClose: () => void;
-  onDone: () => void;
+  /** Nhận địa chỉ THẬT đã cấp — có thể khác `address` khi người dùng đổi trong hộp. */
+  onDone: (address: string) => void;
 }) {
   const { t } = useTranslation();
+  const [target, setTarget] = useState({ address: initialAddress, record: initialRecord });
+  const { address, record } = target;
   const [device, setDevice] = useState(initialDevice ?? { deviceId: '', term: '' });
   // Hồ sơ Trống đã bị gỡ chủ lúc thu hồi, nên ô người dùng mở ra trống — điền lại tên chủ cũ
   // là hồi sinh một chủ không còn.
   const [usedBy, setUsedBy] = useState('');
   const [assignedAt, setAssignedAt] = useState(todayIso());
-  const [note, setNote] = useState(record?.note ?? '');
+  const [note, setNote] = useState(initialRecord?.note ?? '');
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const departments = useDepartments();
@@ -208,13 +238,38 @@ export function AssignIpDialog({
           };
           save.mutate(
             record ? { to: 'assigned', ...owner } : { subnetId, address, ...owner },
-            { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
+            { onSuccess: () => onDone(address), onError: (err) => setError(errorMessage(err)) },
           );
         }}
       >
-        <Field label={t('ipam.address')}>
-          <p className="static-value mono">{address}</p>
-        </Field>
+        {choices && choices.length > 1 ? (
+          <Field label={t('ipam.address')}>
+            <Select
+              value={address}
+              ariaLabel={t('ipam.address')}
+              options={choices.map((choice) => ({
+                value: choice.address,
+                label: choice.record ? (
+                  <>
+                    <span className="mono">{choice.address}</span>{' '}
+                    <small className="muted">{t('ipam.choiceFreedRecord')}</small>
+                  </>
+                ) : (
+                  <span className="mono">{choice.address}</span>
+                ),
+                searchText: choice.address,
+              }))}
+              onChange={(value) => {
+                const next = choices.find((choice) => choice.address === value);
+                if (next) setTarget(next);
+              }}
+            />
+          </Field>
+        ) : (
+          <Field label={t('ipam.address')}>
+            <p className="static-value mono">{address}</p>
+          </Field>
+        )}
 
         <Field label={t('ipam.device')} hint={t('ipam.deviceHint')} error={check.error('owner')}>
           <DeviceCombobox

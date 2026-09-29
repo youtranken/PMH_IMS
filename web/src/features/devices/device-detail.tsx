@@ -29,6 +29,9 @@ import { useToast } from "@/ui/toast";
 import { useCatalogLists } from "@/ui/use-catalog-lists";
 import { DeviceLicensesExpand } from "@/features/software/device-licenses-expand";
 import { DeviceIpAssign } from "@/features/ipam/device-ip-assign";
+import { RowActions } from "@/ui/row-actions";
+import { useIsNarrow } from "@/ui/use-narrow";
+import { heldSummary, warrantyNudgeEnd } from "./device-glance";
 import { DeviceForm } from "./device-form";
 import { toHistoryEntries } from "./device-history-entries";
 import {
@@ -54,6 +57,19 @@ import {
 } from "@/lib/device-types";
 import { PATHS } from "@/lib/routes";
 
+type HeldKey = "ipam" | "ports" | "nat" | "isp" | "software" | "vault" | "attachments";
+
+/** Khóa dịch viết ĐỦ chữ (không ghép chuỗi): bài `dead-keys-rollcall` tìm khóa theo chữ. */
+const HELD_LABEL: Record<HeldKey, string> = {
+  ipam: "devices.held.ipam",
+  ports: "devices.held.ports",
+  nat: "devices.held.nat",
+  isp: "devices.held.isp",
+  software: "devices.held.software",
+  vault: "devices.held.vault",
+  attachments: "devices.held.attachments",
+};
+
 /** Khu mở rộng do module khác đóng góp (Epic 3/4/5) — Đợt 1 luôn rỗng. */
 interface DevicePanel {
   key: string;
@@ -75,6 +91,7 @@ export function DeviceDetail({ me }: { me: Me }) {
   const navigate = useNavigate();
   const lists = useCatalogLists();
   const queryClient = useQueryClient();
+  const narrow = useIsNarrow();
   const { id = "" } = useParams();
   const [params] = useSearchParams();
   const [tab, setTab] = useState(() =>
@@ -481,6 +498,38 @@ export function DeviceDetail({ me }: { me: Me }) {
     item.note ? null : t("devices.note"),
   ].filter((label): label is string => label !== null);
 
+  const openStatus = () => {
+    setStatusError(null);
+    setStatusOpen(true);
+  };
+  const openRetire = () => {
+    setRetireBlocked(null);
+    setRetireError(null);
+    setRetiring(true);
+  };
+
+  const nudgeEnd = warrantyNudgeEnd(item.status, item.warrantyEnd);
+  /* Hàng "Đang giữ": đếm từ đúng nguồn của bản đồ quan hệ, bấm là tới khu/tab đó. Bản đồ
+     trên điện thoại gập lại, nên đây là chỗ duy nhất thấy được cả bộ con số trong một dòng. */
+  const held = heldSummary<HeldKey>([
+    { key: "ipam", count: panels.data ? (panelOf("ipam")?.items.length ?? 0) : undefined },
+    { key: "ports", count: ports.data ? portRowCount : undefined },
+    { key: "nat", count: panels.data ? (panelOf("nat")?.items.length ?? 0) : undefined },
+    { key: "isp", count: panels.data ? (panelOf("isp")?.items.length ?? 0) : undefined },
+    { key: "software", count: panels.data ? (panelOf("software")?.items.length ?? 0) : undefined },
+    { key: "vault", count: counts.secrets },
+    { key: "attachments", count: counts.files },
+  ]);
+  const heldTarget: Record<HeldKey, () => void> = {
+    ipam: () => goSection("ipam"),
+    ports: () => goTab("ports"),
+    nat: () => goSection("nat"),
+    isp: () => goSection("isp"),
+    software: () => goSection("software"),
+    vault: () => goTab("vault"),
+    attachments: () => goTab("attachments"),
+  };
+
   const changeStatus = (status: DeviceStatus) => {
     setStatusError(null);
     setStatus.mutate(
@@ -523,7 +572,37 @@ export function DeviceDetail({ me }: { me: Me }) {
           </>
         }
         actions={
-          retired ? (
+          narrow ? (
+            /* Điện thoại: đứng trước tủ, việc cần là két (mật khẩu) — không phải Sửa/Thanh lý.
+               Nút chính đưa thẳng tới tab Két sắt; mọi việc sửa hồ sơ vào menu ⋯. Máy đã
+               thanh lý thì "Mở lại" vẫn là nút chính như trên máy tính. */
+            <>
+              {retired ? (
+                <button type="button" className="btn primary" onClick={openStatus}>
+                  {t("devices.reopen")}
+                </button>
+              ) : (
+                <button type="button" className="btn primary" onClick={() => goTab("vault")}>
+                  {t("devices.openVault")}
+                </button>
+              )}
+              <RowActions
+                label={t("common.actionsOf", { subject: item.code })}
+                items={[
+                  ...(retired
+                    ? []
+                    : [
+                        { key: "edit", label: t("devices.edit"), onSelect: () => setEditing(true) },
+                        { key: "status", label: t("devices.changeStatus"), onSelect: openStatus },
+                      ]),
+                  { key: "clone", label: t("devices.clone"), onSelect: () => setCloning(true) },
+                  ...(retired
+                    ? []
+                    : [{ key: "retire", label: t("devices.retire"), onSelect: openRetire, danger: true }]),
+                ]}
+              />
+            </>
+          ) : retired ? (
             /* Hồ sơ đã khoá: việc làm được DUY NHẤT là mở lại, nên nó là nút chính. Nút "Sửa hồ
                sơ" xám ở chỗ mắt tìm nút chính chỉ là một lời hứa không bấm được. */
             <>
@@ -595,6 +674,25 @@ export function DeviceDetail({ me }: { me: Me }) {
             </span>
           ) : null}
         </div>
+      ) : null}
+
+      {/* Máy Hỏng mà còn bảo hành: bước kế tiếp là gọi NCC, không phải tự sửa hay mua mới. */}
+      {nudgeEnd ? (
+        <p className="alert info" role="note">
+          {t("devices.warrantyNudge", { date: formatDate(nudgeEnd) })}
+          {item.vendorName ? (
+            <>
+              {" "}
+              <strong>{item.vendorName}</strong>
+              {vendor?.phone ? (
+                <>
+                  {" · "}
+                  <a href={`tel:${vendor.phone.replace(/[^\d+]/g, "")}`}>{vendor.phone}</a>
+                </>
+              ) : null}
+            </>
+          ) : null}
+        </p>
       ) : null}
 
       <DetailLayout
@@ -742,6 +840,21 @@ export function DeviceDetail({ me }: { me: Me }) {
                 <DataItemIfSet label={t("devices.model")} value={item.model} />
                 <DataItemIfSet label={t("devices.note")} value={item.note} />
               </dl>
+              {held.length > 0 ? (
+                <div className="chip-row" role="group" aria-label={t("devices.heldLabel")}>
+                  <span className="muted small">{t("devices.heldLabel")}</span>
+                  {held.map((entry) => (
+                    <button
+                      key={entry.key}
+                      type="button"
+                      className="btn sm ghost"
+                      onClick={heldTarget[entry.key]}
+                    >
+                      {t(HELD_LABEL[entry.key], { count: entry.count })}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               {/* Ô chưa khai gom về MỘT dòng, kèm lối đi bổ sung ngay — một dòng chữ xám không
                   dẫn tới đâu thì chẳng ai bổ sung. */}
               <BlankFields labels={blankLabels} />

@@ -158,6 +158,19 @@ export function nextFreeSlot(
   return null;
 }
 
+/**
+ * Mọi chỗ trống cấp được (cùng luật `nextFreeSlot`: bỏ gateway, bỏ hồ sơ đã ẩn) — ô đổi địa
+ * chỉ trong hộp Cấp IP. Hồ sơ Trống đi kèm bản ghi để cấp lại đúng hồ sơ đó.
+ */
+export function freeChoices(
+  slots: SubnetSlot[],
+  gateway: string | null,
+): { address: string; record: IpRow | null }[] {
+  return slots
+    .filter((slot) => slotStatus(slot) === 'free' && slot.address !== gateway)
+    .map((slot) => ({ address: slot.address, record: slot.kind === 'record' ? slot : null }));
+}
+
 /** Trang (tính từ 1) chứa địa chỉ này trong danh sách đang hiện; không có thì `null`. */
 export function pageOfAddress(
   slots: SubnetSlot[],

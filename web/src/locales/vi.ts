@@ -625,9 +625,9 @@ export default {
     statusSpare: 'Dự phòng',
     statusBroken: 'Hỏng',
     statusRetired: 'Đã thanh lý',
-    allSites: 'Tất cả site',
-    allCabinets: 'Tất cả tủ',
-    allTypes: 'Tất cả loại',
+    allSites: 'Mọi site',
+    allCabinets: 'Mọi tủ',
+    allTypes: 'Mọi loại',
     allStatuses: 'Mọi trạng thái',
     /* `noCabinet`/`noVendor` là nhãn của LỰA CHỌN RỖNG trong ô chọn, không phải lời giải
        thích cho cả ô. Trước 12/09 `noCabinet` bị đem làm `hint` của ô "Tủ mạng", nên dưới ô
@@ -699,6 +699,7 @@ export default {
     emptySearch: 'Không có thiết bị nào khớp “{{q}}”.',
     clearFilters: 'Xóa bộ lọc',
     licenseCount: '{{count}} license',
+    ipMore: '{{ip}} +{{count}}',
     created: 'Đã thêm {{code}}.',
     openProfile: 'Mở hồ sơ',
     // KHÔNG chứa chữ "Lưu": Playwright khớp tên nút theo chuỗi con, hai nút sẽ giành nhau.
@@ -735,6 +736,18 @@ export default {
     quickInfo: 'Thông tin nhanh',
     managementIp: 'IP quản trị',
     fillBlanks: 'Bổ sung {{count}} ô còn thiếu',
+    openVault: 'Két sắt',
+    warrantyNudge: 'Máy hỏng nhưng còn bảo hành tới {{date}} — liên hệ nhà cung cấp.',
+    heldLabel: 'Đang giữ:',
+    held: {
+      ipam: '{{count}} IP',
+      ports: '{{count}} cổng',
+      nat: '{{count}} luật NAT',
+      isp: '{{count}} đường truyền',
+      software: '{{count}} license',
+      vault: '{{count}} mục két',
+      attachments: '{{count}} giấy tờ',
+    },
   },
   attachments: {
     title: 'Giấy tờ đính kèm',
@@ -1028,6 +1041,9 @@ export default {
     device: 'Thiết bị biên',
     deviceHint: 'Draytek/firewall đang cắm đường này. Trang thiết bị đó sẽ hiện ngược lại đường truyền.',
     deviceSearch: 'Tìm thiết bị trong kho…',
+    edgeInUse: 'đang gắn {{lines}}',
+    edgeModel: 'Model',
+    edgeLanIp: 'IP LAN',
     hotline: 'Hotline',
     // Khối thứ hai của form — KHÔNG đặt tên là "Hotline": nó chứa cả số hợp đồng và ngày bắt đầu.
     sectionContract: 'Hợp đồng và liên hệ sự cố',
@@ -1040,7 +1056,7 @@ export default {
     statusSuspended: 'Tạm ngưng',
     statusTerminated: 'Đã thanh lý',
     liquidated: 'Đã thanh lý ngày {{date}} bởi {{actor}}',
-    allSites: 'Tất cả site',
+    allSites: 'Mọi site',
     allStatuses: 'Mọi trạng thái',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
     empty: 'Chưa khai đường truyền nào.',
@@ -1717,6 +1733,10 @@ export default {
     trReclaim: 'Thu hồi IP',
     nextFree: 'Cấp IP trống kế tiếp',
     nextFreeNone: 'Dải này đã hết chỗ trống.',
+    deviceHasIp: 'đang có {{ip}}',
+    previousOwner: 'trước: {{owner}}',
+    seeInFree: 'Xem trong Trống',
+    choiceFreedRecord: 'đã thu hồi',
     filesButton: 'Giấy tờ ({{count}})',
     mask: 'Mask',
     netConfig: 'Cấu hình cho máy',
@@ -1754,6 +1774,8 @@ export default {
     gatewayUse: 'Dùng {{gateway}}',
     hideImpactUsed: '{{count}} IP đang dùng vẫn hiện để tra cứu, nhưng không cấp hay sửa được.',
     hideImpactHistory: 'Lịch sử "IP nào từng của máy nào" giữ nguyên.',
+    hideImpactNat:
+      '{{count}} luật NAT trong Sổ NAT còn trỏ vào IP của dải này — gỡ các luật đó trước, nếu không hệ thống sẽ không cho ngừng dùng dải.',
     hideImpactRestore: 'Dùng lại được bất cứ lúc nào.',
   },
   nat: {
@@ -1880,6 +1902,9 @@ export default {
     ipNotInBook:
       'IP {{ip}} chưa có trong sổ IP (hoặc đang trống) — luật sẽ không gắn được về máy nào. Cấp IP ở màn Địa chỉ IP trước nếu có thể.',
     ipInBook: 'Trong sổ IP: {{owner}}',
+    wanPrefix: 'WAN {{wan}} :',
+    wanTitle: 'IP WAN của đường truyền gắn router này (màn Đường truyền ISP)',
+    ipAssignNow: 'Cấp IP này trong sổ',
   },
   serviceAccounts: {
     phLogin: 'vd ketoan@pmh.com.vn',
@@ -1918,6 +1943,7 @@ export default {
     enableMenu: 'Dùng lại…',
     copyLogin: 'Chép tên đăng nhập',
     codeAutoHint: 'Để trống thì hệ thống tự đặt theo tên đăng nhập.',
+    codePreview: 'Để trống sẽ thành {{code}} (thêm -2, -3… nếu mã này đã có).',
     codeAutoPlaceholder: 'tự đặt theo tên đăng nhập',
     nameAutoHint: 'Để trống thì lấy chính tên đăng nhập.',
     disable: 'Ngừng dùng',
@@ -1951,7 +1977,6 @@ export default {
     // Người dùng đóng hộp hỏi mã 6 số giữa chừng: hồ sơ đã tạo, nhưng mật khẩu KHÔNG vào
     // két. Phải nói ra, không được im lặng để họ tin là đã cất.
     secretSkipped: 'Hồ sơ đã tạo nhưng mật khẩu CHƯA vào két (bạn đã bỏ qua bước nhập mã). Vào tab Két sắt để cất lại.',
-    tabProfile: 'Hồ sơ',
     tabAttachments: 'Giấy tờ',
     tabHistory: 'Lịch sử',
     kindSharedShort: 'Dùng chung',
@@ -1961,6 +1986,8 @@ export default {
     sortByName: 'Sắp theo tên',
     disabledBy: 'Ngừng dùng ngày {{date}} bởi {{by}} — lý do: {{reason}}',
     anyIp: 'Mọi IP',
+    anyIpFilter: 'Lọc VPN theo dải IP nguồn',
+    anyIpOnly: 'VPN mở mọi IP',
     anyIpTitle:
       'VPN này nhận kết nối từ MỌI địa chỉ IP nguồn (dải trống hoặc 0.0.0.0/0). Giới hạn về IP văn phòng / nhà mạng nếu có thể.',
     createdBy: 'Khai bởi',

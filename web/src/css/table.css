@@ -72,7 +72,14 @@ table.table tbody tr {
   transition: background 0.12s var(--ease);
 }
 table.table tbody tr:nth-child(even) td {
-  background: var(--surface-2);
+  background: var(--row-alt);
+}
+/* Ô mono trống chỉ còn dấu "—": vẽ bằng font mono thì nó ngắn lại thành "–", đứng cạnh "—"
+   của cột thường là hai dấu gạch khác nhau cho cùng một nghĩa "chưa khai". */
+table.table td.mono[data-empty] {
+  font-family: var(--font);
+  font-size: inherit;
+  letter-spacing: normal;
 }
 /* Chỉ tô sáng hàng khi hàng THẬT SỰ bấm được. Trước đây luật này không điều kiện, nên rê
    chuột vào ô trống của bất kỳ bảng nào cũng sáng cả hàng như mời bấm — bấm thì không có gì

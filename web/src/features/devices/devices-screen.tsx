@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
@@ -79,6 +79,14 @@ export function DevicesScreen({ me }: { me: Me }) {
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<DeviceRow | null>(null);
+  /* Máy vừa thêm sáng lên một lúc nếu nó nằm ở trang đang xem. Gỡ cờ khi hiệu ứng chạy xong:
+     để lại thì mỗi lần bảng vẽ lại (đổi trang rồi quay về) dòng đó lại nháy. */
+  const [flashId, setFlashId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!flashId) return;
+    const timer = window.setTimeout(() => setFlashId(null), 2600);
+    return () => window.clearTimeout(timer);
+  }, [flashId]);
 
   const lists = useCatalogLists();
 
@@ -124,6 +132,20 @@ export function DevicesScreen({ me }: { me: Me }) {
   });
 
   /**
+   * IP đang giữ của cả trang, một lượt, qua module `ipam` (AD-2). Chỉ là dòng phụ: hỏng thì
+   * dòng phụ vắng, danh sách vẫn dùng được — không đáng một thông báo lỗi.
+   */
+  const heldIps = useQuery({
+    queryKey: ['ipam', 'devices', 'addresses', deviceIds],
+    enabled: deviceIds.length > 0,
+    queryFn: () =>
+      apiFetch<Record<string, string[]>>(
+        `/api/v1/ipam/devices/addresses?deviceIds=${deviceIds.join(',')}`,
+      ),
+  });
+  const ipsOf = heldIps.data;
+
+  /**
    * `id` của cột PHẢI khớp whitelist `DEVICE_SORT_KEYS` phía API — đó là tên cột gửi lên
    * trong `?sort=`. Cột hiển thị qua danh mục (Loại, Vị trí) không sắp được: sắp theo chúng
    * đòi join sang bảng của module khác, vi phạm AD-2. Muốn theo site thì lọc rồi sắp theo mã.
@@ -134,10 +156,15 @@ export function DevicesScreen({ me }: { me: Me }) {
         accessorKey: 'code',
         header: t('devices.code'),
         cell: ({ row }) => (
-          // Link thật (không phải onClick trên <tr>): mở tab mới, copy link được.
-          <Link className="mono" to={PATHS.device(row.original.id)}>
-            {row.original.code}
-          </Link>
+          <>
+            {/* Link thật (không phải onClick trên <tr>): mở tab mới, copy link được. */}
+            <Link className="mono" to={PATHS.device(row.original.id)}>
+              {row.original.code}
+            </Link>
+            {/* IP là dòng phụ dưới mã, không phải cột riêng: ở 1280px thêm một cột là cột Tên
+                bị ép. Nhiều IP thì hiện cái đầu + số còn lại. */}
+            <IpSub ips={ipsOf?.[row.original.id]} />
+          </>
         ),
       },
       {
@@ -222,7 +249,7 @@ export function DevicesScreen({ me }: { me: Me }) {
         cell: ({ row }) => <EditCell device={row.original} onEdit={setEditing} />,
       },
     ],
-    [t],
+    [t, ipsOf],
   );
 
   /* Điện thoại: thẻ gọn ~96px thay cho bảng xếp chồng 8 dòng/máy. Không có nút Sửa — form
@@ -236,12 +263,14 @@ export function DevicesScreen({ me }: { me: Me }) {
       ),
       subtitle: (item) => item.name,
       meta: (item) =>
-        [item.siteCode ? locationLabel(item) : null, item.assignedTo].filter(Boolean).join(' · ') || null,
+        [ipsOf?.[item.id]?.[0], item.siteCode ? locationLabel(item) : null, item.assignedTo]
+          .filter(Boolean)
+          .join(' · ') || null,
       aside: (item) => (
         <ExpiryBadge end={item.warrantyEnd} notCounted={item.status === 'retired'} />
       ),
     }),
-    [t],
+    [t, ipsOf],
   );
 
   return (
@@ -303,10 +332,17 @@ export function DevicesScreen({ me }: { me: Me }) {
           placeholder={t('devices.allCabinets')}
           options={[
             { value: '', label: t('devices.allCabinets') },
-            ...cabinets.map((cabinet) => ({
-              value: cabinet.id,
-              label: `${cabinet.siteCode} · ${cabinet.code}`,
-            })),
+            /* Chia theo site: menu chỉ còn mã tủ dưới tiêu đề site, nên hai tủ cùng hậu tố
+               không bị cắt giữa mã thành hai dòng giống nhau. Nút đã chọn vẫn nói đủ site. */
+            ...[...cabinets]
+              .sort((a, b) => a.siteCode.localeCompare(b.siteCode))
+              .map((cabinet) => ({
+                value: cabinet.id,
+                label: cabinet.code,
+                short: `${cabinet.siteCode} · ${cabinet.code}`,
+                searchText: `${cabinet.siteCode} ${cabinet.code}`,
+                group: cabinet.siteCode,
+              })),
           ]}
           failed={lists.isError}
           onChange={(value) => setFilter('cabinetId', value)}
@@ -391,6 +427,7 @@ export function DevicesScreen({ me }: { me: Me }) {
             stackOnMobile
             stickyActions
             mobileCard={mobileCard}
+            rowClassName={(item) => (item.id === flashId ? 'row-flash' : '')}
             /* Bung dòng ra là thấy máy này đang cài license nào — cùng nếp với danh sách
                phần mềm. Chỉ hiện mũi tên khi thật sự có phần mềm đang cài. */
             /*
@@ -450,8 +487,9 @@ export function DevicesScreen({ me }: { me: Me }) {
           device={null}
           csrfToken={me.csrfToken}
           onClose={() => setCreating(false)}
-          onSaved={(_result, options) => {
+          onSaved={(result, options) => {
             if (!options?.keepOpen) setCreating(false);
+            setFlashId(result.device.id);
             void queryClient.invalidateQueries({ queryKey: ['devices'] });
           }}
           onOpenCreated={(created) => navigate(PATHS.device(created.id))}
@@ -501,6 +539,16 @@ function EditCell({ device, onEdit }: { device: DeviceRow; onEdit: (d: DeviceRow
       </button>
       {reason.hint}
     </>
+  );
+}
+
+function IpSub({ ips }: { ips: string[] | undefined }) {
+  const { t } = useTranslation();
+  if (!ips || ips.length === 0) return null;
+  return (
+    <span className="cell-sub mono" title={ips.join(', ')}>
+      {ips.length > 1 ? t('devices.ipMore', { ip: ips[0], count: ips.length - 1 }) : ips[0]}
+    </span>
   );
 }
 

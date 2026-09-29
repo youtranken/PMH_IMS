@@ -1,4 +1,19 @@
 import { isIpv4OrCidr } from '@/lib/ipv4';
+import { stripDiacritics } from '@/lib/search-fold';
+
+/**
+ * Xem trước mã API sẽ đặt khi ô Mã để trống — bản web của `codeFromLogin` (API), cùng bảng
+ * kiểm (`code-preview.test.ts`). API có thể thêm hậu tố "-2", "-3" nếu mã đã có người dùng,
+ * nên nơi hiện phải nói đây là GỐC của mã.
+ */
+export function previewCodeFromLogin(login: string): string {
+  const local = login.trim().split('@')[0] ?? '';
+  const slug = stripDiacritics(local)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || 'TK';
+}
 
 export const SERVICE_ACCOUNT_KINDS = ['shared', 'vpn'] as const;
 export type ServiceAccountKind = (typeof SERVICE_ACCOUNT_KINDS)[number];

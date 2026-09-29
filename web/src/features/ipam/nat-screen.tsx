@@ -25,7 +25,7 @@ import { ServicePortPicker } from './service-port-picker';
 import { toNatHistory, type NatHistoryRow } from './nat-history-entries';
 import { checkInternalIp } from './nat-internal-ip';
 import { STATUS_KEY, type IpSearchHit, type IpStatus } from './ipam-types';
-import { parseIpv4 } from '@/lib/ipv4';
+import { parseIpv4, subnetOf } from '@/lib/ipv4';
 import { chipsFromValue, parsePortChip, type PortChip } from './port-chips';
 import { PortChipsField } from './port-chips-field';
 import {
@@ -41,6 +41,7 @@ import {
   type NatSortKey,
 } from './nat-buckets';
 import { sensitivePortOf } from './nat-sensitive';
+import { serviceNameFor, wanByRouter } from './nat-context';
 import { useIpamSettings } from './ipam-settings';
 import { PATHS } from '@/lib/routes';
 import { clampPage } from '@/lib/paging';
@@ -169,6 +170,18 @@ export function NatScreen({ me }: { me: Me }) {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['ipam', 'nat'] });
   const all = useMemo(() => rules.data ?? [], [rules.data]);
+
+  /* Rule đi ra WAN nào: IP WAN của đường truyền gắn cùng router (một văn phòng chỉ vài đường,
+     một lượt đủ). Hỏng hay chưa về thì dòng chỉ thiếu phần WAN, bảng vẫn đọc được. */
+  const ispLines = useQuery({
+    queryKey: ['isp', 'nat-wan'],
+    queryFn: () =>
+      apiFetch<{ items: { deviceId: string | null; wanIp: string | null }[] }>(
+        '/api/v1/isp-lines?limit=200',
+      ),
+  });
+  const wanOf = useMemo(() => wanByRouter(ispLines.data?.items ?? []), [ispLines.data]);
+  const services = useMemo(() => lists.data?.servicePorts ?? [], [lists.data]);
   const sensitiveOf = (rule: NatRow) =>
     sensitivePortOf(rule.externalPorts, rule.internalPort, settings.natSensitivePorts);
 
@@ -338,6 +351,8 @@ export function NatScreen({ me }: { me: Me }) {
                 const voided = natBucket(rule) === 'voided';
                 const sensitive = sensitiveOf(rule);
                 const ports = `${protocolLabel(rule.protocol, t)} ${rule.externalPorts}`;
+                const wan = wanOf.get(rule.deviceId);
+                const service = serviceNameFor(rule.internalPort, rule.protocol, services);
                 return (
                 <tr key={rule.id} className={voided ? 'row-muted' : undefined}>
                   <td data-label={t('nat.router')} className="col-router">
@@ -348,11 +363,19 @@ export function NatScreen({ me }: { me: Me }) {
                       và bám được từng nửa ("TCP 8080", "10.0.0.5:80"). */}
                   <td data-label={t('nat.colForward')} className="col-flow">
                     <span className="nat-flow">
+                      {/* WAN của router đứng trước cổng ngoài: "đi vào từ đâu" là nửa đầu
+                          của câu. Nhiều đường thì hiện đủ, ngăn bằng "/". */}
+                      {wan ? (
+                        <span className="muted mono" title={t('nat.wanTitle')}>
+                          {t('nat.wanPrefix', { wan: wan.join(' / ') })}
+                        </span>
+                      ) : null}
                       <span className={voided ? 'mono strike' : 'mono'}>{ports}</span>
                       <span className="nat-arrow" aria-hidden="true">→</span>
                       <span className={voided ? 'mono strike' : 'mono'}>
                         {rule.internalIp}:{rule.internalPort}
                       </span>
+                      {service ? <span className="muted">({service})</span> : null}
                       {sensitive !== null ? (
                         <span
                           className="badge warn"
@@ -1124,16 +1147,23 @@ function NatForm({
             />
           </Field>
 
-          <Field label={t('nat.enabled')}>
+          {/* Ô tick và tên của nó CÙNG HÀNG ("☑ Đang dùng"), câu giải thích là mô tả bên dưới —
+              nhãn đứng trên còn câu gợi ý làm tên ô tick thì mắt và trình đọc màn hình đọc hai
+              thứ khác nhau. */}
+          <div className="field">
             <label className="row" style={{ gap: 'var(--space-3)' }}>
               <input
                 type="checkbox"
                 checked={enabled}
+                aria-describedby="nat-enabled-hint"
                 onChange={(e) => setEnabled(e.target.checked)}
               />
-              <span className="muted">{t('nat.enabledHint')}</span>
+              <span className="lbl-t">{t('nat.enabled')}</span>
             </label>
-          </Field>
+            <span className="field-hint muted" id="nat-enabled-hint">
+              {t('nat.enabledHint')}
+            </span>
+          </div>
 
           <Field
             label={t('nat.reason')}
@@ -1370,12 +1400,32 @@ function IpBookHint({ ip }: { ip: string }) {
     queryFn: () =>
       apiFetch<IpSearchHit[]>(`/api/v1/ipam/addresses?limit=5&search=${encodeURIComponent(address)}`),
   });
+  /* Dải chứa IP này (nếu có) — để lối "Cấp IP này trong sổ" mở đúng dải, đúng dòng. */
+  const subnets = useQuery({
+    queryKey: ['ipam', 'subnets', 'nat-hint'],
+    enabled: valid,
+    queryFn: () => apiFetch<{ id: string; cidr: string }[]>('/api/v1/ipam/subnets'),
+  });
   if (!valid || !hits.data) return null;
   const hit = hits.data.find((row) => row.address === address && row.status === 'assigned');
   if (!hit) {
+    const home = subnetOf(address, subnets.data ?? []);
     return (
       <span className="field-hint warn-text" role="note">
         {t('nat.ipNotInBook', { ip: address })}
+        {/* Mở TAB MỚI: rời form NAT đang gõ dở là mất sạch những gì đã điền. */}
+        {home ? (
+          <>
+            {' '}
+            <a
+              href={`${PATHS.subnet(home.id)}?ip=${encodeURIComponent(address)}`}
+              target="_blank"
+              rel="noopener"
+            >
+              {t('nat.ipAssignNow')}
+            </a>
+          </>
+        ) : null}
       </span>
     );
   }
