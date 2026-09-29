@@ -63,11 +63,11 @@ describe('Trang hồ sơ TKDV — nút Sửa và đổi trạng thái', () => {
     const user = userEvent.setup();
     expect(await screen.findByRole('button', { name: 'Sửa hồ sơ' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Thao tác với VPN-E2E-01' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Vô hiệu hóa…' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Ngừng dùng…' }));
     expect(
-      await screen.findByRole('dialog', { name: 'Vô hiệu hóa — VPN-E2E-01' }),
+      await screen.findByRole('dialog', { name: 'Ngừng dùng — VPN-E2E-01' }),
     ).toBeVisible();
-    expect(screen.getByRole('textbox', { name: /Lý do vô hiệu hóa/ })).toBeVisible();
+    expect(screen.getByRole('textbox', { name: /Lý do ngừng dùng/ })).toBeVisible();
   });
 
   it('hồ sơ đã vô hiệu: menu đổi thành "Bật lại…"', async () => {
@@ -75,8 +75,8 @@ describe('Trang hồ sơ TKDV — nút Sửa và đổi trạng thái', () => {
     renderAs('admin');
     const user = userEvent.setup();
     await user.click(await screen.findByRole('button', { name: 'Thao tác với VPN-E2E-01' }));
-    expect(screen.getByRole('menuitem', { name: 'Bật lại…' })).toBeVisible();
-    expect(screen.queryByRole('menuitem', { name: 'Vô hiệu hóa…' })).toBeNull();
+    expect(screen.getByRole('menuitem', { name: 'Dùng lại…' })).toBeVisible();
+    expect(screen.queryByRole('menuitem', { name: 'Ngừng dùng…' })).toBeNull();
   });
 
   it('member: không có nút nào để bấm rồi ăn 403', async () => {
