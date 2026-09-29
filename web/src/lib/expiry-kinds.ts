@@ -30,6 +30,8 @@ export interface ExpiryKind {
   label: string;
   /** Loại có gia hạn được bằng nút "Gia hạn" không — bảo hành thiết bị thì không. */
   canRenew: boolean;
+  /** Gia hạn loại này ghi được số hợp đồng + chi phí vào sổ gia hạn (Q-15). */
+  canRenewTerms?: boolean;
 }
 
 export function useExpiryKinds() {

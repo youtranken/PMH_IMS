@@ -41,6 +41,8 @@ interface ExpiringItem {
   daysLeft: number;
   link: string | null;
   canRenew: boolean;
+  /** Nguồn có sổ gia hạn: hộp Gia hạn hiện ô hợp đồng + chi phí (Q-15). */
+  canRenewTerms?: boolean;
 }
 
 interface BreakGlassItem {
@@ -906,6 +908,7 @@ function ExpiringBlock({
           row={{ ...renewing, end: renewing.endDate }}
           kindLabel={expiryKindLabel(kinds, renewing.kind)}
           csrfToken={me.csrfToken}
+          withTerms={renewing.canRenewTerms}
           toastAction={
             renewing.link
               ? {

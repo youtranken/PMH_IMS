@@ -61,9 +61,10 @@ export function RenewDialog({
    */
   seatEnds?: string[];
   /**
-   * Hiện hai ô tùy chọn "Số hợp đồng" + "Chi phí kỳ mới" và gửi `contract`/`cost` lên endpoint
-   * của module chủ (`url`) — nó ghi vào sổ gia hạn của RIÊNG lượt này (Q-15). Chỉ bật cho cửa
-   * có `url` nhận hai trường đó; `POST /expiry/renew` không nhận.
+   * Hiện hai ô tùy chọn "Số hợp đồng" + "Chi phí kỳ mới" và gửi `contract`/`cost` — vào sổ gia
+   * hạn của RIÊNG lượt này (Q-15). Cả endpoint của module chủ (`url`) lẫn `POST /expiry/renew`
+   * đều nhận; ở màn Sắp hết hạn và trang chủ, bật theo `canRenewTerms` của dòng (nguồn không có
+   * sổ gia hạn thì API từ chối hai trường này).
    */
   withTerms?: boolean;
   /**
@@ -91,7 +92,7 @@ export function RenewDialog({
   const [endDate, setEndDate] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [withSeats, setWithSeats] = useState(true);
-  const showTerms = !!url && !!withTerms;
+  const showTerms = !!withTerms;
   const [contract, setContract] = useState('');
   // Chi phí giữ dạng CHUỖI lúc gõ: ô trống (chưa khai) phải khác được với 0 ₫.
   const [cost, setCost] = useState('');
@@ -173,7 +174,7 @@ export function RenewDialog({
             : {};
           const body = url
             ? { endDate, ...(seats ? { seats: true } : {}), ...terms, ...sites }
-            : { kind: row.kind, id: row.id, endDate };
+            : { kind: row.kind, id: row.id, endDate, ...terms };
           renew.mutate(body, {
             onSuccess: async (result) => {
               const renewedSeats = result?.seatsRenewed ?? 0;
