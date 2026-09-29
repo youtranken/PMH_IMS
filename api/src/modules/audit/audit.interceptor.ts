@@ -17,7 +17,7 @@ import type { AuditedMeta } from './audited.decorator';
  * Handler ném lỗi → không ghi. AWAIT ghi xong mới trả response (không
  * fire-and-forget — process chết ngay sau response vẫn còn vết).
  *
- * Đây là NƠI DUY NHẤT được dùng `appendBestEffort` (rà soát 07/09, #4). Lý do: dòng audit ở
+ * Đây là NƠI DUY NHẤT được dùng `appendBestEffort`. Lý do: dòng audit ở
  * đây nằm SAU một mutation đã commit, nên ném lỗi biến một thao tác THÀNH CÔNG thành 500 và
  * người dùng bấm lại sẽ tạo bản ghi trùng — hỏng dữ liệu để cứu nhật ký. Mọi nơi khác phải
  * dùng `appendWithin` trong chính transaction nghiệp vụ, kèm `writtenByService: true`.

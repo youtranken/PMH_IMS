@@ -3,15 +3,15 @@ import { AuditWriterService } from './audit-writer.service';
 import type { Database } from '../../database/database.module';
 
 /**
- * Hai thứ bài này giữ, cả hai đều là finding mức Chặn của rà soát 07/09:
+ * Hai thứ bài này giữ, cả hai đều mức Chặn:
  *
- *   #3 — `audit_log.ip` NULL trên 100% số dòng. Cột có trong migration `0004` từ đầu, nhưng
- *        không có trong bảng drizzle, nên `toRow()` không map và không ai ghi. Bảng chỉ-thêm:
- *        mỗi ngày trôi là thêm một ngày "từ đâu" vĩnh viễn rỗng (NFR-03).
+ *   · `audit_log.ip` phải được ghi. Cột có trong migration `0004`, nhưng thiếu ở bảng drizzle
+ *     thì `toRow()` không map và không ai ghi. Bảng chỉ-thêm: mỗi ngày trôi là thêm một ngày
+ *     "từ đâu" vĩnh viễn rỗng (NFR-03).
  *
- *   #4 — audit của việc MỞ KÉT đi qua một hàm nuốt lỗi. `append()` cũ bọc try/catch chỉ log
- *        rồi đi tiếp, và với `writtenByService: true` thì nó là writer DUY NHẤT của đường đó.
- *        INSERT hỏng → plaintext vẫn ra, dấu vết chỉ còn một dòng log container.
+ *   · audit của việc MỞ KÉT không được đi qua một hàm nuốt lỗi. Với `writtenByService: true`
+ *     thì `append()` là writer DUY NHẤT của đường đó; nuốt lỗi thì INSERT hỏng → plaintext
+ *     vẫn ra, dấu vết chỉ còn một dòng log container.
  */
 
 type Captured = { table: unknown; values: Record<string, unknown> };
