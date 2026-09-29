@@ -305,7 +305,7 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
     renderPanel({ ...ME, role: 'member' });
     await send('4');
     expect(await screen.findByText(/Đã gửi yêu cầu. Quản trị/)).toBeInTheDocument();
-    expect(screen.queryByText(/vượt trần/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/vượt mức tối đa/)).not.toBeInTheDocument();
   });
 
   it('gửi 72 giờ, trần 24 → cảnh báo có ĐÚNG con số 24', async () => {
@@ -431,7 +431,7 @@ describe('VaultPanel — ô giá trị, tuổi giá trị, xoá vĩnh viễn', (
     await userEvent.click(await screen.findByRole('button', { name: 'Thao tác với admin web' }));
     await userEvent.click(screen.getByRole('menuitem', { name: 'Đổi giá trị' }));
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText(/IMS KHÔNG nối tới máy chủ hay thiết bị/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/IMS không đổi gì trên thiết bị thật/)).toBeInTheDocument();
     // Chỉ cảnh báo — không có ô tick nào phải bấm trước khi lưu.
     expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
   });
@@ -533,7 +533,7 @@ describe('VaultPanel — quyền theo phiên và nút Trả quyền', () => {
   it('quyền đã gắn ở phiên khác: nói rõ vì sao phải xin lại', async () => {
     mockRelease({ ...NEEDS_APPROVAL, otherSessionHeld: true });
     renderPanel({ ...ME, role: 'member' });
-    expect(await screen.findByText(/đã gắn với một phiên đăng nhập khác/)).toBeInTheDocument();
+    expect(await screen.findByText(/đang gắn với một phiên đăng nhập khác/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Xin mở két' })).toBeInTheDocument();
   });
 
@@ -548,7 +548,7 @@ describe('VaultPanel — quyền theo phiên và nút Trả quyền', () => {
     renderPanel({ ...ME, role: 'member' });
     expect(await screen.findByText(/Đã được duyệt — bấm "Xem"/)).toBeInTheDocument();
     expect(screen.getByText(/tính từ lúc duyệt/)).toBeInTheDocument();
-    expect(screen.getByText(/Lần xem đầu tiên gắn quyền vào phiên/)).toBeInTheDocument();
+    expect(screen.getByText(/Lần xem đầu gắn quyền vào phiên/)).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Xem' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Xin mở két' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Nhận quyền/ })).not.toBeInTheDocument();
@@ -560,7 +560,7 @@ describe('VaultPanel — quyền theo phiên và nút Trả quyền', () => {
     renderPanel({ ...ME, role: 'member' });
     await userEvent.click(await screen.findByRole('button', { name: 'Xin mở két' }));
     const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText(/lần bấm "Xem" đầu tiên/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/bấm "Xem" lần đầu/)).toBeInTheDocument();
     expect(within(dialog).getByText(/đăng xuất hay hết phiên/)).toBeInTheDocument();
   });
 });
@@ -638,7 +638,7 @@ describe('VaultPanel — xem giá trị theo bước trong cùng hộp (VLT-062)
     const calls = mockReveal();
     renderInline();
     await userEvent.click(await screen.findByRole('button', { name: 'Xem' }));
-    await userEvent.click(await screen.findByRole('button', { name: /Quay lại danh sách ngăn/ }));
+    await userEvent.click(await screen.findByRole('button', { name: '‹ Quay lại' }));
     expect(await screen.findByRole('button', { name: 'Xem' })).toBeInTheDocument();
     expect(calls.some((c) => c.url.includes('/auth/step-up'))).toBe(false);
   });

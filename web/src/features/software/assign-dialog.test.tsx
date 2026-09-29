@@ -144,7 +144,7 @@ const chipCodes = () =>
 
 async function quickPick(by: 'Phòng ban' | 'Người sử dụng', value: string) {
   await userEvent.click(
-    screen.getByRole('button', { name: 'Chọn cả lô theo phòng ban / người sử dụng' }),
+    screen.getByRole('button', { name: 'Chọn theo phòng ban / người sử dụng' }),
   );
   await userEvent.click(screen.getByRole('button', { name: by }));
   const label = by === 'Phòng ban' ? 'Tên phòng ban' : 'Tên người sử dụng';
@@ -202,7 +202,7 @@ describe('AssignDialog — chọn nhanh cả lô theo phòng ban / người sử
     const calls = mockFetch();
     render();
     await userEvent.click(
-      screen.getByRole('button', { name: 'Chọn cả lô theo phòng ban / người sử dụng' }),
+      screen.getByRole('button', { name: 'Chọn theo phòng ban / người sử dụng' }),
     );
     await userEvent.click(screen.getByRole('button', { name: 'Thêm các máy' }));
     expect(await screen.findByText('Gõ tên phòng ban hoặc người sử dụng.')).toBeInTheDocument();

@@ -125,7 +125,7 @@ test.describe('Màn danh sách hỏng, đọc ở 390px', () => {
      * phải gia hạn không". Trả lời "không có gì" khi thật ra không hỏi được là cách bỏ lỡ một
      * chứng chỉ SSL hết hạn.
      */
-    await expect(page.getByText('Không có gì sắp hết hạn trong cửa sổ này.')).toHaveCount(0);
+    await expect(page.getByText('Không có gì sắp hết hạn trong khoảng này.')).toHaveCount(0);
     await expectErrorBlockFits(page);
   });
 

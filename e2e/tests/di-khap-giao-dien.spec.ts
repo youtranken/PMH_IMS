@@ -2956,7 +2956,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await page.getByRole('tab', { name: /^Két sắt/ }).click();
     await expect(
       panel.getByText(
-        'Nơi cất mật khẩu và license key. Giá trị được mã hóa, chỉ xem được qua bước xác thực 2 lớp — bảng dưới đây chỉ hiện tên gọi.',
+        'Nơi cất mật khẩu và license key, đã mã hóa. Xem giá trị phải nhập mã 2 lớp.',
       ),
       'Két sắt phải tự nói ra luật chơi của nó trước khi ai bấm gì',
     ).toBeVisible();
@@ -3418,7 +3418,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toHaveAccessibleDescription('Bắt buộc — chưa nhập ô này.');
     // Kỳ hạn đang là Thuê bao mà chưa có ngày hết hạn: báo ngay tại ô (SW-028), nên là BA ô.
     await expect(
-      add.getByText('Nhập ngày hết hạn — thiếu hạn thì hệ thống không nhắc gia hạn được.'),
+      add.getByText('Nhập ngày hết hạn để hệ thống nhắc gia hạn.'),
     ).toBeVisible();
     await expect(add.getByText('Còn 3 ô cần sửa trước khi lưu.')).toBeVisible();
     await expect(
@@ -3566,7 +3566,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     ).toHaveCount(6);
     for (const name of [
       'Đóng hộp thoại',
-      'Chọn cả lô theo phòng ban / người sử dụng',
+      'Chọn theo phòng ban / người sử dụng',
       'Bắt đầu',
       'Kết thúc',
       'Hủy',
@@ -4273,7 +4273,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     await expect(
       add.getByRole('textbox', { name: 'Tên luật', exact: true }),
       'Luật không tên thì sau này không ai biết nó là luật gì — báo đúng câu trong vi.ts',
-    ).toHaveAccessibleDescription('Đặt tên cho luật này (vd "SSL sắp hết hạn → sếp").');
+    ).toHaveAccessibleDescription('Đặt tên cho luật, vd "SSL sắp hết hạn → sếp".');
 
     await add.getByRole('textbox', { name: 'Tên luật', exact: true }).fill(`E2E luật hỏng ${stamp}`);
     await add.getByRole('textbox', { name: 'Người nhận', exact: true }).fill('   ');
@@ -5090,7 +5090,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     const hide = page.getByRole('dialog', { name: `Ngừng dùng dải ${cidr}` });
     await expect(hide).toBeVisible();
     await expect(
-      hide.getByText('Dải Ở LẠI danh sách', { exact: false }),
+      hide.getByText('Dải vẫn ở danh sách', { exact: false }),
       'phải nói rõ ngừng dùng KHÔNG phải xóa — người dùng đọc "biến mất" là "đã mất"',
     ).toBeVisible();
     await expectHandles(hide, 'textbox', ['Lý do'], 'Hộp "Ngừng dùng dải"');
@@ -5499,7 +5499,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     const remove = page.getByRole('dialog', { name: 'Gỡ luật NAT UDP 9000-9010' });
     await expect(remove).toBeVisible();
     await expect(
-      remove.getByText('Luật không bị xóa khỏi hệ thống', { exact: false }),
+      remove.getByText('vẫn xem lại được', { exact: false }),
     ).toBeVisible();
     await expectHandles(remove, 'textbox', ['Lý do gỡ'], 'Hộp "Gỡ luật NAT"');
     await expectHandles(remove, 'button', ['Đóng hộp thoại', 'Hủy', 'Gỡ'], 'Hộp "Gỡ luật NAT"');
@@ -8729,7 +8729,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       form.getByTestId('secret-strength-warning'),
       'giá trị thiếu chữ HOA và ký tự đặc biệt thì phải bị chê',
     ).toHaveText(
-      'Giá trị này chưa đủ mạnh — vẫn lưu được, nhưng nếu là mật khẩu do mình đặt thì nên đổi.',
+      'Giá trị chưa đủ mạnh — vẫn lưu được, nhưng nếu do mình đặt thì nên đổi.',
     );
     await expect(
       form.getByRole('button', { name: 'Lưu' }),
@@ -8820,7 +8820,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     expect(
       await stepUp.getByRole('button').allTextContents(),
       'bước mã phải có đúng cặp Quay lại / Xác nhận',
-    ).toEqual(['‹ Quay lại danh sách ngăn', 'Xác nhận']);
+    ).toEqual(['‹ Quay lại', 'Xác nhận']);
 
     /* ---- Gõ SAI mã: hộp KHÔNG được đóng ---- */
 

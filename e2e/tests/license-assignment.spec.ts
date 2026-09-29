@@ -130,7 +130,7 @@ test.describe('Gán license theo seat', () => {
 
     // SW-057: xuất Excel danh sách máy đang dùng — tải về đúng file xlsx.
     const download = page.waitForEvent('download');
-    await page.getByRole('button', { name: 'Xuất Excel danh sách máy' }).click();
+    await page.getByRole('button', { name: 'Xuất Excel', exact: true }).click();
     expect((await download).suggestedFilename()).toBe(`may-dang-dung-LIC-E2E-SEAT-${stamp}.xlsx`);
     // Đường hỏng: id không phải uuid bị chặn 400, không trả file rỗng.
     expect(

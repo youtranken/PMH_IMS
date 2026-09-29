@@ -282,7 +282,7 @@ describe('Trang chi tiết phiếu — người xin (Q-15)', () => {
       claimedAt: '2026-09-20T02:00:00.000Z',
     });
     renderDetail(MEMBER);
-    expect(await screen.findByText(/gắn với phiên đăng nhập đang dùng/)).toBeInTheDocument();
+    expect(await screen.findByText(/gắn với phiên đăng nhập này/)).toBeInTheDocument();
     expect(screen.queryByText(/Đã duyệt\. Mở lại/)).not.toBeInTheDocument();
   });
 

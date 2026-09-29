@@ -76,7 +76,7 @@ test.describe('Form: kiểm tiếng Việt dưới từng ô', () => {
     });
     await form.getByTestId('dialog-footer').getByRole('button', { name: 'Lưu' }).click();
     await expect(form.getByRole('textbox', { name: 'Số ghế' })).toHaveAccessibleDescription(
-      /Số ghế phải là số nguyên từ 1 trở lên/,
+      /Số ghế là số nguyên từ 1 trở lên/,
     );
     await expect(posted, 'không được gửi gì lên khi Số ghế sai').rejects.toThrow();
     await expect(form).toBeVisible();

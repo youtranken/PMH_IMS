@@ -846,7 +846,7 @@ export default {
   },
   software: {
     title: 'Phần mềm',
-    subtitle: 'License, SSL, tên miền, hợp đồng bảo trì — mọi thứ có ngày gia hạn nằm một chỗ',
+    subtitle: 'License, SSL, tên miền, hợp đồng bảo trì và ngày gia hạn',
     add: 'Thêm hồ sơ',
     edit: 'Sửa hồ sơ',
     search: 'Tìm theo mã, tên, ghi chú hoặc mã máy',
@@ -860,15 +860,15 @@ export default {
     licenseModel: 'Kỳ hạn',
     /* Gợi ý dưới ô Kỳ hạn đổi theo lựa chọn đang bật. */
     subscriptionHint: 'Có ngày hết hạn — hệ thống nhắc gia hạn trước khi hết.',
-    perpetualHint: 'Mua đứt thì chỉ cần ngày bắt đầu — hệ thống sẽ không nhắc gia hạn.',
+    perpetualHint: 'Mua đứt: chỉ cần ngày bắt đầu, không nhắc gia hạn.',
     noEnd: 'Không hết hạn',
-    endRequired: 'Nhập ngày hết hạn — thiếu hạn thì hệ thống không nhắc gia hạn được.',
+    endRequired: 'Nhập ngày hết hạn để hệ thống nhắc gia hạn.',
     sectionTerm: 'Thời hạn',
     subscription: 'Thuê bao',
     perpetual: 'Vĩnh viễn',
     seatHint: 'Số máy được phép cài. Chỉ áp dụng cho license.',
-    seatInvalid: 'Số ghế phải là số nguyên từ 1 trở lên, chỉ gồm chữ số. Bỏ trống = không giới hạn.',
-    seatBelowUsed: 'Đang có {{used}} máy dùng, giảm xuống {{total}} sẽ vượt ghế — gỡ bớt ghế trước.',
+    seatInvalid: 'Số ghế là số nguyên từ 1 trở lên. Bỏ trống nếu không giới hạn.',
+    seatBelowUsed: 'Đang có {{used}} máy dùng — gỡ bớt máy trước khi giảm xuống {{total}} ghế.',
     startDate: 'Bắt đầu',
     endDate: 'Hết hạn',
     note: 'Ghi chú',
@@ -893,16 +893,16 @@ export default {
     noVendor: 'Chưa rõ nhà cung cấp',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
     empty: 'Chưa có hồ sơ license, SSL hay tên miền nào.',
-    emptyHint: 'Thêm license, SSL hoặc tên miền để hệ thống nhắc gia hạn giúp.',
+    emptyHint: 'Thêm license, SSL hoặc tên miền để được nhắc gia hạn.',
     emptyFiltered: 'Không có hồ sơ nào khớp bộ lọc.',
-    emptyFilteredHint: 'Nới bộ lọc, hoặc xóa ô tìm để xem lại toàn bộ danh sách.',
+    emptyFilteredHint: 'Nới bộ lọc hoặc xóa ô tìm.',
     saved: 'Đã lưu hồ sơ.',
     tabProfile: 'Hồ sơ',
     tabDevices: 'Máy đang dùng',
     tabAttachments: 'Giấy tờ',
     tabHistory: 'Lịch sử',
     renew: 'Gia hạn',
-    noteHint: 'KHÔNG ghi key hay mật khẩu ở đây — chúng thuộc về Két sắt.',
+    noteHint: 'Đừng ghi key hay mật khẩu ở đây — cất vào Két sắt.',
     /* Cột gộp trạng thái Q-03 + số ngày (`software-standing.ts`). */
     standing: 'Tình trạng',
     overdueDays: 'quá {{count}} ngày',
@@ -940,19 +940,19 @@ export default {
     retiredAutoNoDays: 'Đã thanh lý ngày {{date}} · tự động khi hết ân hạn',
     retiredBy: 'Đã thanh lý ngày {{date}} · bởi {{by}}',
     retiredUnknown: 'Hồ sơ đã thanh lý.',
-    retiredNote: 'Không còn tính hạn, không vào email nhắc; ghế đã gỡ khỏi các máy. Khôi phục để dùng lại.',
+    retiredNote: 'Không còn tính hạn, không vào email nhắc, ghế đã gỡ khỏi các máy.',
     restore: 'Khôi phục…',
     restoreTitle: 'Khôi phục hồ sơ',
-    restoreIntro: 'Hồ sơ về Đang dùng. Ghế đã gỡ KHÔNG tự gán lại — tick máy bên dưới để gán lại ngay.',
+    restoreIntro: 'Hồ sơ về Đang dùng. Ghế đã gỡ không tự gán lại — tick máy bên dưới để gán lại.',
     restoreEnd: 'Hạn mới',
-    restoreEndHint: 'Từ hôm nay trở đi — để hạn cũ thì lượt quét kế tiếp lại tự thanh lý.',
+    restoreEndHint: 'Chọn từ hôm nay trở đi.',
     restorePlusYear: '+1 năm',
     restoreNeedEnd: 'Chọn hạn mới.',
     restorePastEnd: 'Hạn mới phải từ hôm nay trở đi.',
     restoreNote: 'Ghi chú hồ sơ',
     restoreDevices: 'Các máy từng dùng',
     restoreDevicesNone: 'Chưa có máy nào từng dùng hồ sơ này.',
-    restoreTooMany: 'Hồ sơ có {{total}} ghế — bỏ bớt máy, hoặc tăng số ghế trong Sửa hồ sơ trước.',
+    restoreTooMany: 'Hồ sơ chỉ có {{total}} ghế — bỏ bớt máy, hoặc tăng số ghế trong Sửa hồ sơ.',
     restoreSubmit: 'Khôi phục',
     restored: 'Đã khôi phục hồ sơ.',
     restoredAssigned: 'Đã gán lại {{count}} máy.',
@@ -960,47 +960,47 @@ export default {
   },
   license: {
     assign: 'Gán vào máy',
-    exportDevices: 'Xuất Excel danh sách máy',
+    exportDevices: 'Xuất Excel',
     assignTitle: 'Gán license vào máy',
     assignedCount: 'Đã gán license vào {{count}} máy.',
     assignMany: 'Gán {{count}} máy',
     pickedDevices: 'Máy sẽ gán',
     unpickDevice: 'Bỏ {{code}} khỏi lô',
     /* Lô dừng ở máy hỏng; máy đã gán xong được bỏ khỏi danh sách nên bấm lại là gán tiếp. */
-    assignPartial: 'Đã gán {{done}} máy, dừng ở {{code}}: {{reason}} Các máy còn lại vẫn trong danh sách — sửa rồi bấm gán tiếp.',
+    assignPartial: 'Đã gán {{done}} máy, dừng ở {{code}}: {{reason}} Sửa rồi bấm gán tiếp các máy còn lại.',
     release: 'Gỡ',
-    releasedDone: 'Đã gỡ gán. Bản ghi vẫn còn trong lịch sử.',
+    releasedDone: 'Đã gỡ license khỏi máy. Xem lại ở tab Đã gỡ.',
     device: 'Máy',
-    deviceHint: 'Gõ ít nhất 2 ký tự để tìm theo mã, tên hoặc serial. Chọn được nhiều máy — chi phí, hợp đồng, kỳ hạn bên dưới áp cho cả lô.',
+    deviceHint: 'Gõ từ 2 ký tự để tìm theo mã, tên hoặc serial. Chọn được nhiều máy.',
     deviceSearch: 'Tìm máy trong kho…',
     pickDevice: 'Chọn máy để gán.',
     assignedAt: 'Gán lúc',
     cost: 'Chi phí',
-    costHint: 'Tiền đồng — gõ 5.600.000, 5600000 hay 5,6tr đều được. Để trống nếu chưa rõ — khác với 0đ (được tặng kèm).',
+    costHint: 'Vd 5.600.000 hoặc 5,6tr. Để trống nếu chưa rõ; 0 là được tặng kèm.',
     costInvalid: 'Chi phí chưa đọc được. Gõ số tiền đồng, vd 5.600.000 hoặc 5,6tr.',
     contract: 'Hợp đồng',
-    contractHint: 'Số hợp đồng mua ghế này, để đối chiếu lúc quyết toán.',
+    contractHint: 'Số hợp đồng mua ghế này.',
     term: 'Kỳ hạn',
     startDate: 'Bắt đầu',
     endDate: 'Kết thúc',
-    endDateHint: 'Kỳ hạn RIÊNG của ghế này. Để trống thì ghế đi theo hạn của hồ sơ.',
+    endDateHint: 'Để trống thì ghế theo hạn của hồ sơ.',
     seatsHeader: 'Đã gán {{seats}} ghế',
     editSeatTitle: 'Sửa ghế license',
     seatSaved: 'Đã lưu ghế của máy {{device}}.',
     emptySeats: 'Chưa gán license này vào máy nào.',
     note: 'Ghi chú',
     overSeatReason: 'Lý do vượt số ghế',
-    overSeatHint: 'License đã dùng hết ghế. Vẫn gán được nhưng phải ghi lý do — vượt số ghế là chuyện pháp lý với nhà cung cấp.',
+    overSeatHint: 'License đã hết ghế. Vẫn gán được nhưng phải ghi lý do.',
     empty: 'Chưa gán license này vào máy nào.',
-    emptyHint: 'Gán vào máy để không bao giờ lặp lại vụ "key nhập máy nào không ai biết".',
+    emptyHint: 'Gán vào máy để biết license đang cài ở đâu.',
     emptyReleased: 'Chưa có ghế nào bị gỡ khỏi license này.',
     confirmRelease: 'Gỡ license khỏi máy {{device}}? Bản ghi vẫn được giữ trong lịch sử.',
     onlyLicense: 'Chỉ hồ sơ loại License mới gán được vào máy.',
     /* Hộp gán khi license đã dùng hết ghế / đã Hết hạn — nói ngay lúc mở hộp. */
     assignOver: 'Gán vượt ghế',
-    fullWarning: 'Đã dùng {{seats}} ghế — gán thêm sẽ vượt số ghế trong hợp đồng. Ghi lý do bên dưới.',
+    fullWarning: 'Đã dùng {{seats}} ghế — gán thêm sẽ vượt số ghế trong hợp đồng.',
     overSeatRequired: 'Ghi lý do vượt số ghế.',
-    expiredWarning: 'License này đã Hết hạn — vẫn gán được, nhưng máy sẽ dùng một license chưa gia hạn.',
+    expiredWarning: 'License này đã hết hạn. Vẫn gán được, nhưng máy sẽ dùng license chưa gia hạn.',
     /* Bảng ghế dùng chung (`seat-table.tsx`). */
     contractNote: 'Hợp đồng · Ghi chú',
     releasedOn: 'Đã gỡ {{date}} · {{by}}',
@@ -1014,37 +1014,37 @@ export default {
     expandLabel: 'Mở rộng {{code}} — xem máy đang dùng',
     collapseLabel: 'Thu gọn {{code}}',
     /* Chọn nhanh cả lô theo phòng ban / người sử dụng trong hộp Gán (Q-15). */
-    quickPickOpen: 'Chọn cả lô theo phòng ban / người sử dụng',
+    quickPickOpen: 'Chọn theo phòng ban / người sử dụng',
     quickPickBy: 'Chọn nhanh theo',
     quickPickDepartment: 'Phòng ban',
     quickPickPerson: 'Người sử dụng',
     quickPickDepartmentLabel: 'Tên phòng ban',
     quickPickPersonLabel: 'Tên người sử dụng',
     quickPickAdd: 'Thêm các máy',
-    quickPickHint: 'Thêm mọi máy đang dùng khớp đúng tên này. Bỏ bớt máy bằng nút ✕ bên dưới.',
+    quickPickHint: 'Thêm mọi máy đang dùng khớp đúng tên này. Bỏ bớt bằng nút ✕.',
     quickPickNeedValue: 'Gõ tên phòng ban hoặc người sử dụng.',
     quickPickAdded: 'Đã thêm {{count}} máy của {{who}}.',
     quickPickHeld: '{{count}} máy đã có license này, bỏ qua.',
     quickPickNone: 'Không có máy đang dùng nào của {{who}}.',
     quickPickAllHeld: 'Mọi máy đang dùng của {{who}} đã có license này.',
-    quickPickTruncated: 'Chỉ lấy {{count}} máy đầu — gõ tên cụ thể hơn nếu còn thiếu.',
+    quickPickTruncated: 'Chỉ lấy {{count}} máy đầu — gõ tên cụ thể hơn.',
   },
   isp: {
     title: 'Đường truyền',
     copyWanIp: 'Chép IP WAN',
-    subtitle: 'Đứt cáp lúc 2 giờ sáng: hotline và số hợp đồng có ngay trên danh sách',
+    subtitle: 'Nhà mạng, IP WAN, hotline và số hợp đồng của từng đường',
     add: 'Thêm đường truyền',
     edit: 'Sửa hồ sơ',
     search: 'Tìm theo mã, nhà mạng, IP WAN hoặc số hợp đồng',
     code: 'Mã đường',
     provider: 'Nhà mạng',
     providerPlaceholder: '— Chọn nhà mạng —',
-    providerHint: 'Chọn từ danh mục Nhà mạng. Chưa có thì bấm "+ Thêm vào danh mục" ngay dưới.',
+    providerHint: 'Chọn từ danh mục Nhà mạng. Chưa có thì bấm "+ Thêm vào danh mục".',
     bandwidth: 'Băng thông',
     wanIp: 'IP WAN',
     site: 'Site',
     device: 'Thiết bị biên',
-    deviceHint: 'Draytek/firewall đang cắm đường này. Trang thiết bị đó sẽ hiện ngược lại đường truyền.',
+    deviceHint: 'Router/firewall đang cắm đường này.',
     deviceSearch: 'Tìm thiết bị trong kho…',
     edgeInUse: 'đang gắn {{lines}}',
     edgeModel: 'Model',
@@ -1065,24 +1065,23 @@ export default {
     allStatuses: 'Mọi trạng thái',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
     empty: 'Chưa khai đường truyền nào.',
-    emptyHint: 'Thêm đường ISP để lúc sự cố có hotline và số hợp đồng trong 30 giây.',
+    emptyHint: 'Thêm đường truyền để có sẵn hotline và số hợp đồng khi sự cố.',
     emptyFiltered: 'Không có đường truyền nào khớp bộ lọc.',
-    emptyFilteredHint: 'Nới bộ lọc, hoặc xóa ô tìm để xem lại toàn bộ danh sách.',
+    emptyFilteredHint: 'Nới bộ lọc hoặc xóa ô tìm.',
     saved: 'Đã lưu hồ sơ đường truyền.',
     tabProfile: 'Hồ sơ',
     tabAttachments: 'Giấy tờ',
     tabHistory: 'Lịch sử',
     allProviders: 'Mọi nhà mạng',
-    liveStatuses: 'Còn hiệu lực (đang dùng + tạm ngưng)',
-    wanIpInvalid: 'IP WAN phải là một IPv4 (113.161.10.20) hoặc một khối IP (113.161.10.16/29).',
-    wanIpHint: 'IP tĩnh, hoặc cả khối IP tĩnh nhà mạng cấp (vd 113.161.10.16/29).',
+    liveStatuses: 'Đang dùng + Tạm ngưng',
+    wanIpInvalid: 'IP WAN phải là một IPv4 (vd 113.161.10.20) hoặc một khối IP (vd 113.161.10.16/29).',
+    wanIpHint: 'IP tĩnh hoặc khối IP tĩnh nhà mạng cấp.',
     bandwidthHint: 'vd 300 Mbps, 1 Gbps.',
     phHotline: 'vd 1800 1166',
     addProvider: '+ Thêm vào danh mục',
     terminateTitle: 'Thanh lý đường truyền {{code}}?',
-    terminateMessage:
-      'Đường này rời khỏi danh sách mặc định. Nhớ hủy mật khẩu PPPoE/modem trong két và gỡ đường khỏi thiết bị biên — hai việc đó không tự làm.',
-    liquidatedUnknown: 'Đường truyền này đã thanh lý (chưa rõ ngày — hồ sơ cũ không ghi mốc).',
+    terminateMessage: 'Đường này rời khỏi danh sách mặc định. Nhớ xử lý mật khẩu PPPoE/modem trong két và gỡ đường khỏi thiết bị biên.',
+    liquidatedUnknown: 'Đường truyền đã thanh lý, không rõ ngày.',
     incidentCard: 'Khi mất mạng',
     callHotline: 'Gọi {{hotline}}',
     copyContractNo: 'Chép số hợp đồng',
@@ -1096,13 +1095,11 @@ export default {
     statusTitle_active: 'Dùng lại đường truyền {{code}}?',
     statusTitle_suspended: 'Tạm ngưng đường truyền {{code}}?',
     statusTitle_terminated: 'Thanh lý đường truyền {{code}}?',
-    statusMessage_active: 'Đường này trở lại "Đang dùng". Lịch sử ghi lại ai đổi, lúc nào.',
-    statusMessage_suspended:
-      'Đường vẫn nằm trong danh sách, mang nhãn "Tạm ngưng" (vd nhà mạng tạm cắt, đang chờ thanh toán). Lịch sử ghi lại ai đổi, lúc nào.',
-    statusMessage_terminated:
-      'Đường này rời khỏi danh sách mặc định, và hợp đồng coi như đã cắt.',
-    terminateVault: 'Két còn {{count}} ngăn của đường này — xóa vĩnh viễn hoặc đổi giá trị nếu không còn dùng.',
-    terminateDevice: 'Đường đang gắn với {{device}} — gỡ nó khỏi thiết bị biên nếu đã rút cáp.',
+    statusMessage_active: 'Đường này trở lại "Đang dùng".',
+    statusMessage_suspended: 'Đường vẫn ở danh sách với nhãn "Tạm ngưng" (vd nhà mạng tạm cắt, chờ thanh toán).',
+    statusMessage_terminated: 'Đường này rời khỏi danh sách mặc định, hợp đồng coi như đã cắt.',
+    terminateVault: 'Két còn {{count}} ngăn của đường này — xóa hoặc đổi giá trị nếu không còn dùng.',
+    terminateDevice: 'Đường đang gắn với {{device}} — gỡ khỏi thiết bị biên nếu đã rút cáp.',
   },
   expiry: {
     /*
@@ -1114,7 +1111,7 @@ export default {
      * thôi có nghĩa. Hai câu nghe giống nhau nhưng nói hai chuyện khác hẳn.
      */
     notCounted: 'Không tính hạn',
-    notCountedTitle: 'Hồ sơ đã ở trạng thái cuối (thanh lý) — ngày hết hạn thôi có nghĩa',
+    notCountedTitle: 'Hồ sơ đã thanh lý nên không tính hạn nữa',
     labelNoneTitle: 'Chưa khai ngày hết hạn',
     notCountedRetired: 'Không tính hạn (đã thanh lý)',
     /* Mô tả trợ năng của badge trên mục menu "Sắp hết hạn". */
@@ -1132,7 +1129,7 @@ export default {
     walked: 'Đã đi {{percent}}%',
     noStart: 'Chưa khai mốc bắt đầu',
     title: 'Sắp hết hạn',
-    subtitle: 'Mọi thứ có ngày gia hạn của cả hệ thống về một chỗ — bảo hành, license, SSL, tên miền, hợp đồng',
+    subtitle: 'Bảo hành, license, SSL, tên miền, hợp đồng — mọi thứ có hạn',
     item: 'Mục',
     kind: 'Loại',
     end: 'Hết hạn',
@@ -1166,12 +1163,12 @@ export default {
     renewSeats: 'Cập nhật luôn {{count}} ghế có kỳ hạn riêng tới hạn mới',
     /* Hợp đồng + chi phí của RIÊNG lượt gia hạn — ghi vào sổ gia hạn (Q-15). */
     renewContract: 'Số hợp đồng',
-    renewContractHint: 'Hợp đồng của lần gia hạn này — để trống nếu chưa có.',
+    renewContractHint: 'Hợp đồng của lần gia hạn này. Để trống nếu chưa có.',
     renewCost: 'Chi phí kỳ mới',
     renewWebsites: 'Website của kỳ mới',
-    renewWebsitesHint: 'Mỗi dòng một website. Danh sách này được lưu riêng cho kỳ gia hạn này.',
+    renewWebsitesHint: 'Mỗi dòng một website, lưu riêng cho kỳ này.',
     currentEnd: 'Hạn hiện tại',
-    renewMinHint: 'Hạn mới phải từ {{date}} trở đi — sau hạn hiện tại và sau hôm nay.',
+    renewMinHint: 'Hạn mới phải từ {{date}} trở đi.',
     renewTooEarly: 'Hạn mới phải từ {{date}} trở đi.',
     renewPresets: 'Chọn nhanh hạn mới',
     presetMonths: '+{{count}} tháng',
@@ -1197,21 +1194,21 @@ export default {
     renewedBy: 'Người gia hạn',
     oldToNew: 'Hạn cũ → hạn mới',
     renewalsEmpty: 'Chưa có lượt gia hạn nào.',
-    renewalsEmptyHint: 'Gia hạn ở danh sách hoặc trang hồ sơ — mỗi lượt sẽ hiện ở đây.',
+    renewalsEmptyHint: 'Mỗi lượt gia hạn sẽ hiện ở đây.',
     renewalsEmptyFiltered: 'Không có lượt gia hạn nào trong khoảng ngày này.',
     renewalsRange: 'Khoảng ngày gia hạn',
     renewalsFrom: 'Gia hạn từ ngày',
     renewalsTo: 'Gia hạn đến ngày',
     renewedSeeTabAction: 'Xem trong Đã gia hạn',
     tabList: 'Danh sách',
-    empty: 'Không có gì sắp hết hạn trong cửa sổ này.',
-    emptyHint: 'Nới cửa sổ ra 90 hoặc 180 ngày để nhìn xa hơn.',
+    empty: 'Không có gì sắp hết hạn trong khoảng này.',
+    emptyHint: 'Chọn khoảng dài hơn, vd 90 hoặc 180 ngày.',
     /* Rỗng vì ô số đang bật, KHÁC với rỗng vì cửa sổ ngày quá hẹp — hai nguyên nhân, hai lời
        khuyên. Nói nhầm thì người dùng đi nới cửa sổ, vẫn rỗng, và không hiểu vì sao. */
     emptyFiltered: 'Không có mục nào ở nhóm đang chọn.',
     emptyFilteredHint: 'Bấm lại ô số đang bật để xem toàn bộ danh sách.',
     /* Một nguồn hạn lỗi (EX-002): phần còn lại vẫn hiện, nhưng phải nói là có thể thiếu. */
-    failedKinds: 'Không đọc được: {{kinds}} — danh sách và số đếm có thể thiếu.',
+    failedKinds: 'Không đọc được: {{kinds}}. Danh sách và số đếm có thể thiếu.',
     kpiIncomplete: 'Có thể còn nhiều hơn — không đọc được: {{kinds}}',
   },
   digest: {
@@ -1224,21 +1221,19 @@ export default {
     test: 'Gửi thử',
     /* Chữ "thử" dễ đọc thành "gửi vào đâu đó an toàn". Câu hỏi lại phải nói thẳng là THẬT,
        và nêu đích danh người nhận — đó mới là thứ giúp người dùng dừng đúng lúc. */
-    confirmTest:
-      'Gửi NGAY một email thật tới: {{to}}? Đây không phải bản nháp — hộp thư của họ sẽ nhận ' +
-      'thư y như một kỳ gửi bình thường, và không thu lại được.',
-    testSent: 'Đã đẩy email thử ({{count}} mục) tới {{to}}.',
+    confirmTest: 'Gửi ngay một email thật tới {{to}}? Người nhận sẽ nhận thư như một kỳ gửi thường, không thu hồi được.',
+    testSent: 'Đã gửi email thử ({{count}} mục) tới {{to}}.',
     name: 'Tên luật',
-    nameRequired: 'Đặt tên cho luật này (vd "SSL sắp hết hạn → sếp").',
+    nameRequired: 'Đặt tên cho luật, vd "SSL sắp hết hạn → sếp".',
     scope: 'Theo dõi loại',
-    scopeHint: 'Không tick loại nào = theo dõi MỌI loại, kể cả loại thêm về sau.',
+    scopeHint: 'Không tick loại nào là theo dõi mọi loại, kể cả loại thêm về sau.',
     allKinds: 'Mọi loại',
     withinDays: 'Trong vòng (ngày)',
     withinHint: 'Số ngày nhìn tới, từ {{min}} tới {{max}}.',
     withinInvalid: 'Nhập số ngày từ {{min}} tới {{max}}, chỉ gồm chữ số.',
     within: 'Trong {{days}} ngày tới',
     recipients: 'Người nhận',
-    recipientsHint: 'Nhiều email cách nhau bằng dấu phẩy. Người nhận không cần có tài khoản IMS.',
+    recipientsHint: 'Nhiều email cách nhau bằng dấu phẩy. Không cần có tài khoản IMS.',
     recipientsRequired: 'Nhập ít nhất một email người nhận.',
     recipientsInvalid: 'Email chưa đúng dạng: {{emails}}',
     recipientsParsed: 'Người nhận đã nhập',
@@ -1247,7 +1242,7 @@ export default {
     recipientAdd: 'Thêm {{email}}',
     schedule: 'Kỳ gửi',
     active: 'Đang chạy',
-    activeHint: 'Tắt để tạm ngưng mà không mất cấu hình.',
+    activeHint: 'Tắt để tạm ngưng, giữ nguyên cấu hình.',
     paused: 'Đang tạm ngưng',
     pause: 'Tạm ngưng',
     resume: 'Chạy lại',
@@ -1261,19 +1256,19 @@ export default {
     previewSummary: 'Nếu gửi lúc này, thư có {{total}} mục: {{expired}} đã quá hạn, {{upcoming}} sắp hết hạn.',
     previewTo: 'Gửi tới: {{to}}',
     previewEmpty: 'Kỳ này chưa có mục nào',
-    previewEmptyHint: 'Không có gì cần chú ý thì hệ thống KHÔNG gửi thư rỗng.',
+    previewEmptyHint: 'Kỳ không có mục nào thì hệ thống không gửi thư.',
     previewItem: 'Mục',
     previewKind: 'Loại',
     previewEnd: 'Hết hạn',
     previewLeft: 'còn {{days}} ngày',
     previewOverdue: 'đã quá hạn {{days}} ngày',
     empty: 'Chưa có luật gửi báo cáo nào.',
-    emptyHint: 'Tạo một luật để sếp và team nhận đúng thứ cần, không bị spam từng món.',
+    emptyHint: 'Tạo luật để mỗi người nhận email tổng hợp đúng thứ họ cần.',
     readOnly: 'Bạn xem được luật nhưng không sửa được. Cần đổi thì nhờ Quản trị.',
-    confirmDelete: 'Xóa luật "{{name}}"? Sẽ không còn email tổng hợp theo luật này nữa.',
+    confirmDelete: 'Xóa luật "{{name}}"? Luật này sẽ thôi gửi email.',
   },
   accounts: {
-    searchPlaceholder: 'Tìm kiếm theo tên hoặc email',
+    searchPlaceholder: 'Tìm theo tên hoặc email',
     saveProfileFailed: 'Không lưu được hồ sơ.',
     createFailed: 'Không tạo được tài khoản.',
     title: 'Người dùng IMS',
@@ -1287,7 +1282,7 @@ export default {
     phone: 'Số điện thoại',
     birthDate: 'Ngày sinh',
     employeeCode: 'Mã nhân viên',
-    employeeCodeHint: 'Mã bên Nhân sự dùng để đối chiếu. Không trùng nhau giữa các tài khoản.',
+    employeeCodeHint: 'Mã bên Nhân sự, không trùng giữa các tài khoản.',
     totpRequiredHint: 'Người này phải gõ mã 6 số mỗi lần đăng nhập.',
     role: 'Vai trò',
     status: 'Trạng thái',
@@ -1309,35 +1304,22 @@ export default {
     disable: 'Vô hiệu hóa',
     reactivate: 'Bật lại',
     temporaryPasswordOf: 'Mật khẩu tạm — {{who}}',
-    temporaryPasswordNote:
-      'Đọc mật khẩu này cho người dùng qua kênh an toàn. Hệ thống sẽ không hiển thị lại, ' +
-      'và cũng không có cách nào xem lại — đóng hộp này là mất. Chưa ghi lại được thì đừng đóng.',
+    temporaryPasswordNote: 'Đưa mật khẩu này cho người dùng qua kênh an toàn. Đóng hộp là không xem lại được — ghi lại trước đã.',
     temporaryPasswordDone: 'Tôi đã ghi lại mật khẩu này',
-    confirmLock:
-      'Khóa tài khoản {{name}}? Mọi phiên đang mở sẽ bị đăng xuất ngay. Đây là khóa TẠM — ' +
-      'dùng khi nghi tài khoản bị chiếm, và mở lại được bất cứ lúc nào.',
-    confirmDisable:
-      'Vô hiệu hóa tài khoản {{name}}? Mọi phiên đang mở sẽ bị đăng xuất ngay. Trạng thái này ' +
-      'dành cho người đã nghỉ hẳn — người dùng sẽ được bảo liên hệ SA, chứ không phải chờ mở.',
-    confirmReactivate:
-      'Cho tài khoản {{name}} hoạt động lại? Người dùng đăng nhập được ngay bằng mật khẩu cũ. ' +
-      'Nếu nghi mật khẩu đã lộ thì đặt lại mật khẩu trước rồi hãy bật.',
-    confirmResetPassword:
-      'Đặt lại mật khẩu cho {{name}}? Mọi phiên đang mở của người này bị đóng ngay, và người ' +
-      'dùng phải đổi mật khẩu ở lần đăng nhập tới.',
-    confirmResetTotp: 'Đặt lại xác thực 2 lớp cho {{name}}? Người dùng sẽ phải quét lại mã QR.',
+    confirmLock: 'Mọi phiên đang mở của {{name}} bị đăng xuất ngay. Khóa tạm khi nghi bị chiếm tài khoản, mở lại được bất cứ lúc nào.',
+    confirmDisable: 'Mọi phiên đang mở của {{name}} bị đăng xuất ngay. Dùng cho người đã nghỉ hẳn; họ sẽ được báo liên hệ Super Admin.',
+    confirmReactivate: '{{name}} đăng nhập được ngay bằng mật khẩu cũ. Nghi mật khẩu đã lộ thì đặt lại mật khẩu trước.',
+    confirmResetPassword: 'Mọi phiên đang mở của {{name}} bị đóng ngay; lần đăng nhập tới phải đổi mật khẩu.',
+    confirmResetTotp: '{{name}} sẽ phải quét lại mã QR ở lần đăng nhập tới.',
     /* "Phiên NÀY" là chữ chỉ có nghĩa khi người đọc còn nhìn thấy cái bảng — mà hộp thoại
        vừa che nó đi. Nêu thẳng IP và lần hoạt động gần nhất: đó là hai thứ phân biệt được
        phiên của chính mình với phiên của kẻ đang chiếm tài khoản. */
     /* Câu hỏi phải dùng đúng động từ của cái nút đã mở ra nó (`killSession` = 'Đóng phiên').
        Đợt D 12/09 đổi cái NÚT khỏi tiếng lóng "đá phiên" nhưng bỏ quên câu hỏi bên trong. */
-    confirmKillSession:
-      'Đóng phiên đăng nhập từ IP {{ip}} (hoạt động gần nhất {{seen}})? Người đang dùng phiên đó ' +
-      'bị đăng xuất ngay. Nếu đó là phiên của chính bạn thì bạn sẽ phải đăng nhập lại.',
-    sessionKilled: 'Đã đóng phiên đó — người dùng bị đăng xuất ngay.',
+    confirmKillSession: 'Đóng phiên từ IP {{ip}} (hoạt động gần nhất {{seen}})? Người dùng phiên đó bị đăng xuất ngay; nếu là phiên của bạn thì bạn phải đăng nhập lại.',
+    sessionKilled: 'Đã đóng phiên.',
     killAllSessions: 'Đóng tất cả phiên',
-    confirmKillAllSessions:
-      'Đóng mọi phiên đăng nhập của {{name}}? Người đó bị đăng xuất khỏi mọi máy ngay.',
+    confirmKillAllSessions: '{{name}} bị đăng xuất khỏi mọi máy ngay.',
     killAllIncludeCurrent: 'Đóng cả phiên bạn đang dùng',
     killAllIncludeCurrentHint: 'Không tick thì phiên trên máy này được giữ lại.',
     allSessionsKilled: 'Đã đóng {{count}} phiên.',
@@ -1359,9 +1341,7 @@ export default {
     statusDisabled: 'Đã vô hiệu hóa',
     /* Mở khóa hỏi lại ngắn: nút nằm sát "Đặt lại mật khẩu" và "Vô hiệu hóa", bấm trượt trên
        điện thoại là mở lại một tài khoản đang nghi bị chiếm. */
-    confirmUnlock:
-      'Mở khóa tài khoản {{name}}? Người dùng đăng nhập được ngay và bộ đếm gõ sai được xóa. ' +
-      'Nếu khóa vì nghi bị chiếm thì đặt lại mật khẩu trước.',
+    confirmUnlock: '{{name}} đăng nhập được ngay, bộ đếm gõ sai được xóa. Khóa vì nghi bị chiếm thì đặt lại mật khẩu trước.',
     toastLocked: 'Đã khóa {{name}}.',
     toastUnlocked: 'Đã mở khóa {{name}}.',
     toastDisabled: 'Đã vô hiệu hóa {{name}}.',
@@ -1372,11 +1352,8 @@ export default {
     totpStateOptional: 'Không bắt buộc',
     totpRequireOn: 'Bắt buộc 2 lớp khi đăng nhập',
     totpRequireOff: 'Bỏ bắt buộc 2 lớp khi đăng nhập',
-    confirmTotpRequireOn:
-      'Bắt {{name}} gõ mã 2 lớp mỗi lần đăng nhập? Chưa cài thì lần đăng nhập tới sẽ phải cài ngay.',
-    confirmTotpRequireOff:
-      'Bỏ bắt buộc 2 lớp khi đăng nhập cho {{name}}? Từ giờ chỉ cần mật khẩu là vào được — ' +
-      'mật khẩu lộ là tài khoản mất. Két sắt vẫn đòi mã 2 lớp như cũ.',
+    confirmTotpRequireOn: 'Mỗi lần đăng nhập {{name}} phải gõ mã 2 lớp. Chưa cài thì lần đăng nhập tới phải cài ngay.',
+    confirmTotpRequireOff: '{{name}} chỉ cần mật khẩu là đăng nhập được — lộ mật khẩu là mất tài khoản. Két sắt vẫn đòi mã 2 lớp.',
     toastTotpRequireOn: 'Đã bắt buộc 2 lớp cho {{name}}.',
     toastTotpRequireOff: 'Đã bỏ bắt buộc 2 lớp cho {{name}}.',
     showPassword: 'Hiện',
@@ -1393,7 +1370,7 @@ export default {
     reasonCompromised: 'Nghi bị chiếm tài khoản',
     reasonLeft: 'Nghỉ việc',
     reasonLongLeave: 'Nghỉ dài hạn',
-    offboardTitle: 'Vô hiệu hóa KHÔNG tự gỡ những thứ người này đang giữ — kiểm tiếp:',
+    offboardTitle: 'Vô hiệu hóa không tự gỡ những thứ người này đang giữ — kiểm tiếp:',
     detail: 'Xem chi tiết',
     createdAt: 'Tạo lúc',
     kpiTotal: 'Tài khoản',
@@ -1420,15 +1397,14 @@ export default {
     changeRole: 'Đổi vai trò…',
     changeRoleSubmit: 'Đổi vai trò',
     changeRoleOf: 'Đổi vai trò: {{name}}',
-    changeRoleFromMember: 'Lên Quản trị / Super Admin là xem được MỌI két theo vai — quyền két đã gán riêng không còn tác dụng.',
-    changeRoleToMember: 'Hạ xuống Thành viên: người này mất quyền xem két theo vai — gán lại quyền két cần thiết ở màn Quyền két sắt.',
+    changeRoleFromMember: 'Lên Quản trị / Super Admin là xem được mọi két theo vai — quyền két gán riêng không còn tác dụng.',
+    changeRoleToMember: 'Hạ xuống Thành viên là mất quyền xem két theo vai — gán lại quyền két cần thiết ở màn Quyền két sắt.',
     toastRoleChanged: 'Đã đổi vai trò của {{name}} thành {{role}}.',
     resetAlsoUnlock: 'Mở khóa luôn (tài khoản đang bị khóa)',
     vaultAccess: 'Quyền két sắt',
     auditLog: 'Nhật ký thao tác',
     clearLockout: 'Gỡ tạm chặn',
-    confirmClearLockout:
-      'Gỡ tạm chặn cho {{name}}? Bộ đếm gõ sai và giãn chậm theo IP được xóa, người dùng thử đăng nhập lại được ngay.',
+    confirmClearLockout: 'Bộ đếm gõ sai của {{name}} được xóa, người dùng đăng nhập lại được ngay.',
     toastClearLockout: 'Đã gỡ tạm chặn cho {{name}}.',
     you: 'Bạn',
     tempLocked: 'Tạm chặn tới {{time}} ({{count}} lần sai)',
@@ -1452,9 +1428,8 @@ export default {
     editTitle: 'Sửa hồ sơ: {{name}}',
     nextVaultAccess: 'Gán quyền két sắt',
     nextDevices: 'Gán thiết bị',
-    nextDevicesSearchHint:
-      'Danh sách thiết bị mở sẵn tìm theo "{{name}}" — máy đã ghi tên người này hiện ngay. Máy chưa ghi thì mở hồ sơ máy và điền "{{name}}" vào ô Người sử dụng.',
-    nextStepsNeedDone: 'Ghi lại mật khẩu trước — đi sang màn khác là hộp này đóng và không mở lại được.',
+    nextDevicesSearchHint: 'Danh sách thiết bị mở sẵn, tìm theo "{{name}}". Máy chưa ghi tên thì mở hồ sơ máy, điền "{{name}}" vào ô Người sử dụng.',
+    nextStepsNeedDone: 'Ghi lại mật khẩu trước — rời màn này là hộp đóng, không mở lại được.',
   },
   /* Danh sách phiên đăng nhập dùng chung (`ui/session-list.tsx`) — Hồ sơ và màn Tài khoản. */
   sessionList: {
@@ -1473,12 +1448,10 @@ export default {
        giờ" với "mình lỡ bấm Ẩn" hay "trình duyệt vừa lỗi" — và phản xạ là bấm Xem lần nữa,
        tức thêm một dòng nhật ký mở két cho một lần không cần thiết. */
     autoHidden: 'Đã tự ẩn giá trị. Bấm "Xem" nếu cần mở lại.',
-    intro:
-      'Nơi cất mật khẩu và license key. Giá trị được mã hóa, chỉ xem được qua bước xác thực 2 lớp — bảng dưới đây chỉ hiện tên gọi.',
+    intro: 'Nơi cất mật khẩu và license key, đã mã hóa. Xem giá trị phải nhập mã 2 lớp.',
     // Từ story 6.3, Member CÓ THỂ có quyền — chỉ là không có trên đối tượng NÀY. Câu cũ
     // ("chỉ Quản trị xem được") giờ vừa sai vừa làm người đọc thôi không đi hỏi nữa.
-    noPermission:
-      'Bạn không có quyền trên đối tượng này. Nếu cần, đề nghị Quản trị gán quyền cho bạn.',
+    noPermission: 'Bạn không có quyền trên đối tượng này. Cần thì nhờ Quản trị gán quyền.',
     /* Thuật ngữ két: "két" là nơi chứa của một hồ sơ, "ngăn" là một mật khẩu/khóa trong két.
        Không dùng chữ "secret" trên giao diện; "Xoá vĩnh viễn" để không trùng "Thu hồi sớm" của
        break-glass (cắt quyền tạm, không mất dữ liệu). */
@@ -1486,16 +1459,14 @@ export default {
     edit: 'Sửa thông tin',
     rotate: 'Đổi giá trị',
     rotateHint: 'Giá trị mới sẽ mã hóa lại từ đầu. Giá trị cũ không xem lại được nữa.',
-    rotateOrder:
-      'IMS KHÔNG nối tới máy chủ hay thiết bị: lưu ở đây không đổi gì trên hệ thống thật. Đổi trên hệ thống thật TRƯỚC (việc này ảnh hưởng hệ thống đang chạy) và đăng nhập thử bằng giá trị mới, rồi mới lưu vào két — lưu xong là giá trị cũ không xem lại được.',
+    rotateOrder: 'IMS không đổi gì trên thiết bị thật. Đổi trên thiết bị và đăng nhập thử bằng giá trị mới TRƯỚC, rồi mới lưu vào két — lưu xong giá trị cũ không xem lại được.',
     revoke: 'Xóa vĩnh viễn',
     revoked: 'Đã xóa vĩnh viễn ngăn.',
     typeLabelToConfirm: 'Gõ lại tên ngăn để xác nhận: {{label}}',
     noPermissionTitle: 'Bạn chưa có quyền xem két này',
     needsApproval: 'Cần duyệt',
     lastDenied: 'Lần xin lúc {{at}} bị từ chối:',
-    requestBlock:
-      'Két này cần được duyệt trước khi xem ({{count}} ngăn). Một lần xin là cho cả két, có hạn giờ.',
+    requestBlock: 'Két này cần được duyệt trước khi xem ({{count}} ngăn). Một lần xin mở cả két, có hạn giờ.',
     /* Q-15: hạn đổi mật khẩu = ngày đổi + `dashboard.secret_stale_days` (mặc định 180); số
        ngày do server tính. Đổi giá trị xong là đếm lại từ đầu. */
     changedCol: 'Đổi lần cuối',
@@ -1519,9 +1490,7 @@ export default {
     /* Câu cũ: "…nhưng vết cất vẫn còn trong nhật ký." Nhật ký giữ VẾT (ai cất, lúc nào),
        KHÔNG giữ GIÁ TRỊ — mà câu ấy đọc ra như mật khẩu còn nằm đâu đó lấy lại được. Đây là
        thao tác xoá vĩnh viễn một giá trị đã mã hóa; phải nói thẳng ra như vậy. */
-    confirmRevoke:
-      'Xóa vĩnh viễn "{{label}}"? GIÁ TRỊ mật khẩu bị xóa — không có cách nào xem lại, ' +
-      'kể cả Super Admin. Nhật ký chỉ giữ vết ai đã cất và lúc nào. Chưa có bản khác thì đừng xóa.',
+    confirmRevoke: 'Xóa vĩnh viễn "{{label}}"? Giá trị bị xóa, không ai xem lại được, kể cả Super Admin. Chưa có bản khác thì đừng xóa.',
     saved: 'Đã lưu vào két.',
     rotated: 'Đã đổi giá trị.',
     empty: 'Két chưa có ngăn nào',
@@ -1535,7 +1504,7 @@ export default {
     kind_other: 'Khác',
     username: 'Tên đăng nhập',
     value: 'Giá trị',
-    valueHint: 'Nhập một lần. Hệ thống mã hóa ngay, không lưu bản rõ ở đâu cả.',
+    valueHint: 'Hệ thống mã hóa ngay, không lưu bản rõ.',
     valueRequired: 'Chưa nhập giá trị cần cất.',
     newValue: 'Giá trị mới',
     note: 'Ghi chú',
@@ -1552,7 +1521,7 @@ export default {
     strengthMissing: '(chưa đạt)',
     /* Cảnh báo, KHÔNG chặn: phần lớn secret là mật khẩu của thiết bị ngoài đã có sẵn — chặn
        cứng chỉ đẩy người dùng ghi mật khẩu thật vào ô Ghi chú, chỗ không mã hóa. */
-    strengthWeak: 'Giá trị này chưa đủ mạnh — vẫn lưu được, nhưng nếu là mật khẩu do mình đặt thì nên đổi.',
+    strengthWeak: 'Giá trị chưa đủ mạnh — vẫn lưu được, nhưng nếu do mình đặt thì nên đổi.',
     autoHideShort: 'còn lại trước khi tự ẩn',
     revealLogged: 'Lượt xem này đã được ghi nhật ký.',
     hideNow: 'Ẩn ngay',
@@ -1561,18 +1530,16 @@ export default {
     requestTitleCount: 'Xin mở két ({{count}} ngăn)',
     requestReasonCount: 'Đã gõ {{count}} ký tự · tối thiểu {{min}}.',
     requestHoursHintMax: 'Chọn nhanh hoặc gõ số giờ — tối đa {{hours}} giờ. Xin vừa đủ việc.',
-    requestHint:
-      'Yêu cầu sẽ gửi cho Quản trị. Khi được duyệt, bạn xem được trong đúng thời hạn cấp — hết giờ là tự cắt, không cần ai đóng.',
+    requestHint: 'Yêu cầu gửi tới Quản trị. Được duyệt thì bạn xem được tới hết số giờ cấp, rồi tự cắt.',
     requestReason: 'Lý do',
     requestReasonPlaceholder: 'Việc gì · ở đâu · vì sao cần mật khẩu (vd switch tầng 3 mất kết nối)',
     requestReasonRequired: 'Ghi rõ lý do — người duyệt cần biết để quyết.',
     requestHours: 'Xin trong bao lâu (giờ)',
-    requestHoursHint: 'Xin vừa đủ. Vượt trần hệ thống thì sẽ được kẹp xuống và báo lại.',
-    requestHoursInvalid: 'Số giờ phải là một số nguyên lớn hơn 0. Ví dụ: 4',
+    requestHoursHint: 'Xin vừa đủ. Quá mức tối đa sẽ bị giảm xuống.',
+    requestHoursInvalid: 'Số giờ phải là số nguyên lớn hơn 0, vd 4.',
     requestSend: 'Gửi yêu cầu',
     requestSent: 'Đã gửi yêu cầu. Quản trị sẽ nhận được email.',
-    requestHoursClamped:
-      'Đã gửi yêu cầu, nhưng số giờ xin vượt trần hệ thống — chỉ còn {{hours}} giờ khi được duyệt.',
+    requestHoursClamped: 'Đã gửi yêu cầu. Số giờ xin vượt mức tối đa nên chỉ còn {{hours}} giờ khi được duyệt.',
     awaitingApproval: 'Đang chờ duyệt',
     // Nhánh CUỐI của badge: không xem được, không xin được, mà cũng không có phiếu nào đang
     // treo. Phải là một câu THẬT chứ không mượn câu "Đang chờ duyệt" — xem F-07.
@@ -1589,31 +1556,25 @@ export default {
     tierNote_whitelist: 'Bạn xem thẳng được — vẫn phải gõ mã 6 số mỗi lần.',
     tierNote_denied: 'Bạn không có quyền trên đối tượng này.',
     /* Khối trạng thái khi đang có phiếu treo — người xin rút được, và khung tự làm mới. */
-    pendingSince: 'Yêu cầu gửi lúc {{at}} đang chờ Quản trị quyết. Khung này tự làm mới khi có quyết định.',
+    pendingSince: 'Yêu cầu gửi lúc {{at}} đang chờ Quản trị duyệt. Khung này tự cập nhật khi có kết quả.',
     pendingDetail: 'Xem yêu cầu',
     /* Q-15: yêu cầu đang chờ không gắn phiên — người xin không phải ngồi canh trang. */
-    pendingCanLeave:
-      'Bạn có thể đóng trang — khi được duyệt sẽ có thư báo. Đăng nhập lại, mở két này và bấm "Xem", nhập mã 6 số.',
+    pendingCanLeave: 'Bạn có thể đóng trang — được duyệt sẽ có thư báo. Khi đó mở két này, bấm "Xem" và nhập mã 6 số.',
     pendingExpiresIn: 'Không ai duyệt trong {{hours}} giờ thì yêu cầu tự hết hạn.',
     /* Đã duyệt, chưa xem lần nào: lần xem đầu gắn quyền vào phiên đang xem. */
     approvedReady: 'Đã được duyệt — bấm "Xem" ở ngăn cần mở và nhập mã 6 số.',
     approvedReadyLeft: 'Quyền còn {{left}} (tới {{until}}), tính từ lúc duyệt.',
-    requestSessionNote:
-      'Được duyệt thì lần bấm "Xem" đầu tiên gắn quyền vào phiên đăng nhập lúc đó — đăng xuất hay hết phiên là hết, muốn xem tiếp phải xin lại.',
-    approvedReadyNote:
-      'Lần xem đầu tiên gắn quyền vào phiên đăng nhập này — đăng xuất hay hết phiên là hết, muốn xem tiếp phải xin lại.',
+    requestSessionNote: 'Quyền gắn vào phiên đăng nhập lúc bạn bấm "Xem" lần đầu — đăng xuất hay hết phiên là phải xin lại.',
+    approvedReadyNote: 'Lần xem đầu gắn quyền vào phiên đăng nhập này — đăng xuất hay hết phiên là phải xin lại.',
     /* Q-15: quyền gắn với phiên đã xem lần đầu. Người xin phải đọc được trước, không thì đăng
        nhập lại rồi tưởng hệ thống làm mất quyền. */
-    sessionBound:
-      'Quyền này gắn với phiên đăng nhập đang dùng — đăng xuất hay hết phiên là hết, đăng nhập lại phải xin lại.',
-    otherSessionHeld:
-      'Quyền đã duyệt của bạn đã gắn với một phiên đăng nhập khác (phiên đã xem lần đầu) nên không dùng được ở đây. Gửi yêu cầu mới.',
+    sessionBound: 'Quyền gắn với phiên đăng nhập này — đăng xuất hay hết phiên là phải xin lại.',
+    otherSessionHeld: 'Quyền đã duyệt đang gắn với một phiên đăng nhập khác của bạn nên không dùng được ở đây. Gửi yêu cầu mới.',
     release: 'Trả quyền',
-    releaseConfirm:
-      'Đóng két với bạn ngay bây giờ? Muốn xem lại thì phải gửi yêu cầu mới và chờ duyệt.',
+    releaseConfirm: 'Két đóng với bạn ngay. Muốn xem lại phải gửi yêu cầu mới và chờ duyệt.',
     released: 'Đã trả quyền — két đã đóng với bạn.',
     /* Bước trong hộp (VLT-062): nút rời bước gõ mã, về lại danh sách ngăn của cùng hộp. */
-    stepBack: '‹ Quay lại danh sách ngăn',
+    stepBack: '‹ Quay lại',
   },
   ipam: {
     title: 'Địa chỉ IP',
@@ -1622,7 +1583,7 @@ export default {
     railLabel: 'Danh sách dải mạng',
     vlan: 'VLAN',
     vlanBadge: 'VLAN {{vlan}}',
-    vlanHint: 'Số VLAN 802.1Q (1–4094). Để trống nếu dải này không gắn VLAN nào.',
+    vlanHint: 'VLAN 802.1Q (1–4094). Để trống nếu dải không gắn VLAN.',
     vlanInvalid: 'VLAN phải là số nguyên từ 1 đến 4094.',
     filterAll: 'Tất cả',
     addSubnet: 'Khai dải mới',
@@ -1635,7 +1596,7 @@ export default {
     phCidr: 'vd 172.16.10.0/24',
     phVlan: 'vd 20',
     phGateway: 'vd 172.16.10.1',
-    cidrHint: 'Dạng 172.16.10.0/24. Gõ IP bất kỳ kèm /24 cũng được — hệ thống tự quy về địa chỉ mạng.',
+    cidrHint: 'Dạng 172.16.10.0/24. Gõ IP bất kỳ kèm /24 cũng được, hệ thống tự quy về địa chỉ mạng.',
     name: 'Tên gọi',
     site: 'Site',
     noSite: 'Không gắn site',
@@ -1644,35 +1605,30 @@ export default {
     usageUsed: '{{used}}/{{total}} đang dùng',
     usageOf: 'Mức sử dụng dải {{cidr}}',
     gateway: 'Gateway',
-    gatewayHint:
-      'Địa chỉ gateway của chính dải này (vd 172.16.10.1). Để trống nếu dải không có gateway.',
+    gatewayHint: 'Để trống nếu dải không có gateway.',
     /* Hai nút cho hai tình huống — màn hình tự chọn theo `addressCount`, người dùng không phải đoán. */
     hide: 'Ngừng dùng',
     hideSubnetTitle: 'Ngừng dùng dải {{cidr}}',
-    hideHint: 'Dải Ở LẠI danh sách, gạch ngang và xám đi — đây không phải xóa.',
+    hideHint: 'Dải vẫn ở danh sách, gạch ngang và xám đi — không phải xóa.',
     /* Trạng thái vô hiệu hóa hiện NGAY trên thẻ dải (28/08/2026). Trước đó dải vừa vô hiệu
        hóa là biến mất khỏi danh sách, và người dùng đọc đúng cái đó là "đã bị xóa hẳn". */
     disabledBadge: 'Đã ngừng dùng',
     disabledSince: 'Ngừng dùng {{date}} · {{reason}}',
     restore: 'Dùng lại',
     restoreTitle: 'Dùng lại dải {{cidr}}?',
-    restoreConfirm:
-      'Dải {{cidr}} trở lại danh sách như cũ, và {{count}} hồ sơ IP đã tắt cùng nó cũng sống lại. Những hồ sơ bị xóa lẻ trước đó thì không — chúng đã xóa vì lý do riêng.',
+    restoreConfirm: 'Dải {{cidr}} trở lại như cũ, {{count}} hồ sơ IP tắt cùng dải cũng dùng lại được.',
     subnetRestored: 'Đã dùng lại dải.',
     /* Vì sao dải đã tắt vẫn KHÔNG xóa hẳn được: xóa là mất luôn thứ AC 5.2 bắt giữ vĩnh viễn,
        và `ip_history` là bảng CHỈ-THÊM (AD-13) nên tầng DB cũng không cho xóa. Nói thẳng ra
        trên thẻ, thay vì lặng lẽ giấu nút Xóa và để người dùng tự đoán. */
     keptForHistory: 'Giữ lại vì còn {{count}} hồ sơ IP mang lịch sử — không xóa hẳn được.',
-    voidedSlotHint:
-      'Dải này đã ngừng dùng. Hồ sơ IP hiện ra để tra cứu, không cấp hay sửa được — dùng lại dải trước đã.',
+    voidedSlotHint: 'Dải này đã ngừng dùng. Hồ sơ IP chỉ để tra cứu, không cấp hay sửa được — dùng lại dải trước.',
     deleteSubnetTitle: 'Xóa hẳn dải {{cidr}}?',
-    deleteSubnetConfirm:
-      'Dải {{cidr}} chưa có hồ sơ IP nào nên xóa hẳn được — bản ghi biến mất khỏi hệ thống, cần thì khai lại. Không hoàn tác được.',
+    deleteSubnetConfirm: 'Dải {{cidr}} chưa có hồ sơ IP nào nên xóa hẳn được. Không hoàn tác được.',
     subnetDeleted: 'Đã xóa dải.',
     reason: 'Lý do',
     reasonPlaceholder: 'vd: khai nhầm dải',
-    voidAddressHint:
-      'Dùng cho bản ghi KHAI NHẦM: hồ sơ bị xóa, địa chỉ trở lại thành chỗ trống và nhập lại được ngay. Không khôi phục được trên giao diện — vết vẫn nằm trong Nhật ký hệ thống. Máy đang thật sự dùng địa chỉ này thì bấm Thu hồi IP — nó giữ lại lịch sử "IP này từng của máy nào".',
+    voidAddressHint: 'Chỉ dùng cho hồ sơ khai nhầm: hồ sơ bị xóa, địa chỉ thành ô trống, nhập lại được ngay. Máy đang thật sự dùng IP này thì bấm Thu hồi IP để giữ lịch sử.',
     voidAddressPlaceholder: 'vd: gõ nhầm địa chỉ',
     /* Q-15: xóa để nhập lại — không có nút khôi phục, nên chữ "Xóa" nói đúng việc người dùng
        thấy. Tiêu đề hộp nói rõ HỒ SƠ NHẬP NHẦM để không lẫn với Thu hồi IP ngay trên nó. */
@@ -1681,7 +1637,7 @@ export default {
     addressVoided: 'Đã xóa hồ sơ IP — nhập lại được ngay.',
     /* Bảng rỗng phải nói VÌ SAO rỗng — hai nguyên nhân, hai lời khuyên khác hẳn nhau. */
     slotEmpty: 'Không có dòng nào để hiện.',
-    slotEmptyAll: 'Dải này chưa có địa chỉ nào, kể cả ô trống — kiểm lại khai báo CIDR.',
+    slotEmptyAll: 'Dải này chưa có địa chỉ nào — kiểm lại CIDR.',
     slotEmptyFiltered: 'Không có địa chỉ nào ở trạng thái đang chọn. Bấm "Tất cả" để xem cả dải.',
     /* Chỉ hiện trong dải đã ngừng dùng: hồ sơ tắt CÙNG dải, sống lại khi dùng lại dải. */
     voidedBadge: 'Đã ngừng dùng',
@@ -1713,7 +1669,7 @@ export default {
     paneSearch: 'Lọc trong dải: IP, máy, người dùng, ghi chú…',
     lookup: 'Tra IP hoặc máy…',
     lookupButton: 'Tra',
-    lookupHint: 'Gõ một IP để mở đúng dải và dòng của nó; gõ mã/tên máy hoặc người dùng để xem mọi IP liên quan.',
+    lookupHint: 'Gõ IP để mở đúng dòng của nó; gõ mã/tên máy hoặc người dùng để xem mọi IP liên quan.',
     lookupNoSubnet: 'Không dải nào đang dùng chứa {{ip}}.',
     lookupResults: 'IP khớp "{{q}}"',
     lookupEmpty: 'Không có hồ sơ IP nào khớp "{{q}}".',
@@ -1724,12 +1680,10 @@ export default {
     ipSaved: 'Đã lưu hồ sơ IP.',
     history: 'Lịch sử',
     historyOf: 'Lịch sử của {{address}}',
-    historyEmpty: 'Chưa có thay đổi nào được ghi nhận cho IP này.',
+    historyEmpty: 'IP này chưa có thay đổi nào.',
     transitioned: 'Đã đổi trạng thái.',
-    reasonHint: 'Ghi lại để sau này còn tra. Không bắt buộc, nhưng nên có.',
-    reclaimHint:
-      'Thu hồi sẽ gỡ thiết bị và người dùng khỏi hồ sơ, trả địa chỉ về danh sách IP còn trống. ' +
-      'Lịch sử vẫn giữ nguyên — sau này vẫn tra được IP này từng của ai.',
+    reasonHint: 'Không bắt buộc, nhưng nên ghi để sau này tra.',
+    reclaimHint: 'Gỡ thiết bị và người dùng khỏi hồ sơ, trả địa chỉ về ô trống. Lịch sử vẫn giữ để tra IP này từng của ai.',
     trAssign: 'Cấp IP',
     trReclaim: 'Thu hồi IP',
     nextFree: 'Cấp IP trống kế tiếp',
@@ -1748,14 +1702,12 @@ export default {
     pickSubnet: 'Chọn dải mạng',
     subnetOption: '{{cidr}}{{vlan}} · còn {{free}}',
     voidedBy: 'Ngừng dùng ngày {{date}} bởi {{by}} — lý do: {{reason}}',
-    voidedNeverUsed:
-      'Dải này chưa từng cấp IP nào. SA/Admin xóa hẳn được ở menu ⋯ của thẻ dải bên trái.',
+    voidedNeverUsed: 'Dải này chưa từng cấp IP nào. Super Admin/Quản trị xóa hẳn được ở menu ⋯ của thẻ dải.',
     reclaimOwner: 'Đang cấp cho {{who}}',
     reclaimSince: 'từ {{date}}',
-    reclaimNatWarn:
-      'Còn {{count}} luật NAT trỏ vào {{address}}. Gỡ các luật này trước — còn luật thì hệ thống từ chối thu hồi:',
+    reclaimNatWarn: 'Còn {{count}} luật NAT trỏ vào {{address}}. Gỡ các luật này trước mới thu hồi được:',
     reclaimNatLink: 'Mở sổ NAT',
-    reclaimMenuHint: 'Trả IP về pool, giữ lịch sử',
+    reclaimMenuHint: 'Trả IP về ô trống, giữ lịch sử',
     voidMenuHint: 'Chỉ cho bản ghi khai nhầm',
     freedOn: 'Thu hồi {{date}}',
     assignedByLine: 'bởi {{by}}',
@@ -1775,8 +1727,7 @@ export default {
     gatewayUse: 'Dùng {{gateway}}',
     hideImpactUsed: '{{count}} IP đang dùng vẫn hiện để tra cứu, nhưng không cấp hay sửa được.',
     hideImpactHistory: 'Lịch sử "IP nào từng của máy nào" giữ nguyên.',
-    hideImpactNat:
-      '{{count}} luật NAT trong Sổ NAT còn trỏ vào IP của dải này — gỡ các luật đó trước, nếu không hệ thống sẽ không cho ngừng dùng dải.',
+    hideImpactNat: '{{count}} luật NAT còn trỏ vào IP của dải này — gỡ các luật đó trước mới ngừng dùng được dải.',
     hideImpactRestore: 'Dùng lại được bất cứ lúc nào.',
   },
   nat: {
@@ -1788,8 +1739,7 @@ export default {
     saved: 'Đã lưu luật NAT.',
     removed: 'Đã gỡ luật NAT.',
     empty: 'Chưa có luật NAT nào',
-    emptyHint:
-      'Mỗi lần mở cổng trên Draytek thì ghi vào đây — bên kiểm toán sẽ hỏi, và cuốn sổ này là câu trả lời.',
+    emptyHint: 'Mở cổng trên router thì ghi vào đây để sau này tra được.',
     search: 'Tìm theo cổng, IP, người dùng hoặc lý do…',
     site: 'Site',
     allSites: 'Mọi site',
@@ -1798,12 +1748,11 @@ export default {
     servicePickerPlaceholder: 'Chọn dịch vụ có sẵn…',
     serviceSearchOf: 'Lọc dịch vụ cho {{field}}',
     serviceAdd: '+ Thêm dịch vụ',
-    serviceEmpty: 'Chưa có dịch vụ nào khớp. Bấm "+ Thêm dịch vụ" để khai một lần rồi dùng lại mãi.',
-    routerHint: 'Router/firewall mang luật này — lấy từ kho thiết bị, chưa có thì thêm ngay trong danh sách.',
+    serviceEmpty: 'Chưa có dịch vụ nào khớp. Bấm "+ Thêm dịch vụ" để khai mới.',
+    routerHint: 'Router/firewall mang luật này, chọn từ kho thiết bị.',
     routerSearch: 'Chọn hoặc gõ để lọc…',
     routerShowAll: 'Hiện mọi thiết bị (không chỉ loại Router/Firewall)',
-    routerNoType:
-      'Chưa loại thiết bị nào được đánh dấu Router/Firewall nên đang hiện mọi thiết bị. Bật cờ ở Danh mục → Loại thiết bị.',
+    routerNoType: 'Chưa loại thiết bị nào được đánh dấu Router/Firewall nên đang hiện mọi thiết bị. Đánh dấu ở Danh mục → Loại thiết bị.',
     protocol: 'Giao thức',
     /*
      * `nat.protocolBoth` ĐÃ GỠ (23/09) — nó là bản thứ hai của `catalog.protocolBoth`, và hai
@@ -1817,13 +1766,12 @@ export default {
      * 'TCP' và 'UDP' viết hoa.
      */
     external: 'Cổng ngoài',
-    externalHint:
-      'Gõ "8080" hoặc "8000-8010" rồi Enter. Thêm được nhiều khoảng — mỗi khoảng thành một dòng riêng trong sổ, dùng chung router, IP trong và lý do.',
+    externalHint: 'Gõ "8080" hoặc "8000-8010" rồi Enter. Mỗi khoảng thành một dòng trong sổ, dùng chung router, IP trong và lý do.',
     // Ô port dạng chip
     portAdd: 'Thêm',
     portPlaceholder: '8080 hoặc 8000-8010',
     portRemove: 'Bỏ cổng {{port}}',
-    portOneOnly: 'Đang sửa một dòng nên chỉ giữ một khoảng cổng. Bấm ✕ ở trên rồi gõ khoảng mới.',
+    portOneOnly: 'Đang sửa một dòng nên chỉ giữ một khoảng cổng. Bấm ✕ rồi gõ khoảng mới.',
     portLeftover: 'Chưa nhận:',
     portRequired: 'Thêm ít nhất một cổng ngoài.',
     portErr_format: 'Chỉ nhận một số ("8080") hoặc một dải ("8000-8010").',
@@ -1837,13 +1785,11 @@ export default {
     sectionExternal: 'Cổng mở ra ngoài',
     sectionInternal: 'Chuyển tới máy bên trong',
     target: 'Máy đích (được NAT)',
-    targetHint: 'Máy trong kho mà cổng này dẫn tới. Chọn máy thì ô IP chỉ còn IP của chính máy đó.',
+    targetHint: 'Máy trong kho mà cổng này dẫn tới. Chọn máy thì ô IP chỉ còn IP của máy đó.',
     targetSearch: 'Tìm máy trong kho…',
-    targetNoIp:
-      'Máy này chưa có hồ sơ IP nào. Gõ tay được, nhưng sổ sẽ KHÔNG gắn luật về máy vừa chọn — máy đích suy ra từ hồ sơ IP. Muốn gắn đúng, khai IP cho máy ở màn Địa chỉ IP trước.',
-    targetIpsError: 'Không lấy được danh sách IP của máy — thử lại',
-    internalIpNotOfTarget:
-      'Địa chỉ này không thuộc máy đích vừa chọn. Chọn một IP của chính máy đó, hoặc bỏ chọn máy đích.',
+    targetNoIp: 'Máy này chưa có hồ sơ IP. Gõ tay được, nhưng luật sẽ không gắn về máy này — khai IP cho máy ở màn Địa chỉ IP trước.',
+    targetIpsError: 'Không lấy được danh sách IP của máy. Thử lại.',
+    internalIpNotOfTarget: 'Địa chỉ này không thuộc máy đích. Chọn IP của máy đó, hoặc bỏ chọn máy đích.',
     pickIp: 'Chọn IP của máy…',
     internalIpRequired: 'Chọn hoặc gõ IP của máy đích.',
     sectionWhy: 'Mở cho ai và vì sao',
@@ -1853,16 +1799,15 @@ export default {
     internalPort: 'Cổng trong',
     usedBy: 'Mở cho ai',
     usedByPlaceholder: 'Bộ phận hoặc tên người',
-    usedByHint: 'Người hoặc bộ phận dùng dịch vụ này. Đây là câu bên kiểm toán sẽ hỏi.',
+    usedByHint: 'Người hoặc bộ phận dùng dịch vụ này.',
     reason: 'Lý do mở',
-    reasonHint: 'Không có lý do thì sau này không ai dám đóng, và cổng cứ nằm mở mãi.',
+    reasonHint: 'Ghi lý do để sau này biết lúc nào đóng được.',
     enabled: 'Đang dùng',
-    enabledHint: 'Bỏ tick nếu luật đã tắt trên router nhưng vẫn muốn giữ trong sổ.',
+    enabledHint: 'Bỏ tick nếu luật đã tắt trên router nhưng vẫn giữ trong sổ.',
     disabled: 'Đã ngừng dùng',
     remove: 'Gỡ',
     removeTitle: 'Gỡ luật NAT {{ports}}',
-    removeHint:
-      'Luật không bị xóa khỏi hệ thống — chỉ gỡ khỏi sổ đang dùng. Bật chip "Đã gỡ" trên sổ NAT là xem lại được, kèm ngày gỡ, người gỡ và lý do: "cổng này đóng ngày nào, ai đóng" sẽ có người hỏi.',
+    removeHint: 'Luật chuyển sang nhóm "Đã gỡ", vẫn xem lại được kèm ngày, người gỡ và lý do.',
     bucketGroup: 'Lọc theo trạng thái luật',
     bucketOpen: 'Đang mở',
     bucketVoided: 'Đã gỡ',
@@ -1870,14 +1815,13 @@ export default {
     history: 'Lịch sử',
     historyOf: 'Lịch sử luật NAT {{ports}}',
     emptyFiltered: 'Không có luật nào ở trạng thái đang chọn.',
-    emptyFilteredHint: 'Bật thêm chip "Đang mở", "Đã ngừng dùng" hoặc "Đã gỡ" để xem.',
+    emptyFilteredHint: 'Bật thêm chip "Đang mở", "Đã ngừng dùng" hoặc "Đã gỡ".',
     removeReason: 'Lý do gỡ',
     removeReasonPlaceholder: 'vd: dịch vụ đã ngừng',
     colForward: 'Chuyển tiếp',
     status: 'Trạng thái',
     sensitive: 'Nhạy cảm',
-    sensitiveTitle:
-      'Cổng {{port}} là cổng hay bị quét và tấn công khi mở ra Internet (RDP, SSH, SMB, cơ sở dữ liệu…). Chỉ mở khi thật cần, và nên giới hạn IP nguồn trên router.',
+    sensitiveTitle: 'Cổng {{port}} hay bị quét và tấn công khi mở ra Internet (RDP, SSH, SMB, cơ sở dữ liệu…). Chỉ mở khi thật cần, nên giới hạn IP nguồn.',
     sensitiveOnly: 'Chỉ cổng nhạy cảm',
     allRouters: 'Mọi router',
     allProtocols: 'Mọi giao thức',
@@ -1891,20 +1835,18 @@ export default {
     disableRule: 'Ngừng dùng',
     enableRule: 'Dùng lại',
     disableTitle: 'Ngừng dùng luật NAT {{ports}}?',
-    disableMessage:
-      'Luật vẫn nằm trong sổ, mang nhãn "Đã ngừng dùng" — dùng khi đã tắt nó trên router. Lịch sử ghi lại ai tắt, lúc nào.',
+    disableMessage: 'Luật vẫn ở trong sổ với nhãn "Đã ngừng dùng". Dùng khi đã tắt luật trên router.',
     enableTitle: 'Dùng lại luật NAT {{ports}}?',
-    enableMessage: 'Luật trở lại "Đang mở" — chỉ bấm khi đã bật lại nó trên router. Lịch sử ghi lại ai bật, lúc nào.',
+    enableMessage: 'Luật trở lại "Đang mở". Chỉ bấm khi đã bật lại luật trên router.',
     toggled: 'Đã đổi trạng thái luật.',
     emptySearch: 'Không có luật nào khớp bộ lọc.',
-    emptySearchHint: 'Nới bộ lọc, hoặc xóa ô tìm để xem lại toàn bộ sổ.',
+    emptySearchHint: 'Nới bộ lọc hoặc xóa ô tìm.',
     note: 'Ghi chú',
-    noteHint: 'Chi tiết kỹ thuật, số phiếu yêu cầu, giới hạn IP nguồn… — KHÔNG ghi mật khẩu.',
-    ipNotInBook:
-      'IP {{ip}} chưa có trong sổ IP (hoặc đang trống) — luật sẽ không gắn được về máy nào. Cấp IP ở màn Địa chỉ IP trước nếu có thể.',
+    noteHint: 'Chi tiết kỹ thuật, số phiếu yêu cầu, giới hạn IP nguồn… Không ghi mật khẩu.',
+    ipNotInBook: 'IP {{ip}} chưa có trong sổ IP (hoặc đang trống) nên luật không gắn được về máy nào. Nên cấp IP ở màn Địa chỉ IP trước.',
     ipInBook: 'Trong sổ IP: {{owner}}',
     wanPrefix: 'WAN {{wan}} :',
-    wanTitle: 'IP WAN của đường truyền gắn router này (màn Đường truyền ISP)',
+    wanTitle: 'IP WAN của đường truyền gắn router này (màn Đường truyền)',
     ipAssignNow: 'Cấp IP này trong sổ',
   },
   serviceAccounts: {
