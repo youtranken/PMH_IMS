@@ -7,6 +7,7 @@ import { formatDate } from "@/lib/format";
 import type { Me } from "@/lib/me";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { HistoryPanel } from "@/ui/history-panel";
+import { AuditLogLink } from "@/ui/audit-log-link";
 import { DetailLoadFailed, LoadError, Loading } from "@/ui/load-state";
 import { CopyButton } from "@/ui/copy-button";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
@@ -365,7 +366,10 @@ export function IspDetail({ me }: { me: Me }) {
         ) : history.isError ? (
           <LoadError error={history.error} onRetry={() => void history.refetch()} />
         ) : (
-          <HistoryPanel entries={toIspHistory(history.data ?? [], t)} />
+          <>
+            <AuditLogLink role={me.role} objectType="isp_line" objectId={item.id} />
+            <HistoryPanel entries={toIspHistory(history.data ?? [], t)} />
+          </>
         )}
       </TabPanel>
       </DetailLayout>

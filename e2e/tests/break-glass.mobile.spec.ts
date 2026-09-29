@@ -3,11 +3,8 @@ import {
   APP_ORIGIN,
   E2E_MEMBER,
   E2E_SA,
-  NEW_PASSWORD,
   firstLogin,
   horizontalOverflow,
-  loginWithTotp,
-  logout,
   resetAccessList,
   resetApprovals,
   resetDevices,
@@ -38,8 +35,8 @@ async function csrfOf(page: Page): Promise<string> {
  * nhất — người trực sẽ đi tìm đường vòng, và đường vòng thì không có audit.
  */
 test.describe('Duyệt break-glass ở 390px', () => {
-  test('Admin đọc được lý do và duyệt được trên điện thoại', async ({ page }) => {
-    const saTotp = await firstLogin(page, E2E_SA);
+  test('Admin đọc được lý do và duyệt được trên điện thoại', async ({ page, browser }) => {
+    await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-5);
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
@@ -62,20 +59,20 @@ test.describe('Duyệt break-glass ở 390px', () => {
         tier: 'needs_approval',
       },
     });
-    await logout(page);
 
-    // Member gửi một lý do DÀI — đúng thứ dễ tràn ngang trong khung 390px.
-    await firstLogin(page, E2E_MEMBER);
+    // Member gửi một lý do DÀI — đúng thứ dễ tràn ngang trong khung 390px. Người xin ở ngữ
+    // cảnh riêng và giữ phiên: quyền chỉ dùng được trong phiên đã xin (Q-15).
+    const memberCtx = await browser.newContext({ ignoreHTTPSErrors: true });
+    const member = await memberCtx.newPage();
+    await firstLogin(member, E2E_MEMBER);
     const longReason =
       'Switch tầng 3 mất kết nối từ 1h45 sáng, khách sạn báo mạng phòng họp chết, cần vào ' +
       'cấu hình VLAN để khôi phục trước giờ làm việc';
-    await page.request.post('/api/v1/vault/break-glass', {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+    await member.request.post('/api/v1/vault/break-glass', {
+      headers: { 'X-CSRF-Token': await csrfOf(member), Origin: APP_ORIGIN },
       data: { ownerType: 'device', ownerId: deviceId, reason: longReason, hours: 4 },
     });
-    await logout(page);
 
-    await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
     await page.goto('/approvals');
 
     // Lý do là thứ người duyệt ĐỌC để quyết — phải đọc được đủ, không bị cắt.
@@ -91,6 +88,7 @@ test.describe('Duyệt break-glass ở 390px', () => {
 
     await dialog.getByRole('button', { name: /^Duyệt \d+ giờ$/ }).click();
     await expect(page.getByText('Đã duyệt')).toBeVisible();
+    await memberCtx.close();
   });
 });
 

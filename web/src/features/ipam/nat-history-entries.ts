@@ -13,6 +13,8 @@ export interface NatHistoryRow {
   id: string;
   action: string;
   actor: string;
+  /** Họ tên người làm — API tra (`withActorNames`); vắng thì panel hiện email. */
+  actorName?: string | null;
   changes: Record<string, { before: unknown; after: unknown }> | null;
   createdAt: string;
 }
@@ -44,6 +46,7 @@ export function toNatHistory(rows: NatHistoryRow[], t: TFunction): HistoryEntry[
     id: row.id,
     at: row.createdAt,
     actor: row.actor,
+    actorName: row.actorName ?? undefined,
     action: ACTION_LABEL[row.action] ? t(ACTION_LABEL[row.action]) : row.action,
     detail: describe(row.changes, t),
   }));

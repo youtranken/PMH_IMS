@@ -320,28 +320,55 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
     await expect(page.getByText(/^Lần xin/)).toHaveCount(0);
   });
 
-  test('người xin: khung chờ nói đã báo bao nhiêu người duyệt; được duyệt thì đếm lùi thời gian còn xem', async ({
+  /**
+   * Người xin GIỮ phiên suốt lúc chờ: quyền chỉ dùng được trong phiên đã xin (Q-15). Người duyệt
+   * ở ngữ cảnh riêng. Được duyệt thì khung két đếm lùi, nói quyền hết khi đăng xuất, và có nút
+   * Trả quyền — tất cả ở 390px, vì người trực xin và trả ngay trên điện thoại.
+   */
+  test('người xin: khung chờ nói đã báo bao nhiêu người duyệt; được duyệt thì đếm lùi, trả quyền được', async ({
     page,
+    browser,
   }) => {
-    const { saTotp, memberTotp, deviceId, approvalId } = await pendingRequest(page);
+    const stamp = Date.now().toString().slice(-6);
+    const saCtx = await browser.newContext({ ignoreHTTPSErrors: true });
+    const sa = await saCtx.newPage();
+    await firstLogin(sa, E2E_SA);
+    const { deviceId } = await seedDevice(sa, stamp);
 
-    await loginWithTotp(page, E2E_MEMBER.email, NEW_PASSWORD, memberTotp);
+    await firstLogin(page, E2E_MEMBER);
     await page.goto(`/devices/${deviceId}?tab=vault`);
+    await page.getByRole('button', { name: 'Xin mở két' }).click();
+    const form = page.getByRole('dialog');
+    await expect(form.getByText(/đăng xuất hay hết phiên/)).toBeVisible();
+    await form.getByRole('textbox', { name: 'Lý do' }).fill(`E2E ${stamp}: switch tầng 3 mất kết nối`);
+    await form.getByRole('textbox', { name: 'Xin trong bao lâu (giờ)' }).fill('4');
+    await form.getByRole('button', { name: 'Gửi yêu cầu' }).click();
     await expect(page.getByText(/^Đã báo \d+ người duyệt qua email\.$/)).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
-    await logout(page);
 
     // SA vừa đăng nhập bằng mã 2 lớp = vừa step-up, duyệt qua API được ngay.
-    await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
-    const approved = await page.request.post(`/api/v1/vault/break-glass/${approvalId}/approve`, {
-      headers: await headersOf(page),
+    const pending = (await (await sa.request.get('/api/v1/vault/break-glass/pending')).json()) as {
+      id: string;
+      subjectId: string;
+    }[];
+    const approvalId = pending.find((r) => r.subjectId === deviceId)!.id;
+    const approved = await sa.request.post(`/api/v1/vault/break-glass/${approvalId}/approve`, {
+      headers: await headersOf(sa),
       data: { hours: 4 },
     });
     expect(approved.status()).toBe(201);
-    await logout(page);
+    await saCtx.close();
 
-    await loginWithTotp(page, E2E_MEMBER.email, NEW_PASSWORD, memberTotp);
-    await page.goto(`/devices/${deviceId}?tab=vault`);
+    await page.reload();
     await expect(page.getByText(/Bạn được xem tới .* \(còn 3 giờ 5\d phút\)/)).toBeVisible();
+    await expect(page.getByText(/đăng xuất hay hết phiên/)).toBeVisible();
+    const release = page.getByRole('button', { name: 'Trả quyền' });
+    await expect(release).toBeInViewport();
+    expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+
+    await release.click();
+    await confirmAction(page, 'Trả quyền');
+    await expect(page.getByText(/Đã trả quyền/)).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Xin mở két' })).toBeVisible();
   });
 });

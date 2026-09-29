@@ -614,8 +614,10 @@ export class IpamController {
    */
   @Roles('sa', 'admin', 'member')
   @Get('nat/:id/history')
-  natHistory(@Param() params: IdParamDto) {
-    return this.nat.history(params.id);
+  async natHistory(@Param() params: IdParamDto) {
+    return withActorNames(await this.nat.history(params.id), (emails) =>
+      this.users.namesByEmails(emails),
+    );
   }
 
   @Roles('sa', 'admin', 'member')

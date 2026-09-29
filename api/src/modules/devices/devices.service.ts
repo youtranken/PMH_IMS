@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, asc, count, desc, eq, inArray, ne, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, ne, or, sql, type SQL, type SQLWrapper } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -756,11 +756,25 @@ function buildWhere(filter: DeviceFilter, extraIds: string[] = []): SQL | undefi
   if (filter.cabinetId) parts.push(eq(deviceTable.cabinetId, filter.cabinetId));
   if (filter.deviceTypeId) parts.push(eq(deviceTable.deviceTypeId, filter.deviceTypeId));
   if (filter.status) parts.push(eq(deviceTable.status, filter.status));
+  /*
+   * Phòng ban / người sử dụng: KHỚP ĐÚNG sau khi gấp dấu + hoa thường + khoảng trắng thừa,
+   * không phải "có chứa". Hộp gán license tick sẵn cả lô theo bộ lọc này — "Kế toán" mà kéo
+   * theo "Kế toán tổng hợp" là tiêu nhầm ghế license của phòng khác.
+   */
+  const department = filter.department?.trim();
+  if (department) parts.push(sameText(deviceTable.department, department));
+  const assignedTo = filter.assignedTo?.trim();
+  if (assignedTo) parts.push(sameText(deviceTable.assignedTo, assignedTo));
   // `usableOnly` KHÔNG chồng lên `status`: ai lọc đích danh `status=retired` thì vẫn được
   // xem, đó là màn Kho thanh lý. Cờ này chỉ để các ô CHỌN thôi bày ra thứ không chọn được.
   if (filter.usableOnly) parts.push(ne(deviceTable.status, 'retired'));
   const defined = parts.filter((part): part is SQL => part !== undefined);
   return defined.length > 0 ? and(...defined) : undefined;
+}
+
+/** `ims_norm` là STRICT: cột NULL cho ra NULL → không khớp, đúng ý "máy chưa ghi phòng". */
+function sameText(column: SQLWrapper, value: string): SQL {
+  return sql`ims_norm(btrim(${column})) = ims_norm(${value})`;
 }
 
 function toRecord(row: typeof deviceTable.$inferSelect): DeviceRecord {

@@ -42,6 +42,11 @@ export class AuditQueryDto {
   @MaxLength(255)
   objectId?: string;
 
+  /** `1` = chỉ sự kiện an ninh; tập mã do API giữ (`security-actions.ts`), web không gửi danh sách. */
+  @IsOptional()
+  @IsIn(['1'])
+  security?: string;
+
   @IsOptional()
   @Matches(DATE_RE, { message: 'from phải dạng YYYY-MM-DD' })
   from?: string;
@@ -102,6 +107,7 @@ export class AuditController {
       action: q.action,
       objectType: q.objectType,
       objectId: q.objectId,
+      security: q.security === '1',
       from: q.from,
       to: q.to,
       page: q.page,
@@ -129,6 +135,7 @@ export class AuditController {
       action: q.action,
       objectType: q.objectType,
       objectId: q.objectId,
+      security: q.security === '1',
       from: q.from,
       to: q.to,
       page: 1,

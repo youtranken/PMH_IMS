@@ -766,6 +766,7 @@ export default {
     name: 'Tên file',
     size: 'Dung lượng',
     uploadedAt: 'Tải lên lúc',
+    uploadedBy: 'bởi {{name}}',
     download: 'Tải về',
     remove: 'Xóa',
     confirmRemove: 'Xóa "{{name}}" khỏi hồ sơ? Thao tác này được ghi nhật ký.',
@@ -908,6 +909,21 @@ export default {
     historyRenew: 'Hạn',
     historySeat: 'Ghế',
     historyProfile: 'Hồ sơ',
+    /* Sổ gia hạn (chip Hạn của tab Lịch sử) — hợp đồng + chi phí từng lượt (Q-15). */
+    renewalsTitle: 'Sổ gia hạn',
+    renewalsEmpty: 'Hồ sơ này chưa gia hạn lần nào.',
+    renewalAt: 'Gia hạn lúc',
+    renewalPeriod: 'Hạn cũ → hạn mới',
+    renewalContract: 'Số hợp đồng',
+    renewalCost: 'Chi phí',
+    renewalActor: 'Người gia hạn',
+    renewalNoContract: 'Chưa ghi hợp đồng',
+    renewalWebsites: 'Website',
+    /* Website dùng chứng chỉ SSL / tên miền (Q-15, SW-043). */
+    websitesSsl: 'Website dùng chứng chỉ này',
+    websitesDomain: 'Website dùng tên miền này',
+    websitesHint: 'Mỗi dòng một website, vd shop.pmh.com.vn. Dán cả link cũng được.',
+    websitesEmpty: 'Chưa ghi website nào.',
     seatsFull: 'Hết ghế',
     seatsOver: '+{{count}} vượt',
     /* Băng đầu trang hồ sơ Thanh lý + hộp Khôi phục (Q-13: bên trong là Sửa hồ sơ). */
@@ -935,6 +951,7 @@ export default {
   },
   license: {
     assign: 'Gán vào máy',
+    exportDevices: 'Xuất Excel danh sách máy',
     assignTitle: 'Gán license vào máy',
     assignedCount: 'Đã gán license vào {{count}} máy.',
     assignMany: 'Gán {{count}} máy',
@@ -987,6 +1004,21 @@ export default {
     seatsFullTag: 'hết ghế',
     expandLabel: 'Mở rộng {{code}} — xem máy đang dùng',
     collapseLabel: 'Thu gọn {{code}}',
+    /* Chọn nhanh cả lô theo phòng ban / người sử dụng trong hộp Gán (Q-15). */
+    quickPickOpen: 'Chọn cả lô theo phòng ban / người sử dụng',
+    quickPickBy: 'Chọn nhanh theo',
+    quickPickDepartment: 'Phòng ban',
+    quickPickPerson: 'Người sử dụng',
+    quickPickDepartmentLabel: 'Tên phòng ban',
+    quickPickPersonLabel: 'Tên người sử dụng',
+    quickPickAdd: 'Thêm các máy',
+    quickPickHint: 'Thêm mọi máy đang dùng khớp đúng tên này. Bỏ bớt máy bằng nút ✕ bên dưới.',
+    quickPickNeedValue: 'Gõ tên phòng ban hoặc người sử dụng.',
+    quickPickAdded: 'Đã thêm {{count}} máy của {{who}}.',
+    quickPickHeld: '{{count}} máy đã có license này, bỏ qua.',
+    quickPickNone: 'Không có máy đang dùng nào của {{who}}.',
+    quickPickAllHeld: 'Mọi máy đang dùng của {{who}} đã có license này.',
+    quickPickTruncated: 'Chỉ lấy {{count}} máy đầu — gõ tên cụ thể hơn nếu còn thiếu.',
   },
   isp: {
     title: 'Đường truyền',
@@ -1116,6 +1148,12 @@ export default {
     /* Ghế có kỳ hạn riêng không tự theo hồ sơ — không kéo theo thì license đã gia hạn mà
        ghế vẫn hiện Quá hạn. */
     renewSeats: 'Cập nhật luôn {{count}} ghế có kỳ hạn riêng tới hạn mới',
+    /* Hợp đồng + chi phí của RIÊNG lượt gia hạn — ghi vào sổ gia hạn (Q-15). */
+    renewContract: 'Số hợp đồng',
+    renewContractHint: 'Hợp đồng của lần gia hạn này — để trống nếu chưa có.',
+    renewCost: 'Chi phí kỳ mới',
+    renewWebsites: 'Website của kỳ mới',
+    renewWebsitesHint: 'Mỗi dòng một website. Danh sách này được lưu riêng cho kỳ gia hạn này.',
     currentEnd: 'Hạn hiện tại',
     renewMinHint: 'Hạn mới phải từ {{date}} trở đi — sau hạn hiện tại và sau hôm nay.',
     renewTooEarly: 'Hạn mới phải từ {{date}} trở đi.',
@@ -1143,6 +1181,12 @@ export default {
     oldToNew: 'Hạn cũ → hạn mới',
     renewalsEmpty: 'Chưa có lượt gia hạn nào.',
     renewalsEmptyHint: 'Gia hạn ở danh sách hoặc trang hồ sơ — mỗi lượt sẽ hiện ở đây.',
+    renewalsEmptyFiltered: 'Không có lượt gia hạn nào trong khoảng ngày này.',
+    renewalsRange: 'Khoảng ngày gia hạn',
+    renewalsFrom: 'Gia hạn từ ngày',
+    renewalsTo: 'Gia hạn đến ngày',
+    renewedSeeTab: 'Lượt gia hạn đã ghi vào tab "Đã gia hạn".',
+    renewedSeeTabAction: 'Xem trong Đã gia hạn',
     tabList: 'Danh sách',
     empty: 'Không có gì sắp hết hạn trong cửa sổ này.',
     emptyHint: 'Nới cửa sổ ra 90 hoặc 180 ngày để nhìn xa hơn.',
@@ -1271,6 +1315,12 @@ export default {
       'Đóng phiên đăng nhập từ IP {{ip}} (hoạt động gần nhất {{seen}})? Người đang dùng phiên đó ' +
       'bị đăng xuất ngay. Nếu đó là phiên của chính bạn thì bạn sẽ phải đăng nhập lại.',
     sessionKilled: 'Đã đóng phiên đó — người dùng bị đăng xuất ngay.',
+    killAllSessions: 'Đóng tất cả phiên',
+    confirmKillAllSessions:
+      'Đóng mọi phiên đăng nhập của {{name}}? Người đó bị đăng xuất khỏi mọi máy ngay.',
+    killAllIncludeCurrent: 'Đóng cả phiên bạn đang dùng',
+    killAllIncludeCurrentHint: 'Không tick thì phiên trên máy này được giữ lại.',
+    allSessionsKilled: 'Đã đóng {{count}} phiên.',
     roleSa: 'Super Admin',
     roleAdmin: 'Quản trị',
     roleMember: 'Thành viên',
@@ -1396,7 +1446,7 @@ export default {
     rotateTitle: 'Đổi giá trị: {{label}}',
     rotateHint: 'Giá trị mới sẽ mã hóa lại từ đầu. Giá trị cũ không xem lại được nữa.',
     rotateOrder:
-      'Đổi trên thiết bị và đăng nhập thử bằng giá trị mới TRƯỚC, rồi mới lưu ở đây — lưu xong là giá trị cũ không xem lại được.',
+      'IMS KHÔNG nối tới máy chủ hay thiết bị: lưu ở đây không đổi gì trên hệ thống thật. Đổi trên hệ thống thật TRƯỚC (việc này ảnh hưởng hệ thống đang chạy) và đăng nhập thử bằng giá trị mới, rồi mới lưu vào két — lưu xong là giá trị cũ không xem lại được.',
     revoke: 'Xóa vĩnh viễn',
     revoked: 'Đã xóa vĩnh viễn ngăn.',
     typeLabelToConfirm: 'Gõ lại tên ngăn để xác nhận: {{label}}',
@@ -1405,8 +1455,13 @@ export default {
     lastDenied: 'Lần xin lúc {{at}} bị từ chối:',
     requestBlock:
       'Két này cần được duyệt trước khi xem ({{count}} ngăn). Một lần xin là cho cả két, có hạn giờ.',
-    valueAge: 'Đổi giá trị {{count}} ngày trước · {{who}}',
-    valueStale: 'Lâu chưa đổi',
+    /* Q-15: hạn đổi mật khẩu = ngày đổi + `dashboard.secret_stale_days` (mặc định 180); số
+       ngày do server tính. Đổi giá trị xong là đếm lại từ đầu. */
+    changedCol: 'Đổi lần cuối',
+    changedBy: 'Người đổi: {{who}}',
+    dueLeft: 'còn {{count}} ngày',
+    dueToday: 'Đến hạn đổi hôm nay — cần đổi',
+    dueOver: 'Quá {{count}} ngày — cần đổi',
     valueShow: 'Hiện',
     valueHide: 'Ẩn',
     generate: 'Tạo ngẫu nhiên',
@@ -1439,7 +1494,6 @@ export default {
     newValue: 'Giá trị mới',
     note: 'Ghi chú',
     noteHint: 'Đừng viết mật khẩu vào đây — ghi chú không được mã hóa.',
-    updatedAtShort: 'Cập nhật {{date}}',
     reveal: 'Xem',
     revealBusy: 'Đang mở một ngăn khác — xong sẽ bấm được.',
     strengthLabel: 'Độ khó của giá trị',
@@ -1491,6 +1545,18 @@ export default {
     /* Khối trạng thái khi đang có phiếu treo — người xin rút được, và khung tự làm mới. */
     pendingSince: 'Yêu cầu gửi lúc {{at}} đang chờ Quản trị quyết. Khung này tự làm mới khi có quyết định.',
     pendingDetail: 'Xem yêu cầu',
+    /* Q-15: quyền gắn với phiên đã xin. Người xin phải đọc được trước, không thì đăng nhập lại
+       rồi tưởng hệ thống làm mất quyền. */
+    sessionBound:
+      'Quyền được duyệt chỉ dùng trong phiên đăng nhập này — đăng xuất hay hết phiên là hết, đăng nhập lại phải xin lại.',
+    otherSessionHeld:
+      'Quyền hoặc yêu cầu trước của bạn thuộc một phiên đăng nhập khác nên không dùng được ở đây. Gửi yêu cầu mới.',
+    release: 'Trả quyền',
+    releaseConfirm:
+      'Đóng két với bạn ngay bây giờ? Muốn xem lại thì phải gửi yêu cầu mới và chờ duyệt.',
+    released: 'Đã trả quyền — két đã đóng với bạn.',
+    /* Bước trong hộp (VLT-062): nút rời bước gõ mã, về lại danh sách ngăn của cùng hộp. */
+    stepBack: '‹ Quay lại danh sách ngăn',
   },
   ipam: {
     title: 'Địa chỉ IP',
@@ -2038,6 +2104,7 @@ export default {
     dateRange: 'Khoảng ngày',
     clearFilters: 'Xóa bộ lọc',
     securityEvent: 'An ninh',
+    securityOnly: 'Chỉ sự kiện an ninh',
     openDetail: 'Xem chi tiết dòng nhật ký lúc {{time}}',
     timezoneNote: '(giờ Việt Nam)',
     field: 'Trường',
@@ -2108,6 +2175,7 @@ export default {
       authTotpReenrollReauthFailed: 'Cài lại 2 lớp: gõ sai mật khẩu hiện tại',
       authTotpReenrollSessionRevoked: 'Đóng phiên vì cài lại 2 lớp gõ sai mật khẩu nhiều lần',
       sessionKilled: 'Đóng phiên của người khác',
+      sessionKilledAll: 'Đóng tất cả phiên của một người',
       securityProbeAlerted: 'Cảnh báo: nghi dò mật khẩu / két',
       vaultSecretCreated: 'Cất mật khẩu vào két',
       vaultSecretUpdated: 'Sửa thông tin ngăn két',
@@ -2132,6 +2200,7 @@ export default {
       catalogExported: 'Xuất danh mục',
       devicesExported: 'Xuất danh sách thiết bị',
       softwareExported: 'Xuất danh sách phần mềm',
+      softwareAssignmentsExported: 'Xuất danh sách máy đang dùng license',
       ispExported: 'Xuất danh sách đường truyền',
       ipExported: 'Xuất danh sách IP',
       natExported: 'Xuất sổ NAT',
@@ -2364,6 +2433,13 @@ export default {
     emptyPending: 'Không có yêu cầu nào đang chờ',
     emptyPendingHint: 'Yêu cầu mới sẽ gửi email cho Quản trị và hiện ở đây.',
     emptyLog: 'Chưa có yêu cầu nào',
+    emptyLogFiltered: 'Không có yêu cầu nào khớp bộ lọc',
+    filterRequester: 'Tìm theo email người xin',
+    filterState: 'Trạng thái',
+    filterStateAll: 'Mọi trạng thái',
+    filterDates: 'Khoảng ngày xin',
+    filterFrom: 'Xin từ ngày',
+    filterTo: 'Xin đến ngày',
     // Tab "Yêu cầu của tôi" trước đây rơi vào nhánh else và mượn thông điệp của Nhật ký.
     emptyMine: 'Bạn chưa gửi yêu cầu nào',
     // Nhãn của từng loại đối tượng nằm ở `ownerKind.*` — trước 12/09 ở đây chỉ có hai trên
@@ -2465,6 +2541,7 @@ export default {
    */
   history: {
     emptyDefault: 'Chưa có thay đổi nào được ghi nhận.',
+    auditLog: 'Nhật ký thao tác',
     fDepartment: 'bộ phận',
     fEndDate: 'ngày hết hạn',
     fKind: 'loại',
@@ -2520,6 +2597,7 @@ export default {
       fMachine: 'máy',
       fCost: 'chi phí',
       fContract: 'hợp đồng',
+      fWebsites: 'website',
       fOverSeatReason: 'lý do vượt số ghế',
       actCreated: 'Tạo hồ sơ',
       actUpdated: 'Sửa hồ sơ',

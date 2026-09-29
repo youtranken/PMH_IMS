@@ -8,6 +8,8 @@ export interface TimelineItem {
   action: string;
   at: string;
   actor: string;
+  /** Họ tên người làm — API tra; vắng thì panel hiện email. */
+  actorName?: string | null;
   subject: string;
   link: string | null;
 }
@@ -52,6 +54,7 @@ export function mergeDeviceTimeline(
     id: item.id,
     at: item.at,
     actor: item.actor,
+    actorName: item.actorName ?? undefined,
     source: item.source,
     action: ACTION_KEY[item.action]
       ? t(ACTION_KEY[item.action], { subject: item.subject })

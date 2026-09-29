@@ -9,6 +9,8 @@ import { ISP_SORT_KEYS, IspLineService } from './isp-line.service';
 import { SoftwareExpiryRegistrar } from './software-expiry-sources';
 import type { SoftwareService } from './software.service';
 import type { UsersApiService } from '../users/users.api';
+import type { CatalogApiService } from '../catalog/catalog.api';
+import type { DevicesApiService } from '../devices/devices.api';
 
 /**
  * Q-04 (`docs/QUYET-DINH.md`): đường truyền KHÔNG có hạn. Một line sống tới khi thanh lý, nên
@@ -99,7 +101,13 @@ describe('Q-04 · đường truyền không có ngày kết thúc', () => {
     const isp = { listAll: () => Promise.resolve([]) } as unknown as IspLineService;
     const res = { setHeader: () => undefined, end: () => undefined } as unknown as Response;
 
-    await new IspLineController(isp, excel, {} as UsersApiService).export({}, res);
+    await new IspLineController(
+      isp,
+      excel,
+      {} as UsersApiService,
+      {} as DevicesApiService,
+      {} as CatalogApiService,
+    ).export({}, res);
 
     const headers = captured.map((column) => column.header);
     expect(headers).not.toContain('Hết hạn');

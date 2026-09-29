@@ -12,6 +12,9 @@ const FIELD_LABEL: Record<string, string> = {
   wanIp: 'history.isp.fWanIp',
   siteId: 'history.fSiteId',
   deviceId: 'history.isp.fDeviceId',
+  // API đã đổi `siteId`/`deviceId` thành MÃ (khoá `site`/`device`) — xem isp-line.controller.
+  site: 'history.fSiteId',
+  device: 'history.isp.fDeviceId',
   hotline: 'history.isp.fHotline',
   contractNo: 'history.isp.fContractNo',
   startDate: 'history.fStartDate',

@@ -23,6 +23,11 @@ export class UsersApiService {
     return this.users.findById(id);
   }
 
+  /** `id → họ tên` theo mẻ — người tải giấy tờ lên. Id không còn tài khoản thì vắng khỏi map. */
+  namesByIds(ids: string[]): Promise<Map<string, string>> {
+    return this.users.namesByIds(ids);
+  }
+
   /** `id → email` theo mẻ — gọi tên tài khoản trên màn Nhật ký. */
   emailsByIds(ids: string[]): Promise<Map<string, string>> {
     return this.users.emailsByIds(ids);

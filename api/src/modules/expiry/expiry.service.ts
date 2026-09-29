@@ -1,11 +1,11 @@
 import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, gte, lt, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { ExpirySourceRegistry } from '../../common/expiry/expiry-registry';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import type { Tx } from '../../common/tx';
-import { addDays, daysBetween, isoDateInTz } from '../../common/today';
+import { addDays, daysBetween, isoDateInTz, startOfDayInTz } from '../../common/today';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import type { ExpiryItem } from '../../common/expiry/expiry-source';
 import { AuditWriterService } from '../audit/audit-writer.service';
@@ -238,15 +238,23 @@ export class ExpiryService {
       oldEnd: string | null;
       newEnd: string;
       actor: string;
+      /** Hợp đồng + chi phí của riêng lượt này (Q-15). Bỏ trống = chưa khai. */
+      contract?: string | null;
+      cost?: number | null;
+      /** Website của kỳ này (SSL/tên miền). Null = loại hồ sơ không có khái niệm website. */
+      websites?: string[] | null;
     },
   ): Promise<void> {
-    await tx.insert(renewalHistoryTable).values(entry);
+    const contract = entry.contract?.trim() || null;
+    const cost = entry.cost ?? null;
+    const websites = entry.websites ?? null;
+    await tx.insert(renewalHistoryTable).values({ ...entry, contract, cost, websites });
     await this.audit.appendWithin(tx, {
       actor: entry.actor,
       action: 'expiry.renewed',
       objectType: entry.objectKind,
       objectId: entry.objectId,
-      detail: { oldEnd: entry.oldEnd, newEnd: entry.newEnd },
+      detail: { oldEnd: entry.oldEnd, newEnd: entry.newEnd, contract, cost, websites },
     });
   }
 
@@ -262,16 +270,38 @@ export class ExpiryService {
       .limit(HISTORY_PAGE_LIMIT);
   }
 
-  /** Toàn bộ lượt gia hạn gần đây — dashboard sếp (Epic 7) và báo cáo năm. */
-  async recentRenewals(limit = 50) {
+  /**
+   * Lượt gia hạn gần đây, lọc được theo khoảng ngày (tab "Đã gia hạn"). `from`/`to` là ngày
+   * YYYY-MM-DD, cả hai BAO GỒM, cắt theo `app.timezone` — cùng múi với giờ in trên màn.
+   * Không lọc thì 50 lượt mới nhất; có lọc thì trần rộng hơn vì người hỏi "tháng này gia hạn
+   * những gì" cần đủ cả tháng.
+   */
+  async recentRenewals(range: { from?: string; to?: string } = {}) {
+    const where: SQL[] = [];
+    if (range.from || range.to) {
+      const timeZone = await this.config.getString('appTimezone');
+      if (range.from) {
+        where.push(gte(renewalHistoryTable.createdAt, startOfDayInTz(range.from, timeZone)));
+      }
+      if (range.to) {
+        where.push(
+          lt(renewalHistoryTable.createdAt, startOfDayInTz(addDays(range.to, 1), timeZone)),
+        );
+      }
+    }
     return this.db
       .select()
       .from(renewalHistoryTable)
-      .orderBy(desc(renewalHistoryTable.createdAt))
-      .limit(limit);
+      .where(where.length > 0 ? and(...where) : undefined)
+      .orderBy(desc(renewalHistoryTable.createdAt), desc(renewalHistoryTable.id))
+      .limit(where.length > 0 ? RENEWALS_RANGE_CAP : RENEWALS_RECENT);
   }
 
 }
+
+/** Tab "Đã gia hạn": số lượt khi không lọc, và trần kỹ thuật khi lọc theo khoảng ngày. */
+const RENEWALS_RECENT = 50;
+const RENEWALS_RANGE_CAP = 1000;
 
 /**
  * Ba chip đếm — DÙNG ĐÚNG hai ngưỡng mà huy hiệu trên hàng dùng.

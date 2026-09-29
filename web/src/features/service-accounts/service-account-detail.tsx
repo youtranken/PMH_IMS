@@ -7,6 +7,7 @@ import type { Me } from "@/lib/me";
 import { PATHS } from "@/lib/routes";
 import { AttachmentPanel } from "@/ui/attachment-panel";
 import { HistoryPanel } from "@/ui/history-panel";
+import { AuditLogLink } from "@/ui/audit-log-link";
 import { DetailLoadFailed, LoadError, Loading } from "@/ui/load-state";
 import { CopyButton } from "@/ui/copy-button";
 import { BlankFields, DataItemIfSet, DetailHeader } from "@/ui/detail-header";
@@ -282,7 +283,10 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
         ) : history.isError ? (
           <LoadError error={history.error} onRetry={() => void history.refetch()} />
         ) : (
-          <HistoryPanel entries={toServiceAccountHistory(history.data ?? [], t)} />
+          <>
+            <AuditLogLink role={me.role} objectType="service_account" objectId={item.id} />
+            <HistoryPanel entries={toServiceAccountHistory(history.data ?? [], t)} />
+          </>
         )}
       </TabPanel>
       </DetailLayout>

@@ -2,7 +2,9 @@ import { expect, test, type Page } from '@playwright/test';
 import {
   E2E_MEMBER,
   E2E_SA,
+  expireStepUp,
   firstLogin,
+  freshTotpCode,
   horizontalOverflow,
   resetAccessList,
   resetDevices,
@@ -115,4 +117,58 @@ test('quyền két ở 390px: danh sách thành viên → thẻ quyền của m�
 
   // SA/Admin không là thẻ trống: khối gập "Có toàn quyền theo vai".
   await expect(page.getByText(/^Có toàn quyền theo vai \(\d+\)$/)).toBeVisible();
+});
+
+/**
+ * VLT-062 — mở xem giá trị từ popup két: bước mã và bước giá trị chạy TRONG popup, không chồng
+ * hộp. Trên điện thoại ba lớp hộp chồng nhau là người dùng không biết mình đang ở đâu, và nút
+ * đóng của lớp nào đóng cái gì.
+ */
+test('popup két ở 390px: Xem → mã → giá trị trong CÙNG một hộp, Ẩn ngay về danh sách', async ({
+  page,
+}) => {
+  const totpSecret = await firstLogin(page, E2E_SA);
+  const stamp = uniqueStamp();
+  const code = `PC-E2E-VM1H-${stamp}`;
+  const label = `admin-E2E-${stamp}`;
+  await createDeviceWithSecret(page, code, label);
+  expireStepUp(E2E_SA.email);
+
+  await page.goto('/vault');
+  await page.getByRole('listitem').filter({ hasText: code }).getByRole('button', { name: code }).click();
+  const popup = page.getByRole('dialog');
+  await popup.getByRole('button', { name: 'Xem' }).click();
+
+  const step = popup.getByRole('region', { name: 'Xác nhận danh tính' });
+  await expect(step).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+
+  await step.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
+  await expect(popup.getByTestId('secret-value')).toHaveText('Mat-Khau#2026');
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+  expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
+
+  await popup.getByRole('button', { name: 'Ẩn ngay' }).click();
+  await expect(page.getByTestId('secret-value')).toHaveCount(0);
+  await expect(popup.getByText(label)).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(1);
+});
+
+test('popup két ở 390px: bước mã có Quay lại — về danh sách, không gửi mã', async ({ page }) => {
+  await firstLogin(page, E2E_SA);
+  const stamp = uniqueStamp();
+  const code = `PC-E2E-VM1B-${stamp}`;
+  const label = `admin-E2E-${stamp}`;
+  await createDeviceWithSecret(page, code, label);
+  expireStepUp(E2E_SA.email);
+
+  await page.goto('/vault');
+  await page.getByRole('listitem').filter({ hasText: code }).getByRole('button', { name: code }).click();
+  const popup = page.getByRole('dialog');
+  await popup.getByRole('button', { name: 'Xem' }).click();
+  await popup.getByRole('button', { name: /Quay lại danh sách ngăn/ }).click();
+  await expect(popup.getByText(label)).toBeVisible();
+  await expect(popup.getByRole('button', { name: 'Xem' })).toBeVisible();
+  await expect(page.getByTestId('secret-value')).toHaveCount(0);
 });

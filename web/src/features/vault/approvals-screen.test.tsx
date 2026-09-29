@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { jsonResponse, renderWithI18n, screen, userEvent, within } from '@/test/test-utils';
 import { ToastProvider } from '@/ui/toast';
 import type { Me } from '@/lib/me';
-import { ApprovalsScreen } from './approvals-screen';
+import { ApprovalsScreen, logFilterQuery } from './approvals-screen';
 
 function row(id: string, requester: string) {
   return {
@@ -169,6 +169,41 @@ describe('Thẻ và sổ của màn Duyệt yêu cầu', () => {
     expect(await screen.findByRole('link', { name: 'Mở két' })).toHaveAttribute(
       'href',
       '/devices/a1-0000-4000-8000-000000000001?tab=vault',
+    );
+  });
+});
+
+describe('VLT-019 · bộ lọc nhật ký mở két', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it.each([
+    [{ state: '', requester: '', from: '', to: '' }, ''],
+    [
+      { state: 'expired', requester: ' an@ ', from: '2026-09-01', to: '2026-09-30' },
+      'state=expired&requester=an%40&from=2026-09-01&to=2026-09-30',
+    ],
+  ])('logFilterQuery(%j) → %s', (filters, expected) => {
+    expect(logFilterQuery(filters)).toBe(expected);
+  });
+
+  it('gõ người xin → lượt gọi nhật ký mang ?requester=', async () => {
+    renderRouted(ME, {
+      '/api/v1/vault/break-glass/pending': [],
+      '/api/v1/vault/break-glass/log': { items: [row('a1', 'an@pmh.com.vn')], total: 1 },
+    });
+    await userEvent.click(await screen.findByRole('tab', { name: 'Nhật ký' }));
+    await userEvent.type(
+      await screen.findByRole('searchbox', { name: 'Tìm theo email người xin' }),
+      'an@',
+    );
+    const fetchMock = vi.mocked(fetch);
+    await vi.waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([url]) =>
+            String(url).includes('/break-glass/log?') && String(url).includes('requester=an%40'),
+        ),
+      ).toBe(true),
     );
   });
 });
