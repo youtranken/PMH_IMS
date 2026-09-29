@@ -604,7 +604,7 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
   - `api/Dockerfile:18`: ghi `reset-e2e-user`, file thật là `reset-e2e.mjs`.
   - `SHARED-REGISTRY.md:60`: ghi `DateTimePicker` dùng mọi nơi, thực tế không ai import.
   - `ui/dialog.tsx:17,269`.
-- [ ] **CLEAN-02 (P2) · Dọn chú thích kiểu nhật ký**, mỗi module một commit.
+- [x] **CLEAN-02 (P2) · Dọn chú thích kiểu nhật ký**, mỗi module một commit.
   - Bắt đầu từ các file chú thích nhiều hơn code: `security-probe.service.ts`,
     `use-list-url-state.ts`, `device-retirement.registry.ts`, `common/sql.ts`.
   - **Giữ:** chú thích nói VÌ SAO, ràng buộc không được phá, mã luật (AD-x, FR-x, NFR-x).
@@ -614,6 +614,15 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
   - **Không đụng file migration.**
   - **Rà 29/09:** mới dọn lẻ (1c00ba2, 2aefe44, b57775f, và chú thích "trước đây…" của đợt v1.4.2).
     Đếm thô còn khoảng 250 dòng (api 67, web 106, e2e 78).
+  - **Đã sửa:** 16 commit theo module (api auth · vault · audit · approvals+service-accounts ·
+    devices · ipam · software · catalog+expiry · common · module nền · core; ops; web ui · css ·
+    lib/locales/test · features; e2e). Bộ quét rộng hơn (ngày, "rà soát", "§18", "Story N.M",
+    "Epic N", "finding", "bản trước", "trước đây") đếm được 1263 dòng chú thích: api 569 → 25,
+    web 366 → 38, e2e 310 → 5, ops 18 → 0. Phần còn lại là dữ liệu mẫu (ngày ví dụ, `0.0.0.0/0`,
+    `Gi1/0/2`, "Bước 1/2", tỉ lệ ghế). Câu lịch sử nào mang lý do thật thì viết lại thành lý do;
+    vài chú thích đã lệch code được sửa cho khớp. Kiểm: `api/dist/**/*.js` giống hệt trước/sau
+    (sha256 cả 251 file); bản transpile bỏ chú thích của từng file đổi (kể cả spec, tsx, e2e)
+    giống HEAD; CSS so sau khi bỏ chú thích; jest, vitest, eslint xanh; playwright --list 673.
 - [x] **CLEAN-03 (P2) · Xoá `.pyc` trong `.claude/` khỏi git**, thêm `__pycache__/` vào `.gitignore`.
   - **Rà 29/09:** còn 5 file trong `.claude/skills/bmad-retrospective/scripts/**/__pycache__/`.
   - **Đã sửa:** `git rm --cached` cả 5 file; `.gitignore` thêm `__pycache__/` và `*.pyc`
@@ -912,10 +921,21 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
     migration 0250, sửa được ở màn Tham số, tối thiểu 2) × ngưỡng thì đi thêm đúng MỘT lá leo thang
     (tiêu đề "Vẫn tiếp tục: …"), kể cả khi bị bắn song song. Bài kiểm DB:
     `api/test/security-probe-escalation.spec.ts`; thư: `api/src/modules/mail/mail-event-time.spec.ts`.
-- [ ] **OLD-QA-04 · Thêm luật lint chặn chuỗi tiếng Việt cứng; đổi tên các định danh tiếng Việt
+- [x] **OLD-QA-04 · Thêm luật lint chặn chuỗi tiếng Việt cứng; đổi tên các định danh tiếng Việt
   còn lại** (9 tên tệp, khoảng 175 định danh test).
   - **Rà 29/09:** xong vế luật lint (`NO_VIETNAMESE_TEXT`, 25bf181; kiểm ở `web/src/lint-rules.test.ts`).
     Vế đổi tên còn: `quetNguon`, `timVaChoLoc`, `moTimNhanh`… ở 27 file.
+  - **Đã sửa:** khoảng 270 định danh không dấu trong bài kiểm và helper (web 37 file, api 10,
+    e2e 42) sang tiếng Anh: `scanSource`, `searchAndWaitForFilter`, `openCommandPalette`… Đổi bằng
+    bộ quét AST (chỉ token Identifier, không đụng chuỗi/chú thích, chặn tên đích đã có trong
+    file). Tiêu đề bài kiểm giữ nguyên. Tên tệp: 4 file web (`test/scan-source.ts`,
+    `audit-log-quick-filter`, `expiry-month-sort`, `access-matrix-check`) và 50 spec E2E (ví dụ
+    `vault-rotation-due`, `software-status`, `privilege-escalation`, tên mới mở đầu bằng mảng).
+    Giữ `di-khap-giao-dien-NN-*` vì cổng đọc theo mẫu tên. Còn lại có chủ ý: `an`, `binh` ở
+    `api/test/files-uploader-name.spec.ts` là tên người; định danh không dấu trong mã sản phẩm
+    (`live-region.tsx`, `focus-trap.ts`, `nguong` ở `expiry-screen.tsx`…) nằm ngoài mục này.
+    Kiểm: jest 1479 xanh, vitest xanh (trừ `api-client.test.ts` đỏ sẵn), e2e tsc xanh,
+    playwright --list 673 bài / 127 file.
 - [x] **OLD-QA-05 · Chưa có bài kiểm cho đường `onExpire` của `RevealDialog`.**
   - **Rà 29/09:** còn nguyên.
   - **Đã sửa:** `ui/reveal-dialog.test.tsx` "onExpire khi hết giờ": gọi đúng một lần cùng
