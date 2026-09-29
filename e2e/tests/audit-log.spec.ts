@@ -352,3 +352,67 @@ test.describe('Nhật ký kiểm toán — màn hình', () => {
     await expect(page.getByRole('heading', { name: 'Bạn không có quyền xem trang này' })).toBeVisible();
   });
 });
+
+/**
+ * ADM-065: sự kiện giống hệt lặp liền nhau (cùng người, cùng hành động, cùng đối tượng, cùng
+ * phút) gộp thành một dòng ×N ở API; hộp chi tiết mở được từng lần; bỏ tick thì về từng dòng.
+ */
+test.describe('Nhật ký — gộp sự kiện lặp', () => {
+  test('xuất danh mục 3 lần liền → một dòng ×N; mở từng lần; bỏ gộp thì thấy đủ từng dòng', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    for (let i = 0; i < 3; i += 1) {
+      const res = await page.request.get('/api/v1/catalog/site/export');
+      expect(res.status()).toBe(200);
+    }
+    const grouped = page.waitForResponse(
+      (res) =>
+        res.url().includes('/api/v1/admin/audit?') &&
+        new URL(res.url()).searchParams.get('group') === '1' &&
+        new URL(res.url()).searchParams.get('action') === 'catalog.exported',
+    );
+    await page.goto(
+      `/admin/audit-log?q=${encodeURIComponent(E2E_SA.email)}&action=catalog.exported`,
+    );
+    expect((await grouped).status()).toBe(200);
+    await expect(page.getByRole('checkbox', { name: 'Gộp sự kiện lặp' })).toBeChecked();
+    await expect(page.getByText(/^\d+ lần liền nhau$/).first()).toBeVisible();
+
+    // Ba lần trong tối đa hai phút liền → chắc chắn có một cụm ≥ 2 (ranh giới phút có thể tách 2 + 1).
+    await page
+      .getByRole('row')
+      .filter({ hasText: /lần liền nhau/ })
+      .first()
+      .getByRole('button', { name: /Xem chi tiết dòng nhật ký lúc/ })
+      .click();
+    const hop = page.getByRole('dialog');
+    await expect(hop.getByText(/lần liền nhau — cùng người/)).toBeVisible();
+    const lan = hop.getByRole('button', { name: /^Xem lần lúc/ });
+    expect(await lan.count()).toBeGreaterThanOrEqual(2);
+    await lan.last().click();
+    await expect(hop.getByText(/lần liền nhau — cùng người/)).toHaveCount(0);
+    await hop.getByRole('button', { name: 'Đóng', exact: true }).click();
+
+    // Đường còn lại: bỏ gộp → API không nhận `group`, màn có ít nhất 3 dòng xuất danh mục.
+    const each = page.waitForResponse(
+      (res) =>
+        res.url().includes('/api/v1/admin/audit?') &&
+        new URL(res.url()).searchParams.get('group') === null,
+    );
+    await page.getByRole('checkbox', { name: 'Gộp sự kiện lặp' }).uncheck();
+    expect((await each).status()).toBe(200);
+    await expect(page).toHaveURL(/each=1/);
+    expect(
+      await page.getByRole('button', { name: /Xem chi tiết dòng nhật ký lúc/ }).count(),
+    ).toBeGreaterThanOrEqual(3);
+  });
+
+  test('đường hỏng: tham số gộp sai giá trị bị từ chối (400), không rơi về mặc định im lặng', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const res = await page.request.get('/api/v1/admin/audit?page=1&pageSize=20&group=yes');
+    expect(res.status()).toBe(400);
+  });
+});

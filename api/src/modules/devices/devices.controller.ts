@@ -155,6 +155,9 @@ export class DevicesController {
       status?: DeviceStatus;
       /** '?usable=true' — chỉ máy còn nhận thêm được. Xem `DeviceFilter.usableOnly`. */
       usable?: string;
+      /** Khớp đúng phòng ban / người sử dụng — hộp gán license chọn cả lô (SW-053). */
+      department?: string;
+      assignedTo?: string;
       sort?: string;
       dir?: string;
     },
@@ -169,6 +172,9 @@ export class DevicesController {
         status: query.status,
         // So với chuỗi 'true', không ép boolean: `?usable=false` phải nghĩa là KHÔNG lọc.
         usableOnly: query.usable === 'true',
+        // `?department=a&department=b` ra MẢNG — không phải một phòng, bỏ qua thay vì nổ 500.
+        department: typeof query.department === 'string' ? query.department : undefined,
+        assignedTo: typeof query.assignedTo === 'string' ? query.assignedTo : undefined,
       },
       parseSortQuery(query, DEVICE_SORT_KEYS, DEVICE_SORT_DEFAULT),
     );

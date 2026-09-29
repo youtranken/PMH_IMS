@@ -4,6 +4,7 @@ import { CatalogModule } from '../catalog/catalog.module';
 import { UsersModule } from '../users/users.module';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { ExcelImportService } from '../../common/excel/excel-import.service';
+import { DeviceCatalogUsage } from './device-catalog-usage';
 import { DeviceExpirySource } from './device-expiry-source';
 import { DeviceImportService } from './device-import.service';
 import { DevicePortsService } from './device-ports.service';
@@ -29,6 +30,7 @@ import { PortDeviceRetirement } from './port-device-retirement';
     PortDeviceRetirement,
     DeviceImportService,
     DeviceExpirySource,
+    DeviceCatalogUsage,
     DevicesApiService,
     ExcelExportService,
     ExcelImportService,

@@ -73,6 +73,11 @@ export class AuditQueryDto {
   @Min(1)
   @Max(100)
   pageSize = 20;
+
+  /** '1' = gom sự kiện lặp liền nhau thành một dòng ×N (ADM-065). File xuất luôn từng dòng. */
+  @IsOptional()
+  @IsIn(['0', '1'])
+  group?: string;
 }
 
 /** Viewer audit log (6.2, FR-43) — SA + Admin (delegation 10.1). Chỉ đọc (AD-10). */
@@ -107,6 +112,7 @@ export class AuditController {
       to: q.to,
       page: q.page,
       pageSize: q.pageSize,
+      group: q.group === '1',
     });
   }
 

@@ -20,6 +20,7 @@ import { SoftwareApiService } from './software.api';
 import { SoftwareController } from './software.controller';
 import { SoftwareService } from './software.service';
 import { SoftwareStatusSweep } from './software-status-sweep';
+import { SoftwareCatalogUsage } from './software-catalog-usage';
 
 /**
  * Chủ sở hữu `software` + `software_history` (AD-3).
@@ -43,6 +44,7 @@ import { SoftwareStatusSweep } from './software-status-sweep';
     LicenseDeviceTimeline,
     SoftwareApiService,
     SoftwareStatusSweep,
+    SoftwareCatalogUsage,
   ],
   exports: [SoftwareApiService],
 })

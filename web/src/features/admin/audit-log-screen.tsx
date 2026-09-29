@@ -37,6 +37,17 @@ export interface AuditRow {
   ip: string | null;
   detail: unknown;
   createdAt: string;
+  /** Chỉ có ở dòng đã gom (≥ 2 lần): số lần, mốc sớm nhất, từng lần — mới nhất trước. */
+  count?: number;
+  firstAt?: string;
+  events?: AuditEvent[];
+}
+
+export interface AuditEvent {
+  id: string;
+  ip: string | null;
+  detail: unknown;
+  createdAt: string;
 }
 
 interface AuditPage {
@@ -58,6 +69,8 @@ interface Filters extends Record<string, string> {
   security: string;
   from: string;
   to: string;
+  /** '1' = xem từng sự kiện, không gộp lần lặp. Mặc định gộp (ADM-065). */
+  each: string;
 }
 
 const EMPTY_FILTERS: Filters = {
@@ -68,6 +81,7 @@ const EMPTY_FILTERS: Filters = {
   security: '',
   from: '',
   to: '',
+  each: '',
 };
 
 const DEFAULT_LIMIT = 20;
@@ -89,7 +103,23 @@ function filterParams(filters: Filters): URLSearchParams {
 export function auditQuery(page: number, limit: number, filters: Filters): string {
   const params = new URLSearchParams({ page: String(page), pageSize: String(limit) });
   filterParams(filters).forEach((value, key) => params.set(key, value));
+  // Gộp ở API để phân trang và tổng tính theo dòng đã gộp. File xuất vẫn từng dòng.
+  if (filters.each !== '1') params.set('group', '1');
   return params.toString();
+}
+
+/** Một lần trong cụm → dòng nhật ký đầy đủ để mở hộp chi tiết của đúng lần đó. */
+function eventRow(row: AuditRow, event: AuditEvent): AuditRow {
+  return {
+    ...row,
+    id: event.id,
+    ip: event.ip,
+    detail: event.detail,
+    createdAt: event.createdAt,
+    count: undefined,
+    firstAt: undefined,
+    events: undefined,
+  };
 }
 
 /**
@@ -183,6 +213,7 @@ export function AuditLogScreen() {
           return (
             <>
               {tone ? <span className={`badge ${tone}`}>{label}</span> : label}
+              <RepeatBadge row={row.original} />
               <span className="cell-sub mono">{row.original.action}</span>
             </>
           );
@@ -206,7 +237,9 @@ export function AuditLogScreen() {
 
   /* Điện thoại: mỗi sự kiện hai dòng — "giờ · việc", rồi "ai → cái gì"; chạm là mở chi tiết. */
   const mobileCard: MobileCard<AuditRow> = {
-    title: (row) => `${formatDateTime(row.createdAt)} · ${auditActionLabel(row.action, t)}`,
+    title: (row) =>
+      `${formatDateTime(row.createdAt)} · ${auditActionLabel(row.action, t)}` +
+      (row.count ? ` ${t('audit.repeatBadge', { count: row.count })}` : ''),
     badge: (row) => {
       const tone = auditActionTone(row.action);
       return tone === 'danger' ? <span className="badge danger">{t('audit.securityEvent')}</span> : null;
@@ -299,6 +332,14 @@ export function AuditLogScreen() {
             if (event.key === 'Enter') commitObject();
           }}
         />
+        <label className="row filter-check">
+          <input
+            type="checkbox"
+            checked={filters.each !== '1'}
+            onChange={(event) => url.setFilter('each', event.target.checked ? '' : '1')}
+          />
+          <span>{t('audit.groupRepeats')}</span>
+        </label>
       </FilterBar>
 
       {list.isLoading ? (
@@ -343,7 +384,13 @@ export function AuditLogScreen() {
         </>
       )}
 
-      {open ? <AuditDetailDialog row={open} onClose={() => setOpen(null)} /> : null}
+      {open ? (
+        <AuditDetailDialog
+          row={open}
+          onClose={() => setOpen(null)}
+          onOpenEvent={(event) => setOpen(eventRow(open, event))}
+        />
+      ) : null}
     </>
   );
 }
@@ -353,7 +400,15 @@ export function AuditLogScreen() {
  * (khi `detail` có dạng đổi-từ-gì-sang-gì), và JSON gốc gập lại kèm nút chép — thứ để dán cho
  * đội phát triển.
  */
-function AuditDetailDialog({ row, onClose }: { row: AuditRow; onClose: () => void }) {
+function AuditDetailDialog({
+  row,
+  onClose,
+  onOpenEvent,
+}: {
+  row: AuditRow;
+  onClose: () => void;
+  onOpenEvent: (event: AuditEvent) => void;
+}) {
   const { t } = useTranslation();
   const { changes, rest } = detailChanges(row.detail);
   const shown = (value: unknown) =>
@@ -382,6 +437,12 @@ function AuditDetailDialog({ row, onClose }: { row: AuditRow; onClose: () => voi
         <dt>{t('audit.time')}</dt>
         <dd>
           {formatDateTime(row.createdAt)} <span className="muted">{t('audit.timezoneNote')}</span>
+          {row.count && row.firstAt ? (
+            <span className="cell-sub">
+              {t('audit.repeatLabel', { count: row.count })} ·{' '}
+              {t('audit.repeatSince', { time: formatDateTime(row.firstAt) })}
+            </span>
+          ) : null}
         </dd>
         <dt>{t('audit.actor')}</dt>
         <dd>
@@ -399,6 +460,44 @@ function AuditDetailDialog({ row, onClose }: { row: AuditRow; onClose: () => voi
         <dt>{t('audit.ip')}</dt>
         <dd className="mono">{orDash(row.ip)}</dd>
       </dl>
+
+      {row.events && row.count ? (
+        <section aria-label={t('audit.repeatLabel', { count: row.count })}>
+          <p className="muted">
+            {t('audit.repeatEvents', { count: row.count })}
+            {row.events.length < row.count
+              ? ` ${t('audit.repeatEventsMore', { shown: row.events.length })}`
+              : ''}
+          </p>
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>{t('audit.time')}</th>
+                  <th>{t('audit.ip')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {row.events.map((event) => (
+                  <tr key={event.id}>
+                    <td>
+                      <button
+                        type="button"
+                        className="ghost sm mono"
+                        aria-label={t('audit.openEvent', { time: formatDateTime(event.createdAt) })}
+                        onClick={() => onOpenEvent(event)}
+                      >
+                        {formatDateTime(event.createdAt)}
+                      </button>
+                    </td>
+                    <td className="mono">{orDash(event.ip)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
 
       {changes.length > 0 ? (
         <div className="table-wrap">
@@ -442,6 +541,21 @@ function AuditDetailDialog({ row, onClose }: { row: AuditRow; onClose: () => voi
         </details>
       ) : null}
     </Dialog>
+  );
+}
+
+/** "×8" cạnh nhãn hành động của dòng đã gộp — nhãn đọc được cho trình đọc màn hình là "8 lần liền nhau". */
+function RepeatBadge({ row }: { row: AuditRow }) {
+  const { t } = useTranslation();
+  if (!row.count) return null;
+  return (
+    <>
+      {' '}
+      <span className="badge muted" title={t('audit.repeatLabel', { count: row.count })}>
+        <span aria-hidden="true">{t('audit.repeatBadge', { count: row.count })}</span>
+        <span className="sr-only">{t('audit.repeatLabel', { count: row.count })}</span>
+      </span>
+    </>
   );
 }
 

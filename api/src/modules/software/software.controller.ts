@@ -12,6 +12,8 @@ import {
 } from '@nestjs/common';
 import type { Response } from 'express';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsIn,
   IsInt,
@@ -89,6 +91,10 @@ export class SoftwareBodyDto {
   @IsOptional()
   @IsIn([...SOFTWARE_STATUSES], { message: 'Trạng thái hồ sơ không hợp lệ.' })
   status?: SoftwareStatus;
+
+  /** Website dùng chứng chỉ SSL / tên miền này (Q-15). Service chuẩn hóa + kiểm từng dòng. */
+  @IsOptional() @IsArray() @ArrayMaxSize(500) @IsString({ each: true }) @Length(0, 300, { each: true })
+  websites?: string[];
 }
 
 class RenewDto {
@@ -97,6 +103,17 @@ class RenewDto {
 
   /** SW-049: kéo luôn các ghế có kỳ hạn riêng kết thúc trước hạn mới. */
   @IsOptional() @IsBoolean() seats?: boolean;
+
+  /** Hợp đồng của RIÊNG lượt gia hạn này — ghi vào sổ gia hạn, không vào hồ sơ (Q-15). */
+  @IsOptional() @IsString() @Length(0, 200) contract?: string;
+
+  /** Tiền đồng, số nguyên; `null`/bỏ trống = chưa khai. Service kiểm trần 2^53. */
+  @IsOptional() @ValidateIf((_o, value) => value !== null) @Min(0) @IsInt()
+  cost?: number | null;
+
+  /** SSL/tên miền: danh sách website của kỳ mới; bỏ trống = giữ danh sách đang có (Q-15). */
+  @IsOptional() @IsArray() @ArrayMaxSize(500) @IsString({ each: true }) @Length(0, 300, { each: true })
+  websites?: string[];
 }
 
 /**
@@ -348,7 +365,15 @@ export class SoftwareController {
       body.seats
         ? (tx) => this.assignments.renewSeatsWithin(tx, who, params.id, body.endDate)
         : undefined,
+      { contract: body.contract, cost: body.cost, websites: body.websites },
     );
+  }
+
+  /** Sổ gia hạn của hồ sơ: từng lượt với hạn cũ → mới, hợp đồng, chi phí (Q-15). */
+  @Roles('sa', 'admin', 'member')
+  @Get(':id/renewals')
+  renewals(@Param() params: IdParamDto) {
+    return this.software.renewals(params.id);
   }
 
   // ───────────── Gán license vào máy (story 3.2, FR-011) ─────────────
