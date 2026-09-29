@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 # CỔNG AD-15: cấm hex màu trong LUẬT CSS ngoài `web/src/css/tokens.css`.
 #
-# MỘT BẢN DUY NHẤT, HAI NƠI GỌI (19/09/2026). Trước file này, cùng một luật được viết hai lần:
-# một bản `perl` ở `ops/ci-local.sh` và một bản `grep` thô ở `.github/workflows/ci.yml`. Bản
-# nội bộ được sửa ngày 18/09 để bỏ qua chú thích; bản GitHub thì không — nên nhánh
-# `feat/ui-chi-tiet-v2` XANH ở máy và ĐỎ ở cổng chặn merge, trên ba file mà lỗi duy nhất là có
-# chú thích nhắc tới mã màu. Lỗi BLOCKER 18/09 không mất đi, nó chỉ dịch từ cổng này sang cổng
-# kia. Đó đúng lớp lỗi "hai bản luật cho cùng một khái niệm" mà bản vá hôm ấy lên án, nên lần
-# này luật ở một chỗ và cả hai nơi gọi vào đây.
+# MỘT BẢN DUY NHẤT, HAI NƠI GỌI: `ops/ci-local.sh` và `.github/workflows/ci.yml`. Viết luật
+# hai lần thì hai bản trôi khỏi nhau — một bản bỏ qua chú thích, bản kia không — và một nhánh
+# XANH ở máy lại ĐỎ ở cổng chặn merge, trên những file mà lỗi duy nhất là có chú thích nhắc
+# tới mã màu. Đó đúng lớp lỗi "hai bản luật cho cùng một khái niệm", nên luật ở một chỗ và cả
+# hai nơi gọi vào đây.
 #
 # VÌ SAO PHẢI BỎ CHÚ THÍCH. `grep` thẳng vào file không phân biệt được một LUẬT CSS đặt màu
 # cứng với một CHÚ THÍCH nhắc tới mã màu — mà chú thích kiểu "`--warn` vốn đã là bản ĐẬM
@@ -32,10 +30,9 @@ command -v perl >/dev/null 2>&1 || {
   exit 1
 }
 
-# MIỄN TRỪ THEO ĐƯỜNG DẪN, KHÔNG THEO TÊN FILE (19/09/2026). Bản trước dùng `! -name
-# "tokens.css"`, tức miễn cho BẤT KỲ file nào tên `tokens.css` ở bất kỳ đâu dưới `web/src` —
-# một `features/x/tokens.css` tương lai được cấp quyền viết hex mà không ai quyết. Bản `grep`
-# cũ trên GitHub ghim đúng đường dẫn; gộp hai cổng làm một đã vô tình nới luật ra.
+# MIỄN TRỪ THEO ĐƯỜNG DẪN, KHÔNG THEO TÊN FILE. `! -name "tokens.css"` sẽ miễn cho BẤT KỲ file
+# nào tên `tokens.css` ở bất kỳ đâu dưới `web/src` — một `features/x/tokens.css` tương lai
+# được cấp quyền viết hex mà không ai quyết.
 rogue=""
 soFile=0
 while IFS= read -r f; do

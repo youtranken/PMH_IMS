@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Cổng chất lượng chạy trên máy — BA TẦNG, chọn theo việc đang làm (quyết định 07/09).
+# Cổng chất lượng chạy trên máy — BA TẦNG, chọn theo việc đang làm.
 #
 #   bash ops/ci-local.sh              # ~4 phút — lint + depcruise + test đơn vị + hạ tầng + build
 #                                     # CHẠY MỖI LẦN SỬA CODE. Bao trùm CI GitHub:
@@ -11,22 +11,22 @@
 #   bash ops/ci-local.sh --e2e        # ~30 phút — E2E đầy đủ
 #                                     # BẮT BUỘC trước khi đóng story/epic và trước khi gộp master.
 #
-# CON SỐ LÀ ĐO THẬT trên máy này (07/09), không phải ước lượng. Đừng sửa chúng thành số đẹp
+# CON SỐ LÀ ĐO THẬT trên máy dev, không phải ước lượng. Đừng sửa chúng thành số đẹp
 # hơn mà không đo lại — cả dự án này đã trả giá đủ cho những con số tự khai.
 #
 # VÌ SAO CHIA TẦNG. Lượt đầy đủ từng mất 33 phút, và một cổng nặng tới mức không ai chạy nổi
-# mỗi lần sửa thì nó thành cổng không tồn tại. Nhưng gác hẳn E2E cũng sai: cả hai đợt rà soát
-# 28/08 và 07/09 đều có lỗi mà CHỈ E2E mới thấy (module audit hỏng ba tầng chồng nhau; năm lỗi
-# đua M2). Bảy chuyên gia đọc code không ai tìm ra chúng.
+# mỗi lần sửa thì nó thành cổng không tồn tại. Nhưng gác hẳn E2E cũng sai: có những lỗi mà
+# CHỈ E2E mới thấy (module audit hỏng ba tầng chồng nhau; năm lỗi đua M2) — đọc code không ai
+# tìm ra chúng.
 #
 # `@slow` là nhãn cho những bài PHẢI CHỜ ĐỒNG HỒ THẬT — trần mở két theo phút, cache
 # `system_config` 30 giây, ngưỡng đăng nhập theo IP. Chúng chậm vì bản chất bài toán, không
 # phải vì viết ẩu, nên không tối ưu được; chỉ để dành cho lượt đầy đủ.
 #
-# PHÂN CÔNG (quyết định 03/09): GitHub Actions chạy tầng một; E2E chỉ chạy ở đây, vì nó cần
+# PHÂN CÔNG: GitHub Actions chạy tầng một; E2E chỉ chạy ở đây, vì nó cần
 # dựng cả stack và ở runner GitHub thì tốn 10-15 phút mỗi lần cho repo private.
 #
-# TẦNG TEST CHẠM HẠ TẦNG THẬT (08/09) nằm ở TẦNG MỘT, không phải tầng E2E — nó tốn ~15 giây và
+# TẦNG TEST CHẠM HẠ TẦNG THẬT nằm ở TẦNG MỘT, không phải tầng E2E — nó tốn ~15 giây và
 # chỉ cần ba container hạ tầng (postgres · redis · mailpit), không cần dựng api/web/worker. Đặt
 # nó vào tầng đắt là đặt nó vào chỗ không ai chạy, mà đây đang là cơ chế kiểm chứng DUY NHẤT
 # cho DoD gạch 5 ("migration chạy sạch trên DB TRẮNG"), cho ranh giới transaction của
@@ -80,8 +80,8 @@ step "API — build"
 npm --prefix api run build
 
 step "WEB — lint + depcruise (AD-15 ranh giới tầng, cấm window.confirm)"
-# 07/09: web chuyển từ oxlint sang ESLint để cả repo dùng MỘT phương ngữ luật, và có
-# dependency-cruiser lần đầu (trước đó vòng lặp phụ thuộc bên web không ai canh).
+# Web dùng ESLint để cả repo dùng MỘT phương ngữ luật, và dependency-cruiser để vòng lặp phụ
+# thuộc bên web có người canh.
 npm --prefix web run lint
 
 step "WEB — test đơn vị"
@@ -91,9 +91,9 @@ step "WEB — build (đây mới là cổng kiểm KIỂU của web, không ph�
 npm --prefix web run build
 
 step "E2E — kiểm kiểu (tsc --noEmit)"
-# Playwright transpile TS nhưng KHÔNG kiểm kiểu, nên trước 07/09 thư mục e2e không có cổng
-# nào. Đó là cơ chế đã để lọt lỗi `__dirname` trong gói ESM hôm 03/09: globalSetup chết,
-# KHÔNG bài nào chạy, mà lệnh vẫn thoát 0.
+# Playwright transpile TS nhưng KHÔNG kiểm kiểu, nên thiếu bước này thì thư mục e2e không có
+# cổng nào. Đó là cơ chế đã để lọt lỗi `__dirname` trong gói ESM: globalSetup chết, KHÔNG bài
+# nào chạy, mà lệnh vẫn thoát 0.
 npm --prefix e2e run typecheck
 
 if [ "$MODE" = "--e2e" ] || [ "$MODE" = "--e2e-fast" ]; then
@@ -129,14 +129,14 @@ if [ "$MODE" = "--e2e" ] || [ "$MODE" = "--e2e-fast" ]; then
 fi
 
 # =============================================================================================
-# CỔNG KIỂU RATCHET — CHẠY CUỐI CÙNG, SAU E2E (quyết định 19/09/2026)
+# CỔNG KIỂU RATCHET — CHẠY CUỐI CÙNG, SAU E2E
 # =============================================================================================
 #
 # "Ratchet" = cờ-lê cóc, chỉ quay được một chiều: đã dọn sạch thì không cho tụt lại. Hai cổng
 # dưới đây đúng kiểu ấy — hex màu ngoài `tokens.css` ghim ở 0, selector CSS trong `e2e/` ghim ở
-# 0 (`--max-warnings=0`, từ 25 chỗ đã dọn hết ngày 09/09). Ý tưởng tốt, giữ nguyên.
+# 0 (`--max-warnings=0`).
 #
-# ĐỔI CHỖ, KHÔNG ĐỔI ĐỘ NGHIÊM. Chúng vẫn ĐỎ y như trước; chỉ thôi đứng CHẮN cửa.
+# ĐẶT CUỐI, KHÔNG NỚI ĐỘ NGHIÊM. Chúng vẫn ĐỎ; chỉ không đứng CHẮN cửa.
 #
 # VÌ SAO. Script chạy với `set -e` nên bước nào đỏ là dừng tất cả. Đặt hai cổng này ở tầng một
 # nghĩa là một lỗi HÌNH THỨC — một mã màu nằm trong dòng CHÚ THÍCH, một selector CSS mới trong
@@ -166,9 +166,8 @@ step "RATCHET — cấm file lẫn kiểu xuống dòng"
 bash ops/gate-eol.sh
 
 step "RATCHET — E2E lint (cấm sleep, ghim trần selector CSS)"
-# 08/09: `e2e/` là thư mục DUY NHẤT của repo chưa có lint (rà soát 07/09 #16), nên mọi luật
-# E2E trong CLAUDE.md có 0 cưỡng chế. `--max-warnings` ghim nợ selector CSS ở con số hôm nay —
-# nó không được lớn thêm. Xem đầu `e2e/eslint.config.mjs`.
+# Không có bước này thì mọi luật E2E trong CLAUDE.md có 0 cưỡng chế. `--max-warnings` ghim
+# nợ selector CSS — nó không được lớn thêm. Xem đầu `e2e/eslint.config.mjs`.
 npm --prefix e2e run lint
 
 printf '\n\033[32mTất cả kiểm tra đã xanh.\033[0m\n'
