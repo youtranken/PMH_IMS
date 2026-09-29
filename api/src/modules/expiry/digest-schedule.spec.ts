@@ -107,7 +107,7 @@ describe('localNowIn — quy mốc thời gian về múi giờ ứng dụng', ()
 
   /**
    * Múi giờ hỏng phải lùi về UTC, KHÔNG ném: `isoDateInTz` đã theo nếp đó. Hàm này mà ném
-   * thì màn Expiry vẫn chạy còn digest im lặng không bao giờ gửi (code review Epic 3).
+   * thì màn Expiry vẫn chạy còn digest im lặng không bao giờ gửi.
    */
   it('múi giờ cấu hình sai thì lùi về UTC chứ không ném', () => {
     const at = new Date('2026-08-24T10:00:00Z');

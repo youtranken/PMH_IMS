@@ -7,7 +7,7 @@ import type {
 } from './catalog.types';
 
 /**
- * File MẪU khai báo danh mục (story 2.1, FR-004).
+ * File MẪU khai báo danh mục (FR-004).
  *
  * Đây là ĐỊNH NGHĨA DUY NHẤT của file mẫu — endpoint `/catalog/template` sinh từ đây,
  * bản nằm trong `docs/mau-du-lieu/` cũng sinh từ đây (`npm run make:templates`).

@@ -85,7 +85,7 @@ class EntityParamDto {
  * Route có `:entity/:id` PHẢI khai cả hai tham số trong cùng một DTO.
  * `ValidationPipe` bật `forbidNonWhitelisted`, nên nhận `@Param()` bằng DTO chỉ có `entity`
  * thì `id` thành "property should not exist" → 400 cho mọi thao tác sửa/vô hiệu/xóa.
- * (Đúng cái bẫy đã dính ở story 1.4 với body; E2E story 2.1 bắt lại lần nữa ở param.)
+ * (Cùng một bẫy áp cho body lẫn param.)
  */
 class EntityIdParamDto extends EntityParamDto {
   @IsUUID(undefined, { message: 'Mã mục danh mục không hợp lệ.' })
@@ -93,7 +93,7 @@ class EntityIdParamDto extends EntityParamDto {
 }
 
 /**
- * Danh mục dùng chung (story 2.1, FR-004).
+ * Danh mục dùng chung (FR-004).
  *
  * Quyền: ai đăng nhập cũng ĐỌC được (form thiết bị của Member cần đổ ô chọn),
  * chỉ Admin/SA được SỬA — AC "Member chỉ xem, không sửa danh mục".

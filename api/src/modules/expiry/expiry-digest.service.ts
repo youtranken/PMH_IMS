@@ -43,7 +43,7 @@ export interface DigestRuleInput {
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
- * Báo cáo "sắp hết hạn" gửi theo luật (story 3.5, FR-013).
+ * Báo cáo "sắp hết hạn" gửi theo luật (FR-013).
  *
  * MỘT email tổng hợp cho mỗi luật, KHÔNG mail lẻ từng món: 25 đường ISP mà mỗi đường một
  * email thì tuần sau không ai đọc nữa.
@@ -183,7 +183,7 @@ export class ExpiryDigestService {
       } catch (error) {
         // Một luật hỏng KHÔNG được chặn các luật sau. `SweepService` chỉ bắt lỗi ở mức
         // handler, nên để lỗi thoát ra đây là mọi luật xếp sau ngừng gửi mà tín hiệu duy
-        // nhất là một dòng log mỗi phút (code review Epic 3).
+        // nhất là một dòng log mỗi phút.
         this.logger.error(
           `Luật "${rule.name}" lỗi khi gửi báo cáo: ${redactMessage(error)}`,
         );
@@ -219,7 +219,7 @@ export class ExpiryDigestService {
     const payload = recipients.length > 0 ? await this.buildPayload(rule) : null;
 
     /*
-     * ĐẦU NGÀY THEO MÚI GIỜ ỨNG DỤNG. Bản trước là `new Date(`${local.date}T00:00:00Z`)` —
+     * ĐẦU NGÀY THEO MÚI GIỜ ỨNG DỤNG. Đừng viết `new Date(`${local.date}T00:00:00Z`)` — nó
      * dán nửa đêm UTC vào một chuỗi ngày ĐỊA PHƯƠNG, tức 7 giờ sáng cùng ngày ở Việt Nam. Với
      * mọi luật hẹn giờ 0..6, câu UPDATE giành kỳ bên dưới im lặng cho giành LẦN NỮA, và trọng
      * tài "nhiều nhất một lần" mất tác dụng đúng ở khung giờ người ta hay chọn nhất cho báo
@@ -230,16 +230,16 @@ export class ExpiryDigestService {
       /*
        * CHỐT KỲ và ĐẨY VÀO OUTBOX TRONG CÙNG MỘT TRANSACTION.
        *
-       * Hai tính chất phải giữ cùng lúc, và bản trước chỉ giữ được một:
+       * Hai tính chất phải giữ cùng lúc:
        *
        * 1. "Nhiều nhất một lần" — câu UPDATE có điều kiện `last_sent_at < đầu ngày` là trọng
        *    tài. Hai worker cùng thấy "đến kỳ" thì chỉ một câu UPDATE trúng row; người thua
-       *    nhận 0 hàng và im lặng rút. Tính chất này bản trước ĐÃ có.
+       *    nhận 0 hàng và im lặng rút.
        *
-       * 2. "Ít nhất một lần" — bản trước chốt kỳ bằng `this.db` (tự commit ngay), rồi mở một
-       *    transaction KHÁC để đẩy outbox. Nếu transaction thứ hai hỏng — outbox lỗi, mạng
-       *    DB chớp, worker bị kill giữa chừng — thì `last_sent_at` ĐÃ nhảy sang kỳ mới trong
-       *    khi không có thư nào được xếp hàng. Kỳ báo cáo đó mất VĨNH VIỄN: lần chạy sau
+       * 2. "Ít nhất một lần" — chốt kỳ bằng `this.db` (tự commit ngay) rồi mở một transaction
+       *    KHÁC để đẩy outbox thì mất tính chất này. Nếu transaction thứ hai hỏng — outbox
+       *    lỗi, mạng DB chớp, worker bị kill giữa chừng — thì `last_sent_at` ĐÃ nhảy sang kỳ
+       *    mới trong khi không có thư nào được xếp hàng. Kỳ báo cáo đó mất VĨNH VIỄN: lần chạy sau
        *    thấy `last_sent_at` là hôm nay nên không đến kỳ nữa. Không có gì đỏ, không có gì
        *    trong log, chỉ là người nhận không bao giờ nhận được thư của kỳ đó.
        *
@@ -299,9 +299,9 @@ export class ExpiryDigestService {
   private async buildPayload(rule: typeof expiryRuleTable.$inferSelect) {
     const kinds = rule.kinds as string[];
     /*
-     * Email KHÔNG nhìn lùi một năm như màn hình (rà soát 07/09, mục 6 "Miền nghiệp vụ").
+     * Email KHÔNG nhìn lùi một năm như màn hình.
      *
-     * Bản trước để `includeExpired` trống nên rơi về mặc định của MÀN HÌNH: nhìn lùi 365 ngày.
+     * Để `includeExpired` trống thì rơi về mặc định của MÀN HÌNH: nhìn lùi 365 ngày.
      * Với một thứ gửi hằng tuần thì đó là 52 lá thư liên tiếp cùng chứa một tên miền công ty
      * đã bỏ. Không ai xử được nó BẰNG EMAIL — việc phải làm nằm ở màn khác — nên nó chỉ dạy
      * người nhận rằng thư này có thứ không cần đọc, và vài tuần sau cả lá thư vào thùng rác,
@@ -332,7 +332,7 @@ export class ExpiryDigestService {
       daysLeft: item.daysLeft,
     }));
     // Tách hai con số: thư gọi tất cả là "sắp hết hạn" trong khi thân thư ghi "ĐÃ QUÁ HẠN
-    // 200 ngày" thì người đọc mất tin vào cái tiêu đề (code review Epic 3).
+    // 200 ngày" thì người đọc mất tin vào cái tiêu đề.
     const expired = rows.filter((row) => row.daysLeft < 0).length;
     return {
       ruleId: rule.id,

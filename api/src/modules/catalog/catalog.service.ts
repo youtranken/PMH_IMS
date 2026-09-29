@@ -470,7 +470,7 @@ export class CatalogService {
         .where(eq(tableOf(entity).id, id))
         .returning();
       /*
-       * Trúng 0 dòng phải NÉM (rà soát 07/09 #10).
+       * Trúng 0 dòng phải NÉM.
        *
        * `rows[0] as unknown as CatalogRecord` là ép kiểu che mắt: khi câu UPDATE không khớp
        * dòng nào — mục danh mục bị xóa xen giữa lúc đối chiếu và lúc ghi — nó trả `undefined`
