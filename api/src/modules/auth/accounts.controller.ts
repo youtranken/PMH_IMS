@@ -4,6 +4,7 @@ import {
   Controller,
   Get,
   Param,
+  ParseUUIDPipe,
   Patch,
   Post,
   Query,
@@ -329,6 +330,16 @@ export class AccountsController {
   ) {
     await this.accounts.setTotpLoginRequired(actor(req), id, dto.required);
     return { required: dto.required };
+  }
+
+  /**
+   * Tạm chặn theo từng IP (giãn chậm khi gõ sai) — chỉ đọc. Gỡ vẫn là "Gỡ tạm chặn" qua
+   * `:id/status` (có step-up, có ghi vết): một nút xoá từng IP là thêm một cửa hạ rào thứ hai.
+   */
+  @Roles('sa')
+  @Get(':id/lockouts')
+  listLockouts(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.accounts.listLockouts(id);
   }
 
   @Roles('sa')

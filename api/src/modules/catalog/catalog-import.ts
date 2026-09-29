@@ -92,6 +92,14 @@ export interface ImportPlan {
   hasRecognizedSheet: boolean;
 }
 
+/** Loại mục → tên sheet đúng như file mẫu (`catalog-template.ts`) — file dòng lỗi in lại tên này. */
+export const IMPORT_SHEET_NAME: Record<ImportableEntity, string> = {
+  site: 'Site',
+  cabinet: 'Tủ mạng',
+  device_type: 'Loại thiết bị',
+  vendor: 'Nhà cung cấp',
+};
+
 /**
  * Tên sheet → loại mục. Chấp nhận cả bản có dấu lẫn không dấu vì người dùng có thể
  * đổi tên sheet khi sao chép file.

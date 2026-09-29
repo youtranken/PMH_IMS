@@ -86,15 +86,14 @@ export class VaultAccessController {
   }
 
   /**
-   * Trả lời "người này có tầng gì trên đối tượng kia" — dùng để kiểm chứng một lời gán vừa
-   * tạo có thật sự có tác dụng không. Chỉ SA/Admin: nó đọc ra chính ma trận.
+   * Trả lời "người này có tầng gì trên đối tượng kia, VÌ SAO" — tầng, nhóm của đối tượng và các
+   * dòng quyền đã khớp (dòng quyết định đứng đầu). Dùng để kiểm chứng một lời gán vừa tạo có
+   * thật sự có tác dụng không. Chỉ SA/Admin: nó đọc ra chính ma trận.
    */
   @Roles('sa', 'admin')
   @Get('tier')
-  async tier(@Query() query: TierQueryDto) {
-    return {
-      tier: await this.access.tierFor(query.memberEmail, query.ownerType, query.ownerId),
-    };
+  tier(@Query() query: TierQueryDto) {
+    return this.access.explainTierFor(query.memberEmail, query.ownerType, query.ownerId);
   }
 
   @Roles('sa', 'admin')

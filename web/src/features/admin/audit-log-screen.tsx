@@ -4,9 +4,10 @@ import type { ColumnDef } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
-import { formatDateTime, orDash } from '@/lib/format';
+import { formatDate, formatDateTime, orDash, todayIso } from '@/lib/format';
+import { matchRecent, recentRange } from '@/lib/period-range';
 import { CopyButton } from '@/ui/copy-button';
-import { DataTable, type MobileCard } from '@/ui/data-table';
+import { DataTable, type MobileCard, type TableGroupBy } from '@/ui/data-table';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
@@ -17,8 +18,10 @@ import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import {
+  MODULE_KEY,
   OBJECT_TYPE_KEY,
   auditActionLabel,
+  auditActionModule,
   auditActionTone,
   objectTypeLabel,
 } from './audit-actions';
@@ -85,6 +88,14 @@ const EMPTY_FILTERS: Filters = {
 };
 
 const DEFAULT_LIMIT = 20;
+
+/** Nút chọn nhanh khoảng ngày — "Hôm nay" là 1 ngày. */
+const RECENT_PRESETS = [1, 7, 30] as const;
+
+/** "23:37" — nửa giờ của `formatDateTime`, để thẻ dưới tiêu đề ngày không nhắc lại ngày. */
+function timeOf(value: string): string {
+  return formatDateTime(value).split(' ').pop() ?? '';
+}
 
 /** Tham số bộ lọc gửi API — tên khoá theo `AuditQueryDto`. Dùng chung cho danh sách và file xuất. */
 function filterParams(filters: Filters): URLSearchParams {
@@ -169,6 +180,23 @@ export function AuditLogScreen() {
 
   const rows = list.data?.items ?? [];
 
+  const today = todayIso();
+  const recent = matchRecent(filters.from, filters.to, today, RECENT_PRESETS);
+  const setRecent = (days: number) => {
+    const range = days ? recentRange(days, today) : { from: '', to: '' };
+    url.setFilter('from', range.from);
+    url.setFilter('to', range.to);
+  };
+
+  /* Danh sách luôn mới nhất trước, nên kẻ tiêu đề theo NGÀY là đọc đúng thứ tự đang có. */
+  const todayText = formatDate(new Date());
+  const yesterdayText = formatDate(new Date(Date.now() - 86_400_000));
+  const byDay: TableGroupBy<AuditRow> = {
+    key: (row) => formatDate(row.createdAt),
+    label: (day) =>
+      day === todayText ? t('audit.today') : day === yesterdayText ? t('audit.yesterday') : day,
+  };
+
   const columns = useMemo<ColumnDef<AuditRow, unknown>[]>(
     () => [
       {
@@ -238,7 +266,7 @@ export function AuditLogScreen() {
   /* Điện thoại: mỗi sự kiện hai dòng — "giờ · việc", rồi "ai → cái gì"; chạm là mở chi tiết. */
   const mobileCard: MobileCard<AuditRow> = {
     title: (row) =>
-      `${formatDateTime(row.createdAt)} · ${auditActionLabel(row.action, t)}` +
+      `${timeOf(row.createdAt)} · ${auditActionLabel(row.action, t)}` +
       (row.count ? ` ${t('audit.repeatBadge', { count: row.count })}` : ''),
     badge: (row) => {
       const tone = auditActionTone(row.action);
@@ -266,6 +294,7 @@ export function AuditLogScreen() {
         searchPlaceholder={t('audit.searchActor')}
         activeCount={url.activeCount}
         onClear={url.clearFilters}
+        collapsible
       >
         <div className="segmented" role="group" aria-label={t('audit.securityEvent')}>
           <button
@@ -282,11 +311,20 @@ export function AuditLogScreen() {
           ariaLabel={t('audit.action')}
           placeholder={t('audit.allActions')}
           searchable
+          /* Chia theo module rồi mới theo nhãn: vài chục mã xếp một hàng thì "mọi việc về két"
+             nằm rải khắp danh sách. */
           options={[
             { value: '', label: t('audit.allActions') },
             ...(actions.data ?? [])
-              .map((action) => ({ value: action, label: auditActionLabel(action, t) }))
-              .sort((a, b) => a.label.localeCompare(b.label, 'vi')),
+              .map((action) => ({
+                value: action,
+                label: auditActionLabel(action, t),
+                group: t(MODULE_KEY[auditActionModule(action)]),
+              }))
+              .sort(
+                (a, b) =>
+                  a.group.localeCompare(b.group, 'vi') || a.label.localeCompare(b.label, 'vi'),
+              ),
           ]}
           failed={actions.isError}
           onChange={(value) => url.setFilter('action', value)}
@@ -303,6 +341,18 @@ export function AuditLogScreen() {
           ]}
           onChange={(value) => url.setFilter('objectType', value)}
         />
+        <div className="segmented" role="group" aria-label={t('audit.datePresets')}>
+          {RECENT_PRESETS.map((days) => (
+            <button
+              key={days}
+              type="button"
+              aria-pressed={recent === days}
+              onClick={() => setRecent(recent === days ? 0 : days)}
+            >
+              {days === 1 ? t('audit.presetToday') : t('audit.presetDays', { count: days })}
+            </button>
+          ))}
+        </div>
         {/* Khoảng ngày là MỘT cụm hai ô cạnh nhau — mỗi ô một hàng rộng cả thanh là phí chỗ. */}
         <div className="filter-range" role="group" aria-label={t('audit.dateRange')}>
           <DatePicker
@@ -371,7 +421,25 @@ export function AuditLogScreen() {
             onRowClick={(row) => setOpen(row)}
             /* Sự kiện an ninh thất bại (gõ sai, bị từ chối, bị khóa) có vạch đỏ ở mép trái. */
             rowClassName={(row) => (auditActionTone(row.action) === 'danger' ? 'row-alert' : '')}
+            groupBy={byDay}
           />
+          {/* Nhật ký đọc theo THỜI GIAN chứ không theo số trang: nói rõ trang này phủ khoảng
+              nào, và nhảy tới một ngày bằng chính ô "Đến ngày" của bộ lọc (một nguồn, hai lối). */}
+          <div className="row audit-window">
+            <span className="muted">
+              {t('audit.viewing', {
+                from: formatDateTime(rows[rows.length - 1].createdAt),
+                to: formatDateTime(rows[0].createdAt),
+              })}
+            </span>
+            <DatePicker
+              value={filters.to}
+              ariaLabel={t('audit.goToDate')}
+              placeholder={t('audit.goToDate')}
+              min={filters.from || undefined}
+              onChange={(value) => url.setFilter('to', value)}
+            />
+          </div>
           <Pagination
             page={page}
             limit={limit}

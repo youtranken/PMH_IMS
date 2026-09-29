@@ -34,8 +34,8 @@ import type { AuthedRequest } from '../auth/types';
 import { ExpiryDigestService } from './expiry-digest.service';
 import type { DigestFrequency } from './digest-schedule';
 import { parsePageQuery } from '../../common/pagination';
-import type { ExpiryLevel } from './expiry.service';
-import { ExpiryService } from './expiry.service';
+import type { ExpiryFilterState, ExpirySort } from './expiry.service';
+import { EXPIRY_SORTS, ExpiryService } from './expiry.service';
 import { NoStepUp } from '../auth/step-up.decorator';
 import { NoIdleTouch } from '../auth/no-idle-touch.decorator';
 import { withActorNames } from '../../common/history';
@@ -151,6 +151,8 @@ export class ExpiryController {
       page?: string;
       limit?: string;
       state?: string;
+      sort?: string;
+      dir?: string;
     },
   ) {
     const paging = parsePageQuery(query);
@@ -168,7 +170,8 @@ export class ExpiryController {
        * luận "không có mục nào gấp" — một câu SAI đọc y hệt câu đúng. Bỏ qua bộ lọc thì họ
        * thấy nhiều hơn mong đợi, và đó là kiểu sai tự lộ ra.
        */
-      state: isExpiryLevel(query.state) ? query.state : undefined,
+      state: isExpiryState(query.state) ? query.state : undefined,
+      ...sortOf(query),
     });
   }
 
@@ -178,16 +181,25 @@ export class ExpiryController {
   @Get('export.xlsx')
   async export(
     @Query()
-    query: { withinDays?: string; kinds?: string; includeExpired?: string; state?: string },
+    query: {
+      withinDays?: string;
+      kinds?: string;
+      includeExpired?: string;
+      state?: string;
+      sort?: string;
+      dir?: string;
+    },
     @Res() res: Response,
   ) {
     // Ô số đang bật ("Gấp") cũng là bộ lọc đang xem — file xuất phải theo nó (FR-028).
-    const state = isExpiryLevel(query.state) ? query.state : undefined;
+    const state = isExpiryState(query.state) ? query.state : undefined;
     const { items, failedKinds } = await this.expiry.list({
       withinDays: query.withinDays ? Number(query.withinDays) : undefined,
       kinds: query.kinds ? query.kinds.split(',').filter(Boolean) : undefined,
       includeExpired: query.includeExpired !== 'false',
       state,
+      // File theo đúng thứ tự đang xem trên màn (FR-028).
+      ...sortOf(query),
     });
     // File thiếu dòng trông y hệt file đủ dòng — thà không xuất còn hơn xuất thiếu.
     if (failedKinds.length > 0) {
@@ -316,14 +328,28 @@ export class ExpiryController {
   }
 }
 
-/** `?state=` chỉ nhận đúng ba nhóm của màn — xem `levelOf` trong `expiry.service.ts`. */
 /** Hậu tố tên file xuất theo ô số đang bật — người nhận biết ngay file là nhóm nào. */
-const EXPORT_SUFFIX: Record<ExpiryLevel, string> = {
+const EXPORT_SUFFIX: Record<ExpiryFilterState, string> = {
   expired: 'qua-han',
   critical: 'gap',
   warning: 'sap-toi',
+  autoRetire: 'cho-tu-thanh-ly',
 };
 
-function isExpiryLevel(value: string | undefined): value is ExpiryLevel {
-  return value === 'expired' || value === 'critical' || value === 'warning';
+/**
+ * `?state=` chỉ nhận ba nhóm hạn của màn (xem `levelOf` trong `expiry.service.ts`) cộng nhóm
+ * "chờ tự thanh lý"; giá trị lạ coi như không lọc.
+ */
+function isExpiryState(value: string | undefined): value is ExpiryFilterState {
+  return (
+    value === 'expired' || value === 'critical' || value === 'warning' || value === 'autoRetire'
+  );
+}
+
+/** `?sort=` lạ thì về mặc định (ngày hết hạn) — cùng luật "giá trị lạ coi như không lọc". */
+function sortOf(query: { sort?: string; dir?: string }): { sort?: ExpirySort; dir?: 'asc' | 'desc' } {
+  const sort = (EXPIRY_SORTS as readonly string[]).includes(query.sort ?? '')
+    ? (query.sort as ExpirySort)
+    : undefined;
+  return { sort, dir: query.dir === 'desc' ? 'desc' : 'asc' };
 }

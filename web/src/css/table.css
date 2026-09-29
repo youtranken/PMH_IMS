@@ -707,6 +707,24 @@ table.table .col-sticky-end::after {
   box-shadow: var(--shadow-sm);
   overflow: hidden;
 }
+/* Tiêu đề nhóm (`groupBy` của `DataTable`/`MobileCardList`): "Hôm nay", "Tháng 10/2026". */
+.list-cards-group {
+  padding: var(--space-2) var(--space-6);
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  color: var(--ink-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.table tr.row-group th {
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: normal;
+}
 .list-cards-empty {
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
@@ -934,6 +952,28 @@ button.audit-open {
 }
 .audit-detail-row {
   display: contents;
+}
+/* Khối con trong hộp Chi tiết tài khoản (tạm chặn · còn giữ · xem thêm): cách nhau đều. */
+.account-detail-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-7);
+}
+.account-footprint {
+  margin: 0;
+  padding-left: var(--space-6);
+}
+/* Dưới bảng nhật ký: khoảng thời gian trang đang phủ + ô "Tới ngày…". Xuống dòng ở 390px. */
+.audit-window {
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+.audit-window .dp {
+  flex: 0 1 11rem;
+  min-width: 9.5rem;
 }
 .audit-raw pre {
   white-space: pre-wrap;

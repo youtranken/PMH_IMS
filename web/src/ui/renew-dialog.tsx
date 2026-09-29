@@ -45,6 +45,7 @@ export function RenewDialog({
   withTerms,
   websites,
   attachTo,
+  onOpenRecord,
   onClose,
   onDone,
 }: {
@@ -72,6 +73,12 @@ export function RenewDialog({
   websites?: string[];
   /** Hồ sơ nhận hoá đơn/hợp đồng gia hạn đính kèm — tải lên sau khi gia hạn xong. */
   attachTo?: { ownerType: AttachmentOwnerType; ownerId: string };
+  /**
+   * Có thì toast "Đã gia hạn …" kèm nút "Mở hồ sơ" để soát lại ngày vừa ghi (chọn
+   * nhầm năm thì sửa ở đó). Không có nút Hoàn tác: gia hạn là một dòng trong sổ lịch sử gia
+   * hạn, lùi hạn là việc sửa hồ sơ có ghi vết, không phải xoá lượt vừa ghi.
+   */
+  onOpenRecord?: () => void;
   onClose: () => void;
   onDone: (newEnd: string) => void;
 }) {
@@ -177,6 +184,9 @@ export function RenewDialog({
                         count: renewedSeats,
                       })
                     : t('expiry.renewedTo', { subject, date: formatDate(endDate) }),
+                action: onOpenRecord
+                  ? { label: t('expiry.openRecordShort'), onClick: onOpenRecord }
+                  : undefined,
               });
               /* Gia hạn đã ghi xuống DB: file hỏng thì báo riêng từng file, không biến lượt
                  gia hạn thành "thất bại". */

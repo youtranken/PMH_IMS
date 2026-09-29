@@ -443,6 +443,10 @@ a.linkbtn.sm {
   flex-wrap: wrap;
   gap: var(--space-4);
 }
+/* Nút "Thêm …" của màn Danh mục: nhãn đổi theo tab, bề ngang thì không — cụm nút không giật. */
+.page-header .catalog-add {
+  min-width: 11.5rem;
+}
 .page-header .sub {
   margin-top: var(--space-2);
   color: var(--ink-2);

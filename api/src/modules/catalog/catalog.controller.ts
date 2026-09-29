@@ -265,6 +265,17 @@ export class CatalogController {
     return this.imports.preview(requireXlsx(file));
   }
 
+  /**
+   * Danh sách dòng lỗi của lượt đối chiếu ra Excel (ADM-005) — đọc lại chính file vừa gửi, không
+   * ghi gì và không lộ dữ liệu nào ngoài file đó, nên không `@Audited` như file xuất danh mục.
+   */
+  @Roles('sa', 'admin')
+  @Post('import/errors')
+  @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
+  async importErrors(@UploadedFile() file: Express.Multer.File | undefined, @Res() res: Response) {
+    sendXlsx(res, await this.imports.errorsFile(requireXlsx(file)), 'dong-loi-danh-muc.xlsx');
+  }
+
   @Roles('sa', 'admin')
   @Post('import/commit')
   @Audited('catalog.imported', 'catalog', { writtenByService: true })

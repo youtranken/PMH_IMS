@@ -12,6 +12,7 @@ import { DataTable, type MobileCard } from '@/ui/data-table';
 import { Dialog } from '@/ui/dialog';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { FilterBar } from '@/ui/filter-bar';
+import { KpiStrip, KpiTile } from '@/ui/kpi-strip';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
@@ -25,6 +26,7 @@ import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useToast } from '@/ui/toast';
 import { PATHS } from '@/lib/routes';
 import { AccountForm } from './account-form';
+import { AccountDetailDialog } from './account-detail-dialog';
 import { AccountStatusDialog, RoleDialog } from './account-dialogs';
 
 interface AccountRow {
@@ -225,6 +227,7 @@ export function AccountsScreen({ me }: { me: Me }) {
     null,
   );
   const [roleFor, setRoleFor] = useState<AccountRow | null>(null);
+  const [detailFor, setDetailFor] = useState<AccountRow | null>(null);
   /* Mọi lệnh ghi ở màn này đòi step-up (`@RequiresStepUp`): hết ân hạn thì hỏi mã rồi chạy lại. */
   const stepUp = useStepUpRetry(me.csrfToken);
   const runWithStepUp = stepUp.run;
@@ -241,6 +244,23 @@ export function AccountsScreen({ me }: { me: Me }) {
       ),
   });
   useClampPage(url, accounts.data?.total);
+
+  /*
+   * Ba con số đầu trang, mỗi số là một nút lọc: "ai đang khóa", "ai chưa cài 2 lớp" là hai câu
+   * SA hỏi nhiều nhất. Đếm bằng chính endpoint danh sách (`limit=1` → chỉ lấy `total`), nên
+   * con số luôn khớp bảng khi bấm vào.
+   */
+  const countOf = (key: string, query: string) =>
+    ({
+      queryKey: ['accounts', 'count', key],
+      queryFn: () =>
+        apiFetch<{ total: number }>(`/api/v1/accounts?page=1&limit=1${query}`).then(
+          (page) => page.total,
+        ),
+    }) as const;
+  const countAll = useQuery(countOf('all', ''));
+  const countLocked = useQuery(countOf('locked', '&status=locked'));
+  const countNoTotp = useQuery(countOf('noTotp', '&totp=none'));
 
   const refresh = useCallback(
     () => queryClient.invalidateQueries({ queryKey: ['accounts'] }),
@@ -366,6 +386,7 @@ export function AccountsScreen({ me }: { me: Me }) {
     const busy = setStatus.isPending || resetPassword.isPending || resetTotp.isPending;
     const temp = tempLockOf(account, now);
     const items: RowAction[] = [
+      { key: 'detail', label: t('accounts.detail'), onSelect: () => setDetailFor(account) },
       { key: 'edit', label: t('common.edit'), disabled: busy, onSelect: () => setEditing(account) },
       {
         key: 'sessions',
@@ -659,6 +680,31 @@ export function AccountsScreen({ me }: { me: Me }) {
         }
       />
 
+      {countAll.data !== undefined ? (
+        <KpiStrip dense>
+          <KpiTile
+            value={countAll.data}
+            label={t('accounts.kpiTotal')}
+            active={!url.isFiltered}
+            onClick={url.clearFilters}
+          />
+          <KpiTile
+            value={countLocked.data ?? 0}
+            label={t('accounts.statusLocked')}
+            tone="warn"
+            active={filters.status === 'locked'}
+            onClick={() => url.setFilter('status', filters.status === 'locked' ? '' : 'locked')}
+          />
+          <KpiTile
+            value={countNoTotp.data ?? 0}
+            label={t('accounts.totpNone')}
+            tone="warn"
+            active={filters.totp === 'none'}
+            onClick={() => url.setFilter('totp', filters.totp === 'none' ? '' : 'none')}
+          />
+        </KpiStrip>
+      ) : null}
+
       <FilterBar
         search={url.searchInput}
         onSearchChange={url.setSearchInput}
@@ -715,6 +761,7 @@ export function AccountsScreen({ me }: { me: Me }) {
             emptyText={url.isFiltered ? t('accounts.emptyFiltered') : t('accounts.empty')}
             stackOnMobile
             mobileCard={mobileCard}
+            onRowClick={(row) => setDetailFor(row)}
             manualSorting
             sorting={sorting}
             onSortingChange={(updater) => {
@@ -813,6 +860,74 @@ export function AccountsScreen({ me }: { me: Me }) {
           who={temporaryPassword.who}
           created={temporaryPassword.created}
           onClose={() => setTemporaryPassword(null)}
+        />
+      ) : null}
+
+      {detailFor ? (
+        <AccountDetailDialog
+          account={detailFor}
+          facts={[
+            { label: t('accounts.email'), value: detailFor.email },
+            ...(detailFor.phone ? [{ label: t('accounts.phone'), value: detailFor.phone }] : []),
+            ...(detailFor.employeeCode
+              ? [{ label: t('accounts.employeeCode'), value: detailFor.employeeCode }]
+              : []),
+            {
+              label: t('accounts.role'),
+              value: (
+                <span className={`badge plain ${ROLE_TONE[detailFor.role]}`}>
+                  {roleLabel(detailFor.role, t)}
+                </span>
+              ),
+            },
+            { label: t('accounts.status'), value: statusCell(detailFor) },
+            {
+              label: t('accounts.totpColumn'),
+              value: (
+                <>
+                  <span className={`badge ${totpState(detailFor).tone}`}>
+                    {t(totpState(detailFor).label)}
+                  </span>{' '}
+                  <span className="muted">
+                    {t(
+                      detailFor.totpLoginRequired
+                        ? 'accounts.totpLoginRequiredYes'
+                        : 'accounts.totpLoginRequiredNo',
+                    )}
+                  </span>
+                </>
+              ),
+            },
+            { label: t('accounts.lastLogin'), value: lastLoginCell(detailFor) },
+            ...(detailFor.createdAt
+              ? [{ label: t('accounts.createdAt'), value: formatDateTime(detailFor.createdAt) }]
+              : []),
+          ]}
+          onClose={() => setDetailFor(null)}
+          onOpenSessions={() => {
+            setSessionsFor(detailFor);
+            setDetailFor(null);
+          }}
+          onEdit={() => {
+            setEditing(detailFor);
+            setDetailFor(null);
+          }}
+          onClearLockout={
+            detailFor.status !== 'active'
+              ? undefined
+              : () => {
+                  const account = detailFor;
+                  setDetailFor(null);
+                  void confirmThenRun({
+                    title: t('common.titleOf', { action: t('accounts.clearLockout'), subject: account.fullName }),
+                    message: t('accounts.confirmClearLockout', { name: account.fullName }),
+                    danger: false,
+                    confirmLabel: t('accounts.clearLockout'),
+                    run: () => setStatus.mutateAsync({ id: account.id, status: 'active' }),
+                    done: t('accounts.toastClearLockout', { name: account.fullName }),
+                  });
+                }
+          }
         />
       ) : null}
 

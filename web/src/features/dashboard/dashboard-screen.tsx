@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import {
   BREAK_GLASS_KEY,
@@ -811,6 +811,7 @@ function ExpiringBlock({
 }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [renewing, setRenewing] = useState<ExpiringItem | null>(null);
   const narrow = useMediaQuery(MOBILE_QUERY);
   const [all, setAll] = useState(false);
@@ -905,6 +906,7 @@ function ExpiringBlock({
           row={{ ...renewing, end: renewing.endDate }}
           kindLabel={expiryKindLabel(kinds, renewing.kind)}
           csrfToken={me.csrfToken}
+          onOpenRecord={renewing.link ? () => navigate(renewing.link ?? '/') : undefined}
           onClose={() => setRenewing(null)}
           onDone={() => {
             setRenewing(null);

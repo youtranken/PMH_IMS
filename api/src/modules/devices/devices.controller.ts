@@ -234,6 +234,14 @@ export class DevicesController {
     return this.imports.preview(requireXlsx(file));
   }
 
+  /** Dòng lỗi của lượt đối chiếu ra Excel (ADM-005) — chỉ đọc lại file vừa gửi, không ghi gì. */
+  @Roles('sa', 'admin', 'member')
+  @Post('import/errors')
+  @UseInterceptors(FileInterceptor('file', { limits: XLSX_UPLOAD_LIMIT }))
+  async importErrors(@UploadedFile() file: Express.Multer.File | undefined, @Res() res: Response) {
+    sendXlsx(res, await this.imports.errorsFile(requireXlsx(file)), 'dong-loi-thiet-bi.xlsx');
+  }
+
   @Roles('sa', 'admin', 'member')
   @Post('import/commit')
   @Audited('device.imported', 'device', { writtenByService: true })

@@ -380,6 +380,15 @@ input[list]::-webkit-calendar-picker-indicator {
   font-size: var(--fs-sm);
   cursor: default;
 }
+/* Tiêu đề nhóm trong menu (`SelectOption.group`) — chữ nhỏ mờ, không bấm được. */
+.fsel-group {
+  display: block;
+  padding: var(--space-3) var(--space-4) var(--space-1);
+  color: var(--ink-3);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: default;
+}
 .fsel-option:hover,
 .fsel-option.active {
   background: var(--primary-soft);
@@ -436,6 +445,51 @@ textarea.mono {
   flex-wrap: wrap;
   gap: var(--space-2);
   margin-top: var(--space-2);
+}
+/* `.chip-row` làm danh sách (`<ul>`): chip người nhận đọc lại từ ô tự do (luật gửi báo cáo). */
+ul.chip-row {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 0;
+}
+/*
+ * Công tắc bật/tắt (`<input type="checkbox" role="switch" className="switch">`): vẫn là ô tick
+ * thật (bàn phím, form, trình đọc màn hình) nhưng vẽ thành rãnh + núm. Dùng cho trạng thái
+ * Chạy / Tạm ngưng của cả một cấu hình, không cho lựa chọn trong danh sách.
+ */
+input.switch {
+  appearance: none;
+  position: relative;
+  flex: 0 0 auto;
+  width: 2.5rem;
+  height: 1.4rem;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--ink-3);
+  cursor: pointer;
+  transition: background 0.15s var(--ease);
+}
+input.switch::before {
+  content: '';
+  position: absolute;
+  top: 0.2rem;
+  left: 0.2rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s var(--ease);
+}
+input.switch:checked {
+  background: var(--primary);
+}
+input.switch:checked::before {
+  transform: translateX(1.1rem);
+}
+input.switch:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
 .filter-bar .fsel-trigger[data-filled] {
   border-color: var(--primary);

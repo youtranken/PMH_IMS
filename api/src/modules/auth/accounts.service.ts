@@ -397,6 +397,11 @@ export class AccountsService {
     return this.sessions.listActive(userId);
   }
 
+  /** Nơi (IP) đang tạm chặn / đang đếm sai của người này — SA đọc khi người dùng báo không vào được. */
+  listLockouts(userId: string) {
+    return this.loginFailures.listForUser(userId);
+  }
+
   /** SA đá một phiên cụ thể (NFR-01). */
   async killSession(actor: ActorRef, sessionId: string): Promise<void> {
     const session = await this.sessions.find(sessionId);

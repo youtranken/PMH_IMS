@@ -38,3 +38,41 @@ export function matchPeriod(from: string, to: string, today: string): Period | '
     return range.from === from && range.to === to;
   }) ?? '';
 }
+
+/** Ngày YYYY-MM-DD dời `days` ngày — tính trên lịch UTC nên không vướng giờ mùa hè. */
+function shiftIso(iso: string, days: number): string {
+  const date = new Date(`${iso}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+/** Số ngày lịch từ `from` tới `to` (YYYY-MM-DD); âm khi `to` đứng trước. */
+export function daysBetweenIso(from: string, to: string): number {
+  return Math.round(
+    (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000,
+  );
+}
+
+/**
+ * "N ngày gần đây" (tính cả hôm nay) thành cặp từ–đến — nút "Hôm nay · 7 ngày · 30 ngày" của
+ * Nhật ký hệ thống. `today` từ `todayIso()` như `periodRange`.
+ */
+export function recentRange(days: number, today: string): { from: string; to: string } {
+  return { from: shiftIso(today, -(Math.max(1, days) - 1)), to: today };
+}
+
+/** Khoảng đang lọc trùng preset "N ngày" nào; không trùng thì 0. */
+export function matchRecent(
+  from: string,
+  to: string,
+  today: string,
+  presets: readonly number[],
+): number {
+  if (!from || !to) return 0;
+  return (
+    presets.find((days) => {
+      const range = recentRange(days, today);
+      return range.from === from && range.to === to;
+    }) ?? 0
+  );
+}
