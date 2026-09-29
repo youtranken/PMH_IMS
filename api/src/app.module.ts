@@ -4,6 +4,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { LOG_REDACT_PATHS } from './common/log-redact';
 import { GlobalExceptionFilter } from './common/global-exception.filter';
+import { THROTTLE_LIMITS } from './common/config-throttle';
 import { UserThrottlerGuard } from './common/user-throttler.guard';
 import { ExcelExportService } from './common/excel/excel-export.service';
 import { ExcelImportService } from './common/excel/excel-import.service';
@@ -32,6 +33,7 @@ import { StepUpGuard } from './modules/auth/step-up.guard';
 import { RolesGuard } from './modules/auth/roles.guard';
 import { SessionGuard } from './modules/auth/session.guard';
 import { SystemConfigModule } from './modules/config-sys/system-config.module';
+import { SystemConfigService } from './modules/config-sys/system-config.service';
 import { FilesModule } from './modules/files/files.module';
 import { MailModule } from './modules/mail/mail.module';
 import { ServiceAccountsModule } from './modules/service-accounts/service-accounts.module';
@@ -105,6 +107,8 @@ import { VaultModule } from './modules/vault/vault.module';
     ExcelImportService,
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
     { provide: APP_GUARD, useClass: SessionGuard },
+    // Trần `@ConfigThrottle` của UserThrottlerGuard đọc từ system_config (AD-11).
+    { provide: THROTTLE_LIMITS, useExisting: SystemConfigService },
     { provide: APP_GUARD, useClass: UserThrottlerGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_GUARD, useClass: RolesGuard },

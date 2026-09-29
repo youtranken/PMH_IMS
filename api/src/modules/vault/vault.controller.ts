@@ -14,8 +14,8 @@ import {
   Query,
   Req,
 } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
 import { redactMessage } from '../../common/log-redact';
+import { ConfigThrottle } from '../../common/config-throttle';
 import { IsIn, IsOptional, IsString, IsUUID, Length } from 'class-validator';
 import { Audited } from '../audit/audited.decorator';
 import { AuditWriterService } from '../audit/audit-writer.service';
@@ -216,13 +216,13 @@ export class VaultController {
    *
    * Một lần gọi = một secret = một dòng audit (`VaultService.reveal` ghi TRƯỚC khi giải mã).
    *
-   * Trần 30 lần/phút THEO USER. Hình dạng route ("một id mỗi lần") một mình KHÔNG đủ để giữ
+   * Trần `rate.secret_reveal_per_minute` (30/phút) THEO USER. Hình dạng route ("một id mỗi lần") một mình KHÔNG đủ để giữ
    * FR-026: phiên đã step-up cứ gọi liệt kê rồi mở lần lượt là rút được cả két trong vài phút,
    * chỉ để lại N dòng audit mà chẳng ai ngồi đọc kịp (code review Epic 4, finding 2). Trần này
    * là hàng rào PHÒNG, còn audit là hàng rào PHÁT HIỆN — cần cả hai. 30 vẫn rộng hơn nhiều so
    * với nhịp người thật (mở một hai mật khẩu rồi đi làm việc khác).
    */
-  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @ConfigThrottle('rateSecretRevealPerMinute')
   @Roles('sa', 'admin', 'member')
   @RequiresStepUp()
   @Post(':id/reveal')

@@ -9,6 +9,18 @@ export const CONFIG_KEYS = {
   loginMaxFailedAttempts: { key: 'login.max_failed_attempts', fallback: 5 },
   loginLockoutMinutes: { key: 'login.lockout_minutes', fallback: 15 },
   loginRateLimitPerIp: { key: 'login.rate_limit_per_ip', fallback: 20 },
+  /*
+   * Trần theo phút, THEO USER, của các route nhạy cảm (0283) — đọc qua `@ConfigThrottle`.
+   *
+   * `rate.totp_per_minute`: ba cửa nhận mã TOTP (đăng nhập bước 2, xác nhận cài lại 2 lớp,
+   * step-up mở két). Mã chỉ có một triệu khả năng, trần chung 300/phút quá rộng cho một ô 6 số.
+   * `rate.secret_reveal_per_minute`: cửa mở két — hàng rào PHÒNG việc rút cả két trong vài phút
+   * bằng một phiên đã step-up; audit là hàng rào PHÁT HIỆN.
+   * `rate.file_upload_per_minute`: mỗi lượt upload giữ trọn tệp (tới 20MB) trong RAM.
+   */
+  rateTotpPerMinute: { key: 'rate.totp_per_minute', fallback: 10 },
+  rateSecretRevealPerMinute: { key: 'rate.secret_reveal_per_minute', fallback: 30 },
+  rateFileUploadPerMinute: { key: 'rate.file_upload_per_minute', fallback: 20 },
   // Bậc chờ khi một tài khoản bị đoán sai nhiều lần (0060, SEC-03). Xem `common/lockout.ts`.
   loginAccountBackoffMinutes: { key: 'login.account_backoff_minutes', fallback: '5,15,30,60' },
   // 60s (0034): 30 chỉ vừa đủ đọc xong thì hộp đóng, người dùng bấm Xem lại — mỗi lần một dòng audit.

@@ -236,7 +236,7 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
 - [ ] **BE-19 · Audit ma trận quyền không ghi tầng cũ; gỡ quyền đọc ngoài transaction**
   (`access-list.service.ts`).
   - **Rà 29/09:** còn nguyên (`upsert` không đọc tầng cũ; `remove` đọc `before` ngoài transaction).
-- [ ] **BE-20 · Tham số nghiệp vụ viết cứng, vi phạm AD-11:**
+- [x] **BE-20 · Tham số nghiệp vụ viết cứng, vi phạm AD-11:**
   - `MIN_PREFIX=24`, `WIDE_RANGE=1000`, `LOOK_BACK_DAYS=365`, `MAX_ITEMS=8`.
   - Các `@Throttle` 30 và 10 lần/phút.
   - `MAX_RELAY_ATTEMPTS=10`.
@@ -244,6 +244,15 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
   - **Rà 29/09:** mới xong ý múi giờ (đọc `appTimezone`, 4541be6; kiểm ở
     `api/test/audit-query-filters.spec.ts`). Ba ý còn lại vẫn viết cứng; `MAX_RELAY_ATTEMPTS` nay là
     14 (9216723, OPS-11); thêm một `@Throttle` 20 lần/phút ở `files.controller.ts:107`.
+  - **Đã sửa:** mọi số trên thành khoá `system_config`, seed bằng giá trị cũ (0280–0283):
+    `ipam.subnet_min_prefix`, `nat.wide_port_range`, `expiry.look_back_days`,
+    `dashboard.max_items`, `outbox.max_relay_attempts`, `rate.totp_per_minute`,
+    `rate.secret_reveal_per_minute`, `rate.file_upload_per_minute`. Trừ trần outbox (khoá kỹ
+    thuật), tất cả sửa được ở màn Tham số hệ thống. `@Throttle` thay bằng `@ConfigThrottle`
+    (`common/config-throttle.ts`); web thôi giữ bản sao trần dải và ngưỡng dải cổng NAT. Kiểm:
+    `ipam-config.spec.ts`, `outbox.spec.ts` (test:db), `user-throttler.guard.spec.ts`,
+    `config-throttle-surface.spec.ts`, `dashboard-max-items.spec.ts`,
+    `expiry-look-back.spec.ts`.
 - [x] **BE-21 · `audit-query`:** `actor`/`objectId` đưa vào `ILIKE` không qua `escapeLike`; `page`
   không có `@Max`.
   - **Rà 29/09:** xong (4541be6). `escapeLike` ở `audit-query.service.ts:137,146`; `@Max(COUNT_CAP)`

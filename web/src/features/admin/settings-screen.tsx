@@ -48,6 +48,12 @@ const TEXT: Record<string, [string, string]> = {
   loginMaxFailedAttempts: ['settings.loginMaxFailedAttemptsLabel', 'settings.loginMaxFailedAttemptsDesc'],
   loginLockoutMinutes: ['settings.loginLockoutMinutesLabel', 'settings.loginLockoutMinutesDesc'],
   loginRateLimitPerIp: ['settings.loginRateLimitPerIpLabel', 'settings.loginRateLimitPerIpDesc'],
+  rateTotpPerMinute: ['settings.rateTotpPerMinuteLabel', 'settings.rateTotpPerMinuteDesc'],
+  rateFileUploadPerMinute: ['settings.rateFileUploadPerMinuteLabel', 'settings.rateFileUploadPerMinuteDesc'],
+  rateSecretRevealPerMinute: [
+    'settings.rateSecretRevealPerMinuteLabel',
+    'settings.rateSecretRevealPerMinuteDesc',
+  ],
   loginAccountBackoffMinutes: [
     'settings.loginAccountBackoffMinutesLabel',
     'settings.loginAccountBackoffMinutesDesc',
