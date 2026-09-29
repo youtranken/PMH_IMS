@@ -8715,7 +8715,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     /* ---------- HỘP "XOAY": một ô, và Esc đóng được ---------- */
 
     await rowAction(page, label, 'Đổi giá trị');
-    const rotate = page.getByRole('dialog', { name: `Đổi giá trị: ${label}` });
+    const rotate = page.getByRole('dialog', { name: `Đổi giá trị — ${label}` });
     await expect(rotate).toBeVisible();
     expect(
       await textboxLabels(rotate),

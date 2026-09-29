@@ -829,17 +829,27 @@ table.table tbody tr.row-muted td {
   text-align: center;
   font-size: var(--fs-xs);
 }
-/* Lối tắt tới tab Két sắt trên trang hồ sơ — chỉ ở màn hẹp, nơi tab đó nằm khuất (VLT-042). */
-.btn.vault-jump {
-  display: none;
+/* Lô file đang tải của khu đính kèm (ui/attachment-panel.tsx): mỗi file một dòng, có nút Hủy. */
+.upload-queue {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
-@media (max-width: 640px) {
-  .btn.vault-jump {
-    display: flex;
-    width: 100%;
-    justify-content: center;
-    margin-bottom: var(--space-5);
-  }
+.upload-queue li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+}
+.upload-queue-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 /* Nhóm "Đang có hiệu lực" ghim trên nhật ký: tách hẳn khỏi bảng nhật ký bên dưới. */
 .approval-active {

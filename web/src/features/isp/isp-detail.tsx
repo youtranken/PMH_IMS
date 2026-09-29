@@ -351,6 +351,7 @@ export function IspDetail({ me }: { me: Me }) {
           <VaultPanel
             ownerType="isp"
             ownerId={item.id}
+            ownerLabel={item.code}
             me={me}
             /* Ghi vào két vẫn chỉ SA/Admin — API chặn, UI đừng bày nút ra để bấm rồi 403. */
             canEdit={me.role === "sa" || me.role === "admin"}

@@ -761,6 +761,12 @@ export default {
     pick: 'Chọn file để đính kèm',
     // Chọn/thả là tải ngay, nhiều file một lượt — không còn nút "Tải lên" riêng.
     uploadingOf: 'Đang tải lên {{done}}/{{total}}…',
+    cancelUpload: 'Hủy tải "{{name}}"',
+    queue_waiting: 'Chờ',
+    queue_uploading: 'Đang tải…',
+    queue_done: 'Xong',
+    queue_failed: 'Lỗi',
+    queue_cancelled: 'Đã hủy',
     uploadedCount: 'Đã đính kèm {{count}} giấy tờ.',
     draftFailedLive: 'Không tải lên được "{{name}}": {{reason}}',
     empty: 'Chưa có giấy tờ nào.',
@@ -1463,7 +1469,7 @@ export default {
   },
   vault: {
     tab: 'Két sắt',
-    jumpToVault: 'Mật khẩu trong két',
+    sectionTitle: 'Ngăn két',
     /* Hộp giá trị tự đóng khi hết giờ. Không nói gì thì người dùng không phân biệt được "hết
        giờ" với "mình lỡ bấm Ẩn" hay "trình duyệt vừa lỗi" — và phản xạ là bấm Xem lần nữa,
        tức thêm một dòng nhật ký mở két cho một lần không cần thiết. */
@@ -1480,7 +1486,6 @@ export default {
     add: 'Cất mật khẩu/khóa',
     edit: 'Sửa thông tin',
     rotate: 'Đổi giá trị',
-    rotateTitle: 'Đổi giá trị: {{label}}',
     rotateHint: 'Giá trị mới sẽ mã hóa lại từ đầu. Giá trị cũ không xem lại được nữa.',
     rotateOrder:
       'IMS KHÔNG nối tới máy chủ hay thiết bị: lưu ở đây không đổi gì trên hệ thống thật. Đổi trên hệ thống thật TRƯỚC (việc này ảnh hưởng hệ thống đang chạy) và đăng nhập thử bằng giá trị mới, rồi mới lưu vào két — lưu xong là giá trị cũ không xem lại được.',
@@ -1522,6 +1527,7 @@ export default {
     rotated: 'Đã đổi giá trị.',
     empty: 'Két chưa có ngăn nào',
     emptyHint: 'Mật khẩu admin, SSH, SNMP… cất vào đây thay vì ghi ra file Excel.',
+    emptyLockedHint: 'Hồ sơ đã khóa — không cất thêm được vào két này.',
     label: 'Tên gọi',
     labelRequired: 'Đặt tên gọi cho ngăn này (vd "admin web", "SSH root").',
     kind: 'Loại',

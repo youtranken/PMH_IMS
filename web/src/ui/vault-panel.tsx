@@ -150,11 +150,19 @@ export function VaultPanel({
   me,
   canEdit = true,
   stepsInline = false,
+  ownerLabel,
+  locked = false,
 }: {
   ownerType: SecretOwnerType;
   ownerId: string;
   me: Me;
   canEdit?: boolean;
+  /** Mã hồ sơ chủ — tiêu đề hộp "Cất mật khẩu/khóa — SW-CORE-01" nói cất vào MÁY NÀO (DEV-035). */
+  ownerLabel?: string;
+  /**
+   * Hồ sơ đã khóa (thanh lý): két chỉ còn để đọc, câu rỗng không mời "cất vào đây" nữa (DEV-057).
+   */
+  locked?: boolean;
   /**
    * Khung này đang nằm TRONG một hộp (vd popup của trang Két tổng): bước gõ mã 6 số và bước
    * hiện giá trị thay chỗ danh sách ngăn ngay trong hộp đó, không mở hộp chồng lên (VLT-062).
@@ -490,26 +498,29 @@ export function VaultPanel({
         </p>
       ) : null}
 
-      {canEdit ? (
-        <div className="row" style={{ justifyContent: 'flex-end' }}>
-          {/* Nút thường: két là một TAB của hồ sơ — nút chính của màn là "Sửa hồ sơ" ở đầu
-              trang; hai nút đặc cùng màn thì không còn điểm nhấn nào (SW-015). */}
-          <button
-            type="button"
-            className="btn"
-            onClick={() => setEditing({ secret: null })}
-          >
+      {/* Thanh công cụ của tab như Sơ đồ cổng: tiêu đề + số ngăn bên trái, nút cất bên phải,
+          cùng hàng (DEV-079). Nút thường: nút chính của màn là ở đầu trang (SW-015). */}
+      <div className="section-bar">
+        <h3 className="form-section-title">{t('vault.sectionTitle')}</h3>
+        {secrets.data ? <span className="section-count">{rows.length}</span> : null}
+        {canEdit ? (
+          <button type="button" className="btn" onClick={() => setEditing({ secret: null })}>
             {t('vault.add')}
           </button>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       {secrets.isLoading ? (
         <Loading />
       ) : secrets.isError ? (
         <LoadError error={secrets.error} onRetry={() => void secrets.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState title={t('vault.empty')} hint={t('vault.emptyHint')} />
+        <EmptyState
+          title={t('vault.empty')}
+          hint={
+            canEdit ? t('vault.emptyHint') : locked ? t('vault.emptyLockedHint') : undefined
+          }
+        />
       ) : (
         <>
           {busyReason.hint}
@@ -662,6 +673,7 @@ export function VaultPanel({
       {editing ? (
         <SecretForm
           secret={editing.secret}
+          ownerLabel={ownerLabel}
           ownerType={ownerType}
           ownerId={ownerId}
           csrfToken={me.csrfToken}
@@ -746,6 +758,7 @@ const KINDS: SecretKind[] = ['password', 'license_key', 'other'];
  */
 function SecretForm({
   secret,
+  ownerLabel,
   ownerType,
   ownerId,
   csrfToken,
@@ -753,6 +766,7 @@ function SecretForm({
   onSaved,
 }: {
   secret: SecretMeta | null;
+  ownerLabel?: string;
   ownerType: SecretOwnerType;
   ownerId: string;
   csrfToken: string;
@@ -789,7 +803,14 @@ function SecretForm({
          người dùng tin là đã hủy trong khi secret đã vào két. */
       dismissible={!save.isPending}
       maxWidth={560}
-      title={isEdit ? t('vault.edit') : t('vault.add')}
+      /* Một mẫu tiêu đề cho mọi hộp: "{Việc} — {chủ thể}" (DEV-035). */
+      title={
+        isEdit
+          ? t('common.titleOf', { action: t('vault.edit'), subject: secret.label })
+          : ownerLabel
+            ? t('common.titleOf', { action: t('vault.add'), subject: ownerLabel })
+            : t('vault.add')
+      }
       footer={
         <>
           <button type="button" className="btn" disabled={save.isPending} onClick={onClose}>
@@ -950,7 +971,7 @@ function RotateForm({
          cấu hình thiết bị vừa hết hiệu lực. */
       dismissible={!rotate.isPending}
       maxWidth={480}
-      title={t('vault.rotateTitle', { label: secret.label })}
+      title={t('common.titleOf', { action: t('vault.rotate'), subject: secret.label })}
       footer={
         <>
           <button type="button" className="btn" disabled={rotate.isPending} onClick={onClose}>

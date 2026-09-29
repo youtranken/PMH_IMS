@@ -269,6 +269,7 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
           <VaultPanel
             ownerType="service_account"
             ownerId={item.id}
+            ownerLabel={item.code}
             me={me}
             canEdit={canVaultWrite}
           />
