@@ -1448,12 +1448,10 @@ export default {
        giờ" với "mình lỡ bấm Ẩn" hay "trình duyệt vừa lỗi" — và phản xạ là bấm Xem lần nữa,
        tức thêm một dòng nhật ký mở két cho một lần không cần thiết. */
     autoHidden: 'Đã tự ẩn giá trị. Bấm "Xem" nếu cần mở lại.',
-    intro:
-      'Nơi cất mật khẩu và license key. Giá trị được mã hóa, chỉ xem được qua bước xác thực 2 lớp — bảng dưới đây chỉ hiện tên gọi.',
+    intro: 'Nơi cất mật khẩu và license key, đã mã hóa. Xem giá trị phải nhập mã 2 lớp.',
     // Từ story 6.3, Member CÓ THỂ có quyền — chỉ là không có trên đối tượng NÀY. Câu cũ
     // ("chỉ Quản trị xem được") giờ vừa sai vừa làm người đọc thôi không đi hỏi nữa.
-    noPermission:
-      'Bạn không có quyền trên đối tượng này. Nếu cần, đề nghị Quản trị gán quyền cho bạn.',
+    noPermission: 'Bạn không có quyền trên đối tượng này. Cần thì nhờ Quản trị gán quyền.',
     /* Thuật ngữ két: "két" là nơi chứa của một hồ sơ, "ngăn" là một mật khẩu/khóa trong két.
        Không dùng chữ "secret" trên giao diện; "Xoá vĩnh viễn" để không trùng "Thu hồi sớm" của
        break-glass (cắt quyền tạm, không mất dữ liệu). */
@@ -1461,16 +1459,14 @@ export default {
     edit: 'Sửa thông tin',
     rotate: 'Đổi giá trị',
     rotateHint: 'Giá trị mới sẽ mã hóa lại từ đầu. Giá trị cũ không xem lại được nữa.',
-    rotateOrder:
-      'IMS KHÔNG nối tới máy chủ hay thiết bị: lưu ở đây không đổi gì trên hệ thống thật. Đổi trên hệ thống thật TRƯỚC (việc này ảnh hưởng hệ thống đang chạy) và đăng nhập thử bằng giá trị mới, rồi mới lưu vào két — lưu xong là giá trị cũ không xem lại được.',
+    rotateOrder: 'IMS không đổi gì trên thiết bị thật. Đổi trên thiết bị và đăng nhập thử bằng giá trị mới TRƯỚC, rồi mới lưu vào két — lưu xong giá trị cũ không xem lại được.',
     revoke: 'Xóa vĩnh viễn',
     revoked: 'Đã xóa vĩnh viễn ngăn.',
     typeLabelToConfirm: 'Gõ lại tên ngăn để xác nhận: {{label}}',
     noPermissionTitle: 'Bạn chưa có quyền xem két này',
     needsApproval: 'Cần duyệt',
     lastDenied: 'Lần xin lúc {{at}} bị từ chối:',
-    requestBlock:
-      'Két này cần được duyệt trước khi xem ({{count}} ngăn). Một lần xin là cho cả két, có hạn giờ.',
+    requestBlock: 'Két này cần được duyệt trước khi xem ({{count}} ngăn). Một lần xin mở cả két, có hạn giờ.',
     /* Q-15: hạn đổi mật khẩu = ngày đổi + `dashboard.secret_stale_days` (mặc định 180); số
        ngày do server tính. Đổi giá trị xong là đếm lại từ đầu. */
     changedCol: 'Đổi lần cuối',
@@ -1494,9 +1490,7 @@ export default {
     /* Câu cũ: "…nhưng vết cất vẫn còn trong nhật ký." Nhật ký giữ VẾT (ai cất, lúc nào),
        KHÔNG giữ GIÁ TRỊ — mà câu ấy đọc ra như mật khẩu còn nằm đâu đó lấy lại được. Đây là
        thao tác xoá vĩnh viễn một giá trị đã mã hóa; phải nói thẳng ra như vậy. */
-    confirmRevoke:
-      'Xóa vĩnh viễn "{{label}}"? GIÁ TRỊ mật khẩu bị xóa — không có cách nào xem lại, ' +
-      'kể cả Super Admin. Nhật ký chỉ giữ vết ai đã cất và lúc nào. Chưa có bản khác thì đừng xóa.',
+    confirmRevoke: 'Xóa vĩnh viễn "{{label}}"? Giá trị bị xóa, không ai xem lại được, kể cả Super Admin. Chưa có bản khác thì đừng xóa.',
     saved: 'Đã lưu vào két.',
     rotated: 'Đã đổi giá trị.',
     empty: 'Két chưa có ngăn nào',
@@ -1510,7 +1504,7 @@ export default {
     kind_other: 'Khác',
     username: 'Tên đăng nhập',
     value: 'Giá trị',
-    valueHint: 'Nhập một lần. Hệ thống mã hóa ngay, không lưu bản rõ ở đâu cả.',
+    valueHint: 'Hệ thống mã hóa ngay, không lưu bản rõ.',
     valueRequired: 'Chưa nhập giá trị cần cất.',
     newValue: 'Giá trị mới',
     note: 'Ghi chú',
@@ -1527,7 +1521,7 @@ export default {
     strengthMissing: '(chưa đạt)',
     /* Cảnh báo, KHÔNG chặn: phần lớn secret là mật khẩu của thiết bị ngoài đã có sẵn — chặn
        cứng chỉ đẩy người dùng ghi mật khẩu thật vào ô Ghi chú, chỗ không mã hóa. */
-    strengthWeak: 'Giá trị này chưa đủ mạnh — vẫn lưu được, nhưng nếu là mật khẩu do mình đặt thì nên đổi.',
+    strengthWeak: 'Giá trị chưa đủ mạnh — vẫn lưu được, nhưng nếu do mình đặt thì nên đổi.',
     autoHideShort: 'còn lại trước khi tự ẩn',
     revealLogged: 'Lượt xem này đã được ghi nhật ký.',
     hideNow: 'Ẩn ngay',
@@ -1536,18 +1530,16 @@ export default {
     requestTitleCount: 'Xin mở két ({{count}} ngăn)',
     requestReasonCount: 'Đã gõ {{count}} ký tự · tối thiểu {{min}}.',
     requestHoursHintMax: 'Chọn nhanh hoặc gõ số giờ — tối đa {{hours}} giờ. Xin vừa đủ việc.',
-    requestHint:
-      'Yêu cầu sẽ gửi cho Quản trị. Khi được duyệt, bạn xem được trong đúng thời hạn cấp — hết giờ là tự cắt, không cần ai đóng.',
+    requestHint: 'Yêu cầu gửi tới Quản trị. Được duyệt thì bạn xem được tới hết số giờ cấp, rồi tự cắt.',
     requestReason: 'Lý do',
     requestReasonPlaceholder: 'Việc gì · ở đâu · vì sao cần mật khẩu (vd switch tầng 3 mất kết nối)',
     requestReasonRequired: 'Ghi rõ lý do — người duyệt cần biết để quyết.',
     requestHours: 'Xin trong bao lâu (giờ)',
-    requestHoursHint: 'Xin vừa đủ. Vượt trần hệ thống thì sẽ được kẹp xuống và báo lại.',
-    requestHoursInvalid: 'Số giờ phải là một số nguyên lớn hơn 0. Ví dụ: 4',
+    requestHoursHint: 'Xin vừa đủ. Quá mức tối đa sẽ bị giảm xuống.',
+    requestHoursInvalid: 'Số giờ phải là số nguyên lớn hơn 0, vd 4.',
     requestSend: 'Gửi yêu cầu',
     requestSent: 'Đã gửi yêu cầu. Quản trị sẽ nhận được email.',
-    requestHoursClamped:
-      'Đã gửi yêu cầu, nhưng số giờ xin vượt trần hệ thống — chỉ còn {{hours}} giờ khi được duyệt.',
+    requestHoursClamped: 'Đã gửi yêu cầu. Số giờ xin vượt mức tối đa nên chỉ còn {{hours}} giờ khi được duyệt.',
     awaitingApproval: 'Đang chờ duyệt',
     // Nhánh CUỐI của badge: không xem được, không xin được, mà cũng không có phiếu nào đang
     // treo. Phải là một câu THẬT chứ không mượn câu "Đang chờ duyệt" — xem F-07.
@@ -1564,31 +1556,25 @@ export default {
     tierNote_whitelist: 'Bạn xem thẳng được — vẫn phải gõ mã 6 số mỗi lần.',
     tierNote_denied: 'Bạn không có quyền trên đối tượng này.',
     /* Khối trạng thái khi đang có phiếu treo — người xin rút được, và khung tự làm mới. */
-    pendingSince: 'Yêu cầu gửi lúc {{at}} đang chờ Quản trị quyết. Khung này tự làm mới khi có quyết định.',
+    pendingSince: 'Yêu cầu gửi lúc {{at}} đang chờ Quản trị duyệt. Khung này tự cập nhật khi có kết quả.',
     pendingDetail: 'Xem yêu cầu',
     /* Q-15: yêu cầu đang chờ không gắn phiên — người xin không phải ngồi canh trang. */
-    pendingCanLeave:
-      'Bạn có thể đóng trang — khi được duyệt sẽ có thư báo. Đăng nhập lại, mở két này và bấm "Xem", nhập mã 6 số.',
+    pendingCanLeave: 'Bạn có thể đóng trang — được duyệt sẽ có thư báo. Khi đó mở két này, bấm "Xem" và nhập mã 6 số.',
     pendingExpiresIn: 'Không ai duyệt trong {{hours}} giờ thì yêu cầu tự hết hạn.',
     /* Đã duyệt, chưa xem lần nào: lần xem đầu gắn quyền vào phiên đang xem. */
     approvedReady: 'Đã được duyệt — bấm "Xem" ở ngăn cần mở và nhập mã 6 số.',
     approvedReadyLeft: 'Quyền còn {{left}} (tới {{until}}), tính từ lúc duyệt.',
-    requestSessionNote:
-      'Được duyệt thì lần bấm "Xem" đầu tiên gắn quyền vào phiên đăng nhập lúc đó — đăng xuất hay hết phiên là hết, muốn xem tiếp phải xin lại.',
-    approvedReadyNote:
-      'Lần xem đầu tiên gắn quyền vào phiên đăng nhập này — đăng xuất hay hết phiên là hết, muốn xem tiếp phải xin lại.',
+    requestSessionNote: 'Quyền gắn vào phiên đăng nhập lúc bạn bấm "Xem" lần đầu — đăng xuất hay hết phiên là phải xin lại.',
+    approvedReadyNote: 'Lần xem đầu gắn quyền vào phiên đăng nhập này — đăng xuất hay hết phiên là phải xin lại.',
     /* Q-15: quyền gắn với phiên đã xem lần đầu. Người xin phải đọc được trước, không thì đăng
        nhập lại rồi tưởng hệ thống làm mất quyền. */
-    sessionBound:
-      'Quyền này gắn với phiên đăng nhập đang dùng — đăng xuất hay hết phiên là hết, đăng nhập lại phải xin lại.',
-    otherSessionHeld:
-      'Quyền đã duyệt của bạn đã gắn với một phiên đăng nhập khác (phiên đã xem lần đầu) nên không dùng được ở đây. Gửi yêu cầu mới.',
+    sessionBound: 'Quyền gắn với phiên đăng nhập này — đăng xuất hay hết phiên là phải xin lại.',
+    otherSessionHeld: 'Quyền đã duyệt đang gắn với một phiên đăng nhập khác của bạn nên không dùng được ở đây. Gửi yêu cầu mới.',
     release: 'Trả quyền',
-    releaseConfirm:
-      'Đóng két với bạn ngay bây giờ? Muốn xem lại thì phải gửi yêu cầu mới và chờ duyệt.',
+    releaseConfirm: 'Két đóng với bạn ngay. Muốn xem lại phải gửi yêu cầu mới và chờ duyệt.',
     released: 'Đã trả quyền — két đã đóng với bạn.',
     /* Bước trong hộp (VLT-062): nút rời bước gõ mã, về lại danh sách ngăn của cùng hộp. */
-    stepBack: '‹ Quay lại danh sách ngăn',
+    stepBack: '‹ Quay lại',
   },
   ipam: {
     title: 'Địa chỉ IP',

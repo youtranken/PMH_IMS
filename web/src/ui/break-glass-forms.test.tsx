@@ -322,7 +322,7 @@ describe('Hộp xin quyền xem (vault-panel)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Gửi yêu cầu' }));
 
     expect(screen.getByText('Ghi rõ lý do — người duyệt cần biết để quyết.')).toBeInTheDocument();
-    expect(screen.getByText('Số giờ phải là một số nguyên lớn hơn 0. Ví dụ: 4')).toBeInTheDocument();
+    expect(screen.getByText('Số giờ phải là số nguyên lớn hơn 0, vd 4.')).toBeInTheDocument();
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'POST')).toBe(false);
   });
 });

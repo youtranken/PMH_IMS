@@ -2956,7 +2956,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await page.getByRole('tab', { name: /^Két sắt/ }).click();
     await expect(
       panel.getByText(
-        'Nơi cất mật khẩu và license key. Giá trị được mã hóa, chỉ xem được qua bước xác thực 2 lớp — bảng dưới đây chỉ hiện tên gọi.',
+        'Nơi cất mật khẩu và license key, đã mã hóa. Xem giá trị phải nhập mã 2 lớp.',
       ),
       'Két sắt phải tự nói ra luật chơi của nó trước khi ai bấm gì',
     ).toBeVisible();
@@ -8729,7 +8729,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       form.getByTestId('secret-strength-warning'),
       'giá trị thiếu chữ HOA và ký tự đặc biệt thì phải bị chê',
     ).toHaveText(
-      'Giá trị này chưa đủ mạnh — vẫn lưu được, nhưng nếu là mật khẩu do mình đặt thì nên đổi.',
+      'Giá trị chưa đủ mạnh — vẫn lưu được, nhưng nếu do mình đặt thì nên đổi.',
     );
     await expect(
       form.getByRole('button', { name: 'Lưu' }),
@@ -8820,7 +8820,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     expect(
       await stepUp.getByRole('button').allTextContents(),
       'bước mã phải có đúng cặp Quay lại / Xác nhận',
-    ).toEqual(['‹ Quay lại danh sách ngăn', 'Xác nhận']);
+    ).toEqual(['‹ Quay lại', 'Xác nhận']);
 
     /* ---- Gõ SAI mã: hộp KHÔNG được đóng ---- */
 

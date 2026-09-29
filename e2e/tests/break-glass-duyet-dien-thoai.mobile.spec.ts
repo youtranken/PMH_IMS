@@ -227,9 +227,9 @@ test.describe('Phía người xin, 390px', () => {
 
     // Không còn cảnh báo "vượt trần… chỉ còn  giờ" sai ở mỗi lần gửi.
     await expect(page.getByText('Đã gửi yêu cầu. Quản trị sẽ nhận được email.')).toBeVisible();
-    await expect(page.getByText(/vượt trần/)).toHaveCount(0);
+    await expect(page.getByText(/vượt mức tối đa/)).toHaveCount(0);
 
-    await expect(page.getByText(/đang chờ Quản trị quyết/)).toBeVisible();
+    await expect(page.getByText(/đang chờ Quản trị duyệt/)).toBeVisible();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
     // Phiếu của chính mình trên trang chi tiết: không duyệt được, chỉ rút.
@@ -368,7 +368,7 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
     await page.reload();
     await expect(page.getByText(/Đã được duyệt — bấm "Xem"/)).toBeVisible();
     await expect(page.getByText(/Quyền còn 3 giờ 5\d phút \(tới .*\), tính từ lúc duyệt/)).toBeVisible();
-    await expect(page.getByText(/Lần xem đầu tiên gắn quyền vào phiên/)).toBeVisible();
+    await expect(page.getByText(/Lần xem đầu gắn quyền vào phiên/)).toBeVisible();
     await expect(page.getByRole('button', { name: /Nhận quyền/ })).toHaveCount(0);
     const release = page.getByRole('button', { name: 'Trả quyền' });
     await expect(release).toBeInViewport();
