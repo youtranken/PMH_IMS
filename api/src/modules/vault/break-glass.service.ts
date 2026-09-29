@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
   OnModuleInit,
 } from '@nestjs/common';
@@ -15,6 +16,9 @@ import {
 } from '../../common/approvals/approvals-registry';
 import { UI_PATHS } from '../../common/ui-paths';
 import { UsersApiService } from '../users/users.api';
+import { AuthApiService } from '../auth/auth.api';
+import { SweepService } from '../queue/sweep.service';
+import { redactMessage } from '../../common/log-redact';
 import {
   ApprovalsApiService,
   type ApprovalRecord,
@@ -57,6 +61,22 @@ export const BREAK_GLASS_FLOW = {
     'approved->revoked': 'Thu hồi sớm',
   },
 };
+
+/** Tên lượt quét đóng quyền của phiên đã kết thúc — `SweepService` gọi mỗi vòng. */
+export const SESSION_ENDED_SWEEP = 'break-glass-session-ended';
+
+const SESSION_ENDED_NOTE = 'Phiên đăng nhập của người xin đã kết thúc.';
+
+/**
+ * Người đang gọi: email + phiên đăng nhập của CHÍNH request này (Q-15).
+ *
+ * `sessionId` phải lấy từ `req.user.sessionId` mà `SessionGuard` vừa xác thực, không bao giờ
+ * từ body/query — nhận từ client là để người dùng tự chọn phiên nào mang quyền.
+ */
+export interface BreakGlassViewer {
+  email: string;
+  sessionId: string;
+}
 
 export interface BreakGlassRequestInput {
   ownerType: SecretOwnerType;
@@ -139,6 +159,11 @@ export interface AccessVerdict {
    * người duyệt, để họ không gửi lại y nguyên lý do vừa bị chê. Chỉ phiếu của chính họ.
    */
   lastDenied: { at: Date | null; note: string | null } | null;
+  /**
+   * Người này đang có quyền hoặc phiếu treo trên đối tượng này nhưng từ MỘT PHIÊN KHÁC — phiên
+   * này không dùng được, phải xin lại (Q-15). UI nói rõ vì sao, thay vì im lặng hiện form xin.
+   */
+  otherSessionHeld: boolean;
 }
 
 /**
@@ -159,10 +184,18 @@ export class BreakGlassService implements OnModuleInit {
     private readonly owners: VaultOwnersService,
     private readonly vault: VaultService,
     private readonly users: UsersApiService,
+    private readonly auth: AuthApiService,
+    private readonly sweep: SweepService,
   ) {}
+
+  private readonly logger = new Logger(BreakGlassService.name);
 
   onModuleInit(): void {
     this.kinds.register(BREAK_GLASS_FLOW);
+    this.sweep.register({
+      name: SESSION_ENDED_SWEEP,
+      run: () => this.closeEndedSessions().then(() => undefined),
+    });
     // `mail` là tầng nền, không import được `vault` (AD-2) — nên dạy sổ cách gọi tên đối tượng.
     this.kinds.registerDescriber(BREAK_GLASS_KIND, (type, id) =>
       this.describeSubject(type as SecretOwnerType, id),
@@ -290,10 +323,11 @@ export class BreakGlassService implements OnModuleInit {
 
   /** UI hỏi "tôi làm được gì với chủ thể này" — một lần gọi, đủ để dựng đúng nút. */
   async verdictFor(
-    memberEmail: string,
+    viewer: BreakGlassViewer,
     ownerType: SecretOwnerType,
     ownerId: string,
   ): Promise<AccessVerdict> {
+    const memberEmail = viewer.email;
     const tier = await this.access.tierFor(memberEmail, ownerType, ownerId);
 
     if (tier === 'denied') {
@@ -308,6 +342,7 @@ export class BreakGlassService implements OnModuleInit {
         grantSecondsLeft: null,
         maxGrantHours: null,
         lastDenied: null,
+        otherSessionHeld: false,
       };
     }
     if (tier === 'whitelist') {
@@ -322,10 +357,13 @@ export class BreakGlassService implements OnModuleInit {
         grantSecondsLeft: null,
         maxGrantHours: null,
         lastDenied: null,
+        otherSessionHeld: false,
       };
     }
 
-    const [grant, pending, latest, maxGrantHours] = await Promise.all([
+    const [grant, pending, anyGrant, anyPending, latest, maxGrantHours] = await Promise.all([
+      this.grantOf(viewer, ownerType, ownerId),
+      this.pendingOf(memberEmail, ownerType, ownerId, viewer.sessionId),
       this.approvals.activeGrantFor({
         kind: BREAK_GLASS_KIND,
         requester: memberEmail,
@@ -362,7 +400,33 @@ export class BreakGlassService implements OnModuleInit {
       maxGrantHours,
       lastDenied:
         last?.state === 'denied' ? { at: last.decidedAt, note: last.decisionNote } : null,
+      otherSessionHeld:
+        (grant === null && anyGrant !== null) || (pending === null && anyPending !== null),
     };
+  }
+
+  /**
+   * Grant còn hạn gửi từ ĐÚNG phiên đang gọi, và phiên đó còn sống (Q-15).
+   *
+   * `SessionGuard` đã chặn mọi request từ phiên chết, nên hỏi lại sống/chết ở đây là lớp thứ
+   * hai: đường gọi nào lỡ đi vòng guard (job, test, controller mới quên guard) cũng không mở
+   * được két bằng quyền của một phiên đã đăng xuất.
+   */
+  private async grantOf(
+    viewer: BreakGlassViewer,
+    ownerType: SecretOwnerType,
+    ownerId: string,
+  ): Promise<ApprovalRecord | null> {
+    if (!viewer.sessionId) return null;
+    const grant = await this.approvals.activeGrantFor({
+      kind: BREAK_GLASS_KIND,
+      requester: viewer.email,
+      subjectType: ownerType,
+      subjectId: ownerId,
+      requesterSessionId: viewer.sessionId,
+    });
+    if (!grant) return null;
+    return (await this.auth.isSessionAlive(viewer.sessionId)) ? grant : null;
   }
 
   /**
@@ -393,11 +457,11 @@ export class BreakGlassService implements OnModuleInit {
    * nó thì nhật ký break-glass đứt đúng ở khúc quan trọng nhất: "xem bằng quyền nào".
    */
   async assertCanReveal(
-    memberEmail: string,
+    viewer: BreakGlassViewer,
     ownerType: SecretOwnerType,
     ownerId: string,
   ): Promise<{ tier: AccessTier; grantId: string | null }> {
-    const tier = await this.access.tierFor(memberEmail, ownerType, ownerId);
+    const tier = await this.access.tierFor(viewer.email, ownerType, ownerId);
 
     if (tier === 'whitelist') return { tier, grantId: null };
 
@@ -408,16 +472,13 @@ export class BreakGlassService implements OnModuleInit {
       });
     }
 
-    const grant = await this.approvals.activeGrantFor({
-      kind: BREAK_GLASS_KIND,
-      requester: memberEmail,
-      subjectType: ownerType,
-      subjectId: ownerId,
-    });
+    const grant = await this.grantOf(viewer, ownerType, ownerId);
     if (!grant) {
       throw new ForbiddenException({
         code: 'BREAK_GLASS_REQUIRED',
-        message: 'Cần được duyệt trước khi xem. Gửi yêu cầu kèm lý do và thời hạn.',
+        message:
+          'Cần được duyệt trước khi xem. Quyền đã cấp chỉ dùng được trong phiên đăng nhập đã ' +
+          'xin — đăng nhập lại thì gửi yêu cầu mới.',
       });
     }
     return { tier, grantId: grant.id };
@@ -430,7 +491,8 @@ export class BreakGlassService implements OnModuleInit {
    * đi — người xin ngồi chờ một người duyệt không hề biết có việc. Lúc 2 giờ sáng thì cửa sổ
    * đó là cả đêm.
    */
-  async request(memberEmail: string, input: BreakGlassRequestInput): Promise<ApprovalRecord> {
+  async request(viewer: BreakGlassViewer, input: BreakGlassRequestInput): Promise<ApprovalRecord> {
+    const memberEmail = viewer.email;
     const tier = await this.access.tierFor(memberEmail, input.ownerType, input.ownerId);
     if (tier === 'denied') {
       throw new ForbiddenException({
@@ -453,7 +515,10 @@ export class BreakGlassService implements OnModuleInit {
      * commit. Client không thể xử lý tử tế một API đổi mã theo nhịp gõ phím, và test thì đỏ
      * ngẫu nhiên — đúng cách bộ E2E đầy đủ phát hiện ra chuyện này.
      */
-    const existing = await this.pendingOf(memberEmail, input.ownerType, input.ownerId);
+    const [existing, stale] = await Promise.all([
+      this.pendingOf(memberEmail, input.ownerType, input.ownerId, viewer.sessionId),
+      this.pendingOf(memberEmail, input.ownerType, input.ownerId),
+    ]);
     if (existing) {
       throw new ConflictException({
         code: 'BREAK_GLASS_PENDING',
@@ -465,6 +530,18 @@ export class BreakGlassService implements OnModuleInit {
 
     try {
       return await this.db.transaction(async (tx) => {
+        /*
+         * Phiếu treo của một phiên KHÁC không dùng được ở phiên này (Q-15), nên xin lại thì
+         * đóng nó trong cùng transaction — không thì ràng buộc "một phiếu treo" chặn người
+         * xin mãi, còn người duyệt thì duyệt một phiếu không ai dùng được.
+         */
+        if (stale) {
+          await this.approvals.transitionWithin(tx, stale.id, {
+            to: 'cancelled',
+            actor: memberEmail,
+            note: 'Gửi lại từ một phiên đăng nhập khác.',
+          });
+        }
         const created = await this.approvals.createWithin(tx, {
           kind: BREAK_GLASS_KIND,
           requester: memberEmail,
@@ -472,6 +549,7 @@ export class BreakGlassService implements OnModuleInit {
           subjectId: input.ownerId,
           reason: input.reason,
           payload: { hours },
+          requesterSessionId: viewer.sessionId,
         });
         // Outbox chỉ mang id tham chiếu, KHÔNG PII (AD-11/NFR-04).
         await this.outbox.enqueueWithin(tx, 'approval.requested', { approvalId: created.id });
@@ -599,6 +677,63 @@ export class BreakGlassService implements OnModuleInit {
   }
 
   /**
+   * Người xin tự trả quyền sớm (VLT-055) — việc đã xong thì két đóng ngay, không chờ hết giờ.
+   *
+   * Chỉ trả được grant CỦA CHÍNH MÌNH: cùng lý do với `cancel()` — biết id mà cắt được quyền
+   * của người khác là phá được người đang xử sự cố. Không đòi đúng phiên: bỏ bớt quyền thì
+   * phiên nào của chính người đó làm cũng an toàn.
+   */
+  async release(requester: string, id: string): Promise<ApprovalRecord> {
+    const request = await this.requireBreakGlass(id);
+    if (request.requester.toLowerCase() !== requester.toLowerCase()) {
+      throw new ForbiddenException({
+        code: 'NOT_YOUR_REQUEST',
+        message: 'Chỉ người xin mới trả được quyền này.',
+      });
+    }
+    return this.approvals.transition(id, {
+      to: 'revoked',
+      actor: requester,
+      note: 'Người xin tự trả quyền.',
+    });
+  }
+
+  /**
+   * Lượt quét: grant đã duyệt của phiên đã kết thúc → `expired`, có dòng lịch sử + audit (Q-15).
+   *
+   * Chỉ là VỆ SINH cho nhật ký: quyền đã hết từ lúc phiên chết vì `grantOf` so phiên ở mỗi lần
+   * mở. Phiên chết thì không sống lại, nên đọc-rồi-đóng không có tranh chấp; hai lượt quét cùng
+   * đóng một phiếu thì `transition` chặn lượt sau bằng điều kiện state.
+   *
+   * Không đụng phiếu ĐANG CHỜ: Q-15 cho người duyệt quyết nó (duyệt rồi thì lượt quét sau đóng),
+   * và người xin gửi lại từ phiên mới thì `request()` tự rút nó. Không đụng grant KHÔNG mang
+   * phiên (cấp trước luật này): nó vốn không dùng được, và đồng hồ `expires_at` tự đóng nó.
+   */
+  async closeEndedSessions(): Promise<number> {
+    const open = (await this.approvals.openWithSession(BREAK_GLASS_KIND)).filter(
+      (r) => r.state === 'approved' && r.requesterSessionId !== null,
+    );
+    const alive = await this.auth.aliveSessionIds(open.map((r) => r.requesterSessionId!));
+    let closed = 0;
+    for (const row of open) {
+      if (alive.has(row.requesterSessionId!)) continue;
+      try {
+        await this.approvals.transition(row.id, {
+          to: 'expired',
+          actor: 'system',
+          note: SESSION_ENDED_NOTE,
+          detail: { by: 'session-ended' },
+        });
+        closed += 1;
+      } catch (error) {
+        // Một phiếu vừa được người khác xử lý không được làm câm cả vòng quét.
+        this.logger.warn(`đóng phiếu ${row.id} lỗi: ${redactMessage(error)}`);
+      }
+    }
+    return closed;
+  }
+
+  /**
    * Đúng LOẠI break-glass, không phải một yêu cầu của module khác.
    *
    * Bảng `approval` dùng chung cho mọi luồng duyệt (AD-6). Không kiểm `kind` thì khi Epic 8/9
@@ -643,17 +778,21 @@ export class BreakGlassService implements OnModuleInit {
     return this.approvals.list({ kind: BREAK_GLASS_KIND });
   }
 
+  /** Phiếu treo của người này; có `sessionId` thì chỉ phiếu gửi từ đúng phiên đó. */
   private async pendingOf(
     memberEmail: string,
     ownerType: SecretOwnerType,
     ownerId: string,
+    sessionId?: string,
   ): Promise<ApprovalRecord | null> {
+    if (sessionId === '') return null;
     const rows = await this.approvals.list({
       kind: BREAK_GLASS_KIND,
       state: 'pending',
       requester: memberEmail,
       subjectType: ownerType,
       subjectId: ownerId,
+      requesterSessionId: sessionId,
     });
     return rows[0] ?? null;
   }

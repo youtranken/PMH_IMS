@@ -148,7 +148,11 @@ export class VaultController {
   @NoIdleTouch()
   @Get('verdict')
   verdict(@Query() query: OwnerQueryDto, @Req() req: AuthedRequest) {
-    return this.breakGlass.verdictFor(actor(req), query.ownerType, query.ownerId);
+    return this.breakGlass.verdictFor(
+      { email: actor(req), sessionId: req.user!.sessionId },
+      query.ownerType,
+      query.ownerId,
+    );
   }
 
   @Roles('sa', 'admin')
@@ -253,7 +257,12 @@ export class VaultController {
     let grantId: string | null = null;
     /* Mặc định ĐÓNG (AD-9) — xem chú thích cùng luật ở `list()` bên trên. */
     if (req.user!.role !== 'sa' && req.user!.role !== 'admin') {
-      ({ grantId } = await this.breakGlass.assertCanReveal(who, meta.ownerType, meta.ownerId));
+      ({ grantId } = await this.breakGlass.assertCanReveal(
+        // Grant chỉ dùng được từ đúng phiên đã xin, và phiên đó còn sống (Q-15).
+        { email: who, sessionId: req.user!.sessionId },
+        meta.ownerType,
+        meta.ownerId,
+      ));
     }
 
     const [opened, revealSeconds, graceMinutes] = await Promise.all([

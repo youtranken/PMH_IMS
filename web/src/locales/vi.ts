@@ -1461,6 +1461,16 @@ export default {
     /* Khối trạng thái khi đang có phiếu treo — người xin rút được, và khung tự làm mới. */
     pendingSince: 'Yêu cầu gửi lúc {{at}} đang chờ Quản trị quyết. Khung này tự làm mới khi có quyết định.',
     pendingDetail: 'Xem yêu cầu',
+    /* Q-15: quyền gắn với phiên đã xin. Người xin phải đọc được trước, không thì đăng nhập lại
+       rồi tưởng hệ thống làm mất quyền. */
+    sessionBound:
+      'Quyền được duyệt chỉ dùng trong phiên đăng nhập này — đăng xuất hay hết phiên là hết, đăng nhập lại phải xin lại.',
+    otherSessionHeld:
+      'Quyền hoặc yêu cầu trước của bạn thuộc một phiên đăng nhập khác nên không dùng được ở đây. Gửi yêu cầu mới.',
+    release: 'Trả quyền',
+    releaseConfirm:
+      'Đóng két với bạn ngay bây giờ? Muốn xem lại thì phải gửi yêu cầu mới và chờ duyệt.',
+    released: 'Đã trả quyền — két đã đóng với bạn.',
   },
   ipam: {
     title: 'Địa chỉ IP',

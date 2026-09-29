@@ -143,7 +143,11 @@ export class BreakGlassController {
   @Post()
   @Audited('break_glass.requested', 'approval', { writtenByService: true })
   request(@Body() body: RequestDto, @Req() req: AuthedRequest) {
-    return this.breakGlass.request(actor(req), body);
+    // Phiên lấy từ guard, không từ body: grant chỉ dùng được ở đúng phiên này (Q-15).
+    return this.breakGlass.request(
+      { email: actor(req), sessionId: req.user!.sessionId },
+      body,
+    );
   }
 
   @Roles('sa', 'admin')
@@ -178,6 +182,18 @@ export class BreakGlassController {
   @Audited('break_glass.cancelled', 'approval', { writtenByService: true })
   cancel(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
     return this.breakGlass.cancel(actor(req), params.id);
+  }
+
+  /**
+   * Người xin tự trả quyền sớm (VLT-055). Không đòi mã 6 số: bỏ bớt quyền của chính mình không
+   * mở thêm được gì. Service gác "chỉ grant của chính mình".
+   */
+  @Roles('sa', 'admin', 'member')
+  @Post(':id/release')
+  // Service ghi dòng `break_glass.revoked` với người làm là chính người xin — khai đúng tên đó.
+  @Audited('break_glass.revoked', 'approval', { writtenByService: true })
+  release(@Param() params: IdParamDto, @Req() req: AuthedRequest) {
+    return this.breakGlass.release(actor(req), params.id);
   }
 
   /**

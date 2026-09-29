@@ -50,6 +50,8 @@ export interface AccessVerdict {
   maxGrantHours?: number | null;
   /** Phiếu mới nhất của chính người xem trên hồ sơ này bị từ chối — lúc nào, ghi chú gì. */
   lastDenied?: { at: string | null; note: string | null } | null;
+  /** Quyền/phiếu treo của chính người xem nằm ở một phiên đăng nhập khác — phải xin lại (Q-15). */
+  otherSessionHeld?: boolean;
 }
 
 /**
@@ -203,6 +205,28 @@ export function VaultPanel({
   const writeStepUp = useStepUpRetry(me.csrfToken);
   const breakGlass = useBreakGlassActions(me.csrfToken);
   const [cancelling, setCancelling] = useState(false);
+  const [releasing, setReleasing] = useState(false);
+
+  /** Trả quyền sớm (VLT-055): qua hộp xác nhận, vì trả rồi muốn xem lại là phải chờ duyệt lại. */
+  const releaseGrant = async (grantId: string) => {
+    const ok = await askConfirm({
+      title: t('common.titleOf', { action: t('vault.release'), subject: t('vault.tab') }),
+      message: t('vault.releaseConfirm'),
+      danger: true,
+      confirmLabel: t('vault.release'),
+    });
+    if (!ok) return;
+    setReleasing(true);
+    try {
+      await breakGlass.release(grantId);
+      toast({ message: t('vault.released') });
+      void breakGlass.refresh();
+    } catch (error) {
+      toast({ message: errorMessage(error), tone: 'error' });
+    } finally {
+      setReleasing(false);
+    }
+  };
 
   const refresh = () => queryClient.invalidateQueries({ queryKey });
 
@@ -352,28 +376,45 @@ export function VaultPanel({
               ) : null}
             </p>
           ) : null}
+          {verdict.data.otherSessionHeld ? <p>{t('vault.otherSessionHeld')}</p> : null}
           <p>{t('vault.requestBlock', { count: rows.length })}</p>
           <button type="button" className="btn primary" onClick={() => setRequesting(true)}>
             {t('vault.request')}
           </button>
         </div>
-      ) : !isAdmin && verdict.data ? (
-        <p className={verdict.data.canReveal ? 'alert ok' : 'alert warn'}>
-          {/* `expiresAt` rỗng thì `formatDateTime` trả dấu gạch, và câu thành "Bạn được xem
-              tới —. Hết giờ là tự cắt." — một câu tự mâu thuẫn. Quyền không hạn thì nói là
-              không hạn. */}
-          {verdict.data.grant
-            ? verdict.data.grant.expiresAt
+      ) : !isAdmin && verdict.data?.grant ? (
+        /* Quyền đang chạy: đếm lùi + câu "hết khi đăng xuất" (Q-15) + lối tự trả quyền. */
+        <div className="alert ok" role="status">
+          <p>
+            {/* `expiresAt` rỗng thì `formatDateTime` trả dấu gạch và câu thành "được xem tới —"
+                — tự mâu thuẫn. Quyền không hạn thì nói là không hạn. */}
+            {verdict.data.grant.expiresAt
               ? grantLeft !== null
                 ? t('vault.grantUntilLeft', {
                     until: formatDateTime(verdict.data.grant.expiresAt),
                     left: leftText(grantLeft, t),
                   })
-                : t('vault.grantUntil', {
-                    until: formatDateTime(verdict.data.grant.expiresAt),
-                  })
-              : t('vault.grantNoLimit')
-            : t(`vault.tierNote_${verdict.data.tier}`)}
+                : t('vault.grantUntil', { until: formatDateTime(verdict.data.grant.expiresAt) })
+              : t('vault.grantNoLimit')}
+          </p>
+          <p className="muted">{t('vault.sessionBound')}</p>
+          <div className="row" style={{ gap: 'var(--space-4)', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className="btn sm danger-ghost"
+              disabled={releasing}
+              onClick={() => {
+                const grantId = verdict.data?.grant?.id;
+                if (grantId) void releaseGrant(grantId);
+              }}
+            >
+              {t('vault.release')}
+            </button>
+          </div>
+        </div>
+      ) : !isAdmin && verdict.data ? (
+        <p className={verdict.data.canReveal ? 'alert ok' : 'alert warn'}>
+          {t(`vault.tierNote_${verdict.data.tier}`)}
         </p>
       ) : null}
 
@@ -1015,6 +1056,7 @@ function BreakGlassDialog({
         }}
       >
         <p className="muted">{t('vault.requestHint')}</p>
+        <p className="muted">{t('vault.sessionBound')}</p>
 
         <Field
           label={t('vault.requestReason')}

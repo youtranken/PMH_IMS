@@ -422,3 +422,99 @@ describe('VaultPanel — ô giá trị, tuổi giá trị, xoá vĩnh viễn', (
     expect(fetchMock.mock.calls.some(([, init]) => init?.method === 'DELETE')).toBe(false);
   });
 });
+
+/**
+ * Q-15 — quyền mở két gắn với phiên đăng nhập đã xin; người xin tự trả quyền sớm (VLT-055).
+ *
+ * Người xin phải ĐỌC được rằng đăng xuất là mất quyền (không thì đăng nhập lại và tưởng hệ
+ * thống hỏng), và đóng được két khi xong việc mà không phải nhờ người duyệt thu hồi.
+ */
+describe('VaultPanel — quyền theo phiên và nút Trả quyền', () => {
+  const GRANTED: AccessVerdict = {
+    ...NEEDS_APPROVAL,
+    canReveal: true,
+    canRequest: false,
+    grant: { id: 'g1', expiresAt: '2026-09-20T05:30:00.000Z' },
+    grantSecondsLeft: 3600,
+  };
+
+  function mockRelease(verdict: AccessVerdict) {
+    const calls: { url: string; method: string }[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        const method = init?.method ?? 'GET';
+        calls.push({ url, method });
+        if (method === 'GET' && url.includes('/vault/secrets/verdict')) {
+          return Promise.resolve(jsonResponse(200, verdict));
+        }
+        if (method === 'GET' && url.includes('/vault/secrets')) {
+          return Promise.resolve(jsonResponse(200, [SECRET]));
+        }
+        if (method === 'POST' && url.includes('/release')) {
+          return Promise.resolve(jsonResponse(201, { id: 'g1', state: 'revoked' }));
+        }
+        return new Promise<Response>(() => {});
+      }),
+    );
+    return calls;
+  }
+
+  it('đang có quyền: thấy đếm lùi, câu "hết khi đăng xuất" và nút Trả quyền', async () => {
+    mockRelease(GRANTED);
+    renderPanel({ ...ME, role: 'member' });
+    expect(await screen.findByText(/Bạn được xem tới/)).toBeInTheDocument();
+    expect(screen.getByText(/đăng xuất hay hết phiên/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Trả quyền' })).toBeInTheDocument();
+  });
+
+  it('Trả quyền đi qua hộp xác nhận, rồi gọi đúng phiếu', async () => {
+    const calls = mockRelease(GRANTED);
+    renderPanel({ ...ME, role: 'member' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Trả quyền' }));
+    // Chưa xác nhận thì CHƯA gọi API.
+    expect(calls.some((c) => c.url.includes('/release'))).toBe(false);
+    const confirm = await screen.findByRole('dialog');
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Trả quyền' }));
+
+    expect(await screen.findByText(/Đã trả quyền/)).toBeInTheDocument();
+    expect(
+      calls.some((c) => c.method === 'POST' && c.url.includes('/vault/break-glass/g1/release')),
+    ).toBe(true);
+  });
+
+  it('bấm Hủy ở hộp xác nhận thì không trả gì', async () => {
+    const calls = mockRelease(GRANTED);
+    renderPanel({ ...ME, role: 'member' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Trả quyền' }));
+    const confirm = await screen.findByRole('dialog');
+    // Nút ✕ và nút cuối hộp cùng tên "Hủy" — bấm nút cuối hộp.
+    const buttons = within(confirm).getAllByRole('button', { name: 'Hủy' });
+    await userEvent.click(buttons[buttons.length - 1]);
+    expect(await screen.findByRole('button', { name: 'Trả quyền' })).toBeEnabled();
+    expect(calls.some((c) => c.url.includes('/release'))).toBe(false);
+  });
+
+  it('không có quyền đang chạy thì không có nút Trả quyền', async () => {
+    mockRelease(NEEDS_APPROVAL);
+    renderPanel({ ...ME, role: 'member' });
+    await screen.findByRole('button', { name: 'Xin quyền xem' });
+    expect(screen.queryByRole('button', { name: 'Trả quyền' })).not.toBeInTheDocument();
+  });
+
+  it('quyền/phiếu của phiên khác: nói rõ vì sao phải xin lại', async () => {
+    mockRelease({ ...NEEDS_APPROVAL, otherSessionHeld: true });
+    renderPanel({ ...ME, role: 'member' });
+    expect(await screen.findByText(/thuộc một phiên đăng nhập khác/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Xin quyền xem' })).toBeInTheDocument();
+  });
+
+  it('hộp xin nói trước: quyền hết khi đăng xuất hay hết phiên', async () => {
+    mockRelease(NEEDS_APPROVAL);
+    renderPanel({ ...ME, role: 'member' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Xin quyền xem' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText(/đăng xuất hay hết phiên/)).toBeInTheDocument();
+  });
+});

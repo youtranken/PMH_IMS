@@ -68,6 +68,11 @@ export class ApprovalsApiService {
     return this.approvals.activeGrantFor(params);
   }
 
+  /** Phiếu còn mở kèm phiên đã gửi — lượt quét quyền theo phiên (Q-15). */
+  openWithSession(kind: string): ReturnType<ApprovalsService['openWithSession']> {
+    return this.approvals.openWithSession(kind);
+  }
+
   pending(kind?: string): Promise<ApprovalRecord[]> {
     return this.approvals.pending(kind);
   }

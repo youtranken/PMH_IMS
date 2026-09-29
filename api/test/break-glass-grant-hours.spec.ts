@@ -12,6 +12,7 @@ import type { SweepService } from '../src/modules/queue/sweep.service';
 import type { VaultOwnersService } from '../src/modules/vault/vault-owners.service';
 import type { VaultService } from '../src/modules/vault/vault.service';
 import type { UsersApiService } from '../src/modules/users/users.api';
+import type { AuthApiService } from '../src/modules/auth/auth.api';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
 /**
@@ -52,6 +53,11 @@ describe('Break-glass: số giờ cấp ≤ số giờ xin ≤ trần cấu hìn
       {} as VaultOwnersService,
       {} as VaultService,
       {} as UsersApiService,
+      {
+        isSessionAlive: () => Promise.resolve(true),
+        aliveSessionIds: (ids: string[]) => Promise.resolve(new Set(ids)),
+      } as unknown as AuthApiService,
+      { register: () => undefined } as unknown as SweepService,
     );
     breakGlass.onModuleInit();
   }, TEST_TIMEOUT);

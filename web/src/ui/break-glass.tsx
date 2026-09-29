@@ -162,6 +162,8 @@ export function useBreakGlassActions(csrfToken: string) {
     revoke: (id: string, note?: string) =>
       stepUp.run(() => post(id, 'revoke', note ? { note } : {})),
     cancel: (id: string) => post(id, 'cancel'),
+    /** Người xin tự trả quyền đang chạy (VLT-055) — không đòi mã: bỏ bớt quyền không mở gì thêm. */
+    release: (id: string) => post(id, 'release'),
     refresh: () =>
       Promise.all([
         queryClient.invalidateQueries({ queryKey: BREAK_GLASS_KEY }),
