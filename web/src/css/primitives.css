@@ -474,7 +474,8 @@ table.table tbody tr.exp:hover td {
   color: inherit;
 }
 /* Số của chip ĐANG CHỌN đậm hơn — không thì ở chế độ tối nó chìm ngang số của chip chưa chọn. */
-.segmented button[aria-pressed='true'] .seg-count {
+.segmented button[aria-pressed='true'] .seg-count,
+.segmented button[aria-checked='true'] .seg-count {
   font-weight: 700;
 }
 

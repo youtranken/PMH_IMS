@@ -102,7 +102,7 @@ test.describe('Sổ IP nối về máy', () => {
     await f.assign(`${f.net}.8`, { usedBy: 'Phòng IT E2E' });
 
     await page.goto(`/ip-addresses/${f.subnetId}`);
-    await page.getByRole('button', { name: /^Tất cả/ }).click();
+    await page.getByRole('radio', { name: /^Tất cả/ }).click();
     const row = (address: string) =>
       page.getByRole('row', { name: new RegExp(`^${address.replace(/\./g, '\\.')}\\b`) });
     await expect(row(`${f.net}.6`).getByText(`trước: ${code}`, { exact: false })).toBeVisible();

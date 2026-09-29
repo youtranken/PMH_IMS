@@ -51,13 +51,10 @@ test.describe('Nhật ký hệ thống — lọc nhanh theo ngày, nhóm hành �
   }) => {
     await firstLogin(page, E2E_SA);
     await page.goto('/admin/audit-log');
-    await page.getByRole('button', { name: '7 ngày', exact: true }).click();
+    await page.getByRole('radio', { name: '7 ngày', exact: true }).click();
     await expect(page).toHaveURL(/from=\d{4}-\d{2}-\d{2}/);
     await expect(page).toHaveURL(/to=\d{4}-\d{2}-\d{2}/);
-    await expect(page.getByRole('button', { name: '7 ngày', exact: true })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    await expect(page.getByRole('radio', { name: '7 ngày', exact: true })).toBeChecked();
     // Vừa đăng nhập xong nên hôm nay chắc chắn có sự kiện.
     await expect(page.getByRole('rowheader', { name: 'Hôm nay' })).toBeVisible();
     await expect(page.getByText(/^Đang xem \d{2}\/\d{2}\/\d{4} \d{2}:\d{2} → /)).toBeVisible();
@@ -74,7 +71,7 @@ test.describe('Nhật ký hệ thống — lọc nhanh theo ngày, nhóm hành �
   }) => {
     await firstLogin(page, E2E_SA);
     await page.goto('/admin/audit-log');
-    const hom = page.getByRole('button', { name: 'Hôm nay', exact: true });
+    const hom = page.getByRole('radio', { name: 'Hôm nay', exact: true });
     await hom.click();
     await expect(page).toHaveURL(/from=/);
     await hom.click();

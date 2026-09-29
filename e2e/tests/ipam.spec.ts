@@ -192,11 +192,11 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();
 
     // Nhãn nút lọc mang luôn con số của CẢ dải ("Đang dùng 1"), nên bám theo tiền tố.
-    await page.getByRole('button', { name: /^Đang dùng/ }).click();
+    await page.getByRole('radio', { name: /^Đang dùng/ }).click();
     await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(0);
     await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();
 
-    await page.getByRole('button', { name: /^Trống/ }).click();
+    await page.getByRole('radio', { name: /^Trống/ }).click();
     await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(5);
     await expect(page.getByText('Chị Lan — Kế toán')).toHaveCount(0);
   });
@@ -666,7 +666,7 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
 
     // Con số trên màn hình phải đổi theo, không còn "Đang dùng 0".
     await page.goto(`/ip-addresses/${subnetId}`);
-    await expect(page.getByRole('button', { name: /^Đang dùng 1/ })).toBeVisible();
+    await expect(page.getByRole('radio', { name: /^Đang dùng 1/ })).toBeVisible();
 
     // Và bước chuyển được ghi thành một dòng lịch sử riêng, không lẫn vào "sửa hồ sơ".
     const history = (await (
@@ -699,7 +699,7 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
     await expect(row.getByRole('button', { name: 'Cấp IP', exact: true })).toBeVisible();
     // Q-15: không có đường khôi phục trên giao diện — không chip hồ sơ đã xóa, không nút.
     await expect(
-      page.getByRole('group', { name: 'Trạng thái' }).getByRole('button', { name: /^Đã ẩn|^Đã ngừng dùng/ }),
+      page.getByRole('radiogroup', { name: 'Trạng thái' }).getByRole('radio', { name: /^Đã ẩn|^Đã ngừng dùng/ }),
     ).toHaveCount(0);
 
     // Xóa là để NHẬP LẠI: khai lại đúng địa chỉ đó được ngay.

@@ -18,6 +18,7 @@ import { ExportXlsxButton } from '@/ui/export-xlsx-button';
 import { RowActions, type RowAction } from '@/ui/row-actions';
 import { useMediaQuery } from '@/ui/use-media-query';
 import { Pagination } from '@/ui/pagination';
+import { SegmentedRadio } from '@/ui/segmented-radio';
 import { Select } from '@/ui/select';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import { FilterBar } from '@/ui/filter-bar';
@@ -186,36 +187,39 @@ export function DisposalScreen() {
         activeCount={url.activeCount}
         onClear={url.clearFilters}
       >
-        <div className="segmented" role="group" aria-label={t('disposal.filterKind')}>
-          <button type="button" aria-pressed={kind === ''} onClick={() => setKind('')}>
-            {/* Số đi kèm nhãn lọc phải NHẠT và NHỎ hơn chữ nhãn (`.seg-count`, dùng chung với
-                màn Dải mạng): để cùng cỡ cùng đậm thì mắt đọc "Tất cả 12" thành hai từ ngang
-                hàng chứ không phải một nhãn kèm một con số. */}
-            {t('disposal.allKinds')} <span className="seg-count">{countAll}</span>
-          </button>
-          {(Object.keys(KIND_KEY) as DisposalKind[]).map((key) => (
-            <button
-              key={key}
-              type="button"
-              aria-pressed={kind === key}
-              onClick={() => setKind(key)}
-            >
-              {t(KIND_KEY[key])} <span className="seg-count">{counts?.[key] ?? 0}</span>
-            </button>
-          ))}
-        </div>
-        <div className="segmented" role="group" aria-label={t('disposal.period')}>
-          {PERIODS.map((key) => (
-            <button
-              key={key}
-              type="button"
-              aria-pressed={period === key}
-              onClick={() => setPeriod(period === key ? '' : key)}
-            >
-              {t(PERIOD_KEY[key])}
-            </button>
-          ))}
-        </div>
+        {/* Số đi kèm nhãn lọc phải NHẠT và NHỎ hơn chữ nhãn (`.seg-count`, dùng chung với màn
+            Dải mạng): để cùng cỡ cùng đậm thì mắt đọc "Tất cả 12" thành hai từ ngang hàng chứ
+            không phải một nhãn kèm một con số. */}
+        <SegmentedRadio<'' | DisposalKind>
+          label={t('disposal.filterKind')}
+          value={kind}
+          onChange={setKind}
+          options={[
+            {
+              value: '',
+              label: (
+                <>
+                  {t('disposal.allKinds')} <span className="seg-count">{countAll}</span>
+                </>
+              ),
+            },
+            ...(Object.keys(KIND_KEY) as DisposalKind[]).map((key) => ({
+              value: key,
+              label: (
+                <>
+                  {t(KIND_KEY[key])} <span className="seg-count">{counts?.[key] ?? 0}</span>
+                </>
+              ),
+            })),
+          ]}
+        />
+        {/* Bấm lại khoảng đang chọn là bỏ lọc khoảng. */}
+        <SegmentedRadio<Period>
+          label={t('disposal.period')}
+          value={period}
+          onChange={(key) => setPeriod(period === key ? '' : key)}
+          options={PERIODS.map((key) => ({ value: key, label: t(PERIOD_KEY[key]) }))}
+        />
         <DatePicker
           value={filters.from}
           ariaLabel={t('disposal.from')}

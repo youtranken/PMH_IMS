@@ -177,10 +177,7 @@ test.describe('Sổ NAT', () => {
     await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Cổng ngoài' }).click();
     await page.getByRole('option', { name: /OpenVPN/ }).click();
     await expect(form.getByRole('button', { name: 'Bỏ cổng 1194' })).toBeVisible();
-    await expect(form.getByRole('button', { name: 'UDP', exact: true })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    await expect(form.getByRole('radio', { name: 'UDP', exact: true })).toBeChecked();
 
     await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Cổng trong' }).click();
     await page.getByRole('option', { name: /NAS Web/ }).click();

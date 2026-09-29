@@ -224,8 +224,8 @@ export function VaultHomeScreen({ me }: { me: Me }) {
             thiếu `isp`, nên bật bất kỳ nút nào cũng làm mọi dòng đường truyền biến mất im
             lặng — người dùng đọc ra "đường truyền không có két", còn két thì vẫn ở đó. */}
         {/* `role="group"` + tên nhóm: bốn nút rời rạc thì trình đọc màn hình đọc ra bốn cái nút
-            không biết thuộc về đâu — Kho thanh lý và Dải mạng đều đã khai nhóm. */}
-        {/* Dải nút lọc dùng chung (`.segmented` + `aria-pressed`) như Sổ NAT / Kho thanh lý —
+            không biết thuộc về đâu. */}
+        {/* Nút bật/tắt độc lập (`.segmented` + `aria-pressed`) như ba chip trạng thái của Sổ NAT —
             không phải nút `primary`: chip đang bật mà mang màu nút chính thì lẫn với CTA. */}
         <div role="group" aria-label={t('vaultHome.filterKind')} className="segmented">
           {SECRET_OWNER_TYPES.map((kind) => (

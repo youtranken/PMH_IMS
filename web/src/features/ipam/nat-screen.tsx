@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
+import { CellNote } from '@/ui/cell-note';
 import { Combobox } from '@/ui/combobox';
 import { Dialog } from '@/ui/dialog';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
@@ -13,6 +14,7 @@ import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { RowActions } from '@/ui/row-actions';
 import { Field, FormSection, PageHeader } from '@/ui/page-header';
+import { SegmentedRadio } from '@/ui/segmented-radio';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
@@ -408,11 +410,7 @@ export function NatScreen({ me }: { me: Me }) {
                     <span className="cell-clamp-2" title={rule.reason}>
                       {rule.reason}
                     </span>
-                    {rule.note ? (
-                      <span className="cell-sub cell-note" title={rule.note}>
-                        {rule.note}
-                      </span>
-                    ) : null}
+                    {rule.note ? <CellNote text={rule.note} className="cell-sub" /> : null}
                     <span className="cell-sub" title={rule.createdBy}>
                       {t('nat.openedBy', {
                         date: formatDate(rule.createdAt),
@@ -952,22 +950,15 @@ function NatForm({
             port gõ tay luôn mặc định TCP, sai âm thầm với mấy dịch vụ UDP như VPN.
           */}
           <Field label={t('nat.protocol')}>
-            <div className="segmented" role="group" aria-label={t('nat.protocol')}>
-              {PROTOCOLS.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  className={protocol === item ? 'on' : undefined}
-                  aria-pressed={protocol === item}
-                  onClick={() => setProtocol(item)}
-                >
-                  {/* `catalog.protocolBoth`, KHÔNG phải một khoá riêng của `nat`: ô chọn cổng
-                      dịch vụ trong form đọc đúng khoá ấy, và hai nhãn khác chữ cho cùng một
-                      giao thức là thứ người dùng đọc ra thành hai lựa chọn khác nhau. */}
-                  {protocolLabel(item, t)}
-                </button>
-              ))}
-            </div>
+            {/* `catalog.protocolBoth`, KHÔNG phải một khoá riêng của `nat`: ô chọn cổng dịch vụ
+                trong form đọc đúng khoá ấy, và hai nhãn khác chữ cho cùng một giao thức là thứ
+                người dùng đọc ra thành hai lựa chọn khác nhau. */}
+            <SegmentedRadio<NatProtocol>
+              label={t('nat.protocol')}
+              value={protocol}
+              onChange={setProtocol}
+              options={PROTOCOLS.map((item) => ({ value: item, label: protocolLabel(item, t) }))}
+            />
           </Field>
 
           {/* Hai ô port đứng CẠNH nhau: "ngoài 8080 dẫn vào trong 80" là một câu đọc ngang,

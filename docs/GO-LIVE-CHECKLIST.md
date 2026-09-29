@@ -783,7 +783,7 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
     E2E `software`, `expiry`, `di-khap-giao-dien`. Thẻ dải đã tắt dùng chung câu `ipam.voidedBy`
     với trang chi tiết (ngày · người tắt · lý do); API danh sách vốn đã trả `voidedBy`. Kiểm ở
     `features/ipam/subnet-card.test.tsx`.
-- [ ] **OLD-A11Y-02 · Trợ năng mức nhẹ:**
+- [x] **OLD-A11Y-02 · Trợ năng mức nhẹ:**
   - `.segmented` dùng `aria-pressed` thay vì radiogroup.
   - Ma trận quyền thiếu `scope`.
   - Nhảy từ h1 xuống h3 (`port-map-panel.tsx`).
@@ -791,6 +791,15 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - `.cell-note` chỉ đọc được nội dung đầy đủ qua `title`.
   - **Rà 29/09:** xong font `td::before` (af00c3a). Ma trận quyền mới có `scope="row"`, header cột còn
     thiếu `scope`. Ba ý còn lại còn nguyên.
+  - **Đã sửa:** component dùng chung `ui/segmented-radio.tsx` (radiogroup/radio, Tab dừng một lần,
+    mũi tên/Home/End), thay cho dải chọn-một ở Kho thanh lý (loại, khoảng), Nhật ký (mốc ngày),
+    màn dải IP (trạng thái, kiểu xem), form NAT (giao thức). Nút bật/tắt độc lập (chip an ninh,
+    ba chip trạng thái NAT, lọc Két) vẫn `aria-pressed` — đúng nghĩa. Ma trận quyền có
+    `scope="col"`/`"colgroup"`; `port-map-panel` h3→h2; `ui/cell-note.tsx` biến ô bị cắt thành nút
+    mở/thu (Danh mục, ghi chú IP, ghi chú NAT). Đã khai `SHARED-REGISTRY.md`. Vitest:
+    `segmented-radio`, `cell-note`, `access-matrix-screen`, `port-map-panel`, `audit-log-loc-nhanh`.
+    E2E sửa theo vai mới (chưa chạy): `di-khap-giao-dien`, `nat`, `ipam`, `ip-xoa-nhap-nham.mobile`,
+    `trau-chuot-a`, `trau-chuot-b`, `disposal`, `phan-mem-han-vua-nhe`.
 - [ ] **OLD-BE-03 · Ghi nhật ký:**
   - `@Audited` khai sai tên (`accounts.controller.ts:167`, `catalog.controller.ts:146`).
   - `FIELD_LABEL` thiếu `token`/`currentPassword`/`newPassword` (`validation-messages.ts:37`).

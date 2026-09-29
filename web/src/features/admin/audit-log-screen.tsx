@@ -15,6 +15,7 @@ import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { PageHeader } from '@/ui/page-header';
 import { Pagination } from '@/ui/pagination';
+import { SegmentedRadio } from '@/ui/segmented-radio';
 import { Select } from '@/ui/select';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
 import {
@@ -341,18 +342,19 @@ export function AuditLogScreen() {
           ]}
           onChange={(value) => url.setFilter('objectType', value)}
         />
-        <div className="segmented" role="group" aria-label={t('audit.datePresets')}>
-          {RECENT_PRESETS.map((days) => (
-            <button
-              key={days}
-              type="button"
-              aria-pressed={recent === days}
-              onClick={() => setRecent(recent === days ? 0 : days)}
-            >
-              {days === 1 ? t('audit.presetToday') : t('audit.presetDays', { count: days })}
-            </button>
-          ))}
-        </div>
+        {/* Bấm lại mốc đang chọn là bỏ lọc ngày. */}
+        <SegmentedRadio
+          label={t('audit.datePresets')}
+          value={recent ? String(recent) : ''}
+          onChange={(key) => {
+            const days = Number(key);
+            setRecent(recent === days ? 0 : days);
+          }}
+          options={RECENT_PRESETS.map((days) => ({
+            value: String(days),
+            label: days === 1 ? t('audit.presetToday') : t('audit.presetDays', { count: days }),
+          }))}
+        />
         {/* Khoảng ngày là MỘT cụm hai ô cạnh nhau — mỗi ô một hàng rộng cả thanh là phí chỗ. */}
         <div className="filter-range" role="group" aria-label={t('audit.dateRange')}>
           <DatePicker

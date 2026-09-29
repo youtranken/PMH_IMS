@@ -56,8 +56,8 @@
 .segmented label:has(input:focus-visible) {
   box-shadow: var(--ring);
 }
-/* Bản dùng NÚT (bộ lọc trạng thái ở màn Địa chỉ IP): cùng một điều khiển, nhưng lọc bảng thì
-   `aria-pressed` mới đúng nghĩa — radio ngầm hứa "chọn xong sẽ gửi đi đâu đó". */
+/* Bản dùng NÚT: chọn MỘT trong nhiều là `ui/segmented-radio.tsx` (role radio + `aria-checked`,
+   mũi tên đi trong nhóm); nút bật/tắt độc lập giữ `aria-pressed`. Hai dạng cùng một vẻ ngoài. */
 .segmented button {
   padding: var(--space-2) var(--space-6);
   border: none;
@@ -73,7 +73,8 @@
 .segmented button:hover {
   color: var(--ink);
 }
-.segmented button[aria-pressed='true'] {
+.segmented button[aria-pressed='true'],
+.segmented button[aria-checked='true'] {
   background: var(--surface);
   color: var(--primary-ink);
   box-shadow: var(--shadow-sm);
@@ -84,6 +85,7 @@
 /* Tối: `--surface` TỐI HƠN `--surface-2` của rãnh, nên nút đang bật chìm xuống thay vì nổi
    lên và gần như không khác nút thường. Tô nền nhấn + viền để trạng thái bật đọc được. */
 html[data-theme='dark'] .segmented button[aria-pressed='true'],
+html[data-theme='dark'] .segmented button[aria-checked='true'],
 html[data-theme='dark'] .segmented label:has(input:checked) {
   background: var(--primary-soft);
   box-shadow: inset 0 0 0 1px var(--border-2);

@@ -432,7 +432,8 @@ textarea.mono::placeholder {
   overflow: hidden;
   max-width: 28rem;
 }
-/* Ghi chú trong ô bảng: rút gọn 1 dòng + ellipsis (đầy đủ ở title hover). */
+/* Ghi chú trong ô bảng: rút gọn 1 dòng + ellipsis. Bị cắt thật thì `ui/cell-note.tsx` biến nó
+   thành nút mở/thu — bàn phím và màn cảm ứng không đọc được `title`. */
 .cell-note {
   display: inline-block;
   max-width: 180px;
@@ -440,6 +441,29 @@ textarea.mono::placeholder {
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: bottom;
+}
+/* Nút phải trông y như chữ trong ô: bỏ mọi dáng nút của `base.css`. */
+button.cell-note,
+button.cell-note:hover:not(:disabled),
+button.cell-note:active:not(:disabled) {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-weight: inherit;
+  color: inherit;
+  text-align: left;
+  transform: none;
+}
+/* Ghi chú làm dòng phụ: giữ màu/độ đậm của `.cell-sub`, không lấy màu nút của `base.css`. */
+button.cell-note.cell-sub {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+.cell-note.is-open {
+  max-width: 28rem;
+  white-space: normal;
+  overflow: visible;
 }
 
 /* --- Status badge / pill -------------------------------------------------- */
