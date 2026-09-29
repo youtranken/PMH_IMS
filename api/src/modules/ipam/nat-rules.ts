@@ -12,8 +12,6 @@ import { hostRole, hostRoleIn } from './ip-rules';
 
 const MIN_PORT = 1;
 const MAX_PORT = 65535;
-/** Rộng hơn ngần này thì CẢNH BÁO — không chặn. Xem `NatRuleCheck` bên dưới. */
-const WIDE_RANGE = 1000;
 
 export type PortRange =
   | { ok: true; from: number; to: number }
@@ -74,13 +72,18 @@ export interface NatRuleCheck {
  */
 export function validateNatRule(
   draft: NatRuleDraft,
-  /**
-   * Dải đã khai chứa `internalIp`, nếu có. Có dải thì xét theo prefix của nó (`hostRoleIn`):
-   * octet cuối không nói được .127 là quảng bá của /25, hay .255 là một máy trong /31.
-   * `null`/bỏ trống = IP nằm ngoài mọi dải đã khai, chỉ còn cách đoán theo octet cuối.
-   */
-  subnetCidr?: string | null,
+  context: {
+    /**
+     * Dải đã khai chứa `internalIp`, nếu có. Có dải thì xét theo prefix của nó (`hostRoleIn`):
+     * octet cuối không nói được .127 là quảng bá của /25, hay .255 là một máy trong /31.
+     * `null`/bỏ trống = IP nằm ngoài mọi dải đã khai, chỉ còn cách đoán theo octet cuối.
+     */
+    subnetCidr?: string | null;
+    /** Rộng hơn ngần này cổng thì CẢNH BÁO, không chặn (`nat.wide_port_range`). */
+    widePortRange: number;
+  },
 ): NatRuleCheck {
+  const { subnetCidr, widePortRange } = context;
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -127,10 +130,10 @@ export function validateNatRule(
     errors.push(`Cổng ngoài phải từ ${MIN_PORT} đến ${MAX_PORT}.`);
   } else if (draft.externalFrom > draft.externalTo) {
     errors.push('Khoảng cổng ngoài viết ngược — số đầu phải nhỏ hơn số cuối (vd 8000-8010).');
-  } else if (draft.externalTo - draft.externalFrom + 1 > WIDE_RANGE) {
+  } else if (draft.externalTo - draft.externalFrom + 1 > widePortRange) {
     // CẢNH BÁO, không phải lỗi: dải port camera là việc có thật và hợp lệ.
     warnings.push(
-      `Dải cổng ngoài này mở hơn ${WIDE_RANGE} cổng ra Internet. Nếu đúng ý thì cứ lưu, nhưng hãy chắc chắn.`,
+      `Dải cổng ngoài này mở hơn ${widePortRange} cổng ra Internet. Nếu đúng ý thì cứ lưu, nhưng hãy chắc chắn.`,
     );
   }
 

@@ -8,6 +8,7 @@ import { Dialog } from '@/ui/dialog';
 import { Field } from '@/ui/page-header';
 import { Select } from '@/ui/select';
 import type { SubnetRow } from './ipam-types';
+import { useIpamSettings } from './ipam-settings';
 import { activeOptions, useCatalogLists } from '@/ui/use-catalog-lists';
 import { textRule, useFormErrors } from '@/ui/use-form-errors';
 
@@ -53,7 +54,8 @@ export function SubnetForm({
    */
   const cidrLocked = subnet !== null && subnet.addressCount > 0;
 
-  const preview = previewCidr(cidr);
+  const { subnetMinPrefix } = useIpamSettings();
+  const preview = previewCidr(cidr, subnetMinPrefix);
   const typed = preview.value;
   const overlap = typed
     ? existing.find(
@@ -83,7 +85,10 @@ export function SubnetForm({
         : preview.reason === 'format'
           ? t('ipam.cidrFormat')
           : preview.reason === 'tooWide'
-            ? t('ipam.cidrTooWide')
+            ? t('ipam.cidrTooWide', {
+                prefix: subnetMinPrefix,
+                hosts: 2 ** (32 - subnetMinPrefix) - 2,
+              })
             : overlap
               ? t('ipam.cidrOverlap', { cidr: overlap.cidr, name: overlap.name })
               : false;

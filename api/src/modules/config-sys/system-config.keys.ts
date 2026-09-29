@@ -9,6 +9,18 @@ export const CONFIG_KEYS = {
   loginMaxFailedAttempts: { key: 'login.max_failed_attempts', fallback: 5 },
   loginLockoutMinutes: { key: 'login.lockout_minutes', fallback: 15 },
   loginRateLimitPerIp: { key: 'login.rate_limit_per_ip', fallback: 20 },
+  /*
+   * Trần theo phút, THEO USER, của các route nhạy cảm (0283) — đọc qua `@ConfigThrottle`.
+   *
+   * `rate.totp_per_minute`: ba cửa nhận mã TOTP (đăng nhập bước 2, xác nhận cài lại 2 lớp,
+   * step-up mở két). Mã chỉ có một triệu khả năng, trần chung 300/phút quá rộng cho một ô 6 số.
+   * `rate.secret_reveal_per_minute`: cửa mở két — hàng rào PHÒNG việc rút cả két trong vài phút
+   * bằng một phiên đã step-up; audit là hàng rào PHÁT HIỆN.
+   * `rate.file_upload_per_minute`: mỗi lượt upload giữ trọn tệp (tới 20MB) trong RAM.
+   */
+  rateTotpPerMinute: { key: 'rate.totp_per_minute', fallback: 10 },
+  rateSecretRevealPerMinute: { key: 'rate.secret_reveal_per_minute', fallback: 30 },
+  rateFileUploadPerMinute: { key: 'rate.file_upload_per_minute', fallback: 20 },
   // Bậc chờ khi một tài khoản bị đoán sai nhiều lần (0060, SEC-03). Xem `common/lockout.ts`.
   loginAccountBackoffMinutes: { key: 'login.account_backoff_minutes', fallback: '5,15,30,60' },
   // 60s (0034): 30 chỉ vừa đủ đọc xong thì hộp đóng, người dùng bấm Xem lại — mỗi lần một dòng audit.
@@ -67,13 +79,29 @@ export const CONFIG_KEYS = {
    * Vào đây chứ không nằm trong `dashboard.service.ts` vì chúng là LUẬT NGHIỆP VỤ, không phải
    * hằng số hiển thị: "dải bao nhiêu phần trăm thì gọi là sắp đầy" và "mật khẩu bao lâu không
    * đổi thì gọi là cũ" là hai câu mà bộ phận IT sẽ muốn siết dần theo thời gian, và siết bằng
-   * một dòng UPDATE thì không cần dựng lại ảnh docker. (Số dòng hiện trên mỗi khối thì ngược
-   * lại — đó là chuyện bày biện, để nguyên trong code.)
+   * một dòng UPDATE thì không cần dựng lại ảnh docker.
    */
   dashboardSubnetFullPercent: { key: 'dashboard.subnet_full_percent', fallback: 80 },
   dashboardSecretStaleDays: { key: 'dashboard.secret_stale_days', fallback: 180 },
+  /*
+   * Số dòng tối đa mỗi khối của trang chủ (0281). Trang này đọc trong ba phút; khối dài quá
+   * thì người ta cuộn qua chứ không đọc, và cuối mỗi khối đã có đường sang màn đầy đủ.
+   */
+  dashboardMaxItems: { key: 'dashboard.max_items', fallback: 8 },
   // Cổng mở ra Internet bị gắn "Nhạy cảm" trên sổ NAT (0140) — xem `ipam/nat-sensitive.ts`.
   natSensitivePorts: { key: 'nat.sensitive_ports', fallback: '21,22,23,445,1433,3306,3389,5432,5900' },
+  /*
+   * Dải rộng nhất được khai, tính bằng độ dài prefix (0280): 24 = /24, 254 host.
+   *
+   * Chỉ được SIẾT (số lớn hơn), không được nới dưới 24 — màn Tham số chặn ở 24..30. Màn dải
+   * liệt kê MỌI host trong một lượt gọi và `enumerateHosts` dựng mảng đồng bộ, nên /16 là 65.534
+   * dòng (treo tab), /8 là 16 triệu (treo server). Cũng nhờ trần này mà màn dải cắt trang được ở
+   * client (`slot-paging.ts`) và `hostRole` suy được địa chỉ mạng/quảng bá từ octet cuối. Muốn
+   * nới thì phải đẩy phân trang dải xuống server trước.
+   */
+  ipamSubnetMinPrefix: { key: 'ipam.subnet_min_prefix', fallback: 24 },
+  // Dải cổng ngoài của một luật NAT rộng hơn ngần này thì CẢNH BÁO, không chặn (0280).
+  natWidePortRange: { key: 'nat.wide_port_range', fallback: 1000 },
   // Q-13 (0076): Hết hạn quá số ngày này thì tự Thanh lý + gỡ ghế. 0 = tắt.
   softwareAutoRetireGraceDays: { key: 'software.auto_retire_grace_days', fallback: 30 },
   /*
@@ -94,6 +122,11 @@ export const CONFIG_KEYS = {
    */
   expiryDigestExpiredDays: { key: 'expiry.digest_expired_days', fallback: 30 },
   /*
+   * Màn "Sắp hết hạn" nhìn lùi bao nhiêu ngày để bắt mục ĐÃ quá hạn (0281). Cũng là trần của
+   * `expiry.digest_expired_days`: email không bao giờ nhìn lùi xa hơn màn hình.
+   */
+  expiryLookBackDays: { key: 'expiry.look_back_days', fallback: 365 },
+  /*
    * GIỮ BAO LÂU RỒI DỌN (0051) — hai ngưỡng, hai bảng chỉ-lớn-lên.
    *
    * Vào `system_config` chứ không viết cứng: "giữ vết bao lâu" là một quyết định của bộ phận
@@ -112,6 +145,13 @@ export const CONFIG_KEYS = {
    * việc người trực làm có chủ đích, không phải việc một cron lặng lẽ làm.
    */
   auditArchiveAfterYears: { key: 'audit.archive_after_years', fallback: 2 },
+  /**
+   * Relay bỏ một thư sau ngần này lần hỏng (0282). Lease tăng gấp đôi sau mỗi lần hỏng (5, 10,
+   * 20, 40, 80 rồi giữ 160 phút) nên 14 lần ≈ 24 giờ thử lại: SMTP chết vài giờ (Google bảo
+   * trì, mất Internet) không làm thư rơi vào trạng thái bỏ. Khoá kỹ thuật, không mở trên màn
+   * Tham số — hạ nó xuống là thư bị bỏ sớm mà không ai thấy ngoài danh sách gửi lỗi.
+   */
+  outboxMaxRelayAttempts: { key: 'outbox.max_relay_attempts', fallback: 14 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;

@@ -143,7 +143,7 @@ export class SecurityProbeService {
        * rồi cùng ghi — đúng thứ thời gian nghỉ sinh ra để chặn.
        *
        * Không phải lỗ hẹp: trần của cửa mở ngăn là 30 lượt mỗi phút cho mỗi người
-       * (`@Throttle` ở `vault.controller.ts`), và một Member không có quyền gì trên két vẫn
+       * (`rate.secret_reveal_per_minute`, `@ConfigThrottle` ở `vault.controller.ts`), và một Member không có quyền gì trên két vẫn
        * bắn được đủ 30 lượt ấy song song. Cả 30 lượt đều 403, cả 30 đều gọi vào đây, cả 30
        * đều đọc thấy "chưa cảnh báo" → 30 lá thư tới MỌI SA và Admin trong một nhịp, rồi lặp
        * lại sau mỗi 60 phút. Tức là chính cái cảnh báo trở thành công cụ làm ngập hộp thư —

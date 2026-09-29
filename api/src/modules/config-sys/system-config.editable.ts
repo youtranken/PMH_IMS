@@ -10,16 +10,25 @@ import { CONFIG_KEYS, type ConfigName } from './system-config.keys';
  * lần gõ nhầm biến thành "cả công ty không đăng nhập được".
  */
 
-type SettingGroup = 'auth' | 'vault' | 'approval' | 'expiry' | 'dashboard' | 'software';
-type SettingType = 'int' | 'text' | 'int_list';
-type SettingUnit =
+export type SettingGroup =
+  | 'auth'
+  | 'vault'
+  | 'approval'
+  | 'expiry'
+  | 'dashboard'
+  | 'software'
+  | 'ipam';
+export type SettingType = 'int' | 'text' | 'int_list';
+export type SettingUnit =
   | 'seconds'
   | 'minutes'
   | 'hours'
   | 'days'
   | 'percent'
   | 'times'
-  | 'per_minute';
+  | 'per_minute'
+  | 'ports'
+  | 'rows';
 
 export interface EditableSetting {
   name: ConfigName;
@@ -44,10 +53,13 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'loginMaxFailedAttempts', group: 'auth', type: 'int', unit: 'times', min: 3, max: 20, warnAbove: 10 },
   { name: 'loginLockoutMinutes', group: 'auth', type: 'int', unit: 'minutes', min: 1, max: 1440 },
   { name: 'loginRateLimitPerIp', group: 'auth', type: 'int', unit: 'per_minute', min: 5, max: 1000, warnAbove: 100 },
+  { name: 'rateTotpPerMinute', group: 'auth', type: 'int', unit: 'per_minute', min: 3, max: 60, warnAbove: 20 },
+  { name: 'rateFileUploadPerMinute', group: 'auth', type: 'int', unit: 'per_minute', min: 5, max: 300 },
   { name: 'loginAccountBackoffMinutes', group: 'auth', type: 'int_list', unit: 'minutes', min: 1, max: 1440 },
   { name: 'totpEnrollReauthMinutes', group: 'auth', type: 'int', unit: 'minutes', min: 1, max: 60 },
   { name: 'authSupportContact', group: 'auth', type: 'text', maxLength: 300 },
   // Két sắt
+  { name: 'rateSecretRevealPerMinute', group: 'vault', type: 'int', unit: 'per_minute', min: 5, max: 300, warnAbove: 60 },
   { name: 'secretRevealSeconds', group: 'vault', type: 'int', unit: 'seconds', min: 10, max: 600, warnAbove: 120 },
   { name: 'secretStepUpGraceMinutes', group: 'vault', type: 'int', unit: 'minutes', min: 1, max: 60, warnAbove: 30 },
   { name: 'secretStepUpMaxFailures', group: 'vault', type: 'int', unit: 'times', min: 3, max: 20 },
@@ -64,11 +76,16 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'expiryCriticalDays', group: 'expiry', type: 'int', unit: 'days', min: 1, max: 90 },
   { name: 'expiryWarningDays', group: 'expiry', type: 'int', unit: 'days', min: 1, max: 365 },
   { name: 'expiryDigestExpiredDays', group: 'expiry', type: 'int', unit: 'days', min: 0, max: 365 },
+  { name: 'expiryLookBackDays', group: 'expiry', type: 'int', unit: 'days', min: 30, max: 3650 },
   // Dashboard
   { name: 'dashboardSubnetFullPercent', group: 'dashboard', type: 'int', unit: 'percent', min: 50, max: 100 },
   { name: 'dashboardSecretStaleDays', group: 'dashboard', type: 'int', unit: 'days', min: 30, max: 3650 },
+  { name: 'dashboardMaxItems', group: 'dashboard', type: 'int', unit: 'rows', min: 3, max: 30 },
   // Phần mềm (Q-13: 0 = tắt tự thanh lý)
   { name: 'softwareAutoRetireGraceDays', group: 'software', type: 'int', unit: 'days', min: 0, max: 365, warnZero: true },
+  // Mạng IP & NAT. Trần dải chỉ siết (24..30) — lý do ở chú thích khoá trong `system-config.keys.ts`.
+  { name: 'ipamSubnetMinPrefix', group: 'ipam', type: 'int', min: 24, max: 30 },
+  { name: 'natWidePortRange', group: 'ipam', type: 'int', unit: 'ports', min: 10, max: 65535 },
 ];
 
 export function editableByKey(key: string): EditableSetting | undefined {

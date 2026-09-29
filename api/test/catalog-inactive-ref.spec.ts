@@ -9,7 +9,7 @@ import type { AuditWriterService } from '../src/modules/audit/audit-writer.servi
 import type { DeviceRetirementRegistry } from '../src/common/device-retirement.registry';
 import type { DevicesApiService } from '../src/modules/devices/devices.api';
 import type { ExpiryApiService } from '../src/modules/expiry/expiry.api';
-import type { SystemConfigService } from '../src/modules/config-sys/system-config.service';
+import { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 import { DeviceSearchRegistry } from '../src/common/device-search.registry';
 
@@ -63,7 +63,7 @@ describe('Q-14 · mục danh mục đã vô hiệu không chọn mới được'
     devices = new DevicesService(scratch.db, api, audit, noRetirement, new DeviceSearchRegistry());
     software = new SoftwareService(scratch.db, api, audit, {} as ExpiryApiService, config);
     isp = new IspLineService(scratch.db, api, noDevices, audit);
-    subnets = new SubnetService(scratch.db, audit, api);
+    subnets = new SubnetService(scratch.db, audit, api, new SystemConfigService(scratch.db));
 
     id.siteOn = await one(`INSERT INTO site (code, name) VALUES ('E2E-ON', 'Site dùng') RETURNING id`);
     id.siteOff = await one(`INSERT INTO site (code, name) VALUES ('E2E-OFF', 'Site cũ') RETURNING id`);

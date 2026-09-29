@@ -14,11 +14,11 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Throttle } from '@nestjs/throttler';
 import { IsIn, IsUUID } from 'class-validator';
 import type { Response } from 'express';
 import { Audited } from '../audit/audited.decorator';
 import { OwnerAccessRegistry } from '../../common/owner-access.registry';
+import { ConfigThrottle } from '../../common/config-throttle';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { MULTER_LIMIT } from './file-validation';
@@ -103,8 +103,8 @@ export class FilesController {
 
   @Roles('sa', 'admin', 'member')
   @Post()
-  // Upload giữ nguyên buffer 20MB trong RAM — siết 20 lần/phút/user.
-  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  // Upload giữ nguyên buffer 20MB trong RAM — siết theo `rate.file_upload_per_minute` mỗi user.
+  @ConfigThrottle('rateFileUploadPerMinute')
   @Audited('file.uploaded', 'file', { writtenByService: true })
   @UseInterceptors(FileInterceptor('file', { limits: MULTER_LIMIT }))
   async upload(

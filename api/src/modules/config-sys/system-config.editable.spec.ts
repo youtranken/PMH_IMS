@@ -13,9 +13,25 @@ describe('Danh sách tham số sửa được trên màn (Q-14)', () => {
   });
 
   it('khoá kỹ thuật/bí mật KHÔNG nằm trong danh sách — không sửa được qua màn', () => {
-    for (const key of ['mail.from_address', 'app.timezone', 'session.retention_days']) {
+    for (const key of [
+      'mail.from_address',
+      'app.timezone',
+      'session.retention_days',
+      'outbox.max_relay_attempts',
+    ]) {
       expect(editableByKey(key)).toBeUndefined();
     }
+  });
+
+  it('trần độ rộng dải chỉ SIẾT được: dưới /24 bị từ chối (màn dải liệt kê mọi host một lượt)', () => {
+    const spec = editableByKey('ipam.subnet_min_prefix')!;
+    expect(spec.group).toBe('ipam');
+    expect(validateSetting(spec, 23).reason).not.toBeNull();
+    expect(validateSetting(spec, 26)).toEqual({ value: 26, reason: null });
+  });
+
+  it('ngưỡng cảnh báo dải cổng NAT sửa được trên màn', () => {
+    expect(editableByKey('nat.wide_port_range')?.group).toBe('ipam');
   });
 
   it('mặc định của mọi khoá số nằm trong khoảng của chính nó', () => {

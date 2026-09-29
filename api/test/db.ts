@@ -71,6 +71,29 @@ export function testDbUrl(dbName = 'postgres'): string {
 }
 
 /**
+ * Kết nối tới Redis của compose qua cổng loopback — cùng nguyên tắc với `testDbUrl`: thiếu cấu
+ * hình thì NÉM, không `skip`.
+ */
+export function testRedisConnection(): {
+  host: string;
+  port: number;
+  password: string;
+  maxRetriesPerRequest: null;
+} {
+  const env = { ...repoEnv(), ...process.env };
+  const password = env.REDIS_PASSWORD;
+  if (!password) {
+    throw new Error('Thiếu REDIS_PASSWORD — tầng test DB đọc nó từ .env ở gốc repo.');
+  }
+  return {
+    host: '127.0.0.1',
+    port: Number(env.REDIS_TEST_PORT ?? 56379),
+    password,
+    maxRetriesPerRequest: null,
+  };
+}
+
+/**
  * Chuỗi kết nối bằng ROLE ỨNG DỤNG (`ims_app`) — dùng để hỏi "role hẹp có thật sự hẹp không"
  * (D-01). Đọc cùng `.env` mà compose đọc, nên bài kiểm và stack đang chạy nói về CÙNG một
  * role với CÙNG một mật khẩu: bài kiểm không được phép đổi mật khẩu dưới chân stack.

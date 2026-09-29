@@ -23,6 +23,7 @@ const GROUPS: { key: Group; label: string }[] = [
   { key: 'expiry', label: 'settings.groupExpiry' },
   { key: 'dashboard', label: 'settings.groupDashboard' },
   { key: 'software', label: 'settings.groupSoftware' },
+  { key: 'ipam', label: 'settings.groupIpam' },
 ];
 
 const UNIT: Record<NonNullable<SettingRow['unit']>, string> = {
@@ -33,6 +34,8 @@ const UNIT: Record<NonNullable<SettingRow['unit']>, string> = {
   percent: 'settings.unitPercent',
   times: 'settings.unitTimes',
   per_minute: 'settings.unitPerMinute',
+  ports: 'settings.unitPorts',
+  rows: 'settings.unitRows',
 };
 
 /*
@@ -45,6 +48,12 @@ const TEXT: Record<string, [string, string]> = {
   loginMaxFailedAttempts: ['settings.loginMaxFailedAttemptsLabel', 'settings.loginMaxFailedAttemptsDesc'],
   loginLockoutMinutes: ['settings.loginLockoutMinutesLabel', 'settings.loginLockoutMinutesDesc'],
   loginRateLimitPerIp: ['settings.loginRateLimitPerIpLabel', 'settings.loginRateLimitPerIpDesc'],
+  rateTotpPerMinute: ['settings.rateTotpPerMinuteLabel', 'settings.rateTotpPerMinuteDesc'],
+  rateFileUploadPerMinute: ['settings.rateFileUploadPerMinuteLabel', 'settings.rateFileUploadPerMinuteDesc'],
+  rateSecretRevealPerMinute: [
+    'settings.rateSecretRevealPerMinuteLabel',
+    'settings.rateSecretRevealPerMinuteDesc',
+  ],
   loginAccountBackoffMinutes: [
     'settings.loginAccountBackoffMinutesLabel',
     'settings.loginAccountBackoffMinutesDesc',
@@ -85,6 +94,10 @@ const TEXT: Record<string, [string, string]> = {
     'settings.softwareAutoRetireGraceDaysLabel',
     'settings.softwareAutoRetireGraceDaysDesc',
   ],
+  expiryLookBackDays: ['settings.expiryLookBackDaysLabel', 'settings.expiryLookBackDaysDesc'],
+  dashboardMaxItems: ['settings.dashboardMaxItemsLabel', 'settings.dashboardMaxItemsDesc'],
+  ipamSubnetMinPrefix: ['settings.ipamSubnetMinPrefixLabel', 'settings.ipamSubnetMinPrefixDesc'],
+  natWidePortRange: ['settings.natWidePortRangeLabel', 'settings.natWidePortRangeDesc'],
 };
 
 const SETTINGS_KEY = ['admin', 'settings'] as const;

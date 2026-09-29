@@ -36,7 +36,7 @@ import { createScratchDb, migrationsDir, type ScratchDb } from './db';
  */
 
 const TEST_TIMEOUT = 120_000;
-/** Bắn bao nhiêu lượt cùng lúc — đúng trần `@Throttle` của cửa mở ngăn. */
+/** Bắn bao nhiêu lượt cùng lúc — đúng trần mặc định `rate.secret_reveal_per_minute` của cửa mở ngăn. */
 const SO_LUOT_SONG_SONG = 30;
 
 /**

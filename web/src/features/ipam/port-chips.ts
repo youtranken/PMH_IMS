@@ -76,9 +76,10 @@ export function chipsFromValue(value: string): PortChip[] {
   return chips;
 }
 
-/** Cảnh báo mềm: dải quá rộng vẫn lưu được (API cũng chỉ cảnh báo), nhưng phải nói ra. */
-const WIDE_RANGE_PORTS = 1000;
-
-export function isWideRange(chip: PortChip): boolean {
-  return chip.to - chip.from + 1 > WIDE_RANGE_PORTS;
+/**
+ * Cảnh báo mềm: dải quá rộng vẫn lưu được (API cũng chỉ cảnh báo), nhưng phải nói ra.
+ * `widePortRange` là CÙNG ngưỡng API dùng (`nat.wide_port_range`, qua `GET ipam/settings`).
+ */
+export function isWideRange(chip: PortChip, widePortRange: number): boolean {
+  return chip.to - chip.from + 1 > widePortRange;
 }

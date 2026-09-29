@@ -62,8 +62,12 @@ describe('validateNatRule — luật nghiệp vụ của một dòng sổ NAT (F
     reason: 'máy chấm công cần truy cập từ ngoài',
   };
 
+  /** Ngưỡng cảnh báo mặc định đã seed (`nat.wide_port_range`). */
+  const check = (draft: typeof base, subnetCidr?: string | null) =>
+    validateNatRule(draft, { subnetCidr, widePortRange: 1000 });
+
   it('dòng đầy đủ thì hợp lệ, không lỗi không cảnh báo', () => {
-    expect(validateNatRule(base)).toEqual({ errors: [], warnings: [] });
+    expect(check(base)).toEqual({ errors: [], warnings: [] });
   });
 
   /**
@@ -75,12 +79,12 @@ describe('validateNatRule — luật nghiệp vụ của một dòng sổ NAT (F
     ['reason', { reason: '   ' }],
     ['usedBy', { usedBy: '' }],
   ])('thiếu %s thì từ chối', (_field, over) => {
-    expect(validateNatRule({ ...base, ...over }).errors.length).toBe(1);
+    expect(check({ ...base, ...over }).errors.length).toBe(1);
   });
 
   it('IP trong phải là IPv4 hợp lệ', () => {
-    expect(validateNatRule({ ...base, internalIp: '172.16.10.999' }).errors.length).toBe(1);
-    expect(validateNatRule({ ...base, internalIp: 'fe80::1' }).errors.length).toBe(1);
+    expect(check({ ...base, internalIp: '172.16.10.999' }).errors.length).toBe(1);
+    expect(check({ ...base, internalIp: 'fe80::1' }).errors.length).toBe(1);
   });
 
   /**
@@ -95,7 +99,7 @@ describe('validateNatRule — luật nghiệp vụ của một dòng sổ NAT (F
     ['172.16.10.0', 'địa chỉ mạng'],
     ['172.16.10.255', 'địa chỉ quảng bá'],
   ])('IP trong = %s bị từ chối (%s)', (internalIp) => {
-    const errors = validateNatRule({ ...base, internalIp }).errors;
+    const errors = check({ ...base, internalIp }).errors;
     expect(errors).toHaveLength(1);
     expect(errors[0]).toMatch(/địa chỉ (mạng|quảng bá)/i);
   });
@@ -103,7 +107,7 @@ describe('validateNatRule — luật nghiệp vụ của một dòng sổ NAT (F
   it.each([['172.16.10.1'], ['172.16.10.128'], ['172.16.10.254']])(
     'IP trong = %s vẫn khai được bình thường',
     (internalIp) => {
-      expect(validateNatRule({ ...base, internalIp }).errors).toEqual([]);
+      expect(check({ ...base, internalIp }).errors).toEqual([]);
     },
   );
 
@@ -124,24 +128,24 @@ describe('validateNatRule — luật nghiệp vụ của một dòng sổ NAT (F
     ['172.16.10.5', '172.16.10.0/24', 'host'],
     ['172.16.10.0', '172.16.10.0/24', 'network'],
   ])('IP %s trong dải %s → %s', (internalIp, cidr, role) => {
-    const errors = validateNatRule({ ...base, internalIp }, cidr).errors;
+    const errors = check({ ...base, internalIp }, cidr).errors;
     if (role === 'host') expect(errors).toEqual([]);
     else expect(errors.join(' ')).toMatch(role === 'network' ? /địa chỉ mạng/i : /địa chỉ quảng bá/i);
   });
 
   it('IP không thuộc dải nào đã khai → vẫn chặn .0/.255 theo octet cuối', () => {
-    expect(validateNatRule({ ...base, internalIp: '10.9.9.255' }, null).errors).toHaveLength(1);
-    expect(validateNatRule({ ...base, internalIp: '10.9.9.7' }, null).errors).toEqual([]);
+    expect(check({ ...base, internalIp: '10.9.9.255' }, null).errors).toHaveLength(1);
+    expect(check({ ...base, internalIp: '10.9.9.7' }, null).errors).toEqual([]);
   });
 
   /** Sai định dạng báo MỘT lỗi định dạng, không kèm thêm lỗi "địa chỉ mạng" vô nghĩa. */
   it('IP sai định dạng chỉ báo lỗi định dạng, không báo chồng', () => {
-    expect(validateNatRule({ ...base, internalIp: '172.16.10.999' }).errors).toHaveLength(1);
+    expect(check({ ...base, internalIp: '172.16.10.999' }).errors).toHaveLength(1);
   });
 
   it('port trong phải trong khoảng 1–65535', () => {
-    expect(validateNatRule({ ...base, internalPort: 0 }).errors.length).toBe(1);
-    expect(validateNatRule({ ...base, internalPort: 70000 }).errors.length).toBe(1);
+    expect(check({ ...base, internalPort: 0 }).errors.length).toBe(1);
+    expect(check({ ...base, internalPort: 70000 }).errors.length).toBe(1);
   });
 
   /**
@@ -150,12 +154,12 @@ describe('validateNatRule — luật nghiệp vụ của một dòng sổ NAT (F
    * ngược đầu rơi xuống ràng buộc của Postgres và bung 500 thay vì một câu tiếng Việt.
    */
   it('port NGOÀI cũng phải hợp lệ, không chỉ trông vào bộ phân tích chuỗi của controller', () => {
-    expect(validateNatRule({ ...base, externalFrom: 0, externalTo: 10 }).errors.length).toBe(1);
-    expect(validateNatRule({ ...base, externalFrom: 1, externalTo: 70000 }).errors.length).toBe(1);
+    expect(check({ ...base, externalFrom: 0, externalTo: 10 }).errors.length).toBe(1);
+    expect(check({ ...base, externalFrom: 1, externalTo: 70000 }).errors.length).toBe(1);
   });
 
   it('khoảng port ngoài viết ngược bị từ chối kèm ví dụ đúng', () => {
-    const { errors } = validateNatRule({ ...base, externalFrom: 8020, externalTo: 8010 });
+    const { errors } = check({ ...base, externalFrom: 8020, externalTo: 8010 });
     expect(errors.length).toBe(1);
     expect(errors[0]).toContain('8000-8010');
   });
@@ -167,20 +171,29 @@ describe('validateNatRule — luật nghiệp vụ của một dòng sổ NAT (F
    * trong khi hành vi sai. Giờ khẳng định đúng chỗ: đây là `warnings`, và `errors` phải RỖNG.
    */
   it('mở dải port lớn là CẢNH BÁO, không phải lỗi — dải camera phải lưu được', () => {
-    const result = validateNatRule({ ...base, externalFrom: 50000, externalTo: 52000 });
+    const result = check({ ...base, externalFrom: 50000, externalTo: 52000 });
     expect(result.errors).toEqual([]);
     expect(result.warnings.length).toBe(1);
     expect(result.warnings[0]).toContain('1000');
   });
 
+  // Ngưỡng đọc từ `system_config` (AD-11): hạ xuống 100 thì dải 200 cổng đã phải cảnh báo.
+  it('ngưỡng cảnh báo là tham số, không phải hằng số', () => {
+    const wide = { ...base, externalFrom: 8000, externalTo: 8199 };
+    expect(validateNatRule(wide, { widePortRange: 1000 }).warnings).toEqual([]);
+    const tight = validateNatRule(wide, { widePortRange: 100 });
+    expect(tight.errors).toEqual([]);
+    expect(tight.warnings[0]).toContain('100');
+  });
+
   it('dải ngược đầu KHÔNG lọt qua ô cảnh báo bằng độ rộng âm', () => {
-    const result = validateNatRule({ ...base, externalFrom: 60000, externalTo: 100 });
+    const result = check({ ...base, externalFrom: 60000, externalTo: 100 });
     expect(result.errors.length).toBe(1);
     expect(result.warnings).toEqual([]);
   });
 
   it('gom HẾT lỗi của một dòng, không dừng ở lỗi đầu tiên', () => {
-    const result = validateNatRule({
+    const result = check({
       ...base,
       reason: '',
       usedBy: '',

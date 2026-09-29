@@ -6,6 +6,10 @@ export interface IpamSettings {
   subnetFullPercent: number;
   /** Cổng mở ra Internet bị gắn "Nhạy cảm" trên sổ NAT. */
   natSensitivePorts: number[];
+  /** Dải rộng nhất được khai (độ dài prefix) — form dải báo "quá rộng" theo đúng số này. */
+  subnetMinPrefix: number;
+  /** Dải cổng ngoài rộng hơn ngần này thì chip NAT tô cảnh báo — cùng ngưỡng API cảnh báo. */
+  natWidePortRange: number;
 }
 
 /*
@@ -16,6 +20,8 @@ export interface IpamSettings {
 const FALLBACK: IpamSettings = {
   subnetFullPercent: 80,
   natSensitivePorts: [21, 22, 23, 445, 1433, 3306, 3389, 5432, 5900],
+  subnetMinPrefix: 24,
+  natWidePortRange: 1000,
 };
 
 /** Tham số hiển thị của màn IP và sổ NAT, đọc từ `system_config` qua `GET ipam/settings` (AD-11). */

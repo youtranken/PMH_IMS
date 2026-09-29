@@ -15,6 +15,7 @@ import { requireCas } from '../../common/cas';
 import { effectiveOf } from '../../common/merge-effective';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
+import { SystemConfigService } from '../config-sys/system-config.service';
 import { DevicesApiService } from '../devices/devices.api';
 import { IpAddressService } from './ip-address.service';
 import {
@@ -115,6 +116,7 @@ export class NatRuleService {
     private readonly devices: DevicesApiService,
     private readonly addresses: IpAddressService,
     private readonly catalog: CatalogApiService,
+    private readonly config: SystemConfigService,
   ) {}
 
   /**
@@ -526,7 +528,7 @@ export class NatRuleService {
   }
 
   /**
-   * Chỉ LỖI mới chặn. Cảnh báo (vd mở dải hơn 1000 cổng) được trả về để nơi gọi hiện cho
+   * Chỉ LỖI mới chặn. Cảnh báo (vd mở dải rộng hơn `nat.wide_port_range` cổng) được trả về để nơi gọi hiện cho
    * người dùng — chặn nó là mâu thuẫn với chính thông điệp "nếu đúng ý thì cứ lưu", và làm
    * dải port camera không bao giờ vào nổi sổ (code review Epic 5, finding 1).
    */
@@ -540,7 +542,10 @@ export class NatRuleService {
         usedBy: input.usedBy,
         reason: input.reason,
       },
-      await this.containingCidr(input.internalIp),
+      {
+        subnetCidr: await this.containingCidr(input.internalIp),
+        widePortRange: await this.config.getNumber('natWidePortRange'),
+      },
     );
     if (errors.length > 0) {
       throw new BadRequestException({ code: 'NAT_INVALID', message: errors.join(' ') });

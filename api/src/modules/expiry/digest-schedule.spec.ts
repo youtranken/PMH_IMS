@@ -220,7 +220,16 @@ describe('lookBackDays — nhìn lùi bao xa để bắt mục đã quá hạn',
     ['số lẻ cắt phần thập phân', { expiredWithinDays: 30.9 }, 30],
     ['NaN rơi về mặc định', { expiredWithinDays: Number.NaN }, 365],
   ])('%s', (_name, query, expected) => {
-    expect(lookBackDays(query)).toBe(expected);
+    expect(lookBackDays(query, 365)).toBe(expected);
+  });
+
+  // Mặc định của màn và trần kẹp là `expiry.look_back_days` (AD-11), không phải hằng số.
+  it.each([
+    ['mặc định màn hình theo cấu hình', {}, 90],
+    ['digest cũng bị kẹp ở trần cấu hình', { expiredWithinDays: 200 }, 90],
+    ['digest ngắn hơn trần thì giữ nguyên', { expiredWithinDays: 30 }, 30],
+  ])('trần 90 ngày: %s', (_name, query, expected) => {
+    expect(lookBackDays(query, 90)).toBe(expected);
   });
 });
 

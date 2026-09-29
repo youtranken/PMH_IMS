@@ -15,7 +15,8 @@ import {
 
 describe('hostRole — địa chỉ mạng và địa chỉ quảng bá KHÔNG cấp cho máy được', () => {
   /**
-   * Không biết dải thì suy từ octet cuối. Đúng tuyệt đối trong hệ này vì `MIN_PREFIX = 24`:
+   * Không biết dải thì suy từ octet cuối. Đúng tuyệt đối trong hệ này vì `ipam.subnet_min_prefix`
+   * không bao giờ dưới 24:
    * mọi dải khai được đều là /24 hoặc hẹp hơn, và trong MỌI dải như vậy octet cuối 0 là địa
    * chỉ mạng còn 255 là địa chỉ quảng bá (kiểm cả /25, /26 ở nhóm dưới).
    */
@@ -133,11 +134,30 @@ describe('normalizeSubnet — chuẩn hóa dải', () => {
   it.each(['10.0.0.0/7', '10.0.0.0/8', '172.16.0.0/16', '172.16.0.0/23'])(
     'dải rộng hơn /24 bị chặn kèm lời giải thích: %s',
     (value) => {
-      const result = normalizeSubnet(value);
+      const result = normalizeSubnet(value, 24);
       expect(result.ok).toBe(false);
       expect(result.ok === false && result.reason).toBe('too_wide');
     },
   );
+
+  // Trần đọc từ `ipam.subnet_min_prefix` (AD-11): siết lên /26 thì /24 và /25 thành quá rộng.
+  it.each([
+    ['172.16.10.0/24', 26, 'too_wide'],
+    ['172.16.10.0/25', 26, 'too_wide'],
+    ['172.16.10.0/26', 26, null],
+    ['172.16.10.0/24', 24, null],
+  ])('%s với trần /%i → %s', (value, minPrefix, reason) => {
+    const result = normalizeSubnet(value, minPrefix);
+    expect(result.ok === false ? result.reason : null).toBe(reason);
+  });
+
+  /*
+   * Không truyền trần = chỉ chuẩn hoá, không xét độ rộng. Dùng cho dải ĐÃ nằm trong sổ: siết trần
+   * về sau không được làm một dải /24 đang dùng thôi "chứa" các IP của chính nó.
+   */
+  it('không truyền trần thì không xét độ rộng', () => {
+    expect(normalizeSubnet('172.16.0.0/16').ok).toBe(true);
+  });
 });
 
 describe('isHostInSubnet — IP ngoài dải bị từ chối', () => {
