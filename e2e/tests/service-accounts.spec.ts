@@ -401,7 +401,7 @@ test.describe('Tài khoản dịch vụ', () => {
     expect(created.status).toBe(201);
 
     // NET-074: chip "VPN mở mọi IP" ở danh sách lọc ra đúng tài khoản này (lọc ở API).
-    await page.goto(`/service-accounts?search=${encodeURIComponent(code)}`);
+    await page.goto(`/service-accounts?q=${encodeURIComponent(code)}`);
     await page.getByRole('button', { name: 'VPN mở mọi IP' }).click();
     await expect(page.getByRole('link', { name: code })).toBeVisible();
 
@@ -420,7 +420,7 @@ test.describe('Tài khoản dịch vụ', () => {
     await expect(page.getByText('Mọi IP', { exact: true })).toHaveCount(0);
 
     // Đã giới hạn IP nguồn thì chip không còn lọc ra nó.
-    await page.goto(`/service-accounts?search=${encodeURIComponent(code)}&anyIp=1`);
+    await page.goto(`/service-accounts?q=${encodeURIComponent(code)}&anyIp=1`);
     await expect(page.getByRole('button', { name: 'VPN mở mọi IP' })).toHaveAttribute(
       'aria-pressed',
       'true',
