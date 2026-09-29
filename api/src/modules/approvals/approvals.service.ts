@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
@@ -9,6 +10,7 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { escapeLike } from '../../common/sql';
+import { redactMessage } from '../../common/log-redact';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import type { Page } from '../../common/pagination';
 import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
@@ -112,6 +114,8 @@ export interface TransitionInput {
  */
 @Injectable()
 export class ApprovalsService {
+  private readonly logger = new Logger(ApprovalsService.name);
+
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly audit: AuditWriterService,
@@ -378,14 +382,20 @@ export class ApprovalsService {
       const flow = this.kinds.find(row.kind);
       // Loại chưa đăng ký (module tắt, đổi tên) → bỏ qua, KHÔNG làm chết cả vòng quét.
       if (!flow?.can(row.state, 'expired')) continue;
-      await this.db.transaction(async (tx) => {
-        await this.transitionWithin(tx, row.id, {
-          to: 'expired',
-          actor: 'system',
-          detail: { by: 'sweep' },
+      try {
+        await this.db.transaction(async (tx) => {
+          await this.transitionWithin(tx, row.id, {
+            to: 'expired',
+            actor: 'system',
+            detail: { by: 'sweep' },
+          });
         });
-      });
-      closed += 1;
+        closed += 1;
+      } catch (error) {
+        // Mỗi hàng một transaction riêng: hàng lỗi tự rollback và vòng sau thử lại, còn các hàng
+        // khác vẫn phải được đóng — một hàng hỏng không được làm bẩn cả danh sách.
+        this.logger.warn(`hết hạn grant ${row.id} lỗi: ${redactMessage(error)}`);
+      }
     }
     return closed;
   }

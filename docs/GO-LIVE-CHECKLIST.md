@@ -220,22 +220,30 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
   sang máy đã thanh lý.
   - **Rà 29/09:** còn nguyên cả hai ý (`device-ports.service.ts:142-190`, `prepare()` không kiểm máy
     đầu kia đã thanh lý).
-- [ ] **BE-16 · Sweep hết hạn grant dừng cả vòng khi gặp một hàng lỗi**
+- [x] **BE-16 · Sweep hết hạn grant dừng cả vòng khi gặp một hàng lỗi**
   (`approvals.service.ts:285-307`). Thêm try/catch cho từng hàng.
   - **Rà 29/09:** còn nguyên (`expireDueGrants`, `approvals.service.ts:~364-390`).
-- [ ] **BE-17 · Xin break-glass chồng khi đang có grant còn hạn** (`break-glass.service.ts:230`).
+  - **Đã sửa:** `expireDueGrants` bọc try/catch từng hàng, log qua `redactMessage`, hàng lỗi rollback
+    riêng và vòng sau thử lại. Kiểm: `api/test/approvals.spec.ts` (bài "một hàng lỗi không chặn").
+- [x] **BE-17 · Xin break-glass chồng khi đang có grant còn hạn** (`break-glass.service.ts:230`).
   - **Rà 29/09:** mới một phần (8a2dd5e). API chặn khi còn phiếu chờ (`BREAK_GLASS_PENDING`) và khi
     có quyền đã duyệt chưa gắn phiên (`BREAK_GLASS_APPROVED`); màn hình chặn đủ. Còn hở: gọi API thẳng
     vẫn xin chồng được khi đang cầm quyền đã gắn CHÍNH phiên này. Thiếu bài kiểm cho
     `BREAK_GLASS_APPROVED`.
+  - **Đã sửa:** `request()` thêm 409 `BREAK_GLASS_ACTIVE` khi đang cầm quyền gắn chính phiên này
+    (`grantOf`); quyền gắn phiên khác vẫn xin lại được (Q-15). Kiểm: `api/test/break-glass-session.spec.ts`
+    (nhóm "không xin chồng", có cả `BREAK_GLASS_APPROVED`).
 - [x] **BE-18 · Người xin break-glass không nhận thông báo** khi được duyệt, từ chối hay thu hồi. Thêm
   outbox.
   - **Rà 29/09:** xong (Q-14, VLT-003..008, 858ba4d). Duyệt, từ chối, thu hồi ghi outbox
     `approval.decided` cùng transaction; thư dựng ở `mail.consumer.ts` (`buildDecidedMail`). Kiểm:
     `api/test/break-glass-decided.spec.ts`.
-- [ ] **BE-19 · Audit ma trận quyền không ghi tầng cũ; gỡ quyền đọc ngoài transaction**
+- [x] **BE-19 · Audit ma trận quyền không ghi tầng cũ; gỡ quyền đọc ngoài transaction**
   (`access-list.service.ts`).
   - **Rà 29/09:** còn nguyên (`upsert` không đọc tầng cũ; `remove` đọc `before` ngoài transaction).
+  - **Đã sửa:** `upsert` đọc tầng cũ trong transaction (`FOR UPDATE`), ghi `fromTier` vào audit;
+    `remove` dùng `DELETE … RETURNING` trong transaction, không xoá được hàng nào thì 404 và không
+    audit. Kiểm: `api/test/access-list-audit.spec.ts` (có bài hai người cùng gỡ).
 - [ ] **BE-20 · Tham số nghiệp vụ viết cứng, vi phạm AD-11:**
   - `MIN_PREFIX=24`, `WIDE_RANGE=1000`, `LOOK_BACK_DAYS=365`, `MAX_ITEMS=8`.
   - Các `@Throttle` 30 và 10 lần/phút.
