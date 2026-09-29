@@ -365,6 +365,10 @@ table.table tbody tr.row-suspended td:first-child {
   flex-direction: column;
   gap: 2px;
   min-width: 130px;
+  /* `useAnchoredMenu` chặn max-height theo chỗ trống còn lại của khung nhìn. Menu dài hơn thế
+     (menu dòng tài khoản có tới chục việc) mà không cuộn thì mấy mục cuối — đúng nhóm khóa ·
+     vô hiệu hóa — tràn ra ngoài màn và không bấm được. */
+  overflow-y: auto;
   padding: var(--space-1);
   background: var(--surface);
   border: 1px solid var(--border);
