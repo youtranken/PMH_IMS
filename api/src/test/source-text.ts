@@ -94,8 +94,8 @@ export function allControllers(dir: string): string[] {
 /**
  * Khối decorator NGAY TRÊN `@Controller(...)`.
  *
- * Không dùng `src.slice(0, indexOf('export class'))`: `accounts.controller.ts` có
- * `export class RealDateOrEmpty` (một ValidatorConstraint) ở đầu file, nên cách cắt đó dừng
+ * Không dùng `src.slice(0, indexOf('export class'))`: file controller được phép export lớp
+ * khác (DTO, ValidatorConstraint) phía trên controller, nên cách cắt đó dừng
  * lại trước cả phần cần đọc và báo thiếu cho một file KHÔNG thiếu. Bài kiểm sai theo hướng
  * đó còn tệ hơn không có bài kiểm: nó dạy người ta bỏ qua màu đỏ.
  *

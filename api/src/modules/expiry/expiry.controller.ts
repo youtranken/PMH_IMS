@@ -22,11 +22,12 @@ import {
   IsString,
   IsUUID,
   Length,
-  Matches,
   Max,
   Min,
+  Validate,
   ValidateIf,
 } from 'class-validator';
+import { RealDate } from '../../common/real-date';
 import { Audited } from '../audit/audited.decorator';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
@@ -45,11 +46,11 @@ import { UsersApiService } from '../users/users.api';
 /** Khoảng ngày của tab "Đã gia hạn" — ngày lịch YYYY-MM-DD, cả hai bao gồm. */
 class RenewalsQueryDto {
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '"Từ ngày" phải dạng YYYY-MM-DD.' })
+  @Validate(RealDate, { message: '"Từ ngày" phải là ngày có thật, dạng YYYY-MM-DD.' })
   from?: string;
 
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '"Đến ngày" phải dạng YYYY-MM-DD.' })
+  @Validate(RealDate, { message: '"Đến ngày" phải là ngày có thật, dạng YYYY-MM-DD.' })
   to?: string;
 }
 
@@ -61,7 +62,7 @@ class RenewDto {
   @IsUUID(undefined, { message: 'Mã hồ sơ không hợp lệ.' })
   id!: string;
 
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Hạn mới phải dạng YYYY-MM-DD.' })
+  @Validate(RealDate, { message: 'Hạn mới phải là ngày có thật, dạng YYYY-MM-DD.' })
   endDate!: string;
 
   /**

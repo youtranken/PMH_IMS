@@ -21,11 +21,12 @@ import {
   IsString,
   IsUUID,
   Length,
-  Matches,
   Max,
   Min,
+  Validate,
   ValidateIf,
 } from 'class-validator';
+import { RealDateOrEmpty } from '../../common/real-date';
 import { BadRequestException } from '@nestjs/common';
 import { Audited } from '../audit/audited.decorator';
 import { Roles } from '../auth/roles.decorator';
@@ -43,9 +44,6 @@ import { UsersApiService } from '../users/users.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { withActorNames } from '../../common/history';
 import { sensitivePortsOf } from './nat-sensitive';
-
-/** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
-const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -88,7 +86,7 @@ class IpBodyDto {
   @IsOptional() @ValidateIf((_o, value) => value !== '') @IsUUID() deviceId?: string;
   @IsOptional() @IsString() @Length(0, 160) usedBy?: string;
 
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày cấp phải dạng YYYY-MM-DD.' })
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày cấp phải là ngày có thật, dạng YYYY-MM-DD.' })
   assignedAt?: string;
 
   @IsOptional() @IsString() @Length(0, 2000) note?: string;
@@ -108,7 +106,7 @@ class TransitionDto {
   @IsOptional() @IsString() @Length(0, 160) usedBy?: string;
 
   // Hộp "Cấp IP" dùng chung cho ô trống và hồ sơ Trống gửi cùng một bộ trường.
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày cấp phải dạng YYYY-MM-DD.' })
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày cấp phải là ngày có thật, dạng YYYY-MM-DD.' })
   assignedAt?: string;
   @IsOptional() @IsString() @Length(0, 2000) note?: string;
 }

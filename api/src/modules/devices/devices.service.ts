@@ -9,6 +9,7 @@ import { and, asc, count, desc, eq, inArray, ne, or, sql, type SQL, type SQLWrap
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
+import { isRealDateOnly } from '../../common/real-date';
 import { HISTORY_PAGE_LIMIT, latestStatusEvents, type StatusEvent } from '../../common/history';
 import { DeviceRetirementRegistry } from '../../common/device-retirement.registry';
 import { DeviceSearchRegistry } from '../../common/device-search.registry';
@@ -793,7 +794,7 @@ function dateOnly(
   if (value === undefined) return undefined;
   const trimmed = value?.trim();
   if (!trimmed) return null;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+  if (!isRealDateOnly(trimmed)) {
     throw new BadRequestException({
       code: 'DATE_INVALID',
       message: `${label} phải là ngày hợp lệ.`,

@@ -10,7 +10,8 @@ import {
   Res,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { IsIn, IsOptional, IsString, IsUUID, Length, Matches, ValidateIf } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID, Length, Validate, ValidateIf } from 'class-validator';
+import { RealDateOrEmpty } from '../../common/real-date';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
 import { Audited } from '../audit/audited.decorator';
@@ -32,9 +33,6 @@ import { CatalogApiService } from '../catalog/catalog.api';
 import { DevicesApiService } from '../devices/devices.api';
 import { deviceIdsInHistory, withDeviceCodes } from './history-device-codes';
 
-/** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
-const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
-
 /**
  * KHÔNG có `endDate` (Q-04): đường truyền không có hạn. `forbidNonWhitelisted` bật toàn cục nên
  * client cũ còn gửi trường đó nhận 400 thay vì tưởng đã lưu.
@@ -53,7 +51,7 @@ export class IspBodyDto {
   @IsOptional() @IsString() @Length(0, 60) hotline?: string;
   @IsOptional() @IsString() @Length(0, 80) contractNo?: string;
 
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày bắt đầu phải dạng YYYY-MM-DD.' })
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày bắt đầu phải là ngày có thật, dạng YYYY-MM-DD.' })
   startDate?: string;
 
   @IsOptional() @IsString() @Length(0, 2000) note?: string;

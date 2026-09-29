@@ -1,6 +1,7 @@
 import { BadRequestException, Controller, Get, Query, Res } from '@nestjs/common';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min, Validate } from 'class-validator';
+import { RealDate } from '../../common/real-date';
 import type { Response } from 'express';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
@@ -10,8 +11,6 @@ import { SystemConfigService } from '../config-sys/system-config.service';
 import { Audited } from './audited.decorator';
 import { AuditQueryService, COUNT_CAP, type AuditRow } from './audit-query.service';
 import { NoStepUp } from '../auth/step-up.decorator';
-
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Ngày lịch THẬT (regex chỉ chặn định dạng) — mẫu reports.controller. */
 function assertValidDate(s: string): void {
@@ -48,11 +47,11 @@ export class AuditQueryDto {
   security?: string;
 
   @IsOptional()
-  @Matches(DATE_RE, { message: '"Từ ngày" phải dạng YYYY-MM-DD.' })
+  @Validate(RealDate, { message: '"Từ ngày" phải là ngày có thật, dạng YYYY-MM-DD.' })
   from?: string;
 
   @IsOptional()
-  @Matches(DATE_RE, { message: '"Đến ngày" phải dạng YYYY-MM-DD.' })
+  @Validate(RealDate, { message: '"Đến ngày" phải là ngày có thật, dạng YYYY-MM-DD.' })
   to?: string;
 
   /*

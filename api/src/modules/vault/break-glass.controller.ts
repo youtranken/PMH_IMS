@@ -7,11 +7,12 @@ import {
   IsString,
   IsUUID,
   Length,
-  Matches,
   Max,
   MaxLength,
   Min,
+  Validate,
 } from 'class-validator';
+import { RealDate } from '../../common/real-date';
 import { Audited } from '../audit/audited.decorator';
 import { parsePageQuery } from '../../common/pagination';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
@@ -25,8 +26,6 @@ import { SECRET_OWNER_TYPES, type SecretOwnerType } from './vault.service';
 import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
 import { NoIdleTouch } from '../auth/no-idle-touch.decorator';
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
 /** Bộ lọc nhật ký mở két (VLT-019) — dùng chung cho màn và file xuất. */
 class LogQueryDto {
   @IsOptional() @IsString() page?: string;
@@ -38,8 +37,8 @@ class LogQueryDto {
 
   @IsOptional() @IsString() @MaxLength(255) requester?: string;
 
-  @IsOptional() @Matches(DATE_RE, { message: '"Từ ngày" phải dạng YYYY-MM-DD.' }) from?: string;
-  @IsOptional() @Matches(DATE_RE, { message: '"Đến ngày" phải dạng YYYY-MM-DD.' }) to?: string;
+  @IsOptional() @Validate(RealDate, { message: '"Từ ngày" phải là ngày có thật, dạng YYYY-MM-DD.' }) from?: string;
+  @IsOptional() @Validate(RealDate, { message: '"Đến ngày" phải là ngày có thật, dạng YYYY-MM-DD.' }) to?: string;
 }
 
 function logFilters(query: LogQueryDto) {

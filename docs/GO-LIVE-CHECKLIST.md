@@ -199,7 +199,7 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
 
 ### P2
 
-- [ ] **BE-11 · Một số lỗi 400 lại trả 500:**
+- [x] **BE-11 · Một số lỗi 400 lại trả 500:**
   - Ngày không có thật (`2026-02-30`) lọt qua regex `DATE_ONLY` → Postgres 22008.
   - `subnet.service.ts:235-276` đổi CIDR mà gateway cũ nằm ngoài dải → 23514.
   - `restore` (`:377-421`) trùng CIDR → 23505.
@@ -207,6 +207,12 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
     sinh dùng `RealDateOrEmpty`, các ô `DATE_ONLY` ở devices/software/isp-line/ipam vẫn chỉ kiểm bằng
     regex. Ý 2 còn khi gọi API thẳng: PATCH chỉ gửi `cidr` thì gateway cũ không được kiểm → 500
     (màn web không dính vì luôn gửi gateway).
+  - **Đã sửa:** ý 1 — `RealDateOrEmpty`/`RealDate`/`isRealDateOnly` dời về `common/real-date.ts`,
+    thay mọi regex khuôn ngày trong DTO (thiết bị, phần mềm + ghế, đường truyền, IP, hai `RenewDto`,
+    lọc từ/đến của nhật ký, break-glass, sổ gia hạn, thanh lý) và `dateOnly()` của ba service. Kiểm:
+    `api/src/common/real-date.spec.ts` (bảng ngày + điểm danh controller còn regex). Ý 2 — PATCH chỉ
+    gửi `cidr` thì kiểm gateway đang có theo dải mới → 400 `GATEWAY_OUT_OF_SUBNET`. Kiểm:
+    `api/test/subnet-cidr-gateway.spec.ts`.
 - [ ] **BE-12 · Import Excel:**
   - Quá 20.000 dòng thì bị cắt im lặng (`excel-import.service.ts:13,43`).
   - Ô công thức không có giá trị cache hoặc ô `#N/A` thành rỗng, xoá luôn dữ liệu đang có (`:91`).
