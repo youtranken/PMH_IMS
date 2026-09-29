@@ -119,6 +119,17 @@ describe('DecisionDialog', () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 
+  it('Duyệt cần mã 6 số: hộp hỏi mã nói đang DUYỆT cho ai, không phải câu chung "để xem" (VLT-047)', async () => {
+    renderDecision(true, {
+      respond: () =>
+        Promise.resolve(jsonResponse(403, { code: 'STEPUP_REQUIRED', message: 'Cần xác nhận.' })),
+    });
+    await userEvent.click(screen.getByRole('button', { name: /Duyệt/ }));
+    expect(
+      await screen.findByText('Nhập mã 6 số để duyệt mở két cho Trần Thị B.'),
+    ).toBeInTheDocument();
+  });
+
   it('Duyệt một phiếu vừa bị rút (phiên người xin đã kết thúc) → báo rõ, đóng hộp', async () => {
     const { onClose, onDone } = renderDecision(true, {
       respond: () =>

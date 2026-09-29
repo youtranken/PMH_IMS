@@ -885,6 +885,7 @@ export default {
     standing: 'Tình trạng',
     overdueDays: 'quá {{count}} ngày',
     autoRetireIn: 'tự thanh lý sau {{count}} ngày',
+    matchedDevices: 'khớp máy {{codes}}',
     autoRetireNext: 'tự thanh lý ở lượt quét tới',
     /* Băng cảnh báo trên trang chi tiết hồ sơ Hết hạn (Q-13). */
     autoRetireWarn: 'Tự thanh lý sau {{count}} ngày ({{date}}) nếu chưa gia hạn.',
@@ -1397,6 +1398,7 @@ export default {
   },
   vault: {
     tab: 'Két sắt',
+    jumpToVault: 'Mật khẩu trong két',
     /* Hộp giá trị tự đóng khi hết giờ. Không nói gì thì người dùng không phân biệt được "hết
        giờ" với "mình lỡ bấm Ẩn" hay "trình duyệt vừa lỗi" — và phản xạ là bấm Xem lần nữa,
        tức thêm một dòng nhật ký mở két cho một lần không cần thiết. */
@@ -1436,6 +1438,10 @@ export default {
     valueHide: 'Ẩn',
     generate: 'Tạo ngẫu nhiên',
     stepUpPurpose: 'Nhập mã 6 số để xem "{{label}}".',
+    stepUpSave: 'Nhập mã 6 số để cất "{{label}}" vào két.',
+    stepUpEdit: 'Nhập mã 6 số để lưu thay đổi của "{{label}}".',
+    stepUpRotate: 'Nhập mã 6 số để lưu giá trị mới vào két.',
+    stepUpRevoke: 'Nhập mã 6 số để xóa "{{label}}" khỏi két.',
     stepUpGrace: 'Xác nhận xong thì {{minutes}} phút tới mở ngăn khác không phải gõ lại.',
     perCharOn: 'Hiện từng ký tự',
     perCharOff: 'Hiện liền một dòng',
@@ -2429,6 +2435,10 @@ export default {
     stateRevoked: 'Đã thu hồi',
     cardLabel: 'Yêu cầu của {{member}}',
     fromMail: 'Yêu cầu trong thư',
+    waitingLong: 'Chờ lâu — đã quá mốc nhắc',
+    stepUpApprove: 'Nhập mã 6 số để duyệt mở két cho {{name}}.',
+    stepUpRevoke: 'Nhập mã 6 số để thu hồi quyền mở két của {{name}}.',
+    activeGroup: 'Đang có hiệu lực ({{count}})',
     focusGone:
       'Yêu cầu trong thư không còn chờ duyệt — có thể người khác đã xử lý. Xem tab Nhật ký.',
     /* Đối tượng đọc được thay cho uuid: người duyệt lúc 2 giờ sáng phải biết "máy nào". */

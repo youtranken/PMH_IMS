@@ -9,6 +9,7 @@ import type { SecretOwnerType } from '@/lib/secret-owner-kinds';
 import { Dialog } from '@/ui/dialog';
 import { useDisabledReason } from '@/ui/disabled-reason';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
+import { useSupportContact } from '@/ui/use-support-contact';
 import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
 import { TableWrap } from '@/ui/data-table';
@@ -283,6 +284,11 @@ export function VaultPanel({
     [me.csrfToken, toast],
   );
 
+  // Ngoài danh sách: chỉ đường tới người gán quyền được (VLT-056). Gọi TRƯỚC các nhánh thoát
+  // bên dưới — hook không được nằm sau một `return`.
+  const noAccess = !isAdmin && verdict.data !== undefined && !allowed;
+  const contact = useSupportContact(noAccess);
+
   /*
    * BA CHỐT NÀY CHỈ ÁP CHO NGƯỜI CẦN `verdict` (F-07, vá 21/09).
    *
@@ -305,7 +311,19 @@ export function VaultPanel({
     if (verdict.isError)
       return <LoadError error={verdict.error} onRetry={() => void verdict.refetch()} />;
     if (!allowed) {
-      return <EmptyState title={t('vault.noPermissionTitle')} hint={t('vault.noPermission')} />;
+      return (
+        <EmptyState
+          title={t('vault.noPermissionTitle')}
+          hint={t('vault.noPermission')}
+          action={
+            contact.data?.contact ? (
+              <span>
+                <strong>{t('auth.supportContactLabel')}:</strong> {contact.data.contact}
+              </span>
+            ) : undefined
+          }
+        />
+      );
     }
   }
 
@@ -474,9 +492,11 @@ export function VaultPanel({
 
       {canEdit ? (
         <div className="row" style={{ justifyContent: 'flex-end' }}>
+          {/* Nút thường: két là một TAB của hồ sơ — nút chính của màn là "Sửa hồ sơ" ở đầu
+              trang; hai nút đặc cùng màn thì không còn điểm nhấn nào (SW-015). */}
           <button
             type="button"
-            className="btn primary"
+            className="btn"
             onClick={() => setEditing({ secret: null })}
           >
             {t('vault.add')}
@@ -612,8 +632,9 @@ export function VaultPanel({
                                   try {
                                     // Thu hồi nay đòi step-up (C2): gặp `STEPUP_REQUIRED` thì
                                     // hỏi mã rồi làm lại chính việc này.
-                                    await writeStepUp.run(() =>
-                                      revoke.mutateAsync({ id: secret.id }),
+                                    await writeStepUp.run(
+                                      () => revoke.mutateAsync({ id: secret.id }),
+                                      t('vault.stepUpRevoke', { label: secret.label }),
                                     );
                                     toast({ message: t('vault.revoked') });
                                     void refresh();
@@ -806,6 +827,7 @@ function SecretForm({
                         value,
                       },
                 ),
+                t(isEdit ? 'vault.stepUpEdit' : 'vault.stepUpSave', { label: label.trim() }),
               );
               setValue('');
               onSaved();
@@ -952,7 +974,10 @@ function RotateForm({
           if (!check.check()) return;
           void (async () => {
             try {
-              await stepUp.run(() => rotate.mutateAsync({ value }));
+              await stepUp.run(
+                () => rotate.mutateAsync({ value }),
+                t('vault.stepUpRotate'),
+              );
               setValue('');
               onSaved();
             } catch (err) {

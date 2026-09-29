@@ -709,6 +709,13 @@ export function DeviceDetail({ me }: { me: Me }) {
           </RailCard>
         }
       >
+        {/* Điện thoại: tab Két sắt nằm khuất cuối thanh tab, mà người ở hiện trường mở hồ sơ
+            máy chủ yếu để lấy mật khẩu — một nút ngay trên thanh tab, chỉ hiện ở màn hẹp (VLT-042). */}
+        {canVault && safeTab !== "vault" ? (
+          <button type="button" className="btn vault-jump" onClick={() => goTab("vault")}>
+            {t("vault.jumpToVault")}
+          </button>
+        ) : null}
         <Tabs
           items={tabItems}
           value={safeTab}

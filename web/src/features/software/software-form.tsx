@@ -321,31 +321,33 @@ export function SoftwareForm({
               </div>
             </Field>
           ) : null}
-          <Field label={t('software.startDate')}>
-            <DatePicker
-              value={form.startDate}
-              ariaLabel={t('software.startDate')}
-              onChange={(value) => set('startDate', value)}
-            />
-          </Field>
-          {/* Vĩnh viễn: ô Hết hạn thành chữ tĩnh thay vì biến mất — bố cục không nhảy. */}
-          {isPerpetual ? (
-            <Field label={t('software.endDate')}>
-              <p className="static-value">{t('software.noEnd')}</p>
-            </Field>
-          ) : (
-            <Field
-              label={t('software.endDate')}
-              required={endRequired}
-              error={check.error('endDate')}
-            >
+          <div className="field-pair">
+            <Field label={t('software.startDate')}>
               <DatePicker
-                value={form.endDate}
-                ariaLabel={t('software.endDate')}
-                onChange={(value) => set('endDate', value)}
+                value={form.startDate}
+                ariaLabel={t('software.startDate')}
+                onChange={(value) => set('startDate', value)}
               />
             </Field>
-          )}
+            {/* Vĩnh viễn: ô Hết hạn thành chữ tĩnh thay vì biến mất — bố cục không nhảy. */}
+            {isPerpetual ? (
+              <Field label={t('software.endDate')}>
+                <p className="static-value">{t('software.noEnd')}</p>
+              </Field>
+            ) : (
+              <Field
+                label={t('software.endDate')}
+                required={endRequired}
+                error={check.error('endDate')}
+              >
+                <DatePicker
+                  value={form.endDate}
+                  ariaLabel={t('software.endDate')}
+                  onChange={(value) => set('endDate', value)}
+                />
+              </Field>
+            )}
+          </div>
         </FormSection>
 
         {/* Ô ghế chỉ hiện với license — loại khác thấy ô này là hiểu sai ý nghĩa cột. */}

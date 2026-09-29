@@ -1275,11 +1275,13 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     // Hàng chờ phải sạch — cả hai phiếu đã có người quyết.
     await expect(page.getByText('Không có yêu cầu nào đang chờ')).toBeVisible();
 
-    // --- THU HỒI SỚM. Phiếu đã duyệt nằm ở tab Nhật ký; chỉ phiếu còn hiệu lực mới có nút này,
-    //     nên trên màn chỉ tồn tại đúng MỘT nút "Thu hồi sớm" (phiếu bị từ chối thì không có).
+    // --- THU HỒI SỚM. Phiếu đã duyệt nằm ở tab Nhật ký; chỉ phiếu còn hiệu lực mới có nút này
+    //     (phiếu bị từ chối thì không có). Quyền đang chạy nay được ghim thành nhóm "Đang có hiệu lực" ở đầu tab (VLT-020) nên
+    //     nó hiện hai lần (nhóm + dòng nhật ký) — bấm ở nhóm ghim, chỗ người trực tìm tới.
     await page.getByRole('tab', { name: 'Nhật ký' }).click();
-    await expect(page.getByText(lyDoDuocDuyet)).toBeVisible();
-    await page.getByRole('button', { name: 'Thu hồi sớm' }).click();
+    const nhomHieuLuc = page.getByRole('region', { name: /^Đang có hiệu lực/ });
+    await expect(nhomHieuLuc.getByText(lyDoDuocDuyet)).toBeVisible();
+    await nhomHieuLuc.getByRole('button', { name: 'Thu hồi sớm' }).click();
 
     /*
      * TỪ 12/09 NÚT NÀY PHẢI HỎI LẠI (rà UI/UX #4).

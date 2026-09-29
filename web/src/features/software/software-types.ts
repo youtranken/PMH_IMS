@@ -32,6 +32,8 @@ export interface SoftwareRow {
   autoRetireOn: string | null;
   /** Website dùng chứng chỉ SSL / tên miền này (Q-15). Tùy chọn: bản ghi dựng tay ở test không cần. */
   websites?: string[];
+  /** Mã máy đang giữ ghế khớp ô tìm — chỉ danh sách có ô tìm trả về (SW-010). */
+  matchedDevices?: string[];
 }
 
 /** Trang chi tiết: thêm hồ sơ Thanh lý lúc nào, do ai (`by = 'system'` khi tự động). */
@@ -112,6 +114,16 @@ export const STATUS_TONE: Record<SoftwareStatus, string> = {
 };
 
 /** Chỉ license mới nói tới seat — khớp `supportsSeats` phía API. */
+/**
+ * Chữ của chip "khớp máy …" (SW-010): tối đa ba mã rồi "+N" — tìm theo chữ chung ("LT-") có
+ * thể khớp hàng chục máy, và chip dài hơn cả dòng thì che mất chính hồ sơ.
+ */
+export function matchedDevicesText(codes: string[] | undefined): string | null {
+  if (!codes || codes.length === 0) return null;
+  const shown = codes.slice(0, 3).join(', ');
+  return codes.length > 3 ? `${shown} +${codes.length - 3}` : shown;
+}
+
 export function supportsSeats(kind: SoftwareKind): boolean {
   return kind === 'license';
 }

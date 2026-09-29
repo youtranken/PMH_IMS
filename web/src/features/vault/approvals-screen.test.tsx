@@ -82,6 +82,18 @@ describe('Thẻ phiếu chờ duyệt', () => {
     );
   });
 
+  it('phiếu chờ quá mốc nhắc (server báo `overdue`) có chữ "Chờ lâu"; phiếu mới thì không', async () => {
+    const rows = [
+      { ...row('a1', 'an@pmh.com.vn'), overdue: true },
+      { ...row('b2', 'binh@pmh.com.vn'), overdue: false },
+    ];
+    renderAt('/approvals', rows);
+    const old = await screen.findByRole('region', { name: /an@pmh\.com\.vn/ });
+    expect(within(old).getByText(/Chờ lâu/)).toBeInTheDocument();
+    const fresh = screen.getByRole('region', { name: /binh@pmh\.com\.vn/ });
+    expect(within(fresh).queryByText(/Chờ lâu/)).toBeNull();
+  });
+
   it('phiếu của chính mình: "Cần người khác duyệt", không có Duyệt/Từ chối', async () => {
     renderAt('/approvals', [row('a1', 'sa@pmh.com.vn')]);
     expect(await screen.findByText('Cần người khác duyệt')).toBeInTheDocument();
@@ -133,6 +145,25 @@ describe('Thẻ và sổ của màn Duyệt yêu cầu', () => {
     expect(await screen.findByRole('button', { name: 'Đi tới Chờ duyệt' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Duyệt' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Từ chối' })).not.toBeInTheDocument();
+  });
+
+  it('Nhật ký: quyền đang chạy ghim thành nhóm "Đang có hiệu lực" ở đầu, có Thu hồi sớm', async () => {
+    const live = {
+      ...row('a1', 'an@pmh.com.vn'),
+      state: 'approved',
+      active: true,
+      decidedBy: 'sa2@pmh.com.vn',
+      decidedAt: '2026-09-20T02:00:00.000Z',
+      expiresAt: '2026-09-20T06:00:00.000Z',
+    };
+    renderRouted(ME, {
+      '/api/v1/vault/break-glass/pending': [],
+      '/api/v1/vault/break-glass/active': [live],
+      '/api/v1/vault/break-glass/log': { items: [], total: 0 },
+    });
+    await userEvent.click(await screen.findByRole('tab', { name: 'Nhật ký' }));
+    const group = await screen.findByRole('region', { name: 'Đang có hiệu lực (1)' });
+    expect(within(group).getAllByRole('button', { name: 'Thu hồi sớm' }).length).toBeGreaterThan(0);
   });
 
   it('Nhật ký: phiếu đã thu hồi nói lúc bị cắt, không in hạn gốc như thể quyền còn chạy', async () => {

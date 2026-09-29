@@ -33,6 +33,7 @@ import {
   SOFTWARE_KINDS,
   SOFTWARE_STATUSES,
   STATUS_KEY,
+  matchedDevicesText,
   seatLabel,
   supportsSeats,
   supportsWebsites,
@@ -135,11 +136,25 @@ export function SoftwareScreen({ me }: { me: Me }) {
       {
         accessorKey: 'code',
         header: t('software.code'),
-        cell: ({ row }) => (
-          <Link className="mono" to={PATHS.softwareItem(row.original.id)}>
-            {row.original.code}
-          </Link>
-        ),
+        cell: ({ row }) => {
+          const matched = matchedDevicesText(row.original.matchedDevices);
+          return (
+            <>
+              <Link className="mono" to={PATHS.softwareItem(row.original.id)}>
+                {row.original.code}
+              </Link>
+              {/* Hồ sơ hiện ra vì MÁY đang giữ ghế khớp ô tìm — nói ra, không thì người tìm
+                  "LT-05" thấy một hồ sơ không có chữ đó và tưởng ô tìm hỏng (SW-010). */}
+              {matched ? (
+                <span className="cell-sub">
+                  <span className="badge info plain">
+                    {t('software.matchedDevices', { codes: matched })}
+                  </span>
+                </span>
+              ) : null}
+            </>
+          );
+        },
       },
       {
         /* Loại là dòng phụ dưới tên, không phải một cột riêng: bảng phải vừa 1280px với cột
@@ -516,7 +531,9 @@ function SoftwareRowActions({
 /** Dòng 3 của thẻ điện thoại: "License phần mềm · 6/10 ghế · Microsoft VN · quá 3 ngày". */
 function cardMeta(item: SoftwareRow, t: TFunction): string {
   const standing = standingOf(item);
+  const matched = matchedDevicesText(item.matchedDevices);
   return [
+    matched ? t('software.matchedDevices', { codes: matched }) : null,
     t(KIND_KEY[item.kind]),
     supportsSeats(item.kind) && item.seatTotal !== null
       ? `${seatLabel(item)} ${t('software.seats').toLowerCase()}`

@@ -793,8 +793,34 @@ export class BreakGlassService implements OnModuleInit {
     return request;
   }
 
-  async pendingForApprovers(): Promise<BreakGlassView[]> {
-    return this.views(await this.approvals.pending(BREAK_GLASS_KIND), true);
+  /**
+   * Hàng chờ của người duyệt. `overdue`: phiếu đã chờ quá `approval.reminder_hours` (đúng mốc
+   * thư nhắc đi) — màn tô viền cảnh báo để người trực thấy phiếu nào đang để người xin đợi lâu
+   * (VLT-017). Server so bằng đồng hồ của nó; ngưỡng 0 = tắt nhắc = không tô.
+   */
+  async pendingForApprovers(): Promise<(BreakGlassView & { overdue: boolean })[]> {
+    const [rows, hours] = await Promise.all([
+      this.approvals.pending(BREAK_GLASS_KIND),
+      this.config.getNumber('approvalReminderHours'),
+    ]);
+    const cutoff = hours > 0 ? Date.now() - hours * 3_600_000 : null;
+    return (await this.views(rows, true)).map((view) => ({
+      ...view,
+      overdue: cutoff !== null && view.createdAt.getTime() < cutoff,
+    }));
+  }
+
+  /**
+   * Quyền ĐANG có hiệu lực (đã duyệt, còn giờ theo đồng hồ server) — nhóm ghim ở đầu tab Nhật
+   * ký (VLT-020). Nhật ký chia trang theo lúc gửi, nên một quyền 24 giờ gửi từ sáng có thể đã
+   * trôi sang trang 2 đúng lúc người trực cần tìm nó để thu hồi.
+   */
+  async activeGrants(): Promise<BreakGlassView[]> {
+    const rows = await this.approvals.list({ kind: BREAK_GLASS_KIND, state: 'approved' });
+    return this.views(
+      rows.filter((row) => row.active),
+      true,
+    );
   }
 
   async mine(memberEmail: string, paging: PageQuery): Promise<Page<BreakGlassView>> {

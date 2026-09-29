@@ -1,7 +1,6 @@
 import { useId, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { apiFetch } from '@/lib/api-client';
+import { useSupportContact } from '@/ui/use-support-contact';
 
 /**
  * "Quên mật khẩu?" / "Không lấy được mã?" — chỉ đường tới người quản trị (Q-14: KHÔNG có luồng
@@ -12,12 +11,7 @@ export function SupportHelp({ kind }: { kind: 'password' | 'totp' }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const panelId = useId();
-  const contact = useQuery({
-    queryKey: ['auth', 'support-contact'],
-    queryFn: () => apiFetch<{ contact: string }>('/api/v1/auth/support-contact'),
-    enabled: open,
-    staleTime: 5 * 60_000,
-  });
+  const contact = useSupportContact(open);
 
   return (
     <>

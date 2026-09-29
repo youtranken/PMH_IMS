@@ -80,6 +80,13 @@ export class BreakGlassController {
     return { count: await this.breakGlass.pendingCountFor(actor(req)) };
   }
 
+  /** Quyền đang có hiệu lực — nhóm ghim đầu tab Nhật ký, kèm nút Thu hồi sớm (VLT-020). */
+  @Roles('sa', 'admin')
+  @Get('active')
+  active() {
+    return this.breakGlass.activeGrants();
+  }
+
   /** FR-025: nhật ký đầy đủ — ai xin, lý do, ai duyệt, hết hạn lúc nào. Dashboard Epic 7 đọc. */
   @Roles('sa', 'admin')
   @Get('log')

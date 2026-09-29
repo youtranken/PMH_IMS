@@ -136,7 +136,10 @@ test.describe('Danh sách phần mềm', () => {
 
     await page.goto('/software');
     await timVaChoLoc(page, `LT-E2E-TIMMAY-${stamp}`);
-    await expect(page.getByRole('row', { name: new RegExp(`LIC-E2E-TIMMAY-A-${stamp}`) })).toBeVisible();
+    const dong = page.getByRole('row', { name: new RegExp(`LIC-E2E-TIMMAY-A-${stamp}`) });
+    await expect(dong).toBeVisible();
+    // Nói VÌ SAO hồ sơ hiện ra: nó không có chữ đó trong mã/tên, mà ở máy đang giữ ghế.
+    await expect(dong.getByText(`khớp máy LT-E2E-TIMMAY-${stamp}`)).toBeVisible();
 
     await timVaChoLoc(page, `LT-E2E-KHONGCO-${stamp}`);
     await expect(page.getByText('Không có hồ sơ nào khớp bộ lọc.')).toBeVisible();

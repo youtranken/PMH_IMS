@@ -628,3 +628,24 @@ describe('VaultPanel — xem giá trị theo bước trong cùng hộp (VLT-062)
     expect(await screen.findByRole('dialog')).toBeInTheDocument();
   });
 });
+
+describe('VaultPanel — ngoài danh sách (VLT-056)', () => {
+  it('không có quyền: nói rõ và chỉ đường liên hệ người gán quyền', async () => {
+    const fetchMock = vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/vault/secrets/verdict')) {
+        return Promise.resolve(
+          jsonResponse(200, { ...NEEDS_APPROVAL, tier: 'denied', canRequest: false }),
+        );
+      }
+      if (url.includes('/auth/support-contact')) {
+        return Promise.resolve(jsonResponse(200, { contact: 'Anh Tùng IT — 0909 000 111' }));
+      }
+      return new Promise<Response>(() => {});
+    });
+    vi.stubGlobal('fetch', fetchMock);
+    renderPanel({ ...ME, role: 'member' });
+    expect(await screen.findByText('Bạn chưa có quyền xem két này')).toBeInTheDocument();
+    expect(await screen.findByText(/Anh Tùng IT — 0909 000 111/)).toBeInTheDocument();
+  });
+});

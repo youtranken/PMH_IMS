@@ -45,6 +45,8 @@ export interface BreakGlassRow {
   createdAt: string;
   /** Server tính bằng đồng hồ (AD-6) — client không tự so giờ. */
   active: boolean;
+  /** Chỉ hàng chờ của người duyệt: đã chờ quá `approval.reminder_hours` (server so giờ). */
+  overdue?: boolean;
   /**
    * Chỉ trang chi tiết, chỉ người duyệt: vai người xin và số lần họ đã xin trong
    * `recentWindowDays` ngày (tính cả phiếu này). Người xin tự đọc thì `null`.
@@ -156,11 +158,11 @@ export function useBreakGlassActions(csrfToken: string) {
     });
 
   return {
-    approve: (id: string, input: { hours: number; note?: string }) =>
-      stepUp.run(() => post(id, 'approve', input)),
+    approve: (id: string, input: { hours: number; note?: string }, purpose?: string) =>
+      stepUp.run(() => post(id, 'approve', input), purpose),
     deny: (id: string, note: string) => post(id, 'deny', { note }),
-    revoke: (id: string, note?: string) =>
-      stepUp.run(() => post(id, 'revoke', note ? { note } : {})),
+    revoke: (id: string, note?: string, purpose?: string) =>
+      stepUp.run(() => post(id, 'revoke', note ? { note } : {}), purpose),
     cancel: (id: string) => post(id, 'cancel'),
     /** Người xin tự trả quyền đang chạy (VLT-055) — không đòi mã: bỏ bớt quyền không mở gì thêm. */
     release: (id: string) => post(id, 'release'),
@@ -253,8 +255,14 @@ export function DecisionDialog({
     setBusy(true);
     try {
       if (mode === 'approve') {
-        await actions.approve(row.id, { hours: hoursCheck.value ?? 0, note: trimmed });
-      } else if (mode === 'revoke') await actions.revoke(row.id, trimmed);
+        await actions.approve(
+          row.id,
+          { hours: hoursCheck.value ?? 0, note: trimmed },
+          t('approvals.stepUpApprove', { name: row.requesterName }),
+        );
+      } else if (mode === 'revoke') {
+        await actions.revoke(row.id, trimmed, t('approvals.stepUpRevoke', { name: row.requesterName }));
+      }
       else await actions.deny(row.id, trimmed);
       void actions.refresh();
       onDone();

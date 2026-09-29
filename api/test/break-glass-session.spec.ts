@@ -73,8 +73,8 @@ describe('Break-glass · quyền gắn với phiên đăng nhập (Q-15)', () =>
       { tierFor: () => Promise.resolve('needs_approval') } as unknown as AccessListService,
       config,
       new OutboxService(scratch.db, config, {} as SweepService),
-      {} as VaultOwnersService,
-      {} as VaultService,
+      { describe: () => Promise.resolve({ orphan: true }) } as unknown as VaultOwnersService,
+      { countFor: () => Promise.resolve(0) } as unknown as VaultService,
       users,
       new AuthApiService(sessions, config),
       sweep,
@@ -340,6 +340,42 @@ describe('Break-glass · quyền gắn với phiên đăng nhập (Q-15)', () =>
       await runSweep();
       expect(await stateOf(id)).toBe('expired');
     });
+  });
+
+  it('hàng chờ của người duyệt đánh dấu phiếu chờ quá `approval.reminder_hours` (VLT-017)', async () => {
+    const a = await login();
+    const fresh = await breakGlass.request(
+      { email: member, sessionId: a },
+      { ownerType: 'device', ownerId: randomUUID(), reason: 'Vừa gửi', hours: 1 },
+    );
+    const old = await breakGlass.request(
+      { email: member, sessionId: a },
+      { ownerType: 'device', ownerId: randomUUID(), reason: 'Chờ lâu', hours: 1 },
+    );
+    // Cấu hình giả trả 24 cho mọi khoá số không phải idle → ngưỡng nhắc là 24 giờ.
+    await scratch.pool.query(
+      `UPDATE approval SET created_at = now() - interval '25 hours' WHERE id = $1`,
+      [old.id],
+    );
+    const rows = await breakGlass.pendingForApprovers();
+    expect(rows.find((r) => r.id === fresh.id)?.overdue).toBe(false);
+    expect(rows.find((r) => r.id === old.id)?.overdue).toBe(true);
+  });
+
+  it('nhóm "Đang có hiệu lực" chỉ gồm quyền đã duyệt còn giờ (VLT-020)', async () => {
+    const a = await login();
+    const live = await grantFor(a);
+    const released = await grantFor(a);
+    await breakGlass.release(member, released.id);
+    const timedOut = await grantFor(a);
+    await scratch.pool.query(
+      `UPDATE approval SET expires_at = now() - interval '1 minute' WHERE id = $1`,
+      [timedOut.id],
+    );
+    const ids = (await breakGlass.activeGrants()).map((r) => r.id);
+    expect(ids).toContain(live.id);
+    expect(ids).not.toContain(released.id);
+    expect(ids).not.toContain(timedOut.id);
   });
 
   it('grant không mang phiên (cấp trước khi có luật này) không dùng được', async () => {

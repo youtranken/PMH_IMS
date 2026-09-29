@@ -3,12 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { daysUntil } from '@/lib/expiry';
 import { formatDate, todayIso } from '@/lib/format';
-import { formatMoneyInput, parseMoneyInput } from '@/lib/money-input';
+import { parseMoneyInput } from '@/lib/money-input';
 import { renewMinDate, renewPreset } from '@/lib/renew-dates';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import type { AttachmentOwnerType } from '@/ui/attachment-panel';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
+import { MoneyInput } from '@/ui/money-input';
 import { Field } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
 import { useFormErrors } from '@/ui/use-form-errors';
@@ -274,20 +275,7 @@ export function RenewDialog({
               htmlFor="renew-cost"
               error={check.error('cost')}
             >
-              {/* Ô chữ, không `type="number"`: phải nhận "5.600.000" hay "5,6tr" như chép từ
-                  hóa đơn (`lib/money-input`). */}
-              <input
-                id="renew-cost"
-                className="inp"
-                inputMode="decimal"
-                value={cost}
-                onChange={(e) => setCost(e.target.value)}
-                onBlur={() => {
-                  if (money.reason === null && money.value !== null) {
-                    setCost(formatMoneyInput(money.value));
-                  }
-                }}
-              />
+              <MoneyInput value={cost} onChange={setCost} />
             </Field>
           </>
         ) : null}

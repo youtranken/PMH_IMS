@@ -185,17 +185,24 @@ export class SoftwareController {
    * Bộ lọc CHUNG của danh sách và file xuất (FR-028) — hai chỗ dựng riêng thì file tải về lệch
    * cái đang nhìn. Giá trị lạ trên URL bị bỏ qua thay vì lọt xuống câu truy vấn.
    */
-  private async filterOf(query: {
-    search?: string;
-    kind?: SoftwareKind;
-    licenseModel?: LicenseModel;
-    status?: SoftwareStatus | 'live';
-    vendorId?: string;
-  }): Promise<SoftwareFilter> {
+  private async filterOf(
+    query: {
+      search?: string;
+      kind?: SoftwareKind;
+      licenseModel?: LicenseModel;
+      status?: SoftwareStatus | 'live';
+      vendorId?: string;
+    },
+    deviceMatches?: Map<string, string[]>,
+  ): Promise<SoftwareFilter> {
     const search = query.search?.trim();
     return {
       search,
-      alsoIds: search ? await this.assignments.softwareIdsOnDevices(search) : undefined,
+      alsoIds: search
+        ? deviceMatches
+          ? [...deviceMatches.keys()]
+          : await this.assignments.softwareIdsOnDevices(search)
+        : undefined,
       kind: query.kind,
       licenseModel: LICENSE_MODELS.includes(query.licenseModel as LicenseModel)
         ? query.licenseModel
@@ -224,12 +231,21 @@ export class SoftwareController {
       dir?: string;
     },
   ) {
+    const search = query.search?.trim();
+    const matches = search
+      ? await this.assignments.devicesHoldingSeats(search)
+      : new Map<string, string[]>();
     const page = await this.software.list(
       parsePageQuery(query),
-      await this.filterOf(query),
+      await this.filterOf(query, matches),
       parseSortQuery(query, SOFTWARE_SORT_KEYS, SOFTWARE_SORT_DEFAULT),
     );
-    return { ...page, items: await this.software.present(page.items) };
+    const items = await this.software.present(page.items);
+    return {
+      ...page,
+      // SW-010: hồ sơ hiện ra vì MÁY đang giữ ghế khớp ô tìm → mã máy cho chip "khớp máy X".
+      items: items.map((item) => ({ ...item, matchedDevices: matches.get(item.id) ?? [] })),
+    };
   }
 
   /**
@@ -279,6 +295,8 @@ export class SoftwareController {
         { header: 'Bắt đầu', width: 14, value: (r) => r.startDate ?? '' },
         { header: 'Hết hạn', width: 14, value: (r) => r.endDate ?? '' },
         { header: 'Trạng thái', width: 18, value: (r) => STATUS_LABEL[r.status] },
+        // SW-043: SSL/tên miền phủ những website nào — cùng danh sách với hồ sơ.
+        { header: 'Website', width: 36, value: (r) => (r.websites ?? []).join(', ') },
         { header: 'Ghi chú', width: 40, value: (r) => r.note ?? '' },
       ],
       rows,

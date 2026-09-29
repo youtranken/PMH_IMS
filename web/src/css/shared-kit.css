@@ -128,6 +128,19 @@
 .fsel-trigger[aria-invalid='true'],
 .dp-trigger[aria-invalid='true'] { border-color: var(--danger); }
 
+/* Ô có đơn vị cố định bên phải (ui/money-input.tsx): đơn vị nằm TRONG khung ô cho gọn, nhưng
+   ngoài chữ của ô để giá trị không lẫn đơn vị. */
+.input-affix { position: relative; display: block; }
+.input-affix > .inp { width: 100%; padding-right: 2rem; }
+.input-affix-unit {
+  position: absolute;
+  top: 50%;
+  right: var(--space-4);
+  transform: translateY(-50%);
+  color: var(--ink-3);
+  pointer-events: none;
+}
+
 /* Lịch sử (AD-13) */
 .history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .history-item { display: flex; gap: var(--space-6); padding: var(--space-5) 0; }
@@ -794,6 +807,10 @@ table.table tbody tr.row-muted td {
   border: 2px solid var(--warn);
   background: var(--warn-soft);
 }
+/* Phiếu chờ quá `approval.reminder_hours`: viền cảnh báo, nhẹ hơn phiếu mở từ thư ở trên. */
+.approval-list .card.is-overdue {
+  border-color: var(--warn);
+}
 /* Cặp quyết định trên thẻ: Từ chối trái, Duyệt phải. Trên điện thoại hai nút chia đôi hàng,
    cao 48px, cách 12px — một tay bấm không trượt sang nút kia. */
 .approval-decide {
@@ -811,6 +828,30 @@ table.table tbody tr.row-muted td {
 .approval-fresh {
   text-align: center;
   font-size: var(--fs-xs);
+}
+/* Lối tắt tới tab Két sắt trên trang hồ sơ — chỉ ở màn hẹp, nơi tab đó nằm khuất (VLT-042). */
+.btn.vault-jump {
+  display: none;
+}
+@media (max-width: 640px) {
+  .btn.vault-jump {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    margin-bottom: var(--space-5);
+  }
+}
+/* Nhóm "Đang có hiệu lực" ghim trên nhật ký: tách hẳn khỏi bảng nhật ký bên dưới. */
+.approval-active {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding-bottom: var(--space-7);
+  margin-bottom: var(--space-7);
+  border-bottom: 1px solid var(--border);
+}
+.approval-active > h2 {
+  font-size: var(--fs-md);
 }
 .approval-export-end {
   display: flex;
@@ -1241,6 +1282,9 @@ table.access-grid thead .access-row-head {
   height: 8px;
   border-radius: var(--radius-pill);
   background: var(--surface-2);
+  /* Viền mảnh: ở chế độ tối `--surface-2` trên mặt thẻ chỉ lệch ~1,1:1, rãnh 0% biến mất và
+     "chưa dùng ghế nào" trông như thiếu cột (SW-020). */
+  box-shadow: inset 0 0 0 1px var(--border);
   overflow: hidden;
 }
 .usage-fill {
