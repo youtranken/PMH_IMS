@@ -58,6 +58,8 @@ export interface BreakGlassRow {
   timeline?: { state: string; actor: string; at: string; note: string | null }[] | null;
   /** Lần đổi trạng thái cuối — với phiếu đã thu hồi thì là lúc quyền bị cắt. */
   updatedAt?: string;
+  /** Lúc người xin xem lần đầu và quyền gắn vào phiên đó (Q-15); `null` = chưa xem. */
+  claimedAt?: string | null;
 }
 
 export const BREAK_GLASS_KEY = ['break-glass'] as const;
@@ -182,13 +184,14 @@ const DENY_QUICK = ['approvals.denyQuickVague', 'approvals.denyQuickHours', 'app
 const NOTE_MIN_LEN = 5;
 
 /**
- * Phiếu đã có người khác xử lý, hoặc đã bị rút (người xin tự rút / phiên người xin kết thúc),
- * trong lúc hộp đang mở — không phải lỗi của người đang bấm.
+ * Phiếu đã có người khác xử lý, đã bị rút (người xin tự rút / tài khoản bị vô hiệu hóa), hoặc
+ * đã quá hạn chờ, trong lúc hộp đang mở — không phải lỗi của người đang bấm.
  */
 const RACE_CODES = new Set([
   'APPROVAL_ALREADY_DECIDED',
   'APPROVAL_TRANSITION_INVALID',
   'BREAK_GLASS_WITHDRAWN',
+  'BREAK_GLASS_PENDING_EXPIRED',
 ]);
 
 /**

@@ -1592,13 +1592,23 @@ export default {
     /* Khối trạng thái khi đang có phiếu treo — người xin rút được, và khung tự làm mới. */
     pendingSince: 'Yêu cầu gửi lúc {{at}} đang chờ Quản trị quyết. Khung này tự làm mới khi có quyết định.',
     pendingDetail: 'Xem yêu cầu',
-    pendingKeepOpen: 'Giữ trang này mở — đăng xuất hay hết phiên đăng nhập thì yêu cầu tự bị rút.',
-    /* Q-15: quyền gắn với phiên đã xin. Người xin phải đọc được trước, không thì đăng nhập lại
-       rồi tưởng hệ thống làm mất quyền. */
+    /* Q-15: yêu cầu đang chờ không gắn phiên — người xin không phải ngồi canh trang. */
+    pendingCanLeave:
+      'Bạn có thể đóng trang — khi được duyệt sẽ có thư báo. Đăng nhập lại, mở két này và bấm "Xem", nhập mã 6 số.',
+    pendingExpiresIn: 'Không ai duyệt trong {{hours}} giờ thì yêu cầu tự hết hạn.',
+    /* Đã duyệt, chưa xem lần nào: lần xem đầu gắn quyền vào phiên đang xem. */
+    approvedReady: 'Đã được duyệt — bấm "Xem" ở ngăn cần mở và nhập mã 6 số.',
+    approvedReadyLeft: 'Quyền còn {{left}} (tới {{until}}), tính từ lúc duyệt.',
+    requestSessionNote:
+      'Được duyệt thì lần bấm "Xem" đầu tiên gắn quyền vào phiên đăng nhập lúc đó — đăng xuất hay hết phiên là hết, muốn xem tiếp phải xin lại.',
+    approvedReadyNote:
+      'Lần xem đầu tiên gắn quyền vào phiên đăng nhập này — đăng xuất hay hết phiên là hết, muốn xem tiếp phải xin lại.',
+    /* Q-15: quyền gắn với phiên đã xem lần đầu. Người xin phải đọc được trước, không thì đăng
+       nhập lại rồi tưởng hệ thống làm mất quyền. */
     sessionBound:
-      'Quyền được duyệt chỉ dùng trong phiên đăng nhập này — đăng xuất hay hết phiên là hết, đăng nhập lại phải xin lại.',
+      'Quyền này gắn với phiên đăng nhập đang dùng — đăng xuất hay hết phiên là hết, đăng nhập lại phải xin lại.',
     otherSessionHeld:
-      'Quyền hoặc yêu cầu trước của bạn thuộc một phiên đăng nhập khác nên không dùng được ở đây. Gửi yêu cầu mới.',
+      'Quyền đã duyệt của bạn đã gắn với một phiên đăng nhập khác (phiên đã xem lần đầu) nên không dùng được ở đây. Gửi yêu cầu mới.',
     release: 'Trả quyền',
     releaseConfirm:
       'Đóng két với bạn ngay bây giờ? Muốn xem lại thì phải gửi yêu cầu mới và chờ duyệt.',
@@ -2263,7 +2273,8 @@ export default {
       breakGlassDenied: 'Từ chối mở két',
       breakGlassCancelled: 'Rút yêu cầu mở két',
       breakGlassRevoked: 'Thu hồi quyền mở két',
-      breakGlassExpired: 'Quyền mở két hết hạn',
+      breakGlassExpired: 'Mở két hết hạn (chờ duyệt hoặc quyền)',
+      breakGlassClaimed: 'Xem lần đầu — quyền mở két gắn vào phiên',
       breakGlassExported: 'Xuất danh sách yêu cầu mở két',
       catalogCreated: 'Thêm mục danh mục',
       catalogUpdated: 'Sửa mục danh mục',
@@ -2504,6 +2515,7 @@ export default {
     timelineStep_revoked: 'Thu hồi sớm',
     timelineStep_cancelled: 'Người xin rút',
     timelineStep_expired: 'Hết hạn',
+    timelineStep_claimed: 'Xem lần đầu — quyền gắn vào phiên đăng nhập',
     tabPending: 'Chờ duyệt',
     tabLog: 'Nhật ký',
     tabMine: 'Yêu cầu của tôi',
@@ -2590,6 +2602,9 @@ export default {
     finalRevoked: 'Đã thu hồi sớm. Người duyệt: {{who}}.',
     finalExpired: 'Đã hết hạn — quyền đã tự cắt.',
     finalCancelled: 'Người xin đã rút yêu cầu.',
+    finalPendingExpired: 'Quá hạn chờ mà không ai duyệt — yêu cầu đã tự hết hạn. Cần thì gửi yêu cầu mới.',
+    /* Q-15: được duyệt thì lần xem đầu (qua mã 6 số) gắn quyền vào phiên đang xem. */
+    readyToView: 'Đã được duyệt — mở lại {{subject}} và bấm "Xem", nhập mã 6 số.',
     ownRequest: 'Cần người khác duyệt',
     ownRequestHint: 'Không tự duyệt mở két cho chính mình được — cần người thứ hai (bốn mắt).',
     cancel: 'Rút yêu cầu',
@@ -2839,6 +2854,7 @@ export default {
     by: 'quyết bởi {{who}}',
     validUntil: 'hiệu lực đến {{time}}',
     sentAt: 'gửi lúc {{time}}',
+    readyToView: 'đã duyệt — mở két, bấm "Xem"',
     myRequests: 'Yêu cầu mở két của tôi',
     blockError: 'Không tải được khối này. Các khối còn lại vẫn đúng.',
 
@@ -2933,6 +2949,9 @@ export default {
     breakGlassMaxGrantHoursDesc: 'Người xin chọn số giờ không vượt quá mốc này.',
     approvalReminderHoursLabel: 'Nhắc duyệt sau',
     approvalReminderHoursDesc: 'Yêu cầu chờ quá chừng này thì gửi mail nhắc người duyệt.',
+    breakGlassPendingExpireHoursLabel: 'Yêu cầu mở két tự hết hạn sau',
+    breakGlassPendingExpireHoursDesc:
+      'Chờ quá chừng này mà không ai duyệt thì yêu cầu tự hết hạn và báo người xin. Phải lớn hơn "Nhắc duyệt sau".',
     expiryCriticalDaysLabel: 'Mức "khẩn" — còn dưới',
     expiryCriticalDaysDesc: 'Hồ sơ còn ít ngày hơn mốc này tô đỏ. Phải nhỏ hơn mức "sắp hết hạn".',
     expiryWarningDaysLabel: 'Mức "sắp hết hạn" — còn dưới',

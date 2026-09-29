@@ -71,6 +71,7 @@ export const ACTION_KEY: Record<string, string> = {
   'break_glass.cancelled': 'audit.actions.breakGlassCancelled',
   'break_glass.revoked': 'audit.actions.breakGlassRevoked',
   'break_glass.expired': 'audit.actions.breakGlassExpired',
+  'break_glass.claimed': 'audit.actions.breakGlassClaimed',
   'break_glass.exported': 'audit.actions.breakGlassExported',
   'catalog.created': 'audit.actions.catalogCreated',
   'catalog.updated': 'audit.actions.catalogUpdated',
@@ -171,6 +172,7 @@ export const VERB_KEY: Record<string, string> = {
 export const TEMPLATE_PATTERNS = [
   'account.*',
   '*.requested',
+  '*.claimed',
   '*.*',
   'catalog.*.*',
   'device.*',

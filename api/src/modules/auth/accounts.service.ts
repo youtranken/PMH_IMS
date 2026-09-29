@@ -12,6 +12,7 @@ import { conflictOnUnique, pgConstraint } from "../../common/sql";
 import { generateTemporaryPassword } from "../../common/temporary-password";
 import type { SortQuery } from "../../common/sorting";
 import type { Tx } from "../../common/tx";
+import { ApprovalsApiService } from "../approvals/approvals.api";
 import { AuditWriterService } from "../audit/audit-writer.service";
 import { OutboxService } from "../outbox/outbox.service";
 import {
@@ -45,6 +46,7 @@ export class AccountsService {
     private readonly audit: AuditWriterService,
     private readonly outbox: OutboxService,
     private readonly loginFailures: LoginFailureService,
+    private readonly approvals: ApprovalsApiService,
   ) {}
 
   list(
@@ -281,6 +283,18 @@ export class AccountsService {
               userId,
               `status:${status}`,
             );
+      /*
+       * Vô hiệu hóa = người này thôi làm việc với hệ thống: yêu cầu mở két đang chờ của họ bị
+       * rút cùng transaction (Q-15), để người duyệt không cấp quyền cho một tài khoản đã tắt.
+       * Chỉ KHÓA thì giữ — khóa là tạm, mở lại thì việc đang chờ vẫn còn nguyên.
+       */
+      const withdrawn =
+        status === "disabled"
+          ? await this.approvals.withdrawPendingOfWithin(tx, user.email, {
+              actor: actor.email,
+              note: "Tài khoản của người xin đã bị vô hiệu hóa.",
+            })
+          : 0;
       await this.audit.appendWithin(tx, {
         actor: actor.email,
         action: `account.${status === "active" ? "unlocked" : status}`,
@@ -288,6 +302,7 @@ export class AccountsService {
         objectId: userId,
         detail: {
           revokedSessions: killed,
+          ...(status === "disabled" ? { withdrawnRequests: withdrawn } : {}),
           ...(reason?.trim() ? { reason: reason.trim() } : {}),
         },
       });

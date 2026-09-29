@@ -1215,8 +1215,8 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await logout(page);
 
     // ===== Member: gửi HAI phiếu (mỗi chủ thể chỉ được một phiếu treo — nên phải hai máy) =====
-    // Ngữ cảnh riêng, KHÔNG đăng xuất: phiên người xin chết thì lượt quét rút phiếu đang chờ
-    // (Q-15) và admin không còn phiếu nào để xử. Đóng ngữ cảnh không đóng phiên.
+    // Ngữ cảnh riêng cho người xin; phiếu chờ không gắn phiên (Q-15) nên đóng ngữ cảnh hay
+    // đăng xuất đều không làm mất phiếu admin cần xử.
     const memberCtx = await browser.newContext(SECOND_BROWSER);
     const memberPage = await memberCtx.newPage();
     await firstLogin(memberPage, E2E_MEMBER);
