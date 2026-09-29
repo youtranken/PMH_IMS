@@ -1911,7 +1911,7 @@ export default {
     phLogin: 'vd ketoan@pmh.com.vn',
     phAllowedIps: 'vd 203.113.1.5, 118.70.2.0/24',
     title: 'Tài khoản dịch vụ',
-    subtitle: 'Tài khoản dùng chung và tài khoản VPN — mật khẩu cất trong két, không nằm ở đây',
+    subtitle: 'Tài khoản dùng chung và tài khoản VPN. Mật khẩu cất trong két.',
     add: 'Thêm tài khoản',
     edit: 'Sửa hồ sơ',
     saved: 'Đã lưu tài khoản dịch vụ.',
@@ -1929,13 +1929,13 @@ export default {
     departmentPlaceholder: 'Bộ phận hoặc tên',
     owner: 'Thuộc về',
     ownerName: 'Người phụ trách',
-    ownerNameHint: 'Ai chịu trách nhiệm khi tài khoản này có chuyện. Gõ tự do — có thể là một bộ phận.',
+    ownerNameHint: 'Người chịu trách nhiệm khi tài khoản có sự cố. Ghi tên bộ phận cũng được.',
     groupName: 'Nhóm VPN',
     groupNameHint: 'Tên nhóm trên máy chủ VPN.',
     allowedIps: 'Dải IP được phép',
-    allowedIpsHint: 'IP hoặc dải CIDR, ngăn bằng dấu phẩy hoặc xuống dòng. vd 203.113.1.5, 118.70.2.0/24',
+    allowedIpsHint: 'IP hoặc dải CIDR, ngăn bằng dấu phẩy hoặc xuống dòng.',
     note: 'Ghi chú',
-    noteHint: 'KHÔNG ghi mật khẩu ở đây — mật khẩu thuộc về tab Két sắt.',
+    noteHint: 'Không ghi mật khẩu ở đây. Mật khẩu cất ở tab Két sắt.',
     status: 'Trạng thái',
     statusActive: 'Đang dùng',
     /* Cùng chữ với `accounts.statusDisabled` và `disposal.statusDisabled` — ba màn, một trạng thái. */
@@ -1950,13 +1950,13 @@ export default {
     disable: 'Ngừng dùng',
     disabled: 'Đã ngừng dùng tài khoản.',
     disableHint:
-      'Tài khoản không bị xóa — mật khẩu trong két và mọi dòng nhật ký cũ vẫn còn, chỉ là hồ sơ này thôi được dùng.',
+      'Hồ sơ không bị xóa: mật khẩu trong két và lịch sử vẫn còn.',
     disableReason: 'Lý do ngừng dùng',
     disableReasonPlaceholder: 'vd: nhân sự phụ trách đã nghỉ',
     enable: 'Dùng lại',
     enabled: 'Đã dùng lại tài khoản.',
     enableHint:
-      'Hồ sơ được dùng trở lại từ lúc bấm. Mật khẩu trong két vẫn là mật khẩu cũ — đổi ở tab Két sắt nếu lý do đóng là lộ mật khẩu.',
+      'Mật khẩu trong két vẫn là mật khẩu cũ. Nếu đã ngừng vì lộ mật khẩu, hãy đổi ở tab Két sắt.',
     enableReason: 'Lý do dùng lại',
     enableReasonPlaceholder: 'vd: nhân sự mới nhận bàn giao',
     allKinds: 'Tất cả loại',
@@ -1969,15 +1969,15 @@ export default {
     sectionProfile: 'Hồ sơ',
     sectionOwner: 'Thuộc về ai',
     sectionVpn: 'Cấu hình VPN',
-    sectionSecret: 'Mật khẩu (cất vào két luôn)',
+    sectionSecret: 'Mật khẩu (cất vào két)',
     secretValue: 'Mật khẩu',
     secretHint:
-      'Cất thẳng vào két sắt, mã hóa như mọi ngăn két khác. Bỏ trống cũng được — vào tab Két sắt cất sau.',
+      'Mã hóa như mọi ngăn két khác. Để trống thì cất sau ở tab Két sắt.',
     secretLabel: 'Mật khẩu đăng nhập',
     secretSaved: 'Đã cất mật khẩu vào két.',
     // Người dùng đóng hộp hỏi mã 6 số giữa chừng: hồ sơ đã tạo, nhưng mật khẩu KHÔNG vào
     // két. Phải nói ra, không được im lặng để họ tin là đã cất.
-    secretSkipped: 'Hồ sơ đã tạo nhưng mật khẩu CHƯA vào két (bạn đã bỏ qua bước nhập mã). Vào tab Két sắt để cất lại.',
+    secretSkipped: 'Đã tạo hồ sơ nhưng mật khẩu chưa vào két vì bạn bỏ qua bước nhập mã. Cất lại ở tab Két sắt.',
     tabAttachments: 'Giấy tờ',
     tabHistory: 'Lịch sử',
     kindSharedShort: 'Dùng chung',
@@ -1990,16 +1990,16 @@ export default {
     anyIpFilter: 'Lọc VPN theo dải IP nguồn',
     anyIpOnly: 'VPN mở mọi IP',
     anyIpTitle:
-      'VPN này nhận kết nối từ MỌI địa chỉ IP nguồn (dải trống hoặc 0.0.0.0/0). Giới hạn về IP văn phòng / nhà mạng nếu có thể.',
+      'VPN này nhận kết nối từ mọi IP (dải trống hoặc 0.0.0.0/0). Nên giới hạn về IP văn phòng hoặc nhà mạng.',
     createdBy: 'Khai bởi',
-    kindLocked: 'Loại chỉ chọn lúc tạo — đổi loại là mất nhóm VPN và dải IP. Khai nhầm thì ngừng dùng và khai lại.',
-    codeChangeWarn: 'Đang đổi mã "{{code}}" — phiếu, email hay két đang ghi mã cũ sẽ không tra ra nữa.',
+    kindLocked: 'Loại chỉ chọn lúc tạo. Chọn nhầm thì ngừng dùng rồi khai lại.',
+    codeChangeWarn: 'Đổi mã "{{code}}": phiếu, email đang ghi mã cũ sẽ không tra ra hồ sơ này nữa.',
     allowedIpsInvalid: 'Không phải IP hay dải CIDR: {{list}}',
     allowedIpsAnyWarn:
-      'Đang để MỌI IP được vào (trống hoặc 0.0.0.0/0). Ghi IP văn phòng / nhà mạng nếu có thể, vd 203.113.1.5, 118.70.2.0/24.',
+      'Đang cho mọi IP kết nối (trống hoặc 0.0.0.0/0). Nên ghi IP văn phòng hoặc nhà mạng.',
     checkLegend: 'Việc cần làm ngoài IMS (tick việc đã làm — sẽ ghi vào lịch sử):',
     checkLockedAtSource: 'đã khóa tài khoản trên hệ thống gốc (VPN / Mail)',
-    checkSecretHandled: 'đã hủy hoặc xoay mật khẩu trong két',
+    checkSecretHandled: 'đã xóa hoặc đổi mật khẩu trong két',
     checkDone: 'đã làm',
   },
   /**
@@ -2014,9 +2014,9 @@ export default {
   },
   vaultHome: {
     title: 'Két sắt',
-    subtitle: 'Mọi hồ sơ đang có mật khẩu cất trong hệ thống — thiết bị, phần mềm, tài khoản dịch vụ, đường truyền',
+    subtitle: 'Hồ sơ đang có mật khẩu trong két: thiết bị, phần mềm, tài khoản dịch vụ, đường truyền',
     whereItLives:
-      'Trang này liệt kê CHỦ THỂ đang giữ bí mật — máy nào, hồ sơ nào, mấy ngăn. Cố ý KHÔNG hiện tên hay giá trị của từng ngăn: không tồn tại một trang nào đọc được toàn bộ bí mật của công ty (FR-026). Bấm "Mở két" để xem từng ngăn, và vẫn phải gõ mã 6 số.',
+      'Trang này chỉ liệt kê hồ sơ và số ngăn, không hiện tên hay giá trị từng ngăn. Bấm "Mở két" để xem từng ngăn.',
     searchPlaceholder: 'Tìm theo mã, tên hoặc site…',
     owner: 'Hồ sơ',
     // Tiêu đề cột "Loại"; nhãn của từng loại nằm ở `ownerKind.*` (dùng chung với màn Duyệt).
@@ -2026,8 +2026,8 @@ export default {
     open: 'Mở két',
     openOf: 'Mở két của {{code}}',
     openRecord: 'Mở hồ sơ đầy đủ',
-    orphan: '(hồ sơ đã bị xóa — còn ngăn treo lại)',
-    orphanNote: 'Hồ sơ chủ của mấy ngăn này đã bị xóa, nên không cất thêm hay sửa được nữa. Việc còn làm được là xóa vĩnh viễn từng ngăn treo trong menu ⋯.',
+    orphan: '(hồ sơ đã xóa, còn ngăn treo)',
+    orphanNote: 'Hồ sơ của các ngăn này đã bị xóa nên không cất thêm hay sửa được. Chỉ còn xóa vĩnh viễn từng ngăn ở menu ⋯.',
     site: 'Site',
     secretChip: '{{count}} ngăn',
     clearSearch: 'Xóa tìm kiếm',
@@ -2035,28 +2035,27 @@ export default {
     clearKinds: 'Bỏ lọc',
     summary: '{{owners}} hồ sơ đang giữ két · tổng {{secrets}} ngăn.',
     empty: 'Chưa có hồ sơ nào cất mật khẩu',
-    /* Đường NGẮN NHẤT nằm ngay trên màn này: bấm "Mở két" của một hồ sơ rồi "Cất mật khẩu/khóa"
-       trong popup. Câu cũ chỉ người dùng đi vòng qua trang thiết bị để làm đúng cái việc mà
-       cái popup họ vừa đóng đã làm được. */
-    emptyHint: 'Bấm "Mở két" ở một hồ sơ rồi chọn "Cất mật khẩu/khóa" — hoặc vào tab "Két sắt" của chính hồ sơ đó.',
+    /* Bảng chỉ liệt kê hồ sơ ĐANG có ngăn, nên lúc trống không có nút "Mở két" nào để bấm:
+       chỉ đường tới tab Két sắt của hồ sơ. */
+    emptyHint: 'Cất mật khẩu ở tab Két sắt của thiết bị, phần mềm, tài khoản dịch vụ hoặc đường truyền.',
     noHit: 'Không có hồ sơ nào khớp bộ lọc',
     noHitHint: 'Thử tìm bằng mã máy (vd SRV-01), tên hoặc site.',
     noHitHintKinds: 'Thử bỏ bớt bộ lọc loại, hoặc tìm bằng mã máy (vd SRV-01).',
     rulesTitle: 'Luật của két',
-    rule1: 'Cất bí mật: bấm "Mở két" ngay tại bảng trên, hoặc vào tab "Két sắt" của hồ sơ. Chỉ Quản trị và Super Admin ghi được.',
+    rule1: 'Cất mật khẩu: bấm "Mở két" ở bảng trên, hoặc vào tab Két sắt của hồ sơ. Chỉ Quản trị và Super Admin cất được.',
     /* KHÔNG nói "mỗi phiên": luật thật là một khoảng ÂN HẠN do `secret.stepup_grace_minutes`
        quy định, và chính màn hình có đồng hồ đếm ngược nói điều đó (`reveal-dialog.tsx` —
        "còn mở két được, chưa phải gõ lại mã"). Chữ ở chân trang mà nói ngược cái đồng hồ thì
        người dùng bị hỏi mã giữa chừng và tưởng hệ thống hỏng. */
-    rule2: 'Xem giá trị: phải gõ mã 6 số (TOTP). Gõ một lần rồi thì mở tiếp được trong ít phút, hết khoảng đó phải gõ lại.',
-    rule3: 'Giá trị hiện ra rồi TỰ ẨN — có đồng hồ đếm ngược ngay trên hộp — và không có nút sao chép hàng loạt.',
+    rule2: 'Xem giá trị: phải nhập mã 6 số. Nhập một lần thì xem tiếp được trong ít phút, hết giờ phải nhập lại.',
+    rule3: 'Giá trị hiện ra rồi tự ẩn (có đồng hồ đếm ngược). Không có nút sao chép hàng loạt.',
     rule4: 'Mỗi lần mở đều ghi nhật ký: ai xem, xem của ai, lúc nào — không xóa được.',
   },
   disposal: {
     title: 'Kho thanh lý',
-    subtitle: 'Thiết bị, phần mềm, tài khoản dịch vụ và đường truyền đã ngừng dùng — gom về một chỗ',
+    subtitle: 'Thiết bị, phần mềm, tài khoản dịch vụ và đường truyền đã thanh lý hoặc ngừng dùng',
     /* Cách dùng lại khác nhau theo loại — nên ở menu ⋯ của từng dòng, không trong câu chung. */
-    note: 'Hồ sơ trong kho KHÔNG còn được tính hạn và không vào email nhắc gia hạn.',
+    note: 'Hồ sơ trong kho không còn tính hạn và không vào email nhắc gia hạn.',
     search: 'Tìm theo mã hoặc tên…',
     open: 'Mở hồ sơ',
     clearFilters: 'Xóa bộ lọc',
@@ -2105,11 +2104,11 @@ export default {
     empty: 'Kho thanh lý đang trống',
     emptyHint: 'Chưa có hồ sơ nào bị thanh lý hay ngừng dùng.',
     truncated:
-      'Kho quá lớn nên {{kinds}} chưa hiện hết — màn này chỉ tải tối đa 500 hồ sơ mỗi loại. Tra hồ sơ cũ hơn ở màn gốc của loại đó, lọc trạng thái đã ngừng dùng.',
+      '{{kinds}} chưa hiện hết (tối đa 500 hồ sơ mỗi loại). Xem hồ sơ cũ hơn ở màn của loại đó, lọc theo trạng thái.',
     /* Hai câu này KHÁC HẲN câu trên: kho có hàng, chỉ là bộ lọc đang che đi. Gộp làm một là
        tuyên bố sai về dữ liệu của công ty (rà UI/UX 12/09, mục #17). */
     noHit: 'Không có hồ sơ nào khớp bộ lọc',
-    noHitHint: 'Kho vẫn có hồ sơ — thử bỏ bớt lọc loại hoặc khoảng ngày, hoặc tìm bằng mã hồ sơ.',
+    noHitHint: 'Thử bỏ bớt lọc loại hoặc khoảng ngày, hoặc tìm bằng mã.',
   },
   audit: {
     title: 'Nhật ký hệ thống',
