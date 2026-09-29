@@ -66,7 +66,7 @@ test.describe('Tham số hệ thống', () => {
     await page.goto('/admin/settings?group=auth');
     const rate = page.getByRole('textbox', { name: 'Số lượt đăng nhập tối đa mỗi IP' });
     await rate.fill('150');
-    await expect(page.getByText(/hàng rào này bị nới rất rộng/)).toBeVisible();
+    await expect(page.getByText(/là nới rất rộng/)).toBeVisible();
     await rate.fill('3');
     await expect(page.getByText('Phải từ 5 đến 1000.')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Lưu nhóm này' })).toBeDisabled();

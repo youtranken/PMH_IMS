@@ -107,7 +107,7 @@ test('"Không lấy được mã?" hiện hướng dẫn và câu liên hệ t�
   await fillLogin(page, E2E_SA.email, NEW_PASSWORD);
   await page.getByRole('button', { name: 'Không lấy được mã?' }).click();
   const help = page.getByRole('region', { name: 'Không lấy được mã?' });
-  await expect(help.getByText(/đặt lại xác thực 2 lớp cho bạn/)).toBeVisible();
+  await expect(help.getByText(/nhờ Super Admin đặt lại xác thực 2 lớp/)).toBeVisible();
   await expect(help.getByText(/Liên hệ:/)).toBeVisible();
 });
 
@@ -117,7 +117,7 @@ test('màn đăng nhập: "Quên mật khẩu?" chỉ đường, không có lu�
   await page.goto('/login');
   await page.getByRole('button', { name: 'Quên mật khẩu?' }).click();
   const help = page.getByRole('region', { name: 'Quên mật khẩu?' });
-  await expect(help.getByText(/Super Admin sẽ cấp cho bạn một mật khẩu tạm/)).toBeVisible();
+  await expect(help.getByText(/Nhờ Super Admin cấp mật khẩu tạm/)).toBeVisible();
   await expect(help.getByText(/Liên hệ:/)).toBeVisible();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   // Route công khai chỉ trả đúng một khoá.

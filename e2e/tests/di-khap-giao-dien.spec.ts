@@ -6652,7 +6652,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
       'Hộp ngừng dùng có đúng ba nút: ✕, Hủy, Ngừng dùng',
     ).toEqual(sap(['Đóng hộp thoại', 'Hủy', 'Ngừng dùng']));
     await expect(
-      hopDong.getByText(/Tài khoản không bị xóa/),
+      hopDong.getByText(/Hồ sơ không bị xóa/),
       'Hộp phải nói rõ đóng ≠ xóa — người bấm đang quyết định một việc, không phải bấm cho xong',
     ).toBeVisible();
 
