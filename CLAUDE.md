@@ -41,8 +41,8 @@ Hệ màu "Sunset Grove" chỉ định nghĩa ở **một chỗ**: `web/src/css/
 
 - Component **không** viết hex/rgb trực tiếp, chỉ dùng `var(--primary)`, `var(--ink)`,
   `var(--danger)`… Đổi màu toàn hệ thống = sửa duy nhất `tokens.css`.
-- `ops/gate-hex.sh` chỉ chặn **hex**. `rgb()/rgba()` còn nợ và chưa có cổng (FE-08 trong
-  checklist), nên đừng thêm chỗ mới dựa vào việc cổng không kêu.
+- `ops/gate-hex.sh` chặn hex, `%23hex` trong data-URI và `rgb()/rgba()/hsl()/hsla()` ngoài
+  `tokens.css` (bỏ qua chú thích). Cần màu trong suốt thì tạo token có cặp dark.
 - Mỗi token light phải có cặp dark trong `html[data-theme='dark']`. **Không phải `.dark`**: selector
   đó không tồn tại trong repo, viết theo nó sẽ ra CSS hợp lệ mà không bao giờ chạy.
 - Không tạo style riêng cho màn mới (UX-DR1): dùng lại `web/src/ui` và shell.
