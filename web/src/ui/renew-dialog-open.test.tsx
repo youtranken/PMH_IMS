@@ -7,7 +7,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 const ROW = { kind: 'license', id: 'sw1', code: 'LIC-E2E-01', label: 'Office', end: '2099-12-31' };
 
-function renderDialog(onOpenRecord?: () => void) {
+function renderDialog(toastAction?: { label: string; onClick: () => void }) {
   vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(jsonResponse(201, {}))));
   renderWithI18n(
     <ToastProvider>
@@ -15,7 +15,7 @@ function renderDialog(onOpenRecord?: () => void) {
         row={ROW}
         kindLabel="License"
         csrfToken="t"
-        onOpenRecord={onOpenRecord}
+        toastAction={toastAction}
         onClose={vi.fn()}
         onDone={vi.fn()}
       />
@@ -23,26 +23,30 @@ function renderDialog(onOpenRecord?: () => void) {
   );
 }
 
+async function renew() {
+  await userEvent.click(screen.getByRole('button', { name: '+1 năm' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Gia hạn' }));
+}
+
 /*
- * Chọn nhầm năm (2072 thay vì 2027) thì phải soát lại được ngay: toast "Đã gia hạn … tới …"
- * kèm nút "Mở hồ sơ" (EX-016). Không có Hoàn tác — lùi hạn là việc sửa hồ sơ có ghi vết.
+ * Gia hạn xong chỉ có MỘT toast "Đã gia hạn … tới …" — nút đi kèm do nơi gọi chọn: "Mở hồ sơ"
+ * (trang chủ, soát lại ngày vừa ghi — EX-016) hay "Xem trong Đã gia hạn" (màn Sắp hết hạn, nơi
+ * dòng vừa gia hạn rời danh sách — EX-008). Hai toast chồng nhau cho một việc là nói hai lần.
  */
-describe('RenewDialog — toast kèm "Mở hồ sơ"', () => {
-  it('có onOpenRecord: toast nêu ngày mới và có nút Mở hồ sơ', async () => {
-    const onOpenRecord = vi.fn();
-    renderDialog(onOpenRecord);
-    await userEvent.click(screen.getByRole('button', { name: '+1 năm' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Gia hạn' }));
+describe('RenewDialog — một toast, nút do nơi gọi chọn', () => {
+  it('toastAction: toast nêu ngày mới và có đúng nút nơi gọi truyền', async () => {
+    const onClick = vi.fn();
+    renderDialog({ label: 'Xem trong Đã gia hạn', onClick });
+    await renew();
     expect(await screen.findByText('Đã gia hạn LIC-E2E-01 tới 31/12/2100.')).toBeInTheDocument();
     // Hộp vẫn mở (onClose/onDone giả) nên nền mang pointer-events:none — bấm thẳng vào nút.
-    fireEvent.click(screen.getByRole('button', { name: 'Mở hồ sơ' }));
-    expect(onOpenRecord).toHaveBeenCalledOnce();
+    fireEvent.click(screen.getByRole('button', { name: 'Xem trong Đã gia hạn' }));
+    expect(onClick).toHaveBeenCalledOnce();
   });
 
-  it('không truyền onOpenRecord thì toast không có nút', async () => {
+  it('không truyền toastAction thì toast không có nút', async () => {
     renderDialog();
-    await userEvent.click(screen.getByRole('button', { name: '+1 năm' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Gia hạn' }));
+    await renew();
     await screen.findByText('Đã gia hạn LIC-E2E-01 tới 31/12/2100.');
     expect(screen.queryByRole('button', { name: 'Mở hồ sơ' })).not.toBeInTheDocument();
   });

@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { apiFetch } from '@/lib/api-client';
 import { useExpiryKinds } from '@/lib/expiry-kinds';
 import { daysUntil } from '@/lib/expiry';
@@ -124,9 +124,7 @@ function windowUntil(end: string, today: string): number {
 export function ExpiryScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
-  const navigate = useNavigate();
   const askConfirm = useConfirm();
-  const toast = useToast();
   const [renewing, setRenewing] = useState<ExpiryRow | null>(null);
   const [tab, setTab] = useState('list');
   const [addingRule, setAddingRule] = useState(false);
@@ -634,19 +632,16 @@ export function ExpiryScreen({ me }: { me: Me }) {
           row={{ ...renewing, code: renewing.code }}
           kindLabel={kindLabel(renewing.kind)}
           csrfToken={me.csrfToken}
-          onOpenRecord={() => navigate(renewing.link)}
+          /* Dòng vừa gia hạn rời danh sách — nút của CHÍNH toast "Đã gia hạn …" chỉ đường tới chỗ
+             nó đã sang, để kiểm lại được. Một toast, không phải hai. */
+          toastAction={{
+            label: t('expiry.renewedSeeTabAction'),
+            onClick: () => setTab('renewals'),
+          }}
           onClose={() => setRenewing(null)}
           onDone={() => {
             setRenewing(null);
             void queryClient.invalidateQueries({ queryKey: ['expiry'] });
-            // Dòng vừa gia hạn rời danh sách — chỉ đường tới chỗ nó đã sang, để kiểm lại được.
-            toast({
-              message: t('expiry.renewedSeeTab'),
-              action: {
-                label: t('expiry.renewedSeeTabAction'),
-                onClick: () => setTab('renewals'),
-              },
-            });
           }}
         />
       ) : null}

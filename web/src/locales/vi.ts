@@ -1181,7 +1181,6 @@ export default {
     renewalsRange: 'Khoảng ngày gia hạn',
     renewalsFrom: 'Gia hạn từ ngày',
     renewalsTo: 'Gia hạn đến ngày',
-    renewedSeeTab: 'Lượt gia hạn đã ghi vào tab "Đã gia hạn".',
     renewedSeeTabAction: 'Xem trong Đã gia hạn',
     tabList: 'Danh sách',
     empty: 'Không có gì sắp hết hạn trong cửa sổ này.',

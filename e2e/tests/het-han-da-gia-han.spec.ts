@@ -40,6 +40,10 @@ test('gia hạn → toast "Xem trong Đã gia hạn" mở đúng tab, dòng vừ
   await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gia hạn' }).click();
   expect((await renewed).status()).toBeLessThan(300);
 
+  // MỘT toast cho một lượt gia hạn: câu "Đã gia hạn … tới …" mang luôn nút chỉ đường.
+  await expect(page.getByText(new RegExp(`^Đã gia hạn ${code} tới`))).toHaveCount(1);
+  await expect(page.getByText(/Lượt gia hạn đã ghi vào tab/)).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Xem trong Đã gia hạn' })).toHaveCount(1);
   await page.getByRole('button', { name: 'Xem trong Đã gia hạn' }).click();
   await expect(page.getByRole('tab', { name: 'Đã gia hạn' })).toHaveAttribute('aria-selected', 'true');
   const renewedRow = page.getByRole('row', { name: new RegExp(code) });
