@@ -101,6 +101,7 @@ export const ACTION_KEY: Record<string, string> = {
   'ip.assigned': 'audit.actions.ipAssigned',
   'ip.transitioned': 'audit.actions.ipTransitioned',
   'ip.voided': 'audit.actions.ipVoided',
+  'ip.subnet_voided': 'audit.actions.ipSubnetVoided',
   'ip.restored': 'audit.actions.ipRestored',
   'subnet.created': 'audit.actions.subnetCreated',
   'subnet.updated': 'audit.actions.subnetUpdated',

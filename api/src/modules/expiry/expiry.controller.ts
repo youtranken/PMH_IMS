@@ -25,6 +25,7 @@ import {
   Matches,
   Max,
   Min,
+  ValidateIf,
 } from 'class-validator';
 import { Audited } from '../audit/audited.decorator';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
@@ -62,6 +63,15 @@ class RenewDto {
 
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Hạn mới phải dạng YYYY-MM-DD.' })
   endDate!: string;
+
+  /**
+   * Hợp đồng + chi phí của RIÊNG lượt gia hạn này, vào sổ gia hạn (Q-15). Cùng ràng buộc với
+   * `RenewDto` của phần mềm; module chủ kiểm tiếp trần 2^53 của tiền.
+   */
+  @IsOptional() @IsString() @Length(0, 200) contract?: string;
+
+  @IsOptional() @ValidateIf((_o, value) => value !== null) @Min(0) @IsInt()
+  cost?: number | null;
 }
 
 class RuleBodyDto {
@@ -323,7 +333,10 @@ export class ExpiryController {
   @Post('renew')
   @Audited('expiry.renewed', 'expiry', { writtenByService: true })
   async renew(@Body() body: RenewDto, @Req() req: AuthedRequest) {
-    await this.expiry.renew(req.user!.email, body.kind, body.id, body.endDate);
+    await this.expiry.renew(req.user!.email, body.kind, body.id, body.endDate, {
+      contract: body.contract,
+      cost: body.cost,
+    });
     return { status: 'renewed' };
   }
 }

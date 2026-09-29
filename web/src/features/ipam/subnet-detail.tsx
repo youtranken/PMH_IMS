@@ -119,9 +119,8 @@ export function SubnetPane({
   const highlightRow = useRef<HTMLTableRowElement | null>(null);
   const scrolledTo = useRef<string | null>(null);
   const [historyOf, setHistoryOf] = useState<IpRow | null>(null);
-  /** Hồ sơ IP đang chờ ẨN (kèm lý do) — khác `moving` vốn là bước vòng đời. */
+  /** Hồ sơ IP nhập nhầm đang chờ XÓA (kèm lý do) — khác `moving` vốn là bước vòng đời. */
   const [voiding, setVoiding] = useState<IpRow | null>(null);
-  const [restoring, setRestoring] = useState<IpRow | null>(null);
   const [filesOpen, setFilesOpen] = useState(false);
   /**
    * Dải ĐÃ VÔ HIỆU HÓA thì cả bảng này chỉ còn ĐỌC.
@@ -139,30 +138,20 @@ export function SubnetPane({
    */
   const canWrite = !subnetDisabled;
   /**
-   * ẨN / BẬT LẠI hồ sơ và ghi giấy tờ của dải thì chỉ SA/Admin — API chặn, UI đừng bày nút ra
-   * để bấm rồi 403. Trong dải đã tắt thì bật lại hồ sơ cũng bị từ chối (`SUBNET_VOIDED`).
+   * XÓA hồ sơ nhập nhầm và ghi giấy tờ của dải thì chỉ SA/Admin — API chặn, UI đừng bày nút
+   * ra để bấm rồi 403.
    */
   const isManager = me.role === "sa" || me.role === "admin";
   const canEdit = isManager && !subnetDisabled;
 
   /*
-   * Hồ sơ ĐÃ ẨN chỉ về khi đứng ở chip "Đã ẩn" (`?includeVoided=true`).
-   *
-   * Ẩn một hồ sơ nhập nhầm phải trả ô đó về "trống" — đó là toàn bộ ý nghĩa của việc ẩn, nên
-   * các chip khác không bày chúng. Nhưng chip "Đã ẩn" đứng thường trực với MỌI vai: đó là
-   * đường tới nút "Bật lại", và là chỗ duy nhất trả lời "IP này từng của máy nào" cho một hồ
-   * sơ đã ẩn (lịch sử của nó vẫn mở được, kể cả với member).
+   * Hồ sơ đã XÓA (nhập nhầm, Q-15) không về màn này nữa: xóa là để nhập lại, ô trở thành chỗ
+   * trống ngay, và vết của nó nằm trong Nhật ký hệ thống. Chỉ dải ĐÃ NGỪNG DÙNG mới có hồ sơ
+   * tắt hiện ra — những hồ sơ tắt CÙNG dải, API tự trả kèm.
    */
-  const showVoided = status === VOIDED_FILTER;
-
   const slots = useQuery({
-    // `showVoided` PHẢI nằm trong khóa: thiếu nó thì đổi chip xong màn hình đứng im vì
-    // react-query trả lại đúng ảnh chụp cũ.
-    queryKey: ["ipam", "subnets", id, "addresses", showVoided],
-    queryFn: () =>
-      apiFetch<SubnetSlot[]>(
-        `/api/v1/ipam/subnets/${id}/addresses${showVoided ? "?includeVoided=true" : ""}`,
-      ),
+    queryKey: ["ipam", "subnets", id, "addresses"],
+    queryFn: () => apiFetch<SubnetSlot[]>(`/api/v1/ipam/subnets/${id}/addresses`),
   });
 
   const attachments = useOwnerAttachments("subnet", id);
@@ -397,10 +386,10 @@ export function SubnetPane({
       <div className="pane-tools">
         {/* Bộ lọc trạng thái — "Trống" là một lựa chọn ngang hàng, không phải một ô tick phụ.
             Con số đi kèm ngay trên nút: "còn mấy chỗ trống" là câu hỏi màn này sinh ra để trả
-            lời. Chip "Đã ẩn" không mang số khi chưa mở: API chỉ trả hồ sơ đã ẩn khi được hỏi,
-            nên một con số 0 đứng đó là nói sai. */}
+            lời. Chip "Đã ngừng dùng" chỉ có ở dải đã ngừng dùng — dải đang dùng không còn hồ sơ
+            tắt nào hiện ra (hồ sơ nhập nhầm bị xóa hẳn khỏi màn, Q-15). */}
         <div className="segmented" role="group" aria-label={t("ipam.status")}>
-          {[...SLOT_FILTERS, VOIDED_FILTER].map((key) => (
+          {(subnetDisabled ? [...SLOT_FILTERS, VOIDED_FILTER] : SLOT_FILTERS).map((key) => (
             <button
               key={key}
               type="button"
@@ -413,12 +402,8 @@ export function SubnetPane({
               }}
             >
               {t(key === "all" ? "ipam.filterAll" : BUCKET_KEY[key])}
-              {key !== VOIDED_FILTER || showVoided || subnetDisabled ? (
-                <>
-                  {" "}
-                  <span className="seg-count">{counts[key]}</span>
-                </>
-              ) : null}
+              {" "}
+              <span className="seg-count">{counts[key]}</span>
             </button>
           ))}
         </div>
@@ -430,11 +415,7 @@ export function SubnetPane({
                 type="button"
                 className={view === key ? "on" : undefined}
                 aria-pressed={view === key}
-                onClick={() => {
-                  setView(key);
-                  // Bản đồ là cả dải: đứng ở chip "Đã ẩn" thì hồ sơ thường không về.
-                  if (key === "map" && shown === VOIDED_FILTER) setStatus("all");
-                }}
+                onClick={() => setView(key)}
               >
                 {t(key === "list" ? "ipam.viewList" : "ipam.viewMap")}
               </button>
@@ -539,9 +520,9 @@ export function SubnetPane({
                       </td>
                       <td data-label={t("ipam.status")} className="col-status">
                         {/*
-                          Hồ sơ ĐÃ ẨN phải đọc ra là đã ẩn, không phải "Đang dùng" mờ mờ: nó
-                          giữ nguyên `status` cũ, nên vẽ theo `status` là nói dối về một hàng
-                          mà người khác đang được phép cấp lại địa chỉ đó.
+                          Hồ sơ tắt theo dải phải đọc ra là đã ngừng dùng, không phải "Đang
+                          dùng" mờ mờ: nó giữ nguyên `status` cũ, nên vẽ theo `status` là nói
+                          dối về một hàng không cấp hay sửa được.
                         */}
                         {slot.voidedAt ? (
                           <span className="badge muted" title={slot.voidReason ?? undefined}>
@@ -688,25 +669,6 @@ export function SubnetPane({
         />
       ) : null}
 
-      {restoring ? (
-        <RestoreAddressDialog
-          record={restoring}
-          csrfToken={me.csrfToken}
-          onClose={() => setRestoring(null)}
-          onDone={() => {
-            /* Bật lại xong thì hồ sơ rời rổ "Đã ẩn" — đứng yên ở chip đó là nhìn nó biến mất
-               và tưởng chưa bật được. Về "Tất cả" và tô sáng đúng dòng vừa bật. */
-            const address = restoring.address;
-            setRestoring(null);
-            setStatus("all");
-            scrolledTo.current = null;
-            setHighlight(address);
-            toast({ message: t("ipam.addressRestored") });
-            void refresh();
-          }}
-        />
-      ) : null}
-
       {historyOf ? (
         <IpHistoryDialog
           record={historyOf}
@@ -773,7 +735,7 @@ export function SubnetPane({
     </>
   );
 
-  /** Menu ⋯ của một hồ sơ: việc hay làm trước, Thu hồi (đỏ), rồi Ẩn nhập nhầm (xám) cuối. */
+  /** Menu ⋯ của một hồ sơ: việc hay làm trước, Thu hồi (đỏ), rồi Xóa nhập nhầm (xám) cuối. */
   function rowActions(slot: IpRow): RowAction[] {
     const items: RowAction[] = [];
     // Hồ sơ Trống thì "sửa" chính là cấp — đã có nút Cấp IP trên dòng.
@@ -794,9 +756,10 @@ export function SubnetPane({
       }
     }
     /*
-     * ẨN hồ sơ — cho bản ghi KHAI NHẦM, khác "Thu hồi": thu hồi trả địa chỉ về pool nhưng
-     * giữ hàng và lịch sử "IP này từng của máy nào" (AC 5.2). Xếp cuối, chữ xám, có vạch
-     * ngăn — nó hiếm khi đúng, và chọn nhầm nó thay vì Thu hồi là mất dòng khỏi màn.
+     * XÓA hồ sơ — cho bản ghi KHAI NHẦM, khác "Thu hồi": thu hồi trả địa chỉ về pool nhưng
+     * giữ hàng và lịch sử "IP này từng của máy nào" (AC 5.2) trên màn. Xếp cuối, chữ xám, có
+     * vạch ngăn — nó hiếm khi đúng, và chọn nhầm nó thay vì Thu hồi là mất dòng khỏi màn (không
+     * khôi phục trên giao diện, Q-15).
      */
     if (canEdit && !slot.voidedAt) {
       items.push({
@@ -805,14 +768,6 @@ export function SubnetPane({
         hint: t("ipam.voidMenuHint"),
         onSelect: () => setVoiding(slot),
         muted: true,
-      });
-    }
-    /* Hồ sơ ĐÃ ẨN chỉ còn Lịch sử và BẬT LẠI — mọi việc khác API từ chối (`requireAlive`). */
-    if (canEdit && slot.voidedAt) {
-      items.push({
-        key: "restore",
-        label: t("ipam.restoreAddress"),
-        onSelect: () => setRestoring(slot),
       });
     }
     return items;
@@ -1162,80 +1117,9 @@ function IpHistoryDialog({
 
 
 /**
- * Bật lại một hồ sơ đã ẩn.
+ * Xóa MỘT hồ sơ IP khai nhầm, kèm lý do (Q-15: xóa để nhập lại).
  *
- * Là hộp thoại chứ không phải một cú bấm thẳng: API có thể từ chối vì địa chỉ đã bị hồ sơ khác
- * chiếm trong lúc này (`IP_TAKEN`) hoặc vì dải cha đang bị ẩn (`SUBNET_VOIDED`). Cả hai câu
- * đều cần chỗ để hiện ra và cần người đọc — nuốt chúng vào một cái toast đỏ nửa giây là mất.
- */
-function RestoreAddressDialog({
-  record,
-  csrfToken,
-  onClose,
-  onDone,
-}: {
-  record: IpRow;
-  csrfToken: string;
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const { t } = useTranslation();
-  const [error, setError] = useState<string | null>(null);
-  const restore = useApiMutation<Record<string, never>, unknown>(
-    `/api/v1/ipam/addresses/${record.id}/restore`,
-    { csrfToken, refreshMe: false },
-  );
-
-  return (
-    <Dialog
-      open
-      onOpenChange={onClose}
-      /* Đang ghi thì KHÔNG cho đóng bằng Esc / bấm nền: hộp biến mất nhưng lượt ghi
-         vẫn chạy tiếp, nên người dùng tin là đã hủy trong khi dữ liệu đã vào sổ. */
-      dismissible={!restore.isPending}
-      maxWidth={480}
-      title={`${t("ipam.restoreAddress")} — ${record.address}`}
-      footer={
-        <>
-          <button type="button" className="btn" onClick={onClose}>
-            {t("common.cancel")}
-          </button>
-          <button
-            type="button"
-            className="btn primary"
-            disabled={restore.isPending}
-            onClick={() => {
-              setError(null);
-              restore.mutate(
-                {},
-                { onSuccess: onDone, onError: (err) => setError(errorMessage(err)) },
-              );
-            }}
-          >
-            {restore.isPending ? t("common.loading") : t("ipam.restoreAddress")}
-          </button>
-        </>
-      }
-    >
-      <p className="muted">{t("ipam.restoreAddressHint")}</p>
-      {record.voidReason ? (
-        <p className="muted">
-          {t("ipam.voidReasonWas")} <b>{record.voidReason}</b>
-        </p>
-      ) : null}
-      {error ? (
-        <p className="alert error" role="alert">
-          {error}
-        </p>
-      ) : null}
-    </Dialog>
-  );
-}
-
-/**
- * Ẩn MỘT hồ sơ IP khai nhầm, kèm lý do.
- *
- * Cùng khuôn với hộp ẩn dải và hộp gỡ rule NAT: "địa chỉ này biến đi đâu" là câu sáu tháng
+ * Cùng khuôn với hộp ngừng dùng dải và hộp gỡ luật NAT: "địa chỉ này biến đi đâu" là câu sáu tháng
  * sau sẽ có người hỏi, và chỉ dòng lịch sử trả lời được. Dùng hộp riêng chứ không dùng
  * `useConfirm` chung vì lý do ở đây là DỮ LIỆU bắt buộc, không phải một câu có/không.
  */
@@ -1268,7 +1152,7 @@ function VoidAddressDialog({
       dismissible={!remove.isPending}
       initialFocus="first-field"
       maxWidth={480}
-      title={`${t("ipam.voidAddress")} — ${record.address}`}
+      title={`${t("ipam.voidAddressTitle")} — ${record.address}`}
       footer={
         <>
           <button type="button" className="btn" onClick={onClose}>

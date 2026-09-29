@@ -472,10 +472,10 @@ export default {
     addIspProvider: 'Thêm nhà mạng',
     addServicePort: 'Thêm dịch vụ',
     edit: 'Sửa',
-    /* 'Vô hiệu hóa', không phải 'Vô hiệu' — cùng động từ với `serviceAccounts.disable`.
-       Ba màn dùng chung khái niệm này; `term-consistency.test.ts` canh chúng không lệch lại. */
-    deactivate: 'Vô hiệu hóa',
-    activate: 'Bật lại',
+    /* Cùng cặp động từ với dải IP, tài khoản dịch vụ, luật NAT (Q-15): cất đi mà hồ sơ cũ vẫn
+       đọc được. Tài khoản người dùng IMS là việc khác nên giữ "Vô hiệu hóa / Bật lại". */
+    deactivate: 'Ngừng dùng',
+    activate: 'Dùng lại',
     delete: 'Xóa',
     code: 'Mã',
     name: 'Tên',
@@ -505,9 +505,8 @@ export default {
     portHint: 'Một port: chỉ điền ô này. Một dải: điền cả hai ô (50000 – 52000).',
     status: 'Trạng thái',
     active: 'Đang dùng',
-    /* Cùng chữ với `accounts.statusDisabled` · `serviceAccounts.statusDisabled` ·
-       `disposal.statusDisabled` — bốn màn, một trạng thái. Trước 23/09 là bốn cách viết. */
-    inactive: 'Đã vô hiệu hóa',
+    /* Cùng chữ với badge dải IP · tài khoản dịch vụ · luật NAT (Q-15). */
+    inactive: 'Đã ngừng dùng',
     pickSite: '— Chọn site —',
     searchSite: 'Tìm theo mã hoặc tên site',
     searchCabinet: 'Tìm theo mã tủ, site hoặc mô tả',
@@ -520,12 +519,12 @@ export default {
        xảy ra (chẳng ai sợ mất hồ sơ cũ), nên nó trấn an nhầm — còn chuyện THẬT SỰ xảy ra thì
        không ai nói: từ giờ mọi form thêm mới không chọn được mục này nữa. */
     confirmDeactivate:
-      'Vô hiệu "{{name}}"? Từ giờ KHÔNG form nào chọn được mục này nữa — hồ sơ đang dùng nó ' +
-      'thì giữ nguyên và vẫn đọc được. Bật lại bất cứ lúc nào.',
-    confirmActivate: 'Bật lại "{{name}}"?',
+      'Ngừng dùng "{{name}}"? Từ giờ KHÔNG form nào chọn được mục này nữa — hồ sơ đang dùng nó ' +
+      'thì giữ nguyên và vẫn đọc được. Dùng lại bất cứ lúc nào.',
+    confirmActivate: 'Dùng lại "{{name}}"?',
     confirmDelete:
       'Xóa hẳn "{{name}}"? Mục đang được hồ sơ nào dùng thì hệ thống sẽ không xóa — khi đó hãy ' +
-      'Vô hiệu hóa (dùng "Xem thiết bị dùng mục này" để kiểm trước).',
+      'Ngừng dùng (dùng "Xem thiết bị dùng mục này" để kiểm trước).',
     deleted: 'Đã xóa.',
     saved: 'Đã lưu.',
     importTitle: 'Nhập Site, Tủ mạng, Loại thiết bị, Nhà cung cấp từ Excel',
@@ -551,7 +550,7 @@ export default {
     statusAll: 'Mọi trạng thái',
     siteFilter: 'Lọc theo site',
     siteAll: 'Mọi site',
-    memberHint: 'Vô hiệu hóa, xóa và nhập Excel do Quản trị thực hiện.',
+    memberHint: 'Ngừng dùng, xóa và nhập Excel do Quản trị thực hiện.',
     viewDevices: 'Xem thiết bị dùng mục này',
     usageColumn: 'Đang dùng ở',
     usageNone: 'Chưa dùng',
@@ -562,14 +561,14 @@ export default {
     usage_subnet: '{{count}} dải IP',
     usage_service_account: '{{count}} tài khoản dịch vụ',
     usage_other: '{{count}} hồ sơ',
-    deleteInUse: 'Đang dùng ở {{usage}} — hãy Vô hiệu hóa',
+    deleteInUse: 'Đang dùng ở {{usage}} — hãy Ngừng dùng',
     deactivateInUse: 'Hiện đang dùng ở {{usage}} — các hồ sơ này giữ nguyên.',
     confirmHidePortMapCount:
       'Tắt "Có port map" cho "{{name}}": {{count}} thiết bị loại này sẽ ẩn bảng port ở trang ' +
-      'chi tiết (dữ liệu port vẫn giữ, bật lại là hiện lại).',
+      'chi tiết (dữ liệu port vẫn giữ, tick lại là hiện lại).',
     auditLog: 'Nhật ký thao tác',
-    deactivated: 'Đã vô hiệu hóa "{{name}}".',
-    activated: 'Đã bật lại "{{name}}".',
+    deactivated: 'Đã ngừng dùng "{{name}}".',
+    activated: 'Đã dùng lại "{{name}}".',
     emptyFilteredOnly: 'Không có {{kind}} nào khớp bộ lọc.',
     clearAllFilters: 'Xóa bộ lọc',
     cabinetCodeHint: 'Quy ước TU-<mã site>-NN — chọn site là điền sẵn số kế tiếp, sửa được.',
@@ -582,7 +581,7 @@ export default {
     contactHint: 'Ghi email thì bảng tự thành link gửi thư.',
     confirmHidePortMap:
       'Tắt "Có port map" cho "{{name}}": mọi thiết bị loại này sẽ ẩn bảng port ở trang chi tiết ' +
-      '(dữ liệu port vẫn giữ, bật lại là hiện lại).',
+      '(dữ liệu port vẫn giữ, tick lại là hiện lại).',
     portOverlap: 'Trùng port với "{{name}}" — kiểm lại có phải cùng một dịch vụ không.',
   },
   devices: {
@@ -1673,33 +1672,19 @@ export default {
     reason: 'Lý do',
     reasonPlaceholder: 'vd: khai nhầm dải',
     voidAddressHint:
-      'Dùng cho bản ghi KHAI NHẦM: địa chỉ trở lại thành chỗ trống. Máy đang thật sự dùng địa chỉ này thì bấm Thu hồi IP — nó giữ lại lịch sử "IP này từng của máy nào".',
+      'Dùng cho bản ghi KHAI NHẦM: hồ sơ bị xóa, địa chỉ trở lại thành chỗ trống và nhập lại được ngay. Không khôi phục được trên giao diện — vết vẫn nằm trong Nhật ký hệ thống. Máy đang thật sự dùng địa chỉ này thì bấm Thu hồi IP — nó giữ lại lịch sử "IP này từng của máy nào".',
     voidAddressPlaceholder: 'vd: gõ nhầm địa chỉ',
-    /*
-     * Tên của chính HÀNH ĐỘNG — thêm 23/09. Trước đó ba chỗ của luồng này (mục menu, tiêu đề
-     * hộp, nút gửi) đều đọc `common.delete` = 'Xóa', trong khi kết quả của nó là 'Đã ẩn' và có
-     * hẳn nút 'Bật lại'. Chính chú thích tại chỗ ở `subnet-detail.tsx:444` đã viết "Vẫn là ẩn ở
-     * tầng DB, không DELETE" — code biết đúng, chỉ có chữ trên màn nói sai.
-     *
-     * Và "Xóa" phải được giữ cho việc xoá THẬT: `ipam.subnetDeleted` ('Đã xóa dải.') là một
-     * lượt xoá không hoàn tác được. Dùng cùng một chữ cho hai việc — một cái lùi được, một cái
-     * không — là chỗ người dùng trả giá.
-     */
-    voidAddress: 'Ẩn bản ghi nhập nhầm',
-    /* "Ẩn", không phải "xóa" — câu này phải nói ĐÚNG việc vừa làm. Hồ sơ không biến mất: nó
-       ẩn đi, hiện lại được bằng "Hiện cả hồ sơ đã ẩn" và bật lại được bằng "Bật lại". Người
-       dùng đọc "Đã xóa" rồi đi khai lại từ đầu là mất công thật, không phải chuyện chữ nghĩa. */
-    addressVoided: 'Đã ẩn hồ sơ IP.',
+    /* Q-15: xóa để nhập lại — không có nút khôi phục, nên chữ "Xóa" nói đúng việc người dùng
+       thấy. Tiêu đề hộp nói rõ HỒ SƠ NHẬP NHẦM để không lẫn với Thu hồi IP ngay trên nó. */
+    voidAddress: 'Xóa',
+    voidAddressTitle: 'Xóa hồ sơ IP nhập nhầm',
+    addressVoided: 'Đã xóa hồ sơ IP — nhập lại được ngay.',
     /* Bảng rỗng phải nói VÌ SAO rỗng — hai nguyên nhân, hai lời khuyên khác hẳn nhau. */
     slotEmpty: 'Không có dòng nào để hiện.',
     slotEmptyAll: 'Dải này chưa có địa chỉ nào, kể cả ô trống — kiểm lại khai báo CIDR.',
     slotEmptyFiltered: 'Không có địa chỉ nào ở trạng thái đang chọn. Bấm "Tất cả" để xem cả dải.',
-    voidedBadge: 'Đã ẩn',
-    restoreAddress: 'Bật lại',
-    restoreAddressHint:
-      'Hồ sơ hiện lại trên bảng cùng trạng thái cũ, và lịch sử của nó nối tiếp chứ không bắt đầu lại. Nếu địa chỉ này đã có hồ sơ khác dùng sau khi ẩn thì phải xử lý hồ sơ kia trước.',
-    voidReasonWas: 'Lý do đã ẩn:',
-    addressRestored: 'Đã bật lại hồ sơ IP.',
+    /* Chỉ hiện trong dải đã ngừng dùng: hồ sơ tắt CÙNG dải, sống lại khi dùng lại dải. */
+    voidedBadge: 'Đã ngừng dùng',
     address: 'Địa chỉ',
     status: 'Trạng thái',
     statusFree: 'Trống',
@@ -2303,8 +2288,9 @@ export default {
       ipUpdated: 'Sửa hồ sơ IP',
       ipAssigned: 'Cấp IP',
       ipTransitioned: 'Đổi trạng thái IP',
-      ipVoided: 'Ẩn hồ sơ IP',
-      ipRestored: 'Bật lại hồ sơ IP',
+      ipVoided: 'Xóa hồ sơ IP nhập nhầm',
+      ipSubnetVoided: 'Hồ sơ IP ngừng dùng theo dải',
+      ipRestored: 'Khôi phục hồ sơ IP đã xóa',
       subnetCreated: 'Tạo dải mạng',
       subnetUpdated: 'Sửa dải mạng',
       subnetVoided: 'Ngừng dùng dải mạng',
@@ -2337,8 +2323,8 @@ export default {
       deleted: 'Xóa',
       imported: 'Nhập từ Excel',
       importedUpdate: 'Cập nhật khi nhập Excel',
-      activated: 'Bật lại',
-      deactivated: 'Vô hiệu hóa',
+      activated: 'Dùng lại',
+      deactivated: 'Ngừng dùng',
       enabled: 'Bật',
       disabled: 'Tắt',
       statusChanged: 'Đổi trạng thái',
@@ -2788,8 +2774,9 @@ export default {
       actCreated: 'Tạo hồ sơ',
       actUpdated: 'Sửa hồ sơ',
       actAssigned: 'Gán chủ',
-      actVoided: 'Ẩn bản ghi nhập nhầm',
-      actRestored: 'Bật lại',
+      actVoided: 'Xóa hồ sơ IP nhập nhầm',
+      actSubnetVoided: 'Ngừng dùng theo dải',
+      actRestored: 'Dùng lại',
       actStatusMerged: 'Gộp trạng thái',
     },
 
@@ -2809,8 +2796,8 @@ export default {
       fPortTo: 'đến port',
       actCreated: 'Tạo mục',
       actUpdated: 'Sửa',
-      actActivated: 'Bật lại',
-      actDeactivated: 'Vô hiệu hóa',
+      actActivated: 'Dùng lại',
+      actDeactivated: 'Ngừng dùng',
       actDeleted: 'Xóa',
       actImported: 'Nhập từ Excel',
       actImportedUpdate: 'Cập nhật khi nhập từ Excel',

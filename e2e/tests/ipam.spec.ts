@@ -688,19 +688,28 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
     const ipId = ((await created.json()) as { id: string }).id;
 
     await page.goto(`/ip-addresses/${subnetId}`);
-    await rowAction(page, `172.16.${octet}.2`, 'Ẩn bản ghi nhập nhầm');
-    const form = page.getByRole('dialog');
+    await rowAction(page, `172.16.${octet}.2`, 'Xóa');
+    const form = page.getByRole('dialog', { name: `Xóa hồ sơ IP nhập nhầm — 172.16.${octet}.2` });
     await form.getByRole('textbox', { name: 'Lý do' }).fill('gõ nhầm địa chỉ');
-    await form.getByRole('button', { name: 'Ẩn bản ghi nhập nhầm' }).click();
+    await form.getByRole('button', { name: 'Xóa', exact: true }).click();
 
-    await expect(page.getByText('Đã ẩn hồ sơ IP.')).toBeVisible();
+    await expect(page.getByText('Đã xóa hồ sơ IP — nhập lại được ngay.')).toBeVisible();
     // Địa chỉ trở lại thành chỗ TRỐNG, có nút cấp — chứ không nằm lại trong sổ vĩnh viễn.
+    const row = page.getByRole('row', { name: new RegExp(`172\\.16\\.${octet}\\.2`) });
+    await expect(row.getByRole('button', { name: 'Cấp IP', exact: true })).toBeVisible();
+    // Q-15: không có đường khôi phục trên giao diện — không chip hồ sơ đã xóa, không nút.
     await expect(
-      page.getByRole('row', { name: new RegExp(`172\\.16\\.${octet}\\.2`) })
-        .getByRole('button', { name: 'Cấp IP', exact: true }),
-    ).toBeVisible();
+      page.getByRole('group', { name: 'Trạng thái' }).getByRole('button', { name: /^Đã ẩn|^Đã ngừng dùng/ }),
+    ).toHaveCount(0);
 
-    // Lịch sử của hồ sơ đã ẩn VẪN đọc được — đó mới là lúc người ta cần đọc nó.
+    // Xóa là để NHẬP LẠI: khai lại đúng địa chỉ đó được ngay.
+    const again = await page.request.post('/api/v1/ipam/addresses', {
+      headers,
+      data: { subnetId, address: `172.16.${octet}.2`, usedBy: 'nhập lại đúng E2E' },
+    });
+    expect(again.status()).toBe(201);
+
+    // Lịch sử của hồ sơ đã xóa VẪN đọc được qua API — vết không mất.
     const history = await page.request.get(`/api/v1/ipam/addresses/${ipId}/history`);
     expect(history.status()).toBe(200);
   });

@@ -7,7 +7,8 @@ import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import type { Tx } from '../../common/tx';
 import { addDays, daysBetween, isoDateInTz, startOfDayInTz } from '../../common/today';
 import { SystemConfigService } from '../config-sys/system-config.service';
-import type { ExpiryItem } from '../../common/expiry/expiry-source';
+import type { ExpiryItem, RenewTerms } from '../../common/expiry/expiry-source';
+import type { ExpiryKindInfo } from '../../common/expiry/expiry-registry';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { renewalHistoryTable } from './expiry.schema';
 
@@ -15,6 +16,8 @@ import { renewalHistoryTable } from './expiry.schema';
 export interface ExpiryRow extends ExpiryItem {
   daysLeft: number;
   canRenew: boolean;
+  /** Hộp Gia hạn hiện ô "Số hợp đồng" + "Chi phí" chỉ khi nguồn này có sổ gia hạn (Q-15). */
+  canRenewTerms: boolean;
 }
 
 export interface ExpirySummary {
@@ -115,7 +118,7 @@ export class ExpiryService {
   }
 
   /** Các loại nguồn đang có — màn Expiry dựng bộ lọc từ đây, không viết cứng danh sách. */
-  kinds(): { kind: string; label: string; canRenew: boolean }[] {
+  kinds(): ExpiryKindInfo[] {
     return this.registry.list();
   }
 
@@ -153,17 +156,13 @@ export class ExpiryService {
     const to = addDays(today, withinDays);
 
     const { items, failed } = await this.registry.collect(from, to, query.kinds);
-    const renewable = new Set(
-      this.registry
-        .list()
-        .filter((source) => source.canRenew)
-        .map((source) => source.kind),
-    );
+    const sources = new Map(this.registry.list().map((source) => [source.kind, source]));
 
     const rows = items.map((item) => ({
       ...item,
       daysLeft: daysBetween(today, item.end),
-      canRenew: renewable.has(item.kind),
+      canRenew: sources.get(item.kind)?.canRenew ?? false,
+      canRenewTerms: sources.get(item.kind)?.canRenewTerms ?? false,
     }));
 
     /*
@@ -204,7 +203,13 @@ export class ExpiryService {
    * Gia hạn: gọi API của MODULE CHỦ rồi ghi lịch sử (AC 3.4).
    * Engine không tự UPDATE bảng của ai — nó còn không biết bảng đó tên gì.
    */
-  async renew(actor: string, kind: string, id: string, newEnd: string): Promise<void> {
+  async renew(
+    actor: string,
+    kind: string,
+    id: string,
+    newEnd: string,
+    terms: RenewTerms = {},
+  ): Promise<void> {
     const source = this.registry.find(kind);
     if (!source) {
       throw new NotFoundException({
@@ -235,7 +240,14 @@ export class ExpiryService {
      * Nay phần ghi sổ nằm TRONG transaction của module chủ (`recordRenewalWithin`), nên cả hai
      * cửa dùng chung đúng một đường và một transaction. Ở đây chỉ còn kiểm tra rồi gọi.
      */
-    await source.renew(actor, id, newEnd);
+    const hasTerms = !!terms.contract?.trim() || (terms.cost !== undefined && terms.cost !== null);
+    if (hasTerms && !source.renewTerms) {
+      throw new BadRequestException({
+        code: 'EXPIRY_TERMS_UNSUPPORTED',
+        message: `Loại "${source.sourceLabel}" không có sổ gia hạn để ghi số hợp đồng và chi phí — bỏ trống hai ô đó.`,
+      });
+    }
+    await source.renew(actor, id, newEnd, hasTerms ? terms : undefined);
   }
 
   /**

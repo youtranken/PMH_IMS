@@ -99,10 +99,43 @@ describe('RenewDialog — hợp đồng + chi phí của lượt gia hạn (Q-15
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('không bật withTerms (màn Sắp hết hạn) → không có hai ô', () => {
+  it('không bật withTerms (nguồn không có sổ gia hạn) → không có hai ô', () => {
     renderDialog(undefined);
     expect(screen.queryByLabelText('Số hợp đồng')).toBeNull();
     expect(screen.queryByLabelText('Chi phí kỳ mới')).toBeNull();
+  });
+
+  it('màn Sắp hết hạn (không có url): gửi kind + id + hợp đồng + chi phí lên /expiry/renew', async () => {
+    const fetchMock = vi.fn((_url: string, _init?: RequestInit) =>
+      Promise.resolve(jsonResponse(201, { status: 'renewed' })),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    const onDone = vi.fn();
+    renderWithI18n(
+      <ToastProvider>
+        <RenewDialog
+          row={ROW}
+          kindLabel="License"
+          csrfToken="t"
+          withTerms
+          onClose={vi.fn()}
+          onDone={onDone}
+        />
+      </ToastProvider>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: '+1 năm' }));
+    await userEvent.type(screen.getByLabelText('Số hợp đồng'), 'HD-2027-02');
+    await userEvent.type(screen.getByLabelText('Chi phí kỳ mới'), '3tr');
+    await userEvent.click(screen.getByRole('button', { name: 'Gia hạn' }));
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(String(fetchMock.mock.calls.at(-1)?.[0])).toContain('/api/v1/expiry/renew');
+    expect(sentBody(fetchMock)).toEqual({
+      kind: 'license',
+      id: 'sw1',
+      endDate: '2100-12-31',
+      contract: 'HD-2027-02',
+      cost: 3_000_000,
+    });
   });
 });
 

@@ -47,6 +47,8 @@ interface ExpiryRow {
   link: string;
   daysLeft: number;
   canRenew: boolean;
+  /** Nguồn có sổ gia hạn: hộp Gia hạn hiện ô hợp đồng + chi phí (Q-15). */
+  canRenewTerms?: boolean;
 }
 
 /** Một lượt gia hạn đã ghi (`renewal_history`) — tab "Đã gia hạn". */
@@ -632,6 +634,7 @@ export function ExpiryScreen({ me }: { me: Me }) {
           row={{ ...renewing, code: renewing.code }}
           kindLabel={kindLabel(renewing.kind)}
           csrfToken={me.csrfToken}
+          withTerms={renewing.canRenewTerms}
           /* Dòng vừa gia hạn rời danh sách — nút của CHÍNH toast "Đã gia hạn …" chỉ đường tới chỗ
              nó đã sang, để kiểm lại được. Một toast, không phải hai. */
           toastAction={{

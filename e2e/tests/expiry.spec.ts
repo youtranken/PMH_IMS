@@ -8,6 +8,7 @@ import {
   resetIsp,
   resetSoftware,
   resetUsers,
+  sql,
   uniqueStamp,
 } from './helpers';
 
@@ -205,6 +206,63 @@ test.describe('Cỗ máy Expiry', () => {
     await expect(
       page.getByRole('listitem').filter({ hasText: 'Gia hạn' }).first(),
     ).toBeVisible();
+  });
+
+  /** Q-15: gia hạn từ màn Sắp hết hạn cũng ghi số hợp đồng + chi phí vào sổ gia hạn. */
+  test('gia hạn từ màn Sắp hết hạn ghi số hợp đồng + chi phí vào sổ gia hạn', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const code = `LIC-E2E-EXPHD-${stamp}`;
+    const contract = `HD-E2E-EXP-${stamp}`;
+    const created = await post(page, '/api/v1/software', {
+      code,
+      name: 'License gia hạn từ màn hạn',
+      kind: 'license',
+      endDate: inDays(5),
+    });
+    const id = String(created.body.id);
+
+    await page.goto('/expiry');
+    const row = page.getByRole('row', { name: new RegExp(code) });
+    await row.getByRole('button', { name: 'Gia hạn' }).click();
+    const dialog = page.getByRole('dialog', { name: `Gia hạn ${code}` });
+    await dialog.getByRole('button', { name: '+1 năm', exact: true }).click();
+    await dialog.getByRole('textbox', { name: 'Số hợp đồng', exact: true }).fill(contract);
+    await dialog.getByRole('textbox', { name: 'Chi phí kỳ mới', exact: true }).fill('4tr');
+    const renewed = page.waitForResponse((r) => r.url().endsWith('/expiry/renew'));
+    await dialog.getByTestId('dialog-footer').getByRole('button', { name: 'Gia hạn' }).click();
+    expect((await renewed).status()).toBeLessThan(300);
+    await expect(page.getByText(new RegExp(`^Đã gia hạn ${code} tới`))).toBeVisible();
+
+    expect(
+      sql(`SELECT contract || '|' || cost FROM renewal_history WHERE object_id = '${id}'`),
+    ).toBe(`${contract}|4000000`);
+  });
+
+  test('gia hạn từ màn Sắp hết hạn: chi phí âm bị từ chối, sổ và hạn không đổi', async ({
+    page,
+  }) => {
+    await firstLogin(page, E2E_SA);
+    const stamp = uniqueStamp();
+    const created = await post(page, '/api/v1/software', {
+      code: `LIC-E2E-EXPAM-${stamp}`,
+      name: 'License chi phí âm',
+      kind: 'license',
+      endDate: inDays(5),
+    });
+    const id = String(created.body.id);
+
+    const bad = await post(page, '/api/v1/expiry/renew', {
+      kind: 'license',
+      id,
+      endDate: inDays(400),
+      contract: `HD-E2E-AM-${stamp}`,
+      cost: -1,
+    });
+    expect(bad.status).toBe(400);
+    expect(sql(`SELECT count(*) FROM renewal_history WHERE object_id = '${id}'`)).toBe('0');
+    expect(sql(`SELECT end_date::text FROM software WHERE id = '${id}'`)).toBe(inDays(5));
   });
 
   test('bảo hành thiết bị không gia hạn được từ màn Expiry', async ({ page }) => {

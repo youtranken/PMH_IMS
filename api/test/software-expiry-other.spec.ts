@@ -48,7 +48,12 @@ describe('Nguồn hạn phần mềm · loại "Khác"', () => {
   }, TEST_TIMEOUT);
 
   it('đăng ký nguồn "other" với nhãn "Khác", gia hạn được', () => {
-    expect(registry.list()).toContainEqual({ kind: 'other', label: 'Khác', canRenew: true });
+    expect(registry.list()).toContainEqual({
+      kind: 'other',
+      label: 'Khác',
+      canRenew: true,
+      canRenewTerms: true,
+    });
   });
 
   it('nguồn "other" trả đúng hồ sơ Khác còn sống trong cửa sổ, không lẫn loại khác', async () => {

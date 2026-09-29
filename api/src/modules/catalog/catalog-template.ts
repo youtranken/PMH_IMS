@@ -204,7 +204,7 @@ const GUIDE_ROWS: TemplateRow[] = [
     values: [
       'Import lại lần nữa',
       '',
-      'Trùng mã = CẬP NHẬT mục đó, không tạo bản sao. Mục đang có thiết bị dùng thì không xóa được, chỉ vô hiệu hóa.',
+      'Trùng mã = CẬP NHẬT mục đó, không tạo bản sao. Mục đang có thiết bị dùng thì không xóa được, chỉ ngừng dùng.',
     ],
   },
 ];

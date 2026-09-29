@@ -113,7 +113,7 @@ class TransitionDto {
   @IsOptional() @IsString() @Length(0, 2000) note?: string;
 }
 
-/** Ẩn bản ghi nhập nhầm — LUÔN phải có lý do (quyết định 2026-08-23). */
+/** Xóa hồ sơ IP nhập nhầm — LUÔN phải có lý do, vì vết duy nhất còn lại nằm trong nhật ký. */
 class VoidDto {
   @IsString() @Length(3, 500) reason!: string;
 }
@@ -529,8 +529,8 @@ export class IpamController {
   }
 
   /**
-   * Ẩn hồ sơ NHẬP NHẦM. IP hết dùng thì đi đường vòng đời (thu hồi, story 5.2) — ẩn một IP
-   * đang dùng là làm mất luôn lịch sử mà AC 5.2 đòi giữ vĩnh viễn.
+   * Xóa hồ sơ NHẬP NHẦM để nhập lại (Q-15). IP hết dùng thì đi đường vòng đời (thu hồi) —
+   * xóa một IP đang dùng là làm mất khỏi màn lịch sử mà AC 5.2 đòi giữ.
    */
   @Roles('sa', 'admin')
   @Delete('addresses/:id')
@@ -545,12 +545,11 @@ export class IpamController {
   }
 
   /**
-   * BẬT LẠI hồ sơ đã ẩn — cửa đối ứng của `DELETE`.
-   *
-   * Thiếu nó thì ẩn là đường MỘT CHIỀU: `SubnetService.restore()` bật lại được cả một dải,
-   * còn một hồ sơ IP lẻ bấm nhầm thì không có đường quay lại. Cùng quyền với ẩn (`sa`/`admin`).
+   * KHÔI PHỤC hồ sơ đã xóa — chỉ SA, không có nút trên giao diện (Q-15: xóa là để nhập lại).
+   * Hẹp hơn quyền Xóa để việc đảo ngược một lượt xóa luôn qua người giữ quyền cao nhất và
+   * để vết `ip.restored` trong nhật ký.
    */
-  @Roles('sa', 'admin')
+  @Roles('sa')
   @Post('addresses/:id/restore')
   @Audited('ip.restored', 'ip_address', { writtenByService: true })
   restoreAddress(@Param() params: IdParamDto, @Req() req: AuthedRequest) {

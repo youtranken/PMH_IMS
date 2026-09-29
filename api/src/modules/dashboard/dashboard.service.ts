@@ -119,6 +119,8 @@ export interface Dashboard {
     link: string | null;
     /** Module expiry quyết loại nào gia hạn được (bảo hành thì không) — trang chủ không đoán. */
     canRenew: boolean;
+    /** Nguồn có sổ gia hạn: hộp Gia hạn hiện ô hợp đồng + chi phí (Q-15). */
+    canRenewTerms: boolean;
   }> & { overdueTotal: number };
   incidents: DashboardBlock<never>;
   breakGlass: DashboardBlock<BreakGlassEntry>;
@@ -226,6 +228,7 @@ export class DashboardService {
             daysLeft: row.daysLeft,
             link: row.link ?? null,
             canRenew: row.canRenew,
+            canRenewTerms: row.canRenewTerms,
           }),
         ),
       };

@@ -53,7 +53,7 @@ export interface IpRow {
   note: string | null;
   createdAt: string;
   updatedAt: string;
-  /** Hồ sơ đã ẨN hay chưa — `null` là đang hiển thị. Chỉ về khi màn xin `?includeVoided=true`. */
+  /** Hồ sơ đã tắt hay chưa — `null` là đang dùng. Màn dải chỉ nhận hồ sơ tắt CÙNG dải đã ngừng dùng. */
   voidedAt: string | null;
   voidedBy: string | null;
   voidReason: string | null;

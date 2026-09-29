@@ -174,8 +174,9 @@ describe('actionLabel — tên việc bằng tiếng Việt', () => {
     ['ip.created', 'Tạo hồ sơ'],
     ['ip.updated', 'Sửa hồ sơ'],
     ['ip.assigned', 'Gán chủ'],
-    ['ip.voided', 'Ẩn bản ghi nhập nhầm'],
-    ['ip.restored', 'Bật lại'],
+    ['ip.voided', 'Xóa hồ sơ IP nhập nhầm'],
+    ['ip.subnet_voided', 'Ngừng dùng theo dải'],
+    ['ip.restored', 'Dùng lại'],
     ['ip.status_merged', 'Gộp trạng thái'],
   ])('%s → %s', (action, expected) => {
     expect(actionLabel(action, t)).toBe(expected);
@@ -196,7 +197,34 @@ describe('actionLabel — tên việc bằng tiếng Việt', () => {
     const [entry] = toIpHistoryEntries([
       row({ action: 'ip.restored', fromStatus: 'assigned', toStatus: 'assigned' }),
     ], t);
-    expect(entry.action).toBe('Bật lại');
+    expect(entry.action).toBe('Dùng lại');
+  });
+
+  /*
+   * Dòng tắt-theo-dải ghi TRƯỚC khi có mã `ip.subnet_voided` mang mã `ip.voided` (kèm cả
+   * `fromStatus` lẫn `toStatus`). `ip_history` chỉ-thêm (AD-13) nên không sửa dữ liệu cũ được —
+   * đọc nó là "Xóa hồ sơ nhập nhầm" là nói sai về một hồ sơ vẫn sống lại khi dùng lại dải.
+   */
+  it('dòng cũ tắt theo dải đọc là Ngừng dùng theo dải, không phải Xóa', () => {
+    const [legacy, deleted] = toIpHistoryEntries(
+      [
+        row({
+          action: 'ip.voided',
+          fromStatus: 'assigned',
+          toStatus: 'assigned',
+          changes: { reason: 'ẩn theo dải: khai nhầm' },
+        }),
+        row({
+          action: 'ip.voided',
+          fromStatus: 'assigned',
+          toStatus: null,
+          changes: { reason: 'gõ nhầm chủ' },
+        }),
+      ],
+      t,
+    );
+    expect(legacy.action).toBe('Ngừng dùng theo dải');
+    expect(deleted.action).toBe('Xóa hồ sơ IP nhập nhầm');
   });
 });
 

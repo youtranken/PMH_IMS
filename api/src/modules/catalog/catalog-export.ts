@@ -6,7 +6,7 @@ type Row = CatalogRecord & Record<string, unknown>;
 const text = (value: unknown): string =>
   typeof value === 'string' ? value : typeof value === 'number' ? String(value) : '';
 const yesNo = (value: unknown): string => (value ? 'Có' : 'Không');
-const status = (row: Row): string => (row.active ? 'Đang dùng' : 'Đã vô hiệu hóa');
+const status = (row: Row): string => (row.active ? 'Đang dùng' : 'Đã ngừng dùng');
 
 /**
  * Cột của file "Xuất Excel" theo TỪNG danh mục — đúng bộ cột của bảng trên màn, để tờ in dán
