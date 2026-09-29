@@ -171,12 +171,23 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
   **"Duyệt mở két"** (người duyệt). Bỏ các tên "Break-glass", "Duyệt yêu cầu", "Xin quyền xem tạm
   thời", "Đập tủ kính" khỏi chữ người dùng đọc (mã, bảng, route giữ nguyên). Chữ "secret" trên giao
   diện, nhật ký và Excel đổi theo tên đang dùng ở màn két cho đồng bộ.
-- **Quyền mở két gắn với PHIÊN đăng nhập đã xin:** đăng xuất, hết phiên (idle/tuyệt đối) hay bị
-  đóng phiên thì quyền đang có cũng hết — đăng nhập lại phải xin lại. Người xin có thể tự "Trả
-  quyền" sớm. Lý do: quyền xem mật khẩu không được sống lâu hơn người đang ngồi trước máy.
-  Hệ quả: yêu cầu **đang chờ** mà phiên người xin đã kết thúc thì được duyệt cũng vô dụng, nên
-  lượt quét (mỗi phút) tự **rút** nó như khi người xin tự rút, ghi lịch sử + nhật ký "Phiên đăng
-  nhập của người xin đã kết thúc"; người duyệt bấm Duyệt phiếu đã rút nhận thông báo rõ ràng.
+- **Quyền mở két gắn với PHIÊN đang dùng nó** (sửa lại 29/09/2026, chủ dự án chốt): yêu cầu
+  **đang chờ** KHÔNG gắn phiên — người xin đăng xuất/hết phiên thì yêu cầu vẫn chờ, người duyệt
+  vẫn duyệt được (trước đây lượt quét tự rút nó sau 30 phút ngồi chờ, mâu thuẫn với thư nhắc người
+  duyệt sau `approval.reminder_hours` giờ). Khi được duyệt, người xin **nhận quyền** trong một
+  phiên đang sống (bấm "Nhận quyền" + mã 6 số) — từ lúc đó quyền gắn với phiên ấy: đăng xuất, hết
+  phiên hay bị đóng phiên thì quyền hết, không chuyển sang phiên khác, muốn xem tiếp phải xin
+  lại. Giờ được cấp tính từ lúc duyệt. Người xin tự "Trả quyền" sớm được. Lý do: quyền xem mật
+  khẩu không sống lâu hơn người đang ngồi trước máy, nhưng việc CHỜ duyệt không bắt người xin
+  ngồi canh trang.
+- **Vô hiệu hóa tài khoản** tự rút mọi yêu cầu mở két đang chờ của người đó (cùng transaction,
+  ghi nhật ký). Quyền két theo nhóm giữ nguyên để bật lại là như cũ.
+- **Hồ sơ IP nhập nhầm:** nút là **"Xóa"** — xóa để nhập lại (không khôi phục trên giao diện; vết
+  vẫn nằm trong nhật ký hệ thống).
+- **Danh mục** dùng **"Ngừng dùng / Dùng lại"** như dải IP, tài khoản dịch vụ, luật NAT. Tài
+  khoản người dùng IMS giữ "Vô hiệu hóa / Bật lại".
+- **Gia hạn từ màn Sắp hết hạn** cũng ghi được số hợp đồng và chi phí vào sổ gia hạn. Không có
+  nút Hoàn tác (sai ngày thì Sửa hồ sơ). Màn Sắp hết hạn không cần mốc "Tháng sau / Quý sau".
 - **Lưu giá trị mới vào két:** không bắt tick "Tôi đã đổi trên thiết bị" — chỉ cảnh báo.
 - **Thuật ngữ:** **"Ngừng dùng / Dùng lại"** cho dải IP, tài khoản dịch vụ, luật NAT; NAT dùng
   **"luật NAT"**, **"cổng ngoài"**, **"cổng trong"** thay cho rule/port. Mục menu Hệ thống
