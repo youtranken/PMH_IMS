@@ -73,12 +73,12 @@ export class SessionGuard implements CanActivate {
     }
 
     /*
-     * ĐANG BỊ BẮT ĐỔI MẬT KHẨU thì chỉ đi được bốn cửa (rà soát 10/09).
+     * ĐANG BỊ BẮT ĐỔI MẬT KHẨU thì chỉ đi được bốn cửa.
      *
-     * `must_change_password` mặc định `true` cho mọi tài khoản mới và mọi lần SA reset. Tới
-     * 10/09 nó chỉ được ĐỌC và trả về client — không guard nào chặn. Ràng buộc duy nhất nằm ở
-     * `nextStepPath()` bên web, tức mật khẩu tạm (đi qua email, hoặc đọc qua điện thoại, và
-     * nằm nguyên trong response của `POST /accounts`) dùng được vô thời hạn nếu gọi API thẳng.
+     * `must_change_password` mặc định `true` cho mọi tài khoản mới và mọi lần SA reset. Không
+     * có khối này thì ràng buộc duy nhất nằm ở `nextStepPath()` bên web, tức mật khẩu tạm (đi
+     * qua email, hoặc đọc qua điện thoại, và nằm nguyên trong response của `POST /accounts`)
+     * dùng được vô thời hạn nếu gọi API thẳng.
      *
      * Đặt SAU `status !== 'active'` và SAU khối `totpPending`: thứ tự này là thứ tự của luồng
      * đăng nhập, nên câu lỗi người dùng nhận luôn là bước còn thiếu GẦN NHẤT, không phải bước

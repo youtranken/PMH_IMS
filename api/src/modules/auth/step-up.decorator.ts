@@ -5,7 +5,7 @@ import { SetMetadata } from '@nestjs/common';
  *
  * ===== VÌ SAO TÁCH =====
  *
- * Từ 10/09 `StepUpGuard` là guard TOÀN CỤC và MẶC ĐỊNH ĐÓNG: mọi route phải khai lập trường
+ * `StepUpGuard` là guard TOÀN CỤC và MẶC ĐỊNH ĐÓNG: mọi route phải khai lập trường
  * (`@RequiresStepUp()` hoặc `@NoStepUp()`), không khai thì 403. Nghĩa là mười tám controller
  * của mọi module đều phải import một decorator nằm trong module `auth` — đúng tình huống mà
  * `@Roles` đã có từ đầu.
@@ -15,12 +15,10 @@ import { SetMetadata } from '@nestjs/common';
  * này là vế tương ứng cho step-up: metadata thuần, không phụ thuộc gì, mở cho mọi module;
  * guard giữ nguyên bên trong `auth`.
  *
- * ===== VÀ VÌ SAO ĐIỀU NÀY KHÔNG MÂU THUẪN VỚI QUYẾT ĐỊNH 09/09 =====
+ * ===== VÌ SAO FILE NÀY LÀ NGOẠI LỆ AD-2 MÀ GUARD THÌ KHÔNG =====
  *
- * Hôm 09/09 `auth/step-up.guard` bị GỠ khỏi `INFRA_PRIMITIVES` với lý do đúng ở thời điểm đó:
- * "chỉ `vault` dùng — mở cho cả mười một module để đúng một module đi qua là sai HÌNH DẠNG".
- * Tiền đề ấy đã đổi. Với mặc-định-đóng, lập trường step-up là thứ MỌI route phải trả lời, nên
- * nó thật sự cắt ngang toàn hệ — cùng lý do khiến `@Roles` là ngoại lệ chính đáng.
+ * Với mặc-định-đóng, lập trường step-up là thứ MỌI route phải trả lời, nên nó thật sự cắt
+ * ngang toàn hệ — cùng lý do khiến `@Roles` là ngoại lệ chính đáng.
  *
  * Cái KHÔNG đổi: `step-up.guard` vẫn nằm ngoài danh sách. Module nào import guard chứ không
  * phải decorator thì lint vẫn đỏ, và đó vẫn là lúc cần một cuộc trò chuyện.
@@ -31,7 +29,7 @@ export const REQUIRES_STEP_UP_KEY = 'ims:requires-step-up';
  * FR-022: route này đòi đã gõ TOTP trong `secret.stepup_grace_minutes` phút gần nhất.
  *
  * Vì sao là decorator + guard chứ không phải một câu `if` trong service: cửa mở két nhiều dần
- * (xem secret 4.2, break-glass Epic 6, xuất khóa khi bàn giao). Mỗi chỗ tự viết `if` là mỗi
+ * (xem secret, break-glass, xuất khóa khi bàn giao). Mỗi chỗ tự viết `if` là mỗi
  * chỗ có thể quên, hoặc quên khác kiểu — và cái quên đó không làm test nào đỏ.
  */
 export const RequiresStepUp = () => SetMetadata(REQUIRES_STEP_UP_KEY, true);

@@ -3,9 +3,8 @@ import { PASSWORD_MIN_LENGTH, checkPasswordStrength } from './password-policy';
 /**
  * Luật mật khẩu (NFR-01) — hàm thuần, đúng loại phải test bằng bảng dữ liệu theo CLAUDE.md.
  *
- * Trước 28/08 hàm này KHÔNG có unit test nào; phủ sóng duy nhất là một e2e chốt chung chung
- * "mật khẩu yếu bị từ chối" — không phân biệt được từ chối vì ĐỘ DÀI hay vì SỐ NHÓM KÝ TỰ,
- * nên đổi ngưỡng nào cũng không làm đỏ. Bảng dưới đây chốt từng BIÊN một.
+ * Một e2e chốt chung chung "mật khẩu yếu bị từ chối" không phân biệt được từ chối vì ĐỘ DÀI
+ * hay vì SỐ NHÓM KÝ TỰ, nên đổi ngưỡng nào cũng không làm đỏ. Bảng dưới đây chốt từng BIÊN một.
  */
 describe('checkPasswordStrength', () => {
   describe('biên độ dài', () => {

@@ -5,12 +5,11 @@ export const ALLOW_PASSWORD_PENDING_KEY = 'ims:allow-password-pending';
 /**
  * Route này chạy được kể cả khi tài khoản đang bị bắt ĐỔI MẬT KHẨU.
  *
- * ===== LỖ ĐANG ĐÓNG (rà soát 10/09) =====
+ * ===== LỖ MÀ CỜ NÀY ĐÓNG =====
  *
  * `users.must_change_password` mặc định `true` cho mọi tài khoản mới và mọi lần SA reset mật
- * khẩu. Chú thích ở `accounts.service.ts` viết "buộc đổi mật khẩu và enroll TOTP ở lần đăng
- * nhập đầu". Nhưng grep cả `api/src`: cờ đó chỉ được ĐỌC và TRẢ VỀ CLIENT — không guard nào
- * chặn, không route nào từ chối. Ràng buộc duy nhất nằm ở `nextStepPath()` bên web.
+ * khẩu. Nếu chỉ `nextStepPath()` bên web đọc cờ đó thì không guard nào chặn, không route nào
+ * từ chối.
  *
  * Nghĩa là mật khẩu tạm — thứ đã đi qua email hoặc đọc qua điện thoại, và nằm nguyên trong
  * response của `POST /accounts` — dùng được VÔ THỜI HẠN nếu gọi API thẳng. Người dùng chỉ cần

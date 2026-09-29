@@ -52,13 +52,12 @@ describe('StepUpGuard — FR-022', () => {
   });
 
   /*
-   * ===== MẶC ĐỊNH ĐÓNG (rà soát 10/09) =====
+   * ===== MẶC ĐỊNH ĐÓNG =====
    *
-   * `@RequiresStepUp()` là opt-in, và tới 10/09 nó xuất hiện đúng 5 lần trong cả repo — tất cả
-   * ở `vault.controller.ts`. Nghĩa là MỌI route nhạy cảm viết sau này bắt đầu ở trạng thái
-   * không được bảo vệ, và chỉ được bảo vệ nếu có người nhớ ra.
+   * Nếu `@RequiresStepUp()` chỉ là opt-in thì MỌI route nhạy cảm viết sau này bắt đầu ở trạng
+   * thái không được bảo vệ, và chỉ được bảo vệ nếu có người nhớ ra.
    *
-   * Cái quên đó đã có hậu quả đo được: toàn bộ `/api/v1/accounts/*` không có step-up, nên một
+   * Cái quên đó có hậu quả đo được: khi `/api/v1/accounts/*` không có step-up, một
    * phiên SA bị chiếm (cookie trộm, máy bỏ ngỏ, chưa từng gõ mã) đi được trọn đường:
    * `POST /accounts` trả thẳng `temporaryPassword` trong response → đăng nhập bằng tài khoản
    * mới → `POST /auth/totp/enroll` trả secret base32 → tự sinh mã → step-up → mở két. Yếu tố
@@ -126,7 +125,7 @@ describe('StepUpGuard — FR-022', () => {
   /**
    * Mã phải là SESSION_MISSING chứ KHÔNG phải STEPUP_REQUIRED: client coi STEPUP_REQUIRED là
    * "phiên còn sống, chỉ cần gõ mã" và mở hộp nhập mã. Không có phiên thì gõ mã nào cũng vô
-   * nghĩa — người dùng kẹt trong hộp thoại không thoát được (code review Epic 4).
+   * nghĩa — người dùng kẹt trong hộp thoại không thoát được.
    */
   it('không có phiên trả SESSION_MISSING, để UI đưa về màn đăng nhập', async () => {
     await guardWith(true)
