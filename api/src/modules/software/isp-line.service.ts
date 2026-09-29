@@ -25,6 +25,7 @@ import { AuditWriterService } from '../audit/audit-writer.service';
 import { CATALOG_REF_INACTIVE, CatalogApiService, inactiveRefMessage } from '../catalog/catalog.api';
 import { DevicesApiService } from '../devices/devices.api';
 import { ispLineHistoryTable, ispLineTable } from './software.schema';
+import { wanIpOf } from './wan-ip';
 
 export const ISP_STATUSES = ['active', 'suspended', 'terminated'] as const;
 export type IspStatus = (typeof ISP_STATUSES)[number];
@@ -348,7 +349,7 @@ export class IspLineService {
 
     put('code', input.code === undefined ? undefined : requireText(input.code, 'mã đường truyền'));
     put('bandwidth', text(input.bandwidth));
-    put('wanIp', text(input.wanIp));
+    put('wanIp', input.wanIp === undefined ? undefined : requireWanIp(input.wanIp ?? ''));
     put('siteId', input.siteId === undefined ? undefined : (input.siteId || null));
     put('deviceId', input.deviceId === undefined ? undefined : (input.deviceId || null));
     put('hotline', text(input.hotline));
@@ -520,6 +521,17 @@ function toRecord(row: typeof ispLineTable.$inferSelect): IspLineRecord {
   const { endDate: _retired, ...rest } = row;
   void _retired;
   return { ...rest, status: row.status as IspStatus };
+}
+
+function requireWanIp(raw: string): string | null {
+  const wan = wanIpOf(raw);
+  if (!wan.valid) {
+    throw new BadRequestException({
+      code: 'WAN_IP_INVALID',
+      message: 'IP WAN phải là một IPv4 (vd 113.161.10.20) hoặc một khối IP (vd 113.161.10.16/29).',
+    });
+  }
+  return wan.value;
 }
 
 function text(value: string | null | undefined): string | null | undefined {

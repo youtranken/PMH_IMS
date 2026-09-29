@@ -775,11 +775,25 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - `DevicePortsService` ghi lịch sử mà không kiểm hàng có bị sửa hay xoá thật không.
   - **Rà 29/09:** còn nguyên. Tên `@Audited` của catalog lệch có chủ ý (chú thích
     `catalog.controller.ts:102-106`) — cần chốt giữ hay đổi.
-- [ ] **OLD-DB-04 · Dọn và chuẩn hoá DB:**
+- [x] **OLD-DB-04 · Dọn và chuẩn hoá DB:**
   - Bỏ index `audit_log_actor_trgm` (11 MB, 0 lượt quét).
   - `isp_line.wan_ip` đang là `text`.
   - `device_port.vlan` là `text` trong khi `subnet.vlan` là `integer`.
   - **Rà 29/09:** còn nguyên cả ba ý.
+  - **Đã sửa:**
+    - Index `audit_log_actor_trgm`: **không bỏ**. Bộ lọc `?actor=` của màn Nhật ký vẫn lọc
+      `actor ILIKE '%x%'` (`audit-query.service.ts`), và `api/test/audit-index.spec.ts` khẳng định
+      bằng `EXPLAIN` là câu đó đi qua index này. "0 lượt quét" là số đo trên DB dev nhỏ, nơi planner
+      chọn seq scan vì rẻ hơn.
+    - `isp_line.wan_ip` thành `inet` (0300): kiểm dữ liệu trước, có dòng không phải IP thì dừng và
+      liệt kê mã đường truyền + giá trị; dựng lại `search_norm` bằng `abbrev(wan_ip)`. API kiểm
+      bằng `wanIpOf` (400 `WAN_IP_INVALID`), bỏ `/32` cho khớp cách Postgres in.
+    - `device_port.vlan` giữ `text` theo Q-16 (trống | `trunk` | số 1–4094): 0301 chuẩn hoá
+      khoảng trắng/hoa-thường, dòng không đọc được thì dừng và liệt kê thiết bị + cổng, rồi thêm
+      CHECK `device_port_vlan_check`. API kiểm bằng `portVlanOf` (400 `PORT_VLAN_INVALID`).
+    - Kiểm: `api/test/wan-ip-port-vlan-types.spec.ts` (DB trắng, DB có dữ liệu hợp lệ, DB có dữ
+      liệu sai), unit `wan-ip.spec.ts`, `port-vlan.spec.ts`; DB test isp*, search-norm, sort-index,
+      device-port*, audit-index, migrations xanh.
 - [ ] **OLD-SEC-01 · Probe không gửi thư lần hai** khi kẻ dò vượt ≥3× ngưỡng trong thời gian nghỉ.
   - **Rà 29/09:** còn nguyên.
 - [ ] **OLD-QA-04 · Thêm luật lint chặn chuỗi tiếng Việt cứng; đổi tên các định danh tiếng Việt
