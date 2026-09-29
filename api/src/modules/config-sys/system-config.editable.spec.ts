@@ -13,7 +13,12 @@ describe('Danh sách tham số sửa được trên màn (Q-14)', () => {
   });
 
   it('khoá kỹ thuật/bí mật KHÔNG nằm trong danh sách — không sửa được qua màn', () => {
-    for (const key of ['mail.from_address', 'app.timezone', 'session.retention_days']) {
+    for (const key of [
+      'mail.from_address',
+      'app.timezone',
+      'session.retention_days',
+      'outbox.max_relay_attempts',
+    ]) {
       expect(editableByKey(key)).toBeUndefined();
     }
   });

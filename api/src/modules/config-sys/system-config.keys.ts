@@ -125,6 +125,13 @@ export const CONFIG_KEYS = {
    */
   sessionRetentionDays: { key: 'session.retention_days', fallback: 30 },
   outboxRetentionDays: { key: 'outbox.retention_days', fallback: 30 },
+  /*
+   * Relay bỏ một thư sau ngần này lần hỏng (0282). Lease tăng gấp đôi sau mỗi lần hỏng (5, 10,
+   * 20, 40, 80 rồi giữ 160 phút) nên 14 lần ≈ 24 giờ thử lại: SMTP chết vài giờ (Google bảo
+   * trì, mất Internet) không làm thư rơi vào trạng thái bỏ. Khoá kỹ thuật, không mở trên màn
+   * Tham số — hạ nó xuống là thư bị bỏ sớm mà không ai thấy ngoài danh sách gửi lỗi.
+   */
+  outboxMaxRelayAttempts: { key: 'outbox.max_relay_attempts', fallback: 14 },
 } as const;
 
 export type ConfigName = keyof typeof CONFIG_KEYS;
