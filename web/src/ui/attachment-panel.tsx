@@ -2,11 +2,9 @@ import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api-client';
-import { errorMessage, useApiMutation } from '@/lib/api';
+import { errorMessage, useApiMutation, useMe } from '@/lib/api';
 import { downloadFile } from '@/lib/download-file';
 import { formatDateTime } from '@/lib/format';
-import { ME_KEY } from '@/lib/api';
-import type { Me } from '@/lib/me';
 import { uploadFile } from '@/lib/upload';
 import { FilePicker } from '@/ui/file-picker';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
@@ -114,14 +112,14 @@ export function AttachmentPanel({
    * XÓA đính kèm siết về SA/Admin từ 08/09 (C1) — nên nút Xóa cũng phải biến mất với Member,
    * không phải bày ra để bấm rồi nhận 403.
    *
-   * Đọc `me` thẳng từ cache dùng chung (`ME_KEY`) chứ không thêm prop: bảy chỗ gọi panel này
-   * đều đang dùng `canEdit` với nghĩa "chưa thanh lý / không đang bận", thêm một prop nữa là
-   * bảy lần phải nhớ truyền, và quên một chỗ thì lỗi quay lại y như cũ. `me` luôn có sẵn
-   * trong cache vì shell nạp nó trước khi dựng bất kỳ màn nào.
+   * Đọc `me` qua `useMe()` chứ không thêm prop: bảy chỗ gọi panel này đều đang dùng `canEdit`
+   * với nghĩa "chưa thanh lý / không đang bận", thêm một prop nữa là bảy lần phải nhớ truyền,
+   * và quên một chỗ thì lỗi quay lại y như cũ. Dùng hook (không phải `getQueryData`) để panel
+   * vẽ lại khi `me` về sau — ảnh chụp cache lúc dựng không bao giờ tự cập nhật.
    *
-   * Đây đúng luật mà `device-detail.tsx:228` tự đặt ra: "UI đừng bày nút ra để bấm rồi 403".
+   * UI đừng bày nút ra để bấm rồi 403.
    */
-  const me = queryClient.getQueryData<Me>(ME_KEY);
+  const { data: me } = useMe();
   const canDelete = canEdit && (me?.role === 'sa' || me?.role === 'admin');
   /** Tiến độ lô đang tải: `done`/`total`. `null` = không tải gì. */
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);

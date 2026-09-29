@@ -757,7 +757,7 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - **Rà 29/09:** còn nguyên (`dialog.tsx:422`).
   - **Đã sửa:** nhánh không title bọc `children` trong `<div ref={bodyRef} style="display:contents">`
     + `DialogDepthContext.Provider`. Kiểm ở `ui/dialog.test.tsx` ("Dialog không có title").
-- [ ] **OLD-FE-06 · Còn thiếu:**
+- [x] **OLD-FE-06 · Còn thiếu:**
   - `/nat` và `/disposal` chưa phân trang.
   - `/expiry` chưa sắp theo cột ở server.
   - `attachment-panel.tsx:103` dùng `getQueryData` thay vì `useMe()`.
@@ -765,6 +765,9 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - **Rà 29/09:** xong 3/5 — `/disposal` phân trang (3edeb07), `/nat` phân trang phía client (126ba90),
     `/expiry` sắp theo cột ở server (dc08311). Còn `attachment-panel.tsx:124` (`getQueryData`) và
     interval `RevealDialog` (`reveal-dialog.tsx:143`).
+  - **Đã sửa:** `attachment-panel.tsx` đọc quyền xoá qua `useMe()` (vẽ lại khi `me` về sau);
+    `RevealDialog` giữ `onClose`/`onExpire` trong ref nên interval dựng một lần, và hết giờ chỉ
+    báo một lần. Kiểm ở `ui/attachment-panel.test.tsx`, `ui/reveal-dialog.test.tsx`.
 - [ ] **OLD-FE-07 · Câu chữ:**
   - "Break-glass" còn để tiếng Anh ở KPI.
   - "Tất cả" lẫn với "Mọi".
@@ -800,8 +803,11 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   còn lại** (9 tên tệp, khoảng 175 định danh test).
   - **Rà 29/09:** xong vế luật lint (`NO_VIETNAMESE_TEXT`, 25bf181; kiểm ở `web/src/lint-rules.test.ts`).
     Vế đổi tên còn: `quetNguon`, `timVaChoLoc`, `moTimNhanh`… ở 27 file.
-- [ ] **OLD-QA-05 · Chưa có bài kiểm cho đường `onExpire` của `RevealDialog`.**
+- [x] **OLD-QA-05 · Chưa có bài kiểm cho đường `onExpire` của `RevealDialog`.**
   - **Rà 29/09:** còn nguyên.
+  - **Đã sửa:** `ui/reveal-dialog.test.tsx` "onExpire khi hết giờ": gọi đúng một lần cùng
+    `onClose` (bài này bắt được lỗi thật — trước đó bắn 3 lần khi nơi gọi chưa tháo hộp), không
+    gọi khi bấm "Ẩn ngay". Toast `vault.autoHidden` ở `vault-panel.tsx` đi qua đúng callback này.
 
 Chưa đối chiếu: 13 mục trong `_bmad-output/implementation-artifacts/deferred-work.md`. B-16 và B-19
 cần người mở trình duyệt thật để đo.
