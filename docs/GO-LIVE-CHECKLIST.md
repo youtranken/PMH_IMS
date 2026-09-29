@@ -779,8 +779,11 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - `isp_line.wan_ip` đang là `text`.
   - `device_port.vlan` là `text` trong khi `subnet.vlan` là `integer`.
   - **Rà 29/09:** còn nguyên cả ba ý.
-- [ ] **OLD-SEC-01 · Probe không gửi thư lần hai** khi kẻ dò vượt ≥3× ngưỡng trong thời gian nghỉ.
-  - **Rà 29/09:** còn nguyên.
+- [x] **OLD-SEC-01 · Probe không gửi thư lần hai** khi kẻ dò vượt ≥3× ngưỡng trong thời gian nghỉ.
+  - **Đã sửa:** trong thời gian nghỉ, số lượt vượt `secret.probe_escalation_multiplier` (mặc định 3,
+    migration 0250, sửa được ở màn Tham số, tối thiểu 2) × ngưỡng thì đi thêm đúng MỘT lá leo thang
+    (tiêu đề "Vẫn tiếp tục: …"), kể cả khi bị bắn song song. Bài kiểm DB:
+    `api/test/security-probe-escalation.spec.ts`; thư: `api/src/modules/mail/mail-event-time.spec.ts`.
 - [ ] **OLD-QA-04 · Thêm luật lint chặn chuỗi tiếng Việt cứng; đổi tên các định danh tiếng Việt
   còn lại** (9 tên tệp, khoảng 175 định danh test).
   - **Rà 29/09:** xong vế luật lint (`NO_VIETNAMESE_TEXT`, 25bf181; kiểm ở `web/src/lint-rules.test.ts`).

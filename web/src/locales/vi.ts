@@ -2874,6 +2874,8 @@ export default {
     secretProbeWindowMinutesDesc: 'Các lần sai rải rác xa hơn khoảng này không cộng dồn.',
     secretProbeCooldownMinutesLabel: 'Nghỉ giữa hai lần cảnh báo',
     secretProbeCooldownMinutesDesc: 'Tránh gửi dồn dập mail cảnh báo khi bị dò liên tục.',
+    secretProbeEscalationMultiplierLabel: 'Hệ số cảnh báo leo thang',
+    secretProbeEscalationMultiplierDesc: 'Trong lúc nghỉ, số lần sai vượt hệ số này nhân ngưỡng cảnh báo thì gửi thêm đúng một mail leo thang.',
     breakGlassMaxGrantHoursLabel: 'Số giờ tối đa của một lần mở két',
     breakGlassMaxGrantHoursDesc: 'Người xin chọn số giờ không vượt quá mốc này.',
     approvalReminderHoursLabel: 'Nhắc duyệt sau',

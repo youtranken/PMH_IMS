@@ -55,6 +55,7 @@ const config = {
     if (name === 'secretProbeAlertThreshold') return Promise.resolve(3);
     if (name === 'secretProbeWindowMinutes') return Promise.resolve(15);
     if (name === 'secretProbeCooldownMinutes') return Promise.resolve(60);
+    if (name === 'secretProbeEscalationMultiplier') return Promise.resolve(3);
     return Promise.reject(new Error(`Khóa cấu hình lạ trong bài kiểm: ${name}`));
   },
 } as unknown as SystemConfigService;

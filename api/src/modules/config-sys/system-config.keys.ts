@@ -47,6 +47,8 @@ export const CONFIG_KEYS = {
   secretProbeAlertThreshold: { key: 'secret.probe_alert_threshold', fallback: 3 },
   secretProbeWindowMinutes: { key: 'secret.probe_window_minutes', fallback: 15 },
   secretProbeCooldownMinutes: { key: 'secret.probe_cooldown_minutes', fallback: 60 },
+  // Trong lúc nghỉ, vượt hệ số × ngưỡng thì đi thêm một lá leo thang (0250, OLD-SEC-01).
+  secretProbeEscalationMultiplier: { key: 'secret.probe_escalation_multiplier', fallback: 3 },
   breakGlassMaxGrantHours: { key: 'breakglass.max_grant_hours', fallback: 24 },
   // Cửa sổ đếm "người này đã xin N lần" trên phiếu người duyệt đọc (0098).
   breakGlassRecentWindowDays: { key: 'breakglass.recent_window_days', fallback: 30 },
