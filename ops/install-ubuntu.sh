@@ -47,6 +47,7 @@ NODE_ENV=production
 POSTGRES_USER=ims
 POSTGRES_PASSWORD=$(secret)
 POSTGRES_DB=ims
+MIGRATION_DB_PASSWORD=$(secret)
 APP_DB_PASSWORD=$(secret)
 REDIS_PASSWORD=$(secret)
 APP_BASE_URL=https://$DOMAIN
@@ -57,6 +58,12 @@ TLS_CERT_DIR=./ops/certs
 EOF
   chmod 600 .env
   ok ".env đã tạo với mật khẩu ngẫu nhiên (chmod 600)."
+fi
+# DB-03: .env của bản cài trước chưa có mật khẩu role chủ sở hữu. Thêm vào chứ không tạo lại
+# .env, vì các mật khẩu còn lại đang khớp với DB đã có.
+if ! grep -qE '^MIGRATION_DB_PASSWORD=.+' .env; then
+  echo "MIGRATION_DB_PASSWORD=$(secret)" >> .env
+  ok "Đã thêm MIGRATION_DB_PASSWORD (role chủ sở hữu ims_owner) vào .env."
 fi
 grep -q 'doi-mat-khau-nay' .env && die ".env còn mật khẩu mẫu 'doi-mat-khau-nay' — sửa trước khi tiếp tục."
 grep -q '^NODE_ENV=production' .env || warn "NODE_ENV trong .env không phải production."
@@ -96,6 +103,10 @@ ok "Cert: $(openssl x509 -noout -subject -in ops/certs/fullchain.pem | sed 's/^s
 
 # ─── 5. Dựng ───
 bold "5/7 Dựng và khởi động (vài phút lần đầu)"
+# DB-03: `migrate` đăng nhập bằng `ims_owner`. Cụm mới đã có role từ initdb; cụm cài từ bản cũ
+# thì chưa, và bảng còn thuộc superuser. Script chạy lại được nên gọi cả hai trường hợp.
+bash ops/db-owner-bootstrap.sh
+ok "Role chủ sở hữu ims_owner sở hữu database (không superuser)."
 docker compose up -d --build --wait
 docker compose ps
 ok "Stack đã lên. Migration: $(docker compose logs migrate 2>/dev/null | grep -cE 'Migration applied') file mới áp."
