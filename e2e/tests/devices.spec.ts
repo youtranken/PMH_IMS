@@ -95,7 +95,7 @@ test.describe('Kho thiết bị', () => {
     await page.getByRole('option', { name: 'PC', exact: true }).click();
     await expect(page.getByRole('row', { name: new RegExp(code) })).toHaveCount(0);
     await typeFilter.click();
-    await page.getByRole('option', { name: 'Tất cả loại' }).click();
+    await page.getByRole('option', { name: 'Mọi loại' }).click();
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
 
     // Mở chi tiết, sửa hạn bảo hành, lịch sử phải ghi lại đúng cái vừa đổi.

@@ -47,6 +47,13 @@ import { sensitivePortsOf } from './nat-sensitive';
 /** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
 const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+class DeviceIdsQueryDto {
+  /** Mã máy ngăn bởi dấu phẩy — một trang danh sách (tối đa 100 dòng) vừa trong 4000 ký tự. */
+  @IsOptional() @IsString() @Length(0, 4000) deviceIds?: string;
+}
+
 class SubnetBodyDto {
   @IsOptional() @IsString() @Length(1, 120) name?: string;
   @IsOptional() @IsString() @Length(1, 43) cidr?: string;
@@ -283,6 +290,22 @@ export class IpamController {
    * chính máy đó — hết cảnh gõ tay một địa chỉ không thuộc máy nào (thứ mà `validateNatRule`
    * đang phải chặn ở tầng sau).
    */
+  /**
+   * IP đang giữ của nhiều máy một lượt — cột IP của danh sách thiết bị (một trang, không N+1).
+   * Khai TRƯỚC `devices/:deviceId/addresses`: hai route khác số khúc nên không nuốt nhau, nhưng
+   * đặt cạnh nhau để ai thêm `devices/:x` sau này thấy ngay. Mã máy sai dạng bị bỏ lặng lẽ —
+   * cột IP là thông tin phụ, không đáng làm hỏng cả danh sách.
+   */
+  @Roles('sa', 'admin', 'member')
+  @Get('devices/addresses')
+  async heldAddresses(@Query() query: DeviceIdsQueryDto) {
+    const ids = (query.deviceIds ?? '')
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => UUID_RE.test(id));
+    return Object.fromEntries(await this.addresses.heldAddressesOf(ids));
+  }
+
   @Roles('sa', 'admin', 'member')
   @Get('devices/:deviceId/addresses')
   listForDevice(@Param('deviceId', new ParseUUIDPipe()) deviceId: string) {

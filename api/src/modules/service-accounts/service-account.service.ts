@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { and, count, desc, eq, ilike, type SQL } from 'drizzle-orm';
+import { and, count, desc, eq, ilike, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
@@ -429,6 +429,22 @@ function buildWhere(filter: ServiceAccountFilter): SQL | undefined {
   }
   if (filter.kind) parts.push(eq(serviceAccountTable.kind, filter.kind));
   if (filter.status) parts.push(eq(serviceAccountTable.status, filter.status));
+  if (filter.anyIp) {
+    /* Cùng luật `allowsAnyIp` của web: tách theo phẩy/chấm phẩy/xuống dòng (như
+       `checkAllowedIps`), không còn mục nào = trống; hoặc có đúng mục `0.0.0.0/0`. */
+    const ips = serviceAccountTable.allowedIps;
+    parts.push(eq(serviceAccountTable.kind, 'vpn'));
+    parts.push(
+      sql`(
+        ${ips} IS NULL
+        OR regexp_replace(${ips}, '[,;[:space:]]+', '', 'g') = ''
+        OR EXISTS (
+          SELECT 1 FROM unnest(regexp_split_to_array(${ips}, '[,;[:cntrl:]]+')) AS entry
+          WHERE btrim(entry) = '0.0.0.0/0'
+        )
+      )`,
+    );
+  }
   return parts.length === 0 ? undefined : and(...parts);
 }
 

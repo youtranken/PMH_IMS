@@ -112,7 +112,14 @@ export interface TransitionOptions {
 
 /** Một dòng trên màn "toàn bộ dải": hoặc là hồ sơ thật, hoặc là một ô trống. */
 export type SubnetSlot =
-  | ({ kind: 'record' } & IpAddressRecord)
+  | ({
+      kind: 'record';
+      /**
+       * Chỉ hồ sơ đang Trống: chủ của lượt THU HỒI gần nhất (mã máy, không có thì người/bộ
+       * phận). Hồ sơ đã gỡ chủ lúc thu hồi, nên "IP này vừa của ai" chỉ còn ở lịch sử.
+       */
+      previousOwner?: string | null;
+    } & IpAddressRecord)
   | { kind: 'free'; address: string };
 
 /**
@@ -174,11 +181,55 @@ export class IpAddressService {
      * Xem luật và hậu quả ở chính hàm ấy.
      */
     const byAddress = keepPreferredByAddress(records);
+    const previous = await this.previousOwnersOf(
+      [...byAddress.values()]
+        .filter((record) => record.status === 'free' && !record.voidedAt)
+        .map((record) => record.id),
+    );
 
     return enumerateHosts(frame.cidr).map<SubnetSlot>((address) => {
       const record = byAddress.get(address);
-      return record ? { kind: 'record', ...record } : { kind: 'free', address };
+      if (!record) return { kind: 'free', address };
+      const owner = previous.get(record.id);
+      return owner
+        ? { kind: 'record', ...record, previousOwner: owner }
+        : { kind: 'record', ...record };
     });
+  }
+
+  /**
+   * Chủ của lượt thu hồi GẦN NHẤT cho từng hồ sơ — một câu `DISTINCT ON` cho cả dải, và một
+   * lượt `devices.api` cho mọi mã máy (AD-2, không join bảng `device`).
+   */
+  private async previousOwnersOf(ids: string[]): Promise<Map<string, string>> {
+    const result = new Map<string, string>();
+    if (ids.length === 0) return result;
+    const rows = await this.db
+      .selectDistinctOn([ipHistoryTable.ipAddressId], {
+        id: ipHistoryTable.ipAddressId,
+        deviceId: sql<string | null>`${ipHistoryTable.changes}->>'previousDeviceId'`,
+        usedBy: sql<string | null>`${ipHistoryTable.changes}->>'previousUsedBy'`,
+      })
+      .from(ipHistoryTable)
+      .where(
+        and(
+          inArray(ipHistoryTable.ipAddressId, ids),
+          eq(ipHistoryTable.toStatus, 'free'),
+          or(
+            sql`${ipHistoryTable.changes}->>'previousDeviceId' IS NOT NULL`,
+            sql`${ipHistoryTable.changes}->>'previousUsedBy' IS NOT NULL`,
+          ),
+        ),
+      )
+      .orderBy(ipHistoryTable.ipAddressId, desc(ipHistoryTable.createdAt));
+    const deviceIds = [...new Set(rows.map((row) => row.deviceId).filter(Boolean))] as string[];
+    const devices = await this.devices.getByIds(deviceIds);
+    for (const row of rows) {
+      const code = row.deviceId ? devices.get(row.deviceId)?.code : null;
+      const owner = code ?? row.usedBy;
+      if (owner) result.set(row.id, owner);
+    }
+    return result;
   }
 
   /** Chỉ những IP CÓ hồ sơ, sắp theo thứ tự số học (nhờ kiểu `inet` của Postgres). */
@@ -257,6 +308,34 @@ export class IpAddressService {
         ),
       );
     return rows.map((row) => row.deviceId).filter((value): value is string => value !== null);
+  }
+
+  /**
+   * Địa chỉ đang GIỮ của nhiều máy một lượt — cột IP của danh sách thiết bị hỏi cho cả trang
+   * (không N+1). Cùng luật "đang giữ" với `listForDeviceWithin`: hồ sơ ẩn hay đã trả về pool
+   * không còn là IP của máy đó. Sắp theo kiểu `inet` nên ".3" đứng trước ".20".
+   */
+  async heldAddressesOf(deviceIds: string[]): Promise<Map<string, string[]>> {
+    const result = new Map<string, string[]>();
+    if (deviceIds.length === 0) return result;
+    const rows = await this.db
+      .select({ deviceId: ipAddressTable.deviceId, address: ipAddressTable.address })
+      .from(ipAddressTable)
+      .where(
+        and(
+          inArray(ipAddressTable.deviceId, deviceIds),
+          isNull(ipAddressTable.voidedAt),
+          inArray(ipAddressTable.status, OCCUPYING_STATUSES),
+        ),
+      )
+      .orderBy(asc(ipAddressTable.address));
+    for (const row of rows) {
+      if (!row.deviceId) continue;
+      const list = result.get(row.deviceId) ?? [];
+      list.push(hostOf(row.address));
+      result.set(row.deviceId, list);
+    }
+    return result;
   }
 
   /** IP của một thiết bị — panel IP trên trang thiết bị (story 5.4) hỏi cái này. */

@@ -9,6 +9,9 @@
   --canvas: #f7f6f2;
   --surface: #ffffff;
   --surface-2: #f2f1ea;
+  /* Nền dòng chẵn của bảng. Tách khỏi --surface-2 để nền tối được tăng độ lệch riêng mà không
+     làm sáng mọi khối đang dùng --surface-2. */
+  --row-alt: #f2f1ea;
   --ink: #1f231c;
   --ink-2: #5a615a;
   /* Đậm để chữ phụ nhỏ đạt AA (≥4.5:1) trên nền trắng/tint — verify axe live 2026-08-06. */
@@ -175,6 +178,8 @@ html[data-theme='dark'] {
   --canvas: #0f140f;
   --surface: #161d16;
   --surface-2: #1d261d;
+  /* Sọc dòng trên nền tối: --surface-2 chỉ lệch mặt thẻ vài đơn vị, mắt không dò được hàng. */
+  --row-alt: #232f24;
   --ink: #e9ede7;
   --ink-2: #a7b0a5;
   /* Sáng để chữ phụ nhỏ đạt AA (≥4.5:1) trên nền tối/tint — verify axe live 2026-08-06. */

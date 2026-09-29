@@ -365,6 +365,20 @@ input[list]::-webkit-calendar-picker-indicator {
   font: inherit;
   color: var(--ink);
 }
+/* Tiêu đề nhóm trong menu (vd site của tủ): chữ nhỏ mờ, không bấm được, để mắt thấy ngay
+   đây là nhãn chứ không phải một lựa chọn. */
+.fsel-group {
+  padding: var(--space-2) var(--space-4) var(--space-1);
+  color: var(--ink-3);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: default;
+}
+.fsel-group-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
 /* Dòng báo "không có lựa chọn" khi options rỗng (review D3) — không bấm được. */
 .fsel-none {
   padding: var(--space-3) var(--space-4);
@@ -378,15 +392,6 @@ input[list]::-webkit-calendar-picker-indicator {
   padding: var(--space-3) var(--space-4);
   color: var(--danger);
   font-size: var(--fs-sm);
-  cursor: default;
-}
-/* Tiêu đề nhóm trong menu (`SelectOption.group`) — chữ nhỏ mờ, không bấm được. */
-.fsel-group {
-  display: block;
-  padding: var(--space-3) var(--space-4) var(--space-1);
-  color: var(--ink-3);
-  font-size: var(--fs-xs);
-  font-weight: 600;
   cursor: default;
 }
 .fsel-option:hover,
@@ -572,6 +577,10 @@ input.switch:focus-visible {
 .combo.open .combo-caret {
   transform: translateY(-50%) rotate(180deg);
   color: var(--primary);
+}
+/* Biểu tượng danh sách không có chiều "lên/xuống" — lật nó là vẽ ngược ba gạch. */
+.combo.open .combo-caret[data-caret='suggest'] {
+  transform: translateY(-50%);
 }
 .combo-menu {
   /* Vị trí do Floating UI (useAnchoredMenu) set inline; đây chỉ giữ z-index + hình. */

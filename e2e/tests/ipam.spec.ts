@@ -109,9 +109,16 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await dialog.getByRole('button', { name: 'Cấp IP', exact: true }).click();
     await expect(dialog.getByText('Chọn thiết bị hoặc nhập người/bộ phận dùng IP này.')).toBeVisible();
     await dialog.getByRole('combobox', { name: 'Người / bộ phận dùng' }).fill('Phòng IT E2E');
-    await dialog.getByRole('button', { name: 'Cấp IP', exact: true }).click();
-    await expect(dialog).toHaveCount(0);
-    await expect(page.getByText(`Đã cấp 172.18.${octet}.2.`)).toBeVisible();
+
+    // NET-007: lối "kế tiếp" cho đổi sang chỗ trống khác ngay trong hộp (gateway không có).
+    await dialog.getByRole('button', { name: 'Địa chỉ' }).click();
+    await expect(page.getByRole('option', { name: `172.18.${octet}.1` })).toHaveCount(0);
+    await page.getByRole('option', { name: `172.18.${octet}.3` }).click();
+    const moved = page.getByRole('dialog', { name: `Cấp IP — 172.18.${octet}.3` });
+    await expect(moved).toBeVisible();
+    await moved.getByRole('button', { name: 'Cấp IP', exact: true }).click();
+    await expect(moved).toHaveCount(0);
+    await expect(page.getByText(`Đã cấp 172.18.${octet}.3.`)).toBeVisible();
   });
 
   /**

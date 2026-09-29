@@ -67,7 +67,10 @@ export interface IpSearchHit extends IpRow {
 }
 
 /** Một dòng trên màn dải: hoặc hồ sơ thật, hoặc một ô còn trống (không có hàng trong DB). */
-export type SubnetSlot = ({ kind: 'record' } & IpRow) | { kind: 'free'; address: string };
+export type SubnetSlot =
+  /** `previousOwner`: chỉ hồ sơ Trống — chủ của lượt thu hồi gần nhất (API đọc từ lịch sử). */
+  | ({ kind: 'record'; previousOwner?: string | null } & IpRow)
+  | { kind: 'free'; address: string };
 
 export const STATUS_KEY: Record<IpStatus, string> = {
   free: 'ipam.statusFree',

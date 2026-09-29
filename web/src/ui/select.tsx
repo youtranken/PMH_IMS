@@ -17,11 +17,27 @@ export interface SelectOption {
   /** Chữ để ô lọc so khớp khi `label` không phải chuỗi thuần. */
   searchText?: string;
   /**
-   * Tên nhóm — menu kẻ một dòng tiêu đề mỗi khi nhóm đổi, nên nơi gọi phải XẾP option theo
-   * nhóm trước. Danh sách vài chục mã (Nhật ký hệ thống) mà không chia nhóm thì mắt phải dò
-   * từng dòng mới tìm ra "mọi việc về két".
+   * Tên nhóm (vd mã site của tủ). Các mục liền nhau cùng nhóm được vẽ dưới một tiêu đề, nên
+   * `label` chỉ cần phần phân biệt trong nhóm. Nơi gọi tự sắp theo nhóm; mục không có nhóm
+   * đứng riêng (vd "Tất cả tủ").
    */
   group?: string;
+}
+
+interface GroupRun {
+  group: string | undefined;
+  items: { option: SelectOption; index: number }[];
+}
+
+/** Cắt mảng phẳng thành các đoạn liền nhau cùng `group`, giữ chỉ mục gốc cho ↑/↓. */
+export function groupRuns(options: SelectOption[]): GroupRun[] {
+  const runs: GroupRun[] = [];
+  options.forEach((option, index) => {
+    const last = runs[runs.length - 1];
+    if (last && last.group === option.group) last.items.push({ option, index });
+    else runs.push({ group: option.group, items: [{ option, index }] });
+  });
+  return runs;
 }
 
 /** Quá ngần này lựa chọn thì menu tự có ô gõ để lọc — dò bằng mắt bắt đầu chậm từ đây. */
@@ -252,29 +268,38 @@ export function Select({
           (hoặc ô lọc). Menu portal vào điểm neo của `dialog.tsx` — con CUỐI của `RD.Content`,
           sau cả `.sheet-footer` — nên option nhận Tab thì tiêu điểm rơi xuống SAU nút Lưu.
       */}
-      {shown.map((o, i) => (
-        <li key={o.value} role="presentation">
-          {/* Tiêu đề nhóm nằm TRONG `<li>` của option đầu nhóm và ẩn với trình đọc màn hình:
-              `listbox` chỉ được chứa option, còn tên nhóm đã có trong nhãn từng mục. */}
-          {o.group && o.group !== shown[i - 1]?.group ? (
-            <span className="fsel-group" aria-hidden="true">
-              {o.group}
-            </span>
-          ) : null}
-          <button
-            type="button"
-            id={optionId(i)}
-            role="option"
-            aria-selected={o.value === value}
-            tabIndex={-1}
-            className={`fsel-option${i === active ? ' active' : ''}${o.value === value ? ' sel' : ''}`}
-            onMouseEnter={() => setActive(i)}
-            onClick={() => choose(o.value)}
-          >
-            {o.label}
-          </button>
-        </li>
-      ))}
+      {groupRuns(shown).map((run) => {
+        const items = run.items.map(({ option: o, index: i }) => (
+          <li key={o.value} role="presentation">
+            <button
+              type="button"
+              id={optionId(i)}
+              role="option"
+              aria-selected={o.value === value}
+              tabIndex={-1}
+              className={`fsel-option${i === active ? ' active' : ''}${o.value === value ? ' sel' : ''}`}
+              onMouseEnter={() => setActive(i)}
+              onClick={() => choose(o.value)}
+            >
+              {o.label}
+            </button>
+          </li>
+        ));
+        if (run.group === undefined) return items;
+        const headId = `${listId}-g${run.items[0].index}`;
+        /* Tiêu đề nhóm không phải `option`: ↑/↓ chạy trên mảng phẳng `shown`, nên nó không
+           bao giờ thành dòng sáng và Enter không gán được tên nhóm vào form. */
+        return (
+          <li key={headId} role="group" aria-labelledby={headId}>
+            <div className="fsel-group" id={headId} role="presentation">
+              {run.group}
+            </div>
+            <ul role="presentation" className="fsel-group-list">
+              {items}
+            </ul>
+          </li>
+        );
+      })}
     </ul>
   );
 
