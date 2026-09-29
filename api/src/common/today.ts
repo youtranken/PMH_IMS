@@ -31,15 +31,19 @@ export function isoDateInTz(timeZone: string, now: Date = new Date()): string {
 export function dateTimeInTz(at: Date | null, timeZone: string): string {
   if (!at) return '';
   try {
-    return new Intl.DateTimeFormat('vi-VN', {
+    // Ghép từ từng phần: `vi-VN` tự in giờ TRƯỚC ngày ("18:44 29/09/2026"), còn `hour12: false`
+    // có runtime in nửa đêm là "24:05" — `hourCycle: 'h23'` thì không.
+    const parts = new Intl.DateTimeFormat('en-GB', {
       timeZone,
+      hourCycle: 'h23',
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
-      hour12: false,
-    }).format(at);
+    }).formatToParts(at);
+    const part = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+    return `${part('day')}/${part('month')}/${part('year')} ${part('hour')}:${part('minute')}`;
   } catch {
     // Múi giờ cấu hình sai lùi về ISO chứ không ném — cùng nếp với `isoDateInTz`.
     return at.toISOString().replace('T', ' ').slice(0, 16);
