@@ -1,9 +1,7 @@
 import { Queue } from 'bullmq';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { OutboxService } from '../src/modules/outbox/outbox.service';
 import { runMigrations } from '../src/database/migration-runner';
-import { createScratchDb, migrationsDir, type ScratchDb } from './db';
+import { createScratchDb, migrationsDir, testRedisConnection, type ScratchDb } from './db';
 
 /**
  * Vế còn thiếu của `outbox.spec.ts`: BullMQ THẬT trên Redis THẬT.
@@ -21,36 +19,6 @@ import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
 const TEST_TIMEOUT = 120_000;
 
-function repoEnv(): Record<string, string> {
-  const out: Record<string, string> = {};
-  let raw: string;
-  try {
-    raw = readFileSync(join(__dirname, '..', '..', '.env'), 'utf8');
-  } catch {
-    return out;
-  }
-  for (const line of raw.split(/\r?\n/)) {
-    const m = /^([A-Z0-9_]+)=(.*)$/.exec(line.trim());
-    if (m) out[m[1]] = m[2].replace(/^["']|["']$/g, '');
-  }
-  return out;
-}
-
-/** NÉM khi thiếu cấu hình, không `skip` — cùng nguyên tắc với `testDbUrl`. */
-function redisConnection() {
-  const env = { ...repoEnv(), ...process.env };
-  const password = env.REDIS_PASSWORD;
-  if (!password) {
-    throw new Error('Thiếu REDIS_PASSWORD — tầng test DB đọc nó từ .env ở gốc repo.');
-  }
-  return {
-    host: '127.0.0.1',
-    port: Number(env.REDIS_TEST_PORT ?? 56379),
-    password,
-    maxRetriesPerRequest: null,
-  };
-}
-
 describe('Relay outbox trên BullMQ + Redis thật', () => {
   let scratch: ScratchDb;
   let outbox: OutboxService;
@@ -61,7 +29,7 @@ describe('Relay outbox trên BullMQ + Redis thật', () => {
     await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
     outbox = new OutboxService(scratch.db);
     // Hàng đợi riêng theo tên DB tạm → không giẫm lên hàng đợi thật của stack đang chạy.
-    queue = new Queue(`e2e-${scratch.name}`, { connection: redisConnection() });
+    queue = new Queue(`e2e-${scratch.name}`, { connection: testRedisConnection() });
     await queue.waitUntilReady();
   }, TEST_TIMEOUT);
 

@@ -448,9 +448,12 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
 
 ### P2
 
-- [ ] **OPS-13 · Chuyển lịch `repeat` + `jobId` sang `upsertJobScheduler`** (`worker.ts:88-92`).
+- [x] **OPS-13 · Chuyển lịch `repeat` + `jobId` sang `upsertJobScheduler`** (`worker.ts:88-92`).
   Đổi `SWEEP_EVERY_MS` hiện sẽ sinh ra hai nhịp chạy song song.
   - **Rà 29/09:** còn nguyên (`worker.ts:105-109`).
+  - **Đã sửa:** `queue/sweep-schedule.ts` (`scheduleSweep`) upsert lịch id `sweep-tick` và gỡ mọi
+    lịch khác của hàng đợi quét, kể cả lịch kiểu cũ bản trước để lại. Kiểm trên Redis thật:
+    `api/test/sweep-scheduler-redis.spec.ts`.
 - [x] **OPS-14 · Worker shutdown không đợi `relayBatch` đang chạy xong.**
 
 
