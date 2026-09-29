@@ -12,7 +12,7 @@ import {
 
 test.beforeEach(() => resetUsers());
 
-/** Story 1.2 + 1.3 — đăng nhập, TOTP, đổi mật khẩu bắt buộc. */
+/** Đăng nhập, TOTP, đổi mật khẩu bắt buộc. */
 test.describe('Đăng nhập', () => {
   test('sai mật khẩu → báo lỗi tiếng Việt, không lộ email có tồn tại hay không', async ({ page }) => {
     await fillLogin(page, E2E_MEMBER.email, 'mat-khau-sai-hoan-toan');

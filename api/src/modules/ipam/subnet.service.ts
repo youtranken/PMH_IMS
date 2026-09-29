@@ -12,6 +12,7 @@ import { conflictOnUnique, PG_EXCLUSION_VIOLATION, pgErrorCode } from '../../com
 import type { Tx } from '../../common/tx';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
+import { SystemConfigService } from '../config-sys/system-config.service';
 import { isHostInSubnet, normalizeSubnet, subnetUsage, type SubnetUsage } from './ip-rules';
 import { OCCUPYING_STATUSES } from './ip-lifecycle';
 import { ipAddressTable, ipHistoryTable, natRuleTable, subnetTable } from './ipam.schema';
@@ -34,10 +35,8 @@ export interface SubnetRecord {
   /**
    * Dải đã VÔ HIỆU HÓA hay chưa — `null` là đang dùng.
    *
-   * Ba cột này có từ migration 0020; cái MỚI (28/08/2026) là chúng ra khỏi service.
-   *
-   * Trước 28/08/2026 ba trường này không bao giờ ra khỏi service: `list()` lọc thẳng
-   * `voidedAt IS NULL`, nên một dải vừa vô hiệu hóa là BIẾN MẤT khỏi màn hình. Người dùng đọc
+   * Ba cột này (migration 0020) PHẢI ra khỏi service. Giấu chúng đi và để `list()` lọc thẳng
+   * `voidedAt IS NULL` thì một dải vừa vô hiệu hóa là BIẾN MẤT khỏi màn hình. Người dùng đọc
    * đúng cái đó là "đã xóa", và họ không sai — không còn chỗ nào trên giao diện nói nó tồn
    * tại, trong khi mấy chục máy vẫn đang cắm IP tĩnh thuộc dải ấy.
    */
@@ -68,10 +67,10 @@ export interface SubnetInput {
 }
 
 /**
- * Dải mạng (story 5.1, FR-018). Chủ sở hữu bảng `subnet` (AD-3).
+ * Dải mạng (FR-018). Chủ sở hữu bảng `subnet` (AD-3).
  *
- * Ẩn (nhập nhầm) chứ không xóa — quyết định của anh Thuận 2026-08-23. Áp cho mọi bảng
- * nghiệp vụ từ Epic 5 trở đi.
+ * Ẩn (nhập nhầm) chứ không xóa — quyết định của chủ dự án, áp cho mọi bảng nghiệp vụ của
+ * IPAM trở đi.
  */
 @Injectable()
 export class SubnetService {
@@ -79,6 +78,7 @@ export class SubnetService {
     @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly audit: AuditWriterService,
     private readonly catalog: CatalogApiService,
+    private readonly config: SystemConfigService,
   ) {}
 
   /**
@@ -156,7 +156,7 @@ export class SubnetService {
   }
 
   async create(actor: string, input: SubnetInput): Promise<SubnetRecord> {
-    const cidr = this.requireCidr(input.cidr);
+    const cidr = await this.requireCidr(input.cidr);
     await this.requireSite(input.siteId, null);
     const name = this.requireName(input.name);
     const gateway = this.requireGateway(input.gateway, cidr);
@@ -214,8 +214,20 @@ export class SubnetService {
     if (input.gateway !== undefined) {
       values.gateway = this.requireGateway(
         input.gateway,
-        input.cidr === undefined ? before.cidr : this.requireCidr(input.cidr),
+        input.cidr === undefined ? before.cidr : await this.requireCidr(input.cidr, before.cidr),
       );
+    } else if (input.cidr !== undefined && before.gateway) {
+      /*
+       * Chỉ đổi dải mà không gửi gateway (gọi API thẳng): gateway ĐANG CÓ vẫn phải nằm trong
+       * dải mới. Bỏ qua thì CHECK của DB bắn 23514 → 500 thay vì câu nói rõ phải sửa gì.
+       */
+      const cidr = await this.requireCidr(input.cidr, before.cidr);
+      if (!isHostInSubnet(before.gateway, cidr)) {
+        throw new BadRequestException({
+          code: 'GATEWAY_OUT_OF_SUBNET',
+          message: `Gateway hiện tại ${before.gateway} không nằm trong dải mới ${cidr}. Sửa gateway cùng lúc với dải.`,
+        });
+      }
     }
     if (input.siteId !== undefined) {
       await this.requireSite(input.siteId, before.siteId);
@@ -235,7 +247,9 @@ export class SubnetService {
     const nextCidr =
       input.cidr === undefined
         ? null
-        : ((cidr) => (cidr === before.cidr ? null : cidr))(this.requireCidr(input.cidr));
+        : ((cidr) => (cidr === before.cidr ? null : cidr))(
+            await this.requireCidr(input.cidr, before.cidr),
+          );
 
     try {
       return await this.db.transaction(async (tx) => {
@@ -243,8 +257,8 @@ export class SubnetService {
           /*
            * KHÓA HÀNG SUBNET RỒI MỚI ĐẾM — trong cùng transaction với lượt ghi (AD-5, mẫu M2).
            *
-           * Bản trước đếm bằng `this.db` (ngoài tx) rồi mới mở transaction để UPDATE. Giữa hai
-           * câu lệnh đó, một lượt khai IP hoàn toàn bình thường lọt qua: trigger
+           * Đếm bằng `this.db` (ngoài tx) rồi mới mở transaction để UPDATE là để hở: giữa hai
+           * câu lệnh đó, một lượt khai IP hoàn toàn bình thường lọt qua — trigger
            * `ip_address_within_subnet()` đọc dải CŨ, thấy hợp lệ, commit. Rồi câu UPDATE ở đây
            * đổi dải — và để lại đúng thứ chú thích ngay trên tự hứa sẽ không bao giờ có: một
            * hồ sơ IP nằm ngoài dải của chính nó, không lỗi, không cảnh báo, trigger không bao
@@ -289,7 +303,7 @@ export class SubnetService {
   }
 
   /**
-   * "Xóa" = ẩn, có lý do (quyết định 2026-08-23). Bản ghi ở lại, tra cứu được, còn vết ai ẩn.
+   * "Xóa" = ẩn, có lý do (quyết định của chủ dự án). Bản ghi ở lại, tra cứu được, còn vết ai ẩn.
    *
    * Còn IP bên trong thì KHÔNG cho ẩn: ẩn dải mà để lại IP trỏ vào nó thì màn IP hiện một
    * đống hàng thuộc về một dải không còn tồn tại trên màn hình nào.
@@ -306,9 +320,9 @@ export class SubnetService {
     /*
      * Vô hiệu hóa dải thì ẨN LUÔN mọi hồ sơ IP bên trong — CÙNG một lý do, cùng một lượt.
      *
-     * Bản trước từ chối thẳng ("Ẩn hết IP trong dải trước đã") và bắt người dùng đi ẩn tay
-     * từng địa chỉ. Với một dải /24 đã dùng một nửa thì đó là hơn trăm lượt bấm cho một quyết
-     * định họ đã ra rồi — và không ai làm, nên dải hỏng cứ nằm đó.
+     * Từ chối thẳng ("Ẩn hết IP trong dải trước đã") là bắt người dùng đi ẩn tay từng địa
+     * chỉ. Với một dải /24 đã dùng một nửa thì đó là hơn trăm lượt bấm cho một quyết định họ
+     * đã ra rồi — và không ai làm, nên dải hỏng cứ nằm đó.
      *
      * Ẩn chứ KHÔNG xóa: `ip_history` vẫn trỏ vào những hàng này, và câu "IP này từng của máy
      * nào" mà AC 5.2 bắt giữ vĩnh viễn nằm ở đó. Mỗi hàng vẫn để lại một dòng lịch sử nói rõ
@@ -321,7 +335,7 @@ export class SubnetService {
        * Danh sách hàng bị ẩn lấy TỪ CHÍNH câu UPDATE (`returning`), không phải từ một câu
        * SELECT chạy trước đó ngoài transaction.
        *
-       * Bản trước đọc `children` bằng `this.db` (ngoài tx) rồi mới UPDATE trong tx. Chỉ cần
+       * Đừng đọc `children` bằng `this.db` (ngoài tx) rồi mới UPDATE trong tx. Chỉ cần
        * một IP được cấp trong khoảnh khắc giữa hai câu lệnh: câu UPDATE ẩn luôn hàng mới đó
        * (nó khớp `subnet_id` + `voided_at IS NULL`), nhưng vòng ghi `ip_history` chạy trên
        * ảnh chụp cũ nên KHÔNG sinh dòng `ip.subnet_voided` cho nó — vi phạm đúng điều chú thích
@@ -445,7 +459,7 @@ export class SubnetService {
   /**
    * XÓA CỨNG một dải — chỉ khi nó CHƯA TỪNG được dùng.
    *
-   * Quyết định 2026-08-27: khai nhầm một dải rồi phải sống chung với nó mãi là phiền vô lý.
+   * Quyết định của chủ dự án: khai nhầm một dải rồi phải sống chung với nó mãi là phiền vô lý.
    * Dải chưa có hồ sơ IP nào thì nó chưa mang thông tin gì cả — xóa hẳn, cần thì khai lại.
    *
    * Nhưng "chưa từng dùng" tính theo TỔNG số hàng `ip_address`, kể cả hàng đã thu hồi hoặc đã
@@ -454,9 +468,8 @@ export class SubnetService {
    * bản ghi ở lại, tra cứu được, còn vết ai ẩn và vì sao.
    */
   async remove(actor: string, id: string): Promise<void> {
-    // `requireAny`, không phải `requireAlive`: từ 28/08/2026 thứ tự người dùng đi là
-    // vô hiệu hóa TRƯỚC rồi mới xóa. Chặn dải đã tắt ở đây thì đúng cái đường đi vừa dựng lại
-    // kết thúc bằng 404 ở bước cuối.
+    // `requireAny`, không phải `requireAlive`: thứ tự người dùng đi là vô hiệu hóa TRƯỚC rồi
+    // mới xóa. Chặn dải đã tắt ở đây thì đường đi ấy kết thúc bằng 404 ở bước cuối.
     const row = await this.requireAny(id);
     const [existing] = await this.db
       .select({ all: count() })
@@ -508,12 +521,22 @@ export class SubnetService {
     return name;
   }
 
-  private requireCidr(value: string): string {
-    const parsed = normalizeSubnet(value);
+  /**
+   * `current` = dải đang lưu của hồ sơ đang sửa. Gửi lại đúng dải đó thì cho qua dù trần
+   * `ipam.subnet_min_prefix` đã siết sau lúc khai: form luôn gửi đủ ô, và siết trần không được
+   * biến mọi dải /24 cũ thành hồ sơ không sửa nổi tên.
+   */
+  private async requireCidr(value: string, current?: string): Promise<string> {
+    const minPrefix = await this.config.getNumber('ipamSubnetMinPrefix');
+    const parsed = normalizeSubnet(value, minPrefix);
     if (parsed.ok) return parsed.cidr;
+    if (current !== undefined) {
+      const same = normalizeSubnet(value);
+      if (same.ok && same.cidr === current) return current;
+    }
     throw new BadRequestException({
       code: 'SUBNET_INVALID',
-      message: CIDR_MESSAGE[parsed.reason] ?? 'Dải không hợp lệ. Ví dụ đúng: 172.16.10.0/24.',
+      message: cidrMessage(parsed.reason, minPrefix),
     });
   }
 
@@ -605,7 +628,7 @@ export class SubnetService {
   }
 
   /**
-   * Chặn nếu trong dải còn hồ sơ IP nào đang bị một rule NAT SỐNG trỏ vào (rà soát 10/09).
+   * Chặn nếu trong dải còn hồ sơ IP nào đang bị một rule NAT SỐNG trỏ vào.
    *
    * ===== VÌ SAO CỬA NÀY MỚI LÀ CỬA NGUY HIỂM =====
    *
@@ -681,16 +704,21 @@ export class SubnetService {
   }
 }
 
-const CIDR_MESSAGE: Record<string, string> = {
-  missing_prefix: 'Thiếu độ dài dải. Viết dạng 172.16.10.0/24.',
-  bad_prefix: 'Độ dài dải phải từ /24 đến /32. Ví dụ: 172.16.10.0/24.',
-  too_wide:
-    'Dải rộng nhất là /24 (254 máy). Mạng lớn hơn thì chia thành nhiều dải /24, ' +
-    'vd 172.16.10.0/24 và 172.16.11.0/24.',
-  not_ipv4: 'Chỉ nhận địa chỉ IPv4. Ví dụ đúng: 172.16.10.0/24.',
-  leading_zero: 'Không viết số 0 đứng đầu (172.16.010.5 dễ bị hiểu nhầm). Viết 172.16.10.5.',
-  octet_range: 'Mỗi nhóm số phải từ 0 đến 255.',
-};
+/** Câu lỗi nói đúng trần đang hiệu lực — trần đọc từ `ipam.subnet_min_prefix`, không cố định. */
+function cidrMessage(reason: string, minPrefix: number): string {
+  const hosts = 2 ** (32 - minPrefix) - 2;
+  const messages: Record<string, string> = {
+    missing_prefix: 'Thiếu độ dài dải. Viết dạng 172.16.10.0/24.',
+    bad_prefix: `Độ dài dải phải từ /${minPrefix} đến /32. Ví dụ: 172.16.10.0/${minPrefix}.`,
+    too_wide:
+      `Dải rộng nhất là /${minPrefix} (${hosts} máy). Mạng lớn hơn thì chia thành nhiều dải ` +
+      `/${minPrefix}.`,
+    not_ipv4: 'Chỉ nhận địa chỉ IPv4. Ví dụ đúng: 172.16.10.0/24.',
+    leading_zero: 'Không viết số 0 đứng đầu (172.16.010.5 dễ bị hiểu nhầm). Viết 172.16.10.5.',
+    octet_range: 'Mỗi nhóm số phải từ 0 đến 255.',
+  };
+  return messages[reason] ?? 'Dải không hợp lệ. Ví dụ đúng: 172.16.10.0/24.';
+}
 
 /**
  * FR-020 đếm theo địa chỉ đang CHIẾM chỗ, không phải theo số hàng có trong bảng.

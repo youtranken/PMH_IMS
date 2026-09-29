@@ -8,8 +8,8 @@ export default {
     brandFull: 'Quản lý hệ thống IT · PMH',
     loading: 'Đang tải…',
     /* Bốn câu dưới đây là BỐN NGUYÊN NHÂN khác nhau của cùng một khối "không tải được", và
-       mỗi câu dẫn tới một việc khác nhau. Trước 12/09 cả bốn đều ra `loadError`. Bảng chọn
-       câu nằm ở `lib/load-error-text.ts`. */
+       mỗi câu dẫn tới một việc khác nhau — đừng gộp về `loadError`. Bảng chọn câu nằm ở
+       `lib/load-error-text.ts`. */
     loadError: 'Không tải được dữ liệu.',
     serverUnreachable: 'Không kết nối được máy chủ. Kiểm tra mạng nội bộ rồi thử lại.',
     forbidden: 'Bạn không có quyền xem phần này. Cần thì nhờ Quản trị cấp quyền.',
@@ -209,7 +209,7 @@ export default {
     cutUnknown:
       'Chưa đọc được máy đang giữ gì, nên chưa biết thanh lý sẽ gỡ những gì. ' +
       'Đóng hộp, tải lại trang rồi thử lại.',
-    /* Hai câu cho cảnh ĐANG TẢI — tách khỏi ba câu CHƯA ĐỌC ĐƯỢC ở trên (19/09/2026).
+    /* Hai câu cho cảnh ĐANG TẢI — tách khỏi ba câu CHƯA ĐỌC ĐƯỢC ở trên.
        Cùng là "chưa biết", nhưng "đang tải" là chuyện bình thường của mỗi lượt mở trang, còn
        "chưa đọc được" là một lời CẢNH BÁO kèm chỉ dẫn ("đừng dựa vào nó để quyết định thanh
        lý"). Dùng câu cảnh báo cho nhịp chờ vài trăm mili giây nghĩa là mọi lượt mở trang đều
@@ -235,21 +235,20 @@ export default {
     optionsLoadError: 'Không tải được danh sách. Thử lại sau.',
     search: 'Tìm kiếm',
     edit: 'Sửa',
-    /* `common.delete` THIẾU cho tới 28/08 — nút xóa dải hiện ra nguyên chuỗi khóa
-       "common.delete" trên màn Địa chỉ IP. i18next trả về chính cái khóa khi không tìm thấy,
-       nên lỗi loại này không đỏ ở đâu cả, chỉ lộ ra khi có người nhìn màn hình. */
+    /* Thiếu khóa này thì nút xóa hiện ra nguyên chuỗi "common.delete". i18next trả về chính
+       cái khóa khi không tìm thấy, nên lỗi loại này không đỏ ở đâu cả, chỉ lộ ra khi có người
+       nhìn màn hình. */
     delete: 'Xóa',
     sortBy: 'Sắp xếp theo {{column}}',
     expandRow: 'Mở rộng dòng',
     collapseRow: 'Thu gọn dòng',
     loading: 'Đang tải…',
     /*
-     * `common.empty` = 'Chưa có dữ liệu' ĐÃ GỠ (23/09).
+     * KHÔNG có `common.empty` ('Chưa có dữ liệu') dùng chung.
      *
-     * Nơi gọi cuối cùng là `accounts-screen.tsx`, và nó chính là lỗi: gõ một từ không khớp thì
-     * màn tuyên bố hệ thống chưa có tài khoản nào. Một câu rỗng DÙNG CHUNG cho mọi màn không
-     * thể đúng, vì mỗi màn rỗng vì một lý do khác nhau và lời khuyên đi kèm cũng khác nhau —
-     * đó là cả nội dung của ô "4 màn tách câu rỗng" trong §8.6.
+     * Một câu rỗng dùng chung sẽ nói sai: gõ một từ không khớp ở màn Tài khoản thì màn tuyên bố
+     * hệ thống chưa có tài khoản nào. Mỗi màn rỗng vì một lý do khác nhau và lời khuyên đi kèm
+     * cũng khác nhau.
      *
      * Đừng khai lại nó. Màn mới thì khai `<ns>.empty` + `<ns>.emptyFiltered` của riêng mình;
      * `term-consistency.test.ts` canh cặp ấy.
@@ -263,9 +262,9 @@ export default {
        trong bảng mang cùng một tên: trình đọc màn hình đọc y hệt nhau, và `getByRole` của bài
        kiểm khớp cả hai chục dòng cùng lúc. */
     actionsOf: 'Thao tác với {{subject}}',
-    /* Tiêu đề của MỌI hộp — hỏi lại lẫn form: việc sắp làm — với cái gì. Trước 12/09, 19 trên 24 hộp
-       đội tiêu đề trống "Xác nhận" (`app.confirmTitle`), nên hộp mở ra từ dòng thứ sáu trong
-       một bảng thì không còn gì nói cho người đọc biết họ đang đụng vào hàng nào. */
+    /* Tiêu đề của MỌI hộp — hỏi lại lẫn form: việc sắp làm — với cái gì. Tiêu đề trống kiểu
+       "Xác nhận" (`app.confirmTitle`) khiến hộp mở ra từ dòng thứ sáu trong một bảng không còn
+       gì nói cho người đọc biết họ đang đụng vào hàng nào. */
     titleOf: '{{action}} — {{subject}}',
     yes: 'Có',
     no: 'Không',
@@ -629,20 +628,20 @@ export default {
     allTypes: 'Mọi loại',
     allStatuses: 'Mọi trạng thái',
     /* `noCabinet`/`noVendor` là nhãn của LỰA CHỌN RỖNG trong ô chọn, không phải lời giải
-       thích cho cả ô. Trước 12/09 `noCabinet` bị đem làm `hint` của ô "Tủ mạng", nên dưới ô
-       hiện dòng xám "Không nằm trong tủ" — đọc như một khẳng định về cái máy đang khai. */
+       thích cho cả ô. Đem `noCabinet` làm `hint` của ô "Tủ mạng" thì dưới ô hiện dòng xám
+       "Không nằm trong tủ" — đọc như một khẳng định về cái máy đang khai. */
     noCabinet: '— Không nằm trong tủ —',
     noVendor: '— Chưa rõ nhà cung cấp —',
     cabinetHint: 'Bỏ trống nếu máy không đặt trong tủ.',
     pickType: '— Chọn loại —',
     noSitePick: '— Chưa gán site —',
-    /* Tab đầu của trang thiết bị đổi tên 17/09/2026: nó không còn chỉ là lưới hồ sơ mà là
-       BẢN ĐỒ toàn cảnh + phần hồ sơ. Khóa `?tab=profile` giữ nguyên nên link cũ vẫn chạy. */
+    /* Tab đầu của trang thiết bị không chỉ là lưới hồ sơ mà là BẢN ĐỒ toàn cảnh + phần hồ sơ,
+       nên tên là "Tổng quan". Khóa `?tab=profile` giữ nguyên để link cũ vẫn chạy. */
     tabProfile: 'Tổng quan',
-    /* KHỐI ĐẦU CỦA FORM, KHÔNG PHẢI TAB — hai thứ khác nhau và từ 17/09 mang hai tên khác nhau.
-       Trước đó cả hai cùng đọc `tabProfile`, nên lượt đổi tên tab kéo theo cả tiêu đề khối
-       trong hộp "Thêm thiết bị" ("là máy gì → đứng ở đâu → mua của ai"), nơi chữ "Tổng quan"
-       vô nghĩa vì chưa có gì để tổng quan. E2E bắt được; người dùng thì chỉ thấy lạ. */
+    /* KHỐI ĐẦU CỦA FORM, KHÔNG PHẢI TAB — hai thứ khác nhau nên mang hai khóa khác nhau. Dùng
+       chung `tabProfile` thì đổi tên tab kéo theo cả tiêu đề khối trong hộp "Thêm thiết bị"
+       ("là máy gì → đứng ở đâu → mua của ai"), nơi chữ "Tổng quan" vô nghĩa vì chưa có gì để
+       tổng quan. */
     formSectionProfile: 'Hồ sơ',
     tabHistory: 'Lịch sử',
     tabAttachments: 'Giấy tờ',
@@ -676,9 +675,9 @@ export default {
       'email nhắc hạn.',
     retiredLocked: 'Thiết bị đã thanh lý — bấm "Đưa lại vào dùng" nếu cần sửa hồ sơ.',
     /*
-     * HAI câu cho HAI cảnh, đừng gộp lại (23/09). Trước đó bốn màn danh sách dùng chung một
-     * câu có chữ "khớp bộ lọc", nên một hệ thống vừa cài xong, chưa ai lọc gì, vẫn báo "Chưa
-     * có thiết bị nào khớp bộ lọc" — và người dùng mới đi tìm cái bộ lọc không tồn tại.
+     * HAI câu cho HAI cảnh, đừng gộp lại. Một câu chung có chữ "khớp bộ lọc" khiến hệ thống
+     * vừa cài xong, chưa ai lọc gì, vẫn báo "Chưa có thiết bị nào khớp bộ lọc" — và người dùng
+     * mới đi tìm cái bộ lọc không tồn tại.
      * Câu nào hiện ra do `url.isFiltered` của `useListUrlState` quyết.
      */
     empty: 'Kho thiết bị đang trống.',
@@ -883,7 +882,7 @@ export default {
     /* 'Đã thanh lý', không phải 'Đã bỏ': ba module đổ về CÙNG màn Kho thanh lý, và ở đó hồ sơ
        phần mềm từng hiện "Đã thanh lý license" trong khi màn `/software` gọi nó là "Đã bỏ". */
     statusRetired: 'Đã thanh lý',
-    allKinds: 'Tất cả loại',
+    allKinds: 'Mọi loại',
     allStatuses: 'Mọi trạng thái (cả Đã thanh lý)',
     /* Mặc định của bộ lọc trạng thái: hai trạng thái còn trên máy. */
     liveStatuses: 'Đang dùng + Hết hạn',
@@ -1103,7 +1102,7 @@ export default {
   },
   expiry: {
     /*
-     * Huy hiệu hạn của một hồ sơ ĐÃ NGỪNG DÙNG (B-05). Câu này phải khớp với chữ mà
+     * Huy hiệu hạn của một hồ sơ ĐÃ NGỪNG DÙNG. Câu này phải khớp với chữ mà
      * `/disposal` đang nói — "Hồ sơ trong kho KHÔNG còn được tính hạn" — vì người dùng đi từ
      * màn nọ sang màn kia và phải nhận ra đó là cùng một điều.
      *
@@ -1144,7 +1143,7 @@ export default {
     monthGroup: 'Tháng {{month}}',
     /* Q-13: phần mềm quá ân hạn tự vào kho thanh lý và gỡ ghế — ô số riêng để còn kịp gia hạn. */
     kpiAutoRetire: 'Chờ tự thanh lý',
-    allKinds: 'Tất cả loại',
+    allKinds: 'Mọi loại',
     expired: 'Đã quá hạn',
     /* Số ngày NỘI SUY, không gõ cứng: ngưỡng thật nằm ở `system_config` (AD-11) và ô số này
        giờ THẬT SỰ lọc bảng theo nó. Admin đổi `expiry.critical_days` thành 14 mà nhãn vẫn ghi
@@ -1292,12 +1291,12 @@ export default {
     noSessions: 'Không còn phiên đăng nhập nào đang mở.',
     /* KHÔNG dùng chữ "Đăng xuất": sidebar đã có một nút tên đúng như vậy, và hai việc
        khác hẳn nhau (tự thoát ra / buộc người khác thoát). Cửa canh
-       `e2e/tests/logout-qua-mot-cua.spec.ts` cũng quét đúng chữ đó. */
+       `e2e/tests/logout-single-path.spec.ts` cũng quét đúng chữ đó. */
     killSession: 'Đóng phiên',
     resetPassword: 'Đặt lại mật khẩu',
     resetTotp: 'Đặt lại xác thực 2 lớp',
-    /* Chuỗi này trước đây viết CỨNG trong `accounts-screen.tsx` — lọt qua vì nó nằm trong
-       `toast({ message: '…' })` chứ không phải trên JSX, chỗ mắt không quét tới. */
+    /* Chuỗi trong `toast({ message: '…' })` cũng phải qua i18n — nó không nằm trên JSX nên mắt
+       dễ quét sót. */
     totpReset: 'Đã đặt lại xác thực 2 lớp.',
     lock: 'Khóa',
     unlock: 'Mở khóa',
@@ -1315,7 +1314,7 @@ export default {
        vừa che nó đi. Nêu thẳng IP và lần hoạt động gần nhất: đó là hai thứ phân biệt được
        phiên của chính mình với phiên của kẻ đang chiếm tài khoản. */
     /* Câu hỏi phải dùng đúng động từ của cái nút đã mở ra nó (`killSession` = 'Đóng phiên').
-       Đợt D 12/09 đổi cái NÚT khỏi tiếng lóng "đá phiên" nhưng bỏ quên câu hỏi bên trong. */
+       Đổi chữ ở NÚT thì đổi luôn câu hỏi bên trong. */
     confirmKillSession: 'Đóng phiên từ IP {{ip}} (hoạt động gần nhất {{seen}})? Người dùng phiên đó bị đăng xuất ngay; nếu là phiên của bạn thì bạn phải đăng nhập lại.',
     sessionKilled: 'Đã đóng phiên.',
     killAllSessions: 'Đóng tất cả phiên',
@@ -1335,9 +1334,9 @@ export default {
     emptyFiltered: 'Không có tài khoản nào khớp ô tìm.',
     statusActive: 'Đang hoạt động',
     statusLocked: 'Đang khóa',
-    /* NHÃN trạng thái, không phải NÚT — trước đây trùng y hệt `disable` ('Vô hiệu hóa'), nên
-       trên cùng một hàng của bảng Tài khoản, badge và nút đọc giống hệt nhau và không ai phân
-       biệt được "đang bị vô hiệu" với "bấm để vô hiệu". Cùng chữ với `disposal.statusDisabled`. */
+    /* NHÃN trạng thái, không phải NÚT — phải khác `disable` ('Vô hiệu hóa'), vì trên cùng một
+       hàng của bảng Tài khoản, badge và nút đọc giống hệt nhau thì không ai phân biệt được
+       "đang bị vô hiệu" với "bấm để vô hiệu". Cùng chữ với `disposal.statusDisabled`. */
     statusDisabled: 'Đã vô hiệu hóa',
     /* Mở khóa hỏi lại ngắn: nút nằm sát "Đặt lại mật khẩu" và "Vô hiệu hóa", bấm trượt trên
        điện thoại là mở lại một tài khoản đang nghi bị chiếm. */
@@ -1360,6 +1359,7 @@ export default {
     hidePassword: 'Ẩn',
     copyPassword: 'Chép mật khẩu tạm',
     passwordMasked: 'Mật khẩu tạm đang ẩn',
+    temporaryPasswordAutoHide: 'Tự che sau {{seconds}} giây; bấm Hiện để xem lại.',
     nextSteps: 'Bước tiếp theo',
     roleMemberHint: 'Xem và sửa hồ sơ; xem két theo quyền được gán ở màn Quyền két sắt.',
     roleAdminHint: 'Thêm duyệt mở két, xem mọi két, xem nhật ký hệ thống.',
@@ -1449,8 +1449,8 @@ export default {
        tức thêm một dòng nhật ký mở két cho một lần không cần thiết. */
     autoHidden: 'Đã tự ẩn giá trị. Bấm "Xem" nếu cần mở lại.',
     intro: 'Nơi cất mật khẩu và license key, đã mã hóa. Xem giá trị phải nhập mã 2 lớp.',
-    // Từ story 6.3, Member CÓ THỂ có quyền — chỉ là không có trên đối tượng NÀY. Câu cũ
-    // ("chỉ Quản trị xem được") giờ vừa sai vừa làm người đọc thôi không đi hỏi nữa.
+    // Member CÓ THỂ có quyền — chỉ là không có trên đối tượng NÀY. Câu kiểu "chỉ Quản trị xem
+    // được" vừa sai vừa làm người đọc thôi không đi hỏi nữa.
     noPermission: 'Bạn không có quyền trên đối tượng này. Cần thì nhờ Quản trị gán quyền.',
     /* Thuật ngữ két: "két" là nơi chứa của một hồ sơ, "ngăn" là một mật khẩu/khóa trong két.
        Không dùng chữ "secret" trên giao diện; "Xoá vĩnh viễn" để không trùng "Thu hồi sớm" của
@@ -1542,7 +1542,7 @@ export default {
     requestHoursClamped: 'Đã gửi yêu cầu. Số giờ xin vượt mức tối đa nên chỉ còn {{hours}} giờ khi được duyệt.',
     awaitingApproval: 'Đang chờ duyệt',
     // Nhánh CUỐI của badge: không xem được, không xin được, mà cũng không có phiếu nào đang
-    // treo. Phải là một câu THẬT chứ không mượn câu "Đang chờ duyệt" — xem F-07.
+    // treo. Phải là một câu THẬT chứ không mượn câu "Đang chờ duyệt" — xem `ui/vault-panel.tsx`.
     cannotReveal: 'Chưa có quyền xem',
     grantUntil: 'Bạn được xem tới {{until}}. Hết giờ là tự cắt.',
     grantUntilLeft: 'Bạn được xem tới {{until}} (còn {{left}}). Hết giờ là tự cắt.',
@@ -1610,10 +1610,9 @@ export default {
     hide: 'Ngừng dùng',
     hideSubnetTitle: 'Ngừng dùng dải {{cidr}}',
     hideHint: 'Dải vẫn ở danh sách, gạch ngang và xám đi — không phải xóa.',
-    /* Trạng thái vô hiệu hóa hiện NGAY trên thẻ dải (28/08/2026). Trước đó dải vừa vô hiệu
-       hóa là biến mất khỏi danh sách, và người dùng đọc đúng cái đó là "đã bị xóa hẳn". */
+    /* Trạng thái vô hiệu hóa hiện NGAY trên thẻ dải. Dải vừa vô hiệu hóa mà biến mất khỏi
+       danh sách thì người dùng đọc đúng cái đó là "đã bị xóa hẳn". */
     disabledBadge: 'Đã ngừng dùng',
-    disabledSince: 'Ngừng dùng {{date}} · {{reason}}',
     restore: 'Dùng lại',
     restoreTitle: 'Dùng lại dải {{cidr}}?',
     restoreConfirm: 'Dải {{cidr}} trở lại như cũ, {{count}} hồ sơ IP tắt cùng dải cũng dùng lại được.',
@@ -1720,7 +1719,7 @@ export default {
     mapHint: 'Bấm ô trống để cấp; bấm ô đang dùng để mở dòng của nó trong danh sách.',
     cidrPreview: '→ {{cidr}} · {{hosts}} host ({{first}} – {{last}}) · mask {{mask}}',
     cidrFormat: 'Viết dạng địa chỉ/prefix, vd 172.16.10.0/24.',
-    cidrTooWide: 'Tối đa /24 (254 host). Dải rộng hơn thì khai thành nhiều dải /24.',
+    cidrTooWide: 'Tối đa /{{prefix}} ({{hosts}} host). Dải rộng hơn thì khai thành nhiều dải /{{prefix}}.',
     cidrOverlap: 'Chồng lên dải {{cidr}} ({{name}}) đã khai.',
     cidrLocked: 'Dải đã có hồ sơ IP nên không đổi được CIDR. Cần dải khác thì khai dải mới.',
     gatewayOutside: 'Gateway {{gateway}} không nằm trong dải {{cidr}}.',
@@ -1755,13 +1754,12 @@ export default {
     routerNoType: 'Chưa loại thiết bị nào được đánh dấu Router/Firewall nên đang hiện mọi thiết bị. Đánh dấu ở Danh mục → Loại thiết bị.',
     protocol: 'Giao thức',
     /*
-     * `nat.protocolBoth` ĐÃ GỠ (23/09) — nó là bản thứ hai của `catalog.protocolBoth`, và hai
-     * bản ấy hiện trong CÙNG MỘT FORM cách nhau 3cm: ô chọn giao thức của luật NAT đọc bản này
-     * ('Cả TCP và UDP'), ô chọn cổng dịch vụ ngay bên cạnh đọc bản kia ('TCP + UDP').
+     * KHÔNG có `nat.protocolBoth`: ô chọn giao thức của luật NAT dùng `catalog.protocolBoth`,
+     * vì ô chọn cổng dịch vụ ngay bên cạnh trong CÙNG MỘT FORM cũng đọc khoá đó — hai khoá thì
+     * hai chữ khác nhau đứng cách nhau 3cm.
      *
      * Không sửa bằng cách cho hai khoá cùng giá trị: hai khoá thì hai người sửa hai nơi, và
-     * chúng lệch lại — đúng chuyện đã xảy ra với năm bản sao `display()` ở panel Lịch sử
-     * (F-09). Một khoá, `catalog.protocolBoth`, vì danh mục cổng dịch vụ là chủ của khái niệm
+     * chúng lệch lại. Một khoá, `catalog.protocolBoth`, vì danh mục cổng dịch vụ là chủ của khái niệm
      * này (AD-3). Chữ chọn là 'TCP + UDP' để đứng cùng hàng với hai lựa chọn anh em, vốn in ra
      * 'TCP' và 'UDP' viết hoa.
      */
@@ -1901,7 +1899,7 @@ export default {
       'Mật khẩu trong két vẫn là mật khẩu cũ. Nếu đã ngừng vì lộ mật khẩu, hãy đổi ở tab Két sắt.',
     enableReason: 'Lý do dùng lại',
     enableReasonPlaceholder: 'vd: nhân sự mới nhận bàn giao',
-    allKinds: 'Tất cả loại',
+    allKinds: 'Mọi loại',
     allStatuses: 'Mọi trạng thái',
     /* Hai cảnh, hai câu — xem chú thích ở `devices.empty`. */
     empty: 'Chưa có tài khoản dịch vụ nào.',
@@ -2048,7 +2046,7 @@ export default {
     truncated:
       '{{kinds}} chưa hiện hết (tối đa 500 hồ sơ mỗi loại). Xem hồ sơ cũ hơn ở màn của loại đó, lọc theo trạng thái.',
     /* Hai câu này KHÁC HẲN câu trên: kho có hàng, chỉ là bộ lọc đang che đi. Gộp làm một là
-       tuyên bố sai về dữ liệu của công ty (rà UI/UX 12/09, mục #17). */
+       tuyên bố sai về dữ liệu của công ty. */
     noHit: 'Không có hồ sơ nào khớp bộ lọc',
     noHitHint: 'Thử bỏ bớt lọc loại hoặc khoảng ngày, hoặc tìm bằng mã.',
   },
@@ -2334,7 +2332,7 @@ export default {
     tier_whitelist: 'Xem thẳng',
     tier_needs_approval: 'Cần duyệt',
     note: 'Ghi chú',
-    // Lưới thật (28/08/2026): hàng = người, cột = nhóm đối tượng.
+    // Lưới: hàng = người, cột = nhóm đối tượng.
     person: 'Người',
     columnFilter: 'Nhóm đối tượng',
     allFamilies: 'Tất cả nhóm',
@@ -2456,10 +2454,10 @@ export default {
     filterDates: 'Khoảng ngày xin',
     filterFrom: 'Xin từ ngày',
     filterTo: 'Xin đến ngày',
-    // Tab "Yêu cầu của tôi" trước đây rơi vào nhánh else và mượn thông điệp của Nhật ký.
+    // Tab "Yêu cầu của tôi" có câu rỗng riêng, không mượn thông điệp của Nhật ký.
     emptyMine: 'Bạn chưa gửi yêu cầu nào',
-    // Nhãn của từng loại đối tượng nằm ở `ownerKind.*` — trước 12/09 ở đây chỉ có hai trên
-    // bốn loại, nên yêu cầu cho tài khoản dịch vụ và đường truyền in ra chính cái khóa.
+    // Nhãn của từng loại đối tượng nằm ở `ownerKind.*` (đủ bốn loại), không khai lẻ ở đây —
+    // thiếu một loại là yêu cầu cho loại đó in ra chính cái khóa.
     subject: 'Đối tượng',
     /* "Xin" đứng một mình đọc như một động từ cụt. */
     asked: 'Thời hạn xin',
@@ -2479,7 +2477,7 @@ export default {
     denyTitle: 'Từ chối yêu cầu',
     grantHours: 'Cấp trong bao lâu (giờ)',
     grantHoursHint: 'Cấp vừa đủ việc. Quá mức tối đa thì hệ thống tự hạ xuống.',
-    /* Nói RÕ ô nào sai và nhận cái gì. Trước đây ô này nuốt mọi thứ rồi tự cấp 4 giờ. */
+    /* Nói RÕ ô nào sai và nhận cái gì, thay vì nuốt mọi thứ rồi tự cấp một số giờ mặc định. */
     grantHoursInvalid: 'Số giờ phải là số nguyên lớn hơn 0, vd 4.',
     grantHoursHintMax: 'Rút ngắn được, tối đa {{hours}} giờ như người xin.',
     grantHoursAboveAsked: 'Không cấp quá số giờ đã xin ({{hours}} giờ). Cần lâu hơn thì người xin gửi yêu cầu mới.',
@@ -2551,9 +2549,9 @@ export default {
   /**
    * SỔ LỊCH SỬ — mọi nhãn của tab "Lịch sử" trên sáu trang chi tiết.
    *
-   * Trước 12/09 chúng là 117 chuỗi VIẾT CỨNG trong sáu file `*-history-entries.ts`, tức
-   * vi phạm DoD gạch 6 ("UI tiếng Việt qua `lib/i18n`, không chuỗi cứng"). Chúng lọt lâu vì
-   * nằm trong `Record<string, string>` chứ không trên JSX — chỗ mắt không quét tới.
+   * Chúng nằm ở đây chứ không viết cứng trong sáu file `*-history-entries.ts` (DoD gạch 6:
+   * "UI tiếng Việt qua `lib/i18n`, không chuỗi cứng"). Chuỗi trong `Record<string, string>`
+   * không nằm trên JSX nên mắt dễ quét sót.
    *
    * Mười khóa ĐẦU là phần dùng chung: cùng mã, cùng chữ, ở từ hai sổ trở lên. Phần còn
    * lại nằm trong namespace của từng sổ, vì cùng một mã KHÔNG phải lúc nào cũng cùng chữ —
@@ -2576,8 +2574,7 @@ export default {
     fStatus: 'trạng thái',
     fVendorId: 'nhà cung cấp',
 
-    /* Chữ NỐI của câu mô tả thay đổi — cũng là chuỗi cứng trước 12/09, chỉ nằm rải trong
-       thân hàm nên đếm sót ở lượt rà đầu. */
+    /* Chữ NỐI của câu mô tả thay đổi — cũng phải qua i18n dù chỉ nằm rải trong thân hàm. */
     blank: '(trống)',
     changedOnly: 'đổi {{field}}',
 
@@ -2593,6 +2590,11 @@ export default {
       fWarrantyStart: 'bảo hành từ',
       fWarrantyEnd: 'bảo hành đến',
       fPortLabel: 'cổng',
+      fConnectedDevice: 'thiết bị đầu kia',
+      fConnectedLabel: 'mô tả đầu kia',
+      fConnectedPort: 'cổng đầu kia',
+      fVlan: 'VLAN',
+      fUsedBy: 'người sử dụng',
       actCreated: 'Tạo hồ sơ',
       actUpdated: 'Sửa hồ sơ',
       actStatusChanged: 'Đổi trạng thái',
@@ -2643,8 +2645,8 @@ export default {
       /* Cùng chữ với `software.statusRetired`. Panel Lịch sử giữ MỘT BỘ NHÃN RIÊNG song song
          với nhãn trên bảng — nên một khái niệm ở đây có tới SÁU khoá (3 màn + 3 sổ lịch sử),
          và bản `history.software` đã trôi lệch thật: bảng đọc 'Đã thanh lý', dòng lịch sử ngay
-         dưới nó đọc 'Đã bỏ'. §4.2 của sổ chỉ đếm ba khoá màn; ba khoá lịch sử lộ ra 23/09 lúc
-         một bài kiểm dùng `t` THẬT đỏ lên. `term-consistency.test.ts` khoá từng cặp lại. */
+         dưới nó đọc 'Đã bỏ'. Khoá lịch sử dễ bị đếm sót; `term-consistency.test.ts` khoá từng
+         cặp lại. */
       stRetired: 'Đã thanh lý',
     },
 
@@ -2811,7 +2813,7 @@ export default {
   /* Màn Tham số hệ thống (`features/admin/settings-screen.tsx`, Q-14). */
   settings: {
     title: 'Tham số hệ thống',
-    subtitle: 'Ngưỡng đăng nhập, két sắt, duyệt mở két, hạn và bảng điều khiển. Sửa phải xác thực lại.',
+    subtitle: 'Ngưỡng đăng nhập, két sắt, duyệt mở két, hạn, bảng điều khiển và mạng IP. Sửa phải xác thực lại.',
     groupsNav: 'Nhóm tham số',
     groupAuth: 'Đăng nhập & bảo mật',
     groupVault: 'Két sắt',
@@ -2819,6 +2821,7 @@ export default {
     groupExpiry: 'Hạn & email',
     groupDashboard: 'Bảng điều khiển',
     groupSoftware: 'Phần mềm',
+    groupIpam: 'Mạng IP & NAT',
     defaultIs: 'Mặc định: {{value}}',
     resetDefault: 'Về mặc định',
     lastEdited: 'Sửa lần cuối bởi {{who}} lúc {{at}}',
@@ -2845,6 +2848,8 @@ export default {
     unitPercent: '%',
     unitTimes: 'lần',
     unitPerMinute: 'lần/phút',
+    unitPorts: 'cổng',
+    unitRows: 'dòng',
     sessionIdleMinutesLabel: 'Tự đăng xuất khi không thao tác',
     sessionIdleMinutesDesc: 'Bỏ máy quá chừng này thì phiên hết hạn, phải đăng nhập lại.',
     sessionAbsoluteHoursLabel: 'Thời hạn tối đa của một phiên',
@@ -2855,6 +2860,12 @@ export default {
     loginLockoutMinutesDesc: 'Khóa tạm sau khi gõ sai quá số lần cho phép.',
     loginRateLimitPerIpLabel: 'Số lượt đăng nhập tối đa mỗi IP',
     loginRateLimitPerIpDesc: 'Chặn máy dò mật khẩu hàng loạt. Nới quá rộng là mở cửa cho dò.',
+    rateTotpPerMinuteLabel: 'Số lần gõ mã 2 lớp tối đa mỗi người',
+    rateTotpPerMinuteDesc: 'Áp cho đăng nhập bước 2, cài lại 2 lớp và xác thực lại. Mã chỉ có 6 số — nới rộng là mở cửa cho dò.',
+    rateFileUploadPerMinuteLabel: 'Số lần tải tệp lên tối đa mỗi người',
+    rateFileUploadPerMinuteDesc: 'Mỗi lần tải giữ trọn tệp trong bộ nhớ máy chủ.',
+    rateSecretRevealPerMinuteLabel: 'Số lần mở xem mật khẩu tối đa mỗi người',
+    rateSecretRevealPerMinuteDesc: 'Chặn việc rút hàng loạt mật khẩu khỏi két bằng một phiên đã xác thực lại.',
     loginAccountBackoffMinutesLabel: 'Các bậc chờ khi một tài khoản bị đoán sai',
     loginAccountBackoffMinutesDesc: 'Bậc chờ tăng dần áp cho cả tài khoản, bất kể đoán từ máy nào.',
     totpEnrollReauthMinutesLabel: 'Miễn gõ lại mật khẩu khi cài 2 lớp lần đầu',
@@ -2862,7 +2873,7 @@ export default {
     authSupportContactLabel: 'Câu liên hệ khi quên mật khẩu / mất điện thoại',
     authSupportContactDesc: 'Hiện ở màn đăng nhập và màn mã 2 lớp. Ghi rõ gặp ai, gọi số nào.',
     secretRevealSecondsLabel: 'Thời gian hiện mật khẩu trong két',
-    secretRevealSecondsDesc: 'Hết giờ thì hộp tự ẩn giá trị.',
+    secretRevealSecondsDesc: 'Hết giờ thì hộp tự ẩn giá trị. Cũng là thời gian hộp mật khẩu tạm (tạo, đặt lại tài khoản) tự che.',
     secretStepUpGraceMinutesLabel: 'Ân hạn sau khi xác thực lại',
     secretStepUpGraceMinutesDesc: 'Trong khoảng này mở két, sửa két, sửa tham số không phải gõ lại mã 6 số.',
     secretStepUpMaxFailuresLabel: 'Số lần gõ sai mã xác thực lại trước khi đóng phiên',
@@ -2873,6 +2884,8 @@ export default {
     secretProbeWindowMinutesDesc: 'Các lần sai rải rác xa hơn khoảng này không cộng dồn.',
     secretProbeCooldownMinutesLabel: 'Nghỉ giữa hai lần cảnh báo',
     secretProbeCooldownMinutesDesc: 'Tránh gửi dồn dập mail cảnh báo khi bị dò liên tục.',
+    secretProbeEscalationMultiplierLabel: 'Hệ số cảnh báo leo thang',
+    secretProbeEscalationMultiplierDesc: 'Trong lúc nghỉ, số lần sai vượt hệ số này nhân ngưỡng cảnh báo thì gửi thêm đúng một mail leo thang.',
     breakGlassMaxGrantHoursLabel: 'Số giờ tối đa của một lần mở két',
     breakGlassMaxGrantHoursDesc: 'Người xin chọn số giờ không vượt quá mốc này.',
     approvalReminderHoursLabel: 'Nhắc duyệt sau',
@@ -2892,5 +2905,14 @@ export default {
     dashboardSecretStaleDaysDesc: 'Ngăn két chưa đổi quá số ngày này thì báo "cần đổi" ở két và bảng điều khiển.',
     softwareAutoRetireGraceDaysLabel: 'Ân hạn trước khi tự thanh lý phần mềm',
     softwareAutoRetireGraceDaysDesc: 'Hết hạn quá số ngày này mà chưa gia hạn thì tự thanh lý và gỡ mọi ghế.',
+    expiryLookBackDaysLabel: 'Màn Sắp hết hạn nhìn lùi',
+    expiryLookBackDaysDesc: 'Mục đã quá hạn lâu hơn số ngày này không còn hiện ở màn Sắp hết hạn. Email nhắc không nhìn lùi xa hơn số này.',
+    dashboardMaxItemsLabel: 'Số dòng mỗi khối trên trang chủ',
+    dashboardMaxItemsDesc: 'Khối có nhiều hơn thì hiện số tổng và đường sang màn đầy đủ.',
+    ipamSubnetMinPrefixLabel: 'Dải mạng rộng nhất được khai (độ dài prefix)',
+    ipamSubnetMinPrefixDesc:
+      '24 nghĩa là /24 (254 máy). Chỉ siết được (số lớn hơn là dải hẹp hơn), không nới rộng hơn /24. Dải đã khai không bị ảnh hưởng.',
+    natWidePortRangeLabel: 'Cảnh báo luật NAT mở dải cổng rộng hơn',
+    natWidePortRangeDesc: 'Chỉ cảnh báo trước khi lưu, không chặn.',
   },
 } as const;

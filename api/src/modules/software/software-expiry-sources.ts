@@ -6,10 +6,10 @@ import { SoftwareService } from './software.service';
 import { UI_PATHS } from '../../common/ui-paths';
 
 /**
- * Nguồn hạn của module `software` (AD-7, story 3.4).
+ * Nguồn hạn của module `software` (AD-7).
  *
  * Đăng ký MỘT nguồn cho MỖI loại (license, SSL, tên miền, bảo trì, khác) thay vì một nguồn chung:
- * luật digest ở story 3.5 cấu hình theo loại ("SSL sắp hết trong 30 ngày → sếp"), mà bộ lọc
+ * luật digest (FR-013) cấu hình theo loại ("SSL sắp hết trong 30 ngày → sếp"), mà bộ lọc
  * của registry chạy trên `sourceKind`. Gộp một nguồn thì không lọc theo loại được nữa.
  *
  * Cả bốn loại đều gia hạn được từ màn Expiry — gọi ngược về `SoftwareService.renew`, tức là

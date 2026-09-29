@@ -9,8 +9,8 @@ const TAG_BYTES = 16;
 const DEK_BYTES = 32;
 
 /**
- * Lõi mã hóa envelope (NFR-02, story 1.3) — dùng CHUNG cho TOTP secret (auth) và
- * két sắt (vault, Epic 4). AD-15: chỉ có MỘT bản cài đặt này, không module nào tự chế.
+ * Lõi mã hóa envelope (NFR-02) — dùng CHUNG cho TOTP secret (auth) và
+ * két sắt (vault). AD-15: chỉ có MỘT bản cài đặt này, không module nào tự chế.
  *
  * Cách làm: mỗi giá trị sinh một DEK ngẫu nhiên → mã dữ liệu bằng DEK → bọc DEK bằng
  * master key. Xoay chìa = bọc lại DEK, KHÔNG phải mã lại toàn bộ dữ liệu.

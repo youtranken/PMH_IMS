@@ -1,6 +1,6 @@
 import { diffRecord, type RecordChanges } from '../../common/record-diff';
 /**
- * Luật của một dòng sổ NAT (story 5.3, FR-017) — hàm THUẦN, không chạm DB.
+ * Luật của một dòng sổ NAT (FR-017) — hàm THUẦN, không chạm DB.
  *
  * Mục tiêu của story viết rất rõ: auditor hỏi "port nào mở, vì sao, cho ai" là trả lời được
  * ngay. Nên `reason` và `usedBy` ở đây là BẮT BUỘC, không phải trường tùy chọn cho đẹp — một
@@ -12,8 +12,6 @@ import { hostRole, hostRoleIn } from './ip-rules';
 
 const MIN_PORT = 1;
 const MAX_PORT = 65535;
-/** Rộng hơn ngần này thì CẢNH BÁO — không chặn. Xem `NatRuleCheck` bên dưới. */
-const WIDE_RANGE = 1000;
 
 export type PortRange =
   | { ok: true; from: number; to: number }
@@ -54,14 +52,12 @@ export interface NatRuleDraft {
 /**
  * Kết quả kiểm một dòng: LỖI thì không lưu được, CẢNH BÁO thì lưu được nhưng phải nói ra.
  *
- * Tách hai loại này là điểm sửa của code review Epic 5 (finding 1). Trước đây cả hai cùng đổ
- * vào một mảng `errors`, nên "mở hơn 1000 cổng" — thứ tôi CỐ Ý muốn cho qua và còn viết hẳn
- * trong thông điệp là *"nếu đúng ý thì cứ lưu"* — lại bị chặn. Người dùng đọc được lời khuyên
- * mà không làm theo được, và dải port camera (50000-52000, đúng ví dụ trong chính comment cũ)
- * không bao giờ vào nổi sổ NAT.
+ * Phải tách hai loại. Đổ chung vào một mảng `errors` thì "mở hơn 1000 cổng" — thứ CỐ Ý cho
+ * qua, thông điệp còn viết *"nếu đúng ý thì cứ lưu"* — lại bị chặn: người dùng đọc được lời
+ * khuyên mà không làm theo được, và dải port camera (50000-52000) không bao giờ vào nổi sổ.
  *
- * Bài học đắt hơn: test cũ chỉ đếm `errors.length === 1` nên nó XANH trong khi hành vi sai.
- * Kiểu dữ liệu tách bạch làm chuyện đó không lặp lại được nữa.
+ * Một bài kiểm chỉ đếm `errors.length === 1` sẽ XANH trong khi hành vi sai. Kiểu dữ liệu tách
+ * bạch làm chuyện đó không xảy ra được.
  */
 export interface NatRuleCheck {
   errors: string[];
@@ -74,13 +70,18 @@ export interface NatRuleCheck {
  */
 export function validateNatRule(
   draft: NatRuleDraft,
-  /**
-   * Dải đã khai chứa `internalIp`, nếu có. Có dải thì xét theo prefix của nó (`hostRoleIn`):
-   * octet cuối không nói được .127 là quảng bá của /25, hay .255 là một máy trong /31.
-   * `null`/bỏ trống = IP nằm ngoài mọi dải đã khai, chỉ còn cách đoán theo octet cuối.
-   */
-  subnetCidr?: string | null,
+  context: {
+    /**
+     * Dải đã khai chứa `internalIp`, nếu có. Có dải thì xét theo prefix của nó (`hostRoleIn`):
+     * octet cuối không nói được .127 là quảng bá của /25, hay .255 là một máy trong /31.
+     * `null`/bỏ trống = IP nằm ngoài mọi dải đã khai, chỉ còn cách đoán theo octet cuối.
+     */
+    subnetCidr?: string | null;
+    /** Rộng hơn ngần này cổng thì CẢNH BÁO, không chặn (`nat.wide_port_range`). */
+    widePortRange: number;
+  },
 ): NatRuleCheck {
+  const { subnetCidr, widePortRange } = context;
   const errors: string[] = [];
   const warnings: string[] = [];
 
@@ -118,7 +119,7 @@ export function validateNatRule(
   /**
    * Khoảng port ngoài kiểm Ở ĐÂY chứ không chỉ ở bộ phân tích chuỗi của controller.
    *
-   * Code review Epic 5 (finding 2): `NatRuleService.create` là một hàm công khai — import
+   * `NatRuleService.create` là một hàm công khai — import
    * Excel về sau, seed, hay module khác gọi lại đều đi thẳng vào đây mà không qua DTO HTTP.
    * Không kiểm thì cặp ngược đầu rơi xuống `nat_external_range_check` của Postgres và bung
    * 500 thay vì một câu tiếng Việt.
@@ -127,10 +128,10 @@ export function validateNatRule(
     errors.push(`Cổng ngoài phải từ ${MIN_PORT} đến ${MAX_PORT}.`);
   } else if (draft.externalFrom > draft.externalTo) {
     errors.push('Khoảng cổng ngoài viết ngược — số đầu phải nhỏ hơn số cuối (vd 8000-8010).');
-  } else if (draft.externalTo - draft.externalFrom + 1 > WIDE_RANGE) {
+  } else if (draft.externalTo - draft.externalFrom + 1 > widePortRange) {
     // CẢNH BÁO, không phải lỗi: dải port camera là việc có thật và hợp lệ.
     warnings.push(
-      `Dải cổng ngoài này mở hơn ${WIDE_RANGE} cổng ra Internet. Nếu đúng ý thì cứ lưu, nhưng hãy chắc chắn.`,
+      `Dải cổng ngoài này mở hơn ${widePortRange} cổng ra Internet. Nếu đúng ý thì cứ lưu, nhưng hãy chắc chắn.`,
     );
   }
 
@@ -146,8 +147,8 @@ function inPortRange(port: number): boolean {
  *
  * `tcp` và `udp` KHÔNG đụng nhau — Draytek cho khai riêng hai giao thức cùng port, chặn là
  * chặn nhầm việc hợp lệ. Nhưng `both` thì theo định nghĩa PHỦ CẢ HAI, nên nó đụng với mọi
- * thứ. Ràng buộc `EXCLUDE` của DB so `protocol WITH =` nên không thấy chuyện này (code review
- * Epic 5, finding 4) — service phải tự bắt.
+ * thứ. Ràng buộc `EXCLUDE` của DB so `protocol WITH =` nên không thấy chuyện này — service
+ * phải tự bắt.
  */
 export function protocolsOverlap(a: string, b: string): boolean {
   return a === b || a === 'both' || b === 'both';

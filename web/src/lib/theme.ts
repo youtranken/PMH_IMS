@@ -14,7 +14,7 @@ export function currentTheme(): Theme {
   return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
 }
 
-export function setTheme(theme: Theme): void {
+function setTheme(theme: Theme): void {
   setThemePreference(theme);
 }
 

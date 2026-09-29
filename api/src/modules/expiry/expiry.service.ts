@@ -53,7 +53,7 @@ export interface ExpiryQuery {
   /** true = kèm cả mục ĐÃ quá hạn (mặc định có, vì đó là thứ gấp nhất). */
   includeExpired?: boolean;
   /**
-   * NHÌN LÙI bao nhiêu ngày để bắt mục đã quá hạn. Mặc định `LOOK_BACK_DAYS` (một năm).
+   * NHÌN LÙI bao nhiêu ngày để bắt mục đã quá hạn. Mặc định `expiry.look_back_days` (một năm).
    *
    * ===== VÌ SAO MÀN HÌNH VÀ EMAIL PHẢI KHÁC NHAU Ở ĐÂY =====
    *
@@ -94,7 +94,7 @@ export interface ExpiryQuery {
 }
 
 /**
- * Cỗ máy Expiry (story 3.4, FR-012).
+ * Cỗ máy Expiry (FR-012).
  *
  * Engine KHÔNG biết bảng nào tồn tại: nó chỉ gọi provider đã đăng ký (AD-7). Thêm một loại
  * có hạn ở epic sau (chứng chỉ, hợp đồng thuê máy) chỉ là thêm một provider, không sửa
@@ -152,7 +152,10 @@ export class ExpiryService {
     const today = await this.today();
     const thresholds = await this.thresholds();
     const withinDays = clampWindow(query.withinDays, thresholds.warningDays);
-    const from = addDays(today, -lookBackDays(query));
+    const from = addDays(
+      today,
+      -lookBackDays(query, await this.config.getNumber('expiryLookBackDays')),
+    );
     const to = addDays(today, withinDays);
 
     const { items, failed } = await this.registry.collect(from, to, query.kinds);
@@ -225,20 +228,21 @@ export class ExpiryService {
     }
 
     /*
-     * CHỈ ĐIỀU PHỐI — không tự ghi sổ nữa (rà soát 07/09, #7).
+     * CHỈ ĐIỀU PHỐI — không tự ghi sổ.
      *
-     * Bản trước gọi `source.renew()` (commit), rồi mở transaction THỨ HAI để ghi
-     * `renewal_history`. Hai lỗi cộng dồn:
+     * Đừng gọi `source.renew()` (commit) rồi mở transaction THỨ HAI để ghi `renewal_history`.
+     * Hai lỗi cộng dồn:
      *
-     * 1. HAI CỬA, MỘT SỔ. Web có hai nút Gia hạn: màn "Sắp hết hạn" đi qua đây và ghi sổ; nút
-     *    trong chính trang hồ sơ gọi thẳng `SoftwareService.renew` và KHÔNG ghi gì. `end_date`
-     *    đổi, toast xanh, lịch sử hồ sơ có dòng — nhưng báo cáo cuối năm và khối "gia hạn gần
-     *    đây" trên dashboard đọc `renewal_history` nên trả rỗng. Bảng chỉ-thêm: không vá ngược.
+     * 1. HAI CỬA, MỘT SỔ. Web có hai nút Gia hạn: màn "Sắp hết hạn" đi qua đây; nút trong
+     *    chính trang hồ sơ gọi thẳng `SoftwareService.renew`. Ghi sổ ở đây thì nút kia không
+     *    ghi gì: `end_date` đổi, toast xanh, lịch sử hồ sơ có dòng — nhưng báo cáo cuối năm và
+     *    khối "gia hạn gần đây" trên dashboard đọc `renewal_history` nên trả rỗng. Bảng
+     *    chỉ-thêm: không vá ngược.
      * 2. MẤT SỔ (mẫu N3). `end_date` đã commit mà transaction thứ hai hỏng thì hồ sơ đã gia
      *    hạn nhưng sổ không có dòng nào, và không có đường bù.
      *
-     * Nay phần ghi sổ nằm TRONG transaction của module chủ (`recordRenewalWithin`), nên cả hai
-     * cửa dùng chung đúng một đường và một transaction. Ở đây chỉ còn kiểm tra rồi gọi.
+     * Phần ghi sổ nằm TRONG transaction của module chủ (`recordRenewalWithin`), nên cả hai
+     * cửa dùng chung đúng một đường và một transaction. Ở đây chỉ kiểm tra rồi gọi.
      */
     const hasTerms = !!terms.contract?.trim() || (terms.cost !== undefined && terms.cost !== null);
     if (hasTerms && !source.renewTerms) {
@@ -337,11 +341,11 @@ const RENEWALS_RANGE_CAP = 1000;
 /**
  * Ba chip đếm — DÙNG ĐÚNG hai ngưỡng mà huy hiệu trên hàng dùng.
  *
- * ===== BẪY ĐÃ VÁ 09/09 =====
+ * ===== BẪY: `warning` PHẢI CÓ TRẦN =====
  *
- * Bản trước không có TRẦN cho `warning`: mọi thứ còn hơn 7 ngày đều được đếm là "sắp hết hạn".
- * Với cửa sổ mặc định 30 ngày thì trùng khớp ngẫu nhiên với `expiryLevel()` bên web, nên không
- * ai thấy. Nhưng người dùng đổi cửa sổ thành 90 ngày là hai bên nói khác nhau ngay:
+ * Không có TRẦN cho `warning` thì mọi thứ còn hơn 7 ngày đều được đếm là "sắp hết hạn". Với
+ * cửa sổ mặc định 30 ngày thì trùng khớp ngẫu nhiên với `expiryLevel()` bên web, nên không ai
+ * thấy. Nhưng người dùng đổi cửa sổ thành 90 ngày là hai bên nói khác nhau ngay:
  *
  *     chip:  "40 sắp hết hạn"      (mọi thứ > 7 ngày)
  *     hàng:  40 huy hiệu XÁM 'ok'  (`expiryLevel` gọi > 30 ngày là 'ok')
@@ -355,11 +359,11 @@ export type ExpiryLevel = 'expired' | 'critical' | 'warning';
 /**
  * Một mục thuộc nhóm nào — MỘT bản luật, dùng cho cả phép đếm lẫn phép lọc.
  *
- * Tách ra khỏi `summarize` vì từ 21/09 có hai nơi hỏi cùng câu ấy. Hai bản chép tay của ba
- * nhánh `<0 / <=critical / <=warning` sẽ trôi khỏi nhau ở lần ai đó sửa một bản — đúng thứ
- * F-09 vừa chứng minh là có thật (5 bản sao panel Lịch sử, và chúng ĐÃ lệch).
+ * Tách ra khỏi `summarize` vì có hai nơi hỏi cùng câu ấy (đếm và lọc). Hai bản chép tay của
+ * ba nhánh `<0 / <=critical / <=warning` sẽ trôi khỏi nhau ở lần ai đó sửa một bản — như F-09
+ * (các bản sao panel Lịch sử đã lệch nhau).
  */
-export function levelOf(daysLeft: number, thresholds: ExpiryThresholds): ExpiryLevel | null {
+function levelOf(daysLeft: number, thresholds: ExpiryThresholds): ExpiryLevel | null {
   if (daysLeft < 0) return 'expired';
   if (daysLeft <= thresholds.criticalDays) return 'critical';
   if (daysLeft <= thresholds.warningDays) return 'warning';
@@ -389,7 +393,7 @@ const labelCollator = new Intl.Collator('vi');
  * "gấp nhất lên đầu" (hết hạn tăng dần). Khoá phụ luôn là ngày hết hạn tăng dần, rồi `id`, để
  * hai lượt hỏi liền nhau cắt trang ra cùng một kết quả.
  */
-export function sortExpiryRows<T extends Pick<ExpiryRow, 'id' | 'end' | 'kind' | 'label'>>(
+function sortExpiryRows<T extends Pick<ExpiryRow, 'id' | 'end' | 'kind' | 'label'>>(
   rows: T[],
   sort: ExpirySort | undefined,
   dir: 'asc' | 'desc' | undefined,
@@ -423,28 +427,31 @@ function pageOf(rows: ExpiryRow[], query: ExpiryQuery): ExpiryRow[] {
   return rows.slice(from, from + limit);
 }
 
-/** Nhìn lùi tối đa một năm — mặc định của MÀN HÌNH. */
-export const LOOK_BACK_DAYS = 365;
-
 /**
  * Nhìn lùi bao nhiêu ngày — hàm THUẦN, có bảng test.
+ *
+ * `screenDays` = `expiry.look_back_days`: vừa là mặc định của MÀN HÌNH, vừa là trần kẹp.
  *
  * Ba câu trả lời, và cả ba đều đúng ở đúng chỗ của nó:
  *   - `includeExpired: false` → 0, không nhìn lùi tí nào (bộ lọc "chỉ sắp tới" của màn hình).
  *   - có `expiredWithinDays` → đúng con số đó (digest, đọc từ `system_config`).
- *   - còn lại → một năm (mặc định của màn hình).
+ *   - còn lại → `screenDays` (mặc định của màn hình).
  *
- * Kẹp về 0..365: số âm sẽ đẩy `from` ra TƯƠNG LAI và lặng lẽ giấu mất mọi mục quá hạn — đúng
- * loại hỏng không ai thấy, vì màn hình vẫn có dữ liệu, chỉ thiếu đúng phần nguy hiểm nhất.
+ * Kẹp về 0..`screenDays`: số âm sẽ đẩy `from` ra TƯƠNG LAI và lặng lẽ giấu mất mọi mục quá
+ * hạn — đúng loại hỏng không ai thấy, vì màn hình vẫn có dữ liệu, chỉ thiếu đúng phần nguy
+ * hiểm nhất.
  */
-export function lookBackDays(query: {
-  includeExpired?: boolean;
-  expiredWithinDays?: number;
-}): number {
+export function lookBackDays(
+  query: {
+    includeExpired?: boolean;
+    expiredWithinDays?: number;
+  },
+  screenDays: number,
+): number {
   if (query.includeExpired === false) return 0;
   const raw = query.expiredWithinDays;
-  if (raw === undefined || Number.isNaN(raw)) return LOOK_BACK_DAYS;
-  return Math.min(LOOK_BACK_DAYS, Math.max(0, Math.trunc(raw)));
+  if (raw === undefined || Number.isNaN(raw)) return screenDays;
+  return Math.min(screenDays, Math.max(0, Math.trunc(raw)));
 }
 
 /**

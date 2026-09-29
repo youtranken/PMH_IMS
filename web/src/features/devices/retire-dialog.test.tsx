@@ -11,7 +11,7 @@ const CUT: RetireGroup[] = [
   { title: 'Sổ NAT', items: [] },
 ];
 
-function dung(props: Partial<Parameters<typeof RetireDialog>[0]> = {}) {
+function mount(props: Partial<Parameters<typeof RetireDialog>[0]> = {}) {
   const onConfirm = vi.fn();
   renderWithI18n(
     <RetireDialog
@@ -32,7 +32,7 @@ function dung(props: Partial<Parameters<typeof RetireDialog>[0]> = {}) {
 
 describe('RetireDialog', () => {
   it('liệt kê thứ SẼ GỠ từ dữ liệu thật, nhóm rỗng thì không hiện', () => {
-    dung();
+    mount();
     expect(screen.getByText('10.77.1.2 · Quản trị switch')).toBeTruthy();
     expect(screen.queryByText('Sổ NAT')).toBeNull();
     expect(screen.getByText('Hồ sơ máy và toàn bộ lịch sử')).toBeTruthy();
@@ -40,7 +40,7 @@ describe('RetireDialog', () => {
 
   it('mặc định "Chỉ thanh lý": bấm là gửi cleanup=false, không đòi gõ mã', async () => {
     const user = userEvent.setup();
-    const onConfirm = dung();
+    const onConfirm = mount();
     expect(screen.getByRole('radio', { name: /Chỉ thanh lý/ })).toHaveProperty('checked', true);
     await user.click(screen.getByRole('button', { name: 'Thanh lý' }));
     expect(onConfirm).toHaveBeenCalledWith(false);
@@ -48,7 +48,7 @@ describe('RetireDialog', () => {
 
   it('chọn "Gỡ hết": nút khoá tới khi gõ ĐÚNG mã máy, rồi gửi cleanup=true', async () => {
     const user = userEvent.setup();
-    const onConfirm = dung();
+    const onConfirm = mount();
     await user.click(screen.getByRole('radio', { name: 'Gỡ hết rồi thanh lý' }));
     const submit = screen.getByRole('button', { name: 'Thanh lý' });
     expect(submit).toHaveProperty('disabled', true);
@@ -64,13 +64,13 @@ describe('RetireDialog', () => {
   });
 
   it('máy không giữ gì: không có lựa chọn, không đòi gõ mã', () => {
-    dung({ cut: [] });
+    mount({ cut: [] });
     expect(screen.queryByRole('radio')).toBeNull();
     expect(screen.getByText('Máy này không giữ gì phải gỡ.')).toBeTruthy();
   });
 
   it('409: hiện đúng danh sách API trả về thay cho danh sách dự đoán', () => {
-    dung({ blockedBy: ['địa chỉ IP 10.77.1.9', 'rule NAT tcp 8080'] });
+    mount({ blockedBy: ['địa chỉ IP 10.77.1.9', 'rule NAT tcp 8080'] });
     expect(screen.getByText('rule NAT tcp 8080')).toBeTruthy();
     expect(screen.getByText(/chưa thanh lý được/)).toBeTruthy();
   });

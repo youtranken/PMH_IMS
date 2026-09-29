@@ -32,7 +32,7 @@ export interface DeviceImportResult {
 }
 
 /**
- * Import / export thiết bị (story 2.6).
+ * Import / export thiết bị (FR-001 + FR-028).
  *
  * Cùng khuôn với import danh mục: XEM TRƯỚC rồi mới GHI, và bước ghi TÍNH LẠI plan từ
  * chính file gửi lên lần hai — không cất plan ở server nên "cái được duyệt" và "cái được
@@ -154,11 +154,11 @@ export class DeviceImportService {
           /*
            * "Trước khi sửa" đọc TRONG transaction, không lấy từ ảnh chụp lúc đối chiếu.
            *
-           * Bản trước dùng `context.devices.get(...)` — ảnh chụp dựng ở đầu `commit()` — và
-           * khi tra trượt thì rơi về `before ?? {}`. `{...undefined}` không ném, nên
-           * `diffDevice` lặng lẽ so hồ sơ mới với một object RỖNG và `device_history` ghi
-           * "mọi trường đổi từ trống": một dòng lịch sử BỊA, trong bảng chỉ-thêm mà FR-007
-           * dựng ra để trả lời "ai đổi gì" (rà soát 07/09 #10).
+           * Đừng dùng `context.devices.get(...)` — ảnh chụp dựng ở đầu `commit()`: khi tra
+           * trượt thì rơi về `before ?? {}`. `{...undefined}` không ném, nên `diffDevice` lặng
+           * lẽ so hồ sơ mới với một object RỖNG và `device_history` ghi "mọi trường đổi từ
+           * trống": một dòng lịch sử BỊA, trong bảng chỉ-thêm mà FR-007 dựng ra để trả lời "ai
+           * đổi gì".
            *
            * Đọc lại trong tx sửa cả hai vế: nội dung diff là thật, và hồ sơ đã biến mất thì
            * ném ngay tại đây thay vì `UPDATE` khớp 0 dòng rồi vẫn `updated += 1`.

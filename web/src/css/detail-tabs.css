@@ -54,10 +54,9 @@
   flex-wrap: wrap;
   gap: var(--space-3);
   margin: 0;
-  /* `--fs-3xl` (27,3px), KHÔNG phải `--fs-xl` (18,2px). Token này được thêm vào `tokens.css`
-     đúng để sửa cấp bậc ngược — mã hồ sơ ở trang CHI TIẾT nhỏ hơn tiêu đề trang DANH SÁCH
-     (`.page-header h1` dùng `--fs-2xl` = 21px) — nhưng tới 18/09/2026 chưa chỗ nào dùng nó,
-     nên cấp bậc vẫn ngược. Đo trên trình duyệt thật: 18.2px so với 21px. */
+  /* `--fs-3xl` (27,3px), KHÔNG phải `--fs-xl` (18,2px): với `--fs-xl` thì mã hồ sơ ở trang
+     CHI TIẾT nhỏ hơn tiêu đề trang DANH SÁCH (`.page-header h1` dùng `--fs-2xl` = 21px), tức
+     cấp bậc ngược. */
   font-size: var(--fs-3xl);
   font-weight: 700;
   letter-spacing: -0.02em;
@@ -169,8 +168,8 @@
 }
 
 /* --- Dải chỉ số đầu trang (StatGrid) -----------------------------------------
- * Bốn thứ cần biết trong hai giây. Thứ đã nằm ở đây thì BỎ khỏi lưới bên dưới — bản trước
- * lặp cả hai chỗ, cách nhau 40px.
+ * Bốn thứ cần biết trong hai giây. Thứ đã nằm ở đây thì BỎ khỏi lưới bên dưới — đừng lặp cả
+ * hai chỗ, cách nhau 40px.
  * ---------------------------------------------------------------------------- */
 .stat-grid {
   display: grid;
@@ -181,6 +180,11 @@
   border-radius: var(--r);
   overflow: hidden;
   margin-bottom: var(--space-7);
+}
+@media (max-width: 680px) {
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
 }
 .stat {
   background: var(--surface);
@@ -228,15 +232,14 @@
 }
 .detail-main { min-width: 0; }
 /*
- * NHỊP DỌC CỦA CỘT CHÍNH — MỘT LUẬT, KHÔNG PHẢI MỖI KHU MỘT LỀ (19/09/2026).
+ * NHỊP DỌC CỦA CỘT CHÍNH — MỘT LUẬT, KHÔNG PHẢI MỖI KHU MỘT LỀ.
  *
- * `.detail-main` trước đây chỉ có `min-width: 0`: không `gap`, không `margin`, mà `tokens.css`
- * đã xoá lề mặc định bằng `* { margin: 0 }`. Chừng nào khu đầu tiên còn là một `<dl>` trần thì
- * không ai gặp; ngày 19/09 nó thành một thẻ có viền, và hai thẻ liền nhau dính sát — hai đường
- * viền 1px chồng thành một vạch 2px, mắt đọc ra MỘT hộp cao chia đôi chứ không phải hai khu.
+ * `tokens.css` xoá lề mặc định bằng `* { margin: 0 }`, nên không có luật này thì hai thẻ có
+ * viền liền nhau trong cột chính dính sát — hai đường viền 1px chồng thành một vạch 2px, mắt
+ * đọc ra MỘT hộp cao chia đôi chứ không phải hai khu.
  *
  * Chọn `--space-11` vì `.rmap-card` đã dùng đúng con số ấy làm khoảng cách tới khu kế tiếp, nên
- * cả cột về một nhịp thay vì ba nhịp khác nhau (31,5px → 0 → 11,9px như đo được hôm rà soát).
+ * cả cột về một nhịp thay vì ba nhịp khác nhau.
  * Luật này đặc hiệu hơn `.device-panels { margin-top: --space-6 }` nên nó thắng, và lề dưới của
  * `.rmap-card` thì tự gộp (lề dọc của hai phần tử anh em luôn gộp, không cộng dồn).
  */
@@ -256,7 +259,7 @@
   padding: var(--space-9);
   box-shadow: var(--shadow-sm);
 }
-/* Là `<h2>` từ 17/09 (khu có tên cho trình đọc màn hình) — nên phải dập lề mặc định của thẻ
+/* Là `<h2>` (khu có tên cho trình đọc màn hình) — nên phải dập lề mặc định của thẻ
    tiêu đề, nếu không thẻ định danh tự dưng thụt xuống một khoảng so với cột bên trái. */
 .rail-h {
   margin-top: 0;
@@ -392,7 +395,7 @@
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: var(--space-5);
 }
-/* Mỗi thông tin là 1 Ô có viền (trước đây dt/dd trơ, "nhìn xấu"). */
+/* Mỗi thông tin là 1 Ô có viền (dt/dd trơ thì "nhìn xấu"). */
 .data-item {
   padding: var(--space-4) var(--space-6);
   background: var(--surface-2);
@@ -418,13 +421,6 @@
   font-weight: 500;
   overflow-wrap: anywhere;
 }
-/*
- * ĐÃ XÓA (16/09/2026): khối `.detail-tabs-body .table-wrap { max-height: 460px }` cùng luật
- * `thead` dính kèm theo. Không một `.tsx` nào đặt lớp `detail-tabs-body` — grep toàn bộ web/src
- * ra rỗng — nên hai luật đó CHƯA TỪNG chạy. Bảng lịch sử dài vẫn đẩy cả trang dài ra, đúng cái
- * mà luật này tưởng là đã chặn. Xoá đi cho khỏi ai đọc rồi tưởng có.
- */
-
 /* --- Tabs (chi tiết tài sản) ---------------------------------------------- */
 .tabs {
   display: flex;
@@ -490,8 +486,8 @@
   border-bottom-color: var(--primary);
 }
 /*
- * Thanh tab DÍNH khi cuộn (16/09/2026). Bảng port map và lịch sử dài; cuộn tới dòng 40 mà
- * muốn đổi tab thì trước đây phải cuộn ngược lên đầu trang.
+ * Thanh tab DÍNH khi cuộn. Bảng port map và lịch sử dài; cuộn tới dòng 40 mà muốn đổi tab
+ * thì không phải cuộn ngược lên đầu trang.
  */
 .tabs {
   position: sticky;
@@ -503,7 +499,7 @@
      — bóng NGOÀI, nên nó bị khung cắt cụt. Người đi bằng phím mũi tên (roving tabindex ở
      `ui/tabs.tsx` làm rất đúng) không thấy mình đang đứng ở tab nào.
 
-     BA PHÍA LÀ CHƯA ĐỦ (19/09/2026). Bản trước là `3px 3px 0` — đáy để 0. Nhưng theo spec,
+     BA PHÍA LÀ CHƯA ĐỦ: `3px 3px 0` — đáy để 0 — không được. Theo spec,
      `overflow-y: visible` đi kèm một trục `auto` sẽ tự tính thành `auto`, nên khung cắt CẢ
      chiều dọc tại mép hộp đệm: vòng sáng hở ba cạnh và CỤT ở cạnh dưới — đúng cạnh nằm sát
      gạch chân "tab đang chọn", nên hai tín hiệu lẫn vào nhau.
@@ -514,9 +510,6 @@
   padding: 3px;
   margin-bottom: -3px;
 }
-/* ĐÃ GỠ (19/09/2026): `.tab-dot` + `.tab-dot.danger` — chấm cảnh báo trên tab. Luật viết đủ
-   nhưng KHÔNG màn nào đặt lớp ấy, vì hệ thống chưa có tín hiệu nào để quyết khi nào chấm
-   sáng. Xem chú thích dài ở `ui/tabs.tsx`, chỗ prop `dot` từng đứng. */
 /*
  * Khoảng thở giữa thanh tab và nội dung tab.
  *
@@ -597,26 +590,18 @@
   min-width: 200px;
 }
 input.search {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16' fill='none' stroke='%238a908a' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='m15 15-3.5-3.5'/%3E%3C/svg%3E");
+  background-image: var(--icon-search);
   background-repeat: no-repeat;
   background-position: left 0.65rem center;
   padding-left: 2rem;
 }
 
 /*
- * ĐÃ XÓA (28/08/2026): khối `.stat-grid` / `.stat-card` / `.stat-num` / `.stat-label` của một
- * bản dựng Bảng điều khiển cũ. Bảng điều khiển hiện tại dùng `BlockCard`, không component nào
- * còn gọi tới mấy lớp đó nữa — nhưng `.stat-grid` thứ hai vẫn ĐÈ lên `.stat-grid` thật ở trên
- * (cùng độ đặc hiệu, đứng sau thì thắng) và chỉ đè MỘT PHẦN:
- *
- *   - `grid-template-columns` đổi `auto-fit` → `auto-fill`, nên cột trống KHÔNG co lại;
- *   - `gap` đổi 1px → var(--space-4), nên các ô rời nhau ra;
- *   - `background: var(--border)` của rule thật thì KHÔNG bị đè.
- *
- * Kết quả trên trang chi tiết: hai thẻ chỉ số ngồi trên một tấm nền xám kéo hết chiều ngang —
- * đúng cái người dùng báo ở hình 34. Đây là kiểu hỏng chỉ lộ ra khi hai khối CSS không liên
- * quan trùng tên lớp; đặt tên theo màn (`profile.css` đã làm đúng với `.profile-stat-card`)
- * là cách tránh.
+ * ĐỪNG KHAI LẠI `.stat-grid` (hay tên lớp chung chung nào) ở chỗ khác. Hai khối cùng tên lớp,
+ * cùng độ đặc hiệu thì khối đứng sau thắng và chỉ đè MỘT PHẦN (vd `auto-fit` → `auto-fill`,
+ * `gap` đổi, nhưng `background` giữ) — kết quả là thẻ chỉ số ngồi trên một tấm nền xám kéo
+ * hết chiều ngang. Kiểu hỏng này chỉ lộ ra khi hai khối CSS không liên quan trùng tên lớp;
+ * đặt tên theo màn (`profile.css` làm đúng với `.profile-stat-card`) là cách tránh.
  */
 
 @media (max-width: 680px) {
@@ -762,16 +747,6 @@ input.search {
   }
 }
 
-/* 7.5 Borrow board */
-.board-table tr.row-overdue > td {
-  background: var(--danger-soft);
-}
-.board-table tr.row-overdue .mono {
-  color: var(--danger);
-}
-.text-danger {
-  color: var(--danger);
-}
 /* Dòng vừa thêm/vừa đổi sáng lên rồi nhạt dần: máy mới thường rơi vào giữa trang theo thứ tự
    mã, không có dấu này thì mắt không tìm ra nó. Dùng chung cho mọi `.table`. */
 .table tr.row-flash > td {
@@ -793,11 +768,6 @@ input.search {
 }
 
 /* Skeleton fallback khi chunk trang lazy đang tải (code-splitting) */
-.page-fallback {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-8);
-}
 .skeleton {
   border-radius: var(--r);
   background: linear-gradient(
@@ -808,13 +778,6 @@ input.search {
   );
   background-size: 400% 100%;
   animation: skeletonShimmer 1.4s ease infinite;
-}
-.skeleton-title {
-  width: 38%;
-  height: 28px;
-}
-.skeleton-block {
-  height: 320px;
 }
 @keyframes skeletonShimmer {
   0% {

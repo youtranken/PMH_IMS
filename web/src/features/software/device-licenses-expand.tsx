@@ -15,8 +15,8 @@ import { PATHS } from '@/lib/routes';
  * đã theo (`SoftwareDevicePanel` tự đăng ký vào sổ của `devices`): license là chuyện của
  * module software, `devices` không cần biết license là gì.
  *
- * Trước đây câu "máy này đang cài gì" chỉ trả lời được ở TRANG CHI TIẾT của từng máy — nhìn
- * danh sách 20 dòng thì phải bấm vào 20 lần.
+ * Để câu "máy này đang cài gì" trả lời được ngay trên danh sách — chỉ có ở TRANG CHI TIẾT
+ * thì nhìn danh sách 20 dòng phải bấm vào 20 lần.
  */
 export function DeviceLicensesExpand({
   deviceId,

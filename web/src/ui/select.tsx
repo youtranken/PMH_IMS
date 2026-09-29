@@ -30,7 +30,7 @@ interface GroupRun {
 }
 
 /** Cắt mảng phẳng thành các đoạn liền nhau cùng `group`, giữ chỉ mục gốc cho ↑/↓. */
-export function groupRuns(options: SelectOption[]): GroupRun[] {
+function groupRuns(options: SelectOption[]): GroupRun[] {
   const runs: GroupRun[] = [];
   options.forEach((option, index) => {
     const last = runs[runs.length - 1];
@@ -83,7 +83,7 @@ export function Select({
    */
   id?: string;
   /**
-   * Nối `hint`/`error` của `Field` vào chính nút mở menu (F-06, 23/09).
+   * Nối `hint`/`error` của `Field` vào chính nút mở menu.
    *
    * `Field` tự truyền — nơi gọi không phải biết. Thiếu nó thì dòng "tối thiểu 12 ký tự…" chỉ
    * là chữ nằm cạnh ô, trình đọc màn hình không biết nó thuộc về ô nào.
@@ -113,10 +113,10 @@ export function Select({
    *
    * `Field required` chỉ VẼ dấu `*` (`page-header.tsx`), còn việc chặn thật thì tuỳ loại điều
    * khiển: `<input>` có `required` của trình duyệt, còn `Select` render ra `<button>` nên
-   * KHÔNG có gì cả. Hậu quả trước 12/09: năm ô đội dấu `*` mà trình đọc màn hình không nghe
-   * thấy chữ "bắt buộc" nào — dấu ấy là thứ chỉ người sáng mắt đọc được.
+   * KHÔNG có gì cả. Thiếu cờ này thì ô đội dấu `*` mà trình đọc màn hình không nghe thấy chữ
+   * "bắt buộc" nào — dấu ấy là thứ chỉ người sáng mắt đọc được.
    *
-   * Cờ này vá đúng phần đó. Nó KHÔNG dựng thêm hàng rào chặn submit, và cố ý: năm form ấy đã
+   * Cờ này lo đúng phần đó. Nó KHÔNG dựng thêm hàng rào chặn submit, và cố ý: các form ấy đã
    * tự kiểm trong `submit()` rồi báo bằng một câu tiếng Việt đọc được ("Cần ít nhất: mã thiết
    * bị, tên và loại thiết bị.") — tốt hơn bong bóng mặc định của trình duyệt. Nhồi thêm một
    * `<input required>` ẩn để ép trình duyệt chặn là dựng hàng rào THỨ HAI cho cùng một luật,

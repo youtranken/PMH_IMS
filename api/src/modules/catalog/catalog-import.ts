@@ -7,6 +7,7 @@ import {
   parseBoolean,
   pickCell,
   summarize,
+  unreadableFieldError,
   type ImportAction,
   type ImportSummary,
   type ParsedRow,
@@ -19,7 +20,7 @@ import {
 } from './catalog.types';
 
 // Kiểu dùng chung của mọi màn import (AD-15) — export lại để nơi gọi chỉ cần một chỗ import.
-export type { ImportAction, ImportSummary, ParsedRow, ParsedSheets };
+export type { ParsedSheets };
 
 /**
  * Lõi ĐỐI CHIẾU file danh mục — hàm THUẦN, không chạm DB, không chạm exceljs.
@@ -28,13 +29,13 @@ export type { ImportAction, ImportSummary, ParsedRow, ParsedSheets };
  * xem trước hiện gì thì ghi đúng cái đó.
  */
 
-export interface SiteValues {
+interface SiteValues {
   code: string;
   name?: string;
   address?: string | null;
 }
 
-export interface CabinetValues {
+interface CabinetValues {
   code: string;
   /** Mã site đã chuẩn hóa — bước ghi tra ra `site_id` (kể cả site vừa tạo trong cùng file). */
   siteKey: string;
@@ -43,26 +44,26 @@ export interface CabinetValues {
   uHeight?: number | null;
 }
 
-export interface DeviceTypeValues {
+interface DeviceTypeValues {
   name: string;
   hasPortMap?: boolean;
   description?: string | null;
 }
 
-export interface VendorValues {
+interface VendorValues {
   name: string;
   supplies?: string | null;
   phone?: string | null;
   contact?: string | null;
 }
 
-export type CatalogValues =
+type CatalogValues =
   | SiteValues
   | CabinetValues
   | DeviceTypeValues
   | VendorValues;
 
-export interface ImportRow {
+interface ImportRow {
   sheet: ImportableEntity;
   rowNumber: number;
   action: ImportAction;
@@ -79,7 +80,7 @@ export interface ImportRow {
   changes?: ImportChange[];
 }
 
-export interface ImportChange {
+interface ImportChange {
   field: string;
   from: string | number | boolean | null;
   to: string | number | boolean | null;
@@ -243,6 +244,11 @@ function planRow(
       label: rawLabel(entity, row.cells),
       message: 'Dòng ví dụ trong file mẫu — bỏ qua.',
     };
+  }
+
+  const unreadable = unreadableFieldError(row, FIELDS[entity]);
+  if (unreadable) {
+    return { ...base, action: 'error', label: rawLabel(entity, row.cells), message: unreadable };
   }
 
   const values: Record<string, string | number | boolean | null> = {};

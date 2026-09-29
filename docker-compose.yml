@@ -79,8 +79,15 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?bắt buộc}
       POSTGRES_DB: ${POSTGRES_DB:-ims}
       TZ: Asia/Ho_Chi_Minh
+      # DB-03: mật khẩu role chủ sở hữu `ims_owner`. Chỉ `ops/db/initdb-owner.sh` đọc nó —
+      # lúc initdb trên cụm mới, hoặc qua `ops/db-owner-bootstrap.sh` trên cụm đã có.
+      MIGRATION_DB_PASSWORD: ${MIGRATION_DB_PASSWORD:?bắt buộc — mật khẩu role chủ sở hữu ims_owner (DB-03)}
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # DB-03: superuser chỉ còn dùng để dựng `ims_owner` và giao database cho nó. Image chạy
+      # file trong initdb.d đúng một lần, lúc thư mục dữ liệu còn trống.
+      - ./ops/db:/ims-db:ro
+      - ./ops/db/initdb-owner.sh:/docker-entrypoint-initdb.d/10-ims-owner.sh:ro
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
       interval: 10s
@@ -115,6 +122,9 @@ services:
 
   # Chạy MỘT lần mỗi lần `up`: dựng role ims_app + áp migration bằng chủ sở hữu, rồi thoát (OPS-07).
   # DSN chủ sở hữu CHỈ nằm ở đây — api và worker không bao giờ cầm nó.
+  # Chủ sở hữu là `ims_owner`, KHÔNG phải POSTGRES_USER (DB-03): superuser bỏ qua mọi ACL và
+  # mọi kiểm tra, nên một migration lỗi hay một DSN bị lộ từ đây là toàn quyền trên cả cụm.
+  # Tên role viết thẳng, cùng lý do với `ims_app`: `ops/db/initdb-owner.sh` tạo đúng tên này.
   migrate:
     image: ims-api:latest
     build: ./api
@@ -127,7 +137,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       TZ: Asia/Ho_Chi_Minh
-      MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-ims}
+      MIGRATION_DATABASE_URL: postgresql://ims_owner:${MIGRATION_DB_PASSWORD:?bắt buộc — xem DB-03}@postgres:5432/${POSTGRES_DB:-ims}
       DATABASE_URL: postgresql://ims_app:${APP_DB_PASSWORD}@postgres:5432/${POSTGRES_DB:-ims}
       APP_DB_PASSWORD: ${APP_DB_PASSWORD}
     depends_on:

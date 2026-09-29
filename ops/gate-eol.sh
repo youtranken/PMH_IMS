@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # CỔNG KIỂU XUỐNG DÒNG: cấm file LẪN CRLF và LF trong cùng một file.
 #
-# ===== VÌ SAO CÓ CỔNG NÀY (21/09/2026) =====
+# ===== VÌ SAO CÓ CỔNG NÀY =====
 #
 # Repo trộn kiểu xuống dòng có chủ ý: `core.autocrlf=false`, và `.gitattributes` chỉ đóng băng
 # `api/src/migrations/*.sql` (checksum migration băm trên byte thô — xem chú thích ở đó). Trộn
@@ -11,8 +11,6 @@
 #     được thay đổi thật với nhiễu — và diff là thứ duy nhất đứng giữa một bản vá và production.
 #   · Nó sinh ra lặng lẽ: chỉ cần một script thay chuỗi mà chuỗi thay thế mang xuống-dòng kiểu
 #     Linux, giữa một file kiểu Windows. Không công cụ nào kêu.
-#
-# Đếm lúc dựng cổng: 28 file đã lẫn dòng từ trước, gom lại trong một commit riêng.
 #
 # ===== MỘT LỖI THẬT MÀ CỔNG NÀY KHÔNG BẮT, CỐ Ý =====
 #
@@ -25,10 +23,10 @@
 # ===== BỎ QUA `.claude/skills/` =====
 #
 # Đó là bộ công cụ BMAD cài vào repo, không phải sản phẩm. Một cổng đỏ vì nội dung người khác
-# viết là một cổng sẽ bị tắt trong vòng một tuần. (Đo 21/09: thư mục đó hiện SẠCH, nên đây là
-# quyết định về phạm vi, không phải để né một đống nợ.)
+# viết là một cổng sẽ bị tắt trong vòng một tuần. Đây là quyết định về phạm vi, không phải để
+# né một đống nợ.
 #
-# ===== VÀ BỎ QUA `api/src/migrations/*.sql` — ĐÂY MỚI LÀ CHỖ NGUY HIỂM (§18 #4, 22/09) =====
+# ===== VÀ BỎ QUA `api/src/migrations/*.sql` — ĐÂY MỚI LÀ CHỖ NGUY HIỂM =====
 #
 # Cổng này in ra một CHỈ DẪN SỬA: "bỏ hết CR rồi thêm lại CR trước mọi LF". Làm đúng chỉ dẫn
 # ấy trên một file migration là đổi BYTE của nó — mà `migration-runner` băm sha256 trên byte
@@ -68,10 +66,10 @@ mixed=$(git ls-files -z -- \
 
 scan_status=$?
 
-# "CỔNG HỎNG" và "CÓ FILE LẪN EOL" phải nói hai câu khác nhau (§18 #13).
+# "CỔNG HỎNG" và "CÓ FILE LẪN EOL" phải nói hai câu khác nhau.
 #
-# Bản trước dùng `set -e`: thiếu `perl` trên máy, hay `git ls-files` lỗi, thì lệnh gán chết im
-# lặng và script thoát khác 0 — TRÔNG Y HỆT "cổng bắt được file lẫn dòng". Người đọc mã thoát
+# Với `set -e`: thiếu `perl` trên máy, hay `git ls-files` lỗi, thì lệnh gán chết im lặng và
+# script thoát khác 0 — TRÔNG Y HỆT "cổng bắt được file lẫn dòng". Người đọc mã thoát
 # sẽ đi tìm một file lẫn EOL không hề tồn tại.
 if [ "$scan_status" -ne 0 ]; then
   echo "✗ CỔNG HỎNG (không phải repo hỏng): lượt quét thoát mã $scan_status." >&2

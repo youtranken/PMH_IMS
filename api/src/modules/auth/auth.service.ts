@@ -120,10 +120,10 @@ export class AuthService {
      * SA KHÓA TAY — kiểm ở đây, tách hẳn khỏi khóa tự động bên dưới.
      *
      * `users.status` có ba giá trị (`active`/`locked`/`disabled`), màn Tài khoản đặt được cả
-     * ba, nhưng tới 09/09 chỗ này chỉ kiểm `disabled`. `locked` rơi thẳng qua: SA bấm "Khóa
-     * tài khoản" vì nghi bị chiếm hoặc vì nhân viên vừa nghỉ, màn hiện "Khóa", nhật ký ghi một
-     * dòng — và người kia vẫn đăng nhập bình thường. Không có gì trên hệ thống mâu thuẫn với
-     * niềm tin rằng đã khóa xong (rà soát 07/09, mục 6 "Bảo mật").
+     * ba. Chỉ kiểm `disabled` thì `locked` rơi thẳng qua: SA bấm "Khóa tài khoản" vì nghi bị
+     * chiếm hoặc vì nhân viên vừa nghỉ, màn hiện "Khóa", nhật ký ghi một dòng — và người kia
+     * vẫn đăng nhập bình thường. Không có gì trên hệ thống mâu thuẫn với niềm tin rằng đã khóa
+     * xong.
      *
      * Nặng thêm: đi tiếp thì bộ đếm sai bị XÓA và nhật ký ghi một lần đăng nhập THÀNH CÔNG
      * cho tài khoản đang bị khóa.
@@ -215,14 +215,14 @@ export class AuthService {
         detail: { totpPending: needsTotp },
       });
       /*
-       * `last_login_at` chỉ đóng dấu khi phiên đã xác thực ĐỦ (11/09).
+       * `last_login_at` chỉ đóng dấu khi phiên đã xác thực ĐỦ.
        *
        * Với `needsTotp` thì tới đây người dùng MỚI qua cửa mật khẩu, chưa vào được — đóng dấu
        * lúc này là ghi một lần đăng nhập chưa từng hoàn tất, và kẻ có mật khẩu nhưng bị chặn ở
        * cửa TOTP sẽ để lại đúng dấu vết của một lần vào bình thường.
        *
-       * CÓ BA ĐƯỜNG kết thúc bằng một phiên đã xác thực đủ, không phải hai — bản đầu viết
-       * "nhánh còn lại" ở đây và bỏ sót mất một đường (test tay 12/09):
+       * CÓ BA ĐƯỜNG kết thúc bằng một phiên đã xác thực đủ, không phải hai — rất dễ nghĩ chỉ
+       * có "nhánh còn lại" ở đây mà bỏ sót một đường:
        *   1. chính nhánh này, khi tài khoản không bắt TOTP lúc đăng nhập;
        *   2. `verifyLoginTotp` — người đã cài TOTP, gõ mã để vào;
        *   3. `confirmTotpEnrollment` — LẦN ĐẦU, vừa quét QR xong và được cấp phiên ngay.
@@ -268,7 +268,7 @@ export class AuthService {
     ctx: LoginContext,
   ): Promise<{ session: CreatedSession; mustChangePassword: boolean }> {
     /*
-     * CHỈ nhận phiên ĐANG CHỜ mã. Bản trước không kiểm gì cả.
+     * CHỈ nhận phiên ĐANG CHỜ mã.
      *
      * Đường này kết thúc bằng `completeTotpWithin`, và hàm đó đóng dấu `stepped_up_at` — tức
      * nó cấp một phiên ĐÃ MỞ KÉT. Với một phiên đã xác thực đủ (`totp_pending = false`), gọi
@@ -308,9 +308,9 @@ export class AuthService {
       await this.probe.noteSecurityFailure(user.email);
 
       /*
-       * ĐẾM SAI VÀ THU HỒI PHIÊN — cùng khuôn với `stepUp()` (finding #2).
+       * ĐẾM SAI VÀ THU HỒI PHIÊN — cùng khuôn với `stepUp()`.
        *
-       * Bản trước chỉ ghi audit rồi ném. Trần duy nhất là throttler chung 300/phút, mà ở route
+       * Chỉ ghi audit rồi ném là không đủ. Trần duy nhất khi đó là throttler chung 300/phút, mà ở route
        * này `req.user` đã tồn tại nên 300 lượt đó đổ hết vào ĐÚNG MỘT tài khoản. Kẻ đã có mật
        * khẩu (dùng lại từ nơi khác, phishing) nhưng không có điện thoại chỉ việc bắn liên tục:
        * phiên chờ không bao giờ chết, `clearLoginFailures` đã xóa bộ đếm nên lockout
@@ -363,7 +363,7 @@ export class AuthService {
       });
       await this.sessions.completeTotpWithin(tx, created.id);
       /*
-       * ĐÂY mới là lúc đóng dấu `last_login_at` cho đường có TOTP (11/09).
+       * ĐÂY mới là lúc đóng dấu `last_login_at` cho đường có TOTP.
        *
        * Phiên vừa cấp là phiên đầu tiên người này thật sự vào được: `login()` chỉ mở cửa mật
        * khẩu và cố tình KHÔNG đóng dấu. Đặt trong chính transaction này nên hoặc phiên được
@@ -373,7 +373,7 @@ export class AuthService {
       /*
        * ĐỐT MÃ TRONG CÙNG TRANSACTION VỚI LƯỢT CẤP PHIÊN (NFR-01).
        *
-       * Bản trước ghi mốc này SAU KHI transaction đã commit. Không cần lỗi gì để hỏng: hai
+       * Ghi mốc này SAU KHI transaction đã commit thì không cần lỗi gì để hỏng: hai
        * request mang CÙNG một mã 6 số, cả hai đọc `totp_last_timestep` cũ, cả hai qua cửa,
        * cả hai được cấp phiên. Một mã ra hai phiên — đúng thứ chống-replay sinh ra để chặn.
        */
@@ -383,7 +383,7 @@ export class AuthService {
         result.timeStep as number,
       );
       /*
-       * MÃ ĐÃ BỊ ĐỐT bởi một lượt CHỒNG LÊN lượt này (rà soát 10/09).
+       * MÃ ĐÃ BỊ ĐỐT bởi một lượt CHỒNG LÊN lượt này.
        *
        * `totp.verify` phía trên chạy trên ảnh chụp đọc NGOÀI transaction, nên nó không thấy
        * lượt song song. Vị từ trong `setTotpLastTimestepWithin` mới là chỗ loại trừ, và khớp
@@ -472,7 +472,7 @@ export class AuthService {
       /*
        * GÕ ĐÚNG THÌ XOÁ BỘ ĐẾM — nửa còn lại của việc "dùng chung cơ chế cửa két".
        *
-       * Thiếu câu này (tới 21/09) thì bộ đếm chỉ biết cộng: sai bốn lần rồi gõ đúng vẫn để
+       * Thiếu câu này thì bộ đếm chỉ biết cộng: sai bốn lần rồi gõ đúng vẫn để
        * lại `stepup_failures = 4` trên phiên, và lần gõ hụt mã ĐẦU TIÊN ở cửa két sau đó
        * thu hồi phiên, kèm câu "Gõ sai mã 5 lần" nói sai sự thật. Dùng chung bộ đếm thì phải
        * dùng chung cả hai chiều, nếu không "liên tiếp" chỉ là một chữ trong chú thích.
@@ -594,7 +594,7 @@ export class AuthService {
       });
       await this.sessions.completeTotpWithin(tx, created.id);
       /*
-       * ĐÓNG DẤU Ở ĐÂY LUÔN — đây là đường thứ ba tới một phiên đã xác thực đủ (vá 12/09).
+       * ĐÓNG DẤU Ở ĐÂY LUÔN — đây là đường thứ ba tới một phiên đã xác thực đủ.
        *
        * Dòng `auth.login.ok` ngay dưới đã tự nói rằng đây LÀ một lần đăng nhập thành công.
        * Thiếu dòng này thì hai chỗ nói ngược nhau: nhật ký ghi người ta đã vào, còn cột
@@ -628,10 +628,9 @@ export class AuthService {
       /*
        * Thông điệp phải CHỈ ĐƯỜNG RA, vì đây là chỗ người dùng kẹt lại.
        *
-       * Từ 08/09 cửa này canh cả đường GHI vào két (C2), không chỉ đường đọc — nên câu cũ
-       * ("không thể xem bí mật") vừa sai vừa cụt: tài khoản tạo với `totpLoginRequired: false`
-       * và chưa enroll bao giờ sẽ gõ mã nào cũng trượt mà không biết phải làm gì tiếp
-       * (rà soát 08/09, #4).
+       * Cửa này canh cả đường GHI vào két, không chỉ đường đọc — nên một câu kiểu "không thể
+       * xem bí mật" vừa sai vừa cụt: tài khoản tạo với `totpLoginRequired: false` và chưa
+       * enroll bao giờ sẽ gõ mã nào cũng trượt mà không biết phải làm gì tiếp.
        */
       throw new BadRequestException({
         code: 'TOTP_NOT_ENROLLED',
@@ -658,10 +657,10 @@ export class AuthService {
          bộ đếm thì một kẻ khôn ngoan chỉ cần xen kẽ hai kiểu là không chạm ngưỡng nào cả. */
       await this.probe.noteSecurityFailure(user.email);
       /**
-       * Sai liên tiếp đủ ngưỡng → THU HỒI PHIÊN (code review Epic 4, finding 1).
+       * Sai liên tiếp đủ ngưỡng → THU HỒI PHIÊN.
        *
-       * Trước đây gõ sai chỉ ghi audit, nên kẻ cầm cookie phiên trộm được cứ thử mã cho tới
-       * khi trúng. Thu hồi PHIÊN chứ không khóa TÀI KHOẢN là có chủ ý: khóa tài khoản thì
+       * Gõ sai mà chỉ ghi audit thì kẻ cầm cookie phiên trộm được cứ thử mã cho tới khi
+       * trúng. Thu hồi PHIÊN chứ không khóa TÀI KHOẢN là có chủ ý: khóa tài khoản thì
        * chính kẻ tấn công lại khóa được người dùng thật ra ngoài — hàng rào thành công cụ
        * phá hoại. Mất phiên thì kẻ tấn công mất cookie, người dùng thật đăng nhập lại là xong.
        */
@@ -697,9 +696,9 @@ export class AuthService {
     /*
      * MỘT transaction cho: mở két + ĐỐT MÃ + ghi vết (AD-5, NFR-01).
      *
-     * Bản trước là ba lượt ghi rời, và thứ tự của chúng sai đúng ở chỗ nguy hiểm nhất: audit
-     * "auth.stepup.ok" ghi TRƯỚC cả hai lượt còn lại, rồi `markSteppedUp` commit ngay, rồi mới
-     * tới mốc chống-replay. Nghĩa là quyền mở két đã cấp xong trong khi mã 6 số vừa dùng VẪN
+     * Tách thành ba lượt ghi rời thì hỏng đúng ở chỗ nguy hiểm nhất: audit "auth.stepup.ok"
+     * ghi TRƯỚC cả hai lượt còn lại, rồi `markSteppedUp` commit ngay, rồi mới tới mốc
+     * chống-replay. Nghĩa là quyền mở két đã cấp xong trong khi mã 6 số vừa dùng VẪN
      * còn hiệu lực tới hết chu kỳ 30 giây — và nếu lượt ghi cuối hỏng thì nó còn hiệu lực mà
      * không có dòng lỗi nào. Sổ cũng nói dối được theo chiều ngược lại: "đã mở két lúc 14:03"
      * trong khi lượt ghi thật đằng sau đã rollback.
@@ -712,7 +711,7 @@ export class AuthService {
         result.timeStep as number,
       );
       /*
-       * MÃ ĐÃ BỊ ĐỐT bởi một lượt CHỒNG LÊN lượt này (rà soát 10/09).
+       * MÃ ĐÃ BỊ ĐỐT bởi một lượt CHỒNG LÊN lượt này.
        *
        * `totp.verify` phía trên chạy trên ảnh chụp đọc NGOÀI transaction, nên nó không thấy
        * lượt song song. Vị từ trong `setTotpLastTimestepWithin` mới là chỗ loại trừ, và khớp
@@ -1030,7 +1029,7 @@ export class AuthService {
   }
 
   /*
-   * `ip` không còn là tham số ở đây: từ 08/09 nó là CỘT `audit_log.ip`, do
+   * `ip` không phải tham số ở đây: nó là CỘT `audit_log.ip`, do
    * `AuditWriterService` tự lấy từ ngữ cảnh request (`common/request-context.ts`). Ghi thêm
    * vào `detail` nữa là hai chỗ giữ cùng một sự thật — đúng cách chúng trôi khỏi nhau.
    */
@@ -1209,7 +1208,7 @@ function decodeTicket(ticket: string): SealedValue {
 }
 
 /** Giữ /24 để đổi IP trong cùng dải LAN không bị coi là thiết bị mới. */
-export function maskIp(ip: string | null): string {
+function maskIp(ip: string | null): string {
   if (!ip) return 'unknown';
   const v4 = /^(\d{1,3}\.\d{1,3}\.\d{1,3})\.\d{1,3}$/.exec(ip);
   return v4 ? `${v4[1]}.0/24` : ip;

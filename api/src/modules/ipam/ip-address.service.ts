@@ -25,7 +25,6 @@ import { SystemConfigService } from '../config-sys/system-config.service';
 import { DevicesApiService } from '../devices/devices.api';
 import { enumerateHosts, hostOf, keepPreferredByAddress, parseAddress } from './ip-rules';
 import {
-  IP_LIFECYCLE_STATUSES,
   OCCUPYING_STATUSES,
   canTransition,
   isOccupying,
@@ -37,8 +36,6 @@ import { describePortRange } from './nat-rules';
 import { ipAddressTable, ipHistoryTable, natRuleTable, subnetTable } from './ipam.schema';
 import { SubnetService } from './subnet.service';
 
-/** MỘT nguồn sự thật cho danh sách trạng thái — `ip-lifecycle.ts` (AD-15). */
-export const IP_STATUSES = IP_LIFECYCLE_STATUSES;
 export type { IpStatus };
 
 /** Câu cảnh báo theo đúng việc người dùng vừa bấm — xem `assertNoLiveNatWithin`. */
@@ -69,10 +66,9 @@ export interface IpAddressRecord {
   /**
    * Hồ sơ đã ẨN hay chưa — `null` là đang hiển thị.
    *
-   * Ra khỏi service từ 09/09. Trước đó `decorate` không trả ba trường này, nên khi màn dải
-   * xin thêm hồ sơ đã ẩn (`?includeVoided=true`) thì chúng về trông y hệt hồ sơ đang sống —
-   * và cửa `restore()` không có cách nào biết nên bày nút cho dòng nào. Đúng bẫy đã gặp ở
-   * `SubnetRecord`: ba cột có từ 0020 nhưng không bao giờ ra tới giao diện.
+   * `decorate` PHẢI trả ba trường này. Thiếu chúng thì khi màn dải xin thêm hồ sơ đã ẩn
+   * (`?includeVoided=true`), chúng về trông y hệt hồ sơ đang sống — và cửa `restore()` không
+   * có cách nào biết nên bày nút cho dòng nào. Cùng lý do với `SubnetRecord`.
    */
   voidedAt: Date | null;
   voidedBy: string | null;
@@ -122,7 +118,7 @@ export type SubnetSlot =
   | { kind: 'free'; address: string };
 
 /**
- * Hồ sơ IP (story 5.1, FR-018/FR-019). Chủ sở hữu bảng `ip_address` + `ip_history` (AD-3).
+ * Hồ sơ IP (FR-018/FR-019). Chủ sở hữu bảng `ip_address` + `ip_history` (AD-3).
  */
 @Injectable()
 export class IpAddressService {
@@ -138,7 +134,7 @@ export class IpAddressService {
    * "Hôm nay" theo múi giờ ứng dụng (AD-11).
    *
    * KHÔNG dùng `new Date().toISOString()`: từ 00:00 tới 07:00 giờ VN thì UTC còn là hôm qua,
-   * và ngày cấp IP sẽ lùi một ngày suốt cả buổi sáng — đúng lỗi E2E của Epic 3 bắt được.
+   * và ngày cấp IP sẽ lùi một ngày suốt cả buổi sáng.
    */
   private async timezone(): Promise<string> {
     return this.config.getString('appTimezone');
@@ -177,10 +173,10 @@ export class IpAddressService {
         ? all
         : all.filter((row) => row.voidedAt === null || row.voidedAt.getTime() === stamp);
     /*
-     * `keepPreferredByAddress`, KHÔNG phải `new Map(records.map(...))` (F-10, vá 21/09).
+     * `keepPreferredByAddress`, KHÔNG phải `new Map(records.map(...))` (F-10).
      *
      * `ip_address_key` là UNIQUE một phần (`WHERE voided_at IS NULL`), nên một địa chỉ có thể
-     * có 1 hàng sống + N hàng đã ẩn — và bản trước giữ hàng CUỐI, mà "cuối" do Postgres quyết.
+     * có 1 hàng sống + N hàng đã ẩn — và `new Map` giữ hàng CUỐI, mà "cuối" do Postgres quyết.
      * Xem luật và hậu quả ở chính hàm ấy.
      */
     const byAddress = keepPreferredByAddress(records);
@@ -259,7 +255,7 @@ export class IpAddressService {
    *
    * Lượt thanh lý phải đọc bằng chính `tx` của nó: đọc bằng `this.db` là đọc trên MỘT KẾT NỐI
    * KHÁC, ngoài transaction — một IP vừa được cấp cho máy này sẽ không có trong danh sách và
-   * máy được thanh lý trong khi vẫn đang giữ nó. Đó đúng là mẫu M2 mà cả đợt rà soát này dọn.
+   * máy được thanh lý trong khi vẫn đang giữ nó (mẫu M2).
    *
    * ===== CHỈ NHỮNG ĐỊA CHỈ ĐANG CHIẾM CHỖ (A-06) =====
    *
@@ -342,7 +338,7 @@ export class IpAddressService {
     return result;
   }
 
-  /** IP của một thiết bị — panel IP trên trang thiết bị (story 5.4) hỏi cái này. */
+  /** IP của một thiết bị — panel IP trên trang thiết bị hỏi cái này. */
   async listForDevice(deviceId: string): Promise<IpAddressRecord[]> {
     const rows = await this.db
       .select()
@@ -433,15 +429,13 @@ export class IpAddressService {
   /**
    * Lịch sử một hồ sơ IP — MỚI NHẤT TRÊN ĐẦU, có trần 200 dòng.
    *
-   * Trước 09/09 đây là bản LỆCH DUY NHẤT trong mười bộ đọc lịch sử của repo, và là bản lệch
-   * duy nhất NGƯỜI DÙNG NHÌN THẤY: nó `asc` và không trần, nên panel Lịch sử của IP hiện
-   * cũ-nhất-trên-đầu trong khi chín màn kia hiện mới-nhất-trên-đầu. Người đọc chuyển qua lại
-   * giữa hai màn sẽ đọc sai thứ tự mà không nhận ra — dòng đầu bảng ở màn này là "lâu rồi",
-   * ở màn kia là "vừa xong".
+   * Phải cùng thứ tự với mọi bộ đọc lịch sử khác của repo. Để `asc` thì panel Lịch sử của IP
+   * hiện cũ-nhất-trên-đầu trong khi các màn kia hiện mới-nhất-trên-đầu. Người đọc chuyển qua
+   * lại giữa hai màn sẽ đọc sai thứ tự mà không nhận ra — dòng đầu bảng ở màn này là "lâu
+   * rồi", ở màn kia là "vừa xong".
    *
-   * Trần 200 cũng đi kèm, cùng lý do với chín bản kia: một IP bị chuyển trạng thái hàng ngày
-   * trong vài năm sẽ kéo cả nghìn dòng về trình duyệt cho một cái panel không ai cuộn hết.
-   * Rà soát 07/09, mục 6 "Kiến trúc".
+   * Trần 200 cùng lý do với các bản kia: một IP bị chuyển trạng thái hàng ngày trong vài năm
+   * sẽ kéo cả nghìn dòng về trình duyệt cho một cái panel không ai cuộn hết.
    */
   async history(id: string): Promise<(typeof ipHistoryTable.$inferSelect)[]> {
     await this.requireAny(id);
@@ -527,7 +521,7 @@ export class IpAddressService {
     if (input.assignedAt !== undefined) values.assignedAt = input.assignedAt || null;
     if (input.note !== undefined) values.note = input.note?.trim() || null;
     /**
-     * Trạng thái KHÔNG sửa được qua đây — phải đi `transition()` (story 5.2).
+     * Trạng thái KHÔNG sửa được qua đây — phải đi `transition()`.
      * AC 5.2 nói rõ: "chuyển trạng thái qua transition(), không UPDATE status tự do". Để lọt
      * một đường sửa thẳng thì cái máy trạng thái chỉ còn là gợi ý.
      */
@@ -541,7 +535,7 @@ export class IpAddressService {
     /*
      * Gán MÁY hoặc NGƯỜI DÙNG vào một hồ sơ đang TRỐNG thì nó thành ĐANG CẤP.
      *
-     * Bản trước để `status` nguyên: một hàng vừa có tên máy vừa mang badge "Trống", còn nút
+     * Để `status` nguyên thì một hàng vừa có tên máy vừa mang badge "Trống", còn nút
      * lọc phía trên đếm "Đang dùng 0" — bảng và con số nói ngược nhau, và cả hai đều đúng theo
      * dữ liệu. Người dùng thấy ô đã có máy nên tưởng đã cấp, còn hệ thống thì vẫn coi địa chỉ
      * đó là chỗ trống và sẵn sàng cấp lần nữa cho máy khác.
@@ -568,10 +562,10 @@ export class IpAddressService {
     if (isOccupying(before.status as IpStatus)) requireOwner(nextOwner.deviceId, nextOwner.usedBy);
 
     /*
-     * ĐỔI CHỦ hoặc DỜI ĐỊA CHỈ qua đường sửa hồ sơ cũng phải hỏi sổ NAT (rà soát 10/09).
+     * ĐỔI CHỦ hoặc DỜI ĐỊA CHỈ qua đường sửa hồ sơ cũng phải hỏi sổ NAT.
      *
-     * Bản vá finding #6 đặt hàng rào ở `transitionWithin` và `voidAddress` — hai cửa HẸP. Cửa
-     * này dẫn tới đúng cùng một hậu quả, chỉ khác đường vào:
+     * Hàng rào ở `transitionWithin` và `voidAddress` chỉ canh hai cửa HẸP. Cửa này dẫn tới
+     * đúng cùng một hậu quả, chỉ khác đường vào:
      *
      *   · đổi `deviceId`: rule `TCP 8080 → .5` vẫn mở, và giờ nó trỏ vào máy mới. Không khác
      *     gì "cấp cho máy khác" — thứ `PURPOSE_WARNING.assign` viết ra để chặn.
@@ -652,7 +646,7 @@ export class IpAddressService {
   }
 
   /**
-   * Chuyển trạng thái vòng đời (story 5.2, FR-019).
+   * Chuyển trạng thái vòng đời (FR-019).
    *
    * Đây là đường DUY NHẤT đổi được `status` — `update()` từ chối thẳng. Máy trạng thái nằm
    * ở `ip-lifecycle.ts`, service chỉ hỏi rồi ghi.
@@ -790,7 +784,7 @@ export class IpAddressService {
         actor,
         fromStatus: from,
         toStatus: to,
-        // Ghi lại CHỦ CŨ ngay tại dòng thu hồi — đó là chỗ tra "trước đây IP này của ai".
+        // Ghi lại CHỦ CŨ ngay tại dòng thu hồi — đó là chỗ tra "IP này từng của ai".
         changes: {
           reason: options.reason ?? null,
           previousDeviceId: before.deviceId,
@@ -807,7 +801,7 @@ export class IpAddressService {
    * "Xóa" hồ sơ IP NHẬP NHẦM (Q-15): đặt `voided_at`, có lý do — hàng ở lại giữ lịch sử (AD-13)
    * nhưng biến khỏi mọi màn và nhả địa chỉ để nhập lại ngay. Giao diện không có đường khôi phục.
    *
-   * Chỉ dành cho hồ sơ NHẬP NHẦM. IP hết dùng thì đi đường vòng đời (thu hồi, story 5.2) —
+   * Chỉ dành cho hồ sơ NHẬP NHẦM. IP hết dùng thì đi đường vòng đời (thu hồi) —
    * ẩn một IP đang dùng là làm mất luôn cái lịch sử mà AC 5.2 đòi giữ vĩnh viễn.
    */
   async voidAddress(actor: string, id: string, reason: string): Promise<void> {
@@ -821,12 +815,12 @@ export class IpAddressService {
     }
     await this.db.transaction(async (tx) => {
       /*
-       * ẨN cũng phải hỏi sổ NAT, y như THU HỒI (rà soát 08/09, #5 — mẫu N1).
+       * ẨN cũng phải hỏi sổ NAT, y như THU HỒI (mẫu N1).
        *
-       * Bản đầu của hàng rào #6 chỉ áp cho `transition`, bỏ trống cửa này. Nhưng ẩn hồ sơ còn
-       * tệ hơn thu hồi một bậc: thu hồi thì địa chỉ vẫn còn trong sổ và người ta còn thấy nó
-       * trống; ẩn thì hồ sơ BIẾN MẤT khỏi mọi màn, trong khi rule NAT vẫn lặng lẽ chuyển gói
-       * tới đúng địa chỉ đó. Lỗ thủng vẫn nguyên mà cuốn sổ không còn chỗ nào nhắc tới nó.
+       * Ẩn hồ sơ còn tệ hơn thu hồi một bậc: thu hồi thì địa chỉ vẫn còn trong sổ và người ta
+       * còn thấy nó trống; ẩn thì hồ sơ BIẾN MẤT khỏi mọi màn, trong khi rule NAT vẫn lặng lẽ
+       * chuyển gói tới đúng địa chỉ đó. Lỗ thủng vẫn nguyên mà cuốn sổ không còn chỗ nào nhắc
+       * tới nó.
        */
       await this.assertNoLiveNatWithin(tx, before.address, 'void');
       await tx
@@ -1031,8 +1025,8 @@ export class IpAddressService {
   /**
    * Máy nhận địa chỉ này còn dùng được không — hỏi TRONG `tx` và giữ khoá tới hết lượt ghi.
    *
-   * `assertUsable*` chứ không `exists`: máy đã thanh lý không được nhận thêm IP (rà soát
-   * 07/09). Thông điệp và mã lỗi do `devices.api` giữ — bốn cửa phải nói cùng một câu.
+   * `assertUsable*` chứ không `exists`: máy đã thanh lý không được nhận thêm IP. Thông điệp
+   * và mã lỗi do `devices.api` giữ — bốn cửa phải nói cùng một câu.
    *
    * Bản `Within` chứ không phải bản trên pool: hỏi xong rồi mới mở transaction là chừa lại
    * đúng khoảng hở để một lượt thanh lý chen vào giữa, và địa chỉ được cấp cho một máy vừa ra
@@ -1086,7 +1080,7 @@ export class IpAddressService {
     /*
      * MỘT lượt hỏi `devices.api` cho cả trang, không phải một lượt mỗi thiết bị.
      *
-     * Bản trước gọi `getById` trong vòng lặp, mà hàm đó tốn 8 truy vấn (đọc hàng `device` +
+     * Đừng gọi `getById` trong vòng lặp: hàm đó tốn 8 truy vấn (đọc hàng `device` +
      * `catalog.lists()` bắn 7 câu không cache). Một dải /24 gán đầy là ~2000 câu cho MỘT lần
      * mở màn — và nó lớn lên theo số máy, đúng chiều mà sổ IPAM sẽ lớn lên.
      */

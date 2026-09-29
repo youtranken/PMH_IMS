@@ -367,7 +367,7 @@ test.describe('Tài khoản dịch vụ', () => {
     await expect(page.getByText('Đã ngừng dùng tài khoản.')).toBeVisible();
     await expect(row.getByText('Đã ngừng dùng')).toBeVisible();
     // Đã đóng rồi thì không còn nút đóng nữa — bấm lần hai chỉ đẻ thêm một dòng lịch sử rỗng nghĩa.
-    // Cột Thao tác là menu ba chấm từ 28/08/2026 — mở ra mới đọc được có mục nào.
+    // Cột Thao tác là menu ba chấm — mở ra mới đọc được có mục nào.
     expect(await rowActionNames(page, code)).not.toContain('Ngừng dùng');
 
     // Lý do đi thẳng vào lịch sử, kèm chuyển trạng thái — đó mới là chỗ trả lời câu hỏi sáu tháng sau.

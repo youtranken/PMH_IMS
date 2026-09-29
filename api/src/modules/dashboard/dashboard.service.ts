@@ -16,30 +16,20 @@ const WEEK_DAYS = 7;
 /*
  * KHÔNG CÓ HẰNG SỐ CỬA SỔ "SẮP HẾT HẠN" Ở ĐÂY — và chỗ trống này là cố ý.
  *
- * Từng có `const EXPIRY_WINDOW_DAYS = 30`, kèm chú thích "cùng con số với màn Expiry để hai
- * chỗ khớp nhau". Ý định đúng, hệ quả sai: con số thật nằm ở `expiry.warning_days` trong
- * `system_config` (AD-11, DoD gạch 8), nên truyền 30 vào là GHI ĐÈ cấu hình. Sếp nâng ngưỡng
- * lên 60 ngày thì màn "Sắp hết hạn" nghe lời còn trang chủ vẫn 30 — mà trang chủ mới là chỗ
- * người ta đọc (A-08, vá 21/09).
+ * Đừng khai `const EXPIRY_WINDOW_DAYS = 30` "cho khớp với màn Expiry". Con số thật nằm ở
+ * `expiry.warning_days` trong `system_config` (AD-11, DoD gạch 8), nên truyền 30 vào là GHI ĐÈ
+ * cấu hình. Sếp nâng ngưỡng lên 60 ngày thì màn "Sắp hết hạn" nghe lời còn trang chủ vẫn 30 —
+ * mà trang chủ mới là chỗ người ta đọc.
  *
  * Hai bản sao của một con số chỉ khớp nhau cho tới lần đầu ai đó đổi một bản. Nên dashboard
- * thôi biết gì về cửa sổ: `expiry.list()` không tham số nghĩa là "anh tự quyết theo cấu hình".
+ * không biết gì về cửa sổ: `expiry.list()` không tham số nghĩa là "anh tự quyết theo cấu hình".
  */
-/**
- * Số dòng tối đa mỗi khối.
- *
- * Chuyện BÀY BIỆN, nên nằm trong code chứ không vào `system_config` — khác hẳn hai ngưỡng
- * "sắp đầy" và "két cũ" (0038), là luật nghiệp vụ và sẽ được siết dần. Trang này đọc trong ba
- * phút; khối nào dài hơn tám dòng thì người ta cuộn qua chứ không đọc, và cuối mỗi khối đã có
- * đường sang màn đầy đủ.
- */
-const MAX_ITEMS = 8;
 /** Số chỗ tối đa mục quá hạn được giữ trong khối "sắp hết hạn" khi còn mục sắp tới cần hiện. */
 const OVERDUE_SLOTS = 3;
 
-export interface DashboardBlock<T> {
+interface DashboardBlock<T> {
   /**
-   * `available: false` = module chưa deploy (Epic 9 chưa có). UI hiện "chưa có dữ liệu" gọn
+   * `available: false` = module chưa deploy (vd `incidents`). UI hiện "chưa có dữ liệu" gọn
    * gàng chứ KHÔNG hiện khối rỗng trông như hỏng, và cũng không giấu khối đi — sếp cần biết
    * là phần đó chưa có, không phải tưởng là không có sự cố nào.
    */
@@ -68,7 +58,7 @@ export interface BreakGlassEntry {
 }
 
 /** Dải mạng sắp đầy — FR-020 đã tính sẵn `percent`, đây chỉ chọn dòng nào đáng lên trang. */
-export interface SubnetLoadEntry {
+interface SubnetLoadEntry {
   id: string;
   name: string;
   cidr: string;
@@ -84,7 +74,7 @@ export interface SubnetLoadEntry {
  * `VaultOwnerSummary` giữ: nói "hồ sơ nào có két, mấy ngăn, đổi lần cuối bao giờ", không nói
  * trong đó cất gì.
  */
-export interface StaleSecretEntry {
+interface StaleSecretEntry {
   ownerType: string;
   ownerId: string;
   code: string;
@@ -95,7 +85,7 @@ export interface StaleSecretEntry {
 }
 
 /** Hồ sơ vừa vào kho thanh lý — cùng các loại với màn `/disposal`, không tự gộp lại lần nữa. */
-export interface DisposedEntry {
+interface DisposedEntry {
   kind: string;
   id: string;
   code: string;
@@ -131,7 +121,7 @@ export interface Dashboard {
 }
 
 /**
- * Bảng điều khiển (story 7.1, FR-025).
+ * Bảng điều khiển (FR-025).
  *
  * Mục tiêu viết trong epic rất cụ thể: "sếp 3 phút sáng thứ Hai tự trả lời mọi câu hỏi". Nên
  * mỗi khối phải trả lời ĐÚNG MỘT câu, và trả lời được mà không cần bấm đi đâu.
@@ -166,21 +156,23 @@ export class DashboardService {
      * lộ ra lúc 0 giờ và không ai dựng lại được.
      */
     const now = new Date();
+    // Số dòng mỗi khối (`dashboard.max_items`) — đọc MỘT lần để mọi khối cắt cùng một số.
+    const maxItems = await this.config.getNumber('dashboardMaxItems');
 
     const [expiring, breakGlass, subnetLoad, staleSecrets, disposed] = await Promise.all([
-      this.expiringBlock(),
+      this.expiringBlock(maxItems),
       // AC: Member thấy dashboard RÚT GỌN — không có khối break-glass toàn cục. Họ vẫn xem
       // được yêu cầu của chính mình ở màn Duyệt yêu cầu.
-      isBoss ? this.breakGlassBlock(now) : emptyBlock<BreakGlassEntry>(),
-      this.subnetLoadBlock(),
+      isBoss ? this.breakGlassBlock(now, maxItems) : emptyBlock<BreakGlassEntry>(),
+      this.subnetLoadBlock(maxItems),
       /*
-       * Khối két CHỈ cho SA/Admin, đúng bằng quyền của `GET /vault/owners` (26/08).
+       * Khối két CHỈ cho SA/Admin, đúng bằng quyền của `GET /vault/owners`.
        *
        * Cắt ở TẦNG SERVICE chứ không để web ẩn khối đi: ẩn ở web thì bản đồ "công ty giữ bí
        * mật ở đâu" vẫn đi qua dây và Member mở tab mạng ra là đọc được.
        */
-      isBoss ? this.staleSecretsBlock(now) : emptyBlock<StaleSecretEntry>(),
-      this.disposedBlock(now),
+      isBoss ? this.staleSecretsBlock(now, maxItems) : emptyBlock<StaleSecretEntry>(),
+      this.disposedBlock(now, maxItems),
     ]);
 
     return {
@@ -189,7 +181,7 @@ export class DashboardService {
       staleSecrets,
       disposed,
       /**
-       * Epic 9 chưa deploy nên module `incidents` chưa tồn tại. Khai `available: false` thay
+       * Module `incidents` chưa tồn tại. Khai `available: false` thay
        * vì bịa một mảng rỗng: "chưa có phần này" và "tuần qua không có sự cố nào" là hai câu
        * KHÁC HẲN nhau, và sếp đọc nhầm câu thứ hai thì tưởng mọi thứ đang yên.
        */
@@ -198,16 +190,16 @@ export class DashboardService {
     };
   }
 
-  private async expiringBlock(): Promise<Dashboard['expiring']> {
+  private async expiringBlock(maxItems: number): Promise<Dashboard['expiring']> {
     try {
       /*
        * Hai câu hỏi riêng, mỗi câu chỉ xin đúng số dòng sẽ bày: kéo cả cửa sổ qua ranh giới
-       * module để bày 8 dòng là thứ N-01 đã chặn. Tách "sắp tới" khỏi "quá hạn" vì một danh
+       * module để bày vài dòng là thứ N-01 đã chặn. Tách "sắp tới" khỏi "quá hạn" vì một danh
        * sách chung sắp theo ngày luôn để quá hạn chiếm hết chỗ — xem `pickExpiring`.
        */
       const [upcoming, overdue] = await Promise.all([
-        this.expiry.list({ includeExpired: false, limit: MAX_ITEMS }),
-        this.expiry.list({ state: 'expired', limit: MAX_ITEMS }),
+        this.expiry.list({ includeExpired: false, limit: maxItems }),
+        this.expiry.list({ state: 'expired', limit: maxItems }),
       ]);
       const failedKinds = [...new Set([...upcoming.failedKinds, ...overdue.failedKinds])];
       // Thiếu phần của một nguồn mà vẫn hiện như đủ thì người đọc hiểu là "không còn gì khác".
@@ -219,7 +211,7 @@ export class DashboardService {
         available: true,
         total: upcoming.total + overdue.total,
         overdueTotal: overdue.total,
-        items: pickExpiring(upcoming.items, overdue.items, MAX_ITEMS, OVERDUE_SLOTS).map(
+        items: pickExpiring(upcoming.items, overdue.items, maxItems, OVERDUE_SLOTS).map(
           (row) => ({
             kind: row.kind,
             id: row.id,
@@ -237,8 +229,7 @@ export class DashboardService {
        * Một khối hỏng KHÔNG được làm chết cả trang.
        *
        * Dashboard gom số liệu từ nhiều module; nếu `expiry` lỗi mà cả trang trắng thì sếp mất
-       * luôn hai khối còn lại — và mất cả cái tín hiệu "có gì đó đang hỏng". Đây đúng là bài
-       * học finding 2 của code review Epic 3, ở một hình dạng khác.
+       * luôn hai khối còn lại — và mất cả cái tín hiệu "có gì đó đang hỏng".
        */
       this.logger.warn(`khối sắp-hết-hạn lỗi: ${message(error)}`);
       return { ...emptyBlock(), overdueTotal: 0 };
@@ -255,7 +246,7 @@ export class DashboardService {
    * `total` (số địa chỉ cấp được) đi kèm chứ không chỉ mỗi phần trăm: 95% của một /26 là còn
    * 3 chỗ, 95% của một /24 là còn 12 — hai mức khẩn khác hẳn nhau mà cùng một con số.
    */
-  private async subnetLoadBlock(): Promise<Dashboard['subnetLoad']> {
+  private async subnetLoadBlock(maxItems: number): Promise<Dashboard['subnetLoad']> {
     try {
       const minPercent = await this.config.getNumber('dashboardSubnetFullPercent');
       const loaded = pickLoadedSubnets(await this.ipam.listSubnets(), minPercent);
@@ -264,9 +255,9 @@ export class DashboardService {
         available: true,
         thresholdPercent: minPercent,
         // `total` đếm TẤT CẢ dải đạt ngưỡng, không phải số dòng đã cắt — badge "12" trên một
-        // khối 8 dòng chính là thứ nói cho người đọc biết còn phải bấm xem tiếp.
+        // khối cắt còn vài dòng chính là thứ nói cho người đọc biết còn phải bấm xem tiếp.
         total: loaded.length,
-        items: loaded.slice(0, MAX_ITEMS).map((row) => ({
+        items: loaded.slice(0, maxItems).map((row) => ({
           id: row.id,
           name: row.name,
           cidr: row.cidr,
@@ -292,7 +283,7 @@ export class DashboardService {
    *
    * Dữ liệu đúng bằng `GET /vault/owners`: không nhãn, không loại, không giá trị.
    */
-  private async staleSecretsBlock(now: Date): Promise<Dashboard['staleSecrets']> {
+  private async staleSecretsBlock(now: Date, maxItems: number): Promise<Dashboard['staleSecrets']> {
     try {
       const staleDays = await this.config.getNumber('dashboardSecretStaleDays');
       const stale = pickStaleOwners(await this.vault.listOwners(), staleDays, now);
@@ -300,7 +291,7 @@ export class DashboardService {
       return {
         available: true,
         total: stale.length,
-        items: stale.slice(0, MAX_ITEMS).map((row) => ({
+        items: stale.slice(0, maxItems).map((row) => ({
           ownerType: row.ownerType,
           ownerId: row.ownerId,
           code: row.code,
@@ -323,14 +314,14 @@ export class DashboardService {
    * nhất biết "ngừng dùng" gồm những loại nào, và bản gộp thứ hai ở đây sẽ lặng lẽ thiếu một
    * loại đúng vào hôm có ai thêm một loại mới.
    */
-  private async disposedBlock(now: Date): Promise<Dashboard['disposed']> {
+  private async disposedBlock(now: Date, maxItems: number): Promise<Dashboard['disposed']> {
     try {
       const recent = pickRecent(await this.disposal.list(), WEEK_DAYS, now);
 
       return {
         available: true,
         total: recent.length,
-        items: recent.slice(0, MAX_ITEMS).map((row) => ({
+        items: recent.slice(0, maxItems).map((row) => ({
           kind: row.kind,
           id: row.id,
           code: row.code,
@@ -345,13 +336,13 @@ export class DashboardService {
     }
   }
 
-  private async breakGlassBlock(now: Date): Promise<Dashboard['breakGlass']> {
+  private async breakGlassBlock(now: Date, maxItems: number): Promise<Dashboard['breakGlass']> {
     try {
-      // Lọc tuần và cắt 8 dòng trong SQL: bảng này chỉ lớn lên, trang chủ mở mỗi sáng.
+      // Lọc tuần và cắt số dòng trong SQL: bảng này chỉ lớn lên, trang chủ mở mỗi sáng.
       const since = new Date(now.getTime() - WEEK_DAYS * 86_400_000);
       const recent = await this.approvals.page(
         { kind: 'break_glass', since },
-        { limit: MAX_ITEMS, offset: 0 },
+        { limit: maxItems, offset: 0 },
       );
 
       const names = await this.users.namesByEmails([

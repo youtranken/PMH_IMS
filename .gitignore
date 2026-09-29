@@ -33,3 +33,7 @@ e2e/.e2e-run-start
 
 # Worktree tạm của agent Claude Code — không thuộc repo.
 .claude/worktrees/
+
+# Bytecode Python do chạy script trong .claude/skills sinh ra, khác theo máy và phiên bản.
+__pycache__/
+*.pyc

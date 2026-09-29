@@ -1,5 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { apiFetch, ApiError, queryClient } from '@/lib/api-client';
+import {
+  apiFetch,
+  ApiError,
+  queryClient,
+  shouldRetryQuery,
+} from '@/lib/api-client';
 import { ME_KEY } from '@/lib/me';
 import { clearNextPath, noteTabOwner, peekNextPath } from '@/lib/next-path';
 import { jsonResponse } from '@/test/test-utils';
@@ -93,5 +98,28 @@ describe('apiFetch', () => {
     const init = fn.mock.calls[0][1] as { headers: Record<string, string> };
     expect(init.headers['Content-Type']).toBe('application/json');
     expect(init.headers['X-CSRF-Token']).toBe('tok');
+  });
+});
+
+describe('shouldRetryQuery — chỉ thử lại lỗi mạng và 5xx', () => {
+  it.each([
+    [new ApiError(400, null), false],
+    [new ApiError(403, null), false],
+    [new ApiError(404, null), false],
+    [new ApiError(409, null), false],
+    [new ApiError(500, null), true],
+    [new ApiError(503, null), true],
+    [new TypeError('Failed to fetch'), true],
+  ])('lần hỏng đầu: %s → thử lại = %s', (error, expected) => {
+    expect(shouldRetryQuery(0, error)).toBe(expected);
+  });
+
+  it('thử lại tối đa một lần', () => {
+    expect(shouldRetryQuery(1, new ApiError(500, null))).toBe(false);
+    expect(shouldRetryQuery(1, new TypeError('Failed to fetch'))).toBe(false);
+  });
+
+  it('queryClient mặc định dùng đúng hàm này', () => {
+    expect(queryClient.getDefaultOptions().queries?.retry).toBe(shouldRetryQuery);
   });
 });

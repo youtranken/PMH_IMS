@@ -2,22 +2,21 @@ import { ConflictException } from '@nestjs/common';
 import { sql, type SQL, type SQLWrapper, type Table } from 'drizzle-orm';
 
 /**
- * Escape ký tự đặc biệt của LIKE/ILIKE — search chứa % _ \ không thành wildcard
- * (bài học 1.5; dùng chung users/assets, Epic 3 booking dùng tiếp).
+ * Escape ký tự đặc biệt của LIKE/ILIKE — search chứa % _ \ không thành wildcard.
  */
 export function escapeLike(input: string): string {
   return input.replace(/[\\%_]/g, '\\$&');
 }
 
 /**
- * VẾ TÌM KIẾM GẤP DẤU — một bản, sáu màn (B-01, 25/09/2026).
+ * VẾ TÌM KIẾM GẤP DẤU — một bản, sáu màn (B-01).
  *
  * ===== VẤN ĐỀ NÓ CHỮA =====
  *
  * `ILIKE` **không** gấp dấu: `SELECT 'Thiết bị họp' ILIKE '%thiet%'` trả `f`. Đo trên 30.000
  * thiết bị thật, gõ `may tram` ra **0 dòng** trong khi `Máy trạm` ra 2.500 — 7.500/30.000 hồ
  * sơ vô hình với người gõ không dấu, và màn hình còn khẳng định "Chưa có thiết bị nào khớp
- * bộ lọc". Chi tiết ở §13.3 sổ rà soát.
+ * bộ lọc".
  *
  * ===== HAI HÌNH DẠNG, CHỌN THEO KÍCH CỠ BẢNG =====
  *
@@ -43,7 +42,7 @@ export function searchNormLike(table: Table, term: string): SQL {
  * Vế tìm kiếm gấp dấu TÍNH TẠI CHỖ — cho bảng tra cứu nhỏ, không có cột sinh.
  *
  * `::text` vì phần lớn cột mã/tên của danh mục là `citext`. `ims_norm` là STRICT nên cột
- * `NULL` cho ra `NULL` → không khớp, đúng y như `ILIKE` trên `NULL` trước đây.
+ * `NULL` cho ra `NULL` → không khớp, đúng y như `ILIKE` trên `NULL`.
  */
 export function imsNormLike(column: SQLWrapper, term: string): SQL {
   return sql`ims_norm(${column}::text) LIKE ims_norm(${`%${escapeLike(term)}%`})`;
@@ -67,8 +66,8 @@ export function viOrder(column: SQLWrapper): SQL {
  *
  * Vì sao: drizzle BỌC lỗi pg trong `DrizzleQueryError` ("Failed query: …") và để lỗi gốc ở
  * `cause`. Đọc `error.code` ở lớp ngoài luôn ra `undefined`, nên mọi câu "dịch lỗi DB thành
- * tiếng Việt" đều rơi xuống 500. (Đúng lỗi E2E story 2.1 bắt được: xóa site đang có tủ trả
- * 500 thay vì 409 kèm gợi ý vô hiệu hóa.)
+ * tiếng Việt" đều rơi xuống 500 (xóa site đang có tủ trả 500 thay vì 409 kèm gợi ý vô hiệu
+ * hóa).
  */
 export function pgErrorCode(error: unknown): string | undefined {
   let current: unknown = error;
@@ -100,12 +99,12 @@ export function pgConstraint(error: unknown): string | undefined {
 /** Vi phạm khóa ngoại — "đang có dữ liệu khác trỏ tới, không xóa được". */
 export const PG_FOREIGN_KEY_VIOLATION = '23503';
 /** Vi phạm ràng buộc duy nhất — trùng mã/tên. */
-export const PG_UNIQUE_VIOLATION = '23505';
+const PG_UNIQUE_VIOLATION = '23505';
 /** Vi phạm ràng buộc EXCLUDE — chồng port NAT, chồng dải IP. */
 export const PG_EXCLUSION_VIOLATION = '23P01';
 /**
  * Vi phạm CHECK — cũng là mã mà `RAISE EXCEPTION ... USING ERRCODE = 'check_violation'`
- * trong trigger dùng (vd `ip_address_within_subnet` của Epic 5).
+ * trong trigger dùng (vd `ip_address_within_subnet`).
  */
 export const PG_CHECK_VIOLATION = '23514';
 
@@ -124,7 +123,7 @@ export const PG_CHECK_VIOLATION = '23514';
  * Phần KHÁC NHAU là `code` + `message` — dữ liệu nghiệp vụ, đúng ra phải khác nhau. Phần
  * GIỐNG NHAU là tri thức dễ sai nhất và cũng là thứ đã sai một lần: drizzle bọc lỗi pg trong
  * `DrizzleQueryError` và để lỗi gốc ở `cause`, nên đọc thẳng `error.code` luôn ra `undefined`
- * và MỌI câu dịch rơi xuống 500 (lỗi E2E story 2.1). Bản sao thứ mười ba viết tay là bản sao
+ * và MỌI câu dịch rơi xuống 500. Bản sao thứ mười ba viết tay là bản sao
  * thứ mười ba có thể quên `pgErrorCode` mà dùng `error.code`.
  *
  * Trả về `unknown` chứ không ném: nơi gọi vẫn giữ nguyên nếp `throw this.translate(error)`,

@@ -3,7 +3,7 @@ import { clientIp } from './client-ip';
 /**
  * `req.ip` (Express đã áp `trust proxy = 1`) là NGUỒN DUY NHẤT cho IP client.
  *
- * Bài này khóa lại kết luận của rà soát 07/09 finding #1: đọc `X-Forwarded-For` thô là sai
+ * Bài này khóa lại kết luận: đọc `X-Forwarded-For` thô là sai
  * vì nginx NỐI THÊM vào giá trị client gửi lên (`$proxy_add_x_forwarded_for`), nên phần tử
  * trái nhất chính là thứ nghi phạm tự điền.
  */

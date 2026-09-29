@@ -2,7 +2,7 @@ import { addDays, dateTimeInTz, daysBetween, isoDateInTz, startOfDayInTz, viDate
 
 describe('isoDateInTz — "hôm nay" theo múi giờ ứng dụng, không theo UTC', () => {
   /**
-   * Đây là lỗi thật E2E story 3.4 bắt được: chạy lúc 6 giờ sáng giờ VN, UTC vẫn là hôm qua,
+   * Đây là lỗi thật E2E đã bắt: chạy lúc 6 giờ sáng giờ VN, UTC vẫn là hôm qua,
    * nên mọi phép "còn bao nhiêu ngày" lệch một ngày suốt 7 tiếng mỗi sáng.
    */
   it('6 giờ sáng giờ VN đã là NGÀY MỚI, dù UTC còn là hôm qua', () => {

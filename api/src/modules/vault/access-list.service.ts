@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { asc, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import { AuditWriterService } from '../audit/audit-writer.service';
@@ -49,7 +49,7 @@ export interface AccessRuleInput {
 }
 
 /**
- * Ma trận quyền xem secret (story 6.2, FR-023). Chủ sở hữu bảng `access_list` (AD-3).
+ * Ma trận quyền xem secret (FR-023). Chủ sở hữu bảng `access_list` (AD-3).
  *
  * Cấm là MẶC ĐỊNH, không phải một lời gán: bảng chỉ chứa `whitelist` và `needs_approval`.
  * Muốn cấm thì GỠ dòng đi. Cho phép gán 'denied' sẽ sinh ra câu hỏi "dòng cấm có thắng dòng
@@ -128,6 +128,19 @@ export class AccessListService {
     await this.requireScopeRef(input.scopeType, input.scopeRef);
 
     const record = await this.db.transaction(async (tx) => {
+      // Tầng cũ đọc TRONG transaction và khoá hàng: audit "đổi từ X sang Y" phải đúng cái X
+      // vừa bị ghi đè, không phải cái X của một lượt gán khác chen vào giữa.
+      const [previous] = await tx
+        .select({ tier: accessListTable.tier })
+        .from(accessListTable)
+        .where(
+          and(
+            eq(accessListTable.memberEmail, email),
+            eq(accessListTable.scopeType, input.scopeType),
+            eq(accessListTable.scopeRef, input.scopeRef),
+          ),
+        )
+        .for('update');
       const rows = await tx
         .insert(accessListTable)
         .values({
@@ -163,6 +176,7 @@ export class AccessListService {
           member: email,
           scopeType: input.scopeType,
           scopeRef: input.scopeRef,
+          fromTier: previous?.tier ?? null,
           tier: input.tier,
         },
       });
@@ -173,16 +187,22 @@ export class AccessListService {
 
   /** Gỡ = đưa về CẤM mặc định. Không có "xóa mềm" ở đây: bảng này là cấu hình, không phải sổ. */
   async remove(actor: string, id: string): Promise<void> {
-    const rows = await this.db.select().from(accessListTable).where(eq(accessListTable.id, id));
-    if (rows.length === 0) {
-      throw new NotFoundException({
-        code: 'ACCESS_RULE_NOT_FOUND',
-        message: 'Không tìm thấy lời gán này.',
-      });
-    }
-    const before = rows[0];
     await this.db.transaction(async (tx) => {
-      await tx.delete(accessListTable).where(eq(accessListTable.id, id));
+      /*
+       * Xoá bằng DELETE … RETURNING trong transaction: hai người cùng bấm Gỡ thì đúng một câu
+       * DELETE lấy được hàng, câu kia nhận 0 hàng và báo 404. Đọc trước rồi xoá sau thì cả hai
+       * cùng thấy hàng còn đó và audit ghi hai lần cho một lần gỡ.
+       */
+      const [before] = await tx
+        .delete(accessListTable)
+        .where(eq(accessListTable.id, id))
+        .returning();
+      if (!before) {
+        throw new NotFoundException({
+          code: 'ACCESS_RULE_NOT_FOUND',
+          message: 'Không tìm thấy lời gán này.',
+        });
+      }
       // Vết ai gỡ nằm ở audit — bảng cấu hình không giữ lịch sử, `audit_log` giữ.
       await this.audit.appendWithin(tx, {
         actor,
@@ -202,7 +222,7 @@ export class AccessListService {
   /**
    * Tầng quyền của một người trên một CHỦ THỂ cụ thể (thiết bị hoặc hồ sơ phần mềm).
    *
-   * Đây là hàm mà cả story 6.3 xoay quanh. Nó tra chủ thể qua public api của module chủ
+   * Đây là hàm mà cả break-glass xoay quanh. Nó tra chủ thể qua public api của module chủ
    * (`devices.api`, `software.api`) chứ KHÔNG join bảng của họ — `vault` không được biết bảng
    * `device` trông thế nào (AD-2/AD-3).
    */
@@ -251,8 +271,7 @@ export class AccessListService {
    * `list()` gọi `scopeLabels()` → `scopeOptions()` → `catalog.lists()` để dựng tên đọc được
    * cho màn ma trận. Nhưng `tierFor` nằm trên ĐƯỜNG NÓNG: nó chạy ở mỗi lần mở két, mỗi lần
    * đọc metadata, mỗi lần dựng verdict — và ném hết nhãn đi ngay sau đó. Kéo cả danh mục site
-   * + loại thiết bị + loại phần mềm về chỉ để vứt là cái giá trả mỗi lần xem một mật khẩu
-   * (code review Epic 6, finding 7).
+   * + loại thiết bị + loại phần mềm về chỉ để vứt là cái giá trả mỗi lần xem một mật khẩu.
    */
   private async rulesOf(memberEmail: string): Promise<AccessRule[]> {
     const rows = await this.db

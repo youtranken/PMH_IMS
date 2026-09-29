@@ -36,9 +36,9 @@ async function csrfOf(page: Page): Promise<string> {
 }
 
 /**
- * Story 7.1 — FR-025: mọi số liệu qua public api của module chủ, rút gọn theo vai.
+ * FR-025: mọi số liệu qua public api của module chủ, rút gọn theo vai.
  *
- * Ba khối gốc (sắp hết hạn · sự cố · break-glass) + ba khối thêm 28/08/2026 (dải mạng sắp đầy ·
+ * Sáu khối (sắp hết hạn · sự cố · break-glass · dải mạng sắp đầy ·
  * két lâu chưa đổi · vừa vào kho thanh lý). Tất cả dựng trên dữ liệu đã có sẵn — không bảng
  * mới, không cột mới.
  */
@@ -91,14 +91,14 @@ test.describe('Bảng điều khiển', () => {
     expect(urgent).toBeLessThan(relaxed);
 
     /*
-     * DÒNG PHỤ PHẢI LÀ TIẾNG VIỆT, KHÔNG PHẢI MÃ MÁY — rà UI/UX 12/09.
+     * DÒNG PHỤ PHẢI LÀ TIẾNG VIỆT, KHÔNG PHẢI MÃ MÁY.
      *
-     * Bản trước gọi `t('expiry.kind_' + kind, kind)` trong khi `vi.ts` không có khóa
-     * `expiry.kind_*` nào, nên i18next lặng lẽ rơi về tham số mặc định: chính cái mã. Khối
-     * đầu tiên của màn mở đầu mỗi ngày in ra `license · 27/08/2026`, `warranty · …`.
+     * Gọi `t('expiry.kind_' + kind, kind)` với một khóa không có trong `vi.ts` thì i18next lặng
+     * lẽ rơi về tham số mặc định: chính cái mã. Khối đầu tiên của màn mở đầu mỗi ngày sẽ in ra
+     * `license · 27/08/2026`, `warranty · …`.
      *
      * Hỏng theo kiểu khó thấy, và đó mới là điều đáng chốt: `license` trông vừa đủ giống một
-     * nhãn để mắt lướt qua. Lượt test tay 12/09 đi qua đúng khối này mà không nhận ra.
+     * nhãn để mắt lướt qua, kể cả khi test tay.
      *
      * Chốt CẢ HAI vế. Chỉ đòi "có chữ License phần mềm" thì một bản in ra cả hai
      * (`license License phần mềm`) cũng xanh; chỉ cấm chữ `license` thì một bản in ra ô trống
@@ -108,7 +108,7 @@ test.describe('Bảng điều khiển', () => {
     expect(urgentLine, 'phải hiện nhãn tiếng Việt lấy từ API').toContain('License phần mềm');
     expect(urgentLine, 'không được để lọt mã máy ra cột Loại').not.toMatch(/\blicense\b/);
 
-    // Khối sự cố PHẢI hiện và nói rõ là chưa có phần này (Epic 9 chưa mở).
+    // Khối sự cố PHẢI hiện và nói rõ là chưa có phần này (module sự cố chưa có).
     const incidents = page.locator('section').filter({ hasText: 'Sự cố tuần qua' });
     await expect(incidents.getByText(/chưa theo dõi/i)).toBeVisible();
 
@@ -224,10 +224,10 @@ test.describe('Bảng điều khiển', () => {
   });
 
   /**
-   * Khối "Dải mạng sắp đầy" (28/08/2026).
+   * Khối "Dải mạng sắp đầy".
    *
-   * Câu này trước đây chỉ trả lời được bằng cách mở màn IP rồi đọc từng thanh tiến trình — mà
-   * không ai mở màn IP khi chưa có việc, nên dải đầy dần trong im lặng cho tới hôm cần cấp gấp
+   * Không có khối này thì câu hỏi chỉ trả lời được bằng cách mở màn IP rồi đọc từng thanh tiến
+   * trình — mà không ai mở màn IP khi chưa có việc, nên dải đầy dần trong im lặng cho tới hôm cần cấp gấp
    * một địa chỉ thì không còn.
    */
   test('dải mạng chạm ngưỡng thì lên bảng, kèm số chỗ CÒN LẠI chứ không chỉ phần trăm', async ({
@@ -385,7 +385,7 @@ test.describe('Bảng điều khiển', () => {
   });
 });
 
-// `isoInDays` dã chuyển sang `helpers.ts` (24/09) — xem chú thích ở đó về bẫy múi giờ.
+// `isoInDays` nằm ở `helpers.ts` — xem chú thích ở đó về bẫy múi giờ.
 
 /**
  * DASH-002 — khối "Sắp hết hạn" ở làn chính là BẢNG gọn (Đối tượng · Loại · Hết hạn · Còn lại

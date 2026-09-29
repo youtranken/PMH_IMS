@@ -4,7 +4,7 @@ import { redactMessage } from '../common/log-redact';
 import { ensureAppRole } from './app-role';
 import { resolveMigrationsDir, runMigrations } from './migration-runner';
 
-export const APP_DB_ROLE = 'ims_app';
+const APP_DB_ROLE = 'ims_app';
 
 /**
  * Dựng role ứng dụng và áp migration bằng CHỦ SỞ HỮU (D-01, OPS-07).

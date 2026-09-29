@@ -44,19 +44,19 @@ const EMPTY_FILTERS: Filters = {
 };
 
 /**
- * Danh sách đường truyền (story 3.3, FR-010).
+ * Danh sách đường truyền (FR-010).
  *
- * HOTLINE và SỐ HỢP ĐỒNG nằm ngay trên bảng, không giấu trong trang chi tiết — mục tiêu của
- * story viết rõ: "đứt cáp lúc 2h sáng có hotline + số hợp đồng trong 30 giây".
+ * HOTLINE và SỐ HỢP ĐỒNG nằm ngay trên bảng, không giấu trong trang chi tiết — mục tiêu viết
+ * rõ: "đứt cáp lúc 2h sáng có hotline + số hợp đồng trong 30 giây".
  */
 export function IspScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   /*
-   * Bộ lọc · trang · số dòng · cột sắp nằm trên THANH ĐỊA CHỈ, không trong `useState` nữa
-   * (17/09/2026). Nhờ vậy: F5 giữ nguyên bộ lọc, gửi được link "đường truyền tạm ngưng ở
-   * chi nhánh X" cho đồng nghiệp, và bấm Back từ trang chi tiết về ĐÚNG kết quả cũ thay vì
-   * một danh sách trắng. Ô tìm cũng có debounce 250ms — trước đây mỗi phím là một lượt gọi API.
+   * Bộ lọc · trang · số dòng · cột sắp nằm trên THANH ĐỊA CHỈ, không trong `useState`. Nhờ
+   * vậy: F5 giữ nguyên bộ lọc, gửi được link "đường truyền tạm ngưng ở chi nhánh X" cho đồng
+   * nghiệp, và bấm Back từ trang chi tiết về ĐÚNG kết quả cũ thay vì một danh sách trắng.
+   * Ô tìm có debounce 250ms để mỗi phím không thành một lượt gọi API.
    */
   const url = useListUrlState<Filters>({
     emptyFilters: EMPTY_FILTERS,

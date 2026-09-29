@@ -36,7 +36,7 @@ export interface PortRow {
   note: string | null;
 }
 
-export interface IncomingPortRow {
+interface IncomingPortRow {
   id: string;
   deviceId: string;
   deviceCode: string;
@@ -65,7 +65,7 @@ function emptyAttr(value: string | null | undefined): { 'data-empty'?: true } {
 }
 
 /**
- * Port map của một thiết bị (story 2.4, FR-006, AD-14).
+ * Port map của một thiết bị (FR-006, AD-14).
  *
  * Bảng dưới ("Đang cắm vào thiết bị này") KHÔNG phải dữ liệu riêng — nó là CHIỀU NGƯỢC
  * của những dòng do thiết bị khác giữ, dựng bằng query. Không sửa được ở đây là có chủ ý:
@@ -164,7 +164,7 @@ export function PortMapPanel({
       {/* Thanh công cụ của tab: tiêu đề khu + số đếm bên trái, nút thêm bên phải, CÙNG hàng
           ngay dưới thanh tab — tab nào cũng một chỗ cho nút thêm. */}
       <div className="section-bar">
-        <h3 className="form-section-title">{t('ports.own')}</h3>
+        <h2 className="form-section-title">{t('ports.own')}</h2>
         {map.data ? <span className="section-count">{allPorts.length}</span> : null}
         {canEdit ? (
           <button type="button" className="btn primary" onClick={() => setEditing({ port: null })}>
@@ -326,7 +326,7 @@ export function PortMapPanel({
             </TableWrap>
           )}
 
-          <h3 className="form-section-title">{t('ports.incoming')}</h3>
+          <h2 className="form-section-title">{t('ports.incoming')}</h2>
           {incoming.length === 0 ? (
             /* Rỗng thì MỘT dòng — tiêu đề + đoạn giải thích + câu rỗng là ba khối cho một chữ "không". */
             <p className="muted">{t('ports.incomingEmpty')}</p>

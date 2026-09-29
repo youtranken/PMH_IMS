@@ -70,7 +70,7 @@ const HELD_LABEL: Record<HeldKey, string> = {
   attachments: "devices.held.attachments",
 };
 
-/** Khu mở rộng do module khác đóng góp (Epic 3/4/5) — Đợt 1 luôn rỗng. */
+/** Khu mở rộng do module khác đóng góp (IP, license, secret…) — có thể rỗng. */
 interface DevicePanel {
   key: string;
   title: string;
@@ -79,7 +79,7 @@ interface DevicePanel {
 }
 
 /**
- * Trang chi tiết thiết bị tổng hợp (story 2.5, FR-001/002/006/007).
+ * Trang chi tiết thiết bị tổng hợp (FR-001/002/006/007).
  *
  * Mở một trang thấy đủ: hồ sơ, tình trạng bảo hành, port map, giấy tờ, lịch sử.
  * Các khu IP · license · secret · phiếu đến từ `/devices/:id/panels` — module nào đăng ký
@@ -148,22 +148,21 @@ export function DeviceDetail({ me }: { me: Me }) {
   /*
    * Đếm cổng cho huy hiệu trên tab Port map.
    *
-   * Trước 16/09 chỉ Giấy tờ và Két sắt có số, nên tab DÀY nhất lại là tab duy nhất trông như
-   * rỗng — người đọc suy "không có số nghĩa là không có gì".
+   * Thiếu số thì tab DÀY nhất lại là tab duy nhất trông như rỗng — người đọc suy "không có số
+   * nghĩa là không có gì".
    *
    * Dùng ĐÚNG `queryKey` của `PortMapPanel` nên đây không phải lượt gọi thứ hai: bấm sang tab
    * là dữ liệu đã nằm sẵn trong cache, tab mở ra không còn quay vòng chờ.
    */
   /*
-   * HỎI CỔNG CHO MỌI MÁY, không chỉ máy có port map (sửa 17/09/2026).
+   * HỎI CỔNG CHO MỌI MÁY, không chỉ máy có port map.
    *
-   * Trước đây lượt gọi này bị tắt khi loại thiết bị không bật `has_port_map`. Nghe hợp lý —
-   * máy in thì không có bảng cổng. Nhưng `/ports` trả về HAI chiều: cổng của chính máy này,
-   * VÀ cổng của máy khác đang đấu vào nó. Chiều thứ hai chính là chiều mà một cái máy trạm có:
-   * nó không có cổng nào để khai, nhưng ba con switch đang cắm vào nó — và cho tới hôm nay
-   * hồ sơ của nó KHÔNG hiện chuyện đó ở bất cứ đâu.
+   * Tắt lượt gọi này khi loại thiết bị không bật `has_port_map` nghe hợp lý — máy in thì không
+   * có bảng cổng. Nhưng `/ports` trả về HAI chiều: cổng của chính máy này, VÀ cổng của máy
+   * khác đang đấu vào nó. Chiều thứ hai chính là chiều mà một cái máy trạm có: nó không có
+   * cổng nào để khai, nhưng ba con switch đang cắm vào nó.
    *
-   * Hai chỗ hỏng vì thế: bản đồ quan hệ thiếu hẳn một nhánh, và quan trọng hơn, lượt xem
+   * Tắt đi thì hỏng hai chỗ: bản đồ quan hệ thiếu hẳn một nhánh, và quan trọng hơn, lượt xem
    * "thanh lý sẽ cắt gì" nói thiếu — trong khi `port-device-retirement.ts` sẽ gỡ đúng những
    * liên kết ấy. Tức là màn hình hứa ít hơn việc thật sự xảy ra.
    *
@@ -184,11 +183,11 @@ export function DeviceDetail({ me }: { me: Me }) {
     queryClient.invalidateQueries({ queryKey: ["devices"] });
 
   /**
-   * Tab Két sắt hiện cho MỌI vai kể từ story 6.3.
+   * Tab Két sắt hiện cho MỌI vai.
    *
-   * Trước đây chỉ SA/Admin thấy. Nhưng Member giờ có thể được whitelist hoặc xin duyệt, và
-   * quyền đó nằm ở ma trận 6.2 — client không tự suy ra được từ vai. Ẩn tab theo vai thì
-   * người đã được gán quyền lại không có đường nào tới. Panel tự nói rõ tầng của người xem.
+   * Member có thể được whitelist hoặc xin duyệt, và quyền đó nằm ở ma trận quyền xem secret
+   * (FR-023) — client không tự suy ra được từ vai. Ẩn tab theo vai thì người đã được gán
+   * quyền lại không có đường nào tới. Panel tự nói rõ tầng của người xem.
    */
   const canVault = true;
 
@@ -208,7 +207,7 @@ export function DeviceDetail({ me }: { me: Me }) {
      * Tab Port map hiện khi loại máy có port (FR-006) — HOẶC khi thật sự có dòng để bày.
      *
      * Vế sau là cho cái máy trạm bị ba con switch cắm vào: nó không có cổng nào của riêng
-     * mình, nhưng "ai đang cắm vào tôi" là câu có thật và trước nay không trả lời được ở đâu.
+     * mình, nhưng "ai đang cắm vào tôi" là câu có thật và không có chỗ nào khác trả lời.
      * Điều FR-006 cấm — bày một bảng RỖNG cho máy in — vẫn được giữ nguyên: máy in không có
      * dòng nào thì cả hai vế đều sai và tab vẫn không mọc ra.
      */
@@ -221,7 +220,7 @@ export function DeviceDetail({ me }: { me: Me }) {
      * `PortMapPanel` tự bày lỗi của nó và có nút thử lại.
      */
     /*
-     * `ports.isPending` cũng phải giữ tab lại (19/09/2026).
+     * `ports.isPending` cũng phải giữ tab lại.
      *
      * `useVisibleTab` bên dưới kẹp `tab` về `'profile'` khi khoá hiện tại không có trong danh
      * sách này — và nó chạy NGAY ở lượt render đầu, lúc `device.data` còn `undefined` và
@@ -272,7 +271,7 @@ export function DeviceDetail({ me }: { me: Me }) {
   }
 
   /*
-   * `!device.data` chứ KHÔNG phải `device.data!` (sửa 20/09/2026, lỗi F-02).
+   * `!device.data` chứ KHÔNG phải `device.data!`.
    *
    * `lib/api-client.ts` không khai `networkMode`, nên TanStack v5 chạy mặc định `'online'`:
    * mất mạng ⇒ `fetchStatus: 'paused'` ⇒ `isFetching === false` ⇒ **`isLoading === false`**,
@@ -411,31 +410,26 @@ export function DeviceDetail({ me }: { me: Me }) {
   /**
    * Khu KHÔNG có gì — gom về một dòng xám, không vẽ ô rỗng (cùng lối `BlankFields`).
    *
-   * BA TRẠNG THÁI, KHÔNG PHẢI HAI (18/09/2026). Mỗi khu có thể ở một trong ba tình huống:
+   * BA TRẠNG THÁI, KHÔNG PHẢI HAI. Mỗi khu có thể ở một trong ba tình huống:
    *   · CÓ dòng            → vẽ nút trên bản đồ;
    *   · KHÔNG có dòng      → kể tên vào dòng "Chưa gắn";
    *   · CHƯA BIẾT          → không được nói gì cả.
    *
-   * Hai lỗi cùng họ mà bản trước mắc:
+   * Hai lỗi cùng họ phải tránh:
    *
-   * 1. `counts.files` được đọc bằng phép thử truthy, trong khi `ui/tab-counts.ts` khai rõ
+   * 1. Đọc `counts.files` bằng phép thử truthy, trong khi `ui/tab-counts.ts` khai rõ
    *    `undefined` = "chưa biết (đang tải, hoặc không có quyền xem), KHÔNG phải 0". Một hồ sơ
    *    có 4 giấy tờ mà `/attachments` chưa về sẽ bị khẳng định là "Chưa gắn: Giấy tờ".
    *
-   * 2. Nút vẽ theo `panel.items.length > 0` nhưng dòng "Chưa gắn" lại theo `panelOf(key)` —
+   * 2. Vẽ nút theo `panel.items.length > 0` nhưng dòng "Chưa gắn" lại theo `panelOf(key)` —
    *    hai vị từ khác nhau cho cùng một câu hỏi. Module `ipam` đăng ký panel nhưng máy chưa
    *    có IP nào → panel TỒN TẠI, `items` rỗng → không có nút, cũng KHÔNG có tên trong dòng
    *    "Chưa gắn". Khu đó tàng hình: người đọc không phân biệt được với "module chưa deploy".
    */
   /**
-   * ĐỔI TÊN: `moduleEnabled` → `looksAbsent` (§18 #6, 22/09).
-   *
-   * Tên cũ nói NGƯỢC hẳn với giá trị: hàm trả `true` khi panel KHÔNG tồn tại hoặc RỖNG —
-   * tức khi khu ấy trông như không có gì. Đọc `moduleEnabled("ipam") ? … : null` mà hiểu
-   * đúng thì phải đọc ngược lại trong đầu, mỗi lần.
-   *
-   * Và nó ra đời ở đúng một lượt đổi tên nhằm làm tên DỄ ĐỌC HƠN — nên đây không phải nợ cũ
-   * sót lại, mà là một cái tên vừa được chọn sai.
+   * `looksAbsent` trả `true` khi panel KHÔNG tồn tại hoặc RỖNG — tức khi khu ấy trông như
+   * không có gì. Tên nói đúng chiều của giá trị; một tên kiểu `moduleEnabled` thì phải đọc
+   * ngược lại trong đầu, mỗi lần.
    */
   const looksAbsent = (key: string): boolean => {
     const panel = panelOf(key);
@@ -744,12 +738,12 @@ export function DeviceDetail({ me }: { me: Me }) {
               <RailRowIfSet label={t("devices.department")} value={item.department} />
             )}
             {/*
-             * THANH HẠN NẰM Ở ĐÂY, KHÔNG CÒN Ở CỘT CHÍNH NỮA (16/09/2026).
+             * THANH HẠN NẰM Ở ĐÂY, KHÔNG Ở CỘT CHÍNH.
              *
-             * Trước đây tab Hồ sơ có hẳn một thẻ "Bảo hành" chiếm trọn bề ngang, in lại đúng ba
-             * con số mà dải chỉ số đã có (còn N ngày, đến ngày nào, nhà cung cấp) — hai chỗ cách
-             * nhau 40px. Và một thanh tiến độ kéo dài 1150px thì phần kéo dài ấy không nói thêm
-             * gì cả. Hạn là TRẠNG THÁI của hồ sơ nên nó thuộc về thẻ định danh.
+             * Một thẻ "Bảo hành" chiếm trọn bề ngang ở tab Hồ sơ chỉ in lại đúng ba con số mà
+             * dải chỉ số đã có (còn N ngày, đến ngày nào, nhà cung cấp) — hai chỗ cách nhau
+             * 40px. Và một thanh tiến độ kéo dài 1150px thì phần kéo dài ấy không nói thêm gì
+             * cả. Hạn là TRẠNG THÁI của hồ sơ nên nó thuộc về thẻ định danh.
              *
              * Vẫn là `WarrantyTimeline` ĐẦY ĐỦ chứ không phải bản `compact`: bản gọn giấu hai
              * mốc ngày và dòng "Đã đi N%", mà đó là những thứ thanh này sinh ra để nói.
@@ -942,9 +936,8 @@ export function DeviceDetail({ me }: { me: Me }) {
             ownerType="device"
             ownerId={item.id}
             me={me}
-            /* Ghi vào két là việc của SA/Admin. Member giờ MỞ được tab (story 6.3) nên
-               phải chặn ở đây — không thì họ thấy "Cất secret"/"Xoay"/"Xóa" và bấm vào
-               là 403 (code review Epic 6, finding 3). */
+            /* Ghi vào két là việc của SA/Admin. Member MỞ được tab nên phải chặn ở đây —
+               không thì họ thấy "Cất secret"/"Xoay"/"Xóa" và bấm vào là 403. */
             canEdit={canVaultWrite && !retired}
             ownerLabel={item.code}
             locked={retired}
@@ -1107,7 +1100,7 @@ export function DeviceDetail({ me }: { me: Me }) {
 
 /**
  * Khu mở rộng. Rỗng thì KHÔNG render gì cả — không có tiêu đề "Địa chỉ IP" treo lơ lửng,
- * cũng không có dòng "tính năng sẽ có ở epic sau". Người dùng Đợt 1 không cần biết Đợt 2.
+ * cũng không có dòng "tính năng sẽ có sau". Người dùng không cần biết thứ chưa có.
  *
  * Dựng bằng BẢNG chứ không phải danh sách `nhãn: giá trị`.
  *

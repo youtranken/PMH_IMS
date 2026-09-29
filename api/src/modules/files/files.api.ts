@@ -3,7 +3,7 @@ import { FilesService, type FileOwnerType, type FileRecord } from './files.servi
 
 /**
  * AD-2: public api DUY NHẤT của module `files`.
- * Module nghiệp vụ (devices 2.3, sheets Epic 8, incidents Epic 9) hỏi "chủ thể này có
+ * Module nghiệp vụ (devices, sheets, incidents) hỏi "chủ thể này có
  * mấy file đính kèm" qua đây, KHÔNG query bảng `file`.
  */
 @Injectable()

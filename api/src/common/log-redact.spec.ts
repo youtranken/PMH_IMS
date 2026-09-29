@@ -124,7 +124,7 @@ describe('redactForLog — SQL ra log, tham số thì không', () => {
 });
 
 /**
- * Bản MỘT DÒNG, dùng ở 13 chỗ ghi `logger.warn`/`logger.error` (vá 11/09).
+ * Bản MỘT DÒNG, dùng ở 13 chỗ ghi `logger.warn`/`logger.error`.
  *
  * Ranh giới với `redactForLog` là ĐỘ DÀI, không phải mức độ che: cả hai giấu `params` y như
  * nhau. Nếu bài nào dưới đây để lọt một tham số thì bản ngắn đã che nhẹ tay hơn bản dài, và
@@ -202,9 +202,9 @@ describe('redactMessage — một dòng, vẫn không lọt tham số', () => {
 });
 
 /**
- * `redactPii` chuyển từ `worker/worker.ts` về đây ngày 11/09 (AD-15: những gì phải chà trước
- * khi ghi log có MỘT nhà). Lúc còn nằm riêng trong worker nó KHÔNG có bài kiểm nào — và nó là
- * thứ quyết định một địa chỉ email có rơi vào `outbox.fail_reason` hay không.
+ * `redactPii` ở đây chứ không riêng trong `worker/worker.ts` (AD-15: những gì phải chà trước
+ * khi ghi log có MỘT nhà), và phải có bài kiểm — nó là thứ quyết định một địa chỉ email có
+ * rơi vào `outbox.fail_reason` hay không.
  */
 describe('redactPii — che email trước khi chuỗi đi vào log hoặc DLQ', () => {
   it('che địa chỉ trong câu lỗi SMTP', () => {

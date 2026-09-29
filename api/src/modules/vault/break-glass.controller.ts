@@ -7,11 +7,12 @@ import {
   IsString,
   IsUUID,
   Length,
-  Matches,
   Max,
   MaxLength,
   Min,
+  Validate,
 } from 'class-validator';
+import { RealDate } from '../../common/real-date';
 import { Audited } from '../audit/audited.decorator';
 import { parsePageQuery } from '../../common/pagination';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
@@ -25,8 +26,6 @@ import { SECRET_OWNER_TYPES, type SecretOwnerType } from './vault.service';
 import { NoStepUp, RequiresStepUp } from '../auth/step-up.decorator';
 import { NoIdleTouch } from '../auth/no-idle-touch.decorator';
 
-const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
 /** Bộ lọc nhật ký mở két (VLT-019) — dùng chung cho màn và file xuất. */
 class LogQueryDto {
   @IsOptional() @IsString() page?: string;
@@ -38,8 +37,8 @@ class LogQueryDto {
 
   @IsOptional() @IsString() @MaxLength(255) requester?: string;
 
-  @IsOptional() @Matches(DATE_RE, { message: '"Từ ngày" phải dạng YYYY-MM-DD.' }) from?: string;
-  @IsOptional() @Matches(DATE_RE, { message: '"Đến ngày" phải dạng YYYY-MM-DD.' }) to?: string;
+  @IsOptional() @Validate(RealDate, { message: '"Từ ngày" phải là ngày có thật, dạng YYYY-MM-DD.' }) from?: string;
+  @IsOptional() @Validate(RealDate, { message: '"Đến ngày" phải là ngày có thật, dạng YYYY-MM-DD.' }) to?: string;
 }
 
 function logFilters(query: LogQueryDto) {
@@ -73,7 +72,7 @@ class IdParamDto {
 }
 
 /**
- * Break-glass (story 6.3, FR-023).
+ * Break-glass (FR-023).
  *
  * Quyền ở đây cố ý KHÔNG đối xứng: ai cũng XIN được (kể cả Admin, dù họ hiếm khi cần), nhưng
  * chỉ SA/Admin mới QUYẾT. Người xin cũng tự hủy được yêu cầu của chính mình — việc đã xong
@@ -120,7 +119,7 @@ export class BreakGlassController {
     return this.breakGlass.activeGrants();
   }
 
-  /** FR-025: nhật ký đầy đủ — ai xin, lý do, ai duyệt, hết hạn lúc nào. Dashboard Epic 7 đọc. */
+  /** FR-025: nhật ký đầy đủ — ai xin, lý do, ai duyệt, hết hạn lúc nào. Dashboard đọc. */
   @Roles('sa', 'admin')
   @Get('log')
   log(@Query() query: LogQueryDto) {
@@ -151,8 +150,8 @@ export class BreakGlassController {
          * Trạng thái ĐỌC THEO ĐỒNG HỒ, không đọc thẳng cột `state` (AD-6).
          *
          * Grant đã quá hạn mà sweep chưa kịp đổi `state` thì cột này in "Đã duyệt" —
-         * và đó chính là tờ giấy đem đi trình auditor. Màn duyệt đã xử đúng chỗ này
-         * rồi; file xuất thì chưa (code review Epic 7).
+         * và đó chính là tờ giấy đem đi trình auditor. Màn duyệt xử cùng một cách; file
+         * xuất phải khớp màn.
          */
         {
           header: 'Trạng thái',
@@ -169,7 +168,7 @@ export class BreakGlassController {
          *
          * ExcelJS quy `Date` về số serial theo giờ UTC. Một yêu cầu lúc 2 giờ sáng giờ VN
          * sẽ hiện là 19 giờ HÔM TRƯỚC trong file — lệch 7 tiếng, có khi lệch cả ngày, so
-         * với chính màn hình vừa bấm xuất (code review Epic 7).
+         * với chính màn hình vừa bấm xuất.
          */
         { header: 'Gửi lúc', width: 20, value: (r) => dateTimeInTz(r.createdAt, tz) },
         { header: 'Hết hạn', width: 20, value: (r) => dateTimeInTz(r.expiresAt, tz) },

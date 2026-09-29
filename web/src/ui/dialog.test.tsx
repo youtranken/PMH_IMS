@@ -119,8 +119,8 @@ describe('Dialog — guardUnsaved: không vứt dữ liệu đang gõ dở', () 
     await userEvent.keyboard('{Escape}');
     // `ConfirmDialog` dùng `cancelLabel` cho CẢ nút ✕ lẫn nút chân hộp, nên tên này trúng
     // hai nút. Lấy cái CUỐI — chân hộp nằm sau phần đầu hộp trong tài liệu.
-    const nut = await screen.findAllByRole('button', { name: 'Ở lại nhập tiếp' });
-    await userEvent.click(nut[nut.length - 1]);
+    const triggerButton = await screen.findAllByRole('button', { name: 'Ở lại nhập tiếp' });
+    await userEvent.click(triggerButton[triggerButton.length - 1]);
     expect(onOpenChange).not.toHaveBeenCalled();
     expect(o).toHaveValue('PC-01');
   });
@@ -160,5 +160,43 @@ describe('Dialog — guardUnsaved: không vứt dữ liệu đang gõ dở', () 
     await userEvent.keyboard('{Escape}');
     expect(screen.queryByText('Bỏ những gì vừa nhập?')).not.toBeInTheDocument();
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+});
+
+/**
+ * Hộp KHÔNG có `title` (nơi gọi tự dựng đầu/thân hộp) vẫn phải giữ hai lời hứa của hộp có
+ * title: `guardUnsaved` thật sự canh ô nhập, và hộp mở từ bên trong nó được biết mình là
+ * hộp lồng (nền trong suốt, không dim đôi).
+ */
+describe('Dialog không có title', () => {
+  it('guardUnsaved vẫn canh: đã gõ thì Esc hỏi lại, chưa đóng', async () => {
+    const onOpenChange = vi.fn();
+    renderWithI18n(
+      <ConfirmProvider>
+        <Dialog open onOpenChange={onOpenChange} guardUnsaved>
+          <input aria-label="Ghi chú" defaultValue="" />
+        </Dialog>
+      </ConfirmProvider>,
+    );
+    await userEvent.type(screen.getByRole('textbox', { name: 'Ghi chú' }), 'abc');
+    await userEvent.keyboard('{Escape}');
+    expect(await screen.findByText('Bỏ những gì vừa nhập?')).toBeInTheDocument();
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
+
+  it('hộp con mở cùng lúc bên trong nó dùng nền trong suốt', () => {
+    renderWithI18n(
+      <ConfirmProvider>
+        <Dialog open onOpenChange={() => {}}>
+          <p>Thân hộp cha</p>
+          <Dialog open onOpenChange={() => {}} title="Hộp con">
+            <p>Thân hộp con</p>
+          </Dialog>
+        </Dialog>
+      </ConfirmProvider>,
+    );
+    const backdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
+    expect(backdrops).toHaveLength(2);
+    expect(backdrops.filter((el) => !el.classList.contains('bare'))).toHaveLength(1);
   });
 });

@@ -67,7 +67,7 @@ export default function App() {
       <ToastProvider>
         <ConfirmProvider>
           {/*
-            Vùng sống thường trực, gắn NGOÀI `AppRoutes` (F-06). Phải nằm ngoài vì `AppRoutes`
+            Vùng sống thường trực, gắn NGOÀI `AppRoutes`. Phải nằm ngoài vì `AppRoutes`
             tự `return <Loading/>` trong lúc hỏi `/auth/me`: đặt bên trong thì đúng lượt tải
             đầu tiên — lượt duy nhất người dùng chắc chắn phải chờ — lại không có vùng sống
             nào đang đứng sẵn để loan báo.
@@ -83,7 +83,7 @@ export default function App() {
 /**
  * Chuyển hướng đường cũ sang đường mới, GIỮ NGUYÊN query và hash.
  *
- * Chính đợt này thêm deep-link `?tab=vault`, nên một link đã ghim
+ * Có deep-link `?tab=vault`, nên một link đã ghim
  * `/thiet-bi/<id>?tab=vault` mà rơi mất query sẽ mở ra tab Hồ sơ — người bấm không hiểu vì
  * sao nó không vào thẳng két như mọi khi.
  */
@@ -196,10 +196,9 @@ function AppRoutes() {
     <AppShell me={me}>
       <Routes>
         <Route path={PATHS.dashboard} element={<DashboardScreen me={me} />} />
-        {/* Gác theo BẢNG `ROUTE_ROLES`, không bằng mấy câu `? :` rải rác (B-09, 22/09).
-            Hai màn quản trị dưới đây từng dựng đủ h1 + nút bấm được cho Member rồi mới từ
-            chối — trong khi `/vault` ngay bên dưới gác đúng ở route. Bảng cho phép hỏi "có
-            đường /admin nào chưa khai vai không", câu mà JSX không trả lời được. */}
+        {/* Gác theo BẢNG `ROUTE_ROLES`, không bằng mấy câu `? :` rải rác: gác trong màn thì
+            màn quản trị đã dựng đủ h1 + nút bấm được cho Member rồi mới từ chối. Bảng cho
+            phép hỏi "có đường /admin nào chưa khai vai không", câu mà JSX không trả lời được. */}
         {canSeeRoute(PATHS.adminAccounts, me.role) ? (
           <Route path={PATHS.adminAccounts} element={<AccountsScreen me={me} />} />
         ) : (

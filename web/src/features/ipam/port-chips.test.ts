@@ -118,9 +118,15 @@ describe('isWideRange — cảnh báo mềm khi mở quá rộng', () => {
 
   for (const { name, chip, wide } of cases) {
     it(name, () => {
-      expect(isWideRange(chip)).toBe(wide);
+      expect(isWideRange(chip, 1000)).toBe(wide);
     });
   }
+
+  // Ngưỡng đến từ `GET ipam/settings` (`nat.wide_port_range`), cùng số API dùng để cảnh báo.
+  it('ngưỡng hạ xuống 100 thì dải 200 port đã cảnh báo', () => {
+    expect(isWideRange({ value: '8000-8199', from: 8000, to: 8199 }, 100)).toBe(true);
+    expect(isWideRange({ value: '8000-8199', from: 8000, to: 8199 }, 1000)).toBe(false);
+  });
 });
 
 /**

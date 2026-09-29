@@ -41,11 +41,11 @@ export function registerFailure(
       /*
        * `justLocked` = VỪA CHUYỂN sang trạng thái khóa, không phải "đang khóa".
        *
-       * Nơi gọi dùng cờ này để gửi email báo SA. Bản trước trả `true` cho MỌI lượt sai từ
-       * ngưỡng trở đi, nên sai lần thứ 6, 7, 8… đều bắn thêm một thư nữa. Trước 08/09 lỗi
-       * này bị che bởi chính lỗi đua ở `login()`: mọi lượt song song đều ghi đè nhau về 1,
-       * nên không lượt nào chạm ngưỡng hai lần. Sửa lỗi đua xong thì nó lộ ra ngay — 6 lượt
-       * sai đồng thời đẻ ra HAI dòng `auth.account.locked` và hai thư (rà soát 08/09, #5).
+       * Nơi gọi dùng cờ này để gửi email báo SA. Trả `true` cho MỌI lượt sai từ ngưỡng trở
+       * đi thì sai lần thứ 6, 7, 8… đều bắn thêm một thư nữa, và 6 lượt sai đồng thời đẻ ra
+       * HAI dòng `auth.account.locked` và hai thư. Lỗi này dễ bị che: khi bộ đếm ở `login()`
+       * còn đọc-rồi-ghi-đè thì mọi lượt song song đều ghi về 1, không lượt nào chạm ngưỡng
+       * hai lần.
        *
        * `!isLocked(...)` là đúng ngữ nghĩa chuyển trạng thái, và nó còn xử đúng ca hiếm:
        * admin hạ `login.max_failed_attempts` từ 10 xuống 5 trong lúc một tài khoản đang có 7
@@ -80,7 +80,7 @@ export interface BackoffPolicy {
   stepsMinutes: number[];
 }
 
-export const DEFAULT_BACKOFF_STEPS = [5, 15, 30, 60];
+const DEFAULT_BACKOFF_STEPS = [5, 15, 30, 60];
 
 export function registerAccountFailure(
   state: LockoutState,

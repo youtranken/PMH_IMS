@@ -130,16 +130,19 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
   - **Rà 29/09:** còn nguyên (`auth.service.ts:98-141`). Mã `ACCOUNT_LOCKED` được thêm có chủ ý để
     người dùng biết vì sao không vào được (32c3731), nên muốn đóng mục này phải chốt ở QUYET-DINH trước.
   - **Không sửa** — Q-16: giữ mã lỗi riêng, rủi ro dò email chấp nhận.
-- [ ] **SEC-11 · Kiểm Origin bị bỏ qua khi thiếu header** (`csrf.guard.ts:66`), mở khả năng login-CSRF.
-  - **Rà 29/09:** còn nguyên (`csrf.guard.ts:66` vẫn `if (!origin) return;`).
+- [x] **SEC-11 · Kiểm Origin bị bỏ qua khi thiếu header** (`csrf.guard.ts:66`), mở khả năng login-CSRF.
+  - **Đã sửa:** thiếu `Origin` thì xét `Sec-Fetch-Site` (chỉ nhận `same-origin`/`none`), rồi origin
+    của `Referer`. Route công khai (đăng nhập) không có tín hiệu nguồn nào thì 403 `ORIGIN_MISSING`;
+    route cần phiên vẫn còn lớp token. Bài kiểm dựng lại đòn: `api/src/modules/auth/csrf.guard.spec.ts`.
 - [x] **SEC-12 · Member đính file được vào mọi đối tượng chỉ có quyền đọc**
   (`files.controller.ts`, `assertCanRead`). Cần chủ dự án xác nhận đây là chủ ý.
   - **Rà 29/09:** không sửa, Q-11 chốt là đúng chủ ý. Xoá file vẫn chỉ SA/Admin.
 - [x] **SEC-13 · Quyền theo nhà mạng gắn theo tên** (`isp_provider` dùng `provider.name`). Đổi tên thì
   mất quyền, tên cũ dùng lại thì thừa kế sai người.
-- [ ] **SEC-14 · Mật khẩu tạm không tự ẩn** (`accounts-screen.tsx:544-576`).
-  - **Rà 29/09:** mới một phần. Đã có nút Ẩn/Hiện và nút chép (814ab86, ADM-048), nhưng chưa có hẹn
-    giờ tự che (`accounts-screen.tsx:~981`).
+- [x] **SEC-14 · Mật khẩu tạm không tự ẩn** (`accounts-screen.tsx:544-576`).
+  - **Đã sửa:** hộp mật khẩu tạm tự CHE (không đóng, đóng là mất chuỗi) sau `secret.reveal_seconds`,
+    cùng khoá với két, đọc qua `me.config.secretRevealSeconds`; bấm Hiện lại thì hẹn giờ tính lại.
+    Bài kiểm fake timers: `web/src/features/admin/accounts-screen.test.tsx`.
 
 
 ### Đã làm, bổ sung khi rà 29/09
@@ -199,7 +202,7 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
 
 ### P2
 
-- [ ] **BE-11 · Một số lỗi 400 lại trả 500:**
+- [x] **BE-11 · Một số lỗi 400 lại trả 500:**
   - Ngày không có thật (`2026-02-30`) lọt qua regex `DATE_ONLY` → Postgres 22008.
   - `subnet.service.ts:235-276` đổi CIDR mà gateway cũ nằm ngoài dải → 23514.
   - `restore` (`:377-421`) trùng CIDR → 23505.
@@ -207,36 +210,60 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
     sinh dùng `RealDateOrEmpty`, các ô `DATE_ONLY` ở devices/software/isp-line/ipam vẫn chỉ kiểm bằng
     regex. Ý 2 còn khi gọi API thẳng: PATCH chỉ gửi `cidr` thì gateway cũ không được kiểm → 500
     (màn web không dính vì luôn gửi gateway).
-- [ ] **BE-12 · Import Excel:**
+  - **Đã sửa:** ý 1 — `RealDateOrEmpty`/`RealDate`/`isRealDateOnly` dời về `common/real-date.ts`,
+    thay mọi regex khuôn ngày trong DTO (thiết bị, phần mềm + ghế, đường truyền, IP, hai `RenewDto`,
+    lọc từ/đến của nhật ký, break-glass, sổ gia hạn, thanh lý) và `dateOnly()` của ba service. Kiểm:
+    `api/src/common/real-date.spec.ts` (bảng ngày + điểm danh controller còn regex). Ý 2 — PATCH chỉ
+    gửi `cidr` thì kiểm gateway đang có theo dải mới → 400 `GATEWAY_OUT_OF_SUBNET`. Kiểm:
+    `api/test/subnet-cidr-gateway.spec.ts`.
+- [x] **BE-12 · Import Excel:**
   - Quá 20.000 dòng thì bị cắt im lặng (`excel-import.service.ts:13,43`).
   - Ô công thức không có giá trị cache hoặc ô `#N/A` thành rỗng, xoá luôn dữ liệu đang có (`:91`).
   - **Rà 29/09:** còn nguyên cả hai ý (`excel-import.service.ts:44,95`).
+  - **Đã sửa:** sheet vượt `MAX_ROWS_PER_SHEET` → 400 `EXCEL_TOO_MANY_ROWS` nêu trần, không ghi gì.
+    Ô công thức không có giá trị tính sẵn và ô lỗi (`#N/A`, `#REF!`…) ghi vào `SheetRow.unreadable`;
+    nhập danh mục và nhập thiết bị gọi `unreadableFieldError` → dòng lỗi nêu tên cột, không xoá dữ
+    liệu đang có (cột nháp ngoài mẫu thì bỏ qua). Kiểm: `excel-import.service.spec.ts` (workbook
+    dựng bằng ExcelJS), `device-import.spec.ts`, `catalog-import.spec.ts`.
 - [x] **BE-13 · `renew` hồi sinh hồ sơ `terminated`/`retired`** khi gọi API thẳng.
 - [x] **BE-14 · Gắn được thiết bị vào site/loại/NCC đã vô hiệu hoá** (`catalog.api.ts:51`).
   - **Rà 29/09:** xong (Q-14, ADM-015/DEV-027, 37c5180). `CatalogApiService.assertRefs` từ chối chọn
     MỚI mục đã ngừng dùng (`CATALOG_REF_INACTIVE`), cả ở thiết bị, phần mềm, dải, đường truyền, tủ mạng
-    và nhập Excel. Kiểm: `api/test/catalog-inactive-ref.spec.ts`, E2E `form-kiem-tieng-viet.spec.ts`.
-- [ ] **BE-15 · Audit port map thiếu thông tin** (`device-ports.service.ts:167-171`); vẫn cắm được port
+    và nhập Excel. Kiểm: `api/test/catalog-inactive-ref.spec.ts`, E2E `form-vietnamese-validation.spec.ts`.
+- [x] **BE-15 · Audit port map thiếu thông tin** (`device-ports.service.ts:167-171`); vẫn cắm được port
   sang máy đã thanh lý.
   - **Rà 29/09:** còn nguyên cả hai ý (`device-ports.service.ts:142-190`, `prepare()` không kiểm máy
     đầu kia đã thanh lý).
-- [ ] **BE-16 · Sweep hết hạn grant dừng cả vòng khi gặp một hàng lỗi**
+  - **Đã sửa:** thêm/sửa/gỡ cổng ghi trước/sau của thiết bị đầu kia (mã), mô tả đầu kia, cổng đầu
+    kia, VLAN, người sử dụng, ghi chú (sửa: chỉ ô đổi, kèm tên cổng); tab Lịch sử có nhãn tiếng Việt
+    cho các ô đó. Cắm sang máy đã thanh lý → 400 `PORT_PEER_RETIRED`, kiểm trong tx với `FOR SHARE`
+    trên hàng máy đầu kia. Kiểm: `api/test/device-ports-history.spec.ts`,
+    `web/src/features/devices/device-history-entries.test.ts`.
+- [x] **BE-16 · Sweep hết hạn grant dừng cả vòng khi gặp một hàng lỗi**
   (`approvals.service.ts:285-307`). Thêm try/catch cho từng hàng.
   - **Rà 29/09:** còn nguyên (`expireDueGrants`, `approvals.service.ts:~364-390`).
-- [ ] **BE-17 · Xin break-glass chồng khi đang có grant còn hạn** (`break-glass.service.ts:230`).
+  - **Đã sửa:** `expireDueGrants` bọc try/catch từng hàng, log qua `redactMessage`, hàng lỗi rollback
+    riêng và vòng sau thử lại. Kiểm: `api/test/approvals.spec.ts` (bài "một hàng lỗi không chặn").
+- [x] **BE-17 · Xin break-glass chồng khi đang có grant còn hạn** (`break-glass.service.ts:230`).
   - **Rà 29/09:** mới một phần (8a2dd5e). API chặn khi còn phiếu chờ (`BREAK_GLASS_PENDING`) và khi
     có quyền đã duyệt chưa gắn phiên (`BREAK_GLASS_APPROVED`); màn hình chặn đủ. Còn hở: gọi API thẳng
     vẫn xin chồng được khi đang cầm quyền đã gắn CHÍNH phiên này. Thiếu bài kiểm cho
     `BREAK_GLASS_APPROVED`.
+  - **Đã sửa:** `request()` thêm 409 `BREAK_GLASS_ACTIVE` khi đang cầm quyền gắn chính phiên này
+    (`grantOf`); quyền gắn phiên khác vẫn xin lại được (Q-15). Kiểm: `api/test/break-glass-session.spec.ts`
+    (nhóm "không xin chồng", có cả `BREAK_GLASS_APPROVED`).
 - [x] **BE-18 · Người xin break-glass không nhận thông báo** khi được duyệt, từ chối hay thu hồi. Thêm
   outbox.
   - **Rà 29/09:** xong (Q-14, VLT-003..008, 858ba4d). Duyệt, từ chối, thu hồi ghi outbox
     `approval.decided` cùng transaction; thư dựng ở `mail.consumer.ts` (`buildDecidedMail`). Kiểm:
     `api/test/break-glass-decided.spec.ts`.
-- [ ] **BE-19 · Audit ma trận quyền không ghi tầng cũ; gỡ quyền đọc ngoài transaction**
+- [x] **BE-19 · Audit ma trận quyền không ghi tầng cũ; gỡ quyền đọc ngoài transaction**
   (`access-list.service.ts`).
   - **Rà 29/09:** còn nguyên (`upsert` không đọc tầng cũ; `remove` đọc `before` ngoài transaction).
-- [ ] **BE-20 · Tham số nghiệp vụ viết cứng, vi phạm AD-11:**
+  - **Đã sửa:** `upsert` đọc tầng cũ trong transaction (`FOR UPDATE`), ghi `fromTier` vào audit;
+    `remove` dùng `DELETE … RETURNING` trong transaction, không xoá được hàng nào thì 404 và không
+    audit. Kiểm: `api/test/access-list-audit.spec.ts` (có bài hai người cùng gỡ).
+- [x] **BE-20 · Tham số nghiệp vụ viết cứng, vi phạm AD-11:**
   - `MIN_PREFIX=24`, `WIDE_RANGE=1000`, `LOOK_BACK_DAYS=365`, `MAX_ITEMS=8`.
   - Các `@Throttle` 30 và 10 lần/phút.
   - `MAX_RELAY_ATTEMPTS=10`.
@@ -244,6 +271,15 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
   - **Rà 29/09:** mới xong ý múi giờ (đọc `appTimezone`, 4541be6; kiểm ở
     `api/test/audit-query-filters.spec.ts`). Ba ý còn lại vẫn viết cứng; `MAX_RELAY_ATTEMPTS` nay là
     14 (9216723, OPS-11); thêm một `@Throttle` 20 lần/phút ở `files.controller.ts:107`.
+  - **Đã sửa:** mọi số trên thành khoá `system_config`, seed bằng giá trị cũ (0280–0283):
+    `ipam.subnet_min_prefix`, `nat.wide_port_range`, `expiry.look_back_days`,
+    `dashboard.max_items`, `outbox.max_relay_attempts`, `rate.totp_per_minute`,
+    `rate.secret_reveal_per_minute`, `rate.file_upload_per_minute`. Trừ trần outbox (khoá kỹ
+    thuật), tất cả sửa được ở màn Tham số hệ thống. `@Throttle` thay bằng `@ConfigThrottle`
+    (`common/config-throttle.ts`); web thôi giữ bản sao trần dải và ngưỡng dải cổng NAT. Kiểm:
+    `ipam-config.spec.ts`, `outbox.spec.ts` (test:db), `user-throttler.guard.spec.ts`,
+    `config-throttle-surface.spec.ts`, `dashboard-max-items.spec.ts`,
+    `expiry-look-back.spec.ts`.
 - [x] **BE-21 · `audit-query`:** `actor`/`objectId` đưa vào `ILIKE` không qua `escapeLike`; `page`
   không có `@Max`.
   - **Rà 29/09:** xong (4541be6). `escapeLike` ở `audit-query.service.ts:137,146`; `@Max(COUNT_CAP)`
@@ -288,10 +324,15 @@ Kết quả: 0 lỗi, đủ 37 bảng, chạy lần 2 áp 0 file. **Không squas
 
 ### P1
 
-- [ ] **DB-03 · Migration chạy bằng superuser.** Tạo role chủ sở hữu riêng (không superuser, có
+- [x] **DB-03 · Migration chạy bằng superuser.** Tạo role chủ sở hữu riêng (không superuser, có
   `CREATEROLE`, là owner DB). Cả 5 extension là loại trusted nên vẫn cài được. Làm cùng OPS-07.
   - **Rà 29/09:** còn nguyên. OPS-07 chỉ tách service `migrate` khỏi api; `migrate` vẫn dùng
     `POSTGRES_USER` (superuser) ở `docker-compose.yml:~129`.
+  - **Đã sửa:** role `ims_owner` (NOSUPERUSER, CREATEROLE, ADMIN trên `ims_app`) dựng bằng
+    `ops/db/owner-bootstrap.sql`: initdb tự chạy trên cụm mới, `ops/db-owner-bootstrap.sh` cho cụm
+    đã có và sau khi nạp dump. `migrate` đăng nhập bằng `ims_owner` (`MIGRATION_DB_PASSWORD` trong
+    `.env`). Kiểm: `api/test/db-owner-role.spec.ts` (DB trắng migrate trọn bằng `ims_owner`, DB cũ
+    bootstrap rồi migrate lại, quyền `ims_app` trùng từng ô). Máy đang chạy phải làm RUNBOOK **H1**.
 - [x] **DB-04 · Gắn tag `v1.0-schema`** ngay trước go-live.
 - [x] **DB-05 · Postgres tuning:** `shm_size: 256m`, `shared_buffers`, `work_mem`,
   `log_min_duration_statement=500ms`.
@@ -351,20 +392,26 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
 
 ### P2
 
-- [ ] **FE-08 · `rgba()` viết thẳng ngoài `tokens.css`** ở 9 chỗ (`base.css`, `datepicker.css`,
+- [x] **FE-08 · `rgba()` viết thẳng ngoài `tokens.css`** ở 9 chỗ (`base.css`, `datepicker.css`,
   `form-layout.css:131`, `lightbox.css`, `shell.css`). Tạo token, có cặp dark. Sửa `ops/gate-hex.sh`
   bắt cả `rgb(`/`rgba(`.
   - **Rà 29/09:** còn 7 chỗ trong code: `datepicker.css:155,164,189`, `table.css:313,376,572`,
     `form-layout.css:162`. `base.css`, `lightbox.css`, `shell.css` đã sạch. Cổng vẫn chỉ bắt hex, và
     chú thích "20 chỗ đang nợ" ở `ops/gate-hex.sh:21` đã sai.
+  - **Đã sửa:** 7 chỗ thành token (`--shadow-float`, `--on-brand-veil[-soft]`, `--on-brand-press`,
+    `--shadow`, `--surface-2`), có cặp dark. `ops/gate-hex.sh` bắt thêm `rgb()/rgba()/hsl()/hsla()`
+    và hex mã hoá URL `%23…` (vẫn bỏ qua chú thích). Bài `token-usage.test.ts` mới: mọi token mang
+    màu phải có cặp `html[data-theme='dark']`.
 - [x] **FE-09 · "Bộ giao diện" (`/dev/components`) tắt ở prod** (Q-15). Cờ build `VITE_DEV_KIT`
   (`web/src/lib/dev-kit.ts`): chỉ `docker-compose.override.e2e.yml` truyền `'1'` (image tag riêng
   `ims-web:dev-kit`) và `vite` dev tự bật. Tắt thì không route (gõ URL ra 404), không mục menu,
   không có trong bảng lệnh, và mã trang không vào bundle. Kiểm: `npm --prefix web run build` rồi
   `grep -c -- --warm web/dist/static/index-*.js` ra 0 (chữ chỉ có trong trang dev); build với
   `VITE_DEV_KIT=1` ra 1. Lazy-load từng route còn lại chưa làm — chưa cần ở cỡ bundle hiện tại.
-- [ ] **FE-10 · `retry: 1` áp cả cho 4xx** (`lib/api-client.ts:86`).
+- [x] **FE-10 · `retry: 1` áp cả cho 4xx** (`lib/api-client.ts:86`).
   - **Rà 29/09:** còn nguyên (`lib/api-client.ts:105`).
+  - **Đã sửa:** `shouldRetryQuery` — thử lại một lần chỉ với lỗi mạng và 5xx; 4xx báo ngay. Kiểm ở
+    `lib/api-client.test.ts`.
 - [x] **FE-11 · Script inline đặt theme** (`index.html:9-18`) cần một hash trong CSP. Làm cùng OPS-04.
   - **Rà 29/09:** xong theo cách khác (1e53e7f): script chuyển ra `web/public/theme-init.js`, nên CSP
     `script-src 'self'` (`web/security-headers.conf:10`) không cần hash. Chưa có E2E kiểm header CSP.
@@ -448,9 +495,12 @@ biến `VITE_*`. Chunk app 410 kB (105 kB gzip).
 
 ### P2
 
-- [ ] **OPS-13 · Chuyển lịch `repeat` + `jobId` sang `upsertJobScheduler`** (`worker.ts:88-92`).
+- [x] **OPS-13 · Chuyển lịch `repeat` + `jobId` sang `upsertJobScheduler`** (`worker.ts:88-92`).
   Đổi `SWEEP_EVERY_MS` hiện sẽ sinh ra hai nhịp chạy song song.
   - **Rà 29/09:** còn nguyên (`worker.ts:105-109`).
+  - **Đã sửa:** `queue/sweep-schedule.ts` (`scheduleSweep`) upsert lịch id `sweep-tick` và gỡ mọi
+    lịch khác của hàng đợi quét, kể cả lịch kiểu cũ bản trước để lại. Kiểm trên Redis thật:
+    `api/test/sweep-scheduler-redis.spec.ts`.
 - [x] **OPS-14 · Worker shutdown không đợi `relayBatch` đang chạy xong.**
 
 
@@ -525,13 +575,23 @@ Test **không** vào image production (api build loại `*.spec.ts`, image web c
   secret + 1 file đính kèm → backup → xoá sạch → restore → mở được secret và tải được file.
 - [ ] **QA-03 (P0) · UAT 3–5 ngày với 2–3 người dùng thật** trên staging, dữ liệu thật. Ghi lỗi vào
   một bảng; chỉ go-live khi không còn lỗi mức cao.
-- [ ] **QA-04 (P2) · Tách `e2e/tests/di-khap-giao-dien.spec.ts`** (458 KB, khoảng 8.000 dòng) theo
+- [x] **QA-04 (P2) · Tách `e2e/tests/di-khap-giao-dien.spec.ts`** (458 KB, khoảng 8.000 dòng) theo
   từng màn; đổi tên bài E2E bị trùng.
   - **Rà 29/09:** file đã lớn thêm, 487 KB, 9.184 dòng. Tên bài trùng: "sắp xếp theo cột chạy ở
     server…" ở `accounts.spec.ts`, `devices.spec.ts`, `software.spec.ts`.
-- [ ] **QA-05 (P2) · Gỡ devDependency không dùng:** `supertest`, `@types/supertest`, `@nestjs/testing`,
+  - **Đã sửa:** tách thành 10 file `di-khap-giao-dien-NN-<phòng>.spec.ts` (mỗi khối
+    `test.describe` cấp đỉnh một file, thân giữ nguyên từng byte, chỉ dựng lại import; số thứ tự
+    giữ thứ tự chạy cũ vì `workers: 1`). `di-khap-giao-dien.spec.ts` còn bản kiểm kê + cổng tự
+    canh, nay đọc bài ở cả 10 file. Ba bài trùng tên thêm hậu tố "(tài khoản)", "(thiết bị)",
+    "(phần mềm)". Kiểm: `npx tsc --noEmit`, `npm run lint` xanh; `playwright test --list` 673 bài
+    trước và sau (117 → 127 file), describe + tên bài y hệt trừ ba bài đổi tên, không còn tên lá
+    trùng; logic cổng kiểm kê chạy lại ngoài Playwright: 60 mục ↔ 60 bài, không treo, không thiếu.
+    Chưa chạy E2E thật.
+- [x] **QA-05 (P2) · Gỡ devDependency không dùng:** `supertest`, `@types/supertest`, `@nestjs/testing`,
   `ts-loader`, `tsconfig-paths`.
   - **Rà 29/09:** cả 5 gói vẫn còn và không chỗ nào dùng, gỡ được.
+  - **Đã sửa:** `npm uninstall` cả 5 gói (grep 0 chỗ dùng kể cả `jest.config.js`, `test/jest-db.cjs`,
+    `nest-cli.json`, tsconfig); `nest build` và 1.370 bài unit api xanh.
 
 ---
 
@@ -544,7 +604,7 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
   - `api/Dockerfile:18`: ghi `reset-e2e-user`, file thật là `reset-e2e.mjs`.
   - `SHARED-REGISTRY.md:60`: ghi `DateTimePicker` dùng mọi nơi, thực tế không ai import.
   - `ui/dialog.tsx:17,269`.
-- [ ] **CLEAN-02 (P2) · Dọn chú thích kiểu nhật ký**, mỗi module một commit.
+- [x] **CLEAN-02 (P2) · Dọn chú thích kiểu nhật ký**, mỗi module một commit.
   - Bắt đầu từ các file chú thích nhiều hơn code: `security-probe.service.ts`,
     `use-list-url-state.ts`, `device-retirement.registry.ts`, `common/sql.ts`.
   - **Giữ:** chú thích nói VÌ SAO, ràng buộc không được phá, mã luật (AD-x, FR-x, NFR-x).
@@ -554,10 +614,30 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
   - **Không đụng file migration.**
   - **Rà 29/09:** mới dọn lẻ (1c00ba2, 2aefe44, b57775f, và chú thích "trước đây…" của đợt v1.4.2).
     Đếm thô còn khoảng 250 dòng (api 67, web 106, e2e 78).
-- [ ] **CLEAN-03 (P2) · Xoá `.pyc` trong `.claude/` khỏi git**, thêm `__pycache__/` vào `.gitignore`.
+  - **Đã sửa:** 16 commit theo module (api auth · vault · audit · approvals+service-accounts ·
+    devices · ipam · software · catalog+expiry · common · module nền · core; ops; web ui · css ·
+    lib/locales/test · features; e2e). Bộ quét rộng hơn (ngày, "rà soát", "§18", "Story N.M",
+    "Epic N", "finding", "bản trước", "trước đây") đếm được 1263 dòng chú thích: api 569 → 25,
+    web 366 → 38, e2e 310 → 5, ops 18 → 0. Phần còn lại là dữ liệu mẫu (ngày ví dụ, `0.0.0.0/0`,
+    `Gi1/0/2`, "Bước 1/2", tỉ lệ ghế). Câu lịch sử nào mang lý do thật thì viết lại thành lý do;
+    vài chú thích đã lệch code được sửa cho khớp. Kiểm: `api/dist/**/*.js` giống hệt trước/sau
+    (sha256 cả 251 file); bản transpile bỏ chú thích của từng file đổi (kể cả spec, tsx, e2e)
+    giống HEAD; CSS so sau khi bỏ chú thích; jest, vitest, eslint xanh; playwright --list 673.
+- [x] **CLEAN-03 (P2) · Xoá `.pyc` trong `.claude/` khỏi git**, thêm `__pycache__/` vào `.gitignore`.
   - **Rà 29/09:** còn 5 file trong `.claude/skills/bmad-retrospective/scripts/**/__pycache__/`.
-- [ ] **CLEAN-04 (P2) · Bỏ `export` thừa:** 20 ở api, 18 ở web (theo knip).
+  - **Đã sửa:** `git rm --cached` cả 5 file; `.gitignore` thêm `__pycache__/` và `*.pyc`
+    (`git check-ignore` xác nhận).
+- [x] **CLEAN-04 (P2) · Bỏ `export` thừa:** 20 ở api, 18 ở web (theo knip).
   - **Rà 29/09:** chưa đếm lại — máy chưa cài knip.
+  - **Đã sửa:** knip đếm lại trước khi sửa: api 24 export + 16 type, web 24 export + 12 type. Mỗi
+    tên được grep cả `api/test`, `e2e/` và tài liệu trước khi gỡ. Sau: api còn 3, web còn 1, đều có
+    lý do — `SERVICE_ACCOUNT_STATUSES`, `SERVICE_ACCOUNT_OPTIONAL_FIELDS`, `CATALOG_ENTITIES` chỉ
+    dùng làm kiểu (eslint cấm hằng chỉ dùng làm kiểu mà không export), `parseAdminArgs` dùng ở
+    `seed-sa.main.ts` (knip không biết đó là điểm vào). Code chết gỡ hẳn: `StatGrid`/`Stat`/
+    `StatIfSet` (đã được `DetailLayout` thay, sửa cả `SHARED-REGISTRY.md`), `useRowActionLabel`,
+    `isAdminOrAbove`, `IP_STATUSES`, `SCOPE_LABEL`, vài kiểu không ai dùng, và file thử
+    `api/src/modules/devices/probe-ad16.ts` lỡ bị commit (bài `ad16-gate.lint.spec.ts` tự sinh rồi
+    tự xoá nó). Kiểm: api build + lint + 1.404 bài unit; web build + lint + 1.664 bài vitest.
 
 ---
 
@@ -648,7 +728,7 @@ Tỉ lệ dòng chú thích: api 30%, web 19%, e2e 28%, SQL 50%. Có hơn 600 ch
   đóng phiên khác của mình; đăng nhập xong về đúng trang đã mở. dd7249e, e673629, a115bec (v1.3.0).
 - [x] **DOM-15 · Màn Tham số hệ thống `/admin/settings`** (Q-14, ADM-088): chỉ SA, có step-up, mọi lần
   sửa ghi nhật ký, chỉ sửa khoá có trong danh sách khai báo. 9e4584e (v1.3.0), 7a7705e. Kiểm: E2E
-  `tham-so-he-thong.spec.ts`.
+  `system-config.spec.ts`.
 - [x] **DOM-16 · Hồ sơ IP phải có chủ; loại thiết bị có cờ Router/Firewall cho ô Router của NAT**
   (Q-14). 18a04c2 (NET-001..005), 3b9f9ee (NET-041), v1.3.0.
 - [x] **DOM-17 · "Đã thanh lý" (trạng thái) và "Thanh lý" (nút); phần mềm loại "Khác" có hạn là nguồn
@@ -701,9 +781,19 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   `REFERENCES` nào; xoá danh mục luôn thành công và để lại chuỗi mồ côi. Cần một story riêng, kèm
   quyết định sản phẩm ở mục 11.
 - [x] **OLD-DB-02 · `device_port` thiếu UNIQUE `(connected_device_id, connected_port)`**, trái AD-14.
-- [ ] **OLD-DB-03 · `audit_log` chưa phân vùng theo tháng và chưa có đường lưu trữ.** Bảng này chỉ
+- [x] **OLD-DB-03 · `audit_log` chưa phân vùng theo tháng và chưa có đường lưu trữ.** Bảng này chỉ
   thêm, không bao giờ xoá; phân vùng lúc còn nhỏ rẻ hơn nhiều so với lúc đã lớn.
   - **Rà 29/09:** còn nguyên, chưa có phân vùng lẫn đường lưu trữ.
+  - **Đã sửa (chia theo NĂM, chủ dự án chốt):** 0302 chép bảng cũ sang bảng chia ngăn
+    `RANGE (created_at)` (ngăn `audit_log_<năm>` theo UTC + `audit_log_default`), đủ 8 chỉ mục,
+    trigger chỉ-thêm và ACL cũ; mỗi ngăn thu hết quyền của `ims_app`. Lượt sweep của worker
+    (`AuditPartitionSweep` → hàm `audit_log_ensure_partitions`, SECURITY DEFINER) tự tạo ngăn năm
+    nay + năm sau và dời dòng lỡ rơi vào DEFAULT sang ngăn đúng năm. Lưu trữ bằng tay:
+    `ops/audit-archive.sh` (ngưỡng `audit.archive_after_years`, mặc định 2, 0303), hướng dẫn ở
+    RUNBOOK mục H2. Kiểm: `api/test/audit-partition.spec.ts` (DB trắng, DB có 12.000 dòng cũ,
+    "hôm nay" 31/12/2026, dòng 2028 trong DEFAULT, tách rồi gắn lại), `app-role-privileges`
+    quét cả ngăn; `audit-index` đổi sang tên chỉ mục theo ngăn. `ops/audit-archive.sh` mới
+    kiểm cú pháp (`bash -n`), chưa chạy trên compose thật.
 - [x] **OLD-BE-01 · Mail in giờ GỬI thay vì giờ sự kiện**; `toLocaleString` không ghim múi giờ
   (`mail.consumer.ts:227,281,323,352`).
 - [x] **OLD-BE-02 · Kho thanh lý cắt im lặng ở 500 dòng** (`devices.api.ts:106`, `software.api.ts:54`,
@@ -727,19 +817,31 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
 
 ### P2
 
-- [ ] **OLD-FE-03 · Khoảng 550 dòng CSS chết:**
+- [x] **OLD-FE-03 · Khoảng 550 dòng CSS chết:**
   - `primitives.css:37`, `detail-tabs.css:519`, `form-layout.css:531`, `table.css:375-386`.
   - `filters.css` và `profile.css` vẫn được `@import`.
   - **Rà 29/09:** còn nguyên. `filters.css` (50 dòng) và `profile.css` (224 dòng) chết toàn bộ, vẫn
     `@import` ở `web/src/index.css:15,17`; số dòng cũ ở trên đã lệch.
-- [ ] **OLD-FE-04 · Icon kính lúp giữ màu xám ở dark mode** (`base.css:38`, `detail-tabs.css:379`,
+  - **Đã sửa:** xoá `filters.css` (và `@import`). `profile.css` KHÔNG chết toàn bộ: `.profile-page`,
+    `.profile-card`, `.profile-dl` đang dùng ở `profile-screen.tsx` nên giữ, còn `.stat-grid` 1 cột
+    ≤680px chuyển về `detail-tabs.css`; phần còn lại (~186 dòng) xoá. Xoá rule chết trong
+    `primitives.css`, `detail-tabs.css`, `form-layout.css`, `table.css` — mỗi lớp đã soát không
+    còn trong `web/src/**/*.ts(x)`, `web/index.html`, `e2e/tests` (kể cả lớp ghép động như
+    `is-${bucket}`, `span-${n}`: `is-assigned`/`is-voided`/`span-3` còn sống nên giữ). Tổng
+    ~780 dòng; `npm run build` và các bài Vitest đọc CSS xanh.
+- [x] **OLD-FE-04 · Icon kính lúp giữ màu xám ở dark mode** (`base.css:38`, `detail-tabs.css:379`,
   `shared-kit.css:916`).
   - **Rà 29/09:** còn nguyên, cả ba icon SVG vẫn `stroke='%238a908a'` (`base.css:48`,
     `detail-tabs.css:599`, `shared-kit.css:1592`), chưa có bản đè `html[data-theme='dark']`.
-- [ ] **OLD-FE-05 · Lỗi nhỏ ở dialog:** thiếu Provider khi hộp không có title; `guardUnsaved` thành
+  - **Đã sửa:** icon khay rỗng dùng `mask` + `background-color: var(--ink-3)`; chevron `<select>` và
+    kính lúp (không có `::before`) thành token `--icon-select-chevron`/`--icon-search` có bản dark.
+    Cổng `gate-hex.sh` giờ chặn `%23hex` ngoài `tokens.css`.
+- [x] **OLD-FE-05 · Lỗi nhỏ ở dialog:** thiếu Provider khi hộp không có title; `guardUnsaved` thành
   no-op trong trường hợp đó (`dialog.tsx:~400-437`).
   - **Rà 29/09:** còn nguyên (`dialog.tsx:422`).
-- [ ] **OLD-FE-06 · Còn thiếu:**
+  - **Đã sửa:** nhánh không title bọc `children` trong `<div ref={bodyRef} style="display:contents">`
+    + `DialogDepthContext.Provider`. Kiểm ở `ui/dialog.test.tsx` ("Dialog không có title").
+- [x] **OLD-FE-06 · Còn thiếu:**
   - `/nat` và `/disposal` chưa phân trang.
   - `/expiry` chưa sắp theo cột ở server.
   - `attachment-panel.tsx:103` dùng `getQueryData` thay vì `useMe()`.
@@ -747,7 +849,10 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - **Rà 29/09:** xong 3/5 — `/disposal` phân trang (3edeb07), `/nat` phân trang phía client (126ba90),
     `/expiry` sắp theo cột ở server (dc08311). Còn `attachment-panel.tsx:124` (`getQueryData`) và
     interval `RevealDialog` (`reveal-dialog.tsx:143`).
-- [ ] **OLD-FE-07 · Câu chữ:**
+  - **Đã sửa:** `attachment-panel.tsx` đọc quyền xoá qua `useMe()` (vẽ lại khi `me` về sau);
+    `RevealDialog` giữ `onClose`/`onExpire` trong ref nên interval dựng một lần, và hết giờ chỉ
+    báo một lần. Kiểm ở `ui/attachment-panel.test.tsx`, `ui/reveal-dialog.test.tsx`.
+- [x] **OLD-FE-07 · Câu chữ:**
   - "Break-glass" còn để tiếng Anh ở KPI.
   - "Tất cả" lẫn với "Mọi".
   - Còn sót chữ "seat" (`vi.ts:606-607,1415,1420`).
@@ -757,7 +862,12 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - **Rà 29/09:** xong 4/6 — "Break-glass" ở KPI, chữ "seat", hai tiêu đề chồng, `incidentsNotYet`
     (a565557, fb6c981, 6a780e1, 8bfa5c3). Còn "Tất cả loại" lẫn "Mọi loại" (`vi.ts:886,1147` với
     `629,1230`) và thẻ dải đã tắt ở danh sách (`ipam-screen.tsx:443`) chưa có người tắt.
-- [ ] **OLD-A11Y-02 · Trợ năng mức nhẹ:**
+  - **Đã sửa:** thống nhất theo dạng chiếm đa số ở thanh lọc ("Mọi site", "Mọi trạng thái"…): ba
+    chỗ "Tất cả loại" (phần mềm, theo dõi hạn, tài khoản dịch vụ) thành "Mọi loại"; sửa theo ở
+    E2E `software`, `expiry`, `di-khap-giao-dien`. Thẻ dải đã tắt dùng chung câu `ipam.voidedBy`
+    với trang chi tiết (ngày · người tắt · lý do); API danh sách vốn đã trả `voidedBy`. Kiểm ở
+    `features/ipam/subnet-card.test.tsx`.
+- [x] **OLD-A11Y-02 · Trợ năng mức nhẹ:**
   - `.segmented` dùng `aria-pressed` thay vì radiogroup.
   - Ma trận quyền thiếu `scope`.
   - Nhảy từ h1 xuống h3 (`port-map-panel.tsx`).
@@ -765,25 +875,72 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - `.cell-note` chỉ đọc được nội dung đầy đủ qua `title`.
   - **Rà 29/09:** xong font `td::before` (af00c3a). Ma trận quyền mới có `scope="row"`, header cột còn
     thiếu `scope`. Ba ý còn lại còn nguyên.
-- [ ] **OLD-BE-03 · Ghi nhật ký:**
+  - **Đã sửa:** component dùng chung `ui/segmented-radio.tsx` (radiogroup/radio, Tab dừng một lần,
+    mũi tên/Home/End), thay cho dải chọn-một ở Kho thanh lý (loại, khoảng), Nhật ký (mốc ngày),
+    màn dải IP (trạng thái, kiểu xem), form NAT (giao thức). Nút bật/tắt độc lập (chip an ninh,
+    ba chip trạng thái NAT, lọc Két) vẫn `aria-pressed` — đúng nghĩa. Ma trận quyền có
+    `scope="col"`/`"colgroup"`; `port-map-panel` h3→h2; `ui/cell-note.tsx` biến ô bị cắt thành nút
+    mở/thu (Danh mục, ghi chú IP, ghi chú NAT). Đã khai `SHARED-REGISTRY.md`. Vitest:
+    `segmented-radio`, `cell-note`, `access-matrix-screen`, `port-map-panel`, `audit-log-quick-filter`.
+    E2E sửa theo vai mới (chưa chạy): `di-khap-giao-dien`, `nat`, `ipam`, `ip-delete-mistaken.mobile`,
+    `polish-a`, `polish-b`, `disposal`, `software-expiry-ux-medium-low`.
+- [x] **OLD-BE-03 · Ghi nhật ký:**
   - `@Audited` khai sai tên (`accounts.controller.ts:167`, `catalog.controller.ts:146`).
   - `FIELD_LABEL` thiếu `token`/`currentPassword`/`newPassword` (`validation-messages.ts:37`).
   - `DevicePortsService` ghi lịch sử mà không kiểm hàng có bị sửa hay xoá thật không.
   - **Rà 29/09:** còn nguyên. Tên `@Audited` của catalog lệch có chủ ý (chú thích
     `catalog.controller.ts:102-106`) — cần chốt giữ hay đổi.
-- [ ] **OLD-DB-04 · Dọn và chuẩn hoá DB:**
+  - **Đã sửa:** `@Audited` của đổi trạng thái tài khoản khai đúng ba mã service ghi
+    (`ACCOUNT_STATUS_ACTION`: `account.locked|disabled|unlocked`); `@Audited` nhận mảng mã, chỉ khi
+    `writtenByService`. Tên HỌ của catalog: giữ như cũ — Q-16. `FIELD_LABEL` thêm `token`,
+    `ticket`, `currentPassword`, `newPassword`; bài điểm danh nay đọc cả `*.dto.ts`. Port map:
+    sửa/gỡ khoá dòng trong tx, `returning()` rỗng → 404, lịch sử ghi SAU khi xoá, lưu y nguyên thì
+    không ghi. Kiểm: `accounts-audited.spec.ts`, `validation-messages.spec.ts`,
+    `web/src/features/audit-action-rollcall.test.ts`, `api/test/device-ports-write-check.spec.ts`.
+- [x] **OLD-DB-04 · Dọn và chuẩn hoá DB:**
   - Bỏ index `audit_log_actor_trgm` (11 MB, 0 lượt quét).
   - `isp_line.wan_ip` đang là `text`.
   - `device_port.vlan` là `text` trong khi `subnet.vlan` là `integer`.
   - **Rà 29/09:** còn nguyên cả ba ý.
-- [ ] **OLD-SEC-01 · Probe không gửi thư lần hai** khi kẻ dò vượt ≥3× ngưỡng trong thời gian nghỉ.
-  - **Rà 29/09:** còn nguyên.
-- [ ] **OLD-QA-04 · Thêm luật lint chặn chuỗi tiếng Việt cứng; đổi tên các định danh tiếng Việt
+  - **Đã sửa:**
+    - Index `audit_log_actor_trgm`: **không bỏ**. Bộ lọc `?actor=` của màn Nhật ký vẫn lọc
+      `actor ILIKE '%x%'` (`audit-query.service.ts`), và `api/test/audit-index.spec.ts` khẳng định
+      bằng `EXPLAIN` là câu đó đi qua index này. "0 lượt quét" là số đo trên DB dev nhỏ, nơi planner
+      chọn seq scan vì rẻ hơn.
+    - `isp_line.wan_ip` thành `inet` (0300): kiểm dữ liệu trước, có dòng không phải IP thì dừng và
+      liệt kê mã đường truyền + giá trị; dựng lại `search_norm` bằng `abbrev(wan_ip)`. API kiểm
+      bằng `wanIpOf` (400 `WAN_IP_INVALID`), bỏ `/32` cho khớp cách Postgres in.
+    - `device_port.vlan` giữ `text` theo Q-16 (trống | `trunk` | số 1–4094): 0301 chuẩn hoá
+      khoảng trắng/hoa-thường, dòng không đọc được thì dừng và liệt kê thiết bị + cổng, rồi thêm
+      CHECK `device_port_vlan_check`. API kiểm bằng `portVlanOf` (400 `PORT_VLAN_INVALID`).
+    - Kiểm: `api/test/wan-ip-port-vlan-types.spec.ts` (DB trắng, DB có dữ liệu hợp lệ, DB có dữ
+      liệu sai), unit `wan-ip.spec.ts`, `port-vlan.spec.ts`; DB test isp*, search-norm, sort-index,
+      device-port*, audit-index, migrations xanh.
+- [x] **OLD-SEC-01 · Probe không gửi thư lần hai** khi kẻ dò vượt ≥3× ngưỡng trong thời gian nghỉ.
+  - **Đã sửa:** trong thời gian nghỉ, số lượt vượt `secret.probe_escalation_multiplier` (mặc định 3,
+    migration 0250, sửa được ở màn Tham số, tối thiểu 2) × ngưỡng thì đi thêm đúng MỘT lá leo thang
+    (tiêu đề "Vẫn tiếp tục: …"), kể cả khi bị bắn song song. Bài kiểm DB:
+    `api/test/security-probe-escalation.spec.ts`; thư: `api/src/modules/mail/mail-event-time.spec.ts`.
+- [x] **OLD-QA-04 · Thêm luật lint chặn chuỗi tiếng Việt cứng; đổi tên các định danh tiếng Việt
   còn lại** (9 tên tệp, khoảng 175 định danh test).
   - **Rà 29/09:** xong vế luật lint (`NO_VIETNAMESE_TEXT`, 25bf181; kiểm ở `web/src/lint-rules.test.ts`).
     Vế đổi tên còn: `quetNguon`, `timVaChoLoc`, `moTimNhanh`… ở 27 file.
-- [ ] **OLD-QA-05 · Chưa có bài kiểm cho đường `onExpire` của `RevealDialog`.**
+  - **Đã sửa:** khoảng 270 định danh không dấu trong bài kiểm và helper (web 37 file, api 10,
+    e2e 42) sang tiếng Anh: `scanSource`, `searchAndWaitForFilter`, `openCommandPalette`… Đổi bằng
+    bộ quét AST (chỉ token Identifier, không đụng chuỗi/chú thích, chặn tên đích đã có trong
+    file). Tiêu đề bài kiểm giữ nguyên. Tên tệp: 4 file web (`test/scan-source.ts`,
+    `audit-log-quick-filter`, `expiry-month-sort`, `access-matrix-check`) và 50 spec E2E (ví dụ
+    `vault-rotation-due`, `software-status`, `privilege-escalation`, tên mới mở đầu bằng mảng).
+    Giữ `di-khap-giao-dien-NN-*` vì cổng đọc theo mẫu tên. Còn lại có chủ ý: `an`, `binh` ở
+    `api/test/files-uploader-name.spec.ts` là tên người; định danh không dấu trong mã sản phẩm
+    (`live-region.tsx`, `focus-trap.ts`, `nguong` ở `expiry-screen.tsx`…) nằm ngoài mục này.
+    Kiểm: jest 1479 xanh, vitest xanh (trừ `api-client.test.ts` đỏ sẵn), e2e tsc xanh,
+    playwright --list 673 bài / 127 file.
+- [x] **OLD-QA-05 · Chưa có bài kiểm cho đường `onExpire` của `RevealDialog`.**
   - **Rà 29/09:** còn nguyên.
+  - **Đã sửa:** `ui/reveal-dialog.test.tsx` "onExpire khi hết giờ": gọi đúng một lần cùng
+    `onClose` (bài này bắt được lỗi thật — trước đó bắn 3 lần khi nơi gọi chưa tháo hộp), không
+    gọi khi bấm "Ẩn ngay". Toast `vault.autoHidden` ở `vault-panel.tsx` đi qua đúng callback này.
 
 Chưa đối chiếu: 13 mục trong `_bmad-output/implementation-artifacts/deferred-work.md`. B-16 và B-19
 cần người mở trình duyệt thật để đo.

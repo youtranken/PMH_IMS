@@ -6,17 +6,10 @@ import {
 import { BreakGlassService } from './break-glass.service';
 import { VaultOwnersService, type VaultOwnerSummary } from './vault-owners.service';
 import {
-  SECRET_OWNER_TYPES,
   VaultService,
   type SecretMeta,
   type SecretOwnerType,
 } from './vault.service';
-
-/**
- * Bốn loại chủ thể mà MA TRẬN QUYỀN của két phủ. Xuất ra ngoài để `files` biết đường nào cần
- * hỏi quyền và đường nào không — xem `assertMemberCanSee` bên dưới.
- */
-export { SECRET_OWNER_TYPES, type SecretOwnerType };
 
 /**
  * AD-2 + AD-4: public api DUY NHẤT của module `vault`.
@@ -38,12 +31,10 @@ export class VaultApiService implements OnModuleInit, OwnerAccessChecker {
   /**
    * Loại chủ thể mà `vault` nhận canh quyền ĐỌC ĐÍNH KÈM — chỉ `service_account` và `isp`.
    *
-   * KHÔNG phải cả bốn loại của `SECRET_OWNER_TYPES`, và đây là chỗ bản đầu của tôi làm sai:
-   * gác cả `device`/`software` thì mọi Member mất quyền xem MỌI giấy tờ thiết bị (ma trận là
-   * opt-in, `resolveTier` mặc định `'denied'`, và Member mặc định không có dòng nào trong
-   * `access_list`). Đã đo thật: `GET /files?ownerType=device` trả 403 cho Member. Hóa đơn và
-   * biên bản bàn giao thiết bị là thứ cả team IT xem hằng ngày — đúng điều story 2.3 nói, và
-   * điều đó vẫn đúng.
+   * KHÔNG phải cả bốn loại của `SECRET_OWNER_TYPES`: gác cả `device`/`software` thì mọi Member
+   * mất quyền xem MỌI giấy tờ thiết bị (ma trận là opt-in, `resolveTier` mặc định `'denied'`,
+   * và Member mặc định không có dòng nào trong `access_list`) — `GET /files?ownerType=device`
+   * trả 403 cho Member. Hóa đơn và biên bản bàn giao thiết bị là thứ cả team IT xem hằng ngày.
    *
    * Hai loại ở đây là hai loại được thêm vào `FILE_OWNER_TYPES` SAU khi ma trận ra đời, và là
    * hai loại mà đính kèm hay chép sẵn thông tin đăng nhập (biên bản bàn giao tài khoản dịch
@@ -78,9 +69,9 @@ export class VaultApiService implements OnModuleInit, OwnerAccessChecker {
 
   /**
    * Chủ thể đang giữ két + lần đổi gần nhất — CHÍNH XÁC cùng dữ liệu mà `GET /vault/owners`
-   * đã trả cho SA/Admin từ 26/08, không hơn một trường nào.
+   * trả cho SA/Admin, không hơn một trường nào.
    *
-   * Vì sao được phép mở ra ngoài module (và vì sao `vault-surface.spec.ts` phải sửa theo):
+   * Vì sao được phép mở ra ngoài module (và vì sao `vault-surface.spec.ts` liệt kê nó):
    * `VaultOwnerSummary` cố ý không có `label`, không có `kind`, không có giá trị — bài kiểm
    * ghim từng tên trường của nó. Nên thứ rời khỏi vault ở đây là "hồ sơ nào có két, mấy ngăn,
    * đổi lần cuối bao giờ", không phải bản đồ bí mật.
@@ -96,9 +87,9 @@ export class VaultApiService implements OnModuleInit, OwnerAccessChecker {
   /**
    * "Người này có được nhìn thấy chủ thể đó không" — ném `ACCESS_DENIED` nếu không.
    *
-   * MỞ RA NGOÀI MODULE cho `files` (rà soát 07/09, C1). Két có ma trận quyền ba tầng và mặc
-   * định là CẤM (`access-list.service.ts` trả `'denied'` khi không có luật nào áp), nhưng kho
-   * file đính kèm thì không kiểm gì: một Member bị `denied` trên một tài khoản dịch vụ vẫn
+   * MỞ RA NGOÀI MODULE cho `files`. Két có ma trận quyền ba tầng và mặc định là CẤM
+   * (`access-list.service.ts` trả `'denied'` khi không có luật nào áp); kho file đính kèm mà
+   * không hỏi ở đây thì một Member bị `denied` trên một tài khoản dịch vụ vẫn
    * `GET /files?ownerType=service_account&ownerId=…` để lấy danh sách id, rồi tải từng cái.
    * Đính kèm của tài khoản dịch vụ hay là biên bản bàn giao, ảnh chụp cấu hình router — loại
    * giấy tờ thường có thông tin đăng nhập chép ngay trên đó.

@@ -33,7 +33,7 @@ async function createSubnet(page: Page, cidr: string, name: string): Promise<str
   return ((await created.json()) as { id: string }).id;
 }
 
-/** Story 5.1 — FR-018/FR-019/FR-020: dải mạng, hồ sơ IP, mức sử dụng. */
+/** FR-018/FR-019/FR-020: dải mạng, hồ sơ IP, mức sử dụng. */
 test.describe('Dải mạng và hồ sơ IP', () => {
   test('đường hạnh phúc: khai dải → thấy ô trống → cấp IP → mức sử dụng đổi theo', async ({
     page,
@@ -192,11 +192,11 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();
 
     // Nhãn nút lọc mang luôn con số của CẢ dải ("Đang dùng 1"), nên bám theo tiền tố.
-    await page.getByRole('button', { name: /^Đang dùng/ }).click();
+    await page.getByRole('radio', { name: /^Đang dùng/ }).click();
     await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(0);
     await expect(page.getByText('Chị Lan — Kế toán')).toBeVisible();
 
-    await page.getByRole('button', { name: /^Trống/ }).click();
+    await page.getByRole('radio', { name: /^Trống/ }).click();
     await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(5);
     await expect(page.getByText('Chị Lan — Kế toán')).toHaveCount(0);
   });
@@ -276,7 +276,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
       ['172.16.10.0', 'SUBNET_INVALID'],
       ['172.16.10.0/33', 'SUBNET_INVALID'],
       ['10.0.0.0/7', 'SUBNET_INVALID'],
-      // Trần /24 (quyết định 25/08/2026): /16 là kiểu gõ nhầm dễ xảy ra nhất và tốn nhất —
+      // Trần /24: /16 là kiểu gõ nhầm dễ xảy ra nhất và tốn nhất —
       // 65.534 dòng dựng một lượt ở màn chi tiết dải.
       ['172.16.0.0/16', 'SUBNET_INVALID'],
       ['172.16.0.0/23', 'SUBNET_INVALID'],
@@ -332,8 +332,8 @@ test.describe('Dải mạng và hồ sơ IP', () => {
    *  - `PATCH :id/void` — vô hiệu hóa kèm LÝ DO, cho dải đã từng dùng. Bản ghi ở lại.
    *  - `DELETE :id`      — xóa HẲN, chỉ cho dải CHƯA TỪNG có hồ sơ IP nào.
    *
-   * Trước đây `DELETE` thực ra là ẩn — một cái bẫy cho bất cứ ai đọc route mà không đọc
-   * service. Giờ mỗi route mang đúng nghĩa của nó.
+   * Mỗi route mang đúng nghĩa của nó: một `DELETE` thực ra là ẩn sẽ là cái bẫy cho bất cứ ai
+   * đọc route mà không đọc service.
    */
   test('vô hiệu hóa dải phải có lý do, và ẩn luôn mọi IP bên trong', async ({
     page,
@@ -351,11 +351,10 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     expect(noReason.status()).toBe(400);
 
     /*
-     * Dải còn hồ sơ IP thì vô hiệu hóa vẫn CHẠY, và ẩn luôn mọi IP bên trong cùng một lý do
-     * (28/08/2026).
+     * Dải còn hồ sơ IP thì vô hiệu hóa vẫn CHẠY, và ẩn luôn mọi IP bên trong cùng một lý do.
      *
-     * Bản trước từ chối và bắt đi ẩn tay từng địa chỉ — với một dải /24 đã dùng một nửa thì
-     * đó là hơn trăm lượt bấm cho một quyết định đã ra rồi, nên không ai làm và dải hỏng cứ
+     * Từ chối rồi bắt đi ẩn tay từng địa chỉ thì với một dải /24 đã dùng một nửa, đó là hơn
+     * trăm lượt bấm cho một quyết định đã ra rồi, nên không ai làm và dải hỏng cứ
      * nằm đó. Ẩn chứ KHÔNG xóa: `ip_history` vẫn trỏ vào những hàng đó.
      */
     const created = await page.request.post('/api/v1/ipam/addresses', {
@@ -372,8 +371,8 @@ test.describe('Dải mạng và hồ sơ IP', () => {
     expect(hasIps.status()).toBe(200);
 
     /*
-     * Dải Ở LẠI, mang dấu vô hiệu hóa (28/08/2026) — trước đó nó biến mất khỏi mọi đường đọc,
-     * và người dùng đọc đúng cái đó là "đã bị xóa hẳn".
+     * Dải Ở LẠI, mang dấu vô hiệu hóa — biến mất khỏi mọi đường đọc thì người dùng đọc ra là
+     * "đã bị xóa hẳn".
      */
     const still = await page.request.get(`/api/v1/ipam/subnets/${subnetId}`);
     expect(still.status()).toBe(200);
@@ -415,12 +414,12 @@ test.describe('Dải mạng và hồ sơ IP', () => {
   });
 
   /**
-   * Vô hiệu hóa KHÔNG được trông như đã xóa (phiếu người dùng 28/08/2026).
+   * Vô hiệu hóa KHÔNG được trông như đã xóa.
    *
-   * Trước đây bấm "Vô hiệu hóa" là thẻ dải biến mất khỏi cột trái, và không còn chỗ nào trên
-   * giao diện nói nó tồn tại — nên người dùng đọc ra "đã xóa hẳn". Nhưng dải đó vẫn giữ mấy
+   * Thẻ dải mà biến mất khỏi cột trái, không còn chỗ nào trên giao diện nói nó tồn tại, thì
+   * người dùng đọc ra "đã xóa hẳn". Nhưng dải đó vẫn giữ mấy
    * chục hồ sơ IP TĨNH, và mấy cái máy ngoài kia không nhả địa chỉ ra chỉ vì cuốn sổ cất dải
-   * đi. Giờ nó ở lại, gạch ngang, xem được, bật lại được — rồi mới tới chuyện xóa.
+   * đi. Nên nó ở lại, gạch ngang, xem được, bật lại được — rồi mới tới chuyện xóa.
    */
   test('vô hiệu hóa: dải Ở LẠI danh sách và gạch ngang, bật lại thì IP bên trong sống lại', async ({
     page,
@@ -467,7 +466,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
      * hiện cả những dải đã tắt từ các lần chạy trước, nên khớp lỏng là trúng nhiều thẻ.
      */
     // `'\\.'` chứ không phải `'\.'`: trong chuỗi JS thì `\.` rơi mất dấu chéo và phép thay thế
-    // này thành RỖNG — regex đi ra vẫn còn dấu chấm khớp-mọi-ký-tự (cổng lint e2e bắt, 08/09).
+    // này thành RỖNG — regex đi ra vẫn còn dấu chấm khớp-mọi-ký-tự (cổng lint e2e bắt).
     const card = page.getByRole('link', { name: new RegExp(cidr.replace(/\./g, '\\.')) });
     await expect(card.getByText('Đã ngừng dùng', { exact: true })).toBeVisible();
     await expect(card.getByText(/gộp sang VLAN mới/)).toBeVisible();
@@ -554,8 +553,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
   });
 
   /**
-   * Gateway (0035) — thứ người ta hỏi đầu tiên khi khai IP tĩnh, mà thẻ dải trước đây không
-   * có chỗ nào để ghi. Nằm ngoài chính dải của nó là cấu hình sai mà nhìn vẫn thấy hợp lệ.
+   * Gateway (0035) — thứ người ta hỏi đầu tiên khi khai IP tĩnh. Nằm ngoài chính dải của nó là cấu hình sai mà nhìn vẫn thấy hợp lệ.
    */
   test('gateway phải nằm trong chính dải của nó', async ({ page }) => {
     await firstLogin(page, E2E_SA);
@@ -625,7 +623,7 @@ test.describe('Dải mạng và hồ sơ IP', () => {
 });
 
 /**
- * Hai lỗi người dùng bắt được ngày 28/08/2026, cùng một họ: bảng và con số nói ngược nhau.
+ * Hai lỗi cùng một họ: bảng và con số nói ngược nhau.
  */
 test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
   test('gán máy vào một IP đang TRỐNG thì nó thành ĐANG CẤP, không ở lại "Trống"', async ({
@@ -652,7 +650,7 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
     expect(((await freed.json()) as { status: string }).status).toBe('free');
 
     /*
-     * Rồi SỬA để gán người dùng. Bản trước giữ nguyên `status='free'`: bảng hiện một hàng vừa
+     * Rồi SỬA để gán người dùng. Giữ nguyên `status='free'` thì bảng hiện một hàng vừa
      * có tên chủ vừa mang badge "Trống", còn nút lọc phía trên đếm "Đang dùng 0" — và cả hai
      * đều đúng theo dữ liệu. Người dùng tưởng đã cấp, hệ thống vẫn coi là chỗ trống và sẵn
      * sàng cấp lại cho máy khác.
@@ -666,7 +664,7 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
 
     // Con số trên màn hình phải đổi theo, không còn "Đang dùng 0".
     await page.goto(`/ip-addresses/${subnetId}`);
-    await expect(page.getByRole('button', { name: /^Đang dùng 1/ })).toBeVisible();
+    await expect(page.getByRole('radio', { name: /^Đang dùng 1/ })).toBeVisible();
 
     // Và bước chuyển được ghi thành một dòng lịch sử riêng, không lẫn vào "sửa hồ sơ".
     const history = (await (
@@ -699,7 +697,7 @@ test.describe('Hồ sơ IP — trạng thái phải khớp với chủ', () => {
     await expect(row.getByRole('button', { name: 'Cấp IP', exact: true })).toBeVisible();
     // Q-15: không có đường khôi phục trên giao diện — không chip hồ sơ đã xóa, không nút.
     await expect(
-      page.getByRole('group', { name: 'Trạng thái' }).getByRole('button', { name: /^Đã ẩn|^Đã ngừng dùng/ }),
+      page.getByRole('radiogroup', { name: 'Trạng thái' }).getByRole('radio', { name: /^Đã ẩn|^Đã ngừng dùng/ }),
     ).toHaveCount(0);
 
     // Xóa là để NHẬP LẠI: khai lại đúng địa chỉ đó được ngay.

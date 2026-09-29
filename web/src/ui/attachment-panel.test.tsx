@@ -70,6 +70,58 @@ describe('AttachmentPanel — chọn là tải', () => {
 });
 
 /*
+ * Quyền Xoá đọc từ `useMe()` chứ không từ ảnh chụp cache: panel dựng trước khi `me` về (mở
+ * thẳng URL, cache vừa bị xoá) thì ảnh chụp là `undefined` mãi, và Admin không thấy nút Xoá.
+ */
+describe('AttachmentPanel — quyền xoá theo phiên hiện tại', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  const withMe = (role: string) =>
+    vi.fn((url: string) =>
+      Promise.resolve(
+        String(url).includes('/auth/me')
+          ? jsonResponse(200, { id: 'u1', email: 'a@pmh.com.vn', role })
+          : jsonResponse(200, [
+              {
+                id: 'f1',
+                originalName: 'hoa-don.pdf',
+                mimeType: 'application/pdf',
+                kind: 'document',
+                sizeBytes: 10,
+                createdAt: '2026-09-27T16:16:00.000Z',
+              },
+            ]),
+      ),
+    );
+
+  const renderPanel = () =>
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <AttachmentPanel ownerType="device" ownerId="d1" csrfToken="x" />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+
+  it('Admin: `me` chưa có trong cache lúc dựng, về sau thì nút thao tác vẫn hiện', async () => {
+    vi.stubGlobal('fetch', withMe('admin'));
+    renderPanel();
+    expect(
+      await screen.findByRole('button', { name: 'Thao tác với hoa-don.pdf' }),
+    ).toBeInTheDocument();
+  });
+
+  it('Member: không có nút thao tác xoá', async () => {
+    vi.stubGlobal('fetch', withMe('member'));
+    renderPanel();
+    expect(await screen.findByText('hoa-don.pdf')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Thao tác với hoa-don.pdf' }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+/*
  * DEV-081: đang tải nhiều file mà lỡ chọn nhầm một file (bảng lương thay cho hóa đơn) thì phải
  * hủy được ĐÚNG file đó — không phải chờ cả lô xong rồi đi xóa.
  */

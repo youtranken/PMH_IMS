@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef, SortingState } from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
@@ -194,7 +194,7 @@ function filterQuery(filters: AccountFilters): string[] {
   ].filter(Boolean);
 }
 
-/** Story 1.4 — SA quản trị tài khoản và phiên. */
+/** SA quản trị tài khoản và phiên. */
 export function AccountsScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -859,6 +859,7 @@ export function AccountsScreen({ me }: { me: Me }) {
           password={temporaryPassword.password}
           who={temporaryPassword.who}
           created={temporaryPassword.created}
+          revealSeconds={me.config.secretRevealSeconds}
           onClose={() => setTemporaryPassword(null)}
         />
       ) : null}
@@ -963,22 +964,34 @@ export interface CreatedAccount {
  * mật khẩu tạm chỉ dùng được một lần, bị buộc đổi ngay ở lần đăng nhập đầu, và đang hiện
  * nguyên văn ngay cạnh nút. "Ẩn" để SA che đi khi đang chia sẻ màn hình.
  *
+ * Tự CHE (không tự đóng) sau `secret.reveal_seconds` (SEC-14): SA bỏ màn hình đi thì chuỗi không
+ * nằm nguyên văn mãi, nhưng hộp vẫn mở vì đóng là mất chuỗi. Cùng khoá với két để một tham số
+ * quyết định "một bí mật được đứng trên màn hình bao lâu".
+ *
  * Tạo tài khoản xong thì hiện thêm bước tiếp theo (Q-14: chưa có mail mời).
  */
-function TemporaryPasswordDialog({
+export function TemporaryPasswordDialog({
   password,
   who,
   created,
+  revealSeconds,
   onClose,
 }: {
   password: string;
   who: string;
   created?: CreatedAccount;
+  revealSeconds: number;
   onClose: () => void;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [shown, setShown] = useState(true);
+  useEffect(() => {
+    if (!shown) return undefined;
+    // Mỗi lần hiện lại là một hẹn giờ mới; SA tự bấm Ẩn thì effect dọn hẹn giờ cũ.
+    const timer = window.setTimeout(() => setShown(false), revealSeconds * 1000);
+    return () => window.clearTimeout(timer);
+  }, [shown, revealSeconds]);
   return (
     <Dialog
       open
@@ -1012,6 +1025,7 @@ function TemporaryPasswordDialog({
         </button>
         <CopyButton value={password} label={t('accounts.copyPassword')} />
       </div>
+      <p className="muted">{t('accounts.temporaryPasswordAutoHide', { seconds: revealSeconds })}</p>
       <p className="muted">{t('accounts.temporaryPasswordNote')}</p>
       {created ? (
         <section aria-labelledby="temp-password-next">

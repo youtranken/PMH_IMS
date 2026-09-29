@@ -36,8 +36,8 @@ import { createScratchDb, migrationsDir, type ScratchDb } from './db';
  */
 
 const TEST_TIMEOUT = 120_000;
-/** Bắn bao nhiêu lượt cùng lúc — đúng trần `@Throttle` của cửa mở ngăn. */
-const SO_LUOT_SONG_SONG = 30;
+/** Bắn bao nhiêu lượt cùng lúc — đúng trần mặc định `rate.secret_reveal_per_minute` của cửa mở ngăn. */
+const PARALLEL_ATTEMPTS = 30;
 
 /**
  * MỖI BÀI MỘT NGƯỜI RIÊNG, thay cho `TRUNCATE` giữa các bài.
@@ -46,8 +46,8 @@ const SO_LUOT_SONG_SONG = 30;
  * luật, và bài kiểm không được phép là ngoại lệ của chính luật nó đang canh. Mọi phép đếm ở
  * dưới vì thế đều lọc theo `actor`, y như service làm.
  */
-let dem = 0;
-const nguoiMoi = (): string => `ke-do-ket-${Date.now().toString(36)}-${++dem}@pmh.com.vn`;
+let count = 0;
+const newUser = (): string => `ke-do-ket-${Date.now().toString(36)}-${++count}@pmh.com.vn`;
 
 /** Bản cấu hình cố định: bài này hỏi về ĐUA, không hỏi về việc đọc `system_config`. */
 const config = {
@@ -55,6 +55,7 @@ const config = {
     if (name === 'secretProbeAlertThreshold') return Promise.resolve(3);
     if (name === 'secretProbeWindowMinutes') return Promise.resolve(15);
     if (name === 'secretProbeCooldownMinutes') return Promise.resolve(60);
+    if (name === 'secretProbeEscalationMultiplier') return Promise.resolve(3);
     return Promise.reject(new Error(`Khóa cấu hình lạ trong bài kiểm: ${name}`));
   },
 } as unknown as SystemConfigService;
@@ -80,7 +81,7 @@ describe('Cảnh báo dò két không nhân lên khi bị bắn song song', () =
 
   /** Đưa một người lên ĐÚNG ngưỡng: ba lượt thất bại đã nằm trong cửa sổ 15 phút. Dùng cả hai
       loại hành động vì service đếm CHUNG — tách hai bộ đếm thì kẻ dò chỉ cần xen kẽ. */
-  const gieoNguongCho = async (actor: string): Promise<void> => {
+  const seedThresholdFor = async (actor: string): Promise<void> => {
     await scratch.pool.query(
       `INSERT INTO audit_log (actor, action, object_type, object_id, detail)
        VALUES ($1, 'vault.secret.reveal_denied', 'secret', NULL, '{}'::jsonb),
@@ -90,7 +91,7 @@ describe('Cảnh báo dò két không nhân lên khi bị bắn song song', () =
     );
   };
 
-  const demCanhBao = async (actor: string): Promise<number> => {
+  const countAlerts = async (actor: string): Promise<number> => {
     const { rows } = await scratch.pool.query<{ n: number }>(
       `SELECT count(*)::int AS n FROM audit_log
         WHERE actor = $1 AND action = 'security.probe.alerted'`,
@@ -99,7 +100,7 @@ describe('Cảnh báo dò két không nhân lên khi bị bắn song song', () =
     return rows[0].n;
   };
 
-  const demThu = async (actor: string): Promise<number> => {
+  const countMails = async (actor: string): Promise<number> => {
     const { rows } = await scratch.pool.query<{ n: number }>(
       `SELECT count(*)::int AS n FROM outbox
         WHERE topic = 'security.probe.alert' AND payload->>'who' = $1`,
@@ -109,19 +110,19 @@ describe('Cảnh báo dò két không nhân lên khi bị bắn song song', () =
   };
 
   it(
-    `${SO_LUOT_SONG_SONG} lượt thất bại bắn CÙNG LÚC chỉ sinh ra ĐÚNG MỘT lá thư`,
+    `${PARALLEL_ATTEMPTS} lượt thất bại bắn CÙNG LÚC chỉ sinh ra ĐÚNG MỘT lá thư`,
     async () => {
-      const actor = nguoiMoi();
-      await gieoNguongCho(actor);
+      const actor = newUser();
+      await seedThresholdFor(actor);
 
       await Promise.all(
-        Array.from({ length: SO_LUOT_SONG_SONG }, () => probe.noteFailure(actor)),
+        Array.from({ length: PARALLEL_ATTEMPTS }, () => probe.noteFailure(actor)),
       );
 
       // Đếm dòng vết, không đếm thư trong hộp: vết commit đồng bộ ngay trong lượt gọi, còn
       // thư đi qua outbox → BullMQ → SMTP bất đồng bộ, hỏi nó là hỏi một cuộc đua khác.
-      expect(await demCanhBao(actor)).toBe(1);
-      expect(await demThu(actor)).toBe(1);
+      expect(await countAlerts(actor)).toBe(1);
+      expect(await countMails(actor)).toBe(1);
 
       /*
        * KHÔNG khẳng định cột `ip` ở ĐÂY — và đây là lý do, ghi ra để lần sau khỏi thử lại.
@@ -143,22 +144,22 @@ describe('Cảnh báo dò két không nhân lên khi bị bắn song song', () =
   it(
     'thời gian nghỉ vẫn chặn lượt sau, và vết của nó ở CÙNG transaction với thư',
     async () => {
-      const actor = nguoiMoi();
-      await gieoNguongCho(actor);
+      const actor = newUser();
+      await seedThresholdFor(actor);
 
       await probe.noteFailure(actor);
-      expect(await demCanhBao(actor)).toBe(1);
-      expect(await demThu(actor)).toBe(1);
+      expect(await countAlerts(actor)).toBe(1);
+      expect(await countMails(actor)).toBe(1);
 
       // Lượt thứ hai rơi trọn trong 60 phút nghỉ → không thêm gì cả.
       await probe.noteFailure(actor);
-      expect(await demCanhBao(actor)).toBe(1);
-      expect(await demThu(actor)).toBe(1);
+      expect(await countAlerts(actor)).toBe(1);
+      expect(await countMails(actor)).toBe(1);
 
       /* Vết và thư luôn đi CÙNG NHAU (AD-5). Lệch số là đã có một nhánh commit riêng —
          hoặc thư đi mà không có vết (lần sau gửi tiếp, vì nghỉ đọc từ chính vết ấy), hoặc
          có vết mà thư bị nuốt và không ai biết. */
-      expect(await demCanhBao(actor)).toBe(await demThu(actor));
+      expect(await countAlerts(actor)).toBe(await countMails(actor));
     },
     TEST_TIMEOUT,
   );
@@ -166,20 +167,20 @@ describe('Cảnh báo dò két không nhân lên khi bị bắn song song', () =
   it(
     'hai người khác nhau không chặn cảnh báo của nhau',
     async () => {
-      const mot = nguoiMoi();
-      const hai = nguoiMoi();
-      await gieoNguongCho(mot);
-      await gieoNguongCho(hai);
+      const one = newUser();
+      const two = newUser();
+      await seedThresholdFor(one);
+      await seedThresholdFor(two);
 
       /* Khóa băm từ `actor`, nên hai người phải đi song song được. Bài này canh chiều ngược
          của bản vá: siết quá tay (một khóa CHUNG cho cả hệ thống, hoặc phép đếm nghỉ quên
          lọc theo người) thì người thứ hai mất cảnh báo — im lặng và không ai biết. */
-      await Promise.all([probe.noteFailure(mot), probe.noteFailure(hai)]);
+      await Promise.all([probe.noteFailure(one), probe.noteFailure(two)]);
 
-      expect(await demCanhBao(mot)).toBe(1);
-      expect(await demCanhBao(hai)).toBe(1);
-      expect(await demThu(mot)).toBe(1);
-      expect(await demThu(hai)).toBe(1);
+      expect(await countAlerts(one)).toBe(1);
+      expect(await countAlerts(two)).toBe(1);
+      expect(await countMails(one)).toBe(1);
+      expect(await countMails(two)).toBe(1);
 
       /*
        * BÀI NÀY CHỈ CHỨNG MINH ĐƯỢC NỬA SAU CỦA LỜI HỨA — nói thẳng ra, 19/09/2026.

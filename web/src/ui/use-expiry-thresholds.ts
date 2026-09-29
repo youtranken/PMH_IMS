@@ -2,18 +2,17 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/api-client';
 import { DEFAULT_EXPIRY_THRESHOLDS, type ExpiryThresholds } from '@/lib/expiry';
 
-export const EXPIRY_THRESHOLDS_KEY = ['expiry', 'thresholds'] as const;
+const EXPIRY_THRESHOLDS_KEY = ['expiry', 'thresholds'] as const;
 
 /**
  * Hai ngưỡng "sắp hết hạn" ĐANG HIỆU LỰC, đọc từ server (AD-11, migration 0041).
  *
  * ===== VÌ SAO CẦN =====
  *
- * Luật "sắp hết hạn" của hệ thống là hai con số (7 gấp / 30 sắp) và chúng từng nằm cứng ở BA
- * chỗ độc lập: hai bên API, một bên web. Chú thích ở cả hai file đều tự nhận là "khớp nhau" —
- * bằng lời hứa, không bằng cơ chế. Đổi một chỗ mà quên chỗ kia thì chip đếm và huy hiệu trên
- * hàng nói hai luật khác nhau, và không bài kiểm nào bắt được vì mỗi bên tự nhất quán với
- * chính nó. Nay server là nguồn duy nhất.
+ * Luật "sắp hết hạn" của hệ thống là hai con số (7 gấp / 30 sắp). Viết cứng ở nhiều chỗ độc
+ * lập (API lẫn web) thì chúng chỉ "khớp nhau" bằng lời hứa, không bằng cơ chế: đổi một chỗ mà
+ * quên chỗ kia thì chip đếm và huy hiệu trên hàng nói hai luật khác nhau, và không bài kiểm
+ * nào bắt được vì mỗi bên tự nhất quán với chính nó. Nên server là nguồn duy nhất.
  *
  * ===== VÌ SAO VẪN CÓ MẶC ĐỊNH =====
  *
@@ -32,7 +31,7 @@ export function useExpiryThresholds(): ExpiryThresholds {
     /*
      * KHÔNG thử lại và KHÔNG kêu lên. Đây là thứ trang trí cho một màn đang hiển thị dữ liệu
      * thật: hỏng thì lùi về mặc định và im lặng, chứ không được nuốt màn hình bằng một thông
-     * báo lỗi về hai con số ngưỡng. (Khác hẳn `useCatalogLists` ở đợt D — ở đó danh sách rỗng
+     * báo lỗi về hai con số ngưỡng. (Khác hẳn `useCatalogLists` — ở đó danh sách rỗng
      * làm người dùng chọn nhầm, nên bắt buộc phải kêu.)
      */
     retry: false,

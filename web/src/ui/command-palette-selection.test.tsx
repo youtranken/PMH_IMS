@@ -8,7 +8,7 @@ import type { Me } from '@/lib/me';
 /**
  * ⌘K KHÔNG ĐƯỢC ĐỔI DÒNG ĐANG CHỌN DƯỚI TAY NGƯỜI DÙNG.
  *
- * ===== LỖ ĐANG VÁ =====
+ * ===== LỖ BÀI NÀY CANH =====
  *
  * `hits` ghép theo thứ tự cố định (thiết bị → phần mềm → ISP → tài khoản) từ bốn truy vấn giải
  * quyết ĐỘC LẬP, còn con trỏ là một CHỈ SỐ vào mảng ấy. Nhóm Phần mềm về trước, người dùng bấm
@@ -16,11 +16,10 @@ import type { Me } from '@/lib/me';
  * một hồ sơ hoàn toàn khác. Enter mở đúng hồ sơ sai đó, và `aria-activedescendant` cũng đọc
  * vống ra cái tên mới cho trình đọc màn hình.
  *
- * Bản vá 18/09 dựng đúng ý tưởng (neo theo ĐÍCH ĐẾN thay vì theo chỗ ngồi) nhưng đấu dây sai:
- * effect ghi neo khai TRƯỚC effect khôi phục, nên nó đè neo bằng phần tử ở chỗ ngồi cũ rồi mới
- * đi tìm chính giá trị vừa đè — một no-op hoàn chỉnh. Đợt rà 19/09/2026 dựng lại được cảnh
- * hỏng nguyên vẹn bằng hai bài độc lập. Bản vá ấy chưa từng có bài kiểm nào canh; đây là bài
- * đó.
+ * Neo theo ĐÍCH ĐẾN thay vì theo chỗ ngồi là đúng ý tưởng, nhưng dễ đấu dây sai: effect ghi
+ * neo khai TRƯỚC effect khôi phục thì nó đè neo bằng phần tử ở chỗ ngồi cũ rồi mới đi tìm chính
+ * giá trị vừa đè — một no-op hoàn chỉnh, và cảnh hỏng xảy ra nguyên vẹn. Bài này canh đúng
+ * chuyện đó.
  *
  * ===== BÀI NÀY HỎI GÌ =====
  *
@@ -31,21 +30,21 @@ import type { Me } from '@/lib/me';
 
 const me = { role: 'sa', csrfToken: 'x', email: 'sa@pmh.com.vn' } as unknown as Me;
 
-const trang = (items: unknown[]) => ({ items, total: items.length, page: 1, limit: 3 });
+const pageNo = (items: unknown[]) => ({ items, total: items.length, page: 1, limit: 3 });
 
-const PHAN_MEM = [
+const SOFTWARE = [
   { id: 'sw1', code: 'SW-E2E-01', name: 'Office' },
   { id: 'sw2', code: 'SW-E2E-02', name: 'Photoshop' },
   { id: 'sw3', code: 'SW-E2E-03', name: 'AutoCAD' },
 ];
-const THIET_BI = [
+const DEVICES = [
   { id: 'd1', code: 'TB-E2E-01', name: 'Switch', siteCode: 'HN' },
   { id: 'd2', code: 'TB-E2E-02', name: 'AP', siteCode: 'HN' },
   { id: 'd3', code: 'TB-E2E-03', name: 'Router', siteCode: 'HN' },
 ];
 
 /** Dòng đang sáng, đọc theo đúng thứ trình đọc màn hình đọc. */
-const dongDangSang = () =>
+const highlightedRow = () =>
   document.querySelector('[role="option"][aria-selected="true"]')?.textContent ?? null;
 
 describe('⌘K giữ dòng đang chọn khi một nhóm về muộn', () => {
@@ -53,18 +52,18 @@ describe('⌘K giữ dòng đang chọn khi một nhóm về muộn', () => {
 
   it('nhóm Thiết bị về sau và chèn lên đầu: con trỏ vẫn ở đúng hồ sơ đã chọn', async () => {
     /* Giữ lời hứa của `/devices` lại, nhả đúng lúc muốn — đó là toàn bộ cuộc đua cần dựng. */
-    let nhaThietBi: () => void = () => undefined;
-    const thietBiVe = new Promise<Response>((resolve) => {
-      nhaThietBi = () => resolve(jsonResponse(200, trang(THIET_BI)));
+    let releaseDevices: () => void = () => undefined;
+    const devicesArrived = new Promise<Response>((resolve) => {
+      releaseDevices = () => resolve(jsonResponse(200, pageNo(DEVICES)));
     });
 
     vi.stubGlobal(
       'fetch',
       vi.fn((input: RequestInfo | URL) => {
         const url = String(input);
-        if (url.includes('/devices')) return thietBiVe;
-        if (url.includes('/software')) return Promise.resolve(jsonResponse(200, trang(PHAN_MEM)));
-        return Promise.resolve(jsonResponse(200, trang([])));
+        if (url.includes('/devices')) return devicesArrived;
+        if (url.includes('/software')) return Promise.resolve(jsonResponse(200, pageNo(SOFTWARE)));
+        return Promise.resolve(jsonResponse(200, pageNo([])));
       }),
     );
 
@@ -85,12 +84,12 @@ describe('⌘K giữ dòng đang chọn khi một nhóm về muộn', () => {
     await screen.findByText('SW-E2E-03');
     await user.keyboard('{ArrowDown}{ArrowDown}');
 
-    const truoc = dongDangSang();
-    expect(truoc).toContain('SW-E2E-03');
+    const before = highlightedRow();
+    expect(before).toContain('SW-E2E-03');
 
-    nhaThietBi();
+    releaseDevices();
     await screen.findByText('TB-E2E-01');
 
-    expect(dongDangSang()).toBe(truoc);
+    expect(highlightedRow()).toBe(before);
   });
 });

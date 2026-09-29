@@ -6,7 +6,7 @@ import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-
  */
 
 /** Chỉ những trường này mới được ghi vào lịch sử (bỏ id, created_at, updated_at…). */
-export const TRACKED_FIELDS = [
+const TRACKED_FIELDS = [
   'code',
   'name',
   'deviceTypeId',
@@ -24,8 +24,7 @@ export const TRACKED_FIELDS = [
   'note',
 ] as const;
 
-export type TrackedField = (typeof TRACKED_FIELDS)[number];
-export type { RecordChanges as DeviceChanges, FieldChange } from '../../common/record-diff';
+export type { RecordChanges as DeviceChanges } from '../../common/record-diff';
 export { hasChanges };
 
 export function diffDevice(

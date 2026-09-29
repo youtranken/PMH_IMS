@@ -21,8 +21,8 @@ const WARN_WHEN_ATTEMPTS_LEFT_AT_MOST = 2;
  *
  * Ba cửa của `auth.service` trả kèm `attemptsLeft` khi một lượt sai đưa người dùng tới gần
  * chỗ bị THU HỒI PHIÊN: gõ sai mã lúc đăng nhập, gõ sai mã ở cửa két, và (từ A-02) gõ sai
- * mật khẩu ở cửa cài 2 lớp. Tới 20/09 **không màn nào đọc con số đó** — nên người gõ nhầm
- * thấy "sai mã, sai mã, sai mã, sai mã" rồi đột ngột bị đá ra, không hiểu vì sao.
+ * mật khẩu ở cửa cài 2 lớp. Màn không đọc con số đó thì người gõ nhầm thấy "sai mã, sai mã,
+ * sai mã, sai mã" rồi đột ngột bị đá ra, không hiểu vì sao.
  *
  * Câu cảnh báo do NƠI GỌI dựng (`t(...)`), không dựng ở đây: `lib/` không kéo i18n vào, và
  * DoD gạch 6 cấm chuỗi tiếng Việt cứng. Nhưng phép QUYẾT ĐỊNH "khi nào thì nói" nằm ở đây,
@@ -110,7 +110,7 @@ export function useApiMutation<TInput, TResult>(
     /**
      * PHẢI `await`: nếu chỉ bắn invalidate rồi trả về ngay, callback `onSuccess` của nơi gọi
      * sẽ điều hướng khi `me` CÒN CŨ — RequireAuth đọc `mustChangePassword`/`totpPending` cũ
-     * và đá người dùng ngược lại màn vừa hoàn thành (lỗi phát hiện ở E2E story 1.2).
+     * và đá người dùng ngược lại màn vừa hoàn thành.
      * Trả promise ở đây khiến react-query chờ xong mới gọi callback của nơi gọi.
      */
     onSuccess: async () => {

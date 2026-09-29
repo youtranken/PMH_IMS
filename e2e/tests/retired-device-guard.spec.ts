@@ -19,18 +19,17 @@ import {
 } from './helpers';
 
 /**
- * Rà soát 07/09, mục "miền nghiệp vụ": thiết bị `retired` có **8 điểm ghi đang hở**.
+ * Thiết bị `retired` không được nhận thêm gì ở bất kỳ điểm ghi nào.
  *
- * Máy đã thanh lý — đã ra khỏi công ty, đã ký biên bản — vẫn nhận được license, vẫn được cấp
- * IP, vẫn dựng được rule NAT trỏ vào nó, vẫn cắm được đường truyền. Không cửa nào hỏi một câu.
+ * Không có hàng rào thì máy đã thanh lý — đã ra khỏi công ty, đã ký biên bản — vẫn nhận được
+ * license, vẫn được cấp IP, vẫn dựng được rule NAT trỏ vào nó, vẫn cắm được đường truyền.
  *
- * Nguyên nhân gốc mà rà soát chỉ đúng: `devices.api.exists()` chỉ trả lời "có hàng này trong
- * bảng không". Module khác muốn hỏi "máy này còn dùng được không" thì KHÔNG CÓ CỬA NÀO — và
- * AD-2 cấm chúng tự query bảng `device`. Nên bốn nơi đều hỏi câu duy nhất hỏi được, rồi đi
- * tiếp. Hàng rào không thiếu vì ai đó lười; nó thiếu vì cái api không cho hỏi.
+ * `devices.api.exists()` chỉ trả lời "có hàng này trong bảng không". Module khác muốn hỏi "máy
+ * này còn dùng được không" phải đi qua `assertUsable` — AD-2 cấm chúng tự query bảng `device`,
+ * nên thiếu cửa ấy thì mọi nơi chỉ hỏi được câu kia rồi đi tiếp.
  *
- * Bài này canh cả bốn cửa cùng lúc: sửa một cửa mà quên ba cửa kia là đúng mẫu N1 đã lặp ba
- * lần trong repo này.
+ * Bài này canh cả bốn cửa cùng lúc: sửa một cửa mà quên ba cửa kia là mẫu lỗi "hàng rào dựng
+ * ở một cửa, không áp cho cửa tương đương ngay bên cạnh".
  */
 
 test.beforeEach(() => {
@@ -223,16 +222,15 @@ test.describe('Máy đã thanh lý không nhận thêm gì nữa', () => {
 });
 
 /**
- * BA CỬA GHI CÒN LẠI, phát hiện khi rà lại chính bản vá của mình.
+ * BA CỬA GHI NGAY TRONG MODULE `devices`.
  *
- * Rà soát 07/09 liệt kê TÁM điểm ghi hở với máy đã thanh lý. Đợt trước tôi đóng bốn cửa đi
- * xuyên module (cấp IP · tạo NAT · gán license · nối đường truyền) bằng `assertUsable`, rồi
- * báo là xong. Bốn cửa đó có điểm chung: chúng nằm ở module KHÁC, nên phải đi qua public api
- * của `devices` và tôi buộc phải nhìn thấy chúng.
+ * Bốn cửa đi xuyên module (cấp IP · tạo NAT · gán license · nối đường truyền) được chặn bằng
+ * `assertUsable`: chúng nằm ở module KHÁC, nên phải đi qua public api của `devices` và hàng
+ * rào hiện ra tự nhiên.
  *
- * Ba cửa còn lại nằm NGAY TRONG module `devices` — sửa hồ sơ, import ghi đè, nối cổng — nên
- * chúng không đi qua cửa nào cả. Đúng mẫu N1 mà chính finding đó cảnh báo: dựng hàng rào ở
- * mấy cửa mình buộc phải bước qua, quên mấy cửa mở sẵn trong nhà.
+ * Ba cửa ở đây nằm NGAY TRONG module `devices` — sửa hồ sơ, import ghi đè, nối cổng — nên
+ * chúng không đi qua cửa nào cả. Dễ dựng hàng rào ở mấy cửa buộc phải bước qua rồi quên mấy
+ * cửa mở sẵn trong nhà.
  *
  * Hai cửa còn lại (đính kèm giấy tờ, cất secret) CỐ Ý để mở, và đó không phải sơ suất: biên
  * bản thanh lý được ký SAU khi thanh lý, nên nó phải đính được vào một hồ sơ đã khóa.
@@ -415,13 +413,13 @@ test.describe('Ba cửa ghi trong chính module devices', () => {
 });
 
 /**
- * THANH LÝ CHỈ CÓ MỘT CỬA (A-01, vá 20/09/2026).
+ * THANH LÝ CHỈ CÓ MỘT CỬA.
  *
- * ===== LỖ ĐANG VÁ =====
+ * ===== LỖ BÀI NÀY CANH =====
  *
  * `UpdateDto` của `PATCH /api/v1/devices/:id` nhận `status`, và `DEVICE_STATUSES` có
- * `'retired'`. Nên đổi trạng thái qua ĐƯỜNG SỬA HỒ SƠ ghi thẳng chữ "đã thanh lý" vào bảng,
- * đi vòng qua trọn vẹn chốt của `PATCH :id/status`:
+ * `'retired'`. Không chặn thì đổi trạng thái qua ĐƯỜNG SỬA HỒ SƠ ghi thẳng chữ "đã thanh lý"
+ * vào bảng, đi vòng qua trọn vẹn chốt của `PATCH :id/status`:
  *
  *   · không `FOR UPDATE` ⇒ mất hàng rào đua;
  *   · không hỏi `holdingsWithin` ⇒ IP vẫn `assigned`, rule NAT vẫn mở, ghế license bị chiếm;

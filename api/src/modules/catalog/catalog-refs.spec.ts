@@ -2,9 +2,9 @@ import { CatalogApiService } from './catalog.api';
 import type { CatalogService } from './catalog.service';
 
 /**
- * MỘT CÁI TỦ PHẢI ĐỨNG Ở ĐÂU ĐÓ (A-11, rà soát 20/09).
+ * MỘT CÁI TỦ PHẢI ĐỨNG Ở ĐÂU ĐÓ (A-11).
  *
- * ===== LỖ ĐANG VÁ =====
+ * ===== LỖ MÀ BÀI NÀY CANH =====
  *
  * `validateRefs` kiểm cặp tủ↔site bằng một câu có điều kiện kép:
  *
@@ -15,14 +15,13 @@ import type { CatalogService } from './catalog.service';
  * `site_id`: không lọc ra được bằng site nào, và trang chi tiết hiện một cái tủ không biết
  * nằm ở đâu.
  *
- * Đường Excel chặn đúng chuyện này từ lâu (`device-import.ts:388-397`), kèm một câu từ chối
- * nói rõ phải làm gì. Cửa HTTP thì không — cùng một hình dạng "cửa Excel được canh, cửa HTTP
- * bỏ ngỏ" đã gặp ở A-03, và là lý do A-11 được ghi lại chứ không vá kèm: bản vá A-03 chỉ đổi
- * phép GHÉP, còn lỗ này cần thêm một LUẬT mới.
+ * Đường Excel chặn đúng chuyện này (`device-import.ts`), kèm một câu từ chối nói rõ phải làm
+ * gì. Cửa HTTP phải chặn y như vậy — hình dạng "cửa Excel được canh, cửa HTTP bỏ ngỏ" cũng là
+ * hình dạng của A-03.
  *
- * ===== LUẬT MỚI CÓ CHẶN DỮ LIỆU ĐANG CHẠY KHÔNG =====
+ * ===== LUẬT NÀY CÓ CHẶN DỮ LIỆU ĐANG CHẠY KHÔNG =====
  *
- * Đã đếm trước khi vá, như mục 8.3 dặn:
+ * Đếm trên DB:
  *
  *     SELECT count(*) FROM device WHERE cabinet_id IS NOT NULL AND site_id IS NULL;  -- 0
  *
@@ -33,8 +32,8 @@ import type { CatalogService } from './catalog.service';
  */
 
 /** Danh mục giả — `validateRefs` chỉ đọc bốn danh sách này, không đụng gì khác. */
-const SITE_HA_NOI = 'aaaaaaaa-0000-0000-0000-000000000001';
-const SITE_DA_NANG = 'aaaaaaaa-0000-0000-0000-000000000002';
+const SITE_HANOI = 'aaaaaaaa-0000-0000-0000-000000000001';
+const SITE_DANANG = 'aaaaaaaa-0000-0000-0000-000000000002';
 const CABINET_A1 = 'bbbbbbbb-0000-0000-0000-000000000001';
 
 function apiWithCatalog(): CatalogApiService {
@@ -42,10 +41,10 @@ function apiWithCatalog(): CatalogApiService {
     lists: () =>
       Promise.resolve({
         sites: [
-          { id: SITE_HA_NOI, code: 'HN', name: 'Hà Nội' },
-          { id: SITE_DA_NANG, code: 'DN', name: 'Đà Nẵng' },
+          { id: SITE_HANOI, code: 'HN', name: 'Hà Nội' },
+          { id: SITE_DANANG, code: 'DN', name: 'Đà Nẵng' },
         ],
-        cabinets: [{ id: CABINET_A1, code: 'A1', name: 'Tủ A1', siteId: SITE_HA_NOI }],
+        cabinets: [{ id: CABINET_A1, code: 'A1', name: 'Tủ A1', siteId: SITE_HANOI }],
         deviceTypes: [],
         vendors: [],
       }),
@@ -76,7 +75,7 @@ describe('validateRefs — cặp tủ mạng ↔ site', () => {
 
   it('tủ ĐÚNG site → cho qua (vế đối chứng)', async () => {
     const errors = await apiWithCatalog().validateRefs({
-      siteId: SITE_HA_NOI,
+      siteId: SITE_HANOI,
       cabinetId: CABINET_A1,
     });
     expect(errors).toEqual([]);
@@ -84,7 +83,7 @@ describe('validateRefs — cặp tủ mạng ↔ site', () => {
 
   it('tủ SAI site → vẫn chặn như cũ, và vẫn đúng một câu lỗi', async () => {
     const errors = await apiWithCatalog().validateRefs({
-      siteId: SITE_DA_NANG,
+      siteId: SITE_DANANG,
       cabinetId: CABINET_A1,
     });
     expect(errors).toHaveLength(1);
@@ -92,7 +91,7 @@ describe('validateRefs — cặp tủ mạng ↔ site', () => {
   });
 
   it('site KHÔNG có tủ → cho qua: một cái máy để trên bàn là chuyện bình thường', async () => {
-    expect(await apiWithCatalog().validateRefs({ siteId: SITE_HA_NOI })).toEqual([]);
+    expect(await apiWithCatalog().validateRefs({ siteId: SITE_HANOI })).toEqual([]);
   });
 
   it('không site không tủ → cho qua: cả hai đều là ô tuỳ chọn', async () => {

@@ -8,9 +8,9 @@ import type { CatalogSnapshot, IspProviderRecord } from './catalog.types';
 /**
  * Câu từ chối cho "gắn tủ mà không khai site" — MỘT bản chữ cho CẢ HAI cửa (AD-15).
  *
- * Cửa Excel (`device-import.ts`) chặn chuyện này từ 08/09; cửa HTTP thì không, và đó là A-11.
- * Vá xong mà mỗi cửa tự viết một câu thì hai câu sẽ trôi khỏi nhau đúng như hai phép kiểm vừa
- * trôi khỏi nhau — nên chữ cũng phải dùng chung, không chỉ luật.
+ * Cả cửa Excel (`device-import.ts`) lẫn cửa HTTP đều chặn chuyện này (A-11). Mỗi cửa tự viết
+ * một câu thì hai câu sẽ trôi khỏi nhau, y như hai phép kiểm từng trôi khỏi nhau — nên chữ
+ * cũng phải dùng chung, không chỉ luật.
  *
  * Câu phải nêu được MÃ TỦ (người sửa cần biết vướng cái nào) và cả HAI đường ra: khai site,
  * hoặc bỏ tủ. Chỉ nói "thiếu site" thì người đang cố gỡ một hồ sơ cũ khỏi tủ sẽ không biết
@@ -168,9 +168,9 @@ function refErrors(lists: CatalogLists, refs: CatalogRefs): string[] {
       errors.push('Tủ mạng không tồn tại.');
     } else if (!refs.siteId) {
       /*
-       * TỦ MÀ KHÔNG CÓ SITE — A-11, vá 21/09.
+       * TỦ MÀ KHÔNG CÓ SITE — A-11.
        *
-       * Bản trước viết `else if (refs.siteId && cabinet.siteId !== refs.siteId)`. Vế
+       * Đừng gộp nhánh này vào `else if (refs.siteId && cabinet.siteId !== refs.siteId)`. Vế
        * `refs.siteId &&` ở đầu làm cả phép kiểm BIẾN MẤT khi site trống, nên
        * `{"siteId": ""}` trên một thiết bị đang gắn tủ đi qua cửa trọn vẹn — và hàng ra có
        * `cabinet_id` mà không có `site_id`: không lọc được bằng site nào, và trang chi tiết

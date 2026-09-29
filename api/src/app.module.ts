@@ -4,6 +4,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { LoggerModule } from 'nestjs-pino';
 import { LOG_REDACT_PATHS } from './common/log-redact';
 import { GlobalExceptionFilter } from './common/global-exception.filter';
+import { THROTTLE_LIMITS } from './common/config-throttle';
 import { UserThrottlerGuard } from './common/user-throttler.guard';
 import { ExcelExportService } from './common/excel/excel-export.service';
 import { ExcelImportService } from './common/excel/excel-import.service';
@@ -32,6 +33,7 @@ import { StepUpGuard } from './modules/auth/step-up.guard';
 import { RolesGuard } from './modules/auth/roles.guard';
 import { SessionGuard } from './modules/auth/session.guard';
 import { SystemConfigModule } from './modules/config-sys/system-config.module';
+import { SystemConfigService } from './modules/config-sys/system-config.service';
 import { FilesModule } from './modules/files/files.module';
 import { MailModule } from './modules/mail/mail.module';
 import { ServiceAccountsModule } from './modules/service-accounts/service-accounts.module';
@@ -49,10 +51,9 @@ import { VaultModule } from './modules/vault/vault.module';
  *   3. Csrf       — cần request.user.sessionId của bước 1
  *   4. Roles      — quyền mặc định ĐÓNG (AD-9)
  *
- * Throttler từng đứng đầu để "chặn dò mật khẩu trước khi đụng DB". Nhưng `UserThrottlerGuard`
+ * Đừng đưa Throttler lên đầu để "chặn dò mật khẩu trước khi đụng DB". `UserThrottlerGuard`
  * đếm theo `req.user.email`, mà lúc đó `req.user` CHƯA tồn tại — nên nó lặng lẽ lùi về đếm
- * theo IP, và sau nginx thì cả văn phòng dùng chung một bucket. Đúng thứ thay đổi này định
- * sửa từ epic review 2 lại không có tác dụng, mà không có gì đỏ để báo (code review Epic 4).
+ * theo IP, và sau nginx thì cả văn phòng dùng chung một bucket, mà không có gì đỏ để báo.
  *
  * Đổi thứ tự KHÔNG làm hở đường dò mật khẩu: `SessionGuard` trả `true` ngay cho route
  * `@Public()` (login) mà không chạm DB, và login có `LoginRateGuard` riêng đọc ngưỡng từ
@@ -105,12 +106,14 @@ import { VaultModule } from './modules/vault/vault.module';
     ExcelImportService,
     { provide: APP_FILTER, useClass: GlobalExceptionFilter },
     { provide: APP_GUARD, useClass: SessionGuard },
+    // Trần `@ConfigThrottle` của UserThrottlerGuard đọc từ system_config (AD-11).
+    { provide: THROTTLE_LIMITS, useExisting: SystemConfigService },
     { provide: APP_GUARD, useClass: UserThrottlerGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     /*
      * StepUpGuard chạy SAU RolesGuard và là guard cuối: nó chỉ có nghĩa khi đã biết route này
-     * ai được vào. Từ 10/09 nó MẶC ĐỊNH ĐÓNG — route không khai `@RequiresStepUp()` hoặc
+     * ai được vào. Nó MẶC ĐỊNH ĐÓNG — route không khai `@RequiresStepUp()` hoặc
      * `@NoStepUp()` thì 403 `STEP_UP_NOT_DECLARED`. Xem khối chú thích ở `step-up.guard.ts`
      * để biết chuỗi leo thang quyền mà cách gắn tay từng route đã để lọt.
      */

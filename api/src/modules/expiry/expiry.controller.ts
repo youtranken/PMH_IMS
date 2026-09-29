@@ -22,11 +22,12 @@ import {
   IsString,
   IsUUID,
   Length,
-  Matches,
   Max,
   Min,
+  Validate,
   ValidateIf,
 } from 'class-validator';
+import { RealDate } from '../../common/real-date';
 import { Audited } from '../audit/audited.decorator';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
@@ -45,11 +46,11 @@ import { UsersApiService } from '../users/users.api';
 /** Khoảng ngày của tab "Đã gia hạn" — ngày lịch YYYY-MM-DD, cả hai bao gồm. */
 class RenewalsQueryDto {
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '"Từ ngày" phải dạng YYYY-MM-DD.' })
+  @Validate(RealDate, { message: '"Từ ngày" phải là ngày có thật, dạng YYYY-MM-DD.' })
   from?: string;
 
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '"Đến ngày" phải dạng YYYY-MM-DD.' })
+  @Validate(RealDate, { message: '"Đến ngày" phải là ngày có thật, dạng YYYY-MM-DD.' })
   to?: string;
 }
 
@@ -57,11 +58,11 @@ class RenewDto {
   @IsString() @Length(1, 40) kind!: string;
 
   // @IsUUID chứ không phải regex 36 ký tự: regex nhận cả 36 dấu gạch ngang, lọt xuống
-  // Postgres và bung 500 thay vì 400 (code review Epic 3).
+  // Postgres và bung 500 thay vì 400.
   @IsUUID(undefined, { message: 'Mã hồ sơ không hợp lệ.' })
   id!: string;
 
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Hạn mới phải dạng YYYY-MM-DD.' })
+  @Validate(RealDate, { message: 'Hạn mới phải là ngày có thật, dạng YYYY-MM-DD.' })
   endDate!: string;
 
   /**
@@ -106,7 +107,7 @@ class RuleParamDto {
 }
 
 /**
- * Màn Expiry tổng hợp (story 3.4, FR-012).
+ * Màn Expiry tổng hợp (FR-012).
  * Quyền: cả team IT — ai cũng cần biết cái gì sắp hết hạn.
  */
 @NoStepUp()
@@ -141,11 +142,11 @@ export class ExpiryController {
   }
 
   /**
-   * CỬA CỦA MÀN HÌNH — LUÔN PHÂN TRANG (N-01, vá 21/09).
+   * CỬA CỦA MÀN HÌNH — LUÔN PHÂN TRANG (N-01).
    *
    * `parsePageQuery` mặc định `page=1, limit=50`, nên một client KHÔNG gửi gì vẫn nhận đúng
-   * một trang. Đó là chủ ý: để mặc định là "trọn bộ" thì lỗ chỉ đóng cho client mới, còn
-   * đường cũ vẫn kéo 7.662 dòng — và không gì đỏ để ai biết.
+   * một trang. Đó là chủ ý: để mặc định là "trọn bộ" thì chỉ client biết gửi `limit` mới được
+   * phân trang, còn client quên gửi vẫn kéo hàng nghìn dòng — và không gì đỏ để ai biết.
    *
    * Đường `export.xlsx` bên dưới CỐ Ý không truyền `page`/`limit`: file Excel phải đủ dòng, và
    * một file thiếu dòng trông y hệt một file đủ.
@@ -222,7 +223,7 @@ export class ExpiryController {
      * Nhãn loại lấy từ sổ đăng ký nguồn hạn, không in mã máy.
      *
      * Màn hình hiện "Bảo hành thiết bị"; file xuất mà in `warranty` thì auditor cầm hai tờ
-     * giấy nói hai thứ khác nhau về cùng một dòng (code review Epic 7).
+     * giấy nói hai thứ khác nhau về cùng một dòng.
      */
     const kindLabel = new Map(this.expiry.kinds().map((k) => [k.kind, k.label]));
     const buffer = await this.excel.build({
@@ -270,7 +271,7 @@ export class ExpiryController {
     );
   }
 
-  // ───────────── Luật gửi báo cáo (story 3.5, FR-013) ─────────────
+  // ───────────── Luật gửi báo cáo (FR-013) ─────────────
 
   /** Ai cũng XEM được luật; chỉ Admin/SA sửa — đây là thứ quyết định ai nhận email. */
   @Roles('sa', 'admin', 'member')

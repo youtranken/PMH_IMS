@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useIpamSettings } from './ipam-settings';
 import { isWideRange, parsePortChip, type ChipError, type PortChip } from './port-chips';
 
 /**
@@ -24,6 +25,7 @@ export function PortChipsField({
   inputId: string;
 }) {
   const { t } = useTranslation();
+  const { natWidePortRange } = useIpamSettings();
   const [draft, setDraft] = useState('');
   const [error, setError] = useState<ChipError | null>(null);
   const full = chips.length >= max;
@@ -52,7 +54,7 @@ export function PortChipsField({
          */
         <ul className="chip-list" id={full ? inputId : undefined}>
           {chips.map((chip, index) => (
-            <li key={chip.value} className={`chip${isWideRange(chip) ? ' chip-warn' : ''}`}>
+            <li key={chip.value} className={`chip${isWideRange(chip, natWidePortRange) ? ' chip-warn' : ''}`}>
               <span className="mono">{chip.value}</span>
               {/* Lớp `.chip button` của `form-layout.css` lo hình dáng nút ✕ — không dựng
                   bản riêng, chip ở màn khác phải trông y hệt. */}
@@ -110,10 +112,9 @@ export function PortChipsField({
               /**
                * Phần CHƯA nhận được — mẩu hỏng và MỌI mẩu đứng sau nó.
                *
-               * Bản trước chỉ giữ lại đúng mẩu hỏng rồi `setDraft(stuck || tail)`, nên dán
-               * "80, rác, 443" là `80` thành chip, `rác` ở lại kèm lỗi, còn `443` biến mất
-               * không dấu vết — đúng thứ mà chú thích ngay trên khẳng định là không xảy ra.
-               * Cùng lỗi ở chế độ sửa: dán "80,443,8080" thì `8080` bốc hơi.
+               * Chỉ giữ lại đúng mẩu hỏng (`setDraft(stuck || tail)`) thì dán "80, rác, 443"
+               * là `80` thành chip, `rác` ở lại kèm lỗi, còn `443` biến mất không dấu vết.
+               * Ở chế độ sửa cũng vậy: dán "80,443,8080" thì `8080` bốc hơi.
                */
               const leftover: string[] = [];
               for (const part of parts) {

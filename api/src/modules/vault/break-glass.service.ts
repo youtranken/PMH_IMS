@@ -35,7 +35,7 @@ import { tierLabel, type AccessTier } from './access-tier';
 import { VaultOwnersService } from './vault-owners.service';
 import { VaultService, type SecretOwnerType } from './vault.service';
 
-export const BREAK_GLASS_KIND = 'break_glass';
+const BREAK_GLASS_KIND = 'break_glass';
 
 /**
  * Từ vựng state của break-glass (AD-6). `approvals` không biết những chữ này — nó chỉ biết
@@ -69,10 +69,10 @@ export const BREAK_GLASS_FLOW = {
 };
 
 /** Tên lượt quét đóng quyền của phiên đã kết thúc — `SweepService` gọi mỗi vòng. */
-export const SESSION_ENDED_SWEEP = 'break-glass-session-ended';
+const SESSION_ENDED_SWEEP = 'break-glass-session-ended';
 
 /** Tên lượt quét cho hết hạn yêu cầu chờ quá `breakglass.pending_expire_hours` (Q-15). */
-export const PENDING_EXPIRE_SWEEP = 'break-glass-pending-expire';
+const PENDING_EXPIRE_SWEEP = 'break-glass-pending-expire';
 
 const SESSION_ENDED_NOTE = 'Phiên đăng nhập của người xin đã kết thúc.';
 
@@ -136,7 +136,7 @@ export interface BreakGlassDetail extends BreakGlassView {
   timeline: BreakGlassStep[] | null;
 }
 
-export interface BreakGlassStep {
+interface BreakGlassStep {
   state: string;
   actor: string;
   at: Date;
@@ -193,9 +193,9 @@ export interface AccessVerdict {
 }
 
 /**
- * Break-glass (story 6.3, FR-023, AD-6).
+ * Break-glass (FR-023, AD-6).
  *
- * Ba tầng của 6.2 gặp bộ máy duyệt của 6.1 tại đây. Điểm cốt lõi — và là câu gắt nhất của
+ * Ba tầng quyền gặp bộ máy duyệt tại đây. Điểm cốt lõi — và là câu gắt nhất của
  * AD-6 — nằm ở `assertCanReveal`: hiệu lực kiểm tại MỖI lần đọc bằng đồng hồ, không tin status.
  */
 @Injectable()
@@ -615,14 +615,15 @@ export class BreakGlassService implements OnModuleInit {
     /**
      * Kiểm sớm cho thông điệp tử tế — nhưng ném CÙNG MỘT loại lỗi với hàng rào DB bên dưới.
      *
-     * Trước đây chỗ này ném 400 còn ràng buộc DB ném 409: cùng một sai lầm của người dùng mà
-     * trả hai mã khác nhau tùy vào việc request thứ hai tới trước hay sau khi cái thứ nhất kịp
+     * Ném 400 ở đây trong khi ràng buộc DB ném 409 là cùng một sai lầm của người dùng mà trả
+     * hai mã khác nhau tùy vào việc request thứ hai tới trước hay sau khi cái thứ nhất kịp
      * commit. Client không thể xử lý tử tế một API đổi mã theo nhịp gõ phím, và test thì đỏ
-     * ngẫu nhiên — đúng cách bộ E2E đầy đủ phát hiện ra chuyện này.
+     * ngẫu nhiên.
      */
-    const [existing, claimable] = await Promise.all([
+    const [existing, claimable, held] = await Promise.all([
       this.pendingOf(memberEmail, input.ownerType, input.ownerId),
       this.claimableOf(viewer, input.ownerType, input.ownerId),
+      this.grantOf(viewer, input.ownerType, input.ownerId),
     ]);
     if (existing) {
       throw new ConflictException({
@@ -634,6 +635,16 @@ export class BreakGlassService implements OnModuleInit {
       throw new ConflictException({
         code: 'BREAK_GLASS_APPROVED',
         message: 'Yêu cầu của bạn đã được duyệt — bấm Xem ở ngăn két và nhập mã 6 số để mở.',
+      });
+    }
+    /*
+     * Cùng luật `canRequest` của `verdictFor`: chỉ quyền dùng được Ở PHIÊN NÀY mới chặn. Quyền đã
+     * gắn phiên khác thì phiên này không dùng được (Q-15), nên xin lại phải được.
+     */
+    if (held) {
+      throw new ConflictException({
+        code: 'BREAK_GLASS_ACTIVE',
+        message: 'Bạn đang có quyền xem đối tượng này ở phiên đăng nhập này, chưa cần xin thêm.',
       });
     }
 
@@ -662,7 +673,7 @@ export class BreakGlassService implements OnModuleInit {
        * Câu kiểm `pendingOf()` phía trên chạy NGOÀI transaction nên hai cú bấm "Gửi yêu cầu"
        * cùng lúc (hoặc một lần thử lại) đều thấy "chưa có" và cùng ghi — người duyệt phải
        * quyết hai lần cho một việc, và cái thứ hai nằm treo mãi sau khi cái thứ nhất được
-       * duyệt (code review Epic 6, finding 6).
+       * duyệt.
        */
       throw conflictOnUnique(
         error,
@@ -700,9 +711,8 @@ export class BreakGlassService implements OnModuleInit {
      * BỐN MẮT (FR-023) — người xin không tự duyệt cho chính mình.
      *
      * `POST /vault/break-glass` mở cho cả `member`, `admin` và `sa` ("ai cũng XIN được, kể cả
-     * Admin"), còn `approve` mở cho `sa`/`admin`. Tới 10/09 `approve()` KHÔNG so `approver`
-     * với `request.requester` — trong khi `cancel()` ngay bên dưới thì có, và có vì đúng lý do
-     * này (code review Epic 6, finding 1).
+     * Admin"), còn `approve` mở cho `sa`/`admin`. Nên `approve()` PHẢI so `approver` với
+     * `request.requester` — cùng lý do `cancel()` ngay bên dưới cũng so.
      *
      * Tác động quyền hạn chế: Admin vốn đã đi thẳng qua ma trận nên grant không cho thêm gì.
      * Nhưng nhật ký FR-025 thì in ra một grant "đã được duyệt" nhìn hợp lệ hoàn toàn, với
@@ -814,8 +824,7 @@ export class BreakGlassService implements OnModuleInit {
    *
    * Chỉ hủy được yêu cầu CỦA CHÍNH MÌNH. Không kiểm thì bất kỳ ai biết id (nhìn qua vai, ảnh
    * chụp màn hình, URL bị chia sẻ) đều giết được yêu cầu của người khác — người xin ngồi chờ
-   * tiếp lúc 2 giờ sáng, còn lịch sử thì ghi tên người hủy sai
-   * (code review Epic 6, finding 1).
+   * tiếp lúc 2 giờ sáng, còn lịch sử thì ghi tên người hủy sai.
    */
   async cancel(requester: string, id: string): Promise<ApprovalRecord> {
     const request = await this.requireBreakGlass(id);
@@ -914,10 +923,10 @@ export class BreakGlassService implements OnModuleInit {
   /**
    * Đúng LOẠI break-glass, không phải một yêu cầu của module khác.
    *
-   * Bảng `approval` dùng chung cho mọi luồng duyệt (AD-6). Không kiểm `kind` thì khi Epic 8/9
-   * cắm phiếu ISO và phiếu sự cố vào cùng bảng, các endpoint của két sắt trở thành một cửa hậu
+   * Bảng `approval` dùng chung cho mọi luồng duyệt (AD-6). Không kiểm `kind` thì khi phiếu ISO
+   * và phiếu sự cố cắm vào cùng bảng, các endpoint của két sắt trở thành một cửa hậu
    * lái yêu cầu của module khác — bỏ qua luật riêng của họ, và để lại một dòng audit ghi
-   * `iso_form.approved` phát ra từ `/vault/break-glass/...` (code review Epic 6, finding 4).
+   * `iso_form.approved` phát ra từ `/vault/break-glass/...`.
    */
   private async requireBreakGlass(id: string): Promise<ApprovalRecord> {
     const request = await this.approvals.findOne(id);
@@ -1042,8 +1051,8 @@ export class BreakGlassService implements OnModuleInit {
      *
      * Đặt `breakglass.max_grant_hours = 0` (gõ nhầm, hoặc tưởng 0 nghĩa là "tắt") thì mọi grant
      * hết hạn ĐÚNG LÚC SINH RA — được duyệt xong mà vẫn không xem được, trông y hệt hệ thống
-     * hỏng và không có dòng lỗi nào. Muốn tắt break-glass thì gỡ quyền ở ma trận 6.2, không
-     * phải hạ trần xuống 0 (code review Epic 6, finding 5).
+     * hỏng và không có dòng lỗi nào. Muốn tắt break-glass thì gỡ quyền ở ma trận quyền, không
+     * phải hạ trần xuống 0.
      */
     return Math.max(1, configured);
   }

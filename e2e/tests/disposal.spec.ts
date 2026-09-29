@@ -14,7 +14,7 @@ import {
 } from './helpers';
 
 /**
- * Kho thanh lý (28/08/2026) — MỘT chỗ nhìn thấy mọi thứ công ty đã ngừng dùng.
+ * Kho thanh lý — MỘT chỗ nhìn thấy mọi thứ công ty đã ngừng dùng.
  *
  * Vì sao cần: bốn loại hồ sơ có trạng thái "ngừng dùng" mang tên khác nhau, nằm ở bốn màn
  * khác nhau. Câu "công ty đã bỏ những gì" vì thế không ai trả lời được, dù dữ liệu đã có đủ
@@ -105,7 +105,7 @@ test('ba loại hồ sơ đã ngừng dùng cùng hiện trong một bảng', as
   await expect(page.getByRole('columnheader', { name: 'Người thanh lý' })).toBeVisible();
 
   // DP-004: "Tháng này" vẫn thấy hồ sơ vừa thanh lý; khoảng ngày năm 2000 thì lọc không ra.
-  await page.getByRole('button', { name: 'Tháng này', exact: true }).click();
+  await page.getByRole('radio', { name: 'Tháng này', exact: true }).click();
   await expect(page).toHaveURL(/from=\d{4}-\d{2}-01/);
   await expect(page.getByRole('row', { name: new RegExp(`PC-E2E-DIS-${stamp}`) })).toBeVisible();
   const download = await Promise.all([
@@ -119,7 +119,7 @@ test('ba loại hồ sơ đã ngừng dùng cùng hiện trong một bảng', as
   await expect(page.getByRole('row', { name: new RegExp(`PC-E2E-DIS-${stamp}`) })).toBeVisible();
 
   // Lọc theo loại: bấm "Thiết bị" thì ba loại kia biến đi.
-  await page.getByRole('button', { name: /^Thiết bị \d/ }).click();
+  await page.getByRole('radio', { name: /^Thiết bị \d/ }).click();
   await expect(page.getByRole('row', { name: new RegExp(`PC-E2E-DIS-${stamp}`) })).toBeVisible();
   await expect(page.getByRole('row', { name: new RegExp(`LIC-E2E-DIS-${stamp}`) })).toHaveCount(0);
 
@@ -178,8 +178,8 @@ test('đường truyền đã thanh lý vào kho, link về đúng trang đườ
   await expect(row.getByText('300 Mbps')).toBeVisible();
   await expect(page.getByRole('row', { name: new RegExp(running) })).toHaveCount(0);
 
-  // Loại này có nút lọc riêng, như ba loại kia.
-  await page.getByRole('button', { name: /^Đường truyền \d/ }).click();
+  // Loại này có lựa chọn lọc riêng, như ba loại kia.
+  await page.getByRole('radio', { name: /^Đường truyền \d/ }).click();
   await expect(row).toBeVisible();
 
   await row.getByRole('link', { name: cut }).click();
@@ -222,4 +222,4 @@ test('hồ sơ trong kho KHÔNG còn được tính hạn', async ({ page }) => 
   await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
 });
 
-// `isoInDays` dã chuyển sang `helpers.ts` (24/09) — xem chú thích ở đó về bẫy múi giờ.
+// `isoInDays` nằm ở `helpers.ts` — xem chú thích ở đó về bẫy múi giờ.

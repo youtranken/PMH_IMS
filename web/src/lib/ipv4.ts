@@ -55,12 +55,6 @@ function maskOfPrefix(prefix: number): string {
   return formatIpv4(2 ** 32 - 2 ** (32 - prefix));
 }
 
-/**
- * Dải rộng nhất API nhận — cùng `MIN_PREFIX` của `ip-rules.ts`. Cả dải phải về trong một lượt
- * gọi và vẽ được thành từng dòng; nói ngay khi gõ còn hơn để server từ chối lúc bấm Lưu.
- */
-export const MIN_SUBNET_PREFIX = 24;
-
 export interface CidrPreview {
   cidr: string;
   hosts: number;
@@ -73,8 +67,14 @@ export interface CidrPreview {
  * Xem trước một dải đang gõ: dạng chuẩn API sẽ quy về, số host, host đầu–cuối và mask.
  * Một hình dạng `{ value, reason }` (không union `ok`) vì `tsconfig.app.json` không bật strict.
  * Chuỗi rỗng trả cả hai `null`: chưa gõ gì thì chưa có gì để báo.
+ *
+ * `minPrefix` là trần độ rộng server đang áp (`GET ipam/settings` → `subnetMinPrefix`): nói ngay
+ * khi gõ còn hơn để server từ chối lúc bấm Lưu, và đọc từ server thì không có bản sao để lệch.
  */
-export function previewCidr(text: string): {
+export function previewCidr(
+  text: string,
+  minPrefix: number,
+): {
   value: CidrPreview | null;
   reason: 'format' | 'tooWide' | null;
 } {
@@ -83,7 +83,7 @@ export function previewCidr(text: string): {
   if (!/^[^/]+\/\d{1,2}$/.test(trimmed)) return { value: null, reason: 'format' };
   const range = parseCidr(trimmed);
   if (!range) return { value: null, reason: 'format' };
-  if (range.prefix < MIN_SUBNET_PREFIX) return { value: null, reason: 'tooWide' };
+  if (range.prefix < minPrefix) return { value: null, reason: 'tooWide' };
   const size = 2 ** (32 - range.prefix);
   const network = Math.floor(range.base / size) * size;
   // /31 và /32 không có địa chỉ mạng/quảng bá để trừ ra — cùng luật `subnetUsage` phía API.

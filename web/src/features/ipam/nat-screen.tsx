@@ -6,6 +6,7 @@ import { apiFetch } from '@/lib/api-client';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { formatDate, orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
+import { CellNote } from '@/ui/cell-note';
 import { Combobox } from '@/ui/combobox';
 import { Dialog } from '@/ui/dialog';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
@@ -13,6 +14,7 @@ import { FilterBar } from '@/ui/filter-bar';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
 import { RowActions } from '@/ui/row-actions';
 import { Field, FormSection, PageHeader } from '@/ui/page-header';
+import { SegmentedRadio } from '@/ui/segmented-radio';
 import { Select } from '@/ui/select';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useToast } from '@/ui/toast';
@@ -115,7 +117,7 @@ function protocolLabel(protocol: NatProtocol, t: (key: string) => string): strin
 }
 
 /**
- * Sổ NAT (story 5.3, FR-017).
+ * Sổ NAT (FR-017).
  *
  * Bảng này tồn tại để trả lời đúng ba câu của auditor: **port nào mở, vì sao, cho ai**. Nên
  * cả ba đều nằm NGAY TRÊN BẢNG, không giấu trong trang chi tiết — người ta mở màn này ra là
@@ -408,11 +410,7 @@ export function NatScreen({ me }: { me: Me }) {
                     <span className="cell-clamp-2" title={rule.reason}>
                       {rule.reason}
                     </span>
-                    {rule.note ? (
-                      <span className="cell-sub cell-note" title={rule.note}>
-                        {rule.note}
-                      </span>
-                    ) : null}
+                    {rule.note ? <CellNote text={rule.note} className="cell-sub" /> : null}
                     <span className="cell-sub" title={rule.createdBy}>
                       {t('nat.openedBy', {
                         date: formatDate(rule.createdAt),
@@ -592,12 +590,12 @@ function NatForm({
   const [deviceId, setDeviceId] = useState(rule?.deviceId ?? '');
   const [deviceTerm, setDeviceTerm] = useState(rule?.deviceCode ?? '');
   /*
-   * Ô "Loại thiết bị" ĐÃ BỎ (26/08/2026).
+   * KHÔNG có ô "Loại thiết bị" lọc cho ô Router.
    *
-   * Nó là một bộ lọc cho ô Router ngay dưới, nhưng đứng thành một trường riêng nên để chọn
-   * MỘT con router phải thao tác HAI dropdown. Tệ hơn: chọn nhầm loại là danh sách router
-   * rỗng trơn, và người dùng kết luận kho không có router nào. Router ở PMH gần như luôn là
-   * Firewall/Draytek — một ô tìm là đủ, gõ hai chữ ra ngay.
+   * Đứng thành một trường riêng thì để chọn MỘT con router phải thao tác HAI dropdown. Tệ
+   * hơn: chọn nhầm loại là danh sách router rỗng trơn, và người dùng kết luận kho không có
+   * router nào. Router ở PMH gần như luôn là Firewall/Draytek — một ô tìm là đủ, gõ hai chữ
+   * ra ngay.
    */
   /** Máy ĐƯỢC NAT — chọn máy thì ô IP trong chỉ còn IP của chính máy đó. */
   const [targetId, setTargetId] = useState(rule?.internalDeviceId ?? '');
@@ -610,9 +608,9 @@ function NatForm({
    * Port ngoài giữ dạng DANH SÁCH CHIP, không phải một chuỗi.
    *
    * Một rule trong DB chỉ mang một khoảng port, nhưng việc thật là "mở 8080, 8443 và
-   * 5060-5070 cho cùng một máy, cùng một lý do". Trước đây phải mở form ba lần và gõ lại
-   * router / IP trong / ai dùng / lý do ba lượt — sai một chỗ là ba dòng lệch nhau. Giờ gõ
-   * một lần, bấm Lưu ra ba dòng dùng chung mọi thứ còn lại.
+   * 5060-5070 cho cùng một máy, cùng một lý do". Gõ một lần, bấm Lưu ra ba dòng dùng chung
+   * mọi thứ còn lại — không phải mở form ba lần, gõ lại router / IP trong / ai dùng / lý do
+   * ba lượt rồi sai một chỗ là ba dòng lệch nhau.
    *
    * SỬA thì cắt về đúng một khoảng (`max={1}`): "sửa" là đổi một dòng đang có, còn tách nó
    * thành ba dòng là chuyện khác hẳn và phải đi qua nút Thêm rule cho rõ ràng.
@@ -654,7 +652,7 @@ function NatForm({
   /**
    * KHÔNG còn `enabled: deviceTerm.length > 0`.
    *
-   * Bản cũ chỉ hỏi khi đã gõ, nên ô Router mở ra là một ô trắng với dòng nhắc "Gõ mã hoặc
+   * Chỉ hỏi khi đã gõ thì ô Router mở ra là một ô trắng với dòng nhắc "Gõ mã hoặc
    * tên router…" — người dùng gõ, không ra gì (kho chưa có router nào), và kết luận là hệ
    * thống hỏng. Danh sách hiện sẵn thì thấy ngay có gì để chọn, hoặc thấy ngay là chưa có gì
    * và bấm "Thêm router mới" ở đầu menu.
@@ -739,9 +737,9 @@ function NatForm({
       /*
        * Đang SỬA (đã đủ một khoảng) thì KHÔNG đụng gì cả — kể cả giao thức.
        *
-       * Bản trước vẫn `setProtocol(...)` trong trường hợp này, nên người dùng mở hộp Sửa,
-       * chọn HTTPS, thấy giao thức nhảy sang TCP mà con số port đứng im, và tin rằng port
-       * đã đổi theo. Im lặng một nửa còn tệ hơn im lặng hẳn.
+       * Nếu vẫn `setProtocol(...)` ở đây, người dùng mở hộp Sửa, chọn HTTPS, thấy giao thức
+       * nhảy sang TCP mà con số port đứng im, và tin rằng port đã đổi theo. Im lặng một nửa
+       * còn tệ hơn im lặng hẳn.
        */
       if (ports.length >= maxPorts) return;
       const parsed = parsePortChip(value, ports);
@@ -952,22 +950,15 @@ function NatForm({
             port gõ tay luôn mặc định TCP, sai âm thầm với mấy dịch vụ UDP như VPN.
           */}
           <Field label={t('nat.protocol')}>
-            <div className="segmented" role="group" aria-label={t('nat.protocol')}>
-              {PROTOCOLS.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  className={protocol === item ? 'on' : undefined}
-                  aria-pressed={protocol === item}
-                  onClick={() => setProtocol(item)}
-                >
-                  {/* `catalog.protocolBoth`, KHÔNG phải một khoá riêng của `nat`: ô chọn cổng
-                      dịch vụ trong form đọc đúng khoá ấy, và hai nhãn khác chữ cho cùng một
-                      giao thức là thứ người dùng đọc ra thành hai lựa chọn khác nhau. */}
-                  {protocolLabel(item, t)}
-                </button>
-              ))}
-            </div>
+            {/* `catalog.protocolBoth`, KHÔNG phải một khoá riêng của `nat`: ô chọn cổng dịch vụ
+                trong form đọc đúng khoá ấy, và hai nhãn khác chữ cho cùng một giao thức là thứ
+                người dùng đọc ra thành hai lựa chọn khác nhau. */}
+            <SegmentedRadio<NatProtocol>
+              label={t('nat.protocol')}
+              value={protocol}
+              onChange={setProtocol}
+              options={PROTOCOLS.map((item) => ({ value: item, label: protocolLabel(item, t) }))}
+            />
           </Field>
 
           {/* Hai ô port đứng CẠNH nhau: "ngoài 8080 dẫn vào trong 80" là một câu đọc ngang,

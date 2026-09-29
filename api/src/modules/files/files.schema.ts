@@ -7,8 +7,8 @@ import { bigint, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
  * DB chỉ giữ metadata. Xóa là XÓA MỀM (`deleted_at`): biên bản mua thiết bị lỡ tay xóa
  * mà mất hẳn thì không lấy lại được, còn giữ lại thì chỉ tốn ổ đĩa.
  *
- * `owner_type` + `owner_id` để một module file phục vụ mọi chủ thể: thiết bị (2.3),
- * phần mềm, phiếu ISO (Epic 8), sự cố (Epic 9) — không đẻ mỗi nơi một bảng đính kèm.
+ * `owner_type` + `owner_id` để một module file phục vụ mọi chủ thể: thiết bị, phần mềm,
+ * phiếu ISO, sự cố — không đẻ mỗi nơi một bảng đính kèm.
  */
 export const filesTable = pgTable('file', {
   id: uuid('id').primaryKey().defaultRandom(),

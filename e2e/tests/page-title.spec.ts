@@ -4,8 +4,7 @@ import { APP_ORIGIN, E2E_SA, csrfOf, firstLogin, resetUsers, uniqueStamp } from 
 /**
  * TÊN TAB TRÌNH DUYỆT ĐỔI THEO MÀN (B-03).
  *
- * Trước 23/09 `document.title` không được đặt ở đâu trong `web/src`: mười lăm màn dùng chung
- * đúng một cái tên của `index.html`. Mở bốn tab IMS để đối chiếu thì cả bốn đọc y hệt nhau và
+ * Không đặt `document.title` thì mọi màn dùng chung đúng một cái tên của `index.html`. Mở bốn tab IMS để đối chiếu thì cả bốn đọc y hệt nhau và
  * phải bấm từng cái để tìm; lịch sử duyệt và dấu trang cũng mang một tên duy nhất.
  *
  * VÌ SAO CẦN E2E chứ Vitest chưa đủ: bài Vitest gọi thẳng hook trong một `MemoryRouter`, tức
@@ -17,7 +16,7 @@ test.beforeEach(() => {
   resetUsers();
 });
 
-const MAN_HINH: [string, string][] = [
+const SCREENS: [string, string][] = [
   ['/', 'Bảng điều khiển · IMS'],
   ['/devices', 'Thiết bị · IMS'],
   ['/software', 'Phần mềm · IMS'],
@@ -35,11 +34,11 @@ const MAN_HINH: [string, string][] = [
 test('mỗi màn đội một tên tab khác nhau', async ({ page }) => {
   await firstLogin(page, E2E_SA);
 
-  const daThay = new Set<string>();
-  for (const [duong, ten] of MAN_HINH) {
-    await page.goto(duong);
-    await expect(page, `${duong} phải đội tên "${ten}"`).toHaveTitle(ten);
-    daThay.add(ten);
+  const seen = new Set<string>();
+  for (const [route, name] of SCREENS) {
+    await page.goto(route);
+    await expect(page, `${route} phải đội tên "${name}"`).toHaveTitle(name);
+    seen.add(name);
   }
 
   /*
@@ -48,7 +47,7 @@ test('mỗi màn đội một tên tab khác nhau', async ({ page }) => {
    * đầu — không, nặng hơn: chúng xanh nếu bảng khai đúng nhưng `titleKeyOf` luôn rơi về một
    * tên. Đếm số tên PHÂN BIỆT là câu hỏi mà cả mười hai ô kia không hỏi.
    */
-  expect(daThay.size, 'mười hai màn phải cho mười hai tên khác nhau').toBe(MAN_HINH.length);
+  expect(seen.size, 'mười hai màn phải cho mười hai tên khác nhau').toBe(SCREENS.length);
 });
 
 test('trang chi tiết đội tên khu vực của nó, không rơi về tên sản phẩm trơn', async ({

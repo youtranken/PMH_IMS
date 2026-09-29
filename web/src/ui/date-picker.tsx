@@ -315,7 +315,7 @@ export function DatePicker({
       {/*
         NÚT XÓA LÀ ANH EM CỦA NÚT MỞ, KHÔNG LỒNG BÊN TRONG.
 
-        Bản trước là `<span role="button" tabIndex={0}>` nằm NGAY TRONG `<button className=
+        Đừng đặt `<span role="button" tabIndex={0}>` NGAY TRONG `<button className=
         "dp-trigger">`. HTML không cho phép điều khiển lồng trong điều khiển, và trình duyệt
         không báo lỗi — nó chỉ xử lý mỗi nơi một kiểu: phím Space bấm trên dấu ✕ vẫn nổi lên
         và MỞ luôn lịch, cây trợ năng gộp hai thứ thành một nút nghe không ra là gì, và

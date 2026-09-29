@@ -84,7 +84,7 @@ function initialState(device: DeviceRow | null): FormState {
 }
 
 /**
- * Form hồ sơ thiết bị (story 2.2, FR-001). Màn NHẬP nên desktop-first — màn ĐỌC
+ * Form hồ sơ thiết bị (FR-001). Màn NHẬP nên desktop-first — màn ĐỌC
  * (danh sách, chi tiết) mới phải đạt 390px theo UX-DR2.
  */
 export function DeviceForm({

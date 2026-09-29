@@ -16,12 +16,11 @@ import {
 /**
  * Gắn thứ gì vào một chủ thể KHÔNG CÓ THẬT.
  *
- * ===== CHUYỆN GÌ XẢY RA TRƯỚC 08/09 =====
+ * ===== RỦI RO =====
  *
- * `FilesService.save` và `VaultService.create` nhận `ownerType`/`ownerId` rồi ghi thẳng, không
- * kiểm chủ thể có tồn tại không. Chú thích ngay đầu `files.service.ts` đã ghi rõ rủi ro —
- * "gửi `ownerType` bịa ra thì file thành mồ côi, không màn nào hiển thị và không ai dọn" — mà
- * không có hàng rào nào đi kèm.
+ * `FilesService.save` và `VaultService.create` nhận `ownerType`/`ownerId`. Nếu ghi thẳng mà
+ * không kiểm chủ thể có tồn tại không, thì gửi `ownerType` bịa ra là file thành mồ côi, không
+ * màn nào hiển thị và không ai dọn.
  *
  * Hậu quả cụ thể:
  *   - FILE: blob nằm trên đĩa vĩnh viễn, tính vào dung lượng, không màn nào hiện để mà xóa.
@@ -32,7 +31,7 @@ import {
  *
  * Hàng rào là một sổ đăng ký: mỗi module tự khai loại nó làm chủ. Thiếu MỘT registrar thì
  * đúng loại đó hở lại, và hở trong im lặng — không lỗi biên dịch, không test nào khác đỏ.
- * Đây chính là mẫu N1 ("dựng ở một cửa, quên cửa bên cạnh") đã lặp bốn lần trong repo này.
+ * Đây là mẫu lỗi "dựng ở một cửa, quên cửa bên cạnh".
  * Nên bài này quét TOÀN BỘ `FILE_OWNER_TYPES`, không chọn vài loại tiêu biểu.
  */
 

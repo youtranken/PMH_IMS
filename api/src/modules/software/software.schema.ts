@@ -12,11 +12,12 @@ import {
 
 /** citext: mã hồ sơ so sánh không phân biệt hoa-thường. */
 const citext = customType<{ data: string }>({ dataType: () => 'citext' });
+const inet = customType<{ data: string }>({ dataType: () => 'inet' });
 
 /**
  * Bảng `software` + `software_history` — migration 0014. Chủ sở hữu: module `software` (AD-3).
  *
- * KHÔNG có cột key/mật khẩu: chìa khóa nằm ở két sắt (Epic 4), bảng này chỉ giữ hồ sơ
+ * KHÔNG có cột key/mật khẩu: chìa khóa nằm ở két sắt, bảng này chỉ giữ hồ sơ
  * hành chính. Ngày dùng kiểu `date` thuần vì "hết hạn 30/08/2026" là một NGÀY LỊCH.
  */
 export const softwareTable = pgTable('software', {
@@ -86,7 +87,8 @@ export const ispLineTable = pgTable('isp_line', {
   provider: citext('provider').notNull(),
   providerId: uuid('provider_id').notNull(),
   bandwidth: text('bandwidth'),
-  wanIp: text('wan_ip'),
+  // inet (0300): một IPv4 hoặc một khối IPv4/prefix — Q-04.
+  wanIp: inet('wan_ip'),
   siteId: uuid('site_id'),
   deviceId: uuid('device_id'),
   hotline: text('hotline'),

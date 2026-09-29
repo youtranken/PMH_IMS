@@ -39,7 +39,7 @@ async function scopes(page: Page) {
   return (await res.json()) as { scopeType: string; scopeRef: string; label: string }[];
 }
 
-/** Story 6.2 — FR-023: ma trận quyền xem secret, CẤM là mặc định. */
+/** FR-023: ma trận quyền xem secret, CẤM là mặc định. */
 test.describe('Ma trận quyền két sắt', () => {
   test('đường hạnh phúc: gán quyền cho member, thấy trên ma trận, gỡ lại được', async ({
     page,
@@ -50,10 +50,9 @@ test.describe('Ma trận quyền két sắt', () => {
     await expect(page.getByRole('heading', { name: 'Quyền két sắt' })).toBeVisible();
 
     /*
-     * Ma trận dựng lại thành LƯỚI (28/08/2026): hàng = người, cột = nhóm đối tượng.
+     * Ma trận là LƯỚI: hàng = người, cột = nhóm đối tượng.
      *
-     * Người chưa gán gì vẫn HIỆN — nhưng giờ nó hiện thành một hàng toàn ô trống, chứ không
-     * phải một thẻ có chữ "chưa có quyền nào". Ẩn họ đi thì SA tưởng đã gán rồi.
+     * Người chưa gán gì vẫn HIỆN, thành một hàng toàn ô trống. Ẩn họ đi thì SA tưởng đã gán rồi.
      */
     const row = page.getByRole('row').filter({ hasText: E2E_MEMBER.email });
     await expect(row).toBeVisible();
@@ -155,10 +154,10 @@ test.describe('Ma trận quyền két sắt', () => {
     const deviceId = ((await device.json()) as { device: { id: string } }).device.id;
 
     /*
-     * KIỂM ĐIỀU KIỆN TIÊN QUYẾT, KHÔNG BỌC `if` QUANH PHẦN DỰNG (rà soát 07/09, mục 6).
+     * KIỂM ĐIỀU KIỆN TIÊN QUYẾT, KHÔNG BỌC `if` QUANH PHẦN DỰNG.
      *
-     * Bài này chứng minh "gán theo LOẠI thắng gán theo SITE". Bản trước bọc lượt gán theo site
-     * trong `if (bySite)`: không có nhóm site nào thì lượt gán ấy KHÔNG chạy, nên câu chốt
+     * Bài này chứng minh "gán theo LOẠI thắng gán theo SITE". Bọc lượt gán theo site trong
+     * `if (bySite)` thì khi không có nhóm site nào, lượt gán ấy KHÔNG chạy, nên câu chốt
      * `tier: 'whitelist'` bên dưới đúng một cách tầm thường — chỉ còn đúng một quy tắc trong
      * cuộc, không có gì để mà thắng. Bài xanh, và nó chứng minh đúng con số không.
      */
@@ -264,11 +263,11 @@ test.describe('Ma trận quyền két sắt', () => {
 });
 
 /**
- * Rà soát liên kết 28/08/2026 tìm ra hai lỗ hổng cùng một họ, migration 0036 vá cả hai:
+ * Hai hàng rào cùng một họ (migration 0036):
  *
- *  - Két sắt chưa với tới ĐƯỜNG TRUYỀN, dù giấy tờ thì với tới từ lâu.
- *  - Ma trận quyền chưa có nhóm nào phủ TÀI KHOẢN DỊCH VỤ, nên nó cất được mật khẩu mà không
- *    ai cấp quyền xem được — một tính năng chết, không phải một quyết định.
+ *  - Két sắt phải với tới ĐƯỜNG TRUYỀN, như giấy tờ.
+ *  - Ma trận quyền phải có nhóm phủ TÀI KHOẢN DỊCH VỤ; thiếu nó thì két cất được mật khẩu mà
+ *    không ai cấp quyền xem được — một tính năng chết, không phải một quyết định.
  */
 test.describe('Két sắt và ma trận quyền với tới ISP + tài khoản dịch vụ', () => {
   test('cất được mật khẩu PPPoE của đường truyền', async ({ page }) => {

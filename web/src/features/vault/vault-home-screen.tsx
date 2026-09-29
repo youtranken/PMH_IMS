@@ -68,7 +68,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   /*
-   * Ô tìm và bộ lọc nằm trên THANH ĐỊA CHỈ (17/09/2026), như bốn màn danh sách kia.
+   * Ô tìm và bộ lọc nằm trên THANH ĐỊA CHỈ, như bốn màn danh sách kia.
    *
    * `docs/SHARED-REGISTRY.md` viết thẳng: "Cấm quay lại `useState` cho bốn thứ đó". Đường đi
    * CHÍNH của màn này làm lộ đúng lý do: lọc + gõ tìm → mở két → bấm "Mở hồ sơ đầy đủ" → xem
@@ -101,7 +101,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
   const canEdit = me.role === 'sa' || me.role === 'admin';
 
   const rows = useMemo(() => {
-    // Gấp dấu cả hai vế (B-01): tên chủ sở hữu là tên thiết bị / phần mềm / tài khoản, toàn
+    // Gấp dấu cả hai vế: tên chủ sở hữu là tên thiết bị / phần mềm / tài khoản, toàn
     // tiếng Việt có dấu.
     const term = foldSearch(search.trim());
     return (owners.data ?? []).filter((row) => {
@@ -224,8 +224,8 @@ export function VaultHomeScreen({ me }: { me: Me }) {
             thiếu `isp`, nên bật bất kỳ nút nào cũng làm mọi dòng đường truyền biến mất im
             lặng — người dùng đọc ra "đường truyền không có két", còn két thì vẫn ở đó. */}
         {/* `role="group"` + tên nhóm: bốn nút rời rạc thì trình đọc màn hình đọc ra bốn cái nút
-            không biết thuộc về đâu — Kho thanh lý và Dải mạng đều đã khai nhóm. */}
-        {/* Dải nút lọc dùng chung (`.segmented` + `aria-pressed`) như Sổ NAT / Kho thanh lý —
+            không biết thuộc về đâu. */}
+        {/* Nút bật/tắt độc lập (`.segmented` + `aria-pressed`) như ba chip trạng thái của Sổ NAT —
             không phải nút `primary`: chip đang bật mà mang màu nút chính thì lẫn với CTA. */}
         <div role="group" aria-label={t('vaultHome.filterKind')} className="segmented">
           {SECRET_OWNER_TYPES.map((kind) => (
@@ -339,9 +339,9 @@ export function VaultHomeScreen({ me }: { me: Me }) {
               {opened.orphan ? null : (
                 <Link
                   className="btn"
-                  /* `OWNER_PATH` (lib/routes) chứ không phải chuỗi `if` tại chỗ: bản cũ kết
-                     bằng `return PATHS.softwareItem(...)`, nên một đường truyền rơi vào
-                     nhánh vét và cái nút này mở trang PHẦN MỀM với id đường truyền. */
+                  /* `OWNER_PATH` (lib/routes) chứ không phải chuỗi `if` tại chỗ: chuỗi `if`
+                     kết bằng một nhánh vét như `return PATHS.softwareItem(...)` thì một đường
+                     truyền rơi vào đó và cái nút này mở trang PHẦN MỀM với id đường truyền. */
                   to={OWNER_PATH[opened.ownerType](opened.ownerId)}
                 >
                   {t('vaultHome.openRecord')}

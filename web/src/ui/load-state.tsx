@@ -10,8 +10,8 @@ import { CopyButton } from '@/ui/copy-button';
 import { useAnnounce } from '@/ui/live-region';
 
 /**
- * Hợp đồng loading/empty/error dùng chung (review nguyên tắc #8): mọi màn fetch phải PHÂN BIỆT
- * "đang tải" ≠ "rỗng" ≠ "lỗi". Trước đây nhiều màn nuốt lỗi thành 0 hoặc kẹt "…" vô hạn (P0).
+ * Hợp đồng loading/empty/error dùng chung: mọi màn fetch phải PHÂN BIỆT "đang tải" ≠ "rỗng" ≠
+ * "lỗi". Không phân biệt thì màn nuốt lỗi thành 0 hoặc kẹt "…" vô hạn.
  * (Lượt gọi mạng đi qua `lib/api-client.ts`; file này chỉ export component — fast-refresh.)
  */
 
@@ -181,18 +181,17 @@ export function DetailLoadFailed({
 }
 
 /**
- * Khối "đang tải" dùng chung — phân biệt với rỗng/lỗi (S1).
+ * Khối "đang tải" dùng chung — phân biệt với rỗng/lỗi.
  *
- * ===== `role="status"` ĐÃ GỠ KHỎI NODE NÀY (23/09, F-06) =====
+ * ===== KHÔNG ĐẶT `role="status"` LÊN NODE NÀY =====
  *
- * Nó từng nằm ngay đây, và vì thế KHÔNG BAO GIỜ được đọc lên: node và nội dung của nó sinh ra
- * cùng một lượt, mà trình đọc màn hình chỉ theo dõi những vùng sống đã có mặt TRƯỚC đó. 39 chỗ
- * "đang tải" trên toàn web đều câm — người dùng bấm một nút, nội dung biến mất, và không nghe
- * thấy gì cho tới khi dữ liệu về.
+ * Đặt ở đây thì nó KHÔNG BAO GIỜ được đọc lên: node và nội dung của nó sinh ra cùng một lượt,
+ * mà trình đọc màn hình chỉ theo dõi những vùng sống đã có mặt TRƯỚC đó. Mọi chỗ "đang tải"
+ * trên toàn web sẽ câm — người dùng bấm một nút, nội dung biến mất, và không nghe thấy gì cho
+ * tới khi dữ liệu về.
  *
- * Cùng lỗi này đã được nhận ra và vá hai lần ở chỗ khác (`relation-map`, rồi `command-palette`),
- * cả hai lần đều vá TẠI CHỖ; bản dùng chung thì không ai vá. Nay lời loan báo đi qua
- * `useAnnounce` tới một vùng sống thường trực gắn ở shell (`ui/live-region.tsx`).
+ * Nên lời loan báo đi qua `useAnnounce` tới một vùng sống thường trực gắn ở shell
+ * (`ui/live-region.tsx`), không vá tại chỗ từng màn.
  *
  * `aria-busy` GIỮ LẠI trên node này: nó nói về chính vùng đang bận, không phải một lời loan báo.
  */

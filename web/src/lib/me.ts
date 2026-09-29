@@ -1,8 +1,8 @@
 /**
- * Ba vai của hệ thống — MỘT nguồn cho cả web (22/09).
+ * Ba vai của hệ thống — MỘT nguồn cho cả web.
  *
- * Tách ra khỏi `Me` vì `routes.ts` cần nó để khai bảng quyền theo đường dẫn, và union này gõ
- * tay lần thứ hai ở đó là đúng cái hình dạng mà B-09 vừa dọn.
+ * Tách ra khỏi `Me` vì `routes.ts` cần nó để khai bảng quyền theo đường dẫn; đừng gõ tay union
+ * này lần thứ hai ở đó.
  */
 export type UserRole = 'sa' | 'admin' | 'member';
 
@@ -50,9 +50,9 @@ export const HOME_PATH = '/';
 /**
  * MỘT nơi duy nhất quyết định "người này đang ở bước nào" (AD-15).
  *
- * Trước đây mỗi màn tự gọi navigate() sau khi gọi API — và thua cuộc đua với router
- * khi `me` được nạp lại: màn đăng nhập nhảy về '/', RequireAuth lại đá sang '/dang-nhap/xac-thuc'
- * dù người dùng chưa cài 2 lớp. Giờ router chỉ đọc hàm này, màn không tự điều hướng.
+ * Màn tự gọi navigate() sau khi gọi API sẽ thua cuộc đua với router khi `me` được nạp lại:
+ * màn đăng nhập nhảy về '/', RequireAuth lại đá sang '/dang-nhap/xac-thuc' dù người dùng chưa
+ * cài 2 lớp. Nên router chỉ đọc hàm này, màn không tự điều hướng.
  */
 export function nextStepPath(me: Me | null): string {
   if (!me) return LOGIN_PATH;
@@ -82,8 +82,4 @@ export function pendingSetupSteps(me: Me | null): SetupStep[] {
 export function setupProgress(remaining: number, seenTotal: number): { current: number; total: number } {
   const total = Math.max(remaining, seenTotal);
   return { current: total - remaining + 1, total };
-}
-
-export function isAdminOrAbove(me: Me | null | undefined): boolean {
-  return me?.role === 'sa' || me?.role === 'admin';
 }

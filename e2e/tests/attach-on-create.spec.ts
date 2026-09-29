@@ -18,9 +18,9 @@ import {
 /**
  * Đính kèm giấy tờ NGAY TRONG form thêm mới (khối dùng chung `ui/attachment-draft.tsx`).
  *
- * Trước đây chỉ trang chi tiết mới đính kèm được — mà hóa đơn, biên bản, bản scan hợp đồng
- * lại nằm sẵn trên tay đúng lúc người ta gõ hồ sơ mới. Ba màn thêm mới (thiết bị 2.2, phần
- * mềm 3.1, đường truyền 3.3) dùng CHUNG một khối, nên ba bài dưới đây đi cùng một đường:
+ * Hóa đơn, biên bản, bản scan hợp đồng nằm sẵn trên tay đúng lúc người ta gõ hồ sơ mới, nên
+ * không bắt họ đợi tới trang chi tiết. Ba màn thêm mới (thiết bị, phần mềm, đường truyền) dùng
+ * CHUNG một khối, nên ba bài dưới đây đi cùng một đường:
  * chọn file lúc điền form → lưu → mở tab Giấy tờ của hồ sơ vừa tạo và thấy file ở đó.
  */
 test.beforeEach(() => {

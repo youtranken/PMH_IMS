@@ -40,7 +40,7 @@ export type ConfirmOptions = {
 };
 
 /** Kết quả khi có `checkbox`: bấm gì, và ô tick ở trạng thái nào lúc bấm. */
-export type ConfirmResult = { ok: boolean; checked: boolean };
+type ConfirmResult = { ok: boolean; checked: boolean };
 
 export type ConfirmFn = {
   (o: ConfirmOptions & { checkbox: NonNullable<ConfirmOptions['checkbox']> }): Promise<ConfirmResult>;

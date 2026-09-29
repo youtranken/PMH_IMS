@@ -73,7 +73,7 @@ test.describe('Ô chọn thiết bị bỏ máy đã thanh lý', () => {
     /*
      * Vế đối chứng, và là vế quan trọng hơn: màn DANH SÁCH không truyền cờ, nên nó vẫn phải
      * thấy cả hai. Thiếu vế này thì một bản vá thô bạo (lọc `retired` ở tầng service, mọi nơi)
-     * sẽ xanh ở trên mà làm biến mất cả Kho thanh lý — đúng loại hồi quy tôi đã gây ra ở đợt C.
+     * sẽ xanh ở trên mà làm biến mất cả Kho thanh lý.
      */
     const forList = await search(page, `PC-E2E-UP-`, false);
     expect(forList).toContain(codes.live);

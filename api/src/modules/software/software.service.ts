@@ -9,6 +9,7 @@ import { and, asc, count, desc, eq, inArray, isNull, or, sql, type SQL } from 'd
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
+import { isRealDateOnly } from '../../common/real-date';
 import { HISTORY_PAGE_LIMIT, latestStatusEvents, type StatusEvent } from '../../common/history';
 import { requireUnchangedSince } from '../../common/cas';
 import { effectiveOf } from '../../common/merge-effective';
@@ -209,7 +210,7 @@ export class SoftwareService {
   }
 
   /**
-   * Mọi hồ sơ có hạn nằm trong [from, to] — cỗ máy expiry (story 3.4) hỏi qua api. `kind` lọc
+   * Mọi hồ sơ có hạn nằm trong [from, to] — cỗ máy expiry hỏi qua api. `kind` lọc
    * trong SQL: mỗi loại là một nguồn hạn riêng, lọc bên JS là chạy lại cả câu + `decorate` cho
    * từng loại ở mỗi lượt mở màn / mail tổng hợp.
    */
@@ -358,7 +359,7 @@ export class SoftwareService {
   }
 
   /**
-   * Gia hạn (story 3.4): đẩy `end_date` sang mốc mới. Tách riêng khỏi `update` để tab Lịch sử
+   * Gia hạn: đẩy `end_date` sang mốc mới. Tách riêng khỏi `update` để tab Lịch sử
    * đọc ra "đã gia hạn tới ngày X" chứ không lẫn với mọi lần sửa hồ sơ khác.
    */
   /**
@@ -432,11 +433,11 @@ export class SoftwareService {
         ...siteChange,
       });
       /*
-       * Sổ gia hạn dùng chung ghi Ở ĐÂY, trong chính transaction này (AC 3.4, rà soát 07/09 #7).
+       * Sổ gia hạn dùng chung ghi Ở ĐÂY, trong chính transaction này (AC 3.4).
        *
-       * Trước 08/09 chỉ đường `/expiry/renew` ghi `renewal_history`; nút Gia hạn trong trang hồ
-       * sơ gọi thẳng hàm này và không ghi gì. `end_date` đổi, tab Lịch sử có dòng, toast xanh —
-       * nhưng báo cáo cuối năm và khối "gia hạn gần đây" đọc `renewal_history` nên trả rỗng.
+       * Nút Gia hạn trong trang hồ sơ gọi thẳng hàm này, không qua `/expiry/renew`. Không ghi
+       * `renewal_history` ở đây thì `end_date` đổi, tab Lịch sử có dòng, toast xanh — nhưng
+       * báo cáo cuối năm và khối "gia hạn gần đây" đọc `renewal_history` nên trả rỗng.
        *
        * `label` phải khớp đúng chuỗi mà `software-expiry-sources.ts` dựng, để hai cửa không đẻ
        * ra hai cách gọi tên cùng một hồ sơ trong cùng một bảng.
@@ -520,7 +521,7 @@ export class SoftwareService {
   }
 
   /**
-   * Số seat đang dùng của cả trang, một lượt đếm (story 3.2).
+   * Số seat đang dùng của cả trang, một lượt đếm.
    * Query thẳng `license_assignment` là hợp lệ: cùng module `software` sở hữu cả hai bảng
    * (AD-3). Đi vòng qua service khác chỉ để đọc bảng của chính mình là vòng phụ thuộc thừa.
    */
@@ -573,12 +574,12 @@ export class SoftwareService {
     }
 
     // Luật phải chạy trên giá trị SAU KHI GHÉP với hồ sơ đang có — sửa một trường vẫn có
-    // thể làm cả hồ sơ thành không hợp lệ (bài học từ code review Epic 2).
+    // thể làm cả hồ sơ thành không hợp lệ.
     //
     // Ghép bằng `effectiveOf` chứ KHÔNG bằng `??`: xoá một ô (giá trị `null` có mặt trong
-    // `values`) khác hẳn không đụng tới ô đó, và `??` bóp hai thứ đó thành một. Đúng chỗ
-    // này từng cho `{"endDate":""}` xoá vĩnh viễn hạn của một chứng chỉ SSL — xem docblock
-    // của `common/merge-effective.ts` (A-03, rà soát 19/09).
+    // `values`) khác hẳn không đụng tới ô đó, và `??` bóp hai thứ đó thành một. Với `??`,
+    // `{"endDate":""}` xoá vĩnh viễn hạn của một chứng chỉ SSL — xem docblock của
+    // `common/merge-effective.ts` (A-03).
     const current = id ? await this.requireRow(id) : null;
     const effective = effectiveOf(values);
     const errors = validateSoftware({
@@ -764,7 +765,7 @@ function buildWhere(filter: SoftwareFilter): SQL | undefined {
   const term = filter.search?.trim();
   if (term) {
     // Mã · tên · ghi chú, cả ba trong cột sinh `software.search_norm` (0052) và đã gấp dấu.
-    // Ba vế `ILIKE` trước đây không gấp dấu — B-01.
+    // Tìm phải gấp dấu — B-01.
     // Website của SSL/tên miền không nằm trong `search_norm`: cột sinh không gọi được hàm
     // STABLE như `array_to_string`. Bảng hồ sơ phần mềm cỡ vài trăm dòng — quét tại chỗ được.
     const byText = or(
@@ -831,7 +832,7 @@ function dateOnly(
   if (value === undefined) return undefined;
   const trimmed = value?.trim();
   if (!trimmed) return null;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+  if (!isRealDateOnly(trimmed)) {
     throw new BadRequestException({
       code: 'DATE_INVALID',
       message: `${label} phải là ngày hợp lệ.`,

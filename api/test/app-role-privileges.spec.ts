@@ -85,6 +85,15 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
     expect(await sqlStateOf(app, `TRUNCATE audit_log`)).toBe('42501');
   });
 
+  it('không vòng qua bảng cha được: gọi thẳng tên ngăn năm cũng bị ACL chặn', async () => {
+    const year = new Date().getUTCFullYear();
+    for (const part of [`audit_log_${year}`, 'audit_log_default']) {
+      expect(await sqlStateOf(app, `UPDATE ${part} SET actor = 'x'`)).toBe('42501');
+      expect(await sqlStateOf(app, `DELETE FROM ${part}`)).toBe('42501');
+      expect(await sqlStateOf(app, `TRUNCATE ${part}`)).toBe('42501');
+    }
+  });
+
   /*
    * ===== CHÍN BẢNG LỊCH SỬ, KHÔNG PHẢI MỘT =====
    *
@@ -156,13 +165,19 @@ describe('Role ứng dụng ims_app — hẹp đúng mức AD-9 hứa', () => {
               has_table_privilege('ims_app', c.oid, 'DELETE') AS del
          FROM pg_class c
          WHERE c.relnamespace = 'public'::regnamespace
-           AND c.relkind = 'r'
-           AND (c.relname LIKE '%\\_history' OR c.relname = 'audit_log')
+           AND c.relkind IN ('r', 'p')
+           AND (c.relname LIKE '%\\_history'
+                OR c.relname = 'audit_log'
+                -- Ngăn năm của audit_log (0302): ALTER DEFAULT PRIVILEGES cấp cho mọi bảng mới,
+                -- kể cả ngăn, nên ngăn cũng phải bị quét.
+                OR c.oid IN (SELECT inhrelid FROM pg_inherits
+                              WHERE inhparent = 'public.audit_log'::regclass))
          ORDER BY c.relname`,
     );
 
     // Tiền đề: nếu câu truy vấn không tìm thấy bảng nào thì bài dưới vô nghĩa, không phải đạt.
-    expect(rows.length).toBeGreaterThanOrEqual(APPEND_ONLY_HISTORY.length + 1);
+    // +4: audit_log, ngăn năm nay, năm sau và DEFAULT.
+    expect(rows.length).toBeGreaterThanOrEqual(APPEND_ONLY_HISTORY.length + 4);
 
     const stillWritable = rows.filter((r) => r.upd || r.del).map((r) => r.table_name);
     expect(stillWritable).toEqual([]);

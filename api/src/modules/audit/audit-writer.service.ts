@@ -20,16 +20,15 @@ export interface AuditEntry {
 }
 
 /**
- * Writer audit tối giản (story 1.2) — CHỈ INSERT (AD-10).
- * Story 1.4 xây interceptor declarative TRÊN writer này, không thay thế.
+ * Writer audit tối giản — CHỈ INSERT (AD-10).
+ * Interceptor declarative xây TRÊN writer này, không thay thế.
  *
  * ===== BA HÀM, VÀ VÌ SAO PHẢI PHÂN BIỆT =====
  *
- * Rà soát 07/09 (#4) chỉ ra `append()` cũ bọc `try/catch` chỉ log rồi đi tiếp, và mọi nơi
- * dùng chung một hàm đó — kể cả `vault.reveal()`. Controller két khai `writtenByService: true`
- * nên interceptor đứng ngoài, tức `append()` là writer DUY NHẤT của đường mở két. INSERT hỏng
- * thì plaintext vẫn trả về cho người gọi và dấu vết chỉ còn một dòng log container, trong khi
- * chú thích ngay trên nó hứa "ghi TRƯỚC khi trả giá trị".
+ * Một `append()` bọc `try/catch` chỉ log rồi đi tiếp mà mọi nơi dùng chung — kể cả
+ * `vault.reveal()` — là lỗ: controller két khai `writtenByService: true` nên interceptor đứng
+ * ngoài, tức `append()` là writer DUY NHẤT của đường mở két. INSERT hỏng thì plaintext vẫn trả
+ * về cho người gọi và dấu vết chỉ còn một dòng log container.
  *
  * Ranh giới đúng không phải "audit có quan trọng không" (luôn quan trọng), mà là **dòng audit
  * nằm TRƯỚC hay SAU cái nó ghi lại**:

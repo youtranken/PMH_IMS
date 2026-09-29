@@ -1,4 +1,4 @@
-import { RealDateOrEmpty } from './accounts.controller';
+import { RealDateOrEmpty } from '../../common/real-date';
 
 /**
  * Ngày sinh (0031) — regex khuôn `YYYY-MM-DD` KHÔNG đủ.
@@ -39,8 +39,8 @@ describe('RealDateOrEmpty — ngày sinh phải là ngày CÓ THẬT', () => {
     });
   }
 
-  it('giá trị không phải chuỗi thì bỏ qua (để @IsString lo)', () => {
-    expect(validator.validate(undefined)).toBe(true);
-    expect(validator.validate(12345)).toBe(true);
+  it('giá trị không phải chuỗi thì từ chối — nhiều DTO chỉ có mỗi validator này trên ô ngày', () => {
+    expect(validator.validate(12345)).toBe(false);
+    expect(validator.validate(null)).toBe(false);
   });
 });

@@ -111,7 +111,7 @@ function validityText(
 }
 
 /**
- * Màn duyệt break-glass (story 6.3, FR-023/FR-025).
+ * Màn duyệt break-glass (FR-023/FR-025).
  *
  * AC đòi màn này dùng được ở 390px, và lý do rất cụ thể: yêu cầu break-glass đến lúc 2 giờ
  * sáng, người duyệt đang ở nhà và chỉ có cái điện thoại. Duyệt không được trên điện thoại thì

@@ -19,17 +19,17 @@ import { renderWithI18n, screen, userEvent } from '@/test/test-utils';
  * hai, và sáu bài E2E đang hỏi "câu lỗi trên màn đăng nhập nói gì" đỏ vì `getByRole('alert')`
  * trúng hai phần tử. Bài dưới cùng chốt đúng điều đó: KHÔNG có lỗi thì không có `alert` nào.
  */
-function NutBanToast({ tone, chu, nhan }: { tone: 'ok' | 'error'; chu: string; nhan: string }) {
+function ToastFireButton({ tone, text, label }: { tone: 'ok' | 'error'; text: string; label: string }) {
   const toast = useToast();
   // Nhãn nút KHÁC nội dung toast: giống nhau thì `getByText` trúng cả hai và đỏ vì strict mode.
   return (
-    <button type="button" onClick={() => toast({ message: chu, tone })}>
-      {nhan}
+    <button type="button" onClick={() => toast({ message: text, tone })}>
+      {label}
     </button>
   );
 }
 
-function vungChua(el: HTMLElement | null): HTMLElement | null {
+function containingRegion(el: HTMLElement | null): HTMLElement | null {
   return el?.closest('.toast-stack') as HTMLElement | null;
 }
 
@@ -37,7 +37,7 @@ describe('Toast — lỗi phải được đọc NGAY', () => {
   it('toast lỗi nằm trong vùng assertive', async () => {
     renderWithI18n(
       <ToastProvider>
-        <NutBanToast tone="error" chu="Lưu hỏng rồi" nhan="bắn lỗi" />
+        <ToastFireButton tone="error" text="Lưu hỏng rồi" label="bắn lỗi" />
       </ToastProvider>,
     );
     await userEvent.click(screen.getByRole('button', { name: 'bắn lỗi' }));
@@ -53,12 +53,12 @@ describe('Toast — lỗi phải được đọc NGAY', () => {
   it('toast bình thường vẫn ở vùng polite — đừng cắt ngang vì một câu "Đã lưu"', async () => {
     renderWithI18n(
       <ToastProvider>
-        <NutBanToast tone="ok" chu="Đã lưu hồ sơ" nhan="bắn ok" />
+        <ToastFireButton tone="ok" text="Đã lưu hồ sơ" label="bắn ok" />
       </ToastProvider>,
     );
     await userEvent.click(screen.getByRole('button', { name: 'bắn ok' }));
 
-    expect(vungChua(screen.getByText('Đã lưu hồ sơ'))?.getAttribute('aria-live')).toBe('polite');
+    expect(containingRegion(screen.getByText('Đã lưu hồ sơ'))?.getAttribute('aria-live')).toBe('polite');
     expect(
       screen.queryByRole('alert'),
       'toast thường mà mang vai alert thì mỗi lần lưu xong lại cắt ngang thứ đang nghe',
@@ -68,8 +68,8 @@ describe('Toast — lỗi phải được đọc NGAY', () => {
   it('hai loại cùng lúc thì mỗi cái về đúng vùng của nó', async () => {
     renderWithI18n(
       <ToastProvider>
-        <NutBanToast tone="ok" chu="Đã lưu hồ sơ" nhan="bắn ok" />
-        <NutBanToast tone="error" chu="Lưu hỏng rồi" nhan="bắn lỗi" />
+        <ToastFireButton tone="ok" text="Đã lưu hồ sơ" label="bắn ok" />
+        <ToastFireButton tone="error" text="Lưu hỏng rồi" label="bắn lỗi" />
       </ToastProvider>,
     );
     await userEvent.click(screen.getByRole('button', { name: 'bắn ok' }));
@@ -83,7 +83,7 @@ describe('Toast — lỗi phải được đọc NGAY', () => {
   it('không có lỗi thì KHÔNG có alert nào tồn tại trên trang', () => {
     renderWithI18n(
       <ToastProvider>
-        <NutBanToast tone="ok" chu="Đã lưu hồ sơ" nhan="bắn ok" />
+        <ToastFireButton tone="ok" text="Đã lưu hồ sơ" label="bắn ok" />
       </ToastProvider>,
     );
     expect(
@@ -93,7 +93,7 @@ describe('Toast — lỗi phải được đọc NGAY', () => {
   });
 });
 
-function NutCoHanhDong({ onOpen }: { onOpen: () => void }) {
+function ActionToastButton({ onOpen }: { onOpen: () => void }) {
   const toast = useToast();
   return (
     <button
@@ -110,7 +110,7 @@ describe('Toast — nút bước kế tiếp', () => {
     let opened = 0;
     renderWithI18n(
       <ToastProvider>
-        <NutCoHanhDong onOpen={() => (opened += 1)} />
+        <ActionToastButton onOpen={() => (opened += 1)} />
       </ToastProvider>,
     );
     await userEvent.click(screen.getByRole('button', { name: 'thêm' }));

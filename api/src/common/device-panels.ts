@@ -1,5 +1,5 @@
 /**
- * AD-2 + AC story 2.5: trang chi tiết thiết bị có "khu mở rộng" — IP, license, secret,
+ * AD-2: trang chi tiết thiết bị có "khu mở rộng" — IP, license, secret,
  * phiếu ISO… — mà module `devices` KHÔNG được biết gì về các module đó.
  *
  * Cách làm: module chủ (ipam, software, vault, sheets) tự đăng ký một provider vào token
@@ -10,7 +10,7 @@
  * Kiểu đó phá đồ thị phụ thuộc và mỗi epic mới lại phải sửa vào devices.
  */
 
-export interface DevicePanelItem {
+interface DevicePanelItem {
   label: string;
   value: string;
   /** Đường dẫn UI để bấm sang hồ sơ gốc (vd `/dia-chi-ip/abc`). */
@@ -29,11 +29,11 @@ export interface DevicePanel {
 }
 
 /**
- * AI ĐANG HỎI — thêm 17/09/2026, và đây là một lỗ rò thật đã bịt chứ không phải dọn dẹp.
+ * AI ĐANG HỎI — đây là hàng rào bảo mật, không phải dọn dẹp.
  *
- * `GET /devices/:id/panels` mở cho cả vai `member`, nhưng bản trước chỉ truyền `deviceId` cho
- * provider. Provider vì thế KHÔNG CÓ CÁCH NÀO kiểm quyền — hàng rào không bị quên ở một dòng,
- * nó không có chỗ để đứng. Hệ quả: khu "Két sắt" trả nhãn ngăn + tên đăng nhập của mọi secret
+ * `GET /devices/:id/panels` mở cho cả vai `member`. Chỉ truyền `deviceId` cho provider thì
+ * provider KHÔNG CÓ CÁCH NÀO kiểm quyền — hàng rào không bị quên ở một dòng, nó không có chỗ
+ * để đứng. Hệ quả: khu "Két sắt" trả nhãn ngăn + tên đăng nhập của mọi secret
  * trên máy cho một Member mà ma trận quyền đã từ chối, trong khi `GET /vault/secrets` của
  * chính người đó trả 403. Cùng một dữ liệu, một cửa đóng, một cửa mở — và đường mở không ghi
  * một dòng audit nào.
@@ -58,5 +58,3 @@ export interface DevicePanelProvider {
    */
   buildFor(deviceId: string, viewer: PanelViewer): Promise<DevicePanel | null>;
 }
-
-export const DEVICE_PANEL_PROVIDERS = 'DEVICE_PANEL_PROVIDERS';

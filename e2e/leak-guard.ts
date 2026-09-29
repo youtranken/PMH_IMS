@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
  *
  *   · 09/09 — `subnet`/`software`: 27 dải và 11 hồ sơ phần mềm tích lại vì hai spec đặt tên
  *     thiếu chữ "E2E"; 8 bài đỏ trông y như một hồi quy của API.
- *   · 11/09 — `users`: `leo-thang-quyen.spec.ts` tạo tài khoản tên `sau-ma-…`, `nan-nhan-…`,
+ *   · 11/09 — `users`: `privilege-escalation.spec.ts` tạo tài khoản tên `sau-ma-…`, `nan-nhan-…`,
  *     `tam-…`. Hai ngày sau bảng có 31 hàng, và bài "SA tạo tài khoản mới" đỏ vì hàng vừa tạo
  *     bị đẩy khỏi TRANG 1 (danh sách sắp theo tên, `limit=20`). Lỗi báo "không thấy email" —
  *     không một chữ nào về phân trang, và tuyệt nhiên không nhắc tới file spec gây ra.
@@ -174,6 +174,10 @@ function survivorsSince(since: string): { table: string; column: string }[] {
     .join(', ');
 
   /*
+   * Ngăn con của bảng chia ngăn (audit_log_2026…) được xét qua bảng MẸ: hỏi bảng mẹ đã gồm mọi
+   * ngăn, còn hỏi riêng ngăn thì lách được luật MAY_GROW của bảng mẹ. Không viết chú thích `--`
+   * trong câu SQL: `psql` nhận câu đã gộp một dòng, `--` nuốt luôn phần còn lại.
+   *
    * Cột để in: ưu tiên thứ NGƯỜI ĐỌC nhận ra ngay. `id` là phương án cuối — một dòng uuid
    * không nói được spec nào đã tạo ra nó, mà đó mới là thứ người đọc cần.
    */
@@ -188,6 +192,8 @@ function survivorsSince(since: string): { table: string; column: string }[] {
         AND c.table_name IN (SELECT table_name FROM information_schema.columns
                               WHERE table_schema = 'public' AND column_name = 'created_at')
         AND c.table_name NOT IN (${skipped})
+        AND NOT EXISTS (SELECT 1 FROM pg_inherits i JOIN pg_class ch ON ch.oid = i.inhrelid
+                         WHERE ch.relname = c.table_name)
       GROUP BY c.table_name
       ORDER BY c.table_name`,
   );

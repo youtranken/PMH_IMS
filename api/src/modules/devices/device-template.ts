@@ -2,14 +2,14 @@ import type { ExportSheet } from '../../common/excel/excel-export.service';
 import type { DeviceListItem, DeviceStatus } from './devices.types';
 
 /**
- * File mẫu / file export THIẾT BỊ (story 2.6, FR-001 + FR-028).
+ * File mẫu / file export THIẾT BỊ (FR-001 + FR-028).
  *
  * ĐỊNH NGHĨA DUY NHẤT của bộ cột: nút "Tải file mẫu", nút "Xuất Excel" và bản nằm trong
  * `docs/mau-du-lieu/` đều sinh từ đây. Nhờ vậy vòng XUẤT → SỬA → NHẬP LẠI khép kín:
  * file xuất ra luôn nhập lại được, không phải sửa cột bằng tay.
  */
 
-export const DEVICE_EXAMPLE_MARK = 'VÍ DỤ';
+const DEVICE_EXAMPLE_MARK = 'VÍ DỤ';
 
 /** Nhãn trạng thái ghi ra file — bộ đọc nhận lại đúng các nhãn này. */
 const STATUS_LABEL: Record<DeviceStatus, string> = {

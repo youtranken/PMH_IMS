@@ -5,9 +5,9 @@ import { Link } from 'react-router-dom';
 /**
  * Đầu MỌI trang chi tiết (AD-15): breadcrumb → mã + tên → dòng định danh → nút thao tác.
  *
- * Vì sao thay `PageHeader` ở riêng mấy trang này: trang chi tiết trước đây xếp BỐN tầng điều
- * hướng trước khi tới nội dung — sidebar, topbar, hàng nút có "Về danh sách", rồi thanh tab.
- * Không breadcrumb nào nói đang đứng ở đâu, mà lại có hai đường quay ra.
+ * Vì sao thay `PageHeader` ở riêng mấy trang này: với `PageHeader`, trang chi tiết xếp BỐN tầng
+ * điều hướng trước khi tới nội dung — sidebar, topbar, hàng nút có "Về danh sách", rồi thanh
+ * tab. Không breadcrumb nào nói đang đứng ở đâu, mà lại có hai đường quay ra.
  *
  * Breadcrumb gánh luôn việc của nút "Về danh sách" và nói thêm được bối cảnh ("Thiết bị ›
  * Switch › SW-CORE-01"), nên bốn tầng rút còn ba.
@@ -27,7 +27,7 @@ export function DetailHeader({
 }: {
   crumbs: Crumb[];
   /**
-   * Mã hồ sơ — hiện cỡ lớn, dạng `mono`. KHÔNG kèm nút chép (bỏ 28/08/2026).
+   * Mã hồ sơ — hiện cỡ lớn, dạng `mono`. KHÔNG kèm nút chép.
    *
    * Mã đang là TIÊU ĐỀ của trang, và tiêu đề thì người ta bôi đen chép như mọi chữ khác. Cái
    * nút nhỏ nhét giữa mã và tên làm hàng tiêu đề gãy làm ba mảnh mà đổi lại gần như không ai
@@ -44,8 +44,8 @@ export function DetailHeader({
     <header className="detail-head">
       {/*
         Mục ĐẦU TIÊN vừa là breadcrumb vừa là đường QUAY LẠI, và nó phải trông ra một cái nút.
-        Bản trước để cả hàng cùng một màu xám nhạt: người dùng nhìn không ra chỗ nào bấm được
-        và báo là "mất nút quay về danh sách" — đúng, vì một cái link không trông giống link
+        Để cả hàng cùng một màu xám nhạt thì người dùng nhìn không ra chỗ nào bấm được và báo
+        là "mất nút quay về danh sách" — đúng, vì một cái link không trông giống link
         thì nó không tồn tại.
       */}
       <nav className="crumbs" aria-label="breadcrumb">
@@ -87,61 +87,6 @@ export function DetailHeader({
 }
 
 /**
- * Dải chỉ số đầu trang — bốn thứ cần biết trong hai giây khi đang đứng xử lý sự cố.
- *
- * Mỗi trang chọn bốn chỉ số RIÊNG của mình: thiết bị là trạng thái/bảo hành/vị trí/người dùng,
- * đường truyền là hotline/trạng thái/hợp đồng/cước, phần mềm là hạn/ghế/chi phí/phụ trách.
- *
- * Thứ đã nằm ở đây thì BỎ khỏi lưới thông tin bên dưới. Bản trước lặp cả hai chỗ: badge trạng
- * thái và badge hạn xuất hiện ở dải tóm tắt rồi lặp y hệt trong lưới cách đó 40px.
- */
-export function StatGrid({ children }: { children: ReactNode }) {
-  return <div className="stat-grid">{children}</div>;
-}
-
-export function Stat({
-  label,
-  children,
-  note,
-}: {
-  label: string;
-  children: ReactNode;
-  note?: ReactNode;
-}) {
-  return (
-    <div className="stat">
-      <span className="stat-k">{label}</span>
-      <span className="stat-v">{children}</span>
-      {note ? <span className="stat-note">{note}</span> : null}
-    </div>
-  );
-}
-
-/**
- * Chỉ vẽ thẻ khi CÓ nội dung — thẻ "NHÀ CUNG CẤP: — / —" là một ô chết chiếm đúng chỗ của
- * một chỉ số có ích, và dải chỉ số chỉ có bốn chỗ.
- *
- * Khác `orDash` ở lưới bên dưới: dưới đó một ô rỗng vẫn nói lên điều gì đó ("trường này tồn
- * tại, chưa ai khai"), còn trên dải chỉ số thì nó chỉ tốn chỗ.
- */
-export function StatIfSet({
-  label,
-  value,
-  note,
-}: {
-  label: string;
-  value: string | null | undefined;
-  note?: ReactNode;
-}) {
-  if (!value) return null;
-  return (
-    <Stat label={label} note={note}>
-      {value}
-    </Stat>
-  );
-}
-
-/**
  * Một dòng gom mọi ô CHƯA KHAI, thay cho một dãy hộp chỉ chứa dấu gạch ngang.
  *
  * Hồ sơ khai sơ sài thì lưới cũ hiện 8/13 ô là dấu `—`, và cả trang trông như dữ liệu hỏng —
@@ -157,12 +102,10 @@ export function BlankFields({ labels }: { labels: string[] }) {
 /**
  * Một ô của lưới `data-grid`, và CHỈ vẽ khi có giá trị.
  *
- * Sinh ra 16/09/2026 vì bản cũ làm cả hai việc cùng lúc: lưới vẽ ô `Model: —`, rồi ngay dưới
- * `BlankFields` lại viết "Chưa khai: Model…". Hai lần cho một sự thật, mà lần đầu trông như
- * dữ liệu hỏng chứ không phải việc còn thiếu. Chú thích của `BlankFields` nói đúng ý định —
- * gom ô trống về một dòng — nhưng không ai gỡ mấy cái ô trống đi, nên nó thành CỘNG THÊM.
+ * Vẽ cả ô `Model: —` trong lưới lẫn "Chưa khai: Model…" của `BlankFields` ngay dưới là hai
+ * lần cho một sự thật, mà lần đầu trông như dữ liệu hỏng chứ không phải việc còn thiếu.
  *
- * Từ nay: có giá trị thì vào lưới, không có thì vào một dòng duy nhất bên dưới.
+ * Luật: có giá trị thì vào lưới, không có thì vào một dòng duy nhất bên dưới.
  */
 export function DataItemIfSet({
   label,

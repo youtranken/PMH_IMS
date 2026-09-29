@@ -5,9 +5,8 @@ import { AsyncLocalStorage } from 'node:async_hooks';
  *
  * ===== VÌ SAO CÓ FILE NÀY =====
  *
- * `audit_log.ip` NULL trên 100% số dòng suốt 9 epic (rà soát 07/09, #3). Cột có sẵn trong
- * migration `0004_audit_log.sql:8` từ ngày đầu; thứ thiếu là đường đưa IP từ `req` xuống tới
- * `AuditWriterService`.
+ * Không có nó thì `audit_log.ip` NULL trên 100% số dòng. Cột có sẵn trong migration
+ * `0004_audit_log.sql`; thứ cần là đường đưa IP từ `req` xuống tới `AuditWriterService`.
  *
  * Cách hiển nhiên là thêm tham số `ip` vào chữ ký: `reveal(actor, id, ip)`,
  * `openForDownload(id, actor, ip)`, `killSession(actor, sessionId, ip)`… — khoảng 15 chữ ký và

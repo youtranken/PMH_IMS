@@ -21,10 +21,11 @@ import {
   IsString,
   IsUUID,
   Length,
-  Matches,
   Min,
+  Validate,
   ValidateIf,
 } from 'class-validator';
+import { RealDate, RealDateOrEmpty } from '../../common/real-date';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
 import { Audited } from '../audit/audited.decorator';
@@ -56,9 +57,6 @@ import { SystemConfigService } from '../config-sys/system-config.service';
 import { assignmentExportSheet } from './license-assignments-export';
 import { NoStepUp } from '../auth/step-up.decorator';
 
-/** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
-const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
-
 /** Lọc mã máy rác khỏi danh sách `?deviceIds=` trước khi đưa xuống truy vấn. */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -80,10 +78,10 @@ export class SoftwareBodyDto {
   @IsOptional() @ValidateIf((_o, value) => value !== null) @Min(1) @IsInt()
   seatTotal?: number | null;
 
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày bắt đầu phải dạng YYYY-MM-DD.' })
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày bắt đầu phải là ngày có thật, dạng YYYY-MM-DD.' })
   startDate?: string;
 
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày hết hạn phải dạng YYYY-MM-DD.' })
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày hết hạn phải là ngày có thật, dạng YYYY-MM-DD.' })
   endDate?: string;
 
   @IsOptional() @IsString() @Length(0, 2000) note?: string;
@@ -98,7 +96,7 @@ export class SoftwareBodyDto {
 }
 
 class RenewDto {
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Hạn mới phải dạng YYYY-MM-DD.' })
+  @Validate(RealDate, { message: 'Hạn mới phải là ngày có thật, dạng YYYY-MM-DD.' })
   endDate!: string;
 
   /** SW-049: kéo luôn các ghế có kỳ hạn riêng kết thúc trước hạn mới. */
@@ -130,10 +128,10 @@ class AssignmentTermsDto {
 
   @IsOptional() @IsString() @Length(0, 200) contract?: string;
 
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày bắt đầu của ghế phải dạng YYYY-MM-DD.' })
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày bắt đầu của ghế phải là ngày có thật, dạng YYYY-MM-DD.' })
   startDate?: string;
 
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày kết thúc của ghế phải dạng YYYY-MM-DD.' })
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày kết thúc của ghế phải là ngày có thật, dạng YYYY-MM-DD.' })
   endDate?: string;
 
   @IsOptional() @IsString() @Length(0, 500) note?: string;
@@ -171,10 +169,10 @@ class IdParamDto {
 }
 
 /**
- * Hồ sơ phần mềm (story 3.1, FR-008/FR-009).
+ * Hồ sơ phần mềm (FR-008/FR-009).
  *
  * Quyền: giống kho thiết bị — cả team IT đọc và ghi được, vì đây là việc hằng ngày.
- * Thứ cần siết là KÉT SẮT (Epic 4): key/mật khẩu KHÔNG nằm trong module này.
+ * Thứ cần siết là KÉT SẮT: key/mật khẩu KHÔNG nằm trong module này.
  */
 @NoStepUp()
 @Controller('api/v1/software')
@@ -260,7 +258,7 @@ export class SoftwareController {
    * Khai báo TRƯỚC `@Get(':id')` — Nest khớp route theo thứ tự, để sau thì `export.xlsx` bị
    * `:id` nuốt mất và trả về 400 vì không phải uuid.
    *
-   * Cột KHÔNG có chỗ nào cho key/mật khẩu: hồ sơ phần mềm không giữ chúng (Epic 3), và két
+   * Cột KHÔNG có chỗ nào cho key/mật khẩu: hồ sơ phần mềm không giữ chúng, và két
    * sắt thì tuyệt đối không có đường xuất (FR-026).
    */
   @Roles('sa', 'admin', 'member')
@@ -284,7 +282,7 @@ export class SoftwareController {
      *
      * Cắt ở 5000 dòng thì người dùng nhận một file TRÔNG NHƯ đầy đủ mà thiếu phần đuôi, và
      * không có gì báo. `SoftwareService.listAll` đã có sẵn và ghi rõ trong doc là "chỉ dùng
-     * cho export xlsx (FR-028)" — tôi đã không đọc trước khi viết (code review Epic 7).
+     * cho export xlsx (FR-028)".
      */
     const rows = await this.software.listAll(
       await this.filterOf(query),
@@ -395,7 +393,7 @@ export class SoftwareController {
     return this.software.renewals(params.id);
   }
 
-  // ───────────── Gán license vào máy (story 3.2, FR-011) ─────────────
+  // ───────────── Gán license vào máy (FR-011) ─────────────
 
   /**
    * Máy ĐANG dùng license này ra Excel, kèm dòng tổng chi phí — file nộp kiểm toán (SW-057).

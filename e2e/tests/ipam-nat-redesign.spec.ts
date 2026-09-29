@@ -7,12 +7,12 @@ import {
   resetIpam,
   resetUsers,
   rowAction,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   uniqueStamp,
 } from './helpers';
 
 /**
- * Đợt 3 UI: màn Địa chỉ IP cắt trang 50 dòng + cột dải cuộn riêng, và sổ NAT nhận nhiều
+ * Màn Địa chỉ IP cắt trang 50 dòng + cột dải cuộn riêng, và sổ NAT nhận nhiều
  * khoảng port trong một lần khai (mỗi khoảng ra một dòng).
  */
 test.beforeEach(() => {
@@ -61,7 +61,7 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
     await page.goto(`/ip-addresses/${id}`);
     await expect(page.getByRole('heading', { name: new RegExp(cidr) })).toBeVisible();
 
-    // 254 host / 50 = 6 trang. Trước đây đổ hết 254 dòng ra một lượt.
+    // 254 host / 50 = 6 trang, không đổ hết 254 dòng ra một lượt.
     await expect(page.getByRole('button', { name: 'Cấp IP', exact: true })).toHaveCount(50);
     await expect(page.getByText('1–50 trên 254 dòng')).toBeVisible();
     await expect(page.getByText('Trang 1/6')).toBeVisible();
@@ -97,16 +97,16 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
     expect(created.status()).toBe(201);
 
     await page.goto(`/ip-addresses/${id}`);
-    // Nhãn nút mang luôn con số: "Đang dùng 1", "Trống 253" — đọc được bằng một cái liếc.
-    const assigned = page.getByRole('button', { name: 'Đang dùng 1' });
+    // Nhãn lựa chọn mang luôn con số: "Đang dùng 1", "Trống 253" — đọc được bằng một cái liếc.
+    const assigned = page.getByRole('radio', { name: 'Đang dùng 1' });
     await expect(assigned).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Trống 253' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Tất cả 254' })).toBeVisible();
+    await expect(page.getByRole('radio', { name: 'Trống 253' })).toBeVisible();
+    await expect(page.getByRole('radio', { name: 'Tất cả 254' })).toBeVisible();
 
     // Bấm lọc "Đang dùng": còn đúng 1 dòng và TỰ VỀ TRANG 1 — giữ nguyên trang cũ là bảng rỗng.
     await page.getByRole('button', { name: 'Trang sau' }).click();
     await expect(page.getByText('Trang 2/6')).toBeVisible();
-    await assigned.click();
+    await assigned.check();
     await expect(page.getByText(`10.${octet}.8.120`, { exact: true })).toBeVisible();
     await expect(page.getByText('1–1 trên 1 dòng')).toBeVisible();
   });
@@ -290,7 +290,7 @@ test.describe('Sổ NAT — nhiều khoảng port trong một lần khai', () =>
     expect(created.status()).toBe(201);
 
     await page.goto('/nat');
-    /* KHÔNG dùng `timVaChoLoc` ở đây: màn `/nat` chưa chuyển sang `useListUrlState` nên
+    /* KHÔNG dùng `searchAndWaitForFilter` ở đây: màn `/nat` chưa chuyển sang `useListUrlState` nên
        không có `q=` trên thanh địa chỉ để mà chờ — và vì thế cũng chưa có debounce 250ms
        để mà đua. Ngày nào màn này lên URL thì đổi luôn dòng dưới. */
     await page.getByRole('searchbox', { name: /Tìm/ }).fill(`SSH tạm ${stamp}`);
@@ -380,8 +380,7 @@ test.describe('Sổ NAT — lưu hỏng một phần', () => {
 
 test.describe('Sổ NAT — máy đích được NAT', () => {
   /**
-   * Lỗ hổng lớn nhất của cuốn sổ trước đây: nó ghi "dẫn tới 172.16.10.5" mà không nói
-   * 172.16.10.5 là MÁY NÀO. Ba thứ trong form là ba câu khác nhau và không trùng nhau:
+   * Sổ NAT không được chỉ ghi "dẫn tới 172.16.10.5" mà không nói 172.16.10.5 là MÁY NÀO. Ba thứ trong form là ba câu khác nhau và không trùng nhau:
    * Router = con THỰC HIỆN NAT · Máy đích = con ĐƯỢC NAT · Mở cho ai = NGƯỜI hưởng dịch vụ.
    */
   test('chọn máy đích thì ô IP chỉ còn IP của chính máy đó, và sổ hiện tên máy', async ({
@@ -523,7 +522,7 @@ test.describe('Popup Sửa có chỗ quản lý giấy tờ', () => {
     expect(created.status()).toBe(201);
 
     await page.goto('/devices');
-    await timVaChoLoc(page, code);
+    await searchAndWaitForFilter(page, code);
     await page.getByRole('button', { name: `Sửa máy ${code}` }).click();
 
     const form = page.getByRole('dialog');
@@ -536,9 +535,8 @@ test.describe('Popup Sửa có chỗ quản lý giấy tờ', () => {
  * Lịch sử nghiệp vụ của sổ NAT (0037) + giấy tờ đính kèm cho rule và cho dải.
  *
  * Vì sao đáng có một bài riêng: "ai mở port 3389 ra internet, ngày nào, vì sao, ai gỡ" là câu
- * auditor hỏi nhiều nhất về sổ NAT, và trước 0037 nó chỉ tra được bằng SQL trên `audit_log`.
- * `ip_address` ngay bên cạnh thì đã có `ip_history` từ Epic 5 — nên đây là chỗ bị bỏ sót chứ
- * không phải một quyết định kiến trúc.
+ * auditor hỏi nhiều nhất về sổ NAT; không có lịch sử nghiệp vụ thì nó chỉ tra được bằng SQL
+ * trên `audit_log`. `ip_address` ngay bên cạnh cũng có `ip_history` cùng lý do.
  */
 test.describe('Sổ NAT — lịch sử và giấy tờ', () => {
   test('mở rule → sửa → gỡ đều để lại dòng lịch sử nói rõ đổi gì', async ({ page }) => {
@@ -637,9 +635,8 @@ test.describe('Sổ NAT — lịch sử và giấy tờ', () => {
     const subnetId = ((await subnet.json()) as { id: string }).id;
 
     /*
-     * Gọi thẳng API vì `FILE_OWNER_TYPES` là whitelist — trước 28/08 hai loại này không có
-     * trong đó và mọi lượt tải lên trả 400. Sơ đồ mạng và ảnh chụp cấu hình Draytek vì thế
-     * nằm trong thư mục chia sẻ của phòng IT chứ không trong IMS.
+     * Gọi thẳng API vì `FILE_OWNER_TYPES` là whitelist — thiếu hai loại này là mọi lượt tải
+     * lên trả 400, và sơ đồ mạng, ảnh chụp cấu hình Draytek lại nằm ngoài IMS.
      */
     for (const [ownerType, ownerId] of [
       ['nat_rule', ruleId],

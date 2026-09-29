@@ -9,6 +9,7 @@ import { errorMessage, useApiMutation } from '@/lib/api';
 import { orDash } from '@/lib/format';
 import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
+import { CellNote } from '@/ui/cell-note';
 import { DataTable, type MobileCard } from '@/ui/data-table';
 import { sortQuery } from '@/lib/sort-query';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
@@ -91,18 +92,13 @@ function entityOf(tab: string): CatalogEntity {
 }
 
 /**
- * Ô chữ dài (địa chỉ · mô tả · cung cấp gì) — rút đúng MỘT dòng, đủ câu thì rê chuột.
+ * Ô chữ dài (địa chỉ · mô tả · cung cấp gì) — rút đúng MỘT dòng, bị cắt thì bấm để mở đủ câu.
  *
  * Bảy tab dùng chung một khung bảng, và cột chữ tự do là thứ duy nhất không có trần: một mô tả
  * ba dòng kéo cao cả hàng và bóp mọi cột còn lại. Ở ≤960px bảng gập thẻ dọc nên nó tự nhả ra.
  */
 function note(value: string | null | undefined) {
-  const text = orDash(value);
-  return (
-    <span className="cell-note" title={value ?? undefined}>
-      {text}
-    </span>
-  );
+  return <CellNote text={orDash(value)} />;
 }
 
 /** Số điện thoại bấm gọi được — cùng cách với hotline nhà mạng, hai tab cùng một khái niệm. */
@@ -393,7 +389,7 @@ function usageSummary(entity: CatalogEntity, row: CatalogRow, t: TFunction): str
 }
 
 /**
- * Quản trị danh mục (story 2.1, FR-004).
+ * Quản trị danh mục (FR-004).
  * Q-12: mọi vai thêm và sửa được; ngừng dùng, xóa và nhập Excel chỉ SA/Admin. Chốt quyền thật
  * nằm ở `@Roles` phía API, đây chỉ là ẩn cho đỡ rối (AD-9).
  */

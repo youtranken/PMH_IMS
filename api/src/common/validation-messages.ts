@@ -5,7 +5,7 @@ import type { ValidationError } from '@nestjs/common';
  *
  * ===== LỖ =====
  *
- * Đo ngày 12/09: 434 validator trong `*.controller.ts`, chỉ 80 cái khai `message`. Tức ~354
+ * Đo được: 434 validator trong `*.controller.ts`, chỉ 80 cái khai `message`. Tức ~354
  * validator CÂM, và câu lọt ra màn hình là câu mặc định của class-validator:
  *
  *     internalPort must not be greater than 65535
@@ -48,6 +48,7 @@ export const FIELD_LABEL: Record<string, string> = {
   code: 'Mã hồ sơ',
   columns: 'Danh sách cột',
   cost: 'Chi phí',
+  currentPassword: 'Mật khẩu hiện tại',
   csrfToken: 'Mã chống giả mạo (CSRF)',
   dateStyle: 'Kiểu hiển thị ngày',
   description: 'Mô tả',
@@ -85,6 +86,7 @@ export const FIELD_LABEL: Record<string, string> = {
   message: 'Nội dung',
   mustChangePassword: 'Bắt buộc đổi mật khẩu',
   name: 'Tên',
+  newPassword: 'Mật khẩu mới',
   note: 'Ghi chú',
   objectId: 'Mã đối tượng',
   objectType: 'Loại đối tượng',
@@ -117,9 +119,11 @@ export const FIELD_LABEL: Record<string, string> = {
   state: 'Trạng thái',
   status: 'Trạng thái',
   subnetId: 'Dải mạng',
+  ticket: 'Vé cài lại xác thực 2 lớp',
   tier: 'Tầng quyền',
   timeStyle: 'Kiểu hiển thị giờ',
   to: 'Đến',
+  token: 'Mã xác thực 2 lớp',
   totpLoginRequired: 'Bắt buộc 2 lớp mỗi lần đăng nhập',
   uploadedBy: 'Người tải lên',
   usable: 'Chỉ IP dùng được',
@@ -137,7 +141,7 @@ export const FIELD_LABEL: Record<string, string> = {
   withinDays: 'Trong vòng (ngày)',
 };
 
-export function fieldLabel(property: string): string {
+function fieldLabel(property: string): string {
   /*
    * Rơi về CHÍNH tên trường khi chưa có nhãn — chứ không về một chữ chung chung như "Trường
    * này". Tên thô đọc xấu, nhưng nó nói cho người dùng biết phải sửa Ở ĐÂU; "Trường này sai"

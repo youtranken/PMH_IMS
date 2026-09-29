@@ -101,7 +101,7 @@ export function ServiceAccountDetail({ me }: { me: Me }) {
   }
 
   // Mất mạng ⇒ `fetchStatus:'paused'` ⇒ `isLoading` false, `isError` false, `data` undefined:
-  // hai nhánh trên đều trượt. Xem chú thích đầy đủ ở `devices/device-detail.tsx` (lỗi F-02).
+  // hai nhánh trên đều trượt. Xem chú thích đầy đủ ở `devices/device-detail.tsx`.
   if (!account.data) return <Loading />;
   const item = account.data;
   const vpn = supportsVpnFields(item.kind);

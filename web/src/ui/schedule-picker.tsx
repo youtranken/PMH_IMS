@@ -2,7 +2,7 @@ import { useTranslation } from 'react-i18next';
 import i18n from '@/lib/i18n';
 import { Select } from '@/ui/select';
 
-export type ScheduleFrequency = 'daily' | 'weekly' | 'monthly';
+type ScheduleFrequency = 'daily' | 'weekly' | 'monthly';
 
 export interface ScheduleValue {
   frequency: ScheduleFrequency;

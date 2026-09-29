@@ -6,12 +6,6 @@ import type { Database } from '../../database/database.module';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { SweepService } from '../queue/sweep.service';
 
-export interface OutboxEvent {
-  id: string;
-  topic: string;
-  payload: Record<string, unknown>;
-}
-
 /** Dữ liệu consumer cần để quyết baseline + gửi (5.1) — payload chỉ ref, tự đọc lại từ DB. */
 export interface OutboxConsumerRow {
   payload: Record<string, unknown>;
@@ -26,18 +20,6 @@ export interface FailedNotification {
   lastError: string | null;
   lastFailedAt: Date | null;
 }
-
-/**
- * Trần re-drive (review P0 3.2): mỗi chu kỳ relay cạn retry tăng fail_count +1. Chạm trần →
- * relay NGỪNG chọn lại row (row vẫn `processed_at IS NULL`, còn hiện ở listFailed cho SA); chỉ
- * requeue tay (reset fail_count=0) mới hồi sinh. Chặn poison message re-drive vô hạn mỗi 5'.
- */
-/*
- * OPS-11: lease tăng gấp đôi sau mỗi lần hỏng (5, 10, 20, 40, 80 rồi giữ 160 phút), nên 14 lần hỏng
- * ≈ 24 giờ thử lại. SMTP chết vài giờ (Google bảo trì, mất Internet) không còn làm thư rơi vào
- * trạng thái bỏ sau ~50 phút như khi lease cố định 5 phút và trần 10 lần.
- */
-const MAX_RELAY_ATTEMPTS = 14;
 
 @Injectable()
 export class OutboxService implements OnModuleInit {
@@ -61,8 +43,8 @@ export class OutboxService implements OnModuleInit {
    *
    * ===== VÌ SAO BẢNG NÀY CẦN RETENTION =====
    *
-   * Đo trên DB dev 21/09: 69.583 hàng, 100% đã xử lý, và không có đường dọn nào — nó chỉ có
-   * một chiều. Trong đó 109 hàng `security.probe.alert` mang `who: <email>`.
+   * Không có đường dọn thì bảng chỉ có một chiều: đo trên DB dev được 69.583 hàng, 100% đã
+   * xử lý, trong đó 109 hàng `security.probe.alert` mang `who: <email>`.
    *
    * Email trong payload là NGOẠI LỆ CÓ TÊN, khai sẵn cạnh luật "payload không PII"
    * (AD-11/NFR-04) — không phải vi phạm, và không đụng tới ở đây. Nhưng ngoại lệ ấy được cấp
@@ -92,13 +74,13 @@ export class OutboxService implements OnModuleInit {
    * Ghi sự kiện nghiệp vụ vào outbox TRONG transaction nghiệp vụ (AD-11) — enqueue
    * sang BullMQ tách rời (relay). Payload CHỈ id tham chiếu, KHÔNG PII.
    *
-   * Lý do luật: bảng `outbox` KHÔNG có retention. Mọi hàng nằm lại vĩnh viễn và đi vào mọi
-   * bản `pg_dump` đêm, nên thứ gì rơi vào đây là tự nhân bản ra nhiều nơi.
+   * Lý do luật: hàng outbox nằm lại tới hết hạn giữ (`purgeProcessed`) và đi vào mọi bản
+   * `pg_dump` đêm trong suốt thời gian đó, nên thứ gì rơi vào đây là tự nhân bản ra nhiều nơi.
    *
-   * ===== NGOẠI LỆ DUY NHẤT, CÓ TÊN: `security.probe.alert` (18/09/2026) =====
+   * ===== NGOẠI LỆ DUY NHẤT, CÓ TÊN: `security.probe.alert` =====
    *
    * Topic ấy mang `who: <email>` chứ không mang id, và đó là lựa chọn có cân nhắc chứ không
-   * phải sơ sót — rà soát 18/09 bắt đúng chỗ này rồi quyết giữ:
+   * phải sơ sót:
    *
    *   · Email KHÔNG phải PII lạc chỗ ở đây, nó LÀ nội dung của cảnh báo. Lá thư báo "có người
    *     đang dò quanh két" mà không nói được ai thì báo để làm gì.
@@ -123,7 +105,7 @@ export class OutboxService implements OnModuleInit {
   /**
    * Relay (F1 + F3): claim event CHƯA XỬ (`processed_at IS NULL`) — không phải "chưa đẩy" —
    * bằng FOR UPDATE SKIP LOCKED (2 relay không tranh chấp), gán lease `claimed_at=now()`;
-   * lease hết (dài dần theo fail_count, xem MAX_RELAY_ATTEMPTS) thì re-drive (row job cạn retry/DLQ hoặc Redis mất job KHÔNG bị nuốt — AD-11,
+   * lease hết (dài dần theo fail_count, xem `outbox.max_relay_attempts`) thì re-drive (row job cạn retry/DLQ hoặc Redis mất job KHÔNG bị nuốt — AD-11,
    * AD-9 "quét lại được"). Consumer check-and-set `processed_at` khi xử xong → hết re-drive.
    *
    * `queue.add` chạy NGOÀI transaction claim (F3: không giữ FOR UPDATE + connection suốt I/O
@@ -132,6 +114,13 @@ export class OutboxService implements OnModuleInit {
    * mark → job vẫn chạy (jobId còn) hoặc re-drive sau lease. Trả số event đã đẩy.
    */
   async relayBatch(queue: Queue, limit = 100): Promise<number> {
+    /*
+     * Trần re-drive (`outbox.max_relay_attempts`): mỗi chu kỳ relay cạn retry tăng fail_count +1.
+     * Chạm trần → relay NGỪNG chọn lại row (row vẫn `processed_at IS NULL`, còn hiện ở
+     * listFailed cho SA); chỉ requeue tay (reset fail_count=0) mới hồi sinh. Chặn poison message
+     * re-drive vô hạn.
+     */
+    const maxAttempts = await this.config.getNumber('outboxMaxRelayAttempts');
     // 1) Claim + lease trong tx NGẮN (không I/O Redis trong tx).
     const claimed = await this.db.transaction(async (tx) => {
       const rows = await tx.execute<{
@@ -141,7 +130,7 @@ export class OutboxService implements OnModuleInit {
       }>(sql`
         SELECT id, topic, payload FROM outbox
         WHERE processed_at IS NULL
-          AND fail_count < ${MAX_RELAY_ATTEMPTS}
+          AND fail_count < ${maxAttempts}
           AND (
             claimed_at IS NULL
             OR claimed_at < now() - make_interval(mins => (5 * power(2, least(fail_count, 5)))::int)
@@ -172,7 +161,7 @@ export class OutboxService implements OnModuleInit {
   /**
    * Consumer đã xử xong event → check-and-set `processed_at` (idempotent, AD-11 dedup bền):
    * 0 dòng = đã xử trước đó → bỏ qua. Sau khi set, relay KHÔNG re-drive nữa. Trả true nếu
-   * lần này là lần mark thật (để consumer quyết gửi mail / skip khi đã xử — Epic 5).
+   * lần này là lần mark thật (để consumer quyết gửi mail / skip khi đã xử).
    */
   async markProcessed(eventId: string): Promise<boolean> {
     const r = await this.db.execute<{ id: string }>(sql`
@@ -187,7 +176,7 @@ export class OutboxService implements OnModuleInit {
    * Job cạn retry (DLQ) → ghi marker BỀN vào Postgres (F2): tăng fail_count + last_error để
    * dashboard SA đếm "X thông báo gửi lỗi" (AD-9/AD-11 — không chết im lặng). Row vẫn
    * `processed_at IS NULL` nên relay re-drive tiếp (backstop lỗi tạm thời) CHO ĐẾN khi
-   * fail_count chạm MAX_RELAY_ATTEMPTS thì dừng (điểm terminal, review P0 3.2).
+   * fail_count chạm `outbox.max_relay_attempts` thì dừng (điểm terminal, review P0 3.2).
    */
   async markFailed(eventId: string, error: string): Promise<void> {
     await this.db.execute(sql`

@@ -18,7 +18,7 @@ const APP_URL = () => process.env.APP_BASE_URL ?? 'https://ims.pmh.com.vn';
  * KHÔNG rải nodemailer khắp module nghiệp vụ (AD-15).
  */
 /**
- * TOPIC NÀO CÓ MẪU THƯ — danh sách tường minh (B-06, 22/09).
+ * TOPIC NÀO CÓ MẪU THƯ — danh sách tường minh (B-06).
  *
  * `build()` trả `null` cho HAI chuyện khác hẳn nhau:
  *
@@ -27,7 +27,7 @@ const APP_URL = () => process.env.APP_BASE_URL ?? 'https://ims.pmh.com.vn';
  *   2. **Có mẫu, nhưng không còn gì để gửi** — hồ sơ tham chiếu đã xoá, phiếu đã được quyết,
  *      không còn người nhận nào. Đây là chuyện BÌNH THƯỜNG, xảy ra hằng ngày.
  *
- * Bản trước ghi CÙNG MỘT dòng `warn` cho cả hai. Hậu quả: một lỗi thật nằm lẫn giữa hàng trăm
+ * Ghi CÙNG MỘT dòng `warn` cho cả hai thì một lỗi thật nằm lẫn giữa hàng trăm
  * dòng vô hại, nên không ai lọc ra được — và ai đọc log thì quen mắt tới mức thôi đọc.
  *
  * Danh sách này gõ tay và phải khớp các `case` bên dưới. Đổi bên nào cũng phải đổi bên kia —
@@ -83,9 +83,9 @@ export class MailConsumer {
     const built = await this.build(topic, payload, { eventAt: at(row.createdAt), at });
     if (!built) {
       /*
-       * HAI NGUYÊN NHÂN, HAI MỨC LOG (B-06, vá 22/09).
+       * HAI NGUYÊN NHÂN, HAI MỨC LOG (B-06).
        *
-       * Bản trước gộp làm một dòng `warn`. Nhưng "không có mẫu thư cho topic này" là một LỖI
+       * Đừng gộp làm một dòng `warn`: "không có mẫu thư cho topic này" là một LỖI
        * — một sự kiện nghiệp vụ vừa xảy ra và sẽ không ai được báo — còn "hồ sơ tham chiếu đã
        * xoá" là chuyện bình thường, xảy ra hằng ngày. Gộp lại thì lỗi thật nằm lẫn giữa hàng
        * trăm dòng vô hại, và người đọc log quen mắt tới mức thôi đọc.
@@ -321,6 +321,8 @@ export class MailConsumer {
       /* Thời gian nghỉ THẬT của cảnh báo dò két, đọc từ `system_config` lúc đẩy outbox. Tùy
          chọn vì hàng outbox ghi trước 18/09/2026 không có trường này. */
       cooldownMinutes?: number;
+      /** Lá thứ hai trong thời gian nghỉ vì kẻ dò đã vượt hệ số × ngưỡng (OLD-SEC-01). */
+      escalated?: boolean;
     },
     time: { eventAt: string; at: (date: Date) => string },
   ) {
@@ -331,8 +333,8 @@ export class MailConsumer {
       /*
        * LUẬT BỊ XÓA GIỮA LÚC THƯ CÒN TRONG HÀNG ĐỢI → BỎ KỲ, KHÔNG THỬ LẠI VÔ HẠN.
        *
-       * `buildDigest` ném `NotFoundException` khi luật không còn. Bản trước để nó bay thẳng ra
-       * `handle()`, nên job BullMQ hỏng, hết lượt thử lại thì outbox row không bao giờ được
+       * `buildDigest` ném `NotFoundException` khi luật không còn. Để nó bay thẳng ra
+       * `handle()` thì job BullMQ hỏng, hết lượt thử lại thì outbox row không bao giờ được
        * đánh dấu `processed_at` — relay lại tái phát nó sau mỗi lần hết hạn lease, mãi mãi.
        * Trên màn Hàng đợi, huy hiệu "gửi lỗi" sáng vĩnh viễn cho một luật KHÔNG CÒN TỒN TẠI,
        * và không có nút nào tắt được nó. Admin xóa một luật gõ nhầm là đủ để tạo ra chuyện đó.
@@ -421,11 +423,19 @@ export class MailConsumer {
         if (!payload.who) return null;
         const admins = await this.users.recipientsByRole(['sa', 'admin']);
         if (admins.length === 0) return null;
+        const escalated = payload.escalated === true;
+        const hasCooldown = typeof payload.cooldownMinutes === 'number' && payload.cooldownMinutes > 0;
         const { html, text } = renderMail({
-          title: 'Nhiều lượt mở két thất bại',
+          title: escalated ? 'Vẫn tiếp tục dò két' : 'Nhiều lượt mở két thất bại',
           intro:
-            `${payload.who} vừa có ${payload.count ?? 0} lượt thất bại quanh két trong ` +
-            `${payload.windowMinutes ?? 0} phút (bị từ chối quyền mở ngăn hoặc gõ sai mã 6 số). ` +
+            (escalated
+              ? `${payload.who} vẫn tiếp tục thất bại quanh két sau lá cảnh báo trước: ` +
+                `${payload.count ?? 0} lượt trong ${payload.windowMinutes ?? 0} phút. ` +
+                (hasCooldown
+                  ? `Đây là lá leo thang duy nhất trong ${payload.cooldownMinutes} phút nghỉ. `
+                  : 'Đây là lá leo thang duy nhất trong thời gian nghỉ. ')
+              : `${payload.who} vừa có ${payload.count ?? 0} lượt thất bại quanh két trong ` +
+                `${payload.windowMinutes ?? 0} phút (bị từ chối quyền mở ngăn hoặc gõ sai mã 6 số). `) +
             'Mọi lượt đều đã bị chặn; thư này để có người xem lại.',
           rows: [
             { label: 'Tài khoản', value: payload.who },
@@ -439,32 +449,30 @@ export class MailConsumer {
           /* Thời gian nghỉ NỘI SUY từ payload, không viết cứng "một giờ": nó là
              `secret.probe_cooldown_minutes` trong `system_config` (AD-11) và đổi được bất cứ
              lúc nào. Viết cứng thì đổi tham số là lá thư nói dối về chính cơ chế của nó, mà
-             không cổng nào đỏ lên. Còn `?? 60` chỉ là lưới đỡ cho hàng outbox cũ ghi trước
-             18/09 — chúng không có trường này. */
+             không cổng nào đỏ lên. */
           footnote:
             'Thường là gõ nhầm mã hoặc mở hồ sơ chưa được gán quyền. Hỏi người này trước khi kết luận. ' +
             /*
-             * KHÔNG ĐOÁN HỘ MỘT CON SỐ MÌNH KHÔNG BIẾT (19/09/2026).
+             * KHÔNG ĐOÁN HỘ MỘT CON SỐ MÌNH KHÔNG BIẾT.
              *
-             * Lưới đỡ `?? 60` có hai chỗ hỏng, cả hai lộ ra trong lượt rà soát cùng ngày:
+             * Hàng outbox cũ có thể không mang `cooldownMinutes`. Đừng đỡ bằng `?? 60`:
              *   · `??` chỉ chặn `null`/`undefined`, nên `cooldownMinutes = 0` lọt qua và thư ghi
              *     "im trong 0 phút";
              *   · 60 TRÙNG ĐÚNG giá trị seed của `secret.probe_cooldown_minutes`, nên không bài
              *     kiểm nào phân biệt được hai nguồn — bỏ hẳn trường khỏi payload thì chuỗi vẫn y
              *     nguyên, đúng mẫu `expect(x ?? DEFAULT).toBe(DEFAULT)`. Admin đặt 30 phút mà
-             *     hàng outbox cũ vẫn nói "60 phút": lá thư nói dối về chính cơ chế của nó, và
-             *     không cổng nào đỏ — đúng cái tật chú thích ngay trên đây tuyên bố đã dẹp.
+             *     hàng outbox cũ vẫn nói "60 phút": lá thư nói dối về chính cơ chế của nó.
              *
-             * Hàng cũ (ghi trước 18/09) không có trường này. Với chúng, BỎ HẲN mệnh đề thay vì
-             * đoán: câu ngắn hơn mà đúng, hơn là câu đầy đủ mà sai.
+             * Thiếu trường thì BỎ HẲN mệnh đề thay vì đoán: câu ngắn hơn mà đúng, hơn là câu đầy
+             * đủ mà sai.
              */
-            (typeof payload.cooldownMinutes === 'number' && payload.cooldownMinutes > 0
+            (hasCooldown
               ? `Sau mỗi thư, cảnh báo im trong ${payload.cooldownMinutes} phút nên số lượt thật có thể nhiều hơn.`
               : 'Sau mỗi thư, cảnh báo im một lúc nên số lượt thật có thể nhiều hơn.'),
         });
         return {
           to: admins.map((r) => r.email),
-          subject: `[IMS] ${payload.count ?? 0} lượt thất bại quanh két — ${payload.who}`,
+          subject: `[IMS] ${escalated ? 'Vẫn tiếp tục: ' : ''}${payload.count ?? 0} lượt thất bại quanh két — ${payload.who}`,
           html,
           text,
         };

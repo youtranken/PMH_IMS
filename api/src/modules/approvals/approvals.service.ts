@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { and, desc, eq, gte, inArray, isNotNull, isNull, lt, or, sql, type SQL } from 'drizzle-orm';
@@ -9,6 +10,7 @@ import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
 import { escapeLike } from '../../common/sql';
+import { redactMessage } from '../../common/log-redact';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import type { Page } from '../../common/pagination';
 import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
@@ -104,7 +106,7 @@ export interface TransitionInput {
 }
 
 /**
- * Bộ máy xin–duyệt dùng chung (story 6.1, AD-6).
+ * Bộ máy xin–duyệt dùng chung (AD-6).
  *
  * Module này KHÔNG biết break-glass là gì, cũng không biết phiếu ISO là gì. Nó biết cách chạy
  * một máy trạng thái mà loại yêu cầu mang tới, ghi lịch sử, và trả lời câu "cái grant này còn
@@ -112,6 +114,8 @@ export interface TransitionInput {
  */
 @Injectable()
 export class ApprovalsService {
+  private readonly logger = new Logger(ApprovalsService.name);
+
   constructor(
     @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly audit: AuditWriterService,
@@ -216,7 +220,6 @@ export class ApprovalsService {
        * Hai Admin cùng mở một yêu cầu: A bấm Duyệt, B bấm Từ chối. Không có điều kiện này thì
        * cả hai cùng "thành công", lịch sử có hai dòng mâu thuẫn, và state cuối là của người
        * bấm sau — người bấm trước không hề biết quyết định của mình đã bị ghi đè.
-       * (Đúng họ với finding 8 của code review Epic 5.)
        */
       .where(and(eq(approvalTable.id, id), eq(approvalTable.state, before.state)))
       .returning();
@@ -378,14 +381,20 @@ export class ApprovalsService {
       const flow = this.kinds.find(row.kind);
       // Loại chưa đăng ký (module tắt, đổi tên) → bỏ qua, KHÔNG làm chết cả vòng quét.
       if (!flow?.can(row.state, 'expired')) continue;
-      await this.db.transaction(async (tx) => {
-        await this.transitionWithin(tx, row.id, {
-          to: 'expired',
-          actor: 'system',
-          detail: { by: 'sweep' },
+      try {
+        await this.db.transaction(async (tx) => {
+          await this.transitionWithin(tx, row.id, {
+            to: 'expired',
+            actor: 'system',
+            detail: { by: 'sweep' },
+          });
         });
-      });
-      closed += 1;
+        closed += 1;
+      } catch (error) {
+        // Mỗi hàng một transaction riêng: hàng lỗi tự rollback và vòng sau thử lại, còn các hàng
+        // khác vẫn phải được đóng — một hàng hỏng không được làm bẩn cả danh sách.
+        this.logger.warn(`hết hạn grant ${row.id} lỗi: ${redactMessage(error)}`);
+      }
     }
     return closed;
   }
@@ -509,7 +518,7 @@ export class ApprovalsService {
    *
    * `UPDATE … WHERE payload->>'remindedAt' IS NULL RETURNING` — ai chốt được thì người đó gửi.
    * Đọc-rồi-ghi thì hai worker cùng thấy "chưa nhắc" và người duyệt lãnh hai email giống hệt
-   * nhau (đúng finding 3 của code review Epic 3, cùng một hình dạng lỗi).
+   * nhau.
    */
   async claimReminderWithin(tx: Tx, id: string, now: Date): Promise<boolean> {
     const rows = await tx

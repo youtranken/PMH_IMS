@@ -1,5 +1,5 @@
 /**
- * Vòng đời một địa chỉ IP (story 5.2, FR-019, Q-02) — hàm THUẦN, không chạm DB.
+ * Vòng đời một địa chỉ IP (FR-019, Q-02) — hàm THUẦN, không chạm DB.
  *
  * AC nói rõ: "chuyển trạng thái qua transition(), không UPDATE status tự do". Cái máy trạng
  * thái này là nơi DUY NHẤT biết đường nào đi được — service chỉ hỏi nó rồi ghi. Rải luật ra

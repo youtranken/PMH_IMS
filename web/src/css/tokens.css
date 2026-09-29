@@ -54,7 +54,7 @@
 
   --ring: 0 0 0 3px rgba(14, 159, 110, 0.22);
 
-  /* Thang z-index (thấp→cao). Trước đây 5 lớp cùng z:60 tranh nhau, thứ tự
+  /* Thang z-index (thấp→cao). Không có thang thì nhiều lớp cùng một z tranh nhau, thứ tự
      hiển thị do DOM quyết định. Popup nổi (dropdown/popover) < modal là chủ ý:
      palette/lightbox/toast phải NỔI TRÊN modal. Lớp cục bộ trong component
      (sticky thead, bánh xe time-picker, drawer mobile) giữ z-index riêng. */
@@ -74,8 +74,8 @@
   --r-lg: 14px;
   --radius-pill: 999px;
 
-  /* Thang cách (rem, root 14px) + cỡ chữ + độ đậm. Gom ~18 giá trị lẻ trước đây về
-     10 bậc (snap ≤1.4px). Font-weight CHỈ 3 bậc chuẩn (trước có 550/620/650/680/720). */
+  /* Thang cách (rem, root 14px) + cỡ chữ + độ đậm. Mọi khoảng cách đi theo các bậc này, không
+     viết giá trị lẻ. Font-weight CHỈ 3 bậc chuẩn. */
   --space-1: 0.25rem;
   --space-2: 0.4rem;
   --space-3: 0.5rem;
@@ -86,10 +86,9 @@
   --space-8: 1.1rem;
   --space-9: 1.25rem;
   --space-10: 1.5rem;
-  /* Ba nấc trên — thêm 16/09/2026. Thang cũ dừng ở 1.5rem, mà root là 14px nên nấc lớn nhất
-     chỉ 21px: KHÔNG có khoảng nào để tách KHU với KHU, mọi thứ trôi thành một khối. Đây là
-     lý do thật của cảm giác "trang chi tiết nhìn chưa đẹp". Dùng: 11 = tách hai khối trong
-     một khu, 12 = tách khu với khu (và khe giữa hai cột), 13 = đệm đáy trang. */
+  /* Ba nấc trên. Dừng ở 1.5rem (root 14px → 21px) thì KHÔNG có khoảng nào để tách KHU với
+     KHU, mọi thứ trôi thành một khối. Dùng: 11 = tách hai khối trong một khu, 12 = tách khu
+     với khu (và khe giữa hai cột), 13 = đệm đáy trang. */
   --space-11: 2.25rem;
   --space-12: 3rem;
   --space-13: 4.25rem;
@@ -100,9 +99,8 @@
   --fs-lg: 1.1rem;
   --fs-xl: 1.3rem;
   --fs-2xl: 1.5rem;
-  /* Mã hồ sơ ở đầu trang chi tiết. Trước 16/09 nó dùng --fs-xl (18,2px) trong khi tiêu đề
-     trang DANH SÁCH dùng --fs-2xl (21px) — đi từ danh sách vào chi tiết thì tiêu đề NHỎ LẠI,
-     tức cấp bậc ngược. */
+  /* Mã hồ sơ ở đầu trang chi tiết. Phải lớn hơn tiêu đề trang DANH SÁCH (--fs-2xl) — nhỏ hơn
+     thì đi từ danh sách vào chi tiết tiêu đề NHỎ LẠI, tức cấp bậc ngược. */
   --fs-3xl: 1.95rem;
   --fw-medium: 500;
   --fw-semibold: 600;
@@ -113,9 +111,8 @@
     0 8px 20px -12px rgba(16, 24, 40, 0.2);
   --shadow-pop: 0 12px 28px -10px rgba(16, 24, 40, 0.25);
   /*
-   * Lớp phủ sau hộp thoại. Trước 18/09/2026 nó là `rgba(20,26,20,.44)` viết thẳng trong
-   * `overlays.css` — màu duy nhất nằm ngoài file này, và KHÔNG có cặp cho chế độ tối: trang
-   * vốn đã tối bị phủ thêm 44% đen nên bảng phía sau gần như đen tuyền.
+   * Lớp phủ sau hộp thoại. Là token (không viết thẳng trong `overlays.css`) để có cặp cho chế
+   * độ tối: trang vốn đã tối mà bị phủ thêm 44% đen thì bảng phía sau gần như đen tuyền.
    */
   --scrim: rgba(20, 26, 20, 0.44);
   /*
@@ -123,13 +120,23 @@
    * đi để mắt chỉ còn thấy tấm ảnh, nên 0.44 là quá nhạt — đây không phải hộp thoại có nội
    * dung cần đọc song song với trang phía sau.
    *
-   * Tách token riêng thay vì để `lightbox.css` viết tay `rgba(20,26,20,.62)` như trước
-   * 18/09/2026: bản viết tay ấy không có cặp cho chế độ tối, nên ở theme tối nó phủ thêm 62%
-   * sắc XANH lên một nền vốn đã tối — ảnh bị ám màu.
+   * Tách token riêng thay vì để `lightbox.css` viết tay: bản viết tay không có cặp cho chế độ
+   * tối, nên ở theme tối nó phủ thêm 62% sắc XANH lên một nền vốn đã tối — ảnh bị ám màu.
    */
   --scrim-strong: rgba(20, 26, 20, 0.62);
   /* Vệt mờ ở mép khung cuộn ngang còn nội dung khuất (`ui/scroll-x.tsx`). */
   --edge-fade: rgba(16, 24, 40, 0.16);
+  /* Bóng của khối nổi tách khỏi luồng trang (toast vòng đời, menu thao tác dòng). */
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.18);
+  /* Nút trên dải header gradient của lịch: mực tối --on-brand trên nền trắng mờ. Header giữ
+     gradient sáng ở cả hai theme nên cặp dark giữ nguyên giá trị. */
+  --on-brand-veil: rgba(255, 255, 255, 0.28);
+  --on-brand-veil-soft: rgba(255, 255, 255, 0.18);
+  --on-brand-press: rgba(0, 0, 0, 0.4);
+  /* Icon SVG nhúng làm nền cho <select> và ô tìm kiếm: hai phần tử này không có ::before để
+     dùng mask, nên màu nét nằm trong chính URL và mỗi theme cần một bản. */
+  --icon-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%238a908a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
+  --icon-search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16' fill='none' stroke='%238a908a' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='m15 15-3.5-3.5'/%3E%3C/svg%3E");
 
   --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
@@ -223,6 +230,13 @@ html[data-theme='dark'] {
   --scrim-strong: rgba(0, 0, 0, 0.78);
   /* Nền tối: vệt phải thuần đen và đậm hơn mới thấy được trên mặt bảng tối. */
   --edge-fade: rgba(0, 0, 0, 0.55);
+  /* Nền tối nuốt bóng nhạt: phải đậm hơn mới tách khối nổi khỏi trang. */
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.55);
+  --on-brand-veil: rgba(255, 255, 255, 0.28);
+  --on-brand-veil-soft: rgba(255, 255, 255, 0.18);
+  --on-brand-press: rgba(0, 0, 0, 0.4);
+  --icon-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%239aa39a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
+  --icon-search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16' fill='none' stroke='%239aa39a' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='m15 15-3.5-3.5'/%3E%3C/svg%3E");
   color-scheme: dark;
 
     --on-accent:#0f140f; --on-overlay:#ffffff;
@@ -239,6 +253,11 @@ html[data-theme='dark'] {
     --qr-bg:#ffffff;
     --sidebar-hover:rgba(255,255,255,.06); --sidebar-chip:rgba(255,255,255,.1);
     --sidebar-chip-strong:rgba(255,255,255,.14);
+    /* Sidebar và card đăng nhập tối ở cả hai theme: cặp dark giữ nguyên giá trị sáng, khai
+       tường minh để bài kiểm cặp token bắt được token mới quên cặp. */
+    --sidebar-ink:#8ea595; --sidebar-ink-2:#eaf3ee; --sidebar-label:#9fb0a5;
+    --auth-bg:linear-gradient(135deg,#16231b 0%,#0e3a2a 45%,#1f2a1c 100%);
+    --auth-ink:#eaf3ee; --auth-ink-2:#9fb0a5;
 }
 
 * {

@@ -15,7 +15,8 @@ import {
 
 describe('hostRole — địa chỉ mạng và địa chỉ quảng bá KHÔNG cấp cho máy được', () => {
   /**
-   * Không biết dải thì suy từ octet cuối. Đúng tuyệt đối trong hệ này vì `MIN_PREFIX = 24`:
+   * Không biết dải thì suy từ octet cuối. Đúng tuyệt đối trong hệ này vì `ipam.subnet_min_prefix`
+   * không bao giờ dưới 24:
    * mọi dải khai được đều là /24 hoặc hẹp hơn, và trong MỌI dải như vậy octet cuối 0 là địa
    * chỉ mạng còn 255 là địa chỉ quảng bá (kiểm cả /25, /26 ở nhóm dưới).
    */
@@ -123,7 +124,7 @@ describe('normalizeSubnet — chuẩn hóa dải', () => {
   );
 
   /**
-   * Trần là /24 (254 host) — quyết định của chủ dự án, 25/08/2026.
+   * Trần là /24 (254 host) — quyết định của chủ dự án.
    *
    * Lý do không phải thẩm mỹ: màn chi tiết dải liệt kê MỌI host trong dải, không phân trang.
    * Gõ nhầm /16 thay /24 là 65.534 dòng dựng một lượt (treo tab), /8 là 16 triệu (treo cả
@@ -133,11 +134,30 @@ describe('normalizeSubnet — chuẩn hóa dải', () => {
   it.each(['10.0.0.0/7', '10.0.0.0/8', '172.16.0.0/16', '172.16.0.0/23'])(
     'dải rộng hơn /24 bị chặn kèm lời giải thích: %s',
     (value) => {
-      const result = normalizeSubnet(value);
+      const result = normalizeSubnet(value, 24);
       expect(result.ok).toBe(false);
       expect(result.ok === false && result.reason).toBe('too_wide');
     },
   );
+
+  // Trần đọc từ `ipam.subnet_min_prefix` (AD-11): siết lên /26 thì /24 và /25 thành quá rộng.
+  it.each([
+    ['172.16.10.0/24', 26, 'too_wide'],
+    ['172.16.10.0/25', 26, 'too_wide'],
+    ['172.16.10.0/26', 26, null],
+    ['172.16.10.0/24', 24, null],
+  ])('%s với trần /%i → %s', (value, minPrefix, reason) => {
+    const result = normalizeSubnet(value, minPrefix);
+    expect(result.ok === false ? result.reason : null).toBe(reason);
+  });
+
+  /*
+   * Không truyền trần = chỉ chuẩn hoá, không xét độ rộng. Dùng cho dải ĐÃ nằm trong sổ: siết trần
+   * về sau không được làm một dải /24 đang dùng thôi "chứa" các IP của chính nó.
+   */
+  it('không truyền trần thì không xét độ rộng', () => {
+    expect(normalizeSubnet('172.16.0.0/16').ok).toBe(true);
+  });
 });
 
 describe('isHostInSubnet — IP ngoài dải bị từ chối', () => {
@@ -238,23 +258,23 @@ describe('addressToLong / longToAddress — đi và về không mất mát', () 
  * xanh trên một bản đã hỏng. Bảng dưới không phụ thuộc gì cả: nó hỏi thẳng cái luật.
  */
 describe('keepPreferredByAddress — một địa chỉ, nhiều hồ sơ', () => {
-  const HOM_QUA = new Date('2026-09-20T03:00:00Z');
-  const HOM_NAY = new Date('2026-09-21T03:00:00Z');
+  const YESTERDAY_AT = new Date('2026-09-20T03:00:00Z');
+  const TODAY_AT = new Date('2026-09-21T03:00:00Z');
 
   const live = (tag: string) => ({ tag, address: '10.0.0.5', voidedAt: null });
   const hidden = (tag: string, at: Date) => ({ tag, address: '10.0.0.5', voidedAt: at });
 
   it.each([
-    [[live('song'), hidden('an', HOM_NAY)], 'song', 'ẩn gieo SAU — thế thua của bản cũ'],
-    [[hidden('an', HOM_NAY), live('song')], 'song', 'ẩn gieo TRƯỚC'],
+    [[live('song'), hidden('an', TODAY_AT)], 'song', 'ẩn gieo SAU — thế thua của bản cũ'],
+    [[hidden('an', TODAY_AT), live('song')], 'song', 'ẩn gieo TRƯỚC'],
     [
-      [hidden('a', HOM_QUA), live('song'), hidden('b', HOM_NAY)],
+      [hidden('a', YESTERDAY_AT), live('song'), hidden('b', TODAY_AT)],
       'song',
       'sống bị kẹp giữa hai hàng ẩn',
     ],
-    [[hidden('cu', HOM_QUA), hidden('moi', HOM_NAY)], 'moi', 'chỉ có hàng ẩn: hàng ẩn SAU thắng'],
-    [[hidden('moi', HOM_NAY), hidden('cu', HOM_QUA)], 'moi', 'và không phụ thuộc thứ tự gieo'],
-    [[hidden('mot', HOM_NAY)], 'mot', 'một hàng ẩn duy nhất vẫn phải hiện ra'],
+    [[hidden('cu', YESTERDAY_AT), hidden('moi', TODAY_AT)], 'moi', 'chỉ có hàng ẩn: hàng ẩn SAU thắng'],
+    [[hidden('moi', TODAY_AT), hidden('cu', YESTERDAY_AT)], 'moi', 'và không phụ thuộc thứ tự gieo'],
+    [[hidden('mot', TODAY_AT)], 'mot', 'một hàng ẩn duy nhất vẫn phải hiện ra'],
     [[live('song')], 'song', 'một hàng sống duy nhất'],
   ])('%#: chọn %p (%s)', (rows, winner) => {
     expect(keepPreferredByAddress(rows).get('10.0.0.5')?.tag).toBe(winner);
@@ -272,7 +292,7 @@ describe('keepPreferredByAddress — một địa chỉ, nhiều hồ sơ', () =
   it('KHÔNG bỏ hàng đã ẩn đi — `restore()` cần một đường tới nó', () => {
     // Luật là "sống thắng ẩn", không phải "lọc sạch hàng ẩn". Lọc sạch thì một hồ sơ ẩn nhầm
     // không màn nào hiện ra, và nút "Bật lại" thành một endpoint không ai gọi được.
-    expect(keepPreferredByAddress([hidden('an', HOM_NAY)]).size).toBe(1);
+    expect(keepPreferredByAddress([hidden('an', TODAY_AT)]).size).toBe(1);
   });
 
   it('danh sách rỗng ra map rỗng, không ném', () => {

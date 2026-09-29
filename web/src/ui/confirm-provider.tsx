@@ -6,12 +6,12 @@ import type { ConfirmFn, ConfirmOptions } from '@/ui/confirm-context';
 import { ConfirmDialog } from '@/ui/confirm-dialog';
 
 /*
- * Cái context và `useConfirm` nay ở `ui/confirm-context.ts` — `ui/dialog.tsx` cần chúng cho
+ * Cái context và `useConfirm` ở `ui/confirm-context.ts` — `ui/dialog.tsx` cần chúng cho
  * prop `guardUnsaved`, mà import ngược file này sẽ thành vòng phụ thuộc (depcruise chặn).
- * Re-export để mọi chỗ gọi sẵn có vẫn viết `from '@/ui/confirm-provider'` như cũ.
+ * Re-export để mọi chỗ gọi vẫn viết `from '@/ui/confirm-provider'`.
  */
 export { useConfirm } from '@/ui/confirm-context';
-export type { ConfirmOptions, ConfirmResult, ConfirmFn } from '@/ui/confirm-context';
+export type { ConfirmOptions } from '@/ui/confirm-context';
 
 /**
  * Thay window.confirm bằng ConfirmDialog (Radix) qua một API async dùng chung:

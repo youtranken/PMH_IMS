@@ -13,10 +13,9 @@ import { HISTORY_PAGE_LIMIT } from './common/history';
  * nhiều lần, hay một rule NAT sửa vài năm, sẽ kéo cả nghìn dòng về trình duyệt cho một cái
  * panel không ai cuộn hết. Càng dùng lâu càng chậm, đúng lúc lịch sử đáng giá nhất.
  *
- * Đếm ngày 09/09, trước khi vá: **3 trong 9** bộ đọc không có trần nào (`approvals`,
- * `nat-rule`, `service-account`), và số còn lại chia hai phe 100/200 không vì lý do gì. Rà
- * soát 07/09 gọi đây là "trùng lặp AD-15 đang tăng: 7→10" — nhưng đọc kỹ thì thứ trôi khỏi
- * nhau không phải câu `where` (mỗi bảng một cột khóa ngoại, có bảng ghép hai cột — gói vào
+ * Khi chưa có cổng này, **3 trong 9** bộ đọc không có trần nào (`approvals`, `nat-rule`,
+ * `service-account`), và số còn lại chia hai phe 100/200 không vì lý do gì. Trông như
+ * "trùng lặp AD-15" — nhưng đọc kỹ thì thứ trôi khỏi nhau không phải câu `where` (mỗi bảng một cột khóa ngoại, có bảng ghép hai cột — gói vào
  * một hàm generic sẽ khó đọc hơn chính câu nó thay thế) mà là CON SỐ. Nên cái cần gom là con
  * số, và cái cần dựng là cổng này.
  *

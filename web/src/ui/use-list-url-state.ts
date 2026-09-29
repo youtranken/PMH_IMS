@@ -7,15 +7,15 @@ import { clampPage } from '@/lib/paging';
  * Trạng thái của MỘT màn danh sách — bộ lọc, trang, số dòng, cột sắp — sống trên THANH ĐỊA CHỈ
  * chứ không trong `useState`.
  *
- * VÌ SAO ĐỔI (17/09/2026). Trước đây `devices-screen.tsx` và các màn danh sách khác giữ tất cả
- * trong `useState`. Ba hậu quả, và cả ba đều là chuyện xảy ra hằng ngày:
+ * VÌ SAO KHÔNG DÙNG `useState`. Giữ tất cả trong `useState` thì có ba hậu quả, và cả ba đều là
+ * chuyện xảy ra hằng ngày:
  *   · F5 là mất sạch bộ lọc — đang soi "máy hỏng ở tủ T-1" thì tải lại trang là về đầu;
  *   · không gửi được link cho đồng nghiệp: "mở cái danh sách tôi đang xem" thành một đoạn
  *     hướng dẫn bấm năm bước;
  *   · và đau nhất: mở một máy ra xem rồi bấm Back thì **về một danh sách trắng**, phải lọc lại
  *     từ đầu. Với 100+ thiết bị thì đó là một cú mỗi lần.
  *
- * Trang chi tiết vốn đã làm đúng chuyện này từ lâu (`?tab=`); màn danh sách thì chưa.
+ * Trang chi tiết cũng làm đúng chuyện này (`?tab=`).
  *
  * KHÓA NGẮN, MẶC ĐỊNH THÌ KHÔNG GHI: URL chỉ mang thứ KHÁC mặc định, nên đường dẫn sạch
  * (`/devices` chứ không phải `/devices?page=1&limit=20&sort=code`), và một link đã gửi đi vẫn
@@ -45,8 +45,8 @@ export interface ListUrlState<F extends Record<string, string>> {
    * Có bộ lọc nào đang bật, hoặc ô tìm có chữ, hay không.
    *
    * Dùng để chọn giữa HAI câu rỗng khác hẳn nhau: "chưa khai gì" (mời người dùng thêm bản ghi
-   * đầu tiên) và "lọc không ra" (mời họ nới bộ lọc). Trước 23/09 bốn màn dùng chung một câu,
-   * nên hệ thống mới tinh chưa ai lọc gì vẫn báo "Chưa có thiết bị nào khớp bộ lọc".
+   * đầu tiên) và "lọc không ra" (mời họ nới bộ lọc). Dùng chung một câu thì hệ thống mới tinh
+   * chưa ai lọc gì vẫn báo "Chưa có thiết bị nào khớp bộ lọc".
    *
    * `page`/`limit`/`sort` KHÔNG tính: chúng không giấu dòng nào đi, nên nới chúng ra cũng
    * không làm bảng có thêm gì.
@@ -82,7 +82,7 @@ export function useListUrlState<F extends Record<string, string>>(options: {
   /** Khóa bộ lọc và giá trị rỗng của chúng, vd `{ siteId: '', status: '' }`. */
   emptyFilters: F;
   /**
-   * Hai thứ này KHÔNG bắt buộc (nới 17/09/2026): có màn danh sách không phân trang và không
+   * Hai thứ này KHÔNG bắt buộc: có màn danh sách không phân trang và không
    * sắp theo cột — Két sắt là một, nó tải cả danh sách rồi lọc ở client. Bắt chúng khai hai
    * tham số vô nghĩa chỉ để dùng được ô tìm là cách chắc chắn để người sau gõ đại một con số
    * rồi tưởng nó có tác dụng.
@@ -130,11 +130,11 @@ export function useListUrlState<F extends Record<string, string>>(options: {
 
   const page = Math.max(1, Number.parseInt(read('page', '1'), 10) || 1);
   /*
-   * `limit` PHẢI nằm trong danh sách mà ô "Số dòng" bày ra (18/09/2026).
+   * `limit` PHẢI nằm trong danh sách mà ô "Số dòng" bày ra.
    *
-   * `page` đã kẹp `Math.max(1, …)` từ đầu, `limit` thì không — và `|| defaultLimit` không cứu
-   * được vì số ÂM là truthy. Nên `?limit=-5` đi thẳng vào `queryKey` rồi lên API, `?limit=99999`
-   * cũng vậy: một người sửa tay thanh địa chỉ (hoặc một link ai đó gửi) bắt server dựng một
+   * `page` kẹp được bằng `Math.max(1, …)`, `limit` thì không — và `|| defaultLimit` không cứu
+   * được vì số ÂM là truthy. Không kẹp thì `?limit=-5` đi thẳng vào `queryKey` rồi lên API,
+   * `?limit=99999` cũng vậy: một người sửa tay thanh địa chỉ (hoặc một link ai đó gửi) bắt server dựng một
    * trang 99999 dòng. Trần đó là việc của server, nhưng web không có lý do gì để HỎI.
    *
    * Kẹp về đúng `PAGE_SIZES` — tập mà `ui/pagination.tsx` cho chọn — nên trạng thái trên URL
@@ -157,11 +157,11 @@ export function useListUrlState<F extends Record<string, string>>(options: {
    */
   const [searchInput, setSearchInput] = useState(search);
   /*
-   * ĐỒNG BỘ NGƯỢC CHỈ KHI URL ĐỔI TỪ BÊN NGOÀI (18/09/2026).
+   * ĐỒNG BỘ NGƯỢC CHỈ KHI URL ĐỔI TỪ BÊN NGOÀI.
    *
-   * Effect này sinh ra cho Back/Forward và cho link sâu: URL đổi thì ô nhập phải theo. Nhưng
-   * bản trước ghi đè VÔ ĐIỀU KIỆN, kể cả khi URL vừa đổi do CHÍNH lượt debounce của nó — và
-   * vì lượt ghi có `.trim()`, dấu cách người dùng vừa gõ bị nuốt mất ngay dưới con trỏ: gõ
+   * Effect này có mặt cho Back/Forward và cho link sâu: URL đổi thì ô nhập phải theo. Nhưng
+   * ghi đè VÔ ĐIỀU KIỆN, kể cả khi URL vừa đổi do CHÍNH lượt debounce của nó, là hỏng — vì
+   * lượt ghi có `.trim()`, dấu cách người dùng vừa gõ bị nuốt mất ngay dưới con trỏ: gõ
    * "máy in " rồi dừng 250ms là mất dấu cách, gõ tiếp thành "máy inHP".
    *
    * So bằng bản ĐÃ TRIM: nếu ô nhập rút gọn lại đúng bằng `search` thì không có gì từ bên
@@ -174,7 +174,7 @@ export function useListUrlState<F extends Record<string, string>>(options: {
   /*
    * BẢN MỚI NHẤT CỦA THAM SỐ, giữ trong một ref — không đọc lại từ `params` của lượt render.
    *
-   * VÌ SAO (bắt được 17/09/2026 bởi bài "phân trang ăn thật"). `ui/pagination.tsx` gọi HAI lượt
+   * VÌ SAO (bài E2E "phân trang ăn thật" canh). `ui/pagination.tsx` gọi HAI lượt
    * ghi liền nhau trong cùng một nhịp khi người dùng đổi số dòng:
    *     onLimitChange(10);   // → ghi limit
    *     onPageChange(1);     // → xoá page
@@ -182,7 +182,7 @@ export function useListUrlState<F extends Record<string, string>>(options: {
    * lượt sau đè mất `limit=10` của lượt trước. Triệu chứng đúng như bài kiểm mô tả: bấm "10"
    * xong bảng vẫn 20 dòng, ô "Số dòng" trông như chỉ để trang trí.
    *
-   * Thời `useState` không lộ ra vì `limit` và `page` là hai ô state rời nhau. Gom cả bốn thứ
+   * Với `useState` thì không lộ ra vì `limit` và `page` là hai ô state rời nhau. Gom cả bốn thứ
    * lên một sợi dây duy nhất (thanh địa chỉ) thì thứ tự ghi bắt đầu có nghĩa — và đây là cái
    * giá phải trả, trả một lần ở đây thay vì bắt mỗi màn tự nhớ.
    */
@@ -210,14 +210,14 @@ export function useListUrlState<F extends Record<string, string>>(options: {
   );
 
   /*
-   * Gõ xong 250ms mới đẩy lên URL (và do đó mới gọi API). Trước đây mỗi phím là một request:
-   * gõ "SW-CORE-01" là mười lượt gọi, chín lượt vứt đi.
+   * Gõ xong 250ms mới đẩy lên URL (và do đó mới gọi API). Không debounce thì mỗi phím là một
+   * request: gõ "SW-CORE-01" là mười lượt gọi, chín lượt vứt đi.
    *
-   * SO BẰNG BẢN ĐÃ TRIM, GIỐNG HỆT EFFECT ĐỒNG BỘ NGƯỢC BÊN TRÊN (19/09/2026).
+   * SO BẰNG BẢN ĐÃ TRIM, GIỐNG HỆT EFFECT ĐỒNG BỘ NGƯỢC BÊN TRÊN.
    *
-   * Chốt cũ `searchInput === search` KHÔNG BAO GIỜ đúng khi ô nhập còn dấu cách thừa — vì lượt
+   * Chốt `searchInput === search` KHÔNG BAO GIỜ đúng khi ô nhập còn dấu cách thừa — vì lượt
    * ghi `.trim()` trước khi lên URL, còn effect đồng bộ ngược thì cố ý GIỮ dấu cách ấy lại. Hai
-   * bản vá đúng, ghép vào nhau thành một chốt chết: effect này sống mãi. Mà mỗi lần
+   * luật đúng, ghép vào nhau thành một chốt chết: effect này sống mãi. Mà mỗi lần
    * `location.search` đổi thì `setParams` của react-router đổi định danh → `write` đổi → effect
    * bắn lại → 250ms sau `write({ q })` chạy với `resetPage` mặc định TRUE và xoá `page`.
    *

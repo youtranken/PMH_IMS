@@ -7,16 +7,11 @@
  *
  * ===== VÌ SAO PHẢI GOM LẠI =====
  *
- * Trước 12/09 web có BỐN bản chép tay của cùng danh sách này, và ba bản sai:
- *
- *   · `ui/vault-panel.tsx`        — đủ bốn loại (đúng)
- *   · `lib/routes.ts` OWNER_PATH  — đủ bốn loại, nhưng gõ union thứ hai bằng tay
- *   · `features/vault/vault-home-screen.tsx` — CHỈ BA, thiếu `isp`
- *   · `locales/vi.ts approvals.subject_*`    — CHỈ HAI, thiếu cả `service_account` lẫn `isp`
- *
- * Không chỗ nào trong ba chỗ sai đó ĐỎ, vì cả ba đều kết bằng một nhánh vét: `Record` gõ
- * tay thì loại lạ ra `undefined`, `t()` thì rơi về chính cái khóa. Hậu quả thật, đo bằng
- * tay 12/09 khi cất mật khẩu PPPoE vào một đường truyền:
+ * Danh sách này được dùng ở `ui/vault-panel.tsx`, `lib/routes.ts` (OWNER_PATH), trang tổng két
+ * (`features/vault/vault-home-screen.tsx`) và nhãn màn Duyệt yêu cầu. Chép tay ở từng nơi thì
+ * bản thiếu một loại KHÔNG ĐỎ, vì đều kết bằng một nhánh vét: `Record` gõ tay thì loại lạ ra
+ * `undefined`, `t()` thì rơi về chính cái khóa. Hậu quả đo được khi các bản thiếu `isp` và
+ * người dùng cất mật khẩu PPPoE vào một đường truyền:
  *
  *   (a) cột "Loại" ở trang tổng két TRỐNG;
  *   (b) bật bất kỳ nút lọc loại nào → dòng đường truyền biến mất, không một lời;

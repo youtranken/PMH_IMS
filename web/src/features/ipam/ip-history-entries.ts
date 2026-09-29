@@ -3,7 +3,7 @@ import { orDash } from '@/lib/format';
 import type { HistoryEntry } from '@/ui/history-panel';
 
 /**
- * Đổi bản ghi `ip_history` thô thành dòng người đọc được (story 5.2).
+ * Đổi bản ghi `ip_history` thô thành dòng người đọc được.
  *
  * Mục tiêu của AC rất cụ thể: mở trang một IP và đọc được **"IP này từng là máy in kế toán"**.
  * Nên chỗ quan trọng nhất ở đây là dòng THU HỒI — nó phải nói ra chủ CŨ, vì sau khi thu hồi

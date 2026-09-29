@@ -12,12 +12,11 @@ import { stripComments } from '../../test/source-text';
  *
  *   "Từ vựng state KHÔNG nằm trong CHECK constraint: mỗi loại yêu cầu tự mang máy trạng thái
  *    của mình (`ApprovalFlowSpec`) và `approvals` chỉ biết cách chạy một máy bất kỳ.
- *    Break-glass và phiếu ISO (Epic 8) có từ vựng khác hẳn nhau — nhét cả hai vào một CHECK
+ *    Break-glass và phiếu ISO có từ vựng khác hẳn nhau — nhét cả hai vào một CHECK
  *    cứng là bắt đầu con đường quen thuộc: một cột `status` với mười giá trị mà nửa số đó chỉ
  *    dùng cho một loại, và mỗi loại mới lại là một migration sửa CHECK."
  *
- * Đây là finding THỨ TƯ của đợt rà soát mâu thuẫn với một quyết định đã ghi rõ (sau A-01,
- * F-07 vế b, và B-07 về mức độ). Thêm CHECK vào đây là phá một thiết kế có chủ ý.
+ * Thêm CHECK vào đây là phá một thiết kế có chủ ý.
  *
  * ===== NHƯNG QUYẾT ĐỊNH ẤY CÓ MỘT ĐIỀU KIỆN BÙ, VÀ KHÔNG AI CANH NÓ =====
  *
@@ -26,14 +25,14 @@ import { stripComments } from '../../test/source-text';
  *   "Đổi lại, tầng DB không bảo vệ được từ vựng — nên `ApprovalService.transition()` là đường
  *    DUY NHẤT đổi `state`, và nó tra sổ đăng ký trước khi ghi."
  *
- * Câu ấy là một LỜI HỨA, và tới 22/09 không có gì giữ nó. Một `UPDATE approval SET state =
- * 'xong'` viết ở bất kỳ module nào sẽ chạy trót lọt — DB không cản (cố ý), và không cổng nào
- * hỏi. Lúc đó "từ vựng do sổ đăng ký quyết" trở thành một câu nói đúng về giấy tờ và sai về
- * thực tế, y như D-01 trước khi có `assertNarrowRole`.
+ * Câu ấy là một LỜI HỨA, và không có bài này thì không gì giữ nó. Một `UPDATE approval SET
+ * state = 'xong'` viết ở bất kỳ module nào sẽ chạy trót lọt — DB không cản (cố ý), và không
+ * cổng nào hỏi. Lúc đó "từ vựng do sổ đăng ký quyết" trở thành một câu nói đúng về giấy tờ và
+ * sai về thực tế.
  *
  * Nên việc đúng ở đây không phải thêm CHECK, mà là **dựng cái cổng cho điều kiện bù**.
  *
- * Đã đo 22/09 trước khi viết: `state` chỉ được ghi ở hai chỗ, cả hai trong
+ * Hiện `state` chỉ được ghi ở hai chỗ, cả hai trong
  * `approvals.service.ts`, và cả hai lấy giá trị từ sổ đăng ký (`flow.initial`, `input.to`) —
  * không chỗ nào gõ chuỗi thẳng. Điều kiện bù đang ĐÚNG; bài này giữ cho nó còn đúng.
  */

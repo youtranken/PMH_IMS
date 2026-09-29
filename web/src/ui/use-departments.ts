@@ -8,9 +8,9 @@ import { useCatalogLists } from '@/ui/use-catalog-lists';
  *
  * TRẢ VỀ CẢ CỜ HỎNG, KHÔNG CHỈ MẢNG TÊN.
  *
- * Bản trước trả `string[]`. Khi `/api/v1/catalog` hỏng, mảng đó rỗng, và nơi gọi — đếm lại
- * 26/09: 4 lượt dùng trên 3 file (`port-map-panel`, `subnet-detail` ×2, `service-account-form`)
- * — KHÔNG CÓ ĐƯỜNG NÀO biết được là nó rỗng vì hỏng hay vì chưa khai phòng ban
+ * Chỉ trả `string[]` thì khi `/api/v1/catalog` hỏng, mảng đó rỗng, và nơi gọi (`port-map-panel`,
+ * `subnet-detail`, `service-account-form`) KHÔNG CÓ ĐƯỜNG NÀO biết được là nó rỗng vì hỏng hay
+ * vì chưa khai phòng ban
  * nào. Mọi ô gợi ý im lặng như nhau, nên mỗi người tự gõ một cách viết ("P. Kế toán" /
  * "Phòng Kế toán" / "KT") — đúng cái mà chú thích của `SuggestInput` nói nó sinh ra để tránh,
  * và lọc theo bộ phận về sau sẽ ra thiếu.

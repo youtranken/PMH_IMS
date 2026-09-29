@@ -36,7 +36,7 @@ export function parseSortQuery<K extends string>(
 }
 
 /**
- * `ORDER BY <cột đang sắp>, <khoá chốt hạ>` — CÙNG MỘT HƯỚNG cho cả hai (26/09/2026).
+ * `ORDER BY <cột đang sắp>, <khoá chốt hạ>` — CÙNG MỘT HƯỚNG cho cả hai.
  *
  * ===== VÌ SAO CẦN KHOÁ CHỐT HẠ =====
  *
@@ -46,8 +46,8 @@ export function parseSortQuery<K extends string>(
  *
  * ===== VÌ SAO HƯỚNG PHẢI ĐI THEO NHAU, VÀ ĐÂY LÀ PHẦN ĐẮT =====
  *
- * Bốn service trước 26/09 đều viết `[primary, asc(code)]` — khoá chốt hạ CỐ ĐỊNH `asc` bất kể
- * hướng chính. Khi người dùng bấm sắp giảm, câu sinh ra là `ORDER BY name DESC, code ASC`.
+ * Viết `[primary, asc(code)]` là khoá chốt hạ CỐ ĐỊNH `asc` bất kể hướng chính. Khi người
+ * dùng bấm sắp giảm, câu sinh ra là `ORDER BY name DESC, code ASC`.
  *
  * Một chỉ mục btree `(name, code)` phục vụ được `(ASC, ASC)` khi quét xuôi và `(DESC, DESC)`
  * khi quét ngược. Với hình dạng TRỘN hướng `(DESC, ASC)`, Postgres phải chồng thêm một

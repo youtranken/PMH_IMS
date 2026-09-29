@@ -3,6 +3,7 @@ import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AuditController } from './audit.controller';
 import { AuditInterceptor } from './audit.interceptor';
+import { AuditPartitionSweep } from './audit-partition-sweep';
 import { AuditApiService } from './audit.api';
 import { AuditQueryService } from './audit-query.service';
 import { AuditWriterService } from './audit-writer.service';
@@ -14,17 +15,15 @@ import { UsersModule } from '../users/users.module';
  *
  * `AuditInterceptor` đăng ký APP_INTERCEPTOR ĐÚNG MỘT LẦN, ở đây.
  *
- * Trước đây nó được khai ở CẢ đây lẫn `app.module.ts`, và Nest áp cả hai — mọi route dựa vào
- * interceptor để ghi audit đều đẻ ra HAI dòng giống hệt nhau. Chuyện đó ẩn suốt sáu epic vì
- * gần như mọi endpoint ghi đều dùng `writtenByService: true` (service tự ghi, interceptor bỏ
- * qua). Story 7.2 là chỗ đầu tiên có route thật sự trông vào interceptor — và bài kiểm "mỗi
- * lần xuất ghi một dòng" đếm ra 2 (code review nội bộ, Epic 7).
+ * Khai thêm ở `app.module.ts` thì Nest áp cả hai — mọi route dựa vào interceptor để ghi audit
+ * đều đẻ ra HAI dòng giống hệt nhau. Lỗi đó dễ ẩn vì gần như mọi endpoint ghi đều dùng
+ * `writtenByService: true` (service tự ghi, interceptor bỏ qua).
  */
 @Global()
 @Module({
   /*
    * `users` vào đây để `AuditQueryService` tra được tên người thao tác qua cửa chính, thay
-   * cho `LEFT JOIN users` nó từng tự viết (A-07, vá 21/09).
+   * cho tự viết `LEFT JOIN users` (A-07).
    *
    * Cạnh phụ thuộc chỉ đi MỘT chiều, audit → users. Chiều ngược lại không cần khai: module
    * này `@Global()` nên `UsersService` lấy `AuditWriterService` mà không phải import gì —
@@ -38,6 +37,7 @@ import { UsersModule } from '../users/users.module';
     AuditQueryService,
     SecurityProbeService,
     AuditApiService,
+    AuditPartitionSweep,
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],
   exports: [AuditWriterService, AuditApiService],

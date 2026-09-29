@@ -8,7 +8,7 @@ import { RolesGuard } from './roles.guard';
 import type { AuthedUser } from './types';
 
 /**
- * `RolesGuard` LÀ HIỆN THÂN CỦA AD-9, VÀ NÓ KHÔNG CÓ BÀI KIỂM NÀO CHO TỚI 20/09/2026.
+ * `RolesGuard` LÀ HIỆN THÂN CỦA AD-9.
  *
  * ===== VÌ SAO PHẢI CÓ FILE NÀY =====
  *

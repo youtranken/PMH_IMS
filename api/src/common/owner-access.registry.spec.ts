@@ -10,7 +10,7 @@ function checkerFor(...ownerTypes: string[]): OwnerAccessChecker {
  * trận quyền, không nằm ở sổ này.
  *
  * Nhưng với `service_account` và `isp` thì việc đăng ký là thứ DUY NHẤT đứng giữa Member và
- * đính kèm của những chủ thể đó (lỗ C1, vá 08/09). Và việc đăng ký xảy ra trong
+ * đính kèm của những chủ thể đó. Và việc đăng ký xảy ra trong
  * `VaultApiService.onModuleInit` — một hàm rất dễ ngừng chạy vì lý do chẳng liên quan: đổi thứ
  * tự `imports`, tách module, đặt nhầm một `forwardRef`. Khi đó hệ thống khởi động bình thường,
  * request trả 200, và hàng rào biến mất mà không có gì đỏ.

@@ -6,20 +6,15 @@ import { IS_PUBLIC_KEY } from './public.decorator';
 import type { SessionService } from './session.service';
 
 /**
- * `CsrfGuard` — LÕI BẢO MẬT, VÀ KHÔNG CÓ BÀI KIỂM NÀO CHO TỚI 20/09/2026.
+ * `CsrfGuard` là lõi bảo mật (CLAUDE.md: không có test thì không merge).
  *
- * `CLAUDE.md` liệt CSRF vào danh sách "không có test thì không được merge". Guard này 84 dòng
- * và có **hai nhánh bỏ qua IM LẶNG** mà không ai canh (rà soát 19/09, mục A-10):
+ * Guard có những nhánh CHO QUA mà không đỏ gì cả, nên mỗi nhánh được khoá bằng một bài kiểm kèm
+ * mã lỗi: nếu một lượt refactor đổi hình dạng của nhánh, bài kiểm phải đỏ để người sửa biết mình
+ * đang thay một đánh đổi chứ không phải vô tình phá nó.
  *
- *   · `if (!expected) return;`  — thiếu `APP_BASE_URL` ⇒ thôi kiểm Origin
- *   · `if (!origin) return;`    — client không gửi `Origin` ⇒ thôi kiểm Origin
- *
- * Cả hai là đánh đổi CÓ Ý (boot đã fail-fast nếu thiếu biến; vài trình duyệt cũ không gửi
- * `Origin` cho request cùng gốc). Nhưng "có ý" mà không có bài kiểm thì lượt refactor sau
- * không phân biệt được nó với một lỗ hổng, và cả hai đều **âm thầm cho qua** — lớp hỏng tệ
- * nhất, vì không có gì đỏ cả.
- *
- * File này khoá hình dạng của từng nhánh, kèm mã lỗi, để chúng thôi là chuyện truyền miệng.
+ *   · thiếu `APP_BASE_URL` ⇒ thôi kiểm nguồn (boot đã fail-fast, chỉ gặp ở test);
+ *   · thiếu `Origin` ⇒ xét `Sec-Fetch-Site`, rồi `Referer`; route công khai (đăng nhập) mà không
+ *     có tín hiệu nguồn nào thì CHẶN, vì ở đó lớp nguồn là lớp duy nhất (SEC-11, login-CSRF).
  */
 
 const CSRF = 'token-that-hop-le';
@@ -100,18 +95,75 @@ describe('CsrfGuard — AD-8, hai lớp', () => {
     ).resolves.toBe(true);
   });
 
-  /*
-   * ===== HAI NHÁNH BỎ QUA IM LẶNG =====
-   * Khoá lại đúng hình dạng hiện tại. Nếu một ngày quyết siết (ví dụ đòi `Origin` bắt buộc),
-   * hai bài này sẽ ĐỎ — và đó là lời nhắc rằng đánh đổi cũ đang được thay, chứ không phải
-   * vô tình bị thay.
-   */
-  it('KHÔNG có header Origin: bỏ qua lớp 1, vẫn kiểm token (đánh đổi có ý)', async () => {
+  /* ---------------- Thiếu Origin: tín hiệu nguồn dự phòng (SEC-11) ---------------- */
+
+  it('KHÔNG có header Origin trên route cần phiên: lớp token vẫn đứng', async () => {
     await expect(
       guard().canActivate(contextFor(writeReq({ 'x-csrf-token': CSRF }, 's1'))),
     ).resolves.toBe(true);
-    // ...nhưng thiếu token thì vẫn chặn — bỏ qua Origin KHÔNG phải bỏ qua cả guard.
+    // Bỏ qua Origin KHÔNG phải bỏ qua cả guard.
     await expectForbidden(guard().canActivate(contextFor(writeReq({}, 's1'))), 'CSRF_TOKEN_INVALID');
+  });
+
+  it('login-CSRF: POST đăng nhập không có Origin, không Sec-Fetch-Site, không Referer ⇒ chặn', async () => {
+    await expectForbidden(guard(true).canActivate(contextFor(writeReq({}))), 'ORIGIN_MISSING');
+  });
+
+  it.each(['cross-site', 'same-site'])(
+    'Sec-Fetch-Site=%s mà thiếu Origin ⇒ chặn, kể cả khi có token đúng',
+    async (site) => {
+      await expectForbidden(
+        guard(true).canActivate(contextFor(writeReq({ 'sec-fetch-site': site }))),
+        'ORIGIN_MISMATCH',
+      );
+      await expectForbidden(
+        guard().canActivate(contextFor(writeReq({ 'sec-fetch-site': site, 'x-csrf-token': CSRF }, 's1'))),
+        'ORIGIN_MISMATCH',
+      );
+    },
+  );
+
+  it.each(['same-origin', 'none'])('Sec-Fetch-Site=%s mà thiếu Origin ⇒ route công khai cho qua', async (site) => {
+    await expect(
+      guard(true).canActivate(contextFor(writeReq({ 'sec-fetch-site': site }))),
+    ).resolves.toBe(true);
+  });
+
+  it('Sec-Fetch-Site không nằm trong danh sách biết ⇒ chặn', async () => {
+    await expectForbidden(
+      guard(true).canActivate(contextFor(writeReq({ 'sec-fetch-site': 'la-lam' }))),
+      'ORIGIN_MISMATCH',
+    );
+  });
+
+  it('thiếu Origin lẫn Sec-Fetch-Site: Referer cùng gốc ⇒ qua, Referer lạ hoặc hỏng ⇒ chặn', async () => {
+    await expect(
+      guard(true).canActivate(contextFor(writeReq({ referer: `${ORIGIN}/login?next=%2F` }))),
+    ).resolves.toBe(true);
+    await expectForbidden(
+      guard(true).canActivate(contextFor(writeReq({ referer: 'https://ke-tan-cong.example/ims.pmh.com.vn' }))),
+      'ORIGIN_MISMATCH',
+    );
+    await expectForbidden(
+      guard(true).canActivate(contextFor(writeReq({ referer: 'khong-phai-url' }))),
+      'ORIGIN_MISMATCH',
+    );
+  });
+
+  it('Origin có mặt thì thắng Referer: Origin lạ + Referer đúng vẫn chặn', async () => {
+    await expectForbidden(
+      guard(true).canActivate(
+        contextFor(writeReq({ origin: 'https://ke-tan-cong.example', referer: `${ORIGIN}/login` })),
+      ),
+      'ORIGIN_MISMATCH',
+    );
+  });
+
+  it('Origin "null" (iframe sandbox, file://) không được coi là thiếu Origin', async () => {
+    await expectForbidden(
+      guard(true).canActivate(contextFor(writeReq({ origin: 'null', 'sec-fetch-site': 'same-origin' }))),
+      'ORIGIN_MISMATCH',
+    );
   });
 
   it('thiếu APP_BASE_URL: bỏ qua lớp 1, lớp 2 vẫn đứng', async () => {
@@ -136,7 +188,7 @@ describe('CsrfGuard — AD-8, hai lớp', () => {
     ['sai', 'token-sai'],
     ['đúng tiền tố nhưng ngắn hơn', CSRF.slice(0, 5)],
     ['đúng nội dung nhưng dài hơn', `${CSRF}x`],
-  ])('token %s ⇒ chặn', async (_ten, token) => {
+  ])('token %s ⇒ chặn', async (_name, token) => {
     const headers: Record<string, string | undefined> = { origin: ORIGIN };
     if (token !== undefined) headers['x-csrf-token'] = token;
     await expectForbidden(

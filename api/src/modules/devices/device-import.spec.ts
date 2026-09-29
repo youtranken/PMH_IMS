@@ -147,9 +147,8 @@ describe('planDeviceImport — đối chiếu file thiết bị trước khi ghi
   /**
    * Máy ĐÃ THANH LÝ: hồ sơ khóa lại, và Excel không phải cửa sau.
    *
-   * Rà soát 07/09 liệt kê tám điểm ghi hở với máy `retired`; import là một trong ba điểm nằm
-   * ngay trong module `devices` nên không đi qua `DevicesApiService.assertUsable` — hàng rào
-   * dựng ở cửa ngoài không với tới nó.
+   * Import nằm ngay trong module `devices` nên không đi qua `DevicesApiService.assertUsable`
+   * — hàng rào dựng ở cửa ngoài không với tới nó.
    */
   it('sửa hồ sơ máy đã thanh lý → dòng LỖI, không lặng lẽ ghi đè', () => {
     const plan = planDeviceImport(
@@ -178,7 +177,7 @@ describe('planDeviceImport — đối chiếu file thiết bị trước khi ghi
   });
 
   /**
-   * THANH LÝ BẰNG MỘT Ô EXCEL — tìm ra khi đang vá cửa import, không có trong danh sách rà soát.
+   * THANH LÝ BẰNG MỘT Ô EXCEL.
    *
    * `setStatus` hỏi máy còn giữ IP · rule NAT · ghế license nào, chặn nếu còn, và chỉ dọn khi
    * người dùng tick. Import gọi thẳng `updateWithin` nên đi vòng qua trọn vẹn cái chốt đó.
@@ -209,7 +208,7 @@ describe('planDeviceImport — đối chiếu file thiết bị trước khi ghi
   });
 
   /**
-   * Finding của code review Epic 2: file chỉ có cột Site (không có cột Tủ) mà đổi site thì
+   * File chỉ có cột Site (không có cột Tủ) mà đổi site thì
    * thiết bị giữ nguyên tủ của site CŨ — sai lặng lẽ, form nhập tay chặn còn import thì không.
    */
   it('đổi site mà giữ tủ của site cũ = lỗi, đúng như form nhập tay', () => {
@@ -242,8 +241,8 @@ describe('planDeviceImport — đối chiếu file thiết bị trước khi ghi
   });
 
   /**
-   * Finding của code review: file chỉ sửa MỘT đầu ngày bảo hành vẫn có thể tạo ra khoảng
-   * ngược khi ghép với giá trị đang có — trước đây lọt xuống DB và bung 500 không rõ dòng nào.
+   * File chỉ sửa MỘT đầu ngày bảo hành vẫn có thể tạo ra khoảng ngược khi ghép với giá trị
+   * đang có — không chặn ở đây thì nó lọt xuống DB và bung 500 không rõ dòng nào.
    */
   it('sửa một đầu ngày bảo hành thành khoảng ngược = lỗi ngay ở bảng đối chiếu', () => {
     const plan = planDeviceImport(
@@ -352,5 +351,38 @@ describe('planDeviceImport — đối chiếu file thiết bị trước khi ghi
     );
     expect(plan.rows[0].values).toMatchObject({ serial: null });
     expect(plan.summary).toMatchObject({ update: 1 });
+  });
+});
+
+describe('planDeviceImport — ô Excel không đọc được giá trị (BE-12)', () => {
+  it('ô lỗi ở cột đang nhập → dòng lỗi, không xoá giá trị đang có', () => {
+    const plan = planDeviceImport(
+      {
+        'Thiết bị': [
+          {
+            rowNumber: 5,
+            cells: { ...MINIMAL, Serial: '' },
+            unreadable: { Serial: 'ô đang báo lỗi #N/A' },
+          },
+        ],
+      },
+      context({ devices: new Map([['sw-core-01', existing({ serial: 'FOC123' })]]) }),
+    );
+    expect(plan.rows[0]).toMatchObject({ action: 'error', rowNumber: 5 });
+    expect(plan.rows[0].message).toContain('Serial');
+    expect(plan.rows[0].message).toContain('#N/A');
+    expect(plan.summary).toMatchObject({ error: 1, update: 0 });
+  });
+
+  it('ô lỗi ở cột KHÔNG nhập (cột nháp của người dùng) thì bỏ qua', () => {
+    const plan = planDeviceImport(
+      {
+        'Thiết bị': [
+          { rowNumber: 2, cells: { ...MINIMAL, 'Cột nháp': '' }, unreadable: { 'Cột nháp': 'x' } },
+        ],
+      },
+      context(),
+    );
+    expect(plan.rows[0]).toMatchObject({ action: 'create' });
   });
 });

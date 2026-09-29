@@ -45,7 +45,7 @@ select {
   appearance: none;
   padding-right: 1.9rem;
   /* Mũi tên chevron › (khớp caret nav/expand) — 1 loại mũi tên duy nhất toàn app. */
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%238a908a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E");
+  background-image: var(--icon-select-chevron);
   background-repeat: no-repeat;
   background-position: right 0.62rem center;
 }
@@ -184,7 +184,7 @@ button.danger:hover:not(:disabled) {
   background: var(--danger-strong);
 }
 /*
- * Nút phá ở ĐẦU TRANG chi tiết (16/09/2026): đỏ nhưng KHÔNG đặc.
+ * Nút phá ở ĐẦU TRANG chi tiết: đỏ nhưng KHÔNG đặc.
  *
  * Nền đỏ đặc để dành cho nút xác nhận TRONG hộp thoại — chỗ người dùng đã đọc câu hỏi. Ở đầu
  * trang thì nút đặc ấy nặng hơn cả nút chính của màn, tức việc làm mỗi ngày thì thì thầm còn
@@ -323,7 +323,7 @@ a.linkbtn.sm {
 }
 /* Drawer mobile (≤900px): sidebar cố định trượt vào, có backdrop mờ ấm. */
 /*
- * ĐỊNH VỊ NẰM TRÊN LỚP BỌC, KHÔNG TRÊN `.sidebar` (24/09).
+ * ĐỊNH VỊ NẰM TRÊN LỚP BỌC, KHÔNG TRÊN `.sidebar`.
  *
  * Lớp bọc là cái mang `role="dialog"` (xem `DrawerShell` trong `app-shell.tsx`). Để `position:
  * fixed` ở con thì con ra khỏi luồng, và lớp bọc thành một flex-item RỘNG 0 — tức chính cái
@@ -388,10 +388,9 @@ a.linkbtn.sm {
 }
 .page {
   /* Đệm ĐÁY dày hơn ba phía kia (`--space-13`, xem thang trong `tokens.css`): nội dung cuối
-     trang dính mép dưới thì trông như trang bị cắt ngang. Token này được thêm vào cùng đợt
-     UI/UX đúng cho việc này rồi bỏ không — 0 chỗ dùng cho tới 18/09/2026. */
+     trang dính mép dưới thì trông như trang bị cắt ngang. */
   padding: var(--space-10) var(--space-10) var(--space-13);
-  /* Dùng gần trọn bề ngang màn lớn. Trước đây kẹp 1180px nên trên màn 24" (1920px) bảng bị
+  /* Dùng gần trọn bề ngang màn lớn. Kẹp hẹp (vd 1180px) thì trên màn 24" (1920px) bảng bị
      bó vào giữa, chừa hơn 270px trống MỖI BÊN — mà đây là app đầy bảng, bề ngang là thứ
      đáng tiền nhất. Vẫn có trần để trên màn siêu rộng dòng không dài vô tận. */
   max-width: min(1880px, 95vw);

@@ -6,7 +6,7 @@ import '@/lib/i18n';
 import { usePageTitle } from '@/ui/use-page-title';
 
 /**
- * Tên tab trình duyệt phải ĐỔI THEO MÀN (B-03).
+ * Tên tab trình duyệt phải ĐỔI THEO MÀN.
  *
  * Bài này dùng `t` THẬT (nạp `@/lib/i18n`) chứ không stub: nó khẳng định về CHỮ người dùng
  * đọc trên tab, nên một khoá gõ sai phải đỏ ngay tại đây. Stub trả lại chính cái khoá thì
@@ -40,7 +40,7 @@ describe('usePageTitle', () => {
 
   it('tên MÀN đứng trước tên sản phẩm', () => {
     /*
-     * Vế này đáng một ô riêng vì nó là cả lý do của B-03: tab bị bóp còn ~15 ký tự khi mở
+     * Vế này đáng một ô riêng vì nó là cả lý do của luật: tab bị bóp còn ~15 ký tự khi mở
      * nhiều tab, và trình duyệt cắt ĐUÔI. Đảo thứ tự thành "IMS · Thiết bị" thì bốn tab IMS
      * lại đọc y hệt nhau — tức bài kiểm trên vẫn xanh trong khi lỗi đã quay lại nguyên vẹn.
      */

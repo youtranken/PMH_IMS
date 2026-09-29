@@ -107,7 +107,7 @@ describe('localNowIn — quy mốc thời gian về múi giờ ứng dụng', ()
 
   /**
    * Múi giờ hỏng phải lùi về UTC, KHÔNG ném: `isoDateInTz` đã theo nếp đó. Hàm này mà ném
-   * thì màn Expiry vẫn chạy còn digest im lặng không bao giờ gửi (code review Epic 3).
+   * thì màn Expiry vẫn chạy còn digest im lặng không bao giờ gửi.
    */
   it('múi giờ cấu hình sai thì lùi về UTC chứ không ném', () => {
     const at = new Date('2026-08-24T10:00:00Z');
@@ -220,7 +220,16 @@ describe('lookBackDays — nhìn lùi bao xa để bắt mục đã quá hạn',
     ['số lẻ cắt phần thập phân', { expiredWithinDays: 30.9 }, 30],
     ['NaN rơi về mặc định', { expiredWithinDays: Number.NaN }, 365],
   ])('%s', (_name, query, expected) => {
-    expect(lookBackDays(query)).toBe(expected);
+    expect(lookBackDays(query, 365)).toBe(expected);
+  });
+
+  // Mặc định của màn và trần kẹp là `expiry.look_back_days` (AD-11), không phải hằng số.
+  it.each([
+    ['mặc định màn hình theo cấu hình', {}, 90],
+    ['digest cũng bị kẹp ở trần cấu hình', { expiredWithinDays: 200 }, 90],
+    ['digest ngắn hơn trần thì giữ nguyên', { expiredWithinDays: 30 }, 30],
+  ])('trần 90 ngày: %s', (_name, query, expected) => {
+    expect(lookBackDays(query, 90)).toBe(expected);
   });
 });
 

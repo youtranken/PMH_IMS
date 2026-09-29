@@ -21,9 +21,10 @@ import {
   IsString,
   IsUUID,
   Length,
-  Matches,
+  Validate,
   ValidateIf,
 } from 'class-validator';
+import { RealDateOrEmpty } from '../../common/real-date';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
 import {
@@ -48,9 +49,6 @@ import {
 import { DEVICE_STATUSES, type DeviceStatus } from './devices.types';
 import { NoStepUp } from '../auth/step-up.decorator';
 
-/** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
-const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
-
 class DeviceBodyDto {
   @IsOptional() @IsString() @Length(1, 60) code?: string;
   @IsOptional() @IsString() @Length(1, 200) name?: string;
@@ -66,13 +64,13 @@ class DeviceBodyDto {
   @IsOptional() @IsString() @Length(0, 120) assignedTo?: string;
   @IsOptional() @IsString() @Length(0, 120) department?: string;
 
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày mua phải dạng YYYY-MM-DD.' })
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày mua phải là ngày có thật, dạng YYYY-MM-DD.' })
   purchaseDate?: string;
 
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày bắt đầu bảo hành phải dạng YYYY-MM-DD.' })
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày bắt đầu bảo hành phải là ngày có thật, dạng YYYY-MM-DD.' })
   warrantyStart?: string;
 
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày hết bảo hành phải dạng YYYY-MM-DD.' })
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày hết bảo hành phải là ngày có thật, dạng YYYY-MM-DD.' })
   warrantyEnd?: string;
 
   @IsOptional()
@@ -112,6 +110,7 @@ class PortBodyDto {
   @IsOptional() @IsString() @Length(0, 120) usedBy?: string;
 
   // VLAN của cổng (0029): text, vì "trunk" là giá trị có thật và hay gặp nhất trên uplink.
+  // Dạng hợp lệ (1–4094 | trunk) kiểm ở `portVlanOf`, cùng luật CHECK 0301.
   @IsOptional() @IsString() @Length(0, 40) vlan?: string;
 
   @IsOptional() @IsString() @Length(0, 500) note?: string;
@@ -123,7 +122,7 @@ class PortParamDto extends IdParamDto {
 }
 
 /**
- * Kho thiết bị (story 2.2, FR-001/FR-007).
+ * Kho thiết bị (FR-001/FR-007).
  *
  * Quyền: mọi vai đã đăng nhập đều ĐỌC và GHI được hồ sơ thiết bị — đây là việc hàng ngày
  * của cả team IT (story viết "As a Member"). Thứ chỉ Admin/SA đụng là DANH MỤC.
@@ -181,7 +180,7 @@ export class DevicesController {
   }
 
   /**
-   * File mẫu + export + import (story 2.6). ĐẶT TRƯỚC `@Get(':id')`: Nest khớp route theo
+   * File mẫu + export + import. ĐẶT TRƯỚC `@Get(':id')`: Nest khớp route theo
    * thứ tự khai báo, để sau thì `/devices/template` bị `:id` nuốt và trả 400 "id không hợp lệ".
    */
   @Roles('sa', 'admin', 'member')
@@ -260,8 +259,8 @@ export class DevicesController {
   }
 
   /**
-   * Khu mở rộng (story 2.5): IP, license, secret, phiếu… Đợt 1 trả mảng RỖNG vì chưa module
-   * nào đăng ký — UI ẩn gọn. Epic sau chỉ thêm provider, không sửa gì ở đây (AD-2).
+   * Khu mở rộng: IP, license, secret, phiếu… Không module nào đăng ký thì trả mảng RỖNG — UI
+   * ẩn gọn. Module mới chỉ thêm provider, không sửa gì ở đây (AD-2).
    */
   @Roles('sa', 'admin', 'member')
   @Get(':id/panels')
@@ -328,7 +327,7 @@ export class DevicesController {
     });
     return { status: body.status };
   }
-  // ───────────── Port map (story 2.4, AD-14) ─────────────
+  // ───────────── Port map (AD-14) ─────────────
 
   /**
    * Trả CẢ HAI CHIỀU: `ports` là cổng của chính thiết bị này, `incoming` là cổng ở nơi khác

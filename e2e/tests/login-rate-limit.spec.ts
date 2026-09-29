@@ -11,14 +11,12 @@ import {
 /**
  * Chặn dò mật khẩu theo IP (NFR-01, AC 1.2).
  *
- * VÌ SAO BÀI NÀY TỒN TẠI: hàng rào này chưa từng chạy thật một lần nào.
+ * VÌ SAO BÀI NÀY TỒN TẠI: đây là chỗ duy nhất hàng rào này chạy thật.
  *   - `login-rate.guard.spec.ts` TIÊM `SystemConfigService` GIẢ — nó chứng minh bộ đếm đúng,
- *     không chứng minh guard được lắp đúng vào chuỗi request. Guard từng bị đăng ký sai thứ
- *     tự một lần rồi (docs/EPIC-MAP.md:272) và "không có gì đỏ".
- *   - `resetUsers()` nới trần lên 500 trong MỌI beforeEach của cả 45 spec.
- *   - `grep 429` trong e2e trước 28/08: 3 kết quả, tất cả về trần MỞ KÉT, không dòng nào
- *     cho đăng nhập.
- * Tức là: unit test giả lập cấu hình → E2E tắt tính năng → 0 phủ sóng thực.
+ *     không chứng minh guard được lắp đúng vào chuỗi request. Guard đăng ký sai thứ tự thì
+ *     "không có gì đỏ" (xem docs/EPIC-MAP.md).
+ *   - `resetUsers()` nới trần lên 500 trong MỌI beforeEach của mọi spec khác.
+ * Tức là thiếu bài này: unit test giả lập cấu hình → E2E tắt tính năng → 0 phủ sóng thực.
  *
  * Bài này mượn trần xuống thấp, chứng minh 429 là thật trên stack thật, rồi TRẢ LẠI ngay để
  * các spec sau không bị 429 oan. Bộ đếm của guard nằm trong RAM tiến trình api (cửa sổ 1
@@ -45,25 +43,23 @@ test.describe('Chống dò mật khẩu theo IP', () => {
    * cũ tới 30 giây.
    *
    * Vì vậy bài này KHÔNG chờ mù bằng sleep, mà bắn lại cho tới khi thấy hành vi đổi, có trần
-   * thời gian. Đây cũng chính là bằng chứng thực nghiệm cho F-QA-12 trong hồ sơ rà soát:
-   * "đổi cấu hình có hiệu lực ngay" là không đúng — có độ trễ tới 30 giây, và worker giữ cache
-   * riêng của nó.
+   * thời gian: "đổi cấu hình có hiệu lực ngay" là không đúng — có độ trễ tới 30 giây, và
+   * worker giữ cache riêng của nó.
    */
   test.setTimeout(120_000);
 
   /**
    * CANH CHÍNH CÁI GIÀN GIÁO — không phải canh sản phẩm.
    *
-   * Từ 07/09 (`b3d488f`), `resetUsers()` chỉ XẾP HÀNG; `reset-e2e.mjs` chạy sau, do fixture
-   * gọi ngay trước thân bài — và trong domain `users` của nó có một dòng đặt trần về 500.
-   * Nên trần mà `beforeAll` vừa hạ xuống 3 bị đè lại thành 500 TRƯỚC KHI bài chạy, và bài
+   * `resetUsers()` chỉ XẾP HÀNG; `reset-e2e.mjs` chạy sau, do fixture gọi ngay trước thân
+   * bài — và trong domain `users` của nó có một dòng đặt trần về 500. Không xả hàng đợi trước
+   * thì trần mà `beforeAll` vừa hạ xuống 3 bị đè lại thành 500 TRƯỚC KHI bài chạy, và bài
    * chống dò mật khẩu bên dưới chạy với trần 500: không bao giờ chạm 429, luôn xanh vì lý do
-   * sai. Nó im lặng đúng hai ngày, tới lượt `--e2e` đầy đủ đầu tiên (09/09) mới lộ.
+   * sai.
    *
-   * `setLoginRateLimit` nay tự `flushResets()` trước khi ghi. Bài này khóa đúng điều đó lại:
+   * `setLoginRateLimit` tự `flushResets()` trước khi ghi. Bài này khóa đúng điều đó lại:
    * nó KHÔNG kiểm sản phẩm, nó kiểm rằng con số bộ test vừa đặt còn sống lúc bài bắt đầu.
-   * Bỏ bài này thì lần tối ưu tốc độ tiếp theo lại tắt được một hàng rào bảo mật mà không ai
-   * thấy — đúng như lần vừa rồi.
+   * Bỏ bài này thì một lần tối ưu tốc độ có thể tắt một hàng rào bảo mật mà không ai thấy.
    */
   test('giàn giáo: trần bộ test vừa đặt không bị hàng đợi dọn ghi đè', () => {
     expect(getLoginRateLimit()).toBe(String(LIMIT));

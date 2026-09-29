@@ -64,7 +64,7 @@ async function setUp(page: Page, stamp: string): Promise<Fixture> {
   return { headers, routerId, routerCode, subnetId, internalIp };
 }
 
-/** Story 5.3 — FR-017: sổ NAT trả lời "port nào mở, vì sao, cho ai". */
+/** FR-017: sổ NAT trả lời "port nào mở, vì sao, cho ai". */
 test.describe('Sổ NAT', () => {
   test('đường hạnh phúc: thêm rule → hiện đủ port/lý do/người dùng → nối được sang hồ sơ IP', async ({
     page,
@@ -99,10 +99,9 @@ test.describe('Sổ NAT', () => {
   /**
    * Địa chỉ mạng và địa chỉ quảng bá KHÔNG phải một máy.
    *
-   * Trước đây form chỉ hỏi "có phải IPv4 hợp lệ không", nên `172.16.0.0` khai được và cuốn sổ
-   * có một dòng dẫn tới hư không: gói tin chuyển tới đó không tới máy nào, còn người đọc sổ
-   * thì tin rằng port ấy đang phục vụ một dịch vụ thật. Bên IPAM đã chặn đúng từ đầu — lỗ
-   * hổng chỉ nằm ở cuốn sổ này.
+   * Chỉ hỏi "có phải IPv4 hợp lệ không" là để `172.16.0.0` khai được và cuốn sổ có một dòng
+   * dẫn tới hư không: gói tin chuyển tới đó không tới máy nào, còn người đọc sổ thì tin rằng
+   * port ấy đang phục vụ một dịch vụ thật. Cuốn sổ này phải chặn giống bên IPAM.
    */
   test('đường hỏng: IP trong là địa chỉ mạng hoặc quảng bá đều bị từ chối', async ({ page }) => {
     await firstLogin(page, E2E_SA);
@@ -168,19 +167,16 @@ test.describe('Sổ NAT', () => {
     /*
      * OpenVPN là UDP — chọn nó phải kéo giao thức đổi theo, không chỉ điền con số.
      *
-     * Hai thay đổi của bản dựng lại (26/08/2026) mà bài này phải theo:
-     *  - Danh mục dịch vụ giờ là DROPDOWN xổ khi bấm, không phải bảng luôn mở (hai ô port
-     *    thành hai bảng chiếm quá nửa hộp thoại).
+     * Hình dạng của hộp mà bài này đi theo:
+     *  - Danh mục dịch vụ là DROPDOWN xổ khi bấm, không phải bảng luôn mở (hai ô port mà
+     *    mỗi ô một bảng thì chiếm quá nửa hộp thoại).
      *  - Port ngoài là danh sách CHIP có ✕; chọn dịch vụ là THÊM chip, không ghi đè.
-     *  - Giao thức không còn là ô chọn riêng mà là dải nút nhỏ ngay dưới ô port.
+     *  - Giao thức là dải nút nhỏ ngay dưới ô port, không phải ô chọn riêng.
      */
     await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Cổng ngoài' }).click();
     await page.getByRole('option', { name: /OpenVPN/ }).click();
     await expect(form.getByRole('button', { name: 'Bỏ cổng 1194' })).toBeVisible();
-    await expect(form.getByRole('button', { name: 'UDP', exact: true })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    await expect(form.getByRole('radio', { name: 'UDP', exact: true })).toBeChecked();
 
     await form.getByRole('combobox', { name: 'Lọc dịch vụ cho Cổng trong' }).click();
     await page.getByRole('option', { name: /NAS Web/ }).click();
@@ -375,9 +371,8 @@ test.describe('Sổ NAT', () => {
   });
 
   /**
-   * Code review Epic 5, finding 1: dải rộng là CẢNH BÁO chứ không phải lỗi. Trước đây comment
-   * và test đều nói "không chặn" nhưng code lại ném — người dùng đọc được lời khuyên "nếu
-   * đúng ý thì cứ lưu" mà không làm theo được, và dải port camera không vào nổi sổ.
+   * Dải rộng là CẢNH BÁO chứ không phải lỗi. Nếu code ném thì người dùng đọc được lời khuyên
+   * "nếu đúng ý thì cứ lưu" mà không làm theo được, và dải port camera không vào nổi sổ.
    */
   test('dải port lớn LƯU ĐƯỢC và trả về cảnh báo, không bị chặn', async ({ page }) => {
     await firstLogin(page, E2E_SA);
@@ -403,7 +398,7 @@ test.describe('Sổ NAT', () => {
   });
 
   /**
-   * Code review Epic 5, finding 4: `EXCLUDE` của DB so `protocol WITH =` nên không thấy
+   * `EXCLUDE` của DB so `protocol WITH =` nên không thấy
    * `both` chồng `tcp`. Mà `both` theo định nghĩa phủ cả hai — để lọt là sổ có HAI câu trả
    * lời cho TCP/8080.
    */
@@ -449,8 +444,8 @@ test.describe('Sổ NAT', () => {
   });
 
   /**
-   * Code review Epic 5, finding 6: tìm `8005` phải ra rule `8000-8010`. Bản trước chỉ so
-   * `external_from` nên người tra kết luận nhầm là port đang trống.
+   * Tìm `8005` phải ra rule `8000-8010`. Chỉ so `external_from` thì người tra kết luận nhầm là
+   * port đang trống.
    */
   test('tìm theo port bắt được cả BÊN TRONG khoảng', async ({ page }) => {
     await firstLogin(page, E2E_SA);
@@ -479,8 +474,8 @@ test.describe('Sổ NAT', () => {
   });
 
   /**
-   * Code review Epic 5, finding 3: site không tra ra được (đã xóa / bookmark cũ) phải trả
-   * RỖNG. Bản trước lọc `siteCode === null` nên nó trả về rule của router KHÔNG gắn site —
+   * Site không tra ra được (đã xóa / bookmark cũ) phải trả RỖNG. Lọc thành `siteCode === null`
+   * là trả về rule của router KHÔNG gắn site —
    * một tập khác hẳn, không rỗng, và auditor đọc thành "đây là rule của site X".
    */
   test('lọc theo site không tồn tại trả RỖNG, không trả nhầm tập khác', async ({ page }) => {
@@ -507,14 +502,13 @@ test.describe('Sổ NAT', () => {
     expect(stale.status()).toBe(200);
     expect(((await stale.json()) as unknown[]).length).toBe(0);
 
-    // Còn id rác thì phải là 400 tử tế, không phải 500 (finding 7).
+    // Còn id rác thì phải là 400 tử tế, không phải 500.
     const junk = await page.request.get('/api/v1/ipam/nat?deviceId=abc');
     expect(junk.status()).toBe(400);
   });
 
   /**
-   * Code review Epic 5, finding 5: IP trong không được chuẩn hóa nên một dấu cách thừa làm
-   * mất liên kết sang hồ sơ IP — cột "máy trong" trống trong khi hồ sơ có thật.
+   * IP trong phải được chuẩn hóa: không thì một dấu cách thừa làm mất liên kết sang hồ sơ IP — cột "máy trong" trống trong khi hồ sơ có thật.
    */
   test('IP trong có dấu cách thừa vẫn nối được sang hồ sơ IP', async ({ page }) => {
     await firstLogin(page, E2E_SA);
@@ -540,7 +534,7 @@ test.describe('Sổ NAT', () => {
   });
 
   /**
-   * Code review Epic 5, finding 8: A gỡ rule, B bấm Lưu — không có `voided_at IS NULL` trong
+   * A gỡ rule, B bấm Lưu — không có `voided_at IS NULL` trong
    * chính câu UPDATE thì bản sửa của B ghi đè lên hàng đã gỡ và biến mất vĩnh viễn.
    */
   test('sửa một rule vừa bị người khác gỡ thì báo lỗi, không ghi đè im lặng', async ({ page }) => {
@@ -573,7 +567,7 @@ test.describe('Sổ NAT', () => {
     expect([404, 409]).toContain(late.status());
   });
 
-  /** AC 5.3: trang thiết bị hiển thị rule của chính nó (qua sổ khu mở rộng của story 2.5). */
+  /** AC 5.3: trang thiết bị hiển thị rule của chính nó (qua sổ khu mở rộng `device-panels`). */
   test('trang router hiện sổ NAT của chính nó, devices không phải biết NAT là gì', async ({
     page,
   }) => {
@@ -598,14 +592,14 @@ test.describe('Sổ NAT', () => {
     /*
      * Hỏi TRONG KHU "Sổ NAT", không phải "ở đâu đó trên trang".
      *
-     * Từ 17/09 đầu trang có bản đồ quan hệ, và nó cố ý nhắc lại một dòng tóm tắt của mỗi khu
+     * Đầu trang có bản đồ quan hệ, và nó cố ý nhắc lại một dòng tóm tắt của mỗi khu
      * (kèm một bản dự phòng dạng danh sách cho màn hẹp, luôn nằm trong DOM). "TCP 8443" vì thế
      * khớp ba chỗ và Playwright dừng ở strict mode. Bản đồ đang làm đúng việc của nó — cái sai
      * là câu hỏi quá rộng: bài này muốn biết KHU SỔ NAT có dòng ấy hay không.
      */
-    const khuNat = page.getByRole('region', { name: 'Sổ NAT' });
-    await expect(khuNat.getByText('TCP 8443')).toBeVisible();
-    await expect(khuNat.getByText(/phần mềm thuế truy cập từ ngoài/)).toBeVisible();
+    const natSection = page.getByRole('region', { name: 'Sổ NAT' });
+    await expect(natSection.getByText('TCP 8443')).toBeVisible();
+    await expect(natSection.getByText(/phần mềm thuế truy cập từ ngoài/)).toBeVisible();
   });
 
   /**
@@ -636,7 +630,7 @@ test.describe('Sổ NAT', () => {
   });
 });
 
-/** Story 5.4 — panel IP trên trang thiết bị. */
+/** Panel IP trên trang thiết bị. */
 test.describe('Panel IP trên trang thiết bị', () => {
   test('thiết bị có IP thì trang chi tiết hiện địa chỉ và bấm sang được dải', async ({ page }) => {
     await firstLogin(page, E2E_SA);
@@ -658,9 +652,9 @@ test.describe('Panel IP trên trang thiết bị', () => {
     await page.goto(`/devices/${routerId}`);
     await expect(page.getByRole('heading', { name: 'Địa chỉ IP' })).toBeVisible();
     // Hỏi trong KHU "Địa chỉ IP": bản đồ quan hệ ở trên cũng nhắc lại địa chỉ này (xem bài NAT).
-    const khuIp = page.getByRole('region', { name: 'Địa chỉ IP' });
-    await expect(khuIp.getByText(`172.16.${octet}.1`)).toBeVisible();
-    await expect(khuIp.getByText('cổng mặc định')).toBeVisible();
+    const ipSection = page.getByRole('region', { name: 'Địa chỉ IP' });
+    await expect(ipSection.getByText(`172.16.${octet}.1`)).toBeVisible();
+    await expect(ipSection.getByText('cổng mặc định')).toBeVisible();
     // IP của máy khác KHÔNG được lọt vào panel của con router này.
     await expect(page.getByText(internalIp)).toHaveCount(0);
   });

@@ -2,7 +2,7 @@ import type { Me } from '@/lib/me';
 import { PATHS } from '@/lib/routes';
 import { DEV_KIT_ENABLED } from '@/lib/dev-kit';
 
-export interface NavItem {
+interface NavItem {
   /** Khóa i18n (`nav.*`) — nhãn không bao giờ viết cứng. */
   key: string;
   /** Nhãn riêng cho Member khi cùng một màn làm việc khác hẳn theo vai. */

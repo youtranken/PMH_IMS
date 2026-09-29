@@ -32,7 +32,7 @@ export interface AuditQuery {
 }
 
 /** Một sự kiện trong cụm đã gom — đủ để mở chi tiết từng lần. */
-export interface AuditEvent {
+interface AuditEvent {
   id: string;
   ip: string | null;
   detail: unknown;
@@ -56,8 +56,8 @@ export interface AuditRow {
   objectPath: string | null;
   /**
    * "Từ đâu" của NFR-03. `null` cho các dòng do job nền sinh ra (outbox relay, cron hết hạn)
-   * — đó là câu trả lời đúng, không phải thiếu dữ liệu — và cho MỌI dòng ghi trước 08/09,
-   * khi cột này còn NULL trên 100% số dòng (rà soát 07/09, #3).
+   * — đó là câu trả lời đúng, không phải thiếu dữ liệu — và cho những dòng cũ ghi từ khi bảng
+   * drizzle chưa có cột này (bảng chỉ-thêm, không vá ngược được).
    */
   ip: string | null;
   detail: unknown;
@@ -69,7 +69,7 @@ export interface AuditRow {
 }
 
 /** Trần số sự kiện trả kèm một cụm — cụm dài hơn vẫn đếm đúng, chỉ không liệt kê hết. */
-export const GROUP_EVENTS_CAP = 100;
+const GROUP_EVENTS_CAP = 100;
 
 type RawAuditRow = {
   id: string;
@@ -115,12 +115,9 @@ export class AuditQueryService {
     /*
      * MỌI cột phải gắn bí danh `a.` — cả hai câu dưới đều `FROM audit_log a`.
      *
-     * Bản trước viết cột trần (`created_at >= ...`). Câu đếm không JOIN nên chạy được, nhưng
-     * câu lấy dữ liệu có `LEFT JOIN users u` và `users` CŨNG có cột `created_at` → Postgres
-     * ném 42702 "column reference created_at is ambiguous" mỗi khi người dùng lọc theo ngày.
-     *
-     * Lỗi này bị lỗi `u.sub` che khuất suốt 9 epic: join sai cột chết trước (42703) nên không
-     * ai chạm tới được lớp thứ hai. Sửa lớp một xong, E2E lộ ra ngay lớp hai.
+     * Cột trần (`created_at >= ...`) chạy được ở câu đếm, nhưng chỉ cần một câu nào JOIN với
+     * bảng khác cũng có cột `created_at` là Postgres ném 42702 "column reference created_at is
+     * ambiguous" mỗi khi người dùng lọc theo ngày.
      */
     /*
      * Ranh giới ngày theo `app.timezone` (AD-11), không viết cứng: màn hiển thị giờ theo khóa
@@ -156,23 +153,20 @@ export class AuditQueryService {
 
     const offset = (q.page - 1) * q.pageSize;
     /*
-     * TÊN NGƯỜI THAO TÁC TRA QUA `UsersApiService`, KHÔNG JOIN BẢNG `users` (A-07, vá 21/09).
+     * TÊN NGƯỜI THAO TÁC TRA QUA `UsersApiService`, KHÔNG JOIN BẢNG `users` (A-07).
      *
-     * Bản trước viết `LEFT JOIN users u ON u.email = a.actor` ngay trong câu SQL này. AD-2
-     * cấm tường minh — `users.api.ts` còn viết đúng câu bị vi phạm — nhưng nó sống chín epic
-     * vì không cổng nào nhìn thấy: eslint khớp CHUỖI IMPORT (ở đây không có import nào),
-     * `dependency-cruiser` khớp ĐƯỜNG DẪN ĐÃ RESOLVE (một câu SQL không resolve thành gì cả).
+     * `LEFT JOIN users` ngay trong câu SQL này là vi phạm AD-2 mà không cổng nào nhìn thấy:
+     * eslint khớp CHUỖI IMPORT (ở đây không có import nào), `dependency-cruiser` khớp ĐƯỜNG
+     * DẪN ĐÃ RESOLVE (một câu SQL không resolve thành gì cả).
      *
-     * Và cái giá của việc tự suy đoán lược đồ của module khác đã được trả hai lần, cả hai
-     * đều ghi lại ở đây: bản đầu join `u.sub = a.actor` — bảng `users` chưa bao giờ có cột
-     * `sub`, đó là mảnh sót của QLTS mà AD-12 dặn phải grep bỏ — nên Postgres ném 42703 và
-     * endpoint này 500 ở MỌI lần gọi, suốt chín epic, không gì đỏ. Lần thứ hai là `created_at`
-     * mơ hồ giữa hai bảng, vỡ mỗi lượt lọc theo ngày.
+     * Và tự suy đoán lược đồ của module khác thì hỏng thật: join theo một cột mà `users`
+     * không có (42703, endpoint 500 ở MỌI lần gọi), hay `created_at` mơ hồ giữa hai bảng (vỡ
+     * mỗi lượt lọc theo ngày).
      *
      * Một câu hỏi thêm cho mỗi trang, không phải mỗi dòng: gom email distinct của trang rồi
      * hỏi một lượt. Viewer hiện 50 dòng và phần lớn do vài người thao tác.
      *
-     * `ad2-raw-sql.spec.ts` nay canh chỗ này — cổng thứ ba, cho đúng cửa mà hai cổng kia mù.
+     * `ad2-raw-sql.spec.ts` canh chỗ này — cổng thứ ba, cho đúng cửa mà hai cổng kia mù.
      */
     const [items, totalRows] = q.group
       ? await this.grouped(where, q.pageSize, offset)

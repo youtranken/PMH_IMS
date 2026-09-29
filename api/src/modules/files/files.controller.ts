@@ -14,11 +14,11 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Throttle } from '@nestjs/throttler';
 import { IsIn, IsUUID } from 'class-validator';
 import type { Response } from 'express';
 import { Audited } from '../audit/audited.decorator';
 import { OwnerAccessRegistry } from '../../common/owner-access.registry';
+import { ConfigThrottle } from '../../common/config-throttle';
 import { Roles } from '../auth/roles.decorator';
 import type { AuthedRequest } from '../auth/types';
 import { MULTER_LIMIT } from './file-validation';
@@ -39,24 +39,22 @@ class FileIdParamDto {
 }
 
 /**
- * Đính kèm giấy tờ (story 2.3, FR-002) — module file DÙNG CHUNG cho mọi chủ thể.
+ * Đính kèm giấy tờ (FR-002) — module file DÙNG CHUNG cho mọi chủ thể.
  *
- * ===== QUYỀN, sửa 08/09 (rà soát 07/09, C1) =====
+ * ===== QUYỀN =====
  *
- * Quyết định gốc ở story 2.3 là "mọi vai đã đăng nhập đều xem được; thứ cần siết là KÉT SẮT,
- * không phải cái này". Quyết định đó ĐÚNG lúc nó được đưa ra — khi ấy file chỉ gắn vào thiết
- * bị và phần mềm, và hóa đơn thiết bị đúng là thứ cả team IT cần xem hằng ngày.
+ * Với thiết bị và phần mềm, "mọi vai đã đăng nhập đều xem được" là đúng: hóa đơn thiết bị là
+ * thứ cả team IT cần xem hằng ngày.
  *
- * Nhưng sau đó `service_account` và `isp` được thêm vào `FILE_OWNER_TYPES`, và Epic 6 dựng ma
- * trận quyền ba tầng cho két với mặc định là CẤM. Từ lúc đó phạm vi đã đổi mà luật thì không:
- * một Member bị `denied` trên một tài khoản dịch vụ vẫn liệt kê được đính kèm của nó rồi tải
- * từng cái — mà đính kèm loại này hay là biên bản bàn giao, ảnh chụp cấu hình router, tức
- * giấy tờ có thông tin đăng nhập chép ngay trên đó.
+ * Nhưng `service_account` và `isp` cũng mang đính kèm, và két có ma trận quyền ba tầng với mặc
+ * định là CẤM. Không siết ở đây thì một Member bị `denied` trên một tài khoản dịch vụ vẫn liệt
+ * kê được đính kèm của nó rồi tải từng cái — mà đính kèm loại này hay là biên bản bàn giao,
+ * ảnh chụp cấu hình router, tức giấy tờ có thông tin đăng nhập chép ngay trên đó.
  *
- * Nay: với 4 loại chủ thể mà ma trận PHỦ (`SECRET_OWNER_TYPES`), Member phải có quyền trên
- * chủ thể mới đọc được đính kèm của nó. SA/Admin không đổi. Với `subnet`/`nat_rule` — chủ thể
- * của file nhưng KHÔNG phải của két — không tồn tại khái niệm tầng quyền, nên quyết định gốc
- * của story 2.3 vẫn giữ nguyên cho chúng.
+ * Nên: với 4 loại chủ thể mà ma trận PHỦ (`SECRET_OWNER_TYPES`), Member phải có quyền trên
+ * chủ thể mới đọc được đính kèm của nó. SA/Admin đọc hết. Với `subnet`/`nat_rule` — chủ thể
+ * của file nhưng KHÔNG phải của két — không tồn tại khái niệm tầng quyền, nên mọi vai đã đăng
+ * nhập đều xem được.
  */
 @NoStepUp()
 @Controller('api/v1/files')
@@ -76,17 +74,16 @@ export class FilesController {
    * Loại chủ thể chưa có ai canh (`subnet`, `nat_rule`) đi qua: với chúng khái niệm tầng quyền
    * không tồn tại. Mặc-định-cấm nằm TRONG ma trận, không nằm ở đây.
    *
-   * VỊ TỪ Ở DẠNG "KHÔNG PHẢI SA/ADMIN", KHÔNG PHẢI "CÓ PHẢI MEMBER" (19/09/2026).
+   * VỊ TỪ Ở DẠNG "KHÔNG PHẢI SA/ADMIN", KHÔNG PHẢI "CÓ PHẢI MEMBER".
    *
-   * Bản trước là `if (user.role !== 'member') return;` — nghe giống nhưng hỏng ngược: nó cho MỌI
-   * vai khác `member` đi thẳng, bỏ qua hoàn toàn ma trận quyền. Đó là mẫu MỞ MẶC ĐỊNH, ngược
-   * AD-9. Hôm nay chưa thủng vì `@Roles` bên dưới chỉ cho ba vai đi qua; nhưng ngày thêm vai thứ
-   * tư, vai ấy đọc được mọi giấy tờ đính kèm — biên bản bàn giao, hợp đồng license, file cấu
-   * hình VPN — mà không ai hỏi một câu.
+   * `if (user.role !== 'member') return;` nghe giống nhưng hỏng ngược: nó cho MỌI vai khác
+   * `member` đi thẳng, bỏ qua hoàn toàn ma trận quyền. Đó là mẫu MỞ MẶC ĐỊNH, ngược AD-9.
+   * `@Roles` bên dưới chỉ cho ba vai đi qua nên chưa thủng; nhưng ngày thêm vai thứ tư, vai ấy
+   * sẽ đọc được mọi giấy tờ đính kèm — biên bản bàn giao, hợp đồng license, file cấu hình VPN —
+   * mà không ai hỏi một câu.
    *
-   * Đợt 18/09 đã đảo đúng vị từ này ở ba chỗ bên `vault` (`vault.controller.ts` ×2,
-   * `vault-device-panel.ts`) với đúng lý lẽ ấy, rồi BỎ SÓT ổ thứ tư ở đây. Lượt rà soát 19/09
-   * tìm ra. Ghi lại để lần sau ai đổi một vị từ quyền thì đi tìm hết họ hàng của nó trước.
+   * Cùng vị từ này có họ hàng bên `vault` (`vault.controller.ts` ×2, `vault-device-panel.ts`).
+   * Đổi một vị từ quyền thì đi tìm hết họ hàng của nó trước — sót một ổ là để hở một ổ.
    */
   private async assertCanRead(req: AuthedRequest, ownerType: FileOwnerType, ownerId: string) {
     const user = requireUser(req);
@@ -103,8 +100,8 @@ export class FilesController {
 
   @Roles('sa', 'admin', 'member')
   @Post()
-  // Upload giữ nguyên buffer 20MB trong RAM — siết 20 lần/phút/user.
-  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  // Upload giữ nguyên buffer 20MB trong RAM — siết theo `rate.file_upload_per_minute` mỗi user.
+  @ConfigThrottle('rateFileUploadPerMinute')
   @Audited('file.uploaded', 'file', { writtenByService: true })
   @UseInterceptors(FileInterceptor('file', { limits: MULTER_LIMIT }))
   async upload(
@@ -172,9 +169,9 @@ export class FilesController {
   }
 
   /**
-   * XÓA siết về SA/Admin (rà soát 07/09, C1). Trước đây bất kỳ Member nào cũng xóa được mọi
-   * đính kèm của mọi hồ sơ chỉ cần có id — xóa mềm nên khôi phục được, nhưng không có lý do
-   * nghiệp vụ nào để mở đường đó cho toàn bộ vai Member.
+   * XÓA siết về SA/Admin. Mở cho Member thì bất kỳ ai cũng xóa được mọi đính kèm của mọi hồ
+   * sơ chỉ cần có id — xóa mềm nên khôi phục được, nhưng không có lý do nghiệp vụ nào để mở
+   * đường đó cho toàn bộ vai Member.
    */
   @Roles('sa', 'admin')
   @Delete(':id')

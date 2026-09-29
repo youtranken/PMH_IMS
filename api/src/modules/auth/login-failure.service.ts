@@ -9,9 +9,9 @@ import { SweepService } from '../queue/sweep.service';
 import { loginFailureTable } from './login-failure.schema';
 
 /**
- * Khoá đăng nhập theo CẶP (người dùng, IP) — NFR-01, bản 11/09.
+ * Khoá đăng nhập theo CẶP (người dùng, IP) — NFR-01.
  *
- * Vì sao không còn khoá theo tài khoản: xem khối chú thích đầu
+ * Vì sao không khoá theo tài khoản: xem khối chú thích đầu
  * `0045_login_failure_per_ip.sql`. Tóm tắt — khoá theo tài khoản là một cái nút mà người lạ
  * bấm được, và người đáng bị khoá nhất là SA đúng lúc đang có sự cố.
  *
@@ -72,8 +72,8 @@ export class LoginFailureService implements OnModuleInit {
    * dừng ở chỉ mục unique tới khi lượt trước commit, rồi mới đi tiếp — nên tới lúc đọc lại,
    * nó thấy giá trị đã commit chứ không phải ảnh chụp cũ.
    *
-   * Đây đúng nước cờ `registerLoginFailureWithin` đang dùng trên hàng `users` (rà soát 08/09,
-   * #5: N lượt đoán song song chỉ tốn 1 lượt đếm), chỉ thêm bước dựng hàng.
+   * Đây đúng nước cờ `registerLoginFailureWithin` đang dùng trên hàng `users` (đọc-rồi-ghi thì
+   * N lượt đoán song song chỉ tốn 1 lượt đếm), chỉ thêm bước dựng hàng.
    */
   async registerFailureWithin(
     tx: Tx,

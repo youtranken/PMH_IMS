@@ -22,11 +22,10 @@ import type { ReactNode } from 'react';
 /**
  * Đếm ĐỘ SÂU hộp thoại đang mở, để hộp LỒNG không phủ mờ chồng lên hộp cha.
  *
- * `overlays.css` có sẵn `.modal-backdrop.bare` (trong suốt) và prop `overlayClassName` có sẵn
- * chú thích bảo hộp lồng phải dùng nó — nhưng rà ngày 18/09/2026 thì KHÔNG một nơi gọi nào
- * truyền chuỗi đó: luật CSS chết, và chú thích mô tả một cơ chế chưa từng được đấu dây. Ở Két
- * sắt, lồng hộp là đường đi CHÍNH (mở két → gõ mã 6 số → hiện giá trị), nên tới hộp thứ ba nền
- * đã phủ ba lớp, khoảng 0,69 độ đen, blur chồng blur.
+ * `overlays.css` có sẵn `.modal-backdrop.bare` (trong suốt), nhưng bắt từng nơi gọi tự truyền
+ * `overlayClassName` thì không nơi nào nhớ. Ở Két sắt, lồng hộp là đường đi CHÍNH (mở két → gõ
+ * mã 6 số → hiện giá trị), nên không có bộ đếm này thì tới hộp thứ ba nền đã phủ ba lớp,
+ * khoảng 0,69 độ đen, blur chồng blur.
  *
  * Để hộp TỰ BIẾT thay vì bắt từng nơi gọi tự khai: nơi gọi không phải lúc nào cũng biết mình
  * đang nằm trong một hộp khác — `VaultPanel` dùng ở cả trang chi tiết lẫn trong popup của
@@ -45,8 +44,8 @@ const DialogDepthContext = createContext(0);
  *   1. `ConfirmProvider` dựng `ConfirmDialog` ở GỐC app, là anh em của `children` chứ không
  *      nằm trong hộp nào — nên nó luôn đọc ra `depth = 0`. Mà `guardUnsaved` của chính file
  *      này gọi `askConfirm` (xem `tryClose`), nghĩa là mọi hộp có canh dữ liệu chưa lưu khi
- *      bấm Esc đều đẻ ra một lớp nền mờ THỨ HAI đè lên lớp của chính nó. Đo ngày 18/09/2026:
- *      hai lớp `rgba(20,26,20,.44)` chồng nhau, không lớp nào `bare`.
+ *      bấm Esc đều đẻ ra một lớp nền mờ THỨ HAI đè lên lớp của chính nó (đo được: hai lớp
+ *      `rgba(20,26,20,.44)` chồng nhau, không lớp nào `bare`).
  *   2. Hai hộp anh em trong cùng một component (`{a && <Dialog/>}{b && <Dialog/>}`) cũng đều
  *      `depth = 0`.
  *
@@ -142,7 +141,7 @@ export function Dialog({
    *     buộc phải bấm được, nếu không hộp thành KHÔNG CÓ LỐI RA.
    *
    * Dùng nhầm cái đầu cho vế thứ hai là dựng một hộp không đóng được bằng gì cả. Bài
-   * `accounts.spec.ts` bắt đúng lỗi đó ngày 12/09, khi hộp mật khẩu tạm vá bằng nhầm prop.
+   * `accounts.spec.ts` canh đúng lỗi đó ở hộp mật khẩu tạm.
    */
   requireExplicitClose?: boolean;
   /**
@@ -188,7 +187,7 @@ export function Dialog({
   const [portalEl, setPortalEl] = useState<HTMLDivElement | null>(null);
 
   /*
-   * ===== CANH DỮ LIỆU CHƯA LƯU (12/09) — xem chú thích của prop `guardUnsaved` =====
+   * ===== CANH DỮ LIỆU CHƯA LƯU — xem chú thích của prop `guardUnsaved` =====
    *
    * `bodyRef` trỏ vào thân hộp. Chữ ký là danh sách cặp (tên ô, giá trị) của mọi ô nhập
    * NATIVE bên trong, đem `JSON.stringify`.
@@ -257,14 +256,14 @@ export function Dialog({
   }, [askConfirm, fieldSignature, onOpenChange, t]);
 
   /*
-   * ===== ESC LÚC MENU Ô CHỌN ĐANG MỞ CHỈ ĐƯỢC ĐÓNG MENU (10/09) =====
+   * ===== ESC LÚC MENU Ô CHỌN ĐANG MỞ CHỈ ĐƯỢC ĐÓNG MENU =====
    *
-   * Mở form, bấm ô chọn, đổi ý, bấm Esc — CẢ HỘP đóng và mất trắng những gì vừa gõ. Bài kiểm
-   * "đi khắp giao diện" bắt được, và nó không phải lỗi của một màn: mọi ô chọn trong repo đều
-   * dựng từ `ui/select.tsx`, mọi hộp đều dựng từ file này.
+   * Mở form, bấm ô chọn, đổi ý, bấm Esc — không được để CẢ HỘP đóng và mất trắng những gì vừa
+   * gõ. Đây không phải việc của một màn: mọi ô chọn trong repo đều dựng từ `ui/select.tsx`, mọi
+   * hộp đều dựng từ file này.
    *
-   * Ý định đúng ĐÃ có trong mã: `select.tsx` bắt Escape rồi `e.stopPropagation()`. Nó không
-   * đạt được vì Radix nghe `keydown` ở `document` với `capture: true`
+   * `select.tsx` bắt Escape rồi `e.stopPropagation()` là KHÔNG đủ, vì Radix nghe `keydown` ở
+   * `document` với `capture: true`
    * (`react-dismissable-layer/dist/index.mjs:105`) — tầng bắt chạy XONG trước khi sự kiện kịp
    * bò tới handler React của ô chọn. Không handler nào của con chặn nổi một listener đăng ký
    * ở tài liệu, pha bắt. Đó là lý do một dòng `stopPropagation` trông rất hợp lý lại vô hiệu.
@@ -312,12 +311,11 @@ export function Dialog({
   };
 
   /*
-   * ===== TRẢ TIÊU ĐIỂM VỀ NÚT ĐÃ MỞ HỘP (09/09) =====
+   * ===== TRẢ TIÊU ĐIỂM VỀ NÚT ĐÃ MỞ HỘP =====
    *
-   * Chú thích ở đầu file này từng hứa "Radix lo focus trap, scroll-lock, Esc, TRẢ FOCUS".
-   * Hai phần ba lời hứa đó đúng. Phần trả focus thì KHÔNG, và bài kiểm bàn phím đầu tiên của
-   * bộ E2E đã bắt được: gõ Tab tới nút "Thêm thiết bị", Enter mở hộp, Esc đóng — tiêu điểm
-   * rơi về `<body>`. Người dùng bàn phím bị ném về đầu trang sau MỖI lần đóng hộp, và phải
+   * Radix lo focus trap, scroll-lock, Esc — nhưng phần TRẢ FOCUS thì không tự đúng ở repo này:
+   * gõ Tab tới nút "Thêm thiết bị", Enter mở hộp, Esc đóng — tiêu điểm rơi về `<body>`.
+   * Người dùng bàn phím bị ném về đầu trang sau MỖI lần đóng hộp, và phải
    * gõ lại hơn hai chục lượt Tab để về chỗ cũ.
    *
    * VÌ SAO RADIX KHÔNG LÀM ĐƯỢC Ở ĐÂY: nó trả focus trong bước dọn của `FocusScope`, bước ấy
@@ -420,7 +418,16 @@ export function Dialog({
           >
             <DialogPortalContext.Provider value={portalEl}>
               {title === undefined ? (
-                children
+                /*
+                 * Hộp không title vẫn cần `bodyRef` (thiếu nó `guardUnsaved` đọc chữ ký rỗng và
+                 * không bao giờ hỏi) và `DialogDepthContext` (hộp mở từ trong nó phải biết mình
+                 * là hộp lồng). `display: contents` để lớp bọc không đổi bố cục nơi gọi tự dựng.
+                 */
+                <div ref={bodyRef} style={{ display: 'contents' }}>
+                  <DialogDepthContext.Provider value={depth + 1}>
+                    {children}
+                  </DialogDepthContext.Provider>
+                </div>
               ) : (
                 <>
                   <div className="sheet-header">
@@ -465,7 +472,7 @@ export function Dialog({
                   </div>
                   {footer ? (
                     /*
-                     * ===== CỬA THỨ TƯ CỦA `dismissible` (10/09) =====
+                     * ===== CỬA THỨ TƯ CỦA `dismissible` =====
                      *
                      * Prop `dismissible` sinh ra để chặn đúng một cảnh: lượt ghi ĐANG BAY, hộp
                      * biến mất, POST vẫn hoàn tất — dữ liệu vào sổ nhưng `onSaved()` không

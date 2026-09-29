@@ -21,47 +21,20 @@ import {
   Length,
   Matches,
   Validate,
-  ValidatorConstraint,
-  type ValidatorConstraintInterface,
 } from 'class-validator';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
+import { RealDateOrEmpty } from '../../common/real-date';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
 import { dateTimeInTz } from '../../common/today';
 import { Audited } from '../audit/audited.decorator';
 import { SystemConfigService } from '../config-sys/system-config.service';
 import { USER_SORT_DEFAULT, USER_SORT_KEYS, type UserListFilters } from '../users/users.api';
-import { AccountsService } from './accounts.service';
+import { ACCOUNT_STATUS_ACTION, AccountsService } from './accounts.service';
 import { Roles } from './roles.decorator';
 import type { AuthedRequest, UserRole } from './types';
 import { NoStepUp, RequiresStepUp } from './step-up.decorator';
-
-/**
- * Ngày lịch CÓ THẬT ở dạng `YYYY-MM-DD`, hoặc chuỗi rỗng (= xoá giá trị).
- *
- * Dựng lại ngày từ ba mảnh rồi so ngược: `new Date('2026-02-31')` không ném mà tự trôi sang
- * 03/03, nên chỉ parse được thôi thì chưa chứng minh được ngày đó tồn tại.
- */
-@ValidatorConstraint({ name: 'realDateOrEmpty' })
-export class RealDateOrEmpty implements ValidatorConstraintInterface {
-  validate(value: unknown): boolean {
-    if (typeof value !== 'string' || value === '') return true;
-    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-    if (!match) return false;
-    const [year, month, day] = [Number(match[1]), Number(match[2]), Number(match[3])];
-    const date = new Date(Date.UTC(year, month - 1, day));
-    return (
-      date.getUTCFullYear() === year &&
-      date.getUTCMonth() === month - 1 &&
-      date.getUTCDate() === day
-    );
-  }
-
-  defaultMessage(): string {
-    return 'Ngày sinh phải là một ngày có thật, dạng YYYY-MM-DD.';
-  }
-}
 
 /**
  * SĐT và mã nhân viên (0031) — hai ô TÙY CHỌN, dùng chung cho cả tạo mới lẫn sửa hồ sơ.
@@ -85,15 +58,7 @@ class ContactDto {
 
   @IsOptional()
   @IsString()
-  /*
-   * Chuỗi rỗng phải LỌT qua (nghĩa là "xoá ngày sinh"), nên không dùng `@IsDateString` —
-   * nó từ chối chuỗi rỗng và người dùng hết đường bỏ giá trị đã lỡ nhập.
-   *
-   * Nhưng riêng regex thì KHÔNG đủ: `2026-13-45` khớp đúng khuôn, đi thẳng vào cột `date`,
-   * và Postgres ném 22008 → 500 trắng thay vì đúng câu tiếng Việt bên dưới. Nên kiểm cả
-   * ngày có THẬT hay không.
-   */
-  @Validate(RealDateOrEmpty)
+  @Validate(RealDateOrEmpty, { message: 'Ngày sinh phải là một ngày có thật, dạng YYYY-MM-DD.' })
   birthDate?: string;
 }
 
@@ -186,7 +151,7 @@ class KillAllSessionsDto {
 }
 
 /**
- * Quản trị tài khoản — CHỈ SA (story 1.4). Mọi route ghi có @Audited (AD-9).
+ * Quản trị tài khoản — CHỈ SA. Mọi route ghi có @Audited (AD-9).
  * Không có endpoint xóa user: nghiệp vụ chỉ khóa/vô hiệu hóa (convention "Xóa").
  */
 @NoStepUp()
@@ -278,7 +243,7 @@ export class AccountsController {
   // là thứ duy nhất đứng giữa nó với việc khoá cả công ty ra ngoài.
   @RequiresStepUp()
   @Patch(':id/status')
-  @Audited('account.status.changed', 'user', { writtenByService: true })
+  @Audited(Object.values(ACCOUNT_STATUS_ACTION), 'user', { writtenByService: true })
   async setStatus(
     @Param('id') id: string,
     @Body() dto: StatusDto,

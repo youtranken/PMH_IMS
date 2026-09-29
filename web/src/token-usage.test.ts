@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest';
 /**
  * TOKEN ĐÚNG TÊN MÀ SAI KIỂU — CSS VỨT CẢ DÒNG, IM LẶNG.
  *
- * ===== LỖ SINH RA BÀI NÀY (F-04) =====
+ * ===== LỖ BÀI NÀY CANH =====
  *
- * `shared-kit.css` viết `outline: 2px solid var(--ring)`. Trông đúng: tên token đúng, thuộc
+ * `outline: 2px solid var(--ring)` trông đúng: tên token đúng, thuộc
  * tính hợp lệ, cổng `gate-hex.sh` không có gì để nói vì chẳng có màu viết thẳng nào. Nhưng
  * `tokens.css:49` khai `--ring: 0 0 0 3px rgba(14, 159, 110, 0.22)` — một giá trị
  * **box-shadow**, không phải màu. Thay vào thì dòng thành
@@ -15,16 +15,14 @@ import { describe, expect, it } from 'vitest';
  * báo** mà không báo gì.
  *
  * Hậu quả cụ thể: `FilePicker` giấu `<input>` thật bằng `clip: rect(0 0 0 0)`, nên cái label
- * là thứ duy nhất nhìn thấy được. Vòng tiêu điểm của nó chưa bao giờ vẽ ra — Tab tới ô chọn
- * file là không có tín hiệu nào (WCAG 2.4.7), ở mọi hộp Import và mọi khu đính kèm. 14 chỗ
- * khác trong cùng file viết đúng `box-shadow: var(--ring)`; đúng một chỗ sai.
+ * là thứ duy nhất nhìn thấy được. Viết sai thì vòng tiêu điểm của nó không vẽ ra — Tab tới ô
+ * chọn file là không có tín hiệu nào (WCAG 2.4.7), ở mọi hộp Import và mọi khu đính kèm.
  *
  * ===== VÌ SAO KHÔNG CỔNG NÀO BẮT ĐƯỢC =====
  *
  * `gate-hex.sh` hỏi "có màu viết thẳng ngoài tokens.css không". Đây là câu hỏi khác hẳn:
  * "token này có dùng đúng KIỂU của nó không". Không ai hỏi câu ấy, nên một khai báo chết nằm
- * đó qua nhiều epic mà repo vẫn sạch theo mọi thước đang có — chính là hình dạng mà mục 10
- * của sổ rà soát gọi tên.
+ * đó rất lâu mà repo vẫn sạch theo mọi thước đang có.
  *
  * ===== CÁCH HỎI =====
  *
@@ -160,5 +158,43 @@ describe('Token dùng đúng KIỂU của nó, không chỉ đúng tên', () => 
       }
     }
     expect(offences).toEqual([]);
+  });
+});
+
+/** Token khai trong một khối `selector { … }` đầu tiên khớp `opener` của `tokens.css`. */
+function tokensInBlock(opener: string): Map<string, string> {
+  const source = stripComments(readFileSync(TOKENS_FILE, 'utf8'));
+  const start = source.indexOf(opener);
+  if (start < 0) return new Map();
+  const end = source.indexOf('\n}', start);
+  const out = new Map<string, string>();
+  for (const m of source.slice(start, end).matchAll(/(--[a-z0-9-]+)\s*:\s*([^;]+);/g)) {
+    out.set(m[1], m[2].trim());
+  }
+  return out;
+}
+
+/** Giá trị có chứa màu viết thẳng: hex, hàm màu, hoặc hex mã hoá URL trong SVG nhúng. */
+const CARRIES_COLOUR = /#[0-9a-f]{3,8}\b|%23[0-9a-f]{3,8}\b|\b(rgba?|hsla?)\(/i;
+
+/**
+ * Token mang màu mà thiếu cặp `html[data-theme='dark']` thì ở theme tối nó giữ nguyên màu
+ * sáng — chính lỗi của icon SVG xám và bóng đổ đen nhạt biến mất trên nền tối.
+ */
+describe('Mọi token mang màu có cặp dark', () => {
+  const light = tokensInBlock(':root {');
+  const dark = tokensInBlock("html[data-theme='dark'] {");
+
+  it('đọc được cả hai khối', () => {
+    expect(light.size).toBeGreaterThan(50);
+    expect(dark.size).toBeGreaterThan(20);
+  });
+
+  it('không token mang màu nào chỉ có bản sáng', () => {
+    const missing = [...light]
+      .filter(([, value]) => CARRIES_COLOUR.test(value))
+      .map(([name]) => name)
+      .filter((name) => !dark.has(name));
+    expect(missing).toEqual([]);
   });
 });

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, renderWithI18n, screen, within } from '@/test/test-utils';
 import { formatMinSec, RevealDialog, secretCharClass } from '@/ui/reveal-dialog';
@@ -104,6 +105,92 @@ describe('RevealDialog — tự ẩn sau N giây (FR-022)', () => {
       vi.advanceTimersByTime(250);
     });
     expect(onClose).toHaveBeenCalled();
+  });
+});
+
+/*
+ * `onExpire` là thứ làm hiện toast "Đã tự ẩn giá trị" ở két: thiếu nó người dùng thấy hộp
+ * biến mất không lời và bấm Xem lại cho chắc — thêm một dòng nhật ký mở két.
+ */
+describe('RevealDialog — onExpire khi hết giờ', () => {
+  it('hết giờ: gọi onExpire đúng MỘT lần cùng onClose, kể cả khi nơi gọi chưa kịp tháo hộp', () => {
+    const onClose = vi.fn();
+    const onExpire = vi.fn();
+    renderWithI18n(
+      <RevealDialog
+        label="admin web"
+        value="Sup3r#Secret"
+        seconds={3}
+        onClose={onClose}
+        onExpire={onExpire}
+      />,
+    );
+    advance(2);
+    expect(onExpire).not.toHaveBeenCalled();
+
+    advance(1.5);
+    expect(onExpire).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    // Nơi gọi không tháo hộp (onClose là vi.fn): các nhịp sau không được bắn thêm toast.
+    advance(5);
+    expect(onExpire).toHaveBeenCalledTimes(1);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('bấm "Ẩn ngay" trước hạn: KHÔNG gọi onExpire — người dùng tự đóng thì không cần báo', () => {
+    const onClose = vi.fn();
+    const onExpire = vi.fn();
+    renderWithI18n(
+      <RevealDialog
+        label="admin web"
+        value="Sup3r#Secret"
+        seconds={30}
+        onClose={onClose}
+        onExpire={onExpire}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Ẩn ngay' }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onExpire).not.toHaveBeenCalled();
+  });
+
+  /*
+   * Nơi gọi truyền callback viết tại chỗ (`onClose={() => setRevealed(null)}`), nên mỗi lần
+   * cha vẽ lại là một hàm mới. Đồng hồ không được dựng lại theo — dựng lại mỗi nhịp là xoá rồi
+   * tạo interval liên tục, và một nhịp trễ có thể rơi vào khe giữa hai lần.
+   */
+  it('cha vẽ lại với callback mới: interval chỉ dựng MỘT lần, và hết giờ gọi bản callback mới nhất', () => {
+    const spy = vi.spyOn(globalThis, 'setInterval');
+    const calls: number[] = [];
+    function Host() {
+      const [n, setN] = useState(0);
+      return (
+        <>
+          <button type="button" onClick={() => setN((x) => x + 1)}>
+            vẽ lại
+          </button>
+          <RevealDialog
+            label="admin web"
+            value="Sup3r#Secret"
+            seconds={3}
+            onClose={() => calls.push(n)}
+            onExpire={() => {}}
+          />
+        </>
+      );
+    }
+    renderWithI18n(<Host />);
+    const before = spy.mock.calls.filter((c) => c[1] === 250).length;
+    fireEvent.click(screen.getByRole('button', { name: 'vẽ lại', hidden: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'vẽ lại', hidden: true }));
+    advance(1);
+    const after = spy.mock.calls.filter((c) => c[1] === 250).length;
+    expect(after - before).toBe(0);
+
+    advance(3);
+    expect(calls).toEqual([2]);
+    spy.mockRestore();
   });
 });
 

@@ -41,7 +41,7 @@ export class ExcelExportService {
   }
 
   /**
-   * Nhiều sheet trong một file — file MẪU khai báo danh mục (story 2.1) cần
+   * Nhiều sheet trong một file — file MẪU khai báo danh mục cần
    * Hướng dẫn + Site + Tủ mạng + Loại thiết bị + Nhà cung cấp trong cùng một workbook.
    * `any` ở chữ ký để một workbook chứa được các sheet có kiểu dòng KHÁC NHAU
    * (mỗi sheet tự khai cột khớp kiểu của chính nó).

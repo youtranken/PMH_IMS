@@ -32,7 +32,7 @@ export class TotpTokenDto {
  */
 export class TotpEnrollStartDto {
   /**
-   * `@ValidateIf` CHỨ KHÔNG `@IsOptional` (§18 #9, vá 22/09).
+   * `@ValidateIf` CHỨ KHÔNG `@IsOptional`.
    *
    * `@IsOptional()` của class-validator bỏ qua mọi luật khi giá trị là `undefined` HOẶC
    * `null`. Nên `{"currentPassword": null}` qua được cửa, rồi tới service:

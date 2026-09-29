@@ -10,7 +10,7 @@ import {
 
 /**
  * AD-2: public api DUY NHẤT của module `expiry`.
- * Dashboard sếp (Epic 7) và bộ gửi email digest (3.5) hỏi qua đây.
+ * Dashboard sếp và bộ gửi email digest hỏi qua đây.
  */
 @Injectable()
 export class ExpiryApiService {
@@ -26,9 +26,9 @@ export class ExpiryApiService {
    * (AD-11) — module `expiry` là chủ của câu hỏi "sắp hết hạn nghĩa là trong bao nhiêu ngày".
    * Chỉ truyền số khi NGƯỜI DÙNG tự chọn một cửa sổ khác trên màn hình.
    *
-   * Tham số này từng là bắt buộc, nên dashboard phải bịa ra một con số để mà truyền — và nó
-   * bịa `30`, ghi đè cấu hình suốt từ Epic 7 (A-08, vá 21/09). Một tham số bắt buộc mà nơi
-   * gọi không có gì để điền là một cái bẫy: người ta sẽ điền hằng số.
+   * Đừng biến nó thành bắt buộc: nơi gọi không có gì để điền sẽ bịa ra một con số — dashboard
+   * từng bịa `30` và ghi đè cấu hình (A-08). Một tham số bắt buộc mà nơi gọi không có gì để
+   * điền là một cái bẫy: người ta sẽ điền hằng số.
    */
   list(
     options: {
@@ -68,7 +68,7 @@ export class ExpiryApiService {
    *
    * Module chủ (`software`) gọi cửa này ở cuối `renew()` của mình. Nhờ vậy hai nút
    * "Gia hạn" trên web — nút ở màn "Sắp hết hạn" và nút trong chính trang hồ sơ — dẫn tới cùng
-   * một hệ quả, thay vì cửa sau đổi `end_date` mà không để lại dòng nào (rà soát 07/09, #7).
+   * một hệ quả, thay vì cửa sau đổi `end_date` mà không để lại dòng nào.
    *
    * `tx` là bắt buộc, không có bản chạy trên pool: gia hạn xong mà sổ không ghi thì báo cáo
    * cuối năm thiếu một dòng vĩnh viễn — `renewal_history` chỉ-thêm.

@@ -12,9 +12,3 @@ import type { Database } from '../database/database.module';
  *   });
  */
 export type Tx = Parameters<Parameters<Database['transaction']>[0]>[0];
-
-/** Hàm ghi nghiệp vụ luôn nhận `tx` làm THAM SỐ ĐẦU (đọc chữ ký là thấy ngay). */
-export type WriteFn<TArgs extends unknown[], TResult> = (
-  tx: Tx,
-  ...args: TArgs
-) => Promise<TResult>;

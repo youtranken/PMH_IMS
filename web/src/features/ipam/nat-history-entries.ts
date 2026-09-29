@@ -52,7 +52,7 @@ export function toNatHistory(rows: NatHistoryRow[], t: TFunction): HistoryEntry[
   }));
 }
 
-/** Nhãn + cách đọc riêng của sổ NAT; phần chung ở `ui/history-changes.ts` (AD-15, F-09). */
+/** Nhãn + cách đọc riêng của sổ NAT; phần chung ở `ui/history-changes.ts` (AD-15). */
 function describe(changes: FieldChanges, t: TFunction): string | null {
   return describeFieldChanges(changes, t, {
     label: (field) => (FIELD_LABEL[field] ? t(FIELD_LABEL[field]) : field),

@@ -133,16 +133,12 @@ describe('Màn "Sắp hết hạn" — phân trang máy chủ', () => {
 
 
   /**
-   * LỌC THEO NHÓM CŨNG PHẢI Ở MÁY CHỦ — nếu không, bản vá phân trang đẻ ra một lỗi TỆ HƠN.
+   * LỌC THEO NHÓM CŨNG PHẢI Ở MÁY CHỦ — nếu không, phân trang đẻ ra một lỗi TỆ HƠN.
    *
-   * Màn này có ba nút lọc "Quá hạn / Gấp / Sắp tới", và tới 21/09 chúng lọc Ở CLIENT. Chú
-   * thích tại chỗ nói rõ vì sao được phép: *"Màn này KHÔNG phân trang — API trả về hết — nên
-   * lọc ở đây là lọc đúng toàn bộ tập kết quả, không phải chỉ trang đang xem."*
-   *
-   * Câu ấy đúng, và nó ngừng đúng ngay khi phân trang. Cắt server mà để nguyên phép lọc client
-   * thì bấm "Gấp" chỉ lọc trong 50 dòng đang xem: người trực thấy 3 mục gấp trong khi nút ngay
-   * trên đầu đề số 87. Một màn tự mâu thuẫn với chính nó, và nó xuất hiện do BẢN VÁ chứ không
-   * do lỗi cũ — nên phép lọc phải đi xuống cùng chuyến.
+   * Màn này có ba nút lọc "Quá hạn / Gấp / Sắp tới". Lọc Ở CLIENT chỉ đúng khi API trả về
+   * hết. Cắt trang ở server mà lọc ở client thì bấm "Gấp" chỉ lọc trong 50 dòng đang xem:
+   * người trực thấy 3 mục gấp trong khi nút ngay trên đầu đề số 87. Một màn tự mâu thuẫn với
+   * chính nó — nên phép lọc phải ở cùng chỗ với phép cắt trang.
    *
    * Thứ tự bắt buộc ở server: `summarize` TRƯỚC (cả kho, mọi nhóm) → lọc nhóm → cắt trang.
    * Đảo hai bước đầu thì ba con số trên nút đổi mỗi lần bấm vào chính nó.

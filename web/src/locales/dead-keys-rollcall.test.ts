@@ -4,17 +4,16 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { quetNguon } from '@/test/quet-nguon';
+import { scanSource } from '@/test/scan-source';
 
 /**
  * ĐIỂM DANH: `vi.ts` không được chứa khóa mà không nơi nào dùng.
  *
  * ===== VÌ SAO LÀ MỘT BÀI KIỂM, KHÔNG PHẢI MỘT LẦN DỌN =====
  *
- * Lượt rà 12/09 đếm được 46 khóa chết; đo lại sau bốn đợt vá thì con số ấy đã sai, vì chính
- * bốn đợt đó vừa xoá một loạt khóa và vừa làm SỐNG LẠI hai khóa (`app.serverUnreachable`,
- * `accounts.disable`). Một lần xoá tay chỉ đúng cho hôm nay: khóa chết sinh ra mỗi lần ai đó
- * đổi câu chữ rồi quên dòng cũ, và chuyện đó xảy ra ở mọi story.
+ * Một lần xoá tay chỉ đúng cho hôm nay: khóa chết sinh ra mỗi lần ai đó đổi câu chữ rồi quên
+ * dòng cũ, và một khóa đã xoá cũng có thể SỐNG LẠI khi có người dùng lại nó
+ * (`app.serverUnreachable`, `accounts.disable` từng như thế).
  *
  * Khóa chết không làm hỏng gì, và đó chính là vấn đề: nó làm `vi.ts` dài ra, làm người dịch
  * sau không biết câu nào còn dùng, và làm chỗ sửa-sai-một-câu thành chỗ phải đọc ba câu để
@@ -41,13 +40,13 @@ const SRC = join(HERE, '..');
  * giải thích được trong PR — "sẽ dùng ở story sau" là lý do hợp lệ, "không biết tại sao còn"
  * thì không: cái đó nghĩa là xoá được.
  */
-const DUOC_PHEP_KHONG_DUNG: Record<string, string> = {};
+const ALLOWED_UNUSED: Record<string, string> = {};
 
 /**
  * Khóa mà một template RỘNG (`` t(`ns.${bien}`) ``) thật sự dựng ra.
  *
  * Khai tay vì bộ quét cố ý không cứu theo tiền tố phủ cả namespace — xem chú thích ở chỗ
- * dựng `tienTo`. Thêm nhánh mới cho `ipCheck.reason` hay `done` thì thêm dòng ở đây; quên
+ * dựng `prefixes`. Thêm nhánh mới cho `ipCheck.reason` hay `done` thì thêm dòng ở đây; quên
  * thì bài này đỏ, và đỏ đúng chỗ.
  */
 const KEYS_USED_DYNAMICALLY = new Set<string>([
@@ -60,75 +59,68 @@ const KEYS_USED_DYNAMICALLY = new Set<string>([
 ]);
 
 /*
- * DÙNG BẢN CHUNG `quetNguon` (19/09/2026) — luật bỏ qua `__lint-probe__*` nay sống ở MỘT chỗ.
+ * DÙNG BẢN CHUNG `scanSource` — luật bỏ qua `__lint-probe__*` (tránh cuộc đua ENOENT với thư
+ * mục probe của bài lint đang chạy song song) sống ở MỘT chỗ. Đừng chép lại phép quét cây ở đây.
  *
- * File này từng là bản DUY NHẤT được vá cho cuộc đua ENOENT ngày 18/09, và nó được lấy làm dẫn
- * chứng khi `test/quet-nguon.ts` ra đời ngày 19/09 — nhưng chính nó lại không được chuyển sang
- * bản chung. Docblock của `quet-nguon.ts` và mục EPIC-MAP cùng khai "ba nơi gọi" trong khi thật
- * ra chỉ có hai. Lượt rà soát 19/09 đếm ra. Bản vá chống-chép-bản-sao để lại đúng một bản sao,
- * ở đúng file nó viện dẫn.
- *
- * `vi.ts` lọc SAU khi quét chứ không nhét vào `quetNguon`: đó là luật riêng của bài này (không
+ * `vi.ts` lọc SAU khi quét chứ không nhét vào `scanSource`: đó là luật riêng của bài này (không
  * đếm chính file khai khóa là "nơi dùng khóa"), không phải luật chung của phép quét cây.
  */
-function moiFile(dir: string): string[] {
-  return quetNguon(dir, /\.tsx?$/).filter((f) => !f.endsWith('vi.ts'));
+function allFiles(dir: string): string[] {
+  return scanSource(dir, /\.tsx?$/).filter((f) => !f.endsWith('vi.ts'));
 }
 
 /** Mọi khóa LÁ của `vi.ts`, dạng `a.b.c`. Đọc bằng thụt lề chứ không `import` — xem chú thích. */
-function khoaCuaViTs(): string[] {
+function viTsKeys(): string[] {
   /*
    * Vì sao đọc VĂN BẢN chứ không `import vi from './vi'`: import cho ta object, mà object thì
    * không phân biệt được "khóa lá" với "namespace" khi có namespace chỉ chứa một khóa. Đọc
    * theo dòng thì cấu trúc `vi.ts` nói thẳng điều đó ra.
    */
   const source = readFileSync(join(HERE, 'vi.ts'), 'utf8');
-  const khoa: string[] = [];
-  const duong: string[] = [];
+  const key: string[] = [];
+  const route: string[] = [];
   for (const line of source.split('\n')) {
     const st = line.trim();
-    const moNamespace = /^([A-Za-z_][A-Za-z0-9_]*): \{$/.exec(st);
-    if (moNamespace) {
-      duong.push(moNamespace[1]);
+    const namespaceOpen = /^([A-Za-z_][A-Za-z0-9_]*): \{$/.exec(st);
+    if (namespaceOpen) {
+      route.push(namespaceOpen[1]);
       continue;
     }
     if (st.startsWith('},') || st === '}' || st === '} as const;') {
-      duong.pop();
+      route.pop();
       continue;
     }
-    const laKhoa = /^([A-Za-z_][A-Za-z0-9_]*):/.exec(st);
-    if (laKhoa && duong.length > 0) khoa.push([...duong, laKhoa[1]].join('.'));
+    const keyMatch = /^([A-Za-z_][A-Za-z0-9_]*):/.exec(st);
+    if (keyMatch && route.length > 0) key.push([...route, keyMatch[1]].join('.'));
   }
-  return khoa;
+  return key;
 }
 
 describe('Khóa dịch chết trong vi.ts', () => {
-  const khoa = khoaCuaViTs();
+  const key = viTsKeys();
   /*
-   * LỘT CHÚ THÍCH, VÀ BỎ FILE KIỂM, TRƯỚC KHI DÒ (19/09/2026).
+   * LỘT CHÚ THÍCH, VÀ BỎ FILE KIỂM, TRƯỚC KHI DÒ.
    *
    * Phép "có ai dùng không" là `nguon.includes("'khóa'")` trên VĂN BẢN THÔ, nên một khóa chỉ
    * được NHẮC TỚI trong một dòng chú thích — hoặc chỉ còn sống trong một file `*.test.tsx` —
-   * vẫn được tính là còn người dùng. Đợt rà 19/09 chứng minh bằng đột biến: chèn 2 khóa chết,
-   * bài đỏ cả 2; thêm một dòng chú thích nhắc tên khóa thứ hai vào `ui/tabs.tsx`, bài chỉ còn
-   * đỏ 1. Lỗ ấy chưa nuôi khóa chết nào (đo lại sau khi lột: 0 khóa chênh lệch), nên đây là
-   * bịt lỗ chứ không phải trả nợ.
+   * vẫn được tính là còn người dùng. Đột biến chứng minh: chèn 2 khóa chết, bài đỏ cả 2; thêm
+   * một dòng chú thích nhắc tên khóa thứ hai vào `ui/tabs.tsx`, bài chỉ còn đỏ 1.
    *
    * Vì sao bỏ file kiểm: một khóa mà NƠI DÙNG DUY NHẤT là bài kiểm của chính nó thì nó đã
    * chết trong sản phẩm — đúng thứ bài này sinh ra để tìm.
    */
-  const nguon = moiFile(SRC)
+  const sourceText = allFiles(SRC)
     .filter((f) => !/\.test\.tsx?$/.test(f))
     .map((f) => readFileSync(f, 'utf8'))
-    .map((noiDung) =>
-      noiDung.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1'),
+    .map((content) =>
+      content.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1'),
     )
     .join('\n');
 
   /*
    * Tiền tố của mọi khóa dựng động: `` `abc.def_${…}` `` → 'abc.def_'.
    *
-   * ===== TIỀN TỐ PHỦ CẢ NAMESPACE BỊ TỪ CHỐI (T-03, sửa 20/09/2026) =====
+   * ===== TIỀN TỐ PHỦ CẢ NAMESPACE BỊ TỪ CHỐI =====
    *
    * Luật cứu-theo-tiền-tố có một lỗ: hai template trong repo rộng đến mức phủ trọn một
    * namespace —
@@ -144,32 +136,32 @@ describe('Khóa dịch chết trong vi.ts', () => {
    * dùng thì khai tay ở `KEYS_USED_DYNAMICALLY` — danh sách ngắn, đọc được, và khi thêm nhánh mới
    * cho `ipCheck.reason` thì phải khai, đúng như khi thêm một khóa thường.
    */
-  const tienTo = new Set(
-    [...nguon.matchAll(/[`]([A-Za-z0-9_.]*?)\$\{/g)]
+  const prefixes = new Set(
+    [...sourceText.matchAll(/[`]([A-Za-z0-9_.]*?)\$\{/g)]
       .map((m) => m[1])
       .filter((t) => t && !t.endsWith('.')),
   );
   /* Hậu tố khi phần đầu là biến: `` `${mod}.actCreated` `` → 'actCreated'. */
-  const hauTo = new Set([...nguon.matchAll(/\$\{[^}]*\}\.([A-Za-z0-9_]+)/g)].map((m) => m[1]));
+  const suffixes = new Set([...sourceText.matchAll(/\$\{[^}]*\}\.([A-Za-z0-9_]+)/g)].map((m) => m[1]));
 
   /*
-   * SÀN CHỐNG ĐỌC HỤT. Đổi cách viết `vi.ts` (thụt lề khác, gộp một dòng) làm `khoaCuaViTs`
+   * SÀN CHỐNG ĐỌC HỤT. Đổi cách viết `vi.ts` (thụt lề khác, gộp một dòng) làm `viTsKeys`
    * trả về rỗng, và một bài "mọi khóa tìm được đều có người dùng" sẽ XANH RỰC trong khi nó
-   * chẳng kiểm gì. 1000 là mức sàn thô dưới con số đo được ngày 12/09 (1067).
+   * chẳng kiểm gì. 1000 là mức sàn thô, dưới số khóa thật của `vi.ts` (hơn một nghìn).
    */
   it('đọc được vi.ts (nếu không thì cả bài này vô nghĩa)', () => {
-    expect(khoa.length).toBeGreaterThanOrEqual(1000);
+    expect(key.length).toBeGreaterThanOrEqual(1000);
   });
 
   it('mọi khóa đều có nơi dùng', () => {
-    const chet = khoa.filter((k) => {
-      if (k in DUOC_PHEP_KHONG_DUNG) return false;
+    const dead = key.filter((k) => {
+      if (k in ALLOWED_UNUSED) return false;
       if (KEYS_USED_DYNAMICALLY.has(k)) return false;
-      if (nguon.includes(`'${k}'`) || nguon.includes(`"${k}"`)) return false;
-      for (const t of tienTo) if (k.startsWith(t)) return false;
-      return !hauTo.has(k.split('.').pop() as string);
+      if (sourceText.includes(`'${k}'`) || sourceText.includes(`"${k}"`)) return false;
+      for (const t of prefixes) if (k.startsWith(t)) return false;
+      return !suffixes.has(k.split('.').pop() as string);
     });
     // Vitest in nguyên mảng khi đỏ, nên người đọc thấy luôn khóa nào cần xoá.
-    expect(chet).toEqual([]);
+    expect(dead).toEqual([]);
   });
 });

@@ -81,9 +81,9 @@ table.table td.mono[data-empty] {
   font-size: inherit;
   letter-spacing: normal;
 }
-/* Chỉ tô sáng hàng khi hàng THẬT SỰ bấm được. Trước đây luật này không điều kiện, nên rê
-   chuột vào ô trống của bất kỳ bảng nào cũng sáng cả hàng như mời bấm — bấm thì không có gì
-   xảy ra (chỉ ô Mã và nút trong cột Thao tác mới ăn). Hứa hão ở 15/15 bảng. */
+/* Chỉ tô sáng hàng khi hàng THẬT SỰ bấm được. Tô không điều kiện thì rê chuột vào ô trống của
+   bất kỳ bảng nào cũng sáng cả hàng như mời bấm — bấm thì không có gì xảy ra (chỉ ô Mã và
+   nút trong cột Thao tác mới ăn). */
 table.table tbody tr.clickable:hover td {
   background: var(--primary-soft);
 }
@@ -136,10 +136,6 @@ table.table tbody tr.row-suspended td:first-child {
    nói bằng chữ "Đã gỡ …", nên gạch ngang chỉ là tín hiệu phụ, không phải tín hiệu duy nhất. */
 .table .strike {
   text-decoration: line-through;
-}
-.table-actions {
-  white-space: nowrap;
-  text-align: right;
 }
 
 /* Ô lọc theo dõi hạn (date) trong filter-bar — nhãn nhỏ + input date inline. */
@@ -234,9 +230,9 @@ table.table tbody tr.row-suspended td:first-child {
 
 /* Bảng gom nhóm license (/phan-mem): cột số căn phải + hàng click sang chi tiết. */
 /*
- * Bảng nhiều cột KHÔNG được bóp cho vừa khung hẹp (16/09/2026).
+ * Bảng nhiều cột KHÔNG được bóp cho vừa khung hẹp.
  *
- * Từ khi trang chi tiết chia hai cột, bảng 7 cột (license, port map, két sắt) nằm trong cột
+ * Trang chi tiết chia hai cột, nên bảng 7 cột (license, port map, két sắt) nằm trong cột
  * chính ~800px và mỗi ô bị ép xuống ba dòng — "3.150.000 đ" còn gãy chữ "đ" xuống dòng dưới,
  * tức một con số đọc ra hai lần. Đặt SÀN bề ngang rồi để `.table-wrap` cuộn ngang TRONG thẻ:
  * cuộn một bảng dễ chịu hơn đọc một bảng đã nát.
@@ -263,11 +259,9 @@ table.table tbody tr.row-suspended td:first-child {
   text-align: right;
 }
 /*
- * `col-center` trên THEAD: rà 17/09/2026 thì **12/12 chỗ dùng đều là cột "Thao tác"**, và nút
- * trong ô thì bám mép PHẢI qua `.action-cell`. Căn giữa tiêu đề trong khi nội dung bám phải là
- * lệch nhau đúng nửa cột — nhìn thấy ngay ở mọi bảng có menu ⋯. Chú thích ở `.action-cell` còn
- * viết "thẳng header ACTION (cũng căn phải qua .num)"; lời hứa đó chưa từng đúng.
- * Sửa ở đây thay vì đi đổi 12 chỗ gọi.
+ * `col-center` trên THEAD: mọi chỗ dùng đều là cột "Thao tác", và nút trong ô thì bám mép PHẢI
+ * qua `.action-cell`. Căn giữa tiêu đề trong khi nội dung bám phải là lệch nhau đúng nửa cột —
+ * nhìn thấy ngay ở mọi bảng có menu ⋯. Sửa ở đây thay vì đi đổi từng chỗ gọi.
  */
 .table th.col-center {
   text-align: right;
@@ -281,48 +275,7 @@ table.table tbody tr.row-suspended td:first-child {
 .table tbody tr.clickable:hover {
   background: var(--primary-soft);
 }
-/* Bulk toolbar (5.1): hiện khi chọn ≥1 dòng — đếm + Xuất đã chọn + Bỏ chọn. */
-.bulk-toolbar {
-  display: flex;
-  align-items: center;
-  gap: var(--space-5);
-  flex-wrap: wrap;
-  margin-bottom: var(--space-5);
-  padding: var(--space-4) var(--space-6);
-  background: var(--primary-soft);
-  border: 1px solid var(--border);
-  border-radius: var(--r);
-}
-.bulk-toolbar .bulk-count {
-  font-weight: 600;
-  color: var(--primary-ink);
-  margin-right: auto;
-}
-
-/* Toast lỗi thao tác vòng đời (kebab) — nổi trên cùng, tự đóng bằng ✕. */
-.lifecycle-toast {
-  position: fixed;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: var(--z-toast);
-  display: flex;
-  align-items: center;
-  gap: var(--space-5);
-  max-width: 90vw;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
-}
-.lifecycle-toast button {
-  background: none;
-  border: none;
-  color: inherit;
-  cursor: pointer;
-  font-size: var(--fs-md);
-  line-height: 1;
-  padding: 0;
-}
-
-/* --- Cột Action: nút "Chuyển" luôn hiện + menu "⋯" --------------------------- */
+/* --- Cột Action: menu "⋯" căn phải ---------------------------------------- */
 .action-cell {
   display: flex;
   align-items: center;
@@ -330,13 +283,9 @@ table.table tbody tr.row-suspended td:first-child {
   justify-content: flex-end;
   gap: var(--space-2);
 }
-.transfer-btn {
-  white-space: nowrap;
-}
 
 /* --- Menu thao tác hàng "⋯" (ui/row-actions.tsx) --------------------------
- * Chép sang từ QLTS (AD-12) cùng đợt nền tảng, nhưng tới 28/08/2026 mới có component dùng
- * tới — trước đó cột thao tác vẫn là dãy nút phẳng, và nó phình tới ba–năm nút một dòng.
+ * Chép sang từ QLTS (AD-12). Thay cho dãy nút phẳng, vốn phình tới ba–năm nút một dòng.
  * ---------------------------------------------------------------------------- */
 .row-actions {
   position: relative;
@@ -373,7 +322,7 @@ table.table tbody tr.row-suspended td:first-child {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--r);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+  box-shadow: var(--shadow-float);
 }
 .row-actions-menu button {
   display: flex;
@@ -403,16 +352,6 @@ table.table tbody tr.row-suspended td:first-child {
   outline: none;
   background: var(--muted-soft);
   box-shadow: var(--ring);
-}
-/* Icon dẫn đầu: mờ (ink-3) cho action thường; item danger thì icon đỏ theo chữ. */
-.row-actions-menu .ra-ic {
-  width: 16px;
-  height: 16px;
-  flex: none;
-  color: var(--ink-3);
-}
-.row-actions-menu button.danger .ra-ic {
-  color: var(--danger);
 }
 /* Item nguy hiểm (Thanh lý/Hủy): .ghost định nghĩa SAU .danger nên đè chữ về xám —
    ép lại CHỮ ĐỎ + hover nền đỏ nhạt (khớp mẫu tb-dropdown) để báo hiệu phá hủy. */
@@ -490,7 +429,8 @@ textarea.mono::placeholder {
   overflow: hidden;
   max-width: 28rem;
 }
-/* Ghi chú trong ô bảng: rút gọn 1 dòng + ellipsis (đầy đủ ở title hover). */
+/* Ghi chú trong ô bảng: rút gọn 1 dòng + ellipsis. Bị cắt thật thì `ui/cell-note.tsx` biến nó
+   thành nút mở/thu — bàn phím và màn cảm ứng không đọc được `title`. */
 .cell-note {
   display: inline-block;
   max-width: 180px;
@@ -498,6 +438,29 @@ textarea.mono::placeholder {
   text-overflow: ellipsis;
   white-space: nowrap;
   vertical-align: bottom;
+}
+/* Nút phải trông y như chữ trong ô: bỏ mọi dáng nút của `base.css`. */
+button.cell-note,
+button.cell-note:hover:not(:disabled),
+button.cell-note:active:not(:disabled) {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  font-weight: inherit;
+  color: inherit;
+  text-align: left;
+  transform: none;
+}
+/* Ghi chú làm dòng phụ: giữ màu/độ đậm của `.cell-sub`, không lấy màu nút của `base.css`. */
+button.cell-note.cell-sub {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+.cell-note.is-open {
+  max-width: 28rem;
+  white-space: normal;
+  overflow: visible;
 }
 
 /* --- Status badge / pill -------------------------------------------------- */
@@ -554,23 +517,6 @@ textarea.mono::placeholder {
 }
 
 /* --- Recurring session expander (4.5b) ------------------------------------ */
-button.link.session-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin-right: var(--space-3);
-  padding: 0;
-  border: none;
-  background: none;
-  /* `--accent` không tồn tại → nút "xem chi tiết phiên" trước đây mất hẳn màu nhấn. */
-  color: var(--primary-ink);
-  font-size: var(--fs-xs);
-  font-weight: 600;
-  cursor: pointer;
-}
-.session-detail-row > td {
-  background: var(--surface-2, rgba(0, 0, 0, 0.03));
-}
 .session-list {
   margin: 0;
   padding: var(--space-2) var(--space-7);
@@ -585,24 +531,6 @@ button.link.session-toggle {
   gap: var(--space-4);
   font-size: var(--fs-sm);
 }
-.session-idx {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.4rem;
-  height: 1.4rem;
-  border-radius: 50%;
-  background: var(--muted-soft);
-  color: var(--muted);
-  font-size: var(--fs-2xs);
-  font-weight: 700;
-  flex-shrink: 0;
-}
-.session-time {
-  font-variant-numeric: tabular-nums;
-  min-width: 15rem;
-}
-
 
 /* Chữ phụ trong ô bảng (serial dưới tên máy, email dưới họ tên, băng thông dưới nhà mạng…).
    Dùng ở 10 màn nhưng CHƯA TỪNG có luật — cùng họ lỗi với `.shell`/`.row`/`.spinner`. Không có

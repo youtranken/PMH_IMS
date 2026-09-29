@@ -111,8 +111,21 @@ function RevealContent({
   const [graceLeft, setGraceLeft] = useState(graceTotal);
   const [perChar, setPerChar] = useState(false);
 
+  /*
+   * Callback đi qua ref: nơi gọi viết chúng tại chỗ nên mỗi lần cha vẽ lại là hàm mới. Đưa
+   * chúng vào deps thì interval bị xoá rồi dựng lại theo mỗi lần vẽ (4 lần/giây, vì chính nhịp
+   * đếm làm cha vẽ lại). Ref giữ bản mới nhất mà đồng hồ chỉ dựng một lần.
+   */
+  const onCloseRef = useRef(onClose);
+  const onExpireRef = useRef(onExpire);
+  onCloseRef.current = onClose;
+  onExpireRef.current = onExpire;
+  /** Hết giờ chỉ báo MỘT lần: nơi gọi có thể chưa tháo hộp trước nhịp kế tiếp. */
+  const expired = useRef(false);
+
   useEffect(() => {
     const tick = () => {
+      if (expired.current) return;
       const remaining = Math.ceil((deadline.current - Date.now()) / 1000);
       /*
        * Grace đếm từ CÙNG một mốc với đồng hồ tự ẩn, nên hai số luôn khớp nhau. Trừ dần mỗi
@@ -120,8 +133,9 @@ function RevealContent({
        */
       setGraceLeft(Math.max(0, graceTotal - Math.floor((Date.now() - openedAt.current) / 1000)));
       if (remaining <= 0) {
-        onExpire?.();
-        onClose();
+        expired.current = true;
+        onExpireRef.current?.();
+        onCloseRef.current();
         return;
       }
       setLeft(remaining);
@@ -133,7 +147,7 @@ function RevealContent({
       clearInterval(timer);
       document.removeEventListener('visibilitychange', tick);
     };
-  }, [onClose, onExpire, graceTotal]);
+  }, [graceTotal]);
 
   const tone = countdownTone(left, seconds);
   const graceTone = countdownTone(graceLeft, graceTotal);

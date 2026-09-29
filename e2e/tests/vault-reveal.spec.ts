@@ -76,7 +76,7 @@ async function setUpDeviceWithSecrets(
   return { deviceId, ids, typeId: type.id };
 }
 
-/** Story 4.2 — FR-022: mở két phải gõ TOTP, hiện rồi tự ẩn, mỗi lần một dòng audit. */
+/** FR-022: mở két phải gõ TOTP, hiện rồi tự ẩn, mỗi lần một dòng audit. */
 test.describe('Mở két với TOTP step-up', () => {
   test('đường hạnh phúc: hết grace → gõ mã → giá trị hiện → xem tiếp secret khác không phải gõ lại', async ({
     page,
@@ -191,7 +191,7 @@ test.describe('Mở két với TOTP step-up', () => {
     }
 
     /*
-     * DÒNG AUDIT PHẢI GHI ĐÚNG NGƯỜI — thêm 17/09/2026.
+     * DÒNG AUDIT PHẢI GHI ĐÚNG NGƯỜI.
      *
      * Ba khẳng định ở trên chỉ ĐẾM. Đổi `actor` trong `vault.service.ts` thành hằng `'system'`
      * thì cả ba vẫn xanh, và nhật ký nộp auditor nói "có người xem" mà không nói được ai — thứ
@@ -204,26 +204,25 @@ test.describe('Mở két với TOTP step-up', () => {
   });
 
   /**
-   * THU HỒI LÀ CHẤM DỨT, KHÔNG PHẢI ẨN ĐI — bài này thêm 17/09/2026.
+   * THU HỒI LÀ CHẤM DỨT, KHÔNG PHẢI ẨN ĐI.
    *
-   * Người ta bấm thu hồi đúng vào lúc nghi một mật khẩu đã lộ. Bộ kiểm trước đó chỉ khẳng định
-   * "ngăn biến khỏi danh sách" — mà biến khỏi danh sách và không mở được là HAI chuyện khác
-   * nhau: `listFor()` có vị từ `revokedAt` riêng của nó, nên bỏ hẳn vế `isNull(revokedAt)` ở
-   * `requireAlive()` vẫn để danh sách sạch sẽ trong khi mọi id cũ vẫn mở ra plaintext. Toàn bộ
-   * bộ kiểm khi đó vẫn xanh.
+   * Người ta bấm thu hồi đúng vào lúc nghi một mật khẩu đã lộ. Chỉ khẳng định "ngăn biến khỏi
+   * danh sách" là chưa đủ — biến khỏi danh sách và không mở được là HAI chuyện khác nhau:
+   * `listFor()` có vị từ `revokedAt` riêng của nó, nên bỏ hẳn vế `isNull(revokedAt)` ở
+   * `requireAlive()` vẫn để danh sách sạch sẽ trong khi mọi id cũ vẫn mở ra plaintext.
    *
    * Vế đầu (mở được TRƯỚC khi thu hồi) là vế đối chứng: thiếu nó thì bài này xanh cả khi đường
    * mở két hỏng hoàn toàn.
    */
   /**
-   * CHỐNG REPLAY Ở ĐƯỜNG MỞ KÉT — bài này thêm 17/09/2026, và trước đó chỗ này trống.
+   * CHỐNG REPLAY Ở ĐƯỜNG MỞ KÉT.
    *
    * Mã Authenticator sống 30 giây; mối lo là người nhìn qua vai (hoặc bắt được gói tin) bắn lại
    * CHÍNH mã đó khi còn hạn. Hệ thống có chống — "đốt" mã bằng CAS trong cùng transaction với
-   * lượt mở phiên — nhưng bộ kiểm chỉ canh điều đó ở đường ĐĂNG NHẬP (`auth.spec.ts`) và ở
-   * tầng câu SQL (`api/test/totp-replay-cas.spec.ts`). Cửa `POST /auth/step-up` là một cửa gõ
-   * mã KHÁC, và chưa bài nào gửi lại một mã đã dùng tới đó. Đổi `lastUsedTimeStep` thành `null`
-   * trong `stepUp()` là xanh hết.
+   * lượt mở phiên. `auth.spec.ts` canh điều đó ở đường ĐĂNG NHẬP và
+   * `api/test/totp-replay-cas.spec.ts` ở tầng câu SQL; cửa `POST /auth/step-up` là một cửa gõ
+   * mã KHÁC, và bài này là bài duy nhất gửi lại một mã đã dùng tới đó. Thiếu nó thì đổi
+   * `lastUsedTimeStep` thành `null` trong `stepUp()` vẫn xanh hết.
    *
    * Cố ý KHÔNG dùng `freshTotpCode` cho lượt thứ hai: chính helper đó tránh dùng lại mã, tức
    * tránh đúng thứ bài này sinh ra để thử.
@@ -319,8 +318,8 @@ test.describe('Mở két với TOTP step-up', () => {
     });
   });
   /**
-   * Code review Epic 4, finding 1: trước đây gõ sai mã step-up chỉ ghi audit chứ không đếm,
-   * nên kẻ cầm cookie phiên trộm được cứ thử cho tới khi trúng.
+   * Gõ sai mã step-up phải được ĐẾM, không chỉ ghi audit: không đếm thì kẻ cầm cookie phiên
+   * trộm được cứ thử cho tới khi trúng.
    *
    * Thu hồi PHIÊN chứ không khóa TÀI KHOẢN là có chủ ý — nên bài này kiểm cả hai vế: phiên
    * chết, mà tài khoản vẫn đăng nhập lại được bình thường. Khóa tài khoản thì chính kẻ tấn
@@ -364,11 +363,11 @@ test.describe('Mở két với TOTP step-up', () => {
   });
 
   /**
-   * G-19 — Story 4.1 AC-2: trần 30 lần mở két mỗi phút, ĐẾM THEO USER.
+   * AC 4.1: trần 30 lần mở két mỗi phút, ĐẾM THEO USER.
    *
    * Hình dạng route "một id mỗi lần" một mình không giữ nổi FR-026: một phiên đã step-up cứ
-   * liệt kê rồi mở lần lượt là rút cả két trong vài phút. Trần này là hàng rào PHÒNG, và nó
-   * đã từng lặng lẽ lùi về đếm theo IP vì thứ tự guard sai — không có gì đỏ lúc đó.
+   * liệt kê rồi mở lần lượt là rút cả két trong vài phút. Trần này là hàng rào PHÒNG, và thứ
+   * tự guard sai là nó lặng lẽ lùi về đếm theo IP — không có gì khác đỏ.
    *
    * Vế thứ hai mới là vế khó làm giả: người thứ hai mở từ CÙNG MỘT IP (mọi test đều chạy từ
    * localhost) mà vẫn thông, thì con số 30 kia chắc chắn đang tính theo tài khoản.
@@ -450,9 +449,9 @@ test.describe('Mở két với TOTP step-up', () => {
   });
 
   /**
-   * G-20 — Story 4.2 AC-2: giá trị secret không được xuất hiện trong log.
+   * AC 4.2: giá trị secret không được xuất hiện trong log.
    *
-   * `no-store` và audit đã có bài giữ. Phần log thì chưa: một `console.log` lỡ tay trong
+   * `no-store` và audit có bài giữ ở chỗ khác; bài này giữ phần log: một `console.log` lỡ tay trong
    * service là secret nằm trong `docker compose logs` vĩnh viễn — nơi không mã hóa, không
    * xoay chìa, và ai có quyền đọc log là đọc được.
    */

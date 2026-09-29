@@ -95,7 +95,7 @@ describe('UI_PATHS bên api khớp `routes.ts` bên web', () => {
  * không có gì hỏi lại.
  */
 describe('Không file api nào tự gõ đường dẫn UI tiếng Việt', () => {
-  /** Những lối viết cũ đã tìm thấy 22/09 — đủ để chặn tái phát, không cần đoán thêm. */
+  /** Những lối viết cũ đã từng xuất hiện thật — đủ để chặn tái phát, không cần đoán thêm. */
   const LEGACY = [
     '/thiet-bi/',
     '/phan-mem/',

@@ -1,4 +1,4 @@
-/* --- Bộ dùng chung Story 1.5: toast, phân trang, lịch sử, ô nhập có lỗi ---------------
+/* --- Bộ dùng chung: toast, phân trang, lịch sử, ô nhập có lỗi ---------------
    Mọi màu lấy từ tokens.css (AD-15) — không hex ở đây. */
 
 /* Toast */
@@ -227,19 +227,18 @@
   cursor: pointer;
 }
 /*
- * VÒNG TIÊU ĐIỂM VẼ BẰNG `box-shadow`, KHÔNG BẰNG `outline` (F-04, vá 21/09).
+ * VÒNG TIÊU ĐIỂM VẼ BẰNG `box-shadow`, KHÔNG BẰNG `outline`.
  *
- * Bản trước viết `outline: 2px solid var(--ring)`. Tên token đúng, thuộc tính hợp lệ, không
+ * `outline: 2px solid var(--ring)` trông đúng: tên token đúng, thuộc tính hợp lệ, không
  * màu viết thẳng nào — nên không cổng nào có gì để nói. Nhưng `--ring` là một giá trị
  * BOX-SHADOW (`0 0 0 3px rgba(...)`), nên dòng ấy thành `outline: 2px solid 0 0 0 3px rgba(...)`,
  * không parse được, và trình duyệt vứt CẢ khai báo mà không báo gì.
  *
  * `<input>` thật bị giấu bằng `clip: rect(0 0 0 0)`, nên label là thứ duy nhất nhìn thấy —
- * và vòng tiêu điểm của nó chưa bao giờ vẽ ra. Tab tới ô chọn file không có tín hiệu nào
- * (WCAG 2.4.7), ở mọi hộp Import và mọi khu đính kèm. 14 chỗ khác trong chính file này viết
- * đúng; đây là chỗ duy nhất sai.
+ * và viết sai thì vòng tiêu điểm của nó không bao giờ vẽ ra: Tab tới ô chọn file không có tín
+ * hiệu nào (WCAG 2.4.7), ở mọi hộp Import và mọi khu đính kèm.
  *
- * `src/token-usage.test.ts` nay canh đúng câu hỏi ấy: token có dùng đúng KIỂU của nó không.
+ * `src/token-usage.test.ts` canh đúng câu hỏi ấy: token có dùng đúng KIỂU của nó không.
  */
 .file-picker-input:focus-visible + .file-picker-label {
   outline: none;
@@ -332,8 +331,8 @@
 }
 
 /* --- Ma trận quyền két sắt, chiều "theo nhóm đối tượng" ------------------- */
-/* Hai tầng quyền đứng CẠNH nhau chứ không xếp dọc: câu hỏi lúc rà soát là "ai xem thẳng, ai
-   phải xin duyệt" — hai con số đó phải so được bằng một cái liếc. */
+/* Hai tầng quyền đứng CẠNH nhau chứ không xếp dọc: câu hỏi người đọc mang tới là "ai xem
+   thẳng, ai phải xin duyệt" — hai con số đó phải so được bằng một cái liếc. */
 .scope-tiers {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -363,10 +362,7 @@
   overflow-y: auto;
 }
 
-/* --- Cửa vào két sắt (features/vault/vault-home-screen.tsx) ---------------
- * `.vault-hits` và `.vault-hit-list` bỏ ngày 17/09/2026: tàn dư của một bố cục lưới thẻ đã bị
- * thay bằng bảng từ lâu, không `.tsx` nào còn dùng. Để lại thì người sửa màn này sau đọc chúng
- * như một phần đang sống. */
+/* --- Cửa vào két sắt (features/vault/vault-home-screen.tsx) --------------- */
 .vault-rules {
   display: flex;
   flex-direction: column;
@@ -463,9 +459,9 @@
 /* `.row-danger` nằm ở `table.css`, ngay sau luật sọc dòng: nó phải thắng sọc dòng chẵn. */
 
 /*
- * Dòng đã vô hiệu / đã tắt / đã gỡ — LÙI XUỐNG NHƯNG VẪN ĐỌC ĐƯỢC (sửa 17/09/2026).
+ * Dòng đã vô hiệu / đã tắt / đã gỡ — LÙI XUỐNG NHƯNG VẪN ĐỌC ĐƯỢC.
  *
- * Bản cũ dùng `opacity: 0.55` cho cả ô. Với chữ `--ink-3` vốn đã nhạt thì tích hai lần độ mờ
+ * KHÔNG dùng `opacity: 0.55` cho cả ô. Với chữ `--ink-3` vốn đã nhạt thì tích hai lần độ mờ
  * rơi xuống dưới ngưỡng tương phản AA — và trớ trêu là nó rơi đúng vào những dòng người ta
  * cần soi KỸ NHẤT: một rule NAT đã tắt nhưng còn trong sổ, một danh mục vừa bị vô hiệu, một
  * ghế license vừa bị gỡ. "Mờ" ở đây phải là một TÔNG khác, không phải một lớp sương phủ lên
@@ -551,8 +547,8 @@ table.table tbody tr.row-muted td {
 /* Có việc phải làm thì ô đổi màu ở VIỀN TRÁI và ở con số — không tô nền cả ô, vì năm ô tô
    nền cạnh nhau thì mắt không còn thứ tự nào để đọc. */
 .kpi.kpi-warn { border-left-color: var(--warn); }
-/* `--warn` vốn đã là bản ĐẬM đủ tương phản cho chữ (#a34d08 — ghi rõ ở tokens.css sau lượt
-   axe 06/08), nên dùng thẳng, không cần một sắc riêng cho chữ. */
+/* `--warn` vốn đã là bản ĐẬM đủ tương phản cho chữ (ghi rõ ở tokens.css), nên dùng thẳng,
+   không cần một sắc riêng cho chữ. */
 .kpi.kpi-warn .kpi-n { color: var(--warn); }
 /* `--danger-strong` là bản ĐẬM dành riêng cho CHỮ lỗi trên nền sáng (tokens.css); `--danger`
    thuần là màu viền/nền, đặt lên chữ nhỏ thì tương phản hụt ở chế độ sáng. */
@@ -769,9 +765,9 @@ table.table tbody tr.row-muted td {
 }
 
 /*
- * Nhãn trong thẻ phiếu break-glass. Cho tới 17/09/2026 nó mang class `lbl-t` — một class chỉ
- * tồn tại trong `auth.css` dưới bộ chọn `.auth-form .lbl-t`, tức KHÔNG BAO GIỜ khớp ở đây.
- * Hệ quả: `<dt>` và `<dd>` cùng cỡ, cùng màu, cùng độ đậm — "Đối tượng" đọc ngang hàng với
+ * Nhãn trong thẻ phiếu break-glass. Đừng dùng class `lbl-t` ở đây — nó chỉ tồn tại trong
+ * `auth.css` dưới bộ chọn `.auth-form .lbl-t`, tức KHÔNG BAO GIỜ khớp ở đây. Thiếu luật riêng
+ * thì `<dt>` và `<dd>` cùng cỡ, cùng màu, cùng độ đậm — "Đối tượng" đọc ngang hàng với
  * giá trị của chính nó, thẻ phiếu mất hẳn một tầng phân cấp.
  */
 /*
@@ -1051,7 +1047,7 @@ table.access-grid .access-row-head {
   display: table-cell;
   /*
    * Cột tên người là `<th scope="row">` nằm trong TBODY, mà `table.css` chỉ có luật cho
-   * `thead th` và `tbody td` — không luật nào chạm `tbody th`. Hệ quả trước 17/09: cột dính
+   * `thead th` và `tbody td` — không luật nào chạm `tbody th`. Thiếu luật này thì cột dính
    * trái dùng padding mặc định của trình duyệt (~1px, chữ dí sát mép) và MẤT đường kẻ ngăn
    * hàng, nên vạch kẻ của bảng dừng lại đúng ở mép cột tên.
    */
@@ -1151,7 +1147,7 @@ table.access-grid thead .access-row-head {
   color: var(--ink-2);
   text-align: center;
   /*
-   * `white-space: normal` PHẢI khai tường minh (vá 17/09/2026).
+   * `white-space: normal` PHẢI khai tường minh.
    *
    * `all: unset` ở dòng đầu đặt MỌI thuộc tính về `unset`, mà với thuộc tính KẾ THỪA thì
    * `unset` nghĩa là `inherit` — nên nút này thừa hưởng `white-space: nowrap` từ
@@ -1514,9 +1510,7 @@ table.access-grid thead .access-row-head {
   margin: var(--space-4) 0 0;
 }
 
-/* --- Trang chi tiết thiết bị (story 2.5) ---------------------------------- */
-/* `.device-summary` bỏ ngày 17/09/2026: tên nói là của trang thiết bị nhưng nơi duy nhất dùng
-   nó lại là màn "Sắp hết hạn", và ba cái pill ấy đã thành hàng ô số bấm được (`.dash-kpis`). */
+/* --- Trang chi tiết thiết bị ------------------------------------------------ */
 .device-panels {
   display: flex;
   flex-direction: column;
@@ -1588,8 +1582,10 @@ table.access-grid thead .access-row-head {
   content: '';
   width: 38px;
   height: 38px;
-  background: center / contain no-repeat
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='38' height='38' viewBox='0 0 24 24' fill='none' stroke='%238a908a' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='22 12 16 12 14 15 10 15 8 12 2 12'/%3E%3Cpath d='M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z'/%3E%3C/svg%3E");
+  /* Mask + màu nền token: icon đổi màu theo theme, không cần bản SVG thứ hai cho dark. */
+  background-color: var(--ink-3);
+  -webkit-mask: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='38' height='38' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='22 12 16 12 14 15 10 15 8 12 2 12'/%3E%3Cpath d='M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z'/%3E%3C/svg%3E");
+  mask: center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='38' height='38' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='22 12 16 12 14 15 10 15 8 12 2 12'/%3E%3Cpath d='M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z'/%3E%3C/svg%3E");
 }
 .empty .empty-hint {
   font-size: var(--fs-xs);

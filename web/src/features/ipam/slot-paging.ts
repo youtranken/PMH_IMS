@@ -52,15 +52,14 @@ export const SLOT_PAGE_SIZE = 50;
  *   là lấy mất đúng thứ họ cần. Chuyện "12 dòng dữ liệu nằm rải trong sáu trang ô trống" chỉ
  *   thành vấn đề khi trong dải đã có một lượng hồ sơ thật sự.
  */
-export const BURIED_FREE = 32;
-export const WORTH_ISOLATING = 5;
+const BURIED_FREE = 32;
+const WORTH_ISOLATING = 5;
 
 /**
  * Luật quyết định, tách thành HÀM THUẦN để kiểm được bằng bảng dữ liệu.
  *
- * Trước 18/09 nó là một biểu thức viết thẳng trong JSX của `subnet-detail.tsx`, nên không có
- * đường nào hỏi nó bốn ca biên (4/33 · 5/32 · 5/33 · 5/253) mà không dựng cả màn hình lên.
- * Hai hằng số thì export sẵn từ lâu; chỉ mỗi phép so là kẹt trong component.
+ * Viết thẳng trong JSX thì không có đường nào hỏi nó bốn ca biên (4/33 · 5/32 · 5/33 · 5/253)
+ * mà không dựng cả màn hình lên.
  */
 export function shouldIsolateAssigned(assigned: number, free: number): boolean {
   return assigned >= WORTH_ISOLATING && free > BURIED_FREE;
@@ -76,15 +75,15 @@ export function shouldIsolateAssigned(assigned: number, free: number): boolean {
 export function slotStatus(slot: SubnetSlot): SlotBucket {
   if (slot.kind === 'free') return 'free';
   /*
-   * `voided_at` thắng `status`, và đó là cả điểm của B-04 (23/09).
+   * `voided_at` thắng `status`.
    *
-   * Hồ sơ bị ẩn giữ nguyên `status` cũ trong DB — phần lớn là `'free'`. Hàm này trước đây chỉ
-   * đọc `status`, nên một hồ sơ đã ẩn rơi vào rổ "Trống": chip đếm nó là chỗ trống, bấm lọc
-   * "Trống" thì nó hiện lên trong kết quả, và người dùng cấp đè lên một địa chỉ đang mang
-   * lịch sử — trong khi thẻ dải ngay phía trên nói "Giữ lại vì còn 1 hồ sơ IP mang lịch sử".
+   * Hồ sơ bị ẩn giữ nguyên `status` cũ trong DB — phần lớn là `'free'`. Chỉ đọc `status` thì
+   * một hồ sơ đã ẩn rơi vào rổ "Trống": chip đếm nó là chỗ trống, bấm lọc "Trống" thì nó hiện
+   * lên trong kết quả, và người dùng cấp đè lên một địa chỉ đang mang lịch sử — trong khi thẻ
+   * dải ngay phía trên nói "Giữ lại vì còn 1 hồ sơ IP mang lịch sử".
    *
    * Hỏi ở ĐÂY chứ không ở `countSlots` hay `filterSlots`: vá một trong hai thì con số đúng mà
-   * bộ lọc vẫn sai, hoặc ngược lại. Chú thích của chính hàm này đã nói trước chỗ đúng.
+   * bộ lọc vẫn sai, hoặc ngược lại.
    */
   if (slot.voidedAt) return 'voided';
   return slot.status;

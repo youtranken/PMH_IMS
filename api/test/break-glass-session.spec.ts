@@ -368,6 +368,43 @@ describe('Break-glass · quyền gắn với phiên đã xem (Q-15)', () => {
     });
   });
 
+  describe('không xin chồng khi quyền còn dùng được (BE-17)', () => {
+    it('đã duyệt, chưa xem ở phiên nào → 409 BREAK_GLASS_APPROVED, không sinh phiếu mới', async () => {
+      const a = await login();
+      const { subject } = await approved(a);
+      await expect(ask(a, subject)).rejects.toMatchObject({
+        status: 409,
+        response: { code: 'BREAK_GLASS_APPROVED' },
+      });
+      const { rows } = await scratch.pool.query(
+        `SELECT 1 FROM approval WHERE subject_id = $1`,
+        [subject],
+      );
+      expect(rows).toHaveLength(1);
+    });
+
+    it('đang cầm quyền đã gắn CHÍNH phiên này → 409 BREAK_GLASS_ACTIVE', async () => {
+      const a = await login();
+      const { subject } = await held(a);
+      await expect(ask(a, subject)).rejects.toMatchObject({
+        status: 409,
+        response: { code: 'BREAK_GLASS_ACTIVE' },
+      });
+      const { rows } = await scratch.pool.query(
+        `SELECT 1 FROM approval WHERE subject_id = $1`,
+        [subject],
+      );
+      expect(rows).toHaveLength(1);
+    });
+
+    it('quyền gắn phiên KHÁC không chặn: phiên này vẫn xin lại được (Q-15)', async () => {
+      const a = await login();
+      const b = await login();
+      const { subject } = await held(a);
+      await expect(ask(b, subject)).resolves.toMatchObject({ state: 'pending' });
+    });
+  });
+
   describe('quyền đã gắn chết cùng phiên', () => {
     it('B đăng xuất → hết ngay; lượt quét ghi hết hiệu lực + nhật ký', async () => {
       const b = await login();

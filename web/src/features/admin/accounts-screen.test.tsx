@@ -1,10 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import type { Me } from '@/lib/me';
-import { jsonResponse, renderWithI18n, screen, userEvent, waitFor } from '@/test/test-utils';
+import {
+  act,
+  fireEvent,
+  jsonResponse,
+  renderWithI18n,
+  screen,
+  userEvent,
+  waitFor,
+} from '@/test/test-utils';
 import { ConfirmProvider } from '@/ui/confirm-provider';
 import { ToastProvider } from '@/ui/toast';
-import { AccountsScreen, tempLockOf } from './accounts-screen';
+import { AccountsScreen, TemporaryPasswordDialog, tempLockOf } from './accounts-screen';
 
 const ME = { id: 'u-sa', role: 'sa', csrfToken: 't', email: 'sa@pmh.com.vn' } as unknown as Me;
 const IN_AN_HOUR = new Date(Date.now() + 3_600_000).toISOString();
@@ -181,5 +189,69 @@ describe('Màn Tài khoản', () => {
     await waitFor(() => expect(calls.some((c) => c.url.endsWith('/u-sa/sessions/kill-all'))).toBe(true));
     expect(calls.find((c) => c.url.endsWith('/kill-all'))!.body).toEqual({ includeCurrent: false });
     expect(await screen.findByText('Đã đóng 1 phiên.')).toBeInTheDocument();
+  });
+});
+
+/**
+ * SEC-14: hộp mật khẩu tạm không được đứng mở nguyên văn mãi trên màn hình SA bỏ đi. Không đóng
+ * hộp (đóng là mất chuỗi, SA phải đặt lại) mà CHE sau `secret.reveal_seconds` như két sắt.
+ */
+describe('TemporaryPasswordDialog — tự che sau secret.reveal_seconds (SEC-14)', () => {
+  afterEach(() => vi.useRealTimers());
+
+  function renderDialog(revealSeconds: number) {
+    vi.useFakeTimers();
+    renderWithI18n(
+      <MemoryRouter>
+        <ToastProvider>
+          <TemporaryPasswordDialog
+            password="Tam#Pass2026"
+            who="tv@pmh.com.vn"
+            revealSeconds={revealSeconds}
+            onClose={() => {}}
+          />
+        </ToastProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  function advance(seconds: number) {
+    act(() => {
+      vi.advanceTimersByTime(seconds * 1000);
+    });
+  }
+
+  it('hiện nguyên văn lúc mở, tới đúng hạn thì che, hộp vẫn mở', () => {
+    renderDialog(30);
+    expect(screen.getByTestId('temp-password')).toHaveTextContent('Tam#Pass2026');
+    expect(screen.getByText(/Tự che sau 30 giây/)).toBeInTheDocument();
+
+    advance(29);
+    expect(screen.getByTestId('temp-password')).toBeInTheDocument();
+
+    advance(1);
+    expect(screen.queryByTestId('temp-password')).toBeNull();
+    expect(screen.getByLabelText('Mật khẩu tạm đang ẩn')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hiện' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tôi đã ghi lại mật khẩu này' })).toBeInTheDocument();
+  });
+
+  it('bấm Hiện lại thì đồng hồ tính lại từ đầu', () => {
+    renderDialog(30);
+    advance(30);
+    fireEvent.click(screen.getByRole('button', { name: 'Hiện' }));
+    expect(screen.getByTestId('temp-password')).toBeInTheDocument();
+
+    advance(29);
+    expect(screen.getByTestId('temp-password')).toBeInTheDocument();
+    advance(1);
+    expect(screen.queryByTestId('temp-password')).toBeNull();
+  });
+
+  it('SA tự bấm Ẩn thì không có hẹn giờ nào mở lại', () => {
+    renderDialog(30);
+    fireEvent.click(screen.getByRole('button', { name: 'Ẩn' }));
+    advance(120);
+    expect(screen.queryByTestId('temp-password')).toBeNull();
   });
 });

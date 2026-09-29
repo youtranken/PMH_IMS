@@ -6,7 +6,7 @@ import { currentRequestIp, runWithRequestContext } from './request-context';
  *
  * Vì sao phải có test riêng cho một thứ nhỏ như vậy: nếu `AsyncLocalStorage` mất ngữ cảnh
  * qua một `await` nào đó thì hậu quả là IM LẶNG — `audit_log.ip` lại về NULL và không ai
- * biết, đúng cách nó đã NULL suốt 9 epic (rà soát 07/09, #3). Bảng chỉ-thêm nên không vá
+ * biết. Bảng chỉ-thêm nên không vá
  * ngược được; mất là mất vĩnh viễn.
  */
 describe('request-context', () => {

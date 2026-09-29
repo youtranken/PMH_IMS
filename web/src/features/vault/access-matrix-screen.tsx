@@ -257,7 +257,7 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
     (account) => account.role === 'member' && account.status === 'disabled',
   ).length;
   const roleHolders = allAccounts.filter((account) => account.role !== 'member');
-  // Gấp dấu cả hai vế (B-01): gõ `nguyen thi` phải ra `Nguyễn Thị`.
+  // Gấp dấu cả hai vế: gõ `nguyen thi` phải ra `Nguyễn Thị`.
   const term = foldSearch(search.trim());
   const matches = (account: AccountRow) =>
     !term || foldSearch(account.email).includes(term) || foldSearch(account.fullName).includes(term);
@@ -332,18 +332,23 @@ export function AccessMatrixScreen({ me }: { me: Me }) {
         <table className="table access-grid">
           <thead>
             <tr>
-              <th className="access-row-head" rowSpan={2}>
+              <th className="access-row-head" rowSpan={2} scope="col">
                 {t('access.person')}
               </th>
               {columnGroups.map((group) => (
-                <th key={group.type} colSpan={group.scopes.length} className="access-family">
+                <th
+                  key={group.type}
+                  colSpan={group.scopes.length}
+                  scope="colgroup"
+                  className="access-family"
+                >
                   {group.label}
                 </th>
               ))}
             </tr>
             <tr>
               {columns.map((scope) => (
-                <th key={scopeKey(scope)} className="access-col">
+                <th key={scopeKey(scope)} scope="col" className="access-col">
                   {/* Bấm tiêu đề cột = gán nhóm này cho NHIỀU người một lượt. Nhãn trợ năng là câu
                       đầy đủ vì chữ hiện ra đã cắt tiền tố họ. */}
                   <button
@@ -1074,8 +1079,8 @@ function GrantToScopeDialog({
             /*
              * Người GÁN HỎNG phải được nói ra, kể cả khi có người gán được.
              *
-             * Chọn 5 người mà 3 người đã có luật trên nhóm đó (POST từ chối trùng): bản cũ
-             * đóng hộp, báo "đã gán cho 2 người", và ba lỗi biến mất — SA tin là cả 5 đã có
+             * Chọn 5 người mà 3 người đã có luật trên nhóm đó (POST từ chối trùng): chỉ đóng
+             * hộp và báo "đã gán cho 2 người" thì ba lỗi biến mất — SA tin là cả 5 đã có
              * quyền. Cùng cách làm với form NAT: đẩy cả lỗi lên cho nơi gọi báo riêng.
              */
             onSaved({ granted: done, failures });

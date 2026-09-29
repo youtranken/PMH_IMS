@@ -60,9 +60,9 @@ describe('Loại chủ thể cất secret', () => {
 
   it('mỗi loại đều có nhãn tiếng Việt thật trong vi.ts', () => {
     // `Record` đã bắt đủ khóa lúc biên dịch; đây là vế còn lại — khóa TỒN TẠI trong bản dịch.
-    const thieu = SECRET_OWNER_TYPES.filter(
+    const missing = SECRET_OWNER_TYPES.filter(
       (kind) => typeof lookup(SECRET_OWNER_KIND_KEY[kind]) !== 'string',
     );
-    expect(thieu).toEqual([]);
+    expect(missing).toEqual([]);
   });
 });

@@ -7,9 +7,9 @@ import type { DeviceHistoryRow } from '@/lib/device-types';
  * `t` truyền vào đây là `t` THẬT của app (`@/lib/i18n`, đã nạp bản dịch tiếng Việt), KHÔNG
  * phải một stub trả lại chính cái khóa.
  *
- * Đó là chỗ bài kiểm này đáng giá hơn trước: mọi câu khẳng định bên dưới so với CHỮ THẬT trên
+ * Đó là chỗ bài kiểm này đáng giá: mọi câu khẳng định bên dưới so với CHỮ THẬT trên
  * màn hình, nên một khóa gõ sai hay một khóa quên khai trong `vi.ts` sẽ làm đỏ ngay tại đây —
- * đúng lớp lỗi của mục #1 bản rà soát (i18next rơi về chính cái khóa và không ai thấy).
+ * đúng lớp lỗi i18next rơi về chính cái khóa mà không ai thấy.
  */
 const t = i18n.t;
 
@@ -105,6 +105,27 @@ describe('toHistoryEntries — câu tự nhiên, không phải khoá thô', () =
     expect(added.action).toBe('Thêm cổng Gi1/0/10');
     expect(added.detail).toBeNull();
     expect(removed.action).toBe('Xóa cổng WAN1');
+  });
+
+  it('sửa cổng đọc được đầu kia, VLAN, người dùng bằng tiếng Việt (BE-15)', () => {
+    const [entry] = toHistoryEntries([
+      row({
+        action: 'port-updated',
+        changes: {
+          portLabel: { before: 'Gi1/0/3', after: 'Gi1/0/3' },
+          connectedDevice: { before: 'PC-01', after: 'PC-02' },
+          connectedLabel: { before: 'Máy in', after: null },
+          connectedPort: { before: null, after: 'eth1' },
+          vlan: { before: '10', after: 'trunk' },
+          usedBy: { before: 'Kế toán', after: null },
+        },
+      }),
+    ], t);
+    expect(entry.action).toBe('Sửa cổng Gi1/0/3');
+    for (const label of ['thiết bị đầu kia', 'mô tả đầu kia', 'cổng đầu kia', 'VLAN', 'người sử dụng']) {
+      expect(entry.detail).toContain(label);
+    }
+    expect(entry.detail).not.toMatch(/connected|vlan|usedBy/);
   });
 
   it('thanh lý kèm dọn: nói "đã gỡ IP, NAT, license", không phải "cleanup: (trống) → true"', () => {

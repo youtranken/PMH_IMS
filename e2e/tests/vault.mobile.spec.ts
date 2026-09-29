@@ -87,10 +87,10 @@ test.describe('Két sắt ở 390px', () => {
     expect(overflow).toBeLessThanOrEqual(1);
   });
   /**
-   * UX-DR2 cho ĐƯỜNG MỞ KÉT (4.2). Đây đúng là cảnh dùng thật của tính năng này: 2 giờ sáng,
+   * UX-DR2 cho ĐƯỜNG MỞ KÉT (FR-022). Đây đúng là cảnh dùng thật của tính năng này: 2 giờ sáng,
    * đứng trước tủ rack, cầm điện thoại, phải ĐỌC một chuỗi mật khẩu rồi gõ lại trong 30 giây.
    * `.secret-value` cố ý để chữ to + giãn ký tự cho dễ đọc — đúng thứ dễ tràn ngang ở 390px
-   * mà không có test nào bắt được (code review Epic 4, finding 5).
+   * mà thiếu bài này thì không có test nào bắt được.
    */
   test('hộp nhập mã và hộp hiện giá trị đọc được ở 390px, không tràn ngang', async ({ page }) => {
     const totpSecret = await firstLogin(page, E2E_SA);

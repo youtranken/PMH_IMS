@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import type { Queue } from 'bullmq';
 import { OutboxService } from '../src/modules/outbox/outbox.service';
+import { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { runMigrations } from '../src/database/migration-runner';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
@@ -46,7 +47,7 @@ describe('OutboxService trên Postgres thật', () => {
   beforeAll(async () => {
     scratch = await createScratchDb('ims_outbox');
     await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
-    outbox = new OutboxService(scratch.db);
+    outbox = new OutboxService(scratch.db, new SystemConfigService(scratch.db));
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
@@ -279,6 +280,31 @@ describe('OutboxService trên Postgres thật', () => {
         expect(failed.items[0].id).toBe(id);
         expect(failed.items[0].failCount).toBe(14);
         expect(failed.items[0].lastError).toBe('lỗi lần 13');
+      },
+      TEST_TIMEOUT,
+    );
+
+    it(
+      'trần đọc từ `outbox.max_relay_attempts` (AD-11): hạ xuống 3 thì relay buông ở lần hỏng thứ 3',
+      async () => {
+        await scratch.pool.query(
+          `UPDATE system_config SET value = '3'::jsonb WHERE key = 'outbox.max_relay_attempts'`,
+        );
+        try {
+          const relay = new OutboxService(scratch.db, new SystemConfigService(scratch.db));
+          await scratch.db.transaction((tx) => relay.enqueueWithin(tx, 'mail.tran-thap'));
+          const id = (await rows())[0].id;
+          for (let i = 0; i < 2; i += 1) await relay.markFailed(id, 'x');
+          expect(await relay.relayBatch(fakeQueue().queue)).toBe(1);
+
+          await relay.markFailed(id, 'x');
+          await scratch.pool.query('UPDATE outbox SET claimed_at = NULL');
+          expect(await relay.relayBatch(fakeQueue().queue)).toBe(0);
+        } finally {
+          await scratch.pool.query(
+            `UPDATE system_config SET value = '14'::jsonb WHERE key = 'outbox.max_relay_attempts'`,
+          );
+        }
       },
       TEST_TIMEOUT,
     );

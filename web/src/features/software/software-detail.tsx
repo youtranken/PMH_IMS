@@ -51,11 +51,10 @@ import { SeatUsage } from "./software-standing-cell";
 import { PATHS } from "@/lib/routes";
 
 /**
- * Trang chi tiết hồ sơ phần mềm (story 3.1).
+ * Trang chi tiết hồ sơ phần mềm.
  *
- * Tab "Máy đang dùng" ra đời ở story 3.2; khung tab dựng sẵn để lúc đó chỉ cắm thêm.
- * Khối "Chìa khóa / mật khẩu" cố tình để TRỐNG với một câu giải thích: key nằm ở Két sắt
- * (Epic 4), không nằm trong bảng này (AC 3.1) — nói rõ còn hơn để người dùng đi tìm.
+ * Khối "Chìa khóa / mật khẩu" cố tình để TRỐNG với một câu giải thích: key nằm ở Két sắt,
+ * không nằm trong bảng này — nói rõ còn hơn để người dùng đi tìm.
  */
 export function SoftwareDetail({ me }: { me: Me }) {
   const { t } = useTranslation();
@@ -116,11 +115,11 @@ export function SoftwareDetail({ me }: { me: Me }) {
     lists.data?.vendors.find((vendor) => vendor.id === vendorId)?.name;
 
   /**
-   * Tab Két sắt hiện cho MỌI vai kể từ story 6.3.
+   * Tab Két sắt hiện cho MỌI vai.
    *
-   * Trước đây chỉ SA/Admin thấy. Nhưng Member giờ có thể được whitelist hoặc xin duyệt, và
-   * quyền đó nằm ở ma trận 6.2 — client không tự suy ra được từ vai. Ẩn tab theo vai thì
-   * người đã được gán quyền lại không có đường nào tới. Panel tự nói rõ tầng của người xem.
+   * Member có thể được whitelist hoặc xin duyệt, và quyền đó nằm ở ma trận quyền xem secret
+   * (FR-023) — client không tự suy ra được từ vai. Ẩn tab theo vai thì người đã được gán
+   * quyền lại không có đường nào tới. Panel tự nói rõ tầng của người xem.
    */
   const canVault = true;
 
@@ -132,7 +131,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
   const tabItems = [
     { key: "profile", label: t("software.tabProfile") },
     /*
-     * Tab "Máy đang dùng" chỉ có nghĩa với license (story 3.2) — NHƯNG khi hồ sơ chưa về thì
+     * Tab "Máy đang dùng" chỉ có nghĩa với license (FR-011) — NHƯNG khi hồ sơ chưa về thì
      * chưa biết nó là loại gì, và "chưa biết" không được xử như "không phải license".
      *
      * `useVisibleTab` kẹp `tab` về `'profile'` ngay ở lượt render đầu nếu khoá hiện tại không
@@ -182,7 +181,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
   }
 
   // Mất mạng ⇒ `fetchStatus:'paused'` ⇒ `isLoading` false, `isError` false, `data` undefined:
-  // hai nhánh trên đều trượt. Xem chú thích đầy đủ ở `devices/device-detail.tsx` (lỗi F-02).
+  // hai nhánh trên đều trượt. Xem chú thích đầy đủ ở `devices/device-detail.tsx`.
   if (!software.data) return <Loading />;
   const item = software.data;
   const retired = item.status === "retired";
@@ -292,11 +291,11 @@ export function SoftwareDetail({ me }: { me: Me }) {
             </RailRow>
 
             {/*
-             * HẠN NẰM Ở ĐÂY, KHÔNG CÒN THẺ THỨ HAI Ở CỘT CHÍNH (16/09/2026).
+             * HẠN NẰM Ở ĐÂY, KHÔNG CÓ THẺ THỨ HAI Ở CỘT CHÍNH.
              *
-             * Trước đây tab Hồ sơ vẽ một thẻ "Hết hạn" chiếm trọn bề ngang, còn dải chỉ số vẽ
-             * lại chính nó ở dạng gọn cách đó hai dòng. License vĩnh viễn thì không có quãng
-             * đường nào để vẽ nên vẫn chỉ là một huy hiệu.
+             * Một thẻ "Hết hạn" chiếm trọn bề ngang ở tab Hồ sơ chỉ vẽ lại chính thứ mà dải chỉ
+             * số đã vẽ ở dạng gọn cách đó hai dòng. License vĩnh viễn thì không có quãng đường
+             * nào để vẽ nên vẫn chỉ là một huy hiệu.
              */}
             <RailRow label={t("software.endDate")}>
               {item.licenseModel === "perpetual" ? (

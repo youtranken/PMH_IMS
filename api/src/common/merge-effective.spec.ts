@@ -36,12 +36,12 @@ describe('effectiveValue — ba trạng thái của một ô, không phải hai'
     /*
      * KHOÁ CÓ MẶT NHƯNG MANG `undefined` → vẫn là "không đụng tới ô".
      *
-     * Hàng này sinh ra ngày 21/09 từ một bài E2E đỏ, không phải từ suy nghĩ ở bàn giấy.
+     * Hàng này đến từ một bài E2E đỏ, không phải từ suy nghĩ ở bàn giấy.
      * `nat-rule.service` truyền thẳng object mà controller dựng — object ĐỦ KHOÁ, khoá nào
      * người dùng không gửi thì mang `undefined`. Với `field in values` thì mọi khoá đều "có
      * mặt", nên `effective` trả `undefined` cho cả mười ô và bản sửa nào cũng bị coi là xoá
-     * sạch mọi thứ. Ba nơi đợt B sửa không dính vì `values` ở đó do `put()` dựng, mà `put()`
-     * bỏ qua `undefined` — tức hàm này đang sống nhờ một hợp đồng NGẦM của nơi gọi.
+     * sạch mọi thứ. Nơi gọi dựng `values` bằng `put()` thì không dính vì `put()` bỏ qua
+     * `undefined` — nhưng đó là một hợp đồng NGẦM của nơi gọi.
      *
      * JSON không có `undefined`. "Có khoá, giá trị `undefined`" và "không có khoá" là cùng
      * một ý định; chỉ `null` mới là ý định XOÁ. Hàm phải tự đứng vững, đừng bắt nơi gọi nhớ.
@@ -70,13 +70,12 @@ describe('effectiveValue — ba trạng thái của một ô, không phải hai'
 
   it('không nhầm khoá kế thừa từ prototype với khoá của chính túi values', () => {
     /*
-     * BẢN ĐẦU CỦA BÀI NÀY KHÔNG THỂ ĐỎ — sửa 21/09 sau lượt rà soát chéo.
+     * ĐỪNG KIỂM BẰNG MỘT KHOÁ KHÔNG CÓ Ở ĐÂU CẢ — bài như thế không thể đỏ.
      *
-     * Nó khẳng định `effectiveValue({}, 'endDate', …)` trả giá trị dự phòng. Nhưng
-     * `'endDate' in {}` là `false` với CẢ `in` lẫn `hasOwnProperty`, nên câu đó xanh với mọi
-     * cách viết — một bài kiểm mang tên một rủi ro mà nó không hề chạm tới. Dự án này có
-     * kỷ luật "gieo đột biến mới tính là bài kiểm"; bài cũ không sống nổi qua chính kỷ luật
-     * ấy, vì không tồn tại đột biến nào làm nó đỏ.
+     * Khẳng định `effectiveValue({}, 'endDate', …)` trả giá trị dự phòng thì xanh với mọi cách
+     * viết, vì `'endDate' in {}` là `false` với CẢ `in` lẫn `hasOwnProperty` — một bài kiểm
+     * mang tên một rủi ro mà nó không hề chạm tới. Dự án này có kỷ luật "gieo đột biến mới
+     * tính là bài kiểm"; bài như thế không sống nổi qua chính kỷ luật ấy.
      *
      * Ca THẬT là một khoá CÓ trên prototype: `'toString' in {}` là `true`.
      */

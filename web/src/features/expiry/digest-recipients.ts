@@ -1,5 +1,5 @@
 /** Dạng email đủ để bắt lỗi gõ ở ô Người nhận — server vẫn là hàng rào cuối. */
-export const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
+const EMAIL = /^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/;
 
 /** Số gợi ý tối đa dưới ô Người nhận — nhiều hơn là thành một danh bạ phải đọc. */
 const MAX_SUGGESTIONS = 6;

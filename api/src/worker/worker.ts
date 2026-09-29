@@ -11,9 +11,9 @@ import {
   EVENTS_QUEUE,
   EVENTS_JOB_OPTIONS,
   SWEEP_QUEUE,
-  SWEEP_JOB_OPTIONS,
   redisConnectionOptions,
 } from '../modules/queue/queue.constants';
+import { scheduleSweep } from '../modules/queue/sweep-schedule';
 import { redactMessage, redactPii } from '../common/log-redact';
 
 const RELAY_INTERVAL_MS = 2_000;
@@ -29,7 +29,7 @@ const HEARTBEAT_FILE = process.env.WORKER_HEARTBEAT_FILE ?? '/tmp/worker-heartbe
  *     email, họ tên — NFR-04/AD-4);
  *   · `redactPii` che địa chỉ email, vì lỗi SMTP hay nhúng nguyên địa chỉ người nhận.
  *
- * Trước 11/09 chỗ này chỉ có lớp thứ hai, nên một job hỏng vì lỗi DB vẫn in trọn `params`.
+ * Chỉ có lớp thứ hai thì một job hỏng vì lỗi DB vẫn in trọn `params`.
  */
 function jobFailure(error: unknown): string {
   return redactPii(redactMessage(error));
@@ -102,11 +102,7 @@ async function bootstrap(): Promise<void> {
     logger.error(`SWEEP job ${job?.id} lỗi: ${jobFailure(err)}`);
   });
 
-  await sweepQueue.add(
-    'tick',
-    {},
-    { ...SWEEP_JOB_OPTIONS, repeat: { every: SWEEP_EVERY_MS }, jobId: 'sweep-tick' },
-  );
+  await scheduleSweep(sweepQueue, SWEEP_EVERY_MS);
 
   /*
    * Heartbeat chỉ được ghi khi một lượt relay chạy xong VÀ Redis trả lời: healthcheck của compose

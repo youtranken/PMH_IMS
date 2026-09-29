@@ -25,7 +25,7 @@ describe('pgErrorCode — đào mã SQLSTATE qua chuỗi cause', () => {
 
   /**
    * drizzle bọc lỗi pg trong DrizzleQueryError và để lỗi gốc ở `cause`. Không đào thì mọi
-   * lỗi ràng buộc DB rơi xuống 500 — đúng lỗi E2E story 2.1 bắt được (xóa site đang có tủ).
+   * lỗi ràng buộc DB rơi xuống 500 — lỗi thật mà E2E đã bắt (xóa site đang có tủ).
    */
   it('đọc được mã khi drizzle bọc lỗi pg vào cause', () => {
     const pgError = Object.assign(new Error('violates foreign key constraint'), {
@@ -119,8 +119,8 @@ describe('pgConstraint — đào TÊN ràng buộc bị vi phạm', () => {
  * Mười hai module đều viết lại đúng bốn dòng như nhau, chỉ khác `code` + `message`. Phần
  * GIỐNG NHAU lại chính là tri thức dễ sai nhất, và đã sai một lần thật: drizzle bọc lỗi pg
  * trong `DrizzleQueryError` và để lỗi gốc ở `cause`, nên đọc thẳng `error.code` luôn ra
- * `undefined` và MỌI câu dịch rơi xuống 500 (lỗi E2E story 2.1 — xóa site đang có tủ trả 500
- * thay vì 409 kèm gợi ý). Bản sao thứ mười ba viết tay là bản sao thứ mười ba có thể quên.
+ * `undefined` và MỌI câu dịch rơi xuống 500 (xóa site đang có tủ trả 500 thay vì 409 kèm
+ * gợi ý). Bản sao thứ mười ba viết tay là bản sao thứ mười ba có thể quên.
  */
 describe('conflictOnUnique — dịch 23505 thành 409, mọi thứ khác đi qua nguyên vẹn', () => {
   const BODY = { code: 'DEVICE_CODE_TAKEN', message: 'Đã có thiết bị mang mã này.' };

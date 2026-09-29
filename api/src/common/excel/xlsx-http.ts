@@ -4,12 +4,11 @@ import type { Response } from 'express';
 /**
  * Phần HTTP dùng chung của mọi endpoint xlsx (AD-15): nhận file lên và gửi file về.
  *
- * Trước đây `catalog.controller` và `devices.controller` mỗi bên giữ một bản sao y hệt —
- * và đã kịp lệch nhau hai lần (trần dung lượng 5MB vs 10MB; một bên thêm header còn bên kia
- * quên). Đúng thứ AD-15 sinh ra để chặn.
+ * Mỗi controller giữ một bản sao thì chúng sẽ lệch nhau (trần dung lượng 5MB vs 10MB; một
+ * bên thêm header còn bên kia quên) — đúng thứ AD-15 sinh ra để chặn.
  */
 
-export const XLSX_MIME =
+const XLSX_MIME =
   'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 /**
@@ -63,7 +62,7 @@ export function requireXlsx(file: Express.Multer.File | undefined): Buffer {
  *
  * KHÔNG set `X-Content-Type-Options` ở đây: helmet đặt cho mọi response và nginx đặt thêm
  * một lần nữa (`add_header … always`). Set lần thứ ba ra header trùng lặp
- * "nosniff, nosniff, nosniff" — hợp lệ theo HTTP nhưng vô nghĩa (E2E story 2.3 bắt được).
+ * "nosniff, nosniff, nosniff" — hợp lệ theo HTTP nhưng vô nghĩa.
  */
 export function sendXlsx(res: Response, buffer: Buffer, fileName: string): void {
   res.setHeader('Content-Type', XLSX_MIME);

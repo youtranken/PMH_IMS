@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { useTranslation } from 'react-i18next';
 import { useDialogPortal } from '@/ui/dialog';
 import { useAnchoredMenu } from '@/ui/use-anchored-menu';
 
@@ -38,8 +37,8 @@ export interface RowAction {
  * hạn — co lại tới mức phải cuộn ngang mới đọc hết. Người ta mở một bảng danh sách để ĐỌC;
  * thao tác là việc thỉnh thoảng mới làm, và trả thêm một cú bấm cho nó là đổi đúng hướng.
  *
- * Ba chấm cũng làm được thứ dãy nút phẳng không làm nổi: nó CHỖ NÀO CŨNG BẰNG NHAU. Trước đây
- * một dòng có ba nút, dòng dưới có một — mắt phải quét lại từng dòng để tìm nút mình cần, và
+ * Ba chấm cũng làm được thứ dãy nút phẳng không làm nổi: nó CHỖ NÀO CŨNG BẰNG NHAU. Với dãy nút
+ * phẳng, một dòng có ba nút, dòng dưới có một — mắt phải quét lại từng dòng để tìm nút mình cần, và
  * ở chế độ gập dọc trên điện thoại thì dãy nút tự xuống dòng thành hai tầng lệch nhau.
  *
  * Bàn phím theo chuẩn menu button (WAI-ARIA): Enter/Space/↓ mở, ↑↓ đi trong menu, Home/End
@@ -252,16 +251,4 @@ export function RowActions({
         )}
     </div>
   );
-}
-
-/**
- * Tên khả truy cập chuẩn cho nút ba chấm.
- *
- * Mọi dòng cùng mang tên "Thao tác" thì `getByRole('button', { name: 'Thao tác' })` khớp cả
- * hai chục dòng, và trình đọc màn hình đọc hai chục nút giống hệt nhau. Kèm mã hồ sơ vào là
- * mỗi dòng có một cái tên riêng.
- */
-export function useRowActionLabel(): (subject: string) => string {
-  const { t } = useTranslation();
-  return (subject: string) => t('common.actionsOf', { subject });
 }

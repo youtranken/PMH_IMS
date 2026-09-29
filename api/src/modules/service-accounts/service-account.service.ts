@@ -341,8 +341,8 @@ export class ServiceAccountService {
         groupName: vpn ? merged.groupName : null,
         /*
          * Lưu bản ĐÃ CHUẨN HÓA: `checkAllowedIps` vốn đã bỏ khoảng trắng thừa, bỏ mục rỗng
-         * và bỏ mục trùng — nhưng bản trước lưu nguyên chuỗi thô, nên "1.2.3.4, , 1.2.3.4"
-         * nằm y nguyên trong DB và đi vòng qua form vẫn thế. Dựng ra một hàm chuẩn hóa rồi
+         * và bỏ mục trùng — lưu nguyên chuỗi thô thì "1.2.3.4, , 1.2.3.4" nằm y nguyên trong
+         * DB và đi vòng qua form vẫn thế. Dựng ra một hàm chuẩn hóa rồi
          * không ai đọc thì nó chỉ là một lời hứa trong test.
          */
         allowedIps: vpn ? normalizeIps(merged.allowedIps) : null,
@@ -351,9 +351,9 @@ export class ServiceAccountService {
          * Trạng thái KHÔNG đọc từ body — `ServiceAccountInput` không còn ô đó.
          *
          * Sửa hồ sơ thì giữ nguyên trạng thái đang có; tạo mới thì 'active'. Đổi trạng thái
-         * là việc của `disable()`/`enable()`, hai đường bắt ghi lý do. Bản trước còn nhận
-         * `input.status`, tức là `PATCH {status:'active'}` âm thầm bật lại một tài khoản vừa
-         * bị đóng, xoá công của `disable()` và cái lý do nó đã ghi, mà lịch sử chỉ nói "updated".
+         * là việc của `disable()`/`enable()`, hai đường bắt ghi lý do. Nhận `input.status` ở đây
+         * thì `PATCH {status:'active'}` âm thầm bật lại một tài khoản vừa bị đóng, xoá công của
+         * `disable()` và cái lý do nó đã ghi, mà lịch sử chỉ nói "updated".
          */
         status: before?.status ?? 'active',
       },
@@ -423,8 +423,8 @@ function buildWhere(filter: ServiceAccountFilter): SQL | undefined {
   const term = filter.search?.trim();
   if (term) {
     // Mã · tên · tên đăng nhập · phòng ban · người phụ trách — cả năm nằm trong cột sinh
-    // `service_account.search_norm` (0052) và đã gấp dấu. Năm vế `ilike()` trước đây không
-    // gấp dấu, nên gõ "ke toan" không ra "Kế toán" — B-01.
+    // `service_account.search_norm` (0052) và đã gấp dấu. `ilike()` thẳng trên từng cột thì
+    // không gấp dấu, nên gõ "ke toan" không ra "Kế toán".
     parts.push(searchNormLike(serviceAccountTable, term));
   }
   if (filter.kind) parts.push(eq(serviceAccountTable.kind, filter.kind));
@@ -461,8 +461,8 @@ export function serviceAccountOrderBy(sort: SortQuery<ServiceAccountSortKey>): S
     kind: serviceAccountTable.kind,
     status: serviceAccountTable.status,
   }[sort.key];
-  // Xem `orderByStable`. Bản trước ở đây còn thiếu cả cái chốt `sort.key === 'code'` mà ba
-  // service kia có, nên sắp theo mã giảm dần sinh ra `ORDER BY code DESC, code ASC`.
+  // Xem `orderByStable`: nó tự bỏ khóa phụ khi trùng cột chính, nên sắp theo mã giảm dần
+  // không sinh ra `ORDER BY code DESC, code ASC`.
   return orderByStable(sort.dir, column, serviceAccountTable.code);
 }
 

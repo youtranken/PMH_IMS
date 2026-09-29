@@ -16,10 +16,10 @@ type EnrollStart = TotpSetupData;
  * Cài xác thực 2 lớp lần đầu (NFR-01: enroll bắt buộc).
  * Secret chỉ hiện MỘT LẦN ở màn này; server đã cất bản mã hóa envelope (AD-4).
  *
- * ===== VÌ SAO Ô MẬT KHẨU KHÔNG PHẢI LÚC NÀO CŨNG HIỆN (A-02) =====
+ * ===== VÌ SAO Ô MẬT KHẨU KHÔNG PHẢI LÚC NÀO CŨNG HIỆN =====
  *
- * Từ 20/09 cửa `POST /auth/totp/enroll` đòi mật khẩu hiện tại — cái cookie phiên không còn
- * đủ để gắn một authenticator mới. Nhưng luồng đăng nhập bắt buộc cài 2 lớp được server
+ * Cửa `POST /auth/totp/enroll` đòi mật khẩu hiện tại — cái cookie phiên không đủ để gắn
+ * một authenticator mới. Nhưng luồng đăng nhập bắt buộc cài 2 lớp được server
  * miễn: mật khẩu vừa gõ xong vài giây trước ở màn ngay trước đó.
  *
  * Nên màn này KHÔNG tự đoán trường hợp nào cần hỏi. Nó cứ gọi, và chỉ dựng ô mật khẩu khi

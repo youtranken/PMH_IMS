@@ -5,7 +5,7 @@ import { DevicesService } from './devices.service';
 import { UI_PATHS } from '../../common/ui-paths';
 
 /**
- * Nguồn hạn "bảo hành thiết bị" (AD-7, story 3.4).
+ * Nguồn hạn "bảo hành thiết bị" (AD-7).
  *
  * KHÔNG có hàm `renew`: bảo hành do nhà cung cấp quyết, không phải thứ mình bấm một nút là
  * gia hạn. Đổi hạn bảo hành thì sửa trong hồ sơ thiết bị, và lần sửa đó vào lịch sử thiết bị.

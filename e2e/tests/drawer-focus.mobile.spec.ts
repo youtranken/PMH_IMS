@@ -15,10 +15,10 @@ test.beforeEach(() => {
  * thấy được gì về bố cục. Gỡ dòng `useFocusTrap(...)` khỏi `app-shell.tsx` thì bài Vitest vẫn
  * xanh nguyên — bài này thì đỏ.
  *
- * ===== LỖ ĐANG VÁ =====
+ * ===== LỖ MÀ BÀI NÀY CANH =====
  *
- * Nút mở drawer nằm trong topbar, tức SAU `<nav>` trong DOM. Nên trước 23/09, mở drawer xong
- * thì lượt Tab kế tiếp đi vào NỘI DUNG TRANG và không bao giờ vào được menu: người đi bàn
+ * Nút mở drawer nằm trong topbar, tức SAU `<nav>` trong DOM. Không có bẫy tiêu điểm thì mở
+ * drawer xong lượt Tab kế tiếp đi vào NỘI DUNG TRANG và không bao giờ vào được menu: người đi bàn
  * phím mở được cái menu ra rồi không vào nổi nó. Esc thì đóng được, nhưng tiêu điểm rơi về
  * `<body>` nên lượt Tab sau đó bắt đầu lại từ đầu trang.
  */
@@ -27,36 +27,36 @@ test('mở drawer là tiêu điểm vào trong, Esc trả nó về đúng nút �
   await firstLogin(page, E2E_SA);
   await page.goto('/');
 
-  const nutMo = page.getByRole('button', { name: 'Mở menu' });
-  await expect(nutMo).toBeVisible();
+  const openButton = page.getByRole('button', { name: 'Mở menu' });
+  await expect(openButton).toBeVisible();
   await openNavDrawer(page);
 
   /* ----- 1. Drawer là một HỘP THOẠI, và landmark điều hướng vẫn còn nguyên bên trong ----- */
-  const hop = page.getByRole('dialog', { name: 'Điều hướng chính' });
-  await expect(hop).toBeVisible();
+  const dialog = page.getByRole('dialog', { name: 'Điều hướng chính' });
+  await expect(dialog).toBeVisible();
   await expect(
-    hop.getByRole('navigation', { name: 'Điều hướng chính' }),
+    dialog.getByRole('navigation', { name: 'Điều hướng chính' }),
     'bọc ngoài chứ không đè role lên <nav> — mất landmark là mất đường nhảy bằng phím tắt',
   ).toBeVisible();
 
   /* ----- 2. Tiêu điểm đã Ở TRONG drawer, không nằm lại ở nút mở ----- */
   await expect(
-    hop.locator(':focus'),
+    dialog.locator(':focus'),
     'mở menu xong mà tiêu điểm còn ngoài thì Tab kế tiếp đi vào nội dung trang',
   ).toHaveCount(1);
 
   /* ----- 3. Tab không thoát ra được ----- */
   for (let i = 0; i < 25; i += 1) await page.keyboard.press('Tab');
   await expect(
-    hop.locator(':focus'),
+    dialog.locator(':focus'),
     '25 lượt Tab vẫn phải quẩn trong drawer — nó đang che kín màn hình',
   ).toHaveCount(1);
 
   /* ----- 4. Esc đóng, và TRẢ tiêu điểm về nút đã mở ----- */
   await page.keyboard.press('Escape');
-  await expect(hop).toHaveCount(0);
+  await expect(dialog).toHaveCount(0);
   await expect(
-    nutMo,
+    openButton,
     'trả về nút đã mở, không rơi về <body> — nếu không, lượt Tab sau bắt đầu lại từ đầu trang',
   ).toBeFocused();
 });
@@ -99,13 +99,12 @@ test('desktop KHÔNG bị khoá tiêu điểm vào sidebar (vế đối chứng)
    * Tiêu điểm đặt NGOÀI sidebar rồi Tab: nếu bẫy lỡ bật ở màn rộng thì lượt Tab ấy bị kéo
    * ngược vào sidebar.
    *
-   * **Bản đầu của ô này SAI.** Nó bấm Tab 40 lượt từ link đầu sidebar rồi đòi tiêu điểm phải
-   * nằm ngoài sidebar — nhưng vòng Tab của trang là một VÒNG KHÉP KÍN: đi hết trang thì nó
-   * quay lại đầu, tức trở về sidebar. Bài đỏ vì phép đo sai, không phải vì sản phẩm sai. Đếm
+   * Đừng bấm Tab N lượt từ link đầu sidebar rồi đòi tiêu điểm phải nằm ngoài sidebar: vòng Tab
+   * của trang là một VÒNG KHÉP KÍN — đi hết trang thì nó quay lại đầu, tức trở về sidebar. Đếm
    * số lượt Tab để suy ra tiêu điểm đang ở đâu là một phép đo không bao giờ chắc.
    */
-  const oTim = page.getByRole('searchbox').first();
-  await oTim.focus();
+  const searchBox = page.getByRole('searchbox').first();
+  await searchBox.focus();
   await page.keyboard.press('Tab');
   await expect(
     page.getByRole('navigation', { name: 'Điều hướng chính' }).locator(':focus'),

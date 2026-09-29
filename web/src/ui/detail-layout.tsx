@@ -84,18 +84,18 @@ export function DetailLayout({
 }
 
 /** Mốc thu thẻ định danh — PHẢI khớp `@media (max-width: 680px)` của `.rail-card` ở detail-tabs.css. */
-export const RAIL_COLLAPSE_QUERY = '(max-width: 680px)';
+const RAIL_COLLAPSE_QUERY = '(max-width: 680px)';
 
 /**
  * Thẻ định danh. `title` mặc định để mọi trang gọi cùng một tên, khỏi mỗi nơi một kiểu.
  *
- * LÀ MỘT KHU CÓ TÊN, không phải một cái hộp (sửa 17/09/2026). Bản đầu dựng tiêu đề bằng một
- * `<div class="rail-h">` — nhìn thì y hệt, nhưng với trình đọc màn hình nó chỉ là chữ trôi
- * giữa trang: không nhảy tới được, không biết mấy dòng dưới thuộc về nó.
+ * LÀ MỘT KHU CÓ TÊN, không phải một cái hộp. Tiêu đề dựng bằng `<div class="rail-h">` thì
+ * nhìn y hệt, nhưng với trình đọc màn hình nó chỉ là chữ trôi giữa trang: không nhảy tới
+ * được, không biết mấy dòng dưới thuộc về nó.
  *
  * Thẻ này lại đang giữ đúng những thứ người ta cần gấp nhất (mã, vị trí, trạng thái, còn bao
- * nhiêu ngày bảo hành/hạn), và từ đợt dựng lại thì hạn CHỈ còn ở đây — cột chính không vẽ lại
- * nữa. Một khu quan trọng đến thế mà không có tên thì đường vào duy nhất là nghe hết cả trang.
+ * nhiêu ngày bảo hành/hạn), và hạn CHỈ có ở đây — cột chính không vẽ lại. Một khu quan trọng
+ * đến thế mà không có tên thì đường vào duy nhất là nghe hết cả trang.
  */
 export function RailCard({ title, children }: { title: string; children: ReactNode }) {
   const id = useId();
@@ -112,12 +112,11 @@ export function RailCard({ title, children }: { title: string; children: ReactNo
 /**
  * Một KHU CÓ TÊN ở cột chính — bản anh em của `RailCard` cho nửa bên trái.
  *
- * VÌ SAO NÓ RA ĐỜI (19/09/2026). Khu "Hồ sơ" thêm ngày 19/09 được chép NGUYÊN VĂN vào bốn file
- * `features/` — cùng `<section className="card device-panel" id="sec-ho-so" aria-labelledby=…>`,
- * cùng `<h2 className="form-section-title">`, từng ký tự. Đó là fork bản sao, thứ AD-15 cấm
- * thẳng ("cần khác đi thì thêm prop, CẤM copy ra bản riêng"), và `RailCard` ngay trên đây đã là
- * khuôn mẫu sẵn có cho cột phải — cột trái chỉ thiếu bản của mình. Hậu quả đo được ngay: đổi
- * một chi tiết phải sửa bốn chỗ, và hai khiếm khuyết trình bày của khu ấy cũng phải vá bốn lần.
+ * VÌ SAO CÓ NÓ. Khu "Hồ sơ" có mặt ở bốn trang chi tiết; chép `<section className="card
+ * device-panel" aria-labelledby=…>` + `<h2 className="form-section-title">` vào bốn file
+ * `features/` là fork bản sao, thứ AD-15 cấm thẳng ("cần khác đi thì thêm prop, CẤM copy ra
+ * bản riêng"), và đổi một chi tiết là phải sửa bốn chỗ. `RailCard` ngay trên đây là khuôn mẫu
+ * cho cột phải; đây là bản cho cột trái.
  *
  * `useId` thay cho `id="sec-ho-so"` gõ tay: id gõ tay chỉ an toàn chừng nào không màn nào vẽ
  * hai khu cùng lúc — một điều kiện không ai cưỡng chế được, và ngày nó vỡ thì `aria-labelledby`
@@ -191,9 +190,9 @@ export function RailRowIfSet({
   note?: ReactNode;
 }) {
   /*
-   * KHÔNG CÓ `value` NHƯNG CÓ `note` THÌ VẪN PHẢI VẼ (18/09/2026).
+   * KHÔNG CÓ `value` NHƯNG CÓ `note` THÌ VẪN PHẢI VẼ.
    *
-   * Bản trước trả `null` ngay khi `value` rỗng, và thế là nuốt luôn cả `note`. Mà `note` đang
+   * Trả `null` ngay khi `value` rỗng là nuốt luôn cả `note`. Mà `note` đang
    * là chỗ DUY NHẤT vài trường tồn tại trên trang đọc: `department` chỉ xuất hiện dưới dạng
    * chú của dòng "Người dùng" / "Người phụ trách".
    *

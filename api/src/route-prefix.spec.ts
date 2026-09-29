@@ -10,9 +10,8 @@ import { join } from 'node:path';
  * trình duyệt: không lỗi biên dịch, không lỗi khởi động, Nest vẫn đăng ký route bình thường,
  * chỉ là không ai gọi tới được.
  *
- * Chuyện đã xảy ra thật: `AuditController` khai `@Controller('admin/audit')` và sống 9 epic
- * — controller duy nhất trong 17 cái thiếu tiền tố. Phát hiện ngày 03/09 khi E2E lần đầu
- * chạm tới endpoint đó và nhận 404. Xem `docs/CODE-REVIEW-2026-08-28.md`.
+ * Chuyện đã xảy ra thật: `AuditController` khai `@Controller('admin/audit')` — controller
+ * duy nhất trong 17 cái thiếu tiền tố — và chỉ lộ ra khi E2E chạm tới endpoint đó và nhận 404.
  *
  * Bài này quét file nguồn thay vì dựng app, nên nó chạy trong mili-giây và không cần DB.
  */

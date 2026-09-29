@@ -5,9 +5,9 @@ import { Global, Injectable, Module, type OnApplicationBootstrap } from '@nestjs
  *
  * ===== VÌ SAO PHẢI LÀ SỔ ĐĂNG KÝ, KHÔNG PHẢI MỘT LỜI GỌI THẲNG =====
  *
- * Bài toán (rà soát 07/09, C1): kho file đính kèm phải tuân theo ma trận quyền ba tầng của
- * két. Cách hiển nhiên là cho `files` gọi `VaultApiService` — và tôi đã viết đúng như thế,
- * rồi `dependency-cruiser` chặn lại với `base-must-not-import-biz`.
+ * Bài toán: kho file đính kèm phải tuân theo ma trận quyền ba tầng của két. Cách hiển nhiên
+ * là cho `files` gọi `VaultApiService` — và `dependency-cruiser` chặn lại với
+ * `base-must-not-import-biz`.
  *
  * Nó chặn ĐÚNG. `files` là module NỀN: `devices`, `software`, `isp`, `service-accounts`,
  * `ipam` đều đính kèm được. Cho nền biết tới một module nghiệp vụ cụ thể là đảo ngược chiều
@@ -25,8 +25,8 @@ import { Global, Injectable, Module, type OnApplicationBootstrap } from '@nestjs
  * `assertCanRead` KHÔNG ném khi loại chủ thể chưa có người canh. Nghe ngược với "mặc định
  * cấm", nên phải nói rõ: sổ này chỉ trả lời "ma trận quyền nói gì", và có những loại chủ thể
  * (`subnet`, `nat_rule`) mà ma trận KHÔNG phủ — với chúng khái niệm tầng quyền không tồn tại.
- * Cấm sạch những loại đó là đổi hành vi của một quyết định khác (story 2.3) mà không ai yêu
- * cầu. Mặc-định-cấm nằm ở TRONG ma trận (`access-list.service.ts` trả `'denied'` khi không có
+ * Cấm sạch những loại đó là đổi hành vi của một quyết định khác ("mọi vai đã đăng nhập đều
+ * xem được đính kèm") mà không ai yêu cầu. Mặc-định-cấm nằm ở TRONG ma trận (`access-list.service.ts` trả `'denied'` khi không có
  * luật nào áp), và đó mới là chỗ nó thuộc về.
  */
 
@@ -46,7 +46,7 @@ export interface OwnerAccessChecker {
  * `assertCanRead` đi qua im lặng khi không ai đăng ký loại chủ thể đó, và với `subnet` /
  * `nat_rule` thì đúng — mặc-định-cấm của chúng nằm trong ma trận quyền, không nằm ở sổ này.
  * Nhưng với `service_account` và `isp` thì việc đăng ký là thứ DUY NHẤT đứng giữa Member và
- * đính kèm của những chủ thể đó (lỗ C1, đã vá 08/09).
+ * đính kèm của những chủ thể đó.
  *
  * Việc đăng ký lại xảy ra trong `VaultApiService.onModuleInit`. Nếu một cách lắp module về
  * sau khiến hàm đó không chạy — đổi thứ tự `imports`, tách module, một `forwardRef` đặt sai —

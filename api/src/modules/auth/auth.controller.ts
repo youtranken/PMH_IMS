@@ -11,8 +11,8 @@ import {
   UnauthorizedException,
   UseGuards,
 } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
+import { ConfigThrottle } from '../../common/config-throttle';
 import { clientIp } from '../../common/client-ip';
 import { Audited } from '../audit/audited.decorator';
 import { SystemConfigService } from '../config-sys/system-config.service';
@@ -75,13 +75,12 @@ export class AuthController {
   /**
    * Bước 2: mã TOTP. Phiên chờ được thay bằng phiên mới (regenerate id).
    *
-   * Trần 10 lần/phút — CÙNG con số với `POST /auth/step-up` ngay dưới, và vì cùng một lý do:
+   * Trần `rate.totp_per_minute` (10/phút) — CÙNG khoá với `POST /auth/step-up`, vì cùng một lý do:
    * mã TOTP chỉ có một triệu khả năng, còn trần chung 300/phút là quá rộng cho một ô 6 số.
    * Đường này kết thúc bằng `completeTotpWithin` (đóng dấu `stepped_up_at`) nên đoán trúng ở
    * đây là được cấp một phiên ĐÃ MỞ KÉT — nó là cửa két thứ hai, phải canh ngang cửa thứ nhất.
-   * Trước 07/09 route này không có gì cả (rà soát 07/09, finding #2).
    */
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ConfigThrottle('rateTotpPerMinute')
   @AllowTotpPending()
   @Roles(...ALL_ROLES)
   @Post('login/totp')
@@ -176,7 +175,7 @@ export class AuthController {
    * Không đòi step-up lần nữa: vé chỉ sinh ra sau step-up + mật khẩu và gắn chặt với phiên này.
    * Đòi lại thì người đang mất vài phút cài ứng dụng trên máy mới bị hỏi mã của máy CŨ giữa chừng.
    */
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ConfigThrottle('rateTotpPerMinute')
   @Roles(...ALL_ROLES)
   @Post('totp/re-enroll/confirm')
   @HttpCode(200)
@@ -231,11 +230,11 @@ export class AuthController {
   /**
    * FR-022: step-up để xem bí mật — luôn bắt buộc, kể cả khi tắt TOTP lúc đăng nhập.
    *
-   * Trần 10 lần/phút THEO USER (UserThrottlerGuard). Mã TOTP chỉ có một triệu khả năng và
+   * Trần `rate.totp_per_minute` (10/phút) THEO USER (UserThrottlerGuard). Mã TOTP chỉ có một triệu khả năng và
    * đây là cửa duy nhất vào cả két: trần 300/phút chung là quá rộng cho một ô 6 số. Người
    * dùng thật gõ nhiều nhất vài lần — 10 đã là rộng rãi.
    */
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
+  @ConfigThrottle('rateTotpPerMinute')
   @Roles(...ALL_ROLES)
   @Post('step-up')
   @HttpCode(200)

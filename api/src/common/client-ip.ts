@@ -8,8 +8,7 @@ export interface IpBearingRequest {
  *
  * VÌ SAO. `web/proxy-api-headers.conf:5` dùng `$proxy_add_x_forwarded_for`, tức nginx **NỐI
  * THÊM** vào giá trị client gửi lên chứ không ghi đè. Header tới đây là
- * `<client tự khai>, <IP thật>`. Bản trước lấy phần tử TRÁI NHẤT — tức lấy đúng thứ client
- * tự điền vào.
+ * `<client tự khai>, <IP thật>`. Lấy phần tử TRÁI NHẤT là lấy đúng thứ client tự điền vào.
  *
  * Hai hậu quả, cái đầu nặng hơn nhiều:
  *
@@ -27,7 +26,7 @@ export interface IpBearingRequest {
  * trong repo về một. Muốn chắc hơn nữa thì có `X-Real-IP` (nginx GHI ĐÈ bằng `$remote_addr`,
  * không nối, nên không giả được) — giữ lại đây như đường dự phòng nếu sau này bỏ trust proxy.
  *
- * Nằm ở `common/` (AD-15) vì từ 08/09 có HAI nơi cần: controller auth và middleware dựng
+ * Nằm ở `common/` (AD-15) vì có HAI nơi cần: controller auth và middleware dựng
  * `RequestContext` cho `audit_log.ip`. Đây là định nghĩa duy nhất của "IP client" trong repo.
  */
 export function clientIp(req: IpBearingRequest): string | null {

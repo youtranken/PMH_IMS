@@ -85,7 +85,7 @@ export const ipHistoryTable = pgTable('ip_history', {
  * Bảng `nat_rule_history` — migration 0037. CHỈ-THÊM (AD-13), cùng khuôn `ip_history`.
  *
  * Sinh ra vì câu auditor hỏi nhiều nhất về sổ NAT — "ai mở port 3389 ra internet, ngày nào,
- * vì sao" — trước đây chỉ tra được bằng SQL trên `audit_log`.
+ * vì sao" — phải trả lời được mà không cần SQL trên `audit_log`.
  */
 export const natRuleHistoryTable = pgTable('nat_rule_history', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -97,7 +97,7 @@ export const natRuleHistoryTable = pgTable('nat_rule_history', {
 });
 
 /**
- * Bảng `nat_rule` — migration 0022 (story 5.3, FR-017). Cùng chủ với `ip_address`: một rule
+ * Bảng `nat_rule` — migration 0022 (FR-017). Cùng chủ với `ip_address`: một rule
  * NAT chỉ có nghĩa khi gắn được với một IP trong, ranh giới giữa hai thứ đó là ranh giới giả.
  *
  * Chồng port ngoài trên cùng một router bị chặn ở tầng DB bằng `EXCLUDE USING gist` — bắt

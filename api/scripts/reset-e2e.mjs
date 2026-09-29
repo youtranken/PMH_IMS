@@ -312,17 +312,22 @@ async function resetUsers(pool) {
  *
  * `catalog_history` là bảng mà lượt dọn chạm tới muộn — chọn nó làm mẫu thì câu hỏi này bao
  * đúng cái ca đã gây ra sự cố. Chủ sở hữu bảng lịch sử nào cũng là một, nên một bảng là đủ.
+ *
+ * Superuser cũng qua: từ DB-03 chủ bảng là `ims_owner`, nhưng các bảng chỉ-thêm đã thu quyền
+ * DELETE của CẢ chủ bảng, nên chỉ superuser (DSN của file override dev) vừa tháo trigger vừa
+ * xoá được dòng lịch sử của bài kiểm.
  */
 async function assertCanDisableTriggers(pool) {
   const { rows } = await pool.query(
     `SELECT current_user::text AS me,
-            pg_get_userbyid(c.relowner) AS owner
+            pg_get_userbyid(c.relowner) AS owner,
+            (SELECT rolsuper FROM pg_roles WHERE rolname = current_user) AS super
        FROM pg_class c
       WHERE c.oid = to_regclass('public.catalog_history')`,
   );
   const row = rows[0];
   if (!row) return; // Lược đồ chưa dựng — `resetDomain` sẽ tự nói ra bằng lỗi của nó.
-  if (row.me === row.owner) return;
+  if (row.super || row.me === row.owner) return;
 
   console.error(
     `Lượt dọn E2E cần QUYỀN SỞ HỮU bảng để tháo trigger, nhưng đang kết nối bằng "${row.me}" ` +
@@ -330,7 +335,7 @@ async function assertCanDisableTriggers(pool) {
   );
   console.error(
     'Nguyên nhân thường gặp: đã tách role (D-01) nhưng container chạy script này chưa được ' +
-      'khai E2E_RESET_DATABASE_URL (docker-compose.override.e2e.yml), nên nó lùi về DATABASE_URL của role hẹp.',
+      'khai E2E_RESET_DATABASE_URL (DSN superuser, docker-compose.override.e2e.yml), nên nó lùi về DATABASE_URL của role hẹp.',
   );
   console.error('DỪNG TRƯỚC KHI XOÁ GÌ — dọn dở dang tệ hơn không dọn.');
   process.exit(1);

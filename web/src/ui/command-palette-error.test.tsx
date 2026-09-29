@@ -12,12 +12,12 @@ import type { Me } from '@/lib/me';
  *
  * Hộp tìm nhanh gộp bốn nguồn (thiết bị · phần mềm · đường truyền · tài khoản dịch vụ), và cả
  * bốn đều viết `…data?.items ?? []`. Một lượt 500 vì thế hoá thành danh sách rỗng, và hộp in
- * ra câu KHẲNG ĐỊNH: "Không có hồ sơ nào khớp ...". Đo trên trình duyệt thật ngày 18/09/2026
- * bằng cách ép `/isp-lines` trả 500 rồi gõ "fpt" — ra đúng câu đó.
+ * ra câu KHẲNG ĐỊNH: "Không có hồ sơ nào khớp ...". Đo trên trình duyệt thật bằng cách ép
+ * `/isp-lines` trả 500 rồi gõ "fpt" — ra đúng câu đó.
  *
  * Hậu quả không phải thẩm mỹ: người trực đọc "không có hồ sơ nào khớp" rồi đi khai TRÙNG một
- * đường truyền đã có trong hệ thống. Đây đúng họ lỗi mà `loi-api-khong-hoa-thanh-rong.spec.ts`
- * sinh ra để chặn ở các màn danh sách, nay tái xuất ở một cửa mới.
+ * đường truyền đã có trong hệ thống. Đây đúng họ lỗi mà `api-error-not-empty.spec.ts`
+ * chặn ở các màn danh sách, chỉ là ở một cửa khác.
  *
  * Cờ `loading` cũng chỉ đọc hai trên bốn nguồn, nên một nhóm về chậm là hộp nháy câu "không
  * có gì" trước khi đổ kết quả ra.
@@ -31,17 +31,17 @@ import type { Me } from '@/lib/me';
 
 const me = { role: 'sa', csrfToken: 'x', email: 'sa@pmh.com.vn' } as unknown as Me;
 
-const trang = (items: unknown[]) => ({ items, total: items.length, page: 1, limit: 5 });
+const pageNo = (items: unknown[]) => ({ items, total: items.length, page: 1, limit: 5 });
 
 /** Giả lập tầng mạng: `isp-lines` hỏng, ba nguồn còn lại trả về `items`. */
-function gaLapFetch(itemsThietBi: unknown[]) {
+function gaLapFetch(deviceItems: unknown[]) {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes('/isp-lines')) return Promise.resolve(jsonResponse(500, { message: 'toang' }));
-      if (url.includes('/devices')) return Promise.resolve(jsonResponse(200, trang(itemsThietBi)));
-      return Promise.resolve(jsonResponse(200, trang([])));
+      if (url.includes('/devices')) return Promise.resolve(jsonResponse(200, pageNo(deviceItems)));
+      return Promise.resolve(jsonResponse(200, pageNo([])));
     }),
   );
 }
@@ -49,7 +49,7 @@ function gaLapFetch(itemsThietBi: unknown[]) {
 describe('⌘K khi một nguồn hỏng', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  const moVaGo = async (chu: string) => {
+  const openAndType = async (text: string) => {
     const user = userEvent.setup();
     renderWithI18n(
       <MemoryRouter>
@@ -59,14 +59,14 @@ describe('⌘K khi một nguồn hỏng', () => {
       </MemoryRouter>,
     );
     await user.keyboard('{Control>}k{/Control}');
-    /* `combobox`, không phải `textbox`: từ 18/09 ô tìm khai `role="combobox"` +
+    /* `combobox`, không phải `textbox`: ô tìm khai `role="combobox"` +
        `aria-activedescendant` để mũi tên ↑/↓ nói được với trình đọc màn hình. */
-    await user.type(screen.getByRole('combobox', { name: /tìm nhanh/i }), chu);
+    await user.type(screen.getByRole('combobox', { name: /tìm nhanh/i }), text);
   };
 
   it('không kết quả nào: KHÔNG được khẳng định "không có hồ sơ nào khớp"', async () => {
     gaLapFetch([]);
-    await moVaGo('fpt');
+    await openAndType('fpt');
 
     // Câu phải nói ra là ĐANG THIẾU, và thiếu nhóm nào.
     // `findByText` đã NÉM khi không thấy, nên `toBeTruthy()` sau nó không thể đỏ — bỏ đi để
@@ -77,7 +77,7 @@ describe('⌘K khi một nguồn hỏng', () => {
 
   it('có kết quả: vẫn phải nói danh sách còn thiếu', async () => {
     gaLapFetch([{ id: 'd1', code: 'SW-CORE-01', name: 'Switch lõi', siteCode: 'HN' }]);
-    await moVaGo('sw');
+    await openAndType('sw');
 
     // Tên dòng đi qua vai `option`: phần khớp từ khoá được bọc `<mark>`, chữ bị tách thành nhiều nút.
     await screen.findByRole('option', { name: /SW-CORE-01/ });

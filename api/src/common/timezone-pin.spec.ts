@@ -1,5 +1,5 @@
 /**
- * CỔNG CANH CHÍNH CÁI GHIM MÚI GIỜ CỦA JEST (24/09/2026).
+ * CỔNG CANH CHÍNH CÁI GHIM MÚI GIỜ CỦA JEST.
  *
  * `jest.config.js` đặt `process.env.TZ = 'Asia/Ho_Chi_Minh'` ngay ở đầu file — trước khi
  * framework kịp đụng `Date`, vì Node ghi nhớ múi giờ ở lần dùng `Date` ĐẦU TIÊN.
@@ -14,7 +14,7 @@
 describe('múi giờ của bộ kiểm API', () => {
   /*
    * Nhận CẢ HAI tên: `Asia/Saigon` là tên IANA cũ, `Asia/Ho_Chi_Minh` là tên hiện hành, và
-   * bản ICU đi kèm Node quyết định trả về cái nào — đo 24/09 trên Windows ra `Asia/Saigon`.
+   * bản ICU đi kèm Node quyết định trả về cái nào — trên Windows đo được `Asia/Saigon`.
    * Khoá một chuỗi ở đây là dựng lại đúng cái bệnh "xanh máy này, đỏ máy kia".
    */
   const APP_TZ = ['Asia/Ho_Chi_Minh', 'Asia/Saigon'];

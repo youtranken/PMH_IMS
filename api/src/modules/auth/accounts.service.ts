@@ -32,7 +32,17 @@ export interface ActorRef {
 }
 
 /**
- * SA quản trị tài khoản và phiên (story 1.4).
+ * Mã nhật ký của từng trạng thái đích — viết thẳng thành chuỗi để `@Audited` của route khai
+ * đúng tập này (`accounts-audited.spec.ts`) và bài điểm danh nhãn bên web đọc được.
+ */
+export const ACCOUNT_STATUS_ACTION = {
+  active: "account.unlocked",
+  locked: "account.locked",
+  disabled: "account.disabled",
+} as const;
+
+/**
+ * SA quản trị tài khoản và phiên.
  * Luật sống còn: KHÔNG XÓA user bao giờ (convention "Xóa") và không được để hệ thống
  * còn dưới 2 SA hoạt động (NFR-01 dual control).
  */
@@ -254,13 +264,10 @@ export class AccountsService {
       /*
        * Đếm SA BÊN TRONG transaction, và khóa các hàng đếm được.
        *
-       * Bản trước gọi `assertNotLastSa` NGOÀI transaction bên dưới. Hệ thống còn đúng 3 SA,
-       * hai lệnh khóa chạy song song trên hai SA khác nhau: cả hai đếm được "còn 2 SA hoạt
-       * động", cả hai qua cửa, cả hai ghi. Kết quả là còn 1 SA — và với đúng 2 SA thì kết
-       * quả là còn 0, tức KHÓA CẢ CÔNG TY RA NGOÀI hệ thống, không ai mở lại được vì mở
-       * cũng cần quyền SA.
-       *
-       * Đây là chỗ nguy hiểm nhất trong cả nhóm lỗi này, nên nó được sửa trước tiên.
+       * Gọi `assertNotLastSa` NGOÀI transaction thì hỏng: hệ thống còn đúng 3 SA, hai lệnh
+       * khóa chạy song song trên hai SA khác nhau: cả hai đếm được "còn 2 SA hoạt động", cả
+       * hai qua cửa, cả hai ghi. Kết quả là còn 1 SA — và với đúng 2 SA thì kết quả là còn 0,
+       * tức KHÓA CẢ CÔNG TY RA NGOÀI hệ thống, không ai mở lại được vì mở cũng cần quyền SA.
        */
       if (status !== "active") {
         await this.assertNotLastSaWithin(tx, user.role, userId);
@@ -297,7 +304,7 @@ export class AccountsService {
           : 0;
       await this.audit.appendWithin(tx, {
         actor: actor.email,
-        action: `account.${status === "active" ? "unlocked" : status}`,
+        action: ACCOUNT_STATUS_ACTION[status],
         objectType: "user",
         objectId: userId,
         detail: {
@@ -427,16 +434,15 @@ export class AccountsService {
       });
     }
     /*
-     * MỘT transaction cho đá-phiên + ghi vết (AD-5, mẫu N3).
+     * MỘT transaction cho đá-phiên + ghi vết (AD-5).
      *
-     * Bản trước `revoke()` chạy trên pool và COMMIT NGAY, rồi mới ghi audit riêng. Transaction
-     * thứ hai hỏng — pool cạn, worker bị kill — thì phiên ĐÃ CHẾT mà không còn dòng nào nói ai
-     * đá và đá lúc nào; `audit_log` chỉ-thêm nên không có đường bù. Đúng cửa mà NFR-03 sinh ra
-     * để trả lời: SA nghi tài khoản bị chiếm, đá phiên, rồi tuần sau phải chứng minh mình đã
-     * làm gì.
+     * Thu hồi chạy trên pool và COMMIT NGAY rồi mới ghi audit riêng thì khi transaction thứ
+     * hai hỏng — pool cạn, worker bị kill — phiên ĐÃ CHẾT mà không còn dòng nào nói ai đá và
+     * đá lúc nào; `audit_log` chỉ-thêm nên không có đường bù. Đúng cửa mà NFR-03 sinh ra để
+     * trả lời: SA nghi tài khoản bị chiếm, đá phiên, rồi tuần sau phải chứng minh mình đã làm
+     * gì.
      *
-     * `verifyLoginTotp` đã gói đúng cặp này trong tx từ đợt A — ba chỗ còn lại (đây,
-     * `stepUp()`, `logout()`) là những cửa tương đương chưa được áp (mẫu N1).
+     * Cùng khuôn với `verifyLoginTotp`, `stepUp()`, `logout()`.
      */
     await this.db.transaction(async (tx) => {
       await this.sessions.revokeWithin(tx, sessionId, `killed-by:${actor.email}`);

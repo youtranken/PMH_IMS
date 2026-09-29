@@ -32,7 +32,7 @@ import type { Database } from '../src/database/database.module';
  * cần mock nó.
  *
  * Vế còn lại — `login()` có THẬT SỰ đọc bộ đếm này không — do
- * `e2e/tests/khoa-dang-nhap-theo-noi.spec.ts` giữ.
+ * `e2e/tests/login-lockout-per-ip.spec.ts` giữ.
  */
 
 const TEST_TIMEOUT = 120_000;
