@@ -953,6 +953,17 @@ button.audit-open {
 .audit-detail-row {
   display: contents;
 }
+/* Khối con trong hộp Chi tiết tài khoản (tạm chặn · còn giữ · xem thêm): cách nhau đều. */
+.account-detail-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-7);
+}
+.account-footprint {
+  margin: 0;
+  padding-left: var(--space-6);
+}
 /* Dưới bảng nhật ký: khoảng thời gian trang đang phủ + ô "Tới ngày…". Xuống dòng ở 390px. */
 .audit-window {
   flex-wrap: wrap;
