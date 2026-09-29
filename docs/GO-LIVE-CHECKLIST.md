@@ -227,10 +227,15 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
   - **Rà 29/09:** xong (Q-14, ADM-015/DEV-027, 37c5180). `CatalogApiService.assertRefs` từ chối chọn
     MỚI mục đã ngừng dùng (`CATALOG_REF_INACTIVE`), cả ở thiết bị, phần mềm, dải, đường truyền, tủ mạng
     và nhập Excel. Kiểm: `api/test/catalog-inactive-ref.spec.ts`, E2E `form-kiem-tieng-viet.spec.ts`.
-- [ ] **BE-15 · Audit port map thiếu thông tin** (`device-ports.service.ts:167-171`); vẫn cắm được port
+- [x] **BE-15 · Audit port map thiếu thông tin** (`device-ports.service.ts:167-171`); vẫn cắm được port
   sang máy đã thanh lý.
   - **Rà 29/09:** còn nguyên cả hai ý (`device-ports.service.ts:142-190`, `prepare()` không kiểm máy
     đầu kia đã thanh lý).
+  - **Đã sửa:** thêm/sửa/gỡ cổng ghi trước/sau của thiết bị đầu kia (mã), mô tả đầu kia, cổng đầu
+    kia, VLAN, người sử dụng, ghi chú (sửa: chỉ ô đổi, kèm tên cổng); tab Lịch sử có nhãn tiếng Việt
+    cho các ô đó. Cắm sang máy đã thanh lý → 400 `PORT_PEER_RETIRED`, kiểm trong tx với `FOR SHARE`
+    trên hàng máy đầu kia. Kiểm: `api/test/device-ports-history.spec.ts`,
+    `web/src/features/devices/device-history-entries.test.ts`.
 - [ ] **BE-16 · Sweep hết hạn grant dừng cả vòng khi gặp một hàng lỗi**
   (`approvals.service.ts:285-307`). Thêm try/catch cho từng hàng.
   - **Rà 29/09:** còn nguyên (`expireDueGrants`, `approvals.service.ts:~364-390`).

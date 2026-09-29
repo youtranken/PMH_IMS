@@ -8,7 +8,9 @@ import {
 import { and, asc, eq, ne } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
+import { diffRecord, type RecordChanges } from '../../common/record-diff';
 import { conflictOnUnique } from '../../common/sql';
+import type { Tx } from '../../common/tx';
 import { devicePortTable, deviceTable } from './devices.schema';
 import { DevicesService } from './devices.service';
 
@@ -59,6 +61,45 @@ export interface IncomingPortRow {
 export interface PortMap {
   ports: PortRow[];
   incoming: IncomingPortRow[];
+}
+
+/**
+ * Các ô lịch sử ghi lại cho một dòng port map. Đầu kia ghi bằng MÃ thiết bị: uuid trong tab
+ * Lịch sử không ai đọc được.
+ */
+const TRACKED = [
+  'connectedDevice',
+  'connectedLabel',
+  'connectedPort',
+  'vlan',
+  'usedBy',
+  'note',
+] as const;
+
+type PortSnapshot = { portLabel: string } & Record<(typeof TRACKED)[number], string | null>;
+
+function snapshotOf(row: PortRow): PortSnapshot {
+  return {
+    portLabel: row.portLabel,
+    connectedDevice: row.connectedDeviceCode,
+    connectedLabel: row.connectedLabel,
+    connectedPort: row.connectedPort,
+    vlan: row.vlan,
+    usedBy: row.usedBy,
+    note: row.note,
+  };
+}
+
+/**
+ * Trước/sau của một lượt thêm (`before` null), sửa, gỡ (`after` null). `portLabel` luôn có mặt,
+ * kể cả khi không đổi: câu lịch sử ("Sửa cổng Gi1/0/12") đọc tên cổng từ đó.
+ */
+function portChanges(before: PortSnapshot | null, after: PortSnapshot | null): RecordChanges {
+  const empty = Object.fromEntries(TRACKED.map((field) => [field, null]));
+  return {
+    portLabel: { before: before?.portLabel ?? null, after: after?.portLabel ?? null },
+    ...diffRecord(TRACKED, before ?? empty, after ?? empty),
+  };
 }
 
 /**
@@ -132,6 +173,9 @@ export class DevicePortsService {
       // TRONG `tx` và có khoá: hỏi trên pool rồi mới mở transaction là chừa lại đúng khoảng
       // hở để một lượt thanh lý chen vào giữa (xem `assertUsableWithin`).
       await this.devices.assertUsableWithin(tx, deviceId);
+      if (values.connectedDeviceId) {
+        await this.assertPeerUsableWithin(tx, values.connectedDeviceId as string);
+      }
       let inserted;
       try {
         inserted = await tx
@@ -141,9 +185,8 @@ export class DevicePortsService {
       } catch (error) {
         throw this.translate(error, (values.connectedPort as string | null | undefined) ?? null);
       }
-      await this.devices.recordWithin(tx, actor, deviceId, 'port-added', {
-        portLabel: { before: null, after: values.portLabel as string },
-      });
+      const after = await this.snapshotWithin(tx, inserted[0].id);
+      await this.devices.recordWithin(tx, actor, deviceId, 'port-added', portChanges(null, after));
       return inserted[0].id;
     });
     return this.requireRow(deviceId, id);
@@ -159,6 +202,9 @@ export class DevicePortsService {
     const values = await this.prepare(deviceId, input, portId);
     await this.db.transaction(async (tx) => {
       await this.devices.assertUsableWithin(tx, deviceId);
+      if (values.connectedDeviceId && values.connectedDeviceId !== before.connectedDeviceId) {
+        await this.assertPeerUsableWithin(tx, values.connectedDeviceId as string);
+      }
       try {
         await tx
           .update(devicePortTable)
@@ -172,12 +218,14 @@ export class DevicePortsService {
             : before.connectedPort,
         );
       }
-      await this.devices.recordWithin(tx, actor, deviceId, 'port-updated', {
-        portLabel: {
-          before: before.portLabel,
-          after: (values.portLabel as string | undefined) ?? before.portLabel,
-        },
-      });
+      const after = await this.snapshotWithin(tx, portId);
+      await this.devices.recordWithin(
+        tx,
+        actor,
+        deviceId,
+        'port-updated',
+        portChanges(snapshotOf(before), after),
+      );
     });
     return this.requireRow(deviceId, portId);
   }
@@ -190,9 +238,13 @@ export class DevicePortsService {
     const before = await this.requireRow(deviceId, portId);
     await this.db.transaction(async (tx) => {
       await this.devices.assertUsableWithin(tx, deviceId);
-      await this.devices.recordWithin(tx, actor, deviceId, 'port-removed', {
-        portLabel: { before: before.portLabel, after: null },
-      });
+      await this.devices.recordWithin(
+        tx,
+        actor,
+        deviceId,
+        'port-removed',
+        portChanges(snapshotOf(before), null),
+      );
       await tx.delete(devicePortTable).where(eq(devicePortTable.id, portId));
     });
   }
@@ -260,6 +312,41 @@ export class DevicePortsService {
       }
     }
     return values;
+  }
+
+  /**
+   * Không cắm cổng sang máy đã thanh lý: lượt thanh lý gỡ mọi liên kết trỏ vào máy đó
+   * (`PortDeviceRetirement`), nên cắm mới vào là dựng lại đúng thứ nó vừa dọn.
+   *
+   * TRONG `tx` và `FOR SHARE` trên hàng máy đầu kia — bắt cặp với `FOR UPDATE` của
+   * `setStatus`: kiểm trên pool rồi mới ghi là chừa khe cho lượt thanh lý chen vào giữa.
+   */
+  private async assertPeerUsableWithin(tx: Tx, peerId: string): Promise<void> {
+    const peer = await this.devices.requireRowWithin(tx, peerId, 'share');
+    if (peer.status === 'retired') {
+      throw new BadRequestException({
+        code: 'PORT_PEER_RETIRED',
+        message: `Thiết bị đầu kia ${peer.code} đã thanh lý — không cắm cổng sang máy đã thanh lý.`,
+      });
+    }
+  }
+
+  /** Ảnh chụp một dòng port map trong `tx` (kèm mã máy đầu kia) để ghi lịch sử. */
+  private async snapshotWithin(tx: Tx, portId: string): Promise<PortSnapshot> {
+    const [row] = await tx
+      .select({ port: devicePortTable, peerCode: deviceTable.code })
+      .from(devicePortTable)
+      .leftJoin(deviceTable, eq(devicePortTable.connectedDeviceId, deviceTable.id))
+      .where(eq(devicePortTable.id, portId));
+    return {
+      portLabel: row.port.portLabel,
+      connectedDevice: row.peerCode ?? null,
+      connectedLabel: row.port.connectedLabel,
+      connectedPort: row.port.connectedPort,
+      vlan: row.port.vlan,
+      usedBy: row.port.usedBy,
+      note: row.port.note,
+    };
   }
 
   private async requireRow(deviceId: string, portId: string): Promise<PortRow> {

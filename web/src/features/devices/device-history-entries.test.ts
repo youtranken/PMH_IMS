@@ -107,6 +107,27 @@ describe('toHistoryEntries — câu tự nhiên, không phải khoá thô', () =
     expect(removed.action).toBe('Xóa cổng WAN1');
   });
 
+  it('sửa cổng đọc được đầu kia, VLAN, người dùng bằng tiếng Việt (BE-15)', () => {
+    const [entry] = toHistoryEntries([
+      row({
+        action: 'port-updated',
+        changes: {
+          portLabel: { before: 'Gi1/0/3', after: 'Gi1/0/3' },
+          connectedDevice: { before: 'PC-01', after: 'PC-02' },
+          connectedLabel: { before: 'Máy in', after: null },
+          connectedPort: { before: null, after: 'eth1' },
+          vlan: { before: '10', after: 'trunk' },
+          usedBy: { before: 'Kế toán', after: null },
+        },
+      }),
+    ], t);
+    expect(entry.action).toBe('Sửa cổng Gi1/0/3');
+    for (const label of ['thiết bị đầu kia', 'mô tả đầu kia', 'cổng đầu kia', 'VLAN', 'người sử dụng']) {
+      expect(entry.detail).toContain(label);
+    }
+    expect(entry.detail).not.toMatch(/connected|vlan|usedBy/);
+  });
+
   it('thanh lý kèm dọn: nói "đã gỡ IP, NAT, license", không phải "cleanup: (trống) → true"', () => {
     const [entry] = toHistoryEntries([
       row({
