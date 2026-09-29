@@ -220,9 +220,11 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
   sang máy đã thanh lý.
   - **Rà 29/09:** còn nguyên cả hai ý (`device-ports.service.ts:142-190`, `prepare()` không kiểm máy
     đầu kia đã thanh lý).
-- [ ] **BE-16 · Sweep hết hạn grant dừng cả vòng khi gặp một hàng lỗi**
+- [x] **BE-16 · Sweep hết hạn grant dừng cả vòng khi gặp một hàng lỗi**
   (`approvals.service.ts:285-307`). Thêm try/catch cho từng hàng.
   - **Rà 29/09:** còn nguyên (`expireDueGrants`, `approvals.service.ts:~364-390`).
+  - **Đã sửa:** `expireDueGrants` bọc try/catch từng hàng, log qua `redactMessage`, hàng lỗi rollback
+    riêng và vòng sau thử lại. Kiểm: `api/test/approvals.spec.ts` (bài "một hàng lỗi không chặn").
 - [ ] **BE-17 · Xin break-glass chồng khi đang có grant còn hạn** (`break-glass.service.ts:230`).
   - **Rà 29/09:** mới một phần (8a2dd5e). API chặn khi còn phiếu chờ (`BREAK_GLASS_PENDING`) và khi
     có quyền đã duyệt chưa gắn phiên (`BREAK_GLASS_APPROVED`); màn hình chặn đủ. Còn hở: gọi API thẳng

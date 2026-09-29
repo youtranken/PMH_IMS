@@ -242,6 +242,38 @@ describe('ApprovalsService — máy trạng thái, tầng DB', () => {
     expect(await approvals.expireDueGrants(sweepAt)).toBe(0);
   });
 
+  it('quét hết hạn: một hàng lỗi không chặn các hàng sau, hàng lỗi giữ nguyên để vòng sau thử lại', async () => {
+    const now = new Date();
+    const broken = await request();
+    const good = await request();
+    for (const r of [broken, good]) {
+      await approvals.transition(r.id, {
+        to: 'approved',
+        actor: 'duyet@qa.test',
+        expiresAt: new Date(now.getTime() + 1_000),
+      });
+    }
+    // Ghi audit hỏng đúng một hàng: dựng lại lỗi thật (DB/audit trục trặc) của riêng hàng đó.
+    const kinds = new ApprovalKindRegistry();
+    kinds.register(BREAK_GLASS_FLOW);
+    const flaky = new ApprovalsService(
+      scratch.db,
+      {
+        appendWithin: (_tx: unknown, e: { objectId: string }) =>
+          e.objectId === broken.id ? Promise.reject(new Error('audit hỏng')) : Promise.resolve(),
+      } as unknown as AuditWriterService,
+      kinds,
+    );
+
+    const sweepAt = new Date(now.getTime() + 60_000);
+    expect(await flaky.expireDueGrants(sweepAt)).toBe(1);
+    expect((await approvals.findOne(good.id)).state).toBe('expired');
+    expect((await approvals.findOne(broken.id)).state).toBe('approved');
+
+    expect(await approvals.expireDueGrants(sweepAt)).toBe(1);
+    expect((await approvals.findOne(broken.id)).state).toBe('expired');
+  });
+
   it('chốt lượt nhắc nguyên tử: chỉ lượt đầu chốt được, yêu cầu đã quyết thì không nhắc', async () => {
     const r = await request();
     const now = new Date();
