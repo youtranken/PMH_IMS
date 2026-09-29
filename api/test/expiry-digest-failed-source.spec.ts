@@ -54,6 +54,7 @@ describe('BE-01 · digest không chốt kỳ khi một nguồn hạn lỗi', () 
       expiryCriticalDays: 7,
       expiryWarningDays: 30,
       expiryDigestExpiredDays: 30,
+      expiryLookBackDays: 365,
     };
     const config = {
       getString: () => Promise.resolve('Asia/Ho_Chi_Minh'),

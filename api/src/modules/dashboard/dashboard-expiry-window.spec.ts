@@ -59,7 +59,7 @@ function buildService(): DashboardService {
   const ipam = { listSubnets: empty } as unknown as IpamApiService;
   const vault = { listOwners: empty } as unknown as VaultApiService;
   const disposal = { list: empty } as unknown as DisposalApiService;
-  const config = { getNumber: () => Promise.resolve(80) } as unknown as SystemConfigService;
+  const config = { getNumber: (name: string) => Promise.resolve(name === 'dashboardMaxItems' ? 8 : 80) } as unknown as SystemConfigService;
 
   return new DashboardService(expiry, approvals, kinds, ipam, vault, disposal, config, users);
 }

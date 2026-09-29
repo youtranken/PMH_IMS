@@ -27,7 +27,8 @@ export type SettingUnit =
   | 'percent'
   | 'times'
   | 'per_minute'
-  | 'ports';
+  | 'ports'
+  | 'rows';
 
 export interface EditableSetting {
   name: ConfigName;
@@ -70,9 +71,11 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'expiryCriticalDays', group: 'expiry', type: 'int', unit: 'days', min: 1, max: 90 },
   { name: 'expiryWarningDays', group: 'expiry', type: 'int', unit: 'days', min: 1, max: 365 },
   { name: 'expiryDigestExpiredDays', group: 'expiry', type: 'int', unit: 'days', min: 0, max: 365 },
+  { name: 'expiryLookBackDays', group: 'expiry', type: 'int', unit: 'days', min: 30, max: 3650 },
   // Dashboard
   { name: 'dashboardSubnetFullPercent', group: 'dashboard', type: 'int', unit: 'percent', min: 50, max: 100 },
   { name: 'dashboardSecretStaleDays', group: 'dashboard', type: 'int', unit: 'days', min: 30, max: 3650 },
+  { name: 'dashboardMaxItems', group: 'dashboard', type: 'int', unit: 'rows', min: 3, max: 30 },
   // Phần mềm (Q-13: 0 = tắt tự thanh lý)
   { name: 'softwareAutoRetireGraceDays', group: 'software', type: 'int', unit: 'days', min: 0, max: 365, warnZero: true },
   // Mạng IP & NAT. Trần dải chỉ siết (24..30) — lý do ở chú thích khoá trong `system-config.keys.ts`.

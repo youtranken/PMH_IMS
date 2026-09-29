@@ -65,11 +65,15 @@ export const CONFIG_KEYS = {
    * Vào đây chứ không nằm trong `dashboard.service.ts` vì chúng là LUẬT NGHIỆP VỤ, không phải
    * hằng số hiển thị: "dải bao nhiêu phần trăm thì gọi là sắp đầy" và "mật khẩu bao lâu không
    * đổi thì gọi là cũ" là hai câu mà bộ phận IT sẽ muốn siết dần theo thời gian, và siết bằng
-   * một dòng UPDATE thì không cần dựng lại ảnh docker. (Số dòng hiện trên mỗi khối thì ngược
-   * lại — đó là chuyện bày biện, để nguyên trong code.)
+   * một dòng UPDATE thì không cần dựng lại ảnh docker.
    */
   dashboardSubnetFullPercent: { key: 'dashboard.subnet_full_percent', fallback: 80 },
   dashboardSecretStaleDays: { key: 'dashboard.secret_stale_days', fallback: 180 },
+  /*
+   * Số dòng tối đa mỗi khối của trang chủ (0281). Trang này đọc trong ba phút; khối dài quá
+   * thì người ta cuộn qua chứ không đọc, và cuối mỗi khối đã có đường sang màn đầy đủ.
+   */
+  dashboardMaxItems: { key: 'dashboard.max_items', fallback: 8 },
   // Cổng mở ra Internet bị gắn "Nhạy cảm" trên sổ NAT (0140) — xem `ipam/nat-sensitive.ts`.
   natSensitivePorts: { key: 'nat.sensitive_ports', fallback: '21,22,23,445,1433,3306,3389,5432,5900' },
   /*
@@ -103,6 +107,11 @@ export const CONFIG_KEYS = {
    * nhận rằng thư này có thứ không cần đọc.
    */
   expiryDigestExpiredDays: { key: 'expiry.digest_expired_days', fallback: 30 },
+  /*
+   * Màn "Sắp hết hạn" nhìn lùi bao nhiêu ngày để bắt mục ĐÃ quá hạn (0281). Cũng là trần của
+   * `expiry.digest_expired_days`: email không bao giờ nhìn lùi xa hơn màn hình.
+   */
+  expiryLookBackDays: { key: 'expiry.look_back_days', fallback: 365 },
   /*
    * GIỮ BAO LÂU RỒI DỌN (0051) — hai ngưỡng, hai bảng chỉ-lớn-lên.
    *

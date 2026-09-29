@@ -53,7 +53,7 @@ export interface ExpiryQuery {
   /** true = kèm cả mục ĐÃ quá hạn (mặc định có, vì đó là thứ gấp nhất). */
   includeExpired?: boolean;
   /**
-   * NHÌN LÙI bao nhiêu ngày để bắt mục đã quá hạn. Mặc định `LOOK_BACK_DAYS` (một năm).
+   * NHÌN LÙI bao nhiêu ngày để bắt mục đã quá hạn. Mặc định `expiry.look_back_days` (một năm).
    *
    * ===== VÌ SAO MÀN HÌNH VÀ EMAIL PHẢI KHÁC NHAU Ở ĐÂY =====
    *
@@ -152,7 +152,10 @@ export class ExpiryService {
     const today = await this.today();
     const thresholds = await this.thresholds();
     const withinDays = clampWindow(query.withinDays, thresholds.warningDays);
-    const from = addDays(today, -lookBackDays(query));
+    const from = addDays(
+      today,
+      -lookBackDays(query, await this.config.getNumber('expiryLookBackDays')),
+    );
     const to = addDays(today, withinDays);
 
     const { items, failed } = await this.registry.collect(from, to, query.kinds);
@@ -423,28 +426,31 @@ function pageOf(rows: ExpiryRow[], query: ExpiryQuery): ExpiryRow[] {
   return rows.slice(from, from + limit);
 }
 
-/** Nhìn lùi tối đa một năm — mặc định của MÀN HÌNH. */
-export const LOOK_BACK_DAYS = 365;
-
 /**
  * Nhìn lùi bao nhiêu ngày — hàm THUẦN, có bảng test.
+ *
+ * `screenDays` = `expiry.look_back_days`: vừa là mặc định của MÀN HÌNH, vừa là trần kẹp.
  *
  * Ba câu trả lời, và cả ba đều đúng ở đúng chỗ của nó:
  *   - `includeExpired: false` → 0, không nhìn lùi tí nào (bộ lọc "chỉ sắp tới" của màn hình).
  *   - có `expiredWithinDays` → đúng con số đó (digest, đọc từ `system_config`).
- *   - còn lại → một năm (mặc định của màn hình).
+ *   - còn lại → `screenDays` (mặc định của màn hình).
  *
- * Kẹp về 0..365: số âm sẽ đẩy `from` ra TƯƠNG LAI và lặng lẽ giấu mất mọi mục quá hạn — đúng
- * loại hỏng không ai thấy, vì màn hình vẫn có dữ liệu, chỉ thiếu đúng phần nguy hiểm nhất.
+ * Kẹp về 0..`screenDays`: số âm sẽ đẩy `from` ra TƯƠNG LAI và lặng lẽ giấu mất mọi mục quá
+ * hạn — đúng loại hỏng không ai thấy, vì màn hình vẫn có dữ liệu, chỉ thiếu đúng phần nguy
+ * hiểm nhất.
  */
-export function lookBackDays(query: {
-  includeExpired?: boolean;
-  expiredWithinDays?: number;
-}): number {
+export function lookBackDays(
+  query: {
+    includeExpired?: boolean;
+    expiredWithinDays?: number;
+  },
+  screenDays: number,
+): number {
   if (query.includeExpired === false) return 0;
   const raw = query.expiredWithinDays;
-  if (raw === undefined || Number.isNaN(raw)) return LOOK_BACK_DAYS;
-  return Math.min(LOOK_BACK_DAYS, Math.max(0, Math.trunc(raw)));
+  if (raw === undefined || Number.isNaN(raw)) return screenDays;
+  return Math.min(screenDays, Math.max(0, Math.trunc(raw)));
 }
 
 /**

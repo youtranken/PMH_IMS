@@ -33,7 +33,7 @@ describe('Khối break-glass của trang chủ', () => {
       { listSubnets: empty } as unknown as IpamApiService,
       { listOwners: empty } as unknown as VaultApiService,
       { list: empty } as unknown as DisposalApiService,
-      { getNumber: () => Promise.resolve(80) } as unknown as SystemConfigService,
+      { getNumber: (name: string) => Promise.resolve(name === 'dashboardMaxItems' ? 8 : 80) } as unknown as SystemConfigService,
       { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService,
     );
 
@@ -86,7 +86,7 @@ describe('Dòng break-glass của trang chủ', () => {
       { listSubnets: () => Promise.resolve([]) } as unknown as IpamApiService,
       { listOwners: () => Promise.resolve([]) } as unknown as VaultApiService,
       { list: () => Promise.resolve([]) } as unknown as DisposalApiService,
-      { getNumber: () => Promise.resolve(80) } as unknown as SystemConfigService,
+      { getNumber: (name: string) => Promise.resolve(name === 'dashboardMaxItems' ? 8 : 80) } as unknown as SystemConfigService,
       {
         namesByEmails: () =>
           Promise.resolve(new Map([['lan@pmh.com.vn', 'Nguyễn Thị Lan'], ['sep@pmh.com.vn', 'Trần Sếp']])),
@@ -130,7 +130,7 @@ describe('Khối hạn và khối dải mạng mang thêm số để web phân l
       { listSubnets: () => Promise.resolve([]) } as unknown as IpamApiService,
       { listOwners: () => Promise.resolve([]) } as unknown as VaultApiService,
       { list: () => Promise.resolve([]) } as unknown as DisposalApiService,
-      { getNumber: () => Promise.resolve(90) } as unknown as SystemConfigService,
+      { getNumber: (name: string) => Promise.resolve(name === 'dashboardMaxItems' ? 8 : 90) } as unknown as SystemConfigService,
       { namesByEmails: () => Promise.resolve(new Map()) } as unknown as UsersApiService,
     );
     const board = await service.build({ email: 'sep@pmh.com.vn', role: 'admin' });

@@ -35,6 +35,7 @@ const UNIT: Record<NonNullable<SettingRow['unit']>, string> = {
   times: 'settings.unitTimes',
   per_minute: 'settings.unitPerMinute',
   ports: 'settings.unitPorts',
+  rows: 'settings.unitRows',
 };
 
 /*
@@ -83,6 +84,8 @@ const TEXT: Record<string, [string, string]> = {
     'settings.softwareAutoRetireGraceDaysLabel',
     'settings.softwareAutoRetireGraceDaysDesc',
   ],
+  expiryLookBackDays: ['settings.expiryLookBackDaysLabel', 'settings.expiryLookBackDaysDesc'],
+  dashboardMaxItems: ['settings.dashboardMaxItemsLabel', 'settings.dashboardMaxItemsDesc'],
   ipamSubnetMinPrefix: ['settings.ipamSubnetMinPrefixLabel', 'settings.ipamSubnetMinPrefixDesc'],
   natWidePortRange: ['settings.natWidePortRangeLabel', 'settings.natWidePortRangeDesc'],
 };

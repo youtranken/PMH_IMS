@@ -2847,6 +2847,7 @@ export default {
     unitTimes: 'lần',
     unitPerMinute: 'lần/phút',
     unitPorts: 'cổng',
+    unitRows: 'dòng',
     sessionIdleMinutesLabel: 'Tự đăng xuất khi không thao tác',
     sessionIdleMinutesDesc: 'Bỏ máy quá chừng này thì phiên hết hạn, phải đăng nhập lại.',
     sessionAbsoluteHoursLabel: 'Thời hạn tối đa của một phiên',
@@ -2894,6 +2895,10 @@ export default {
     dashboardSecretStaleDaysDesc: 'Ngăn két chưa đổi quá số ngày này thì báo "cần đổi" ở két và bảng điều khiển.',
     softwareAutoRetireGraceDaysLabel: 'Ân hạn trước khi tự thanh lý phần mềm',
     softwareAutoRetireGraceDaysDesc: 'Hết hạn quá số ngày này mà chưa gia hạn thì tự thanh lý và gỡ mọi ghế.',
+    expiryLookBackDaysLabel: 'Màn Sắp hết hạn nhìn lùi',
+    expiryLookBackDaysDesc: 'Mục đã quá hạn lâu hơn số ngày này không còn hiện ở màn Sắp hết hạn. Email nhắc không nhìn lùi xa hơn số này.',
+    dashboardMaxItemsLabel: 'Số dòng mỗi khối trên trang chủ',
+    dashboardMaxItemsDesc: 'Khối có nhiều hơn thì hiện số tổng và đường sang màn đầy đủ.',
     ipamSubnetMinPrefixLabel: 'Dải mạng rộng nhất được khai (độ dài prefix)',
     ipamSubnetMinPrefixDesc:
       '24 nghĩa là /24 (254 máy). Chỉ siết được (số lớn hơn là dải hẹp hơn), không nới rộng hơn /24. Dải đã khai không bị ảnh hưởng.',

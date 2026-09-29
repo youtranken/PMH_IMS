@@ -4,7 +4,7 @@ export interface SettingRow {
   key: string;
   group: 'auth' | 'vault' | 'approval' | 'expiry' | 'dashboard' | 'software' | 'ipam';
   type: 'int' | 'text' | 'int_list';
-  unit?: 'seconds' | 'minutes' | 'hours' | 'days' | 'percent' | 'times' | 'per_minute' | 'ports';
+  unit?: 'seconds' | 'minutes' | 'hours' | 'days' | 'percent' | 'times' | 'per_minute' | 'ports' | 'rows';
   min?: number;
   max?: number;
   maxLength?: number;
