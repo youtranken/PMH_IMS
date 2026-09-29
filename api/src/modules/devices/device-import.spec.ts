@@ -354,3 +354,36 @@ describe('planDeviceImport — đối chiếu file thiết bị trước khi ghi
     expect(plan.summary).toMatchObject({ update: 1 });
   });
 });
+
+describe('planDeviceImport — ô Excel không đọc được giá trị (BE-12)', () => {
+  it('ô lỗi ở cột đang nhập → dòng lỗi, không xoá giá trị đang có', () => {
+    const plan = planDeviceImport(
+      {
+        'Thiết bị': [
+          {
+            rowNumber: 5,
+            cells: { ...MINIMAL, Serial: '' },
+            unreadable: { Serial: 'ô đang báo lỗi #N/A' },
+          },
+        ],
+      },
+      context({ devices: new Map([['sw-core-01', existing({ serial: 'FOC123' })]]) }),
+    );
+    expect(plan.rows[0]).toMatchObject({ action: 'error', rowNumber: 5 });
+    expect(plan.rows[0].message).toContain('Serial');
+    expect(plan.rows[0].message).toContain('#N/A');
+    expect(plan.summary).toMatchObject({ error: 1, update: 0 });
+  });
+
+  it('ô lỗi ở cột KHÔNG nhập (cột nháp của người dùng) thì bỏ qua', () => {
+    const plan = planDeviceImport(
+      {
+        'Thiết bị': [
+          { rowNumber: 2, cells: { ...MINIMAL, 'Cột nháp': '' }, unreadable: { 'Cột nháp': 'x' } },
+        ],
+      },
+      context(),
+    );
+    expect(plan.rows[0]).toMatchObject({ action: 'create' });
+  });
+});

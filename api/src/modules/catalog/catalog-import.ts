@@ -7,6 +7,7 @@ import {
   parseBoolean,
   pickCell,
   summarize,
+  unreadableFieldError,
   type ImportAction,
   type ImportSummary,
   type ParsedRow,
@@ -243,6 +244,11 @@ function planRow(
       label: rawLabel(entity, row.cells),
       message: 'Dòng ví dụ trong file mẫu — bỏ qua.',
     };
+  }
+
+  const unreadable = unreadableFieldError(row, FIELDS[entity]);
+  if (unreadable) {
+    return { ...base, action: 'error', label: rawLabel(entity, row.cells), message: unreadable };
   }
 
   const values: Record<string, string | number | boolean | null> = {};

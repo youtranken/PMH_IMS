@@ -23,6 +23,8 @@ export interface ParsedRow {
   /** Số dòng THẬT trong sheet Excel (dòng 1 là tiêu đề) — để người dùng mở file sửa đúng dòng. */
   rowNumber: number;
   cells: Record<string, string>;
+  /** Tên cột → vì sao ô đó không đọc được giá trị (xem `ExcelImportService`). */
+  unreadable?: Record<string, string>;
 }
 
 export type ParsedSheets = Record<string, ParsedRow[]>;
@@ -71,6 +73,27 @@ export function pickCell(
     }
   }
   return undefined;
+}
+
+/**
+ * Câu lỗi của dòng khi một cột ĐANG NHẬP có ô không đọc được giá trị; `null` nếu không có.
+ *
+ * Ô đó đến đây dưới dạng chuỗi rỗng, mà "cột có, ô trống" nghĩa là XOÁ giá trị đang có — nên
+ * phải chặn thành dòng lỗi trước khi lõi đọc ô. Cột người dùng tự thêm (không thuộc `fields`)
+ * thì bỏ qua: ta không nhập nó, lỗi ở đó không hại gì.
+ */
+export function unreadableFieldError(
+  row: ParsedRow,
+  fields: { label: string; aliases: string[] }[],
+): string | null {
+  if (!row.unreadable) return null;
+  for (const field of fields) {
+    const problem = pickCell(row.unreadable, field.aliases);
+    if (problem !== undefined) {
+      return `Cột "${field.label}": ${problem}. Gõ hoặc dán giá trị thật vào ô rồi tải lên lại.`;
+    }
+  }
+  return null;
 }
 
 export function cellText(raw: string | undefined): string {

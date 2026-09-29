@@ -213,10 +213,15 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
     `api/src/common/real-date.spec.ts` (bảng ngày + điểm danh controller còn regex). Ý 2 — PATCH chỉ
     gửi `cidr` thì kiểm gateway đang có theo dải mới → 400 `GATEWAY_OUT_OF_SUBNET`. Kiểm:
     `api/test/subnet-cidr-gateway.spec.ts`.
-- [ ] **BE-12 · Import Excel:**
+- [x] **BE-12 · Import Excel:**
   - Quá 20.000 dòng thì bị cắt im lặng (`excel-import.service.ts:13,43`).
   - Ô công thức không có giá trị cache hoặc ô `#N/A` thành rỗng, xoá luôn dữ liệu đang có (`:91`).
   - **Rà 29/09:** còn nguyên cả hai ý (`excel-import.service.ts:44,95`).
+  - **Đã sửa:** sheet vượt `MAX_ROWS_PER_SHEET` → 400 `EXCEL_TOO_MANY_ROWS` nêu trần, không ghi gì.
+    Ô công thức không có giá trị tính sẵn và ô lỗi (`#N/A`, `#REF!`…) ghi vào `SheetRow.unreadable`;
+    nhập danh mục và nhập thiết bị gọi `unreadableFieldError` → dòng lỗi nêu tên cột, không xoá dữ
+    liệu đang có (cột nháp ngoài mẫu thì bỏ qua). Kiểm: `excel-import.service.spec.ts` (workbook
+    dựng bằng ExcelJS), `device-import.spec.ts`, `catalog-import.spec.ts`.
 - [x] **BE-13 · `renew` hồi sinh hồ sơ `terminated`/`retired`** khi gọi API thẳng.
 - [x] **BE-14 · Gắn được thiết bị vào site/loại/NCC đã vô hiệu hoá** (`catalog.api.ts:51`).
   - **Rà 29/09:** xong (Q-14, ADM-015/DEV-027, 37c5180). `CatalogApiService.assertRefs` từ chối chọn
