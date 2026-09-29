@@ -46,6 +46,48 @@ export function dateTimeInTz(at: Date | null, timeZone: string): string {
   }
 }
 
+/**
+ * 00:00 của ngày lịch `iso` (YYYY-MM-DD) theo múi giờ ứng dụng, ra mốc tuyệt đối.
+ *
+ * Lọc "từ ngày … tới ngày …" phải cắt ngày theo CÙNG múi mà màn hiển thị giờ — cắt theo UTC
+ * thì việc lúc 6 giờ sáng giờ VN rơi sang ngày hôm trước. Đoán theo độ lệch của chính mốc
+ * UTC rồi chỉnh lại một lần: đủ đúng cả ở ngày đổi giờ mùa hè (đổi giờ không xảy ra lúc 00:00).
+ */
+export function startOfDayInTz(iso: string, timeZone: string): Date {
+  const utcMidnight = Date.parse(`${iso}T00:00:00Z`);
+  try {
+    const first = utcMidnight - offsetMs(new Date(utcMidnight), timeZone);
+    return new Date(utcMidnight - offsetMs(new Date(first), timeZone));
+  } catch {
+    // Múi giờ cấu hình sai lùi về UTC chứ không ném — cùng nếp với `isoDateInTz`.
+    return new Date(utcMidnight);
+  }
+}
+
+/** Độ lệch (ms) của múi `timeZone` so với UTC tại mốc `at`. */
+function offsetMs(at: Date, timeZone: string): number {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hourCycle: 'h23',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).formatToParts(at);
+  const part = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  const asUtc = Date.UTC(
+    part('year'),
+    part('month') - 1,
+    part('day'),
+    part('hour'),
+    part('minute'),
+    part('second'),
+  );
+  return asUtc - Math.floor(at.getTime() / 1000) * 1000;
+}
+
 /** Cộng/trừ ngày trên chuỗi YYYY-MM-DD, tính theo NGÀY LỊCH. */
 export function addDays(iso: string, days: number): string {
   const date = new Date(`${iso}T00:00:00Z`);

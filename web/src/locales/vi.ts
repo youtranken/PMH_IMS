@@ -2322,6 +2322,13 @@ export default {
     emptyPending: 'Không có yêu cầu nào đang chờ',
     emptyPendingHint: 'Yêu cầu mới sẽ gửi email cho Quản trị và hiện ở đây.',
     emptyLog: 'Chưa có yêu cầu nào',
+    emptyLogFiltered: 'Không có yêu cầu nào khớp bộ lọc',
+    filterRequester: 'Tìm theo email người xin',
+    filterState: 'Trạng thái',
+    filterStateAll: 'Mọi trạng thái',
+    filterDates: 'Khoảng ngày xin',
+    filterFrom: 'Xin từ ngày',
+    filterTo: 'Xin đến ngày',
     // Tab "Yêu cầu của tôi" trước đây rơi vào nhánh else và mượn thông điệp của Nhật ký.
     emptyMine: 'Bạn chưa gửi yêu cầu nào',
     // Nhãn của từng loại đối tượng nằm ở `ownerKind.*` — trước 12/09 ở đây chỉ có hai trên

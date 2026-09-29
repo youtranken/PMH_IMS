@@ -8,6 +8,7 @@ import { and, desc, eq, gte, isNotNull, lt, sql, type SQL } from 'drizzle-orm';
 import { DRIZZLE_DB } from '../../database/database.module';
 import type { Database } from '../../database/database.module';
 import type { Tx } from '../../common/tx';
+import { escapeLike } from '../../common/sql';
 import { HISTORY_PAGE_LIMIT } from '../../common/history';
 import type { Page } from '../../common/pagination';
 import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
@@ -42,6 +43,16 @@ export interface ApprovalFilters {
   subjectId?: string;
   /** Chỉ yêu cầu tạo từ mốc này trở đi — lọc trong SQL. */
   since?: Date;
+  /** Chỉ yêu cầu tạo TRƯỚC mốc này (loại trừ) — cặp với `since` thành khoảng ngày. */
+  until?: Date;
+  /** Người xin chứa chuỗi này (không phân biệt hoa thường) — ô lọc của màn nhật ký. */
+  requesterContains?: string;
+  /**
+   * Trạng thái ĐỌC THEO ĐỒNG HỒ (AD-6): phiếu `approved` đã quá `expires_at` mà sweep chưa
+   * kịp đổi là "Hết hạn", không phải "Đã duyệt" — lọc theo cột `state` trần thì người rà
+   * nhật ký tìm "đang có quyền" lại thấy cả quyền đã hết.
+   */
+  effectiveState?: string;
 }
 
 function whereOf(filters: ApprovalFilters): SQL | undefined {
@@ -52,6 +63,21 @@ function whereOf(filters: ApprovalFilters): SQL | undefined {
   if (filters.subjectType) where.push(eq(approvalTable.subjectType, filters.subjectType));
   if (filters.subjectId) where.push(eq(approvalTable.subjectId, filters.subjectId));
   if (filters.since) where.push(gte(approvalTable.createdAt, filters.since));
+  if (filters.until) where.push(lt(approvalTable.createdAt, filters.until));
+  if (filters.requesterContains) {
+    where.push(sql`${approvalTable.requester} ILIKE ${`%${escapeLike(filters.requesterContains)}%`}`);
+  }
+  if (filters.effectiveState === 'approved') {
+    where.push(
+      sql`${approvalTable.state} = 'approved' AND (${approvalTable.expiresAt} IS NULL OR ${approvalTable.expiresAt} > now())`,
+    );
+  } else if (filters.effectiveState === 'expired') {
+    where.push(
+      sql`(${approvalTable.state} = 'expired' OR (${approvalTable.state} = 'approved' AND ${approvalTable.expiresAt} <= now()))`,
+    );
+  } else if (filters.effectiveState) {
+    where.push(eq(approvalTable.state, filters.effectiveState));
+  }
   return where.length > 0 ? and(...where) : undefined;
 }
 
