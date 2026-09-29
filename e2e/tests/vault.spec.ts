@@ -81,8 +81,12 @@ test.describe('Két sắt', () => {
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByText('Két chưa có ngăn nào')).toBeVisible();
 
+    // Thanh công cụ của tab: tiêu đề khu + số ngăn + nút cất cùng hàng (DEV-079).
+    await expect(page.getByRole('heading', { name: 'Ngăn két' })).toBeVisible();
     await page.getByRole('button', { name: 'Cất mật khẩu/khóa' }).click();
-    const form = page.getByRole('dialog');
+    // Tiêu đề hộp nói cất vào MÁY NÀO (DEV-035).
+    const form = page.getByRole('dialog', { name: `Cất mật khẩu/khóa — ${code}` });
+    await expect(form).toBeVisible();
     await form.getByRole('textbox', { name: 'Tên gọi' }).fill(label);
     await form.getByRole('textbox', { name: 'Tên đăng nhập' }).fill('admin');
     await form.getByRole('textbox', { name: 'Giá trị', exact: true }).fill(secretValue);
