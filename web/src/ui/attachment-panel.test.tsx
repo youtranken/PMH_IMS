@@ -68,3 +68,49 @@ describe('AttachmentPanel — chọn là tải', () => {
     expect(await screen.findByText('bởi Nguyễn Văn An')).toBeInTheDocument();
   });
 });
+
+/*
+ * DEV-081: đang tải nhiều file mà lỡ chọn nhầm một file (bảng lương thay cho hóa đơn) thì phải
+ * hủy được ĐÚNG file đó — không phải chờ cả lô xong rồi đi xóa.
+ */
+describe('AttachmentPanel — hủy từng file đang tải', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('hủy file đang chờ: nó không bao giờ được gửi; hủy file đang tải: yêu cầu bị ngắt', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(jsonResponse(200, []))),
+    );
+    uploadFile.mockReset();
+    // File đầu treo tới khi bị hủy (signal) — đúng cảnh "đang tải".
+    uploadFile.mockImplementation(
+      (_path: string, _file: File, _csrf: string, _fields: unknown, _name: unknown, signal?: AbortSignal) =>
+        new Promise((_resolve, reject) => {
+          signal?.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError')));
+        }),
+    );
+    renderWithI18n(
+      <ToastProvider>
+        <ConfirmProvider>
+          <AttachmentPanel ownerType="device" ownerId="d1" csrfToken="x" />
+        </ConfirmProvider>
+      </ToastProvider>,
+    );
+    const a = new File(['%PDF'], 'hoa-don.pdf');
+    const b = new File(['%PDF'], 'bang-luong.xlsx');
+    await userEvent.upload(screen.getByLabelText('Chọn file để đính kèm'), [a, b]);
+    await waitFor(() => expect(uploadFile).toHaveBeenCalledTimes(1));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Hủy tải "bang-luong.xlsx"' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Hủy tải "hoa-don.pdf"' }));
+
+    const signal = uploadFile.mock.calls[0][5] as AbortSignal;
+    expect(signal.aborted).toBe(true);
+    // Lô kết thúc, file bị hủy KHÔNG được gửi, và hủy không phải lỗi.
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: /^Hủy tải/ })).not.toBeInTheDocument(),
+    );
+    expect(uploadFile).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/Không tải lên được/)).not.toBeInTheDocument();
+  });
+});

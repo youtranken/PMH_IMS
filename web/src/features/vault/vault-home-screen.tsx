@@ -372,6 +372,7 @@ export function VaultHomeScreen({ me }: { me: Me }) {
           <VaultPanel
             ownerType={opened.ownerType}
             ownerId={opened.ownerId}
+            ownerLabel={opened.code}
             me={me}
             canEdit={canEdit && !opened.orphan}
             /* Khung két đã nằm trong hộp này: bước mã và bước giá trị chạy ngay trong hộp,

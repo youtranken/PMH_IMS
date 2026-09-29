@@ -14,9 +14,11 @@ export async function uploadFile<T>(
   csrfToken: string,
   fields: Record<string, string> = {},
   fieldName = 'file',
+  /** Hủy giữa chừng (nút "Hủy" từng file của khu đính kèm) — fetch ném `AbortError`. */
+  signal?: AbortSignal,
 ): Promise<T> {
   // Cùng luật với `apiFetch`, kể cả 401-phiên-chết → về màn đăng nhập.
-  return readResponse<T>(await postFile(path, file, csrfToken, fields, fieldName));
+  return readResponse<T>(await postFile(path, file, csrfToken, fields, fieldName, signal));
 }
 
 /**
@@ -38,6 +40,7 @@ function postFile(
   csrfToken: string,
   fields: Record<string, string>,
   fieldName: string,
+  signal?: AbortSignal,
 ): Promise<Response> {
   const form = new FormData();
   form.append(fieldName, file);
@@ -47,5 +50,6 @@ function postFile(
     credentials: 'include',
     headers: { 'X-CSRF-Token': csrfToken },
     body: form,
+    signal,
   });
 }

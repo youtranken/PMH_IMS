@@ -79,23 +79,39 @@ export class LicenseAssignmentService {
    * cả kho theo một chữ chung chung.
    */
   async softwareIdsOnDevices(term: string): Promise<string[]> {
+    return [...(await this.devicesHoldingSeats(term)).keys()];
+  }
+
+  /**
+   * Như `softwareIdsOnDevices`, kèm MÃ MÁY đang giữ ghế cho từng hồ sơ — danh sách hiện chip
+   * "khớp máy X" để người tìm biết vì sao một hồ sơ không có chữ đó trong mã/tên lại hiện ra.
+   */
+  async devicesHoldingSeats(term: string): Promise<Map<string, string[]>> {
     const text = term.trim();
-    if (!text) return [];
+    if (!text) return new Map();
     const devices = await this.devices.search(text, 50);
-    if (devices.length === 0) return [];
+    if (devices.length === 0) return new Map();
+    const codeOf = new Map(devices.map((device) => [device.id, device.code]));
     const rows = await this.db
-      .selectDistinct({ softwareId: licenseAssignmentTable.softwareId })
+      .selectDistinct({
+        softwareId: licenseAssignmentTable.softwareId,
+        deviceId: licenseAssignmentTable.deviceId,
+      })
       .from(licenseAssignmentTable)
       .where(
         and(
-          inArray(
-            licenseAssignmentTable.deviceId,
-            devices.map((device) => device.id),
-          ),
+          inArray(licenseAssignmentTable.deviceId, [...codeOf.keys()]),
           isNull(licenseAssignmentTable.releasedAt),
         ),
       );
-    return rows.map((row) => row.softwareId);
+    const out = new Map<string, string[]>();
+    for (const row of rows) {
+      const list = out.get(row.softwareId) ?? [];
+      list.push(codeOf.get(row.deviceId) ?? '');
+      out.set(row.softwareId, list);
+    }
+    for (const list of out.values()) list.sort();
+    return out;
   }
 
   /** Mã máy cho các id — tab Lịch sử đổi `deviceId` thô thành mã (`history-device-codes.ts`). */

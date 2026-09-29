@@ -734,6 +734,23 @@ input.search {
   .table-stack td.lead:empty {
     display: none;
   }
+  /* Dòng bung được: mũi tên đứng CÙNG HÀNG với ô đầu (thường là Mã) thay vì chiếm riêng một
+     hàng không nhãn ở đầu thẻ (SW-023). */
+  .table-stack tr:has(> td.lead:not(:empty)) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .table-stack tr:has(> td.lead:not(:empty)) > td {
+    grid-column: 1 / -1;
+  }
+  .table-stack tr:has(> td.lead:not(:empty)) > td.lead {
+    grid-column: 1;
+    align-self: center;
+    padding-right: 0;
+  }
+  .table-stack tr:has(> td.lead:not(:empty)) > td.lead + td {
+    grid-column: 2;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

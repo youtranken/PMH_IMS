@@ -37,13 +37,19 @@ describe('Break-glass · quyền gắn với phiên đăng nhập (Q-15)', () =>
   let breakGlass: BreakGlassService;
   let sweepJobs: Map<string, () => Promise<unknown>>;
   let userId: string;
+  const auditLog: { actor: string; action: string; objectId: string }[] = [];
   const member = 'e2e-q15-member@qa.test';
   const other = 'e2e-q15-other@qa.test';
 
   beforeAll(async () => {
     scratch = await createScratchDb('ims_bg_session');
     await runMigrations(scratch.pool, migrationsDir(), { log: () => undefined });
-    const audit = { appendWithin: () => Promise.resolve() } as unknown as AuditWriterService;
+    const audit = {
+      appendWithin: (_tx: unknown, entry: { actor: string; action: string; objectId: string }) => {
+        auditLog.push(entry);
+        return Promise.resolve();
+      },
+    } as unknown as AuditWriterService;
     const kinds = new ApprovalKindRegistry();
     approvals = new ApprovalsService(scratch.db, audit, kinds);
     const config = {
@@ -67,8 +73,8 @@ describe('Break-glass · quyền gắn với phiên đăng nhập (Q-15)', () =>
       { tierFor: () => Promise.resolve('needs_approval') } as unknown as AccessListService,
       config,
       new OutboxService(scratch.db, config, {} as SweepService),
-      {} as VaultOwnersService,
-      {} as VaultService,
+      { describe: () => Promise.resolve({ orphan: true }) } as unknown as VaultOwnersService,
+      { countFor: () => Promise.resolve(0) } as unknown as VaultService,
       users,
       new AuthApiService(sessions, config),
       sweep,
@@ -241,19 +247,135 @@ describe('Break-glass · quyền gắn với phiên đăng nhập (Q-15)', () =>
     ).rejects.toMatchObject({ response: { code: 'BREAK_GLASS_PENDING' } });
   });
 
-  it('lượt quét: phiếu CHỜ của phiên đã chết để người duyệt quyết; duyệt xong thì đóng', async () => {
-    const dead = await login();
-    const p1 = await breakGlass.request(
-      { email: member, sessionId: dead },
-      { ownerType: 'device', ownerId: randomUUID(), reason: 'Phiên sẽ đăng xuất', hours: 1 },
-    );
-    await logout(dead);
-    await runSweep();
-    expect(await stateOf(p1.id)).toBe('pending');
+  describe('lượt quét rút phiếu CHỜ của phiên đã chết', () => {
+    async function pendingFrom(sessionId: string) {
+      return breakGlass.request(
+        { email: member, sessionId },
+        { ownerType: 'device', ownerId: randomUUID(), reason: 'Chờ người duyệt', hours: 1 },
+      );
+    }
 
-    await breakGlass.approve('sa@qa.test', p1.id, { hours: 1 });
-    await runSweep();
-    expect(await stateOf(p1.id)).toBe('expired');
+    it('phiên người xin đã chết → phiếu bị rút như người xin tự rút, có lịch sử + audit', async () => {
+      const dead = await login();
+      const p1 = await pendingFrom(dead);
+      await logout(dead);
+      await runSweep();
+
+      expect(await stateOf(p1.id)).toBe('cancelled');
+      const { rows } = await scratch.pool.query<{ actor: string; detail: { note?: string; by?: string } }>(
+        `SELECT actor, detail FROM approval_history WHERE approval_id = $1 AND to_state = 'cancelled'`,
+        [p1.id],
+      );
+      expect(rows).toHaveLength(1);
+      expect(rows[0].actor).toBe('system');
+      expect(rows[0].detail.note).toBe('Phiên đăng nhập của người xin đã kết thúc.');
+      expect(rows[0].detail.by).toBe('session-ended');
+      expect(auditLog).toContainEqual(
+        expect.objectContaining({ actor: 'system', action: 'break_glass.cancelled', objectId: p1.id }),
+      );
+    });
+
+    it('phiên hết idle cũng rút; phiên còn sống thì phiếu vẫn chờ', async () => {
+      const idle = await login();
+      const alive = await login();
+      const stale = await pendingFrom(idle);
+      const live = await pendingFrom(alive);
+      await scratch.pool.query(
+        `UPDATE sessions SET last_seen_at = now() - make_interval(mins => $2) WHERE id = $1`,
+        [idle, IDLE_MINUTES + 1],
+      );
+      await runSweep();
+      expect(await stateOf(stale.id)).toBe('cancelled');
+      expect(await stateOf(live.id)).toBe('pending');
+    });
+
+    it('badge người duyệt bớt đi đúng phiếu đã rút', async () => {
+      const dead = await login();
+      const alive = await login();
+      await pendingFrom(alive);
+      await pendingFrom(dead);
+      const before = await breakGlass.pendingCountFor('sa@qa.test');
+      await logout(dead);
+      await runSweep();
+      expect(await breakGlass.pendingCountFor('sa@qa.test')).toBe(before - 1);
+    });
+
+    it('người duyệt bấm Duyệt / Từ chối phiếu đã bị rút → 409 nói rõ phiếu đã được rút', async () => {
+      const dead = await login();
+      const p1 = await pendingFrom(dead);
+      await logout(dead);
+      await runSweep();
+
+      await expect(breakGlass.approve('sa@qa.test', p1.id, { hours: 1 })).rejects.toMatchObject({
+        status: 409,
+        response: {
+          code: 'BREAK_GLASS_WITHDRAWN',
+          message: expect.stringMatching(/phiên đăng nhập của người xin đã kết thúc/i),
+        },
+      });
+      await expect(breakGlass.deny('sa@qa.test', p1.id, 'Không cần nữa')).rejects.toMatchObject({
+        status: 409,
+        response: { code: 'BREAK_GLASS_WITHDRAWN' },
+      });
+      expect(await stateOf(p1.id)).toBe('cancelled');
+    });
+
+    it('phiếu người xin TỰ rút: Duyệt cũng nhận 409 "đã được rút", không phải lỗi chung', async () => {
+      const a = await login();
+      const p1 = await pendingFrom(a);
+      await breakGlass.cancel(member, p1.id);
+      await expect(breakGlass.approve('sa@qa.test', p1.id, { hours: 1 })).rejects.toMatchObject({
+        status: 409,
+        response: {
+          code: 'BREAK_GLASS_WITHDRAWN',
+          message: expect.stringMatching(/người xin đã rút/i),
+        },
+      });
+    });
+
+    it('phiếu đã duyệt của phiên chết vẫn đóng thành hết hiệu lực, không bị "rút"', async () => {
+      const dead = await login();
+      const { id } = await grantFor(dead);
+      await logout(dead);
+      await runSweep();
+      expect(await stateOf(id)).toBe('expired');
+    });
+  });
+
+  it('hàng chờ của người duyệt đánh dấu phiếu chờ quá `approval.reminder_hours` (VLT-017)', async () => {
+    const a = await login();
+    const fresh = await breakGlass.request(
+      { email: member, sessionId: a },
+      { ownerType: 'device', ownerId: randomUUID(), reason: 'Vừa gửi', hours: 1 },
+    );
+    const old = await breakGlass.request(
+      { email: member, sessionId: a },
+      { ownerType: 'device', ownerId: randomUUID(), reason: 'Chờ lâu', hours: 1 },
+    );
+    // Cấu hình giả trả 24 cho mọi khoá số không phải idle → ngưỡng nhắc là 24 giờ.
+    await scratch.pool.query(
+      `UPDATE approval SET created_at = now() - interval '25 hours' WHERE id = $1`,
+      [old.id],
+    );
+    const rows = await breakGlass.pendingForApprovers();
+    expect(rows.find((r) => r.id === fresh.id)?.overdue).toBe(false);
+    expect(rows.find((r) => r.id === old.id)?.overdue).toBe(true);
+  });
+
+  it('nhóm "Đang có hiệu lực" chỉ gồm quyền đã duyệt còn giờ (VLT-020)', async () => {
+    const a = await login();
+    const live = await grantFor(a);
+    const released = await grantFor(a);
+    await breakGlass.release(member, released.id);
+    const timedOut = await grantFor(a);
+    await scratch.pool.query(
+      `UPDATE approval SET expires_at = now() - interval '1 minute' WHERE id = $1`,
+      [timedOut.id],
+    );
+    const ids = (await breakGlass.activeGrants()).map((r) => r.id);
+    expect(ids).toContain(live.id);
+    expect(ids).not.toContain(released.id);
+    expect(ids).not.toContain(timedOut.id);
   });
 
   it('grant không mang phiên (cấp trước khi có luật này) không dùng được', async () => {

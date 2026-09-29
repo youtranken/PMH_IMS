@@ -325,7 +325,7 @@ test.describe('Break-glass', () => {
    * Bất kỳ ai biết id (nhìn qua vai, ảnh chụp màn hình, URL bị chia sẻ) đều giết được yêu cầu
    * của người khác — người xin ngồi chờ tiếp lúc 2 giờ sáng, còn lịch sử ghi sai tên người hủy.
    */
-  test('không hủy được yêu cầu của người khác', async ({ page }) => {
+  test('không hủy được yêu cầu của người khác', async ({ page, browser }) => {
     const saTotp = await firstLogin(page, E2E_SA);
     const stamp = Date.now().toString().slice(-5);
     const { deviceId } = await setUpAs(page, stamp, 'needs_approval');
@@ -337,19 +337,23 @@ test.describe('Break-glass', () => {
       data: { ownerType: 'device', ownerId: deviceId, reason: 'sự cố mạng tầng 3', hours: 4 },
     });
     const id = ((await asked.json()) as { id: string }).id;
-    await logout(page);
 
+    /* SA ở ngữ cảnh riêng: người xin phải còn phiên — phiên chết thì lượt quét tự rút phiếu
+       (Q-15) và câu "vẫn chờ duyệt" dưới đây đỏ theo nhịp quét. */
+    const saCtx = await browser.newContext({ ignoreHTTPSErrors: true });
+    const sa = await saCtx.newPage();
+    await loginWithTotp(sa, E2E_SA.email, NEW_PASSWORD, saTotp);
     // SA cũng KHÔNG hủy hộ được — muốn chặn thì dùng "Từ chối", để lịch sử ghi đúng việc.
-    await loginWithTotp(page, E2E_SA.email, NEW_PASSWORD, saTotp);
-    const stolen = await page.request.post(`/api/v1/vault/break-glass/${id}/cancel`, {
-      headers: { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN },
+    const stolen = await sa.request.post(`/api/v1/vault/break-glass/${id}/cancel`, {
+      headers: { 'X-CSRF-Token': await csrfOf(sa), Origin: APP_ORIGIN },
     });
     expect(stolen.status()).toBe(403);
     expect(await stolen.json()).toMatchObject({ code: 'NOT_YOUR_REQUEST' });
 
     // Yêu cầu vẫn còn nguyên, vẫn chờ duyệt.
-    const pending = await page.request.get('/api/v1/vault/break-glass/pending');
+    const pending = await sa.request.get('/api/v1/vault/break-glass/pending');
     expect(((await pending.json()) as { id: string }[]).some((r) => r.id === id)).toBe(true);
+    await saCtx.close();
   });
 
   /**

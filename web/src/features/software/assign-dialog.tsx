@@ -8,6 +8,7 @@ import { formatMoneyInput, parseMoneyInput } from '@/lib/money-input';
 import { Combobox } from '@/ui/combobox';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
+import { MoneyInput } from '@/ui/money-input';
 import { Field } from '@/ui/page-header';
 import { SuggestInput } from '@/ui/suggest-input';
 import { useDepartments } from '@/ui/use-departments';
@@ -422,20 +423,7 @@ export function AssignDialog({
           htmlFor="assign-cost"
           error={check.error('cost')}
         >
-          {/* Ô chữ, không `type="number"`: phải nhận "5.600.000" hay "5,6tr" như chép từ hoá
-              đơn. Rời ô thì tự viết lại có dấu chấm hàng nghìn để soát được bằng mắt. */}
-          <input
-            id="assign-cost"
-            className="inp"
-            inputMode="decimal"
-            value={cost}
-            onChange={(e) => setCost(e.target.value)}
-            onBlur={() => {
-              if (money.reason === null && money.value !== null) {
-                setCost(formatMoneyInput(money.value));
-              }
-            }}
-          />
+          <MoneyInput value={cost} onChange={setCost} />
         </Field>
         <Field label={t('license.contract')} hint={t('license.contractHint')} htmlFor="assign-contract">
           <input

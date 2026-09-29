@@ -3,12 +3,13 @@ import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
 import { daysUntil } from '@/lib/expiry';
 import { formatDate, todayIso } from '@/lib/format';
-import { formatMoneyInput, parseMoneyInput } from '@/lib/money-input';
+import { parseMoneyInput } from '@/lib/money-input';
 import { renewMinDate, renewPreset } from '@/lib/renew-dates';
 import { AttachmentDraftSection, useAttachmentDraft } from '@/ui/attachment-draft';
 import type { AttachmentOwnerType } from '@/ui/attachment-panel';
 import { DatePicker } from '@/ui/date-picker';
 import { Dialog } from '@/ui/dialog';
+import { MoneyInput } from '@/ui/money-input';
 import { Field } from '@/ui/page-header';
 import { useToast } from '@/ui/toast';
 import { useFormErrors } from '@/ui/use-form-errors';
@@ -45,7 +46,7 @@ export function RenewDialog({
   withTerms,
   websites,
   attachTo,
-  onOpenRecord,
+  toastAction,
   onClose,
   onDone,
 }: {
@@ -74,11 +75,12 @@ export function RenewDialog({
   /** Hồ sơ nhận hoá đơn/hợp đồng gia hạn đính kèm — tải lên sau khi gia hạn xong. */
   attachTo?: { ownerType: AttachmentOwnerType; ownerId: string };
   /**
-   * Có thì toast "Đã gia hạn …" kèm nút "Mở hồ sơ" để soát lại ngày vừa ghi (chọn
-   * nhầm năm thì sửa ở đó). Không có nút Hoàn tác: gia hạn là một dòng trong sổ lịch sử gia
-   * hạn, lùi hạn là việc sửa hồ sơ có ghi vết, không phải xoá lượt vừa ghi.
+   * Nút đi kèm toast "Đã gia hạn …" — hộp chỉ báo MỘT toast, nơi gọi chọn nút: "Mở hồ sơ" để
+   * soát lại ngày vừa ghi (chọn nhầm năm thì sửa ở đó), hay "Xem trong Đã gia hạn" khi dòng vừa
+   * gia hạn rời danh sách đang xem. Nơi gọi đừng báo toast thứ hai. Không có nút Hoàn tác: gia
+   * hạn là một dòng trong sổ lịch sử gia hạn, lùi hạn là việc sửa hồ sơ có ghi vết.
    */
-  onOpenRecord?: () => void;
+  toastAction?: { label: string; onClick: () => void };
   onClose: () => void;
   onDone: (newEnd: string) => void;
 }) {
@@ -184,9 +186,7 @@ export function RenewDialog({
                         count: renewedSeats,
                       })
                     : t('expiry.renewedTo', { subject, date: formatDate(endDate) }),
-                action: onOpenRecord
-                  ? { label: t('expiry.openRecordShort'), onClick: onOpenRecord }
-                  : undefined,
+                action: toastAction,
               });
               /* Gia hạn đã ghi xuống DB: file hỏng thì báo riêng từng file, không biến lượt
                  gia hạn thành "thất bại". */
@@ -284,20 +284,7 @@ export function RenewDialog({
               htmlFor="renew-cost"
               error={check.error('cost')}
             >
-              {/* Ô chữ, không `type="number"`: phải nhận "5.600.000" hay "5,6tr" như chép từ
-                  hóa đơn (`lib/money-input`). */}
-              <input
-                id="renew-cost"
-                className="inp"
-                inputMode="decimal"
-                value={cost}
-                onChange={(e) => setCost(e.target.value)}
-                onBlur={() => {
-                  if (money.reason === null && money.value !== null) {
-                    setCost(formatMoneyInput(money.value));
-                  }
-                }}
-              />
+              <MoneyInput value={cost} onChange={setCost} />
             </Field>
           </>
         ) : null}

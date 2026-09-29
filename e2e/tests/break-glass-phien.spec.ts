@@ -232,4 +232,42 @@ test.describe('Xin mở két — quyền gắn với phiên đăng nhập (Q-15)
     expect(await revealCode(memberPage, kit.secretId)).not.toBe('BREAK_GLASS_REQUIRED');
     await ctx.close();
   });
+
+  test('phiên người xin kết thúc khi phiếu còn chờ → phiếu tự rút, người duyệt bấm Duyệt nhận 409 rõ ràng', async ({
+    page,
+    browser,
+  }) => {
+    test.setTimeout(240_000);
+    await firstLogin(page, E2E_SA);
+    const stamp = Date.now().toString().slice(-5);
+    const kit = await setUp(page, stamp);
+
+    const ctx = await browser.newContext({ ignoreHTTPSErrors: true });
+    const memberPage = await ctx.newPage();
+    await firstLogin(memberPage, E2E_MEMBER);
+    const id = await ask(memberPage, kit.deviceId, 'E2E cổng uplink chập chờn');
+
+    // Khung chờ nói trước: hết phiên là phiếu bị rút.
+    await memberPage.goto(`/devices/${kit.deviceId}?tab=vault`);
+    await expect(memberPage.getByText(/Giữ trang này mở/)).toBeVisible();
+
+    // Đường hỏng thật: người xin đăng xuất (hoặc hết phiên) trong lúc chờ.
+    await logout(memberPage);
+    await expect.poll(() => stateOf(id), { timeout: 120_000 }).toBe('cancelled');
+    expect(
+      sql(
+        `SELECT actor || '|' || (detail->>'note') FROM approval_history WHERE approval_id = '${id}' AND to_state = 'cancelled'`,
+      ),
+    ).toBe('system|Phiên đăng nhập của người xin đã kết thúc.');
+
+    // Người duyệt còn mở đúng phiếu đó: bấm Duyệt nhận câu nói rõ đã được rút, không cấp gì.
+    const late = await page.request.post(`/api/v1/vault/break-glass/${id}/approve`, {
+      headers: await writeHeaders(page),
+      data: { hours: 4 },
+    });
+    expect(late.status()).toBe(409);
+    expect(await late.json()).toMatchObject({ code: 'BREAK_GLASS_WITHDRAWN' });
+    expect(stateOf(id)).toBe('cancelled');
+    await ctx.close();
+  });
 });

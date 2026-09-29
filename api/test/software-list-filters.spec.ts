@@ -86,8 +86,8 @@ describe('Danh sách phần mềm · bộ lọc', () => {
     // Tìm máy thật trong DB — cùng luật khớp mã với module thiết bị là không cần ở đây.
     const devices = {
       search: async (term: string) => {
-        const { rows } = await scratch.pool.query<{ id: string }>(
-          `SELECT id FROM device WHERE code ILIKE $1`,
+        const { rows } = await scratch.pool.query<{ id: string; code: string }>(
+          `SELECT id, code FROM device WHERE code ILIKE $1`,
           [`%${term}%`],
         );
         return rows;
@@ -122,6 +122,18 @@ describe('Danh sách phần mềm · bộ lọc', () => {
     const onB = await seats.softwareIdsOnDevices('LT-E2E-LOC-B');
     expect(onB).toEqual([]);
     expect(await codes({ search: 'LT-E2E-LOC-B', alsoIds: onB })).toEqual([]);
+  });
+
+  it('nói được KHỚP MÁY NÀO cho từng hồ sơ — chip "khớp máy X" trên danh sách', async () => {
+    const onA = await seats.devicesHoldingSeats('LT-E2E-LOC-A');
+    const active = await one(`SELECT id FROM software WHERE code = 'LIC-E2E-LOC-ACTIVE'`);
+    expect([...onA.entries()]).toEqual([[active, ['LT-E2E-LOC-A']]]);
+    // Ghế đã gỡ thì không "khớp máy".
+    expect((await seats.devicesHoldingSeats('LT-E2E-LOC-B')).size).toBe(0);
+    // Khớp cả hai máy (chung tiền tố) nhưng chỉ A còn giữ ghế.
+    expect([...(await seats.devicesHoldingSeats('LT-E2E-LOC')).values()]).toEqual([
+      ['LT-E2E-LOC-A'],
+    ]);
   });
 
   it('ô tìm vẫn khớp mã hồ sơ như cũ', async () => {

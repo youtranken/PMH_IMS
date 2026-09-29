@@ -9,6 +9,7 @@ import type { SecretOwnerType } from '@/lib/secret-owner-kinds';
 import { Dialog } from '@/ui/dialog';
 import { useDisabledReason } from '@/ui/disabled-reason';
 import { EmptyState, LoadError, Loading } from '@/ui/load-state';
+import { useSupportContact } from '@/ui/use-support-contact';
 import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
 import { TableWrap } from '@/ui/data-table';
@@ -149,11 +150,19 @@ export function VaultPanel({
   me,
   canEdit = true,
   stepsInline = false,
+  ownerLabel,
+  locked = false,
 }: {
   ownerType: SecretOwnerType;
   ownerId: string;
   me: Me;
   canEdit?: boolean;
+  /** Mã hồ sơ chủ — tiêu đề hộp "Cất mật khẩu/khóa — SW-CORE-01" nói cất vào MÁY NÀO (DEV-035). */
+  ownerLabel?: string;
+  /**
+   * Hồ sơ đã khóa (thanh lý): két chỉ còn để đọc, câu rỗng không mời "cất vào đây" nữa (DEV-057).
+   */
+  locked?: boolean;
   /**
    * Khung này đang nằm TRONG một hộp (vd popup của trang Két tổng): bước gõ mã 6 số và bước
    * hiện giá trị thay chỗ danh sách ngăn ngay trong hộp đó, không mở hộp chồng lên (VLT-062).
@@ -283,6 +292,11 @@ export function VaultPanel({
     [me.csrfToken, toast],
   );
 
+  // Ngoài danh sách: chỉ đường tới người gán quyền được (VLT-056). Gọi TRƯỚC các nhánh thoát
+  // bên dưới — hook không được nằm sau một `return`.
+  const noAccess = !isAdmin && verdict.data !== undefined && !allowed;
+  const contact = useSupportContact(noAccess);
+
   /*
    * BA CHỐT NÀY CHỈ ÁP CHO NGƯỜI CẦN `verdict` (F-07, vá 21/09).
    *
@@ -305,7 +319,19 @@ export function VaultPanel({
     if (verdict.isError)
       return <LoadError error={verdict.error} onRetry={() => void verdict.refetch()} />;
     if (!allowed) {
-      return <EmptyState title={t('vault.noPermissionTitle')} hint={t('vault.noPermission')} />;
+      return (
+        <EmptyState
+          title={t('vault.noPermissionTitle')}
+          hint={t('vault.noPermission')}
+          action={
+            contact.data?.contact ? (
+              <span>
+                <strong>{t('auth.supportContactLabel')}:</strong> {contact.data.contact}
+              </span>
+            ) : undefined
+          }
+        />
+      );
     }
   }
 
@@ -367,6 +393,9 @@ export function VaultPanel({
           <p>
             {t('vault.pendingSince', { at: formatDateTime(verdict.data.pending.createdAt) })}
           </p>
+          {/* Quyền gắn với phiên (Q-15): phiên chết thì lượt quét rút phiếu — nói trước để người
+              xin không đóng máy đi chờ rồi quay lại thấy phiếu đã mất. */}
+          <p className="muted">{t('vault.pendingKeepOpen')}</p>
           {/* Người xin ngồi chờ lúc 2 giờ sáng cần biết có ai được báo không — chỉ con số. */}
           {typeof verdict.data.notifiedApprovers === 'number' ? (
             <p>
@@ -469,24 +498,29 @@ export function VaultPanel({
         </p>
       ) : null}
 
-      {canEdit ? (
-        <div className="row" style={{ justifyContent: 'flex-end' }}>
-          <button
-            type="button"
-            className="btn primary"
-            onClick={() => setEditing({ secret: null })}
-          >
+      {/* Thanh công cụ của tab như Sơ đồ cổng: tiêu đề + số ngăn bên trái, nút cất bên phải,
+          cùng hàng (DEV-079). Nút thường: nút chính của màn là ở đầu trang (SW-015). */}
+      <div className="section-bar">
+        <h3 className="form-section-title">{t('vault.sectionTitle')}</h3>
+        {secrets.data ? <span className="section-count">{rows.length}</span> : null}
+        {canEdit ? (
+          <button type="button" className="btn" onClick={() => setEditing({ secret: null })}>
             {t('vault.add')}
           </button>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
       {secrets.isLoading ? (
         <Loading />
       ) : secrets.isError ? (
         <LoadError error={secrets.error} onRetry={() => void secrets.refetch()} />
       ) : rows.length === 0 ? (
-        <EmptyState title={t('vault.empty')} hint={t('vault.emptyHint')} />
+        <EmptyState
+          title={t('vault.empty')}
+          hint={
+            canEdit ? t('vault.emptyHint') : locked ? t('vault.emptyLockedHint') : undefined
+          }
+        />
       ) : (
         <>
           {busyReason.hint}
@@ -609,8 +643,9 @@ export function VaultPanel({
                                   try {
                                     // Thu hồi nay đòi step-up (C2): gặp `STEPUP_REQUIRED` thì
                                     // hỏi mã rồi làm lại chính việc này.
-                                    await writeStepUp.run(() =>
-                                      revoke.mutateAsync({ id: secret.id }),
+                                    await writeStepUp.run(
+                                      () => revoke.mutateAsync({ id: secret.id }),
+                                      t('vault.stepUpRevoke', { label: secret.label }),
                                     );
                                     toast({ message: t('vault.revoked') });
                                     void refresh();
@@ -638,6 +673,7 @@ export function VaultPanel({
       {editing ? (
         <SecretForm
           secret={editing.secret}
+          ownerLabel={ownerLabel}
           ownerType={ownerType}
           ownerId={ownerId}
           csrfToken={me.csrfToken}
@@ -722,6 +758,7 @@ const KINDS: SecretKind[] = ['password', 'license_key', 'other'];
  */
 function SecretForm({
   secret,
+  ownerLabel,
   ownerType,
   ownerId,
   csrfToken,
@@ -729,6 +766,7 @@ function SecretForm({
   onSaved,
 }: {
   secret: SecretMeta | null;
+  ownerLabel?: string;
   ownerType: SecretOwnerType;
   ownerId: string;
   csrfToken: string;
@@ -765,7 +803,14 @@ function SecretForm({
          người dùng tin là đã hủy trong khi secret đã vào két. */
       dismissible={!save.isPending}
       maxWidth={560}
-      title={isEdit ? t('vault.edit') : t('vault.add')}
+      /* Một mẫu tiêu đề cho mọi hộp: "{Việc} — {chủ thể}" (DEV-035). */
+      title={
+        isEdit
+          ? t('common.titleOf', { action: t('vault.edit'), subject: secret.label })
+          : ownerLabel
+            ? t('common.titleOf', { action: t('vault.add'), subject: ownerLabel })
+            : t('vault.add')
+      }
       footer={
         <>
           <button type="button" className="btn" disabled={save.isPending} onClick={onClose}>
@@ -803,6 +848,7 @@ function SecretForm({
                         value,
                       },
                 ),
+                t(isEdit ? 'vault.stepUpEdit' : 'vault.stepUpSave', { label: label.trim() }),
               );
               setValue('');
               onSaved();
@@ -925,7 +971,7 @@ function RotateForm({
          cấu hình thiết bị vừa hết hiệu lực. */
       dismissible={!rotate.isPending}
       maxWidth={480}
-      title={t('vault.rotateTitle', { label: secret.label })}
+      title={t('common.titleOf', { action: t('vault.rotate'), subject: secret.label })}
       footer={
         <>
           <button type="button" className="btn" disabled={rotate.isPending} onClick={onClose}>
@@ -949,7 +995,10 @@ function RotateForm({
           if (!check.check()) return;
           void (async () => {
             try {
-              await stepUp.run(() => rotate.mutateAsync({ value }));
+              await stepUp.run(
+                () => rotate.mutateAsync({ value }),
+                t('vault.stepUpRotate'),
+              );
               setValue('');
               onSaved();
             } catch (err) {

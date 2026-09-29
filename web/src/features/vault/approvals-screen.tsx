@@ -179,6 +179,14 @@ export function ApprovalsScreen({ me }: { me: Me }) {
     enabled: canDecide && tab === "log",
   });
 
+  /* Quyền đang chạy ghim đầu tab Nhật ký (VLT-020): nhật ký chia trang theo lúc gửi, quyền
+     cần thu hồi có thể đã trôi sang trang sau. */
+  const activeGrants = useQuery({
+    queryKey: [...BREAK_GLASS_KEY, "active"],
+    queryFn: () => apiFetch<ApprovalRow[]>("/api/v1/vault/break-glass/active"),
+    enabled: canDecide && tab === "log",
+  });
+
   const mine = useQuery({
     queryKey: [...BREAK_GLASS_KEY, "mine", minePage],
     queryFn: () =>
@@ -355,6 +363,20 @@ export function ApprovalsScreen({ me }: { me: Me }) {
           </FilterBar>
         ) : null}
         {focusGone ? <p className="muted">{t("approvals.focusGone")}</p> : null}
+        {tab === "log" && activeGrants.data && activeGrants.data.length > 0 ? (
+          <section
+            className="approval-active"
+            aria-label={t("approvals.activeGroup", { count: activeGrants.data.length })}
+          >
+            <h2>{t("approvals.activeGroup", { count: activeGrants.data.length })}</h2>
+            <LogTable
+              rows={activeGrants.data}
+              busyId={busyId}
+              onRevoke={(row) => setDeciding({ row, approve: false, revoke: true })}
+              onGoPending={() => setTab("pending")}
+            />
+          </section>
+        ) : null}
         {active.isLoading ? (
           <Loading />
         ) : active.isError ? (
@@ -407,7 +429,11 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                 <section
                   key={row.id}
                   ref={isFocused ? focusRef : undefined}
-                  className="card device-panel"
+                  className={
+                    tab === "pending" && row.overdue
+                      ? "card device-panel is-overdue"
+                      : "card device-panel"
+                  }
                   aria-label={t("approvals.cardLabel", {
                     member: row.requester,
                   })}
@@ -422,6 +448,10 @@ export function ApprovalsScreen({ me }: { me: Me }) {
                       <span className="badge warn">
                         {t("approvals.fromMail")}
                       </span>
+                    ) : null}
+                    {/* Chờ quá mốc thư nhắc: chữ + viền, không chỉ màu (VLT-017). */}
+                    {tab === "pending" && row.overdue ? (
+                      <span className="badge warn">{t("approvals.waitingLong")}</span>
                     ) : null}
                     {/* Ở tab của mình thì người xin luôn là mình — đối tượng mới là tiêu đề thẻ. */}
                     {tab === "mine" ? null : (

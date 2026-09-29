@@ -174,6 +174,9 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
 - **Quyền mở két gắn với PHIÊN đăng nhập đã xin:** đăng xuất, hết phiên (idle/tuyệt đối) hay bị
   đóng phiên thì quyền đang có cũng hết — đăng nhập lại phải xin lại. Người xin có thể tự "Trả
   quyền" sớm. Lý do: quyền xem mật khẩu không được sống lâu hơn người đang ngồi trước máy.
+  Hệ quả: yêu cầu **đang chờ** mà phiên người xin đã kết thúc thì được duyệt cũng vô dụng, nên
+  lượt quét (mỗi phút) tự **rút** nó như khi người xin tự rút, ghi lịch sử + nhật ký "Phiên đăng
+  nhập của người xin đã kết thúc"; người duyệt bấm Duyệt phiếu đã rút nhận thông báo rõ ràng.
 - **Lưu giá trị mới vào két:** không bắt tick "Tôi đã đổi trên thiết bị" — chỉ cảnh báo.
 - **Thuật ngữ:** **"Ngừng dùng / Dùng lại"** cho dải IP, tài khoản dịch vụ, luật NAT; NAT dùng
   **"luật NAT"**, **"cổng ngoài"**, **"cổng trong"** thay cho rule/port. Mục menu Hệ thống

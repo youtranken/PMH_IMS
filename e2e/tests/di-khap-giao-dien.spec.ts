@@ -1185,7 +1185,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
    * Phần của Member dựng bằng `page.request` cho nhanh (đó không phải thứ bài này kiểm); phần
    * của admin thì BẤM THẬT từng nút.
    */
-  test('Quản trị viên xử được phiếu xin quyền — cả từ chối lẫn thu hồi', async ({ page }) => {
+  test('Quản trị viên xử được phiếu xin quyền — cả từ chối lẫn thu hồi', async ({ page, browser }) => {
     // Ba lượt đăng nhập đầy đủ (SA → Member → admin mới), mỗi lượt một lần chờ mã TOTP mới.
     test.setTimeout(150_000);
 
@@ -1215,19 +1215,23 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await logout(page);
 
     // ===== Member: gửi HAI phiếu (mỗi chủ thể chỉ được một phiếu treo — nên phải hai máy) =====
-    await firstLogin(page, E2E_MEMBER);
-    const memberHeaders = await writeHeaders(page);
+    // Ngữ cảnh riêng, KHÔNG đăng xuất: phiên người xin chết thì lượt quét rút phiếu đang chờ
+    // (Q-15) và admin không còn phiếu nào để xử. Đóng ngữ cảnh không đóng phiên.
+    const memberCtx = await browser.newContext(SECOND_BROWSER);
+    const memberPage = await memberCtx.newPage();
+    await firstLogin(memberPage, E2E_MEMBER);
+    const memberHeaders = await writeHeaders(memberPage);
     for (const [ownerId, reason] of [
       [deviceA, lyDoA],
       [deviceB, lyDoB],
     ] as const) {
-      const sent = await page.request.post('/api/v1/vault/break-glass', {
+      const sent = await memberPage.request.post('/api/v1/vault/break-glass', {
         headers: memberHeaders,
         data: { ownerType: 'device', ownerId, reason, hours: 4 },
       });
       expect(sent.status(), `Member phải gửi được phiếu: ${reason}`).toBe(201);
     }
-    await logout(page);
+    await memberCtx.close();
 
     // ===== Quản trị viên: xử phiếu bằng tay =====
     await firstLogin(page, { email: ADMIN_EMAIL, password: matKhauTam });
@@ -1272,11 +1276,13 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     // Hàng chờ phải sạch — cả hai phiếu đã có người quyết.
     await expect(page.getByText('Không có yêu cầu nào đang chờ')).toBeVisible();
 
-    // --- THU HỒI SỚM. Phiếu đã duyệt nằm ở tab Nhật ký; chỉ phiếu còn hiệu lực mới có nút này,
-    //     nên trên màn chỉ tồn tại đúng MỘT nút "Thu hồi sớm" (phiếu bị từ chối thì không có).
+    // --- THU HỒI SỚM. Phiếu đã duyệt nằm ở tab Nhật ký; chỉ phiếu còn hiệu lực mới có nút này
+    //     (phiếu bị từ chối thì không có). Quyền đang chạy nay được ghim thành nhóm "Đang có hiệu lực" ở đầu tab (VLT-020) nên
+    //     nó hiện hai lần (nhóm + dòng nhật ký) — bấm ở nhóm ghim, chỗ người trực tìm tới.
     await page.getByRole('tab', { name: 'Nhật ký' }).click();
-    await expect(page.getByText(lyDoDuocDuyet)).toBeVisible();
-    await page.getByRole('button', { name: 'Thu hồi sớm' }).click();
+    const nhomHieuLuc = page.getByRole('region', { name: /^Đang có hiệu lực/ });
+    await expect(nhomHieuLuc.getByText(lyDoDuocDuyet)).toBeVisible();
+    await nhomHieuLuc.getByRole('button', { name: 'Thu hồi sớm' }).click();
 
     /*
      * TỪ 12/09 NÚT NÀY PHẢI HỎI LẠI (rà UI/UX #4).
@@ -8709,7 +8715,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     /* ---------- HỘP "XOAY": một ô, và Esc đóng được ---------- */
 
     await rowAction(page, label, 'Đổi giá trị');
-    const rotate = page.getByRole('dialog', { name: `Đổi giá trị: ${label}` });
+    const rotate = page.getByRole('dialog', { name: `Đổi giá trị — ${label}` });
     await expect(rotate).toBeVisible();
     expect(
       await textboxLabels(rotate),

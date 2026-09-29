@@ -392,6 +392,7 @@ export function SoftwareDetail({ me }: { me: Me }) {
           <VaultPanel
             ownerType="software"
             ownerId={item.id}
+            ownerLabel={item.code}
             me={me}
             canEdit={canVaultWrite}
           />

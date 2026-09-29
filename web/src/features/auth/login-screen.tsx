@@ -1,8 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { errorMessage, useApiMutation } from '@/lib/api';
-import { apiFetch } from '@/lib/api-client';
 import { clearSignedOut, justSignedOut } from '@/lib/after-logout';
 import { classifyLoginError, formatWait, type LoginErrorKind } from '@/lib/login-error';
 import { nextPathLabelKey, peekNextPath } from '@/lib/next-path';
@@ -14,6 +12,7 @@ import {
 import { Field } from '@/ui/page-header';
 import { PasswordInput } from '@/ui/password-input';
 import { useFormErrors } from '@/ui/use-form-errors';
+import { useSupportContact } from '@/ui/use-support-contact';
 import { useNow } from '@/ui/use-now';
 import { AuthCard } from './auth-card';
 import { AUTH_ERROR_ID, clearSetupSteps } from './setup-steps';
@@ -71,12 +70,7 @@ export function LoginScreen() {
   }, [lockedUntil, waiting]);
 
   const needsContact = failure?.kind === 'locked' || failure?.kind === 'disabled';
-  const contact = useQuery({
-    queryKey: ['auth', 'support-contact'],
-    queryFn: () => apiFetch<{ contact: string }>('/api/v1/auth/support-contact'),
-    enabled: needsContact,
-    staleTime: 5 * 60_000,
-  });
+  const contact = useSupportContact(needsContact);
 
   // Đích đã nhớ (link trong mail…): nói TÊN MÀN sẽ mở sau khi đăng nhập, không in đường dẫn.
   const [nextKey] = useState(() => nextPathLabelKey(peekNextPath()));

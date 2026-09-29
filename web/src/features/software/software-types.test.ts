@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { codePrefix, requiresEndDate } from './software-types';
+import { codePrefix, matchedDevicesText, requiresEndDate } from './software-types';
 
 describe('requiresEndDate — khớp `requiresEndDate` phía API (SW-028)', () => {
   it.each([
@@ -23,5 +23,17 @@ describe('codePrefix — gợi ý tiền tố mã theo loại (SW-026)', () => {
     ['other', ''],
   ] as const)('%s → "%s"', (kind, prefix) => {
     expect(codePrefix(kind)).toBe(prefix);
+  });
+});
+
+describe('matchedDevicesText — chip "khớp máy X" khi tìm theo máy (SW-010)', () => {
+  it.each([
+    [undefined, null],
+    [[], null],
+    [['LT-05'], 'LT-05'],
+    [['LT-05', 'LT-06', 'PC-01'], 'LT-05, LT-06, PC-01'],
+    [['A', 'B', 'C', 'D', 'E'], 'A, B, C +2'],
+  ] as const)('%j → %j', (codes, expected) => {
+    expect(matchedDevicesText(codes as string[] | undefined)).toBe(expected);
   });
 });

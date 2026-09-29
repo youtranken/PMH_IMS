@@ -103,7 +103,12 @@ export function ApprovalDetailScreen({ me }: { me: Me }) {
       return;
     }
     void run(
-      () => actions.approve(row.id, { hours: granted, note: note.trim() }),
+      () =>
+        actions.approve(
+          row.id,
+          { hours: granted, note: note.trim() },
+          t('approvals.stepUpApprove', { name: row.requesterName }),
+        ),
       'approvals.approved',
     );
   };

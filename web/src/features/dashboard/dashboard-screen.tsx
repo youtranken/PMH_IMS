@@ -906,7 +906,14 @@ function ExpiringBlock({
           row={{ ...renewing, end: renewing.endDate }}
           kindLabel={expiryKindLabel(kinds, renewing.kind)}
           csrfToken={me.csrfToken}
-          onOpenRecord={renewing.link ? () => navigate(renewing.link ?? '/') : undefined}
+          toastAction={
+            renewing.link
+              ? {
+                  label: t('expiry.openRecordShort'),
+                  onClick: () => navigate(renewing.link ?? '/'),
+                }
+              : undefined
+          }
           onClose={() => setRenewing(null)}
           onDone={() => {
             setRenewing(null);

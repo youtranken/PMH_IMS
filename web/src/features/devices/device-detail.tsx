@@ -946,6 +946,8 @@ export function DeviceDetail({ me }: { me: Me }) {
                phải chặn ở đây — không thì họ thấy "Cất secret"/"Xoay"/"Xóa" và bấm vào
                là 403 (code review Epic 6, finding 3). */
             canEdit={canVaultWrite && !retired}
+            ownerLabel={item.code}
+            locked={retired}
           />
         ) : safeTab === "attachments" ? (
           <AttachmentPanel

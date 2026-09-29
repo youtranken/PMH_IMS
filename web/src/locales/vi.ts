@@ -761,6 +761,12 @@ export default {
     pick: 'Chọn file để đính kèm',
     // Chọn/thả là tải ngay, nhiều file một lượt — không còn nút "Tải lên" riêng.
     uploadingOf: 'Đang tải lên {{done}}/{{total}}…',
+    cancelUpload: 'Hủy tải "{{name}}"',
+    queue_waiting: 'Chờ',
+    queue_uploading: 'Đang tải…',
+    queue_done: 'Xong',
+    queue_failed: 'Lỗi',
+    queue_cancelled: 'Đã hủy',
     uploadedCount: 'Đã đính kèm {{count}} giấy tờ.',
     draftFailedLive: 'Không tải lên được "{{name}}": {{reason}}',
     empty: 'Chưa có giấy tờ nào.',
@@ -902,6 +908,7 @@ export default {
     standing: 'Tình trạng',
     overdueDays: 'quá {{count}} ngày',
     autoRetireIn: 'tự thanh lý sau {{count}} ngày',
+    matchedDevices: 'khớp máy {{codes}}',
     autoRetireNext: 'tự thanh lý ở lượt quét tới',
     /* Băng cảnh báo trên trang chi tiết hồ sơ Hết hạn (Q-13). */
     autoRetireWarn: 'Tự thanh lý sau {{count}} ngày ({{date}}) nếu chưa gia hạn.',
@@ -1196,7 +1203,6 @@ export default {
     renewalsRange: 'Khoảng ngày gia hạn',
     renewalsFrom: 'Gia hạn từ ngày',
     renewalsTo: 'Gia hạn đến ngày',
-    renewedSeeTab: 'Lượt gia hạn đã ghi vào tab "Đã gia hạn".',
     renewedSeeTabAction: 'Xem trong Đã gia hạn',
     tabList: 'Danh sách',
     empty: 'Không có gì sắp hết hạn trong cửa sổ này.',
@@ -1463,6 +1469,7 @@ export default {
   },
   vault: {
     tab: 'Két sắt',
+    sectionTitle: 'Ngăn két',
     /* Hộp giá trị tự đóng khi hết giờ. Không nói gì thì người dùng không phân biệt được "hết
        giờ" với "mình lỡ bấm Ẩn" hay "trình duyệt vừa lỗi" — và phản xạ là bấm Xem lần nữa,
        tức thêm một dòng nhật ký mở két cho một lần không cần thiết. */
@@ -1479,7 +1486,6 @@ export default {
     add: 'Cất mật khẩu/khóa',
     edit: 'Sửa thông tin',
     rotate: 'Đổi giá trị',
-    rotateTitle: 'Đổi giá trị: {{label}}',
     rotateHint: 'Giá trị mới sẽ mã hóa lại từ đầu. Giá trị cũ không xem lại được nữa.',
     rotateOrder:
       'IMS KHÔNG nối tới máy chủ hay thiết bị: lưu ở đây không đổi gì trên hệ thống thật. Đổi trên hệ thống thật TRƯỚC (việc này ảnh hưởng hệ thống đang chạy) và đăng nhập thử bằng giá trị mới, rồi mới lưu vào két — lưu xong là giá trị cũ không xem lại được.',
@@ -1502,6 +1508,10 @@ export default {
     valueHide: 'Ẩn',
     generate: 'Tạo ngẫu nhiên',
     stepUpPurpose: 'Nhập mã 6 số để xem "{{label}}".',
+    stepUpSave: 'Nhập mã 6 số để cất "{{label}}" vào két.',
+    stepUpEdit: 'Nhập mã 6 số để lưu thay đổi của "{{label}}".',
+    stepUpRotate: 'Nhập mã 6 số để lưu giá trị mới vào két.',
+    stepUpRevoke: 'Nhập mã 6 số để xóa "{{label}}" khỏi két.',
     stepUpGrace: 'Xác nhận xong thì {{minutes}} phút tới mở ngăn khác không phải gõ lại.',
     perCharOn: 'Hiện từng ký tự',
     perCharOff: 'Hiện liền một dòng',
@@ -1517,6 +1527,7 @@ export default {
     rotated: 'Đã đổi giá trị.',
     empty: 'Két chưa có ngăn nào',
     emptyHint: 'Mật khẩu admin, SSH, SNMP… cất vào đây thay vì ghi ra file Excel.',
+    emptyLockedHint: 'Hồ sơ đã khóa — không cất thêm được vào két này.',
     label: 'Tên gọi',
     labelRequired: 'Đặt tên gọi cho ngăn này (vd "admin web", "SSH root").',
     kind: 'Loại',
@@ -1581,6 +1592,7 @@ export default {
     /* Khối trạng thái khi đang có phiếu treo — người xin rút được, và khung tự làm mới. */
     pendingSince: 'Yêu cầu gửi lúc {{at}} đang chờ Quản trị quyết. Khung này tự làm mới khi có quyết định.',
     pendingDetail: 'Xem yêu cầu',
+    pendingKeepOpen: 'Giữ trang này mở — đăng xuất hay hết phiên đăng nhập thì yêu cầu tự bị rút.',
     /* Q-15: quyền gắn với phiên đã xin. Người xin phải đọc được trước, không thì đăng nhập lại
        rồi tưởng hệ thống làm mất quyền. */
     sessionBound:
@@ -2544,6 +2556,10 @@ export default {
     stateRevoked: 'Đã thu hồi',
     cardLabel: 'Yêu cầu của {{member}}',
     fromMail: 'Yêu cầu trong thư',
+    waitingLong: 'Chờ lâu — đã quá mốc nhắc',
+    stepUpApprove: 'Nhập mã 6 số để duyệt mở két cho {{name}}.',
+    stepUpRevoke: 'Nhập mã 6 số để thu hồi quyền mở két của {{name}}.',
+    activeGroup: 'Đang có hiệu lực ({{count}})',
     focusGone:
       'Yêu cầu trong thư không còn chờ duyệt — có thể người khác đã xử lý. Xem tab Nhật ký.',
     /* Đối tượng đọc được thay cho uuid: người duyệt lúc 2 giờ sáng phải biết "máy nào". */

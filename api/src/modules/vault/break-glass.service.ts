@@ -597,6 +597,7 @@ export class BreakGlassService implements OnModuleInit {
     options: { hours?: number; note?: string | null } = {},
   ): Promise<ApprovalRecord> {
     const request = await this.requireBreakGlass(id);
+    await this.assertNotWithdrawn(request);
     /*
      * BỐN MẮT (FR-023) — người xin không tự duyệt cho chính mình.
      *
@@ -627,7 +628,7 @@ export class BreakGlassService implements OnModuleInit {
     const typed = options.hours ?? asked;
     const hours = await this.clampHours(asked > 0 ? Math.min(typed, asked) : typed);
 
-    return this.decide(id, {
+    return this.decideOrWithdrawn(id, {
       to: 'approved',
       actor: approver,
       note: options.note,
@@ -637,8 +638,48 @@ export class BreakGlassService implements OnModuleInit {
   }
 
   async deny(approver: string, id: string, note?: string | null): Promise<ApprovalRecord> {
-    await this.requireBreakGlass(id);
-    return this.decide(id, { to: 'denied', actor: approver, note });
+    await this.assertNotWithdrawn(await this.requireBreakGlass(id));
+    return this.decideOrWithdrawn(id, { to: 'denied', actor: approver, note });
+  }
+
+  /**
+   * Phiếu đã bị rút (người xin tự rút, hoặc lượt quét rút vì phiên đã chết) → 409 nói đúng thế.
+   *
+   * Không có bước này người duyệt đang mở đúng phiếu nhận câu chung "yêu cầu đã kết thúc" và
+   * không biết là do người xin — có thể bấm lại hoặc đi hỏi. Lượt quét chạy mỗi phút nên việc
+   * phiếu bị rút giữa lúc hộp Duyệt đang mở là chuyện thường, không phải lỗi hiếm.
+   */
+  private async assertNotWithdrawn(request: ApprovalRecord): Promise<void> {
+    if (request.state !== 'cancelled') return;
+    const history = await this.approvals.history(request.id);
+    const bySession = history.some(
+      (step) =>
+        step.toState === 'cancelled' &&
+        (step.detail as { by?: string } | null)?.by === 'session-ended',
+    );
+    throw new ConflictException({
+      code: 'BREAK_GLASS_WITHDRAWN',
+      message: bySession
+        ? 'Yêu cầu này đã được rút: phiên đăng nhập của người xin đã kết thúc. Không cần ' +
+          'duyệt nữa; người xin sẽ gửi yêu cầu mới nếu còn cần.'
+        : 'Người xin đã rút yêu cầu này. Không cần duyệt nữa.',
+    });
+  }
+
+  /**
+   * `decide`, nhưng thua cuộc đua với lượt quét rút phiếu thì vẫn trả 409 "đã được rút" chứ
+   * không phải câu chung "vừa được người khác xử lý" (không có người nào khác cả).
+   */
+  private async decideOrWithdrawn(id: string, input: TransitionInput): Promise<ApprovalRecord> {
+    try {
+      return await this.decide(id, input);
+    } catch (error) {
+      const code = (error as { response?: { code?: string } }).response?.code;
+      if (code === 'APPROVAL_ALREADY_DECIDED' || code === 'APPROVAL_TRANSITION_INVALID') {
+        await this.assertNotWithdrawn(await this.requireBreakGlass(id));
+      }
+      throw error;
+    }
   }
 
   /** Thu hồi sớm — người xin không còn trực nữa thì không phải chờ hết giờ. */
@@ -708,19 +749,19 @@ export class BreakGlassService implements OnModuleInit {
   }
 
   /**
-   * Lượt quét: grant đã duyệt của phiên đã kết thúc → `expired`, có dòng lịch sử + audit (Q-15).
+   * Lượt quét phiếu của phiên đã kết thúc, có dòng lịch sử + audit (Q-15):
+   * - grant đã duyệt → `expired`. Chỉ là VỆ SINH cho nhật ký: quyền đã hết từ lúc phiên chết vì
+   *   `grantOf` so phiên ở mỗi lần mở.
+   * - phiếu ĐANG CHỜ → `cancelled` (như người xin tự rút). Duyệt nó cũng không ai dùng được,
+   *   nên để nó treo là bắt người duyệt quyết một việc vô ích — có khi lúc 2 giờ sáng.
    *
-   * Chỉ là VỆ SINH cho nhật ký: quyền đã hết từ lúc phiên chết vì `grantOf` so phiên ở mỗi lần
-   * mở. Phiên chết thì không sống lại, nên đọc-rồi-đóng không có tranh chấp; hai lượt quét cùng
-   * đóng một phiếu thì `transition` chặn lượt sau bằng điều kiện state.
-   *
-   * Không đụng phiếu ĐANG CHỜ: Q-15 cho người duyệt quyết nó (duyệt rồi thì lượt quét sau đóng),
-   * và người xin gửi lại từ phiên mới thì `request()` tự rút nó. Không đụng grant KHÔNG mang
-   * phiên (cấp trước luật này): nó vốn không dùng được, và đồng hồ `expires_at` tự đóng nó.
+   * Phiên chết thì không sống lại, nên đọc-rồi-đóng không có tranh chấp; người duyệt bấm cùng
+   * lúc thì `transition` chặn một bên bằng điều kiện state. Không đụng phiếu KHÔNG mang phiên
+   * (gửi trước luật này): grant của nó vốn không dùng được, và đồng hồ `expires_at` tự đóng nó.
    */
   async closeEndedSessions(): Promise<number> {
     const open = (await this.approvals.openWithSession(BREAK_GLASS_KIND)).filter(
-      (r) => r.state === 'approved' && r.requesterSessionId !== null,
+      (r) => (r.state === 'approved' || r.state === 'pending') && r.requesterSessionId !== null,
     );
     const alive = await this.auth.aliveSessionIds(open.map((r) => r.requesterSessionId!));
     let closed = 0;
@@ -728,7 +769,7 @@ export class BreakGlassService implements OnModuleInit {
       if (alive.has(row.requesterSessionId!)) continue;
       try {
         await this.approvals.transition(row.id, {
-          to: 'expired',
+          to: row.state === 'pending' ? 'cancelled' : 'expired',
           actor: 'system',
           note: SESSION_ENDED_NOTE,
           detail: { by: 'session-ended' },
@@ -761,8 +802,34 @@ export class BreakGlassService implements OnModuleInit {
     return request;
   }
 
-  async pendingForApprovers(): Promise<BreakGlassView[]> {
-    return this.views(await this.approvals.pending(BREAK_GLASS_KIND), true);
+  /**
+   * Hàng chờ của người duyệt. `overdue`: phiếu đã chờ quá `approval.reminder_hours` (đúng mốc
+   * thư nhắc đi) — màn tô viền cảnh báo để người trực thấy phiếu nào đang để người xin đợi lâu
+   * (VLT-017). Server so bằng đồng hồ của nó; ngưỡng 0 = tắt nhắc = không tô.
+   */
+  async pendingForApprovers(): Promise<(BreakGlassView & { overdue: boolean })[]> {
+    const [rows, hours] = await Promise.all([
+      this.approvals.pending(BREAK_GLASS_KIND),
+      this.config.getNumber('approvalReminderHours'),
+    ]);
+    const cutoff = hours > 0 ? Date.now() - hours * 3_600_000 : null;
+    return (await this.views(rows, true)).map((view) => ({
+      ...view,
+      overdue: cutoff !== null && view.createdAt.getTime() < cutoff,
+    }));
+  }
+
+  /**
+   * Quyền ĐANG có hiệu lực (đã duyệt, còn giờ theo đồng hồ server) — nhóm ghim ở đầu tab Nhật
+   * ký (VLT-020). Nhật ký chia trang theo lúc gửi, nên một quyền 24 giờ gửi từ sáng có thể đã
+   * trôi sang trang 2 đúng lúc người trực cần tìm nó để thu hồi.
+   */
+  async activeGrants(): Promise<BreakGlassView[]> {
+    const rows = await this.approvals.list({ kind: BREAK_GLASS_KIND, state: 'approved' });
+    return this.views(
+      rows.filter((row) => row.active),
+      true,
+    );
   }
 
   async mine(memberEmail: string, paging: PageQuery): Promise<Page<BreakGlassView>> {
