@@ -90,8 +90,7 @@ export class OwnerExistsRegistry {
       throw new BadRequestException({
         code: 'OWNER_TYPE_UNRESOLVABLE',
         message:
-          `Không xác minh được chủ thể loại "${ownerType}" — chưa module nào nhận làm chủ loại này. ` +
-          'Đây là lỗi cấu hình của hệ thống, báo quản trị viên.',
+          `Không xác minh được hồ sơ loại "${ownerType}". Đây là lỗi phần mềm, hãy báo SA.`,
       });
     }
     return resolver;

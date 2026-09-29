@@ -334,7 +334,7 @@ export class IpamController {
       includeVoided: subnet.voidedAt !== null,
     });
     const buffer = await this.excel.build({
-      sheetName: 'Dia chi IP',
+      sheetName: 'Địa chỉ IP',
       columns: [
         { header: 'Địa chỉ', width: 18, value: (r) => r.address },
         { header: 'Trạng thái', width: 16, value: (r) => IP_STATUS_LABEL[r.status] ?? r.status },
@@ -577,7 +577,7 @@ export class IpamController {
   async exportNat(@Query() query: NatQueryDto, @Res() res: Response) {
     const rows = await this.nat.list(natFilters(query));
     const buffer = await this.excel.build({
-      sheetName: 'So NAT',
+      sheetName: 'Sổ NAT',
       columns: [
         { header: 'Router', width: 22, value: (r) => r.deviceCode ?? '' },
         { header: 'Site', width: 12, value: (r) => r.siteCode ?? '' },

@@ -7,6 +7,7 @@ import { UsersApiService } from '../users/users.api';
 import { renderMail } from './mail-layout';
 import { MailTransportService } from './mail-transport.service';
 import { UI_PATHS } from '../../common/ui-paths';
+import { viDate } from '../../common/today';
 import { ApprovalKindRegistry } from '../../common/approvals/approvals-registry';
 
 const APP_URL = () => process.env.APP_BASE_URL ?? 'https://ims.pmh.com.vn';
@@ -153,13 +154,13 @@ export class MailConsumer {
     const ask = `${who} xin mở két${subject ? ` ${subject.code}` : ''}${hours ? ` (${hours} giờ)` : ''}`;
     const waited = Math.round((Date.now() - request.createdAt.getTime()) / 60_000);
     const { html, text } = renderMail({
-      title: isReminder ? 'Yêu cầu xin mở két còn đang chờ duyệt' : 'Có yêu cầu xin mở két cần duyệt',
+      title: isReminder ? 'Yêu cầu mở két vẫn chờ duyệt' : 'Có yêu cầu mở két cần duyệt',
       intro: isReminder
         ? `Yêu cầu dưới đây đã chờ ${waited} phút mà chưa ai xử lý.`
         : `${who} vừa gửi một yêu cầu mở két cần người duyệt.`,
       rows: [
         { label: 'Người xin', value: `${who} (${request.requester})` },
-        { label: 'Đối tượng', value: subject?.label ?? 'Không còn gọi tên được — mở yêu cầu để xem' },
+        { label: 'Đối tượng', value: subject?.label ?? 'Không xác định — mở yêu cầu để xem' },
         { label: 'Xin', value: hours ? `${hours} giờ` : 'Không ghi số giờ' },
         { label: 'Lý do', value: request.reason },
         { label: 'Lúc', value: at(request.createdAt) },
@@ -211,7 +212,7 @@ export class MailConsumer {
     const code = subject ? ` ${subject.code}` : '';
     const subjectRow = {
       label: 'Đối tượng',
-      value: subject?.label ?? 'Không còn gọi tên được',
+      value: subject?.label ?? 'Không xác định',
     };
     const noteRow = request.decisionNote
       ? [{ label: 'Ghi chú của người duyệt', value: request.decisionNote }]
@@ -239,8 +240,7 @@ export class MailConsumer {
         ctaWide: true,
         footnote:
           'Giờ được cấp tính từ lúc duyệt. Quyền gắn với phiên đăng nhập bạn xem lần đầu: ' +
-          'đăng xuất hay hết phiên là quyền hết, muốn xem tiếp phải xin lại. Xong việc sớm thì ' +
-          'bấm "Trả quyền" trên màn két.',
+          'đăng xuất hay hết phiên là mất quyền. Xong việc sớm thì bấm "Trả quyền" trên màn két.',
       });
       return {
         to: [request.requester],
@@ -255,8 +255,8 @@ export class MailConsumer {
       const { html, text } = renderMail({
         title: 'Yêu cầu mở két đã hết hạn chờ duyệt',
         intro:
-          'Yêu cầu của bạn quá thời hạn chờ mà không ai duyệt nên đã tự hết hạn. ' +
-          'Nếu vẫn còn cần, hãy gửi yêu cầu mới.',
+          'Không ai duyệt yêu cầu của bạn trong thời hạn chờ nên yêu cầu đã tự hết hạn. ' +
+          'Còn cần thì gửi yêu cầu mới.',
         rows: [subjectRow, { label: 'Gửi lúc', value: at(request.createdAt) }],
         ctaLabel: `Mở két${code}`,
         ctaUrl: `${APP_URL()}${subject?.path ?? UI_PATHS.approval(request.id)}`,
@@ -381,10 +381,10 @@ export class MailConsumer {
       case 'auth.account.locked': {
         if (!user) return null;
         const { html, text } = renderMail({
-          title: 'Một tài khoản đang bị đoán mật khẩu',
+          title: 'Tài khoản bị tạm chặn đăng nhập',
           intro:
-            `Tài khoản ${user.email} vừa nhập sai mật khẩu hoặc mã xác thực ${user.failedAttempts} lần. ` +
-            'Đăng nhập vào tài khoản này đang bị TẠM CHẶN ở mọi nơi; mỗi lần sai tiếp, thời gian chờ dài thêm.',
+            `Tài khoản ${user.email} vừa nhập sai mật khẩu hoặc mã xác thực ${user.failedAttempts} lần ` +
+            'nên bị tạm chặn đăng nhập ở mọi nơi. Mỗi lần sai tiếp, thời gian chặn dài thêm.',
           rows: [
             { label: 'Người dùng', value: `${user.fullName} (${user.email})` },
             { label: 'Chặn đến', value: user.lockedUntil ? time.at(user.lockedUntil) : '—' },
@@ -392,16 +392,16 @@ export class MailConsumer {
           ],
           /* Chủ tài khoản cũng nhận thư này nhưng màn Nhật ký chỉ mở cho SA/Quản trị — nhãn
              nói trước điều đó để người nhận không tưởng nút hỏng khi bấm ra trang 404. */
-          ctaLabel: 'Xem nhật ký của tài khoản (SA/Quản trị)',
+          ctaLabel: 'Xem nhật ký (SA/Quản trị)',
           ctaUrl: `${APP_URL()}${UI_PATHS.auditLog(user.email)}`,
           footnote:
-            'Không phải bạn đang quên mật khẩu? Báo SA ngay. SA có thể KHÓA TAY tài khoản ở màn Người dùng IMS — khóa tay chặn mọi nơi và chỉ SA mở được.',
+            'Không phải bạn nhập sai? Báo SA ngay. SA có thể khóa tay tài khoản ở màn Người dùng IMS; chỉ SA mở lại được.',
         });
         // Chủ tài khoản cũng nhận: họ là người đầu tiên biết lượt sai đó có phải của mình không.
         const to = [...new Set([user.email, ...sa.map((r) => r.email)])];
         return {
           to,
-          subject: `[IMS] Đoán mật khẩu tài khoản ${user.email}`,
+          subject: `[IMS] Tạm chặn đăng nhập: ${user.email}`,
           html,
           text,
         };
@@ -422,18 +422,18 @@ export class MailConsumer {
         const admins = await this.users.recipientsByRole(['sa', 'admin']);
         if (admins.length === 0) return null;
         const { html, text } = renderMail({
-          title: 'Có người đang dò dẫm quanh két sắt',
+          title: 'Nhiều lượt mở két thất bại',
           intro:
             `${payload.who} vừa có ${payload.count ?? 0} lượt thất bại quanh két trong ` +
-            `${payload.windowMinutes ?? 0} phút — bị từ chối quyền mở ngăn, hoặc gõ sai mã 6 số. ` +
-            'Hàng rào đã chặn từng lượt; thư này chỉ để có người NHÌN vào.',
+            `${payload.windowMinutes ?? 0} phút (bị từ chối quyền mở ngăn hoặc gõ sai mã 6 số). ` +
+            'Mọi lượt đều đã bị chặn; thư này để có người xem lại.',
           rows: [
             { label: 'Tài khoản', value: payload.who },
             { label: 'Số lượt', value: String(payload.count ?? 0) },
             { label: 'Trong', value: `${payload.windowMinutes ?? 0} phút` },
             { label: 'Thời điểm', value: time.eventAt },
           ],
-          ctaLabel: 'Xem nhật ký của tài khoản này',
+          ctaLabel: 'Xem nhật ký tài khoản',
           ctaUrl: `${APP_URL()}${UI_PATHS.auditLog(payload.who)}`,
 
           /* Thời gian nghỉ NỘI SUY từ payload, không viết cứng "một giờ": nó là
@@ -442,7 +442,7 @@ export class MailConsumer {
              không cổng nào đỏ lên. Còn `?? 60` chỉ là lưới đỡ cho hàng outbox cũ ghi trước
              18/09 — chúng không có trường này. */
           footnote:
-            'Phần lớn trường hợp là người dùng thật gõ nhầm mã hoặc bấm vào một hồ sơ chưa được gán quyền. Hỏi thẳng người này trước khi kết luận; nhật ký cho thấy các lượt đó diễn ra lúc nào và từ đâu. ' +
+            'Thường là gõ nhầm mã hoặc mở hồ sơ chưa được gán quyền. Hỏi người này trước khi kết luận. ' +
             /*
              * KHÔNG ĐOÁN HỘ MỘT CON SỐ MÌNH KHÔNG BIẾT (19/09/2026).
              *
@@ -459,8 +459,8 @@ export class MailConsumer {
              * đoán: câu ngắn hơn mà đúng, hơn là câu đầy đủ mà sai.
              */
             (typeof payload.cooldownMinutes === 'number' && payload.cooldownMinutes > 0
-              ? `Thư này im trong ${payload.cooldownMinutes} phút sau mỗi lần gửi, nên không phản ánh tổng số lượt.`
-              : 'Thư này có thời gian nghỉ sau mỗi lần gửi, nên không phản ánh tổng số lượt.'),
+              ? `Sau mỗi thư, cảnh báo im trong ${payload.cooldownMinutes} phút nên số lượt thật có thể nhiều hơn.`
+              : 'Sau mỗi thư, cảnh báo im một lúc nên số lượt thật có thể nhiều hơn.'),
         });
         return {
           to: admins.map((r) => r.email),
@@ -486,7 +486,7 @@ export class MailConsumer {
           intro: `Chào ${user.fullName}, SA vừa tạo tài khoản IMS cho bạn. Mật khẩu tạm do SA cung cấp trực tiếp.`,
           rows: [
             { label: 'Email đăng nhập', value: user.email },
-            { label: 'Vai trò', value: user.role },
+            { label: 'Vai trò', value: ROLE_LABEL[user.role] ?? user.role },
           ],
           ctaLabel: 'Đăng nhập',
           ctaUrl: APP_URL(),
@@ -559,6 +559,13 @@ interface DigestContent {
   }[];
 }
 
+/** Tên vai như màn Người dùng IMS gọi — thư không được in mã thô `sa`/`member`. */
+const ROLE_LABEL: Record<string, string> = {
+  sa: 'Super Admin',
+  admin: 'Quản trị',
+  member: 'Thành viên',
+};
+
 const KIND_LABEL: Record<string, string> = {
   warranty: 'Bảo hành thiết bị',
   license: 'License phần mềm',
@@ -581,8 +588,8 @@ function buildDigestMail(digest: DigestContent, isTest: boolean) {
     label: `${item.label} · ${KIND_LABEL[item.kind] ?? item.kind}`,
     value:
       item.daysLeft < 0
-        ? `${item.end} — ĐÃ QUÁ HẠN ${Math.abs(item.daysLeft)} ngày`
-        : `${item.end} — còn ${item.daysLeft} ngày`,
+        ? `${viDate(item.end)} — ĐÃ QUÁ HẠN ${Math.abs(item.daysLeft)} ngày`
+        : `${viDate(item.end)} — còn ${item.daysLeft} ngày`,
   }));
 
   const headline =
@@ -591,10 +598,10 @@ function buildDigestMail(digest: DigestContent, isTest: boolean) {
       : `${digest.upcoming} mục sắp hết hạn`;
 
   const { html, text } = renderMail({
-    title: `${isTest ? '[GỬI THỬ] ' : ''}${headline}`,
+    title: `${isTest ? '[Gửi thử] ' : ''}${headline}`,
     intro:
-      `Luật "${digest.ruleName}" (${digest.schedule}) — mục hết hạn trong ${digest.withinDays} ` +
-      'ngày tới, kèm những mục đã quá hạn mà chưa ai xử.',
+      `Luật "${digest.ruleName}" (${digest.schedule}): các mục hết hạn trong ${digest.withinDays} ` +
+      'ngày tới và các mục đã quá hạn chưa được xử lý.',
     rows,
     ctaLabel: 'Mở màn Sắp hết hạn',
     ctaUrl: `${APP_URL()}${UI_PATHS.expiry}`,

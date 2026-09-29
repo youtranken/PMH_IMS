@@ -420,7 +420,7 @@ export class NatRuleService {
     if (!text) {
       throw new BadRequestException({
         code: 'VOID_REASON_REQUIRED',
-        message: 'Nói rõ vì sao gỡ luật NAT này (vd "dịch vụ đã ngừng").',
+        message: 'Ghi lý do gỡ luật NAT này (vd "dịch vụ đã ngừng").',
       });
     }
     {
@@ -611,7 +611,7 @@ export class NatRuleService {
         `Cổng ngoài ${describePortRange(input.externalFrom, input.externalTo)} ` +
         `(${input.protocol.toUpperCase()}) đụng luật NAT đang có: ` +
         `${clash.protocol.toUpperCase()} ${describePortRange(clash.externalFrom, clash.externalTo)}. ` +
-        'Sổ NAT chỉ được có MỘT câu trả lời cho mỗi cổng — sửa luật cũ hoặc gỡ nó trước.',
+        'Sửa hoặc gỡ luật cũ trước.',
     });
   }
 
@@ -816,8 +816,7 @@ export class NatRuleService {
         code: 'NAT_PORT_OVERLAP',
         message:
           `Cổng ngoài ${describePortRange(input.externalFrom, input.externalTo)} (${input.protocol.toUpperCase()}) ` +
-          'đã có luật NAT khác trên router này. Sổ NAT chỉ được có MỘT câu trả lời cho mỗi cổng — ' +
-          'sửa luật cũ hoặc gỡ nó trước.',
+          'đã có luật NAT khác trên router này. Sửa hoặc gỡ luật cũ trước.',
       });
     }
     return error;

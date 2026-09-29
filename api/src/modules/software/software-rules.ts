@@ -153,7 +153,7 @@ export function validateAssignmentTerms(
   }
   if (licenseModel === 'perpetual' && terms.endDate) {
     errors.push(
-      'License mua đứt là vĩnh viễn — chỗ ngồi của nó không có ngày kết thúc. Bỏ ngày kết thúc, hoặc đổi kỳ hạn hồ sơ sang thuê bao.',
+      'License vĩnh viễn thì ghế không có ngày kết thúc. Bỏ ngày kết thúc, hoặc đổi kỳ hạn hồ sơ sang thuê bao.',
     );
   }
   return errors;
@@ -238,7 +238,7 @@ export function seatConflicts(
   }
   if (next.licenseModel === 'perpetual' && seats.withEndDate > 0) {
     errors.push(
-      `Có ${seats.withEndDate} ghế đang ghi ngày hết hạn — bản vĩnh viễn thì ghế không có hạn. Bỏ ngày hết hạn của các ghế đó trước.`,
+      `Có ${seats.withEndDate} ghế đang ghi ngày hết hạn, mà bản vĩnh viễn thì ghế không có hạn. Bỏ ngày hết hạn của các ghế đó trước.`,
     );
   }
   if (
@@ -264,7 +264,7 @@ export function validateSoftware(effective: SoftwareEffective): string[] {
 
   if (requiresEndDate(effective.kind, effective.licenseModel) && !effective.endDate) {
     errors.push(
-      `${KIND_LABEL[effective.kind]} phải có ngày hết hạn — không có hạn thì hệ thống không nhắc gia hạn được.`,
+      `${KIND_LABEL[effective.kind]} phải có ngày hết hạn để hệ thống nhắc gia hạn.`,
     );
   }
   if (effective.licenseModel === 'perpetual') {
@@ -276,7 +276,7 @@ export function validateSoftware(effective: SoftwareEffective): string[] {
     }
     if (effective.kind !== 'license') {
       errors.push(
-        `Chỉ ${KIND_LABEL.license} mới có bản mua đứt. "${KIND_LABEL[effective.kind]}" luôn có kỳ hạn.`,
+        `Chỉ ${KIND_LABEL.license} mới có kỳ hạn Vĩnh viễn. "${KIND_LABEL[effective.kind]}" luôn là Thuê bao.`,
       );
     }
   }
@@ -286,10 +286,10 @@ export function validateSoftware(effective: SoftwareEffective): string[] {
   if (effective.seatTotal !== null) {
     if (!supportsSeats(effective.kind)) {
       errors.push(
-        `Chỉ ${KIND_LABEL.license} mới có số seat. Loại "${KIND_LABEL[effective.kind]}" hãy để trống ô này.`,
+        `Chỉ ${KIND_LABEL.license} mới có số ghế. Loại "${KIND_LABEL[effective.kind]}" hãy để trống ô này.`,
       );
     } else if (!Number.isInteger(effective.seatTotal) || effective.seatTotal < 1) {
-      errors.push('Số seat phải là số nguyên từ 1 trở lên.');
+      errors.push('Số ghế phải là số nguyên từ 1 trở lên.');
     }
   }
   return errors;

@@ -112,7 +112,7 @@ const GUIDE_ROWS: TemplateRow[] = [
     values: [
       'Thứ tự làm',
       '',
-      '1) Điền 4 sheet trong file này → 2) Quản trị › Danh mục › Nhập từ Excel → 3) Điền file mẫu thiết bị → 4) Import thiết bị',
+      '1) Điền 4 sheet trong file này → 2) Hệ thống › Danh mục › Nhập từ Excel → 3) Điền file mẫu thiết bị → 4) Nhập thiết bị từ Excel',
     ],
   },
   {
@@ -164,16 +164,16 @@ const GUIDE_ROWS: TemplateRow[] = [
   { values: ['Sheet Loại thiết bị', '', ''] },
   {
     values: [
-      'Có sẵn 12 loại',
+      'Loại có sẵn',
       '',
-      'Sửa/xóa/thêm thoải mái. Loại nào công ty không có thì xóa cho gọn danh sách chọn.',
+      'Sửa hoặc thêm dòng tùy ý. Xóa dòng khỏi file KHÔNG xóa loại trong hệ thống — loại không dùng thì bấm Ngừng dùng ở màn Danh mục.',
     ],
   },
   {
     values: [
       'Có port map?',
       'Có/Không',
-      'Ghi "Có" thì trang chi tiết thiết bị loại đó hiện bảng port map (FR-006). Thường chỉ Switch, Firewall, Server, NAS, UPS cần.',
+      'Ghi "Có" thì hồ sơ thiết bị loại đó có tab Sơ đồ cổng. Thường chỉ Switch, Firewall, Server, NAS, UPS cần.',
     ],
   },
   { values: ['', '', ''] },
@@ -197,7 +197,7 @@ const GUIDE_ROWS: TemplateRow[] = [
     values: [
       'Sau khi điền xong',
       '',
-      'Vào Quản trị › Danh mục › Nhập từ Excel, chọn file này. Hệ thống hiện bảng đối chiếu (thêm mới / cập nhật / lỗi) để duyệt TRƯỚC khi ghi.',
+      'Vào Hệ thống › Danh mục › Nhập từ Excel, chọn file này. Hệ thống hiện bảng đối chiếu (thêm mới / cập nhật / lỗi) để xem TRƯỚC khi ghi.',
     ],
   },
   {

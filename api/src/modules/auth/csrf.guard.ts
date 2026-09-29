@@ -44,7 +44,7 @@ export class CsrfGuard implements CanActivate {
     if (!sessionId) {
       throw new ForbiddenException({
         code: 'CSRF_NO_SESSION',
-        message: 'Không xác định được phiên để kiểm tra CSRF.',
+        message: 'Phiên không còn hợp lệ. Đăng nhập lại.',
       });
     }
 
@@ -55,7 +55,7 @@ export class CsrfGuard implements CanActivate {
     }
     throw new ForbiddenException({
       code: 'CSRF_TOKEN_INVALID',
-      message: 'Thiếu hoặc sai CSRF token — tải lại trang rồi thử lại.',
+      message: 'Trang đã cũ so với phiên đăng nhập. Tải lại trang rồi thử lại.',
     });
   }
 

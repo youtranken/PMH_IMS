@@ -189,7 +189,7 @@ describe('planDeviceImport — đối chiếu file thiết bị trước khi ghi
       context({ devices: new Map([['sw-core-01', existing({ status: 'in_use' })]]) }),
     );
     expect(plan.rows[0].action).toBe('error');
-    expect(plan.rows[0].message).toMatch(/thanh lý phải đi qua nút/i);
+    expect(plan.rows[0].message).toMatch(/bằng Excel.*nút "Thanh lý"/i);
   });
 
   /** Nhưng TẠO MỚI một máy đã thanh lý thì hợp lệ: nạp kho lịch sử lần đầu là việc thật. */

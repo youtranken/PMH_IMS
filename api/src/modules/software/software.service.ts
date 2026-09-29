@@ -19,7 +19,7 @@ import { AuditWriterService } from '../audit/audit-writer.service';
 import { ExpiryApiService } from '../expiry/expiry.api';
 import { CatalogApiService } from '../catalog/catalog.api';
 import { SystemConfigService } from '../config-sys/system-config.service';
-import { isoDateInTz } from '../../common/today';
+import { isoDateInTz, viDate } from '../../common/today';
 import { diffRecord, hasChanges, type RecordChanges } from '../../common/record-diff';
 import {
   autoRetireOn,
@@ -383,7 +383,7 @@ export class SoftwareService {
       throw new ConflictException({
         code: 'SOFTWARE_RETIRED',
         message:
-          'Hồ sơ này đã thanh lý, không gia hạn được. Muốn dùng lại: bấm Sửa hồ sơ, chọn trạng thái Đang dùng và nhập ngày hết hạn mới.',
+          'Hồ sơ này đã thanh lý nên không gia hạn được. Bấm Khôi phục để dùng lại với hạn mới.',
       });
     }
     const errors = validateSoftware({
@@ -399,7 +399,7 @@ export class SoftwareService {
     if (before.endDate && newEnd <= before.endDate) {
       throw new BadRequestException({
         code: 'RENEW_NOT_FORWARD',
-        message: `Hạn mới (${newEnd}) phải sau hạn hiện tại (${before.endDate}). Sửa nhầm hạn thì dùng nút Sửa hồ sơ.`,
+        message: `Hạn mới (${viDate(newEnd)}) phải sau hạn hiện tại (${viDate(before.endDate)}). Sửa nhầm hạn thì dùng Sửa hồ sơ.`,
       });
     }
     return this.db.transaction(async (tx) => {

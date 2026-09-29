@@ -223,8 +223,8 @@ export class ServiceAccountService {
         code: 'REASON_REQUIRED',
         message:
           next === 'disabled'
-            ? 'Ghi lý do ngừng dùng — sáu tháng sau sẽ có người hỏi vì sao.'
-            : 'Ghi lý do dùng lại — sáu tháng sau sẽ có người hỏi vì sao.',
+            ? 'Ghi lý do ngừng dùng.'
+            : 'Ghi lý do dùng lại.',
       });
     }
     const action = next === 'disabled' ? 'disabled' : 'enabled';

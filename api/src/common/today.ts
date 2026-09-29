@@ -88,6 +88,16 @@ function offsetMs(at: Date, timeZone: string): number {
   return asUtc - Math.floor(at.getTime() / 1000) * 1000;
 }
 
+/**
+ * YYYY-MM-DD → dd/mm/yyyy cho ngày nằm trong CÂU người dùng đọc (câu lỗi, thân thư) — màn hình
+ * luôn hiện ngày kiểu Việt, câu lỗi in ISO thì người đọc phải tự đổi. Chuỗi không đúng dạng thì
+ * trả nguyên: đoán sai một ngày còn tệ hơn in đúng thứ nhận được.
+ */
+export function viDate(iso: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : iso;
+}
+
 /** Cộng/trừ ngày trên chuỗi YYYY-MM-DD, tính theo NGÀY LỊCH. */
 export function addDays(iso: string, days: number): string {
   const date = new Date(`${iso}T00:00:00Z`);

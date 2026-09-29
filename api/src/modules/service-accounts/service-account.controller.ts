@@ -168,7 +168,7 @@ export class ServiceAccountController {
       parseSortQuery(query, SERVICE_ACCOUNT_SORT_KEYS, SERVICE_ACCOUNT_SORT_DEFAULT),
     );
     const buffer = await this.excel.build({
-      sheetName: 'Tai khoan dich vu',
+      sheetName: 'Tài khoản dịch vụ',
       columns: [
         { header: 'Mã', width: 18, value: (r) => r.code },
         { header: 'Tên', width: 28, value: (r) => r.name },

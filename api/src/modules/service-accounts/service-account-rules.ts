@@ -212,8 +212,8 @@ export function validateServiceAccount(draft: ServiceAccountDraft): ServiceAccou
   const errors: string[] = [];
   const warnings: string[] = [];
 
-  if (!draft.code.trim()) errors.push('Cần mã tài khoản để gọi tên nó trong biên bản.');
-  if (!draft.name.trim()) errors.push('Cần tên tài khoản.');
+  if (!draft.code.trim()) errors.push('Thiếu mã tài khoản.');
+  if (!draft.name.trim()) errors.push('Thiếu tên tài khoản.');
 
   const vpn = supportsVpnFields(draft.kind);
 

@@ -549,15 +549,15 @@ export class BreakGlassService implements OnModuleInit {
       new ForbiddenException({
         code: 'BREAK_GLASS_REQUIRED',
         message:
-          'Cần được duyệt trước khi xem. Quyền đã cấp chỉ dùng được trong phiên đăng nhập đã ' +
-          'xem lần đầu — phiên đó kết thúc thì gửi yêu cầu mới.',
+          'Cần được duyệt trước khi xem. Quyền đã cấp gắn với phiên đăng nhập xem lần đầu; ' +
+          'phiên đó kết thúc thì gửi yêu cầu mới.',
       });
     const otherSession = () =>
       new ForbiddenException({
         code: 'BREAK_GLASS_OTHER_SESSION',
         message:
-          'Quyền mở két này đã gắn với một phiên đăng nhập khác của bạn (phiên đã xem lần ' +
-          'đầu) — quyền không chuyển sang phiên này. Muốn xem ở đây thì gửi yêu cầu mới.',
+          'Quyền mở két này đã gắn với phiên đăng nhập khác của bạn (phiên xem lần đầu). ' +
+          'Muốn xem ở đây thì gửi yêu cầu mới.',
       });
 
     if (!viewer.sessionId || !(await this.auth.isSessionAlive(viewer.sessionId))) {
@@ -601,7 +601,7 @@ export class BreakGlassService implements OnModuleInit {
     if (tier === 'denied') {
       throw new ForbiddenException({
         code: 'ACCESS_DENIED',
-        message: 'Bạn không có quyền trên đối tượng này — xin cũng không được.',
+        message: 'Bạn không có quyền trên đối tượng này nên không gửi yêu cầu được.',
       });
     }
     if (tier === 'whitelist') {
@@ -712,8 +712,8 @@ export class BreakGlassService implements OnModuleInit {
       throw new ForbiddenException({
         code: 'CANNOT_APPROVE_OWN_REQUEST',
         message:
-          'Không tự duyệt yêu cầu của chính mình được — phải là người khác duyệt (FR-023). ' +
-          'Nhờ một Quản trị viên khác, hoặc hủy yêu cầu nếu đã hết cần.',
+          'Không tự duyệt yêu cầu của chính mình được. ' +
+          'Nhờ một Quản trị viên khác, hoặc rút yêu cầu nếu không còn cần.',
       });
     }
     const asked = Number((request.payload as { hours?: number } | null)?.hours ?? 0);

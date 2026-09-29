@@ -142,7 +142,7 @@ export class IspLineController {
       parseSortQuery(query, ISP_SORT_KEYS, ISP_SORT_DEFAULT),
     );
     const buffer = await this.excel.build({
-      sheetName: 'Duong truyen',
+      sheetName: 'Đường truyền',
       columns: [
         { header: 'Mã', width: 18, value: (r) => r.code },
         { header: 'Nhà mạng', width: 22, value: (r) => r.provider },

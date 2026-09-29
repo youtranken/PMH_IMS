@@ -139,9 +139,7 @@ describe('Câu lỗi nhập liệu — tiếng Việt cho MỌI validator', () =
       'Trạng thái chỉ nhận một trong: active, locked, disabled.',
     );
     expect(await cauLoiCho({ enabled: 'co' })).toContain('Trạng thái bật/tắt chỉ nhận đúng hoặc sai.');
-    expect(await cauLoiCho({ email: 'khong-phai-email' })).toContain(
-      'Email không đúng định dạng email.',
-    );
+    expect(await cauLoiCho({ email: 'khong-phai-email' })).toContain('Email không hợp lệ.');
     expect(await cauLoiCho({ vlan: 'abc' })).toContain('VLAN sai định dạng.');
   });
 
