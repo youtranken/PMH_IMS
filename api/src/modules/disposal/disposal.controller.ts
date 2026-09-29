@@ -3,6 +3,7 @@ import type { Response } from 'express';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
 import { parsePageQuery } from '../../common/pagination';
+import { isRealDateOnly } from '../../common/real-date';
 import { parseSortQuery } from '../../common/sorting';
 import { isoDateInTz } from '../../common/today';
 import { Audited } from '../audit/audited.decorator';
@@ -23,8 +24,6 @@ interface RawQuery {
   limit?: string;
 }
 
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-
 /** Bộ lọc lạ (sửa tay trên URL) rơi về "không lọc" chứ không thành lỗi 400 cho một màn chỉ đọc. */
 function filterOf(query: RawQuery): Omit<DisposalQuery, 'page' | 'limit'> {
   const sort = parseSortQuery(query, DISPOSAL_SORT_KEYS, { key: 'disposedAt', dir: 'desc' });
@@ -33,8 +32,8 @@ function filterOf(query: RawQuery): Omit<DisposalQuery, 'page' | 'limit'> {
       ? (query.kind as DisposalKind)
       : undefined,
     search: query.search?.trim() || undefined,
-    from: query.from && ISO_DATE.test(query.from) ? query.from : undefined,
-    to: query.to && ISO_DATE.test(query.to) ? query.to : undefined,
+    from: query.from && isRealDateOnly(query.from) ? query.from : undefined,
+    to: query.to && isRealDateOnly(query.to) ? query.to : undefined,
     sort: sort.key,
     dir: sort.dir,
   };

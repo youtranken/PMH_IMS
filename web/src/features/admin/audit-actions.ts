@@ -171,7 +171,6 @@ export const VERB_KEY: Record<string, string> = {
  * một mẫu mới ở API mà không khai ở đây là đỏ — vì mẫu mới thường đi kèm một HỌ mới chưa có nhãn.
  */
 export const TEMPLATE_PATTERNS = [
-  'account.*',
   '*.requested',
   '*.claimed',
   '*.*',

@@ -172,7 +172,7 @@ describe('Câu lỗi nhập liệu — tiếng Việt cho MỌI validator', () =
 /*
  * ===== ĐIỂM DANH TRÊN MÃ NGUỒN THẬT =====
  *
- * Hai bài dưới đây đọc thẳng `*.controller.ts`. Chúng canh hai lối mà một câu tiếng Anh có thể
+ * Hai bài dưới đây đọc thẳng `*.controller.ts` và `*.dto.ts`. Chúng canh hai lối mà một câu tiếng Anh có thể
  * bò trở lại: một ràng buộc kiểu MỚI chưa có bản dịch, và một câu `message` viết không dấu
  * (làm hỏng chính quy ước "toàn ASCII = chưa dịch" mà `isDefaultMessage` dựa vào).
  */
@@ -182,7 +182,9 @@ function moiControllerFile(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
     const full = join(dir, e.name);
     if (e.isDirectory()) return moiControllerFile(full);
-    return e.isFile() && e.name.endsWith('.controller.ts') ? [full] : [];
+    // DTO tách riêng (`auth.dto.ts`) cũng đi qua cùng `ValidationPipe` — bỏ sót chúng là để lọt
+    // đúng những trường của màn đăng nhập/đổi mật khẩu.
+    return e.isFile() && /\.(controller|dto)\.ts$/.test(e.name) ? [full] : [];
   });
 }
 

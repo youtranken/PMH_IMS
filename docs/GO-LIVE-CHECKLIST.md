@@ -202,7 +202,7 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
 
 ### P2
 
-- [ ] **BE-11 · Một số lỗi 400 lại trả 500:**
+- [x] **BE-11 · Một số lỗi 400 lại trả 500:**
   - Ngày không có thật (`2026-02-30`) lọt qua regex `DATE_ONLY` → Postgres 22008.
   - `subnet.service.ts:235-276` đổi CIDR mà gateway cũ nằm ngoài dải → 23514.
   - `restore` (`:377-421`) trùng CIDR → 23505.
@@ -210,19 +210,35 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
     sinh dùng `RealDateOrEmpty`, các ô `DATE_ONLY` ở devices/software/isp-line/ipam vẫn chỉ kiểm bằng
     regex. Ý 2 còn khi gọi API thẳng: PATCH chỉ gửi `cidr` thì gateway cũ không được kiểm → 500
     (màn web không dính vì luôn gửi gateway).
-- [ ] **BE-12 · Import Excel:**
+  - **Đã sửa:** ý 1 — `RealDateOrEmpty`/`RealDate`/`isRealDateOnly` dời về `common/real-date.ts`,
+    thay mọi regex khuôn ngày trong DTO (thiết bị, phần mềm + ghế, đường truyền, IP, hai `RenewDto`,
+    lọc từ/đến của nhật ký, break-glass, sổ gia hạn, thanh lý) và `dateOnly()` của ba service. Kiểm:
+    `api/src/common/real-date.spec.ts` (bảng ngày + điểm danh controller còn regex). Ý 2 — PATCH chỉ
+    gửi `cidr` thì kiểm gateway đang có theo dải mới → 400 `GATEWAY_OUT_OF_SUBNET`. Kiểm:
+    `api/test/subnet-cidr-gateway.spec.ts`.
+- [x] **BE-12 · Import Excel:**
   - Quá 20.000 dòng thì bị cắt im lặng (`excel-import.service.ts:13,43`).
   - Ô công thức không có giá trị cache hoặc ô `#N/A` thành rỗng, xoá luôn dữ liệu đang có (`:91`).
   - **Rà 29/09:** còn nguyên cả hai ý (`excel-import.service.ts:44,95`).
+  - **Đã sửa:** sheet vượt `MAX_ROWS_PER_SHEET` → 400 `EXCEL_TOO_MANY_ROWS` nêu trần, không ghi gì.
+    Ô công thức không có giá trị tính sẵn và ô lỗi (`#N/A`, `#REF!`…) ghi vào `SheetRow.unreadable`;
+    nhập danh mục và nhập thiết bị gọi `unreadableFieldError` → dòng lỗi nêu tên cột, không xoá dữ
+    liệu đang có (cột nháp ngoài mẫu thì bỏ qua). Kiểm: `excel-import.service.spec.ts` (workbook
+    dựng bằng ExcelJS), `device-import.spec.ts`, `catalog-import.spec.ts`.
 - [x] **BE-13 · `renew` hồi sinh hồ sơ `terminated`/`retired`** khi gọi API thẳng.
 - [x] **BE-14 · Gắn được thiết bị vào site/loại/NCC đã vô hiệu hoá** (`catalog.api.ts:51`).
   - **Rà 29/09:** xong (Q-14, ADM-015/DEV-027, 37c5180). `CatalogApiService.assertRefs` từ chối chọn
     MỚI mục đã ngừng dùng (`CATALOG_REF_INACTIVE`), cả ở thiết bị, phần mềm, dải, đường truyền, tủ mạng
     và nhập Excel. Kiểm: `api/test/catalog-inactive-ref.spec.ts`, E2E `form-kiem-tieng-viet.spec.ts`.
-- [ ] **BE-15 · Audit port map thiếu thông tin** (`device-ports.service.ts:167-171`); vẫn cắm được port
+- [x] **BE-15 · Audit port map thiếu thông tin** (`device-ports.service.ts:167-171`); vẫn cắm được port
   sang máy đã thanh lý.
   - **Rà 29/09:** còn nguyên cả hai ý (`device-ports.service.ts:142-190`, `prepare()` không kiểm máy
     đầu kia đã thanh lý).
+  - **Đã sửa:** thêm/sửa/gỡ cổng ghi trước/sau của thiết bị đầu kia (mã), mô tả đầu kia, cổng đầu
+    kia, VLAN, người sử dụng, ghi chú (sửa: chỉ ô đổi, kèm tên cổng); tab Lịch sử có nhãn tiếng Việt
+    cho các ô đó. Cắm sang máy đã thanh lý → 400 `PORT_PEER_RETIRED`, kiểm trong tx với `FOR SHARE`
+    trên hàng máy đầu kia. Kiểm: `api/test/device-ports-history.spec.ts`,
+    `web/src/features/devices/device-history-entries.test.ts`.
 - [x] **BE-16 · Sweep hết hạn grant dừng cả vòng khi gặp một hàng lỗi**
   (`approvals.service.ts:285-307`). Thêm try/catch cho từng hàng.
   - **Rà 29/09:** còn nguyên (`expireDueGrants`, `approvals.service.ts:~364-390`).
@@ -781,12 +797,19 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
   - `.cell-note` chỉ đọc được nội dung đầy đủ qua `title`.
   - **Rà 29/09:** xong font `td::before` (af00c3a). Ma trận quyền mới có `scope="row"`, header cột còn
     thiếu `scope`. Ba ý còn lại còn nguyên.
-- [ ] **OLD-BE-03 · Ghi nhật ký:**
+- [x] **OLD-BE-03 · Ghi nhật ký:**
   - `@Audited` khai sai tên (`accounts.controller.ts:167`, `catalog.controller.ts:146`).
   - `FIELD_LABEL` thiếu `token`/`currentPassword`/`newPassword` (`validation-messages.ts:37`).
   - `DevicePortsService` ghi lịch sử mà không kiểm hàng có bị sửa hay xoá thật không.
   - **Rà 29/09:** còn nguyên. Tên `@Audited` của catalog lệch có chủ ý (chú thích
     `catalog.controller.ts:102-106`) — cần chốt giữ hay đổi.
+  - **Đã sửa:** `@Audited` của đổi trạng thái tài khoản khai đúng ba mã service ghi
+    (`ACCOUNT_STATUS_ACTION`: `account.locked|disabled|unlocked`); `@Audited` nhận mảng mã, chỉ khi
+    `writtenByService`. Tên HỌ của catalog: giữ như cũ — Q-16. `FIELD_LABEL` thêm `token`,
+    `ticket`, `currentPassword`, `newPassword`; bài điểm danh nay đọc cả `*.dto.ts`. Port map:
+    sửa/gỡ khoá dòng trong tx, `returning()` rỗng → 404, lịch sử ghi SAU khi xoá, lưu y nguyên thì
+    không ghi. Kiểm: `accounts-audited.spec.ts`, `validation-messages.spec.ts`,
+    `web/src/features/audit-action-rollcall.test.ts`, `api/test/device-ports-write-check.spec.ts`.
 - [ ] **OLD-DB-04 · Dọn và chuẩn hoá DB:**
   - Bỏ index `audit_log_actor_trgm` (11 MB, 0 lượt quét).
   - `isp_line.wan_ip` đang là `text`.

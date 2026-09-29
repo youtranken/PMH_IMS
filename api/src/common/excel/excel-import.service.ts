@@ -6,12 +6,21 @@ import { EXCEL_UNREADABLE_MESSAGE } from './xlsx-http';
 export interface SheetRow {
   rowNumber: number;
   cells: Record<string, string>;
+  /**
+   * Ô KHÔNG đọc được giá trị (công thức chưa có kết quả tính sẵn, ô lỗi `#N/A`…), theo tên cột
+   * → câu mô tả. Ô đó vẫn là `''` trong `cells`, nên lõi `plan*Import` phải xem ở đây trước:
+   * coi nó là "ô trống" thì nhập lại sẽ XOÁ giá trị đang có mà không ai hay.
+   */
+  unreadable?: Record<string, string>;
 }
 
 export type SheetData = Record<string, SheetRow[]>;
 
-/** Trần chống zip-bomb / file khổng lồ làm nghẽn worker (khớp trần upload 10MB ở `XLSX_UPLOAD_LIMIT`). */
-const MAX_ROWS_PER_SHEET = 20_000;
+/**
+ * Trần chống zip-bomb / file khổng lồ làm nghẽn worker (khớp trần upload 10MB ở `XLSX_UPLOAD_LIMIT`).
+ * Vượt trần thì từ chối CẢ file: cắt bớt thì người dùng thấy "nhập xong" mà phần đuôi mất lặng lẽ.
+ */
+export const MAX_ROWS_PER_SHEET = 20_000;
 
 /**
  * AD-15: nơi DUY NHẤT đọc file xlsx (đối xứng với ExcelExportService là nơi duy nhất ghi).
@@ -41,18 +50,51 @@ export class ExcelImportService {
 
       const rows: SheetRow[] = [];
       sheet.eachRow((row, rowNumber) => {
-        if (rowNumber === 1 || rows.length >= MAX_ROWS_PER_SHEET) return;
+        if (rowNumber === 1) return;
+        if (rows.length >= MAX_ROWS_PER_SHEET) throw tooManyRows(sheet.name);
         const cells: Record<string, string> = {};
+        let unreadable: Record<string, string> | undefined;
         headers.forEach((header, index) => {
           if (!header) return;
-          cells[header] = cellToText(row.getCell(index + 1).value);
+          const value = row.getCell(index + 1).value;
+          cells[header] = cellToText(value);
+          const problem = cellProblem(value);
+          if (problem) (unreadable ??= {})[header] = problem;
         });
-        rows.push({ rowNumber, cells });
+        rows.push(unreadable ? { rowNumber, cells, unreadable } : { rowNumber, cells });
       });
       out[sheet.name] = rows;
     });
     return out;
   }
+}
+
+function tooManyRows(sheetName: string): BadRequestException {
+  return new BadRequestException({
+    code: 'EXCEL_TOO_MANY_ROWS',
+    message: `Sheet "${sheetName}" có hơn ${MAX_ROWS_PER_SHEET.toLocaleString('vi-VN')} dòng dữ liệu, vượt trần một lần nhập. Chia thành nhiều file rồi nhập lần lượt. Chưa ghi gì cả.`,
+  });
+}
+
+/**
+ * Ô có giá trị mà ta KHÔNG đọc ra được: ô lỗi, hoặc công thức không có kết quả tính sẵn (file
+ * sinh bằng công cụ không tính công thức, hay Excel để chế độ tính tay). exceljs không tự tính
+ * công thức, nên đoán giá trị là đoán mò.
+ *
+ * Công thức cho ra chuỗi rỗng cũng rơi vào đây: file xlsx không lưu kết quả rỗng, nên không
+ * phân biệt được với "chưa tính". Báo lỗi còn hơn xoá dữ liệu thật.
+ */
+function cellProblem(value: ExcelJS.CellValue): string | null {
+  if (value === null || typeof value !== 'object' || value instanceof Date) return null;
+  const obj = value as unknown as Record<string, unknown>;
+  if (typeof obj.error === 'string') return `ô đang báo lỗi ${obj.error}`;
+  if ('formula' in obj || 'sharedFormula' in obj) {
+    if (obj.result === undefined || obj.result === null || obj.result === '') {
+      return 'ô là công thức chưa có giá trị tính sẵn';
+    }
+    return cellProblem(obj.result as ExcelJS.CellValue);
+  }
+  return null;
 }
 
 function readHeaders(sheet: ExcelJS.Worksheet): string[] {

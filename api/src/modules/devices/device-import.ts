@@ -7,6 +7,7 @@ import {
   parseDateCell,
   pickCell,
   summarize,
+  unreadableFieldError,
   type ImportAction,
   type ImportSummary,
   type ParsedRow,
@@ -211,6 +212,9 @@ function planRow(
   if (isExampleRow(row.cells)) {
     return { ...base, action: 'skip', label, message: 'Dòng ví dụ trong file mẫu — bỏ qua.' };
   }
+
+  const unreadable = unreadableFieldError(row, FIELDS);
+  if (unreadable) return { ...base, action: 'error', label, message: unreadable };
 
   const values: Record<string, unknown> = {};
   // Site phải xử lý TRƯỚC tủ: tủ chỉ duy nhất trong một site nên phải biết site mới tra được.

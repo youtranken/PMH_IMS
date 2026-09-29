@@ -279,3 +279,23 @@ describe('planCatalogImport — bảng đối chiếu trước khi ghi (story 2.
     expect(plan.summary).toMatchObject({ update: 1, create: 1 });
   });
 });
+
+describe('planCatalogImport — ô Excel không đọc được giá trị (BE-12)', () => {
+  it('ô công thức chưa có giá trị ở cột đang nhập → dòng lỗi nêu tên cột', () => {
+    const plan = planCatalogImport(
+      {
+        Site: [
+          {
+            rowNumber: 3,
+            cells: { 'Mã site *': 'PMH-HO', 'Tên site *': 'Văn phòng chính', 'Địa chỉ': '' },
+            unreadable: { 'Địa chỉ': 'ô là công thức chưa có giá trị tính sẵn' },
+          },
+        ],
+      },
+      snapshotWith({ sites: new Map([[normalizeKey('PMH-HO'), SITE_HO]]) }),
+    );
+    expect(plan.rows[0]).toMatchObject({ action: 'error', rowNumber: 3, sheet: 'site' });
+    expect(plan.rows[0].message).toContain('Địa chỉ');
+    expect(plan.rows[0].message).toContain('công thức');
+  });
+});

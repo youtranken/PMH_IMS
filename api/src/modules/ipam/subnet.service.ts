@@ -216,6 +216,18 @@ export class SubnetService {
         input.gateway,
         input.cidr === undefined ? before.cidr : this.requireCidr(input.cidr),
       );
+    } else if (input.cidr !== undefined && before.gateway) {
+      /*
+       * Chỉ đổi dải mà không gửi gateway (gọi API thẳng): gateway ĐANG CÓ vẫn phải nằm trong
+       * dải mới. Bỏ qua thì CHECK của DB bắn 23514 → 500 thay vì câu nói rõ phải sửa gì.
+       */
+      const cidr = this.requireCidr(input.cidr);
+      if (!isHostInSubnet(before.gateway, cidr)) {
+        throw new BadRequestException({
+          code: 'GATEWAY_OUT_OF_SUBNET',
+          message: `Gateway hiện tại ${before.gateway} không nằm trong dải mới ${cidr}. Sửa gateway cùng lúc với dải.`,
+        });
+      }
     }
     if (input.siteId !== undefined) {
       await this.requireSite(input.siteId, before.siteId);

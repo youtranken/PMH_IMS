@@ -28,6 +28,11 @@ const FIELD_LABEL: Record<string, string> = {
   status: 'history.fStatus',
   note: 'history.fNote',
   portLabel: 'history.devices.fPortLabel',
+  connectedDevice: 'history.devices.fConnectedDevice',
+  connectedLabel: 'history.devices.fConnectedLabel',
+  connectedPort: 'history.devices.fConnectedPort',
+  vlan: 'history.devices.fVlan',
+  usedBy: 'history.devices.fUsedBy',
 };
 
 export const ACTION_LABEL: Record<string, string> = {

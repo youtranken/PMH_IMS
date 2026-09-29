@@ -32,6 +32,16 @@ export interface ActorRef {
 }
 
 /**
+ * Mã nhật ký của từng trạng thái đích — viết thẳng thành chuỗi để `@Audited` của route khai
+ * đúng tập này (`accounts-audited.spec.ts`) và bài điểm danh nhãn bên web đọc được.
+ */
+export const ACCOUNT_STATUS_ACTION = {
+  active: "account.unlocked",
+  locked: "account.locked",
+  disabled: "account.disabled",
+} as const;
+
+/**
  * SA quản trị tài khoản và phiên (story 1.4).
  * Luật sống còn: KHÔNG XÓA user bao giờ (convention "Xóa") và không được để hệ thống
  * còn dưới 2 SA hoạt động (NFR-01 dual control).
@@ -297,7 +307,7 @@ export class AccountsService {
           : 0;
       await this.audit.appendWithin(tx, {
         actor: actor.email,
-        action: `account.${status === "active" ? "unlocked" : status}`,
+        action: ACCOUNT_STATUS_ACTION[status],
         objectType: "user",
         objectId: userId,
         detail: {

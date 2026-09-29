@@ -59,7 +59,11 @@ describe('AuditInterceptor', () => {
   });
 
   it('route khai @Audited thường → ghi một dòng audit', async () => {
-    const calls = await run({ action: 'device.created', objectType: 'device' });
+    const calls = await run({
+      action: 'device.created',
+      actions: ['device.created'],
+      objectType: 'device',
+    });
     expect(calls).toHaveLength(1);
     expect(calls[0]).toMatchObject({
       actor: 'it01@pmh.com.vn',
@@ -77,6 +81,7 @@ describe('AuditInterceptor', () => {
   it('route khai writtenByService → interceptor ĐỨNG NGOÀI, không ghi dòng thứ hai', async () => {
     const calls = await run({
       action: 'device.created',
+      actions: ['device.created'],
       objectType: 'device',
       writtenByService: true,
     });

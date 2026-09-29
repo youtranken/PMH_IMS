@@ -21,9 +21,10 @@ import {
   IsString,
   IsUUID,
   Length,
-  Matches,
+  Validate,
   ValidateIf,
 } from 'class-validator';
+import { RealDateOrEmpty } from '../../common/real-date';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
 import {
@@ -48,9 +49,6 @@ import {
 import { DEVICE_STATUSES, type DeviceStatus } from './devices.types';
 import { NoStepUp } from '../auth/step-up.decorator';
 
-/** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
-const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
-
 class DeviceBodyDto {
   @IsOptional() @IsString() @Length(1, 60) code?: string;
   @IsOptional() @IsString() @Length(1, 200) name?: string;
@@ -66,13 +64,13 @@ class DeviceBodyDto {
   @IsOptional() @IsString() @Length(0, 120) assignedTo?: string;
   @IsOptional() @IsString() @Length(0, 120) department?: string;
 
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày mua phải dạng YYYY-MM-DD.' })
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày mua phải là ngày có thật, dạng YYYY-MM-DD.' })
   purchaseDate?: string;
 
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày bắt đầu bảo hành phải dạng YYYY-MM-DD.' })
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày bắt đầu bảo hành phải là ngày có thật, dạng YYYY-MM-DD.' })
   warrantyStart?: string;
 
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày hết bảo hành phải dạng YYYY-MM-DD.' })
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày hết bảo hành phải là ngày có thật, dạng YYYY-MM-DD.' })
   warrantyEnd?: string;
 
   @IsOptional()

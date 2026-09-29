@@ -21,10 +21,11 @@ import {
   IsString,
   IsUUID,
   Length,
-  Matches,
   Min,
+  Validate,
   ValidateIf,
 } from 'class-validator';
+import { RealDate, RealDateOrEmpty } from '../../common/real-date';
 import { parsePageQuery } from '../../common/pagination';
 import { parseSortQuery } from '../../common/sorting';
 import { Audited } from '../audit/audited.decorator';
@@ -56,9 +57,6 @@ import { SystemConfigService } from '../config-sys/system-config.service';
 import { assignmentExportSheet } from './license-assignments-export';
 import { NoStepUp } from '../auth/step-up.decorator';
 
-/** Ngày lịch dạng YYYY-MM-DD; chuỗi rỗng nghĩa là XÓA ngày đang có. */
-const DATE_ONLY = /^(\d{4}-\d{2}-\d{2})?$/;
-
 /** Lọc mã máy rác khỏi danh sách `?deviceIds=` trước khi đưa xuống truy vấn. */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -80,10 +78,10 @@ export class SoftwareBodyDto {
   @IsOptional() @ValidateIf((_o, value) => value !== null) @Min(1) @IsInt()
   seatTotal?: number | null;
 
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày bắt đầu phải dạng YYYY-MM-DD.' })
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày bắt đầu phải là ngày có thật, dạng YYYY-MM-DD.' })
   startDate?: string;
 
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày hết hạn phải dạng YYYY-MM-DD.' })
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày hết hạn phải là ngày có thật, dạng YYYY-MM-DD.' })
   endDate?: string;
 
   @IsOptional() @IsString() @Length(0, 2000) note?: string;
@@ -98,7 +96,7 @@ export class SoftwareBodyDto {
 }
 
 class RenewDto {
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'Hạn mới phải dạng YYYY-MM-DD.' })
+  @Validate(RealDate, { message: 'Hạn mới phải là ngày có thật, dạng YYYY-MM-DD.' })
   endDate!: string;
 
   /** SW-049: kéo luôn các ghế có kỳ hạn riêng kết thúc trước hạn mới. */
@@ -130,10 +128,10 @@ class AssignmentTermsDto {
 
   @IsOptional() @IsString() @Length(0, 200) contract?: string;
 
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày bắt đầu của ghế phải dạng YYYY-MM-DD.' })
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày bắt đầu của ghế phải là ngày có thật, dạng YYYY-MM-DD.' })
   startDate?: string;
 
-  @IsOptional() @Matches(DATE_ONLY, { message: 'Ngày kết thúc của ghế phải dạng YYYY-MM-DD.' })
+  @IsOptional() @Validate(RealDateOrEmpty, { message: 'Ngày kết thúc của ghế phải là ngày có thật, dạng YYYY-MM-DD.' })
   endDate?: string;
 
   @IsOptional() @IsString() @Length(0, 500) note?: string;
