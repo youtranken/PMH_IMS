@@ -281,7 +281,7 @@ export default {
     /* Đăng xuất gọi API hỏng: dữ liệu trên máy đã xoá, nhưng phiên phía máy chủ có thể còn
        sống — nói rõ để người dùng không rời máy dùng chung với một phiên mở. */
     logoutFailed:
-      'Đăng xuất chưa thành công trên máy chủ (mất kết nối?). Dữ liệu trên máy này đã được xóa; nếu vẫn vào được hệ thống, hãy bấm Đăng xuất lần nữa.',
+      'Máy chủ chưa nhận lệnh đăng xuất (mất kết nối?). Dữ liệu trên máy này đã xóa; nếu vẫn vào được, bấm Đăng xuất lần nữa.',
     signInSub: 'Hệ thống nội bộ — chỉ dành cho team IT',
     email: 'Email',
     password: 'Mật khẩu',
@@ -290,7 +290,7 @@ export default {
     /* Câu dự phòng khi API không gửi `message` (mất mạng, trang lỗi HTML của nginx). */
     loginFailed: 'Đăng nhập không thành công.',
     changePasswordFailed: 'Không đổi được mật khẩu.',
-    totpInvalid: 'Mã không đúng hoặc đã hết hạn (mã đổi mỗi 30 giây). Hãy nhập mã mới nhất.',
+    totpInvalid: 'Mã không đúng hoặc đã hết hạn. Nhập mã mới nhất trên ứng dụng.',
     qrFailed: 'Không tạo được mã QR.',
     currentPasswordWrong: 'Mật khẩu hiện tại không đúng.',
     totpTitle: 'Xác thực 2 lớp',
@@ -305,9 +305,9 @@ export default {
     enrollReauthSub:
       'Trang này đã mở khá lâu. Nhập lại mật khẩu để tiếp tục cài xác thực 2 lớp.',
     enrollReauthSubmit: 'Tiếp tục',
-    attemptsLeft: 'Còn {{count}} lần nữa là phiên bị thu hồi và phải đăng nhập lại.',
+    attemptsLeft: 'Còn {{count}} lần thử; sai hết thì phải đăng nhập lại.',
     changePasswordTitle: 'Đổi mật khẩu',
-    changePasswordSub: 'Lần đăng nhập đầu bắt buộc đổi mật khẩu tạm',
+    changePasswordSub: 'Bạn đang dùng mật khẩu tạm — đặt mật khẩu mới để tiếp tục',
     currentPassword: 'Mật khẩu hiện tại',
     newPassword: 'Mật khẩu mới',
     confirmPassword: 'Nhập lại mật khẩu mới',
@@ -316,10 +316,10 @@ export default {
     stepUpSub: 'Nhập mã xác thực để xem thông tin bí mật',
     forgotPassword: 'Quên mật khẩu?',
     forgotPasswordHelp:
-      'Hệ thống không tự đặt lại mật khẩu qua email. Super Admin sẽ cấp cho bạn một mật khẩu tạm; lần đăng nhập sau bạn đặt mật khẩu mới.',
+      'Hệ thống không gửi mật khẩu qua email. Nhờ Super Admin cấp mật khẩu tạm, rồi đặt mật khẩu mới khi đăng nhập.',
     lostTotp: 'Không lấy được mã?',
     lostTotpHelp:
-      'Đổi hoặc mất điện thoại, xóa nhầm ứng dụng: Super Admin có thể đặt lại xác thực 2 lớp cho bạn. Sau đó bạn đăng nhập lại và quét mã mới.',
+      'Đổi, mất điện thoại hoặc xóa nhầm ứng dụng: nhờ Super Admin đặt lại xác thực 2 lớp, rồi đăng nhập và quét mã mới.',
     supportContactLabel: 'Liên hệ',
     hideHelp: 'Ẩn hướng dẫn',
     signingInAs: 'Đang đăng nhập: {{email}}',
@@ -346,7 +346,7 @@ export default {
     lockedWaitButton: 'Chờ {{time}}',
     lockedUrgent: 'Cần vào gấp? Liên hệ Super Admin để mở khóa.',
     /* Quản trị khóa tay / vô hiệu hóa — không tự hết, phải gặp người mở. */
-    lockedByAdmin: 'Tài khoản đã bị quản trị viên tạm ngưng. Liên hệ Super Admin để mở lại.',
+    lockedByAdmin: 'Tài khoản đang bị khóa. Liên hệ Super Admin để mở khóa.',
     accountDisabled: 'Tài khoản đã bị vô hiệu hóa. Cần dùng lại thì liên hệ Super Admin.',
     /* Không kèm số lần còn lại: con số đó cho kẻ dò biết email nào có thật. */
     lockoutWarning: 'Sai nhiều lần liên tiếp sẽ bị tạm khóa, thời gian chờ tăng dần.',
@@ -394,7 +394,7 @@ export default {
     totpEnable: 'Bật ngay',
     totpReEnroll: 'Cài lại trên điện thoại mới',
     totpReEnrollHint:
-      'Cần mã 6 số trên điện thoại hiện tại và mật khẩu. Mã trên điện thoại cũ hết dùng được sau khi xong, và các máy khác bị đăng xuất.',
+      'Cần mật khẩu và mã 6 số trên điện thoại đang dùng. Xong thì điện thoại cũ hết dùng được, các máy khác bị đăng xuất.',
     totpReEnrollPasswordSub: 'Nhập mật khẩu hiện tại để bắt đầu cài xác thực 2 lớp.',
     totpReEnrollContinue: 'Tiếp tục',
     totpEnrolled: 'Đã bật xác thực 2 lớp.',
@@ -403,7 +403,7 @@ export default {
     sessionsHint: 'Các máy và trình duyệt đang đăng nhập bằng tài khoản này.',
     sessionCurrent: 'Máy này',
     sessionLastSeen: 'Hoạt động lần cuối {{time}}',
-    sessionRevoke: 'Đăng xuất máy này',
+    sessionRevoke: 'Đăng xuất phiên',
     sessionRevokeTitle: 'Đăng xuất phiên này?',
     sessionRevokeBody: 'Máy đó sẽ phải đăng nhập lại.',
     sessionRevoked: 'Đã đăng xuất phiên đó.',

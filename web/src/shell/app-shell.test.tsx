@@ -105,7 +105,7 @@ describe('AppShell — đăng xuất', () => {
     renderShell();
     await logoutViaMenu();
     expect(await screen.findByText('Màn đăng nhập')).toBeInTheDocument();
-    expect(await screen.findByText(/Đăng xuất chưa thành công/)).toBeInTheDocument();
+    expect(await screen.findByText(/Máy chủ chưa nhận lệnh đăng xuất/)).toBeInTheDocument();
   });
 
   it('đăng xuất thành công → về màn đăng nhập, không có toast lỗi', async () => {
@@ -113,7 +113,7 @@ describe('AppShell — đăng xuất', () => {
     renderShell();
     await logoutViaMenu();
     expect(await screen.findByText('Màn đăng nhập')).toBeInTheDocument();
-    expect(screen.queryByText(/Đăng xuất chưa thành công/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Máy chủ chưa nhận lệnh đăng xuất/)).not.toBeInTheDocument();
   });
 });
 

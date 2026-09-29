@@ -158,7 +158,7 @@ test('đóng một phiên khác của mình từ Hồ sơ → máy kia bị đá
   await loginWithTotp(other, person.email, person.password, person.secret);
 
   await openProfileFromMenu(own);
-  await own.getByRole('button', { name: 'Đăng xuất máy này' }).first().click();
+  await own.getByRole('button', { name: 'Đăng xuất phiên', exact: true }).first().click();
   await confirmAction(own);
   await expect(own.getByText('Đã đăng xuất phiên đó.')).toBeVisible();
   await expect

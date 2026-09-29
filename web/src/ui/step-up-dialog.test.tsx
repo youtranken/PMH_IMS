@@ -22,7 +22,7 @@ import { jsonResponse, renderWithI18n, screen, userEvent } from '@/test/test-uti
  * Mất câu ấy thì màn hình vẫn báo "mã sai" rất bình thản, đúng tới lần cuối cùng.
  */
 
-const ATTEMPTS_LEFT_WARNING = 'Còn 1 lần nữa là phiên bị thu hồi và phải đăng nhập lại.';
+const ATTEMPTS_LEFT_WARNING = 'Còn 1 lần thử; sai hết thì phải đăng nhập lại.';
 
 function mockStepUp(status: number, body: unknown) {
   vi.stubGlobal(
@@ -60,7 +60,7 @@ describe('StepUpDialog — cảnh báo sắp hết lượt', () => {
     await typeCodeAndSubmit();
 
     expect(await screen.findByText('Mã không đúng.')).toBeInTheDocument();
-    expect(screen.queryByText(new RegExp('Còn .* lần nữa'))).not.toBeInTheDocument();
+    expect(screen.queryByText(new RegExp('Còn .* lần thử'))).not.toBeInTheDocument();
   });
 
   it('server KHÔNG trả `attemptsLeft` → vẫn hiện câu lỗi, không bịa thêm gì', async () => {
