@@ -167,7 +167,7 @@ test.describe('Gán license theo seat', () => {
     // Có lý do thì vẫn gán được, và kết quả kèm cảnh báo.
     const forced = await assign(page, licenseId, second, 'Sếp duyệt mua thêm seat tuần sau');
     expect(forced.status()).toBe(201);
-    expect(String((await forced.json()).warnings)).toContain('vượt seat');
+    expect(String((await forced.json()).warnings)).toContain('vượt số ghế');
 
     await page.goto(`/software/${licenseId}`);
     await page.getByRole('tab', { name: 'Máy đang dùng' }).click();

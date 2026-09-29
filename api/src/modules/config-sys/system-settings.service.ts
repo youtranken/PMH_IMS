@@ -119,8 +119,8 @@ export class SystemSettingsService {
       throw new BadRequestException({
         code: 'SETTING_OUT_OF_RANGE',
         message:
-          'Giờ nhắc người duyệt phải nhỏ hơn giờ tự hết hạn của yêu cầu mở két — không thì ' +
-          'yêu cầu hết hạn trước khi thư nhắc kịp đi.',
+          '"Nhắc duyệt sau" phải nhỏ hơn "Yêu cầu mở két tự hết hạn sau", ' +
+          'không thì thư nhắc không kịp đi.',
       });
     }
 

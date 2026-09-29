@@ -261,7 +261,7 @@ export class ExpiryController {
     if (query.from && query.to && query.to < query.from) {
       throw new BadRequestException({
         code: 'RANGE_INVALID',
-        message: '"Đến ngày" phải sau "Từ ngày".',
+        message: '"Đến ngày" không được trước "Từ ngày".',
       });
     }
     // Cột "Người" đọc họ tên (email vào tooltip) — tra một lượt qua users.api (AD-2).

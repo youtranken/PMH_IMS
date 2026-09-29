@@ -186,6 +186,6 @@ function assertRange(q: AuditQueryDto): void {
   if (q.from) assertValidDate(q.from);
   if (q.to) assertValidDate(q.to);
   if (q.from && q.to && q.to < q.from) {
-    throw new BadRequestException('to phải ≥ from');
+    throw new BadRequestException('"Đến ngày" không được trước "Từ ngày".');
   }
 }

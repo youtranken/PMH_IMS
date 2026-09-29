@@ -373,11 +373,11 @@ export class LicenseAssignmentService {
         if (!input.overSeatReason?.trim()) {
           throw new BadRequestException({
             code: 'SEAT_LIMIT_REACHED',
-            message: `License này đã dùng hết ${seatTotal} seat. Vẫn gán được nhưng phải ghi lý do.`,
+            message: `License này đã dùng hết ${seatTotal} ghế. Vẫn gán được nhưng phải ghi lý do.`,
           });
         }
         warnings.push(
-          `Đang vượt seat: ${used + 1}/${seatTotal}. Lý do đã được ghi vào lịch sử.`,
+          `Đang vượt số ghế: ${used + 1}/${seatTotal}. Lý do đã ghi vào lịch sử.`,
         );
       }
 

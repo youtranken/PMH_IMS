@@ -297,7 +297,7 @@ export class SoftwareController {
         { header: 'Tên', width: 32, value: (r) => r.name },
         { header: 'Loại', width: 16, value: (r) => KIND_LABEL[r.kind] },
         { header: 'Nhà cung cấp', width: 22, value: (r) => r.vendorName ?? '' },
-        { header: 'Seat dùng/tổng', width: 14, value: (r) => seatText(r) },
+        { header: 'Ghế dùng/tổng', width: 14, value: (r) => seatText(r) },
         { header: 'Bắt đầu', width: 14, value: (r) => r.startDate ?? '' },
         { header: 'Hết hạn', width: 14, value: (r) => r.endDate ?? '' },
         { header: 'Trạng thái', width: 18, value: (r) => STATUS_LABEL[r.status] },
