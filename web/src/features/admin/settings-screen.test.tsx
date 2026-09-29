@@ -36,6 +36,19 @@ const ROWS = [
     updatedAt: null,
     updatedBy: null,
   },
+  {
+    name: 'natWidePortRange',
+    key: 'nat.wide_port_range',
+    group: 'ipam',
+    type: 'int',
+    unit: 'ports',
+    min: 10,
+    max: 65535,
+    defaultValue: 1000,
+    value: 1000,
+    updatedAt: null,
+    updatedBy: null,
+  },
 ];
 
 function renderAt(entry: string) {
@@ -62,6 +75,12 @@ describe('Màn Tham số hệ thống', () => {
     expect(screen.getByText('lần/phút')).toBeInTheDocument();
     expect(screen.getByText(/Mặc định: 20 lần\/phút/)).toBeInTheDocument();
     expect(screen.getByText(/Sửa lần cuối bởi cao.thuan@pmh.com.vn/)).toBeInTheDocument();
+  });
+
+  it('nhóm Mạng IP & NAT: nhãn tiếng Việt và đơn vị cổng', async () => {
+    renderAt('/admin/settings?group=ipam');
+    expect(await screen.findByLabelText('Cảnh báo luật NAT mở dải cổng rộng hơn')).toHaveValue('1000');
+    expect(screen.getByText(/Mặc định: 1000 cổng/)).toBeInTheDocument();
   });
 
   it('nới quá ngưỡng → cảnh báo; Lưu mở hộp Trước → Sau, chưa gửi gì', async () => {

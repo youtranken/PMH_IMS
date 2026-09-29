@@ -1720,7 +1720,7 @@ export default {
     mapHint: 'Bấm ô trống để cấp; bấm ô đang dùng để mở dòng của nó trong danh sách.',
     cidrPreview: '→ {{cidr}} · {{hosts}} host ({{first}} – {{last}}) · mask {{mask}}',
     cidrFormat: 'Viết dạng địa chỉ/prefix, vd 172.16.10.0/24.',
-    cidrTooWide: 'Tối đa /24 (254 host). Dải rộng hơn thì khai thành nhiều dải /24.',
+    cidrTooWide: 'Tối đa /{{prefix}} ({{hosts}} host). Dải rộng hơn thì khai thành nhiều dải /{{prefix}}.',
     cidrOverlap: 'Chồng lên dải {{cidr}} ({{name}}) đã khai.',
     cidrLocked: 'Dải đã có hồ sơ IP nên không đổi được CIDR. Cần dải khác thì khai dải mới.',
     gatewayOutside: 'Gateway {{gateway}} không nằm trong dải {{cidr}}.',
@@ -2811,7 +2811,7 @@ export default {
   /* Màn Tham số hệ thống (`features/admin/settings-screen.tsx`, Q-14). */
   settings: {
     title: 'Tham số hệ thống',
-    subtitle: 'Ngưỡng đăng nhập, két sắt, duyệt mở két, hạn và bảng điều khiển. Sửa phải xác thực lại.',
+    subtitle: 'Ngưỡng đăng nhập, két sắt, duyệt mở két, hạn, bảng điều khiển và mạng IP. Sửa phải xác thực lại.',
     groupsNav: 'Nhóm tham số',
     groupAuth: 'Đăng nhập & bảo mật',
     groupVault: 'Két sắt',
@@ -2819,6 +2819,7 @@ export default {
     groupExpiry: 'Hạn & email',
     groupDashboard: 'Bảng điều khiển',
     groupSoftware: 'Phần mềm',
+    groupIpam: 'Mạng IP & NAT',
     defaultIs: 'Mặc định: {{value}}',
     resetDefault: 'Về mặc định',
     lastEdited: 'Sửa lần cuối bởi {{who}} lúc {{at}}',
@@ -2845,6 +2846,7 @@ export default {
     unitPercent: '%',
     unitTimes: 'lần',
     unitPerMinute: 'lần/phút',
+    unitPorts: 'cổng',
     sessionIdleMinutesLabel: 'Tự đăng xuất khi không thao tác',
     sessionIdleMinutesDesc: 'Bỏ máy quá chừng này thì phiên hết hạn, phải đăng nhập lại.',
     sessionAbsoluteHoursLabel: 'Thời hạn tối đa của một phiên',
@@ -2892,5 +2894,10 @@ export default {
     dashboardSecretStaleDaysDesc: 'Ngăn két chưa đổi quá số ngày này thì báo "cần đổi" ở két và bảng điều khiển.',
     softwareAutoRetireGraceDaysLabel: 'Ân hạn trước khi tự thanh lý phần mềm',
     softwareAutoRetireGraceDaysDesc: 'Hết hạn quá số ngày này mà chưa gia hạn thì tự thanh lý và gỡ mọi ghế.',
+    ipamSubnetMinPrefixLabel: 'Dải mạng rộng nhất được khai (độ dài prefix)',
+    ipamSubnetMinPrefixDesc:
+      '24 nghĩa là /24 (254 máy). Chỉ siết được (số lớn hơn là dải hẹp hơn), không nới rộng hơn /24. Dải đã khai không bị ảnh hưởng.',
+    natWidePortRangeLabel: 'Cảnh báo luật NAT mở dải cổng rộng hơn',
+    natWidePortRangeDesc: 'Chỉ cảnh báo trước khi lưu, không chặn.',
   },
 } as const;

@@ -2,9 +2,9 @@
 export interface SettingRow {
   name: string;
   key: string;
-  group: 'auth' | 'vault' | 'approval' | 'expiry' | 'dashboard' | 'software';
+  group: 'auth' | 'vault' | 'approval' | 'expiry' | 'dashboard' | 'software' | 'ipam';
   type: 'int' | 'text' | 'int_list';
-  unit?: 'seconds' | 'minutes' | 'hours' | 'days' | 'percent' | 'times' | 'per_minute';
+  unit?: 'seconds' | 'minutes' | 'hours' | 'days' | 'percent' | 'times' | 'per_minute' | 'ports';
   min?: number;
   max?: number;
   maxLength?: number;

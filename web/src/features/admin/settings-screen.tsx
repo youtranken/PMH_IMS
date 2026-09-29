@@ -23,6 +23,7 @@ const GROUPS: { key: Group; label: string }[] = [
   { key: 'expiry', label: 'settings.groupExpiry' },
   { key: 'dashboard', label: 'settings.groupDashboard' },
   { key: 'software', label: 'settings.groupSoftware' },
+  { key: 'ipam', label: 'settings.groupIpam' },
 ];
 
 const UNIT: Record<NonNullable<SettingRow['unit']>, string> = {
@@ -33,6 +34,7 @@ const UNIT: Record<NonNullable<SettingRow['unit']>, string> = {
   percent: 'settings.unitPercent',
   times: 'settings.unitTimes',
   per_minute: 'settings.unitPerMinute',
+  ports: 'settings.unitPorts',
 };
 
 /*
@@ -81,6 +83,8 @@ const TEXT: Record<string, [string, string]> = {
     'settings.softwareAutoRetireGraceDaysLabel',
     'settings.softwareAutoRetireGraceDaysDesc',
   ],
+  ipamSubnetMinPrefix: ['settings.ipamSubnetMinPrefixLabel', 'settings.ipamSubnetMinPrefixDesc'],
+  natWidePortRange: ['settings.natWidePortRangeLabel', 'settings.natWidePortRangeDesc'],
 };
 
 const SETTINGS_KEY = ['admin', 'settings'] as const;

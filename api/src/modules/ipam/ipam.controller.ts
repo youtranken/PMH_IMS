@@ -239,15 +239,25 @@ export class IpamController {
    *
    * Thẻ dải tô "sắp đầy" theo CÙNG con số bảng điều khiển dùng để nhắc dải sắp đầy — hai chỗ
    * nói khác nhau về một dải là người đọc không biết tin chỗ nào.
+   *
+   * `subnetMinPrefix`, `natWidePortRange`: form báo "quá rộng" ngay khi gõ theo CÙNG ngưỡng server
+   * sẽ xét, không giữ bản sao con số ở web.
    */
   @Roles('sa', 'admin', 'member')
   @Get('settings')
   async settings() {
-    const [subnetFullPercent, sensitive] = await Promise.all([
+    const [subnetFullPercent, sensitive, subnetMinPrefix, natWidePortRange] = await Promise.all([
       this.config.getNumber('dashboardSubnetFullPercent'),
       this.config.getString('natSensitivePorts'),
+      this.config.getNumber('ipamSubnetMinPrefix'),
+      this.config.getNumber('natWidePortRange'),
     ]);
-    return { subnetFullPercent, natSensitivePorts: sensitivePortsOf(sensitive) };
+    return {
+      subnetFullPercent,
+      natSensitivePorts: sensitivePortsOf(sensitive),
+      subnetMinPrefix,
+      natWidePortRange,
+    };
   }
 
   // --- Dải mạng ---------------------------------------------------------------

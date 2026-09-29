@@ -12,6 +12,7 @@ import { conflictOnUnique, PG_EXCLUSION_VIOLATION, pgErrorCode } from '../../com
 import type { Tx } from '../../common/tx';
 import { AuditWriterService } from '../audit/audit-writer.service';
 import { CatalogApiService } from '../catalog/catalog.api';
+import { SystemConfigService } from '../config-sys/system-config.service';
 import { isHostInSubnet, normalizeSubnet, subnetUsage, type SubnetUsage } from './ip-rules';
 import { OCCUPYING_STATUSES } from './ip-lifecycle';
 import { ipAddressTable, ipHistoryTable, natRuleTable, subnetTable } from './ipam.schema';
@@ -79,6 +80,7 @@ export class SubnetService {
     @Inject(DRIZZLE_DB) private readonly db: Database,
     private readonly audit: AuditWriterService,
     private readonly catalog: CatalogApiService,
+    private readonly config: SystemConfigService,
   ) {}
 
   /**
@@ -156,7 +158,7 @@ export class SubnetService {
   }
 
   async create(actor: string, input: SubnetInput): Promise<SubnetRecord> {
-    const cidr = this.requireCidr(input.cidr);
+    const cidr = await this.requireCidr(input.cidr);
     await this.requireSite(input.siteId, null);
     const name = this.requireName(input.name);
     const gateway = this.requireGateway(input.gateway, cidr);
@@ -214,7 +216,7 @@ export class SubnetService {
     if (input.gateway !== undefined) {
       values.gateway = this.requireGateway(
         input.gateway,
-        input.cidr === undefined ? before.cidr : this.requireCidr(input.cidr),
+        input.cidr === undefined ? before.cidr : await this.requireCidr(input.cidr, before.cidr),
       );
     }
     if (input.siteId !== undefined) {
@@ -235,7 +237,9 @@ export class SubnetService {
     const nextCidr =
       input.cidr === undefined
         ? null
-        : ((cidr) => (cidr === before.cidr ? null : cidr))(this.requireCidr(input.cidr));
+        : ((cidr) => (cidr === before.cidr ? null : cidr))(
+            await this.requireCidr(input.cidr, before.cidr),
+          );
 
     try {
       return await this.db.transaction(async (tx) => {
@@ -508,12 +512,22 @@ export class SubnetService {
     return name;
   }
 
-  private requireCidr(value: string): string {
-    const parsed = normalizeSubnet(value);
+  /**
+   * `current` = dải đang lưu của hồ sơ đang sửa. Gửi lại đúng dải đó thì cho qua dù trần
+   * `ipam.subnet_min_prefix` đã siết sau lúc khai: form luôn gửi đủ ô, và siết trần không được
+   * biến mọi dải /24 cũ thành hồ sơ không sửa nổi tên.
+   */
+  private async requireCidr(value: string, current?: string): Promise<string> {
+    const minPrefix = await this.config.getNumber('ipamSubnetMinPrefix');
+    const parsed = normalizeSubnet(value, minPrefix);
     if (parsed.ok) return parsed.cidr;
+    if (current !== undefined) {
+      const same = normalizeSubnet(value);
+      if (same.ok && same.cidr === current) return current;
+    }
     throw new BadRequestException({
       code: 'SUBNET_INVALID',
-      message: CIDR_MESSAGE[parsed.reason] ?? 'Dải không hợp lệ. Ví dụ đúng: 172.16.10.0/24.',
+      message: cidrMessage(parsed.reason, minPrefix),
     });
   }
 
@@ -681,16 +695,21 @@ export class SubnetService {
   }
 }
 
-const CIDR_MESSAGE: Record<string, string> = {
-  missing_prefix: 'Thiếu độ dài dải. Viết dạng 172.16.10.0/24.',
-  bad_prefix: 'Độ dài dải phải từ /24 đến /32. Ví dụ: 172.16.10.0/24.',
-  too_wide:
-    'Dải rộng nhất là /24 (254 máy). Mạng lớn hơn thì chia thành nhiều dải /24, ' +
-    'vd 172.16.10.0/24 và 172.16.11.0/24.',
-  not_ipv4: 'Chỉ nhận địa chỉ IPv4. Ví dụ đúng: 172.16.10.0/24.',
-  leading_zero: 'Không viết số 0 đứng đầu (172.16.010.5 dễ bị hiểu nhầm). Viết 172.16.10.5.',
-  octet_range: 'Mỗi nhóm số phải từ 0 đến 255.',
-};
+/** Câu lỗi nói đúng trần đang hiệu lực — trần đọc từ `ipam.subnet_min_prefix`, không cố định. */
+function cidrMessage(reason: string, minPrefix: number): string {
+  const hosts = 2 ** (32 - minPrefix) - 2;
+  const messages: Record<string, string> = {
+    missing_prefix: 'Thiếu độ dài dải. Viết dạng 172.16.10.0/24.',
+    bad_prefix: `Độ dài dải phải từ /${minPrefix} đến /32. Ví dụ: 172.16.10.0/${minPrefix}.`,
+    too_wide:
+      `Dải rộng nhất là /${minPrefix} (${hosts} máy). Mạng lớn hơn thì chia thành nhiều dải ` +
+      `/${minPrefix}.`,
+    not_ipv4: 'Chỉ nhận địa chỉ IPv4. Ví dụ đúng: 172.16.10.0/24.',
+    leading_zero: 'Không viết số 0 đứng đầu (172.16.010.5 dễ bị hiểu nhầm). Viết 172.16.10.5.',
+    octet_range: 'Mỗi nhóm số phải từ 0 đến 255.',
+  };
+  return messages[reason] ?? 'Dải không hợp lệ. Ví dụ đúng: 172.16.10.0/24.';
+}
 
 /**
  * FR-020 đếm theo địa chỉ đang CHIẾM chỗ, không phải theo số hàng có trong bảng.

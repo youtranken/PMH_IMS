@@ -10,20 +10,6 @@
  */
 
 /**
- * Trần độ rộng một dải: /24 (254 host). Quyết định của chủ dự án, 25/08/2026.
- *
- * Không phải giới hạn tuỳ tiện: `listBySubnet` liệt kê MỌI host của dải trong một lượt gọi và
- * `enumerateHosts` dựng mảng đồng bộ. Nên gõ nhầm /16 thay /24 là 65.534 dòng (treo tab), /8
- * là 16 triệu (treo luôn server). Chặn ngay lúc khai dải là chỗ rẻ nhất. Mạng lớn hơn thì
- * chia thành nhiều dải /24 — cách PMH vẫn đang đánh số LAN.
- *
- * Trần này CHÍNH LÀ thứ cho phép màn dải cắt trang ở client (50 dòng/trang, `slot-paging.ts`):
- * 254 host về gọn trong một lượt gọi, nên đổi trang là tức thì và con số đếm trên từng nút lọc
- * vẫn tính trên cả dải. Nới trần ở đây thì phải đẩy phân trang xuống server trước.
- */
-const MIN_PREFIX = 24;
-
-/**
  * Cột `inet` của Postgres trả về kèm mask (`172.16.10.5/32`); người dùng và mọi ô nhập đều nói
  * địa chỉ trần. Chuẩn hóa về một dạng trước khi SO SÁNH hay HIỂN THỊ.
  *
@@ -98,9 +84,14 @@ export interface Subnet {
  * Quy về ĐỊA CHỈ MẠNG: người ta hay gõ IP máy mình kèm /24 (`172.16.10.37/24`). Lưu nguyên
  * như vậy thì hai người khai cùng một dải ra hai bản ghi khác nhau, và ràng buộc "không
  * trùng dải" mất tác dụng ngay từ đầu.
+ *
+ * `minPrefix` là trần độ rộng (`ipam.subnet_min_prefix`), chỉ truyền khi xét dải người dùng
+ * KHAI MỚI. Dải đã nằm trong sổ thì không truyền: siết trần về sau không được làm một dải đang
+ * dùng thôi được coi là dải hợp lệ ở các phép tính chứa-IP.
  */
 export function normalizeSubnet(
   value: string,
+  minPrefix?: number,
 ): { ok: true; cidr: string; network: number; prefix: number } | { ok: false; reason: string } {
   const text = value.trim();
   const slash = text.lastIndexOf('/');
@@ -113,7 +104,7 @@ export function normalizeSubnet(
   if (!/^\d{1,2}$/.test(prefixText)) return { ok: false, reason: 'bad_prefix' };
   const prefix = Number(prefixText);
   if (prefix > 32) return { ok: false, reason: 'bad_prefix' };
-  if (prefix < MIN_PREFIX) return { ok: false, reason: 'too_wide' };
+  if (minPrefix !== undefined && prefix < minPrefix) return { ok: false, reason: 'too_wide' };
 
   const network = maskOf(prefix) === 0 ? 0 : (addressToLong(address.value) & maskOf(prefix)) >>> 0;
   return { ok: true, cidr: `${longToAddress(network)}/${prefix}`, network, prefix };

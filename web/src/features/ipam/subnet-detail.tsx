@@ -233,7 +233,7 @@ export function SubnetPane({
   );
 
   /**
-   * Phân trang Ở CLIENT, cố ý: `MIN_PREFIX = 24` phía API chặn dải rộng nhất ở /24 = 254 host,
+   * Phân trang Ở CLIENT, cố ý: `ipam.subnet_min_prefix` (không dưới 24) chặn dải rộng nhất ở /24 = 254 host,
    * nên cả dải về trong MỘT lượt gọi. Cắt trang ở đây thì bộ lọc và con số đếm trên từng nút
    * vẫn tính trên TOÀN dải — đó mới là câu trả lời đúng cho "còn mấy chỗ trống".
    */

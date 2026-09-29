@@ -72,6 +72,18 @@ export const CONFIG_KEYS = {
   dashboardSecretStaleDays: { key: 'dashboard.secret_stale_days', fallback: 180 },
   // Cổng mở ra Internet bị gắn "Nhạy cảm" trên sổ NAT (0140) — xem `ipam/nat-sensitive.ts`.
   natSensitivePorts: { key: 'nat.sensitive_ports', fallback: '21,22,23,445,1433,3306,3389,5432,5900' },
+  /*
+   * Dải rộng nhất được khai, tính bằng độ dài prefix (0280): 24 = /24, 254 host.
+   *
+   * Chỉ được SIẾT (số lớn hơn), không được nới dưới 24 — màn Tham số chặn ở 24..30. Màn dải
+   * liệt kê MỌI host trong một lượt gọi và `enumerateHosts` dựng mảng đồng bộ, nên /16 là 65.534
+   * dòng (treo tab), /8 là 16 triệu (treo server). Cũng nhờ trần này mà màn dải cắt trang được ở
+   * client (`slot-paging.ts`) và `hostRole` suy được địa chỉ mạng/quảng bá từ octet cuối. Muốn
+   * nới thì phải đẩy phân trang dải xuống server trước.
+   */
+  ipamSubnetMinPrefix: { key: 'ipam.subnet_min_prefix', fallback: 24 },
+  // Dải cổng ngoài của một luật NAT rộng hơn ngần này thì CẢNH BÁO, không chặn (0280).
+  natWidePortRange: { key: 'nat.wide_port_range', fallback: 1000 },
   // Q-13 (0076): Hết hạn quá số ngày này thì tự Thanh lý + gỡ ghế. 0 = tắt.
   softwareAutoRetireGraceDays: { key: 'software.auto_retire_grace_days', fallback: 30 },
   /*

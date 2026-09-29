@@ -10,7 +10,14 @@ import { CONFIG_KEYS, type ConfigName } from './system-config.keys';
  * lần gõ nhầm biến thành "cả công ty không đăng nhập được".
  */
 
-export type SettingGroup = 'auth' | 'vault' | 'approval' | 'expiry' | 'dashboard' | 'software';
+export type SettingGroup =
+  | 'auth'
+  | 'vault'
+  | 'approval'
+  | 'expiry'
+  | 'dashboard'
+  | 'software'
+  | 'ipam';
 export type SettingType = 'int' | 'text' | 'int_list';
 export type SettingUnit =
   | 'seconds'
@@ -19,7 +26,8 @@ export type SettingUnit =
   | 'days'
   | 'percent'
   | 'times'
-  | 'per_minute';
+  | 'per_minute'
+  | 'ports';
 
 export interface EditableSetting {
   name: ConfigName;
@@ -67,6 +75,9 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   { name: 'dashboardSecretStaleDays', group: 'dashboard', type: 'int', unit: 'days', min: 30, max: 3650 },
   // Phần mềm (Q-13: 0 = tắt tự thanh lý)
   { name: 'softwareAutoRetireGraceDays', group: 'software', type: 'int', unit: 'days', min: 0, max: 365, warnZero: true },
+  // Mạng IP & NAT. Trần dải chỉ siết (24..30) — lý do ở chú thích khoá trong `system-config.keys.ts`.
+  { name: 'ipamSubnetMinPrefix', group: 'ipam', type: 'int', min: 24, max: 30 },
+  { name: 'natWidePortRange', group: 'ipam', type: 'int', unit: 'ports', min: 10, max: 65535 },
 ];
 
 export function editableByKey(key: string): EditableSetting | undefined {

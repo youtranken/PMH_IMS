@@ -74,7 +74,7 @@ describe('previewCidr — xem trước dải ngay khi gõ', () => {
     ['192.168.5.9/30', '192.168.5.8/30', 2, '192.168.5.9', '192.168.5.10', '255.255.255.252'],
     ['10.0.0.7/32', '10.0.0.7/32', 1, '10.0.0.7', '10.0.0.7', '255.255.255.255'],
   ])('%s → %s', (text, cidr, hosts, first, last, mask) => {
-    const { value, reason } = previewCidr(text);
+    const { value, reason } = previewCidr(text, 24);
     expect(reason).toBeNull();
     expect(value).toEqual({ cidr, hosts, first, last, mask });
   });
@@ -88,9 +88,15 @@ describe('previewCidr — xem trước dải ngay khi gõ', () => {
     ['10.77.0.0/16', 'tooWide'],
     ['10.77.1.0/23', 'tooWide'],
   ])('%s → lỗi %s', (text, reason) => {
-    const result = previewCidr(text);
+    const result = previewCidr(text, 24);
     expect(result.value).toBeNull();
     expect(result.reason).toBe(reason);
+  });
+
+  // Trần đến từ `GET ipam/settings` (`ipam.subnet_min_prefix`), không phải hằng số của web.
+  it('siết trần lên /26 thì /24 thành quá rộng, /26 vẫn qua', () => {
+    expect(previewCidr('10.77.1.0/24', 26).reason).toBe('tooWide');
+    expect(previewCidr('10.77.1.0/26', 26).reason).toBeNull();
   });
 });
 

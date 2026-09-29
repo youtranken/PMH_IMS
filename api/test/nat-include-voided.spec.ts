@@ -6,6 +6,7 @@ import type { AuditWriterService } from '../src/modules/audit/audit-writer.servi
 import type { DevicesApiService } from '../src/modules/devices/devices.api';
 import type { IpAddressService } from '../src/modules/ipam/ip-address.service';
 import type { CatalogApiService } from '../src/modules/catalog/catalog.api';
+import { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import { createScratchDb, migrationsDir, type ScratchDb } from './db';
 
 /**
@@ -64,6 +65,7 @@ describe('Sổ NAT — ?includeVoided=true', () => {
       devices,
       addresses,
       {} as CatalogApiService,
+      new SystemConfigService(db),
     );
   }, TEST_TIMEOUT);
 

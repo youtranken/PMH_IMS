@@ -1,6 +1,7 @@
 import { runMigrations } from '../src/database/migration-runner';
 import type { AuditWriterService } from '../src/modules/audit/audit-writer.service';
 import type { CatalogApiService } from '../src/modules/catalog/catalog.api';
+import { SystemConfigService } from '../src/modules/config-sys/system-config.service';
 import type { DevicesApiService } from '../src/modules/devices/devices.api';
 import type { IpAddressService } from '../src/modules/ipam/ip-address.service';
 import { NatRuleService } from '../src/modules/ipam/nat-rule.service';
@@ -53,6 +54,7 @@ describe('BE-07 · NAT xét IP theo dải chứa nó', () => {
       {} as DevicesApiService,
       {} as IpAddressService,
       {} as CatalogApiService,
+      new SystemConfigService(scratch.db),
     );
   }, TEST_TIMEOUT);
 
