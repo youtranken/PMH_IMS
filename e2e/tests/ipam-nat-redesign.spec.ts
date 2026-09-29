@@ -97,16 +97,16 @@ test.describe('Màn Địa chỉ IP — cắt trang và cột dải cuộn riên
     expect(created.status()).toBe(201);
 
     await page.goto(`/ip-addresses/${id}`);
-    // Nhãn nút mang luôn con số: "Đang dùng 1", "Trống 253" — đọc được bằng một cái liếc.
-    const assigned = page.getByRole('button', { name: 'Đang dùng 1' });
+    // Nhãn lựa chọn mang luôn con số: "Đang dùng 1", "Trống 253" — đọc được bằng một cái liếc.
+    const assigned = page.getByRole('radio', { name: 'Đang dùng 1' });
     await expect(assigned).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Trống 253' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Tất cả 254' })).toBeVisible();
+    await expect(page.getByRole('radio', { name: 'Trống 253' })).toBeVisible();
+    await expect(page.getByRole('radio', { name: 'Tất cả 254' })).toBeVisible();
 
     // Bấm lọc "Đang dùng": còn đúng 1 dòng và TỰ VỀ TRANG 1 — giữ nguyên trang cũ là bảng rỗng.
     await page.getByRole('button', { name: 'Trang sau' }).click();
     await expect(page.getByText('Trang 2/6')).toBeVisible();
-    await assigned.click();
+    await assigned.check();
     await expect(page.getByText(`10.${octet}.8.120`, { exact: true })).toBeVisible();
     await expect(page.getByText('1–1 trên 1 dòng')).toBeVisible();
   });
