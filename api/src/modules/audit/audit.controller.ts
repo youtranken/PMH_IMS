@@ -1,6 +1,6 @@
 import { BadRequestException, Controller, Get, Query, Res } from '@nestjs/common';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Matches, Max, MaxLength, Min } from 'class-validator';
 import type { Response } from 'express';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { sendXlsx } from '../../common/excel/xlsx-http';
@@ -68,6 +68,11 @@ export class AuditQueryDto {
   @Min(1)
   @Max(100)
   pageSize = 20;
+
+  /** '1' = gom sự kiện lặp liền nhau thành một dòng ×N (ADM-065). File xuất luôn từng dòng. */
+  @IsOptional()
+  @IsIn(['0', '1'])
+  group?: string;
 }
 
 /** Viewer audit log (6.2, FR-43) — SA + Admin (delegation 10.1). Chỉ đọc (AD-10). */
@@ -101,6 +106,7 @@ export class AuditController {
       to: q.to,
       page: q.page,
       pageSize: q.pageSize,
+      group: q.group === '1',
     });
   }
 

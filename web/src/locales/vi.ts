@@ -1991,6 +1991,15 @@ export default {
     ip: 'IP',
     /* Đếm có trần ở API: con số trên thanh phân trang là trần, không phải tổng thật. */
     capped: 'Còn nhiều dòng khớp hơn con số trên — lọc hẹp lại (theo ngày, người thao tác) để xem đủ.',
+    groupRepeats: 'Gộp sự kiện lặp',
+    repeatBadge: '×{{count}}',
+    repeatLabel: '{{count}} lần liền nhau',
+    repeatSince: 'từ {{time}}',
+    repeatEvents:
+      '{{count}} lần liền nhau — cùng người, cùng hành động, cùng đối tượng, trong một phút. ' +
+      'Bấm một lần để xem chi tiết lần đó.',
+    repeatEventsMore: 'Chỉ liệt kê {{shown}} lần mới nhất.',
+    openEvent: 'Xem lần lúc {{time}}',
     empty: 'Nhật ký chưa có dòng nào',
     emptyHint: 'Mỗi lượt đăng nhập và mỗi thay đổi dữ liệu sẽ ghi một dòng ở đây.',
     emptyFiltered: 'Không có dòng nào khớp bộ lọc',

@@ -102,6 +102,12 @@ describe('Đếm nhật ký an ninh có trần', () => {
        */
       expect(page.totalCapped).toBe(true);
       expect(page.items).toHaveLength(20);
+
+      // Nhánh gom (ADM-065) dùng cùng cái phanh: quá trần thì cũng nói ra, không giả số thật.
+      const grouped = await service.listAudit({ page: 1, pageSize: 20, group: true });
+      expect(grouped.total).toBe(COUNT_CAP);
+      expect(grouped.totalCapped).toBe(true);
+      expect(grouped.items).toHaveLength(20);
     },
     TEST_TIMEOUT,
   );
