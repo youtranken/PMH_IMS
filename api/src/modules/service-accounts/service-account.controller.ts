@@ -24,7 +24,7 @@ import { sendXlsx } from '../../common/excel/xlsx-http';
 
 /** Chữ trong file xuất — cùng chữ với màn danh sách (`serviceAccounts.kind*Short`). */
 const KIND_LABEL: Record<string, string> = { shared: 'Dùng chung', vpn: 'VPN' };
-const STATUS_LABEL: Record<string, string> = { active: 'Đang dùng', disabled: 'Đã vô hiệu hóa' };
+const STATUS_LABEL: Record<string, string> = { active: 'Đang dùng', disabled: 'Đã ngừng dùng' };
 
 class IdParamDto {
   @IsUUID(undefined, { message: 'Mã tài khoản dịch vụ không hợp lệ.' })
@@ -76,13 +76,13 @@ class ServiceAccountBodyDto {
 
 class DisableDto {
   @IsString()
-  @Length(3, 500, { message: 'Lý do vô hiệu hóa từ 3 ký tự.' })
+  @Length(3, 500, { message: 'Lý do ngừng dùng từ 3 ký tự.' })
   reason!: string;
 }
 
 class EnableDto {
   @IsString()
-  @Length(3, 500, { message: 'Lý do bật lại từ 3 ký tự.' })
+  @Length(3, 500, { message: 'Lý do dùng lại từ 3 ký tự.' })
   reason!: string;
 }
 

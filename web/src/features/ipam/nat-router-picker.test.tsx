@@ -62,7 +62,7 @@ async function openRouterPicker() {
       </ToastProvider>
     </MemoryRouter>,
   );
-  await user.click(await screen.findByRole('button', { name: 'Thêm rule' }));
+  await user.click(await screen.findByRole('button', { name: 'Thêm luật NAT' }));
   await user.click(await screen.findByRole('combobox', { name: 'Router' }));
   return user;
 }

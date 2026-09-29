@@ -217,7 +217,7 @@ test.describe('Bảng điều khiển', () => {
 
     // Hai khối này thì reset kiểm soát được TRỌN VẸN, nên vẫn bắt đúng chữ trạng thái rỗng —
     // đó là chỗ thật sự kiểm được nhánh "không có dữ liệu" của BlockCard.
-    await expect(page.getByText('Tuần qua không ai xin quyền xem tạm thời.')).toBeVisible();
+    await expect(page.getByText('Tuần qua không ai xin mở két.')).toBeVisible();
   });
 
   /**

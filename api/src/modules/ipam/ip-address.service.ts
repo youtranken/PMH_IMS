@@ -43,11 +43,11 @@ export type { IpStatus };
 
 /** Câu cảnh báo theo đúng việc người dùng vừa bấm — xem `assertNoLiveNatWithin`. */
 const PURPOSE_WARNING = {
-  reclaim: 'Thu hồi mà để nguyên rule thì port vẫn mở và sẽ trỏ vào máy được cấp tiếp theo.',
-  assign: 'Cấp cho máy khác mà để nguyên rule là giao thẳng port đang mở cho máy mới.',
-  void: 'Ẩn hồ sơ thì địa chỉ này biến khỏi mọi màn, còn rule NAT vẫn chuyển gói tới đó — lỗ thủng còn nguyên mà không còn chỗ nào nhắc tới nó.',
+  reclaim: 'Thu hồi mà để nguyên luật NAT thì cổng vẫn mở và sẽ trỏ vào máy được cấp tiếp theo.',
+  assign: 'Cấp cho máy khác mà để nguyên luật NAT là giao thẳng cổng đang mở cho máy mới.',
+  void: 'Ẩn hồ sơ thì địa chỉ này biến khỏi mọi màn, còn luật NAT vẫn chuyển gói tới đó — lỗ thủng còn nguyên mà không còn chỗ nào nhắc tới nó.',
   readdress:
-    'Dời hồ sơ sang địa chỉ khác mà để nguyên rule thì rule vẫn trỏ vào địa chỉ CŨ — sổ NAT và sổ IP nói khác nhau về cùng một cái máy.',
+    'Dời hồ sơ sang địa chỉ khác mà để nguyên luật NAT thì luật vẫn trỏ vào địa chỉ CŨ — sổ NAT và sổ IP nói khác nhau về cùng một cái máy.',
 } as const;
 
 /** Trường được theo dõi trong lịch sử (AD-13). */
@@ -814,7 +814,7 @@ export class IpAddressService {
         code: 'SUBNET_VOIDED',
         message:
           `Dải ${frame.cidr} đang bị ẩn nên bật lẻ hồ sơ này cũng không hiện ra ở đâu. ` +
-          'Bật lại cả dải trước.',
+          'Dùng lại cả dải trước.',
       });
     }
 
@@ -951,9 +951,9 @@ export class IpAddressService {
     throw new ConflictException({
       code: 'IP_HAS_LIVE_NAT',
       message:
-        `Địa chỉ ${hostOf(address)} còn ${rules.length} rule NAT đang mở (${list}). ` +
+        `Địa chỉ ${hostOf(address)} còn ${rules.length} luật NAT đang mở (${list}). ` +
         PURPOSE_WARNING[purpose] +
-        ' Vào sổ NAT gỡ hoặc trỏ lại rule trước, rồi làm lại.',
+        ' Vào sổ NAT gỡ hoặc trỏ lại luật trước, rồi làm lại.',
     });
   }
 

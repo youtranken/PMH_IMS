@@ -47,21 +47,21 @@ test.describe('Trang hồ sơ TKDV — thao tác ngay tại chỗ (NET-072)', ()
     await expect(page.getByText('đổi từ trang hồ sơ E2E')).toBeVisible();
 
     await page.getByRole('button', { name: `Thao tác với ${code}` }).click();
-    await page.getByRole('menuitem', { name: 'Vô hiệu hóa…' }).click();
-    const off = page.getByRole('dialog', { name: `Vô hiệu hóa — ${code}` });
-    await off.getByRole('button', { name: 'Vô hiệu hóa' }).click();
+    await page.getByRole('menuitem', { name: 'Ngừng dùng…' }).click();
+    const off = page.getByRole('dialog', { name: `Ngừng dùng — ${code}` });
+    await off.getByRole('button', { name: 'Ngừng dùng' }).click();
     // Đường hỏng: lý do bắt buộc, báo tiếng Việt dưới ô, không gửi.
     await expect(off.getByText(/Bắt buộc/)).toBeVisible();
-    await off.getByRole('textbox', { name: /Lý do vô hiệu hóa/ }).fill('nhân sự đã nghỉ E2E');
-    await off.getByRole('button', { name: 'Vô hiệu hóa' }).click();
+    await off.getByRole('textbox', { name: /Lý do ngừng dùng/ }).fill('nhân sự đã nghỉ E2E');
+    await off.getByRole('button', { name: 'Ngừng dùng' }).click();
     await expect(off).toHaveCount(0);
-    await expect(page.getByText('Đã vô hiệu hóa', { exact: true }).first()).toBeVisible();
+    await expect(page.getByText('Đã ngừng dùng', { exact: true }).first()).toBeVisible();
 
     await page.getByRole('button', { name: `Thao tác với ${code}` }).click();
-    await page.getByRole('menuitem', { name: 'Bật lại…' }).click();
-    const on = page.getByRole('dialog', { name: `Bật lại — ${code}` });
-    await on.getByRole('textbox', { name: /Lý do bật lại/ }).fill('người mới nhận E2E');
-    await on.getByRole('button', { name: 'Bật lại' }).click();
+    await page.getByRole('menuitem', { name: 'Dùng lại…' }).click();
+    const on = page.getByRole('dialog', { name: `Dùng lại — ${code}` });
+    await on.getByRole('textbox', { name: /Lý do dùng lại/ }).fill('người mới nhận E2E');
+    await on.getByRole('button', { name: 'Dùng lại' }).click();
     await expect(on).toHaveCount(0);
     await expect(page.getByText('Đang dùng', { exact: true }).first()).toBeVisible();
   });

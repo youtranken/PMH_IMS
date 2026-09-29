@@ -163,7 +163,7 @@ describe('Thẻ và sổ của màn Duyệt yêu cầu', () => {
     };
     renderRouted(member, { '/api/v1/vault/break-glass/mine': { items: [approved], total: 1 } });
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Yêu cầu xem két' }),
+      await screen.findByRole('heading', { level: 1, name: 'Xin mở két' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('tablist')).not.toBeInTheDocument();
     expect(await screen.findByRole('link', { name: 'Mở két' })).toHaveAttribute(

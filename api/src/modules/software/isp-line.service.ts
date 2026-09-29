@@ -456,7 +456,7 @@ export class IspLineService {
     if (pgErrorCode(error) === PG_FOREIGN_KEY_VIOLATION && isProviderFk(error)) {
       return new ConflictException({
         code: 'ISP_PROVIDER_CHANGED',
-        message: 'Nhà mạng vừa được đổi tên hoặc xoá trong danh mục. Tải lại rồi chọn lại.',
+        message: 'Nhà mạng vừa được đổi tên hoặc xóa trong danh mục. Tải lại rồi chọn lại.',
       });
     }
     return conflictOnUnique(error, {

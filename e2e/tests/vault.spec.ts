@@ -108,12 +108,12 @@ test.describe('Két sắt', () => {
 
     // Thu hồi = xóa mềm: biến khỏi danh sách.
     // Không hoàn tác được nên phải gõ lại đúng tên ngăn thì nút xác nhận mới bật.
-    await rowAction(page, label, 'Xoá vĩnh viễn');
+    await rowAction(page, label, 'Xóa vĩnh viễn');
     await expect(
-      page.getByTestId('dialog-footer').last().getByRole('button', { name: 'Xoá vĩnh viễn' }),
+      page.getByTestId('dialog-footer').last().getByRole('button', { name: 'Xóa vĩnh viễn' }),
     ).toBeDisabled();
     await page.getByRole('dialog').last().getByRole('textbox').fill(label);
-    await confirmAction(page, 'Xoá vĩnh viễn');
+    await confirmAction(page, 'Xóa vĩnh viễn');
     await expect(page.getByRole('row', { name: new RegExp(label) })).toHaveCount(0);
   });
 

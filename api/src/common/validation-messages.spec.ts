@@ -104,7 +104,7 @@ describe('Câu lỗi nhập liệu — tiếng Việt cho MỌI validator', () =
     const cau = await cauLoiCho({ internalPort: 99999 });
     // Đây chính là câu lọt ra màn hình ở ô "Port trong" của form NAT trước 12/09:
     //   internalPort must not be greater than 65535
-    expect(cau).toContain('Port trong không được lớn hơn 65535.');
+    expect(cau).toContain('Cổng trong không được lớn hơn 65535.');
   });
 
   it('Min giữ được mốc dưới', async () => {
@@ -118,13 +118,13 @@ describe('Câu lỗi nhập liệu — tiếng Việt cho MỌI validator', () =
    */
   it('gõ CHỮ vào ô số → nói là phải là số nguyên, KHÔNG nói là quá lớn', async () => {
     expect(await cauLoiCho({ internalPort: 'khong-phai-so' })).toContain(
-      'Port trong phải là số nguyên.',
+      'Cổng trong phải là số nguyên.',
     );
   });
 
   it('số quá to vẫn nói đúng là quá to', async () => {
     expect(await cauLoiCho({ internalPort: 99999 })).toContain(
-      'Port trong không được lớn hơn 65535.',
+      'Cổng trong không được lớn hơn 65535.',
     );
   });
 

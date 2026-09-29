@@ -30,8 +30,8 @@ test.describe('390px', () => {
   test('danh sách tài khoản đọc được ở 390px', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     await openNavDrawer(page);
-    await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
-    await expect(page.getByRole('heading', { name: 'Tài khoản', exact: true })).toBeVisible();
+    await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Người dùng IMS', exact: true })).toBeVisible();
     // Ở khổ này mỗi tài khoản là một THẺ (tên · vai, dòng phụ email) chứ không phải dòng bảng.
     // Tên xuất hiện cả ở chân sidebar — bám thẻ mang CẢ tên lẫn email.
     await expect(

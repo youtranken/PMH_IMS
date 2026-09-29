@@ -137,7 +137,7 @@ test.describe('API hỏng phải nói ra, không được hóa thành rỗng', (
     // CHỈ chặn đường tìm kiếm thiết bị. Danh mục và bảng NAT vẫn tải thật.
     await breakRoute(page, /\/api\/v1\/devices\?.*search=/);
     await page.goto('/nat');
-    await page.getByRole('button', { name: 'Thêm rule' }).click();
+    await page.getByRole('button', { name: 'Thêm luật NAT' }).click();
 
     const picker = page.getByRole('combobox', { name: 'Router' });
     await picker.fill('RT-E2E');

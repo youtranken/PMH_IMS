@@ -152,7 +152,7 @@ describe('VaultPanel — hộp Xin quyền xem khóa lại khi đang gửi', () 
     mockApi(NEEDS_APPROVAL, [SECRET]);
     renderPanel({ ...ME, role: 'member' });
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Xin quyền xem' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Xin mở két' }));
     await userEvent.type(
       screen.getByLabelText(/Lý do/),
       'switch tầng 3 mất kết nối',
@@ -291,7 +291,7 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
   }
 
   async function send(hours: string) {
-    await userEvent.click(await screen.findByRole('button', { name: 'Xin quyền xem' }));
+    await userEvent.click(await screen.findByRole('button', { name: 'Xin mở két' }));
     const dialog = screen.getByRole('dialog');
     await userEvent.type(within(dialog).getByLabelText(/Lý do/), 'switch tầng 3 mất kết nối');
     const hoursBox = within(dialog).getByLabelText(/Xin trong bao lâu/);
@@ -342,7 +342,7 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
     mockApi(NEEDS_APPROVAL, [SECRET, { ...SECRET, id: 's2', label: 'SSH root' }]);
     renderPanel({ ...ME, role: 'member' });
     expect(await screen.findAllByText('Cần duyệt')).toHaveLength(2);
-    expect(screen.getAllByRole('button', { name: 'Xin quyền xem' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: 'Xin mở két' })).toHaveLength(1);
     expect(screen.getByText(/cần được duyệt trước khi xem \(2 ngăn\)/)).toBeInTheDocument();
   });
 
@@ -362,8 +362,8 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
   it('nấc giờ trong trần server đưa; chạm "2 giờ" là gửi 2', async () => {
     const calls = mockFlow({ ...NEEDS_APPROVAL, maxGrantHours: 6 }, 2);
     renderPanel({ ...ME, role: 'member' });
-    await userEvent.click(await screen.findByRole('button', { name: 'Xin quyền xem' }));
-    const dialog = screen.getByRole('dialog', { name: 'Xin xem két (1 ngăn)' });
+    await userEvent.click(await screen.findByRole('button', { name: 'Xin mở két' }));
+    const dialog = screen.getByRole('dialog', { name: 'Xin mở két (1 ngăn)' });
     const group = within(dialog).getByRole('group', { name: 'Chọn nhanh số giờ' });
     expect(within(group).getAllByRole('button').map((b) => b.textContent)).toEqual([
       '1 giờ',
@@ -413,9 +413,9 @@ describe('VaultPanel — ô giá trị, tuổi giá trị, xoá vĩnh viễn', (
     const fetchMock = mockApi(WHITELIST, [SECRET]);
     renderPanel();
     await userEvent.click(await screen.findByRole('button', { name: 'Thao tác với admin web' }));
-    await userEvent.click(screen.getByRole('menuitem', { name: 'Xoá vĩnh viễn' }));
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Xóa vĩnh viễn' }));
     const confirm = await screen.findByRole('dialog');
-    const button = within(confirm).getByRole('button', { name: 'Xoá vĩnh viễn' });
+    const button = within(confirm).getByRole('button', { name: 'Xóa vĩnh viễn' });
     expect(button).toBeDisabled();
     await userEvent.type(within(confirm).getByRole('textbox'), 'admin web');
     expect(button).toBeEnabled();

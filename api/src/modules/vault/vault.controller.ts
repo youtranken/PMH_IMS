@@ -51,7 +51,7 @@ class CreateSecretDto {
   @IsUUID(undefined, { message: 'Mã chủ thể không hợp lệ.' })
   ownerId!: string;
 
-  @IsIn([...SECRET_KINDS], { message: 'Loại secret không hợp lệ.' })
+  @IsIn([...SECRET_KINDS], { message: 'Loại ngăn két không hợp lệ.' })
   kind!: SecretKind;
 
   @IsString() @Length(1, 120) label!: string;
@@ -73,7 +73,7 @@ class RotateSecretDto {
 }
 
 class IdParamDto {
-  @IsUUID(undefined, { message: 'Mã secret không hợp lệ.' })
+  @IsUUID(undefined, { message: 'Mã ngăn két không hợp lệ.' })
   id!: string;
 }
 
