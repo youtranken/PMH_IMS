@@ -45,11 +45,11 @@ import { UsersApiService } from '../users/users.api';
 /** Khoảng ngày của tab "Đã gia hạn" — ngày lịch YYYY-MM-DD, cả hai bao gồm. */
 class RenewalsQueryDto {
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'from phải dạng YYYY-MM-DD' })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '"Từ ngày" phải dạng YYYY-MM-DD.' })
   from?: string;
 
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'to phải dạng YYYY-MM-DD' })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: '"Đến ngày" phải dạng YYYY-MM-DD.' })
   to?: string;
 }
 

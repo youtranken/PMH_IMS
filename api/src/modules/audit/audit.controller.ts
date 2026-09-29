@@ -48,11 +48,11 @@ export class AuditQueryDto {
   security?: string;
 
   @IsOptional()
-  @Matches(DATE_RE, { message: 'from phải dạng YYYY-MM-DD' })
+  @Matches(DATE_RE, { message: '"Từ ngày" phải dạng YYYY-MM-DD.' })
   from?: string;
 
   @IsOptional()
-  @Matches(DATE_RE, { message: 'to phải dạng YYYY-MM-DD' })
+  @Matches(DATE_RE, { message: '"Đến ngày" phải dạng YYYY-MM-DD.' })
   to?: string;
 
   /*

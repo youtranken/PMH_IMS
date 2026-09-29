@@ -37,8 +37,8 @@ class LogQueryDto {
 
   @IsOptional() @IsString() @MaxLength(255) requester?: string;
 
-  @IsOptional() @Matches(DATE_RE, { message: 'from phải dạng YYYY-MM-DD' }) from?: string;
-  @IsOptional() @Matches(DATE_RE, { message: 'to phải dạng YYYY-MM-DD' }) to?: string;
+  @IsOptional() @Matches(DATE_RE, { message: '"Từ ngày" phải dạng YYYY-MM-DD.' }) from?: string;
+  @IsOptional() @Matches(DATE_RE, { message: '"Đến ngày" phải dạng YYYY-MM-DD.' }) to?: string;
 }
 
 function logFilters(query: LogQueryDto) {

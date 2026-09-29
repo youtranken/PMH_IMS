@@ -192,7 +192,8 @@ export function vietnameseFor(
     case 'isUuid':
       return `${label} không hợp lệ.`;
     case 'isEmail':
-      return `${label} không đúng định dạng email.`;
+      // Trường tên "Email" mà ghép khuôn chung thì ra "Email không đúng định dạng email."
+      return label === 'Email' ? 'Email không hợp lệ.' : `${label} phải là địa chỉ email hợp lệ.`;
     case 'isDateString':
       return `${label} phải là ngày hợp lệ.`;
     case 'isNotEmpty':
