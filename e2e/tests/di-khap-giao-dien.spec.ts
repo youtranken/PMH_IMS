@@ -8739,11 +8739,16 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       .getByRole('row', { name: new RegExp(label) })
       .getByRole('button', { name: 'Xem' })
       .click();
-    const stepUp = page.getByRole('dialog', { name: 'Xác nhận danh tính' });
+    /*
+     * VLT-062: popup két đã là một hộp, nên bước gõ mã và bước hiện giá trị chạy NGAY TRONG
+     * hộp đó — không chồng thêm hộp nào. Luôn chỉ MỘT hộp đang mở.
+     */
+    const stepUp = popup.getByRole('region', { name: 'Xác nhận danh tính' });
     await expect(
       stepUp,
       'hết grace mà bấm Xem thì phải được HỎI MÃ, không phải một toast lỗi rồi bỏ mặc',
     ).toBeVisible();
+    await expect(page.getByRole('dialog'), 'bước mã nằm trong popup, không chồng hộp').toHaveCount(1);
     // Hộp nêu ĐÚNG ngăn đang mở (VLT-047) — người ta biết mình gõ mã để xem cái gì.
     await expect(stepUp.getByText(`Nhập mã 6 số để xem "${label}".`)).toBeVisible();
 
@@ -8761,9 +8766,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
     ).toHaveValue('12345');
     await stepUp.getByLabel('Mã xác thực').fill('');
     expect(
-      await stepUp.getByTestId('dialog-footer').getByRole('button').allTextContents(),
-      'chân hộp phải có đúng cặp Hủy / Xác nhận',
-    ).toEqual(['Hủy', 'Xác nhận']);
+      await stepUp.getByRole('button').allTextContents(),
+      'bước mã phải có đúng cặp Quay lại / Xác nhận',
+    ).toEqual(['‹ Quay lại danh sách ngăn', 'Xác nhận']);
 
     /* ---- Gõ SAI mã: hộp KHÔNG được đóng ---- */
 
@@ -8792,8 +8797,9 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     /* ---------- HỘP "HIỆN SECRET": đủ bộ ba, và một nút ẩn ngay ---------- */
 
-    const reveal = page.getByRole('dialog', { name: label });
+    const reveal = popup.getByRole('region', { name: label });
     await expect(reveal).toBeVisible();
+    await expect(page.getByRole('dialog'), 'bước giá trị cũng nằm trong popup').toHaveCount(1);
     await expect(
       reveal.getByTestId('secret-value'),
       'gõ đúng mã rồi thì phải thấy đúng giá trị vừa cất',
@@ -8812,13 +8818,15 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'người xem phải BIẾT là lượt xem này có vết — đó là nửa sức răn đe của cơ chế',
     ).toBeVisible();
     expect(
-      await reveal.getByTestId('dialog-footer').getByRole('button').allTextContents(),
-      'chân hộp hiện secret chỉ có đúng một nút "Ẩn ngay" — không nút sao chép, FR-026',
-    ).toEqual(['Ẩn ngay']);
+      await reveal.getByRole('button').allTextContents(),
+      'bước hiện giá trị chỉ có nút đổi cách hiện và "Ẩn ngay" — không nút sao chép, FR-026',
+    ).toEqual(['Hiện từng ký tự', 'Ẩn ngay']);
 
     await reveal.getByRole('button', { name: 'Ẩn ngay' }).click();
     await expect(reveal, 'bấm "Ẩn ngay" phải giấu giá trị đi ngay lập tức').toBeHidden();
     await expect(page.getByTestId('secret-value')).toHaveCount(0);
+    // Ẩn xong là về lại danh sách ngăn của CÙNG popup, không đóng popup.
+    await expect(popup.getByRole('row', { name: new RegExp(label) })).toBeVisible();
   });
 
   /* ================================================================== *

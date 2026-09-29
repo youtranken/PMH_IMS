@@ -1471,6 +1471,8 @@ export default {
     releaseConfirm:
       'Đóng két với bạn ngay bây giờ? Muốn xem lại thì phải gửi yêu cầu mới và chờ duyệt.',
     released: 'Đã trả quyền — két đã đóng với bạn.',
+    /* Bước trong hộp (VLT-062): nút rời bước gõ mã, về lại danh sách ngăn của cùng hộp. */
+    stepBack: '‹ Quay lại danh sách ngăn',
   },
   ipam: {
     title: 'Địa chỉ IP',

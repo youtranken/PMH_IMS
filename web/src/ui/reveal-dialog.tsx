@@ -37,15 +37,49 @@ export function formatMinSec(seconds: number): string {
  * Thiếu số thứ hai thì người dùng mở ngăn thứ hai lúc 9:09 và bị hỏi mã giữa chừng mà không
  * hiểu vì sao, dù cái mốc đó vốn đoán trước được.
  */
-export function RevealDialog({
-  label,
-  username,
-  value,
-  seconds,
-  stepUpSecondsLeft,
-  onClose,
-  onExpire,
-}: {
+export function RevealDialog(props: RevealProps) {
+  const { t } = useTranslation();
+  return (
+    <Dialog
+      open
+      onOpenChange={props.onClose}
+      maxWidth={480}
+      title={props.label}
+      footer={
+        /* Nút thường, không `primary`: lối ra không được là thứ sáng nhất hộp — nội dung mới là. */
+        <button type="button" className="btn" onClick={props.onClose}>
+          {t('vault.hideNow')}
+        </button>
+      }
+    >
+      <RevealContent {...props} />
+    </Dialog>
+  );
+}
+
+/**
+ * Cùng nội dung, nhưng là một BƯỚC trong hộp đang mở thay cho hộp chồng lên (VLT-062).
+ *
+ * Luật giữ nguyên như hộp riêng: đồng hồ tự ẩn, không clipboard, rời bước là giá trị mất khỏi
+ * cây React (nơi gọi xóa state khi `onClose`).
+ */
+export function RevealStep(props: RevealProps) {
+  const { t } = useTranslation();
+  return (
+    <section className="form-grid" data-columns={1} aria-label={props.label}>
+      <h3>{props.label}</h3>
+      <RevealContent {...props} />
+      <div className="row">
+        {/* Ẩn = quay về danh sách ngăn: một nút, một nghĩa. */}
+        <button type="button" className="btn" onClick={props.onClose}>
+          {t('vault.hideNow')}
+        </button>
+      </div>
+    </section>
+  );
+}
+
+interface RevealProps {
   label: string;
   /** Tên đăng nhập đi kèm — người ta cần CẶP user + mật khẩu, bảng phía sau đã bị hộp che. */
   username?: string | null;
@@ -59,7 +93,16 @@ export function RevealDialog({
    * sang gõ vào thiết bị, nhìn lại thấy hộp mất, phải biết là do hết giờ.
    */
   onExpire?: () => void;
-}) {
+}
+
+function RevealContent({
+  username,
+  value,
+  seconds,
+  stepUpSecondsLeft,
+  onClose,
+  onExpire,
+}: RevealProps) {
   const { t } = useTranslation();
   const openedAt = useRef(Date.now());
   const deadline = useRef(openedAt.current + seconds * 1000);
@@ -97,73 +140,60 @@ export function RevealDialog({
   const chars = Array.from(value);
 
   return (
-    <Dialog
-      open
-      onOpenChange={onClose}
-      maxWidth={480}
-      title={label}
-      footer={
-        /* Nút thường, không `primary`: lối ra không được là thứ sáng nhất hộp — nội dung mới là. */
-        <button type="button" className="btn" onClick={onClose}>
-          {t('vault.hideNow')}
-        </button>
-      }
-    >
-      <div className="form-grid" data-columns={1}>
-        {username ? (
-          <p className="reveal-username">
-            {t('vault.username')}: <span className="mono">{username}</span>
-          </p>
-        ) : null}
-        {perChar ? (
-          <ol className="secret-chars" aria-label={t('vault.perCharLabel')}>
-            {chars.map((ch, index) => (
-              <li key={index} className={`ch-${secretCharClass(ch)}`}>
-                <span className="secret-char-no">{index + 1}</span>
-                <span className="mono">{ch}</span>
-              </li>
-            ))}
-          </ol>
-        ) : (
-          <p className="secret-value mono" data-testid="secret-value">
-            {chars.map((ch, index) => (
-              <span key={index} className={`ch-${secretCharClass(ch)}`}>
-                {ch}
-              </span>
-            ))}
-          </p>
-        )}
-        <div>
-          <button
-            type="button"
-            className="btn sm"
-            aria-pressed={perChar}
-            onClick={() => setPerChar((current) => !current)}
-          >
-            {t(perChar ? 'vault.perCharOff' : 'vault.perCharOn')}
-          </button>
-        </div>
-        {/* `role="status"` để trình đọc màn hình đọc được mốc còn lại; `aria-live` mặc định
-            của status là polite nên nó không cắt ngang mỗi giây. */}
-        <p className="countdown" role="status" data-testid="reveal-countdown">
-          <span className={`countdown-num ${tone}`}>{left}s</span>
-          <span className="countdown-note muted">{t('vault.autoHideShort')}</span>
+    <div className="form-grid" data-columns={1}>
+      {username ? (
+        <p className="reveal-username">
+          {t('vault.username')}: <span className="mono">{username}</span>
         </p>
-        <div className="reveal-progress" aria-hidden="true">
-          <span className={tone} style={{ width: `${(left / Math.max(1, seconds)) * 100}%` }} />
-        </div>
-        {stepUpSecondsLeft === undefined ? null : (
-          <p className="countdown">
-            <span className="countdown-note muted">{t('vault.graceLine')}</span>
-            <span className={`countdown-num ${graceTone}`} data-testid="stepup-countdown">
-              {formatMinSec(graceLeft)}
+      ) : null}
+      {perChar ? (
+        <ol className="secret-chars" aria-label={t('vault.perCharLabel')}>
+          {chars.map((ch, index) => (
+            <li key={index} className={`ch-${secretCharClass(ch)}`}>
+              <span className="secret-char-no">{index + 1}</span>
+              <span className="mono">{ch}</span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="secret-value mono" data-testid="secret-value">
+          {chars.map((ch, index) => (
+            <span key={index} className={`ch-${secretCharClass(ch)}`}>
+              {ch}
             </span>
-          </p>
-        )}
-        <p className="muted">
-          <small>{t('vault.revealLogged')}</small>
+          ))}
         </p>
+      )}
+      <div>
+        <button
+          type="button"
+          className="btn sm"
+          aria-pressed={perChar}
+          onClick={() => setPerChar((current) => !current)}
+        >
+          {t(perChar ? 'vault.perCharOff' : 'vault.perCharOn')}
+        </button>
       </div>
-    </Dialog>
+      {/* `role="status"` để trình đọc màn hình đọc được mốc còn lại; `aria-live` mặc định
+          của status là polite nên nó không cắt ngang mỗi giây. */}
+      <p className="countdown" role="status" data-testid="reveal-countdown">
+        <span className={`countdown-num ${tone}`}>{left}s</span>
+        <span className="countdown-note muted">{t('vault.autoHideShort')}</span>
+      </p>
+      <div className="reveal-progress" aria-hidden="true">
+        <span className={tone} style={{ width: `${(left / Math.max(1, seconds)) * 100}%` }} />
+      </div>
+      {stepUpSecondsLeft === undefined ? null : (
+        <p className="countdown">
+          <span className="countdown-note muted">{t('vault.graceLine')}</span>
+          <span className={`countdown-num ${graceTone}`} data-testid="stepup-countdown">
+            {formatMinSec(graceLeft)}
+          </span>
+        </p>
+      )}
+      <p className="muted">
+        <small>{t('vault.revealLogged')}</small>
+      </p>
+    </div>
   );
 }

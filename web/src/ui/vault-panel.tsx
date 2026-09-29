@@ -13,10 +13,10 @@ import { Field } from '@/ui/page-header';
 import { RowActions } from '@/ui/row-actions';
 import { TableWrap } from '@/ui/data-table';
 import { Select } from '@/ui/select';
-import { RevealDialog } from '@/ui/reveal-dialog';
+import { RevealDialog, RevealStep } from '@/ui/reveal-dialog';
 import { SecretStrengthMeter } from '@/ui/secret-strength-meter';
 import { SecretValueInput } from '@/ui/secret-value-input';
-import { StepUpDialog } from '@/ui/step-up-dialog';
+import { StepUpDialog, StepUpStep } from '@/ui/step-up-dialog';
 import { hourSteps } from '@/ui/grant-hours';
 import { useStepUpRetry } from '@/ui/use-step-up-retry';
 import { useFormErrors } from '@/ui/use-form-errors';
@@ -145,11 +145,18 @@ export function VaultPanel({
   ownerId,
   me,
   canEdit = true,
+  stepsInline = false,
 }: {
   ownerType: SecretOwnerType;
   ownerId: string;
   me: Me;
   canEdit?: boolean;
+  /**
+   * Khung này đang nằm TRONG một hộp (vd popup của trang Két tổng): bước gõ mã 6 số và bước
+   * hiện giá trị thay chỗ danh sách ngăn ngay trong hộp đó, không mở hộp chồng lên (VLT-062).
+   * Trên trang hồ sơ (không có hộp bao ngoài) thì để mặc định — mỗi lúc chỉ có một hộp.
+   */
+  stepsInline?: boolean;
 }) {
   const { t } = useTranslation();
   const toast = useToast();
@@ -300,6 +307,47 @@ export function VaultPanel({
   }
 
   const rows = secrets.data ?? [];
+
+  const stepUpPurpose = pendingStepUp
+    ? t('vault.stepUpPurpose', { label: pendingStepUp.label })
+    : undefined;
+  const afterStepUp = () => {
+    const secret = pendingStepUp;
+    setPendingStepUp(null);
+    // `afterStepUp` = true: gõ mã xong mà vẫn bị đòi mã nữa thì đó là lỗi thật,
+    // không phải chuyện để hỏi lại vòng hai — nếu không sẽ thành vòng lặp hộp thoại.
+    if (secret) void openSecret(secret, true);
+  };
+  /* Hết giờ thì NÓI RA. Hộp biến mất không một lời là thứ khiến người dùng bấm "Xem"
+     lần nữa cho chắc — và mỗi lần bấm là thêm một dòng nhật ký mở két. */
+  const onRevealExpire = () => toast({ message: t('vault.autoHidden') });
+
+  if (stepsInline && (pendingStepUp || revealed)) {
+    return (
+      <div className="attachment-panel">
+        {revealed ? (
+          <RevealStep
+            label={revealed.label}
+            username={revealed.username}
+            value={revealed.value}
+            seconds={revealed.seconds}
+            stepUpSecondsLeft={revealed.stepUpSecondsLeft}
+            onClose={() => setRevealed(null)}
+            onExpire={onRevealExpire}
+          />
+        ) : pendingStepUp ? (
+          <StepUpStep
+            csrfToken={me.csrfToken}
+            purpose={stepUpPurpose}
+            graceMinutes={me.config?.stepUpGraceMinutes}
+            backLabel={t('vault.stepBack')}
+            onBack={() => setPendingStepUp(null)}
+            onDone={afterStepUp}
+          />
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="attachment-panel">
@@ -608,23 +656,17 @@ export function VaultPanel({
 
       {writeStepUp.dialog}
 
-      {pendingStepUp ? (
+      {pendingStepUp && !stepsInline ? (
         <StepUpDialog
           csrfToken={me.csrfToken}
-          purpose={t('vault.stepUpPurpose', { label: pendingStepUp.label })}
+          purpose={stepUpPurpose}
           graceMinutes={me.config?.stepUpGraceMinutes}
           onClose={() => setPendingStepUp(null)}
-          onDone={() => {
-            const secret = pendingStepUp;
-            setPendingStepUp(null);
-            // `afterStepUp` = true: gõ mã xong mà vẫn bị đòi mã nữa thì đó là lỗi thật,
-            // không phải chuyện để hỏi lại vòng hai — nếu không sẽ thành vòng lặp hộp thoại.
-            void openSecret(secret, true);
-          }}
+          onDone={afterStepUp}
         />
       ) : null}
 
-      {revealed ? (
+      {revealed && !stepsInline ? (
         <RevealDialog
           label={revealed.label}
           username={revealed.username}
@@ -632,9 +674,7 @@ export function VaultPanel({
           seconds={revealed.seconds}
           stepUpSecondsLeft={revealed.stepUpSecondsLeft}
           onClose={() => setRevealed(null)}
-          /* Hết giờ thì NÓI RA. Hộp biến mất không một lời là thứ khiến người dùng bấm "Xem"
-             lần nữa cho chắc — và mỗi lần bấm là thêm một dòng nhật ký mở két. */
-          onExpire={() => toast({ message: t('vault.autoHidden') })}
+          onExpire={onRevealExpire}
         />
       ) : null}
 
