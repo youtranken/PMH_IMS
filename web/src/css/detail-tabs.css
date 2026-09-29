@@ -738,8 +738,16 @@ input.search {
 .text-danger {
   color: var(--danger);
 }
-.board-table tr.row-flash > td {
+/* Dòng vừa thêm/vừa đổi sáng lên rồi nhạt dần: máy mới thường rơi vào giữa trang theo thứ tự
+   mã, không có dấu này thì mắt không tìm ra nó. Dùng chung cho mọi `.table`. */
+.table tr.row-flash > td {
   animation: rowFlash 2.5s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .table tr.row-flash > td {
+    animation: none;
+    background: var(--warn-hi);
+  }
 }
 @keyframes rowFlash {
   0% {

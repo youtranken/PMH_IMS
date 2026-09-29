@@ -259,6 +259,34 @@ export class IpAddressService {
     return rows.map((row) => row.deviceId).filter((value): value is string => value !== null);
   }
 
+  /**
+   * Địa chỉ đang GIỮ của nhiều máy một lượt — cột IP của danh sách thiết bị hỏi cho cả trang
+   * (không N+1). Cùng luật "đang giữ" với `listForDeviceWithin`: hồ sơ ẩn hay đã trả về pool
+   * không còn là IP của máy đó. Sắp theo kiểu `inet` nên ".3" đứng trước ".20".
+   */
+  async heldAddressesOf(deviceIds: string[]): Promise<Map<string, string[]>> {
+    const result = new Map<string, string[]>();
+    if (deviceIds.length === 0) return result;
+    const rows = await this.db
+      .select({ deviceId: ipAddressTable.deviceId, address: ipAddressTable.address })
+      .from(ipAddressTable)
+      .where(
+        and(
+          inArray(ipAddressTable.deviceId, deviceIds),
+          isNull(ipAddressTable.voidedAt),
+          inArray(ipAddressTable.status, OCCUPYING_STATUSES),
+        ),
+      )
+      .orderBy(asc(ipAddressTable.address));
+    for (const row of rows) {
+      if (!row.deviceId) continue;
+      const list = result.get(row.deviceId) ?? [];
+      list.push(hostOf(row.address));
+      result.set(row.deviceId, list);
+    }
+    return result;
+  }
+
   /** IP của một thiết bị — panel IP trên trang thiết bị (story 5.4) hỏi cái này. */
   async listForDevice(deviceId: string): Promise<IpAddressRecord[]> {
     const rows = await this.db

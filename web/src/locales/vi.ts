@@ -697,6 +697,7 @@ export default {
     emptySearch: 'Không có thiết bị nào khớp “{{q}}”.',
     clearFilters: 'Xóa bộ lọc',
     licenseCount: '{{count}} license',
+    ipMore: '{{ip}} +{{count}}',
     created: 'Đã thêm {{code}}.',
     openProfile: 'Mở hồ sơ',
     // KHÔNG chứa chữ "Lưu": Playwright khớp tên nút theo chuỗi con, hai nút sẽ giành nhau.
