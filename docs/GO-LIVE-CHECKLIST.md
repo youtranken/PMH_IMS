@@ -733,11 +733,18 @@ Các sổ nguồn đã xoá ngày 27/09 và vẫn còn trong lịch sử git. M�
 
 ### P2
 
-- [ ] **OLD-FE-03 · Khoảng 550 dòng CSS chết:**
+- [x] **OLD-FE-03 · Khoảng 550 dòng CSS chết:**
   - `primitives.css:37`, `detail-tabs.css:519`, `form-layout.css:531`, `table.css:375-386`.
   - `filters.css` và `profile.css` vẫn được `@import`.
   - **Rà 29/09:** còn nguyên. `filters.css` (50 dòng) và `profile.css` (224 dòng) chết toàn bộ, vẫn
     `@import` ở `web/src/index.css:15,17`; số dòng cũ ở trên đã lệch.
+  - **Đã sửa:** xoá `filters.css` (và `@import`). `profile.css` KHÔNG chết toàn bộ: `.profile-page`,
+    `.profile-card`, `.profile-dl` đang dùng ở `profile-screen.tsx` nên giữ, còn `.stat-grid` 1 cột
+    ≤680px chuyển về `detail-tabs.css`; phần còn lại (~186 dòng) xoá. Xoá rule chết trong
+    `primitives.css`, `detail-tabs.css`, `form-layout.css`, `table.css` — mỗi lớp đã soát không
+    còn trong `web/src/**/*.ts(x)`, `web/index.html`, `e2e/tests` (kể cả lớp ghép động như
+    `is-${bucket}`, `span-${n}`: `is-assigned`/`is-voided`/`span-3` còn sống nên giữ). Tổng
+    ~780 dòng; `npm run build` và các bài Vitest đọc CSS xanh.
 - [x] **OLD-FE-04 · Icon kính lúp giữ màu xám ở dark mode** (`base.css:38`, `detail-tabs.css:379`,
   `shared-kit.css:916`).
   - **Rà 29/09:** còn nguyên, cả ba icon SVG vẫn `stroke='%238a908a'` (`base.css:48`,
