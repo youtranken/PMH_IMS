@@ -6,10 +6,10 @@ import { UI_PATHS } from '../../common/ui-paths';
 import type { IpStatus } from './ip-lifecycle';
 
 /**
- * Khu "Địa chỉ IP" trên trang chi tiết thiết bị (story 5.4, AC: một trang đủ thông tin khi
- * xử lý sự cố).
+ * Khu "Địa chỉ IP" trên trang chi tiết thiết bị (AC: một trang đủ thông tin khi xử lý sự cố).
  *
- * Đúng cơ chế của story 2.5: `ipam` tự cắm vào, `devices` không phải sửa một dòng nào.
+ * Dùng cơ chế khu mở rộng (`common/device-panels`): `ipam` tự cắm vào, `devices` không phải
+ * sửa một dòng nào.
  */
 @Injectable()
 export class IpDevicePanel implements DevicePanelProvider, OnModuleInit {

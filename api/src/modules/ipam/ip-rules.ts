@@ -1,5 +1,5 @@
 /**
- * Số học IPv4 — hàm THUẦN, không chạm DB (story 5.1, FR-018/FR-020).
+ * Số học IPv4 — hàm THUẦN, không chạm DB (FR-018/FR-020).
  *
  * Tách ra vì đây là chỗ sai thầm lặng nhất của cả epic: sai một bit là cấp trùng IP, và
  * chuyện đó chỉ lộ ra ở ngoài mạng — hai máy cùng IP, người dùng báo "mạng chập chờn", còn
@@ -13,10 +13,9 @@
  * Cột `inet` của Postgres trả về kèm mask (`172.16.10.5/32`); người dùng và mọi ô nhập đều nói
  * địa chỉ trần. Chuẩn hóa về một dạng trước khi SO SÁNH hay HIỂN THỊ.
  *
- * Gom về đây (AD-15) vì tới 08/09 khái niệm này đã có ba bản: một hàm riêng trong
- * `nat-rule.service.ts`, một dòng `split('/')[0]` chép tay trong `ip-address.service.ts`, và
- * hàng rào NAT mới cần bản thứ ba. Ba bản của cùng một phép chuẩn hóa là ba cơ hội để hai
- * cuốn sổ trả lời khác nhau về CÙNG một địa chỉ — đúng loại lệch mà finding #6 nói tới.
+ * Chỉ một bản, ở đây (AD-15): sổ NAT, hồ sơ IP và hàng rào NAT đều cần phép chuẩn hóa này.
+ * Mỗi nơi một bản chép tay là mỗi nơi một cơ hội để hai cuốn sổ trả lời khác nhau về CÙNG
+ * một địa chỉ.
  */
 export function hostOf(value: string): string {
   return value.split('/')[0];

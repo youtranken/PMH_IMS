@@ -90,7 +90,7 @@ describe('validateNatRule — luật nghiệp vụ của một dòng sổ NAT (F
   /**
    * Địa chỉ mạng và địa chỉ quảng bá KHÔNG phải máy nào cả.
    *
-   * Trước đây form chỉ hỏi "có phải IPv4 hợp lệ không", nên `172.16.0.0` khai được và cuốn
+   * Chỉ hỏi "có phải IPv4 hợp lệ không" thì `172.16.0.0` khai được và cuốn
    * sổ có một dòng dẫn tới hư không: gói tin chuyển tới đó không tới máy nào, còn người đọc
    * sổ thì tin rằng port ấy đang phục vụ một dịch vụ thật.
    */
@@ -149,7 +149,7 @@ describe('validateNatRule — luật nghiệp vụ của một dòng sổ NAT (F
   });
 
   /**
-   * Code review Epic 5, finding 2: `NatRuleService.create` là hàm công khai — import Excel về
+   * `NatRuleService.create` là hàm công khai — import Excel về
    * sau, seed, hay module khác gọi lại đều KHÔNG đi qua DTO HTTP. Không kiểm ở đây thì cặp
    * ngược đầu rơi xuống ràng buộc của Postgres và bung 500 thay vì một câu tiếng Việt.
    */
@@ -165,10 +165,9 @@ describe('validateNatRule — luật nghiệp vụ của một dòng sổ NAT (F
   });
 
   /**
-   * ĐÂY là finding số 1 của code review Epic 5, và là loại lỗi tệ nhất: comment nói "cảnh báo,
-   * không chặn", thông điệp nói "nếu đúng ý thì cứ lưu", nhưng code lại NÉM — người dùng đọc
-   * được lời khuyên mà không làm theo được. Test cũ chỉ đếm `errors.length === 1` nên nó XANH
-   * trong khi hành vi sai. Giờ khẳng định đúng chỗ: đây là `warnings`, và `errors` phải RỖNG.
+   * Loại lỗi tệ nhất: thông điệp nói "nếu đúng ý thì cứ lưu" mà code lại NÉM — người dùng đọc
+   * được lời khuyên mà không làm theo được. Chỉ đếm `errors.length === 1` thì bài XANH trong
+   * khi hành vi sai, nên khẳng định đúng chỗ: đây là `warnings`, và `errors` phải RỖNG.
    */
   it('mở dải port lớn là CẢNH BÁO, không phải lỗi — dải camera phải lưu được', () => {
     const result = check({ ...base, externalFrom: 50000, externalTo: 52000 });
@@ -205,7 +204,7 @@ describe('validateNatRule — luật nghiệp vụ của một dòng sổ NAT (F
 });
 
 /**
- * Code review Epic 5, finding 4: ràng buộc `EXCLUDE` của DB so `protocol WITH =` nên `both`
+ * Ràng buộc `EXCLUDE` của DB so `protocol WITH =` nên `both`
  * và `tcp` cùng port KHÔNG đụng nhau ở tầng DB — trong khi `both` theo định nghĩa phủ cả TCP
  * lẫn UDP. Sổ NAT khi đó có HAI câu trả lời cho TCP/8080, đúng thứ bảng này sinh ra để tránh.
  */

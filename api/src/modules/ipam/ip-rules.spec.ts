@@ -124,7 +124,7 @@ describe('normalizeSubnet — chuẩn hóa dải', () => {
   );
 
   /**
-   * Trần là /24 (254 host) — quyết định của chủ dự án, 25/08/2026.
+   * Trần là /24 (254 host) — quyết định của chủ dự án.
    *
    * Lý do không phải thẩm mỹ: màn chi tiết dải liệt kê MỌI host trong dải, không phân trang.
    * Gõ nhầm /16 thay /24 là 65.534 dòng dựng một lượt (treo tab), /8 là 16 triệu (treo cả
