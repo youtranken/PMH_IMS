@@ -201,6 +201,7 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
 - **SSL / tên miền (SW-043):** không thêm bộ trường SSL riêng. Chỉ cần ghi lại **website nào dùng
   chứng chỉ SSL nào, theo từng năm** — danh sách website trên hồ sơ SSL, và mỗi lần gia hạn lưu
   lại danh sách website của kỳ đó trong sổ lịch sử gia hạn.
+- **Luật NAT không có hạn "rà lại"** (chủ dự án chốt, 29/09/2026).
 - Chưa làm: lưới mặt trước switch (cần trường "số cổng" theo model).
 
 ### Q-09 · Tài liệu
