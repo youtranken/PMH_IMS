@@ -130,8 +130,10 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
   - **Rà 29/09:** còn nguyên (`auth.service.ts:98-141`). Mã `ACCOUNT_LOCKED` được thêm có chủ ý để
     người dùng biết vì sao không vào được (32c3731), nên muốn đóng mục này phải chốt ở QUYET-DINH trước.
   - **Không sửa** — Q-16: giữ mã lỗi riêng, rủi ro dò email chấp nhận.
-- [ ] **SEC-11 · Kiểm Origin bị bỏ qua khi thiếu header** (`csrf.guard.ts:66`), mở khả năng login-CSRF.
-  - **Rà 29/09:** còn nguyên (`csrf.guard.ts:66` vẫn `if (!origin) return;`).
+- [x] **SEC-11 · Kiểm Origin bị bỏ qua khi thiếu header** (`csrf.guard.ts:66`), mở khả năng login-CSRF.
+  - **Đã sửa:** thiếu `Origin` thì xét `Sec-Fetch-Site` (chỉ nhận `same-origin`/`none`), rồi origin
+    của `Referer`. Route công khai (đăng nhập) không có tín hiệu nguồn nào thì 403 `ORIGIN_MISSING`;
+    route cần phiên vẫn còn lớp token. Bài kiểm dựng lại đòn: `api/src/modules/auth/csrf.guard.spec.ts`.
 - [x] **SEC-12 · Member đính file được vào mọi đối tượng chỉ có quyền đọc**
   (`files.controller.ts`, `assertCanRead`). Cần chủ dự án xác nhận đây là chủ ý.
   - **Rà 29/09:** không sửa, Q-11 chốt là đúng chủ ý. Xoá file vẫn chỉ SA/Admin.
