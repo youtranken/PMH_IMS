@@ -734,6 +734,18 @@ export default {
     quickInfo: 'Thông tin nhanh',
     managementIp: 'IP quản trị',
     fillBlanks: 'Bổ sung {{count}} ô còn thiếu',
+    openVault: 'Két sắt',
+    warrantyNudge: 'Máy hỏng nhưng còn bảo hành tới {{date}} — liên hệ nhà cung cấp.',
+    heldLabel: 'Đang giữ:',
+    held: {
+      ipam: '{{count}} IP',
+      ports: '{{count}} cổng',
+      nat: '{{count}} luật NAT',
+      isp: '{{count}} đường truyền',
+      software: '{{count}} license',
+      vault: '{{count}} mục két',
+      attachments: '{{count}} giấy tờ',
+    },
   },
   attachments: {
     title: 'Giấy tờ đính kèm',
