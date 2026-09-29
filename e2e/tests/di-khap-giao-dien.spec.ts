@@ -5090,7 +5090,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     const hide = page.getByRole('dialog', { name: `Ngừng dùng dải ${cidr}` });
     await expect(hide).toBeVisible();
     await expect(
-      hide.getByText('Dải Ở LẠI danh sách', { exact: false }),
+      hide.getByText('Dải vẫn ở danh sách', { exact: false }),
       'phải nói rõ ngừng dùng KHÔNG phải xóa — người dùng đọc "biến mất" là "đã mất"',
     ).toBeVisible();
     await expectHandles(hide, 'textbox', ['Lý do'], 'Hộp "Ngừng dùng dải"');
@@ -5499,7 +5499,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     const remove = page.getByRole('dialog', { name: 'Gỡ luật NAT UDP 9000-9010' });
     await expect(remove).toBeVisible();
     await expect(
-      remove.getByText('Luật không bị xóa khỏi hệ thống', { exact: false }),
+      remove.getByText('vẫn xem lại được', { exact: false }),
     ).toBeVisible();
     await expectHandles(remove, 'textbox', ['Lý do gỡ'], 'Hộp "Gỡ luật NAT"');
     await expectHandles(remove, 'button', ['Đóng hộp thoại', 'Hủy', 'Gỡ'], 'Hộp "Gỡ luật NAT"');

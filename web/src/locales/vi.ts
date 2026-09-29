@@ -1583,7 +1583,7 @@ export default {
     railLabel: 'Danh sách dải mạng',
     vlan: 'VLAN',
     vlanBadge: 'VLAN {{vlan}}',
-    vlanHint: 'Số VLAN 802.1Q (1–4094). Để trống nếu dải này không gắn VLAN nào.',
+    vlanHint: 'VLAN 802.1Q (1–4094). Để trống nếu dải không gắn VLAN.',
     vlanInvalid: 'VLAN phải là số nguyên từ 1 đến 4094.',
     filterAll: 'Tất cả',
     addSubnet: 'Khai dải mới',
@@ -1596,7 +1596,7 @@ export default {
     phCidr: 'vd 172.16.10.0/24',
     phVlan: 'vd 20',
     phGateway: 'vd 172.16.10.1',
-    cidrHint: 'Dạng 172.16.10.0/24. Gõ IP bất kỳ kèm /24 cũng được — hệ thống tự quy về địa chỉ mạng.',
+    cidrHint: 'Dạng 172.16.10.0/24. Gõ IP bất kỳ kèm /24 cũng được, hệ thống tự quy về địa chỉ mạng.',
     name: 'Tên gọi',
     site: 'Site',
     noSite: 'Không gắn site',
@@ -1605,35 +1605,30 @@ export default {
     usageUsed: '{{used}}/{{total}} đang dùng',
     usageOf: 'Mức sử dụng dải {{cidr}}',
     gateway: 'Gateway',
-    gatewayHint:
-      'Địa chỉ gateway của chính dải này (vd 172.16.10.1). Để trống nếu dải không có gateway.',
+    gatewayHint: 'Để trống nếu dải không có gateway.',
     /* Hai nút cho hai tình huống — màn hình tự chọn theo `addressCount`, người dùng không phải đoán. */
     hide: 'Ngừng dùng',
     hideSubnetTitle: 'Ngừng dùng dải {{cidr}}',
-    hideHint: 'Dải Ở LẠI danh sách, gạch ngang và xám đi — đây không phải xóa.',
+    hideHint: 'Dải vẫn ở danh sách, gạch ngang và xám đi — không phải xóa.',
     /* Trạng thái vô hiệu hóa hiện NGAY trên thẻ dải (28/08/2026). Trước đó dải vừa vô hiệu
        hóa là biến mất khỏi danh sách, và người dùng đọc đúng cái đó là "đã bị xóa hẳn". */
     disabledBadge: 'Đã ngừng dùng',
     disabledSince: 'Ngừng dùng {{date}} · {{reason}}',
     restore: 'Dùng lại',
     restoreTitle: 'Dùng lại dải {{cidr}}?',
-    restoreConfirm:
-      'Dải {{cidr}} trở lại danh sách như cũ, và {{count}} hồ sơ IP đã tắt cùng nó cũng sống lại. Những hồ sơ bị xóa lẻ trước đó thì không — chúng đã xóa vì lý do riêng.',
+    restoreConfirm: 'Dải {{cidr}} trở lại như cũ, {{count}} hồ sơ IP tắt cùng dải cũng dùng lại được.',
     subnetRestored: 'Đã dùng lại dải.',
     /* Vì sao dải đã tắt vẫn KHÔNG xóa hẳn được: xóa là mất luôn thứ AC 5.2 bắt giữ vĩnh viễn,
        và `ip_history` là bảng CHỈ-THÊM (AD-13) nên tầng DB cũng không cho xóa. Nói thẳng ra
        trên thẻ, thay vì lặng lẽ giấu nút Xóa và để người dùng tự đoán. */
     keptForHistory: 'Giữ lại vì còn {{count}} hồ sơ IP mang lịch sử — không xóa hẳn được.',
-    voidedSlotHint:
-      'Dải này đã ngừng dùng. Hồ sơ IP hiện ra để tra cứu, không cấp hay sửa được — dùng lại dải trước đã.',
+    voidedSlotHint: 'Dải này đã ngừng dùng. Hồ sơ IP chỉ để tra cứu, không cấp hay sửa được — dùng lại dải trước.',
     deleteSubnetTitle: 'Xóa hẳn dải {{cidr}}?',
-    deleteSubnetConfirm:
-      'Dải {{cidr}} chưa có hồ sơ IP nào nên xóa hẳn được — bản ghi biến mất khỏi hệ thống, cần thì khai lại. Không hoàn tác được.',
+    deleteSubnetConfirm: 'Dải {{cidr}} chưa có hồ sơ IP nào nên xóa hẳn được. Không hoàn tác được.',
     subnetDeleted: 'Đã xóa dải.',
     reason: 'Lý do',
     reasonPlaceholder: 'vd: khai nhầm dải',
-    voidAddressHint:
-      'Dùng cho bản ghi KHAI NHẦM: hồ sơ bị xóa, địa chỉ trở lại thành chỗ trống và nhập lại được ngay. Không khôi phục được trên giao diện — vết vẫn nằm trong Nhật ký hệ thống. Máy đang thật sự dùng địa chỉ này thì bấm Thu hồi IP — nó giữ lại lịch sử "IP này từng của máy nào".',
+    voidAddressHint: 'Chỉ dùng cho hồ sơ khai nhầm: hồ sơ bị xóa, địa chỉ thành ô trống, nhập lại được ngay. Máy đang thật sự dùng IP này thì bấm Thu hồi IP để giữ lịch sử.',
     voidAddressPlaceholder: 'vd: gõ nhầm địa chỉ',
     /* Q-15: xóa để nhập lại — không có nút khôi phục, nên chữ "Xóa" nói đúng việc người dùng
        thấy. Tiêu đề hộp nói rõ HỒ SƠ NHẬP NHẦM để không lẫn với Thu hồi IP ngay trên nó. */
@@ -1642,7 +1637,7 @@ export default {
     addressVoided: 'Đã xóa hồ sơ IP — nhập lại được ngay.',
     /* Bảng rỗng phải nói VÌ SAO rỗng — hai nguyên nhân, hai lời khuyên khác hẳn nhau. */
     slotEmpty: 'Không có dòng nào để hiện.',
-    slotEmptyAll: 'Dải này chưa có địa chỉ nào, kể cả ô trống — kiểm lại khai báo CIDR.',
+    slotEmptyAll: 'Dải này chưa có địa chỉ nào — kiểm lại CIDR.',
     slotEmptyFiltered: 'Không có địa chỉ nào ở trạng thái đang chọn. Bấm "Tất cả" để xem cả dải.',
     /* Chỉ hiện trong dải đã ngừng dùng: hồ sơ tắt CÙNG dải, sống lại khi dùng lại dải. */
     voidedBadge: 'Đã ngừng dùng',
@@ -1674,7 +1669,7 @@ export default {
     paneSearch: 'Lọc trong dải: IP, máy, người dùng, ghi chú…',
     lookup: 'Tra IP hoặc máy…',
     lookupButton: 'Tra',
-    lookupHint: 'Gõ một IP để mở đúng dải và dòng của nó; gõ mã/tên máy hoặc người dùng để xem mọi IP liên quan.',
+    lookupHint: 'Gõ IP để mở đúng dòng của nó; gõ mã/tên máy hoặc người dùng để xem mọi IP liên quan.',
     lookupNoSubnet: 'Không dải nào đang dùng chứa {{ip}}.',
     lookupResults: 'IP khớp "{{q}}"',
     lookupEmpty: 'Không có hồ sơ IP nào khớp "{{q}}".',
@@ -1685,12 +1680,10 @@ export default {
     ipSaved: 'Đã lưu hồ sơ IP.',
     history: 'Lịch sử',
     historyOf: 'Lịch sử của {{address}}',
-    historyEmpty: 'Chưa có thay đổi nào được ghi nhận cho IP này.',
+    historyEmpty: 'IP này chưa có thay đổi nào.',
     transitioned: 'Đã đổi trạng thái.',
-    reasonHint: 'Ghi lại để sau này còn tra. Không bắt buộc, nhưng nên có.',
-    reclaimHint:
-      'Thu hồi sẽ gỡ thiết bị và người dùng khỏi hồ sơ, trả địa chỉ về danh sách IP còn trống. ' +
-      'Lịch sử vẫn giữ nguyên — sau này vẫn tra được IP này từng của ai.',
+    reasonHint: 'Không bắt buộc, nhưng nên ghi để sau này tra.',
+    reclaimHint: 'Gỡ thiết bị và người dùng khỏi hồ sơ, trả địa chỉ về ô trống. Lịch sử vẫn giữ để tra IP này từng của ai.',
     trAssign: 'Cấp IP',
     trReclaim: 'Thu hồi IP',
     nextFree: 'Cấp IP trống kế tiếp',
@@ -1709,14 +1702,12 @@ export default {
     pickSubnet: 'Chọn dải mạng',
     subnetOption: '{{cidr}}{{vlan}} · còn {{free}}',
     voidedBy: 'Ngừng dùng ngày {{date}} bởi {{by}} — lý do: {{reason}}',
-    voidedNeverUsed:
-      'Dải này chưa từng cấp IP nào. SA/Admin xóa hẳn được ở menu ⋯ của thẻ dải bên trái.',
+    voidedNeverUsed: 'Dải này chưa từng cấp IP nào. Super Admin/Quản trị xóa hẳn được ở menu ⋯ của thẻ dải.',
     reclaimOwner: 'Đang cấp cho {{who}}',
     reclaimSince: 'từ {{date}}',
-    reclaimNatWarn:
-      'Còn {{count}} luật NAT trỏ vào {{address}}. Gỡ các luật này trước — còn luật thì hệ thống từ chối thu hồi:',
+    reclaimNatWarn: 'Còn {{count}} luật NAT trỏ vào {{address}}. Gỡ các luật này trước mới thu hồi được:',
     reclaimNatLink: 'Mở sổ NAT',
-    reclaimMenuHint: 'Trả IP về pool, giữ lịch sử',
+    reclaimMenuHint: 'Trả IP về ô trống, giữ lịch sử',
     voidMenuHint: 'Chỉ cho bản ghi khai nhầm',
     freedOn: 'Thu hồi {{date}}',
     assignedByLine: 'bởi {{by}}',
@@ -1736,8 +1727,7 @@ export default {
     gatewayUse: 'Dùng {{gateway}}',
     hideImpactUsed: '{{count}} IP đang dùng vẫn hiện để tra cứu, nhưng không cấp hay sửa được.',
     hideImpactHistory: 'Lịch sử "IP nào từng của máy nào" giữ nguyên.',
-    hideImpactNat:
-      '{{count}} luật NAT trong Sổ NAT còn trỏ vào IP của dải này — gỡ các luật đó trước, nếu không hệ thống sẽ không cho ngừng dùng dải.',
+    hideImpactNat: '{{count}} luật NAT còn trỏ vào IP của dải này — gỡ các luật đó trước mới ngừng dùng được dải.',
     hideImpactRestore: 'Dùng lại được bất cứ lúc nào.',
   },
   nat: {
@@ -1749,8 +1739,7 @@ export default {
     saved: 'Đã lưu luật NAT.',
     removed: 'Đã gỡ luật NAT.',
     empty: 'Chưa có luật NAT nào',
-    emptyHint:
-      'Mỗi lần mở cổng trên Draytek thì ghi vào đây — bên kiểm toán sẽ hỏi, và cuốn sổ này là câu trả lời.',
+    emptyHint: 'Mở cổng trên router thì ghi vào đây để sau này tra được.',
     search: 'Tìm theo cổng, IP, người dùng hoặc lý do…',
     site: 'Site',
     allSites: 'Mọi site',
@@ -1759,12 +1748,11 @@ export default {
     servicePickerPlaceholder: 'Chọn dịch vụ có sẵn…',
     serviceSearchOf: 'Lọc dịch vụ cho {{field}}',
     serviceAdd: '+ Thêm dịch vụ',
-    serviceEmpty: 'Chưa có dịch vụ nào khớp. Bấm "+ Thêm dịch vụ" để khai một lần rồi dùng lại mãi.',
-    routerHint: 'Router/firewall mang luật này — lấy từ kho thiết bị, chưa có thì thêm ngay trong danh sách.',
+    serviceEmpty: 'Chưa có dịch vụ nào khớp. Bấm "+ Thêm dịch vụ" để khai mới.',
+    routerHint: 'Router/firewall mang luật này, chọn từ kho thiết bị.',
     routerSearch: 'Chọn hoặc gõ để lọc…',
     routerShowAll: 'Hiện mọi thiết bị (không chỉ loại Router/Firewall)',
-    routerNoType:
-      'Chưa loại thiết bị nào được đánh dấu Router/Firewall nên đang hiện mọi thiết bị. Bật cờ ở Danh mục → Loại thiết bị.',
+    routerNoType: 'Chưa loại thiết bị nào được đánh dấu Router/Firewall nên đang hiện mọi thiết bị. Đánh dấu ở Danh mục → Loại thiết bị.',
     protocol: 'Giao thức',
     /*
      * `nat.protocolBoth` ĐÃ GỠ (23/09) — nó là bản thứ hai của `catalog.protocolBoth`, và hai
@@ -1778,13 +1766,12 @@ export default {
      * 'TCP' và 'UDP' viết hoa.
      */
     external: 'Cổng ngoài',
-    externalHint:
-      'Gõ "8080" hoặc "8000-8010" rồi Enter. Thêm được nhiều khoảng — mỗi khoảng thành một dòng riêng trong sổ, dùng chung router, IP trong và lý do.',
+    externalHint: 'Gõ "8080" hoặc "8000-8010" rồi Enter. Mỗi khoảng thành một dòng trong sổ, dùng chung router, IP trong và lý do.',
     // Ô port dạng chip
     portAdd: 'Thêm',
     portPlaceholder: '8080 hoặc 8000-8010',
     portRemove: 'Bỏ cổng {{port}}',
-    portOneOnly: 'Đang sửa một dòng nên chỉ giữ một khoảng cổng. Bấm ✕ ở trên rồi gõ khoảng mới.',
+    portOneOnly: 'Đang sửa một dòng nên chỉ giữ một khoảng cổng. Bấm ✕ rồi gõ khoảng mới.',
     portLeftover: 'Chưa nhận:',
     portRequired: 'Thêm ít nhất một cổng ngoài.',
     portErr_format: 'Chỉ nhận một số ("8080") hoặc một dải ("8000-8010").',
@@ -1798,13 +1785,11 @@ export default {
     sectionExternal: 'Cổng mở ra ngoài',
     sectionInternal: 'Chuyển tới máy bên trong',
     target: 'Máy đích (được NAT)',
-    targetHint: 'Máy trong kho mà cổng này dẫn tới. Chọn máy thì ô IP chỉ còn IP của chính máy đó.',
+    targetHint: 'Máy trong kho mà cổng này dẫn tới. Chọn máy thì ô IP chỉ còn IP của máy đó.',
     targetSearch: 'Tìm máy trong kho…',
-    targetNoIp:
-      'Máy này chưa có hồ sơ IP nào. Gõ tay được, nhưng sổ sẽ KHÔNG gắn luật về máy vừa chọn — máy đích suy ra từ hồ sơ IP. Muốn gắn đúng, khai IP cho máy ở màn Địa chỉ IP trước.',
-    targetIpsError: 'Không lấy được danh sách IP của máy — thử lại',
-    internalIpNotOfTarget:
-      'Địa chỉ này không thuộc máy đích vừa chọn. Chọn một IP của chính máy đó, hoặc bỏ chọn máy đích.',
+    targetNoIp: 'Máy này chưa có hồ sơ IP. Gõ tay được, nhưng luật sẽ không gắn về máy này — khai IP cho máy ở màn Địa chỉ IP trước.',
+    targetIpsError: 'Không lấy được danh sách IP của máy. Thử lại.',
+    internalIpNotOfTarget: 'Địa chỉ này không thuộc máy đích. Chọn IP của máy đó, hoặc bỏ chọn máy đích.',
     pickIp: 'Chọn IP của máy…',
     internalIpRequired: 'Chọn hoặc gõ IP của máy đích.',
     sectionWhy: 'Mở cho ai và vì sao',
@@ -1814,16 +1799,15 @@ export default {
     internalPort: 'Cổng trong',
     usedBy: 'Mở cho ai',
     usedByPlaceholder: 'Bộ phận hoặc tên người',
-    usedByHint: 'Người hoặc bộ phận dùng dịch vụ này. Đây là câu bên kiểm toán sẽ hỏi.',
+    usedByHint: 'Người hoặc bộ phận dùng dịch vụ này.',
     reason: 'Lý do mở',
-    reasonHint: 'Không có lý do thì sau này không ai dám đóng, và cổng cứ nằm mở mãi.',
+    reasonHint: 'Ghi lý do để sau này biết lúc nào đóng được.',
     enabled: 'Đang dùng',
-    enabledHint: 'Bỏ tick nếu luật đã tắt trên router nhưng vẫn muốn giữ trong sổ.',
+    enabledHint: 'Bỏ tick nếu luật đã tắt trên router nhưng vẫn giữ trong sổ.',
     disabled: 'Đã ngừng dùng',
     remove: 'Gỡ',
     removeTitle: 'Gỡ luật NAT {{ports}}',
-    removeHint:
-      'Luật không bị xóa khỏi hệ thống — chỉ gỡ khỏi sổ đang dùng. Bật chip "Đã gỡ" trên sổ NAT là xem lại được, kèm ngày gỡ, người gỡ và lý do: "cổng này đóng ngày nào, ai đóng" sẽ có người hỏi.',
+    removeHint: 'Luật chuyển sang nhóm "Đã gỡ", vẫn xem lại được kèm ngày, người gỡ và lý do.',
     bucketGroup: 'Lọc theo trạng thái luật',
     bucketOpen: 'Đang mở',
     bucketVoided: 'Đã gỡ',
@@ -1831,14 +1815,13 @@ export default {
     history: 'Lịch sử',
     historyOf: 'Lịch sử luật NAT {{ports}}',
     emptyFiltered: 'Không có luật nào ở trạng thái đang chọn.',
-    emptyFilteredHint: 'Bật thêm chip "Đang mở", "Đã ngừng dùng" hoặc "Đã gỡ" để xem.',
+    emptyFilteredHint: 'Bật thêm chip "Đang mở", "Đã ngừng dùng" hoặc "Đã gỡ".',
     removeReason: 'Lý do gỡ',
     removeReasonPlaceholder: 'vd: dịch vụ đã ngừng',
     colForward: 'Chuyển tiếp',
     status: 'Trạng thái',
     sensitive: 'Nhạy cảm',
-    sensitiveTitle:
-      'Cổng {{port}} là cổng hay bị quét và tấn công khi mở ra Internet (RDP, SSH, SMB, cơ sở dữ liệu…). Chỉ mở khi thật cần, và nên giới hạn IP nguồn trên router.',
+    sensitiveTitle: 'Cổng {{port}} hay bị quét và tấn công khi mở ra Internet (RDP, SSH, SMB, cơ sở dữ liệu…). Chỉ mở khi thật cần, nên giới hạn IP nguồn.',
     sensitiveOnly: 'Chỉ cổng nhạy cảm',
     allRouters: 'Mọi router',
     allProtocols: 'Mọi giao thức',
@@ -1852,20 +1835,18 @@ export default {
     disableRule: 'Ngừng dùng',
     enableRule: 'Dùng lại',
     disableTitle: 'Ngừng dùng luật NAT {{ports}}?',
-    disableMessage:
-      'Luật vẫn nằm trong sổ, mang nhãn "Đã ngừng dùng" — dùng khi đã tắt nó trên router. Lịch sử ghi lại ai tắt, lúc nào.',
+    disableMessage: 'Luật vẫn ở trong sổ với nhãn "Đã ngừng dùng". Dùng khi đã tắt luật trên router.',
     enableTitle: 'Dùng lại luật NAT {{ports}}?',
-    enableMessage: 'Luật trở lại "Đang mở" — chỉ bấm khi đã bật lại nó trên router. Lịch sử ghi lại ai bật, lúc nào.',
+    enableMessage: 'Luật trở lại "Đang mở". Chỉ bấm khi đã bật lại luật trên router.',
     toggled: 'Đã đổi trạng thái luật.',
     emptySearch: 'Không có luật nào khớp bộ lọc.',
-    emptySearchHint: 'Nới bộ lọc, hoặc xóa ô tìm để xem lại toàn bộ sổ.',
+    emptySearchHint: 'Nới bộ lọc hoặc xóa ô tìm.',
     note: 'Ghi chú',
-    noteHint: 'Chi tiết kỹ thuật, số phiếu yêu cầu, giới hạn IP nguồn… — KHÔNG ghi mật khẩu.',
-    ipNotInBook:
-      'IP {{ip}} chưa có trong sổ IP (hoặc đang trống) — luật sẽ không gắn được về máy nào. Cấp IP ở màn Địa chỉ IP trước nếu có thể.',
+    noteHint: 'Chi tiết kỹ thuật, số phiếu yêu cầu, giới hạn IP nguồn… Không ghi mật khẩu.',
+    ipNotInBook: 'IP {{ip}} chưa có trong sổ IP (hoặc đang trống) nên luật không gắn được về máy nào. Nên cấp IP ở màn Địa chỉ IP trước.',
     ipInBook: 'Trong sổ IP: {{owner}}',
     wanPrefix: 'WAN {{wan}} :',
-    wanTitle: 'IP WAN của đường truyền gắn router này (màn Đường truyền ISP)',
+    wanTitle: 'IP WAN của đường truyền gắn router này (màn Đường truyền)',
     ipAssignNow: 'Cấp IP này trong sổ',
   },
   serviceAccounts: {
