@@ -57,6 +57,7 @@ export const EDITABLE_SETTINGS: readonly EditableSetting[] = [
   // Duyệt & break-glass
   { name: 'breakGlassMaxGrantHours', group: 'approval', type: 'int', unit: 'hours', min: 1, max: 168, warnAbove: 72 },
   { name: 'approvalReminderHours', group: 'approval', type: 'int', unit: 'hours', min: 0, max: 72, warnZero: true },
+  { name: 'breakGlassPendingExpireHours', group: 'approval', type: 'int', unit: 'hours', min: 1, max: 168 },
   // Hạn & email
   { name: 'expiryCriticalDays', group: 'expiry', type: 'int', unit: 'days', min: 1, max: 90 },
   { name: 'expiryWarningDays', group: 'expiry', type: 'int', unit: 'days', min: 1, max: 365 },

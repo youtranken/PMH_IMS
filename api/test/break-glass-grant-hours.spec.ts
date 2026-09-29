@@ -41,7 +41,9 @@ describe('Break-glass: số giờ cấp ≤ số giờ xin ≤ trần cấu hìn
       getNumber: (key: string) =>
         key === 'breakGlassMaxGrantHours'
           ? Promise.resolve(MAX_GRANT_HOURS)
-          : Promise.reject(new Error(`khoá không ngờ tới: ${key}`)),
+          : key === 'breakGlassPendingExpireHours'
+            ? Promise.resolve(8)
+            : Promise.reject(new Error(`khoá không ngờ tới: ${key}`)),
     } as unknown as SystemConfigService;
     breakGlass = new BreakGlassService(
       scratch.db,

@@ -20,11 +20,14 @@ export const approvalTable = pgTable('approval', {
   decisionNote: text('decision_note'),
   /** NGUỒN SỰ THẬT về hiệu lực (AD-6) — `state` chỉ nói "đã có người duyệt". */
   expiresAt: timestamp('expires_at', { withTimezone: true }),
-  /**
-   * Phiên đăng nhập đã gửi yêu cầu (0170, Q-15). Loại nào gắn quyền với phiên thì tự lọc theo
-   * cột này; KHÔNG trả ra ngoài trong `ApprovalRecord`.
-   */
+  /** Phiên đăng nhập đã GỬI yêu cầu (0170) — chỉ để tra vết, không gác quyền nào. */
   requesterSessionId: uuid('requester_session_id'),
+  /**
+   * Phiên đang GIỮ grant (0240, Q-15): phiên đã dùng grant lần đầu. NULL = chưa ai dùng. KHÔNG
+   * trả ra ngoài trong `ApprovalRecord` — id phiên không đi ra màn hình.
+   */
+  claimedSessionId: uuid('claimed_session_id'),
+  claimedAt: timestamp('claimed_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

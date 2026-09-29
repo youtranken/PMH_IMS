@@ -1,4 +1,7 @@
 import { runMigrations } from '../src/database/migration-runner';
+import { ApprovalKindRegistry } from '../src/common/approvals/approvals-registry';
+import { ApprovalsApiService } from '../src/modules/approvals/approvals.api';
+import { ApprovalsService } from '../src/modules/approvals/approvals.service';
 import { AuditWriterService } from '../src/modules/audit/audit-writer.service';
 import { AccountsService } from '../src/modules/auth/accounts.service';
 import { LoginFailureService } from '../src/modules/auth/login-failure.service';
@@ -40,6 +43,7 @@ describe('Mở khóa / kích hoạt lại tài khoản xoá sạch bộ đếm s
       audit,
       outbox,
       new LoginFailureService(db, config, noopSweep),
+      new ApprovalsApiService(new ApprovalsService(db, audit, new ApprovalKindRegistry())),
     );
   }, TEST_TIMEOUT);
 

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ExcelExportService } from '../../common/excel/excel-export.service';
 import { EnvelopeCryptoService } from '../../common/crypto/envelope.service';
 import { MasterKeyRing } from '../../common/crypto/master-key-ring';
+import { ApprovalsModule } from '../approvals/approvals.module';
 import { AuditModule } from '../audit/audit.module';
 import { OutboxModule } from '../outbox/outbox.module';
 import { UsersModule } from '../users/users.module';
@@ -23,7 +24,8 @@ import { TotpService } from './totp.service';
  * ngay lúc dựng module — thiếu secret là api chết lúc boot, không chạy nửa vời (AD-11).
  */
 @Module({
-  imports: [UsersModule, AuditModule, OutboxModule],
+  // ApprovalsModule: vô hiệu hóa tài khoản rút yêu cầu mở két đang chờ qua `approvals.api` (Q-15).
+  imports: [UsersModule, AuditModule, OutboxModule, ApprovalsModule],
   controllers: [AuthController, AccountsController],
   providers: [
     ExcelExportService,

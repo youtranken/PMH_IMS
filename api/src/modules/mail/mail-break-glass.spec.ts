@@ -37,6 +37,7 @@ function record(overrides: Partial<ApprovalRecord> = {}): ApprovalRecord {
     decidedAt: null,
     decisionNote: null,
     expiresAt: null,
+    claimedAt: null,
     createdAt: CREATED,
     updatedAt: CREATED,
     active: false,
@@ -184,6 +185,33 @@ describe('Thư báo kết quả cho người xin (approval.decided)', () => {
     expect(mail.text).toContain('Mở két SW-CORE-01');
     expect(mail.text).toContain('/devices/d1?tab=vault');
     expect(mail.text).toContain('Chỉ đổi VLAN');
+  });
+
+  it('được duyệt: chỉ đường "mở lại, bấm Xem, nhập mã 6 số"; quyền gắn phiên xem lần đầu (Q-15)', async () => {
+    const [mail] = await send(
+      { payload: { approvalId: 'a1', state: 'approved' }, row: approved },
+      'approval.decided',
+    );
+    expect(mail.text).toMatch(/bấm "Xem"/);
+    expect(mail.text).toMatch(/mã 6 số/);
+    expect(mail.text).toMatch(/phiên đăng nhập.*xem lần đầu/i);
+    // Câu cũ "phiên đã gửi yêu cầu" là sai với luật mới — người xin đăng nhập lại vẫn dùng được.
+    expect(mail.text).not.toMatch(/phiên đăng nhập đã gửi/i);
+  });
+
+  it('hết hạn chờ duyệt: báo người xin, nói gửi lại nếu còn cần (Q-15)', async () => {
+    const [mail] = await send(
+      {
+        payload: { approvalId: 'a1', state: 'expired' },
+        row: record({ state: 'expired', decidedBy: 'system', decidedAt: DECIDED }),
+      },
+      'approval.decided',
+    );
+    expect(mail.to).toEqual([REQUESTER]);
+    expect(mail.subject).toBe('[IMS] Hết hạn chờ duyệt: mở két SW-CORE-01');
+    expect(mail.text).toMatch(/không ai duyệt/i);
+    expect(mail.text).toMatch(/gửi yêu cầu mới/i);
+    expect(mail.text).toContain('/devices/d1?tab=vault');
   });
 
   it('bị từ chối: có ghi chú của người duyệt, nút về trang yêu cầu', async () => {
