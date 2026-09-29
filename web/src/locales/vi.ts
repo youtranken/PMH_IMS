@@ -1268,7 +1268,7 @@ export default {
     confirmDelete: 'Xóa luật "{{name}}"? Luật này sẽ thôi gửi email.',
   },
   accounts: {
-    searchPlaceholder: 'Tìm kiếm theo tên hoặc email',
+    searchPlaceholder: 'Tìm theo tên hoặc email',
     saveProfileFailed: 'Không lưu được hồ sơ.',
     createFailed: 'Không tạo được tài khoản.',
     title: 'Người dùng IMS',
@@ -1282,7 +1282,7 @@ export default {
     phone: 'Số điện thoại',
     birthDate: 'Ngày sinh',
     employeeCode: 'Mã nhân viên',
-    employeeCodeHint: 'Mã bên Nhân sự dùng để đối chiếu. Không trùng nhau giữa các tài khoản.',
+    employeeCodeHint: 'Mã bên Nhân sự, không trùng giữa các tài khoản.',
     totpRequiredHint: 'Người này phải gõ mã 6 số mỗi lần đăng nhập.',
     role: 'Vai trò',
     status: 'Trạng thái',
@@ -1304,35 +1304,22 @@ export default {
     disable: 'Vô hiệu hóa',
     reactivate: 'Bật lại',
     temporaryPasswordOf: 'Mật khẩu tạm — {{who}}',
-    temporaryPasswordNote:
-      'Đọc mật khẩu này cho người dùng qua kênh an toàn. Hệ thống sẽ không hiển thị lại, ' +
-      'và cũng không có cách nào xem lại — đóng hộp này là mất. Chưa ghi lại được thì đừng đóng.',
+    temporaryPasswordNote: 'Đưa mật khẩu này cho người dùng qua kênh an toàn. Đóng hộp là không xem lại được — ghi lại trước đã.',
     temporaryPasswordDone: 'Tôi đã ghi lại mật khẩu này',
-    confirmLock:
-      'Khóa tài khoản {{name}}? Mọi phiên đang mở sẽ bị đăng xuất ngay. Đây là khóa TẠM — ' +
-      'dùng khi nghi tài khoản bị chiếm, và mở lại được bất cứ lúc nào.',
-    confirmDisable:
-      'Vô hiệu hóa tài khoản {{name}}? Mọi phiên đang mở sẽ bị đăng xuất ngay. Trạng thái này ' +
-      'dành cho người đã nghỉ hẳn — người dùng sẽ được bảo liên hệ SA, chứ không phải chờ mở.',
-    confirmReactivate:
-      'Cho tài khoản {{name}} hoạt động lại? Người dùng đăng nhập được ngay bằng mật khẩu cũ. ' +
-      'Nếu nghi mật khẩu đã lộ thì đặt lại mật khẩu trước rồi hãy bật.',
-    confirmResetPassword:
-      'Đặt lại mật khẩu cho {{name}}? Mọi phiên đang mở của người này bị đóng ngay, và người ' +
-      'dùng phải đổi mật khẩu ở lần đăng nhập tới.',
-    confirmResetTotp: 'Đặt lại xác thực 2 lớp cho {{name}}? Người dùng sẽ phải quét lại mã QR.',
+    confirmLock: 'Mọi phiên đang mở của {{name}} bị đăng xuất ngay. Khóa tạm khi nghi bị chiếm tài khoản, mở lại được bất cứ lúc nào.',
+    confirmDisable: 'Mọi phiên đang mở của {{name}} bị đăng xuất ngay. Dùng cho người đã nghỉ hẳn; họ sẽ được báo liên hệ Super Admin.',
+    confirmReactivate: '{{name}} đăng nhập được ngay bằng mật khẩu cũ. Nghi mật khẩu đã lộ thì đặt lại mật khẩu trước.',
+    confirmResetPassword: 'Mọi phiên đang mở của {{name}} bị đóng ngay; lần đăng nhập tới phải đổi mật khẩu.',
+    confirmResetTotp: '{{name}} sẽ phải quét lại mã QR ở lần đăng nhập tới.',
     /* "Phiên NÀY" là chữ chỉ có nghĩa khi người đọc còn nhìn thấy cái bảng — mà hộp thoại
        vừa che nó đi. Nêu thẳng IP và lần hoạt động gần nhất: đó là hai thứ phân biệt được
        phiên của chính mình với phiên của kẻ đang chiếm tài khoản. */
     /* Câu hỏi phải dùng đúng động từ của cái nút đã mở ra nó (`killSession` = 'Đóng phiên').
        Đợt D 12/09 đổi cái NÚT khỏi tiếng lóng "đá phiên" nhưng bỏ quên câu hỏi bên trong. */
-    confirmKillSession:
-      'Đóng phiên đăng nhập từ IP {{ip}} (hoạt động gần nhất {{seen}})? Người đang dùng phiên đó ' +
-      'bị đăng xuất ngay. Nếu đó là phiên của chính bạn thì bạn sẽ phải đăng nhập lại.',
-    sessionKilled: 'Đã đóng phiên đó — người dùng bị đăng xuất ngay.',
+    confirmKillSession: 'Đóng phiên từ IP {{ip}} (hoạt động gần nhất {{seen}})? Người dùng phiên đó bị đăng xuất ngay; nếu là phiên của bạn thì bạn phải đăng nhập lại.',
+    sessionKilled: 'Đã đóng phiên.',
     killAllSessions: 'Đóng tất cả phiên',
-    confirmKillAllSessions:
-      'Đóng mọi phiên đăng nhập của {{name}}? Người đó bị đăng xuất khỏi mọi máy ngay.',
+    confirmKillAllSessions: '{{name}} bị đăng xuất khỏi mọi máy ngay.',
     killAllIncludeCurrent: 'Đóng cả phiên bạn đang dùng',
     killAllIncludeCurrentHint: 'Không tick thì phiên trên máy này được giữ lại.',
     allSessionsKilled: 'Đã đóng {{count}} phiên.',
@@ -1354,9 +1341,7 @@ export default {
     statusDisabled: 'Đã vô hiệu hóa',
     /* Mở khóa hỏi lại ngắn: nút nằm sát "Đặt lại mật khẩu" và "Vô hiệu hóa", bấm trượt trên
        điện thoại là mở lại một tài khoản đang nghi bị chiếm. */
-    confirmUnlock:
-      'Mở khóa tài khoản {{name}}? Người dùng đăng nhập được ngay và bộ đếm gõ sai được xóa. ' +
-      'Nếu khóa vì nghi bị chiếm thì đặt lại mật khẩu trước.',
+    confirmUnlock: '{{name}} đăng nhập được ngay, bộ đếm gõ sai được xóa. Khóa vì nghi bị chiếm thì đặt lại mật khẩu trước.',
     toastLocked: 'Đã khóa {{name}}.',
     toastUnlocked: 'Đã mở khóa {{name}}.',
     toastDisabled: 'Đã vô hiệu hóa {{name}}.',
@@ -1367,11 +1352,8 @@ export default {
     totpStateOptional: 'Không bắt buộc',
     totpRequireOn: 'Bắt buộc 2 lớp khi đăng nhập',
     totpRequireOff: 'Bỏ bắt buộc 2 lớp khi đăng nhập',
-    confirmTotpRequireOn:
-      'Bắt {{name}} gõ mã 2 lớp mỗi lần đăng nhập? Chưa cài thì lần đăng nhập tới sẽ phải cài ngay.',
-    confirmTotpRequireOff:
-      'Bỏ bắt buộc 2 lớp khi đăng nhập cho {{name}}? Từ giờ chỉ cần mật khẩu là vào được — ' +
-      'mật khẩu lộ là tài khoản mất. Két sắt vẫn đòi mã 2 lớp như cũ.',
+    confirmTotpRequireOn: 'Mỗi lần đăng nhập {{name}} phải gõ mã 2 lớp. Chưa cài thì lần đăng nhập tới phải cài ngay.',
+    confirmTotpRequireOff: '{{name}} chỉ cần mật khẩu là đăng nhập được — lộ mật khẩu là mất tài khoản. Két sắt vẫn đòi mã 2 lớp.',
     toastTotpRequireOn: 'Đã bắt buộc 2 lớp cho {{name}}.',
     toastTotpRequireOff: 'Đã bỏ bắt buộc 2 lớp cho {{name}}.',
     showPassword: 'Hiện',
@@ -1388,7 +1370,7 @@ export default {
     reasonCompromised: 'Nghi bị chiếm tài khoản',
     reasonLeft: 'Nghỉ việc',
     reasonLongLeave: 'Nghỉ dài hạn',
-    offboardTitle: 'Vô hiệu hóa KHÔNG tự gỡ những thứ người này đang giữ — kiểm tiếp:',
+    offboardTitle: 'Vô hiệu hóa không tự gỡ những thứ người này đang giữ — kiểm tiếp:',
     detail: 'Xem chi tiết',
     createdAt: 'Tạo lúc',
     kpiTotal: 'Tài khoản',
@@ -1415,15 +1397,14 @@ export default {
     changeRole: 'Đổi vai trò…',
     changeRoleSubmit: 'Đổi vai trò',
     changeRoleOf: 'Đổi vai trò: {{name}}',
-    changeRoleFromMember: 'Lên Quản trị / Super Admin là xem được MỌI két theo vai — quyền két đã gán riêng không còn tác dụng.',
-    changeRoleToMember: 'Hạ xuống Thành viên: người này mất quyền xem két theo vai — gán lại quyền két cần thiết ở màn Quyền két sắt.',
+    changeRoleFromMember: 'Lên Quản trị / Super Admin là xem được mọi két theo vai — quyền két gán riêng không còn tác dụng.',
+    changeRoleToMember: 'Hạ xuống Thành viên là mất quyền xem két theo vai — gán lại quyền két cần thiết ở màn Quyền két sắt.',
     toastRoleChanged: 'Đã đổi vai trò của {{name}} thành {{role}}.',
     resetAlsoUnlock: 'Mở khóa luôn (tài khoản đang bị khóa)',
     vaultAccess: 'Quyền két sắt',
     auditLog: 'Nhật ký thao tác',
     clearLockout: 'Gỡ tạm chặn',
-    confirmClearLockout:
-      'Gỡ tạm chặn cho {{name}}? Bộ đếm gõ sai và giãn chậm theo IP được xóa, người dùng thử đăng nhập lại được ngay.',
+    confirmClearLockout: 'Bộ đếm gõ sai của {{name}} được xóa, người dùng đăng nhập lại được ngay.',
     toastClearLockout: 'Đã gỡ tạm chặn cho {{name}}.',
     you: 'Bạn',
     tempLocked: 'Tạm chặn tới {{time}} ({{count}} lần sai)',
@@ -1447,9 +1428,8 @@ export default {
     editTitle: 'Sửa hồ sơ: {{name}}',
     nextVaultAccess: 'Gán quyền két sắt',
     nextDevices: 'Gán thiết bị',
-    nextDevicesSearchHint:
-      'Danh sách thiết bị mở sẵn tìm theo "{{name}}" — máy đã ghi tên người này hiện ngay. Máy chưa ghi thì mở hồ sơ máy và điền "{{name}}" vào ô Người sử dụng.',
-    nextStepsNeedDone: 'Ghi lại mật khẩu trước — đi sang màn khác là hộp này đóng và không mở lại được.',
+    nextDevicesSearchHint: 'Danh sách thiết bị mở sẵn, tìm theo "{{name}}". Máy chưa ghi tên thì mở hồ sơ máy, điền "{{name}}" vào ô Người sử dụng.',
+    nextStepsNeedDone: 'Ghi lại mật khẩu trước — rời màn này là hộp đóng, không mở lại được.',
   },
   /* Danh sách phiên đăng nhập dùng chung (`ui/session-list.tsx`) — Hồ sơ và màn Tài khoản. */
   sessionList: {
