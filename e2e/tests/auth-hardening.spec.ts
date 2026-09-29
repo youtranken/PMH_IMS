@@ -11,7 +11,7 @@ import {
 } from './helpers';
 
 /**
- * Siết hai cửa xác thực mà rà soát 07/09 chỉ ra là không được canh (finding #2 và #5).
+ * Siết hai cửa xác thực dễ bị bỏ không canh.
  *
  * Cả hai bài đều gọi API TRỰC TIẾP, không qua trình duyệt: thứ cần chứng minh là hành vi của
  * server dưới tải song song, và mở 6 tab Chromium chỉ làm nhiễu phép đo.
@@ -36,15 +36,15 @@ function failedAttemptsOf(email: string): number {
 
 test.describe('Siết cửa xác thực', () => {
   /**
-   * Finding #5 — bộ đếm sai mật khẩu là đọc-rồi-ghi NGOÀI transaction.
+   * Bộ đếm sai mật khẩu không được là đọc-rồi-ghi NGOÀI transaction.
    *
-   * `login()` đọc `user.failedAttempts` ở đầu hàm, rồi Argon2 xác minh mất ~200ms, rồi mới ghi
-   * một giá trị TUYỆT ĐỐI đè lên. Bắn nhiều request song song cùng email: tất cả đọc được cùng
-   * một con số cũ, tất cả tính ra cùng một giá trị mới, tất cả ghi đè nhau.
+   * Nếu `login()` đọc `user.failedAttempts` ở đầu hàm, rồi Argon2 xác minh mất ~200ms, rồi mới
+   * ghi một giá trị TUYỆT ĐỐI đè lên, thì nhiều request song song cùng email đều đọc được cùng
+   * một con số cũ, tính ra cùng một giá trị mới, và ghi đè nhau.
    *
    * Hệ quả: N lần đoán chỉ tốn 1 lượt đếm. NFR-01 nói sai 5 lần thì khóa — hàng rào đó gần như
-   * vô hiệu trước một kẻ tấn công biết bắn song song. Repo đã làm ĐÚNG chỗ tương đương ở
-   * `session.service.ts:160` (`SET stepup_failures = stepup_failures + 1`), chỉ đường login là sót.
+   * vô hiệu trước một kẻ tấn công biết bắn song song. Chỗ tương đương đúng mẫu:
+   * `session.service.ts` (`SET stepup_failures = stepup_failures + 1`).
    */
   test('đếm sai mật khẩu: sáu lượt sai đồng thời phải tính đủ SÁU, không phải một', async () => {
     const BURST = 6;
@@ -72,10 +72,9 @@ test.describe('Siết cửa xác thực', () => {
       );
 
       /*
-       * `users.locked_until` ĐỔI VAI từ 11/09: nó không còn chặn đăng nhập, nay là mốc CẢNH
-       * BÁO (chạm ngưỡng thì bắn thư báo SA, và chính nó là cửa sổ chống spam thư). Bài này
-       * vẫn đọc đúng cột đó vì thứ nó đang đo là BỘ ĐẾM CÓ CỘNG DỒN KHÔNG — câu hỏi không đổi.
-       * Vế "ai bị chặn" nay do `khoa-dang-nhap-theo-noi.spec.ts` giữ.
+       * `users.locked_until` không chặn đăng nhập; nó là mốc CẢNH BÁO (chạm ngưỡng thì bắn
+       * thư báo SA, và chính nó là cửa sổ chống spam thư). Bài này đọc cột đó vì thứ nó đang
+       * đo là BỘ ĐẾM CÓ CỘNG DỒN KHÔNG. Vế "ai bị chặn" do `khoa-dang-nhap-theo-noi.spec.ts` giữ.
        */
       const lockedUntil = sql(
         `SELECT coalesce(locked_until::text, '') FROM users WHERE email = '${E2E_SA.email}'`,
@@ -87,12 +86,12 @@ test.describe('Siết cửa xác thực', () => {
   });
 
   /**
-   * Finding #2 — `POST /auth/login/totp` là cửa step-up THỨ HAI mà không ai canh.
+   * `POST /auth/login/totp` là cửa step-up THỨ HAI, phải được canh như cửa thứ nhất.
    *
-   * `POST /auth/step-up` có `@Throttle 10/phút`, có bộ đếm sai, và thu hồi phiên khi quá ngưỡng
-   * — kèm 5 dòng chú thích giải thích vì sao. `/auth/login/totp` thì KHÔNG có gì cả: trần duy
-   * nhất là throttler chung 300/phút, và vì `req.user` đã tồn tại ở route này nên 300 lượt đó
-   * đổ hết vào đúng một tài khoản.
+   * `POST /auth/step-up` có `@Throttle 10/phút`, có bộ đếm sai, và thu hồi phiên khi quá
+   * ngưỡng. Nếu `/auth/login/totp` không có gì cả thì trần duy nhất là throttler chung
+   * 300/phút, và vì `req.user` đã tồn tại ở route này nên 300 lượt đó đổ hết vào đúng một tài
+   * khoản.
    *
    * Nặng hơn nữa: `completeTotpWithin` đóng dấu `stepped_up_at`, nên đoán trúng ở đây là được
    * cấp một phiên ĐÃ MỞ KÉT. Kẻ đã có mật khẩu (dùng lại từ nơi khác, phishing) nhưng không có
@@ -180,12 +179,12 @@ test.describe('Siết cửa xác thực', () => {
 });
 
 /**
- * "ĐĂNG NHẬP LẦN CUỐI" PHẢI LÀ LÚC THẬT SỰ VÀO ĐƯỢC — vá 11/09.
+ * "ĐĂNG NHẬP LẦN CUỐI" PHẢI LÀ LÚC THẬT SỰ VÀO ĐƯỢC.
  *
- * ===== LỖ ĐANG VÁ =====
+ * ===== LỖ MÀ BÀI NÀY CANH =====
  *
- * `markLoginSuccess` chạy ngay sau khi Argon2 xác minh xong, tức TRƯỚC bước TOTP, và nó đóng
- * dấu `last_login_at` cùng lúc với việc xoá hai bộ đếm sai. Với tài khoản bật
+ * `markLoginSuccess` chạy ngay sau khi Argon2 xác minh xong, tức TRƯỚC bước TOTP. Nếu nó đóng
+ * dấu `last_login_at` cùng lúc với việc xoá hai bộ đếm sai, thì với tài khoản bật
  * `totp_login_required` (mặc định là mọi tài khoản), người gõ đúng mật khẩu nhưng KHÔNG có
  * điện thoại vẫn khiến cột đó nhảy sang thời điểm ấy.
  *
@@ -205,18 +204,18 @@ test.describe('Dấu "đăng nhập lần cuối"', () => {
   }
 
   /**
-   * ĐƯỜNG THỨ BA — lần đăng nhập ĐẦU TIÊN, đi qua màn "Cài xác thực 2 lớp" (test tay 12/09).
+   * ĐƯỜNG THỨ BA — lần đăng nhập ĐẦU TIÊN, đi qua màn "Cài xác thực 2 lớp".
    *
    * Hai bài dưới phủ hai đường: `login()` khi tài khoản không bắt TOTP, và `verifyLoginTotp()`
    * khi tài khoản đã cài rồi. Nhưng có BA đường kết thúc bằng một phiên đã xác thực đủ —
    * đường thứ ba là `confirmTotpEnrollment()`, lúc người dùng vừa quét QR xong. Nó cấp phiên
-   * mới và ghi `auth.login.ok`, nhưng bản trước không đóng dấu `last_login_at`.
+   * mới và ghi `auth.login.ok`, nên cũng phải đóng dấu `last_login_at`.
    *
-   * Vì sao không bài nào bắt được: cả hai bài dưới đều mở màn bằng `firstLogin()` rồi
+   * Vì sao hai bài kia không bắt được: cả hai bài dưới đều mở màn bằng `firstLogin()` rồi
    * `UPDATE users SET last_login_at = NULL` để dọn nền — tức chính bước dọn đã XOÁ đúng cái
    * dấu mà đường thứ ba lẽ ra phải để lại. Bài này làm ngược: xoá TRƯỚC, rồi mới đăng nhập.
    *
-   * Hậu quả của lỗ: tài khoản vừa được SA tạo, người ta đăng nhập lần đầu xong, cột "Đăng nhập
+   * Hậu quả nếu thiếu: tài khoản vừa được SA tạo, người ta đăng nhập lần đầu xong, cột "Đăng nhập
    * lần cuối" trên màn Tài khoản vẫn là "—". SA rà tài khoản bỏ quên sẽ đọc thành "người này
    * chưa từng vào" — trong khi nhật ký cùng lúc ghi họ đã vào. Hai chỗ nói ngược nhau, và cột
    * hiển thị là chỗ người ta tin.

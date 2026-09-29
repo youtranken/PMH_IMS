@@ -11,18 +11,17 @@ import {
 } from './helpers';
 
 /**
- * B-01 — NGƯỜI VIỆT GÕ KHÔNG DẤU VẪN PHẢI TÌM RA.
+ * NGƯỜI VIỆT GÕ KHÔNG DẤU VẪN PHẢI TÌM RA.
  *
  * ===== LỖI ĐANG CANH =====
  *
  * `ILIKE` của Postgres không gấp dấu, còn `toLowerCase().includes()` bên trình duyệt cũng
- * không. Đo trên 30.000 thiết bị thật trước khi sửa (§13.3 sổ rà soát): gõ `Máy trạm` ra
- * 2.500 dòng, gõ `may tram` ra **0 dòng** — và màn hình trả lời "Không có thiết bị nào khớp
- * bộ lọc", tức khẳng định một điều sai. Một phần tư đội máy vô hình.
+ * không. Không gấp dấu thì gõ `Máy trạm` ra hàng nghìn dòng, gõ `may tram` ra **0 dòng** — và
+ * màn hình trả lời "Không có thiết bị nào khớp bộ lọc", tức khẳng định một điều sai.
  *
  * ===== VÌ SAO PHẢI LÀ E2E, KHÔNG PHẢI BÀI ĐƠN VỊ =====
  *
- * B-01 chỉ đúng khi BA bản gấp dấu cùng nói một thứ: `ims_norm()` trong Postgres, `foldSearch`
+ * Tìm không dấu chỉ đúng khi BA bản gấp dấu cùng nói một thứ: `ims_norm()` trong Postgres, `foldSearch`
  * bên api, `foldSearch` bên web. Ba bản ấy sống ở ba dự án không import được nhau. Bài đơn vị
  * canh từng bản so với `ops/search-fold-cases.json`; chỉ lượt E2E này mới hỏi được câu cuối
  * cùng — người gõ vào ô tìm thật thì có thấy hàng thật không.
@@ -64,7 +63,7 @@ test.describe('Tìm kiếm tiếng Việt không dấu', () => {
     const code = await taoThietBiCoDau(page, stamp);
     const row = page.getByRole('row', { name: new RegExp(code) });
 
-    // Đây là câu hỏi trung tâm của B-01. Trước 25/09 dòng này trả về 0 hàng.
+    // Đây là câu hỏi trung tâm của cả file: không gấp dấu thì dòng này trả về 0 hàng.
     await timVaChoLoc(page, 'may tram');
     await expect(row).toBeVisible();
 
@@ -92,7 +91,7 @@ test.describe('Tìm kiếm tiếng Việt không dấu', () => {
     await timVaChoLoc(page, 'may chu ao hoa');
     await expect(page.getByRole('row', { name: new RegExp(code) })).toHaveCount(0);
     /*
-     * Hai câu trả lời KHÁC NHAU và bản trước gộp làm một: "kho trống" dẫn người đọc tới kết
+     * Hai câu trả lời KHÁC NHAU, không được gộp làm một: "kho trống" dẫn người đọc tới kết
      * luận chưa ai khai thiết bị nào, còn "không khớp bộ lọc" dẫn tới việc nới ô tìm. Ở đây
      * kho KHÔNG trống, nên câu đúng là câu thứ hai.
      */
@@ -137,8 +136,7 @@ test.describe('Tìm kiếm tiếng Việt không dấu', () => {
      *
      * `page.goto` trả về khi tài liệu tải xong, còn Ctrl+K thì do một listener React gắn lên
      * `document` sau khi hydrate. Gõ vào khoảng giữa là phím rơi vào hư không, và bài đỏ ở
-     * dòng "mở hộp" với một thông báo chẳng liên quan gì tới gấp dấu — đúng cảnh xảy ra ngày
-     * 25/09 lúc đem đột biến ra thử.
+     * dòng "mở hộp" với một thông báo chẳng liên quan gì tới gấp dấu.
      */
     await expect(page.getByRole('navigation', { name: /Điều hướng/ })).toBeVisible();
 

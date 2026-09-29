@@ -115,7 +115,7 @@ import { fileURLToPath } from 'node:url';
  *     → Phòng Sắp hết hạn — tab Danh sách: bộ lọc, bảng, và nút Gia hạn chỉ ở nơi gia hạn được
  * [x] Sắp hết hạn — tab Luật gửi báo cáo, và bên trong hộp Thêm luật
  *     → Phòng Sắp hết hạn — tab Luật gửi báo cáo, và bên trong hộp "Thêm luật"
- * [x] Link sâu ?tab= mở đúng tab — VÁ 19/09: tab mọc-theo-dữ-liệu ở lại trong lúc đang tải
+ * [x] Link sâu ?tab= mở đúng tab — tab mọc-theo-dữ-liệu ở lại trong lúc đang tải
  *     → Link sâu ?tab=devices phải mở đúng tab "Máy đang dùng", không rơi về tab Hồ sơ
  *
  * ── PHÒNG ĐỊA CHỈ IP và PHÒNG SỔ NAT ────────────────────────────────────────

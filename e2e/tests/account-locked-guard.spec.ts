@@ -12,15 +12,15 @@ import {
 /**
  * SA BẤM "KHÓA TÀI KHOẢN" MÀ NGƯỜI ĐÓ VẪN ĐĂNG NHẬP ĐƯỢC.
  *
- * ===== CHUYỆN GÌ XẢY RA TRƯỚC 09/09 =====
+ * ===== LỖ MÀ BÀI NÀY CANH =====
  *
  * `users.status` có ba giá trị: `active` · `locked` · `disabled`. Màn Tài khoản cho SA đặt cả
- * ba, và `accounts.controller.ts` nhận cả ba qua `@IsIn`. Nhưng `auth.service.login()` chỉ
+ * ba, và `accounts.controller.ts` nhận cả ba qua `@IsIn`. Nếu `auth.service.login()` chỉ
  * kiểm đúng MỘT:
  *
  *     if (user.status === 'disabled') { ...chặn... }
  *
- * `locked` rơi thẳng qua. Hàng rào duy nhất mang tên "locked" trong luồng đăng nhập là
+ * thì `locked` rơi thẳng qua. Hàng rào duy nhất mang tên "locked" trong luồng đăng nhập là
  * `isLocked(failedAttempts, lockedUntil)` — bộ đếm sai mật khẩu TỰ ĐỘNG, không liên quan gì
  * tới việc SA khóa tay.
  *
@@ -29,10 +29,9 @@ import {
  * "Khóa tài khoản" là việc người ta làm khi nghi tài khoản bị chiếm, hoặc khi nhân viên vừa
  * nghỉ việc. Bấm xong, màn hiện trạng thái "Khóa", nhật ký ghi một dòng, SA đóng máy về.
  * Người kia vẫn đăng nhập bình thường — và không có gì trên hệ thống mâu thuẫn với niềm tin
- * rằng đã khóa xong. Đúng lớp lỗi mà rà soát 07/09 gọi tên: hệ thống nói một đằng, làm một nẻo,
- * và người dùng không có cách nào biết.
+ * rằng đã khóa xong: hệ thống nói một đằng, làm một nẻo, và người dùng không có cách nào biết.
  *
- * Cộng thêm một vế mà rà soát nêu: `login` chạy tiếp thì bộ đếm sai bị XÓA và nhật ký ghi
+ * Cộng thêm một vế: `login` chạy tiếp thì bộ đếm sai bị XÓA và nhật ký ghi
  * `auth.login.ok` — một lần đăng nhập THÀNH CÔNG cho một tài khoản đang bị khóa.
  */
 
@@ -73,7 +72,7 @@ test.describe('Tài khoản bị SA khóa thì không đăng nhập được', (
     /*
      * Đếm TRƯỚC/SAU thay vì lọc theo mốc thời gian.
      *
-     * Bản đầu dùng `created_at >= '${sql('SELECT now()')}'`: chuỗi thời gian có dấu cách và
+     * Đừng dùng `created_at >= '${sql('SELECT now()')}'`: chuỗi thời gian có dấu cách và
      * hậu tố múi giờ, đi qua hai lớp trích dẫn (shell → psql) rồi hỏng lặng lẽ — câu đếm trả
      * về 28793, tức là mất luôn cả mệnh đề lọc. Một assertion đếm sai kiểu đó nguy hiểm hơn
      * không có assertion: nó vẫn đỏ/xanh, chỉ là không nói về thứ mình tưởng.

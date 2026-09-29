@@ -29,12 +29,12 @@ test.beforeEach(() => {
   resetSecrets();
   resetDevices();
   /*
-   * DỌN CẢ MA TRẬN QUYỀN (thêm 18/09/2026).
+   * DỌN CẢ MA TRẬN QUYỀN.
    *
    * Hai bài của file này — "Member chưa được gán gì: đọc 403" và "khu Két sắt không lọt cho
-   * Member ngoài ma trận quyền" — đều GIẢ ĐỊNH `E2E_MEMBER` không có phiếu quyền nào. Điều
-   * đó tới nay đúng nhờ MAY: `vault-reveal.spec.ts` chạy ngay trước theo thứ tự tên file, và
-   * `beforeEach` của nó có `resetAccessList()` nên dọn hộ.
+   * Member ngoài ma trận quyền" — đều GIẢ ĐỊNH `E2E_MEMBER` không có phiếu quyền nào. Không
+   * dọn ở đây thì điều đó chỉ đúng nhờ MAY: `vault-reveal.spec.ts` chạy ngay trước theo thứ tự
+   * tên file, và `beforeEach` của nó có `resetAccessList()` nên dọn hộ.
    *
    * Nghĩa là chạy `vault.spec.ts` một mình bằng `--grep`, hoặc chỉ cần đổi thứ tự khai test
    * bên file kia, là hai bài này đỏ vì một lý do chẳng liên quan gì tới thứ chúng đang canh.
@@ -65,7 +65,7 @@ async function createSwitch(page: Page, code: string): Promise<string> {
   return ((await created.json()) as { device: { id: string } }).device.id;
 }
 
-/** Story 4.1 — FR-021 (cất secret mã hóa) + FR-026 (không có đường xuất hàng loạt). */
+/** FR-021 (cất secret mã hóa) + FR-026 (không có đường xuất hàng loạt). */
 test.describe('Két sắt', () => {
   test('đường hạnh phúc: cất mật khẩu → hiện tên gọi, không hiện giá trị → xoay → thu hồi', async ({
     page,
@@ -168,8 +168,8 @@ test.describe('Két sắt', () => {
   });
 
   /**
-   * Story 6.3 ĐỔI hành vi này có chủ ý: Member giờ THẤY tab Két sắt, vì quyền của họ nằm ở ma
-   * trận 6.2 chứ không suy ra được từ vai. Nhưng chưa được gán gì thì vẫn là tầng CẤM — API
+   * Member THẤY tab Két sắt, vì quyền của họ nằm ở ma trận quyền xem (FR-023) chứ không suy ra
+   * được từ vai. Nhưng chưa được gán gì thì vẫn là tầng CẤM — API
    * trả 403 và không có gì lọt ra.
    *
    * Cái KHÔNG đổi, và là phần đáng giữ nhất của bài kiểm này: Member không bao giờ GHI được
@@ -202,7 +202,7 @@ test.describe('Két sắt', () => {
 
     await page.goto(`/devices/${deviceId}`);
     await expect(page.getByRole('tab', { name: 'Tổng quan' })).toBeVisible();
-    // Tab CÓ hiện (story 6.3) nhưng nội dung nói rõ là không có quyền — không phải bảng trống.
+    // Tab CÓ hiện nhưng nội dung nói rõ là không có quyền — không phải bảng trống.
     await page.getByRole('tab', { name: 'Két sắt' }).click();
     await expect(page.getByText(/không có quyền/i)).toBeVisible();
   });
@@ -210,9 +210,9 @@ test.describe('Két sắt', () => {
   /**
    * MỌI LƯỢT KHÔNG MỞ ĐƯỢC ĐỀU ĐỂ LẠI VẾT, VÀ ĐỦ NGƯỠNG THÌ BÁO CHO QUẢN TRỊ (0046).
    *
-   * Trước 18/09/2026 nhật ký két chỉ có lượt THÀNH CÔNG: `assertCanReveal` ném trước khi
-   * `vault.reveal()` chạy, mà dòng audit lại nằm bên trong hàm đó — nên "ai đã mở" thì có, "ai
-   * đã thử mà bị chặn" thì không ở đâu cả. Đúng câu mà một hàng rào PHÁT HIỆN phải trả lời.
+   * `assertCanReveal` ném trước khi `vault.reveal()` chạy, mà dòng audit của lượt thành công
+   * nằm bên trong hàm đó — nên lượt bị chặn phải có dòng vết riêng, không thì "ai đã thử mà bị
+   * chặn" không ở đâu cả. Đúng câu mà một hàng rào PHÁT HIỆN phải trả lời.
    *
    * Bài này đi trọn chuỗi: SÁU lượt bị từ chối → sáu dòng vết → đúng MỘT lá thư tới SA/Admin.
    *
@@ -230,7 +230,7 @@ test.describe('Két sắt', () => {
    * Và không có đường dọn: `audit_log` bị trigger chặn cả UPDATE lẫn DELETE ở tầng DB (0005,
    * NFR-03) — đúng như nó phải vậy. Một hàm trợ giúp tắt được trigger đó là khẩu súng đã lên
    * đạn nằm sẵn trong repo. Nên bài kiểm lấy lịch sử rỗng bằng cách đổi NGƯỜI, không bằng cách
-   * xoá vết. (Bẫy đã ăn một lượt gỡ rối ngày 18/09/2026.)
+   * xoá vết.
    */
   test('bị từ chối mở két: ghi vết mỗi lượt, vượt ngưỡng vẫn chỉ đúng một thư cảnh báo', async ({
     page,
@@ -274,9 +274,9 @@ test.describe('Két sắt', () => {
     const headers = { 'X-CSRF-Token': await csrfOf(page), Origin: APP_ORIGIN };
 
     /*
-     * NGƯỠNG ĐỌC TỪ `system_config`, KHÔNG GÕ CỨNG (AD-11, sửa 18/09/2026).
+     * NGƯỠNG ĐỌC TỪ `system_config`, KHÔNG GÕ CỨNG (AD-11).
      *
-     * Bản trước chốt "sáu lượt" và ngầm giả định ngưỡng là 3. Hai chuyện hỏng theo:
+     * Chốt cứng "sáu lượt" là ngầm giả định ngưỡng là 3. Hai chuyện hỏng theo:
      * đổi `secret.probe_alert_threshold` — đúng đường lùi mà migration 0046 quảng cáo — là
      * bài này đỏ vì một lý do chẳng liên quan; còn HẠ ngưỡng xuống 1 thì bài vẫn xanh mà
      * thời gian nghỉ không còn được kiểm đúng cảnh (phải vượt ngưỡng rồi mới nói được là
@@ -318,7 +318,7 @@ test.describe('Két sắt', () => {
 
     /*
      * "ĐÚNG MỘT LẦN" hỏi DB, không hỏi hộp thư — xem chú thích của `countAuditByActor`.
-     * Bản trước dùng `expect(mails.length).toBe(1)`, và đó là một cuộc đua: `waitForMail` trả
+     * `expect(mails.length).toBe(1)` là một cuộc đua: `waitForMail` trả
      * về ngay lượt poll đầu thấy ≥1 lá, nên bỏ trọn khối thời-gian-nghỉ vẫn XANH — bốn lá
      * thừa còn đang trên đường qua outbox → BullMQ → SMTP.
      */
@@ -329,13 +329,13 @@ test.describe('Két sắt', () => {
     ).toBe(1);
 
     /*
-     * DÒNG AN NINH PHẢI GHI LẠI DÒ TỪ MÁY NÀO (19/09/2026).
+     * DÒNG AN NINH PHẢI GHI LẠI DÒ TỪ MÁY NÀO.
      *
      * Đây là lý do DUY NHẤT `security-probe.service.ts` dùng `audit.appendWithin` thay vì
      * `tx.insert` gõ tay: chỉ đường kia mới chạy `toRow()`, nơi `ip` lấy từ `currentRequestIp()`.
-     * Insert thẳng thì `ip` LUÔN NULL — đúng khoảng trống NFR-03 mà rà soát 07/09 vừa vá, tái
-     * xuất ở dòng an ninh đáng giá nhất. Lượt rà 19/09 chỉ ra không bài nào đọc cột ấy, và bài
-     * `api/test/security-probe-race.spec.ts` KHÔNG đọc được vì nó chạy ngoài ngữ cảnh request.
+     * Insert thẳng thì `ip` LUÔN NULL — một khoảng trống NFR-03 ở dòng an ninh đáng giá nhất.
+     * Bài `api/test/security-probe-race.spec.ts` KHÔNG đọc được cột ấy vì nó chạy ngoài ngữ
+     * cảnh request.
      * Ở đây thì có: lượt gọi đi qua controller thật, trong một request thật.
      */
     expect(
@@ -360,11 +360,10 @@ test.describe('Két sắt', () => {
   /**
    * MÁY ĐÃ THANH LÝ THÌ KÉT ĐÓNG BĂNG — ở MỌI CỬA, không chỉ trên một màn.
    *
-   * Trước 17/09/2026 luật này chỉ tồn tại ở trang chi tiết thiết bị, dưới dạng một biểu thức
-   * trong JSX (`canEdit={canVaultWrite && !retired}`). Màn `/vault` không xét trạng thái hồ sơ
-   * và API không có một dòng `retired` nào trong cả module vault — nên đi đường `/vault` là
-   * cất được mật khẩu mới vào một cái máy đã thanh lý. Người dùng học một luật ở màn này rồi
-   * phát hiện màn kia không theo, và không test nào bắt được vì cả hai đều "xanh".
+   * Luật này phải nằm ở API, không chỉ ở một biểu thức trong JSX của trang chi tiết thiết bị
+   * (`canEdit={canVaultWrite && !retired}`): màn `/vault` không xét trạng thái hồ sơ, nên gác ở
+   * một màn thì đi đường `/vault` là cất được mật khẩu mới vào một cái máy đã thanh lý. Người
+   * dùng học một luật ở màn này rồi phát hiện màn kia không theo.
    *
    * Thu hồi cũng bị chặn, và đó là chủ ý: cùng luật với phần còn lại của hồ sơ ("mở lại mới
    * sửa được"). Vế cuối của bài kiểm chính là đường thoát — mở lại thì làm được ngay.
@@ -462,10 +461,9 @@ test.describe('Két sắt', () => {
   /**
    * SỬA METADATA CỦA MỘT NGĂN — `PATCH /vault/secrets/:id`.
    *
-   * Cho tới 17/09/2026 cửa này KHÔNG có một dòng kiểm nào, ở bất kỳ tầng nào: không unit,
-   * không E2E, và chuỗi "Sửa thông tin" không xuất hiện trong cả thư mục `e2e/`. Nghĩa là
-   * `updateMeta` có thể trả về mà không ghi gì, hoặc bỏ luôn dòng audit trong transaction, và
-   * không có gì báo cho tới khi người dùng kêu.
+   * Đây là bài kiểm duy nhất của cửa này ở mọi tầng. Thiếu nó thì `updateMeta` có thể trả về
+   * mà không ghi gì, hoặc bỏ luôn dòng audit trong transaction, và không có gì báo cho tới khi
+   * người dùng kêu.
    *
    * Bài này khẳng định ba vế: metadata đổi thật, GIÁ TRỊ không hề đổi theo (sửa nhãn không
    * được đụng tới mật khẩu), và có đúng một dòng audit mang tên người sửa.
@@ -515,11 +513,11 @@ test.describe('Két sắt', () => {
   });
 
   /**
-   * LỖ RÒ ĐÃ BỊT 17/09/2026 — và đây là bài canh nó.
+   * BÀI CANH MỘT LỖ RÒ ĐÃ BỊT.
    *
    * `GET /devices/:id/panels` mở cho vai `member` (hồ sơ máy là việc hàng ngày), nhưng khu
-   * "Két sắt" trong đó bày NHÃN NGĂN và TÊN ĐĂNG NHẬP. Trước bản vá, provider chỉ nhận
-   * `deviceId` nên không có gì để hỏi ma trận quyền: cùng một dữ liệu mà `GET /vault/secrets`
+   * "Két sắt" trong đó bày NHÃN NGĂN và TÊN ĐĂNG NHẬP. Provider chỉ nhận `deviceId` thì không
+   * có gì để hỏi ma trận quyền: cùng một dữ liệu mà `GET /vault/secrets`
    * trả 403 thì cửa này trả 200. Lặp `GET /devices` rồi gọi panel từng máy là lấy được bản đồ
    * "công ty giữ bí mật ở đâu" — đúng thứ `/vault/owners` khoá lại cho SA/Admin — và đường
    * này KHÔNG ghi một dòng audit nào.

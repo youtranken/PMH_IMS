@@ -142,7 +142,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     ).toBeGreaterThanOrEqual(12);
 
     /*
-     * Nhãn nút là một LỜI XÁC NHẬN chứ không phải "Đóng" (rà UI/UX 12/09): hộp này chặn Esc
+     * Nhãn nút là một LỜI XÁC NHẬN chứ không phải "Đóng": hộp này chặn Esc
      * và chặn click-nền, nên bấm nút là đường ra DUY NHẤT — và người bấm phải tự khẳng định
      * đã ghi lại mật khẩu, vì không có lần hiện thứ hai.
      */
@@ -220,26 +220,22 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
    * Một cánh cửa bị khoá phải NÓI ra là nó khoá. Bài này gõ thẳng bốn URL của SA bằng phiên
    * admin và khẳng định ĐIỀU THẬT SỰ XẢY RA — không phải điều dễ nghe.
    *
-   * ĐÃ ĐỌC `web/src/App.tsx` (bản 09/09) trước khi viết, và ba route ứng xử KHÁC NHAU:
+   * Các route ứng xử KHÁC NHAU (đọc `web/src/App.tsx`):
    *
-   *   • `/dev/components` — route chỉ được ĐĂNG KÝ khi `me.role === 'sa'` (App.tsx, khối
-   *     `{me.role === 'sa' ? <Route …/> : null}`). Admin gõ URL rơi xuống `*` → 404. Gác thật
-   *     ở web.
+   *   • `/dev/components` và `/admin/accounts` — gác theo bảng `ROUTE_ROLES`
+   *     (`lib/routes`): vai không đủ thì nhận trang 403 "Bạn không có quyền xem trang này".
    *   • `/documents` — CHƯA có route nào cả (mục menu còn `planned`), nên mọi vai đều nhận
    *     404, kể cả SA.
-   *   • `/admin/accounts` — **KHÔNG gác vai ở web**. `<Route path={PATHS.adminAccounts}
-   *     element={<AccountsScreen me={me} />} />` nằm ngoài mọi điều kiện vai; `app-nav.ts` chỉ
-   *     ẩn MỤC MENU (`roles: ['sa']`). Admin gõ thẳng URL thì màn VẪN dựng ra.
    *
    * Hàng rào thật của `/admin/accounts` nằm ở API: `AccountsController` mang `@Roles('sa')`
    * trên MỌI endpoint (AD-9), nên `GET /api/v1/accounts` trả 403 cho admin. Bài này vì thế
    * khẳng định hai thứ, và cả hai đều đáng giá:
    *   1. API là nơi chặn — 403, không phải 200 với danh sách rỗng.
-   *   2. Màn PHẢI NÓI RA là nó không tải được (`LoadError`), tuyệt đối không được biến 403
-   *      thành "Chưa có dữ liệu". Đây là kiểu hỏng nguy hiểm nhất của màn này: một Quản trị
-   *      viên đọc "công ty không có tài khoản nào" và tin là mình vừa kiểm tra xong.
+   *   2. Router cũng gác: admin gõ thẳng URL nhận trang 403, không bao giờ thấy "Chưa có dữ
+   *      liệu" — một Quản trị viên đọc "công ty không có tài khoản nào" sẽ tin là mình vừa
+   *      kiểm tra xong.
    *
-   * ĐỎ KHI: một trong hai route 404 bỗng mở ra cho admin; hoặc `/admin/accounts` nuốt 403
+   * ĐỎ KHI: một route bị gác bỗng mở ra cho admin; hoặc `/admin/accounts` nuốt 403
    * thành bảng rỗng; hoặc API nới `@Roles` cho admin mà không ai bàn.
    */
   test('Quản trị viên gõ thẳng URL của SA thì hệ thống nói KHÔNG, chứ không im lặng', async ({
@@ -266,7 +262,7 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
       'admin gõ /documents phải nhận trang 404 tử tế, không phải màn trắng hay redirect câm',
     ).toBeVisible();
 
-    // --- `/admin/accounts`: màn MỞ (web không gác), API mới là nơi chặn.
+    // --- `/admin/accounts`: API là hàng rào thật, router gác thêm một lớp.
     const truoc = await page.request.get('/api/v1/accounts');
     expect(
       truoc.status(),
@@ -275,13 +271,10 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
 
     await page.goto('/admin/accounts');
     /*
-     * `/admin/accounts` — HAI HÀNG RÀO, và bài này chốt cả hai (B-09, sửa 22/09).
+     * `/admin/accounts` — HAI HÀNG RÀO, và bài này chốt cả hai (B-09): router gác bằng bảng
+     * `ROUTE_ROLES` trong `App.tsx`, và API gác bằng `@Roles('sa')`.
      *
-     * Bản trước chốt rằng màn VẪN dựng ra cho admin, kèm câu "ĐÂY LÀ SỰ THẬT, không phải điều
-     * mong muốn … ai muốn 404 thì phải sửa App.tsx, sửa xong hãy sửa bài này". Đã sửa
-     * `App.tsx` (bảng `ROUTE_ROLES`), nên sửa bài này theo — đúng lời dặn của chính nó.
-     *
-     * Vế API ngay trên giữ NGUYÊN: router gác là tiện cho người dùng, `@Roles('sa')` mới là
+     * Vế API ngay trên phải giữ: router gác là tiện cho người dùng, `@Roles('sa')` mới là
      * hàng rào. Bỏ vế ấy thì một lượt "dọn dẹp" App.tsx sau này gỡ mất lớp router mà không gì
      * kêu lên rằng cửa sau đang mở.
      */
@@ -291,15 +284,14 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     ).toBeVisible();
 
     /*
-     * KHỐI "403 phải nói ra là lỗi QUYỀN" ĐÃ RỜI KHỎI ĐÂY (B-09, 22/09).
+     * VẾ "403 phải nói ra là lỗi QUYỀN" Ở TẦNG MÀN KHÔNG NẰM Ở ĐÂY (B-09).
      *
-     * Vế cũ chốt một điều thật sự đáng giá: 403 phải hiện thành khối lỗi nói rõ "Bạn không có
-     * quyền", KHÔNG được hoá thành "Chưa có dữ liệu" — câu đọc lên nghe như "công ty chưa có
-     * tài khoản nào", một lời nói dối với người vừa bị từ chối.
+     * Điều đó vẫn đáng giá: 403 phải hiện thành khối lỗi nói rõ "Bạn không có quyền", KHÔNG
+     * được hoá thành "Chưa có dữ liệu" — câu đọc lên nghe như "công ty chưa có tài khoản nào",
+     * một lời nói dối với người vừa bị từ chối.
      *
-     * Route đã 404 thì admin không còn tới được nhánh ấy qua cửa này, nên vế đó không còn chỗ
-     * đứng Ở ĐÂY. Nó KHÔNG mất: `web/src/ui/load-state.test.tsx` canh đúng hành vi đó ở tầng
-     * component — "in đúng câu API gửi về" và "403 không có câu kèm → nói là thiếu quyền,
+     * Router đã gác thì admin không tới được nhánh ấy qua cửa này. Vế đó được canh ở
+     * `web/src/ui/load-state.test.tsx`, tầng component — "in đúng câu API gửi về" và "403 không có câu kèm → nói là thiếu quyền,
      * không nói là lỗi tải". Đó mới là chỗ đúng của một component dùng chung: nó áp cho MỌI
      * màn, không chỉ cho hai màn quản trị.
      */
@@ -309,8 +301,8 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
    * ===== BÀI 3 =====
    *
    * Vai admin ĐƯỢC làm trọn việc két sắt: cất · xem · xoay. `vault-panel.tsx` dựng nút theo
-   * `isAdmin = role === 'sa' || role === 'admin'`, nhưng cho tới nay chỉ nhánh `sa` từng chạy
-   * trong E2E — nhánh `admin` là code chưa ai bấm thử.
+   * `isAdmin = role === 'sa' || role === 'admin'`; các bài khác chỉ chạy nhánh `sa`, nên bài này
+   * bấm thử nhánh `admin`.
    *
    * ĐỎ KHI: admin không thấy nút "Cất mật khẩu/khóa" hoặc menu Sửa/Xoay/Thu hồi; API chặn nhầm vai
    * admin ở đường ghi két; bước xác thực (step-up) không bật lên khi grace đã hết; hoặc — tệ
@@ -509,12 +501,12 @@ test.describe('Quản trị viên — vai chưa từng ai kiểm', () => {
     await nhomHieuLuc.getByRole('button', { name: 'Thu hồi sớm' }).click();
 
     /*
-     * TỪ 12/09 NÚT NÀY PHẢI HỎI LẠI (rà UI/UX #4).
+     * NÚT NÀY PHẢI HỎI LẠI.
      *
      * Nó cắt một quyền ĐANG CHẠY của người khác — có thể họ đang mở két giữa lúc xử sự cố —
      * mà lại nằm ngay dưới cặp Duyệt/Từ chối trên cùng một thẻ phiếu, nên trượt tay là cắt
-     * nhầm. Hai chỗ anh em trong cụm Két sắt (gỡ quyền ở ma trận, thu hồi ngăn ở panel) đều
-     * đã qua `askConfirm({ danger: true })`; riêng chỗ này đi thẳng vào `mutate`.
+     * nhầm. Hai chỗ anh em trong cụm Két sắt (gỡ quyền ở ma trận, thu hồi ngăn ở panel) cũng
+     * qua `askConfirm({ danger: true })`.
      *
      * Vế "chưa xác nhận thì CHƯA thu hồi" mới là vế có giá trị: một bản vá dựng hộp lên rồi
      * vẫn gọi API ngay cũng làm câu `toBeVisible` phía dưới xanh.

@@ -65,9 +65,9 @@ test.describe('Địa chỉ IP ở 390px', () => {
   });
 
   /**
-   * G-11 — Story 5.4 AC-2 nói thẳng "panel pass 390px", mà chưa có bài nào.
+   * G-11 — AC nói thẳng "panel pass 390px".
    *
-   * Đây là cảnh dùng thật của cả Epic 5: đứng trước tủ mạng, mở trang con switch trên điện
+   * Đây là cảnh dùng thật của cả mảng IP: đứng trước tủ mạng, mở trang con switch trên điện
    * thoại, cần biết ngay nó đang giữ IP nào.
    */
   test('panel IP trên trang thiết bị đọc được ở 390px', async ({ page }) => {

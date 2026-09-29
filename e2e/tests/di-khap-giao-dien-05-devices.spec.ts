@@ -187,7 +187,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    *
    * Đầu trang Thiết bị có bốn cái nút, và ba trong số đó là CỬA DUY NHẤT tới một việc: không
    * có "Tải file mẫu" thì không ai biết file nhập phải có cột nào; không có "Nhập từ Excel"
-   * thì cả story 2.6 không có lối vào từ giao diện. `devices.spec.ts` bấm "Thêm thiết bị"
+   * thì cả luồng nhập Excel không có lối vào từ giao diện. `devices.spec.ts` bấm "Thêm thiết bị"
    * suốt, `device-import.spec.ts` bấm "Nhập từ Excel" — nhưng KHÔNG bài nào hỏi "đầu trang có
    * đúng bốn nút này thôi chứ?". Gỡ một nút đi, hoặc nhét thêm một nút thứ năm, cả bộ E2E vẫn
    * xanh.
@@ -706,8 +706,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect(hop, 'và hộp vẫn phải mở để người dùng sửa nốt').toBeVisible();
 
     /* HAI ĐƯỜNG ĐÓNG, KHÔNG LƯU GÌ. */
-    /* Form đã gõ dở, nên từ 12/09 lối đóng TÌNH CỜ phải hỏi lại trước
-       (`Dialog guardUnsaved`, rà UI/UX #10) — trả lời xong mới đóng. */
+    /* Form đã gõ dở, nên lối đóng TÌNH CỜ phải hỏi lại trước (`Dialog guardUnsaved`) — trả
+       lời xong mới đóng. */
     await page.keyboard.press('Escape');
     await expect(
       page.getByRole('dialog', { name: 'Bỏ những gì vừa nhập?' }),
@@ -909,8 +909,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    * hai điều mà đọc code mới biết:
    *   - Tab Port map CHỈ hiện với loại thiết bị bật `has_port_map`. Bài này tạo một con Switch
    *     (seed: có port map) nên phải thấy ĐỦ NĂM tab.
-   *   - Tab Két sắt hiện cho MỌI vai kể từ story 6.3 — panel tự nói tầng quyền của người xem
-   *     chứ tab không còn bị ẩn theo vai.
+   *   - Tab Két sắt hiện cho MỌI vai — panel tự nói tầng quyền của người xem chứ tab không bị
+   *     ẩn theo vai.
    *
    * ĐỎ KHI: một tab biến mất khỏi hồ sơ (đặc biệt là Port map trên loại có port map), một tab
    * mở ra rỗng hoặc mất khối đặc trưng của nó, hai nút "Sửa hồ sơ"/"Thanh lý" ở đầu trang
@@ -942,10 +942,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * Nhãn tab có thể mang số đếm nối sau ("Giấy tờ 3"), và số đó về SAU hồ sơ một nhịp mạng
      * — nên cắt phần số đi rồi mới so tập hợp, và chờ bằng `expect.poll` thay vì đọc một lần.
      *
-     * Ví dụ cũ ở đây là "Giấy tờ 0", nhưng từ 19/09 luật đã đảo: `ui/tabs.tsx` dùng phép thử
-     * truthy nên số `0` KHÔNG vẽ ra nữa (`_SPEC.md:61`, `:529`). Phép `.replace(/\s+\d+$/,'')`
-     * vẫn đúng cho cả hai thời kỳ — chỉ cái ví dụ là lạc hậu, và nó mâu thuẫn trực tiếp với
-     * `device-detail.spec.ts` vừa sửa cùng đợt.
+     * Số `0` thì KHÔNG vẽ ra: `ui/tabs.tsx` dùng phép thử truthy (`_SPEC.md:61`, `:529`).
      */
     await expect
       .poll(
@@ -985,12 +982,11 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     /*
      * MỖI Ô KỂ MỘT LẦN — hoặc là một ô có giá trị, hoặc là một cái tên trong dòng "Chưa khai".
      *
-     * Bản trước của bài này đòi CẢ HAI cùng lúc: phải có ô "Model" (rỗng, một dấu gạch ngang)
-     * VÀ phải có dòng "Chưa khai: Model, …". Máy trong bài không khai ô nào, nên bản cũ khoá
-     * lại đúng cái nhược điểm mà lượt dựng lại 17/09 đi sửa: một lưới toàn gạch ngang, rồi
-     * ngay dưới là một câu nói lại y hệt danh sách ấy.
+     * Đòi CẢ HAI cùng lúc — ô "Model" rỗng (một dấu gạch ngang) VÀ dòng "Chưa khai: Model, …"
+     * — là khoá lại một lưới toàn gạch ngang, rồi ngay dưới là một câu nói lại y hệt danh sách
+     * ấy.
      *
-     * Luật mới, và đây là thứ bài kiểm giữ từ giờ: ô KHÔNG có giá trị thì không vẽ ra ô nào.
+     * Luật bài kiểm giữ: ô KHÔNG có giá trị thì không vẽ ra ô nào.
      */
     for (const nhan of ['Model', 'Serial', 'Nhà cung cấp', 'Ngày mua', 'Ghi chú']) {
       await expect(

@@ -18,8 +18,8 @@ import {
  * VÌ SAO BÀI NÀY PHẢI LÀ E2E, KHÔNG THỂ LÀ UNIT TEST:
  * lỗi ở đây không nằm trong một hàm nào cả — nó nằm ở KHOẢNG GIỮA hai câu lệnh SQL, và chỉ
  * hiện ra khi có hai kết nối thật chạy chồng lên nhau trên một Postgres thật. Mock drizzle
- * thì không còn transaction để mà đua (và CLAUDE.md cấm mock drizzle). Tầng test giữa —
- * `api/test/` với Postgres thật — hiện đang rỗng, nên E2E là chỗ duy nhất chứng minh được.
+ * thì không còn transaction để mà đua (và CLAUDE.md cấm mock drizzle). Bài này chạy
+ * qua HTTP thật để chứng minh cả đường controller → service → Postgres.
  *
  * CÁCH BÀI NÀY ĐƯỢC THIẾT KẾ ĐỂ KHÔNG "XANH VÌ KHÔNG CHẠY GÌ":
  * mỗi bài bắn N request ĐỒNG THỜI vào cùng một bản ghi rồi khẳng định **đúng một** cái thắng.
@@ -71,9 +71,9 @@ function tally(statuses: number[]): Map<number, number> {
 
 test.describe('M2 — ghi song song trên cùng bản ghi', () => {
   /**
-   * Finding 2 của Đợt 2: `license-assignment.service.ts` `assign`.
+   * `license-assignment.service.ts` `assign`.
    *
-   * Bản cũ đếm seat bằng `usageFor()` chạy trên pool, NGOÀI transaction chèn. License 1 ghế,
+   * Đếm seat trên pool, NGOÀI transaction chèn, là để lọt đua. License 1 ghế,
    * sáu người gán cùng lúc: cả sáu đọc `used = 0`, `0 >= 1` là sai nên cả sáu qua cửa, cả sáu
    * chèn. Thành 6/1 và KHÔNG AI phải khai `overSeatReason` — trong khi AC 3.2 dựng ra cái ô
    * lý do đó chính vì vượt seat là chuyện pháp lý với nhà cung cấp.
@@ -135,10 +135,10 @@ test.describe('M2 — ghi song song trên cùng bản ghi', () => {
   });
 
   /**
-   * Finding 3 của Đợt 2: `license-assignment.service.ts` `release`.
+   * `license-assignment.service.ts` `release`.
    *
-   * Gỡ ghế hai lần cùng lúc (bấm đúp, hoặc hai người cùng mở màn). Bản cũ ghi đè `released_at`
-   * lần nữa VÀ ghi thêm một dòng `software_history` "license-released". `software_history` là
+   * Gỡ ghế hai lần cùng lúc (bấm đúp, hoặc hai người cùng mở màn). Không khóa thì lượt sau ghi
+   * đè `released_at` lần nữa VÀ ghi thêm một dòng `software_history` "license-released". `software_history` là
    * bảng chỉ-thêm (AD-13) — dòng thừa đó nằm lại vĩnh viễn, không UPDATE cũng không DELETE
    * được. Sổ lịch sử nói một lần ngồi ghế bị gỡ hai lần.
    */
@@ -193,9 +193,9 @@ test.describe('M2 — ghi song song trên cùng bản ghi', () => {
   });
 
   /**
-   * Finding 1 của Đợt 2: `ip-address.service.ts` `transition`.
+   * `ip-address.service.ts` `transition`.
    *
-   * `requireAlive` đọc bằng pool, ngoài transaction ghi. Sáu lượt chuyển `free → assigned`
+   * Nếu `requireAlive` đọc bằng pool, ngoài transaction ghi, thì sáu lượt chuyển `free → assigned`
    * cùng lúc trên MỘT hồ sơ IP: cả sáu đọc `from = 'free'`, cả sáu qua `canTransition`, cả
    * sáu UPDATE. Trạng thái cuối là của người bấm sau, và `ip_history` để lại SÁU dòng cùng
    * `from_status = 'free'` — sổ lịch sử tự mâu thuẫn với chính nó, mà AC 5.2 bắt giữ nó
@@ -256,10 +256,10 @@ test.describe('M2 — ghi song song trên cùng bản ghi', () => {
   });
 
   /**
-   * Finding 4 của Đợt 2: `accounts.service.ts` `setStatus` — chỗ nguy hiểm nhất cả nhóm.
+   * `accounts.service.ts` `setStatus` — chỗ nguy hiểm nhất cả nhóm.
    *
-   * NFR-01 bắt hệ thống luôn còn tối thiểu 2 SA hoạt động. Bản cũ đếm SA NGOÀI transaction
-   * ghi: hệ thống còn 3 SA, hai lệnh khóa chạy song song trên hai SA khác nhau — cả hai đếm
+   * NFR-01 bắt hệ thống luôn còn tối thiểu 2 SA hoạt động. Đếm SA NGOÀI transaction ghi thì:
+   * hệ thống còn 3 SA, hai lệnh khóa chạy song song trên hai SA khác nhau — cả hai đếm
    * được "còn 2", cả hai qua cửa, cả hai ghi. Còn lại 1. Với đúng 2 SA thì còn 0, tức KHÓA
    * CẢ CÔNG TY RA NGOÀI hệ thống, và không ai mở lại được vì mở cũng cần quyền SA.
    */

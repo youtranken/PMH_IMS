@@ -308,18 +308,18 @@ test.describe('Cỗ máy Expiry', () => {
     await page.goto('/expiry');
     await expect(page.getByRole('link', { name: new RegExp(`SSL-E2E-OLD-${stamp}`) })).toBeVisible();
     await expect(page.getByText(/Quá hạn \d+ ngày/).first()).toBeVisible();
-    /* Ô số ở đầu màn: từ 17/09/2026 là "số to đứng trước, nhãn nhỏ bên dưới" và bấm được để
-       lọc — không còn khuôn "Đã quá hạn: 4" của ba cái pill cũ. */
+    /* Ô số ở đầu màn là "số to đứng trước, nhãn nhỏ bên dưới" và bấm được để lọc — không phải
+       khuôn "Đã quá hạn: 4". */
     await expect(
       page.getByRole('button', { name: /[1-9]\d*\s*Đã quá hạn/ }),
     ).toHaveCount(1);
   });
 
   /**
-   * BỘ LỌC MÀN SẮP HẾT HẠN SỐNG TRÊN THANH ĐỊA CHỈ (18/09/2026).
+   * BỘ LỌC MÀN SẮP HẾT HẠN SỐNG TRÊN THANH ĐỊA CHỈ.
    *
-   * Ba bộ lọc của màn này — cửa sổ nhìn tới, loại hạn, và ô số — nằm trong `useState` cho tới
-   * 18/09, trong khi `docs/SHARED-REGISTRY.md` viết thẳng: "Cấm quay lại `useState` cho bốn
+   * Ba bộ lọc của màn này — cửa sổ nhìn tới, loại hạn, và ô số — không được nằm trong
+   * `useState`: `docs/SHARED-REGISTRY.md` viết thẳng: "Cấm quay lại `useState` cho bốn
    * thứ đó — mất bộ lọc khi F5, không gửi được link, và bấm Back từ trang chi tiết rơi về một
    * danh sách trắng."
    *

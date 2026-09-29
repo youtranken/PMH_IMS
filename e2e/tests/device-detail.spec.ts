@@ -46,7 +46,7 @@ async function createSwitch(page: Page, code: string): Promise<string> {
   return ((await created.json()) as { device: { id: string } }).device.id;
 }
 
-/** Story 2.5 — một trang mở ra thấy mọi thứ về thiết bị. */
+/** Một trang mở ra thấy mọi thứ về thiết bị. */
 test.describe('Trang chi tiết thiết bị', () => {
   test('gom đủ hồ sơ · bảo hành · port map · giấy tờ · lịch sử trong một trang', async ({
     page,
@@ -117,7 +117,7 @@ test.describe('Trang chi tiết thiết bị', () => {
       const res = await fetch(`/api/v1/devices/${id}/panels`, { credentials: 'include' });
       return (await res.json()) as unknown[];
     }, deviceId);
-    // Đợt 1: ipam/vault/software chưa tồn tại nên danh sách rỗng — ĐÚNG như thiết kế.
+    // Máy mới chưa gắn gì ở ipam/vault/software nên danh sách rỗng — ĐÚNG như thiết kế.
     expect(panels).toEqual([]);
 
     await page.goto(`/devices/${deviceId}`);
@@ -174,10 +174,10 @@ test.describe('Trang chi tiết thiết bị', () => {
 });
 
 /**
- * Đợt dựng lại trang chi tiết (28/08/2026): thanh thời hạn, dải chỉ số, breadcrumb.
+ * Trang chi tiết: thanh thời hạn, dải chỉ số, breadcrumb.
  *
- * Trước đó "bảo hành" chỉ là một cái nhãn chữ ("Còn 157 ngày") — trả lời đúng một câu và
- * giấu mất ba câu còn lại: mua từ bao giờ, hạn chạy từ mốc nào, đã đi hết bao nhiêu phần.
+ * "Bảo hành" mà chỉ là một cái nhãn chữ ("Còn 157 ngày") thì trả lời đúng một câu và giấu mất
+ * ba câu còn lại: mua từ bao giờ, hạn chạy từ mốc nào, đã đi hết bao nhiêu phần.
  */
 test.describe('Trang chi tiết — dựng lại 28/08', () => {
   test('thanh bảo hành hiện quãng đường và mốc hôm nay, không chỉ một nhãn chữ', async ({
@@ -255,22 +255,21 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
   });
 
   /**
-   * Số trên nhãn tab (28/08/2026) — "Két sắt 1".
+   * Số trên nhãn tab — "Két sắt 1".
    *
-   * Trước đây phải bấm vào từng tab mới biết trong đó có gì. Số trên nhãn trả lời trước.
+   * Không phải bấm vào từng tab mới biết trong đó có gì: số trên nhãn trả lời trước.
    *
    * Đếm ở web qua chính truy vấn mà panel dùng, không phải một endpoint mới: `vault.module` đã
    * import `devices`, nên cho `devices` gọi ngược `vault.api` để đếm là vòng phụ thuộc.
    *
-   * ===== VẾ "SỐ 0 VẪN HIỆN" ĐÃ BỊ ĐẢO (18/09/2026) =====
+   * ===== SỐ 0 THÌ KHÔNG HIỆN =====
    *
-   * Bản 28/08 khẳng định `0` là câu trả lời THẬT và vẫn phải hiện. Đợt thiết kế v2 đảo lại, và
-   * đảo có văn bản: `design-ims/v2-chi-tiet/_SPEC.md:61` xếp "Badge đếm hiện số 0" vào danh
-   * sách LỖI của bản cũ, `:529` đưa thành gạch nghiệm thu — `count === 0` thì KHÔNG vẽ
+   * Có văn bản: `design-ims/v2-chi-tiet/_SPEC.md:61` xếp "Badge đếm hiện số 0" vào danh sách
+   * LỖI, `:529` đưa thành gạch nghiệm thu — `count === 0` thì KHÔNG vẽ
    * `.tab-count`. Lý do: số 0 không nói thêm gì so với việc mở tab ra thấy khu rỗng, nhưng nó
    * làm hàng tab của hồ sơ mới trông như đang hỏng ("Tổng quan · Giấy tờ 0 · Két sắt 0").
    *
-   * Cái bài này canh thì KHÔNG đổi, và đó mới là phần đáng giá: số chỉ xuất hiện khi có thứ
+   * Phần đáng giá của bài: số chỉ xuất hiện khi có thứ
    * để đếm, và nó phải KHỚP với nội dung panel — hai chỗ dùng chung một truy vấn nên không
    * thể nói hai con số khác nhau.
    */
@@ -313,7 +312,7 @@ test.describe('Trang chi tiết — dựng lại 28/08', () => {
 
 /*
  * DEV-089: cấp IP ngay từ trang thiết bị — chọn dải, IP trống đầu tiên (bỏ gateway) điền sẵn,
- * máy đang xem đã điền trong hộp Cấp IP. Trước đây phải sang màn Địa chỉ IP và lật trang tìm ô.
+ * máy đang xem đã điền trong hộp Cấp IP — không phải sang màn Địa chỉ IP và lật trang tìm ô.
  */
 test.describe('Cấp IP từ trang thiết bị', () => {
   test('đường hạnh phúc: chọn dải → IP đầu tiên sau gateway → khu Địa chỉ IP có dòng mới', async ({

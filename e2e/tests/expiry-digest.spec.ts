@@ -19,7 +19,7 @@ test.beforeEach(async () => {
   resetUsers();
   resetSoftware();
   // PHẢI dọn cả thiết bị: luật dưới đây tính "mọi loại", nên một cái máy sót lại từ spec
-  // khác có bảo hành sắp hết là số mục đếm được lệch ngay (code review Epic 3).
+  // khác có bảo hành sắp hết là số mục đếm được lệch ngay.
   resetDevices();
   resetDigestRules();
   await clearMailbox();
@@ -48,22 +48,21 @@ function inDays(days: number): string {
 /**
  * Lịch gửi KHÔNG BAO GIỜ tới hạn hôm nay — và đây là cả điểm mấu chốt của hai bài dưới.
  *
- * ===== BÀI KIỂM NÀY TỪNG ĐỎ ĐÚNG MỘT NGÀY TRONG TUẦN =====
+ * ===== VÌ SAO KHÔNG DÙNG MỘT LỊCH CỐ ĐỊNH =====
  *
- * Bản trước khai `frequency: 'weekly', weekday: 1, hour: 8` — tức "thứ Hai 8 giờ". Lượt chạy
- * cổng ngày 21/09/2026 lúc 18:50 rơi đúng **thứ Hai**, nên `shouldSendNow` trả `true` (đúng
- * thứ · đã qua giờ · `lastSentAt` còn rỗng vì luật vừa tạo) và sweep gửi một digest THẬT —
- * cộng thêm thư `[Gửi thử]` của chính bài. Hai thư, `toHaveLength(1)` đỏ.
+ * Khai cứng `frequency: 'weekly', weekday: 1, hour: 8` — "thứ Hai 8 giờ" — thì lượt chạy rơi
+ * vào chiều thứ Hai làm `shouldSendNow` trả `true` (đúng thứ · đã qua giờ · `lastSentAt` còn
+ * rỗng vì luật vừa tạo) và sweep gửi một digest THẬT — cộng thêm thư `[Gửi thử]` của chính
+ * bài. Hai thư, `toHaveLength(1)` đỏ.
  *
  * Nó chập chờn chứ không đỏ hẳn vì sweep chạy mỗi phút: rơi trúng khoảng vài giây giữa lúc
- * tạo luật và lúc đếm thư thì đỏ, không thì xanh. Hai lượt cổng cùng ngày (12:14 và 17:04)
- * né được; 18:50 thì không. Một bài kiểm hỏng theo NGÀY TRONG TUẦN là bài sẽ bị đổ cho "chập
+ * tạo luật và lúc đếm thư thì đỏ, không thì xanh. Một bài kiểm hỏng theo NGÀY TRONG TUẦN là bài sẽ bị đổ cho "chập
  * chờn" rồi chạy lại cho qua — đúng thứ làm người ta thôi tin bộ bài kiểm.
  *
- * Bài "lọc theo loại" còn hở rộng hơn: `frequency: 'daily'` tới hạn MỌI ngày sau 8 giờ. Nó
- * chỉ chưa đỏ vì assertion của nó đúng với cả hai thư — may, không phải đúng.
+ * `frequency: 'daily'` còn hở rộng hơn: tới hạn MỌI ngày sau 8 giờ; assertion đúng với cả hai
+ * thư thì chỉ là may, không phải đúng.
  *
- * Cách vá: chọn ngày cách hôm nay BA ngày. Không phải "ngày mai" — lệch múi giờ giữa máy chạy
+ * Nên: chọn ngày cách hôm nay BA ngày. Không phải "ngày mai" — lệch múi giờ giữa máy chạy
  * Playwright và múi giờ ứng dụng có thể biến "ngày mai" thành "hôm nay" ở quanh nửa đêm.
  *
  * Phần đang kiểm — "MỘT thư cho nhiều mục" và "lọc đúng loại" — không phụ thuộc vào ngày gửi,
@@ -207,7 +206,7 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
     /*
      * Luật đang chạy mà không có người nhận thì mỗi phút sweep lại đến kỳ, lại bỏ qua, lại
      * ghi một dòng cảnh báo — gần một nghìn dòng rác mỗi ngày mà không ai nhận được gì
-     * (code review Epic 3). Chặn ngay lúc lưu.
+     * Chặn ngay lúc lưu.
      */
     const blocked = await post(page, '/api/v1/expiry/rules', {
       name: `E2E không người nhận ${stamp}`,

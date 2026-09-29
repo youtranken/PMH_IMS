@@ -257,14 +257,13 @@ async function buildDeviceFile(path: string, rows: string[][]): Promise<string> 
 }
 
 /**
- * Finding #10 — import đối chiếu NGOÀI transaction rồi ghi vô điều kiện bên trong.
- *
- * Hai lỗi cộng dồn, và cả hai đều IM LẶNG:
+ * Import đối chiếu NGOÀI transaction rồi ghi vô điều kiện bên trong thì có hai lỗi cộng dồn,
+ * và cả hai đều IM LẶNG:
  *
  * 1. `updateWithin` không kiểm số dòng trúng. Hồ sơ bị xóa xen giữa lúc đối chiếu và lúc ghi
  *    thì `UPDATE ... WHERE id = <đã chết>` khớp 0 dòng, Postgres không báo lỗi, `updated += 1`
- *    và audit ghi một sự kiện CHƯA TỪNG XẢY RA. Bản catalog còn ép kiểu `as unknown as` nên
- *    trả `undefined` đội lốt bản ghi.
+ *    và audit ghi một sự kiện CHƯA TỪNG XẢY RA. Ép kiểu `as unknown as` thì còn trả
+ *    `undefined` đội lốt bản ghi.
  * 2. `before` lấy từ ảnh chụp lúc đối chiếu, tra trượt thì rơi về `before ?? {}`.
  *    `{...undefined}` không ném, nên `diffDevice` lặng lẽ so với object RỖNG và
  *    `device_history` ghi "mọi trường đổi từ trống" — một dòng lịch sử BỊA trong bảng
@@ -272,7 +271,7 @@ async function buildDeviceFile(path: string, rows: string[][]): Promise<string> 
  *
  * ===== BÀI NÀY CHỨNG MINH ĐƯỢC GÌ, VÀ KHÔNG CHỨNG MINH ĐƯỢC GÌ =====
  *
- * Nói thẳng: bài này XANH CẢ TRƯỚC LẪN SAU bản sửa. Nó là hàng rào hồi quy, KHÔNG phải bằng
+ * Nói thẳng: bài này XANH CẢ KHI CÓ LẪN KHI KHÔNG CÓ bản sửa. Nó là hàng rào hồi quy, KHÔNG phải bằng
  * chứng. Đừng đọc nó như bằng chứng.
  *
  * Lý do, cho cả hai vế:
@@ -286,10 +285,8 @@ async function buildDeviceFile(path: string, rows: string[][]): Promise<string> 
  *
  * Nên giá trị thật của bài này là: khóa lại hình dạng ĐÚNG của `changes` (diff thật, `before`
  * là giá trị cũ thật), để nếu ai đó đổi cách dựng khóa hoặc quay lại dùng ảnh chụp thì nó đỏ.
- * Chứng minh trực tiếp hai vế trên cần tầng integration chạm DB thật. Lúc viết bài này tầng
- * đó chưa tồn tại (`api/test/` rỗng, nợ số một ở `docs/CODE-REVIEW-2026-09-07.md` mục 9); nó
- * đã được dựng ngày 08/09 và nay có hơn hai chục bài, nên hai vế trên LÀM ĐƯỢC ở đó — đây là
- * việc còn nợ, không còn là việc bất khả.
+ * Chứng minh trực tiếp hai vế trên cần tầng integration chạm DB thật (`api/test/`) — làm được
+ * ở đó, và là việc còn nợ.
  */
 test.describe('Import cập nhật — lịch sử phải là THẬT (finding #10)', () => {
   test('sửa MỘT ô qua import thì lịch sử chỉ ghi đúng ô đó, không phải "mọi trường từ trống"', async ({

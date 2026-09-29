@@ -19,8 +19,8 @@ import { expect, test } from '@playwright/test';
  *
  * Và `catalog` PHẢI đứng cuối ở cả hai: nó là thứ mọi vùng khác trỏ vào (site · tủ · nhà cung
  * cấp · loại thiết bị · cổng dịch vụ · phòng ban · nhà mạng), nên dọn nó trước là lỗi khoá
- * ngoại. Từ 18/09 script tự sắp lại theo thứ tự khai của chính nó nên thứ tự tham số không
- * còn quyết định gì — nhưng bất biến "catalog cuối" thì vẫn là bất biến, và đây là nơi nói ra.
+ * ngoại. Script tự sắp lại theo thứ tự khai của chính nó nên thứ tự tham số không quyết định
+ * gì — nhưng bất biến "catalog cuối" thì vẫn là bất biến, và đây là nơi nói ra.
  *
  * Bài này đọc VĂN BẢN chứ không `import`: `reset-e2e.mjs` là script Node chạy TRONG container
  * api, nạp nó vào Playwright là kéo theo `pg` và một `DATABASE_URL` không tồn tại ở đây.
@@ -34,9 +34,9 @@ function vungCuaScript(): string[] {
   const khoi = /const DOMAINS = \{([\s\S]*?)\n\};/.exec(src);
   expect(khoi, 'không tìm thấy khối DOMAINS trong reset-e2e.mjs').not.toBeNull();
   /*
-   * NỚI REGEX, RỒI CHỐT SÀN (19/09/2026).
+   * NỚI REGEX, RỒI CHỐT SÀN.
    *
-   * Bản trước ghim CẢ mức thụt lề (`^ {2}`) LẪN bộ ký tự (`[a-z-]`), nên nó giòn hai chiều:
+   * Ghim CẢ mức thụt lề (`^ {2}`) LẪN bộ ký tự (`[a-z-]`) thì giòn hai chiều:
    *   · prettier hay ai đó đổi sang 4 dấu cách → danh sách rỗng → bài đỏ với thông báo trỏ
    *     sai chỗ hoàn toàn ("thiếu vùng X") thay vì "không đọc được file";
    *   · thêm một vùng có chữ số hoặc chữ hoa (`nat2`, `ipamV6`) → regex bỏ qua → bài 2 XANH

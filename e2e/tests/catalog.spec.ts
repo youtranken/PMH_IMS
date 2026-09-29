@@ -22,7 +22,7 @@ test.beforeEach(() => {
 });
 
 /**
- * Story 2.1 — danh mục site / tủ / loại thiết bị / nhà cung cấp.
+ * Danh mục site / tủ / loại thiết bị / nhà cung cấp.
  * Chạy trên stack docker thật, không mock API (DoD).
  */
 test.describe('Danh mục', () => {

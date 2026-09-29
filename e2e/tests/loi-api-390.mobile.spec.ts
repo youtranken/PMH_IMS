@@ -34,11 +34,10 @@ test.beforeEach(() => {
 });
 
 /*
- * Câu của khối lỗi khi API trả 500 — đổi 12/09 (mục #6 bản rà soát UI/UX).
+ * Câu của khối lỗi khi API trả 500.
  *
- * `LoadError` nay chọn câu THEO NGUYÊN NHÂN: 403 nói thiếu quyền, 404 nói không tìm thấy,
- * mất mạng nói mất kết nối, và 500 ra câu này. Trước đó cả bốn dùng chung 'Không tải được
- * dữ liệu.' — bài này giả lập 500, nên đây mới là câu đúng của nó.
+ * `LoadError` chọn câu THEO NGUYÊN NHÂN: 403 nói thiếu quyền, 404 nói không tìm thấy, mất
+ * mạng nói mất kết nối, và 500 ra câu này — bài này giả lập 500, nên đây là câu đúng của nó.
  */
 const LOAD_ERROR =
   'Máy chủ IMS đang lỗi. Thử lại sau ít phút; nếu vẫn lỗi, gửi "Chi tiết kỹ thuật" bên dưới cho Super Admin.';
@@ -91,11 +90,10 @@ test.describe('Màn danh sách hỏng, đọc ở 390px', () => {
      * Vế phủ định là vế quan trọng: một lượt gọi API hỏng KHÔNG được đọc ra thành một cái kho
      * sạch — người trực đóng máy về, và cái máy họ đang đi tìm vẫn nằm đó.
      *
-     * Từ 23/09 có HAI câu rỗng phải loại trừ, không phải một: màn đã tách "chưa khai gì" khỏi
-     * "lọc không ra". Và câu NGUY HIỂM hơn lại là câu mới ('Kho thiết bị đang trống.') — nó
-     * khẳng định thẳng thừng rằng kho rỗng, trong khi câu cũ ít ra còn nhắc tới bộ lọc. Kiểm
-     * thiếu một vế là cổng này khớp đúng số không chuỗi: nó xanh vì đang canh một câu không
-     * còn xuất hiện ở cảnh này nữa.
+     * Có HAI câu rỗng phải loại trừ, không phải một: màn tách "chưa khai gì" khỏi "lọc không
+     * ra". Câu NGUY HIỂM hơn là 'Kho thiết bị đang trống.' — nó khẳng định thẳng thừng rằng kho
+     * rỗng, trong khi câu kia ít ra còn nhắc tới bộ lọc. Kiểm thiếu một vế là cổng này có thể
+     * xanh vì đang canh một câu không xuất hiện ở cảnh này.
      */
     await expect(page.getByText('Không có thiết bị nào khớp bộ lọc.')).toHaveCount(0);
     await expect(page.getByText('Kho thiết bị đang trống.')).toHaveCount(0);

@@ -18,8 +18,7 @@ test.beforeEach(() => {
 });
 
 /**
- * G-09 — Story 3.1 AC-1 ghi thẳng "pass 390px chế độ xem", nhưng không có file mobile nào
- * cho màn phần mềm. Cảnh dùng thật: sếp hỏi "license Office còn hạn tới bao giờ" lúc đang
+ * AC 3.1 ghi thẳng "pass 390px chế độ xem" cho màn phần mềm. Cảnh dùng thật: sếp hỏi "license Office còn hạn tới bao giờ" lúc đang
  * ngồi họp, người trả lời chỉ có cái điện thoại.
  */
 test('danh sách phần mềm và tab Máy đang dùng đọc được ở 390px', async ({ page }) => {

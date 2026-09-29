@@ -209,16 +209,14 @@ test.describe('Kho thiết bị', () => {
     /*
      * Tủ thuộc site KHÁC với site đã chọn cũng phải bị chặn (bẫy hay gặp khi import).
      *
-     * ===== BÀI NÀY TỰ DỰNG DỮ LIỆU, KHÔNG XIN SEED (sửa 09/09) =====
+     * ===== BÀI NÀY TỰ DỰNG DỮ LIỆU, KHÔNG XIN SEED =====
      *
-     * Bản trước bọc cả phần kiểm trong `if (cabinet && otherSite)` và đọc tủ/site từ danh mục
-     * có sẵn. Rà soát 07/09 xếp nó vào nhóm "assertion có thể không bao giờ chạy"; đợt E6 đổi
-     * `if` thành hai `expect` điều kiện tiên quyết, và lượt E2E ngay sau đó ĐỎ — vì seed
-     * KHÔNG có tủ nào. Nghĩa là suốt từ đầu, phần kiểm ranh giới quan trọng nhất của bài này
-     * chưa từng chạy một lần nào, và bài vẫn xanh, vẫn được đếm là một bài đã qua.
+     * Bọc phần kiểm trong `if (cabinet && otherSite)` rồi đọc tủ/site từ danh mục có sẵn là
+     * "assertion có thể không bao giờ chạy": seed KHÔNG có tủ nào, nên phần kiểm ranh giới
+     * quan trọng nhất sẽ không chạy lần nào mà bài vẫn xanh.
      *
      * Bài kiểm đi mượn dữ liệu của người khác là bài kiểm sẽ im lặng bỏ đi vào một ngày nào
-     * đó. Nay nó tự khai hai site và một tủ, nên tình huống "tủ lệch site" luôn tồn tại.
+     * đó. Nên nó tự khai hai site và một tủ, nên tình huống "tủ lệch site" luôn tồn tại.
      */
     const site = async (suffix: string) => {
       const res = await page.request.post('/api/v1/catalog/site', {
@@ -321,8 +319,8 @@ test.describe('Kho thiết bị', () => {
   /**
    * Bung dòng thiết bị: máy này đang cài license nào (gói 2).
    *
-   * Trước đó câu hỏi ấy chỉ trả lời được ở TRANG CHI TIẾT từng máy — nhìn danh sách 20 dòng
-   * thì phải bấm vào 20 lần.
+   * Không có nó thì câu hỏi ấy chỉ trả lời được ở TRANG CHI TIẾT từng máy — nhìn danh sách 20
+   * dòng thì phải bấm vào 20 lần.
    */
   test('bung dòng thiết bị thấy phần mềm đang cài; máy chưa cài thì không có mũi tên', async ({
     page,

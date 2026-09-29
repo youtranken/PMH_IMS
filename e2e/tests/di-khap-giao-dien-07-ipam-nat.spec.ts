@@ -37,11 +37,11 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
    * Nên mọi khẳng định ở đây là SO TẬP HỢP. Tập hợp bắt được cả thứ THIẾU lẫn thứ THỪA;
    * `toBeVisible()` từng cái thì chỉ bắt được một nửa.
    *
-   * ===== HAI CÁI BẪY ĐÃ TRẢ GIÁ (lượt chạy 1, bốn bài đỏ) =====
+   * ===== HAI CÁI BẪY ĐÃ TRẢ GIÁ =====
    *
    * 1. `allTextContents()` KHÔNG chờ. Nó chụp DOM đúng một lần, ngay lúc gọi. Gọi nó ngay sau
-   *    `page.goto()` là chụp một trang chưa vẽ xong và nhận về `[]` — ba bài đỏ vì đúng chuyện
-   *    đó, trong khi ảnh chụp lúc đỏ cho thấy màn hình có ĐÚNG thứ bài kiểm chờ. Nên mọi phép
+   *    `page.goto()` là chụp một trang chưa vẽ xong và nhận về `[]` — bài đỏ trong khi ảnh
+   *    chụp lúc đỏ cho thấy màn hình có ĐÚNG thứ bài kiểm chờ. Nên mọi phép
    *    so tập ở đây đi qua `expect(locator).toHaveText([...])`: nó vẫn so ĐỦ BỘ (mảng, không
    *    phải `toContainText`), nhưng có thử lại cho tới khi trang lắng xuống.
    *
@@ -679,8 +679,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(
       form.getByRole('heading', { level: 2 }),
       'hộp sửa dải vẫn là một khối phẳng — khu giấy tờ ở đây không dựng FormSection riêng',
-      /* Tiêu đề hộp LÀ một `h2`, nên nó nằm trong danh sách này. Từ 12/09 tiêu đề kèm luôn
-         đối tượng (rà UI/UX #9) — một chữ "Sửa dải" không nói được đang sửa dải nào. */
+      /* Tiêu đề hộp LÀ một `h2`, nên nó nằm trong danh sách này. Tiêu đề kèm luôn đối
+         tượng — một chữ "Sửa dải" không nói được đang sửa dải nào. */
     ).toHaveText([`Sửa dải — ${cidr}`]);
 
     await expect(form.getByRole('textbox', { name: 'Dải', exact: true })).toHaveValue(cidr);
@@ -860,9 +860,8 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
    * tin, một ô cổng dạng CHIP nhận nhiều khoảng, một nhóm giao thức `role="group"`, và HAI
    * đường mở tiếp hộp con ("+ Thêm router mới", "+ Thêm dịch vụ") cho thứ chưa có trong kho.
    *
-   * Ba khối ấy không phải trang trí: bản cũ là một dây mười ô xếp dọc, trong đó "Loại thiết
-   * bị" — một BỘ LỌC của ô ngay dưới — đứng như thể là dữ liệu của rule. Gộp lại là quay về
-   * đúng chỗ đã bỏ đi.
+   * Ba khối ấy không phải trang trí: một dây mười ô xếp dọc làm "Loại thiết bị" — một BỘ LỌC
+   * của ô ngay dưới — đứng như thể là dữ liệu của rule.
    *
    * ĐỎ KHI: một khối biến mất, một ô rơi khỏi form, nhóm giao thức mất một lựa chọn (từ đó
    * port UDP âm thầm được ghi thành TCP), chip cổng không bỏ ra được, hộp con mở ra làm hộp
@@ -1066,7 +1065,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
     await expect(
       form.getByRole('heading', { level: 2 }),
       'sửa một rule đang có thì mở luôn giấy tờ và lịch sử — đó là câu auditor hỏi nhiều nhất',
-      /* Tiêu đề hộp LÀ một `h2` — từ 12/09 nó kèm giao thức và cổng (rà UI/UX #9). */
+      /* Tiêu đề hộp LÀ một `h2`, và nó kèm giao thức và cổng. */
     ).toHaveText([
       'Sửa luật NAT — UDP 9000-9010',
       'Cổng mở ra ngoài',

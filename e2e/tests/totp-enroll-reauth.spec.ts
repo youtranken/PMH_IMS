@@ -14,12 +14,12 @@ import {
 } from './helpers';
 
 /**
- * A-02 (rà soát 19/09): GẮN yếu tố thứ hai mà không phải chứng minh lại mình là ai.
+ * GẮN yếu tố thứ hai phải chứng minh lại mình là ai.
  *
- * ===== LỖ ĐANG VÁ =====
+ * ===== LỖ BÀI NÀY CANH =====
  *
- * `POST /auth/totp/enroll` chỉ đòi một phiên đã đăng nhập. Với một tài khoản CHƯA cài 2 lớp,
- * cái cookie phiên vì thế là đủ để:
+ * Nếu `POST /auth/totp/enroll` chỉ đòi một phiên đã đăng nhập thì với một tài khoản CHƯA cài
+ * 2 lớp, cái cookie phiên là đủ để:
  *
  *   1. `POST /auth/totp/enroll`        → server trả secret base32 nguyên văn;
  *   2. tự sinh mã 6 số từ secret đó    → `POST /auth/totp/enroll/confirm`;
@@ -28,11 +28,11 @@ import {
  *
  * Kẻ trộm cookie tự gắn authenticator CỦA CHÍNH NÓ rồi đi qua cửa két — cửa được dựng để
  * "kể cả root cũng phải gõ mã". Đây đúng là bước 4 trong chuỗi mà docblock của
- * `step-up.guard.ts` tự viết ra, và là bước duy nhất trong chuỗi đó chưa ai đóng.
+ * `step-up.guard.ts` tự viết ra.
  *
  * ===== HÀNG RÀO, VÀ VÌ SAO NÓ CÓ MỘT NGOẠI LỆ =====
  *
- * Bản vá đòi mật khẩu hiện tại — trừ khi phiên còn cờ `totp_pending`, tức đang ở GIỮA luồng
+ * Hàng rào đòi mật khẩu hiện tại — trừ khi phiên còn cờ `totp_pending`, tức đang ở GIỮA luồng
  * đăng nhập bắt buộc cài 2 lớp. Ở đó mật khẩu vừa được chứng minh vài giây trước để tạo ra
  * chính phiên này, và phiên đó chưa mở được gì ngoài ba route của luồng đăng nhập. Bắt gõ
  * lại mật khẩu ngay sau màn đăng nhập là ma sát không đổi lấy được gì.
@@ -149,7 +149,7 @@ test.describe('Gắn yếu tố thứ hai phải chứng minh lại mình là ai
     await loginAs(page, victim);
     await clearMailbox();
 
-    // Đọc từ `system_config`, không viết cứng: DoD gạch 8 áp cho cả bài kiểm (sửa 21/09).
+    // Đọc từ `system_config`, không viết cứng: DoD gạch 8 áp cho cả bài kiểm.
     const maxFailures = configNumber('secret.stepup_max_failures');
     for (let i = 1; i <= maxFailures; i += 1) {
       const wrong = await page.request.post('/api/v1/auth/totp/enroll', {

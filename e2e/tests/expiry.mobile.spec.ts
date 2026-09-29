@@ -19,8 +19,8 @@ test.beforeEach(() => {
 });
 
 /**
- * G-10 — Story 3.4: "Sắp hết hạn" là màn ĐỌC trung tâm của Epic 3 và UX-DR2 xếp nó vào nhóm
- * phải dùng được ở 390px, nhưng chưa có bài nào.
+ * G-10: "Sắp hết hạn" là màn ĐỌC trung tâm và UX-DR2 xếp nó vào nhóm phải dùng được ở
+ * 390px.
  *
  * Kiểm cả SÁNG lẫn TỐI vì đây là màn có màu trạng thái — theo luật của dự án, màn nào dùng
  * màu để nói nghĩa thì phải nhìn được ở cả hai chế độ.

@@ -14,7 +14,7 @@ import {
 test.beforeEach(() => resetUsers());
 
 /**
- * Kịch bản tấn công — mỗi test ở đây tương ứng một finding của code review.
+ * Kịch bản tấn công — mỗi test ở đây dựng lại đúng một đòn tấn công vào lỗ đã vá.
  * Đỏ ở đây nghĩa là một hàng rào an ninh đã bị gỡ mất.
  */
 test.describe('Hàng rào an ninh', () => {

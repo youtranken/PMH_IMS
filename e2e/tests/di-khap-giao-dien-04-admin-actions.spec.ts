@@ -87,8 +87,8 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
       // thiết nằm ở trang đang xem.
       // Chờ bộ lọc ÁP XONG chứ không chỉ chờ hàng hiện ra: hàng cần tìm vốn đã nằm ở trang 1
       // của danh sách CHƯA lọc, nên câu chờ xanh ngay, rồi lượt nạp lại đổ xuống giữa lúc menu
-      // ba chấm đang mở và giật nó khỏi DOM. Lý do đầy đủ: `di-khap-giao-dien.spec.ts`, bài
-      // "Phòng Tài khoản" (25/09/2026).
+      // ba chấm đang mở và giật nó khỏi DOM. Lý do đầy đủ: `di-khap-giao-dien-09-catalog-accounts-kit.spec.ts`, bài
+      // "Phòng Tài khoản".
       await timVaChoLoc(page, 'E2E Thành viên');
       await expect(page.getByRole('table').getByRole('row')).toHaveCount(2);
       await expect(page.getByRole('button', { name: 'Thao tác với E2E Thành viên' })).toBeVisible();
@@ -106,7 +106,7 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
         'mật khẩu tạm chỉ hiện MỘT LẦN — không hiện ra là SA phải làm lại cả quy trình',
       ).toBeGreaterThanOrEqual(12);
       // Nhãn nút là LỜI XÁC NHẬN, không phải "Đóng": hộp chặn Esc và click-nền nên đây là
-      // đường ra duy nhất, và người bấm phải tự khẳng định đã ghi lại (rà UI/UX 12/09).
+      // đường ra duy nhất, và người bấm phải tự khẳng định đã ghi lại.
       await page
         .getByRole('button', { name: 'Tôi đã ghi lại mật khẩu này', exact: true })
         .click();
@@ -160,8 +160,7 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
    * Giữa hai bài đó có một khoảng trống đúng bằng thứ SA thật sự bấm: nếu nút "Khóa" gửi sai
    * `status`, hoặc gửi đúng nhưng vào nhầm `account.id`, thì bài thứ nhất vẫn xanh (nhãn đổi
    * theo dữ liệu server trả về) và bài thứ hai cũng xanh (nó không đi qua nút). Người bị khóa
-   * vẫn đăng nhập bình thường — đúng lớp lỗi mà rà soát 07/09 gọi tên: hệ thống nói một đằng,
-   * làm một nẻo.
+   * vẫn đăng nhập bình thường: hệ thống nói một đằng, làm một nẻo.
    *
    * Bài này nối liền hai đầu: bấm nút, rồi ở một trình duyệt KHÁC thử đăng nhập thật và đọc
    * đúng câu báo lỗi trên màn. Rồi mở khóa và chứng minh cửa mở lại được — vế đối chứng, thứ

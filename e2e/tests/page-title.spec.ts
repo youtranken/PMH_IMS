@@ -4,8 +4,7 @@ import { APP_ORIGIN, E2E_SA, csrfOf, firstLogin, resetUsers, uniqueStamp } from 
 /**
  * TÊN TAB TRÌNH DUYỆT ĐỔI THEO MÀN (B-03).
  *
- * Trước 23/09 `document.title` không được đặt ở đâu trong `web/src`: mười lăm màn dùng chung
- * đúng một cái tên của `index.html`. Mở bốn tab IMS để đối chiếu thì cả bốn đọc y hệt nhau và
+ * Không đặt `document.title` thì mọi màn dùng chung đúng một cái tên của `index.html`. Mở bốn tab IMS để đối chiếu thì cả bốn đọc y hệt nhau và
  * phải bấm từng cái để tìm; lịch sử duyệt và dấu trang cũng mang một tên duy nhất.
  *
  * VÌ SAO CẦN E2E chứ Vitest chưa đủ: bài Vitest gọi thẳng hook trong một `MemoryRouter`, tức

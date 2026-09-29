@@ -10,7 +10,7 @@ import {
 } from './helpers';
 
 /**
- * CÔNG TẮC `totp_login_required` — endpoint GHI cuối cùng chưa có bài kiểm nào.
+ * CÔNG TẮC `totp_login_required`.
  *
  * ===== VÌ SAO NÓ ĐÁNG MỘT BÀI RIÊNG =====
  *
@@ -19,10 +19,6 @@ import {
  * không còn bước hai. Ai chiếm được tài khoản SA có thể tắt lớp thứ hai của người khác rồi
  * đăng nhập bằng mật khẩu lấy được từ nơi khác, và người bị tắt KHÔNG thấy gì bất thường trên
  * màn hình của họ.
- *
- * Rà soát 07/09 xếp nó vào nhóm "12 endpoint ghi có 0 test". Đếm lại 09/09 sau khi đã vá
- * `reset-password`, `reset-totp`, break-glass `deny`/`revoke`: trong 73 endpoint ghi của repo,
- * đây là cái CUỐI CÙNG không có bài kiểm nào chạm tới.
  *
  * ===== ĐO HIỆU LỰC, KHÔNG ĐO MÃ TRẢ VỀ =====
  *

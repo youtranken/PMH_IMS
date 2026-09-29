@@ -74,9 +74,9 @@ async function assign(
 /**
  * Tìm một license trên danh sách và CHỜ BẢNG LỌC XONG rồi mới trả dòng về.
  *
- * ===== VÌ SAO PHẢI CHỜ (17/09/2026, đỏ thật một lượt ngày 18/09) =====
+ * ===== VÌ SAO PHẢI CHỜ =====
  *
- * Ô tìm có debounce 250ms từ khi trạng thái danh sách chuyển lên thanh địa chỉ. Dòng cần tìm
+ * Ô tìm có debounce 250ms (trạng thái danh sách nằm trên thanh địa chỉ). Dòng cần tìm
  * hiện ra ngay TỪ TRƯỚC khi lọc — nó vốn đã nằm trong bảng — nên `toBeVisible()` xanh sớm,
  * rồi thao tác tiếp theo rơi vào đúng khoảnh khắc trước lượt vẽ lại: bung được dòng, nhưng
  * 250ms sau bảng vẽ lại và khu vừa bung đóng sập.
@@ -85,10 +85,10 @@ async function assign(
  *
  * ===== VÌ SAO TÁCH RA KHỎI `expandLicense` =====
  *
- * Bản trước chôn phép chờ này bên trong `expandLicense`, nên bài nào cần khẳng định một điều
- * gì đó TRƯỚC khi bung (ví dụ "chưa bung thì mã máy chưa có mặt") không dùng lại được và đã
- * chép tay phần `goto + fill + toBeVisible` — thiếu đúng dòng chờ. Lượt E2E đầy đủ 18/09 đỏ
- * ở đúng chỗ đó. Tách ra thì cả hai đường đều đi qua một phép chờ duy nhất.
+ * Chôn phép chờ này bên trong `expandLicense` thì bài nào cần khẳng định một điều gì đó
+ * TRƯỚC khi bung (ví dụ "chưa bung thì mã máy chưa có mặt") không dùng lại được và phải chép
+ * tay phần `goto + fill + toBeVisible` — dễ thiếu đúng dòng chờ. Tách ra thì cả hai đường đều
+ * đi qua một phép chờ duy nhất.
  */
 async function timLicense(page: Page, licenseCode: string) {
   await page.goto('/software');
@@ -299,8 +299,7 @@ test.describe('Gán license theo seat', () => {
     expect((await assign(page, licenseId, deviceId)).status()).toBe(201);
 
     // `timLicense` chờ bảng LỌC XONG rồi mới trả dòng — xem chú thích của nó. Chép tay ba
-    // dòng `goto + fill + toBeVisible` ở đây là thiếu đúng phép chờ ấy, và lượt E2E đầy đủ
-    // ngày 18/09 đã đỏ ở đúng chỗ này.
+    // dòng `goto + fill + toBeVisible` ở đây là thiếu đúng phép chờ ấy, và bài đỏ chập chờn.
     const row = await timLicense(page, `LIC-E2E-EXP-${stamp}`);
 
     // Chưa bung thì mã máy CHƯA có mặt trên màn.
@@ -527,7 +526,7 @@ test.describe('Gán license theo seat', () => {
 
     await page.goto('/software');
     await timVaChoLoc(page, code);
-    // Cột Thao tác là menu ba chấm từ 28/08/2026: mục chỉ có trong DOM khi menu đang mở.
+    // Cột Thao tác là menu ba chấm: mục chỉ có trong DOM khi menu đang mở.
     const names = await rowActionNames(page, code);
     expect(names).toContain('Sửa');
     expect(names).not.toContain('Gán vào máy');

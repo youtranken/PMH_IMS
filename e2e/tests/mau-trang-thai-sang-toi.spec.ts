@@ -212,12 +212,12 @@ test('huy hiệu hạn ở màn Sắp hết hạn đọc được ở CẢ chế
    * và lúc đó bài kiểm đo màu của khung chứ không phải của huy hiệu — xanh vì đo nhầm chỗ.
    */
   /*
-   * BA CON SỐ ĐẦU MÀN ĐỔI HÌNH 17/09/2026: từ ba cái pill "Gấp (≤7 ngày): 2" thành ba Ô SỐ
-   * bấm được (số to đứng trước, nhãn nhỏ bên dưới, cả ô là nút lọc).
+   * BA CON SỐ ĐẦU MÀN là ba Ô SỐ bấm được (số to đứng trước, nhãn nhỏ bên dưới, cả ô là nút
+   * lọc), không phải pill.
    *
-   * Thứ MANG MÀU giờ là CON SỐ, không phải một cái pill có nền tint. Nên phép đo đổi chỗ bám —
-   * vẫn đo đúng hai điều cũ (đọc được ở cả hai chế độ, và hai mức phải khác màu nhau), chỉ bỏ
-   * vế "phải có nền riêng" vì ô số cố ý không tô nền: năm ô tô nền cạnh nhau thì mắt không còn
+   * Thứ MANG MÀU là CON SỐ, không phải một cái pill có nền tint. Nên phép đo bám con số — đo
+   * hai điều (đọc được ở cả hai chế độ, và hai mức phải khác màu nhau), không đòi "phải có nền
+   * riêng" vì ô số cố ý không tô nền: năm ô tô nền cạnh nhau thì mắt không còn
    * thứ tự nào để đọc (xem `ui/kpi-strip.tsx`).
    */
   const soCua = (nhan: RegExp) => page.getByRole('button', { name: nhan }).getByText(/^\d+$/);

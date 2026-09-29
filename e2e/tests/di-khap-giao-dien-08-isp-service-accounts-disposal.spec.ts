@@ -328,10 +328,9 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
      * "Nhà mạng" KHÔNG còn ở đây — nó là khoá ngoại tới danh mục, chọn chứ không gõ (Q-11),
      * nên nằm trong bộ nút bên dưới.
      *
-     * **ĐỔI 24/09 (F-06).** Trước đó ô tra thiết bị không có nhãn nối vào, nên tên khả truy cập
-     * của nó rơi về `placeholder` — trình đọc màn hình đọc "Tìm thiết bị trong kho…" thay vì tên
-     * của ô. Bản cũ của bài này khoá đúng hiện trạng ấy và ghi rõ là nó khoá một placeholder.
-     * Nay `Field` tự nối `id` vào `Combobox`, nên tên là NHÃN thật: "Thiết bị biên".
+     * F-06: `Field` tự nối `id` vào `Combobox`, nên tên khả truy cập là NHÃN thật: "Thiết bị
+     * biên". Không có nhãn nối vào thì tên rơi về `placeholder` — trình đọc màn hình đọc "Tìm
+     * thiết bị trong kho…" thay vì tên của ô.
      */
     expect(
       await tenTheoVaiTro(hop, 'combobox'),
@@ -388,8 +387,8 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     await expect(hop, 'Báo lỗi thì hộp phải Ở LẠI để người dùng sửa, không được đóng').toBeVisible();
 
     // ĐƯỜNG ĐÓNG THỨ NHẤT: phím Esc.
-    /* Form đã gõ dở, nên từ 12/09 lối đóng TÌNH CỜ phải hỏi lại trước
-       (`Dialog guardUnsaved`, rà UI/UX #10) — trả lời xong mới đóng. */
+    /* Form đã gõ dở, nên lối đóng TÌNH CỜ phải hỏi lại trước (`Dialog guardUnsaved`) — trả
+       lời xong mới đóng. */
     await page.keyboard.press('Escape');
     await confirmAction(page, 'Bỏ và đóng');
     await expect(hop, 'Esc phải đóng được hộp khi chưa có lượt ghi nào đang chạy').toHaveCount(0);
@@ -647,10 +646,9 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
   /*
    * ===== BÀI 3b — Esc TRONG Ô CHỌN CHỈ ĐƯỢC ĐÓNG Ô CHỌN =====
    *
-   * VÌ SAO BÀI NÀY TỒN TẠI: lượt chạy đầu của khối này bắt được đúng một lỗi phần mềm, và
-   * bài này là hàng rào giữ cho nó không quay lại.
+   * VÌ SAO BÀI NÀY TỒN TẠI: hàng rào giữ cho một lỗi thật không quay lại.
    *
-   * ĐO ĐƯỢC (10/09): mở hồ sơ đường truyền → "Sửa hồ sơ" → bấm ô chọn Trạng thái → gõ Esc.
+   * TRIỆU CHỨNG KHI HỎNG: mở hồ sơ đường truyền → "Sửa hồ sơ" → bấm ô chọn Trạng thái → gõ Esc.
    * Danh sách chọn không đóng một mình: CẢ HỘP Sửa biến mất, mang theo mọi ô vừa gõ. Người
    * dùng bàn phím gõ Esc để bỏ một menu vừa lỡ bung ra thì mất trắng lần nhập.
    *
@@ -704,13 +702,12 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     ).toHaveValue('đang gõ dở E2E');
 
     /*
-     * ===== VÀ CÚ ESC THỨ HAI: KHÔNG CÒN MENU NÀO, NHƯNG VẪN CÒN CHỮ ĐANG GÕ (12/09, #10) =====
+     * ===== VÀ CÚ ESC THỨ HAI: KHÔNG CÒN MENU NÀO, NHƯNG VẪN CÒN CHỮ ĐANG GÕ =====
      *
-     * Tới 12/09 cú Esc này đóng thẳng hộp và ném đi cả form — `dismissible={!save.isPending}`
-     * chỉ chặn lúc lượt ghi ĐANG BAY, còn trước khi bấm Lưu thì không có hàng rào nào. Mười
-     * form trong repo như vậy, nặng nhất là form Thiết bị với 15 ô.
+     * `dismissible={!save.isPending}` chỉ chặn lúc lượt ghi ĐANG BAY; trước khi bấm Lưu thì cú
+     * Esc này sẽ đóng thẳng hộp và ném đi cả form — nặng nhất là form Thiết bị với 15 ô.
      *
-     * Nay `Dialog guardUnsaved` so chữ ký các ô nhập với ảnh chụp lúc mở hộp. Hai vế phải đi
+     * Nên `Dialog guardUnsaved` so chữ ký các ô nhập với ảnh chụp lúc mở hộp. Hai vế phải đi
      * đôi, và vế thứ hai (ở dưới) mới là vế giữ cho cửa này có nghĩa: hỏi lại ở MỌI lần đóng
      * cũng làm vế thứ nhất xanh, mà đó là bản tệ hơn — người dùng sẽ học cách bấm "Bỏ và đóng"
      * theo phản xạ, rồi bấm nó cả vào hôm có dữ liệu thật.
@@ -1025,7 +1022,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Thuộc về ai',
         'Mật khẩu (cất vào két)',
         /* Khu Ghi chú KHÔNG còn tiêu đề riêng: nó chỉ có một ô, mà nhãn ô cũng là
-           "Ghi chú" — hai dòng y hệt chồng nhau (rà UI/UX 12/09, mục #35). */
+           "Ghi chú" — hai dòng y hệt chồng nhau. */
         'Giấy tờ đính kèm',
       ]),
     );
@@ -1085,7 +1082,7 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
         'Cấu hình VPN',
         'Mật khẩu (cất vào két)',
         /* Khu Ghi chú KHÔNG còn tiêu đề riêng: nó chỉ có một ô, mà nhãn ô cũng là
-           "Ghi chú" — hai dòng y hệt chồng nhau (rà UI/UX 12/09, mục #35). */
+           "Ghi chú" — hai dòng y hệt chồng nhau. */
         'Giấy tờ đính kèm',
       ]),
     );

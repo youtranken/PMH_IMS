@@ -14,13 +14,12 @@ import {
 } from './helpers';
 
 /**
- * CHUỖI LEO THANG QUYỀN — nợ cũ trên `master`, đóng ngày 10/09.
+ * CHUỖI LEO THANG QUYỀN.
  *
  * ===== ĐƯỜNG ĐI, SÁU BƯỚC, KHÔNG CẦN YẾU TỐ THỨ HAI CỦA NẠN NHÂN =====
  *
- * `@RequiresStepUp()` là opt-in, và tới 10/09 nó xuất hiện đúng 5 lần trong cả repo — tất cả ở
- * `vault.controller.ts`. Toàn bộ `/api/v1/accounts/*` đứng ngoài hàng rào. Với một phiên SA bị
- * chiếm — đúng mô hình đe doạ mà chính cửa két nêu ra: "cookie trộm, máy bỏ ngỏ, chưa từng gõ
+ * `@RequiresStepUp()` là opt-in. Nếu chỉ `vault.controller.ts` gắn nó thì toàn bộ
+ * `/api/v1/accounts/*` đứng ngoài hàng rào. Với một phiên SA bị chiếm — đúng mô hình đe doạ mà chính cửa két nêu ra: "cookie trộm, máy bỏ ngỏ, chưa từng gõ
  * mã, hoặc đã hết grace" — kẻ tấn công đi được trọn:
  *
  *   1. `GET /auth/me` lấy CSRF token (GET nên CsrfGuard bỏ qua).
@@ -161,8 +160,8 @@ test.describe('Bề mặt quản trị tài khoản đòi step-up', () => {
 
 test.describe('Bắt đổi mật khẩu tạm là hàng rào của SERVER, không phải của giao diện', () => {
   /**
-   * `must_change_password` mặc định `true` cho mọi tài khoản mới. Tới 10/09 cờ đó chỉ được ĐỌC
-   * và trả về client — `nextStepPath()` bên web là ràng buộc duy nhất. Nghĩa là mật khẩu tạm
+   * `must_change_password` mặc định `true` cho mọi tài khoản mới. Nếu cờ đó chỉ được ĐỌC và
+   * trả về client — `nextStepPath()` bên web là ràng buộc duy nhất — thì mật khẩu tạm
    * (đã đi qua email hoặc đọc qua điện thoại, và nằm nguyên trong response của `POST /accounts`)
    * dùng được VÔ THỜI HẠN nếu gọi API thẳng, không mở trình duyệt.
    *
@@ -215,11 +214,10 @@ test.describe('Bắt đổi mật khẩu tạm là hàng rào của SERVER, khô
 test.describe('Break-glass — nguyên tắc bốn mắt (FR-023)', () => {
   /**
    * `POST /vault/break-glass` mở cho cả `member`, `admin` và `sa` ("ai cũng XIN được, kể cả
-   * Admin"), còn `approve` mở cho `sa`/`admin`. Tới 10/09 `approve()` KHÔNG so `approver` với
-   * `request.requester` — trong khi `cancel()` ngay bên dưới thì có, và có vì đúng lý do này
-   * (code review Epic 6, finding 1).
+   * Admin"), còn `approve` mở cho `sa`/`admin`. `approve()` phải so `approver` với
+   * `request.requester` — như `cancel()` ngay bên dưới, và vì đúng lý do ấy.
    *
-   * Tác động quyền thì hạn chế: Admin vốn đã đi thẳng qua ma trận nên grant không cho thêm gì.
+   * Thiếu phép so đó thì tác động quyền hạn chế: Admin vốn đã đi thẳng qua ma trận nên grant không cho thêm gì.
    * Thứ mất đi là ĐỘ TIN CẬY CỦA SỔ: nhật ký FR-025 in ra một grant "đã được duyệt" nhìn hợp
    * lệ hoàn toàn, `decided_by` là chính người xin — và đó là thứ auditor đọc.
    *

@@ -10,16 +10,16 @@ import {
 } from './helpers';
 
 /**
- * Finding #7 của rà soát 07/09 — HAI nút "Gia hạn", chỉ MỘT nút ghi sổ.
+ * HAI nút "Gia hạn" phải cùng ghi sổ.
  *
- * ===== CHUYỆN XẢY RA =====
+ * ===== RỦI RO =====
  *
  * Web có hai đường gia hạn cùng một hồ sơ:
- *   - `POST /expiry/renew` (từ màn "Sắp hết hạn") → `ExpiryService.renew` → ghi `renewal_history`;
- *   - `POST /software/:id/renew` (nút trong chính trang hồ sơ) → thẳng `SoftwareService.renew`,
- *     KHÔNG ghi gì vào `renewal_history`.
+ *   - `POST /expiry/renew` (từ màn "Sắp hết hạn") → `ExpiryService.renew`;
+ *   - `POST /software/:id/renew` (nút trong chính trang hồ sơ) → `SoftwareService.renew`.
  *
- * Người dùng ở trang hồ sơ bấm Gia hạn: `end_date` đổi, toast xanh, lịch sử hồ sơ có dòng
+ * Nếu một cửa không ghi `renewal_history` thì người dùng ở trang hồ sơ bấm Gia hạn: `end_date`
+ * đổi, toast xanh, lịch sử hồ sơ có dòng
  * "Gia hạn" — mọi thứ trông đúng. Nhưng `renewal_history` là bảng CHỈ-THÊM và là nguồn của
  * báo cáo cuối năm lẫn khối "gia hạn gần đây" trên dashboard sếp. Cả hai trả rỗng, và không
  * vá ngược được. AC 3.4.
@@ -120,7 +120,8 @@ test.describe('Gia hạn — hai cửa phải cùng ghi sổ (AC 3.4)', () => {
 
   /**
    * Gia hạn LÙI bị chặn ở `SoftwareService.renew`. Chặn rồi thì KHÔNG được để lại dòng sổ nào
-   * — một dòng "đã gia hạn" cho việc chưa từng xảy ra là đúng thứ finding #10 mô tả ở chỗ khác.
+   * — một dòng "đã gia hạn" cho việc chưa từng xảy ra là sổ nói dối, và bảng chỉ-thêm thì không
+   * xóa được.
    */
   test('bị chặn vì gia hạn lùi thì không được để lại dòng sổ nào', async ({ page }) => {
     await firstLogin(page, E2E_SA);

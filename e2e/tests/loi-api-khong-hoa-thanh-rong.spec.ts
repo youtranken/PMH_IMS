@@ -14,10 +14,10 @@ import {
 /**
  * "KHÔNG CÓ" LÀ MỘT KHẲNG ĐỊNH. Màn hình không được nói nó khi chưa hỏi được.
  *
- * ===== CHUYỆN GÌ XẢY RA TRƯỚC 08/09 =====
+ * ===== MẪU LỖI BÀI NÀY CANH =====
  *
- * Rà soát 07/09 đặt tên mẫu này là M3. Khắp web viết `query.data ?? []` / `?? 0`, nên một lỗi
- * 500 rơi đúng vào hình dạng của "không có gì" và màn hình trông HOÀN CHỈNH. Không toast,
+ * Viết `query.data ?? []` / `?? 0` là để một lỗi 500 rơi đúng vào hình dạng của "không có gì"
+ * và màn hình trông HOÀN CHỈNH. Không toast,
  * không khối đỏ, không có gì để người dùng nghi ngờ.
  *
  * Bốn chỗ đau nhất, và vì sao chúng không phải chuyện giao diện:
@@ -38,7 +38,7 @@ import {
  *
  * ===== VÌ SAO BÀI NÀY CHẶN Ở TẦNG MẠNG =====
  *
- * Đây là bài đầu tiên của repo dùng `page.route`. Không có cách nào khác: hàng rào cần chứng
+ * Bài này dùng `page.route` vì không có cách nào khác: hàng rào cần chứng
  * minh là hành vi khi API HỎNG, mà API thật thì không hỏng theo yêu cầu. Chỉ chặn đúng MỘT
  * đường mỗi bài — phần còn lại của màn vẫn chạy thật, nên bài kiểm cũng chứng minh luôn rằng
  * một khối hỏng không kéo sập cả trang.
@@ -53,8 +53,8 @@ test.beforeEach(() => {
 });
 
 /*
- * Bài này giả lập 500, nên câu đúng của nó là câu dành cho 500 — xem `lib/load-error-text.ts`.
- * Từ 12/09 `LoadError` không còn một câu cho mọi nguyên nhân nữa.
+ * Bài này giả lập 500, nên câu đúng của nó là câu dành cho 500 — xem `lib/load-error-text.ts`:
+ * `LoadError` chọn câu theo nguyên nhân.
  */
 const LOAD_ERROR =
   'Máy chủ IMS đang lỗi. Thử lại sau ít phút; nếu vẫn lỗi, gửi "Chi tiết kỹ thuật" bên dưới cho Super Admin.';
@@ -122,9 +122,9 @@ test.describe('API hỏng phải nói ra, không được hóa thành rỗng', (
      * Vế phủ định là vế quan trọng: chính "Chưa có dữ liệu" mới là câu nói dối. Thiếu dòng
      * này thì một bản sửa hiện CẢ HAI câu cùng lúc vẫn xanh, mà màn hình thì vẫn lừa người đọc.
      */
-    /* Câu rỗng của hộp này đổi 12/09: 'Chưa có dữ liệu' là chữ của một cái bảng trống,
-       còn màn NÀY người ta mở đúng lúc nghi tài khoản bị chiếm — câu trả lời phải là một
-       khẳng định đọc được. Bài vẫn chốt đúng điều cũ: API hỏng thì KHÔNG được nói câu đó. */
+    /* Câu rỗng của hộp này không phải 'Chưa có dữ liệu' (chữ của một cái bảng trống): màn
+       NÀY người ta mở đúng lúc nghi tài khoản bị chiếm — câu trả lời phải là một khẳng định
+       đọc được. API hỏng thì KHÔNG được nói câu đó. */
     await expect(dialog.getByText('Không còn phiên đăng nhập nào đang mở.')).toHaveCount(0);
   });
 

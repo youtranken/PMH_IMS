@@ -173,7 +173,7 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
      * hộp hỏi mã. `.first()` bắt trúng nút Hủy của hộp XOAY — nút đang nằm dưới lớp modal
      * (`pointer-events: none`), nên hoặc là treo tới hết 150 giây, hoặc nếu lọt thì nó đóng
      * hộp Xoay và tháo luôn hộp hỏi mã, khiến khẳng định cuối chạy trên một node đã chết.
-     * Kiểu nào cũng là bài kiểm nói dối (rà soát 08/09, #3).
+     * Kiểu nào cũng là bài kiểm nói dối.
      */
     const stepUpDialog = page
       .getByRole('dialog')
@@ -192,10 +192,10 @@ test.describe('C2 — luồng hỏi mã trên giao diện', () => {
     /*
      * VÀ KHÔNG GHI GÌ — nửa còn lại của tên bài.
      *
-     * Tới 10/09 bài này chỉ có ba khẳng định về hiển thị và nút bấm. Nếu lượt xoay VẪN lọt
-     * xuống server sau khi người dùng hủy — đúng chế độ hỏng mà `useStepUpRetry` sinh ra để
-     * chặn — thì cả ba khẳng định kia vẫn xanh, và bài mang tên một lời hứa bảo mật mà không
-     * có dòng nào đỡ lời hứa đó.
+     * Các khẳng định phía trên chỉ nói về hiển thị và nút bấm. Nếu lượt xoay VẪN lọt xuống
+     * server sau khi người dùng hủy — đúng chế độ hỏng mà `useStepUpRetry` sinh ra để chặn —
+     * thì chúng vẫn xanh; thiếu vế này thì bài mang tên một lời hứa bảo mật mà không có dòng
+     * nào đỡ lời hứa đó.
      *
      * Kiểm ở DB chứ không qua API: đường đọc giá trị đòi step-up, mà bài này vừa cố tình để
      * step-up hết hạn.

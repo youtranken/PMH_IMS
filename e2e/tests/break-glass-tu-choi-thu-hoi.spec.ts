@@ -13,12 +13,12 @@ import {
 } from './helpers';
 
 /**
- * `deny` VÀ `revoke` CỦA BREAK-GLASS — hai endpoint GHI chưa từng có bài kiểm nào.
+ * `deny` VÀ `revoke` CỦA BREAK-GLASS.
  *
- * ===== VÌ SAO HAI CỬA NÀY, TRONG SỐ MƯỜI HAI =====
+ * ===== VÌ SAO HAI CỬA NÀY CẦN BÀI RIÊNG =====
  *
- * Rà soát 07/09 đếm ra 12 endpoint ghi không có bài kiểm. `break-glass.spec.ts` phủ kín
- * `request` / `approve` / `cancel` — nhưng hai cửa TỪ CHỐI và THU HỒI thì không, và chúng
+ * `break-glass.spec.ts` phủ kín `request` / `approve` / `cancel` — nhưng hai cửa TỪ CHỐI và
+ * THU HỒI thì không, và chúng
  * mới là hai cửa nói "KHÔNG". Một cửa cấp quyền hỏng thì người dùng kêu ngay trong ngày; một
  * cửa TỪ CHỐI hỏng thì không ai kêu cả, vì thứ nó tạo ra là im lặng: người xin không được
  * báo, và quyền vẫn ở đó.

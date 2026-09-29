@@ -14,14 +14,12 @@ import {
 /**
  * HAI CỬA KHÔI PHỤC TÀI KHOẢN CỦA SA — `reset-password` và `reset-totp`.
  *
- * ===== VÌ SAO BÀI NÀY RA ĐỜI =====
+ * ===== VÌ SAO BÀI NÀY TỒN TẠI =====
  *
- * Rà soát 07/09 đếm ra 12 endpoint GHI không có bài kiểm nào, và hai cửa này đứng đầu danh
- * sách. Chúng cũng nằm trong nhóm "luồng email bảo mật không có assertion nào ở hộp thư":
- * `MailConsumer` có mẫu thư cho cả hai, nhưng chưa từng có bài kiểm nào chứng minh thư THẬT
- * SỰ tới nơi. Một mẫu thư không ai kiểm là một mẫu thư có thể đã chết từ lâu mà cả bộ E2E
- * vẫn xanh — đúng chuyện đã xảy ra với phần `text` của thư (Mailpit tự suy nó ra từ HTML nên
- * bài kiểm cũ xanh dù `text` đã bị bỏ hẳn).
+ * `MailConsumer` có mẫu thư cho cả hai cửa, và bài này là chỗ chứng minh thư THẬT SỰ tới nơi.
+ * Một mẫu thư không ai kiểm là một mẫu thư có thể đã chết từ lâu mà cả bộ E2E vẫn xanh — ví
+ * dụ phần `text` của thư: Mailpit tự suy nó ra từ HTML, nên bài chỉ nhìn hộp thư vẫn xanh dù
+ * `text` đã bị bỏ hẳn.
  *
  * Và thư ở đây KHÔNG phải chi tiết trang trí: nó là đường DUY NHẤT báo cho chủ tài khoản biết
  * có người vừa đặt lại mật khẩu / xác thực 2 lớp của họ. Nếu một tài khoản SA bị chiếm, lá thư
@@ -88,8 +86,7 @@ test.describe('SA khôi phục tài khoản người khác', () => {
     expect(sessionCount(id), 'mọi phiên đang mở phải bị thu hồi').toBe(0);
 
     /*
-     * VẾ HỘP THƯ. Đây là vế duy nhất chứng minh chủ tài khoản BIẾT chuyện vừa xảy ra — và là
-     * vế đã thiếu suốt từ Epic 4.
+     * VẾ HỘP THƯ. Đây là vế duy nhất chứng minh chủ tài khoản BIẾT chuyện vừa xảy ra.
      */
     /*
      * CHỜ THEO THÂN THƯ, KHÔNG THEO TIÊU ĐỀ — hai lỗi chồng nhau ở một chỗ.

@@ -440,8 +440,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     ).toHaveText('Số U phải là số nguyên từ 1 đến 60.');
     await expect(hop).toBeVisible();
 
-    /* Form đã gõ dở, nên từ 12/09 lối đóng TÌNH CỜ phải hỏi lại trước
-       (`Dialog guardUnsaved`, rà UI/UX #10) — trả lời xong mới đóng. */
+    /* Form đã gõ dở, nên lối đóng TÌNH CỜ phải hỏi lại trước (`Dialog guardUnsaved`) — trả
+       lời xong mới đóng. */
     await page.keyboard.press('Escape');
     await confirmAction(page, 'Bỏ và đóng');
     await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -655,7 +655,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
    * và người phát hiện là một SA đang cần dùng nó gấp.
    *
    * Hộp "Phiên đang mở" thì có một cái bẫy riêng, đã ghi trong `accounts-screen.tsx`: nhánh
-   * hỏng của nó từng nói "Chưa có dữ liệu" khi API 500. Bài này chốt rằng bên trong hộp có
+   * hỏng của nó dễ nói "Chưa có dữ liệu" khi API 500. Bài này chốt rằng bên trong hộp có
    * BẢNG THẬT với đủ bốn cột và có nút đá phiên — tức là nó đã hỏi được và đã trả lời.
    *
    * ĐỎ KHI: mất nút "Thêm tài khoản", bảng thừa/thiếu/đổi tên một cột (nhất là cột Vai trò —
@@ -699,18 +699,17 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     /*
      * Lọc trước: bảng phân trang 20 dòng, SA không chắc nằm ở trang đang xem.
      *
-     * PHẢI CHỜ BỘ LỌC ÁP XONG, KHÔNG CHỈ CHỜ HÀNG HIỆN RA (25/09/2026).
+     * PHẢI CHỜ BỘ LỌC ÁP XONG, KHÔNG CHỈ CHỜ HÀNG HIỆN RA.
      *
-     * Bản trước gọi thẳng `fill()` rồi khẳng định nút ba chấm của SA đã hiện — nhưng hàng SA
-     * VỐN ĐÃ nằm ở trang 1 của danh sách CHƯA lọc, nên câu khẳng định ấy xanh ngay lập tức,
+     * Gọi thẳng `fill()` rồi khẳng định nút ba chấm của SA đã hiện là không đủ: hàng SA VỐN ĐÃ
+     * nằm ở trang 1 của danh sách CHƯA lọc, nên câu khẳng định ấy xanh ngay lập tức,
      * trước khi nhịp lắng 300ms của ô tìm kịp bắn. Bài đi tiếp, mở menu ba chấm, rồi lượt nạp
      * lại đổ xuống giữa chừng: bảng từ 7 dòng còn 1 dòng, hàng được dựng lại, và mục menu đang
      * mở bị giật khỏi DOM. Playwright báo "element is not stable" rồi "detached", đợi đủ 150
      * giây mới chịu thua — một thông báo chẳng liên quan gì tới thứ bài này đang kiểm.
      *
-     * Cuộc đua ấy nằm sẵn ở đây từ lâu và trước nay vẫn thắng nhờ MAY: quãng `rowActionNames`
-     * (mở menu · đọc chữ · Esc) tình cờ dài hơn 300ms. Đo được ngày 25/09 khi một thay đổi
-     * khác làm lệch nhịp vài chục mili-giây và mặt sấp luôn ngửa lên.
+     * Cuộc đua ấy thường thắng nhờ MAY: quãng `rowActionNames` (mở menu · đọc chữ · Esc) tình
+     * cờ dài hơn 300ms. Một thay đổi khác làm lệch nhịp vài chục mili-giây là mặt sấp ngửa lên.
      *
      * `timVaChoLoc` chờ đúng GIÁ TRỊ `q=` trên thanh địa chỉ — tức nhịp lắng đã bắn thật.
      * Kèm thêm câu chốt "bảng còn đúng một dòng" để chắc rằng dữ liệu ĐÃ LỌC cũng đã về, chứ
@@ -858,7 +857,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
       'tạo xong mà không có mật khẩu tạm thì SA không có gì để đọc cho người dùng',
     ).toBeGreaterThanOrEqual(12);
     // Nhãn nút là LỜI XÁC NHẬN, không phải "Đóng": hộp chặn Esc và click-nền nên đây là
-    // đường ra duy nhất, và người bấm phải tự khẳng định đã ghi lại (rà UI/UX 12/09).
+    // đường ra duy nhất, và người bấm phải tự khẳng định đã ghi lại.
     await page
       .getByRole('button', { name: 'Tôi đã ghi lại mật khẩu này', exact: true })
       .click();
@@ -867,8 +866,8 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
     // ===== CHẾ ĐỘ SỬA =====
     // Chờ bộ lọc ÁP XONG chứ không chỉ chờ hàng hiện ra: hàng cần tìm vốn đã nằm ở trang 1
     // của danh sách CHƯA lọc, nên câu chờ xanh ngay, rồi lượt nạp lại đổ xuống giữa lúc menu
-    // ba chấm đang mở và giật nó khỏi DOM. Lý do đầy đủ: `di-khap-giao-dien.spec.ts`, bài
-    // "Phòng Tài khoản" (25/09/2026).
+    // ba chấm đang mở và giật nó khỏi DOM. Lý do đầy đủ: chú thích ở bài
+    // "Phòng Tài khoản" trong chính file này.
     await timVaChoLoc(page, email);
     await expect(page.getByRole('table').getByRole('row')).toHaveCount(2);
     await expect(page.getByRole('button', { name: `Thao tác với ${hoTen}` })).toBeVisible();
@@ -913,7 +912,7 @@ test.describe('Phòng Danh mục, Tài khoản và Bộ giao diện — bên tro
    *
    * VÌ SAO BÀI NÀY TỒN TẠI
    *
-   * `/dev/components` là bản kê SỐNG của tài sản dùng chung (AD-15, story 1.5). Nó có hai
+   * `/dev/components` là bản kê SỐNG của tài sản dùng chung (AD-15). Nó có hai
    * công dụng, và bài kiểm này giữ cả hai:
    *
    *   1. Nó là nơi người viết story sau mở ra xem "đã có sẵn chưa" trước khi viết component

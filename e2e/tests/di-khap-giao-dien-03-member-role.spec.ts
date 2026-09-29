@@ -173,25 +173,12 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
     }
 
     /*
-     * ===== HAI CỬA CÒN LẠI KHÔNG PHẢI 404, VÀ ĐÓ LÀ SỰ THẬT PHẢI GHI RA =====
+     * HAI CỬA QUẢN TRỊ CŨNG GÁC Ở ROUTER (B-09).
      *
-     * `/admin/accounts` và `/admin/vault-access` nằm ngoài mọi điều kiện vai trong `App.tsx`
-     * — chúng chỉ bị ẩn khỏi menu. Viết `toBeVisible()` cho tiêu đề 404 ở đây là viết một bài
-     * kiểm sai sự thật; viết `getByText('Chưa có dữ liệu')` cũng sai nốt.
+     * Quyền theo đường dẫn nằm trong bảng `ROUTE_ROLES` của `App.tsx`, và mọi cửa gác cùng một
+     * kiểu. Hàng rào thật vẫn là `@Roles('sa')` ở API, và vế cuối bài này chốt đúng nó.
      *
-     * Điều THẬT SỰ xảy ra: màn render (đầu trang, cả nút "Thêm tài khoản" — nút đó không gác
-     * vai), rồi lượt `GET /api/v1/accounts` nhận 403 và khối bảng đổi thành `LoadError`.
-     * Hàng rào thật là `@Roles('sa')` ở API, và vế cuối bài này chốt đúng nó.
-     */
-    /*
-     * HAI CỬA NÀY NAY CŨNG 404 (B-09, sửa 22/09).
-     *
-     * Chú thích ngay trên đây từng ghi: "Viết `toBeVisible()` cho tiêu đề 404 ở đây là viết
-     * một bài kiểm sai sự thật", và bài chị em ở trên dặn thẳng: "ai muốn 404 thì phải sửa
-     * App.tsx, sửa xong hãy sửa bài này". Đã sửa `App.tsx` — quyền theo đường dẫn nay nằm
-     * trong bảng `ROUTE_ROLES` và cả năm cửa gác cùng một kiểu — nên bài này sửa theo.
-     *
-     * Vế "403 phải nói ra là lỗi QUYỀN, không hoá thành Chưa có dữ liệu" chuyển về
+     * Vế "403 phải nói ra là lỗi QUYỀN, không hoá thành Chưa có dữ liệu" nằm ở
      * `web/src/ui/load-state.test.tsx`, nơi nó áp cho MỌI màn chứ không riêng hai màn này.
      */
     for (const path of ['/admin/accounts', '/admin/vault-access'] as const) {
@@ -216,8 +203,8 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
   /**
    * TẠI SAO BÀI NÀY TỒN TẠI
    *
-   * Story 6.3 mở tab "Két sắt" cho MỌI vai, kể cả Thành viên chưa có quyền — cố ý, vì quyền
-   * đến từ ma trận 6.2 cộng với grant còn hạn, và client không suy ra được từ vai. Đổi lại,
+   * Tab "Két sắt" mở cho MỌI vai, kể cả Thành viên chưa có quyền — cố ý, vì quyền đến từ ma
+   * trận quyền xem cộng với grant còn hạn, và client không suy ra được từ vai. Đổi lại,
    * cái tab ấy phải tự nói rõ ba điều cùng lúc:
    *
    *   1. CÓ gì trong két (tên gọi secret) — không thì người ta không biết mình đang xin cái gì;

@@ -70,7 +70,7 @@ test.describe('Port map', () => {
     await expect(reverse.getByText('Gi1/0/12')).toBeVisible();
 
     // Chiều ngược chỉ để ĐỌC — sửa ở nơi giữ bản ghi.
-    // Bám nút BA CHẤM chứ không bám chữ "Xóa": từ 28/08/2026 mục xóa nằm trong menu, nên
+    // Bám nút BA CHẤM chứ không bám chữ "Xóa": mục xóa nằm trong menu, nên
     // `getByRole('button', { name: 'Xóa' })` trả 0 kể cả khi menu có mục đó — một khẳng
     // định luôn xanh không kiểm được gì.
     await expect(reverse.getByRole('button', { name: /^Thao tác với/ })).toHaveCount(0);

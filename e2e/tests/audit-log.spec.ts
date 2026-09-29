@@ -14,15 +14,13 @@ import {
 test.beforeEach(() => resetUsers());
 
 /**
- * Nhật ký kiểm toán (Story 6.2, FR-43, NFR-03).
+ * Nhật ký kiểm toán (FR-43, NFR-03).
  *
- * VÌ SAO BÀI NÀY TỒN TẠI: `GET /admin/audit` chạy raw SQL và đã sống 9 epic với một câu
- * `LEFT JOIN users u ON u.sub = a.actor` — bảng `users` KHÔNG có cột `sub` (mảnh sót của bản
- * QLTS mà AD-12 dặn phải grep bỏ). Endpoint ném 42703 mọi lần gọi. Không có gì đỏ vì:
+ * VÌ SAO BÀI NÀY TỒN TẠI: `GET /admin/audit` chạy raw SQL. Một câu tham chiếu cột không tồn
+ * tại (ví dụ `LEFT JOIN users u ON u.sub = a.actor` — bảng `users` KHÔNG có cột `sub`, mảnh
+ * sót của bản QLTS mà AD-12 dặn phải grep bỏ) làm endpoint ném 42703 mọi lần gọi, mà:
  *   - raw SQL nên `npm run build` và TypeScript không thấy;
- *   - màn web còn `planned: true` trong sidebar nên chưa ai bấm vào;
- *   - và không có một dòng test nào chạm endpoint này.
- * Nó chỉ lộ ra đúng lúc Story 6.2 dựng màn — tức là lúc tốn kém nhất.
+ *   - và không lớp kiểm nào khác chạm endpoint này.
  *
  * Bài kiểm chạm DB THẬT, nên nó bắt được cả lớp lỗi "SQL tham chiếu cột không tồn tại" mà
  * không lớp nào ở trên bắt được.
@@ -78,13 +76,13 @@ test.describe('Nhật ký kiểm toán — API', () => {
     const body = (await filtered.json()) as { items: { actor: string }[] };
 
     /*
-     * VẾ KHẲNG ĐỊNH DƯƠNG, THÊM 24/09 — thiếu nó thì bài này XANH VÌ LÝ DO SAI.
+     * VẾ KHẲNG ĐỊNH DƯƠNG — thiếu nó thì bài này XANH VÌ LÝ DO SAI.
      *
-     * Bản cũ chỉ có vòng `for (const row of body.items) expect(...)`. Danh sách rỗng thì thân
+     * Chỉ có vòng `for (const row of body.items) expect(...)` thì danh sách rỗng làm thân
      * vòng KHÔNG chạy lần nào và bài xanh mà không kiểm gì — đúng hình dạng "cổng khớp đúng
-     * số không chuỗi" mà §18 vừa phải dọn mười sáu chỗ.
+     * số không chuỗi".
      *
-     * Và nó rỗng thật được: `today` trước đây tính bằng `toISOString()`, tức giờ UTC, nên từ
+     * Và nó rỗng thật được: `today` tính bằng `toISOString()` là giờ UTC, nên từ
      * 00:00 đến 07:00 giờ VN bộ lọc đi hỏi NGÀY HÔM QUA. Hai lỗi chồng nhau — một cái làm
      * dữ liệu biến mất, một cái làm chuyện đó không ai thấy.
      *
@@ -115,8 +113,7 @@ test.describe('Nhật ký kiểm toán — API', () => {
   /**
    * `audit_log` phải CHỈ-THÊM ở tầng DB (NFR-03) — kể cả khi kết nối bằng superuser.
    *
-   * Trước 28/08 không có bài nào kiểm điều này cho `audit_log`; chỉ `ip_history` được kiểm.
-   * Và hàng rào thật sự có một lỗ: trigger `FOR EACH ROW` KHÔNG chạy khi TRUNCATE, còn câu
+   * Hàng rào có một lỗ tự nhiên: trigger `FOR EACH ROW` KHÔNG chạy khi TRUNCATE, còn câu
    * `REVOKE ... FROM current_user` là no-op vì app nối bằng chính owner/superuser. Nghĩa là
    * `TRUNCATE audit_log` xóa sạch được nhật ký an ninh. Migration 0039 bịt bằng trigger cấp
    * câu lệnh; bài này là thứ giữ cho nó không bị gỡ ra.
@@ -128,10 +125,10 @@ test.describe('Nhật ký kiểm toán — API', () => {
     /*
      * KHÔNG dùng `catch { blocked = true }` trần.
      *
-     * Bản trước làm thế, và `catch` rỗng nuốt MỌI nguyên nhân: docker chưa chạy, sai tên
-     * container, máy không có `psql`, gõ sai tên bảng, mất mạng — tất cả đều thành "đã bị
-     * chặn". Bài này là thứ DUY NHẤT giữ migration 0039 khỏi bị gỡ ra, và nó xanh cả khi
-     * Postgres không tồn tại (rà soát 07/09). Nên phải soi `stderr` để biết nó bị chặn ĐÚNG
+     * `catch` rỗng nuốt MỌI nguyên nhân: docker chưa chạy, sai tên container, máy không có
+     * `psql`, gõ sai tên bảng, mất mạng — tất cả đều thành "đã bị chặn". Bài này là thứ DUY
+     * NHẤT giữ migration 0039 khỏi bị gỡ ra, và với `catch` trần nó xanh cả khi Postgres không
+     * tồn tại. Nên phải soi `stderr` để biết nó bị chặn ĐÚNG
      * bởi hàng rào của mình, chứ không phải bởi một sự cố nào khác.
      */
     const guardSignals = /chỉ-thêm|append_only|no_truncate|no_delete|no_update|permission denied/i;
@@ -163,12 +160,11 @@ test.describe('Nhật ký kiểm toán — API', () => {
 });
 
 /**
- * NFR-03 đòi nhật ký trả lời được "AI làm gì, lúc nào, TỪ ĐÂU". Vế cuối là vế duy nhất chưa
- * bao giờ được trả lời: `audit_log.ip` NULL trên 100% số dòng suốt 9 epic (rà soát 07/09, #3).
+ * NFR-03 đòi nhật ký trả lời được "AI làm gì, lúc nào, TỪ ĐÂU". Vế cuối dễ mất lặng lẽ nhất.
  *
- * Cột `ip` có trong `0004_audit_log.sql:8` từ ngày đầu; thứ thiếu là bảng drizzle không khai
- * nó, nên `toRow()` không map và không ai ghi. Không có gì đỏ vì cột NULL là hợp lệ với
- * Postgres, và endpoint đọc cũng không `SELECT` nó nên không ai nhìn thấy khoảng trống.
+ * Cột `ip` có trong `0004_audit_log.sql:8`; bảng drizzle không khai nó thì `toRow()` không map
+ * và không ai ghi. Không có gì đỏ vì cột NULL là hợp lệ với Postgres, và endpoint đọc không
+ * `SELECT` nó thì không ai nhìn thấy khoảng trống.
  *
  * Đây là loại lỗi chỉ E2E mới bắt được: nó không phải sai logic ở một hàm nào, mà là đứt gãy
  * giữa migration ↔ ORM ↔ HTTP. Và vì bảng chỉ-thêm nên nó KHÔNG vá ngược được — mỗi ngày
@@ -215,7 +211,7 @@ test.describe('Nhật ký kiểm toán — "từ đâu" (NFR-03)', () => {
      * Vế thứ hai, và là vế quan trọng hơn: nginx dùng `$proxy_add_x_forwarded_for` (NỐI THÊM),
      * nên nếu code đọc phần tử trái nhất của `X-Forwarded-For` thì nó lấy đúng thứ nghi phạm
      * tự điền. Ghi được IP mà là IP giả thì tệ hơn để trống — nó khiến người điều tra đi sai
-     * hướng và tin rằng mình có bằng chứng (rà soát 07/09, #1).
+     * hướng và tin rằng mình có bằng chứng.
      */
     expect(ip, 'IP phải đến từ req.ip (trust proxy), không phải X-Forwarded-For client khai').not.toBe(
       FORGED_IP,
@@ -227,13 +223,11 @@ test.describe('Nhật ký kiểm toán — "từ đâu" (NFR-03)', () => {
      * MỐC THỜI GIAN LẤY TRƯỚC KHI ĐĂNG NHẬP — và đây là phần quan trọng nhất của bài.
      *
      * `audit_log` là bảng CHỈ-THÊM, không bao giờ được dọn giữa các lượt chạy (chính bài
-     * "chỉ-thêm" phía trên chứng minh `TRUNCATE` bị chặn). Bản đầu của bài này đếm mọi dòng
-     * `auth.login.ok` có ip của tài khoản E2E, không giới hạn thời gian — mà lượt chạy đầu
-     * tiên đã để lại 133 dòng như vậy. Từ đó trở đi nó XANH VĨNH VIỄN: gỡ sạch phần điền IP
-     * rồi chạy lại vẫn xanh, vì 133 dòng cũ đủ thỏa điều kiện (rà soát 08/09, #1).
+     * "chỉ-thêm" phía trên chứng minh `TRUNCATE` bị chặn). Đếm mọi dòng `auth.login.ok` có ip
+     * của tài khoản E2E mà không giới hạn thời gian thì sau lượt chạy đầu tiên bài XANH VĨNH
+     * VIỄN: gỡ sạch phần điền IP rồi chạy lại vẫn xanh, vì dòng cũ đủ thỏa điều kiện.
      *
-     * Đúng chế độ hỏng mà đợt A đã dính một lần: bài kiểm không thể đỏ thì nó không phải bài
-     * kiểm, chỉ là một dòng chữ trấn an.
+     * Bài kiểm không thể đỏ thì nó không phải bài kiểm, chỉ là một dòng chữ trấn an.
      */
     const before = sql(`SELECT now()`);
     await firstLogin(page, E2E_SA);

@@ -22,13 +22,13 @@ import {
  *
  * Nặng nhất là form NAT: nó POST TỪNG chip port một, nối tiếp. Esc ở giữa chuỗi đó không hủy
  * gì cả — vòng lặp chạy nốt và mở hết số port còn lại RA INTERNET, trong khi màn hình đã sạch
- * trơn và không còn chỗ nào nói cho người dùng biết chuyện đó (rà soát 07/09, mục 6 "Web").
+ * trơn và không còn chỗ nào nói cho người dùng biết chuyện đó.
  *
  * ===== CÁCH ĐO =====
  *
  * `page.route` giữ câu trả lời lại vài giây để dựng đúng khoảnh khắc "đang ghi" — không có nó
  * thì lượt ghi xong trước cả khi kịp bấm phím, và bài kiểm xanh mà không hỏi được gì. Đây là
- * cách đã dùng ở `loi-api-khong-hoa-thanh-rong.spec.ts` (đợt D).
+ * cách đã dùng ở `loi-api-khong-hoa-thanh-rong.spec.ts`.
  */
 
 test.beforeEach(() => {

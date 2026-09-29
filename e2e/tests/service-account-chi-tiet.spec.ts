@@ -13,7 +13,7 @@ import {
 
 /**
  * NET-072: trang hồ sơ tài khoản dịch vụ có "Sửa hồ sơ" và menu ⋯ "Vô hiệu hóa…/Bật lại…"
- * (SA/Admin) — trước đây phải quay ra danh sách, tìm dòng rồi mở ⋯.
+ * (SA/Admin), để khỏi phải quay ra danh sách, tìm dòng rồi mở ⋯.
  */
 
 test.beforeEach(() => {
