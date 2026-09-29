@@ -951,9 +951,13 @@ export class BreakGlassService implements OnModuleInit {
    * Quyền ĐANG có hiệu lực (đã duyệt, còn giờ theo đồng hồ server) — nhóm ghim ở đầu tab Nhật
    * ký (VLT-020). Nhật ký chia trang theo lúc gửi, nên một quyền 24 giờ gửi từ sáng có thể đã
    * trôi sang trang 2 đúng lúc người trực cần tìm nó để thu hồi.
+   *
+   * Lọc giờ trong SQL: sweep chạy trễ thì quyền đã hết nằm lại `approved` hàng loạt, kéo về
+   * rồi mới bỏ là phí `views()` cho từng dòng. `row.active` vẫn giữ để loại quyền không có hạn
+   * (dữ liệu hỏng — AD-6 không coi là vô hạn).
    */
   async activeGrants(): Promise<BreakGlassView[]> {
-    const rows = await this.approvals.list({ kind: BREAK_GLASS_KIND, state: 'approved' });
+    const rows = await this.approvals.list({ kind: BREAK_GLASS_KIND, effectiveState: 'approved' });
     return this.views(
       rows.filter((row) => row.active),
       true,
