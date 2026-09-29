@@ -110,6 +110,17 @@ describe('Nhật ký · gom sự kiện lặp liền nhau', () => {
   );
 
   it(
+    'trang vượt quá cuối: không có dòng nào nhưng tổng vẫn đúng (để màn lùi về trang cuối)',
+    async () => {
+      const beyond = await service().listAudit({ page: 9, pageSize: 4, group: true });
+      expect(beyond.items).toEqual([]);
+      expect(beyond.total).toBe(6);
+      expect(beyond.totalCapped).toBe(false);
+    },
+    TEST_TIMEOUT,
+  );
+
+  it(
     'gom sau khi lọc: lọc bỏ người b thì hai dòng của a hai bên nó thành liền nhau nhưng khác phút',
     async () => {
       const page = await service().listAudit({

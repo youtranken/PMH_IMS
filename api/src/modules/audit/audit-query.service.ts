@@ -309,23 +309,29 @@ export class AuditQueryService {
         FROM marked
         GROUP BY actor, action, object_type, object_id, minute, island
       )`;
-    return Promise.all([
-      this.db.execute<RawAuditRow>(sql`
-        ${groups}
+    /*
+     * MỘT lượt chạy cho cả trang lẫn tổng: CTE dùng hai lần được Postgres dựng một lần, còn hai
+     * câu riêng thì chạy lại cả cửa sổ + hai hàm cửa sổ + gom mảng. `counts` là hàng đơn LEFT
+     * JOIN trang, nên trang vượt quá cuối vẫn trả được tổng.
+     *
+     * `n` là số dòng ĐÃ GOM; nhưng cờ "quá trần" phải xét số dòng GỐC trong cửa sổ, nên khi cửa
+     * sổ đầy thì trả `COUNT_CAP + 1` để nơi gọi bật `totalCapped` như nhánh không gom.
+     */
+    const result = await this.db.execute<RawAuditRow & { total: number }>(sql`
+      ${groups}, page AS (
         SELECT * FROM grouped
         ORDER BY created_at DESC, id DESC
         LIMIT ${pageSize} OFFSET ${offset}
-      `),
-      /*
-       * `n` là số dòng ĐÃ GOM; nhưng cờ "quá trần" phải xét số dòng GỐC trong cửa sổ, nên khi
-       * cửa sổ đầy thì trả `COUNT_CAP + 1` để nơi gọi bật `totalCapped` như nhánh không gom.
-       */
-      this.db.execute<{ n: number }>(sql`
-        ${groups}
+      ), counts AS (
         SELECT CASE WHEN (SELECT count(*) FROM win) > ${COUNT_CAP} THEN ${COUNT_CAP + 1}
-                    ELSE (SELECT count(*) FROM grouped) END::int AS n
-      `),
-    ]);
+                    ELSE (SELECT count(*) FROM grouped) END::int AS total
+      )
+      SELECT counts.total, page.*
+      FROM counts LEFT JOIN page ON true
+      ORDER BY page.created_at DESC, page.id DESC
+    `);
+    const rows = result.rows.filter((row) => row.id !== null);
+    return [{ rows }, { rows: [{ n: result.rows[0]?.total ?? 0 }] }] as const;
   }
 
   /**
