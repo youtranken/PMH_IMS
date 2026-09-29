@@ -218,6 +218,13 @@ Những điểm chạm nghiệp vụ/bảo mật chốt như sau:
 - **Luật NAT không có hạn "rà lại"** (chủ dự án chốt, 29/09/2026).
 - Chưa làm: lưới mặt trước switch (cần trường "số cổng" theo model).
 
+### Q-16 · Chốt khi rà checklist go-live (29/09/2026, chủ dự án chốt)
+
+- **Màn đăng nhập giữ mã lỗi riêng** cho tài khoản bị khóa / bị vô hiệu hóa (`ACCOUNT_LOCKED`,
+  `ACCOUNT_DISABLED`), không gộp thành "sai email hoặc mật khẩu". Người dùng phải biết vì sao không
+  vào được để gọi đúng người. Rủi ro chấp nhận: người ngoài dò được một email có tồn tại hay không
+  (SEC-10 — không sửa).
+
 ### Q-09 · Tài liệu
 
 - Chỉ giữ tài liệu còn sống trong `docs/`. Biên bản, code review, rà soát theo ngày thì xoá khi đã
