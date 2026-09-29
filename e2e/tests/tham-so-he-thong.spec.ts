@@ -38,7 +38,7 @@ test.describe('Tham số hệ thống', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Tham số hệ thống' })).toBeVisible();
 
     await page.getByRole('navigation', { name: 'Nhóm tham số' }).getByRole('button', { name: 'Phần mềm' }).click();
-    const input = page.getByLabel('Ân hạn trước khi tự Thanh lý phần mềm hết hạn');
+    const input = page.getByLabel('Ân hạn trước khi tự thanh lý phần mềm');
     const next = String(Number(graceBefore) === 45 ? 46 : 45);
     await input.fill(next);
     await expect(page.getByText('Có 1 thay đổi chưa lưu')).toBeVisible();
@@ -73,8 +73,8 @@ test.describe('Tham số hệ thống', () => {
     await page.getByRole('button', { name: 'Bỏ thay đổi' }).click();
 
     await page.goto('/admin/settings?group=software');
-    await page.getByLabel('Ân hạn trước khi tự Thanh lý phần mềm hết hạn').fill('0');
-    await expect(page.getByText('Đặt 0 là TẮT hẳn chức năng này.')).toBeVisible();
+    await page.getByLabel('Ân hạn trước khi tự thanh lý phần mềm').fill('0');
+    await expect(page.getByText('Đặt 0 là tắt hẳn chức năng này.')).toBeVisible();
   });
 
   test('TẤN CÔNG: Thành viên gọi thẳng API → 403; SA gửi khoá ngoài danh sách / ngoài khoảng → 400', async ({

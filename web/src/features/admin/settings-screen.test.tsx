@@ -69,7 +69,7 @@ describe('Màn Tham số hệ thống', () => {
     const input = await screen.findByLabelText('Số lượt đăng nhập tối đa mỗi IP');
     await userEvent.clear(input);
     await userEvent.type(input, '150');
-    expect(screen.getByText(/hàng rào này bị nới rất rộng/)).toBeInTheDocument();
+    expect(screen.getByText(/là nới rất rộng/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Lưu nhóm này' }));
     const dialog = await screen.findByRole('dialog', { name: 'Xác nhận đổi tham số' });
     expect(dialog).toHaveTextContent('20 lần/phút → 150 lần/phút');
@@ -87,9 +87,9 @@ describe('Màn Tham số hệ thống', () => {
 
   it('?group=software mở đúng nhóm; 0 = tắt có cảnh báo', async () => {
     renderAt('/admin/settings?group=software');
-    const input = await screen.findByLabelText('Ân hạn trước khi tự Thanh lý phần mềm hết hạn');
+    const input = await screen.findByLabelText('Ân hạn trước khi tự thanh lý phần mềm');
     await userEvent.clear(input);
     await userEvent.type(input, '0');
-    expect(screen.getByText('Đặt 0 là TẮT hẳn chức năng này.')).toBeInTheDocument();
+    expect(screen.getByText('Đặt 0 là tắt hẳn chức năng này.')).toBeInTheDocument();
   });
 });
