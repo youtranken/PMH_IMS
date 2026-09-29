@@ -238,9 +238,12 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
   - **Rà 29/09:** xong (Q-14, VLT-003..008, 858ba4d). Duyệt, từ chối, thu hồi ghi outbox
     `approval.decided` cùng transaction; thư dựng ở `mail.consumer.ts` (`buildDecidedMail`). Kiểm:
     `api/test/break-glass-decided.spec.ts`.
-- [ ] **BE-19 · Audit ma trận quyền không ghi tầng cũ; gỡ quyền đọc ngoài transaction**
+- [x] **BE-19 · Audit ma trận quyền không ghi tầng cũ; gỡ quyền đọc ngoài transaction**
   (`access-list.service.ts`).
   - **Rà 29/09:** còn nguyên (`upsert` không đọc tầng cũ; `remove` đọc `before` ngoài transaction).
+  - **Đã sửa:** `upsert` đọc tầng cũ trong transaction (`FOR UPDATE`), ghi `fromTier` vào audit;
+    `remove` dùng `DELETE … RETURNING` trong transaction, không xoá được hàng nào thì 404 và không
+    audit. Kiểm: `api/test/access-list-audit.spec.ts` (có bài hai người cùng gỡ).
 - [ ] **BE-20 · Tham số nghiệp vụ viết cứng, vi phạm AD-11:**
   - `MIN_PREFIX=24`, `WIDE_RANGE=1000`, `LOOK_BACK_DAYS=365`, `MAX_ITEMS=8`.
   - Các `@Throttle` 30 và 10 lần/phút.
