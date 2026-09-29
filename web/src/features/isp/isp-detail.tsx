@@ -264,6 +264,7 @@ export function IspDetail({ me }: { me: Me }) {
                     </Link>
                   </RailRow>
                 ) : null}
+                {item.deviceId ? <EdgeFacts deviceId={item.deviceId} /> : null}
               </RailCard>
             )}
             {/* Băng thông và site ĐÃ ở dòng định danh dưới tiêu đề — không lặp ở đây. */}
@@ -379,6 +380,40 @@ export function IspDetail({ me }: { me: Me }) {
             void refresh();
           }}
         />
+      ) : null}
+    </>
+  );
+}
+
+/**
+ * Model và IP LAN của thiết bị biên, ngay trong thẻ "Khi mất mạng": đứt cáp thì việc kế tiếp
+ * là vào trang quản trị Draytek — phải biết địa chỉ mà không bấm sang trang khác. Đọc qua
+ * `devices` và `ipam` (AD-2); hỏng thì thẻ chỉ thiếu hai dòng này.
+ */
+function EdgeFacts({ deviceId }: { deviceId: string }) {
+  const { t } = useTranslation();
+  const device = useQuery({
+    queryKey: ["devices", deviceId],
+    queryFn: () => apiFetch<{ model: string | null }>(`/api/v1/devices/${deviceId}`),
+  });
+  const ips = useQuery({
+    queryKey: ["ipam", "devices", "addresses", [deviceId]],
+    queryFn: () =>
+      apiFetch<Record<string, string[]>>(`/api/v1/ipam/devices/addresses?deviceIds=${deviceId}`),
+  });
+  const lan = ips.data?.[deviceId] ?? [];
+  return (
+    <>
+      <RailRowIfSet label={t("isp.edgeModel")} value={device.data?.model ?? null} />
+      {lan.length > 0 ? (
+        <RailRow label={t("isp.edgeLanIp")}>
+          {lan.map((ip) => (
+            <span key={ip} className="subline-item">
+              <span className="mono">{ip}</span>{" "}
+              <CopyButton value={ip} label={t("devices.copyIp")} inline />
+            </span>
+          ))}
+        </RailRow>
       ) : null}
     </>
   );

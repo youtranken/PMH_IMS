@@ -33,6 +33,8 @@ export interface ServiceAccountFilter {
   search?: string;
   kind?: ServiceAccountKind;
   status?: ServiceAccountStatus;
+  /** Chỉ tài khoản VPN mở cho mọi IP nguồn (dải trống hoặc có `0.0.0.0/0`). */
+  anyIp?: boolean;
 }
 
 export interface ServiceAccountInput {

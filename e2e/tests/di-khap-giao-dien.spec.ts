@@ -2198,7 +2198,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     ).toEqual(['Mọi trạng thái', 'Đang dùng', 'Dự phòng', 'Hỏng', 'Đã thanh lý']);
 
     const loai = await luaChonCua(page, main.getByRole('button', { name: 'Loại', exact: true }));
-    expect(loai[0], 'Ô lọc Loại phải mở đầu bằng mục bỏ lọc').toBe('Tất cả loại');
+    expect(loai[0], 'Ô lọc Loại phải mở đầu bằng mục bỏ lọc').toBe('Mọi loại');
     // So theo TẬP HỢP đã sắp, không theo thứ tự: API sắp theo `name` bằng collation của
     // Postgres, mà thứ tự của "Điện thoại IP" trong bảng chữ cái phụ thuộc collation ấy —
     // chốt cứng thứ tự là chốt vào một thứ không thuộc về phòng này.
@@ -2211,11 +2211,11 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     expect(
       (await luaChonCua(page, main.getByRole('button', { name: 'Site', exact: true })))[0],
       'Ô lọc Site phải mở đầu bằng mục bỏ lọc',
-    ).toBe('Tất cả site');
+    ).toBe('Mọi site');
     expect(
       (await luaChonCua(page, main.getByRole('button', { name: 'Tủ mạng', exact: true })))[0],
       'Ô lọc Tủ mạng phải mở đầu bằng mục bỏ lọc',
-    ).toBe('Tất cả tủ');
+    ).toBe('Mọi tủ');
   });
 
   /*
@@ -5276,17 +5276,18 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'Hộp "Thêm luật NAT"',
     );
     /*
-     * Ô tick "Đang bật" mang tên trợ năng là DÒNG GỢI Ý, không phải nhãn trường: nhãn của
-     * `Field` không có `htmlFor`, còn `<label>` bọc ngoài thì bọc cả dòng gợi ý. Khoá lại
-     * đúng hiện trạng — đổi câu chữ ấy là đổi tên một điều khiển.
+     * Ô tick "Đang dùng" mang tên là chính nhãn đứng cùng hàng (NET-047); câu "Bỏ tick nếu…"
+     * là MÔ TẢ của nó, không phải tên.
      */
     await expectHandles(
       form,
       'checkbox',
-      [/^Hiện mọi thiết bị/, /^Bỏ tick nếu luật đã tắt/],
+      [/^Hiện mọi thiết bị/, 'Đang dùng'],
       'Hộp "Thêm luật NAT"',
     );
-    await expect(form.getByRole('checkbox', { name: /^Bỏ tick nếu luật đã tắt/ }), 'rule khai mới thì mặc định là ĐANG BẬT').toBeChecked();
+    const enabledBox = form.getByRole('checkbox', { name: 'Đang dùng', exact: true });
+    await expect(enabledBox, 'rule khai mới thì mặc định là ĐANG BẬT').toBeChecked();
+    await expect(enabledBox).toHaveAccessibleDescription(/^Bỏ tick nếu luật đã tắt/);
 
     /* ----- Nhóm giao thức: đúng ba lựa chọn, TCP là mặc định ----- */
     const protocols = form.getByRole('group', { name: 'Giao thức' });
@@ -5449,7 +5450,7 @@ test.describe('Phòng Địa chỉ IP và phòng Sổ NAT — bên trong có gì
       'Phòng Nhân sự',
     );
     await expect(form.getByRole('textbox', { name: 'Lý do mở', exact: true })).toHaveValue(reason);
-    await expect(form.getByRole('checkbox', { name: /^Bỏ tick nếu luật đã tắt/ })).toBeChecked();
+    await expect(form.getByRole('checkbox', { name: 'Đang dùng', exact: true })).toBeChecked();
     await expect(
       form
         .getByRole('group', { name: 'Giao thức' })
@@ -6355,13 +6356,19 @@ test.describe('Phòng Đường truyền, Tài khoản dịch vụ và Kho thanh
     const tenTab = (await page.getByRole('tab').allTextContents()).map((raw) =>
       gonNhan(raw).replace(/\s+\d+$/, ''),
     );
+    /* NET-075: khu Hồ sơ (ghi chú + "Chưa khai") đứng thẳng đầu cột chính, không sau một
+       tab — thanh tab mở vào Két sắt. */
     expect(
       tenTab,
-      'Hồ sơ tài khoản dịch vụ có đúng bốn tab như hồ sơ đường truyền',
-    ).toEqual(['Hồ sơ', 'Két sắt', 'Giấy tờ', 'Lịch sử']);
+      'Hồ sơ tài khoản dịch vụ: ba tab Két sắt · Giấy tờ · Lịch sử, khu Hồ sơ nằm trên thanh tab',
+    ).toEqual(['Két sắt', 'Giấy tờ', 'Lịch sử']);
+    await expect(page.getByText('Chưa khai:')).toBeVisible();
+    await expect(page.getByRole('tab', { name: /^Két sắt/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
 
     for (const [ten, dauHieu] of [
-      [/^Hồ sơ$/, page.getByText('Chưa khai:')],
       [/^Két sắt/, page.getByText(/Nơi cất mật khẩu và license key/)],
       [/^Giấy tờ/, page.getByText('Chưa có giấy tờ nào.')],
       [/^Lịch sử$/, page.getByRole('listitem').filter({ hasText: 'Tạo hồ sơ' })],

@@ -361,6 +361,13 @@ table.table tbody tr.exp:hover td {
 .subnet-rail > .form-section-title {
   margin: 0;
 }
+/* Tiêu đề nhóm site trong cột dải: nhỏ, mờ, không cạnh tranh với mã CIDR của thẻ. */
+.subnet-rail > .rail-group {
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  color: var(--ink-3);
+}
 .subnet-card {
   border: 1px solid var(--border);
   border-radius: var(--r);

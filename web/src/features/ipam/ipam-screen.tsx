@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -22,6 +22,7 @@ import { IpLookup } from './ip-lookup';
 import type { SubnetRow } from './ipam-types';
 import { PATHS } from '@/lib/routes';
 import { useIpamSettings } from './ipam-settings';
+import { groupSubnets, type SubnetGroupKey } from './subnet-groups';
 
 /** Từ bao nhiêu dải thì cột trái cần ô lọc — ít hơn thế thì liếc là thấy. */
 const RAIL_FILTER_FROM = 6;
@@ -156,6 +157,13 @@ export function IpamScreen({ me }: { me: Me }) {
    * thứ sáu là thẻ đang chọn nằm dưới mép mà không có gì báo. `nearest` không giật cột khi
    * thẻ đã thấy sẵn.
    */
+  const groupLabel = (key: SubnetGroupKey): string =>
+    key === 'voided'
+      ? t('ipam.disabledBadge')
+      : key === 'nosite'
+        ? t('ipam.noSite')
+        : key.slice('site:'.length);
+
   const railRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     railRef.current
@@ -208,14 +216,17 @@ export function IpamScreen({ me }: { me: Me }) {
               <Select
                 value={selected.id}
                 ariaLabel={t('ipam.pickSubnet')}
-                options={rows.map((row) => ({
-                  value: row.id,
-                  label: t('ipam.subnetOption', {
-                    cidr: row.cidr,
-                    vlan: row.vlan === null ? '' : ` · ${t('ipam.vlanBadge', { vlan: row.vlan })}`,
-                    free: row.free,
-                  }),
-                }))}
+                options={groupSubnets(rows).flatMap((group) =>
+                  group.rows.map((row) => ({
+                    value: row.id,
+                    label: t('ipam.subnetOption', {
+                      cidr: row.cidr,
+                      vlan: row.vlan === null ? '' : ` · ${t('ipam.vlanBadge', { vlan: row.vlan })}`,
+                      free: row.free,
+                    }),
+                    group: group.key === 'all' ? undefined : groupLabel(group.key),
+                  })),
+                )}
                 onChange={(value) => navigate(PATHS.subnet(value))}
               />
               <SubnetCard
@@ -246,18 +257,27 @@ export function IpamScreen({ me }: { me: Me }) {
             {shownRows.length === 0 ? (
               <p className="muted">{t('ipam.railFilterEmpty')}</p>
             ) : null}
-            {shownRows.map((subnet) => (
-              <SubnetCard
-                key={subnet.id}
-                subnet={subnet}
-                active={subnet.id === selected?.id}
-                canEdit={canEdit}
-                fullPercent={fullPercent}
-                onEdit={() => setEditing({ subnet })}
-                onHide={() => setHiding(subnet)}
-                onRestore={() => void restoreSubnet(subnet)}
-                onDelete={() => void removeSubnet(subnet)}
-              />
+            {/* Chia theo site khi có hơn một nhóm: ba chi nhánh ba chục dải thì cột một dải
+                dài lẫn lộn là phải đọc từng thẻ mới biết thuộc đâu. */}
+            {groupSubnets(shownRows).map((group) => (
+              <Fragment key={group.key}>
+                {group.key === 'all' ? null : (
+                  <h3 className="rail-group">{groupLabel(group.key)}</h3>
+                )}
+                {group.rows.map((subnet) => (
+                  <SubnetCard
+                    key={subnet.id}
+                    subnet={subnet}
+                    active={subnet.id === selected?.id}
+                    canEdit={canEdit}
+                    fullPercent={fullPercent}
+                    onEdit={() => setEditing({ subnet })}
+                    onHide={() => setHiding(subnet)}
+                    onRestore={() => void restoreSubnet(subnet)}
+                    onDelete={() => void removeSubnet(subnet)}
+                  />
+                ))}
+              </Fragment>
             ))}
           </nav>
           )}

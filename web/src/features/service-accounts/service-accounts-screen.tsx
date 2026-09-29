@@ -42,9 +42,11 @@ interface Filters extends Record<string, string> {
   search: string;
   kind: '' | ServiceAccountKind;
   status: '' | ServiceAccountStatus;
+  /** '1' = chỉ VPN mở cho mọi IP nguồn — lọc ở API vì danh sách phân trang. */
+  anyIp: '' | '1';
 }
 
-const EMPTY_FILTERS: Filters = { search: '', kind: '', status: '' };
+const EMPTY_FILTERS: Filters = { search: '', kind: '', status: '', anyIp: '' };
 
 /**
  * Tài khoản dịch vụ (0032): tài khoản DÙNG CHUNG và tài khoản VPN.
@@ -263,6 +265,18 @@ export function ServiceAccountsScreen({ me }: { me: Me }) {
           ]}
           onChange={(value) => url.setSorting({ key: value, desc: false })}
         />
+        {/* VPN mở cho mọi IP là câu kiểm toán hỏi đầu tiên — một chip bật/tắt, cùng kiểu chip
+            "Chỉ cổng nhạy cảm" của sổ NAT. */}
+        <div className="segmented" role="group" aria-label={t('serviceAccounts.anyIpFilter')}>
+          <button
+            type="button"
+            className={filters.anyIp ? 'on' : undefined}
+            aria-pressed={filters.anyIp === '1'}
+            onClick={() => setFilter('anyIp', filters.anyIp ? '' : '1')}
+          >
+            {t('serviceAccounts.anyIpOnly')}
+          </button>
+        </div>
       </FilterBar>
 
       {accounts.isLoading ? (
@@ -373,5 +387,6 @@ function buildFilterQuery(filters: Filters, sorting: SortingState): string {
   if (filters.search.trim()) params.set('search', filters.search.trim());
   if (filters.kind) params.set('kind', filters.kind);
   if (filters.status) params.set('status', filters.status);
+  if (filters.anyIp) params.set('anyIp', 'true');
   return [params.toString(), sortQuery(sorting)].filter(Boolean).join('&');
 }

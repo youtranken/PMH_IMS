@@ -86,6 +86,21 @@ class EnableDto {
   reason!: string;
 }
 
+/** Bộ lọc dùng CHUNG cho danh sách và file xuất — hai chỗ không được lọc khác nhau (FR-028). */
+function filterOf(query: {
+  search?: string;
+  kind?: ServiceAccountKind;
+  status?: ServiceAccountStatus;
+  anyIp?: string;
+}) {
+  return {
+    search: query.search,
+    kind: query.kind,
+    status: query.status,
+    anyIp: query.anyIp === 'true',
+  };
+}
+
 /**
  * Tài khoản dịch vụ (0032): tài khoản DÙNG CHUNG (email kế toán, cổng VNPT…) và tài khoản VPN.
  *
@@ -114,13 +129,14 @@ export class ServiceAccountController {
       search?: string;
       kind?: ServiceAccountKind;
       status?: ServiceAccountStatus;
+      anyIp?: string;
       sort?: string;
       dir?: string;
     },
   ) {
     return this.accounts.list(
       parsePageQuery(query),
-      { search: query.search, kind: query.kind, status: query.status },
+      filterOf(query),
       parseSortQuery(query, SERVICE_ACCOUNT_SORT_KEYS, SERVICE_ACCOUNT_SORT_DEFAULT),
     );
   }
@@ -141,13 +157,14 @@ export class ServiceAccountController {
       search?: string;
       kind?: ServiceAccountKind;
       status?: ServiceAccountStatus;
+      anyIp?: string;
       sort?: string;
       dir?: string;
     },
     @Res() res: Response,
   ) {
     const rows = await this.accounts.listAll(
-      { search: query.search, kind: query.kind, status: query.status },
+      filterOf(query),
       parseSortQuery(query, SERVICE_ACCOUNT_SORT_KEYS, SERVICE_ACCOUNT_SORT_DEFAULT),
     );
     const buffer = await this.excel.build({

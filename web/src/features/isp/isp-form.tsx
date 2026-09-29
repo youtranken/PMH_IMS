@@ -89,14 +89,33 @@ export function IspForm({
    * Chưa gõ gì vẫn hỏi (10 máy đầu): ô mở ra trắng trơn thì người khai không biết đây là ô
    * tìm hay ô chọn. Đã chọn xong thì thôi hỏi — ô đang hiện đúng mã máy.
    */
+  /* Chưa gõ mà đã chọn site: danh sách mở sẵn là máy CÙNG site (thiết bị biên nằm ở đó).
+     Gõ thì tìm khắp kho — Draytek chưa gán site vẫn phải tìm ra được. */
+  const nearSite = debounced.trim() === '' ? form.siteId : '';
   const candidates = useQuery({
-    queryKey: ['devices', 'picker', debounced],
+    queryKey: ['devices', 'picker', debounced, nearSite],
     enabled: device === null,
     queryFn: () =>
       apiFetch<{ items: DeviceRow[] }>(
-        `/api/v1/devices?limit=10&usable=true&search=${encodeURIComponent(debounced.trim())}`,
+        `/api/v1/devices?limit=10&usable=true&search=${encodeURIComponent(debounced.trim())}${
+          nearSite ? `&siteId=${nearSite}` : ''
+        }`,
       ),
   });
+  /* Máy nào đang là thiết bị biên của đường KHÁC — một Draytek hai đường là chuyện có thật,
+     nhưng người chọn phải thấy để khỏi gắn nhầm. Hỏng thì chỉ thiếu dòng ghi thêm. */
+  const otherLines = useQuery({
+    queryKey: ['isp', 'edge-usage'],
+    enabled: device === null,
+    queryFn: () =>
+      apiFetch<{ items: { id: string; code: string; deviceId: string | null }[] }>(
+        '/api/v1/isp-lines?limit=200',
+      ),
+  });
+  const linesOn = (deviceId: string) =>
+    (otherLines.data?.items ?? [])
+      .filter((line) => line.deviceId === deviceId && line.id !== row?.id)
+      .map((line) => line.code);
 
   const save = useApiMutation<Record<string, unknown>, { id: string }>(
     row ? `/api/v1/isp-lines/${row.id}` : '/api/v1/isp-lines',
@@ -346,11 +365,20 @@ export function IspForm({
               options={candidates.data?.items ?? []}
               failed={candidates.isError}
               getKey={(item) => item.id}
-              renderOption={(item) => (
-                <>
-                  <span className="mono">{item.code}</span> <small>{item.name}</small>
-                </>
-              )}
+              renderOption={(item) => {
+                const used = linesOn(item.id);
+                return (
+                  <>
+                    <span className="mono">{item.code}</span> <small>{item.name}</small>
+                    {used.length > 0 ? (
+                      <small>
+                        {' · '}
+                        {t('isp.edgeInUse', { lines: used.join(', ') })}
+                      </small>
+                    ) : null}
+                  </>
+                );
+              }}
               onSelect={(item) => {
                 setDevice({ id: item.id, code: item.code });
                 setQuery(item.code);

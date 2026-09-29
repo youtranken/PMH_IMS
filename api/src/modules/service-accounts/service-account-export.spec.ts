@@ -32,7 +32,7 @@ describe('Xuất Excel tài khoản dịch vụ', () => {
     );
     expect(headers.some((header) => /mật khẩu|password|secret/i.test(header))).toBe(false);
     // Xuất đúng bộ lọc đang xem (FR-028).
-    expect(filterSeen).toEqual({ search: undefined, kind: 'vpn', status: 'active' });
+    expect(filterSeen).toEqual({ search: undefined, kind: 'vpn', status: 'active', anyIp: false });
     const kind = captured.find((column) => column.header === 'Loại')!;
     expect(kind.value({ kind: 'vpn' })).toBe('VPN');
     expect(kind.value({ kind: 'shared' })).toBe('Dùng chung');

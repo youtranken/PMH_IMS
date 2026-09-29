@@ -58,6 +58,17 @@ import { PATHS } from "@/lib/routes";
 
 type HeldKey = "ipam" | "ports" | "nat" | "isp" | "software" | "vault" | "attachments";
 
+/** Khóa dịch viết ĐỦ chữ (không ghép chuỗi): bài `dead-keys-rollcall` tìm khóa theo chữ. */
+const HELD_LABEL: Record<HeldKey, string> = {
+  ipam: "devices.held.ipam",
+  ports: "devices.held.ports",
+  nat: "devices.held.nat",
+  isp: "devices.held.isp",
+  software: "devices.held.software",
+  vault: "devices.held.vault",
+  attachments: "devices.held.attachments",
+};
+
 /** Khu mở rộng do module khác đóng góp (Epic 3/4/5) — Đợt 1 luôn rỗng. */
 interface DevicePanel {
   key: string;
@@ -831,7 +842,7 @@ export function DeviceDetail({ me }: { me: Me }) {
                       className="btn sm ghost"
                       onClick={heldTarget[entry.key]}
                     >
-                      {t(`devices.held.${entry.key}`, { count: entry.count })}
+                      {t(HELD_LABEL[entry.key], { count: entry.count })}
                     </button>
                   ))}
                 </div>
