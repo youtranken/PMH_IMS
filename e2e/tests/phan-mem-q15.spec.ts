@@ -7,7 +7,7 @@ import {
   resetSoftware,
   resetUsers,
   sql,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   uniqueStamp,
   writeHeaders,
 } from './helpers';
@@ -264,7 +264,7 @@ test.describe('SW-043 · Website dùng chứng chỉ SSL, theo từng kỳ gia h
 
     // Ô tìm của danh sách phần mềm ra hồ sơ theo website.
     await page.goto('/software');
-    await timVaChoLoc(page, `mail-e2e-${stamp}`);
+    await searchAndWaitForFilter(page, `mail-e2e-${stamp}`);
     await expect(page.getByRole('link', { name: code })).toBeVisible();
 
     await page.goto(`/software/${id}`);

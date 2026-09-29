@@ -8,7 +8,7 @@ import {
   resetSoftware,
   resetUsers,
   rowAction,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   rowActionNames,
   uniqueStamp,
 } from './helpers';
@@ -90,7 +90,7 @@ async function assign(
  * tay phần `goto + fill + toBeVisible` — dễ thiếu đúng dòng chờ. Tách ra thì cả hai đường đều
  * đi qua một phép chờ duy nhất.
  */
-async function timLicense(page: Page, licenseCode: string) {
+async function findLicense(page: Page, licenseCode: string) {
   await page.goto('/software');
   await page.getByRole('searchbox', { name: /Tìm/ }).fill(licenseCode);
   const row = page.getByRole('row', { name: new RegExp(licenseCode) });
@@ -101,7 +101,7 @@ async function timLicense(page: Page, licenseCode: string) {
 
 /** Bung dòng license đang hiện trên danh sách và trả về khu vừa mở. */
 async function expandLicense(page: Page, licenseCode: string) {
-  const row = await timLicense(page, licenseCode);
+  const row = await findLicense(page, licenseCode);
   await row.getByRole('button').first().click();
   return row;
 }
@@ -298,9 +298,9 @@ test.describe('Gán license theo seat', () => {
     const deviceId = await createDevice(page, deviceCode);
     expect((await assign(page, licenseId, deviceId)).status()).toBe(201);
 
-    // `timLicense` chờ bảng LỌC XONG rồi mới trả dòng — xem chú thích của nó. Chép tay ba
+    // `findLicense` chờ bảng LỌC XONG rồi mới trả dòng — xem chú thích của nó. Chép tay ba
     // dòng `goto + fill + toBeVisible` ở đây là thiếu đúng phép chờ ấy, và bài đỏ chập chờn.
-    const row = await timLicense(page, `LIC-E2E-EXP-${stamp}`);
+    const row = await findLicense(page, `LIC-E2E-EXP-${stamp}`);
 
     // Chưa bung thì mã máy CHƯA có mặt trên màn.
     await expect(page.getByRole('link', { name: deviceCode })).toHaveCount(0);
@@ -325,12 +325,12 @@ test.describe('Gán license theo seat', () => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
     const licenseId = await createLicense(page, `LIC-E2E-TERM-${stamp}`, 5);
-    const ktCode = `PC-E2E-KT-${stamp}`;
-    const xuongCode = `PC-E2E-XU-${stamp}`;
+    const accountingCode = `PC-E2E-KT-${stamp}`;
+    const workshopCode = `PC-E2E-XU-${stamp}`;
 
     expect(
       (
-        await assign(page, licenseId, await createDevice(page, ktCode), '', {
+        await assign(page, licenseId, await createDevice(page, accountingCode), '', {
           cost: 3_500_000,
           contract: `HD-KT-${stamp}`,
           startDate: '2026-01-01',
@@ -340,7 +340,7 @@ test.describe('Gán license theo seat', () => {
     ).toBe(201);
     expect(
       (
-        await assign(page, licenseId, await createDevice(page, xuongCode), '', {
+        await assign(page, licenseId, await createDevice(page, workshopCode), '', {
           cost: 1_200_000,
           contract: `HD-XU-${stamp}`,
         })
@@ -525,7 +525,7 @@ test.describe('Gán license theo seat', () => {
     expect(created.status()).toBe(201);
 
     await page.goto('/software');
-    await timVaChoLoc(page, code);
+    await searchAndWaitForFilter(page, code);
     // Cột Thao tác là menu ba chấm: mục chỉ có trong DOM khi menu đang mở.
     const names = await rowActionNames(page, code);
     expect(names).toContain('Sửa');

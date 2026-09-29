@@ -10,7 +10,7 @@ import {
   rowAction,
   mailpitMessages,
   rowActionNames,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
 } from './helpers';
@@ -475,7 +475,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      * Form sửa mở ra trống là kiểu hỏng tệ nhất của màn nhập: bấm Lưu một phát là ghi đè sạch
      * mọi thứ, và trên màn hình không có gì báo rằng dữ liệu vừa bị xóa.
      */
-    await timVaChoLoc(page, code);
+    await searchAndWaitForFilter(page, code);
     await expect(page.getByRole('row', { name: new RegExp(code) })).toBeVisible();
     await rowAction(page, code, 'Sửa');
 
@@ -568,7 +568,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
 
     // ===== CHẾ ĐỘ GÁN MỚI, mở thẳng từ menu ba chấm của danh sách =====
     await page.goto('/software');
-    await timVaChoLoc(page, licenseCode);
+    await searchAndWaitForFilter(page, licenseCode);
     await expect(page.getByRole('row', { name: new RegExp(licenseCode) })).toBeVisible();
     await rowAction(page, licenseCode, 'Gán vào máy');
 
@@ -803,9 +803,9 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      * Yêu cầu không hạ: vẫn phải có thanh thời hạn đầy đủ
      * (thanh tiến trình + hai mốc ngày), và cột chính KHÔNG được vẽ lại lần nữa.
      */
-    const theDinhDanh = page.getByRole('region', { name: 'Thẻ định danh' });
+    const identityCard = page.getByRole('region', { name: 'Thẻ định danh' });
     await expect(
-      theDinhDanh.getByRole('progressbar'),
+      identityCard.getByRole('progressbar'),
       'Hồ sơ có hạn thì thẻ định danh phải vẽ thanh thời hạn đầy đủ',
     ).toHaveCount(1);
     await expect(
@@ -1186,7 +1186,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      * Vế chốt là HỘP THƯ: bấm Hủy xong mà Mailpit vẫn nhận thêm thư thì câu hỏi lại chỉ là
      * trang trí — hộp hiện lên trong khi lượt gửi đã chạy ở phía sau.
      */
-    const thuTruoc = (await mailpitMessages()).length;
+    const mailCountBefore = (await mailpitMessages()).length;
     // Khớp nguyên văn: menu còn có "Gửi thử cho tôi" (EX-021), đây là bản gửi cả danh sách.
     await rowAction(page, ruleName, /^Gửi thử$/);
     await expect(
@@ -1199,7 +1199,7 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
     expect(
       (await mailpitMessages()).length,
       'bấm Hủy mà hộp thư vẫn nhận thêm thư nghĩa là câu hỏi lại chỉ để trang trí',
-    ).toBe(thuTruoc);
+    ).toBe(mailCountBefore);
 
     // ===== BÊN TRONG HỘP "THÊM LUẬT" =====
     await page.getByRole('button', { name: 'Thêm luật', exact: true }).click();
@@ -1274,18 +1274,18 @@ test.describe('Phòng Phần mềm và phòng Sắp hết hạn — bên trong c
      * người nhận (EX-020): số lượng tùy hộp thư đã dùng ở luật khác, nhưng hộp thư của chính
      * người đang đăng nhập thì luôn có — chờ nó hiện rồi mới đếm.
      */
-    const goiY = add.getByRole('group', { name: 'Gợi ý người nhận' }).getByRole('button');
+    const suggestions = add.getByRole('group', { name: 'Gợi ý người nhận' }).getByRole('button');
     await expect(
-      goiY.filter({ hasText: E2E_SA.email }),
+      suggestions.filter({ hasText: E2E_SA.email }),
       'Gợi ý người nhận luôn có hộp thư của chính mình',
     ).toHaveCount(1);
-    await expect(goiY, 'mỗi gợi ý là một nút "Thêm <email>"').toHaveText(
-      Array(await goiY.count()).fill(/^\+ \S+@\S+$/),
+    await expect(suggestions, 'mỗi gợi ý là một nút "Thêm <email>"').toHaveText(
+      Array(await suggestions.count()).fill(/^\+ \S+@\S+$/),
     );
     await expect(
       add.getByRole('button'),
       'Hộp thêm luật (hằng tháng) có đúng 6 nút ngoài gợi ý: ✕ · Tần suất · Ngày trong tháng · Lúc · Hủy · Lưu',
-    ).toHaveCount(6 + (await goiY.count()));
+    ).toHaveCount(6 + (await suggestions.count()));
     for (const name of ['Đóng hộp thoại', 'Tần suất', 'Ngày trong tháng', 'Lúc', 'Hủy', 'Lưu']) {
       await expect(add.getByRole('button', { name, exact: true })).toHaveCount(1);
     }

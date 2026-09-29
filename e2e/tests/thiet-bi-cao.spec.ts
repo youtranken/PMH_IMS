@@ -8,7 +8,7 @@ import {
   resetSecrets,
   resetSoftware,
   resetUsers,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   uniqueStamp,
   writeHeaders,
 } from './helpers';
@@ -83,11 +83,11 @@ test.describe('DEV-013 · tìm thiết bị theo IP, người sử dụng, bộ 
     ).toBeVisible();
     const row = page.getByRole('row', { name: new RegExp(code) });
 
-    await timVaChoLoc(page, address);
+    await searchAndWaitForFilter(page, address);
     await expect(row).toBeVisible();
-    await timVaChoLoc(page, 'chi binh');
+    await searchAndWaitForFilter(page, 'chi binh');
     await expect(row).toBeVisible();
-    await timVaChoLoc(page, 'ke hoach');
+    await searchAndWaitForFilter(page, 'ke hoach');
     await expect(row).toBeVisible();
   });
 
@@ -103,7 +103,7 @@ test.describe('DEV-013 · tìm thiết bị theo IP, người sử dụng, bộ 
     const other = address.replace(/\.5$/, '.9');
 
     await page.goto('/devices');
-    await timVaChoLoc(page, other);
+    await searchAndWaitForFilter(page, other);
     await expect(page.getByRole('row', { name: new RegExp(code) })).toHaveCount(0);
     // Câu rỗng nêu lại đúng từ khoá vừa gõ (DEV-009): "không khớp", không phải "kho trống".
     await expect(page.getByText(`Không có thiết bị nào khớp “${other}”.`)).toBeVisible();
@@ -182,7 +182,7 @@ test.describe('DEV-001 · danh sách thiết bị vừa 1280px có sidebar', () 
     });
 
     await page.goto('/devices');
-    await timVaChoLoc(page, code);
+    await searchAndWaitForFilter(page, code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toBeVisible();
 
@@ -204,7 +204,7 @@ test.describe('DEV-001 · danh sách thiết bị vừa 1280px có sidebar', () 
     await createDevice(page, { code, name: 'Máy trạm', assignedTo: 'Chị Lan' });
 
     await page.goto('/devices');
-    await timVaChoLoc(page, code);
+    await searchAndWaitForFilter(page, code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expectInsideWidth(page, row.getByRole('button', { name: `Sửa máy ${code}` }), 'nút Sửa');
   });

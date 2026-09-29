@@ -7,7 +7,7 @@ import {
   resetSoftware,
   resetUsers,
   rowAction,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
 } from './helpers';
@@ -293,7 +293,7 @@ test.describe('Hồ sơ phần mềm', () => {
 
     // Trên danh sách: cột hạn nói "Vĩnh viễn", không phải badge ngày.
     await page.goto('/software');
-    await timVaChoLoc(page, code);
+    await searchAndWaitForFilter(page, code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toContainText('Vĩnh viễn');
 
@@ -331,7 +331,7 @@ test.describe('Hồ sơ phần mềm', () => {
     // của danh sách CHƯA lọc, nên câu chờ xanh ngay, rồi lượt nạp lại đổ xuống giữa lúc menu
     // ba chấm đang mở và giật nó khỏi DOM. Lý do đầy đủ: `di-khap-giao-dien-09-catalog-accounts-kit.spec.ts`, bài
     // "Phòng Tài khoản".
-    await timVaChoLoc(page, code);
+    await searchAndWaitForFilter(page, code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toBeVisible();
 

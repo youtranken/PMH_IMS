@@ -7,7 +7,7 @@ import {
   resetCatalog,
   resetDevices,
   resetUsers,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
 } from './helpers';
@@ -91,7 +91,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    * ty, nên nó là hằng số kiểm được. Site · tủ · nhà cung cấp thì KHÔNG: đó là dữ liệu riêng
    * của PMH, nhập qua màn Danh mục, nên bài này chỉ chốt mục "Tất cả …" đứng đầu.
    */
-  const LOAI_THIET_BI_GOC = [
+  const BASE_DEVICE_TYPES = [
     'Switch',
     'Firewall',
     'Server',
@@ -115,7 +115,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    * tên từ `<label for>` bên cạnh. Người dùng trình đọc màn hình nghe đúng chuỗi mà hàm này
    * trả về — nên đó mới là thứ đáng chốt, không phải chữ vẽ trên màn hình.
    */
-  async function tenDieuKhien(scope: Locator): Promise<string[]> {
+  async function controlName(scope: Locator): Promise<string[]> {
     return scope.evaluateAll((els) =>
       els.map((el) => {
         const aria = el.getAttribute('aria-label');
@@ -136,7 +136,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    * là NHÃN (chuỗi trong `vi.ts`), không phải kiểu chữ: đổi `text-transform` là một quyết định
    * thị giác, đổi nhãn mới là đổi nghĩa. `textContent` không bị biến đổi nên nói đúng nhãn.
    */
-  async function nhanCua(scope: Locator): Promise<string[]> {
+  async function labelOf(scope: Locator): Promise<string[]> {
     const texts = await scope.allTextContents();
     return texts.map((text) => text.replace(/\s+/g, ' ').trim());
   }
@@ -148,7 +148,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
    * đóng luôn cả hộp — bài kiểm sẽ đỏ ở bước sau, cách xa chỗ thật sự sai. Bấm lại nút mở thì
    * chỉ có một thứ đóng, và đó đúng là thứ ta vừa mở.
    */
-  async function luaChonCua(page: Page, trigger: Locator): Promise<string[]> {
+  async function optionsOf(page: Page, trigger: Locator): Promise<string[]> {
     const options = page.getByRole('option');
     let names: string[] = [];
     /*
@@ -161,7 +161,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       await expect(options.first(), 'ô chọn mở ra phải có ít nhất một lựa chọn').toBeVisible({
         timeout: 2_000,
       });
-      // `allTextContents` chứ không phải `allInnerTexts` — xem chú thích ở `nhanCua`.
+      // `allTextContents` chứ không phải `allInnerTexts` — xem chú thích ở `labelOf`.
       names = await options.allTextContents();
       await trigger.click();
       await expect(options, 'bấm lại nút mở phải đóng danh sách lựa chọn').toHaveCount(0, {
@@ -172,7 +172,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
   }
 
   /** Loại thiết bị "Switch" — loại duy nhất trong bài này cần BẬT port map (seed: `has_port_map`). */
-  async function idLoaiSwitch(page: Page): Promise<string> {
+  async function switchTypeId(page: Page): Promise<string> {
     const res = await page.request.get('/api/v1/catalog');
     const lists = (await res.json()) as { deviceTypes: { id: string; name: string }[] };
     const found = lists.deviceTypes.find((type) => type.name === 'Switch');
@@ -207,7 +207,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
 
     const stamp = uniqueStamp();
     const headers = await writeHeaders(page);
-    const deviceTypeId = await idLoaiSwitch(page);
+    const deviceTypeId = await switchTypeId(page);
 
     // Dàn cảnh qua API: điều đang kiểm là THANH LỌC, không phải đường tạo máy.
     for (const [suffix, name] of [
@@ -225,7 +225,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect(page.getByRole('heading', { level: 1, name: /^Thiết bị$/ })).toBeVisible();
 
     const main = page.getByRole('main');
-    const timKiem = page.getByRole('searchbox', {
+    const search = page.getByRole('searchbox', {
       name: 'Tìm mã, tên, serial, IP hoặc người dùng',
     });
 
@@ -237,14 +237,14 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * đúng thứ LUÔN có mặt: ba nút đầu trang (file mẫu nằm TRONG hộp nhập), bốn ô lọc, nút
      * "Xóa lọc" của thanh lọc và nút "Xóa bộ lọc" của khối rỗng.
      */
-    await timKiem.fill(`KHONG-CO-MAY-NAO-E2E-${stamp}`);
+    await search.fill(`KHONG-CO-MAY-NAO-E2E-${stamp}`);
     await expect(
       main.getByText(`Không có thiết bị nào khớp “KHONG-CO-MAY-NAO-E2E-${stamp}”.`),
       'lọc về rỗng phải ra empty-state, không phải bảng trắng',
     ).toBeVisible();
 
     await expect
-      .poll(() => tenDieuKhien(main.getByRole('button')), {
+      .poll(() => controlName(main.getByRole('button')), {
         message:
           'Bộ khung đầu phòng Thiết bị: ba nút hành động, bốn ô lọc, hai nút gỡ lọc — không thừa, không thiếu',
       })
@@ -266,13 +266,13 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * Chỉ khẳng định "thấy máy A" thì một ô tìm hỏng hoàn toàn (gửi lên server rồi bỏ qua)
      * vẫn xanh, vì máy A vốn đã nằm trong bảng. Hai con số mới nói được điều gì đó.
      */
-    await timKiem.fill(`TB-E2E-DAU-${stamp}`);
+    await search.fill(`TB-E2E-DAU-${stamp}`);
     await expect(
       page.getByRole('row'),
       'lọc theo dấu của lần chạy này phải còn đúng hai máy mồi (kèm dòng tiêu đề)',
     ).toHaveCount(3);
 
-    await timKiem.fill(`TB-E2E-DAU-${stamp}-A`);
+    await search.fill(`TB-E2E-DAU-${stamp}-A`);
     await expect(
       page.getByRole('row'),
       'gõ thêm hậu tố "-A" phải thu bảng xuống còn một máy — không thu tức là ô tìm không đi tới server',
@@ -284,7 +284,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       'máy còn lại phải đúng là máy A',
     ).toBeVisible();
 
-    await timKiem.fill('');
+    await search.fill('');
 
     /*
      * BÊN TRONG TỪNG Ô LỌC.
@@ -292,32 +292,32 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * `exact: true` là bắt buộc ở đây: đầu bảng cũng có nút "Sắp xếp theo Trạng thái", và
      * `getByRole` khớp tên theo CHUỖI CON — không neo thì một cú bấm rơi nhầm vào đầu bảng.
      */
-    const trangThai = await luaChonCua(
+    const status = await optionsOf(
       page,
       main.getByRole('button', { name: 'Trạng thái', exact: true }),
     );
     expect(
-      trangThai,
+      status,
       'Ô lọc Trạng thái phải bày đúng vòng đời thiết bị: mục "mọi" rồi bốn trạng thái của DEVICE_STATUSES',
     ).toEqual(['Mọi trạng thái', 'Đang dùng', 'Dự phòng', 'Hỏng', 'Đã thanh lý']);
 
-    const loai = await luaChonCua(page, main.getByRole('button', { name: 'Loại', exact: true }));
-    expect(loai[0], 'Ô lọc Loại phải mở đầu bằng mục bỏ lọc').toBe('Mọi loại');
+    const kind = await optionsOf(page, main.getByRole('button', { name: 'Loại', exact: true }));
+    expect(kind[0], 'Ô lọc Loại phải mở đầu bằng mục bỏ lọc').toBe('Mọi loại');
     // So theo TẬP HỢP đã sắp, không theo thứ tự: API sắp theo `name` bằng collation của
     // Postgres, mà thứ tự của "Điện thoại IP" trong bảng chữ cái phụ thuộc collation ấy —
     // chốt cứng thứ tự là chốt vào một thứ không thuộc về phòng này.
     expect(
-      [...loai.slice(1)].sort(),
+      [...kind.slice(1)].sort(),
       'Ô lọc Loại phải khớp ĐÚNG 12 loại do migration 0011 gieo — thừa một loại nghĩa là danh mục E2E chưa được dọn, thiếu một loại nghĩa là seed đã đổi',
-    ).toEqual([...LOAI_THIET_BI_GOC].sort());
+    ).toEqual([...BASE_DEVICE_TYPES].sort());
 
     // Site và tủ là dữ liệu riêng của PMH (nhập qua màn Danh mục), nên chỉ chốt được mục đầu.
     expect(
-      (await luaChonCua(page, main.getByRole('button', { name: 'Site', exact: true })))[0],
+      (await optionsOf(page, main.getByRole('button', { name: 'Site', exact: true })))[0],
       'Ô lọc Site phải mở đầu bằng mục bỏ lọc',
     ).toBe('Mọi site');
     expect(
-      (await luaChonCua(page, main.getByRole('button', { name: 'Tủ mạng', exact: true })))[0],
+      (await optionsOf(page, main.getByRole('button', { name: 'Tủ mạng', exact: true })))[0],
       'Ô lọc Tủ mạng phải mở đầu bằng mục bỏ lọc',
     ).toBe('Mọi tủ');
   });
@@ -346,20 +346,20 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
 
     const stamp = uniqueStamp();
     const headers = await writeHeaders(page);
-    const deviceTypeId = await idLoaiSwitch(page);
+    const deviceTypeId = await switchTypeId(page);
 
     /*
      * 12 máy — đủ để trang thứ hai TỒN TẠI ở cỡ 10 dòng. Tên đi NGƯỢC chiều với mã (máy `-01`
      * tên "Máy L", máy `-12` tên "Máy A") để "sắp theo tên" không thể tình cờ trùng với "sắp
      * theo mã": trùng thì bài kiểm xanh cả khi nút sắp xếp chẳng làm gì.
      */
-    const chuCai = ['L', 'K', 'J', 'I', 'H', 'G', 'F', 'E', 'D', 'C', 'B', 'A'];
-    for (let i = 0; i < chuCai.length; i += 1) {
+    const letters = ['L', 'K', 'J', 'I', 'H', 'G', 'F', 'E', 'D', 'C', 'B', 'A'];
+    for (let i = 0; i < letters.length; i += 1) {
       const created = await page.request.post('/api/v1/devices', {
         headers,
         data: {
           code: `TB-E2E-BANG-${stamp}-${String(i + 1).padStart(2, '0')}`,
-          name: `Máy ${chuCai[i]} của bài kiểm kê bảng`,
+          name: `Máy ${letters[i]} của bài kiểm kê bảng`,
           deviceTypeId,
         },
       });
@@ -373,7 +373,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect(page.getByRole('row'), 'lọc xong phải còn đúng 12 máy vừa dựng').toHaveCount(13);
 
     await expect
-      .poll(() => nhanCua(page.getByRole('columnheader')), {
+      .poll(() => labelOf(page.getByRole('columnheader')), {
         message:
           'Bảng thiết bị có đúng 7 cột, đúng thứ tự này. Loại máy là dòng phụ dưới Tên (không bớt thông tin): thêm cột là cột Tên bị ép và nút Sửa bị đẩy khỏi khung ở 1280px',
       })
@@ -395,9 +395,9 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * đứng ngoài vì nó không phải dữ liệu. Một nút thứ sáu mọc ra ở đây mà API chưa có khóa
      * tương ứng thì bấm vào bảng sẽ im lặng không đổi gì — không có tập hợp thì không ai biết.
      */
-    const dongTieuDe = page.getByRole('row').first();
+    const headerRow = page.getByRole('row').first();
     await expect
-      .poll(() => tenDieuKhien(dongTieuDe.getByRole('button')), {
+      .poll(() => controlName(headerRow.getByRole('button')), {
         message:
           'Đúng năm cột sắp xếp được, và nhãn phải NÓI RÕ đây là nút sắp xếp (thanh lọc cũng có nút tên "Loại")',
       })
@@ -409,37 +409,37 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
         'Sắp xếp theo Trạng thái',
       ]);
 
-    const cotMa = page.getByRole('columnheader', { name: /Mã thiết bị/ });
-    const cotTen = page.getByRole('columnheader', { name: /Tên thiết bị/ });
-    const dongDauTien = page.getByRole('row').nth(1);
+    const codeColumn = page.getByRole('columnheader', { name: /Mã thiết bị/ });
+    const nameColumn = page.getByRole('columnheader', { name: /Tên thiết bị/ });
+    const firstRow = page.getByRole('row').nth(1);
 
-    await expect(cotMa, 'mở màn bảng sắp theo Mã thiết bị tăng dần').toHaveAttribute(
+    await expect(codeColumn, 'mở màn bảng sắp theo Mã thiết bị tăng dần').toHaveAttribute(
       'aria-sort',
       'ascending',
     );
-    await expect(dongDauTien, 'sắp theo mã tăng thì máy -01 đứng đầu').toContainText(`${stamp}-01`);
+    await expect(firstRow, 'sắp theo mã tăng thì máy -01 đứng đầu').toContainText(`${stamp}-01`);
 
-    await dongTieuDe.getByRole('button', { name: 'Sắp xếp theo Tên thiết bị' }).click();
+    await headerRow.getByRole('button', { name: 'Sắp xếp theo Tên thiết bị' }).click();
     await expect(
-      cotTen,
+      nameColumn,
       'bấm nút sắp xếp của cột Tên thì CHÍNH cột đó phải mang aria-sort',
     ).toHaveAttribute('aria-sort', 'ascending');
     await expect(
-      cotMa,
+      codeColumn,
       'và cột Mã phải về "none" (sắp được, đang không sắp) — hai cột cùng khai đang-sắp là nói dối trình đọc màn hình',
     ).toHaveAttribute('aria-sort', 'none');
     await expect(
-      dongDauTien,
+      firstRow,
       'sắp theo tên tăng thì "Máy A" lên đầu — tức máy mang mã -12, khác hẳn thứ tự theo mã',
     ).toContainText(`${stamp}-12`);
 
-    await dongTieuDe.getByRole('button', { name: 'Sắp xếp theo Tên thiết bị' }).click();
-    await expect(cotTen, 'bấm lần hai phải lật sang giảm dần').toHaveAttribute(
+    await headerRow.getByRole('button', { name: 'Sắp xếp theo Tên thiết bị' }).click();
+    await expect(nameColumn, 'bấm lần hai phải lật sang giảm dần').toHaveAttribute(
       'aria-sort',
       'descending',
     );
     await expect(
-      dongDauTien,
+      firstRow,
       'sắp theo tên giảm thì "Máy L" lên đầu — thứ tự phải ĐỔI THẬT, không chỉ đổi mũi tên',
     ).toContainText(`${stamp}-01`);
 
@@ -454,7 +454,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect
       .poll(
         () =>
-          tenDieuKhien(
+          controlName(
             page.getByRole('row', { name: new RegExp(`${stamp}-01`) }).getByRole('button'),
           ),
         {
@@ -477,27 +477,27 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       'thanh phân trang phải nói rõ đang xem bao nhiêu trên tổng bao nhiêu',
     ).toContainText('trên 12 dòng');
 
-    const soDong = pager.getByLabel('Số dòng');
+    const rowCount = pager.getByLabel('Số dòng');
     expect(
-      await luaChonCua(page, soDong),
+      await optionsOf(page, rowCount),
       'Ô "Số dòng" phải bày đủ bốn cỡ của PAGE_SIZES — 10 cho điện thoại, 100 cho lúc soi cả kho',
     ).toEqual(['10', '20', '50', '100']);
 
-    await soDong.click();
+    await rowCount.click();
     await page.getByRole('option', { name: '10', exact: true }).click();
     await expect(
       page.getByRole('row'),
       'đổi sang cỡ 10 thì bảng phải còn đúng 10 dòng dữ liệu — không đổi tức là ô "Số dòng" chỉ để trang trí',
     ).toHaveCount(11);
 
-    const trangSau = pager.getByRole('button', { name: 'Trang sau' });
-    await expect(trangSau, '12 dòng ở cỡ 10 thì phải còn trang thứ hai để đi tới').toBeEnabled();
-    await trangSau.click();
+    const nextPage = pager.getByRole('button', { name: 'Trang sau' });
+    await expect(nextPage, '12 dòng ở cỡ 10 thì phải còn trang thứ hai để đi tới').toBeEnabled();
+    await nextPage.click();
     await expect(
       page.getByRole('row'),
       'trang hai của 12 dòng ở cỡ 10 phải còn đúng 2 dòng',
     ).toHaveCount(3);
-    await expect(trangSau, 'hết trang thì nút "Trang sau" phải tắt').toBeDisabled();
+    await expect(nextPage, 'hết trang thì nút "Trang sau" phải tắt').toBeDisabled();
     await expect(
       pager.getByRole('button', { name: 'Trang trước' }),
       'và nút "Trang trước" phải bật lên',
@@ -515,9 +515,9 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * FE-03 — trang KHÔNG TỒN TẠI trên thanh địa chỉ (link cũ, gõ tay) phải được kéo về trang
      * cuối, không phải "91–12 trên 12 dòng" kèm câu rỗng "chưa có thiết bị nào".
      */
-    const xa = new URL(page.url());
-    xa.searchParams.set('page', '99');
-    await page.goto(xa.toString());
+    const currentUrl = new URL(page.url());
+    currentUrl.searchParams.set('page', '99');
+    await page.goto(currentUrl.toString());
     await expect(page.getByRole('row'), '?page=99 của 12 dòng phải rơi về trang 2').toHaveCount(3);
     await expect(
       page.getByRole('navigation', { name: 'Trang', exact: true }).getByRole('button', {
@@ -560,8 +560,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await page.goto('/devices');
     await devicesPageButton(page, 'Thêm thiết bị').click();
 
-    const hop = page.getByRole('dialog', { name: 'Thêm thiết bị' });
-    await expect(hop, 'bấm "Thêm thiết bị" phải mở đúng hộp mang tên đó').toBeVisible();
+    const dialog = page.getByRole('dialog', { name: 'Thêm thiết bị' });
+    await expect(dialog, 'bấm "Thêm thiết bị" phải mở đúng hộp mang tên đó').toBeVisible();
 
     /*
      * Năm tiêu đề cấp 2, không phải bốn: `Dialog` dựng tiêu đề hộp bằng `RD.Title` của Radix,
@@ -569,7 +569,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * lọt vào cùng tập hợp. Chốt cả năm, đúng thứ tự đọc từ trên xuống.
      */
     await expect
-      .poll(() => nhanCua(hop.getByRole('heading', { level: 2 })), {
+      .poll(() => labelOf(dialog.getByRole('heading', { level: 2 })), {
         message:
           'Form thiết bị chia đúng bốn khối dưới tiêu đề hộp, kể một mạch chuyện: là máy gì → đứng ở đâu → mua của ai → giấy tờ kèm theo',
       })
@@ -588,10 +588,10 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * "Vị trí trong tủ" mà không khai vào API) sẽ lọt qua sạch sẽ.
      */
     await expect(
-      hop.getByRole('textbox'),
+      dialog.getByRole('textbox'),
       'Hộp thêm thiết bị có đúng 6 ô gõ chữ: Mã · Tên · Model · Serial · Người sử dụng · Ghi chú',
     ).toHaveCount(6);
-    for (const nhan of [
+    for (const label of [
       'Mã thiết bị',
       'Tên thiết bị',
       'Model',
@@ -600,8 +600,8 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       'Ghi chú',
     ]) {
       await expect(
-        hop.getByLabel(nhan),
-        `Ô "${nhan}" phải là một ô gõ chữ có nhãn nối đúng — mất nhãn là người dùng bàn phím mất luôn ô`,
+        dialog.getByLabel(label),
+        `Ô "${label}" phải là một ô gõ chữ có nhãn nối đúng — mất nhãn là người dùng bàn phím mất luôn ô`,
       ).toHaveCount(1);
     }
 
@@ -611,7 +611,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * cấm khai một bộ phận vừa lập.
      */
     await expect(
-      hop.getByRole('combobox', { name: 'Bộ phận' }),
+      dialog.getByRole('combobox', { name: 'Bộ phận' }),
       'Ô Bộ phận phải là combobox (gõ tự do + gợi ý), không phải ô chọn cứng',
     ).toHaveCount(1);
 
@@ -622,7 +622,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * là KHÔNG có "Trạng thái" — quyết định cố ý của form thêm mới.
      */
     await expect
-      .poll(() => tenDieuKhien(hop.getByRole('button')), {
+      .poll(() => controlName(dialog.getByRole('button')), {
         message:
           'Bộ nút của hộp THÊM MỚI: bốn ô chọn, ba ô ngày + ba nút đặt nhanh hạn bảo hành, một ô chọn file, ba nút chân hộp — và TUYỆT NHIÊN không có ô "Trạng thái"',
       })
@@ -645,19 +645,19 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       ]);
 
     await expect
-      .poll(() => tenDieuKhien(page.getByTestId('dialog-footer').getByRole('button')), {
+      .poll(() => controlName(page.getByTestId('dialog-footer').getByRole('button')), {
         message: 'Chân hộp đi theo đúng nếp toàn app: Hủy trước, nút ghi chính sau cùng',
       })
       .toEqual(['Hủy', 'Ghi rồi thêm máy khác', 'Lưu']);
 
     /* Ô NGÀY mở ra một lịch thật, không phải một ô gõ chữ trá hình. */
-    const oNgayMua = hop.getByRole('button', { name: 'Ngày mua' });
-    await oNgayMua.click();
+    const purchaseDateField = dialog.getByRole('button', { name: 'Ngày mua' });
+    await purchaseDateField.click();
     await expect(
       page.getByRole('button', { name: 'Tháng sau' }),
       'Ô "Ngày mua" phải mở ra lịch chọn được (có nút lật tháng), không phải một ô trống',
     ).toBeVisible();
-    await oNgayMua.click();
+    await purchaseDateField.click();
     await expect(page.getByRole('button', { name: 'Tháng sau' })).toHaveCount(0);
 
     /*
@@ -665,14 +665,14 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * một cái máy phải là một loại cụ thể. Mục "— Chọn loại —" chỉ là chữ hiện trên nút khi
      * chưa chọn, không phải một lựa chọn bấm được.
      */
-    const loaiTrongForm = await luaChonCua(
+    const typeInForm = await optionsOf(
       page,
-      hop.getByRole('button', { name: 'Loại', exact: true }),
+      dialog.getByRole('button', { name: 'Loại', exact: true }),
     );
     expect(
-      [...loaiTrongForm].sort(),
+      [...typeInForm].sort(),
       'Ô "Loại" trong form phải bày đúng 12 loại của danh mục, KHÔNG kèm mục "Mọi loại" của thanh lọc',
-    ).toEqual([...LOAI_THIET_BI_GOC].sort());
+    ).toEqual([...BASE_DEVICE_TYPES].sort());
 
     /*
      * ĐƯỜNG HỎNG — BẤM LƯU KHI CÒN THIẾU (DEV-025).
@@ -682,28 +682,28 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * `aria-describedby`, tiêu điểm về ô lỗi đầu tiên, và hộp phải còn nguyên (đóng im lặng là
      * nuốt mất mọi thứ người dùng vừa gõ). Loại thiết bị là `Select` (nút bấm) — ô dễ rơi nhất.
      */
-    await hop.getByRole('button', { name: 'Lưu' }).click();
-    await expect(hop, 'Bấm Lưu khi form trống: hộp PHẢI còn đó').toBeVisible();
+    await dialog.getByRole('button', { name: 'Lưu' }).click();
+    await expect(dialog, 'Bấm Lưu khi form trống: hộp PHẢI còn đó').toBeVisible();
     await expect(
-      hop.getByText('Còn 3 ô cần sửa trước khi lưu.'),
+      dialog.getByText('Còn 3 ô cần sửa trước khi lưu.'),
       'Ba ô bắt buộc cùng thiếu thì đầu form tóm tắt số ô phải sửa',
     ).toBeVisible();
-    const oMa = hop.getByRole('textbox', { name: 'Mã thiết bị' });
-    await expect(oMa, 'Câu lỗi tiếng Việt nằm dưới và nối vào đúng ô Mã').toHaveAccessibleDescription(
+    const codeField = dialog.getByRole('textbox', { name: 'Mã thiết bị' });
+    await expect(codeField, 'Câu lỗi tiếng Việt nằm dưới và nối vào đúng ô Mã').toHaveAccessibleDescription(
       'Bắt buộc — chưa nhập ô này.',
     );
-    await expect(oMa, 'Tiêu điểm về ô lỗi đầu tiên').toBeFocused();
+    await expect(codeField, 'Tiêu điểm về ô lỗi đầu tiên').toBeFocused();
 
-    await oMa.fill(`TB-E2E-HOP-${stamp}`);
-    await hop.getByLabel('Tên thiết bị').fill('Máy chỉ để xem hộp thoại');
-    await hop.getByRole('button', { name: 'Lưu' }).click();
+    await codeField.fill(`TB-E2E-HOP-${stamp}`);
+    await dialog.getByLabel('Tên thiết bị').fill('Máy chỉ để xem hộp thoại');
+    await dialog.getByRole('button', { name: 'Lưu' }).click();
 
     await expect(
-      hop.getByRole('button', { name: 'Loại', exact: true }),
+      dialog.getByRole('button', { name: 'Loại', exact: true }),
       'Thiếu LOẠI thiết bị thì chính ô Loại phải nói ra, bằng tiếng Việt',
     ).toHaveAccessibleDescription('Bắt buộc — chưa chọn ô này.');
-    await expect(hop.getByText(/ô cần sửa trước khi lưu/), 'Còn một lỗi thì không cần tóm tắt').toHaveCount(0);
-    await expect(hop, 'và hộp vẫn phải mở để người dùng sửa nốt').toBeVisible();
+    await expect(dialog.getByText(/ô cần sửa trước khi lưu/), 'Còn một lỗi thì không cần tóm tắt').toHaveCount(0);
+    await expect(dialog, 'và hộp vẫn phải mở để người dùng sửa nốt').toBeVisible();
 
     /* HAI ĐƯỜNG ĐÓNG, KHÔNG LƯU GÌ. */
     /* Form đã gõ dở, nên lối đóng TÌNH CỜ phải hỏi lại trước (`Dialog guardUnsaved`) — trả
@@ -714,12 +714,12 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       'form 15 ô đã gõ hai ô mà Esc xoá trắng không hỏi là chỗ mất mát nặng nhất của repo',
     ).toBeVisible();
     await confirmAction(page, 'Bỏ và đóng');
-    await expect(hop, 'trả lời xong thì Esc phải đóng được hộp thêm thiết bị').toHaveCount(0);
+    await expect(dialog, 'trả lời xong thì Esc phải đóng được hộp thêm thiết bị').toHaveCount(0);
 
     await devicesPageButton(page, 'Thêm thiết bị').click();
-    await expect(hop).toBeVisible();
-    await hop.getByRole('button', { name: 'Đóng hộp thoại' }).click();
-    await expect(hop, 'nút ✕ cũng phải đóng được hộp').toHaveCount(0);
+    await expect(dialog).toBeVisible();
+    await dialog.getByRole('button', { name: 'Đóng hộp thoại' }).click();
+    await expect(dialog, 'nút ✕ cũng phải đóng được hộp').toHaveCount(0);
 
     await expect(
       page.getByRole('cell', { name: `TB-E2E-HOP-${stamp}` }),
@@ -757,7 +757,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     const stamp = uniqueStamp();
     const code = `TB-E2E-SUA-${stamp}`;
     const headers = await writeHeaders(page);
-    const deviceTypeId = await idLoaiSwitch(page);
+    const deviceTypeId = await switchTypeId(page);
 
     const created = await page.request.post('/api/v1/devices', {
       headers,
@@ -783,9 +783,9 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await expect(page.getByRole('cell', { name: code, exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: `Sửa máy ${code}` }).click();
-    const hopSua = page.getByRole('dialog', { name: `Sửa hồ sơ — ${code}` });
+    const editDialog = page.getByRole('dialog', { name: `Sửa hồ sơ — ${code}` });
     await expect(
-      hopSua,
+      editDialog,
       'Tiêu đề hộp sửa phải mang MÃ MÁY — mở hai tab rồi lẫn lộn hai cái máy là hỏng thật, không phải hỏng đẹp',
     ).toBeVisible();
 
@@ -795,7 +795,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * `toHaveValue` chứ không phải `toBeVisible`: một ô hiện ra nhưng RỖNG mới đúng là kiểu
      * hỏng đang rình ở đây.
      */
-    for (const [nhan, giaTri] of [
+    for (const [label, value] of [
       ['Mã thiết bị', code],
       ['Tên thiết bị', 'Switch tầng 3 của bài kiểm kê'],
       ['Model', 'C9200-24P'],
@@ -804,20 +804,20 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       ['Ghi chú', 'Ghi chú mồi để đọc lại ở form sửa'],
     ]) {
       await expect(
-        hopSua.getByLabel(nhan),
-        `Ô "${nhan}" của form SỬA phải mang sẵn giá trị cũ — form gửi đủ mọi trường lên API, ô trống nghĩa là XÓA`,
-      ).toHaveValue(giaTri);
+        editDialog.getByLabel(label),
+        `Ô "${label}" của form SỬA phải mang sẵn giá trị cũ — form gửi đủ mọi trường lên API, ô trống nghĩa là XÓA`,
+      ).toHaveValue(value);
     }
     await expect(
-      hopSua.getByRole('combobox', { name: 'Bộ phận' }),
+      editDialog.getByRole('combobox', { name: 'Bộ phận' }),
       'Ô Bộ phận (combobox) cũng phải điền sẵn',
     ).toHaveValue('Phòng CNTT');
     await expect(
-      hopSua.getByRole('button', { name: 'Loại', exact: true }),
+      editDialog.getByRole('button', { name: 'Loại', exact: true }),
       'Nút ô chọn Loại phải hiện đúng loại đang gắn, không phải chữ "— Chọn loại —"',
     ).toHaveText('Switch');
     await expect(
-      hopSua.getByRole('button', { name: 'Trạng thái', exact: true }),
+      editDialog.getByRole('button', { name: 'Trạng thái', exact: true }),
       'Nút ô chọn Trạng thái phải hiện đúng trạng thái hiện tại',
     ).toHaveText('Đang dùng');
 
@@ -827,7 +827,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      *   + "Tải lên": hồ sơ đã có id nên giấy tờ đẩy lên được NGAY, không phải chờ lưu xong.
      */
     await expect
-      .poll(() => tenDieuKhien(hopSua.getByRole('button')), {
+      .poll(() => controlName(editDialog.getByRole('button')), {
         message:
           'Chế độ SỬA = chế độ THÊM cộng ô "Trạng thái", bớt nút "Ghi rồi thêm máy khác"; khu giấy tờ ghi thẳng (chọn là tải, không có nút "Tải lên")',
       })
@@ -850,7 +850,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       ]);
 
     await page.keyboard.press('Escape');
-    await expect(hopSua, 'Esc đóng hộp sửa').toHaveCount(0);
+    await expect(editDialog, 'Esc đóng hộp sửa').toHaveCount(0);
     await expect(
       page.getByRole('cell', { name: 'Switch tầng 3 của bài kiểm kê' }),
       'Đóng bằng Esc thì hồ sơ phải y nguyên, không lưu gì cả',
@@ -858,11 +858,11 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
 
     /* ===== HỘP NHẬP TỪ EXCEL, LÚC VỪA MỞ RA ===== */
     await page.getByRole('button', { name: 'Nhập từ Excel' }).click();
-    const hopNhap = page.getByRole('dialog', { name: 'Nhập thiết bị từ Excel' });
-    await expect(hopNhap).toBeVisible();
+    const importDialog = page.getByRole('dialog', { name: 'Nhập thiết bị từ Excel' });
+    await expect(importDialog).toBeVisible();
 
     await expect
-      .poll(() => tenDieuKhien(hopNhap.getByRole('button')), {
+      .poll(() => controlName(importDialog.getByRole('button')), {
         message:
           'Hộp nhập có đúng: ✕ · ô chọn file · Tải file mẫu · Hủy · Đối chiếu · Xác nhận ghi — ba bước, đúng thứ tự đối chiếu-trước-ghi-sau',
       })
@@ -877,23 +877,23 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
       ]);
 
     await expect(
-      hopNhap.getByRole('button', { name: 'Đối chiếu' }),
+      importDialog.getByRole('button', { name: 'Đối chiếu' }),
       'Chưa chọn file thì nút Đối chiếu phải TẮT',
     ).toBeDisabled();
     await expect(
-      hopNhap.getByRole('button', { name: 'Xác nhận ghi' }),
+      importDialog.getByRole('button', { name: 'Xác nhận ghi' }),
       'Chưa có bảng đối chiếu thì nút ghi phải TẮT — bật sẵn là mở đường ghi mù vào cả kho thiết bị',
     ).toBeDisabled();
     await expect(
-      hopNhap.getByText(
+      importDialog.getByText(
         'Dùng file mẫu hoặc file vừa xuất Excel. Site, tủ mạng, loại thiết bị, nhà cung cấp phải ' +
         'khai trong Danh mục trước — hệ thống không tự tạo.',
       ),
       'Hộp nhập phải tự nói ra điều kiện tiên quyết, không để người dùng đoán',
     ).toBeVisible();
 
-    await hopNhap.getByRole('button', { name: 'Đóng hộp thoại' }).click();
-    await expect(hopNhap, 'nút ✕ đóng được hộp nhập').toHaveCount(0);
+    await importDialog.getByRole('button', { name: 'Đóng hộp thoại' }).click();
+    await expect(importDialog, 'nút ✕ đóng được hộp nhập').toHaveCount(0);
   });
 
   /*
@@ -934,7 +934,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
     await form.getByRole('button', { name: 'Lưu' }).click();
     await expect(form, 'lưu xong thì hộp phải đóng').toHaveCount(0);
 
-    await timVaChoLoc(page, code);
+    await searchAndWaitForFilter(page, code);
     await page.getByRole('main').getByRole('link', { name: code, exact: true }).click();
     await expect(page.getByRole('heading', { level: 1, name: new RegExp(code) })).toBeVisible();
 
@@ -962,7 +962,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
 
     /* ===== TAB HỒ SƠ ===== */
     await expect
-      .poll(() => tenDieuKhien(main.getByRole('button')), {
+      .poll(() => controlName(main.getByRole('button')), {
         message:
           'Đầu hồ sơ thiết bị: chép mã, sửa, đổi trạng thái, nhân bản, thanh lý; tab Tổng quan thêm "Bổ sung n ô" và "Cấp IP" — không nút nào khác',
       })
@@ -988,10 +988,10 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      *
      * Luật bài kiểm giữ: ô KHÔNG có giá trị thì không vẽ ra ô nào.
      */
-    for (const nhan of ['Model', 'Serial', 'Nhà cung cấp', 'Ngày mua', 'Ghi chú']) {
+    for (const label of ['Model', 'Serial', 'Nhà cung cấp', 'Ngày mua', 'Ghi chú']) {
       await expect(
-        panel.getByText(nhan, { exact: true }),
-        `Máy này chưa khai "${nhan}" nên KHÔNG được vẽ một ô rỗng cho nó — tên của nó chỉ được xuất hiện trong dòng "Chưa khai"`,
+        panel.getByText(label, { exact: true }),
+        `Máy này chưa khai "${label}" nên KHÔNG được vẽ một ô rỗng cho nó — tên của nó chỉ được xuất hiện trong dòng "Chưa khai"`,
       ).toHaveCount(0);
     }
     await expect(
@@ -1012,7 +1012,7 @@ test.describe('Phòng Thiết bị — bên trong có gì', () => {
      * trị đã await)` thì không.
      */
     await expect
-      .poll(() => nhanCua(panel.getByRole('heading', { level: 2 })), {
+      .poll(() => labelOf(panel.getByRole('heading', { level: 2 })), {
         message:
           'Port map luôn kể HAI chiều: cổng của máy này, và ai đang cắm vào nó (AD-14 — một sợi dây một bản ghi)',
       })

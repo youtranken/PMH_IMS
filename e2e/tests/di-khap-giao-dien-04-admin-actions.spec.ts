@@ -10,7 +10,7 @@ import {
   resetUsers,
   rowAction,
   sql,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
 } from './helpers';
@@ -89,7 +89,7 @@ test.describe('Ba cửa quản trị chưa ai bấm bằng tay', () => {
       // của danh sách CHƯA lọc, nên câu chờ xanh ngay, rồi lượt nạp lại đổ xuống giữa lúc menu
       // ba chấm đang mở và giật nó khỏi DOM. Lý do đầy đủ: `di-khap-giao-dien-09-catalog-accounts-kit.spec.ts`, bài
       // "Phòng Tài khoản".
-      await timVaChoLoc(page, 'E2E Thành viên');
+      await searchAndWaitForFilter(page, 'E2E Thành viên');
       await expect(page.getByRole('table').getByRole('row')).toHaveCount(2);
       await expect(page.getByRole('button', { name: 'Thao tác với E2E Thành viên' })).toBeVisible();
 

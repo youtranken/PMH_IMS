@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { E2E_SA, firstLogin, horizontalOverflow, resetUsers, rowAction, sql, timVaChoLoc } from './helpers';
+import { E2E_SA, firstLogin, horizontalOverflow, resetUsers, rowAction, sql, searchAndWaitForFilter } from './helpers';
 
 test.beforeEach(() => resetUsers());
 
@@ -12,16 +12,16 @@ test('Phiên đang mở ở 390px: thẻ thiết bị · IP, nút Đóng phiên 
 }) => {
   await firstLogin(page, E2E_SA);
   await page.goto('/admin/accounts');
-  const hoTen = sql(`SELECT full_name FROM users WHERE email = '${E2E_SA.email}'`);
-  await timVaChoLoc(page, E2E_SA.email);
-  await rowAction(page, hoTen, 'Phiên đang mở');
+  const fullName = sql(`SELECT full_name FROM users WHERE email = '${E2E_SA.email}'`);
+  await searchAndWaitForFilter(page, E2E_SA.email);
+  await rowAction(page, fullName, 'Phiên đang mở');
 
-  const hop = page.getByRole('dialog', { name: `Phiên đang mở: ${hoTen}` });
-  await expect(hop).toBeVisible();
+  const dialog = page.getByRole('dialog', { name: `Phiên đang mở: ${fullName}` });
+  await expect(dialog).toBeVisible();
   // Thẻ, không phải bảng.
-  await expect(hop.getByRole('table')).toHaveCount(0);
-  await expect(hop.getByRole('listitem').first()).toContainText(/Hoạt động/);
-  const nut = hop.getByRole('button', { name: 'Đóng phiên' }).first();
-  await expect(nut).toBeInViewport();
+  await expect(dialog.getByRole('table')).toHaveCount(0);
+  await expect(dialog.getByRole('listitem').first()).toContainText(/Hoạt động/);
+  const button = dialog.getByRole('button', { name: 'Đóng phiên' }).first();
+  await expect(button).toBeInViewport();
   expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 });

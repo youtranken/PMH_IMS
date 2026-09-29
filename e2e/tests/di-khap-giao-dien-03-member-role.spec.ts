@@ -88,8 +88,8 @@ test.describe('Thành viên thấy một hệ thống hẹp hơn', () => {
 
     // Nhãn nhóm vẫn phải còn: "Hệ thống" biến mất nghĩa là Danh mục cũng đã rơi mất; nhóm
     // "Dành cho nhà phát triển" chỉ SA thấy (SHELL-008, SHELL-012).
-    for (const nhom of ['Tổng quan', 'Tài sản', 'Mạng', 'Bảo mật', 'Hệ thống']) {
-      await expect(nav.getByText(nhom, { exact: true })).toBeVisible();
+    for (const group of ['Tổng quan', 'Tài sản', 'Mạng', 'Bảo mật', 'Hệ thống']) {
+      await expect(nav.getByText(group, { exact: true })).toBeVisible();
     }
     await expect(nav.getByText('Dành cho nhà phát triển', { exact: true })).toHaveCount(0);
 

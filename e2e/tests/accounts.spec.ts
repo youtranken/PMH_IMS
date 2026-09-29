@@ -9,7 +9,7 @@ import {
   resetUsers,
   rowAction,
   rowActionNames,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   SECOND_BROWSER,
   writeHeaders,
   uniqueStamp,
@@ -360,15 +360,15 @@ test('/admin/accounts giữ ô tìm và thứ tự trên URL — chia sẻ đư�
   await page.getByRole('link', { name: 'Người dùng IMS', exact: true }).click();
   await expect(page).toHaveURL(/\/admin\/accounts$/);
 
-  await timVaChoLoc(page, 'e2e-thanh-vien');
+  await searchAndWaitForFilter(page, 'e2e-thanh-vien');
   // Đếm khi bảng đã vẽ xong; đếm sớm ra 0 rồi so với bảng sau reload là đỏ chập chờn.
   await expect(page.getByRole('row').first()).toBeVisible();
-  const soDong = await page.getByRole('row').count();
+  const rowCount = await page.getByRole('row').count();
 
   // 1. Reload giữ nguyên kết quả — tức link chia sẻ được.
   await page.reload();
   await expect(page.getByRole('searchbox', { name: /Tìm/ })).toHaveValue('e2e-thanh-vien');
-  await expect(page.getByRole('row')).toHaveCount(soDong);
+  await expect(page.getByRole('row')).toHaveCount(rowCount);
 
   // 2. Sắp xếp cũng đi vào URL.
   await page.getByRole('button', { name: 'Họ tên' }).click();

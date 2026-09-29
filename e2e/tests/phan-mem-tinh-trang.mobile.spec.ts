@@ -6,7 +6,7 @@ import {
   isoInDays,
   resetSoftware,
   resetUsers,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   uniqueStamp,
   writeHeaders,
 } from './helpers';
@@ -37,7 +37,7 @@ test('danh sách phần mềm ở 390px là thẻ gọn 3 dòng, chạm thẻ m�
   expect(res.status()).toBe(201);
 
   await page.goto('/software');
-  await timVaChoLoc(page, code);
+  await searchAndWaitForFilter(page, code);
   const card = page.getByRole('listitem').filter({ has: page.getByRole('link', { name: code }) });
   await expect(card).toHaveCount(1);
   await expect(card.getByText('Hết hạn', { exact: true })).toBeVisible();

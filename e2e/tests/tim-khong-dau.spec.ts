@@ -6,7 +6,7 @@ import {
   resetCatalog,
   resetDevices,
   resetUsers,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   uniqueStamp,
 } from './helpers';
 
@@ -39,7 +39,7 @@ test.beforeEach(() => {
 });
 
 /** Tạo một thiết bị mang tên TIẾNG VIỆT CÓ DẤU. Trả về mã đã dùng. */
-async function taoThietBiCoDau(page: Page, stamp: string): Promise<string> {
+async function createDeviceWithDiacritics(page: Page, stamp: string): Promise<string> {
   const code = `PC-E2E-VN-${stamp}`;
   await page.goto('/devices');
   await devicesPageButton(page, 'Thêm thiết bị').click();
@@ -60,24 +60,24 @@ test.describe('Tìm kiếm tiếng Việt không dấu', () => {
   }) => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
-    const code = await taoThietBiCoDau(page, stamp);
+    const code = await createDeviceWithDiacritics(page, stamp);
     const row = page.getByRole('row', { name: new RegExp(code) });
 
     // Đây là câu hỏi trung tâm của cả file: không gấp dấu thì dòng này trả về 0 hàng.
-    await timVaChoLoc(page, 'may tram');
+    await searchAndWaitForFilter(page, 'may tram');
     await expect(row).toBeVisible();
 
     // `đ` không phải ký tự tổ hợp nên `NFD` không tách được — nó phải được thay riêng, ở cả
     // ba bản gấp dấu. Ô này là chỗ duy nhất bắt được nếu một bản quên.
-    await timVaChoLoc(page, 'duong moi');
+    await searchAndWaitForFilter(page, 'duong moi');
     await expect(row).toBeVisible();
 
     // Chữa bệnh này KHÔNG được làm mắc bệnh ngược lại: gõ đủ dấu vẫn phải ra.
-    await timVaChoLoc(page, 'Máy trạm');
+    await searchAndWaitForFilter(page, 'Máy trạm');
     await expect(row).toBeVisible();
 
     // Và mã vẫn tìm được như cũ — cột sinh gộp bốn cột, không thay thế cột nào.
-    await timVaChoLoc(page, code);
+    await searchAndWaitForFilter(page, code);
     await expect(row).toBeVisible();
   });
 
@@ -86,9 +86,9 @@ test.describe('Tìm kiếm tiếng Việt không dấu', () => {
   }) => {
     await firstLogin(page, E2E_SA);
     const stamp = uniqueStamp();
-    const code = await taoThietBiCoDau(page, stamp);
+    const code = await createDeviceWithDiacritics(page, stamp);
 
-    await timVaChoLoc(page, 'may chu ao hoa');
+    await searchAndWaitForFilter(page, 'may chu ao hoa');
     await expect(page.getByRole('row', { name: new RegExp(code) })).toHaveCount(0);
     /*
      * Hai câu trả lời KHÁC NHAU, không được gộp làm một: "kho trống" dẫn người đọc tới kết
@@ -152,13 +152,13 @@ test.describe('Tìm kiếm tiếng Việt không dấu', () => {
     // Soi TRONG nhóm "Màn hình", không soi cả hộp: bốn nhóm kia là kết quả API và chúng cũng
     // có thể chứa chữ "Thiết bị". Khoanh vào đúng nhóm là cách duy nhất để ô này chỉ xanh
     // được vì phép gấp dấu ở trình duyệt, chứ không xanh nhờ một hồ sơ trùng chữ.
-    const manHinh = palette.getByRole('group', { name: 'Màn hình' });
+    const screen = palette.getByRole('group', { name: 'Màn hình' });
 
     await palette.getByRole('combobox').fill('thiet bi');
-    await expect(manHinh.getByRole('option', { name: /^Thiết bị/ })).toBeVisible();
+    await expect(screen.getByRole('option', { name: /^Thiết bị/ })).toBeVisible();
 
     // Và vẫn tìm được khi gõ đủ dấu — chữa bệnh này không được làm mắc bệnh ngược lại.
     await palette.getByRole('combobox').fill('Sổ NAT');
-    await expect(manHinh.getByRole('option', { name: /^Sổ NAT/ })).toBeVisible();
+    await expect(screen.getByRole('option', { name: /^Sổ NAT/ })).toBeVisible();
   });
 });

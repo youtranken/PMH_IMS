@@ -6,7 +6,7 @@ import {
   resetCatalog,
   resetDevices,
   resetUsers,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   uniqueStamp,
   writeHeaders,
 } from './helpers';
@@ -61,7 +61,7 @@ test.describe('DEV-005 · danh sách thiết bị là thẻ gọn trên điện 
     });
 
     await page.goto('/devices');
-    await timVaChoLoc(page, code);
+    await searchAndWaitForFilter(page, code);
     const card = page.getByRole('listitem').filter({ hasText: code });
     await expect(card).toBeVisible();
     await expect(card).toContainText('Máy trạm kế toán');
@@ -83,10 +83,10 @@ test.describe('DEV-005 · danh sách thiết bị là thẻ gọn trên điện 
   test('đường hỏng: lọc không ra thì nói không khớp, không vẽ thẻ rỗng', async ({ page }) => {
     await firstLogin(page, E2E_SA);
     await page.goto('/devices');
-    const tuKhoa = `KHONG-CO-E2E-${uniqueStamp()}`;
-    await timVaChoLoc(page, tuKhoa);
+    const keyword = `KHONG-CO-E2E-${uniqueStamp()}`;
+    await searchAndWaitForFilter(page, keyword);
     // Câu rỗng nêu lại đúng từ khoá vừa gõ (DEV-009).
-    await expect(page.getByText(`Không có thiết bị nào khớp “${tuKhoa}”.`)).toBeVisible();
+    await expect(page.getByText(`Không có thiết bị nào khớp “${keyword}”.`)).toBeVisible();
     await expect(page.getByRole('listitem').filter({ hasText: 'E2E' })).toHaveCount(0);
   });
 });

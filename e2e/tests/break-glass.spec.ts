@@ -161,11 +161,11 @@ test.describe('Break-glass', () => {
     await expect(member.getByText(/Bạn được xem tới/)).toBeVisible();
     await memberCtx.close();
 
-    const vet = lastAudit('vault.secret.revealed', secretId);
-    expect(vet?.actor, 'vết phải mang tên người vừa xem').toBe(E2E_MEMBER.email);
-    const chiTiet = JSON.parse(vet?.detail ?? '{}') as { grantId?: string | null };
+    const trace = lastAudit('vault.secret.revealed', secretId);
+    expect(trace?.actor, 'vết phải mang tên người vừa xem').toBe(E2E_MEMBER.email);
+    const detail = JSON.parse(trace?.detail ?? '{}') as { grantId?: string | null };
     expect(
-      chiTiet.grantId,
+      detail.grantId,
       'xem qua đường break-glass thì vết PHẢI trỏ tới phiếu đã duyệt, không được null',
     ).toEqual(expect.any(String));
 
@@ -173,7 +173,7 @@ test.describe('Break-glass', () => {
        LỌC CẢ NGƯỜI XIN: lý do là một chuỗi cố định, nên một phiếu demo hay phiếu
        thật trùng lý do — `du-lieu-demo` có gieo — sẽ bị `ORDER BY created_at DESC LIMIT 1` bốc
        nhầm và làm bài đỏ oan ở dòng khẳng định ngay dưới. */
-    const phieu = execSync(
+    const ticketId = execSync(
       `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
         `"SELECT id FROM approval WHERE reason = 'switch tầng 3 mất kết nối' ` +
         `AND requester = '${E2E_MEMBER.email}' ` +
@@ -182,7 +182,7 @@ test.describe('Break-glass', () => {
     )
       .toString()
       .trim();
-    expect(chiTiet.grantId, 'phải là ĐÚNG phiếu vừa được duyệt').toBe(phieu);
+    expect(detail.grantId, 'phải là ĐÚNG phiếu vừa được duyệt').toBe(ticketId);
   });
 
   /**

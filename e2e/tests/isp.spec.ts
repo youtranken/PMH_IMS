@@ -98,9 +98,9 @@ test.describe('Đường truyền ISP', () => {
     await page.reload();
     await expect(page.getByRole('heading', { name: 'Đường truyền ISP' })).toBeVisible();
     // Hỏi trong KHU "Đường truyền ISP": bản đồ quan hệ ở đầu trang cũng in hotline ra một dòng.
-    const khuIsp = page.getByRole('region', { name: 'Đường truyền ISP' });
-    await expect(khuIsp.getByText('18008098')).toBeVisible();
-    await expect(khuIsp.getByText(`HD-FW-${stamp}`)).toBeVisible();
+    const ispSection = page.getByRole('region', { name: 'Đường truyền ISP' });
+    await expect(ispSection.getByText('18008098')).toBeVisible();
+    await expect(ispSection.getByText(`HD-FW-${stamp}`)).toBeVisible();
   });
 
   test('đường hỏng: thiếu nhà mạng, gửi ngày hết hạn, thiết bị không tồn tại', async ({ page }) => {

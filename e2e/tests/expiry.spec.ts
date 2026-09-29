@@ -337,8 +337,8 @@ test.describe('Cỗ máy Expiry', () => {
     });
 
     await page.goto('/expiry');
-    const hang = page.getByRole('link', { name: new RegExp(`SSL-E2E-URL-${stamp}`) });
-    await expect(hang).toBeVisible();
+    const linkRow = page.getByRole('link', { name: new RegExp(`SSL-E2E-URL-${stamp}`) });
+    await expect(linkRow).toBeVisible();
 
     // Bấm ô "Đã quá hạn" → trạng thái phải hiện lên thanh địa chỉ, không nằm trong bộ nhớ.
     await page.getByRole('button', { name: /\d+\s*Đã quá hạn/ }).click();
@@ -347,13 +347,13 @@ test.describe('Cỗ máy Expiry', () => {
     // F5: bộ lọc còn nguyên, và dòng vẫn ở đó.
     await page.reload();
     await expect(page).toHaveURL(/[?&]state=expired/);
-    await expect(hang).toBeVisible();
+    await expect(linkRow).toBeVisible();
 
     // Mở hồ sơ rồi bấm Back — không được rơi về một bảng chưa lọc.
-    await hang.click();
+    await linkRow.click();
     await expect(page).toHaveURL(/\/software\//);
     await page.goBack();
     await expect(page).toHaveURL(/[?&]state=expired/);
-    await expect(hang).toBeVisible();
+    await expect(linkRow).toBeVisible();
   });
 });

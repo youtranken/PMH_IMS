@@ -228,15 +228,15 @@ test.describe('Bản kiểm kê tự canh chính nó', () => {
     'dấu tick phải nói đúng trạng thái: [x] chạy thật, [~] đang treo, [ ] chưa có bài',
   ];
 
-  interface Muc {
+  interface InventoryEntry {
     mark: string;
     label: string;
     title: string | null;
   }
 
   /** Đọc bản kiểm kê: `[x] nhãn` và dòng `→ tên bài` đi ngay sau nó (nếu có). */
-  function docKiemKe(): Muc[] {
-    const out: Muc[] = [];
+  function readInventory(): InventoryEntry[] {
+    const out: InventoryEntry[] = [];
     const lines = source.split('\n');
     for (let i = 0; i < lines.length; i += 1) {
       const item = /^ \* \[([x~ ])\] (.+)$/.exec(lines[i]);
@@ -248,7 +248,7 @@ test.describe('Bản kiểm kê tự canh chính nó', () => {
   }
 
   /** Mọi bài trong file, kèm cờ nó có đang `test.fixme` hay không. */
-  function docCacBai(): { title: string; fixme: boolean }[] {
+  function readTests(): { title: string; fixme: boolean }[] {
     const out: { title: string; fixme: boolean }[] = [];
     const re = /^ {2}test(\.fixme)?\(\s*\n?\s*'([^']+)'/gm;
     let m: RegExpExecArray | null;
@@ -264,56 +264,56 @@ test.describe('Bản kiểm kê tự canh chính nó', () => {
    * trong khi chẳng kiểm gì cả. Chốt sàn để kiểu hỏng đó không im lặng được.
    */
   test('mỗi dòng → trong bản kiểm kê phải trỏ tới một bài CÓ THẬT', () => {
-    const kiemKe = docKiemKe();
-    const bai = docCacBai();
-    expect(kiemKe.length, 'không đọc được bản kiểm kê — cổng này đang mù').toBeGreaterThan(50);
-    expect(bai.length, 'không đọc được bài kiểm nào — cổng này đang mù').toBeGreaterThan(50);
+    const inventory = readInventory();
+    const tests = readTests();
+    expect(inventory.length, 'không đọc được bản kiểm kê — cổng này đang mù').toBeGreaterThan(50);
+    expect(tests.length, 'không đọc được bài kiểm nào — cổng này đang mù').toBeGreaterThan(50);
 
-    const coThat = new Set(bai.map((b) => b.title));
-    const treoLoLung = kiemKe
-      .filter((m) => m.title !== null && !coThat.has(m.title))
+    const actual = new Set(tests.map((b) => b.title));
+    const dangling = inventory
+      .filter((m) => m.title !== null && !actual.has(m.title))
       .map((m) => `[${m.mark}] ${m.label} → ${m.title ?? ''}`);
     expect(
-      treoLoLung,
+      dangling,
       'bản kiểm kê tick cho một bài không còn tồn tại — đổi tên bài thì phải sửa cả dòng → của nó',
     ).toEqual([]);
   });
 
   test('mỗi bài trong file phải có mặt đúng một lần trong bản kiểm kê', () => {
-    const kiemKe = docKiemKe();
-    const bai = docCacBai().filter((b) => !GATE_TITLES.includes(b.title));
-    expect(bai.length, 'không đọc được bài kiểm nào — cổng này đang mù').toBeGreaterThan(50);
+    const inventory = readInventory();
+    const tests = readTests().filter((b) => !GATE_TITLES.includes(b.title));
+    expect(tests.length, 'không đọc được bài kiểm nào — cổng này đang mù').toBeGreaterThan(50);
 
-    const daKhai = kiemKe.map((m) => m.title).filter((t): t is string => t !== null);
-    const chuaKhai = bai.map((b) => b.title).filter((t) => !daKhai.includes(t));
+    const declared = inventory.map((m) => m.title).filter((t): t is string => t !== null);
+    const undeclared = tests.map((b) => b.title).filter((t) => !declared.includes(t));
     expect(
-      chuaKhai,
+      undeclared,
       'có bài kiểm không nằm trong bản kiểm kê — thêm bài thì phải khai vào, không thì bản đồ thiếu một phòng',
     ).toEqual([]);
 
-    const khaiTrung = daKhai.filter((t, i) => daKhai.indexOf(t) !== i);
-    expect(khaiTrung, 'một bài được khai hai lần — bản kiểm kê phải là ánh xạ một-một').toEqual([]);
+    const duplicateDeclarations = declared.filter((t, i) => declared.indexOf(t) !== i);
+    expect(duplicateDeclarations, 'một bài được khai hai lần — bản kiểm kê phải là ánh xạ một-một').toEqual([]);
   });
 
   test('dấu tick phải nói đúng trạng thái: [x] chạy thật, [~] đang treo, [ ] chưa có bài', () => {
-    const kiemKe = docKiemKe();
-    const fixme = new Set(docCacBai().filter((b) => b.fixme).map((b) => b.title));
-    expect(kiemKe.length, 'không đọc được bản kiểm kê — cổng này đang mù').toBeGreaterThan(50);
+    const inventory = readInventory();
+    const fixme = new Set(readTests().filter((b) => b.fixme).map((b) => b.title));
+    expect(inventory.length, 'không đọc được bản kiểm kê — cổng này đang mù').toBeGreaterThan(50);
 
-    const noiDoi: string[] = [];
-    for (const m of kiemKe) {
+    const falseClaims: string[] = [];
+    for (const m of inventory) {
       if (m.mark === 'x') {
-        if (m.title === null) noiDoi.push(`[x] "${m.label}" — tick mà không chỉ ra bài nào giữ nó`);
-        else if (fixme.has(m.title)) noiDoi.push(`[x] "${m.label}" — bài đang test.fixme, phải là [~]`);
+        if (m.title === null) falseClaims.push(`[x] "${m.label}" — tick mà không chỉ ra bài nào giữ nó`);
+        else if (fixme.has(m.title)) falseClaims.push(`[x] "${m.label}" — bài đang test.fixme, phải là [~]`);
       } else if (m.mark === '~') {
-        if (m.title === null) noiDoi.push(`[~] "${m.label}" — treo mà không chỉ ra bài nào`);
-        else if (!fixme.has(m.title)) noiDoi.push(`[~] "${m.label}" — bài đã chạy thật rồi, phải là [x]`);
+        if (m.title === null) falseClaims.push(`[~] "${m.label}" — treo mà không chỉ ra bài nào`);
+        else if (!fixme.has(m.title)) falseClaims.push(`[~] "${m.label}" — bài đã chạy thật rồi, phải là [x]`);
       } else if (m.title !== null) {
-        noiDoi.push(`[ ] "${m.label}" — nói chưa đi mà lại chỉ ra một bài; sửa dấu thành [x] hoặc [~]`);
+        falseClaims.push(`[ ] "${m.label}" — nói chưa đi mà lại chỉ ra một bài; sửa dấu thành [x] hoặc [~]`);
       }
     }
     expect(
-      noiDoi,
+      falseClaims,
       'dấu tick nói một đằng, bài kiểm làm một nẻo — đây đúng là kiểu hỏng bản kiểm kê sinh ra để chặn',
     ).toEqual([]);
   });

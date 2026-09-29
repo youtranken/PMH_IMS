@@ -290,7 +290,7 @@ export function countAudit(action: string, objectId: string): number {
 export function countAuditByActor(action: string, actor: string): number {
   const out = dockerExec(
     `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
-      `"SELECT count(*) FROM audit_log WHERE action = '${chuoiSql(action)}' AND actor = '${chuoiSql(actor)}'"`,
+      `"SELECT count(*) FROM audit_log WHERE action = '${sqlString(action)}' AND actor = '${sqlString(actor)}'"`,
     'Đếm dòng audit theo người',
   );
   return Number(out.trim());
@@ -313,8 +313,8 @@ export function auditIpOf(action: string, actor: string): string {
     `${COMPOSE} exec -T postgres psql -U ims -d ims -t -A -c ` +
       /* `ip` là cột **text**, không phải `inet` — `host()` chỉ nhận `inet` và ném
          "function host(text) does not exist". Đã đo: `information_schema` báo `ip|text`. */
-      `"SELECT coalesce(ip, '') FROM audit_log WHERE action = '${chuoiSql(action)}' ` +
-      `AND actor = '${chuoiSql(actor)}' ORDER BY created_at DESC LIMIT 1"`,
+      `"SELECT coalesce(ip, '') FROM audit_log WHERE action = '${sqlString(action)}' ` +
+      `AND actor = '${sqlString(actor)}' ORDER BY created_at DESC LIMIT 1"`,
     'Đọc IP của dòng audit',
   ).trim();
 }
@@ -328,7 +328,7 @@ export function auditIpOf(action: string, actor: string): string {
  * phải một hàng rào. Nhân đôi nháy đơn là phép thoát của chính SQL, và chặn luôn ký tự lạ để
  * hỏng SỚM với câu nói đúng bệnh.
  */
-function chuoiSql(v: string): string {
+function sqlString(v: string): string {
   if (!/^[\w.@+\- :]*$/.test(v)) {
     throw new Error(`Tham số SQL có ký tự lạ, từ chối ghép vào câu lệnh: ${JSON.stringify(v)}`);
   }
@@ -935,8 +935,8 @@ export function horizontalOverflow(page: Page): Promise<number> {
  * thanh địa chỉ, tức nhịp lắng đã bắn thật — rồi chốt thêm số dòng của bảng nếu bước sau có
  * đụng vào menu của một hàng.
  */
-export async function timVaChoLoc(page: Page, tuKhoa: string): Promise<void> {
-  await page.getByRole('searchbox', { name: /Tìm/ }).fill(tuKhoa);
+export async function searchAndWaitForFilter(page: Page, keyword: string): Promise<void> {
+  await page.getByRole('searchbox', { name: /Tìm/ }).fill(keyword);
   /*
    * CHỜ ĐÚNG GIÁ TRỊ, KHÔNG CHỜ "CÓ `q=` LÀ ĐƯỢC".
    *
@@ -950,12 +950,12 @@ export async function timVaChoLoc(page: Page, tuKhoa: string): Promise<void> {
   /* Mã hoá bằng CHÍNH `URLSearchParams` — thứ `useListUrlState` dùng để ghi. Không dùng
      `encodeURIComponent`: nó cho dấu cách thành `%20`, còn `URLSearchParams` cho `+`, nên một
      từ khoá có dấu cách sẽ không bao giờ khớp. */
-  const mong = new URLSearchParams({ q: tuKhoa }).toString();
-  const ma = mong.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const expectedQuery = new URLSearchParams({ q: keyword }).toString();
+  const escaped = expectedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   /* `(&|#|$)`: skip-link đặt `#noi-dung` lên thanh địa chỉ, nên `q=` không phải lúc nào cũng ở
      CUỐI chuỗi. Thiếu `#` là helper chờ tới hết giờ với thông báo chẳng liên quan tới thứ đang
      kiểm — đúng loại lỗi khó lần nhất trong một bộ E2E 34 phút. */
-  await expect(page).toHaveURL(new RegExp(`[?&]${ma}(&|#|$)`));
+  await expect(page).toHaveURL(new RegExp(`[?&]${escaped}(&|#|$)`));
 }
 
 /**

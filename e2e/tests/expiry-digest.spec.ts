@@ -68,7 +68,7 @@ function inDays(days: number): string {
  * Phần đang kiểm — "MỘT thư cho nhiều mục" và "lọc đúng loại" — không phụ thuộc vào ngày gửi,
  * nên đổi lịch không làm yếu bài đi chút nào.
  */
-function lichKhongToiHanHomNay(): { frequency: 'weekly'; weekday: number; hour: number } {
+function scheduleNotDueToday(): { frequency: 'weekly'; weekday: number; hour: number } {
   const js = new Date().getDay();
   const isoToday = js === 0 ? 7 : js;
   return { frequency: 'weekly', weekday: ((isoToday - 1 + 3) % 7) + 1, hour: 8 };
@@ -105,7 +105,7 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
       kinds: ['ssl', 'domain'],
       withinDays: 30,
       recipients: ['sep@pmh.com.vn', 'it@pmh.com.vn'],
-      ...lichKhongToiHanHomNay(),
+      ...scheduleNotDueToday(),
     });
     expect(rule.status).toBe(201);
 
@@ -154,7 +154,7 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
       kinds: ['ssl'],
       withinDays: 30,
       recipients: ['it@pmh.com.vn'],
-      ...lichKhongToiHanHomNay(),
+      ...scheduleNotDueToday(),
     });
     expect(rule.status).toBe(201);
 
@@ -188,7 +188,7 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
       kinds: ['ssl'],
       withinDays: 30,
       recipients: ['ssl@pmh.com.vn'],
-      ...lichKhongToiHanHomNay(),
+      ...scheduleNotDueToday(),
     });
     const sent = await post(page, `/api/v1/expiry/rules/${String(rule.body.id)}/test`, {});
     expect(sent.body).toMatchObject({ items: 1 });
@@ -308,7 +308,7 @@ test.describe('Báo cáo sắp-hết-hạn theo luật', () => {
       kinds: ['ssl'],
       withinDays: 30,
       recipients: ['sep@pmh.com.vn'],
-      ...lichKhongToiHanHomNay(),
+      ...scheduleNotDueToday(),
     });
     expect(rule.status).toBe(201);
 

@@ -9,7 +9,7 @@ import {
   resetDevices,
   resetSoftware,
   resetUsers,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
 } from './helpers';
@@ -297,7 +297,7 @@ test.describe('Kho thiết bị', () => {
     ).toBe(201);
 
     await page.goto('/devices');
-    await timVaChoLoc(page, code);
+    await searchAndWaitForFilter(page, code);
     const row = page.getByRole('row', { name: new RegExp(code) });
     await expect(row).toBeVisible();
     await expect(row.getByText('chị Lan')).toBeVisible();
@@ -371,7 +371,7 @@ test.describe('Kho thiết bị', () => {
     ).toBe(201);
 
     await page.goto('/devices');
-    await timVaChoLoc(page, `E2E-INST-${stamp}`);
+    await searchAndWaitForFilter(page, `E2E-INST-${stamp}`);
     const row = page.getByRole('row', { name: new RegExp(withCode) });
     await expect(row).toBeVisible();
 
@@ -384,7 +384,7 @@ test.describe('Kho thiết bị', () => {
     await expect(page.getByText(`HD-INST-${stamp}`)).toBeVisible();
 
     // Máy chưa cài gì thì KHÔNG được mọc mũi tên bấm ra rỗng.
-    await timVaChoLoc(page, bareCode);
+    await searchAndWaitForFilter(page, bareCode);
     const bareRow = page.getByRole('row', { name: new RegExp(bareCode) });
     await expect(bareRow).toBeVisible();
     await expect(bareRow.getByRole('button', { name: /license/ })).toHaveCount(0);
@@ -422,7 +422,7 @@ test.describe('Kho thiết bị', () => {
     }
 
     await page.goto('/devices');
-    await timVaChoLoc(page, `SORT-E2E-${stamp}`);
+    await searchAndWaitForFilter(page, `SORT-E2E-${stamp}`);
     await expect(page.getByRole('row')).toHaveCount(4); // 1 dòng tiêu đề + 3 máy
 
     const firstDataRow = () => page.getByRole('row').nth(1);

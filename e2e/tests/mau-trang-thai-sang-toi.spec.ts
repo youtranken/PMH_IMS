@@ -173,9 +173,9 @@ async function expectLegibleBadge(badge: Locator, what: string): Promise<void> {
  * tương phản là con số bịa), và tỉ lệ tương phản phải đạt AA. Bỏ vế "có nền riêng khác nền
  * phía sau" — ô số cố ý không tô nền, xem `ui/kpi-strip.tsx`.
  */
-async function expectLegibleNumber(so: Locator, what: string): Promise<void> {
-  await expect(so, `${what}: phải hiện ra đã`).toBeVisible();
-  const paint = await paintOf(so);
+async function expectLegibleNumber(count: Locator, what: string): Promise<void> {
+  await expect(count, `${what}: phải hiện ra đã`).toBeVisible();
+  const paint = await paintOf(count);
   const detail = `${what} — chữ ${paint.color} trên nền ${paint.effectiveBackground}`;
   expect(paint.opaqueFound, `${detail}: không tìm thấy lớp nền đục nào (phép đo không tin được)`)
     .toBe(true);
@@ -220,9 +220,9 @@ test('huy hiệu hạn ở màn Sắp hết hạn đọc được ở CẢ chế
    * riêng" vì ô số cố ý không tô nền: năm ô tô nền cạnh nhau thì mắt không còn
    * thứ tự nào để đọc (xem `ui/kpi-strip.tsx`).
    */
-  const soCua = (nhan: RegExp) => page.getByRole('button', { name: nhan }).getByText(/^\d+$/);
-  const chipCritical = soCua(/Gấp \(≤7 ngày\)/);
-  const chipWarning = soCua(/Sắp tới/);
+  const countOf = (label: RegExp) => page.getByRole('button', { name: label }).getByText(/^\d+$/);
+  const chipCritical = countOf(/Gấp \(≤7 ngày\)/);
+  const chipWarning = countOf(/Sắp tới/);
   const badgeCritical = page
     .getByRole('row')
     .filter({ hasText: `Chứng chỉ gấp ${stamp}` })

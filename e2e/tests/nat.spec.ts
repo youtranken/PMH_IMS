@@ -597,9 +597,9 @@ test.describe('Sổ NAT', () => {
      * khớp ba chỗ và Playwright dừng ở strict mode. Bản đồ đang làm đúng việc của nó — cái sai
      * là câu hỏi quá rộng: bài này muốn biết KHU SỔ NAT có dòng ấy hay không.
      */
-    const khuNat = page.getByRole('region', { name: 'Sổ NAT' });
-    await expect(khuNat.getByText('TCP 8443')).toBeVisible();
-    await expect(khuNat.getByText(/phần mềm thuế truy cập từ ngoài/)).toBeVisible();
+    const natSection = page.getByRole('region', { name: 'Sổ NAT' });
+    await expect(natSection.getByText('TCP 8443')).toBeVisible();
+    await expect(natSection.getByText(/phần mềm thuế truy cập từ ngoài/)).toBeVisible();
   });
 
   /**
@@ -652,9 +652,9 @@ test.describe('Panel IP trên trang thiết bị', () => {
     await page.goto(`/devices/${routerId}`);
     await expect(page.getByRole('heading', { name: 'Địa chỉ IP' })).toBeVisible();
     // Hỏi trong KHU "Địa chỉ IP": bản đồ quan hệ ở trên cũng nhắc lại địa chỉ này (xem bài NAT).
-    const khuIp = page.getByRole('region', { name: 'Địa chỉ IP' });
-    await expect(khuIp.getByText(`172.16.${octet}.1`)).toBeVisible();
-    await expect(khuIp.getByText('cổng mặc định')).toBeVisible();
+    const ipSection = page.getByRole('region', { name: 'Địa chỉ IP' });
+    await expect(ipSection.getByText(`172.16.${octet}.1`)).toBeVisible();
+    await expect(ipSection.getByText('cổng mặc định')).toBeVisible();
     // IP của máy khác KHÔNG được lọt vào panel của con router này.
     await expect(page.getByText(internalIp)).toHaveCount(0);
   });

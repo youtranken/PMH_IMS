@@ -155,7 +155,7 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
    * Đọc thẳng thuộc tính thì lưới khoanh đúng họ nút bật/tắt và KHÔNG nở ra theo số dòng dữ
    * liệu — nghĩa là nó vẫn bắt được nút lọc thứ tư mọc thêm, đúng điều nó sinh ra để làm.
    */
-  async function toggleButtons(scope: Locator): Promise<{ ten: string; bat: boolean }[]> {
+  async function toggleButtons(scope: Locator): Promise<{ toggleName: string; enabled: boolean }[]> {
     return scope.getByRole('button').evaluateAll((nodes) =>
       nodes
         .filter((node) => node.hasAttribute('aria-pressed'))
@@ -164,11 +164,11 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
              nút lọc như Kho thanh lý và Dải mạng. Bài này hỏi "có đúng bốn
              loại không", không hỏi "mỗi loại có mấy cái" — con số đổi theo dữ liệu gieo nên
              chốt cứng nó vào đây là tự tạo một bài kiểm đỏ ngẫu nhiên. */
-          ten: (node.textContent ?? '')
+          toggleName: (node.textContent ?? '')
             .replace(/\s+/g, ' ')
             .trim()
             .replace(/\s+\d+$/, ''),
-          bat: node.getAttribute('aria-pressed') === 'true',
+          enabled: node.getAttribute('aria-pressed') === 'true',
         })),
     );
   }
@@ -239,10 +239,10 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       'trang tổng phải có ĐÚNG bốn nút lọc loại — một cho mỗi loại chủ thể cất được secret — ' +
         'và lúc mới vào cả bốn đều đang TẮT',
     ).toEqual([
-      { ten: 'Thiết bị', bat: false },
-      { ten: 'Phần mềm', bat: false },
-      { ten: 'Tài khoản dịch vụ', bat: false },
-      { ten: 'Đường truyền', bat: false },
+      { toggleName: 'Thiết bị', enabled: false },
+      { toggleName: 'Phần mềm', enabled: false },
+      { toggleName: 'Tài khoản dịch vụ', enabled: false },
+      { toggleName: 'Đường truyền', enabled: false },
     ]);
 
     const deviceRow = table.getByRole('row', { name: new RegExp(deviceCode) });
@@ -269,10 +269,10 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
       () => toggleButtons(main),
       { message: 'bấm "Thiết bị" thì đúng một nút được bật, ba nút kia phải giữ nguyên trạng thái tắt' },
     ).toEqual([
-      { ten: 'Thiết bị', bat: true },
-      { ten: 'Phần mềm', bat: false },
-      { ten: 'Tài khoản dịch vụ', bat: false },
-      { ten: 'Đường truyền', bat: false },
+      { toggleName: 'Thiết bị', enabled: true },
+      { toggleName: 'Phần mềm', enabled: false },
+      { toggleName: 'Tài khoản dịch vụ', enabled: false },
+      { toggleName: 'Đường truyền', enabled: false },
     ]);
 
     const rowsAfter = await table.getByRole('row').count();
@@ -871,14 +871,14 @@ test.describe('Phòng Két sắt, Quyền, Duyệt và Bảng điều khiển �
 
     const label = `admin web E2E ${stamp}`;
     await form.getByLabel('Tên gọi').fill(label);
-    const oGiaTri = form.getByLabel(/^\s*Giá trị\s*\*?\s*$/);
-    await oGiaTri.fill('');
+    const valueField = form.getByLabel(/^\s*Giá trị\s*\*?\s*$/);
+    await valueField.fill('');
     await form.getByRole('button', { name: 'Lưu' }).click();
     await expect(
-      oGiaTri,
+      valueField,
       'ô Giá trị trống: câu tiếng Việt dưới ô (trước đây là bong bóng tiếng Anh, câu này chưa từng hiện)',
     ).toHaveAccessibleDescription(/Chưa nhập giá trị cần cất\./);
-    await expect(oGiaTri).toHaveAttribute('aria-invalid', 'true');
+    await expect(valueField).toHaveAttribute('aria-invalid', 'true');
     await expect(
       form.getByRole('textbox', { name: 'Tên gọi' }),
       'ô Tên gọi đã sửa xong thì lỗi của nó phải tự tắt',

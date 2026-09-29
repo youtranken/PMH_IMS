@@ -378,7 +378,7 @@ test.describe('Rule NAT thiếu router', () => {
      * `@ValidateIf(() => false)` thì bài trên vẫn xanh, nhưng một mã thiết bị gõ sai sẽ trôi
      * xuống tận `eq(deviceTable.id, 'abc')` — đúng cái 500 mà cả describe này sinh ra để chặn.
      */
-    const rac = await page.request.post('/api/v1/ipam/nat', {
+    const junkResponse = await page.request.post('/api/v1/ipam/nat', {
       headers,
       data: {
         deviceId: 'khong-phai-uuid',
@@ -390,9 +390,9 @@ test.describe('Rule NAT thiếu router', () => {
         reason: 'Kiem router rac E2E',
       },
     });
-    expect(rac.status(), 'gõ rác vẫn là lỗi người dùng, không được thành 500').toBe(400);
+    expect(junkResponse.status(), 'gõ rác vẫn là lỗi người dùng, không được thành 500').toBe(400);
     expect(
-      ((await rac.json()) as { message?: string }).message,
+      ((await junkResponse.json()) as { message?: string }).message,
       'gõ sai định dạng thì nói sai định dạng — khác hẳn câu "bạn quên chọn"',
     ).toContain('không hợp lệ');
   });

@@ -380,13 +380,13 @@ test.describe('Nhật ký — gộp sự kiện lặp', () => {
       .first()
       .getByRole('button', { name: /Xem chi tiết dòng nhật ký lúc/ })
       .click();
-    const hop = page.getByRole('dialog');
-    await expect(hop.getByText(/lần liền nhau — cùng người/)).toBeVisible();
-    const lan = hop.getByRole('button', { name: /^Xem lần lúc/ });
-    expect(await lan.count()).toBeGreaterThanOrEqual(2);
-    await lan.last().click();
-    await expect(hop.getByText(/lần liền nhau — cùng người/)).toHaveCount(0);
-    await hop.getByRole('button', { name: 'Đóng', exact: true }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText(/lần liền nhau — cùng người/)).toBeVisible();
+    const occurrenceButton = dialog.getByRole('button', { name: /^Xem lần lúc/ });
+    expect(await occurrenceButton.count()).toBeGreaterThanOrEqual(2);
+    await occurrenceButton.last().click();
+    await expect(dialog.getByText(/lần liền nhau — cùng người/)).toHaveCount(0);
+    await dialog.getByRole('button', { name: 'Đóng', exact: true }).click();
 
     // Đường còn lại: bỏ gộp → API không nhận `group`, màn có ít nhất 3 dòng xuất danh mục.
     const each = page.waitForResponse(
@@ -396,9 +396,9 @@ test.describe('Nhật ký — gộp sự kiện lặp', () => {
     );
     // Ô tick đọc trạng thái từ URL: lượt ghi URL đi qua react-router nên DOM đổi SAU cú bấm một
     // nhịp — `uncheck()` đo ngay sau cú bấm nên đỏ chập chờn. Bấm rồi CHỜ trạng thái mới.
-    const gop = page.getByRole('checkbox', { name: 'Gộp sự kiện lặp' });
-    await gop.click();
-    await expect(gop).not.toBeChecked();
+    const groupToggle = page.getByRole('checkbox', { name: 'Gộp sự kiện lặp' });
+    await groupToggle.click();
+    await expect(groupToggle).not.toBeChecked();
     expect((await each).status()).toBe(200);
     await expect(page).toHaveURL(/each=1/);
     expect(

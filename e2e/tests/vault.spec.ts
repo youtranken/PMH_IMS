@@ -285,12 +285,12 @@ test.describe('Két sắt', () => {
      * Bài `vault-reveal.spec.ts` đã đọc `secretRevealSeconds` từ `/auth/me` theo đúng lối
      * này; đây chỉ là áp cùng một luật cho con số thứ hai.
      */
-    const nguong = Number(getConfig('secret.probe_alert_threshold'));
-    expect(nguong, 'ngưỡng phải là một số dương thì bài này mới có nghĩa').toBeGreaterThan(0);
-    const soLuot = nguong * 2;
+    const threshold = Number(getConfig('secret.probe_alert_threshold'));
+    expect(threshold, 'ngưỡng phải là một số dương thì bài này mới có nghĩa').toBeGreaterThan(0);
+    const attemptCount = threshold * 2;
 
     // Member ngoài ma trận quyền: bắn gấp đôi ngưỡng, tất cả phải bị chặn.
-    for (let i = 0; i < soLuot; i += 1) {
+    for (let i = 0; i < attemptCount; i += 1) {
       const denied = await page.request.post(`/api/v1/vault/secrets/${secretId}/reveal`, {
         headers,
       });
@@ -304,7 +304,7 @@ test.describe('Két sắt', () => {
     expect(
       countAudit('vault.secret.reveal_denied', secretId),
       'mỗi lượt bị chặn phải là MỘT dòng vết — đây là thứ trước đây không có',
-    ).toBe(soLuot);
+    ).toBe(attemptCount);
 
     const row = lastAudit('vault.secret.reveal_denied', secretId);
     expect(row?.actor, 'vết phải mang tên người vừa thử').toBe(prober.email);
@@ -324,7 +324,7 @@ test.describe('Két sắt', () => {
      */
     expect(
       countAuditByActor('security.probe.alerted', prober.email),
-      `${soLuot} lượt thất bại chỉ được sinh ĐÚNG MỘT lượt cảnh báo: thời gian nghỉ là thứ ` +
+      `${attemptCount} lượt thất bại chỉ được sinh ĐÚNG MỘT lượt cảnh báo: thời gian nghỉ là thứ ` +
         'chặn chính cảnh báo trở thành công cụ làm ngập hộp thư quản trị',
     ).toBe(1);
 
@@ -339,9 +339,9 @@ test.describe('Két sắt', () => {
      * Ở đây thì có: lượt gọi đi qua controller thật, trong một request thật.
      */
     expect(
-      { ipCuaDongCanhBao: auditIpOf('security.probe.alerted', prober.email) === '' },
+      { alertRowIp: auditIpOf('security.probe.alerted', prober.email) === '' },
       'dòng `security.probe.alerted` phải mang IP — "dò từ máy nào" là câu điều tra viên hỏi đầu tiên',
-    ).toEqual({ ipCuaDongCanhBao: false });
+    ).toEqual({ alertRowIp: false });
 
     const body = await mailBody(mails[0].ID);
     expect(body, 'thư phải nói ai đang dò').toContain(prober.email);
@@ -397,10 +397,10 @@ test.describe('Két sắt', () => {
 
     /* BỐN cửa ghi, không phải một: hàng rào dựng ở cửa được nhớ tới và thiếu ở những cửa
        tương đương ngay bên cạnh là lớp lỗi đã lặp lại nhiều lần trong repo này. */
-    const cuaGhi: { ten: string; goi: () => Promise<{ status: () => number }> }[] = [
+    const writeEndpoints: { name: string; call: () => Promise<{ status: () => number }> }[] = [
       {
-        ten: 'cất ngăn mới',
-        goi: () =>
+        name: 'cất ngăn mới',
+        call: () =>
           page.request.post('/api/v1/vault/secrets', {
             headers,
             data: {
@@ -413,30 +413,30 @@ test.describe('Két sắt', () => {
           }),
       },
       {
-        ten: 'sửa metadata',
-        goi: () =>
+        name: 'sửa metadata',
+        call: () =>
           page.request.patch(`/api/v1/vault/secrets/${secretId}`, {
             headers,
             data: { label: `đổi nhãn E2E ${stamp}` },
           }),
       },
       {
-        ten: 'xoay giá trị',
-        goi: () =>
+        name: 'xoay giá trị',
+        call: () =>
           page.request.post(`/api/v1/vault/secrets/${secretId}/rotate`, {
             headers,
             data: { value: 'gia-tri-moi' },
           }),
       },
       {
-        ten: 'thu hồi',
-        goi: () => page.request.delete(`/api/v1/vault/secrets/${secretId}`, { headers }),
+        name: 'thu hồi',
+        call: () => page.request.delete(`/api/v1/vault/secrets/${secretId}`, { headers }),
       },
     ];
 
-    for (const cua of cuaGhi) {
-      const res = await cua.goi();
-      expect(res.status(), `cửa "${cua.ten}" phải bị chặn khi máy đã thanh lý`).toBe(400);
+    for (const endpoint of writeEndpoints) {
+      const res = await endpoint.call();
+      expect(res.status(), `cửa "${endpoint.name}" phải bị chặn khi máy đã thanh lý`).toBe(400);
     }
 
     // ĐỌC thì vẫn được: biên bản thanh lý là thứ người ta cần tra nhất sau khi máy đã đi.

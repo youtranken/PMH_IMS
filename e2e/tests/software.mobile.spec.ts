@@ -6,7 +6,7 @@ import {
   resetDevices,
   resetSoftware,
   resetUsers,
-  timVaChoLoc,
+  searchAndWaitForFilter,
   writeHeaders,
   uniqueStamp,
 } from './helpers';
@@ -119,7 +119,7 @@ test('ghế license ở 390px: thẻ danh sách mở hồ sơ, bảng ghế gậ
   ).toBe(201);
 
   await page.goto('/software');
-  await timVaChoLoc(page, code);
+  await searchAndWaitForFilter(page, code);
   await expect(page.getByRole('link', { name: code })).toBeVisible();
   /* ≤600px danh sách là thẻ gọn (SW-022), không bung ghế trong thẻ: chạm thẻ mở hồ sơ, ghế
      nằm ở tab Máy đang dùng. */

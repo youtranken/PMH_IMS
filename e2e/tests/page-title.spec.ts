@@ -16,7 +16,7 @@ test.beforeEach(() => {
   resetUsers();
 });
 
-const MAN_HINH: [string, string][] = [
+const SCREENS: [string, string][] = [
   ['/', 'Bảng điều khiển · IMS'],
   ['/devices', 'Thiết bị · IMS'],
   ['/software', 'Phần mềm · IMS'],
@@ -34,11 +34,11 @@ const MAN_HINH: [string, string][] = [
 test('mỗi màn đội một tên tab khác nhau', async ({ page }) => {
   await firstLogin(page, E2E_SA);
 
-  const daThay = new Set<string>();
-  for (const [duong, ten] of MAN_HINH) {
-    await page.goto(duong);
-    await expect(page, `${duong} phải đội tên "${ten}"`).toHaveTitle(ten);
-    daThay.add(ten);
+  const seen = new Set<string>();
+  for (const [route, name] of SCREENS) {
+    await page.goto(route);
+    await expect(page, `${route} phải đội tên "${name}"`).toHaveTitle(name);
+    seen.add(name);
   }
 
   /*
@@ -47,7 +47,7 @@ test('mỗi màn đội một tên tab khác nhau', async ({ page }) => {
    * đầu — không, nặng hơn: chúng xanh nếu bảng khai đúng nhưng `titleKeyOf` luôn rơi về một
    * tên. Đếm số tên PHÂN BIỆT là câu hỏi mà cả mười hai ô kia không hỏi.
    */
-  expect(daThay.size, 'mười hai màn phải cho mười hai tên khác nhau').toBe(MAN_HINH.length);
+  expect(seen.size, 'mười hai màn phải cho mười hai tên khác nhau').toBe(SCREENS.length);
 });
 
 test('trang chi tiết đội tên khu vực của nó, không rơi về tên sản phẩm trơn', async ({
