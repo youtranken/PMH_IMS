@@ -65,6 +65,10 @@ const TEXT: Record<string, [string, string]> = {
   ],
   breakGlassMaxGrantHours: ['settings.breakGlassMaxGrantHoursLabel', 'settings.breakGlassMaxGrantHoursDesc'],
   approvalReminderHours: ['settings.approvalReminderHoursLabel', 'settings.approvalReminderHoursDesc'],
+  breakGlassPendingExpireHours: [
+    'settings.breakGlassPendingExpireHoursLabel',
+    'settings.breakGlassPendingExpireHoursDesc',
+  ],
   expiryCriticalDays: ['settings.expiryCriticalDaysLabel', 'settings.expiryCriticalDaysDesc'],
   expiryWarningDays: ['settings.expiryWarningDaysLabel', 'settings.expiryWarningDaysDesc'],
   expiryDigestExpiredDays: ['settings.expiryDigestExpiredDaysLabel', 'settings.expiryDigestExpiredDaysDesc'],

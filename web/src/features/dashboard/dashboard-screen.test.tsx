@@ -178,4 +178,29 @@ describe('Bảng điều khiển', () => {
     // Phiếu đã bị từ chối là chuyện đã xong — không chiếm chỗ đầu trang.
     expect(within(block).queryByText('Đã từ chối')).toBeNull();
   });
+
+  it('phiếu đã duyệt mà chưa xem lần nào → nói bước tiếp theo "mở két, bấm Xem" (Q-15)', async () => {
+    const base = { ...BOARD.breakGlass.items[0], secretCount: null, payload: null };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith('/api/v1/dashboard')) return Promise.resolve(jsonResponse(200, BOARD));
+        if (url.includes('/break-glass/mine'))
+          return Promise.resolve(
+            jsonResponse(200, {
+              total: 2,
+              items: [
+                { ...base, id: 'm1', state: 'approved', active: true, claimedAt: null },
+                { ...base, id: 'm2', state: 'approved', active: true, claimedAt: '2026-09-20T02:00:00.000Z' },
+              ],
+            }),
+          );
+        return Promise.resolve(jsonResponse(200, []));
+      }),
+    );
+    renderBoard();
+    const block = (await screen.findByRole('heading', { name: 'Yêu cầu mở két của tôi' })).closest('section')!;
+    expect(within(block).getAllByText(/đã duyệt — mở két, bấm "Xem"/)).toHaveLength(1);
+  });
 });

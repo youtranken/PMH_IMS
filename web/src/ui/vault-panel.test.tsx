@@ -321,12 +321,15 @@ describe('VaultPanel — gửi và rút yêu cầu xem', () => {
         ...NEEDS_APPROVAL,
         canRequest: false,
         pending: { id: 'p1', createdAt: '2026-09-20T01:30:00.000Z' },
+        pendingExpireHours: 8,
       },
       4,
     );
     renderPanel({ ...ME, role: 'member' });
-    // Q-15: phiên chết là phiếu bị rút — nói trước khi người xin bỏ đi chờ.
-    expect(await screen.findByText(/Giữ trang này mở/)).toBeInTheDocument();
+    // Q-15: yêu cầu chờ không gắn phiên — người xin được bảo cứ đóng trang, chờ thư.
+    expect(await screen.findByText(/Bạn có thể đóng trang/)).toBeInTheDocument();
+    expect(screen.getByText(/trong 8 giờ thì yêu cầu tự hết hạn/)).toBeInTheDocument();
+    expect(screen.queryByText(/Giữ trang này mở/)).not.toBeInTheDocument();
 
     await userEvent.click(await screen.findByRole('button', { name: 'Rút yêu cầu' }));
     // Chưa xác nhận thì CHƯA gọi API.
@@ -527,18 +530,37 @@ describe('VaultPanel — quyền theo phiên và nút Trả quyền', () => {
     expect(screen.queryByRole('button', { name: 'Trả quyền' })).not.toBeInTheDocument();
   });
 
-  it('quyền/phiếu của phiên khác: nói rõ vì sao phải xin lại', async () => {
+  it('quyền đã gắn ở phiên khác: nói rõ vì sao phải xin lại', async () => {
     mockRelease({ ...NEEDS_APPROVAL, otherSessionHeld: true });
     renderPanel({ ...ME, role: 'member' });
-    expect(await screen.findByText(/thuộc một phiên đăng nhập khác/)).toBeInTheDocument();
+    expect(await screen.findByText(/đã gắn với một phiên đăng nhập khác/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Xin mở két' })).toBeInTheDocument();
   });
 
-  it('hộp xin nói trước: quyền hết khi đăng xuất hay hết phiên', async () => {
+  it('đã duyệt, chưa xem lần nào: chỉ đường "bấm Xem, nhập mã 6 số", có nút Xem ở ngăn', async () => {
+    mockRelease({
+      ...NEEDS_APPROVAL,
+      canReveal: true,
+      canRequest: false,
+      claimable: { id: 'g1', expiresAt: '2026-09-20T05:30:00.000Z' },
+      grantSecondsLeft: 3600,
+    });
+    renderPanel({ ...ME, role: 'member' });
+    expect(await screen.findByText(/Đã được duyệt — bấm "Xem"/)).toBeInTheDocument();
+    expect(screen.getByText(/tính từ lúc duyệt/)).toBeInTheDocument();
+    expect(screen.getByText(/Lần xem đầu tiên gắn quyền vào phiên/)).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Xem' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Xin mở két' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Nhận quyền/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Trả quyền' })).toBeInTheDocument();
+  });
+
+  it('hộp xin nói trước: lần xem đầu gắn quyền vào phiên, đăng xuất hay hết phiên là hết', async () => {
     mockRelease(NEEDS_APPROVAL);
     renderPanel({ ...ME, role: 'member' });
     await userEvent.click(await screen.findByRole('button', { name: 'Xin mở két' }));
     const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText(/lần bấm "Xem" đầu tiên/)).toBeInTheDocument();
     expect(within(dialog).getByText(/đăng xuất hay hết phiên/)).toBeInTheDocument();
   });
 });

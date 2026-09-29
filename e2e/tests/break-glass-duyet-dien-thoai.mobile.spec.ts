@@ -90,9 +90,8 @@ async function seedDevice(page: Page, stamp: string): Promise<{ deviceId: string
 /**
  * SA dựng máy → Member xin qua API → SA đăng nhập lại. Trả id phiếu + TOTP của cả hai.
  *
- * Người xin ở ngữ cảnh trình duyệt riêng và KHÔNG đăng xuất: phiên người xin chết thì lượt quét
- * tự rút phiếu đang chờ (Q-15), và bài duyệt phía sau đỏ theo nhịp quét. Ngữ cảnh đó sống tới
- * hết worker — đúng như người xin thật giữ trang mở trong lúc chờ.
+ * Người xin ở ngữ cảnh trình duyệt riêng. Phiếu chờ không gắn phiên (Q-15) nên người xin đăng
+ * xuất hay không cũng không đổi gì ở phía người duyệt; ngữ cảnh riêng chỉ để `page` là của SA.
  */
 async function pendingRequest(page: Page, hours = 4) {
   const stamp = Date.now().toString().slice(-6);
@@ -325,9 +324,10 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
   });
 
   /**
-   * Người xin GIỮ phiên suốt lúc chờ: quyền chỉ dùng được trong phiên đã xin (Q-15). Người duyệt
-   * ở ngữ cảnh riêng. Được duyệt thì khung két đếm lùi, nói quyền hết khi đăng xuất, và có nút
-   * Trả quyền — tất cả ở 390px, vì người trực xin và trả ngay trên điện thoại.
+   * Phiếu chờ không gắn phiên (Q-15): khung chờ nói cứ đóng trang, chờ thư. Người duyệt ở ngữ
+   * cảnh riêng. Được duyệt thì khung két chỉ đường "bấm Xem, nhập mã 6 số", đếm lùi TỪ LÚC
+   * DUYỆT, nói lần xem đầu gắn quyền vào phiên, và có nút Trả quyền — tất cả ở 390px, vì người
+   * trực xin và trả ngay trên điện thoại.
    */
   test('người xin: khung chờ nói đã báo bao nhiêu người duyệt; được duyệt thì đếm lùi, trả quyền được', async ({
     page,
@@ -348,6 +348,8 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
     await form.getByRole('textbox', { name: 'Xin trong bao lâu (giờ)' }).fill('4');
     await form.getByRole('button', { name: 'Gửi yêu cầu' }).click();
     await expect(page.getByText(/^Đã báo \d+ người duyệt qua email\.$/)).toBeVisible();
+    await expect(page.getByText(/Bạn có thể đóng trang/)).toBeVisible();
+    await expect(page.getByText(/Giữ trang này mở/)).toHaveCount(0);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
 
     // SA vừa đăng nhập bằng mã 2 lớp = vừa step-up, duyệt qua API được ngay.
@@ -364,8 +366,10 @@ test.describe('Ngữ cảnh để quyết và để chờ, 390px (VLT-FLOW)', ()
     await saCtx.close();
 
     await page.reload();
-    await expect(page.getByText(/Bạn được xem tới .* \(còn 3 giờ 5\d phút\)/)).toBeVisible();
-    await expect(page.getByText(/đăng xuất hay hết phiên/)).toBeVisible();
+    await expect(page.getByText(/Đã được duyệt — bấm "Xem"/)).toBeVisible();
+    await expect(page.getByText(/Quyền còn 3 giờ 5\d phút \(tới .*\), tính từ lúc duyệt/)).toBeVisible();
+    await expect(page.getByText(/Lần xem đầu tiên gắn quyền vào phiên/)).toBeVisible();
+    await expect(page.getByRole('button', { name: /Nhận quyền/ })).toHaveCount(0);
     const release = page.getByRole('button', { name: 'Trả quyền' });
     await expect(release).toBeInViewport();
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);

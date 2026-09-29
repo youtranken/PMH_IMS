@@ -181,8 +181,7 @@ test.describe('Bảng điều khiển', () => {
 
     // SA: thấy đủ ba thứ AC đòi — ai, thiết bị gì, lý do. Mã thiết bị chứ không phải uuid.
     // `loginWithTotp` chứ không phải `firstLogin`: tài khoản này đã cài 2 lớp ở đầu bài.
-    // Ngữ cảnh riêng, người xin KHÔNG đăng xuất: phiên chết thì lượt quét rút phiếu (Q-15) và
-    // "Chờ duyệt" dưới đây đỏ theo nhịp quét.
+    // Ngữ cảnh riêng cho SA; phiếu chờ không gắn phiên người xin (Q-15) nên vẫn "Chờ duyệt".
     const saCtx = await browser.newContext({ ignoreHTTPSErrors: true });
     const sa = await saCtx.newPage();
     await loginWithTotp(sa, E2E_SA.email, NEW_PASSWORD, saTotp);

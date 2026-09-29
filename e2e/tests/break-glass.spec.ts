@@ -93,9 +93,9 @@ test.describe('Break-glass', () => {
     browser,
   }) => {
     /**
-     * Người xin ở một ngữ cảnh trình duyệt RIÊNG và giữ phiên suốt lúc chờ duyệt: quyền chỉ
-     * dùng được trong đúng phiên đã xin (Q-15), nên "đăng xuất chờ, đăng nhập lại rồi xem"
-     * không còn là luồng hợp lệ — `break-glass-phien.spec.ts` dựng lại đúng đòn đó.
+     * Người xin ở một ngữ cảnh trình duyệt riêng. Phiếu chờ không gắn phiên (Q-15); lần xem
+     * đầu sau khi được duyệt gắn quyền vào phiên đang xem — `break-glass-phien.spec.ts` dựng
+     * lại các đòn quanh việc gắn phiên.
      *
      * Trần 150 giây: hai lượt cài 2 lớp + một lượt chờ mã TOTP mới cho hộp xác nhận danh tính.
      */
@@ -150,12 +150,15 @@ test.describe('Break-glass', () => {
     expireStepUp(E2E_MEMBER.email);
     await member.goto(`/devices/${deviceId}`);
     await member.getByRole('tab', { name: 'Két sắt' }).click();
-    await expect(member.getByText(/Bạn được xem tới/)).toBeVisible();
+    // Q-15: không có nút riêng — khung chỉ đường "bấm Xem, nhập mã 6 số".
+    await expect(member.getByText(/Đã được duyệt — bấm "Xem"/)).toBeVisible();
 
     await member.getByRole('button', { name: 'Xem' }).click();
     await expect(member.getByRole('heading', { name: 'Xác nhận danh tính' })).toBeVisible();
     await member.getByLabel('Mã xác thực').fill(await freshTotpCode(totpSecret));
     await expect(member.getByTestId('secret-value')).toHaveText(secretValue);
+    // Lần xem đầu vừa gắn quyền vào phiên này: khung chuyển sang quyền đang chạy.
+    await expect(member.getByText(/Bạn được xem tới/)).toBeVisible();
     await memberCtx.close();
 
     const vet = lastAudit('vault.secret.revealed', secretId);
@@ -192,8 +195,9 @@ test.describe('Break-glass', () => {
     browser,
   }) => {
     /*
-     * Người xin giữ phiên của mình (ngữ cảnh riêng) suốt bài: quyền gắn với phiên đã xin
-     * (Q-15), nên đăng nhập lại để thử sẽ bị chặn vì LÝ DO KHÁC và bài xanh mà không kiểm gì.
+     * Người xin giữ phiên của mình (ngữ cảnh riêng) suốt bài: lượt xem đối chứng gắn quyền vào
+     * phiên này (Q-15), nên đăng nhập lại để thử sẽ bị chặn vì LÝ DO KHÁC và bài xanh mà không
+     * kiểm gì.
      */
     test.setTimeout(150_000);
     await firstLogin(page, E2E_SA);
@@ -338,8 +342,8 @@ test.describe('Break-glass', () => {
     });
     const id = ((await asked.json()) as { id: string }).id;
 
-    /* SA ở ngữ cảnh riêng: người xin phải còn phiên — phiên chết thì lượt quét tự rút phiếu
-       (Q-15) và câu "vẫn chờ duyệt" dưới đây đỏ theo nhịp quét. */
+    /* SA ở ngữ cảnh riêng, người xin giữ phiên của mình. Phiếu chờ không gắn phiên (Q-15),
+       nên cách dựng này không bắt buộc — chỉ tránh đăng nhập lại hai lần. */
     const saCtx = await browser.newContext({ ignoreHTTPSErrors: true });
     const sa = await saCtx.newPage();
     await loginWithTotp(sa, E2E_SA.email, NEW_PASSWORD, saTotp);
