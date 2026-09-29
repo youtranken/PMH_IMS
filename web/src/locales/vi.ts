@@ -1241,6 +1241,12 @@ export default {
       'Đóng phiên đăng nhập từ IP {{ip}} (hoạt động gần nhất {{seen}})? Người đang dùng phiên đó ' +
       'bị đăng xuất ngay. Nếu đó là phiên của chính bạn thì bạn sẽ phải đăng nhập lại.',
     sessionKilled: 'Đã đóng phiên đó — người dùng bị đăng xuất ngay.',
+    killAllSessions: 'Đóng tất cả phiên',
+    confirmKillAllSessions:
+      'Đóng mọi phiên đăng nhập của {{name}}? Người đó bị đăng xuất khỏi mọi máy ngay.',
+    killAllIncludeCurrent: 'Đóng cả phiên bạn đang dùng',
+    killAllIncludeCurrentHint: 'Không tick thì phiên trên máy này được giữ lại.',
+    allSessionsKilled: 'Đã đóng {{count}} phiên.',
     roleSa: 'Super Admin',
     roleAdmin: 'Quản trị',
     roleMember: 'Thành viên',
@@ -2058,6 +2064,7 @@ export default {
       authTotpReenrollReauthFailed: 'Cài lại 2 lớp: gõ sai mật khẩu hiện tại',
       authTotpReenrollSessionRevoked: 'Đóng phiên vì cài lại 2 lớp gõ sai mật khẩu nhiều lần',
       sessionKilled: 'Đóng phiên của người khác',
+      sessionKilledAll: 'Đóng tất cả phiên của một người',
       securityProbeAlerted: 'Cảnh báo: nghi dò mật khẩu / két',
       vaultSecretCreated: 'Cất mật khẩu vào két',
       vaultSecretUpdated: 'Sửa thông tin ngăn két',

@@ -55,6 +55,7 @@ export const ACTION_KEY: Record<string, string> = {
   'auth.totp.reenroll.reauth_failed': 'audit.actions.authTotpReenrollReauthFailed',
   'auth.totp.reenroll.session_revoked': 'audit.actions.authTotpReenrollSessionRevoked',
   'session.killed': 'audit.actions.sessionKilled',
+  'session.killed_all': 'audit.actions.sessionKilledAll',
   'security.probe.alerted': 'audit.actions.securityProbeAlerted',
   'vault.secret.created': 'audit.actions.vaultSecretCreated',
   'vault.secret.updated': 'audit.actions.vaultSecretUpdated',
