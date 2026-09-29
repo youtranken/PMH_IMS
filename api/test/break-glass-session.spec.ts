@@ -565,6 +565,33 @@ describe('Break-glass · quyền gắn với phiên đã xem (Q-15)', () => {
       });
     });
 
+    it('quyền đã duyệt (chưa xem lẫn đã xem) bị thu hồi luôn: bật lại tài khoản cũng không mở được', async () => {
+      const off = await freshMember();
+      const s = await login(off.id);
+      const unclaimed = await ask(s, randomUUID(), off.email);
+      await breakGlass.approve(sa, unclaimed.id, { hours: 4 });
+      const claimedSubject = randomUUID();
+      const claimed = await ask(s, claimedSubject, off.email);
+      await breakGlass.approve(sa, claimed.id, { hours: 4 });
+      await breakGlass.assertCanReveal(as(s, off.email), 'device', claimedSubject);
+
+      await accounts.setStatus({ id: randomUUID(), email: sa }, off.id, 'disabled', 'Nghi lộ');
+
+      expect(await stateOf(unclaimed.id)).toBe('revoked');
+      expect(await stateOf(claimed.id)).toBe('revoked');
+      const audit = await scratch.pool.query<{ detail: { withdrawnRequests?: number } }>(
+        `SELECT detail FROM audit_log WHERE object_id = $1 AND action = 'account.disabled'`,
+        [off.id],
+      );
+      expect(audit.rows[0].detail.withdrawnRequests).toBe(2);
+
+      await accounts.setStatus({ id: randomUUID(), email: sa }, off.id, 'active');
+      const again = await login(off.id);
+      await expect(
+        breakGlass.assertCanReveal(as(again, off.email), 'device', unclaimed.subjectId),
+      ).rejects.toMatchObject(REQUIRED);
+    });
+
     it('chỉ KHÓA (không vô hiệu hóa) thì yêu cầu vẫn chờ', async () => {
       const off = await freshMember();
       const p1 = await ask(await login(off.id), randomUUID(), off.email);

@@ -63,8 +63,9 @@ export const BREAK_GLASS_FLOW = {
     'approved->expired': 'Hết hạn',
     'approved->revoked': 'Thu hồi sớm',
   },
-  // Tài khoản người xin bị vô hiệu hóa: phiếu đang chờ bị rút như người xin tự rút (Q-15).
-  withdrawOnRequesterDisabled: 'cancelled',
+  // Tài khoản người xin bị vô hiệu hóa (Q-15): phiếu chờ bị rút như người xin tự rút, quyền đã
+  // duyệt bị thu hồi.
+  withdrawOnRequesterDisabled: { pending: 'cancelled', approved: 'revoked' },
 };
 
 /** Tên lượt quét đóng quyền của phiên đã kết thúc — `SweepService` gọi mỗi vòng. */
