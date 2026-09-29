@@ -42,7 +42,7 @@ describe('describeLoadError', () => {
     {
       /*
        * `global-exception.filter.ts` trả MỘT câu chung chung cho mọi 500, cố ý, để không lộ
-       * nội bộ (từ 12/09 câu đó đã là tiếng Việt). Web vẫn dùng câu CỦA MÌNH thay vì bê câu
+       * nội bộ (câu đó là tiếng Việt). Web vẫn dùng câu CỦA MÌNH thay vì bê câu
        * ấy ra: hai bên nói cùng một ý, nhưng chữ trên màn hình là việc của tầng giao diện —
        * và quan trọng hơn, quy tắc "500 thì đừng tin câu của server" phải đúng cả cho những
        * 500 KHÔNG đi qua filter (nginx sập, gateway chết) — lúc đó câu trả về là HTML.
@@ -69,7 +69,7 @@ describe('describeLoadError', () => {
   }
 
   it('mọi khóa hàm này trả về đều có thật trong vi.ts', () => {
-    // Khóa gõ sai thì i18next in ra chính cái khóa — đúng lớp lỗi mục #1 của bản rà soát.
+    // Khóa gõ sai thì i18next in ra chính cái khóa — lỗi không đỏ ở đâu cả nếu thiếu bài này.
     const keys = new Set(cases.map((c) => c.key));
     const thieu = [...keys].filter(
       (key) => typeof (vi.app as Record<string, unknown>)[key.replace('app.', '')] !== 'string',

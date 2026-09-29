@@ -7,7 +7,7 @@ const STRING_PATHS = (Object.values(PATHS) as unknown[]).filter(
 ) as string[];
 
 /**
- * VAI NÀO VÀO ĐƯỢC ĐƯỜNG NÀO (B-09).
+ * VAI NÀO VÀO ĐƯỢC ĐƯỜNG NÀO.
  *
  * ===== LỖ ĐANG VÁ =====
  *
@@ -24,7 +24,8 @@ const STRING_PATHS = (Object.values(PATHS) as unknown[]).filter(
  *
  * `App` tự đi hỏi `/auth/me` rồi mới dựng route, nên render nó trong bài kiểm là dựng lại cả
  * tầng mạng cho một câu hỏi về DANH SÁCH. Và một cổng đọc `App.tsx` bằng chuỗi thì chính là
- * loại cổng mà §18 vừa phải sửa bốn cái.
+ * loại cổng dễ tự thỏa mãn bằng một dòng chú thích nhắc đúng tên (xem `test/source-text`
+ * bên api).
  *
  * Nên luật nằm trong DỮ LIỆU (`ROUTE_ROLES`) và `App` chỉ hỏi `canSeeRoute`. Bảng thì kiểm
  * được bằng hàm thuần, và nó trả lời được câu mà JSX không trả lời nổi: *"có đường `/admin`
@@ -71,8 +72,8 @@ describe('canSeeRoute', () => {
 /**
  * MẶC-ĐỊNH-ĐÓNG CHO MÀN QUẢN TRỊ — đây mới là bài giữ cho lỗi không tái phát.
  *
- * Hai màn của B-09 không hở vì ai đó quyết định sai; chúng hở vì người viết màn thứ ba, thứ
- * tư không có gì nhắc. Bài này là cái nhắc ấy: thêm một `/admin/...` vào `PATHS` mà quên khai
+ * Màn quản trị không hở vì ai đó quyết định sai; chúng hở vì người viết màn mới không có gì
+ * nhắc. Bài này là cái nhắc ấy: thêm một `/admin/...` vào `PATHS` mà quên khai
  * vai là ĐỎ ngay, không phải chờ tới lúc có người gõ URL bằng tay.
  */
 describe('mọi đường /admin phải khai vai', () => {
@@ -99,7 +100,7 @@ describe('mọi đường /admin phải khai vai', () => {
 });
 
 /**
- * TÊN TAB TRÌNH DUYỆT (B-03).
+ * TÊN TAB TRÌNH DUYỆT.
  *
  * ===== LỖ ĐANG VÁ =====
  *

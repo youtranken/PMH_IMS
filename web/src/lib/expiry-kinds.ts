@@ -11,14 +11,12 @@ import { apiFetch } from '@/lib/api-client';
  * HAI cho cùng một khái niệm — thêm loại hạn ở API thì một trong hai bản sẽ lệch, và bản lệch
  * là bản người dùng nhìn thấy.
  *
- * ===== LỖI ĐÃ VÁ — giữ lại vì luật ở trên sinh ra từ nó (rà UI/UX 12/09) =====
+ * ===== ĐỪNG GỌI `t('expiry.kind_' + kind, kind)` =====
  *
- * Bảng điều khiển từng gọi `t('expiry.kind_' + kind, kind)` trong khi `vi.ts` không có khóa
- * `expiry.kind_*` nào; i18next lặng lẽ rơi về tham số mặc định, nên khối "Sắp hết hạn" in ra
- * `warranty · 21/09/2026` trong khi màn `/expiry` cùng lúc hiện đúng "Bảo hành thiết bị".
- * Hỏng theo kiểu khó thấy: `license` trông đủ giống một nhãn để mắt lướt qua, và lượt test tay
- * 12/09 đi qua đúng khối này rồi đọc nhầm thành rác dữ liệu. Nay mọi nơi gọi `expiryKindLabel`
- * ở dưới.
+ * `vi.ts` không có khóa `expiry.kind_*` nào; i18next lặng lẽ rơi về tham số mặc định, nên màn
+ * in ra `warranty · 21/09/2026` trong khi màn `/expiry` hiện đúng "Bảo hành thiết bị". Hỏng
+ * theo kiểu khó thấy: `license` trông đủ giống một nhãn để mắt lướt qua, và người test tay dễ
+ * đọc nhầm thành rác dữ liệu. Mọi nơi gọi `expiryKindLabel` ở dưới.
  *
  * ===== CÙNG MỘT `queryKey` LÀ CỐ Ý =====
  *
@@ -45,8 +43,8 @@ export function useExpiryKinds() {
  * Nhãn của một loại hạn, hoặc chính mã đó khi chưa tải xong / gọi hỏng.
  *
  * Vẫn rơi về mã thay vì để trống: một dòng "· 27/08/2026" cụt đầu khiến người đọc tưởng dữ
- * liệu thiếu, còn thấy `license` thì ít nhất biết là nhãn chưa về. Khác chỗ hỏng cũ ở chỗ nay
- * nó chỉ xảy ra khi MẠNG hỏng, không phải mọi lúc.
+ * liệu thiếu, còn thấy `license` thì ít nhất biết là nhãn chưa về. Việc này chỉ xảy ra khi
+ * MẠNG hỏng, không phải mọi lúc.
  */
 export function expiryKindLabel(kinds: ExpiryKind[] | undefined, kind: string): string {
   return kinds?.find((item) => item.kind === kind)?.label ?? kind;

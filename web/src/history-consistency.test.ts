@@ -5,16 +5,16 @@ import { toIspHistory } from '@/features/isp/isp-history-entries';
 import { toIpHistoryEntries } from '@/features/ipam/ip-history-entries';
 
 /**
- * NĂM BẢN SAO CỦA MỘT HÀM, VÀ CHÚNG ĐÃ TRÔI KHỎI NHAU (F-09).
+ * NHIỀU BẢN SAO CỦA MỘT HÀM THÌ SẼ TRÔI KHỎI NHAU.
  *
- * ===== LỖ ĐANG VÁ =====
+ * ===== LỖ BÀI NÀY CANH =====
  *
- * `display()` + `describe()` của panel Lịch sử được CHÉP sáu lần: `device` · `ip` · `isp` ·
- * `nat` · `service-account` · `software`. Đếm 22/09: BA bản có nhánh
+ * `display()` + `describe()` của panel Lịch sử từng được CHÉP sáu lần: `device` · `ip` · `isp`
+ * · `nat` · `service-account` · `software`. Ba bản có nhánh
  *
  *     if (field.endsWith('Id')) return t('history.changedOnly', { field: label });
  *
- * và BA bản không (`ip`, `nat`, `service-account`).
+ * và ba bản không.
  *
  * Nhánh ấy tồn tại vì một lý do rất cụ thể: giá trị của các trường `*Id` là UUID, và UUID
  * trên màn lịch sử không nói gì với ai. Bản có nhánh nói "Site: đã thay đổi"; bản không có
@@ -34,7 +34,7 @@ import { toIpHistoryEntries } from '@/features/ipam/ip-history-entries';
  *
  * ===== VÌ SAO FILE NÀY Ở `src/` CHỨ KHÔNG Ở `ui/` =====
  *
- * Bản đầu tôi đặt nó cạnh `ui/history-changes.ts`, và lint đỏ ngay: AD-15 cấm tầng nền
+ * Đặt cạnh `ui/history-changes.ts` thì lint đỏ: AD-15 cấm tầng nền
  * (`ui`/`lib`/`shell`) biết tới `features`. Luật đúng, và nó đúng cả với bài kiểm — một file
  * trong `ui/` import sáu feature là đã mở đường cho `ui` phụ thuộc ngược.
  *

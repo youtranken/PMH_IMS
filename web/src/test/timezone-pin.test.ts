@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 /**
- * CỔNG CANH CHÍNH CÁI GHIM MÚI GIỜ (24/09/2026).
+ * CỔNG CANH CHÍNH CÁI GHIM MÚI GIỜ.
  *
  * ===== VÌ SAO MỘT DÒNG CẤU HÌNH CẦN MỘT BÀI KIỂM =====
  *
@@ -27,7 +27,7 @@ describe('múi giờ của bộ kiểm', () => {
    *
    * `Asia/Saigon` là tên IANA cũ, `Asia/Ho_Chi_Minh` là tên hiện hành. Bản ICU đi kèm Node
    * quyết định `resolvedOptions()` trả về cái nào, và **bản trên Windows khác bản trên
-   * Ubuntu**: đo 24/09 trên Windows ra `Asia/Saigon` dù đã ghim `Asia/Ho_Chi_Minh`.
+   * Ubuntu**: đo trên Windows ra `Asia/Saigon` dù đã ghim `Asia/Ho_Chi_Minh`.
    *
    * Khoá đúng một chuỗi ở đây là dựng lại đúng cái bệnh vừa chữa — một bài xanh trên máy này
    * và đỏ trên máy kia, vì lý do chẳng liên quan gì tới thứ nó canh. Nhận cả hai tên, rồi để
@@ -54,8 +54,8 @@ describe('múi giờ của bộ kiểm', () => {
 
   it('ngày địa phương và ngày UTC LỆCH NHAU lúc 00:30 giờ VN — chính cái bẫy đang canh', () => {
     /*
-     * Tái dựng đúng khoảnh khắc làm `expiry-thresholds-live` đỏ hôm 24/09: 00:30 giờ VN thì
-     * UTC còn là hôm trước. Ô này khoá lại sự thật ấy để người đọc sau không phải tự dựng
+     * Tái dựng đúng khoảnh khắc từng làm `expiry-thresholds-live` đỏ: 00:30 giờ VN thì UTC
+     * còn là hôm trước. Ô này khoá lại sự thật ấy để người đọc sau không phải tự dựng
      * lại bối cảnh mới hiểu vì sao có cái ghim ở `vite.config.ts`.
      */
     const nuaDem = new Date('2026-09-23T17:30:00Z'); // = 00:30 ngày 24/09 giờ VN

@@ -11,8 +11,7 @@ import vi from './vi';
  *
  * ===== VÌ SAO LÀ MỘT BÀI KIỂM, KHÔNG PHẢI MỘT LẦN SỬA CÂU CHỮ =====
  *
- * Mục #25 của lượt rà 12/09 đã nêu đúng vấn đề này và **không ai tick**; lượt 19/09 đếm lại
- * thì vẫn nguyên sáu khái niệm hai tên. Lý do một lần sửa tay không đủ: khoá dịch nằm rải
+ * Một lần sửa tay không đủ: khoá dịch nằm rải
  * trong một file 1400 dòng chia theo MÀN, nên hai người viết hai màn khác nhau đặt hai cái
  * tên cho cùng một việc là chuyện bình thường — và không có gì đỏ. Chính `accounts.disable`
  * đã "sống lại" một lần sau khi bị xoá (xem `dead-keys-rollcall.test.ts`).
@@ -87,9 +86,8 @@ describe('Một khái niệm — một tên', () => {
   });
 
   /**
-   * Đợt D (12/09) khai đã bỏ tiếng lóng "đá phiên" — thật ra chỉ đổi cái NÚT. Câu hỏi trong
-   * chính hộp mà nút đó mở ra vẫn giữ tiếng lóng, nên người dùng bấm "Đóng phiên" rồi được
-   * hỏi "Đá phiên…?".
+   * Đổi chữ ở NÚT mà quên câu hỏi trong chính hộp nút đó mở ra thì người dùng bấm "Đóng phiên"
+   * rồi được hỏi "Đá phiên…?".
    */
   it('đóng phiên người khác: nút và câu hỏi dùng cùng một động từ', () => {
     expect(lookup('accounts.confirmKillSession')).toContain(lookup('accounts.killSession'));
@@ -130,11 +128,11 @@ describe('Một khái niệm — một tên', () => {
 /**
  * Panel Lịch sử giữ MỘT BỘ NHÃN RIÊNG (`history.<module>.st*`) song song với nhãn trên bảng
  * (`<module>.status*`). Nghĩa là mỗi trạng thái có hai khoá, và chúng trôi lệch được mà không
- * gì đỏ — đúng hình dạng của F-09 (năm bản sao `display()` ở chính panel này, và chúng ĐÃ lệch).
+ * gì đỏ — đúng hình dạng của các bản sao `display()` ở chính panel này, vốn ĐÃ từng lệch.
  *
  * Chuyện đã xảy ra thật: bảng `/software` đọc 'Đã thanh lý' trong khi dòng lịch sử ngay dưới
- * nó đọc 'Đã bỏ'. §4.2 của sổ đếm ba khoá màn và không thấy ba khoá lịch sử; chúng lộ ra
- * 23/09 chỉ vì `software-history-entries.test.ts` dùng `t` THẬT chứ không dùng stub.
+ * nó đọc 'Đã bỏ'. Khoá lịch sử dễ bị đếm sót vì chúng không nằm cùng namespace màn; chúng chỉ
+ * lộ ra khi bài kiểm dùng `t` THẬT chứ không dùng stub.
  *
  * Bảng dưới là **mọi** cặp có thể đối chiếu được. Thêm module mới vào panel Lịch sử thì thêm
  * một dòng ở đây; quên thì không ai bắt được — nên dòng này quan trọng hơn nó trông.

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { foldSearch, stripDiacritics } from '@/lib/search-fold';
 
 /**
- * GẤP DẤU TIẾNG VIỆT — bản JS bên web, đối chiếu với BẢNG CHUẨN DÙNG CHUNG (B-01).
+ * GẤP DẤU TIẾNG VIỆT — bản JS bên web, đối chiếu với BẢNG CHUẨN DÙNG CHUNG.
  *
  * Bài anh em: `api/src/common/search-fold.spec.ts` (Jest) và `api/test/search-norm.spec.ts`
  * (SQL thật). Cả ba đọc CÙNG một file `ops/search-fold-cases.json`, vì ba bản cài đặt ấy

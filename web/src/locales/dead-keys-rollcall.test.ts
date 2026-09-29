@@ -11,10 +11,9 @@ import { quetNguon } from '@/test/quet-nguon';
  *
  * ===== VÌ SAO LÀ MỘT BÀI KIỂM, KHÔNG PHẢI MỘT LẦN DỌN =====
  *
- * Lượt rà 12/09 đếm được 46 khóa chết; đo lại sau bốn đợt vá thì con số ấy đã sai, vì chính
- * bốn đợt đó vừa xoá một loạt khóa và vừa làm SỐNG LẠI hai khóa (`app.serverUnreachable`,
- * `accounts.disable`). Một lần xoá tay chỉ đúng cho hôm nay: khóa chết sinh ra mỗi lần ai đó
- * đổi câu chữ rồi quên dòng cũ, và chuyện đó xảy ra ở mọi story.
+ * Một lần xoá tay chỉ đúng cho hôm nay: khóa chết sinh ra mỗi lần ai đó đổi câu chữ rồi quên
+ * dòng cũ, và một khóa đã xoá cũng có thể SỐNG LẠI khi có người dùng lại nó
+ * (`app.serverUnreachable`, `accounts.disable` từng như thế).
  *
  * Khóa chết không làm hỏng gì, và đó chính là vấn đề: nó làm `vi.ts` dài ra, làm người dịch
  * sau không biết câu nào còn dùng, và làm chỗ sửa-sai-một-câu thành chỗ phải đọc ba câu để
@@ -60,13 +59,8 @@ const KEYS_USED_DYNAMICALLY = new Set<string>([
 ]);
 
 /*
- * DÙNG BẢN CHUNG `quetNguon` (19/09/2026) — luật bỏ qua `__lint-probe__*` nay sống ở MỘT chỗ.
- *
- * File này từng là bản DUY NHẤT được vá cho cuộc đua ENOENT ngày 18/09, và nó được lấy làm dẫn
- * chứng khi `test/quet-nguon.ts` ra đời ngày 19/09 — nhưng chính nó lại không được chuyển sang
- * bản chung. Docblock của `quet-nguon.ts` và mục EPIC-MAP cùng khai "ba nơi gọi" trong khi thật
- * ra chỉ có hai. Lượt rà soát 19/09 đếm ra. Bản vá chống-chép-bản-sao để lại đúng một bản sao,
- * ở đúng file nó viện dẫn.
+ * DÙNG BẢN CHUNG `quetNguon` — luật bỏ qua `__lint-probe__*` (tránh cuộc đua ENOENT với thư
+ * mục probe của bài lint đang chạy song song) sống ở MỘT chỗ. Đừng chép lại phép quét cây ở đây.
  *
  * `vi.ts` lọc SAU khi quét chứ không nhét vào `quetNguon`: đó là luật riêng của bài này (không
  * đếm chính file khai khóa là "nơi dùng khóa"), không phải luật chung của phép quét cây.
@@ -105,14 +99,12 @@ function khoaCuaViTs(): string[] {
 describe('Khóa dịch chết trong vi.ts', () => {
   const khoa = khoaCuaViTs();
   /*
-   * LỘT CHÚ THÍCH, VÀ BỎ FILE KIỂM, TRƯỚC KHI DÒ (19/09/2026).
+   * LỘT CHÚ THÍCH, VÀ BỎ FILE KIỂM, TRƯỚC KHI DÒ.
    *
    * Phép "có ai dùng không" là `nguon.includes("'khóa'")` trên VĂN BẢN THÔ, nên một khóa chỉ
    * được NHẮC TỚI trong một dòng chú thích — hoặc chỉ còn sống trong một file `*.test.tsx` —
-   * vẫn được tính là còn người dùng. Đợt rà 19/09 chứng minh bằng đột biến: chèn 2 khóa chết,
-   * bài đỏ cả 2; thêm một dòng chú thích nhắc tên khóa thứ hai vào `ui/tabs.tsx`, bài chỉ còn
-   * đỏ 1. Lỗ ấy chưa nuôi khóa chết nào (đo lại sau khi lột: 0 khóa chênh lệch), nên đây là
-   * bịt lỗ chứ không phải trả nợ.
+   * vẫn được tính là còn người dùng. Đột biến chứng minh: chèn 2 khóa chết, bài đỏ cả 2; thêm
+   * một dòng chú thích nhắc tên khóa thứ hai vào `ui/tabs.tsx`, bài chỉ còn đỏ 1.
    *
    * Vì sao bỏ file kiểm: một khóa mà NƠI DÙNG DUY NHẤT là bài kiểm của chính nó thì nó đã
    * chết trong sản phẩm — đúng thứ bài này sinh ra để tìm.
@@ -128,7 +120,7 @@ describe('Khóa dịch chết trong vi.ts', () => {
   /*
    * Tiền tố của mọi khóa dựng động: `` `abc.def_${…}` `` → 'abc.def_'.
    *
-   * ===== TIỀN TỐ PHỦ CẢ NAMESPACE BỊ TỪ CHỐI (T-03, sửa 20/09/2026) =====
+   * ===== TIỀN TỐ PHỦ CẢ NAMESPACE BỊ TỪ CHỐI =====
    *
    * Luật cứu-theo-tiền-tố có một lỗ: hai template trong repo rộng đến mức phủ trọn một
    * namespace —
@@ -155,7 +147,7 @@ describe('Khóa dịch chết trong vi.ts', () => {
   /*
    * SÀN CHỐNG ĐỌC HỤT. Đổi cách viết `vi.ts` (thụt lề khác, gộp một dòng) làm `khoaCuaViTs`
    * trả về rỗng, và một bài "mọi khóa tìm được đều có người dùng" sẽ XANH RỰC trong khi nó
-   * chẳng kiểm gì. 1000 là mức sàn thô dưới con số đo được ngày 12/09 (1067).
+   * chẳng kiểm gì. 1000 là mức sàn thô, dưới số khóa thật của `vi.ts` (hơn một nghìn).
    */
   it('đọc được vi.ts (nếu không thì cả bài này vô nghĩa)', () => {
     expect(khoa.length).toBeGreaterThanOrEqual(1000);

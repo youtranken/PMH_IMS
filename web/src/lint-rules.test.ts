@@ -6,22 +6,20 @@ import { describe, expect, it } from 'vitest';
 /**
  * Bài kiểm CANH CHÍNH CÁI CỔNG, không kiểm sản phẩm.
  *
- * VÌ SAO NÓ TỒN TẠI. Rà soát 07/09 phát hiện cổng lint cũ của web (oxlint) cấm
- * `confirm`/`alert` bằng `no-restricted-globals` — rule đó chỉ khớp ĐỊNH DANH TRẦN, không khớp
- * `window.confirm(...)`. Tức luật khớp đúng số không chuỗi, trong khi `window.confirm` chính là
- * cách `CLAUDE.md` viết ra khi cấm. Repo vẫn sạch, nên cổng đang bảo vệ một trạng thái sạch mà
- * nó KHÔNG canh được — và không có gì đỏ để ai biết.
+ * VÌ SAO NÓ TỒN TẠI. Một luật lint có thể khớp đúng số không chuỗi mà không ai biết: cấm
+ * `confirm`/`alert` bằng `no-restricted-globals` chỉ khớp ĐỊNH DANH TRẦN, không khớp
+ * `window.confirm(...)` — trong khi `window.confirm` chính là cách `CLAUDE.md` viết ra khi cấm.
+ * Repo vẫn sạch, nên cổng bảo vệ một trạng thái sạch mà nó KHÔNG canh được — và không có gì đỏ.
  *
- * Đây là lần thứ hai lớp lỗi này xảy ra: hồi 28/08 luật eslint AD-2 bên api cũng khớp 0 chuỗi
- * suốt 9 epic. Lần đó bài học rút ra là "phải có bài test chốt rằng luật BẮT được thứ nó phải
- * bắt" (`api/src/ad2-boundary.spec.ts`). Bài này là bản tương ứng cho phía web.
+ * Nên phải có bài test chốt rằng luật BẮT được thứ nó phải bắt. Bên api là
+ * `api/src/ad2-boundary.spec.ts`; bài này là bản tương ứng cho phía web.
  *
  * KHÁC MỘT CHỖ QUAN TRỌNG so với `ad2-boundary.spec.ts`: bài kia kiểm biểu thức regex, còn bài
  * này chạy THẲNG `eslint` trên file thật. Kiểm regex thì vẫn còn cửa "regex đúng nhưng không
- * được cắm vào rule nào" — đúng lỗ mà rà soát 07/09 chỉ ra ở phía api.
+ * được cắm vào rule nào".
  *
- * (07/09: web đã chuyển từ oxlint sang ESLint để cả repo dùng MỘT phương ngữ luật — chính bài
- * này là thứ phát hiện oxlint không có `no-restricted-syntax`. Xem `eslint.config.mjs`.)
+ * (Web dùng ESLint, không dùng oxlint, để cả repo dùng MỘT phương ngữ luật — oxlint không có
+ * `no-restricted-syntax`. Xem `eslint.config.mjs`.)
  */
 
 const WEB_ROOT = join(__dirname, '..');
@@ -38,10 +36,10 @@ function lintSnippet(
   code: string,
   under = 'src',
   /**
-   * TÊN FILE PROBE — và nó KHÔNG phải chi tiết vặt (§18 #14, thêm 22/09).
+   * TÊN FILE PROBE — và nó KHÔNG phải chi tiết vặt.
    *
-   * Mọi probe trước nay đều tên `probe.tsx`, nên cấu hình dành riêng cho FILE KIỂM
-   * (`web/eslint.config.mjs`, khối `**\/*.test.tsx`) chưa bao giờ được bài nào đi qua. Khối
+   * Probe nào cũng tên `probe.tsx` thì cấu hình dành riêng cho FILE KIỂM
+   * (`web/eslint.config.mjs`, khối `**\/*.test.tsx`) không được bài nào đi qua. Khối
    * đó khai lại `'no-restricted-syntax': ['error', NO_VIETNAMESE_IDENT]` — tức tắt luật
    * `window.confirm` nhưng CỐ Ý GIỮ AD-16 cho file kiểm.
    *
@@ -142,7 +140,7 @@ describe('web/eslint.config.mjs — cổng AD-15 phải THẬT SỰ bắt đư�
   /*
    * ===== AD-16 — CANH CHÍNH CÁI CỔNG =====
    *
-   * Luật chặn định danh tiếng Việt có dấu cắm ngày 20/09/2026. Không có bài này thì nó có
+   * Luật chặn định danh tiếng Việt có dấu. Không có bài này thì nó có
    * thể chết y như `no-restricted-globals` đã chết: selector viết đúng, cắm sai chỗ, khớp 0
    * chuỗi, và repo vẫn sạch nên không gì đỏ để ai biết.
    *
@@ -235,7 +233,7 @@ describe('DoD-6 — chữ tiếng Việt viết cứng trong mã sản phẩm', 
 });
 
 /**
- * NGOẠI LỆ CỐ Ý CHO FILE KIỂM — giữ AD-16, bỏ luật `window.confirm` (§18 #14).
+ * NGOẠI LỆ CỐ Ý CHO FILE KIỂM — giữ AD-16, bỏ luật `window.confirm`.
  *
  * `web/eslint.config.mjs` viết LẠI cả mảng `no-restricted-syntax` cho `**\/*.test.tsx` thay
  * vì đặt `'off'`, kèm chú thích giải thích vì sao. Hai bài dưới đây là thứ giữ cho lời giải
