@@ -620,9 +620,10 @@ export class BreakGlassService implements OnModuleInit {
      * commit. Client không thể xử lý tử tế một API đổi mã theo nhịp gõ phím, và test thì đỏ
      * ngẫu nhiên — đúng cách bộ E2E đầy đủ phát hiện ra chuyện này.
      */
-    const [existing, claimable] = await Promise.all([
+    const [existing, claimable, held] = await Promise.all([
       this.pendingOf(memberEmail, input.ownerType, input.ownerId),
       this.claimableOf(viewer, input.ownerType, input.ownerId),
+      this.grantOf(viewer, input.ownerType, input.ownerId),
     ]);
     if (existing) {
       throw new ConflictException({
@@ -634,6 +635,16 @@ export class BreakGlassService implements OnModuleInit {
       throw new ConflictException({
         code: 'BREAK_GLASS_APPROVED',
         message: 'Yêu cầu của bạn đã được duyệt — bấm Xem ở ngăn két và nhập mã 6 số để mở.',
+      });
+    }
+    /*
+     * Cùng luật `canRequest` của `verdictFor`: chỉ quyền dùng được Ở PHIÊN NÀY mới chặn. Quyền đã
+     * gắn phiên khác thì phiên này không dùng được (Q-15), nên xin lại phải được.
+     */
+    if (held) {
+      throw new ConflictException({
+        code: 'BREAK_GLASS_ACTIVE',
+        message: 'Bạn đang có quyền xem đối tượng này ở phiên đăng nhập này, chưa cần xin thêm.',
       });
     }
 

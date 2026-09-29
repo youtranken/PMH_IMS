@@ -225,11 +225,14 @@ thiếu (dòng **Rà 29/09**). Việc đã làm sau ngày lập mà chưa có m�
   - **Rà 29/09:** còn nguyên (`expireDueGrants`, `approvals.service.ts:~364-390`).
   - **Đã sửa:** `expireDueGrants` bọc try/catch từng hàng, log qua `redactMessage`, hàng lỗi rollback
     riêng và vòng sau thử lại. Kiểm: `api/test/approvals.spec.ts` (bài "một hàng lỗi không chặn").
-- [ ] **BE-17 · Xin break-glass chồng khi đang có grant còn hạn** (`break-glass.service.ts:230`).
+- [x] **BE-17 · Xin break-glass chồng khi đang có grant còn hạn** (`break-glass.service.ts:230`).
   - **Rà 29/09:** mới một phần (8a2dd5e). API chặn khi còn phiếu chờ (`BREAK_GLASS_PENDING`) và khi
     có quyền đã duyệt chưa gắn phiên (`BREAK_GLASS_APPROVED`); màn hình chặn đủ. Còn hở: gọi API thẳng
     vẫn xin chồng được khi đang cầm quyền đã gắn CHÍNH phiên này. Thiếu bài kiểm cho
     `BREAK_GLASS_APPROVED`.
+  - **Đã sửa:** `request()` thêm 409 `BREAK_GLASS_ACTIVE` khi đang cầm quyền gắn chính phiên này
+    (`grantOf`); quyền gắn phiên khác vẫn xin lại được (Q-15). Kiểm: `api/test/break-glass-session.spec.ts`
+    (nhóm "không xin chồng", có cả `BREAK_GLASS_APPROVED`).
 - [x] **BE-18 · Người xin break-glass không nhận thông báo** khi được duyệt, từ chối hay thu hồi. Thêm
   outbox.
   - **Rà 29/09:** xong (Q-14, VLT-003..008, 858ba4d). Duyệt, từ chối, thu hồi ghi outbox
