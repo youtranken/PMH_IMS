@@ -17,7 +17,7 @@ export default {
     /* Người dùng IMS CHÍNH LÀ team IT — "báo bộ phận IT" là bảo họ đi báo chính mình. Chỉ đúng
        người vận hành IMS và thứ cần gửi kèm. */
     serverError:
-      'Máy chủ IMS đang gặp sự cố. Thử lại sau ít phút; nếu vẫn lỗi, gửi phần "Chi tiết kỹ thuật" bên dưới cho Super Admin.',
+      'Máy chủ IMS đang lỗi. Thử lại sau ít phút; nếu vẫn lỗi, gửi "Chi tiết kỹ thuật" bên dưới cho Super Admin.',
     retry: 'Thử lại',
     techDetails: 'Chi tiết kỹ thuật',
     techStatus: 'HTTP {{status}}',
@@ -41,16 +41,16 @@ export default {
        dùng được, và việc người dùng làm được ngay. */
     screenErrorTitle: 'Màn này gặp lỗi khi hiển thị',
     screenErrorHint:
-      'Các phần khác của hệ thống vẫn dùng bình thường. Tải lại trang để thử lại; nếu vẫn lỗi, báo Super Admin kèm đường dẫn đang mở.',
+      'Các phần khác vẫn dùng bình thường. Tải lại trang; nếu vẫn lỗi, báo Super Admin kèm đường dẫn đang mở.',
     reload: 'Tải lại trang',
     confirmTitle: 'Xác nhận',
-    confirmOk: 'Đồng ý',
+    confirmOk: 'Xác nhận',
     /* Câu hỏi khi Esc / bấm nền / ✕ trên một hộp đang có dữ liệu gõ dở (`Dialog guardUnsaved`).
        Nút xác nhận nói rõ việc SẼ xảy ra ("Bỏ và đóng"), nút hủy nói rõ việc KHÔNG xảy ra
        ("Ở lại nhập tiếp") — cặp "Đồng ý / Hủy" ở đây là hai chữ không ai đoán được nghĩa. */
     discardTitle: 'Bỏ những gì vừa nhập?',
     discardMessage:
-      'Hộp này đang có dữ liệu chưa lưu. Đóng lại là mất hết, không khôi phục được.',
+      'Dữ liệu chưa lưu trong hộp này sẽ mất, không khôi phục được.',
     discardConfirm: 'Bỏ và đóng',
     discardCancel: 'Ở lại nhập tiếp',
     openNav: 'Mở menu',
@@ -84,7 +84,7 @@ export default {
     prev: 'Tháng trước',
     next: 'Tháng sau',
     typeLabel: 'Gõ ngày (dd/mm/yyyy)',
-    typeInvalid: 'Ngày không có thật — gõ theo dạng dd/mm/yyyy.',
+    typeInvalid: 'Ngày không hợp lệ — gõ theo dạng dd/mm/yyyy.',
     typeOutOfRange: 'Ngày này nằm ngoài khoảng được chọn.',
   },
   pagination: {
@@ -99,7 +99,7 @@ export default {
   dataTable: {
     selectAll: 'Chọn tất cả',
     selectRow: 'Chọn dòng',
-    scrollHint: 'Bảng rộng hơn khung — kéo ngang (hoặc Shift + lăn chuột) để xem thêm cột.',
+    scrollHint: 'Kéo ngang (hoặc Shift + lăn chuột) để xem thêm cột.',
   },
   theme: {
     dark: 'Chế độ tối',
@@ -156,7 +156,7 @@ export default {
     openHint: 'Tìm nhanh ({{keys}})',
     placeholder: 'Tìm mã, tên, serial, IP…',
     placeholderShort: 'Mã, tên, serial, IP…',
-    hintShort: 'Gõ ít nhất 2 ký tự: mã, tên, serial, IP, tên dải hoặc VLAN.',
+    hintShort: 'Gõ từ 2 ký tự: mã, tên, serial, IP, dải hoặc VLAN.',
     groupRecent: 'Mở gần đây',
     groupGoto: 'Đi tới',
     groupSearchIn: 'Tìm trong danh sách',
@@ -172,7 +172,7 @@ export default {
        trùng một hồ sơ đã tồn tại. Nói rõ là danh sách đang thiếu, và thiếu nhóm nào. */
     partial: 'Chưa tìm được trong: {{list}}. Danh sách dưới đây còn thiếu.',
     emptyPartial:
-      'Chưa tìm được trong: {{list}}, nên chưa nói được là có hồ sơ nào khớp "{{q}}" hay không.',
+      'Chưa tìm được trong: {{list}}, nên chưa chắc có hồ sơ khớp "{{q}}" hay không.',
     groupNav: 'Màn hình',
     footMove: 'di chuyển',
     footOpen: 'mở',
@@ -195,8 +195,8 @@ export default {
     legendCut: 'sẽ bị gỡ khi thanh lý',
     missing: 'Chưa gắn: {{list}}.',
     alone:
-      'Máy này chưa giữ gì của ai — không IP, không luật NAT, không cổng, không license, ' +
-      'không giấy tờ. Thanh lý nó không kéo theo gì cả.',
+      'Máy này không giữ IP, luật NAT, cổng, license, đường truyền hay giấy tờ nào. ' +
+      'Thanh lý không phải gỡ gì.',
     aloneShort: 'Chưa gắn với gì cả',
     ownPorts: 'Cổng của máy này',
     incomingPorts: 'Đang cắm vào máy này',
@@ -204,11 +204,11 @@ export default {
     /* Ba câu cho cảnh CHƯA BIẾT. Im lặng ở đây không được phép đọc thành "sạch rồi": đó đúng
        là câu người ta mở trang này ra để hỏi trước khi thanh lý. */
     unknown:
-      'Chưa đọc được máy này đang giữ những gì — bản đồ bên dưới có thể thiếu. Đừng dựa vào ' +
-      'nó để quyết định thanh lý cho tới khi tải lại được.',
+      'Chưa đọc được máy này đang giữ những gì — bản đồ có thể thiếu. Đừng dựa vào nó để ' +
+      'thanh lý cho tới khi tải lại được.',
     cutUnknown:
-      'Chưa đọc được danh sách thứ máy đang giữ, nên chưa nói được lượt thanh lý sẽ cắt gì. ' +
-      'Tải lại khu bên dưới rồi xem lại.',
+      'Chưa đọc được máy đang giữ gì, nên chưa biết thanh lý sẽ gỡ những gì. ' +
+      'Đóng hộp, tải lại trang rồi thử lại.',
     /* Hai câu cho cảnh ĐANG TẢI — tách khỏi ba câu CHƯA ĐỌC ĐƯỢC ở trên (19/09/2026).
        Cùng là "chưa biết", nhưng "đang tải" là chuyện bình thường của mỗi lượt mở trang, còn
        "chưa đọc được" là một lời CẢNH BÁO kèm chỉ dẫn ("đừng dựa vào nó để quyết định thanh
@@ -839,7 +839,7 @@ export default {
     needCheck: 'Bấm "Đối chiếu" trước để xem file sẽ ghi những gì.',
     needFile: 'Chọn file .xlsx trước đã.',
     confirm: 'Xác nhận ghi',
-    nothing: 'Không có dòng nào cần ghi — file trùng khớp với dữ liệu đang có.',
+    nothing: 'Không có dòng nào cần ghi — file khớp với dữ liệu đang có.',
     hasErrors: 'Còn dòng lỗi. Sửa trong file rồi đối chiếu lại — chưa ghi gì cả.',
     downloadErrors: 'Tải danh sách {{count}} dòng lỗi (.xlsx)',
     done: 'Đã nhập: thêm {{created}}, cập nhật {{updated}}.',

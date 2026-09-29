@@ -48,7 +48,7 @@ describe('LoadError', () => {
 describe('LoadError — chi tiết kỹ thuật', () => {
   it('500: câu chỉ đúng người vận hành, Thử lại cỡ thường, có mã HTTP để gửi kèm', () => {
     renderWithI18n(<LoadError error={new ApiError(502, null)} onRetry={() => {}} />);
-    expect(screen.getByText(/gửi phần "Chi tiết kỹ thuật" bên dưới cho Super Admin/)).toBeInTheDocument();
+    expect(screen.getByText(/gửi "Chi tiết kỹ thuật" bên dưới cho Super Admin/)).toBeInTheDocument();
     expect(screen.queryByText(/bộ phận IT/)).toBeNull();
     expect(screen.getByRole('button', { name: 'Thử lại' })).not.toHaveClass('sm');
     expect(screen.getByText('Chi tiết kỹ thuật')).toBeInTheDocument();

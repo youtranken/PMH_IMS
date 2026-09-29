@@ -41,7 +41,7 @@ test.beforeEach(() => {
  * dữ liệu.' — bài này giả lập 500, nên đây mới là câu đúng của nó.
  */
 const LOAD_ERROR =
-  'Máy chủ IMS đang gặp sự cố. Thử lại sau ít phút; nếu vẫn lỗi, gửi phần "Chi tiết kỹ thuật" bên dưới cho Super Admin.';
+  'Máy chủ IMS đang lỗi. Thử lại sau ít phút; nếu vẫn lỗi, gửi "Chi tiết kỹ thuật" bên dưới cho Super Admin.';
 
 /** Bắt một đường API trả 500 — giống `breakRoute` của bài desktop, cùng hình dạng lỗi. */
 async function breakRoute(page: Page, pattern: RegExp): Promise<void> {

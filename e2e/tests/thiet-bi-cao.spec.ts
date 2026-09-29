@@ -287,7 +287,7 @@ test.describe('DEV-043/044 · bản đồ quan hệ không chồng, mã không n
     await page.goto(`/devices/${deviceId}`);
     for (const theme of ['light', 'dark'] as const) {
       await useTheme(page, theme);
-      await expect(page.getByText(/chưa giữ gì của ai/)).toBeVisible();
+      await expect(page.getByText(/không giữ IP, luật NAT/)).toBeVisible();
       await expect(page.getByTestId('rmap-hub')).toHaveCount(0);
     }
   });
