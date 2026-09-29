@@ -124,6 +124,22 @@ interface DataTableProps<T> {
    * đừng truyền prop này. Không truyền → giữ nguyên hành vi cũ.
    */
   mobileCard?: MobileCard<T>;
+  /**
+   * Kẻ một dòng tiêu đề mỗi khi khoá nhóm đổi — "Hôm nay", "Tháng 10/2026". Dữ liệu phải XẾP
+   * SẴN theo khoá (bảng không tự sắp lại): nhóm chỉ là cách đọc thứ tự đang có, nên màn chỉ
+   * truyền prop này khi thứ tự hiện tại đúng là thứ tự của khoá.
+   */
+  groupBy?: TableGroupBy<T>;
+}
+
+export interface TableGroupBy<T> {
+  key: (row: T) => string;
+  label: (key: string, row: T) => ReactNode;
+}
+
+/** Dòng nào mở đầu một nhóm mới (so với dòng liền trước) — dùng chung cho bảng và thẻ. */
+export function groupStarts<T>(rows: readonly T[], key: (row: T) => string): boolean[] {
+  return rows.map((row, index) => index === 0 || key(row) !== key(rows[index - 1]));
 }
 
 /** Gộp class của cột với class cột dính. */
@@ -184,6 +200,7 @@ export function DataTable<T>({
   rowNumberOffset,
   stickyActions,
   mobileCard,
+  groupBy,
 }: DataTableProps<T>) {
   const { t } = useTranslation();
   const narrow = useMediaQuery(MOBILE_CARD_QUERY);
@@ -243,21 +260,22 @@ export function DataTable<T>({
             {loading ? <SkeletonCards /> : <div className="empty">{emptyText}</div>}
           </div>
         ) : (
-          <ul className="list-cards">
-            {rows.map((row) => (
-              <MobileCardItem
-                key={row.id}
-                row={row.original}
-                card={mobileCard}
-                className={rowClassName?.(row.original)}
-                onRowClick={onRowClick}
-              />
-            ))}
-          </ul>
+          <MobileCardList
+            rows={rows.map((row) => row.original)}
+            rowKey={(_, index) => rows[index].id}
+            card={mobileCard}
+            rowClassName={rowClassName}
+            onRowClick={onRowClick}
+            groupBy={groupBy}
+          />
         )}
       </>
     );
   }
+
+  const columnCount =
+    table.getAllLeafColumns().length + (renderExpanded ? 1 : 0) + (selection ? 1 : 0);
+  const starts = groupBy ? groupStarts(rows.map((row) => row.original), groupBy.key) : null;
 
   return (
     <>
@@ -386,6 +404,13 @@ export function DataTable<T>({
                 const expanded = rowCanExpand && expandedId === row.id;
                 return (
                   <Fragment key={row.id}>
+                    {groupBy && starts?.[rowIndex] ? (
+                      <tr className="row-group">
+                        <th scope="colgroup" colSpan={columnCount}>
+                          {groupBy.label(groupBy.key(row.original), row.original)}
+                        </th>
+                      </tr>
+                    ) : null}
                     <tr
                       className={
                         [
@@ -500,6 +525,50 @@ export function DataTable<T>({
         </table>
       </TableWrap>
     </>
+  );
+}
+
+/**
+ * Danh sách thẻ gọn — phần điện thoại của `DataTable`, tách ra cho bảng VIẾT TAY dùng lại
+ * (Kho thanh lý): cùng một kiểu thẻ ở mọi màn, không màn nào tự dựng `<li>` riêng.
+ * `groupBy` kẻ một dòng tiêu đề trước thẻ đầu mỗi nhóm.
+ */
+export function MobileCardList<T>({
+  rows,
+  rowKey,
+  card,
+  rowClassName,
+  onRowClick,
+  groupBy,
+}: {
+  rows: readonly T[];
+  rowKey: (row: T, index: number) => string;
+  card: MobileCard<T>;
+  rowClassName?: (row: T) => string;
+  onRowClick?: (row: T) => void;
+  groupBy?: TableGroupBy<T>;
+}) {
+  const starts = groupBy ? groupStarts(rows, groupBy.key) : null;
+  return (
+    <ul className="list-cards">
+      {rows.map((row, index) => (
+        <Fragment key={rowKey(row, index)}>
+          {groupBy && starts?.[index] ? (
+            <li className="list-cards-group" role="presentation">
+              <span role="heading" aria-level={3}>
+                {groupBy.label(groupBy.key(row), row)}
+              </span>
+            </li>
+          ) : null}
+          <MobileCardItem
+            row={row}
+            card={card}
+            className={rowClassName?.(row)}
+            onRowClick={onRowClick}
+          />
+        </Fragment>
+      ))}
+    </ul>
   );
 }
 

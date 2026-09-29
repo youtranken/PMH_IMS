@@ -12,9 +12,11 @@ import {
   disposalStatusKey,
   type DisposalKind,
 } from '@/lib/disposal-kinds';
+import { MOBILE_CARD_QUERY, MobileCardList } from '@/ui/data-table';
 import { DatePicker } from '@/ui/date-picker';
 import { ExportXlsxButton } from '@/ui/export-xlsx-button';
-import { RowActions } from '@/ui/row-actions';
+import { RowActions, type RowAction } from '@/ui/row-actions';
+import { useMediaQuery } from '@/ui/use-media-query';
 import { Pagination } from '@/ui/pagination';
 import { Select } from '@/ui/select';
 import { useClampPage, useListUrlState } from '@/ui/use-list-url-state';
@@ -138,6 +140,29 @@ export function DisposalScreen() {
   const counts = inventory.data?.counts;
   const countAll = counts ? DISPOSAL_KINDS.reduce((sum, key) => sum + counts[key], 0) : 0;
 
+  /* ≤600px: thẻ hai dòng "mã + loại" / "tên", rồi "Đã thanh lý dd/mm · ai" — bảng gập dọc
+     lặp nhãn Mã/Loại/Chi tiết/Ngày trên từng thẻ nên cao gấp đôi mà không nói thêm gì. */
+  const narrow = useMediaQuery(MOBILE_CARD_QUERY);
+
+  const actionsOf = (item: DisposalItem): RowAction[] => [
+    {
+      key: 'open',
+      label: t('disposal.open'),
+      onSelect: () => navigate(LINK[item.kind](item.id)),
+    },
+    /* Khôi phục đi thẳng tới hộp Khôi phục của module chủ — chỉ phần mềm có hộp đó (Q-13);
+       loại khác đổi trạng thái trong Sửa hồ sơ. */
+    ...(item.kind === 'software'
+      ? [
+          {
+            key: 'restore',
+            label: t('software.restore'),
+            onSelect: () => navigate(`${LINK.software(item.id)}?restore=1`),
+          },
+        ]
+      : []),
+  ];
+
   const setPeriod = (next: Period | '') => {
     const range = next ? periodRange(next, today) : { from: '', to: '' };
     url.setFilter('from', range.from);
@@ -250,77 +275,85 @@ export function DisposalScreen() {
         )
       ) : (
         <>
-          <div className="table-wrap">
-            <table className="table table-stack">
-              <thead>
-                <tr>
-                  <th>{t('disposal.code')}</th>
-                  <th>{t('disposal.kind')}</th>
-                  <th>{t('disposal.detail')}</th>
-                  <th>{t('disposal.at')}</th>
-                  <th>{t('disposal.by')}</th>
-                  <th className="col-center col-sticky-end">{t('common.actions')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((item) => (
-                  <tr key={`${item.kind}-${item.id}`}>
-                    <td data-label={t('disposal.code')}>
-                      {/* Vẫn mở được hồ sơ gốc: "đã thanh lý" không phải "đã xoá", và người ta
-                          mở nó ra chính để đọc lịch sử vì sao bỏ. */}
-                      <Link className="mono" to={LINK[item.kind](item.id)}>
-                        {item.code}
-                      </Link>
-                      <span className="cell-sub">{item.name}</span>
-                    </td>
-                    <td data-label={t('disposal.kind')}>
-                      <span>{t(KIND_KEY[item.kind])}</span>
-                      {/* Tên gốc của trạng thái theo module chủ — thứ cả màn này sinh ra để nói. */}
-                      <span className="cell-sub">
-                        <span className="badge muted">{statusLabel(item.status, t)}</span>
-                      </span>
-                    </td>
-                    <td data-label={t('disposal.detail')}>
-                      {disposalDetail(item.kind, item.detail, t)}
-                    </td>
-                    <td data-label={t('disposal.at')}>
-                      {orDash(formatDate(item.disposedAt))}
-                    </td>
-                    <td data-label={t('disposal.by')}>
-                      {orDash(byText(item, t))}
-                      {item.reason ? <span className="cell-sub">{item.reason}</span> : null}
-                    </td>
-                    <td className="col-center col-sticky-end" data-label={t('common.actions')}>
-                      <div className="action-cell">
-                        <RowActions
-                          label={t('common.actionsOf', { subject: item.code })}
-                          items={[
-                            {
-                              key: 'open',
-                              label: t('disposal.open'),
-                              onSelect: () => navigate(LINK[item.kind](item.id)),
-                            },
-                            /* Khôi phục đi thẳng tới hộp Khôi phục của module chủ — chỉ phần
-                               mềm có hộp đó (Q-13); loại khác đổi trạng thái trong Sửa hồ sơ. */
-                            ...(item.kind === 'software'
-                              ? [
-                                  {
-                                    key: 'restore',
-                                    label: t('software.restore'),
-                                    onSelect: () =>
-                                      navigate(`${LINK.software(item.id)}?restore=1`),
-                                  },
-                                ]
-                              : []),
-                          ]}
-                        />
-                      </div>
-                    </td>
+          {narrow ? (
+            <MobileCardList
+              rows={rows}
+              rowKey={(item) => `${item.kind}-${item.id}`}
+              card={{
+                title: (item) => item.code,
+                href: (item) => LINK[item.kind](item.id),
+                badge: (item) => <span className="badge muted">{t(KIND_KEY[item.kind])}</span>,
+                actions: (item) => (
+                  <RowActions
+                    label={t('common.actionsOf', { subject: item.code })}
+                    items={actionsOf(item)}
+                  />
+                ),
+                subtitle: (item) => item.name,
+                meta: (item) =>
+                  [
+                    `${statusLabel(item.status, t)} ${orDash(formatDate(item.disposedAt))}`,
+                    byText(item, t),
+                  ]
+                    .filter(Boolean)
+                    .join(' · '),
+              }}
+            />
+          ) : (
+            <div className="table-wrap">
+              <table className="table table-stack">
+                <thead>
+                  <tr>
+                    <th>{t('disposal.code')}</th>
+                    <th>{t('disposal.kind')}</th>
+                    <th>{t('disposal.detail')}</th>
+                    <th>{t('disposal.at')}</th>
+                    <th>{t('disposal.by')}</th>
+                    <th className="col-center col-sticky-end">{t('common.actions')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {rows.map((item) => (
+                    <tr key={`${item.kind}-${item.id}`}>
+                      <td data-label={t('disposal.code')}>
+                        {/* Vẫn mở được hồ sơ gốc: "đã thanh lý" không phải "đã xoá", và người ta
+                            mở nó ra chính để đọc lịch sử vì sao bỏ. */}
+                        <Link className="mono" to={LINK[item.kind](item.id)}>
+                          {item.code}
+                        </Link>
+                        <span className="cell-sub">{item.name}</span>
+                      </td>
+                      <td data-label={t('disposal.kind')}>
+                        <span>{t(KIND_KEY[item.kind])}</span>
+                        {/* Tên gốc của trạng thái theo module chủ — thứ cả màn này sinh ra để nói. */}
+                        <span className="cell-sub">
+                          <span className="badge muted">{statusLabel(item.status, t)}</span>
+                        </span>
+                      </td>
+                      <td data-label={t('disposal.detail')}>
+                        {disposalDetail(item.kind, item.detail, t)}
+                      </td>
+                      <td data-label={t('disposal.at')}>
+                        {orDash(formatDate(item.disposedAt))}
+                      </td>
+                      <td data-label={t('disposal.by')}>
+                        {orDash(byText(item, t))}
+                        {item.reason ? <span className="cell-sub">{item.reason}</span> : null}
+                      </td>
+                      <td className="col-center col-sticky-end" data-label={t('common.actions')}>
+                        <div className="action-cell">
+                          <RowActions
+                            label={t('common.actionsOf', { subject: item.code })}
+                            items={actionsOf(item)}
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           <Pagination
             page={url.page}
             limit={url.limit}

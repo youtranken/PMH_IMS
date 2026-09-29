@@ -221,6 +221,74 @@ export function auditActionTone(code: string): 'danger' | 'warn' | null {
   return null;
 }
 
+/**
+ * Module của một mã hành động — nhóm của ô chọn "Hành động" ở Nhật ký. Tính theo đoạn đầu của
+ * mã (`vault.secret.revealed` → két), nên mã mới của một module cũ tự vào đúng nhóm.
+ */
+export type AuditModule =
+  | 'auth'
+  | 'account'
+  | 'vault'
+  | 'breakGlass'
+  | 'catalog'
+  | 'device'
+  | 'software'
+  | 'isp'
+  | 'serviceAccount'
+  | 'network'
+  | 'expiry'
+  | 'disposal'
+  | 'file'
+  | 'system'
+  | 'other';
+
+const MODULE_OF_PREFIX: Record<string, AuditModule> = {
+  auth: 'auth',
+  session: 'auth',
+  security: 'auth',
+  account: 'account',
+  accounts: 'account',
+  vault: 'vault',
+  break_glass: 'breakGlass',
+  catalog: 'catalog',
+  device: 'device',
+  devices: 'device',
+  software: 'software',
+  isp: 'isp',
+  service_account: 'serviceAccount',
+  ip: 'network',
+  subnet: 'network',
+  nat: 'network',
+  expiry: 'expiry',
+  disposal: 'disposal',
+  file: 'file',
+  system_config: 'system',
+  crypto: 'system',
+  audit: 'system',
+};
+
+export const MODULE_KEY: Record<AuditModule, string> = {
+  auth: 'audit.module.auth',
+  account: 'audit.module.account',
+  vault: 'audit.module.vault',
+  breakGlass: 'audit.module.breakGlass',
+  catalog: 'audit.module.catalog',
+  device: 'audit.module.device',
+  software: 'audit.module.software',
+  isp: 'audit.module.isp',
+  serviceAccount: 'audit.module.serviceAccount',
+  network: 'audit.module.network',
+  expiry: 'audit.module.expiry',
+  disposal: 'audit.module.disposal',
+  file: 'audit.module.file',
+  system: 'audit.module.system',
+  other: 'audit.module.other',
+};
+
+export function auditActionModule(code: string): AuditModule {
+  return MODULE_OF_PREFIX[code.split('.')[0]] ?? 'other';
+}
+
 /** Loại đối tượng (`object_type`) → nhãn tiếng Việt. */
 export const OBJECT_TYPE_KEY: Record<string, string> = {
   user: 'audit.objectType.user',

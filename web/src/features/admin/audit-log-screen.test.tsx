@@ -65,7 +65,9 @@ describe('Màn Nhật ký', () => {
     expect(screen.getByText('10.0.0.8')).toBeInTheDocument();
     // 01:30 UTC = 08:30 giờ Việt Nam.
     expect(
-      screen.getByText((text) => text.includes('20/09/2026') && text.includes('08:30')),
+      screen.getByText((text) => text.includes('20/09/2026') && text.includes('08:30'), {
+        selector: 'button',
+      }),
     ).toBeInTheDocument();
   });
 

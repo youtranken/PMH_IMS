@@ -380,6 +380,15 @@ input[list]::-webkit-calendar-picker-indicator {
   font-size: var(--fs-sm);
   cursor: default;
 }
+/* Tiêu đề nhóm trong menu (`SelectOption.group`) — chữ nhỏ mờ, không bấm được. */
+.fsel-group {
+  display: block;
+  padding: var(--space-3) var(--space-4) var(--space-1);
+  color: var(--ink-3);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  cursor: default;
+}
 .fsel-option:hover,
 .fsel-option.active {
   background: var(--primary-soft);
